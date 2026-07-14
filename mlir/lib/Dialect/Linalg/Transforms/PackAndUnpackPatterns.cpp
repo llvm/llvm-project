@@ -18,31 +18,27 @@ namespace mlir {
 namespace linalg {
 namespace {
 
-/// Returns the number of shape sizes that is either dynamic or greater than 1.
-static int64_t getNumGtOneDims(ArrayRef<int64_t> shape) {
-  return llvm::count_if(
-      shape, [](int64_t v) { return ShapedType::isDynamic(v) || v > 1; });
-}
+/// Returns `true` if there is no need of transposition for the packed layout
+/// except the unit tile size.
+static bool isPackWithoutTranspose(ArrayRef<int64_t> dimsPos,
+                                   ArrayRef<int64_t> tileSize) {
+  SmallVector<int64_t> seqPos;
+  if (dimsPos.empty()) {
+    seqPos = llvm::to_vector<4>(llvm::seq<int64_t>(0, tileSize.size()));
+    dimsPos = seqPos;
+  }
 
-/// Returns success() if there is only 1 dimension size in non-packed domain
-/// being greater than 1 and packing only happens on the dimension.
-/// Note: this method should only be used by pack/unpack to reshape conversion.
-/// It assumes that non-unit inner tile size must be used by the non-unit
-/// dimension.
-static LogicalResult isPackOn1D(RewriterBase &rewriter, Operation *op,
-                                ArrayRef<int64_t> srcShape,
-                                ArrayRef<int64_t> innerPackTileSize) {
-  if (getNumGtOneDims(srcShape) > 1) {
-    return rewriter.notifyMatchFailure(
-        op, "expects non-packed domain to have at most one non-unit dims");
+  int64_t lastNonUnitPos = 0;
+  for (auto [pos, tile] : llvm::zip_equal(dimsPos, tileSize)) {
+    if ((ShapedType::isDynamic(tile) || tile > 1)) {
+      if (pos < lastNonUnitPos) {
+        return false;
+      }
+      lastNonUnitPos = pos;
+    }
   }
-  // Non-unit inner tile size must be used by the non-unit dimension. If not, it
-  // will faill on getting reassociation maps.
-  if (getNumGtOneDims(innerPackTileSize) > 1) {
-    return rewriter.notifyMatchFailure(
-        op, "expects at most one non-unit inner tiles");
-  }
-  return success();
+
+  return true;
 }
 
 // If the `linalgOp` represents a transpose, return the permutation vector for
@@ -88,25 +84,6 @@ struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
         .getResult();
   }
 
-  /// Returns success() if it is only packing on the innermost dimension.
-  LogicalResult isPackOnInnerMostDim(RewriterBase &rewriter,
-                                     PackOp packOp) const {
-    auto outerDimsPerm = packOp.getOuterDimsPerm();
-    if (!outerDimsPerm.empty() && !isIdentityPermutation(outerDimsPerm)) {
-      return rewriter.notifyMatchFailure(
-          packOp,
-          "expects outer_dims_perm is empty or an identity permutation");
-    }
-
-    int64_t srcRank = packOp.getSourceRank();
-    ArrayRef<int64_t> dimsPos = packOp.getInnerDimsPos();
-    if (dimsPos.size() != 1 || (dimsPos[0] + 1 != srcRank)) {
-      return rewriter.notifyMatchFailure(
-          packOp, "expects packing at the innermost dimension");
-    }
-    return success();
-  }
-
   LogicalResult matchAndRewrite(PackOp packOp,
                                 PatternRewriter &rewriter) const override {
     if (packOp.getPaddingValue())
@@ -115,19 +92,24 @@ struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
     if (!packOp.hasPureTensorSemantics())
       return failure();
 
+    PackingMetadata packingMetadata;
     ShapedType sourceType = packOp.getSourceType();
-    if (failed(isPackOnInnerMostDim(rewriter, packOp)) &&
-        failed(isPackOn1D(rewriter, packOp, sourceType.getShape(),
-                          packOp.getStaticTiles())) &&
-        !packOp.isLikePad()) {
-      return failure();
-    }
-
     ShapedType destType = packOp.getDestType();
+    ArrayRef<int64_t> outputShape = destType.getShape();
+    SmallVector<int64_t> packInverseDestPerm =
+        getPackInverseDestPerm(packOp, packingMetadata);
+    SmallVector<int64_t> transpPerm =
+        invertPermutationVector(packInverseDestPerm);
+
+    if (!isPackWithoutTranspose(transpPerm, outputShape))
+      return rewriter.notifyMatchFailure(packOp,
+                                         "expects no transpose behavior");
+
     auto reassociation =
         getReassociationIndicesForReshape(sourceType, destType);
     if (!reassociation)
-      return failure();
+      return rewriter.notifyMatchFailure(
+          packOp, "unable to get reshape reassociation indices");
     FailureOr<Value> expanded =
         insertExpand(rewriter, packOp.getLoc(), packOp.getSource(), destType,
                      *reassociation);
@@ -151,49 +133,38 @@ struct SimplifyUnPackToCollapseShape : public OpRewritePattern<UnPackOp> {
                                            operand, reassociation);
   }
 
-  /// Returns success() if it is unpacking on the innermost dimension.
-  LogicalResult isUnpackOnInnerMostDim(RewriterBase &rewriter,
-                                       UnPackOp unpackOp) const {
-    auto outerDimsPerm = unpackOp.getOuterDimsPerm();
-    if (!outerDimsPerm.empty() && !isIdentityPermutation(outerDimsPerm)) {
-      return rewriter.notifyMatchFailure(
-          unpackOp,
-          "expects outer_dims_perm is empty or an identity permutation");
-    }
-
-    ShapedType sourceType = unpackOp.getSourceType();
-    ShapedType destType = unpackOp.getDestType();
-    if (!sourceType.hasStaticShape() || !destType.hasStaticShape())
-      return rewriter.notifyMatchFailure(unpackOp, "expects static shapes");
-
-    ArrayRef<int64_t> dimsPos = unpackOp.getInnerDimsPos();
-    if (dimsPos.size() != 1 || (dimsPos[0] + 1 != destType.getRank())) {
-      return rewriter.notifyMatchFailure(
-          unpackOp, "expects unpacking on the innermost dimension");
-    }
-
-    return success();
-  }
-
   LogicalResult matchAndRewrite(UnPackOp unpackOp,
                                 PatternRewriter &rewriter) const override {
     // TODO: Support Memref UnPackOp. Temporarily return failure.
     if (!unpackOp.hasPureTensorSemantics())
       return failure();
 
-    ShapedType destType = unpackOp.getDestType();
-    if (failed(isUnpackOnInnerMostDim(rewriter, unpackOp)) &&
-        failed(isPackOn1D(rewriter, unpackOp, destType.getShape(),
-                          unpackOp.getStaticTiles())) &&
-        !unpackOp.isLikeUnPad()) {
-      return failure();
-    }
-
     ShapedType sourceType = unpackOp.getSourceType();
+    ShapedType destType = unpackOp.getDestType();
+
+    if (PackOp::requirePaddingValueStrict(
+            destType.getShape(), unpackOp.getInnerDimsPos(),
+            sourceType.getShape(), unpackOp.getOuterDimsPerm(),
+            unpackOp.getMixedTiles()))
+      return rewriter.notifyMatchFailure(unpackOp,
+                                         "expects no padding behavior");
+
+    PackingMetadata metadata;
+    ArrayRef<int64_t> inputShape = sourceType.getShape();
+    SmallVector<int64_t> unpackInverseSrcPerm =
+        getUnPackInverseSrcPerm(unpackOp, metadata);
+    SmallVector<int64_t> transpPerm =
+        invertPermutationVector(unpackInverseSrcPerm);
+
+    if (!isPackWithoutTranspose(transpPerm, inputShape))
+      return rewriter.notifyMatchFailure(unpackOp,
+                                         "expects no transpose behavior");
+
     auto reassociation =
         getReassociationIndicesForReshape(sourceType, destType);
     if (!reassociation)
-      return failure();
+      return rewriter.notifyMatchFailure(
+          unpackOp, "unable to get reshape reassociation indices");
     Value collapsed = insertCollapse(
         rewriter, unpackOp.getLoc(), unpackOp.getSource(), destType,
         getReassociationIndicesAttribute(rewriter, *reassociation));

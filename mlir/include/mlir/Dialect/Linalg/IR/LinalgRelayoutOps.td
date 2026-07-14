@@ -195,10 +195,10 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
     ```
   }];
   let arguments = (ins TensorOrMemRef<[AnyType]>:$source,
-      TensorOrMemRef<[AnyType]>:$dest, 
+      TensorOrMemRef<[AnyType]>:$dest,
       Optional<AnyType>:$padding_value,
       DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$outer_dims_perm,
-      DenseI64ArrayAttr:$inner_dims_pos, 
+      DenseI64ArrayAttr:$inner_dims_pos,
       Variadic<Index>:$inner_tiles,
       DenseI64ArrayAttr:$static_inner_tiles);
   let results = (outs Optional<AnyRankedTensor>:$result);
@@ -235,7 +235,7 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
         ArrayRef<int64_t> outerDimsPerm = {});
 
     // Returns the shape of the packed type. It is a shared helper that helps
-    // type inference methods in a way that ensures that they agree on which 
+    // type inference methods in a way that ensures that they agree on which
     // dimensions are dynamic.
     static SmallVector<int64_t> inferPackedShape(ArrayRef<int64_t> inputShape,
         ArrayRef<int64_t> innerTileSizes, ArrayRef<int64_t> innerDimsPos,
@@ -252,7 +252,7 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
                                     ArrayRef<OpFoldResult> innerTiles);
 
     // Same as above function but here dynamic dimensions are assumed
-    // to require padding.
+    // to require padding except the unit-tile size dims.
     static bool requirePaddingValueStrict(ArrayRef<int64_t> inputShape,
                                           ArrayRef<int64_t> innerDimsPos,
                                           ArrayRef<int64_t> outputShape,
