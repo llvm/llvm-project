@@ -45,10 +45,10 @@
 // RUN: %clang_cl -arm64EC -marm64x -fuse-ld=link -### -- %s 2>&1 | FileCheck --check-prefix=ARM64X %s
 // ARM64X: "-machine:arm64x"
 
-// RUN: %clang --target=arm64ec-pc-windows-msvc -marm64x -### %s 2>&1 | FileCheck --check-prefix=ARM64X-LLD %s
-// RUN: %clang --target=aarch64-pc-windows-msvc -marm64x -### %s 2>&1 | FileCheck --check-prefix=ARM64X-LLD %s
-// RUN: %clang_cl -marm64x -### -- %s 2>&1 | FileCheck --check-prefix=ARM64X-LLD %s
-// RUN: %clang_cl -arm64EC -marm64x -### -- %s 2>&1 | FileCheck --check-prefix=ARM64X-LLD %s
+// RUN: %clang -fuse-ld= --target=arm64ec-pc-windows-msvc -marm64x -### %s 2>&1 | FileCheck --check-prefix=ARM64X-LLD %s
+// RUN: %clang -fuse-ld= --target=aarch64-pc-windows-msvc -marm64x -### %s 2>&1 | FileCheck --check-prefix=ARM64X-LLD %s
+// RUN: %clang_cl -fuse-ld= -marm64x -### -- %s 2>&1 | FileCheck --check-prefix=ARM64X-LLD %s
+// RUN: %clang_cl -fuse-ld= -arm64EC -marm64x -### -- %s 2>&1 | FileCheck --check-prefix=ARM64X-LLD %s
 // ARM64X-LLD: lld-link
 // ARM64X-LLD-SAME: "-machine:arm64x"
 
