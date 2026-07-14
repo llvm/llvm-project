@@ -3481,8 +3481,8 @@ int64_t SIInstrInfo::extractSubregFromImm(int64_t Imm,
                                           unsigned SubRegIndex) const {
   if (SubRegIndex == AMDGPU::NoSubRegister)
     return Imm;
-  assert(RI.getSubRegIdxSize(SubRegIndex) > 0);
-  assert(RI.getSubRegIdxOffset(SubRegIndex) >= 0);
+  assert(RI.getSubRegIdxSize(SubRegIndex) != -1u);
+  assert(RI.getSubRegIdxOffset(SubRegIndex) != -1u);
   return SignExtend64(Imm >> RI.getSubRegIdxOffset(SubRegIndex),
                       RI.getSubRegIdxSize(SubRegIndex));
 }
