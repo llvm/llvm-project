@@ -90,11 +90,12 @@ InitLLVM::InitLLVM(int &Argc, const char **&Argv,
 #endif
 
   if (InstallPipeSignalExitHandler)
-    // The pipe signal handler must be installed before any other handlers are
-    // registered. This is because the Unix \ref RegisterHandlers function does
-    // not perform a sigaction() for SIGPIPE unless a one-shot handler is
-    // present, to allow long-lived processes (like lldb) to fully opt-out of
-    // llvm's SIGPIPE handling and ignore the signal safely.
+    // The Unix \ref RegisterHandlers function only performs a sigaction() for
+    // SIGPIPE when a one-shot handler is present, so that long-lived processes
+    // (like lldb) can fully opt-out of llvm's SIGPIPE handling and ignore the
+    // signal safely. Installing the one-shot handler registers SIGPIPE even
+    // though other handlers (like CleanupStdHandles above) have already been
+    // registered.
     sys::SetOneShotPipeSignalFunction(sys::DefaultOneShotPipeSignalHandler);
   // Initialize the stack printer after installing the one-shot pipe signal
   // handler, so we can perform a sigaction() for SIGPIPE on Unix if requested.
