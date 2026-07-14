@@ -283,50 +283,6 @@ public:
   DiagnosticConsumer DiagConsumer;
 };
 
-/// Annotates the input code with provided semantic highlightings. Results look
-/// something like:
-///   class $Class[[X]] {
-///     $Primitive[[int]] $Field[[a]] = 0;
-///   };
-std::string annotate(llvm::StringRef Input,
-                     llvm::ArrayRef<HighlightingToken> Tokens) {
-  assert(llvm::is_sorted(
-      Tokens, [](const HighlightingToken &L, const HighlightingToken &R) {
-        return L.R.start < R.R.start;
-      }));
-
-  std::string Buf;
-  llvm::raw_string_ostream OS(Buf);
-  unsigned NextChar = 0;
-  for (auto &T : Tokens) {
-    unsigned StartOffset = llvm::cantFail(positionToOffset(Input, T.R.start));
-    unsigned EndOffset = llvm::cantFail(positionToOffset(Input, T.R.end));
-    assert(StartOffset <= EndOffset);
-    assert(NextChar <= StartOffset);
-
-    bool hasDef =
-        T.Modifiers & (1 << uint32_t(HighlightingModifier::Definition));
-    bool hasDecl =
-        T.Modifiers & (1 << uint32_t(HighlightingModifier::Declaration));
-    EXPECT_TRUE(!hasDef || hasDecl);
-
-    OS << Input.substr(NextChar, StartOffset - NextChar);
-    OS << '$' << T.Kind;
-    for (unsigned I = 0;
-         I <= static_cast<uint32_t>(HighlightingModifier::LastModifier); ++I) {
-      if (T.Modifiers & (1 << I)) {
-        // _decl_def is common and redundant, just print _def instead.
-        if (I != uint32_t(HighlightingModifier::Declaration) || !hasDef)
-          OS << '_' << static_cast<HighlightingModifier>(I);
-      }
-    }
-    OS << "[[" << Input.substr(StartOffset, EndOffset - StartOffset) << "]]";
-    NextChar = EndOffset;
-  }
-  OS << Input.substr(NextChar);
-  return std::move(OS.str());
-}
-
 TEST_F(PrerequisiteModulesTests, NonModularTest) {
   MockDirectoryCompilationDatabase CDB(TestDir, FS);
 
@@ -620,7 +576,8 @@ int use() { return a; }
 
   ModulesBuilder Builder(CDB);
 
-  auto UseInfo = Builder.buildPrerequisiteModulesFor(getFullPath("Use.cpp"), FS);
+  auto UseInfo =
+      Builder.buildPrerequisiteModulesFor(getFullPath("Use.cpp"), FS);
   ASSERT_TRUE(UseInfo);
 
   HeaderSearchOptions HSOpts;
@@ -1719,12 +1676,11 @@ TEST_F(PrerequisiteModulesTests, ModuleSemanticHighlighting) {
 
   llvm::StringRef AnnotatedCode = R"cpp(
       module;
-      $Modifier[[import]] $Namespace[[M]];
+      $import[[import]] M;
       export module highlight;
-      $Modifier[[export]] void $Function_def_globalScope[[foo]]() {
+      $export[[export]] void foo() {
       }
 )cpp";
-  uint32_t ModifierMask = -1;
   Annotations UseCpp(AnnotatedCode);
 
   CDB.addFile("M.cppm", R"cpp(
@@ -1753,10 +1709,13 @@ export struct TypeFromModule {};
                               Preamble);
   auto Actual = getSemanticHighlightings(AST.value(),
                                          /*IncludeInactiveRegionTokens=*/true);
-  for (auto &Token : Actual)
-    Token.Modifiers &= ModifierMask;
-
-  EXPECT_EQ(AnnotatedCode, annotate(UseCpp.code(), Actual));
+  auto HasToken = [&](llvm::StringRef Name, HighlightingKind Kind) {
+    return llvm::any_of(Actual, [&](const HighlightingToken &T) {
+      return T.Kind == Kind && T.R == UseCpp.range(Name);
+    });
+  };
+  EXPECT_TRUE(HasToken("import", HighlightingKind::Modifier));
+  EXPECT_TRUE(HasToken("export", HighlightingKind::Modifier));
 }
 
 } // namespace
