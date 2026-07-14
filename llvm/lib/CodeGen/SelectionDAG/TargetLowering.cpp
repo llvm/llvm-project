@@ -6416,6 +6416,21 @@ TargetLowering::ConstraintGroup TargetLowering::getConstraintPreferences(
     Ret.emplace_back(Code, CType);
   }
 
+  // A direct output becomes the result of the asm rather than being written
+  // through an address supplied by the caller, so it has to live in a
+  // register. Prefer the other alternatives, if any (e.g. "r" in "=rm").
+  // If memory is the only option (e.g. "=m"), keep it so that lowering can
+  // diagnose the constraint; memory outputs must be spelled indirectly
+  // (e.g. "=*m").
+  if (OpInfo.Type == InlineAsm::isOutput && !OpInfo.isIndirect) {
+    auto IsMemOrAddr = [](const ConstraintPair &P) {
+      return P.second == TargetLowering::C_Memory ||
+             P.second == TargetLowering::C_Address;
+    };
+    if (!llvm::all_of(Ret, IsMemOrAddr))
+      llvm::erase_if(Ret, IsMemOrAddr);
+  }
+
   llvm::stable_sort(Ret, [](ConstraintPair a, ConstraintPair b) {
     return getConstraintPiority(a.second) > getConstraintPiority(b.second);
   });
