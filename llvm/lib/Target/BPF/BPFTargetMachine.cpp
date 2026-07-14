@@ -57,7 +57,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFTarget() {
   initializeBPFMIPreEmitPeepholeLegacyPass(PR);
   initializeBPFDAGToDAGISelLegacyPass(PR);
   initializeBPFMISimplifyPatchableLegacyPass(PR);
-  initializeBPFMIPreEmitCheckingPass(PR);
+  initializeBPFMIPreEmitCheckingLegacyPass(PR);
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
@@ -149,7 +149,7 @@ void BPFPassConfig::addMachineSSAOptimization() {
 }
 
 void BPFPassConfig::addPreEmitPass() {
-  addPass(createBPFMIPreEmitCheckingPass());
+  addPass(createBPFMIPreEmitCheckingLegacyPass());
   if (!DisableMIPeephole) {
     addPass(createBPFMIExpandStackArgPseudosLegacyPass());
     addPass(createBPFMIPreEmitPeepholeLegacyPass());

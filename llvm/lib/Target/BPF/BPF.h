@@ -77,7 +77,15 @@ public:
 };
 
 FunctionPass *createBPFMIPreEmitPeepholeLegacyPass();
-FunctionPass *createBPFMIPreEmitCheckingPass();
+
+class BPFMIPreEmitCheckingPass
+    : public OptionalPassInfoMixin<BPFMIPreEmitCheckingPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createBPFMIPreEmitCheckingLegacyPass();
 
 InstructionSelector *createBPFInstructionSelector(const BPFTargetMachine &,
                                                   const BPFSubtarget &,
@@ -87,7 +95,7 @@ void initializeBPFAsmPrinterPass(PassRegistry &);
 void initializeBPFCheckAndAdjustIRLegacyPass(PassRegistry &);
 void initializeBPFDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeBPFMIPeepholeLegacyPass(PassRegistry &);
-void initializeBPFMIPreEmitCheckingPass(PassRegistry &);
+void initializeBPFMIPreEmitCheckingLegacyPass(PassRegistry &);
 void initializeBPFMIExpandStackArgPseudosLegacyPass(PassRegistry &);
 void initializeBPFMIPreEmitPeepholeLegacyPass(PassRegistry &);
 void initializeBPFMISimplifyPatchableLegacyPass(PassRegistry &);
