@@ -249,6 +249,109 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   }
 };
 
+struct GPURotateOpLowering : public ConvertOpToLLVMPattern<gpu::RotateOp> {
+  using ConvertOpToLLVMPattern<gpu::RotateOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::RotateOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+    Type valueTy = adaptor.getValue().getType();
+    auto int32Ty = rewriter.getI32Type();
+    auto int64Ty = rewriter.getI64Type();
+    auto predTy = rewriter.getI1Type();
+
+    Value laneId =
+        NVVM::LaneIdOp::create(rewriter, loc, int32Ty, /*range=*/nullptr);
+    Value one = LLVM::ConstantOp::create(rewriter, loc, int32Ty, 1);
+    Value minusOne = LLVM::ConstantOp::create(rewriter, loc, int32Ty, -1);
+    Value thirtyTwo = LLVM::ConstantOp::create(rewriter, loc, int32Ty, 32);
+    Value offset =
+        LLVM::ConstantOp::create(rewriter, loc, int32Ty, op.getOffset());
+    Value width = LLVM::ConstantOp::create(rewriter, loc, int32Ty, op.getWidth());
+
+    Value numLeadInactiveLane =
+        LLVM::SubOp::create(rewriter, loc, int32Ty, thirtyTwo, width);
+    Value activeMask = LLVM::LShrOp::create(rewriter, loc, int32Ty, minusOne,
+                                            numLeadInactiveLane);
+    Value maskAndClamp =
+        LLVM::SubOp::create(rewriter, loc, int32Ty, width, one);
+
+    Value rotatedWithinWidth =
+        LLVM::AndOp::create(rewriter, loc, int32Ty,
+                            LLVM::AddOp::create(rewriter, loc, int32Ty, laneId,
+                                                offset),
+                            maskAndClamp);
+    Value upperLaneMask =
+        LLVM::XOrOp::create(rewriter, loc, int32Ty, maskAndClamp, minusOne);
+    Value laneBase =
+        LLVM::AndOp::create(rewriter, loc, int32Ty, laneId, upperLaneMask);
+    Value sourceLane =
+        LLVM::AddOp::create(rewriter, loc, int32Ty, rotatedWithinWidth, laneBase);
+
+    bool predIsUsed = !op->getResult(1).use_empty();
+    auto emitShfl = [&](Value value, Type resultType) -> std::pair<Value, Value> {
+      UnitAttr returnValueAndIsValidAttr = predIsUsed ? rewriter.getUnitAttr()
+                                                      : UnitAttr();
+      Type shflResultTy = resultType;
+      if (predIsUsed)
+        shflResultTy = LLVM::LLVMStructType::getLiteral(rewriter.getContext(),
+                                                        {resultType, predTy});
+      Value shfl = NVVM::ShflOp::create(
+          rewriter, loc, shflResultTy, activeMask, value, sourceLane,
+          maskAndClamp, NVVM::ShflKind::idx, returnValueAndIsValidAttr);
+      if (!predIsUsed)
+        return {shfl, nullptr};
+      Value shuffledValue = LLVM::ExtractValueOp::create(rewriter, loc, shfl, 0);
+      Value isActiveSrcLane =
+          LLVM::ExtractValueOp::create(rewriter, loc, shfl, 1);
+      return {shuffledValue, isActiveSrcLane};
+    };
+
+    Value result;
+    Value isValid;
+    if (valueTy == int32Ty || valueTy.isF32()) {
+      std::tie(result, isValid) = emitShfl(adaptor.getValue(), valueTy);
+    } else if (valueTy == int64Ty || valueTy.isF64()) {
+      Value value = adaptor.getValue();
+      if (valueTy.isF64())
+        value = LLVM::BitcastOp::create(rewriter, loc, int64Ty, value);
+
+      Value low32 = LLVM::TruncOp::create(rewriter, loc, int32Ty, value);
+      Value high32 = LLVM::TruncOp::create(
+          rewriter, loc, int32Ty,
+          LLVM::LShrOp::create(
+              rewriter, loc, int64Ty, value,
+              LLVM::ConstantOp::create(rewriter, loc, int64Ty, 32)));
+
+      Value lowShfl, lowValid, highShfl, highValid;
+      std::tie(lowShfl, lowValid) = emitShfl(low32, int32Ty);
+      std::tie(highShfl, highValid) = emitShfl(high32, int32Ty);
+
+      Value low64 = LLVM::ZExtOp::create(rewriter, loc, int64Ty, lowShfl);
+      Value high64 = LLVM::ShlOp::create(
+          rewriter, loc, int64Ty,
+          LLVM::ZExtOp::create(rewriter, loc, int64Ty, highShfl),
+          LLVM::ConstantOp::create(rewriter, loc, int64Ty, 32));
+      result = LLVM::OrOp::create(rewriter, loc, int64Ty, low64, high64);
+      if (valueTy.isF64())
+        result = LLVM::BitcastOp::create(rewriter, loc, valueTy, result);
+
+      if (predIsUsed)
+        isValid = LLVM::AndOp::create(rewriter, loc, predTy, lowValid, highValid);
+    } else {
+      return rewriter.notifyMatchFailure(
+          op, "nvvm rotate only supports i32/f32 and decomposed i64/f64 values");
+    }
+
+    if (predIsUsed)
+      rewriter.replaceOp(op, {result, isValid});
+    else
+      rewriter.replaceOp(op, {result, nullptr});
+    return success();
+  }
+};
+
 struct GPULaneIdOpToNVVM : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
   using ConvertOpToLLVMPattern<gpu::LaneIdOp>::ConvertOpToLLVMPattern;
 
@@ -667,7 +770,7 @@ void mlir::populateGpuToNVVMConversionPatterns(
       gpu::GridDimOp, NVVM::GridDimXOp, NVVM::GridDimYOp, NVVM::GridDimZOp>>(
       converter, IndexKind::Grid, IntrType::Dim, benefit);
   patterns.add<GPULaneIdOpToNVVM, GPUBallotOpToNVVM, GPUShuffleOpLowering,
-               GPUReturnOpLowering>(converter, benefit);
+               GPURotateOpLowering, GPUReturnOpLowering>(converter, benefit);
 
   patterns.add<GPUDynamicSharedMemoryOpLowering>(
       converter, NVVM::kSharedMemoryAlignmentBit, benefit);
