@@ -2,11 +2,11 @@
 Test lldb-dap launch request.
 """
 
-from lldbsuite.test.tools.lldb_dap import lldb_dap_testcase
-from lldbsuite.test.tools.lldb_dap.dap_types import LaunchArgs
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 
 
-class TestDAP_launch_basic(lldb_dap_testcase.DAPTestCaseBase):
+class TestDAP_launch_basic(DAPTestCaseBase):
     """
     Tests the default launch of a simple program. No arguments,
     environment, or anything else is specified.

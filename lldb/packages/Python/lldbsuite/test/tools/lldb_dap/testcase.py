@@ -5,7 +5,7 @@ from typing import Any, Final, Optional, TypeVar, Union, cast
 
 from lldbsuite.test.lldbtest import Base, LLDBTestCaseFactory, is_exe
 
-from .dap_types import AnyResponse, ErrorResponse, Response
+from .types import AnyResponse, ErrorResponse, Response
 from .session_helpers import DAPTestSession
 from .utils import DebugAdapter, DebugAdapterOptions
 

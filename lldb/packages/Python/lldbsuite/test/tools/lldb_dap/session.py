@@ -15,7 +15,7 @@ from dataclasses import fields
 from pathlib import Path
 from typing import Any, Callable, Generic, Optional, Type, TypeVar
 
-from .dap_types import (
+from .types import (
     AnyResponse,
     ArgsProtocol,
     Capabilities,
