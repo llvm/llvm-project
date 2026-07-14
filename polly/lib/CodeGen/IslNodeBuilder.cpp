@@ -436,9 +436,9 @@ static bool IsLoopVectorizerDisabled(isl::ast_node_for Node) {
   return false;
 }
 
-// Returns true if the loop has a dist=1 dependence involving FP operations
-// (array-carried RAW/WAW or scalar FP reduction). In that case we omit the
-// vectorize.enable annotation and let the Loop Vectorizer decide.
+/// Returns true if the loop has a dist=1 dependence involving FP operations
+/// (array-carried RAW/WAW or scalar FP reduction). In that case we omit the
+/// vectorize.enable annotation and let the Loop Vectorizer decide.
 static bool hasLoopCarriedDependence(isl::ast_node_for For, const Scop &S) {
   isl::pw_aff PwaDist = IslAstInfo::getMinimalDependenceDistance(For);
   if (PwaDist.is_null())
@@ -509,13 +509,16 @@ void IslNodeBuilder::createForSequential(isl::ast_node_for For,
   bool UseGuardBB = !GenSE->isKnownPredicate(Predicate, GenSE->getSCEV(ValueLB),
                                              GenSE->getSCEV(ValueUB));
 
-  // Skip vectorize.enable for dist=1 FP loops; let the Loop Vectorizer decide.
-  // Note: llvm.loop.vectorize.enable=true has an additional property beyond
-  // requesting vectorization — it implicitly allows FP operation reordering
-  // (see https://github.com/llvm/llvm-project/issues/198726). This is a
-  // limitation of the metadata format: there is no way to separate the request
-  // for vectorization from the request for reassociating FP ops. We suppress
-  // the metadata here for loops where FP reordering would be harmful.
+  // FIXME: This is a workaround for
+  // https://github.com/llvm/llvm-project/issues/198726.
+  // llvm.loop.vectorize.enable=true has an additional property beyond
+  // requesting vectorization — it implicitly allows FP operation reordering.
+  // This is a limitation of the metadata format: there is no way to separate
+  // the request for vectorization from the request for reassociating FP ops.
+  // Once LoopVectorize is fixed to not reorder FP ops without explicit
+  // permission, this workaround can be removed.
+  // For now, skip vectorize.enable for dist=1 FP loops to avoid correctness
+  // failures from FP reassociation.
   bool SkipVectorizeEnableMetadata = hasLoopCarriedDependence(For, S);
 
   IV = createLoop(ValueLB, ValueUB, ValueInc, Builder, *GenLI, *GenDT,
