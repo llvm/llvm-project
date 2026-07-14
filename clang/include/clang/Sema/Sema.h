@@ -6417,7 +6417,12 @@ public:
                                      SourceLocation NameLoc,
                                      SourceLocation EllipsisLoc,
                                      const ParsedAttributesView &Attr,
-                                     MultiTemplateParamsArg TempParamLists);
+                                     MultiTemplateParamsArg TempParamLists,
+                                     TemplateIdAnnotation *TemplateId);
+
+  bool CheckDependentFriend(SourceLocation Loc, NestedNameSpecifierLoc NNSLoc,
+                            ArrayRef<TemplateParameterList *> TPL,
+                            bool IsInstantiation = false);
 
   MSPropertyDecl *HandleMSProperty(Scope *S, RecordDecl *TagD,
                                    SourceLocation DeclStart, Declarator &D,
@@ -13843,6 +13848,11 @@ public:
   TypeSourceInfo *SubstType(TypeLoc TL,
                             const MultiLevelTemplateArgumentList &TemplateArgs,
                             SourceLocation Loc, DeclarationName Entity);
+
+  TypeSourceInfo *
+  SubstFriendType(TypeSourceInfo *TSI,
+                  const MultiLevelTemplateArgumentList &TemplateArgs,
+                  SourceLocation Loc, DeclarationName Entity);
 
   /// A form of SubstType intended specifically for instantiating the
   /// type of a FunctionDecl.  Its purpose is solely to force the

@@ -2027,46 +2027,46 @@ LookupQualifiedFriendType(Sema &SemaRef, NestedNameSpecifierLoc QualifierLoc,
   return true;
 }
 
-static TypeSourceInfo *
-SubstDependentFriendType(Sema &SemaRef, TypeSourceInfo *TSI, SourceLocation Loc,
-                         const DeclarationName &Entity,
-                         const MultiLevelTemplateArgumentList &TemplateArgs) {
+TypeSourceInfo *
+Sema::SubstFriendType(TypeSourceInfo *TSI,
+                      const MultiLevelTemplateArgumentList &TemplateArgs,
+                      SourceLocation Loc, DeclarationName Entity) {
   TemplateSpecializationTypeLoc TSTL =
       TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>();
   NestedNameSpecifierLoc QualifierLoc =
       TSTL ? TSTL.getQualifierLoc() : NestedNameSpecifierLoc();
   if (!TSTL || !QualifierLoc ||
       !QualifierLoc.getNestedNameSpecifier().isDependent())
-    return SemaRef.SubstType(TSI, TemplateArgs, Loc, Entity);
+    return SubstType(TSI, TemplateArgs, Loc, Entity);
 
-  TemplateDecl *TD = TSTL.getTypePtr()->getTemplateName().getAsTemplateDecl();
-  if (!isa_and_nonnull<ClassTemplateDecl>(TD))
-    return SemaRef.SubstType(TSI, TemplateArgs, Loc, Entity);
+  const auto *FriendTST = TSTL.getTypePtr();
+  auto *FriendCTD = dyn_cast_or_null<ClassTemplateDecl>(
+      FriendTST->getTemplateName().getAsTemplateDecl());
+  if (!FriendCTD)
+    return SubstType(TSI, TemplateArgs, Loc, Entity);
 
-  QualifierLoc =
-      SemaRef.SubstNestedNameSpecifierLoc(QualifierLoc, TemplateArgs);
+  QualifierLoc = SubstNestedNameSpecifierLoc(QualifierLoc, TemplateArgs);
   if (!QualifierLoc)
     return nullptr;
 
-  TemplateName Template;
-  if (!LookupQualifiedFriendType(
-          SemaRef, QualifierLoc, TD->getDeclName(), TSTL.getTemplateNameLoc(),
-          TSTL.getTemplateKeywordLoc().isValid(), Template))
-    return SemaRef.SubstType(TSI, TemplateArgs, Loc, Entity);
+  TemplateName InstTemplate;
+  if (!LookupQualifiedFriendType(*this, QualifierLoc, FriendCTD->getDeclName(),
+                                 TSTL.getTemplateNameLoc(),
+                                 TSTL.getTemplateKeywordLoc().isValid(),
+                                 InstTemplate))
+    return SubstType(TSI, TemplateArgs, Loc, Entity);
 
-  SmallVector<TemplateArgumentLoc, 4> WrittenArgs;
+  SmallVector<TemplateArgumentLoc, 4> FriendArgs;
   for (unsigned I = 0, N = TSTL.getNumArgs(); I != N; ++I)
-    WrittenArgs.push_back(TSTL.getArgLoc(I));
+    FriendArgs.push_back(TSTL.getArgLoc(I));
 
   TemplateArgumentListInfo InstArgs(TSTL.getLAngleLoc(), TSTL.getRAngleLoc());
-  if (SemaRef.SubstTemplateArguments(WrittenArgs, TemplateArgs, InstArgs))
+  if (SubstTemplateArguments(FriendArgs, TemplateArgs, InstArgs))
     return nullptr;
 
-  QualType InstTy =
-      SemaRef.CheckTemplateIdType(TSTL.getTypePtr()->getKeyword(), Template,
-                                  TSTL.getTemplateNameLoc(), InstArgs,
-                                  /*Scope=*/nullptr,
-                                  /*ForNestedNameSpecifier=*/false);
+  QualType InstTy = CheckTemplateIdType(
+      FriendTST->getKeyword(), InstTemplate, TSTL.getTemplateNameLoc(),
+      InstArgs, /*Scope=*/nullptr, /*ForNestedNameSpecifier=*/false);
   if (InstTy.isNull())
     return nullptr;
 
@@ -2074,7 +2074,7 @@ SubstDependentFriendType(Sema &SemaRef, TypeSourceInfo *TSI, SourceLocation Loc,
   TLB.push<TemplateSpecializationTypeLoc>(InstTy).set(
       TSTL.getElaboratedKeywordLoc(), QualifierLoc,
       TSTL.getTemplateKeywordLoc(), TSTL.getTemplateNameLoc(), InstArgs);
-  return TLB.getTypeSourceInfo(SemaRef.Context, InstTy);
+  return TLB.getTypeSourceInfo(Context, InstTy);
 }
 
 template <typename FriendTy>
@@ -2132,8 +2132,8 @@ Decl *TemplateDeclInstantiator::VisitFriendDecl(FriendDecl *D) {
     if (D->isPackExpansion() && InstantiateFriendPackExpansion(D, Ty))
       return nullptr;
 
-    TypeSourceInfo *InstTy = SubstDependentFriendType(
-        SemaRef, Ty, D->getLocation(), DeclarationName(), TemplateArgs);
+    TypeSourceInfo *InstTy = SemaRef.SubstFriendType(
+        Ty, TemplateArgs, D->getLocation(), DeclarationName());
     if (!InstTy)
       return nullptr;
 
@@ -3302,14 +3302,14 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
 
   DeclContext *DC = Owner;
   if (isFriend) {
-    if (QualifierLoc) {
+    if (QualifierLoc && !QualifierLoc.getNestedNameSpecifier().isDependent()) {
       CXXScopeSpec SS;
       SS.Adopt(QualifierLoc);
       DC = SemaRef.computeDeclContext(SS);
 
       if (DC && SemaRef.RequireCompleteDeclContext(SS, DC))
         return nullptr;
-    } else {
+    } else if (!QualifierLoc) {
       DC = SemaRef.FindInstantiatedContext(D->getLocation(),
                                            D->getDeclContext(),
                                            TemplateArgs);
@@ -3452,12 +3452,22 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
         return nullptr;
     }
 
-    if (SemaRef.CheckFunctionTemplateSpecialization(
-            Method, DFTSI->TemplateArgumentsAsWritten ? &ExplicitArgs : nullptr,
-            Previous))
-      Method->setInvalidDecl();
-
-    IsExplicitSpecialization = true;
+    if (QualifierLoc && QualifierLoc.getNestedNameSpecifier().isDependent()) {
+      if (SemaRef.CheckDependentFunctionTemplateSpecialization(
+              Method,
+              DFTSI->TemplateArgumentsAsWritten ? &ExplicitArgs : nullptr,
+              Previous))
+        Method->setInvalidDecl();
+    } else {
+      if (Previous.empty())
+        SemaRef.LookupQualifiedName(Previous, DC);
+      if (SemaRef.CheckFunctionTemplateSpecialization(
+              Method,
+              DFTSI->TemplateArgumentsAsWritten ? &ExplicitArgs : nullptr,
+              Previous))
+        Method->setInvalidDecl();
+      IsExplicitSpecialization = true;
+    }
   } else if (const ASTTemplateArgumentListInfo *ArgsWritten =
                  D->getTemplateSpecializationArgsAsWritten()) {
     SemaRef.LookupQualifiedName(Previous, DC);
@@ -4799,53 +4809,66 @@ Decl *TemplateDeclInstantiator::VisitObjCAtDefsFieldDecl(ObjCAtDefsFieldDecl *D)
 }
 
 Decl *TemplateDeclInstantiator::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
-  ArrayRef<TemplateParameterList *> TPLists =
+  ArrayRef<TemplateParameterList *> FriendTPLs =
       D->getFriendTypeTemplateParameterLists();
 
-  Decl *FTD = nullptr;
-  if (TypeSourceInfo *FT = D->getFriendType()) {
-    if (D->isPackExpansion() && InstantiateFriendPackExpansion(D, FT, TPLists))
+  TypeSourceInfo *FriendTSI = D->getFriendType();
+  if (FriendTSI && D->isPackExpansion() &&
+      InstantiateFriendPackExpansion(D, FriendTSI, FriendTPLs))
+    return nullptr;
+
+  SmallVector<TemplateParameterList *, 1> InstTPLs;
+  if (SubstTemplateParameterLists(FriendTPLs, InstTPLs))
+    return nullptr;
+
+  NestedNameSpecifierLoc QualifierLoc =
+      FriendTSI ? FriendTSI->getTypeLoc().getPrefix()
+                : NestedNameSpecifierLoc();
+
+  NestedNameSpecifierLoc InstQualifierLoc = QualifierLoc;
+  if (QualifierLoc && QualifierLoc.getNestedNameSpecifier().isDependent()) {
+    InstQualifierLoc =
+        SemaRef.SubstNestedNameSpecifierLoc(QualifierLoc, TemplateArgs);
+    if (!InstQualifierLoc ||
+        SemaRef.CheckDependentFriend(D->getLocation(), InstQualifierLoc,
+                                     /*TPL=*/{}, /*IsInstantiation=*/true))
       return nullptr;
-
-    SmallVector<TemplateParameterList *, 1> TPL;
-    if (SubstTemplateParameterLists(TPLists, TPL))
-      return nullptr;
-
-    TemplateName Template;
-    if (auto DNT = FT->getTypeLoc().getAs<DependentNameTypeLoc>()) {
-      NestedNameSpecifierLoc QualifierLoc = SemaRef.SubstNestedNameSpecifierLoc(
-          DNT.getQualifierLoc(), TemplateArgs);
-      LookupQualifiedFriendType(SemaRef, QualifierLoc,
-                                DNT.getTypePtr()->getIdentifier(),
-                                DNT.getNameLoc(),
-                                /*HasTemplateKeyword=*/false, Template);
-    }
-
-    if (Template.isNull()) {
-      if (TypeSourceInfo *InstTy = SemaRef.SubstType(
-              FT, TemplateArgs, D->getLocation(), DeclarationName())) {
-        FTD =
-            FriendTemplateDecl::Create(SemaRef.Context, Owner, D->getLocation(),
-                                       InstTy, D->getFriendLoc(), TPL);
-      }
-    } else {
-      FTD = FriendTemplateDecl::Create(SemaRef.Context, Owner, D->getLocation(),
-                                       Template, D->getFriendLoc(), TPL);
-    }
-  } else {
-    SmallVector<TemplateParameterList *, 1> TPL;
-    if (SubstTemplateParameterLists(TPLists, TPL))
-      return nullptr;
-
-    if (auto *InstND = cast_or_null<NamedDecl>(SemaRef.FindInstantiatedDecl(
-            D->getLocation(), D->getFriendDecl(), TemplateArgs)))
-      FTD = FriendTemplateDecl::Create(SemaRef.Context, Owner, D->getLocation(),
-                                       InstND, D->getFriendLoc(), TPL);
   }
 
-  if (FTD) {
-    FTD->setAccess(AS_public);
-    Owner->addDecl(FTD);
+  FriendTemplateDecl *InstFriend = nullptr;
+  if (FriendTSI) {
+    TemplateName InstTemplate;
+    if (auto FriendDNT =
+            FriendTSI->getTypeLoc().getAs<DependentNameTypeLoc>()) {
+      LookupQualifiedFriendType(SemaRef, InstQualifierLoc,
+                                FriendDNT.getTypePtr()->getIdentifier(),
+                                FriendDNT.getNameLoc(),
+                                /*HasTemplateKeyword=*/false, InstTemplate);
+    }
+
+    if (InstTemplate.isNull()) {
+      if (TypeSourceInfo *InstFriendTSI = SemaRef.SubstType(
+              FriendTSI, TemplateArgs, D->getLocation(), DeclarationName())) {
+        InstFriend = FriendTemplateDecl::Create(SemaRef.Context, Owner,
+                                                D->getLocation(), InstFriendTSI,
+                                                D->getFriendLoc(), InstTPLs);
+      }
+    } else {
+      InstFriend =
+          FriendTemplateDecl::Create(SemaRef.Context, Owner, D->getLocation(),
+                                     InstTemplate, D->getFriendLoc(), InstTPLs);
+    }
+  } else {
+    if (auto *InstFriendDecl =
+            cast_or_null<NamedDecl>(Visit(D->getFriendDecl())))
+      InstFriend = FriendTemplateDecl::Create(SemaRef.Context, Owner,
+                                              D->getLocation(), InstFriendDecl,
+                                              D->getFriendLoc(), InstTPLs);
+  }
+
+  if (InstFriend) {
+    InstFriend->setAccess(AS_public);
+    Owner->addDecl(InstFriend);
   }
 
   return nullptr;

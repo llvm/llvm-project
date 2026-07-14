@@ -9554,6 +9554,15 @@ bool Sema::CheckDependentFunctionTemplateSpecialization(
 
   bool IsFriend = FD->getFriendObjectKind() != Decl::FOK_None;
   if (Previous.empty()) {
+    NestedNameSpecifier FriendQualifier = FD->getQualifier();
+    if (IsFriend && FriendQualifier && FriendQualifier.isDependent() &&
+        FriendQualifier.getKind() == NestedNameSpecifier::Kind::Type &&
+        FriendQualifier.getAsType()->getAs<TemplateSpecializationType>()) {
+      FD->setDependentTemplateSpecialization(
+          Context, Previous.asUnresolvedSet(), ExplicitTemplateArgs);
+      return false;
+    }
+
     Diag(FD->getLocation(), diag::err_dependent_function_template_spec_no_match)
         << IsFriend;
     for (auto &P : DiscardedCandidates)

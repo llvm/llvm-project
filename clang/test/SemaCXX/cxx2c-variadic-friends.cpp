@@ -154,3 +154,32 @@ void f() {
 }
 }
 
+namespace GH104057 {
+template <class... Vs> class X;
+
+template <class T> struct A {
+  template <class U> struct B {
+    static void f(X<int, long> &);
+  };
+};
+
+template <class... Vs> class X {
+  int n; // #GH104057-X-n
+
+  template <class T>
+  friend struct A<T>::template B<Vs>...;
+};
+
+template <class T>
+template <class U>
+void A<T>::B<U>::f(X<int, long> &x) {
+  x.n = 0;
+  // expected-error@-1 {{'n' is a private member of 'GH104057::X<int, long>'}}
+  //   expected-note@#GH104057-X-n {{implicitly declared private here}}
+}
+
+template struct A<char>::B<int>;
+template struct A<char>::B<long>;
+template struct A<char>::B<double>;
+// expected-note@-1 {{in instantiation of member function 'GH104057::A<char>::B<double>::f' requested here}}
+}

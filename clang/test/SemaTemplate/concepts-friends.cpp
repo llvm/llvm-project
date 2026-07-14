@@ -567,8 +567,8 @@ struct Test {
 
 }
 
-namespace DependentFriends {
-template <class T> concept X = requires { typename T::type; }; // #DependentFriends_X
+namespace GH104057 {
+template <class T> concept X = requires { typename T::type; }; // #GH104057_X
 
 struct A {
   using type = int;
@@ -577,7 +577,7 @@ struct B {};
 
 template <class T> struct C {
   static void f()
-    requires X<T>; // #DependentFriends_C_f
+    requires X<T>; // #GH104057_C_f
 };
 
 class D {
@@ -586,8 +586,8 @@ class D {
 };
 
 template <class T> struct E {
-  template <X U> // #DependentFriends_E_TPL
-  static void f() // #DependentFriends_E_f
+  template <X U> // #GH104057_E_TPL
+  static void f() // #GH104057_E_f
     requires X<T>;
 };
 
@@ -613,14 +613,14 @@ void test() {
   C<A>::f();
   C<B>::f();
   // expected-error@-1 {{invalid reference to function 'f': constraints not satisfied}}
-  //   expected-note@#DependentFriends_C_f {{because 'DependentFriends::B' does not satisfy 'X'}}
-  //   expected-note@#DependentFriends_X {{because 'typename T::type' would be invalid: no type named 'type' in 'DependentFriends::B'}}
+  //   expected-note@#GH104057_C_f {{because 'GH104057::B' does not satisfy 'X'}}
+  //   expected-note@#GH104057_X {{because 'typename T::type' would be invalid: no type named 'type' in 'GH104057::B'}}
 
   E<A>::f<A>();
   E<A>::f<B>();
   // expected-error@-1 {{no matching function for call to 'f'}}
-  //   expected-note@#DependentFriends_E_f {{candidate template ignored: constraints not satisfied}}
-  //   expected-note@#DependentFriends_E_TPL {{because 'DependentFriends::B' does not satisfy 'X'}}
-  //   expected-note@#DependentFriends_X {{because 'typename T::type' would be invalid: no type named 'type' in 'DependentFriends::B'}}
+  //   expected-note@#GH104057_E_f {{candidate template ignored: constraints not satisfied}}
+  //   expected-note@#GH104057_E_TPL {{because 'GH104057::B' does not satisfy 'X'}}
+  //   expected-note@#GH104057_X {{because 'typename T::type' would be invalid: no type named 'type' in 'GH104057::B'}}
 }
-}
+} // namespace GH104057
