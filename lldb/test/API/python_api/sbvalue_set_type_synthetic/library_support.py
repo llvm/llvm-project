@@ -14,7 +14,6 @@ class SessionInfoSynthetic:
 
     def update(self) -> bool:
         self.foos = self.valobj.GetChildMemberWithName("foos")
-        self.foos.GetTypeSynthetic()  # TODO: BUG in my PR - Puzzlingly this needs to be called for Set to take effect?
         self.foos.SetTypeSynthetic(
             lldb.SBTypeSynthetic.CreateWithClassName(
                 "library_support.FooHandleArraySynthetic"
@@ -25,7 +24,6 @@ class SessionInfoSynthetic:
         # print(self.foos.GetTypeSyntheticImplementation())
 
         self.bars = self.valobj.GetChildMemberWithName("bars")
-        self.bars.GetTypeSynthetic()  # TODO: Remove
         self.bars.SetTypeSynthetic(
             lldb.SBTypeSynthetic.CreateWithClassName(
                 "library_support.BarHandleArraySynthetic"

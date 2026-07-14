@@ -399,8 +399,8 @@ void SBValue::SetTypeSynthetic(lldb::SBTypeSynthetic &synthetic) {
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   lldb::ScriptedSyntheticChildrenSP synthetic_sp(synthetic.GetSP());
-  if (value_sp && synthetic_sp) {
-    value_sp->SetSyntheticChildren(synthetic_sp);
+  if (value_sp) {
+    value_sp->SetSyntheticChildrenOverride(synthetic_sp);
   }
 }
 

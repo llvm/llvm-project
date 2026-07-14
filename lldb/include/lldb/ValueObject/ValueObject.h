@@ -912,8 +912,17 @@ public:
     m_synthetic_children_sp = synth_sp;
   }
 
+  void SetSyntheticChildrenOverride(const lldb::SyntheticChildrenSP &synth_sp) {
+    if (synth_sp.get() == m_synthetic_children_override_sp.get())
+      return;
+    ClearUserVisibleData(eClearUserVisibleDataItemsSyntheticChildren);
+    m_synthetic_children_override_sp = synth_sp;
+  }
+
   lldb::SyntheticChildrenSP GetSyntheticChildren() {
     UpdateFormatsIfNeeded();
+    if (m_synthetic_children_override_sp)
+      return m_synthetic_children_override_sp;
     return m_synthetic_children_sp;
   }
 
@@ -1122,7 +1131,13 @@ protected:
   uint32_t m_last_format_mgr_revision = 0;
   lldb::TypeSummaryImplSP m_type_summary_sp;
   lldb::TypeFormatImplSP m_type_format_sp;
+
+  /// As determined by `DataVisualization` - may be overridden
   lldb::SyntheticChildrenSP m_synthetic_children_sp;
+
+  /// Sticky override of `m_synthetic_children_sp`
+  lldb::SyntheticChildrenSP m_synthetic_children_override_sp;
+
   ProcessModID m_user_id_of_forced_summary;
   AddressType m_address_type_of_ptr_or_ref_children = eAddressTypeInvalid;
 
