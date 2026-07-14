@@ -1257,8 +1257,12 @@ public:
   const CallExpr* getTrylockCallExpr(const Stmt *Cond, LocalVarContext C,
                                      bool &Negate);
 
-  std::pair<const CallExpr *, const NamedDecl *>
-  getTerminatorTrylockCall(const CFGBlock *Block, bool &Negate);
+  using TerminatorTrylockCall =
+      std::tuple<const CallExpr *, const NamedDecl *,
+                 std::optional<llvm::scope_exit<std::function<void()>>>>;
+
+  TerminatorTrylockCall getTerminatorTrylockCall(const CFGBlock *Block,
+                                                 bool &Negate);
 
   void getEdgeLockset(FactSet &Result, const FactSet &ExitSet,
                       const CFGBlock* PredBlock,
@@ -1679,11 +1683,12 @@ const CallExpr* ThreadSafetyAnalyzer::getTrylockCallExpr(const Stmt *Cond,
 /// in a local variable), return that call and its callee. \p Negate is set if
 /// the branch tests the negated result of the call. In beta mode, this leaves
 /// the local variable lookup closure of SExprBuilder installed so that callers
-/// can translate the callee's attribute expressions; callers are responsible
-/// for clearing it.
-std::pair<const CallExpr *, const NamedDecl *>
+/// can translate the callee's attribute expressions
+ThreadSafetyAnalyzer::TerminatorTrylockCall
 ThreadSafetyAnalyzer::getTerminatorTrylockCall(const CFGBlock *Block,
                                                bool &Negate) {
+  assert(!Negate && "Must be called with Negate initialized to false");
+
   const Stmt *Cond = Block->getTerminatorCondition();
   // We don't acquire try-locks on ?: branches, only when its result is used.
   if (!Cond || isa<ConditionalOperator>(Block->getTerminatorStmt()))
@@ -1691,12 +1696,14 @@ ThreadSafetyAnalyzer::getTerminatorTrylockCall(const CFGBlock *Block,
 
   const LocalVarContext &LVarCtx = BlockInfo[Block->getBlockID()].ExitContext;
 
+  std::optional<llvm::scope_exit<std::function<void()>>> Cleanup;
   if (Handler.issueBetaWarnings()) {
     // Temporarily set the lookup context for SExprBuilder.
     SxBuilder.setLookupLocalVarExpr(
         [this, Ctx = LVarCtx](const NamedDecl *D) mutable -> const Expr * {
           return LocalVarMap.lookupExpr(D, Ctx);
         });
+    Cleanup.emplace([this] { SxBuilder.setLookupLocalVarExpr(nullptr); });
   }
 
   const auto *Exp = getTrylockCallExpr(Cond, LVarCtx, Negate);
@@ -1707,7 +1714,7 @@ ThreadSafetyAnalyzer::getTerminatorTrylockCall(const CFGBlock *Block,
   if (!FunDecl || !FunDecl->hasAttr<TryAcquireCapabilityAttr>())
     return {};
 
-  return {Exp, FunDecl};
+  return {Exp, FunDecl, std::move(Cleanup)};
 }
 
 /// Find the lockset that holds on the edge between PredBlock
@@ -1720,10 +1727,7 @@ void ThreadSafetyAnalyzer::getEdgeLockset(FactSet &Result,
   Result = ExitSet;
 
   bool Negate = false;
-  llvm::scope_exit Cleanup(
-      [this] { SxBuilder.setLookupLocalVarExpr(nullptr); });
-
-  auto [Exp, FunDecl] = getTerminatorTrylockCall(PredBlock, Negate);
+  auto [Exp, FunDecl, Cleanup] = getTerminatorTrylockCall(PredBlock, Negate);
   if (!Exp)
     return;
 
@@ -1752,10 +1756,7 @@ void ThreadSafetyAnalyzer::getEdgeLockset(FactSet &Result,
 void ThreadSafetyAnalyzer::getTerminatorTrylockCaps(const CFGBlock *Block,
                                                     CapExprSet &Caps) {
   bool Negate = false;
-  llvm::scope_exit Cleanup(
-      [this] { SxBuilder.setLookupLocalVarExpr(nullptr); });
-
-  auto [Exp, FunDecl] = getTerminatorTrylockCall(Block, Negate);
+  auto [Exp, FunDecl, Cleanup] = getTerminatorTrylockCall(Block, Negate);
   if (!Exp)
     return;
 

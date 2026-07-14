@@ -2041,7 +2041,9 @@ struct TestTryLock {
     mu.Unlock();
   }
 
-  void foo3_warn_stmtexpr() {
+  // Mimic the logic of the previous test, but in a statement expression.
+  // This pattern is typically found in macros.
+  void foo3_double_branch_statement_expression() {
     if (({ bool failed = !mu.TryLock(); if (failed) cond = true; failed; }))
       return;
     a = 3;
