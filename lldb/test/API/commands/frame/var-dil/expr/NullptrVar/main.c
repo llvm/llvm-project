@@ -1,3 +1,5 @@
+int nullptr = 1;
+
 void stop() {}
 
 int main(int argc, char **argv) {
