@@ -111,3 +111,57 @@ else:
   %res = phi i64 [ %v, %cont ], [ 0, %entry ]
   ret i64 %res
 }
+
+; InstCombine canonicalizes the sign checks %b <s 0, %c <s 0 and %d <s 0 into a
+; single (%b & %c & %d) <s 0 test.
+define noundef i64 @and_slt_canonicalization(ptr noundef %p, i64 noundef %a, i64 noundef %b, i64 noundef %c, i64 noundef %d) {
+; CHECK-LABEL: define noundef i64 @and_slt_canonicalization(
+; CHECK-SAME: ptr nofree noundef readonly captures(none) [[P:%.*]], i64 noundef [[A:%.*]], i64 noundef [[B:%.*]], i64 noundef [[C:%.*]], i64 noundef [[D:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[CMP_3:%.*]] = icmp slt i64 [[A]], [[B]]
+; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[C]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], [[D]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i64 [[TMP1]], 0
+; CHECK-NEXT:    [[AND_3:%.*]] = and i1 [[CMP_3]], [[TMP2]]
+; CHECK-NEXT:    br i1 [[AND_3]], label %[[CONT:.*]], label %[[ELSE:.*]]
+; CHECK:       [[CONT]]:
+; CHECK-NEXT:    [[OOB:%.*]] = icmp sgt i64 [[A]], -1
+; CHECK-NEXT:    br i1 [[OOB]], label %[[TRAP:.*]], label %[[CONT1:.*]]
+; CHECK:       [[TRAP]]:
+; CHECK-NEXT:    tail call void @llvm.trap()
+; CHECK-NEXT:    unreachable
+; CHECK:       [[CONT1]]:
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[D]]
+; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
+; CHECK-NEXT:    br label %[[ELSE]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[V]], %[[CONT1]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+entry:
+  %cmp.1 = icmp slt i64 %b, 0
+  %cmp.2 = icmp slt i64 %c, 0
+  %cmp.3 = icmp slt i64 %a, %b
+  %cmp.4 = icmp slt i64 %d, 0
+  %and.1 = and i1 %cmp.1, %cmp.2
+  %and.2 = and i1 %and.1, %cmp.3
+  %and.3 = and i1 %and.2, %cmp.4
+  br i1 %and.3, label %then, label %else
+
+then:
+  %oob = icmp sge i64 %a, 0
+  br i1 %oob, label %trap, label %cont
+
+trap:
+  call void @llvm.trap()
+  br label %cont
+
+cont:
+  %arrayidx = getelementptr inbounds i64, ptr %p, i64 %d
+  %v = load i64, ptr %arrayidx, align 8
+  br label %else
+
+else:
+  %res = phi i64 [ %v, %cont ], [ 0, %entry ]
+  ret i64 %res
+}
