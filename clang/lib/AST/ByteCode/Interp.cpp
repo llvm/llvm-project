@@ -762,11 +762,10 @@ bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
         // Diagnose as non-const read.
         diagnoseNonConstVariable(S, OpPC, VD);
       } else {
-        const SourceInfo &Loc = S.Current->getSource(OpPC);
         // Diagnose as "read of object outside its lifetime".
-        S.FFDiag(Loc, diag::note_constexpr_access_uninit)
+        S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_uninit)
             << AK << /*IsIndeterminate=*/false;
-        S.Note(VD->getLocation(), diag::note_declared_at);
+        S.Note(VD->getFirstDecl()->getLocation(), diag::note_declared_at);
       }
       return false;
     }

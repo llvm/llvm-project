@@ -152,7 +152,8 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
     InvalidTypeKind = CountedByInvalidPointeeTypeKind::SIZELESS;
   } else if (PointeeTy->isFunctionType()) {
     InvalidTypeKind = CountedByInvalidPointeeTypeKind::FUNCTION;
-  } else if (PointeeTy->isStructureTypeWithFlexibleArrayMember()) {
+  } else if (PointeeTy->isStructureTypeWithFlexibleArrayMember() &&
+             !CountInBytes) {
     if (FieldTy->isArrayType() && !getLangOpts().BoundsSafety) {
       // This is a workaround for the Linux kernel that has already adopted
       // `counted_by` on a FAM where the pointee is a struct with a FAM. This
