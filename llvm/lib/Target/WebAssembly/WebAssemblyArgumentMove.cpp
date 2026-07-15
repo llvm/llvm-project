@@ -29,7 +29,11 @@
 #include "WebAssembly.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -37,10 +41,10 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm-argument-move"
 
 namespace {
-class WebAssemblyArgumentMove final : public MachineFunctionPass {
+class WebAssemblyArgumentMoveLegacy final : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
-  WebAssemblyArgumentMove() : MachineFunctionPass(ID) {}
+  WebAssemblyArgumentMoveLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return "WebAssembly Argument Move"; }
 
@@ -55,15 +59,15 @@ public:
 };
 } // end anonymous namespace
 
-char WebAssemblyArgumentMove::ID = 0;
-INITIALIZE_PASS(WebAssemblyArgumentMove, DEBUG_TYPE,
+char WebAssemblyArgumentMoveLegacy::ID = 0;
+INITIALIZE_PASS(WebAssemblyArgumentMoveLegacy, DEBUG_TYPE,
                 "Move ARGUMENT instructions for WebAssembly", false, false)
 
-FunctionPass *llvm::createWebAssemblyArgumentMove() {
-  return new WebAssemblyArgumentMove();
+FunctionPass *llvm::createWebAssemblyArgumentMoveLegacyPass() {
+  return new WebAssemblyArgumentMoveLegacy();
 }
 
-bool WebAssemblyArgumentMove::runOnMachineFunction(MachineFunction &MF) {
+static bool argumentMove(MachineFunction &MF) {
   LLVM_DEBUG({
     dbgs() << "********** Argument Move **********\n"
            << "********** Function: " << MF.getName() << '\n';
@@ -91,4 +95,16 @@ bool WebAssemblyArgumentMove::runOnMachineFunction(MachineFunction &MF) {
   }
 
   return Changed;
+}
+
+bool WebAssemblyArgumentMoveLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return argumentMove(MF);
+}
+
+PreservedAnalyses
+WebAssemblyArgumentMovePass::run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM) {
+  return argumentMove(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                .preserveSet<CFGAnalyses>()
+                          : PreservedAnalyses::all();
 }

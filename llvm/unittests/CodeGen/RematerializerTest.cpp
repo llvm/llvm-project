@@ -10,6 +10,7 @@
 #include "CodeGenTestBase.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/RegisterPressure.h"
+#include "llvm/Config/Targets.h"
 #include "llvm/Support/TargetSelect.h"
 
 using namespace llvm;
@@ -459,7 +460,7 @@ TEST_F(RematerializerTest, EmptyRegion) {
 /// Checks that only registers with a single definition are rematerializable,
 /// even when registers are made up of multiple sub-registers each with their
 /// own definition.
-TEST_F(RematerializerTest, SubReg) {
+TEST_F(RematerializerTest, SubRegRematSupport) {
   StringRef MIRBody = R"MIR(
   bb.0:
     undef %01.sub0:vreg_64_align2 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
@@ -468,10 +469,21 @@ TEST_F(RematerializerTest, SubReg) {
     undef %2.sub0:vreg_64_align2 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode
 
     undef %34.sub0:vreg_64_align2 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode
-
+    
+    undef %56.sub0:sreg_64 = S_MOV_B32 5
+    %56.sub1:sreg_64 = S_MOV_B32 6, implicit-def $m0    
+    
+    undef %78.sub0:sreg_64 = S_MOV_B32 7
+    S_NOP 0, implicit %78.sub0
+    %78.sub1:sreg_64 = S_MOV_B32 8
+    
+    undef %99.sub0:sreg_64 = S_MOV_B32 9
+    %99.sub1:sreg_64 = S_MOV_B32 %99.sub0
+    
   bb.1:
     %34.sub1:vreg_64_align2 = nofpexcept V_CVT_I32_F64_e32 4, implicit $exec, implicit $mode
-    S_NOP 0, implicit %01, implicit %2, implicit %34
+
+    S_NOP 0, implicit %01, implicit %2, implicit %34, implicit %56, implicit %78, implicit %99
     S_ENDPGM 0
 )MIR";
   rematerializerTest(MIRBody, [](RematerializerWrapper &RW) {
@@ -479,6 +491,15 @@ TEST_F(RematerializerTest, SubReg) {
 
     const unsigned MBB0 = 0, MBB1 = 1;
     const RegisterIdx Cst2 = 0;
+
+    // - %01 is not rematerializable because it has multiplie definitions.
+    // - %34 is not rematerializable because it is defined over multiple
+    // regions.
+    // - %56 is not rematerializable because the second defining MI is
+    // unrematerializable due to the implicit def.
+    // - %78 is not rematerializable because it is read by an MI not defining it
+    // before its last definition.
+    // - %99 is not rematerializable because it has multiplie definitions.
 
     RegisterIdx RematCst2 = RW->rematerializeToRegion(Cst2, MBB1, DRI);
     RW.moveMIs(MBB0, MBB1, 1);
@@ -640,33 +661,137 @@ TEST_F(RematerializerTest, RollbackInvalidInsertPos) {
     const unsigned MBB0 = 0, MBB1 = 1;
     const RegisterIdx Cst0 = 0, Cst1 = 1, Cst2 = 2, Cst3 = 3;
 
-    // Rematerialize %0 to MBB1, deleting the original register.
-    RW->rematerializeToRegion(Cst0, MBB1, DRI);
-    RW.moveMIs(MBB0, MBB1, 1);
-    ASSERT_REGION_SIZES();
+    auto RematToMBB1 = [&](RegisterIdx RegIdx) -> void {
+      // Rematerialize %RegIdx to MBB1, deleting the original register.
+      RW->rematerializeToRegion(RegIdx, MBB1, DRI.clear());
+      RW.moveMIs(MBB0, MBB1, 1);
+      ASSERT_REGION_SIZES();
+    };
 
-    // Rematerialize %1 to MBB1, deleting the original register.
-    RW->rematerializeToRegion(Cst1, MBB1, DRI.clear());
-    RW.moveMIs(MBB0, MBB1, 1);
-    ASSERT_REGION_SIZES();
+    auto GetNextMI = [&](MachineInstr *MI) -> MachineInstr * {
+      return &*std::next(MI->getIterator());
+    };
 
-    // Rematerialize %2 to MBB1, deleting the original register.
-    RW->rematerializeToRegion(Cst2, MBB1, DRI.clear());
-    RW.moveMIs(MBB0, MBB1, 1);
-    ASSERT_REGION_SIZES();
+    auto RollbackAndCheckOriginalOrder = [&]() -> void {
+      // Rollback and check for correct instruction order in the original
+      // defining region. The asserts on region sizes ensure that all original
+      // registers were indeed deleted and will be re-created in the original
+      // region.
+      Rollback.rollback(*RW);
+      RW.moveMIs(MBB1, MBB0, 3);
+      ASSERT_REGION_SIZES();
 
-    // Now rollback and check for correct instruction order in the original
-    // defining region.
+      MachineInstr *DefCst0 = RW->getReg(Cst0).DefMI;
+      MachineInstr *DefCst1 = RW->getReg(Cst1).DefMI;
+      MachineInstr *DefCst2 = RW->getReg(Cst2).DefMI;
+      MachineInstr *DefCst3 = RW->getReg(Cst3).DefMI;
+      EXPECT_EQ(GetNextMI(DefCst0), DefCst1);
+      EXPECT_EQ(GetNextMI(DefCst1), DefCst2);
+      EXPECT_EQ(GetNextMI(DefCst2), DefCst3);
+    };
+
+    // Test every possible rematerialization order.
+
+    RematToMBB1(Cst0);
+    RematToMBB1(Cst1);
+    RematToMBB1(Cst2);
+    RollbackAndCheckOriginalOrder();
+
+    RematToMBB1(Cst0);
+    RematToMBB1(Cst2);
+    RematToMBB1(Cst1);
+    RollbackAndCheckOriginalOrder();
+
+    RematToMBB1(Cst1);
+    RematToMBB1(Cst0);
+    RematToMBB1(Cst2);
+    RollbackAndCheckOriginalOrder();
+
+    RematToMBB1(Cst1);
+    RematToMBB1(Cst2);
+    RematToMBB1(Cst0);
+    RollbackAndCheckOriginalOrder();
+
+    RematToMBB1(Cst2);
+    RematToMBB1(Cst0);
+    RematToMBB1(Cst1);
+    RollbackAndCheckOriginalOrder();
+
+    RematToMBB1(Cst2);
+    RematToMBB1(Cst1);
+    RematToMBB1(Cst0);
+    RollbackAndCheckOriginalOrder();
+  });
+}
+
+/// Checks that rollback re-creates MIs in the correct order when the next MI
+/// after a deleted one is a rematerialization of another MI.
+TEST_F(RematerializerTest, RollbackNextPosIsRemat) {
+  StringRef MIRBody = R"MIR(
+  bb.0:
+    %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
+    %1:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
+    
+  bb.1:
+    %2:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode
+    S_NOP 0, implicit %0
+
+  bb.2:
+    %3:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode
+    S_NOP 0, implicit %1
+
+  bb.3:
+    S_NOP 0, implicit %2, implicit %3
+    S_ENDPGM 0
+)MIR";
+  rematerializerTest(MIRBody, [](RematerializerWrapper &RW) {
+    Rematerializer::DependencyReuseInfo DRI;
+    Rollbacker Rollback;
+
+    const unsigned MBB1 = 1, MBB2 = 2, MBB3 = 3;
+    const RegisterIdx Cst0 = 0, Cst1 = 1, Cst2 = 2, Cst3 = 3;
+
+    MachineInstr *Nop1 = &*std::prev(RW.MF.getBlockNumbered(1)->end());
+    MachineInstr *Nop2 = &*std::prev(RW.MF.getBlockNumbered(2)->end());
+    MachineInstr *Nop3 =
+        &*std::prev(std::prev(RW.MF.getBlockNumbered(3)->end()));
+
+    auto ExpectSeq = [](MachineInstr *MI, MachineInstr *ExpectedNext) {
+      MachineInstr *ActualNext = &*std::next(MI->getIterator());
+      EXPECT_EQ(ActualNext, ExpectedNext);
+    };
+
+    // This rematerialization is created right after %2, which is later
+    // rematerialized. It is *not* recorded by the rollbacker.
+    RegisterIdx RematCst0 = RW->rematerializeToRegion(Cst0, MBB1, DRI.clear());
+    ExpectSeq(RW->getReg(Cst2).DefMI, RW->getReg(RematCst0).DefMI);
+    ExpectSeq(RW->getReg(RematCst0).DefMI, Nop1);
+
+    RW->addListener(&Rollback);
+
+    // This rematerialization is created right after %3, which is later
+    // rematerialized. It is recorded by the rollbacker.
+    RegisterIdx RematCst1 = RW->rematerializeToRegion(Cst1, MBB2, DRI.clear());
+    ExpectSeq(RW->getReg(Cst3).DefMI, RW->getReg(RematCst1).DefMI);
+    ExpectSeq(RW->getReg(RematCst1).DefMI, Nop2);
+
+    RegisterIdx RematCst2 = RW->rematerializeToRegion(Cst2, MBB3, DRI.clear());
+    RegisterIdx RematCst3 = RW->rematerializeToRegion(Cst3, MBB3, DRI.clear());
+
+    ExpectSeq(RW->getReg(RematCst2).DefMI, RW->getReg(RematCst3).DefMI);
+    ExpectSeq(RW->getReg(RematCst3).DefMI, Nop3);
+
+    // After rollback, %2 and %3 should be re-created at the beginning of their
+    // respective original region.
     Rollback.rollback(*RW);
-    RW.moveMIs(MBB1, MBB0, 3);
-    ASSERT_REGION_SIZES();
 
-    MachineInstr &DefCst0 = *RW->getReg(Cst0).DefMI;
-    MachineInstr &DefCst1 = *RW->getReg(Cst1).DefMI;
-    MachineInstr &DefCst2 = *RW->getReg(Cst2).DefMI;
-    MachineInstr &DefCst3 = *RW->getReg(Cst3).DefMI;
-    EXPECT_EQ(std::next(DefCst0.getIterator()), DefCst1.getIterator());
-    EXPECT_EQ(std::next(DefCst1.getIterator()), DefCst2.getIterator());
-    EXPECT_EQ(std::next(DefCst2.getIterator()), DefCst3.getIterator());
+    // The rematerialization of %0 was not recorded so isn't rolled back, %2 is
+    // re-created right before it.
+    ExpectSeq(RW->getReg(Cst2).DefMI, RW->getReg(RematCst0).DefMI);
+    ExpectSeq(RW->getReg(RematCst0).DefMI, Nop1);
+
+    // The rematerialization of %1 was recorded so is rolled back, %3 is
+    // re-created before the S_NOP in its region.
+    ExpectSeq(RW->getReg(Cst3).DefMI, Nop2);
   });
 }

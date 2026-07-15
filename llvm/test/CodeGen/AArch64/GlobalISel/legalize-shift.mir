@@ -552,3 +552,27 @@ body:             |
     $w0 = COPY %d2(s32)
 
 ...
+---
+name: test_lshr_i48
+body:             |
+  bb.1.entry:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: test_lshr_i48
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](i64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[TRUNC]], [[C]](i64)
+    ; CHECK-NEXT: $w0 = COPY [[LSHR]](i32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %1:_(i64) = COPY $x0
+    %0:_(i48) = G_TRUNC %1(i64)
+    %6:_(i32) = G_TRUNC %0(i48)
+    %2:_(i48) = G_CONSTANT i48 1
+    %7:_(i32) = G_LSHR %6, %2(i48)
+    $w0 = COPY %7(i32)
+    RET_ReallyLR implicit $w0
+
+...
