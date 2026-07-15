@@ -2571,6 +2571,17 @@ LogicalResult TargetDataOp::verify() {
   return verifyMapClause(*this, getMapVars(), getMapIterated());
 }
 
+// Adapted from fir.if implementation.
+void TargetDataOp::getSuccessorRegions(
+  mlir::RegionBranchPoint point, 
+  llvm::SmallVectorImpl<::mlir::RegionSuccessor>& regions) {
+  if (!point.isParent()) {
+    regions.push_back(mlir::RegionSuccessor::parent());
+    return;
+  }
+  regions.push_back(mlir::RegionSuccessor(&getRegion()));
+}
+
 //===----------------------------------------------------------------------===//
 // TargetEnterDataOp
 //===----------------------------------------------------------------------===//
@@ -2851,6 +2862,17 @@ LogicalResult TargetOp::verifyRegions() {
   }
 
   return success();
+}
+
+// Copy from `TargetDataOp::getSuccessorRegions`
+void TargetOp::getSuccessorRegions(
+  mlir::RegionBranchPoint point, 
+  llvm::SmallVectorImpl<::mlir::RegionSuccessor>& regions) {
+  if (!point.isParent()) {
+    regions.push_back(mlir::RegionSuccessor::parent());
+    return;
+  }
+  regions.push_back(mlir::RegionSuccessor(&getRegion()));
 }
 
 //===----------------------------------------------------------------------===//
