@@ -21,6 +21,8 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/Support/ConvertUTF.h"
+#include <algorithm>
 #include <numeric>
 
 namespace clang {
@@ -107,26 +109,38 @@ public:
     SmallVector<size_t, 16> ElementIndicies(NumElements);
     std::iota(ElementIndicies.begin(), ElementIndicies.end(), 0);
 
+    // Precompute the UTF-16 form of each string key. The runtime stores keys as
+    // UTF-16 and looks them up by UTF-16 code-unit order, so we must sort by the
+    // same order here. Sorting by the raw UTF-8 bytes instead would diverge for
+    // keys mixing characters in U+E000..U+FFFF with astral characters
+    // (U+10000..U+10FFFF), because UTF-16 encodes the latter with lead
+    // surrogates (0xD800..0xDBFF) that sort *below* 0xE000 -- causing the
+    // runtime's lookup to miss keys that are actually present.
+    SmallVector<SmallVector<llvm::UTF16, 16>, 16> KeysUTF16(NumElements);
+    for (size_t I = 0; I < NumElements; ++I) {
+      Expr *const K = E->getKeyValueElement(I).Key->IgnoreImpCasts();
+      auto *SL = dyn_cast<ObjCStringLiteral>(K);
+      assert(SL && "Non-constant literals should not be sorted to "
+                   "maintain existing behavior");
+      // NOTE: Using the `StringLiteral->getString()` since it checks that
+      //       `chars` are 1 byte
+      StringRef KS = SL->getString()->getString();
+      bool OK = llvm::convertUTF8ToUTF16String(KS, KeysUTF16[I]);
+      (void)OK;
+      assert(OK && "constant dictionary key is not well-formed UTF-8");
+    }
+
     // Now perform the sorts and shift the indicies as needed
     std::stable_sort(
         ElementIndicies.begin(), ElementIndicies.end(),
-        [E, O](size_t LI, size_t RI) {
-          Expr *const LK = E->getKeyValueElement(LI).Key->IgnoreImpCasts();
-          Expr *const RK = E->getKeyValueElement(RI).Key->IgnoreImpCasts();
-
-          if (!isa<ObjCStringLiteral>(LK) || !isa<ObjCStringLiteral>(RK))
-            llvm_unreachable("Non-constant literals should not be sorted to "
-                             "maintain existing behavior");
-
-          // NOTE: Using the `StringLiteral->getString()` since it checks that
-          //       `chars` are 1 byte
-          StringRef LKS = cast<ObjCStringLiteral>(LK)->getString()->getString();
-          StringRef RKS = cast<ObjCStringLiteral>(RK)->getString()->getString();
-
-          // Do an alpha sort to aid in with de-dupe at link time
-          // `O(log n)` worst case lookup at runtime supported by `Foundation`
+        [O, &KeysUTF16](size_t LI, size_t RI) {
+          // Sort by UTF-16 code unit to match the runtime's lookup order. This
+          // is a deterministic total order, so it still aids link-time de-dupe,
+          // and it supports the runtime's `O(log n)` worst-case lookup.
           if (O == Options::Sorted)
-            return LKS < RKS;
+            return std::lexicographical_compare(
+                KeysUTF16[LI].begin(), KeysUTF16[LI].end(),
+                KeysUTF16[RI].begin(), KeysUTF16[RI].end());
           llvm_unreachable("Unexpected `NSDictionaryBuilder::Options given");
         });
 
