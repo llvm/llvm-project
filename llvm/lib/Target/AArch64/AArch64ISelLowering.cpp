@@ -2521,7 +2521,7 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
 
   // Mark floating-point truncating stores/extending loads as having custom
   // lowering
-  if (VT.isFloatingPoint() && !VT.isVectorOf(MVT::bf16)) {
+  if (VT.getScalarType() == MVT::f32 || VT.getScalarType() == MVT::f64) {
     MVT InnerVT = VT.changeVectorElementType(MVT::f16);
     while (InnerVT != VT) {
       setTruncStoreAction(VT, InnerVT, Custom);
@@ -7521,7 +7521,8 @@ SDValue AArch64TargetLowering::LowerMLOAD(SDValue Op, SelectionDAG &DAG) const {
   assert(LoadNode && "Expected custom lowering of a masked load node");
   EVT VT = Op->getValueType(0);
 
-  if (useSVEForFixedLengthVectorVT(VT, /*OverrideNEON=*/true))
+  if (useSVEForFixedLengthVectorVT(VT, /*OverrideNEON=*/true,
+                                   /*AllowBF16=*/true))
     return LowerFixedLengthVectorMLoadToSVE(Op, DAG);
 
   SDValue PassThru = LoadNode->getPassThru();
@@ -8835,8 +8836,9 @@ bool AArch64TargetLowering::mergeStoresAfterLegalization(EVT VT) const {
   return !Subtarget->useSVEForFixedLengthVectors();
 }
 
-bool AArch64TargetLowering::useSVEForFixedLengthVectorVT(
-    EVT VT, bool OverrideNEON) const {
+bool AArch64TargetLowering::useSVEForFixedLengthVectorVT(EVT VT,
+                                                         bool OverrideNEON,
+                                                         bool AllowBF16) const {
   if (!VT.isFixedLengthVector() || !VT.isSimple())
     return false;
 
@@ -8848,8 +8850,9 @@ bool AArch64TargetLowering::useSVEForFixedLengthVectorVT(
   default:
     return false;
   case MVT::bf16:
-    return OverrideNEON && (VT.is128BitVector() || VT.is64BitVector()) &&
-           Subtarget->isSVEorStreamingSVEAvailable();
+    if (!AllowBF16)
+      return false;
+    [[fallthrough]];
   case MVT::i8:
   case MVT::i16:
   case MVT::i32:
