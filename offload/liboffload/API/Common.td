@@ -39,6 +39,14 @@ def OL_APIEXPORT : Macro {
   let alt_value = "";
 }
 
+def OL_NODISCARD : Macro {
+  let desc = "Marks a function whose result should not be discarded";
+  let condition = "(defined(__cplusplus) && __cplusplus >= 201703L) || "
+                  "(defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L)";
+  let value = "[[nodiscard]]";
+  let alt_value = "";
+}
+
 def ol_platform_handle_t : Handle {
   let desc = "Handle of a platform instance";
 }
@@ -155,6 +163,7 @@ def OL_INIT_ARGS_INIT : Macro {
 
 def olInit : Function {
   let desc = "Perform initialization of the Offload library";
+  let nodiscard = 1;
   let details = [
     "This must be the first API call made by a user of the Offload library",
     "Each call will increment an internal reference count that is decremented by `olShutDown`",

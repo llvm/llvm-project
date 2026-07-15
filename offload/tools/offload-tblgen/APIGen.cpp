@@ -109,6 +109,8 @@ static void ProcessFunction(const FunctionRec &F, raw_ostream &OS) {
     }
   }
 
+  if (F.isNodiscard())
+    OS << "OL_NODISCARD ";
   OS << formatv("{0}_APIEXPORT {1}_result_t {0}_APICALL ", PrefixUpper,
                 PrefixLower);
   OS << F.getName();
@@ -212,9 +214,10 @@ static void ProcessFuncWithCodeLocVariant(const FunctionRec &Func,
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of {0} that also sets source code location information
 /// @details See also ::{0}
-OL_APIEXPORT ol_result_t OL_APICALL {0}WithCodeLoc(
+{1}OL_APIEXPORT ol_result_t OL_APICALL {0}WithCodeLoc(
 )";
-  OS << formatv(FuncWithCodeLocBegin, Func.getName());
+  OS << formatv(FuncWithCodeLocBegin, Func.getName(),
+                Func.isNodiscard() ? "OL_NODISCARD " : "");
   auto Params = Func.getParams();
   for (auto &Param : Params) {
     OS << "  " << Param.getType() << " " << Param.getName();

@@ -154,6 +154,10 @@ class Function : APIObject {
   list<string> details = [];
   list<string> analogues = [];
 
+  // When set, the generated function declaration is marked with OL_NODISCARD
+  // so the compiler warns if the returned result is ignored.
+  bit nodiscard = 0;
+
   list<Return> returns_with_def = !listconcat(DefaultReturns, returns);
   list<Return> all_returns = AddPointerChecksToReturns<params,
         AddHandleChecksToReturns<params, returns_with_def>.returns_out>.returns_out;

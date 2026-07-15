@@ -225,6 +225,7 @@ public:
   std::vector<StringRef> getAnalogues() const {
     return rec->getValueAsListOfStrings("analogues");
   }
+  bool isNodiscard() const { return rec->getValueAsBit("nodiscard"); }
 
 private:
   std::vector<ReturnRec> rets;
