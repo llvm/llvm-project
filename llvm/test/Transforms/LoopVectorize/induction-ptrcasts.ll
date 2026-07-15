@@ -9,7 +9,8 @@ define void @int_iv_based_on_pointer_iv(ptr %A) {
 ; VF1-SAME: ptr [[A:%.*]]) {
 ; VF1-NEXT:  [[ENTRY:.*:]]
 ; VF1-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 add (i64 ptrtoint (ptr @f to i64), i64 -4), i64 0)
-; VF1-NEXT:    [[TMP0:%.*]] = sub i64 add (i64 ptrtoint (ptr @f to i64), i64 -1), [[SMIN]]
+; VF1-NEXT:    [[TMP6:%.*]] = sub i64 ptrtoint (ptr @f to i64), [[SMIN]]
+; VF1-NEXT:    [[TMP0:%.*]] = add i64 [[TMP6]], -1
 ; VF1-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 2
 ; VF1-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
 ; VF1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 2
@@ -17,13 +18,12 @@ define void @int_iv_based_on_pointer_iv(ptr %A) {
 ; VF1:       [[VECTOR_PH]]:
 ; VF1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 2
 ; VF1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; VF1-NEXT:    [[TMP3:%.*]] = mul i64 [[N_VEC]], 4
-; VF1-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 4
+; VF1-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 2
 ; VF1-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr null, i64 [[TMP4]]
 ; VF1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF1:       [[VECTOR_BODY]]:
 ; VF1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF1-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 4
+; VF1-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
 ; VF1-NEXT:    [[INDUCTION3:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; VF1-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[OFFSET_IDX]]
 ; VF1-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDUCTION3]]
@@ -41,7 +41,8 @@ define void @int_iv_based_on_pointer_iv(ptr %A) {
 ; VF2-SAME: ptr [[A:%.*]]) {
 ; VF2-NEXT:  [[ENTRY:.*:]]
 ; VF2-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 add (i64 ptrtoint (ptr @f to i64), i64 -4), i64 0)
-; VF2-NEXT:    [[TMP0:%.*]] = sub i64 add (i64 ptrtoint (ptr @f to i64), i64 -1), [[SMIN]]
+; VF2-NEXT:    [[TMP7:%.*]] = sub i64 ptrtoint (ptr @f to i64), [[SMIN]]
+; VF2-NEXT:    [[TMP0:%.*]] = add i64 [[TMP7]], -1
 ; VF2-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 2
 ; VF2-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
 ; VF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 2
@@ -49,13 +50,12 @@ define void @int_iv_based_on_pointer_iv(ptr %A) {
 ; VF2:       [[VECTOR_PH]]:
 ; VF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 2
 ; VF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; VF2-NEXT:    [[TMP3:%.*]] = mul i64 [[N_VEC]], 4
-; VF2-NEXT:    [[TMP6:%.*]] = mul i64 [[N_VEC]], 4
+; VF2-NEXT:    [[TMP6:%.*]] = shl i64 [[N_VEC]], 2
 ; VF2-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr null, i64 [[TMP6]]
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 4
+; VF2-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
 ; VF2-NEXT:    [[TMP4:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; VF2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[OFFSET_IDX]]
 ; VF2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP4]]

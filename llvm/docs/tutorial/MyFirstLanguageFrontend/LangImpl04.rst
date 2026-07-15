@@ -155,6 +155,9 @@ add to a function created in the previous chapter (``InitializeModule()``):
       TheSI->registerCallbacks(*ThePIC, TheMAM.get());
       ...
 
+Besides the initialization we have a `TheModule->setDataLayout(TheJIT->getDataLayout());` 
+in the code. We will discuss about it later in this chapter.
+
 After initializing the global module ``TheModule`` and the FunctionPassManager,
 we need to initialize other parts of the framework. The four AnalysisManagers
 allow us to add analysis passes that run across the four levels of the IR
@@ -293,21 +296,16 @@ adding a global variable ``TheJIT``, and initializing it in
       return 0;
     }
 
-We also need to setup the data layout for the JIT:
+We also need to set up the data layout for the JIT. Now that ``TheJIT`` exists,
+we can add a ``setDataLayout`` call to ``InitializeModuleAndManagers``:
 
 .. code-block:: c++
 
-    void InitializeModuleAndPassManager(void) {
+    void InitializeModuleAndManagers(void) {
       // Open a new context and module.
       TheContext = std::make_unique<LLVMContext>();
-      TheModule = std::make_unique<Module>("my cool jit", TheContext);
+      TheModule = std::make_unique<Module>("KaleidoscopeJIT", *TheContext);
       TheModule->setDataLayout(TheJIT->getDataLayout());
-
-      // Create a new builder for the module.
-      Builder = std::make_unique<IRBuilder<>>(*TheContext);
-
-      // Create a new pass manager attached to it.
-      TheFPM = std::make_unique<legacy::FunctionPassManager>(TheModule.get());
       ...
 
 The KaleidoscopeJIT class is a simple JIT built specifically for these
@@ -337,7 +335,7 @@ look like this:
 
           auto TSM = ThreadSafeModule(std::move(TheModule), std::move(TheContext));
           ExitOnErr(TheJIT->addModule(std::move(TSM), RT));
-          InitializeModuleAndPassManager();
+          InitializeModuleAndManagers();
 
           // Search the JIT for the __anon_expr symbol.
           auto ExprSymbol = ExitOnErr(TheJIT->lookup("__anon_expr"));
@@ -356,7 +354,7 @@ the top-level expression to the JIT. We do this by calling addModule, which
 triggers code generation for all the functions in the module, and accepts a
 ``ResourceTracker`` which can be used to remove the module from the JIT later. Once 
 the module has been added to the JIT it can no longer be modified, so we also open a
-new module to hold subsequent code by calling ``InitializeModuleAndPassManager()``.
+new module to hold subsequent code by calling ``InitializeModuleAndManagers()``.
 
 Once we've added the module to the JIT we need to get a pointer to the final
 generated code. We do this by calling the JIT's ``lookup`` method, and passing
@@ -373,7 +371,7 @@ linked into your application.
 Finally, since we don't support re-evaluation of top-level expressions, we
 remove the module from the JIT when we're done to free the associated memory.
 Recall, however, that the module we created a few lines earlier (via
-``InitializeModuleAndPassManager``) is still open and waiting for new code to be
+``InitializeModuleAndManagers``) is still open and waiting for new code to be
 added.
 
 With just these two changes, let's see how Kaleidoscope works now!
@@ -530,7 +528,7 @@ We also need to update HandleDefinition and HandleExtern:
           fprintf(stderr, "\n");
           ExitOnErr(TheJIT->addModule(
               ThreadSafeModule(std::move(TheModule), std::move(TheContext))));
-          InitializeModuleAndPassManager();
+          InitializeModuleAndManagers();
         }
       } else {
         // Skip token for error recovery.

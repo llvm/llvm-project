@@ -99,6 +99,33 @@ func.func @int32_vector_addui_extended(%lhs: vector<4xi32>, %rhs: vector<4xi32>)
   return %sum, %overflow : vector<4xi32>, vector<4xi1>
 }
 
+// Check integer subtract-with-borrow conversions.
+// CHECK-LABEL: @int32_scalar_subui_extended
+// CHECK-SAME: (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32)
+func.func @int32_scalar_subui_extended(%lhs: i32, %rhs: i32) -> (i32, i1) {
+  // CHECK-NEXT: %[[ISB:.+]] = spirv.ISubBorrow %[[LHS]], %[[RHS]] : !spirv.struct<(i32, i32)>
+  // CHECK-DAG:  %[[DIFF:.+]] = spirv.CompositeExtract %[[ISB]][0 : i32] : !spirv.struct<(i32, i32)>
+  // CHECK-DAG:  %[[B0:.+]]   = spirv.CompositeExtract %[[ISB]][1 : i32] : !spirv.struct<(i32, i32)>
+  // CHECK-DAG:  %[[ONE:.+]]  = spirv.Constant 1 : i32
+  // CHECK-NEXT: %[[B1:.+]]   = spirv.IEqual %[[B0]], %[[ONE]] : i32
+  // CHECK-NEXT: return %[[DIFF]], %[[B1]] : i32, i1
+  %diff, %borrow = arith.subui_extended %lhs, %rhs: i32, i1
+  return %diff, %borrow : i32, i1
+}
+
+// CHECK-LABEL: @int32_vector_subui_extended
+// CHECK-SAME: (%[[LHS:.+]]: vector<4xi32>, %[[RHS:.+]]: vector<4xi32>)
+func.func @int32_vector_subui_extended(%lhs: vector<4xi32>, %rhs: vector<4xi32>) -> (vector<4xi32>, vector<4xi1>) {
+  // CHECK-NEXT: %[[ISB:.+]] = spirv.ISubBorrow %[[LHS]], %[[RHS]] : !spirv.struct<(vector<4xi32>, vector<4xi32>)>
+  // CHECK-DAG:  %[[DIFF:.+]] = spirv.CompositeExtract %[[ISB]][0 : i32] : !spirv.struct<(vector<4xi32>, vector<4xi32>)>
+  // CHECK-DAG:  %[[B0:.+]]   = spirv.CompositeExtract %[[ISB]][1 : i32] : !spirv.struct<(vector<4xi32>, vector<4xi32>)>
+  // CHECK-DAG:  %[[ONE:.+]]  = spirv.Constant dense<1> : vector<4xi32>
+  // CHECK-NEXT: %[[B1:.+]]   = spirv.IEqual %[[B0]], %[[ONE]] : vector<4xi32>
+  // CHECK-NEXT: return %[[DIFF]], %[[B1]] : vector<4xi32>, vector<4xi1>
+  %diff, %borrow = arith.subui_extended %lhs, %rhs: vector<4xi32>, vector<4xi1>
+  return %diff, %borrow : vector<4xi32>, vector<4xi1>
+}
+
 // Check extended signed integer multiplication conversions.
 // CHECK-LABEL: @int32_scalar_mulsi_extended
 // CHECK-SAME: (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32)
@@ -1467,15 +1494,9 @@ func.func @float32_minimumf_scalar(%arg0 : f32, %arg1 : f32) -> f32 {
 }
 
 // CHECK-LABEL: @float32_minnumf_scalar
-// CHECK-SAME: %[[LHS:.+]]: f32, %[[RHS:.+]]: f32
 func.func @float32_minnumf_scalar(%arg0 : f32, %arg1 : f32) -> f32 {
-  // CHECK: %[[MIN:.+]] = spirv.GL.FMin %arg0, %arg1 : f32
-  // CHECK: %[[LHS_NAN:.+]] = spirv.IsNan %[[LHS]] : f32
-  // CHECK: %[[RHS_NAN:.+]] = spirv.IsNan %[[RHS]] : f32
-  // CHECK: %[[SELECT1:.+]] = spirv.Select %[[LHS_NAN]], %[[RHS]], %[[MIN]]
-  // CHECK: %[[SELECT2:.+]] = spirv.Select %[[RHS_NAN]], %[[LHS]], %[[SELECT1]]
+  // CHECK: spirv.GL.NMin %arg0, %arg1 : f32
   %0 = arith.minnumf %arg0, %arg1 : f32
-  // CHECK: return %[[SELECT2]]
   return %0: f32
 }
 
@@ -1493,15 +1514,9 @@ func.func @float32_maximumf_scalar(%arg0 : vector<2xf32>, %arg1 : vector<2xf32>)
 }
 
 // CHECK-LABEL: @float32_maxnumf_scalar
-// CHECK-SAME: %[[LHS:.+]]: vector<2xf32>, %[[RHS:.+]]: vector<2xf32>
 func.func @float32_maxnumf_scalar(%arg0 : vector<2xf32>, %arg1 : vector<2xf32>) -> vector<2xf32> {
-  // CHECK: %[[MAX:.+]] = spirv.GL.FMax %arg0, %arg1 : vector<2xf32>
-  // CHECK: %[[LHS_NAN:.+]] = spirv.IsNan %[[LHS]] : vector<2xf32>
-  // CHECK: %[[RHS_NAN:.+]] = spirv.IsNan %[[RHS]] : vector<2xf32>
-  // CHECK: %[[SELECT1:.+]] = spirv.Select %[[LHS_NAN]], %[[RHS]], %[[MAX]]
-  // CHECK: %[[SELECT2:.+]] = spirv.Select %[[RHS_NAN]], %[[LHS]], %[[SELECT1]]
+  // CHECK: spirv.GL.NMax %arg0, %arg1 : vector<2xf32>
   %0 = arith.maxnumf %arg0, %arg1 : vector<2xf32>
-  // CHECK: return %[[SELECT2]]
   return %0: vector<2xf32>
 }
 

@@ -38,9 +38,9 @@ static std::string AArch64InstPrinterTestPrintAlignedLabel(uint64_t value) {
   MCAsmInfo MAI(MCOptions);
   MCInstrInfo MII;
   MCRegisterInfo MRI;
-  MCSubtargetInfo STI(Triple(""), "", "", "", {}, {}, {}, nullptr, nullptr,
-                      nullptr, nullptr, nullptr, nullptr);
-  MCContext Ctx(Triple(""), MAI, &MRI, &STI);
+  MCSubtargetInfo STI(Triple(""), "", "", "", "", {}, {}, nullptr, nullptr,
+                      nullptr, nullptr, nullptr, nullptr, nullptr);
+  MCContext Ctx(Triple(""), MAI, MRI, STI);
   MCInst MI;
 
   MI.addOperand(MCOperand::createExpr(MCConstantExpr::create(value, Ctx)));

@@ -1120,6 +1120,27 @@ bool HasConstant(const Expr<SomeType> &);
 // Predicate: Does an expression contain a component
 bool HasStructureComponent(const Expr<SomeType> &expr);
 
+// Predicate: does an expression contain parentheses?
+bool HasParentheses(const Expr<SomeType> &expr);
+
+// Predicate: does an expression contain a procedure reference?
+bool HasProcedureRef(const Expr<SomeType> &expr);
+
+// Predicate: does an expression contain subtraction?
+bool HasSubtract(const Expr<SomeType> &expr);
+
+// Predicate: does an expression contain a VOLATILE or ASYNCHRONOUS symbol?
+bool HasVolatileOrAsynchronousSymbol(const Expr<SomeType> &expr);
+
+// Can a scalar real RHS expression in an assignment be rewritten as a split
+// sum expression tree?
+bool CanBuildSplitSumExpressionTree(
+    const Expr<SomeType> &lhs, const Expr<SomeType> &rhs);
+
+// Try to rewrite a scalar real sum as a split sum expression tree.
+std::optional<Expr<SomeType>> TryBuildSplitSumExpressionTree(
+    const Expr<SomeType> &expr);
+
 // Utilities for attaching the location of the declaration of a symbol
 // of interest to a message.  Handles the case of USE association gracefully.
 parser::Message *AttachDeclaration(parser::Message &, const Symbol &);
@@ -1571,6 +1592,11 @@ std::optional<Expr<SomeType>> GetConvertInput(const Expr<SomeType> &x);
 // How many ancestors does have a derived type have?
 std::optional<int> CountDerivedTypeAncestors(const semantics::Scope &);
 
+// For an expression of enumeration type, extract the value of the hidden
+// __ordinal component.  Returns std::nullopt if the expression is not a
+// constant or structure constructor of an enumeration-type value.
+std::optional<Expr<SomeType>> GetEnumerationOrdinal(Expr<SomeDerived> &);
+
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {
@@ -1593,6 +1619,8 @@ inline bool IsAlternateEntry(const Symbol *symbol) {
 bool IsVariableName(const Symbol &);
 bool IsPureProcedure(const Symbol &);
 bool IsPureProcedure(const Scope &);
+bool IsSimpleProcedure(const Symbol &);
+bool IsSimpleProcedure(const Scope &);
 bool IsExplicitlyImpureProcedure(const Symbol &);
 bool IsElementalProcedure(const Symbol &);
 bool IsFunction(const Symbol &);

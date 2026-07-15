@@ -432,25 +432,32 @@ Using Coverage Tracking to remove false positives
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 As described :ref:`above<WhenToDropLocation>`, there are valid reasons for
-instructions to not have source locations. Therefore, when detecting dropped or
-not-generated source locations, it may be preferable to avoid detecting cases
-where the missing source location is intentional. For this, you can use the
-"coverage tracking" feature in LLVM to prevent these from appearing in the
-``debugify`` output. This is enabled in a build of LLVM by setting the CMake
-flag ``-DLLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING=COVERAGE``. When this has been
-set, LLVM will enable runtime tracking of
+instructions to not have source locations. Therefore, when detecting missing
+source locations, it may be preferable to avoid detecting cases where the
+missing source location is intentional. For this, you can use the "coverage
+tracking" feature in LLVM to prevent these from appearing in the ``debugify``
+output. This is enabled in a build of LLVM by setting the CMake flag
+``-DLLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING=COVERAGE``. When this has been set,
+LLVM will enable runtime tracking of
 :ref:`DebugLoc annotations<NewInstLocations>`, allowing ``debugify`` to ignore
 instructions that have an explicitly recorded reason given for not having a
 source location.
 
 For triaging source location bugs detected with ``debugify``, you may find it
 helpful to instead set the CMake flag to enable "origin tracking",
-``-DLLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING=COVERAGE_AND_ORIGIN``. This flag adds
-more detail to ``debugify``'s output, by including one or more stacktraces with
-every missing source location, capturing the point at which the empty source
-location was created, and every point at which it was copied to an instruction,
-making it trivial in most cases to find the origin of the underlying bug. If
-using origin tracking, it is recommended to also build LLVM with debug info
+``-DLLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING=COVERAGE_AND_ORIGIN``. This flag
+allows more detail to be added to ``debugify``'s output, by including one or
+more stacktraces with every missing source location, capturing the point at
+which the empty source location was created, and every point at which it was
+copied to an instruction, making it trivial in most cases to find the origin of
+the underlying bug. When origin tracking is enabled, the
+``--enable-origin-stacktraces`` flag must be passed to actually trigger the
+collecting of stacktraces; this flag can be passed as-is to collect stacktraces
+all the time, or it can be passed with a comma-separated list of pass names (in
+their internal PascalCase form) to enable collecting stacktraces during only
+those passes.
+
+If using origin tracking, it is recommended to also build LLVM with debug info
 enabled, so that the stacktrace can be accurately symbolized.
 
 .. note::

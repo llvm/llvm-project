@@ -9,6 +9,7 @@
 #ifndef LLDB_HOST_WINDOWS_CONNECTIONCONPTYWINDOWS_H
 #define LLDB_HOST_WINDOWS_CONNECTIONCONPTYWINDOWS_H
 
+#include "lldb/Host/windows/ConPTYUtils.h"
 #include "lldb/Host/windows/ConnectionGenericFileWindows.h"
 #include "lldb/Host/windows/PseudoConsole.h"
 #include "lldb/Host/windows/windows.h"

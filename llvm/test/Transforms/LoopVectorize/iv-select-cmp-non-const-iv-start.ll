@@ -451,8 +451,7 @@ define i32 @select_trunc_non_const_iv_start_signed_guard(ptr %a, i32 %rdx_start,
 ; CHECK-VF1IC4-NEXT:    [[TMP7:%.*]] = add i64 [[IV]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP8:%.*]] = add i64 [[IV]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP9:%.*]] = add i64 [[IV]], 3
-; CHECK-VF1IC4-NEXT:    [[OFFSET_IDX4:%.*]] = add i64 [[TMP0]], [[INDEX]]
-; CHECK-VF1IC4-NEXT:    [[TMP10:%.*]] = trunc i64 [[OFFSET_IDX4]] to i32
+; CHECK-VF1IC4-NEXT:    [[TMP10:%.*]] = trunc i64 [[IV]] to i32
 ; CHECK-VF1IC4-NEXT:    [[TMP11:%.*]] = add i32 [[TMP10]], 0
 ; CHECK-VF1IC4-NEXT:    [[TMP12:%.*]] = add i32 [[TMP10]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP13:%.*]] = add i32 [[TMP10]], 2

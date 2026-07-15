@@ -20,7 +20,7 @@ define void @test_pr55375_interleave_opaque_ptr(ptr %start, ptr %end) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 16
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 4
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -28,7 +28,7 @@ define void @test_pr55375_interleave_opaque_ptr(ptr %start, ptr %end) {
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[START]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <2 x i64> <i64 0, i64 16>
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x ptr> [[TMP10]], i64 0
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x ptr> zeroinitializer, <2 x ptr> [[TMP10]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x ptr> splat (ptr null), <2 x ptr> [[TMP10]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x ptr> [[TMP12]], <4 x ptr> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
 ; CHECK-NEXT:    store <4 x ptr> [[INTERLEAVED_VEC]], ptr [[TMP7]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2

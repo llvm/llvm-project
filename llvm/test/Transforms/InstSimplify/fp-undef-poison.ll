@@ -3,7 +3,7 @@
 
 define float @fadd_undef_op0(float %x) {
 ; CHECK-LABEL: @fadd_undef_op0(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %r = fadd float undef, %x
   ret float %r
@@ -19,7 +19,7 @@ define float @fadd_poison_op0(float %x) {
 
 define float @fadd_undef_op1(float %x) {
 ; CHECK-LABEL: @fadd_undef_op1(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %r = fadd float %x, undef
   ret float %r
@@ -35,7 +35,7 @@ define float @fadd_poison_op1(float %x) {
 
 define float @fsub_undef_op0(float %x) {
 ; CHECK-LABEL: @fsub_undef_op0(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %r = fsub float undef, %x
   ret float %r
@@ -51,7 +51,7 @@ define float @fsub_poison_op0(float %x) {
 
 define float @fsub_undef_op1(float %x) {
 ; CHECK-LABEL: @fsub_undef_op1(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %r = fsub float %x, undef
   ret float %r
@@ -67,7 +67,7 @@ define float @fsub_poison_op1(float %x) {
 
 define float @fmul_undef_op0(float %x) {
 ; CHECK-LABEL: @fmul_undef_op0(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %r = fmul float undef, %x
   ret float %r
@@ -83,7 +83,7 @@ define float @fmul_poison_op0(float %x) {
 
 define float @fmul_undef_op1(float %x) {
 ; CHECK-LABEL: @fmul_undef_op1(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %r = fmul float %x, undef
   ret float %r
@@ -99,7 +99,7 @@ define float @fmul_poison_op1(float %x) {
 
 define float @fdiv_undef_op0(float %x) {
 ; CHECK-LABEL: @fdiv_undef_op0(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %r = fdiv float undef, %x
   ret float %r
@@ -115,7 +115,7 @@ define float @fdiv_poison_op0(float %x) {
 
 define float @fdiv_undef_op1(float %x) {
 ; CHECK-LABEL: @fdiv_undef_op1(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %r = fdiv float %x, undef
   ret float %r
@@ -131,7 +131,7 @@ define float @fdiv_poison_op1(float %x) {
 
 define float @frem_undef_op0(float %x) {
 ; CHECK-LABEL: @frem_undef_op0(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %r = frem float undef, %x
   ret float %r
@@ -147,7 +147,7 @@ define float @frem_poison_op0(float %x) {
 
 define float @frem_undef_op1(float %x) {
 ; CHECK-LABEL: @frem_undef_op1(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %r = frem float %x, undef
   ret float %r
@@ -245,7 +245,7 @@ define float @frem_undef_op1_fast(float %x) {
 
 define double @fdiv_ninf_nan_op0(double %x) {
 ; CHECK-LABEL: @fdiv_ninf_nan_op0(
-; CHECK-NEXT:    ret double 0xFFF8000000000000
+; CHECK-NEXT:    ret double -qnan
 ;
   %r = fdiv ninf double 0xfff8000000000000, %x
   ret double %r
@@ -253,7 +253,7 @@ define double @fdiv_ninf_nan_op0(double %x) {
 
 define double @fadd_ninf_nan_op1(double %x) {
 ; CHECK-LABEL: @fadd_ninf_nan_op1(
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    ret double +qnan
 ;
   %r = fadd ninf double %x, 0x7ff8000000000000
   ret double %r
@@ -277,7 +277,7 @@ define double @fadd_ninf_inf_op1(double %x) {
 
 define double @fsub_nnan_inf_op0(double %x) {
 ; CHECK-LABEL: @fsub_nnan_inf_op0(
-; CHECK-NEXT:    ret double 0x7FF0000000000000
+; CHECK-NEXT:    ret double +inf
 ;
   %r = fsub nnan double 0x7ff0000000000000, %x
   ret double %r
@@ -287,7 +287,7 @@ define double @fsub_nnan_inf_op0(double %x) {
 
 define double @fmul_nnan_inf_op1(double %x) {
 ; CHECK-LABEL: @fmul_nnan_inf_op1(
-; CHECK-NEXT:    [[R:%.*]] = fmul nnan double [[X:%.*]], 0xFFF0000000000000
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan double [[X:%.*]], -inf
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %r = fmul nnan double %x, 0xfff0000000000000
@@ -328,7 +328,7 @@ define <vscale x 2 x float> @sqrt_poison_scalable_vec() {
 
 define float @sqrt_nnan_nan() {
 ; CHECK-LABEL: @sqrt_nnan_nan(
-; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float 0x7FF8000000000000)
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float +qnan)
 ; CHECK-NEXT:    ret float [[SQRT]]
 ;
   %sqrt = call nnan float @llvm.sqrt(float 0x7ff8000000000000)
@@ -337,7 +337,7 @@ define float @sqrt_nnan_nan() {
 
 define float @sqrt_ninf_inf() {
 ; CHECK-LABEL: @sqrt_ninf_inf(
-; CHECK-NEXT:    [[SQRT:%.*]] = call ninf float @llvm.sqrt.f32(float 0xFFF0000000000000)
+; CHECK-NEXT:    [[SQRT:%.*]] = call ninf float @llvm.sqrt.f32(float -inf)
 ; CHECK-NEXT:    ret float [[SQRT]]
 ;
   %sqrt = call ninf float @llvm.sqrt(float 0xfff0000000000000)

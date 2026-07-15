@@ -6,8 +6,8 @@
 !u8i = !cir.int<u, 8>
 !void = !cir.void
 
-!Base = !cir.record<struct "Base" {!cir.ptr<!cir.ptr<!cir.func<() -> !cir.int<u, 32>>>>}>
-!Derived = !cir.record<struct "Derived" {!cir.record<struct "Base" {!cir.ptr<!cir.ptr<!cir.func<() -> !cir.int<u, 32>>>>}>}>
+!Base = !cir.struct<"Base" {!cir.ptr<!cir.ptr<!cir.func<() -> !cir.int<u, 32>>>>}>
+!Derived = !cir.struct<"Derived" {!cir.struct<"Base" {!cir.ptr<!cir.ptr<!cir.func<() -> !cir.int<u, 32>>>>}>}>
 
 module {
   cir.global "private" constant external @_ZTI4Base : !cir.ptr<!u32i>
@@ -28,8 +28,8 @@ module {
 !u8i = !cir.int<u, 8>
 !void = !cir.void
 
-!Base = !cir.record<struct "Base" {!cir.ptr<!cir.ptr<!cir.func<() -> !cir.int<u, 32>>>>}>
-!Derived = !cir.record<struct "Derived" {!cir.record<struct "Base" {!cir.ptr<!cir.ptr<!cir.func<() -> !cir.int<u, 32>>>>}>}>
+!Base = !cir.struct<"Base" {!cir.ptr<!cir.ptr<!cir.func<() -> !cir.int<u, 32>>>>}>
+!Derived = !cir.struct<"Derived" {!cir.struct<"Base" {!cir.ptr<!cir.ptr<!cir.func<() -> !cir.int<u, 32>>>>}>}>
 
 module {
   cir.global "private" constant external @_ZTI4Base : !cir.ptr<!u8i>

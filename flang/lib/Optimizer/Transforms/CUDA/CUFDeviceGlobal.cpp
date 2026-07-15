@@ -8,14 +8,9 @@
 
 #include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "flang/Runtime/CUDA/common.h"
-#include "flang/Runtime/allocatable.h"
-#include "flang/Support/Fortran.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
@@ -165,7 +160,32 @@ public:
       if (gpuSymTable.lookup<fir::GlobalOp>(globalName)) {
         continue;
       }
-      gpuSymTable.insert(globalOp->clone());
+      auto *cloned = globalOp->clone();
+      auto clonedGlobal = mlir::cast<fir::GlobalOp>(cloned);
+      // Under -gpu=mem:unified, plain host module-scope variables (no
+      // explicit CUF data attribute, not a constant) get a no-body
+      // declaration in the GPU module: clear the body, init value, and
+      // linkName. With no linkName, the LLVM lowering uses the default
+      // External linkage (see convertLinkage in CodeGen.cpp), so an
+      // initializer-less global emits as `.extern .global ...` in PTX.
+      // The host-side definition stays. CUFAddConstructor will emit
+      // CUFRegisterExternalVariable (= __cudaRegisterHostVar) so the CUDA
+      // runtime maps the device extern to the host pointer at module-load
+      // time, and HMM/ATS handles migration.
+      if (cudaUnified && !globalOp.getConstant() &&
+          !globalOp.getDataAttrAttr()) {
+        clonedGlobal.getRegion().getBlocks().clear();
+        clonedGlobal.removeInitValAttr();
+        clonedGlobal.removeLinkNameAttr();
+      }
+      // Registered CUDA globals with internal linkage must have a visible
+      // device symbol so runtime lookups (cudaGetSymbolAddress) can resolve
+      // them. Drop internal linkage from the GPU clone so it uses default
+      // external linkage.
+      if (cuf::isRegisteredDeviceGlobal(globalOp) &&
+          globalOp.getLinkName() == "internal")
+        clonedGlobal.removeLinkNameAttr();
+      gpuSymTable.insert(cloned);
     }
   }
 };

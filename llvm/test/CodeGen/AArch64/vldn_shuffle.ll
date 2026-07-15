@@ -371,17 +371,17 @@ define void @transpose_s16_8x8_simpler2(ptr nocapture noundef %a) {
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ldp q0, q1, [x0]
 ; CHECK-NEXT:    ldp q2, q3, [x0, #64]
-; CHECK-NEXT:    ldp q4, q5, [x0, #32]
-; CHECK-NEXT:    ldp q6, q7, [x0, #96]
+; CHECK-NEXT:    ldp q4, q5, [x0, #96]
 ; CHECK-NEXT:    trn1 v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    zip1 v1.8h, v2.8h, v3.8h
-; CHECK-NEXT:    zip1 v2.8h, v4.8h, v5.8h
-; CHECK-NEXT:    trn1 v3.8h, v6.8h, v7.8h
-; CHECK-NEXT:    trn1 v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    uzp1 v1.4s, v2.4s, v3.4s
-; CHECK-NEXT:    zip2 v2.4s, v0.4s, v1.4s
-; CHECK-NEXT:    st2 { v0.2s, v1.2s }, [x0]
-; CHECK-NEXT:    str q2, [x0, #64]
+; CHECK-NEXT:    ldp q2, q3, [x0, #32]
+; CHECK-NEXT:    trn1 v4.8h, v4.8h, v5.8h
+; CHECK-NEXT:    zip1 v3.8h, v2.8h, v3.8h
+; CHECK-NEXT:    trn1 v2.4s, v0.4s, v1.4s
+; CHECK-NEXT:    dup v0.4s, v4.s[2]
+; CHECK-NEXT:    zip2 v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    st2 { v2.2s, v3.2s }, [x0]
+; CHECK-NEXT:    str q0, [x0, #64]
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <8 x i16>, ptr %a, align 16

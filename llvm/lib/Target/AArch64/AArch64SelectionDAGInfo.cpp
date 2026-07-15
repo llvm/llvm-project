@@ -121,8 +121,8 @@ void AArch64SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
 SDValue AArch64SelectionDAGInfo::EmitMOPS(unsigned Opcode, SelectionDAG &DAG,
                                           const SDLoc &DL, SDValue Chain,
                                           SDValue Dst, SDValue SrcOrValue,
-                                          SDValue Size, Align Alignment,
-                                          bool isVolatile,
+                                          SDValue Size, Align DstAlign,
+                                          Align SrcAlign, bool isVolatile,
                                           MachinePointerInfo DstPtrInfo,
                                           MachinePointerInfo SrcPtrInfo) const {
 
@@ -140,7 +140,7 @@ SDValue AArch64SelectionDAGInfo::EmitMOPS(unsigned Opcode, SelectionDAG &DAG,
       isVolatile ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone;
   auto DstFlags = MachineMemOperand::MOStore | Vol;
   auto *DstOp =
-      MF.getMachineMemOperand(DstPtrInfo, DstFlags, MemSize, Alignment);
+      MF.getMachineMemOperand(DstPtrInfo, DstFlags, MemSize, DstAlign);
 
   if (IsSet) {
     // Extend value to i64, if required.
@@ -158,7 +158,7 @@ SDValue AArch64SelectionDAGInfo::EmitMOPS(unsigned Opcode, SelectionDAG &DAG,
 
     auto SrcFlags = MachineMemOperand::MOLoad | Vol;
     auto *SrcOp =
-        MF.getMachineMemOperand(SrcPtrInfo, SrcFlags, MemSize, Alignment);
+        MF.getMachineMemOperand(SrcPtrInfo, SrcFlags, MemSize, SrcAlign);
     DAG.setNodeMemRefs(Node, {DstOp, SrcOp});
     return SDValue(Node, 3);
   }
@@ -223,14 +223,16 @@ SDValue AArch64SelectionDAGInfo::EmitStreamingCompatibleMemLibCall(
 
 SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dst, SDValue Src,
-    SDValue Size, Align Alignment, bool isVolatile, bool AlwaysInline,
-    MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
+    SDValue Size, Align DstAlign, Align SrcAlign, bool isVolatile,
+    bool AlwaysInline, MachinePointerInfo DstPtrInfo,
+    MachinePointerInfo SrcPtrInfo) const {
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
 
   if (UseMOPS && STI.hasMOPS())
     return EmitMOPS(AArch64::MOPSMemoryCopyPseudo, DAG, DL, Chain, Dst, Src,
-                    Size, Alignment, isVolatile, DstPtrInfo, SrcPtrInfo);
+                    Size, DstAlign, SrcAlign, isVolatile, DstPtrInfo,
+                    SrcPtrInfo);
 
   auto *AFI = DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
   SMEAttrs Attrs = AFI->getSMEFnAttrs();
@@ -249,7 +251,7 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemset(
 
   if (UseMOPS && STI.hasMOPS())
     return EmitMOPS(AArch64::MOPSMemorySetPseudo, DAG, dl, Chain, Dst, Src,
-                    Size, Alignment, isVolatile, DstPtrInfo,
+                    Size, Alignment, Alignment, isVolatile, DstPtrInfo,
                     MachinePointerInfo{});
 
   auto *AFI = DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
@@ -262,14 +264,15 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemset(
 
 SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemmove(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
-    SDValue Size, Align Alignment, bool isVolatile,
+    SDValue Size, Align DstAlign, Align SrcAlign, bool isVolatile,
     MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
 
   if (UseMOPS && STI.hasMOPS())
     return EmitMOPS(AArch64::MOPSMemoryMovePseudo, DAG, dl, Chain, Dst, Src,
-                    Size, Alignment, isVolatile, DstPtrInfo, SrcPtrInfo);
+                    Size, DstAlign, SrcAlign, isVolatile, DstPtrInfo,
+                    SrcPtrInfo);
 
   auto *AFI = DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
   SMEAttrs Attrs = AFI->getSMEFnAttrs();

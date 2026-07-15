@@ -138,99 +138,53 @@ static bool isShortLived(const ValueDecl *Var, const SourceManager *SrcMgr,
 }
 
 void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *StandaloneVar =
-      Result.Nodes.getNodeAs<ValueDecl>("standaloneVar");
-  if (StandaloneVar) {
-    if (!StandaloneVar->getIdentifier())
+  auto WarnIfTooShort = [&](const ValueDecl *Var, unsigned MinNameLength,
+                            const llvm::Regex &IgnoredNames, unsigned VarKind) {
+    if (!Var->getIdentifier())
       return;
 
-    const StringRef VarName = StandaloneVar->getName();
-
-    if (VarName.size() >= MinimumVariableNameLength ||
-        IgnoredVariableNames.match(VarName))
+    const StringRef VarName = Var->getName();
+    if (VarName.size() >= MinNameLength || IgnoredNames.match(VarName))
       return;
 
-    if (isShortLived(StandaloneVar, Result.SourceManager, Result.Context,
+    if (isShortLived(Var, Result.SourceManager, Result.Context,
                      LineCountThreshold))
       return;
 
-    diag(StandaloneVar->getLocation(), ErrorMessage)
-        << 0 << StandaloneVar << MinimumVariableNameLength;
+    diag(Var->getLocation(), ErrorMessage) << VarKind << Var << MinNameLength;
+  };
+
+  if (const auto *StandaloneVar =
+          Result.Nodes.getNodeAs<ValueDecl>("standaloneVar")) {
+    WarnIfTooShort(StandaloneVar, MinimumVariableNameLength,
+                   IgnoredVariableNames, 0);
+    return;
   }
 
-  const auto *BindingVar = Result.Nodes.getNodeAs<ValueDecl>("bindingVar");
-  if (BindingVar) {
-    if (!BindingVar->getIdentifier())
-      return;
-
-    const StringRef VarName = BindingVar->getName();
-
-    if (VarName.size() >= MinimumBindingNameLength ||
-        IgnoredBindingNames.match(VarName))
-      return;
-
-    if (isShortLived(BindingVar, Result.SourceManager, Result.Context,
-                     LineCountThreshold))
-      return;
-
-    diag(BindingVar->getLocation(), ErrorMessage)
-        << 1 << BindingVar << MinimumBindingNameLength;
+  if (const auto *BindingVar =
+          Result.Nodes.getNodeAs<ValueDecl>("bindingVar")) {
+    WarnIfTooShort(BindingVar, MinimumBindingNameLength, IgnoredBindingNames,
+                   1);
+    return;
   }
 
-  auto *ExceptionVarName = Result.Nodes.getNodeAs<ValueDecl>("exceptionVar");
-  if (ExceptionVarName) {
-    if (!ExceptionVarName->getIdentifier())
-      return;
-
-    const StringRef VarName = ExceptionVarName->getName();
-    if (VarName.size() >= MinimumExceptionNameLength ||
-        IgnoredExceptionVariableNames.match(VarName))
-      return;
-
-    if (isShortLived(ExceptionVarName, Result.SourceManager, Result.Context,
-                     LineCountThreshold))
-      return;
-
-    diag(ExceptionVarName->getLocation(), ErrorMessage)
-        << 2 << ExceptionVarName << MinimumExceptionNameLength;
+  if (const auto *ExceptionVar =
+          Result.Nodes.getNodeAs<ValueDecl>("exceptionVar")) {
+    WarnIfTooShort(ExceptionVar, MinimumExceptionNameLength,
+                   IgnoredExceptionVariableNames, 2);
+    return;
   }
 
-  const auto *LoopVar = Result.Nodes.getNodeAs<ValueDecl>("loopVar");
-  if (LoopVar) {
-    if (!LoopVar->getIdentifier())
-      return;
-
-    const StringRef VarName = LoopVar->getName();
-
-    if (VarName.size() >= MinimumLoopCounterNameLength ||
-        IgnoredLoopCounterNames.match(VarName))
-      return;
-
-    if (isShortLived(LoopVar, Result.SourceManager, Result.Context,
-                     LineCountThreshold))
-      return;
-
-    diag(LoopVar->getLocation(), ErrorMessage)
-        << 3 << LoopVar << MinimumLoopCounterNameLength;
+  if (const auto *LoopVar = Result.Nodes.getNodeAs<ValueDecl>("loopVar")) {
+    WarnIfTooShort(LoopVar, MinimumLoopCounterNameLength,
+                   IgnoredLoopCounterNames, 3);
+    return;
   }
 
-  const auto *ParamVar = Result.Nodes.getNodeAs<ValueDecl>("paramVar");
-  if (ParamVar) {
-    if (!ParamVar->getIdentifier())
-      return;
-
-    const StringRef VarName = ParamVar->getName();
-
-    if (VarName.size() >= MinimumParameterNameLength ||
-        IgnoredParameterNames.match(VarName))
-      return;
-
-    if (isShortLived(ParamVar, Result.SourceManager, Result.Context,
-                     LineCountThreshold))
-      return;
-
-    diag(ParamVar->getLocation(), ErrorMessage)
-        << 4 << ParamVar << MinimumParameterNameLength;
+  if (const auto *ParamVar = Result.Nodes.getNodeAs<ValueDecl>("paramVar")) {
+    WarnIfTooShort(ParamVar, MinimumParameterNameLength, IgnoredParameterNames,
+                   4);
+    return;
   }
 }
 

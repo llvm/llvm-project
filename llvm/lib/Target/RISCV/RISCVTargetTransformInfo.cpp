@@ -358,9 +358,9 @@ InstructionCost RISCVTTIImpl::getPartialReductionCost(
 
   Type *Tp = VectorType::get(AccumType, VF.divideCoefficientBy(4));
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
-  // Note: Asuming all vdota4* variants are equal cost
+  // Note: Asuming all vdot4a* variants are equal cost
   return LT.first *
-         getRISCVInstructionCost(RISCV::VDOTA4_VV, LT.second, CostKind);
+         getRISCVInstructionCost(RISCV::VDOT4A_VV, LT.second, CostKind);
 }
 
 bool RISCVTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
@@ -873,6 +873,14 @@ RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
                                         LT.second, CostKind));
   }
   case TTI::SK_Broadcast: {
+    // Check for broadcast loads, which are synthesized by optimized zero-stride
+    // loads (this is checked in RISCVTTIImpl::isLegalBroadcastLoad).
+    bool IsLoad = !Args.empty() && isa<LoadInst>(Args[0]);
+    if (IsLoad && LT.second.isVector() &&
+        isLegalBroadcastLoad(SrcTy->getElementType(),
+                             LT.second.getVectorElementCount()))
+      return 0;
+
     bool HasScalar = (Args.size() > 0) && (Operator::getOpcode(Args[0]) ==
                                            Instruction::InsertElement);
     if (LT.second.getScalarSizeInBits() == 1) {
@@ -1109,6 +1117,9 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VTy);
     // Need to make sure type has't been scalarized
     if (LT.second.isVector()) {
+      if (CostKind == TTI::TCK_CodeSize)
+        return LT.first * TTI::TCC_Basic;
+
       auto *SubVecTy =
           VectorType::get(VTy->getElementType(),
                           VTy->getElementCount().divideCoefficientBy(Factor));
@@ -1128,11 +1139,8 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
 
         // Otherwise, the cost is proportional to the number of elements (VL *
         // Factor ops).
-        InstructionCost MemOpCost =
-            getMemoryOpCost(Opcode, VTy->getElementType(), Alignment, 0,
-                            CostKind, {TTI::OK_AnyValue, TTI::OP_None});
         unsigned NumLoads = getEstimatedVLFor(VTy);
-        return NumLoads * MemOpCost;
+        return NumLoads * TTI::TCC_Basic;
       }
     }
   }
@@ -1292,14 +1300,8 @@ InstructionCost RISCVTTIImpl::getExpandCompressMemoryOpCost(
 InstructionCost
 RISCVTTIImpl::getStridedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                                      TTI::TargetCostKind CostKind) const {
-
-  unsigned Opcode = MICA.getID() == Intrinsic::experimental_vp_strided_load
-                        ? Instruction::Load
-                        : Instruction::Store;
-
   Type *DataTy = MICA.getDataType();
   Align Alignment = MICA.getAlignment();
-  const Instruction *I = MICA.getInst();
 
   if (!isLegalStridedLoadStore(DataTy, Alignment))
     return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
@@ -1310,13 +1312,9 @@ RISCVTTIImpl::getStridedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   // Cost is proportional to the number of memory operations implied.  For
   // scalable vectors, we use an estimate on that number since we don't
   // know exactly what VL will be.
-  // FIXME: This will overcost for i64 on rv32 with +zve64x.
   auto &VTy = *cast<VectorType>(DataTy);
-  InstructionCost MemOpCost =
-      getMemoryOpCost(Opcode, VTy.getElementType(), Alignment, 0, CostKind,
-                      {TTI::OK_AnyValue, TTI::OP_None}, I);
   unsigned NumLoads = getEstimatedVLFor(&VTy);
-  return NumLoads * MemOpCost;
+  return NumLoads * TTI::TCC_Basic;
 }
 
 InstructionCost
@@ -2288,7 +2286,7 @@ InstructionCost RISCVTTIImpl::getExtendedReductionCost(
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
 
   if (IsUnsigned && Opcode == Instruction::Add &&
-      LT.second.isFixedLengthVector() && LT.second.getScalarType() == MVT::i1) {
+      LT.second.isFixedLengthVectorOf(MVT::i1)) {
     // Represent vector_reduce_add(ZExt(<n x i1>)) as
     // ZExtOrTrunc(ctpop(bitcast <n x i1> to in)).
     return LT.first *
@@ -2329,8 +2327,9 @@ InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                               TTI::OperandValueInfo OpInfo,
                                               const Instruction *I) const {
   EVT VT = TLI->getValueType(DL, Src, true);
-  // Type legalization can't handle structs
-  if (VT == MVT::Other)
+  // Type legalization can't handle structs, and load latency isn't handled here
+  if (VT == MVT::Other ||
+      (Opcode == Instruction::Load && CostKind == TTI::TCK_Latency))
     return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                   CostKind, OpInfo, I);
 
@@ -3406,6 +3405,15 @@ bool RISCVTTIImpl::isLegalMaskedCompressStore(Type *DataTy,
   if (!isLegalMaskedLoadStore(DataTy, Alignment))
     return false;
   return true;
+}
+
+bool RISCVTTIImpl::isLegalBroadcastLoad(Type *ElementTy,
+                                        ElementCount NumElements) const {
+  // Optimized zero-stride loads can be treated as broadcasts.
+  if (!ST->hasVInstructions() || !ST->hasOptimizedZeroStrideLoad())
+    return false;
+
+  return TLI->isLegalElementTypeForRVV(TLI->getValueType(DL, ElementTy));
 }
 
 /// See if \p I should be considered for address type promotion. We check if \p

@@ -101,7 +101,9 @@ DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {
       node->getAlignInBits(), translateExpression(node->getDataLocationExp()),
       translateExpression(node->getRankExp()),
       translateExpression(node->getAllocatedExp()),
-      translateExpression(node->getAssociatedExp()), elements);
+      translateExpression(node->getAssociatedExp()),
+      getStringAttrOrNull(node->getRawIdentifier()),
+      translate(node->getDiscriminator()), elements);
 }
 
 DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {
@@ -109,8 +111,19 @@ DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {
   DITypeAttr baseType = translate(node->getBaseType());
   if (node->getBaseType() && !baseType)
     return nullptr;
-  DINodeAttr extraData =
-      translate(dyn_cast_or_null<llvm::DINode>(node->getExtraData()));
+  llvm::Metadata *rawExtraData = node->getExtraData();
+  Attribute extraData;
+  if (auto *extraDataNode = dyn_cast_or_null<llvm::DINode>(rawExtraData)) {
+    extraData = translate(extraDataNode);
+  } else if (auto *constantAsMetadata =
+                 dyn_cast_or_null<llvm::ConstantAsMetadata>(rawExtraData)) {
+    if (auto *constantInt =
+            dyn_cast<llvm::ConstantInt>(constantAsMetadata->getValue())) {
+      const APInt &value = constantInt->getValue();
+      extraData = IntegerAttr::get(
+          IntegerType::get(context, value.getBitWidth()), value);
+    }
+  }
   return DIDerivedTypeAttr::get(
       context, node->getTag(), getStringAttrOrNull(node->getRawName()),
       translate(node->getFile()), node->getLine(), translate(node->getScope()),
@@ -246,9 +259,15 @@ DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
     return nullptr;
 
   // Convert the retained nodes but drop all of them if one of them is invalid.
-  SmallVector<DINodeAttr> retainedNodes;
-  for (llvm::DINode *retainedNode : node->getRetainedNodes())
+  SmallVector<Attribute> retainedNodes;
+  auto add = [this, &retainedNodes](llvm::DINode *retainedNode) {
     retainedNodes.push_back(translate(retainedNode));
+  };
+  auto addGVE = [](llvm::DIGlobalVariableExpression *GVE) {
+    // FIXME Import DIGlobalVariableExpressions from retainedNodes without
+    // duplicating them.
+  };
+  node->forEachRetainedNode(add, add, add, add, addGVE);
   if (llvm::is_contained(retainedNodes, nullptr))
     retainedNodes.clear();
 

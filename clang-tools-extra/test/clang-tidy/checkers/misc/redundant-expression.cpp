@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy %s misc-redundant-expression %t -- -- -fno-delayed-template-parsing -Wno-array-compare-cxx26
-// RUN: %check_clang_tidy %s misc-redundant-expression %t -- -- -fno-delayed-template-parsing -Wno-array-compare-cxx26 -DTEST_MACRO
+// RUN: %check_clang_tidy %s misc-redundant-expression %t -- -- --target=x86_64-linux -fno-delayed-template-parsing -Wno-array-compare-cxx26
+// RUN: %check_clang_tidy %s misc-redundant-expression %t -- -- --target=x86_64-linux -fno-delayed-template-parsing -Wno-array-compare-cxx26 -DTEST_MACRO
 
 typedef __INT64_TYPE__ I64;
 
@@ -572,6 +572,51 @@ int TestBitwise(int X, int Y) {
   return 0;
 }
 
+bool TestBitwiseUInt128(unsigned __int128 Value) {
+  constexpr unsigned __int128 BigBit =
+      static_cast<unsigned __int128>(1) << 100;
+
+  if ((Value & BigBit) == BigBit) return true;
+
+  constexpr unsigned __int128 LowMask = static_cast<unsigned __int128>(0xFF);
+
+  if ((Value & LowMask) == BigBit) return true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: logical expression is always false
+  if ((Value & LowMask) != BigBit) return true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: logical expression is always true
+  if ((Value | BigBit) == LowMask) return true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: logical expression is always false
+  if ((Value | BigBit) != LowMask) return true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: logical expression is always true
+
+  return false;
+}
+
+#define UINT128_BIG_BIT (static_cast<unsigned __int128>(1) << 100)
+
+bool TestBitwiseUInt128Macro(unsigned __int128 Value) {
+  return (Value & UINT128_BIG_BIT) == UINT128_BIG_BIT;
+}
+
+template <int N>
+bool TestBitwiseUInt128Template(unsigned __int128 Value) {
+  constexpr unsigned __int128 Mask = static_cast<unsigned __int128>(1) << N;
+  return (Value & Mask) == Mask;
+}
+
+bool UseBitwiseUInt128Template(unsigned __int128 Value) {
+  return TestBitwiseUInt128Template<100>(Value);
+}
+
+using RedundantExpressionU128 = unsigned __int128;
+typedef unsigned __int128 RedundantExpressionTypedefU128;
+
+bool TestBitwiseUInt128AliasCvRef(const RedundantExpressionU128 &Value) {
+  constexpr RedundantExpressionTypedefU128 Mask =
+      static_cast<RedundantExpressionU128>(1) << 100;
+  return (Value & Mask) == Mask;
+}
+
 // Overloaded operators that compare an instance of a struct and an integer
 // constant.
 struct S {
@@ -1081,3 +1126,49 @@ namespace PR35857 {
     decltype(x + y - (x + y)) z = 10;
   }
 }
+
+namespace GH145415 {
+
+namespace std {
+template <class T, int N> struct array {};
+template <class T> struct tuple_size;
+template <class T, int N> struct tuple_size<array<T, N>> {
+  static constexpr int value = N;
+};
+template <class T> constexpr int tuple_size_v = tuple_size<T>::value;
+} // namespace std
+
+using MonthArray = std::array<int, 12>;
+using ZodiacArray = std::array<int, 12>;
+
+namespace N {
+  int Value = 0;
+}
+using N::Value;
+
+template <typename T> void myFunc(T) {}
+template <typename T, typename U = int> void myDefaultFunc(T) {}
+using FuncPtr = void (*)(int);
+
+void TestGH145415() {
+
+  bool b1 = std::tuple_size<MonthArray>::value == std::tuple_size<ZodiacArray>::value;
+  bool b2 = std::tuple_size_v<MonthArray> == std::tuple_size_v<ZodiacArray>;
+
+  bool b3 = std::tuple_size<MonthArray>::value == std::tuple_size<MonthArray>::value;
+  // CHECK-MESSAGES: :[[@LINE-1]]:48: warning: both sides of operator are equivalent
+
+  bool b4 = std::tuple_size_v<
+                MonthArray> ==
+            std::tuple_size_v<MonthArray>;
+  // CHECK-MESSAGES: :[[@LINE-2]]:29: warning: both sides of operator are equivalent
+
+  bool b5 = N::Value == Value;
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: both sides of operator are equivalent
+
+  bool b6 = FuncPtr(myFunc<int>) == FuncPtr(myFunc);
+
+  bool b7 = FuncPtr(myDefaultFunc<int>) == FuncPtr(myDefaultFunc<int, int>);
+}
+
+} // namespace GH145415

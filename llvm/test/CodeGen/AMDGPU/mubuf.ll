@@ -1,4 +1,4 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -show-mc-encoding < %s | FileCheck %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tahiti -show-mc-encoding < %s | FileCheck %s
 
 ;;;==========================================================================;;;
 ;;; MUBUF LOAD TESTS

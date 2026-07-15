@@ -226,13 +226,15 @@ FileSpec::operator bool() const { return m_filename || m_directory; }
 bool FileSpec::operator!() const { return !m_directory && !m_filename; }
 
 bool FileSpec::DirectoryEquals(const FileSpec &rhs) const {
-  const bool case_sensitive = IsCaseSensitive() || rhs.IsCaseSensitive();
-  return ConstString::Equals(m_directory, rhs.m_directory, case_sensitive);
+  if (IsCaseSensitive() || rhs.IsCaseSensitive())
+    return GetDirectory() == rhs.GetDirectory();
+  return GetDirectory().equals_insensitive(rhs.GetDirectory());
 }
 
 bool FileSpec::FileEquals(const FileSpec &rhs) const {
-  const bool case_sensitive = IsCaseSensitive() || rhs.IsCaseSensitive();
-  return ConstString::Equals(m_filename, rhs.m_filename, case_sensitive);
+  if (IsCaseSensitive() || rhs.IsCaseSensitive())
+    return GetFilename() == rhs.GetFilename();
+  return GetFilename().equals_insensitive(rhs.GetFilename());
 }
 
 // Equal to operator
@@ -284,24 +286,34 @@ int FileSpec::Compare(const FileSpec &a, const FileSpec &b, bool full) {
   // of the FileSpec objects.
 
   if (full || (a.m_directory && b.m_directory)) {
-    result = ConstString::Compare(a.m_directory, b.m_directory, case_sensitive);
+    if (case_sensitive)
+      result = a.GetDirectory().compare(b.GetDirectory());
+    else
+      result = a.GetDirectory().compare_insensitive(b.GetDirectory());
+
     if (result)
       return result;
   }
-  return ConstString::Compare(a.m_filename, b.m_filename, case_sensitive);
+
+  if (case_sensitive)
+    result = a.GetFilename().compare(b.GetFilename());
+  else
+    result = a.GetFilename().compare_insensitive(b.GetFilename());
+
+  return result;
 }
 
 bool FileSpec::Equal(const FileSpec &a, const FileSpec &b, bool full) {
-  if (full || (a.GetDirectory() && b.GetDirectory()))
+  if (full || (!a.GetDirectory().empty() && !b.GetDirectory().empty()))
     return a == b;
 
   return a.FileEquals(b);
 }
 
 bool FileSpec::Match(const FileSpec &pattern, const FileSpec &file) {
-  if (pattern.GetDirectory())
+  if (!pattern.GetDirectory().empty())
     return pattern == file;
-  if (pattern.GetFilename())
+  if (!pattern.GetFilename().empty())
     return pattern.FileEquals(file);
   return true;
 }
@@ -339,18 +351,8 @@ llvm::json::Value FileSpec::ToJSON() const {
 
 FileSpec::Style FileSpec::GetPathStyle() const { return m_style; }
 
-void FileSpec::SetDirectory(ConstString directory) {
-  m_directory = directory;
-  PathWasModified();
-}
-
 void FileSpec::SetDirectory(llvm::StringRef directory) {
   m_directory = ConstString(directory);
-  PathWasModified();
-}
-
-void FileSpec::SetFilename(ConstString filename) {
-  m_filename = filename;
   PathWasModified();
 }
 
@@ -387,10 +389,6 @@ std::string FileSpec::GetPath(bool denormalize) const {
   return static_cast<std::string>(result);
 }
 
-ConstString FileSpec::GetPathAsConstString(bool denormalize) const {
-  return ConstString{GetPath(denormalize)};
-}
-
 void FileSpec::GetPath(llvm::SmallVectorImpl<char> &path,
                        bool denormalize) const {
   path.append(m_directory.GetStringRef().begin(),
@@ -411,8 +409,8 @@ llvm::StringRef FileSpec::GetFileNameExtension() const {
   return llvm::sys::path::extension(m_filename.GetStringRef(), m_style);
 }
 
-ConstString FileSpec::GetFileNameStrippingExtension() const {
-  return ConstString(llvm::sys::path::stem(m_filename.GetStringRef(), m_style));
+llvm::StringRef FileSpec::GetFileNameStrippingExtension() const {
+  return llvm::sys::path::stem(m_filename.GetStringRef(), m_style);
 }
 
 // Return the size in bytes that this object takes in memory. This returns the
@@ -546,8 +544,8 @@ void llvm::format_provider<FileSpec>::format(const FileSpec &F,
           Style.equals_insensitive("D")) &&
          "Invalid FileSpec style!");
 
-  StringRef dir = F.GetDirectory().GetStringRef();
-  StringRef file = F.GetFilename().GetStringRef();
+  StringRef dir = F.GetDirectory();
+  StringRef file = F.GetFilename();
 
   if (dir.empty() && file.empty()) {
     Stream << "(empty)";

@@ -29,8 +29,7 @@ end module
 
 !Expect: req.mod
 !module req
-!!$omp requires atomic_default_mem_order(seq_cst)
-!!$omp requires reverse_offload
+!!$omp requires atomic_default_mem_order(seq_cst) reverse_offload
 !contains
 !subroutine f00()
 !end
@@ -42,8 +41,7 @@ end module
 !module user
 !use req,only:f00
 !use req,only:f01
-!!$omp requires atomic_default_mem_order(seq_cst)
-!!$omp requires reverse_offload
+!!$omp requires atomic_default_mem_order(seq_cst) reverse_offload
 !end
 
 !Expect: fold.mod

@@ -14,6 +14,8 @@
 #define LLVM_ANALYSIS_VECTORUTILS_H
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/IR/Module.h"
@@ -475,16 +477,6 @@ LLVM_ABI llvm::SmallVector<int, 16> createUnaryMask(ArrayRef<int> Mask,
 LLVM_ABI Value *concatenateVectors(IRBuilderBase &Builder,
                                    ArrayRef<Value *> Vecs);
 
-/// Given a mask vector of i1, Return true if all of the elements of this
-/// predicate mask are known to be false or undef.  That is, return true if all
-/// lanes can be assumed inactive.
-LLVM_ABI bool maskIsAllZeroOrUndef(Value *Mask);
-
-/// Given a mask vector of i1, Return true if all of the elements of this
-/// predicate mask are known to be true or undef.  That is, return true if all
-/// lanes can be assumed active.
-LLVM_ABI bool maskIsAllOneOrUndef(Value *Mask);
-
 /// Given a mask vector of i1, Return true if any of the elements of this
 /// predicate mask are known to be true or undef.  That is, return true if at
 /// least one lane can be assumed active.
@@ -552,11 +544,6 @@ public:
       return false;
     int32_t Key = *MaybeKey;
 
-    // Skip if the key is used for either the tombstone or empty special values.
-    if (DenseMapInfo<int32_t>::getTombstoneKey() == Key ||
-        DenseMapInfo<int32_t>::getEmptyKey() == Key)
-      return false;
-
     // Skip if there is already a member with the same index.
     if (Members.contains(Key))
       return false;
@@ -593,6 +580,15 @@ public:
   InstTy *getMember(uint32_t Index) const {
     int32_t Key = SmallestKey + Index;
     return Members.lookup(Key);
+  }
+
+  /// Return an iterator range over the non-null members of this group, in
+  /// index order.
+  auto members() const {
+    return make_filter_range(
+        map_range(seq<uint32_t>(0, Factor),
+                  [this](uint32_t I) { return getMember(I); }),
+        [](InstTy *I) { return I != nullptr; });
   }
 
   /// Get the index for the given member. Unlike the key in the member
@@ -669,8 +665,9 @@ class InterleavedAccessInfo {
 public:
   InterleavedAccessInfo(PredicatedScalarEvolution &PSE, Loop *L,
                         DominatorTree *DT, LoopInfo *LI,
-                        const LoopAccessInfo *LAI)
-      : PSE(PSE), TheLoop(L), DT(DT), LI(LI), LAI(LAI) {}
+                        const LoopAccessInfo *LAI, bool OptForSize)
+      : PSE(PSE), TheLoop(L), DT(DT), LI(LI), LAI(LAI), OptForSize(OptForSize) {
+  }
 
   ~InterleavedAccessInfo() { invalidateGroups(); }
 
@@ -742,6 +739,7 @@ private:
   DominatorTree *DT;
   LoopInfo *LI;
   const LoopAccessInfo *LAI;
+  bool OptForSize;
 
   /// True if the loop may contain non-reversed interleaved groups with
   /// out-of-bounds accesses. We ensure we don't speculatively access memory
@@ -809,10 +807,13 @@ private:
     delete Group;
   }
 
-  /// Collect all the accesses with a constant stride in program order.
+  /// Collect all the accesses with a constant stride in program order. Any
+  /// SCEV predicates needed to compute the strides are added to \p
+  /// Predicates if it is not nullptr.
   void collectConstStrideAccesses(
       MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
-      const DenseMap<Value *, const SCEV *> &Strides);
+      const DenseMap<Value *, const SCEV *> &Strides,
+      SmallVectorImpl<const SCEVPredicate *> *Predicates);
 
   /// Returns true if \p Stride is allowed in an interleaved group.
   LLVM_ABI static bool isStrided(int Stride);

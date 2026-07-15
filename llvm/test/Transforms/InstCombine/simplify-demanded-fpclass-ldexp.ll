@@ -34,7 +34,7 @@ define nofpclass(qnan inf norm sub zero) float @ret_only_snan__ldexp(float %x, i
 define nofpclass(snan inf norm sub zero) float @ret_only_qnan__ldexp(float %x, i32 %exp) {
 ; CHECK-LABEL: define nofpclass(snan inf zero sub norm) float @ret_only_qnan__ldexp(
 ; CHECK-SAME: float [[X:%.*]], i32 [[EXP:%.*]]) {
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 %exp)
   ret float %ldexp
@@ -43,7 +43,7 @@ define nofpclass(snan inf norm sub zero) float @ret_only_qnan__ldexp(float %x, i
 define nofpclass(inf norm sub zero) float @ret_only_nan__ldexp(float %x, i32 %exp) {
 ; CHECK-LABEL: define nofpclass(inf zero sub norm) float @ret_only_nan__ldexp(
 ; CHECK-SAME: float [[X:%.*]], i32 [[EXP:%.*]]) {
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 %exp)
   ret float %ldexp
@@ -62,7 +62,7 @@ define nofpclass(nan norm sub zero) float @ret_only_inf__ldexp(float %x, i32 %ex
 define nofpclass(nan ninf norm sub zero) float @ret_only_pinf__ldexp(float %x, i32 %exp) {
 ; CHECK-LABEL: define nofpclass(nan ninf zero sub norm) float @ret_only_pinf__ldexp(
 ; CHECK-SAME: float [[X:%.*]], i32 [[EXP:%.*]]) {
-; CHECK-NEXT:    ret float 0x7FF0000000000000
+; CHECK-NEXT:    ret float +inf
 ;
   %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 %exp)
   ret float %ldexp
@@ -71,7 +71,7 @@ define nofpclass(nan ninf norm sub zero) float @ret_only_pinf__ldexp(float %x, i
 define nofpclass(nan pinf norm sub zero) float @ret_only_ninf__ldexp(float %x, i32 %exp) {
 ; CHECK-LABEL: define nofpclass(nan pinf zero sub norm) float @ret_only_ninf__ldexp(
 ; CHECK-SAME: float [[X:%.*]], i32 [[EXP:%.*]]) {
-; CHECK-NEXT:    ret float 0xFFF0000000000000
+; CHECK-NEXT:    ret float -inf
 ;
   %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 %exp)
   ret float %ldexp
@@ -486,4 +486,18 @@ define nofpclass(snan) float @qnan_result_demands_snan_src(i1 %cond, float %unkn
   %select = select i1 %cond, float %snan, float %unknown
   %ldexp = call float @llvm.ldexp.f32.i32(float %select, i32 %unknown.int)
   ret float %ldexp
+}
+
+; Make sure there's no assertion from trying to query
+; getIntegerBitWidth on the vector type.
+define <2 x float> @ldexp_v2f32_v2i32_fmul_crash(<2 x i32> %exp) {
+; CHECK-LABEL: define <2 x float> @ldexp_v2f32_v2i32_fmul_crash(
+; CHECK-SAME: <2 x i32> [[EXP:%.*]]) {
+; CHECK-NEXT:    [[LDEXP:%.*]] = call nnan <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> splat (float 1.000000e+00), <2 x i32> [[EXP]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul <2 x float> [[LDEXP]], zeroinitializer
+; CHECK-NEXT:    ret <2 x float> [[MUL]]
+;
+  %ldexp = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> splat (float 1.0), <2 x i32> %exp)
+  %mul = fmul <2 x float> %ldexp, zeroinitializer
+  ret <2 x float> %mul
 }

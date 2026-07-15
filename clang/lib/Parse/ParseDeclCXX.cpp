@@ -2519,11 +2519,15 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
   else
     DeclaratorInfo.SetIdentifier(nullptr, Tok.getLocation());
 
+  bool IsFunctionDeclarator = DeclaratorInfo.isFunctionDeclarator();
+  if (!IsFunctionDeclarator && !getLangOpts().MSVCCompat)
+    MaybeParseGNUAttributes(DeclaratorInfo, &LateParsedAttrs);
+
   if (getLangOpts().HLSL)
     MaybeParseHLSLAnnotations(DeclaratorInfo, nullptr,
                               /*CouldBeBitField*/ true);
 
-  if (!DeclaratorInfo.isFunctionDeclarator() && TryConsumeToken(tok::colon)) {
+  if (!IsFunctionDeclarator && TryConsumeToken(tok::colon)) {
     assert(DeclaratorInfo.isPastIdentifier() &&
            "don't know where identifier would go yet?");
     BitfieldSize = ParseConstantExpression();
@@ -4698,21 +4702,15 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
       Diag(Tok, diag::err_cxx11_attribute_forbids_ellipsis) << AttrName;
   }
 
-  // If we hit an error and recovered by parsing up to a semicolon, eat the
-  // semicolon and don't issue further diagnostics about missing brackets.
-  if (Tok.is(tok::semi)) {
-    ConsumeToken();
-    return;
-  }
-
   SourceLocation CloseLoc = Tok.getLocation();
-  if (ExpectAndConsume(tok::r_square))
+  bool IsTokenNotFound = ExpectAndConsume(tok::r_square);
+  if (IsTokenNotFound)
     SkipUntil(tok::r_square);
   else if (Tok.is(tok::r_square))
     checkCompoundToken(CloseLoc, tok::r_square, CompoundToken::AttrEnd);
   if (EndLoc)
     *EndLoc = Tok.getLocation();
-  if (ExpectAndConsume(tok::r_square))
+  if (!IsTokenNotFound && ExpectAndConsume(tok::r_square))
     SkipUntil(tok::r_square);
 }
 

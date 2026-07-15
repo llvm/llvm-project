@@ -648,9 +648,9 @@ define amdgpu_kernel void @ashr_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @14, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 3 @6
-; EG-NEXT:    ALU 39, @15, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T2.XYZW, T3.X, 0
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XYZW, T1.X, 1
+; EG-NEXT:    ALU 38, @15, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T2.XYZW, T1.X, 0
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XYZW, T3.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    Fetch clause starting at 6:
 ; EG-NEXT:     VTX_READ_128 T1.XYZW, T0.X, 32, #1
@@ -687,19 +687,18 @@ define amdgpu_kernel void @ashr_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; EG-NEXT:     AND_INT * T4.W, T1.X, literal.x,
 ; EG-NEXT:    32(4.484155e-44), 0(0.000000e+00)
 ; EG-NEXT:     CNDE_INT T2.X, PS, PV.W, PV.Y,
-; EG-NEXT:     ASHR T6.Y, T3.W, literal.x,
-; EG-NEXT:     ASHR T3.Z, T0.Y, literal.x, BS:VEC_201
-; EG-NEXT:     ADD_INT T3.W, KC0[2].Y, literal.y,
+; EG-NEXT:     ASHR T3.Z, T3.W, literal.x,
+; EG-NEXT:     ASHR T3.W, T0.Y, literal.x, BS:VEC_201
 ; EG-NEXT:     CNDE_INT * T0.W, T1.Z, T2.Y, T1.Y,
-; EG-NEXT:    31(4.344025e-44), 16(2.242078e-44)
-; EG-NEXT:     LSHR T1.X, PV.W, literal.x,
-; EG-NEXT:     CNDE_INT T0.Y, T2.W, T4.Y, PV.Z,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     LSHR T1.X, KC0[2].Y, literal.x,
+; EG-NEXT:     CNDE_INT T0.Y, T2.W, T4.Y, PV.W,
 ; EG-NEXT:     ASHR T3.W, T3.Y, literal.y,
-; EG-NEXT:     CNDE_INT * T2.W, T1.W, T4.Z, PV.Y,
+; EG-NEXT:     CNDE_INT * T2.W, T1.W, T4.Z, PV.Z,
 ; EG-NEXT:    2(2.802597e-45), 31(4.344025e-44)
-; EG-NEXT:     LSHR T3.X, KC0[2].Y, literal.x,
+; EG-NEXT:     ADD_INT T3.X, PV.X, literal.x,
 ; EG-NEXT:     CNDE_INT * T2.Y, T4.W, T5.Y, PV.W,
-; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; EG-NEXT:    4(5.605194e-45), 0(0.000000e+00)
   %b_ptr = getelementptr <4 x i64>, ptr addrspace(1) %in, i64 1
   %a = load <4 x i64>, ptr addrspace(1) %in
   %b = load <4 x i64>, ptr addrspace(1) %b_ptr
