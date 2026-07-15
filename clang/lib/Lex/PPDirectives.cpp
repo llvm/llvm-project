@@ -515,6 +515,21 @@ void Preprocessor::SuggestTypoedDirective(const Token &Tok,
   // directives.
   if (getLangOpts().AsmPreprocessor) return;
 
+  // A known non-conditional directive (e.g. #include or #define inside a
+  // skipped conditional block) is not a typo of a conditional don't scan
+  // it. #elifdef/#elifndef stay eligible so that pre-C23/C++23 code still
+  // gets the "did you mean #elif" suggestion.
+  if (tok::PPKeywordKind K = getIdentifierInfo(Directive)->getPPKeywordID();
+      K != tok::pp_not_keyword && K != tok::pp_elifdef &&
+      K != tok::pp_elifndef)
+    return;
+
+  // The scan only feeds this diagnostic; skip it when the diagnostic is
+  // disabled at this location (e.g. -w).
+  if (getDiagnostics().isIgnored(diag::warn_pp_invalid_directive,
+                                 Tok.getLocation()))
+    return;
+
   std::vector<StringRef> Candidates = {
       "if", "ifdef", "ifndef", "elif", "else", "endif"
   };

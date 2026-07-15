@@ -8637,6 +8637,12 @@ void Sema::checkUnusedDeclAttributes(Declarator &D) {
 
 void Sema::DiagnoseUnknownAttribute(const ParsedAttr &AL) {
   SourceRange NR = AL.getNormalizedRange();
+  // Skip the expensive spelling-list typo-correction scan when the
+  // diagnostics it feeds are disabled at this location.
+  if (Diags.isIgnored(diag::warn_unknown_attribute_ignored, NR.getBegin()) &&
+      Diags.isIgnored(diag::warn_unknown_attribute_ignored_suggestion,
+                      NR.getBegin()))
+    return;
   StringRef ScopeName = AL.getNormalizedScopeName();
   std::optional<StringRef> CorrectedScopeName =
       AL.tryGetCorrectedScopeName(ScopeName);
