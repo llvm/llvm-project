@@ -95,9 +95,8 @@ static void replaceWithTLIFunction(IntrinsicInst *II, VFInfo &Info,
   auto *Replacement = IRBuilder.CreateCall(
       TLIVecFunc, Args, OpBundles, /*FMFSource=*/II->getFastMathFlagsOrNone());
   // Preserve fpmath for FP math
-  if (isa<FPMathOperator>(Replacement)) {
+  if (isa<FPMathOperator>(Replacement))
     Replacement->copyMetadata(*II, {LLVMContext::MD_fpmath});
-  }
   II->replaceAllUsesWith(Replacement);
   Replacement->setCallingConv(TLIVecFunc->getCallingConv());
 }
