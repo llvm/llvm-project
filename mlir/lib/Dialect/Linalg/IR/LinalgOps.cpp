@@ -5074,6 +5074,164 @@ Speculation::Speculatability ElementwiseOp::getSpeculatability() {
   return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
 }
 
+/// Check if the given elementwise op is a binary mul.
+static bool isElementwiseMul(ElementwiseOp op) {
+  auto groupAndKind = getArityGroupAndKind(op.getKind());
+  return groupAndKind.arityGroup == ElementwiseArityGroup::Binary &&
+         groupAndKind.kind.binaryFn == BinaryFn::mul;
+}
+
+/// Try to extract the scalar constant value from a Value that is either:
+/// - a dense splat constant (tensor<...xf32> with all same elements), or
+/// - a scalar constant that was broadcast.
+/// Returns std::nullopt if the value is not a recognizable scalar constant.
+static std::optional<TypedAttr> getScalarConstant(Value val) {
+  // Case 1: Dense splat constant.
+  if (auto splatAttr = getScalarConstantAttrFromDenseSplat(val))
+    return splatAttr;
+
+  // Case 2: fill(scalar_constant) - a linalg.fill with a constant scalar.
+  if (auto fillOp = val.getDefiningOp<linalg::FillOp>()) {
+    Value fillVal = fillOp.getInputs()[0];
+    Attribute constAttr;
+    if (matchPattern(fillVal, m_Constant(&constAttr)))
+      return cast<TypedAttr>(constAttr);
+  }
+
+  return std::nullopt;
+}
+
+/// Fold two consecutive scalar multiplications into one:
+///
+///   %c1 = arith.constant dense<s1> : tensor<...>
+///   %mul1 = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+///       ins(%x, %c1 : ...) outs(...)
+///   %c2 = arith.constant dense<s2> : tensor<...>
+///   %mul2 = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+///       ins(%mul1, %c2 : ...) outs(...)
+///
+/// Into:
+///
+///   %c = arith.constant dense<s1 * s2> : tensor<...>
+///   %mul = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+///       ins(%x, %c : ...) outs(...)
+///
+struct FoldConsecutiveScalarMulPattern
+    : public OpRewritePattern<ElementwiseOp> {
+  using OpRewritePattern<ElementwiseOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ElementwiseOp outerMul,
+                                PatternRewriter &rewriter) const override {
+    if (!outerMul.hasPureTensorSemantics())
+      return failure();
+
+    // Check that the outer op is a mul.
+    if (!isElementwiseMul(outerMul))
+      return failure();
+
+    // The outer op has exactly 2 inputs for binary mul.
+    Value outerLhs = outerMul.getInputs()[0];
+    Value outerRhs = outerMul.getInputs()[1];
+
+    // Find which operand of the outer mul is the scalar constant, and which
+    // is the inner mul.
+    Value outerNonConst = nullptr;
+    std::optional<TypedAttr> outerScalar;
+
+    // Try outerRhs as scalar, outerLhs as inner mul.
+    outerScalar = getScalarConstant(outerRhs);
+    if (outerScalar) {
+      outerNonConst = outerLhs;
+    } else {
+      // Try outerLhs as scalar, outerRhs as inner mul.
+      outerScalar = getScalarConstant(outerLhs);
+      if (!outerScalar)
+        return failure();
+      outerNonConst = outerRhs;
+    }
+
+    // The non-constant operand must be produced by another elementwise mul.
+    auto innerMul =
+        dyn_cast_or_null<ElementwiseOp>(outerNonConst.getDefiningOp());
+    if (!innerMul || !isElementwiseMul(innerMul))
+      return failure();
+
+    if (!innerMul.hasPureTensorSemantics())
+      return failure();
+
+    // The inner mul result should only be used by the outer mul (to avoid
+    // duplicating computation).
+    if (!innerMul->hasOneUse())
+      return failure();
+
+    Value innerLhs = innerMul.getInputs()[0];
+    Value innerRhs = innerMul.getInputs()[1];
+
+    // Find the scalar constant in the inner mul.
+    Value innerNonConst = nullptr;
+    std::optional<TypedAttr> innerScalar;
+
+    innerScalar = getScalarConstant(innerRhs);
+    if (innerScalar) {
+      innerNonConst = innerLhs;
+    } else {
+      innerScalar = getScalarConstant(innerLhs);
+      if (!innerScalar)
+        return failure();
+      innerNonConst = innerRhs;
+    }
+
+    // Fold the two scalar constants: compute s1 * s2 at compile time.
+    Location loc = outerMul.getLoc();
+    auto innerAttr = *innerScalar;
+    auto outerAttr = *outerScalar;
+
+    // Both scalars must have the same element type.
+    if (innerAttr.getType() != outerAttr.getType())
+      return failure();
+
+    TypedAttr foldedAttr;
+    if (isa<FloatType>(innerAttr.getType())) {
+      auto lhs = cast<FloatAttr>(innerAttr);
+      auto rhs = cast<FloatAttr>(outerAttr);
+      foldedAttr = FloatAttr::get(lhs.getType(), lhs.getValue() * rhs.getValue());
+    } else if (isa<IntegerType>(innerAttr.getType())) {
+      auto lhs = cast<IntegerAttr>(innerAttr);
+      auto rhs = cast<IntegerAttr>(outerAttr);
+      foldedAttr = IntegerAttr::get(lhs.getType(), lhs.getValue() * rhs.getValue());
+    } else {
+      return failure();
+    }
+
+    // Create the combined splat constant with the same type as the outer
+    // scalar operand.
+    Value outerScalarOperand =
+        (getScalarConstant(outerRhs)) ? outerRhs : outerLhs;
+    auto scalarOperandType =
+        cast<RankedTensorType>(outerScalarOperand.getType());
+    auto combinedSplat = DenseElementsAttr::get(scalarOperandType, foldedAttr);
+    Value combinedConst =
+        arith::ConstantOp::create(rewriter, loc, scalarOperandType,
+                                  combinedSplat);
+
+    // Create the new single mul: innerNonConst * combinedConst.
+    // Use the same indexing maps as the outer mul, since both operands have
+    // matching shapes (the inner non-const input may need the inner mul's
+    // indexing map).
+    SmallVector<Value> newInputs = {innerNonConst, combinedConst};
+    rewriter.replaceOpWithNewOp<ElementwiseOp>(
+        outerMul, newInputs, outerMul.getDpsInits(),
+        outerMul.getKindAttr(),
+        rewriter.getAffineMapArrayAttr(outerMul.getIndexingMapsArray()));
+    return success();
+  }
+};
+
+void ElementwiseOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                MLIRContext *context) {
+  results.add<FoldConsecutiveScalarMulPattern>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // PackOp/UnPackOp Common
 //===----------------------------------------------------------------------===//
