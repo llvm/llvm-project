@@ -1809,11 +1809,13 @@ static void maybeDiagnoseUTF8Homoglyph(DiagnosticsEngine &Diags, uint32_t C,
   }
 }
 
-static void diagnoseInvalidUnicodeCodepointInIdentifier(
-    DiagnosticsEngine &Diags, const LangOptions &LangOpts, uint32_t CodePoint,
-    CharSourceRange Range, bool IsFirst) {
+static bool CheckCodepointValidInIdentifier(const Preprocessor *PP,
+                                            const LangOptions &LangOpts,
+                                            uint32_t CodePoint,
+                                            CharSourceRange Range, bool IsFirst,
+                                            bool Diagnose) {
   if (isASCII(CodePoint))
-    return;
+    return true;
 
   bool IsExtension;
   bool IsIDStart = isAllowedInitiallyIDChar(CodePoint, LangOpts, IsExtension);
@@ -1821,19 +1823,23 @@ static void diagnoseInvalidUnicodeCodepointInIdentifier(
       IsIDStart || isAllowedIDChar(CodePoint, LangOpts, IsExtension);
 
   if ((IsFirst && IsIDStart) || (!IsFirst && IsIDContinue))
-    return;
+    return true;
+
+  if (!Diagnose)
+    return false;
 
   bool InvalidOnlyAtStart = IsFirst && !IsIDStart && IsIDContinue;
 
   if (!IsFirst || InvalidOnlyAtStart) {
-    Diags.Report(Range.getBegin(), diag::err_character_not_allowed_identifier)
+    PP->Diag(Range.getBegin(), diag::err_character_not_allowed_identifier)
         << Range << codepointAsHexString(CodePoint) << int(InvalidOnlyAtStart)
         << FixItHint::CreateRemoval(Range);
   } else {
-    Diags.Report(Range.getBegin(), diag::err_character_not_allowed)
+    PP->Diag(Range.getBegin(), diag::err_character_not_allowed)
         << Range << codepointAsHexString(CodePoint)
         << FixItHint::CreateRemoval(Range);
   }
+  return false;
 }
 
 bool Lexer::tryConsumeIdentifierUCN(const char *&CurPtr, unsigned Size,
@@ -1847,13 +1853,15 @@ bool Lexer::tryConsumeIdentifierUCN(const char *&CurPtr, unsigned Size,
   if (!isAllowedIDChar(CodePoint, LangOpts, IsExtension)) {
     if (isASCII(CodePoint) || isUnicodeWhitespace(CodePoint))
       return false;
-    if (!isLexingRawMode() && !ParsingPreprocessorDirective &&
-        !PP->isPreprocessedOutput())
-      diagnoseInvalidUnicodeCodepointInIdentifier(
-          PP->getDiagnostics(), LangOpts, CodePoint,
-          makeCharRange(*this, CurPtr, UCNPtr),
-          /*IsFirst=*/false);
 
+    bool DiagnoseAndContinue = !isLexingRawMode() &&
+                               !ParsingPreprocessorDirective &&
+                               !PP->isPreprocessedOutput();
+    if (!CheckCodepointValidInIdentifier(
+            PP, LangOpts, CodePoint, makeCharRange(*this, CurPtr, UCNPtr),
+            /*IsFirst=*/false, DiagnoseAndContinue) &&
+        !DiagnoseAndContinue)
+      return false;
     // We got a unicode codepoint that is neither a space nor a
     // a valid identifier part.
     // Carry on as if the codepoint was valid for recovery purposes.
@@ -1900,11 +1908,16 @@ bool Lexer::tryConsumeIdentifierUTF8Char(const char *&CurPtr, Token &Result) {
     if (isASCII(CodePoint) || isUnicodeWhitespace(CodePoint))
       return false;
 
-    if (!isLexingRawMode() && !ParsingPreprocessorDirective &&
-        !PP->isPreprocessedOutput())
-      diagnoseInvalidUnicodeCodepointInIdentifier(
-          PP->getDiagnostics(), LangOpts, CodePoint,
-          makeCharRange(*this, CharStart, UnicodePtr), /*IsFirst=*/false);
+    bool DiagnoseAndContinue = !isLexingRawMode() &&
+                               !ParsingPreprocessorDirective &&
+                               !PP->isPreprocessedOutput();
+
+    if (!CheckCodepointValidInIdentifier(
+            PP, LangOpts, CodePoint,
+            makeCharRange(*this, CharStart, UnicodePtr), /*IsFirst=*/false,
+            DiagnoseAndContinue) &&
+        !DiagnoseAndContinue)
+      return false;
     // We got a unicode codepoint that is neither a space nor a
     // a valid identifier part. Carry on as if the codepoint was
     // valid for recovery purposes.
@@ -1960,9 +1973,9 @@ bool Lexer::LexUnicodeIdentifierStart(Token &Result, uint32_t C,
     // loophole in the mapping of Unicode characters to basic character set
     // characters that allows us to map these particular characters to, say,
     // whitespace.
-    diagnoseInvalidUnicodeCodepointInIdentifier(
-        PP->getDiagnostics(), LangOpts, C,
-        makeCharRange(*this, BufferPtr, CurPtr), /*IsStart*/ true);
+    CheckCodepointValidInIdentifier(PP, LangOpts, C,
+                                    makeCharRange(*this, BufferPtr, CurPtr),
+                                    /*IsStart=*/true, /*Diagnose=*/true);
     BufferPtr = CurPtr;
     return false;
   }
@@ -2144,6 +2157,7 @@ bool Lexer::LexNumericConstant(Token &Result, const char *CurPtr) {
   // If we have a digit separator, continue.
   if (C == '\'' && LangOpts.AllowLiteralDigitSeparator) {
     auto [Next, NextSize] = getCharAndSizeNoWarn(CurPtr + Size, LangOpts);
+    // A digit or non-digit.
     if (isAsciiIdentifierContinue(Next)) {
       if (!isLexingRawMode())
         Diag(CurPtr, LangOpts.CPlusPlus
@@ -2153,6 +2167,11 @@ bool Lexer::LexNumericConstant(Token &Result, const char *CurPtr) {
       CurPtr = ConsumeChar(CurPtr, NextSize, Result);
       return LexNumericConstant(Result, CurPtr);
     }
+  }
+
+  if (C == '$' && LangOpts.DollarIdents) {
+    CurPtr = ConsumeChar(CurPtr, Size, Result);
+    return LexNumericConstant(Result, CurPtr);
   }
 
   // If we have a UCN or UTF-8 character (perhaps in a ud-suffix), continue.
@@ -2179,7 +2198,7 @@ const char *Lexer::LexUDSuffix(Token &Result, const char *CurPtr,
   char C = getCharAndSize(CurPtr, Size);
   bool Consumed = false;
 
-  if (!isAsciiIdentifierStart(C)) {
+  if (!isAsciiIdentifierStart(C, LangOpts.DollarIdents)) {
     if (C == '\\' && tryConsumeIdentifierUCN(CurPtr, Size, Result))
       Consumed = true;
     else if (!isASCII(C) && tryConsumeIdentifierUTF8Char(CurPtr, Result))
@@ -2217,7 +2236,7 @@ const char *Lexer::LexUDSuffix(Token &Result, const char *CurPtr,
       while (true) {
         auto [Next, NextSize] =
             getCharAndSizeNoWarn(CurPtr + Consumed, LangOpts);
-        if (!isAsciiIdentifierContinue(Next)) {
+        if (!isAsciiIdentifierContinue(Next, LangOpts.DollarIdents)) {
           // End of suffix. Check whether this is on the allowed list.
           const StringRef CompleteSuffix(Buffer, Chars);
           IsUDSuffix =
@@ -2249,7 +2268,7 @@ const char *Lexer::LexUDSuffix(Token &Result, const char *CurPtr,
   Result.setFlag(Token::HasUDSuffix);
   while (true) {
     C = getCharAndSize(CurPtr, Size);
-    if (isAsciiIdentifierContinue(C)) {
+    if (isAsciiIdentifierContinue(C, LangOpts.DollarIdents)) {
       CurPtr = ConsumeChar(CurPtr, Size, Result);
     } else if (C == '\\' && tryConsumeIdentifierUCN(CurPtr, Size, Result)) {
     } else if (!isASCII(C) && tryConsumeIdentifierUTF8Char(CurPtr, Result)) {
@@ -2279,8 +2298,28 @@ bool Lexer::LexStringLiteral(Token &Result, const char *CurPtr,
   while (C != '"') {
     // Skip escaped characters.  Escaped newlines will already be processed by
     // getAndAdvanceChar.
-    if (C == '\\')
+    if (C == '\\') {
+      const char *SavedCurPtr = CurPtr;
       C = getAndAdvanceChar(CurPtr, Result);
+
+      // lex.header
+      //
+      // header-name:
+      //    ...
+      //    " q-char-sequence "
+      //    ...
+      // q-char-sequence:
+      //    q-char q-char-sequence[opt]
+      // q-char:
+      //    any member of the translation character set except new-line and
+      //    U+0022 quotation mark
+      //
+      // The implementation-defined semantics cannot be taken as causing '\' to
+      // "escape" the following " because there is no provision for " in a
+      // q-char-sequence.
+      if (ParsingFilename && C == '"')
+        CurPtr = SavedCurPtr;
+    }
 
     if (C == '\n' || C == '\r' ||             // Newline.
         (C == 0 && CurPtr-1 == BufferEnd)) {  // End of file.

@@ -484,6 +484,10 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
     return rewriter.notifyMatchFailure(linalgOp,
                                        "incorrect number of pack sizes");
   }
+  if (!linalgOp.hasPureTensorSemantics()) {
+    return rewriter.notifyMatchFailure(
+        linalgOp, "expects LinalgOp with pure tensor semantics");
+  }
 
   Location loc = linalgOp->getLoc();
   SmallVector<AffineMap> indexingMaps = linalgOp.getIndexingMapsArray();

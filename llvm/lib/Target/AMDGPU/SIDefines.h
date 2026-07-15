@@ -10,7 +10,9 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_SIDEFINES_H
 #define LLVM_LIB_TARGET_AMDGPU_SIDEFINES_H
 
+#include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 
 namespace llvm {
@@ -182,6 +184,220 @@ enum : uint64_t {
   IsSWMMAC = UINT64_C(1) << 63,
 };
 
+// Predicate functions over TSFlags — the single place where raw TSFlags bit
+// tests are written. All callers (SIInstrInfo methods, MC-layer code) go
+// through these so that bit-layout changes require updating only this file.
+//
+// getTSFlags is overloaded for MCInstrDesc, (MCInstrInfo, Opcode), and
+// (MCInstrInfo, MCInst) here; SIInstrInfo.h adds a MachineInstr overload in
+// namespace llvm so ADL finds it when predicates are instantiated with
+// MachineInstr.
+
+constexpr uint64_t getTSFlags(const MCInstrDesc &Desc) { return Desc.TSFlags; }
+inline uint64_t getTSFlags(const MCInstrInfo &MII, unsigned Opcode) {
+  return MII.get(Opcode).TSFlags;
+}
+inline uint64_t getTSFlags(const MCInstrInfo &MII, const MCInst &Inst) {
+  return MII.get(Inst.getOpcode()).TSFlags;
+}
+
+template <typename... T> constexpr bool isSALU(const T &...O) {
+  return getTSFlags(O...) & SALU;
+}
+template <typename... T> constexpr bool isVALU(const T &...O) {
+  return getTSFlags(O...) & VALU;
+}
+template <typename... T> constexpr bool isSOP1(const T &...O) {
+  return getTSFlags(O...) & SOP1;
+}
+template <typename... T> constexpr bool isSOP2(const T &...O) {
+  return getTSFlags(O...) & SOP2;
+}
+template <typename... T> constexpr bool isSOPC(const T &...O) {
+  return getTSFlags(O...) & SOPC;
+}
+template <typename... T> constexpr bool isSOPK(const T &...O) {
+  return getTSFlags(O...) & SOPK;
+}
+template <typename... T> constexpr bool isSOPP(const T &...O) {
+  return getTSFlags(O...) & SOPP;
+}
+template <typename... T> constexpr bool isVOP1(const T &...O) {
+  return getTSFlags(O...) & VOP1;
+}
+template <typename... T> constexpr bool isVOP2(const T &...O) {
+  return getTSFlags(O...) & VOP2;
+}
+template <typename... T> constexpr bool isVOPC(const T &...O) {
+  return getTSFlags(O...) & VOPC;
+}
+template <typename... T> constexpr bool isVOP3(const T &...O) {
+  return getTSFlags(O...) & VOP3;
+}
+template <typename... T> constexpr bool isVOP3P(const T &...O) {
+  return getTSFlags(O...) & VOP3P;
+}
+template <typename... T> constexpr bool isVOP3Like(const T &...O) {
+  return getTSFlags(O...) & (VOP3 | VOP3P);
+}
+template <typename... T> constexpr bool isVINTRP(const T &...O) {
+  return getTSFlags(O...) & VINTRP;
+}
+template <typename... T> constexpr bool isSDWA(const T &...O) {
+  return getTSFlags(O...) & SDWA;
+}
+template <typename... T> constexpr bool isDPP(const T &...O) {
+  return getTSFlags(O...) & DPP;
+}
+template <typename... T> constexpr bool isTRANS(const T &...O) {
+  return getTSFlags(O...) & TRANS;
+}
+template <typename... T> constexpr bool isMUBUF(const T &...O) {
+  return getTSFlags(O...) & MUBUF;
+}
+template <typename... T> constexpr bool isMTBUF(const T &...O) {
+  return getTSFlags(O...) & MTBUF;
+}
+template <typename... T> constexpr bool isBuffer(const T &...O) {
+  return getTSFlags(O...) & (MUBUF | MTBUF);
+}
+template <typename... T> constexpr bool isSMRD(const T &...O) {
+  return getTSFlags(O...) & SMRD;
+}
+template <typename... T> constexpr bool isMIMG(const T &...O) {
+  return getTSFlags(O...) & MIMG;
+}
+template <typename... T> constexpr bool isVIMAGE(const T &...O) {
+  return getTSFlags(O...) & VIMAGE;
+}
+template <typename... T> constexpr bool isVSAMPLE(const T &...O) {
+  return getTSFlags(O...) & VSAMPLE;
+}
+template <typename... T> constexpr bool isEXP(const T &...O) {
+  return getTSFlags(O...) & EXP;
+}
+template <typename... T> constexpr bool isFLAT(const T &...O) {
+  return getTSFlags(O...) & FLAT;
+}
+template <typename... T> constexpr bool isDS(const T &...O) {
+  return getTSFlags(O...) & DS;
+}
+template <typename... T> constexpr bool isSpill(const T &...O) {
+  return getTSFlags(O...) & Spill;
+}
+template <typename... T> constexpr bool isLDSDIR(const T &...O) {
+  return getTSFlags(O...) & LDSDIR;
+}
+template <typename... T> constexpr bool isVINTERP(const T &...O) {
+  return getTSFlags(O...) & VINTERP;
+}
+template <typename... T> constexpr bool isWQM(const T &...O) {
+  return getTSFlags(O...) & WQM;
+}
+template <typename... T> constexpr bool isDisableWQM(const T &...O) {
+  return getTSFlags(O...) & DisableWQM;
+}
+template <typename... T> constexpr bool isGather4(const T &...O) {
+  return getTSFlags(O...) & Gather4;
+}
+template <typename... T> constexpr bool usesTENSOR_CNT(const T &...O) {
+  return getTSFlags(O...) & TENSOR_CNT;
+}
+template <typename... T> constexpr bool isScalarStore(const T &...O) {
+  return getTSFlags(O...) & SCALAR_STORE;
+}
+template <typename... T> constexpr bool isFixedSize(const T &...O) {
+  return getTSFlags(O...) & FIXED_SIZE;
+}
+template <typename... T> constexpr bool usesASYNC_CNT(const T &...O) {
+  return getTSFlags(O...) & ASYNC_CNT;
+}
+template <typename... T> constexpr bool hasVOP3OpSel(const T &...O) {
+  return getTSFlags(O...) & VOP3_OPSEL;
+}
+template <typename... T> constexpr bool isMaybeAtomic(const T &...O) {
+  return getTSFlags(O...) & maybeAtomic;
+}
+template <typename... T> constexpr bool hasFPClamp(const T &...O) {
+  return getTSFlags(O...) & FPClamp;
+}
+template <typename... T> constexpr bool hasIntClamp(const T &...O) {
+  return getTSFlags(O...) & IntClamp;
+}
+template <typename... T> constexpr bool hasClampLo(const T &...O) {
+  return getTSFlags(O...) & ClampLo;
+}
+template <typename... T> constexpr bool hasClampHi(const T &...O) {
+  return getTSFlags(O...) & ClampHi;
+}
+template <typename... T> constexpr bool isPacked(const T &...O) {
+  return getTSFlags(O...) & IsPacked;
+}
+template <typename... T> constexpr bool isD16Buf(const T &...O) {
+  return getTSFlags(O...) & D16Buf;
+}
+template <typename... T> constexpr bool isFlatGlobal(const T &...O) {
+  return getTSFlags(O...) & FlatGlobal;
+}
+template <typename... T> constexpr bool usesFPDPRounding(const T &...O) {
+  return getTSFlags(O...) & FPDPRounding;
+}
+template <typename... T> constexpr bool isFPAtomic(const T &...O) {
+  return getTSFlags(O...) & FPAtomic;
+}
+template <typename... T> constexpr bool isMAI(const T &...O) {
+  return getTSFlags(O...) & IsMAI;
+}
+template <typename... T> constexpr bool isDOT(const T &...O) {
+  return getTSFlags(O...) & IsDOT;
+}
+template <typename... T> constexpr bool isFlatScratch(const T &...O) {
+  return getTSFlags(O...) & FlatScratch;
+}
+template <typename... T> constexpr bool isAtomicNoRet(const T &...O) {
+  return getTSFlags(O...) & IsAtomicNoRet;
+}
+template <typename... T> constexpr bool isAtomicRet(const T &...O) {
+  return getTSFlags(O...) & IsAtomicRet;
+}
+template <typename... T> constexpr bool isWMMA(const T &...O) {
+  return getTSFlags(O...) & IsWMMA;
+}
+template <typename... T> constexpr bool isTiedSourceNotRead(const T &...O) {
+  return getTSFlags(O...) & TiedSourceNotRead;
+}
+template <typename... T> constexpr bool isNeverUniform(const T &...O) {
+  return getTSFlags(O...) & IsNeverUniform;
+}
+template <typename... T> constexpr bool isGWS(const T &...O) {
+  return getTSFlags(O...) & GWS;
+}
+template <typename... T> constexpr bool isSWMMAC(const T &...O) {
+  return getTSFlags(O...) & IsSWMMAC;
+}
+template <typename... T> constexpr bool usesVM_CNT(const T &...O) {
+  return getTSFlags(O...) & VM_CNT;
+}
+template <typename... T> constexpr bool usesLGKM_CNT(const T &...O) {
+  return getTSFlags(O...) & LGKM_CNT;
+}
+
+// Compound predicates.
+template <typename... T> constexpr bool isAtomic(const T &...O) {
+  return isAtomicNoRet(O...) || isAtomicRet(O...);
+}
+template <typename... T> constexpr bool isSegmentSpecificFLAT(const T &...O) {
+  return isFlatGlobal(O...) || isFlatScratch(O...);
+}
+// Any image-family instruction: pre-gfx11 MIMG, gfx11+ VIMAGE or VSAMPLE.
+template <typename... T> constexpr bool isImage(const T &...O) {
+  return isMIMG(O...) || isVIMAGE(O...) || isVSAMPLE(O...);
+}
+// Vector memory: buffer + image + flat.
+template <typename... T> constexpr bool isVMEM(const T &...O) {
+  return isMUBUF(O...) || isMTBUF(O...) || isImage(O...) || isFLAT(O...);
+}
+
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.
 // The result is true if any of these tests are true.
 enum ClassFlags : unsigned {
@@ -213,9 +429,11 @@ enum OperandType : unsigned {
   OPERAND_REG_IMM_V2FP16,
   OPERAND_REG_IMM_V2FP16_SPLAT,
   OPERAND_REG_IMM_V2INT16,
+  OPERAND_REG_IMM_V2INT64,
   OPERAND_REG_IMM_NOINLINE_V2FP16,
   OPERAND_REG_IMM_V2INT32,
   OPERAND_REG_IMM_V2FP32,
+  OPERAND_REG_IMM_V2FP64,
 
   /// Operands with register or inline constant
   OPERAND_REG_INLINE_C_INT16,
@@ -253,7 +471,7 @@ enum OperandType : unsigned {
   OPERAND_SDWA_VOPC_DST,
 
   OPERAND_REG_IMM_FIRST = OPERAND_REG_IMM_INT32,
-  OPERAND_REG_IMM_LAST = OPERAND_REG_IMM_V2FP32,
+  OPERAND_REG_IMM_LAST = OPERAND_REG_IMM_V2FP64,
 
   OPERAND_REG_INLINE_C_FIRST = OPERAND_REG_INLINE_C_INT16,
   OPERAND_REG_INLINE_C_LAST = OPERAND_REG_INLINE_AC_FP64,

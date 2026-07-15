@@ -18,12 +18,7 @@ LLVM_LIBC_FUNCTION(void, qsort_r,
                    (void *array, size_t array_size, size_t elem_size,
                     int (*compare)(const void *, const void *, void *),
                     void *arg)) {
-
-  const auto is_less = [compare, arg](const void *a, const void *b) -> bool {
-    return compare(a, b, arg) < 0;
-  };
-
-  internal::unstable_sort(array, array_size, elem_size, is_less);
+  internal::unstable_sort(array, array_size, elem_size, compare, arg);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

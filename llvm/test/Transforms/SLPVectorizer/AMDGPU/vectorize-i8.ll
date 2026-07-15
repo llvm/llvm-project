@@ -73,30 +73,28 @@ define protected amdgpu_kernel void @arith_3(<16 x i8> %invec, ptr %out, i32 %fl
 ; GFX8-LABEL: define protected amdgpu_kernel void @arith_3(
 ; GFX8-SAME: <16 x i8> [[INVEC:%.*]], ptr [[OUT:%.*]], i32 [[FLAG:%.*]]) #[[ATTR0]] {
 ; GFX8-NEXT:  [[ENTRY:.*:]]
-; GFX8-NEXT:    [[EL0:%.*]] = extractelement <16 x i8> [[INVEC]], i64 0
+; GFX8-NEXT:    [[EL0:%.*]] = extractelement <16 x i8> [[INVEC]], i64 2
 ; GFX8-NEXT:    [[MUL2:%.*]] = mul i8 [[EL0]], 1
-; GFX8-NEXT:    [[ADD2:%.*]] = add i8 [[MUL2]], 1
-; GFX8-NEXT:    [[TMP0:%.*]] = shufflevector <16 x i8> [[INVEC]], <16 x i8> poison, <2 x i32> <i32 1, i32 2>
+; GFX8-NEXT:    [[TMP0:%.*]] = shufflevector <16 x i8> [[INVEC]], <16 x i8> poison, <2 x i32> <i32 0, i32 1>
 ; GFX8-NEXT:    [[TMP1:%.*]] = mul <2 x i8> [[TMP0]], splat (i8 1)
 ; GFX8-NEXT:    [[TMP2:%.*]] = add <2 x i8> [[TMP1]], splat (i8 1)
-; GFX8-NEXT:    [[VECINS0:%.*]] = insertelement <16 x i8> poison, i8 [[ADD2]], i64 0
+; GFX8-NEXT:    [[ADD2:%.*]] = add i8 [[MUL2]], 1
 ; GFX8-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i8> [[TMP2]], <2 x i8> poison, <16 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; GFX8-NEXT:    [[VECINS2:%.*]] = shufflevector <16 x i8> [[VECINS0]], <16 x i8> [[TMP3]], <16 x i32> <i32 0, i32 16, i32 17, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; GFX8-NEXT:    [[VECINS2:%.*]] = insertelement <16 x i8> [[TMP3]], i8 [[ADD2]], i64 2
 ; GFX8-NEXT:    store <16 x i8> [[VECINS2]], ptr [[OUT]], align 16
 ; GFX8-NEXT:    ret void
 ;
 ; GFX9-LABEL: define protected amdgpu_kernel void @arith_3(
 ; GFX9-SAME: <16 x i8> [[INVEC:%.*]], ptr [[OUT:%.*]], i32 [[FLAG:%.*]]) #[[ATTR0]] {
 ; GFX9-NEXT:  [[ENTRY:.*:]]
-; GFX9-NEXT:    [[EL0:%.*]] = extractelement <16 x i8> [[INVEC]], i64 0
+; GFX9-NEXT:    [[EL0:%.*]] = extractelement <16 x i8> [[INVEC]], i64 2
 ; GFX9-NEXT:    [[MUL2:%.*]] = mul i8 [[EL0]], 1
-; GFX9-NEXT:    [[ADD2:%.*]] = add i8 [[MUL2]], 1
-; GFX9-NEXT:    [[TMP0:%.*]] = shufflevector <16 x i8> [[INVEC]], <16 x i8> poison, <2 x i32> <i32 1, i32 2>
+; GFX9-NEXT:    [[TMP0:%.*]] = shufflevector <16 x i8> [[INVEC]], <16 x i8> poison, <2 x i32> <i32 0, i32 1>
 ; GFX9-NEXT:    [[TMP1:%.*]] = mul <2 x i8> [[TMP0]], splat (i8 1)
 ; GFX9-NEXT:    [[TMP2:%.*]] = add <2 x i8> [[TMP1]], splat (i8 1)
-; GFX9-NEXT:    [[VECINS0:%.*]] = insertelement <16 x i8> poison, i8 [[ADD2]], i64 0
+; GFX9-NEXT:    [[ADD2:%.*]] = add i8 [[MUL2]], 1
 ; GFX9-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i8> [[TMP2]], <2 x i8> poison, <16 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; GFX9-NEXT:    [[VECINS2:%.*]] = shufflevector <16 x i8> [[VECINS0]], <16 x i8> [[TMP3]], <16 x i32> <i32 0, i32 16, i32 17, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; GFX9-NEXT:    [[VECINS2:%.*]] = insertelement <16 x i8> [[TMP3]], i8 [[ADD2]], i64 2
 ; GFX9-NEXT:    store <16 x i8> [[VECINS2]], ptr [[OUT]], align 16
 ; GFX9-NEXT:    ret void
 ;

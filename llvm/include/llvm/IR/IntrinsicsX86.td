@@ -2575,18 +2575,6 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_bmi_bzhi_64 : ClangBuiltin<"__builtin_ia32_bzhi_di">,
       DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty],
                             [IntrNoMem]>;
-  def int_x86_bmi_pdep_32 : ClangBuiltin<"__builtin_ia32_pdep_si">,
-      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
-                            [IntrNoMem]>;
-  def int_x86_bmi_pdep_64 : ClangBuiltin<"__builtin_ia32_pdep_di">,
-      DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty],
-                            [IntrNoMem]>;
-  def int_x86_bmi_pext_32 : ClangBuiltin<"__builtin_ia32_pext_si">,
-      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
-                            [IntrNoMem]>;
-  def int_x86_bmi_pext_64 : ClangBuiltin<"__builtin_ia32_pext_di">,
-      DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty],
-                            [IntrNoMem]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -5664,16 +5652,6 @@ let TargetPrefix = "x86" in {
                         [llvm_i16_ty, llvm_i16_ty, llvm_x86amx_ty, llvm_i32_ty],
                         []>;
 
-  def int_x86_tmmultf32ps : ClangBuiltin<"__builtin_ia32_tmmultf32ps">,
-              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
-                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
-                         ImmArg<ArgIndex<2>>]>;
-  def int_x86_tmmultf32ps_internal :
-              ClangBuiltin<"__builtin_ia32_tmmultf32ps_internal">,
-              Intrinsic<[llvm_x86amx_ty],
-                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_x86amx_ty,
-                         llvm_x86amx_ty, llvm_x86amx_ty], []>;
-
   def int_x86_tdpbf8ps_internal :
                 ClangBuiltin<"__builtin_ia32_tdpbf8ps_internal">,
                 Intrinsic<[llvm_x86amx_ty],
@@ -7341,4 +7319,26 @@ def int_x86_movrsdi : ClangBuiltin<"__builtin_ia32_movrsdi">,
                   [IntrReadMem]>;
 def int_x86_prefetchrs : ClangBuiltin<"__builtin_ia32_prefetchrs">,
         Intrinsic<[], [llvm_ptr_ty], []>;
+
+//===----------------------------------------------------------------------===//
+// BMM intrinsics
+
+def int_x86_avx512_vbmacor_v16hi :
+  ClangBuiltin<"__builtin_ia32_bmacor16x16x16_v16hi">,
+  DefaultAttrsIntrinsic<[llvm_v16i16_ty], [llvm_v16i16_ty, llvm_v16i16_ty, llvm_v16i16_ty],
+                        [IntrNoMem]>;
+def int_x86_avx512_vbmacor_v32hi :
+  ClangBuiltin<"__builtin_ia32_bmacor16x16x16_v32hi">,
+  DefaultAttrsIntrinsic<[llvm_v32i16_ty], [llvm_v32i16_ty, llvm_v32i16_ty, llvm_v32i16_ty],
+                        [IntrNoMem]>;
+
+def int_x86_avx512_vbmacxor_v16hi :
+  ClangBuiltin<"__builtin_ia32_bmacxor16x16x16_v16hi">,
+  DefaultAttrsIntrinsic<[llvm_v16i16_ty], [llvm_v16i16_ty, llvm_v16i16_ty, llvm_v16i16_ty],
+                        [IntrNoMem]>;
+def int_x86_avx512_vbmacxor_v32hi :
+  ClangBuiltin<"__builtin_ia32_bmacxor16x16x16_v32hi">,
+  DefaultAttrsIntrinsic<[llvm_v32i16_ty], [llvm_v32i16_ty, llvm_v32i16_ty, llvm_v32i16_ty],
+                        [IntrNoMem]>;
 }
+//===----------------------------------------------------------------------===//

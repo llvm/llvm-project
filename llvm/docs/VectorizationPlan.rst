@@ -36,7 +36,7 @@ the vectorization process [10]_. Those include transformations to
 3. Apply unroll- and vectorization-factor specific optimizations, e.g. removing
    the backedge to reiterate the vector loop based on VF & UF.
 
-Refer to :numref:`fig-vplan-transform-pipeline` for an overview of the current
+Refer to :ref:`fig-vplan-transform-pipeline` for an overview of the current
 transformation pipeline.
 
 Note that some legality checks are already done in VPlan, including checking if
@@ -52,7 +52,7 @@ bails out marking the VPlan as invalid.
 
 
 VPlan currently models the complete vector loop, as well as additional parts of
-the vectorization skeleton. Refer to :numref:`fig-vplan-scope` for an overview
+the vectorization skeleton. Refer to :ref:`fig-vplan-scope` for an overview
 of the scope covered by VPlan.
 
 .. _fig-vplan-scope:

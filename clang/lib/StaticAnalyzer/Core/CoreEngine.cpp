@@ -254,11 +254,9 @@ void CoreEngine::dispatchWorkItem(ExplodedNode *Pred, ProgramPoint Loc,
       break;
     }
     default:
-      assert(Loc.getAs<PostStmt>() ||
-             Loc.getAs<PostInitializer>() ||
-             Loc.getAs<PostImplicitCall>() ||
-             Loc.getAs<CallExitEnd>() ||
-             Loc.getAs<LoopExit>() ||
+      assert(Loc.getAs<PostStmt>() || Loc.getAs<PostInitializer>() ||
+             Loc.getAs<PostImplicitCall>() || Loc.getAs<CallExitEnd>() ||
+             Loc.getAs<LoopExit>() || Loc.getAs<LifetimeEnd>() ||
              Loc.getAs<PostAllocatorCall>());
       HandlePostStmt(WU.getBlock(), WU.getIndex(), Pred);
       break;
@@ -306,6 +304,9 @@ void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
       } else if (std::optional<CFGAutomaticObjDtor> AutoDtor =
                      LastElement.getAs<CFGAutomaticObjDtor>()) {
         RS = dyn_cast<ReturnStmt>(AutoDtor->getTriggerStmt());
+      } else if (std::optional<CFGScopeMarker> ScopeMarker =
+                     LastElement.getAs<CFGScopeMarker>()) {
+        RS = dyn_cast<ReturnStmt>(ScopeMarker->getTriggerStmt());
       }
     }
 
@@ -591,9 +592,10 @@ void CoreEngine::enqueueStmtNode(ExplodedNode *N,
 
   // Do not create extra nodes. Move to the next CFG element.
   if (N->getLocation().getAs<PostInitializer>() ||
-      N->getLocation().getAs<PostImplicitCall>()||
-      N->getLocation().getAs<LoopExit>()) {
-    WList->enqueue(N, Block, Idx+1);
+      N->getLocation().getAs<PostImplicitCall>() ||
+      N->getLocation().getAs<LoopExit>() ||
+      N->getLocation().getAs<LifetimeEnd>()) {
+    WList->enqueue(N, Block, Idx + 1);
     return;
   }
 

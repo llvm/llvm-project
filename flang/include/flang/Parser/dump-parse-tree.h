@@ -321,6 +321,7 @@ public:
   NODE(parser, EndChangeTeamStmt)
   NODE(parser, EndCriticalStmt)
   NODE(parser, EndDoStmt)
+  NODE(parser, EndEnumerationTypeStmt)
   NODE(parser, EndEnumStmt)
   NODE(parser, EndForallStmt)
   NODE(parser, EndFunctionStmt)
@@ -342,6 +343,9 @@ public:
   NODE(parser, EnumDefStmt)
   NODE(parser, Enumerator)
   NODE(parser, EnumeratorDefStmt)
+  NODE(parser, EnumerationEnumeratorStmt)
+  NODE(parser, EnumerationTypeDef)
+  NODE(parser, EnumerationTypeStmt)
   NODE(parser, EorLabel)
   NODE(parser, EquivalenceObject)
   NODE(parser, EquivalenceStmt)
@@ -356,6 +360,7 @@ public:
   NODE(parser, ExitStmt)
   NODE(parser, ExplicitCoshapeSpec)
   NODE(parser, ExplicitShapeSpec)
+  NODE(parser, ExplicitShapeBoundsSpec)
   NODE(parser, Expr)
   NODE(Expr, Parentheses)
   NODE(Expr, UnaryPlus)
@@ -551,6 +556,15 @@ public:
   NODE_ENUM(OmpAlwaysModifier, Value)
   NODE(parser, OmpAppendArgsClause)
   NODE(OmpAppendArgsClause, OmpAppendOp)
+  NODE(parser, OmpLoopModifier)
+
+  static std::string GetNodeName(const llvm::omp::LoopModifier &x) {
+    return llvm::Twine(
+        "llvm::omp::LoopModifier = ", llvm::omp::getLoopModifierName(x))
+        .str();
+  }
+  NODE(parser, OmpApplyClause)
+  NODE(OmpApplyClause, Modifier)
   NODE(parser, OmpArgument)
   NODE(parser, OmpArgumentList)
   NODE(parser, OmpAssumeDirective)
@@ -662,7 +676,6 @@ public:
   NODE(parser, OmpLinearModifier)
   NODE_ENUM(OmpLinearModifier, Value)
   NODE(parser, OmpLocator)
-  NODE(parser, OmpLocatorList)
   NODE(parser, OmpLooprangeClause)
   NODE(parser, OmpLowerBound)
   NODE(parser, OmpMapClause)
@@ -717,6 +730,7 @@ public:
   NODE_ENUM(OmpRefModifier, Value)
   NODE(parser, OmpReplayableClause)
   NODE(parser, OmpRequiresDirective)
+  NODE(parser, OmpReservedIdentifier)
   NODE(parser, OmpReverseOffloadClause)
   NODE(parser, OmpScheduleClause)
   NODE(OmpScheduleClause, Modifier)

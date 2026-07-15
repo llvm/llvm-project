@@ -26,6 +26,8 @@ RUN apt-get update && \
     libstdc++6-ppc64el-cross \
     gcc-powerpc64le-linux-gnu \
     g++-powerpc64le-linux-gnu \
+    gcc-12-arm-linux-gnueabihf \
+    g++-12-arm-linux-gnueabihf \
     sudo \
     sccache \
     wget \

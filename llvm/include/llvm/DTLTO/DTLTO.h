@@ -16,6 +16,7 @@
 #ifndef LLVM_DTLTO_DTLTO_H
 #define LLVM_DTLTO_DTLTO_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -27,34 +28,30 @@
 namespace llvm {
 namespace lto {
 
-/// Prepares inputs for Distributed ThinLTO so that backend compilations can use
+/// Prepares inputs for Distributed ThinLTO so that backend compilations use
 /// individual bitcode paths and consistent module IDs.
 ///
 /// Each input must exist as an individual bitcode file on disk and be loadable
-/// via its ModuleID. Archive members and FatLTO objects do not satisfy that by
-/// default; this class writes bitcode out when needed and updates ModuleID.
-/// On Windows, module IDs are normalized to remove short 8.3 path components
+/// via its ModuleID. Archive members and FatLTO objects do not satisfy this
+/// requirement. For these inputs, this class extracts the individual bitcode
+/// to an individual temporary file, and updates ModuleID to that path. On
+/// Windows, module IDs are normalized to remove short 8.3 path components
 /// that are machine-local and break distribution; other normalization is left
 /// to DTLTO distributors.
 ///
-/// Input files are kept until the pipeline has determined per-module ThinLTO
-/// participation. addInput() performs: (1) register the input; (2) on Windows,
-/// normalize module ID for standalone bitcode; (3) for thin archive members,
-/// set module ID to the on-disk member path; (4) for other archives and FatLTO,
-/// set module ID to a unique path and serialize content in
-/// serializeLTOInputs().
-class DTLTO : public LTO {
+/// Input files are kept alive until the pipeline has determined per-module
+/// ThinLTO participation and cache status, see addInput() for details.
+class LLVM_ABI DTLTO : public LTO {
   using Base = LTO;
 
 public:
-  LLVM_ABI DTLTO(Config Conf, unsigned ParallelCodeGenParallelismLevel,
-                 LTOKind LTOMode, IndexWriteCallback OnWrite,
-                 bool EmitIndexFiles, bool EmitImportsFiles,
-                 StringRef LinkerOutputFile, StringRef Distributor,
-                 ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
-                 ArrayRef<StringRef> RemoteCompilerPrependArgs,
-                 ArrayRef<StringRef> RemoteCompilerArgs,
-                 AddBufferFn AddBufferArg, bool SaveTempsArg)
+  DTLTO(Config Conf, unsigned ParallelCodeGenParallelismLevel, LTOKind LTOMode,
+        IndexWriteCallback OnWrite, bool EmitIndexFiles, bool EmitImportsFiles,
+        StringRef LinkerOutputFile, StringRef Distributor,
+        ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
+        ArrayRef<StringRef> RemoteCompilerPrependArgs,
+        ArrayRef<StringRef> RemoteCompilerArgs, AddBufferFn AddBufferArg,
+        bool SaveTempsArg)
       : Base(std::move(Conf), writeIndexesBackendInstance(),
              ParallelCodeGenParallelismLevel, LTOMode),
         AddBuffer(AddBufferArg), SaveTemps(SaveTempsArg),
@@ -83,9 +80,8 @@ public:
   ///    (normalized on Windows) to the member file on disk.
   /// 4. For archive members and FatLTO objects, overwrite the module ID with a
   ///    unique path (normalized on Windows) naming a file that will contain the
-  ///    member content. The file is created and populated later (see
-  ///    serializeInputs()).
-  LLVM_ABI Expected<std::shared_ptr<InputFile>>
+  ///    content. The file is created/populated later (see extractLTOInputs()).
+  Expected<std::shared_ptr<InputFile>>
   addInput(std::unique_ptr<InputFile> InputPtr) override;
 
   /// Runs the DTLTO pipeline. This function calls the supplied AddStream
@@ -96,23 +92,23 @@ public:
   ///
   /// The client will receive at most one callback (via either AddStream or
   /// Cache) for each task identifier.
-  LLVM_ABI virtual Error run(AddStreamFn AddStream,
-                             FileCache Cache = {}) override;
+  virtual Error run(AddStreamFn AddStream, FileCache Cache = {}) override;
 
 private:
-  /// DTLTO archives support.
+  /// DTLTO archive support.
   ///
-  /// Save the contents of ThinLTO-enabled input files that must be serialized
+  /// Save the contents of ThinLTO-enabled input files that must be extracted
   /// for distribution, such as archive members and FatLTO objects, to
   /// individual bitcode files named after the module ID.
   ///
-  /// Must be called after all input files are added but before optimization
-  /// begins. If a file with that name already exists, it is likely a leftover
-  /// from a previously terminated linker process and can be safely overwritten.
-  LLVM_ABI Error serializeLTOInputs();
+  /// Must be called after all input files are added and cache hits are known,
+  /// but before optimization begins. Existing files are overwritten because
+  /// they are likely leftovers from a previously terminated linker process and
+  /// can be safely replaced.
+  LLVM_ABI Error extractLTOInputs();
 
   // Remove temporary files created to enable distribution.
-  LLVM_ABI void cleanup() override;
+  void cleanup() override;
 
 public:
   // Mutable and const accessors to the LTO configuration object.
@@ -165,6 +161,8 @@ public:
 private:
   // Backend compilation jobs, one per module.
   SmallVector<Job> Jobs;
+  // Input module IDs that must be extracted to individual files.
+  DenseSet<StringRef> InputModuleIDsToExtract;
   // Task index offset for first ThinLTO job.
   unsigned ThinLTOTaskOffset;
   // Optional cache for native objects.
@@ -212,10 +210,13 @@ private:
   ///    distributor will skip this job. On a cache miss, J.CacheAddStream is
   ///    set for later use when storing the compiled object.
   ///
-  /// 4. Writes the per-module summary index to disk only on cache miss. The
+  /// 4. Records the module ID and imported module IDs that must be extracted
+  ///    to individual files.
+  ///
+  /// 5. Writes the per-module summary index to disk only on cache miss. The
   ///    remote compiler will read this via -fthinlto-index=.
   ///
-  /// 5. Registers the job's temporary files for removal on abnormal process
+  /// 6. Registers the job's temporary files for removal on abnormal process
   ///    exit when SaveTemps is false (only for files that will be created).
   ///
   /// \param ModulePath The module identifier (bitcode path) for the ThinLTO
@@ -313,7 +314,7 @@ private:
 public:
   // Parameters and shared state for DistributorDriver class.
   struct DistributionDriverParams {
-    LLVM_ABI
+
     DistributionDriverParams() = default;
     DistributionDriverParams(StringRef DistributorArg,
                              ArrayRef<StringRef> DistributorArgsArg,
@@ -368,7 +369,6 @@ constexpr StringRef BCError = "DTLTO backend compilation: ";
 
 class DistributionDriver {
 public:
-  LLVM_ABI
   DistributionDriver(DTLTO::DistributionDriverParams &ParamsArg,
                      ArrayRef<DTLTO::Job> JobsArg, bool SaveTempsArg,
                      std::function<void(StringRef)> AddToClenupArg)
@@ -396,7 +396,7 @@ public:
   ///
   /// \returns Error::success() on success, or an Error if the distributor
   /// fails.
-  Error operator()();
+  LLVM_ABI Error operator()();
 };
 
 } // namespace lto
