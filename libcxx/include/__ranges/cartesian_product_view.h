@@ -107,13 +107,13 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator<false> begin()
     requires(!__simple_view<_First> || ... || !__simple_view<_Vs>)
   {
-    return __iterator<false>(*this, __tuple_transform(ranges::begin, __bases_));
+    return __iterator<false>(*this, std::__tuple_transform(ranges::begin, __bases_));
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator<true> begin() const
     requires(range<const _First> && ... && range<const _Vs>)
   {
-    return __iterator<true>(*this, __tuple_transform(ranges::begin, __bases_));
+    return __iterator<true>(*this, std::__tuple_transform(ranges::begin, __bases_));
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator<false> end()
@@ -152,7 +152,7 @@ private:
                                         &__b = __self.__bases_]<std::size_t... _Ip>(std::index_sequence<_Ip...>) {
       const auto __begin_or_first_end = []<class _IsFirst>(_IsFirst, auto& __rng, bool __empty) {
         if constexpr (_IsFirst::value)
-          return __empty ? ranges::begin(__rng) : __cartesian_common_arg_end(__rng);
+          return __empty ? ranges::begin(__rng) : ranges::__cartesian_common_arg_end(__rng);
         return ranges::begin(__rng);
       };
       return std::make_tuple(
@@ -223,7 +223,7 @@ public:
       : __parent_(__i.__parent_), __current_(std::move(__i.__current_)) {}
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator*() const {
-    return __tuple_transform([](auto& __i) -> decltype(auto) { return *__i; }, __current_);
+    return std::__tuple_transform([](auto& __i) -> decltype(auto) { return *__i; }, __current_);
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
@@ -339,7 +339,7 @@ public:
       (noexcept(ranges::iter_move(std::declval<const iterator_t<__maybe_const<_IsConst, _Vs>>&>())) && ...) &&
       is_nothrow_move_constructible_v<range_rvalue_reference_t<__maybe_const<_IsConst, _First>>> &&
       (is_nothrow_move_constructible_v<range_rvalue_reference_t<__maybe_const<_IsConst, _Vs>>> && ...)) {
-    return __tuple_transform(ranges::iter_move, __i.__current_);
+    return std::__tuple_transform(ranges::iter_move, __i.__current_);
   }
 
   friend _LIBCPP_HIDE_FROM_ABI constexpr void iter_swap(const __iterator& __l, const __iterator& __r) noexcept(
@@ -377,7 +377,7 @@ private:
     auto& __it = std::get<_Np>(__current_);
     if constexpr (_Np > 0) {
       if (const auto& __v = std::get<_Np>(__parent_->__bases_); __it == ranges::begin(__v)) {
-        __it = __cartesian_common_arg_end(__v);
+        __it = ranges::__cartesian_common_arg_end(__v);
         __prev<_Np - 1>();
       }
     }
