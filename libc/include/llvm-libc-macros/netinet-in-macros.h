@@ -49,8 +49,8 @@
 
 #define __IN6_IS_ADDR_LOOPBACK(a)                                              \
   ((a)->s6_addr32[0] == 0 && (a)->s6_addr32[1] == 0 &&                         \
-   (a)->s6_addr32[2] == 0 && (a)->s6_addr[12] == 0 &&                          \
-   (a)->s6_addr[13] == 0 && (a)->s6_addr[14] == 0 && (a)->s6_addr[15] == 1)
+   (a)->s6_addr32[2] == 0 && (a)->s6_addr[12] == 0 && (a)->s6_addr[13] == 0 && \
+   (a)->s6_addr[14] == 0 && (a)->s6_addr[15] == 1)
 
 #define IN6_IS_ADDR_UNSPECIFIED(a)                                             \
   (__extension__({                                                             \
