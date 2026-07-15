@@ -14004,6 +14004,22 @@ unsigned ASTContext::getTargetAddressSpace(LangAS AS) const {
   return getTargetInfo().getTargetAddressSpace(AS);
 }
 
+bool ASTContext::isTargetConstantAddressSpaceObject(const VarDecl *D) const {
+  std::optional<LangAS> ConstantAS = getTargetInfo().getConstantAddressSpace();
+  // TargetInfo::getConstantAddressSpace() may return LangAS::Default as a
+  // placement fallback. That is not a distinct target constant address space.
+  if (!ConstantAS || *ConstantAS == LangAS::Default)
+    return false;
+
+  unsigned TargetConstantAS = getTargetAddressSpace(*ConstantAS);
+
+  if (LangOpts.CUDA && LangOpts.CUDAIsDevice && D->hasAttr<CUDAConstantAttr>())
+    return getTargetAddressSpace(LangAS::cuda_constant) == TargetConstantAS;
+
+  LangAS AS = D->getType().getAddressSpace();
+  return AS != LangAS::Default && getTargetAddressSpace(AS) == TargetConstantAS;
+}
+
 bool ASTContext::hasSameExpr(const Expr *X, const Expr *Y) const {
   if (X == Y)
     return true;

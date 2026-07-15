@@ -28,11 +28,68 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include <cstdint>
+#include <optional>
 #include <utility>
 
 namespace clang {
 
 SemaAMDGPU::SemaAMDGPU(Sema &S) : SemaBase(S) {}
+
+namespace {
+
+static std::pair<StringRef, SourceLocation>
+getExplicitAMDGPUSectionName(const VarDecl *D) {
+  if (auto *SA = D->getAttr<SectionAttr>())
+    return {SA->getName(), SA->getLocation()};
+  return {StringRef(), SourceLocation()};
+}
+
+static bool isDependentVarDecl(const VarDecl *D) {
+  if (D->getType()->isDependentType())
+    return true;
+  if (const auto *Init = D->getInit())
+    return Init->isValueDependent();
+  return false;
+}
+
+} // namespace
+
+void SemaAMDGPU::checkConstantAddressSpaceSection(VarDecl *VD) {
+  if (!SemaRef.Context.getTargetInfo().getTriple().isAMDGCN())
+    return;
+  std::optional<StringRef> ConstantSection =
+      SemaRef.Context.getTargetInfo().getConstantAddressSpaceSectionName();
+  if (!ConstantSection)
+    return;
+  if (VD->isInvalidDecl() || !VD->hasGlobalStorage() ||
+      !VD->isThisDeclarationADefinition() || isDependentVarDecl(VD))
+    return;
+  VarDecl *CanonicalVD = VD->getCanonicalDecl();
+  if (InvalidConstantSectionVars.contains(CanonicalVD))
+    return;
+
+  bool IsConstantAS = SemaRef.Context.isTargetConstantAddressSpaceObject(VD);
+
+  if (IsConstantAS) {
+    auto [ExplicitSection, ExplicitDiagLoc] = getExplicitAMDGPUSectionName(VD);
+    if (!ExplicitSection.empty() && ExplicitSection != *ConstantSection) {
+      SemaRef.Diag(ExplicitDiagLoc,
+                   diag::err_amdgpu_constant_address_space_section)
+          << *ConstantSection;
+      InvalidConstantSectionVars.insert(CanonicalVD);
+      VD->setInvalidDecl();
+    }
+    return;
+  }
+
+  auto [Section, DiagLoc] = getExplicitAMDGPUSectionName(VD);
+  if (Section == *ConstantSection) {
+    SemaRef.Diag(DiagLoc, diag::err_amdgpu_reserved_constant_section)
+        << *ConstantSection;
+    InvalidConstantSectionVars.insert(CanonicalVD);
+    VD->setInvalidDecl();
+  }
+}
 
 bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
                                                 CallExpr *TheCall) {

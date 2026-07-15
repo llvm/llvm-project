@@ -11,6 +11,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
+#include <optional>
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -337,6 +338,19 @@ static bool requiresAMDGPUProtectedVisibility(const Decl *D,
             cast<VarDecl>(D)->getType()->isCUDADeviceBuiltinTextureType())));
 }
 
+static void setAMDGPUConstantSection(CodeGenModule &M, const VarDecl *D,
+                                     llvm::GlobalValue *GV) {
+  if (GV->isDeclaration())
+    return;
+  std::optional<StringRef> ConstantSection =
+      M.getTarget().getConstantAddressSpaceSectionName();
+  if (!ConstantSection)
+    return;
+
+  if (M.getContext().isTargetConstantAddressSpaceObject(D))
+    cast<llvm::GlobalVariable>(GV)->setSection(*ConstantSection);
+}
+
 void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     const FunctionDecl *FD, llvm::Function *F, CodeGenModule &M) const {
   const auto *ReqdWGS =
@@ -427,6 +441,9 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
     GV->setVisibility(llvm::GlobalValue::ProtectedVisibility);
     GV->setDSOLocal(true);
   }
+
+  if (const auto *VD = dyn_cast_or_null<VarDecl>(D))
+    setAMDGPUConstantSection(M, VD, GV);
 
   if (GV->isDeclaration())
     return;

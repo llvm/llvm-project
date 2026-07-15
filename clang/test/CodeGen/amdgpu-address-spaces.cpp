@@ -19,12 +19,12 @@ int [[clang::address_space(999)]] bbb = 1234;
 //.
 // CHECK: @a = addrspace(1) global i32 100, align 4
 // CHECK: @b = global i32 42, align 4
-// CHECK: @c = addrspace(4) constant i32 999, align 4
+// CHECK: @c = addrspace(4) constant i32 999, section "__amdgpu_constant", align 4
 // CHECK: @d = addrspace(3) global i32 undef, align 4
 // CHECK: @e = addrspace(5) global i32 undef, align 4
 // CHECK: @x = addrspace(1) global i32 100, align 4
 // CHECK: @y = global i32 42, align 4
-// CHECK: @z = addrspace(4) global i32 999, align 4
+// CHECK: @z = addrspace(4) global i32 999, section "__amdgpu_constant", align 4
 // CHECK: @w = addrspace(3) global i32 undef, align 4
 // CHECK: @u = addrspace(5) global i32 undef, align 4
 // CHECK: @aaa = addrspace(6) global i32 1000, align 4

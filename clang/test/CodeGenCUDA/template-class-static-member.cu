@@ -38,9 +38,9 @@ const int A<T>::const_member;
 template class A<int>;
 
 //DEV-DAG: @_ZN1AIiE8d_memberE = internal addrspace(1) global i32 0, comdat, align 4
-//DEV-DAG: @_ZN1AIiE8c_memberE = internal addrspace(4) constant i32 0, comdat, align 4
+//DEV-DAG: @_ZN1AIiE8c_memberE = internal addrspace(4) constant i32 0, section "__amdgpu_constant", comdat, align 4
 //DEV-DAG: @_ZN1AIiE8m_memberE = internal addrspace(1) externally_initialized global ptr addrspace(1) null
-//DEV-DAG: @_ZN1AIiE12const_memberE = internal addrspace(4) constant i32 0, comdat, align 4
+//DEV-DAG: @_ZN1AIiE12const_memberE = internal addrspace(4) constant i32 0, section "__amdgpu_constant", comdat, align 4
 //DEV-NEG-NOT: @_ZN1AIiE8h_memberE
 
 //HOST-DAG: @_ZN1AIiE8h_memberE = weak_odr global i32 0, comdat, align 4
