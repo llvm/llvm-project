@@ -357,8 +357,8 @@ public:
 
   const FunctionT &getFunction() const { return F; }
 
-  /// \brief Mark \p UniVal as a value that is always uniform.
-  void addUniformOverride(const InstructionT &Instr);
+  /// \brief Mark \p V as a value that is always uniform.
+  void addUniformOverride(ConstValueRefT V);
 
   /// \brief Examine \p I for divergent outputs and add to the worklist.
   void markDivergent(const InstructionT &I);
@@ -376,9 +376,8 @@ public:
   /// Divergence is seeded by calls to \p markDivergent.
   void compute();
 
-  /// \brief Whether \p Val will always return a uniform value regardless of its
-  /// operands
-  bool isAlwaysUniform(const InstructionT &Instr) const;
+  /// \brief Whether \p V is a value that is always uniform.
+  bool isAlwaysUniform(ConstValueRefT V) const;
 
   bool hasDivergentDefs(const InstructionT &I) const;
 
@@ -471,8 +470,9 @@ private:
   // The SDA links divergent branches to divergent control-flow joins.
   SyncDependenceAnalysisT SDA;
 
-  // Set of known-uniform values.
-  SmallPtrSet<const InstructionT *, 32> UniformOverrides;
+  // Set of known-uniform values. Keyed on values (ConstValueRefT) so that
+  // individual defs of a multi-def instruction can be overridden uniform.
+  DenseSet<ConstValueRefT> UniformOverrides;
 
   /// \brief Mark all nodes in \p JoinBlock as divergent and push them on
   /// the worklist.
@@ -813,8 +813,6 @@ auto llvm::GenericSyncDependenceAnalysis<ContextT>::getJoinBlocks(
 template <typename ContextT>
 void GenericUniformityAnalysisImpl<ContextT>::markDivergent(
     const InstructionT &I) {
-  if (isAlwaysUniform(I))
-    return;
   // For custom uniformity candidates, check if the instruction can be
   // proven uniform based on which operands are uniform/divergent.
   // The candidate will be re-evaluated as operands become divergent.
@@ -840,6 +838,8 @@ void GenericUniformityAnalysisImpl<ContextT>::markDivergent(
 template <typename ContextT>
 bool GenericUniformityAnalysisImpl<ContextT>::markDivergent(
     ConstValueRefT Val) {
+  if (isAlwaysUniform(Val))
+    return false;
   if (UniformValues.erase(Val)) {
     LLVM_DEBUG(dbgs() << "marked divergent: " << Context.print(Val) << "\n");
     return true;
@@ -849,8 +849,8 @@ bool GenericUniformityAnalysisImpl<ContextT>::markDivergent(
 
 template <typename ContextT>
 void GenericUniformityAnalysisImpl<ContextT>::addUniformOverride(
-    const InstructionT &Instr) {
-  UniformOverrides.insert(&Instr);
+    ConstValueRefT V) {
+  UniformOverrides.insert(V);
 }
 
 template <typename ContextT>
@@ -1176,8 +1176,8 @@ void GenericUniformityAnalysisImpl<ContextT>::recordTemporalDivergence(
 
 template <typename ContextT>
 bool GenericUniformityAnalysisImpl<ContextT>::isAlwaysUniform(
-    const InstructionT &Instr) const {
-  return UniformOverrides.contains(&Instr);
+    ConstValueRefT V) const {
+  return UniformOverrides.contains(V);
 }
 
 template <typename ContextT>
