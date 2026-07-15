@@ -121,6 +121,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### Attribute Changes in Clang
 
+- Clang now properly propagates attributes on class and variable templates to their redeclarations, which will result in redeclarations not interfering with diagnostics. (#GH101469)
+
 ### Improvements to Clang's diagnostics
 
 ### Improvements to Clang's time-trace

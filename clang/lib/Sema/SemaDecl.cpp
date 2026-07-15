@@ -4768,7 +4768,11 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
     New->setInvalidDecl();
   }
 
+  if (NewTemplate && OldTemplate)
+    mergeDeclAttributes(NewTemplate, OldTemplate);
+
   mergeDeclAttributes(New, Old);
+
   // Warn if an already-defined variable is made a weak_import in a subsequent
   // declaration
   if (New->hasAttr<WeakImportAttr>())
