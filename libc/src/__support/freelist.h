@@ -65,20 +65,20 @@ struct FreeListSecrets {
   static constexpr int NODE_PTR_ROTATE_DISTANCE = 17;
 
 #if LIBC_COPT_HARDEN_FREELIST
-  uintptr_t k0;
-  uintptr_t k1;
-  uintptr_t k2;
+  uintptr_t forward_key;
+  uintptr_t backward_key[2];
 
-  LIBC_INLINE constexpr FreeListSecrets(uintptr_t k0, uintptr_t k1,
+  LIBC_INLINE constexpr FreeListSecrets(uintptr_t forward_key, uintptr_t k1,
                                         uintptr_t k2)
-      : k0(k0), k1(k1), k2(k2) {}
+      : forward_key(forward_key), backward_key{k1, k2} {}
 #else
   LIBC_INLINE constexpr FreeListSecrets() = default;
 #endif
 
-  template <typename T> LIBC_INLINE T *decrypt_next(T *next_val) const {
+  template <typename T> LIBC_INLINE T *flip_next(T *next_val) const {
 #if LIBC_COPT_HARDEN_FREELIST
-    return reinterpret_cast<T *>(reinterpret_cast<uintptr_t>(next_val) ^ k0);
+    return reinterpret_cast<T *>(reinterpret_cast<uintptr_t>(next_val) ^
+                                 forward_key);
 #else
     return next_val;
 #endif
@@ -88,20 +88,12 @@ struct FreeListSecrets {
   LIBC_INLINE T *decrypt_prev([[maybe_unused]] const void *node,
                               T *prev_val) const {
 #if LIBC_COPT_HARDEN_FREELIST
-    uintptr_t val = reinterpret_cast<uintptr_t>(prev_val) ^ k2 ^
+    uintptr_t val = reinterpret_cast<uintptr_t>(prev_val) ^ backward_key[1] ^
                     reinterpret_cast<uintptr_t>(node);
     val = cpp::rotl(val, NODE_PTR_ROTATE_DISTANCE);
-    return reinterpret_cast<T *>(val ^ k1);
+    return reinterpret_cast<T *>(val ^ backward_key[0]);
 #else
     return prev_val;
-#endif
-  }
-
-  template <typename T> LIBC_INLINE T *encrypt_next(T *next_val) const {
-#if LIBC_COPT_HARDEN_FREELIST
-    return reinterpret_cast<T *>(reinterpret_cast<uintptr_t>(next_val) ^ k0);
-#else
-    return next_val;
 #endif
   }
 
@@ -109,9 +101,10 @@ struct FreeListSecrets {
   LIBC_INLINE T *encrypt_prev([[maybe_unused]] const void *node,
                               T *prev_val) const {
 #if LIBC_COPT_HARDEN_FREELIST
-    uintptr_t val = reinterpret_cast<uintptr_t>(prev_val) ^ k1;
+    uintptr_t val = reinterpret_cast<uintptr_t>(prev_val) ^ backward_key[0];
     val = cpp::rotr(val, NODE_PTR_ROTATE_DISTANCE);
-    return reinterpret_cast<T *>(val ^ reinterpret_cast<uintptr_t>(node) ^ k2);
+    return reinterpret_cast<T *>(val ^ reinterpret_cast<uintptr_t>(node) ^
+                                 backward_key[1]);
 #else
     return prev_val;
 #endif
@@ -167,7 +160,7 @@ public:
 
   LIBC_INLINE Node *next_node(const Node *node,
                               const FreeListSecrets &secrets) const {
-    return node ? secrets.decrypt_next(node->next) : nullptr;
+    return node ? secrets.flip_next(node->next) : nullptr;
   }
 
   LIBC_INLINE Node *prev_node(const Node *node,
