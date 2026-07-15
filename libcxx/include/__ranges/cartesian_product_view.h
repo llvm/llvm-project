@@ -147,21 +147,19 @@ private:
   template <class _Self>
   _LIBCPP_HIDE_FROM_ABI static constexpr auto __end_impl(_Self& __self) {
     const auto __ranges_to_iterators = [__end_is_empty = __self.__end_is_empty(),
-                                        &__b = __self.__bases_]<std::size_t... _Ip>(std::index_sequence<_Ip...>) {
+                                        &__b           = __self.__bases_]<size_t... _Ip>(index_sequence<_Ip...>) {
       const auto __begin_or_first_end = []<class _IsFirst>(_IsFirst, auto& __rng, bool __empty) {
         if constexpr (_IsFirst::value)
           return __empty ? ranges::begin(__rng) : ranges::__cartesian_common_arg_end(__rng);
         return ranges::begin(__rng);
       };
-      return std::make_tuple(
-          __begin_or_first_end(std::bool_constant<_Ip == 0>{}, std::get<_Ip>(__b), __end_is_empty)...);
+      return std::make_tuple(__begin_or_first_end(bool_constant<_Ip == 0>{}, std::get<_Ip>(__b), __end_is_empty)...);
     };
-    __iterator<std::is_const_v<_Self>> __it(
-        __self, __ranges_to_iterators(std::make_index_sequence<1 + sizeof...(_Vs)>{}));
+    __iterator<is_const_v<_Self>> __it(__self, __ranges_to_iterators(make_index_sequence<1 + sizeof...(_Vs)>{}));
     return __it;
   }
 
-  template <std::size_t _Np = 1>
+  template <size_t _Np = 1>
   _LIBCPP_HIDE_FROM_ABI constexpr bool __end_is_empty() const {
     if constexpr (_Np == 1 + sizeof...(_Vs))
       return false;
@@ -175,8 +173,8 @@ private:
   _LIBCPP_HIDE_FROM_ABI constexpr auto __size_impl() const {
     return std::apply(
         [](auto&&... __bases) {
-          using _SizeType = std::common_type_t<std::ranges::range_size_t<decltype(__bases)>...>;
-          return (static_cast<_SizeType>(std::ranges::size(__bases)) * ...);
+          using _SizeType = common_type_t<ranges::range_size_t<decltype(__bases)>...>;
+          return (static_cast<_SizeType>(ranges::size(__bases)) * ...);
         },
         __bases_);
   }
@@ -212,7 +210,7 @@ public:
       tuple<range_value_t<__maybe_const<_IsConst, _First>>, range_value_t<__maybe_const<_IsConst, _Vs>>...>;
   using reference =
       tuple<range_reference_t<__maybe_const<_IsConst, _First>>, range_reference_t<__maybe_const<_IsConst, _Vs>>...>;
-  using difference_type = std::common_type_t<range_difference_t<_First>, range_difference_t<_Vs>...>;
+  using difference_type = common_type_t<range_difference_t<_First>, range_difference_t<_Vs>...>;
 
   _LIBCPP_HIDE_FROM_ABI __iterator() = default;
 
@@ -320,9 +318,9 @@ public:
   operator-(const __iterator& __i, default_sentinel_t)
     requires __cartesian_is_sized_sentinel<_IsConst, sentinel_t, _First, _Vs...>
   {
-    tuple __end_tuple = [&__b = __i.__parent_->__bases_]<std::size_t... _Ip>(std::index_sequence<_Ip...>) {
+    tuple __end_tuple = [&__b = __i.__parent_->__bases_]<size_t... _Ip>(index_sequence<_Ip...>) {
       return tuple{ranges::end(std::get<0>(__b)), ranges::begin(std::get<1 + _Ip>(__b))...};
-    }(std::make_index_sequence<sizeof...(_Vs)>{});
+    }(make_index_sequence<sizeof...(_Vs)>{});
     return __i.__distance_from(__end_tuple);
   }
 
@@ -361,7 +359,7 @@ private:
   _Parent* __parent_ = nullptr;
   _MultiIter __current_;
 
-  template <std::size_t _Np = sizeof...(_Vs)>
+  template <size_t _Np = sizeof...(_Vs)>
   _LIBCPP_HIDE_FROM_ABI constexpr void __next() {
     auto& __it = std::get<_Np>(__current_);
     ++__it;
@@ -373,7 +371,7 @@ private:
     }
   }
 
-  template <std::size_t _Np = sizeof...(_Vs)>
+  template <size_t _Np = sizeof...(_Vs)>
   _LIBCPP_HIDE_FROM_ABI constexpr void __prev() {
     auto& __it = std::get<_Np>(__current_);
     if constexpr (_Np > 0) {
@@ -392,7 +390,7 @@ private:
 
     const auto& __v    = std::get<_Np>(__parent_->__bases_);
     auto& __it         = std::get<_Np>(__current_);
-    const auto __sz    = static_cast<difference_type>(std::ranges::size(__v));
+    const auto __sz    = static_cast<difference_type>(ranges::size(__v));
     const auto __first = ranges::begin(__v);
 
     if (__sz > 0) {
