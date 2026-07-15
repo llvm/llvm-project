@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -verify-misched -run-pass=machine-scheduler -misched-only-block=2 -filetype=null %s
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -verify-misched -run-pass=machine-scheduler -misched-only-block=2 -filetype=null %s
 # REQUIRES: asserts
 
 # This used to assert while moving a dead subregister def upward. The moved

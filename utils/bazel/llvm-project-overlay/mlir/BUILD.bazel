@@ -5855,8 +5855,7 @@ cc_library(
         "//llvm:Target",
     ] + if_cuda_available([
         ":NVVMToLLVMIRTranslation",
-        "//llvm:NVPTXCodeGen",
-    ]),
+    ] + (["//llvm:NVPTXCodeGen"] if "NVPTX" in llvm_targets else [])),
 )
 
 cc_library(
@@ -6100,6 +6099,7 @@ cc_library(
         ":NVVMDialect",
         ":Pass",
         ":SCFTransforms",
+        ":VectorDialect",
         "//llvm:Support",
     ],
 )
@@ -9381,27 +9381,6 @@ cc_library(
 )
 
 cc_library(
-    name = "OpenACCToLLVMIRTranslation",
-    srcs = glob(["lib/Target/LLVMIR/Dialect/OpenACC/*.cpp"]),
-    hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/OpenACC/*.h"]),
-    includes = ["include"],
-    deps = [
-        ":Analysis",
-        ":IR",
-        ":LLVMDialect",
-        ":OpenACCDialect",
-        ":OpenMPCommon",
-        ":Support",
-        ":ToLLVMIRTranslation",
-        ":TransformUtils",
-        "//llvm:Core",
-        "//llvm:FrontendOpenMP",
-        "//llvm:Support",
-        "//llvm:TargetParser",
-    ],
-)
-
-cc_library(
     name = "OpenMPToLLVMIRTranslation",
     srcs = glob(["lib/Target/LLVMIR/Dialect/OpenMP/*.cpp"]),
     hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/OpenMP/*.h"]),
@@ -9471,7 +9450,6 @@ cc_library(
         ":LLVMIRToNVVMTranslation",
         ":LLVMToLLVMIRTranslation",
         ":NVVMToLLVMIRTranslation",
-        ":OpenACCToLLVMIRTranslation",
         ":OpenMPToLLVMIRTranslation",
         ":PtrToLLVMIRTranslation",
         ":ROCDLToLLVMIRTranslation",
@@ -10071,7 +10049,6 @@ cc_library(
         ":IR",
         ":LLVMDialect",
         ":LLVMToLLVMIRTranslation",
-        ":OpenACCToLLVMIRTranslation",
         ":OpenMPToLLVMIRTranslation",
         ":ParseUtilities",
         ":Parser",
@@ -10266,7 +10243,6 @@ cc_binary(
         ":LLVMDialect",
         ":LLVMToLLVMIRTranslation",
         ":MlirJitRunner",
-        ":OpenACCToLLVMIRTranslation",
         ":OpenMPToLLVMIRTranslation",
         ":ToLLVMIRTranslation",
         "//llvm:AsmParser",
@@ -10665,6 +10641,19 @@ cc_library(
 )
 
 cc_library(
+    name = "OpenACCAnalysisHeaders",
+    hdrs = glob(["include/mlir/Dialect/OpenACC/Analysis/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":GPUDialect",
+        ":IR",
+        ":OpenACCDialect",
+        ":Pass",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "OpenACCUtils",
     srcs = glob(
         ["lib/Dialect/OpenACC/Utils/*.cpp"],
@@ -10673,11 +10662,15 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ArithUtils",
+        ":ComplexDialect",
         ":DataLayoutInterfaces",
         ":DialectUtils",
         ":FuncDialect",
         ":FunctionInterfaces",
         ":IR",
+        ":LLVMDialect",
+        ":MemRefDialect",
+        ":OpenACCAnalysisHeaders",
         ":OpenACCDialect",
         ":OpenACCOpsIncGen",
         ":OpenACCPassIncGen",

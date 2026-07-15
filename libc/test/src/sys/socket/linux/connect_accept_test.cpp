@@ -8,7 +8,9 @@
 
 #include "hdr/fcntl_macros.h"
 #include "hdr/sys_socket_macros.h"
+#include "hdr/types/sa_family_t.h"
 #include "hdr/types/size_t.h"
+#include "hdr/types/socklen_t.h"
 #include "hdr/types/struct_sockaddr_un.h"
 #include "src/fcntl/fcntl.h"
 #include "src/stdio/remove.h"

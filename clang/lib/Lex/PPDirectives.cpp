@@ -396,16 +396,15 @@ bool Preprocessor::CheckMacroName(Token &MacroNameTok, MacroUse isDefineUndef,
   // Macro names with reserved identifiers are accepted if built-in or passed
   // through the command line (the later may be present if -dD was used to
   // generate the preprocessed file).
-  // NB: isInPredefinedFile() is relatively expensive, so keep it at the end
-  // of the condition.
-  if (!SourceMgr.isInSystemHeader(MacroNameLoc) &&
+  // NB: isInPredefinedFile() (via getPresumedLoc) is relatively expensive, so
+  // only run it for names that can actually warn.
+  MacroDiag D = MD_NoWarn;
+  if (isDefineUndef == MU_Define) {
+    D = shouldWarnOnMacroDef(*this, II);
+  } else if (isDefineUndef == MU_Undef)
+    D = shouldWarnOnMacroUndef(*this, II);
+  if (D != MD_NoWarn && !SourceMgr.isInSystemHeader(MacroNameLoc) &&
       !SourceMgr.isInPredefinedFile(MacroNameLoc)) {
-    MacroDiag D = MD_NoWarn;
-    if (isDefineUndef == MU_Define) {
-      D = shouldWarnOnMacroDef(*this, II);
-    }
-    else if (isDefineUndef == MU_Undef)
-      D = shouldWarnOnMacroUndef(*this, II);
     if (D == MD_KeywordDef) {
       // We do not want to warn on some patterns widely used in configuration
       // scripts.  This requires analyzing next tokens, so do not issue warnings
@@ -1455,10 +1454,11 @@ void Preprocessor::HandleDirective(Token &Result) {
       return HandlePragmaDirective({PIK_HashPragma, Introducer.getLocation()});
     case tok::pp_module:
     case tok::pp___preprocessed_module:
-      return HandleCXXModuleDirective(Result);
+      if (Introducer.isModuleContextualKeyword())
+        return HandleCXXModuleDirective(Result);
+      break;
     case tok::pp___preprocessed_import:
       return HandleCXXImportDirective(Result);
-    // GNU Extensions.
     case tok::pp_import:
       switch (Introducer.getKind()) {
       case tok::hash:
@@ -1470,6 +1470,8 @@ void Preprocessor::HandleDirective(Token &Result) {
       default:
         llvm_unreachable("not a valid import directive");
       }
+
+    // GNU Extensions.
     case tok::pp_include_next:
       return HandleIncludeNextDirective(Introducer.getLocation(), Result);
 

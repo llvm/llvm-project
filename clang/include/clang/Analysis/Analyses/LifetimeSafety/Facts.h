@@ -385,6 +385,7 @@ public:
   /// Retrieves all the facts in the block containing Program Point P.
   /// \note This is intended for testing only.
   llvm::ArrayRef<const Fact *> getBlockContaining(ProgramPoint P) const;
+  size_t getBlockID(ProgramPoint P) const;
 
   unsigned getNumFacts() const { return NextFactID.Value; }
 

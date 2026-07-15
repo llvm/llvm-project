@@ -14,9 +14,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO: uses or report_fatal_error (which is also deprecated) /
-//       ReportFatalUsageError in this file should be refactored, as per LLVM
-//       best practices, to rely on the Diagnostic infrastructure.
+// TODO: Per LLVM best practices, the report_fatal_error (deprecated) /
+//       ReportFatalUsageError calls in this file should be replaced with the
+//       Diagnostic infrastructure (e.g. the reportUnsupported function below).
 
 #include "SPIRVModuleAnalysis.h"
 #include "MCTargetDesc/SPIRVBaseInfo.h"
@@ -55,6 +55,12 @@ char llvm::SPIRVModuleAnalysis::ID = 0;
 
 INITIALIZE_PASS(SPIRVModuleAnalysis, DEBUG_TYPE, "SPIRV module analysis", true,
                 true)
+
+static void reportUnsupported(const MachineInstr &MI, const char *Msg) {
+  const Function &Func = MI.getMF()->getFunction();
+  Func.getContext().diagnose(
+      DiagnosticInfoUnsupported(Func, Msg, MI.getDebugLoc()));
+}
 
 // Retrieve an unsigned from an MDNode with a list of them as operands.
 static unsigned getMetadataUInt(MDNode *MdNode, unsigned OpIndex,
@@ -1166,16 +1172,6 @@ static void addOpTypeImageReqs(const MachineInstr &MI,
     break;
   }
 
-  // Check if the sampled type is a 64-bit integer, which requires
-  // Int64ImageEXT capability.
-  assert(MI.getOperand(1).isReg());
-  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
-  SPIRVTypeInst SampledTypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
-  if (SampledTypeDef.isTypeIntN(64)) {
-    Reqs.addCapability(SPIRV::Capability::Int64ImageEXT);
-    Reqs.addExtension(SPIRV::Extension::SPV_EXT_shader_image_int64);
-  }
-
   // Has optional access qualifier.
   if (!ST.isShader()) {
     if (MI.getNumOperands() > 8 &&
@@ -1662,8 +1658,40 @@ void addInstrRequirements(const MachineInstr &MI,
       addPrintfRequirements(MI, Reqs, ST);
       break;
     }
-    // TODO: handle bfloat16 extended instructions when
-    // SPV_INTEL_bfloat16_arithmetic is enabled.
+    if (MI.getOperand(2).getImm() ==
+        static_cast<int64_t>(SPIRV::InstructionSet::OpenCL_std)) {
+      const MachineFunction *MF = MI.getMF();
+      const MachineRegisterInfo &MRI = MF->getRegInfo();
+      SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
+
+      auto IsBFloat16 = [&](SPIRVTypeInst TypeDef) {
+        if (TypeDef && TypeDef->getOpcode() == SPIRV::OpTypeVector)
+          TypeDef = MRI.getVRegDef(TypeDef->getOperand(1).getReg());
+        return isBFloat16Type(TypeDef);
+      };
+
+      // Result type is operand 1; arguments start at operand 4.
+      bool UsesBFloat16 = IsBFloat16(MRI.getVRegDef(MI.getOperand(1).getReg()));
+      for (unsigned I = 4, E = MI.getNumOperands(); I < E && !UsesBFloat16;
+           ++I) {
+        const MachineOperand &MO = MI.getOperand(I);
+        if (MO.isReg())
+          UsesBFloat16 = IsBFloat16(GR->getResultType(
+              MO.getReg(), const_cast<MachineFunction *>(MF)));
+      }
+
+      if (UsesBFloat16) {
+        if (!ST.canUseExtension(
+                SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic)) {
+          reportUnsupported(
+              MI, "OpenCL Extended instructions with bfloat16 require the "
+                  "following SPIR-V extension: SPV_INTEL_bfloat16_arithmetic");
+          break;
+        }
+        Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic);
+        Reqs.addCapability(SPIRV::Capability::BFloat16ArithmeticINTEL);
+      }
+    }
     break;
   }
   case SPIRV::OpAliasDomainDeclINTEL:
@@ -1737,6 +1765,7 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpAtomicStore:
   case SPIRV::OpAtomicExchange:
   case SPIRV::OpAtomicCompareExchange:
+  case SPIRV::OpAtomicCompareExchangeWeak:
   case SPIRV::OpAtomicIIncrement:
   case SPIRV::OpAtomicIDecrement:
   case SPIRV::OpAtomicIAdd:

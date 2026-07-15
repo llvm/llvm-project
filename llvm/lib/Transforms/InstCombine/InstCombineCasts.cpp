@@ -1686,6 +1686,15 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
     return BinaryOperator::CreateXor(Builder.CreateAnd(X, ZC), ZC);
   }
 
+  // zext(sub(0, trunc(X))) -> and(sub(0, X), mask)
+  if (match(Src, m_Sub(m_Zero(), m_Trunc(m_Value(X)))) &&
+      X->getType() == DestTy) {
+    APInt Mask = APInt::getLowBitsSet(DestTy->getScalarSizeInBits(),
+                                      SrcTy->getScalarSizeInBits());
+    Value *Neg = Builder.CreateSub(ConstantInt::get(DestTy, 0), X);
+    return BinaryOperator::CreateAnd(Neg, ConstantInt::get(DestTy, Mask));
+  }
+
   // If we are truncating, masking, and then zexting back to the original type,
   // that's just a mask. This is not handled by canEvaluateZextd if the
   // intermediate values have extra uses. This could be generalized further for
@@ -2511,7 +2520,64 @@ static Instruction *foldFPtoI(Instruction &FI, InstCombiner &IC) {
   if (FPClass.isKnownNever(Mask))
     return IC.replaceInstUsesWith(FI, ConstantInt::getNullValue(FI.getType()));
 
-  return nullptr;
+  // fpto{u/s}i (fdiv ({u/s}itofp X to F), C_fp) --> {u/s}div X, C
+  //
+  // F has precision p (significand bits incl. hidden bit); C_fp is the exact FP
+  // value of the integer constant C. Given N = integer width, this is safe if:
+  //   Unsigned: C > 0 and N <= p.
+  //   Signed:   C != 0 and N - 1 <= p, excluding (X == INT_MIN, C == -1) since
+  //             sdiv INT_MIN, -1 is UB while the FP path only yields poison.
+  //             fdiv X, -1 gets transformed to fneg in InstCombine regardless.
+  //
+  // The bounds make {u/s}itofp and C_fp exact (every |int| <= 2^p is exact),
+  // and ensure the rounded quotient never crosses an integer boundary:
+  //   Rounding lemma: for 0 <= A <= 2^p, 1 <= B <= 2^p, q = floor(A/B),
+  //     trunc(R_p(A/B)) = q.
+  //   For r = A - qB > 0, m = q+1, half-gap H(m) <= q/2^p and
+  //   m - A/B = (B-r)/B >= 1/B > q/2^p >= H(m), so R_p(A/B) < m; q = 0 is
+  //   similar (H(1) = 2^(-p-1) < 2^-p <= 1/B).
+  //   Signed case: by symmetry R_p(-z) = -R_p(z), so fptosi yields s*q = sdiv.
+  bool IsSigned = FI.getOpcode() == Instruction::FPToSI;
+  Value *X;
+  const APFloat *APF;
+  if (IsSigned) {
+    if (!match(FI.getOperand(0),
+               m_OneUse(m_FDiv(m_SIToFP(m_Value(X)), m_APFloat(APF)))))
+      return nullptr;
+  } else {
+    if (!match(FI.getOperand(0),
+               m_OneUse(m_FDiv(m_UIToFP(m_Value(X)), m_APFloat(APF)))))
+      return nullptr;
+  }
+  Type *IntTy = X->getType();
+  if (FI.getType() != IntTy)
+    return nullptr;
+
+  unsigned IntWidth = IntTy->getScalarSizeInBits();
+  unsigned Precision = APFloat::semanticsPrecision(APF->getSemantics());
+  if (Precision + IsSigned < IntWidth)
+    return nullptr;
+
+  if (!APF->isInteger())
+    return nullptr;
+
+  APSInt Divisor(IntWidth, !IsSigned);
+  bool IsExact = false;
+  APF->convertToInteger(Divisor, APFloat::rmTowardZero, &IsExact);
+  if (!IsExact)
+    return nullptr;
+
+  if (Divisor.isZero())
+    return nullptr;
+
+  // sdiv INT_MIN, -1 is UB, not poison, so this isn't valid if X == INT_MIN.
+  // fdiv X, -1 gets transformed to fneg anyways, so we do not handle C == -1.
+  if (IsSigned && Divisor.isAllOnes())
+    return nullptr;
+
+  Constant *C = ConstantInt::get(IntTy, Divisor);
+  return IsSigned ? BinaryOperator::CreateSDiv(X, C)
+                  : BinaryOperator::CreateUDiv(X, C);
 }
 
 Instruction *InstCombinerImpl::visitFPToUI(FPToUIInst &FI) {
@@ -2938,8 +3004,7 @@ static Value *optimizeIntegerToVectorInsertions(BitCastInst &CI,
   for (unsigned i = 0, e = Elements.size(); i != e; ++i) {
     if (!Elements[i]) continue;  // Unset element.
 
-    Result = IC.Builder.CreateInsertElement(Result, Elements[i],
-                                            IC.Builder.getInt32(i));
+    Result = IC.Builder.CreateInsertElement(Result, Elements[i], i);
   }
 
   return Result;
@@ -3350,9 +3415,7 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
       // If our destination is not a vector, then make this a straight
       // scalar-scalar cast.
       if (!DestTy->isVectorTy()) {
-        Value *Elem =
-          Builder.CreateExtractElement(Src,
-                     Constant::getNullValue(Type::getInt32Ty(CI.getContext())));
+        Value *Elem = Builder.CreateExtractElement(Src, uint64_t{0});
         return CastInst::Create(Instruction::BitCast, Elem, DestTy);
       }
 
