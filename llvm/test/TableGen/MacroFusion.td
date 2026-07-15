@@ -73,7 +73,7 @@ def TestNoStatisticFusion: SimpleFusion<"test-no-statistic", "HasTestNoStatistic
                                         "Test Fusion Without Statistic",
                                         CheckOpcode<[Inst0]>,
                                         CheckOpcode<[Inst1]>> {
-  let GenerateStatistic = 0;
+  let GenerateStatistic = false;
 }
 
 // CHECK-PREDICATOR:       #ifdef GET_Test_MACRO_FUSION_PRED_DECL
