@@ -672,14 +672,12 @@ protected:
   SmallVector<SymbolTableEntry, 0> symbols;
 
   // Synthetic STT_FILE with an empty name, added by maybeAddSttFile and placed
-  // by sortSymTabSymbols before all symbols demoted to STB_LOCAL.
+  // by sortSymTabSymbols before all locals that cannot be attributed to a file.
   Defined *synthSttFileSym = nullptr;
 
-  // symbols[firstGlobalIdx, synthSttFileIdx) were originally non-local and may
-  // be converted to local. synthSttFileIdx is where synthSttFileSym lands.
-  // Locals added later (thunks via addSyntheticLocal) fall outside and stay
-  // grouped with their file.
-  size_t firstGlobalIdx = 0, synthSttFileIdx = 0;
+  // symbols.size() before the global loop. Locals from here on are not
+  // file-attributable and move behind synthSttFileSym.
+  size_t firstGlobalIdx = 0;
 
   StringTableSection &strTabSec;
 

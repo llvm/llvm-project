@@ -4,9 +4,11 @@
 ## STT_FILE with an empty name, omitted if the output has no STT_FILE.
 
 # RUN: rm -rf %t && split-file %s %t && cd %t
-# RUN: llvm-mc -filetype=obj -triple=aarch64 a.s -o a.o
-# RUN: llvm-mc -filetype=obj -triple=aarch64 b.s -o b.o
-# RUN: mkdir c && llvm-mc -filetype=obj -triple=aarch64 c.s -o c/a.o
+## -implicit-mapsyms omits the input $x/$d mapping symbols; only the linker's
+## own thunk mapping symbols remain (THUNK below).
+# RUN: llvm-mc -filetype=obj -triple=aarch64 -implicit-mapsyms a.s -o a.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64 -implicit-mapsyms b.s -o b.o
+# RUN: mkdir c && llvm-mc -filetype=obj -triple=aarch64 -implicit-mapsyms c.s -o c/a.o
 
 ## Only b.c has an STT_FILE. a.o's a_local has no leading STT_FILE; the hidden
 ## a_hidden follows the synthetic STT_FILE. --emit-relocs adds STT_SECTION
@@ -15,11 +17,9 @@
 # RUN: llvm-readelf -s ab | FileCheck %s
 
 # CHECK:      NOTYPE  LOCAL  DEFAULT [[#]] a_local
-# CHECK-NEXT: NOTYPE  LOCAL  DEFAULT [[#]] $x
 # CHECK-NEXT: SECTION LOCAL  DEFAULT [[#]] .text
 # CHECK-NEXT: FILE    LOCAL  DEFAULT   ABS b.c
 # CHECK-NEXT: NOTYPE  LOCAL  DEFAULT [[#]] b_local
-# CHECK-NEXT: NOTYPE  LOCAL  DEFAULT [[#]] $d
 # CHECK-NEXT: SECTION LOCAL  DEFAULT [[#]] .data
 # CHECK-NEXT: SECTION LOCAL  DEFAULT [[#]] .comment
 # CHECK-NEXT: FILE    LOCAL  DEFAULT   ABS{{ $}}
@@ -35,11 +35,9 @@
 
 # RO:      FILE    LOCAL  DEFAULT   ABS a.o
 # RO-NEXT: NOTYPE  LOCAL  DEFAULT [[#]] a_local
-# RO-NEXT: NOTYPE  LOCAL  DEFAULT [[#]] $x
 # RO-NEXT: SECTION LOCAL  DEFAULT [[#]] .text
 # RO-NEXT: FILE    LOCAL  DEFAULT   ABS b.c
 # RO-NEXT: NOTYPE  LOCAL  DEFAULT [[#]] b_local
-# RO-NEXT: NOTYPE  LOCAL  DEFAULT [[#]] $d
 # RO-NEXT: SECTION LOCAL  DEFAULT [[#]] .data
 # RO-NEXT: NOTYPE  GLOBAL DEFAULT [[#]] a_localized
 # RO-NEXT: NOTYPE  GLOBAL HIDDEN  [[#]] a_hidden
@@ -53,14 +51,11 @@
 
 # MULTI:      FILE    LOCAL  DEFAULT   ABS a.o
 # MULTI-NEXT: NOTYPE  LOCAL  DEFAULT [[#]] a_local
-# MULTI-NEXT: NOTYPE  LOCAL  DEFAULT [[#]] $x
 # MULTI-NEXT: FILE    LOCAL  DEFAULT   ABS b.c
 # MULTI-NEXT: NOTYPE  LOCAL  DEFAULT [[#]] b_local
-# MULTI-NEXT: NOTYPE  LOCAL  DEFAULT [[#]] $d
 # MULTI-NEXT: SECTION LOCAL  DEFAULT [[#]] .text
 # MULTI-NEXT: SECTION LOCAL  DEFAULT [[#]] .data
 # MULTI-NEXT: FILE    LOCAL  DEFAULT   ABS a.o
-# MULTI-NEXT: NOTYPE  LOCAL  DEFAULT [[#]] $x
 # MULTI-NEXT: NOTYPE  LOCAL  DEFAULT [[#]] far
 
 ## Symbols localized by a version script follow a synthetic STT_FILE with empty name.
@@ -69,10 +64,8 @@
 
 # VER:      FILE    LOCAL  DEFAULT   ABS a.o
 # VER-NEXT: NOTYPE  LOCAL  DEFAULT [[#]] a_local
-# VER-NEXT: NOTYPE  LOCAL  DEFAULT [[#]] $x
 # VER-NEXT: FILE    LOCAL  DEFAULT   ABS b.c
 # VER-NEXT: NOTYPE  LOCAL  DEFAULT [[#]] b_local
-# VER-NEXT: NOTYPE  LOCAL  DEFAULT [[#]] $d
 # VER-NEXT: FILE    LOCAL  DEFAULT   ABS{{ $}}
 # VER-NEXT: NOTYPE  LOCAL  DEFAULT [[#]] a_localized
 # VER-NEXT: NOTYPE  LOCAL  HIDDEN  [[#]] a_hidden
@@ -81,18 +74,21 @@
 # VER-NEXT: NOTYPE  GLOBAL DEFAULT [[#]] a_exported
 # VER-NEXT: NOTYPE  GLOBAL DEFAULT [[#]] b_exported
 
-## A range-extension thunk is added to .symtab by finalizeAddressDependentContent,
-## after the global part. It must stay in the local part before the synthetic
-## STT_FILE that groups the demoted c_hidden, not be moved behind it.
+## A range-extension thunk (and its $x/$d) is added by
+## finalizeAddressDependentContent and parented to the internal file, which has
+## no STT_FILE. Like the demoted c_hidden it cannot be attributed to a file, so
+## it follows the synthetic STT_FILE.
 # RUN: ld.lld c/a.o b.o -T lds -o cb
 # RUN: llvm-readelf -s cb | FileCheck %s --check-prefix=THUNK
 
 # THUNK:      NOTYPE  LOCAL  DEFAULT [[#]] far
-# THUNK:      FUNC    LOCAL  DEFAULT [[#]] __AArch64AbsLongThunk_{{.*}}
-# THUNK-NEXT: NOTYPE  LOCAL  DEFAULT [[#]] $x
-# THUNK-NEXT: NOTYPE  LOCAL  DEFAULT [[#]] $d
+# THUNK-NEXT: FILE    LOCAL  DEFAULT   ABS b.c
+# THUNK-NEXT: NOTYPE  LOCAL  DEFAULT [[#]] b_local
 # THUNK-NEXT: FILE    LOCAL  DEFAULT   ABS{{ $}}
 # THUNK-NEXT: NOTYPE  LOCAL  HIDDEN  [[#]] c_hidden
+# THUNK-NEXT: FUNC    LOCAL  DEFAULT [[#]] __AArch64AbsLongThunk_{{.*}}
+# THUNK-NEXT: NOTYPE  LOCAL  DEFAULT [[#]] $x
+# THUNK-NEXT: NOTYPE  LOCAL  DEFAULT [[#]] $d
 # THUNK-NEXT: NOTYPE  GLOBAL DEFAULT [[#]] _start
 
 ## --discard-all discards STT_FILE symbols as well. With no STT_FILE in the
