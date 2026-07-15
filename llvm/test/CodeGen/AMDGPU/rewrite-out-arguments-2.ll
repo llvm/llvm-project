@@ -13,6 +13,31 @@ define i32 @load_out_ptr_after_store(ptr addrspace(5) %out) {
   ret i32 %load
 }
 
+define i32 @callee(ptr addrspace(5) %val, ptr addrspace(5) %other) {
+; CHECK-LABEL: define i32 @callee(ptr addrspace(5) %val, ptr addrspace(5) %other) {
+; CHECK-NEXT: store i32 0, ptr addrspace(5) %val, align 4
+; CHECK-NEXT: %load = load i32, ptr addrspace(5) %other, align 4
+; CHECK-NEXT: ret i32 %load
+  store i32 0, ptr addrspace(5) %val
+  %load = load i32, ptr addrspace(5) %other
+  ret i32 %load
+}
+
+define amdgpu_kernel void @caller(ptr addrspace(1) %out) {
+; CHECK-LABEL: define amdgpu_kernel void @caller(ptr addrspace(1) %out) {
+; CHECK-NEXT: %slot = alloca i32, align 4, addrspace(5)
+; CHECK-NEXT: store i32 1, ptr addrspace(5) %slot, align 4
+; CHECK-NEXT: %result = call i32 @callee(ptr addrspace(5) %slot, ptr addrspace(5) %slot)
+; CHECK-NEXT: store i32 %result, ptr addrspace(1) %out, align 4
+; CHECK-NEXT: ret void
+  %slot = alloca i32, addrspace(5)
+  store i32 1, ptr addrspace(5) %slot
+  %result = call i32 @callee(ptr addrspace(5) %slot,
+                            ptr addrspace(5) %slot)
+  store i32 %result, ptr addrspace(1) %out
+  ret void
+}
+
 define i32 @load_out_ptr_before_store(ptr addrspace(5) %out) {
 ; CHECK-LABEL: define i32 @load_out_ptr_before_store(
 ; CHECK-SAME: ptr addrspace(5) [[OUT:%.*]]) {
