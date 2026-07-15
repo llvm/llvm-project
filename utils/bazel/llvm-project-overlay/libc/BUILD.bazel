@@ -3868,7 +3868,7 @@ libc_support_library(
         ":__support_fputil_multiply_add",
         ":__support_fputil_sqrt",
         ":__support_macros_optimization",
-        ":__support_math_inv_trigf_utils",
+        ":__support_math_asin_utils",
     ],
 )
 
@@ -7845,17 +7845,6 @@ libc_support_library(
     hdrs = ["src/__support/math/getpayloadl.h"],
     deps = [
         ":__support_fputil_basic_operations",
-        ":__support_macros_config",
-    ],
-)
-
-libc_support_library(
-    name = "__support_math_inv_trigf_utils",
-    hdrs = ["src/__support/math/inv_trigf_utils.h"],
-    deps = [
-        ":__support_common",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_polyeval",
         ":__support_macros_config",
     ],
 )
