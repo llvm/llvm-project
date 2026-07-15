@@ -1016,36 +1016,6 @@ void ARMAsmPrinter::emitMachineConstantPoolValue(
     unsigned char TF =
         TM.getTargetTriple().isOSBinFormatMachO() ? ARMII::MO_NONLAZY : 0;
     MCSym = GetARMGVSymbol(GV, TF);
-
-    // For weak symbols in ELF PIC mode, the assembler would eagerly resolve a
-    // PC-relative expression like sym-(LPC+8) when the symbol and reference are
-    // in the same section, preventing the linker from overriding a weak
-    // definition with a non-weak definition from another section. Use a
-    // .reloc directive rather than a fixup to force the generation of a
-    // relocation (R_ARM_REL32) so the linker can perform the override.
-    if (GV->isWeakForLinker() && TM.getTargetTriple().isOSBinFormatELF() &&
-        TM.isPositionIndependent() && ACPV->getPCAdjustment() != 0) {
-      MCSymbol *CPILabel = OutContext.createTempSymbol();
-      OutStreamer->emitLabel(CPILabel);
-      // Emit local-only expression: CPILabel - (LPC+PCAdj)
-      const MCExpr *LocalExpr = MCSymbolRefExpr::create(CPILabel, OutContext);
-      MCSymbol *PCLabel =
-          getPICLabel(DL.getInternalSymbolPrefix(), getFunctionNumber(),
-                      ACPV->getLabelId(), OutContext);
-      const MCExpr *PCRelExpr = MCSymbolRefExpr::create(PCLabel, OutContext);
-      PCRelExpr = MCBinaryExpr::createAdd(
-          PCRelExpr,
-          MCConstantExpr::create(ACPV->getPCAdjustment(), OutContext),
-          OutContext);
-      LocalExpr = MCBinaryExpr::createSub(LocalExpr, PCRelExpr, OutContext);
-      OutStreamer->emitValue(LocalExpr, Size);
-      // Emit .reloc to force linker resolution of the weak symbol.
-      const MCExpr *CPIExpr = MCSymbolRefExpr::create(CPILabel, OutContext);
-      const MCExpr *SymExpr = MCSymbolRefExpr::create(MCSym, OutContext);
-      OutStreamer->emitRelocDirective(*CPIExpr, "R_ARM_REL32", SymExpr,
-                                      SMLoc());
-      return;
-    }
   } else if (ACPV->isMachineBasicBlock()) {
     const MachineBasicBlock *MBB = cast<ARMConstantPoolMBB>(ACPV)->getMBB();
     MCSym = MBB->getSymbol();

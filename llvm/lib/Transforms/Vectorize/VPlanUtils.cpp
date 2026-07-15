@@ -388,7 +388,7 @@ bool vputils::isElementwise(const VPValue *V) {
                             [](auto *R) { return R->getOpcode(); })
                         .Default([](auto *) { return 0; });
   // TODO: Handle more opcodes and recipes.
-  return Instruction::isBinaryOp(Opcode);
+  return Instruction::isUnaryOp(Opcode) || Instruction::isBinaryOp(Opcode);
 }
 
 bool vputils::isSingleScalar(const VPValue *VPV) {
@@ -821,7 +821,9 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
   }
   case scTruncate:
   case scZeroExtend:
-  case scSignExtend: {
+  case scSignExtend:
+  case scPtrToInt:
+  case scPtrToAddr: {
     auto *Cast = cast<SCEVCastExpr>(S);
     VPValue *Op = tryToExpand(Cast->getOperand());
     if (!Op)
@@ -837,10 +839,54 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
     case scSignExtend:
       Opcode = Instruction::SExt;
       break;
+    case scPtrToInt:
+      Opcode = Instruction::PtrToInt;
+      break;
+    case scPtrToAddr:
+      Opcode = Instruction::PtrToAddr;
+      break;
     default:
       llvm_unreachable("Unhandled cast SCEV");
     }
     return Builder.createScalarCast(Opcode, Op, S->getType(), DL);
+  }
+  case scUMaxExpr:
+  case scSMaxExpr:
+  case scUMinExpr:
+  case scSMinExpr: {
+    auto *MinMax = cast<SCEVMinMaxExpr>(S);
+    Intrinsic::ID IntrinsicID;
+    switch (S->getSCEVType()) {
+    case scUMaxExpr:
+      IntrinsicID = Intrinsic::umax;
+      break;
+    case scSMaxExpr:
+      IntrinsicID = Intrinsic::smax;
+      break;
+    case scUMinExpr:
+      IntrinsicID = Intrinsic::umin;
+      break;
+    case scSMinExpr:
+      IntrinsicID = Intrinsic::smin;
+      break;
+    default:
+      llvm_unreachable("Unexpected min/max SCEV type");
+    }
+    // Chain operands in reverse order matching SCEVExpander's expansion of
+    // min/max expressions.
+    SmallVector<VPValue *, 2> Ops;
+    for (const SCEVUse &Op : reverse(MinMax->operands())) {
+      VPValue *OpV = tryToExpand(Op);
+      if (!OpV)
+        return nullptr;
+      Ops.push_back(OpV);
+    }
+    Type *ResultTy = MinMax->getType();
+    VPValue *Result = Ops.front();
+    for (VPValue *Op : drop_begin(Ops))
+      Result = Builder.createScalarIntrinsic(IntrinsicID, {Result, Op},
+                                             ResultTy, DL);
+    return Result;
   }
   default:
     return nullptr;

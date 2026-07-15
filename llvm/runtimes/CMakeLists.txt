@@ -628,6 +628,13 @@ if(build_runtimes)
         list(APPEND extra_deps ${dep})
       endif()
     endforeach()
+    # The offload unittests detect the GPU arch at configure time via
+    # -mcpu=native.
+    if(LLVM_INCLUDE_TESTS)
+      if(TARGET offload-arch)
+        list(APPEND extra_deps offload-arch)
+      endif()
+    endif()
   endif()
   if("libsycl" IN_LIST LLVM_ENABLE_RUNTIMES)
     foreach(dep clang-linker-wrapper clang-sycl-linker clang llvm-offload-binary)

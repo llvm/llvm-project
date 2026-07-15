@@ -82,7 +82,7 @@ template <typename ThisT, typename ParentT>
 char ErrorExtends<ThisT, ParentT>::ID = 0;
 
 /// Represents an environmental error.
-class ORC_RT_NODISCARD Error {
+class [[nodiscard]] Error {
 
   template <typename T> friend class Expected;
 
@@ -356,7 +356,7 @@ private:
 /// Expected constructor for details.
 struct ForceExpectedSuccessValue {};
 
-template <typename T> class ORC_RT_NODISCARD Expected {
+template <typename T> class [[nodiscard]] Expected {
 
   template <class OtherT> friend class Expected;
 

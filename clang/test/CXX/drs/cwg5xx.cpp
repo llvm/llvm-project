@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking -verify-directives -verify=expected,cxx98-23,cxx98-11,cxx98-14,cxx98-17,cxx98
-// RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking -verify-directives -verify=expected,cxx98-23,cxx98-11,cxx98-14,cxx98-17,since-cxx11
-// RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking -verify-directives -verify=expected,cxx98-23,cxx98-14,cxx98-17,since-cxx11
-// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking -verify-directives -verify=expected,cxx98-23,since-cxx17,cxx98-17,since-cxx11
-// RUN: %clang_cc1 -std=c++20 %s -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking -verify-directives -verify=expected,cxx98-23,since-cxx20,since-cxx17,since-cxx11
-// RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking -verify-directives -verify=expected,cxx98-23,since-cxx23,since-cxx20,since-cxx17,since-cxx11
-// RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking -verify-directives -verify=expected,since-cxx26,since-cxx23,since-cxx20,since-cxx17,since-cxx11
+// RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-23,cxx98-11,cxx98-14,cxx98-17,cxx98
+// RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-23,cxx98-11,cxx98-14,cxx98-17,since-cxx11
+// RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-23,cxx98-14,cxx98-17,since-cxx11
+// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-23,since-cxx17,cxx98-17,since-cxx11
+// RUN: %clang_cc1 -std=c++20 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-23,since-cxx20,since-cxx17,since-cxx11
+// RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-23,since-cxx23,since-cxx20,since-cxx17,since-cxx11
+// RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx26,since-cxx23,since-cxx20,since-cxx17,since-cxx11
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -472,7 +472,7 @@ namespace cwg535 { // cwg535: 3.1
 // cwg538: na
 
 namespace cwg539 { // cwg539: 3.4
-const f(const a) {
+const cwg539_f(const a) {
 // expected-error@-1 {{unknown type name 'a'}}
 // expected-error@-2 {{a type specifier is required for all declarations}}
   const b;

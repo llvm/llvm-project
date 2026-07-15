@@ -526,6 +526,11 @@ public:
 
   static lldb::ScriptLanguage StringToLanguage(const llvm::StringRef &string);
 
+  static llvm::StringLiteral
+  ExtensionToString(lldb::ScriptedExtension extension);
+
+  static lldb::ScriptedExtension StringToExtension(llvm::StringRef string);
+
   lldb::ScriptLanguage GetLanguage() { return m_script_lang; }
 
   virtual lldb::ScriptedProcessInterfaceUP CreateScriptedProcessInterface() {
@@ -555,10 +560,6 @@ public:
   }
 
   virtual lldb::ScriptedPlatformInterfaceUP GetScriptedPlatformInterface() {
-    return {};
-  }
-
-  virtual lldb::ScriptedStopHookInterfaceSP CreateScriptedStopHookInterface() {
     return {};
   }
 
