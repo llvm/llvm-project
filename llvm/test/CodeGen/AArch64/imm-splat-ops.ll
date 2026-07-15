@@ -749,8 +749,9 @@ define <2 x i32> @smax_v2i32(<2 x i32> %a) {
 ;
 ; CHECK-SVE-LABEL: smax_v2i32:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.2s, #7
-; CHECK-SVE-NEXT:    smax v0.2s, v0.2s, v1.2s
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    smax z0.s, z0.s, #7
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %smax = call <2 x i32> @llvm.smax(<2 x i32> %a, <2 x i32> splat (i32 7))
@@ -766,8 +767,9 @@ define <4 x i32> @smax_v4i32(<4 x i32> %a) {
 ;
 ; CHECK-SVE-LABEL: smax_v4i32:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    mvni v1.4s, #127
-; CHECK-SVE-NEXT:    smax v0.4s, v0.4s, v1.4s
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    smax z0.s, z0.s, #-128
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %smax = call <4 x i32> @llvm.smax(<4 x i32> %a, <4 x i32> splat (i32 -128))
@@ -783,8 +785,9 @@ define <4 x i16> @smax_v4i16(<4 x i16> %a) {
 ;
 ; CHECK-SVE-LABEL: smax_v4i16:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.4h, #5
-; CHECK-SVE-NEXT:    smax v0.4h, v0.4h, v1.4h
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    smax z0.h, z0.h, #5
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %smax = call <4 x i16> @llvm.smax(<4 x i16> %a, <4 x i16> splat (i16 5))
@@ -800,8 +803,9 @@ define <8 x i16> @smax_v8i16(<8 x i16> %a) {
 ;
 ; CHECK-SVE-LABEL: smax_v8i16:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    mvni v1.8h, #32
-; CHECK-SVE-NEXT:    smax v0.8h, v0.8h, v1.8h
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    smax z0.h, z0.h, #-33
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %smax = call <8 x i16> @llvm.smax(<8 x i16> %a, <8 x i16> splat (i16 -33))
@@ -817,8 +821,9 @@ define <8 x i8> @smax_v8i8(<8 x i8> %a) {
 ;
 ; CHECK-SVE-LABEL: smax_v8i8:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-SVE-NEXT:    smax v0.8b, v0.8b, v1.8b
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    smax z0.b, z0.b, #0
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %smax = call <8 x i8> @llvm.smax(<8 x i8> %a, <8 x i8> splat (i8 0))
@@ -834,8 +839,9 @@ define <16 x i8> @smax_v16i8(<16 x i8> %a) {
 ;
 ; CHECK-SVE-LABEL: smax_v16i8:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.16b, #239
-; CHECK-SVE-NEXT:    smax v0.16b, v0.16b, v1.16b
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    smax z0.b, z0.b, #-17
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %smax = call <16 x i8> @llvm.smax(<16 x i8> %a, <16 x i8> splat (i8 -17))
@@ -925,8 +931,9 @@ define <2 x i32> @smin_v2i32(<2 x i32> %a) {
 ;
 ; CHECK-SVE-LABEL: smin_v2i32:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.2s, #7
-; CHECK-SVE-NEXT:    smin v0.2s, v0.2s, v1.2s
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    smin z0.s, z0.s, #7
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %smin = call <2 x i32> @llvm.smin(<2 x i32> %a, <2 x i32> splat (i32 7))
@@ -942,8 +949,9 @@ define <4 x i32> @smin_v4i32(<4 x i32> %a) {
 ;
 ; CHECK-SVE-LABEL: smin_v4i32:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    mvni v1.4s, #127
-; CHECK-SVE-NEXT:    smin v0.4s, v0.4s, v1.4s
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    smin z0.s, z0.s, #-128
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %smin = call <4 x i32> @llvm.smin(<4 x i32> %a, <4 x i32> splat (i32 -128))
@@ -959,8 +967,9 @@ define <4 x i16> @smin_v4i16(<4 x i16> %a) {
 ;
 ; CHECK-SVE-LABEL: smin_v4i16:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.4h, #5
-; CHECK-SVE-NEXT:    smin v0.4h, v0.4h, v1.4h
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    smin z0.h, z0.h, #5
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %smin = call <4 x i16> @llvm.smin(<4 x i16> %a, <4 x i16> splat (i16 5))
@@ -976,8 +985,9 @@ define <8 x i16> @smin_v8i16(<8 x i16> %a) {
 ;
 ; CHECK-SVE-LABEL: smin_v8i16:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    mvni v1.8h, #32
-; CHECK-SVE-NEXT:    smin v0.8h, v0.8h, v1.8h
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    smin z0.h, z0.h, #-33
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %smin = call <8 x i16> @llvm.smin(<8 x i16> %a, <8 x i16> splat (i16 -33))
@@ -993,8 +1003,9 @@ define <8 x i8> @smin_v8i8(<8 x i8> %a) {
 ;
 ; CHECK-SVE-LABEL: smin_v8i8:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-SVE-NEXT:    smin v0.8b, v0.8b, v1.8b
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    smin z0.b, z0.b, #0
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %smin = call <8 x i8> @llvm.smin(<8 x i8> %a, <8 x i8> splat (i8 0))
@@ -1010,8 +1021,9 @@ define <16 x i8> @smin_v16i8(<16 x i8> %a) {
 ;
 ; CHECK-SVE-LABEL: smin_v16i8:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.16b, #239
-; CHECK-SVE-NEXT:    smin v0.16b, v0.16b, v1.16b
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    smin z0.b, z0.b, #-17
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %smin = call <16 x i8> @llvm.smin(<16 x i8> %a, <16 x i8> splat (i8 -17))
@@ -1102,8 +1114,9 @@ define <2 x i32> @umax_v2i32(<2 x i32> %a) {
 ;
 ; CHECK-SVE-LABEL: umax_v2i32:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.2s, #7
-; CHECK-SVE-NEXT:    umax v0.2s, v0.2s, v1.2s
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    umax z0.s, z0.s, #7
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %umax = call <2 x i32> @llvm.umax(<2 x i32> %a, <2 x i32> splat (i32 7))
@@ -1119,8 +1132,9 @@ define <4 x i32> @umax_v4i32(<4 x i32> %a) {
 ;
 ; CHECK-SVE-LABEL: umax_v4i32:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.4s, #47
-; CHECK-SVE-NEXT:    umax v0.4s, v0.4s, v1.4s
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    umax z0.s, z0.s, #47
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %umax = call <4 x i32> @llvm.umax(<4 x i32> %a, <4 x i32> splat (i32 47))
@@ -1136,8 +1150,9 @@ define <4 x i16> @umax_v4i16(<4 x i16> %a) {
 ;
 ; CHECK-SVE-LABEL: umax_v4i16:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.4h, #5
-; CHECK-SVE-NEXT:    umax v0.4h, v0.4h, v1.4h
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    umax z0.h, z0.h, #5
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %umax = call <4 x i16> @llvm.umax(<4 x i16> %a, <4 x i16> splat (i16 5))
@@ -1153,8 +1168,9 @@ define <8 x i16> @umax_v8i16(<8 x i16> %a) {
 ;
 ; CHECK-SVE-LABEL: umax_v8i16:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.8h, #33
-; CHECK-SVE-NEXT:    umax v0.8h, v0.8h, v1.8h
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    umax z0.h, z0.h, #33
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %umax = call <8 x i16> @llvm.umax(<8 x i16> %a, <8 x i16> splat (i16 33))
@@ -1170,8 +1186,9 @@ define <8 x i8> @umax_v8i8(<8 x i8> %a) {
 ;
 ; CHECK-SVE-LABEL: umax_v8i8:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.8b, #8
-; CHECK-SVE-NEXT:    umax v0.8b, v0.8b, v1.8b
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    umax z0.b, z0.b, #8
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %umax = call <8 x i8> @llvm.umax(<8 x i8> %a, <8 x i8> splat (i8 8))
@@ -1187,8 +1204,9 @@ define <16 x i8> @umax_v16i8(<16 x i8> %a) {
 ;
 ; CHECK-SVE-LABEL: umax_v16i8:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.16b, #17
-; CHECK-SVE-NEXT:    umax v0.16b, v0.16b, v1.16b
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    umax z0.b, z0.b, #17
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %umax = call <16 x i8> @llvm.umax(<16 x i8> %a, <16 x i8> splat (i8 17))
@@ -1262,8 +1280,9 @@ define <2 x i32> @umin_v2i32(<2 x i32> %a) {
 ;
 ; CHECK-SVE-LABEL: umin_v2i32:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.2s, #7
-; CHECK-SVE-NEXT:    umin v0.2s, v0.2s, v1.2s
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    umin z0.s, z0.s, #7
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %umin = call <2 x i32> @llvm.umin(<2 x i32> %a, <2 x i32> splat (i32 7))
@@ -1279,8 +1298,9 @@ define <4 x i32> @umin_v4i32(<4 x i32> %a) {
 ;
 ; CHECK-SVE-LABEL: umin_v4i32:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.4s, #47
-; CHECK-SVE-NEXT:    umin v0.4s, v0.4s, v1.4s
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    umin z0.s, z0.s, #47
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %umin = call <4 x i32> @llvm.umin(<4 x i32> %a, <4 x i32> splat (i32 47))
@@ -1296,8 +1316,9 @@ define <4 x i16> @umin_v4i16(<4 x i16> %a) {
 ;
 ; CHECK-SVE-LABEL: umin_v4i16:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.4h, #5
-; CHECK-SVE-NEXT:    umin v0.4h, v0.4h, v1.4h
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    umin z0.h, z0.h, #5
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %umin = call <4 x i16> @llvm.umin(<4 x i16> %a, <4 x i16> splat (i16 5))
@@ -1313,8 +1334,9 @@ define <8 x i16> @umin_v8i16(<8 x i16> %a) {
 ;
 ; CHECK-SVE-LABEL: umin_v8i16:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.8h, #33
-; CHECK-SVE-NEXT:    umin v0.8h, v0.8h, v1.8h
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    umin z0.h, z0.h, #33
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %umin = call <8 x i16> @llvm.umin(<8 x i16> %a, <8 x i16> splat (i16 33))
@@ -1330,8 +1352,9 @@ define <8 x i8> @umin_v8i8(<8 x i8> %a) {
 ;
 ; CHECK-SVE-LABEL: umin_v8i8:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.8b, #8
-; CHECK-SVE-NEXT:    umin v0.8b, v0.8b, v1.8b
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    umin z0.b, z0.b, #8
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %umin = call <8 x i8> @llvm.umin(<8 x i8> %a, <8 x i8> splat (i8 8))
@@ -1347,8 +1370,9 @@ define <16 x i8> @umin_v16i8(<16 x i8> %a) {
 ;
 ; CHECK-SVE-LABEL: umin_v16i8:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.16b, #17
-; CHECK-SVE-NEXT:    umin v0.16b, v0.16b, v1.16b
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    umin z0.b, z0.b, #17
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %umin = call <16 x i8> @llvm.umin(<16 x i8> %a, <16 x i8> splat (i8 17))
