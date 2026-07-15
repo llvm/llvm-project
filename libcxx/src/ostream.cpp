@@ -14,10 +14,18 @@
 
 #include "std_stream.h"
 
+#ifdef _WIN32
+#  define WIN32_LEAN_AND_MEAN
+#  define NOMINMAX
+#  include <io.h>
+#  include <windows.h>
+#endif
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-_LIBCPP_EXPORTED_FROM_ABI FILE* __get_ostream_file(ostream& __os) {
+_LIBCPP_EXPORTED_FROM_ABI void* __get_ostream_file(ostream& __os) {
+#ifdef _WIN32
   // dynamic_cast requires RTTI, this only affects users whose vendor builds
   // the dylib with RTTI disabled. It does not affect users who build with RTTI
   // disabled but use a dylib where the RTTI is enabled.
@@ -25,16 +33,17 @@ _LIBCPP_EXPORTED_FROM_ABI FILE* __get_ostream_file(ostream& __os) {
   // Returning a nullptr means the stream is not considered a terminal and the
   // special terminal handling is not done. The terminal handling is mainly of
   // importance on Windows.
-#if _LIBCPP_HAS_RTTI
+#  if _LIBCPP_HAS_RTTI
   auto* __rdbuf = __os.rdbuf();
-#  if _LIBCPP_HAS_FILESYSTEM
+#    if _LIBCPP_HAS_FILESYSTEM
   if (auto* __buffer = dynamic_cast<filebuf*>(__rdbuf))
     return __buffer->__file_;
 #  endif
 
   if (auto* __buffer = dynamic_cast<__stdoutbuf<char>*>(__rdbuf))
-    return __buffer->__file_;
-#endif // _LIBCPP_HAS_RTTI
+    return reinterpret_cast<void*>(_get_osfhandle(fileno(__buffer->__file_)));
+#  endif // _LIBCPP_HAS_RTTI
+#endif
 
   return nullptr;
 }

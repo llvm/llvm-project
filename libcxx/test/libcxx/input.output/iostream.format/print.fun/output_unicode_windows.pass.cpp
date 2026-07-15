@@ -12,8 +12,7 @@
 // UNSUPPORTED: libcpp-has-no-unicode
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
-// Clang modules do not work with the definiton of _LIBCPP_TESTING_PRINT_WRITE_TO_WINDOWS_CONSOLE_FUNCTION
-// ADDITIONAL_COMPILE_FLAGS: -fno-modules
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_TESTING_PRINT_WRITE_TO_WINDOWS_CONSOLE_FUNCTION=::write_to_console
 
 // XFAIL: availability-fp_to_chars-missing
 
@@ -32,8 +31,7 @@
 #include <algorithm>
 #include <cassert>
 
-void write_to_console(FILE*, std::wstring_view data);
-#define _LIBCPP_TESTING_PRINT_WRITE_TO_WINDOWS_CONSOLE_FUNCTION ::write_to_console
+void write_to_console(void*, std::wstring_view data);
 #include <print>
 
 #include "test_macros.h"
@@ -47,7 +45,7 @@ TEST_GCC_DIAGNOSTIC_IGNORED("-Wuse-after-free")
 bool calling               = false;
 std::wstring_view expected = L" world";
 
-void write_to_console(FILE*, std::wstring_view data) {
+void write_to_console(void*, std::wstring_view data) {
   assert(calling);
   assert(data == expected);
 }

@@ -70,7 +70,7 @@ _LIBCPP_EXPORTED_FROM_ABI bool __is_windows_terminal(FILE* __stream);
 // it with C++23 would fail since the dylib is currently built using C++20.
 //
 // Note the function is only implemented on the Windows platform.
-_LIBCPP_EXPORTED_FROM_ABI void __write_to_windows_console(FILE* __stream, wstring_view __view);
+_LIBCPP_EXPORTED_FROM_ABI void __write_to_windows_console(void* __stream, wstring_view __view);
 #      endif // _LIBCPP_HAS_WIDE_CHARACTERS
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 #    endif   // _LIBCPP_WIN32API
@@ -233,7 +233,7 @@ _LIBCPP_HIDE_FROM_ABI inline void __output_nonunicode(FILE* __stream, string_vie
 
 #      if _LIBCPP_HAS_WIDE_CHARACTERS
 template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
-_LIBCPP_HIDE_FROM_ABI inline void __output_unicode_windows([[maybe_unused]] FILE* __stream, string_view __text) {
+_LIBCPP_HIDE_FROM_ABI inline void __output_unicode_windows([[maybe_unused]] void* __handle, string_view __text) {
   // UTF-16 uses the same number or less code units than UTF-8.
   // However the size of the code unit is 16 bits instead of 8 bits.
   //
@@ -250,9 +250,9 @@ _LIBCPP_HIDE_FROM_ABI inline void __output_unicode_windows([[maybe_unused]] FILE
   // The macro _LIBCPP_TESTING_PRINT_WRITE_TO_WINDOWS_CONSOLE_FUNCTION is used to change
   // the behavior in the test. This is not part of the public API.
 #        ifdef _LIBCPP_TESTING_PRINT_WRITE_TO_WINDOWS_CONSOLE_FUNCTION
-  _LIBCPP_TESTING_PRINT_WRITE_TO_WINDOWS_CONSOLE_FUNCTION(__stream, __view);
+  _LIBCPP_TESTING_PRINT_WRITE_TO_WINDOWS_CONSOLE_FUNCTION(__handle, __view);
 #        elif defined(_LIBCPP_WIN32API)
-  std::__write_to_windows_console(__stream, __view);
+  std::__write_to_windows_console(__handle, __view);
 #        else
   std::__throw_runtime_error("No defintion of _LIBCPP_TESTING_PRINT_WRITE_TO_WINDOWS_CONSOLE_FUNCTION and "
                              "__write_to_windows_console is not available.");

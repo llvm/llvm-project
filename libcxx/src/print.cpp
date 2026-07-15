@@ -52,16 +52,10 @@ _LIBCPP_EXPORTED_FROM_ABI bool __is_windows_terminal(FILE* __stream) {
 }
 
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
-_LIBCPP_EXPORTED_FROM_ABI void
-__write_to_windows_console([[maybe_unused]] FILE* __stream, [[maybe_unused]] wstring_view __view) {
+_LIBCPP_EXPORTED_FROM_ABI void __write_to_windows_console(void* __handle, [[maybe_unused]] wstring_view __view) {
   // https://learn.microsoft.com/en-us/windows/console/writeconsole
-  if (WriteConsoleW(reinterpret_cast<void*>(_get_osfhandle(fileno(__stream))), // clang-format aid
-                    __view.data(),
-                    __view.size(),
-                    nullptr,
-                    nullptr) == 0) {
+  if (WriteConsoleW(__handle, __view.data(), __view.size(), nullptr, nullptr) == 0)
     std::__throw_system_error(filesystem::detail::get_last_error(), "failed to write formatted output");
-  }
 }
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
