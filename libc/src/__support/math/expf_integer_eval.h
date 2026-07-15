@@ -34,35 +34,42 @@ LIBC_INLINE float expf(float x) {
 
   // Exceptional values
   // TODO: optimize the branching order
-  if (xbits.is_zero()) {
+  if (LIBC_UNLIKELY(xbits.is_zero())) {
     // e^0 = 1 (exact), for both +/-0
     return 1.0f;
-  } else {
-    // x is inf or NaN
-    if (LIBC_UNLIKELY(x_e > 2 * FPBits::EXP_BIAS)) {
-      // e^NaN = NaN
-      if (xbits.is_signaling_nan()) {
-        // Per conversation with lntue, we don't need to raise exception here,
-        // as we're assuming no FPUs/fenv in this kind of environment
-
-        // silencing
-        return FPBits::quiet_nan().get_val();
-      }
-
-      // e^-inf = 0
-      // e^+inf = +inf
-      if (xbits.is_inf()) {
-        return is_neg ? 0.0f : FPBits::inf().get_val();
-      }
-
-      // x is a quiet NaN
-      return x;
-    } else {
-      // TODO: out-of-range (overflow/underflow), exeecute range reduction
-    }
   }
 
+  // x is inf or NaN
+  if (LIBC_UNLIKELY(x_e > 2 * FPBits::EXP_BIAS)) {
+    // e^NaN = NaN
+    if (xbits.is_signaling_nan()) {
+      // Per conversation with lntue, we don't need to raise exception here,
+      // as we're assuming no FPUs/fenv in this kind of environment
+
+      // silencing
+      return FPBits::quiet_nan().get_val();
+    }
+
+    // e^-inf = 0
+    // e^+inf = +inf
+    if (xbits.is_inf()) {
+      return is_neg ? 0.0f : FPBits::inf().get_val();
+    }
+
+    // x is a quiet NaN
+    return x;
+  }
+
+  // strats:
+  // 1. u32 fast path + u64 accurate path
+  // 2. dropping u32 altogether, just single u64 accurate path
+  // aim for minimal code size
+  // (speed/acc still important)
+
   // TODO: execute the normal exp here
+  // TODO: evaluate ULPs, relative errors, etc.
+  // We're doing round-to-nearest only in this pass
+
   return 0.0f;
 }
 
