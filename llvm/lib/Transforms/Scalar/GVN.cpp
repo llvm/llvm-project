@@ -750,6 +750,14 @@ uint32_t GVNPass::ValueTable::lookupOrAddCmp(unsigned Opcode,
   return assignExpNewValueNum(Exp).first;
 }
 
+/// Returns the value number of ptrtoint \p Ptr to \Ty.
+uint32_t GVNPass::ValueTable::lookupPtrToInt(Value *Ptr, Type *Ty) {
+  Expression Exp(Instruction::PtrToInt);
+  Exp.Ty = Ty;
+  Exp.VarArgs.push_back(lookupOrAdd(Ptr));
+  return ExpressionNumbering.lookup(Exp);
+}
+
 /// Remove all entries from the ValueTable.
 void GVNPass::ValueTable::clear() {
   ValueNumbering.clear();
@@ -1163,13 +1171,15 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
       // Drop all metadata that is not known to cause immediate UB on violation,
       // unless the load has !noundef, in which case all metadata violations
       // will be promoted to UB.
-      // TODO: We can combine noalias/alias.scope metadata here, because it is
-      // independent of the load type.
+      // !noalias and !alias.scope are kept: the load is not moved and still
+      // accesses the same memory, and these are independent of the load type
+      // and offset, so they remain valid for the coerced result.
       if (!CoercedLoad->hasMetadata(LLVMContext::MD_noundef))
         CoercedLoad->dropUnknownNonDebugMetadata(
             {LLVMContext::MD_dereferenceable,
              LLVMContext::MD_dereferenceable_or_null,
-             LLVMContext::MD_invariant_load, LLVMContext::MD_invariant_group});
+             LLVMContext::MD_invariant_load, LLVMContext::MD_invariant_group,
+             LLVMContext::MD_alias_scope, LLVMContext::MD_noalias});
       LLVM_DEBUG(dbgs() << "GVN COERCED NONLOCAL LOAD:\nOffset: " << Offset
                         << "  " << *getCoercedLoadValue() << '\n'
                         << *Res << '\n'
@@ -3396,6 +3406,23 @@ bool GVNPass::processInstruction(Instruction *I) {
   if (isa<AllocaInst>(I) || I->isTerminator() || isa<PHINode>(I)) {
     LeaderTable.insert(Num, I, I->getParent());
     return false;
+  }
+
+  // A ptrtoaddr and a ptrtoint of the same pointer compute the same value when
+  // the address width equals the pointer representation width.
+  if (auto *PTA = dyn_cast<PtrToAddrInst>(I)) {
+    const DataLayout &DL = I->getDataLayout();
+    unsigned AS = PTA->getPointerAddressSpace();
+    if (DL.getAddressSizeInBits(AS) == DL.getPointerSizeInBits(AS) &&
+        !DL.hasUnstableRepresentation(AS)) {
+      uint32_t PTINum =
+          VN.lookupPtrToInt(PTA->getPointerOperand(), PTA->getType());
+      if (Value *PTI = findLeader(I->getParent(), PTINum)) {
+        patchAndReplaceAllUsesWith(I, PTI);
+        salvageAndRemoveInstruction(I);
+        return true;
+      }
+    }
   }
 
   // If the number we were assigned was a brand new VN, then we don't

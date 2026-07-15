@@ -3720,6 +3720,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case FunctionParmPackExprClass:
   case RecoveryExprClass:
   case CXXFoldExprClass:
+  case CXXExpansionSelectExprClass:
     // Make a conservative assumption for dependent nodes.
     return IncludePossibleEffects;
 
@@ -5318,6 +5319,10 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__atomic_max_fetch:
   case AO__atomic_fetch_min:
   case AO__atomic_fetch_max:
+  case AO__atomic_fetch_fminimum:
+  case AO__atomic_fetch_fmaximum:
+  case AO__atomic_fetch_fminimum_num:
+  case AO__atomic_fetch_fmaximum_num:
   case AO__atomic_fetch_uinc:
   case AO__atomic_fetch_udec:
     return 3;
@@ -5341,6 +5346,10 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__scoped_atomic_max_fetch:
   case AO__scoped_atomic_fetch_min:
   case AO__scoped_atomic_fetch_max:
+  case AO__scoped_atomic_fetch_fminimum:
+  case AO__scoped_atomic_fetch_fmaximum:
+  case AO__scoped_atomic_fetch_fminimum_num:
+  case AO__scoped_atomic_fetch_fmaximum_num:
   case AO__scoped_atomic_exchange_n:
   case AO__scoped_atomic_fetch_uinc:
   case AO__scoped_atomic_fetch_udec:

@@ -59,11 +59,7 @@ template <typename... Ts> class format_object {
   template <std::size_t... Is>
   int snprint_tuple(char *Buffer, unsigned BufferSize,
                     std::index_sequence<Is...>) const {
-#ifdef _MSC_VER
-    return _snprintf(Buffer, BufferSize, Fmt, std::get<Is>(Vals)...);
-#else
     return snprintf(Buffer, BufferSize, Fmt, std::get<Is>(Vals)...);
-#endif
   }
 
 public:
@@ -76,31 +72,12 @@ public:
   int snprint(char *Buffer, unsigned BufferSize) const {
     return snprint_tuple(Buffer, BufferSize, std::index_sequence_for<Ts...>());
   }
-
-  unsigned print(char *Buffer, unsigned BufferSize) const {
-    assert(BufferSize && "Invalid buffer size!");
-
-    // Print the string, leaving room for the terminating null.
-    int N = snprint(Buffer, BufferSize);
-
-    // VC++ and old GlibC return negative on overflow, just double the size.
-    if (N < 0)
-      return BufferSize * 2;
-
-    // Other implementations yield number of bytes needed, not including the
-    // final '\0'.
-    if (unsigned(N) >= BufferSize)
-      return N + 1;
-
-    // Otherwise N is the length of output (not including the final '\0').
-    return N;
-  }
 };
 
 template <typename... Ts>
 raw_ostream &operator<<(raw_ostream &OS, format_object<Ts...> Fmt) {
   OS <<
-      [&Fmt](char *Buf, size_t Size) -> size_t { return Fmt.print(Buf, Size); };
+      [&Fmt](char *Buf, size_t Size) -> int { return Fmt.snprint(Buf, Size); };
   return OS;
 }
 

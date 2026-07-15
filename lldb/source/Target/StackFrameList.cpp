@@ -762,7 +762,7 @@ StackFrameList::GetFrameWithConcreteFrameIndex(uint32_t unwind_idx) {
 
 static bool CompareStackID(const StackFrameSP &stack_sp,
                            const StackID &stack_id) {
-  return stack_sp->GetStackID() < stack_id;
+  return stack_sp->GetStackID().IsYoungerThan(stack_id);
 }
 
 StackFrameSP StackFrameList::GetFrameWithStackID(const StackID &stack_id) {
@@ -804,14 +804,12 @@ bool StackFrameList::SetFrameAtIndex(uint32_t idx, StackFrameSP &frame_sp) {
 }
 
 void StackFrameList::SelectMostRelevantFrame() {
-  // Don't call into the frame recognizers on the private state thread as
-  // they can cause code to run in the target, and that can cause deadlocks
-  // when fetching stop events for the expression.
+  // Don't call into the frame recognizers while evaluating an expression on
+  // the private state thread, as they can cause code to run in the inferior
+  // process, and that can cause deadlocks when fetching stop events for the
+  // expression.
   Policy policy = PolicyStack::Get().Current();
-  if (policy.view == Policy::View::Private)
-    return;
-
-  if (m_thread.GetProcess()->CurrentThreadPosesAsPrivateStateThread())
+  if (!policy.capabilities.can_run_frame_recognizers)
     return;
 
   Log *log = GetLog(LLDBLog::Thread);

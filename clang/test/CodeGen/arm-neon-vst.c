@@ -1270,13 +1270,13 @@ void test_vst1_u8_x4(uint8_t *a, uint8x8x4_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [4 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
@@ -1310,17 +1310,17 @@ void test_vst1q_f16_x2(float16_t *a, float16x8x2_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [6 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_4_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 4
-// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_5_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 5
-// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[B_SROA_6_40_VEC_INSERT]] to <16 x i8>
@@ -1360,21 +1360,21 @@ void test_vst1q_f16_x3(float16_t *a, float16x8x3_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [8 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_4_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 4
-// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_5_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 5
-// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_6_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 6
-// CHECK-A32-NEXT:    [[B_SROA_9_48_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_6_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_9_48_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_6_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_7_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 7
-// CHECK-A32-NEXT:    [[B_SROA_9_56_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_9_48_VEC_INSERT]], i64 [[B_COERCE_FCA_7_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_9_56_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_9_48_VEC_INSERT]], i64 [[B_COERCE_FCA_7_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[B_SROA_6_40_VEC_INSERT]] to <16 x i8>
@@ -1408,13 +1408,13 @@ void test_vst1q_f16_x4(float16_t *a, float16x8x4_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [4 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x float>
@@ -1448,17 +1448,17 @@ void test_vst1q_f32_x2(float32_t *a, float32x4x2_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [6 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_4_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 4
-// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_5_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 5
-// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[B_SROA_6_40_VEC_INSERT]] to <16 x i8>
@@ -1498,21 +1498,21 @@ void test_vst1q_f32_x3(float32_t *a, float32x4x3_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [8 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_4_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 4
-// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_5_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 5
-// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_6_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 6
-// CHECK-A32-NEXT:    [[B_SROA_9_48_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_6_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_9_48_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_6_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_7_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 7
-// CHECK-A32-NEXT:    [[B_SROA_9_56_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_9_48_VEC_INSERT]], i64 [[B_COERCE_FCA_7_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_9_56_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_9_48_VEC_INSERT]], i64 [[B_COERCE_FCA_7_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[B_SROA_6_40_VEC_INSERT]] to <16 x i8>
@@ -1544,13 +1544,13 @@ void test_vst1q_f32_x4(float32_t *a, float32x4x4_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [4 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
@@ -1581,17 +1581,17 @@ void test_vst1q_p16_x2(poly16_t *a, poly16x8x2_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [6 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_4_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 4
-// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_5_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 5
-// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[B_SROA_6_40_VEC_INSERT]] to <16 x i8>
@@ -1627,21 +1627,21 @@ void test_vst1q_p16_x3(poly16_t *a, poly16x8x3_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [8 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_4_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 4
-// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_5_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 5
-// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_6_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 6
-// CHECK-A32-NEXT:    [[B_SROA_9_48_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_6_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_9_48_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_6_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_7_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 7
-// CHECK-A32-NEXT:    [[B_SROA_9_56_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_9_48_VEC_INSERT]], i64 [[B_COERCE_FCA_7_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_9_56_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_9_48_VEC_INSERT]], i64 [[B_COERCE_FCA_7_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[B_SROA_6_40_VEC_INSERT]] to <16 x i8>
@@ -1669,13 +1669,13 @@ void test_vst1q_p16_x4(poly16_t *a, poly16x8x4_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [4 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    call void @llvm.arm.neon.vst1x2.p0.v16i8(ptr [[A]], <16 x i8> [[TMP0]], <16 x i8> [[TMP1]])
@@ -1698,17 +1698,17 @@ void test_vst1q_p8_x2(poly8_t *a, poly8x16x2_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [6 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_4_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 4
-// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_5_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 5
-// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[B_SROA_6_40_VEC_INSERT]] to <16 x i8>
@@ -1733,21 +1733,21 @@ void test_vst1q_p8_x3(poly8_t *a, poly8x16x3_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [8 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_4_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 4
-// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_5_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 5
-// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_6_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 6
-// CHECK-A32-NEXT:    [[B_SROA_9_48_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_6_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_9_48_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_6_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_7_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 7
-// CHECK-A32-NEXT:    [[B_SROA_9_56_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_9_48_VEC_INSERT]], i64 [[B_COERCE_FCA_7_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_9_56_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_9_48_VEC_INSERT]], i64 [[B_COERCE_FCA_7_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[B_SROA_6_40_VEC_INSERT]] to <16 x i8>
@@ -1775,13 +1775,13 @@ void test_vst1q_p8_x4(poly8_t *a, poly8x16x4_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [4 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
@@ -1812,17 +1812,17 @@ void test_vst1q_s16_x2(int16_t *a, int16x8x2_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [6 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_4_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 4
-// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_5_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 5
-// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[B_SROA_6_40_VEC_INSERT]] to <16 x i8>
@@ -1858,21 +1858,21 @@ void test_vst1q_s16_x3(int16_t *a, int16x8x3_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [8 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_4_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 4
-// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_5_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 5
-// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_6_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 6
-// CHECK-A32-NEXT:    [[B_SROA_9_48_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_6_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_9_48_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_6_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_7_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 7
-// CHECK-A32-NEXT:    [[B_SROA_9_56_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_9_48_VEC_INSERT]], i64 [[B_COERCE_FCA_7_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_9_56_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_9_48_VEC_INSERT]], i64 [[B_COERCE_FCA_7_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[B_SROA_6_40_VEC_INSERT]] to <16 x i8>
@@ -1904,13 +1904,13 @@ void test_vst1q_s16_x4(int16_t *a, int16x8x4_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [4 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
@@ -1941,17 +1941,17 @@ void test_vst1q_s32_x2(int32_t *a, int32x4x2_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [6 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_4_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 4
-// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_5_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 5
-// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[B_SROA_6_40_VEC_INSERT]] to <16 x i8>
@@ -1987,21 +1987,21 @@ void test_vst1q_s32_x3(int32_t *a, int32x4x3_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [8 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_4_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 4
-// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_5_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 5
-// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_6_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 6
-// CHECK-A32-NEXT:    [[B_SROA_9_48_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_6_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_9_48_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_6_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_7_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 7
-// CHECK-A32-NEXT:    [[B_SROA_9_56_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_9_48_VEC_INSERT]], i64 [[B_COERCE_FCA_7_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_9_56_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_9_48_VEC_INSERT]], i64 [[B_COERCE_FCA_7_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[B_SROA_6_40_VEC_INSERT]] to <16 x i8>
@@ -2033,13 +2033,13 @@ void test_vst1q_s32_x4(int32_t *a, int32x4x4_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [4 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
@@ -2070,17 +2070,17 @@ void test_vst1q_s64_x2(int64_t *a, int64x2x2_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [6 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_4_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 4
-// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_5_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 5
-// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[B_SROA_6_40_VEC_INSERT]] to <16 x i8>
@@ -2116,21 +2116,21 @@ void test_vst1q_s64_x3(int64_t *a, int64x2x3_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [8 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_4_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 4
-// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_5_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 5
-// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_6_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 6
-// CHECK-A32-NEXT:    [[B_SROA_9_48_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_6_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_9_48_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_6_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_7_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 7
-// CHECK-A32-NEXT:    [[B_SROA_9_56_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_9_48_VEC_INSERT]], i64 [[B_COERCE_FCA_7_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_9_56_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_9_48_VEC_INSERT]], i64 [[B_COERCE_FCA_7_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[B_SROA_6_40_VEC_INSERT]] to <16 x i8>
@@ -2158,13 +2158,13 @@ void test_vst1q_s64_x4(int64_t *a, int64x2x4_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [4 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    call void @llvm.arm.neon.vst1x2.p0.v16i8(ptr [[A]], <16 x i8> [[TMP0]], <16 x i8> [[TMP1]])
@@ -2187,17 +2187,17 @@ void test_vst1q_s8_x2(int8_t *a, int8x16x2_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [6 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_4_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 4
-// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_5_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 5
-// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[B_SROA_6_40_VEC_INSERT]] to <16 x i8>
@@ -2222,21 +2222,21 @@ void test_vst1q_s8_x3(int8_t *a, int8x16x3_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [8 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_4_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 4
-// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_5_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 5
-// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_6_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 6
-// CHECK-A32-NEXT:    [[B_SROA_9_48_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_6_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_9_48_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_6_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_7_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 7
-// CHECK-A32-NEXT:    [[B_SROA_9_56_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_9_48_VEC_INSERT]], i64 [[B_COERCE_FCA_7_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_9_56_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_9_48_VEC_INSERT]], i64 [[B_COERCE_FCA_7_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[B_SROA_6_40_VEC_INSERT]] to <16 x i8>
@@ -2264,13 +2264,13 @@ void test_vst1q_s8_x4(int8_t *a, int8x16x4_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [4 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
@@ -2301,17 +2301,17 @@ void test_vst1q_u16_x2(uint16_t *a, uint16x8x2_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [6 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_4_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 4
-// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_5_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 5
-// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[B_SROA_6_40_VEC_INSERT]] to <16 x i8>
@@ -2347,21 +2347,21 @@ void test_vst1q_u16_x3(uint16_t *a, uint16x8x3_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [8 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_4_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 4
-// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_5_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 5
-// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_6_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 6
-// CHECK-A32-NEXT:    [[B_SROA_9_48_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_6_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_9_48_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_6_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_7_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 7
-// CHECK-A32-NEXT:    [[B_SROA_9_56_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_9_48_VEC_INSERT]], i64 [[B_COERCE_FCA_7_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_9_56_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_9_48_VEC_INSERT]], i64 [[B_COERCE_FCA_7_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[B_SROA_6_40_VEC_INSERT]] to <16 x i8>
@@ -2393,13 +2393,13 @@ void test_vst1q_u16_x4(uint16_t *a, uint16x8x4_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [4 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
@@ -2430,17 +2430,17 @@ void test_vst1q_u32_x2(uint32_t *a, uint32x4x2_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [6 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_4_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 4
-// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_5_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 5
-// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[B_SROA_6_40_VEC_INSERT]] to <16 x i8>
@@ -2476,21 +2476,21 @@ void test_vst1q_u32_x3(uint32_t *a, uint32x4x3_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [8 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_4_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 4
-// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_5_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 5
-// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_6_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 6
-// CHECK-A32-NEXT:    [[B_SROA_9_48_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_6_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_9_48_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_6_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_7_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 7
-// CHECK-A32-NEXT:    [[B_SROA_9_56_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_9_48_VEC_INSERT]], i64 [[B_COERCE_FCA_7_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_9_56_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_9_48_VEC_INSERT]], i64 [[B_COERCE_FCA_7_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[B_SROA_6_40_VEC_INSERT]] to <16 x i8>
@@ -2522,13 +2522,13 @@ void test_vst1q_u32_x4(uint32_t *a, uint32x4x4_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [4 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
@@ -2559,17 +2559,17 @@ void test_vst1q_u64_x2(uint64_t *a, uint64x2x2_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [6 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_4_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 4
-// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_5_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 5
-// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[B_SROA_6_40_VEC_INSERT]] to <16 x i8>
@@ -2605,21 +2605,21 @@ void test_vst1q_u64_x3(uint64_t *a, uint64x2x3_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [8 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_4_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 4
-// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_5_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 5
-// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_6_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 6
-// CHECK-A32-NEXT:    [[B_SROA_9_48_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_6_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_9_48_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_6_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_7_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 7
-// CHECK-A32-NEXT:    [[B_SROA_9_56_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_9_48_VEC_INSERT]], i64 [[B_COERCE_FCA_7_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_9_56_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_9_48_VEC_INSERT]], i64 [[B_COERCE_FCA_7_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[B_SROA_6_40_VEC_INSERT]] to <16 x i8>
@@ -2647,13 +2647,13 @@ void test_vst1q_u64_x4(uint64_t *a, uint64x2x4_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [4 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [4 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    call void @llvm.arm.neon.vst1x2.p0.v16i8(ptr [[A]], <16 x i8> [[TMP0]], <16 x i8> [[TMP1]])
@@ -2676,17 +2676,17 @@ void test_vst1q_u8_x2(uint8_t *a, uint8x16x2_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [6 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_4_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 4
-// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_5_EXTRACT:%.*]] = extractvalue [6 x i64] [[B_COERCE]], 5
-// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[B_SROA_6_40_VEC_INSERT]] to <16 x i8>
@@ -2711,21 +2711,21 @@ void test_vst1q_u8_x3(uint8_t *a, uint8x16x3_t b) {
 // CHECK-A32-SAME: ptr noundef [[A:%.*]], [8 x i64] [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 0
-// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_0_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 1
-// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_0_0_VEC_INSERT]], i64 [[B_COERCE_FCA_1_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 2
-// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_3_16_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_2_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 3
-// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_3_24_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_3_16_VEC_INSERT]], i64 [[B_COERCE_FCA_3_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_4_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 4
-// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_6_32_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_4_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_5_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 5
-// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_6_40_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_6_32_VEC_INSERT]], i64 [[B_COERCE_FCA_5_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_6_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 6
-// CHECK-A32-NEXT:    [[B_SROA_9_48_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_6_EXTRACT]], i32 0
+// CHECK-A32-NEXT:    [[B_SROA_9_48_VEC_INSERT:%.*]] = insertelement <2 x i64> undef, i64 [[B_COERCE_FCA_6_EXTRACT]], i64 0
 // CHECK-A32-NEXT:    [[B_COERCE_FCA_7_EXTRACT:%.*]] = extractvalue [8 x i64] [[B_COERCE]], 7
-// CHECK-A32-NEXT:    [[B_SROA_9_56_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_9_48_VEC_INSERT]], i64 [[B_COERCE_FCA_7_EXTRACT]], i32 1
+// CHECK-A32-NEXT:    [[B_SROA_9_56_VEC_INSERT:%.*]] = insertelement <2 x i64> [[B_SROA_9_48_VEC_INSERT]], i64 [[B_COERCE_FCA_7_EXTRACT]], i64 1
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B_SROA_0_8_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B_SROA_3_24_VEC_INSERT]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[B_SROA_6_40_VEC_INSERT]] to <16 x i8>

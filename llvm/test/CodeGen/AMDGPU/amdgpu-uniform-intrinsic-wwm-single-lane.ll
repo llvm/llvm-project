@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn--amdpal -amdgpu-uniform-intrinsic-combine -mattr=+wavefrontsize64 -S < %s | FileCheck %s -check-prefix=CHECK
+; RUN: opt -mtriple=amdgpu--amdpal -amdgpu-uniform-intrinsic-combine -mattr=+wavefrontsize64 -S < %s | FileCheck %s -check-prefix=CHECK
 
 ; If uniformity analysis sees that the workgroup size is 1, it would say this function is trivially uniform.
 ; However, the function's use of wwm means that all lanes will be active even if the workgroup size is 1, so

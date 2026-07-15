@@ -5,9 +5,7 @@ add_entrypoint_object(
   HDRS
     ../alarm.h
   DEPENDS
-    libc.hdr.types.struct_itimerval
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.alarm
     libc.src.__support.common
     libc.src.__support.macros.config
 )
@@ -140,6 +138,7 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.pid_t
     libc.hdr.fcntl_macros
+    libc.hdr.signal_macros
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.threads.fork_callbacks
@@ -344,7 +343,7 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.unistd_macros
     libc.include.unistd
-    libc.include.sys_ioctl
+    libc.hdr.sys_ioctl_macros
     libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
     libc.src.errno.errno
 )

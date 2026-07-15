@@ -22557,8 +22557,11 @@ TEST_F(FormatTest, DoNotCrashOnInvalidInput) {
   verifyNoCrash("        tst     %o5     ! are we doing the gray case?\n"
                 "LY52:                   ! [internal]");
   verifyNoCrash("operator foo *;");
+  verifyNoCrash("[[[a]]");
+  verifyNoCrash("[[[a]]]");
+  verifyNoCrash("[[ [a] ]]");
   verifyNoCrash(
-      "  #xxxx??x<xxxxxxx||??x<xxxxxxx and xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+      "#xxxx??x<xxxxxxx||??x<xxxxxxx and xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 }
 
 TEST_F(FormatTest, FormatsTableGenCode) {
