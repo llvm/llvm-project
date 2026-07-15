@@ -12,6 +12,17 @@
 
 let Component = "Sema" in {
 let CategoryName = "Semantic Issue" in {
+// C23 compatibility with C17.
+defm restrict_on_array_of_pointers : C23Compat<"'restrict' qualifier on an array of pointers is">;
+defm non_local_variable_decl_in_for : C23Compat<"declaration of non-local variable in 'for' loop is">;
+defm non_variable_decl_in_for : C23Compat<"non-variable declaration in 'for' loop is">;
+
+// C2y compatibility with C23.
+defm imaginary_constant : C2yCompat<"imaginary constants are">;
+defm alignof_incomplete_array : C2yCompat<"'alignof' on an incomplete array type is">;
+defm increment_complex : C2yCompat<"'%select{--|++}0' on an object of complex type is">;
+defm assoc_type_incomplete : C2yCompat<"use of incomplete type %0 in a '_Generic' association is">;
+
 // C++11 compatibility with C++98.
 defm nonclass_type_friend : CXX11Compat<"non-class friend type %0 is">;
 defm static_data_member_in_union : CXX11Compat<"static data member %0 in union is">;
@@ -66,8 +77,9 @@ defm decomp_decl_cond : CXX26Compat<"structured binding declaration in a conditi
 
 // Compatibility warnings duplicated across multiple language versions.
 foreach std = [14, 20, 23] in {
-  defm cxx#std#_constexpr_body_invalid_stmt : CXXCompat<
-    "use of this statement in a constexpr %select{function|constructor}0 is", std>;
+  defm cxx#std#_constexpr_body_invalid_stmt : CompatWarning<
+    "use of this statement in a constexpr %select{function|constructor}0 is",
+    std, /*cxx=*/true>;
 }
 
 def note_previous_decl : Note<"%0 declared here">;
@@ -322,11 +334,6 @@ def ext_designated_init_brace_elision : ExtWarn<
 // Declarations.
 def ext_plain_complex : ExtWarn<
   "plain '_Complex' requires a type specifier; assuming '_Complex double'">;
-def warn_c23_compat_imaginary_constant : Warning<
-  "imaginary constants are incompatible with C standards before C2y">,
-  DefaultIgnore, InGroup<CPre2yCompat>;
-def ext_c2y_imaginary_constant : Extension<
-  "imaginary constants are a C2y extension">, InGroup<C2y>;
 def ext_gnu_imaginary_constant : Extension<
   "imaginary constants are a GNU extension">, InGroup<GNUImaginaryConstant>;
 def ext_integer_complex : Extension<
@@ -3826,12 +3833,6 @@ def warn_alignment_not_power_of_two : Warning<
   InGroup<DiagGroup<"non-power-of-two-alignment">>;
 def err_alignment_dependent_typedef_name : Error<
   "requested alignment is dependent but declaration is not dependent">;
-def ext_c2y_alignof_incomplete_array : Extension<
-  "'alignof' on an incomplete array type is a C2y extension">,
-  InGroup<C2y>;
-def warn_c2y_compat_alignof_incomplete_array : Warning<
-  "'alignof' on an incomplete array type is incompatible with C standards "
-  "before C2y">, InGroup<CPre2yCompat>, DefaultIgnore;
 
 def warn_alignment_builtin_useless : Warning<
   "%select{aligning a value|the result of checking whether a value is aligned}0"
@@ -7912,11 +7913,6 @@ def warn_c23_compat_utf8_string : Warning<
 def note_cxx20_c23_compat_utf8_string_remove_u8 : Note<
   "remove 'u8' prefix to avoid a change of behavior; "
   "Clang encodes unprefixed narrow string literals as UTF-8">;
-def warn_c23_compat_restrict_on_array_of_pointers : Warning<
-  "'restrict' qualifier on an array of pointers is incompatible with C standards before C23">,
-  InGroup<CPre23Compat>, DefaultIgnore;
-def ext_restrict_on_array_of_pointers_c23 : Extension<
-  "'restrict' qualifier on an array of pointers is a C23 extension">, InGroup<C23>;
 def err_array_init_different_type : Error<
   "cannot initialize array %diff{of type $ with array of type $|"
   "with different type of array}0,1">;
@@ -8365,12 +8361,6 @@ def note_gnu_counted_by_void_ptr_use_sized_by
            "to suppress this warning">;
 def err_readonly_message_assignment : Error<
   "assigning to 'readonly' return result of an Objective-C message not allowed">;
-def ext_c2y_increment_complex : Extension<
-  "'%select{--|++}0' on an object of complex type is a C2y extension">,
-  InGroup<C2y>;
-def warn_c2y_compat_increment_complex : Warning<
-  "'%select{--|++}0' on an object of complex type is incompatible with C "
-  "standards before C2y">, InGroup<CPre2yCompat>, DefaultIgnore;
 def ext_integer_complement_complex : Extension<
   "ISO C does not support '~' for complex conjugation of %0">;
 def err_nosetter_property_assignment : Error<
@@ -11218,13 +11208,6 @@ def warn_type_safety_null_pointer_required : Warning<
   "specified %0 type tag requires a null pointer">, InGroup<TypeSafety>;
 
 // Generic selections.
-def ext_assoc_type_incomplete : Extension<
-  "incomplete type %0 in a '_Generic' association is a C2y extension">,
-  InGroup<C2y>;
-def warn_c2y_compat_assoc_type_incomplete : Warning<
-  "use of incomplete type %0 in a '_Generic' association is incompatible with "
-  "C standards before C2y">,
-  InGroup<CPre2yCompat>, DefaultIgnore;
 def err_assoc_type_nonobject : Error<
   "type %0 in generic association not an object type">;
 def err_assoc_type_variably_modified : Error<
@@ -11618,22 +11601,6 @@ def err_non_local_variable_decl_in_for : Error<
   "declaration of non-local variable in 'for' loop">;
 def err_non_variable_decl_in_for : Error<
   "non-variable declaration in 'for' loop">;
-
-def ext_c23_non_local_variable_decl_in_for : Extension<
-  "declaration of non-local variable in 'for' loop is a C23 extension">,
-  InGroup<C23>;
-
-def warn_c17_non_local_variable_decl_in_for : Warning<
-  "declaration of non-local variable in 'for' loop is incompatible with C standards before C23">,
-  DefaultIgnore, InGroup<CPre23Compat>;
-
-def ext_c23_non_variable_decl_in_for : Extension<
-  "non-variable declaration in 'for' loop is a C23 extension">,
-  InGroup<C23>;
-
-def warn_c17_non_variable_decl_in_for : Warning<
-  "non-variable declaration in 'for' loop is incompatible with C standards before C23">,
-  DefaultIgnore, InGroup<CPre23Compat>;
 
 def err_toomany_element_decls : Error<
   "only one element declaration is allowed">;
@@ -13712,6 +13679,9 @@ def err_hlsl_matrix_layout_non_matrix
 def err_hlsl_matrix_layout_conflict
     : Error<"%0 and %1 attributes are not compatible">;
 
+def err_hlsl_ambiguous_entry_point : Error<
+   "ambiguous entry point definition '%0'">;
+def err_hlsl_missing_entry_point : Error<"missing entry point definition '%0'">;
 def err_hlsl_entry_shader_attr_mismatch : Error<
    "%0 attribute on entry function does not match the target profile">;
 def err_hlsl_numthreads_argument_oor : Error<"argument '%select{X|Y|Z}0' to numthreads attribute cannot exceed %1">;

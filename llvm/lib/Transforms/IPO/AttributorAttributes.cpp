@@ -11437,7 +11437,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
         // If the incoming value is not the PHI but an instruction in the same
         // cycle we might have multiple versions of it flying around.
         if (CyclePHI && isa<Instruction>(V) &&
-            (!C || C->contains(cast<Instruction>(V)->getParent())))
+            (!C || CI->contains(*C, cast<Instruction>(V)->getParent())))
           return false;
 
         Worklist.push_back({{*V, IncomingBB->getTerminator()}, II.S});
