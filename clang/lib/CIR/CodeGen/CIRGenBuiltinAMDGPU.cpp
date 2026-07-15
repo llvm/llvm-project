@@ -251,10 +251,7 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   case AMDGPU::BI__builtin_amdgcn_rcpf:
   case AMDGPU::BI__builtin_amdgcn_rcph:
   case AMDGPU::BI__builtin_amdgcn_rcp_bf16: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.rcp").getValue();
   }
   case AMDGPU::BI__builtin_amdgcn_sqrt:
   case AMDGPU::BI__builtin_amdgcn_sqrtf:
@@ -269,17 +266,12 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   case AMDGPU::BI__builtin_amdgcn_rsqf:
   case AMDGPU::BI__builtin_amdgcn_rsqh:
   case AMDGPU::BI__builtin_amdgcn_rsq_bf16: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.rsq").getValue();
   }
   case AMDGPU::BI__builtin_amdgcn_rsq_clamp:
   case AMDGPU::BI__builtin_amdgcn_rsq_clampf: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.rsq.clamp")
+        .getValue();
   }
   case AMDGPU::BI__builtin_amdgcn_sinf:
   case AMDGPU::BI__builtin_amdgcn_sinh:

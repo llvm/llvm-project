@@ -45,6 +45,12 @@ TEST(WrapperFunctionUtilsTest, WrapperFunctionBufferFromRange) {
   EXPECT_EQ(B.getOutOfBandError(), nullptr);
 }
 
+TEST(WrapperFunctionUtilsTest, WrapperFunctionBufferFromEmptyRangeIsEmpty) {
+  const char *Empty = "";
+  auto B = WrapperFunctionBuffer::copyFrom(Empty, 0);
+  EXPECT_TRUE(B.empty());
+}
+
 TEST(WrapperFunctionUtilsTest, WrapperFunctionBufferFromCString) {
   auto B = WrapperFunctionBuffer::copyFrom(TestString);
   EXPECT_EQ(B.size(), strlen(TestString) + 1);
