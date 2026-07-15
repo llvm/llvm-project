@@ -204,11 +204,7 @@ void *CUFAllocPinned(std::size_t sizeInBytes,
   return p;
 }
 
-void CUFFreePinned(void *p) {
-  if (DeviceContextTornDown())
-    return;
-  cudaFreeHost(p);
-}
+void CUFFreePinned(void *p) { cudaFreeHost(p); }
 
 void *CUFAllocDevice(std::size_t sizeInBytes,
     [[maybe_unused]] std::size_t alignment, std::int64_t *asyncObject) {
@@ -228,10 +224,8 @@ void *CUFAllocDevice(std::size_t sizeInBytes,
   return p;
 }
 
-// No teardown guard here: this is the hot deallocation path (cudaFreeAsync just
-// enqueues). Automatic end-of-scope frees that may run after a user
-// cudaDeviceReset() are guarded in lowering via genDeviceIsActive(); an
-// explicit deallocate after a reset is unsupported.
+// End-of-main cleanup is guarded in lowering; explicit deallocation after a
+// reset is unsupported, keeping cudaFreeAsync free of context-query overhead.
 void CUFFreeDevice(void *p) {
   CriticalSection critical{lock};
   int pos = findAllocation(p);
@@ -254,9 +248,6 @@ void *CUFAllocManaged(std::size_t sizeInBytes,
 }
 
 void CUFFreeManaged(void *p) {
-  // Descriptor cleanup runs through here at end of scope; skip after a reset.
-  if (DeviceContextTornDown())
-    return;
   CUDA_REPORT_IF_ERROR(cudaFree(p));
 }
 

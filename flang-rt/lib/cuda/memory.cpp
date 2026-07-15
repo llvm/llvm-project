@@ -200,10 +200,6 @@ void RTDEF(CUFMemFree)(
     void *ptr, unsigned type, const char *sourceFile, int sourceLine) {
   if (!ptr)
     return;
-  // After a user cudaDeviceReset(), stale device/pinned frees fail and can
-  // recreate a phantom context, so skip them.
-  if (DeviceContextTornDown())
-    return;
   if (type == kMemTypeDevice || type == kMemTypeManaged ||
       type == kMemTypeUnified) {
     CUDA_REPORT_IF_ERROR_LOC(cudaFree(ptr), sourceFile, sourceLine);

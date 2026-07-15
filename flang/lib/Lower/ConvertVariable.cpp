@@ -32,7 +32,6 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
-#include "flang/Optimizer/Builder/Runtime/CUDA/Descriptor.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
@@ -1287,29 +1286,27 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
     // Free the CUF storage, including in the main program: this is storage
     // cleanup, not finalization, so it must not be skipped there.
     if (dataAttr.getValue() != cuf::DataAttribute::Shared) {
-      converter.getFctCtx().attachCleanup([builder, loc, exv, sym]() {
+      bool isMainProgram =
+          sym->owner().kind() == Fortran::semantics::Scope::Kind::MainProgram;
+      Fortran::lower::StatementContext &cudaCleanupCtx =
+          isMainProgram ? converter.getMainProgramCudaCleanupCtx()
+                        : converter.getFctCtx();
+      cudaCleanupCtx.attachCleanup([builder, loc, exv, sym]() {
         cuf::DataAttributeAttr dataAttr =
             Fortran::lower::translateSymbolCUFDataAttribute(
                 builder->getContext(), *sym);
         cuf::FreeOp::create(*builder, loc, fir::getBase(exv), dataAttr);
       });
-      // Main-program allocatables skip normal deallocation; free the data
-      // before the descriptor cleanup (LIFO), guarded so we skip a torn-down
-      // descriptor.
-      if (sym->owner().kind() == Fortran::semantics::Scope::Kind::MainProgram &&
-          Fortran::semantics::IsAllocatable(*sym)) {
+      // Main-program allocatables skip normal deallocation. Attach this after
+      // descriptor cleanup so it runs first (cleanups are LIFO).
+      if (isMainProgram && Fortran::semantics::IsAllocatable(*sym)) {
         auto *converterPtr = &converter;
-        converter.getFctCtx().attachCleanup([converterPtr, loc, exv, sym]() {
+        cudaCleanupCtx.attachCleanup([converterPtr, loc, exv, sym]() {
           fir::FirOpBuilder &b = converterPtr->getFirOpBuilder();
-          mlir::Value active = fir::runtime::cuda::genDeviceIsActive(b, loc);
-          b.genIfThen(loc, active)
-              .genThen([&]() {
-                if (const fir::MutableBoxValue *mutableBox =
-                        exv.getBoxOf<fir::MutableBoxValue>())
-                  Fortran::lower::genDeallocateIfAllocated(
-                      *converterPtr, *mutableBox, loc, sym);
-              })
-              .end();
+          if (const fir::MutableBoxValue *mutableBox =
+                  exv.getBoxOf<fir::MutableBoxValue>())
+            Fortran::lower::genDeallocateIfAllocated(*converterPtr, *mutableBox,
+                                                     loc, sym);
         });
       }
     }
