@@ -2177,6 +2177,25 @@ cc_library(
 )
 
 cc_library(
+    name = "PluginObjectFileXCOFF",
+    srcs = glob(["ObjectFile/XCOFF/*.cpp"]),
+    hdrs = glob(["ObjectFile/XCOFF/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Symbol",
+        "//lldb:SymbolHeaders",
+        "//lldb:Target",
+        "//lldb:TargetHeaders",
+        "//llvm:BinaryFormat",
+        "//llvm:Object",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "PluginUnwindAssemblyX86",
     srcs = glob(["UnwindAssembly/x86/*.cpp"]),
     hdrs = glob(["UnwindAssembly/x86/*.h"]),
