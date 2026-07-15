@@ -98,6 +98,8 @@ class AArch64AsmPrinter : public AsmPrinter {
   FaultMaps FM;
   const AArch64Subtarget *STI;
   bool ShouldEmitWeakSwiftAsyncExtendedFramePointerFlags = false;
+  bool PtrauthInitFini = false;
+  bool PtrauthInitFiniAddressDisc = false;
 #ifndef NDEBUG
   unsigned InstsEmitted;
 #endif
@@ -398,6 +400,17 @@ private:
 
 } // end anonymous namespace
 
+// Get boolean module flag (0 or 1), treating absent flag as having value 0.
+static bool getOptionalBooleanModuleFlag(Module &M, StringRef Name) {
+  Metadata *Flag = M.getModuleFlag(Name);
+  if (!Flag)
+    return false;
+
+  uint64_t Value = mdconst::extract<ConstantInt>(Flag)->getZExtValue();
+  assert((Value == 0 || Value == 1) && "Boolean flag is expected, if present");
+  return Value;
+}
+
 void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
   const Triple &TT = TM.getTargetTriple();
 
@@ -408,6 +421,10 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
     if (M.getModuleFlag("import-call-optimization"))
       EnableImportCallOptimization = true;
   }
+
+  PtrauthInitFini = getOptionalBooleanModuleFlag(M, "ptrauth-init-fini");
+  PtrauthInitFiniAddressDisc = getOptionalBooleanModuleFlag(
+      M, "ptrauth-init-fini-address-discrimination");
 
   if (!TT.isOSBinFormatELF())
     return;
@@ -453,6 +470,16 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
   if (const auto *PAV = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("aarch64-elf-pauthabi-version"))) {
     PAuthABIVersion = PAV->getZExtValue();
+  }
+
+  // For LLVM_LINUX experimental platform, version value of 0 means no PAuth
+  // support. Do not emit corresponding PAuthABI GNU property note and AArch64
+  // build attributes for this case to keep Linux binaries not using PAuth
+  // unaffected.
+  if (PAuthABIPlatform == ELF::AARCH64_PAUTH_PLATFORM_LLVM_LINUX &&
+      PAuthABIVersion == 0) {
+    PAuthABIPlatform = uint64_t(-1);
+    PAuthABIVersion = uint64_t(-1);
   }
 
   // Emit AArch64 Build Attributes
@@ -1465,18 +1492,31 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
 
 void AArch64AsmPrinter::emitXXStructor(const DataLayout &DL,
                                        const Constant *CV) {
-  if (const auto *CPA = dyn_cast<ConstantPtrAuth>(CV))
-    if (CPA->hasAddressDiscriminator() &&
-        !CPA->hasSpecialAddressDiscriminator(
-            ConstantPtrAuth::AddrDiscriminator_CtorsDtors))
-      report_fatal_error(
-          "unexpected address discrimination value for ctors/dtors entry, only "
-          "'ptr inttoptr (i64 1 to ptr)' is allowed");
-  // If we have signed pointers in xxstructors list, they'll be lowered to @AUTH
-  // MCExpr's via AArch64AsmPrinter::lowerConstantPtrAuth. It does not look at
-  // actual address discrimination value and only checks
-  // hasAddressDiscriminator(), so it's OK to leave special address
-  // discrimination value here.
+  LLVMContext &C = CV->getContext();
+  assert(!isa<ConstantPtrAuth>(CV) &&
+         "ctors/dtors are to be signed by asm printer");
+
+  if (PtrauthInitFini) {
+    IntegerType *Int32Ty = IntegerType::get(C, 32);
+    IntegerType *Int64Ty = IntegerType::get(C, 64);
+    PointerType *PtrTy = PointerType::get(C, 0);
+
+    ConstantInt *Key = ConstantInt::get(Int32Ty, AArch64PAuth::InitFiniKey);
+    ConstantInt *IntDisc = ConstantInt::get(
+        Int64Ty, AArch64PAuth::InitFiniPointerConstantDiscriminator);
+    Constant *Null = ConstantPointerNull::get(PtrTy);
+    Constant *AddressDisc = Null;
+    if (PtrauthInitFiniAddressDisc) {
+      uint64_t Marker = ConstantPtrAuth::AddrDiscriminator_CtorsDtors;
+      AddressDisc =
+          ConstantExpr::getIntToPtr(ConstantInt::get(Int64Ty, Marker), PtrTy);
+    }
+
+    CV = ConstantPtrAuth::get(const_cast<Constant *>(CV), Key, IntDisc,
+                              AddressDisc, /*DeactivationSymbol=*/Null);
+  }
+
+  // Signed pointers will be lowered by AArch64AsmPrinter::lowerConstantPtrAuth.
   AsmPrinter::emitXXStructor(DL, CV);
 }
 
