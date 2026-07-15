@@ -56,6 +56,7 @@ libc_test(
         "//libc:feraiseexcept",
         "//libc:fetestexcept",
         "//libc:hdr_fenv_macros",
+        "//libc:hdr_signal_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
