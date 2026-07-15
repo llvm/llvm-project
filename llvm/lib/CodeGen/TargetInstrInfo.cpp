@@ -872,17 +872,32 @@ TargetInstrInfo::foldMemoryOperand(MachineInstr &MI, ArrayRef<unsigned> Ops,
 static void transferImplicitOperands(MachineInstr *MI,
                                      MachineBasicBlock::instr_iterator FirstMI,
                                      const TargetRegisterInfo *TRI) {
-  MachineBasicBlock::iterator LastMI = MI;
+  MachineBasicBlock::instr_iterator LastMI = MI->getIterator();
   --LastMI;
 
   Register DstReg = MI->getOperand(0).getReg();
   for (const MachineOperand &MO : MI->implicit_operands()) {
-    // Must transfer implicit-def of super-registers to first replacement
-    // instruction to keep subregister defs alive in future backward liveness
-    // scans.
+    // If an implicit-def of a super-register left on the last
+    // instruction fully covers a subreg def and no later instruction reads
+    // it to keep it live, it would make that def look dead. So we transfert the
+    // implicit def to the first instruction to keep it alive.
     if (MO.isDef() && TRI->regsOverlap(DstReg, MO.getReg())) {
-      FirstMI->addOperand(MO);
-      continue;
+      bool WouldKillEarlierDef =
+          any_of(make_range(FirstMI, LastMI), [&](MachineInstr &Repl) {
+            const MachineOperand &Def = Repl.getOperand(0);
+            if (!Def.isReg() || !Def.getReg() ||
+                !TRI->isSubRegisterEq(MO.getReg(), Def.getReg()))
+              return false;
+            return none_of(
+                make_range(std::next(Repl.getIterator()), MI->getIterator()),
+                [&](const MachineInstr &Later) {
+                  return Later.readsRegister(Def.getReg(), TRI);
+                });
+          });
+      if (WouldKillEarlierDef) {
+        FirstMI->addOperand(MO);
+        continue;
+      }
     }
 
     LastMI->addOperand(MO);
