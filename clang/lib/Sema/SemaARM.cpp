@@ -343,8 +343,8 @@ bool SemaARM::BuiltinARMAtomicStoreHintCall(unsigned BuiltinID,
            << PtrArg->getType() << 0 << PtrArg->getSourceRange();
   QualType PtrQT = PtrTy->getPointeeType();
 
-  // TODO: Allow MFloat8 types when supported by atomic store
-  if (!PtrQT->isIntegralType(getASTContext()) && !PtrQT->isFloatingType())
+  if (!PtrQT->isIntegralType(getASTContext()) && !PtrQT->isFloatingType() &&
+      !PtrQT->isMFloat8Type())
     return Diag(TheCall->getBeginLoc(),
                 diag::err_atomic_op_needs_atomic_int_or_fp)
            << 0 << PtrQT << PtrArg->getSourceRange();
