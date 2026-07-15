@@ -7,6 +7,11 @@
 # the CHECK text, so the value reaches the pattern as [[uid]]). The record is
 # emitted at ERROR level, which os_log persists, so `log show` sees it;
 #
+# The record also carries a runtime string logged with ORC_RT_LOG_PUB_S. os_log
+# redacts a dynamic string to <private> unless it is published, so matching the
+# payload's contents (rather than <private>) confirms the public annotation
+# takes effect.
+#
 # REQUIRES: os-log-show-tests
 # RUN: orc-rt-log-check --uid %{orc-rt-log-uid}
 # RUN: log show --predicate \
@@ -14,4 +19,4 @@
 # RUN:     --style compact --last 15s \
 # RUN:     | FileCheck -Duid=%{orc-rt-log-uid} %s
 
-# CHECK: delivery marker uid=[[uid]]
+# CHECK: delivery marker uid=[[uid]] payload=public-payload
