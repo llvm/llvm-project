@@ -913,6 +913,10 @@ define i64 @test_x86_tbm_blsic_u64_sle(i64 %a, i64 %b, i64 %c) nounwind {
 ; CHECK-LABEL: test_blsic_original
 ; CHECK: blsicl
 define i32 @test_blsic_original(i32 %x) {
+; CHECK-LABEL: test_blsic_original:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    blsicl %edi, %eax
+; CHECK-NEXT:    retq
   %_2 = xor i32 %x, -1
   %_0.i = add i32 %x, -1
   %_0 = or i32 %_0.i, %_2
@@ -922,6 +926,10 @@ define i32 @test_blsic_original(i32 %x) {
 ; CHECK-LABEL: test_blsic_optimized
 ; CHECK: blsicl
 define i32 @test_blsic_optimized(i32 %x) {
+; CHECK-LABEL: test_blsic_optimized:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    blsicl %edi, %eax
+; CHECK-NEXT:    retq
   %1 = sub i32 0, %x
   %2 = and i32 %x, %1
   %3 = xor i32 %2, -1
@@ -932,6 +940,10 @@ define i32 @test_blsic_optimized(i32 %x) {
 ; CHECK-LABEL: test_blsic_64_original
 ; CHECK: blsicq
 define i64 @test_blsic_64_original(i64 %x) {
+; CHECK-LABEL: test_blsic_64_original:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    blsicq %rdi, %rax
+; CHECK-NEXT:    retq
   %_2 = xor i64 %x, -1
   %_0.i = add i64 %x, -1
   %_0 = or i64 %_0.i, %_2
@@ -941,6 +953,10 @@ define i64 @test_blsic_64_original(i64 %x) {
 ; CHECK-LABEL: test_blsic_64_optimized
 ; CHECK: blsicq
 define i64 @test_blsic_64_optimized(i64 %x) {
+; CHECK-LABEL: test_blsic_64_optimized:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    blsicq %rdi, %rax
+; CHECK-NEXT:    retq
   %1 = sub i64 0, %x
   %2 = and i64 %x, %1
   %3 = xor i64 %2, -1
