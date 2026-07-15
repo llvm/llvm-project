@@ -620,6 +620,7 @@ bool yaml2coff(llvm::COFFYAML::Object &Doc, raw_ostream &Out,
     return false;
   }
   if (Error E = CBA.takeLimitError()) {
+    // Match ELF by reporting a custom error message instead below.
     consumeError(std::move(E));
     ErrHandler("the desired output size is greater than permitted. Use the "
                "--max-size option to change the limit");
