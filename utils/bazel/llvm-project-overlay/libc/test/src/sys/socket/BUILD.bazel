@@ -11,26 +11,6 @@ package(default_visibility = ["//visibility:public"])
 licenses(["notice"])
 
 libc_test(
-    name = "socket_test",
-    srcs = ["linux/socket_test.cpp"],
-    deps = [
-        "//libc:__support_cpp_scope",
-        "//libc:close",
-        "//libc:socket",
-    ],
-)
-
-libc_test(
-    name = "socketpair_test",
-    srcs = ["linux/socketpair_test.cpp"],
-    deps = [
-        "//libc:__support_cpp_scope",
-        "//libc:close",
-        "//libc:socketpair",
-    ],
-)
-
-libc_test(
     name = "send_recv_test",
     srcs = ["linux/send_recv_test.cpp"],
     deps = [
@@ -39,18 +19,6 @@ libc_test(
         "//libc:hdr_sys_socket_macros",
         "//libc:recv",
         "//libc:send",
-        "//libc:socketpair",
-    ],
-)
-
-libc_test(
-    name = "sendto_recvfrom_test",
-    srcs = ["linux/sendto_recvfrom_test.cpp"],
-    deps = [
-        "//libc:__support_cpp_scope",
-        "//libc:close",
-        "//libc:recvfrom",
-        "//libc:sendto",
         "//libc:socketpair",
     ],
 )
@@ -72,5 +40,104 @@ libc_test(
         "//libc:sendmsg",
         "//libc:socketpair",
         "//libc:types_struct_cmsghdr",
+    ],
+)
+
+libc_test(
+    name = "sendrecvmmsg_test",
+    srcs = ["linux/sendrecvmmsg_test.cpp"],
+    deps = [
+        "//libc:__support_cpp_scope",
+        "//libc:close",
+        "//libc:hdr_sys_socket_macros",
+        "//libc:recvmmsg",
+        "//libc:sendmmsg",
+        "//libc:socketpair",
+        "//libc:strlen",
+        "//libc:types_struct_iovec",
+        "//libc:types_struct_mmsghdr",
+        "//libc:types_struct_timespec",
+    ],
+)
+
+libc_test(
+    name = "sendto_recvfrom_test",
+    srcs = ["linux/sendto_recvfrom_test.cpp"],
+    deps = [
+        "//libc:__support_cpp_scope",
+        "//libc:close",
+        "//libc:recvfrom",
+        "//libc:sendto",
+        "//libc:socketpair",
+    ],
+)
+
+libc_test(
+    name = "shutdown_test",
+    srcs = ["linux/shutdown_test.cpp"],
+    deps = [
+        "//libc:__support_cpp_scope",
+        "//libc:close",
+        "//libc:hdr_sys_socket_macros",
+        "//libc:read",
+        "//libc:shutdown",
+        "//libc:socketpair",
+        "//libc:types_ssize_t",
+    ],
+)
+
+libc_test(
+    name = "sockaddr_storage_test",
+    srcs = [
+        "linux/sockaddr_storage_helper.cpp",
+        "linux/sockaddr_storage_test.cpp",
+    ],
+    deps = [
+        "//libc:hdr_sys_socket_macros",
+        "//libc:types_sa_family_t",
+        "//libc:types_struct_sockaddr_storage",
+        "//libc:types_struct_sockaddr_un",
+    ],
+)
+
+libc_test(
+    name = "socket_test",
+    srcs = ["linux/socket_test.cpp"],
+    deps = [
+        "//libc:__support_cpp_scope",
+        "//libc:close",
+        "//libc:socket",
+    ],
+)
+
+libc_test(
+    name = "socketopt_test",
+    srcs = ["linux/socketopt_test.cpp"],
+    deps = [
+        "//libc:__support_cpp_scope",
+        "//libc:__support_time_clock_gettime",
+        "//libc:close",
+        "//libc:getsockopt",
+        "//libc:hdr_sys_socket_macros",
+        "//libc:hdr_time_macros",
+        "//libc:pipe",
+        "//libc:recv",
+        "//libc:setsockopt",
+        "//libc:socket",
+        "//libc:socketpair",
+        "//libc:types_socklen_t",
+        "//libc:types_struct_linger",
+        "//libc:types_struct_timespec",
+        "//libc:types_struct_timeval",
+    ],
+)
+
+libc_test(
+    name = "socketpair_test",
+    srcs = ["linux/socketpair_test.cpp"],
+    deps = [
+        "//libc:__support_cpp_scope",
+        "//libc:close",
+        "//libc:socketpair",
     ],
 )
