@@ -94,6 +94,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
@@ -204,6 +205,7 @@ public:
   void lowerNonKernelLDSAccesses(Function *Func,
                                  SetVector<GlobalVariable *> &LDSGlobals,
                                  NonKernelLDSParameters &NKLDSParams);
+  void lowerFlatToLocalRoundTrips(Function *Func);
   void
   updateMallocSizeForDynamicLDS(Function *Func, Value **CurrMallocSize,
                                 Value *HiddenDynLDSSize,
@@ -790,6 +792,80 @@ void AMDGPUSwLowerLDS::translateLDSMemoryOperationsToGlobalMemory(
   }
 }
 
+void AMDGPUSwLowerLDS::lowerFlatToLocalRoundTrips(Function *Func) {
+  // After SW LDS lowering, storage that used to live in LDS now lives in global
+  // memory, but it may still be handed to a callee as a flat (generic) pointer.
+  // Such a callee can re-derive an LDS pointer with a round-trip pattern:
+  //   %p = getelementptr ..., ptr %flat_arg        ; flat, backed by global mem
+  //   %c = addrspacecast ptr %p to ptr addrspace(3)
+  //   load/store ... ptr addrspace(3) %c
+  // The addrspace(3) access would then hit dead LDS. Redo the access through
+  // the flat source pointer, which still points at the global backing buffer.
+  SmallVector<Instruction *> ToErase;
+  SmallPtrSet<AddrSpaceCastInst *, 8> Casts;
+  for (BasicBlock &BB : *Func) {
+    for (Instruction &Inst : BB) {
+      Value *Ptr = nullptr;
+      if (auto *LI = dyn_cast<LoadInst>(&Inst))
+        Ptr = LI->getPointerOperand();
+      else if (auto *SI = dyn_cast<StoreInst>(&Inst))
+        Ptr = SI->getPointerOperand();
+      else if (auto *RMW = dyn_cast<AtomicRMWInst>(&Inst))
+        Ptr = RMW->getPointerOperand();
+      else if (auto *XCHG = dyn_cast<AtomicCmpXchgInst>(&Inst))
+        Ptr = XCHG->getPointerOperand();
+      else
+        continue;
+
+      auto *ASC = dyn_cast<AddrSpaceCastInst>(Ptr);
+      if (!ASC || ASC->getSrcAddressSpace() != AMDGPUAS::FLAT_ADDRESS ||
+          ASC->getDestAddressSpace() != AMDGPUAS::LOCAL_ADDRESS)
+        continue;
+
+      // Only collapse pointers that originate from a flat function argument,
+      // i.e. storage passed in from a caller. Genuine in-function LDS pointers
+      // are lowered through the base/offset table machinery instead.
+      Value *FlatPtr = ASC->getPointerOperand();
+      if (!isa<Argument>(getUnderlyingObject(FlatPtr)))
+        continue;
+
+      IRB.SetInsertPoint(&Inst);
+      Instruction *NewInst = nullptr;
+      if (auto *LI = dyn_cast<LoadInst>(&Inst)) {
+        NewInst = IRB.CreateLoad(LI->getType(), FlatPtr, LI->getProperties());
+      } else if (auto *SI = dyn_cast<StoreInst>(&Inst)) {
+        NewInst = IRB.CreateStore(SI->getValueOperand(), FlatPtr,
+                                  SI->getProperties());
+      } else if (auto *RMW = dyn_cast<AtomicRMWInst>(&Inst)) {
+        auto *NewRMW = IRB.CreateAtomicRMW(
+            RMW->getOperation(), FlatPtr, RMW->getValOperand(), RMW->getAlign(),
+            RMW->getOrdering(), RMW->getSyncScopeID());
+        NewRMW->setVolatile(RMW->isVolatile());
+        NewInst = NewRMW;
+      } else {
+        auto *XCHG = cast<AtomicCmpXchgInst>(&Inst);
+        auto *NewXCHG = IRB.CreateAtomicCmpXchg(
+            FlatPtr, XCHG->getCompareOperand(), XCHG->getNewValOperand(),
+            XCHG->getAlign(), XCHG->getSuccessOrdering(),
+            XCHG->getFailureOrdering(), XCHG->getSyncScopeID());
+        NewXCHG->setVolatile(XCHG->isVolatile());
+        NewInst = NewXCHG;
+      }
+      // Flat access into the global backing buffer must be sanitized.
+      AsanInfo.Instructions.insert(NewInst);
+      Inst.replaceAllUsesWith(NewInst);
+      ToErase.push_back(&Inst);
+      Casts.insert(ASC);
+    }
+  }
+  for (Instruction *I : ToErase)
+    I->eraseFromParent();
+  // Drop the now-dead round-trip casts.
+  for (AddrSpaceCastInst *ASC : Casts)
+    if (ASC->use_empty())
+      ASC->eraseFromParent();
+}
+
 void AMDGPUSwLowerLDS::poisonRedzones(Function *Func, Value *MallocPtr) {
   auto &LDSParams = FuncLDSAccessInfo.KernelToLDSParametersMap[Func];
   Type *Int64Ty = IRB.getInt64Ty();
@@ -1322,6 +1398,12 @@ bool AMDGPUSwLowerLDS::run() {
 
   if (!Changed)
     return Changed;
+
+  // Fix up callees that still access lowered storage through the
+  // flat-arg -> addrspace(3) round-trip pattern.
+  for (Function &F : M)
+    if (!F.isDeclaration())
+      lowerFlatToLocalRoundTrips(&F);
 
   for (auto &GV : make_early_inc_range(M.globals())) {
     if (AMDGPU::isLDSVariableToLower(GV)) {
