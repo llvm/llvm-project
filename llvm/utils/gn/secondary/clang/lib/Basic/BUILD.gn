@@ -78,6 +78,7 @@ static_library("Basic") {
   include_dirs = [ "." ]
   sources = [
     "ASTSourceDescriptor.cpp",
+    "AtomicLineLogger.cpp",
     "Attributes.cpp",
     "Builtins.cpp",
     "CLWarnings.cpp",

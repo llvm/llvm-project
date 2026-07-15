@@ -218,10 +218,95 @@ atomic {
   llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
   omp.yield
 }
-llvm.func @target_in_reduction(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause in_reduction in omp.target operation}}
+llvm.func @target_in_reduction_byref(%x : !llvm.ptr) {
+  %m = omp.map.info var_ptr(%x : !llvm.ptr, f32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
+  // expected-error@below {{not yet implemented: Unhandled clause in_reduction with byref modifier in omp.target operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target kernel_type(generic) in_reduction(@add_f32 %x -> %prv : !llvm.ptr) {
+  omp.target kernel_type(generic) in_reduction(byref @add_f32 %x : !llvm.ptr) map_entries(%m -> %arg : !llvm.ptr) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
+omp.declare_reduction @add_cleanup_f32 : f32
+init {
+^bb0(%arg: f32):
+  %0 = llvm.mlir.constant(0.0 : f32) : f32
+  omp.yield (%0 : f32)
+}
+combiner {
+^bb1(%arg0: f32, %arg1: f32):
+  %1 = llvm.fadd %arg0, %arg1 : f32
+  omp.yield (%1 : f32)
+}
+cleanup {
+^bb2(%arg2: f32):
+  omp.yield
+}
+llvm.func @target_in_reduction_cleanup(%x : !llvm.ptr) {
+  %m = omp.map.info var_ptr(%x : !llvm.ptr, f32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
+  // expected-error@below {{not yet implemented: Unhandled clause in_reduction with cleanup region in omp.target operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
+  omp.target kernel_type(generic) in_reduction(@add_cleanup_f32 %x : !llvm.ptr) map_entries(%m -> %arg : !llvm.ptr) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
+omp.declare_reduction @add_two_arg_init_i32 : !llvm.ptr alloc {
+^bb0(%arg: !llvm.ptr):
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x i32 : (i64) -> !llvm.ptr
+  omp.yield(%1 : !llvm.ptr)
+} init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  llvm.store %0, %arg1 : i32, !llvm.ptr
+  omp.yield(%arg1 : !llvm.ptr)
+} combiner {
+^bb1(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  %0 = llvm.load %arg0 : !llvm.ptr -> i32
+  %1 = llvm.load %arg1 : !llvm.ptr -> i32
+  %2 = llvm.add %0, %1 : i32
+  llvm.store %2, %arg0 : i32, !llvm.ptr
+  omp.yield(%arg0 : !llvm.ptr)
+}
+llvm.func @target_in_reduction_two_arg_init(%x : !llvm.ptr) {
+  %m = omp.map.info var_ptr(%x : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
+  // expected-error@below {{not yet implemented: Unhandled clause in_reduction with two-argument initializer in omp.target operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
+  omp.target kernel_type(generic) in_reduction(@add_two_arg_init_i32 %x : !llvm.ptr) map_entries(%m -> %arg : !llvm.ptr) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
+omp.declare_reduction @add_dup_map_f32 : f32
+init {
+^bb0(%arg: f32):
+  %0 = llvm.mlir.constant(0.0 : f32) : f32
+  omp.yield (%0 : f32)
+}
+combiner {
+^bb0(%arg0: f32, %arg1: f32):
+  %1 = llvm.fadd %arg0, %arg1 : f32
+  omp.yield (%1 : f32)
+}
+llvm.func @target_in_reduction_duplicate_map(%x : !llvm.ptr) {
+  // The in_reduction variable %x has two matching map_entries entries for the
+  // same var_ptr. The translation cannot disambiguate which map block argument
+  // to redirect, so it must reject this as ambiguous.
+  %m1 = omp.map.info var_ptr(%x : !llvm.ptr, f32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
+  %m2 = omp.map.info var_ptr(%x : !llvm.ptr, f32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
+  // expected-error@below {{in_reduction variable on omp.target has multiple matching map_entries entries; the redirect target is ambiguous}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
+  omp.target kernel_type(generic) in_reduction(@add_dup_map_f32 %x : !llvm.ptr) map_entries(%m1 -> %arg1, %m2 -> %arg2 : !llvm.ptr, !llvm.ptr) {
     omp.terminator
   }
   llvm.return

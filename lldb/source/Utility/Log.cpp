@@ -247,28 +247,23 @@ Log::EnableLogChannel(const std::shared_ptr<LogHandler> &log_handler_sp,
   return llvm::Error::success();
 }
 
-bool Log::DisableLogChannel(llvm::StringRef channel,
-                            llvm::ArrayRef<const char *> categories,
-                            llvm::raw_ostream &error_stream) {
+llvm::Error Log::DisableLogChannel(llvm::StringRef channel,
+                                   llvm::ArrayRef<const char *> categories) {
   auto iter = g_channel_map->find(channel);
-  if (iter == g_channel_map->end()) {
-    error_stream << llvm::formatv("Invalid log channel '{0}'.\n", channel);
-    return false;
-  }
+  if (iter == g_channel_map->end())
+    return llvm::createStringErrorV("Invalid log channel '{0}'.\n", channel);
 
   if (categories.empty()) {
     iter->second.Disable(std::nullopt);
-    return true;
+    return llvm::Error::success();
   }
 
   llvm::Expected<MaskType> flags = GetFlags(*iter, categories);
-  if (!flags) {
-    error_stream << toString(flags.takeError()) << "\n";
-    return false;
-  }
+  if (!flags)
+    return flags.takeError();
 
   iter->second.Disable(*flags);
-  return true;
+  return llvm::Error::success();
 }
 
 bool Log::DumpLogChannel(llvm::StringRef channel,
@@ -287,15 +282,16 @@ bool Log::DumpLogChannel(llvm::StringRef channel,
   return true;
 }
 
-bool Log::ListChannelCategories(llvm::StringRef channel,
-                                llvm::raw_ostream &stream) {
+llvm::Expected<std::string>
+Log::ListChannelCategories(llvm::StringRef channel) {
   auto ch = g_channel_map->find(channel);
-  if (ch == g_channel_map->end()) {
-    stream << llvm::formatv("Invalid log channel '{0}'.\n", channel);
-    return false;
-  }
-  ListCategories(stream, *ch);
-  return true;
+  if (ch == g_channel_map->end())
+    return llvm::createStringErrorV("Invalid log channel '{0}'.\n", channel);
+
+  std::string categories;
+  llvm::raw_string_ostream strm(categories);
+  ListCategories(strm, *ch);
+  return categories;
 }
 
 void Log::DisableAllLogChannels() {
