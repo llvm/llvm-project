@@ -1432,6 +1432,21 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
     return;
   }
 
+  // Simplify (select %mask0, (select %mask1, %T, %F), %F) -> (select
+  // (logical-and %mask0, %mask1), %T, %F) This is useful for exit value for
+  // predicated outer loop reductions with tail-folding which will generate a
+  // blend recipe for predication and a select for tail-folding.
+  VPValue *Mask0, *Mask1, *F;
+  if (match(Def, m_SelectLike(m_VPValue(Mask0), m_VPValue(X), m_VPValue(F)))) {
+    VPValue *T;
+    if (match(X, m_SelectLike(m_VPValue(Mask1), m_VPValue(T), m_Specific(F)))) {
+      auto *Select =
+          Builder.createSelect(Builder.createLogicalAnd(Mask0, Mask1), T, F,
+                               cast<VPSingleDefRecipe>(X)->getDebugLoc());
+      return Def->replaceAllUsesWith(Select);
+    }
+  }
+
   // For i1 vp.merges produced by AnyOf reductions:
   // vp.merge true, (or x, y), x, evl -> vp.merge y, true, x, evl
   if (match(Def, m_Intrinsic<Intrinsic::vp_merge>(m_True(), m_VPValue(A),
