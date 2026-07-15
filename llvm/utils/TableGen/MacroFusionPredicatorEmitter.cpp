@@ -21,8 +21,7 @@
 //
 // Each predicator also maintains `Statistic`s that count how often the fusion
 // is matched, split into pre-RA and post-RA counters because both schedulers
-// run MacroFusion. Per-fusion, these can be disabled by setting
-// `GenerateStatistic = false` on the `Fusion` definition.
+// run MacroFusion.
 //
 // The generated predicator will be like:
 //
@@ -110,18 +109,15 @@ void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
     std::vector<const Record *> Predicates =
         Fusion->getValueAsListOfDefs("Predicates");
     bool IsCommutable = Fusion->getValueAsBit("IsCommutable");
-    bool GenerateStatistic = Fusion->getValueAsBit("GenerateStatistic");
 
     // Emit the statistics that count how often this fusion is matched. The
     // pre-RA and post-RA schedulers both run MacroFusion, so they are split
     // into separate counters (distinguished below via the `NoVRegs` property)
     // to avoid conflating the two.
-    if (GenerateStatistic) {
-      OS << "STATISTIC(Num" << Fusion->getName() << "PreRA, \"Times "
-         << Fusion->getName() << " Triggered (pre-ra)\");\n";
-      OS << "STATISTIC(Num" << Fusion->getName() << "PostRA, \"Times "
-         << Fusion->getName() << " Triggered (post-ra)\");\n";
-    }
+    OS << "STATISTIC(Num" << Fusion->getName() << "PreRA, \"Times "
+       << Fusion->getName() << " Triggered (pre-ra)\");\n";
+    OS << "STATISTIC(Num" << Fusion->getName() << "PostRA, \"Times "
+       << Fusion->getName() << " Triggered (post-ra)\");\n";
 
     OS << "bool is" << Fusion->getName() << "(\n";
     OS.indent(4) << "const TargetInstrInfo &TII,\n";
@@ -133,12 +129,10 @@ void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
 
     emitPredicates(Predicates, IsCommutable, PE, OS);
 
-    if (GenerateStatistic) {
-      OS.indent(2) << "if (SecondMI.getMF()->getProperties().hasNoVRegs())\n";
-      OS.indent(4) << "++Num" << Fusion->getName() << "PostRA;\n";
-      OS.indent(2) << "else\n";
-      OS.indent(4) << "++Num" << Fusion->getName() << "PreRA;\n";
-    }
+    OS.indent(2) << "if (SecondMI.getMF()->getProperties().hasNoVRegs())\n";
+    OS.indent(4) << "++Num" << Fusion->getName() << "PostRA;\n";
+    OS.indent(2) << "else\n";
+    OS.indent(4) << "++Num" << Fusion->getName() << "PreRA;\n";
 
     OS.indent(2) << "return true;\n";
     OS << "}\n";
