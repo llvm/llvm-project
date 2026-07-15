@@ -249,6 +249,57 @@ TEST_F(FormatterBytecodeTest, ArithOps) {
     ASSERT_TRUE(Interpret({op_lit_uint, 1, op_lit_uint, 1, op_ge}, data));
     ASSERT_EQ(data.Pop<uint64_t>(), 1u);
   }
+  // Comparisons between a negative Int and a UInt must compare by mathematical
+  // value, not by reinterpreting one's bits as the other's type: a negative Int
+  // is always less than any UInt, and a UInt with the high bit set is always
+  // greater than any Int.
+  {
+    // -1 > 5u == 0u
+    DataStack data;
+    data.Push((int64_t)-1);
+    data.Push((uint64_t)5);
+    ASSERT_TRUE(Interpret({op_gt}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 0u);
+  }
+  {
+    // -1 < 5u == 1u
+    DataStack data;
+    data.Push((int64_t)-1);
+    data.Push((uint64_t)5);
+    ASSERT_TRUE(Interpret({op_lt}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 1u);
+  }
+  {
+    // 5u > -1 == 1u
+    DataStack data;
+    data.Push((uint64_t)5);
+    data.Push((int64_t)-1);
+    ASSERT_TRUE(Interpret({op_gt}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 1u);
+  }
+  {
+    // UINT64_MAX > INT64_MAX == 1u
+    DataStack data;
+    data.Push((uint64_t)UINT64_MAX); // UINT64_MAX, >= 2^63.
+    data.Push((int64_t)INT64_MAX);
+    ASSERT_TRUE(Interpret({op_gt}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 1u);
+  }
+  {
+    // INT64_MAX < UINT64_MAX == 1u
+    DataStack data;
+    data.Push((int64_t)INT64_MAX);
+    data.Push((uint64_t)UINT64_MAX); // UINT64_MAX, >= 2^63.
+    ASSERT_TRUE(Interpret({op_lt}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 1u);
+  }
+  {
+    DataStack data;
+    data.Push((int64_t)5);
+    data.Push((uint64_t)5);
+    ASSERT_TRUE(Interpret({op_eq}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 1u);
+  }
 }
 
 TEST_F(FormatterBytecodeTest, CallOps) {

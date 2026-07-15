@@ -17,6 +17,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatProviders.h"
 #include "llvm/Support/FormatVariadicDetails.h"
+#include <optional>
 
 using namespace lldb;
 namespace lldb_private {
@@ -182,6 +183,40 @@ static llvm::Error TypeCheck(llvm::ArrayRef<DataStackElement> data,
     return error;
   return TypeCheck(data.drop_back(1), type2, type1);
 }
+
+/// Three-way compare two 64-bit integers as mathematical integers, i.e. without
+/// reinterpreting one's bit pattern as the other's type. A negative Int always
+/// compares less than any UInt, and a UInt with the high bit set (>= 2^63)
+/// always compares greater than any Int: neither is truncated or reinterpreted.
+static std::optional<int> Compare(const DataStackElement &x,
+                                  const DataStackElement &y) {
+  if (auto *ux = std::get_if<uint64_t>(&x)) {
+    if (auto *uy = std::get_if<uint64_t>(&y))
+      return Compare(*ux, *uy);
+    if (auto *sy = std::get_if<int64_t>(&y))
+      return Compare(*ux, *sy);
+  } else if (auto *sx = std::get_if<int64_t>(&x)) {
+    if (auto *sy = std::get_if<int64_t>(&y))
+      return Compare(*sx, *sy);
+    if (auto *uy = std::get_if<uint64_t>(&y))
+      return Compare(*sx, *uy);
+  }
+  return std::nullopt;
+}
+
+static int Compare(uint64_t x, uint64_t y) {
+
+  return x < y ? -1 : (x > y ? 1 : 0);
+}
+static int Compare(int64_t x, int64_t y) {
+  return x < y ? -1 : (x > y ? 1 : 0);
+}
+static int Compare(int64_t x, uint64_t y) {
+  if (x < 0)
+    return -1;
+  return Compare((uint64_t)x, y);
+}
+static int Compare(uint64_t x, int64_t y) { return -Compare(y, x); }
 
 llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
   if (control.empty())
@@ -423,22 +458,32 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
       data.Push(~data.Pop<uint64_t>());
       continue;
     case op_eq:
-      BINOP(==);
+#define CMPOP(OP)                                                              \
+  {                                                                            \
+    TYPE_CHECK(Any, Any);                                                      \
+    auto y = data.PopAny();                                                    \
+    auto x = data.PopAny();                                                    \
+    std::optional<int> cmp = Compare(x, y);                                    \
+    if (!cmp)                                                                  \
+      return error("invalid comparison data types");                           \
+    data.Push((uint64_t)(*cmp OP 0));                                          \
+  }
+      CMPOP(==);
       continue;
     case op_neq:
-      BINOP(!=);
+      CMPOP(!=);
       continue;
     case op_lt:
-      BINOP(<);
+      CMPOP(<);
       continue;
     case op_gt:
-      BINOP(>);
+      CMPOP(>);
       continue;
     case op_le:
-      BINOP(<=);
+      CMPOP(<=);
       continue;
     case op_ge:
-      BINOP(>=);
+      CMPOP(>=);
       continue;
     case op_call: {
       TYPE_CHECK(Selector);
