@@ -27,4 +27,4 @@ end subroutine
 ! CHECK: %[[FALSE:.*]] = arith.constant false
 ! CHECK: hlfir.as_expr %{{.*}} move %[[FALSE]]
 ! CHECK: fir.if
-! CHECK: cuf.deallocate %[[DECL]]#{{[0-9]}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>{{.*}}<managed>
+! CHECK: cuf.deallocate %[[RES]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>{{.*}}<managed>
