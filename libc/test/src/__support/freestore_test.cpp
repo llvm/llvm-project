@@ -24,9 +24,17 @@ using LIBC_NAMESPACE::FreeTrie;
 using LIBC_NAMESPACE::cpp::byte;
 using LIBC_NAMESPACE::cpp::optional;
 
+constexpr FreeListSecrets get_test_secrets() {
+#if LIBC_COPT_HARDEN_FREELIST
+  return FreeListSecrets{0x1234, 0x5678, 0x9abc};
+#else
+  return FreeListSecrets{};
+#endif
+}
+
 // Inserting or removing blocks too small to be tracked does nothing.
 TEST(LlvmLibcFreeStore, TooSmall) {
-  FreeListSecrets secrets{};
+  FreeListSecrets secrets = get_test_secrets();
   byte mem[1024];
   optional<BlockRef> maybeBlock = BlockRef::init(mem);
   ASSERT_TRUE(maybeBlock.has_value());
@@ -50,7 +58,7 @@ TEST(LlvmLibcFreeStore, TooSmall) {
 }
 
 TEST(LlvmLibcFreeStore, RemoveBestFit) {
-  FreeListSecrets secrets{};
+  FreeListSecrets secrets = get_test_secrets();
   byte mem[1024];
   optional<BlockRef> maybeBlock = BlockRef::init(mem);
   ASSERT_TRUE(maybeBlock.has_value());
@@ -101,7 +109,7 @@ TEST(LlvmLibcFreeStore, RemoveBestFit) {
 }
 
 TEST(LlvmLibcFreeStore, Remove) {
-  FreeListSecrets secrets{};
+  FreeListSecrets secrets = get_test_secrets();
   byte mem[1024];
   optional<BlockRef> maybeBlock = BlockRef::init(mem);
   ASSERT_TRUE(maybeBlock.has_value());

@@ -72,7 +72,6 @@ struct FreeListSecrets {
   LIBC_INLINE constexpr FreeListSecrets(uintptr_t k0, uintptr_t k1,
                                         uintptr_t k2)
       : k0(k0), k1(k1), k2(k2) {}
-  LIBC_INLINE constexpr FreeListSecrets() : k0(0), k1(0), k2(0) {}
 #else
   LIBC_INLINE constexpr FreeListSecrets() = default;
 #endif

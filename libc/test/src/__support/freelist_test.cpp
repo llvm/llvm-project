@@ -22,12 +22,13 @@ using LIBC_NAMESPACE::FreeListSecrets;
 using LIBC_NAMESPACE::cpp::byte;
 using LIBC_NAMESPACE::cpp::optional;
 
+constexpr FreeListSecrets get_test_secrets() {
 #if LIBC_COPT_HARDEN_FREELIST
-#define TEST_SECRETS FreeListSecrets{0x1234, 0x5678, 0x9abc}
+  return FreeListSecrets{0x1234, 0x5678, 0x9abc};
 #else
-#define TEST_SECRETS                                                           \
-  FreeListSecrets {}
+  return FreeListSecrets{};
 #endif
+}
 
 TEST(LlvmLibcFreeList, FreeList) {
   byte mem[1024];
@@ -43,26 +44,26 @@ TEST(LlvmLibcFreeList, FreeList) {
   ASSERT_TRUE(maybeBlock.has_value());
 
   FreeList list;
-  list.push(block1, TEST_SECRETS);
+  list.push(block1, get_test_secrets());
   ASSERT_FALSE(list.empty());
   EXPECT_EQ(list.front().addr(), block1.addr());
 
-  list.push(block2, TEST_SECRETS);
+  list.push(block2, get_test_secrets());
   EXPECT_EQ(list.front().addr(), block1.addr());
 
-  list.pop(TEST_SECRETS);
+  list.pop(get_test_secrets());
   ASSERT_FALSE(list.empty());
   EXPECT_EQ(list.front().addr(), block2.addr());
 
-  list.pop(TEST_SECRETS);
+  list.pop(get_test_secrets());
   ASSERT_TRUE(list.empty());
 
-  list.push(block1, TEST_SECRETS);
-  list.push(block2, TEST_SECRETS);
+  list.push(block1, get_test_secrets());
+  list.push(block2, get_test_secrets());
   list.remove(reinterpret_cast<FreeList::Node *>(block2.usable_space()),
-              TEST_SECRETS);
+              get_test_secrets());
   EXPECT_EQ(list.front().addr(), block1.addr());
-  list.pop(TEST_SECRETS);
+  list.pop(get_test_secrets());
   ASSERT_TRUE(list.empty());
 }
 
@@ -78,8 +79,8 @@ TEST(LlvmLibcFreeList, HardenedCorruptNext) {
   BlockRef block2 = *maybeBlock;
 
   FreeList list;
-  list.push(block1, TEST_SECRETS);
-  list.push(block2, TEST_SECRETS);
+  list.push(block1, get_test_secrets());
+  list.push(block2, get_test_secrets());
 
   struct RawNode {
     void *prev;
@@ -90,7 +91,7 @@ TEST(LlvmLibcFreeList, HardenedCorruptNext) {
 
   EXPECT_DEATH(
       [&] {
-        list.pop(TEST_SECRETS); // Should trap due to corrupted block2->next
+        list.pop(get_test_secrets()); // Should trap due to corrupted block2->next
       },
       WITH_SIGNAL(-1));
 }
@@ -106,8 +107,8 @@ TEST(LlvmLibcFreeList, HardenedCorruptPrev) {
   BlockRef block2 = *maybeBlock;
 
   FreeList list;
-  list.push(block1, TEST_SECRETS);
-  list.push(block2, TEST_SECRETS);
+  list.push(block1, get_test_secrets());
+  list.push(block2, get_test_secrets());
 
   struct RawNode {
     void *prev;
@@ -118,7 +119,7 @@ TEST(LlvmLibcFreeList, HardenedCorruptPrev) {
 
   EXPECT_DEATH(
       [&] {
-        list.pop(TEST_SECRETS); // Should trap due to corrupted block2->prev
+        list.pop(get_test_secrets()); // Should trap due to corrupted block2->prev
       },
       WITH_SIGNAL(-1));
 }

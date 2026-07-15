@@ -39,10 +39,19 @@ LIBC_INLINE constexpr bool IsPow2(size_t x) { return x && (x & (x - 1)) == 0; }
 
 class FreeListHeap {
 public:
-  constexpr FreeListHeap() : begin(&_end), end(&__llvm_libc_heap_limit) {}
+#if LIBC_COPT_HARDEN_FREELIST
+  LIBC_INLINE constexpr FreeListHeap()
+      : begin(&_end), end(&__llvm_libc_heap_limit), secrets(0, 0, 0) {}
 
-  constexpr FreeListHeap(span<cpp::byte> region)
+  LIBC_INLINE constexpr FreeListHeap(span<cpp::byte> region)
+      : begin(region.begin()), end(region.end()), secrets(0, 0, 0) {}
+#else
+  LIBC_INLINE constexpr FreeListHeap()
+      : begin(&_end), end(&__llvm_libc_heap_limit) {}
+
+  LIBC_INLINE constexpr FreeListHeap(span<cpp::byte> region)
       : begin(region.begin()), end(region.end()) {}
+#endif
 
   void *allocate(size_t size);
   void *aligned_allocate(size_t alignment, size_t size);
@@ -52,26 +61,22 @@ public:
   void *realloc(void *ptr, size_t size);
   void *calloc(size_t num, size_t size);
 
-  cpp::span<cpp::byte> region() const { return {begin, end}; }
+  LIBC_INLINE cpp::span<cpp::byte> region() const { return {begin, end}; }
 
-#if LIBC_COPT_HARDEN_FREELIST
   void init(const FreeListSecrets &secrets);
-#else
-  void init(const FreeListSecrets &secrets = {});
-#endif
 
   void sanitize_heap() const;
 
 private:
   void *allocate_impl(size_t alignment, size_t size);
 
-  span<cpp::byte> block_to_span(BlockRef block) {
+  LIBC_INLINE span<cpp::byte> block_to_span(BlockRef block) {
     return span<cpp::byte>(block.usable_space(), block.inner_size());
   }
 
   bool shrink_in_place(BlockRef block, size_t size);
 
-  bool is_valid_ptr(void *ptr) { return ptr >= begin && ptr < end; }
+  LIBC_INLINE bool is_valid_ptr(void *ptr) { return ptr >= begin && ptr < end; }
 
   cpp::byte *begin;
   cpp::byte *end;
@@ -82,7 +87,7 @@ private:
 
 template <size_t BUFF_SIZE> class FreeListHeapBuffer : public FreeListHeap {
 public:
-  constexpr FreeListHeapBuffer() : FreeListHeap{buffer}, buffer{} {}
+  LIBC_INLINE constexpr FreeListHeapBuffer() : FreeListHeap{buffer}, buffer{} {}
 
 private:
   cpp::byte buffer[BUFF_SIZE];
@@ -103,15 +108,14 @@ LIBC_INLINE void *FreeListHeap::allocate_impl(size_t alignment, size_t size) {
   if (size == 0)
     return nullptr;
 
-  if (!is_initialized) {
 #if LIBC_COPT_HARDEN_FREELIST
-    LIBC_HARDENING_ASSERT(
-        false &&
-        "Hardened heap must be explicitly initialized via init(secrets)");
+  LIBC_HARDENING_ASSERT(
+      is_initialized &&
+      "Hardened heap must be explicitly initialized via init(secrets)");
 #else
-    init();
+  if (!is_initialized)
+    init({});
 #endif
-  }
 
   size_t request_size = BlockRef::min_size_for_allocation(alignment, size);
   if (!request_size)
