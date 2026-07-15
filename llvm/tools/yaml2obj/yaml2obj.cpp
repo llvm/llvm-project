@@ -51,7 +51,8 @@ cl::opt<unsigned>
 
 static cl::opt<uint64_t>
     MaxSize("max-size", cl::init(10 * 1024 * 1024),
-            cl::desc("Sets the maximum allowed output size (0 means no limit)"),
+            cl::desc("Sets the maximum allowed output size (0 means no limit) "
+                     "[ELF and COFF only]"),
             cl::cat(Cat));
 
 cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
