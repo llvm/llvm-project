@@ -21,7 +21,6 @@
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -30,6 +29,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
+#include <utility>
 
 using namespace mlir;
 
@@ -599,9 +599,17 @@ static mlir::Value getZeroOffsetViewRoot(mlir::Value val) {
 AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
   // A wrapper around alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   // mlir::Value rhs) This allows a user to provide Source that may be obtained
-  // through other dialects
-  auto lhsSrc = getSource(lhs);
-  auto rhsSrc = getSource(rhs);
+  // through other dialects.
+  //
+  // Scope-aware refinement is only meaningful after inlining, when the
+  // function contains more than one fir.dummy_scope op. Skip
+  // collectScopedOrigins and the scope-pair loop for non-inlined functions
+  // to avoid the per-query getDeclarationScope/DominanceInfo overhead.
+  bool multiScopes = functionHasMultipleScopes(lhs);
+  auto lhsSrc =
+      getSource(lhs, /*getLastInstantiationPoint=*/false, multiScopes);
+  auto rhsSrc =
+      getSource(rhs, /*getLastInstantiationPoint=*/false, multiScopes);
   AliasResult result = alias(lhsSrc, rhsSrc, lhs, rhs);
 
   // Scope-aware refinement after inlining: if both walks crossed declares
@@ -615,7 +623,8 @@ AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
   // and pointer-dereferenced paths remain correctly reported as MayAlias.
   // Short-circuit on NoAlias since any pair that disambiguates is
   // decisive.
-  if (result == AliasResult::NoAlias || result == AliasResult::MustAlias)
+  if (!multiScopes || result == AliasResult::NoAlias ||
+      result == AliasResult::MustAlias)
     return result;
   for (const auto &lhsScopedOrigin : lhsSrc.scopedOrigins) {
     if (!lhsScopedOrigin.scope)
@@ -942,9 +951,14 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
 
   // TODO: limit to Fortran functions??
   // 1. Detect variables that can be accessed indirectly.
-  fir::AliasAnalysis aliasAnalysis;
+  // Reuse this AliasAnalysis instance instead of constructing a fresh one per
+  // query. getCallModRef is only reached from getModRef, and getSource/alias
+  // never call getModRef, so there is no recursion. varSrc is used only to
+  // classify var (kind/attributes); getCallModRef never inspects its
+  // scopedOrigins, so skip their (potentially expensive) collection.
   fir::AliasAnalysis::Source varSrc =
-      aliasAnalysis.getSource(var, /*getLastInstantiationPoint=*/true);
+      getSource(var, /*getLastInstantiationPoint=*/true,
+                /*collectScopedOrigins=*/false);
   // If the variable is not a user variable, we cannot safely assume that
   // Fortran semantics apply (e.g., a bare alloca/allocmem result may very well
   // be placed in an allocatable/pointer descriptor and escape).
@@ -982,8 +996,7 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
   }
   // 2. Check if the variable is passed via the arguments.
   for (auto arg : call.getArgs()) {
-    if (fir::conformsWithPassByRef(arg.getType()) &&
-        !aliasAnalysis.alias(arg, var).isNo()) {
+    if (fir::conformsWithPassByRef(arg.getType()) && !alias(arg, var).isNo()) {
       // TODO: intent(in) would allow returning Ref here. This can be obtained
       // in the func.func attributes for direct calls, but the module lookup is
       // linear with the number of MLIR symbols, which would introduce a pseudo
@@ -1095,9 +1108,40 @@ static mlir::Value walkBlockArgPassThroughs(mlir::Value v) {
   return v;
 }
 
+void AliasAnalysis::enableSourceCache() { sourceCacheEnabled = true; }
+
+void AliasAnalysis::disableSourceCache() {
+  sourceCacheEnabled = false;
+  clearSourceCache();
+}
+
 AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
                                                bool getLastInstantiationPoint,
                                                bool collectScopedOrigins) {
+  if (!sourceCacheEnabled)
+    return getSourceImpl(v, getLastInstantiationPoint, collectScopedOrigins);
+
+  // Key on the queried value and the two boolean flags. Recursive sub-queries
+  // go through this same wrapper, so the whole walk is memoized.
+  std::pair<mlir::Value, unsigned> key{v,
+                                       (getLastInstantiationPoint ? 1u : 0u) |
+                                           (collectScopedOrigins ? 2u : 0u)};
+  auto it = getSourceCache.find(key);
+  if (it != getSourceCache.end()) {
+    ++sourceCacheHits;
+    return it->second;
+  }
+
+  ++sourceCacheMisses;
+  Source source =
+      getSourceImpl(v, getLastInstantiationPoint, collectScopedOrigins);
+  getSourceCache.try_emplace(key, source);
+  return source;
+}
+
+AliasAnalysis::Source
+AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
+                             bool collectScopedOrigins) {
   // If v is a pass-through block argument (see walkBlockArgPassThroughs),
   // continue from the underlying operand so the tracking loop below has a
   // defining op to chew on. Without this, a recursive query like the one in
@@ -1295,6 +1339,18 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
                   type = SourceKind::Allocate;
                   v = def;
                   defOp = nullptr;
+                } else if (boxSrc.kind == SourceKind::HostAssoc) {
+                  // Box loaded from a host-associated descriptor: classify
+                  // the dereferenced target as HostAssoc (not Indirect) so
+                  // alias() can apply the host-assoc/pointer rules instead
+                  // of coarsening to MayAlias. The access path (PointerDeref/
+                  // AllocDeref step) and Pointer attribute were already set
+                  // above, so the resulting Source matches the one that
+                  // buildSourceAtDeclare() rebuilds during scope-aware
+                  // refinement.
+                  type = SourceKind::HostAssoc;
+                  v = def;
+                  defOp = nullptr;
                 } else if (isDummyArgument(def)) {
                   defOp = nullptr;
                   v = def;
@@ -1338,10 +1394,18 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           // but their handling is more complex. Maybe we can find better
           // abstractions to handle them in a general fashion.
           bool isPrivateItem = false;
+          // The private/map block argument is owned by the clause-carrying op
+          // (e.g. omp.wsloop), but the declare may be nested deeper (e.g. in an
+          // omp.loop_nest). Resolve the op from the block arg's owner rather
+          // than the declare's immediate parent to handle that nesting.
+          mlir::Operation *ompParentOp = op->getParentOp();
+          if (auto blockArg =
+                  mlir::dyn_cast<mlir::BlockArgument>(op.getMemref()))
+            ompParentOp = blockArg.getOwner()->getParentOp();
           if (omp::BlockArgOpenMPOpInterface argIface =
-                  dyn_cast<omp::BlockArgOpenMPOpInterface>(op->getParentOp())) {
+                  dyn_cast<omp::BlockArgOpenMPOpInterface>(ompParentOp)) {
             Value ompValArg;
-            llvm::TypeSwitch<Operation *>(op->getParentOp())
+            llvm::TypeSwitch<Operation *>(ompParentOp)
                 .Case([&](omp::TargetOp targetOp) {
                   // If declare operation is inside omp target region,
                   // continue alias analysis outside the target region
@@ -1756,6 +1820,29 @@ fir::AliasAnalysis::Source fir::AliasAnalysis::buildSourceAtDeclare(
   source.approximateSource = scopedOrigin.approximateSource;
   source.origin.isData = scopedOrigin.isData;
   return source;
+}
+
+bool fir::AliasAnalysis::functionHasMultipleScopes(mlir::Value v) {
+  mlir::func::FuncOp funcOp;
+  if (mlir::Operation *defOp = v.getDefiningOp())
+    funcOp = defOp->getParentOfType<mlir::func::FuncOp>();
+  else if (auto bArg = mlir::dyn_cast<mlir::BlockArgument>(v))
+    if (mlir::Region *region = bArg.getOwner()->getParent())
+      funcOp = region->getParentOfType<mlir::func::FuncOp>();
+  if (!funcOp)
+    return true; // conservative
+  mlir::Operation *funcOpPtr = funcOp.getOperation();
+  auto it = multiScopeCache.find(funcOpPtr);
+  if (it != multiScopeCache.end())
+    return it->second;
+  // Walk counting DummyScopeOps, stop early at 2.
+  unsigned count = 0;
+  funcOp.walk([&](fir::DummyScopeOp) -> mlir::WalkResult {
+    return ++count >= 2 ? mlir::WalkResult::interrupt()
+                        : mlir::WalkResult::advance();
+  });
+  // Cache both true and false so subsequent queries are O(1).
+  return multiScopeCache.try_emplace(funcOpPtr, count >= 2).first->second;
 }
 
 } // namespace fir

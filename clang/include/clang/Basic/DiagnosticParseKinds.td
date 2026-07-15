@@ -169,6 +169,12 @@ def ext_c2y_generic_with_type_arg : Extension<
 def warn_c2y_compat_generic_with_type_arg : Warning<
   "passing a type argument as the first operand to '_Generic' is incompatible "
   "with C standards before C2y">, InGroup<CPre2yCompat>, DefaultIgnore;
+def warn_c2y_compat_decl_statement : Warning<
+  "'%select{if|switch}0' declaration statements are incompatible with "
+  "C standards before C2y">, DefaultIgnore, InGroup<CPre2yCompat>;
+def ext_c2y_decl_statement : Extension<
+  "'%select{if|switch}0' declaration statements are a C2y extension">,
+  InGroup<C2y>;
 
 def ext_c99_feature : Extension<
   "'%0' is a C99 extension">, InGroup<C99>;
@@ -220,6 +226,9 @@ def ext_c2y_case_range : Extension<
   "case ranges are a C2y extension">, InGroup<C2y>;
 def err_c2y_labeled_break_continue : Error<
   "named %select{'break'|'continue'}0 is only supported in C2y">;
+def err_c2y_first_condition_clause_is_not_declaration : Error<
+  "first clause in condition must be a declaration">;
+def err_c2y_multiple_declarations : Error<"multiple declarations are not allowed">;
 
 // Generic errors.
 def err_expected_expression : Error<"expected expression">;
@@ -421,9 +430,10 @@ def warn_cxx98_compat_for_range : Warning<
   "range-based for loop is incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 def err_for_range_identifier : Error<
-  "range-based for loop requires type for loop variable">;
+  "%select{range-based for loop|expansion statement}0 requires "
+  "type for %select{loop|expansion}0 variable">;
 def err_for_range_expected_decl : Error<
-  "for range declaration must declare a variable">;
+  "%select{for range|expansion statement}0 declaration must declare a variable">;
 def err_argument_required_after_attribute : Error<
   "argument required after attribute">;
 def err_missing_param : Error<"expected parameter declarator">;
@@ -450,6 +460,12 @@ def err_unspecified_size_with_static : Error<
   "'static' may not be used without an array size">;
 def err_expected_parentheses_around_typename : Error<
   "expected parentheses around type name in %0 expression">;
+def err_expansion_stmt_requires_range : Error<
+  "expansion statement must use the syntax of a range-based for loop">;
+def err_expansion_stmt_requires_cxx2c : Error<
+  "expansion statements are only supported in C++2c">;
+def err_for_template : Error<
+  "'for template' is invalid; use 'template for' instead">;
 
 def err_expected_case_before_expression: Error<
   "expected 'case' keyword before expression">;
@@ -1360,6 +1376,10 @@ def err_pragma_comment_unknown_kind : Error<"unknown kind of pragma comment">;
 // PS4 recognizes only #pragma comment(lib)
 def warn_pragma_comment_ignored : Warning<"'#pragma comment %0' ignored">,
   InGroup<IgnoredPragmas>;
+def warn_pragma_comment_once
+    : Warning<"'#pragma comment %0' "
+              "ignored: it can be specified only once per translation unit">,
+      InGroup<IgnoredPragmas>;
 // - #pragma detect_mismatch
 def err_pragma_detect_mismatch_malformed : Error<
   "pragma detect_mismatch is malformed; it requires two comma-separated "

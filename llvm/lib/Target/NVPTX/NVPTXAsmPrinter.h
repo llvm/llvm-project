@@ -88,21 +88,10 @@ class LLVM_LIBRARY_VISIBILITY NVPTXAsmPrinter : public AsmPrinter {
                           [=](unsigned pos) { return pos % ptrSize == 0; });
     }
 
-    // True when every symbol occupies a full pointer-sized slot. A narrower
-    // slot (e.g. ptrtoint to an integer smaller than the pointer) must use the
-    // per-byte mask() path, since the word path emits a whole pointer per
-    // symbol and would overrun the following field.
-    bool allSymbolsFullPtrSize(unsigned ptrSize) const {
-      return llvm::all_of(SymbolSizes,
-                          [=](unsigned size) { return size == ptrSize; });
-    }
-
   private:
     const unsigned Size;               // size of the buffer in bytes
     std::vector<unsigned char> buffer; // the buffer
     SmallVector<unsigned, 4> symbolPosInBuffer;
-    // SymbolSizes[i] is the number of bytes Symbols[i] occupies in 'buffer'.
-    SmallVector<unsigned, 4> SymbolSizes;
     SmallVector<const Value *, 4> Symbols;
     // SymbolsBeforeStripping[i] is the original form of Symbols[i] before
     // stripping pointer casts, i.e.,
@@ -147,12 +136,10 @@ class LLVM_LIBRARY_VISIBILITY NVPTXAsmPrinter : public AsmPrinter {
       }
     }
 
-    void addSymbol(const Value *GVar, const Value *GVarBeforeStripping,
-                   unsigned SymbolSize) {
+    void addSymbol(const Value *GVar, const Value *GVarBeforeStripping) {
       symbolPosInBuffer.push_back(curpos);
       Symbols.push_back(GVar);
       SymbolsBeforeStripping.push_back(GVarBeforeStripping);
-      SymbolSizes.push_back(SymbolSize);
     }
 
     void printBytes(raw_ostream &os);
@@ -201,6 +188,8 @@ private:
   void encodeDebugInfoRegisterNumbers(const MachineFunction &MF);
   void printReturnValStr(const Function *, raw_ostream &O);
   void printReturnValStr(const MachineFunction &MF, raw_ostream &O);
+  void emitCallPrototype(const CallBase &CB, unsigned UniqueCallSite,
+                         raw_ostream &O) const;
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        const char *ExtraCode, raw_ostream &) override;
   void printOperand(const MachineInstr *MI, unsigned OpNum, raw_ostream &O);

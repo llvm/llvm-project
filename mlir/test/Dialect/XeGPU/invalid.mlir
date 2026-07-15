@@ -789,3 +789,19 @@ func.func @dpas_mx_scale_b_layout_not_distributable(%a : vector<8x16xf8E5M2>, %b
   %1 = xegpu.dpas_mx %a, %b, %acc scale_a = %scale_a_val scale_b = %scale_b_val {layout_b_scale = #layout_b_scale_invalid} : (vector<8x16xf8E5M2>, vector<16x16xf8E5M2>, vector<8x16xf32>, vector<8x2xf8E8M0FNU>, vector<2x16xf8E8M0FNU>) -> vector<8x16xf32>
   return
 }
+
+// -----
+func.func @contiguity_too_small(%src: i64, %offset: vector<16xindex>, %mask: vector<16xi1>) {
+  // expected-error@+1 {{contiguity = 1 (must be >= 2)}}
+  %val = xegpu.load %src[%offset], %mask <{contiguity = 1 : i64}>
+      : i64, vector<16xindex>, vector<16xi1> -> vector<16xf32>
+  return
+}
+
+// -----
+func.func @contiguity_does_not_divide(%src: i64, %offset: vector<6xindex>, %mask: vector<6xi1>) {
+  // expected-error@+1 {{contiguity = 4 (must divide the innermost offsets dim 6)}}
+  %val = xegpu.load %src[%offset], %mask <{contiguity = 4 : i64}>
+      : i64, vector<6xindex>, vector<6xi1> -> vector<6xf32>
+  return
+}

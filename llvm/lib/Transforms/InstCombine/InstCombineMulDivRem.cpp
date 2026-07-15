@@ -331,6 +331,41 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   if (Value *FoldedMul = foldMulSelectToNegate(I, Builder))
     return replaceInstUsesWith(I, FoldedMul);
 
+  // (shl X, C1)*(select cond, C2, C3)--> X * (select cond, C2<<C1, C3<<C1)
+  // (mul X, C1)*(select cond, C2, C3)--> X * (select cond, C2*C1, C3*C1)
+  // (Includes commuted forms)
+
+  {
+    Value *NewOp, *Cond, *OtherValue;
+    Constant *C1, *C2, *C3;
+
+    if (match(&I, m_c_Mul(m_OneUse(m_Value(OtherValue)),
+                          m_OneUse(m_Select(m_Value(Cond), m_ImmConstant(C2),
+                                            m_ImmConstant(C3))))) &&
+        (match(OtherValue, m_Mul(m_Value(NewOp), m_ImmConstant(C1))) ||
+         match(OtherValue, m_Shl(m_Value(NewOp), m_ImmConstant(C1))))) {
+
+      auto *OtherInst = cast<OverflowingBinaryOperator>(OtherValue);
+      auto Opc = OtherInst->getOpcode();
+
+      Constant *NewTV = ConstantFoldBinaryOpOperands(Opc, C2, C1, DL);
+      Constant *NewFV = ConstantFoldBinaryOpOperands(Opc, C3, C1, DL);
+
+      if (NewTV && NewFV) {
+        Value *NewSel = Builder.CreateSelect(Cond, NewTV, NewFV);
+        BinaryOperator *BO = BinaryOperator::CreateMul(NewOp, NewSel);
+
+        if (HasNUW && OtherInst->hasNoUnsignedWrap())
+          BO->setHasNoUnsignedWrap();
+        if (HasNSW && OtherInst->hasNoSignedWrap() &&
+            NewTV->isNotMinSignedValue() && NewFV->isNotMinSignedValue())
+          BO->setHasNoSignedWrap();
+
+        return BO;
+      }
+    }
+  }
+
   // Simplify mul instructions with a constant RHS.
   Constant *MulC;
   if (match(Op1, m_ImmConstant(MulC))) {
@@ -1290,16 +1325,9 @@ Instruction *InstCombinerImpl::commonIDivRemTransforms(BinaryOperator &I) {
 
   // If any element of a constant divisor fixed width vector is zero or undef
   // the behavior is undefined and we can fold the whole op to poison.
-  auto *Op1C = dyn_cast<Constant>(Op1);
-  Type *Ty = I.getType();
-  auto *VTy = dyn_cast<FixedVectorType>(Ty);
-  if (Op1C && VTy) {
-    unsigned NumElts = VTy->getNumElements();
-    for (unsigned i = 0; i != NumElts; ++i) {
-      Constant *Elt = Op1C->getAggregateElement(i);
-      if (Elt && (Elt->isNullValue() || isa<UndefValue>(Elt)))
-        return replaceInstUsesWith(I, PoisonValue::get(Ty));
-    }
+  if (match(Op1, m_ContainsMatchingVectorElement(
+                     m_CombineOr(m_Zero(), m_UndefValue())))) {
+    return replaceInstUsesWith(I, PoisonValue::get(I.getType()));
   }
 
   if (Instruction *Phi = foldBinopWithPhiOperands(I))
@@ -1748,9 +1776,10 @@ Instruction *InstCombinerImpl::visitUDiv(BinaryOperator &I) {
   }
 
   // Op0 / C where C is large (negative) --> zext (Op0 >= C)
-  // TODO: Could use isKnownNegative() to handle non-constant values.
+  // This also handles non-constant values where the sign bit is known to be
+  // set.
   Type *Ty = I.getType();
-  if (match(Op1, m_Negative())) {
+  if (isKnownNegative(Op1, SQ.getWithInstruction(&I))) {
     Value *Cmp = Builder.CreateICmpUGE(Op0, Op1);
     return CastInst::CreateZExtOrBitCast(Cmp, Ty);
   }

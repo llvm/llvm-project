@@ -52,16 +52,16 @@ define i32 @csr6_alloc16(ptr %argv) {
 ;
 ; WIN-V3-LABEL: csr6_alloc16:
 ; WIN-V3:       # %bb.0: # %entry
-; WIN-V3-NEXT:    .seh_pushreg %rax
-; WIN-V3-NEXT:    pushq %rax
-; WIN-V3-NEXT:    .seh_push2regs %r15, %r14
-; WIN-V3-NEXT:    push2 %r14, %r15
-; WIN-V3-NEXT:    .seh_push2regs %r13, %r12
-; WIN-V3-NEXT:    push2 %r12, %r13
-; WIN-V3-NEXT:    .seh_push2regs %rbp, %rbx
-; WIN-V3-NEXT:    push2 %rbx, %rbp
-; WIN-V3-NEXT:    .seh_stackalloc 64
-; WIN-V3-NEXT:    subq $64, %rsp
+; WIN-V3-NEXT:    .seh_pushreg %r15
+; WIN-V3-NEXT:    pushq %r15
+; WIN-V3-NEXT:    .seh_push2regs %r14, %r13
+; WIN-V3-NEXT:    push2 %r13, %r14
+; WIN-V3-NEXT:    .seh_push2regs %r12, %rbp
+; WIN-V3-NEXT:    push2 %rbp, %r12
+; WIN-V3-NEXT:    .seh_pushreg %rbx
+; WIN-V3-NEXT:    pushq %rbx
+; WIN-V3-NEXT:    .seh_stackalloc 56
+; WIN-V3-NEXT:    subq $56, %rsp
 ; WIN-V3-NEXT:    .seh_endprologue
 ; WIN-V3-NEXT:    #APP
 ; WIN-V3-NEXT:    #NO_APP
@@ -69,32 +69,32 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; WIN-V3-NEXT:    callq *%rax
 ; WIN-V3-NEXT:    nop
 ; WIN-V3-NEXT:    .seh_startepilogue
-; WIN-V3-NEXT:    .seh_stackalloc 64
-; WIN-V3-NEXT:    addq $64, %rsp
-; WIN-V3-NEXT:    .seh_push2regs %rbx, %rbp
-; WIN-V3-NEXT:    pop2 %rbp, %rbx
-; WIN-V3-NEXT:    .seh_push2regs %r12, %r13
-; WIN-V3-NEXT:    pop2 %r13, %r12
-; WIN-V3-NEXT:    .seh_push2regs %r14, %r15
-; WIN-V3-NEXT:    pop2 %r15, %r14
-; WIN-V3-NEXT:    .seh_stackalloc 8
-; WIN-V3-NEXT:    popq %rax
+; WIN-V3-NEXT:    .seh_stackalloc 56
+; WIN-V3-NEXT:    addq $56, %rsp
+; WIN-V3-NEXT:    .seh_pushreg %rbx
+; WIN-V3-NEXT:    popq %rbx
+; WIN-V3-NEXT:    .seh_push2regs %rbp, %r12
+; WIN-V3-NEXT:    pop2 %r12, %rbp
+; WIN-V3-NEXT:    .seh_push2regs %r13, %r14
+; WIN-V3-NEXT:    pop2 %r14, %r13
+; WIN-V3-NEXT:    .seh_pushreg %r15
+; WIN-V3-NEXT:    popq %r15
 ; WIN-V3-NEXT:    .seh_endepilogue
 ; WIN-V3-NEXT:    retq
 ; WIN-V3-NEXT:    .seh_endproc
 ;
 ; WIN-V3-PPX-LABEL: csr6_alloc16:
 ; WIN-V3-PPX:       # %bb.0: # %entry
-; WIN-V3-PPX-NEXT:    .seh_pushreg %rax
-; WIN-V3-PPX-NEXT:    pushq %rax
-; WIN-V3-PPX-NEXT:    .seh_push2regs %r15, %r14
-; WIN-V3-PPX-NEXT:    push2p %r14, %r15
-; WIN-V3-PPX-NEXT:    .seh_push2regs %r13, %r12
-; WIN-V3-PPX-NEXT:    push2p %r12, %r13
-; WIN-V3-PPX-NEXT:    .seh_push2regs %rbp, %rbx
-; WIN-V3-PPX-NEXT:    push2p %rbx, %rbp
-; WIN-V3-PPX-NEXT:    .seh_stackalloc 64
-; WIN-V3-PPX-NEXT:    subq $64, %rsp
+; WIN-V3-PPX-NEXT:    .seh_pushreg %r15
+; WIN-V3-PPX-NEXT:    pushp %r15
+; WIN-V3-PPX-NEXT:    .seh_push2regs %r14, %r13
+; WIN-V3-PPX-NEXT:    push2p %r13, %r14
+; WIN-V3-PPX-NEXT:    .seh_push2regs %r12, %rbp
+; WIN-V3-PPX-NEXT:    push2p %rbp, %r12
+; WIN-V3-PPX-NEXT:    .seh_pushreg %rbx
+; WIN-V3-PPX-NEXT:    pushp %rbx
+; WIN-V3-PPX-NEXT:    .seh_stackalloc 56
+; WIN-V3-PPX-NEXT:    subq $56, %rsp
 ; WIN-V3-PPX-NEXT:    .seh_endprologue
 ; WIN-V3-PPX-NEXT:    #APP
 ; WIN-V3-PPX-NEXT:    #NO_APP
@@ -102,16 +102,16 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; WIN-V3-PPX-NEXT:    callq *%rax
 ; WIN-V3-PPX-NEXT:    nop
 ; WIN-V3-PPX-NEXT:    .seh_startepilogue
-; WIN-V3-PPX-NEXT:    .seh_stackalloc 64
-; WIN-V3-PPX-NEXT:    addq $64, %rsp
-; WIN-V3-PPX-NEXT:    .seh_push2regs %rbx, %rbp
-; WIN-V3-PPX-NEXT:    pop2p %rbp, %rbx
-; WIN-V3-PPX-NEXT:    .seh_push2regs %r12, %r13
-; WIN-V3-PPX-NEXT:    pop2p %r13, %r12
-; WIN-V3-PPX-NEXT:    .seh_push2regs %r14, %r15
-; WIN-V3-PPX-NEXT:    pop2p %r15, %r14
-; WIN-V3-PPX-NEXT:    .seh_stackalloc 8
-; WIN-V3-PPX-NEXT:    popq %rax
+; WIN-V3-PPX-NEXT:    .seh_stackalloc 56
+; WIN-V3-PPX-NEXT:    addq $56, %rsp
+; WIN-V3-PPX-NEXT:    .seh_pushreg %rbx
+; WIN-V3-PPX-NEXT:    popp %rbx
+; WIN-V3-PPX-NEXT:    .seh_push2regs %rbp, %r12
+; WIN-V3-PPX-NEXT:    pop2p %r12, %rbp
+; WIN-V3-PPX-NEXT:    .seh_push2regs %r13, %r14
+; WIN-V3-PPX-NEXT:    pop2p %r14, %r13
+; WIN-V3-PPX-NEXT:    .seh_pushreg %r15
+; WIN-V3-PPX-NEXT:    popp %r15
 ; WIN-V3-PPX-NEXT:    .seh_endepilogue
 ; WIN-V3-PPX-NEXT:    retq
 ; WIN-V3-PPX-NEXT:    .seh_endproc

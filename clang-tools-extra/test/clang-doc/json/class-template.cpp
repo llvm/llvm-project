@@ -1,11 +1,6 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: clang-doc --pretty-json --output=%t --format=json --executor=standalone %s
+// RUN: clang-doc --pretty-json --output=%t --format=json --executor=standalone %S/../Inputs/class-template.cpp
 // RUN: FileCheck %s < %t/json/GlobalNamespace/_ZTV7MyClass.json
-
-template<typename T> struct MyClass {
-  T MemberTemplate;
-  T method(T Param); 
-};
 
 // CHECK:         "Name": "MyClass",
 // CHECK:         "PublicMembers": [
@@ -25,8 +20,8 @@ template<typename T> struct MyClass {
 // CHECK-NEXT:          "QualName": "T",
 // CHECK-NEXT:          "USR": "0000000000000000000000000000000000000000"
 // CHECK-NEXT:        }
-// CHECK-NEXT:      } 
-// CHECK-NEXT:    ], 
+// CHECK-NEXT:      }
+// CHECK-NEXT:    ],
 // CHECK-NEXT:    "ReturnType": {
 // CHECK-NEXT:      "IsBuiltIn": false,
 // CHECK-NEXT:      "IsTemplate": true,
@@ -41,4 +36,4 @@ template<typename T> struct MyClass {
 // CHECK-NEXT:        }
 // CHECK-NEXT:      ],
 // CHECK-NEXT:      "VerticalDisplay": false
-// CHECK-NEXT:    } 
+// CHECK-NEXT:    }

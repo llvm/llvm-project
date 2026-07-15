@@ -626,14 +626,14 @@ static bool DumpFile(Stream &s, const FileSpec &file, FileKind file_kind) {
     break;
 
   case FileKind::Basename:
-    if (file.GetFilename()) {
+    if (!file.GetFilename().empty()) {
       s << file.GetFilename();
       return true;
     }
     break;
 
   case FileKind::Dirname:
-    if (file.GetDirectory()) {
+    if (!file.GetDirectory().empty()) {
       s << file.GetDirectory();
       return true;
     }
@@ -2557,10 +2557,10 @@ bool FormatEntity::FormatFileSpec(const FileSpec &file_spec, Stream &s,
     file_spec.Dump(s.AsRawOstream());
     return true;
   } else if (variable_name == ".basename") {
-    s.PutCString(file_spec.GetFilename().GetStringRef());
+    s.PutCString(file_spec.GetFilename());
     return true;
   } else if (variable_name == ".dirname") {
-    s.PutCString(file_spec.GetFilename().GetStringRef());
+    s.PutCString(file_spec.GetFilename());
     return true;
   }
   return false;

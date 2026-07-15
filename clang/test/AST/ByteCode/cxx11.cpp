@@ -233,6 +233,13 @@ namespace ExternPointer {
   constexpr const int *pua = &pu.a; // Ok.
 }
 
+namespace ExternRedecl {
+  extern const int q; // both-note {{declared here}}
+  constexpr int g() { return q; } // both-note {{outside its lifetime}}
+  constexpr int q = g(); // both-error {{constant expression}} \
+                         // both-note {{in call}}
+}
+
 namespace PseudoDtor {
   typedef int I;
   constexpr int f(int a = 1) { // both-error {{never produces a constant expression}} \
@@ -343,6 +350,7 @@ namespace ReadMutableInCopyCtor {
   constexpr G g1 = {};
   constexpr G g2 = g1; // both-error {{must be initialized by a constant expression}} \
                        // both-note {{read of mutable member 'u'}} \
+                       // expected-note {{in call to 'U(g1.u)'}} \
                        // both-note {{in call to 'G(g1)'}}
 }
 

@@ -54,14 +54,14 @@ using has_get_fastmath_t = decltype(std::declval<T>().getFastmath());
 template <typename SourceOp>
 struct OpToFuncCallLowering : public ConvertOpToLLVMPattern<SourceOp> {
 public:
-  explicit OpToFuncCallLowering(const LLVMTypeConverter &lowering,
-                                StringRef f32Func, StringRef f64Func,
-                                StringRef f32ApproxFunc, StringRef f16Func,
-                                StringRef i32Func = "",
-                                PatternBenefit benefit = 1)
+  explicit OpToFuncCallLowering(
+      const LLVMTypeConverter &lowering, StringRef f32Func, StringRef f64Func,
+      StringRef f32ApproxFunc, StringRef f16Func, StringRef i32Func = "",
+      PatternBenefit benefit = 1,
+      LLVM::cconv::CConv cconv = LLVM::cconv::CConv::C)
       : ConvertOpToLLVMPattern<SourceOp>(lowering, benefit), f32Func(f32Func),
         f64Func(f64Func), f32ApproxFunc(f32ApproxFunc), f16Func(f16Func),
-        i32Func(i32Func) {}
+        i32Func(i32Func), cconv(cconv) {}
 
   LogicalResult
   matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
@@ -104,6 +104,7 @@ public:
     LLVMFuncOp funcOp = appendOrGetFuncOp(funcName, funcType, op);
     auto callOp =
         LLVM::CallOp::create(rewriter, op->getLoc(), funcOp, castedOperands);
+    callOp.setCConv(cconv);
 
     if (resultType == adaptor.getOperands().front().getType()) {
       rewriter.replaceOp(op, {callOp.getResult()});
@@ -171,7 +172,9 @@ public:
     // location as debug info metadata inside of a function cannot be used
     // outside of that function.
     auto globalloc = op->getLoc()->findInstanceOfOrUnknown<FileLineColLoc>();
-    return LLVMFuncOp::create(b, globalloc, funcName, funcType);
+    auto newFuncOp = LLVMFuncOp::create(b, globalloc, funcName, funcType);
+    newFuncOp.setCConv(cconv);
+    return newFuncOp;
   }
 
   StringRef getFunctionName(Type type, SourceOp op) const {
@@ -202,6 +205,7 @@ public:
   const std::string f32ApproxFunc;
   const std::string f16Func;
   const std::string i32Func;
+  const LLVM::cconv::CConv cconv;
 };
 
 } // namespace mlir

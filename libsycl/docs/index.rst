@@ -109,6 +109,9 @@ TODO for added SYCL classes
 * ``queue``:
 
   * to implement USM methods
+
+    * ``memcpy``: enable the host-to-host case (blocked by liboffload limitations)
+
   * to implement synchronization methods
   * to implement submit & copy with accessors (low priority)
   * get_info & properties
@@ -125,8 +128,12 @@ TODO for added SYCL classes
   * forward templated funcs to alignment methods (rewrite current impl)
   * handle sub devices once they are implemented (blocked by liboffload support)
 
-* ``event``: get_wait_list, get_info, get_profiling_info, wait_and_throw & default ctor are not implemented
-* ``range``, ``id`` - to add operators
+* ``event``:
+
+  * get_info, get_profiling_info (no liboffload support) are not implemented
+  * get_wait_list should be aligned with the results of this discussion: https://github.com/KhronosGroup/SYCL-Docs/issues/1017
+
+* ``range``, ``id`` - __SYCL_DISABLE_ID_TO_INT_CONV__ and __SYCL_ASSUME_ID_RANGE optimizations are not implemented
 * general opens:
 
   * define a way to report errors from object dtors

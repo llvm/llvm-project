@@ -168,6 +168,7 @@ private:
   SDValue lowerFMINIMUM_FMAXIMUM(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFLDEXP(SDValue Op, SelectionDAG &DAG) const;
   SDValue promoteUniformOpToI32(SDValue Op, DAGCombinerInfo &DCI) const;
+  SDValue promoteUniformUnaryOpToI32(SDValue Op, DAGCombinerInfo &DCI) const;
   SDValue lowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerMUL(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerXMULO(SDValue Op, SelectionDAG &DAG) const;
@@ -241,7 +242,6 @@ private:
 
   SDValue performAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performPtrAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
-  SDValue performAddCarrySubCarryCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSubCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFSubCombine(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -542,9 +542,9 @@ public:
                                      const APInt &DemandedElts,
                                      const SelectionDAG &DAG,
                                      unsigned Depth = 0) const override;
-  void computeKnownBitsForFrameIndex(int FrameIdx,
-                                     KnownBits &Known,
-                                     const MachineFunction &MF) const override;
+  void computeKnownBitsForStackObjectPointer(KnownBits &Known,
+                                             const MachineFunction &MF,
+                                             Align Alignment) const override;
   void computeKnownBitsForTargetInstr(GISelValueTracking &Analysis, Register R,
                                       KnownBits &Known,
                                       const APInt &DemandedElts,
