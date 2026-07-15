@@ -113,6 +113,12 @@ list(APPEND CLANG_TEST_DEPS
   hmaptool
   )
 
+if(CLANG_ENABLE_AMDCLANG)
+  list(APPEND CLANG_TEST_DEPS
+    amdllvm
+    )
+endif()
+
 if(CLANG_ENABLE_CIR)
   list(APPEND CLANG_TEST_DEPS
     cir-opt
