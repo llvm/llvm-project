@@ -276,9 +276,11 @@ void SpillOrRestoreCandidate::emitRestoresForHead(
       }
 
       if (U->isPHI()) {
+        MachineBasicBlock *RestoreMBB = Restore->getParent();
         for (unsigned i = 1; i < U->getNumOperands(); i += 2) {
           if (U->getOperand(i).getReg() == CandidateReg &&
-              U->getOperand(i + 1).getMBB() == G1.getRestoreBlockForPHI(U)) {
+              U->getOperand(i + 1).getMBB() == G1.getRestoreBlockForPHI(U) &&
+              U->getOperand(i + 1).getMBB() == RestoreMBB) {
             U->getOperand(i).setReg(Restore->getOperand(0).getReg());
           }
         }
@@ -747,6 +749,20 @@ static bool shouldGroupUses(MachineLoop *CurLoop, MachineLoop *Head1Loop,
   return true;
 }
 
+// PHI incoming edges require a restore at the end of that specific predecessor
+// block. Do not merge groups that would share one restore across different
+// predecessor blocks when either group carries a PHI incoming-edge placement.
+static bool mustKeepSeparatePhiRestoreBlocks(const DomGroup &G1,
+                                             const DomGroup &G2) {
+  if (G1.getRestoreBlock() == G2.getRestoreBlock())
+    return false;
+
+  return G1.getWhereToRestore() ==
+             DomGroup::RestorePlacement::IncomingBlockOfPhi ||
+         G2.getWhereToRestore() ==
+             DomGroup::RestorePlacement::IncomingBlockOfPhi;
+}
+
 void AMDGPUEarlyRegisterSpilling::groupUses(
     Register CandidateReg, MachineBasicBlock *SpillBlock, MachineInstr *CurMI,
     SetVectorType &DominatedUses, SmallVector<DomGroup> &GroupOfUses) {
@@ -877,6 +893,9 @@ void AMDGPUEarlyRegisterSpilling::groupUses(
 
       for (auto *Block : G2.getUseBlocks())
         UseBlocks.push_back(Block);
+
+      if (mustKeepSeparatePhiRestoreBlocks(G1, G2))
+        continue;
 
       if (EmitRestoreInCommonDominator) {
         MachineBasicBlock *CommonDom = DT->findNearestCommonDominator(
