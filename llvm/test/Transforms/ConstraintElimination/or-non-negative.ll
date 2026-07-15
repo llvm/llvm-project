@@ -49,7 +49,8 @@ define i1 @or_non_negative_sge(i64 %a, i64 %b) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp sge i64 [[O]], 0
 ; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[RES:%.*]] = icmp sge i64 [[B]], 0
+; CHECK-NEXT:    ret i1 [[RES]]
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    ret i1 false
 ;

@@ -1996,12 +1996,10 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
                                      DFSInStack);
       }
 
-      // (X | Y) >=s 0 implies X >=s 0 and Y >=s 0, because the sign bit of an
+      // (X | Y) >s -1 implies X >s -1 and Y >s -1, because the sign bit of an
       // OR is the OR of the operand sign bits. Look through this
-      // canonicalization by InstCombine. disjunct so it is available to the
-      // solver.
-      if ((Pred == CmpInst::ICMP_SGE && match(B, m_Zero())) ||
-          (Pred == CmpInst::ICMP_SGT && match(B, m_AllOnes()))) {
+      // canonicalization by InstCombine.
+      if (Pred == CmpInst::ICMP_SGT && match(B, m_AllOnes())) {
         SmallVector<Value *> OrWorklist = {A};
         SmallPtrSet<Value *, 4> SeenOr;
         Value *X, *Y;
