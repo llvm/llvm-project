@@ -44,10 +44,4 @@ static constexpr unsigned kDeviceToDevice = 2;
     terminator.Crash("'%s' failed with '%s'", #expr, name); \
   }(expr, sourceFile, sourceLine)
 
-namespace Fortran::runtime::cuda {
-/// True when scope-exit CUDA cleanup must be skipped because the current
-/// device's primary context is inactive or its state cannot be queried.
-bool DeviceContextTornDown();
-} // namespace Fortran::runtime::cuda
-
 #endif // FORTRAN_RUNTIME_CUDA_COMMON_H_

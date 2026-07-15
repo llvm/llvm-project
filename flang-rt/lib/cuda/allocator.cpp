@@ -24,7 +24,7 @@
 
 namespace Fortran::runtime::cuda {
 
-bool DeviceContextTornDown() {
+static bool deviceContextTornDown() {
   int device{0};
   if (cudaGetDevice(&device) != cudaSuccess) {
     return true;
@@ -32,7 +32,7 @@ bool DeviceContextTornDown() {
   // Driver API reports primary-context state WITHOUT lazily creating one
   // (unlike the runtime API); resolve it via cudart to avoid a libcuda link.
   // Only the current device is checked (single-device assumption).
-  using GetStateFn = CUresult(CUDAAPI *)(CUdevice, unsigned *, int *);
+  using GetStateFn = PFN_cuDevicePrimaryCtxGetState;
   static GetStateFn getState{[]() -> GetStateFn {
     void *fn{nullptr};
     if (cudaGetDriverEntryPoint("cuDevicePrimaryCtxGetState", &fn,
@@ -172,7 +172,7 @@ void RTDEF(CUFRegisterAllocator)() {
       kUnifiedAllocatorPos, {&CUFAllocUnified, CUFFreeUnified});
 }
 
-bool RTDEF(CUFDeviceIsActive)() { return !DeviceContextTornDown(); }
+bool RTDEF(CUFDeviceIsActive)() { return !deviceContextTornDown(); }
 
 cudaStream_t RTDECL(CUFGetAssociatedStream)(void *p) {
   int pos = findAllocation(p);

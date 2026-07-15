@@ -1302,7 +1302,6 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
       if (isMainProgram && Fortran::semantics::IsAllocatable(*sym)) {
         auto *converterPtr = &converter;
         cudaCleanupCtx.attachCleanup([converterPtr, loc, exv, sym]() {
-          fir::FirOpBuilder &b = converterPtr->getFirOpBuilder();
           if (const fir::MutableBoxValue *mutableBox =
                   exv.getBoxOf<fir::MutableBoxValue>())
             Fortran::lower::genDeallocateIfAllocated(*converterPtr, *mutableBox,

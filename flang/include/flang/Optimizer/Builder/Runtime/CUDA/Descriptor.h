@@ -32,7 +32,7 @@ void genDescriptorCheckSection(fir::FirOpBuilder &builder, mlir::Location loc,
                                mlir::Value desc);
 
 /// Generate a call returning (as i1) whether the device's primary context is
-/// alive, to guard end-of-program frees against a user cudaDeviceReset().
+/// alive, to guard scope-exit frees against a user cudaDeviceReset().
 mlir::Value genDeviceIsActive(fir::FirOpBuilder &builder, mlir::Location loc);
 
 } // namespace fir::runtime::cuda
