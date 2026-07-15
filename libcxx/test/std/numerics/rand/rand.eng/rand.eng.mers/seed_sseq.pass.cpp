@@ -44,10 +44,28 @@ test2()
     assert(e1 == e2);
 }
 
+void test3() {
+  unsigned a[] = {15, 22, 288, 37};
+  std::seed_seq sseq(a, a + 4);
+  std::mt19937 e;
+  e.seed(sseq);
+  assert(e() == 192527404u);
+}
+
+void test4() {
+  unsigned a[] = {15, 22, 288, 37};
+  std::seed_seq sseq(a, a + 4);
+  std::mt19937_64 e;
+  e.seed(sseq);
+  assert(e() == 11567978440329390872ull);
+}
+
 int main(int, char**)
 {
     test1();
     test2();
+    test3();
+    test4();
 
-  return 0;
+    return 0;
 }
