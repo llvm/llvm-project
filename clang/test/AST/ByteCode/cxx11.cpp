@@ -492,4 +492,5 @@ namespace SubPtr {
   constexpr int diff6 = &a[1][2].n - &a[1][2].n;
   constexpr int diff7 = (A*)&a[0][1] - (A*)&a[0][0]; // both-error {{constant expression}} \
                                                      // both-note {{subtracted pointers are not elements of the same array}}
+  constexpr auto diff8 = &a[1][2].n - (&a[1][2].n + 1);
 }
