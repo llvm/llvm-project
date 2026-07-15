@@ -110,12 +110,7 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
       Actions.SetDeclDeleted(FnD, KWLoc, Message);
       Delete = true;
       if (auto *DeclAsFunction = dyn_cast<FunctionDecl>(FnD)) {
-        DeclAsFunction->setRangeEnd(
-            Message ? PrevTokLocation
-                    : KWLoc.getLocWithOffset(
-                          Lexer::MeasureTokenLength(
-                              KWLoc, PP.getSourceManager(), getLangOpts()) -
-                          1));
+        DeclAsFunction->setRangeEnd(PrevTokLocation);
       }
     } else if (TryConsumeToken(tok::kw_default, KWLoc)) {
       Diag(KWLoc, getLangOpts().CPlusPlus11
@@ -124,10 +119,7 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
         << 0 /* defaulted */;
       Actions.SetDeclDefaulted(FnD, KWLoc);
       if (auto *DeclAsFunction = dyn_cast<FunctionDecl>(FnD)) {
-        DeclAsFunction->setRangeEnd(KWLoc.getLocWithOffset(
-            Lexer::MeasureTokenLength(KWLoc, PP.getSourceManager(),
-                                      getLangOpts()) -
-            1));
+        DeclAsFunction->setRangeEnd(PrevTokLocation);
       }
     } else {
       llvm_unreachable("function definition after = not 'delete' or 'default'");
