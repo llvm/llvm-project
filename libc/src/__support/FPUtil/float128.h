@@ -39,9 +39,8 @@ struct Float128 {
     if constexpr (cpp::is_floating_point_v<T>) {
       bits = fputil::cast<Float128>(value).bits;
     } else if constexpr (cpp::is_integral_v<T>) {
-      using unsigned_t = cpp::make_unsigned_t<T>;
       Sign sign = Sign::POS;
-      auto unsigned_value = static_cast<usnsigned_t>(value);
+      auto unsigned_value = static_cast<cpp::make_unsigned_t<T>>(value);
 
       if constexpr (cpp::is_signed_v<T>) {
         if (value < 0) {

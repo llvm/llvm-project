@@ -69,7 +69,7 @@ TEST(LlvmLibcFloat128Test, SpecialValues) {
 TEST(LlvmLibcFloat128Test, IntegerConversion) {
   // Float128 to Integer conversion test
   ASSERT_EQ(static_cast<int>(Float128(0.0f)), 0);
-  ASSERT_EQ(static_cast<int>(Float128(-0.0f)), -0);
+  ASSERT_EQ(static_cast<int>(Float128(-0.0f)), 0);
   ASSERT_EQ(static_cast<int>(Float128(1.0f)), 1);
   ASSERT_EQ(static_cast<int>(Float128(-1.0)), -1);
   ASSERT_EQ(static_cast<long long>(Float128(1000000000.0)),
@@ -82,8 +82,8 @@ TEST(LlvmLibcFloat128Test, IntegerConversion) {
   // Extreme values
   ASSERT_EQ(static_cast<int>(Float128(INT_MAX)), INT_MAX);
   ASSERT_EQ(static_cast<int>(Float128(INT_MIN)), INT_MIN);
-  ASSERT_EQ(static_cast<int>(Float128(LLONG_MAX)), LLONG_MAX);
-  ASSERT_EQ(static_cast<int>(Float128(LLONG_MIN)), LLONG_MIN);
+  ASSERT_EQ(static_cast<long long>(Float128(LLONG_MAX)), LLONG_MAX);
+  ASSERT_EQ(static_cast<long long>(Float128(LLONG_MIN)), LLONG_MIN);
   ASSERT_EQ(static_cast<unsigned>(Float128(UINT_MAX)), UINT_MAX);
   ASSERT_EQ(static_cast<unsigned>(Float128(0U)), 0U);
 
