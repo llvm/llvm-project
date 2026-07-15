@@ -106,7 +106,8 @@ UseAfterLifetimeEndBRVisitor::VisitNode(const ExplodedNode *N,
   PathDiagnosticLocation Pos(S, BRC.getSourceManager(), N->getStackFrame());
   auto Piece = std::make_shared<PathDiagnosticEventPiece>(
       Pos,
-      (llvm::Twine("Value bound to '") + SourceRegion->getString() + "' here")
+      (llvm::Twine("Value's lifetime bound to the lifetime of '") +
+       SourceRegion->getString() + "' here")
           .str(),
       true);
 

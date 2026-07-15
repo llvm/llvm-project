@@ -158,7 +158,7 @@ int *direct_return() {
   int i = 5;
   return test_func(&i);
   // expected-warning@-1 {{Returning value bound to 'i' that will go out of scope}}
-  // expected-note@-2    {{Value bound to 'i' here}}
+  // expected-note@-2    {{Value's lifetime bound to the lifetime of 'i' here}}
   // expected-note@-3    {{Lifetime of 'i' ended here}}
   // expected-warning@-4 {{address of stack memory associated with local variable 'i' returned}}
 }
@@ -168,7 +168,7 @@ int *variable_return() {
   int *p = test_func(&y);
   return p;
   // expected-warning@-1 {{Returning value bound to 'y' that will go out of scope}}
-  // expected-note@-3    {{Value bound to 'y' here}}
+  // expected-note@-3    {{Value's lifetime bound to the lifetime of 'y' here}}
   // expected-note@-3    {{Lifetime of 'y' ended here}}
 }
 
@@ -196,11 +196,11 @@ int &dangling_sources_ref() {
   int x = 1, y = 2;
   return multi_param_test_ref(x, y);
   // expected-warning@-1 {{Returning value bound to 'x' that will go out of scope}}
-  // expected-note@-2    {{Value bound to 'x' here}}
+  // expected-note@-2    {{Value's lifetime bound to the lifetime of 'x' here}}
   // expected-note@-3    {{Lifetime of 'x' ended here}}
   // expected-warning@-4 {{reference to stack memory associated with local variable 'x' returned}}
   // expected-warning@-5 {{Returning value bound to 'y' that will go out of scope}}
-  // expected-note@-6    {{Value bound to 'y' here}}
+  // expected-note@-6    {{Value's lifetime bound to the lifetime of 'y' here}}
   // expected-note@-7    {{Lifetime of 'y' ended here}}
   // expected-warning@-8 {{reference to stack memory associated with local variable 'y' returned}}
 }
@@ -215,7 +215,7 @@ int &one_dangling_source_ref(int &a [[clang::lifetimebound]]) {
   int x = 1;
   return multi_param_test_ref(a, x);
   // expected-warning@-1 {{Returning value bound to 'x' that will go out of scope}}
-  // expected-note@-2    {{Value bound to 'x' here}}
+  // expected-note@-2    {{Value's lifetime bound to the lifetime of 'x' here}}
   // expected-note@-3    {{Lifetime of 'x' ended here}}
   // expected-warning@-4 {{reference to stack memory associated with local variable 'x' returned}}
 }
@@ -229,10 +229,10 @@ int *dangling_sources_ptr() {
   int *y_ptr = &y;
   return multi_param_test_ptr(x_ptr, y_ptr);
   // expected-warning@-1 {{Returning value bound to 'x' that will go out of scope}}
-  // expected-note@-2    {{Value bound to 'x' here}}
+  // expected-note@-2    {{Value's lifetime bound to the lifetime of 'x' here}}
   // expected-note@-3    {{Lifetime of 'x' ended here}}
   // expected-warning@-4 {{Returning value bound to 'y' that will go out of scope}}
-  // expected-note@-5    {{Value bound to 'y' here}}
+  // expected-note@-5    {{Value's lifetime bound to the lifetime of 'y' here}}
   // expected-note@-6    {{Lifetime of 'y' ended here}}
 }
 
@@ -247,7 +247,7 @@ int *one_dangling_source_ptr(int *a [[clang::lifetimebound]]) {
   int *x_ptr = &x;
   return multi_param_test_ptr(a, x_ptr);
   // expected-warning@-1 {{Returning value bound to 'x' that will go out of scope}}
-  // expected-note@-2    {{Value bound to 'x' here}}
+  // expected-note@-2    {{Value's lifetime bound to the lifetime of 'x' here}}
   // expected-note@-3    {{Lifetime of 'x' ended here}}
 }
 
