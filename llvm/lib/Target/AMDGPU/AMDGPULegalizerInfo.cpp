@@ -6701,6 +6701,9 @@ bool AMDGPULegalizerInfo::legalizeBufferStore(MachineInstr &MI,
   const int MemSize = MMO->getSize().getValue();
   LLT MemTy = MMO->getMemoryType();
 
+  if (IsFormat && !IsTyped && !IsD16 && MemTy.getSizeInBits() < 32)
+    return false;
+
   VData = fixStoreSourceType(B, VData, MemTy, IsFormat);
 
   castBufferRsrcArgToV4I32(MI, B, 2);
@@ -6870,6 +6873,9 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
   LLT EltTy = Ty.getScalarType();
   const bool IsD16 = IsFormat && (EltTy.getSizeInBits() == 16);
   const bool Unpacked = ST.hasUnpackedD16VMem();
+
+  if (IsFormat && !IsTyped && !IsD16 && MemTy.getSizeInBits() < 32)
+    return false;
 
   std::tie(VOffset, ImmOffset) = splitBufferOffsets(B, VOffset);
 
