@@ -2273,6 +2273,24 @@ cc_library(
 )
 
 cc_library(
+    name = "PluginScriptedFrameProvider",
+    srcs = glob(["SyntheticFrameProvider/ScriptedFrameProvider/*.cpp"]),
+    hdrs = glob(["SyntheticFrameProvider/ScriptedFrameProvider/*.h"]),
+    includes = [".."],
+    deps = [
+        ":PluginScriptedProcess",
+        "//lldb:Core",
+        "//lldb:CoreHeaders",
+        "//lldb:Headers",
+        "//lldb:InterpreterHeaders",
+        "//lldb:Target",
+        "//lldb:TargetHeaders",
+        "//lldb:Utility",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "PluginProcessMachCore",
     srcs = glob(["Process/mach-core/*.cpp"]),
     hdrs = glob(["Process/mach-core/*.h"]),

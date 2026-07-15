@@ -3651,10 +3651,15 @@ SDValue ARMTargetLowering::LowerGlobalAddressELF(SDValue Op,
       return V;
 
   if (isPositionIndependent()) {
-    SDValue G = DAG.getTargetGlobalAddress(
-        GV, dl, PtrVT, 0, GV->isDSOLocal() ? 0 : ARMII::MO_GOT);
+    // Weak symbols need GOT indirection even when hidden/DSO-local.
+    // The assembler eagerly resolves PC-relative expressions when the
+    // symbol and reference are in the same section, which prevents the
+    // linker from overriding a weak definition with a non-weak one.
+    bool UseGOT = !GV->isDSOLocal() || GV->isWeakForLinker();
+    SDValue G = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0,
+                                           UseGOT ? ARMII::MO_GOT : 0);
     SDValue Result = DAG.getNode(ARMISD::WrapperPIC, dl, PtrVT, G);
-    if (!GV->isDSOLocal())
+    if (UseGOT)
       Result =
           DAG.getLoad(PtrVT, dl, DAG.getEntryNode(), Result,
                       MachinePointerInfo::getGOT(DAG.getMachineFunction()));
@@ -19400,7 +19405,7 @@ EVT ARMTargetLowering::getOptimalMemOpType(
     LLVMContext &Context, const MemOp &Op,
     const AttributeList &FuncAttributes) const {
   // See if we can use NEON instructions for this...
-  if ((Op.isMemcpy() || Op.isZeroMemset()) && Subtarget->hasNEON() &&
+  if ((Op.isMemcpyOrMemmove() || Op.isZeroMemset()) && Subtarget->hasNEON() &&
       !FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat)) {
     unsigned Fast;
     if (Op.size() >= 16 &&
