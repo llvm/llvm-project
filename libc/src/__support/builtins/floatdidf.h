@@ -24,9 +24,7 @@ namespace builtins {
 
 // double <- int64_t conversion, round to nearest.
 // Mirrors compiler-rt's __floatdidf.
-LIBC_INLINE double floatdidf(int64_t x) {
-  return floatint<double>(x);
-}
+LIBC_INLINE double floatdidf(int64_t x) { return floatint<double>(x); }
 
 } // namespace builtins
 } // namespace LIBC_NAMESPACE_DECL
