@@ -211,7 +211,9 @@ $ gh attestation verify --repo llvm/llvm-project <package file name> --bundle <p
 
     prerelease = True if "rc" in release else False
 
-    repo.create_git_release(draft=True, tag=tag, name=name, message=message, prerelease=prerelease)
+    repo.create_git_release(
+        draft=True, tag=tag, name=name, message=message, prerelease=prerelease
+    )
 
 
 def upload_files(repo, release, files):
