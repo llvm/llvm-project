@@ -2108,24 +2108,15 @@ static bool isRemOfLoopIncrementWithLoopInvariant(
 
   Value *AddInst, *AddOffset;
   // Find out loop increment PHI.
-  auto *PN = dyn_cast<PHINode>(Incr);
+  PHINode *PN = dyn_cast<PHINode>(Incr);
   if (PN != nullptr) {
     AddInst = nullptr;
     AddOffset = nullptr;
   } else {
     // Search through a NUW add on top of the loop increment.
-    Value *V0, *V1;
-    if (!match(Incr, m_NUWAdd(m_Value(V0), m_Value(V1))))
+    if (!match(Incr, m_c_NUWAdd(m_Phi(PN), m_Value(AddOffset))))
       return false;
-
     AddInst = Incr;
-    PN = dyn_cast<PHINode>(V0);
-    if (PN != nullptr) {
-      AddOffset = V1;
-    } else {
-      PN = dyn_cast<PHINode>(V1);
-      AddOffset = V0;
-    }
   }
 
   if (!PN)

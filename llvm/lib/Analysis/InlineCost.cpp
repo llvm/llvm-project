@@ -3197,20 +3197,6 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
   if (Callee->isPresplitCoroutine())
     return InlineResult::failure("unsplited coroutine call");
 
-  // Never inline calls with byval arguments that does not have the alloca
-  // address space. Since byval arguments can be replaced with a copy to an
-  // alloca, the inlined code would need to be adjusted to handle that the
-  // argument is in the alloca address space (so it is a little bit complicated
-  // to solve).
-  unsigned AllocaAS = Callee->getDataLayout().getAllocaAddrSpace();
-  for (unsigned I = 0, E = Call.arg_size(); I != E; ++I)
-    if (Call.isByValArgument(I)) {
-      PointerType *PTy = cast<PointerType>(Call.getArgOperand(I)->getType());
-      if (PTy->getAddressSpace() != AllocaAS)
-        return InlineResult::failure("byval arguments without alloca"
-                                     " address space");
-    }
-
   // Inlining into a function with less target features is unsound, so enforce
   // this even if alwaysinline is used.
   Function *Caller = Call.getCaller();

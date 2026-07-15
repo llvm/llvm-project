@@ -2474,6 +2474,7 @@ genTargetClauses(lower::AbstractConverter &converter,
                  mlir::omp::TargetExtOperands &clauseOps,
                  DefaultMapsTy &defaultMaps,
                  llvm::SmallVectorImpl<Object> &hasDeviceAddrObjects,
+                 llvm::SmallVectorImpl<Object> &inReductionObjects,
                  llvm::SmallVectorImpl<Object> &isDevicePtrObjects,
                  llvm::SmallVectorImpl<Object> &mapObjects) {
   ClauseProcessor cp(converter, semaCtx, clauses);
@@ -2489,12 +2490,33 @@ genTargetClauses(lower::AbstractConverter &converter,
     hostEvalInfo->collectValues(clauseOps.hostEvalVars);
   }
   cp.processIf(llvm::omp::Directive::OMPD_target, clauseOps);
+  cp.processInReduction(loc, clauseOps, inReductionObjects);
+  // The host lowering of `target in_reduction` redirects each list item's
+  // dedicated implicit map entry to the per-task reduction-private storage
+  // returned by the runtime. A COMMON block member is accessed in the target
+  // body through the COMMON block storage map, not through its own member map
+  // entry, so the redirect would rewrite an unused map argument and the body
+  // would accumulate into the mapped original rather than the private copy.
+  // An EQUIVALENCE-associated variable has the same problem: it shares storage
+  // with another variable that may be mapped separately (e.g. `map(tofrom: j)`
+  // with `equivalence(i, j)`), so the body updates the aliased storage while
+  // the redirected runtime-private copy stays dead.
+  // Reject both cases until the redirect can target the storage map.
+  for (const Object &object : inReductionObjects)
+    if (const semantics::Symbol *sym = object.sym()) {
+      if (semantics::FindCommonBlockContaining(sym->GetUltimate()))
+        TODO(loc,
+             "TARGET construct with IN_REDUCTION of a COMMON block member");
+      if (semantics::FindEquivalenceSet(sym->GetUltimate()))
+        TODO(loc, "TARGET construct with IN_REDUCTION of an EQUIVALENCE "
+                  "storage-associated variable");
+    }
   cp.processIsDevicePtr(stmtCtx, clauseOps, isDevicePtrObjects);
   cp.processMap(loc, stmtCtx, clauseOps, llvm::omp::Directive::OMPD_unknown,
                 &mapObjects);
   cp.processNowait(clauseOps);
   cp.processThreadLimit(stmtCtx, clauseOps);
-  cp.processTODO<clause::Allocate, clause::InReduction, clause::UsesAllocators>(
+  cp.processTODO<clause::Allocate, clause::UsesAllocators>(
       loc, llvm::omp::Directive::OMPD_target);
 
   // `target private(..)` is only supported in delayed privatization mode.
@@ -3162,10 +3184,17 @@ static void genUnrollOp(Fortran::lower::AbstractConverter &converter,
                         ConstructQueue::const_iterator item) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
-  // Clauses for unrolling not yet implemnted
   ClauseProcessor cp(converter, semaCtx, item->clauses);
-  cp.processTODO<clause::Partial, clause::Full>(
-      loc, llvm::omp::Directive::OMPD_unroll);
+
+  // The `full` clause is not yet implemented.
+  cp.processTODO<clause::Full>(loc, llvm::omp::Directive::OMPD_unroll);
+
+  // Process the `partial` clause. If present, it may carry a constant unroll
+  // factor.
+  std::optional<int64_t> partialFactor;
+  bool hasPartial = cp.processPartial(partialFactor);
+  if (hasPartial && !partialFactor.has_value())
+    TODO(loc, "PARTIAL clause on UNROLL without a constant factor");
 
   // Emit the associated loop
   llvm::SmallVector<mlir::omp::CanonicalLoopOp, 1> canonLoops;
@@ -3177,9 +3206,16 @@ static void genUnrollOp(Fortran::lower::AbstractConverter &converter,
   for (auto &&canonLoop : canonLoops)
     applyees.push_back(canonLoop.getCli());
 
-  // Apply unrolling to it
   auto cli = llvm::getSingleElement(canonLoops).getCli();
-  mlir::omp::UnrollHeuristicOp::create(firOpBuilder, loc, cli);
+
+  if (partialFactor.has_value()) {
+    // Partially unroll the loop by the given constant factor.
+    mlir::omp::UnrollPartialOp::create(firOpBuilder, loc, cli,
+                                       static_cast<uint64_t>(*partialFactor));
+  } else {
+    // Apply heuristic unrolling to it.
+    mlir::omp::UnrollHeuristicOp::create(firOpBuilder, loc, cli);
+  }
 }
 
 static mlir::omp::MaskedOp
@@ -3556,10 +3592,10 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   mlir::omp::TargetExtOperands clauseOps;
   DefaultMapsTy defaultMaps;
   llvm::SmallVector<Object> mapObjects, hasDeviceAddrObjects,
-      isDevicePtrObjects;
+      inReductionObjects, isDevicePtrObjects;
   genTargetClauses(converter, semaCtx, symTable, stmtCtx, eval, item->clauses,
                    loc, clauseOps, defaultMaps, hasDeviceAddrObjects,
-                   isDevicePtrObjects, mapObjects);
+                   inReductionObjects, isDevicePtrObjects, mapObjects);
 
   KernelTypeVisitor visitor(semaCtx, converter.getModuleOp());
   clauseOps.kernelType = mlir::omp::TargetExecModeAttr::get(
@@ -3607,6 +3643,26 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                            /*isTargetPrivitization=*/true);
   dsp.processStep1(&clauseOps);
 
+  // The host lowering of `target in_reduction` requires each list item to be
+  // implicitly mapped as an address-preserving entry whose map argument the
+  // redirect rewrites to the runtime reduction-private storage. When the same
+  // variable is also privatized on the target (implicitly, as with a
+  // host-associated scalar that defaults to firstprivate, or explicitly with
+  // `firstprivate(i) in_reduction(+:i)`), the force-map is suppressed because
+  // the symbol is already in the privatization set, and the firstprivate copy
+  // region then has no mold value for it, aborting translation. Reject until
+  // in_reduction can be reconciled with target privatization.
+  for (const Object &object : inReductionObjects)
+    if (const semantics::Symbol *sym = object.sym()) {
+      const semantics::Symbol &ultimate = sym->GetUltimate();
+      if (llvm::any_of(dsp.getAllSymbolsToPrivatize(),
+                       [&](const semantics::Symbol *priv) {
+                         return priv->GetUltimate() == ultimate;
+                       }))
+        TODO(loc,
+             "TARGET construct with IN_REDUCTION of a privatized variable");
+    }
+
   // Collect symbols that have dynamic substring accesses
   llvm::SmallPtrSet<const semantics::Symbol *, 8> symbolsWithDynamicSubstring;
   collectSymbolsWithDynamicSubstring(semaCtx, eval,
@@ -3617,7 +3673,16 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   // symbols used inside the region that do not have explicit data-environment
   // attribute clauses (neither data-sharing; e.g. `private`, nor `map`
   // clauses).
-  auto captureImplicitMap = [&](const semantics::Symbol &sym) {
+  //
+  // When `forceAddressPreserving` is set, the symbol is force-mapped as an
+  // address-preserving `capture(ByRef)` with implicit `tofrom` flags,
+  // bypassing the scalar default capture rules. This is used for `target
+  // in_reduction` list items, whose mapped pointer is passed as the `orig`
+  // argument of `__kmpc_task_reduction_get_th_data`; a ByCopy scalar capture
+  // would break the runtime lookup against the enclosing taskgroup's
+  // task_reduction descriptor.
+  auto captureImplicitMap = [&](const semantics::Symbol &sym,
+                                bool forceAddressPreserving = false) {
     // Structure component symbols don't have bindings, and can only be
     // explicitly mapped individually. If a member is captured implicitly
     // we map the entirety of the derived type when we find its symbol.
@@ -3626,12 +3691,14 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
     // if the symbol is part of an already mapped common block, do not make a
     // map for it.
-    if (const Fortran::semantics::Symbol *common =
-            Fortran::semantics::FindCommonBlockContaining(sym.GetUltimate()))
-      if (llvm::any_of(mapObjects, [=](const Object &object) {
-            return object.sym() == common;
-          }))
-        return;
+    if (!forceAddressPreserving) {
+      if (const Fortran::semantics::Symbol *common =
+              Fortran::semantics::FindCommonBlockContaining(sym.GetUltimate()))
+        if (llvm::any_of(mapObjects, [=](const Object &object) {
+              return object.sym() == common;
+            }))
+          return;
+    }
 
     // If we come across a symbol without a symbol address, we
     // return as we cannot process it, this is intended as a
@@ -3681,13 +3748,21 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
         eleType = refType.getElementType();
 
       std::pair<mlir::omp::ClauseMapFlags, mlir::omp::VariableCaptureKind>
-          mapFlagAndKind = getImplicitMapTypeAndKind(
-              firOpBuilder, converter, defaultMaps, eleType, loc, sym);
+          mapFlagAndKind;
+      if (forceAddressPreserving)
+        mapFlagAndKind = {mlir::omp::ClauseMapFlags::implicit |
+                              mlir::omp::ClauseMapFlags::to |
+                              mlir::omp::ClauseMapFlags::from,
+                          mlir::omp::VariableCaptureKind::ByRef};
+      else
+        mapFlagAndKind = getImplicitMapTypeAndKind(
+            firOpBuilder, converter, defaultMaps, eleType, loc, sym);
 
       mlir::FlatSymbolRefAttr mapperId;
       auto defaultmapBehaviour = getDefaultmapIfPresent(defaultMaps, eleType);
-      if (defaultmapBehaviour ==
-          clause::Defaultmap::ImplicitBehavior::Default) {
+      if (!forceAddressPreserving &&
+          defaultmapBehaviour ==
+              clause::Defaultmap::ImplicitBehavior::Default) {
         const semantics::DerivedTypeSpec *typeSpec =
             sym.GetType() ? sym.GetType()->AsDerived() : nullptr;
         if (typeSpec) {
@@ -3741,6 +3816,15 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
           Object{const_cast<semantics::Symbol *>(&sym), std::nullopt});
     }
   };
+  // OpenMP requires `in_reduction` list items on `target` to be implicitly
+  // data-mapped. Force-map them as address-preserving captures before the
+  // generic implicit-map walk so that walk treats the symbols as already
+  // mapped via `isDuplicateMappedSymbol` and does not downgrade them to
+  // ByCopy.
+  for (const Object &object : inReductionObjects)
+    if (const semantics::Symbol *sym = object.sym())
+      captureImplicitMap(*sym, /*forceAddressPreserving=*/true);
+
   lower::pft::visitAllSymbols(eval, captureImplicitMap);
 
   auto targetOp = mlir::omp::TargetOp::create(firOpBuilder, loc, clauseOps);
@@ -3753,7 +3837,10 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   args.hasDeviceAddr.objects = hasDeviceAddrObjects;
   args.hasDeviceAddr.vars = hasDeviceAddrBaseValues;
   args.hostEvalVars = clauseOps.hostEvalVars;
-  // TODO: Add in_reduction syms and vars.
+  // `in_reduction` list items do not get their own entry block argument on
+  // `omp.target`; they are implicitly mapped (see the force-map above) and the
+  // target body accesses them through their `map_entries` block argument. The
+  // `in_reduction` operands remain on the op as host-side metadata.
   args.map.objects = mapObjects;
   args.map.vars = mapBaseValues;
   args.priv.objects = makeObjects(dsp.getDelayedPrivSymbols());
@@ -4778,8 +4865,8 @@ static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
        const parser::OmpDeclareVariantDirective &declareVariantDirective) {
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OmpDeclareVariantDirective");
+  // No lowering for the declarative directive itself; the recorded variants are
+  // resolved at call sites (see resolveDeclareVariantCallee in CallInterface).
 }
 
 static ReductionProcessor::GenCombinerCBTy processReductionCombiner(

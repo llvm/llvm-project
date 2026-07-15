@@ -598,7 +598,7 @@ gpu.func @load_2D_vector_addrspace3(%source: memref<16x32xf32, 3>,
 
 // -----
 gpu.module @xevm_module {
-gpu.func @load_1D_vector_addrspace3_unsupported(%source: memref<32xf32, 3>,
+gpu.func @load_1D_vector_addrspace3(%source: memref<32xf32, 3>,
     %offset: index) -> vector<8xf32> {
   %c0 = arith.constant 0.0 : f32
   %0 = vector.transfer_read %source[%offset], %c0
@@ -606,11 +606,19 @@ gpu.func @load_1D_vector_addrspace3_unsupported(%source: memref<32xf32, 3>,
   gpu.return %0 : vector<8xf32>
 }
 
-// LOAD-ND-LABEL: @load_1D_vector_addrspace3_unsupported
-// LOAD-ND: vector.transfer_read
+// LOAD-ND-LABEL: @load_1D_vector_addrspace3
+// LOAD-ND-SAME: %[[SOURCE:.+]]: memref<32xf32, 3>
+// LOAD-ND-SAME: %[[OFFSET:.+]]: index
+// LOAD-ND: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[SOURCE]] : memref<32xf32, 3> -> !xegpu.mem_desc<32xf32>
+// LOAD-ND: %[[DATA:.+]] = xegpu.load_matrix %[[MEM_DESC]][%[[OFFSET]]] : !xegpu.mem_desc<32xf32>, index -> vector<8xf32>
+// LOAD-ND: gpu.return %[[DATA]] : vector<8xf32>
 
-// LOAD-GATHER-LABEL: @load_1D_vector_addrspace3_unsupported
-// LOAD-GATHER: vector.transfer_read
+// LOAD-GATHER-LABEL: @load_1D_vector_addrspace3
+// LOAD-GATHER-SAME: %[[SOURCE:.+]]: memref<32xf32, 3>
+// LOAD-GATHER-SAME: %[[OFFSET:.+]]: index
+// LOAD-GATHER: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[SOURCE]] : memref<32xf32, 3> -> !xegpu.mem_desc<32xf32>
+// LOAD-GATHER: %[[DATA:.+]] = xegpu.load_matrix %[[MEM_DESC]][%[[OFFSET]]] : !xegpu.mem_desc<32xf32>, index -> vector<8xf32>
+// LOAD-GATHER: gpu.return %[[DATA]] : vector<8xf32>
 
 }
 
@@ -641,11 +649,10 @@ gpu.func @load_2D_vector_alloca_promoted_to_slm(%offset: index)
 }
 
 // -----
-// memref.alloca is unconditionally promoted to SLM (address space 3). A 1D
-// transfer_read on it cannot be lowered to xegpu.load_matrix (which requires
-// rank 2), so the transfer_read is left as-is on the SLM memref.
+// memref.alloca is unconditionally promoted to SLM (address space 3) and,
+// lowered to xegpu.load_matrix.
 gpu.module @xevm_module {
-gpu.func @load_1D_vector_alloca_promoted_unsupported(%offset: index)
+gpu.func @load_1D_vector_alloca_promoted_to_slm(%offset: index)
     -> vector<8xf32> {
   %buf = memref.alloca() : memref<16xf32>
   %c0 = arith.constant 0.0 : f32
@@ -654,17 +661,15 @@ gpu.func @load_1D_vector_alloca_promoted_unsupported(%offset: index)
   gpu.return %0 : vector<8xf32>
 }
 
-// LOAD-ND-LABEL: @load_1D_vector_alloca_promoted_unsupported
-// LOAD-ND: memref.alloca() : memref<16xf32, 3>
-// LOAD-ND: vector.transfer_read
-// LOAD-ND-NOT: xegpu.create_mem_desc
-// LOAD-ND-NOT: xegpu.load_matrix
+// LOAD-ND-LABEL: @load_1D_vector_alloca_promoted_to_slm
+// LOAD-ND: %[[BUF:.+]] = memref.alloca() : memref<16xf32, 3>
+// LOAD-ND: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[BUF]] : memref<16xf32, 3> -> !xegpu.mem_desc<16xf32>
+// LOAD-ND: xegpu.load_matrix %[[MEM_DESC]]
 
-// LOAD-GATHER-LABEL: @load_1D_vector_alloca_promoted_unsupported
-// LOAD-GATHER: memref.alloca() : memref<16xf32, 3>
-// LOAD-GATHER: vector.transfer_read
-// LOAD-GATHER-NOT: xegpu.create_mem_desc
-// LOAD-GATHER-NOT: xegpu.load_matrix
+// LOAD-GATHER-LABEL: @load_1D_vector_alloca_promoted_to_slm
+// LOAD-GATHER: %[[BUF:.+]] = memref.alloca() : memref<16xf32, 3>
+// LOAD-GATHER: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[BUF]] : memref<16xf32, 3> -> !xegpu.mem_desc<16xf32>
+// LOAD-GATHER: xegpu.load_matrix %[[MEM_DESC]]
 
 }
 
@@ -696,5 +701,50 @@ gpu.func @load_0D_vector_unsupported(%source: memref<3xf32>,
 
 // LOAD-GATHER-LABEL: @load_0D_vector_unsupported
 // LOAD-GATHER: vector.transfer_read
+
+}
+
+// -----
+gpu.module @xevm_module {
+gpu.func @transpose_1x1024x24x64(
+    %arg0: memref<1x1024x24x64xf16>,
+    %arg1: memref<1x24x1024x64xf16>) kernel
+    attributes {known_block_size = array<i32: 256, 1, 1>} {
+  %pad = ub.poison : f16
+  %c0 = arith.constant 0 : index
+  %block_id_x = gpu.block_id x
+  %block_id_y = gpu.block_id y
+  %block_id_z = gpu.block_id z
+  %seq_off = affine.apply affine_map<()[s0] -> (s0 * 16)>()[%block_id_y]
+  %hid_off = affine.apply affine_map<()[s0] -> (s0 * 8)>()[%block_id_z]
+  %vec = vector.transfer_read %arg0[%c0, %seq_off, %block_id_x, %hid_off], %pad
+    {in_bounds = [true, true, true, true]}
+    : memref<1x1024x24x64xf16>, vector<1x16x1x8xf16>
+  %transposed = vector.transpose %vec, [0, 2, 1, 3]
+    : vector<1x16x1x8xf16> to vector<1x1x16x8xf16>
+  vector.transfer_write %transposed, %arg1[%c0, %block_id_x, %seq_off, %hid_off]
+    {in_bounds = [true, true, true, true]}
+    : vector<1x1x16x8xf16>, memref<1x24x1024x64xf16>
+  gpu.return
+}
+
+// CHECK-LABEL: @transpose_1x1024x24x64
+// CHECK-DAG: %[[C1536:.+]] = arith.constant 1536 : index
+// CHECK-DAG: %[[C64:.+]] = arith.constant 64 : index
+// CHECK-DAG: %[[C65536:.+]] = arith.constant 65536 : index
+
+// Read from memref<1x1024x24x64xf16>, strides [1572864, 1536, 64, 1].
+// Scalar base offset: seq_off * 1536 (original dim1 stride),
+//                    block_id_x * 64  (original dim2 stride).
+// CHECK:     arith.muli %{{.+}}, %[[C1536]] : index
+// CHECK:     arith.muli %block_id_x, %[[C64]] : index
+// CHECK:     xegpu.load {{.*}} -> vector<1x1x16x8xf16>
+
+// Write to memref<1x24x1024x64xf16>, strides [1572864, 65536, 64, 1].
+// Scalar base offset: block_id_x * 65536 (original dim1 stride),
+//                    seq_off * 64        (original dim2 stride).
+// CHECK:     arith.muli %block_id_x, %[[C65536]] : index
+// CHECK:     arith.muli %{{.+}}, %[[C64]] : index
+// CHECK:     xegpu.store {{.*}}
 
 }

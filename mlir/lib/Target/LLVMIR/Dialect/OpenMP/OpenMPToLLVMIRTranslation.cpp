@@ -364,9 +364,40 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       op.emitWarning("hint clause discarded");
   };
   auto checkInReduction = [&todo](auto op, LogicalResult &result) {
-    if (!op.getInReductionVars().empty() || op.getInReductionByref() ||
-        op.getInReductionSyms())
+    if (isa<omp::TargetOp, omp::TaskOp, omp::TaskloopContextOp>(
+            op.getOperation())) {
+      if (auto byrefAttr = op.getInReductionByref()) {
+        for (bool isByRef : *byrefAttr) {
+          if (isByRef) {
+            result = todo("in_reduction with byref modifier");
+            return;
+          }
+        }
+      }
+      if (isa<omp::TargetOp>(op.getOperation())) {
+        if (auto inReductionSyms = op.getInReductionSyms()) {
+          for (auto sym :
+               (*inReductionSyms).template getAsRange<SymbolRefAttr>()) {
+            auto decl =
+                SymbolTable::lookupNearestSymbolFrom<omp::DeclareReductionOp>(
+                    op, sym);
+            assert(decl &&
+                   "symbol resolution should be guaranteed by the op verifier");
+            if (decl.getInitializerRegion().front().getNumArguments() != 1) {
+              result = todo("in_reduction with two-argument initializer");
+              return;
+            }
+            if (!decl.getCleanupRegion().empty()) {
+              result = todo("in_reduction with cleanup region");
+              return;
+            }
+          }
+        }
+      }
+    } else if (!op.getInReductionVars().empty() || op.getInReductionByref() ||
+               op.getInReductionSyms()) {
       result = todo("in_reduction");
+    }
   };
   auto checkNowait = [&todo](auto op, LogicalResult &result) {
     if (op.getNowait())
@@ -423,14 +454,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
           return;
         }
   };
-  auto checkInReductionByref = [&todo](auto op, LogicalResult &result) {
-    if (auto byrefAttr = op.getInReductionByref())
-      for (bool isByRef : *byrefAttr)
-        if (isByRef) {
-          result = todo("in_reduction with byref modifier");
-          return;
-        }
-  };
   auto checkNumTeams = [&todo](auto op, LogicalResult &result) {
     if (op.hasNumTeamsMultiDim())
       result = todo("num_teams with multi-dimensional values");
@@ -482,7 +505,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case([&](omp::TaskOp op) {
         checkAllocate(op, result);
-        checkInReductionByref(op, result);
+        checkInReduction(op, result);
       })
       .Case([&](omp::TaskgroupOp op) {
         checkAllocate(op, result);
@@ -494,7 +517,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case([&](omp::TaskloopContextOp op) {
         checkAllocate(op, result);
-        checkInReductionByref(op, result);
+        checkInReduction(op, result);
         checkReduction(op, result);
         checkReductionByref(op, result);
       })
@@ -5188,6 +5211,30 @@ applyUnrollHeuristic(omp::UnrollHeuristicOp op, llvm::IRBuilderBase &builder,
   return success();
 }
 
+/// Apply a `#pragma omp unroll partial` / `!$omp unroll partial`
+/// transformation using the OpenMPIRBuilder.
+static LogicalResult
+applyUnrollPartial(omp::UnrollPartialOp op, llvm::IRBuilderBase &builder,
+                   LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+
+  Value applyee = op.getApplyee();
+  assert(applyee && "Loop to apply unrolling on required");
+
+  llvm::CanonicalLoopInfo *consBuilderCLI =
+      moduleTranslation.lookupOMPLoop(applyee);
+  llvm::OpenMPIRBuilder::LocationDescription loc(builder);
+
+  // No generatee is supported yet, so the unrolled loop's CanonicalLoopInfo is
+  // not requested and unrolling is deferred to LLVM's LoopUnroll pass.
+  int32_t factor = static_cast<int32_t>(op.getUnrollFactor());
+  ompBuilder->unrollLoopPartial(loc.DL, consBuilderCLI, factor,
+                                /*UnrolledCLI=*/nullptr);
+
+  moduleTranslation.invalidateOmpLoop(applyee);
+  return success();
+}
+
 /// Apply a `#pragma omp tile` / `!$omp tile` transformation using the
 /// OpenMPIRBuilder.
 static LogicalResult applyTile(omp::TileOp op, llvm::IRBuilderBase &builder,
@@ -6221,6 +6268,27 @@ static uint64_t getArrayElementSizeInBits(LLVM::LLVMArrayType arrTy,
   return dl.getTypeSizeInBits(arrTy.getElementType());
 }
 
+// The intent is to verify if the mapped data being passed is a
+// pointer -> pointee that requires special handling in certain cases,
+// e.g. applying the OMP_MAP_PTR_AND_OBJ map type.
+//
+// There may be a better way to verify this, but unfortunately with
+// opaque pointers we lose the ability to easily check if something is
+// a pointer whilst maintaining access to the underlying type.
+static bool checkIfPointerMap(omp::MapInfoOp mapOp) {
+  // If we have a varPtrPtr field assigned then the underlying type is a pointer
+  if (mapOp.getVarPtrPtr())
+    return true;
+
+  // If the map data is declare target with a link clause, then it's represented
+  // as a pointer when we lower it to LLVM-IR even if at the MLIR level it has
+  // no relation to pointers.
+  if (isDeclareTargetLink(mapOp.getVarPtr()))
+    return true;
+
+  return false;
+}
+
 // This function calculates the size to be offloaded for a specified type, given
 // its associated map clause (which can contain bounds information which affects
 // the total size), this size is calculated based on the underlying element type
@@ -6273,8 +6341,51 @@ static llvm::Value *getSizeInBytes(DataLayout &dl, const mlir::Type &type,
       // size, so we do some on the fly runtime math to get the size in
       // bytes from the extent (ub - lb) * sizeInBytes. NOTE: This may need
       // some adjustment for members with more complex types.
-      return builder.CreateMul(elementCount,
-                               builder.getInt64(underlyingTypeSzInBits / 8));
+      llvm::Value *sizeCalc = builder.CreateMul(
+          elementCount, builder.getInt64(underlyingTypeSzInBits / 8),
+          "element_count");
+
+      // This is a part of a "complicated" bit of size calculation logic that is
+      // in place to handle a couple of scenarios, one specific to Fortran and
+      // the other a more general OpenMP issue. The other piece of the
+      // calculation can be found as the final size calculation within the
+      // processIndividualMap function. Ideally we would move it here, but due
+      // to the complexity of calculating the final base address of some
+      // constructs (required for a nullary check), it's left as the final step.
+      // So, in the below 2 cases, the nullary check is in processIndividualMap
+      // and the size equality check is here. The cases this modifications help
+      // cover are:
+      //
+      // 1) If an argument has a null base pointer, then the size must be set to
+      //    0 to avoid the runtime exploding/complaining about an illegal
+      //    pointer map. The size returning non-zero is feasible in certain
+      //    cases if for example someone has specified there own bounds/range.
+      // 2) We wish to support a very specific OpenMP Fortran edge-case where a
+      //    size zero array can be legally presence checked and found to be on
+      //    device when it has been mapped. In these rare occasions the
+      //    allocatable/pointer will have a size of 1 allocated for the
+      //    underlying data, but this wall not be represented within the size of
+      //    the descriptor, so we get a non-nullary pointer and a size of 0,
+      //    allowing us to specify a size of 1 in these cases registering it on
+      //    the device mapping table as present.
+      //
+      // The default fall through case is just returning the size calculation
+      // above, if we are not nullary and the size we calculate is non-zero,
+      // which is basically any pointer type that is allocated in someway
+      // (providing you are not running on a rare system that allows malloc's of
+      // size 0 with whatever caveats that may come with).
+      //
+      // Later in the nullary check in processIndividualMap it just devolves to
+      // selecting a size of 0 if we are nullary, if we are not, we will return
+      // either 1 or the calculated size, depending on the outcome of this
+      // select.
+      if (checkIfPointerMap(memberClause)) {
+        return builder.CreateSelect(
+            builder.CreateICmpEQ(sizeCalc, builder.getInt64(0)),
+            builder.getInt64(1), sizeCalc);
+      }
+
+      return sizeCalc;
     }
   }
 
@@ -6747,27 +6858,6 @@ getOverlappedMembers(llvm::SmallVectorImpl<size_t> &overlapMapDataIdxs,
   for (size_t i = 0; i < numMembers; ++i)
     if (!skipIndices.contains(i))
       overlapMapDataIdxs.push_back(i);
-}
-
-// The intent is to verify if the mapped data being passed is a
-// pointer -> pointee that requires special handling in certain cases,
-// e.g. applying the OMP_MAP_PTR_AND_OBJ map type.
-//
-// There may be a better way to verify this, but unfortunately with
-// opaque pointers we lose the ability to easily check if something is
-// a pointer whilst maintaining access to the underlying type.
-static bool checkIfPointerMap(omp::MapInfoOp mapOp) {
-  // If we have a varPtrPtr field assigned then the underlying type is a pointer
-  if (mapOp.getVarPtrPtr())
-    return true;
-
-  // If the map data is declare target with a link clause, then it's represented
-  // as a pointer when we lower it to LLVM-IR even if at the MLIR level it has
-  // no relation to pointers.
-  if (isDeclareTargetLink(mapOp.getVarPtr()))
-    return true;
-
-  return false;
 }
 
 /// This function handles the insertion of a single item of map data from
@@ -8493,6 +8583,55 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   bool isOffloadEntry =
       isTargetDevice || !ompBuilder->Config.TargetTriples.empty();
 
+  // Resolve in_reduction clauses on omp.target for the host. From the target
+  // device's perspective an in_reduction list item behaves as a regular
+  // map(tofrom) variable, so no special handling is needed there; only the
+  // host redirects the mapped value to the per-task reduction-private storage
+  // returned by __kmpc_task_reduction_get_th_data (emitted inside the
+  // to-be-outlined target task body). This applies to both offloading and
+  // non-offloading host modules.
+  //
+  // The target body has no dedicated in_reduction block argument: each
+  // in_reduction variable is accessed through its map_entries block argument.
+  // So each in_reduction variable must also be captured by a matching
+  // map_entries entry (guaranteed by the verifier); without one the outlined
+  // body would reference a value defined in the host function. Record, for each
+  // in_reduction variable, the position of that map entry so the corresponding
+  // map block argument can be redirected inside the body. The in_reduction
+  // operand itself is used as the `orig` argument of the runtime lookup.
+  SmallVector<llvm::Value *> inRedOrigPtrs;
+  SmallVector<unsigned> inRedMapArgIdx;
+  if (!targetOp.getInReductionVars().empty() && !isTargetDevice) {
+    inRedOrigPtrs.reserve(targetOp.getInReductionVars().size());
+    inRedMapArgIdx.reserve(targetOp.getInReductionVars().size());
+    for (Value v : targetOp.getInReductionVars()) {
+      // Select the map_entries entry that captures this in_reduction operand.
+      // The verifier guarantees at least one match exists; more than one
+      // matching entry is a lowering ambiguity (the redirect cannot pick which
+      // map argument to rebind).
+      std::optional<unsigned> matchIdx;
+      for (auto [idx, mapV] : llvm::enumerate(targetOp.getMapVars())) {
+        auto mapInfo = mapV.getDefiningOp<omp::MapInfoOp>();
+        if (v != mapInfo.getVarPtr())
+          continue;
+        if (matchIdx)
+          return targetOp.emitError()
+                 << "in_reduction variable on omp.target has multiple matching "
+                    "map_entries entries; the redirect target is ambiguous";
+        matchIdx = idx;
+      }
+      // The verifier requires a capturing map entry for every in_reduction
+      // operand, so a match must exist here.
+      assert(matchIdx &&
+             "TargetOp verifier guarantees a matching map_entries entry for "
+             "each in_reduction variable");
+      inRedMapArgIdx.push_back(*matchIdx);
+      // The runtime `orig` pointer is the in_reduction operand itself, the
+      // reduction variable the enclosing taskgroup registered.
+      inRedOrigPtrs.push_back(moduleTranslation.lookupValue(v));
+    }
+  }
+
   // For some private variables, the MapsForPrivatizedVariablesPass
   // creates MapInfoOp instances. Go through the private variables and
   // the mapped variables so that during codegeneration we are able
@@ -8568,8 +8707,15 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
         attr.isStringAttribute())
       llvmOutlinedFn->addFnAttr(attr);
 
-    for (auto [arg, mapOp] : llvm::zip_equal(mapBlockArgs, mapVars)) {
-      auto mapInfoOp = cast<omp::MapInfoOp>(mapOp.getDefiningOp());
+    for (auto [idx, arg] : llvm::enumerate(mapBlockArgs)) {
+      // in_reduction list items on omp.target are accessed through their
+      // map_entries block argument, which is redirected below to the per-task
+      // reduction-private storage returned by the runtime. Skip the default
+      // host-value mapping for those block arguments so the write-once
+      // mapValue mapping is free to be set to the private pointer.
+      if (llvm::is_contained(inRedMapArgIdx, idx))
+        continue;
+      auto mapInfoOp = cast<omp::MapInfoOp>(mapVars[idx].getDefiningOp());
       llvm::Value *mapOpValue =
           moduleTranslation.lookupValue(mapInfoOp.getVarPtr());
       moduleTranslation.mapValue(arg, mapOpValue);
@@ -8604,6 +8750,37 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
             privateVarsInfo.llvmVars, privateVarsInfo.privatizers,
             targetOp.getPrivateNeedsBarrier(), &mappedPrivateVars)))
       return llvm::make_error<PreviouslyReportedError>();
+
+    // The target body accesses each in_reduction variable through its
+    // map_entries block argument. Redirect that block argument to the per-task
+    // private storage returned by __kmpc_task_reduction_get_th_data so the body
+    // accumulates into the reduction-private copy rather than the mapped
+    // original. The lookup must run inside the target task body so the gtid
+    // corresponds to the executing thread. The descriptor argument is NULL: the
+    // runtime walks enclosing taskgroups to locate the matching task_reduction
+    // registration for `origPtr`. Mirrors the in_reduction handling on
+    // omp.taskloop.context.
+    if (!inRedOrigPtrs.empty()) {
+      // Collect, per item, the type the private pointer must have (the map
+      // block argument's type), and, through the callback, rebind the map block
+      // argument that stands in for each in_reduction list item to the per-task
+      // reduction-private storage the runtime returns.
+      SmallVector<llvm::Type *> inRedResultPtrTys;
+      inRedResultPtrTys.reserve(inRedMapArgIdx.size());
+      for (unsigned mapArgIdx : inRedMapArgIdx)
+        inRedResultPtrTys.push_back(
+            moduleTranslation.convertType(mapBlockArgs[mapArgIdx].getType()));
+
+      llvm::OpenMPIRBuilder::LocationDescription bodyLoc(builder);
+      llvm::OpenMPIRBuilder::InsertPointTy redIP =
+          ompBuilder->createTargetInReduction(
+              bodyLoc, inRedOrigPtrs, inRedResultPtrTys,
+              [&](unsigned idx, llvm::Value *priv) {
+                moduleTranslation.mapValue(mapBlockArgs[inRedMapArgIdx[idx]],
+                                           priv);
+              });
+      builder.restoreIP(redIP);
+    }
 
     LLVM::ModuleTranslation::SaveStack<OpenMPAllocStackFrame> frame(
         moduleTranslation, allocaIP, deallocBlocks);
@@ -8855,6 +9032,54 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
       auto captureClauseKind = convertToCaptureClauseKind(captureClause);
       auto deviceClause =
           convertToDeviceClauseKind(attribute.getDeviceType().getValue());
+      llvm::StringRef entryMangledName = mangledName;
+      llvm::Constant *entryAddr = llvm::cast<llvm::Constant>(gVal);
+      std::function<llvm::GlobalValue::LinkageTypes()> variableLinkage;
+      llvm::SmallString<128> entryNameStorage;
+      bool requiresUSM = ompBuilder->Config.hasRequiresUnifiedSharedMemory();
+      bool isToOrEnter =
+          captureClause == omp::DeclareTargetCaptureClause::to ||
+          captureClause == omp::DeclareTargetCaptureClause::enter;
+      bool isHostOnly = attribute.getDeviceType().getValue() ==
+                        omp::DeclareTargetDeviceType::host;
+
+      // A to/enter declare-target variable needs a device-resident,
+      // name-resolvable copy and a host offloading entry. A local-linkage
+      // global provides neither, so we promote it to external.
+      if (isToOrEnter && !isHostOnly && !requiresUSM &&
+          gVar->hasLocalLinkage()) {
+        gVar->setLinkage(llvm::GlobalValue::ExternalLinkage);
+        isExternallyVisible = true;
+
+        // Clear the stale dso_local flag so it is referenced like a
+        // module-scope declare target global.
+        if (ompBuilder->Config.isTargetDevice())
+          gVar->setDSOLocal(false);
+      }
+
+      if (isToOrEnter &&
+          deviceClause ==
+              llvm::OffloadEntriesInfoManager::OMPTargetDeviceClauseAny &&
+          !requiresUSM && !isDeclaration &&
+          (gVal->hasLocalLinkage() || gVal->hasHiddenVisibility())) {
+        // Keep the original symbol as-is for target code, but create a visible
+        // alias for the offload entry so libomptarget can associate the host
+        // global with the actual device global.
+        entryNameStorage = (mangledName + llvm::Twine("_decl_tgt_entry")).str();
+        entryMangledName = entryNameStorage;
+        if (llvm::GlobalValue *existing =
+                llvmModule->getNamedValue(entryMangledName)) {
+          entryAddr = llvm::cast<llvm::Constant>(existing);
+        } else {
+          entryAddr = llvm::GlobalAlias::create(
+              gVal->getValueType(), gVal->getAddressSpace(),
+              llvm::GlobalValue::WeakAnyLinkage, entryMangledName, entryAddr,
+              llvmModule);
+          llvm::cast<llvm::GlobalAlias>(entryAddr)->setVisibility(
+              llvm::GlobalValue::DefaultVisibility);
+        }
+        variableLinkage = [] { return llvm::GlobalValue::WeakAnyLinkage; };
+      }
       // unused for MLIR at the moment, required in Clang for book
       // keeping
       std::vector<llvm::GlobalVariable *> generatedRefs;
@@ -8879,34 +9104,13 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
                                                      lineNo);
       };
 
-      bool requiresUSM = ompBuilder->Config.hasRequiresUnifiedSharedMemory();
-      bool isToOrEnter =
-          captureClause == omp::DeclareTargetCaptureClause::to ||
-          captureClause == omp::DeclareTargetCaptureClause::enter;
-      bool isHostOnly = attribute.getDeviceType().getValue() ==
-                        omp::DeclareTargetDeviceType::host;
-
-      // A to/enter declare-target variable needs a device-resident,
-      // name-resolvable copy and a host offloading entry. A local-linkage
-      // global provides neither, so we promote it to external.
-      if (isToOrEnter && !isHostOnly && !requiresUSM &&
-          gVar->hasLocalLinkage()) {
-        gVar->setLinkage(llvm::GlobalValue::ExternalLinkage);
-        isExternallyVisible = true;
-
-        // Clear the stale dso_local flag so it is referenced like a
-        // module-scope declare target global.
-        if (ompBuilder->Config.isTargetDevice())
-          gVar->setDSOLocal(false);
-      }
-
       llvm::vfs::FileSystem &vfs = moduleTranslation.getFileSystem();
       ompBuilder->registerTargetGlobalVariable(
           captureClauseKind, deviceClause, isDeclaration, isExternallyVisible,
           ompBuilder->getTargetEntryUniqueInfo(fileInfoCallBack, vfs),
-          mangledName, generatedRefs, /*OpenMPSimd*/ false, targetTriple,
-          /*GlobalInitializer*/ nullptr, /*VariableLinkage*/ nullptr,
-          gVal->getType(), gVal);
+          entryMangledName, generatedRefs, /*OpenMPSimd*/ false, targetTriple,
+          /*GlobalInitializer*/ nullptr, variableLinkage, gVal->getType(),
+          entryAddr);
 
       if (ompBuilder->Config.isTargetDevice() &&
           (captureClause == omp::DeclareTargetCaptureClause::link ||
@@ -9644,6 +9848,9 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
             // contained region including their transformations must occur at
             // the omp.canonical_loop.
             return applyUnrollHeuristic(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::UnrollPartialOp op) {
+            return applyUnrollPartial(op, builder, moduleTranslation);
           })
           .Case([&](omp::TileOp op) {
             return applyTile(op, builder, moduleTranslation);

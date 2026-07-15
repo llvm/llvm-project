@@ -1,11 +1,11 @@
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=GCN,SI,NOTGFX9 %s
-; XUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=GCN,SI,NOTGFX9 %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=bonaire < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9 %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=bonaire < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9 %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9 %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9 %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,CIPLUS,GFX9 %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,CIPLUS,GFX9 %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu6.00 < %s | FileCheck -check-prefixes=GCN,SI,NOTGFX9 %s
+; XUN: llc -global-isel=1 -mtriple=amdgpu6.00 < %s | FileCheck -check-prefixes=GCN,SI,NOTGFX9 %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu7.04 < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu7.04 < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9 %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu8.02 < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu8.02 < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9 %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu9.00 < %s | FileCheck -check-prefixes=GCN,CIPLUS,GFX9 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu9.00 < %s | FileCheck -check-prefixes=GCN,CIPLUS,GFX9 %s
 
 ; GCN-LABEL: {{^}}ds_consume_lds:
 ; GCN: s_load_dword [[PTR:s[0-9]+]]
