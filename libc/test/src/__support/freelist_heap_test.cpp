@@ -62,14 +62,14 @@ constexpr FreeListSecrets get_test_secrets() {
     void SetUp() override {                                                    \
       freelist_heap =                                                          \
           new (&fake_global_buffer) FreeListHeapBuffer<BufferSize>;            \
-      freelist_heap->init(get_test_secrets());                                  \
+      freelist_heap->init(get_test_secrets());                                 \
     }                                                                          \
     void RunTest(FreeListHeap &allocator, [[maybe_unused]] size_t N);          \
   };                                                                           \
   TEST_F(LlvmLibcFreeListHeapTest##TestCase, TestCase) {                       \
     byte buf[BufferSize] = {byte(0)};                                          \
     FreeListHeap allocator(buf);                                               \
-    allocator.init(get_test_secrets());                                         \
+    allocator.init(get_test_secrets());                                        \
     RunTest(allocator, BufferSize);                                            \
     RunTest(*freelist_heap, freelist_heap->region().size());                   \
   }                                                                            \

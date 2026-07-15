@@ -91,7 +91,8 @@ TEST(LlvmLibcFreeList, HardenedCorruptNext) {
 
   EXPECT_DEATH(
       [&] {
-        list.pop(get_test_secrets()); // Should trap due to corrupted block2->next
+        list.pop(
+            get_test_secrets()); // Should trap due to corrupted block2->next
       },
       WITH_SIGNAL(-1));
 }
@@ -119,7 +120,8 @@ TEST(LlvmLibcFreeList, HardenedCorruptPrev) {
 
   EXPECT_DEATH(
       [&] {
-        list.pop(get_test_secrets()); // Should trap due to corrupted block2->prev
+        list.pop(
+            get_test_secrets()); // Should trap due to corrupted block2->prev
       },
       WITH_SIGNAL(-1));
 }
