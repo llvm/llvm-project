@@ -5,7 +5,6 @@
 
 # RUN: rm -f %t.xml
 # RUN: not %{lit} -v %{inputs}/shtest-format --xunit-xml-output %t.xml > %t.out
-# RUN: cp %t.xml /tmp/test
 # RUN: FileCheck -DERROR_MSG=%errc_ENOENT < %t.out %s
 # RUN: FileCheck --check-prefix=XUNIT < %t.xml %s
 
