@@ -2168,6 +2168,10 @@ void Clang::AddSystemZTargetArgs(const ArgList &Args,
     CmdArgs.push_back("-mfloat-abi");
     CmdArgs.push_back("soft");
   }
+
+  if (Triple.isOSzOS())
+    Args.AddLastArg(CmdArgs, options::OPT_mzos_ppa1_name,
+                    options::OPT_mno_zos_ppa1_name);
 }
 
 void Clang::AddX86TargetArgs(const ArgList &Args,
@@ -3978,6 +3982,10 @@ static void RenderHLSLOptions(const Driver &D, const ArgList &Args,
   }
   if (Arg *A = Args.getLastArg(options::OPT_dxc_Zsb))
     A->claim(); // /Zsb is the default behavior, no need to forward it to llc.
+  if (Args.hasArg(options::OPT_dxc_source_in_debug_module)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("--dx-source-in-debug-module");
+  }
 }
 
 static void RenderOpenACCOptions(const Driver &D, const ArgList &Args,
@@ -8073,6 +8081,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT__ssaf_extract_summaries);
   Args.AddLastArg(CmdArgs, options::OPT__ssaf_tu_summary_file);
   Args.AddLastArg(CmdArgs, options::OPT__ssaf_compilation_unit_id);
+  Args.AddLastArg(CmdArgs, options::OPT__ssaf_include_local_entities);
 
   // Handle serialized diagnostics.
   if (Arg *A = Args.getLastArg(options::OPT__serialize_diags)) {
