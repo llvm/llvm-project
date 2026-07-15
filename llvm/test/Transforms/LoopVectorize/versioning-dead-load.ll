@@ -17,9 +17,9 @@ define void @f(ptr noalias %p, ptr noalias %q, ptr noalias %dst, i64 %stride) {
 ; VF4UF1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF4UF1-NEXT:    [[TMP0:%.*]] = shl nuw nsw i64 [[INDEX]], 3
 ; VF4UF1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[TMP0]]
-; VF4UF1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP1]], i64 0
-; VF4UF1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x ptr> [[BROADCAST_SPLATINSERT]], <4 x ptr> poison, <4 x i32> zeroinitializer
-; VF4UF1-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[BROADCAST_SPLAT]], <4 x i1> splat (i1 true), <4 x i32> poison)
+; VF4UF1-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP1]], align 4
+; VF4UF1-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; VF4UF1-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; VF4UF1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i8], ptr [[Q]], i64 [[INDEX]]
 ; VF4UF1-NEXT:    store <4 x i32> [[WIDE_MASKED_GATHER]], ptr [[TMP2]], align 4
 ; VF4UF1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[DST]], i64 [[INDEX]]
@@ -133,13 +133,13 @@ define void @f(ptr noalias %p, ptr noalias %q, ptr noalias %dst, i64 %stride) {
 ; VF2UF2-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[INDEX]], 3
 ; VF2UF2-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP0]], 3
 ; VF2UF2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[TMP1]]
-; VF2UF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP3]], i64 0
-; VF2UF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x ptr> [[BROADCAST_SPLATINSERT]], <2 x ptr> poison, <2 x i32> zeroinitializer
 ; VF2UF2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[TMP2]]
-; VF2UF2-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP4]], i64 0
-; VF2UF2-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x ptr> [[BROADCAST_SPLATINSERT1]], <2 x ptr> poison, <2 x i32> zeroinitializer
-; VF2UF2-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> align 4 [[BROADCAST_SPLAT]], <2 x i1> splat (i1 true), <2 x i32> poison)
-; VF2UF2-NEXT:    [[WIDE_MASKED_GATHER3:%.*]] = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> align 4 [[BROADCAST_SPLAT2]], <2 x i1> splat (i1 true), <2 x i32> poison)
+; VF2UF2-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
+; VF2UF2-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = shufflevector <4 x i32> [[WIDE_VEC]], <4 x i32> poison, <2 x i32> <i32 0, i32 2>
+; VF2UF2-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <4 x i32> [[WIDE_VEC]], <4 x i32> poison, <2 x i32> <i32 1, i32 3>
+; VF2UF2-NEXT:    [[WIDE_VEC2:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
+; VF2UF2-NEXT:    [[WIDE_MASKED_GATHER3:%.*]] = shufflevector <4 x i32> [[WIDE_VEC2]], <4 x i32> poison, <2 x i32> <i32 0, i32 2>
+; VF2UF2-NEXT:    [[STRIDED_VEC4:%.*]] = shufflevector <4 x i32> [[WIDE_VEC2]], <4 x i32> poison, <2 x i32> <i32 1, i32 3>
 ; VF2UF2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [4 x i8], ptr [[Q]], i64 [[INDEX]]
 ; VF2UF2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i64 2
 ; VF2UF2-NEXT:    store <2 x i32> [[WIDE_MASKED_GATHER]], ptr [[TMP5]], align 4

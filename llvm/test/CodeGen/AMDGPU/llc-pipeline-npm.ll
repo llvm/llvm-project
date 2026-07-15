@@ -103,7 +103,6 @@
 ; GCN-O0-NEXT:       machine-sanmd
 ; GCN-O0-NEXT:       amdgpu-preload-kern-arg-prolog
 ; GCN-O0-NEXT:       stack-frame-layout
-; GCN-O0-NEXT:       verify
 ; GCN-O0-NEXT:       amdgpu-asm-printer
 ; GCN-O0-NEXT:     free-machine-function 
 ; GCN-O0-NEXT: amdgpu-asm-printer-end
@@ -292,7 +291,6 @@
 ; GCN-O2-NEXT:       machine-sanmd
 ; GCN-O2-NEXT:       amdgpu-preload-kern-arg-prolog
 ; GCN-O2-NEXT:       stack-frame-layout
-; GCN-O2-NEXT:       verify
 ; GCN-O2-NEXT:       amdgpu-asm-printer
 ; GCN-O2-NEXT:     free-machine-function
 ; GCN-O2-NEXT: amdgpu-asm-printer-end
@@ -481,7 +479,6 @@
 ; GCN-O3-NEXT:       machine-sanmd
 ; GCN-O3-NEXT:       amdgpu-preload-kern-arg-prolog
 ; GCN-O3-NEXT:       stack-frame-layout
-; GCN-O3-NEXT:       verify
 ; GCN-O3-NEXT:       amdgpu-asm-printer
 ; GCN-O3-NEXT:     free-machine-function
 ; GCN-O3-NEXT: amdgpu-asm-printer-end

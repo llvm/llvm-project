@@ -2350,12 +2350,12 @@ uint8x4_t test_prev_u8x4(uint8x4_t a) { return __riscv_prev_u8x4(a); }
 
 // CHECK-LABEL: test_prev_i16x2:
 // RV32:        ppairoe.h
-// RV64:        rev16
+// RV64:        ppairoe.h
 int16x2_t test_prev_i16x2(int16x2_t a) { return __riscv_prev_i16x2(a); }
 
 // CHECK-LABEL: test_prev_u16x2:
 // RV32:        ppairoe.h
-// RV64:        rev16
+// RV64:        ppairoe.h
 uint16x2_t test_prev_u16x2(uint16x2_t a) { return __riscv_prev_u16x2(a); }
 
 // CHECK-LABEL: test_prev_i8x8:
