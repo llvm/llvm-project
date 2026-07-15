@@ -389,3 +389,22 @@ define void @insert_store_dynamic_indices_may_alias(ptr %p, i16 %a, i16 %b, i32 
   store <8 x i16> %v2, ptr %p
   ret void
 }
+
+; counter-example
+define void @crash_counter_exam(ptr %p, i32 %x, i32 %arg) {
+; CHECK-LABEL: @crash_counter_exam(
+; CHECK-NEXT:    [[IDX:%.*]] = freeze i32 [[ARG:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX]], 4
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[P:%.*]], i32 0, i32 [[IDX]]
+; CHECK-NEXT:    store i32 [[X:%.*]], ptr [[TMP1]], align 4
+; CHECK-NEXT:    ret void
+;
+  %ld = load <4 x i32>, ptr %p, align 16
+  %idx = freeze i32 %arg
+  %cmp = icmp ult i32 %idx, 4
+  call void @llvm.assume(i1 %cmp)
+  %ins = insertelement <4 x i32> %ld, i32 %x, i32 %idx
+  store <4 x i32> %ins, ptr %p, align 16
+  ret void
+}
