@@ -357,11 +357,30 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(Triple::SubArchType SubArch) {
   }
 }
 
+unsigned AMDGPU::getTotalNumSGPRs(StringRef GPU) {
+  IsaVersion Version = getIsaVersion(GPU);
+  if (Version.Major >= 8)
+    return 800;
+  return 512;
+}
+
 unsigned AMDGPU::getTotalNumSGPRs(Triple::SubArchType SubArch) {
   IsaVersion Version = getIsaVersion(SubArch);
   if (Version.Major >= 8)
     return 800;
   return 512;
+}
+
+unsigned AMDGPU::getAddressableNumSGPRs(StringRef GPU) {
+  if (getArchAttrAMDGCN(parseArchAMDGCN(GPU)) & FEATURE_SGPR_INIT_BUG)
+    return FIXED_NUM_SGPRS_FOR_INIT_BUG;
+
+  IsaVersion Version = getIsaVersion(GPU);
+  if (Version.Major >= 10)
+    return 106;
+  if (Version.Major >= 8)
+    return 102;
+  return 104;
 }
 
 unsigned AMDGPU::getAddressableNumSGPRs(Triple::SubArchType SubArch) {
@@ -374,6 +393,15 @@ unsigned AMDGPU::getAddressableNumSGPRs(Triple::SubArchType SubArch) {
   if (Version.Major >= 8)
     return 102;
   return 104;
+}
+
+unsigned AMDGPU::getSGPRAllocGranule(StringRef GPU) {
+  IsaVersion Version = getIsaVersion(GPU);
+  if (Version.Major >= 10)
+    return getAddressableNumSGPRs(GPU);
+  if (Version.Major >= 8)
+    return 16;
+  return 8;
 }
 
 unsigned AMDGPU::getSGPRAllocGranule(Triple::SubArchType SubArch) {

@@ -1256,22 +1256,7 @@ unsigned getWavesPerWorkGroup(const MCSubtargetInfo &STI,
   return divideCeil(FlatWorkGroupSize, getWavefrontSize(STI));
 }
 
-unsigned getSGPRAllocGranule(const MCSubtargetInfo &STI) {
-  return AMDGPU::getSGPRAllocGranule(
-      AMDGPU::getSubArch(AMDGPU::parseArchAMDGCN(STI.getCPU())));
-}
-
 unsigned getSGPREncodingGranule(const MCSubtargetInfo &STI) { return 8; }
-
-unsigned getTotalNumSGPRs(const MCSubtargetInfo &STI) {
-  return AMDGPU::getTotalNumSGPRs(
-      AMDGPU::getSubArch(AMDGPU::parseArchAMDGCN(STI.getCPU())));
-}
-
-unsigned getAddressableNumSGPRs(const MCSubtargetInfo &STI) {
-  return AMDGPU::getAddressableNumSGPRs(
-      AMDGPU::getSubArch(AMDGPU::parseArchAMDGCN(STI.getCPU())));
-}
 
 // Per-wave SGPRs reserved for the trap handler when enabled.
 static unsigned getSGPRTrapHandlerReserve(const MCSubtargetInfo &STI) {
@@ -1303,26 +1288,26 @@ unsigned getMinNumSGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU) {
     return 0;
 
   unsigned MinNumSGPRs =
-      getSGPRBudgetPerWave(getTotalNumSGPRs(STI), WavesPerEU + 1,
+      getSGPRBudgetPerWave(getTotalNumSGPRs(STI.getCPU()), WavesPerEU + 1,
                            getSGPRTrapHandlerReserve(STI),
-                           getSGPRAllocGranule(STI)) +
+                           getSGPRAllocGranule(STI.getCPU())) +
       1;
-  return std::min(MinNumSGPRs, getAddressableNumSGPRs(STI));
+  return std::min(MinNumSGPRs, getAddressableNumSGPRs(STI.getCPU()));
 }
 
 unsigned getMaxNumSGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
                         bool Addressable) {
   assert(WavesPerEU != 0);
 
-  unsigned AddressableNumSGPRs = getAddressableNumSGPRs(STI);
+  unsigned AddressableNumSGPRs = getAddressableNumSGPRs(STI.getCPU());
   IsaVersion Version = getIsaVersion(STI.getCPU());
   if (Version.Major >= 10)
     return Addressable ? AddressableNumSGPRs : 108;
   if (Version.Major >= 8 && !Addressable)
     AddressableNumSGPRs = 112;
-  unsigned MaxNumSGPRs = getSGPRBudgetPerWave(getTotalNumSGPRs(STI), WavesPerEU,
-                                              getSGPRTrapHandlerReserve(STI),
-                                              getSGPRAllocGranule(STI));
+  unsigned MaxNumSGPRs = getSGPRBudgetPerWave(
+      getTotalNumSGPRs(STI.getCPU()), WavesPerEU,
+      getSGPRTrapHandlerReserve(STI), getSGPRAllocGranule(STI.getCPU()));
   return std::min(MaxNumSGPRs, AddressableNumSGPRs);
 }
 
@@ -1478,9 +1463,9 @@ unsigned getOccupancyWithNumSGPRs(const MCSubtargetInfo &STI, unsigned SGPRs) {
   if (!isSGPROccupancyLimited(STI))
     return MaxWaves;
 
-  return getOccupancyWithNumSGPRs(SGPRs, MaxWaves, getTotalNumSGPRs(STI),
-                                  getSGPRAllocGranule(STI),
-                                  getSGPRTrapHandlerReserve(STI));
+  return getOccupancyWithNumSGPRs(
+      SGPRs, MaxWaves, getTotalNumSGPRs(STI.getCPU()),
+      getSGPRAllocGranule(STI.getCPU()), getSGPRTrapHandlerReserve(STI));
 }
 
 unsigned getMinNumVGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,

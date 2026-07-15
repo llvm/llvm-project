@@ -450,8 +450,8 @@ const AMDGPUMCExpr *createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
   // Bake the per-function SGPR budget into the operands so the late-evaluated
   // MCExpr stays arithmetic. The trap reservation in particular is implicit on
   // amdhsa and lives on STM, not on the assembler's MCSubtargetInfo.
-  unsigned SGPRTotal = IsaInfo::getTotalNumSGPRs(STM);
-  unsigned SGPRGranule = IsaInfo::getSGPRAllocGranule(STM);
+  unsigned SGPRTotal = AMDGPU::getTotalNumSGPRs(STM.getCPU());
+  unsigned SGPRGranule = AMDGPU::getSGPRAllocGranule(STM.getCPU());
   unsigned SGPRTrapReserve = STM.hasTrapHandler() ? IsaInfo::TRAP_NUM_SGPRS : 0;
 
   auto CreateExpr = [&Ctx](unsigned Value) {
