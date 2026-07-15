@@ -183,10 +183,6 @@ bool ThreadPlan::IsUsuallyUnexplainedStopReason(lldb::StopReason reason) {
   }
 }
 
-bool ThreadPlan::IsYounger(const StackID &lhs, const StackID &rhs) const {
-  return StackID::IsYounger(lhs, rhs, m_process);
-}
-
 // ThreadPlanNull
 
 ThreadPlanNull::ThreadPlanNull(Thread &thread)

@@ -55,9 +55,10 @@ public:
   /// the heap.
   bool IsCFAOnStack(Process &process) const;
 
-  /// Determine if the first StackID is "younger" than the second.
-  static bool IsYounger(const StackID &lhs, const StackID &rhs,
-                        Process &process);
+  /// Returns true if this StackID corresponds to a frame younger (i.e. higher
+  /// on the call stack) than `other`, and false otherwise (including when the
+  /// frames are not comparable, in some cases where this can be detected).
+  bool IsYoungerThan(const StackID &other, Process &process) const;
 
 protected:
   friend class StackFrame;
@@ -95,7 +96,6 @@ protected:
 
 bool operator==(const StackID &lhs, const StackID &rhs);
 bool operator!=(const StackID &lhs, const StackID &rhs);
-
 } // namespace lldb_private
 
 #endif // LLDB_TARGET_STACKID_H
