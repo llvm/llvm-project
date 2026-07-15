@@ -91,6 +91,7 @@ static_library("LLVMWebAssemblyCodeGen") {
     "WebAssemblyCFGSort.cpp",
     "WebAssemblyCFGStackify.cpp",
     "WebAssemblyCleanCodeAfterTrap.cpp",
+    "WebAssemblyCoalesceFeaturesAndStripAtomics.cpp",
     "WebAssemblyDebugFixup.cpp",
     "WebAssemblyDebugValueManager.cpp",
     "WebAssemblyExceptionInfo.cpp",
