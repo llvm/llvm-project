@@ -93,6 +93,13 @@ void GlobalValue::assignGUID() {
                                     Type::getInt64Ty(getContext()), G))}));
 }
 
+void GlobalValue::reassignGUID() {
+  if (!getGUIDMetadata())
+    return;
+  eraseMetadata(LLVMContext::MD_unique_id);
+  assignGUID();
+}
+
 GlobalValue::GUID GlobalValue::getGUID() const {
   auto MaybeGUID = getGUIDIfAssigned();
   assert(MaybeGUID.has_value() &&
@@ -168,11 +175,13 @@ GlobalObject::~GlobalObject() {
   setComdat(nullptr);
 }
 
-bool GlobalValue::isInterposable() const {
+bool GlobalValue::isInterposable(bool CheckNoIPA) const {
+  if (CheckNoIPA && isNoipaFnDef())
+    return true;
   if (isInterposableLinkage(getLinkage()))
     return true;
-  return getParent() && getParent()->getSemanticInterposition() &&
-         !isDSOLocal();
+  return !isDSOLocal() && getParent() &&
+         getParent()->getSemanticInterposition();
 }
 
 bool GlobalValue::canBenefitFromLocalAlias() const {
@@ -389,6 +398,13 @@ bool GlobalValue::isNobuiltinFnDef() const {
   return F->hasFnAttribute(Attribute::NoBuiltin);
 }
 
+bool GlobalValue::isNoipaFnDef() const {
+  const Function *F = dyn_cast<Function>(this);
+  if (!F || F->isDeclaration())
+    return false;
+  return F->hasFnAttribute(Attribute::NoIPA);
+}
+
 bool GlobalValue::isDeclaration() const {
   // Globals are definitions if they have an initializer.
   if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(this))
@@ -452,11 +468,11 @@ bool GlobalObject::canIncreaseAlignment() const {
   return true;
 }
 
-bool GlobalObject::hasMetadataOtherThanDebugLoc() const {
+bool GlobalObject::hasMetadataOtherThanDebugLocAndGuid() const {
   SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
   getAllMetadata(MDs);
   for (const auto &V : MDs)
-    if (V.first != LLVMContext::MD_dbg)
+    if (V.first != LLVMContext::MD_dbg && V.first != LLVMContext::MD_unique_id)
       return true;
   return false;
 }

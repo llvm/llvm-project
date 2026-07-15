@@ -114,8 +114,20 @@ struct BFloat16 {
     return fputil::generic::div<bfloat16>(*this, other);
   }
 
-  LIBC_INLINE constexpr BFloat16 &operator*=(const BFloat16 &other) {
+  LIBC_INLINE constexpr BFloat16 &operator*=(BFloat16 other) {
     *this = *this * other;
+    return *this;
+  }
+  LIBC_INLINE constexpr BFloat16 &operator+=(BFloat16 other) {
+    *this = *this + other;
+    return *this;
+  }
+  LIBC_INLINE constexpr BFloat16 &operator-=(BFloat16 other) {
+    *this = *this - other;
+    return *this;
+  }
+  LIBC_INLINE constexpr BFloat16 &operator/=(BFloat16 other) {
+    *this = *this / other;
     return *this;
   }
 }; // struct BFloat16

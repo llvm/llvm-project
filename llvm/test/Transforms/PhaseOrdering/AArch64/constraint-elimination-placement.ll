@@ -6,7 +6,7 @@ target triple = "arm64-apple-macosx"
 
 define i1 @test_order_1(ptr %this, ptr noalias %other, i1 %tobool9.not, i32 %call) {
 ; CHECK-LABEL: define noundef i1 @test_order_1(
-; CHECK-SAME: ptr writeonly captures(none) [[THIS:%.*]], ptr noalias [[OTHER:%.*]], i1 [[TOBOOL9_NOT:%.*]], i32 [[CALL:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr nofree writeonly captures(none) [[THIS:%.*]], ptr noalias nofree captures(address) [[OTHER:%.*]], i1 [[TOBOOL9_NOT:%.*]], i32 [[CALL:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[TOBOOL9_NOT]], label [[EXIT:%.*]], label [[FOR_COND_PREHEADER:%.*]]
 ; CHECK:       for.cond.preheader:
@@ -94,20 +94,21 @@ declare i64 @strlen(ptr)
 
 define void @test2(ptr %this) #0 {
 ; CHECK-LABEL: define void @test2(
-; CHECK-SAME: ptr writeonly captures(none) [[THIS:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: ptr nofree writeonly captures(none) [[THIS:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL1_I_I:%.*]] = tail call i1 @test2_fn4(i8 undef)
+; CHECK-NEXT:    br i1 [[CALL1_I_I]], label [[COND_TRUE_I_I:%.*]], label [[COMMON_RET:%.*]]
+; CHECK:       cond.true.i.i:
 ; CHECK-NEXT:    [[CALL2_I_I:%.*]] = load i64, ptr inttoptr (i64 8 to ptr), align 8
 ; CHECK-NEXT:    [[COND38:%.*]] = icmp eq i64 [[CALL2_I_I]], 13
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CALL1_I_I]], i1 [[COND38]], i1 false
-; CHECK-NEXT:    br i1 [[COND]], label [[TEST2_FN2_EXIT12:%.*]], label [[COMMON_RET:%.*]]
-; CHECK:       test2_fn2.exit12:
+; CHECK-NEXT:    br i1 [[COND38]], label [[TEST2_FN2_EXIT14:%.*]], label [[COMMON_RET]]
+; CHECK:       test2_fn2.exit14:
 ; CHECK-NEXT:    [[CALL8_I_I8:%.*]] = tail call fastcc noundef i32 @test2_fn6()
 ; CHECK-NEXT:    [[CMP4_I11:%.*]] = icmp eq i32 [[CALL8_I_I8]], 0
 ; CHECK-NEXT:    br i1 [[CMP4_I11]], label [[TEST2_FN2_EXIT24:%.*]], label [[COMMON_RET]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
-; CHECK:       test2_fn2.exit24:
+; CHECK:       test2_fn2.exit28:
 ; CHECK-NEXT:    store i8 0, ptr [[THIS]], align 4
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
@@ -132,12 +133,16 @@ if.else21:                                        ; preds = %entry
 
 define i1 @test2_fn2(ptr %__rhs) #0 {
 ; CHECK-LABEL: define noundef i1 @test2_fn2(
-; CHECK-SAME: ptr readonly captures(none) [[__RHS:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
+; CHECK-SAME: ptr nofree readonly captures(none) [[__RHS:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[__RHS]])
 ; CHECK-NEXT:    [[CALL1_I:%.*]] = tail call i1 @test2_fn4(i8 undef)
+; CHECK-NEXT:    br i1 [[CALL1_I]], label [[COND_TRUE_I:%.*]], label [[ENTRY:%.*]]
+; CHECK:       cond.true.i:
 ; CHECK-NEXT:    [[CALL2_I:%.*]] = load i64, ptr inttoptr (i64 8 to ptr), align 8
-; CHECK-NEXT:    [[COND_I:%.*]] = select i1 [[CALL1_I]], i64 [[CALL2_I]], i64 0
+; CHECK-NEXT:    br label [[ENTRY]]
+; CHECK:       test2_fn3.exit:
+; CHECK-NEXT:    [[COND_I:%.*]] = phi i64 [ [[CALL2_I]], [[COND_TRUE_I]] ], [ 0, [[ENTRY1:%.*]] ]
 ; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp eq i64 [[CALL]], [[COND_I]]
 ; CHECK-NEXT:    br i1 [[CMP2_NOT]], label [[IF_END:%.*]], label [[CLEANUP:%.*]]
 ; CHECK:       if.end:
@@ -145,7 +150,7 @@ define i1 @test2_fn2(ptr %__rhs) #0 {
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp eq i32 [[CALL8_I]], 0
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i1 [ [[CMP4]], [[IF_END]] ], [ false, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i1 [ [[CMP4]], [[IF_END]] ], [ false, [[ENTRY]] ]
 ; CHECK-NEXT:    ret i1 [[RETVAL_0]]
 ;
 entry:

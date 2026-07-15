@@ -265,6 +265,9 @@ unsigned RISCVInstrumentManager::getSchedClassID(
 
   std::optional<unsigned> VPOpcode;
   if (const auto *VXMO = RISCV::getVXMemOpInfo(Opcode)) {
+    if (!SEW)
+      return SchedClassID;
+
     // Calculate the expected index EMUL. For indexed operations,
     // the DataEEW and DataEMUL are equal to SEW and LMUL, respectively.
     unsigned IndexEMUL = ((1 << VXMO->Log2IdxEEW) * LMUL) / SEW;
@@ -297,6 +300,9 @@ unsigned RISCVInstrumentManager::getSchedClassID(
       }
     }
   } else if (opcodeHasEEWAndEMULInfo(Opcode)) {
+    if (!SEW)
+      return SchedClassID;
+
     RISCVVType::VLMUL VLMUL = static_cast<RISCVVType::VLMUL>(LMUL);
     auto [EEW, EMUL] = getEEWAndEMUL(Opcode, VLMUL, SEW);
     if (const auto *RVV =

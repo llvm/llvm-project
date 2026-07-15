@@ -106,6 +106,11 @@ bool destructsFirstArg(const FunctionDecl &FD);
 /// that can propagate the stored lambda's origins.
 bool isStdCallableWrapperType(const CXXRecordDecl *RD);
 
+/// Returns true for std reference-cast builtins (e.g., std::move). Their result
+/// refers to the same object as the argument, so all origins propagate from
+/// argument to result.
+bool isStdReferenceCast(const FunctionDecl *FD);
+
 } // namespace clang::lifetimes
 
 #endif // LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMEANNOTATIONS_H

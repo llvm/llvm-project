@@ -65,7 +65,7 @@ public:
     BitIntMaxAlign = 128;
   }
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     if (!isValidCPUName(Name))
       return false;
     CPU = Name;
@@ -106,8 +106,6 @@ public:
   bool hasBitIntType() const override { return true; }
 
   bool hasBFloat16Type() const override { return true; }
-
-  bool useFP16ConversionIntrinsics() const override { return false; }
 
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override;

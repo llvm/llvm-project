@@ -26,9 +26,12 @@
 #include "clang/AST/HLSLResource.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -45,6 +48,8 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <cstdint>
 #include <optional>
 
@@ -96,6 +101,14 @@ void addRootSignatureMD(llvm::dxbc::RootSignatureVersion RootSigVer,
   RootSignatureValMD->addOperand(MDVals);
 }
 
+static void copyGlobalResource(CodeGenFunction &CGF, const VarDecl *ResourceVD,
+                               AggValueSlot &DestSlot) {
+  GlobalVariable *ResGV =
+      cast<GlobalVariable>(CGF.CGM.GetAddrOfGlobalVar(ResourceVD));
+  assert(ResGV && "expected valid global variable");
+  CGF.Builder.CreateStore(ResGV, DestSlot.getAddress());
+}
+
 // Given a MemberExpr of a resource or resource array type, find the parent
 // VarDecl of the struct or class instance that contains this resource and
 // build the full resource name based on the member access path.
@@ -104,12 +117,16 @@ void addRootSignatureMD(llvm::dxbc::RootSignatureVersion RootSigVer,
 // this function will find the VarDecl of "myStructArray" and use the
 // EmbeddedResourceNameBuilder to build the resource name
 // "myStructArray.0.memberA".
+//
+// This also works for a record type expression that has some embedded
+// resources. It finds the parent VarDecl of that record and builds a partial
+// name which is the prefix of the resource globals associated with the
+// declaration.
 static const VarDecl *findStructResourceParentDeclAndBuildName(
-    const MemberExpr *ME, EmbeddedResourceNameBuilder &NameBuilder) {
+    const Expr *E, EmbeddedResourceNameBuilder &NameBuilder) {
 
   SmallVector<const Expr *> WorkList;
   const VarDecl *VD = nullptr;
-  const Expr *E = ME;
 
   for (;;) {
     if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
@@ -189,11 +206,107 @@ findAssociatedResourceDeclForStruct(ASTContext &AST, const MemberExpr *ME) {
   return nullptr;
 }
 
+void addSourceInfo(CodeGenModule &CGM, llvm::Module &M) {
+  auto &SM = CGM.getContext().getSourceManager();
+  auto &Macros = CGM.getPreprocessorOpts().Macros;
+  auto &CodeGenOpts = CGM.getCodeGenOpts();
+  auto &Ctx = M.getContext();
+
+  // Names and content of shader source code files.
+  llvm::NamedMDNode *DXContents =
+      M.getOrInsertNamedMetadata("dx.source.contents");
+  auto addFile = [&](const std::pair<StringRef, StringRef> &NameContent) {
+    llvm::MDTuple *FileInfo =
+        llvm::MDNode::get(Ctx, {llvm::MDString::get(Ctx, NameContent.first),
+                                llvm::MDString::get(Ctx, NameContent.second)});
+    DXContents->addOperand(FileInfo);
+  };
+
+  bool Invalid = false;
+  const SrcMgr::SLocEntry *MainLocEntry =
+      &SM.getSLocEntry(SM.getMainFileID(), &Invalid);
+  assert(!Invalid && "Main file SLocEntry must not be invalid!");
+  const SrcMgr::ContentCache &MainCCEntry =
+      MainLocEntry->getFile().getContentCache();
+
+  SmallVector<std::pair<std::string, StringRef>> Files;
+  std::optional<SmallString<256>> MainFileName;
+  Files.reserve(SM.local_sloc_entry_size());
+  for (unsigned I : llvm::seq(SM.local_sloc_entry_size())) {
+    const SrcMgr::SLocEntry &LocEntry = SM.getLocalSLocEntry(I);
+    if (!LocEntry.isFile())
+      continue;
+
+    const SrcMgr::FileInfo &FInfo = LocEntry.getFile();
+    if (isSystem(FInfo.getFileCharacteristic()))
+      continue;
+
+    const SrcMgr::ContentCache &CCEntry = FInfo.getContentCache();
+    OptionalFileEntryRef FEntry = CCEntry.OrigEntry;
+    if (!FEntry)
+      continue;
+
+    llvm::SmallString<256> Path = FEntry->getName();
+    llvm::sys::path::native(Path);
+    std::optional<llvm::MemoryBufferRef> Buffer = CCEntry.getBufferOrNone(
+        SM.getDiagnostics(), SM.getFileManager(), SourceLocation());
+    if (!Buffer) {
+      SM.getDiagnostics().Report(diag::warn_hlsl_failed_to_embed_source)
+          << Path;
+      continue;
+    }
+
+    if (&MainCCEntry != &CCEntry) {
+      Files.emplace_back(Path, Buffer->getBuffer());
+    } else {
+      // Main file should be at first position.
+      addFile(std::make_pair(Path, Buffer->getBuffer()));
+      MainFileName.emplace(Path);
+    }
+  }
+  assert(MainFileName && "Main file not found.");
+
+  // Files other that main one should be sorted by name.
+  llvm::sort(Files);
+#ifndef NDEBUG
+  for (unsigned I = 1; I < Files.size(); ++I)
+    assert((Files[I - 1].first != Files[I].first) &&
+           "duplicate files in dx.source.contents");
+#endif
+  llvm::for_each(Files, addFile);
+
+  SmallVector<llvm::Metadata *> Defines;
+  Defines.reserve(Macros.size());
+  for (const auto &Macro : Macros) {
+    // Ignore undefs.
+    if (!Macro.second)
+      Defines.emplace_back(llvm::MDString::get(Ctx, Macro.first));
+  }
+  M.getOrInsertNamedMetadata("dx.source.defines")
+      ->addOperand(llvm::MDNode::get(Ctx, Defines));
+
+  if (!CodeGenOpts.MainFileName.empty())
+    llvm::sys::path::native(CodeGenOpts.MainFileName, *MainFileName);
+  M.getOrInsertNamedMetadata("dx.source.mainFileName")
+      ->addOperand(
+          llvm::MDNode::get(Ctx, llvm::MDString::get(Ctx, *MainFileName)));
+
+  SmallVector<llvm::Metadata *> Args;
+  Args.reserve(CodeGenOpts.HLSLParsedCommandLine.size());
+  if (!CodeGenOpts.HLSLParsedCommandLine.empty())
+    for (const auto &Arg : llvm::drop_begin(CodeGenOpts.HLSLParsedCommandLine))
+      Args.push_back(llvm::MDString::get(Ctx, Arg));
+  M.getOrInsertNamedMetadata("dx.source.args")
+      ->addOperand(llvm::MDNode::get(Ctx, Args));
+}
+
 // Find array variable declaration from DeclRef expression
 static const ValueDecl *getArrayDecl(ASTContext &AST, const Expr *E) {
   E = E->IgnoreImpCasts();
   if (const auto *DRE = dyn_cast_or_null<DeclRefExpr>(E))
     return DRE->getDecl();
+  if (auto *OVE = dyn_cast<OpaqueValueExpr>(E))
+    E = OVE->getSourceExpr()->IgnoreImpCasts();
   if (isa<MemberExpr>(E))
     return findAssociatedResourceDeclForStruct(AST, cast<MemberExpr>(E));
   return nullptr;
@@ -296,17 +409,17 @@ static void callResourceInitMethod(CodeGenFunction &CGF,
   CGF.EmitCall(FnInfo, Callee, ReturnValue, Args, nullptr);
 }
 
-// Initializes local resource array variable. For multi-dimensional arrays it
-// calls itself recursively to initialize its sub-arrays. The Index used in the
-// resource constructor calls will begin at StartIndex and will be incremented
-// for each array element. The last used resource Index is returned to the
-// caller. If the function returns std::nullopt, it indicates an error.
-static std::optional<llvm::Value *> initializeLocalResourceArray(
+// Initializes local resource array variable with global resource array
+// elements. For multi-dimensional arrays it calls itself recursively to
+// initialize its sub-arrays. The Index used in the resource constructor calls
+// will begin at StartIndex and will be incremented for each array element. The
+// last used resource Index is returned to the caller. If the function returns
+// std::nullopt, it indicates an error.
+static std::optional<llvm::Value *> initializeResourceArrayFromGlobal(
     CodeGenFunction &CGF, CXXRecordDecl *ResourceDecl,
     const ConstantArrayType *ArrayTy, AggValueSlot &ValueSlot,
     llvm::Value *Range, llvm::Value *StartIndex, StringRef ResourceName,
-    ResourceBindingAttrs &Binding, ArrayRef<llvm::Value *> PrevGEPIndices,
-    SourceLocation ArraySubsExprLoc) {
+    ResourceBindingAttrs &Binding, ArrayRef<llvm::Value *> PrevGEPIndices) {
 
   ASTContext &AST = CGF.getContext();
   llvm::IntegerType *IntTy = CGF.CGM.IntTy;
@@ -329,9 +442,10 @@ static std::optional<llvm::Value *> initializeLocalResourceArray(
         Index = CGF.Builder.CreateAdd(Index, One);
         GEPIndices.back() = llvm::ConstantInt::get(IntTy, I);
       }
-      std::optional<llvm::Value *> MaybeIndex = initializeLocalResourceArray(
-          CGF, ResourceDecl, SubArrayTy, ValueSlot, Range, Index, ResourceName,
-          Binding, GEPIndices, ArraySubsExprLoc);
+      std::optional<llvm::Value *> MaybeIndex =
+          initializeResourceArrayFromGlobal(CGF, ResourceDecl, SubArrayTy,
+                                            ValueSlot, Range, Index,
+                                            ResourceName, Binding, GEPIndices);
       if (!MaybeIndex)
         return std::nullopt;
       Index = *MaybeIndex;
@@ -367,6 +481,266 @@ static std::optional<llvm::Value *> initializeLocalResourceArray(
   }
   return Index;
 }
+
+/// Utility for emitting copies following the HLSL buffer layout rules (ie,
+/// copying out of a cbuffer).
+class HLSLBufferCopyEmitter {
+  CodeGenFunction &CGF;
+  Address DstPtr;
+  Address SrcPtr;
+  llvm::Type *LayoutTy = nullptr;
+
+  SmallVector<llvm::Value *> CurStoreIndices;
+  SmallVector<llvm::Value *> CurLoadIndices;
+
+  using EmitResourceFnTy = llvm::function_ref<void(AggValueSlot &)>;
+
+  // Creates & returns either a structured.gep or a ptradd/gep depending on
+  // langopts.
+  llvm::Value *emitAccessChain(llvm::Type *BaseTy, llvm::Value *Base,
+                               ArrayRef<llvm::Value *> Indices) {
+    bool EmitLogical = CGF.getLangOpts().EmitLogicalPointer;
+    if (EmitLogical)
+      return CGF.Builder.CreateAccessChain(EmitLogical, BaseTy, Base, Indices);
+
+    llvm::SmallVector<llvm::Value *> GEPIndices;
+    GEPIndices.reserve(Indices.size() + 1);
+    GEPIndices.push_back(llvm::ConstantInt::get(CGF.IntTy, 0));
+    GEPIndices.append(Indices.begin(), Indices.end());
+    return CGF.Builder.CreateAccessChain(EmitLogical, BaseTy, Base, GEPIndices);
+  }
+
+  bool isBufferLayoutArray(llvm::StructType *ST) {
+    // A buffer layout array is a struct with two elements: the padded array,
+    // and the last element. That is, is should look something like this:
+    //
+    //   { [%n x { %type, %padding }], %type }
+    //
+    if (!ST || ST->getNumElements() != 2)
+      return false;
+
+    auto *PaddedEltsTy = dyn_cast<llvm::ArrayType>(ST->getElementType(0));
+    if (!PaddedEltsTy)
+      return false;
+
+    auto *PaddedTy = dyn_cast<llvm::StructType>(PaddedEltsTy->getElementType());
+    if (!PaddedTy || PaddedTy->getNumElements() != 2)
+      return false;
+
+    if (!CGF.CGM.getTargetCodeGenInfo().isHLSLPadding(
+            PaddedTy->getElementType(1)))
+      return false;
+
+    llvm::Type *ElementTy = ST->getElementType(1);
+    if (PaddedTy->getElementType(0) != ElementTy)
+      return false;
+    return true;
+  }
+
+  // Returns true if the type is either a struct representing a resource record,
+  // or an array of structs that are resource records. This assumes a struct is
+  // a resource record if the first element is a target type (resource handle).
+  // This is the case for all target types used by HLSL except the padding type
+  // ("{dx|spirv.Padding"), but padding will never be the first element of a
+  // struct.
+  bool isResourceOrResourceArray(llvm::Type *Ty) {
+    while (auto *AT = dyn_cast<llvm::ArrayType>(Ty))
+      Ty = AT->getElementType();
+
+    auto *ST = dyn_cast<llvm::StructType>(Ty);
+    if (!ST || ST->getNumElements() < 1)
+      return false;
+
+    auto *TargetTy = dyn_cast<llvm::TargetExtType>(ST->getElementType(0));
+    return TargetTy != nullptr;
+  }
+
+  void emitResourceOrResourceArray(Value *Dst, llvm::Type *DstTy,
+                                   EmitResourceFnTy EmitResFn) {
+    CharUnits DstAlign =
+        CharUnits::fromQuantity(CGF.CGM.getDataLayout().getABITypeAlign(DstTy));
+    Address DstAddr(Dst, DstTy, DstAlign);
+    AggValueSlot Slot = AggValueSlot::forAddr(
+        DstAddr, Qualifiers(), AggValueSlot::IsDestructed_t(true),
+        AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsAliased_t(false),
+        AggValueSlot::DoesNotOverlap);
+
+    EmitResFn(Slot);
+  }
+
+  void emitBufferLayoutCopy(Value *Src, llvm::StructType *SrcTy, Value *Dst,
+                            llvm::ArrayType *DstTy,
+                            EmitResourceFnTy EmitResFn) {
+    // Those assumptions are checked by isBufferLayoutArray.
+    auto *SrcPaddedArrayTy = cast<llvm::ArrayType>(SrcTy->getElementType(0));
+    assert(SrcPaddedArrayTy->getNumElements() + 1 == DstTy->getNumElements());
+    assert(cast<llvm::StructType>(SrcPaddedArrayTy->getElementType())
+               ->getElementType(0) == SrcTy->getElementType(1));
+
+    auto *SrcDataTy = SrcTy->getElementType(1);
+    auto Zero = llvm::ConstantInt::get(CGF.IntTy, 0);
+
+    for (unsigned I = 0; I < SrcPaddedArrayTy->getNumElements(); ++I) {
+      auto Index = llvm::ConstantInt::get(CGF.IntTy, I);
+      auto *SrcElt = emitAccessChain(SrcTy, Src, {Zero, Index, Zero});
+      auto *DstElt = emitAccessChain(DstTy, Dst, {Index});
+      emitElementCopy(SrcElt, SrcDataTy, DstElt, DstTy->getElementType(),
+                      EmitResFn);
+    }
+
+    auto *SrcElt =
+        emitAccessChain(SrcTy, Src, {llvm::ConstantInt::get(CGF.IntTy, 1)});
+    auto *DstElt = emitAccessChain(
+        DstTy, Dst,
+        {llvm::ConstantInt::get(CGF.IntTy, DstTy->getNumElements() - 1)});
+    emitElementCopy(SrcElt, SrcDataTy, DstElt, DstTy->getElementType(),
+                    EmitResFn);
+  }
+
+  void emitCopy(Value *Src, llvm::StructType *SrcTy, Value *Dst,
+                llvm::Type *DstTy, EmitResourceFnTy EmitResFn) {
+    assert(!isResourceOrResourceArray(DstTy) &&
+           "direct access to resources or resource arrays should be handled "
+           "separately");
+
+    if (isBufferLayoutArray(SrcTy))
+      return emitBufferLayoutCopy(Src, SrcTy, Dst, cast<llvm::ArrayType>(DstTy),
+                                  EmitResFn);
+
+    unsigned SrcIndex = 0;
+    unsigned DstIndex = 0;
+
+    // DstTy layout is in default address space and can include resource types.
+    // SrcTy is in cbuffer layout where resources are filtered out, so the
+    // number of elements in SrcTy can be less than the number of elements in
+    // DstTy.
+    auto *DstST = cast<llvm::StructType>(DstTy);
+    while (DstIndex < DstST->getNumElements()) {
+      llvm::Type *DstEltTy = DstST->getElementType(DstIndex);
+      if (CGF.CGM.getTargetCodeGenInfo().isHLSLPadding(DstEltTy)) {
+        DstIndex += 1;
+        continue;
+      }
+      if (isResourceOrResourceArray(DstEltTy)) {
+        auto *DstElt = emitAccessChain(
+            DstTy, Dst, {llvm::ConstantInt::get(CGF.IntTy, DstIndex)});
+        emitResourceOrResourceArray(DstElt, DstEltTy, EmitResFn);
+        DstIndex += 1;
+        continue;
+      }
+
+      assert(SrcIndex < SrcTy->getNumElements());
+      llvm::Type *SrcEltTy = SrcTy->getElementType(SrcIndex);
+      if (CGF.CGM.getTargetCodeGenInfo().isHLSLPadding(SrcEltTy)) {
+        SrcIndex += 1;
+        continue;
+      }
+
+      auto *SrcElt = emitAccessChain(
+          SrcTy, Src, {llvm::ConstantInt::get(CGF.IntTy, SrcIndex)});
+      auto *DstElt = emitAccessChain(
+          DstTy, Dst, {llvm::ConstantInt::get(CGF.IntTy, DstIndex)});
+      emitElementCopy(SrcElt, SrcEltTy, DstElt, DstEltTy, EmitResFn);
+      DstIndex += 1;
+      SrcIndex += 1;
+    }
+  }
+
+  void emitCopy(Value *Src, llvm::ArrayType *SrcTy, Value *Dst,
+                llvm::Type *DstTy, EmitResourceFnTy EmitResFn) {
+    for (unsigned I = 0, E = SrcTy->getNumElements(); I < E; ++I) {
+      auto *SrcElt =
+          emitAccessChain(SrcTy, Src, {llvm::ConstantInt::get(CGF.IntTy, I)});
+      auto *DstElt =
+          emitAccessChain(DstTy, Dst, {llvm::ConstantInt::get(CGF.IntTy, I)});
+      emitElementCopy(SrcElt, SrcTy->getElementType(), DstElt,
+                      cast<llvm::ArrayType>(DstTy)->getElementType(),
+                      EmitResFn);
+    }
+  }
+
+  void emitElementCopy(Value *Src, llvm::Type *SrcTy, Value *Dst,
+                       llvm::Type *DstTy, EmitResourceFnTy EmitResFn) {
+    if (auto *AT = dyn_cast<llvm::ArrayType>(SrcTy))
+      return emitCopy(Src, AT, Dst, DstTy, EmitResFn);
+    if (auto *ST = dyn_cast<llvm::StructType>(SrcTy))
+      return emitCopy(Src, ST, Dst, DstTy, EmitResFn);
+
+    // When we have a scalar or vector element we can emit the copy.
+    CharUnits SrcAlign =
+        CharUnits::fromQuantity(CGF.CGM.getDataLayout().getABITypeAlign(SrcTy));
+    CharUnits DstAlign =
+        CharUnits::fromQuantity(CGF.CGM.getDataLayout().getABITypeAlign(DstTy));
+    Address SrcAddr(Src, SrcTy, SrcAlign);
+    Address DstAddr(Dst, DstTy, DstAlign);
+    llvm::Value *Load = CGF.Builder.CreateLoad(SrcAddr, "cbuf.load");
+    CGF.Builder.CreateStore(Load, DstAddr);
+  }
+
+public:
+  HLSLBufferCopyEmitter(CodeGenFunction &CGF, Address DstPtr, Address SrcPtr)
+      : CGF(CGF), DstPtr(DstPtr), SrcPtr(SrcPtr) {}
+
+  bool emitCopy(QualType CType, EmitResourceFnTy EmitResFn = nullptr) {
+    LayoutTy = HLSLBufferLayoutBuilder(CGF.CGM).layOutType(CType);
+
+    // TODO: We should be able to fall back to a regular memcpy if the layout
+    // type doesn't have any padding, but that runs into issues in the backend
+    // currently.
+    //
+    // See https://github.com/llvm/wg-hlsl/issues/351
+    emitElementCopy(SrcPtr.getBasePointer(), LayoutTy, DstPtr.getBasePointer(),
+                    DstPtr.getElementType(), EmitResFn);
+    return true;
+  }
+};
+
+// Represents a list resources associated with a global struct whose name
+// starts with the specified prefix.
+// The order of HLSLAssociatedResourceDeclAttr attributes is identical to the
+// order of the depth-first traversal of the corresponding fields in the struct.
+// The resources are always returned in that order, which is the same order
+// we need when a struct is copied element-by-element.
+class AssociatedResourcesList {
+  // Iterator pointers for the associated resource attributes that match the
+  // prefix. Begin = begin of the range of attributes that match the prefix End
+  // = end of the range of attributes that match the prefix Next = the current
+  // attribute in the iteration to be returned by getNextResource
+  specific_attr_iterator<HLSLAssociatedResourceDeclAttr> Begin, End, Next;
+
+public:
+  AssociatedResourcesList(const VarDecl *StructVD,
+                          StringRef ResourceNamePrefix) {
+    auto I = StructVD->specific_attr_begin<HLSLAssociatedResourceDeclAttr>();
+    auto E = StructVD->specific_attr_end<HLSLAssociatedResourceDeclAttr>();
+
+    // Skip over associated resources that don't match the prefix.
+    while (I != E &&
+           !I->getResDecl()->getName().starts_with(ResourceNamePrefix))
+      ++I;
+    assert(I != E && "expected associated resource not found");
+    Begin = End = I;
+
+    // Scan over associated resources that do match the prefix to find the end
+    // of the range.
+    while (I != E && ((HLSLAssociatedResourceDeclAttr *)*I)
+                         ->getResDecl()
+                         ->getName()
+                         .starts_with(ResourceNamePrefix))
+      End = ++I;
+
+    Next = Begin;
+  }
+
+  const VarDecl *getNextResource() {
+    if (Next == End)
+      return nullptr;
+
+    const VarDecl *Res = Next->getResDecl();
+    ++Next;
+    return Res;
+  }
+};
 
 } // namespace
 
@@ -527,11 +901,18 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
   llvm::Type *LayoutTy = convertHLSLSpecificType(ResHandleTy, OffsetInfo);
   llvm::GlobalVariable *BufGV = new GlobalVariable(
       LayoutTy, /*isConstant*/ false,
-      GlobalValue::LinkageTypes::ExternalLinkage, PoisonValue::get(LayoutTy),
+      GlobalValue::LinkageTypes::InternalLinkage, PoisonValue::get(LayoutTy),
       llvm::formatv("{0}{1}", BufDecl->getName(),
                     BufDecl->isCBuffer() ? ".cb" : ".tb"),
       GlobalValue::NotThreadLocal);
-  CGM.getModule().insertGlobalVariable(BufGV);
+
+  llvm::Module &M = CGM.getModule();
+  M.insertGlobalVariable(BufGV);
+
+  // Add the global variable to the compiler used list so it does not
+  // get optimized away by GlobalOptPass before it reaches
+  // {DXIL|SPIRV}CBufferAccess pass.
+  llvm::appendToCompilerUsed(M, {BufGV});
 
   // Add globals for constant buffer elements and create metadata nodes
   emitBufferGlobalsAndMetadata(BufDecl, BufGV, OffsetInfo);
@@ -576,6 +957,10 @@ void CGHLSLRuntime::finishCodeGen() {
   Triple T(M.getTargetTriple());
   if (T.getArch() == Triple::ArchType::dxil)
     addDxilValVersion(TargetOpts.DxilValidatorVersion, M);
+  if (!CodeGenOpts.DisableDXSourceMetadata &&
+      CodeGenOpts.getDebugInfo() >=
+          llvm::codegenoptions::DebugInfoKind::DebugInfoConstructor)
+    addSourceInfo(CGM, M);
   if (CodeGenOpts.ResMayAlias)
     M.setModuleFlag(llvm::Module::ModFlagBehavior::Error, "dx.resmayalias", 1);
   if (CodeGenOpts.AllResourcesBound)
@@ -591,6 +976,21 @@ void CGHLSLRuntime::finishCodeGen() {
   if (LangOpts.NativeHalfType)
     M.setModuleFlag(llvm::Module::ModFlagBehavior::Error, "dx.nativelowprec",
                     1);
+
+  if (LangOpts.HLSLSpvPreserveInterface && T.isSPIRV()) {
+    // Runs before optimization. Keeps Input/Output globals from GlobalDCE.
+    const ASTContext &Ctx = CGM.getContext();
+    unsigned InputAS = Ctx.getTargetAddressSpace(LangAS::hlsl_input);
+    unsigned OutputAS = Ctx.getTargetAddressSpace(LangAS::hlsl_output);
+    SmallVector<GlobalValue *, 8> InterfaceVars;
+    for (GlobalVariable &GV : M.globals()) {
+      unsigned AS = GV.getAddressSpace();
+      if (AS == InputAS || AS == OutputAS)
+        InterfaceVars.push_back(&GV);
+    }
+    if (!InterfaceVars.empty())
+      appendToCompilerUsed(M, InterfaceVars);
+  }
 
   generateGlobalCtorDtorCalls();
 }
@@ -1096,8 +1496,14 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
             PD->getAttr<HLSLParamModifierAttr>()) {
       llvm_unreachable("Not handled yet");
     } else {
-      llvm::Type *ParamType =
-          Param.hasByValAttr() ? Param.getParamByValType() : Param.getType();
+      llvm::Type *ParamType = nullptr;
+      if (Param.hasByValAttr())
+        ParamType = Param.getParamByValType();
+      else if (PD->getType()->isRecordType())
+        ParamType = CGM.getTypes().ConvertType(PD->getType());
+      else
+        ParamType = Param.getType();
+
       auto AttrBegin = PD->specific_attr_begin<HLSLAppliedSemanticAttr>();
       auto AttrEnd = PD->specific_attr_end<HLSLAppliedSemanticAttr>();
       auto Result =
@@ -1105,12 +1511,11 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
       SemanticValue = Result.first;
       if (!SemanticValue)
         return;
-      if (Param.hasByValAttr()) {
+      if (Param.hasByValAttr() || PD->getType()->isRecordType()) {
         llvm::Value *Var =
             CGM.getLangOpts().EmitLogicalPointer
-                ? cast<Instruction>(
-                      B.CreateStructuredAlloca(Param.getParamByValType()))
-                : cast<Instruction>(B.CreateAlloca(Param.getParamByValType()));
+                ? cast<Instruction>(B.CreateStructuredAlloca(ParamType))
+                : cast<Instruction>(B.CreateAlloca(ParamType));
         B.CreateStore(SemanticValue, Var);
         SemanticValue = Var;
       }
@@ -1227,10 +1632,10 @@ static void initializeBuffer(CodeGenModule &CGM, llvm::GlobalVariable *GV,
                              ArrayRef<llvm::Value *> Args) {
 
   LLVMContext &Ctx = CGM.getLLVMContext();
-  llvm::Function *InitResFunc = llvm::Function::Create(
-      llvm::FunctionType::get(CGM.VoidTy, false),
-      llvm::GlobalValue::InternalLinkage,
-      ("_init_buffer_" + GV->getName()).str(), CGM.getModule());
+  llvm::Function *InitResFunc =
+      llvm::Function::Create(llvm::FunctionType::get(CGM.VoidTy, false),
+                             llvm::GlobalValue::InternalLinkage,
+                             "_init_buffer_" + GV->getName(), CGM.getModule());
   InitResFunc->addFnAttr(llvm::Attribute::AlwaysInline);
 
   llvm::BasicBlock *EntryBB =
@@ -1443,30 +1848,23 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
     // needs to be initialized.
     const ConstantArrayType *ArrayTy =
         cast<ConstantArrayType>(ResultTy.getTypePtr());
-    std::optional<llvm::Value *> EndIndex = initializeLocalResourceArray(
+    std::optional<llvm::Value *> EndIndex = initializeResourceArrayFromGlobal(
         CGF, ResourceTy->getAsCXXRecordDecl(), ArrayTy, ValueSlot, Range, Index,
-        ArrayDecl->getName(), Binding, {llvm::ConstantInt::get(CGM.IntTy, 0)},
-        ArraySubsExpr->getExprLoc());
+        ArrayDecl->getName(), Binding, {llvm::ConstantInt::get(CGM.IntTy, 0)});
     if (!EndIndex)
       return std::nullopt;
   }
   return CGF.MakeAddrLValue(TmpVar, ResultTy, AlignmentSource::Decl);
 }
 
-// If RHSExpr is a global resource array, initialize all of its resources and
-// set them into LHS. Returns false if no copy has been performed and the
-// array copy should be handled by Clang codegen.
-bool CGHLSLRuntime::emitResourceArrayCopy(LValue &LHS, Expr *RHSExpr,
-                                          CodeGenFunction &CGF) {
-  QualType ResultTy = RHSExpr->getType();
-  assert(ResultTy->isHLSLResourceRecordArray() && "expected resource array");
-
-  // Let Clang codegen handle local and static resource array copies.
-  const VarDecl *ArrayDecl =
-      dyn_cast_or_null<VarDecl>(getArrayDecl(CGF.CGM.getContext(), RHSExpr));
-  if (!ArrayDecl || !ArrayDecl->hasGlobalStorage() ||
-      ArrayDecl->getStorageClass() == SC_Static)
-    return false;
+// Initialize all resources of a global resource array into provided slot.
+bool CGHLSLRuntime::initializeGlobalResourceArray(CodeGenFunction &CGF,
+                                                  const VarDecl *ArrayDecl,
+                                                  AggValueSlot &DestSlot) {
+  assert(ArrayDecl->getType()->isHLSLResourceRecordArray() &&
+         ArrayDecl->hasGlobalStorage() &&
+         ArrayDecl->getStorageClass() != SC_Static &&
+         "expected global non-static resource array");
 
   // Find binding info for the resource array. For implicit binding
   // the HLSLResourceBindingAttr should have been added by SemaHLSL.
@@ -1476,29 +1874,64 @@ bool CGHLSLRuntime::emitResourceArrayCopy(LValue &LHS, Expr *RHSExpr,
 
   // Find the individual resource type.
   ASTContext &AST = ArrayDecl->getASTContext();
-  QualType ResTy = AST.getBaseElementType(ResultTy);
-  const auto *ResArrayTy = cast<ConstantArrayType>(ResultTy.getTypePtr());
-
-  // Use the provided LHS for the result.
-  AggValueSlot ValueSlot = AggValueSlot::forAddr(
-      LHS.getAddress(), Qualifiers(), AggValueSlot::IsDestructed_t(true),
-      AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsAliased_t(false),
-      AggValueSlot::DoesNotOverlap);
+  QualType ResTy = AST.getBaseElementType(ArrayDecl->getType());
+  const auto *ResArrayTy =
+      cast<ConstantArrayType>(ArrayDecl->getType().getTypePtr());
 
   // Create Value for index and total array size (= range size).
   int Size = getTotalArraySize(AST, ResArrayTy);
   llvm::Value *Zero = llvm::ConstantInt::get(CGM.IntTy, 0);
   llvm::Value *Range = llvm::ConstantInt::get(CGM.IntTy, Size);
 
-  // Initialize individual resources in the array into LHS.
-  std::optional<llvm::Value *> EndIndex = initializeLocalResourceArray(
-      CGF, ResTy->getAsCXXRecordDecl(), ResArrayTy, ValueSlot, Range, Zero,
-      ArrayDecl->getName(), Binding, {Zero}, RHSExpr->getExprLoc());
+  // Initialize individual resources in the array into DestSlot.
+  std::optional<llvm::Value *> EndIndex = initializeResourceArrayFromGlobal(
+      CGF, ResTy->getAsCXXRecordDecl(), ResArrayTy, DestSlot, Range, Zero,
+      ArrayDecl->getName(), Binding, {Zero});
   return EndIndex.has_value();
 }
 
+// If the expression is a global resource array, initialize all of its resources
+// into Dest. Returns false if no initialization has been performed and the
+// array copy should be handled by the default codegen.
+bool CGHLSLRuntime::emitGlobalResourceArray(CodeGenFunction &CGF, const Expr *E,
+                                            AggValueSlot &DestSlot) {
+  assert(E->getType()->isHLSLResourceRecordArray() &&
+         "expected resource array");
+
+  // Find the array declaration for the expression. Fallback to the default
+  // handling if it's not a global resource array.
+  const VarDecl *ArrayDecl =
+      dyn_cast_or_null<VarDecl>(getArrayDecl(CGF.CGM.getContext(), E));
+  if (!ArrayDecl || !ArrayDecl->hasGlobalStorage() ||
+      ArrayDecl->getStorageClass() == SC_Static)
+    return false;
+
+  return initializeGlobalResourceArray(CGF, ArrayDecl, DestSlot);
+}
+
+// If the expression is a global resource array, create a temporary and
+// initialize all of its resources, and return it as an LValue. Returns nullopt
+// if no initialization has been performed and the handling should follow the
+// default path.
+std::optional<LValue>
+CGHLSLRuntime::emitGlobalResourceArrayAsLValue(CodeGenFunction &CGF,
+                                               const VarDecl *ArrayDecl) {
+  assert(ArrayDecl->getType()->isHLSLResourceRecordArray() &&
+         "expected resource array declaration");
+
+  if (!ArrayDecl->hasGlobalStorage() ||
+      ArrayDecl->getStorageClass() == SC_Static)
+    return std::nullopt;
+
+  AggValueSlot TmpArraySlot =
+      CGF.CreateAggTemp(ArrayDecl->getType(), "tmpResArray");
+  if (initializeGlobalResourceArray(CGF, ArrayDecl, TmpArraySlot))
+    return CGF.MakeAddrLValue(TmpArraySlot.getAddress(), ArrayDecl->getType(),
+                              AlignmentSource::Decl);
+  return std::nullopt;
+}
+
 RawAddress CGHLSLRuntime::createBufferMatrixTempAddress(const LValue &LV,
-                                                        SourceLocation Loc,
                                                         CodeGenFunction &CGF) {
 
   assert(LV.getType()->isConstantMatrixType() && "expected matrix type");
@@ -1514,7 +1947,7 @@ RawAddress CGHLSLRuntime::createBufferMatrixTempAddress(const LValue &LV,
 
   RawAddress DestAlloca =
       CGF.CreateMemTempWithoutCast(MatQualTy, "matrix.buf.copy");
-  emitBufferCopy(CGF, DestAlloca, SrcAddr, MatQualTy);
+  HLSLBufferCopyEmitter(CGF, DestAlloca, SrcAddr).emitCopy(MatQualTy);
   return DestAlloca;
 }
 
@@ -1588,17 +2021,14 @@ CGHLSLRuntime::emitResourceMemberExpr(CodeGenFunction &CGF,
           ME->getType()->isHLSLResourceRecordArray()) &&
          "expected resource member expression");
 
-  if (ME->getType()->isHLSLResourceRecordArray()) {
-    // FIXME: Handle member access of the whole array of resources
-    // (llvm/llvm-project#187087). Access to individual resource array elements
-    // is already handled in emitResourceArraySubscriptExpr.
-    return std::nullopt;
-  }
-
   const VarDecl *ResourceVD =
       findAssociatedResourceDeclForStruct(CGF.CGM.getContext(), ME);
   if (!ResourceVD)
     return std::nullopt;
+
+  // Handle member of resource array type.
+  if (ResourceVD->getType()->isHLSLResourceRecordArray())
+    return emitGlobalResourceArrayAsLValue(CGF, ResourceVD);
 
   GlobalVariable *ResGV =
       cast<GlobalVariable>(CGM.GetAddrOfGlobalVar(ResourceVD));
@@ -1612,173 +2042,57 @@ CGHLSLRuntime::emitResourceMemberExpr(CodeGenFunction &CGF,
   return LV;
 }
 
-namespace {
-/// Utility for emitting copies following the HLSL buffer layout rules (ie,
-/// copying out of a cbuffer).
-class HLSLBufferCopyEmitter {
-  CodeGenFunction &CGF;
-  Address DstPtr;
-  Address SrcPtr;
-  llvm::Type *LayoutTy = nullptr;
+bool CGHLSLRuntime::emitBufferCopy(CodeGenFunction &CGF, const Expr *E,
+                                   const LValue &SrcLV,
+                                   AggValueSlot &DestSlot) {
+  assert(E->getType().getAddressSpace() == LangAS::hlsl_constant &&
+         "expected expression in HLSL constant address space");
+  assert(!E->getType()->isHLSLResourceRecord() &&
+         !E->getType()->isHLSLResourceRecordArray() &&
+         "direct accesses to resource types should be handled separately");
 
-  SmallVector<llvm::Value *> CurStoreIndices;
-  SmallVector<llvm::Value *> CurLoadIndices;
+  if (DestSlot.isIgnored())
+    return false;
 
-  // Creates & returns either a structured.gep or a ptradd/gep depending on
-  // langopts.
-  llvm::Value *emitAccessChain(llvm::Type *BaseTy, llvm::Value *Base,
-                               ArrayRef<llvm::Value *> Indices) {
-    bool EmitLogical = CGF.getLangOpts().EmitLogicalPointer;
-    if (EmitLogical)
-      return CGF.Builder.CreateAccessChain(EmitLogical, BaseTy, Base, Indices);
+  QualType Ty = E->getType();
+  Address DstPtr = DestSlot.getAddress();
+  Address SrcPtr = SrcLV.getAddress();
 
-    llvm::SmallVector<llvm::Value *> GEPIndices;
-    GEPIndices.reserve(Indices.size() + 1);
-    GEPIndices.push_back(llvm::ConstantInt::get(CGF.IntTy, 0));
-    GEPIndices.append(Indices.begin(), Indices.end());
-    return CGF.Builder.CreateAccessChain(EmitLogical, BaseTy, Base, GEPIndices);
-  }
+  // If there are no intangible types, we don't need to lookup associated
+  // resources.
+  if (!Ty->isHLSLIntangibleType())
+    return HLSLBufferCopyEmitter(CGF, DstPtr, SrcPtr).emitCopy(Ty);
 
-  bool isBufferLayoutArray(llvm::StructType *ST) {
-    // A buffer layout array is a struct with two elements: the padded array,
-    // and the last element. That is, is should look something like this:
-    //
-    //   { [%n x { %type, %padding }], %type }
-    //
-    if (!ST || ST->getNumElements() != 2)
-      return false;
+  // Handle structs with intangible types by setting the resource fields
+  // of the destination struct with the resources associated with the global
+  // struct.
+  EmbeddedResourceNameBuilder NameBuilder;
+  const VarDecl *VD = findStructResourceParentDeclAndBuildName(E, NameBuilder);
+  AssociatedResourcesList AssociatedResources(VD, NameBuilder.getName());
 
-    auto *PaddedEltsTy = dyn_cast<llvm::ArrayType>(ST->getElementType(0));
-    if (!PaddedEltsTy)
-      return false;
+  // Callback to fill in the associated resource.
+  auto EmitResFn = [&](AggValueSlot &ResSlot) {
+    const VarDecl *ResDecl = AssociatedResources.getNextResource();
+    assert(ResDecl && "associated resource declaration not found");
 
-    auto *PaddedTy = dyn_cast<llvm::StructType>(PaddedEltsTy->getElementType());
-    if (!PaddedTy || PaddedTy->getNumElements() != 2)
-      return false;
+    // Check that the resource type of dest and src matches.
+    [[maybe_unused]] llvm::Type *DestType =
+        ResSlot.getAddress().getElementType();
+    [[maybe_unused]] llvm::Type *SrcConvertedType =
+        CGM.getTypes().ConvertTypeForMem(ResDecl->getType());
+    assert(DestType == SrcConvertedType && "resource slot type mismatch");
 
-    if (!CGF.CGM.getTargetCodeGenInfo().isHLSLPadding(
-            PaddedTy->getElementType(1)))
-      return false;
+    if (ResDecl->getType()->isHLSLResourceRecord())
+      copyGlobalResource(CGF, ResDecl, ResSlot);
+    else
+      initializeGlobalResourceArray(CGF, ResDecl, ResSlot);
+  };
 
-    llvm::Type *ElementTy = ST->getElementType(1);
-    if (PaddedTy->getElementType(0) != ElementTy)
-      return false;
-    return true;
-  }
-
-  void emitBufferLayoutCopy(Value *Src, llvm::StructType *SrcTy, Value *Dst,
-                            llvm::ArrayType *DstTy) {
-    // Those assumptions are checked by isBufferLayoutArray.
-    auto *SrcPaddedArrayTy = cast<llvm::ArrayType>(SrcTy->getElementType(0));
-    assert(SrcPaddedArrayTy->getNumElements() + 1 == DstTy->getNumElements());
-    assert(cast<llvm::StructType>(SrcPaddedArrayTy->getElementType())
-               ->getElementType(0) == SrcTy->getElementType(1));
-
-    auto *SrcDataTy = SrcTy->getElementType(1);
-    auto Zero = llvm::ConstantInt::get(CGF.IntTy, 0);
-
-    for (unsigned I = 0; I < SrcPaddedArrayTy->getNumElements(); ++I) {
-      auto Index = llvm::ConstantInt::get(CGF.IntTy, I);
-      auto *SrcElt = emitAccessChain(SrcTy, Src, {Zero, Index, Zero});
-      auto *DstElt = emitAccessChain(DstTy, Dst, {Index});
-      emitElementCopy(SrcElt, SrcDataTy, DstElt, DstTy->getElementType());
-    }
-
-    auto *SrcElt =
-        emitAccessChain(SrcTy, Src, {llvm::ConstantInt::get(CGF.IntTy, 1)});
-    auto *DstElt = emitAccessChain(
-        DstTy, Dst,
-        {llvm::ConstantInt::get(CGF.IntTy, DstTy->getNumElements() - 1)});
-    emitElementCopy(SrcElt, SrcDataTy, DstElt, DstTy->getElementType());
-  }
-
-  void emitCopy(Value *Src, llvm::StructType *SrcTy, Value *Dst,
-                llvm::Type *DstTy) {
-    if (isBufferLayoutArray(SrcTy))
-      return emitBufferLayoutCopy(Src, SrcTy, Dst,
-                                  cast<llvm::ArrayType>(DstTy));
-
-    unsigned SrcIndex = 0;
-    unsigned DstIndex = 0;
-
-    auto *DstST = cast<llvm::StructType>(DstTy);
-    while (SrcIndex < SrcTy->getNumElements() &&
-           DstIndex < DstST->getNumElements()) {
-      if (CGF.CGM.getTargetCodeGenInfo().isHLSLPadding(
-              SrcTy->getElementType(SrcIndex))) {
-        SrcIndex += 1;
-        continue;
-      }
-
-      if (CGF.CGM.getTargetCodeGenInfo().isHLSLPadding(
-              DstST->getElementType(DstIndex))) {
-        DstIndex += 1;
-        continue;
-      }
-
-      auto *SrcElt = emitAccessChain(
-          SrcTy, Src, {llvm::ConstantInt::get(CGF.IntTy, SrcIndex)});
-      auto *DstElt = emitAccessChain(
-          DstTy, Dst, {llvm::ConstantInt::get(CGF.IntTy, DstIndex)});
-      emitElementCopy(SrcElt, SrcTy->getElementType(SrcIndex), DstElt,
-                      DstST->getElementType(DstIndex));
-      DstIndex += 1;
-      SrcIndex += 1;
-    }
-  }
-
-  void emitCopy(Value *Src, llvm::ArrayType *SrcTy, Value *Dst,
-                llvm::Type *DstTy) {
-    for (unsigned I = 0, E = SrcTy->getNumElements(); I < E; ++I) {
-      auto *SrcElt =
-          emitAccessChain(SrcTy, Src, {llvm::ConstantInt::get(CGF.IntTy, I)});
-      auto *DstElt =
-          emitAccessChain(DstTy, Dst, {llvm::ConstantInt::get(CGF.IntTy, I)});
-      emitElementCopy(SrcElt, SrcTy->getElementType(), DstElt,
-                      cast<llvm::ArrayType>(DstTy)->getElementType());
-    }
-  }
-
-  void emitElementCopy(Value *Src, llvm::Type *SrcTy, Value *Dst,
-                       llvm::Type *DstTy) {
-    if (auto *AT = dyn_cast<llvm::ArrayType>(SrcTy))
-      return emitCopy(Src, AT, Dst, DstTy);
-    if (auto *ST = dyn_cast<llvm::StructType>(SrcTy))
-      return emitCopy(Src, ST, Dst, DstTy);
-
-    // When we have a scalar or vector element we can emit the copy.
-    CharUnits SrcAlign =
-        CharUnits::fromQuantity(CGF.CGM.getDataLayout().getABITypeAlign(SrcTy));
-    CharUnits DstAlign =
-        CharUnits::fromQuantity(CGF.CGM.getDataLayout().getABITypeAlign(DstTy));
-    Address SrcAddr(Src, SrcTy, SrcAlign);
-    Address DstAddr(Dst, DstTy, DstAlign);
-    llvm::Value *Load = CGF.Builder.CreateLoad(SrcAddr, "cbuf.load");
-    CGF.Builder.CreateStore(Load, DstAddr);
-  }
-
-public:
-  HLSLBufferCopyEmitter(CodeGenFunction &CGF, Address DstPtr, Address SrcPtr)
-      : CGF(CGF), DstPtr(DstPtr), SrcPtr(SrcPtr) {}
-
-  bool emitCopy(QualType CType) {
-    LayoutTy = HLSLBufferLayoutBuilder(CGF.CGM).layOutType(CType);
-
-    // TODO: We should be able to fall back to a regular memcpy if the layout
-    // type doesn't have any padding, but that runs into issues in the backend
-    // currently.
-    //
-    // See https://github.com/llvm/wg-hlsl/issues/351
-    emitElementCopy(SrcPtr.getBasePointer(), LayoutTy, DstPtr.getBasePointer(),
-                    DstPtr.getElementType());
-    return true;
-  }
-};
-} // namespace
-
-bool CGHLSLRuntime::emitBufferCopy(CodeGenFunction &CGF, Address DstPtr,
-                                   Address SrcPtr, QualType CType) {
-  return HLSLBufferCopyEmitter(CGF, DstPtr, SrcPtr).emitCopy(CType);
+  auto Result =
+      HLSLBufferCopyEmitter(CGF, DstPtr, SrcPtr).emitCopy(Ty, EmitResFn);
+  assert(AssociatedResources.getNextResource() == nullptr &&
+         "expected all associated resources to be processed");
+  return Result;
 }
 
 LValue CGHLSLRuntime::emitBufferMemberExpr(CodeGenFunction &CGF,

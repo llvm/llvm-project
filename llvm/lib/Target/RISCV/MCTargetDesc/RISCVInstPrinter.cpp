@@ -12,6 +12,7 @@
 
 #include "RISCVInstPrinter.h"
 #include "RISCVBaseInfo.h"
+#include "RISCVMCAsmInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -136,7 +137,7 @@ void RISCVInstPrinter::printCSRSystemRegister(const MCInst *MI, unsigned OpNo,
     if (Reg.IsAltName || Reg.IsDeprecatedName)
       continue;
     if (Reg.haveRequiredFeatures(STI.getFeatureBits())) {
-      markup(O, Markup::Register) << Reg.Name;
+      markup(O, Markup::Register) << RISCVSysReg::getSysRegStr(Reg.Name);
       return;
     }
   }
@@ -159,6 +160,16 @@ void RISCVInstPrinter::printFenceArg(const MCInst *MI, unsigned OpNo,
     O << 'w';
   if (FenceArg == 0)
     O << "0";
+}
+
+void RISCVInstPrinter::printSMTVType(const MCInst *MI, unsigned OpNo,
+                                     const MCSubtargetInfo &STI,
+                                     raw_ostream &O) {
+  auto VType =
+      static_cast<XSMTVTypeMode::SMTVTypeMode>(MI->getOperand(OpNo).getImm());
+  assert(XSMTVTypeMode::isValidSMTVTypeMode(VType) &&
+         "SpacemiT's Integer Matrix only supports [i4|i8] mode");
+  O << ", " << XSMTVTypeMode::SMTVTypeModeToString(VType);
 }
 
 void RISCVInstPrinter::printFRMArg(const MCInst *MI, unsigned OpNo,
@@ -221,14 +232,8 @@ void RISCVInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
                                    const MCSubtargetInfo &STI, raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
   // Print the raw immediate for reserved values: vlmul[2:0]=4, vsew[2:0]=0b1xx,
-  // altfmt=1 without zvfbfa or zvfofp8min extension, or non-zero in bits 9 and
-  // above.
-  if (!RISCVVType::isValidVType(Imm) ||
-      (RISCVVType::isAltFmt(Imm) &&
-       !(STI.hasFeature(RISCV::FeatureStdExtZvfbfa) ||
-         STI.hasFeature(RISCV::FeatureStdExtZvfofp8min) ||
-         STI.hasFeature(RISCV::FeatureVendorXSfvfbfexp16e))) ||
-      (Imm >> 9) != 0) {
+  // altfmt=1 without sew=8 or sew=16, or non-zero in bits 9 and above.
+  if (!RISCVVType::isValidVType(Imm) || (Imm >> 9) != 0) {
     O << formatImm(Imm);
     return;
   }
@@ -350,6 +355,20 @@ void RISCVInstPrinter::printVScaleReg(const MCInst *MI, unsigned OpNo,
   O << ", ";
   printRegName(O, MO.getReg());
   O << ".scale";
+}
+
+void RISCVInstPrinter::printTileLambda(const MCInst *MI, unsigned OpNo,
+                                       const MCSubtargetInfo &STI,
+                                       raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNo);
+
+  assert(MO.isImm() && "printTileLambda can only print immediate operands");
+  unsigned Lambda = MO.getImm();
+  if (Lambda == 0)
+    return;
+
+  assert(Lambda <= 7 && "Unexpected tile lambda encoding");
+  O << ", L" << (1U << (Lambda - 1));
 }
 
 void RISCVInstPrinter::printImm(const MCInst *MI, unsigned OpNo,

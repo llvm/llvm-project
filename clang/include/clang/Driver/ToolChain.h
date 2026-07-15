@@ -11,6 +11,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/OffloadArch.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Multilib.h"
@@ -60,6 +61,8 @@ class InputInfo;
 class SanitizerArgs;
 class Tool;
 class XRayArgs;
+
+enum LTOKind : int;
 
 /// Helper structure used to pass information extracted from clang executable
 /// name such as `i686-linux-android-g++`.
@@ -345,7 +348,7 @@ public:
   Multilib::flags_list getMultilibFlags(const llvm::opt::ArgList &) const;
 
   SanitizerArgs getSanitizerArgs(
-      const llvm::opt::ArgList &JobArgs, StringRef BoundArch = "",
+      const llvm::opt::ArgList &JobArgs, BoundArch BA = {},
       Action::OffloadKind DeviceOffloadKind = Action::OFK_None) const;
 
   /// Returns the feature requirement for a sanitizer on a specific arch for
@@ -353,7 +356,7 @@ public:
   /// the sanitizer is generally supported but requires a specific feature for
   /// the given BoundArch, or an empty StringRef otherwise.
   virtual StringRef getSanitizerRequirement(SanitizerMask Kinds,
-                                            StringRef BoundArch) const {
+                                            BoundArch BA) const {
     return {};
   }
 
@@ -391,11 +394,11 @@ public:
   /// specific translations are needed. If \p DeviceOffloadKind is specified
   /// the translation specific for that offload kind is performed.
   ///
-  /// \param BoundArch - The bound architecture name, or 0.
+  /// \param BA - The bound architecture.
   /// \param DeviceOffloadKind - The device offload kind used for the
   /// translation.
   virtual llvm::opt::DerivedArgList *
-  TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
+  TranslateArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
                 Action::OffloadKind DeviceOffloadKind) const {
     return nullptr;
   }
@@ -419,7 +422,7 @@ public:
   /// a null pointer, otherwise return a DerivedArgList containing the
   /// translated arguments.
   virtual llvm::opt::DerivedArgList *
-  TranslateXarchArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
+  TranslateXarchArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
                      Action::OffloadKind DeviceOffloadKind,
                      SmallVectorImpl<llvm::opt::Arg *> *AllocatedArgs) const;
 
@@ -461,6 +464,17 @@ public:
   /// HasNativeLTOLinker - Check whether the linker and related tools have
   /// native LLVM support.
   virtual bool HasNativeLLVMSupport() const;
+
+  /// Returns the default LTO mode for this toolchain.
+  virtual LTOKind getDefaultLTOMode() const;
+
+  /// Resolve the requested LTO mode for this toolchain.
+  virtual LTOKind getLTOMode(const llvm::opt::ArgList &Args,
+                             Action::OffloadKind Kind = Action::OFK_None) const;
+
+  /// Returns true if LTO is active for this toolchain given the args.
+  bool isUsingLTO(const llvm::opt::ArgList &Args,
+                  Action::OffloadKind Kind = Action::OFK_None) const;
 
   /// LookupTypeForExtension - Return the default language type to use for the
   /// given extension.
@@ -702,7 +716,7 @@ public:
   /// ComputeLLVMTriple - Return the LLVM target triple to use, after taking
   /// command line arguments into account.
   virtual std::string
-  ComputeLLVMTriple(const llvm::opt::ArgList &Args, StringRef BoundArch = {},
+  ComputeLLVMTriple(const llvm::opt::ArgList &Args, BoundArch BA = {},
                     types::ID InputType = types::TY_INVALID) const;
 
   /// ComputeEffectiveClangTriple - Return the Clang triple to use for this
@@ -711,8 +725,7 @@ public:
   /// sets the deployment target) determines the version in the triple passed to
   /// Clang.
   virtual std::string
-  ComputeEffectiveClangTriple(const llvm::opt::ArgList &Args,
-                              StringRef BoundArch = {},
+  ComputeEffectiveClangTriple(const llvm::opt::ArgList &Args, BoundArch BA = {},
                               types::ID InputType = types::TY_INVALID) const;
 
   /// getDefaultObjCRuntime - Return the default Objective-C runtime
@@ -741,9 +754,10 @@ public:
                             llvm::opt::ArgStringList &CC1Args) const;
 
   /// Add options that need to be passed to cc1 for this target.
-  virtual void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                                     llvm::opt::ArgStringList &CC1Args,
-                                     Action::OffloadKind DeviceOffloadKind) const;
+  virtual void
+  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
+                        Action::OffloadKind DeviceOffloadKind) const;
 
   /// Add options that need to be passed to cc1as for this target.
   virtual void
@@ -855,7 +869,7 @@ public:
 
   /// Get paths for device libraries.
   virtual llvm::SmallVector<BitCodeLibraryInfo, 12>
-  getDeviceLibs(const llvm::opt::ArgList &Args,
+  getDeviceLibs(const llvm::opt::ArgList &Args, BoundArch BA,
                 const Action::OffloadKind DeviceOffloadingKind) const;
 
   /// Add the system specific libraries for the active offload kinds.
@@ -865,7 +879,7 @@ public:
 
   /// Return sanitizers which are available in this toolchain.
   virtual SanitizerMask
-  getSupportedSanitizers(StringRef BoundArch,
+  getSupportedSanitizers(BoundArch BA,
                          Action::OffloadKind DeviceOffloadKind) const;
 
   /// Return sanitizers which are enabled by default.

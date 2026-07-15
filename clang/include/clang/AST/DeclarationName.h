@@ -552,18 +552,6 @@ public:
     return LHS.Ptr != RHS.Ptr;
   }
 
-  static DeclarationName getEmptyMarker() {
-    DeclarationName Name;
-    Name.Ptr = uintptr_t(-1);
-    return Name;
-  }
-
-  static DeclarationName getTombstoneMarker() {
-    DeclarationName Name;
-    Name.Ptr = uintptr_t(-2);
-    return Name;
-  }
-
   static int compare(DeclarationName LHS, DeclarationName RHS);
 
   void print(raw_ostream &OS, const PrintingPolicy &Policy) const;
@@ -930,14 +918,6 @@ namespace llvm {
 /// in DenseMap and DenseSets.
 template<>
 struct DenseMapInfo<clang::DeclarationName> {
-  static inline clang::DeclarationName getEmptyKey() {
-    return clang::DeclarationName::getEmptyMarker();
-  }
-
-  static inline clang::DeclarationName getTombstoneKey() {
-    return clang::DeclarationName::getTombstoneMarker();
-  }
-
   static unsigned getHashValue(clang::DeclarationName Name) {
     return DenseMapInfo<void*>::getHashValue(Name.getAsOpaquePtr());
   }

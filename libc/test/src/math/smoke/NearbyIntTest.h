@@ -19,9 +19,6 @@
 
 using LIBC_NAMESPACE::Sign;
 
-static constexpr int ROUNDING_MODES[4] = {FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO,
-                                          FE_TONEAREST};
-
 template <typename T>
 class NearbyIntTestTemplate : public LIBC_NAMESPACE::testing::Test {
 

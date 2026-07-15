@@ -80,7 +80,7 @@ subroutine test_intent_in(x)
 ! CHECK: hlfir.copy_in
 ! CHECK: fir.call @_QPbar_intent_in
 ! CHECK: hlfir.copy_out
-! CHECK-SAME: ) -> ()
+! CHECK-SAME: %{{.*}}, %{{.*}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, i1) -> ()
   call bar_intent_in(x)
 end subroutine
 
@@ -96,6 +96,29 @@ subroutine test_actual_arg_intent_in(x)
 ! CHECK-NOT: to
 ! CHECK: return
   call bar(x)
+end subroutine
+
+! Test the transitive copy-out case. The outer INTENT(IN) array is forwarded
+! to a dummy without INTENT, which then passes a noncontiguous section to an
+! implicit-interface procedure. Lowering cannot recognize the outer contract
+! at the inner call site, so the inner procedure still generates copy-back.
+! The outer array must therefore not be marked fir.read_only.
+! CHECK-LABEL: func.func @_QPtest_forwarded_intent_in(
+! CHECK-SAME: %{{.*}}: !fir.ref<!fir.array<4xf32>> {fir.bindc_name = "x"}) {
+subroutine test_forwarded_intent_in(x)
+  real, intent(in) :: x(4)
+  call test_forwarded_without_intent(x)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_forwarded_without_intent(
+! CHECK-SAME: %{{.*}}: !fir.ref<!fir.array<4xf32>> {fir.bindc_name = "x"}) {
+subroutine test_forwarded_without_intent(x)
+  real :: x(4)
+! CHECK: hlfir.copy_in
+! CHECK: fir.call @_QPbar
+! CHECK: hlfir.copy_out
+! CHECK-SAME: to
+  call bar(x(1:4:2))
 end subroutine
 
 ! Test copy-out is NOT skipped when passing a section of a pointer component
@@ -118,7 +141,8 @@ end subroutine
 ! pointer dummy: INTENT(IN) on a pointer restricts pointer association, not
 ! the target's contents, so the callee may define the target and copy-out is
 ! required.
-! CHECK-LABEL: func @_QPtest_actual_intent_in_pointer(
+! CHECK-LABEL: func.func @_QPtest_actual_intent_in_pointer(
+! CHECK-SAME: %{{.*}}: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {fir.bindc_name = "pi", fir.read_only}) {
 subroutine test_actual_intent_in_pointer(pi)
   integer, intent(in), pointer :: pi(:)
 ! CHECK: hlfir.copy_in

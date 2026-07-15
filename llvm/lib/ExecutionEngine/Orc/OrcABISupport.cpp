@@ -16,9 +16,9 @@ using namespace llvm;
 using namespace llvm::orc;
 
 template <typename ORCABI>
-static bool stubAndPointerRangesOk(ExecutorAddr StubBlockAddr,
-                                   ExecutorAddr PointerBlockAddr,
-                                   unsigned NumStubs) {
+[[maybe_unused]] static bool
+stubAndPointerRangesOk(ExecutorAddr StubBlockAddr,
+                       ExecutorAddr PointerBlockAddr, unsigned NumStubs) {
   constexpr unsigned MaxDisp = ORCABI::StubToPointerMaxDisplacement;
   ExecutorAddr FirstStub = StubBlockAddr;
   ExecutorAddr LastStub = FirstStub + ((NumStubs - 1) * ORCABI::StubSize);

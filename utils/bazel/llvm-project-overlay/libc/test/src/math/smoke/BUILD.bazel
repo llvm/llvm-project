@@ -83,6 +83,8 @@ math_test(name = "cbrt")
 
 math_test(name = "cbrtf")
 
+math_test(name = "cbrtf16")
+
 math_test(
     name = "ceil",
     hdrs = ["CeilTest.h"],
@@ -992,6 +994,11 @@ math_test(
 )
 
 math_test(
+    name = "isnanf128",
+    hdrs = ["IsNanTest.h"],
+)
+
+math_test(
     name = "llogbf16",
     hdrs = ["ILogbTest.h"],
 )
@@ -1688,6 +1695,13 @@ math_test(name = "exp2f16")
 math_test(name = "exp2m1f16")
 
 math_test(name = "expf16")
+
+math_test(
+    name = "expbf16",
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
 
 math_test(name = "expm1f16")
 
