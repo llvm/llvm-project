@@ -54,10 +54,6 @@ private:
   /// at the root.
   GenericCycle *ParentCycle = nullptr;
 
-  /// The top-level cycle this cycle is part of. Points to itself if this is
-  /// a top-level cycle.
-  GenericCycle *TopLevelCycle;
-
   /// The entry block(s) of the cycle. The header is the only entry if
   /// this is a loop. Is empty for the root "cycle", to avoid
   /// unnecessary memory use.
@@ -82,9 +78,6 @@ private:
   ///       always have the same depth.
   unsigned Depth = 0;
 
-  /// The cycle info that owns this cycle. Used by contains(BlockT*).
-  const GenericCycleInfo<ContextT> *CI = nullptr;
-
   /// Cache for the results of GetExitBlocks
   mutable SmallVector<BlockT *, 4> ExitBlocksCache;
 
@@ -108,7 +101,7 @@ private:
   GenericCycle &operator=(GenericCycle &&Rhs) = delete;
 
 public:
-  GenericCycle() : TopLevelCycle(this) {}
+  GenericCycle() = default;
 
   /// \brief Whether the cycle is a natural loop.
   bool isReducible() const { return Entries.size() == 1; }
@@ -130,46 +123,24 @@ public:
   }
 
   /// \brief Replace all entries with \p Block as single entry.
+  /// \p Block must be contained in the cycle.
   void setSingleEntry(BlockT *Block) {
-    assert(contains(Block));
     Entries.clear();
     Entries.push_back(Block);
     clearCache();
   }
 
-  /// \brief Return whether \p Block is contained in the cycle. O(1).
-  bool contains(const BlockT *Block) const;
-
   /// \brief Returns true iff this cycle contains \p C. O(1). Non-strict, i.e.
   /// returns true if C is the same cycle.
-  bool contains(const GenericCycle *C) const;
+  bool contains(const GenericCycle *C) const {
+    return C && IdxBegin <= C->IdxBegin && C->IdxEnd <= IdxEnd;
+  }
 
   const GenericCycle *getParentCycle() const { return ParentCycle; }
   GenericCycle *getParentCycle() { return ParentCycle; }
   unsigned getDepth() const { return Depth; }
 
-  /// Return all of the successor blocks of this cycle.
-  ///
-  /// These are the blocks _outside of the current cycle_ which are
-  /// branched to.
-  void getExitBlocks(SmallVectorImpl<BlockT *> &TmpStorage) const;
-
-  /// Return all blocks of this cycle that have successor outside of this cycle.
-  /// These blocks have cycle exit branch.
-  void getExitingBlocks(SmallVectorImpl<BlockT *> &TmpStorage) const;
-
-  /// Return the preheader block for this cycle. Pre-header is well-defined for
-  /// reducible cycle in docs/LoopTerminology.md as: the only one entering
-  /// block and its only edge is to the entry block. Return null for irreducible
-  /// cycles.
-  BlockT *getCyclePreheader() const;
-
-  /// If the cycle has exactly one entry with exactly one predecessor, return
-  /// it, otherwise return nullptr.
-  BlockT *getCyclePredecessor() const;
-
-  void verifyCycle() const;
-  void verifyCycleNest() const;
+  size_t getNumBlocks() const { return IdxEnd - IdxBegin; }
 
   /// Iteration over child cycles.
   //@{
@@ -200,19 +171,6 @@ public:
   }
   //@}
 
-  /// Iteration over blocks in the cycle (including entry blocks).
-  //@{
-  using const_block_iterator =
-      typename SmallVector<BlockT *, 8>::const_iterator;
-
-  const_block_iterator block_begin() const;
-  const_block_iterator block_end() const;
-  size_t getNumBlocks() const { return IdxEnd - IdxBegin; }
-  iterator_range<const_block_iterator> blocks() const {
-    return llvm::make_range(block_begin(), block_end());
-  }
-  //@}
-
   /// Iteration over entry blocks.
   //@{
   using const_entry_iterator =
@@ -236,19 +194,6 @@ public:
         Out << LS << Ctx.print(Entry);
     });
   }
-
-  Printable print(const ContextT &Ctx) const {
-    return Printable([this, &Ctx](raw_ostream &Out) {
-      Out << "depth=" << Depth << ": entries(" << printEntries(Ctx) << ')';
-
-      for (auto *Block : blocks()) {
-        if (isEntry(Block))
-          continue;
-
-        Out << ' ' << Ctx.print(Block);
-      }
-    });
-  }
 };
 
 /// \brief Cycle information for a function.
@@ -257,7 +202,6 @@ public:
   using BlockT = typename ContextT::BlockT;
   using CycleT = GenericCycle<ContextT>;
   using FunctionT = typename ContextT::FunctionT;
-  template <typename> friend class GenericCycle;
   template <typename> friend class GenericCycleInfoCompute;
 
 private:
@@ -283,7 +227,11 @@ private:
   /// the subtree.
   void moveTopLevelCycleToNewParent(CycleT *NewParent, CycleT *Child);
 
-  void verifyBlockNumberEpoch(const FunctionT *Fn) const;
+  void verifyBlockNumberEpoch(const FunctionT *Fn) const {
+    assert(BlockNumberEpoch ==
+               GraphTraits<const FunctionT *>::getNumberEpoch(Fn) &&
+           "CycleInfo used with outdated block number epoch");
+  }
   void addToBlockMap(BlockT *Block, CycleT *Cycle);
 
   /// Build BlockLayout and every cycle's [IdxBegin, IdxEnd) slice
@@ -292,29 +240,8 @@ private:
 
 public:
   GenericCycleInfo() = default;
-  GenericCycleInfo(GenericCycleInfo &&Other) { *this = std::move(Other); }
-  GenericCycleInfo &operator=(GenericCycleInfo &&Other) {
-    if (this == &Other)
-      return *this;
-    Context = std::move(Other.Context);
-    BlockNumberEpoch = Other.BlockNumberEpoch;
-    BlockMap = std::move(Other.BlockMap);
-    BlockLayout = std::move(Other.BlockLayout);
-    TopLevelCycles = std::move(Other.TopLevelCycles);
-    // The moved cycles carry a back-reference to their owning info (used by
-    // GenericCycle::contains(BlockT*) and blocks()); re-point it at this
-    // object.
-    SmallVector<CycleT *, 8> Worklist;
-    for (auto &TLC : TopLevelCycles)
-      Worklist.push_back(TLC.get());
-    while (!Worklist.empty()) {
-      CycleT *C = Worklist.pop_back_val();
-      C->CI = this;
-      for (auto &Child : C->Children)
-        Worklist.push_back(Child.get());
-    }
-    return *this;
-  }
+  GenericCycleInfo(GenericCycleInfo &&) = default;
+  GenericCycleInfo &operator=(GenericCycleInfo &&) = default;
 
   void clear();
   void compute(FunctionT &F);
@@ -323,11 +250,70 @@ public:
   const FunctionT *getFunction() const { return Context.getFunction(); }
   const ContextT &getSSAContext() const { return Context; }
 
-  CycleT *getCycle(const BlockT *Block) const;
+  /// \brief Find the innermost cycle containing \p Block.
+  ///
+  /// \returns the innermost cycle containing \p Block or nullptr if
+  ///          it is not contained in any cycle.
+  CycleT *getCycle(const BlockT *Block) const {
+    verifyBlockNumberEpoch(Block->getParent());
+    unsigned Number = GraphTraits<const BlockT *>::getNumber(Block);
+    return Number < BlockMap.size() ? BlockMap[Number] : nullptr;
+  }
+
+  /// \brief Return whether \p Block is contained in \p C. O(1).
+  bool contains(const CycleT &C, const BlockT *Block) const {
+    return C.contains(getCycle(Block));
+  }
+
+  /// \brief Return the blocks of \p C, including those of nested cycles.
+  ArrayRef<BlockT *> getBlocks(const CycleT &C) const {
+    return ArrayRef<BlockT *>(BlockLayout.begin() + C.IdxBegin,
+                              BlockLayout.begin() + C.IdxEnd);
+  }
+
   CycleT *getSmallestCommonCycle(CycleT *A, CycleT *B) const;
   CycleT *getSmallestCommonCycle(BlockT *A, BlockT *B) const;
-  unsigned getCycleDepth(const BlockT *Block) const;
-  CycleT *getTopLevelParentCycle(const BlockT *Block) const;
+
+  /// \brief Return the depth of the innermost cycle containing \p Block, or 0
+  /// if it is not contained in any cycle.
+  unsigned getCycleDepth(const BlockT *Block) const {
+    CycleT *Cycle = getCycle(Block);
+    return Cycle ? Cycle->getDepth() : 0;
+  }
+
+  CycleT *getTopLevelParentCycle(const BlockT *Block) const {
+    CycleT *Cycle = getCycle(Block);
+    while (Cycle && Cycle->ParentCycle)
+      Cycle = Cycle->ParentCycle;
+    return Cycle;
+  }
+
+  /// Return all of the successor blocks of \p C: the blocks outside of \p C
+  /// which are branched to from within it.
+  void getExitBlocks(const CycleT &C,
+                     SmallVectorImpl<BlockT *> &TmpStorage) const;
+
+  /// Return all blocks of \p C that have a successor outside of \p C.
+  void getExitingBlocks(const CycleT &C,
+                        SmallVectorImpl<BlockT *> &TmpStorage) const;
+
+  /// Return the preheader block for \p C. Pre-header is well-defined for
+  /// reducible cycle in docs/LoopTerminology.md as: the only one entering
+  /// block and its only edge is to the entry block. Return null for
+  /// irreducible cycles.
+  BlockT *getCyclePreheader(const CycleT &C) const;
+
+  /// If \p C has exactly one entry with exactly one predecessor, return it,
+  /// otherwise return nullptr.
+  BlockT *getCyclePredecessor(const CycleT &C) const;
+
+  /// Verify that \p C is actually a well-formed cycle in the CFG.
+  void verifyCycle(const CycleT &C) const;
+
+  /// Verify the parent-child relations of \p C.
+  ///
+  /// Note that this does \em not check that \p C is really a cycle in the CFG.
+  void verifyCycleNest(const CycleT &C) const;
 
   /// Assumes that \p Cycle is the innermost cycle containing \p Block.
   /// \p Block will be appended to \p Cycle and all of its parent cycles.
@@ -341,7 +327,7 @@ public:
   void verify() const;
   void print(raw_ostream &Out) const;
   void dump() const { print(dbgs()); }
-  Printable print(const CycleT *Cycle) { return Cycle->print(Context); }
+  Printable print(const CycleT *Cycle) const;
   //@}
 
   /// Iteration over top-level cycles.

@@ -2420,6 +2420,82 @@ std::optional<DynamicUserCondition> MakeVariantMatchInfo(
   return dynamicCond;
 }
 
+bool MayVariantBeSelected(
+    const parser::traits::OmpContextSelectorSpecification *selector,
+    SemanticsContext &context, OmpVariantMatchContext &matchContext) {
+  if (!selector ||
+      FindUnsupportedSelectorFeature(*selector, context) !=
+          UnsupportedSelectorFeature::None) {
+    return true;
+  }
+  llvm::omp::VariantMatchInfo vmi;
+  (void)MakeVariantMatchInfo(vmi, *selector, context);
+  const auto &required{vmi.RequiredTraits};
+  using TP = llvm::omp::TraitProperty;
+
+  enum class MatchKind { All, Any, None };
+  MatchKind matchKind{MatchKind::All};
+  if (required.test(unsigned(TP::implementation_extension_match_any))) {
+    matchKind = MatchKind::Any;
+  }
+  // Match-none takes precedence over match-any when both are present, matching
+  // isVariantApplicableInContextHelper.
+  if (required.test(unsigned(TP::implementation_extension_match_none))) {
+    matchKind = MatchKind::None;
+  }
+
+  bool userTrue{required.test(unsigned(TP::user_condition_true))};
+  bool userUnknown{required.test(unsigned(TP::user_condition_unknown))};
+  bool userFalse{required.test(unsigned(TP::user_condition_false))};
+  bool invalid{required.test(unsigned(TP::invalid))};
+
+  // The target-only LLVM matcher below skips user and construct traits while
+  // retaining the global match kind. Account for those skipped traits first;
+  // otherwise an empty filtered set incorrectly fails match-any and satisfies
+  // match-none.
+  switch (matchKind) {
+  case MatchKind::All:
+    if (userFalse || invalid) {
+      return false;
+    }
+    break;
+  case MatchKind::Any:
+    if (userTrue || userUnknown || !vmi.ConstructTraits.empty()) {
+      return true;
+    }
+    break;
+  case MatchKind::None:
+    if (userTrue) {
+      return false;
+    }
+    break;
+  }
+
+  // Without a target triple, do not reject device or implementation traits.
+  if (context.targetTriple().empty()) {
+    if (matchKind != MatchKind::Any) {
+      return true;
+    }
+    // No skipped trait can satisfy match-any here. Keep the selector
+    // conservatively selectable if it contains a device or implementation
+    // trait; otherwise no trait can satisfy match-any.
+    for (unsigned bit : required.set_bits()) {
+      TP property{static_cast<TP>(bit)};
+      llvm::omp::TraitSet set{
+          llvm::omp::getOpenMPContextTraitSetForProperty(property)};
+      if ((set == llvm::omp::TraitSet::device ||
+              set == llvm::omp::TraitSet::implementation) &&
+          llvm::omp::getOpenMPContextTraitSelectorForProperty(property) !=
+              llvm::omp::TraitSelector::implementation_extension) {
+        return true;
+      }
+    }
+    return false;
+  }
+  return llvm::omp::isVariantApplicableInContext(
+      vmi, matchContext, /*DeviceOrImplementationSetOnly=*/true);
+}
+
 OmpVariantMatchContext::OmpVariantMatchContext(bool isDeviceCompilation,
     llvm::Triple targetTriple, llvm::Triple targetOffloadTriple,
     std::string targetFeatures,
