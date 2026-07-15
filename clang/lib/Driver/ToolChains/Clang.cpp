@@ -9746,6 +9746,17 @@ static bool requiresUBSanRT(unsigned ID) {
   }
 }
 
+// Options that need the csan compiler-rt library on the target toolchain.
+static bool requiresCSanRT(unsigned ID) {
+  switch (ID) {
+  case options::OPT_fsanitize_EQ:
+  case options::OPT_fno_sanitize_EQ:
+    return true;
+  default:
+    return false;
+  }
+}
+
 void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
                                  const InputInfo &Output,
                                  const InputInfoList &Inputs,
@@ -9824,6 +9835,8 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     // Don't forward sanitizer arguments if the toolchain doesn't support it.
     // Without this check using it on the host would result in linker errors.
     if (requiresUBSanRT(ID) && !ToolChainHasRT(TC, "ubsan_minimal"))
+      return false;
+    if (requiresCSanRT(ID) && !ToolChainHasRT(TC, "csan"))
       return false;
     // Don't forward -mllvm to toolchains that don't support LLVM.
     return TC.HasNativeLLVMSupport() || ID != OPT_mllvm;

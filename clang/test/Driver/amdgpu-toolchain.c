@@ -71,3 +71,10 @@
 // RUN:   | FileCheck -check-prefixes=UBSAN %s
 //      UBSAN: ld.lld
 // UBSAN-SAME: "[[RESOURCE_DIR:.+]]{{/|\\\\}}lib{{/|\\\\}}amdgcn-amd-amdhsa{{/|\\\\}}libclang_rt.ubsan_minimal.a"
+
+// RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx906 -nogpulib \
+// RUN:   -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:   -fsanitize=concurrency %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CSAN %s
+//      CSAN: ld.lld
+// CSAN-SAME: "[[RESOURCE_DIR:.+]]{{/|\\\\}}lib{{/|\\\\}}amdgcn-amd-amdhsa{{/|\\\\}}libclang_rt.csan.a"

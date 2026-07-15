@@ -1486,7 +1486,16 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
   if (Sanitizers.empty())
     return;
-  CmdArgs.push_back(Args.MakeArgString("-fsanitize=" + toString(Sanitizers)));
+
+  // The concurrency sampler re-uses the thread sanitizer instrumentation. We
+  // lower it to `-fsanitize=thread` but the driver selects a differnt runtime.
+  SanitizerSet EmittedSanitizers = Sanitizers;
+  if (EmittedSanitizers.has(SanitizerKind::Concurrency)) {
+    EmittedSanitizers.set(SanitizerKind::Concurrency, false);
+    EmittedSanitizers.set(SanitizerKind::Thread, true);
+  }
+  CmdArgs.push_back(
+      Args.MakeArgString("-fsanitize=" + toString(EmittedSanitizers)));
 
   if (!SuppressUBSanFeature.empty())
     CmdArgs.push_back(

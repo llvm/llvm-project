@@ -1729,6 +1729,8 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("tsan_cxx");
   }
+  if (!SanArgs.needsSharedRt() && SanArgs.needsCsanRt())
+    StaticRuntimes.push_back("csan");
   if (!SanArgs.needsSharedRt() && SanArgs.needsTysanRt())
     StaticRuntimes.push_back("tysan");
   if (!SanArgs.needsSharedRt() && SanArgs.needsUbsanRt()) {
