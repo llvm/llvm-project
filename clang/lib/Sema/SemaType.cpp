@@ -4890,7 +4890,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         // If there already was an problem with the scope, don’t issue another
         // error about the explicit object parameter.
         return SS.isInvalid() ||
-               isa_and_present<CXXRecordDecl>(S.computeDeclContext(SS));
+               isa_and_present<CXXRecordDecl>(
+                   S.computeDeclContext(SS, /*EnteringContext=*/true));
       };
 
       // C++23 [dcl.fct]p6:
