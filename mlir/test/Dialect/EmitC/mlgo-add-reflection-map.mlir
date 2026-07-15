@@ -58,7 +58,7 @@ emitc.class @fooExcluded {
 
 // -----
 
-/// Test that the pass leaves IR unchanged if fields don't have any attributes (match failure)
+/// Test that the pass bails out and leaves IR unchanged if fields don't have any attributes
 
 emitc.class @fooNoAttrs {
   emitc.field @fieldName0 : !emitc.array<1xf32>
@@ -77,7 +77,7 @@ emitc.class @fooNoAttrs {
 
 // -----
 
-/// Test that the pass leaves IR unchanged if the ClassOp doesn't have any fields (match failure)
+/// Test that the pass bails out and leaves IR unchanged if the ClassOp doesn't have any fields
 
 emitc.class @fooNoFields {
   emitc.func @bar() {
@@ -114,8 +114,8 @@ emitc.class @fooNoOperator {
 
 // -----
 
-/// Test that the pass returns with a match failure if a FieldOp has the specified
-/// dictionary attribute with an array containing a type other than string
+/// Test that the pass bails out if a FieldOp has the specified dictionary attribute
+/// with an array containing a type other than string
 
 emitc.class @fooNonStringAttr {
   emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = [1]}

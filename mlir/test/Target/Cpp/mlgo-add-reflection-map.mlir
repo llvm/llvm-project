@@ -59,7 +59,7 @@ emitc.class @fooExcluded {
 
 // -----
 
-/// Test that translation doesn't add headers if the class does not match the pass.
+/// Test that headers aren't added if the pass bails out.
 
 emitc.class @fooNoAttrs {
   emitc.field @fieldName0 : !emitc.array<1xf32>
