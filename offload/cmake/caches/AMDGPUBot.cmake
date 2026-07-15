@@ -22,5 +22,5 @@ set(LIBOMPTEST_BUILD_UNITTESTS ON CACHE BOOL "")
 set(CLANG_DEFAULT_LINKER "lld" CACHE STRING "")
 set(CLANG_DEFAULT_RTLIB "compiler-rt" STRING "")
 
-set(LLVM_RUNTIME_TARGETS default;amdgcn-amd-amdhsa CACHE STRING "")
-set(RUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES "openmp" CACHE STRING "")
+set(LLVM_RUNTIME_TARGETS default;amdgpu-amd-amdhsa CACHE STRING "")
+set(RUNTIMES_amdgpu-amd-amdhsa_LLVM_ENABLE_RUNTIMES "openmp" CACHE STRING "")
