@@ -5463,12 +5463,12 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
       // operations. The tree has Log2(Factor) levels, with Factor UZP/ZIP
       // operations at each level, giving a total shuffle cost of
       // Factor * Log2(Factor).
+      llvm::InstructionCost LegalizationCost =
+          getTypeLegalizationCost(SubVecTy).first;
 
       // For stores, account for an additional legalization cost when
       // repacking the legalized subvectors into the narrow interleaved
       // vector.
-      auto LegalizationCost = getTypeLegalizationCost(SubVecTy).first;
-
       if (Opcode == Instruction::Store)
         LegalizationCost *= 2;
 
