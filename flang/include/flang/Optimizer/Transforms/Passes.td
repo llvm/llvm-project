@@ -477,6 +477,9 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
        Option<"setNoAlias", "set-noalias", "bool", /*default=*/"false",
               "Set LLVM noalias attribute on function arguments, "
               "if possible">,
+       Option<"setReadOnly", "set-readonly", "bool", /*default=*/"false",
+              "Set LLVM readonly attribute on INTENT(IN) by-reference "
+              "function arguments, if possible">,
   ];
 }
 
@@ -689,6 +692,11 @@ def MIFOpConversion : Pass<"mif-convert", "mlir::ModuleOp"> {
   let summary = "Convert some MIF operations to runtime calls";
   let dependentDialects = ["fir::FIROpsDialect", "mlir::LLVM::LLVMDialect",
                            "mlir::cf::ControlFlowDialect", "mlir::DLTIDialect"];
+}
+
+def EmitMIFGlobalCtors : Pass<"emit-mif-global-ctors", "mlir::ModuleOp"> {
+  let summary = "Generate GlobalCtorOp to init MIF and allocate coarrays.";
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::LLVM::LLVMDialect"];
 }
 
 def LoopInvariantCodeMotion : Pass<"flang-licm", "::mlir::func::FuncOp"> {

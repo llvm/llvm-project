@@ -319,7 +319,10 @@ def GPR : GPRRegisterClass<(add (sequence "X%u", 10, 17),
                                 (sequence "X%u", 28, 31),
                                 (sequence "X%u", 8, 9),
                                 (sequence "X%u", 18, 27),
-                                (sequence "X%u", 0, 4))>;
+                                (sequence "X%u", 0, 4))> {
+  let DiagnosticType = "InvalidRegClassGPR";
+  let DiagnosticString = "register must be a GPR";
+}
 
 def YGPR : RegisterClass<"RISCV", [YLenVT], 64,
                          (add (sequence "X%u_Y", 10, 17),
@@ -332,7 +335,10 @@ def YGPR : RegisterClass<"RISCV", [YLenVT], 64,
   let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X0_Y, 32, /*RVELimit=*/16>";
 }
 
-def GPRX0 : GPRRegisterClass<(add X0)>;
+def GPRX0 : GPRRegisterClass<(add X0)> {
+  let DiagnosticType = "InvalidRegClassGPRX0";
+  let DiagnosticString = "register must be zero (x0)";
+}
 
 def GPRX1 : GPRRegisterClass<(add X1)> {
   let DiagnosticType = "InvalidRegClassGPRX1";
@@ -391,7 +397,10 @@ def SP : GPRRegisterClass<(add X2)> {
 
 // Saved Registers from s0 to s7, for C.MVA01S07 instruction in Zcmp extension
 def SR07 : GPRRegisterClass<(add (sequence "X%u", 8, 9),
-                                 (sequence "X%u", 18, 23))>;
+                                 (sequence "X%u", 18, 23))> {
+  let DiagnosticType = "InvalidRegClassSR07";
+  let DiagnosticString = "register must be GPR from s0 to s7 (x8, x9 or x18-x23)";
+}
 
 def GPRX1X5 :  GPRRegisterClass<(add X1, X5)> {
   let DiagnosticType = "InvalidRegClassGPRX1X5";

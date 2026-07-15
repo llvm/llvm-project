@@ -20486,7 +20486,11 @@ static QualType getNextLargerIntegralType(ASTContext &Context, QualType T) {
     Context.UnsignedLongLongTy
   };
 
-  unsigned BitWidth = Context.getTypeSize(T);
+  // Compare value widths, not storage sizes: a _BitInt(33) is stored in 64
+  // bits but a 64-bit standard type can still represent its incremented
+  // value. C23 6.7.3.3p12 does not allow the widened type to be a
+  // bit-precise type either.
+  unsigned BitWidth = Context.getIntWidth(T);
   QualType *Types = T->isSignedIntegerOrEnumerationType()? SignedIntegralTypes
                                                         : UnsignedIntegralTypes;
   for (unsigned I = 0; I != NumTypes; ++I)

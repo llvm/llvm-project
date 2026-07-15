@@ -1762,7 +1762,7 @@ TEST_F(VPRecipeTest, CastVPReductionEVLRecipeToVPUser) {
 
 struct VPDoubleValueDef : public VPRecipeBase {
   VPDoubleValueDef(ArrayRef<VPValue *> Operands, Type *Ty)
-      : VPRecipeBase(99, Operands) {
+      : VPRecipeBase(VPRecipeBase::VPInterleaveSC, Operands) {
     new VPMultiDefValue(this, /*UV=*/nullptr, Ty);
     new VPMultiDefValue(this, /*UV=*/nullptr, Ty);
   }
