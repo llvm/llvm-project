@@ -775,6 +775,41 @@ bool AMDGPUInstructionSelector::selectS16MergeToS32(MachineInstr &MI) const {
   return true;
 }
 
+// Pack each pair of s16 into an s32 with S_PACK_LL_B32_B16, then combine the
+// s32 pieces into the destination with a REG_SEQUENCE.
+bool AMDGPUInstructionSelector::selectS16MergeToWide(MachineInstr &MI) const {
+  MachineBasicBlock *BB = MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+  Register DstReg = MI.getOperand(0).getReg();
+  const unsigned DstSize = MRI->getType(DstReg).getSizeInBits();
+  const RegisterBank *DstBank = RBI.getRegBank(DstReg, *MRI, TRI);
+  const unsigned NumSrc = MI.getNumOperands() - 1;
+
+  // Pack each pair of s16 sources into an s32.
+  SmallVector<Register, 8> S32Regs;
+  for (unsigned I = 0; I != NumSrc; I += 2) {
+    Register S32 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    auto Pack = BuildMI(*BB, MI, DL, TII.get(AMDGPU::S_PACK_LL_B32_B16), S32)
+                    .addReg(MI.getOperand(I + 1).getReg())
+                    .addReg(MI.getOperand(I + 2).getReg());
+    constrainSelectedInstRegOperands(*Pack, TII, TRI, RBI);
+    S32Regs.push_back(S32);
+  }
+
+  // Combine the s32 pieces into the destination with a REG_SEQUENCE.
+  const TargetRegisterClass *DstRC =
+      TRI.getRegClassForSizeOnBank(DstSize, *DstBank);
+  if (!DstRC || !RBI.constrainGenericRegister(DstReg, *DstRC, *MRI))
+    return false;
+  ArrayRef<int16_t> SubRegs = TRI.getRegSplitParts(DstRC, /*EltSize=*/4);
+  auto MIB = BuildMI(*BB, MI, DL, TII.get(TargetOpcode::REG_SEQUENCE), DstReg);
+  for (unsigned I = 0, E = S32Regs.size(); I != E; ++I)
+    MIB.addReg(S32Regs[I]).addImm(SubRegs[I]);
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPUInstructionSelector::selectG_MERGE_VALUES(MachineInstr &MI) const {
   MachineBasicBlock *BB = MI.getParent();
   Register DstReg = MI.getOperand(0).getReg();
@@ -788,7 +823,19 @@ bool AMDGPUInstructionSelector::selectG_MERGE_VALUES(MachineInstr &MI) const {
         MI.getNumOperands() == 3) {
       return selectS16MergeToS32(MI);
     }
-    return selectImpl(MI, *CoverageInfo);
+    // With true16 a scalar s16 is a register type, so a scalar wider than 32
+    // bits can be built from s16 pieces.
+    bool IsWideS16Merge = SrcSize == 16 && DstTy.getSizeInBits() > 32 &&
+                          DstTy.getSizeInBits() % 32 == 0;
+
+    // SGPRs have no 16-bit subregisters, so pack pairs of s16 with S_PACK.
+    if (IsWideS16Merge &&
+        RBI.getRegBank(DstReg, *MRI, TRI)->getID() != AMDGPU::VGPRRegBankID)
+      return selectS16MergeToWide(MI);
+
+    // A VGPR wide s16 merge falls through to the generic path below.
+    if (!IsWideS16Merge)
+      return selectImpl(MI, *CoverageInfo);
   }
 
   const DebugLoc &DL = MI.getDebugLoc();

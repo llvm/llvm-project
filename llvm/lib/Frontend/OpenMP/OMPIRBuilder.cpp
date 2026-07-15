@@ -1218,6 +1218,56 @@ Value *OpenMPIRBuilder::getOrCreateThreadID(Value *Ident) {
       "omp_global_thread_num");
 }
 
+OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInReduction(
+    const LocationDescription &Loc, ArrayRef<Value *> OrigPtrs,
+    ArrayRef<Type *> ResultPtrTys,
+    function_ref<void(unsigned, Value *)> MapPrivateCB) {
+  assert(OrigPtrs.size() == ResultPtrTys.size() &&
+         "expected one result pointer type per in_reduction item");
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+  if (OrigPtrs.empty())
+    return Builder.saveIP();
+
+  // Compute the executing thread's gtid once for the whole target body and
+  // reuse it for every in_reduction lookup, so a target with several
+  // in_reduction items does not emit a redundant __kmpc_global_thread_num per
+  // item.
+  uint32_t SrcLocStrSize;
+  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
+  Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
+  Value *Gtid = getOrCreateThreadID(Ident);
+
+  // The runtime entry point takes (and returns) a generic, default-address-
+  // space `ptr`. A NULL descriptor makes the runtime walk the enclosing
+  // taskgroups to find the matching task_reduction registration for the item.
+  Type *PtrTy = PointerType::getUnqual(M.getContext());
+  Value *NullDesc = ConstantPointerNull::get(PtrTy);
+  FunctionCallee GetThData =
+      getOrCreateRuntimeFunction(M, OMPRTL___kmpc_task_reduction_get_th_data);
+
+  for (unsigned Idx = 0; Idx < OrigPtrs.size(); ++Idx) {
+    // Normalize a non-default-address-space original pointer to the generic
+    // address space before the call.
+    Value *OrigPtr = OrigPtrs[Idx];
+    if (auto *OrigPtrTy = dyn_cast<PointerType>(OrigPtr->getType());
+        OrigPtrTy && OrigPtrTy->getAddressSpace() != 0)
+      OrigPtr = Builder.CreateAddrSpaceCast(OrigPtr, PtrTy);
+
+    Value *Priv = Builder.CreateCall(GetThData, {Gtid, NullDesc, OrigPtr},
+                                     "omp.inred.priv");
+
+    // Cast the returned private pointer back to the requested address space
+    // when it differs.
+    if (auto *ResPtrTy = dyn_cast<PointerType>(ResultPtrTys[Idx]);
+        ResPtrTy && ResPtrTy->getAddressSpace() != 0)
+      Priv = Builder.CreateAddrSpaceCast(Priv, ResultPtrTys[Idx]);
+
+    MapPrivateCB(Idx, Priv);
+  }
+  return Builder.saveIP();
+}
+
 OpenMPIRBuilder::InsertPointOrErrorTy
 OpenMPIRBuilder::createBarrier(const LocationDescription &Loc, Directive Kind,
                                bool ForceSimpleCall, bool CheckCancelFlag) {

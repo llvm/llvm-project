@@ -1938,7 +1938,7 @@ let ArchGuard = "defined(__aarch64__)", TargetGuard = "f8f32mm,neon" in {
 }
 
 let ArchGuard = "defined(__aarch64__)", TargetGuard = "f16mm,neon" in {
-  def VMMLA_F16_F16 : SInst<"vmmla_f16", "....", "Qh">;
+  def VMMLA_F16_F16 : SInst<"vmmla", "....", "Qh">;
 }
 
 let ArchGuard = "defined(__aarch64__)", TargetGuard = "f16f32mm,neon" in {
