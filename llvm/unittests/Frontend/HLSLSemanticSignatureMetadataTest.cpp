@@ -11,6 +11,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -41,7 +42,24 @@ protected:
       Ops.push_back(getI32(I));
     return MDNode::get(Ctx, Ops);
   }
+
+  // Assemble a raw signature element node from the example in the spec
+  MDNode *getElement(uint32_t SigId, StringRef Name, uint32_t CompType,
+                     uint32_t SemanticKind, ArrayRef<uint32_t> Indices,
+                     uint32_t InterpMode, uint32_t Rows, uint8_t Cols,
+                     uint32_t StartRow, uint8_t StartCol, uint8_t UsageMask,
+                     uint8_t DynIndexMask, uint32_t GSStream) {
+    return MDNode::get(
+        Ctx, {getI32(SigId), getStr(Name), getI32(CompType),
+              getI32(SemanticKind), getIndices(Indices), getI32(InterpMode),
+              getI32(Rows), getI8(Cols), getI32(StartRow), getI8(StartCol),
+              getI8(UsageMask), getI8(DynIndexMask), getI32(GSStream)});
+  }
 };
+
+//===----------------------------------------------------------------------===//
+// Success cases
+//===----------------------------------------------------------------------===//
 
 TEST_F(HLSLSemanticSignatureMetadataTest, StructHelpers) {
   SemanticSignatureElement Elem;
@@ -52,6 +70,172 @@ TEST_F(HLSLSemanticSignatureMetadataTest, StructHelpers) {
   Elem.StartCol = 0;
   EXPECT_TRUE(Elem.isAllocated());
   EXPECT_EQ(Elem.getDeclaredMask(), 0xF);
+}
+
+TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElement) {
+  MDNode *Node = getElement(/*SigId=*/1, "TEXCOORD", /*CompType=*/9,
+                            /*SemanticKind=*/0, /*Indices=*/{0, 1},
+                            /*InterpMode=*/0, /*Rows=*/2, /*Cols=*/4,
+                            /*StartRow=*/1, /*StartCol=*/0, /*UsageMask=*/0,
+                            /*DynIndexMask=*/0, /*GSStream=*/0);
+
+  Expected<SemanticSignatureElement> Elem =
+      SemanticSignatureElement::fromMetadata(Node);
+  ASSERT_THAT_EXPECTED(Elem, Succeeded());
+
+  EXPECT_EQ(Elem->SigId, 1u);
+  EXPECT_EQ(Elem->SemanticName, "TEXCOORD");
+  EXPECT_EQ(Elem->CompType, dxil::ElementType::F32);
+  EXPECT_EQ(Elem->SemanticKind, dxbc::PSV::SemanticKind::Arbitrary);
+  EXPECT_THAT(Elem->SemanticIndices, testing::ElementsAre(0u, 1u));
+  EXPECT_EQ(Elem->InterpMode, dxbc::PSV::InterpolationMode::Undefined);
+  EXPECT_EQ(Elem->Rows, 2u);
+  EXPECT_EQ(Elem->Cols, 4u);
+  EXPECT_EQ(Elem->StartRow, 1u);
+  EXPECT_EQ(Elem->StartCol, 0u);
+  EXPECT_EQ(Elem->UsageMask, 0u);
+  EXPECT_EQ(Elem->DynIndexMask, 0u);
+  EXPECT_EQ(Elem->GSStream, 0u);
+}
+
+// SV_Target output with a non-zero usage/dynamic-index mask and semantic index
+TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementSystemValue) {
+  MDNode *Node = getElement(/*SigId=*/1, "SV_Target", /*CompType=*/9,
+                            /*SemanticKind=*/16, /*Indices=*/{1},
+                            /*InterpMode=*/0, /*Rows=*/1, /*Cols=*/4,
+                            /*StartRow=*/1, /*StartCol=*/0, /*UsageMask=*/0x7,
+                            /*DynIndexMask=*/0x1, /*GSStream=*/0);
+
+  Expected<SemanticSignatureElement> Elem =
+      SemanticSignatureElement::fromMetadata(Node);
+  ASSERT_THAT_EXPECTED(Elem, Succeeded());
+
+  EXPECT_EQ(Elem->SemanticName, "SV_Target");
+  EXPECT_EQ(Elem->SemanticKind, dxbc::PSV::SemanticKind::Target);
+  EXPECT_THAT(Elem->SemanticIndices, testing::ElementsAre(1u));
+  EXPECT_EQ(Elem->UsageMask, 0x7u);
+  EXPECT_EQ(Elem->DynIndexMask, 0x1u);
+}
+
+// An unallocated element uses the row/col sentinels
+TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementUnallocated) {
+  MDNode *Node = getElement(/*SigId=*/0, "POSITION", /*CompType=*/9,
+                            /*SemanticKind=*/0, /*Indices=*/{0},
+                            /*InterpMode=*/0, /*Rows=*/1, /*Cols=*/4,
+                            /*StartRow=*/UnallocatedRow, /*StartCol=*/UnallocatedCol,
+                            /*UsageMask=*/0, /*DynIndexMask=*/0, /*GSStream=*/0);
+
+  Expected<SemanticSignatureElement> Elem =
+      SemanticSignatureElement::fromMetadata(Node);
+  ASSERT_THAT_EXPECTED(Elem, Succeeded());
+
+  EXPECT_EQ(Elem->StartRow, UnallocatedRow);
+  EXPECT_EQ(Elem->StartCol, UnallocatedCol);
+  EXPECT_FALSE(Elem->isAllocated());
+}
+
+// Every component type value maps onto the matching dxil::ElementType
+TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementComponentTypes) {
+  for (dxil::ElementType CompType :
+       {dxil::ElementType::I32, dxil::ElementType::U32,
+        dxil::ElementType::F16, dxil::ElementType::F32,
+        dxil::ElementType::F64, dxil::ElementType::I16}) {
+    MDNode *Node = getElement(
+        /*SigId=*/0, "A", static_cast<uint32_t>(CompType), /*SemanticKind=*/0,
+        /*Indices=*/{0}, /*InterpMode=*/0, /*Rows=*/1, /*Cols=*/1,
+        /*StartRow=*/0, /*StartCol=*/0, /*UsageMask=*/0, /*DynIndexMask=*/0,
+        /*GSStream=*/0);
+
+    Expected<SemanticSignatureElement> Elem =
+        SemanticSignatureElement::fromMetadata(Node);
+    ASSERT_THAT_EXPECTED(Elem, Succeeded());
+    EXPECT_EQ(Elem->CompType, CompType);
+  }
+}
+
+// Every interpolation mode value maps onto the matching enumerator
+TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementInterpModes) {
+  for (dxbc::PSV::InterpolationMode Mode :
+       {dxbc::PSV::InterpolationMode::Constant,
+        dxbc::PSV::InterpolationMode::Linear,
+        dxbc::PSV::InterpolationMode::LinearCentroid,
+        dxbc::PSV::InterpolationMode::LinearNoperspective,
+        dxbc::PSV::InterpolationMode::LinearSample}) {
+    MDNode *Node = getElement(
+        /*SigId=*/0, "A", /*CompType=*/9, /*SemanticKind=*/0, /*Indices=*/{0},
+        static_cast<uint32_t>(Mode), /*Rows=*/1, /*Cols=*/1, /*StartRow=*/0,
+        /*StartCol=*/0, /*UsageMask=*/0, /*DynIndexMask=*/0, /*GSStream=*/0);
+
+    Expected<SemanticSignatureElement> Elem =
+        SemanticSignatureElement::fromMetadata(Node);
+    ASSERT_THAT_EXPECTED(Elem, Succeeded());
+    EXPECT_EQ(Elem->InterpMode, Mode);
+  }
+}
+
+// A column-offset allocation drives the derived declared/usage masks
+TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementDerivedMasks) {
+  MDNode *Node = getElement(/*SigId=*/0, "SV_Position", /*CompType=*/9,
+                            /*SemanticKind=*/3, /*Indices=*/{0},
+                            /*InterpMode=*/4, /*Rows=*/1, /*Cols=*/2,
+                            /*StartRow=*/0, /*StartCol=*/1, /*UsageMask=*/0x2,
+                            /*DynIndexMask=*/0, /*GSStream=*/0);
+
+  Expected<SemanticSignatureElement> Elem =
+      SemanticSignatureElement::fromMetadata(Node);
+  ASSERT_THAT_EXPECTED(Elem, Succeeded());
+
+  EXPECT_EQ(Elem->SemanticKind, dxbc::PSV::SemanticKind::Position);
+  EXPECT_TRUE(Elem->isAllocated());
+  // ((1 << 2) - 1) << 1 == 0b0110
+  EXPECT_EQ(Elem->getDeclaredMask(), 0x6);
+  EXPECT_EQ(Elem->getAlwaysReadsMask(), 0x2);
+  // ~0x2 & 0x6 == 0x4
+  EXPECT_EQ(Elem->getNeverWritesMask(), 0x4);
+}
+
+// A geometry shader output carries a non-zero stream index
+TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementGSStream) {
+  MDNode *Node = getElement(/*SigId=*/0, "A", /*CompType=*/9,
+                            /*SemanticKind=*/0, /*Indices=*/{0},
+                            /*InterpMode=*/0, /*Rows=*/1, /*Cols=*/1,
+                            /*StartRow=*/0, /*StartCol=*/0, /*UsageMask=*/0,
+                            /*DynIndexMask=*/0, /*GSStream=*/3);
+
+  Expected<SemanticSignatureElement> Elem =
+      SemanticSignatureElement::fromMetadata(Node);
+  ASSERT_THAT_EXPECTED(Elem, Succeeded());
+  EXPECT_EQ(Elem->GSStream, 3u);
+}
+
+//===----------------------------------------------------------------------===//
+// Error cases
+//===----------------------------------------------------------------------===//
+
+// A null node is not a valid signature element
+TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementNull) {
+  EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(nullptr),
+                       Failed());
+}
+
+// A node with the wrong number of operands is rejected
+TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementWrongOperandCount) {
+  MDNode *Node = MDNode::get(Ctx, {getI32(0), getStr("A")});
+  EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(Node), Failed());
+}
+
+// A node with an operand of the wrong type is rejected
+TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementWrongOperandType) {
+  // Operand 0 (SigId) should be an integer, not a string
+  MDNode *Node = getElement(/*SigId=*/0, "A", /*CompType=*/9,
+                            /*SemanticKind=*/0, /*Indices=*/{0},
+                            /*InterpMode=*/0, /*Rows=*/1, /*Cols=*/1,
+                            /*StartRow=*/0, /*StartCol=*/0, /*UsageMask=*/0,
+                            /*DynIndexMask=*/0, /*GSStream=*/0);
+  SmallVector<Metadata *> Ops(Node->op_begin(), Node->op_end());
+  Ops[0] = getStr("not an int");
+  EXPECT_THAT_EXPECTED(
+      SemanticSignatureElement::fromMetadata(MDNode::get(Ctx, Ops)), Failed());
 }
 
 } // namespace
