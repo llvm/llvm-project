@@ -12917,6 +12917,14 @@ bool Sema::CheckForConstantInitializer(Expr *Init, unsigned DiagID) {
   if (Init->isConstantInitializer(Context, /*ForRef=*/false, &Culprit))
     return false;
 
+  // Under ARC, the initializer is wrapped in `ExprWithCleanups` +
+  // `ImplicitCastExpr <ARCReclaimReturnedObject>`. Unwrap both
+  // here so the ObjC-specific path fires under ARC too. 
+  Init = Init->IgnoreImpCasts();
+  if (auto *EWC = dyn_cast<ExprWithCleanups>(Init))
+    Init = EWC->getSubExpr()->IgnoreImpCasts();
+  Culprit = Culprit->IgnoreImpCasts();
+
   // Emit ObjC-specific diagnostics for non-constant literals at file scope.
   if (getLangOpts().ObjCConstantLiterals && isa<ObjCObjectLiteral>(Culprit)) {
 
@@ -12937,8 +12945,7 @@ bool Sema::CheckForConstantInitializer(Expr *Init, unsigned DiagID) {
       for (size_t I = 0, N = DLE->getNumElements(); I != N; ++I) {
         const ObjCDictionaryElement Elm = DLE->getKeyValueElement(I);
 
-        // Check that the key is a string literal and is constant.
-        if (!isa<ObjCStringLiteral>(Elm.Key) ||
+        if (!isa<ObjCStringLiteral>(Elm.Key->IgnoreImpCasts()) ||
             !Elm.Key->isConstantInitializer(Context)) {
           Diag(Elm.Key->getExprLoc(),
                diag::err_objc_literal_nonconstant_at_file_scope)
