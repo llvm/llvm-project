@@ -11552,6 +11552,9 @@ StmtResult SemaOpenMP::ActOnOpenMPTeamsGenericLoopDirective(
   if (validateMultidimClauses(*this, Clauses))
     return StmtError();
 
+  if (checkClausesForDecompositionConflicts(SemaRef, OMPD_teams_loop, Clauses))
+    return StmtError();
+
   // OpenMP 5.1 [2.11.7, loop construct, Restrictions]
   // A list item may not appear in a lastprivate clause unless it is the
   // loop iteration variable of a loop that is associated with the construct.
@@ -11657,6 +11660,10 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetParallelGenericLoopDirective(
     return StmtError();
 
   if (validateMultidimClauses(*this, Clauses))
+    return StmtError();
+
+  if (checkClausesForDecompositionConflicts(SemaRef, OMPD_target_parallel_loop,
+                                            Clauses))
     return StmtError();
 
   // OpenMP 5.1 [2.11.7, loop construct, Restrictions]
@@ -13988,6 +13995,10 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetParallelForDirective(
   if (validateMultidimClauses(*this, Clauses))
     return StmtError();
 
+  if (checkClausesForDecompositionConflicts(SemaRef, OMPD_target_parallel_for,
+                                            Clauses))
+    return StmtError();
+
   CapturedStmt *CS =
       setBranchProtectedScope(SemaRef, OMPD_target_parallel_for, AStmt);
 
@@ -14737,6 +14748,10 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetParallelForSimdDirective(
   if (validateMultidimClauses(*this, Clauses))
     return StmtError();
 
+  if (checkClausesForDecompositionConflicts(
+          SemaRef, OMPD_target_parallel_for_simd, Clauses))
+    return StmtError();
+
   CapturedStmt *CS =
       setBranchProtectedScope(SemaRef, OMPD_target_parallel_for_simd, AStmt);
 
@@ -14769,6 +14784,9 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetSimdDirective(
   if (validateMultidimClauses(*this, Clauses))
     return StmtError();
 
+  if (checkClausesForDecompositionConflicts(SemaRef, OMPD_target_simd, Clauses))
+    return StmtError();
+
   CapturedStmt *CS = setBranchProtectedScope(SemaRef, OMPD_target_simd, AStmt);
 
   OMPLoopBasedDirective::HelperExprs B;
@@ -14797,12 +14815,11 @@ StmtResult SemaOpenMP::ActOnOpenMPTeamsDistributeDirective(
   if (!AStmt)
     return StmtError();
 
-<<<<<<< HEAD
   if (validateMultidimClauses(*this, Clauses))
-=======
+    return StmtError();
+
   if (checkClausesForDecompositionConflicts(SemaRef, OMPD_teams_distribute,
                                             Clauses))
->>>>>>> 35a2727c24a4 (Addressed review comment and applied suggestion)
     return StmtError();
 
   CapturedStmt *CS =
@@ -14833,12 +14850,10 @@ StmtResult SemaOpenMP::ActOnOpenMPTeamsDistributeSimdDirective(
   if (!AStmt)
     return StmtError();
 
-<<<<<<< HEAD
   if (validateMultidimClauses(*this, Clauses))
-=======
+    return StmtError();
   if (checkClausesForDecompositionConflicts(SemaRef, OMPD_teams_distribute_simd,
                                             Clauses))
->>>>>>> 35a2727c24a4 (Addressed review comment and applied suggestion)
     return StmtError();
 
   CapturedStmt *CS =
@@ -14872,12 +14887,11 @@ StmtResult SemaOpenMP::ActOnOpenMPTeamsDistributeParallelForSimdDirective(
   if (!AStmt)
     return StmtError();
 
-<<<<<<< HEAD
   if (validateMultidimClauses(*this, Clauses))
-=======
+    return StmtError();
+
   if (checkClausesForDecompositionConflicts(
           SemaRef, OMPD_teams_distribute_parallel_for_simd, Clauses))
->>>>>>> 35a2727c24a4 (Addressed review comment and applied suggestion)
     return StmtError();
 
   CapturedStmt *CS = setBranchProtectedScope(
@@ -14911,12 +14925,11 @@ StmtResult SemaOpenMP::ActOnOpenMPTeamsDistributeParallelForDirective(
   if (!AStmt)
     return StmtError();
 
-<<<<<<< HEAD
   if (validateMultidimClauses(*this, Clauses))
-=======
+    return StmtError();
+
   if (checkClausesForDecompositionConflicts(
           SemaRef, OMPD_teams_distribute_parallel_for, Clauses))
->>>>>>> 35a2727c24a4 (Addressed review comment and applied suggestion)
     return StmtError();
 
   CapturedStmt *CS = setBranchProtectedScope(

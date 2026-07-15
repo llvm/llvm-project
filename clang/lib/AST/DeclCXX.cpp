@@ -3788,6 +3788,8 @@ DecompositionDecl::OriginalVarResult DecompositionDecl::getOriginalVar() const {
                             : OriginalVarResult::CallExpr;
   };
   const Expr *Stripped = Init->IgnoreParenImpCasts();
+  if (const auto *BTE = dyn_cast<CXXBindTemporaryExpr>(Stripped))
+    Stripped = BTE->getSubExpr()->IgnoreParenImpCasts();
   if (const auto *DRE = dyn_cast<DeclRefExpr>(Stripped)) {
     Result.Var = dyn_cast<VarDecl>(DRE->getDecl());
     return Result;
