@@ -20,6 +20,9 @@
 // __atomic_compare_exchange: https://github.com/llvm/llvm-project/issues/191388
 // UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
 
+// GCC fails to link without explicit -latomic
+// XFAIL: gcc
+
 #include <atomic>
 #include <cstring>
 #include <cassert>
