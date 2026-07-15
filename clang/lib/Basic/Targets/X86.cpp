@@ -175,18 +175,18 @@ bool X86TargetInfo::initFeatureMap(
     }
 
     if (Feature == "+apxf" || Feature == "-apxf") {
-      llvm::X86::expandAPXFeatures(Feature == "-apxf" ? true : false,
-                                   getTriple().isOSWindows(),
-                                   UpdatedFeaturesVec);
+      std::vector<StringRef> APXFeatures;
+      llvm::X86::expandAPXFeatures(Feature == "-apxf", getTriple().isOSWindows(),
+                                   APXFeatures);
+      UpdatedFeaturesVec.insert(UpdatedFeaturesVec.end(), APXFeatures.begin(),
+                                APXFeatures.end());
       continue;
     }
 
     UpdatedFeaturesVec.push_back(Feature);
   }
 
-  if (!TargetInfo::initFeatureMap(
-          Features, Diags, CPU,
-          {UpdatedFeaturesVec.begin(), UpdatedFeaturesVec.end()}))
+  if (!TargetInfo::initFeatureMap(Features, Diags, CPU, UpdatedFeaturesVec))
     return false;
 
   // Can't do this earlier because we need to be able to explicitly enable
@@ -1194,6 +1194,15 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("xsaves", true)
       .Case("xsaveopt", true)
       .Case("apxf", true)
+      .Case("egpr", true)
+      .Case("push2pop2", true)
+      .Case("ppx", true)
+      .Case("ndd", true)
+      .Case("ccmp", true)
+      .Case("nf", true)
+      .Case("cf", true)
+      .Case("zu", true)
+      .Case("jmpabs", true)
       .Default(false);
 }
 

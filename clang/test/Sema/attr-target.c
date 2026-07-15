@@ -35,26 +35,21 @@ void __attribute__((target("x86-64-v2"))) v2(void) {}
 
 int __attribute__((target("sha"))) good_target_but_not_for_fmv() { return 5; }
 
+// 'apxf' and the individual APX sub-features are all valid in a 'target'
+// attribute when used to enable the feature on a single (non-multiversioned)
+// function, so none of these produce a diagnostic. 
 int __attribute__((target("apxf"))) apx_supported(void) { return 6; }
 int __attribute__((target("no-apxf"))) no_apx_supported(void) { return 7; }
-
-// APXF sub-features should NOT be supported directly in target attribute
-//expected-warning@+1 {{unsupported 'egpr' in the 'target' attribute string; 'target' attribute ignored}}
-int __attribute__((target("egpr"))) egpr_not_supported(void) { return 8; }
-//expected-warning@+1 {{unsupported 'ndd' in the 'target' attribute string; 'target' attribute ignored}}
-int __attribute__((target("ndd"))) ndd_not_supported(void) { return 9; }
-//expected-warning@+1 {{unsupported 'ccmp' in the 'target' attribute string; 'target' attribute ignored}}
-int __attribute__((target("ccmp"))) ccmp_not_supported(void) { return 10; }
-//expected-warning@+1 {{unsupported 'nf' in the 'target' attribute string; 'target' attribute ignored}}
-int __attribute__((target("nf"))) nf_not_supported(void) { return 11; }
-//expected-warning@+1 {{unsupported 'cf' in the 'target' attribute string; 'target' attribute ignored}}
-int __attribute__((target("cf"))) cf_not_supported(void) { return 12; }
-//expected-warning@+1 {{unsupported 'zu' in the 'target' attribute string; 'target' attribute ignored}}
-int __attribute__((target("zu"))) zu_not_supported(void) { return 13; }
-//expected-warning@+1 {{unsupported 'push2pop2' in the 'target' attribute string; 'target' attribute ignored}}
-int __attribute__((target("push2pop2"))) push2pop2_not_supported(void) { return 14; }
-//expected-warning@+1 {{unsupported 'ppx' in the 'target' attribute string; 'target' attribute ignored}}
-int __attribute__((target("ppx"))) ppx_not_supported(void) { return 15; }
+int __attribute__((target("egpr"))) egpr_enabled(void) { return 8; }
+int __attribute__((target("ndd"))) ndd_enabled(void) { return 9; }
+int __attribute__((target("ccmp"))) ccmp_enabled(void) { return 10; }
+int __attribute__((target("nf"))) nf_enabled(void) { return 11; }
+int __attribute__((target("cf"))) cf_enabled(void) { return 12; }
+int __attribute__((target("zu"))) zu_enabled(void) { return 13; }
+int __attribute__((target("push2pop2"))) push2pop2_enabled(void) { return 14; }
+int __attribute__((target("ppx"))) ppx_enabled(void) { return 15; }
+int __attribute__((target("jmpabs"))) jmpabs_enabled(void) { return 16; }
+int __attribute__((target("egpr,ndd,ccmp"))) multiple_enabled(void) { return 17; }
 
 #elifdef __aarch64__
 
