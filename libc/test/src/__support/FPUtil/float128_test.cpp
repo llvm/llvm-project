@@ -50,27 +50,26 @@ TEST(LlvmLibcFloat128Test, Operators) {
 }
 
 TEST(LlvmLibcFloat128Test, SpecialValues) {
-  Float128 zero = FPBits::zero(Sign::POS).get_val();
-  Float128 neg_zero = FPBits::zero(Sign::NEG).get_val();
   Float128 inf = FPBits::inf(Sign::POS).get_val();
   Float128 neg_inf = FPBits::inf(Sign::NEG).get_val();
   Float128 nan = FPBits::quiet_nan().get_val();
 
   // checking operators with special values
-  ASSERT_TRUE(zero == neg_zero); // +0.0 == -0.0 is true
-  ASSERT_TRUE(zero == Float128(0.0f));
+  ASSERT_TRUE(Float128(0.0f) == Float128(-0.0f)); // +0.0 == -0.0 is true
+  ASSERT_TRUE(Float128(0.0f) == Float128(0.0f));
   ASSERT_TRUE(inf == inf);
   ASSERT_TRUE(-inf == neg_inf);
   ASSERT_TRUE((inf + Float128(1.0f)) == inf);
   ASSERT_TRUE(inf + inf == inf);
   ASSERT_TRUE(nan != nan);
   ASSERT_TRUE(!(nan == nan));
-  ASSERT_TRUE(nan != zero);
+  ASSERT_TRUE(nan != Float128(0.0f));
 }
 
 TEST(LlvmLibcFloat128Test, IntegerConversion) {
   // Float128 to Integer conversion test
   ASSERT_EQ(static_cast<int>(Float128(0.0f)), 0);
+  ASSERT_EQ(static_cast<int>(Float128(-0.0f)), -0);
   ASSERT_EQ(static_cast<int>(Float128(1.0f)), 1);
   ASSERT_EQ(static_cast<int>(Float128(-1.0)), -1);
   ASSERT_EQ(static_cast<long long>(Float128(1000000000.0)),
@@ -83,6 +82,8 @@ TEST(LlvmLibcFloat128Test, IntegerConversion) {
   // Extreme values
   ASSERT_EQ(static_cast<int>(Float128(INT_MAX)), INT_MAX);
   ASSERT_EQ(static_cast<int>(Float128(INT_MIN)), INT_MIN);
+  ASSERT_EQ(static_cast<int>(Float128(LLONG_MAX)), LLONG_MAX);
+  ASSERT_EQ(static_cast<int>(Float128(LLONG_MIN)), LLONG_MIN);
   ASSERT_EQ(static_cast<unsigned>(Float128(UINT_MAX)), UINT_MAX);
   ASSERT_EQ(static_cast<unsigned>(Float128(0U)), 0U);
 

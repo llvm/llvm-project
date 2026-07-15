@@ -25,11 +25,6 @@ TEST_F(LlvmLibcAsinTest, SpecialNumbers) {
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::asin(-2.0));
   EXPECT_FP_EQ(0x1.921fb54442d18p0, LIBC_NAMESPACE::asin(1.0));
   EXPECT_FP_EQ(-0x1.921fb54442d18p0, LIBC_NAMESPACE::asin(-1.0));
-
-  ASSERT_EQ(static_cast<int>(double(INT_MAX)), INT_MAX);
-  ASSERT_EQ(static_cast<int>(double(INT_MIN)), INT_MIN);
-  ASSERT_EQ(static_cast<unsigned>(double(UINT_MAX)), UINT_MAX);
-  ASSERT_EQ(static_cast<unsigned>(double(0U)), 0U);
 }
 
 #ifdef LIBC_TEST_FTZ_DAZ

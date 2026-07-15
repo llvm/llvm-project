@@ -30,6 +30,10 @@ public:
       __is_unqualified_any_of<T, float, double, long double
 #ifdef LIBC_TYPES_HAS_FLOAT16
                               ,
+                              // TODO: Remove this once all the function and
+                              // modified to use the emulated float128 and the
+                              // new alias for both native and emulated float128
+                              // is defined
                               float16
 #endif
 #ifdef LIBC_TYPES_HAS_FLOAT128
@@ -40,8 +44,6 @@ public:
                               bfloat16
 
                               ,
-                              // TODO: Replace as float128 once the alias is
-                              // fixed
                               fputil::Float128>();
 };
 template <typename T>
