@@ -327,11 +327,20 @@ rejected outright:
 
 A member or variable counts as assigned only when every path to the read
 assigns it (§1.3), and a compound assignment (``x += 1``) or an increment or
-decrement reads the old value first, so it is diagnosed like a read.  A
-``this``-capturing lambda might run immediately, so member reads in its body
-count at the point the lambda is created (and writes there earn no credit).
-Members of an object initialized by a *user-provided* constructor are trusted
-(§5.1) and not flow-tracked; only the defining constructor itself is checked.
+decrement reads the old value first, so it is diagnosed like a read.  Inside
+a constructor body only that plain whole-member assignment earns credit:
+passing ``&m`` to a function (even one whose parameter is marked
+``[[ref_to_uninit]]``), binding a reference to the member, calling a member
+function, or letting ``this`` escape does not count as initializing ``m`` --
+the paper rejects complex constructor code (§5.1) and reserves
+callee-initialization for ``now_init()`` (§6.2); suppress the rule where
+such a flow is intended.  A ``this``-capturing lambda might run immediately,
+so member reads in its body count at the point the lambda is created (and
+writes there earn no credit -- the same strict policy).  For a *local*
+variable the analyses instead treat any escape as an assignment (see
+`Limitations`_).  Members of an object initialized by a *user-provided*
+constructor are trusted (§5.1) and not flow-tracked; only the defining
+constructor itself is checked.
 
 
 Writes to Subobjects of Uninitialized Objects
@@ -477,9 +486,24 @@ produce a read of a not-yet-initialized object:
 Limitations
 -----------
 
-The implemented slice is deliberately conservative; each omission below is a
-missed diagnostic, never a false positive.
+The implemented slice is deliberately conservative.  The first entry below
+is a deliberate strictness -- it rejects code the paper itself rejects --
+rather than an omission; each of the others is a missed diagnostic, never a
+false positive.
 
+- Inside a constructor body, *only* a plain assignment to an ``[[uninit]]``
+  member counts as its initialization.  Taking the member's address, binding
+  a reference to it, calling a member function, letting ``this`` escape, or
+  passing ``&m`` to a ``[[ref_to_uninit]]`` parameter earns no credit, so a
+  later read of the member is rejected: the paper rejects complex
+  constructor code (§5.1) and reserves callee-initialization for
+  ``now_init()`` (§6.2); the remedy for an intended flow is
+  ``[[profiles::suppress]]``.  For *locals*, by contrast, the local-aggregate
+  pass and the plain-local analysis conservatively treat any escape of the
+  variable as an assignment -- there the omission is a missed diagnostic,
+  never a false positive.  That escape-crediting is an interim deviation
+  from the paper, to be replaced by explicit ``now_init()`` recognition when
+  it is implemented.
 - ``construct_at``/``destroy_at`` flow is not modeled: class-type
   initialization of uninitialized storage, double initialization, and double
   destruction are not checked, and writes through ``[[ref_to_uninit]]`` are

@@ -296,6 +296,45 @@ struct LambdaReadSuppressed {
   }
 };
 
+// Strict assignment-only crediting: inside a constructor body, nothing but a
+// plain whole-member assignment counts as initializing an [[uninit]] member.
+// Passing &m to a [[ref_to_uninit]] parameter, calling a member function that
+// assigns it, or letting `this` escape earns no credit -- the paper rejects
+// complex constructor code (§5.1) and reserves callee-initialization for
+// now_init() (§6.2); the remedy is [[profiles::suppress]]. Contrast the
+// *local*-object passes, which conservatively credit any escape
+// (safety-profile-init-local-member-read.cpp, test_escape_*).
+void init_pointee(int *p [[ref_to_uninit]]);
+struct EscapeMemberAddress {
+  int m [[uninit]]; // expected-note {{member 'm' declared here}}
+  EscapeMemberAddress() {
+    init_pointee(&m);
+    int x = m; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+    (void)x;
+  }
+};
+
+struct EscapeMemberCall {
+  int m [[uninit]]; // expected-note {{member 'm' declared here}}
+  void setup() { m = 1; }
+  EscapeMemberCall() {
+    setup();
+    int x = m; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+    (void)x;
+  }
+};
+
+struct EscapeThis;
+void take_this(EscapeThis *);
+struct EscapeThis {
+  int m [[uninit]]; // expected-note {{member 'm' declared here}}
+  EscapeThis() {
+    take_this(this);
+    int x = m; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+    (void)x;
+  }
+};
+
 // [[uninit]] members inherited from a non-virtual base with no user-provided
 // constructor are tracked like the class's own: nothing can have assigned
 // them before the derived body runs. A base with a user-provided constructor

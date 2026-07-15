@@ -116,6 +116,9 @@ int test_branch_both_paths(bool c) {
 // Any appearance of the variable outside a recognized member read or write
 // conservatively marks every member assigned: the address may be used to
 // initialize the object (construct_at, memcpy, an initializing callee).
+// These pin the interim (pre-now_init()) leniency, paper §6.2; contrast the
+// ctor-body pass's strict assignment-only crediting
+// (safety-profile-init-ctor-body.cpp, Escape*).
 int test_escape_address_of_object() {
   Agg a;
   (void)&a;

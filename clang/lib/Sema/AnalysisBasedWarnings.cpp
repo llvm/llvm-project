@@ -1803,6 +1803,18 @@ static void collectTrackedUninitMembers(
 // the violation. There is no constructor-exit requirement: a member that is
 // simply never read is left as-is, exactly as the structural ctor_uninit_member
 // check (R5) excuses a marked member.
+//
+// Crediting is strictly assignment-only: nothing but a plain whole-member
+// store (or a written member/base initializer) marks a member assigned.
+// Taking the member's address, binding a reference to it, calling a member
+// function, letting `this` escape, or passing &m to a [[ref_to_uninit]]
+// parameter earns no credit -- the paper rejects complex constructor code
+// (§5.1) and reserves callee-initialization for now_init() (§6.2), so such
+// code is deliberately rejected here (the remedy is [[profiles::suppress]]).
+// This is the deliberate counterpart of checkInitProfileLocalMembers'
+// "soundness over completeness" escape crediting below: locals conservatively
+// credit any escape (missed diagnostics only), while constructor bodies get
+// the paper's strictness.
 static void checkInitProfileCtorBody(Sema &S, const CXXConstructorDecl *Ctor,
                                      AnalysisDeclContext &AC) {
   // A delegating constructor leaves member initialization to its target (paper
