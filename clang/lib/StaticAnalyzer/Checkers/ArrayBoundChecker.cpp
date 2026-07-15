@@ -664,11 +664,11 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
     return;
   }
 
-  const NoteTag *T = nullptr;
+  std::string RegName = getRegionName(Space, Reg);
 
+  const NoteTag *T = nullptr;
   if (Res.mayBeInvalid()) {
     if (!Res.mayBeValid()) {
-      std::string RegName = getRegionName(Space, Reg);
       Messages Msgs = getNonTaintMsgs(C.getASTContext(), RegName, ByteOffset,
                                       Res.extentIfRelevant(), Location,
                                       Res.getBadOffsetKind());
@@ -685,17 +685,16 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
         if (isTainted(State, ASE->getIdx(), C.getStackFrame()))
           OffsetName = "index";
 
-      std::string RegName = getRegionName(Space, Reg);
       Messages Msgs = getTaintMsgs(RegName, OffsetName, Res.mayUnderflow());
       reportOOB(C, State, Msgs, ByteOffset, Extent, /*IsTaintBug=*/true);
       return;
     }
 
-    std::string RN = getRegionName(Space, Reg);
     SizeUnit SU = SizeUnit::forExpr(E, C);
-    T = C.getNoteTag([Res, RN, SU](PathSensitiveBugReport &BR) -> std::string {
-      return Res.getMessage(BR, RN, SU);
-    });
+    T = C.getNoteTag(
+        [Res, RegName, SU](PathSensitiveBugReport &BR) -> std::string {
+          return Res.getMessage(BR, RegName, SU);
+        });
   }
 
   C.addTransition(Res.getValidState(), T);
