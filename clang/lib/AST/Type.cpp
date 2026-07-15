@@ -70,46 +70,91 @@ bool Qualifiers::isStrictSupersetOf(Qualifiers Other) const {
           (hasObjCLifetime() && !Other.hasObjCLifetime()));
 }
 
+// When targeting the OpenCL execution environment, corresponding SYCL and
+// OpenCL address spaces designate the same underlying address space and are
+// mutually convertible.
+static bool isConvertibleOpenCLSYCLAddressSpace(LangAS A, LangAS B) {
+  return (A == LangAS::sycl_global && B == LangAS::opencl_global) ||
+         (A == LangAS::opencl_global && B == LangAS::sycl_global) ||
+         (A == LangAS::sycl_global_device &&
+          B == LangAS::opencl_global_device) ||
+         (A == LangAS::opencl_global_device &&
+          B == LangAS::sycl_global_device) ||
+         (A == LangAS::sycl_global_host && B == LangAS::opencl_global_host) ||
+         (A == LangAS::opencl_global_host && B == LangAS::sycl_global_host) ||
+         (A == LangAS::sycl_local && B == LangAS::opencl_local) ||
+         (A == LangAS::opencl_local && B == LangAS::sycl_local) ||
+         (A == LangAS::sycl_private && B == LangAS::opencl_private) ||
+         (A == LangAS::opencl_private && B == LangAS::sycl_private) ||
+         (A == LangAS::sycl_generic && B == LangAS::opencl_generic) ||
+         (A == LangAS::opencl_generic && B == LangAS::sycl_generic) ||
+         (A == LangAS::sycl_constant && B == LangAS::opencl_constant) ||
+         (A == LangAS::opencl_constant && B == LangAS::sycl_constant);
+}
+
 bool Qualifiers::isTargetAddressSpaceSupersetOf(LangAS A, LangAS B,
                                                 const ASTContext &Ctx) {
-  // In OpenCLC v2.0 s6.5.5: every address space except for __constant can be
-  // used as __generic.
-  return (A == LangAS::opencl_generic && B != LangAS::opencl_constant) ||
-         // We also define global_device and global_host address spaces,
-         // to distinguish global pointers allocated on host from pointers
-         // allocated on device, which are a subset of __global.
-         (A == LangAS::opencl_global && (B == LangAS::opencl_global_device ||
-                                         B == LangAS::opencl_global_host)) ||
-         (A == LangAS::sycl_global &&
-          (B == LangAS::sycl_global_device || B == LangAS::sycl_global_host)) ||
-         // Consider pointer size address spaces to be equivalent to default.
-         ((isPtrSizeAddressSpace(A) || A == LangAS::Default) &&
-          (isPtrSizeAddressSpace(B) || B == LangAS::Default)) ||
-         // Default and sycl_generic are supersets of SYCL address spaces.
-         ((A == LangAS::Default || A == LangAS::sycl_generic) &&
-          (B == LangAS::sycl_private || B == LangAS::sycl_local ||
-           B == LangAS::sycl_global || B == LangAS::sycl_global_device ||
-           B == LangAS::sycl_global_host)) ||
-         // Consider sycl_generic address space to be equivalent to default.
-         (A == LangAS::Default && B == LangAS::sycl_generic) ||
-         (B == LangAS::Default && A == LangAS::sycl_generic) ||
-         // In HIP device compilation, any cuda address space is allowed
-         // to implicitly cast into the default address space.
-         (A == LangAS::Default &&
-          (B == LangAS::cuda_constant || B == LangAS::cuda_device ||
-           B == LangAS::cuda_shared)) ||
-         // In HLSL, the this pointer for member functions points to the default
-         // address space. This causes a problem if the structure is in
-         // a different address space. We want to allow casting from these
-         // address spaces to default to work around this problem.
-         (A == LangAS::Default && B == LangAS::hlsl_private) ||
-         (A == LangAS::Default && B == LangAS::hlsl_device) ||
-         (A == LangAS::Default && B == LangAS::hlsl_input) ||
-         (A == LangAS::Default && B == LangAS::hlsl_output) ||
-         (A == LangAS::Default && B == LangAS::hlsl_push_constant) ||
-         // Conversions from target specific address spaces may be legal
-         // depending on the target information.
-         Ctx.getTargetInfo().isAddressSpaceSupersetOf(A, B);
+  const bool IsOpenCLExecEnv =
+      Ctx.getTargetInfo().getTriple().getOS() == llvm::Triple::OpenCL;
+
+  // In OpenCL C v2.0 s6.5.5: every address space except for __constant can be
+  // used as __generic. The OpenCL address space attributes are also available
+  // in SYCL device mode, but there opencl_generic only overlaps other address
+  // spaces when targeting the OpenCL execution environment.
+  if ((Ctx.getLangOpts().OpenCL || IsOpenCLExecEnv) &&
+      A == LangAS::opencl_generic && B != LangAS::opencl_constant)
+    return true;
+
+  // __global is a superset of the global_device and global_host address
+  // spaces, which distinguish global pointers allocated on the host from those
+  // allocated on the device.
+  if (A == LangAS::opencl_global &&
+      (B == LangAS::opencl_global_device || B == LangAS::opencl_global_host))
+    return true;
+  if (A == LangAS::sycl_global &&
+      (B == LangAS::sycl_global_device || B == LangAS::sycl_global_host))
+    return true;
+
+  // Pointer size address spaces are equivalent to the default address space.
+  if ((isPtrSizeAddressSpace(A) || A == LangAS::Default) &&
+      (isPtrSizeAddressSpace(B) || B == LangAS::Default))
+    return true;
+
+  // Default and sycl_generic are supersets of the SYCL address spaces.
+  if ((A == LangAS::Default || A == LangAS::sycl_generic) &&
+      (B == LangAS::sycl_private || B == LangAS::sycl_local ||
+       B == LangAS::sycl_global || B == LangAS::sycl_global_device ||
+       B == LangAS::sycl_global_host))
+    return true;
+
+  // Default and sycl_generic are equivalent.
+  if ((A == LangAS::Default && B == LangAS::sycl_generic) ||
+      (B == LangAS::Default && A == LangAS::sycl_generic))
+    return true;
+
+  if (IsOpenCLExecEnv && isConvertibleOpenCLSYCLAddressSpace(A, B))
+    return true;
+
+  // In HIP device compilation, any cuda address space is allowed to implicitly
+  // cast into the default address space.
+  if (A == LangAS::Default &&
+      (B == LangAS::cuda_constant || B == LangAS::cuda_device ||
+       B == LangAS::cuda_shared))
+    return true;
+
+  // In HLSL, the this pointer for member functions points to the default
+  // address space. This causes a problem if the structure is in a different
+  // address space. We want to allow casting from these address spaces to
+  // default to work around this problem.
+  if (A == LangAS::Default &&
+      (B == LangAS::hlsl_private || B == LangAS::hlsl_device ||
+       B == LangAS::hlsl_input || B == LangAS::hlsl_output ||
+       B == LangAS::hlsl_push_constant))
+    return true;
+
+  // Conversions from target specific address spaces may be legal depending on
+  // the target information.
+  return Ctx.getTargetInfo().isAddressSpaceSupersetOf(A, B);
 }
 
 const IdentifierInfo *QualType::getBaseTypeIdentifier() const {

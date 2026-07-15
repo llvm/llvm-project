@@ -873,7 +873,9 @@ expression.
   }];
 }
 
-def SYCLAddressSpaceDocs : DocumentationCategory<"SYCL Address Spaces"> {
+def SYCLAddressSpaceDocs : Documentation {
+  let Category = DocCatType;
+  let Heading = "SYCL Address Spaces";
   let Content = [{
 .. note::
 

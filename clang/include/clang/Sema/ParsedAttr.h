@@ -598,6 +598,14 @@ public:
       return LangAS::sycl_generic;
     case ParsedAttr::AT_SYCLConstantAddressSpace:
       return LangAS::sycl_constant;
+    // The OpenCL address space attributes are available in SYCL device
+    // mode when targeting the OpenCL execution environment.
+    case ParsedAttr::AT_OpenCLGlobalAddressSpace:
+    case ParsedAttr::AT_OpenCLLocalAddressSpace:
+    case ParsedAttr::AT_OpenCLPrivateAddressSpace:
+    case ParsedAttr::AT_OpenCLGenericAddressSpace:
+    case ParsedAttr::AT_OpenCLConstantAddressSpace:
+      return asOpenCLLangAS();
     default:
       return LangAS::Default;
     }
