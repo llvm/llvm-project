@@ -195,10 +195,6 @@ void Rematerializer::transferUserImpl(RegisterIdx FromRegIdx,
     // Other defining MIs might already be using the new register.
     IsNewDep = !is_contained(UserDeps, ToRegIdx);
 
-    auto MOIsFromReg = [FromReg](MachineOperand &MO) {
-      return MO.getReg() == FromReg;
-    };
-
     // If any other defining instruction of the rematerializable user still uses
     // the original register, we should not remove it from dependencies and may
     // need to add a new dependency if it is the first time the new register is
@@ -206,10 +202,12 @@ void Rematerializer::transferUserImpl(RegisterIdx FromRegIdx,
     for (MachineInstr *DefMI : UserReg.Defs) {
       if (DefMI == &UserMI)
         continue;
-      if (any_of(DefMI->all_uses(), MOIsFromReg)) {
-        if (IsNewDep)
-          UserDeps.push_back(ToRegIdx);
-        return;
+      for (const MachineOperand &MO : DefMI->all_uses()) {
+        if (MO.getReg() == FromReg) {
+          if (IsNewDep)
+            UserDeps.push_back(ToRegIdx);
+          return;
+        }
       }
     }
   }

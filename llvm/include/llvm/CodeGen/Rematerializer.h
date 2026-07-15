@@ -142,10 +142,7 @@ public:
     /// instructions.
     Register getDefReg() const {
       const MachineInstr *DefMI = getFirstDef();
-      assert(DefMI && "defining instruction(s) were deleted");
-      if (!DefMI->getOperand(0).isDef())
-        dbgs() << *DefMI;
-      assert(DefMI->getOperand(0).isDef() && "not a register def");
+      assert(DefMI && DefMI->getOperand(0).isDef() && "not a register def");
       return DefMI->getOperand(0).getReg();
     }
 
