@@ -393,6 +393,23 @@ public:
   /// references cannot be reseated, so their credit is never cleared).
   bool hasPointeeStoreCredit(const ValueDecl *VD) const;
 
+  /// True if the [[uninit]] member \p F of the base object identified by
+  /// \p Base (see resolveMemberStoreBase; null returns false) is credited by
+  /// a recorded whole-member store; the member then classifies as
+  /// initialized through that same base.
+  bool hasMemberStoreCredit(const Decl *Base, const FieldDecl *F) const;
+
+  /// Resolve the identity key of a member access's base object for the
+  /// per-object member store credit: the enclosing function declaration for
+  /// a current-object access (this->m / m / (*this).m) -- so credit recorded
+  /// in one function body can never satisfy a binding in another -- or the
+  /// directly named local-storage, non-reference VarDecl of a dot access
+  /// (a.m). Any other base -- another member (a.b.m; §5.4 rejects deep
+  /// delayed-initialization tracking), an arrow through an arbitrary pointer
+  /// value, a reference (an alias to an object also reachable other ways) --
+  /// is untrackable per object: null.
+  const Decl *resolveMemberStoreBase(const MemberExpr *ME) const;
+
   /// Store-credit bits for recordInitProfileStore.
   enum InitStoreCreditFlags : unsigned {
     /// The [[uninit]] entity itself was assigned (u = e, u @= e, ++u).
@@ -408,6 +425,19 @@ public:
   /// declarations, and template instantiations build fresh declarations, so
   /// pattern-time and instantiation-time state stay independent.
   llvm::DenseMap<const VarDecl *, unsigned> InitStoreCredit;
+
+  /// Parse-order whole-member store credit, keyed per base object: the base
+  /// is the directly named local-storage VarDecl (a.m = e) or, for the
+  /// current object (this->m = e / m = e), the enclosing function
+  /// declaration -- so credit recorded in one function body can never
+  /// satisfy a binding in another, and two locals of the same type never
+  /// share credit. Only WholeStored is ever set: member *pointee* stores
+  /// (*a.p = e) are deliberately never credited -- per-object pointee
+  /// aliasing (copies share pointees) makes them unsound to approximate.
+  /// Never cleared, for the same reasons as InitStoreCredit (instantiations
+  /// key on fresh field and function declarations).
+  llvm::DenseMap<std::pair<const Decl *, const FieldDecl *>, unsigned>
+      MemberStoreCredit;
 
   /// std::init / ref_to_uninit (paper §5): a thrown pointer copy-initializes
   /// the exception object, which cannot carry [[ref_to_uninit]]; a no-op for

@@ -473,10 +473,22 @@ credited in either direction (§5.4's random-access ban applies even to
 ``&u`` to a ``[[ref_to_uninit]]`` parameter) never count -- the paper
 reserves callee-initialization for ``now_init()`` (§6.2).  Class-typed
 whole-object assignment never credits either: it is a member ``operator=``
-call on uninitialized storage, rejected as above.  The credit is purely
-parse-order, with no dominance or flow analysis: a store under a condition
-credits everything after it, so a binding on the untaken path is a missed
-diagnostic (see `Limitations`_).
+call on uninitialized storage, rejected as above.
+
+Whole-member stores are credited too, keyed per base object: after
+``a.m = 5;`` on a directly named local, or ``this->m = 5;`` on the current
+object (keyed to the enclosing function body, so no other function -- nor a
+lambda body, which is its own function -- shares it), binding ``a.m`` or
+``&a.m`` through the *same* base is accepted, and the reverse direction
+applies as for locals.  The boundaries: one member level only (``x.agg.m =
+5;`` is itself the piecemeal-initialization error and earns nothing), only
+directly named non-reference locals or the current object (a member reached
+through a pointer, reference, or any other object -- including a copy, per
+§5.2 -- stays strict), and never member *pointee* stores (``*w.p = 5;``),
+whose aliasing is per-value: a copy of the object shares the pointee.  The
+credit is purely parse-order, with no dominance or flow analysis: a store
+under a condition credits everything after it, so a binding on the untaken
+path is a missed diagnostic (see `Limitations`_).
 
 
 Constructors

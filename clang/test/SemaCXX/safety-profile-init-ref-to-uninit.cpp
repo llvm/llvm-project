@@ -1501,9 +1501,12 @@ void test_reseat_clears_credit(int *p [[ref_to_uninit]],
   (void)x; (void)y; (void)z;
 }
 
-// The credit map keys on local VarDecls, so a [[ref_to_uninit]] *member*
-// pointer is never credited: a read through it keeps failing even after a
-// store through the exact same lvalue (no per-object tracking).
+// The *pointee* credit map keys on local VarDecls, so a [[ref_to_uninit]]
+// *member* pointer is never credited: a read through it keeps failing even
+// after a store through the exact same lvalue. The per-object *whole-member*
+// credit below deliberately does not extend here: pointee aliasing is
+// per-value, not per-object (a copy of the object shares the pointee), so
+// crediting `(w, p)` would be unsound the moment w is copied.
 struct WithMarkedPtrField {
   int *p [[ref_to_uninit]] = &g_uninit;
 };
@@ -1521,6 +1524,140 @@ void test_member_store_never_credits(Inner *ptr [[ref_to_uninit]]) {
   int y = ptr->m; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
   (void)y;
 }
+
+// Per-object whole-member store credit (paper §4.2: "After initialization,
+// the object is no longer [[uninit]]"; §6: ordinary assignment initializes a
+// built-in): `a.m = 5` credits exactly the (base object, member) pair, so a
+// later binding of that member through the same base is legal -- the member
+// analog of the locals credit above. The base identity is the directly named
+// local-storage variable or, for current-object accesses (this->m / m), the
+// enclosing function declaration, so unrelated objects and other function
+// bodies never share credit. Same parse-order semantics: no dominance or
+// flow analysis, missed diagnostics only.
+struct MemberCredit { int m [[uninit]]; }; // expected-note {{member 'm' declared here}}
+void mc_sink_ptr(int *);
+void mc_sink_ref(const int &);
+void mc_fill(int *p [[ref_to_uninit]]);
+
+void test_member_store_credit() {
+  MemberCredit a;
+  mc_sink_ref(a.m); // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  mc_sink_ptr(&a.m); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  a.m = 5;
+  mc_sink_ref(a.m);  // OK: credited
+  mc_sink_ptr(&a.m); // OK: credited
+  int *q = &a.m;     // OK: credited
+  (void)q;
+}
+
+// The reverse direction applies too (mirroring test_assign_credited_to_marked):
+// a credited member is initialized memory and now requires an unmarked target.
+void test_member_credit_reverse_direction() {
+  MemberCredit a;
+  a.m = 5;
+  mc_fill(&a.m); // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+}
+
+// The credit is per base object: a store to one local's member says nothing
+// about another local of the same type (and per §5.2, nothing about a copy).
+void test_member_credit_per_object() {
+  MemberCredit a1, a2;
+  a1.m = 5;
+  mc_sink_ref(a1.m); // OK: credited
+  mc_sink_ref(a2.m); // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+
+// Current-object members key on the enclosing function: `m = 5` in one member
+// function never credits a binding in another, `this->m` / `m` / `(*this).m`
+// share the key within one body, and a this-capturing lambda's body is its
+// own function (its stores and the enclosing function's do not mix, in
+// either direction).
+struct ThisMemberCredit {
+  int m [[uninit]];
+  void store_then_bind() {
+    this->m = 5;
+    mc_sink_ref(m);          // OK: credited (same key as this->m)
+    mc_sink_ptr(&(*this).m); // OK: credited
+  }
+  void bind_without_store() {
+    mc_sink_ref(m); // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  }
+  void lambda_store_isolated() {
+    auto l = [this] { m = 5; }; // records under the lambda's own key
+    mc_sink_ptr(&m); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+    (void)l;
+  }
+  void lambda_bind_isolated() {
+    m = 5; // records under this function's key
+    auto l = [this] {
+      mc_sink_ptr(&m); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+    };
+    (void)l;
+  }
+};
+
+// In a constructor, the parse-time binding after a whole-member store is
+// credited the same way (this was the escape-adjacent false positive); the
+// CFG ctor-body pass independently keeps governing *reads*, with real flow
+// analysis (safety-profile-init-ctor-body.cpp).
+struct CtorMemberCredit {
+  int m [[uninit]];
+  CtorMemberCredit() {
+    m = 5;
+    mc_sink_ptr(&m); // OK: credited by the store above
+  }
+  CtorMemberCredit(int) {
+    mc_sink_ptr(&m); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+    m = 5;
+  }
+};
+
+// Compound assignment and ++/-- record through the same arm: the store side
+// credits later bindings (the read side of `a.m += 1` on a local aggregate is
+// the CFG local-members pass's, which flags it with flow precision).
+void test_member_credit_compound() {
+  MemberCredit a;
+  a.m += 1; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+  mc_sink_ref(a.m); // OK: the compound store credited (a, m)
+}
+
+// Only a single-level, directly named base earns or consults credit. A store
+// below a marked class-type member (x.agg.m) is itself the banned piecemeal
+// initialization (uninit_write, §5.4) and resolves no base, so it earns
+// nothing -- the later binding still sees agg's marker below top level. A
+// whole-member `x.agg = ...` cannot credit either: a class-typed assignment
+// is a member operator= call on uninitialized storage, rejected outright.
+struct AggMemberCredit { MemberCredit agg [[uninit]]; };
+void test_member_credit_single_level() {
+  AggMemberCredit x;
+  x.agg.m = 5; // expected-error {{writing a member of an '[[uninit]]' object does not initialize it under profile 'std::init'; initialize the whole object}}
+  mc_sink_ptr(&x.agg.m); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  x.agg = MemberCredit(); // expected-error {{calling member function 'operator=' binds its implicit object parameter to uninitialized memory under profile 'std::init'}}
+}
+
+// A member of an object reached through a reference or pointer parameter is
+// the pinned aliasing boundary: the store is trusted as a write, but the
+// binding through that alias stays strict.
+void test_member_credit_alias_boundary(MemberCredit &r, MemberCredit *p) {
+  r.m = 5;
+  mc_sink_ref(r.m); // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  p->m = 5;
+  mc_sink_ptr(&p->m); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+
+// Credit is recorded at pattern-parse time and independently at instantiation
+// (fresh field and function declarations), so the store-then-bind sequence
+// holds in templates too; the dependent binding defers on the pattern and
+// re-runs on the rebuilt (credited-in-order) instantiation.
+template <typename T>
+struct TmplMemberCredit {
+  int m [[uninit]];
+  void f() {
+    this->m = 5;
+    mc_sink_ref(this->m); // OK at the pattern and at instantiation
+  }
+};
+template struct TmplMemberCredit<int>;
 
 // The reverse direction applies through the assignment funnel too: a
 // credited marked pointer refers to initialized memory, so assigning it to

@@ -929,6 +929,45 @@ const ValueDecl *SemaProfiles::getDirectlyNamedDecl(const Expr *E) {
   return nullptr;
 }
 
+// True if E denotes the current object: `this` (the implicit/explicit pointer
+// of an arrow access) or `*this` (the object lvalue of a dot access). A local
+// twin of AnalysisBasedWarnings.cpp's isCurrentObjectBase (the CFG passes'
+// helper); each file keeps its recognizer vocabulary self-contained.
+static bool isCurrentObjectExpr(const Expr *E) {
+  E = E->IgnoreParenImpCasts();
+  if (isa<CXXThisExpr>(E))
+    return true;
+  const auto *UO = dyn_cast<UnaryOperator>(E);
+  return UO && UO->getOpcode() == UO_Deref &&
+         isa<CXXThisExpr>(UO->getSubExpr()->IgnoreParenImpCasts());
+}
+
+const Decl *SemaProfiles::resolveMemberStoreBase(const MemberExpr *ME) const {
+  const Expr *Base = ME->getBase()->IgnoreParenImpCasts();
+  // The current object: this->m, the implicit m, or (*this).m. Keyed on the
+  // enclosing function declaration (`this` cannot be reseated, so the key is
+  // stable for the whole body); AllowLambda gives a lambda body inside a
+  // member function its own key, so its stores and the enclosing function's
+  // never share credit. No current function (e.g. an NSDMI parse) is
+  // untrackable.
+  if (isCurrentObjectExpr(Base))
+    return SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);
+  // A directly named local object: a dot access on a local-storage,
+  // non-reference VarDecl (a by-value parameter is its own object and
+  // qualifies). A reference base is an alias to an object also reachable
+  // under other names, and an arrow base reaches the object through an
+  // arbitrary (reseatable) pointer value -- both untrackable per object, the
+  // same aliasing boundary that keeps fields of parameter-reached objects
+  // uncredited. A deeper base (a.b.m) is §5.4's rejected deep
+  // delayed-initialization tracking.
+  if (!ME->isArrow())
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(Base))
+      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
+          VD && VD->hasLocalStorage() && !VD->getType()->isReferenceType())
+        return VD;
+  return nullptr;
+}
+
 // Pass-through forms shared by the pointer and glvalue recognizers, which are
 // transparent to their operand: a single-element braced initializer { e }
 // binds from e (modeling
@@ -1139,7 +1178,26 @@ static UninitStorage glvalueDenotesUninitStorage(ASTContext &Ctx, const Expr *E,
     // initialization of an [[uninit]] object is itself banned (paper §5.4;
     // only whole-object construct_at re-initializes, which is uniformly
     // unmodeled) -- so below the top level the marker counts for every access.
-    if (DeclDenotesUninit(ME->getMemberDecl()))
+    //
+    // Parse-order member store credit: after `a.m = 5` / `this->m = 5`, the
+    // marked member of that *specific* base object counts as initialized
+    // (paper §4.2: "After initialization, the object is no longer
+    // [[uninit]]"; §6: assignment initializes a built-in) -- covering both
+    // `a.m` (a reference binding lands in this arm directly) and `&a.m` (the
+    // UO_AddrOf arm recurses here). The consult keys on the same base
+    // identity the recording resolved, so the same member observed through
+    // any other object -- including a copy (§5.2: a copy does not inherit
+    // credit) -- stays uncredited. It applies at any chain depth: the map
+    // only ever holds whole-member stores (which initialize the entire
+    // member), and in practice only scalar members (see
+    // recordInitProfileStore), which have no subobjects to chain through.
+    const ValueDecl *MD = ME->getMemberDecl();
+    if (const auto *F = dyn_cast<FieldDecl>(MD);
+        F && Opts.Credit && F->hasAttr<UninitAttr>() &&
+        Opts.Credit->hasMemberStoreCredit(
+            Opts.Credit->resolveMemberStoreBase(ME), F))
+      return UninitStorage::Initialized;
+    if (DeclDenotesUninit(MD))
       return UninitStorage::Uninitialized;
     return ME->isArrow() ? pointerRefersToUninitStorage(
                                Ctx, ME->getBase(), Opts.withoutTopLevelDrop())
@@ -1498,9 +1556,30 @@ void SemaProfiles::recordInitProfileStore(const Expr *LHS) {
       InitStoreCredit[VD] |= PointeeStored;
     return;
   }
-  // Only a directly named local-storage variable can be credited: a
-  // MemberExpr's FieldDecl fails the VarDecl cast (fields are the CFG
-  // passes' territory) and statics fail hasLocalStorage.
+  // a.m = e / this->m = e / m = e (also `@=` and `++`, via the shared
+  // hosts): a whole-member store to an [[uninit]] field of a trackable base
+  // object is that member's initialization (paper §4.2: "After
+  // initialization, the object is no longer [[uninit]]"; §6: ordinary
+  // assignment initializes a built-in), keyed per (base, field) so unrelated
+  // objects and other function bodies never share credit. Only single-level
+  // bases earn credit (x.agg.m = e resolves no base -- and is itself an
+  // uninit_write violation; §5.4 rejects deep delayed-initialization
+  // tracking), element stores (a.m[i] = e) present a subscript, not a
+  // MemberExpr, and stay uncredited, and a class-typed x.agg = e is a member
+  // operator= call (rejected as a call on uninitialized storage) that never
+  // reaches this built-in-assignment funnel -- so only scalar members are
+  // ever credited. Member *pointee* stores (*a.p = e) took the deref arm
+  // above, which keys on local pointers only: the pinned per-object aliasing
+  // boundary (copies share pointees).
+  if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+    if (const auto *F = dyn_cast<FieldDecl>(ME->getMemberDecl());
+        F && F->hasAttr<UninitAttr>())
+      if (const Decl *Base = resolveMemberStoreBase(ME))
+        MemberStoreCredit[{Base, F}] |= WholeStored;
+    return;
+  }
+  // Only a directly named local-storage variable can be credited beyond
+  // this point: statics fail hasLocalStorage.
   const auto *VD = dyn_cast_or_null<VarDecl>(getDirectlyNamedDecl(E));
   if (!VD || !VD->hasLocalStorage())
     return;
@@ -1539,6 +1618,14 @@ bool SemaProfiles::hasPointeeStoreCredit(const ValueDecl *VD) const {
     return false;
   auto It = InitStoreCredit.find(Var);
   return It != InitStoreCredit.end() && (It->second & PointeeStored);
+}
+
+bool SemaProfiles::hasMemberStoreCredit(const Decl *Base,
+                                        const FieldDecl *F) const {
+  if (!Base || !F)
+    return false;
+  auto It = MemberStoreCredit.find({Base, F});
+  return It != MemberStoreCredit.end() && (It->second & WholeStored);
 }
 
 void SemaProfiles::checkInitProfileThrowOperand(const Expr *Operand) {
