@@ -53,6 +53,7 @@ struct IsaVersion {
     return Major == Other.Major && Minor == Other.Minor &&
            Stepping == Other.Stepping;
   }
+  bool operator!=(const IsaVersion &Other) const { return !(*this == Other); }
 };
 
 // This isn't comprehensive for now, just things that are needed from the
@@ -238,9 +239,15 @@ public:
   static std::optional<TargetID>
   parseTargetIDString(StringRef TargetIDDirective);
 
-  /// Returns true if a device image built for *this can satisfy a request for
-  /// \p Other (i.e. they are compatible and can be grouped together).
-  bool isCompatibleWith(const TargetID &Other) const;
+  /// Returns true if \p Other denotes the same target as *this, i.e. the same
+  /// processor and xnack/sramecc settings on a compatible triple. This is a
+  /// semantic equality that looks through spelling differences.
+  bool isEquivalent(const TargetID &Other) const;
+
+  /// Returns true if a device image for *this can provide the device code for a
+  /// request for \p Other. This is directional and models logical-linking
+  /// compatibility.
+  bool providesFor(const TargetID &Other) const;
 
   void print(raw_ostream &OS) const;
 
