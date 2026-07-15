@@ -17,6 +17,7 @@
 #include "llvm/InitializePasses.h"
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 using namespace llvm;
 
@@ -36,6 +37,11 @@ static cl::opt<bool> DisableRestoreGrouping("disable-restore-grouping",
 
 static cl::opt<bool> EnableRestoreOptimization("enable-restore-optimization",
                                                cl::init(true), cl::Hidden);
+
+static cl::opt<int>
+    RestoreOptMinDistance("restore-optimization-min-distance",
+                          cl::init(std::numeric_limits<int>::max()),
+                          cl::Hidden);
 
 // TODO: Remove this flag.
 static cl::opt<unsigned>
@@ -604,6 +610,21 @@ AMDGPUEarlyRegisterSpilling::getCandidates(MachineInstr *CurMI,
     // 'RegCandidates'.
     auto NextUseDist = NUA->getShortestDistance(CandidateReg, *CurMI,
                                                 UsesForNextUseDistCalculation);
+
+    if (EnableRestoreOptimization && RestoreOptMinDistance != 0 &&
+        isRestoredReg(CandidateReg) && CandidateMI->getParent() == CurMBB) {
+      NextUseDistance Limit(0);
+      if (RestoreOptMinDistance < 0) {
+        Limit = NextUseDistance(static_cast<unsigned>(-RestoreOptMinDistance));
+      } else {
+        const NextUseDistance MBBSpan = NUA->getSpan(*CurMBB);
+        Limit = std::min<NextUseDistance>(
+            static_cast<unsigned>(RestoreOptMinDistance), MBBSpan);
+      }
+      if (NextUseDist < Limit)
+        continue;
+    }
+
     RegCandidates.push_back({CandidateReg, NextUseDist, Mask});
     LLVM_DEBUG({
       dbgs() << CandidateCnt

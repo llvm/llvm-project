@@ -2107,6 +2107,11 @@ public:
     return getShortestDistance(LiveReg, LaneBitmask::getAll(), FromMI, Uses,
                                nullptr, nullptr, nullptr);
   }
+
+  NextUseDistance getShortestDistance(const MachineInstr &FromMI,
+                                      const MachineInstr &ToMI) const {
+    return calcShortestDistance(&FromMI, &ToMI);
+  }
 };
 
 AMDGPUNextUseAnalysisImpl::AMDGPUNextUseAnalysisImpl(
@@ -2244,6 +2249,13 @@ NextUseDistance AMDGPUNextUseAnalysis::getShortestDistance(
       DistancesOut->push_back(D);
   }
   return Dist;
+}
+
+/// \Returns the next-use distance for \p LiveReg.
+NextUseDistance
+AMDGPUNextUseAnalysis::getShortestDistance(const MachineInstr &FromMI,
+                                           const MachineInstr &ToMI) const {
+  return Impl->getShortestDistance(FromMI, ToMI);
 }
 
 void AMDGPUNextUseAnalysis::getNextUseDistances(

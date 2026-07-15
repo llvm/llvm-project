@@ -309,6 +309,13 @@ public:
                       const MachineOperand **ShortestUseOut = nullptr,
                       SmallVector<NextUseDistance> *Distances = nullptr) const;
 
+  NextUseDistance getShortestDistance(const MachineInstr &FromMI,
+                                      const MachineInstr &ToMI) const;
+
+  NextUseDistance getSpan(const MachineBasicBlock &MBB) const {
+    return getShortestDistance(MBB.instr_front(), MBB.instr_back());
+  }
+
   struct UseDistancePair {
     const MachineOperand *Use = nullptr;
     NextUseDistance Dist = 0;
