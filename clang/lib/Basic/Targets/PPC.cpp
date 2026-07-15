@@ -734,11 +734,9 @@ llvm::APInt PPCTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
 
   if (!ParsedAttr.CPU.empty()) {
     int Priority = llvm::StringSwitch<int>(ParsedAttr.CPU)
-                       .Case("pwr7", 100)
-                       .Case("pwr8", 200)
-                       .Case("pwr9", 300)
-                       .Case("pwr10", 400)
-                       .Case("pwr11", 500)
+#define PPC_AIX_CLONES_CPU(CPU_NAME, _, PRIORITY)                      \
+  .Case(CPU_NAME, PRIORITY)
+#include "llvm/TargetParser/PPCTargetParser.def"
                        .Default(0);
     return llvm::APInt(32, Priority);
   }
@@ -757,8 +755,7 @@ llvm::APInt PPCTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
                        .Default(0);
     return llvm::APInt(32, Priority);
   }
-
-  return llvm::APInt(32, 0);
+  llvm_unreachable("Invalid target_clones parameter");
 }
 
 // Make sure that registers are added in the correct array index which should be

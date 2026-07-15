@@ -323,6 +323,17 @@ PPC_AIX_CLONES_FEATURE("popcntd",             "arch_2_06", 112)
 PPC_AIX_CLONES_FEATURE("altivec",             "altivec",   50)
 #undef PPC_AIX_CLONES_FEATURE
 
+#ifndef PPC_AIX_CLONES_CPU
+#define PPC_AIX_CLONES_CPU(CPU_NAME, AIX_BUILTIN_CPU_SUPPORTS_NAME, PRIORITY)
+#endif
+PPC_AIX_CLONES_CPU("pwr7",                    "arch_2_06", 100)
+PPC_AIX_CLONES_CPU("pwr8",                    "arch_2_07", 200)
+PPC_AIX_CLONES_CPU("pwr9",                    "arch_3_00", 300)
+PPC_AIX_CLONES_CPU("pwr10",                   "arch_3_1",  400)
+// Power11 implements the same ISA as Power10
+PPC_AIX_CLONES_CPU("pwr11",                   "arch_3_1",  500)
+#undef PPC_AIX_CLONES_CPU
+
 // PPC_SYSTEMCONFIG_TYPE defines the IR data structure of kernel variable
 // `_system_configuration`, that is found in the AIX OS header file: </usr/include/sys/systemcfg.h>.
 #ifndef PPC_SYSTEMCONFIG_TYPE
