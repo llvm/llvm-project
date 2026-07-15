@@ -13,10 +13,17 @@
 #include <algorithm>
 #include <string>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 // Defined in AMDGPUArchByHIP.cpp (non-static, compiled into this test).
 #ifdef _WIN32
+using LoadLibraryExWFn = decltype(&::LoadLibraryExW);
+
 bool compareVersions(llvm::StringRef A, llvm::StringRef B);
 llvm::SmallVector<std::string, 8> getCandidateBinPaths(llvm::StringRef ExeDir);
+void primeLibraryLoad(llvm::StringRef Path, LoadLibraryExWFn Loader);
 #endif
 
 using namespace llvm;
@@ -24,6 +31,37 @@ using namespace llvm;
 cl::opt<bool> Verbose("offload-arch-test-verbose", cl::Hidden, cl::init(false));
 
 #ifdef _WIN32
+
+// --- primeLibraryLoad ---
+
+namespace {
+std::wstring CapturedPath;
+HANDLE CapturedFile;
+DWORD CapturedFlags;
+
+HMODULE WINAPI mockLoadLibraryExW(LPCWSTR Path, HANDLE File, DWORD Flags) {
+  CapturedPath = Path;
+  CapturedFile = File;
+  CapturedFlags = Flags;
+  return reinterpret_cast<HMODULE>(1);
+}
+} // namespace
+
+TEST(PrimeLibraryLoad, UsesWindowsBackslashes) {
+  CapturedPath.clear();
+  CapturedFile = reinterpret_cast<HANDLE>(1);
+  CapturedFlags = 0;
+
+  primeLibraryLoad("C:/rocm\\bin/amdhip64_7.dll", mockLoadLibraryExW);
+
+  // The underlying LoadLibraryExW function should be called with backslashes,
+  // not forward slashes to ensure that it can discover and load dependent
+  // DLLs in the same directory.
+  EXPECT_EQ(CapturedPath, L"C:\\rocm\\bin\\amdhip64_7.dll");
+  EXPECT_EQ(CapturedPath.find(L'/'), std::wstring::npos);
+  EXPECT_EQ(CapturedFile, nullptr);
+  EXPECT_EQ(CapturedFlags, LOAD_WITH_ALTERED_SEARCH_PATH);
+}
 
 // --- compareVersions ---
 
