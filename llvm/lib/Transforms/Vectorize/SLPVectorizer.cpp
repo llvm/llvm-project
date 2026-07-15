@@ -7808,22 +7808,23 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   SPtrInfo.StrideSCEV = Stride0;
   SPtrInfo.Ty = StridedLoadTy;
 
-  auto isReverseWidenedOrder = [&](ArrayRef<unsigned> Order,
+  auto IsReverseWidenedOrder = [&](ArrayRef<unsigned> Order,
                                    unsigned NumOffsets) -> bool {
     if (Order.empty())
       return false;
     unsigned Sz = Order.size();
+    unsigned VecSz = Sz / NumOffsets;
     return all_of(enumerate(Order), [&](const auto &Pair) {
       return Pair.value() == Sz ||
-             (NumOffsets - (Pair.index() / NumOffsets) - 1 ==
-                  (Pair.value() / NumOffsets) &&
-              (Pair.index() % NumOffsets) == (Pair.value() % NumOffsets));
+             (NumOffsets - (Pair.index() / VecSz) - 1 ==
+                  (Pair.value() / VecSz) &&
+              (Pair.index() % VecSz) == (Pair.value() % VecSz));
     });
   };
 
   if (isIdentityOrder(SortedIndices)) {
     SortedIndices.clear();
-  } else if (isReverseWidenedOrder(SortedIndices, NumOffsets)) {
+  } else if (IsReverseWidenedOrder(SortedIndices, NumOffsets)) {
     SPtrInfo.StrideSCEV = SE->getNegativeSCEV(SPtrInfo.StrideSCEV);
     SortedIndices.clear();
   }
@@ -28857,7 +28858,7 @@ bool SLPVectorizerPass::vectorizeStores(
   for (RelatedStoreInsts &StoreSeq : SortedStores)
     ExtendContexts(StoreSeq.getStores());
 
-  if (EnableStridedStores) {
+  if (EnableStridedStores && !Stores.empty()) {
     // Stores is already reversed, reverse again so that we generate
     // chains in program order in order for scheduling to occur
     const unsigned NumStores = Stores.size();
