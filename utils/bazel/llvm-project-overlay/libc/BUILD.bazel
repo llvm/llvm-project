@@ -764,6 +764,11 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "types_sa_family_t",
+    hdrs = ["hdr/types/sa_family_t.h"],
+)
+
+libc_support_library(
     name = "types_socklen_t",
     hdrs = ["hdr/types/socklen_t.h"],
 )
@@ -771,6 +776,31 @@ libc_support_library(
 libc_support_library(
     name = "types_struct_sockaddr",
     hdrs = ["hdr/types/struct_sockaddr.h"],
+)
+
+libc_support_library(
+    name = "types_struct_sockaddr_storage",
+    hdrs = ["hdr/types/struct_sockaddr_storage.h"],
+)
+
+libc_support_library(
+    name = "types_struct_sockaddr_un",
+    hdrs = ["hdr/types/struct_sockaddr_un.h"],
+)
+
+libc_support_library(
+    name = "types_struct_linger",
+    hdrs = ["hdr/types/struct_linger.h"],
+)
+
+libc_support_library(
+    name = "types_struct_iovec",
+    hdrs = ["hdr/types/struct_iovec.h"],
+)
+
+libc_support_library(
+    name = "types_struct_mmsghdr",
+    hdrs = ["hdr/types/struct_mmsghdr.h"],
 )
 
 libc_support_library(
@@ -2702,6 +2732,70 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_osutil_syscall",
         ":types_ssize_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_recvmmsg",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/recvmmsg.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_struct_mmsghdr",
+        ":types_struct_timespec",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_sendmmsg",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/sendmmsg.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_struct_mmsghdr",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_setsockopt",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/setsockopt.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_socklen_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_shutdown",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/shutdown.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
     ],
 )
 
@@ -15956,85 +16050,6 @@ libc_function(
 ############################## sys/socket targets ##############################
 
 libc_function(
-    name = "socket",
-    srcs = ["src/sys/socket/linux/socket.cpp"],
-    hdrs = ["src/sys/socket/socket.h"],
-    deps = [
-        ":__support_common",
-        ":__support_libc_errno",
-        ":__support_macros_config",
-        ":__support_osutil_linux_syscall_wrappers_socket",
-        ":__support_osutil_syscall",
-        ":errno",
-    ],
-)
-
-libc_function(
-    name = "socketpair",
-    srcs = ["src/sys/socket/linux/socketpair.cpp"],
-    hdrs = ["src/sys/socket/socketpair.h"],
-    deps = [
-        ":__support_common",
-        ":__support_libc_errno",
-        ":__support_macros_config",
-        ":__support_macros_sanitizer",
-        ":__support_osutil_linux_syscall_wrappers_socketpair",
-        ":__support_osutil_syscall",
-        ":errno",
-    ],
-)
-
-libc_function(
-    name = "send",
-    srcs = ["src/sys/socket/linux/send.cpp"],
-    hdrs = ["src/sys/socket/send.h"],
-    deps = [
-        ":__support_common",
-        ":__support_libc_errno",
-        ":__support_macros_config",
-        ":__support_osutil_linux_syscall_wrappers_sendto",
-        ":__support_osutil_syscall",
-        ":errno",
-        ":types_socklen_t",
-        ":types_ssize_t",
-        ":types_struct_sockaddr",
-    ],
-)
-
-libc_function(
-    name = "sendto",
-    srcs = ["src/sys/socket/linux/sendto.cpp"],
-    hdrs = ["src/sys/socket/sendto.h"],
-    deps = [
-        ":__support_common",
-        ":__support_libc_errno",
-        ":__support_macros_config",
-        ":__support_osutil_linux_syscall_wrappers_sendto",
-        ":__support_osutil_syscall",
-        ":errno",
-        ":types_socklen_t",
-        ":types_ssize_t",
-        ":types_struct_sockaddr",
-    ],
-)
-
-libc_function(
-    name = "sendmsg",
-    srcs = ["src/sys/socket/linux/sendmsg.cpp"],
-    hdrs = ["src/sys/socket/sendmsg.h"],
-    deps = [
-        ":__support_common",
-        ":__support_libc_errno",
-        ":__support_macros_config",
-        ":__support_osutil_linux_syscall_wrappers_sendmsg",
-        ":__support_osutil_syscall",
-        ":errno",
-        ":types_ssize_t",
-        ":types_struct_msghdr",
-    ],
-)
-
-libc_function(
     name = "getsockopt",
     srcs = ["src/sys/socket/linux/getsockopt.cpp"],
     hdrs = ["src/sys/socket/getsockopt.h"],
@@ -16043,6 +16058,7 @@ libc_function(
         ":__support_libc_errno",
         ":__support_macros_config",
         ":__support_osutil_linux_syscall_wrappers_getsockopt",
+        ":__support_osutil_syscall",
         ":errno",
         ":types_socklen_t",
     ],
@@ -16085,6 +16101,22 @@ libc_function(
 )
 
 libc_function(
+    name = "recvmmsg",
+    srcs = ["src/sys/socket/linux/recvmmsg.cpp"],
+    hdrs = ["src/sys/socket/recvmmsg.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_recvmmsg",
+        ":__support_osutil_syscall",
+        ":errno",
+        ":types_struct_mmsghdr",
+        ":types_struct_timespec",
+    ],
+)
+
+libc_function(
     name = "recvmsg",
     srcs = ["src/sys/socket/linux/recvmsg.cpp"],
     hdrs = ["src/sys/socket/recvmsg.h"],
@@ -16098,6 +16130,129 @@ libc_function(
         ":errno",
         ":types_ssize_t",
         ":types_struct_msghdr",
+    ],
+)
+
+libc_function(
+    name = "send",
+    srcs = ["src/sys/socket/linux/send.cpp"],
+    hdrs = ["src/sys/socket/send.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_sendto",
+        ":__support_osutil_syscall",
+        ":errno",
+        ":types_socklen_t",
+        ":types_ssize_t",
+        ":types_struct_sockaddr",
+    ],
+)
+
+libc_function(
+    name = "sendmmsg",
+    srcs = ["src/sys/socket/linux/sendmmsg.cpp"],
+    hdrs = ["src/sys/socket/sendmmsg.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_sendmmsg",
+        ":__support_osutil_syscall",
+        ":errno",
+        ":types_struct_mmsghdr",
+    ],
+)
+
+libc_function(
+    name = "sendmsg",
+    srcs = ["src/sys/socket/linux/sendmsg.cpp"],
+    hdrs = ["src/sys/socket/sendmsg.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_sendmsg",
+        ":__support_osutil_syscall",
+        ":errno",
+        ":types_ssize_t",
+        ":types_struct_msghdr",
+    ],
+)
+
+libc_function(
+    name = "sendto",
+    srcs = ["src/sys/socket/linux/sendto.cpp"],
+    hdrs = ["src/sys/socket/sendto.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_sendto",
+        ":__support_osutil_syscall",
+        ":errno",
+        ":types_socklen_t",
+        ":types_ssize_t",
+        ":types_struct_sockaddr",
+    ],
+)
+
+libc_function(
+    name = "setsockopt",
+    srcs = ["src/sys/socket/linux/setsockopt.cpp"],
+    hdrs = ["src/sys/socket/setsockopt.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_setsockopt",
+        ":__support_osutil_syscall",
+        ":errno",
+        ":types_socklen_t",
+    ],
+)
+
+libc_function(
+    name = "shutdown",
+    srcs = ["src/sys/socket/linux/shutdown.cpp"],
+    hdrs = ["src/sys/socket/shutdown.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_shutdown",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "socket",
+    srcs = ["src/sys/socket/linux/socket.cpp"],
+    hdrs = ["src/sys/socket/socket.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_socket",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "socketpair",
+    srcs = ["src/sys/socket/linux/socketpair.cpp"],
+    hdrs = ["src/sys/socket/socketpair.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_macros_sanitizer",
+        ":__support_osutil_linux_syscall_wrappers_socketpair",
+        ":__support_osutil_syscall",
+        ":errno",
     ],
 )
 

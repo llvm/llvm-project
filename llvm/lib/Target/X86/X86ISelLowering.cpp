@@ -2375,6 +2375,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
 
     if (Subtarget.hasBMM()) {
+      setOperationAction(ISD::BITREVERSE, MVT::i8, Custom);
+      setOperationAction(ISD::BITREVERSE, MVT::i16, Custom);
+      setOperationAction(ISD::BITREVERSE, MVT::i32, Custom);
+      setOperationAction(ISD::BITREVERSE, MVT::i64, Custom);
+
       for (auto VT : {MVT::v16i8, MVT::v32i8, MVT::v64i8})
         setOperationAction(ISD::BITREVERSE, VT, Legal);
     }
@@ -3832,7 +3837,8 @@ unsigned X86TargetLowering::preferedOpcodeForCmpEqPiecesOfOperand(
 TargetLoweringBase::CondMergingParams
 X86TargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
                                                  const Value *Lhs,
-                                                 const Value *Rhs) const {
+                                                 const Value *Rhs,
+                                                 const Function *) const {
   using namespace llvm::PatternMatch;
   int BaseCost = BrMergingBaseCostThresh.getValue();
   // With CCMP, branches can be merged in a more efficient way.
@@ -33499,8 +33505,8 @@ static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
   if (Subtarget.hasXOP() && !VT.is512BitVector())
     return LowerBITREVERSE_XOP(Op, DAG);
 
-  assert((Subtarget.hasSSSE3() || Subtarget.hasGFNI()) &&
-         "SSSE3 or GFNI required for BITREVERSE");
+  assert((Subtarget.hasSSSE3() || Subtarget.hasGFNI() || Subtarget.hasBMM()) &&
+         "SSSE3, GFNI, or BMM required for BITREVERSE");
 
   SDValue In = Op.getOperand(0);
   SDLoc DL(Op);

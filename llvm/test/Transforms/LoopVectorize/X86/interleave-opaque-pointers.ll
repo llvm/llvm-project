@@ -11,8 +11,8 @@ define void @test_pr55375_interleave_opaque_ptr(ptr %start, ptr %end) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START:%.*]] to i64
 ; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END:%.*]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -16
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[START2]], [[END1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP5]], -16
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
@@ -21,11 +21,11 @@ define void @test_pr55375_interleave_opaque_ptr(ptr %start, ptr %end) {
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 4
-; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[END]], i64 [[TMP4]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[START]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[END]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <2 x i64> <i64 0, i64 16>
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x ptr> [[TMP10]], i64 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x ptr> splat (ptr null), <2 x ptr> [[TMP10]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -39,7 +39,7 @@ define void @test_pr55375_interleave_opaque_ptr(ptr %start, ptr %end) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP8]], [[MIDDLE_BLOCK]] ], [ [[END]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -47,7 +47,7 @@ define void @test_pr55375_interleave_opaque_ptr(ptr %start, ptr %end) {
 ; CHECK-NEXT:    store ptr [[IV]], ptr [[IV_1]], align 8
 ; CHECK-NEXT:    store ptr null, ptr [[IV]], align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = getelementptr inbounds [[PAIR]], ptr [[IV]], i64 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq ptr [[IV_NEXT]], [[END]]
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq ptr [[IV_NEXT]], [[START]]
 ; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
