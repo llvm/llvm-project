@@ -2,6 +2,9 @@
 Creating an LLVM Project
 ========================
 
+.. contents::
+   :local:
+
 Overview
 ========
 

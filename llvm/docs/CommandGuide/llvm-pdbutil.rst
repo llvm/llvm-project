@@ -3,6 +3,9 @@ llvm-pdbutil - PDB File forensics and diagnostics
 
 .. program:: llvm-pdbutil
 
+.. contents::
+   :local:
+
 Synopsis
 --------
 

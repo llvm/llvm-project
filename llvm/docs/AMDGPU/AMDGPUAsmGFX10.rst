@@ -9,6 +9,9 @@
 Syntax of GFX10 RDNA1 Instructions
 ====================================================================================
 
+.. contents::
+  :local:
+
 Introduction
 ============
 

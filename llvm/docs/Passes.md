@@ -1,5 +1,9 @@
 # LLVM's Analysis and Transform Passes
 
+```{contents}
+:local:
+```
+
 ```{toctree}
 :hidden:
 

@@ -2,6 +2,9 @@
 LLVM Block Frequency Terminology
 ================================
 
+.. contents::
+   :local:
+
 Introduction
 ============
 

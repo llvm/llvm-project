@@ -2,6 +2,10 @@
 
 # LLVM GitHub User Guide
 
+```{contents}
+:local:
+```
+
 ## Introduction
 
 The LLVM Project uses [GitHub](https://github.com/) for

@@ -1,6 +1,8 @@
 # Getting Started with the LLVM System using Microsoft Visual Studio
 
-
+```{contents}
+:local:
+```
 
 ## Overview
 
