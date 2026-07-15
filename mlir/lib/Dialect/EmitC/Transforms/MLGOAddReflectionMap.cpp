@@ -98,29 +98,32 @@ class MLGOAddReflectionMapPass
 /// Rewrites a `emitc::ClassOp` to generate a reflection map of member fields
 /// and a lookup method.
 ///
-/// Fields to be mapped are identified via `includedFieldAttrs` attributes (e.g.,
-/// `emitc.field_ref`). Fields containing `excludedFieldAttrs` are skipped. All
-/// other fields must match one of the inclusion/exclusion filters, otherwise the
-/// pattern fails.
+/// Fields to be mapped are identified via `includedFieldAttrs` attributes
+/// (e.g., `emitc.field_ref`). Fields containing `excludedFieldAttrs` are
+/// skipped. All other fields must match one of the inclusion/exclusion filters,
+/// otherwise the pattern fails.
 ///
 /// Before:
 /// ```mlir
 /// emitc.class @foo {
-///   emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = ["another_feature"]}
-///   emitc.func @bar() { return }
+///   emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref =
+///   ["another_feature"]} emitc.func @bar() { return }
 /// }
 /// ```
 ///
 /// After:
 /// ```mlir
 /// emitc.class @foo {
-///   emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = ["another_feature"]}
-///   emitc.field @reflectionMap : !emitc.opaque<"const std::map<std::string, char*>"> = 
-///     #emitc.opaque<"{ { \"another_feature\", reinterpret_cast<char*>(&fieldName0) } }">
-///   emitc.func @getBufferForName(%name: !emitc.opaque<"std::string">) -> !emitc.ptr<!emitc.opaque<"char">> {
-///     %map = get_field @reflectionMap : !emitc.opaque<"const std::map<std::string, char*>">
-///     %ptr = member_call_opaque %map "at"(%name) : ...
-///     return %ptr : !emitc.ptr<!emitc.opaque<"char">>
+///   emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref =
+///   ["another_feature"]} emitc.field @reflectionMap : !emitc.opaque<"const
+///   std::map<std::string, char*>"> =
+///     #emitc.opaque<"{ { \"another_feature\",
+///     reinterpret_cast<char*>(&fieldName0) } }">
+///   emitc.func @getBufferForName(%name: !emitc.opaque<"std::string">) ->
+///   !emitc.ptr<!emitc.opaque<"char">> {
+///     %map = get_field @reflectionMap : !emitc.opaque<"const
+///     std::map<std::string, char*>"> %ptr = member_call_opaque %map
+///     "at"(%name) : ... return %ptr : !emitc.ptr<!emitc.opaque<"char">>
 ///   }
 ///   emitc.func @bar() { return }
 /// }
