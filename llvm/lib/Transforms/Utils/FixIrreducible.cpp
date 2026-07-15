@@ -220,7 +220,7 @@ static void reconnectChildLoops(LoopInfo &LI, Loop *ParentLoop, Loop *NewLoop,
   }
 }
 
-static void updateLoopInfo(LoopInfo &LI, Cycle &C, CycleInfo &CI,
+static void updateLoopInfo(CycleInfo &CI, LoopInfo &LI, Cycle &C,
                            ArrayRef<BasicBlock *> GuardBlocks) {
   // The parent loop is a natural loop L mapped to the cycle header H as long as
   // H is not also the header of L. In the latter case, L is destroyed and we
@@ -287,7 +287,7 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
   // Redirect internal edges incident on the header.
   BasicBlock *Header = C.getHeader();
   for (BasicBlock *P : predecessors(Header)) {
-    if (CI.contains(&C, P))
+    if (CI.contains(C, P))
       Predecessors.insert(P);
   }
 
@@ -331,7 +331,7 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
   Predecessors.clear();
   for (BasicBlock *E : C.entries()) {
     for (BasicBlock *P : predecessors(E)) {
-      if (!CI.contains(&C, P))
+      if (!CI.contains(C, P))
         Predecessors.insert(P);
     }
   }
@@ -339,16 +339,16 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
   for (BasicBlock *P : Predecessors) {
     if (UncondBrInst *Branch = dyn_cast<UncondBrInst>(P->getTerminator())) {
       BasicBlock *Succ0 = Branch->getSuccessor();
-      Succ0 = CI.contains(&C, Succ0) ? Succ0 : nullptr;
+      Succ0 = CI.contains(C, Succ0) ? Succ0 : nullptr;
       CHub.addBranch(P, Succ0);
 
       LLVM_DEBUG(dbgs() << "Added external branch: " << printBasicBlock(P)
                         << " -> " << printBasicBlock(Succ0) << '\n');
     } else if (CondBrInst *Branch = dyn_cast<CondBrInst>(P->getTerminator())) {
       BasicBlock *Succ0 = Branch->getSuccessor(0);
-      Succ0 = CI.contains(&C, Succ0) ? Succ0 : nullptr;
+      Succ0 = CI.contains(C, Succ0) ? Succ0 : nullptr;
       BasicBlock *Succ1 = Branch->getSuccessor(1);
-      Succ1 = CI.contains(&C, Succ1) ? Succ1 : nullptr;
+      Succ1 = CI.contains(C, Succ1) ? Succ1 : nullptr;
       CHub.addBranch(P, Succ0, Succ1);
 
       LLVM_DEBUG(dbgs() << "Added external branch: " << printBasicBlock(P)
@@ -359,7 +359,7 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
       SmallDenseMap<BasicBlock *, BasicBlock *> CallBrTargets;
       for (unsigned I = 0; I < CallBr->getNumSuccessors(); ++I) {
         BasicBlock *Succ = CallBr->getSuccessor(I);
-        if (!CI.contains(&C, Succ))
+        if (!CI.contains(C, Succ))
           continue;
         auto It = CallBrTargets.find(Succ);
         BasicBlock *ExistingTarget =
@@ -406,7 +406,7 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
   // If we are updating LoopInfo, do that now before modifying the cycle. This
   // ensures that the first guard block is the header of a new natural loop.
   if (LI)
-    updateLoopInfo(*LI, C, CI, GuardBlocks);
+    updateLoopInfo(CI, *LI, C, GuardBlocks);
 
   for (auto *G : GuardBlocks) {
     LLVM_DEBUG(dbgs() << "added guard block to cycle: " << G->getName()

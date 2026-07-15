@@ -3035,6 +3035,8 @@ genIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic *intrinsic,
       loweredActuals.push_back(std::nullopt);
       continue;
     }
+    if (arg.value()->isConditionalArg())
+      TODO(loc, "lowering conditional arguments to HLFIR");
     auto *expr =
         Fortran::evaluate::UnwrapExpr<Fortran::lower::SomeExpr>(arg.value());
     if (!expr) {
@@ -3161,6 +3163,8 @@ genProcedureRef(CallContext &callContext) {
            Fortran::lower::CallerInterface>::PassedEntity &arg :
        caller.getPassedArguments())
     if (const auto *actual = arg.entity) {
+      if (actual->isConditionalArg())
+        TODO(loc, "lowering conditional arguments to HLFIR");
       const auto *expr = actual->UnwrapExpr();
       if (!expr) {
         // TYPE(*) actual argument.
