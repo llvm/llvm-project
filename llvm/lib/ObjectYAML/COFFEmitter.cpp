@@ -297,7 +297,7 @@ static bool layoutCOFF(COFFParser &CP) {
   else
     CP.Obj.Header.PointerToSymbolTable = 0;
 
-  *reinterpret_cast<support::ulittle32_t *>(&CP.StringTable[0]) =
+  *reinterpret_cast<support::ulittle32_t *>(CP.StringTable.data()) =
       CP.StringTable.size();
 
   return true;
@@ -558,7 +558,7 @@ static bool writeCOFF(COFFParser &CP, ContiguousBlobAccumulator &CBA) {
 
   // Output string table.
   if (CP.Obj.Header.PointerToSymbolTable)
-    CBA.write(&CP.StringTable[0], CP.StringTable.size());
+    CBA.write(CP.StringTable.data(), CP.StringTable.size());
   return true;
 }
 
