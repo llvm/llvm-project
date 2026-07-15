@@ -50,12 +50,20 @@ llvm::StringRef ProtocolServerMCP::GetPluginDescriptionStatic() {
   return "MCP Server.";
 }
 
-void ProtocolServerMCP::Extend(lldb_protocol::mcp::Server &server) const {
+void lldb_private::mcp::PopulateServer(lldb_protocol::mcp::Server &server) {
   server.AddTool(
       std::make_unique<CommandTool>("command", "Run an lldb command."));
   server.AddTool(std::make_unique<DebuggerListTool>(
       "debugger_list", "List debugger instances with their debugger_id."));
+  server.AddTool(std::make_unique<DebuggerCreateTool>(
+      "debugger_create", "Create a new debugger instance and return its URI."));
+  server.AddTool(std::make_unique<DebuggerDeleteTool>(
+      "debugger_delete", "Destroy a debugger instance by id or URI."));
   server.AddResourceProvider(std::make_unique<DebuggerResourceProvider>());
+}
+
+void ProtocolServerMCP::Extend(lldb_protocol::mcp::Server &server) const {
+  PopulateServer(server);
 }
 
 void ProtocolServerMCP::AcceptCallback(std::unique_ptr<Socket> socket) {

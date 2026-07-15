@@ -7420,23 +7420,26 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceRange CallRange,
     return false;
   }
 
+  // If an anonymous union would be destroyed, some enclosing destructor must
+  // have been explicitly defined, and the anonymous union destruction should
+  // have no effect.
+  if (RD->isAnonymousStructOrUnion() && RD->isUnion()) {
+    Value = APValue();
+    return true;
+  }
+
   const CXXDestructorDecl *DD = RD->getDestructor();
   if (!DD && !RD->hasTrivialDestructor()) {
     Info.FFDiag(CallRange.getBegin());
     return false;
   }
 
-  if (!DD || DD->isTrivial() ||
-      (RD->isAnonymousStructOrUnion() && RD->isUnion())) {
+  if (!DD || DD->isTrivial()) {
     // A trivial destructor just ends the lifetime of the object. Check for
     // this case before checking for a body, because we might not bother
     // building a body for a trivial destructor. Note that it doesn't matter
     // whether the destructor is constexpr in this case; all trivial
     // destructors are constexpr.
-    //
-    // If an anonymous union would be destroyed, some enclosing destructor must
-    // have been explicitly defined, and the anonymous union destruction should
-    // have no effect.
     Value = APValue();
     return true;
   }
