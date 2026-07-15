@@ -365,6 +365,42 @@ if.else:
   ret void
 }
 
+define void @test_and_icmp_eq_with_trunc_nuw_is_false(i8 %x) {
+; CHECK-LABEL: define void @test_and_icmp_eq_with_trunc_nuw_is_false(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[X]], 0
+; CHECK-NEXT:    [[C2:%.*]] = trunc nuw i8 [[X]] to i1
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C1]], [[C2]]
+; CHECK-NEXT:    call void @use(i1 [[AND]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %c1 = icmp eq i8 %x, 0
+  %c2 = trunc nuw i8 %x to i1
+  %and = and i1 %c1, %c2
+  call void @use(i1 %and)
+  ret void
+}
+
+define void @test_and_trunc_nuw_with_icmp_eq_is_false(i8 %x) {
+; CHECK-LABEL: define void @test_and_trunc_nuw_with_icmp_eq_is_false(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C1:%.*]] = trunc nuw i8 [[X]] to i1
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[X]], 0
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C1]], [[C2]]
+; CHECK-NEXT:    call void @use(i1 [[AND]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %c1 = trunc nuw i8 %x to i1
+  %c2 = icmp eq i8 %x, 0
+  %and = and i1 %c1, %c2
+  call void @use(i1 %and)
+  ret void
+}
+
 declare void @use(i1)
 
 declare void @cond()
