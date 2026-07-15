@@ -5194,11 +5194,13 @@ struct FoldConsecutiveScalarMulPattern
     if (isa<FloatType>(innerAttr.getType())) {
       auto lhs = cast<FloatAttr>(innerAttr);
       auto rhs = cast<FloatAttr>(outerAttr);
-      foldedAttr = FloatAttr::get(lhs.getType(), lhs.getValue() * rhs.getValue());
+      foldedAttr = 
+          FloatAttr::get(lhs.getType(), lhs.getValue() * rhs.getValue());
     } else if (isa<IntegerType>(innerAttr.getType())) {
       auto lhs = cast<IntegerAttr>(innerAttr);
       auto rhs = cast<IntegerAttr>(outerAttr);
-      foldedAttr = IntegerAttr::get(lhs.getType(), lhs.getValue() * rhs.getValue());
+      foldedAttr = 
+          IntegerAttr::get(lhs.getType(), lhs.getValue() * rhs.getValue());
     } else {
       return failure();
     }
@@ -5210,9 +5212,8 @@ struct FoldConsecutiveScalarMulPattern
     auto scalarOperandType =
         cast<RankedTensorType>(outerScalarOperand.getType());
     auto combinedSplat = DenseElementsAttr::get(scalarOperandType, foldedAttr);
-    Value combinedConst =
-        arith::ConstantOp::create(rewriter, loc, scalarOperandType,
-                                  combinedSplat);
+    Value combinedConst = arith::ConstantOp::create(
+        rewriter, loc, scalarOperandType, combinedSplat);
 
     // Create the new single mul: innerNonConst * combinedConst.
     // Use the same indexing maps as the outer mul, since both operands have
@@ -5220,8 +5221,7 @@ struct FoldConsecutiveScalarMulPattern
     // indexing map).
     SmallVector<Value> newInputs = {innerNonConst, combinedConst};
     rewriter.replaceOpWithNewOp<ElementwiseOp>(
-        outerMul, newInputs, outerMul.getDpsInits(),
-        outerMul.getKindAttr(),
+        outerMul, newInputs, outerMul.getDpsInits(), outerMul.getKindAttr(),
         rewriter.getAffineMapArrayAttr(outerMul.getIndexingMapsArray()));
     return success();
   }
