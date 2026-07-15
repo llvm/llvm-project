@@ -2329,7 +2329,7 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   // the other parts.
   getCurScope()->EnterLoopBody(PrecedingLabel);
 
-  bool BodyStartsWithSquare = Tok.is(tok::l_square);
+  bool BodyStartsWithAttr = Tok.isOneOf(tok::l_square, tok::kw___attribute);
   SourceLocation BodyBeginLoc = Tok.getLocation();
 
   // C99 6.8.5p5 - In C99, the body of the for statement is a scope, even if
@@ -2383,7 +2383,8 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
     }
 
     // attribute-specifier without attribute (`[[]]`) isn't in AST.
-    if (!isa<CompoundStmt>(Body.get()) || BodyStartsWithSquare)
+    // `__declspec()` is only applied to declarations, so we can ignore it.
+    if (!isa<CompoundStmt>(Body.get()) || BodyStartsWithAttr)
       Diag(BodyBeginLoc, diag::ext_expansion_stmt_missing_braces);
 
     return Actions.FinishCXXExpansionStmt(ForRangeStmt.get(), Body.get());

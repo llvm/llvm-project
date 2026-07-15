@@ -27,5 +27,8 @@ void f() {
     [ // expected-warning {{ISO C++ requires a compound statement to be the body of an expansion statement}}
       []] {}
   template for (int x : {1})
+    __attribute__ // expected-warning {{ISO C++ requires a compound statement to be the body of an expansion statement}}
+      (()) {}
+  template for (int x : {1})
     foo: {} // expected-error {{labels are not allowed in expansion statements}}
 }
