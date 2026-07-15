@@ -445,28 +445,15 @@ static bool isSetregMode(const MachineInstr &MI, const SIInstrInfo &TII) {
   return HwRegId == AMDGPU::Hwreg::ID_MODE;
 }
 
-/// Backtracks \p It in \p MBB until we hit a non-meta instruction and returns
-/// whether that instruction is a S_SETREG_IMM32_B32(MODE). Returns false when
-/// there are no non-meta instruction in [MBB.instr_begin(), It).
-static bool previousInstrIsSetRegMode(MachineBasicBlock::instr_iterator &It,
-                                      const MachineBasicBlock &MBB,
-                                      const SIInstrInfo &TII) {
-  while (It != MBB.begin()) {
-    It = std::prev(It);
-    if (isSetregMode(*It, TII))
-      return true;
-    if (!It->isMetaInstruction())
-      return false;
-  }
-  return false;
-}
-
 bool AMDGPULowerVGPREncoding::needNopBeforeSetVGPRMSB(
     MachineBasicBlock::instr_iterator I) {
-  if (previousInstrIsSetRegMode(I, *MBB, *TII))
-    return true;
-  if (I != MBB->begin())
-    return false;
+  while (I != MBB->begin()) {
+    I = std::prev(I);
+    if (isSetregMode(*I, *TII))
+      return true;
+    if (!I->isMetaInstruction())
+      return false;
+  }
 
   // Look for a potential fallthrough predecessor block. When it ends with a
   // S_SETREG_IMM32_B32(MODE) we need to insert a S_NOP too.
@@ -482,10 +469,13 @@ bool AMDGPULowerVGPREncoding::needNopBeforeSetVGPRMSB(
         continue;
 
       MachineBasicBlock::instr_iterator LastMI = PredMBB->instr_end();
-      if (previousInstrIsSetRegMode(LastMI, *PredMBB, *TII))
-        return true;
-      if (LastMI != PredMBB->begin())
-        return false;
+      while (LastMI != PredMBB->begin()) {
+        LastMI = std::prev(LastMI);
+        if (isSetregMode(*LastMI, *TII))
+          return true;
+        if (!LastMI->isMetaInstruction())
+          return false;
+      }
 
       // The predecessor is empty, recursively look for its own potential
       // fallthrough predecessor.
