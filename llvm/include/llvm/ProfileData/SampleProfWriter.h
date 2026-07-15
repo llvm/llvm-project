@@ -22,7 +22,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <memory>
-#include <set>
 #include <system_error>
 
 namespace llvm {
@@ -224,8 +223,6 @@ protected:
   virtual std::error_code writeContextIdx(const SampleContext &Context);
   std::error_code writeNameIdx(FunctionId FName);
   std::error_code writeBody(const FunctionSamples &S);
-  inline void stablizeNameTable(MapVector<FunctionId, uint32_t> &NameTable,
-                                std::set<FunctionId> &V);
 
   MapVector<FunctionId, uint32_t> NameTable;
 

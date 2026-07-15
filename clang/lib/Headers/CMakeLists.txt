@@ -415,6 +415,7 @@ set(zos_wrapper_files
   zos_wrappers/locale.h
   zos_wrappers/math.h
   zos_wrappers/poll.h
+  zos_wrappers/stdlib.h
   zos_wrappers/string.h
   zos_wrappers/time.h
   zos_wrappers/variant.h
