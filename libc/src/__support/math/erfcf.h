@@ -168,7 +168,9 @@ LIBC_INLINE float erfcf(float x) {
         fputil::FPBits<float>(out).get_val());
   }
 
-  if (LIBC_UNLIKELY(x_abs < 0x33000000U)) { // |x| < 2^-25, includes x = 0
+  // For |x| < 2^-10, erfc(|x|) is within ~0.0016 ULPs of 1 - 2x/sqrt(pi).
+  // Also catches all values where shift >= 32 would cause uint32_t UB.
+  if (LIBC_UNLIKELY(x_abs < 0x3A000000U)) { // |x| < 2^-10
     constexpr double NEG_TWO_OVER_SQRT_PI = -0x1.20dd750429b6dp0;
     double xd = fputil::cast<double>(x);
     return fputil::cast<float>(
