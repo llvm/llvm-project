@@ -190,6 +190,9 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       default: // Assume MSVC for unknown environments
         return std::make_unique<MicrosoftARM64TargetInfo>(Triple, Opts);
       }
+    case llvm::Triple::Trusty:
+      return std::make_unique<TrustyTargetInfo<AArch64leTargetInfo>>(Triple,
+                                                                     Opts);
     default:
       return std::make_unique<AArch64leTargetInfo>(Triple, Opts);
     }
@@ -251,6 +254,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       default: // Assume MSVC for unknown environments
         return std::make_unique<MicrosoftARMleTargetInfo>(Triple, Opts);
       }
+    case llvm::Triple::Trusty:
+      return std::make_unique<TrustyTargetInfo<ARMleTargetInfo>>(Triple, Opts);
     default:
       return std::make_unique<ARMleTargetInfo>(Triple, Opts);
     }
@@ -693,6 +698,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     case llvm::Triple::Serenity:
       return std::make_unique<SerenityTargetInfo<X86_64TargetInfo>>(Triple,
                                                                     Opts);
+    case llvm::Triple::Trusty:
+      return std::make_unique<TrustyTargetInfo<X86_64TargetInfo>>(Triple, Opts);
     default:
       return std::make_unique<X86_64TargetInfo>(Triple, Opts);
     }
