@@ -172,11 +172,24 @@ private:
                                           unsigned Idx, unsigned MinVF,
                                           unsigned &Size);
 
+  /// Single vectorization attempt for a store chain. \p vectorizeStoreChain
+  /// wraps this to retry once with runtime alias checks enabled when the
+  /// normal attempt is blocked only by runtime-checkable may-alias
+  /// dependencies.
+  std::optional<bool> vectorizeStoreChainImpl(ArrayRef<Value *> Chain,
+                                              slpvectorizer::BoUpSLP &R,
+                                              unsigned Idx, unsigned MinVF,
+                                              unsigned &Size);
+
   bool vectorizeStores(
       ArrayRef<StoreInst *> Stores, slpvectorizer::BoUpSLP &R,
       DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>>
           &Visited,
       bool AllowMaskedStores = true);
+
+  /// Set by runImpl() when runtime alias check versioning changed the CFG, so
+  /// run() can drop CFG-analysis preservation only when necessary.
+  bool CFGChanged = false;
 
   /// The store instructions in a basic block organized by base pointer.
   StoreListMap Stores;

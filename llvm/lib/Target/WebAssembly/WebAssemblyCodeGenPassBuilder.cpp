@@ -24,6 +24,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Transforms/Utils/LowerGlobalDtors.h"
 #include "llvm/Transforms/Utils/LowerInvoke.h"
@@ -57,11 +58,21 @@ public:
                                          const CGPassBuilderOption &Opts,
                                          PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC) {
-    disablePass<RegisterCoalescerPass, MachineLateInstrsCleanupPass,
-                MachineCopyPropagationPass, PostRAMachineSinkingPass,
-                PostRASchedulerPass, FuncletLayoutPass, StackMapLivenessPass,
-                PatchableFunctionPass, ShrinkWrapPass,
-                RemoveLoadsIntoFakeUsesPass, MachineBlockPlacementPass>();
+    disablePass<MachineLateInstrsCleanupPass, MachineCopyPropagationPass,
+                PostRAMachineSinkingPass, PostRASchedulerPass,
+                FuncletLayoutPass, StackMapLivenessPass, PatchableFunctionPass,
+                ShrinkWrapPass, RemoveLoadsIntoFakeUsesPass,
+                MachineBlockPlacementPass>();
+
+    // Currently RegisterCoalesce degrades wasm debug info quality by a
+    // significant margin. As a quick fix, disable this for -O1, which is often
+    // used for debugging large applications. Disabling this increases code size
+    // of Emscripten core benchmarks by ~5%, which is acceptable for -O1, which
+    // is usually not used for production builds.
+    // TODO Investigate why RegisterCoalesce degrades debug info quality and fix
+    // it properly
+    if (getOptLevel() == CodeGenOptLevel::Less)
+      disablePass<RegisterCoalescerPass>();
   }
 
   void addIRPasses(PassManagerWrapper &PMW) const;
@@ -134,6 +145,24 @@ void WebAssemblyCodeGenPassBuilder::addISelPrepare(
 Error WebAssemblyCodeGenPassBuilder::addInstSelector(
     PassManagerWrapper &PMW) const {
   addMachineFunctionPass(WebAssemblyISelDAGToDAGPass(TM, getOptLevel()), PMW);
+
+  // Run the argument-move pass immediately after the ScheduleDAG scheduler
+  // so that we can fix up the ARGUMENT instructions before anything else
+  // sees them in the wrong place.
+  // TODO(boomanaiden154): WebAssemblyArgumentMove
+
+  // Set the p2align operands. This information is present during ISel, however
+  // it's inconvenient to collect. Collect it now, and update the immediate
+  // operands.
+  // TODO(boomanaiden154): WebAssemblySetP2AlignOperands
+
+  // Eliminate range checks and add default targets to br_table instructions.
+  // TODO(boomanaiden154): WebAssemblyFixBrTableDefaults
+
+  // unreachable is terminator, non-terminator instruction after it is not
+  // allowed.
+  // TODO(boomanaiden154): WebAssemblyCleanCodeAfterTrap
+
   return Error::success();
 }
 

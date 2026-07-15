@@ -53,6 +53,7 @@ struct IsaVersion {
     return Major == Other.Major && Minor == Other.Minor &&
            Stepping == Other.Stepping;
   }
+  bool operator!=(const IsaVersion &Other) const { return !(*this == Other); }
 };
 
 // This isn't comprehensive for now, just things that are needed from the
@@ -166,6 +167,10 @@ public:
   TargetID(GPUKind Arch, const Triple &TT, TargetIDSetting XnackSetting,
            TargetIDSetting SramEccSetting);
 
+  /// Construct a TargetID from a triple \p TT and the processor+features string
+  /// e.g. "gfx90a", "gfx90a:xnack+:sramecc-", "".
+  TargetID(const Triple &TT, StringRef TargetIDStr);
+
   ~TargetID() = default;
 
   /// \return True if the current xnack setting is not "Unsupported".
@@ -233,6 +238,16 @@ public:
 
   static std::optional<TargetID>
   parseTargetIDString(StringRef TargetIDDirective);
+
+  /// Returns true if \p Other denotes the same target as *this, i.e. the same
+  /// processor and xnack/sramecc settings on a compatible triple. This is a
+  /// semantic equality that looks through spelling differences.
+  bool isEquivalent(const TargetID &Other) const;
+
+  /// Returns true if a device image for *this can provide the device code for a
+  /// request for \p Other. This is directional and models logical-linking
+  /// compatibility.
+  bool providesFor(const TargetID &Other) const;
 
   void print(raw_ostream &OS) const;
 
