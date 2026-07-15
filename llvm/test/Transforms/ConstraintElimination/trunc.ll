@@ -218,14 +218,12 @@ define void @test_trunc_nuw(i1 %c, i8 %x) {
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[T_3:%.*]] = trunc nuw i8 [[X]] to i1
-; CHECK-NEXT:    call void @use(i1 [[T_3]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[T_6:%.*]] = trunc nuw i8 [[X]] to i1
-; CHECK-NEXT:    call void @use(i1 [[T_6]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -258,8 +256,7 @@ define void @assume_trunc_nuw(i8 %x) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[T_3:%.*]] = trunc nuw i8 [[X]] to i1
-; CHECK-NEXT:    call void @use(i1 [[T_3]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ;
   %c.1 = trunc nuw i8 %x to i1
@@ -291,8 +288,7 @@ define void @test_or_trunc_nuw(i1 %c, i8 %x) {
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[T_6:%.*]] = trunc nuw i8 [[X]] to i1
-; CHECK-NEXT:    call void @use(i1 [[T_6]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -329,8 +325,7 @@ define void @test_and_trunc_nuw(i1 %c, i8 %x) {
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[T_3:%.*]] = trunc nuw i8 [[X]] to i1
-; CHECK-NEXT:    call void @use(i1 [[T_3]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[T_4:%.*]] = icmp eq i8 [[X]], 0
@@ -371,8 +366,7 @@ define void @test_and_icmp_eq_with_trunc_nuw_is_false(i8 %x) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[X]], 0
 ; CHECK-NEXT:    [[C2:%.*]] = trunc nuw i8 [[X]] to i1
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C1]], [[C2]]
-; CHECK-NEXT:    call void @use(i1 [[AND]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -389,8 +383,7 @@ define void @test_and_trunc_nuw_with_icmp_eq_is_false(i8 %x) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[C1:%.*]] = trunc nuw i8 [[X]] to i1
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[X]], 0
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C1]], [[C2]]
-; CHECK-NEXT:    call void @use(i1 [[AND]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:
