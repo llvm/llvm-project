@@ -55,6 +55,16 @@ protected:
               getI32(Rows), getI8(Cols), getI32(StartRow), getI8(StartCol),
               getI8(UsageMask), getI8(DynIndexMask), getI32(GSStream)});
   }
+
+  // Read back an integer operand
+  uint64_t getIntOp(const MDNode *N, unsigned I) {
+    return mdconst::extract<ConstantInt>(N->getOperand(I))->getZExtValue();
+  }
+
+  // Read back a string operand
+  StringRef getStrOp(const MDNode *N, unsigned I) {
+    return cast<MDString>(N->getOperand(I))->getString();
+  }
 };
 
 //===----------------------------------------------------------------------===//
@@ -348,6 +358,119 @@ TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementIndicesRowMismatch) {
                             /*StartRow=*/0, /*StartCol=*/0, /*UsageMask=*/0,
                             /*DynIndexMask=*/0, /*GSStream=*/0);
   EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(Node), Failed());
+}
+
+//===--------------------------------------------------------------------===//
+// struct -> metadata
+//===--------------------------------------------------------------------===//
+
+// A fully populated element emits all 13 operands in order
+TEST_F(HLSLSemanticSignatureMetadataTest, ElementToMetadata) {
+  SemanticSignatureElement Elem;
+  Elem.SigId = 1;
+  Elem.SemanticName = "TEXCOORD";
+  Elem.CompType = dxil::ElementType::F32;
+  Elem.SemanticKind = dxbc::PSV::SemanticKind::Arbitrary;
+  Elem.SemanticIndices = {0, 1};
+  Elem.InterpMode = dxbc::PSV::InterpolationMode::Undefined;
+  Elem.Rows = 2;
+  Elem.Cols = 4;
+  Elem.StartRow = 1;
+  Elem.StartCol = 0;
+  Elem.UsageMask = 0;
+  Elem.DynIndexMask = 0;
+  Elem.GSStream = 0;
+
+  MDNode *Node = Elem.toMetadata(Ctx);
+  ASSERT_EQ(Node->getNumOperands(), 13u);
+  EXPECT_EQ(getIntOp(Node, 0), 1u);
+  EXPECT_EQ(getStrOp(Node, 1), "TEXCOORD");
+  EXPECT_EQ(getIntOp(Node, 2), 9u);
+  EXPECT_EQ(getIntOp(Node, 3), 0u);
+  EXPECT_EQ(Node->getOperand(4).get(), getIndices({0, 1}));
+  EXPECT_EQ(getIntOp(Node, 5), 0u);
+  EXPECT_EQ(getIntOp(Node, 6), 2u);
+  EXPECT_EQ(getIntOp(Node, 7), 4u);
+  EXPECT_EQ(getIntOp(Node, 8), 1u);
+  EXPECT_EQ(getIntOp(Node, 9), 0u);
+  EXPECT_EQ(getIntOp(Node, 10), 0u);
+  EXPECT_EQ(getIntOp(Node, 11), 0u);
+  EXPECT_EQ(getIntOp(Node, 12), 0u);
+}
+
+// System value, non-zero masks and a non-zero stream index are emitted
+TEST_F(HLSLSemanticSignatureMetadataTest, ElementToMetadataSystemValue) {
+  SemanticSignatureElement Elem;
+  Elem.SigId = 1;
+  Elem.SemanticName = "SV_Target";
+  Elem.CompType = dxil::ElementType::F32;
+  Elem.SemanticKind = dxbc::PSV::SemanticKind::Target;
+  Elem.SemanticIndices = {1};
+  Elem.Rows = 1;
+  Elem.Cols = 4;
+  Elem.StartRow = 1;
+  Elem.StartCol = 0;
+  Elem.UsageMask = 0x7;
+  Elem.DynIndexMask = 0x1;
+  Elem.GSStream = 2;
+
+  MDNode *Node = Elem.toMetadata(Ctx);
+  ASSERT_EQ(Node->getNumOperands(), 13u);
+  EXPECT_EQ(getStrOp(Node, 1), "SV_Target");
+  EXPECT_EQ(getIntOp(Node, 3), 16u);
+  EXPECT_EQ(Node->getOperand(4).get(), getIndices({1}));
+  EXPECT_EQ(getIntOp(Node, 10), 0x7u);
+  EXPECT_EQ(getIntOp(Node, 11), 0x1u);
+  EXPECT_EQ(getIntOp(Node, 12), 2u);
+}
+
+// An unallocated element emits the row/col sentinels
+TEST_F(HLSLSemanticSignatureMetadataTest, ElementToMetadataUnallocated) {
+  SemanticSignatureElement Elem;
+  Elem.SemanticName = "POSITION";
+  Elem.CompType = dxil::ElementType::F32;
+  Elem.SemanticIndices = {0};
+
+  MDNode *Node = Elem.toMetadata(Ctx);
+  ASSERT_EQ(Node->getNumOperands(), 13u);
+  EXPECT_EQ(getIntOp(Node, 8), UnallocatedRow);
+  EXPECT_EQ(getIntOp(Node, 9), UnallocatedCol);
+}
+
+// Emitting then parsing yields an equivalent element
+TEST_F(HLSLSemanticSignatureMetadataTest, ElementRoundTrip) {
+  SemanticSignatureElement Elem;
+  Elem.SigId = 2;
+  Elem.SemanticName = "TEXCOORD";
+  Elem.CompType = dxil::ElementType::F32;
+  Elem.SemanticKind = dxbc::PSV::SemanticKind::Arbitrary;
+  Elem.SemanticIndices = {1};
+  Elem.InterpMode = dxbc::PSV::InterpolationMode::LinearNoperspective;
+  Elem.Rows = 1;
+  Elem.Cols = 4;
+  Elem.StartRow = 2;
+  Elem.StartCol = 0;
+  Elem.UsageMask = 0x7;
+  Elem.DynIndexMask = 0;
+  Elem.GSStream = 0;
+
+  Expected<SemanticSignatureElement> Parsed =
+      SemanticSignatureElement::fromMetadata(Elem.toMetadata(Ctx));
+  ASSERT_THAT_EXPECTED(Parsed, Succeeded());
+  EXPECT_EQ(Parsed->SigId, Elem.SigId);
+  EXPECT_EQ(Parsed->SemanticName, Elem.SemanticName);
+  EXPECT_EQ(Parsed->CompType, Elem.CompType);
+  EXPECT_EQ(Parsed->SemanticKind, Elem.SemanticKind);
+  EXPECT_THAT(Parsed->SemanticIndices,
+              testing::ElementsAreArray(Elem.SemanticIndices));
+  EXPECT_EQ(Parsed->InterpMode, Elem.InterpMode);
+  EXPECT_EQ(Parsed->Rows, Elem.Rows);
+  EXPECT_EQ(Parsed->Cols, Elem.Cols);
+  EXPECT_EQ(Parsed->StartRow, Elem.StartRow);
+  EXPECT_EQ(Parsed->StartCol, Elem.StartCol);
+  EXPECT_EQ(Parsed->UsageMask, Elem.UsageMask);
+  EXPECT_EQ(Parsed->DynIndexMask, Elem.DynIndexMask);
+  EXPECT_EQ(Parsed->GSStream, Elem.GSStream);
 }
 
 } // namespace
