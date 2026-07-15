@@ -1,0 +1,114 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func private @dtor(!cir.ptr<!s32i>)
+
+  // A while loop with a per-iteration cleanup region that runs on both the
+  // normal and EH exit edges.
+  cir.func @while_cleanup_all(%cond : !cir.bool, %s : !cir.ptr<!s32i>) {
+    cir.while {
+      cir.condition(%cond)
+    } do {
+      cir.yield
+    } cleanup all {
+      cir.call @dtor(%s) : (!cir.ptr<!s32i>) -> ()
+      cir.yield
+    }
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @while_cleanup_all
+  // CHECK:         cir.while {
+  // CHECK:           cir.condition(%[[COND:.*]])
+  // CHECK:         } do {
+  // CHECK:           cir.yield
+  // CHECK:         } cleanup all {
+  // CHECK:           cir.call @dtor
+  // CHECK:           cir.yield
+  // CHECK:         }
+
+  // A while loop with a normal-only cleanup region (exceptions disabled).
+  cir.func @while_cleanup_normal(%cond : !cir.bool, %s : !cir.ptr<!s32i>) {
+    cir.while {
+      cir.condition(%cond)
+    } do {
+      cir.yield
+    } cleanup normal {
+      cir.call @dtor(%s) : (!cir.ptr<!s32i>) -> ()
+      cir.yield
+    }
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @while_cleanup_normal
+  // CHECK:         } cleanup normal {
+  // CHECK:           cir.call @dtor
+  // CHECK:         }
+
+  // A while loop without a cleanup region still prints as before.
+  cir.func @while_no_cleanup(%cond : !cir.bool) {
+    cir.while {
+      cir.condition(%cond)
+    } do {
+      cir.yield
+    }
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @while_no_cleanup
+  // CHECK:         cir.while {
+  // CHECK:           cir.condition
+  // CHECK:         } do {
+  // CHECK:           cir.yield
+  // CHECK-NOT:     cleanup
+
+  // A for loop with a per-iteration cleanup region after the step region.
+  cir.func @for_cleanup_all(%cond : !cir.bool, %s : !cir.ptr<!s32i>) {
+    cir.for : cond {
+      cir.condition(%cond)
+    } body {
+      cir.yield
+    } step {
+      cir.yield
+    } cleanup all {
+      cir.call @dtor(%s) : (!cir.ptr<!s32i>) -> ()
+      cir.yield
+    }
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @for_cleanup_all
+  // CHECK:         cir.for : cond {
+  // CHECK:           cir.condition(%[[FCOND:.*]])
+  // CHECK:         } body {
+  // CHECK:           cir.yield
+  // CHECK:         } step {
+  // CHECK:           cir.yield
+  // CHECK:         } cleanup all {
+  // CHECK:           cir.call @dtor
+  // CHECK:           cir.yield
+  // CHECK:         }
+
+  // A for loop without a cleanup region still prints as before.
+  cir.func @for_no_cleanup(%cond : !cir.bool) {
+    cir.for : cond {
+      cir.condition(%cond)
+    } body {
+      cir.yield
+    } step {
+      cir.yield
+    }
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @for_no_cleanup
+  // CHECK:         cir.for : cond {
+  // CHECK:           cir.condition
+  // CHECK:         } body {
+  // CHECK:           cir.yield
+  // CHECK:         } step {
+  // CHECK:           cir.yield
+  // CHECK-NOT:     cleanup
+}

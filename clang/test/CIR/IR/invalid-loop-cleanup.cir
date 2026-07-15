@@ -1,0 +1,81 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+
+cir.func private @dtor(!cir.ptr<!s32i>)
+
+cir.func @while_cleanup_missing_kind(%cond : !cir.bool, %s : !cir.ptr<!s32i>) {
+  cir.while {
+    cir.condition(%cond)
+  } do {
+    cir.yield
+  // expected-error @below {{expected valid keyword or string}}
+  // expected-error @below {{failed to parse CIR_CleanupKindAttr}}
+  } cleanup {
+    cir.call @dtor(%s) : (!cir.ptr<!s32i>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func private @dtor(!cir.ptr<!s32i>)
+
+cir.func @for_cleanup_missing_kind(%cond : !cir.bool, %s : !cir.ptr<!s32i>) {
+  cir.for : cond {
+    cir.condition(%cond)
+  } body {
+    cir.yield
+  } step {
+    cir.yield
+  // expected-error @below {{expected valid keyword or string}}
+  // expected-error @below {{failed to parse CIR_CleanupKindAttr}}
+  } cleanup {
+    cir.call @dtor(%s) : (!cir.ptr<!s32i>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func private @dtor(!cir.ptr<!s32i>)
+
+cir.func @while_cleanup_eh(%cond : !cir.bool, %s : !cir.ptr<!s32i>) {
+  // expected-error @below {{loop cleanup kind must be 'normal' or 'all', not 'eh'}}
+  cir.while {
+    cir.condition(%cond)
+  } do {
+    cir.yield
+  } cleanup eh {
+    cir.call @dtor(%s) : (!cir.ptr<!s32i>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func private @dtor(!cir.ptr<!s32i>)
+
+cir.func @for_cleanup_eh(%cond : !cir.bool, %s : !cir.ptr<!s32i>) {
+  // expected-error @below {{loop cleanup kind must be 'normal' or 'all', not 'eh'}}
+  cir.for : cond {
+    cir.condition(%cond)
+  } body {
+    cir.yield
+  } step {
+    cir.yield
+  } cleanup eh {
+    cir.call @dtor(%s) : (!cir.ptr<!s32i>) -> ()
+    cir.yield
+  }
+  cir.return
+}
