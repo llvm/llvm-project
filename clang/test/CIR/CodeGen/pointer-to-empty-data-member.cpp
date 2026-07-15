@@ -128,12 +128,16 @@ int hasNUA::* nua_i = &hasNUA::i;
 // LLVM-DAG: @nua_i = global i64 0
 
 struct FirstField { int a; };
-struct HoldsNUA { int b; [[no_unique_address]] EmptyBase e; };
+struct HoldsNUA { int b; [[no_unique_address]] EmptyBase e; [[no_unique_address]] EmptyBase e2; };
 struct DerivesNUA : FirstField, HoldsNUA {};
 EmptyBase DerivesNUA::* nua_in_base = &DerivesNUA::e;
 // CIR-BEFORE-DAG: cir.global external @nua_in_base = #cir.data_member_offset<4> : !cir.data_member<!rec_EmptyBase in !rec_DerivesNUA>
 // CIR-AFTER-DAG: cir.global external @nua_in_base = #cir.int<4> : !s64i
 // LLVM-DAG: @nua_in_base = global i64 4
+EmptyBase DerivesNUA::* nua_in_base2 = &DerivesNUA::e2;
+// CIR-BEFORE-DAG: cir.global external @nua_in_base2 = #cir.data_member_offset<8> : !cir.data_member<!rec_EmptyBase in !rec_DerivesNUA>
+// CIR-AFTER-DAG: cir.global external @nua_in_base2 = #cir.int<8> : !s64i
+// LLVM-DAG: @nua_in_base2 = global i64 8
 
 union U1 {
   EmptyBase eb;
