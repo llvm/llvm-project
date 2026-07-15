@@ -900,6 +900,12 @@ static void CollectConstructSelectorSet(
             llvm::omp::getLeafConstructsOrSelf(*dir)) {
           constructs.push_back(leaf);
         }
+      } else if (const auto *value{std::get_if<TraitName::Value>(&traitName.u)};
+                 value && *value == TraitName::Value::Simd) {
+        // In a construct selector, `simd` is represented as Value::Simd (it can
+        // carry simd-specific properties), not as a Directive; treat it as
+        // OMPD_simd so it participates in the comparison.
+        constructs.push_back(llvm::omp::Directive::OMPD_simd);
       }
     }
   }

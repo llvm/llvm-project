@@ -27,6 +27,34 @@ contains
   end subroutine
 end subroutine
 
+! 'simd' (represented specially in the parse tree) appears in only one of the
+! construct selector sets, so the sets differ: not conforming.
+subroutine r1_simd_diff
+  !$omp declare variant (p1:p3) match (construct={parallel})
+  !ERROR: Variant procedure 'p3' must have the same 'construct' selector set in all DECLARE VARIANT directives
+  !$omp declare variant (p2:p3) match (construct={parallel, simd})
+contains
+  subroutine p1
+  end subroutine
+  subroutine p2
+  end subroutine
+  subroutine p3
+  end subroutine
+end subroutine
+
+! 'simd' appears in both construct selector sets: the sets are the same.
+subroutine r1_simd_same
+  !$omp declare variant (p1:p3) match (construct={parallel, simd})
+  !$omp declare variant (p2:p3) match (construct={parallel, simd})
+contains
+  subroutine p1
+  end subroutine
+  subroutine p2
+  end subroutine
+  subroutine p3
+  end subroutine
+end subroutine
+
 ! A procedure (p2) that is a variant may not later be used as a base function.
 subroutine r3_variant_then_base
   !$omp declare variant (p1:p2) match (construct={parallel})
