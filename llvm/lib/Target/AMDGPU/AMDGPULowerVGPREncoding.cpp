@@ -462,7 +462,7 @@ bool AMDGPULowerVGPREncoding::needNopBeforeSetVGPRMSB(
     // Look for a potential fallthrough predecessor block. When it ends with a
     // S_SETREG_IMM32_B32(MODE) we need to insert a S_NOP too. We assume that an
     // explicit jump to the current block from the block that would otherwise
-    // have naturally fell through to it will remain in the final assembly.
+    // have naturally fallen through to it will remain in the final assembly.
     CurrentMBB = CurrentMBB->getPrevNode();
     if (!CurrentMBB || !CurrentMBB->canFallThrough())
       return false;
