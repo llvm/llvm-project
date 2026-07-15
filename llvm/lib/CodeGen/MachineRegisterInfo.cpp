@@ -714,66 +714,63 @@ void MachineRegisterInfo::updateDbgUsersToReg(
     }
   }
 }
-void MachineRegisterInfo::addChainHint(Register VReg, Register PrefReg) {
-  if (ChainHints.isEquivalent(VReg, PrefReg))
-    return;
 
-  ChainHints.insert(VReg);
-  ChainHints.insert(PrefReg);
+EquivalenceClasses<Register>
+MachineRegisterInfo::createTypedHintsEC(unsigned Type) {
+  EquivalenceClasses<Register> TypedHintsEC;
+  for (unsigned I = 0, E = RegAllocHints.size(); I != E; ++I) {
+    Register Reg = Register::index2VirtReg(I);
 
-  SmallVector<Register> SetA(ChainHints.members(VReg));
-  SmallVector<Register> SetB(ChainHints.members(PrefReg));
+    for (auto &[HintType, HintReg] : RegAllocHints[Reg]) {
+      if (HintType != Type)
+        continue;
 
-  ChainHints.unionSets(VReg, PrefReg);
-
-  for (Register A : SetA) {
-    for (Register B : SetB) {
-      RegAllocHints.grow(A);
-      RegAllocHints.grow(B);
-      if (!llvm::is_contained(RegAllocHints[A].second, B))
-        addRegAllocationHint(A, B);
-      if (!llvm::is_contained(RegAllocHints[B].second, A))
-        addRegAllocationHint(B, A);
+      TypedHintsEC.insert(Reg);
+      TypedHintsEC.insert(HintReg);
+      TypedHintsEC.unionSets(Reg, HintReg);
     }
   }
+
+  return TypedHintsEC;
 }
 
-void MachineRegisterInfo::removeIncompatibleChainHints() {
-  SmallVector<Register> InvalidLeaders;
+void MachineRegisterInfo::removeIncompatibleHintsOfType(unsigned Type) {
+  EquivalenceClasses<Register> TypedHintsEC = createTypedHintsEC(Type);
+  const TargetRegisterInfo *TRI = getTargetRegisterInfo();
 
-  for (const EquivalenceClasses<llvm::Register>::ECValue *I : ChainHints) {
+  SmallVector<Register> InvalidLeaders;
+  for (const EquivalenceClasses<llvm::Register>::ECValue *I : TypedHintsEC) {
     if (!I->isLeader())
       continue;
 
-    auto isValidChainHint = [&]() {
-      for (auto AI = ChainHints.member_begin(*I), End = ChainHints.member_end();
+    auto hasCompatibleRCs = [&]() {
+      for (auto AI = TypedHintsEC.member_begin(*I),
+                End = TypedHintsEC.member_end();
            AI != End; ++AI) {
         for (auto BI = std::next(AI); BI != End; ++BI) {
           const TargetRegisterClass *ARC = getRegClass(*AI);
           const TargetRegisterClass *BRC = getRegClass(*BI);
-          if (!getTargetRegisterInfo()->getCommonSubClass(ARC, BRC))
+          if (!TRI->getCommonSubClass(ARC, BRC))
             return false;
         }
       }
       return true;
     };
 
-    if (!isValidChainHint())
+    if (!hasCompatibleRCs())
       InvalidLeaders.push_back(I->getData());
   }
 
   for (Register Leader : InvalidLeaders) {
-    SmallVector<Register> Members(ChainHints.members(Leader));
-    auto LeaderIt = ChainHints.findLeader(Leader);
+    SmallVector<Register> Members(TypedHintsEC.members(Leader));
     for (Register Member : Members) {
-      auto &MemberHints = RegAllocHints[Member].second;
-      MemberHints.erase(llvm::remove_if(MemberHints,
-                                        [&](Register HintReg) {
-                                          return ChainHints.findLeader(
-                                                     HintReg) == LeaderIt;
-                                        }),
-                        MemberHints.end());
+      auto &MemberHints = RegAllocHints[Member];
+      MemberHints.erase(
+          llvm::remove_if(MemberHints,
+                          [&](const std::pair<unsigned, Register> &Hint) {
+                            return Hint.first == Type;
+                          }),
+          MemberHints.end());
     }
-    ChainHints.eraseClass(Leader);
   }
 }

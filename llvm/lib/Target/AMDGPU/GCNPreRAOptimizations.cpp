@@ -325,7 +325,22 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
           continue;
         LLVM_DEBUG(dbgs() << "Setting hint for " << MI << " Dst: " << *DstMO
                           << " Src2: " << *Src2MO << "\n");
-        MRI->addChainHint(Dst, Src2);
+        MFMAHints.unionSets(Dst, Src2);
+      }
+    }
+
+    for (const EquivalenceClasses<llvm::Register>::ECValue *I : MFMAHints) {
+      if (!I->isLeader())
+        continue;
+
+      for (auto AI = MFMAHints.member_begin(*I), End = MFMAHints.member_end();
+           AI != End; ++AI) {
+        Register A = *AI;
+        for (auto BI = std::next(AI); BI != End; ++BI) {
+          Register B = *BI;
+          MRI->addRegAllocationHint(A, AMDGPURI::ChainHint, B);
+          MRI->addRegAllocationHint(B, AMDGPURI::ChainHint, A);
+        }
       }
     }
   }

@@ -327,8 +327,8 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
     // Copy register allocation hints.
     const auto *Hints = SrcMRI->getRegAllocationHints(Reg);
     if (Hints)
-      for (Register PrefReg : Hints->second)
-        DstMRI->addRegAllocationHint(NewReg, PrefReg);
+      for (const auto &[Type, PrefReg] : *Hints)
+        DstMRI->addRegAllocationHint(NewReg, Type, PrefReg);
   }
 
   const TargetSubtargetInfo &STI = DstMF->getSubtarget();
@@ -560,7 +560,7 @@ static uint64_t computeMIRComplexityScoreImpl(const MachineFunction &MF) {
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
     Register Reg = Register::index2VirtReg(I);
     if (const auto *Hints = MRI.getRegAllocationHints(Reg))
-      Score += Hints->second.size();
+      Score += Hints->size();
   }
 
   for (const MachineBasicBlock &MBB : MF) {

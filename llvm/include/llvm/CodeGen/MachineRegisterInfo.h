@@ -105,25 +105,19 @@ private:
   /// all registers that were disabled are removed from the list.
   SmallVector<MCPhysReg, 16> UpdatedCSRs;
 
-  /// RegAllocHints - This vector records register allocation hints for
-  /// virtual registers. For each virtual register, it keeps a pair of hint
-  /// type and hints vector making up the allocation hints. Only the first
-  /// hint may be target specific, and in that case this is reflected by the
-  /// first member of the pair being non-zero. If the hinted register is
-  /// virtual, it means the allocator should prefer the physical register
-  /// allocated to it if any.
-  IndexedMap<std::pair<unsigned, SmallVector<Register, 4>>,
+  /// RegAllocHints - This map records register allocation hints for
+  /// virtual registers. Each virtual register may have multiple hints, stored
+  /// as a vector of pairs of hint types and hint registers. The first member of
+  /// the pair is the hint type. If it is non-zero, it is target specific. If
+  /// the hinted register is virtual, it means the allocator should prefer the
+  /// physical register allocated to it if any.
+  IndexedMap<SmallVector<std::pair<unsigned, Register>, 4>,
              VirtReg2IndexFunctor>
       RegAllocHints;
 
   /// Hold the register properties that are used to populate the VirtRegMap
   /// pass when deserializing from .mir files.
   SmallVector<PendingVirtRegMapEntry, 0> PendingVirtRegMapEntries;
-
-  /// ChainHints - This equivalence class stores hints that are meant to only be
-  /// applied if all of the involved register classes are compatible, otherwise
-  /// none of them are applied.
-  EquivalenceClasses<Register> ChainHints;
 
   /// PhysRegUseDefLists - This is an array of the head of the use/def list for
   /// physical registers.
@@ -850,18 +844,17 @@ public:
   void setRegAllocationHint(Register VReg, unsigned Type, Register PrefReg) {
     assert(VReg.isVirtual());
     RegAllocHints.grow(Register::index2VirtReg(getNumVirtRegs()));
-    auto &Hint = RegAllocHints[VReg];
-    Hint.first = Type;
-    Hint.second.clear();
-    Hint.second.push_back(PrefReg);
+    auto &Hints = RegAllocHints[VReg];
+    Hints.clear();
+    Hints.push_back({Type, PrefReg});
   }
 
   /// addRegAllocationHint - Add a register allocation hint to the hints
   /// vector for VReg.
-  void addRegAllocationHint(Register VReg, Register PrefReg) {
+  void addRegAllocationHint(Register VReg, unsigned Type, Register PrefReg) {
     assert(VReg.isVirtual());
     RegAllocHints.grow(Register::index2VirtReg(getNumVirtRegs()));
-    RegAllocHints[VReg].second.push_back(PrefReg);
+    RegAllocHints[VReg].push_back({Type, PrefReg});
   }
 
   /// Specify the preferred (target independent) register allocation hint for
@@ -870,23 +863,18 @@ public:
     setRegAllocationHint(VReg, /*Type=*/0, PrefReg);
   }
 
-  void clearSimpleHint(Register VReg) {
-    assert (!RegAllocHints[VReg].first &&
-            "Expected to clear a non-target hint!");
-    if (RegAllocHints.inBounds(VReg))
-      RegAllocHints[VReg].second.clear();
+  void clearSimpleHints(Register VReg) {
+    if (!RegAllocHints.inBounds(VReg))
+      return;
+
+    auto &Hints = RegAllocHints[VReg];
+    Hints.erase(llvm::remove_if(Hints,
+                                [](const std::pair<unsigned, Register> &H) {
+                                  return H.first == 0;
+                                }),
+                Hints.end());
+    return;
   }
-
-  /// addChainHint - Union the sets of chain hints containing VReg and PrefReg
-  /// and also add bidirectional hints to all members of the unioned set.
-  LLVM_ABI void addChainHint(Register VReg, Register PrefReg);
-
-  /// removeIncompatibleChainHints - Check that all sets of chain hints have
-  /// compatible register classes with all other members of their set. If they
-  /// do not, remove those hints and then delete that set. If a register has
-  /// non-chain simple hints and its set is deleted, those non-chain hints will
-  /// not be removed.
-  LLVM_ABI void removeIncompatibleChainHints();
 
   /// getRegAllocationHint - Return the register allocation hint for the
   /// specified virtual register. If there are many hints, this returns the
@@ -895,9 +883,10 @@ public:
     assert(VReg.isVirtual());
     if (!RegAllocHints.inBounds(VReg))
       return {0, Register()};
-    auto &Hint = RegAllocHints[VReg.id()];
-    Register BestHint = (Hint.second.size() ? Hint.second[0] : Register());
-    return {Hint.first, BestHint};
+    const auto &Hints = RegAllocHints[VReg];
+    std::pair<unsigned, Register> BestHint =
+        (!Hints.empty() ? Hints[0] : std::make_pair(0u, Register()));
+    return BestHint;
   }
 
   /// getSimpleHint - same as getRegAllocationHint except it will only return
@@ -910,11 +899,22 @@ public:
 
   /// getRegAllocationHints - Return a reference to the vector of all
   /// register allocation hints for VReg.
-  const std::pair<unsigned, SmallVector<Register, 4>> *
+  const SmallVector<std::pair<unsigned, Register>, 4> *
   getRegAllocationHints(Register VReg) const {
     assert(VReg.isVirtual());
     return RegAllocHints.inBounds(VReg) ? &RegAllocHints[VReg] : nullptr;
   }
+
+  /// createTypedHintsEC - Build equivalence classes over virtual registers,
+  /// where two registers are placed in the same class if they are connected
+  /// by a register allocation hint of the given hint \p Type.
+  LLVM_ABI EquivalenceClasses<Register> createTypedHintsEC(unsigned Type);
+
+  /// removeIncompatibleHintsOfType - Build equivalence classes from hints of
+  /// \p Type. For any class containing registers where some pair does not have
+  /// a common register subclass, remove all hints of that type between members
+  /// of the class.
+  LLVM_ABI void removeIncompatibleHintsOfType(unsigned Type);
 
   /// markUsesInDebugValueAsUndef - Mark every DBG_VALUE referencing the
   /// specified register as undefined which causes the DBG_VALUE to be

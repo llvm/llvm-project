@@ -12,16 +12,16 @@ define amdgpu_kernel void @max_12regs_13a_used(i32 %cond, ptr addrspace(1) %arg,
 ; GFX908-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX908-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX908-NEXT:    v_mov_b32_e32 v5, s8
-; GFX908-NEXT:    v_mov_b32_e32 v1, s9
-; GFX908-NEXT:    v_mov_b32_e32 v2, s10
-; GFX908-NEXT:    v_accvgpr_write_b32 a0, v5
-; GFX908-NEXT:    v_mov_b32_e32 v5, s11
-; GFX908-NEXT:    v_accvgpr_write_b32 a1, v1
-; GFX908-NEXT:    v_accvgpr_write_b32 a2, v2
-; GFX908-NEXT:    v_accvgpr_write_b32 a3, v5
+; GFX908-NEXT:    v_mov_b32_e32 v1, s8
+; GFX908-NEXT:    v_mov_b32_e32 v2, s9
+; GFX908-NEXT:    v_mov_b32_e32 v5, s10
+; GFX908-NEXT:    v_accvgpr_write_b32 a4, v1
+; GFX908-NEXT:    v_mov_b32_e32 v1, s11
+; GFX908-NEXT:    v_accvgpr_write_b32 a5, v2
+; GFX908-NEXT:    v_accvgpr_write_b32 a6, v5
+; GFX908-NEXT:    v_accvgpr_write_b32 a7, v1
 ; GFX908-NEXT:    s_nop 0
-; GFX908-NEXT:    v_mfma_f32_4x4x1f32 a[0:3], v0, v0, a[0:3]
+; GFX908-NEXT:    v_mfma_f32_4x4x1f32 a[0:3], v0, v0, a[4:7]
 ; GFX908-NEXT:    v_mfma_f32_4x4x1f32 a[4:7], v0, v0, a[0:3]
 ; GFX908-NEXT:    s_cbranch_scc0 .LBB0_2
 ; GFX908-NEXT:  ; %bb.1: ; %st
@@ -64,12 +64,12 @@ define amdgpu_kernel void @max_12regs_13a_used(i32 %cond, ptr addrspace(1) %arg,
 ; GFX90A-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX90A-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-NEXT:    v_accvgpr_write_b32 a0, s8
-; GFX90A-NEXT:    v_accvgpr_write_b32 a1, s9
-; GFX90A-NEXT:    v_accvgpr_write_b32 a2, s10
-; GFX90A-NEXT:    v_accvgpr_write_b32 a3, s11
+; GFX90A-NEXT:    v_accvgpr_write_b32 a4, s8
+; GFX90A-NEXT:    v_accvgpr_write_b32 a5, s9
+; GFX90A-NEXT:    v_accvgpr_write_b32 a6, s10
+; GFX90A-NEXT:    v_accvgpr_write_b32 a7, s11
 ; GFX90A-NEXT:    s_nop 1
-; GFX90A-NEXT:    v_mfma_f32_4x4x1f32 a[0:3], v0, v0, a[0:3]
+; GFX90A-NEXT:    v_mfma_f32_4x4x1f32 a[0:3], v0, v0, a[4:7]
 ; GFX90A-NEXT:    v_mfma_f32_4x4x1f32 a[4:7], v0, v0, a[0:3]
 ; GFX90A-NEXT:    s_cbranch_scc0 .LBB0_2
 ; GFX90A-NEXT:  ; %bb.1: ; %st

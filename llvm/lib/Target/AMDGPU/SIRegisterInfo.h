@@ -33,7 +33,7 @@ struct SGPRSpillBuilder;
 /// Register allocation hint types. Helps eliminate unneeded COPY with True16
 namespace AMDGPURI {
 
-enum { Size16 = 1, Size32 = 2 };
+enum { Size16 = 1, Size32 = 2, ChainHint = 3 };
 
 } // end namespace AMDGPURI
 
@@ -506,6 +506,12 @@ public:
                 ? 2.0
                 : 1.0);
   }
+
+  ArrayRef<unsigned>
+  getHintTypesRequiringRegisterClassCompatibility() const override {
+    static constexpr unsigned HintTypes[] = {AMDGPURI::ChainHint};
+    return HintTypes;
+  };
 };
 
 } // End namespace llvm
