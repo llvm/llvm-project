@@ -2509,7 +2509,7 @@ define i16 @neg_mul_add_two(i16 range(i16 0, 2) %x, i16 %y) {
 }
 
 define i1 @neg_mul_add_one_i1(i1 %x, i1 %y) {
-; CHECK-LABEL: @mul_add_one_i1(
+; CHECK-LABEL: @neg_mul_add_one_i1(
 ; CHECK-NEXT:    [[ADD:%.*]] = xor i1 [[X:%.*]], true
 ; CHECK-NEXT:    [[RET:%.*]] = and i1 [[Y:%.*]], [[ADD]]
 ; CHECK-NEXT:    ret i1 [[RET]]
