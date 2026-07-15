@@ -15,20 +15,24 @@
 #include <benchmark/benchmark.h>
 #include "test_macros.h"
 
+void run_sizes(benchmark::Benchmark* benchmark) { benchmark->Arg(0)->Arg(100)->Arg(4000)->Arg(10000); }
+
 static TEST_ALIGN_BENCHMARK void bm_ofstream_write(benchmark::State& state) {
   std::vector<char> buffer;
-  buffer.resize(16384);
+  buffer.resize(state.range());
 
-  std::ofstream stream("/dev/null");
+  std::ofstream stream("testfile");
 
-  for (auto _ : state)
+  for (auto _ : state) {
     stream.write(buffer.data(), buffer.size());
+    stream.seekp(0);
+  }
 }
-BENCHMARK(bm_ofstream_write)->Name("std::ofstream::write(char*, size)");
+BENCHMARK(bm_ofstream_write)->Name("std::ofstream::write(char*, size)")->Apply(run_sizes);
 
 static TEST_ALIGN_BENCHMARK void bm_ifstream_read(benchmark::State& state) {
   std::vector<char> buffer;
-  buffer.resize(16384);
+  buffer.resize(state.range());
 
   {
     std::ofstream gen_testfile("testfile");
@@ -44,9 +48,7 @@ static TEST_ALIGN_BENCHMARK void bm_ifstream_read(benchmark::State& state) {
     stream.seekg(0);
   }
 }
-BENCHMARK(bm_ifstream_read)->Name("std::ifstream::read(char*, size)");
-
-void run_sizes(benchmark::Benchmark* benchmark) { benchmark->Arg(0)->Arg(100)->Arg(4000)->Arg(10000); }
+BENCHMARK(bm_ifstream_read)->Name("std::ifstream::read(char*, size)")->Apply(run_sizes);
 
 template <bool prime>
 static void bm_seekoff_cur(benchmark::State& state) {
