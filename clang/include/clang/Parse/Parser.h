@@ -27,7 +27,6 @@
 #include "llvm/Support/SaveAndRestore.h"
 #include <optional>
 #include <stack>
-#include <string>
 
 namespace clang {
 class PragmaHandler;
