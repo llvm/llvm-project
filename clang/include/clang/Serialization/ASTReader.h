@@ -2399,12 +2399,49 @@ public:
   llvm::Expected<SourceLocation::UIntTy> readSLocOffset(ModuleFile *F,
                                                         unsigned Index);
 
+  /// Identity of an input file, taken from serialized metadata without touching
+  /// the filesystem. It uses the stored name, size, and modification time that
+  /// Clang's own input-file staleness check relies on. An empty Name marks a
+  /// non-file entry (a buffer or expansion), which never deduplicates.
+  struct SLocFileIdentity {
+    StringRef Name;
+    off_t Size = 0;
+    time_t Time = 0;
+  };
+
+  /// Where a file's SLoc entry first landed in the loaded address space, kept
+  /// with the identity fields used to confirm a later module's same-named entry
+  /// really is the same file.
+  struct PrimaryLoadedFileLoc {
+    SourceLocation::UIntTy Offset = 0; ///< global start offset
+    int ID = 0;                        ///< global SLoc entry ID
+    off_t Size = 0;
+    time_t Time = 0;
+  };
+
+  /// Files already loaded into the loaded SLoc address space, keyed by stored
+  /// name. Lets a later module reuse an earlier module's copy instead of
+  /// allocating a duplicate range. The key is serialized metadata, so no input
+  /// file is resolved or stat'd at load time.
+  llvm::StringMap<PrimaryLoadedFileLoc> PrimaryLoadedFiles;
+
+  /// The location of a previously-loaded file matching \p Id (same name, size,
+  /// and time), or null if none has been loaded.
+  const PrimaryLoadedFileLoc *
+  getPrimaryLoadedFile(const SLocFileIdentity &Id) const;
+
+  /// Record the location of a file the first time it loads. \p Id must name a
+  /// file entry (non-empty Name). Later duplicates are ignored.
+  void registerPrimaryLoadedFile(const SLocFileIdentity &Id,
+                                 SourceLocation::UIntTy Offset, int ID);
+
   /// Read \p F's SLoc entry records without materializing them, filling
   /// \p Offsets[i] with each entry's local offset and \p Files[i] with its
-  /// FileEntry (null for non-file entries). Returns false on a malformed record.
-  bool scanLoadedSLocEntries(ModuleFile &F,
-                             SmallVectorImpl<uint32_t> &Offsets,
-                             SmallVectorImpl<const FileEntry *> &Files);
+  /// file identity (empty Name for non-file entries). File identity comes from
+  /// serialized metadata only, with no input file resolved on disk. Returns
+  /// false on a malformed record.
+  bool scanLoadedSLocEntries(ModuleFile &F, SmallVectorImpl<uint32_t> &Offsets,
+                             SmallVectorImpl<SLocFileIdentity> &Files);
 
   /// Map a local SLoc entry offset (as stored in the entry record) to its
   /// global start offset. This is (SLocEntryBaseOffset + LocalOffset) unless a
@@ -2514,13 +2551,24 @@ public:
       SourceLocation::UIntTy Raw = Loc.getRawEncoding();
       SourceLocation::UIntTy MacroBit = Raw & SourceLocation::MacroIDBit;
       SourceLocation::UIntTy Low = Raw & ~SourceLocation::MacroIDBit;
-      for (const auto &Seg : ModuleFile.SLocRemap)
-        if (Low >= Seg.LocalBegin && Low < Seg.LocalEnd)
+      // The list is sorted by LocalBegin and its segments are contiguous, so
+      // the covering segment is the last one whose LocalBegin is <= Low.
+      auto It = llvm::upper_bound(
+          ModuleFile.SLocRemap, Low,
+          [](SourceLocation::UIntTy V,
+             const serialization::ModuleFile::SLocRemapSegment &S) {
+            return V < S.LocalBegin;
+          });
+      if (It != ModuleFile.SLocRemap.begin()) {
+        const auto &Seg = *std::prev(It);
+        if (Low < Seg.LocalEnd)
           return SourceLocation::getFromRawEncoding(
               (static_cast<SourceLocation::UIntTy>(static_cast<int64_t>(Low) +
                                                    Seg.Delta)) |
               MacroBit);
-      // No segment matched (shouldn't happen): fall through to the flat shift.
+      }
+      // No segment matched. This shouldn't happen, so fall through to the
+      // flat shift below.
     }
 
     return Loc.getLocWithOffset(ModuleFile.SLocEntryBaseOffset - 2);

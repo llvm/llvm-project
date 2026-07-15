@@ -348,8 +348,8 @@ public:
 
   // === Source location de-duplication ===
 
-  /// One segment of the local-to-global source location map: a local raw
-  /// location L in [LocalBegin, LocalEnd) maps to the global location L + Delta.
+  /// One segment of the local-to-global source location map. A local raw
+  /// location L in [LocalBegin, LocalEnd) maps to global location L + Delta.
   struct SLocRemapSegment {
     SourceLocation::UIntTy LocalBegin;
     SourceLocation::UIntTy LocalEnd;
@@ -357,15 +357,15 @@ public:
   };
 
   /// The local-to-global source location map for this module, sorted by
-  /// LocalBegin. A module whose files are all distinct has a single segment
-  /// equivalent to the flat shift by (SLocEntryBaseOffset - 2); when a file is
-  /// reused from an earlier module, extra segments redirect that file's
-  /// locations into the earlier module. Empty for a module that is not loaded
-  /// through this path, in which case the flat shift is used directly.
+  /// LocalBegin. When a module's files are all distinct it holds a single
+  /// segment equivalent to the flat shift by (SLocEntryBaseOffset - 2). When a
+  /// file is reused from an earlier module, extra segments redirect that file's
+  /// locations into the earlier module. Empty when this path did not run, in
+  /// which case the flat shift is used directly.
   llvm::SmallVector<SLocRemapSegment, 4> SLocRemap;
 
   /// Maps a local SLoc entry index to its global SLoc entry ID. A kept entry
-  /// maps to its own ID; a file reused from an earlier module maps to that
+  /// maps to its own ID. A file reused from an earlier module maps to that
   /// module's copy. Empty when no file was reused (the global ID is then
   /// SLocEntryBaseID + index).
   std::vector<int> LocalToGlobalID;

@@ -1815,18 +1815,40 @@ llvm::Error ASTReader::ReadSourceManagerBlock(ModuleFile &F) {
   }
 }
 
+const ASTReader::PrimaryLoadedFileLoc *
+ASTReader::getPrimaryLoadedFile(const SLocFileIdentity &Id) const {
+  assert(!Id.Name.empty() && "querying a non-file entry");
+  auto It = PrimaryLoadedFiles.find(Id.Name);
+  if (It == PrimaryLoadedFiles.end())
+    return nullptr;
+  const PrimaryLoadedFileLoc &Primary = It->second;
+  // A matching name but different size or time is a different file, e.g. two
+  // modules built against different versions of the same path. Don't merge.
+  if (Primary.Size != Id.Size || Primary.Time != Id.Time)
+    return nullptr;
+  return &Primary;
+}
+
+void ASTReader::registerPrimaryLoadedFile(const SLocFileIdentity &Id,
+                                          SourceLocation::UIntTy Offset,
+                                          int ID) {
+  assert(!Id.Name.empty() && "registering a non-file entry");
+  PrimaryLoadedFiles.try_emplace(
+      Id.Name, PrimaryLoadedFileLoc{Offset, ID, Id.Size, Id.Time});
+}
+
 bool ASTReader::scanLoadedSLocEntries(
     ModuleFile &F, SmallVectorImpl<uint32_t> &Offsets,
-    SmallVectorImpl<const FileEntry *> &Files) {
+    SmallVectorImpl<SLocFileIdentity> &Files) {
   unsigned N = F.LocalNumSLocEntries;
   Offsets.assign(N, 0);
-  Files.assign(N, nullptr);
+  Files.assign(N, SLocFileIdentity{});
 
   BitstreamCursor &Cursor = F.SLocEntryCursor;
   SavedStreamPosition SavedPosition(Cursor);
   for (unsigned I = 0; I != N; ++I) {
-    if (llvm::Error Err = Cursor.JumpToBit(F.SLocEntryOffsetsBase +
-                                           F.SLocEntryOffsets[I])) {
+    if (llvm::Error Err =
+            Cursor.JumpToBit(F.SLocEntryOffsetsBase + F.SLocEntryOffsets[I])) {
       consumeError(std::move(Err));
       return false;
     }
@@ -1839,16 +1861,22 @@ bool ASTReader::scanLoadedSLocEntries(
       return false;
 
     RecordData Record;
-    StringRef Blob;
-    Expected<unsigned> Code = Cursor.readRecord(Entry->ID, Record, &Blob);
+    Expected<unsigned> Code = Cursor.readRecord(Entry->ID, Record);
     if (!Code) {
       consumeError(Code.takeError());
       return false;
     }
     Offsets[I] = (uint32_t)Record[0];
-    if (Code.get() == SM_SLOC_FILE_ENTRY)
-      if (OptionalFileEntryRef File = getInputFile(F, Record[4]).getFile())
-        Files[I] = &File->getFileEntry();
+    if (Code.get() == SM_SLOC_FILE_ENTRY) {
+      // Identify the file from serialized metadata only. Resolving it on disk
+      // here (getInputFile) would stat and open every input file of every
+      // module at load, which is prohibitive. The stored name, size, and time
+      // are the identity Clang's own staleness check already uses.
+      InputFileInfo IFI = getInputFileInfo(F, Record[4]);
+      if (IFI.isValid())
+        Files[I] = SLocFileIdentity{IFI.UnresolvedImportedFilename,
+                                    IFI.StoredSize, IFI.StoredTime};
+    }
   }
   return true;
 }
@@ -1859,12 +1887,22 @@ ASTReader::remapSLocEntryOffset(ModuleFile &F, uint32_t LocalOffset) const {
   // are reserved). Find the segment covering it and apply that segment's delta.
   if (!F.SLocRemap.empty()) {
     SourceLocation::UIntTy Low = LocalOffset + 2;
-    for (const auto &Seg : F.SLocRemap)
-      if (Low >= Seg.LocalBegin && Low < Seg.LocalEnd)
+    // The list is sorted by LocalBegin and its segments are contiguous, so the
+    // covering segment is the last one whose LocalBegin is <= Low.
+    auto It = llvm::upper_bound(
+        F.SLocRemap, Low,
+        [](SourceLocation::UIntTy V,
+           const serialization::ModuleFile::SLocRemapSegment &S) {
+          return V < S.LocalBegin;
+        });
+    if (It != F.SLocRemap.begin()) {
+      const auto &Seg = *std::prev(It);
+      if (Low < Seg.LocalEnd)
         return static_cast<SourceLocation::UIntTy>(static_cast<int64_t>(Low) +
                                                    Seg.Delta);
+    }
   }
-  // No remap (or no segment matched): original flat shift.
+  // No remap, or no segment matched. Use the original flat shift.
   return F.SLocEntryBaseOffset + LocalOffset;
 }
 
@@ -2013,7 +2051,8 @@ bool ASTReader::ReadSLocEntry(int ID) {
   // table.
   unsigned LocalIndex = ID - F->SLocEntryBaseID;
   if (!F->KeptSLocLocalIndex.empty()) {
-    assert(LocalIndex < F->KeptSLocLocalIndex.size() && "kept slot out of range");
+    assert(LocalIndex < F->KeptSLocLocalIndex.size() &&
+           "kept slot out of range");
     LocalIndex = F->KeptSLocLocalIndex[LocalIndex];
   }
   if (llvm::Error Err = F->SLocEntryCursor.JumpToBit(
@@ -2113,9 +2152,9 @@ bool ASTReader::ReadSLocEntry(int ID) {
     auto Buffer = ReadBuffer(SLocEntryCursor, Name);
     if (!Buffer)
       return true;
-    FileID FID = SourceMgr.createFileID(std::move(Buffer), FileCharacter, ID,
-                                        remapSLocEntryOffset(*F, Offset),
-                                        IncludeLoc);
+    FileID FID =
+        SourceMgr.createFileID(std::move(Buffer), FileCharacter, ID,
+                               remapSLocEntryOffset(*F, Offset), IncludeLoc);
     if (Record[3]) {
       auto &FileInfo = SourceMgr.getSLocEntry(FID).getFile();
       FileInfo.setHasLineDirectives();
@@ -4305,9 +4344,10 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       unsigned N = F.LocalNumSLocEntries;
 
       // Scan this module's SLoc entries before allocating, so files already
-      // loaded by an earlier module can be recognized and reserve no space here.
+      // loaded by an earlier module can be recognized and reserve no space
+      // here.
       SmallVector<uint32_t, 64> Offsets;
-      SmallVector<const FileEntry *, 64> Files;
+      SmallVector<SLocFileIdentity, 64> Files;
       bool Scanned = scanLoadedSLocEntries(F, Offsets, Files);
 
       // Decide duplicates here, up front. The loop below registers each kept
@@ -4322,7 +4362,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       uint64_t DupBytes = 0;
       if (Scanned)
         for (unsigned I = 0; I != N; ++I)
-          if (SourceMgr.isLoadedFileDuplicate(Files[I])) {
+          if (!Files[I].Name.empty() && getPrimaryLoadedFile(Files[I])) {
             IsDup[I] = true;
             uint64_t Size = entrySize(I);
             SourceMgr.noteDuplicateLoadedFile(Size);
@@ -4344,20 +4384,20 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       }
 
       if (NumDupEntries == 0) {
-        // Nothing reused: a single segment equal to the flat shift, and a
+        // Nothing reused. A single segment equal to the flat shift, plus a
         // linear ID mapping. Record each file so later modules can reuse it.
         F.SLocRemap.push_back(
             {/*LocalBegin=*/0, /*LocalEnd=*/~SourceLocation::UIntTy(0),
              /*Delta=*/static_cast<int64_t>(F.SLocEntryBaseOffset) - 2});
         if (Scanned)
           for (unsigned I = 0; I != N; ++I)
-            if (Files[I])
-              SourceMgr.registerCanonicalLoadedFile(
-                  Files[I], F.SLocEntryBaseOffset + Offsets[I],
-                  F.SLocEntryBaseID + (int)I);
+            if (!Files[I].Name.empty())
+              registerPrimaryLoadedFile(Files[I],
+                                        F.SLocEntryBaseOffset + Offsets[I],
+                                        F.SLocEntryBaseID + (int)I);
       } else {
         // Build the offset segments and the ID map. A reused file gets no slot
-        // and no address space; its references point at the earlier copy.
+        // and no address space, and its references point at the earlier copy.
         F.LocalToGlobalID.assign(N, 0);
         F.KeptSLocLocalIndex.reserve(ReducedNumEntries);
         uint64_t DupBefore = 0;
@@ -4366,20 +4406,19 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
           SourceLocation::UIntTy LowStart = Offsets[I] + 2;
           SourceLocation::UIntTy LowEnd =
               (I + 1 < N ? Offsets[I + 1] : SLocSpaceSize) + 2;
-          const FileEntry *FE = Files[I];
+          const SLocFileIdentity &Id = Files[I];
           if (IsDup[I]) {
             // Redirect this file's locations into the module that first loaded
-            // it; reserve nothing here.
-            const SourceManager::LoadedFileLoc *Canon =
-                SourceMgr.getCanonicalLoadedFile(FE);
+            // it and reserve nothing here.
+            const PrimaryLoadedFileLoc *Primary = getPrimaryLoadedFile(Id);
             F.SLocRemap.push_back({LowStart, LowEnd,
-                                   static_cast<int64_t>(Canon->Offset) -
+                                   static_cast<int64_t>(Primary->Offset) -
                                        static_cast<int64_t>(LowStart)});
-            F.LocalToGlobalID[I] = Canon->ID;
+            F.LocalToGlobalID[I] = Primary->ID;
             DupBefore += LowEnd - LowStart;
           } else {
-            // Keep: lands in this module's block, shifted down to close gaps
-            // left by skipped duplicates before it.
+            // Kept entry. It lands in this module's block, shifted down to
+            // close gaps left by skipped duplicates before it.
             int GlobalID = F.SLocEntryBaseID + (int)KeptCount;
             SourceLocation::UIntTy GlobalStart =
                 static_cast<SourceLocation::UIntTy>(F.SLocEntryBaseOffset +
@@ -4389,8 +4428,8 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
                                        static_cast<int64_t>(LowStart)});
             F.LocalToGlobalID[I] = GlobalID;
             F.KeptSLocLocalIndex.push_back(I);
-            if (FE)
-              SourceMgr.registerCanonicalLoadedFile(FE, GlobalStart, GlobalID);
+            if (!Id.Name.empty())
+              registerPrimaryLoadedFile(Id, GlobalStart, GlobalID);
             ++KeptCount;
           }
         }

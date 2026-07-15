@@ -31,6 +31,9 @@
 # Nested build directory
 /build*
 
+/ Test directory
+/dedup-test
+
 #==============================================================================#
 # Explicit files to ignore (only matches one).
 #==============================================================================#

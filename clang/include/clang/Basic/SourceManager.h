@@ -755,45 +755,18 @@ class SourceManager : public RefCountedBase<SourceManager> {
   static const SourceLocation::UIntTy MaxLoadedOffset =
       1ULL << (8 * sizeof(SourceLocation::UIntTy) - 1);
 
-  // === Source location de-duplication ===
-public:
-  /// Where a file's SLoc entry first landed in the loaded address space. A file
-  /// shared by several modules is loaded once; later modules reuse this rather
-  /// than allocating their own.
-  struct LoadedFileLoc {
-    SourceLocation::UIntTy Offset = 0; ///< global start offset
-    int ID = 0;                        ///< global SLoc entry ID
-  };
-
+  // Source location de-duplication. A file included into many modules is
+  // serialized into each of their PCMs. ASTReader keeps the first loaded copy
+  // and redirects later modules' references to it instead of allocating a
+  // duplicate SLoc range. These counters record the address space that reuse
+  // saved, for -print-stats.
 private:
-  /// The first loaded location of each file, keyed by the FileEntry identity
-  /// Clang already uses to share file contents.
-  llvm::DenseMap<const FileEntry *, LoadedFileLoc> CanonicalLoadedFiles;
   /// Number of loaded file entries reused from an earlier module.
   unsigned NumDuplicateLoadedFiles = 0;
   /// Address-space bytes reused instead of allocated, for -print-stats.
   uint64_t DuplicateLoadedBytes = 0;
 
 public:
-  /// Whether a file with this identity was already loaded into the address
-  /// space by an earlier module (i.e. its SLoc entry would be a duplicate).
-  bool isLoadedFileDuplicate(const FileEntry *FE) const {
-    return FE && CanonicalLoadedFiles.contains(FE);
-  }
-
-  /// The canonical loaded location of a previously-loaded file, or null.
-  const LoadedFileLoc *getCanonicalLoadedFile(const FileEntry *FE) const {
-    auto It = CanonicalLoadedFiles.find(FE);
-    return It == CanonicalLoadedFiles.end() ? nullptr : &It->second;
-  }
-
-  /// Record the canonical loaded location of a file the first time it loads.
-  void registerCanonicalLoadedFile(const FileEntry *FE,
-                                   SourceLocation::UIntTy Offset, int ID) {
-    if (FE)
-      CanonicalLoadedFiles.try_emplace(FE, LoadedFileLoc{Offset, ID});
-  }
-
   /// Record that a loaded file entry was reused from an earlier module.
   void noteDuplicateLoadedFile(uint64_t Size) {
     ++NumDuplicateLoadedFiles;
