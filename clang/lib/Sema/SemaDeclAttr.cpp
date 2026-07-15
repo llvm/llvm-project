@@ -6653,31 +6653,26 @@ public:
             << DiagName << (FAttr.hasLowerBound() ? 0 : 1);
         return false;
       }
-      if (Level == 0) {
-        Sema::BoundsAttrFlags Flags;
-        Flags.CountInBytes = CountInBytes;
-        Flags.OrNull = OrNull;
-        if (!S.ValidateBoundsAttrTypeShape(DeclTy, Loc, SourceRange(Loc),
-                                           Flags))
-          return false;
-        CountInBytes = Flags.CountInBytes;
-        return true;
+      if (Level != 0) {
+        --Level;
+        llvm::SaveAndRestore<bool> Local(AutoPtrAttributed, false);
+        return diagnoseCountAttributedTypeShape(
+            PT->getPointeeType(), CountInBytes, OrNull, AllowRedecl);
       }
-      --Level;
-      llvm::SaveAndRestore<bool> Local(AutoPtrAttributed, false);
-      return diagnoseCountAttributedTypeShape(
-          PT->getPointeeType(), CountInBytes, OrNull, AllowRedecl);
     }
 
-    // T isn't a pointer type.
-    unsigned DiagKind = CountInBytes
-                            ? (OrNull ? BoundsAttributedType::SizedByOrNull
-                                      : BoundsAttributedType::SizedBy)
-                            : (OrNull ? BoundsAttributedType::CountedByOrNull
-                                      : BoundsAttributedType::CountedBy);
-    S.Diag(Loc, diag::err_count_attr_not_on_ptr_or_flexible_array_member)
-        << DiagKind << 0;
-    return false;
+    // T is a pointer type at Level == 0 or T is not a pointer type.
+    Sema::BoundsAttrFlags Flags;
+    Flags.CountInBytes = CountInBytes;
+    Flags.OrNull = OrNull;
+    // TODO: Change this function to use `BoundsAttrFlags` directly in its
+    // parameters then we can make `ValidateBoundsAttrTypeShape` a tail call.
+    if (!S.ValidateBoundsAttrTypeShape(DeclTy, Loc, SourceRange(Loc), Flags))
+      return false;
+    // For error recovery when __counted_by(_or_null) is used in error but
+    // __sized_by(_or_null) would be a correct replacement.
+    CountInBytes = Flags.CountInBytes;
+    return true;
   }
 
   // Pre-check for ended-by.
@@ -6777,18 +6772,18 @@ public:
             << DiagName << (FAttr.hasLowerBound() ? 0 : 1);
         return false;
       }
-      if (Level == 0)
-        return true;
-      --Level;
-      llvm::SaveAndRestore<bool> Local(AutoPtrAttributed, false);
-      return diagnoseDynamicRangePointerTypeShape(PT->getPointeeType(),
-                                                  AllowRedecl);
+      if (Level != 0) {
+        --Level;
+        llvm::SaveAndRestore<bool> Local(AutoPtrAttributed, false);
+        return diagnoseDynamicRangePointerTypeShape(PT->getPointeeType(),
+                                                    AllowRedecl);
+      }
     }
 
-    // T isn't a pointer type.
-    S.Diag(Loc, diag::err_count_attr_not_on_ptr_or_flexible_array_member)
-        << BoundsAttributedType::EndedBy << 0;
-    return false;
+    // T is a pointer type at Level == 0 or T is not a pointer type.
+    Sema::BoundsAttrFlags Flags;
+    Flags.IsEndedBy = true;
+    return S.ValidateBoundsAttrTypeShape(DeclTy, Loc, SourceRange(Loc), Flags);
   }
 };
 
