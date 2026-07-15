@@ -8742,32 +8742,6 @@ to the SSA value of the pointer operand.
 Note that this is an experimental feature, which means that its semantics might
 change in the future.
 
-(metadata_aarch64_atomic_hint)=
-
-#### '``aarch64.atomic.hint``' Metadata
-
-The ``aarch64.atomic.hint`` metadata may be attached to an atomic store
-instruction, referencing a single metadata node containing a single ``i32``
-entry:
-
-```llvm
-  store atomic i64 %x, ptr %y seq_cst, align 8, !aarch64.atomic.hint !0
-
-  ...
-  !0 = !{i32 1}
-```
-
-On AArch64 targets, this metadata may be used to emit an atomic store together
-with a hint instruction. The hint is a suggestion to the compiler which may be
-used when selecting code sequences, but it is not required to emit a specific
-hint instruction. The following hint values are currently recognised:
-
-- ``0``: ``stshh keep`` hint.
-- ``1``: ``stshh strm`` hint.
-
-If the compiler does not recognise the hint value provided, it may ignore the
-metadata. Targets that do not support this metadata may also ignore it.
-
 #### '`type`' Metadata
 
 See {doc}`TypeMetadata`.

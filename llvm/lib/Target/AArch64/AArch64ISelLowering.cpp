@@ -41,6 +41,7 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
@@ -79,7 +80,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
-#include "llvm/Support/AArch64AtomicHints.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
@@ -19432,23 +19432,7 @@ AArch64TargetLowering::getTargetMMOFlags(const Instruction &I) const {
   if (Subtarget->getProcFamily() == AArch64Subtarget::Falkor &&
       I.hasMetadata(FALKOR_STRIDED_ACCESS_MD))
     return MOStridedAccess;
-
-  auto Flags = MachineMemOperand::MONone;
-  const MDNode *AtomicStHint = I.getMetadata("aarch64.atomic.hint");
-  if (AtomicStHint) {
-    unsigned HintVal =
-        cast<ConstantInt>(
-            cast<ConstantAsMetadata>(AtomicStHint->getOperand(0))->getValue())
-            ->getZExtValue();
-    AArch64AtomicStoreHint Hint = getAtomicStoreHintFromMD(HintVal);
-
-    if (static_cast<unsigned>(Hint) & 0b1)
-      Flags |= MOAtomicHintBit0;
-    if (static_cast<unsigned>(Hint) & 0b10)
-      Flags |= MOAtomicHintBit1;
-  }
-
-  return Flags;
+  return MachineMemOperand::MONone;
 }
 
 bool AArch64TargetLowering::isLegalInterleavedAccessType(
@@ -33762,6 +33746,14 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
         return true;
     }
   }
+
+  // The !mem.cache_hint metadata is not supported by GISel and will be dropped.
+  // TODO: Remove this and handle atomic store hints in GISel once supported.
+  if (auto *Store = dyn_cast<StoreInst>(&Inst)) {
+    if (Store->isAtomic() && getMemCacheHintMetadata(*Store, 1))
+      return true;
+  }
+
   return false;
 }
 

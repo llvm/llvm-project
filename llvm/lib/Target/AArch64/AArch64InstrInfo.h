@@ -31,10 +31,6 @@ static const MachineMemOperand::Flags MOSuppressPair =
     MachineMemOperand::MOTargetFlag1;
 static const MachineMemOperand::Flags MOStridedAccess =
     MachineMemOperand::MOTargetFlag2;
-static const MachineMemOperand::Flags MOAtomicHintBit0 =
-    MachineMemOperand::MOTargetFlag3;
-static const MachineMemOperand::Flags MOAtomicHintBit1 =
-    MachineMemOperand::MOTargetFlag4;
 
 #define FALKOR_STRIDED_ACCESS_MD "falkor.strided.access"
 
@@ -235,8 +231,7 @@ public:
   /// Return true if the given load or store is a strided memory access.
   static bool isStridedAccess(const MachineInstr &MI);
 
-  static AArch64AtomicStoreHint
-  decodeAtomicHintFlags(MachineMemOperand::Flags MMOFlags);
+  static AArch64AtomicStoreHint decodeAtomicHintFlags(MachineMemOperand &MMO);
 
   /// Return true if it has an unscaled load/store offset.
   static bool hasUnscaledLdStOffset(unsigned Opc);
