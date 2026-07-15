@@ -644,3 +644,32 @@ func.func @complete_dpas_mx_inst_data(%arg0: vector<16x1024xf8E5M2>, %arg1: vect
   return
 }
 }
+
+// -----
+// %trunc has two consumers: the broadcast/transpose chain (nearer in program
+// order, back-propagates a slice layout) and the store_nd of %trunc (farther,
+// back-propagates a plain layout). `meet` must keep the nearer consumer's
+// layout, preserving its inst_data / lane_layout / lane_data fields.
+gpu.module @test {
+  // CHECK-LABEL: truncf_prefers_nearer_user
+  // CHECK: %[[TRUNC:.*]] = arith.truncf
+  // CHECK-SAME: {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [16, 8, 1], lane_layout = [16, 1, 1], lane_data = [1, 1, 1], order = [0, 2, 1]>, dims = [0]>}
+  // CHECK-SAME: : vector<32x4xbf16> to vector<32x4xf8E8M0FNU>
+  gpu.func @truncf_prefers_nearer_user(%src: memref<32x128xbf16>, %dst_red: memref<32x128xf8E8M0FNU>,
+      %dst_plain: memref<32x4xf8E8M0FNU>) kernel {
+    %cst = arith.constant dense<0xFF80> : vector<32x4xbf16>
+    %tdesc = xegpu.create_nd_tdesc %src : memref<32x128xbf16> -> !xegpu.tensor_desc<32x128xbf16>
+    %load = xegpu.load_nd %tdesc[0, 0] : !xegpu.tensor_desc<32x128xbf16> -> vector<32x128xbf16>
+    %sc1 = vector.shape_cast %load : vector<32x128xbf16> to vector<32x4x32xbf16>
+    %red = vector.multi_reduction <maximumf>, %sc1, %cst [2] : vector<32x4x32xbf16> to vector<32x4xbf16>
+    %trunc = arith.truncf %red : vector<32x4xbf16> to vector<32x4xf8E8M0FNU>
+    %bcast = vector.broadcast %trunc : vector<32x4xf8E8M0FNU> to vector<32x32x4xf8E8M0FNU>
+    %bcast2 = vector.transpose %bcast, [1, 2, 0] : vector<32x32x4xf8E8M0FNU> to vector<32x4x32xf8E8M0FNU>
+    %sc2 = vector.shape_cast %bcast2 : vector<32x4x32xf8E8M0FNU> to vector<32x128xf8E8M0FNU>
+    %tdesc_red = xegpu.create_nd_tdesc %dst_red : memref<32x128xf8E8M0FNU> -> !xegpu.tensor_desc<32x128xf8E8M0FNU>
+    xegpu.store_nd %sc2, %tdesc_red[0, 0] <{layout = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<32x128xf8E8M0FNU>, !xegpu.tensor_desc<32x128xf8E8M0FNU>
+    %tdesc_plain = xegpu.create_nd_tdesc %dst_plain : memref<32x4xf8E8M0FNU> -> !xegpu.tensor_desc<32x4xf8E8M0FNU>
+    xegpu.store_nd %trunc, %tdesc_plain[0, 0] <{layout = #xegpu.layout<inst_data = [8, 2], lane_layout = [8, 1], lane_data = [1, 1]>}> : vector<32x4xf8E8M0FNU>, !xegpu.tensor_desc<32x4xf8E8M0FNU>
+    gpu.return
+  }
+}
