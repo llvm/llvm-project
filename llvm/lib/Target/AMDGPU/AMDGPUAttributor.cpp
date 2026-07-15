@@ -1142,7 +1142,44 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
-    return updateImplImpl<AAAMDWavesPerEU>(A);
+    ChangeStatus Change = ChangeStatus::UNCHANGED;
+
+    auto CheckCallSite = [&](AbstractCallSite CS) {
+      Function *Caller = CS.getInstruction()->getFunction();
+      LLVM_DEBUG(dbgs() << '[' << getName() << "] Call " << Caller->getName()
+                        << "->" << getAssociatedFunction()->getName() << '\n');
+
+      const auto *CallerAA = A.getAAFor<AAAMDWavesPerEU>(
+          *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
+      if (!CallerAA || !CallerAA->isValidState())
+        return false;
+
+      ConstantRange Assumed = getAssumed();
+      ConstantRange CallerRange = CallerAA->getAssumed();
+      // Take the conservative (larger) lower bound: a callee reachable from
+      // several kernels must run enough waves per EU for the most demanding
+      // one, otherwise its register budget would be too optimistic. Widen the
+      // upper bound to cover every caller.
+      unsigned Min = std::max(Assumed.getLower().getZExtValue(),
+                              CallerRange.getLower().getZExtValue());
+      unsigned Max = std::max(Assumed.getUpper().getZExtValue(),
+                              CallerRange.getUpper().getZExtValue());
+      IntegerRangeState RangeState(
+          ConstantRange(APInt(32, Min), APInt(32, Max)));
+      getState() = RangeState;
+      Change |= getState() == Assumed ? ChangeStatus::UNCHANGED
+                                      : ChangeStatus::CHANGED;
+
+      return true;
+    };
+
+    bool AllCallSitesKnown = true;
+    if (!A.checkForAllCallSites(CheckCallSite, *this,
+                                /*RequireAllCallSites=*/true,
+                                AllCallSitesKnown))
+      return indicatePessimisticFixpoint();
+
+    return Change;
   }
 
   /// Create an abstract attribute view for the position \p IRP.

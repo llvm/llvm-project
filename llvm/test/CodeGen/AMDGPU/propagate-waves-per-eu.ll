@@ -20,7 +20,7 @@ define internal void @default_to_1_8_a() {
 
 define amdgpu_kernel void @kernel_1_8() #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_1_8
-; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    call void @default_to_1_8_a()
 ; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
@@ -33,7 +33,7 @@ define amdgpu_kernel void @kernel_1_8() #0 {
 ; Called from a single kernel with 1,2
 define internal void @default_to_1_2() {
 ; CHECK-LABEL: define internal void @default_to_1_2
-; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
@@ -43,7 +43,7 @@ define internal void @default_to_1_2() {
 
 define amdgpu_kernel void @kernel_1_2() #1 {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_1_2
-; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-SAME: () #[[ATTR2]] {
 ; CHECK-NEXT:    call void @default_to_1_2()
 ; CHECK-NEXT:    call void @flat_group_1_1()
 ; CHECK-NEXT:    call void @default_to_1_8_b()
@@ -62,7 +62,7 @@ define amdgpu_kernel void @kernel_1_2() #1 {
 ; Called from a single kernel with 1,4
 define internal void @default_to_1_4() {
 ; CHECK-LABEL: define internal void @default_to_1_4
-; CHECK-SAME: () #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
@@ -72,7 +72,7 @@ define internal void @default_to_1_4() {
 
 define amdgpu_kernel void @kernel_1_4() #2 {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_1_4
-; CHECK-SAME: () #[[ATTR2]] {
+; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:    call void @default_to_1_4()
 ; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
@@ -85,7 +85,7 @@ define amdgpu_kernel void @kernel_1_4() #2 {
 ; Called from kernels with 2,9 and 9,9
 define internal void @default_to_2_9() {
 ; CHECK-LABEL: define internal void @default_to_2_9
-; CHECK-SAME: () #[[ATTR3:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
@@ -97,7 +97,7 @@ define internal void @default_to_2_9() {
 ; bounds, and should not be changed.
 define internal void @flat_group_1_1() #3 {
 ; CHECK-LABEL: define internal void @flat_group_1_1
-; CHECK-SAME: () #[[ATTR4:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
@@ -108,7 +108,7 @@ define internal void @flat_group_1_1() #3 {
 ; 2,8 -> 2,2
 define internal void @flat_group_2_8() #4 {
 ; CHECK-LABEL: define internal void @flat_group_2_8
-; CHECK-SAME: () #[[ATTR5:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
@@ -129,7 +129,7 @@ define internal void @flat_group_9_10() #5 {
 
 define amdgpu_kernel void @kernel_2_9() #6 {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_2_9
-; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-SAME: () #[[ATTR7:[0-9]+]] {
 ; CHECK-NEXT:    call void @default_to_2_9()
 ; CHECK-NEXT:    call void @flat_group_1_1()
 ; CHECK-NEXT:    call void @dummy()
@@ -143,7 +143,7 @@ define amdgpu_kernel void @kernel_2_9() #6 {
 
 define amdgpu_kernel void @kernel_9_9() #7 {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_9_9
-; CHECK-SAME: () #[[ATTR7:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    call void @default_to_2_9()
 ; CHECK-NEXT:    call void @flat_group_9_10()
 ; CHECK-NEXT:    call void @dummy()
@@ -170,7 +170,7 @@ define internal void @default_to_1_8_b() {
 ; this should probably be illegal.
 define amdgpu_kernel void @kernel_2_8() #4 {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_2_8
-; CHECK-SAME: () #[[ATTR5]] {
+; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    call void @default_to_1_8_a()
 ; CHECK-NEXT:    call void @default_to_1_8_b()
 ; CHECK-NEXT:    call void @dummy()
@@ -185,7 +185,7 @@ define amdgpu_kernel void @kernel_2_8() #4 {
 ; 1,2 -> 2,2
 define internal void @merge_cycle_0() #1 {
 ; CHECK-LABEL: define internal void @merge_cycle_0
-; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-SAME: () #[[ATTR2]] {
 ; CHECK-NEXT:    call void @merge_cycle_1()
 ; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
@@ -199,7 +199,7 @@ define internal void @merge_cycle_0() #1 {
 ; 2,8 -> 2,8
 define internal void @merge_cycle_1() #4 {
 ; CHECK-LABEL: define internal void @merge_cycle_1
-; CHECK-SAME: () #[[ATTR5]] {
+; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    call void @merge_cycle_0()
 ; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
@@ -260,7 +260,7 @@ define internal i32 @bitcasted_function() {
 
 define internal void @called_from_invalid_bounds_0() {
 ; CHECK-LABEL: define internal void @called_from_invalid_bounds_0
-; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
@@ -281,7 +281,7 @@ define internal void @called_from_invalid_bounds_1() {
 ; Invalid range for amdgpu-waves-per-eu
 define amdgpu_kernel void @kernel_invalid_bounds_0_8() #9 {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_invalid_bounds_0_8
-; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:    call void @called_from_invalid_bounds_0()
 ; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
@@ -470,14 +470,14 @@ attributes #17 = { "amdgpu-waves-per-eu"="5,8" }
 attributes #18 = { "amdgpu-waves-per-eu"="9,10" }
 attributes #19 = { "amdgpu-waves-per-eu"="8,9" }
 ;.
-; CHECK: attributes #[[ATTR0]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,8" }
-; CHECK: attributes #[[ATTR1]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,2" }
-; CHECK: attributes #[[ATTR2]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,4" }
-; CHECK: attributes #[[ATTR3]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="2,9" }
-; CHECK: attributes #[[ATTR4]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,1" }
-; CHECK: attributes #[[ATTR5]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="2,8" }
+; CHECK: attributes #[[ATTR0]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="2,8" }
+; CHECK: attributes #[[ATTR1]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,8" }
+; CHECK: attributes #[[ATTR2]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,2" }
+; CHECK: attributes #[[ATTR3]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,4" }
+; CHECK: attributes #[[ATTR4]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="9,9" }
+; CHECK: attributes #[[ATTR5]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,1" }
 ; CHECK: attributes #[[ATTR6]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="9,10" }
-; CHECK: attributes #[[ATTR7]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="9,9" }
+; CHECK: attributes #[[ATTR7]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="2,9" }
 ; CHECK: attributes #[[ATTR8]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="3,8" }
 ; CHECK: attributes #[[ATTR9]] = { "amdgpu-flat-work-group-size"="1,64" }
 ; CHECK: attributes #[[ATTR10]] = { "amdgpu-flat-work-group-size"="1,64" "amdgpu-waves-per-eu"="1,123" }
