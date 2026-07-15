@@ -33,31 +33,13 @@ Function *llvm::getMaybeBitcastedCallee(const CallBase *CB) {
   return dyn_cast<Function>(CB->getCalledOperand()->stripPointerCasts());
 }
 
-Align llvm::getPTXPromotedParamTypeAlign(const Function *F, Type *ArgTy,
-                                         const DataLayout &DL) {
+Align llvm::getPTXParamTypeAlign(Type *ArgTy, const DataLayout &DL) {
   // Capping the alignment to 128 bytes as that is the maximum alignment
   // supported by PTX.
-  const Align ABITypeAlign = std::min(Align(128), DL.getABITypeAlign(ArgTy));
-
-  // If a function has linkage different from internal or private, we
-  // must use default ABI alignment as external users rely on it. Same
-  // for a function that may be called from a function pointer.
-  const bool MayOptimizeAlign =
-      F && F->hasLocalLinkage() &&
-      !F->hasAddressTaken(/*Users=*/nullptr,
-                          /*IgnoreCallbackUses=*/false,
-                          /*IgnoreAssumeLikeCalls=*/true,
-                          /*IgnoreLLVMUsed=*/true);
-  assert(!(MayOptimizeAlign && isKernelFunction(*F)) &&
-         "Expect kernels to have non-local linkage");
-  const Align OptimizedAlign = MayOptimizeAlign ? Align(16) : Align(1);
-  return std::max(OptimizedAlign, ABITypeAlign);
+  return std::min(Align(128), DL.getABITypeAlign(ArgTy));
 }
 
-Align llvm::getDeviceByValParamAlign(const Function *F, Type *ArgTy,
-                                     Align InitialAlign, const DataLayout &DL) {
-  const Align OptimizedAlign = getPTXPromotedParamTypeAlign(F, ArgTy, DL);
-
+static Align getByValParamAlignFloor(const Function *F) {
   // Old ptx versions have a bug. When PTX code takes address of
   // byval parameter with alignment < 4, ptxas generates code to
   // spill argument into memory. Alas on sm_50+ ptxas generates
@@ -69,9 +51,28 @@ Align llvm::getDeviceByValParamAlign(const Function *F, Type *ArgTy,
   // on non-deprecated ptxas versions.
   const bool ShouldForceMinAlign =
       ForceMinByValParamAlign && (!F || !isKernelFunction(*F));
-  const Align AlignFloor = ShouldForceMinAlign ? Align(4) : Align(1);
+  return ShouldForceMinAlign ? Align(4) : Align(1);
+}
 
-  return std::max({InitialAlign, OptimizedAlign, AlignFloor});
+Align llvm::getDeviceByValParamAlign(const Function *F, Type *ArgTy,
+                                     unsigned AttrIdx, const DataLayout &DL) {
+  return std::max(getPTXParamAlign(F, ArgTy, AttrIdx, DL),
+                  getByValParamAlignFloor(F));
+}
+
+Align llvm::getDeviceByValParamAlign(const CallBase *CB, Type *ArgTy,
+                                     unsigned AttrIdx, const DataLayout &DL) {
+  Align ParamAlign = getPTXParamAlign(CB, ArgTy, AttrIdx, DL);
+
+  // For an indirect call getPTXParamAlign can't see the call's own byval
+  // alignment, so fold it in.
+  if (CB && AttrIdx >= AttributeList::FirstArgIndex)
+    ParamAlign = std::max(
+        ParamAlign,
+        CB->getParamAlign(AttrIdx - AttributeList::FirstArgIndex).valueOrOne());
+
+  return std::max(ParamAlign, getByValParamAlignFloor(
+                                  CB ? CB->getCalledFunction() : nullptr));
 }
 
 Align llvm::getPTXParamAlign(const Function *F, Type *Ty, unsigned AttrIdx,
@@ -80,7 +81,7 @@ Align llvm::getPTXParamAlign(const Function *F, Type *Ty, unsigned AttrIdx,
     if (MaybeAlign StackAlign = getStackAlign(*F, AttrIdx))
       return StackAlign.value();
 
-  Align TypeAlign = getPTXPromotedParamTypeAlign(F, Ty, DL);
+  Align TypeAlign = getPTXParamTypeAlign(Ty, DL);
   if (F && AttrIdx >= AttributeList::FirstArgIndex) {
     unsigned ArgNo = AttrIdx - AttributeList::FirstArgIndex;
     if (F->getAttributes().hasParamAttr(ArgNo, Attribute::ByVal))
@@ -91,14 +92,14 @@ Align llvm::getPTXParamAlign(const Function *F, Type *Ty, unsigned AttrIdx,
 
 Align llvm::getPTXParamAlign(const CallBase *CB, Type *Ty, unsigned Idx,
                              const DataLayout &DL) {
-  const Function *DirectCallee = CB ? CB->getCalledFunction() : nullptr;
-
-  if (!DirectCallee && CB) {
+  if (CB)
     if (MaybeAlign StackAlign = getStackAlign(*CB, Idx))
       return StackAlign.value();
 
+  // Otherwise resolve the direct callee and use its parameter alignment.
+  const Function *DirectCallee = CB ? CB->getCalledFunction() : nullptr;
+  if (!DirectCallee && CB)
     DirectCallee = getMaybeBitcastedCallee(CB);
-  }
 
   return getPTXParamAlign(DirectCallee, Ty, Idx, DL);
 }

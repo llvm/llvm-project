@@ -833,7 +833,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
     const MachineBasicBlock::iterator &MI) const {
   assert(MI->getNumMemOperands() > 0);
 
-  SyncScope::ID SSID = SyncScope::SingleThread;
+  std::optional<SyncScope::ID> MergedSSID;
   AtomicOrdering Ordering = AtomicOrdering::NotAtomic;
   AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic;
   SIAtomicAddrSpace InstrAddrSpace = SIAtomicAddrSpace::NONE;
@@ -849,19 +849,19 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
     IsVolatile |= MMO->isVolatile();
     IsLastUse |= MMO->getFlags() & MOLastUse;
     IsCooperative |= MMO->getFlags() & MOCooperative;
-    InstrAddrSpace |=
-      toSIAtomicAddrSpace(MMO->getPointerInfo().getAddrSpace());
+    InstrAddrSpace |= toSIAtomicAddrSpace(MMO->getPointerInfo().getAddrSpace());
     AtomicOrdering OpOrdering = MMO->getSuccessOrdering();
     if (OpOrdering != AtomicOrdering::NotAtomic) {
-      const auto &IsSyncScopeInclusion =
-          MMI->isSyncScopeInclusion(SSID, MMO->getSyncScopeID());
-      if (!IsSyncScopeInclusion) {
-        reportUnsupported(MI,
-          "Unsupported non-inclusive atomic synchronization scope");
+      // Merge the accumulated scope with the new one to get the smallest scope
+      // inclusive of both.
+      SyncScope::ID CurSSID = MergedSSID.value_or(MMO->getSyncScopeID());
+      const auto &Merged =
+          MMI->getMergedSyncScopeID(CurSSID, MMO->getSyncScopeID());
+      if (!Merged) {
+        reportUnsupported(MI, "Unsupported atomic synchronization scope");
         return std::nullopt;
       }
-
-      SSID = *IsSyncScopeInclusion ? SSID : MMO->getSyncScopeID();
+      MergedSSID = *Merged;
       Ordering = getMergedAtomicOrdering(Ordering, OpOrdering);
       assert(MMO->getFailureOrdering() != AtomicOrdering::Release &&
              MMO->getFailureOrdering() != AtomicOrdering::AcquireRelease);
@@ -869,6 +869,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
           getMergedAtomicOrdering(FailureOrdering, MMO->getFailureOrdering());
     }
   }
+  SyncScope::ID SSID = MergedSSID.value_or(SyncScope::SingleThread);
 
   // FIXME: The MMO of buffer atomic instructions does not always have an atomic
   // ordering. We only need to handle VBUFFER atomics on GFX12+ so we can fix it

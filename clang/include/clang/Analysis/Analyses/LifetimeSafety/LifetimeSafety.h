@@ -171,10 +171,10 @@ void collectLifetimeStats(AnalysisDeclContext &AC, OriginManager &OM,
 /// An object to hold the factories for immutable collections, ensuring
 /// that all created states share the same underlying memory management.
 struct LifetimeFactory {
-  OriginLoanMap::Factory OriginMapFactory{/*canonicalize=*/false};
-  LoanSet::Factory LoanSetFactory{/*canonicalize=*/false};
-  MovedLoansMap::Factory MovedLoansMapFactory{/*canonicalize=*/false};
-  LivenessMap::Factory LivenessMapFactory{/*canonicalize=*/false};
+  OriginLoanMap::Factory OriginMapFactory;
+  LoanSet::Factory LoanSetFactory;
+  MovedLoansMap::Factory MovedLoansMapFactory;
+  LivenessMap::Factory LivenessMapFactory;
 };
 
 /// Running the lifetime safety analysis and querying its results. It
