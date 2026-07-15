@@ -35,6 +35,7 @@ bazel_dep(name = "llvm", version = "0.8.5", dev_dependency = True)
 llvm_repos_extension = use_extension(":extensions.bzl", "llvm_repos_extension")
 use_repo(
     llvm_repos_extension,
+    "linux_uapi",
     "llvm-raw",
     "pyyaml",
     "vulkan_sdk",
