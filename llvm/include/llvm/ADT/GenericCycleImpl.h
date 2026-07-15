@@ -227,11 +227,6 @@ void GenericCycle<ContextT>::verifyCycleNest() const {
   if (ParentCycle) {
     assert(is_contained(ParentCycle->children(), this) &&
            "Cycle is not a subcycle of its parent!");
-    assert(ParentCycle->TopLevelCycle == TopLevelCycle &&
-           "Top level cycle of parent cycle must be the same");
-  } else {
-    assert(TopLevelCycle == this &&
-           "Cycle without parent must be top-level cycle");
   }
 #endif
 }
@@ -293,7 +288,9 @@ template <typename ContextT>
 auto GenericCycleInfo<ContextT>::getTopLevelParentCycle(
     const BlockT *Block) const -> CycleT * {
   CycleT *Cycle = getCycle(Block);
-  return Cycle ? Cycle->TopLevelCycle : nullptr;
+  while (Cycle && Cycle->ParentCycle)
+    Cycle = Cycle->ParentCycle;
+  return Cycle;
 }
 
 template <typename ContextT>
@@ -311,9 +308,6 @@ void GenericCycleInfo<ContextT>::moveTopLevelCycleToNewParent(CycleT *NewParent,
   *Pos = std::move(CurrentContainer.back());
   CurrentContainer.pop_back();
   Child->ParentCycle = NewParent;
-  Child->TopLevelCycle = NewParent;
-  for (CycleT *Cycle : depth_first(Child))
-    Cycle->TopLevelCycle = NewParent;
   // This only relinks the cycle tree and does NOT touch BlockLayout, so it
   // leaves every cycle's [IdxBegin, IdxEnd) range stale, i.e. BlockLayout is
   // left invalid. The caller must call layoutBlocks() before any
