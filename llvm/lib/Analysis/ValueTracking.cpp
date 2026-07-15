@@ -5757,7 +5757,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           Known.knownNot(fcPosZero);
       }
 
-      // if src lands normaly in dest, result can never be sub-normal.
+      // If src lands normaly in dest, result can never be sub-normal.
       if (APFloat::isRepresentableAsNormalIn(SrcSemantics, DstSemantics))
         Known.knownNot(fcSubnormal);
       break;
