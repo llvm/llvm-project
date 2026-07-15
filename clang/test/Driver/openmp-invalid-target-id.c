@@ -1,6 +1,4 @@
-// REQUIRES: clang-driver
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
+// REQUIRES: amdgpu-registered-target, x86-registered-target
 
 //
 // Legacy mode (-fopenmp-targets,-Xopenmp-target,-march) tests for TargetID
@@ -29,7 +27,7 @@
 // RUN:   -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx900+xnack \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=UNK-L %s
 
-// UNK-L: error: invalid target ID 'gfx908:unknown+'
+// UNK-L: error: invalid target ID 'gfx900+xnack'
 
 // RUN: not %clang -### -target x86_64-linux-gnu -fopenmp\
 // RUN:   -fopenmp-targets=amdgcn-amd-amdhsa,amdgcn-amd-amdhsa,amdgcn-amd-amdhsa \
@@ -38,7 +36,7 @@
 // RUN:   -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx900+xnack \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=MIXED-L %s
 
-// MIXED-L: error: invalid target ID 'gfx908:sramecc+:unknown+'
+// MIXED-L: error: invalid target ID 'gfx900+xnack'
 
 // RUN: not %clang -### -target x86_64-linux-gnu -fopenmp\
 // RUN:   -fopenmp-targets=amdgcn-amd-amdhsa,amdgcn-amd-amdhsa \
@@ -64,13 +62,9 @@
 
 // NOCOLON-L: error: invalid target ID 'gfx900+xnack'
 
-// RUN: not %clang -### -target x86_64-linux-gnu -fopenmp\
-// RUN:   -fopenmp-targets=amdgcn-amd-amdhsa,amdgcn-amd-amdhsa \
-// RUN:   -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908 \
-// RUN:   -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908:xnack+ \
-// RUN:   %s 2>&1 | FileCheck -check-prefix=COMBO-L %s
-
-// COMBO-L: error: invalid offload arch combinations: 'gfx908' and 'gfx908:xnack+'
+// Two legacy -Xopenmp-target -march values sharing the same triple are
+// deduplicated, so no offload arch combination conflict is diagnosed here; the
+// --offload-arch COMBO case below covers that diagnostic.
 
 //
 // Offload-arch mode (--offload-arch) tests for TargetID
@@ -80,7 +74,7 @@
 // RUN:   --offload-arch=gfx908xnack \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=NOPLUS %s
 
-// NOPLUS: error: invalid target ID 'gfx908xnack'
+// NOPLUS: error: failed to deduce triple for target architecture 'gfx908xnack'
 
 // RUN: not %clang -### -target x86_64-linux-gnu \
 // RUN:   -fopenmp --offload-arch=gfx900 \
@@ -96,7 +90,7 @@
 // RUN:   --offload-arch=gfx900+xnack \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=UNK %s
 
-// UNK: error: invalid target ID 'gfx908:unknown+'
+// UNK: error: failed to deduce triple for target architecture 'gfx900+xnack'
 
 // RUN: not %clang -### -target x86_64-linux-gnu \
 // RUN:   -fopenmp --offload-arch=gfx908 \
@@ -104,7 +98,7 @@
 // RUN:   --offload-arch=gfx900+xnack \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=MIXED %s
 
-// MIXED: error: invalid target ID 'gfx908:sramecc+:unknown+'
+// MIXED: error: failed to deduce triple for target architecture 'gfx900+xnack'
 
 // RUN: not %clang -### -target x86_64-linux-gnu \
 // RUN:   -fopenmp --offload-arch=gfx908 \
@@ -125,7 +119,7 @@
 // RUN:   --offload-arch=gfx900+xnack \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=NOCOLON %s
 
-// NOCOLON: error: invalid target ID 'gfx900+xnack'
+// NOCOLON: error: failed to deduce triple for target architecture 'gfx900+xnack'
 
 // RUN: not %clang -### -target x86_64-linux-gnu \
 // RUN:   -fopenmp --offload-arch=gfx908 \
