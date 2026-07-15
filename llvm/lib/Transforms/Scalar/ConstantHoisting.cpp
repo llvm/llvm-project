@@ -505,6 +505,12 @@ void ConstantHoistingPass::collectConstantCandidates(
 
   // Scan all operands.
   for (unsigned Idx = 0, E = Inst->getNumOperands(); Idx != E; ++Idx) {
+    // Skip analyzing incoming PHI edges from unreachable blocks.
+    if (auto PHI = dyn_cast<PHINode>(Inst)) {
+      BasicBlock *IncomingBB = PHI->getIncomingBlock(Idx);
+      if (!DT->isReachableFromEntry(IncomingBB))
+        continue;
+    }
     // The cost of materializing the constants (defined in
     // `TargetTransformInfo::getIntImmCostInst`) for instructions which only
     // take constant variables is lower than `TargetTransformInfo::TCC_Basic`.

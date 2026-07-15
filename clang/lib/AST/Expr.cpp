@@ -25,6 +25,7 @@
 #include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeBase.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CharInfo.h"
@@ -1690,7 +1691,7 @@ OffsetOfExpr::OffsetOfExpr(const ASTContext &C, QualType type,
   setDependence(computeDependence(this));
 }
 
-IdentifierInfo *OffsetOfNode::getFieldName() const {
+const IdentifierInfo *OffsetOfNode::getFieldName() const {
   assert(getKind() == Field || getKind() == Identifier);
   if (getKind() == Field)
     return getField()->getIdentifier();
@@ -2087,7 +2088,8 @@ ImplicitCastExpr *ImplicitCastExpr::Create(const ASTContext &C, QualType T,
   // Per C++ [conv.lval]p3, lvalue-to-rvalue conversions on class and
   // std::nullptr_t have special semantics not captured by CK_LValueToRValue.
   assert((Kind != CK_LValueToRValue ||
-          !(T->isNullPtrType() || T->getAsCXXRecordDecl())) &&
+          !(T->isNullPtrType() ||
+            (T->getAsCXXRecordDecl() && !C.getLangOpts().HLSL))) &&
          "invalid type for lvalue-to-rvalue conversion");
   ImplicitCastExpr *E =
       new (Buffer) ImplicitCastExpr(T, Kind, Operand, PathSize, FPO, VK);
@@ -3622,7 +3624,7 @@ CallExpr::evaluateBytesReturnedByAllocSizeCall(const ASTContext &Ctx) const {
     Into = ExprResult.Val.getInt();
     if (Into.isNegative() || !Into.isIntN(BitsInSizeT))
       return false;
-    Into = Into.zext(BitsInSizeT);
+    Into = Into.extOrTrunc(BitsInSizeT);
     return true;
   };
 
@@ -3718,6 +3720,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case FunctionParmPackExprClass:
   case RecoveryExprClass:
   case CXXFoldExprClass:
+  case CXXExpansionSelectExprClass:
     // Make a conservative assumption for dependent nodes.
     return IncludePossibleEffects;
 
@@ -5316,6 +5319,10 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__atomic_max_fetch:
   case AO__atomic_fetch_min:
   case AO__atomic_fetch_max:
+  case AO__atomic_fetch_fminimum:
+  case AO__atomic_fetch_fmaximum:
+  case AO__atomic_fetch_fminimum_num:
+  case AO__atomic_fetch_fmaximum_num:
   case AO__atomic_fetch_uinc:
   case AO__atomic_fetch_udec:
     return 3;
@@ -5339,6 +5346,10 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__scoped_atomic_max_fetch:
   case AO__scoped_atomic_fetch_min:
   case AO__scoped_atomic_fetch_max:
+  case AO__scoped_atomic_fetch_fminimum:
+  case AO__scoped_atomic_fetch_fmaximum:
+  case AO__scoped_atomic_fetch_fminimum_num:
+  case AO__scoped_atomic_fetch_fmaximum_num:
   case AO__scoped_atomic_exchange_n:
   case AO__scoped_atomic_fetch_uinc:
   case AO__scoped_atomic_fetch_udec:
@@ -5701,4 +5712,67 @@ APValue &CompoundLiteralExpr::getOrCreateStaticValue(ASTContext &Ctx) const {
 APValue &CompoundLiteralExpr::getStaticValue() const {
   assert(StaticValue);
   return *StaticValue;
+}
+
+namespace {
+/// Visitor that walks an Expr to the head of a struct-field access chain;
+/// see clang::findStructFieldAccess.
+class StructFieldAccessVisitor
+    : public ConstStmtVisitor<StructFieldAccessVisitor, const Expr *> {
+  bool AddrOfSeen = false;
+
+public:
+  const Expr *ArrayIndex = nullptr;
+  QualType ArrayElementTy;
+
+  const Expr *VisitMemberExpr(const MemberExpr *E) {
+    if (AddrOfSeen && E->getType()->isArrayType())
+      // '&fam' designates the array object as a whole, not the
+      // pointer-to-element value that 'fam' decays to.
+      return nullptr;
+    return E;
+  }
+
+  const Expr *VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
+    if (ArrayIndex)
+      // We don't support multiple subscripts.
+      return nullptr;
+
+    AddrOfSeen = false; // '&ptr->array[idx]' is okay.
+    ArrayIndex = E->getIdx();
+    ArrayElementTy = E->getBase()->getType();
+    return Visit(E->getBase());
+  }
+  const Expr *VisitCastExpr(const CastExpr *E) {
+    if (E->getCastKind() == CK_LValueToRValue)
+      return E;
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitParenExpr(const ParenExpr *E) {
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitUnaryAddrOf(const UnaryOperator *E) {
+    AddrOfSeen = true;
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitUnaryDeref(const UnaryOperator *E) {
+    AddrOfSeen = false;
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitBinaryOperator(const BinaryOperator *Op) {
+    return Op->isCommaOp() ? Visit(Op->getRHS()) : nullptr;
+  }
+};
+} // namespace
+
+const Expr *clang::findStructFieldAccess(const Expr *E,
+                                         const Expr **OutArrayIndex,
+                                         QualType *OutArrayElementTy) {
+  StructFieldAccessVisitor V;
+  const Expr *Result = V.Visit(E);
+  if (OutArrayIndex)
+    *OutArrayIndex = V.ArrayIndex;
+  if (OutArrayElementTy)
+    *OutArrayElementTy = V.ArrayElementTy;
+  return Result;
 }

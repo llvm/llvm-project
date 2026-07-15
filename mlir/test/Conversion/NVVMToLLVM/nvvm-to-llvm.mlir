@@ -584,19 +584,6 @@ func.func @cp_async_bulk_wait_group() {
 
 // -----
 
-// CHECK-LABEL: @llvm_nvvm_barrier_arrive
-// CHECK-SAME: (%[[barId:.*]]: i32, %[[numberOfThreads:.*]]: i32)
-llvm.func @llvm_nvvm_barrier_arrive(%barID : i32, %numberOfThreads : i32) {
-  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "bar.arrive 0, $0;", "r" %[[numberOfThreads]] : (i32) -> ()
-  nvvm.barrier.arrive number_of_threads = %numberOfThreads
-  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "bar.arrive $0, $1;", "r,r" %[[barId]], %[[numberOfThreads]] : (i32, i32) -> ()
-  nvvm.barrier.arrive id = %barID number_of_threads = %numberOfThreads
-  llvm.return
-}
-
-
-// -----
-
 llvm.func @init_mbarrier(
     %barrier_gen : !llvm.ptr, 
     %barrier : !llvm.ptr<3>, 
@@ -787,4 +774,22 @@ llvm.func @inline_ptx_single_rw_no_result(%a : f32, %b : f32) -> f32 {
   nvvm.inline_ptx "asm1 " rw(%c : f32)
   %a2 = llvm.fadd %c, %a : f32
   llvm.return %a2 : f32
+}
+
+// -----
+
+// CHECK-LABEL: @inline_ptx_preserves_special_register
+llvm.func @inline_ptx_preserves_special_register() -> i32 {
+  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "mov.u32 $0, %laneid;", "=r"
+  %0 = nvvm.inline_ptx "mov.u32 {$w0}, %laneid;" -> i32
+  llvm.return %0 : i32
+}
+
+// -----
+
+// CHECK-LABEL: @inline_ptx_special_register_trailing_digit
+llvm.func @inline_ptx_special_register_trailing_digit() -> i32 {
+  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "mov.u32 $0, %pm0;", "=r"
+  %0 = nvvm.inline_ptx "mov.u32 {$w0}, %pm0;" -> i32
+  llvm.return %0 : i32
 }

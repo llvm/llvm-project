@@ -19,7 +19,7 @@ module attributes {
 
   // Entry-block memory roundtrip recovers the complex from the vector arg.
   // CHECK: cir.func{{.*}} @takes_complex(%[[ARG:.*]]: !cir.vector<2 x !cir.float>)
-  // CHECK:   %[[SLOT:.*]] = cir.alloca !cir.vector<2 x !cir.float>, !cir.ptr<!cir.vector<2 x !cir.float>>, ["coerce"]
+  // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!cir.vector<2 x !cir.float>>
   // CHECK:   cir.store %[[ARG]], %[[SLOT]] : !cir.vector<2 x !cir.float>, !cir.ptr<!cir.vector<2 x !cir.float>>
   // CHECK:   %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!cir.vector<2 x !cir.float>> -> !cir.ptr<!cir.complex<!cir.float>>
   // CHECK:   %{{.*}} = cir.load %[[CAST]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
@@ -33,7 +33,7 @@ module attributes {
   // Call site coerces the complex value to the vector type through memory.
   // CHECK: cir.func{{.*}} @caller(%[[ARG:.*]]: !cir.vector<2 x !cir.float>)
   // CHECK:   %[[COMPLEX:.*]] = cir.load %{{.*}} : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
-  // CHECK:   %[[CSLOT:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["coerce"]
+  // CHECK:   %[[CSLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
   // CHECK:   cir.store %[[COMPLEX]], %[[CSLOT]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
   // CHECK:   %[[CCAST:.*]] = cir.cast bitcast %[[CSLOT]] : !cir.ptr<!cir.complex<!cir.float>> -> !cir.ptr<!cir.vector<2 x !cir.float>>
   // CHECK:   %[[COERCED:.*]] = cir.load %[[CCAST]] : !cir.ptr<!cir.vector<2 x !cir.float>>, !cir.vector<2 x !cir.float>

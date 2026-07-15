@@ -108,8 +108,8 @@ static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
     return CGF->EmitPPCBuiltinExpr(BuiltinID, E);
+  case llvm::Triple::amdgpu:
   case llvm::Triple::r600:
-  case llvm::Triple::amdgcn:
     return CGF->EmitAMDGPUBuiltinExpr(BuiltinID, E);
   case llvm::Triple::systemz:
     return CGF->EmitSystemZBuiltinExpr(BuiltinID, E);
@@ -133,6 +133,8 @@ static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
     [[fallthrough]];
   case llvm::Triple::spirv:
     return CGF->EmitSPIRVBuiltinExpr(BuiltinID, E);
+  case llvm::Triple::avr:
+    return CGF->EmitAVRBuiltinExpr(BuiltinID, E);
   default:
     return nullptr;
   }
@@ -903,58 +905,6 @@ CodeGenFunction::evaluateOrEmitBuiltinObjectSize(const Expr *E, unsigned Type,
   return emitBuiltinObjectSize(E, Type, ResType, EmittedE, IsDynamic);
 }
 
-namespace {
-
-/// StructFieldAccess is a simple visitor class to grab the first MemberExpr
-/// from an Expr. It records any ArraySubscriptExpr we meet along the way.
-class StructFieldAccess
-    : public ConstStmtVisitor<StructFieldAccess, const Expr *> {
-  bool AddrOfSeen = false;
-
-public:
-  const Expr *ArrayIndex = nullptr;
-  QualType ArrayElementTy;
-
-  const Expr *VisitMemberExpr(const MemberExpr *E) {
-    if (AddrOfSeen && E->getType()->isArrayType())
-      // Avoid forms like '&ptr->array'.
-      return nullptr;
-    return E;
-  }
-
-  const Expr *VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
-    if (ArrayIndex)
-      // We don't support multiple subscripts.
-      return nullptr;
-
-    AddrOfSeen = false; // '&ptr->array[idx]' is okay.
-    ArrayIndex = E->getIdx();
-    ArrayElementTy = E->getBase()->getType();
-    return Visit(E->getBase());
-  }
-  const Expr *VisitCastExpr(const CastExpr *E) {
-    if (E->getCastKind() == CK_LValueToRValue)
-      return E;
-    return Visit(E->getSubExpr());
-  }
-  const Expr *VisitParenExpr(const ParenExpr *E) {
-    return Visit(E->getSubExpr());
-  }
-  const Expr *VisitUnaryAddrOf(const clang::UnaryOperator *E) {
-    AddrOfSeen = true;
-    return Visit(E->getSubExpr());
-  }
-  const Expr *VisitUnaryDeref(const clang::UnaryOperator *E) {
-    AddrOfSeen = false;
-    return Visit(E->getSubExpr());
-  }
-  const Expr *VisitBinaryOperator(const clang::BinaryOperator *Op) {
-    return Op->isCommaOp() ? Visit(Op->getRHS()) : nullptr;
-  }
-};
-
-} // end anonymous namespace
-
 /// Find a struct's flexible array member. It may be embedded inside multiple
 /// sub-structs, but must still be the last field.
 static const FieldDecl *FindFlexibleArrayMemberField(CodeGenFunction &CGF,
@@ -1044,12 +994,12 @@ llvm::Value *CodeGenFunction::emitCountedBySize(const Expr *E,
   // structure. Therefore, because of the above issue, we choose to match what
   // GCC does for consistency's sake.
 
-  StructFieldAccess Visitor;
-  E = Visitor.Visit(E);
+  const Expr *Idx = nullptr;
+  QualType ArrayElementTy;
+  E = findStructFieldAccess(E, &Idx, &ArrayElementTy);
   if (!E)
     return nullptr;
 
-  const Expr *Idx = Visitor.ArrayIndex;
   if (Idx) {
     if (Idx->HasSideEffects(getContext()))
       // We can't have side-effects.
@@ -1069,14 +1019,14 @@ llvm::Value *CodeGenFunction::emitCountedBySize(const Expr *E,
   // __counted_by on either a flexible array member or a pointer into a struct
   // with a flexible array member.
   if (const auto *ME = dyn_cast<MemberExpr>(E))
-    return emitCountedByMemberSize(ME, Idx, EmittedE, Visitor.ArrayElementTy,
-                                   Type, ResType);
+    return emitCountedByMemberSize(ME, Idx, EmittedE, ArrayElementTy, Type,
+                                   ResType);
 
   // __counted_by on a pointer in a struct.
   if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E);
       ICE && ICE->getCastKind() == CK_LValueToRValue)
-    return emitCountedByPointerSize(ICE, Idx, EmittedE, Visitor.ArrayElementTy,
-                                    Type, ResType);
+    return emitCountedByPointerSize(ICE, Idx, EmittedE, ArrayElementTy, Type,
+                                    ResType);
 
   return nullptr;
 }
@@ -1670,11 +1620,19 @@ static llvm::Value *EmitBitCountExpr(CodeGenFunction &CGF, const Expr *E) {
   // Boolean vectors can be casted directly to its bitfield representation. We
   // intentionally do not round up to the next power of two size and let LLVM
   // handle the trailing bits.
+  //
+  // In big endian mode, the bitfield representation has a reversed bit order,
+  // hence the need to add an operation to reverse it back to the expected
+  // order.
   if (auto *VT = dyn_cast<llvm::FixedVectorType>(ArgType);
       VT && VT->getElementType()->isIntegerTy(1)) {
     llvm::Type *StorageType =
         llvm::Type::getIntNTy(CGF.getLLVMContext(), VT->getNumElements());
     ArgValue = CGF.Builder.CreateBitCast(ArgValue, StorageType);
+
+    if (CGF.getTarget().isBigEndian())
+      ArgValue = CGF.Builder.CreateIntrinsic(Intrinsic::bitreverse,
+                                             {StorageType}, ArgValue);
   }
 
   return ArgValue;
@@ -4340,11 +4298,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
   case Builtin::BI__builtin_prefetch: {
     Value *Locality, *RW, *Address = EmitScalarExpr(E->getArg(0));
+    unsigned ICEArguments = (1 << 1) | (1 << 2);
     // FIXME: Technically these constants should of type 'int', yes?
-    RW = (E->getNumArgs() > 1) ? EmitScalarExpr(E->getArg(1)) :
-      llvm::ConstantInt::get(Int32Ty, 0);
-    Locality = (E->getNumArgs() > 2) ? EmitScalarExpr(E->getArg(2)) :
-      llvm::ConstantInt::get(Int32Ty, 3);
+    RW = (E->getNumArgs() > 1) ? EmitScalarOrConstFoldImmArg(ICEArguments, 1, E)
+                               : llvm::ConstantInt::get(Int32Ty, 0);
+    Locality = (E->getNumArgs() > 2)
+                   ? EmitScalarOrConstFoldImmArg(ICEArguments, 2, E)
+                   : llvm::ConstantInt::get(Int32Ty, 3);
     Value *Data = llvm::ConstantInt::get(Int32Ty, 1);
     Function *F = CGM.getIntrinsic(Intrinsic::prefetch, Address->getType());
     Builder.CreateCall(F, {Address, RW, Locality, Data});
@@ -4594,6 +4554,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_clmul:
     return RValue::get(
         emitBuiltinWithOneOverloadedType<2>(*this, E, Intrinsic::clmul));
+  case Builtin::BI__builtin_elementwise_pext:
+    return RValue::get(
+        emitBuiltinWithOneOverloadedType<2>(*this, E, Intrinsic::pext));
+  case Builtin::BI__builtin_elementwise_pdep:
+    return RValue::get(
+        emitBuiltinWithOneOverloadedType<2>(*this, E, Intrinsic::pdep));
 
   case Builtin::BI__builtin_elementwise_add_sat:
   case Builtin::BI__builtin_elementwise_sub_sat: {
@@ -6299,6 +6265,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
   case Builtin::BI__builtin_ptrauth_auth:
   case Builtin::BI__builtin_ptrauth_auth_and_resign:
+  case Builtin::BI__builtin_ptrauth_auth_with_pc_and_resign:
   case Builtin::BI__builtin_ptrauth_auth_load_relative_and_sign:
   case Builtin::BI__builtin_ptrauth_blend_discriminator:
   case Builtin::BI__builtin_ptrauth_sign_generic_data:
@@ -6315,6 +6282,17 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Args[0] = Builder.CreatePtrToInt(Args[0], IntPtrTy);
 
     switch (BuiltinID) {
+    case Builtin::BI__builtin_ptrauth_auth_with_pc_and_resign:
+      // Convert oldDiscriminator (arg 2), oldPC (arg 3) and newDiscriminator
+      // (arg 5) to intptr_t
+      if (Args[2]->getType()->isPointerTy())
+        Args[2] = Builder.CreatePtrToInt(Args[2], IntPtrTy);
+      if (Args[3]->getType()->isPointerTy())
+        Args[3] = Builder.CreatePtrToInt(Args[3], IntPtrTy);
+      if (Args[5]->getType()->isPointerTy())
+        Args[5] = Builder.CreatePtrToInt(Args[5], IntPtrTy);
+      break;
+
     case Builtin::BI__builtin_ptrauth_auth_and_resign:
     case Builtin::BI__builtin_ptrauth_auth_load_relative_and_sign:
       if (Args[4]->getType()->isPointerTy())
@@ -6344,6 +6322,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         return Intrinsic::ptrauth_auth;
       case Builtin::BI__builtin_ptrauth_auth_and_resign:
         return Intrinsic::ptrauth_resign;
+      case Builtin::BI__builtin_ptrauth_auth_with_pc_and_resign:
+        return Intrinsic::ptrauth_auth_with_pc_and_resign;
       case Builtin::BI__builtin_ptrauth_auth_load_relative_and_sign:
         return Intrinsic::ptrauth_resign_load_relative;
       case Builtin::BI__builtin_ptrauth_blend_discriminator:
@@ -7009,6 +6989,34 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     Value *ArgPtr = Builder.CreateLoad(SrcAddr, "ap.val");
     return RValue::get(Builder.CreateStore(ArgPtr, DestAddr));
+  }
+
+  case Builtin::BI__builtin_zos_va_start:
+  case Builtin::BI__builtin_zos_va_end: {
+    // The va_list is an array with 2 elements, called curr and next.
+    // Element curr is set to 0. For builtin_zos_va_start, next is initialized
+    // with a call to @llvm.va_start. Otherwise, next is passed to @llvm.va_end.
+    Address VAList = EmitZOSVAListRef(E->getArg(0));
+    llvm::Type *VAListTy = ConvertType(getContext().getBuiltinZOSVaListType());
+    VAList = VAList.withElementType(VAListTy);
+    Address Curr = Builder.CreateConstArrayGEP(VAList, 0, "curr");
+    Value *Zero = llvm::Constant::getNullValue(VoidPtrTy);
+    Builder.CreateStore(Zero, Curr);
+    Address Next = Builder.CreateConstArrayGEP(VAList, 1, "next");
+    return RValue::get(
+        EmitVAStartEnd(Next.emitRawPointer(*this),
+                       BuiltinID == Builtin::BI__builtin_zos_va_start));
+  }
+  case Builtin::BI__builtin_zos_va_copy: {
+    // Lower this manually because later can't reliably determine the type.
+    Address Dest = EmitZOSVAListRef(E->getArg(0));
+    Address Src = EmitZOSVAListRef(E->getArg(1));
+    llvm::Type *VAListTy = ConvertType(getContext().getBuiltinZOSVaListType());
+    uint64_t SizeBytes =
+        CGM.getDataLayout().getTypeAllocSize(VAListTy).getFixedValue();
+    Value *SizeVal = llvm::ConstantInt::get(Int64Ty, SizeBytes);
+    Builder.CreateMemCpy(Dest, Src, SizeVal, false);
+    return RValue::get(Dest.emitRawPointer(*this));
   }
 
   case Builtin::BI__builtin_get_device_side_mangled_name: {

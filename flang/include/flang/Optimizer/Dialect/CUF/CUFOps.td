@@ -334,6 +334,26 @@ def cuf_RegisterKernelOp : cuf_Op<"register_kernel", []> {
   }];
 }
 
+def cuf_RegisterVariableStaticOp : cuf_Op<"register_variable_static", []> {
+  let summary = "Register a device or constant global as device-resident";
+
+  let description = [{
+    Emitted under -gpu=mem:unified for a module-scope device or constant global.
+    Registers the global with the runtime as device-resident so that a matching
+    host-side declaration of the same symbol is not treated as host memory.
+  }];
+
+  let arguments = (ins
+    SymbolRefAttr:$global,
+    StrAttr:$varName,
+    I64Attr:$size
+  );
+
+  let assemblyFormat = [{
+    $global `(` $varName `,` $size `)` attr-dict
+  }];
+}
+
 def cuf_DeviceAddressOp : cuf_Op<"device_address", []> {
   let summary = "Get the device address from a host symbol";
 

@@ -730,6 +730,10 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
   int CopyCostParsed = R->getValueAsInt("CopyCost");
   Allocatable = R->getValueAsBit("isAllocatable");
   AltOrderSelect = R->getValueAsString("AltOrderSelect");
+  int SpillStackIDParsed = R->getValueAsInt("SpillStackID");
+  if (!isUInt<8>(SpillStackIDParsed))
+    PrintFatalError(R->getLoc(), "SpillStackID out of range [0,255]");
+  SpillStackID = SpillStackIDParsed;
   int AllocationPriority = R->getValueAsInt("AllocationPriority");
   if (!isUInt<5>(AllocationPriority))
     PrintFatalError(R->getLoc(), "AllocationPriority out of range [0,31]");
@@ -757,7 +761,7 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
     : Members(*Props.Members), TheDef(nullptr), Name(Name.str()),
       RegsWithSuperRegsTopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1),
       RSI(Props.RSI), CopyCost(0), Allocatable(true), AllocationPriority(0),
-      GlobalPriority(false), TSFlags(0) {
+      GlobalPriority(false), TSFlags(0), SpillStackID(0) {
   MemberBV.resize(RegBank.getRegisters().size());
   Artificial = true;
   GeneratePressureSet = false;
@@ -794,6 +798,7 @@ void CodeGenRegisterClass::inheritProperties(CodeGenRegBank &RegBank) {
   AllocationPriority = Super.AllocationPriority;
   GlobalPriority = Super.GlobalPriority;
   TSFlags = Super.TSFlags;
+  SpillStackID = Super.SpillStackID;
   GeneratePressureSet |= Super.GeneratePressureSet;
 
   // Copy all allocation orders, filter out foreign registers from the larger
@@ -1376,7 +1381,7 @@ CodeGenSubRegIndex *CodeGenRegBank::getConcatSubRegIndex(
 
   // None exists, synthesize one.
   std::string Name = Parts.front()->getName();
-  const unsigned UnknownSize = (uint16_t)-1;
+  const unsigned UnknownSize = (uint32_t)-1;
 
   for (const CodeGenSubRegIndex *Part : ArrayRef(Parts).drop_front()) {
     Name += '_';
@@ -2563,6 +2568,9 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
       // When SubRC is already an inferred class, prefer a name of the form
       // "<RC>_with_<CompositeSubIdx>_in_<SubSubRC>" over a chain of the form
       // "<RC>_with_<SubIdx>_in_<OtherRc>_with_<SubSubIdx>_in_<SubSubRC>".
+      // If that preferred name is already used, fall back to the uncomposed
+      // form so that different inferred classes do not alias through the same
+      // composed name.
       CodeGenSubRegIndex *CompositeSubIdx = SubIdx;
       CodeGenRegisterClass *CompositeSubRC = &SubRC;
       if (CodeGenSubRegIndex *SubSubIdx = SubRC.getInferredFromSubRegIdx()) {
@@ -2573,10 +2581,19 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
         }
       }
 
-      auto [SubSetRC, Inserted] = getOrCreateSubClass(
-          RC, &SubSetVec,
-          RC->getName() + "_with_" + CompositeSubIdx->getName() + "_in_" +
-              CompositeSubRC->getName());
+      std::string Name = RC->getName() + "_with_" + CompositeSubIdx->getName() +
+                         "_in_" + CompositeSubRC->getName();
+
+      const bool HasRegClassNamed =
+          llvm::any_of(RegClasses, [&](const CodeGenRegisterClass &RC) {
+            return RC.getName() == Name;
+          });
+
+      if (HasRegClassNamed)
+        Name = RC->getName() + "_with_" + SubIdx->getName() + "_in_" +
+               SubRC.getName();
+
+      auto [SubSetRC, Inserted] = getOrCreateSubClass(RC, &SubSetVec, Name);
 
       if (Inserted)
         SubSetRC->setInferredFrom(CompositeSubIdx, CompositeSubRC);

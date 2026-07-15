@@ -169,6 +169,45 @@ public:
         : Behavior(B), Key(K), Val(V) {}
   };
 
+  struct GlobalAsmProperties {
+    std::string TargetFeatures;
+    std::string TargetCPU;
+
+    /// Set a property using a string name.
+    /// Returns whether the property name was valid.
+    LLVM_ABI bool set(StringRef Name, std::string Value);
+
+    /// Get a list of set properties as pairs of key and value.
+    LLVM_ABI SmallVector<std::pair<StringRef, StringRef>> getAsStrings() const;
+
+    bool operator==(const GlobalAsmProperties &Other) const {
+      return TargetFeatures == Other.TargetFeatures &&
+             TargetCPU == Other.TargetCPU;
+    }
+
+    bool operator!=(const GlobalAsmProperties &Other) const {
+      return !(*this == Other);
+    }
+  };
+
+  struct GlobalAsmFragment {
+    std::string Asm;
+    GlobalAsmProperties Props;
+
+    GlobalAsmFragment(StringRef Asm) : GlobalAsmFragment(Asm.str()) {}
+    GlobalAsmFragment(std::string AsmArg, GlobalAsmProperties Props = {})
+        : Asm(std::move(AsmArg)), Props(std::move(Props)) {
+      if (!Asm.empty() && Asm.back() != '\n')
+        Asm += '\n';
+    }
+
+    bool empty() const { return Asm.empty(); }
+
+    bool hasSameProperties(const GlobalAsmFragment &Other) const {
+      return Props == Other.Props;
+    }
+  };
+
 /// @}
 /// @name Member Variables
 /// @{
@@ -180,7 +219,8 @@ private:
   AliasListType AliasList;        ///< The Aliases in the module
   IFuncListType IFuncList;        ///< The IFuncs in the module
   NamedMDListType NamedMDList;    ///< The named metadata in the module
-  std::string GlobalScopeAsm;     ///< Inline Asm at global scope.
+  /// Inline Asm at the global scope.
+  SmallVector<GlobalAsmFragment, 0> GlobalScopeAsm;
   std::unique_ptr<ValueSymbolTable> ValSymTab; ///< Symbol table for values
   ComdatSymTabType ComdatSymTab;  ///< Symbol table for COMDATs
   std::unique_ptr<MemoryBuffer>
@@ -287,8 +327,17 @@ public:
   LLVMContext &getContext() const { return Context; }
 
   /// Get any module-scope inline assembly blocks.
-  /// @returns a string containing the module-scope inline assembly blocks.
-  const std::string &getModuleInlineAsm() const { return GlobalScopeAsm; }
+  ArrayRef<GlobalAsmFragment> getModuleInlineAsm() const {
+    return GlobalScopeAsm;
+  }
+
+  /// Get any module-scope inline assembly blocks.
+  MutableArrayRef<GlobalAsmFragment> getModuleInlineAsm() {
+    return GlobalScopeAsm;
+  }
+
+  /// Return whether there is any module-scope inline assembly.
+  bool hasModuleInlineAsm() const { return !GlobalScopeAsm.empty(); }
 
   /// Get a RandomNumberGenerator salted for use with this module. The
   /// RNG can be seeded via -rng-seed=<uint64> and is salted with the
@@ -325,20 +374,45 @@ public:
   /// Set the target triple.
   void setTargetTriple(Triple T) { TargetTriple = std::move(T); }
 
+  void removeModuleInlineAsm() { GlobalScopeAsm.clear(); }
+
   /// Set the module-scope inline assembly blocks.
   /// A trailing newline is added if the input doesn't have one.
-  void setModuleInlineAsm(StringRef Asm) {
-    GlobalScopeAsm = std::string(Asm);
-    if (!GlobalScopeAsm.empty() && GlobalScopeAsm.back() != '\n')
-      GlobalScopeAsm += '\n';
+  void setModuleInlineAsm(GlobalAsmFragment Fragment) {
+    GlobalScopeAsm.clear();
+    appendModuleInlineAsm(std::move(Fragment));
+  }
+
+  void setModuleInlineAsm(ArrayRef<GlobalAsmFragment> Fragments) {
+    GlobalScopeAsm.clear();
+    append_range(GlobalScopeAsm, Fragments);
   }
 
   /// Append to the module-scope inline assembly blocks.
   /// A trailing newline is added if the input doesn't have one.
-  void appendModuleInlineAsm(StringRef Asm) {
-    GlobalScopeAsm += Asm;
-    if (!GlobalScopeAsm.empty() && GlobalScopeAsm.back() != '\n')
-      GlobalScopeAsm += '\n';
+  void appendModuleInlineAsm(GlobalAsmFragment Fragment) {
+    if (Fragment.empty())
+      return;
+
+    if (!GlobalScopeAsm.empty() &&
+        GlobalScopeAsm.back().hasSameProperties(Fragment)) {
+      GlobalScopeAsm.back().Asm += Fragment.Asm;
+    } else {
+      GlobalScopeAsm.emplace_back(std::move(Fragment));
+    }
+  }
+
+  /// Prepend to the module-scope inline assembly blocks.
+  void prependModuleInlineAsm(GlobalAsmFragment Fragment) {
+    if (Fragment.empty())
+      return;
+
+    if (!GlobalScopeAsm.empty() &&
+        GlobalScopeAsm.front().hasSameProperties(Fragment)) {
+      GlobalScopeAsm.front().Asm.insert(0, Fragment.Asm);
+    } else {
+      GlobalScopeAsm.insert(GlobalScopeAsm.begin(), std::move(Fragment));
+    }
   }
 
 /// @}
@@ -578,10 +652,34 @@ public:
   // Use global_size() to get the total number of global variables.
   // Use globals() to get the range of all global variables.
 
+  std::optional<GlobalValue::GUID> getGUID(const Value *V) const {
+    const auto It = ValueToGUIDMap.find(V);
+    if (It == ValueToGUIDMap.end())
+      return std::nullopt;
+
+    return It->getSecond();
+  }
+
+  void insertGUID(const Value *V, GlobalValue::GUID GUID) {
+    const auto [It, WasInserted] = ValueToGUIDMap.insert({V, GUID});
+
+    (void)It, (void)WasInserted;
+#ifndef NDEBUG
+    if (!WasInserted) {
+      assert((It->second == GUID) && "insertGUID called with different value");
+    }
+#endif
+  }
+
 private:
-/// @}
-/// @name Direct access to the globals list, functions list, and symbol table
-/// @{
+  /// A mapping directly from Value to GUID. Populated from bitcode
+  /// (MODULE_CODE_GUIDLIST). Necessary for lazy-loading modules, where we
+  /// don't load metadata.
+  DenseMap<const Value *, GlobalValue::GUID> ValueToGUIDMap;
+
+  /// @}
+  /// @name Direct access to the globals list, functions list, and symbol table
+  /// @{
 
   /// Get the Module's list of global variables (constant).
   const GlobalListType   &getGlobalList() const       { return GlobalList; }
@@ -1063,9 +1161,8 @@ public:
   /// Returns target-abi from MDString, null if target-abi is absent.
   StringRef getTargetABIFromMD();
 
-  /// Get how unwind v2 (epilog) information should be generated for x64
-  /// Windows.
-  WinX64EHUnwindV2Mode getWinX64EHUnwindV2Mode() const;
+  /// Get how unwind information should be generated for x64 Windows.
+  WinX64EHUnwindMode getWinX64EHUnwindMode() const;
 
   /// Gets the Control Flow Guard mode.
   ControlFlowGuardMode getControlFlowGuardMode() const;

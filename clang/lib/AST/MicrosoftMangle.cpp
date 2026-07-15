@@ -57,16 +57,17 @@ static GlobalDecl getGlobalDeclAsDeclContext(const DeclContext *DC) {
 
 struct msvc_hashing_ostream : public llvm::raw_svector_ostream {
   raw_ostream &OS;
+  size_t Threshold;
   llvm::SmallString<64> Buffer;
 
-  msvc_hashing_ostream(raw_ostream &OS)
-      : llvm::raw_svector_ostream(Buffer), OS(OS) {}
+  msvc_hashing_ostream(raw_ostream &OS, size_t Threshold = 4096)
+      : llvm::raw_svector_ostream(Buffer), OS(OS), Threshold(Threshold) {}
   ~msvc_hashing_ostream() override {
     StringRef MangledName = str();
     bool StartsWithEscape = MangledName.starts_with("\01");
     if (StartsWithEscape)
       MangledName = MangledName.drop_front(1);
-    if (MangledName.size() < 4096) {
+    if (MangledName.size() < Threshold) {
       OS << str();
       return;
     }
@@ -3098,6 +3099,12 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
 
   mangleCallingConvention(CC, Range);
 
+  if (Proto) {
+    unsigned SMEAttrs = Proto->getAArch64SMEAttributes();
+    if (SMEAttrs)
+      Out << "__clang_sme_attr" << SMEAttrs;
+  }
+
   // <return-type> ::= <type>
   //               ::= @ # structors (they have no declared return type)
   if (IsStructor) {
@@ -4187,8 +4194,13 @@ void MicrosoftMangleContextImpl::mangleCXXRTTI(QualType T, raw_ostream &Out) {
 
 void MicrosoftMangleContextImpl::mangleCXXRTTIName(
     QualType T, raw_ostream &Out, bool NormalizeIntegers = false) {
-  MicrosoftCXXNameMangler Mangler(*this, Out);
-  Mangler.getStream() << '.';
+  Out << '.';
+  // MSVC caps the length of the TypeDescriptor's name string the same way it
+  // caps decorated names, substituting "??@<md5>@" for over-long names. The
+  // leading '.' counts toward the 4096-character limit but is not part of
+  // the hashed input, so the threshold is one lower than for symbols.
+  msvc_hashing_ostream MHO(Out, /*Threshold=*/4095);
+  MicrosoftCXXNameMangler Mangler(*this, MHO);
   Mangler.mangleType(T, SourceRange(), MicrosoftCXXNameMangler::QMM_Result);
 }
 

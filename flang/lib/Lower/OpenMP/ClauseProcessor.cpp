@@ -19,7 +19,6 @@
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/ReductionProcessor.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Utils/OpenMP.h"
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
@@ -28,6 +27,24 @@
 namespace Fortran {
 namespace lower {
 namespace omp {
+
+static void TodoLocators(mlir::Location loc, const omp::ObjectList &objects) {
+  for (const omp::Object &object : objects) {
+    if (auto &ref = object.ref()) {
+      auto op = GetTopLevelOperation(*ref).first;
+      if (op == evaluate::operation::Operator::Call)
+        TODO(loc, "Function call locators are not supported yet");
+    }
+    semantics::Symbol *symbol = object.sym();
+    if (symbol->test(semantics::Symbol::Flag::OmpReserved)) {
+      std::string name =
+          parser::ToLowerCaseLetters(object.sym()->name().ToString());
+      if (llvm::is_contained(llvm::omp::getReservedLocatorNames(), name)) {
+        TODO(loc, "Reserved locators are not supported yet");
+      }
+    }
+  }
+}
 
 using ReductionModifier =
     Fortran::lower::omp::clause::Reduction::ReductionModifier;
@@ -345,10 +362,6 @@ bool ClauseProcessor::processAllocator(
   return false;
 }
 
-bool ClauseProcessor::processBare(mlir::omp::BareClauseOps &result) const {
-  return markClauseOccurrence<omp::clause::OmpxBare>(result.bare);
-}
-
 bool ClauseProcessor::processBind(mlir::omp::BindClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Bind>()) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -643,6 +656,16 @@ bool ClauseProcessor::processInitializer(
                         exprResult.getType()))
                   if (ompPrivVar.getType() == refType)
                     exprResult = fir::LoadOp::create(builder, loc, exprResult);
+                // The initializer expression may have a different but
+                // convertible scalar type than the reduction. For example a
+                // LOGICAL initializer (e.g. omp_priv = .false.) lowers to an
+                // i1 while the reduction type is !fir.logical<4>. Convert so
+                // the init region yields the reduction type, as the
+                // omp.declare_reduction verifier requires.
+                if (exprResult.getType() != type &&
+                    fir::isa_trivial(exprResult.getType()) &&
+                    fir::isa_trivial(type))
+                  exprResult = builder.createConvert(loc, type, exprResult);
                 return exprResult;
               }},
           initExpr.u);
@@ -790,6 +813,15 @@ bool ClauseProcessor::processOrdered(
     if (clause->v.has_value())
       orderedClauseValue = *evaluate::ToInt64(*clause->v);
     result.ordered = firOpBuilder.getI64IntegerAttr(orderedClauseValue);
+    return true;
+  }
+  return false;
+}
+
+bool ClauseProcessor::processPartial(std::optional<int64_t> &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Partial>()) {
+    if (clause->v.has_value())
+      result = evaluate::ToInt64(*clause->v);
     return true;
   }
   return false;
@@ -970,6 +1002,8 @@ bool ClauseProcessor::processAffinity(
         auto &iteratorModifier =
             std::get<std::optional<omp::clause::Iterator>>(clause.t);
         collectIteratorIVs(clause, converter, stmtCtx, iteratorRanges, ivSyms);
+
+        TodoLocators(clauseLocation, objects);
 
         for (const omp::Object &object : objects) {
           llvm::SmallVector<mlir::Value> bounds;
@@ -1646,7 +1680,7 @@ bool ClauseProcessor::processInReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 inReductionVars, inReduceVarByRef, inReductionDeclSymbols,
-                inReductionSyms))
+                inReductionSyms, inReductionObjects, converter.getSymbolMap()))
           TODO(currentLocation, "Lowering unrecognised reduction type");
 
         // Copy local lists into the output.
@@ -1792,88 +1826,6 @@ void ClauseProcessor::processMapObjects(
     bool isMotionModifier, llvm::omp::Directive directive) const {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
-  auto getSymbolDerivedType = [](const semantics::Symbol &symbol)
-      -> const semantics::DerivedTypeSpec * {
-    const semantics::Symbol &ultimate = symbol.GetUltimate();
-    if (const semantics::DeclTypeSpec *declType = ultimate.GetType())
-      if (const auto *derived = declType->AsDerived())
-        return derived;
-    return nullptr;
-  };
-
-  auto addImplicitMapper = [&](const omp::Object &object,
-                               std::string &mapperIdName,
-                               bool allowGenerate) -> mlir::FlatSymbolRefAttr {
-    if (!allowGenerate || mapperIdName.empty())
-      return mlir::FlatSymbolRefAttr();
-
-    const semantics::DerivedTypeSpec *typeSpec =
-        getSymbolDerivedType(*object.sym());
-    if (!typeSpec && object.sym()->owner().IsDerivedType())
-      typeSpec = object.sym()->owner().derivedTypeSpec();
-
-    if (!typeSpec)
-      return mlir::FlatSymbolRefAttr();
-
-    mlir::Type type = converter.genType(*typeSpec);
-    auto recordType = mlir::dyn_cast<fir::RecordType>(type);
-    if (!recordType)
-      return mlir::FlatSymbolRefAttr();
-
-    return utils::openmp::getOrGenImplicitDefaultDeclareMapper(
-        converter.getFirOpBuilder(), clauseLocation, recordType, mapperIdName,
-        [&](std::string &mapperIdName, llvm::StringRef memberName) {
-          defaultMangler(converter, mapperIdName, memberName);
-        });
-  };
-
-  auto getDefaultMapperID =
-      [&](const semantics::DerivedTypeSpec *typeSpec) -> std::string {
-    if (mlir::isa<mlir::omp::DeclareMapperOp>(
-            firOpBuilder.getRegion().getParentOp()) ||
-        !typeSpec)
-      return {};
-
-    std::string mapperIdName =
-        typeSpec->name().ToString() + llvm::omp::OmpDefaultMapperName;
-    if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName)) {
-      mapperIdName =
-          converter.mangleName(mapperIdName, sym->GetUltimate().owner());
-    } else {
-      mapperIdName = converter.mangleName(mapperIdName, *typeSpec->GetScope());
-    }
-
-    // Make sure we don't return a mapper to self.
-    if (auto declMapOp = mlir::dyn_cast<mlir::omp::DeclareMapperOp>(
-            firOpBuilder.getRegion().getParentOp()))
-      if (mapperIdName == declMapOp.getSymName())
-        return {};
-    return mapperIdName;
-  };
-
-  auto findMapperIfTypeMatch =
-      [&](const semantics::DerivedTypeSpec *objectTypeSpec,
-          llvm::StringRef explicitMapperName) -> std::string {
-    auto declMapperOp =
-        converter.getModuleOp().lookupSymbol<mlir::omp::DeclareMapperOp>(
-            explicitMapperName);
-    if (!declMapperOp)
-      return "__implicit_mapper";
-
-    // Verify if the explicit mapper provided matches the type being mapped.
-    // If it does return the mapper name, if it doesn't return null-ary.
-    mlir::Type mapperType = declMapperOp.getType();
-    mlir::Type objectType = converter.genType(*objectTypeSpec);
-    auto mapperRecordType = mlir::dyn_cast<fir::RecordType>(mapperType);
-    auto objectRecordType = mlir::dyn_cast<fir::RecordType>(objectType);
-    if (mapperRecordType && objectRecordType &&
-        mapperRecordType.getName() == objectRecordType.getName()) {
-      return explicitMapperName.str();
-    }
-
-    return "__implicit_mapper";
-  };
-
   for (const omp::Object &object : objects) {
     llvm::SmallVector<mlir::Value> bounds;
     std::stringstream asFortran;
@@ -1905,62 +1857,9 @@ void ClauseProcessor::processMapObjects(
       }
     }
 
-    const semantics::DerivedTypeSpec *objectTypeSpec =
-        getSymbolDerivedType(*object.sym());
-    mlir::FlatSymbolRefAttr mapperId = mlir::FlatSymbolRefAttr();
-    if (objectTypeSpec) {
-      std::string mapperIdName = mapperIdNameRef.str();
-      // if we have an explicit mapper specified, we need to check it matches
-      // the type being mapped, if it doesn't we fallback to look for a user
-      // default mapper or generate an compiler defined default mapper if
-      // relevant. This function will return "__implicit_mapper" if we find that
-      // the map isn't relevant to the explicit declare mapper, which allows it
-      // to fallback.
-      if (!mapperIdName.empty() && mapperIdName != "__implicit_mapper")
-        mapperIdName = findMapperIfTypeMatch(objectTypeSpec, mapperIdName);
-
-      if (mapperIdName == "__implicit_mapper") {
-        mapperIdName = getDefaultMapperID(objectTypeSpec);
-        // Currently we do not apply implicit compiler generated delcare mappers
-        // to enter, exit or update directives. However, we will syntheize one
-        // below if we're not a target enter/exit/update and no user defined
-        // implicit declare mapper has been defined and we meet the other
-        // conditions
-        // TODO/FIXME: Loosen this restriction to comply with the OpenMP
-        // specification.
-        auto *userDefinedDefault =
-            converter.getModuleOp().lookupSymbol(mapperIdName);
-        if (!userDefinedDefault && !parentObj.has_value() &&
-            (directive != llvm::omp::Directive::OMPD_target_enter_data &&
-             directive != llvm::omp::Directive::OMPD_target_exit_data &&
-             directive != llvm::omp::Directive::OMPD_target_update)) {
-          bool isAllocOrPointer =
-              semantics::IsAllocatableOrObjectPointer(object.sym());
-          bool isPointer = semantics::IsPointer(*object.sym());
-          bool isImplicitMap =
-              (mapTypeBits & mlir::omp::ClauseMapFlags::implicit) ==
-              mlir::omp::ClauseMapFlags::implicit;
-          bool needsDefaultMapper =
-              isAllocOrPointer ||
-              requiresImplicitDefaultDeclareMapper(*objectTypeSpec);
-          // For implicit captures, avoid synthesizing default mappers for
-          // pointer entities (which can over-map pointer payloads) and for
-          // plain non-allocatable/non-pointer entities. Keep implicit mapper
-          // support for allocatables.
-          if (isImplicitMap && (isPointer || !isAllocOrPointer))
-            needsDefaultMapper = false;
-          mapperId = addImplicitMapper(object, mapperIdName,
-                                       /*allowGenerate=*/needsDefaultMapper);
-        }
-      }
-
-      // Make sure we've generated the symbol in one of our previous steps
-      // before assigning the symbol.
-      if (!mapperIdName.empty() &&
-          converter.getModuleOp().lookupSymbol(mapperIdName))
-        mapperId = mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
-                                                mapperIdName);
-    }
+    mlir::FlatSymbolRefAttr mapperId =
+        resolveMapperId(converter, clauseLocation, object, mapperIdNameRef,
+                        mapTypeBits, directive, parentObj.has_value());
 
     // Explicit map captures are captured ByRef by default,
     // optimisation passes may alter this to ByCopy or other capture
@@ -2104,10 +2003,11 @@ bool ClauseProcessor::processMap(
       }
     }
 
-    if (iterator) {
+    if (iterator)
       TODO(currentLocation,
            "Support for iterator modifiers is not implemented yet");
-    }
+    TodoLocators(currentLocation, objects);
+
     processMapObjects(stmtCtx, clauseLocation,
                       std::get<omp::ObjectList>(clause.t), mapTypeBits,
                       parentMemberIndices, result.mapVars, *ptrMapObjects,
@@ -2140,9 +2040,9 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
     // Support motion modifiers: iterator.
     std::string mapperIdName = getMapperIdentifier(converter, mapper);
 
-    if (iterator) {
+    if (iterator)
       TODO(clauseLocation, "Iterator modifier is not supported yet");
-    }
+    TodoLocators(clauseLocation, objects);
 
     processMapObjects(stmtCtx, clauseLocation, objects, mapTypeBits,
                       parentMemberIndices, result.mapVars, mapObjects,
@@ -2188,12 +2088,9 @@ bool ClauseProcessor::processReduction(
 
         auto mod = std::get<std::optional<ReductionModifier>>(clause.t);
         if (mod.has_value()) {
-          if (mod.value() == ReductionModifier::Task)
-            TODO(currentLocation, "Reduction modifier `task` is not supported");
-          else
-            result.reductionMod = mlir::omp::ReductionModifierAttr::get(
-                converter.getFirOpBuilder().getContext(),
-                translateReductionModifier(mod.value()));
+          result.reductionMod = mlir::omp::ReductionModifierAttr::get(
+              converter.getFirOpBuilder().getContext(),
+              translateReductionModifier(mod.value()));
         }
 
         ReductionProcessor rp;
@@ -2201,7 +2098,8 @@ bool ClauseProcessor::processReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 reductionVars, reduceVarByRef, reductionDeclSymbols,
-                reductionSyms, reductionVarCache))
+                reductionSyms, reductionObjects, converter.getSymbolMap(),
+                reductionVarCache))
           TODO(currentLocation, "Lowering unrecognised reduction type");
         // Copy local lists into the output.
         llvm::copy(reductionVars, std::back_inserter(result.reductionVars));
@@ -2230,7 +2128,8 @@ bool ClauseProcessor::processTaskReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 taskReductionVars, taskReduceVarByRef, taskReductionDeclSymbols,
-                taskReductionSyms))
+                taskReductionSyms, taskReductionObjects,
+                converter.getSymbolMap()))
           TODO(currentLocation, "Lowering unrecognised reduction type");
         // Copy local lists into the output.
         llvm::copy(taskReductionVars,
