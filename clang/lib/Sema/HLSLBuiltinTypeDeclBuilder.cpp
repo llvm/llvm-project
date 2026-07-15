@@ -1640,24 +1640,17 @@ BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethods() {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = SemaRef.getASTContext();
 
-  // Each entry declares two overloads (with and without an out original-value
-  // parameter). Adding a new atomic here only requires a new line — the shared
-  // helper takes care of the composition.
+  // This is a helper that declares two overloads with and without an out
+  // original-value parameter for each entry.
   addByteAddressBufferInterlockedMethod("InterlockedAdd", AST.UnsignedIntTy,
                                         "__builtin_hlsl_interlocked_add");
 
-  // 64-bit typed atomics on UAVs require SM 6.6 (DXIL 1.6 introduces the
-  // int64 overload of the atomicBinOp op). Skip synthesizing the *64 methods
-  // on older DXIL targets so callers get "no matching member function" from
-  // overload resolution — this matches DXC and mirrors how other HLSL SM-gated
-  // features are handled (see hlsl_intrinsics.h `_HLSL_AVAILABILITY`
-  // annotations). Non-DXIL targets (e.g., SPIR-V) always get the method: their
-  // 64-bit atomic support is gated by device extensions, not shader model.
+  // Skip synthesizing the 64 bit methods on DXIL targets older than SM 6.6.
   const llvm::Triple &TT = AST.getTargetInfo().getTriple();
-  bool DXILNeedsSM66 =
-      TT.getArch() == llvm::Triple::dxil &&
-      AST.getTargetInfo().getPlatformMinVersion() < VersionTuple(6, 6);
-  if (!DXILNeedsSM66) {
+  bool HasInt64AtomicSupport =
+      TT.getArch() != llvm::Triple::dxil ||
+      AST.getTargetInfo().getPlatformMinVersion() >= VersionTuple(6, 6);
+  if (HasInt64AtomicSupport) {
     // HLSL's uint64_t is `unsigned long`.
     addByteAddressBufferInterlockedMethod("InterlockedAdd64",
                                           AST.UnsignedLongTy,

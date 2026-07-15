@@ -228,7 +228,6 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_sign:
   case Intrinsic::dx_step:
   case Intrinsic::dx_radians:
-  case Intrinsic::dx_interlocked_add:
   case Intrinsic::dx_interlocked_or:
   case Intrinsic::usub_sat:
   case Intrinsic::vector_reduce_add:
@@ -1340,9 +1339,6 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::dx_radians:
     Result = expandRadiansIntrinsic(Orig);
-    break;
-  case Intrinsic::dx_interlocked_add:
-    Result = expandInterlockedIntrinsic(Orig, AtomicRMWInst::Add);
     break;
   case Intrinsic::dx_interlocked_or:
     Result = expandInterlockedIntrinsic(Orig, AtomicRMWInst::Or);

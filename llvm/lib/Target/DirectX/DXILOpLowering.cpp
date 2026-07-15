@@ -187,6 +187,19 @@ public:
     SmallVector<CallInst *> ToRemove;
     SmallVector<Function *> CastFns;
 
+    // Also pick up any `dx.resource.casthandle` calls that were introduced
+    // outside of this pass (e.g. by DXILResourceAccess when it emits DXIL
+    // ops directly). All such casts must be resolved here.
+    for (Function &F : M) {
+      if (!F.isDeclaration() ||
+          F.getIntrinsicID() != Intrinsic::dx_resource_casthandle)
+        continue;
+      for (User *U : F.users())
+        if (auto *CI = dyn_cast<CallInst>(U))
+          if (!llvm::is_contained(CleanupCasts, CI))
+            CleanupCasts.push_back(CI);
+    }
+
     for (CallInst *Cast : CleanupCasts) {
       // These casts were only put in to ease the move from `target("dx")` types
       // to `dx.types.Handle in a piecemeal way. At this point, all of the
@@ -849,33 +862,6 @@ public:
     });
   }
 
-  [[nodiscard]] bool lowerResourceAtomicBinOp(Function &F) {
-    IRBuilder<> &IRB = OpBuilder.getIRB();
-
-    return replaceFunction(F, [&](CallInst *CI) -> Error {
-      IRB.SetInsertPoint(CI);
-      Value *Handle =
-          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
-      Value *Index = CI->getArgOperand(1);
-      Value *Offset = CI->getArgOperand(2);
-      Value *BinOp = CI->getArgOperand(3);
-      Value *NewValue = CI->getArgOperand(4);
-
-      std::array<Value *, 6> Args{Handle, BinOp,           Index,
-                                  Offset, IRB.getInt32(0), NewValue};
-
-      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
-          OpCode::AtomicBinOp, Args, CI->getName(), CI->getType());
-
-      if (Error E = OpCall.takeError())
-        return E;
-
-      CI->replaceAllUsesWith(*OpCall);
-      CI->eraseFromParent();
-      return Error::success();
-    });
-  }
-
   [[nodiscard]] bool lowerGetDimensionsX(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int32Ty = IRB.getInt32Ty();
@@ -1236,9 +1222,6 @@ public:
         break;
       case Intrinsic::dx_resource_updatecounter:
         HasErrors |= lowerUpdateCounter(F);
-        break;
-      case Intrinsic::dx_resource_atomicbinop:
-        HasErrors |= lowerResourceAtomicBinOp(F);
         break;
       case Intrinsic::dx_resource_getdimensions_x:
         HasErrors |= lowerGetDimensionsX(F);

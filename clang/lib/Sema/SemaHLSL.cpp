@@ -4590,26 +4590,17 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     }
 
-    // 64-bit interlocked ops require SM 6.6 on DXIL — the DXIL 1.6 int64
-    // overloads of atomicBinOp/cmpXchg are what enable them. The synthesized
-    // wrapper methods (e.g. RWByteAddressBuffer::InterlockedAdd64) that call
-    // this builtin are themselves only declared when the target supports it
-    // (see HLSLBuiltinTypeDeclBuilder), so pre-SM6.6 usage is caught by
-    // overload resolution. This defensive check catches direct
-    // `__builtin_hlsl_interlocked_add` calls from HLSL code with a 64-bit
-    // dest on pre-SM6.6 DXIL targets. Skip synthetic invocations (invalid
-    // source location) built while composing wrapper method bodies.
+    // 64-bit interlocked ops require SM 6.6 on DXIL. The synthesized wrapper
+    // methods (e.g. RWByteAddressBuffer::InterlockedAdd64) are only declared
+    // on SM 6.6+, so this defensive check only fires for direct builtin
+    // calls; skip synthetic invocations (invalid source location).
     const TargetInfo &TI = SemaRef.Context.getTargetInfo();
     if (TheCall->getBeginLoc().isValid() &&
         TI.getTriple().getArch() == llvm::Triple::dxil &&
         SemaRef.Context.getTypeSize(DestTy) == 64 &&
         TI.getPlatformMinVersion() < VersionTuple(6, 6)) {
-      llvm::StringRef PlatformName(
-          AvailabilityAttr::getPrettyPlatformName(TI.getPlatformName()));
-      SemaRef.Diag(TheCall->getBeginLoc(), diag::warn_hlsl_availability)
-          << TheCall->getDirectCallee() << PlatformName
-          << VersionTuple(6, 6).getAsString() << /*UseEnvironment=*/false
-          << /*EnvName=*/"";
+      SemaRef.Diag(TheCall->getBeginLoc(), diag::err_hlsl_builtin_requires_sm)
+          << TheCall->getDirectCallee() << VersionTuple(6, 6).getAsString();
       return true;
     }
 

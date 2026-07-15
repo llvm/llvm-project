@@ -148,10 +148,6 @@ def int_spv_rsqrt : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty]
   def int_spv_wave_reduce_or : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem]>;
   def int_spv_wave_reduce_xor : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem]>;
   def int_spv_wave_reduce_and : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem]>;
-  def int_spv_interlocked_add :
-      DefaultAttrsIntrinsic<[llvm_anyint_ty],
-                            [llvm_anyptr_ty, LLVMMatchType<0>],
-                            [IntrArgMemOnly]>;
   def int_spv_interlocked_or :
       DefaultAttrsIntrinsic<[llvm_anyint_ty],
                             [llvm_anyptr_ty, LLVMMatchType<0>],
