@@ -276,11 +276,11 @@ getResultNonUnitDimsAndOffsetsForRC(memref::ReinterpretCastOp rc) {
 ///   memref.copy %src, %strided
 ///
 ///   // AFTER
-///   // Assuming OFF delinearizes to [0, 0, OFF]:
+///   // Assuming OFF delinearizes to [0, 0, DELIN_OFF]:
 ///   scf.for %i = 0 to M step 1 {
 ///     scf.for %k = 0 to K step 1 {
 ///       %v = memref.load %src[0, %i, %k]
-///       memref.store %v, %dst[0, %i, OFF + %k]
+///       memref.store %v, %dst[0, %i, DELIN_OFF + %k]
 ///     }
 ///   }
 struct CopyToLoadAndStore : public OpRewritePattern<memref::CopyOp> {
