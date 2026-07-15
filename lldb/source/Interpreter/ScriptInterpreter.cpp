@@ -16,6 +16,7 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/ValueObject/ValueObject.h"
+#include "llvm/ADT/StringSwitch.h"
 #if defined(_WIN32)
 #include "lldb/Host/windows/ConnectionGenericFileWindows.h"
 #endif
@@ -186,6 +187,50 @@ ScriptInterpreter::StringToLanguage(const llvm::StringRef &language) {
   if (language.equals_insensitive(LanguageToString(eScriptLanguageLua)))
     return eScriptLanguageLua;
   return eScriptLanguageUnknown;
+}
+
+llvm::StringLiteral
+ScriptInterpreter::ExtensionToString(lldb::ScriptedExtension extension) {
+  switch (extension) {
+  case eScriptedExtensionInvalid:
+    return "Invalid";
+  case eScriptedExtensionOperatingSystem:
+    return "OperatingSystem";
+  case eScriptedExtensionScriptedPlatform:
+    return "ScriptedPlatform";
+  case eScriptedExtensionScriptedProcess:
+    return "ScriptedProcess";
+  case eScriptedExtensionScriptedBreakpointResolver:
+    return "ScriptedBreakpointResolver";
+  case eScriptedExtensionScriptedThreadPlan:
+    return "ScriptedThreadPlan";
+  case eScriptedExtensionScriptedFrameProvider:
+    return "ScriptedFrameProvider";
+  case eScriptedExtensionScriptedHook:
+    return "ScriptedHook";
+  case eScriptedExtensionScriptedThread:
+    return "ScriptedThread";
+  case eScriptedExtensionScriptedFrame:
+    return "ScriptedFrame";
+  }
+  llvm_unreachable("unhandled ScriptedExtension");
+}
+
+lldb::ScriptedExtension
+ScriptInterpreter::StringToExtension(llvm::StringRef string) {
+  return llvm::StringSwitch<lldb::ScriptedExtension>(string)
+      .CaseLower("OperatingSystem", eScriptedExtensionOperatingSystem)
+      .CaseLower("ScriptedPlatform", eScriptedExtensionScriptedPlatform)
+      .CaseLower("ScriptedProcess", eScriptedExtensionScriptedProcess)
+      .CaseLower("ScriptedBreakpointResolver",
+                 eScriptedExtensionScriptedBreakpointResolver)
+      .CaseLower("ScriptedThreadPlan", eScriptedExtensionScriptedThreadPlan)
+      .CaseLower("ScriptedFrameProvider",
+                 eScriptedExtensionScriptedFrameProvider)
+      .CaseLower("ScriptedHook", eScriptedExtensionScriptedHook)
+      .CaseLower("ScriptedThread", eScriptedExtensionScriptedThread)
+      .CaseLower("ScriptedFrame", eScriptedExtensionScriptedFrame)
+      .Default(eScriptedExtensionInvalid);
 }
 
 Status ScriptInterpreter::SetBreakpointCommandCallback(

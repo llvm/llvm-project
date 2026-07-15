@@ -2705,9 +2705,13 @@ class NVVM_MMA_OPS {
   list<list<WMMA_REGS>> bit_mma_ops = MMA_OPS<
             [GEOM<8,8,128>, GEOM<16,8,128>, GEOM<16,8,256>],
             ["b1"], [], ["s32"], []>.ret;
+  list<list<WMMA_REGS>> fp8_mma_ops = MMA_OPS<
+            [GEOM<16,8,16>, GEOM<16,8,32>],
+            ["e4m3", "e5m2"], ["e4m3", "e5m2"], ["f16", "f32"], []>.ret;
   list<list<WMMA_REGS>> all_mma_sync_ops = !listconcat(
             tf32_mma_ops, bf16_mma_ops, f64_mma_ops,
-            fp_mma_ops, int_mma_ops, subint_mma_ops, bit_mma_ops);
+            fp_mma_ops, int_mma_ops, subint_mma_ops, bit_mma_ops,
+            fp8_mma_ops);
 
   list<list<WMMA_REGS>> bf16_mma_sp_ops = MMA_OPS<
             [GEOM<16,8,16>, GEOM<16,8,32>],
