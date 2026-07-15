@@ -38,4 +38,6 @@ MACHINE_FUNCTION_PASS("wasm-fix-irreducible-control-flow",
                       WebAssemblyFixIrreducibleControlFlowPass())
 MACHINE_FUNCTION_PASS("wasm-nullify-dbg-value-lists",
                       WebAssemblyNullifyDebugValueListsPass())
+MACHINE_FUNCTION_PASS("wasm-set-p2align-operands",
+                      WebAssemblySetP2AlignOperandsPass())
 #undef MACHINE_FUNCTION_PASS
