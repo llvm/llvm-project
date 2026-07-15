@@ -284,12 +284,15 @@ TEST_F(ModuleCacheTest, RebuildFinalizedModuleAfterInputChange) {
   ASSERT_FALSE(Instance2.ExecuteAction(Action2));
   ASSERT_TRUE(Diags->hasErrorOccurred());
 
-  // New notes may be added in the future, so we are checking that
-  // we have at least the expected number instead of a precise one.
-  ASSERT_GE(Captured.size(), 2u);
+  ASSERT_EQ(Captured.size(), 4u);
   EXPECT_EQ(Captured[0].ID, (unsigned)diag::err_fe_ast_file_modified);
   EXPECT_NE(Captured[0].Message.find("m.h"), std::string::npos);
   EXPECT_EQ(Captured[1].ID, (unsigned)diag::note_fe_ast_file_modified);
+  EXPECT_EQ(Captured[2].ID,
+            (unsigned)diag::note_fe_ast_file_modified_finalized);
+  EXPECT_NE(Captured[2].Message.find("'M'"), std::string::npos);
+  EXPECT_EQ(Captured[3].ID,
+            (unsigned)diag::note_ast_file_input_files_validation_status);
 
   // Make sure we do not see the generic error anywhere.
   for (const auto &D : Captured)

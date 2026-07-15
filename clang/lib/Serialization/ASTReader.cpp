@@ -3010,6 +3010,11 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
           << FileChange.Kind << (FileChange.Old && FileChange.New)
           << llvm::itostr(FileChange.Old.value_or(0))
           << llvm::itostr(FileChange.New.value_or(0));
+      if (getModuleManager()
+              .getModuleCache()
+              .getInMemoryModuleCache()
+              .isPCMFinal(F.FileName))
+        Diag(diag::note_fe_ast_file_modified_finalized) << F.ModuleName;
 
       // Print the import stack.
       if (ImportStack.size() > 1) {
