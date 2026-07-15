@@ -1225,7 +1225,7 @@ public:
   size_t getSize() const override;
   void writeTo(uint8_t *buf) override;
   InputSection *getTargetInputSection() const;
-  bool assignOffsets();
+  bool assignOffsets(bool sort = false);
 
   // When true, round up reported size of section to 4 KiB. See comment
   // in addThunkSection() for more details.

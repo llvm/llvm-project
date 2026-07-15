@@ -629,6 +629,11 @@ void Thunk::setOffset(uint64_t newOffset) {
   offset = newOffset;
 }
 
+uint64_t Thunk::getDestVA() const {
+  return destination.isInPlt(ctx) ? destination.getPltVA(ctx)
+                                  : destination.getVA(ctx, addend);
+}
+
 // AArch64 Thunk base class.
 static uint64_t getAArch64ThunkDestVA(Ctx &ctx, const Symbol &s, int64_t a) {
   uint64_t v = s.isInPlt(ctx) ? s.getPltVA(ctx) : s.getVA(ctx, a);

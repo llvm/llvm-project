@@ -38,6 +38,7 @@
 #include "Thunks.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Demangle/Demangle.h"
@@ -1966,8 +1967,12 @@ bool ThunkCreator::createThunks(uint32_t pass,
               rel.addend = -getPCBias(ctx, *isec, rel);
           }
 
-        for (auto &p : isd->thunkSections)
-          addressesChanged |= p.first->assignOffsets();
+        for (auto &p : isd->thunkSections) {
+          // Ordering thunks by their destination allows for quicker
+          // convergence. Bulk of thunks are created in pass 0. So sorting them
+          // then has most impact and should be sufficient in most cases.
+          addressesChanged |= p.first->assignOffsets(pass == 0);
+        }
       });
 
   for (auto &p : thunkedSections)
