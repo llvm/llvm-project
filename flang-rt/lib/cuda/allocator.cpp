@@ -19,6 +19,7 @@
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Support/Fortran.h"
 
+#include "cuda.h"
 #include "cuda_runtime.h"
 
 namespace Fortran::runtime::cuda {
@@ -31,7 +32,7 @@ bool DeviceContextTornDown() {
   // Driver API reports primary-context state WITHOUT lazily creating one
   // (unlike the runtime API); resolve it via cudart to avoid a libcuda link.
   // Only the current device is checked (single-device assumption).
-  using GetStateFn = int (*)(int, unsigned *, int *);
+  using GetStateFn = CUresult(CUDAAPI *)(CUdevice, unsigned *, int *);
   static GetStateFn getState{[]() -> GetStateFn {
     void *fn{nullptr};
     if (cudaGetDriverEntryPoint("cuDevicePrimaryCtxGetState", &fn,
@@ -41,11 +42,11 @@ bool DeviceContextTornDown() {
     return reinterpret_cast<GetStateFn>(fn);
   }()};
   if (!getState) {
-    return false;
+    return true;
   }
   unsigned flags{0};
   int active{0};
-  if (getState(device, &flags, &active) != 0 /*CUDA_SUCCESS*/) {
+  if (getState(device, &flags, &active) != CUDA_SUCCESS) {
     return true;
   }
   return active == 0;
@@ -247,9 +248,7 @@ void *CUFAllocManaged(std::size_t sizeInBytes,
   return reinterpret_cast<void *>(p);
 }
 
-void CUFFreeManaged(void *p) {
-  CUDA_REPORT_IF_ERROR(cudaFree(p));
-}
+void CUFFreeManaged(void *p) { CUDA_REPORT_IF_ERROR(cudaFree(p)); }
 
 void *CUFAllocUnified(std::size_t sizeInBytes,
     [[maybe_unused]] std::size_t alignment,

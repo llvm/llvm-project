@@ -45,9 +45,8 @@ static constexpr unsigned kDeviceToDevice = 2;
   }(expr, sourceFile, sourceLine)
 
 namespace Fortran::runtime::cuda {
-/// True when the current device's primary context was torn down (e.g. user
-/// cudaDeviceReset()). Frees must then be skipped: cudaFree() would lazily
-/// recreate a phantom context that also breaks later teardown frees.
+/// True when scope-exit CUDA cleanup must be skipped because the current
+/// device's primary context is inactive or its state cannot be queried.
 bool DeviceContextTornDown();
 } // namespace Fortran::runtime::cuda
 

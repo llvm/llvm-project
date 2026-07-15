@@ -127,8 +127,8 @@ public:
 
   Fortran::lower::StatementContext &fctCtx() { return functionContext; }
 
-  Fortran::lower::StatementContext &mainProgramCudaCleanupCtx() {
-    return mainProgramCudaCleanupContext;
+  Fortran::lower::StatementContext &cudaCleanupCtx() {
+    return cudaCleanupContext;
   }
 
   Fortran::lower::StatementContext &openAccCtx() { return openAccContext; }
@@ -167,7 +167,7 @@ private:
 
   Fortran::semantics::SemanticsContext &semanticsContext;
   Fortran::lower::StatementContext functionContext;
-  Fortran::lower::StatementContext mainProgramCudaCleanupContext;
+  Fortran::lower::StatementContext cudaCleanupContext;
   Fortran::lower::StatementContext openAccContext;
   const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds;
   const Fortran::evaluate::IntrinsicProcTable &intrinsics;

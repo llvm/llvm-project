@@ -1245,9 +1245,11 @@ public:
     return bridge.fctCtx();
   }
 
-  Fortran::lower::StatementContext &
-  getMainProgramCudaCleanupCtx() override final {
-    return bridge.mainProgramCudaCleanupCtx();
+  Fortran::lower::StatementContext &getCudaCleanupCtx() override final {
+    if (!activeConstructStack.empty() &&
+        activeConstructStack.back().eval.isA<Fortran::parser::BlockConstruct>())
+      return activeConstructStack.back().stmtCtx;
+    return bridge.cudaCleanupCtx();
   }
 
   /// Initializes values for STAT and ERRMSG
@@ -1976,14 +1978,12 @@ private:
   void genExitRoutine(bool earlyReturn, mlir::ValueRange retval = {}) {
     if (blockIsUnterminated()) {
       bridge.openAccCtx().finalizeAndKeep();
-      if (currentFunctionUnit && currentFunctionUnit->isMainProgram() &&
-          bridge.mainProgramCudaCleanupCtx().hasCode()) {
+      if (bridge.cudaCleanupCtx().hasCode()) {
         mlir::Location loc = toLocation();
         mlir::Value active =
             fir::runtime::cuda::genDeviceIsActive(*builder, loc);
         builder->genIfThen(loc, active)
-            .genThen(
-                [&]() { bridge.mainProgramCudaCleanupCtx().finalizeAndKeep(); })
+            .genThen([&]() { bridge.cudaCleanupCtx().finalizeAndKeep(); })
             .end();
       }
       bridge.fctCtx().finalizeAndKeep();
@@ -1991,8 +1991,7 @@ private:
     }
     if (!earlyReturn) {
       bridge.openAccCtx().pop();
-      if (currentFunctionUnit && currentFunctionUnit->isMainProgram())
-        bridge.mainProgramCudaCleanupCtx().pop();
+      bridge.cudaCleanupCtx().pop();
       bridge.fctCtx().pop();
     }
   }
@@ -6225,8 +6224,7 @@ private:
   void startNewFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
     assert(!builder && "expected nullptr");
     bridge.fctCtx().pushScope();
-    if (funit.isMainProgram())
-      bridge.mainProgramCudaCleanupCtx().pushScope();
+    bridge.cudaCleanupCtx().pushScope();
     bridge.openAccCtx().pushScope();
     const Fortran::semantics::Scope &scope = funit.getScope();
     LLVM_DEBUG(llvm::dbgs() << "\n[bridge - startNewFunction]";

@@ -1274,8 +1274,9 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
     Fortran::lower::defaultInitializeAtRuntime(converter, var.getSymbol(),
                                                symMap);
   auto *builder = &converter.getFirOpBuilder();
-  if (needCUDAAlloc(var.getSymbol()) &&
-      !cuf::isCUDADeviceContext(builder->getRegion())) {
+  bool needsHostCudaCleanup = needCUDAAlloc(var.getSymbol()) &&
+                              !cuf::isCUDADeviceContext(builder->getRegion());
+  if (needsHostCudaCleanup) {
     cuf::DataAttributeAttr dataAttr =
         Fortran::lower::translateSymbolCUFDataAttribute(builder->getContext(),
                                                         var.getSymbol());
@@ -1289,8 +1290,7 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
       bool isMainProgram =
           sym->owner().kind() == Fortran::semantics::Scope::Kind::MainProgram;
       Fortran::lower::StatementContext &cudaCleanupCtx =
-          isMainProgram ? converter.getMainProgramCudaCleanupCtx()
-                        : converter.getFctCtx();
+          converter.getCudaCleanupCtx();
       cudaCleanupCtx.attachCleanup([builder, loc, exv, sym]() {
         cuf::DataAttributeAttr dataAttr =
             Fortran::lower::translateSymbolCUFDataAttribute(
@@ -1328,7 +1328,10 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
     case VariableCleanUp::Deallocate:
       auto *converterPtr = &converter;
       auto *sym = &var.getSymbol();
-      converter.getFctCtx().attachCleanup([converterPtr, loc, exv, sym]() {
+      Fortran::lower::StatementContext &cleanupCtx =
+          needsHostCudaCleanup ? converter.getCudaCleanupCtx()
+                               : converter.getFctCtx();
+      cleanupCtx.attachCleanup([converterPtr, loc, exv, sym]() {
         const fir::MutableBoxValue *mutableBox =
             exv.getBoxOf<fir::MutableBoxValue>();
         assert(mutableBox &&
