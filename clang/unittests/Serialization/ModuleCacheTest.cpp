@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -198,6 +199,101 @@ TEST_F(ModuleCacheTest, CachedModuleNewPathAllowErrors) {
   SyntaxOnlyAction Action2;
   ASSERT_FALSE(Instance2.ExecuteAction(Action2));
   ASSERT_TRUE(Diags->hasErrorOccurred());
+}
+
+struct CapturedDiag {
+  unsigned ID;
+  std::string Message;
+};
+
+class CapturedDiagConsumer : public DiagnosticConsumer {
+  std::vector<CapturedDiag> &Diags;
+
+public:
+  CapturedDiagConsumer(std::vector<CapturedDiag> &D) : Diags(D) {}
+  void HandleDiagnostic(DiagnosticsEngine::Level Level,
+                        const Diagnostic &Info) override {
+    DiagnosticConsumer::HandleDiagnostic(Level, Info);
+    SmallString<128> Msg;
+    Info.FormatDiagnostic(Msg);
+    Diags.push_back({Info.getID(), std::string(Msg)});
+  }
+};
+
+TEST_F(ModuleCacheTest, RebuildFinalizedModuleAfterInputChange) {
+  addFile("test.m", R"cpp(
+          @import M;
+      )cpp");
+  addFile("frameworks/M.framework/Headers/m.h", R"cpp(
+          void foo(void);
+      )cpp");
+  addFile("frameworks/M.framework/Modules/module.modulemap", R"cpp(
+          framework module M [system] {
+            header "m.h"
+            export *
+          }
+      )cpp");
+
+  SmallString<256> MCPArg("-fmodules-cache-path=");
+  MCPArg.append(ModuleCachePath);
+  CreateInvocationOptions CIOpts;
+  CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
+  DiagnosticOptions DiagOpts;
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
+      CompilerInstance::createDiagnostics(*CIOpts.VFS, DiagOpts);
+  CIOpts.Diags = Diags;
+
+  const char *Args[] = {"clang",        "-fmodules",          "-Fframeworks",
+                        MCPArg.c_str(), "-working-directory", TestDir.c_str(),
+                        "test.m"};
+
+  // Run 1: builds, loads, and finalizes M in the shared in-memory cache.
+  std::shared_ptr<CompilerInvocation> Invocation =
+      createInvocationAndEnableFree(Args, CIOpts);
+  ASSERT_TRUE(Invocation);
+  CompilerInstance Instance(std::move(Invocation));
+  Instance.setVirtualFileSystem(CIOpts.VFS);
+  Instance.setDiagnostics(Diags);
+  SyntaxOnlyAction Action;
+  ASSERT_TRUE(Instance.ExecuteAction(Action));
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+
+  // Grow m.h so its recorded size no longer matches, marking M out of date on
+  // the next load. Because M is finalized in the shared cache, it can be
+  // neither dropped nor rebuilt.
+  addFile("frameworks/M.framework/Headers/m.h", R"cpp(
+          void foo(void);
+          void bar(void);
+          void baz(void);
+      )cpp");
+
+  std::vector<CapturedDiag> Captured;
+  Diags->setClient(new CapturedDiagConsumer(Captured),
+                   /*ShouldOwnClient=*/true);
+
+  // Run 2 shares the module cache (and thus the finalized M).
+  std::shared_ptr<CompilerInvocation> Invocation2 =
+      createInvocationAndEnableFree(Args, CIOpts);
+  ASSERT_TRUE(Invocation2);
+  CompilerInstance Instance2(std::move(Invocation2),
+                             Instance.getPCHContainerOperations(),
+                             Instance.getModuleCachePtr());
+  Instance2.setVirtualFileSystem(CIOpts.VFS);
+  Instance2.setDiagnostics(Diags);
+  SyntaxOnlyAction Action2;
+  ASSERT_FALSE(Instance2.ExecuteAction(Action2));
+  ASSERT_TRUE(Diags->hasErrorOccurred());
+
+  // New notes may be added in the future, so we are checking that
+  // we have at least the expected number instead of a precise one.
+  ASSERT_GE(Captured.size(), 2u);
+  EXPECT_EQ(Captured[0].ID, (unsigned)diag::err_fe_ast_file_modified);
+  EXPECT_NE(Captured[0].Message.find("m.h"), std::string::npos);
+  EXPECT_EQ(Captured[1].ID, (unsigned)diag::note_fe_ast_file_modified);
+
+  // Make sure we do not see the generic error anywhere.
+  for (const auto &D : Captured)
+    EXPECT_NE(D.ID, (unsigned)diag::err_module_rebuild_finalized);
 }
 
 } // anonymous namespace

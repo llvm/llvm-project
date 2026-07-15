@@ -3300,7 +3300,8 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       // loaded module files, ignore missing inputs.
       if (!DisableValidation && F.Kind != MK_ExplicitModule &&
           F.Kind != MK_PrebuiltModule) {
-        bool Complain = (ClientLoadCapabilities & ARR_OutOfDate) == 0;
+        bool Complain =
+            !canRecoverFromOutOfDate(F.FileName, ClientLoadCapabilities);
 
         // If we are reading a module, we will create a verification timestamp,
         // so we verify all input files.  Otherwise, verify only user input
