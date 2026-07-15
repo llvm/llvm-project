@@ -1,3 +1,5 @@
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s --implicit-check-not=omp.reduction.element
+
 ! Regression test for reductions on array *sections* (e.g. a(2:96)).
 !
 ! An array section has rank > 0, so it must be lowered using the boxed
@@ -6,8 +8,6 @@
 ! single-element path (uniq_name = "omp.reduction.element"), which only supports
 ! rank-0 references and otherwise aborts in PrivateReductionUtils with
 ! "creating reduction/privatization init region for unsupported type".
-
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s --implicit-check-not=omp.reduction.element
 
 subroutine reduction_array_section(a, n)
   integer :: a(100), n
