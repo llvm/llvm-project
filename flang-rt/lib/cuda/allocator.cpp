@@ -32,7 +32,7 @@ static bool deviceContextTornDown() {
   // Driver API reports primary-context state WITHOUT lazily creating one
   // (unlike the runtime API); resolve it via cudart to avoid a libcuda link.
   // Only the current device is checked (single-device assumption).
-  using GetStateFn = PFN_cuDevicePrimaryCtxGetState;
+  using GetStateFn = CUresult(CUDAAPI *)(CUdevice, unsigned *, int *);
   static GetStateFn getState{[]() -> GetStateFn {
     void *fn{nullptr};
     if (cudaGetDriverEntryPoint("cuDevicePrimaryCtxGetState", &fn,
