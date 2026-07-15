@@ -362,7 +362,7 @@ public:
     auto CmdListOrErr = createImmCmdList(InOrder);
     if (!CmdListOrErr)
       return CmdListOrErr.takeError();
-    return new L0CmdListManagerTy(*CmdListOrErr);
+    return new L0CmdListManagerTy(*CmdListOrErr, l0Context);
   }
 
   Error releaseCmdListManager(L0CmdListManagerTy *CmndListMngr) {
@@ -485,8 +485,8 @@ public:
   loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
                  int32_t ImageId) override;
   Error unloadBinaryImpl(DeviceImageTy *Image) override;
-  Expected<void *> allocate(size_t Size, void *HstPtr,
-                            TargetAllocTy Kind) override;
+  Expected<void *> allocate(size_t Size, void *HstPtr, TargetAllocTy Kind,
+                            size_t Alignment) override;
   Error free(void *TgtPtr, TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) override;
 
   /// This plugin does nothing to lock buffers. Do not return an error, just
@@ -507,6 +507,9 @@ public:
   Error dataFillImpl(void *TgtPtr, const void *PatternPtr, int64_t PatternSize,
                      int64_t Size,
                      AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+  Error dataPrefetchImpl(size_t Count, const void **Mems, const size_t *Sizes,
+                         bool ToHost,
+                         AsyncInfoWrapperTy &AsyncInfoWrapper) override;
   Error synchronizeImpl(__tgt_async_info &AsyncInfo,
                         bool ReleaseQueue) override;
   Error queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
@@ -523,10 +526,7 @@ public:
   hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override;
 
   Error enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
-                            AsyncInfoWrapperTy &AsyncInfo) override {
-    return Plugin::error(ErrorCode::UNIMPLEMENTED,
-                         "enqueueHostCallImpl not implemented yet");
-  }
+                            AsyncInfoWrapperTy &AsyncInfo) override;
 
   Expected<bool> isEventCompleteImpl(void *EventPtr,
                                      AsyncInfoWrapperTy &) override;

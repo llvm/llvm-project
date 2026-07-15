@@ -2200,19 +2200,32 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
     return true;
   }
   case AArch64::G_INSERT_VECTOR_ELT: {
-    // Convert the type from p0 to s64 to help selection.
     LLT DstTy = MRI.getType(I.getOperand(0).getReg());
     LLT SrcVecTy = MRI.getType(I.getOperand(1).getReg());
-    if (!SrcVecTy.isPointerVector())
-      return false;
-    auto NewSrc = MIB.buildCopy(LLT::scalar(64), I.getOperand(2).getReg());
-    MRI.setType(I.getOperand(1).getReg(),
-                DstTy.changeElementType(LLT::scalar(64)));
-    MRI.setType(I.getOperand(0).getReg(),
-                DstTy.changeElementType(LLT::scalar(64)));
-    MRI.setRegClass(NewSrc.getReg(0), &AArch64::GPR64RegClass);
-    I.getOperand(2).setReg(NewSrc.getReg(0));
-    return true;
+    if (SrcVecTy.isPointerVector()) {
+      // Convert the type from p0 to s64 to help selection.
+      auto NewSrc = MIB.buildCopy(LLT::scalar(64), I.getOperand(2).getReg());
+      MRI.setType(I.getOperand(1).getReg(),
+                  DstTy.changeElementType(LLT::scalar(64)));
+      MRI.setType(I.getOperand(0).getReg(),
+                  DstTy.changeElementType(LLT::scalar(64)));
+      MRI.setRegClass(NewSrc.getReg(0), &AArch64::GPR64RegClass);
+      I.getOperand(2).setReg(NewSrc.getReg(0));
+      return true;
+    }
+
+    Register EltReg = I.getOperand(2).getReg();
+    LLT EltTy = MRI.getType(EltReg);
+    if (EltTy.isScalar() &&
+        (EltTy.getSizeInBits() == 8 || EltTy.getSizeInBits() == 16) &&
+        RBI.getRegBank(EltReg, MRI, TRI)->getID() == AArch64::GPRRegBankID) {
+      // Convert the type from s8/s16 to s32 to help selection.
+      auto NewElt = MIB.buildCopy(LLT::scalar(32), EltReg);
+      MRI.setRegClass(NewElt.getReg(0), &AArch64::GPR32RegClass);
+      I.getOperand(2).setReg(NewElt.getReg(0));
+      return true;
+    }
+    return false;
   }
   case TargetOpcode::G_UITOFP:
   case TargetOpcode::G_SITOFP: {
@@ -4110,7 +4123,7 @@ bool AArch64InstructionSelector::selectUnmergeValues(MachineInstr &I,
   // directly. Otherwise, we need to do a bit of setup with some subregister
   // inserts.
   if (NarrowTy.getSizeInBits() * NumElts == 128) {
-    InsertRegs = SmallVector<Register, 4>(NumInsertRegs, SrcReg);
+    InsertRegs.assign(NumInsertRegs, SrcReg);
   } else {
     // No. We have to perform subregister inserts. For each insert, create an
     // implicit def and a subregister insert, and save the register we create.
@@ -5136,25 +5149,55 @@ bool AArch64InstructionSelector::selectShuffleVector(
   Register Src1Reg = I.getOperand(1).getReg();
   Register Src2Reg = I.getOperand(2).getReg();
   ArrayRef<int> Mask = I.getOperand(3).getShuffleMask();
+  assert(DstTy == MRI.getType(Src1Reg) &&
+         "Expected equal shuffle types during selection");
 
   MachineBasicBlock &MBB = *I.getParent();
   MachineFunction &MF = *MBB.getParent();
   LLVMContext &Ctx = MF.getFunction().getContext();
 
   unsigned BytesPerElt = DstTy.getElementType().getSizeInBits() / 8;
+  int NumElts = DstTy.getNumElements();
 
-  SmallVector<Constant *, 64> CstIdxs;
-  for (int Val : Mask) {
-    // For now, any undef indexes we'll just assume to be 0. This should be
-    // optimized in future, e.g. to select DUP etc.
-    Val = Val < 0 ? 0 : Val;
+  SmallVector<int> NewMask;
+  bool FirstUsed = false;
+  bool SecondUsed = false;
+  for (int M : Mask) {
+    // Map any undef or zero lanes to 255.
+    if (M < 0 || VT->getKnownBits(M < NumElts ? Src1Reg : Src2Reg,
+                                  APInt::getOneBitSet(NumElts, M % NumElts))
+                     .isZero()) {
+      for (unsigned Byte = 0; Byte < BytesPerElt; ++Byte)
+        NewMask.push_back(255);
+      continue;
+    }
+
+    FirstUsed |= M < NumElts;
+    SecondUsed |= M >= NumElts;
     for (unsigned Byte = 0; Byte < BytesPerElt; ++Byte) {
-      unsigned Offset = Byte + Val * BytesPerElt;
-      CstIdxs.emplace_back(ConstantInt::get(Type::getInt8Ty(Ctx), Offset));
+      unsigned Offset = Byte + M * BytesPerElt;
+      NewMask.push_back(Offset);
     }
   }
 
+  // If the first is unused or all zeros, use the second src in a tbl1.
+  if (!FirstUsed) {
+    int ByteLanes = DstTy.getSizeInBits() == 128 ? 16 : 8;
+    for (int &M : NewMask) {
+      if (M != 255) {
+        assert(M >= ByteLanes && M < 2 * ByteLanes);
+        M -= ByteLanes;
+      }
+    }
+    std::swap(Src1Reg, Src2Reg);
+    std::swap(FirstUsed, SecondUsed);
+  }
+
   // Use a constant pool to load the index vector for TBL.
+  SmallVector<Constant *> CstIdxs;
+  transform(NewMask, std::back_inserter(CstIdxs), [&Ctx](int M) {
+    return ConstantInt::get(Type::getInt8Ty(Ctx), M);
+  });
   Constant *CPVal = ConstantVector::get(CstIdxs);
   MachineInstr *IndexLoad = emitLoadFromConstantPool(CPVal, MIB);
   if (!IndexLoad) {
@@ -5185,6 +5228,14 @@ bool AArch64InstructionSelector::selectShuffleVector(
         MIB.buildInstr(TargetOpcode::COPY, {I.getOperand(0).getReg()}, {})
             .addReg(TBL1.getReg(0), {}, AArch64::dsub);
     RBI.constrainGenericRegister(Copy.getReg(0), AArch64::FPR64RegClass, MRI);
+    I.eraseFromParent();
+    return true;
+  }
+
+  if (!SecondUsed) {
+    auto TBL1 = MIB.buildInstr(AArch64::TBLv16i8One, {I.getOperand(0)},
+                               {Src1Reg, IndexLoad->getOperand(0)});
+    constrainSelectedInstRegOperands(*TBL1, TII, TRI, RBI);
     I.eraseFromParent();
     return true;
   }
@@ -6696,6 +6747,42 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     I.eraseFromParent();
     return true;
   }
+  case Intrinsic::ptrauth_auth_with_pc_and_resign: {
+    Register DstReg = I.getOperand(0).getReg();
+    Register ValReg = I.getOperand(2).getReg();
+    uint64_t AUTKey = I.getOperand(3).getImm();
+    Register AUTDisc = I.getOperand(4).getReg();
+    Register AUTPC = I.getOperand(5).getReg();
+    uint64_t PACKey = I.getOperand(6).getImm();
+    Register PACDisc = I.getOperand(7).getReg();
+
+    assert((AUTKey == AArch64PACKey::IA || AUTKey == AArch64PACKey::IB) &&
+           "auth_with_pc_and_resign only supports IA and IB keys");
+
+    uint16_t PACConstDiscC = 0;
+    Register PACAddrDisc;
+    std::tie(PACConstDiscC, PACAddrDisc) =
+        extractPtrauthBlendDiscriminators(PACDisc, MRI);
+
+    if (PACAddrDisc == AArch64::NoRegister)
+      PACAddrDisc = AArch64::XZR;
+
+    MIB.buildCopy({AArch64::X17}, {ValReg});
+    MIB.buildCopy({AArch64::X16}, {AUTDisc});
+    MIB.buildCopy({AArch64::X15}, {AUTPC});
+
+    MIB.buildInstr(AArch64::AUTPCPAC)
+        .addImm(AUTKey)
+        .addImm(PACKey)
+        .addImm(PACConstDiscC)
+        .addUse(PACAddrDisc)
+        .constrainAllUses(TII, TRI, RBI);
+
+    MIB.buildCopy({DstReg}, Register(AArch64::X17));
+    RBI.constrainGenericRegister(DstReg, AArch64::GPR64RegClass, MRI);
+    I.eraseFromParent();
+    return true;
+  }
   case Intrinsic::ptrauth_auth: {
     Register DstReg = I.getOperand(0).getReg();
     Register ValReg = I.getOperand(2).getReg();
@@ -7937,7 +8024,7 @@ void AArch64InstructionSelector::renderFixedPointXForm(MachineInstrBuilder &MIB,
   // should be able to reuse the Renderers already calculated by
   // selectCVTFixedPointVecBase.
   InstructionSelector::ComplexRendererFns Renderer =
-      selectCVTFixedPointVecBase(MI.getOperand(2), /*isReciprocal*/ false);
+      selectCVTFixedPointVecBase(MI.getOperand(OpIdx), /*isReciprocal*/ false);
   assert((Renderer && Renderer->size() == 1) &&
          "Expected selectCVTFixedPointVec to provide a function\n");
   (Renderer->front())(MIB);
@@ -7946,7 +8033,7 @@ void AArch64InstructionSelector::renderFixedPointXForm(MachineInstrBuilder &MIB,
 void AArch64InstructionSelector::renderFixedPointRecipXForm(
     MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
   InstructionSelector::ComplexRendererFns Renderer =
-      selectCVTFixedPointVecBase(MI.getOperand(2), /*isReciprocal*/ true);
+      selectCVTFixedPointVecBase(MI.getOperand(OpIdx), /*isReciprocal*/ true);
   assert((Renderer && Renderer->size() == 1) &&
          "Expected selectCVTFixedPosRecipOperandVec to provide a function\n");
   (Renderer->front())(MIB);

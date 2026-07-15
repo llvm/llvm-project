@@ -30,7 +30,6 @@ set(python_plugin_sources
   Interfaces/ScriptedPlatformPythonInterface.cpp
   Interfaces/ScriptedProcessPythonInterface.cpp
   Interfaces/ScriptedPythonInterface.cpp
-  Interfaces/ScriptedStopHookPythonInterface.cpp
   Interfaces/ScriptedHookPythonInterface.cpp
   Interfaces/ScriptedBreakpointPythonInterface.cpp
   Interfaces/ScriptedThreadPlanPythonInterface.cpp
@@ -76,6 +75,8 @@ if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
     lldb_record_dynamic_script_interpreter_exports(
       lldbPluginScriptInterpreterPython)
   endif()
+
+  lldb_add_scriptinterpreter_plugin_to_framework(lldbPluginScriptInterpreterPython)
 
   # Static variant linked directly by unit tests. Separate compilation is
   # required so llvm::Error RTTI (ErrorInfoBase::ID) has a single address

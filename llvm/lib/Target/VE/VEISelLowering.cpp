@@ -42,6 +42,7 @@ using namespace llvm;
 // Calling Convention Implementation
 //===----------------------------------------------------------------------===//
 
+#define GET_CALLING_CONV_IMPL
 #include "VEGenCallingConv.inc"
 
 CCAssignFn *getReturnCC(CallingConv::ID CallConv) {

@@ -207,6 +207,10 @@ def AddLike: PatFrags<(ops node:$A, node:$B),
     return CurDAG->isBaseWithConstantOffset(SDValue(N, 0));
 }]>;
 
+// Addressing mode for the Xqcilo large-offset load/store instructions
+// (qc.e.lw/qc.e.sw), which have a 26-bit signed offset field.
+def AddrRegImm26 : ComplexPattern<iPTR, 2, "SelectAddrRegImm26">;
+
 def SingleBitSetMaskImm12 : RISCVOp<XLenVT>, ImmLeaf<XLenVT, [{
   return isPowerOf2_32(Imm) && isInt<12>(Imm) && Imm != 1;
 }], SingleBitSetMaskToIndex>;
@@ -1335,12 +1339,13 @@ def PseudoLongQC_E_BGEI : LongBcciPseudo<simm16nonzero, 10>;
 def PseudoLongQC_E_BLTUI : LongBcciPseudo<uimm16nonzero, 10>;
 def PseudoLongQC_E_BGEUI : LongBcciPseudo<uimm16nonzero, 10>;
 
-// Load/Store pseudos with QC.E.* Mnemonics. These expand to an AUIPC +
-// (Standard) Load/Store sequence, as this can materialize all 32-bit addresses,
-// and is shorter than e.g. an AUIPC + Xqcilo Load/Store sequence. These
-// sequences can be turned back into a single Xqcilo instruction using linker
-// relaxation.
-let Predicates = [HasVendorXqcilo, IsRV32] in {
+// Load/Store pseudos with QC.E.* Mnemonics. These expand to a QC.E.LI +
+// PseudoQCAccess Load/Store sequence. The QC_E_LI materializes the symbol
+// address, and the PseudoQCAccess instruction carries a %qc.access relocation
+// that enables linker relaxation back to a single Xqcilo instruction.
+// Opportunistic compression is applied to the load/store when the registers
+// are in the GPRC class and Zca/Zcb is available.
+let Predicates = [HasVendorXqcilo, HasVendorXqcili, IsRV32] in {
 def PseudoQC_E_LB : PseudoLoad<"qc.e.lb">;
 def PseudoQC_E_LBU : PseudoLoad<"qc.e.lbu">;
 def PseudoQC_E_LH : PseudoLoad<"qc.e.lh">;
@@ -1350,7 +1355,7 @@ def PseudoQC_E_LW : PseudoLoad<"qc.e.lw">;
 def PseudoQC_E_SB : PseudoStore<"qc.e.sb">;
 def PseudoQC_E_SH : PseudoStore<"qc.e.sh">;
 def PseudoQC_E_SW : PseudoStore<"qc.e.sw">;
-} // Predicates = [HasVendorXqcilo, IsRV32]
+} // Predicates = [HasVendorXqcilo, HasVendorXqcili, IsRV32]
 
 let Predicates = [HasShortForwardBranchIALU] in {
 def PseudoCCQC_LI : SFBQC_LI;
@@ -1364,8 +1369,6 @@ def PseudoCCQC_E_LW : SFBQCLoad;
 def PseudoCCQC_E_LHU : SFBQCLoad;
 def PseudoCCQC_E_LBU : SFBQCLoad;
 }
-
-def simm12 : RISCVSImmOp<12>;
 
 def QCAccessSymbol : AsmOperandClass {
   let Name = "QCAccessSymbol";
@@ -1512,12 +1515,12 @@ class PatGprNoX0GprNoX0<SDPatternOperator OpNode, RVInstR Inst>
           (Inst GPRNoX0:$rs1, GPRNoX0:$rs2)>;
 
 class QC48LdPat<PatFrag LoadOp, RVInst48 Inst>
-    : Pat<(i32 (LoadOp (AddLike (i32 GPR:$rs1), simm26_nosimm12:$imm26))),
-          (Inst GPR:$rs1, simm26_nosimm12:$imm26)>;
+    : Pat<(i32 (LoadOp (AddrRegImm26 (i32 GPR:$rs1), simm26:$imm26))),
+          (Inst GPR:$rs1, simm26:$imm26)>;
 
 class QC48StPat<PatFrag StoreOp, RVInst48 Inst>
-    : Pat<(StoreOp (i32 GPR:$rs2), (AddLike (i32 GPR:$rs1), simm26_nosimm12:$imm26)),
-          (Inst GPR:$rs2, GPR:$rs1, simm26_nosimm12:$imm26)>;
+    : Pat<(StoreOp (i32 GPR:$rs2), (AddrRegImm26 (i32 GPR:$rs1), simm26:$imm26)),
+          (Inst GPR:$rs2, GPR:$rs1, simm26:$imm26)>;
 
 def AddrRegRegScale7 : AddrRegRegScale<7>;
 
@@ -1630,6 +1633,13 @@ def : PatGprNoX0Simm26NoSimm12<add, QC_E_ADDI>;
 def : PatGprNoX0Simm26NoSimm12<and, QC_E_ANDI>;
 def : PatGprNoX0Simm26NoSimm12<or, QC_E_ORI>;
 def : PatGprNoX0Simm26NoSimm12<xor, QC_E_XORI>;
+} // Predicates = [HasVendorXqcilia, IsRV32]
+
+/// FrameIndex calculations
+
+let Predicates = [HasVendorXqcilia, IsRV32] in {
+  def : Pat<(riscv_add_like frameindex:$fi, simm26_nosimm12:$offset),
+            (QC_E_ADDI (iPTR (to_tframeindex $fi)), simm26_nosimm12:$offset)>;
 } // Predicates = [HasVendorXqcilia, IsRV32]
 
 /// Load/Store operations
