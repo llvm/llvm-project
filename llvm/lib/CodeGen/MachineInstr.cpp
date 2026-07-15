@@ -1593,6 +1593,29 @@ bool MachineInstr::mayAlias(AAResults *AA, const MachineInstr &Other,
   return mayAlias(static_cast<BatchAAResults *>(nullptr), Other, UseTBAA);
 }
 
+bool MachineInstr::mayAlias(AAResults *AA, const MachineMemOperand *MMO,
+                            bool UseTBAA) const {
+  if (!mayStore() && (!mayLoad() || !MMO->isStore()))
+    return false;
+  if (memoperands_empty())
+    return true;
+
+  std::optional<BatchAAResults> BAAStorage;
+  BatchAAResults *BAA = nullptr;
+  if (AA) {
+    BAAStorage.emplace(*AA);
+    BAA = &*BAAStorage;
+  }
+
+  for (auto *MMOa : memoperands()) {
+    if (!MMOa->isStore() && !MMO->isStore())
+      continue;
+    if (MemOperandsHaveAlias(getMF()->getFrameInfo(), BAA, UseTBAA, MMOa, MMO))
+      return true;
+  }
+  return false;
+}
+
 /// hasOrderedMemoryRef - Return true if this instruction may have an ordered
 /// or volatile memory reference, or if the information describing the memory
 /// reference is not available. Return false if it is known to have no ordered

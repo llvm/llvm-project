@@ -1799,6 +1799,11 @@ public:
   LLVM_ABI bool mayAlias(AAResults *AA, const MachineInstr &Other,
                          bool UseTBAA) const;
 
+  /// Returns true if this instruction's memory access aliases the memory
+  /// access described by MMO.
+  LLVM_ABI bool mayAlias(AAResults *AA, const MachineMemOperand *MMO,
+                         bool UseTBAA) const;
+
   /// Return true if this instruction may have an ordered
   /// or volatile memory reference, or if the information describing the memory
   /// reference is not available. Return false if it is known to have no
