@@ -28,7 +28,7 @@
 // CHECK-NEXT:     FEAT_FRINTTS                                           Enable FRInt[32|64][Z|X] instructions that round a floating-point number to an integer (in FP format) forcing it to fit into a 32- or 64-bit int
 // CHECK-NEXT:     FEAT_FlagM                                             Enable Armv8.4-A Flag Manipulation instructions
 // CHECK-NEXT:     FEAT_FlagM2                                            Enable alternative NZCV format for floating point comparisons
-// CHECK-NEXT:     FEAT_HCX                                               Enable Armv8.7-A HCRX_EL2 system register
+// CHECK-NEXT:     FEAT_HCX                                               Accepted for backwards compatibility; has no effect
 // CHECK-NEXT:     FEAT_I8MM                                              Enable Matrix Multiply Int8 Extension
 // CHECK-NEXT:     FEAT_JSCVT                                             Enable Armv8.3-A JavaScript FP conversion instructions
 // CHECK-NEXT:     FEAT_LOR                                               Enable Armv8.1-A Limited Ordering Regions extension

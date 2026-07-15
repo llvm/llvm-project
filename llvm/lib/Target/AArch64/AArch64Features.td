@@ -304,7 +304,7 @@ def FeatureWFxT : ExtensionWithMArch<"wfxt", "WFxT", "FEAT_WFxT",
   "Enable Armv8.7-A WFET and WFIT instruction">;
 
 def FeatureHCX : Extension<"hcx", "HCX", "FEAT_HCX",
-  "Enable Armv8.7-A HCRX_EL2 system register">;
+  "Accepted for backwards compatibility; has no effect">;
 
 def FeatureLS64 : ExtensionWithMArch<"ls64", "LS64",
   "FEAT_LS64, FEAT_LS64_V, FEAT_LS64_ACCDATA",
