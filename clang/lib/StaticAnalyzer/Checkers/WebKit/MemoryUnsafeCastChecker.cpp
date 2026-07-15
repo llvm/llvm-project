@@ -95,6 +95,14 @@ static decltype(auto) hasTypePointingTo(DeclarationMatcher DeclM) {
   return hasType(pointerType(pointee(hasDeclaration(DeclM))));
 }
 
+// Matches `this` or `*this`, but not member accesses like `this->m_field`.
+static decltype(auto) isThisOrDerefThis() {
+  return ignoringParenImpCasts(
+      anyOf(cxxThisExpr(),
+            unaryOperator(hasOperatorName("*"),
+                          hasUnaryOperand(ignoringParenImpCasts(cxxThisExpr())))));
+}
+
 void MemoryUnsafeCastChecker::checkASTCodeBody(const Decl *D,
                                                AnalysisManager &AM,
                                                BugReporter &BR) const {
@@ -120,7 +128,7 @@ void MemoryUnsafeCastChecker::checkASTCodeBody(const Decl *D,
             hasType(hasUnqualifiedDesugaredType(recordType(hasDeclaration(
                 decl(cxxRecordDecl(isDerivedFrom(equalsBoundNode(BaseNode)))
                          .bind(DerivedNode)))))),
-            unless(anyOf(hasSourceExpression(hasDescendant(cxxThisExpr())),
+            unless(anyOf(hasSourceExpression(isThisOrDerefThis()),
                          hasType(templateTypeParmDecl()))));
   auto MatchExprPtrVoidCast = allOf(
       anyOf(hasSourceExpression(explicitCastExpr(

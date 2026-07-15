@@ -254,6 +254,9 @@ public:
   void initializeWeakPtrFactory() const {
     auto &this_to_T = static_cast<const WeakPtrFactoryType&>(*this);
   }
+  void initializeWeakPtrFactoryReinterpret() const {
+    auto &this_to_T = reinterpret_cast<const WeakPtrFactoryType&>(*this);
+  }
 };
 
 template<typename T>
