@@ -1257,33 +1257,20 @@ unsigned getWavesPerWorkGroup(const MCSubtargetInfo &STI,
 }
 
 unsigned getSGPRAllocGranule(const MCSubtargetInfo &STI) {
-  IsaVersion Version = getIsaVersion(STI.getCPU());
-  if (Version.Major >= 10)
-    return getAddressableNumSGPRs(STI);
-  if (Version.Major >= 8)
-    return 16;
-  return 8;
+  return AMDGPU::getSGPRAllocGranule(
+      AMDGPU::getSubArch(AMDGPU::parseArchAMDGCN(STI.getCPU())));
 }
 
 unsigned getSGPREncodingGranule(const MCSubtargetInfo &STI) { return 8; }
 
 unsigned getTotalNumSGPRs(const MCSubtargetInfo &STI) {
-  IsaVersion Version = getIsaVersion(STI.getCPU());
-  if (Version.Major >= 8)
-    return 800;
-  return 512;
+  return AMDGPU::getTotalNumSGPRs(
+      AMDGPU::getSubArch(AMDGPU::parseArchAMDGCN(STI.getCPU())));
 }
 
 unsigned getAddressableNumSGPRs(const MCSubtargetInfo &STI) {
-  if (STI.getFeatureBits().test(FeatureSGPRInitBug))
-    return FIXED_NUM_SGPRS_FOR_INIT_BUG;
-
-  IsaVersion Version = getIsaVersion(STI.getCPU());
-  if (Version.Major >= 10)
-    return 106;
-  if (Version.Major >= 8)
-    return 102;
-  return 104;
+  return AMDGPU::getAddressableNumSGPRs(
+      AMDGPU::getSubArch(AMDGPU::parseArchAMDGCN(STI.getCPU())));
 }
 
 // Per-wave SGPRs reserved for the trap handler when enabled.

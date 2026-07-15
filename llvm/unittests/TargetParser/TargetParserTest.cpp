@@ -2828,6 +2828,34 @@ TEST(TargetParserTest, testAMDGPUgetIsaVersionFromSubArch) {
             (AMDGPU::IsaVersion{0, 0, 0}));
 }
 
+TEST(TargetParserTest, testAMDGPUgetNumSGPRs) {
+  // getTotalNumSGPRs: 800 for GFX8+, 512 otherwise.
+  EXPECT_EQ(AMDGPU::getTotalNumSGPRs(Triple::AMDGPUSubArch600), 512u);
+  EXPECT_EQ(AMDGPU::getTotalNumSGPRs(Triple::AMDGPUSubArch700), 512u);
+  EXPECT_EQ(AMDGPU::getTotalNumSGPRs(Triple::AMDGPUSubArch900), 800u);
+  EXPECT_EQ(AMDGPU::getTotalNumSGPRs(Triple::AMDGPUSubArch1030), 800u);
+
+  // getAddressableNumSGPRs resolves the SGPR init bug from the device kind:
+  // 106 for GFX10+, 102 for GFX8/GFX9, 104 otherwise; gfx802/gfx805 have the
+  // init bug and return the fixed size.
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(Triple::AMDGPUSubArch600), 104u);
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(Triple::AMDGPUSubArch803), 102u);
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(Triple::AMDGPUSubArch900), 102u);
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(Triple::AMDGPUSubArch1030), 106u);
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(Triple::AMDGPUSubArch802),
+            AMDGPU::FIXED_NUM_SGPRS_FOR_INIT_BUG);
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(Triple::AMDGPUSubArch805),
+            AMDGPU::FIXED_NUM_SGPRS_FOR_INIT_BUG);
+}
+
+TEST(TargetParserTest, testAMDGPUgetSGPRAllocGranule) {
+  // 8 for pre-GFX8, 16 for GFX8/GFX9, addressable count for GFX10+.
+  EXPECT_EQ(AMDGPU::getSGPRAllocGranule(Triple::AMDGPUSubArch600), 8u);
+  EXPECT_EQ(AMDGPU::getSGPRAllocGranule(Triple::AMDGPUSubArch802), 16u);
+  EXPECT_EQ(AMDGPU::getSGPRAllocGranule(Triple::AMDGPUSubArch900), 16u);
+  EXPECT_EQ(AMDGPU::getSGPRAllocGranule(Triple::AMDGPUSubArch1030), 106u);
+}
+
 TEST(TargetParserTest, testAMDGPUTargetIDProvidesFor) {
   using AMDGPU::TargetID;
   Triple AMDHSA("amdgcn-amd-amdhsa");
