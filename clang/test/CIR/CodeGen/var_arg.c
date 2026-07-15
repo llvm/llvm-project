@@ -4,6 +4,17 @@
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
+//
+// C23 is required for __builtin_c23_va_start and for variadic functions with
+// no named parameters; the *-C23 prefixes check the guarded functions at the
+// end of this file. The LLVM-C23 checks are shared between the ClangIR
+// pipeline and OG CodeGen.
+// RUN: %clang_cc1 -std=c23 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir %s -o %t.c23.cir
+// RUN: FileCheck --input-file=%t.c23.cir %s -check-prefix=CIR-C23
+// RUN: %clang_cc1 -std=c23 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.c23.ll
+// RUN: FileCheck --input-file=%t-cir.c23.ll %s -check-prefix=LLVM-C23
+// RUN: %clang_cc1 -std=c23 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.c23.ll
+// RUN: FileCheck --input-file=%t.c23.ll %s -check-prefix=LLVM-C23
 
 // CIR: !rec___va_list_tag = !cir.struct<"__va_list_tag" {!u32i, !u32i, !cir.ptr<!void>, !cir.ptr<!void>}
 // LLVM: %struct.__va_list_tag = type { i32, i32, ptr, ptr }
@@ -252,3 +263,46 @@ int varargs_new(char *fmt, ...) {
 // OGCG:   call void @llvm.va_end.p0(ptr %[[DECAY2]])
 // OGCG:   %[[VAL:.+]] = load i32, ptr %[[RES_ADDR]]
 // OGCG:   ret i32 %[[VAL]]
+
+// C23 only: __builtin_c23_va_start and variadic functions with no named
+// parameters. Ensure that __builtin_va_start(list, 0) and
+// __builtin_c23_va_start(list) have the same codegen.
+#if __STDC_VERSION__ >= 202311L
+
+void noargs(...) {
+    __builtin_va_list list;
+    __builtin_va_start(list, 0);
+    __builtin_c23_va_start(list);
+    __builtin_va_end(list);
+}
+
+// CIR-C23-LABEL: cir.func {{.*}} @noargs(
+// CIR-C23:   %[[VAAREA:.+]] = cir.alloca "list" {{.*}} : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+// CIR-C23:   %[[VA_PTR0:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
+// CIR-C23-NEXT:   cir.va_start %[[VA_PTR0]] : !cir.ptr<!rec___va_list_tag>
+// CIR-C23:   %[[VA_PTR1:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
+// CIR-C23-NEXT:   cir.va_start %[[VA_PTR1]] : !cir.ptr<!rec___va_list_tag>
+// CIR-C23:   %[[VA_PTR2:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
+// CIR-C23-NEXT:   cir.va_end %[[VA_PTR2]] : !cir.ptr<!rec___va_list_tag>
+
+// LLVM-C23-LABEL: define {{.*}}void @noargs(...)
+// LLVM-C23:   %[[VAAREA:.+]] = alloca [1 x %struct.__va_list_tag]
+// LLVM-C23:   call void @llvm.va_start.p0(ptr %{{.+}})
+// LLVM-C23:   call void @llvm.va_start.p0(ptr %{{.+}})
+// LLVM-C23:   call void @llvm.va_end.p0(ptr %{{.+}})
+
+void with_param(int count, ...) {
+    __builtin_va_list list;
+    __builtin_c23_va_start(list, count);
+    __builtin_va_end(list);
+}
+
+// CIR-C23-LABEL: cir.func {{.*}} @with_param(
+// CIR-C23:   cir.va_start %{{.+}} : !cir.ptr<!rec___va_list_tag>
+// CIR-C23:   cir.va_end %{{.+}} : !cir.ptr<!rec___va_list_tag>
+
+// LLVM-C23-LABEL: define {{.*}}void @with_param(i32 noundef %{{.+}}, ...)
+// LLVM-C23:   call void @llvm.va_start.p0(ptr %{{.+}})
+// LLVM-C23:   call void @llvm.va_end.p0(ptr %{{.+}})
+
+#endif // __STDC_VERSION__ >= 202311L
