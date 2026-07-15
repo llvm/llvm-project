@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify=expected -fprofiles -fcxx-exceptions -std=c++23 %s
-// RUN: %clang_cc1 -fsyntax-only -verify=no-profiles -fcxx-exceptions -std=c++23 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected -fprofiles -fblocks -fcxx-exceptions -std=c++23 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=no-profiles -fblocks -fcxx-exceptions -std=c++23 %s
 
 // std::init / ref_to_uninit (paper §5): a [[ref_to_uninit]] pointer or
 // reference must be bound to uninitialized memory, and an unmarked pointer or
@@ -676,6 +676,123 @@ int *ret_comma_ptr_bad() {
 int *ret_suppressed() {
   // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
   [[profiles::suppress(std::init)]] return &g_uninit; // OK: suppressed
+}
+
+// A return inside a lambda binds against the *lambda's own* call operator
+// (paper §8.2: the function returning the value must itself be declared
+// appropriately), whose [[ref_to_uninit]] marker is spelled in the C++23
+// attribute position after the lambda-introducer. A deduced return type is
+// resolved before the check runs, so `auto` lambdas are covered too.
+// (co_return is not this hook's: it lowers to promise.return_value(e), whose
+// argument funnels through the call-argument binding site.)
+void test_lambda_return_unmarked() {
+  auto explicit_ret = [](int *q [[ref_to_uninit]]) -> int * {
+    return q; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  };
+  auto deduced_ret = [](int *q [[ref_to_uninit]]) {
+    return q; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  };
+  auto ref_ret = []() -> int & {
+    return g_uninit; // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  };
+  auto ok = []() -> int * { return &g_init; }; // OK
+  (void)explicit_ret; (void)deduced_ret; (void)ref_ret; (void)ok;
+}
+
+// The marked call operator is enforced in both directions, enabling the §4.4
+// get_uninit() idiom in lambda form.
+void test_lambda_return_marked() {
+  auto marked = [] [[ref_to_uninit]] (int *q [[ref_to_uninit]]) -> int * {
+    return q; // OK: marked operator returning uninitialized memory
+  };
+  auto marked_bad = [] [[ref_to_uninit]] () -> int * {
+    return &g_init; // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  };
+  (void)marked; (void)marked_bad;
+}
+
+// The enclosing function's marker never leaks into a lambda's returns (and
+// vice versa): each return is attributed to its own scope's declaration.
+[[ref_to_uninit]] int *marked_fn_lambda_isolated() {
+  auto inner = []() -> int * {
+    return &g_uninit; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  };
+  (void)inner;
+  return &g_uninit; // OK: the function's own marker
+}
+int *unmarked_fn_marked_lambda() {
+  auto inner = [] [[ref_to_uninit]] () -> int * {
+    return &g_uninit; // OK: the lambda's own marker
+  };
+  (void)inner;
+  return &g_init; // OK: the function itself is unmarked
+}
+
+// Nested lambdas: the inner return is checked against the inner operator, the
+// outer return against the outer one.
+void test_nested_lambda_returns() {
+  auto outer = [] [[ref_to_uninit]] () -> int * {
+    auto inner = []() -> int * {
+      return &g_uninit; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+    };
+    (void)inner;
+    return &g_uninit; // OK: the outer operator is marked
+  };
+  (void)outer;
+}
+
+// Suppression covers a lambda return like any other site: the declaration
+// statement's parse-time dominion spans the lambda body's tokens.
+void test_lambda_return_suppress() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init)]] auto l = []() -> int * {
+    return &g_uninit; // OK: suppressed
+  };
+  auto m = []() -> int * {
+    // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+    [[profiles::suppress(std::init)]] return &g_uninit; // OK: suppressed
+  };
+  (void)l; (void)m;
+}
+
+// Parse-order store credit reaches lambda returns like every binding: the
+// body's own store precedes the return in parse order, so the credited entity
+// is initialized memory and the unmarked return is accepted (the by-ref
+// capture is accepted for the same reason, see test_ref_capture_body_store).
+void test_lambda_return_after_store() {
+  int u [[uninit]];
+  auto l = [&]() -> int * {
+    u = 5;
+    return &u; // OK: credited by the store above
+  };
+  (void)l;
+}
+
+// A generic lambda's call operator is a template pattern: the Decl-carrying
+// return check defers via isTemplated and fires when the call operator is
+// instantiated -- mirroring the variable-init site (template_nondependent_bad)
+// -- so a never-invoked generic lambda's return stays undiagnosed (deferred,
+// never instantiated), and an invoked one fires per instantiation.
+void test_generic_lambda_return() {
+  auto never = [](auto) -> int * { return &g_uninit; }; // OK: never instantiated
+  auto invoked = [](auto) -> int * {
+    return &g_uninit; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  };
+  invoked(0); // expected-note {{in instantiation of function template specialization}}
+  (void)never;
+}
+
+// A block's return is the same capturing-scope binding with no declaration to
+// carry the marker, so it is checked as an unmarked target (like a variadic
+// argument), through the same null-target path.
+void test_block_return() {
+  int *(^b1)() = ^int *() {
+    return &g_uninit; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  };
+  int *(^b2)() = ^int *() {
+    return &g_init; // OK
+  };
+  (void)b1; (void)b2;
 }
 
 template <typename T>

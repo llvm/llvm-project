@@ -3709,6 +3709,35 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
     }
   }
 
+  // std::init / ref_to_uninit (paper §5): a return inside a capturing scope
+  // binds the returned pointer or reference against that scope's *own*
+  // [[ref_to_uninit]] marking -- never the enclosing function's (paper §8.2:
+  // the function returning the value must itself be declared appropriately).
+  // A lambda carries the marker on its call operator (C++23 attribute
+  // position, after the lambda-introducer); a block cannot carry it, so block
+  // returns are unmarked targets (null Target), like variadic arguments. The
+  // owning declaration drives the suppression walk through lexical parents
+  // and, for a call operator in a template -- a generic lambda's pattern, or
+  // any lambda in a templated entity -- defers via isTemplated: the body is
+  // rebuilt under a fresh LambdaScopeInfo at instantiation
+  // (LambdaScopeForCallOperatorInstantiationRAII / TransformLambdaExpr), so
+  // this hook re-runs with the concrete declaration. Runs after the
+  // deduced/implicit return type is resolved above, so the wrapper sees the
+  // concrete FnRetType (a still-dependent one no-ops there, deferring to the
+  // same rebuild). A return in a captured region already errored above.
+  if (RetValExp && getLangOpts().Profiles) {
+    const ValueDecl *Target = nullptr;
+    const Decl *ScopeDecl = nullptr;
+    if (CurLambda) {
+      Target = CurLambda->CallOperator;
+      ScopeDecl = CurLambda->CallOperator;
+    } else if (const auto *BSI = dyn_cast<BlockScopeInfo>(CurCap)) {
+      ScopeDecl = BSI->TheDecl;
+    }
+    Profiles().checkInitProfileRefToUninitBinding(
+        RetValExp->getExprLoc(), Target, FnRetType, RetValExp, ScopeDecl);
+  }
+
   // Otherwise, verify that this result type matches the previous one.  We are
   // pickier with blocks than for normal functions because we don't have GCC
   // compatibility to worry about here.
@@ -4118,9 +4147,13 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
     }
   }
   // std::init / ref_to_uninit (paper §5): the returned pointer or reference
-  // must match the function's [[ref_to_uninit]] return marking.
+  // must match the function's [[ref_to_uninit]] return marking. AllowLambda
+  // keeps a lambda call operator's body -- should it ever reach this
+  // non-capturing path -- checked against its own marker rather than the
+  // enclosing function's (returns inside lambdas normally take the capturing
+  // branch above, at parse and at instantiation alike).
   if (RetValExp && getLangOpts().Profiles)
-    if (const FunctionDecl *FD = getCurFunctionDecl())
+    if (const FunctionDecl *FD = getCurFunctionDecl(/*AllowLambda=*/true))
       Profiles().checkInitProfileRefToUninitBinding(RetValExp->getExprLoc(),
                                                     FD, FnRetType, RetValExp);
 

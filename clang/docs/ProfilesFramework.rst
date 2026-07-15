@@ -439,7 +439,10 @@ one parse-order fact, whole-entity stores (below):
 
 The check applies wherever a pointer or reference is bound: variable, member,
 and aggregate initialization, assignment, call arguments (including defaulted
-and variadic ones), ``return`` and ``throw`` statements, lambda captures, and
+and variadic ones), ``return`` and ``throw`` statements (including returns
+inside lambdas and blocks -- a lambda's marker is written on its call
+operator, in the C++23 attribute position after the lambda-introducer:
+``[] [[ref_to_uninit]] () -> int* { ... }``), lambda captures, and
 the implicit object argument of a member call -- so calling a member function
 on an object recognized as uninitialized storage is rejected, and so is
 copying a class object out of one.  For the copy, the escape is the paper's
