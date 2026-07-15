@@ -144,7 +144,8 @@ SemanticSignatureElement::fromMetadata(const MDNode *Node) {
   Elem.GSStream = *GSStream;
 
   if (Elem.SemanticIndices.size() != Elem.Rows)
-    return makeError("number of semantic indices must equal the number of rows");
+    return makeError(
+        "number of semantic indices must equal the number of rows");
 
   return Elem;
 }
@@ -163,12 +164,12 @@ MDNode *SemanticSignatureElement::toMetadata(LLVMContext &Ctx) const {
   for (uint32_t Index : SemanticIndices)
     IndexOps.push_back(GetI32(Index));
 
-  return MDNode::get(
-      Ctx, {GetI32(SigId), MDString::get(Ctx, SemanticName),
-            GetI32(static_cast<uint32_t>(CompType)),
-            GetI32(static_cast<uint32_t>(SemanticKind)),
-            MDNode::get(Ctx, IndexOps),
-            GetI32(static_cast<uint32_t>(InterpMode)), GetI32(Rows),
-            GetI8(Cols), GetI32(StartRow), GetI8(StartCol), GetI8(UsageMask),
-            GetI8(DynIndexMask), GetI32(GSStream)});
+  return MDNode::get(Ctx,
+                     {GetI32(SigId), MDString::get(Ctx, SemanticName),
+                      GetI32(static_cast<uint32_t>(CompType)),
+                      GetI32(static_cast<uint32_t>(SemanticKind)),
+                      MDNode::get(Ctx, IndexOps),
+                      GetI32(static_cast<uint32_t>(InterpMode)), GetI32(Rows),
+                      GetI8(Cols), GetI32(StartRow), GetI8(StartCol),
+                      GetI8(UsageMask), GetI8(DynIndexMask), GetI32(GSStream)});
 }

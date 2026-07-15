@@ -30,8 +30,7 @@ protected:
   }
 
   Metadata *getI8(uint8_t Val) {
-    return ConstantAsMetadata::get(
-        ConstantInt::get(Type::getInt8Ty(Ctx), Val));
+    return ConstantAsMetadata::get(ConstantInt::get(Type::getInt8Ty(Ctx), Val));
   }
 
   Metadata *getStr(StringRef Val) { return MDString::get(Ctx, Val); }
@@ -129,11 +128,12 @@ TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementSystemValue) {
 
 // An unallocated element uses the row/col sentinels
 TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementUnallocated) {
-  MDNode *Node = getElement(/*SigId=*/0, "POSITION", /*CompType=*/9,
-                            /*SemanticKind=*/0, /*Indices=*/{0},
-                            /*InterpMode=*/0, /*Rows=*/1, /*Cols=*/4,
-                            /*StartRow=*/UnallocatedRow, /*StartCol=*/UnallocatedCol,
-                            /*UsageMask=*/0, /*DynIndexMask=*/0, /*GSStream=*/0);
+  MDNode *Node =
+      getElement(/*SigId=*/0, "POSITION", /*CompType=*/9,
+                 /*SemanticKind=*/0, /*Indices=*/{0},
+                 /*InterpMode=*/0, /*Rows=*/1, /*Cols=*/4,
+                 /*StartRow=*/UnallocatedRow, /*StartCol=*/UnallocatedCol,
+                 /*UsageMask=*/0, /*DynIndexMask=*/0, /*GSStream=*/0);
 
   Expected<SemanticSignatureElement> Elem =
       SemanticSignatureElement::fromMetadata(Node);
@@ -147,9 +147,9 @@ TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementUnallocated) {
 // Every component type value maps onto the matching dxil::ElementType
 TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementComponentTypes) {
   for (dxil::ElementType CompType :
-       {dxil::ElementType::I32, dxil::ElementType::U32,
-        dxil::ElementType::F16, dxil::ElementType::F32,
-        dxil::ElementType::F64, dxil::ElementType::I16}) {
+       {dxil::ElementType::I32, dxil::ElementType::U32, dxil::ElementType::F16,
+        dxil::ElementType::F32, dxil::ElementType::F64,
+        dxil::ElementType::I16}) {
     MDNode *Node = getElement(
         /*SigId=*/0, "A", static_cast<uint32_t>(CompType), /*SemanticKind=*/0,
         /*Indices=*/{0}, /*InterpMode=*/0, /*Rows=*/1, /*Cols=*/1,
@@ -224,9 +224,8 @@ TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementGSStream) {
 
 // A null node is not a valid signature element
 TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementNull) {
-  EXPECT_THAT_EXPECTED(
-      SemanticSignatureElement::fromMetadata(nullptr),
-      FailedWithMessage("signature element node is null"));
+  EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(nullptr),
+                       FailedWithMessage("signature element node is null"));
 }
 
 // A node with the wrong number of operands is rejected
@@ -268,7 +267,8 @@ TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementInvalidCompType) {
 }
 
 // A semantic kind outside dxbc::PSV::SemanticKind is rejected
-TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementInvalidSemanticKind) {
+TEST_F(HLSLSemanticSignatureMetadataTest,
+       MetadataToElementInvalidSemanticKind) {
   MDNode *Node = getElement(/*SigId=*/0, "A", /*CompType=*/9,
                             /*SemanticKind=*/100, /*Indices=*/{0},
                             /*InterpMode=*/0, /*Rows=*/1, /*Cols=*/1,
@@ -316,7 +316,8 @@ TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementInvalidStartCol) {
 }
 
 // The row/col sentinels must be set together
-TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementInvalidSentinelPair) {
+TEST_F(HLSLSemanticSignatureMetadataTest,
+       MetadataToElementInvalidSentinelPair) {
   MDNode *RowOnly = getElement(
       /*SigId=*/0, "A", /*CompType=*/9, /*SemanticKind=*/0, /*Indices=*/{0},
       /*InterpMode=*/0, /*Rows=*/1, /*Cols=*/1, /*StartRow=*/UnallocatedRow,
