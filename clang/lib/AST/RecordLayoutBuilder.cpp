@@ -3395,16 +3395,15 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
 
     // Create a minimal safe layout for error recovery
     // Use 1-byte size and alignment to avoid division by zero or other issues
-    ASTRecordLayout *NewEntry = new (*this)
-        ASTRecordLayout(*this,
-                /*Size=*/CharUnits::One(),
-                /*Alignment=*/CharUnits::One(),
-                /*PreferredAlignment=*/CharUnits::One(),
-                /*UnadjustedAlignment=*/CharUnits::One(),
-                /*RequiredAlignment=*/CharUnits::One(),
-                /*DataSize=*/CharUnits::One(),
-                /*FieldOffsets=*/ArrayRef<uint64_t>()
-         );
+    ASTRecordLayout *NewEntry =
+        new (*this) ASTRecordLayout(*this,
+                                    /*Size=*/CharUnits::One(),
+                                    /*Alignment=*/CharUnits::One(),
+                                    /*PreferredAlignment=*/CharUnits::One(),
+                                    /*UnadjustedAlignment=*/CharUnits::One(),
+                                    /*RequiredAlignment=*/CharUnits::One(),
+                                    /*DataSize=*/CharUnits::One(),
+                                    /*FieldOffsets=*/ArrayRef<uint64_t>());
 
     ASTRecordLayouts[D] = NewEntry;
     return *NewEntry;
