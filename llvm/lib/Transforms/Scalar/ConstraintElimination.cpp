@@ -1505,8 +1505,13 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
   if (auto ImpliedCondition = TryWithConstraint(R))
     return ImpliedCondition;
 
-  // Additionally, query the signed system for eq/ne predicates.
+  // Additionally, query the signed system for eq/ne predicates if we know about
+  // A or B.
   if (CmpInst::isEquality(Pred)) {
+    const auto &Value2Index = Info.getValue2Index(/*Signed=*/true);
+    if (!Value2Index.contains(A) && !Value2Index.contains(B))
+      return std::nullopt;
+
     SmallVector<Value *> NewVariables;
     auto SR = Info.getConstraint(Pred, A, B, NewVariables,
                                  /*ForceSignedSystem=*/true);
