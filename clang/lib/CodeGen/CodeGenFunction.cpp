@@ -3145,11 +3145,9 @@ void CodeGenFunction::EmitPPCAIXMultiVersionResolver(
       // CPU specification - map to ISA level
       StringRef CPU = FeatureStr.split("=").second.trim();
       BuiltinCpuSupportsArg = llvm::StringSwitch<StringRef>(CPU)
-                                  .Case("pwr7", "arch_2_06")
-                                  .Case("pwr8", "arch_2_07")
-                                  .Case("pwr9", "arch_3_00")
-                                  .Case("pwr10", "arch_3_1")
-                                  .Case("pwr11", "arch_3_1")
+#define PPC_AIX_CLONES_CPU(CPU_NAME, AIX_BUILTIN_CPU_SUPPORTS_NAME, _) \
+  .Case(CPU_NAME, AIX_BUILTIN_CPU_SUPPORTS_NAME)
+#include "llvm/TargetParser/PPCTargetParser.def"
                                   .Default("error");
     } else {
       // Feature strings arrive here already normalized:
@@ -3171,7 +3169,7 @@ void CodeGenFunction::EmitPPCAIXMultiVersionResolver(
 
       // All features in target_clones must have runtime detection
       assert(!BuiltinCpuSupportsArg.empty() &&
-             "feature without runtime detection should have been rejected in "
+             "Feature without runtime detection should have been rejected in "
              "Sema");
     }
 
