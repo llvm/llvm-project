@@ -951,6 +951,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed a assertion when `__block` is used on global variables in C mode. (#GH183974)
 - Added missing AST nodes representing the `decltype` specifiers in destructor call to AST.
 - Fixed a missing ODR violation diagnostic introduced by the inline assembly string or clobber list. (#GH198616)
+- Fixed a non-deterministic ordering of unused local typedefs that made
+  serialized PCH/AST files and `-Wunused-local-typedef` diagnostics
+  non-reproducible across runs. (#GH209639)
 
 #### Miscellaneous Bug Fixes
 
