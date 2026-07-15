@@ -194,28 +194,28 @@ entry:
 }
 
 
-define noundef x86_fp80 @_Z22store_load_long_doublePe(ptr captures(none) noundef initializes((0, 10)) %A) {
-; CHECK-LABEL: define noundef x86_fp80 @_Z22store_load_long_doublePe(
-; CHECK-SAME: ptr noundef captures(none) initializes((0, 10)) [[A:%.*]]) {
+define <4 x i8> @store_load_vec4i8(ptr captures(none) noundef initializes((0, 4)) %A) {
+; CHECK-LABEL: define <4 x i8> @store_load_vec4i8(
+; CHECK-SAME: ptr noundef captures(none) initializes((0, 4)) [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = alloca x86_fp80, align 16, addrspace(5)
-; CHECK-NEXT:    store x86_fp80 8.000000e+00, ptr addrspace(5) [[TMP0]], align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = alloca <4 x i8>, align 4, addrspace(5)
+; CHECK-NEXT:    store <4 x i8> <i8 1, i8 2, i8 3, i8 4>, ptr addrspace(5) [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(5) [[TMP0]] to ptr
-; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @__instrumentor_pre_store_ind(ptr [[A]], i32 0, ptr [[TMP1]], i64 10, i64 16, i32 4, i32 0, i8 1, i8 0) #[[ATTR0]]
-; CHECK-NEXT:    store x86_fp80 8.000000e+00, ptr [[TMP2]], align 16
-; CHECK-NEXT:    call void @__instrumentor_post_store_ind(ptr [[A]], i32 0, ptr [[TMP1]], i64 10, i64 16, i32 4, i32 0, i8 1, i8 0) #[[ATTR0]]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 16
-; CHECK-NEXT:    [[TMP3:%.*]] = call ptr @__instrumentor_pre_load(ptr [[ARRAYIDX]], i32 0, i64 10, i64 16, i32 4, i32 0, i8 1, i8 0) #[[ATTR0]]
-; CHECK-NEXT:    [[TMP6:%.*]] = load x86_fp80, ptr [[TMP3]], align 16
-; CHECK-NEXT:    store x86_fp80 [[TMP6]], ptr addrspace(5) [[TMP0]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @__instrumentor_pre_store_ind(ptr [[A]], i32 0, ptr [[TMP1]], i64 4, i64 1, i32 18, i32 0, i8 1, i8 0) #[[ATTR0]]
+; CHECK-NEXT:    store <4 x i8> <i8 1, i8 2, i8 3, i8 4>, ptr [[TMP2]], align 1
+; CHECK-NEXT:    call void @__instrumentor_post_store_ind(ptr [[A]], i32 0, ptr [[TMP1]], i64 4, i64 1, i32 18, i32 0, i8 1, i8 0) #[[ATTR0]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 4
+; CHECK-NEXT:    [[TMP3:%.*]] = call ptr @__instrumentor_pre_load(ptr [[ARRAYIDX]], i32 0, i64 4, i64 1, i32 18, i32 0, i8 1, i8 0) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i8>, ptr [[TMP3]], align 1
+; CHECK-NEXT:    store <4 x i8> [[TMP4]], ptr addrspace(5) [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = addrspacecast ptr addrspace(5) [[TMP0]] to ptr
-; CHECK-NEXT:    call void @__instrumentor_post_load_ind(ptr [[ARRAYIDX]], i32 0, ptr [[TMP5]], i64 10, i64 16, i32 4, i32 0, i8 1, i8 0) #[[ATTR0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load x86_fp80, ptr [[TMP5]], align 16
-; CHECK-NEXT:    ret x86_fp80 [[TMP4]]
+; CHECK-NEXT:    call void @__instrumentor_post_load_ind(ptr [[ARRAYIDX]], i32 0, ptr [[TMP5]], i64 4, i64 1, i32 18, i32 0, i8 1, i8 0) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load <4 x i8>, ptr [[TMP5]], align 4
+; CHECK-NEXT:    ret <4 x i8> [[TMP6]]
 ;
 entry:
-  store x86_fp80 0xK40028000000000000000, ptr %A, align 16
-  %arrayidx = getelementptr inbounds nuw i8, ptr %A, i64 16
-  %0 = load x86_fp80, ptr %arrayidx, align 16
-  ret x86_fp80 %0
+  store <4 x i8> <i8 1, i8 2, i8 3, i8 4>, ptr %A, align 1
+  %arrayidx = getelementptr inbounds nuw i8, ptr %A, i64 4
+  %0 = load <4 x i8>, ptr %arrayidx, align 1
+  ret <4 x i8> %0
 }
