@@ -553,18 +553,17 @@ static MCSectionXCOFF *getContainingCsect(const MCSymbolXCOFF *XSym) {
   return XSym->getRepresentedCsect();
 }
 
-// Checks that the branhc target symbol has a different section then the one
-// containing the fragment F.
+// Checks that the section that contains the fragment F and the section
+// that contains the Target are different.
 static bool haveDifferentSections(const MCFragment &F, MCValue Target) {
   const MCSymbol *TargetSym = Target.getAddSym();
   if (!TargetSym)
     return false;
 
-  // Branch to an externally defined symbol.
+  // Target is externally defined.
   if (!TargetSym->isDefined())
     return true;
 
-  // Branch across sections.
   const MCSection *FragSection = F.getParent();
   const MCSection *TargetSection = TargetSym->getFragment()->getParent();
   return TargetSection != FragSection;
