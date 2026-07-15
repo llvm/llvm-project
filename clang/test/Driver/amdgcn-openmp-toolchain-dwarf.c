@@ -1,6 +1,4 @@
-// REQUIRES: clang-driver
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
+// REQUIRES: amdgpu-registered-target, x86-registered-target
 
 // RUN: %clang -### -target x86_64-pc-linux-gnu -fopenmp \
 // RUN:   -fopenmp-targets=amdgcn-amd-amdhsa -nogpulib \
