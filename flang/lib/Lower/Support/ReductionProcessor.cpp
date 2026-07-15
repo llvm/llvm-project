@@ -387,7 +387,11 @@ bool ReductionProcessor::isExpressionLoweredAsReductionObject(
   if (!object || !object->ref())
     return false;
   const SomeExpr &expr = *object->ref();
-  return evaluate::IsArrayElement(expr);
+  // Only genuine single array elements (rank 0) are lowered via the element
+  // path. Array sections such as a(2:96) and vector subscripts have rank > 0;
+  // lowering them here produces an unsupported sequence type and aborts in
+  // PrivateReductionUtils. Let them fall back to the boxed whole-array path.
+  return evaluate::IsArrayElement(expr) && expr.Rank() == 0;
 }
 
 template <typename ParentDeclOpType>
