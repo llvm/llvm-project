@@ -27,7 +27,7 @@ enum hipHostMallocFlag_t : unsigned int {
   hipHostMallocNonCoherent = 0x80000000,
 };
 
-hipError_t hipHostMalloc(void **Ptr, size_t Size, unsigned int Flags) {
+inline hipError_t hipHostMalloc(void **Ptr, size_t Size, unsigned int Flags) {
   return hipHostAlloc(Ptr, Size, Flags);
 }
 

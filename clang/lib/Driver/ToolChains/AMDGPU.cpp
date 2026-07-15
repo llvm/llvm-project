@@ -515,6 +515,25 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
                             !DriverArgs.hasArg(options::OPT_nohipwrapperinc);
   bool HasHipStdPar = DriverArgs.hasArg(options::OPT_hipstdpar);
 
+  // if (D.getTargetTriple() == llvm::Triple::LLVM &&
+  if (DriverArgs.hasFlag(options::OPT_foffload_via_llvm,
+                         options::OPT_fno_offload_via_llvm, false)) {
+    if (DriverArgs.hasFlag(options::OPT_offload_inc,
+                           options::OPT_no_offload_inc, true) &&
+        !DriverArgs.hasArg(options::OPT_nohipwrapperinc) &&
+        !DriverArgs.hasArg(options::OPT_nobuiltininc)) {
+      CC1Args.append({"-include", "__clang_gpu_device_functions.h"});
+
+      SmallString<128> HIPIncludePath(D.ResourceDir);
+      llvm::sys::path::append(HIPIncludePath, "..", "..", "..");
+      llvm::sys::path::append(HIPIncludePath, "include", "offload", "hip");
+      CC1Args.push_back("-internal-isystem");
+      CC1Args.push_back(DriverArgs.MakeArgString(HIPIncludePath));
+      CC1Args.append({"-include", "hip_runtime.h"});
+    }
+    return;
+  }
+
   if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
     // HIP header includes standard library wrapper headers under clang
     // cuda_wrappers directory. Since these wrapper headers include_next

@@ -167,11 +167,10 @@ Error_t GetDeviceProperties(DeviceProp_t *DeviceProp, int DeviceNo) {
   olGetDeviceInfo(Device, OL_DEVICE_INFO_NAME, nameSize, &DeviceProp->name[0]);
   olGetDeviceInfo(Device, OL_DEVICE_INFO_GLOBAL_MEM_SIZE, sizeof(size_t),
                   &DeviceProp->totalGlobalMem);
+  olGetDeviceInfo(Device, OL_DEVICE_INFO_NUM_COMPUTE_UNITS, sizeof(uint32_t),
+                  &DeviceProp->multiProcessorCount);
   olGetDeviceInfo(Device, OL_DEVICE_INFO_WARP_SIZE, sizeof(uint32_t),
                   &DeviceProp->warpSize);
-  DeviceProp->multiProcessorCount = 110;
-  DeviceProp->major = 47;
-  DeviceProp->minor = 11;
   return Success;
 }
 

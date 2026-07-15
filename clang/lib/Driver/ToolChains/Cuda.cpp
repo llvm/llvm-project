@@ -306,8 +306,7 @@ void CudaInstallationDetector::AddCudaIncludeArgs(
                          options::OPT_fno_offload_via_llvm, false)) {
     if (DriverArgs.hasFlag(options::OPT_offload_inc,
                            options::OPT_no_offload_inc, true) &&
-        !DriverArgs.hasArg(options::OPT_nohipwrapperinc) &&
-        !DriverArgs.hasArg(options::OPT_nobuiltininc)){
+        !DriverArgs.hasArg(options::OPT_nobuiltininc)) {
       CC1Args.append({"-include", "__clang_gpu_device_functions.h"});
 
       SmallString<128> CudaIncludePath(D.ResourceDir);

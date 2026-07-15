@@ -962,7 +962,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     getToolChain().printVerboseInfo(llvm::errs());
     getToolChain().AddCudaIncludeArgs(Args, CmdArgs);
   }
-  if (JA.isOffloading(Action::OFK_HIP))
+  if (JA.isOffloading(Action::OFK_HIP) && !UsesLLVMOffloading)
     getToolChain().AddHIPIncludeArgs(Args, CmdArgs);
   if (JA.isOffloading(Action::OFK_SYCL))
     getToolChain().addSYCLIncludeArgs(Args, CmdArgs);
@@ -992,7 +992,6 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
   if (UsesLLVMOffloading && JA.isOffloading(Action::OFK_Cuda) &&
       Args.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
                    true) &&
-      !Args.hasArg(options::OPT_nohipwrapperinc) &&
       !Args.hasArg(options::OPT_nobuiltininc) && isCudaInput) {
     CmdArgs.append({"-include", "__clang_gpu_device_functions.h"});
 
@@ -1002,6 +1001,22 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     CmdArgs.append({"-internal-isystem", Args.MakeArgString(OffloadCudaInclude),
                     "-include"});
     CmdArgs.push_back("cuda_runtime.h");
+  }
+  bool isHIPInput = llvm::any_of(
+      Inputs, [](const InputInfo &I) { return types::isHIP(I.getType()); });
+  if (UsesLLVMOffloading && JA.isOffloading(Action::OFK_HIP) &&
+      Args.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
+                   true) &&
+      !Args.hasArg(options::OPT_nohipwrapperinc) &&
+      !Args.hasArg(options::OPT_nobuiltininc) && isHIPInput) {
+    CmdArgs.append({"-include", "__clang_gpu_device_functions.h"});
+
+    SmallString<128> OffloadHIPInclude(D.Dir);
+    llvm::sys::path::append(OffloadHIPInclude, "..", "include", "offload",
+                            "hip");
+    CmdArgs.append({"-internal-isystem", Args.MakeArgString(OffloadHIPInclude),
+                    "-include"});
+    CmdArgs.push_back("hip_runtime.h");
   }
 
   // Add -i* options, and automatically translate to
