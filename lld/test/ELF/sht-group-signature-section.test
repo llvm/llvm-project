@@ -1,0 +1,73 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: ld.lld -r %t.o -o %t
+# RUN: llvm-readobj --sections %t | FileCheck %s
+
+# CHECK-DAG: Name: .text.direct.a
+# CHECK-DAG: Name: .text.direct.b
+# CHECK-DAG: Name: .text.xindex.a
+# CHECK-DAG: Name: .text.xindex.b
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .group.direct.a
+    Type: SHT_GROUP
+    Link: .symtab
+    Info: 1
+    Members:
+      - SectionOrType: GRP_COMDAT
+      - SectionOrType: .text.direct.a
+  - Name: .text.direct.a
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR, SHF_GROUP ]
+  - Name: .group.direct.b
+    Type: SHT_GROUP
+    Link: .symtab
+    Info: 2
+    Members:
+      - SectionOrType: GRP_COMDAT
+      - SectionOrType: .text.direct.b
+  - Name: .text.direct.b
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR, SHF_GROUP ]
+  - Name: .group.xindex.a
+    Type: SHT_GROUP
+    Link: .symtab
+    Info: 3
+    Members:
+      - SectionOrType: GRP_COMDAT
+      - SectionOrType: .text.xindex.a
+  - Name: .text.xindex.a
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR, SHF_GROUP ]
+  - Name: .group.xindex.b
+    Type: SHT_GROUP
+    Link: .symtab
+    Info: 4
+    Members:
+      - SectionOrType: GRP_COMDAT
+      - SectionOrType: .text.xindex.b
+  - Name: .text.xindex.b
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR, SHF_GROUP ]
+  - Name: .symtab_shndx
+    Type: SHT_SYMTAB_SHNDX
+    Link: .symtab
+    Entries: [ 0, 0, 0, 6, 8 ]
+Symbols:
+  - Name: ""
+    Type: STT_SECTION
+    Section: .text.direct.a
+  - Name: ""
+    Type: STT_SECTION
+    Section: .text.direct.b
+  - Name: ""
+    Type: STT_SECTION
+    Index: SHN_XINDEX
+  - Name: ""
+    Type: STT_SECTION
+    Index: SHN_XINDEX

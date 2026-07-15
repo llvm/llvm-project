@@ -695,7 +695,25 @@ StringRef ObjFile<ELFT>::getShtGroupSignature(ArrayRef<Elf_Shdr> sections,
   if (sec.sh_info >= symbols.size())
     Fatal(ctx) << this << ": invalid symbol index";
   const typename ELFT::Sym &sym = symbols[sec.sh_info];
-  return CHECK2(sym.getName(this->stringTable), this);
+  StringRef signature = CHECK2(sym.getName(this->stringTable), this);
+  if (!signature.empty() || sym.getType() != STT_SECTION)
+    return signature;
+
+  // GNU as may use an unnamed STT_SECTION symbol as a group signature.
+  ArrayRef<Elf_Word> shndx;
+  if (sym.st_shndx == SHN_XINDEX) {
+    for (const Elf_Shdr &section : sections) {
+      if (section.sh_type != SHT_SYMTAB_SHNDX || section.sh_link != sec.sh_link)
+        continue;
+      shndx = CHECK2(getObj().getSHNDXTable(section, sections), this);
+      break;
+    }
+  }
+  uint32_t sectionIndex =
+      CHECK2(getObj().getSectionIndex(sym, symbols, shndx), this);
+  if (sectionIndex == 0 || sectionIndex >= sections.size())
+    Fatal(ctx) << this << ": invalid section index: " << sectionIndex;
+  return CHECK2(getObj().getSectionName(sections[sectionIndex]), this);
 }
 
 template <class ELFT>
