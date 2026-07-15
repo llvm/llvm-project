@@ -968,6 +968,20 @@ const Decl *SemaProfiles::resolveMemberStoreBase(const MemberExpr *ME) const {
   return nullptr;
 }
 
+// The directly named [[ref_to_uninit]] local/parameter *pointer* of \p E, if
+// any: the only pointer entity whose pointee state is tracked (the credit
+// map keys on VarDecls; a marked member pointer is the pinned per-object
+// aliasing boundary -- copies share pointees). Shared by the store-recording
+// deref arm and the [[now_init]] argument shapes.
+static const VarDecl *getCreditableMarkedPointer(const Expr *E) {
+  const auto *VD =
+      dyn_cast_or_null<VarDecl>(SemaProfiles::getDirectlyNamedDecl(E));
+  if (VD && VD->hasLocalStorage() && VD->getType()->isPointerType() &&
+      VD->hasAttr<RefToUninitAttr>())
+    return VD;
+  return nullptr;
+}
+
 // Pass-through forms shared by the pointer and glvalue recognizers, which are
 // transparent to their operand: a single-element braced initializer { e }
 // binds from e (modeling
@@ -1292,6 +1306,89 @@ void SemaProfiles::checkInitProfileRefToUninitBinding(SourceLocation Loc,
   checkInitProfileRefToUninit(Loc,
                               Target && Target->hasAttr<RefToUninitAttr>(),
                               T->isReferenceType(), Src, D);
+  // Runs after the check: the binding itself is judged against the
+  // *pre-call* state, and only then does a [[now_init]] callee's promised
+  // initialization take effect for what follows in parse order.
+  recordNowInitArgument(Target, T, Src);
+}
+
+void SemaProfiles::recordNowInitArgument(const ValueDecl *Target, QualType T,
+                                         const Expr *Src) {
+  // Only the binding of a [[ref_to_uninit]] parameter of a [[now_init]]
+  // function carries the callee's initialization promise (P4222R2 §6.2: the
+  // attribute "would apply to every [[ref_to_uninit]] argument"). A variadic
+  // argument, an unmarked parameter, or a call through a function pointer
+  // presents no marked ParmVarDecl and earns nothing.
+  const auto *Parm = dyn_cast_or_null<ParmVarDecl>(Target);
+  if (!Parm || !Src || !Parm->hasAttr<RefToUninitAttr>())
+    return;
+  const auto *FD = dyn_cast_or_null<FunctionDecl>(Parm->getDeclContext());
+  if (!FD || !FD->hasAttr<NowInitAttr>())
+    return;
+  // Like recordInitProfileStore: no enforcement, suppression, or in-template
+  // gate (a suppressed or pattern-parsed call still initializes; rebuilt
+  // instantiations re-record against fresh declarations), but a call in a
+  // never-executed context earns no credit.
+  if (inNeverExecutedContext())
+    return;
+  const Expr *E = Src->IgnoreParenImpCasts();
+  // Mirror the recognizers' explicit-cast pass-through (paper §4.3: a cast
+  // of a marked pointer is itself marked; a reference cast denotes the same
+  // storage): the callee initializes the same storage either way.
+  while (const auto *CE = dyn_cast<ExplicitCastExpr>(E)) {
+    const Expr *Sub = CE->getSubExpr();
+    if (!Sub->getType()->isPointerType() && !Sub->isGLValue())
+      break;
+    E = Sub->IgnoreParenImpCasts();
+  }
+  // The glvalue whose storage the callee initializes: the operand of &G for
+  // a pointer parameter, or the bound glvalue itself for a reference one.
+  const Expr *Glvalue = nullptr;
+  if (const auto *UO = dyn_cast<UnaryOperator>(E);
+      UO && UO->getOpcode() == UO_AddrOf)
+    Glvalue = UO->getSubExpr()->IgnoreParenImpCasts();
+  else if (T->isReferenceType())
+    Glvalue = E;
+  if (Glvalue) {
+    // &base.m / base.m: per-object whole-member credit, under exactly the
+    // member-store keys (resolveMemberStoreBase); an untrackable base -- a
+    // parameter-reached object, a deeper chain -- resolves null and stays
+    // strict, the same boundary as a direct store.
+    if (const auto *ME = dyn_cast<MemberExpr>(Glvalue)) {
+      if (const auto *F = dyn_cast<FieldDecl>(ME->getMemberDecl());
+          F && F->hasAttr<UninitAttr>())
+        if (const Decl *Base = resolveMemberStoreBase(ME))
+          MemberStoreCredit[{Base, F}] |= WholeStored;
+      return;
+    }
+    // &*p / *p: the callee initializes the pointee of a marked pointer.
+    if (const auto *UO = dyn_cast<UnaryOperator>(Glvalue);
+        UO && UO->getOpcode() == UO_Deref) {
+      if (const VarDecl *VD = getCreditableMarkedPointer(UO->getSubExpr()))
+        InitStoreCredit[VD] |= PointeeStored;
+      return;
+    }
+    if (const auto *VD =
+            dyn_cast_or_null<VarDecl>(getDirectlyNamedDecl(Glvalue));
+        VD && VD->hasLocalStorage()) {
+      // &u / u: the whole [[uninit]] entity is initialized by the callee,
+      // exactly as `u = e` would credit it.
+      if (VD->hasAttr<UninitAttr>())
+        InitStoreCredit[VD] |= WholeStored;
+      // r (a marked reference bound onward): its referent is initialized; a
+      // reference cannot be reseated, so the credit never lapses.
+      else if (VD->getType()->isReferenceType() &&
+               VD->hasAttr<RefToUninitAttr>())
+        InitStoreCredit[VD] |= PointeeStored;
+    }
+    return;
+  }
+  // p as a pointer value: the callee initializes p's pointee -- §6.2's
+  // initialize2(p) example verbatim. Only a directly named marked
+  // local/parameter pointer is trackable; reseating p afterwards clears this
+  // credit like any other pointee credit.
+  if (const VarDecl *VD = getCreditableMarkedPointer(E))
+    InitStoreCredit[VD] |= PointeeStored;
 }
 
 void SemaProfiles::checkInitProfileVariadicArgument(const Expr *Arg) {
@@ -1523,6 +1620,11 @@ void SemaProfiles::checkInitProfileIncDec(Expr *Operand, SourceLocation OpLoc) {
   recordInitProfileStore(Operand);
 }
 
+bool SemaProfiles::inNeverExecutedContext() const {
+  return SemaRef.isUnevaluatedContext() ||
+         SemaRef.currentEvaluationContext().isDiscardedStatementContext();
+}
+
 void SemaProfiles::recordInitProfileStore(const Expr *LHS) {
   if (!getLangOpts().Profiles || !LHS)
     return;
@@ -1534,9 +1636,7 @@ void SemaProfiles::recordInitProfileStore(const Expr *LHS) {
   // non-dependent code in a template is checked at definition time and must
   // find pattern-time credit (instantiations rebuild their DeclRefExprs
   // against fresh decls, so they re-record independently).
-  if (SemaRef.isUnevaluatedContext())
-    return;
-  if (SemaRef.currentEvaluationContext().isDiscardedStatementContext())
+  if (inNeverExecutedContext())
     return;
   const Expr *E = LHS->IgnoreParenImpCasts();
   // *p = e: a store through the exact whole-`*p` lvalue of a marked
@@ -1549,10 +1649,7 @@ void SemaProfiles::recordInitProfileStore(const Expr *LHS) {
   // invalidating: the paper bans element-wise tracking (§5.4/§5.5).
   if (const auto *UO = dyn_cast<UnaryOperator>(E);
       UO && UO->getOpcode() == UO_Deref) {
-    if (const auto *VD =
-            dyn_cast_or_null<VarDecl>(getDirectlyNamedDecl(UO->getSubExpr()));
-        VD && VD->hasLocalStorage() && VD->getType()->isPointerType() &&
-        VD->hasAttr<RefToUninitAttr>())
+    if (const VarDecl *VD = getCreditableMarkedPointer(UO->getSubExpr()))
       InitStoreCredit[VD] |= PointeeStored;
     return;
   }

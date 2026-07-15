@@ -490,6 +490,25 @@ credit is purely parse-order, with no dominance or flow analysis: a store
 under a condition credits everything after it, so a binding on the untaken
 path is a missed diagnostic (see `Limitations`_).
 
+One kind of call *does* count as initialization: §6.2's ``[[now_init]]``
+attribute (its placement and spelling track an open committee question)
+declares that a function initializes the storage passed to each of its
+``[[ref_to_uninit]]`` parameters, and it requires at least one such
+parameter.  After a call to a ``[[now_init]]`` function, the argument's
+storage earns exactly the credit the equivalent direct store would --
+``fill(&u)`` credits ``u`` whole, ``fill(p)`` credits the marked pointer's
+pointee (until ``p`` is reseated), ``fill(&a.m)`` credits the ``(a, m)``
+pair -- with the same boundaries and the same reverse-direction consequence
+(a second ``fill(&u)`` is rejected: ``u`` no longer refers to uninitialized
+memory, which incidentally catches double ``construct_at``).  This is R2
+§4.5's requested library annotation: declare ``construct_at`` with
+``[[now_init]]`` and a ``[[ref_to_uninit]]`` first parameter and the
+lifecycle *start* is checked.  The §4.4 ``now_init()`` identity function
+needs no compiler support at all -- declared as ``template<class T> T*
+now_init(T* p [[ref_to_uninit]]);``, its unmarked return is already trusted
+as initialized -- but only the attribute legalizes the original *name* after
+the call.
+
 
 Constructors
 ------------
@@ -560,23 +579,30 @@ is a deliberate strictness -- it rejects code the paper itself rejects --
 rather than an omission; each of the others is a missed diagnostic, never a
 false positive.
 
-- Inside a constructor body, *only* a plain assignment to an ``[[uninit]]``
-  member counts as its initialization.  Taking the member's address, binding
-  a reference to it, calling a member function, letting ``this`` escape, or
-  passing ``&m`` to a ``[[ref_to_uninit]]`` parameter earns no credit, so a
-  later read of the member is rejected: the paper rejects complex
+- Inside a constructor body, only a plain assignment to an ``[[uninit]]``
+  member or a call to a ``[[now_init]]`` function (§6.2) counts as its
+  initialization -- the latter for the current-object storage bound to the
+  callee's ``[[ref_to_uninit]]`` parameters (``&m``, ``m``, or ``this``
+  itself, which credits every tracked member), as a genuine dataflow fact,
+  so a ``[[now_init]]`` call on one branch still does not satisfy a read at
+  the join (§1.2).  Taking the member's address, binding a reference to it,
+  calling a member function, letting ``this`` escape, or passing ``&m`` to a
+  ``[[ref_to_uninit]]`` parameter of an *ordinary* function earns no credit,
+  so a later read of the member is rejected: the paper rejects complex
   constructor code (§5.1) and reserves callee-initialization for
-  ``now_init()`` (§6.2); the remedy for an intended flow is
-  ``[[profiles::suppress]]``.  For *locals*, by contrast, the local-aggregate
-  pass and the plain-local analysis conservatively treat any escape of the
-  variable as an assignment -- there the omission is a missed diagnostic,
-  never a false positive.  That escape-crediting is an interim deviation
-  from the paper, to be replaced by explicit ``now_init()`` recognition when
-  it is implemented.
-- ``construct_at``/``destroy_at`` flow is not modeled: class-type
-  initialization of uninitialized storage, double initialization, and double
-  destruction are not checked, and writes through ``[[ref_to_uninit]]`` are
-  not verified.
+  ``now_init`` (§6.2); the remedy for an intended flow is ``[[now_init]]``
+  on the callee or ``[[profiles::suppress]]``.  For *locals*, by contrast,
+  the local-aggregate pass and the plain-local analysis conservatively treat
+  any escape of the variable as an assignment -- there the omission is a
+  missed diagnostic, never a false positive.  That escape-crediting is an
+  interim leniency relative to the paper (which credits only ``now_init``);
+  tightening it to ``[[now_init]]`` callees alone is future work.
+- ``construct_at``/``destroy_at`` flow is only partially modeled: a
+  ``[[now_init]]``-annotated ``construct_at`` declaration checks the
+  lifecycle start (including double construction, via the reverse-direction
+  binding rule), but destruction -- ``destroy_at``, double destruction,
+  use-after-destroy -- is not checked, and writes through
+  ``[[ref_to_uninit]]`` are not verified.
 - A ``new`` expression whose result is not bound to anything (``new int;``)
   is not checked.
 - A call through a function pointer cannot see parameter markers on the
@@ -591,6 +617,8 @@ false positive.
 - Whole-entity store credit is parse-order only: a store under a condition
   (or inside a lambda body) credits every later use in parse order, so a
   read or binding on a path that skips the store is a missed diagnostic.
+  ``[[now_init]]`` call credit outside constructor bodies is parse-order in
+  the same way (inside them it is a real dataflow fact, as above).
 - In a template, a violation in non-dependent code is diagnosed at definition
   time and may be repeated at instantiation.
 

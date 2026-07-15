@@ -957,6 +957,45 @@ without ``-fprofiles``.
   }];
 }
 
+def NowInitDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "now_init";
+  let Content = [{
+The ``[[now_init]]`` attribute marks a function as *initializing* the
+storage passed to each of its ``[[ref_to_uninit]]`` parameters. It is purely
+informational: it has no effect on code generation.
+
+The attribute exists to support the initialization profile (see
+:doc:`ProfilesFramework`) and implements the annotation proposed in P4222R2
+§6.2 (its exact placement and spelling track an open committee question).
+Passing uninitialized memory to a ``[[ref_to_uninit]]`` parameter never by
+itself convinces the profile that the memory was initialized -- the callee
+may merely store the pointer. On a ``[[now_init]]`` function the profile
+instead treats the storage bound to every ``[[ref_to_uninit]]`` parameter as
+initialized after the call returns, so the caller may continue to use the
+original name:
+
+.. code-block:: c++
+
+  [[now_init]] void fill(int *p [[ref_to_uninit]]);
+
+  void f() {
+    int u [[uninit]];
+    fill(&u);
+    int v = u;  // OK: fill() initialized u
+  }
+
+The attribute requires at least one parameter marked ``[[ref_to_uninit]]``
+(it would be vacuous otherwise); this is diagnosed regardless of
+``-fprofiles``. It does not cover the implicit object parameter of a member
+function, which cannot carry ``[[ref_to_uninit]]``.
+
+Outside the initialization profile the attribute is otherwise silently
+accepted and has no effect, so code that uses it remains valid when compiled
+without ``-fprofiles``.
+  }];
+}
+
 def NoMergeDocs : Documentation {
   let Category = DocCatStmt;
   let Content = [{

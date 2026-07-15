@@ -296,13 +296,15 @@ struct LambdaReadSuppressed {
   }
 };
 
-// Strict assignment-only crediting: inside a constructor body, nothing but a
-// plain whole-member assignment counts as initializing an [[uninit]] member.
-// Passing &m to a [[ref_to_uninit]] parameter, calling a member function that
-// assigns it, or letting `this` escape earns no credit -- the paper rejects
-// complex constructor code (§5.1) and reserves callee-initialization for
-// now_init() (§6.2); the remedy is [[profiles::suppress]]. Contrast the
-// *local*-object passes, which conservatively credit any escape
+// Strict crediting for plain escapes: inside a constructor body, nothing but
+// a whole-member assignment counts as initializing an [[uninit]] member.
+// Passing &m to a [[ref_to_uninit]] parameter of an ordinary function,
+// calling a member function that assigns it, or letting `this` escape earns
+// no credit -- the paper rejects complex constructor code (§5.1) and
+// reserves callee-initialization for now_init (§6.2, the [[now_init]] tests
+// below); the remedy for a plain callee is [[profiles::suppress]] or the
+// [[now_init]] annotation. Contrast the *local*-object passes, which
+// conservatively credit any escape
 // (safety-profile-init-local-member-read.cpp, test_escape_*).
 void init_pointee(int *p [[ref_to_uninit]]);
 struct EscapeMemberAddress {
@@ -331,6 +333,139 @@ struct EscapeThis {
   EscapeThis() {
     take_this(this);
     int x = m; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+    (void)x;
+  }
+};
+
+// The §6.2 exception: a call to a [[now_init]] function initializes the
+// storage bound to each of its [[ref_to_uninit]] parameters, so a
+// current-object member passed as `&m` (or `m` to a reference parameter)
+// becomes assigned at the call. The credit is a real Gen bit in the
+// dataflow -- not parse-order -- so §1.2's all-branches rule still governs:
+// a [[now_init]] call under one branch does not satisfy a read at the join.
+[[now_init]] void now_init_pointee(int *p [[ref_to_uninit]]);
+[[now_init]] void now_init_referent(int &r [[ref_to_uninit]]);
+struct NowInitMemberAddress {
+  int m [[uninit]];
+  NowInitMemberAddress() {
+    now_init_pointee(&m);
+    int x = m; // OK: the [[now_init]] callee initialized m
+    (void)x;
+  }
+};
+
+struct NowInitMemberReference {
+  int m [[uninit]];
+  NowInitMemberReference() {
+    now_init_referent(m);
+    int x = m; // OK
+    (void)x;
+  }
+};
+
+struct NowInitReadBeforeCall {
+  int m [[uninit]]; // expected-note {{member 'm' declared here}}
+  NowInitReadBeforeCall() {
+    int x = m; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+    now_init_pointee(&m);
+    (void)x;
+  }
+};
+
+struct NowInitUnderBranch {
+  int m [[uninit]]; // expected-note {{member 'm' declared here}}
+  NowInitUnderBranch(bool b) {
+    if (b)
+      now_init_pointee(&m);
+    int x = m; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+    (void)x;
+  }
+};
+
+struct NowInitBothBranches {
+  int m [[uninit]];
+  NowInitBothBranches(bool b) {
+    if (b)
+      now_init_pointee(&m);
+    else
+      m = 0;
+    int x = m; // OK: initialized on every path
+    (void)x;
+  }
+};
+
+// Only the *marked* parameters carry the promise: an unmarked parameter of
+// the same [[now_init]] callee earns nothing -- and handing it &m is already
+// the parse-time binding violation.
+[[now_init]] void now_init_first(int *p [[ref_to_uninit]], int *q);
+struct NowInitUnmarkedParam {
+  int m [[uninit]]; // expected-note {{member 'm' declared here}}
+  int o [[uninit]];
+  NowInitUnmarkedParam() {
+    now_init_first(&o, &m); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+    int x = o; // OK: bound to the marked parameter
+    int y = m; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+    (void)x; (void)y;
+  }
+};
+
+// Passing `this` itself to a marked parameter hands the callee the whole
+// object to initialize: every tracked member is assigned at the call. (The
+// implicit object parameter of a member call cannot carry the marker, so a
+// member call still earns nothing -- see EscapeMemberCall.)
+struct NowInitWholeObject;
+[[now_init]] void now_init_object(NowInitWholeObject *obj [[ref_to_uninit]]);
+struct NowInitWholeObject {
+  int a [[uninit]];
+  int b [[uninit]];
+  NowInitWholeObject() {
+    now_init_object(this);
+    int x = a + b; // OK: the whole object was handed over for initialization
+    (void)x;
+  }
+};
+
+// Argument mapping through operator calls: a member operator() receives the
+// object as operator-call argument 0 ahead of its declared parameters --
+// for a C++23 static operator() too, whose object argument is still
+// evaluated -- while an explicit-object operator() declares the object as
+// parameter 0 and maps arguments directly.
+struct NowInitStaticFunctor {
+  [[now_init]] static void operator()(int *p [[ref_to_uninit]]);
+};
+struct NowInitStaticOperator {
+  int m [[uninit]];
+  NowInitStaticOperator() {
+    NowInitStaticFunctor f;
+    f(&m);
+    int x = m; // OK: &m bound the static operator()'s marked parameter
+    (void)x;
+  }
+};
+
+struct NowInitExplicitObjectFunctor {
+  [[now_init]] void operator()(this NowInitExplicitObjectFunctor &,
+                               int *p [[ref_to_uninit]]);
+};
+struct NowInitExplicitObjectOperator {
+  int m [[uninit]];
+  NowInitExplicitObjectOperator() {
+    NowInitExplicitObjectFunctor f;
+    f(&m);
+    int x = m; // OK: &m bound the explicit-object operator()'s parameter 1
+    (void)x;
+  }
+};
+
+// A [[now_init]] call inside a written member initializer credits in
+// execution order: the call element precedes the initializer's own write, so
+// a body read of the passed member is already covered.
+[[now_init]] int now_init_count(int *p [[ref_to_uninit]]);
+struct NowInitInMemInit {
+  int m [[uninit]];
+  int n;
+  NowInitInMemInit() : n(now_init_count(&m)) {
+    int x = m; // OK: credited at the call inside n's initializer
     (void)x;
   }
 };

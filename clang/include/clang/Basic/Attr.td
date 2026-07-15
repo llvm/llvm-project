@@ -1733,6 +1733,12 @@ def RefToUninit : InheritableAttr {
   let Documentation = [RefToUninitDocs];
 }
 
+def NowInit : InheritableAttr {
+  let Spellings = [CXX11<"", "now_init", 202602>];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Documentation = [NowInitDocs];
+}
+
 def NonBlocking : TypeAttr {
   let Spellings = [Clang<"nonblocking">];
   let Args = [ExprArgument<"Cond", /*optional*/1>];

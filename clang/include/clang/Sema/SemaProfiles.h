@@ -381,6 +381,32 @@ public:
   /// failing to credit it would turn suppression into later false positives.
   void recordInitProfileStore(const Expr *LHS);
 
+  /// std::init / [[now_init]] (P4222R2 §6.2): a [[now_init]] callee
+  /// initializes the storage bound to each of its [[ref_to_uninit]]
+  /// parameters, so the binding earns the same parse-order credit the
+  /// equivalent direct store would. Called from the tail of
+  /// checkInitProfileRefToUninitBinding when \p Target is a marked parameter
+  /// of a [[now_init]] function; recognizes the affirmatively creditable
+  /// source shapes -- &u / u (whole-entity credit on an [[uninit]] local), p
+  /// / *p / &*p (pointee credit on a marked local/parameter pointer; §6.2's
+  /// initialize2(p) example), r (pointee credit on a marked reference), and
+  /// &base.m / base.m (per-object member credit, resolveMemberStoreBase
+  /// keys) -- through the recognizers' explicit-cast pass-through. Variadic
+  /// arguments, unmarked parameters, and calls through function pointers
+  /// never reach here (no marked ParmVarDecl target). Recorded regardless of
+  /// enforcement, suppression, or diagnosis of the binding itself (the
+  /// callee still initializes; recordInitProfileStore's rationale), but not
+  /// in never-executed contexts.
+  void recordNowInitArgument(const ValueDecl *Target, QualType T,
+                             const Expr *Src);
+
+  /// True if the current expression-evaluation context never executes at
+  /// runtime (unevaluated or discarded-statement), mirroring
+  /// shouldEmitProfileViolation's context checks: a store or a callee
+  /// initialization seen there earns no credit. The shared gate of
+  /// recordInitProfileStore and recordNowInitArgument.
+  bool inNeverExecutedContext() const;
+
   /// True if \p VD is a local [[uninit]] variable credited by a recorded
   /// whole-entity store; the recognizers then classify it as initialized
   /// (which also enables the paper's reverse-direction rule: a credited

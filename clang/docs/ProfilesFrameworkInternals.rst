@@ -251,7 +251,10 @@ patterns.  Its rules map to mechanisms as follows:
      - 2 and 1
      - ``CFGUninitProfiles`` row for local variables;
        ``checkInitProfileCtorBody`` and ``checkInitProfileLocalMembers``
-       (definite-assignment dataflow over ``[[uninit]]`` members);
+       (definite-assignment dataflow over ``[[uninit]]`` members; the
+       ctor-body pass's ``CallExpr`` arm turns a ``[[now_init]]`` call into a
+       ``Gen`` bit for the current-object storage bound to the callee's
+       marked parameters, P4222R2 §6.2);
        ``checkInitProfileReadThrough`` at the lvalue-to-rvalue chokepoint,
        plus compound-assignment and increment/decrement hooks
    * - ``uninit_decl``

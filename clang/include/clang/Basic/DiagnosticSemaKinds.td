@@ -14177,6 +14177,9 @@ def err_uninit_attr_invalid_subject : Error<
 def err_ref_to_uninit_attr_invalid_type : Error<
   "'ref_to_uninit' attribute only applies to pointers, references, and "
   "functions returning them">;
+def err_now_init_attr_no_marked_parameter : Error<
+  "'now_init' attribute requires at least one parameter marked "
+  "'[[ref_to_uninit]]'">;
 def err_init_union_marker : ProfileRuleError<
   "'[[uninit]]' cannot be applied to %select{a variable of union type|"
   "a union member|a data member of union type}1 under profile '%0'">;

@@ -1804,17 +1804,22 @@ static void collectTrackedUninitMembers(
 // simply never read is left as-is, exactly as the structural ctor_uninit_member
 // check (R5) excuses a marked member.
 //
-// Crediting is strictly assignment-only: nothing but a plain whole-member
-// store (or a written member/base initializer) marks a member assigned.
-// Taking the member's address, binding a reference to it, calling a member
-// function, letting `this` escape, or passing &m to a [[ref_to_uninit]]
-// parameter earns no credit -- the paper rejects complex constructor code
-// (§5.1) and reserves callee-initialization for now_init() (§6.2), so such
-// code is deliberately rejected here (the remedy is [[profiles::suppress]]).
-// This is the deliberate counterpart of checkInitProfileLocalMembers'
-// "soundness over completeness" escape crediting below: locals conservatively
-// credit any escape (missed diagnostics only), while constructor bodies get
-// the paper's strictness.
+// Crediting is strict for plain escapes: nothing but a whole-member store
+// (or a written member/base initializer) marks a member assigned. Taking the
+// member's address, binding a reference to it, calling a member function,
+// letting `this` escape, or passing &m to a [[ref_to_uninit]] parameter of
+// an ordinary function earns no credit -- the paper rejects complex
+// constructor code (§5.1) and reserves callee-initialization for now_init
+// (§6.2), so such code is deliberately rejected here (the remedy is
+// [[profiles::suppress]]). The one sanctioned exception is exactly §6.2's: a
+// call to a [[now_init]] function credits the current-object storage bound
+// to its [[ref_to_uninit]] parameters (see the CallExpr arm below), as a
+// real Gen bit -- so §1.2's all-branches rule still governs a call under a
+// branch. This is the deliberate counterpart of
+// checkInitProfileLocalMembers' "soundness over completeness" escape
+// crediting below: locals conservatively credit any escape (missed
+// diagnostics only, subsuming [[now_init]] callees), while constructor
+// bodies get the paper's strictness.
 static void checkInitProfileCtorBody(Sema &S, const CXXConstructorDecl *Ctor,
                                      AnalysisDeclContext &AC) {
   // A delegating constructor leaves member initialization to its target (paper
@@ -1956,6 +1961,63 @@ static void checkInitProfileCtorBody(Sema &S, const CXXConstructorDecl *Ctor,
           continue;
         BlockEvents.push_back({ReadWrite, It->second, UO});
         Gen[B->getBlockID()].set(It->second);
+      } else if (const auto *CE = dyn_cast<CallExpr>(St)) {
+        // A call to a [[now_init]] function initializes the storage bound to
+        // each of its [[ref_to_uninit]] parameters (P4222R2 §6.2) -- the
+        // paper's sanctioned exception to the strict assignment-only
+        // crediting above. A current-object member passed as `&m` / `m`
+        // becomes assigned at the call element (its argument-subexpression
+        // events, e.g. a read of another member, precede it in the block);
+        // passing `this` / `*this` itself to a marked parameter hands the
+        // callee the whole object to initialize, so every tracked member is
+        // assigned. This is a real Gen bit in the dataflow, not parse-order
+        // credit: a [[now_init]] call under a branch still does not satisfy
+        // a read at the join (§1.2's all-branches rule). A plain (non-
+        // [[now_init]]) callee continues to earn nothing.
+        const FunctionDecl *Callee = CE->getDirectCallee();
+        if (!Callee || !Callee->hasAttr<NowInitAttr>())
+          continue;
+        // Zip declared parameters with arguments. A member operator called
+        // through CXXOperatorCallExpr receives the object as argument 0
+        // ahead of its declared parameters -- for a C++23 static operator
+        // too, whose object argument is still evaluated -- so skip it. An
+        // explicit-object member function instead declares its object as
+        // parameter 0, so its mapping is already direct.
+        unsigned ArgOffset = 0;
+        if (isa<CXXOperatorCallExpr>(CE))
+          if (const auto *MD = dyn_cast<CXXMethodDecl>(Callee);
+              MD && !MD->isExplicitObjectMemberFunction())
+            ArgOffset = 1;
+        for (unsigned PI = 0, NP = Callee->getNumParams(); PI != NP; ++PI) {
+          if (PI + ArgOffset >= CE->getNumArgs())
+            break;
+          if (!Callee->getParamDecl(PI)->hasAttr<RefToUninitAttr>())
+            continue;
+          const Expr *Arg = CE->getArg(PI + ArgOffset)->IgnoreParenImpCasts();
+          // Peel explicit pointer/reference casts, mirroring the parse-time
+          // recognizers (§4.3: a cast marked pointer is itself marked).
+          while (const auto *Cast = dyn_cast<ExplicitCastExpr>(Arg)) {
+            const Expr *Sub = Cast->getSubExpr();
+            if (!Sub->getType()->isPointerType() && !Sub->isGLValue())
+              break;
+            Arg = Sub->IgnoreParenImpCasts();
+          }
+          const Expr *G = Arg;
+          if (const auto *AddrOf = dyn_cast<UnaryOperator>(Arg);
+              AddrOf && AddrOf->getOpcode() == UO_AddrOf)
+            G = AddrOf->getSubExpr();
+          if (const FieldDecl *F = getCurrentObjectMember(G)) {
+            auto It = Index.find(F);
+            if (It == Index.end())
+              continue;
+            BlockEvents.push_back({Write, It->second, CE});
+            Gen[B->getBlockID()].set(It->second);
+          } else if (isCurrentObjectBase(Arg)) {
+            for (unsigned Idx = 0; Idx != N; ++Idx)
+              BlockEvents.push_back({Write, Idx, CE});
+            Gen[B->getBlockID()].set();
+          }
+        }
       } else if (const auto *LE = dyn_cast<LambdaExpr>(St)) {
         // The lambda body is a separate function and never appears in this
         // CFG, but a this-capturing lambda can read members the moment it is
@@ -2155,11 +2217,13 @@ static const CXXRecordDecl *getTrackedLocalAggregate(const VarDecl *V) {
 // recognized member read or write -- &a, &a.m, a reference binding, passing a
 // to any function (construct_at, memcpy), a member call, a lambda capture --
 // conservatively marks every member assigned from that point (the address may
-// be used to initialize the object). Members of an object with a
-// user-provided constructor stay untracked (trusted, §5.1), as do objects
-// reached through parameters, references, or other objects. A backward goto
-// across the declaration re-default-initializes the object, which the
-// gen-only dataflow cannot model -- a possible missed diagnostic, matching
+// be used to initialize the object). This subsumes [[now_init]] callees
+// (§6.2): passing &a.m to one is an escape like any other, so no dedicated
+// call arm is needed here, unlike the strict ctor-body pass above. Members of
+// an object with a user-provided constructor stay untracked (trusted, §5.1), as
+// do objects reached through parameters, references, or other objects. A
+// backward goto across the declaration re-default-initializes the object, which
+// the gen-only dataflow cannot model -- a possible missed diagnostic, matching
 // the ctor-body pass's accepted imprecision level.
 static void checkInitProfileLocalMembers(Sema &S, AnalysisDeclContext &AC) {
   CFG *cfg = AC.getCFG();

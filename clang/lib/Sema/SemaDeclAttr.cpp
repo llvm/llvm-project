@@ -7005,6 +7005,30 @@ static void handleRefToUninitAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) RefToUninitAttr(S.Context, AL));
 }
 
+static void handleNowInitAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  // The SubjectList restricts D to a function. [[now_init]] asserts that the
+  // callee initializes the storage bound to each of its [[ref_to_uninit]]
+  // parameters (P4222R2 §6.2), so a declaration with no marked parameter
+  // would make it vacuous; reject it. The parameters' attributes are
+  // attached when the parameter declarations are built, before this
+  // declaration attribute is processed, so the prefix and suffix attribute
+  // positions both see them. A dependent parameter's marker is attached to
+  // the pattern unvalidated (its type check defers to instantiation), so a
+  // template with a marked dependent parameter passes here; should the
+  // instantiation drop that marker, the inherited [[now_init]] goes inert
+  // rather than re-diagnosed, like the dropped marker itself. Like the other
+  // marker subject checks, this fires regardless of -fprofiles.
+  if (llvm::none_of(
+          cast<FunctionDecl>(D)->parameters(),
+          [](const ParmVarDecl *P) { return P->hasAttr<RefToUninitAttr>(); })) {
+    S.Diag(AL.getLoc(), diag::err_now_init_attr_no_marked_parameter);
+    AL.setInvalid();
+    return;
+  }
+
+  D->addAttr(::new (S.Context) NowInitAttr(S.Context, AL));
+}
+
 static void handleMIGServerRoutineAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Check that the return type is a `typedef int kern_return_t` or a typedef
   // around it, because otherwise MIG convention checks make no sense.
@@ -8277,6 +8301,10 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   case ParsedAttr::AT_RefToUninit:
     handleRefToUninitAttr(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_NowInit:
+    handleNowInitAttr(S, D, AL);
     break;
 
   case ParsedAttr::AT_ObjCExternallyRetained:

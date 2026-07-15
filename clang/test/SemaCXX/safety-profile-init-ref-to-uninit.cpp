@@ -1659,6 +1659,155 @@ struct TmplMemberCredit {
 };
 template struct TmplMemberCredit<int>;
 
+// [[now_init]] (P4222R2 §6.2): binding an entity to a [[ref_to_uninit]]
+// parameter of a [[now_init]] function earns the same parse-order credit as
+// the equivalent direct store -- the callee initializes the storage it was
+// handed. A plain (non-[[now_init]]) callee still earns nothing (the strict
+// no-escape-credit doctrine; the paper reserves callee-initialization for
+// exactly this annotation). Inside constructors the CFG ctor-body pass has
+// its own flow-precise [[now_init]] credit (safety-profile-init-ctor-body.cpp).
+[[now_init]] void now_init_fill(int *p [[ref_to_uninit]]);
+[[now_init]] void now_init_fill_ref(int &r [[ref_to_uninit]]);
+[[now_init]] void now_init_variadic(int *p [[ref_to_uninit]], ...);
+void ni_sink(int *);
+void ni_cref(const int &);
+
+void test_now_init_whole_local() {
+  int u [[uninit]];
+  ni_sink(&u);       // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  now_init_fill(&u); // OK: marked target, uninitialized source
+  ni_sink(&u);       // OK: the callee initialized u
+  ni_cref(u);        // OK
+  now_init_fill(&u); // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+}
+
+// A plain callee taking the same marked parameter earns no credit: the
+// binding after it stays the strict error.
+void plain_fill(int *p [[ref_to_uninit]]);
+void test_plain_callee_no_credit() {
+  int u [[uninit]];
+  plain_fill(&u);
+  ni_sink(&u); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+
+// Passing the marked pointer's *value* is §6.2's initialize2(p) example
+// verbatim: the callee initializes the pointee, so whole-`*p` accesses after
+// the call are legal -- composed with the existing reseat machinery, which
+// clears the credit like any other pointee credit.
+void test_now_init_pointee(int *p [[ref_to_uninit]]) {
+  int before = *p; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  now_init_fill(p); // OK: marked-to-marked binding
+  int v = *p;       // OK: the callee initialized the pointee
+  ni_sink(p);       // OK: p now refers to initialized memory
+  (void)before; (void)v;
+}
+
+void test_now_init_reseat(int *p [[ref_to_uninit]], int *q [[ref_to_uninit]]) {
+  now_init_fill(p);
+  p = q;      // reseating clears the pointee credit
+  int x = *p; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  (void)x;
+}
+
+void test_now_init_reference(int &r [[ref_to_uninit]]) {
+  now_init_fill_ref(r); // OK: marked reference onward to a marked parameter
+  int v = r;            // OK: the referent is initialized (never lapses)
+  (void)v;
+}
+
+// Members earn the same per-object credit as a direct member store, under
+// the same base-identity keys and boundaries: a member of a parameter-
+// reached object stays uncredited (the pinned aliasing boundary).
+void test_now_init_member() {
+  MemberCredit a;
+  now_init_fill(&a.m); // OK
+  mc_sink_ptr(&a.m);   // OK: (a, m) credited by the callee
+  mc_sink_ref(a.m);    // OK
+}
+void test_now_init_member_boundary(MemberCredit &r) {
+  now_init_fill(&r.m); // OK: marked target, uninitialized source
+  mc_sink_ptr(&r.m);   // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+
+// A variadic argument reaches no declared parameter, so it earns nothing
+// even from a [[now_init]] callee (and is checked as an unmarked target).
+void test_now_init_variadic_no_credit() {
+  int u [[uninit]];
+  int w [[uninit]];
+  now_init_variadic(&u, &w); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  ni_sink(&u); // OK: the marked parameter credited u
+  ni_sink(&w); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+
+// [[now_init]] on a function template: a call to a concrete [[now_init]]
+// callee credits at pattern-parse time, so definition-time checks find it; a
+// dependent callee defers with the rest of the call and credits per
+// instantiation, in the rebuilt parse order.
+template <typename T>
+[[now_init]] void now_init_tmpl(T *p [[ref_to_uninit]]);
+
+template <typename T>
+void template_now_init_nondependent() {
+  int u [[uninit]];
+  now_init_fill(&u);
+  ni_sink(&u); // OK at definition time and at instantiation
+}
+template void template_now_init_nondependent<int>();
+
+template <typename T>
+void template_now_init_dependent() {
+  T u [[uninit]];
+  now_init_tmpl(&u);
+  T *s = &u; // OK per instantiation: the rebuilt call credits first
+  (void)s;
+}
+template void template_now_init_dependent<int>();
+
+// R2 §4.4's now_init() library function works today as a *pure declaration*
+// with no compiler support at all: its unmarked return classifies as
+// initialized (trusted, §4.3), so the returned pointer launders the storage
+// -- the paper's own deliberate profile hole (its `return p;` definition is
+// written once, under suppression). What the declaration alone cannot do is
+// legalize the *original name* after the call; that is exactly what the §6.2
+// [[now_init]] attribute adds when placed on the same declaration.
+template <class T> T *now_init(T *p [[ref_to_uninit]]);
+template <class T> [[now_init]] T *now_init_annotated(T *p [[ref_to_uninit]]);
+
+void test_now_init_library_pattern() {
+  int m [[uninit]];
+  int v = *now_init(&m); // OK today: the unmarked return is trusted
+  int *s = now_init(&m); // OK: unmarked pointer from an unmarked return
+  ni_cref(m); // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)v; (void)s;
+}
+void test_now_init_library_pattern_annotated() {
+  int m [[uninit]];
+  int *s = now_init_annotated(&m); // OK
+  ni_cref(m); // OK: the attribute legalizes the original name
+  (void)s;
+}
+
+// R2 §4.5's requested library annotation, verbatim: construct_at takes a
+// [[ref_to_uninit]] pointer and returns a pointer to an initialized object.
+// As a [[now_init]]-annotated declaration the lifecycle *start* works: the
+// argument's whole object is credited and a repeated construct_at is even
+// caught by the reverse-direction rule (a credited source no longer refers
+// to uninitialized memory). The rest of the §4.5 lifecycle -- destroy_at,
+// use-after-destroy -- remains future work.
+template <class T, class... A>
+[[now_init]] T *construct_at(T *p [[ref_to_uninit]], A &&...args);
+
+struct CtorAtPayload { int x; int y; };
+void test_construct_at_bridge() {
+  CtorAtPayload s [[uninit]];
+  construct_at(&s, 1, 2);
+  int v = s.x; // OK: construct_at initialized the whole object
+  construct_at(&s, 3, 4); // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  CtorAtPayload t [[uninit]];
+  int w = t.x; // expected-error {{read of a subobject of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
+  (void)v; (void)w;
+}
+
 // The reverse direction applies through the assignment funnel too: a
 // credited marked pointer refers to initialized memory, so assigning it to
 // another marked pointer is the requires-uninit error -- while an unmarked
