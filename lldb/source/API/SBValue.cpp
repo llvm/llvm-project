@@ -377,9 +377,12 @@ lldb::SBTypeSynthetic SBValue::GetTypeSynthetic() {
   LLDB_INSTRUMENT_VA(this);
 
   lldb::SBTypeSynthetic synthetic;
-  ValueLocker locker;
-  lldb::ValueObjectSP value_sp(GetSP(locker));
-  if (value_sp) {
+  if (IsValid()) {
+    ValueImpl non_synthetic_root(m_opaque_sp->GetRootSP(),
+                                 m_opaque_sp->GetUseDynamic(), false);
+
+    ValueLocker locker;
+    lldb::ValueObjectSP value_sp(locker.GetLockedSP(non_synthetic_root));
     if (value_sp->UpdateValueIfNeeded(true)) {
       lldb::SyntheticChildrenSP children_sp = value_sp->GetSyntheticChildren();
 
@@ -396,28 +399,37 @@ lldb::SBTypeSynthetic SBValue::GetTypeSynthetic() {
 void SBValue::SetTypeSynthetic(lldb::SBTypeSynthetic &synthetic) {
   LLDB_INSTRUMENT_VA(this);
 
-  ValueLocker locker;
-  lldb::ValueObjectSP value_sp(GetSP(locker));
-  lldb::ScriptedSyntheticChildrenSP synthetic_sp(synthetic.GetSP());
-  if (value_sp) {
-    value_sp->SetSyntheticChildrenOverride(synthetic_sp);
+  if (IsValid()) {
+    ValueImpl non_synthetic_root(m_opaque_sp->GetRootSP(),
+                                 m_opaque_sp->GetUseDynamic(), false);
+
+    ValueLocker locker;
+    lldb::ValueObjectSP root_sp(locker.GetLockedSP(non_synthetic_root));
+
+    root_sp->SetSyntheticChildrenOverride(synthetic.GetSP());
   }
 }
 
 lldb::SBScriptObject SBValue::GetTypeSyntheticImplementation() {
   LLDB_INSTRUMENT_VA(this);
 
-  ValueLocker locker;
-  lldb::ValueObjectSP value_sp(GetSP(locker));
-  if (!value_sp)
-    return lldb::SBScriptObject(nullptr, eScriptLanguageDefault);
+  ScriptObjectPtr ptr = nullptr;
+  if (IsValid()) {
+    ValueImpl non_synthetic_root(m_opaque_sp->GetRootSP(),
+                                 m_opaque_sp->GetUseDynamic(), false);
 
-  auto frontend = value_sp->GetSyntheticChildrenFrontEnd();
-  if (!frontend)
-    return lldb::SBScriptObject(nullptr, eScriptLanguageDefault);
+    ValueLocker locker;
+    lldb::ValueObjectSP root_sp(locker.GetLockedSP(non_synthetic_root));
 
-  return lldb::SBScriptObject(frontend->GetImplementation(),
-                              eScriptLanguageDefault);
+    if (root_sp->UpdateValueIfNeeded(true)) {
+      if (auto synth = root_sp->GetSyntheticValue()) {
+        if (auto frontend = synth->GetSyntheticChildrenFrontEnd()) {
+          ptr = frontend->GetImplementation();
+        }
+      }
+    }
+  }
+  return lldb::SBScriptObject(ptr, eScriptLanguageDefault);
 }
 
 lldb::SBValue SBValue::CreateChildAtOffset(const char *name, uint32_t offset,
