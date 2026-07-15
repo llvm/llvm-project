@@ -319,7 +319,10 @@ def GPR : GPRRegisterClass<(add (sequence "X%u", 10, 17),
                                 (sequence "X%u", 28, 31),
                                 (sequence "X%u", 8, 9),
                                 (sequence "X%u", 18, 27),
-                                (sequence "X%u", 0, 4))>;
+                                (sequence "X%u", 0, 4))> {
+  let DiagnosticType = "InvalidRegClassGPR";
+  let DiagnosticString = "register must be a GPR";
+}
 
 def YGPR : RegisterClass<"RISCV", [YLenVT], 64,
                          (add (sequence "X%u_Y", 10, 17),
@@ -332,7 +335,10 @@ def YGPR : RegisterClass<"RISCV", [YLenVT], 64,
   let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X0_Y, 32, /*RVELimit=*/16>";
 }
 
-def GPRX0 : GPRRegisterClass<(add X0)>;
+def GPRX0 : GPRRegisterClass<(add X0)> {
+  let DiagnosticType = "InvalidRegClassGPRX0";
+  let DiagnosticString = "register must be zero (x0)";
+}
 
 def GPRX1 : GPRRegisterClass<(add X1)> {
   let DiagnosticType = "InvalidRegClassGPRX1";
