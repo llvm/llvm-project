@@ -475,7 +475,9 @@ def Tosa_MatMulTOp : Tosa_InferShapedTypeOp<"matmul_t", [NoMemoryEffect]> {
   list<Availability> availability =
       [Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
        Extension<[Tosa_EXT_INT16, Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2,
-                  Tosa_EXT_BF16]>,
+                  Tosa_EXT_BF16, Tosa_EXT_MX_COMMON, Tosa_EXT_MX_FP4E2M1,
+                  Tosa_EXT_MX_FP6E2M3, Tosa_EXT_MX_FP6E3M2, Tosa_EXT_MX_FP8E4M3,
+                  Tosa_EXT_MX_FP8E5M2, Tosa_EXT_MX_INT8]>,
   ];
 
   let extraClassDeclaration = [{
@@ -494,6 +496,8 @@ def Tosa_MatMulTOp : Tosa_InferShapedTypeOp<"matmul_t", [NoMemoryEffect]> {
 
 //===----------------------------------------------------------------------===//
 // Operator: matmul_t_block_scaled
+//
+// Note: This operation is deprecated. It will be removed in the future.
 //===----------------------------------------------------------------------===//
 def Tosa_MatmulTBlockScaledOp : Tosa_InferShapedTypeOp<"matmul_t_block_scaled", [NoMemoryEffect]> {
   let summary = "Performs two dimensional matrix multiplications using block scaled tensors.";
@@ -506,6 +510,8 @@ def Tosa_MatmulTBlockScaledOp : Tosa_InferShapedTypeOp<"matmul_t_block_scaled", 
 
     This operation is not pure. Undefined behaviour may occur if the accumulated
     result overflows.
+
+    Note: This operation is deprecated. It will be removed in the future.
   }];
 
   let arguments = (ins
@@ -2334,7 +2340,11 @@ def Tosa_ReshapeOp : Tosa_InferTensorTypeOp<"reshape", [Pure]> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT64]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16,
+               Tosa_EXT_INT64, Tosa_EXT_MX_COMMON, Tosa_EXT_MX_FP4E2M1,
+               Tosa_EXT_MX_FP6E2M3, Tosa_EXT_MX_FP6E3M2,
+               Tosa_EXT_MX_FP8E4M3, Tosa_EXT_MX_FP8E5M2,
+               Tosa_EXT_MX_INT8]>,
   ];
 
   let extraClassDeclaration = [{
@@ -2348,6 +2358,8 @@ def Tosa_ReshapeOp : Tosa_InferTensorTypeOp<"reshape", [Pure]> {
 
 //===----------------------------------------------------------------------===//
 // Operator: reshape_block_scaled
+//
+// Note: This operation is deprecated. It will be removed in the future.
 //===----------------------------------------------------------------------===//
 def Tosa_ReshapeBlockScaledOp
     : Tosa_InferTensorTypeOp<"reshape_block_scaled", [Pure]> {
@@ -2360,6 +2372,8 @@ def Tosa_ReshapeBlockScaledOp
     single non-block-scaled tensor of any rank. No data conversion happens during
     a reshape operation. Reshape must retain the relationship between values
     and their scale in a block for block-scaled content.
+
+    Note: This operation is deprecated. It will be removed in the future.
   }];
 
   let hasVerifier = 1;
@@ -2597,7 +2611,15 @@ def Tosa_RowGatherOp : Tosa_InferShapedTypeOp<"row_gather", [NoMemoryEffect]> {
   list<Availability> availability = [Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
                                      Extension<[Tosa_EXT_FP8E4M3,
                                                 Tosa_EXT_FP8E5M2, Tosa_EXT_BF16,
-                                                Tosa_EXT_INT16, Tosa_EXT_INT64]>,
+                                                Tosa_EXT_INT16,
+                                                Tosa_EXT_INT64,
+                                                Tosa_EXT_MX_COMMON,
+                                                Tosa_EXT_MX_FP4E2M1,
+                                                Tosa_EXT_MX_FP6E2M3,
+                                                Tosa_EXT_MX_FP6E3M2,
+                                                Tosa_EXT_MX_FP8E4M3,
+                                                Tosa_EXT_MX_FP8E5M2,
+                                                Tosa_EXT_MX_INT8]>,
   ];
 
   let hasCanonicalizer = 1;
@@ -2609,6 +2631,8 @@ def Tosa_RowGatherOp : Tosa_InferShapedTypeOp<"row_gather", [NoMemoryEffect]> {
 
 //===----------------------------------------------------------------------===//
 // Operator: row_gather_block_scaled
+//
+// Note: This operation is deprecated. It will be removed in the future.
 //===----------------------------------------------------------------------===//
 def Tosa_RowGatherBlockScaledOp
     : Tosa_InferShapedTypeOp<"row_gather_block_scaled", [NoMemoryEffect]> {
@@ -2625,11 +2649,10 @@ def Tosa_RowGatherBlockScaledOp
     - non-block-scaled: 1 input value tensor and 1 result tensor
     - block-scaled: data + scale input tensors and data + scale result tensors
 
-    This operation follows the TOSA 1.1 draft specification and may evolve as
-    the specification is updated.
-
     This operation is not pure. Undefined behaviour may occur if the specified
     indices are out of range.
+
+    Note: This operation is deprecated. It will be removed in the future.
   }];
 
   let arguments = (ins Variadic<Tosa_Tensor3D>:$values,

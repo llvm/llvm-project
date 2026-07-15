@@ -265,7 +265,7 @@ bool DivergenceLoweringHelper::lowerTemporalDivergenceI1() {
 
     for (auto Entry : Cycle->getEntries()) {
       for (MachineBasicBlock *Pred : Entry->predecessors()) {
-        if (!CInfo.contains(Cycle, Pred)) {
+        if (!CInfo.contains(*Cycle, Pred)) {
           B.setInsertPt(*Pred, Pred->getFirstTerminator());
           auto ImplDef = B.buildInstr(AMDGPU::IMPLICIT_DEF, {BoolS1}, {});
           SSAUpdater.AddAvailableValue(Pred, ImplDef.getReg(0));

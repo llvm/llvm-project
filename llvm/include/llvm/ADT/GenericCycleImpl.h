@@ -48,7 +48,7 @@ void GenericCycleInfo<ContextT>::getExitBlocks(
     for (size_t Idx = NumExitBlocks, End = C.ExitBlocksCache.size(); Idx < End;
          ++Idx) {
       BlockT *Succ = C.ExitBlocksCache[Idx];
-      if (!contains(&C, Succ)) {
+      if (!contains(C, Succ)) {
         auto ExitEndIt = C.ExitBlocksCache.begin() + NumExitBlocks;
         if (std::find(C.ExitBlocksCache.begin(), ExitEndIt, Succ) == ExitEndIt)
           C.ExitBlocksCache[NumExitBlocks++] = Succ;
@@ -66,7 +66,7 @@ void GenericCycleInfo<ContextT>::getExitingBlocks(
     const CycleT &C, SmallVectorImpl<BlockT *> &TmpStorage) const {
   for (BlockT *Block : getBlocks(C)) {
     for (BlockT *Succ : successors(Block)) {
-      if (!contains(&C, Succ)) {
+      if (!contains(C, Succ)) {
         TmpStorage.push_back(Block);
         break;
       }
@@ -104,7 +104,7 @@ auto GenericCycleInfo<ContextT>::getCyclePredecessor(const CycleT &C) const
   // Loop over the predecessors of the header node...
   BlockT *Header = C.getHeader();
   for (const auto Pred : predecessors(Header)) {
-    if (!contains(&C, Pred)) {
+    if (!contains(C, Pred)) {
       if (Out && Out != Pred)
         return nullptr;
       Out = Pred;
@@ -127,7 +127,7 @@ void GenericCycleInfo<ContextT>::verifyCycle(const CycleT &C) const {
   DenseSet<BlockT *> Entries;
   for (BlockT *Entry : C.entries()) {
     assert(Entries.insert(Entry).second); // duplicate entry?
-    assert(contains(&C, Entry));
+    assert(contains(C, Entry));
   }
 
   // Setup for using a depth-first iterator to visit every block in the cycle.
@@ -142,16 +142,16 @@ void GenericCycleInfo<ContextT>::verifyCycle(const CycleT &C) const {
   // Check the individual blocks.
   for (BlockT *BB : depth_first_ext(C.getHeader(), VisitSet)) {
     assert(llvm::any_of(llvm::children<BlockT *>(BB),
-                        [&](BlockT *B) { return contains(&C, B); }) &&
+                        [&](BlockT *B) { return contains(C, B); }) &&
            "Cycle block has no in-cycle successors!");
 
     assert(llvm::any_of(llvm::inverse_children<BlockT *>(BB),
-                        [&](BlockT *B) { return contains(&C, B); }) &&
+                        [&](BlockT *B) { return contains(C, B); }) &&
            "Cycle block has no in-cycle predecessors!");
 
     DenseSet<BlockT *> OutsideCyclePreds;
     for (BlockT *B : llvm::inverse_children<BlockT *>(BB))
-      if (!contains(&C, B))
+      if (!contains(C, B))
         OutsideCyclePreds.insert(B);
 
     if (Entries.contains(BB)) {
@@ -195,7 +195,7 @@ void GenericCycleInfo<ContextT>::verifyCycleNest(const CycleT &C) const {
   for (CycleT *Child : C.children()) {
     // Each block in each subcycle should be contained within this cycle.
     for (BlockT *BB : getBlocks(*Child)) {
-      assert(contains(&C, BB) &&
+      assert(contains(C, BB) &&
              "Cycle does not contain all the blocks of a subcycle!");
     }
     assert(Child->Depth == C.Depth + 1);
@@ -205,11 +205,6 @@ void GenericCycleInfo<ContextT>::verifyCycleNest(const CycleT &C) const {
   if (C.ParentCycle) {
     assert(is_contained(C.ParentCycle->children(), &C) &&
            "Cycle is not a subcycle of its parent!");
-    assert(C.ParentCycle->TopLevelCycle == C.TopLevelCycle &&
-           "Top level cycle of parent cycle must be the same");
-  } else {
-    assert(C.TopLevelCycle == &C &&
-           "Cycle without parent must be top-level cycle");
   }
 #endif
 }
@@ -282,9 +277,6 @@ void GenericCycleInfo<ContextT>::moveTopLevelCycleToNewParent(CycleT *NewParent,
   *Pos = std::move(CurrentContainer.back());
   CurrentContainer.pop_back();
   Child->ParentCycle = NewParent;
-  Child->TopLevelCycle = NewParent;
-  for (CycleT *Cycle : depth_first(Child))
-    Cycle->TopLevelCycle = NewParent;
   // This only relinks the cycle tree and does NOT touch BlockLayout, so it
   // leaves every cycle's [IdxBegin, IdxEnd) range stale, i.e. BlockLayout is
   // left invalid. The caller must call layoutBlocks() before any
