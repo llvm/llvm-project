@@ -173,7 +173,7 @@ ASTNodeUP DILParser::ParseLogicalOrExpression() {
     Token token = CurToken();
     m_dil_lexer.Advance();
     auto rhs = ParseLogicalAndExpression();
-    assert(lhs && "ASTNodeUP must not contain a nullptr");
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
     lhs = std::make_unique<BinaryOpNode>(
         token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
         std::move(lhs), std::move(rhs));
@@ -195,7 +195,7 @@ ASTNodeUP DILParser::ParseLogicalAndExpression() {
     Token token = CurToken();
     m_dil_lexer.Advance();
     auto rhs = ParseInclusiveOrExpression();
-    assert(lhs && "ASTNodeUP must not contain a nullptr");
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
     lhs = std::make_unique<BinaryOpNode>(
         token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
         std::move(lhs), std::move(rhs));
