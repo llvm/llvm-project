@@ -2400,7 +2400,7 @@ public:
                                                         unsigned Index);
 
   /// Identity of an input file, built from serialized metadata so we touch no
-  /// files at load. An empty Name means a non-file entry like a buffer or 
+  /// files at load. An empty Name means a non-file entry like a buffer or
   /// expansion, and never deduplicates.
   struct SLocFileIdentity {
     StringRef Name;
