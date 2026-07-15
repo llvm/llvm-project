@@ -1318,9 +1318,12 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
     mlir::Location loc = converter.getCurrentLocation();
     fir::ExtendedValue exv =
         converter.getSymbolExtendedValue(var.getSymbol(), &symMap);
+    Fortran::lower::StatementContext &cleanupCtx =
+        needsHostCudaCleanup ? converter.getCudaCleanupCtx()
+                             : converter.getFctCtx();
     switch (*cleanup) {
     case VariableCleanUp::Finalize:
-      converter.getFctCtx().attachCleanup([builder, loc, exv]() {
+      cleanupCtx.attachCleanup([builder, loc, exv]() {
         mlir::Value box = builder->createBox(loc, exv);
         fir::runtime::genDerivedTypeDestroy(*builder, loc, box);
       });
@@ -1328,9 +1331,6 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
     case VariableCleanUp::Deallocate:
       auto *converterPtr = &converter;
       auto *sym = &var.getSymbol();
-      Fortran::lower::StatementContext &cleanupCtx =
-          needsHostCudaCleanup ? converter.getCudaCleanupCtx()
-                               : converter.getFctCtx();
       cleanupCtx.attachCleanup([converterPtr, loc, exv, sym]() {
         const fir::MutableBoxValue *mutableBox =
             exv.getBoxOf<fir::MutableBoxValue>();

@@ -225,7 +225,7 @@ void *CUFAllocDevice(std::size_t sizeInBytes,
   return p;
 }
 
-// End-of-main cleanup is guarded in lowering; explicit deallocation after a
+// Scope-exit cleanup is guarded in lowering; explicit deallocation after a
 // reset is unsupported, keeping cudaFreeAsync free of context-query overhead.
 void CUFFreeDevice(void *p) {
   CriticalSection critical{lock};
