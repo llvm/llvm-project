@@ -666,11 +666,12 @@ OutlinedFunctionDecl *BuildSYCLKernelEntryPointOutline(Sema &SemaRef,
   return OFD;
 }
 
-NamespaceDecl* getSyclNamespace(Sema &SemaRef) {
+NamespaceDecl* getSyclNamespace(Sema &SemaRef, SourceLocation Loc) {
+  // TODO too slow; cache this
   ASTContext &Ctx = SemaRef.getASTContext();
   IdentifierInfo const &SyclNamespaceID = Ctx.Idents.get("sycl");
 
-  LookupResult NamespaceResult(SemaRef, &SyclNamespaceID, SourceLocation(),
+  LookupResult NamespaceResult(SemaRef, &SyclNamespaceID, Loc,
                                Sema::LookupNamespaceName);
   SemaRef.LookupQualifiedName(NamespaceResult, Ctx.getTranslationUnitDecl());
 
@@ -680,62 +681,105 @@ NamespaceDecl* getSyclNamespace(Sema &SemaRef) {
   return NamespaceResult.getAsSingle<NamespaceDecl>();
 }
 
-bool lookupIsDeviceCopyable(Sema &SemaRef, QualType Ty) {
-  NamespaceDecl* SyclNamespace = getSyclNamespace(SemaRef);
+bool lookupIsDeviceCopyable(Sema &SemaRef, QualType &Ty, SourceLocation Loc) {
+  // No need to lookup anything if trivially copyable already
+  ASTContext &Ctx = SemaRef.getASTContext();
+  if (Ty.isTriviallyCopyableType(Ctx)) {
+    return true;
+  }
+
+  // TODO too slow; cache this
+  NamespaceDecl* SyclNamespace = getSyclNamespace(SemaRef, Loc);
   if (nullptr == SyclNamespace) {
     // TODO Decide if I throw error or just let it pass
     // - Throw error: Assumes the SYCL namespace must exist
     // - Let it pass: Assumes that the SYCL namespace might not necessarily be declared
+    llvm::errs() << "debug1\n";
     return false;
   }
 
-  ASTContext &Ctx = SemaRef.getASTContext();
-  IdentifierInfo const &IsDeviceCopyableIdent =
+  // is_device_copyable Identifier
+  IdentifierInfo const &IDCIdent =
     Ctx.Idents.get("is_device_copyable");
 
-  LookupResult Result(SemaRef, &IsDeviceCopyableIdent, SourceLocation(),
+  LookupResult IdentResult(SemaRef, &IDCIdent, Loc,
                       Sema::LookupOrdinaryName);
-  SemaRef.LookupQualifiedName(Result, SyclNamespace);
+  SemaRef.LookupQualifiedName(IdentResult, SyclNamespace);
 
-  if (Result.isAmbiguous())
-    // TODO error or let go? perhaps letgo here?
+  if (IdentResult.isAmbiguous()) {
+    // TODO error or let go?
+    llvm::errs() << "debug2\n";
     return false;
+  }
 
-  ClassTemplateDecl* IsDeviceCopyable =
-    Result.getAsSingle<ClassTemplateDecl>();
+  ClassTemplateDecl* IDCDecl =
+    IdentResult.getAsSingle<ClassTemplateDecl>();
+  if (nullptr == IDCDecl) {
+    // TODO error or let go?
+    llvm::errs() << "debug3\n";
+    return false;
+  }
 
-  // TODO: reference this from SemaCoroutine:
+  TemplateArgumentListInfo Args{};
+  TemplateArgument TyArg{Ty};
+  Args.addArgument(SemaRef.getTrivialTemplateArgumentLoc(TyArg, QualType{}, Loc));
 
-  // // Form template argument list for coroutine_traits<R, P1, P2, ...> according
-  // // to [dcl.fct.def.coroutine]3
-  // TemplateArgumentListInfo Args(KwLoc, KwLoc);
-  // auto AddArg = [&](QualType T) {
-  //   Args.addArgument(TemplateArgumentLoc(
-  //       TemplateArgument(T), S.Context.getTrivialTypeSourceInfo(T, KwLoc)));
-  // };
-  // AddArg(FnType->getReturnType());
-  // // If the function is a non-static member function, add the type
-  // // of the implicit object parameter before the formal parameters.
-  // if (auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
-  //   if (MD->isImplicitObjectMemberFunction()) {
-  //     // [over.match.funcs]4
-  //     // For non-static member functions, the type of the implicit object
-  //     // parameter is
-  //     //  -- "lvalue reference to cv X" for functions declared without a
-  //     //      ref-qualifier or with the & ref-qualifier
-  //     //  -- "rvalue reference to cv X" for functions declared with the &&
-  //     //      ref-qualifier
-  //     QualType T = MD->getFunctionObjectParameterType();
-  //     T = FnType->getRefQualifier() == RQ_RValue
-  //             ? S.Context.getRValueReferenceType(T)
-  //             : S.Context.getLValueReferenceType(T, /*SpelledAsLValue*/ true);
-  //     AddArg(T);
-  //   }
-  // }
-  // for (QualType T : FnType->getParamTypes())
-  //   AddArg(T);
+  QualType IDCTrait = SemaRef.CheckTemplateIdType(
+      ElaboratedTypeKeyword::None, TemplateName{IDCDecl}, Loc, Args,
+      /*Scope=*/nullptr, /*ForNestedNameSpecifier=*/false);
+
+  if (IDCTrait.isNull()) {
+    // TODO error or let go?
+    llvm::errs() << "debug4\n";
+    return false;
+  }
+  if (SemaRef.RequireCompleteType(Loc, IDCTrait, diag::err_sycl_incomplete_type_trait)) {
+    // TODO error or let go?
+    llvm::errs() << "debug5\n";
+    return false;
+  }
+
+  CXXRecordDecl *RD = IDCTrait->getAsCXXRecordDecl();
+  assert(RD && "specialization of class template is not a class?");
+
+  // Look up the ::promise_type member.
+  IdentifierInfo const &ValueIdent = Ctx.Idents.get("value");
+  LookupResult ValueResult(SemaRef, &ValueIdent, Loc, Sema::LookupOrdinaryName);
+  SemaRef.LookupQualifiedName(ValueResult, RD);
+  if (ValueResult.empty() || ValueResult.isAmbiguous()) {
+    // TODO error or let go?
+    llvm::errs() << "debug6\n";
+    return false;
+  }
+
+  ExprResult ValueExpr = SemaRef.BuildDeclarationNameExpr(CXXScopeSpec{}, ValueResult, /*NeedsADL=*/false);
+  if (ValueExpr.isInvalid()) {
+    // TODO error or let go?
+    llvm::errs() << "debug7\n";
+    return false;
+  }
   
-  return false;
+  struct ICEDiagnoser : Sema::VerifyICEDiagnoser {
+    QualType &TraitTy;
+    Expr *GotExpr;
+    ICEDiagnoser(QualType &TT, Expr *E)
+        : TraitTy(TT), GotExpr(E) {}
+    Sema::SemaDiagnosticBuilder diagnoseNotICE(Sema &S,
+                                               SourceLocation Loc) override {
+      return S.Diag(Loc, diag::err_sycl_unexpected_type_trait_val)
+             << TraitTy << "std::true_type or std::false_type" << GotExpr;
+    }
+  } Diagnoser(IDCTrait, ValueExpr.get());
+
+  llvm::APSInt IDCValue;
+  ValueExpr = SemaRef.VerifyIntegerConstantExpression(ValueExpr.get(), &IDCValue, Diagnoser);
+  if (ValueExpr.isInvalid()){
+    // TODO error or let go?
+    llvm::errs() << "debug8\n";
+    return false;
+  }
+
+  return IDCValue.getBoolValue();
 }
 
 class KernelParamsChecker : public ConstSubobjectVisitor<KernelParamsChecker> {
@@ -822,6 +866,24 @@ public:
       // invalid use of a reference.
       IsValid = false;
       return false;
+    }
+
+    auto DirectParent = ObjectAccessPath.back();
+    // TODO Do I care about deep traversal + checking if every subfield within a class is conformant?
+    // TODO Do I at least need to dive into the lambdas
+    if (const ParmVarDecl *parmVar = dyn_cast<const ParmVarDecl *>(DirectParent)) {
+      const CXXRecordDecl *RD = Ty.getNonReferenceType()->getAsCXXRecordDecl();
+      if (RD && !RD->isLambda() && (RD->isClass() || RD->isStruct())) {
+        if (!lookupIsDeviceCopyable(SemaSYCLRef.SemaRef, Ty, parmVar->getLocation())) {
+          SemaSYCLRef.Diag(parmVar->getLocation(), diag::err_sycl_kernel_param_not_device_copyable) << Ty;
+          emitObjectAccessPathNotes();
+
+          IsValid = false;
+          return false;
+        }
+        // TODO Issue warning if type is obviously not copyable
+        // ... but what does that mean? And how thorough do I want to check, even if the user has already marked it copyable?
+      }
     }
     return true;
   }

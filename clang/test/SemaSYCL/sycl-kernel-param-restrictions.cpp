@@ -8,6 +8,14 @@ template<int, int = 0> struct KN;
 template<typename KNT, typename... Ts>
 void sycl_kernel_launch(const char *, Ts...) {}
 
+namespace sycl {
+
+// Make everything is_device_copyable for sake of testing
+template <typename T>
+struct is_device_copyable { static constexpr bool value = true; };
+
+} // namespace sycl
+
 // Check that reference captures of kernel that defined as lambda are diagnosed.
 namespace badref1 {
 // Kernel entry point template definition.
@@ -166,7 +174,6 @@ public:
 class Derived : virtual Base { // expected-note {{within base class of type 'Base' declared here}}
 public:
   Derived(int &a) : Base(a) {}
-
 };
 
 void test() {

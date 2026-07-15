@@ -1,6 +1,22 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -fsycl-is-host -verify %s
 // RUN: %clang_cc1 -triple spirv64 -std=c++17 -fsyntax-only -fsycl-is-device -verify %s
-#include <type_traits>
+
+namespace std {
+
+template <bool B>
+struct bool_constant {
+  static constexpr bool value = B;
+};
+
+using true_type = bool_constant<true>;
+
+template <typename T>
+struct is_trivially_copyable : bool_constant<__is_trivially_copyable(T)> {};
+
+template <typename T>
+inline constexpr bool is_trivially_copyable_v = is_trivially_copyable<T>::value;
+
+} // namespace std
 
 // A unique kernel name type is required for each declared kernel entry point.
 template<int, int = 0> struct KN;
@@ -42,6 +58,8 @@ void kernel_single_task(T t) {}
 
 void test() {
   DeviceCopyable a;
-  kernel_single_task<KN<1>>([=] { (void)a; });
+  NotTriviallyCopyable b;
+  kernel_single_task<KN<1>>(a);
+  kernel_single_task<KN<2>>(b);
 }
 } // namespace iscopyable1

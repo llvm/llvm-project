@@ -13521,6 +13521,10 @@ def err_sycl_special_type_num_init_method : Error<
   "method defined">;
 def err_sycl_device_invalid_target : Error<
   "%0 is not a supported SYCL device target">;
+def err_sycl_incomplete_type_trait : Error<
+  "SYCL type trait %0 is declared but incomplete">;
+def err_sycl_unexpected_type_trait_val : Error<
+  "expected %1 for SYCL type trait %0, but found %2 instead">;
 
 // SYCL external attribute diagnostics
 def err_sycl_external_invalid_linkage : Error<
@@ -13581,6 +13585,8 @@ def note_sycl_kernel_launch_overload_resolution_here : Note<
 def err_sycl_entry_point_device_use : Error<
   "function %0 cannot be used in device code because it is declared with the"
   " %1 attribute">;
+def err_sycl_kernel_param_not_device_copyable : Error<
+  "%0 is not device copyable (sycl::is_device_copyable) and cannot be used as a kernel parameter">;
 
 def warn_cuda_maxclusterrank_sm_90 : Warning<
   "maxclusterrank requires sm_90 or higher, CUDA arch provided: %0, ignoring "
