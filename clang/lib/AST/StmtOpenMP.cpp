@@ -18,8 +18,8 @@
 using namespace clang;
 using namespace llvm::omp;
 
-// True if the attributed statement carries the internal `omp tile` intra-tile
-// body-guard marker.
+/// Returns true if the attributed statement carries the internal `omp tile`
+/// intra-tile reinterpretation hint (see OMPInvariantPredicateBoundAttr).
 static bool hasOMPInvariantPredicateBound(const AttributedStmt *AS) {
   for (const Attr *A : AS->getAttrs())
     if (isa<OMPInvariantPredicateBoundAttr>(A))
@@ -27,17 +27,26 @@ static bool hasOMPInvariantPredicateBound(const AttributedStmt *AS) {
   return false;
 }
 
-// Like `Stmt::IgnoreContainers`, but also treats the `omp tile` body-guard
-static Stmt *IgnoreContainersAndOMPTileBodyGuard(Stmt *S) {
+/// Peeks through an intra-tile hint wrapper to return the underlying loop;
+/// otherwise returns \p S unchanged. Used by the loop walker once the hint has
+/// already been delivered to the analysis callback and we need to look through
+/// the wrapper to reach the loop body.
+static Stmt *ignoreOMPIntraTileHint(Stmt *S) {
+  if (auto *AS = dyn_cast_or_null<AttributedStmt>(S))
+    if (hasOMPInvariantPredicateBound(AS))
+      return AS->getSubStmt();
+  return S;
+}
+
+/// Like `Stmt::IgnoreContainers`, but stops at (and preserves) an intra-tile
+/// hint wrapper so that the enclosing loop walker can deliver the hint to
+/// loop-associated analysis (e.g. `collapse`). Non-hint attributed statements
+/// and single-statement compounds are still skipped.
+static Stmt *ignoreContainersKeepingIntraTileHint(Stmt *S) {
   while (true) {
     if (auto *AS = dyn_cast_or_null<AttributedStmt>(S)) {
-      if (hasOMPInvariantPredicateBound(AS)) {
-        if (auto *If = dyn_cast<IfStmt>(AS->getSubStmt());
-            If && !If->getElse()) {
-          S = If->getThen();
-          continue;
-        }
-      }
+      if (hasOMPInvariantPredicateBound(AS))
+        break;
       S = AS->getSubStmt();
       continue;
     }
@@ -114,7 +123,7 @@ Stmt *
 OMPLoopBasedDirective::tryToFindNextInnerLoop(Stmt *CurStmt,
                                               bool TryImperfectlyNestedLoops) {
   Stmt *OrigStmt = CurStmt;
-  CurStmt = IgnoreContainersAndOMPTileBodyGuard(CurStmt);
+  CurStmt = ignoreContainersKeepingIntraTileHint(CurStmt);
   // Additional work for imperfectly nested loops, introduced in OpenMP 5.0.
   if (TryImperfectlyNestedLoops) {
     if (auto *CS = dyn_cast<CompoundStmt>(CurStmt)) {
@@ -128,14 +137,17 @@ OMPLoopBasedDirective::tryToFindNextInnerLoop(Stmt *CurStmt,
         for (Stmt *S : CS->body()) {
           if (!S)
             continue;
-          if (auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(S))
-            S = CanonLoop->getLoopStmt();
-          // Check for the `omp tile` body-guard marker.
-          if (auto *AS = dyn_cast<AttributedStmt>(S);
-              AS && hasOMPInvariantPredicateBound(AS))
-            S = IgnoreContainersAndOMPTileBodyGuard(S);
-          if (isa<ForStmt>(S) || isa<CXXForRangeStmt>(S) ||
-              (isa<OMPLoopBasedDirective>(S) && !isa<OMPLoopDirective>(S))) {
+          // Peek past an OMPCanonicalLoop wrapper and/or an intra-tile hint to
+          // check whether this child is loop-like; keep the original (wrapped)
+          // node in CurStmt so the hint still reaches the loop-analysis
+          // callback.
+          Stmt *Inner = S;
+          if (auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(Inner))
+            Inner = CanonLoop->getLoopStmt();
+          Inner = ignoreOMPIntraTileHint(Inner);
+          if (isa<ForStmt>(Inner) || isa<CXXForRangeStmt>(Inner) ||
+              (isa<OMPLoopBasedDirective>(Inner) &&
+               !isa<OMPLoopDirective>(Inner))) {
             // Only single loop construct is allowed.
             if (CurStmt) {
               CurStmt = OrigStmt;
@@ -167,7 +179,7 @@ bool OMPLoopBasedDirective::doForAllLoops(
     llvm::function_ref<bool(unsigned, Stmt *)> Callback,
     llvm::function_ref<void(OMPLoopTransformationDirective *)>
         OnTransformationCallback) {
-  CurStmt = IgnoreContainersAndOMPTileBodyGuard(CurStmt);
+  CurStmt = ignoreContainersKeepingIntraTileHint(CurStmt);
   for (unsigned Cnt = 0; Cnt < NumLoops; ++Cnt) {
     while (true) {
       auto *Dir = dyn_cast<OMPLoopTransformationDirective>(CurStmt);
@@ -197,19 +209,23 @@ bool OMPLoopBasedDirective::doForAllLoops(
     }
     if (auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(CurStmt))
       CurStmt = CanonLoop->getLoopStmt();
+    // Deliver the (possibly hint-wrapped) loop node to the callback so it can
+    // read the intra-tile reinterpretation hint, then look through the wrapper
+    // to reach the loop body.
     if (Callback(Cnt, CurStmt))
       return false;
+    Stmt *LoopStmt = ignoreOMPIntraTileHint(CurStmt);
     // Move on to the next nested for loop, or to the loop body.
     // OpenMP [2.8.1, simd construct, Restrictions]
     // All loops associated with the construct must be perfectly nested; that
     // is, there must be no intervening code nor any OpenMP directive between
     // any two loops.
-    if (auto *For = dyn_cast<ForStmt>(CurStmt)) {
+    if (auto *For = dyn_cast<ForStmt>(LoopStmt)) {
       CurStmt = For->getBody();
     } else {
-      assert(isa<CXXForRangeStmt>(CurStmt) &&
+      assert(isa<CXXForRangeStmt>(LoopStmt) &&
              "Expected canonical for or range-based for loops.");
-      CurStmt = cast<CXXForRangeStmt>(CurStmt)->getBody();
+      CurStmt = cast<CXXForRangeStmt>(LoopStmt)->getBody();
     }
     CurStmt = OMPLoopBasedDirective::tryToFindNextInnerLoop(
         CurStmt, TryImperfectlyNestedLoops);
@@ -223,6 +239,8 @@ void OMPLoopBasedDirective::doForAllLoopsBodies(
   bool Res = OMPLoopBasedDirective::doForAllLoops(
       CurStmt, TryImperfectlyNestedLoops, NumLoops,
       [Callback](unsigned Cnt, Stmt *Loop) {
+        // Look through an intra-tile hint wrapper to reach the loop itself.
+        Loop = ignoreOMPIntraTileHint(Loop);
         Stmt *Body = nullptr;
         if (auto *For = dyn_cast<ForStmt>(Loop)) {
           Body = For->getBody();

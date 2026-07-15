@@ -2231,32 +2231,15 @@ public:
 };
 } // namespace
 
-// Helper function to look through the statement and return the special marked
-// `omp tile` guard `if`, or nullptr if this is not that shape.
-static const IfStmt *getOMPTileBodyGuardIf(const Stmt *S) {
-  while (S) {
-    if (const auto *AS = dyn_cast<AttributedStmt>(S)) {
-      bool IsMarker = llvm::any_of(AS->getAttrs(), [](const Attr *A) {
-        return isa<OMPInvariantPredicateBoundAttr>(A);
-      });
-      if (!IsMarker) {
-        S = AS->getSubStmt();
-        continue;
-      }
-      const auto *If = dyn_cast<IfStmt>(AS->getSubStmt());
-      if (!If || If->getElse())
-        return nullptr;
-      return If;
-    }
-    if (const auto *CS = dyn_cast<CompoundStmt>(S)) {
-      if (CS->size() != 1)
-        return nullptr;
-      S = CS->body_back();
-      continue;
-    }
-    return nullptr;
-  }
-  return nullptr;
+/// Helper function to look through the droppable intra-tile hint wrapper
+/// (OMPInvariantPredicateBoundAttr) to the loop statement it annotates.
+static const Stmt *lookThroughOMPIntraTileHint(const Stmt *S) {
+  if (const auto *AS = dyn_cast_or_null<AttributedStmt>(S))
+    if (llvm::any_of(AS->getAttrs(), [](const Attr *A) {
+          return isa<OMPInvariantPredicateBoundAttr>(A);
+        }))
+      return AS->getSubStmt();
+  return S;
 }
 
 static void emitBody(CodeGenFunction &CGF, const Stmt *S, const Stmt *NextLoop,
@@ -2275,23 +2258,10 @@ static void emitBody(CodeGenFunction &CGF, const Stmt *S, const Stmt *NextLoop,
     return;
   }
 
-  // If this is the marked `omp tile` guard, emit its predicate as a runtime
-  // body guard and recurse into `Then` so consumed loops are still walked.
-  if (const IfStmt *Guard = getOMPTileBodyGuardIf(S)) {
-    assert(!Guard->getInit() && !Guard->getConditionVariable() &&
-           "omp tile body-guard must be a plain `if (P) Then`");
-    llvm::BasicBlock *ThenBlock = CGF.createBasicBlock("omp_tile.pred.then");
-    llvm::BasicBlock *EndBlock = CGF.createBasicBlock("omp_tile.pred.end");
-    CGF.EmitBranchOnBoolExpr(
-        Guard->getCond(), ThenBlock, EndBlock, /*TrueCount=*/0,
-        Stmt::getLikelihood(Guard->getThen(), Guard->getElse()));
-    CGF.EmitBlock(ThenBlock);
-    emitBody(CGF, Guard->getThen(), NextLoop, MaxLevel, Level);
-    CGF.EmitBranch(EndBlock);
-    CGF.EmitBlock(EndBlock);
-    return;
-  }
-  if (SimplifiedS == NextLoop) {
+  // The loop walker may hand back the intra-tile hint wrapper as `NextLoop`;
+  // match against the loop it annotates. The tile overshoot guard is emitted
+  // separately via EmitOMPLoopBody's finals-conditions handling.
+  if (SimplifiedS == lookThroughOMPIntraTileHint(NextLoop)) {
     if (auto *Dir = dyn_cast<OMPLoopTransformationDirective>(SimplifiedS))
       SimplifiedS = Dir->getTransformedStmt();
     if (const auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(SimplifiedS))

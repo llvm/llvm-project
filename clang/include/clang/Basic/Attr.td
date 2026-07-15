@@ -4881,6 +4881,8 @@ def OMPInvariantPredicateBound : StmtAttr {
   let Spellings = [];
   let SemaHandler = 0;
   let Subjects = SubjectList<[Stmt], ErrorDiag>;
+  let Args = [ExprArgument<"RectCond">, ExprArgument<"Predicate">,
+              ExprArgument<"TileSize">];
   let Documentation = [InternalOnly];
 }
 
