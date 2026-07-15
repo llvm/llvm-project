@@ -995,7 +995,7 @@ void buffer_unique_ostream::anchor() {}
 
 static bool isNullDeviceName(StringRef OutputFileName) {
 #ifdef _WIN32
-  if (OutputFileName.equals_insensitive("nul"))
+  if (OutputFileName.equals_insensitive("NUL"))
     return true;
 #endif
   return OutputFileName == "/dev/null";

@@ -661,8 +661,8 @@ TEST(raw_ostreamTest, writeToDevNull) {
 }
 
 #ifdef _WIN32
-TEST(raw_ostreamTest, writeToNul) {
-  // raw_null_ostream never touches the filesystem, so no "nul.temp-stream-*"
+TEST(raw_ostreamTest, writeToNUL) {
+  // raw_null_ostream never touches the filesystem, so no "NUL.temp-stream-*"
   // file should exist in the CWD while Write() runs.
   llvm::unittest::TempDir RootTestDirectory("writeToNul", /*Unique=*/true);
   SmallString<128> SavedCWD;
@@ -670,7 +670,7 @@ TEST(raw_ostreamTest, writeToNul) {
   ASSERT_FALSE(sys::fs::set_current_path(RootTestDirectory.path()));
 
   EXPECT_THAT_ERROR(
-      writeToOutput("nul",
+      writeToOutput("NUL",
                     [&](raw_ostream &Out) -> Error {
                       std::error_code EC;
                       sys::fs::directory_iterator It(RootTestDirectory.path(),
