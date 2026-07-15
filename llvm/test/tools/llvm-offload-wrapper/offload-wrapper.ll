@@ -107,3 +107,27 @@
 ; CUDA-NEXT:   call void @__cudaUnregisterFatBinary(ptr %0)
 ; CUDA-NEXT:   ret void
 ; CUDA-NEXT: }
+
+; RUN: llvm-offload-wrapper --triple=x86_64-unknown-linux-gnu -kind=sycl %s -o %t.bc
+; RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefix=SYCL
+
+;      SYCL: @.sycl_offloading.binary = internal unnamed_addr constant [[[SIZE:[0-9]+]] x i8] c"{{.*}}", section ".llvm.offloading"
+; SYCL-NEXT: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @sycl.descriptor_reg, ptr null }]
+; SYCL-NEXT: @llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @sycl.descriptor_unreg, ptr null }]
+
+;      SYCL: define internal void @sycl.descriptor_reg() section ".text.startup" {
+; SYCL-NEXT: entry:
+; SYCL-NEXT:   call void @__sycl_register_lib(ptr @.sycl_offloading.binary, i64 [[SIZE]])
+; SYCL-NEXT:   ret void
+; SYCL-NEXT: }
+
+;      SYCL: define internal void @sycl.descriptor_unreg() section ".text.startup" {
+; SYCL-NEXT: entry:
+; SYCL-NEXT:   call void @__sycl_unregister_lib(ptr @.sycl_offloading.binary, i64 [[SIZE]])
+; SYCL-NEXT:   ret void
+; SYCL-NEXT: }
+
+; RUN: llvm-offload-wrapper --triple=x86_64-unknown-linux-gnu -kind=openmp --relocatable %s -o %t.bc
+; RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefix=OMP-RELOCATABLE
+
+; OMP-RELOCATABLE: @.omp_offloading.device_image = internal unnamed_addr constant [{{[0-9]+}} x i8] c"{{.*}}", section ".llvm.offloading.relocatable", align 8

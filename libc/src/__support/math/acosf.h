@@ -46,7 +46,7 @@ LIBC_INLINE_VAR constexpr fputil::ExceptValues<float, N_EXCEPTS> ACOSF_EXCEPTS =
 
 } // namespace acosf_internal
 
-LIBC_INLINE constexpr float acosf(float x) {
+LIBC_INLINE float acosf(float x) {
   constexpr double M_MATH_PI = 0x1.921fb54442d18p+1;
   constexpr double M_MATH_PI_2 = 0x1.921fb54442d18p+0;
 

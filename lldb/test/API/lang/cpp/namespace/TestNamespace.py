@@ -133,6 +133,7 @@ class NamespaceTestCase(TestBase):
 
     # rdar://problem/8668674
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
+    @skipIfWasm  # no expression evaluation
     def test_with_run_command(self):
         """Test that anonymous and named namespace variables display correctly."""
         self.build()

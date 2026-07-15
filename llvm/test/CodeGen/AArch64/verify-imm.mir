@@ -6,6 +6,18 @@
 # CHECK: - instruction: $q0 = MOVIv4s_msl 55, 8
 # CHECK: *** Bad machine code: OPERAND_IMPLICIT_IMM_0 should be 0 ***
 # CHECK: - instruction: $zad0 = MOVA_MXI2Z_V_D $zad0(tied-def 0), $w12, 1, $z0_z1
+# CHECK: *** Bad machine code: OPERAND_IMM_UINT8 should be in the range 0 to 255 ***
+# CHECK: - instruction: $h0 = FMOVHi 256
+# CHECK: *** Bad machine code: OPERAND_IMM_UINT8 should be in the range 0 to 255 ***
+# CHECK: - instruction: $s0 = FMOVSi -1
+# CHECK: *** Bad machine code: OPERAND_IMM_UINT8 should be in the range 0 to 255 ***
+# CHECK: - instruction: $d0 = FMOVDi 256
+# CHECK: *** Bad machine code: OPERAND_IMM_UINT8 should be in the range 0 to 255 ***
+# CHECK: - instruction: $q0 = FMOVv2f64_ns 256
+# CHECK: *** Bad machine code: OPERAND_IMM_UINT5 should be in the range 0 to 31 ***
+# CHECK: - instruction: $p0 = PTRUE_D 32, implicit $vg
+# CHECK: *** Bad machine code: OPERAND_IMM_UINT5 should be in the range 0 to 31 ***
+# CHECK: - instruction: $p0 = PTRUES_H -1, implicit-def $nzcv, implicit $vg
 
 ---
 name:            verifyImm
@@ -18,5 +30,11 @@ body:             |
     $d0 = MOVIv2s_msl 55, 262
     $q0 = MOVIv4s_msl 55, 8
     $zad0 = MOVA_MXI2Z_V_D $zad0, $w12, 1, $z0_z1
+    $h0 = FMOVHi 256
+    $s0 = FMOVSi -1
+    $d0 = FMOVDi 256
+    $q0 = FMOVv2f64_ns 256
+    $p0 = PTRUE_D 32, implicit $vg
+    $p0 = PTRUES_H -1, implicit-def $nzcv, implicit $vg
     RET undef $lr, implicit $x0
 ...

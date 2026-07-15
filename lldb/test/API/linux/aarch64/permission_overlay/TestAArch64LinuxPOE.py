@@ -14,24 +14,24 @@ class AArch64LinuxPOE(TestBase):
 
     EXPECTED_POR_EL0 = "por_el0 = 0x0000000001234567"
     EXPECTED_POR_EL0_FIELDS = (
-        "         = {\n"
-        "             Perm15 = No Access\n"
-        "             Perm14 = No Access\n"
-        "             Perm13 = No Access\n"
-        "             Perm12 = No Access\n"
-        "             Perm11 = No Access\n"
-        "             Perm10 = No Access\n"
-        "             Perm9 = No Access\n"
-        "             Perm8 = No Access\n"
-        "             Perm7 = No Access\n"
-        "             Perm6 = Read\n"
-        "             Perm5 = Execute\n"
-        "             Perm4 = Read, Execute\n"
-        "             Perm3 = Write\n"
-        "             Perm2 = Write, Read\n"
-        "             Perm1 = Write, Execute\n"
-        "             Perm0 = Read, Write, Execute\n"
-        "           }"
+        "          = {\n"
+        "              Perm15 = No Access\n"
+        "              Perm14 = No Access\n"
+        "              Perm13 = No Access\n"
+        "              Perm12 = No Access\n"
+        "              Perm11 = No Access\n"
+        "              Perm10 = No Access\n"
+        "              Perm9 = No Access\n"
+        "              Perm8 = No Access\n"
+        "              Perm7 = No Access\n"
+        "              Perm6 = Read\n"
+        "              Perm5 = Execute\n"
+        "              Perm4 = Read, Execute\n"
+        "              Perm3 = Write\n"
+        "              Perm2 = Write, Read\n"
+        "              Perm1 = Write, Execute\n"
+        "              Perm0 = Read, Write, Execute\n"
+        "            }"
     )
 
     @skipUnlessArch("aarch64")
@@ -149,6 +149,17 @@ class AArch64LinuxPOE(TestBase):
             self.expect(
                 "register read por_el0",
                 substrs=[f" {self.EXPECTED_POR_EL0}\n" + self.EXPECTED_POR_EL0_FIELDS],
+            )
+
+            # por_el0 is an unusal case where every field uses the same enum.
+            # We should print all the field names in a list, then the enum only
+            # once. Rather than printing the enum 15 times, once for each field.
+            self.expect(
+                "register info por_el0",
+                substrs=[
+                    ", ".join([f"Perm{n}" for n in range(15, -1, -1)])
+                    + ": 0 = No Access"
+                ],
             )
 
         # Protection keys are listed in /proc/<pid>/smaps, which is not included

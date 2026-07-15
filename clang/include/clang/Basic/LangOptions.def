@@ -57,6 +57,7 @@ LANGOPT(CPlusPlus17       , 1, 0, NotCompatible, "C++17")
 LANGOPT(CPlusPlus20       , 1, 0, NotCompatible, "C++20")
 LANGOPT(CPlusPlus23       , 1, 0, NotCompatible, "C++23")
 LANGOPT(CPlusPlus26       , 1, 0, NotCompatible, "C++26")
+LANGOPT(CPlusPlus29       , 1, 0, NotCompatible, "C++29")
 LANGOPT(ObjC              , 1, 0, NotCompatible, "Objective-C")
 LANGOPT(ObjCDefaultSynthProperties , 1, 0, Benign,
         "Objective-C auto-synthesized properties")
@@ -153,6 +154,7 @@ LANGOPT(Blocks            , 1, 0, NotCompatible, "blocks extension to C")
 LANGOPT(EmitAllDecls      , 1, 0, Benign, "emitting all declarations")
 LANGOPT(MathErrno         , 1, 1, NotCompatible, "errno in math functions")
 LANGOPT(Modules           , 1, 0, NotCompatible, "modules semantics")
+LANGOPT(ClangModules      , 1, 0, Compatible, "Clang header modules")
 LANGOPT(CPlusPlusModules  , 1, 0, Compatible, "C++ modules syntax")
 LANGOPT(SkipODRCheckInGMF , 1, 0, NotCompatible, "Skip ODR checks for decls in the global module fragment")
 LANGOPT(BuiltinHeadersInSystemModules, 1, 0, NotCompatible, "builtin headers belong to system modules, and _Builtin_ modules are ignored for cstdlib headers")
@@ -231,7 +233,6 @@ LANGOPT(OpenMPCUDAMode    , 1, 0, NotCompatible, "Generate code for OpenMP pragm
 LANGOPT(OpenMPIRBuilder   , 1, 0, NotCompatible, "Use the experimental OpenMP-IR-Builder codegen path.")
 LANGOPT(OpenMPCUDANumSMs  , 32, 0, NotCompatible, "Number of SMs for CUDA devices.")
 LANGOPT(OpenMPCUDABlocksPerSM  , 32, 0, NotCompatible, "Number of blocks per SM for CUDA devices.")
-LANGOPT(OpenMPCUDAReductionBufNum , 32, 1024, NotCompatible, "Number of the reduction records in the intermediate reduction buffer used for the teams reductions.")
 LANGOPT(OpenMPTargetDebug , 32, 0, NotCompatible, "Enable debugging in the OpenMP offloading device RTL")
 LANGOPT(OpenMPOptimisticCollapse  , 1, 0, NotCompatible, "Use at most 32 bits to represent the collapsed loop nest counter.")
 LANGOPT(OpenMPThreadSubscription  , 1, 0, NotCompatible, "Assume work-shared loops do not have more iterations than participating threads.")
@@ -248,6 +249,7 @@ LANGOPT(HLSLStrictAvailability, 1, 0, NotCompatible,
         "Strict availability diagnostic mode for HLSL built-in functions.")
 LANGOPT(HLSLSpvUseUnknownImageFormat, 1, 0, NotCompatible, "For storage images and texel buffers, sets the default format to 'Unknown' when not specified via the `vk::image_format` attribute. If this option is not used, the format is inferred from the resource's data type.")
 LANGOPT(HLSLSpvEnableMaximalReconvergence, 1, 0, NotCompatible, "Enables the MaximallyReconvergesKHR execution mode for this module. This ensures that control flow reconverges at well-defined merge points as defined by the Vulkan spec.")
+LANGOPT(HLSLSpvPreserveInterface, 1, 0, NotCompatible, "Preserve entry-point interface variables from dead-code elimination.")
 LANGOPT(EmitLogicalPointer, 1, 0, NotCompatible, "Allow emitting structured GEP/alloca intrinsics instead of normal GEP/alloca instructions.")
 
 LANGOPT(CUDAIsDevice      , 1, 0, NotCompatible, "compiling for CUDA device")
@@ -385,7 +387,7 @@ LANGOPT(ConstexprCallDepth, 32, 512, Benign,
         "maximum constexpr call depth")
 LANGOPT(ConstexprStepLimit, 32, 1048576, Benign,
         "maximum constexpr evaluation steps")
-LANGOPT(EnableNewConstInterp, 1, 0, Benign,
+LANGOPT(EnableNewConstInterp, 1, CLANG_USE_EXPERIMENTAL_CONST_INTERP, Benign,
         "enable the experimental new constant interpreter")
 LANGOPT(BracketDepth, 32, 256, Benign,
         "maximum bracket nesting depth")
@@ -518,14 +520,16 @@ LANGOPT(CheckConstexprFunctionBodies, 1, 1, Benign,
 
 LANGOPT(BoundsSafety, 1, 0, NotCompatible, "Bounds safety extension for C")
 
-LANGOPT(DebugRunLifetimeSafety, 1, 0, NotCompatible, "Run lifetime safety analysis for C++. Does not enable warnings.")
+LANGOPT(DebugRunLifetimeSafety, 1, 0, Benign, "Run lifetime safety analysis for C++. Does not enable warnings.")
 
-LANGOPT(LifetimeSafetyMaxCFGBlocks, 32, 0, NotCompatible, "Skip LifetimeSafety analysis for functions with CFG block count exceeding this threshold. Specify 0 for no limit")
+LANGOPT(EnableLifetimeSafetyInC, 1, 0, Benign, "Lifetime safety analysis for C")
 
-LANGOPT(EnableLifetimeSafetyInference, 1, 0, NotCompatible, "Lifetime safety inference analysis for C++")
+LANGOPT(LifetimeSafetyMaxCFGBlocks, 32, 0, Benign, "Skip LifetimeSafety analysis for functions with CFG block count exceeding this threshold. Specify 0 for no limit")
+
+LANGOPT(EnableLifetimeSafetyInference, 1, 0, Benign, "Lifetime safety inference analysis for C++")
 
 // TODO: Remove flag and default to end-of-TU analysis for lifetime safety after performance validation.
-LANGOPT(EnableLifetimeSafetyTUAnalysis, 1, 0, NotCompatible, "Lifetime safety at translation-unit end, analyzing functions in call graph post-order for C++")
+LANGOPT(EnableLifetimeSafetyTUAnalysis, 1, 0, Benign, "Lifetime safety at translation-unit end, analyzing functions in call graph post-order for C++")
 
 LANGOPT(PreserveVec3Type, 1, 0, NotCompatible, "Preserve 3-component vector type")
 LANGOPT(Reflection      , 1, 0, NotCompatible, "C++26 Reflection")

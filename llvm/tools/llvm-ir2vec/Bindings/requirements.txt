@@ -1,2 +1,34 @@
-# BUILD dependencies
+# IR2Vec python bindings' dependencies
+#
+# BEFORE UPDATING: verify compatibility with ml-compiler-opt's Pipfile/Pipenv
+# environment first. The bot environment is initialized from there and conflicts
+# or version skews will cause failures that are hard to diagnose because bots
+# restart/get preempted at arbitrary intervals with no persistent state.
+#
+# See: https://github.com/google/ml-compiler-opt/Pipfile
+
+
+# IR2Vec unit-test dependencies
+#
+# Context: LLVM's post-merge CI bots are launched via the zorg repository
+# (llvm/llvm-zorg), which configures and schedules the buildbot workers.
+# The ml-opt* bots among these use google/ml-compiler-opt to set up
+# their Python environment (via its Pipenv/Pipfile). IR2Vec's unit tests run
+# on those same bots, so, these dependencies get installed on the same
+# environment as ml-compiler-opt's Pipenv environment.
+#
+# Because bots restart/get preempted at arbitrary intervals with no persistent
+# state, a dependency conflict between ml-compiler-opt's Pipenv and these
+# requirements will cause hard-to-diagnose initialization failures.
+#
+# BEFORE UPDATING these requirements: verify tml-compiler-opt pipenv
+# can be applied first, then these requirements.
+#
+# Recommended verification workflow:
+#   1. Apply ml-compiler-opt's pipenv (Pipfile.lock) in a fresh venv.
+#   2. pip install the updated requirements on top of it.
+#   3. Run unit tests locally to confirm no breakage.
+#
+# See: https://github.com/llvm/llvm-zorg (bot configuration)
+#      https://github.com/google/ml-compiler-opt (Pipfile / build env)
 nanobind>=2.9, <3.0

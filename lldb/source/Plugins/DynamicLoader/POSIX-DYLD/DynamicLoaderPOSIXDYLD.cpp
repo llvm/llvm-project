@@ -722,8 +722,8 @@ void DynamicLoaderPOSIXDYLD::LoadAllCurrentModules() {
       // Create placeholder modules for any modules we couldn't load from disk
       // or from memory.
       ModuleSpec module_spec(so_entry.file_spec, target.GetArchitecture());
-      if (UUID uuid = m_process->FindModuleUUID(so_entry.file_spec.GetPath()))
-        module_spec.GetUUID() = uuid;
+      module_spec.SetLoadAddress(so_entry.base_addr);
+      m_process->FindModuleUUID(module_spec);
       module_sp = Module::CreateModuleFromObjectFile<ObjectFilePlaceholder>(
           module_spec, so_entry.base_addr, 512);
       bool load_addr_changed = false;

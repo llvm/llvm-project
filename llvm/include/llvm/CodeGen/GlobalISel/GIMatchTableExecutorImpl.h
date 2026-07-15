@@ -51,7 +51,7 @@ bool GIMatchTableExecutor::executeMatchTable(
     CodeGenCoverage *CoverageInfo) const {
 
   uint64_t CurrentIdx = 0;
-  SmallVector<uint64_t, 4> OnFailResumeAt;
+  SmallVector<uint64_t, 8> OnFailResumeAt;
   NewMIVector OutMIs;
 
   GISelChangeObserver *Observer = Builder.getObserver();
@@ -155,7 +155,26 @@ bool GIMatchTableExecutor::executeMatchTable(
       OnFailResumeAt.push_back(readU32());
       break;
     }
-
+    case GIM_Try_CheckFeatures: {
+      // This is optimized so that if the feature is not present, we don't even
+      // modify OnFailResumeAt. Instead we directly jump to OnFail.
+      unsigned OnFail = readU32();
+      uint16_t ExpectedBitsetID = readU16();
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx
+                             << ": GIM_Try_CheckFeatures(ExpectedBitsetID="
+                             << ExpectedBitsetID << ")\n");
+      if ((AvailableFeatures & ExecInfo.FeatureBitsets[ExpectedBitsetID]) !=
+          ExecInfo.FeatureBitsets[ExpectedBitsetID]) {
+        DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                        dbgs() << CurrentIdx
+                               << ": Features do not match, rejected\n");
+        CurrentIdx = OnFail;
+      } else {
+        OnFailResumeAt.push_back(OnFail);
+      }
+      break;
+    }
     case GIM_RecordInsn:
     case GIM_RecordInsnIgnoreCopies: {
       uint64_t NewInsnID = readULEB();
@@ -199,20 +218,6 @@ bool GIMatchTableExecutor::executeMatchTable(
                       dbgs() << CurrentIdx << ": MIs[" << NewInsnID
                              << "] = GIM_RecordInsn(" << InsnID << ", " << OpIdx
                              << ")\n");
-      break;
-    }
-
-    case GIM_CheckFeatures: {
-      uint16_t ExpectedBitsetID = readU16();
-      DEBUG_WITH_TYPE(TgtExecutor::getName(),
-                      dbgs() << CurrentIdx
-                             << ": GIM_CheckFeatures(ExpectedBitsetID="
-                             << ExpectedBitsetID << ")\n");
-      if ((AvailableFeatures & ExecInfo.FeatureBitsets[ExpectedBitsetID]) !=
-          ExecInfo.FeatureBitsets[ExpectedBitsetID]) {
-        if (handleReject() == RejectAndGiveUp)
-          return false;
-      }
       break;
     }
     case GIM_CheckOpcode:

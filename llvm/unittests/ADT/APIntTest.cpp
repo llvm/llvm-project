@@ -9,6 +9,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Alignment.h"
@@ -3131,6 +3132,7 @@ TEST(APIntTest, concat) {
 
   APInt I65(65, 0x3ULL);
   APInt I0 = APInt::getZeroWidth();
+  EXPECT_EQ(I64, I0.concat(I64));
   EXPECT_EQ(I65, I65.concat(I0));
   EXPECT_EQ(I65, I0.concat(I65));
 }
@@ -4010,11 +4012,61 @@ TEST(APIntTest, clmulh) {
             21845);
 }
 
-TEST(APIntTest, sqrt) {
-  EXPECT_EQ(APInt::getMaxValue(64).sqrt(), 4294967296U);
-  EXPECT_EQ(APInt::getMaxValue(128).sqrt(),
-            APInt(128, "18446744073709551616", 10));
-  EXPECT_EQ(APInt::getMaxValue(256).sqrt(),
-            APInt(256, "340282366920938463463374607431768211456", 10));
+TEST(APIntTest, sqrtFloor) {
+  EXPECT_EQ(APInt::getMaxValue(64).sqrtFloor(), 4294967295U);
+  EXPECT_EQ(APInt::getMaxValue(128).sqrtFloor(),
+            APInt(128, "18446744073709551615", 10));
+  EXPECT_EQ(APInt::getMaxValue(256).sqrtFloor(),
+            APInt(256, "340282366920938463463374607431768211455", 10));
+  // Exhaustive test for smallish inputs.
+  for (unsigned N : seq(1000u)) {
+    unsigned S = APInt(32, N).sqrtFloor().getZExtValue();
+    EXPECT_LE(S * S, N);
+    EXPECT_GT((S + 1) * (S + 1), N);
+  }
+  // Test some values around an arbitrary square larger than 2^52.
+  for (uint64_t I : seq(1000ull)) {
+    uint64_t N = 87654321ull * 87654321ull + I - 500ull;
+    uint64_t S = APInt(64, N).sqrtFloor().getZExtValue();
+    EXPECT_LE(S * S, N);
+    EXPECT_GT((S + 1) * (S + 1), N);
+  }
+}
+
+TEST(APIntTest, pext) {
+  EXPECT_EQ(APIntOps::pext(APInt(8, 0), APInt(8, 0xAAU)).getZExtValue(), 0U);
+  EXPECT_EQ(APIntOps::pext(APInt(8, 0x55U), APInt(8, 0xAAU)).getZExtValue(),
+            0U);
+  EXPECT_EQ(APIntOps::pext(APInt(8, 0xAAU), APInt(8, 0xAAU)).getZExtValue(),
+            15U);
+  EXPECT_EQ(APIntOps::pext(APInt(8, 0xFFU), APInt(8, 0xAAU)).getZExtValue(),
+            15U);
+  EXPECT_EQ(APIntOps::pext(APInt(8, 0xFFU), APInt(8, 0)).getZExtValue(), 0U);
+  EXPECT_EQ(APIntOps::pext(APInt(4, 0xFU), APInt(4, 0xAU)).getZExtValue(), 3U);
+  EXPECT_EQ(APIntOps::pext(APInt(4, 0xAU), APInt(4, 0xAU)).getZExtValue(), 3U);
+  EXPECT_EQ(APIntOps::pext(APInt(4, 0x5U), APInt(4, 0xAU)).getZExtValue(), 0U);
+}
+
+TEST(APIntTest, pdep) {
+  EXPECT_EQ(APIntOps::pdep(APInt(8, 0), APInt(8, 0xAAU)).getZExtValue(), 0U);
+  EXPECT_EQ(APIntOps::pdep(APInt(8, 15U), APInt(8, 0xAAU)).getZExtValue(),
+            0xAAU);
+  EXPECT_EQ(APIntOps::pdep(APInt(8, 0xFFU), APInt(8, 0)).getZExtValue(), 0U);
+  EXPECT_EQ(APIntOps::pdep(APInt(4, 3U), APInt(4, 0xAU)).getZExtValue(), 0xAU);
+  EXPECT_EQ(APIntOps::pdep(APInt(4, 1U), APInt(4, 0xAU)).getZExtValue(), 2U);
+  APInt X(8, 0b10110100U);
+  APInt M(8, 0b11001110U);
+  EXPECT_EQ(APIntOps::pdep(APIntOps::pext(X, M), M), X & M);
+}
+
+TEST(APIntTest, pext_pdep_exhaustive) {
+  for (unsigned V = 0; V < 256; ++V) {
+    for (unsigned Mask = 0; Mask < 256; ++Mask) {
+      APInt Val(8, V), APMask(8, Mask);
+      APInt Compressed = APIntOps::pext(Val, APMask);
+      APInt RoundTrip = APIntOps::pdep(Compressed, APMask);
+      EXPECT_EQ(RoundTrip, Val & APMask);
+    }
+  }
 }
 } // end anonymous namespace

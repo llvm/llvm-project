@@ -10,6 +10,8 @@ import io
 import json
 import os
 import re
+import shutil
+import socket
 import sys
 import subprocess
 import time
@@ -56,6 +58,113 @@ def mkdir_p(path):
             raise
     if not os.path.isdir(path):
         raise OSError(errno.ENOTDIR, "%s is not a directory" % path)
+
+
+def get_extended_windows_path(path):
+    r"""Return ``path`` in the Windows extended-length ``\\?\`` form so it can be
+    handed to the Win32 API (and therefore to ``os``/``shutil``) even when it is
+    longer than MAX_PATH (260 characters). On non-Windows platforms ``path`` is
+    returned unchanged.
+
+    The ``\\?\`` prefix disables all path normalization normally performed by
+    Win32, so the path must be fully qualified, use backslash separators and
+    contain no ``.``/``..`` components. ``os.path.abspath`` guarantees all three.
+    """
+    if sys.platform != "win32":
+        return path
+    if path.startswith("\\\\?\\"):
+        return path
+    assert os.path.isabs(path), (
+        "cannot form a \\\\?\\ extended-length path from relative path: %s" % path
+    )
+    abs_path = os.path.abspath(path)
+    # UNC shares (\\server\share) use the \\?\UNC\ spelling.
+    if abs_path.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + abs_path[2:]
+    return "\\\\?\\" + abs_path
+
+
+def remove_tree(path):
+    """Recursively delete the directory tree rooted at ``path``.
+
+    On Windows this drives the shell ``SHFileOperationW`` API directly rather
+    than ``shutil.rmtree``. It deletes the whole tree in a single native call,
+    which also clears read-only files.
+
+    This mirrors lit's builtin ``rm`` (see
+    ``llvm/utils/lit/lit/InprocBuiltins.py``).
+
+    On non-Windows platforms this is ``shutil.rmtree`` with a handler that
+    tolerates entries vanishing mid-walk (``FileNotFoundError``). clang's
+    implicit-module ``*.pcm.lock`` files, whose lifetime is tied to a concurrent
+    or just-exited clang process.
+    """
+    if sys.platform != "win32":
+
+        def _ignore_missing(func, failed_path, exc):
+            # `shutil.rmtree` passes the error as an instance on the `onexc` API
+            # (3.12+) or a `sys.exc_info()` tuple on the legacy `onerror` API.
+            if isinstance(exc, tuple):
+                exc = exc[1]
+            if isinstance(exc, FileNotFoundError):
+                return
+            raise exc
+
+        if sys.version_info >= (3, 12):
+            shutil.rmtree(path, onexc=_ignore_missing)
+        else:
+            shutil.rmtree(path, onerror=_ignore_missing)
+        return
+
+    # NOTE: use ctypes to access `SHFileOperationW` on Windows so we can delete
+    # trees using the wide-character Win32 API, which reaches long file paths
+    # that cannot be removed otherwise.
+    from ctypes import (
+        POINTER,
+        Structure,
+        WinError,
+        addressof,
+        byref,
+        c_void_p,
+        create_unicode_buffer,
+        windll,
+    )
+    from ctypes.wintypes import BOOL, HWND, LPCWSTR, UINT, WORD
+
+    class SHFILEOPSTRUCTW(Structure):
+        _fields_ = [
+            ("hWnd", HWND),
+            ("wFunc", UINT),
+            ("pFrom", LPCWSTR),
+            ("pTo", LPCWSTR),
+            ("fFlags", WORD),
+            ("fAnyOperationsAborted", BOOL),
+            ("hNameMappings", c_void_p),
+            ("lpszProgressTitle", LPCWSTR),
+        ]
+
+    FO_DELETE = 3
+
+    FOF_SILENT = 4
+    FOF_NOCONFIRMATION = 16
+    FOF_NOCONFIRMMKDIR = 512
+    FOF_NOERRORUI = 1024
+    FOF_NO_UI = FOF_SILENT | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_NOCONFIRMMKDIR
+
+    SHFileOperationW = windll.shell32.SHFileOperationW
+    SHFileOperationW.argtypes = [POINTER(SHFILEOPSTRUCTW)]
+
+    path = os.path.abspath(path)
+    pFrom = create_unicode_buffer(path, len(path) + 2)
+    pFrom[len(path)] = pFrom[len(path) + 1] = "\0"
+    operation = SHFILEOPSTRUCTW(
+        wFunc=UINT(FO_DELETE),
+        pFrom=LPCWSTR(addressof(pFrom)),
+        fFlags=FOF_NO_UI,
+    )
+    result = SHFileOperationW(byref(operation))
+    if result:
+        raise WinError(result)
 
 
 # ============================
@@ -1889,3 +1998,23 @@ def send_packet_get_reply(test, packet_str):
 def get_qsupported_capabilities(test):
     reply = send_packet_get_reply(test, "qSupported")
     return reply.strip().split(";")
+
+
+def connect_to_new_remote_platform(testcase, platform_exe, extra_args=[]):
+    hostname = socket.getaddrinfo("localhost", 0, proto=socket.IPPROTO_TCP)[0][4][0]
+    port_file = testcase.getBuildArtifact("port")
+    commandline_args = [
+        "platform",
+        "--listen",
+        f"[{hostname}]:0",
+        "--socket-file",
+        port_file,
+    ] + extra_args
+    testcase.spawnSubprocess(platform_exe, commandline_args)
+
+    socket_id = wait_for_file_on_target(testcase, port_file)
+    new_platform = lldb.SBPlatform("remote-" + testcase.getPlatform())
+    testcase.dbg.SetSelectedPlatform(new_platform)
+    testcase.runCmd(f"platform connect connect://[{hostname}]:{socket_id}")
+
+    return new_platform

@@ -30,7 +30,7 @@ define i32 @more_than_one_use(ptr %a, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%i> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%r> = phi vp<[[VP4]]>, ir<%tmp3>
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%r> = phi (add) vp<[[VP4]]>, ir<%tmp3>
 ; CHECK-NEXT:      WIDEN ir<%i.next> = add nuw nsw ir<%i>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%cond> = icmp sge ir<%i.next>, ir<%n>
 ; CHECK-NEXT:      WIDEN ir<%tmp0> = select ir<%cond>, ir<0>, ir<%i.next>
@@ -101,7 +101,6 @@ define void @test(ptr %ptr) {
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
 ; CHECK-NEXT:  Live-in vp<[[VP3:%[0-9]+]]> = backedge-taken count
-; CHECK-NEXT:  Live-in ir<14> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
@@ -114,7 +113,7 @@ define void @test(ptr %ptr) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP4]]>
+; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = icmp ule vp<[[VP5]]>, vp<[[VP3]]>
 ; CHECK-NEXT:      WIDEN ir<%cond0> = icmp ult ir<%iv>, ir<13>
 ; CHECK-NEXT:      WIDEN ir<%s> = select ir<%cond0>, ir<10>, ir<20>

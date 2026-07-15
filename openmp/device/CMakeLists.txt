@@ -2,7 +2,7 @@
 set(req_ver "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
 if(LLVM_VERSION_MAJOR AND NOT (CMAKE_CXX_COMPILER_ID MATCHES "[Cc]lang" AND
    ${CMAKE_CXX_COMPILER_VERSION} VERSION_EQUAL "${req_ver}"))
-  message(FATAL_ERROR "Cannot build GPU device runtime. CMake compiler "
+   message(WARNING "openmp for GPU requires an up-to-date clang. CMake compiler "
                       "'${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}' "
                       " is not 'Clang ${req_ver}'.")
 endif()
@@ -44,8 +44,8 @@ endif()
 # propagation. That said, we will run the vectorizer again after the runtime
 # has been linked into the user program.
 list(APPEND compile_options "SHELL: -mllvm -vectorize-slp=false")
-if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn" OR
-   "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgcn")
+if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgpu|^amdgcn" OR
+   "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgpu|^amdgcn")
   set(target_name "amdgpu")
   list(APPEND compile_options "SHELL:-Xclang -mcode-object-version=none")
 elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx" OR

@@ -16,6 +16,7 @@
 #include "X86BaseInfo.h"
 #include "X86IntelInstPrinter.h"
 #include "X86MCAsmInfo.h"
+#include "X86MCLFIRewriter.h"
 #include "X86TargetStreamer.h"
 #include "llvm-c/Visibility.h"
 #include "llvm/ADT/APInt.h"
@@ -80,7 +81,7 @@ bool X86_MC::hasLockPrefix(const MCInst &MI) {
 static bool isMemOperand(const MCInst &MI, unsigned Op, unsigned RegClassID) {
   const MCOperand &Base = MI.getOperand(Op + X86::AddrBaseReg);
   const MCOperand &Index = MI.getOperand(Op + X86::AddrIndexReg);
-  const MCRegisterClass &RC = X86MCRegisterClasses[RegClassID];
+  const MCRegisterClass &RC = getX86MCRegisterClass(RegClassID);
 
   return (Base.isReg() && Base.getReg() && RC.contains(Base.getReg())) ||
          (Index.isReg() && Index.getReg() && RC.contains(Index.getReg()));
@@ -272,6 +273,22 @@ void X86_MC::initLLVMToSEHAndCVRegMapping(MCRegisterInfo *MRI) {
       {codeview::RegisterId::R13, X86::R13},
       {codeview::RegisterId::R14, X86::R14},
       {codeview::RegisterId::R15, X86::R15},
+      {codeview::RegisterId::R16, X86::R16},
+      {codeview::RegisterId::R17, X86::R17},
+      {codeview::RegisterId::R18, X86::R18},
+      {codeview::RegisterId::R19, X86::R19},
+      {codeview::RegisterId::R20, X86::R20},
+      {codeview::RegisterId::R21, X86::R21},
+      {codeview::RegisterId::R22, X86::R22},
+      {codeview::RegisterId::R23, X86::R23},
+      {codeview::RegisterId::R24, X86::R24},
+      {codeview::RegisterId::R25, X86::R25},
+      {codeview::RegisterId::R26, X86::R26},
+      {codeview::RegisterId::R27, X86::R27},
+      {codeview::RegisterId::R28, X86::R28},
+      {codeview::RegisterId::R29, X86::R29},
+      {codeview::RegisterId::R30, X86::R30},
+      {codeview::RegisterId::R31, X86::R31},
       {codeview::RegisterId::R8B, X86::R8B},
       {codeview::RegisterId::R9B, X86::R9B},
       {codeview::RegisterId::R10B, X86::R10B},
@@ -280,6 +297,22 @@ void X86_MC::initLLVMToSEHAndCVRegMapping(MCRegisterInfo *MRI) {
       {codeview::RegisterId::R13B, X86::R13B},
       {codeview::RegisterId::R14B, X86::R14B},
       {codeview::RegisterId::R15B, X86::R15B},
+      {codeview::RegisterId::R16B, X86::R16B},
+      {codeview::RegisterId::R17B, X86::R17B},
+      {codeview::RegisterId::R18B, X86::R18B},
+      {codeview::RegisterId::R19B, X86::R19B},
+      {codeview::RegisterId::R20B, X86::R20B},
+      {codeview::RegisterId::R21B, X86::R21B},
+      {codeview::RegisterId::R22B, X86::R22B},
+      {codeview::RegisterId::R23B, X86::R23B},
+      {codeview::RegisterId::R24B, X86::R24B},
+      {codeview::RegisterId::R25B, X86::R25B},
+      {codeview::RegisterId::R26B, X86::R26B},
+      {codeview::RegisterId::R27B, X86::R27B},
+      {codeview::RegisterId::R28B, X86::R28B},
+      {codeview::RegisterId::R29B, X86::R29B},
+      {codeview::RegisterId::R30B, X86::R30B},
+      {codeview::RegisterId::R31B, X86::R31B},
       {codeview::RegisterId::R8W, X86::R8W},
       {codeview::RegisterId::R9W, X86::R9W},
       {codeview::RegisterId::R10W, X86::R10W},
@@ -288,6 +321,22 @@ void X86_MC::initLLVMToSEHAndCVRegMapping(MCRegisterInfo *MRI) {
       {codeview::RegisterId::R13W, X86::R13W},
       {codeview::RegisterId::R14W, X86::R14W},
       {codeview::RegisterId::R15W, X86::R15W},
+      {codeview::RegisterId::R16W, X86::R16W},
+      {codeview::RegisterId::R17W, X86::R17W},
+      {codeview::RegisterId::R18W, X86::R18W},
+      {codeview::RegisterId::R19W, X86::R19W},
+      {codeview::RegisterId::R20W, X86::R20W},
+      {codeview::RegisterId::R21W, X86::R21W},
+      {codeview::RegisterId::R22W, X86::R22W},
+      {codeview::RegisterId::R23W, X86::R23W},
+      {codeview::RegisterId::R24W, X86::R24W},
+      {codeview::RegisterId::R25W, X86::R25W},
+      {codeview::RegisterId::R26W, X86::R26W},
+      {codeview::RegisterId::R27W, X86::R27W},
+      {codeview::RegisterId::R28W, X86::R28W},
+      {codeview::RegisterId::R29W, X86::R29W},
+      {codeview::RegisterId::R30W, X86::R30W},
+      {codeview::RegisterId::R31W, X86::R31W},
       {codeview::RegisterId::R8D, X86::R8D},
       {codeview::RegisterId::R9D, X86::R9D},
       {codeview::RegisterId::R10D, X86::R10D},
@@ -296,6 +345,22 @@ void X86_MC::initLLVMToSEHAndCVRegMapping(MCRegisterInfo *MRI) {
       {codeview::RegisterId::R13D, X86::R13D},
       {codeview::RegisterId::R14D, X86::R14D},
       {codeview::RegisterId::R15D, X86::R15D},
+      {codeview::RegisterId::R16D, X86::R16D},
+      {codeview::RegisterId::R17D, X86::R17D},
+      {codeview::RegisterId::R18D, X86::R18D},
+      {codeview::RegisterId::R19D, X86::R19D},
+      {codeview::RegisterId::R20D, X86::R20D},
+      {codeview::RegisterId::R21D, X86::R21D},
+      {codeview::RegisterId::R22D, X86::R22D},
+      {codeview::RegisterId::R23D, X86::R23D},
+      {codeview::RegisterId::R24D, X86::R24D},
+      {codeview::RegisterId::R25D, X86::R25D},
+      {codeview::RegisterId::R26D, X86::R26D},
+      {codeview::RegisterId::R27D, X86::R27D},
+      {codeview::RegisterId::R28D, X86::R28D},
+      {codeview::RegisterId::R29D, X86::R29D},
+      {codeview::RegisterId::R30D, X86::R30D},
+      {codeview::RegisterId::R31D, X86::R31D},
       {codeview::RegisterId::AMD64_YMM0, X86::YMM0},
       {codeview::RegisterId::AMD64_YMM1, X86::YMM1},
       {codeview::RegisterId::AMD64_YMM2, X86::YMM2},
@@ -560,7 +625,7 @@ bool X86MCInstrAnalysis::clearsSuperRegisters(const MCRegisterInfo &MRI,
   const MCRegisterClass &VR128XRC = MRI.getRegClass(X86::VR128XRegClassID);
   const MCRegisterClass &VR256XRC = MRI.getRegClass(X86::VR256XRegClassID);
 
-  auto ClearsSuperReg = [=](MCRegister RegID) {
+  auto ClearsSuperReg = [&](MCRegister RegID) {
     // On X86-64, a general purpose integer register is viewed as a 64-bit
     // register internal to the processor.
     // An update to the lower 32 bits of a 64 bit integer register is
@@ -723,6 +788,14 @@ static MCInstrAnalysis *createX86MCInstrAnalysis(const MCInstrInfo *Info) {
   return new X86_MC::X86MCInstrAnalysis(Info);
 }
 
+static MCLFIRewriter *
+createX86MCLFIRewriter(MCContext &Ctx,
+                       std::unique_ptr<MCRegisterInfo> &&RegInfo,
+                       std::unique_ptr<MCInstrInfo> &&InstInfo) {
+  return new X86::X86MCLFIRewriter(Ctx, std::move(RegInfo),
+                                   std::move(InstInfo));
+}
+
 // Force static initialization.
 extern "C" LLVM_C_ABI void LLVMInitializeX86TargetMC() {
   for (Target *T : {&getTheX86_32Target(), &getTheX86_64Target()}) {
@@ -744,6 +817,9 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86TargetMC() {
 
     // Register the code emitter.
     TargetRegistry::RegisterMCCodeEmitter(*T, createX86MCCodeEmitter);
+
+    // Register the LFI rewriter.
+    TargetRegistry::RegisterMCLFIRewriter(*T, createX86MCLFIRewriter);
 
     // Register the obj target streamer.
     TargetRegistry::RegisterObjectTargetStreamer(*T,

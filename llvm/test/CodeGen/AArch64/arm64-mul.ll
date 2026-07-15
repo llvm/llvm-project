@@ -29,14 +29,12 @@ define i128 @t2(i64 %a, i64 %b) nounwind readnone ssp {
 ;
 ; CHECK-GI-LABEL: t2:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    umulh x8, x0, x1
 ; CHECK-GI-NEXT:    asr x9, x1, #63
-; CHECK-GI-NEXT:    asr x10, x0, #63
-; CHECK-GI-NEXT:    mul x8, x0, x1
-; CHECK-GI-NEXT:    mul x9, x0, x9
-; CHECK-GI-NEXT:    umulh x11, x0, x1
-; CHECK-GI-NEXT:    mov x0, x8
-; CHECK-GI-NEXT:    madd x9, x10, x1, x9
-; CHECK-GI-NEXT:    add x1, x9, x11
+; CHECK-GI-NEXT:    madd x8, x0, x9, x8
+; CHECK-GI-NEXT:    asr x9, x0, #63
+; CHECK-GI-NEXT:    mul x0, x0, x1
+; CHECK-GI-NEXT:    madd x1, x9, x1, x8
 ; CHECK-GI-NEXT:    ret
 entry:
   %tmp1 = sext i64 %a to i128
@@ -211,13 +209,20 @@ entry:
 }
 
 define i64 @t13b(i32 %a, i64 %b) nounwind {
-; CHECK-LABEL: t13b:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, #-24910 // =0xffffffffffff9eb2
-; CHECK-NEXT:    mov w9, w0
-; CHECK-NEXT:    movk x8, #65347, lsl #16
-; CHECK-NEXT:    madd x0, x9, x8, x1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: t13b:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov w8, #24910 // =0x614e
+; CHECK-SD-NEXT:    movk w8, #188, lsl #16
+; CHECK-SD-NEXT:    umsubl x0, w0, w8, x1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: t13b:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov x8, #-24910 // =0xffffffffffff9eb2
+; CHECK-GI-NEXT:    mov w9, w0
+; CHECK-GI-NEXT:    movk x8, #65347, lsl #16
+; CHECK-GI-NEXT:    madd x0, x9, x8, x1
+; CHECK-GI-NEXT:    ret
 entry:
   %tmp1 = zext i32 %a to i64
   %tmp3 = mul i64 %tmp1, -12345678
@@ -261,12 +266,18 @@ entry:
 }
 
 define i64 @mpp(i32 %a, i32 %b, i64 %c) {
-; CHECK-LABEL: mpp:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, #-1234 // =0xfffffffffffffb2e
-; CHECK-NEXT:    mov w9, w0
-; CHECK-NEXT:    madd x0, x9, x8, x2
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: mpp:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov w8, #1234 // =0x4d2
+; CHECK-SD-NEXT:    umsubl x0, w0, w8, x2
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: mpp:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov x8, #-1234 // =0xfffffffffffffb2e
+; CHECK-GI-NEXT:    mov w9, w0
+; CHECK-GI-NEXT:    madd x0, x9, x8, x2
+; CHECK-GI-NEXT:    ret
 entry:
   %conv = zext i32 %a to i64
   %mul = mul nsw i64 %conv, -1234
@@ -317,12 +328,18 @@ entry:
 }
 
 define i64 @mpp2(i32 %a, i32 %b, i64 %c) {
-; CHECK-LABEL: mpp2:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, #-1234 // =0xfffffffffffffb2e
-; CHECK-NEXT:    mov w9, w0
-; CHECK-NEXT:    madd x0, x9, x8, x2
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: mpp2:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov w8, #1234 // =0x4d2
+; CHECK-SD-NEXT:    umsubl x0, w0, w8, x2
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: mpp2:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov x8, #-1234 // =0xfffffffffffffb2e
+; CHECK-GI-NEXT:    mov w9, w0
+; CHECK-GI-NEXT:    madd x0, x9, x8, x2
+; CHECK-GI-NEXT:    ret
 entry:
   %conv = zext i32 %a to i64
   %mul = mul nsw i64 %conv, -1234
@@ -331,13 +348,19 @@ entry:
 }
 
 define i64 @mppMin(i32 %a, i32 %b, i64 %c) {
-; CHECK-LABEL: mppMin:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, #-65534 // =0xffffffffffff0002
-; CHECK-NEXT:    mov w9, w0
-; CHECK-NEXT:    movk x8, #0, lsl #16
-; CHECK-NEXT:    madd x0, x9, x8, x2
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: mppMin:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov w8, #-2 // =0xfffffffe
+; CHECK-SD-NEXT:    umsubl x0, w0, w8, x2
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: mppMin:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov x8, #-65534 // =0xffffffffffff0002
+; CHECK-GI-NEXT:    mov w9, w0
+; CHECK-GI-NEXT:    movk x8, #0, lsl #16
+; CHECK-GI-NEXT:    madd x0, x9, x8, x2
+; CHECK-GI-NEXT:    ret
 entry:
   %conv = zext i32 %a to i64
   %mul = mul nsw i64 %conv, -4294967294

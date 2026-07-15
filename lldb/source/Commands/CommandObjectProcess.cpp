@@ -143,7 +143,8 @@ public:
 
 protected:
   void DoExecute(Args &launch_args, CommandReturnObject &result) override {
-    Target *target = &GetTarget();
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
     // If our listener is nullptr, users aren't allows to launch
     ModuleSP exe_module_sp = target->GetExecutableModule();
 
@@ -167,7 +168,7 @@ protected:
     // (i.e. enabled if the platform supports it). First check if the process
     // launch options explicitly turn on/off
     // disabling ASLR.  If so, use that setting;
-    // otherwise, use the 'settings target.disable-aslr' setting.
+    // otherwise, use the 'settings target->disable-aslr' setting.
     bool disable_aslr = false;
     if (m_options.disable_aslr != eLazyBoolCalculate) {
       // The user specified an explicit setting on the process launch line.
@@ -175,7 +176,7 @@ protected:
       disable_aslr = (m_options.disable_aslr == eLazyBoolYes);
     } else {
       // The user did not explicitly specify whether to disable ASLR.  Fall
-      // back to the target.disable-aslr setting.
+      // back to the target->disable-aslr setting.
       disable_aslr = target->GetDisableASLR();
     }
 
@@ -313,9 +314,7 @@ protected:
     PlatformSP platform_sp(
         GetDebugger().GetPlatformList().GetSelectedPlatform());
 
-    Target *target = &GetTarget();
-    if (target->IsDummyTarget())
-      target = nullptr;
+    Target *target = GetTarget();
     // N.B. The attach should be synchronous.  It doesn't help much to get the
     // prompt back between initiating the attach and the target actually
     // stopping.  So even if the interpreter is set to be asynchronous, we wait
@@ -528,7 +527,8 @@ protected:
         }
       }
 
-      Target &target = GetTarget();
+      Target *target = GetTarget();
+      assert(target && "target guaranteed by eCommandRequiresProcess");
       BreakpointIDList run_to_bkpt_ids;
       // Don't pass an empty run_to_breakpoint list, as Verify will look for the
       // default breakpoint.
@@ -556,7 +556,7 @@ protected:
         // the breakpoint.location specifications since the latter require
         // special handling.  We also figure out whether there's at least one
         // specifier in the set that is enabled.
-        BreakpointList &bkpt_list = target.GetBreakpointList();
+        BreakpointList &bkpt_list = target->GetBreakpointList();
         std::unordered_set<break_id_t> bkpts_seen;
         std::unordered_set<break_id_t> bkpts_with_locs_seen;
         BreakpointIDList with_locs;
@@ -691,7 +691,7 @@ protected:
       }
 
       // Now re-enable the breakpoints we disabled:
-      BreakpointList &bkpt_list = target.GetBreakpointList();
+      BreakpointList &bkpt_list = target->GetBreakpointList();
       for (break_id_t bp_id : bkpts_disabled) {
         BreakpointSP bp_sp = bkpt_list.FindBreakpointByID(bp_id);
         if (bp_sp)
@@ -917,9 +917,7 @@ protected:
     Status error;
     Debugger &debugger = GetDebugger();
     PlatformSP platform_sp = m_interpreter.GetPlatform(true);
-    Target *target = &GetTarget();
-    if (target->IsDummyTarget())
-      target = nullptr;
+    Target *target = GetTarget();
     ProcessSP process_sp =
         debugger.GetAsyncExecution()
             ? platform_sp->ConnectProcess(command.GetArgumentAtIndex(0),
@@ -1591,7 +1589,7 @@ public:
                             "Manage LLDB handling of OS signals for the "
                             "current target process.  Defaults to showing "
                             "current policy.",
-                            nullptr) {
+                            nullptr, eCommandAllowsDummyTarget) {
     SetHelpLong("\nIf no signals are specified but one or more actions are, "
                 "and there is a live process, update them all.  If no action "
                 "is specified, list the current values.\n"
@@ -1665,13 +1663,13 @@ public:
 
 protected:
   void DoExecute(Args &signal_args, CommandReturnObject &result) override {
-    Target &target = GetTarget();
-
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandAllowsDummyTarget");
     // Any signals that are being set should be added to the Target's
     // DummySignals so they will get applied on rerun, etc.
     // If we have a process, however, we can do a more accurate job of vetting
     // the user's options.
-    ProcessSP process_sp = target.GetProcessSP();
+    ProcessSP process_sp = target->GetProcessSP();
 
     std::optional<bool> stop_action = {};
     std::optional<bool> pass_action = {};
@@ -1734,14 +1732,14 @@ protected:
     // If we were just asked to print the target values, do that here and
     // return:
     if (m_options.only_target_values) {
-      target.PrintDummySignals(result.GetOutputStream(), signal_args);
+      target->PrintDummySignals(result.GetOutputStream(), signal_args);
       result.SetStatus(eReturnStatusSuccessFinishResult);
       return;
     }
 
     // This handles clearing values:
     if (m_options.do_clear) {
-      target.ClearDummySignals(signal_args);
+      target->ClearDummySignals(signal_args);
       if (m_options.dummy)
         GetDummyTarget().ClearDummySignals(signal_args);
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
@@ -1791,9 +1789,9 @@ protected:
 
         // If there were no actions, we're just listing, don't add the dummy:
         if (!no_actions)
-          target.AddDummySignal(arg.ref(), set_lazy_bool(pass_action),
-                                set_lazy_bool(notify_action),
-                                set_lazy_bool(stop_action));
+          target->AddDummySignal(arg.ref(), set_lazy_bool(pass_action),
+                                 set_lazy_bool(notify_action),
+                                 set_lazy_bool(stop_action));
       }
     } else {
       // No signal specified, if any command options were specified, update ALL
@@ -1824,8 +1822,7 @@ protected:
       PrintSignalInformation(result.GetOutputStream(), signal_args,
                              num_signals_set, signals_sp);
     else
-      target.PrintDummySignals(result.GetOutputStream(),
-          signal_args);
+      target->PrintDummySignals(result.GetOutputStream(), signal_args);
 
     if (num_signals_set > 0)
       result.SetStatus(eReturnStatusSuccessFinishResult);

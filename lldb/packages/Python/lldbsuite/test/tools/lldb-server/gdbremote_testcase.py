@@ -559,6 +559,17 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         server.send_ack()
 
     def add_verified_launch_packets(self, launch_args):
+        if os.environ.get("LLDB_LAUNCH_FLAG_USE_PIPES", "0") == "1":
+            self.test_sequence.add_log_lines(
+                [
+                    "read packet: %s"
+                    % gdbremote_packet_encode_string(
+                        "QSetSTDIOWindowSize:cols=0;rows=0"
+                    ),
+                    "send packet: $OK#00",
+                ],
+                True,
+            )
         self.test_sequence.add_log_lines(
             [
                 "read packet: %s" % build_gdbremote_A_packet(launch_args),
@@ -940,6 +951,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         "SupportedCompressions",
         "MultiMemRead",
         "jMultiBreakpoint",
+        "accelerator-plugins",
     ]
 
     def parse_qSupported_response(self, context):

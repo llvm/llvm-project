@@ -235,6 +235,11 @@ components within the compiler.
 Aaron Ballman \
 aaron@aaronballman.com (email), aaron.ballman (Phabricator), [AaronBallman](https://github.com/AaronBallman) (GitHub), AaronBallman (Discourse), aaronballman (Discord)
 
+### Floating-point and numerics
+
+Joshua Cranmer \
+joshua.cranmer@intel.com (email), [jcranmer-intel](https://github.com/jcranmer-intel) (GitHub), jcranmer (Discourse)
+
 ### Plugins
 
 Vassil Vassilev \

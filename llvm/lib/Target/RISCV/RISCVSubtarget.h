@@ -18,6 +18,7 @@
 #include "RISCVFrameLowering.h"
 #include "RISCVISelLowering.h"
 #include "RISCVInstrInfo.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
@@ -42,7 +43,7 @@ class StringRef;
 namespace RISCVTuneInfoTable {
 
 struct RISCVTuneInfo {
-  const char *Name;
+  StringTable::Offset Name;
   uint8_t PrefFunctionAlignment;
   uint8_t PrefLoopAlignment;
 
@@ -72,6 +73,8 @@ struct RISCVTuneInfo {
 
   // The direction of PostRA scheduling.
   MISched::Direction PostRASchedDirection;
+
+  bool IsJumpExpensive;
 };
 
 #define GET_RISCVTuneInfoTable_DECL
@@ -189,10 +192,7 @@ public:
     return HasStdExtZfhmin || HasStdExtZfbfmin;
   }
 
-  bool hasCLZLike() const {
-    return HasStdExtZbb || HasVendorXTHeadBb ||
-           (HasVendorXCVbitmanip && !IsRV64);
-  }
+  bool hasCLZLike() const { return HasStdExtZbb || HasVendorXTHeadBb; }
   bool hasCTZLike() const {
     return HasStdExtZbb || (HasVendorXCVbitmanip && !IsRV64);
   }
@@ -247,9 +247,13 @@ public:
   }
 
   Align getZilsdAlign() const {
-    return Align(enableUnalignedScalarMem() ? 1
-                 : allowZilsd4ByteAlign()   ? 4
-                                            : 8);
+    if (enableUnalignedScalarMem())
+      return Align(1);
+
+    if (allowZilsdWordAlign())
+      return Align(4);
+
+    return Align(8);
   }
 
   unsigned getELen() const {
@@ -293,6 +297,16 @@ public:
     assert(i.id() < RISCV::NUM_TARGET_REGS && "Register out of range");
     return UserReservedRegister[i.id()];
   }
+
+  TargetRegisterClass const *getLargestFPRegClass() const {
+    if (HasStdExtQ)
+      return &RISCV::FPR128RegClass;
+    if (HasStdExtD)
+      return &RISCV::FPR64RegClass;
+    if (HasStdExtF)
+      return &RISCV::FPR32RegClass;
+    return nullptr;
+  };
 
   // XRay support - require D and C extensions.
   bool isXRaySupported() const override { return hasStdExtD() && hasStdExtC(); }
@@ -443,6 +457,8 @@ public:
   MISched::Direction getPostRASchedDirection() const {
     return TuneInfo->PostRASchedDirection;
   }
+
+  bool isJumpExpensive() const { return TuneInfo->IsJumpExpensive; }
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
                            const SchedRegion &Region) const override;

@@ -60,6 +60,7 @@
 #include "llvm/Transforms/Scalar/DFAJumpThreading.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -216,7 +217,14 @@ void DFAJumpThreading::unfold(DomTreeUpdater *DTU, LoopInfo *LI,
         SI->getContext(), Twine(SI->getName(), ".si.unfold.false"),
         EndBlock->getParent(), EndBlock);
     NewBBs->push_back(NewBlock);
-    UncondBrInst::Create(EndBlock, NewBlock);
+    // The branch from NewBlock and the new CondBr from StartBlock collectively
+    // substitute the existing Select+Br instructions, so following the rules
+    // for updating source locations we assign each of them the merged location
+    // of the Select+Br.
+    DebugLoc SelectBranchLoc = DebugLoc::getMergedLocation(
+        StartBlockTerm->getDebugLoc(), SI->getDebugLoc());
+    Instruction *NewToEndBr = UncondBrInst::Create(EndBlock, NewBlock);
+    NewToEndBr->setDebugLoc(SelectBranchLoc);
     DTU->applyUpdates({{DominatorTree::Insert, NewBlock, EndBlock}});
 
     // StartBlock
@@ -267,6 +275,7 @@ void DFAJumpThreading::unfold(DomTreeUpdater *DTU, LoopInfo *LI,
     StartBlockTerm->eraseFromParent();
     auto *BI =
         CondBrInst::Create(SI->getCondition(), EndBlock, NewBlock, StartBlock);
+    BI->setDebugLoc(SelectBranchLoc);
     if (!ProfcheckDisableMetadataFixes)
       BI->setMetadata(LLVMContext::MD_prof,
                       SI->getMetadata(LLVMContext::MD_prof));
@@ -301,10 +310,15 @@ void DFAJumpThreading::unfold(DomTreeUpdater *DTU, LoopInfo *LI,
     //   |     /
     // EndBlock
     //  (Use)
-    UncondBrInst::Create(EndBlock, NewBlockF);
+    Instruction *NewFToEnd = UncondBrInst::Create(EndBlock, NewBlockF);
     // Insert the real conditional branch based on the original condition.
     auto *BI =
         CondBrInst::Create(SI->getCondition(), EndBlock, NewBlockF, NewBlockT);
+    // The branches from NewBlockT and NewBlockF are performing the Select
+    // logic, and so assume its source location.
+    DebugLoc SelectLoc = SI->getDebugLoc();
+    NewFToEnd->setDebugLoc(SelectLoc);
+    BI->setDebugLoc(SelectLoc);
     if (!ProfcheckDisableMetadataFixes)
       BI->setMetadata(LLVMContext::MD_prof,
                       SI->getMetadata(LLVMContext::MD_prof));
@@ -756,6 +770,7 @@ private:
   /// PHI nodes in those blocks that define the state.
   StateDefMap getStateDefMap() const {
     StateDefMap Res;
+    DenseSet<const BasicBlock *> MultipleDefBBs;
     PHINode *FirstDef = dyn_cast<PHINode>(Switch->getOperand(0));
     assert(FirstDef && "The first definition must be a phi.");
 
@@ -765,8 +780,12 @@ private:
 
     while (!Stack.empty()) {
       PHINode *CurPhi = Stack.pop_back_val();
+      BasicBlock *CurDefBlock = CurPhi->getParent();
 
-      Res[CurPhi->getParent()] = CurPhi;
+      auto [_, Inserted] = Res.try_emplace(CurDefBlock, CurPhi);
+      if (!Inserted)
+        MultipleDefBBs.insert(CurDefBlock);
+
       SeenValues.insert(CurPhi);
 
       for (BasicBlock *IncomingBB : CurPhi->blocks()) {
@@ -782,6 +801,17 @@ private:
       }
     }
 
+    // NOTE: If multiple phi definitions exist in a block, we cannot
+    // thread the paths with such block by simple cloning. For example:
+    // < then, det, lbl_entry, switch_bb > [ 0, det ]
+    // < then, det, switch_bb > [ 1, det ]
+    // In this case, it is impossible to diverge then->det into then->det.0 and
+    // then->det.1 by simple path cloning.
+    for (auto *BB : MultipleDefBBs) {
+      LLVM_DEBUG(dbgs() << "Not a state-defining block: Multiple defs in "
+                        << BB->getNameOrAsOperand() << "\n");
+      Res.erase(BB);
+    }
     return Res;
   }
 
@@ -1229,6 +1259,12 @@ private:
     NewBB->moveAfter(BB);
     NumCloned++;
 
+    // Give the clone fresh noalias scopes; otherwise it shares BB's scopes and
+    // AA can treat aliasing accesses on different threaded paths as noalias.
+    SmallVector<MDNode *> NoAliasScopes;
+    identifyNoAliasScopesToClone({NewBB}, NoAliasScopes);
+    cloneAndAdaptNoAliasScopes(NoAliasScopes, {NewBB}, BB->getContext(), "dfa");
+
     for (Instruction &I : *NewBB) {
       // Do not remap operands of PHINode in case a definition in BB is an
       // incoming value to a phi in the same block. This incoming value will
@@ -1386,8 +1422,9 @@ private:
         DTUpdates.push_back({DominatorTree::Delete, LastBlock, Succ});
     }
 
+    DebugLoc SwitchLoc = Switch->getDebugLoc();
     Switch->eraseFromParent();
-    UncondBrInst::Create(NextCase, LastBlock);
+    UncondBrInst::Create(NextCase, LastBlock)->setDebugLoc(SwitchLoc);
 
     DTU->applyUpdates(DTUpdates);
   }

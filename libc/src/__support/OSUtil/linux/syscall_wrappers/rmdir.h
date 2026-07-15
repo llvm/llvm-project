@@ -25,10 +25,10 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> rmdir(const char *path) {
-#ifdef SYS_rmdir
-  int ret = syscall_impl<int>(SYS_rmdir, path);
-#elif defined(SYS_unlinkat)
+#ifdef SYS_unlinkat
   int ret = syscall_impl<int>(SYS_unlinkat, AT_FDCWD, path, AT_REMOVEDIR);
+#elif defined(SYS_rmdir)
+  int ret = syscall_impl<int>(SYS_rmdir, path);
 #else
 #error "rmdir and unlinkat syscalls not available."
 #endif

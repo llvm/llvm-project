@@ -5,9 +5,9 @@ add_entrypoint_object(
   HDRS
     ../socket.h
   DEPENDS
-    libc.include.sys_syscall
     libc.include.sys_socket
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.OSUtil.linux.syscall_wrappers.socket
     libc.src.errno.errno
 )
 
@@ -18,9 +18,11 @@ add_entrypoint_object(
   HDRS
     ../bind.h
   DEPENDS
-    libc.include.sys_syscall
     libc.include.sys_socket
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.struct_sockaddr
+    libc.hdr.types.socklen_t
+    libc.src.__support.common
+    libc.src.__support.OSUtil.linux.syscall_wrappers.bind
     libc.src.errno.errno
 )
 
@@ -129,10 +131,10 @@ add_entrypoint_object(
   HDRS
     ../socketpair.h
   DEPENDS
-    libc.include.sys_syscall
     libc.include.sys_socket
     libc.src.__support.macros.sanitizer
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.OSUtil.linux.syscall_wrappers.socketpair
     libc.src.errno.errno
 )
 
@@ -143,10 +145,10 @@ add_entrypoint_object(
   HDRS
     ../send.h
   DEPENDS
-    libc.include.sys_syscall
-    libc.hdr.types.struct_sockaddr
-    libc.hdr.types.socklen_t
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.size_t
+    libc.hdr.types.ssize_t
+    libc.src.__support.common
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sendto
     libc.src.errno.errno
 )
 
@@ -157,10 +159,11 @@ add_entrypoint_object(
   HDRS
     ../sendto.h
   DEPENDS
-    libc.include.sys_syscall
     libc.hdr.types.struct_sockaddr
     libc.hdr.types.socklen_t
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.ssize_t
+    libc.src.__support.common
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sendto
     libc.src.errno.errno
 )
 
@@ -179,15 +182,29 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sendmmsg
+  SRCS
+    sendmmsg.cpp
+  HDRS
+    ../sendmmsg.h
+  DEPENDS
+    libc.hdr.types.struct_mmsghdr
+    libc.src.__support.common
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sendmmsg
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   sendmsg
   SRCS
     sendmsg.cpp
   HDRS
     ../sendmsg.h
   DEPENDS
-    libc.include.sys_syscall
     libc.hdr.types.struct_msghdr
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.ssize_t
+    libc.src.__support.common
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sendmsg
     libc.src.errno.errno
 )
 add_entrypoint_object(
@@ -197,11 +214,11 @@ add_entrypoint_object(
   HDRS
     ../recv.h
   DEPENDS
-    libc.include.sys_syscall
-    libc.hdr.types.struct_sockaddr
-    libc.hdr.types.socklen_t
     libc.src.__support.macros.sanitizer
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.size_t
+    libc.hdr.types.ssize_t
+    libc.src.__support.common
+    libc.src.__support.OSUtil.linux.syscall_wrappers.recvfrom
     libc.src.errno.errno
 )
 
@@ -212,11 +229,26 @@ add_entrypoint_object(
   HDRS
     ../recvfrom.h
   DEPENDS
-    libc.include.sys_syscall
     libc.hdr.types.struct_sockaddr
     libc.hdr.types.socklen_t
     libc.src.__support.macros.sanitizer
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.ssize_t
+    libc.src.__support.common
+    libc.src.__support.OSUtil.linux.syscall_wrappers.recvfrom
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  recvmmsg
+  SRCS
+    recvmmsg.cpp
+  HDRS
+    ../recvmmsg.h
+  DEPENDS
+    libc.hdr.types.struct_mmsghdr
+    libc.hdr.types.struct_timespec
+    libc.src.__support.common
+    libc.src.__support.OSUtil.linux.syscall_wrappers.recvmmsg
     libc.src.errno.errno
 )
 
@@ -227,10 +259,11 @@ add_entrypoint_object(
   HDRS
     ../recvmsg.h
   DEPENDS
-    libc.include.sys_syscall
     libc.hdr.types.struct_msghdr
     libc.src.__support.macros.sanitizer
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.ssize_t
+    libc.src.__support.common
+    libc.src.__support.OSUtil.linux.syscall_wrappers.recvmsg
     libc.src.errno.errno
 )
 
@@ -243,5 +276,18 @@ add_entrypoint_object(
   DEPENDS
     libc.include.sys_socket
     libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sockatmark
+  SRCS
+    sockatmark.cpp
+  HDRS
+    ../sockatmark.h
+  DEPENDS
+    libc.include.sys_socket
+    libc.src.__support.common
+    libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
     libc.src.errno.errno
 )
