@@ -167,6 +167,29 @@ VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
 /// Finds the incoming alias-mask within the vector preheader.
 VPValue *findIncomingAliasMask(const VPlan &Plan);
 
+/// Get any instruction opcode or intrinsic ID data embedded in recipe \p R.
+/// Returns an optional pair, where the first element indicates whether it is
+/// an intrinsic ID.
+std::optional<std::pair<bool, unsigned>>
+getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R);
+
+/// Returns true if \p R is dead, i.e. none of its defined values are used and
+/// it has no side effects (with the exception of conditional assumes, which are
+/// considered dead as their conditions may be flattened).
+bool isDeadRecipe(VPRecipeBase &R);
+
+/// Recursively delete \p V and any of its operands that become dead.
+void recursivelyDeleteDeadRecipes(VPValue *V);
+
+/// Collect all users of \p V, looking through recipes that define other values.
+SmallVector<VPUser *> collectUsersRecursively(VPValue *V);
+
+/// Try to fold \p R using InstSimplifyFolder. Will succeed and return a
+/// non-nullptr VPValue for a handled opcode or intrinsic ID if corresponding \p
+/// Operands are foldable live-ins.
+VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R, ArrayRef<VPValue *> Operands,
+                            const DataLayout &DL);
+
 } // namespace vputils
 
 /// Lightweight SCEV-to-VPlan expander. Converts SCEV expressions into

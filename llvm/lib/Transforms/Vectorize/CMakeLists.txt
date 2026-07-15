@@ -30,6 +30,7 @@ add_llvm_component_library(LLVMVectorize
   VPlan.cpp
   VPlanAnalysis.cpp
   VPlanConstruction.cpp
+  VPlanEVLTransforms.cpp
   VPlanPredicator.cpp
   VPlanRecipes.cpp
   VPlanTransforms.cpp
