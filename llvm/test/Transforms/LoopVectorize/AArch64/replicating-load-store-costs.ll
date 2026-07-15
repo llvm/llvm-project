@@ -221,24 +221,24 @@ define void @test_load_gep_widen_induction(ptr noalias %dst, ptr noalias %dst2) 
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add nuw <2 x i64> [[STEP_ADD]], splat (i64 2)
 ; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add nuw <2 x i64> [[STEP_ADD_2]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i128, ptr [[DST]], <2 x i64> [[VEC_IND]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x ptr> [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x ptr> [[TMP0]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i128, ptr [[DST]], <2 x i64> [[STEP_ADD]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x ptr> [[TMP1]], i64 0
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x ptr> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i128, ptr [[DST]], <2 x i64> [[STEP_ADD_2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x ptr> [[TMP2]], i64 0
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x ptr> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i128, ptr [[DST]], <2 x i64> [[STEP_ADD_3]]
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x ptr> [[TMP3]], i64 0
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x ptr> [[TMP3]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x ptr> [[TMP0]], i64 0
 ; CHECK-NEXT:    store ptr null, ptr [[TMP5]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x ptr> [[TMP0]], i64 1
 ; CHECK-NEXT:    store ptr null, ptr [[TMP6]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x ptr> [[TMP1]], i64 0
 ; CHECK-NEXT:    store ptr null, ptr [[TMP7]], align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x ptr> [[TMP1]], i64 1
 ; CHECK-NEXT:    store ptr null, ptr [[TMP8]], align 8
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x ptr> [[TMP2]], i64 0
 ; CHECK-NEXT:    store ptr null, ptr [[TMP9]], align 8
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x ptr> [[TMP2]], i64 1
 ; CHECK-NEXT:    store ptr null, ptr [[TMP10]], align 8
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x ptr> [[TMP3]], i64 0
 ; CHECK-NEXT:    store ptr null, ptr [[TMP11]], align 8
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x ptr> [[TMP3]], i64 1
 ; CHECK-NEXT:    store ptr null, ptr [[TMP17]], align 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr ptr, ptr [[DST2]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr ptr, ptr [[TMP12]], i64 2
@@ -447,16 +447,17 @@ define void @test_prefer_vector_addressing(ptr %start, ptr %ms, ptr noalias %src
 ; CHECK-LABEL: define void @test_prefer_vector_addressing(
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[MS:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
-; CHECK-NEXT:    [[MS1:%.*]] = ptrtoint ptr [[MS]] to i64
 ; CHECK-NEXT:    [[GEP_START:%.*]] = getelementptr i8, ptr [[START]], i64 3
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[MS]] to i64
+; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[START2]], 3
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[MS1]], i64 [[TMP0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[UMAX]], -3
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP10]], i64 [[TMP0]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[START2]]
-; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP2]], i64 1)
+; CHECK-NEXT:    [[TMP23:%.*]] = add i64 [[TMP2]], -3
+; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP23]], i64 1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], [[UMIN]]
-; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[TMP3]], 3
+; CHECK-NEXT:    [[TMP24:%.*]] = add i64 [[TMP3]], -3
+; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[TMP24]], 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[UMIN]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP6]], 4

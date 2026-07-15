@@ -2345,7 +2345,9 @@ static bool shouldMergeGEPs(GEPOperator &GEP, GEPOperator &Src) {
 }
 
 /// Find a constant NewC that has property:
-///   shuffle(NewC, ShMask) = C
+///   shuffle(NewC, poison, ShMask) = C
+/// for lanes that select NewC. Lanes that select the poison operand are not
+/// constrained.
 /// Returns nullptr if such a constant does not exist e.g. ShMask=<0,0> C=<1,2>
 ///
 /// A 1-to-1 mapping is not required. Example:
@@ -2370,8 +2372,11 @@ Constant *InstCombinerImpl::unshuffleConstant(ArrayRef<int> ShMask, Constant *C,
   for (unsigned I = 0; I < NumElts; ++I) {
     Constant *CElt = C->getAggregateElement(I);
     if (ShMask[I] >= 0) {
-      assert(ShMask[I] < (int)NumElts && "Not expecting narrowing shuffle");
-      Constant *NewCElt = NewVecC[ShMask[I]];
+      int MaskElt = ShMask[I];
+      if (MaskElt >= (int)NewCNumElts)
+        continue;
+
+      Constant *NewCElt = NewVecC[MaskElt];
       // Bail out if:
       // 1. The constant vector contains a constant expression.
       // 2. The shuffle needs an element of the constant vector that can't
@@ -2381,7 +2386,7 @@ Constant *InstCombinerImpl::unshuffleConstant(ArrayRef<int> ShMask, Constant *C,
       if (!CElt || (!isa<PoisonValue>(NewCElt) && NewCElt != CElt) ||
           I >= NewCNumElts)
         return nullptr;
-      NewVecC[ShMask[I]] = CElt;
+      NewVecC[MaskElt] = CElt;
     }
   }
   return ConstantVector::get(NewVecC);
@@ -5394,11 +5399,12 @@ bool InstCombinerImpl::freezeOtherUses(FreezeInst &FI) {
   });
 
   for (auto *U : Users) {
-    for (auto &AssumeVH : AC.assumptionsFor(U)) {
-      if (!AssumeVH)
-        continue;
-      AC.updateAffectedValues(cast<AssumeInst>(AssumeVH));
-    }
+    // Re-queue U and its users: freezing U's operand can expose a fold on a
+    // user of U (e.g. a freeze of U can now be pushed through it) that would
+    // otherwise only fire on a later iteration, tripping the fixpoint verifier.
+    auto *UI = cast<Instruction>(U);
+    Worklist.pushUsersToWorkList(*UI);
+    Worklist.push(UI);
   }
 
   return Changed;
@@ -5510,15 +5516,10 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
     auto *VTy = dyn_cast<FixedVectorType>(Ty);
     if (!VTy)
       return nullptr;
-    unsigned NumElts = VTy->getNumElements();
-    Constant *BestValue = Constant::getNullValue(VTy->getScalarType());
-    for (unsigned i = 0; i != NumElts; ++i) {
-      Constant *EltC = C->getAggregateElement(i);
-      if (EltC && !match(EltC, m_Undef())) {
-        BestValue = EltC;
-        break;
-      }
-    }
+    Constant *BestValue;
+    if (!match(C, m_ContainsMatchingVectorElement(m_CombineAnd(
+                      m_Unless(m_Undef()), m_Constant(BestValue)))))
+      BestValue = Constant::getNullValue(VTy->getScalarType());
     return Constant::replaceUndefsWith(C, BestValue);
   };
 
@@ -5628,7 +5629,7 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
     for (BasicBlock::iterator Scan = std::next(I->getIterator()),
                               E = I->getParent()->end();
          Scan != E; ++Scan)
-      if (Scan->mayWriteToMemory())
+      if (Scan->mayWriteToMemory() && !isa<AssumeInst>(Scan))
         return false;
   }
 

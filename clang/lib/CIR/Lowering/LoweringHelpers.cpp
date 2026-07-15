@@ -272,6 +272,80 @@ lowerConstArrayAttr(cir::ConstArrayAttr constArr,
   return std::nullopt;
 }
 
+/// Lower a constant attribute that initializes a single member of a record (or
+/// a leaf of a nested aggregate) to an LLVM-dialect attribute that can be
+/// attached directly to an \c llvm.mlir.global, avoiding an insertvalue
+/// initializer region. Returns \c std::nullopt when the attribute cannot be
+/// represented as a single constant attribute (e.g. an indexed
+/// \c GlobalViewAttr), in which case the caller falls back to the region-based
+/// lowering.
+static std::optional<mlir::Attribute>
+lowerConstRecordMemberAttr(mlir::Attribute attr,
+                           const mlir::TypeConverter *converter,
+                           mlir::ModuleOp moduleOp) {
+  mlir::MLIRContext *ctx = attr.getContext();
+
+  if (auto arrayAttr = mlir::dyn_cast<cir::ConstArrayAttr>(attr))
+    return lowerConstArrayAttr(arrayAttr, converter, moduleOp);
+
+  if (auto recordAttr = mlir::dyn_cast<cir::ConstRecordAttr>(attr))
+    return lowerConstRecordAttr(recordAttr, converter, moduleOp);
+
+  if (mlir::isa<cir::ZeroAttr>(attr))
+    return mlir::LLVM::ZeroAttr::get(ctx);
+
+  if (mlir::isa<cir::UndefAttr>(attr))
+    return mlir::LLVM::UndefAttr::get(ctx);
+
+  if (auto intAttr = mlir::dyn_cast<cir::IntAttr>(attr))
+    return mlir::IntegerAttr::get(converter->convertType(intAttr.getType()),
+                                  intAttr.getValue());
+
+  if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(attr))
+    return mlir::IntegerAttr::get(converter->convertType(boolAttr.getType()),
+                                  boolAttr.getValue() ? 1 : 0);
+
+  if (auto fpAttr = mlir::dyn_cast<cir::FPAttr>(attr))
+    return mlir::FloatAttr::get(converter->convertType(fpAttr.getType()),
+                                fpAttr.getValue());
+
+  // Null pointers and simple address-of-global references can be represented
+  // as constant attributes; anything more complex uses the region fallback.
+  return lowerPointerElementAttr(attr, ctx, moduleOp, converter);
+}
+
+std::optional<mlir::Attribute>
+lowerConstRecordAttr(cir::ConstRecordAttr constRecord,
+                     const mlir::TypeConverter *converter,
+                     mlir::ModuleOp moduleOp) {
+  // Build one constant attribute per record member. The LLVM dialect global
+  // translation accepts an ArrayAttr (one element per struct field) and emits
+  // an llvm::ConstantStruct, so the whole initializer can be a single
+  // attribute on the global instead of an insertvalue region.
+  mlir::ArrayAttr memberAttrs = constRecord.getMembers();
+  llvm::SmallVector<mlir::Attribute> loweredMembers;
+  loweredMembers.reserve(memberAttrs.size());
+  for (mlir::Attribute member : memberAttrs) {
+    std::optional<mlir::Attribute> lowered =
+        lowerConstRecordMemberAttr(member, converter, moduleOp);
+    if (!lowered)
+      return std::nullopt;
+    loweredMembers.push_back(*lowered);
+  }
+
+  // For a union, the CIR representation is a single field. However, if the
+  // union has padding, we would have added that as an LLVM field, so make sure
+  // we have a corresponding undef for that spot.
+  if (auto unionTy = mlir::dyn_cast<cir::UnionType>(constRecord.getType());
+      unionTy && unionTy.getPadded()) {
+    assert(loweredMembers.size() == 1);
+    loweredMembers.push_back(
+        mlir::LLVM::UndefAttr::get(constRecord.getContext()));
+  }
+
+  return mlir::ArrayAttr::get(constRecord.getContext(), loweredMembers);
+}
+
 mlir::Value getConstAPInt(mlir::OpBuilder &bld, mlir::Location loc,
                           mlir::Type typ, const llvm::APInt &val) {
   return mlir::LLVM::ConstantOp::create(bld, loc, typ, val);

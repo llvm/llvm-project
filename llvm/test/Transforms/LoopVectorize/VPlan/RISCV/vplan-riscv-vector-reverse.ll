@@ -37,12 +37,10 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-end-pointer ir<%arrayidx>, vp<%evl>
 ; CHECK-NEXT:      WIDEN ir<%0> = vp.load vp<[[VP8]]>, vp<%evl>
-; CHECK-NEXT:      WIDEN-INTRINSIC vp<[[VP9:%[0-9]+]]> = call llvm.experimental.vp.reverse(ir<%0>, ir<true>, vp<%evl>)
-; CHECK-NEXT:      WIDEN ir<%add9> = add vp<[[VP9]]>, ir<1>
+; CHECK-NEXT:      WIDEN ir<%add9> = add ir<%0>, ir<1>
 ; CHECK-NEXT:      CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
-; CHECK-NEXT:      vp<[[VP10:%[0-9]+]]> = vector-end-pointer ir<%arrayidx3>, vp<%evl>
-; CHECK-NEXT:      WIDEN-INTRINSIC vp<[[VP11:%[0-9]+]]> = call llvm.experimental.vp.reverse(ir<%add9>, ir<true>, vp<%evl>)
-; CHECK-NEXT:      WIDEN vp.store vp<[[VP10]]>, vp<[[VP11]]>, vp<%evl>
+; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-end-pointer ir<%arrayidx3>, vp<%evl>
+; CHECK-NEXT:      WIDEN vp.store vp<[[VP9]]>, ir<%add9>, vp<%evl>
 ; CHECK-NEXT:      EMIT vp<%current.iteration.next> = add vp<%evl>, vp<[[VP5]]>
 ; CHECK-NEXT:      EMIT vp<%avl.next> = sub nuw vp<%avl>, vp<%evl>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add vp<[[VP4]]>, vp<[[VP0]]>

@@ -59,10 +59,6 @@ const Declaration &FunctionInfo::GetDeclaration() const {
 
 ConstString FunctionInfo::GetName() const { return m_name; }
 
-size_t FunctionInfo::MemorySize() const {
-  return m_name.MemorySize() + m_declaration.MemorySize();
-}
-
 InlineFunctionInfo::InlineFunctionInfo(const char *name,
                                        llvm::StringRef mangled,
                                        const Declaration *decl_ptr,
@@ -115,10 +111,6 @@ const Declaration &InlineFunctionInfo::GetCallSite() const {
 Mangled &InlineFunctionInfo::GetMangled() { return m_mangled; }
 
 const Mangled &InlineFunctionInfo::GetMangled() const { return m_mangled; }
-
-size_t InlineFunctionInfo::MemorySize() const {
-  return FunctionInfo::MemorySize() + m_mangled.MemorySize();
-}
 
 /// @name Call site related structures
 /// @{
@@ -507,11 +499,6 @@ bool Function::GetDisassembly(const ExecutionContext &exe_ctx,
 void Function::DumpSymbolContext(Stream *s) {
   m_comp_unit->DumpSymbolContext(s);
   s->Printf(", Function{0x%8.8" PRIx64 "}", GetID());
-}
-
-size_t Function::MemorySize() const {
-  size_t mem_size = sizeof(Function) + m_block.MemorySize();
-  return mem_size;
 }
 
 bool Function::GetIsOptimized() {

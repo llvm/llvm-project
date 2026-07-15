@@ -37,7 +37,7 @@
  </tr>
   <tr>
   <td><a href="#cxx29">C++2d</a></td>
-  <td></td>
+  <td><tt>-std=c++2d</tt></td>
   <td class="partial" align="center">Partial</td>
  </tr>
 <tr>
@@ -98,6 +98,8 @@ and so on, to track known bugs with Clang's language conformance.</p>
 <p>Clang has support for some of the features of the C++ standard following
 C++2c, informally referred to as C++2d.</p>
 
+<p>You can use Clang in C++2d mode with the <code>-std=c++2d</code> option.</p>
+
 <details open>
 <summary>List of features and minimum Clang version with support</summary>
 <table width="689" border="1" cellspacing="0">
@@ -145,7 +147,7 @@ C++2c, informally referred to as C++2d.</p>
 <tr>
   <td>More named universal character escapes</td>
   <td><a href="https://wg21.link/P3733R1">P3733R1</a> <a href="#dr">(DR)</a></td>
-  <td class="none" align="center">No</td>
+  <td class="full" align="center">Clang 23</td>
 </tr>
 <tr>
   <td>Lexical order for lambdas</td>
@@ -430,7 +432,13 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Expansion Statements</td>
   <td><a href="https://wg21.link/P1306">P1306R5</a></td>
-  <td class="none" align="center">No</td>
+  <td class="partial" align="center">
+    <details>
+      <summary>Clang 23 (Partial)</summary>
+      Iterating expansion statements currently cannot be expanded and will
+      result in a diagnostic, but other types of expansion statements work.
+    </details>
+  </td>
  </tr>
  <tr>
    <td>constexpr virtual inheritance</td>

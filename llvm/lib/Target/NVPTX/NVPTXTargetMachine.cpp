@@ -111,7 +111,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXAssignValidGlobalNamesPass(PR);
   initializeNVPTXAtomicLowerPass(PR);
   initializeNVPTXLowerArgsLegacyPassPass(PR);
-  initializeNVPTXSetByValParamAlignLegacyPassPass(PR);
+  initializeNVPTXPromoteParamAlignLegacyPassPass(PR);
   initializeNVPTXMarkKernelPtrsGlobalLegacyPassPass(PR);
   initializeNVPTXLowerAllocaPass(PR);
   initializeNVPTXLowerUnreachablePass(PR);
@@ -119,6 +119,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXLowerAggrCopiesPass(PR);
   initializeNVPTXProxyRegErasurePass(PR);
   initializeNVPTXForwardParamsPassPass(PR);
+  initializeNVPTXAddressFolderPassPass(PR);
   initializeNVPTXDAGToDAGISelLegacyPass(PR);
   initializeNVPTXAAWrapperPassPass(PR);
   initializeNVPTXExternalAAWrapperPass(PR);
@@ -366,7 +367,7 @@ void NVPTXPassConfig::addIRPasses() {
   // before the address space inference passes.
   if (getNVPTXTargetMachine().getDrvInterface() == NVPTX::CUDA)
     addPass(createNVPTXMarkKernelPtrsGlobalPass());
-  addPass(createNVPTXSetByValParamAlignPass());
+  addPass(createNVPTXPromoteParamAlignPass());
   addPass(createNVPTXLowerArgsPass());
   if (getOptLevel() != CodeGenOptLevel::None) {
     addAddressSpaceInferencePasses();
@@ -421,6 +422,8 @@ bool NVPTXPassConfig::addInstSelector() {
 
 void NVPTXPassConfig::addPreRegAlloc() {
   addPass(createNVPTXForwardParamsPass());
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(createNVPTXAddressFolderPass());
   // Remove Proxy Register pseudo instructions used to keep `callseq_end` alive.
   addPass(createNVPTXProxyRegErasurePass());
 }

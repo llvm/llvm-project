@@ -388,13 +388,13 @@ TEST(DWARFExpression, DW_OP_const) {
       Evaluate({DW_OP_const8s, 0x00, 0x11, 0x22, 0x33, 0x44, 0x42, 0x47, 0x88}),
       ExpectScalar(0x33221100));
 
-  // Don't truncate to address size for compatibility with clang (pr48087).
+  // LEB constants also push generic values, so truncate to address size.
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_constu, 0x81, 0x82, 0x84, 0x88, 0x90, 0xa0, 0x40}),
-      ExpectScalar(0x01010101010101));
+      ExpectScalar(32, 0x01010101, false));
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_consts, 0x81, 0x82, 0x84, 0x88, 0x90, 0xa0, 0x40}),
-      ExpectScalar(0xffff010101010101));
+      ExpectScalar(32, 0x01010101, true));
 }
 
 TEST(DWARFExpression, DW_OP_skip) {
@@ -445,6 +445,24 @@ DWARF:
               Form:            DW_FORM_data1
             - Attribute:       DW_AT_byte_size
               Form:            DW_FORM_data1
+        - Code:            0x00000003
+          Tag:             DW_TAG_enumeration_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_encoding
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_byte_size
+              Form:            DW_FORM_data1
+        - Code:            0x00000004
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_encoding
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_byte_size
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_bit_size
+              Form:            DW_FORM_data1
   debug_info:
     - Version:         4
       AddrSize:        8
@@ -493,15 +511,28 @@ DWARF:
           Values:
             - Value:           0x000000000000000b # DW_ATE_numeric_string
             - Value:           0x0000000000000001
+        # 0x00000020:
+        - AbbrCode:        0x00000003
+          Values:
+            - Value:           0x0000000000000007 # DW_ATE_unsigned
+            - Value:           0x0000000000000004
+        # 0x00000023:
+        - AbbrCode:        0x00000004
+          Values:
+            - Value:           0x0000000000000005 # DW_ATE_signed
+            - Value:           0x0000000000000004
+            - Value:           0x000000000000001f
         - AbbrCode:        0x00000000
 
 )";
-  // Compile unit relative offsets to each DW_TAG_base_type
+  // Compile unit relative offsets to type DIEs.
   uint8_t offs_uint32_t = 0x0000000e;
   uint8_t offs_uint64_t = 0x00000011;
   uint8_t offs_sint64_t = 0x00000014;
   uint8_t offs_uchar = 0x00000017;
   uint8_t offs_schar = 0x0000001a;
+  uint8_t offs_enum = 0x00000020;
+  uint8_t offs_sint31_t = 0x00000023;
 
   DWARFExpressionTester t(yamldata, /*cu_index=*/1);
   ASSERT_TRUE((bool)t.GetDwarfUnit());
@@ -555,6 +586,18 @@ DWARF:
                                offs_schar, DW_OP_stack_value}),
                        ExpectScalar(8, 'A', is_signed));
 
+  // Prefer DW_AT_bit_size over DW_AT_byte_size when both are present.
+  EXPECT_THAT_EXPECTED(
+      t.Eval({DW_OP_const4u, 0x00, 0x00, 0x00, 0x40, DW_OP_convert,
+              offs_sint31_t, DW_OP_stack_value}),
+      ExpectScalar(31, 0x40000000, is_signed));
+
+  // Truncate the high bit when the value crosses the 31-bit boundary.
+  EXPECT_THAT_EXPECTED(
+      t.Eval({DW_OP_const4u, 0x00, 0x00, 0x00, 0xc0, DW_OP_convert,
+              offs_sint31_t, DW_OP_stack_value}),
+      ExpectScalar(31, 0x40000000, is_signed));
+
   //
   // Errors.
   //
@@ -574,10 +617,119 @@ DWARF:
   EXPECT_THAT_ERROR(
       t.Eval({DW_OP_const1s, 'X', DW_OP_convert, 0x1d}).takeError(),
       llvm::Failed());
+
+  // Not a DW_TAG_base_type.
+  EXPECT_THAT_ERROR(
+      t.Eval({DW_OP_const1s, 'X', DW_OP_convert, offs_enum}).takeError(),
+      llvm::FailedWithMessage(
+          "DW_OP_convert type DIE is not a DW_TAG_base_type"));
+
+  // A non-zero DIE offset with no DWARF unit.
+  EXPECT_THAT_ERROR(
+      Evaluate({DW_OP_const1s, 'X', DW_OP_convert, 0x01}, nullptr, nullptr)
+          .takeError(),
+      llvm::FailedWithMessage(
+          "DW_OP_convert with a DIE offset requires a DWARF unit"));
+
+  // DW_OP_convert with an empty stack.
+  EXPECT_THAT_ERROR(
+      Evaluate({DW_OP_convert, 0x00}, nullptr, nullptr).takeError(),
+      llvm::FailedWithMessage("DW_OP_convert needs at least 1 stack entries "
+                              "(stack has 0 entries)"));
+}
+
+TEST(DWARFExpression, TypedBinaryOpsRejectMismatchedTypes) {
+  class TypedDwarfDelegate : public MockDwarfDelegate {
+  public:
+    enum : uint8_t {
+      UnsignedChar = 1,
+      SignedChar = 2,
+      UnsignedShort = 3,
+    };
+
+    llvm::Expected<std::pair<uint64_t, bool>>
+    GetDIEBitSizeAndSign(uint64_t relative_die_offset) const override {
+      switch (relative_die_offset) {
+      case UnsignedChar:
+        return std::pair<uint64_t, bool>{8, false};
+      case SignedChar:
+        return std::pair<uint64_t, bool>{8, true};
+      case UnsignedShort:
+        return std::pair<uint64_t, bool>{16, false};
+      default:
+        return llvm::createStringError("unknown base type offset");
+      }
+    }
+  };
+
+  TypedDwarfDelegate unit;
+  constexpr uint8_t opcodes[] = {
+      DW_OP_plus, DW_OP_minus, DW_OP_div, DW_OP_mod, DW_OP_mul,  DW_OP_and,
+      DW_OP_or,   DW_OP_xor,   DW_OP_shl, DW_OP_shr, DW_OP_shra, DW_OP_lt,
+      DW_OP_le,   DW_OP_gt,    DW_OP_ge,  DW_OP_eq,  DW_OP_ne,
+  };
+
+  for (uint8_t opcode : opcodes) {
+    std::vector<uint8_t> expr = {DW_OP_constu,
+                                 0xff,
+                                 0x01,
+                                 DW_OP_convert,
+                                 TypedDwarfDelegate::UnsignedChar,
+                                 DW_OP_lit1,
+                                 DW_OP_convert,
+                                 TypedDwarfDelegate::UnsignedShort,
+                                 opcode,
+                                 DW_OP_stack_value};
+    EXPECT_THAT_EXPECTED(Evaluate(expr, {}, &unit), llvm::Failed())
+        << "opcode 0x" << llvm::utohexstr(opcode);
+  }
+
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_constu, 0xff, 0x01, DW_OP_convert,
+                TypedDwarfDelegate::UnsignedChar, DW_OP_lit1, DW_OP_convert,
+                TypedDwarfDelegate::SignedChar, DW_OP_plus, DW_OP_stack_value},
+               {}, &unit),
+      llvm::Failed());
+}
+
+TEST(DWARFExpression, GenericBinaryOpsAllowDifferentSignedness) {
+  // The DWARF generic type has unspecified signedness, so differently signed
+  // address-sized generic values are still compatible operands.
+  uint8_t expr[] = {DW_OP_lit8, DW_OP_consts, 4, DW_OP_minus,
+                    DW_OP_stack_value};
+  DataExtractor extractor(expr, sizeof(expr), lldb::eByteOrderLittle,
+                          /*addr_size*/ 8);
+  EXPECT_THAT_EXPECTED(
+      DWARFExpression::Evaluate(/*exe_ctx=*/nullptr, /*reg_ctx=*/nullptr,
+                                /*module_sp=*/{}, extractor,
+                                /*unit=*/nullptr, lldb::eRegisterKindLLDB,
+                                /*initial_value_ptr=*/nullptr,
+                                /*object_address_ptr=*/nullptr),
+      ExpectScalar(4));
 }
 
 TEST(DWARFExpression, DW_OP_stack_value) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_stack_value}), llvm::Failed());
+}
+
+TEST(DWARFExpression, IsImplicit) {
+  auto is_implicit = [](llvm::ArrayRef<uint8_t> expr) {
+    DataExtractor extractor(expr.data(), expr.size(), lldb::eByteOrderLittle,
+                            /*addr_size=*/4);
+    return DWARFExpression(extractor).IsImplicit(/*dwarf_cu=*/nullptr);
+  };
+
+  // Implicit and composite locations have no writable storage.
+  EXPECT_TRUE(is_implicit({DW_OP_lit1, DW_OP_stack_value}));
+  EXPECT_TRUE(is_implicit({DW_OP_implicit_value, 0x01, 0x11}));
+  EXPECT_TRUE(is_implicit({DW_OP_reg0, DW_OP_piece, 0x02}));
+  EXPECT_TRUE(is_implicit({DW_OP_reg0, DW_OP_bit_piece, 0x04, 0x00}));
+
+  // Memory and register locations are writable.
+  EXPECT_FALSE(is_implicit({DW_OP_addr, 0x10, 0x20, 0x30, 0x40}));
+  EXPECT_FALSE(is_implicit({DW_OP_reg0}));
+  EXPECT_FALSE(is_implicit({DW_OP_breg0, 0x00}));
+  EXPECT_FALSE(is_implicit({DW_OP_fbreg, 0x00}));
 }
 
 // This test shows that the dwarf version is used by the expression evaluation.
@@ -1113,6 +1265,22 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_regx) {
       ExpectScalar(0xBEEF, Value::ContextType::RegisterInfo));
 }
 
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref_size_zero) {
+  // DW_OP_deref_size with size 0 must report an error instead of constructing
+  // a DataExtractor with addr_size 0 (caught by lldb-dwarf-expression-fuzzer:
+  // assertion failure in DataExtractor / DerefSizeExtractDataHelper).
+  TestContext ctx;
+  MockMemory::Map mem;
+  mem[{lldb::addr_t(0), size_t(0)}] = {};
+  ASSERT_TRUE(
+      CreateTestContext(&ctx, "i386-pc-linux", std::nullopt, MockMemory(mem)));
+  ExecutionContext exe_ctx(ctx.process_sp);
+  EXPECT_THAT_ERROR(Evaluate({DW_OP_lit0, DW_OP_deref_size, 0x00}, {}, {},
+                             &exe_ctx, ctx.reg_ctx_sp.get())
+                        .takeError(),
+                    llvm::Failed());
+}
+
 TEST_F(DWARFExpressionMockProcessTest, DW_OP_breg0) {
   TestContext ctx;
   ASSERT_TRUE(CreateTestContext(&ctx, "i386-pc-linux",
@@ -1179,10 +1347,11 @@ TEST_F(DWARFExpressionMockProcessTest, WASM_DW_OP_addr) {
   ASSERT_TRUE(CreateTestContext(&test_ctx, "wasm32-unknown-unknown-wasm"));
 
   ExecutionContext exe_ctx(test_ctx.target_sp, false);
-  // DW_OP_addr takes a single operand of address size width:
+  // DW_OP_addr takes a single operand of address size width. It denotes a
+  // location in the module's address space, i.e. a file address.
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_addr, 0x40, 0x0, 0x0, 0x0}, {}, {}, &exe_ctx),
-      ExpectLoadAddress(0x40));
+      ExpectFileAddress(0x40));
 }
 
 TEST_F(DWARFExpressionMockProcessTest, WASM_DW_OP_addr_index) {
@@ -1255,11 +1424,11 @@ DWARF:
   DWARFExpression expr(extractor);
 
   llvm::Expected<Value> result = evaluate(expr);
-  EXPECT_THAT_EXPECTED(result, ExpectLoadAddress(0x5678u));
+  EXPECT_THAT_EXPECTED(result, ExpectFileAddress(0x5678u));
 
   ASSERT_TRUE(expr.Update_DW_OP_addr(dwarf_cu, 0xdeadbeef));
   result = evaluate(expr);
-  EXPECT_THAT_EXPECTED(result, ExpectLoadAddress(0xdeadbeefu));
+  EXPECT_THAT_EXPECTED(result, ExpectFileAddress(0xdeadbeefu));
 }
 
 class CustomSymbolFileDWARF : public SymbolFileDWARF {
