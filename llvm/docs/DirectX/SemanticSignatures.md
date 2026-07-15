@@ -9,10 +9,9 @@ stores this information in binary signature parts (`ISG1`, `OSG1`) and in the
 pipeline state validation part (`PSV0`). To assist with the construction of, and
 interaction with, these parts, a semantic signature is represented as metadata
 (`dx.semantic.signatures`) in the LLVM IR. The metadata can then be converted to
-its binary form, as defined in
-[SemanticSignatures.h].
-This document serves as a reference for the metadata representation of a
-semantic signature for users to interface with.
+its binary form, as defined in [SemanticSignatures.h]. This document serves as a
+reference for the metadata representation of a semantic signature for users to
+interface with.
 
 [SemanticSignatures.h]: https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Frontend/HLSL/SemanticSignatures.h
 
@@ -103,6 +102,9 @@ retains all information needed to serialize into `ISG1`, `OSG1` and `PSV0`.
 | Dynamic Index Mask     | i8              | 4-bit bitmask of components that are dynamically indexed                                                                                                                                                                           |
 | GS Output Stream Index | i32             | GS output stream index; 0 for non-GS stages                                                                                                                                                                                        |
 
+[ElementType]: https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Support/DXILABI.h
+[DXContainerConstants]: https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/BinaryFormat/DXContainerConstants.def
+
 ### Derived Container Fields
 
 The following container fields are derived from the operands above:
@@ -114,9 +116,6 @@ The following container fields are derived from the operands above:
   inputs; for outputs `NeverWrites = ~UsageMask & DeclaredMask`.
 - **MinPrecision**: from `CompType` plus the `UseMinPrecision` module flag.
 
-[ElementType]: https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Support/DXILABI.h
-[DXContainerConstants]: https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/BinaryFormat/DXContainerConstants.def
-
 ## Semantic Indices
 
 ```LLVM
@@ -126,4 +125,3 @@ The following container fields are derived from the operands above:
 
 A metadata node of one or more semantic indices. Its length must equal the
 `Rows` field of the containing signature element.
-
