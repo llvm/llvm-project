@@ -1,8 +1,10 @@
 // REQUIRES: comgr-has-spirv-translator
 // COM: Build a compressed bitcode bundle for amdgcnspirv.
+// COM: --offload-new-driver: SPIR-V bundling needs the new driver (old-driver
+// COM: default lines bundle raw bitcode and fail the SPV check).
 // RUN: %clang -c -x hip --offload-arch=amdgcnspirv \
 // RUN:    -nogpulib -nogpuinc -emit-llvm \
-// RUN:    --gpu-bundle-output --offload-device-only \
+// RUN:    --gpu-bundle-output --offload-device-only --offload-new-driver \
 // RUN:    --offload-compress \
 // RUN:    %s -o %t.compressed-bundle.bc
 
