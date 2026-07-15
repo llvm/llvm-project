@@ -205,6 +205,12 @@ void OmpStructureChecker::Enter(const parser::ModuleSubprogram &) {
 }
 
 void OmpStructureChecker::Enter(const parser::SpecificationPart &) {
+  // Clear pending metadirective loop variants at the start of a program unit.
+  // An empty partStack_ marks the unit's top-level specification part, so a
+  // nested one such as an interface body does not reset them.
+  if (partStack_.empty()) {
+    metadirectiveLoopVariants_.clear();
+  }
   partStack_.push_back(PartKind::SpecificationPart);
 }
 
@@ -217,6 +223,11 @@ void OmpStructureChecker::Enter(const parser::ExecutionPart &) {
 }
 
 void OmpStructureChecker::Leave(const parser::ExecutionPart &) {
+  if (!metadirectiveLoopVariants_.empty()) {
+    // No loop nest followed the metadirective in this execution part, so its
+    // loop-associated variants were never validated.
+    CheckMetadirectiveVariantsWithoutLoop();
+  }
   partStack_.pop_back();
 }
 
@@ -1673,6 +1684,13 @@ void OmpStructureChecker::ChecksOnOrderedAsBlock() {
       context_.Say(GetContext().directiveSource,
           "An ORDERED directive with SIMD clause must be closely nested in a "
           "SIMD or worksharing-loop SIMD region"_err_en_US);
+    } else if (CurrentDirectiveIsNested() &&
+        FindClause(llvm::omp::Clause::OMPC_simd) &&
+        FindClause(llvm::omp::Clause::OMPC_threads) && isNestedInSIMD &&
+        !isNestedInDoSIMD) {
+      context_.Say(GetContext().directiveSource,
+          "An ORDERED directive with SIMD and THREADS clauses must be closely "
+          "nested in a worksharing-loop SIMD region"_err_en_US);
     }
     if (isNestedInDo && (noOrderedClause || isOrderedClauseWithPara)) {
       context_.Say(GetContext().directiveSource,
@@ -1910,8 +1928,28 @@ void OmpStructureChecker::Leave(const parser::OmpThreadprivateDirective &x) {
 void OmpStructureChecker::Enter(const parser::OmpDeclareSimdDirective &x) {
   const parser::OmpDirectiveName &dirName{x.v.DirName()};
 
+  unsigned version{context_.langOptions().OpenMPVersion};
+
   const Scope &containingScope = context_.FindScope(dirName.source);
   const Scope &progUnitScope = GetProgramUnitContaining(containingScope);
+
+  // OpenMP 6.0, 9.8 declare_simd Directive, Fortran restriction:
+  // "Any declare_simd directive must appear in the specification part of a
+  // subroutine subprogram, function subprogram, or interface body to which it
+  // applies."
+  // An interface body has a Subprogram scope as well, so checking the scope
+  // kind is sufficient to accept the three allowed contexts, while rejecting
+  // modules, main programs and block data. A BLOCK construct has a scope of
+  // its own, which excludes its specification part from that of the enclosing
+  // subprogram. Placing the directive in an execution part is diagnosed by the
+  // parser.
+  if (GetProgramUnitOrBlockConstructContaining(containingScope).kind() !=
+      Scope::Kind::Subprogram) {
+    context_.Say(dirName.source,
+        "%s directive must appear in the specification part of a subroutine subprogram, function subprogram, or interface body"_err_en_US,
+        GetUpperName(dirName.v, version));
+    return;
+  }
 
   // A DECLARE SIMD directive may legally appear in an interface body, but it
   // applies to the external procedure being declared rather than to any
@@ -3974,7 +4012,12 @@ bool OmpStructureChecker::CheckReductionOperator(
     // for that. We mangle those names to store the user details.
     if (const auto *definedOp{std::get_if<parser::DefinedOpName>(&dOpr.u)}) {
       std::string mangled{MangleDefinedOperator(definedOp->v.symbol->name())};
-      const Scope &scope{definedOp->v.symbol->owner()};
+      // Look up the user-defined reduction in the scope where the clause
+      // appears (FindUserReduction searches enclosing scopes for host
+      // association), not in the scope where the operator itself is declared:
+      // the DECLARE REDUCTION may be local to a procedure that host-associates
+      // the operator from an enclosing module or program unit.
+      const Scope &scope{context_.FindScope(source)};
       if (FindUserReduction(scope, mangled)) {
         return true;
       }

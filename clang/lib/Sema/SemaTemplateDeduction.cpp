@@ -4112,16 +4112,6 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   return TemplateDeductionResult::Success;
 }
 
-TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
-    TemplateDecl *TD, TemplateParameterList *TPL,
-    ArrayRef<TemplateArgument> PatternArgs, ArrayRef<TemplateArgument> Args,
-    SmallVectorImpl<DeducedTemplateArgument> &Deduced,
-    sema::TemplateDeductionInfo &Info, bool CopyDeducedArgs) {
-  return ::FinishTemplateArgumentDeduction(
-      *this, TD, TPL, TD, /*PartialOrdering=*/false, PatternArgs, Args, Deduced,
-      Info, CopyDeducedArgs);
-}
-
 /// Gets the type of a function for template-argument-deducton
 /// purposes when it's considered as part of an overload set.
 static QualType GetTypeOfFunction(Sema &S, const OverloadExpr::FindResult &R,
@@ -4843,6 +4833,10 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
             /*HasDeducedAnyParam=*/nullptr);
         Result != TemplateDeductionResult::Success)
       return Result;
+    // Substituting the function type can instantiate the trailing return type,
+    // so handle the same immediate-context substitution failure here.
+    if (Trap.hasErrorOccurred())
+      return TemplateDeductionResult::SubstitutionFailure;
   }
 
   TemplateDeductionResult Result;
@@ -4852,6 +4846,42 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
         /*OriginalCallArgs=*/nullptr, /*PartialOverloading=*/false,
         /*PartialOrdering=*/true, IsAddressOfFunction);
   });
+  // Taking the address of a function template forms its function type, and
+  // substituting into that type can require instantiating a trailing return
+  // type whose expression selects a deleted function. That is a deduction
+  // failure, not a hard error:
+  //
+  // C++ [temp.deduct.funcaddr]p1:
+  //   [...] If there is a target, the function template's function type and
+  //   the target type are used as the types of P and A, and the deduction is
+  //   done as described in [temp.deduct.type].
+  //
+  // C++ [temp.deduct.general]p7:
+  //   [...] The substitution occurs in all types and expressions that are
+  //   used in the deduction substitution loci. The expressions include [...]
+  //   general expressions (i.e., non-constant expressions) inside sizeof,
+  //   decltype, and other contexts that allow non-constant expressions. [...]
+  //
+  // C++ [dcl.fct.def.delete]p2:
+  //   A construct that designates a deleted function implicitly or
+  //   explicitly, other than to declare it [...], is ill-formed.
+  //   [Note: [...] It applies even for references in expressions that are not
+  //   potentially evaluated. - end note]
+  //
+  // C++ [temp.deduct.general]p8:
+  //   If a substitution results in an invalid type or expression, type
+  //   deduction fails. [...] Invalid types and expressions can result in a
+  //   deduction failure only in the immediate context of the deduction
+  //   substitution loci. [...]
+  //
+  // This substitution is in that immediate context, so treat diagnostics
+  // recorded by the SFINAE trap as deduction failure instead of replaying
+  // them as hard errors.
+  if (Trap.hasErrorOccurred()) {
+    if (Specialization)
+      Specialization->setInvalidDecl(true);
+    return TemplateDeductionResult::SubstitutionFailure;
+  }
   if (Result != TemplateDeductionResult::Success)
     return Result;
 
@@ -5190,20 +5220,6 @@ static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
     return true;
   MultiLevelTemplateArgumentList MLTAL(Concept, CTAI.SugaredConverted,
                                        /*Final=*/true);
-  // Build up an EvaluationContext with an ImplicitConceptSpecializationDecl so
-  // that the template arguments of the constraint can be preserved. For
-  // example:
-  //
-  //  template <class T>
-  //  concept C = []<D U = void>() { return true; }();
-  //
-  // We need the argument for T while evaluating type constraint D in
-  // building the CallExpr to the lambda.
-  EnterExpressionEvaluationContext EECtx(
-      S, Sema::ExpressionEvaluationContext::Unevaluated,
-      ImplicitConceptSpecializationDecl::Create(
-          S.getASTContext(), Concept->getDeclContext(), Concept->getLocation(),
-          CTAI.SugaredConverted));
   if (S.CheckConstraintSatisfaction(
           Concept, AssociatedConstraint(Concept->getConstraintExpr()), MLTAL,
           TypeLoc.getLocalSourceRange(), Satisfaction))

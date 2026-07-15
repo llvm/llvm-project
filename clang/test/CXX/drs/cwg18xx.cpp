@@ -416,24 +416,29 @@ struct A<float*> {
 };
 
 class C {
-  int private_int; // #cwg1862-C-private_int
+  int private_int;
 
   template<class T>
   friend struct A<T>::B;
+  // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'C'}}
 
   template<class T>
   friend void A<T>::f();
+  // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'C'}}
 
+  // FIXME: this is ill-formed, because A<T>​::​D does not end with a simple-template-id
   template<class T>
   friend void A<T>::D::g();
-  // expected-error@-1 {{friend declaration does not name a member of a class template specialization}}
+  // expected-warning@-1 {{dependent nested name specifier 'A<T>::D' for friend class declaration is not supported; turning off access control for 'C'}}
 
   template<class T>
   friend int *A<T*>::h();
+  // expected-warning@-1 {{dependent nested name specifier 'A<T *>' for friend class declaration is not supported; turning off access control for 'C'}}
 
   template<class T>
   template<T U>
   friend T A<T>::i();
+  // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'C'}}
 };
 
 C c;
@@ -445,16 +450,11 @@ void A<int>::B::e() { (void)c.private_int; }
 template<class T>
 void A<T>::f() { (void)c.private_int; }
 int A<int>::f() { (void)c.private_int; return 0; }
-// expected-error@-1 {{'private_int' is a private member of 'cwg1862::C'}}
-//   expected-note@#cwg1862-C-private_int {{implicitly declared private here}}
 
-// FIXME: the primary template definition of 'D::g' is not a friend either,
-// so it should not have access to 'private_int'.
+// FIXME: both definition of 'D::g' are not friends, so they don't have access to 'private_int'
 template<class T>
 void A<T>::D::g() { (void)c.private_int; }
 void A<int>::D::g() { (void)c.private_int; }
-// expected-error@-1 {{'private_int' is a private member of 'cwg1862::C'}}
-//   expected-note@#cwg1862-C-private_int {{implicitly declared private here}}
 
 template<class T>
 T A<T>::h() { (void)c.private_int; }

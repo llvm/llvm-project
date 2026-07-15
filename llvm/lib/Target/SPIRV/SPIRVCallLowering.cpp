@@ -86,15 +86,6 @@ static uint32_t getFunctionControl(const Function &F,
   return FuncControl;
 }
 
-static ConstantInt *getConstInt(MDNode *MD, unsigned NumOp) {
-  if (MD->getNumOperands() > NumOp) {
-    auto *CMeta = dyn_cast<ConstantAsMetadata>(MD->getOperand(NumOp));
-    if (CMeta)
-      return dyn_cast<ConstantInt>(CMeta->getValue());
-  }
-  return nullptr;
-}
-
 // If the function has pointer arguments, we are forced to re-create this
 // function type from the very beginning, changing PointerType by
 // TypedPointerType for each pointer argument. Otherwise, the same `Type*`
@@ -179,11 +170,6 @@ static SPIRVTypeInst getArgSPIRVType(const Function &F, unsigned ArgIdx,
                                     true);
 
   Type *ArgType = Arg->getType();
-  if (isTypedPointerTy(ArgType)) {
-    return GR->getOrCreateSPIRVPointerType(
-        cast<TypedPointerType>(ArgType)->getElementType(), MIRBuilder,
-        addressSpaceToStorageClass(getPointerAddressSpace(ArgType), ST));
-  }
 
   // In case OriginalArgType is of untyped pointer type, there are three
   // possibilities:
@@ -358,13 +344,13 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
         for (const MDOperand &MDOp : MD->operands()) {
           MDNode *MD2 = dyn_cast<MDNode>(MDOp);
           assert(MD2 && "Metadata operand is expected");
-          ConstantInt *Const = getConstInt(MD2, 0);
+          ConstantInt *Const = getMDOperandAsConstInt(MD2, 0);
           assert(Const && "MDOperand should be ConstantInt");
           auto Dec =
               static_cast<SPIRV::Decoration::Decoration>(Const->getZExtValue());
           std::vector<uint32_t> DecVec;
           for (unsigned j = 1; j < MD2->getNumOperands(); j++) {
-            ConstantInt *Const = getConstInt(MD2, j);
+            ConstantInt *Const = getMDOperandAsConstInt(MD2, j);
             assert(Const && "MDOperand should be ConstantInt");
             DecVec.push_back(static_cast<uint32_t>(Const->getZExtValue()));
           }
@@ -426,11 +412,14 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
   // Handle entry points and function linkage.
   if (isEntryPoint(F)) {
+    if (F.getName().empty())
+      report_fatal_error("SPIR-V entry point function must have a name");
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpEntryPoint)
                    .addImm(static_cast<uint32_t>(getExecutionModel(*ST, F)))
                    .addUse(FuncVReg);
     addStringImm(F.getName(), MIB);
-  } else if (const auto LnkTy = getSpirvLinkageTypeFor(*ST, F)) {
+  } else if (const auto LnkTy = getSpirvLinkageTypeFor(*ST, F);
+             LnkTy && !F.getName().empty()) {
     buildOpDecorate(FuncVReg, MIRBuilder, SPIRV::Decoration::LinkageAttributes,
                     {static_cast<uint32_t>(*LnkTy)}, F.getName());
   }

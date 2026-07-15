@@ -156,7 +156,9 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
   while (fields_str.size()) {
     std::pair<llvm::StringRef, llvm::StringRef> split = fields_str.split('\n');
     fields_str = split.second;
-    // Indent as far as the register name did.
+    // Indent as much as the stream does.
+    s.Indent();
+    // Indent further to match where the register name finishes.
     s.Printf(fmt.c_str(), "");
 
     // Lines after the first won't have " = " so compensate for that.

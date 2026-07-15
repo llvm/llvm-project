@@ -33,6 +33,7 @@
 #include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateInstCallback.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <optional>
 
@@ -1766,9 +1767,9 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
   // Build the instantiated declaration.
   VarDecl *Var;
   if (Bindings)
-    Var = DecompositionDecl::Create(SemaRef.Context, DC, D->getInnerLocStart(),
-                                    D->getLocation(), TSI->getType(), TSI,
-                                    D->getStorageClass(), *Bindings);
+    Var = DecompositionDecl::Create(
+        SemaRef.Context, DC, D->getInnerLocStart(), D->getLocation(),
+        D->getEndLoc(), TSI->getType(), TSI, D->getStorageClass(), *Bindings);
   else
     Var = VarDecl::Create(SemaRef.Context, DC, D->getInnerLocStart(),
                           D->getLocation(), D->getIdentifier(), TSI->getType(),
@@ -1989,69 +1990,68 @@ Decl *TemplateDeclInstantiator::VisitIndirectFieldDecl(IndirectFieldDecl *D) {
   return IndirectField;
 }
 
-template <typename FriendTy>
-bool TemplateDeclInstantiator::InstantiateFriendPackExpansion(
-    FriendTy *D, TypeSourceInfo *TSI, ArrayRef<TemplateParameterList *> TPL) {
-  SmallVector<UnexpandedParameterPack, 2> Unexpanded;
-  SemaRef.collectUnexpandedParameterPacks(TSI->getTypeLoc(), Unexpanded);
-  assert(!Unexpanded.empty() && "Pack expansion without packs");
-
-  bool ShouldExpand = true;
-  bool RetainExpansion = false;
-  UnsignedOrNone NumExpansions = std::nullopt;
-  if (SemaRef.CheckParameterPacksForExpansion(
-          D->getEllipsisLoc(), D->getSourceRange(), Unexpanded, TemplateArgs,
-          /*FailOnPackProducingTemplates=*/true, ShouldExpand, RetainExpansion,
-          NumExpansions))
-    return true;
-
-  assert(!RetainExpansion &&
-         "should never retain an expansion for a friend declaration");
-
-  if (!ShouldExpand)
-    return false;
-
-  for (unsigned I = 0; I != *NumExpansions; I++) {
-    Sema::ArgPackSubstIndexRAII SubstIndex(SemaRef, I);
-    SmallVector<TemplateParameterList *, 1> InstTPL;
-    if (SubstTemplateParameterLists(TPL, InstTPL))
-      return true;
-
-    TypeSourceInfo *InstTy = SemaRef.SubstType(
-        TSI, TemplateArgs, D->getEllipsisLoc(), DeclarationName());
-    if (!InstTy)
-      return true;
-
-    FriendDecl *FD;
-    if (isa<FriendTemplateDecl>(D))
-      FD = FriendTemplateDecl::Create(SemaRef.Context, Owner, D->getLocation(),
-                                      InstTy, D->getFriendLoc(), InstTPL);
-    else {
-      assert(InstTPL.empty() && "unexpected template parameter lists");
-      FD = FriendDecl::Create(SemaRef.Context, Owner, D->getLocation(), InstTy,
-                              D->getFriendLoc());
-    }
-
-    FD->setAccess(AS_public);
-    Owner->addDecl(FD);
-  }
-
-  return true;
-}
-
 Decl *TemplateDeclInstantiator::VisitFriendDecl(FriendDecl *D) {
+  // Handle friend type expressions by simply substituting template
+  // parameters into the pattern type and checking the result.
   if (TypeSourceInfo *Ty = D->getFriendType()) {
-    if (D->isPackExpansion() && InstantiateFriendPackExpansion(D, Ty))
-      return nullptr;
+    TypeSourceInfo *InstTy;
+    // If this is an unsupported friend, don't bother substituting template
+    // arguments into it. The actual type referred to won't be used by any
+    // parts of Clang, and may not be valid for instantiating. Just use the
+    // same info for the instantiated friend.
+    if (D->isUnsupportedFriend()) {
+      InstTy = Ty;
+    } else {
+      if (D->isPackExpansion()) {
+        SmallVector<UnexpandedParameterPack, 2> Unexpanded;
+        SemaRef.collectUnexpandedParameterPacks(Ty->getTypeLoc(), Unexpanded);
+        assert(!Unexpanded.empty() && "Pack expansion without packs");
 
-    TypeSourceInfo *InstTy = SemaRef.SubstType(
-        Ty, TemplateArgs, D->getLocation(), DeclarationName());
+        bool ShouldExpand = true;
+        bool RetainExpansion = false;
+        UnsignedOrNone NumExpansions = std::nullopt;
+        if (SemaRef.CheckParameterPacksForExpansion(
+                D->getEllipsisLoc(), D->getSourceRange(), Unexpanded,
+                TemplateArgs, /*FailOnPackProducingTemplates=*/true,
+                ShouldExpand, RetainExpansion, NumExpansions))
+          return nullptr;
+
+        assert(!RetainExpansion &&
+               "should never retain an expansion for a variadic friend decl");
+
+        if (ShouldExpand) {
+          SmallVector<FriendDecl *> Decls;
+          for (unsigned I = 0; I != *NumExpansions; I++) {
+            Sema::ArgPackSubstIndexRAII SubstIndex(SemaRef, I);
+            TypeSourceInfo *TSI = SemaRef.SubstType(
+                Ty, TemplateArgs, D->getEllipsisLoc(), DeclarationName());
+            if (!TSI)
+              return nullptr;
+
+            auto FD =
+                FriendDecl::Create(SemaRef.Context, Owner, D->getLocation(),
+                                   TSI, D->getFriendLoc());
+
+            FD->setAccess(AS_public);
+            Owner->addDecl(FD);
+            Decls.push_back(FD);
+          }
+
+          // Just drop this node; we have no use for it anymore.
+          return nullptr;
+        }
+      }
+
+      InstTy = SemaRef.SubstType(Ty, TemplateArgs, D->getLocation(),
+                                 DeclarationName());
+    }
     if (!InstTy)
       return nullptr;
 
     FriendDecl *FD = FriendDecl::Create(
         SemaRef.Context, Owner, D->getLocation(), InstTy, D->getFriendLoc());
     FD->setAccess(AS_public);
+    FD->setUnsupportedFriend(D->isUnsupportedFriend());
     Owner->addDecl(FD);
     return FD;
   }
@@ -2070,6 +2070,7 @@ Decl *TemplateDeclInstantiator::VisitFriendDecl(FriendDecl *D) {
     FriendDecl::Create(SemaRef.Context, Owner, D->getLocation(),
                        cast<NamedDecl>(NewND), D->getFriendLoc());
   FD->setAccess(AS_public);
+  FD->setUnsupportedFriend(D->isUnsupportedFriend());
   Owner->addDecl(FD);
   return FD;
 }
@@ -2101,6 +2102,41 @@ Decl *TemplateDeclInstantiator::VisitExplicitInstantiationDecl(
   // ExplicitInstantiationDecl is a source-info-only node and should not
   // appear inside a template pattern. Nothing to instantiate.
   llvm_unreachable("ExplicitInstantiationDecl should not be instantiated");
+}
+
+Decl *TemplateDeclInstantiator::VisitCXXExpansionStmtDecl(
+    CXXExpansionStmtDecl *OldESD) {
+  Decl *Index = VisitNonTypeTemplateParmDecl(OldESD->getIndexTemplateParm());
+  CXXExpansionStmtDecl *NewESD = SemaRef.BuildCXXExpansionStmtDecl(
+      Owner, OldESD->getBeginLoc(), cast<NonTypeTemplateParmDecl>(Index));
+  SemaRef.CurrentInstantiationScope->InstantiatedLocal(OldESD, NewESD);
+
+  // If this was already expanded, only instantiate the expansion and
+  // don't touch the unexpanded expansion statement.
+  if (CXXExpansionStmtInstantiation *OldInst = OldESD->getInstantiations()) {
+    StmtResult NewInst = SemaRef.SubstStmt(OldInst, TemplateArgs);
+    if (NewInst.isInvalid())
+      return nullptr;
+
+    NewESD->setInstantiations(NewInst.getAs<CXXExpansionStmtInstantiation>());
+    NewESD->setExpansionPattern(OldESD->getExpansionPattern());
+    return NewESD;
+  }
+
+  // Enter the scope of this expansion statement; don't do this if we've
+  // already expanded it, as in that case we no longer want to treat its
+  // content as dependent.
+  Sema::ContextRAII Context(SemaRef, NewESD, /*NewThis=*/false);
+
+  StmtResult Expansion =
+      SemaRef.SubstStmt(OldESD->getExpansionPattern(), TemplateArgs);
+  if (Expansion.isInvalid())
+    return nullptr;
+
+  // The code that handles CXXExpansionStmtPattern takes care of calling
+  // setInstantiation() on the ESD if there was an expansion.
+  NewESD->setExpansionPattern(cast<CXXExpansionStmtPattern>(Expansion.get()));
+  return NewESD;
 }
 
 Decl *TemplateDeclInstantiator::VisitEnumDecl(EnumDecl *D) {
@@ -2547,7 +2583,7 @@ TemplateDeclInstantiator::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
   // merged with the local instantiation scope for the function template
   // itself.
   LocalInstantiationScope Scope(SemaRef);
-  Sema::ConstraintEvalRAII<TemplateDeclInstantiator> RAII(*this);
+  llvm::SaveAndRestore RAII(EvaluateConstraints, false);
 
   TemplateParameterList *TempParams = D->getTemplateParameters();
   TemplateParameterList *InstParams = SubstTemplateParams(TempParams);
@@ -3577,9 +3613,11 @@ Decl *TemplateDeclInstantiator::VisitTemplateTypeParmDecl(
 
   TemplateTypeParmDecl *Inst = TemplateTypeParmDecl::Create(
       SemaRef.Context, Owner, D->getBeginLoc(), D->getLocation(),
-      D->getDepth() - TemplateArgs.getNumSubstitutedLevels(), D->getIndex(),
-      D->getIdentifier(), D->wasDeclaredWithTypename(), D->isParameterPack(),
-      D->hasTypeConstraint(), NumExpanded);
+      D->getDepth() - (TemplateArgs.retainInnerDepths()
+                           ? 0
+                           : TemplateArgs.getNumSubstitutedLevels()),
+      D->getIndex(), D->getIdentifier(), D->wasDeclaredWithTypename(),
+      D->isParameterPack(), D->hasTypeConstraint(), NumExpanded);
 
   Inst->setAccess(AS_public);
   Inst->setImplicit(D->isImplicit());
@@ -4711,75 +4749,12 @@ Decl *TemplateDeclInstantiator::VisitObjCAtDefsFieldDecl(ObjCAtDefsFieldDecl *D)
 }
 
 Decl *TemplateDeclInstantiator::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
-  ArrayRef<TemplateParameterList *> TPLists =
-      D->getFriendTypeTemplateParameterLists();
-
-  Decl *FTD = nullptr;
-  if (TypeSourceInfo *FT = D->getFriendType()) {
-    if (D->isPackExpansion() && InstantiateFriendPackExpansion(D, FT, TPLists))
-      return nullptr;
-
-    SmallVector<TemplateParameterList *, 1> TPL;
-    if (SubstTemplateParameterLists(TPLists, TPL))
-      return nullptr;
-
-    TemplateName Template;
-    if (auto DNT = FT->getTypeLoc().getAs<DependentNameTypeLoc>()) {
-      NestedNameSpecifierLoc QualifierLoc = SemaRef.SubstNestedNameSpecifierLoc(
-          DNT.getQualifierLoc(), TemplateArgs);
-      if (QualifierLoc) {
-        CXXScopeSpec SS;
-        SS.Adopt(QualifierLoc);
-
-        DeclContext *DC =
-            SemaRef.computeDeclContext(SS, /*EnteringContext=*/true);
-        if (DC && !DC->isDependentContext() &&
-            SemaRef.RequireCompleteDeclContext(SS, DC))
-          DC = nullptr;
-        if (DC) {
-          LookupResult Result(SemaRef, DNT.getTypePtr()->getIdentifier(),
-                              DNT.getNameLoc(), Sema::LookupOrdinaryName,
-                              SemaRef.forRedeclarationInCurContext());
-          SemaRef.LookupQualifiedName(Result, DC);
-          if (auto *CTD = Result.getAsSingle<ClassTemplateDecl>()) {
-            auto *FoundUsingShadow =
-                dyn_cast<UsingShadowDecl>(Result.getRepresentativeDecl());
-            Template = FoundUsingShadow ? TemplateName(FoundUsingShadow)
-                                        : TemplateName(CTD);
-            Template = SemaRef.Context.getQualifiedTemplateName(
-                QualifierLoc.getNestedNameSpecifier(),
-                /*TemplateKeyword=*/false, Template);
-          }
-        }
-      }
-    }
-
-    if (Template.isNull()) {
-      if (TypeSourceInfo *InstTy = SemaRef.SubstType(
-              FT, TemplateArgs, D->getLocation(), DeclarationName())) {
-        FTD =
-            FriendTemplateDecl::Create(SemaRef.Context, Owner, D->getLocation(),
-                                       InstTy, D->getFriendLoc(), TPL);
-      }
-    } else {
-      FTD = FriendTemplateDecl::Create(SemaRef.Context, Owner, D->getLocation(),
-                                       Template, D->getFriendLoc(), TPL);
-    }
-  } else {
-    SmallVector<TemplateParameterList *, 1> TPL;
-    if (SubstTemplateParameterLists(TPLists, TPL))
-      return nullptr;
-
-    if (auto *InstND = cast_or_null<NamedDecl>(SemaRef.FindInstantiatedDecl(
-            D->getLocation(), D->getFriendDecl(), TemplateArgs)))
-      FTD = FriendTemplateDecl::Create(SemaRef.Context, Owner, D->getLocation(),
-                                       InstND, D->getFriendLoc(), TPL);
-  }
-
-  if (FTD) {
-    FTD->setAccess(AS_public);
-    Owner->addDecl(FTD);
-  }
+  // FIXME: We need to be able to instantiate FriendTemplateDecls.
+  unsigned DiagID = SemaRef.getDiagnostics().getCustomDiagID(
+                                               DiagnosticsEngine::Error,
+                                               "cannot instantiate %0 yet");
+  SemaRef.Diag(D->getLocation(), DiagID)
+    << D->getDeclKindName();
 
   return nullptr;
 }
@@ -4911,26 +4886,19 @@ TemplateDeclInstantiator::SubstTemplateParams(TemplateParameterList *L) {
     return nullptr;
 
   Expr *InstRequiresClause = L->getRequiresClause();
+  if (InstRequiresClause && EvaluateConstraints) {
+    ExprResult E =
+        SemaRef.SubstConstraintExpr(InstRequiresClause, TemplateArgs);
+    if (E.isInvalid())
+      return nullptr;
+    InstRequiresClause = E.get();
+  }
 
   TemplateParameterList *InstL
     = TemplateParameterList::Create(SemaRef.Context, L->getTemplateLoc(),
                                     L->getLAngleLoc(), Params,
                                     L->getRAngleLoc(), InstRequiresClause);
   return InstL;
-}
-
-bool TemplateDeclInstantiator::SubstTemplateParameterLists(
-    ArrayRef<TemplateParameterList *> TPL,
-    SmallVectorImpl<TemplateParameterList *> &InstTPL) {
-  LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true);
-  for (TemplateParameterList *L : TPL) {
-    TemplateParameterList *InstParams = SubstTemplateParams(L);
-    if (!InstParams)
-      return true;
-
-    InstTPL.push_back(InstParams);
-  }
-  return false;
 }
 
 TemplateParameterList *
@@ -5246,10 +5214,8 @@ TemplateDeclInstantiator::SubstFunctionType(FunctionDecl *D,
           continue;
         }
 
-        ParmVarDecl *Parm = SemaRef.SubstParmVarDecl(
-            OldParam, TemplateArgs, /*indexAdjustment=*/0,
-            /*NumExpansions=*/std::nullopt,
-            /*ExpectParameterPack=*/false, EvaluateConstraints);
+        ParmVarDecl *Parm =
+            cast_or_null<ParmVarDecl>(VisitParmVarDecl(OldParam));
         if (!Parm)
           return nullptr;
         Params.push_back(Parm);
@@ -5594,11 +5560,10 @@ bool TemplateDeclInstantiator::SubstDefaultedFunction(FunctionDecl *New,
       Lookups.push_back(DeclAccessPair::make(D, DA.getAccess()));
     }
 
-    // It's unlikely that substitution will change any declarations. Don't
-    // store an unnecessary copy in that case.
     New->setDefaultedOrDeletedInfo(
         AnyChanged ? FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
-                         SemaRef.Context, Lookups)
+                         SemaRef.Context, Lookups, DFI->getFPFeatures(),
+                         DFI->getDeletedMessage())
                    : DFI);
   }
 
@@ -7182,6 +7147,12 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
 
     // Fall through to deal with other dependent record types (e.g.,
     // anonymous unions in class templates).
+  }
+
+  if (CurrentInstantiationScope) {
+    if (auto Found = CurrentInstantiationScope->getInstantiationOfIfExists(D))
+      if (auto *FD = dyn_cast<NamedDecl>(cast<Decl *>(*Found)))
+        return FD;
   }
 
   if (!ParentDependsOnArgs)

@@ -1066,8 +1066,7 @@ SDValue HexagonTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   MVT OpTy = ty(LHS);
 
   if (OpTy == MVT::v2i16 || OpTy == MVT::v4i8) {
-    MVT ElemTy = OpTy.getVectorElementType();
-    assert(ElemTy.isScalarInteger());
+    assert(OpTy.getVectorElementType().isScalarInteger());
     MVT WideTy = OpTy.widenIntegerElementType();
     return DAG.getSetCC(dl, ResTy,
                         DAG.getSExtOrTrunc(LHS, SDLoc(LHS), WideTy),
@@ -1123,8 +1122,7 @@ HexagonTargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
   const SDLoc &dl(Op);
 
   if (OpTy == MVT::v2i16 || OpTy == MVT::v4i8) {
-    MVT ElemTy = OpTy.getVectorElementType();
-    assert(ElemTy.isScalarInteger());
+    assert(OpTy.getVectorElementType().isScalarInteger());
     MVT WideTy = OpTy.widenIntegerElementType();
     // Generate (trunc (select (_, sext, sext))).
     return DAG.getSExtOrTrunc(
@@ -1810,6 +1808,8 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::FMINIMUMNUM, MVT::f32, Legal);
   setOperationAction(ISD::FMAXIMUMNUM, MVT::f32, Legal);
+  setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
+  setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
 
   setOperationAction(ISD::FP_TO_UINT, MVT::i1,  Promote);
   setOperationAction(ISD::FP_TO_UINT, MVT::i8,  Promote);
@@ -1865,6 +1865,8 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasV67Ops()) {
     setOperationAction(ISD::FMINIMUMNUM, MVT::f64, Legal);
     setOperationAction(ISD::FMAXIMUMNUM, MVT::f64, Legal);
+    setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
+    setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
     setOperationAction(ISD::FMUL,    MVT::f64, Legal);
   }
 

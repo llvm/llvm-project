@@ -6499,6 +6499,9 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
     return ExprError();
 
   if (From->containsErrors()) {
+    if (S.Context.hasSameType(From->getType(), T))
+      return From;
+
     // The expression already has errors, so the correct cast kind can't be
     // determined. Use RecoveryExpr to keep the expected type T and mark the
     // result as invalid, preventing further cascading errors.
@@ -12394,9 +12397,8 @@ static TemplateDecl *getDescribedTemplate(Decl *Templated) {
 /// Diagnose a failed template-argument deduction.
 static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
                                  DeductionFailureInfo &DeductionFailure,
-                                 unsigned NumArgs, bool TakingCandidateAddress,
-                                 TemplateSpecCandidateSetKind CandidateSetKind =
-                                     TemplateSpecCandidateSetKind::Normal) {
+                                 unsigned NumArgs,
+                                 bool TakingCandidateAddress) {
   TemplateParameter Param = DeductionFailure.getTemplateParameter();
   NamedDecl *ParamD;
   (ParamD = Param.dyn_cast<TemplateTypeParmDecl*>()) ||
@@ -12643,10 +12645,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
           //    name for types, not decls.
           // Ideally, this should folded into the diagnostic printer.
           S.Diag(Templated->getLocation(),
-                 CandidateSetKind ==
-                         TemplateSpecCandidateSetKind::FriendTemplate
-                     ? diag::note_friend_template_non_deduced_mismatch_qualified
-                     : diag::note_ovl_candidate_non_deduced_mismatch_qualified)
+                 diag::note_ovl_candidate_non_deduced_mismatch_qualified)
               << FirstTN.getAsTemplateDecl() << SecondTN.getAsTemplateDecl();
           return;
         }
@@ -12662,9 +12661,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     // diagnostic that mentions 'auto' and lambda in addition to
     // (or instead of?) the canonical template type parameters.
     S.Diag(Templated->getLocation(),
-           CandidateSetKind == TemplateSpecCandidateSetKind::FriendTemplate
-               ? diag::note_friend_template_non_deduced_mismatch
-               : diag::note_ovl_candidate_non_deduced_mismatch)
+           diag::note_ovl_candidate_non_deduced_mismatch)
         << FirstTA << SecondTA;
     return;
   }
@@ -13615,12 +13612,10 @@ struct CompareTemplateSpecCandidatesForDisplay {
 /// Diagnose a template argument deduction failure.
 /// We are treating these failures as overload failures due to bad
 /// deductions.
-void TemplateSpecCandidate::NoteDeductionFailure(
-    Sema &S, bool ForTakingAddress,
-    TemplateSpecCandidateSetKind CandidateSetKind) {
+void TemplateSpecCandidate::NoteDeductionFailure(Sema &S,
+                                                 bool ForTakingAddress) {
   DiagnoseBadDeduction(S, FoundDecl, Specialization, // pattern
-                       DeductionFailure, /*NumArgs=*/0, ForTakingAddress,
-                       CandidateSetKind);
+                       DeductionFailure, /*NumArgs=*/0, ForTakingAddress);
 }
 
 void TemplateSpecCandidateSet::destroyCandidates() {
@@ -13672,7 +13667,7 @@ void TemplateSpecCandidateSet::NoteCandidates(Sema &S, SourceLocation Loc) {
 
     assert(Cand->Specialization &&
            "Non-matching built-in candidates are not added to Cands.");
-    Cand->NoteDeductionFailure(S, ForTakingAddress, CandidateSetKind);
+    Cand->NoteDeductionFailure(S, ForTakingAddress);
   }
 
   if (I != E)

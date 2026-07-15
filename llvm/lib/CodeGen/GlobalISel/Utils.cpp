@@ -2089,7 +2089,8 @@ static bool findGISelOptimalMemOpLowering(std::vector<LLT> &MemOps,
                                           unsigned DstAS, unsigned SrcAS,
                                           const AttributeList &FuncAttributes,
                                           const TargetLowering &TLI) {
-  if (Op.isMemcpyWithFixedDstAlign() && Op.getSrcAlign() < Op.getDstAlign())
+  if (Op.isMemcpyOrMemmoveWithFixedDstAlign() &&
+      Op.getSrcAlign() < Op.getDstAlign())
     return false;
 
   LLT Ty = TLI.getOptimalMemOpLLT(Op, FuncAttributes);
@@ -2128,7 +2129,7 @@ static bool findGISelOptimalMemOpLowering(std::vector<LLT> &MemOps,
       unsigned Fast;
       // Need to get a VT equivalent for allowMisalignedMemoryAccesses().
       MVT VT = getMVTForLLT(Ty);
-      if (NumMemOps && Op.allowOverlap() && NewTySize < Size &&
+      if (NumMemOps && !Op.isVolatile() && NewTySize < Size &&
           TLI.allowsMisalignedMemoryAccesses(
               VT, DstAS, Op.isFixedDstAlign() ? Op.getDstAlign() : Align(1),
               MachineMemOperand::MONone, &Fast) &&
@@ -2237,7 +2238,7 @@ bool llvm::canLowerMemCpyFamily(const MachineInstr &MI,
     unsigned Limit = TLI.getMaxStoresPerMemmove(OptSize);
     return findGISelOptimalMemOpLowering(
         MemOps, Limit,
-        MemOp::Copy(KnownLen, DstAlignCanChange, std::min(DstAlign, SrcAlign),
+        MemOp::Move(KnownLen, DstAlignCanChange, std::min(DstAlign, SrcAlign),
                     SrcAlign, IsVolatile),
         DstPtrInfo.getAddrSpace(), SrcPtrInfo.getAddrSpace(),
         MF.getFunction().getAttributes(), TLI);
