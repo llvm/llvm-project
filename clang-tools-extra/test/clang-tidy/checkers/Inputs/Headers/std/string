@@ -42,8 +42,10 @@ struct basic_string {
 
   _Type& append(const C *s);
   _Type& append(const C *s, size_type n);
+  _Type& append(const _Type& str, size_type pos, size_type count = npos);
   _Type& assign(const C *s);
   _Type& assign(const C *s, size_type n);
+  _Type& assign(const _Type& str, size_type pos, size_type count = npos);
 
   int compare(const _Type&) const;
   int compare(const C* s) const;

@@ -113,6 +113,13 @@ infrastructure are described first, followed by tool-specific sections.
   Finds calls to `value_or` (and alternative spellings `valueOr`,
   `ValueOr`) on optional types where the return type is expensive to copy.
 
+- New {doc}`performance-inefficient-substr
+  <clang-tidy/checks/performance/inefficient-substr>` check.
+
+  Finds assignments and appends of a `substr()` result to another string
+  and suggests the `assign()`/`append()` overloads taking a string,
+  position, and count, which avoid the temporary string.
+
 - New {doc}`portability-avoid-pragma-comment
   <clang-tidy/checks/portability/avoid-pragma-comment>` check.
 

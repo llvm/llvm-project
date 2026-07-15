@@ -358,6 +358,7 @@ readability/*
 | {doc}`performance-implicit-conversion-in-loop <performance/implicit-conversion-in-loop>` |  |
 | {doc}`performance-inefficient-algorithm <performance/inefficient-algorithm>` | Yes |
 | {doc}`performance-inefficient-string-concatenation <performance/inefficient-string-concatenation>` |  |
+| {doc}`performance-inefficient-substr <performance/inefficient-substr>` | Yes |
 | {doc}`performance-inefficient-vector-operation <performance/inefficient-vector-operation>` | Yes |
 | {doc}`performance-move-const-arg <performance/move-const-arg>` | Yes |
 | {doc}`performance-move-constructor-init <performance/move-constructor-init>` |  |
