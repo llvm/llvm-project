@@ -26,16 +26,10 @@ entry:
 }
 
 define <8 x i32> @insert_v8i32_v4i32_high(<8 x i32> %a, <4 x i32> %b) {
-; CHECK-SD-LABEL: insert_v8i32_v4i32_high:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov v0.16b, v2.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: insert_v8i32_v4i32_high:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov v1.16b, v0.16b
-; CHECK-GI-NEXT:    mov v0.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: insert_v8i32_v4i32_high:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    ret
 entry:
   %vector = call <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32> %a, <4 x i32> %b, i64 0)
   ret <8 x i32> %vector

@@ -1344,19 +1344,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_EXTRACT_SUBVECTOR)
       .legalFor({{v8s8, v16s8}, {v4s16, v8s16}, {v2s32, v4s32}})
       .widenScalarOrEltToNextPow2(0)
-      .fewerElementsIf(
-          [=](const LegalityQuery &Q) {
-            LLT SrcTy = Q.Types[1];
-            if (SrcTy.isScalar())
-              return false;
-            if (!isPowerOf2_32(SrcTy.getNumElements()))
-              return false;
-            return SrcTy.getSizeInBits() > 128;
-          },
-          [=](const LegalityQuery &Q) {
-            LLT SrcTy = Q.Types[1];
-            return std::make_pair(1, SrcTy.divide(2));
-          })
+      .clampNumElements(1, v8s8, v16s8)
+      .clampNumElements(1, v4s16, v8s16)
+      .clampNumElements(1, v2s32, v4s32)
       .lower()
       .immIdx(0); // Inform verifier imm idx 0 is handled.
 

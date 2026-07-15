@@ -87,7 +87,7 @@ define <16 x half> @complex_add_v16f16(<16 x half> %a, <16 x half> %b) {
 ; CHECK-GI-LABEL: complex_add_v16f16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    fcadd v0.8h, v2.8h, v0.8h, #90
-; CHECK-GI-NEXT:    mov v1.16b, v0.16b
+; CHECK-GI-NEXT:    fcadd v1.8h, v3.8h, v1.8h, #90
 ; CHECK-GI-NEXT:    ret
 entry:
   %a.real = shufflevector <16 x half> %a, <16 x half> zeroinitializer, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
@@ -169,7 +169,7 @@ define <16 x half> @complex_add_v16f16_with_intrinsic(<16 x half> %a, <16 x half
 ; CHECK-GI-LABEL: complex_add_v16f16_with_intrinsic:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    fcadd v0.8h, v2.8h, v0.8h, #90
-; CHECK-GI-NEXT:    mov v1.16b, v0.16b
+; CHECK-GI-NEXT:    fcadd v1.8h, v3.8h, v1.8h, #90
 ; CHECK-GI-NEXT:    ret
 entry:
   %a.deinterleaved = tail call { <8 x half>, <8 x half> } @llvm.vector.deinterleave2.v16f16(<16 x half> %a)

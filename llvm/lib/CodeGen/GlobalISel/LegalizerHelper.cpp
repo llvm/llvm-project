@@ -4887,13 +4887,13 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     auto InsertionPointImm = MI.getOperand(3).getImm();
 
     LLT VectorTy = MRI.getType(Vector);
-    LLT SubvectorTy = MRI.getType(Subvector);
+    LLT DstTy = MRI.getType(Subvector);
     // If so, -> concat(subvector, extract(half of vector))
     // (Operands can be either way round depending on insertion point
-    if (VectorTy.getSizeInBits() == SubvectorTy.getSizeInBits() * 2) {
+    if (VectorTy.getSizeInBits() == DstTy.getSizeInBits() * 2) {
       bool InsertInLowHalf = InsertionPointImm == 0;
       auto Extract = MIRBuilder.buildExtractSubvector(
-          SubvectorTy, Vector,
+          DstTy, Vector,
           (uint64_t)(InsertInLowHalf ? VectorTy.getNumElements() / 2 : 0));
 
       auto LowHalf = InsertInLowHalf ? Subvector : Extract.getReg(0);
@@ -4915,7 +4915,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
       for (int i = 0; i < VectorTy.getNumElements(); i++) {
         // If this index is within bounds, put subvector's index into mask
         if (i >= InsertionPointImm &&
-            i < InsertionPointImm + SubvectorTy.getNumElements())
+            i < InsertionPointImm + DstTy.getNumElements())
           Mask.push_back(VectorTy.getNumElements() + i - InsertionPointImm);
         else
           Mask.push_back(i);
@@ -4929,33 +4929,33 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     }
   }
   case G_EXTRACT_SUBVECTOR: {
-    Register Subvector = MI.getOperand(0).getReg();
-    Register Vector = MI.getOperand(1).getReg();
+    Register DstReg = MI.getOperand(0).getReg();
+    Register SrcReg = MI.getOperand(1).getReg();
     uint64_t ExtractionPointImm = MI.getOperand(2).getImm();
 
-    LLT VectorTy = MRI.getType(Vector);
-    LLT SubvectorTy = MRI.getType(Subvector);
+    LLT SrcTy = MRI.getType(SrcReg);
+    LLT DstTy = MRI.getType(DstReg);
 
-    if (VectorTy.isScalable() || SubvectorTy.isScalable())
+    if (SrcTy.isScalable() || DstTy.isScalable())
       return UnableToLegalize;
 
-    if (VectorTy.getScalarType() != SubvectorTy.getScalarType())
+    if (SrcTy.getScalarType() != DstTy.getScalarType())
       return UnableToLegalize;
 
-    if (VectorTy.getNumElements() <= SubvectorTy.getNumElements())
+    if (SrcTy.getNumElements() < DstTy.getNumElements())
       return UnableToLegalize;
 
     // extract_subvector = build_vector(extract_element, extract_element, ...)
     SmallVector<Register> ExtractedElements;
-    for (uint64_t i = 0; i < SubvectorTy.getNumElements(); i++) {
+    for (uint64_t i = 0; i < DstTy.getNumElements(); i++) {
       ExtractedElements.push_back(
           MIRBuilder
-              .buildExtractVectorElementConstant(VectorTy.getScalarType(),
-                                                 Vector, ExtractionPointImm + i)
+              .buildExtractVectorElementConstant(SrcTy.getScalarType(), SrcReg,
+                                                 ExtractionPointImm + i)
               .getReg(0));
     }
 
-    MIRBuilder.buildBuildVector(Subvector, ExtractedElements);
+    MIRBuilder.buildBuildVector(DstReg, ExtractedElements);
     MI.eraseFromParent();
     return Legalized;
   }
@@ -5833,20 +5833,24 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
     LLT SrcTy = MRI.getType(SrcReg);
     uint64_t InsertionPointImm = MI.getOperand(2).getImm();
 
-    // If Dst > 128 bits, then cannot legalize (yet)
-    if (DstTy.getSizeInBits() > 128)
-      return UnableToLegalize;
-    // If the extract is into a vector half its size, then convert to a copy
-    if (2 * DstTy.getNumElements() != SrcTy.getNumElements())
+    // If Dst > NarrowTy bits, then cannot legalize
+    if (DstTy.getSizeInBits() > NarrowTy.getSizeInBits())
       return UnableToLegalize;
 
-    // extract_subvector(large_vector) -> copy(high/low half of
-    // unmerge_values(large_vector, 2))
-    auto Unmerge = MIRBuilder.buildUnmerge(DstTy, SrcReg);
-    if (InsertionPointImm == 0)
-      MIRBuilder.buildCopy(DstReg, Unmerge.getReg(0));
+    // If DstTy's size is not a multiple of NarrowTy's, then cannot legalize
+    if (DstTy.getSizeInBits() % NarrowTy.getSizeInBits() != 0)
+      return UnableToLegalize;
+
+    auto Unmerge = MIRBuilder.buildUnmerge(NarrowTy, SrcReg);
+    uint64_t RequiredSubvectorIndex =
+        InsertionPointImm / NarrowTy.getNumElements();
+    // If Dst and Narrow are both same size, convert to a copy
+    if (DstTy.getNumElements() == NarrowTy.getNumElements())
+      MIRBuilder.buildCopy(DstReg, Unmerge.getReg(RequiredSubvectorIndex));
     else
-      MIRBuilder.buildCopy(DstReg, Unmerge.getReg(0));
+      MIRBuilder.buildExtractSubvector(
+          DstTy, Unmerge.getReg(RequiredSubvectorIndex),
+          InsertionPointImm % NarrowTy.getNumElements());
 
     MI.eraseFromParent();
     return Legalized;
