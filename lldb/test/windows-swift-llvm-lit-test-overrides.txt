@@ -113,16 +113,7 @@ skip lldb-api :: tools/lldb-server
 skip lldb-api :: commands/dwim-print/TestDWIMPrint.py
 skip lldb-api :: commands/thread/backtrace/TestThreadBacktraceRepeat.py
 skip lldb-api :: functionalities/inferior-crashing/TestInferiorCrashing.py
-skip lldb-api :: functionalities/inline-stepping/TestInlineStepping.py
-skip lldb-api :: functionalities/step_scripted/TestStepScripted.py
 skip lldb-api :: functionalities/thread/thread_specific_break/TestThreadSpecificBreakpoint.py
-
-### Tests that pass occasionally ###
-
-# Fixed upstream: https://github.com/llvm/llvm-project/commit/ec009994a06338995dfb6431c943b299f9327fd2
-# But patches don't apply on stable branch due to downstream changes.
-skip lldb-api :: functionalities/archives/TestBSDArchives.py
-skip lldb-api :: macosx/duplicate-archive-members/TestDuplicateMembers.py
 
 ### Tests that pass accidentally ###
 
