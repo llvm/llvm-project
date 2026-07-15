@@ -38,7 +38,8 @@ NativeRegisterContextDBReg_arm64::GetWatchpointSize(uint32_t wp_index) {
 std::optional<NativeRegisterContextDBReg::WatchpointDetails>
 NativeRegisterContextDBReg_arm64::AdjustWatchpoint(
     const WatchpointDetails &details) {
-  // A BAS watchpoint's size must be a power of 2 that is no greater than 8.
+  // For the way we are using BAS watchpoints, their size must be a power of 2
+  // that is less than 8. Note that this is a subset of what hardware allows.
   const size_t max_size = 8;
   size_t size = details.size;
   if (!llvm::isPowerOf2_64(size) || size > max_size)
@@ -94,14 +95,15 @@ uint32_t NativeRegisterContextDBReg_arm64::MakeBreakControlValue(size_t size) {
   // PAC (bits 2:1): 0b10
   const uint32_t pac_bits = 2 << 1;
 
-  // BAS (bits 12:5) hold a bit-mask of addresses to watch
+  // BAS (bits 12:5) hold a bit-mask of addresses to watch.
+  // Hardware does allow gaps but we only support unbroken ranges at this time
+  //
   // e.g. 0b00000001 means 1 byte at address
   //      0b00000011 means 2 bytes (addr..addr+1)
   //      ...
   //      0b11111111 means 8 bytes (addr..addr+7)
   size_t encoded_size = ((1 << size) - 1) << 5;
 
-  // Return encoded hardware breakpoint control value.
   return m_hw_dbg_enable_bit | pac_bits | encoded_size;
 }
 
@@ -111,13 +113,14 @@ NativeRegisterContextDBReg_arm64::MakeWatchControlValue(size_t size,
   // PAC (bits 2:1): 0b10
   const uint32_t pac_bits = 2 << 1;
 
-  // BAS (bits 12:5) hold a bit-mask of addresses to watch
+  // BAS (bits 12:5) hold a bit-mask of addresses to watch.
+  // Hardware does allow gaps but we only support unbroken ranges at this time.
+  //
   // e.g. 0b00000001 means 1 byte at address
   //      0b00000011 means 2 bytes (addr..addr+1)
   //      ...
   //      0b11111111 means 8 bytes (addr..addr+7)
   size_t encoded_size = ((1 << size) - 1) << 5;
 
-  // Return encoded hardware watchpoint control value.
   return m_hw_dbg_enable_bit | pac_bits | encoded_size | (watch_flags << 3);
 }
