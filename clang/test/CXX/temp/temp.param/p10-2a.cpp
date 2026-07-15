@@ -141,3 +141,10 @@ using j2 = J<'a', nullptr>;
 template<OneOf<char, int> auto &x>
 // expected-error@-1 {{constrained placeholder types other than simple 'auto' on non-type template parameters not supported yet}}
 using K = int;
+
+namespace GH208658 {
+template <class> concept C = true;
+template <auto &x> using A = int;
+template <C auto &x> using A = int;
+// expected-error@-1 {{constrained placeholder types other than simple 'auto' on non-type template parameters not supported yet}}
+}

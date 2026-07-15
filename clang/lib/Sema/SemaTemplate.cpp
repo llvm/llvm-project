@@ -8281,6 +8281,13 @@ static bool MatchTemplateParameterKind(
     if (Kind != Sema::TPL_TemplateTemplateParmMatch ||
         (!OldNTTP->getType()->isDependentType() &&
          !NewNTTP->getType()->isDependentType())) {
+
+      // Matching against an invalid declaration is going to be rife with
+      // errors, particularly when `getUnconstrainedType` isn't really valid
+      // there. Just treat these as otherwise invalid.
+      if (OldNTTP->isInvalidDecl() || NewNTTP->isInvalidDecl())
+        return false;
+
       // C++20 [temp.over.link]p6:
       //   Two [non-type] template-parameters are equivalent [if] they have
       //   equivalent types ignoring the use of type-constraints for
