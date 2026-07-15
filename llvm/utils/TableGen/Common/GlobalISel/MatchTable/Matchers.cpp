@@ -649,6 +649,13 @@ Error RuleMatcher::defineComplexSubOperand(StringRef SymbolicName,
   return Error::success();
 }
 
+InstructionMatcher &
+RuleMatcher::allocateInstructionMatcher(StringRef SymbolicName,
+                                        bool AllowNumOpsCheck) {
+  return *InsnMatchers.emplace_back(std::make_unique<InstructionMatcher>(
+      *this, InsnMatchers.size(), SymbolicName, AllowNumOpsCheck));
+}
+
 InstructionMatcher &RuleMatcher::addInstructionMatcher(StringRef SymbolicName) {
   auto &Res = allocateInstructionMatcher(SymbolicName);
   Roots.push_back(&Res);

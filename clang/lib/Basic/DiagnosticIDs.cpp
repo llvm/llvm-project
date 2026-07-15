@@ -876,8 +876,8 @@ StringRef DiagnosticIDs::getNearestOption(diag::Flavor Flavor,
   return Best;
 }
 
-unsigned DiagnosticIDs::getCXXCompatDiagId(const LangOptions &LangOpts,
-                                           unsigned CompatDiagId) {
+unsigned DiagnosticIDs::getCompatDiagId(const LangOptions &LangOpts,
+                                        unsigned CompatDiagId) {
   struct CompatDiag {
     unsigned StdVer;
     unsigned DiagId;
@@ -888,10 +888,17 @@ unsigned DiagnosticIDs::getCXXCompatDiagId(const LangOptions &LangOpts,
   // actual numbers don't really matter for this, but the definitions of the
   // compat diags in the Tablegen file use the standard version number (i.e.
   // 98, 11, 14, etc.), so we base the encoding here on that.
+  //
+  // Likewise, for C, we have C99 < C11 < C17 < C23 < C29.
+  //
+  // We do end up with some overlap between C and C++ here, e.g. 2011 is used
+  // for both C11 and C++11, but this doesn't matter since we're never in e.g.
+  // C11 and C++11 mode at the same time (additionally, we should only ever
+  // be issuing C compatibility diagnostics in C mode and likewise for C++).
 #define DIAG_COMPAT_IDS_BEGIN()
 #define DIAG_COMPAT_IDS_END()
 #define DIAG_COMPAT_ID(Value, Name, Std, Diag, DiagPre)                        \
-  {Std == 98 ? 1998 : 2000 + Std, diag::Diag, diag::DiagPre},
+  {Std >= 98 ? 1900 + Std : 2000 + Std, diag::Diag, diag::DiagPre},
   static constexpr CompatDiag Diags[]{
 #include "clang/Basic/DiagnosticAllCompatIDs.inc"
   };
@@ -902,6 +909,20 @@ unsigned DiagnosticIDs::getCXXCompatDiagId(const LangOptions &LangOpts,
   assert(CompatDiagId < std::size(Diags) && "Invalid compat diag id");
 
   unsigned StdVer = [&] {
+    if (!LangOpts.CPlusPlus) {
+      if (LangOpts.C2y)
+        return 2029;
+      if (LangOpts.C23)
+        return 2023;
+      if (LangOpts.C17)
+        return 2017;
+      if (LangOpts.C11)
+        return 2011;
+      if (LangOpts.C99)
+        return 1999;
+      return 1989;
+    }
+
     if (LangOpts.CPlusPlus29)
       return 2029;
     if (LangOpts.CPlusPlus26)
