@@ -608,6 +608,53 @@ TEST_F(AlignBracketsTest, AlignAfterOpenBracketBlockIndentInitializers) {
                "    {baz},\n"
                "};",
                Style);
+  // The closing brace should be at the start of the line.
+  verifyFormat("SomeStruct //\n"
+               "    s = SomeStruct{\n"
+               "        \"xxxxxxxxxxxxx\",\n"
+               "        \"yyyyyyyyyyyyy\",\n"
+               "        \"zzzzzzzzzzzzz\",\n"
+               "};");
+  verifyFormat("SomeStruct //\n"
+               "    s{\n"
+               "        \"xxxxxxxxxxxxx\",\n"
+               "        \"yyyyyyyyyyyyy\",\n"
+               "        \"zzzzzzzzzzzzz\",\n"
+               "};");
+  verifyFormat("SomeStruct //\n"
+               "    s = SomeStruct::SomeStruct{\n"
+               "        \"xxxxxxxxxxxxx\",\n"
+               "        \"yyyyyyyyyyyyy\",\n"
+               "        \"zzzzzzzzzzzzz\",\n"
+               "};");
+  verifyFormat("void x() {\n"
+               "  SomeStruct //\n"
+               "      s = SomeStruct{\n"
+               "          \"xxxxxxxxxxxxx\",\n"
+               "          \"yyyyyyyyyyyyy\",\n"
+               "          \"zzzzzzzzzzzzz\",\n"
+               "  };\n"
+               "}");
+  verifyFormat("void x() {\n"
+               "  SomeStruct //\n"
+               "      s{\n"
+               "          \"xxxxxxxxxxxxx\",\n"
+               "          \"yyyyyyyyyyyyy\",\n"
+               "          \"zzzzzzzzzzzzz\",\n"
+               "  };\n"
+               "}");
+  verifyFormat("SomeArrayT //\n"
+               "    a[3] = {\n"
+               "        {\n"
+               "            foo,\n"
+               "            bar,\n"
+               "        },\n"
+               "        {\n"
+               "            foo,\n"
+               "            bar,\n"
+               "        },\n"
+               "        SomeArrayT{},\n"
+               "};");
 }
 
 TEST_F(AlignBracketsTest, AllowAllArgumentsOnNextLineDontAlign) {

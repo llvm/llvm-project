@@ -750,6 +750,19 @@ struct ScalarEnumerationTraits<FormatStyle::ReturnTypeBreakingStyle> {
 };
 
 template <>
+struct ScalarEnumerationTraits<FormatStyle::BreakBeforeReturnTypeStyle> {
+  static void enumeration(IO &IO,
+                          FormatStyle::BreakBeforeReturnTypeStyle &Value) {
+    IO.enumCase(Value, "None", FormatStyle::BBRTS_None);
+    IO.enumCase(Value, "All", FormatStyle::BBRTS_All);
+    IO.enumCase(Value, "TopLevel", FormatStyle::BBRTS_TopLevel);
+    IO.enumCase(Value, "AllDefinitions", FormatStyle::BBRTS_AllDefinitions);
+    IO.enumCase(Value, "TopLevelDefinitions",
+                FormatStyle::BBRTS_TopLevelDefinitions);
+  }
+};
+
+template <>
 struct ScalarEnumerationTraits<FormatStyle::SeparateDefinitionStyle> {
   static void enumeration(IO &IO, FormatStyle::SeparateDefinitionStyle &Value) {
     IO.enumCase(Value, "Leave", FormatStyle::SDS_Leave);
@@ -1146,14 +1159,14 @@ template <> struct MappingTraits<FormatStyle> {
         break;
       case BAS_BlockIndent:
         Style.AlignAfterOpenBracket = true;
+        Style.BreakAfterOpenBracketBracedList = true;
+        Style.BreakAfterOpenBracketFunction = true;
+        Style.BreakAfterOpenBracketIf = true;
+        Style.BreakAfterOpenBracketLoop = false;
+        Style.BreakAfterOpenBracketSwitch = false;
         Style.BreakBeforeCloseBracketBracedList = true;
         Style.BreakBeforeCloseBracketFunction = true;
         Style.BreakBeforeCloseBracketIf = true;
-        Style.BreakAfterOpenBracketLoop = false;
-        Style.BreakAfterOpenBracketSwitch = false;
-        Style.BreakBeforeCloseBracketBracedList = false;
-        Style.BreakBeforeCloseBracketFunction = false;
-        Style.BreakBeforeCloseBracketIf = false;
         Style.BreakBeforeCloseBracketLoop = false;
         Style.BreakBeforeCloseBracketSwitch = false;
         break;
@@ -1317,6 +1330,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("BreakBeforeBraces", Style.BreakBeforeBraces);
     IO.mapOptional("BreakBeforeInlineASMColon",
                    Style.BreakBeforeInlineASMColon);
+    IO.mapOptional("BreakBeforeReturnType", Style.BreakBeforeReturnType);
     IO.mapOptional("BreakBeforeTemplateCloser",
                    Style.BreakBeforeTemplateCloser);
     IO.mapOptional("BreakBeforeTernaryOperators",
@@ -1889,6 +1903,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakBeforeCloseBracketSwitch = false;
   LLVMStyle.BreakBeforeConceptDeclarations = FormatStyle::BBCDS_Always;
   LLVMStyle.BreakBeforeInlineASMColon = FormatStyle::BBIAS_OnlyMultiline;
+  LLVMStyle.BreakBeforeReturnType = FormatStyle::BBRTS_None;
   LLVMStyle.BreakBeforeTemplateCloser = false;
   LLVMStyle.BreakBeforeTernaryOperators = true;
   LLVMStyle.BreakBinaryOperations = {FormatStyle::BBO_Never, {}};
@@ -2809,12 +2824,12 @@ private:
   void editEnumTrailingComma(SmallVectorImpl<AnnotatedLine *> &Lines,
                              tooling::Replacements &Result) {
     bool InEnumBraces = false;
-    const FormatToken *BeforeRBrace = nullptr;
+    FormatToken *BeforeRBrace = nullptr;
     const auto &SourceMgr = Env.getSourceManager();
     for (auto *Line : Lines) {
       if (!Line->Children.empty())
         editEnumTrailingComma(Line->Children, Result);
-      for (const auto *Token = Line->First; Token && !Token->Finalized;
+      for (auto *Token = Line->First; Token && !Token->Finalized;
            Token = Token->Next) {
         if (Token->isNot(TT_EnumRBrace)) {
           if (Token->is(TT_EnumLBrace))
@@ -2824,8 +2839,10 @@ private:
           continue;
         }
         InEnumBraces = false;
-        if (!BeforeRBrace) // Empty braces or Line not affected.
+        if (!BeforeRBrace || BeforeRBrace->HasEnumTrailingCommaHandled) {
+          // Empty braces, or Line not affected, or already handled.
           continue;
+        }
         if (BeforeRBrace->is(tok::comma)) {
           if (Style.EnumTrailingComma == FormatStyle::ETC_Remove)
             replaceToken(*BeforeRBrace, BeforeRBrace->Next, SourceMgr, Result);
@@ -2833,6 +2850,7 @@ private:
           cantFail(Result.add(tooling::Replacement(
               SourceMgr, BeforeRBrace->Tok.getEndLoc(), 0, ",")));
         }
+        BeforeRBrace->HasEnumTrailingCommaHandled = true;
         BeforeRBrace = nullptr;
       }
     }
@@ -4615,7 +4633,7 @@ loadAndParseConfigFile(StringRef ConfigFile, llvm::vfs::FileSystem *FS,
                        llvm::SourceMgr::DiagHandlerTy DiagHandler,
                        bool IsDotHFile) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
-      FS->getBufferForFile(ConfigFile.str());
+      FS->getBufferForFile(ConfigFile);
   if (auto EC = Text.getError())
     return EC;
   if (auto EC = parseConfiguration(*Text.get(), Style, AllowUnknownOptions,

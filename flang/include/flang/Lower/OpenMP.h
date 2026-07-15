@@ -16,7 +16,6 @@
 #include "llvm/ADT/SmallVector.h"
 
 #include <cinttypes>
-#include <utility>
 
 namespace mlir {
 class Operation;
@@ -80,6 +79,7 @@ void genOpenMPDeclarativeConstruct(AbstractConverter &,
 void genOpenMPSymbolProperties(AbstractConverter &converter,
                                const pft::Variable &var);
 
+void genGroupprivateOp(AbstractConverter &, const pft::Variable &);
 void genThreadprivateOp(AbstractConverter &, const pft::Variable &);
 void genDeclareTargetIntGlobal(AbstractConverter &, const pft::Variable &);
 bool isOpenMPTargetConstruct(const parser::OpenMPConstruct &);
@@ -103,6 +103,15 @@ void genOpenMPRequires(mlir::Operation *, const Fortran::semantics::Symbol *);
 void materializeOpenMPDeclareMappers(
     Fortran::lower::AbstractConverter &, Fortran::semantics::SemanticsContext &,
     const Fortran::semantics::Scope *scope = nullptr);
+
+namespace omp {
+/// If \p base carries OpenMP DECLARE VARIANT entries, return the variant symbol
+/// that best matches the enclosing OpenMP context, or nullptr if none matches.
+/// \p base is expected to have variant entries.
+const Fortran::semantics::Symbol *
+resolveDeclareVariantCallee(const Fortran::semantics::Symbol &base,
+                            AbstractConverter &converter);
+} // namespace omp
 
 } // namespace lower
 } // namespace Fortran

@@ -51,8 +51,7 @@ LIBC_INLINE static constexpr cpp::enable_if_t<
         cpp::is_trivially_copyable<From>::value,
     To>
 bit_cast(const From &from) {
-#if __has_builtin(__builtin_bit_cast) || defined(LIBC_COMPILER_IS_MSVC) ||     \
-    defined(LIBC_HAS_CONSTANT_EVALUATION)
+#if LIBC_HAS_BUILTIN_BIT_CAST
   return __builtin_bit_cast(To, from);
 #else
   To to{};

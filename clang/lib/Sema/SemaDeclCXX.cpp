@@ -1380,33 +1380,40 @@ static bool checkTupleLikeDecomposition(Sema &S,
       return true;
     Expr *Init = E.get();
 
-    //   Given the type T designated by std::tuple_element<i - 1, E>::type,
+    //   Given the type T designated by std::tuple_element<i - 1, E>::type
     QualType T = getTupleLikeElementType(S, Loc, I, DecompType);
     if (T.isNull())
       return true;
 
-    //   each vi is a variable of type "reference to T" initialized with the
-    //   initializer, where the reference is an lvalue reference if the
-    //   initializer is an lvalue and an rvalue reference otherwise
-    QualType RefType =
-        S.BuildReferenceType(T, E.get()->isLValue(), Loc, B->getDeclName());
-    if (RefType.isNull())
+    // C++26 [dcl.struct.bind]p7:
+    //   and the type Ui, defined as Ti if the initializer is a prvalue,
+    //   as "lvalue reference to Ti" if the initializer is an lvalue,
+    //   or as "rvalue reference to Ti" otherwise
+    // "defined as Ti if the initializer is a prvalue" was introduced by CWG3135
+    QualType U = E.get()->isPRValue()
+                     ? T
+                     : S.BuildReferenceType(T, E.get()->isLValue(), Loc,
+                                            B->getDeclName());
+    if (U.isNull())
       return true;
 
     // Don't give this VarDecl a TypeSourceInfo, since this is a synthesized
     // entity and this type was never written in source code.
-    auto *RefVD =
+    auto *BindingVD =
         VarDecl::Create(S.Context, Src->getDeclContext(), Loc, Loc,
-                        B->getDeclName().getAsIdentifierInfo(), RefType,
+                        B->getDeclName().getAsIdentifierInfo(), U,
                         /*TInfo=*/nullptr, Src->getStorageClass());
-    RefVD->setLexicalDeclContext(Src->getLexicalDeclContext());
-    RefVD->setTSCSpec(Src->getTSCSpec());
-    RefVD->setImplicit();
+    BindingVD->setLexicalDeclContext(Src->getLexicalDeclContext());
+    BindingVD->setTSCSpec(Src->getTSCSpec());
+    BindingVD->setConstexpr(Src->isConstexpr());
+    if (const auto *CIAttr = Src->getAttr<ConstInitAttr>())
+      BindingVD->addAttr(CIAttr->clone(S.Context));
+    BindingVD->setImplicit();
     if (Src->isInlineSpecified())
-      RefVD->setInlineSpecified();
-    RefVD->getLexicalDeclContext()->addHiddenDecl(RefVD);
+      BindingVD->setInlineSpecified();
+    BindingVD->getLexicalDeclContext()->addHiddenDecl(BindingVD);
 
-    InitializedEntity Entity = InitializedEntity::InitializeBinding(RefVD);
+    InitializedEntity Entity = InitializedEntity::InitializeBinding(BindingVD);
     InitializationKind Kind = InitializationKind::CreateCopy(Loc, Loc);
     InitializationSequence Seq(S, Entity, Kind, Init);
     E = Seq.Perform(S, Entity, Kind, Init);
@@ -1415,12 +1422,11 @@ static bool checkTupleLikeDecomposition(Sema &S,
     E = S.ActOnFinishFullExpr(E.get(), Loc, /*DiscardedValue*/ false);
     if (E.isInvalid())
       return true;
-    RefVD->setInit(E.get());
-    S.CheckCompleteVariableDeclaration(RefVD);
+    BindingVD->setInit(E.get());
+    S.CheckCompleteVariableDeclaration(BindingVD);
 
-    E = S.BuildDeclarationNameExpr(CXXScopeSpec(),
-                                   DeclarationNameInfo(B->getDeclName(), Loc),
-                                   RefVD);
+    E = S.BuildDeclarationNameExpr(
+        CXXScopeSpec(), DeclarationNameInfo(B->getDeclName(), Loc), BindingVD);
     if (E.isInvalid())
       return true;
 
@@ -2044,6 +2050,9 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
       //   - using-declarations,
       //   - using-directives,
       //   - using-enum-declaration
+      continue;
+
+    case Decl::CXXExpansionStmt:
       continue;
 
     case Decl::Typedef:
@@ -6333,7 +6342,8 @@ static void ReferenceDllExportedMembers(Sema &S, CXXRecordDecl *Class) {
       if (S.Context.getTargetInfo().getCXXABI().isMicrosoft()) {
         auto *CD = dyn_cast<CXXConstructorDecl>(MD);
         if (CD && CD->isDefaultConstructor() && TSK == TSK_Undeclared) {
-          S.InstantiateDefaultCtorDefaultArgs(CD);
+          S.BuildCtorClosureDefaultArgs(
+              CD->getAttr<DLLExportAttr>()->getLocation(), CD);
         }
       }
 
@@ -6386,10 +6396,8 @@ static void checkForMultipleExportedDefaultConstructors(Sema &S,
     // If the class is non-dependent, mark the default arguments as ODR-used so
     // that we can properly codegen the constructor closure.
     if (!Class->isDependentContext()) {
-      for (ParmVarDecl *PD : CD->parameters()) {
-        (void)S.CheckCXXDefaultArgExpr(Attr->getLocation(), CD, PD);
-        S.DiscardCleanupsInEvaluationContext();
-      }
+      S.BuildCtorClosureDefaultArgs(Attr->getLocation(), CD);
+      S.DiscardCleanupsInEvaluationContext();
     }
 
     if (LastExportedDefaultCtor) {
@@ -6901,6 +6909,25 @@ Sema::getDefaultedFunctionKind(const FunctionDecl *FD) {
   return DefaultedFunctionKind();
 }
 
+namespace {
+/// RAII object to restore the floating-point (FP) features active at the time
+/// a defaulted function was declared. This ensures that the synthesized body
+/// of the function respects the FP pragmas (e.g., #pragma STDC FENV_ACCESS)
+/// that were in effect when the function was explicitly defaulted.
+struct DefaultedFunctionFPFeaturesRAII {
+  Sema::FPFeaturesStateRAII SavedFPFeatures;
+  DefaultedFunctionFPFeaturesRAII(Sema &S, FunctionDecl *FD)
+      : SavedFPFeatures(S) {
+    auto *Info = FD->getDefaultedOrDeletedInfo();
+    FPOptionsOverride FPO = Info ? Info->getFPFeatures() : FPOptionsOverride();
+    S.CurFPFeatures = FPO.applyOverrides(S.LangOpts);
+    S.FpPragmaStack.CurrentValue = FPO;
+  }
+
+  ~DefaultedFunctionFPFeaturesRAII() = default;
+};
+} // namespace
+
 static void DefineDefaultedFunction(Sema &S, FunctionDecl *FD,
                                     SourceLocation DefaultLoc) {
   Sema::DefaultedFunctionKind DFK = S.getDefaultedFunctionKind(FD);
@@ -7411,7 +7438,7 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
   checkClassLevelCodeSegAttribute(Record);
 
   bool ClangABICompat4 =
-      Context.getLangOpts().getClangABICompat() <= LangOptions::ClangABI::Ver4;
+      Context.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver4);
   TargetInfo::CallingConvKind CCK =
       Context.getTargetInfo().getCallingConvKind(ClangABICompat4);
   bool CanPass = canPassInRegisters(*this, Record, CCK);
@@ -9024,7 +9051,7 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
                                           FD->getOverloadedOperator());
     FD->setDefaultedOrDeletedInfo(
         FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
-            Context, Operators.pairs()));
+            Context, Operators.pairs(), CurFPFeatureOverrides()));
   }
 
   // C++2a [class.compare.default]p1:
@@ -9368,6 +9395,8 @@ void Sema::DefineDefaultedComparison(SourceLocation UseLoc, FunctionDecl *FD,
 
   // Add a context note for diagnostics produced after this point.
   Scope.addContextNote(UseLoc);
+
+  DefaultedFunctionFPFeaturesRAII RestoreFP(*this, FD);
 
   {
     // Build and set up the function body.
@@ -10438,8 +10467,8 @@ bool Sema::SpecialMemberIsTrivial(CXXMethodDecl *MD, CXXSpecialMemberKind CSM,
     // Otherwise, if ClangABICompat14 is false, All copy constructors can be
     // trivial, if they are not user-provided, regardless of the qualifiers on
     // the reference type.
-    const bool ClangABICompat14 = Context.getLangOpts().getClangABICompat() <=
-                                  LangOptions::ClangABI::Ver14;
+    const bool ClangABICompat14 =
+        Context.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver14);
     if (!RT ||
         ((RT->getPointeeType().getCVRQualifiers() != Qualifiers::Const) &&
          ClangABICompat14)) {
@@ -11899,9 +11928,10 @@ bool Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
 
       const QualifiedTemplateName *Qualifiers =
           SpecifiedName.getAsQualifiedTemplateName();
-      assert(Qualifiers && "expected QualifiedTemplate");
-      bool SimplyWritten =
-          !Qualifiers->hasTemplateKeyword() && !Qualifiers->getQualifier();
+      // A Template template parameter is never wrapped in a
+      // QualifiedTemplateName, but it's always simply-written.
+      bool SimplyWritten = !Qualifiers || (!Qualifiers->hasTemplateKeyword() &&
+                                           !Qualifiers->getQualifier());
       if (SimplyWritten && TemplateMatches)
         AcceptableReturnType = true;
       else {
@@ -13892,13 +13922,22 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
     TypeAliasTemplateDecl *OldDecl = nullptr;
     TemplateParameterList *OldTemplateParams = nullptr;
 
+    TemplateParameterList *TemplateParams = TemplateParamLists[0];
     if (TemplateParamLists.size() != 1) {
       Diag(UsingLoc, diag::err_alias_template_extra_headers)
         << SourceRange(TemplateParamLists[1]->getTemplateLoc(),
          TemplateParamLists[TemplateParamLists.size()-1]->getRAngleLoc());
       Invalid = true;
+
+      // Recover by picking the last non-empty template parameter list.
+      auto It = llvm::find_if(
+          llvm::reverse(TemplateParamLists),
+          [](TemplateParameterList *TPL) { return !TPL->empty(); });
+      assert(It != TemplateParamLists.rend() &&
+             "if all template parameter lists were empty, this should have "
+             "been rejected as an explicit specialization");
+      TemplateParams = *It;
     }
-    TemplateParameterList *TemplateParams = TemplateParamLists[0];
 
     // Check that we can declare a template here.
     if (CheckTemplateDeclScope(S, TemplateParams))
@@ -14352,6 +14391,7 @@ CXXConstructorDecl *Sema::DeclareImplicitDefaultConstructor(
 
 void Sema::DefineImplicitDefaultConstructor(SourceLocation CurrentLocation,
                                             CXXConstructorDecl *Constructor) {
+  DefaultedFunctionFPFeaturesRAII RestoreFP(*this, Constructor);
   assert((Constructor->isDefaulted() && Constructor->isDefaultConstructor() &&
           !Constructor->doesThisDeclarationHaveABody() &&
           !Constructor->isDeleted()) &&
@@ -14392,6 +14432,10 @@ void Sema::DefineImplicitDefaultConstructor(SourceLocation CurrentLocation,
   }
 
   DiagnoseUninitializedFields(*this, Constructor);
+
+  // The synthesized body applies the class's NSDMIs and never reaches the
+  // normal IssueWarnings path, so run lifetime safety on it here.
+  AnalysisWarnings.IssueWarningsForImplicitFunction(Constructor);
 }
 
 void Sema::ActOnFinishDelayedMemberInitializers(Decl *D) {
@@ -14573,6 +14617,10 @@ void Sema::DefineInheritingConstructor(SourceLocation CurrentLocation,
   }
 
   DiagnoseUninitializedFields(*this, Constructor);
+
+  // The synthesized body applies the class's NSDMIs and never reaches the
+  // normal IssueWarnings path, so run lifetime safety on it here.
+  AnalysisWarnings.IssueWarningsForImplicitFunction(Constructor);
 }
 
 CXXDestructorDecl *Sema::DeclareImplicitDestructor(CXXRecordDecl *ClassDecl) {
@@ -14643,6 +14691,7 @@ CXXDestructorDecl *Sema::DeclareImplicitDestructor(CXXRecordDecl *ClassDecl) {
 
 void Sema::DefineImplicitDestructor(SourceLocation CurrentLocation,
                                     CXXDestructorDecl *Destructor) {
+  DefaultedFunctionFPFeaturesRAII RestoreFP(*this, Destructor);
   assert((Destructor->isDefaulted() &&
           !Destructor->doesThisDeclarationHaveABody() &&
           !Destructor->isDeleted()) &&
@@ -15333,6 +15382,7 @@ static void diagnoseDeprecatedCopyOperation(Sema &S, CXXMethodDecl *CopyOp) {
 
 void Sema::DefineImplicitCopyAssignment(SourceLocation CurrentLocation,
                                         CXXMethodDecl *CopyAssignOperator) {
+  DefaultedFunctionFPFeaturesRAII RestoreFP(*this, CopyAssignOperator);
   assert((CopyAssignOperator->isDefaulted() &&
           CopyAssignOperator->isOverloadedOperator() &&
           CopyAssignOperator->getOverloadedOperator() == OO_Equal &&
@@ -15720,6 +15770,7 @@ static void checkMoveAssignmentForRepeatedMove(Sema &S, CXXRecordDecl *Class,
 
 void Sema::DefineImplicitMoveAssignment(SourceLocation CurrentLocation,
                                         CXXMethodDecl *MoveAssignOperator) {
+  DefaultedFunctionFPFeaturesRAII RestoreFP(*this, MoveAssignOperator);
   assert((MoveAssignOperator->isDefaulted() &&
           MoveAssignOperator->isOverloadedOperator() &&
           MoveAssignOperator->getOverloadedOperator() == OO_Equal &&
@@ -16053,6 +16104,7 @@ CXXConstructorDecl *Sema::DeclareImplicitCopyConstructor(
 
 void Sema::DefineImplicitCopyConstructor(SourceLocation CurrentLocation,
                                          CXXConstructorDecl *CopyConstructor) {
+  DefaultedFunctionFPFeaturesRAII RestoreFP(*this, CopyConstructor);
   assert((CopyConstructor->isDefaulted() &&
           CopyConstructor->isCopyConstructor() &&
           !CopyConstructor->doesThisDeclarationHaveABody() &&
@@ -16191,6 +16243,7 @@ CXXConstructorDecl *Sema::DeclareImplicitMoveConstructor(
 
 void Sema::DefineImplicitMoveConstructor(SourceLocation CurrentLocation,
                                          CXXConstructorDecl *MoveConstructor) {
+  DefaultedFunctionFPFeaturesRAII RestoreFP(*this, MoveConstructor);
   assert((MoveConstructor->isDefaulted() &&
           MoveConstructor->isMoveConstructor() &&
           !MoveConstructor->doesThisDeclarationHaveABody() &&
@@ -18083,13 +18136,12 @@ DeclResult Sema::ActOnTemplatedFriendTag(
                                 Name, NameLoc, Attr, TemplateParams, AS_public,
                                 /*ModulePrivateLoc=*/SourceLocation(),
                                 FriendLoc, TempParamLists.size() - 1,
-                                TempParamLists.data())
+                                TempParamLists.data(), IsMemberSpecialization)
           .get();
     } else {
       // The "template<>" header is extraneous.
       Diag(TemplateParams->getTemplateLoc(), diag::err_template_tag_noparams)
-        << TypeWithKeyword::getTagTypeKindName(Kind) << Name;
-      IsMemberSpecialization = true;
+          << TypeWithKeyword::getTagTypeKindName(Kind) << Name;
     }
   }
 
@@ -18754,6 +18806,16 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
       return;
   }
 
+  // Only allocate DefaultedOrDeletedFunctionInfo if we actually have
+  // non-default FP features to stash. This avoids memory overhead for
+  // the vast majority of defaulted functions.
+  if (!FD->getDefaultedOrDeletedInfo() &&
+      CurFPFeatureOverrides().requiresTrailingStorage()) {
+    FD->setDefaultedOrDeletedInfo(
+        FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
+            Context, /*Lookups=*/{}, CurFPFeatureOverrides()));
+  }
+
   if (DefKind.isComparison()) {
     if (CheckExplicitlyDefaultedComparison(nullptr, FD, DefKind.asComparison()))
       FD->setInvalidDecl();
@@ -19279,7 +19341,12 @@ bool Sema::DefineUsedVTables() {
     DefinedAnything = true;
     MarkVirtualMembersReferenced(Loc, Class);
     CXXRecordDecl *Canonical = Class->getCanonicalDecl();
-    if (VTablesUsed[Canonical] && !Class->shouldEmitInExternalSource())
+    // The vtable is assumed to be emitted in an external source only for
+    // classes attached to a named module, which is guaranteed to have an object
+    // file. This isn't true for -fmodules-debuginfo, which still has
+    // shouldEmitInExternalSource as true so that debug info gets supressed.
+    if (VTablesUsed[Canonical] &&
+        !(Class->isInNamedModule() && Class->shouldEmitInExternalSource()))
       Consumer.HandleVTable(Class);
 
     // Warn if we're emitting a weak vtable. The vtable will be weak if there is
@@ -19789,4 +19856,37 @@ void Sema::ActOnFinishFunctionDeclarationDeclarator(Declarator &Declarator) {
     }
   }
   InventedParameterInfos.pop_back();
+}
+
+bool Sema::BuildCtorClosureDefaultArgs(SourceLocation Loc,
+                                       CXXConstructorDecl *Ctor, bool IsCopy) {
+  assert(Context.getTargetInfo().getCXXABI().isMicrosoft());
+
+  if (!Ctor->getCtorClosureDefaultArgs().empty()) {
+    // If we build args for default constructor closures, those will have
+    // been generated *before* building args for any copy constructor closures.
+    assert(IsCopy || Ctor->getCtorClosureDefaultArgs()[0] != nullptr);
+    return false;
+  }
+
+  unsigned NumParams = Ctor->getNumParams();
+  if (NumParams == 0)
+    return false;
+
+  CXXDefaultArgExpr **Args =
+      new (getASTContext()) CXXDefaultArgExpr *[NumParams];
+
+  if (IsCopy)
+    Args[0] = nullptr; // Copy ctor closure will provide the first argument.
+
+  for (unsigned I = IsCopy ? 1 : 0; I != NumParams; ++I) {
+    ExprResult R = BuildCXXDefaultArgExpr(Loc, Ctor, Ctor->getParamDecl(I));
+    CleanupVarDeclMarking();
+    if (R.isInvalid())
+      return true;
+    Args[I] = cast<CXXDefaultArgExpr>(R.get());
+  }
+
+  Ctor->setCtorClosureDefaultArgs(ArrayRef(Args, NumParams));
+  return false;
 }

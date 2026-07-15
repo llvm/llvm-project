@@ -789,13 +789,12 @@ public:
   }
 
   bool VisitCXXDestructorDecl(CXXDestructorDecl *D) {
-    if (auto *TI = D->getNameInfo().getNamedTypeInfo()) {
-      SourceLocation Loc = TI->getTypeLoc().getBeginLoc();
-      H.addExtraModifier(Loc, HighlightingModifier::ConstructorOrDestructor);
-      H.addExtraModifier(Loc, HighlightingModifier::Declaration);
-      if (D->isThisDeclarationADefinition())
-        H.addExtraModifier(Loc, HighlightingModifier::Definition);
-    }
+    SourceLocation Loc =
+        D->getNameInfo().getNamedTypeInfo()->getTypeLoc().getBeginLoc();
+    H.addExtraModifier(Loc, HighlightingModifier::ConstructorOrDestructor);
+    H.addExtraModifier(Loc, HighlightingModifier::Declaration);
+    if (D->isThisDeclarationADefinition())
+      H.addExtraModifier(Loc, HighlightingModifier::Definition);
     return true;
   }
 
@@ -804,12 +803,12 @@ public:
     // `(foo.*pointer_to_member_fun)(arg);`
     if (auto *D = CE->getMethodDecl()) {
       if (isa<CXXDestructorDecl>(D)) {
-        if (auto *ME = dyn_cast<MemberExpr>(CE->getCallee())) {
-          if (auto *TI = ME->getMemberNameInfo().getNamedTypeInfo()) {
-            H.addExtraModifier(TI->getTypeLoc().getBeginLoc(),
-                               HighlightingModifier::ConstructorOrDestructor);
-          }
-        }
+        if (auto *ME = dyn_cast<MemberExpr>(CE->getCallee()))
+          H.addExtraModifier(ME->getMemberNameInfo()
+                                 .getNamedTypeInfo()
+                                 ->getTypeLoc()
+                                 .getBeginLoc(),
+                             HighlightingModifier::ConstructorOrDestructor);
       } else if (D->isOverloadedOperator()) {
         if (auto *ME = dyn_cast<MemberExpr>(CE->getCallee()))
           H.addToken(
@@ -834,8 +833,10 @@ public:
     auto *TSI = D->getTypeSourceInfo();
     if (!TSI)
       return true;
-    SourceLocation StartLoc =
-        TSI->getTypeLoc().getContainedAutoTypeLoc().getNameLoc();
+    auto ATL = TSI->getTypeLoc().getContainedAutoTypeLoc();
+    if (!ATL)
+      return true;
+    SourceLocation StartLoc = ATL.getNameLoc();
     // The AutoType may not have a corresponding token, e.g. in the case of
     // init-captures. In this case, StartLoc overlaps with the location
     // of the decl itself, and producing a token for the type here would result

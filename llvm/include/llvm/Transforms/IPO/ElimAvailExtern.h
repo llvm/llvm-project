@@ -24,7 +24,7 @@ class Module;
 class EliminateAvailableExternallyPass
     : public OptionalPassInfoMixin<EliminateAvailableExternallyPass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
 
 } // end namespace llvm

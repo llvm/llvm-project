@@ -116,3 +116,37 @@ func.func @test_preserve_scatter_i8_i32(%arg0: tensor<13x52x3xi8>, %arg1: tensor
   %0 = tosa.scatter %arg0, %arg1, %arg2 : (tensor<13x52x3xi8>, tensor<13x26xi32>, tensor<13x26x3xi8>) -> tensor<13x52x3xi8>
   return %0 : tensor<13x52x3xi8>
 }
+
+// -----
+
+// CHECK-LABEL: @test_matmul_t_static_batch
+// CHECK: %[[TRANSPOSE:.+]] = tosa.transpose %arg1 {perms = array<i32: 0, 2, 1>} : (tensor<4x28x19xf32>) -> tensor<4x19x28xf32>
+// CHECK: %[[MATMUL:.+]] = tosa.matmul %arg0, %[[TRANSPOSE]], %arg2, %arg3 : (tensor<4x14x19xf32>, tensor<4x19x28xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<4x14x28xf32>
+// CHECK: return %[[MATMUL]]
+func.func @test_matmul_t_static_batch(%arg0: tensor<4x14x19xf32>, %arg1: tensor<4x28x19xf32>, %arg2: tensor<1xf32>, %arg3: tensor<1xf32>) -> tensor<4x14x28xf32> {
+  %0 = tosa.matmul_t %arg0, %arg1, %arg2, %arg3 : (tensor<4x14x19xf32>, tensor<4x28x19xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<4x14x28xf32>
+  return %0 : tensor<4x14x28xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @test_matmul_t_static_broadcast
+// CHECK: %[[MULTIPLES:.+]] = tosa.const_shape {values = dense<[4, 1, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
+// CHECK: %[[TRANSPOSE:.+]] = tosa.transpose %arg1 {perms = array<i32: 0, 2, 1>} : (tensor<1x28x19xf32>) -> tensor<1x19x28xf32>
+// CHECK: %[[TILE:.+]] = tosa.tile %[[TRANSPOSE]], %[[MULTIPLES]] : (tensor<1x19x28xf32>, !tosa.shape<3>) -> tensor<4x19x28xf32>
+// CHECK: %[[MATMUL:.+]] = tosa.matmul %arg0, %[[TILE]], %arg2, %arg3 : (tensor<4x14x19xf32>, tensor<4x19x28xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<4x14x28xf32>
+// CHECK: return %[[MATMUL]]
+func.func @test_matmul_t_static_broadcast(%arg0: tensor<4x14x19xf32>, %arg1: tensor<1x28x19xf32>, %arg2: tensor<1xf32>, %arg3: tensor<1xf32>) -> tensor<4x14x28xf32> {
+  %0 = tosa.matmul_t %arg0, %arg1, %arg2, %arg3 : (tensor<4x14x19xf32>, tensor<1x28x19xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<4x14x28xf32>
+  return %0 : tensor<4x14x28xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @test_preserve_matmul_t_dynamic_broadcast
+// CHECK: %[[MATMUL_T:.+]] = tosa.matmul_t %arg0, %arg1, %arg2, %arg3 : (tensor<4x14x19xf32>, tensor<?x28x19xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<4x14x28xf32>
+// CHECK: return %[[MATMUL_T]]
+func.func @test_preserve_matmul_t_dynamic_broadcast(%arg0: tensor<4x14x19xf32>, %arg1: tensor<?x28x19xf32>, %arg2: tensor<1xf32>, %arg3: tensor<1xf32>) -> tensor<4x14x28xf32> {
+  %0 = tosa.matmul_t %arg0, %arg1, %arg2, %arg3 : (tensor<4x14x19xf32>, tensor<?x28x19xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<4x14x28xf32>
+  return %0 : tensor<4x14x28xf32>
+}

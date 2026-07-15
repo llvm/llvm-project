@@ -72,9 +72,11 @@ class ErrorReporter {
     llvm_unreachable("Unknown target alloc kind");
   }
 
+#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wgcc-compat"
 #pragma clang diagnostic ignored "-Wformat-security"
+#endif
   /// Print \p Format, instantiated with \p Args to stderr.
   /// TODO: Allow redirection into a file stream.
   template <typename... ArgsTy>
@@ -109,7 +111,9 @@ class ErrorReporter {
     print(BoldRed, Format, Args...);
     print("\n");
   }
+#ifdef __clang__
 #pragma clang diagnostic pop
+#endif
 
   static void reportError(const char *Str) { reportError("%s", Str); }
   static void print(const char *Str) { print("%s", Str); }

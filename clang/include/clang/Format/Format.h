@@ -2462,6 +2462,31 @@ struct FormatStyle {
   /// \version 16
   BreakBeforeInlineASMColonStyle BreakBeforeInlineASMColon;
 
+  /// Different ways to break before the function return type.
+  enum BreakBeforeReturnTypeStyle : int8_t {
+    /// Do not force a break before the return type.
+    BBRTS_None,
+    /// Always break before the return type.
+    /// \code
+    ///   static inline
+    ///   void f();
+    /// \endcode
+    BBRTS_All,
+    /// Break before the return type of top-level functions only.
+    BBRTS_TopLevel,
+    /// Break before the return type of function definitions only.
+    BBRTS_AllDefinitions,
+    /// Break before the return type of top-level definitions only.
+    BBRTS_TopLevelDefinitions,
+  };
+
+  /// The function declaration/definition return type breaking style to use.
+  /// Trailing return types (``auto f() -> T``) are not affected. To have
+  /// identifier macros (e.g. ``__always_inline``) treated as specifiers,
+  /// add them to ``AttributeMacros``.
+  /// \version 23
+  BreakBeforeReturnTypeStyle BreakBeforeReturnType;
+
   /// If ``true``, break before a template closing bracket (``>``) when there is
   /// a line break after the matching opening bracket (``<``).
   /// \code
@@ -6092,6 +6117,7 @@ struct FormatStyle {
            BreakBeforeCloseBracketSwitch == R.BreakBeforeCloseBracketSwitch &&
            BreakBeforeConceptDeclarations == R.BreakBeforeConceptDeclarations &&
            BreakBeforeInlineASMColon == R.BreakBeforeInlineASMColon &&
+           BreakBeforeReturnType == R.BreakBeforeReturnType &&
            BreakBeforeTemplateCloser == R.BreakBeforeTemplateCloser &&
            BreakBeforeTernaryOperators == R.BreakBeforeTernaryOperators &&
            BreakBinaryOperations == R.BreakBinaryOperations &&

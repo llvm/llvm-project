@@ -462,6 +462,11 @@ static Decomposition decomposeGEP(GEPOperator &GEP,
   if (!BasePtr || NW == GEPNoWrapFlags::none())
     return &GEP;
 
+  // For a nuw-only GEP (nuw without nusw/inbounds), the offset must be
+  // interpreted as unsigned.
+  if (!NW.hasNoUnsignedSignedWrap() && ConstantOffset.isNegative())
+    return &GEP;
+
   Decomposition Result(ConstantOffset.getSExtValue(), DecompEntry(1, BasePtr));
   for (auto [Index, Scale] : VariableOffsets) {
     auto IdxResult = decompose(Index, Preconditions, IsSigned, DL);
@@ -936,21 +941,20 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (!L || L->getHeader() != &BB)
     return;
 
+  // A is either a phi or a post-increment PN + C with constant step. For the
+  // latter, extract the constant IncStep.
   Value *A;
   Value *B;
+  PHINode *PN = nullptr;
+  const APInt *IncStep = nullptr;
   CmpPredicate Pred;
+  auto IndValue =
+      m_Value(A, m_CombineOr(m_Phi(PN), m_c_Add(m_Phi(PN), m_APInt(IncStep))));
 
   if (!match(BB.getTerminator(),
-             m_Br(m_ICmp(Pred, m_Value(A), m_Value(B)), m_Value(), m_Value())))
+             m_Br(m_c_ICmp(Pred, IndValue, m_Value(B)), m_Value(), m_Value())))
     return;
-  PHINode *PN = dyn_cast<PHINode>(A);
-  if (!PN) {
-    Pred = CmpInst::getSwappedPredicate(Pred);
-    std::swap(A, B);
-    PN = dyn_cast<PHINode>(A);
-  }
-
-  if (!PN || PN->getParent() != &BB || PN->getNumIncomingValues() != 2 ||
+  if (PN->getParent() != &BB || PN->getNumIncomingValues() != 2 ||
       !SE.isSCEVable(PN->getType()))
     return;
 
@@ -965,9 +969,12 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (!L->contains(InLoopSucc) || !L->isLoopExiting(&BB) || InLoopSucc == &BB)
     return;
 
-  auto *AR = dyn_cast_or_null<SCEVAddRecExpr>(SE.getSCEV(PN));
   BasicBlock *LoopPred = L->getLoopPredecessor();
-  if (!AR || AR->getLoop() != L || !LoopPred)
+  if (!LoopPred || !L->isLoopInvariant(B))
+    return;
+
+  auto *AR = dyn_cast_or_null<SCEVAddRecExpr>(SE.getSCEV(PN));
+  if (!AR || AR->getLoop() != L)
     return;
 
   const SCEV *StartSCEV = AR->getStart();
@@ -1001,8 +1008,9 @@ void State::addInfoForInductions(BasicBlock &BB) {
   else
     return;
 
-  // Make sure the bound B is loop-invariant.
-  if (!L->isLoopInvariant(B))
+  // If we looked through `PN + C`, only derive facts when that add is
+  // really the induction's post-increment.
+  if (IncStep && (*IncStep != StepOffset || StepOffset.isNegative()))
     return;
 
   // Handle negative steps.
@@ -1045,24 +1053,39 @@ void State::addInfoForInductions(BasicBlock &BB) {
       return;
   }
 
-  // AR may wrap. Add PN >= StartValue conditional on StartValue <= B which
+  Value *LowerBound = StartValue;
+  if (IncStep) {
+    // Adjust lower bound when dealing with a post-increment value.
+    auto *StartC = dyn_cast<ConstantInt>(StartValue);
+    if (!StartC)
+      return;
+    bool Overflow = false;
+    APInt Sum = StartC->getValue().uadd_ov(StepOffset, Overflow);
+    if (Overflow)
+      return;
+    LowerBound = ConstantInt::get(StartValue->getType(), Sum);
+  }
+
+  // AR may wrap. Add PN >= StartValue conditional on LowerBound <= B which
   // guarantees that the loop exits before wrapping in combination with the
   // restrictions on B and the step above.
   if (!MonotonicallyIncreasingUnsigned)
     WorkList.push_back(FactOrCheck::getConditionFact(
         DTN, CmpInst::ICMP_UGE, PN, StartValue,
-        ConditionTy(CmpInst::ICMP_ULE, StartValue, B)));
-  if (!MonotonicallyIncreasingSigned)
+        ConditionTy(CmpInst::ICMP_ULE, LowerBound, B)));
+  // Only unsigned facts are derived for the post-increment path.
+  if (!MonotonicallyIncreasingSigned && !IncStep)
     WorkList.push_back(FactOrCheck::getConditionFact(
         DTN, CmpInst::ICMP_SGE, PN, StartValue,
         ConditionTy(CmpInst::ICMP_SLE, StartValue, B)));
 
   WorkList.push_back(FactOrCheck::getConditionFact(
       DTN, CmpInst::ICMP_ULT, PN, B,
-      ConditionTy(CmpInst::ICMP_ULE, StartValue, B)));
-  WorkList.push_back(FactOrCheck::getConditionFact(
-      DTN, CmpInst::ICMP_SLT, PN, B,
-      ConditionTy(CmpInst::ICMP_SLE, StartValue, B)));
+      ConditionTy(CmpInst::ICMP_ULE, LowerBound, B)));
+  if (!IncStep)
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, CmpInst::ICMP_SLT, PN, B,
+        ConditionTy(CmpInst::ICMP_SLE, StartValue, B)));
 
   // Try to add condition from header to the dedicated exit blocks. When exiting
   // either with EQ or NE in the header, we know that the induction value must
@@ -1070,7 +1093,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
   assert(!StepOffset.isNegative() && "induction must be increasing");
   assert((Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE) &&
          "unsupported predicate");
-  ConditionTy Precond = {CmpInst::ICMP_ULE, StartValue, B};
+  ConditionTy Precond = {CmpInst::ICMP_ULE, LowerBound, B};
   SmallVector<BasicBlock *> ExitBBs;
   L->getExitBlocks(ExitBBs);
   for (BasicBlock *EB : ExitBBs) {
@@ -1129,6 +1152,8 @@ void State::addInfoFor(BasicBlock &BB) {
   addInfoForInductions(BB);
   auto &DL = BB.getDataLayout();
 
+  Value *A, *B;
+  CmpPredicate Pred;
   // True as long as the current instruction is guaranteed to execute.
   bool GuaranteedToExecute = true;
   // Queue conditions and assumes.
@@ -1152,8 +1177,6 @@ void State::addInfoFor(BasicBlock &BB) {
       if (!AccessSize.isFixed())
         return;
       if (GuaranteedToExecute) {
-        CmpPredicate Pred;
-        Value *A, *B;
         if (getConstraintFromMemoryAccess(*GEP, AccessSize.getFixedValue(),
                                           Pred, A, B, DL, TLI)) {
           // The memory access is guaranteed to execute when BB is entered,
@@ -1180,9 +1203,7 @@ void State::addInfoFor(BasicBlock &BB) {
     Intrinsic::ID ID = II ? II->getIntrinsicID() : Intrinsic::not_intrinsic;
     switch (ID) {
     case Intrinsic::assume: {
-      Value *A, *B;
-      CmpPredicate Pred;
-      if (!match(I.getOperand(0), m_ICmp(Pred, m_Value(A), m_Value(B))))
+      if (!match(I.getOperand(0), m_ICmpLike(Pred, m_Value(A), m_Value(B))))
         break;
       if (GuaranteedToExecute) {
         // The assume is guaranteed to execute when BB is entered, hence Cond
@@ -1278,11 +1299,10 @@ void State::addInfoFor(BasicBlock &BB) {
       QueueValue(Op0);
       while (!CondWorkList.empty()) {
         Value *Cur = CondWorkList.pop_back_val();
-        if (auto *Cmp = dyn_cast<ICmpInst>(Cur)) {
+        if (match(Cur, m_ICmpLike(Pred, m_Value(A), m_Value(B)))) {
           WorkList.emplace_back(FactOrCheck::getConditionFact(
               DT.getNode(Successor),
-              IsOr ? Cmp->getInverseCmpPredicate() : Cmp->getCmpPredicate(),
-              Cmp->getOperand(0), Cmp->getOperand(1)));
+              IsOr ? CmpPredicate::getInverse(Pred) : Pred, A, B));
           continue;
         }
         if (IsOr && match(Cur, m_LogicalOr(m_Value(Op0), m_Value(Op1)))) {
@@ -1300,17 +1320,14 @@ void State::addInfoFor(BasicBlock &BB) {
     return;
   }
 
-  auto *CmpI = dyn_cast<ICmpInst>(Br->getCondition());
-  if (!CmpI)
+  if (!match(Br->getCondition(), m_ICmpLike(Pred, m_Value(A), m_Value(B))))
     return;
   if (canAddSuccessor(BB, Br->getSuccessor(0)))
     WorkList.emplace_back(FactOrCheck::getConditionFact(
-        DT.getNode(Br->getSuccessor(0)), CmpI->getCmpPredicate(),
-        CmpI->getOperand(0), CmpI->getOperand(1)));
+        DT.getNode(Br->getSuccessor(0)), Pred, A, B));
   if (canAddSuccessor(BB, Br->getSuccessor(1)))
     WorkList.emplace_back(FactOrCheck::getConditionFact(
-        DT.getNode(Br->getSuccessor(1)), CmpI->getInverseCmpPredicate(),
-        CmpI->getOperand(0), CmpI->getOperand(1)));
+        DT.getNode(Br->getSuccessor(1)), CmpPredicate::getInverse(Pred), A, B));
 }
 
 #ifndef NDEBUG
@@ -2060,10 +2077,11 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         continue;
       }
     } else {
-      bool Matched = match(CB.Inst, m_Intrinsic<Intrinsic::assume>(
-                                        m_ICmp(Pred, m_Value(A), m_Value(B))));
+      bool Matched = match(CB.Inst, m_Intrinsic<Intrinsic::assume>(m_ICmpLike(
+                                        Pred, m_Value(A), m_Value(B))));
       (void)Matched;
-      assert(Matched && "Must have an assume intrinsic with a icmp operand");
+      assert(Matched &&
+             "Must have an assume intrinsic with a icmp like operand");
     }
     AddFact(Pred, A, B);
   }

@@ -162,8 +162,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:     /*TargetOpcode::G_SEXT*//*Label 4*/ GIMT_Encode4([[L4:[0-9]+]]), GIMT_Encode4(0),
 // CHECK-NEXT:     /*TargetOpcode::G_ZEXT*//*Label 5*/ GIMT_Encode4([[L5:[0-9]+]]),
 // CHECK-NEXT:     // Label 0: @[[#%u, mul(UPPER-LOWER, 4) + 10]]
-// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 7*/ GIMT_Encode4([[L7:[0-9]+]]), // Rule ID 4 //
-// CHECK-NEXT:       GIM_CheckFeatures, GIMT_Encode2(GIFBS_HasAnswerToEverything),
+// CHECK-NEXT:     GIM_Try_CheckFeatures, /*On fail goto*//*Label 7*/ GIMT_Encode4([[L7:[0-9]+]]), GIMT_Encode2(GIFBS_HasAnswerToEverything), // Rule ID 4 //
 // CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule3Enabled),
 // CHECK-NEXT:       // MIs[0] a
 // CHECK-NEXT:       // No operand predicates

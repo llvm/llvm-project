@@ -1,4 +1,11 @@
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(libclc VERSION 0.2.0 LANGUAGES CXX C)
@@ -26,7 +33,7 @@ option(
 set( LIBCLC_ARCHS_NVPTX nvptx64 )
 set( LIBCLC_ARCHS_AMDGPU amdgpu amdgcn )
 set( LIBCLC_ARCHS_SPIRV spirv spirv32 spirv64 )
-list( APPEND LIBCLC_ARCHS_ALL ${LIBCLC_ARCHS_AMDGPU} ${LIBCLC_ARCHS_NVPTX} ${LIBCLC_ARCHS_SPIRV} )
+set( LIBCLC_ARCHS_ALL ${LIBCLC_ARCHS_AMDGPU} ${LIBCLC_ARCHS_NVPTX} ${LIBCLC_ARCHS_SPIRV} )
 
 set(LIBCLC_TARGET ${LLVM_DEFAULT_TARGET_TRIPLE})
 
@@ -83,9 +90,9 @@ else()
   include(GetClangResourceDir)
   get_clang_resource_dir( LIBCLC_INSTALL_DIR )
   cmake_path( APPEND LIBCLC_INSTALL_DIR "lib" )
-
-  cmake_path( GET LLVM_LIBRARY_OUTPUT_INTDIR PARENT_PATH LIBCLC_OUTPUT_LIBRARY_DIR )
-  cmake_path( APPEND LIBCLC_OUTPUT_LIBRARY_DIR ${LIBCLC_INSTALL_DIR} )
+  cmake_path( APPEND LLVM_BINARY_DIR ${LIBCLC_INSTALL_DIR}
+    OUTPUT_VARIABLE LIBCLC_OUTPUT_LIBRARY_DIR
+  )
 endif()
 
 if( NOT LIBCLC_USE_SPIRV_BACKEND )
@@ -123,18 +130,8 @@ foreach( tool IN ITEMS opt llvm-link )
   endif()
 endforeach()
 
-# Determine the clang target triple. Vulkan and SPIR-V backend targets use the
-# triple directly; other SPIR-V targets fall back to the legacy SPIR target.
+# Determine the clang target triple.
 set(clang_triple ${LIBCLC_TARGET})
-if(LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_SPIRV)
-  if(NOT LIBCLC_TARGET_OS STREQUAL vulkan AND NOT LIBCLC_USE_SPIRV_BACKEND)
-    if(LIBCLC_TARGET_ARCH STREQUAL spirv)
-      set(clang_triple spir--)
-    else()
-      set(clang_triple spir64--)
-    endif()
-  endif()
-endif()
 
 # Address space values.
 set(private_addrspace_val 0)
@@ -201,35 +198,28 @@ libclc_add_builtin_library(${LIBCLC_CLC_TARGET}
   COMPILE_OPTIONS ${compile_flags}
   INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/clc/include
   COMPILE_DEFINITIONS ${common_defs}
+  SOURCE_SUB_DIR clc
   FOLDER "libclc/Device IR/CLC"
 )
 
+# Build, link, and install the final OpenCL builtins library.
 set(LIBCLC_OPENCL_TARGET opencl)
-libclc_add_builtin_library(${LIBCLC_OPENCL_TARGET}
+libclc_add_library(libclc-${LIBCLC_TARGET}
+  ARCH ${LIBCLC_TARGET_ARCH}
+  TRIPLE ${clang_triple}
+  TARGET_TRIPLE ${LIBCLC_TARGET}
   COMPILE_OPTIONS ${compile_flags} "SHELL:-Xclang -fdeclare-opencl-builtins"
   INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/clc/include
     ${CMAKE_CURRENT_SOURCE_DIR}/opencl/include
   COMPILE_DEFINITIONS ${common_defs}
-  FOLDER "libclc/Device IR/Intermediate"
-)
-
-add_subdirectory(clc)
-add_subdirectory(opencl)
-
-# Link and install the final OpenCL builtins library.
-libclc_add_library(libclc-${LIBCLC_TARGET}
-  ARCH ${LIBCLC_TARGET_ARCH}
-  TRIPLE ${clang_triple}
-  TARGET_TRIPLE ${LIBCLC_TARGET}
-  LIBRARIES ${LIBCLC_OPENCL_TARGET}
   INTERNALIZE_LIBRARIES ${LIBCLC_CLC_TARGET}
   OPT_FLAGS ${opt_flags}
+  SOURCE_TARGET ${LIBCLC_OPENCL_TARGET}
+  SOURCE_SUB_DIR opencl
   OUTPUT_FILENAME libclc
   PARENT_TARGET libclc-opencl-builtins
 )
-
-set(LIBCLC_UNRESOLVED_SYMBOL_TEST_TARGETS libclc-${LIBCLC_TARGET})
 
 if(LLVM_INCLUDE_TESTS)
   add_subdirectory(test)

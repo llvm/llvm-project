@@ -38,3 +38,150 @@ acc.compute_region launch(%arg0 = %c32) {
 ^bb0(%arg0: index, %extra: index):
   "acc.yield"() : () -> ()
 }) {origin = "acc.parallel"} : (index) -> ()
+
+// -----
+
+func.func @reduction_accumulate_invalid_operator() {
+  %partial = arith.constant 1.0 : f32
+  %private = memref.alloca() : memref<f32>
+  acc.reduction_accumulate %partial to %private <addi>
+      : f32 -> memref<f32> {par_dims = #acc<par_dims[thread_x]>}
+  // expected-error@-2 {{expected ::mlir::acc::ReductionOperator to be one of}}
+  // expected-error@-3 {{failed to parse OpenACC_ReductionOperatorAttr}}
+  return
+}
+
+// -----
+
+func.func @reduction_accumulate_type_mismatch() {
+  %wrong_ty = arith.constant 3.0 : f32
+  %private_i32 = memref.alloca() : memref<i32>
+  // expected-error@+1 {{pointer-like element type must match value type}}
+  acc.reduction_accumulate %wrong_ty to %private_i32 <add>
+      : f32 -> memref<i32> {par_dims = #acc<par_dims[thread_x]>}
+  return
+}
+
+// -----
+
+func.func @reduction_accumulate_empty_par_dims() {
+  %partial3 = arith.constant 4 : i32
+  %private4 = memref.alloca() : memref<i32>
+  // expected-error@+1 {{par_dims must specify at least one parallel dimension}}
+  acc.reduction_accumulate %partial3 to %private4 <add>
+      : i32 -> memref<i32> {par_dims = #acc<par_dims[]>}
+  return
+}
+
+// -----
+
+func.func @reduction_accumulate_array_invalid_operator(%private: memref<4xi32>, %bounds: !acc.data_bounds_ty) {
+  acc.reduction_accumulate_array %private bounds(%bounds) <addi>
+      : memref<4xi32> {par_dims = #acc<par_dims[thread_x]>}
+  // expected-error@-2 {{expected ::mlir::acc::ReductionOperator to be one of}}
+  // expected-error@-3 {{failed to parse OpenACC_ReductionOperatorAttr}}
+  return
+}
+
+// -----
+
+func.func @reduction_accumulate_array_empty_par_dims(%private: memref<4xi32>, %bounds: !acc.data_bounds_ty) {
+  // expected-error@+1 {{par_dims must specify at least one parallel dimension}}
+  acc.reduction_accumulate_array %private bounds(%bounds) <add>
+      : memref<4xi32> {par_dims = #acc<par_dims[]>}
+  return
+}
+
+// -----
+
+func.func @predicate_region_empty() {
+  acc.compute_region {
+    // expected-error@+1 {{region needs to have at least one block}}
+    acc.predicate_region {
+    }
+    acc.yield
+  } {origin = "acc.parallel"}
+  return
+}
+
+// -----
+
+func.func @predicate_region_with_args() {
+  acc.compute_region {
+    // expected-error@+1 {{region cannot have any arguments}}
+    acc.predicate_region {
+    ^bb0(%arg0: index):
+      %c0 = arith.constant 0 : index
+    }
+    acc.yield
+  } {origin = "acc.parallel"}
+  return
+}
+
+// -----
+
+func.func @predicate_region_outside_compute_region() {
+  // expected-error@+1 {{must be nested within an acc.compute_region operation}}
+  acc.predicate_region {
+    %c0 = arith.constant 0 : i32
+  }
+  return
+}
+
+// -----
+
+func.func @gpu_shared_memory_mismatched_runtime_attrs() {
+  // expected-error@+1 {{dynamic_shared_memory_scaling_bytes and dynamic_shared_memory_fixed_bytes must both be present or both be absent}}
+  %sm = acc.gpu_shared_memory()
+      {num_copies = 1 : i64,
+       static_upper_bound_bytes = 512 : i64,
+       dynamic_shared_memory_scaling_bytes = 4 : i64}
+      : () -> memref<8xf32, #gpu.address_space<workgroup>>
+  return
+}
+
+// -----
+
+func.func @gpu_shared_memory_non_workgroup_memref() {
+  // expected-error@+1 {{result memref must use #gpu.address_space<workgroup>}}
+  %sm = acc.gpu_shared_memory()
+      {num_copies = 1 : i64, static_upper_bound_bytes = 512 : i64}
+      : () -> memref<8xf32>
+  return
+}
+
+// -----
+
+func.func @gpu_shared_memory_zero_num_copies() {
+  // expected-error@+1 {{num_copies must be positive}}
+  %sm = acc.gpu_shared_memory()
+      {num_copies = 0 : i64, static_upper_bound_bytes = 512 : i64}
+      : () -> memref<8xf32, #gpu.address_space<workgroup>>
+  return
+}
+
+// -----
+
+func.func @gpu_shared_memory_negative_scaling_bytes() {
+  // expected-error@+1 {{dynamic_shared_memory_scaling_bytes must be non-negative}}
+  %sm = acc.gpu_shared_memory()
+      {num_copies = 1 : i64,
+       static_upper_bound_bytes = 512 : i64,
+       dynamic_shared_memory_scaling_bytes = -1 : i64,
+       dynamic_shared_memory_fixed_bytes = 24 : i64}
+      : () -> memref<8xf32, #gpu.address_space<workgroup>>
+  return
+}
+
+// -----
+
+func.func @gpu_shared_memory_negative_fixed_bytes() {
+  // expected-error@+1 {{dynamic_shared_memory_fixed_bytes must be non-negative}}
+  %sm = acc.gpu_shared_memory()
+      {num_copies = 1 : i64,
+       static_upper_bound_bytes = 512 : i64,
+       dynamic_shared_memory_scaling_bytes = 12 : i64,
+       dynamic_shared_memory_fixed_bytes = -1 : i64}
+      : () -> memref<8xf32, #gpu.address_space<workgroup>>
+  return
+}

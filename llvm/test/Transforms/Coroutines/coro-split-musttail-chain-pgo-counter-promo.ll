@@ -1,12 +1,12 @@
 ; REQUIRES: x86-registered-target
 ; RUN: opt -passes='pgo-instr-gen,instrprof,coro-split' -do-counter-promotion=true -S < %s | FileCheck %s
 
-; CHECK-LABEL: define internal fastcc void @f.resume
-; CHECK: musttail call fastcc void 
+; CHECK-LABEL: define internal void @f.resume
+; CHECK: musttail call void 
 ; CHECK-NEXT: ret void
-; CHECK: musttail call fastcc void 
+; CHECK: musttail call void 
 ; CHECK-NEXT: ret void
-; CHECK-LABEL: define internal fastcc void @f.destroy
+; CHECK-LABEL: define internal void @f.destroy
 target triple = "x86_64-grtev4-linux-gnu"
 
 %CoroutinePromise = type { ptr, i64, [8 x i8], ptr} 
@@ -131,7 +131,7 @@ define ptr @f(i32 %0) presplitcoroutine align 32 {
   %48 = inttoptr i64 %40 to ptr
   %49 = call ptr @llvm.coro.subfn.addr(ptr %48, i8 0)
   %50 = ptrtoint ptr %49 to i64
-  call fastcc void %49(ptr %48) #9
+  call void %49(ptr %48) #9
   %51 = call i8 @llvm.coro.suspend(token %37, i1 true) #28
   switch i8 %51, label %61 [
     i8 0, label %53

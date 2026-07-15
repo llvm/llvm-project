@@ -1016,6 +1016,18 @@ CIRGenTypes::arrangeFreeFunctionCall(const CallArgList &args,
   return arrangeFreeFunctionLikeCall(*this, cgm, args, fnType);
 }
 
+const CIRGenFunctionInfo &
+CIRGenTypes::arrangeBuiltinFunctionCall(QualType resultType,
+                                        const CallArgList &args) {
+  llvm::SmallVector<CanQualType, 16> argTypes;
+  for (const CallArg &arg : args)
+    argTypes.push_back(astContext.getCanonicalParamType(arg.ty));
+
+  CanQualType retType = resultType->getCanonicalTypeUnqualified();
+  return arrangeCIRFunctionInfo(retType, /*isInstanceMethod=*/false, argTypes,
+                                FunctionType::ExtInfo(), RequiredArgs::All);
+}
+
 /// Arrange the argument and result information for a declaration or definition
 /// of the given C++ non-static member function. The member function must be an
 /// ordinary function, i.e. not a constructor or destructor.
@@ -1028,7 +1040,15 @@ CIRGenTypes::arrangeCXXMethodDeclaration(const CXXMethodDecl *md) {
       md->getType()->getCanonicalTypeUnqualified().getAs<FunctionProtoType>();
   assert(!cir::MissingFeatures::cudaSupport());
 
-  if (md->isInstance()) {
+  // Mirrors classic CodeGen's check at CGCall.cpp.  C++23 explicit-object
+  // member functions (P0847R7, `void f(this Self&&)`) do not receive an
+  // implicit `this`; the explicit object parameter takes its place at the
+  // AST level and appears as the first parameter of the FunctionProtoType.
+  // Arrange them as free functions so we don't prepend a stale implicit
+  // `this` to the parameter list, which would produce a CIRGenFunctionInfo
+  // with one more argument than the matching cir.func type and trip the
+  // assertion in setArgAttrs.
+  if (md->isImplicitObjectMemberFunction()) {
     // The abstract case is perfectly fine.
     auto *thisType = theCXXABI.getThisArgumentTypeForMethod(md);
     return arrangeCXXMethodType(thisType, prototype.getTypePtr(), md);

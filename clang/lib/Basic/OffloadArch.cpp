@@ -40,16 +40,22 @@ static const OffloadArchToStringMap ArchNames[] = {
     SM(90a),                         // Hopper
     SM(100),                         // Blackwell
     SM(100a),                        // Blackwell
+    SM(100f),                        // Blackwell
     SM(101),                         // Blackwell
     SM(101a),                        // Blackwell
+    SM(101f),                        // Blackwell
     SM(103),                         // Blackwell
     SM(103a),                        // Blackwell
+    SM(103f),                        // Blackwell
     SM(110),                         // Blackwell
     SM(110a),                        // Blackwell
+    SM(110f),                        // Blackwell
     SM(120),                         // Blackwell
     SM(120a),                        // Blackwell
+    SM(120f),                        // Blackwell
     SM(121),                         // Blackwell
     SM(121a),                        // Blackwell
+    SM(121f),                        // Blackwell
     GFX(600),  // gfx600
     GFX(601),  // gfx601
     GFX(602),  // gfx602
@@ -98,15 +104,18 @@ static const OffloadArchToStringMap ArchNames[] = {
     GFX(1151), // gfx1151
     GFX(1152), // gfx1152
     GFX(1153), // gfx1153
+    GFX(1154), // gfx1154
+    {OffloadArch::GFX11_7_GENERIC, "gfx11-7-generic", "compute_amdgcn"},
     GFX(1170), // gfx1170
     GFX(1171), // gfx1171
     GFX(1172), // gfx1172
     {OffloadArch::GFX12_GENERIC, "gfx12-generic", "compute_amdgcn"},
     GFX(1200), // gfx1200
     GFX(1201), // gfx1201
+    {OffloadArch::GFX12_5_GENERIC, "gfx12-5-generic", "compute_amdgcn"},
     GFX(1250), // gfx1250
     GFX(1251), // gfx1251
-    {OffloadArch::GFX12_5_GENERIC, "gfx12-5-generic", "compute_amdgcn"},
+    {OffloadArch::GFX13_GENERIC, "gfx13-generic", "compute_amdgcn"},
     GFX(1310), // gfx1310
     {OffloadArch::AMDGCNSPIRV, "amdgcnspirv", "compute_amdgcn"},
     // Intel CPUs
@@ -164,8 +173,7 @@ llvm::Triple OffloadArchToTriple(const llvm::Triple &DefaultToolchainTriple,
   }
 
   if (IsAMDOffloadArch(ID))
-    return llvm::Triple(llvm::Triple::amdgcn, llvm::Triple::NoSubArch,
-                        llvm::Triple::AMD, llvm::Triple::AMDHSA);
+    return llvm::Triple("amdgcn-amd-amdhsa");
 
   return {};
 }

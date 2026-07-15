@@ -6,13 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// clang-format off
-// LLDB Python header must be included first
 #include "../lldb-python.h"
-//clang-format on
 
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
 
@@ -56,9 +54,9 @@ ScriptedHookPythonInterface::GetSupportedMethods() {
 
 llvm::Expected<StructuredData::GenericSP>
 ScriptedHookPythonInterface::CreatePluginObject(
-    llvm::StringRef class_name, lldb::TargetSP target_sp,
-    const StructuredDataImpl &args_sp) {
-  return ScriptedPythonInterface::CreatePluginObject(class_name, nullptr,
+    const ScriptedMetadata &scripted_metadata, lldb::TargetSP target_sp) {
+  StructuredDataImpl args_sp(scripted_metadata.GetArgsSP());
+  return ScriptedPythonInterface::CreatePluginObject(scripted_metadata, nullptr,
                                                      target_sp, args_sp);
 }
 
@@ -101,7 +99,8 @@ void ScriptedHookPythonInterface::Initialize() {
       GetPluginNameStatic(),
       llvm::StringRef("Perform actions on target lifecycle events (module "
                       "load/unload, process stop)."),
-      CreateInstance, eScriptLanguagePython, {ci_usages, api_usages});
+      CreateInstance, eScriptedExtensionScriptedHook, eScriptLanguagePython,
+      {ci_usages, api_usages});
 }
 
 void ScriptedHookPythonInterface::Terminate() {
