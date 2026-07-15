@@ -447,44 +447,28 @@ static bool isSetregMode(const MachineInstr &MI, const SIInstrInfo &TII) {
 
 bool AMDGPULowerVGPREncoding::needNopBeforeSetVGPRMSB(
     MachineBasicBlock::instr_iterator I) {
-  while (I != MBB->begin()) {
-    I = std::prev(I);
-    if (isSetregMode(*I, *TII))
-      return true;
-    if (!I->isMetaInstruction())
-      return false;
-  }
-
-  // Look for a potential fallthrough predecessor block. When it ends with a
-  // S_SETREG_IMM32_B32(MODE) we need to insert a S_NOP too.
   MachineBasicBlock *CurrentMBB = MBB;
-  bool HasEmptyFallThroughPred;
-  do {
-    HasEmptyFallThroughPred = false;
-    for (MachineBasicBlock *PredMBB : CurrentMBB->predecessors()) {
-      // We assume that an explicit jump to the current block from the block
-      // that would otherwise have naturally fell through to it will remain in
-      // the final assembly.
-      if (PredMBB->getFallThrough(/*JumpToFallThrough=*/false) != CurrentMBB)
-        continue;
-
-      MachineBasicBlock::instr_iterator LastMI = PredMBB->instr_end();
-      while (LastMI != PredMBB->begin()) {
-        LastMI = std::prev(LastMI);
-        if (isSetregMode(*LastMI, *TII))
-          return true;
-        if (!LastMI->isMetaInstruction())
-          return false;
-      }
-
-      // The predecessor is empty, recursively look for its own potential
-      // fallthrough predecessor.
-      CurrentMBB = PredMBB;
-      HasEmptyFallThroughPred = true;
-      break;
+  MachineBasicBlock::iterator CurrentInstr = I;
+  while (true) {
+    // Walk the block backward until we hit a non-meta instruction or the
+    // beginning of the block.
+    while (CurrentInstr != CurrentMBB->begin()) {
+      CurrentInstr = std::prev(CurrentInstr);
+      if (isSetregMode(*CurrentInstr, *TII))
+        return true;
+      if (!CurrentInstr->isMetaInstruction())
+        return false;
     }
-  } while (HasEmptyFallThroughPred);
 
+    // Look for a potential fallthrough predecessor block. When it ends with a
+    // S_SETREG_IMM32_B32(MODE) we need to insert a S_NOP too. We assume that an
+    // explicit jump to the current block from the block that would otherwise
+    // have naturally fell through to it will remain in the final assembly.
+    CurrentMBB = CurrentMBB->getPrevNode();
+    if (!CurrentMBB || !CurrentMBB->canFallThrough())
+      return false;
+    CurrentInstr = CurrentMBB->end();
+  }
   return false;
 }
 
