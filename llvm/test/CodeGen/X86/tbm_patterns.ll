@@ -910,8 +910,6 @@ define i64 @test_x86_tbm_blsic_u64_sle(i64 %a, i64 %b, i64 %c) nounwind {
 }
 
 
-; CHECK-LABEL: test_blsic_original
-; CHECK: blsicl
 define i32 @test_blsic_original(i32 %x) {
 ; CHECK-LABEL: test_blsic_original:
 ; CHECK:       # %bb.0:
@@ -923,8 +921,6 @@ define i32 @test_blsic_original(i32 %x) {
   ret i32 %_0
 }
 
-; CHECK-LABEL: test_blsic_optimized
-; CHECK: blsicl
 define i32 @test_blsic_optimized(i32 %x) {
 ; CHECK-LABEL: test_blsic_optimized:
 ; CHECK:       # %bb.0:
@@ -936,9 +932,6 @@ define i32 @test_blsic_optimized(i32 %x) {
   ret i32 %3
 }
 
-; 64-bit versions
-; CHECK-LABEL: test_blsic_64_original
-; CHECK: blsicq
 define i64 @test_blsic_64_original(i64 %x) {
 ; CHECK-LABEL: test_blsic_64_original:
 ; CHECK:       # %bb.0:
@@ -950,8 +943,6 @@ define i64 @test_blsic_64_original(i64 %x) {
   ret i64 %_0
 }
 
-; CHECK-LABEL: test_blsic_64_optimized
-; CHECK: blsicq
 define i64 @test_blsic_64_optimized(i64 %x) {
 ; CHECK-LABEL: test_blsic_64_optimized:
 ; CHECK:       # %bb.0:
