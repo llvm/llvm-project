@@ -21,6 +21,7 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/libc_assert.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/math_extras.h"
 #include "src/string/memory_utils/inline_memcpy.h"
@@ -38,10 +39,19 @@ LIBC_INLINE constexpr bool IsPow2(size_t x) { return x && (x & (x - 1)) == 0; }
 
 class FreeListHeap {
 public:
-  constexpr FreeListHeap() : begin(&_end), end(&__llvm_libc_heap_limit) {}
+#if LIBC_COPT_HARDEN_FREELIST
+  LIBC_INLINE constexpr FreeListHeap()
+      : begin(&_end), end(&__llvm_libc_heap_limit), secrets(0, 0, 0) {}
 
-  constexpr FreeListHeap(span<cpp::byte> region)
+  LIBC_INLINE constexpr FreeListHeap(span<cpp::byte> region)
+      : begin(region.begin()), end(region.end()), secrets(0, 0, 0) {}
+#else
+  LIBC_INLINE constexpr FreeListHeap()
+      : begin(&_end), end(&__llvm_libc_heap_limit) {}
+
+  LIBC_INLINE constexpr FreeListHeap(span<cpp::byte> region)
       : begin(region.begin()), end(region.end()) {}
+#endif
 
   void *allocate(size_t size);
   void *aligned_allocate(size_t alignment, size_t size);
@@ -51,41 +61,46 @@ public:
   void *realloc(void *ptr, size_t size);
   void *calloc(size_t num, size_t size);
 
-  cpp::span<cpp::byte> region() const { return {begin, end}; }
+  LIBC_INLINE cpp::span<cpp::byte> region() const { return {begin, end}; }
+
+  void init(const FreeListSecrets &secrets);
+
+  void sanitize_heap() const;
 
 private:
-  void init();
-
   void *allocate_impl(size_t alignment, size_t size);
 
-  span<cpp::byte> block_to_span(BlockRef block) {
+  LIBC_INLINE span<cpp::byte> block_to_span(BlockRef block) {
     return span<cpp::byte>(block.usable_space(), block.inner_size());
   }
 
   bool shrink_in_place(BlockRef block, size_t size);
 
-  bool is_valid_ptr(void *ptr) { return ptr >= begin && ptr < end; }
+  LIBC_INLINE bool is_valid_ptr(void *ptr) { return ptr >= begin && ptr < end; }
 
   cpp::byte *begin;
   cpp::byte *end;
   bool is_initialized = false;
   FreeStore free_store;
+  LIBC_NO_UNIQUE_ADDRESS FreeListSecrets secrets;
 };
 
 template <size_t BUFF_SIZE> class FreeListHeapBuffer : public FreeListHeap {
 public:
-  constexpr FreeListHeapBuffer() : FreeListHeap{buffer}, buffer{} {}
+  LIBC_INLINE constexpr FreeListHeapBuffer() : FreeListHeap{buffer}, buffer{} {}
 
 private:
   cpp::byte buffer[BUFF_SIZE];
 };
 
-LIBC_INLINE void FreeListHeap::init() {
+[[gnu::noinline]] LIBC_INLINE void
+FreeListHeap::init(const FreeListSecrets &secrets_arg) {
   LIBC_ASSERT(!is_initialized && "duplicate initialization");
+  secrets = secrets_arg;
   auto result = BlockRef::init(region());
   BlockRef block = *result;
   free_store.set_range({0, cpp::bit_ceil(block.inner_size())});
-  free_store.insert(block);
+  free_store.insert(block, secrets);
   is_initialized = true;
 }
 
@@ -93,22 +108,28 @@ LIBC_INLINE void *FreeListHeap::allocate_impl(size_t alignment, size_t size) {
   if (size == 0)
     return nullptr;
 
+#if LIBC_COPT_HARDEN_FREELIST
+  LIBC_HARDENING_ASSERT(
+      is_initialized &&
+      "Hardened heap must be explicitly initialized via init(secrets)");
+#else
   if (!is_initialized)
-    init();
+    init({});
+#endif
 
   size_t request_size = BlockRef::min_size_for_allocation(alignment, size);
   if (!request_size)
     return nullptr;
 
-  BlockRef block = free_store.remove_best_fit(request_size);
+  BlockRef block = free_store.remove_best_fit(request_size, secrets);
   if (!block)
     return nullptr;
 
   auto block_info = BlockRef::allocate(block, alignment, size);
   if (block_info.next)
-    free_store.insert(block_info.next);
+    free_store.insert(block_info.next, secrets);
   if (block_info.prev)
-    free_store.insert(block_info.prev);
+    free_store.insert(block_info.prev, secrets);
 
   block_info.block.mark_used();
   return block_info.block.usable_space();
@@ -153,16 +174,16 @@ LIBC_INLINE void FreeListHeap::free(void *ptr) {
 
   if (prev_free) {
     // Remove from free store and merge.
-    free_store.remove(prev_free);
+    free_store.remove(prev_free, secrets);
     block = prev_free;
     block.merge_next();
   }
   if (!next.used()) {
-    free_store.remove(next);
+    free_store.remove(next, secrets);
     block.merge_next();
   }
   // Add back to the freelist
-  free_store.insert(block);
+  free_store.insert(block, secrets);
 }
 
 LIBC_INLINE bool FreeListHeap::shrink_in_place(BlockRef block, size_t size) {
@@ -182,10 +203,10 @@ LIBC_INLINE bool FreeListHeap::shrink_in_place(BlockRef block, size_t size) {
       // to be non-null.
       LIBC_ASSERT(right && "right block must be non-null");
       if (!right.used()) {
-        free_store.remove(right);
+        free_store.remove(right, secrets);
         next_block.merge_next();
       }
-      free_store.insert(next_block);
+      free_store.insert(next_block, secrets);
     }
     return true;
   }
@@ -237,6 +258,12 @@ LIBC_INLINE void *FreeListHeap::calloc(size_t num, size_t size) {
   if (ptr != nullptr)
     LIBC_NAMESPACE::inline_memset(ptr, 0, bytes);
   return ptr;
+}
+
+LIBC_INLINE void FreeListHeap::sanitize_heap() const {
+  if (!is_initialized)
+    return;
+  free_store.sanitize(secrets);
 }
 
 extern FreeListHeap *freelist_heap;

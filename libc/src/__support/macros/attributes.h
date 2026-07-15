@@ -165,4 +165,16 @@ LIBC_THREAD_MODE_EXTERNAL.
 #define LIBC_NO_SANITIZE_OOB_ACCESS
 #endif
 
+#if defined(__has_cpp_attribute)
+#if __has_cpp_attribute(msvc::no_unique_address)
+#define LIBC_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
+#elif __has_cpp_attribute(no_unique_address)
+#define LIBC_NO_UNIQUE_ADDRESS [[no_unique_address]]
+#endif
+#endif
+
+#ifndef LIBC_NO_UNIQUE_ADDRESS
+#define LIBC_NO_UNIQUE_ADDRESS
+#endif
+
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_ATTRIBUTES_H

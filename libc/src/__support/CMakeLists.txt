@@ -35,6 +35,7 @@ add_object_library(
     .block
     libc.src.__support.fixedvector
     libc.src.__support.CPP.array
+    libc.src.__support.CPP.bit
     libc.src.__support.CPP.cstddef
     libc.src.__support.CPP.new
     libc.src.__support.CPP.span
