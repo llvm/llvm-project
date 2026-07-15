@@ -215,7 +215,7 @@ public:
 
     switch (Inst.getOpcode()) {
     default:
-      llvm_unreachable("unsupported tail call opcode");
+      return false;
     case RISCV::JAL:
     case RISCV::JALR:
     case RISCV::C_J:
@@ -224,6 +224,14 @@ public:
     }
 
     setTailCall(Inst);
+    return true;
+  }
+
+  bool convertTailCallToJmp(MCInst &Inst) override {
+    removeAnnotation(Inst, MCPlus::MCAnnotation::kTailCall);
+    clearOffset(Inst);
+    if (getConditionalTailCall(Inst))
+      unsetConditionalTailCall(Inst);
     return true;
   }
 
@@ -328,6 +336,8 @@ public:
     default:
       return false;
     case RISCV::C_J:
+    case RISCV::PseudoCALL:
+    case RISCV::PseudoTAIL:
       OpNum = 0;
       return true;
     case RISCV::AUIPC:
