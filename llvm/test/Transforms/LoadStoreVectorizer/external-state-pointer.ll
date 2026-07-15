@@ -10,10 +10,9 @@ define { ptr addrspace(2), i32 } @load_external_state_pointer(ptr align 8 %base)
 ; CHECK-LABEL: define { ptr addrspace(2), i32 } @load_external_state_pointer(
 ; CHECK-SAME: ptr align 8 [[BASE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[BASE]], align 8
-; CHECK-NEXT:    [[P1:%.*]] = extractelement <2 x i32> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr i32 [[P1]] to ptr addrspace(2)
-; CHECK-NEXT:    [[I2:%.*]] = extractelement <2 x i32> [[TMP0]], i32 1
+; CHECK-NEXT:    [[NEXT:%.*]] = getelementptr i8, ptr [[BASE]], i64 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(2), ptr [[BASE]], align 8
+; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr [[NEXT]], align 4
 ; CHECK-NEXT:    [[R0:%.*]] = insertvalue { ptr addrspace(2), i32 } poison, ptr addrspace(2) [[TMP1]], 0
 ; CHECK-NEXT:    [[R1:%.*]] = insertvalue { ptr addrspace(2), i32 } [[R0]], i32 [[I2]], 1
 ; CHECK-NEXT:    ret { ptr addrspace(2), i32 } [[R1]]
@@ -35,10 +34,9 @@ define void @store_external_state_pointer(
 ; CHECK-LABEL: define void @store_external_state_pointer(
 ; CHECK-SAME: ptr align 8 [[BASE:%.*]], ptr addrspace(2) [[P:%.*]], i32 [[I:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr addrspace(2) [[P]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[I]], i32 1
-; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[BASE]], align 8
+; CHECK-NEXT:    [[NEXT:%.*]] = getelementptr i8, ptr [[BASE]], i64 4
+; CHECK-NEXT:    store ptr addrspace(2) [[P]], ptr [[BASE]], align 8
+; CHECK-NEXT:    store i32 [[I]], ptr [[NEXT]], align 4
 ; CHECK-NEXT:    ret void
 ;
   ptr align 8 %base, ptr addrspace(2) %p, i32 %i) {
