@@ -112,17 +112,16 @@ body: |
     RET 0, $al
 ...
 
-# Profitability: like dom_no_shadow, but bb.3 (the multi-predecessor block)
-# reaches the redundant compare in bb.4 through a single-predecessor chain that
-# itself has an NF-convertible clobber (the IMUL in bb.3). That clobber is on
-# the unconditional path to the compare, so converting it is pure added cost:
-# the reuse is declined and the compare kept (contrast dom_no_shadow, whose only
-# clobbers are on the mutually exclusive diamond arms).
+# Cap: the producer in bb.0 dominates the multi-predecessor block bb.3, but the
+# path to the redundant compare in bb.3 has more NF-convertible EFLAGS clobbers
+# (7 IMULs on the bb.1 arm) than the conversion cap allows. Converting that many
+# instructions to delete one compare is a net size regression, so the reuse is
+# declined and the compare in bb.3 is kept.
 ---
-name: chain_conv_unprofitable
+name: too_many_conversions
 tracksRegLiveness: true
 body: |
-  ; CHECK-LABEL: name: chain_conv_unprofitable
+  ; CHECK-LABEL: name: too_many_conversions
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $edi, $esi
@@ -137,18 +136,18 @@ body: |
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[IMUL32rr:%[0-9]+]]:gr32 = nuw nsw IMUL32rr [[COPY]], [[COPY1]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[IMUL32rr1:%[0-9]+]]:gr32 = nuw nsw IMUL32rr [[IMUL32rr]], [[COPY1]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[IMUL32rr2:%[0-9]+]]:gr32 = nuw nsw IMUL32rr [[IMUL32rr1]], [[COPY1]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[IMUL32rr3:%[0-9]+]]:gr32 = nuw nsw IMUL32rr [[IMUL32rr2]], [[COPY1]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[IMUL32rr4:%[0-9]+]]:gr32 = nuw nsw IMUL32rr [[IMUL32rr3]], [[COPY1]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[IMUL32rr5:%[0-9]+]]:gr32 = nuw nsw IMUL32rr [[IMUL32rr4]], [[COPY1]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[IMUL32rr6:%[0-9]+]]:gr32 = nuw nsw IMUL32rr [[IMUL32rr5]], [[COPY1]], implicit-def dead $eflags
   ; CHECK-NEXT:   JMP_1 %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   successors: %bb.4(0x80000000)
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[IMUL32rr1:%[0-9]+]]:gr32 = nuw nsw IMUL32rr [[COPY]], [[COPY1]], implicit-def dead $eflags
-  ; CHECK-NEXT:   JMP_1 %bb.4
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.4:
   ; CHECK-NEXT:   CMP32ri [[COPY]], 2, implicit-def $eflags
   ; CHECK-NEXT:   $al = SETCCr 15, implicit $eflags
   ; CHECK-NEXT:   RET 0, $al
@@ -162,15 +161,17 @@ body: |
 
   bb.1:
     %2:gr32 = nuw nsw IMUL32rr %0, %1, implicit-def dead $eflags
+    %3:gr32 = nuw nsw IMUL32rr %2, %1, implicit-def dead $eflags
+    %4:gr32 = nuw nsw IMUL32rr %3, %1, implicit-def dead $eflags
+    %5:gr32 = nuw nsw IMUL32rr %4, %1, implicit-def dead $eflags
+    %6:gr32 = nuw nsw IMUL32rr %5, %1, implicit-def dead $eflags
+    %7:gr32 = nuw nsw IMUL32rr %6, %1, implicit-def dead $eflags
+    %8:gr32 = nuw nsw IMUL32rr %7, %1, implicit-def dead $eflags
     JMP_1 %bb.3
 
   bb.2:
 
   bb.3:
-    %3:gr32 = nuw nsw IMUL32rr %0, %1, implicit-def dead $eflags
-    JMP_1 %bb.4
-
-  bb.4:
     CMP32ri %0, 2, implicit-def $eflags
     $al = SETCCr 15, implicit $eflags
     RET 0, $al

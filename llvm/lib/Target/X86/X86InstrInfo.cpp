@@ -81,6 +81,12 @@ static cl::opt<unsigned> UndefRegClearance(
              "certain undef register reads"),
     cl::init(128), cl::Hidden);
 
+static cl::opt<unsigned> MaxNFConversions(
+    "x86-max-nf-conversions-for-cmp-reuse",
+    cl::desc("Maximum number of NF conversions allowed to reuse EFLAGS from a "
+             "producer dominating a multi-predecessor block"),
+    cl::init(6), cl::Hidden);
+
 // Pin the vtable to this file.
 void X86InstrInfo::anchor() {}
 
@@ -5323,6 +5329,13 @@ MachineInstr *X86InstrInfo::findDominatingRedundantFlagInstr(
   // Clobbers are staged in Pending and committed only on success. Visited
   // (seeded with MultiPredMBB) stops the walk from revisiting a block or
   // re-entering the single-predecessor chain, so none is collected twice.
+  //
+  // Each NF conversion trades a compact legacy/EVEX-compressed encoding for a
+  // wider EVEX (often NDD three-operand) one, growing code size, while the
+  // reuse only removes a single compare. Cap the total number of conversions
+  // (those the caller already collected on the single-predecessor chain plus
+  // those the walk stages) so the reuse cannot bloat code just to delete one
+  // compare.
   MachineInstr *Sub = nullptr;
   MachineBasicBlock *SubMBB = nullptr;
   SmallVector<std::pair<MachineInstr *, unsigned>, 4> Pending;
@@ -5345,6 +5358,8 @@ MachineInstr *X86InstrInfo::findDominatingRedundantFlagInstr(
       }
       unsigned NewOpc = X86::getNFVariantIfClobberRemovable(Inst, TRI);
       if (!NewOpc)
+        return nullptr;
+      if (InstsToUpdate.size() + Pending.size() >= MaxNFConversions)
         return nullptr;
       Pending.push_back(std::make_pair(&Inst, NewOpc));
     }
@@ -5574,14 +5589,9 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       //   bb2:    ...
       //   bb3:    cmp %x, C    ; <-- redundant, reuse EFLAGS from entry
       //           cmovcc ...
-      //
-      // Only attempt this when no NF conversion has been collected yet. An NF
-      // conversion grows code size, and any already collected lies on the
-      // single-predecessor chain to CmpInstr, i.e. the unconditional path the
-      // compare removal saves, so converting it is pure added cost. Conversions
-      // the dominating walk collects instead lie on the mutually exclusive
-      // diamond arms and are only conditionally executed.
-      if (HasNF && InstsToUpdate.empty())
+      // The helper caps the total number of NF conversions so this cannot grow
+      // code size without bound just to delete one compare.
+      if (HasNF)
         Sub = findDominatingRedundantFlagInstr(
             CmpInstr, SrcReg, SrcReg2, CmpMask, CmpValue, MBB, IsSwapped,
             ImmDelta, InstsToUpdate);
