@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/FIRDialect.h"
+#include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Transforms/Passes.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Transforms/WalkPatternRewriteDriver.h"
 
@@ -127,6 +129,11 @@ struct DoLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
     // Copy loop annotations from the fir.do_loop to scf loop op.
     if (auto ann = doLoopOp.getLoopAnnotation())
       scfLoopOp->setAttr("loop_annotation", *ann);
+
+    // Copy any OpenACC parallel dimensions from the fir.do_loop to the scf loop
+    // op.
+    if (auto parDims = doLoopOp->getAttr(mlir::acc::GPUParallelDimsAttr::name))
+      scfLoopOp->setAttr(mlir::acc::GPUParallelDimsAttr::name, parDims);
 
     rewriter.replaceOp(doLoopOp, scfLoopOp);
     return mlir::success();

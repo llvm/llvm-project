@@ -2027,6 +2027,35 @@ def CIR_FNegOp : CIR_UnaryOp<"fneg", CIR_AnyFloatOrVecOfFloatType> {
 }
 
 //===----------------------------------------------------------------------===//
+// FreezeOp
+//===----------------------------------------------------------------------===//
+
+def CIR_FreezeOp : CIR_Op<"freeze", [Pure, SameOperandsAndResultType]> {
+  let summary = "Stop propagation of undef and poison values";
+  let description = [{
+    The `cir.freeze` operation takes a single operand and returns a value of the
+    same type. If the operand is a poison or undef value, `cir.freeze` returns
+    an arbitrary, but fixed, value of the operand type. Otherwise it returns
+    the operand unchanged.
+
+    Example:
+
+    ```mlir
+    %1 = cir.freeze %0 : !s32i
+    ```
+  }];
+
+  let arguments = (ins CIR_AnyType:$input);
+  let results = (outs CIR_AnyType:$result);
+
+  let assemblyFormat = [{
+    $input `:` type($input) attr-dict
+  }];
+
+  let llvmOp = "FreezeOp";
+}
+
+//===----------------------------------------------------------------------===//
 // BrCondOp
 //===----------------------------------------------------------------------===//
 
@@ -3995,7 +4024,7 @@ def CIR_FuncOp : CIR_Op<"func", [
     OptionalAttr<FlatSymbolRefAttr>:$personality,
     CIR_OptionalPriorityAttr:$global_ctor_priority,
     CIR_OptionalPriorityAttr:$global_dtor_priority,
-    OptionalAttr<CIR_CXXSpecialMemberAttr>:$cxx_special_member,
+    OptionalAttr<CIR_FuncInfoAttr>:$func_info,
     OptionalAttr<CIR_AnnotationArrayAttr>:$annotations
   );
 
@@ -4258,6 +4287,10 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
     bool isIndirect() { return !getCallee(); }
     mlir::Value getIndirectCall();
 
+    /// Returns the `cir.func` being called or null if the call is indirect or
+    /// cannot be resolved.
+    cir::FuncOp resolveCalleeInTable(mlir::SymbolTableCollection &symbolTable);
+
     void setArg(unsigned index, mlir::Value value) {
       if (!isIndirect()) {
         setOperand(index, value);
@@ -4266,6 +4299,16 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
 
       // For indirect call, the operand list is shifted by one.
       setOperand(index + 1, value);
+    }
+  }];
+
+  let extraClassDefinition = [{
+    cir::FuncOp $cppClass::resolveCalleeInTable(
+        mlir::SymbolTableCollection &symbolTable) {
+      mlir::FlatSymbolRefAttr callee = getCalleeAttr();
+      if (!callee)
+        return {};
+      return symbolTable.lookupNearestSymbolFrom<cir::FuncOp>(*this, callee);
     }
   }];
 
@@ -4616,13 +4659,19 @@ def CIR_CopyOp : CIR_Op<"copy",[
   let arguments = (ins
       Arg<CIR_PointerType, "", [MemWrite]>:$dst,
       Arg<CIR_PointerType, "", [MemRead]>:$src,
+      OptionalAttr<I64Attr>:$dst_alignment,
+      OptionalAttr<I64Attr>:$src_alignment,
       UnitAttr:$is_volatile,
       UnitAttr:$skip_tail_padding
   );
 
-  let assemblyFormat = [{$src `to` $dst (`volatile` $is_volatile^)?
-                        (`skip_tail_padding` $skip_tail_padding^)?
-                        attr-dict `:` qualified(type($dst))
+  let assemblyFormat = [{
+    $src (`align` `(` $src_alignment^ `)`)?
+    `to`
+    $dst (`align` `(` $dst_alignment^ `)`)?
+    (`volatile` $is_volatile^)?
+    (`skip_tail_padding` $skip_tail_padding^)?
+    attr-dict `:` qualified(type($dst))
   }];
   let hasVerifier = 1;
 

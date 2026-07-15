@@ -127,6 +127,10 @@ elseif (NOT FLANG_RT_FORTRAN_MODULES)
   set(FLANG_RT_INCLUDE_TESTS_default OFF)
 elseif (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
   set(FLANG_RT_INCLUDE_TESTS_default OFF)
+# NonGTestTesting uses LINK_TO_LLVM, pulling in host dependencies
+# (e.g. ZLIB::ZLIB) that break cross-compilation.
+elseif (CMAKE_CROSSCOMPILING)
+  set(FLANG_RT_INCLUDE_TESTS_default OFF)
 endif()
 option(FLANG_RT_INCLUDE_TESTS "Generate build targets for the flang-rt unit and regression-tests." "${FLANG_RT_INCLUDE_TESTS_default}")
 if (FLANG_RT_INCLUDE_TESTS AND NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)

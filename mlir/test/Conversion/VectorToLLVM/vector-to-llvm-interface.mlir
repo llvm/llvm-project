@@ -2189,6 +2189,25 @@ func.func @to_elements_dead_elements(%a: vector<4xf32>) -> (f32, f32) {
 // vector.step
 //===----------------------------------------------------------------------===//
 
+// Fixed-width steps lower to `llvm.intr.stepvector` on both the
+// `--convert-to-llvm` and `-convert-vector-to-llvm` paths.
+// CHECK-LABEL: @step
+// CHECK: %[[STEPVECTOR:.*]] = llvm.intr.stepvector : vector<4xi64>
+// CHECK: %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[STEPVECTOR]] : vector<4xi64> to vector<4xindex>
+// CHECK: return %[[CAST]] : vector<4xindex>
+func.func @step() -> vector<4xindex> {
+  %0 = vector.step : vector<4xindex>
+  return %0 : vector<4xindex>
+}
+
+// CHECK-LABEL: @step_i8
+// CHECK: %[[STEPVECTOR:.*]] = llvm.intr.stepvector : vector<4xi8>
+// CHECK: return %[[STEPVECTOR]] : vector<4xi8>
+func.func @step_i8() -> vector<4xi8> {
+  %0 = vector.step : vector<4xi8>
+  return %0 : vector<4xi8>
+}
+
 // CHECK-LABEL: @step_scalable
 // CHECK: %[[STEPVECTOR:.*]] = llvm.intr.stepvector : vector<[4]xi64>
 // CHECK: %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[STEPVECTOR]] : vector<[4]xi64> to vector<[4]xindex>
@@ -2196,4 +2215,12 @@ func.func @to_elements_dead_elements(%a: vector<4xf32>) -> (f32, f32) {
 func.func @step_scalable() -> vector<[4]xindex> {
   %0 = vector.step : vector<[4]xindex>
   return %0 : vector<[4]xindex>
+}
+
+// CHECK-LABEL: @step_scalable_i8
+// CHECK: %[[STEPVECTOR:.*]] = llvm.intr.stepvector : vector<[4]xi8>
+// CHECK: return %[[STEPVECTOR]] : vector<[4]xi8>
+func.func @step_scalable_i8() -> vector<[4]xi8> {
+  %0 = vector.step : vector<[4]xi8>
+  return %0 : vector<[4]xi8>
 }

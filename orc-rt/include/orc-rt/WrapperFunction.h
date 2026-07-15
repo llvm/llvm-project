@@ -135,8 +135,11 @@ struct WFHandlerTraitsImpl {
   }
 };
 
+template <bool /* is_const */, bool /* is_noexcept */, typename... Ts>
+struct WFHandlerTraitsImplAdapter : WFHandlerTraitsImpl<Ts...> {};
+
 template <typename C>
-using WFHandlerTraits = CallableTraitsHelper<WFHandlerTraitsImpl, C>;
+using WFHandlerTraits = CallableTraitsHelper<WFHandlerTraitsImplAdapter, C>;
 
 template <typename Serializer> class StructuredYieldBase {
 public:

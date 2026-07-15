@@ -1647,14 +1647,11 @@ void ObjectFileMachO::ProcessSegmentCommand(
     // addresses will differ from what the ObjectFile had originally,
     // and what the dSYM has.
     if (is_dsym && unified_section_sp->GetFileAddress() != load_cmd.vmaddr) {
-      Log *log = GetLog(LLDBLog::Symbols);
-      if (log) {
-        log->Printf(
-            "Installing dSYM's %s segment file address over ObjectFile's "
-            "so symbol table/debug info resolves correctly for %s",
-            const_segname.AsCString(""),
-            module_sp->GetFileSpec().GetFilename().AsCString(""));
-      }
+      LLDB_LOG(GetLog(LLDBLog::Symbols),
+               "Installing dSYM's {0} segment file address over ObjectFile's "
+               "so symbol table/debug info resolves correctly for {1}",
+               const_segname.AsCString(""),
+               module_sp->GetFileSpec().GetFilename());
 
       // Make sure we've parsed the symbol table from the ObjectFile before
       // we go around changing its Sections.
@@ -2078,10 +2075,11 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   Log *log = GetLog(LLDBLog::Symbols);
 
   const FileSpec &file = m_file ? m_file : module_sp->GetFileSpec();
-  const char *file_name = file.GetFilename().AsCString("<Unknown>");
-  LLDB_SCOPED_TIMERF("ObjectFileMachO::ParseSymtab () module = %s", file_name);
+  llvm::StringRef file_name = file.GetFilename().nonEmptyOr("<Unknown>");
+  LLDB_SCOPED_TIMERF("ObjectFileMachO::ParseSymtab () module = %s",
+                     file_name.str().c_str());
   LLDB_LOG(log, "Parsing symbol table for {0}", file_name);
-  Progress progress("Parsing symbol table", file_name);
+  Progress progress("Parsing symbol table", file_name.str());
 
   LinkeditDataCommandLargeOffsets function_starts_load_command;
   LinkeditDataCommandLargeOffsets exports_trie_load_command;
@@ -4826,8 +4824,7 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
 
   if (!rpath_paths.empty()) {
     // Fixup all LC_RPATH values to be absolute paths.
-    const std::string this_directory =
-        this_file_spec.GetDirectory().GetString();
+    const std::string this_directory = this_file_spec.GetDirectory().str();
     for (auto &rpath : rpath_paths) {
       if (llvm::StringRef(rpath).starts_with(g_loader_path))
         rpath = this_directory + rpath.substr(g_loader_path.size());
@@ -5513,8 +5510,7 @@ ObjectFile::Strata ObjectFileMachO::CalculateStrata() {
     } else {
       SectionList *section_list = GetSectionList();
       if (section_list) {
-        static ConstString g_kld_section_name("__KLD");
-        if (section_list->FindSectionByName(g_kld_section_name))
+        if (section_list->FindSectionByName("__KLD"))
           return eStrataKernel;
       }
     }

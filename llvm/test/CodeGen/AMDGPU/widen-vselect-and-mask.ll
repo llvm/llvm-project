@@ -12,16 +12,18 @@ define amdgpu_kernel void @widen_vselect_and_mask_v4f64(<4 x double> %arg) #0 {
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    v_mov_b32_e32 v1, v0
 ; GCN-NEXT:    v_mov_b32_e32 v2, v0
-; GCN-NEXT:    v_mov_b32_e32 v3, v0
 ; GCN-NEXT:    v_cmp_u_f64_e64 s[4:5], s[0:1], s[0:1]
 ; GCN-NEXT:    v_cmp_neq_f64_e64 s[0:1], s[0:1], 0
-; GCN-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s[4:5]
-; GCN-NEXT:    v_cmp_lt_i32_e32 vcc, -1, v1
-; GCN-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
+; GCN-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; GCN-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; GCN-NEXT:    s_cmp_gt_i32 s5, -1
+; GCN-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; GCN-NEXT:    s_and_b64 s[0:1], s[4:5], s[0:1]
 ; GCN-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GCN-NEXT:    s_cselect_b32 s4, 0x3ff00000, 0
-; GCN-NEXT:    v_mov_b32_e32 v1, v0
+; GCN-NEXT:    v_mov_b32_e32 v3, v0
 ; GCN-NEXT:    s_mov_b64 s[0:1], 16
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
@@ -57,14 +59,18 @@ define amdgpu_kernel void @widen_vselect_and_mask_v4i64(<4 x i64> %arg) #0 {
 ; GCN-NEXT:    s_mov_b64 s[4:5], 0
 ; GCN-NEXT:    v_cmp_eq_u64_e64 s[6:7], s[0:1], 0
 ; GCN-NEXT:    v_cmp_ne_u64_e64 s[0:1], s[0:1], 0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[6:7]
-; GCN-NEXT:    v_cmp_lt_i32_e32 vcc, -1, v0
-; GCN-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; GCN-NEXT:    s_and_b64 s[6:7], s[6:7], exec
+; GCN-NEXT:    s_cselect_b64 s[6:7], -1, 0
+; GCN-NEXT:    s_cmp_gt_i32 s7, -1
+; GCN-NEXT:    s_cselect_b64 s[6:7], -1, 0
+; GCN-NEXT:    s_and_b64 s[0:1], s[6:7], s[0:1]
+; GCN-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; GCN-NEXT:    s_cselect_b32 s6, 1, 0
 ; GCN-NEXT:    v_mov_b32_e32 v2, v1
 ; GCN-NEXT:    v_mov_b32_e32 v3, v1
 ; GCN-NEXT:    v_mov_b32_e32 v4, v1
 ; GCN-NEXT:    s_mov_b64 s[0:1], 16
+; GCN-NEXT:    v_mov_b32_e32 v0, s6
 ; GCN-NEXT:    s_mov_b32 s6, s2
 ; GCN-NEXT:    s_mov_b32 s7, s3
 ; GCN-NEXT:    buffer_store_dwordx4 v[1:4], off, s[0:3], 0

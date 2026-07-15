@@ -145,10 +145,42 @@ JSONFormat::readArtifactEncoding(llvm::StringRef Path) {
     return ArtifactEncoding{std::move(*ExpectedLU)};
   }
 
-  return ErrorBuilder::create(std::errc::invalid_argument,
-                              ErrorMessages::UnknownArtifactEncodingType,
-                              *ExpectedType, JSONTypeKey,
-                              JSONTypeValueTUSummary, JSONTypeValueLUSummary)
+  if (*ExpectedType == JSONTypeValueStaticLibrary) {
+    auto ExpectedStaticLibrary = readStaticLibraryFromObject(*RootObjectPtr);
+    if (!ExpectedStaticLibrary) {
+      return ErrorBuilder::wrap(ExpectedStaticLibrary.takeError())
+          .context(ErrorMessages::ReadingFromFile, "ArtifactEncoding", Path)
+          .build();
+    }
+    return ArtifactEncoding{std::move(*ExpectedStaticLibrary)};
+  }
+
+  if (*ExpectedType == JSONTypeValueMultiArchStaticLibrary) {
+    auto ExpectedM = readMultiArchStaticLibraryFromObject(*RootObjectPtr);
+    if (!ExpectedM) {
+      return ErrorBuilder::wrap(ExpectedM.takeError())
+          .context(ErrorMessages::ReadingFromFile, "ArtifactEncoding", Path)
+          .build();
+    }
+    return ArtifactEncoding{std::move(*ExpectedM)};
+  }
+
+  if (*ExpectedType == JSONTypeValueMultiArchSharedLibrary) {
+    auto ExpectedM = readMultiArchSharedLibraryFromObject(*RootObjectPtr);
+    if (!ExpectedM) {
+      return ErrorBuilder::wrap(ExpectedM.takeError())
+          .context(ErrorMessages::ReadingFromFile, "ArtifactEncoding", Path)
+          .build();
+    }
+    return ArtifactEncoding{std::move(*ExpectedM)};
+  }
+
+  return ErrorBuilder::create(
+             std::errc::invalid_argument,
+             ErrorMessages::UnknownArtifactEncodingType, *ExpectedType,
+             JSONTypeKey, JSONTypeValueTUSummary, JSONTypeValueLUSummary,
+             JSONTypeValueStaticLibrary, JSONTypeValueMultiArchStaticLibrary,
+             JSONTypeValueMultiArchSharedLibrary)
       .context(ErrorMessages::ReadingFromFile, "ArtifactEncoding", Path)
       .build();
 }
@@ -160,11 +192,17 @@ llvm::Error JSONFormat::writeArtifactEncoding(const ArtifactEncoding &E,
         using T = std::decay_t<decltype(Enc)>;
         if constexpr (std::is_same_v<T, TUSummaryEncoding>) {
           return writeTUSummaryEncoding(Enc, Path);
+        } else if constexpr (std::is_same_v<T, LUSummaryEncoding>) {
+          return writeLUSummaryEncoding(Enc, Path);
+        } else if constexpr (std::is_same_v<T, StaticLibrary>) {
+          return writeStaticLibrary(Enc, Path);
+        } else if constexpr (std::is_same_v<T, MultiArchStaticLibrary>) {
+          return writeMultiArchStaticLibrary(Enc, Path);
         } else {
           static_assert(
-              std::is_same_v<T, LUSummaryEncoding>,
+              std::is_same_v<T, MultiArchSharedLibrary>,
               "ArtifactEncoding visitor must cover all variant alternatives");
-          return writeLUSummaryEncoding(Enc, Path);
+          return writeMultiArchSharedLibrary(Enc, Path);
         }
       },
       E);
