@@ -475,7 +475,9 @@ def Tosa_MatMulTOp : Tosa_InferShapedTypeOp<"matmul_t", [NoMemoryEffect]> {
   list<Availability> availability =
       [Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
        Extension<[Tosa_EXT_INT16, Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2,
-                  Tosa_EXT_BF16]>,
+                  Tosa_EXT_BF16, Tosa_EXT_MX_COMMON, Tosa_EXT_MX_FP4E2M1,
+                  Tosa_EXT_MX_FP6E2M3, Tosa_EXT_MX_FP6E3M2, Tosa_EXT_MX_FP8E4M3,
+                  Tosa_EXT_MX_FP8E5M2, Tosa_EXT_MX_INT8]>,
   ];
 
   let extraClassDeclaration = [{
@@ -494,6 +496,8 @@ def Tosa_MatMulTOp : Tosa_InferShapedTypeOp<"matmul_t", [NoMemoryEffect]> {
 
 //===----------------------------------------------------------------------===//
 // Operator: matmul_t_block_scaled
+//
+// Note: This operation is deprecated. It will be removed in the future.
 //===----------------------------------------------------------------------===//
 def Tosa_MatmulTBlockScaledOp : Tosa_InferShapedTypeOp<"matmul_t_block_scaled", [NoMemoryEffect]> {
   let summary = "Performs two dimensional matrix multiplications using block scaled tensors.";
@@ -506,6 +510,8 @@ def Tosa_MatmulTBlockScaledOp : Tosa_InferShapedTypeOp<"matmul_t_block_scaled", 
 
     This operation is not pure. Undefined behaviour may occur if the accumulated
     result overflows.
+
+    Note: This operation is deprecated. It will be removed in the future.
   }];
 
   let arguments = (ins
