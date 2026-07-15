@@ -573,12 +573,13 @@ MCSymbol *BinaryContext::handleExternalBranchTarget(uint64_t Address,
           << Twine::utohexstr(Address) << "; ignoring both functions\n";
       IsValid = false;
     }
-    if (Target.isInConstantIsland(Address)) {
-      this->errs() << "BOLT-WARNING: ignoring entry point at address 0x"
-                   << Twine::utohexstr(Address)
-                   << " in constant island of function " << Target << '\n';
-      IsValid = false;
-    }
+  }
+
+  if (Target.isInConstantIsland(Address)) {
+    this->errs() << "BOLT-WARNING: ignoring entry point at address 0x"
+                 << Twine::utohexstr(Address)
+                 << " in constant island of function " << Target << '\n';
+    IsValid = false;
   }
 
   if (!IsValid) {

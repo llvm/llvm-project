@@ -343,13 +343,74 @@ static uint64_t canEncodeValueRISCV(uint32_t Type, uint64_t Value,
   }
 }
 
-static uint64_t encodeValueRISCV(uint32_t Type, uint64_t Value, uint64_t PC) {
+static uint64_t encodeValueRISCV(uint32_t Type, uint64_t Value, uint64_t PC,
+                                 uint64_t OldValue) {
+  auto encodePCRel = [&](uint32_t Type, uint64_t Value) -> uint64_t {
+    const int64_t PCRelValue =
+        static_cast<int64_t>(Value) - static_cast<int64_t>(PC);
+    assert((PCRelValue & 0x1) == 0 && "RISC-V branch target is misaligned");
+    const uint64_t EncValue = static_cast<uint64_t>(PCRelValue);
+    switch (Type) {
+    default:
+      llvm_unreachable("unsupported relocation");
+    case ELF::R_RISCV_BRANCH: {
+      assert(isInt<13>(PCRelValue) && "RISC-V branch target out of range");
+      const uint64_t Sbit = (EncValue >> 12) & 0x1;
+      const uint64_t Hi1 = (EncValue >> 11) & 0x1;
+      const uint64_t Mid6 = (EncValue >> 5) & 0x3f;
+      const uint64_t Lo4 = (EncValue >> 1) & 0xf;
+      return (OldValue & 0x01fff07f) | (Sbit << 31) | (Mid6 << 25) |
+             (Lo4 << 8) | (Hi1 << 7);
+    }
+    case ELF::R_RISCV_JAL: {
+      assert(isInt<21>(PCRelValue) && "RISC-V jump target out of range");
+      const uint64_t Sbit = (EncValue >> 20) & 0x1;
+      const uint64_t Hi8 = (EncValue >> 12) & 0xff;
+      const uint64_t Mid1 = (EncValue >> 11) & 0x1;
+      const uint64_t Lo10 = (EncValue >> 1) & 0x3ff;
+      return (OldValue & 0xfff) | (Sbit << 31) | (Lo10 << 21) | (Mid1 << 20) |
+             (Hi8 << 12);
+    }
+    case ELF::R_RISCV_RVC_BRANCH: {
+      assert(isInt<9>(PCRelValue) &&
+             "RISC-V compressed branch target out of range");
+      const uint64_t Bit8 = (EncValue >> 8) & 0x1;
+      const uint64_t Bit7_6 = (EncValue >> 6) & 0x3;
+      const uint64_t Bit5 = (EncValue >> 5) & 0x1;
+      const uint64_t Bit4_3 = (EncValue >> 3) & 0x3;
+      const uint64_t Bit2_1 = (EncValue >> 1) & 0x3;
+      return (OldValue & 0xe383) | (Bit8 << 12) | (Bit4_3 << 10) |
+             (Bit7_6 << 5) | (Bit2_1 << 3) | (Bit5 << 2);
+    }
+    case ELF::R_RISCV_RVC_JUMP: {
+      assert(isInt<12>(PCRelValue) &&
+             "RISC-V compressed jump target out of range");
+      const uint64_t Bit11 = (EncValue >> 11) & 0x1;
+      const uint64_t Bit4 = (EncValue >> 4) & 0x1;
+      const uint64_t Bit9_8 = (EncValue >> 8) & 0x3;
+      const uint64_t Bit10 = (EncValue >> 10) & 0x1;
+      const uint64_t Bit6 = (EncValue >> 6) & 0x1;
+      const uint64_t Bit7 = (EncValue >> 7) & 0x1;
+      const uint64_t Bit3_1 = (EncValue >> 1) & 0x7;
+      const uint64_t Bit5 = (EncValue >> 5) & 0x1;
+      return (OldValue & 0xe003) | (Bit11 << 12) | (Bit4 << 11) |
+             (Bit9_8 << 9) | (Bit10 << 8) | (Bit6 << 7) | (Bit7 << 6) |
+             (Bit3_1 << 3) | (Bit5 << 2);
+    }
+    }
+  };
+
   switch (Type) {
   default:
     llvm_unreachable("unsupported relocation");
   case ELF::R_RISCV_32:
   case ELF::R_RISCV_64:
     break;
+  case ELF::R_RISCV_BRANCH:
+  case ELF::R_RISCV_JAL:
+  case ELF::R_RISCV_RVC_BRANCH:
+  case ELF::R_RISCV_RVC_JUMP:
+    return encodePCRel(Type, Value);
   }
   return Value;
 }
@@ -782,7 +843,8 @@ bool Relocation::skipRelocationType(uint32_t Type) {
   }
 }
 
-uint64_t Relocation::encodeValue(uint32_t Type, uint64_t Value, uint64_t PC) {
+uint64_t Relocation::encodeValue(uint32_t Type, uint64_t Value, uint64_t PC,
+                                 uint64_t OldValue) {
   switch (Arch) {
   default:
     llvm_unreachable("Unsupported architecture");
@@ -790,7 +852,7 @@ uint64_t Relocation::encodeValue(uint32_t Type, uint64_t Value, uint64_t PC) {
     return encodeValueAArch64(Type, Value, PC);
   case Triple::riscv64:
   case Triple::riscv32:
-    return encodeValueRISCV(Type, Value, PC);
+    return encodeValueRISCV(Type, Value, PC, OldValue);
   case Triple::x86_64:
     return encodeValueX86(Type, Value, PC);
   }

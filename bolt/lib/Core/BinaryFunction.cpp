@@ -1835,6 +1835,22 @@ bool BinaryFunction::scanExternalRefs() {
         continue;
       }
 
+      if (BC.isRISCV()) {
+        switch (Rel->Type) {
+        default:
+          break;
+        case ELF::R_RISCV_BRANCH:
+        case ELF::R_RISCV_JAL:
+        case ELF::R_RISCV_RVC_BRANCH:
+        case ELF::R_RISCV_RVC_JUMP:
+          if (BinaryFunction *TargetBF = BC.getFunctionForSymbol(Rel->Symbol)) {
+            TargetBF->setNeedsPatch(true);
+            continue;
+          }
+          break;
+        }
+      }
+
       if (BC.isAArch64()) {
         // Allow the relocation to be skipped in case of the overflow during the
         // relocation value encoding.
