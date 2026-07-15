@@ -5748,6 +5748,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           APFloat::isRepresentableBy(SrcSemantics, DstSemantics))
         Known.knownNot(fcInf);
 
+      if (SrcSemantics.nanEncoding == fltNanEncoding::NegativeZero)
+        Known.knownNot(fcNegZero);
+
       if (!APFloat::semanticsHasZero(SrcSemantics)) {
         Known.knownNot(fcZero);
       } else {
