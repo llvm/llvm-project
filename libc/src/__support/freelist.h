@@ -84,6 +84,10 @@ struct FreeListSecrets {
 #endif
   }
 
+  /// Encrypts/decrypts `prev` using XOR, bitwise rotation, and node address binding.
+  /// Pure XOR chaining (A ^ K0 ^ B ^ K1) reduces to A ^ B ^ K due to commutativity.
+  /// Bitwise rotation breaks commutativity between key XORs, and node address
+  /// binding prevents reusing encoded pointers across different node locations.
   template <typename T>
   LIBC_INLINE T *decrypt_prev([[maybe_unused]] const void *node,
                               T *prev_val) const {
