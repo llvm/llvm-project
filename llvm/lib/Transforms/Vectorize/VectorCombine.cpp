@@ -2051,7 +2051,59 @@ bool VectorCombine::foldInsertElementsToStores(Instruction &I) {
                                       CostKind, Index);
   }
 
+  bool HasKnownStride =
+      InsertElements.size() > 1 && all_of(InsertElements, [](const auto &Elt) {
+        return isa<ConstantInt>(Elt.second);
+      });
+
   InstructionCost NewCost = 0;
+  if (HasKnownStride) {
+    // getPointersChainCost requires concrete pointer values. Create detached
+    // GEPs for the cost query so the profitability check does not mutate IR.
+    // ScalarGEPs owns them through unique_value, so they are deleted
+    // automatically at the end of this scope.
+    SmallVector<unique_value, 4> ScalarGEPs;
+    SmallVector<const Value *, 4> ScalarPtrs;
+    for (const auto &Elt : InsertElements) {
+      Value *Idx = Elt.second;
+      SmallVector<Value *, 2> GEPIndices = {ConstantInt::get(Idx->getType(), 0),
+                                            Idx};
+      auto *GEP = GetElementPtrInst::CreateInBounds(
+          VecTy, SI->getPointerOperand(), GEPIndices);
+      ScalarPtrs.push_back(GEP);
+      ScalarGEPs.emplace_back(GEP);
+    }
+
+    bool IsUnitStride = true;
+    uint64_t PrevIdx =
+        cast<ConstantInt>(InsertElements.front().second)->getZExtValue();
+    for (const auto &Elt : drop_begin(InsertElements)) {
+      Value *Idx = Elt.second;
+      uint64_t CurrentIdx = cast<ConstantInt>(Idx)->getZExtValue();
+      if (CurrentIdx != PrevIdx + 1) {
+        IsUnitStride = false;
+        break;
+      }
+      PrevIdx = CurrentIdx;
+    }
+
+    auto PtrsInfo = IsUnitStride ? TTI::PointersChainInfo::getUnitStride()
+                                 : TTI::PointersChainInfo::getKnownStride();
+    NewCost +=
+        TTI.getPointersChainCost(ScalarPtrs, ScalarPtrs.front(), PtrsInfo,
+                                 VecTy->getElementType(), CostKind);
+  } else {
+    // Without a known stride, cost each prospective GEP independently.
+    // getGEPCost accepts the base and indices directly, so no detached GEP
+    // instructions are needed for this query.
+    for (auto [InsertVal, Idx] : InsertElements) {
+      SmallVector<const Value *, 2> GEPIndices = {
+          ConstantInt::get(Idx->getType(), 0), Idx};
+      NewCost += TTI.getGEPCost(VecTy, SI->getPointerOperand(), GEPIndices,
+                                InsertVal->getType(), CostKind);
+    }
+  }
+
   for (auto [InsertVal, Idx] : InsertElements) {
     Align ScalarOpAlignment = computeAlignmentAfterScalarization(
         std::max(SI->getAlign(), Load->getAlign()), InsertVal->getType(), Idx,
