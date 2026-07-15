@@ -94,8 +94,8 @@ entry:
 ; CHECK-NEXT:               *   Bit 2: 1 = Uses alloca
 ; CHECK:                    stmg  4,[[SPILLHI:[0-9]+]],[[#%u,2048-mul(div(DSA_SIZE,32),32)]](4)
 ; CHECK:                    aghi  4,-[[#%u,mul(div(DSA_SIZE,32),32)]]
-; CHECK:                    llgt  [[REG1:[0-9]+]],1208
 ; CHECK:                    lgr   [[ALLOCAREG:[0-9]+]],4
+; CHECK:                    llgt  [[REG1:[0-9]+]],1208
 ; CHECK:                    mvc   [[#%u,2040+mul(div(DSA_SIZE,32),32)]](8,[[ALLOCAREG]]),152([[REG1]])
 ; ...
 ; CHECK:                    llgt  [[REG3:[0-9]+]],1208

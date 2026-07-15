@@ -1961,15 +1961,12 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.versionDefinitions.push_back(
       {"global", (uint16_t)VER_NDX_GLOBAL, {}, {}});
 
-  // If --retain-symbol-file is used, we'll keep only the symbols listed in
-  // the file and discard all others.
+  // Keep only these symbols in .symtab (not .dynsym), matching GNU ld.
   if (auto *arg = args.getLastArg(OPT_retain_symbols_file)) {
-    ctx.arg.versionDefinitions[VER_NDX_LOCAL].nonLocalPatterns.push_back(
-        {"*", /*isExternCpp=*/false, /*hasWildcard=*/true});
+    ctx.arg.retainSymbols.emplace();
     if (std::optional<MemoryBufferRef> buffer = readFile(ctx, arg->getValue()))
       for (StringRef s : args::getLines(*buffer))
-        ctx.arg.versionDefinitions[VER_NDX_GLOBAL].nonLocalPatterns.push_back(
-            {s, /*isExternCpp=*/false, /*hasWildcard=*/false});
+        ctx.arg.retainSymbols->insert(s);
   }
 
   for (opt::Arg *arg : args.filtered(OPT_warn_backrefs_exclude)) {

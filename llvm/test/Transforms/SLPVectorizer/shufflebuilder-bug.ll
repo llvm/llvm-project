@@ -8,7 +8,7 @@ define void @foo(<4 x float> %vec, float %val, ptr %ptr) {
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds float, ptr [[PTR]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[GEP0]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[VEC]], <4 x float> poison, <2 x i32> <i32 3, i32 poison>
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[VAL]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[VAL]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x float> [[TMP1]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul <4 x float> [[TMP5]], [[TMP4]]

@@ -21,7 +21,7 @@
 #include "llvm/Support/CommandLine.h"
 #include <algorithm>
 
-namespace llvm {
+using namespace llvm;
 
 static cl::opt<bool> ForceMinByValParamAlign(
     "nvptx-force-min-byval-param-align", cl::Hidden,
@@ -29,12 +29,12 @@ static cl::opt<bool> ForceMinByValParamAlign(
              " params of device functions."),
     cl::init(false));
 
-Function *getMaybeBitcastedCallee(const CallBase *CB) {
+Function *llvm::getMaybeBitcastedCallee(const CallBase *CB) {
   return dyn_cast<Function>(CB->getCalledOperand()->stripPointerCasts());
 }
 
-Align getPTXPromotedParamTypeAlign(const Function *F, Type *ArgTy,
-                                   const DataLayout &DL) {
+Align llvm::getPTXPromotedParamTypeAlign(const Function *F, Type *ArgTy,
+                                         const DataLayout &DL) {
   // Capping the alignment to 128 bytes as that is the maximum alignment
   // supported by PTX.
   const Align ABITypeAlign = std::min(Align(128), DL.getABITypeAlign(ArgTy));
@@ -54,8 +54,8 @@ Align getPTXPromotedParamTypeAlign(const Function *F, Type *ArgTy,
   return std::max(OptimizedAlign, ABITypeAlign);
 }
 
-Align getDeviceByValParamAlign(const Function *F, Type *ArgTy,
-                               Align InitialAlign, const DataLayout &DL) {
+Align llvm::getDeviceByValParamAlign(const Function *F, Type *ArgTy,
+                                     Align InitialAlign, const DataLayout &DL) {
   const Align OptimizedAlign = getPTXPromotedParamTypeAlign(F, ArgTy, DL);
 
   // Old ptx versions have a bug. When PTX code takes address of
@@ -74,8 +74,8 @@ Align getDeviceByValParamAlign(const Function *F, Type *ArgTy,
   return std::max({InitialAlign, OptimizedAlign, AlignFloor});
 }
 
-Align getPTXParamAlign(const Function *F, Type *Ty, unsigned AttrIdx,
-                       const DataLayout &DL) {
+Align llvm::getPTXParamAlign(const Function *F, Type *Ty, unsigned AttrIdx,
+                             const DataLayout &DL) {
   if (F)
     if (MaybeAlign StackAlign = getStackAlign(*F, AttrIdx))
       return StackAlign.value();
@@ -89,8 +89,8 @@ Align getPTXParamAlign(const Function *F, Type *Ty, unsigned AttrIdx,
   return TypeAlign;
 }
 
-Align getPTXParamAlign(const CallBase *CB, Type *Ty, unsigned Idx,
-                       const DataLayout &DL) {
+Align llvm::getPTXParamAlign(const CallBase *CB, Type *Ty, unsigned Idx,
+                             const DataLayout &DL) {
   const Function *DirectCallee = CB ? CB->getCalledFunction() : nullptr;
 
   if (!DirectCallee && CB) {
@@ -103,7 +103,7 @@ Align getPTXParamAlign(const CallBase *CB, Type *Ty, unsigned Idx,
   return getPTXParamAlign(DirectCallee, Ty, Idx, DL);
 }
 
-bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM) {
+bool llvm::shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM) {
   const auto &ST =
       *static_cast<const NVPTXTargetMachine &>(TM).getSubtargetImpl();
   if (!ST.hasNoReturn())
@@ -121,5 +121,3 @@ bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM) {
          F->getFunctionType()->getReturnType()->isVoidTy() &&
          !isKernelFunction(*F);
 }
-
-} // namespace llvm
