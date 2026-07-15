@@ -3630,13 +3630,16 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
 RISCVTTIImpl::TTI::MemCmpExpansionOptions
 RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   TTI::MemCmpExpansionOptions Options;
-  // TODO: Enable expansion when unaligned access is not supported after we fix
-  // issues in ExpandMemcmp.
-  if (!ST->enableUnalignedScalarMem())
-    return Options;
 
   if (!ST->hasStdExtZbb() && !ST->hasStdExtZbkb() && !IsZeroCmp)
     return Options;
+
+  // If the target does not support unaligned scalar memory access, expansion is
+  // still possible when both pointers are statically known to be sufficiently
+  // aligned. ExpandMemCmp will restrict the load sizes below to the ones
+  // covered by the known per-call-site alignment and fall back to the libcall
+  // when none fits.
+  Options.RequireNaturalAlignment = !ST->enableUnalignedScalarMem();
 
   Options.AllowOverlappingLoads = true;
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);

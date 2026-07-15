@@ -860,6 +860,28 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
   if (!OptForSize && MaxLoadsPerMemcmp.getNumOccurrences())
     Options.MaxNumLoads = MaxLoadsPerMemcmp;
 
+  if (Options.RequireNaturalAlignment) {
+    // The target can only perform naturally aligned loads. Keep the load sizes
+    // that are powers of two and no larger than the statically known alignment
+    // of both pointers. Because the greedy load sequence only places a load of
+    // size S at an offset that is a multiple of S, a power-of-two load that
+    // does not exceed the base alignment is guaranteed to be naturally aligned.
+    // Overlapping loads and merged tail expansions can produce unaligned or
+    // non-power-of-two accesses, so they are not used in this mode.
+    Options.AllowOverlappingLoads = false;
+    Options.AllowedTailExpansions.clear();
+    const Align LhsAlign = CI->getArgOperand(0)->getPointerAlignment(*DL);
+    const Align RhsAlign = CI->getArgOperand(1)->getPointerAlignment(*DL);
+    const uint64_t MinAlign = std::min(LhsAlign.value(), RhsAlign.value());
+    llvm::erase_if(Options.LoadSizes, [&](unsigned LoadSize) {
+      return LoadSize > MinAlign || !isPowerOf2_64(LoadSize);
+    });
+    // If only single-byte loads survive, inlining a byte-wise comparison offers
+    // no benefit over the library call, so leave it as a libcall.
+    if (Options.LoadSizes.empty() || Options.LoadSizes.front() == 1)
+      return false;
+  }
+
   MemCmpExpansion Expansion(CI, SizeVal, Options, IsUsedForZeroCmp, *DL, DTU);
 
   // Don't expand if this will require more loads than desired by the target.
