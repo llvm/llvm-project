@@ -1686,7 +1686,9 @@ SparcAsmParser::adjustPICRelocation(uint16_t RelType, const MCExpr *subExpr) {
   // actually a %pc10 or %pc22 relocation. Otherwise, they are interpreted
   // as %got10 or %got22 relocation.
 
-  if (getContext().getObjectFileInfo()->isPositionIndependent()) {
+  int64_t AbsoluteValue;
+  if (getContext().getObjectFileInfo()->isPositionIndependent() &&
+      !subExpr->evaluateAsAbsolute(AbsoluteValue)) {
     switch (RelType) {
     default: break;
     case ELF::R_SPARC_LO10:
