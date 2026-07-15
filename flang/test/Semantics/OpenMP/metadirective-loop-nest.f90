@@ -152,3 +152,126 @@ end subroutine
 subroutine no_loop_dead_variant()
   !$omp metadirective when(device={kind(nohost)}: do) default(nothing)
 end subroutine
+
+! A loop-associated variant in a declarative context (e.g. a module
+! specification part) also has no loop nest to associate with.
+module no_loop_in_module
+  implicit none
+  !ERROR: This construct should contain a DO-loop or a loop-nest-generating construct
+  !$omp metadirective when(implementation={vendor(llvm)}: do) default(nothing)
+end module
+
+! Starting a contained procedure must not discard a pending variant from the
+! enclosing module specification part.
+module no_loop_in_module_with_contains
+  implicit none
+  !ERROR: This construct should contain a DO-loop or a loop-nest-generating construct
+  !$omp metadirective when(implementation={vendor(llvm)}: do) default(nothing)
+contains
+  subroutine contained()
+  end subroutine
+end module
+
+! A later specification-part metadirective must not discard an earlier one.
+module no_loop_before_another_metadirective
+  implicit none
+  !ERROR: This construct should contain a DO-loop or a loop-nest-generating construct
+  !$omp metadirective when(implementation={vendor(llvm)}: do) default(nothing)
+  !$omp metadirective when(implementation={vendor(llvm)}: parallel) default(nothing)
+end module
+
+! A loop in the enclosing subprogram cannot satisfy a variant from an
+! interface body, which has no execution part of its own.
+subroutine no_loop_in_interface_body(n, a)
+  integer :: n, a(n), i
+  interface
+    subroutine iface()
+      !ERROR: This construct should contain a DO-loop or a loop-nest-generating construct
+      !$omp metadirective when(implementation={vendor(llvm)}: do) default(nothing)
+    end subroutine
+  end interface
+  do i = 1, n
+    a(i) = i
+  end do
+end subroutine
+
+! Checking an interface body must preserve variants pending in the enclosing
+! subprogram for its execution part.
+subroutine no_loop_in_interface_body_preserves_outer(n, a)
+  integer :: n, a(n), i
+  !ERROR: This construct requires a perfect nest of depth 2, but the associated nest is a perfect nest of depth 1
+  !BECAUSE: COLLAPSE clause was specified with argument 2
+  !$omp metadirective when(implementation={vendor(llvm)}: do collapse(2)) default(nothing)
+  interface
+    subroutine iface()
+      !ERROR: This construct should contain a DO-loop or a loop-nest-generating construct
+      !$omp metadirective when(implementation={vendor(llvm)}: do) default(nothing)
+    end subroutine
+  end interface
+  do i = 1, n
+    a(i) = i
+  end do
+end subroutine
+
+! A loop after an empty BLOCK cannot satisfy a variant from the BLOCK's
+! specification part.
+subroutine no_loop_in_empty_block(n, a)
+  integer :: n, a(n), i
+  block
+    !ERROR: This construct should contain a DO-loop or a loop-nest-generating construct
+    !$omp metadirective when(implementation={vendor(llvm)}: do) default(nothing)
+  end block
+  do i = 1, n
+    a(i) = i
+  end do
+end subroutine
+
+! A loop in the BLOCK itself remains its associated loop.
+subroutine loop_in_block(n, a)
+  integer :: n, a(n), i
+  block
+    !$omp metadirective when(implementation={vendor(llvm)}: do) default(nothing)
+    do i = 1, n
+      a(i) = i
+    end do
+  end block
+end subroutine
+
+! A loop in a mutually exclusive IF branch cannot satisfy the variant.
+subroutine no_loop_across_if_branch(n, a, flag)
+  integer :: n, a(n), i
+  logical :: flag
+  if (flag) then
+    !ERROR: This construct should contain a DO-loop or a loop-nest-generating construct
+    !$omp metadirective when(implementation={vendor(llvm)}: do) default(nothing)
+  else
+    do i = 1, n
+      a(i) = i
+    end do
+  end if
+end subroutine
+
+! A loop after a nested executable block cannot satisfy its variant.
+subroutine no_loop_after_if(n, a, flag)
+  integer :: n, a(n), i
+  logical :: flag
+  if (flag) then
+    !ERROR: This construct should contain a DO-loop or a loop-nest-generating construct
+    !$omp metadirective when(implementation={vendor(llvm)}: do) default(nothing)
+  end if
+  do i = 1, n
+    a(i) = i
+  end do
+end subroutine
+
+! A loop in the same IF branch remains the associated loop.
+subroutine loop_in_if_branch(n, a, flag)
+  integer :: n, a(n), i
+  logical :: flag
+  if (flag) then
+    !$omp metadirective when(implementation={vendor(llvm)}: do) default(nothing)
+    do i = 1, n
+      a(i) = i
+    end do
+  end if
+end subroutine
