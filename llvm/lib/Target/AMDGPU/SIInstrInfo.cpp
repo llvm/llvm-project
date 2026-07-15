@@ -7719,8 +7719,10 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
   // loop that executes the access once per unique index across the wave.
   if (auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
     MachineOperand *Idx = &LdStIdx->getIdxOp();
-    if (Idx->isReg() && Idx->getReg().isVirtual() &&
-        !RI.isSGPRClass(MRI.getRegClass(Idx->getReg())))
+    // Waterfall any non-SGPR index. isSGPRReg handles both virtual and physical
+    // registers, so a physical (non-SGPR) index - not expected here, but still
+    // possible - is made uniform rather than silently skipped.
+    if (Idx->isReg() && !RI.isSGPRReg(MRI, Idx->getReg()))
       CreatedBB = generateWaterFallLoop(*this, MI, {Idx}, MDT);
     return CreatedBB;
   }
