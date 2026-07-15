@@ -2000,8 +2000,9 @@ bool VectorCombine::foldInsertElementsToStores(Instruction &I) {
   }
   Value *SrcAddr = Load->getPointerOperand()->stripPointerCasts();
   // Step 4: Establish the load/store update is legal: both accesses are simple,
-  // have the same base address and block, have scalar-sized elements, and no
-  // intervening operation modifies the updated memory.
+  // have the same base address and block, have scalar elements whose type size
+  // equals their store size, and no intervening operation modifies the updated
+  // memory.
   if (!Load->isSimple() || Load->getParent() != SI->getParent() ||
       !DL->typeSizeEqualsStoreSize(Load->getType()->getScalarType()) ||
       SrcAddr != SI->getPointerOperand()->stripPointerCasts())
