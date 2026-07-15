@@ -19,6 +19,7 @@
 // LWG4274: The hh_mm_ss constructor supports unsigned durations.
 
 #include <chrono>
+#include <ratio>
 
 // A signed arithmetic-like type used as a custom duration representation.
 struct SignedRep {
