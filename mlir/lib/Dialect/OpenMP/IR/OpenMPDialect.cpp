@@ -2576,7 +2576,7 @@ void TargetDataOp::getSuccessorRegions(
   mlir::RegionBranchPoint point, 
   llvm::SmallVectorImpl<::mlir::RegionSuccessor>& regions) {
   if (!point.isParent()) {
-    regions.push_back(mlir::RegionSuccessor::parent());
+    regions.push_back(mlir::RegionSuccessor(getOperation()));
     return;
   }
   regions.push_back(mlir::RegionSuccessor(&getRegion()));
@@ -2869,7 +2869,7 @@ void TargetOp::getSuccessorRegions(
   mlir::RegionBranchPoint point, 
   llvm::SmallVectorImpl<::mlir::RegionSuccessor>& regions) {
   if (!point.isParent()) {
-    regions.push_back(mlir::RegionSuccessor::parent());
+    regions.push_back(mlir::RegionSuccessor(getOperation()));
     return;
   }
   regions.push_back(mlir::RegionSuccessor(&getRegion()));
