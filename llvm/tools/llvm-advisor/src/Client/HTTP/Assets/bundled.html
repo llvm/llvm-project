@@ -3780,11 +3780,20 @@ const CompareView = {
     const section = h('div', { class: 'compare-remarks-section' });
     section.appendChild(h('h3', { style: { margin: '0 0 10px' } }, 'Optimization Impact'));
 
+    const net = newMissed - resolved;
+    const netColor = net > 0 ? 'var(--orange)' : net < 0 ? 'var(--green)' : 'var(--fg)';
+    const netSign = net > 0 ? '+' : '';
+
     const impactBar = h('div', { style: { display: 'flex', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' } });
-    if (newMissed > 0)
+    if (net !== 0)
       impactBar.appendChild(h('div', { class: 'summary-metric warn' },
+        h('div', { class: 'label' }, 'Net'),
+        h('div', { class: 'values', style: { color: netColor } }, `${netSign}${formatNumber(net)}`)
+      ));
+    if (newMissed > 0)
+      impactBar.appendChild(h('div', { class: 'summary-metric' },
         h('div', { class: 'label' }, 'New Missed'),
-        h('div', { class: 'values', style: { color: 'var(--orange)' } }, `+${formatNumber(newMissed)}`)
+        h('div', { class: 'values', style: { color: 'var(--red)' } }, `+${formatNumber(newMissed)}`)
       ));
     if (resolved > 0)
       impactBar.appendChild(h('div', { class: 'summary-metric' },
@@ -3810,6 +3819,7 @@ const CompareView = {
     const functions = diff.functions || [];
     if (!functions.length) { el.appendChild(section); return; }
 
+    const SEVERITY_COLORS = { minor: 'var(--fg3)', moderate: 'var(--orange)', critical: 'var(--red)' };
     const tbl = h('table', { class: 'top-units-table', style: { width: '100%' } });
     const thead = h('tr', {},
       h('th', {}, 'Function'),
@@ -3817,6 +3827,7 @@ const CompareView = {
       h('th', { style: { textAlign: 'right' } }, 'After'),
       h('th', { style: { textAlign: 'right' } }, '∆ Missed'),
       h('th', { style: { textAlign: 'right' } }, '∆ Total'),
+      h('th', { style: { textAlign: 'center' } }, 'Severity'),
     );
     tbl.appendChild(h('thead', {}, thead));
     const tbody = h('tbody', {});
@@ -3824,14 +3835,21 @@ const CompareView = {
     functions.forEach((fn, idx) => {
       const delta = fn.delta_missed;
       const color = delta > 0 ? 'var(--orange)' : delta < 0 ? 'var(--green)' : 'var(--fg)';
+      const sev = fn.severity || 'minor';
+      const sevColor = SEVERITY_COLORS[sev] || 'var(--fg3)';
+      const beforeMissed = fn.before?.missed || 0;
+      const beforePassed = fn.before?.passed || 0;
+      const afterMissed = fn.after?.missed || 0;
+      const afterPassed = fn.after?.passed || 0;
       const row = h('tr', { style: { cursor: 'pointer' },
         onClick: () => this._toggleFnDetail(fn, row, tbody, idx)
       },
         h('td', { class: 'mono', style: { fontSize: '11px', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, title: fn.name }, fn.name),
-        h('td', { class: 'num' }, formatNumber(fn.before?.missed || 0)),
-        h('td', { class: 'num' }, formatNumber(fn.after?.missed || 0)),
+        h('td', { class: 'num', title: `${beforeMissed} missed / ${beforePassed} passed` }, `${formatNumber(beforeMissed)}${beforePassed > 0 ? '/' + formatNumber(beforePassed) : ''}`),
+        h('td', { class: 'num', title: `${afterMissed} missed / ${afterPassed} passed` }, `${formatNumber(afterMissed)}${afterPassed > 0 ? '/' + formatNumber(afterPassed) : ''}`),
         h('td', { class: 'num', style: { color } }, `${delta >= 0 ? '+' : ''}${formatNumber(delta)}`),
         h('td', { class: 'num', style: { color: fn.delta_total > 0 ? 'var(--orange)' : fn.delta_total < 0 ? 'var(--green)' : '' } }, `${fn.delta_total >= 0 ? '+' : ''}${formatNumber(fn.delta_total)}`),
+        h('td', { class: 'num', style: { color: sevColor, fontWeight: '600', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.5px' } }, sev),
       );
       tbody.appendChild(row);
     });
@@ -3919,8 +3937,8 @@ const CompareView = {
       makeEntries(removed, '−', 'var(--green)').forEach(e => cell.appendChild(e));
     }
     if (added.length) {
-      cell.appendChild(h('div', { style: { marginTop: removed.length ? '8px' : 0, marginBottom: '4px', fontWeight: '600', color: 'var(--orange)' } }, 'Added (new):'));
-      makeEntries(added, '+', 'var(--orange)').forEach(e => cell.appendChild(e));
+      cell.appendChild(h('div', { style: { marginTop: removed.length ? '8px' : 0, marginBottom: '4px', fontWeight: '600', color: 'var(--red)' } }, 'Added (new):'));
+      makeEntries(added, '+', 'var(--red)').forEach(e => cell.appendChild(e));
     }
   },
 

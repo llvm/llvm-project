@@ -1191,6 +1191,14 @@ static HTTPResult handleGetCompareRemarks(CoreClient &Client,
     FuncProfile Before, After;
     int64_t DeltaMissed;
     int64_t DeltaTotal;
+    StringRef Severity;
+  };
+
+  auto getSeverity = [](int64_t DeltaMissed) -> StringRef {
+    int64_t AD = std::abs(DeltaMissed);
+    if (AD < 5) return "minor";
+    if (AD < 50) return "moderate";
+    return "critical";
   };
 
   SmallVector<FuncDiff, 256> Diffs;
@@ -1205,6 +1213,7 @@ static HTTPResult handleGetCompareRemarks(CoreClient &Client,
     D.After = KV.second;
     D.DeltaMissed = KV.second.Missed - B.Missed;
     D.DeltaTotal = KV.second.Total - B.Total;
+    D.Severity = getSeverity(D.DeltaMissed);
     if (D.DeltaMissed != 0 || D.DeltaTotal != 0 || B.Total == 0)
       Diffs.push_back(D);
   }
@@ -1215,6 +1224,7 @@ static HTTPResult handleGetCompareRemarks(CoreClient &Client,
     D.Before = KV.second;
     D.DeltaMissed = -KV.second.Missed;
     D.DeltaTotal = -KV.second.Total;
+    D.Severity = getSeverity(D.DeltaMissed);
     Diffs.push_back(D);
   }
 
@@ -1277,6 +1287,7 @@ static HTTPResult handleGetCompareRemarks(CoreClient &Client,
           JOS.attributeEnd();
           JOS.attribute("delta_missed", D.DeltaMissed);
           JOS.attribute("delta_total", D.DeltaTotal);
+          JOS.attribute("severity", D.Severity);
         });
       }
       JOS.arrayEnd();
