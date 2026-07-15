@@ -53,7 +53,6 @@ add_libc_unittest(
   DEPENDS
     libc.src.arpa.inet.inet_ntoa
     libc.hdr.types.struct_in_addr
-    libc.src.__support.common
     libc.src.__support.endian_internal
 )
 
