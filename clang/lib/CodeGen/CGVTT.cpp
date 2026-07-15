@@ -90,8 +90,9 @@ CodeGenVTables::EmitVTTDefinition(llvm::GlobalVariable *VTT,
      llvm::Constant *Init = llvm::ConstantExpr::getGetElementPtr(
          VTable->getValueType(), VTable, Idxs, /*InBounds=*/true, InRange);
 
-     if (auto PAuthQual = CGM.computeVTPointerAuthentication(
-             VTTVT.getBase(), /*IsVTTEntry=*/true)) {
+     if (auto PAuthQual =
+             CGM.getVTablePointerAuthentication(VTTVT.getBase(),
+                                                /*IsVTTEntry=*/true)) {
        llvm::Constant *Address = nullptr;
        if (PAuthQual->isAddressDiscriminated())
          Address = llvm::ConstantExpr::getGetElementPtr(

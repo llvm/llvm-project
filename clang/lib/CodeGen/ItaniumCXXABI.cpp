@@ -2233,9 +2233,9 @@ llvm::Value *ItaniumCXXABI::getVTableAddressPointInStructorWithVTT(
                                     CGF.getPointerAlign());
 
   if (auto PointerAuth = CGM.getVTablePointerAuthInfo(&CGF, VTableClass, VTT,
-                                                      /*IsVTTEntry=*/true)) {
+                                                      /*IsVTTEntry=*/true))
     AP = CGF.EmitPointerAuthAuth(*PointerAuth, AP);
-  }
+
   return AP;
 }
 

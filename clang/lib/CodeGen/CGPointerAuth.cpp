@@ -636,27 +636,27 @@ CodeGenModule::computeVTPointerAuthentication(const CXXRecordDecl *ThisClass,
 }
 
 std::optional<PointerAuthQualifier>
-CodeGenModule::getVTablePointerAuthentication(const CXXRecordDecl *Record) {
+CodeGenModule::getVTablePointerAuthentication(const CXXRecordDecl *Record,
+                                              bool IsVTTEntry) {
   if (!Record->getDefinition() || !Record->isPolymorphic())
     return std::nullopt;
 
-  auto Existing = VTablePtrAuthInfos.find(Record);
-  std::optional<PointerAuthQualifier> Authentication;
-  if (Existing != VTablePtrAuthInfos.end()) {
-    Authentication = Existing->getSecond();
-  } else {
-    Authentication = computeVTPointerAuthentication(Record);
-    VTablePtrAuthInfos.insert(std::make_pair(Record, Authentication));
+  if (!IsVTTEntry) {
+    auto Existing = VTablePtrAuthInfos.find(Record);
+    if (Existing != VTablePtrAuthInfos.end())
+      return Existing->getSecond();
   }
+  std::optional<PointerAuthQualifier> Authentication =
+      computeVTPointerAuthentication(Record, IsVTTEntry);
+  if (!IsVTTEntry)
+    VTablePtrAuthInfos.insert(std::make_pair(Record, Authentication));
   return Authentication;
 }
 
 std::optional<CGPointerAuthInfo> CodeGenModule::getVTablePointerAuthInfo(
     CodeGenFunction *CGF, const CXXRecordDecl *Record,
     llvm::Value *StorageAddress, bool IsVTTEntry) {
-  auto Authentication = IsVTTEntry
-                            ? computeVTPointerAuthentication(Record, IsVTTEntry)
-                            : getVTablePointerAuthentication(Record);
+  auto Authentication = getVTablePointerAuthentication(Record, IsVTTEntry);
   if (!Authentication)
     return std::nullopt;
 
