@@ -6017,12 +6017,24 @@ float APFloat::convertToFloat() const {
   return Temp.getIEEE().convertToFloat();
 }
 
+unsigned APFloatBase::getArbitraryFPFormatSizeInBits(StringRef Format) {
+  return StringSwitch<unsigned>(Format)
+      .Case("Float8E5M2", getSizeInBits(semFloat8E5M2))
+      .Case("Float8E5M2FNUZ", getSizeInBits(semFloat8E5M2FNUZ))
+      .Case("Float8E4M3", getSizeInBits(semFloat8E4M3))
+      .Case("Float8E4M3FN", getSizeInBits(semFloat8E4M3FN))
+      .Case("Float8E4M3FNUZ", getSizeInBits(semFloat8E4M3FNUZ))
+      .Case("Float8E4M3B11FNUZ", getSizeInBits(semFloat8E4M3B11FNUZ))
+      .Case("Float8E3M4", getSizeInBits(semFloat8E3M4))
+      .Case("Float8E8M0FNU", getSizeInBits(semFloat8E8M0FNU))
+      .Case("Float6E3M2FN", getSizeInBits(semFloat6E3M2FN))
+      .Case("Float6E2M3FN", getSizeInBits(semFloat6E2M3FN))
+      .Case("Float4E2M1FN", getSizeInBits(semFloat4E2M1FN))
+      .Default(0);
+}
+
 bool APFloatBase::isValidArbitraryFPFormat(StringRef Format) {
-  static constexpr StringLiteral ValidFormats[] = {
-      "Float8E5M2",     "Float8E5M2FNUZ",    "Float8E4M3",  "Float8E4M3FN",
-      "Float8E4M3FNUZ", "Float8E4M3B11FNUZ", "Float8E3M4",  "Float8E8M0FNU",
-      "Float6E3M2FN",   "Float6E2M3FN",      "Float4E2M1FN"};
-  return llvm::is_contained(ValidFormats, Format);
+  return getArbitraryFPFormatSizeInBits(Format) != 0;
 }
 
 const fltSemantics *APFloatBase::getArbitraryFPSemantics(StringRef Format) {

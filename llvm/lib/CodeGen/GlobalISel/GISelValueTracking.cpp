@@ -424,6 +424,38 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known.Zero.setHighBits(std::min(SignBits0, SignBits1) - 1);
     break;
   }
+  case TargetOpcode::G_SADDSAT: {
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::sadd_sat(Known, Known2);
+    break;
+  }
+  case TargetOpcode::G_UADDSAT: {
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::uadd_sat(Known, Known2);
+    break;
+  }
+  case TargetOpcode::G_SSUBSAT: {
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::ssub_sat(Known, Known2);
+    break;
+  }
+  case TargetOpcode::G_USUBSAT: {
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::usub_sat(Known, Known2);
+    break;
+  }
   case TargetOpcode::G_UDIV: {
     computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
                          Depth + 1);
@@ -2483,20 +2515,7 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
   // Finally, if we can prove that the top bits of the result are 0's or 1's,
   // use this information.
   KnownBits Known = getKnownBits(R, DemandedElts, Depth);
-  APInt Mask;
-  if (Known.isNonNegative()) { // sign bit is 0
-    Mask = Known.Zero;
-  } else if (Known.isNegative()) { // sign bit is 1;
-    Mask = Known.One;
-  } else {
-    // Nothing known.
-    return FirstAnswer;
-  }
-
-  // Okay, we know that the sign bit in Mask is set.  Use CLO to determine
-  // the number of identical bits in the top of the input value.
-  Mask <<= Mask.getBitWidth() - TyBits;
-  return std::max(FirstAnswer, Mask.countl_one());
+  return std::max(FirstAnswer, Known.countMinSignBits());
 }
 
 unsigned GISelValueTracking::computeNumSignBits(Register R, unsigned Depth) {

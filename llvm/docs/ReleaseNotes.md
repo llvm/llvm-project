@@ -263,6 +263,7 @@ Makes programs 10x faster by doing Special New Thing.
   Absolute Difference) extension.
 * Adds CodeGen support for the 'Zvabd` extension.
 * `-mcpu=spacemit-a100` was added.
+* Adds assembler support for the `XSMTVDotII` (SpacemiT Vector Extension for Matrix 2.0) extension.
 * The opt-in `-riscv-enable-p-ext-simd-codegen` flag has been removed. P extension SIMD code generation is now enabled automatically if the P extension is supported.
 * `-mcpu=xt-c910v2` and `-mcpu=xt-c920v2` were added.
 * Adds experimental assembler support for the 'Zvzip` (RISC-V Vector
@@ -400,6 +401,9 @@ Makes programs 10x faster by doing Special New Thing.
 * Fixed `llvm-ar` to correctly handle the `N` count modifier on Windows for archive members whose names differ only
   in case (e.g. `FOO.OBJ` and `foo.obj`). Previously, `-N 2` would fail with "not found" even when two matching members existed.
 * `llvm-readobj` and `llvm-readelf` now support the `--call-graph-section` option to dump the contents of the experimental [call graph section](CallGraphSection.md).
+* Added support for hybrid ARM64X object files to `llvm-ar` and `llvm-lib`. When these files are added to
+  an archive, they are automatically split into separate native and EC members. Because the resulting members
+  are no longer hybrid object files, consumers of these archives do not need to support the hybrid format themselves.
 
 ### Changes to LLDB
 

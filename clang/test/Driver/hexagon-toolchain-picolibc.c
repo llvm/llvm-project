@@ -252,6 +252,15 @@
 // RUN:   -mcpu=hexagonv68 -G0 -### %s 2>&1 | FileCheck -check-prefix=CHECK-H2-LIBPATHS-G0 %s
 // CHECK-H2-LIBPATHS-G0: "-L{{.*}}{{/|\\\\}}Inputs{{/|\\\\}}hexagon_tree{{/|\\\\}}Tools{{/|\\\\}}bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}picolibc{{/|\\\\}}hexagon-unknown-h2-elf{{/|\\\\}}lib{{/|\\\\}}v68-G0"
 
+// -----------------------------------------------------------------------------
+// --cstdlib=picolibc enables init-array (not legacy .init/.fini)
+// -----------------------------------------------------------------------------
+// RUN: %clang --target=hexagon-none-elf --cstdlib=picolibc -### %s 2>&1 | FileCheck %s --check-prefix=CHECK-INIT-ARRAY
+// CHECK-INIT-ARRAY-NOT: "-fno-use-init-array"
+
+// RUN: %clang --target=hexagon-h2-elf --cstdlib=picolibc -### %s 2>&1 | FileCheck %s --check-prefix=CHECK-H2-INIT-ARRAY
+// CHECK-H2-INIT-ARRAY-NOT: "-fno-use-init-array"
+
 // =============================================================================
 // --sysroot tests: verify includes, library paths, and start files when an
 // explicit sysroot is provided together with --cstdlib=picolibc.
