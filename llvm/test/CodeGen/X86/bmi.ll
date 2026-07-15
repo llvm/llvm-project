@@ -2198,6 +2198,7 @@ define i8 @andn8(i8 %x, i8 %y) {
   %and = and i8 %not, %y
   ret i8 %and
 }
+
 define i8 @andn8_commuted(i8 %x, i8 %y) {
 ; X86-LABEL: andn8_commuted:
 ; X86:       # %bb.0:
@@ -2222,6 +2223,7 @@ define i8 @andn8_commuted(i8 %x, i8 %y) {
   ret i8 %and
 }
 
+; Make sure a regular i8 AND is not promoted by the ANDN combine.
 define i8 @and8(i8 %x, i8 %y) {
 ; X86-LABEL: and8:
 ; X86:       # %bb.0:
