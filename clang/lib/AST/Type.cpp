@@ -98,9 +98,7 @@ bool Qualifiers::isTargetAddressSpaceSupersetOf(LangAS A, LangAS B,
       Ctx.getTargetInfo().getTriple().getOS() == llvm::Triple::OpenCL;
 
   // In OpenCL C v2.0 s6.5.5: every address space except for __constant can be
-  // used as __generic. The OpenCL address space attributes are also available
-  // in SYCL device mode, but there opencl_generic only overlaps other address
-  // spaces when targeting the OpenCL execution environment.
+  // used as __generic.
   if ((Ctx.getLangOpts().OpenCL || IsOpenCLExecEnv) &&
       A == LangAS::opencl_generic && B != LangAS::opencl_constant)
     return true;
