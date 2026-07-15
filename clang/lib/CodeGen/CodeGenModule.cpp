@@ -57,8 +57,12 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -8854,4 +8858,176 @@ void CodeGenModule::requireVectorDestructorDefinition(const CXXRecordDecl *RD) {
   // destructor definition is required. That helps to enforse its generation
   // even if destructor is only declared.
   addDeferredDeclToEmit(VectorDtorGD);
+}
+
+// Stable open(2) flag values from AIX <fcntl.h>.
+static constexpr unsigned AIX_O_RDONLY  = 0x0;
+static constexpr unsigned AIX_O_WRONLY  = 0x1;
+static constexpr unsigned AIX_O_RDWR    = 0x2;
+static constexpr unsigned AIX_O_ACCMODE = 0x3;
+static constexpr unsigned AIX_O_APPEND  = 0x8;
+static constexpr unsigned AIX_O_CREAT   = 0x100;
+static constexpr unsigned AIX_O_TRUNC   = 0x200;
+static constexpr unsigned AIX_O_EXCL    = 0x400;
+
+// On AIX, fopen(3) does not atomically implement the C11/C23 'x' exclusive
+// mode. Lazily synthesises __aix_fopen_exclusive(path, mode) which uses
+// open(O_CREAT|O_EXCL)+fdopen so that exclusive creation is truly atomic.
+llvm::Function *CodeGenModule::getOrCreateAIXFOpenExclusiveHelper() {
+  assert(getTriple().isOSAIX() &&
+         "AIX fopen exclusive helper is only needed on AIX");
+
+  constexpr llvm::StringLiteral HelperName("__aix_fopen_exclusive");
+  llvm::Module &M = getModule();
+
+  if (llvm::Function *F = M.getFunction(HelperName))
+    return F;
+
+  llvm::LLVMContext &Ctx = getLLVMContext();
+  llvm::PointerType *PtrTy   = llvm::PointerType::getUnqual(Ctx);
+  llvm::IntegerType *Int32Ty = llvm::Type::getInt32Ty(Ctx);
+  llvm::IntegerType *Int8Ty  = llvm::Type::getInt8Ty(Ctx);
+  llvm::ArrayType   *Arr8Ty  = llvm::ArrayType::get(Int8Ty, 8);
+
+  llvm::Value *Zero32     = llvm::ConstantInt::get(Int32Ty, 0);
+  llvm::Value *One32      = llvm::ConstantInt::get(Int32Ty, 1);
+  llvm::Value *MinusOne32 = llvm::ConstantInt::getSigned(Int32Ty, -1);
+  llvm::Value *ZeroI8     = llvm::ConstantInt::get(Int8Ty, 0);
+  llvm::Value *NullPtr    = llvm::ConstantPointerNull::get(PtrTy);
+  llvm::Value *CreatExclFlags =
+      llvm::ConstantInt::get(Int32Ty, AIX_O_CREAT | AIX_O_EXCL);
+
+  llvm::FunctionType *FnTy =
+      llvm::FunctionType::get(PtrTy, {PtrTy, PtrTy}, /*isVarArg=*/false);
+  llvm::Function *Fn = llvm::Function::Create(
+      FnTy, llvm::GlobalValue::LinkOnceODRLinkage, HelperName, &M);
+  Fn->setVisibility(llvm::GlobalValue::HiddenVisibility);
+  Fn->addFnAttr(llvm::Attribute::NoUnwind);
+  Fn->setDSOLocal(true);
+
+  llvm::Argument *ArgPath = Fn->getArg(0);
+  llvm::Argument *ArgMode = Fn->getArg(1);
+  ArgPath->setName("path");
+  ArgMode->setName("mode");
+
+  llvm::FunctionCallee OpenFn = M.getOrInsertFunction(
+      "open",
+      llvm::FunctionType::get(Int32Ty, {PtrTy, Int32Ty}, /*isVarArg=*/true));
+  llvm::FunctionCallee FdopenFn = M.getOrInsertFunction(
+      "fdopen",
+      llvm::FunctionType::get(PtrTy, {Int32Ty, PtrTy}, /*isVarArg=*/false));
+  llvm::FunctionCallee CloseFn = M.getOrInsertFunction(
+      "close",
+      llvm::FunctionType::get(Int32Ty, {Int32Ty}, /*isVarArg=*/false));
+
+  using BB = llvm::BasicBlock;
+  llvm::IRBuilder<> B(Ctx);
+
+  BB *EntryBB      = BB::Create(Ctx, "entry",      Fn);
+  BB *OpenCallBB   = BB::Create(Ctx, "open.call",  Fn);
+  BB *OpenOkBB     = BB::Create(Ctx, "open.ok",    Fn);
+  BB *OpenFailBB   = BB::Create(Ctx, "open.fail",  Fn);
+  BB *FdopenOkBB   = BB::Create(Ctx, "fdopen.ok",  Fn);
+  BB *FdopenFailBB = BB::Create(Ctx, "fdopen.fail",Fn);
+  BB *RetBB        = BB::Create(Ctx, "ret",        Fn);
+
+  B.SetInsertPoint(EntryBB);
+
+  llvm::AllocaInst *BmodeBuf = B.CreateAlloca(Arr8Ty, nullptr, "bmode");
+  BmodeBuf->setAlignment(llvm::Align(1));
+
+  // Derive open(2) access flags from mode[0]: 'w'→O_WRONLY|O_TRUNC,
+  // 'a'→O_WRONLY|O_APPEND, otherwise O_RDONLY.
+  llvm::Value *Mode0 = B.CreateLoad(Int8Ty, ArgMode, "mode0");
+  llvm::Value *AccFlags = B.CreateSelect(
+      B.CreateICmpEQ(Mode0, llvm::ConstantInt::get(Int8Ty, 'w'), "is.w"),
+      llvm::ConstantInt::get(Int32Ty, AIX_O_WRONLY | AIX_O_TRUNC),
+      B.CreateSelect(
+          B.CreateICmpEQ(Mode0, llvm::ConstantInt::get(Int8Ty, 'a'), "is.a"),
+          llvm::ConstantInt::get(Int32Ty, AIX_O_WRONLY | AIX_O_APPEND),
+          llvm::ConstantInt::get(Int32Ty, AIX_O_RDONLY)),
+      "acc.flags");
+
+  // If '+' appears anywhere in mode, upgrade to O_RDWR (unrolled 6 iters).
+  llvm::Value *HasPlus = llvm::ConstantInt::get(llvm::Type::getInt1Ty(Ctx), 0);
+  for (int i = 0; i < 6; ++i) {
+    llvm::Value *Ch = B.CreateLoad(Int8Ty,
+        B.CreateConstGEP1_64(Int8Ty, ArgMode, i, ("mp" + llvm::Twine(i)).str()),
+        ("mc" + llvm::Twine(i)).str());
+    HasPlus = B.CreateOr(HasPlus,
+        B.CreateICmpEQ(Ch, llvm::ConstantInt::get(Int8Ty, '+'),
+            ("eq.plus" + llvm::Twine(i)).str()),
+        ("has.plus" + llvm::Twine(i)).str());
+  }
+  llvm::Value *AccMask = llvm::ConstantInt::get(Int32Ty, ~AIX_O_ACCMODE);
+  llvm::Value *AccFlagsFinal = B.CreateSelect(HasPlus,
+      B.CreateOr(B.CreateAnd(AccFlags, AccMask),
+                 llvm::ConstantInt::get(Int32Ty, AIX_O_RDWR)),
+      AccFlags, "acc.final");
+
+  llvm::Value *OpenFlags =
+      B.CreateOr(AccFlagsFinal, CreatExclFlags, "open.flags");
+
+  // Build a mode string without 'x' in BmodeBuf (unrolled 6 iters).
+  llvm::AllocaInst *WIdxAlloca = B.CreateAlloca(Int32Ty, nullptr, "widx");
+  B.CreateStore(Zero32, WIdxAlloca);
+  llvm::Value *XChar = llvm::ConstantInt::get(Int8Ty, 'x');
+  for (int i = 0; i < 6; ++i) {
+    llvm::Value *Ch = B.CreateLoad(Int8Ty,
+        B.CreateConstGEP1_64(Int8Ty, ArgMode, i, ("sp" + llvm::Twine(i)).str()),
+        ("ch" + llvm::Twine(i)).str());
+    BB *DoStore   = BB::Create(Ctx, ("store" + llvm::Twine(i)).str(), Fn);
+    BB *AfterIter = BB::Create(Ctx, ("after" + llvm::Twine(i)).str(), Fn);
+    B.CreateCondBr(
+        B.CreateOr(B.CreateICmpEQ(Ch, XChar), B.CreateICmpEQ(Ch, ZeroI8),
+            ("skip" + llvm::Twine(i)).str()),
+        AfterIter, DoStore);
+    B.SetInsertPoint(DoStore);
+    llvm::Value *WIdx = B.CreateLoad(Int32Ty, WIdxAlloca, "wi");
+    B.CreateStore(Ch, B.CreateGEP(Arr8Ty, BmodeBuf,
+        {Zero32, WIdx}, ("dp" + llvm::Twine(i)).str()));
+    B.CreateStore(B.CreateAdd(WIdx, One32), WIdxAlloca);
+    B.CreateBr(AfterIter);
+    B.SetInsertPoint(AfterIter);
+  }
+  llvm::Value *WIdx = B.CreateLoad(Int32Ty, WIdxAlloca, "wi.fin");
+  B.CreateStore(ZeroI8,
+      B.CreateGEP(Arr8Ty, BmodeBuf, {Zero32, WIdx}, "nuldst"));
+  llvm::Value *BmodePtr =
+      B.CreateConstGEP2_32(Arr8Ty, BmodeBuf, 0, 0, "bmode.ptr");
+  B.CreateBr(OpenCallBB);
+
+  B.SetInsertPoint(OpenCallBB);
+  llvm::Value *Mode0666 = llvm::ConstantInt::get(Int32Ty, 0666);
+  llvm::CallInst *FdVal =
+      B.CreateCall(OpenFn, {ArgPath, OpenFlags, Mode0666}, "fd");
+  FdVal->setDoesNotThrow();
+  B.CreateCondBr(B.CreateICmpEQ(FdVal, MinusOne32, "open.fail.cmp"),
+                 OpenFailBB, OpenOkBB);
+
+  B.SetInsertPoint(OpenFailBB);
+  B.CreateBr(RetBB);
+
+  B.SetInsertPoint(OpenOkBB);
+  llvm::CallInst *FpVal =
+      B.CreateCall(FdopenFn, {FdVal, BmodePtr}, "fp");
+  FpVal->setDoesNotThrow();
+  B.CreateCondBr(B.CreateICmpEQ(FpVal, NullPtr, "fdopen.fail.cmp"),
+                 FdopenFailBB, FdopenOkBB);
+
+  B.SetInsertPoint(FdopenFailBB);
+  B.CreateCall(CloseFn, {FdVal})->setDoesNotThrow();
+  B.CreateBr(RetBB);
+
+  B.SetInsertPoint(FdopenOkBB);
+  B.CreateBr(RetBB);
+
+  B.SetInsertPoint(RetBB);
+  llvm::PHINode *Ret = B.CreatePHI(PtrTy, 3, "retval");
+  Ret->addIncoming(NullPtr, OpenFailBB);
+  Ret->addIncoming(NullPtr, FdopenFailBB);
+  Ret->addIncoming(FpVal,   FdopenOkBB);
+  B.CreateRet(Ret);
+
+  return Fn;
 }

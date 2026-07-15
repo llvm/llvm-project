@@ -6517,6 +6517,27 @@ RValue CodeGenFunction::EmitCallExpr(const CallExpr *E,
     return EmitCXXPseudoDestructorExpr(callee.getPseudoDestructorExpr());
   }
 
+  // On AIX, redirect fopen(path, "...x...") to a helper that uses
+  // open(O_CREAT|O_EXCL)+fdopen, which handles exclusive creation atomically.
+  if (CGM.getTriple().isOSAIX()) {
+    if (const FunctionDecl *FD = E->getDirectCallee()) {
+      if (FD->getDeclName().isIdentifier() &&
+          FD->getName() == "fopen" && E->getNumArgs() == 2) {
+        const Expr *ModeArg = E->getArg(1)->IgnoreImpCasts();
+        if (const StringLiteral *SL = dyn_cast<StringLiteral>(ModeArg)) {
+          if (SL->getString().contains('x')) {
+            llvm::Function *Helper = CGM.getOrCreateAIXFOpenExclusiveHelper();
+            llvm::Value *PathVal = EmitScalarExpr(E->getArg(0));
+            llvm::Value *ModeVal = EmitScalarExpr(E->getArg(1));
+            llvm::CallInst *CI = Builder.CreateCall(Helper, {PathVal, ModeVal});
+            CI->setCallingConv(Helper->getCallingConv());
+            return RValue::get(CI);
+          }
+        }
+      }
+    }
+  }
+
   return EmitCall(E->getCallee()->getType(), callee, E, ReturnValue,
                   /*Chain=*/nullptr, CallOrInvoke);
 }

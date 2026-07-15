@@ -1414,6 +1414,10 @@ public:
   llvm::Constant *CreateRuntimeVariable(llvm::Type *Ty,
                                         StringRef Name);
 
+  // On AIX, fopen(3) with 'x' mode is not atomic. Lazily emits a helper
+  // __aix_fopen_exclusive that uses open(O_CREAT|O_EXCL)+fdopen instead.
+  llvm::Function *getOrCreateAIXFOpenExclusiveHelper();
+
   ///@name Custom Blocks Runtime Interfaces
   ///@{
 
