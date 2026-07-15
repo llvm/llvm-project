@@ -19,14 +19,14 @@ define <5 x i32> @bad_odd_sized_vector(ptr %p, <5 x i32> %v) {
 }
 
 ;--- add-must-be-integer.ll
-; CHECK: atomicrmw add operand must be an integer
+; CHECK: atomicrmw add operand must be an integer or fixed vector of integer type
 define <4 x float> @bad_add(ptr %p, <4 x float> %v) {
   %old = atomicrmw elementwise add ptr %p, <4 x float> %v monotonic
   ret <4 x float> %old
 }
 
 ;--- fadd-must-be-fp.ll
-; CHECK: atomicrmw fadd operand must be a floating point type
+; CHECK: atomicrmw fadd operand must be a floating point or fixed vector of floating point type
 define <4 x i32> @bad_fadd(ptr %p, <4 x i32> %v) {
   %old = atomicrmw elementwise fadd ptr %p, <4 x i32> %v monotonic
   ret <4 x i32> %old

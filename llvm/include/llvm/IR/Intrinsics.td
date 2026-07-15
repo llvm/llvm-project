@@ -1045,8 +1045,10 @@ def int_prefetch
                 [llvm_anyptr_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
                 [IntrInaccessibleMemOrArgMemOnly,
                  ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
-                 ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>,
-                 ImmArg<ArgIndex<3>>]>;
+                 ImmArg<ArgIndex<1>>, Range<ArgIndex<1>, 0, 2>,
+                 ImmArg<ArgIndex<2>>, Range<ArgIndex<2>, 0, 4>,
+                 ImmArg<ArgIndex<3>>, Range<ArgIndex<3>, 0, 2>
+                ]>;
 def int_pcmarker      : DefaultAttrsIntrinsic<[], [llvm_i32_ty]>;
 
 def int_readcyclecounter : DefaultAttrsIntrinsic<[llvm_i64_ty]>;
@@ -1361,7 +1363,9 @@ def int_is_fpclass
     : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
                             [llvm_anyfloat_ty, llvm_i32_ty],
                             [IntrNoMem, IntrSpeculatable,
-                             IntrNoCreateUndefOrPoison, ImmArg<ArgIndex<1>>]>;
+                             IntrNoCreateUndefOrPoison, ImmArg<ArgIndex<1>>,
+                             ArgInfo<ArgIndex<1>,
+                                     [ImmArgPrinter<"printFPClassMask">]>]>;
 
 //===--------------- Constrained Floating Point Intrinsics ----------------===//
 //
@@ -3125,6 +3129,18 @@ def int_ptrauth_resign : Intrinsic<[llvm_i64_ty],
                                     llvm_i32_ty, llvm_i64_ty],
                                    [IntrNoMem, ImmArg<ArgIndex<1>>,
                                     ImmArg<ArgIndex<3>>]>;
+
+// Authenticate a signed pointer using a PC-based signature and resign it.
+// The second (key) and third (discriminator) arguments specify the signing
+// schema used for authenticating.
+// The fourth argument specifies the PC value used for authenticating.
+// The fifth and sixth arguments specify the schema used for resigning.
+// The signature must be valid.
+def int_ptrauth_auth_with_pc_and_resign : Intrinsic<[llvm_i64_ty],
+                                                    [llvm_i64_ty, llvm_i32_ty, llvm_i64_ty,
+                                                     llvm_i64_ty, llvm_i32_ty, llvm_i64_ty],
+                                                    [IntrNoMem, ImmArg<ArgIndex<1>>,
+                                                     ImmArg<ArgIndex<4>>]>;
 
 // Authenticate a signed pointer, load 32bit value at offset from pointer, add
 // both, and sign it. The second (key) and third (discriminator) arguments

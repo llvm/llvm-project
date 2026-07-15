@@ -303,9 +303,6 @@ def FeatureXS : Extension<"xs", "XS", "FEAT_XS",
 def FeatureWFxT : ExtensionWithMArch<"wfxt", "WFxT", "FEAT_WFxT",
   "Enable Armv8.7-A WFET and WFIT instruction">;
 
-def FeatureHCX : Extension<"hcx", "HCX", "FEAT_HCX",
-  "Enable Armv8.7-A HCRX_EL2 system register">;
-
 def FeatureLS64 : ExtensionWithMArch<"ls64", "LS64",
   "FEAT_LS64, FEAT_LS64_V, FEAT_LS64_ACCDATA",
   "Enable Armv8.7-A LD64B/ST64B Accelerator Extension">;
@@ -581,6 +578,9 @@ def FeatureSME_TMOP: ExtensionWithMArch<"sme-tmop", "SME_TMOP", "FEAT_SME_TMOP",
 
 def FeatureSSVE_FEXPA : ExtensionWithMArch<"ssve-fexpa", "SSVE_FEXPA", "FEAT_SSVE_FEXPA",
   "Enable SVE FEXPA instruction in Streaming SVE mode", [FeatureSME2]>;
+
+def FeatureHINTE: ExtensionWithMArch<"hinte", "HINTE", "FEAT_HINTE",
+  "Enable extended A64 hint instruction space">;
 
 //===----------------------------------------------------------------------===//
 //  Armv9.7 Architecture Extensions
@@ -1007,6 +1007,11 @@ def FeatureFixedLoadLatency4 : SubtargetFeature<
     "fixed-load-latency-4", "FixedLoadLatency", "4",
     "Use a fixed latency of 4 for loads instead of querying the scheduling model">;
 
+def FeatureLimited64bitVectorMulBandwidth : SubtargetFeature<
+    "has-limited-64bit-vector-mul-bandwidth", "HasLimited64bitVectorMulBandwidth", "true",
+    "Has limited 64bit vector multiply bandwidth compared to scalar multiply",
+    [], InlineIgnore>;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //
@@ -1057,7 +1062,7 @@ def HasV8_6aOps : Architecture64<8, 6, "a", "v8.6a",
     FeatureEnhancedCounterVirtualization, FeatureMatMulInt8],
   !listconcat(HasV8_5aOps.DefaultExts, [FeatureBF16, FeatureMatMulInt8])>;
 def HasV8_7aOps : Architecture64<8, 7, "a", "v8.7a",
-  [HasV8_6aOps, FeatureXS, FeatureWFxT, FeatureHCX],
+  [HasV8_6aOps, FeatureXS, FeatureWFxT],
   !listconcat(HasV8_6aOps.DefaultExts, [FeatureWFxT, FeatureSPE_EEF])>;
 def HasV8_8aOps : Architecture64<8, 8, "a", "v8.8a",
   [HasV8_7aOps, FeatureHBC, FeatureMOPS, FeatureNMI],
@@ -1090,9 +1095,9 @@ def HasV9_5aOps : Architecture64<9, 5, "a", "v9.5a",
   [HasV9_4aOps, FeatureCPA],
   !listconcat(HasV9_4aOps.DefaultExts, [FeatureCPA,  FeatureLUT, FeatureFAMINMAX])>;
 def HasV9_6aOps : Architecture64<9, 6, "a", "v9.6a",
-  [HasV9_5aOps, FeatureCMPBR, FeatureLSUI, FeatureOCCMO],
+  [HasV9_5aOps, FeatureCMPBR, FeatureLSUI, FeatureOCCMO, FeatureHINTE],
   !listconcat(HasV9_5aOps.DefaultExts, [FeatureCMPBR,
-    FeatureLSUI, FeatureOCCMO])>;
+    FeatureLSUI, FeatureOCCMO, FeatureHINTE])>;
 def HasV9_7aOps : Architecture64<9, 7, "a", "v9.7a",
   [HasV9_6aOps, FeatureSVE2p3, FeatureFPRCVT, FeatureF16F32DOT],
   !listconcat(HasV9_6aOps.DefaultExts, [FeatureSVE2p3, FeatureFPRCVT,

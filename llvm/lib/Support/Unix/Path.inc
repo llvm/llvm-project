@@ -1173,17 +1173,24 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
                     !Stat.st_tag.ft_txtflag && !Stat.st_tag.ft_ccsid &&
                     Stat.st_size == 0;
     if (Flags & OF_Text) {
-      if (auto EC = llvm::enableAutoConversion(ResultFD))
-        return EC;
-      if (DoSetTag) {
-        if (auto EC = llvm::setzOSFileTag(ResultFD, CCSID_IBM_1047, true))
+      if ((Access & FA_Write) && (Disp != CD_OpenExisting)) {
+        int ccsid = CCSID_IBM_1047;
+        if (Stat.st_tag.ft_txtflag && Stat.st_tag.ft_ccsid != FT_UNTAGGED)
+          ccsid = Stat.st_tag.ft_ccsid;
+        if (auto EC = llvm::enableAutoConversion(ResultFD, ccsid))
           return EC;
-      }
+        if (DoSetTag) {
+          if (auto EC = llvm::setzOSFileTag(ResultFD, ccsid, /*IsText=*/true))
+            return EC;
+        }
+      } else if (auto EC = llvm::enableAutoConversion(ResultFD))
+        return EC;
     } else {
       if (auto EC = llvm::disableAutoConversion(ResultFD))
         return EC;
       if (DoSetTag) {
-        if (auto EC = llvm::setzOSFileTag(ResultFD, FT_BINARY, false))
+        if (auto EC =
+                llvm::setzOSFileTag(ResultFD, FT_BINARY, /*IsText=*/false))
           return EC;
       }
     }

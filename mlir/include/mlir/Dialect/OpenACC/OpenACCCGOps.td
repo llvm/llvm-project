@@ -42,8 +42,8 @@ def OpenACC_ReductionInitOp
     contains the recipe's init code and must yield a single value (the private
     reduction storage) via `acc.yield`.
 
-    The var operand is the original/shared reduction variable. The
-    reduction_operator specifies the reduction kind (e.g. add, mul).
+    The `var` operand is the original/shared reduction variable. The
+    `reduction_operator` specifies the reduction kind (e.g. add, mul).
   }];
   let arguments = (ins OpenACC_AnyPointerOrMappableType:$var,
                        OpenACC_ReductionOperatorAttr:$reductionOperator);
@@ -74,8 +74,8 @@ def OpenACC_ReductionCombineRegionOp
     value(s) in the original/shared reduction variable. The region is
     terminated by `acc.yield` with no operands.
 
-    The destVar operand is the original/shared reduction variable.
-    The srcVar operand is typically the result of acc.reduction_init.
+    The `destVar` operand is the original/shared reduction variable.
+    The `srcVar` operand is typically the result of acc.reduction_init.
   }];
   let arguments = (ins OpenACC_AnyPointerOrMappableType:$destVar,
                        OpenACC_AnyPointerOrMappableType:$srcVar);
@@ -113,11 +113,11 @@ def OpenACC_ReductionCombineOp: OpenACC_Op<"reduction_combine",
       memref.store %combine, %dest[] : memref<i32>
     ```
     
-    The $destMemref operand is a "pointer" to the original reduction 
-    variable (typically shared). The $srcMemref operand is a "pointer"
+    The `destMemref` operand is a "pointer" to the original reduction 
+    variable (typically shared). The `srcMemref` operand is a "pointer"
     to the partial sum of the reduction (typically private).
 
-    The $kind is the OpenACC reduction operator that determines how to 
+    The `kind` is the OpenACC reduction operator that determines how to 
     accumulate the two values.
   }];
 

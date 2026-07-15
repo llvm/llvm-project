@@ -571,7 +571,6 @@ bool Context::Run(State &Parent, const Function *Func) {
   return false;
 }
 
-// TODO: Virtual bases?
 const CXXMethodDecl *
 Context::getOverridingFunction(const CXXRecordDecl *DynamicDecl,
                                const CXXRecordDecl *StaticDecl,
@@ -680,7 +679,8 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
     bool IsConst = PD->getType().isConstQualified();
     bool IsVolatile = PD->getType().isVolatileQualified();
 
-    if (!getASTContext().hasSameType(PD->getType(),
+    if (PD->isInvalidDecl() ||
+        !getASTContext().hasSameType(PD->getType(),
                                      FuncProto->getParamType(ParamIndex)))
       return nullptr;
 

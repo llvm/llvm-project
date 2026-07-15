@@ -63,8 +63,8 @@ Session::~Session() {
   });
 }
 
-void Session::attach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {
-  assert(CA && "attach called with null CA object");
+void Session::doAttach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {
+  assert(CA && "doAttach called with null CA object");
 
   {
     std::scoped_lock<std::mutex> Lock(M);
