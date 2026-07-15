@@ -1142,7 +1142,6 @@ static void normalizeCosts(
 
   // Log-scale normalization.
   static constexpr int64_t Limit = 100;
-  static constexpr int64_t OutlierBonus = 20;
   double LogMaxNextUseDist = std::log(MaxNextUseDist - MinNextUseDist + 1);
   double LogMaxRestoreCost = std::log(MaxRestoreCost - MinRestoreCost + 1);
 
