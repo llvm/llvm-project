@@ -78,6 +78,31 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 #### C2y Feature Support
 
+- Clang now supports C2y's new syntax for `if` and `switch` statements with
+  initializer and condition variables, as specified in
+  [N3356](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3356.htm)_. For
+  example:
+
+```c
+  if (bool x = true; x) {
+    // ...
+  }
+
+  if (bool x = true) {
+    // ...
+  }
+
+  // attribute list on declarations are also supported
+  switch ([[maybe_unused]] int x = 1) {
+  default:
+    // ...
+  }
+
+  if (bool x [[maybe_unused]] = true; x) {
+    // ...
+  }
+```
+
 #### C23 Feature Support
 
 ### Objective-C Language Changes
@@ -103,6 +128,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 ### Bug Fixes in This Version
 
 - Fixed a constraint comparison bug in partial ordering. (#GH182671)
+- Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -179,6 +205,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 %   - Moved checkers
 
 #### Improvements
+
+- The lock-order-reversal check in ``alpha.unix.PthreadLock`` is now disabled by default.
+  It can be re-enabled with the ``WarnOnLockOrderReversal`` option.
 
 #### Moved checkers
 
