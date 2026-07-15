@@ -91,6 +91,16 @@ struct Test {
   template <class ExecutionPolicy>
   void operator()(ExecutionPolicy&& policy) {
     {
+      // check the return types
+      int lhs[1]       = {0};
+      int rhs[1]       = {0};
+      auto res_3legged = std::mismatch(policy, Iter1(std::begin(lhs)), Iter1(std::begin(lhs)), Iter2(std::begin(rhs)));
+      auto res_4legged = std::mismatch(
+          policy, Iter1(std::begin(lhs)), Iter1(std::begin(lhs)), Iter2(std::begin(rhs)), Iter2(std::begin(rhs)));
+      static_assert(std::is_same_v<decltype(res_3legged), std::pair<Iter1, Iter2>>);
+      static_assert(std::is_same_v<decltype(res_4legged), std::pair<Iter1, Iter2>>);
+    }
+    {
       // empty ranges
       int lhs[1] = {0};
       int rhs[1] = {0};
