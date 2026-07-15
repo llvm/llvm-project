@@ -77,11 +77,24 @@ bool isSplat(ArrayRef<Value *> VL);
 /// For BinaryOperator, it also checks if \p ValWithUses is used in specific
 /// patterns that make it effectively commutative (like equality comparisons
 /// with zero).
+/// In most cases, users should not call this function directly (since \p I and
+/// \p ValWithUses are the same). However, when analyzing interchangeable
+/// instructions, we need to use the converted opcode along with the original
+/// uses.
+/// \param I The instruction to check for commutativity
+/// \param ValWithUses The value whose uses are analyzed for special
+/// patterns
 bool isCommutative(const Instruction *I, const Value *ValWithUses,
                    bool IsCopyable = false);
 
-/// Convenience wrapper that calls the two-parameter version of isCommutative
-/// with the same instruction for both parameters.
+/// This is a helper function to check whether \p I is commutative.
+/// This is a convenience wrapper that calls the two-parameter version of
+/// isCommutative with the same instruction for both parameters. This is
+/// the common case where the instruction being checked for commutativity
+/// is the same as the instruction whose uses are analyzed for special
+/// patterns (see the two-parameter version above for details).
+/// \param I The instruction to check for commutativity
+/// \returns true if the instruction is commutative, false otherwise
 bool isCommutative(const Instruction *I);
 
 /// Checks if the operand is commutative. In commutative operations, not all
