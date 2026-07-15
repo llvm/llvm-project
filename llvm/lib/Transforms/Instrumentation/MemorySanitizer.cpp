@@ -5306,7 +5306,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     Value *Input = I.getOperand(0);
     assert(isFixedFPVector(Input));
-    FixedVectorType *InputType = cast<FixedVectorType>(Input->getType());
+    [[maybe_unused]] FixedVectorType *InputType = cast<FixedVectorType>(Input->getType());
 
     Value *Classifiers = I.getOperand(1);
     assert(isa<ConstantInt>(Classifiers));
