@@ -313,6 +313,9 @@ public:
   void setSupportsDebugEntryValues(bool Enable) {
     Options.SupportsDebugEntryValues = Enable;
   }
+  void setEnableDefaultMachineVerifier(bool Enable) {
+    Options.EnableDefaultMachineVerifier = Enable;
+  }
 
   void setCFIFixup(bool Enable) { Options.EnableCFIFixup = Enable; }
 
