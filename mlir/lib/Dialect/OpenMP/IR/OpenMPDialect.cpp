@@ -2573,8 +2573,8 @@ LogicalResult TargetDataOp::verify() {
 
 // Adapted from fir.if implementation.
 void TargetDataOp::getSuccessorRegions(
-  mlir::RegionBranchPoint point, 
-  llvm::SmallVectorImpl<::mlir::RegionSuccessor>& regions) {
+    mlir::RegionBranchPoint point,
+    llvm::SmallVectorImpl<::mlir::RegionSuccessor> &regions) {
   if (!point.isParent()) {
     regions.push_back(mlir::RegionSuccessor(getOperation()));
     return;
@@ -2866,8 +2866,8 @@ LogicalResult TargetOp::verifyRegions() {
 
 // Copy from `TargetDataOp::getSuccessorRegions`
 void TargetOp::getSuccessorRegions(
-  mlir::RegionBranchPoint point, 
-  llvm::SmallVectorImpl<::mlir::RegionSuccessor>& regions) {
+    mlir::RegionBranchPoint point,
+    llvm::SmallVectorImpl<::mlir::RegionSuccessor> &regions) {
   if (!point.isParent()) {
     regions.push_back(mlir::RegionSuccessor(getOperation()));
     return;
