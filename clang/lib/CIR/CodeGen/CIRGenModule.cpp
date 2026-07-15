@@ -3553,12 +3553,13 @@ void CIRGenModule::setFuncInfoAttr(cir::FuncOp funcOp,
   // the shape of each call. Only free functions name a known entity today, so
   // a member like char_traits::find never shares the tag of the free std::find.
   std::optional<cir::KnownFuncKind> kind;
-  if (!method)
+  if (!method) {
     kind = llvm::StringSwitch<std::optional<cir::KnownFuncKind>>(
                funcDecl->getName())
                .Case(cir::StdFindOp::getFunctionName(),
                      cir::StdFindOp::getFuncKind())
                .Default(std::nullopt);
+  }
   if (!kind)
     return;
 

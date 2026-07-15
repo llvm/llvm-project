@@ -98,7 +98,7 @@ struct LoweringPreparePass
   void lowerTrivialCopyCall(cir::CallOp op);
   void lowerStoreOfConstAggregate(cir::StoreOp op);
   void lowerLocalInitOp(cir::LocalInitOp op);
-  void lowerStdOp(mlir::Operation *op);
+  template <typename StdOpTy> void lowerStdOp(StdOpTy op);
 
   /// Return the FuncOp called by `callOp`.  Uses the cached `symbolTables`
   /// member to avoid the O(M) module-wide scan that the static
@@ -2255,17 +2255,18 @@ void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
 // Every raised operation carries the original callee, the operands, and the
 // attributes of the call, so this one function lowers any of them back to an
 // equivalent plain call.
-void LoweringPreparePass::lowerStdOp(mlir::Operation *op) {
+template <typename StdOpTy>
+void LoweringPreparePass::lowerStdOp(StdOpTy typedOp) {
+  mlir::Operation *op = typedOp.getOperation();
   cir::CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op);
   mlir::Type resultType;
   if (op->getNumResults())
     resultType = op->getResult(0).getType();
   cir::CallOp call = builder.createCallOp(
-      op->getLoc(), op->getAttrOfType<mlir::FlatSymbolRefAttr>("original_fn"),
-      resultType, op->getOperands());
+      op->getLoc(), typedOp.getOriginalFnAttr(), resultType, op->getOperands());
   for (mlir::NamedAttribute attr : op->getAttrs())
-    if (attr.getName() != "original_fn")
+    if (attr.getName() != typedOp.getOriginalFnAttrName())
       call->setAttr(attr.getName(), attr.getValue());
 
   op->replaceAllUsesWith(call);
@@ -2277,8 +2278,8 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
     lowerArrayCtor(arrayCtor);
   } else if (auto arrayDtor = dyn_cast<cir::ArrayDtor>(op)) {
     lowerArrayDtor(arrayDtor);
-  } else if (mlir::isa<cir::StdFindOp>(op)) {
-    lowerStdOp(op);
+  } else if (auto findOp = mlir::dyn_cast<cir::StdFindOp>(op)) {
+    lowerStdOp(findOp);
   } else if (auto cast = mlir::dyn_cast<cir::CastOp>(op)) {
     lowerCastOp(cast);
   } else if (auto complexConj = mlir::dyn_cast<cir::ComplexConjOp>(op)) {
