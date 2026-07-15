@@ -95,8 +95,7 @@ DiagnosticBuilder Parser::Diag(const Token &Tok, unsigned DiagID) {
 
 DiagnosticBuilder Parser::DiagCompat(SourceLocation Loc,
                                      unsigned CompatDiagId) {
-  return Diag(Loc,
-              DiagnosticIDs::getCXXCompatDiagId(getLangOpts(), CompatDiagId));
+  return Diag(Loc, DiagnosticIDs::getCompatDiagId(getLangOpts(), CompatDiagId));
 }
 
 DiagnosticBuilder Parser::DiagCompat(const Token &Tok, unsigned CompatDiagId) {

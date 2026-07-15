@@ -356,6 +356,10 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalForCartesianProduct(allScalarsAndVectors)
       .legalIf(extendedScalarsAndVectorsProduct);
 
+  // Lower G_SEXT_INREG to the canonical shl/ashr pair, which map to
+  // OpShiftLeftLogical + OpShiftRightArithmetic.
+  getActionDefinitionsBuilder(G_SEXT_INREG).lower();
+
   getActionDefinitionsBuilder(G_PHI)
       .legalFor(allPtrsScalarsAndVectors)
       .legalIf(extendedPtrsScalarsAndVectors)
