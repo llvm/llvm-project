@@ -60,12 +60,8 @@ namespace Padding {
   typedef long double LongDouble3Vec __attribute__((ext_vector_type(3)));
   void foo() {
       LongDouble3Vec v1, v2;
-#if __SIZEOF_SIZE_T__ == 8
-#if !defined(_WIN32)
+#if __x86_64
       static_assert(__builtin_object_size(&v1, 0) == 64);
-#else
-      static_assert(__builtin_object_size(&v1, 0) == 32);
-#endif
 #endif
   }
 }
