@@ -67,8 +67,25 @@ module attributes {
   }
 
   // CHECK: cir.call @take_s8(%arg0) : (!s8i {llvm.signext}) -> ()
+
+  // A sub-register integer return is also extended, not just arguments.
+  cir.func @ret_s8() -> !s8i {
+    %0 = cir.const #cir.int<0> : !s8i
+    cir.return %0 : !s8i
+  }
+
+  // CHECK: cir.func{{.*}} @ret_s8() -> (!s8i {llvm.signext})
+
+  cir.func @ret_u16() -> !u16i {
+    %0 = cir.const #cir.int<0> : !u16i
+    cir.return %0 : !u16i
+  }
+
+  // CHECK: cir.func{{.*}} @ret_u16() -> (!u16i {llvm.zeroext})
 }
 
 // LLVM: define void @take_s8(i8 signext %{{.+}})
 // LLVM: define void @take_u16(i16 zeroext %{{.+}})
 // LLVM: define void @take_bool(i1 zeroext %{{.+}})
+// LLVM: define signext i8 @ret_s8()
+// LLVM: define zeroext i16 @ret_u16()

@@ -47,6 +47,7 @@
 #include "llvm/ABI/FunctionInfo.h"
 #include "llvm/ABI/TargetInfo.h"
 #include "llvm/ABI/Types.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/CallingConv.h"
 
 using namespace mlir;
@@ -67,8 +68,8 @@ namespace {
 // Library's SysV x86_64 classifier, and converts the result back into the
 // dialect-agnostic mlir::abi::FunctionClassification that CIRABIRewriteContext
 // consumes.  Only integer / pointer / bool / f32 / f64 signatures are handled;
-// aggregates and other leaf types are reported NYI by classifyX86_64 so an
-// unsupported signature fails the pass instead of being misclassified.
+// aggregates and other leaf types are reported NYI by classifyX86_64Function
+// so an unsupported signature fails the pass instead of being misclassified.
 //===----------------------------------------------------------------------===//
 
 /// llvm::Align requires a power of two; DataLayout can report non-power-of-two
@@ -94,54 +95,91 @@ static bool isSupportedScalarType(mlir::Type ty) {
 static mlir::Type abiTypeToCIR(const llvm::abi::Type *ty, MLIRContext *ctx) {
   if (!ty)
     return nullptr;
-  if (ty->isVoid())
-    return cir::VoidType::get(ctx);
-  if (auto *intTy = llvm::dyn_cast<llvm::abi::IntegerType>(ty))
-    return cir::IntType::get(ctx, intTy->getSizeInBits().getFixedValue(),
-                             intTy->isSigned());
-  if (auto *fltTy = llvm::dyn_cast<llvm::abi::FloatType>(ty)) {
-    const llvm::fltSemantics *sem = fltTy->getSemantics();
-    if (sem == &llvm::APFloat::IEEEsingle())
-      return cir::SingleType::get(ctx);
-    if (sem == &llvm::APFloat::IEEEdouble())
-      return cir::DoubleType::get(ctx);
-  }
-  if (llvm::isa<llvm::abi::PointerType>(ty))
-    return cir::PointerType::get(cir::VoidType::get(ctx));
-  return nullptr;
+  return llvm::TypeSwitch<const llvm::abi::Type *, mlir::Type>(ty)
+      .Case(
+          [&](const llvm::abi::VoidType *) { return cir::VoidType::get(ctx); })
+      .Case([&](const llvm::abi::IntegerType *intTy) {
+        return cir::IntType::get(ctx, intTy->getSizeInBits().getFixedValue(),
+                                 intTy->isSigned());
+      })
+      .Case([&](const llvm::abi::FloatType *fltTy) -> mlir::Type {
+        const llvm::fltSemantics *sem = fltTy->getSemantics();
+        if (sem == &llvm::APFloat::IEEEsingle())
+          return cir::SingleType::get(ctx);
+        if (sem == &llvm::APFloat::IEEEdouble())
+          return cir::DoubleType::get(ctx);
+        return nullptr;
+      })
+      .Case([&](const llvm::abi::PointerType *) {
+        return cir::PointerType::get(cir::VoidType::get(ctx));
+      })
+      .Default([](const llvm::abi::Type *) -> mlir::Type { return nullptr; });
 }
 
-/// Map a scalar CIR type to an llvm::abi::Type.  classifyX86_64 pre-filters the
-/// signature, so only the scalar types handled here can reach this function.
+/// Map a scalar CIR type to an llvm::abi::Type.  classifyX86_64Function
+/// pre-filters the signature, so only the scalar types handled here can
+/// reach this function.
 static const llvm::abi::Type *mapCIRType(mlir::Type type,
                                          mlir::abi::ABITypeMapper &typeMapper,
                                          const DataLayout &dl) {
   llvm::abi::TypeBuilder &tb = typeMapper.getTypeBuilder();
-  if (auto intTy = dyn_cast<cir::IntType>(type))
-    return tb.getIntegerType(intTy.getWidth(),
-                             safeAlign(dl.getTypeABIAlignment(type)),
-                             intTy.isSigned());
-  if (isa<cir::PointerType>(type))
-    return tb.getPointerType(dl.getTypeSizeInBits(type),
-                             safeAlign(dl.getTypeABIAlignment(type)),
-                             /*AddressSpace=*/0);
-  if (isa<cir::BoolType>(type))
-    return tb.getIntegerType(dl.getTypeSizeInBits(type),
-                             safeAlign(dl.getTypeABIAlignment(type)),
-                             /*Signed=*/false);
-  if (isa<cir::VoidType>(type))
-    return tb.getVoidType();
-  if (isa<cir::SingleType>(type))
-    return tb.getFloatType(llvm::APFloat::IEEEsingle(),
-                           safeAlign(dl.getTypeABIAlignment(type)));
-  if (isa<cir::DoubleType>(type))
-    return tb.getFloatType(llvm::APFloat::IEEEdouble(),
-                           safeAlign(dl.getTypeABIAlignment(type)));
-  llvm_unreachable("mapCIRType: type not pre-filtered by classifyX86_64");
+  return llvm::TypeSwitch<mlir::Type, const llvm::abi::Type *>(type)
+      .Case([&](cir::IntType intTy) {
+        return tb.getIntegerType(intTy.getWidth(),
+                                 safeAlign(dl.getTypeABIAlignment(type)),
+                                 intTy.isSigned());
+      })
+      .Case([&](cir::PointerType ptrTy) {
+        unsigned addrSpace = 0;
+        if (auto targetAsAttr =
+                dyn_cast_if_present<cir::TargetAddressSpaceAttr>(
+                    ptrTy.getAddrSpace()))
+          addrSpace = targetAsAttr.getValue();
+        return tb.getPointerType(dl.getTypeSizeInBits(type),
+                                 safeAlign(dl.getTypeABIAlignment(type)),
+                                 addrSpace);
+      })
+      .Case([&](cir::BoolType) {
+        return tb.getIntegerType(dl.getTypeSizeInBits(type),
+                                 safeAlign(dl.getTypeABIAlignment(type)),
+                                 /*Signed=*/false);
+      })
+      .Case([&](cir::VoidType) { return tb.getVoidType(); })
+      .Case([&](cir::SingleType) {
+        return tb.getFloatType(llvm::APFloat::IEEEsingle(),
+                               safeAlign(dl.getTypeABIAlignment(type)));
+      })
+      .Case([&](cir::DoubleType) {
+        return tb.getFloatType(llvm::APFloat::IEEEdouble(),
+                               safeAlign(dl.getTypeABIAlignment(type)));
+      })
+      .Default([](mlir::Type) -> const llvm::abi::Type * {
+        llvm_unreachable(
+            "mapCIRType: type not pre-filtered by classifyX86_64Function");
+      });
 }
 
 /// Convert an llvm::abi::ArgInfo for a scalar type into the ArgClassification
 /// consumed by CIRABIRewriteContext.
+///
+/// Direct: every scalar this bridge maps passes as-is, so no coercion type
+/// is needed (nullptr means "same as the original CIR type").
+///
+/// Extend: bool or a sub-register integer needs a signext/zeroext attribute.
+/// Every ArgInfo::getExtend() call site in the x86_64 classifier
+/// (llvm/lib/ABI/Targets/X86.cpp) is gated on the operand being an integer,
+/// so a non-integer, non-bool origTy here would mean the classifier
+/// disagreed with its own source -- asserted rather than silently handled.
+///
+/// Indirect: needed once records/_BitInt/vectors are supported (sret,
+/// byval, and large _BitInt all classify Indirect), but
+/// X86_64TargetInfo::getIndirectResult()/getIndirectReturnResult() only
+/// return Indirect for aggregates or _BitInt, neither of which the
+/// scalar-only type set this bridge accepts can produce.  Unreachable until
+/// a later PR adds those types and the record/vector/complex/int type gate
+/// that belongs here.
+///
+/// Ignore: a void return has no register or stack slot.
 static ArgClassification convertABIArgInfo(const llvm::abi::ArgInfo &info,
                                            MLIRContext *ctx,
                                            mlir::Type origTy) {
@@ -150,14 +188,14 @@ static ArgClassification convertABIArgInfo(const llvm::abi::ArgInfo &info,
   if (info.isExtend()) {
     if (origTy && isa<cir::BoolType>(origTy))
       return ArgClassification::getExtend(nullptr, info.isSignExt());
-    if (origTy && !isa<cir::IntType>(origTy))
-      return ArgClassification::getDirect(nullptr);
-    mlir::Type coerced = abiTypeToCIR(info.getCoerceToType(), ctx);
-    return ArgClassification::getExtend(coerced, info.isSignExt());
+    assert((!origTy || isa<cir::IntType>(origTy)) &&
+           "the x86_64 classifier only returns Extend for integers and bool");
+    mlir::Type extendedTy = abiTypeToCIR(info.getCoerceToType(), ctx);
+    return ArgClassification::getExtend(extendedTy, info.isSignExt());
   }
   if (info.isIndirect())
-    return ArgClassification::getIndirect(info.getIndirectAlign(),
-                                          info.getIndirectByVal());
+    llvm_unreachable("Indirect classification is impossible for the "
+                     "scalar-only type set this bridge accepts");
   return ArgClassification::getIgnore();
 }
 
@@ -165,13 +203,14 @@ static ArgClassification convertABIArgInfo(const llvm::abi::ArgInfo &info,
 /// std::nullopt and emits an NYI error if the signature uses a type the scalar
 /// bridge does not handle yet.
 static std::optional<FunctionClassification>
-classifyX86_64(cir::FuncOp func, const DataLayout &dl,
-               mlir::abi::ABITypeMapper &typeMapper,
-               const llvm::abi::TargetInfo &targetInfo) {
+classifyX86_64Function(cir::FuncOp func, const DataLayout &dl,
+                       mlir::abi::ABITypeMapper &typeMapper,
+                       const llvm::abi::TargetInfo &targetInfo) {
   MLIRContext *ctx = func->getContext();
   cir::FuncType fnTy = func.getFunctionType();
   mlir::Type retCIR = fnTy.getReturnType();
-  bool voidRet = !retCIR || isa<cir::VoidType>(retCIR);
+  assert(retCIR && "FuncType::getReturnType() never returns null");
+  bool voidRet = isa<cir::VoidType>(retCIR);
 
   auto reject = [&](mlir::Type t) -> bool {
     if (isSupportedScalarType(t))
@@ -208,6 +247,36 @@ classifyX86_64(cir::FuncOp func, const DataLayout &dl,
         convertABIArgInfo(fi->getArgInfo(i).Info, ctx, origArg));
   }
   return fc;
+}
+
+/// The classifier targets this pass drives internally via a shared
+/// ABITypeMapper/TargetInfo.  (The classification-attr injection mode is
+/// orthogonal -- it names an arbitrary attribute, not a fixed target -- and
+/// stays string-keyed.)  The name/enum pairs below are the single source of
+/// truth for both parsing the `target` pass option and the unknown-target
+/// diagnostic in classifyFunction.
+enum class CallConvTarget { Test, X86_64 };
+
+const std::pair<llvm::StringRef, CallConvTarget> kCallConvTargets[] = {
+    {"test", CallConvTarget::Test},
+    {"x86_64", CallConvTarget::X86_64},
+};
+
+std::optional<CallConvTarget> parseCallConvTarget(StringRef target) {
+  for (const auto &[name, value] : kCallConvTargets)
+    if (target == name)
+      return value;
+  return std::nullopt;
+}
+
+std::string supportedCallConvTargets() {
+  std::string result;
+  for (const auto &entry : kCallConvTargets) {
+    if (!result.empty())
+      result += ", ";
+    result += entry.first.str();
+  }
+  return result;
 }
 
 bool needsRewrite(const FunctionClassification &fc) {
@@ -247,13 +316,13 @@ classifyFunction(cir::FuncOp func, const DataLayout &dl, StringRef target,
         attr, [&]() { return func.emitOpError(); });
   }
 
-  if (target == "test")
+  if (parseCallConvTarget(target) == CallConvTarget::Test)
     return mlir::abi::test::classify(argTypes, returnType, dl);
 
   // Note: the "x86_64" target is handled directly in runOnOperation (it needs
   // a shared ABITypeMapper and TargetInfo), so it never reaches here.
   func.emitOpError() << "unknown target '" << target
-                     << "' (supported: test, x86_64)";
+                     << "' (supported: " << supportedCallConvTargets() << ")";
   return std::nullopt;
 }
 
@@ -302,7 +371,7 @@ void CallConvLoweringPass::runOnOperation() {
   // reuse it (and its type mapper) across every function.
   std::optional<mlir::abi::ABITypeMapper> x86TypeMapper;
   std::unique_ptr<llvm::abi::TargetInfo> x86Target;
-  if (target == "x86_64") {
+  if (parseCallConvTarget(target) == CallConvTarget::X86_64) {
     x86TypeMapper.emplace(dl);
     auto avx =
         static_cast<llvm::abi::X86AVXABILevel>(x86AvxAbiLevel.getValue());
@@ -319,7 +388,7 @@ void CallConvLoweringPass::runOnOperation() {
   moduleOp.walk([&](cir::FuncOp f) {
     std::optional<FunctionClassification> fc;
     if (x86Target)
-      fc = classifyX86_64(f, dl, *x86TypeMapper, *x86Target);
+      fc = classifyX86_64Function(f, dl, *x86TypeMapper, *x86Target);
     else
       fc = classifyFunction(f, dl, target, classificationAttr);
     if (!fc) {
