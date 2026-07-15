@@ -224,14 +224,17 @@ TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementGSStream) {
 
 // A null node is not a valid signature element
 TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementNull) {
-  EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(nullptr),
-                       Failed());
+  EXPECT_THAT_EXPECTED(
+      SemanticSignatureElement::fromMetadata(nullptr),
+      FailedWithMessage("signature element node is null"));
 }
 
 // A node with the wrong number of operands is rejected
 TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementWrongOperandCount) {
   MDNode *Node = MDNode::get(Ctx, {getI32(0), getStr("A")});
-  EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(Node), Failed());
+  EXPECT_THAT_EXPECTED(
+      SemanticSignatureElement::fromMetadata(Node),
+      FailedWithMessage("signature element node has wrong number of operands"));
 }
 
 // A node with an operand of the wrong type is rejected
@@ -245,7 +248,8 @@ TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementWrongOperandType) {
   SmallVector<Metadata *> Ops(Node->op_begin(), Node->op_end());
   Ops[0] = getStr("not an int");
   EXPECT_THAT_EXPECTED(
-      SemanticSignatureElement::fromMetadata(MDNode::get(Ctx, Ops)), Failed());
+      SemanticSignatureElement::fromMetadata(MDNode::get(Ctx, Ops)),
+      FailedWithMessage("expected integer operand 0"));
 }
 
 //===--------------------------------------------------------------------===//
@@ -259,7 +263,8 @@ TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementInvalidCompType) {
                             /*InterpMode=*/0, /*Rows=*/1, /*Cols=*/1,
                             /*StartRow=*/0, /*StartCol=*/0, /*UsageMask=*/0,
                             /*DynIndexMask=*/0, /*GSStream=*/0);
-  EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(Node), Failed());
+  EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(Node),
+                       FailedWithMessage("invalid component type"));
 }
 
 // A semantic kind outside dxbc::PSV::SemanticKind is rejected
@@ -269,7 +274,8 @@ TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementInvalidSemanticKind) 
                             /*InterpMode=*/0, /*Rows=*/1, /*Cols=*/1,
                             /*StartRow=*/0, /*StartCol=*/0, /*UsageMask=*/0,
                             /*DynIndexMask=*/0, /*GSStream=*/0);
-  EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(Node), Failed());
+  EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(Node),
+                       FailedWithMessage("invalid semantic kind"));
 }
 
 // An interpolation mode outside dxbc::PSV::InterpolationMode is rejected
@@ -279,7 +285,8 @@ TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementInvalidInterpMode) {
                             /*InterpMode=*/100, /*Rows=*/1, /*Cols=*/1,
                             /*StartRow=*/0, /*StartCol=*/0, /*UsageMask=*/0,
                             /*DynIndexMask=*/0, /*GSStream=*/0);
-  EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(Node), Failed());
+  EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(Node),
+                       FailedWithMessage("invalid interpolation mode"));
 }
 
 // The number of components per row must be within 1-4
@@ -290,8 +297,9 @@ TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementInvalidCols) {
                               /*InterpMode=*/0, /*Rows=*/1, Cols,
                               /*StartRow=*/0, /*StartCol=*/0, /*UsageMask=*/0,
                               /*DynIndexMask=*/0, /*GSStream=*/0);
-    EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(Node),
-                         Failed());
+    EXPECT_THAT_EXPECTED(
+        SemanticSignatureElement::fromMetadata(Node),
+        FailedWithMessage("number of components per row must be within 1-4"));
   }
 }
 
@@ -302,7 +310,9 @@ TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementInvalidStartCol) {
                             /*InterpMode=*/0, /*Rows=*/1, /*Cols=*/1,
                             /*StartRow=*/0, /*StartCol=*/4, /*UsageMask=*/0,
                             /*DynIndexMask=*/0, /*GSStream=*/0);
-  EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(Node), Failed());
+  EXPECT_THAT_EXPECTED(
+      SemanticSignatureElement::fromMetadata(Node),
+      FailedWithMessage("start column must be within 0-3 or unallocated"));
 }
 
 // The row/col sentinels must be set together
@@ -311,16 +321,18 @@ TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementInvalidSentinelPair) 
       /*SigId=*/0, "A", /*CompType=*/9, /*SemanticKind=*/0, /*Indices=*/{0},
       /*InterpMode=*/0, /*Rows=*/1, /*Cols=*/1, /*StartRow=*/UnallocatedRow,
       /*StartCol=*/0, /*UsageMask=*/0, /*DynIndexMask=*/0, /*GSStream=*/0);
-  EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(RowOnly),
-                       Failed());
+  EXPECT_THAT_EXPECTED(
+      SemanticSignatureElement::fromMetadata(RowOnly),
+      FailedWithMessage("start row and column sentinels must be set together"));
 
   MDNode *ColOnly = getElement(
       /*SigId=*/0, "A", /*CompType=*/9, /*SemanticKind=*/0, /*Indices=*/{0},
       /*InterpMode=*/0, /*Rows=*/1, /*Cols=*/1, /*StartRow=*/0,
       /*StartCol=*/UnallocatedCol, /*UsageMask=*/0, /*DynIndexMask=*/0,
       /*GSStream=*/0);
-  EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(ColOnly),
-                       Failed());
+  EXPECT_THAT_EXPECTED(
+      SemanticSignatureElement::fromMetadata(ColOnly),
+      FailedWithMessage("start row and column sentinels must be set together"));
 }
 
 // The usage and dynamic-index masks are 4-bit values
@@ -330,14 +342,15 @@ TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementInvalidMasks) {
       /*InterpMode=*/0, /*Rows=*/1, /*Cols=*/1, /*StartRow=*/0, /*StartCol=*/0,
       /*UsageMask=*/0x10, /*DynIndexMask=*/0, /*GSStream=*/0);
   EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(BadUsage),
-                       Failed());
+                       FailedWithMessage("usage mask must be a 4-bit value"));
 
   MDNode *BadDyn = getElement(
       /*SigId=*/0, "A", /*CompType=*/9, /*SemanticKind=*/0, /*Indices=*/{0},
       /*InterpMode=*/0, /*Rows=*/1, /*Cols=*/1, /*StartRow=*/0, /*StartCol=*/0,
       /*UsageMask=*/0, /*DynIndexMask=*/0x10, /*GSStream=*/0);
-  EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(BadDyn),
-                       Failed());
+  EXPECT_THAT_EXPECTED(
+      SemanticSignatureElement::fromMetadata(BadDyn),
+      FailedWithMessage("dynamic index mask must be a 4-bit value"));
 }
 
 // A geometry shader output stream index must be within 0-3
@@ -347,7 +360,9 @@ TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementInvalidGSStream) {
                             /*InterpMode=*/0, /*Rows=*/1, /*Cols=*/1,
                             /*StartRow=*/0, /*StartCol=*/0, /*UsageMask=*/0,
                             /*DynIndexMask=*/0, /*GSStream=*/4);
-  EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(Node), Failed());
+  EXPECT_THAT_EXPECTED(
+      SemanticSignatureElement::fromMetadata(Node),
+      FailedWithMessage("geometry shader stream index must be within 0-3"));
 }
 
 // The number of semantic indices must equal the number of rows
@@ -357,7 +372,10 @@ TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementIndicesRowMismatch) {
                             /*InterpMode=*/0, /*Rows=*/2, /*Cols=*/1,
                             /*StartRow=*/0, /*StartCol=*/0, /*UsageMask=*/0,
                             /*DynIndexMask=*/0, /*GSStream=*/0);
-  EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(Node), Failed());
+  EXPECT_THAT_EXPECTED(
+      SemanticSignatureElement::fromMetadata(Node),
+      FailedWithMessage(
+          "number of semantic indices must equal the number of rows"));
 }
 
 //===--------------------------------------------------------------------===//
