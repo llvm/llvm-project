@@ -5295,8 +5295,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // AVX512 Floating-Point Classification
   //
   // e.g.,
-  // - <8 x i1> @llvm.x86.avx512.fpclass.pd.512(<8 x double>, i32)
-  // - <16 x i1> @llvm.x86.avx512.fpclass.ps.512(<16 x float>, i32)
+  // - < 8 x i1> @llvm.x86.avx512.fpclass.pd.512
+  //                 (<8 x double> %input, i32 %classifiers)
+  // - <16 x i1> @llvm.x86.avx512.fpclass.ps.512
+  //                 (<16 x float> %input, i32 %classifiers)
   void handleAVX512FPClass(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
 
