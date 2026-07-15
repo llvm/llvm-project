@@ -14086,14 +14086,23 @@ bool ScalarEvolution::containsErasedValue(const SCEV *S) const {
 /// Return the size of an element read or written by Inst.
 const SCEV *ScalarEvolution::getElementSize(Instruction *Inst) {
   Type *Ty;
-  if (StoreInst *Store = dyn_cast<StoreInst>(Inst))
+  Type *PtrTy;
+  if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
     Ty = Store->getValueOperand()->getType();
-  else if (LoadInst *Load = dyn_cast<LoadInst>(Inst))
+    PtrTy = Store->getPointerOperandType();
+  } else if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
     Ty = Load->getType();
-  else
+    PtrTy = Load->getPointerOperandType();
+  } else {
     return nullptr;
+  }
 
-  Type *ETy = getEffectiveSCEVType(PointerType::getUnqual(Inst->getContext()));
+  // Derive the index type from the access's actual pointer operand rather than
+  // a generic address-space-0 pointer. On targets whose data layout uses
+  // different index widths per address space, the element-size SCEV must match
+  // the width of the access function's SCEV; otherwise delinearization would
+  // divide SCEVs of mismatched types.
+  Type *ETy = getEffectiveSCEVType(PtrTy);
   return getSizeOfExpr(ETy, Ty);
 }
 
