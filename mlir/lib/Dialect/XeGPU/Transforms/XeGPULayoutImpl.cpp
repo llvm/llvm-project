@@ -234,6 +234,50 @@ static void propagateRegionResultsToYieldOperands(
   }
 }
 
+/// Assign a layout to a region op's results (e.g. scf.for) using the layout of
+/// the terminator operands that the region forwards to them. For each operand a
+/// terminator (e.g. scf.yield) forwards to a successor input, if that input is
+/// a region op result, the operand's layout is written onto the result.
+/// clang-format off
+/// Example: scf.for ... iter_args(...) -> (out types) {
+///   ...
+///   scf.yield ... : (yield types)
+/// }
+/// clang-format on
+/// Having a layout on the region op result lets a later step attach a
+/// convert_layout as a use to resolve the region op's no-use case.
+/// Block-argument successors are left untouched.
+LogicalResult xegpu::propagateYieldOperandsToRegionResults(
+    mlir::RegionBranchTerminatorOpInterface terminator,
+    xegpu::GetLayoutFnTy getLayoutOfValue) {
+  // Only process if the terminator is inside a region branch op.
+  auto branchOp = dyn_cast<RegionBranchOpInterface>(terminator->getParentOp());
+  if (!branchOp)
+    return success();
+
+  RegionBranchSuccessorMapping mapping;
+  branchOp.getSuccessorOperandInputMapping(mapping,
+                                           RegionBranchPoint(terminator));
+  for (const auto &[successorOperand, successorInputs] : mapping) {
+    for (Value successorInput : successorInputs) {
+      Type inputType = successorInput.getType();
+      // We only need to operate on vector types.
+      if (!isa<VectorType>(inputType))
+        continue;
+      xegpu::DistributeLayoutAttr successorOperandLayout =
+          getLayoutOfValue(successorOperand->get());
+
+      // The forwarded operand must carry a layout to propagate.
+      if (!successorOperandLayout)
+        return failure();
+      // Assign the yield operand's layout to the region op result it feeds.
+      if (auto result = dyn_cast<OpResult>(successorInput))
+        xegpu::setDistributeLayoutAttr(result, successorOperandLayout);
+    }
+  }
+  return success();
+}
+
 // Propagate layout from region arguments to region op's init operands. This
 // sets the temporary layout for region arguments and init operands.
 LogicalResult

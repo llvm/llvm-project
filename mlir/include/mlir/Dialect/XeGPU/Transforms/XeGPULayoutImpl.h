@@ -53,6 +53,16 @@ using GetLayoutFnTy = llvm::function_ref<DistributeLayoutAttr(Value)>;
 LogicalResult propagateRegionArgsToInits(RegionBranchOpInterface regionOp,
                                          GetLayoutFnTy getLayoutOfValue);
 
+/// Propagate layouts from a region branch terminator's forwarded operands to
+/// the matching region results / successor block arguments. For each operand
+/// that a terminator (e.g. scf.yield) forwards to a successor input, the
+/// operand's layout is obtained via `getLayoutOfValue` and recorded on the
+/// successor input when it is an op result. Returns failure if a forwarded
+/// operand has no assigned layout.
+LogicalResult propagateYieldOperandsToRegionResults(
+    RegionBranchTerminatorOpInterface terminator,
+    GetLayoutFnTy getLayoutOfValue);
+
 /// Attach layout attributes to all vector-type operands of operations within
 /// the given operation's nested region. Reports an error if any vector operand
 /// lacks a layout attribute.
