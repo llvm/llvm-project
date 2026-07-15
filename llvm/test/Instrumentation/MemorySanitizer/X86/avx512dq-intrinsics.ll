@@ -20,8 +20,6 @@
 ;                    (<2 x double>, <2 x double>, <2 x double>, i8, i32, i32)
 ; - <4 x float> @llvm.x86.avx512.mask.reduce.ss
 ;                    (<4 x float>, <4 x float>, <4 x float>, i8, i32, i32)
-; - <8 x i1> @llvm.x86.avx512.fpclass.pd.512(<8 x double>, i32)
-; - <16 x i1> @llvm.x86.avx512.fpclass.ps.512(<16 x float>, i32)
 ; - i8 @llvm.x86.avx512.mask.fpclass.sd(<2 x double>, i32, i8)
 ; - i8 @llvm.x86.avx512.mask.fpclass.ss(<4 x float>, i32, i8)
 ; - <8 x double> @llvm.x86.avx512.sitofp.round(<8 x i64>, i32)
