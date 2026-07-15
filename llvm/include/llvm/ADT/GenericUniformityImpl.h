@@ -658,7 +658,7 @@ public:
 
     // Bootstrap with branch targets
     for (const auto *SuccBlock : successors(&DivTermBlock)) {
-      if (DivTermCycle && !CI.contains(DivTermCycle, SuccBlock)) {
+      if (DivTermCycle && !CI.contains(*DivTermCycle, SuccBlock)) {
         // If DivTerm exits the cycle immediately, computeJoin() might
         // not reach SuccBlock with a different label. We need to
         // check for this exit now.
@@ -683,7 +683,7 @@ public:
       // If no irreducible cycle, stop if freshLable.count() = 1 and Block
       // is the IPD. If it is in any irreducible cycle, continue propagation.
       if (FreshLabels.count() == 1 &&
-          (!IrreducibleAncestor || !CI.contains(IrreducibleAncestor, Block)))
+          (!IrreducibleAncestor || !CI.contains(*IrreducibleAncestor, Block)))
         break;
 
       LLVM_DEBUG(dbgs() << "Current labels:\n"; printDefs(dbgs()));
@@ -721,7 +721,7 @@ public:
         LLVM_DEBUG(dbgs() << CI.print(BlockCycle) << '\n');
         SmallVector<BlockT *, 4> BlockCycleExits;
         CI.getExitBlocks(*BlockCycle, BlockCycleExits);
-        bool BranchIsInside = CI.contains(BlockCycle, &DivTermBlock);
+        bool BranchIsInside = CI.contains(*BlockCycle, &DivTermBlock);
         for (auto *BlockCycleExit : BlockCycleExits) {
           if (BranchIsInside)
             visitCycleExitEdge(*BlockCycleExit, *Label);
@@ -988,14 +988,14 @@ const CycleT *getExtDivCycle(const CycleInfoT &CI, const CycleT *Cycle,
                              const BlockT *DivTermBlock,
                              const BlockT *JoinBlock) {
   assert(Cycle);
-  assert(CI.contains(Cycle, JoinBlock));
+  assert(CI.contains(*Cycle, JoinBlock));
 
-  if (CI.contains(Cycle, DivTermBlock))
+  if (CI.contains(*Cycle, DivTermBlock))
     return nullptr;
 
   const auto *OriginalCycle = Cycle;
   const auto *Parent = Cycle->getParentCycle();
-  while (Parent && !CI.contains(Parent, DivTermBlock)) {
+  while (Parent && !CI.contains(*Parent, DivTermBlock)) {
     Cycle = Parent;
     Parent = Cycle->getParentCycle();
   }
@@ -1032,8 +1032,8 @@ const CycleT *getIntDivCycle(const CycleInfoT &CI, const CycleT *Cycle,
     return nullptr;
 
   // Find the smallest common cycle, if one exists.
-  assert(Cycle && CI.contains(Cycle, JoinBlock));
-  while (Cycle && !CI.contains(Cycle, DivTermBlock)) {
+  assert(Cycle && CI.contains(*Cycle, JoinBlock));
+  while (Cycle && !CI.contains(*Cycle, DivTermBlock)) {
     Cycle = Cycle->getParentCycle();
   }
   if (!Cycle || Cycle->isReducible())
@@ -1084,7 +1084,7 @@ bool GenericUniformityAnalysisImpl<ContextT>::isTemporalDivergent(
     const BlockT &ObservingBlock, const InstructionT &Def) const {
   const BlockT *DefBlock = Def.getParent();
   for (const CycleT *Cycle = CI.getCycle(DefBlock);
-       Cycle && !CI.contains(Cycle, &ObservingBlock);
+       Cycle && !CI.contains(*Cycle, &ObservingBlock);
        Cycle = Cycle->getParentCycle()) {
     if (DivergentExitCycles.contains(Cycle)) {
       return true;
@@ -1354,7 +1354,7 @@ void llvm::ModifiedPostOrder<ContextT>::computeStackPO(
       for (auto *NestedExitBB : NestedExits) {
         LLVM_DEBUG(dbgs() << "  examine exit: "
                           << CI.getSSAContext().print(NestedExitBB) << "\n");
-        if (Cycle && !CI.contains(Cycle, NestedExitBB))
+        if (Cycle && !CI.contains(*Cycle, NestedExitBB))
           continue;
         if (Finalized.count(NestedExitBB))
           continue;
@@ -1377,7 +1377,7 @@ void llvm::ModifiedPostOrder<ContextT>::computeStackPO(
     for (auto *SuccBB : successors(NextBB)) {
       LLVM_DEBUG(dbgs() << "  examine succ: "
                         << CI.getSSAContext().print(SuccBB) << "\n");
-      if (Cycle && !CI.contains(Cycle, SuccBB))
+      if (Cycle && !CI.contains(*Cycle, SuccBB))
         continue;
       if (Finalized.count(SuccBB))
         continue;
@@ -1420,7 +1420,7 @@ void ModifiedPostOrder<ContextT>::computeCyclePO(
   for (auto *BB : successors(CycleHeader)) {
     LLVM_DEBUG(dbgs() << "  examine succ: " << CI.getSSAContext().print(BB)
                       << "\n");
-    if (!CI.contains(Cycle, BB))
+    if (!CI.contains(*Cycle, BB))
       continue;
     if (BB == CycleHeader)
       continue;

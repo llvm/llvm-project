@@ -84,7 +84,7 @@ delinearizeStaticRCOffset(memref::ReinterpretCastOp rc) {
   return offsetIdxs;
 }
 
-static bool hasExactlyOneCollapsedNonUnitDim(memref::ReinterpretCastOp rc) {
+static bool hasExactlyOneTruncatedNonUnitDim(memref::ReinterpretCastOp rc) {
   MemRefType srcType = dyn_cast<MemRefType>(rc.getSource().getType());
   MemRefType resType = dyn_cast<MemRefType>(rc.getType());
   assert(srcType.hasStaticShape() && resType.hasStaticShape() &&
@@ -92,25 +92,26 @@ static bool hasExactlyOneCollapsedNonUnitDim(memref::ReinterpretCastOp rc) {
   assert(srcType.getRank() == resType.getRank() &&
          "expected rank-preserving reinterpret_cast");
 
-  unsigned collapsedDims = 0;
+  unsigned truncatedDims = 0;
 
   for (auto [srcSize, resSize] :
        llvm::zip_equal(srcType.getShape(), resType.getShape())) {
     if (srcSize == resSize)
       continue;
 
-    // Only allow collapsing one non-unit source dim to a unit result dim.
-    if (srcSize != 1 && resSize == 1) {
-      ++collapsedDims;
+    // Only one non-unit source dimension may be truncated.
+    if (srcSize != 1 && resSize < srcSize) {
+      ++truncatedDims;
       continue;
     }
 
-    // The sizes differ and both of them are non-unit - ATM not supported.
+    // The size change is not a supported single non-unit source dimension
+    // reduction.
     return false;
   }
 
-  // Make sure there is only one collapsed dimension.
-  return collapsedDims == 1;
+  // Make sure there is only one truncated dimension.
+  return truncatedDims == 1;
 }
 
 /// Returns the unique non-unit dim or nullopt if # non-unit-dims != 1.
@@ -134,21 +135,19 @@ static std::optional<unsigned> getSingleNonUnitDim(MemRefType type) {
 /// offsets, delinearized offset.
 ///
 /// Supports ranked, static-shape, rank-preserving reinterpret_casts from
-/// identity-layout sources. In addition:
-///     identical to the source identity strides, and exactly one non-unit
-///     source
-///  * Non-scalar results must have static offsets, static result strides
-///     dimension collapsed to unit size
-/// Scalar-shaped results may have arbitrary result strides (i.e. for scalars,
-/// strides are effectively irrelevant).
+/// identity-layout sources.
+/// * Scalar-shaped results may have arbitrary result strides.
+/// * Non-scalar results must have static offsets, static result strides
+///   identical to the source identity strides, and exactly one non-unit
+///   source dimension size truncated.
 ///
-/// Returns nullopt for unsupported
-/// reinterpret_casts.
+/// Returns nullopt for unsupported reinterpret_casts.
 ///
 /// Examples that return info:
 ///
 ///   reinterpret_cast memref<1xMxNxf32, identity-layout>
-///     to memref<1xMx1xf32, strided<[M*N, N, 1], offset: OFF>>
+///     to memref<1xMxKxf32, strided<[M*N, N, 1], offset: OFF>>
+///     where K < N
 ///
 ///   reinterpret_cast memref<1xMxf32, identity-layout>
 ///     to memref<1x1xf32, strided<[?, ?], offset: ?>>
@@ -156,10 +155,11 @@ static std::optional<unsigned> getSingleNonUnitDim(MemRefType type) {
 /// Examples that return no info:
 ///
 ///   reinterpret_cast memref<1xMxNxf32, identity-layout>
-///     to memref<1xMx1xf32, strided<[?, N, 1]>>
+///     to memref<1xMxKxf32, strided<[?, N, 1]>>
 ///
 ///   reinterpret_cast memref<1xMxNxf32, identity-layout>
-///     to memref<1xKx1xf32, strided<[M*N, N, 1], offset: OFF>>
+///     to memref<1xNxPxf32, strided<[M*N, N, 1], offset: OFF>>
+///     where M != N && N != P
 static std::optional<ResultNonUnitDimsAndOffsetsForRC>
 getResultNonUnitDimsAndOffsetsForRC(memref::ReinterpretCastOp rc) {
   MemRefType srcType = dyn_cast<MemRefType>(rc.getSource().getType());
@@ -221,7 +221,7 @@ getResultNonUnitDimsAndOffsetsForRC(memref::ReinterpretCastOp rc) {
                       }))
       return std::nullopt;
 
-    if (!hasExactlyOneCollapsedNonUnitDim(rc))
+    if (!hasExactlyOneTruncatedNonUnitDim(rc))
       return std::nullopt;
   }
 
@@ -255,9 +255,9 @@ getResultNonUnitDimsAndOffsetsForRC(memref::ReinterpretCastOp rc) {
 ///      the store index is derived from the reinterpret_cast offset.
 ///
 ///   2. Non-scalar reinterpret_cast results that preserve all non-unit source
-///      dimensions except one collapsed-to-unit dimension. Result strides must
-///      be static and identical to the identity strides of the source, and the
-///      static offset selects the collapsed dimension.
+///      dimensions sizes except one. Result
+///      strides must be static and identical to the identity strides of the
+///      source, and the offset must be static.
 ///
 ///   // BEFORE (scalar-shaped result)
 ///   %strided = memref.reinterpret_cast %dst
@@ -268,18 +268,20 @@ getResultNonUnitDimsAndOffsetsForRC(memref::ReinterpretCastOp rc) {
 ///   %v = memref.load %src[0, ..., 0]
 ///   memref.store %v, %dst[delinearized(OFF)]
 ///
-///   // BEFORE (one collapsed non-unit dimension)
+///   // BEFORE (one truncated non-unit dimension)
 ///   %strided = memref.reinterpret_cast %dst
-///     to offset: [OFF], sizes: [1, M, 1], strides: [M*N, N, 1]
+///     to offset: [OFF], sizes: [1, M, K], strides: [M*N, N, 1]
 ///     : memref<1xMxNxf32>
-///       to memref<1xMx1xf32, strided<[M*N, N, 1], offset: OFF>>
+///       to memref<1xMxKxf32, strided<[M*N, N, 1], offset: OFF>>
 ///   memref.copy %src, %strided
 ///
 ///   // AFTER
-///   // Assuming OFF delinearizes to [0, 0, OFF]:
+///   // Assuming OFF delinearizes to [0, 0, DELIN_OFF]:
 ///   scf.for %i = 0 to M step 1 {
-///     %v = memref.load %src[0, %i, 0]
-///     memref.store %v, %dst[0, %i, OFF]
+///     scf.for %k = 0 to K step 1 {
+///       %v = memref.load %src[0, %i, %k]
+///       memref.store %v, %dst[0, %i, DELIN_OFF + %k]
+///     }
 ///   }
 struct CopyToLoadAndStore : public OpRewritePattern<memref::CopyOp> {
 public:

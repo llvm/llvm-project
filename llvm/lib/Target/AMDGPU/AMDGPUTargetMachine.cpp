@@ -1273,7 +1273,9 @@ GCNTargetMachine::GCNTargetMachine(const Target &T, const Triple &TT,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
-    : AMDGPUTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {}
+    : AMDGPUTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {
+  setEnableDefaultMachineVerifier(false);
+}
 
 enum class OOBFlagValue {
   Any = 0,

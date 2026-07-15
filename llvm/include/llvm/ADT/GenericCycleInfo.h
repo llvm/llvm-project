@@ -54,10 +54,6 @@ private:
   /// at the root.
   GenericCycle *ParentCycle = nullptr;
 
-  /// The top-level cycle this cycle is part of. Points to itself if this is
-  /// a top-level cycle.
-  GenericCycle *TopLevelCycle;
-
   /// The entry block(s) of the cycle. The header is the only entry if
   /// this is a loop. Is empty for the root "cycle", to avoid
   /// unnecessary memory use.
@@ -94,7 +90,7 @@ private:
   GenericCycle &operator=(GenericCycle &&Rhs) = delete;
 
 public:
-  GenericCycle() : TopLevelCycle(this) {}
+  GenericCycle() = default;
 
   /// \brief Whether the cycle is a natural loop.
   bool isReducible() const { return Entries.size() == 1; }
@@ -254,8 +250,8 @@ public:
   }
 
   /// \brief Return whether \p Block is contained in \p C. O(1).
-  bool contains(const CycleT *C, const BlockT *Block) const {
-    return C && C->contains(getCycle(Block));
+  bool contains(const CycleT &C, const BlockT *Block) const {
+    return C.contains(getCycle(Block));
   }
 
   /// \brief Return the blocks of \p C, including those of nested cycles.
@@ -276,7 +272,9 @@ public:
 
   CycleT *getTopLevelParentCycle(const BlockT *Block) const {
     CycleT *Cycle = getCycle(Block);
-    return Cycle ? Cycle->TopLevelCycle : nullptr;
+    while (Cycle && Cycle->ParentCycle)
+      Cycle = Cycle->ParentCycle;
+    return Cycle;
   }
 
   /// Return all of the successor blocks of \p C: the blocks outside of \p C

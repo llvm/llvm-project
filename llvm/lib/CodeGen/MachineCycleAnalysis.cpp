@@ -168,7 +168,7 @@ bool llvm::isCycleInvariant(const MachineCycleInfo &CI,
 
     // If the cycle contains the definition of an operand, then the instruction
     // isn't cycle invariant.
-    if (CI.contains(&Cycle, MRI->getVRegDef(Reg)->getParent()))
+    if (CI.contains(Cycle, MRI->getVRegDef(Reg)->getParent()))
       return false;
   }
 

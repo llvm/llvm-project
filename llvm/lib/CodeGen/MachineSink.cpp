@@ -1780,7 +1780,7 @@ bool MachineSinking::aggressivelySinkIntoCycle(
                            "can't sink.\n");
       continue;
     }
-    if (!CI->contains(Cycle, MI->getParent())) {
+    if (!CI->contains(*Cycle, MI->getParent())) {
       LLVM_DEBUG(
           dbgs() << "AggressiveCycleSink:   Use not in cycle, can't sink.\n");
       continue;

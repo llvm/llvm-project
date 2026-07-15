@@ -150,7 +150,7 @@ subroutine test_standalone_bind_teams
   num = N
 
   ! CHECK:     omp.distribute
-  ! CHECK-SAME:  private(@{{.*}}Ea_private_box_100000xi32 {{[^,]*}},
+  ! CHECK-SAME:  private(@{{.*}}Ea_private_100000xi32 {{[^,]*}},
   ! CHECK-SAME:          @{{.*}}Ei_private_i32 {{.*}} : {{.*}}) {
   ! CHECK:       omp.loop_nest {{.*}} {
   ! CHECK:       }
@@ -170,7 +170,7 @@ subroutine test_standalone_bind_parallel
   num = N
 
   ! CHECK:     omp.wsloop
-  ! CHECK-SAME:  private(@{{.*}}Ea_private_box_100000xi32 {{[^,]*}},
+  ! CHECK-SAME:  private(@{{.*}}Ea_private_100000xi32 {{[^,]*}},
   ! CHECK-SAME:          @{{.*}}Ei_private_i32 {{.*}} : {{.*}}) {
   ! CHECK:       omp.loop_nest {{.*}} {
   ! CHECK:       }
