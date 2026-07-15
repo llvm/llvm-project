@@ -58,9 +58,12 @@ class MLGOAddReflectionMapPass
     PatternMatchListener listener;
     walkAndApplyPatterns(moduleOp, std::move(patterns), &listener);
 
+    // If nothing was matched, no reflection maps were added, removing the need
+    // to add include headers for map and string
     if (!listener.patternApplied)
       return;
 
+    // Check if the map and/or string headers are already present
     bool hasMapHdr = false;
     bool hasStringHdr = false;
     for (auto &op : *moduleOp.getBody()) {
@@ -109,7 +112,9 @@ public:
     emitc::OpaqueType mapType = mlir::emitc::OpaqueType::get(
         context, "const std::map<std::string, char*>");
 
-    // Collect all field names
+    // Collect the names of all FieldOps that have one of the attributes in
+    // includedFieldAttrs to use the first element of the array attribute
+    // as the reflection map key
     std::vector<std::pair<StringRef, StringRef>> fieldNames;
     bool hasError = false;
     classOp.walk([&](FieldOp fieldOp) {
@@ -126,6 +131,8 @@ public:
         }
       }
 
+      // If one of the attributes in excludedFieldAttrs is present,
+      // don't add this FieldOp
       bool shouldIgnore =
           llvm::any_of(excludedFieldAttrs, [&fieldOp](StringRef ignoreAttr) {
             return fieldOp->hasAttr(ignoreAttr);
@@ -144,6 +151,7 @@ public:
     if (hasError || fieldNames.empty())
       return failure();
 
+    // Create reflection map contents
     std::string reflectionMapContents;
     reflectionMapContents += "{ ";
     bool first = true;
@@ -157,6 +165,8 @@ public:
     }
     reflectionMapContents += " }";
 
+    // Set insertion point before the first function or after all fields
+    // if there are no functions within the class
     auto funcs = classOp.getBlock().getOps<FuncOp>();
     auto it = funcs.begin();
     if (it != funcs.end())
