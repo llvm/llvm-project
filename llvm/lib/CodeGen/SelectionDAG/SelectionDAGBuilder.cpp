@@ -10435,6 +10435,16 @@ computeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
     // Compute the constraint code and ConstraintType to use.
     TLI.ComputeConstraintToUse(OpInfo, OpInfo.CallOperand, &DAG);
 
+    // An address operand is an input: an address for the asm to read from or
+    // jump to. There is no such thing as an address output, indirect or not
+    // (prepareDAGLevelOperands asserts as much), so diagnose it here.
+    if (OpInfo.ConstraintType == TargetLowering::C_Address &&
+        OpInfo.Type == InlineAsm::isOutput) {
+      Info.ErrorMsg << "address constraint '" << OpInfo.ConstraintCode
+                    << "' is only valid as an input";
+      return true;
+    }
+
     if ((OpInfo.ConstraintType == TargetLowering::C_Memory &&
          OpInfo.Type == InlineAsm::isClobber) ||
         OpInfo.ConstraintType == TargetLowering::C_Address)

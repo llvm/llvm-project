@@ -332,6 +332,18 @@ bool InlineAsmLowering::lowerInlineAsm(
 
     switch (OpInfo.Type) {
     case InlineAsm::isOutput:
+      // An address operand is an input: an address for the asm to read from
+      // or jump to. There is no such thing as an address output, indirect or
+      // not.
+      if (OpInfo.ConstraintType == TargetLowering::C_Address) {
+        emitInlineAsmError(MIRBuilder, Call,
+                           "address constraint '" +
+                               Twine(OpInfo.ConstraintCode) +
+                               "' is only valid as an input",
+                           GetOrCreateVRegs(Call));
+        return true;
+      }
+
       if (OpInfo.ConstraintType == TargetLowering::C_Memory) {
         // A memory output writes through an address passed to the asm, so it
         // only has somewhere to write to if it is indirect (e.g. "=*m"). A

@@ -12,3 +12,15 @@ define i64 @direct_mo_output() {
   %v = call i64 asm "", "=mo"()
   ret i64 %v
 }
+
+; CHECK: error: address constraint 'p' is only valid as an input
+define i64 @direct_p_output() {
+  %v = call i64 asm "", "=p"()
+  ret i64 %v
+}
+
+; CHECK: error: address constraint 'p' is only valid as an input
+define void @indirect_p_output(ptr %x) {
+  call void asm "", "=*p"(ptr elementtype(i64) %x)
+  ret void
+}
