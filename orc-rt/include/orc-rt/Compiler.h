@@ -15,6 +15,8 @@
 #ifndef ORC_RT_COMPILER_H
 #define ORC_RT_COMPILER_H
 
+#include <cassert>
+
 #if defined(_WIN32)
 #define ORC_RT_INTERFACE extern "C"
 #define ORC_RT_HIDDEN
@@ -53,6 +55,29 @@
 #define ORC_RT_WEAK_IMPORT
 #else
 #define ORC_RT_WEAK_IMPORT __attribute__((weak))
+#endif
+
+// ORC_RT_BUILTIN_UNREACHABLE: an optimizer hint that the current location is
+// not reachable.
+#if __has_builtin(__builtin_unreachable) || defined(__GNUC__)
+#define ORC_RT_BUILTIN_UNREACHABLE __builtin_unreachable()
+#elif defined(_MSC_VER)
+#define ORC_RT_BUILTIN_UNREACHABLE __assume(false)
+#else
+#define ORC_RT_BUILTIN_UNREACHABLE
+#endif
+
+// ORC_RT_UNREACHABLE(MSG): marks a point the program must never reach. In
+// +Asserts builds it aborts with MSG; otherwise it lowers to
+// ORC_RT_BUILTIN_UNREACHABLE.
+#ifndef NDEBUG
+#define ORC_RT_UNREACHABLE(MSG)                                                \
+  do {                                                                         \
+    assert(false && (MSG));                                                    \
+    ORC_RT_BUILTIN_UNREACHABLE;                                                \
+  } while (false)
+#else
+#define ORC_RT_UNREACHABLE(MSG) ORC_RT_BUILTIN_UNREACHABLE
 #endif
 
 #endif // ORC_RT_COMPILER_H
