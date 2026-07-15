@@ -1263,6 +1263,43 @@ define <4 x i8> @test_psra_bs_vec_shamt(<4 x i8> %a, <4 x i8> %b) {
   ret <4 x i8> %res
 }
 
+; Packed saturating and rounding shifts
+define <2 x i16> @test_pssha_s_i16x2(<2 x i16> %a, i32 %shamt) {
+; CHECK-LABEL: test_pssha_s_i16x2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pssha.hs a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pssha.v2i16.i32(<2 x i16> %a, i32 %shamt)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_psshar_s_i16x2(<2 x i16> %a, i32 %shamt) {
+; CHECK-LABEL: test_psshar_s_i16x2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psshar.hs a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.psshar.v2i16.i32(<2 x i16> %a, i32 %shamt)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_psshl_s_u16x2(<2 x i16> %a, i32 %shamt) {
+; CHECK-LABEL: test_psshl_s_u16x2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psshl.hs a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.psshl.v2i16.i32(<2 x i16> %a, i32 %shamt)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_psshlr_s_u16x2(<2 x i16> %a, i32 %shamt) {
+; CHECK-LABEL: test_psshlr_s_u16x2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psshlr.hs a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.psshlr.v2i16.i32(<2 x i16> %a, i32 %shamt)
+  ret <2 x i16> %res
+}
+
 ; Test packed multiply high signed for v4i8
 define <4 x i8> @test_pmulh_b(<4 x i8> %a, <4 x i8> %b) {
 ; RV32-LABEL: test_pmulh_b:
@@ -2231,10 +2268,10 @@ define <2 x i16> @test_select_v2i16(i1 %cond, <2 x i16> %a, <2 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB154_2
+; CHECK-NEXT:    bnez a3, .LBB158_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB154_2:
+; CHECK-NEXT:  .LBB158_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <2 x i16> %a, <2 x i16> %b
   ret <2 x i16> %res
@@ -2245,10 +2282,10 @@ define <4 x i8> @test_select_v4i8(i1 %cond, <4 x i8> %a, <4 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB155_2
+; CHECK-NEXT:    bnez a3, .LBB159_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB155_2:
+; CHECK-NEXT:  .LBB159_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <4 x i8> %a, <4 x i8> %b
   ret <4 x i8> %res
