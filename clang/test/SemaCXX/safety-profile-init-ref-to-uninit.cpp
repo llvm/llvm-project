@@ -1659,6 +1659,38 @@ struct TmplMemberCredit {
 };
 template struct TmplMemberCredit<int>;
 
+// TreeTransform hands a fully non-dependent statement back *unchanged* when
+// instantiating a body, so `m = 5` inside a generic lambda runs Sema (and
+// records its credit) only at the pattern parse. The current-object key is
+// the function's parse-time pattern on record and consult alike, so the
+// instantiated call operators' checks still find that credit -- while the
+// per-function isolation above is unchanged (different functions have
+// different patterns).
+struct GenericLambdaMemberCredit {
+  int m [[uninit]];
+  void go() {
+    auto l = [this](auto) {
+      m = 5;
+      mc_sink_ref(m);  // OK: credited at the pattern parse and per instantiation
+      mc_sink_ptr(&m); // OK
+    };
+    l(1);
+    l(2L);
+  }
+};
+
+// The same statement reuse through a non-generic lambda in a member function
+// template: the transformed call operator reaches its parsed pattern through
+// a member-specialization link.
+struct LambdaInMemberTemplateCredit {
+  int m [[uninit]];
+  template <class T> void go() {
+    auto l = [this] { m = 5; mc_sink_ref(m); }; // OK
+    l();
+  }
+};
+template void LambdaInMemberTemplateCredit::go<int>();
+
 // [[now_init]] (P4222R2 §6.2): binding an entity to a [[ref_to_uninit]]
 // parameter of a [[now_init]] function earns the same parse-order credit as
 // the equivalent direct store -- the callee initializes the storage it was
@@ -1728,6 +1760,20 @@ void test_now_init_member_boundary(MemberCredit &r) {
   now_init_fill(&r.m); // OK: marked target, uninitialized source
   mc_sink_ptr(&r.m);   // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
 }
+
+// The callee credit survives statement reuse in instantiated lambda bodies
+// exactly like a direct store (the current-object key is the parse-time
+// pattern; see GenericLambdaMemberCredit above).
+struct GenericLambdaNowInitMemberCredit {
+  int m [[uninit]];
+  void go() {
+    auto l = [this](auto) {
+      now_init_fill(&m);
+      mc_sink_ptr(&m); // OK: credited at the pattern parse and per instantiation
+    };
+    l(1);
+  }
+};
 
 // A variadic argument reaches no declared parameter, so it earns nothing
 // even from a [[now_init]] callee (and is checked as an unmarked target).

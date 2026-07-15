@@ -426,14 +426,16 @@ public:
   bool hasMemberStoreCredit(const Decl *Base, const FieldDecl *F) const;
 
   /// Resolve the identity key of a member access's base object for the
-  /// per-object member store credit: the enclosing function declaration for
-  /// a current-object access (this->m / m / (*this).m) -- so credit recorded
-  /// in one function body can never satisfy a binding in another -- or the
-  /// directly named local-storage, non-reference VarDecl of a dot access
-  /// (a.m). Any other base -- another member (a.b.m; §5.4 rejects deep
-  /// delayed-initialization tracking), an arrow through an arbitrary pointer
-  /// value, a reference (an alias to an object also reachable other ways) --
-  /// is untrackable per object: null.
+  /// per-object member store credit: the parse-time pattern of the enclosing
+  /// function declaration for a current-object access (this->m / m /
+  /// (*this).m) -- so credit recorded in one function body can never satisfy
+  /// a binding in another, while a statement an instantiation reuses
+  /// (unrebuilt) from its template or generic-lambda pattern agrees with a
+  /// rebuilt one on the key -- or the directly named local-storage,
+  /// non-reference VarDecl of a dot access (a.m). Any other base -- another
+  /// member (a.b.m; §5.4 rejects deep delayed-initialization tracking), an
+  /// arrow through an arbitrary pointer value, a reference (an alias to an
+  /// object also reachable other ways) -- is untrackable per object: null.
   const Decl *resolveMemberStoreBase(const MemberExpr *ME) const;
 
   /// Store-credit bits for recordInitProfileStore.
@@ -454,12 +456,14 @@ public:
 
   /// Parse-order whole-member store credit, keyed per base object: the base
   /// is the directly named local-storage VarDecl (a.m = e) or, for the
-  /// current object (this->m = e / m = e), the enclosing function
-  /// declaration -- so credit recorded in one function body can never
-  /// satisfy a binding in another, and two locals of the same type never
-  /// share credit. Only WholeStored is ever set: member *pointee* stores
-  /// (*a.p = e) are deliberately never credited -- per-object pointee
-  /// aliasing (copies share pointees) makes them unsound to approximate.
+  /// current object (this->m = e / m = e), the parse-time pattern of the
+  /// enclosing function declaration -- so credit recorded in one function
+  /// body can never satisfy a binding in another, two locals of the same
+  /// type never share credit, and instantiations agree with their pattern
+  /// on statements they reuse from it (see resolveMemberStoreBase). Only
+  /// WholeStored is ever set: member *pointee* stores (*a.p = e) are
+  /// deliberately never credited -- per-object pointee aliasing (copies
+  /// share pointees) makes them unsound to approximate.
   /// Never cleared, for the same reasons as InitStoreCredit (instantiations
   /// key on fresh field and function declarations).
   llvm::DenseMap<std::pair<const Decl *, const FieldDecl *>, unsigned>

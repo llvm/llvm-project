@@ -478,7 +478,9 @@ call on uninitialized storage, rejected as above.
 Whole-member stores are credited too, keyed per base object: after
 ``a.m = 5;`` on a directly named local, or ``this->m = 5;`` on the current
 object (keyed to the enclosing function body, so no other function -- nor a
-lambda body, which is its own function -- shares it), binding ``a.m`` or
+lambda body, which is its own function -- shares it; instantiations of one
+template or generic lambda share their pattern's single body, and its
+credit), binding ``a.m`` or
 ``&a.m`` through the *same* base is accepted, and the reverse direction
 applies as for locals.  The boundaries: one member level only (``x.agg.m =
 5;`` is itself the piecemeal-initialization error and earns nothing), only
@@ -618,7 +620,12 @@ false positive.
   (or inside a lambda body) credits every later use in parse order, so a
   read or binding on a path that skips the store is a missed diagnostic.
   ``[[now_init]]`` call credit outside constructor bodies is parse-order in
-  the same way (inside them it is a real dataflow fact, as above).
+  the same way (inside them it is a real dataflow fact, as above).  The
+  requires-uninitialized direction consults this credit at definition time
+  only -- an instantiation re-walk does not rewind parse-order state, so
+  re-checked statements must not trip over credit they themselves recorded
+  -- which makes a reverse-direction violation established only by credit
+  in fully dependent code a missed diagnostic as well.
 - In a template, a violation in non-dependent code is diagnosed at definition
   time and may be repeated at instantiation.
 

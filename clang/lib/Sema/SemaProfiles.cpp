@@ -942,16 +942,59 @@ static bool isCurrentObjectExpr(const Expr *E) {
          isa<CXXThisExpr>(UO->getSubExpr()->IgnoreParenImpCasts());
 }
 
+// The parse-time pattern of \p FD -- the declaration whose body statements
+// the current function can share. TreeTransform hands a statement back
+// *unchanged* when nothing in it needs rebuilding, so a fully non-dependent
+// `this->m = 5` inside a generic lambda (or a lambda in a member function
+// template) runs Sema -- and earns its parse-order credit -- only once,
+// while the pattern is parsed; the instantiated call operator reuses the
+// statement wholesale. Keying current-object member credit on the pattern
+// makes record and consult agree whether a statement was reused
+// (pattern-time credit) or rebuilt (the instantiation-time key normalizes
+// to the same pattern). Iterated because each transform hop adds one link:
+// a generic lambda in a member function template reaches its parsed pattern
+// via a member-specialization link and then a primary-template link (a
+// local twin of SemaLambda.cpp's getPatternFunctionDecl). Instantiations of
+// one pattern share its key -- and its statements, so the parse order the
+// credit approximates is the same for all of them; a store only one
+// sibling instantiation rebuilds (e.g. under a dependent `if constexpr`)
+// then credits the others too, a parse-order-style missed diagnostic, never
+// a false positive.
+static const FunctionDecl *getParseTimePattern(const FunctionDecl *FD) {
+  while (FD) {
+    // A local function without template machinery of its own, instantiated
+    // while transforming an enclosing templated body. (A transformed lambda
+    // call operator instead carries a member-specialization link and a
+    // generic lambda's specialization a primary-template link -- both
+    // resolved by the pattern walk below.)
+    if (FD->getTemplatedKind() == FunctionDecl::TK_DependentNonTemplate) {
+      const FunctionDecl *P = FD->getInstantiatedFromDecl();
+      if (!P)
+        return FD;
+      FD = P;
+      continue;
+    }
+    const FunctionDecl *P = FD->getTemplateInstantiationPattern();
+    if (!P || P == FD)
+      return FD;
+    FD = P;
+  }
+  return FD;
+}
+
 const Decl *SemaProfiles::resolveMemberStoreBase(const MemberExpr *ME) const {
   const Expr *Base = ME->getBase()->IgnoreParenImpCasts();
   // The current object: this->m, the implicit m, or (*this).m. Keyed on the
-  // enclosing function declaration (`this` cannot be reseated, so the key is
-  // stable for the whole body); AllowLambda gives a lambda body inside a
-  // member function its own key, so its stores and the enclosing function's
-  // never share credit. No current function (e.g. an NSDMI parse) is
-  // untrackable.
+  // enclosing function declaration's parse-time pattern (`this` cannot be
+  // reseated, so the key is stable for the whole body; the *pattern*, so
+  // that a statement an instantiation reuses from its pattern and a rebuilt
+  // one agree on the key -- see getParseTimePattern); AllowLambda gives a
+  // lambda body inside a member function its own key, so its stores and the
+  // enclosing function's never share credit. No current function (e.g. an
+  // NSDMI parse) is untrackable.
   if (isCurrentObjectExpr(Base))
-    return SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);
+    return getParseTimePattern(
+        SemaRef.getCurFunctionDecl(/*AllowLambda=*/true));
   // A directly named local object: a dot access on a local-storage,
   // non-reference VarDecl (a by-value parameter is its own object and
   // qualifies). A reference base is an alias to an object also reachable
@@ -1281,8 +1324,25 @@ void SemaProfiles::checkInitProfileRefToUninit(SourceLocation Loc,
   static constexpr StringRef Rule = "ref_to_uninit";
   if (!shouldEmitProfileViolation(Profile, Rule, Loc, D))
     return;
+  // Parse-order credit is recorded once and never rewound, so when an
+  // instantiation re-walks a statement the pattern already checked, the
+  // re-check runs against post-pattern state -- including credit this very
+  // statement recorded (a reused [[now_init]] argument, a this-member store
+  // keyed to the pattern). For the requires-uninit direction that would turn
+  // the pattern's pass into a false "must refer to uninitialized memory" at
+  // instantiation, so a marked target classifies without credit while
+  // instantiating: the reverse direction diagnoses at definition time, and a
+  // violation established only by credit in fully dependent code is a missed
+  // diagnostic -- the usual parse-order trade, never a false positive.
+  // Direct classification (an initialized global, a marked entity) is
+  // unaffected, so credit-free reverse violations still repeat per
+  // instantiation, and the accepting direction keeps credit everywhere (a
+  // deferred binding needs the instantiation-time record to pass).
   UninitStorage SrcState = classifyUninitSource(
-      getASTContext(), Src, IsReference, UninitBindAccess.withCredit(this));
+      getASTContext(), Src, IsReference,
+      TargetIsRefToUninit && SemaRef.inTemplateInstantiation()
+          ? UninitBindAccess
+          : UninitBindAccess.withCredit(this));
   unsigned IsRef = IsReference ? 1 : 0;
   // A marked target is a violation only against an affirmatively Initialized
   // source: an Unknown one (pointer arithmetic, an integer-to-pointer cast, a
