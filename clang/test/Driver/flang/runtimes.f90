@@ -5,4 +5,4 @@
 ! CHECK-DAG: flang_rt.{{[^ "]}}
 
 ! RUN: not %clang --driver-mode=flang -stdlib=libc++ -### %s 2>&1 | FileCheck --check-prefix=LIBCXX %s
-! LIBCXX: clang: error: unknown argument: '-stdlib=libc++'
+! LIBCXX: error: unknown argument: '-stdlib=libc++'
