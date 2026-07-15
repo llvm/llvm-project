@@ -20,8 +20,6 @@ define dso_local void @pair_sibling_simplified(i32 noundef %n1, i32 noundef %n2,
 ; CHECK:       [[FOR_COND6_PREHEADER]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP5:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[CMP823:%.*]] = icmp ugt i32 [[N2]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP0]], i64 1
 ; CHECK-NEXT:    br i1 [[CMP823]], label %[[FOR_BODY10:.*]], label %[[FOR_COND_CLEANUP9:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[I_020:%.*]] = phi i32 [ [[ADD4:%.*]], %[[FOR_BODY]] ], [ 0, %[[ENTRY]] ]
@@ -35,25 +33,20 @@ define dso_local void @pair_sibling_simplified(i32 noundef %n1, i32 noundef %n2,
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], [[N1]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_COND6_PREHEADER]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       [[FOR_COND_CLEANUP9]]:
-; CHECK-NEXT:    [[ACC1_1_LCSSA:%.*]] = phi double [ [[TMP2]], %[[FOR_COND6_PREHEADER]] ], [ [[TMP9:%.*]], %[[FOR_BODY10]] ]
-; CHECK-NEXT:    [[ACC0_1_LCSSA:%.*]] = phi double [ [[TMP1]], %[[FOR_COND6_PREHEADER]] ], [ [[TMP7:%.*]], %[[FOR_BODY10]] ]
-; CHECK-NEXT:    [[ADD19:%.*]] = fadd double [[ACC1_1_LCSSA]], [[ACC0_1_LCSSA]]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x double> [ [[TMP0]], %[[FOR_COND6_PREHEADER]] ], [ [[TMP7:%.*]], %[[FOR_BODY10]] ]
+; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> poison, <2 x i32> <i32 1, i32 poison>
+; CHECK-NEXT:    [[FOLDEXTEXTBINOP:%.*]] = fadd <2 x double> [[SHIFT]], [[TMP8]]
+; CHECK-NEXT:    [[ADD19:%.*]] = extractelement <2 x double> [[FOLDEXTEXTBINOP]], i64 0
 ; CHECK-NEXT:    store double [[ADD19]], ptr [[OUT]], align 8, !tbaa [[DOUBLE_TBAA10]]
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY10]]:
-; CHECK-NEXT:    [[I5_026:%.*]] = phi i32 [ [[ADD17:%.*]], %[[FOR_BODY10]] ], [ 0, %[[FOR_COND6_PREHEADER]] ]
-; CHECK-NEXT:    [[ACC0_125:%.*]] = phi double [ [[TMP7]], %[[FOR_BODY10]] ], [ [[TMP1]], %[[FOR_COND6_PREHEADER]] ]
-; CHECK-NEXT:    [[ACC1_124:%.*]] = phi double [ [[TMP9]], %[[FOR_BODY10]] ], [ [[TMP2]], %[[FOR_COND6_PREHEADER]] ]
-; CHECK-NEXT:    [[ADD727:%.*]] = or disjoint i32 [[I5_026]], 1
-; CHECK-NEXT:    [[IDXPROM11:%.*]] = zext i32 [[I5_026]] to i64
-; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR]], i64 [[IDXPROM11]]
-; CHECK-NEXT:    [[TMP6:%.*]] = load double, ptr [[ARRAYIDX12]], align 8, !tbaa [[DOUBLE_TBAA10]]
-; CHECK-NEXT:    [[TMP7]] = tail call double @llvm.fmuladd.f64(double [[TMP6]], double 4.000000e+00, double [[ACC0_125]])
+; CHECK-NEXT:    [[ADD727:%.*]] = phi i32 [ [[ADD17:%.*]], %[[FOR_BODY10]] ], [ 0, %[[FOR_COND6_PREHEADER]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x double> [ [[TMP7]], %[[FOR_BODY10]] ], [ [[TMP0]], %[[FOR_COND6_PREHEADER]] ]
 ; CHECK-NEXT:    [[IDXPROM14:%.*]] = zext i32 [[ADD727]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR]], i64 [[IDXPROM14]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load double, ptr [[ARRAYIDX15]], align 8, !tbaa [[DOUBLE_TBAA10]]
-; CHECK-NEXT:    [[TMP9]] = tail call double @llvm.fmuladd.f64(double [[TMP8]], double 4.000000e+00, double [[ACC1_124]])
-; CHECK-NEXT:    [[ADD17]] = add i32 [[I5_026]], [[COND]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x double>, ptr [[ARRAYIDX15]], align 8, !tbaa [[DOUBLE_TBAA10]]
+; CHECK-NEXT:    [[TMP7]] = tail call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP6]], <2 x double> splat (double 4.000000e+00), <2 x double> [[TMP9]])
+; CHECK-NEXT:    [[ADD17]] = add i32 [[ADD727]], [[COND]]
 ; CHECK-NEXT:    [[ADD7:%.*]] = or disjoint i32 [[ADD17]], 1
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp ult i32 [[ADD7]], [[N2]]
 ; CHECK-NEXT:    br i1 [[CMP8]], label %[[FOR_BODY10]], label %[[FOR_COND_CLEANUP9]], !llvm.loop [[LOOP14:![0-9]+]]
