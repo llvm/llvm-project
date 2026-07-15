@@ -123,3 +123,30 @@ body:             |
   $vgpr256 = nofpexcept V_EXP_F32_e32 killed $vgpr257, implicit $mode, implicit $exec
   S_ENDPGM 0
 ...
+
+---
+name:            coissue_opt_honors_nop_rule
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; V_MOV_B32_e32 uses dst/src0 (MSB=1)
+    ; CHECK-LABEL: name: coissue_opt_honors_nop_rule
+    ; CHECK: S_SET_VGPR_MSB 65, implicit-def $mode
+    ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 23228, 30721, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: S_NOP 0
+    ; CHECK-NEXT: S_SET_VGPR_MSB 16713, implicit-def $mode
+    ; CHECK-NEXT: S_BARRIER_WAIT -1
+    ; CHECK-NEXT: $vgpr256 = V_ADD_U32_e32 $vgpr257, $vgpr512, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+
+    ; size=16, offset=0, hwreg=MODE: simm16 = 0x7801 = 30721
+    ; imm32 = 0x5ABC = 23228 (bits 12:19 = 5 = MODE register mode for vgpr256/257)
+    S_SETREG_IMM32_B32 23228, 30721, implicit-def $mode, implicit $mode
+    S_BARRIER_WAIT -1
+
+    ; V_ADD_U32_e32 uses same dst/src0 (MSB=1) but adds src1 (MSB=2)
+    $vgpr256 = V_ADD_U32_e32 $vgpr257, $vgpr512, implicit $exec
+    S_ENDPGM 0
+...
