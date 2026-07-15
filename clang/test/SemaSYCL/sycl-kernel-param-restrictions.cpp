@@ -328,6 +328,8 @@ template<typename KNT, typename T>
 void kernel_single_task(T t) {} // expected-note-re {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
 
 class Base { 
+  // No diagnostic is issued for data because recursive subobject visitation
+  // stops once a virtual base class is found.
   int &data; 
 public:
   Base(int &a) : data(a) {}
