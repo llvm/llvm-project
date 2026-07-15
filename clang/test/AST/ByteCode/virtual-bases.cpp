@@ -469,3 +469,14 @@ namespace LValueAPValue {
   constexpr int g() { return f()->n; }
   static_assert(g() == 7);
 }
+
+namespace MostDerivedIsArrayElem {
+  struct V { int n = 7; int k;};
+  struct D : virtual V {};
+  constexpr D d[9] = {};
+
+  static_assert(d[0].n == 7);
+  static_assert(d[0].k == 0);
+  static_assert(d[8].n == 7);
+  static_assert(d[8].k == 0);
+}

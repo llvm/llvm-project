@@ -1451,11 +1451,11 @@ namespace {
     unsigned getLValueCallIndex() const { return Base.getCallIndex(); }
     unsigned getLValueVersion() const { return Base.getVersion(); }
 
-    bool pointsToCompleteClass() const {
+    bool pointsToCompleteClass(const CXXRecordDecl *D) const {
       if (Designator.Entries.empty())
         return true;
 
-      return !getAsBaseClass(Designator.Entries.back());
+      return Designator.MostDerivedType->getAsCXXRecordDecl() == D;
     }
 
     void moveInto(APValue &V) const {
@@ -7335,7 +7335,7 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
     if (I->isBaseInitializer()) {
       QualType BaseType(I->getBaseClass(), 0);
       if (I->isBaseVirtual()) {
-        if (This.pointsToCompleteClass()) {
+        if (This.pointsToCompleteClass(RD)) {
           if (!HandleLValueDirectVirtualBase(Info, I->getInit(), Subobject, RD,
                                              BaseType->getAsCXXRecordDecl(),
                                              &Layout))
@@ -11400,7 +11400,7 @@ static bool HandleClassZeroInitialization(EvalInfo &Info, const Expr *E,
       return false;
   }
 
-  if (CD && This.pointsToCompleteClass()) {
+  if (CD && This.pointsToCompleteClass(CD)) {
     unsigned Index = 0;
     for (const auto &B : CD->vbases()) {
       const CXXRecordDecl *Base = B.getType()->getAsCXXRecordDecl();
