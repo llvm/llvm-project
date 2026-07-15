@@ -75,6 +75,16 @@ void OmpStructureChecker::Enter(const parser::ProgramUnit &) { //
   declareVariantPairs_.clear();
 }
 
+void OmpStructureChecker::Leave(const parser::ProgramUnit &) {
+  if (!metadirectiveLoopVariants_.empty()) {
+    // A declaration-only unit (module, submodule, or block data) has no
+    // execution part to follow the metadirective, so its loop-associated
+    // variants were never validated. A subprogram validates them while
+    // scanning the execution part, leaving none pending here.
+    CheckMetadirectiveVariantsWithoutLoop();
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::MainProgram &x) {
   using StatementProgramStmt = parser::Statement<parser::ProgramStmt>;
   if (auto &stmt{std::get<std::optional<StatementProgramStmt>>(x.t)}) {
@@ -187,12 +197,38 @@ void OmpStructureChecker::Enter(const parser::EndMpSubprogramStmt &x) {
   scopeStack_.pop_back();
 }
 
+void OmpStructureChecker::BeginMetadirectiveVariantScope() {
+  metadirectiveVariantScopeStarts_.push_back(metadirectiveLoopVariants_.size());
+}
+
+void OmpStructureChecker::EndMetadirectiveVariantScope() {
+  CHECK(!metadirectiveVariantScopeStarts_.empty());
+  std::size_t firstVariant{metadirectiveVariantScopeStarts_.back()};
+  metadirectiveVariantScopeStarts_.pop_back();
+  if (firstVariant < metadirectiveLoopVariants_.size()) {
+    // Diagnose variants that were recorded in this scope but not consumed by
+    // one of its executable constructs, preserving variants from an enclosing
+    // scope.
+    CheckMetadirectiveVariantsWithoutLoop(firstVariant);
+  }
+}
+
+void OmpStructureChecker::Enter(const parser::Block &) {
+  BeginMetadirectiveVariantScope();
+}
+
+void OmpStructureChecker::Leave(const parser::Block &) {
+  EndMetadirectiveVariantScope();
+}
+
 void OmpStructureChecker::Enter(const parser::BlockConstruct &x) {
+  BeginMetadirectiveVariantScope();
   auto &endBlockStmt{std::get<parser::Statement<parser::EndBlockStmt>>(x.t)};
   scopeStack_.push_back(&context_.FindScope(endBlockStmt.source));
 }
 
 void OmpStructureChecker::Leave(const parser::BlockConstruct &x) {
+  EndMetadirectiveVariantScope();
   scopeStack_.pop_back();
 }
 
@@ -202,6 +238,23 @@ void OmpStructureChecker::Enter(const parser::InternalSubprogram &) {
 
 void OmpStructureChecker::Enter(const parser::ModuleSubprogram &) {
   ClearLabels();
+}
+
+void OmpStructureChecker::Enter(const parser::ModuleSubprogramPart &) {
+  if (!metadirectiveLoopVariants_.empty()) {
+    // The enclosing module or submodule has no execution part. Diagnose its
+    // pending loop-associated variants before a contained procedure starts a
+    // new specification part and resets the worklist.
+    CheckMetadirectiveVariantsWithoutLoop();
+  }
+}
+
+void OmpStructureChecker::Enter(const parser::InterfaceBody &) {
+  BeginMetadirectiveVariantScope();
+}
+
+void OmpStructureChecker::Leave(const parser::InterfaceBody &) {
+  EndMetadirectiveVariantScope();
 }
 
 void OmpStructureChecker::Enter(const parser::SpecificationPart &) {
