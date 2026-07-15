@@ -42,6 +42,8 @@ Implemented Papers
 Improvements and New Features
 -----------------------------
 
+- ``std::fstream`` disables buffering of the underlying C stream now to avoid double buffering and to better respect the
+  users requests, improving performance by up to 2x.
 
 Deprecations and Removals
 -------------------------

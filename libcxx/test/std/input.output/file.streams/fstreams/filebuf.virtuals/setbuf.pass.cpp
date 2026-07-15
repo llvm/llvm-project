@@ -97,8 +97,8 @@ static void unbuffered_request_after_open_ate() {
 
   buffer.sputc(CharT('a'));
   assert(file_size<CharT>("test.dat") <= 1);
-  // on libc++ buffering is used by default.
-  LIBCPP_ASSERT(file_size<CharT>("test.dat") == 0);
+  // libc++ doesn't buffer if the buffer is explicitly removed.
+  LIBCPP_NON_FROZEN_ASSERT(file_size<CharT>("test.dat") == 1);
 
   buffer.close();
   assert(file_size<CharT>("test.dat") == 1);
