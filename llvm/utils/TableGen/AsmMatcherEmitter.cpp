@@ -2528,7 +2528,8 @@ static void emitRegisterMatchErrorFunc(AsmMatcherInfo &Info, raw_ostream &OS) {
   OS << "}\n\n";
 }
 
-/// emitTokenDiagFunction - Emit a function mapping token class kinds to diagnostics.
+/// emitTokenDiagFunction - Emit a function mapping token class kinds to
+/// diagnostics.
 static void emitTokenDiagFunction(AsmMatcherInfo &Info, raw_ostream &OS) {
   OS << "static unsigned getDiagKindFromTokenClass(MatchClassKind Kind) {\n";
   OS << "  switch (Kind) {\n";
@@ -2537,8 +2538,8 @@ static void emitTokenDiagFunction(AsmMatcherInfo &Info, raw_ostream &OS) {
   for (const auto &CI : Info.Classes) {
     if (CI.Kind == ClassInfo::Token && !CI.DiagnosticType.empty()) {
       OS << "  case " << CI.Name << ":\n";
-      OS << "    return " << Info.Target.getName()
-         << "AsmParser::Match_" << CI.DiagnosticType << ";\n";
+      OS << "    return " << Info.Target.getName() << "AsmParser::Match_"
+         << CI.DiagnosticType << ";\n";
     }
   }
   OS << "  }\n";
