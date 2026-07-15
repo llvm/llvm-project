@@ -246,16 +246,21 @@ getAccRoutineCallParDim(CallOpInterface callOp,
 /// Collects parallel dimensions from enclosing loops and the compute region.
 static SmallVector<GPUParallelDimAttr> getAncestorParDims(Operation *op) {
   SmallVector<GPUParallelDimAttr> parDimsArray;
+  ComputeRegionOp computeRegion = op->getParentOfType<ComputeRegionOp>();
+  assert(computeRegion && "missing enclosing acc.compute_region");
   scf::ParallelOp parentLoop = op->getParentOfType<scf::ParallelOp>();
   while (parentLoop) {
     if (GPUParallelDimsAttr parDimsAttr = getParDimsAttr(parentLoop))
       for (GPUParallelDimAttr parDim : parDimsAttr.getArray())
         insertParDim(parDimsArray, parDim);
+    // A block-redundant loop executes on every block, so its enclosing block
+    // dimensions are active ancestors that must not be predicated away.
+    if (hasGPUBlockRedundantAttr(parentLoop))
+      for (GPUParallelDimAttr parDim : computeRegion.getLaunchParDims())
+        insertParDim(parDimsArray, parDim);
     parentLoop = parentLoop->getParentOfType<scf::ParallelOp>();
   }
 
-  ComputeRegionOp computeRegion = op->getParentOfType<ComputeRegionOp>();
-  assert(computeRegion && "missing enclosing acc.compute_region");
   if (GPUParallelDimsAttr parDimsAttr = getParDimsAttr(computeRegion))
     for (GPUParallelDimAttr parDim : parDimsAttr.getArray())
       insertParDim(parDimsArray, parDim);
