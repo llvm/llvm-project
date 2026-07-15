@@ -109,10 +109,9 @@ class Fusion<string name, string fieldName, string desc, list<FusionPredicate> p
   bit IsCommutable = 0;
 
   // When true, the MacroFusionPredicatorEmitter generates `Statistic`s that
-  // count how often this fusion is matched (see the
-  // `GET_<TargetName>_MACRO_FUSION_STATISTICS` section of the generated file).
-  // Set this to false to opt out, for fusions whose statistics are not
-  // interesting.
+  // count how often this fusion is matched (split into pre-RA and post-RA
+  // counters). Set this to false to opt out, for fusions whose statistics are
+  // not interesting.
   bit GenerateStatistic = true;
 }
 

@@ -34,12 +34,6 @@ using namespace llvm;
 #undef DEBUG_TYPE
 #define DEBUG_TYPE "riscv-macro-fusion"
 
-// The statistics section defines `ENABLE_STATISTIC` and the `Statistic`
-// counters, so it must be included before the predicator implementations that
-// reference them.
-#define GET_RISCV_MACRO_FUSION_STATISTICS
-#include "RISCVGenMacroFusion.inc"
-
 #define GET_RISCV_MACRO_FUSION_PRED_IMPL
 #include "RISCVGenMacroFusion.inc"
 
