@@ -1525,11 +1525,12 @@ LogicalResult ResolveLayoutConflicts::run() {
       // we need to check if the result has layout and add a convert_layout to
       // serve as anchor op for the reduction op's layout.
       if (result.getType().isIntOrFloat() &&
-              (isa<vector::MultiDimReductionOp>(op) || isa<vector::ReductionOp>(op))) {
+          (isa<vector::MultiDimReductionOp>(op) ||
+           isa<vector::ReductionOp>(op))) {
         auto res = assignResultLayout(result);
         if (failed(res)) {
-          DBGS() << "Failed to assign layout for scalar consumer of reduction " << *op
-                << "\n";
+          DBGS() << "Failed to assign layout for scalar consumer of reduction "
+                 << *op << "\n";
           return WalkResult::interrupt();
         }
       }
@@ -1540,8 +1541,8 @@ LogicalResult ResolveLayoutConflicts::run() {
           isa<RegionBranchOpInterface>(op)) {
         auto res = assignResultLayout(result);
         if (failed(res)) {
-          DBGS() << "Failed to assign layout for vector consumer of region op " << *op
-                << "\n";
+          DBGS() << "Failed to assign layout for vector consumer of region op "
+                 << *op << "\n";
           return WalkResult::interrupt();
         }
       }
