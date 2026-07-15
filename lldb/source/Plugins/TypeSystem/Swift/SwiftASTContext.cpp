@@ -3424,11 +3424,12 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
 
     if (computed_triple.getOS() == llvm::Triple::MacOSX) {
       // Handle the case where an apparent macOS binary has been
-      // force-loaded as a macCatalyst process. The Xcode test
-      // runner works this way.
+      // force-loaded as a macCatalyst process. The Xcode test runner
+      // works this way.
       llvm::Triple exe_triple = get_executable_triple();
       if (exe_triple.getOS() == llvm::Triple::IOS &&
-          exe_triple.getEnvironment() == llvm::Triple::MacABI) {
+          exe_triple.getEnvironment() == llvm::Triple::MacABI &&
+          sc.module_sp == exe_module_sp) {
         LOG_PRINTF(GetLog(LLDBLog::Types), "Adjusting triple to macCatalyst.");
         computed_triple.setOSAndEnvironmentName(
             exe_triple.getOSAndEnvironmentName());
