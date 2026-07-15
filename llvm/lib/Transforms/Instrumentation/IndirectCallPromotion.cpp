@@ -32,6 +32,7 @@
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Value.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -161,10 +162,11 @@ static cl::list<std::string> ICPIgnoredBaseTypes(
         "names are those string literals used in LLVM type metadata"));
 
 static cl::opt<int> HotFuncCutoffForICP(
-    "hot-func-cutoff-for-icp", cl::Hidden, cl::init(990000),
+    "hot-func-cutoff-for-icp", cl::Hidden, cl::init(-1),
     cl::desc("A count is hot for indirect call promotion if it exceeds "
              "the minimum count to reach this percentile of total counts."
-             "Default value is the same as ProfileSummaryCutoffHot."));
+             "Default value -1 means that if the flag is unspecified then "
+             "the value of ProfileSummaryCutoffHot will be used instead."));
 namespace {
 
 // The key is a vtable global variable, and the value is a map.
@@ -887,9 +889,13 @@ bool IndirectCallPromoter::processFunction(ProfileSummaryInfo *PSI) {
         continue;
       }
       // Only promote hot if ICPAllowHotOnly is true. ICP has its own cutoff
-      // threshold for hotness.
+      // threshold for hotness, which defaults to ProfileSummaryCutoffHot if
+      // unspecified.
       if (ICPAllowHotOnly &&
-          !PSI->isHotCountNthPercentile(HotFuncCutoffForICP, TotalCount)) {
+          !PSI->isHotCountNthPercentile(HotFuncCutoffForICP == -1
+                                            ? ProfileSummaryCutoffHot
+                                            : HotFuncCutoffForICP,
+                                        TotalCount)) {
         LLVM_DEBUG(dbgs() << "Don't promote the non-hot candidate: TotalCount="
                           << TotalCount << "\n");
         continue;

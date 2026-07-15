@@ -1,5 +1,6 @@
 ; RUN: opt < %s -passes=pgo-icall-prom -hot-func-cutoff-for-icp=200000 -pass-remarks=pgo-icall-prom 2>&1 | FileCheck %s --check-prefix=PASS-REMARK
 ; RUN: opt < %s -passes=pgo-icall-prom -hot-func-cutoff-for-icp=100000 -pass-remarks=pgo-icall-prom 2>&1 | FileCheck %s --check-prefix=FAIL-REMARK
+; RUN: opt < %s -passes=pgo-icall-prom -pass-remarks=pgo-icall-prom 2>&1 | FileCheck %s --check-prefix=PASS-REMARK-DEFAULT
 
 ; ICP has its own cutoff threshold for hotness that can be tuned.
 
@@ -11,10 +12,21 @@
 ; FAIL-REMARK-NOT: remark: <unknown>:0:0: Promote indirect call to func2
 ; FAIL-REMARK-NOT: remark: <unknown>:0:0: Promote indirect call to func3
 
+; If ICP does not specify "-hot-func-cutoff-for-icp", then it falls back to the default ProfileSummaryCutoffHot value,
+; and will promote "%call2" as well.
+
+; PASS-REMARK-DEFAULT: remark: <unknown>:0:0: Promote indirect call to func4 with count 5 out of 14
+; PASS-REMARK-DEFAULT: remark: <unknown>:0:0: Promote indirect call to func2 with count 4 out of 9
+; PASS-REMARK-DEFAULT: remark: <unknown>:0:0: Promote indirect call to func3 with count 3 out of 5
+; PASS-REMARK-DEFAULT: remark: <unknown>:0:0: Promote indirect call to func4 with count 3 out of 5
+; PASS-REMARK-DEFAULT: remark: <unknown>:0:0: Promote indirect call to func2 with count 1 out of 2
+
+
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 @foo = common global ptr null, align 8
+@baz = common global ptr null, align 8
 
 define i32 @func1() {
 entry:
@@ -39,7 +51,9 @@ entry:
 define i32 @bar() {
 entry:
   %tmp = load ptr, ptr @foo, align 8
+  %tmp2 = load ptr, ptr @baz, align 8
   %call = call i32 %tmp(), !prof !34
+  %call2 = call i32 %tmp2(), !prof !35
   ret i32 %call
 }
 
@@ -54,11 +68,11 @@ entry:
 !5 = !{i32 1, !"ProfileSummary", !6}
 !6 = !{!7, !8, !9, !10, !11, !12, !13, !14, !15, !16}
 !7 = !{!"ProfileFormat", !"InstrProf"}
-!8 = !{!"TotalCount", i64 3}
-!9 = !{!"MaxCount", i64 1}
-!10 = !{!"MaxInternalCount", i64 1}
-!11 = !{!"MaxFunctionCount", i64 1}
-!12 = !{!"NumCounts", i64 7}
+!8 = !{!"TotalCount", i64 136}
+!9 = !{!"MaxCount", i64 16}
+!10 = !{!"MaxInternalCount", i64 5}
+!11 = !{!"MaxFunctionCount", i64 16}
+!12 = !{!"NumCounts", i64 16}
 !13 = !{!"NumFunctions", i64 4}
 !14 = !{!"IsPartialProfile", i64 0}
 !15 = !{!"PartialProfileRatio", double 0.000000e+00}
@@ -81,3 +95,4 @@ entry:
 !32 = !{i32 999990, i64 2, i32 15}
 !33 = !{i32 999999, i64 1, i32 16}
 !34 = !{!"VP", i32 0, i64 14, i64 7651369219802541373, i64 5, i64 -4377547752858689819, i64 4, i64 -6929281286627296573, i64 3, i64 -2545542355363006406, i64 2}
+!35 = !{!"VP", i32 0, i64 5, i64 7651369219802541373, i64 3, i64 -4377547752858689819, i64 1}
