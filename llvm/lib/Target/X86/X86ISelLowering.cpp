@@ -51985,10 +51985,11 @@ static SDValue combineI8AndNotIntoI32AndNot(SDNode *N, const SDLoc &DL,
   } else if (SDValue Not = IsNOT(N1, DAG)) {
     X = Not;
     Y = N0;
-  } else
+  } else {
     return SDValue();
+  }
 
-  if (X.getValueType() != MVT::i8 || Y.getValueType() != MVT::i8)
+  if (X.getValueType() != MVT::i8)
     return SDValue();
   if (auto *C = dyn_cast<ConstantSDNode>(Y); C && !C->isOpaque())
     return SDValue();
