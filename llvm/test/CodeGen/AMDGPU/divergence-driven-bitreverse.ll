@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -stop-after=amdgpu-isel < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -enable-new-pm -stop-after=amdgpu-isel < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu6.00 -stop-after=amdgpu-isel < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu6.00 -enable-new-pm -stop-after=amdgpu-isel < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: name: uniform_bitreverse_i32
 ; GCN: S_BREV_B32

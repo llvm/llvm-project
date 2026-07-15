@@ -1023,11 +1023,9 @@ protected:
   std::error_code readSecHdrTableEntry(uint64_t Idx);
   std::error_code readSecHdrTable();
 
-  std::error_code readFuncMetadata(bool ProfileHasAttribute,
-                                   DenseSet<FunctionSamples *> &Profiles);
-  std::error_code readFuncMetadata(bool ProfileHasAttribute);
-  std::error_code readFuncMetadata(bool ProfileHasAttribute,
-                                   FunctionSamples *FProfile);
+  std::error_code readFuncMetadata(DenseSet<FunctionSamples *> &Profiles);
+  std::error_code readFuncMetadata();
+  std::error_code readFuncMetadata(FunctionSamples *FProfile);
   std::error_code readFuncOffsetTable();
   std::error_code readFuncProfiles();
   std::error_code readFuncProfiles(const DenseSet<StringRef> &FuncsToUse,

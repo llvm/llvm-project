@@ -1153,6 +1153,25 @@ if (LLVM_USE_SPLIT_DWARF AND
   endif()
 endif()
 
+# For PIC builds, enable RELR if supported by the linker and loader.
+# glibc supports RELR since 2.36. musl supports RELR since 1.2.4, but there's
+# no easy way to detect or feature-test this.
+if (LLVM_ENABLE_PIC AND LLVM_USING_GLIBC)
+  CHECK_CXX_SOURCE_COMPILES("
+  #include <cstdio>
+  #if __GLIBC__ < 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 36)
+  #error
+  #endif
+  int main() { return 0; }
+  " GLIBC_2_36_OR_NEWER)
+  if (GLIBC_2_36_OR_NEWER)
+    include(CheckLinkerFlag)
+    check_linker_flag(CXX "-Wl,-z,pack-relative-relocs" LINKER_SUPPORTS_RELR)
+    append_if(LINKER_SUPPORTS_RELR "-Wl,-z,pack-relative-relocs"
+      CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+  endif()
+endif()
+
 add_compile_definitions(__STDC_CONSTANT_MACROS)
 add_compile_definitions(__STDC_FORMAT_MACROS)
 add_compile_definitions(__STDC_LIMIT_MACROS)

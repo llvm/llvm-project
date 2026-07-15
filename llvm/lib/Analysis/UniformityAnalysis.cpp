@@ -113,7 +113,7 @@ bool llvm::GenericUniformityAnalysisImpl<SSAContext>::usesValueFromCycle(
   assert(!isAlwaysUniform(I));
   for (const Use &U : I.operands()) {
     if (auto *I = dyn_cast<Instruction>(&U)) {
-      if (DefCycle.contains(I->getParent()))
+      if (CI.contains(DefCycle, I->getParent()))
         return true;
     }
   }
@@ -126,7 +126,7 @@ void llvm::GenericUniformityAnalysisImpl<
                                              const Cycle &DefCycle) {
   for (auto *User : I.users()) {
     auto *UserInstr = cast<Instruction>(User);
-    if (DefCycle.contains(UserInstr->getParent()))
+    if (CI.contains(DefCycle, UserInstr->getParent()))
       continue;
     markDivergent(*UserInstr);
     recordTemporalDivergence(&I, UserInstr, &DefCycle);

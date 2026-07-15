@@ -30,7 +30,7 @@ end subroutine red_derived
 
 ! The op name must be module-scoped (a mangled "_QQ..." generated name), NOT the
 ! bare operator spelling. The directive and clause must reference the same name.
-! CHECK: omp.declare_reduction @[[RED:_QQ[A-Za-z0-9_.]*op\.myop\.]] : !fir.ref
+! CHECK: omp.declare_reduction @[[RED:_QQ[A-Za-z0-9_.]*op\.myop\.[A-Za-z0-9_.]*]] : !fir.ref
 ! CHECK-NOT: omp.declare_reduction @op.myop.
 ! CHECK: omp.wsloop
 ! CHECK-SAME: reduction(byref @[[RED]]

@@ -61,7 +61,7 @@ if(TARGET libc.include.signal)
     DEPENDS
       .message_mapper
       .platform_signals
-      libc.include.signal
+      libc.hdr.signal_macros
       libc.src.__support.common
       libc.src.__support.CPP.span
       libc.src.__support.CPP.string_view

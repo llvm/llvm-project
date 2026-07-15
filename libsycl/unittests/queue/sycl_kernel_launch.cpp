@@ -6,46 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <common/device_images.hpp>
+#include <common/scoped_binary_registration.hpp>
 #include <mock/helpers.hpp>
-
-#include <detail/program_manager.hpp>
 
 #include <sycl/__impl/queue.hpp>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include <array>
 #include <cstring>
-#include <string>
 
 using namespace sycl;
 using namespace ::testing;
-
-namespace {
-
-class ScopedKernelRegistration {
-public:
-  explicit ScopedKernelRegistration(std::string KernelName)
-      : MKernelName(std::move(KernelName)) {
-    std::array<llvm::StringRef, 1> KernelNames = {MKernelName};
-    MBinary = sycl::unittest::createSYCLDeviceBinary(KernelNames);
-    sycl::detail::ProgramAndKernelManager::getInstance().registerFatBin(
-        MBinary.data(), MBinary.size());
-  }
-
-  ~ScopedKernelRegistration() {
-    sycl::detail::ProgramAndKernelManager::getInstance().unregisterFatBin(
-        MBinary.data(), MBinary.size());
-  }
-
-private:
-  std::string MKernelName;
-  llvm::SmallString<0> MBinary;
-};
-
-} // namespace
 
 class sycl::detail::MockQueue : public sycl::queue {
 public:
@@ -60,7 +32,7 @@ struct KernelData {
 
 TEST(Queue, KernelLaunch) {
   mock::MockWrapper Mock;
-  ScopedKernelRegistration Registration{"TestKernel"};
+  sycl::unittests::ScopedKernelRegistration Registration{"TestKernel"};
   sycl::detail::MockQueue Q;
   KernelData Data{};
   Data.Arr[0] = 'A';

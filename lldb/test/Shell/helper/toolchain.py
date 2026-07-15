@@ -49,19 +49,12 @@ def get_lldb_args(config, suffix=""):
 
 
 class ShTestLldb(ShTest):
-    def __init__(
-        self, execute_external=False, extra_substitutions=[], preamble_commands=[]
-    ):
-        super().__init__(execute_external, extra_substitutions, preamble_commands)
+    def __init__(self, extra_substitutions=[], preamble_commands=[]):
+        super().__init__(
+            extra_substitutions=extra_substitutions, preamble_commands=preamble_commands
+        )
 
     def execute(self, test, litConfig):
-        exec_path = test.getExecPath()
-        if platform.system() == "Windows" and len(exec_path) > 256:
-            litConfig.warning(
-                "Test path exceeds 256 characters (Windows MAX_PATH limit): "
-                + exec_path
-            )
-
         # Run each Shell test in a separate directory (on remote).
 
         # Find directory change command in %lldb substitution.

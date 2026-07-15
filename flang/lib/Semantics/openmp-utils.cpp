@@ -12,6 +12,8 @@
 
 #include "flang/Semantics/openmp-utils.h"
 
+#include "resolve-names-utils.h"
+
 #include "flang/Common/Fortran-consts.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
@@ -36,6 +38,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
 
@@ -2420,6 +2424,82 @@ std::optional<DynamicUserCondition> MakeVariantMatchInfo(
   return dynamicCond;
 }
 
+bool MayVariantBeSelected(
+    const parser::traits::OmpContextSelectorSpecification *selector,
+    SemanticsContext &context, OmpVariantMatchContext &matchContext) {
+  if (!selector ||
+      FindUnsupportedSelectorFeature(*selector, context) !=
+          UnsupportedSelectorFeature::None) {
+    return true;
+  }
+  llvm::omp::VariantMatchInfo vmi;
+  (void)MakeVariantMatchInfo(vmi, *selector, context);
+  const auto &required{vmi.RequiredTraits};
+  using TP = llvm::omp::TraitProperty;
+
+  enum class MatchKind { All, Any, None };
+  MatchKind matchKind{MatchKind::All};
+  if (required.test(unsigned(TP::implementation_extension_match_any))) {
+    matchKind = MatchKind::Any;
+  }
+  // Match-none takes precedence over match-any when both are present, matching
+  // isVariantApplicableInContextHelper.
+  if (required.test(unsigned(TP::implementation_extension_match_none))) {
+    matchKind = MatchKind::None;
+  }
+
+  bool userTrue{required.test(unsigned(TP::user_condition_true))};
+  bool userUnknown{required.test(unsigned(TP::user_condition_unknown))};
+  bool userFalse{required.test(unsigned(TP::user_condition_false))};
+  bool invalid{required.test(unsigned(TP::invalid))};
+
+  // The target-only LLVM matcher below skips user and construct traits while
+  // retaining the global match kind. Account for those skipped traits first;
+  // otherwise an empty filtered set incorrectly fails match-any and satisfies
+  // match-none.
+  switch (matchKind) {
+  case MatchKind::All:
+    if (userFalse || invalid) {
+      return false;
+    }
+    break;
+  case MatchKind::Any:
+    if (userTrue || userUnknown || !vmi.ConstructTraits.empty()) {
+      return true;
+    }
+    break;
+  case MatchKind::None:
+    if (userTrue) {
+      return false;
+    }
+    break;
+  }
+
+  // Without a target triple, do not reject device or implementation traits.
+  if (context.targetTriple().empty()) {
+    if (matchKind != MatchKind::Any) {
+      return true;
+    }
+    // No skipped trait can satisfy match-any here. Keep the selector
+    // conservatively selectable if it contains a device or implementation
+    // trait; otherwise no trait can satisfy match-any.
+    for (unsigned bit : required.set_bits()) {
+      TP property{static_cast<TP>(bit)};
+      llvm::omp::TraitSet set{
+          llvm::omp::getOpenMPContextTraitSetForProperty(property)};
+      if ((set == llvm::omp::TraitSet::device ||
+              set == llvm::omp::TraitSet::implementation) &&
+          llvm::omp::getOpenMPContextTraitSelectorForProperty(property) !=
+              llvm::omp::TraitSelector::implementation_extension) {
+        return true;
+      }
+    }
+    return false;
+  }
+  return llvm::omp::isVariantApplicableInContext(
+      vmi, matchContext, /*DeviceOrImplementationSetOnly=*/true);
+}
+
 OmpVariantMatchContext::OmpVariantMatchContext(bool isDeviceCompilation,
     llvm::Triple targetTriple, llvm::Triple targetOffloadTriple,
     std::string targetFeatures,
@@ -2452,5 +2532,236 @@ bool OmpVariantMatchContext::matchesISATrait(llvm::StringRef rawString) const {
   llvm::StringRef(features_).split(
       tokens, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
   return llvm::is_contained(tokens, want);
+}
+
+// User-defined reduction resolution, shared between the OpenMP semantic checks
+// and lowering. The two public entry points (FindUserReductionSymbol and
+// FindOperatorUserReductionSymbol) return the resolved (non-ultimate) reduction
+// symbol; the caller reads its UserReductionDetails.
+
+// Compute the mangled reduction name to look up in a reduction's source module.
+// If the operator was renamed on import (e.g. USE m, ONLY: operator(.local.) =>
+// operator(.remote.)), the local mangled name will not match in the source
+// module; re-derive the lookup name from the source operator's ultimate name.
+// Only defined operators can be renamed (intrinsic operators and named
+// reductions cannot), so a detected rename always has a ".op." source name.
+// For non-renamed lookups the original mangled name is returned unchanged.
+static std::string SourceReductionName(const parser::CharBlock &mangledName,
+    const parser::CharBlock &localName, const parser::CharBlock &sourceName) {
+  if (sourceName != localName && sourceName.size() >= 3 &&
+      sourceName.front() == '.' && sourceName.back() == '.') {
+    return MangleDefinedOperator(sourceName);
+  }
+  return mangledName.ToString();
+}
+
+// Return the reduction details of `symbol` if it is a user reduction that
+// supports `type` (any type when `type` is null).
+static const UserReductionDetails *AcceptReduction(
+    const Symbol &symbol, const DeclTypeSpec *type) {
+  const auto *details{symbol.GetUltimate().detailsIf<UserReductionDetails>()};
+  if (details && (!type || details->SupportsType(*type))) {
+    return details;
+  }
+  return nullptr;
+}
+
+// A reduction symbol is locally declared (authoritative) when it is not reached
+// through any USE association, even via host association. Such a reduction
+// shadows reductions imported or reachable through its operator.
+static bool IsLocalReduction(const Symbol &symbol) {
+  const Symbol *s{&symbol};
+  while (const auto *host{s->detailsIf<HostAssocDetails>()}) {
+    s = &host->symbol();
+  }
+  return !s->detailsIf<UseDetails>();
+}
+
+// A reduction's canonical identity is its own (mangled) name together with the
+// name of the module that defines it. Pointer identity of the ultimate symbol
+// is not sufficient: a hermetic module file embeds a private copy of its
+// dependencies, so a reduction reached both through a direct USE of its module
+// and through a facade that embeds that module has two distinct ultimate
+// symbols living in two module scopes of the same name. Identifying them by
+// the module name and reduction name collapses the two.
+//
+// Known limitation: this cannot distinguish two genuinely different versions of
+// a same-named module (a stale hermetic embed of an old module vs. a rebuilt
+// one), because the module name and mangled reduction name are identical and
+// only the combiner body differs. Such an inconsistent build collapses to one
+// candidate and the reduction is resolved by USE order without a diagnostic,
+// matching the pre-existing behavior (Flang does not reject a same-named module
+// loaded at two different versions either). The module-file hash does not help:
+// a consistent hermetic embed and its directly used module are already distinct
+// module instances with different hashes, so hashing would wrongly report the
+// common, valid case as ambiguous.
+static parser::CharBlock DefiningModuleName(const Symbol &ultimate) {
+  const Scope &owner{ultimate.owner()};
+  return owner.symbol() ? owner.symbol()->name() : parser::CharBlock{};
+}
+
+// Add `reductionSym` to `matches` unless a reduction with the same canonical
+// identity (defining module name + reduction name) is already present. Using
+// this identity, rather than ultimate-symbol pointer, collapses one
+// reduction reached through several USE/rename/facade paths (a diamond, or a
+// hermetic facade that embeds the defining module) to a single entry, while
+// genuinely different reductions declared in different modules remain separate.
+static void AddDistinctReduction(llvm::SmallVectorImpl<const Symbol *> &matches,
+    const Symbol &reductionSym) {
+  const Symbol &ultimate{reductionSym.GetUltimate()};
+  parser::CharBlock reductionName{ultimate.name()};
+  parser::CharBlock moduleName{DefiningModuleName(ultimate)};
+  for (const Symbol *match : matches) {
+    const Symbol &matchUltimate{match->GetUltimate()};
+    if (matchUltimate.name() == reductionName &&
+        DefiningModuleName(matchUltimate) == moduleName) {
+      return;
+    }
+  }
+  matches.push_back(&reductionSym);
+}
+
+// Collect every distinct user reduction supporting `type` reachable by
+// following the operator/procedure symbol `opSym` through its USE associations
+// and merged generic sources. Each module the operator passes through is
+// checked for a (possibly renamed) reduction; `localName` is the operator name
+// written at the use site, used to detect renames. Unlike a first-match search,
+// every branch of a merged generic is explored and the results are unioned
+// (deduped by canonical identity), so an operator merged from two modules that
+// each declare a reduction for `type` is detected as ambiguous rather than
+// silently resolved by USE order. A locally declared reduction in a module is
+// authoritative: it settles that branch (it is collected if it supports the
+// type, otherwise it shadows reductions reachable further along that branch).
+static void CollectOperatorReductions(const Symbol &opSym,
+    const parser::CharBlock &mangledName, const parser::CharBlock &localName,
+    const DeclTypeSpec *type, llvm::SmallPtrSetImpl<const Symbol *> &visited,
+    llvm::SmallVectorImpl<const Symbol *> &matches) {
+  if (!visited.insert(&opSym).second) {
+    return;
+  }
+  const Scope &scope{opSym.owner()};
+  if (scope.kind() == Scope::Kind::Module) {
+    std::string lookupName{
+        SourceReductionName(mangledName, localName, opSym.name())};
+    auto it{scope.find(parser::CharBlock{lookupName})};
+    if (it != scope.end()) {
+      const Symbol &reductionSym{*it->second};
+      const Symbol &reductionUltimate{reductionSym.GetUltimate()};
+      if (!reductionUltimate.attrs().test(Attr::PRIVATE)) {
+        if (AcceptReduction(reductionUltimate, type)) {
+          AddDistinctReduction(matches, reductionSym);
+          return;
+        }
+        // A locally declared reduction here shadows reductions reachable
+        // further along this branch.
+        if (reductionUltimate.detailsIf<UserReductionDetails>() &&
+            IsLocalReduction(reductionSym)) {
+          return;
+        }
+      }
+    }
+  }
+  // Follow a USE-associated operator to the module it was imported from.
+  if (const auto *use{opSym.detailsIf<UseDetails>()}) {
+    CollectOperatorReductions(
+        use->symbol(), mangledName, localName, type, visited, matches);
+    return;
+  }
+  // Search every module merged into a generic operator (recursing through
+  // re-exporting facade modules). Every branch is explored, not just the first
+  // to match: two branches that reach distinct reductions make the merged
+  // operator ambiguous.
+  if (const auto *generic{opSym.detailsIf<GenericDetails>()}) {
+    for (const Symbol &useSym : generic->uses()) {
+      CollectOperatorReductions(
+          useSym, mangledName, localName, type, visited, matches);
+    }
+  }
+}
+
+// Find user reduction details for a mangled name, following USE associations
+// when the reduction is not directly visible in the scope. A type may be
+// supplied to disambiguate an operator that carries reductions for several
+// types (e.g. a generic merged from multiple modules); a candidate is accepted
+// only if it supports that type. A locally declared reduction is authoritative
+// for its operator in its scope and shadows USE-associated reductions. All
+// distinct matches are collected into `matches` (a merged/renamed operator can
+// reach several); FindUserReductionSymbol returns the front of this set.
+// Internal to this TU: FindUserReductionSymbol (and its ambiguity path) is the
+// only caller now that the eager guard is gone.
+static void FindUserReductionSymbols(const Scope &scope,
+    const parser::CharBlock &mangledName, const DeclTypeSpec *type,
+    llvm::SmallVectorImpl<const Symbol *> &matches) {
+  // Direct lookup: a reduction directly visible via bare USE or a local
+  // declaration.
+  const Symbol *directSymbol{scope.FindSymbol(mangledName)};
+  if (directSymbol) {
+    if (const auto *useError{directSymbol->detailsIf<UseErrorDetails>()}) {
+      // Several modules declare a reduction with the same mangled name (e.g.
+      // two modules each with `reduction(+:integer)`, or the same special
+      // function): the name collides into a USE error. Each colliding source
+      // that supports the type is a distinct candidate.
+      for (const auto &[occurrenceName, occurrenceSym] :
+          useError->occurrences()) {
+        if (occurrenceSym &&
+            AcceptReduction(occurrenceSym->GetUltimate(), type)) {
+          AddDistinctReduction(matches, *occurrenceSym);
+        }
+      }
+    } else if (AcceptReduction(*directSymbol, type)) {
+      AddDistinctReduction(matches, *directSymbol);
+      // A locally declared reduction is authoritative: it shadows any
+      // USE-associated reduction reachable through the operator, so stop here.
+      if (IsLocalReduction(*directSymbol)) {
+        return;
+      }
+      // A USE-associated direct match is only one candidate: continue through
+      // the operator to detect a second, distinct reduction merged under it.
+    } else if (directSymbol->GetUltimate().detailsIf<UserReductionDetails>() &&
+        IsLocalReduction(*directSymbol)) {
+      // A locally declared reduction that does not support the requested type
+      // is authoritative: it shadows USE-associated reductions
+      // (ProcessReduction- Specifier erases the latter), so do not resurrect
+      // them via the operator.
+      return;
+    }
+  }
+  // Trace the operator/procedure to the modules that declare its reduction.
+  std::string fortranName{GetReductionFortranId(mangledName)};
+  const Symbol *opSymbol{
+      fortranName.empty() ? nullptr : scope.FindSymbol(fortranName)};
+  if (opSymbol) {
+    llvm::SmallPtrSet<const Symbol *, 8> visited;
+    CollectOperatorReductions(
+        *opSymbol, mangledName, opSymbol->name(), type, visited, matches);
+  }
+}
+
+// Return the front of FindUserReductionSymbols' match set (the first
+// candidate), preserving the historical single-symbol interface. When
+// `ambiguous` is non-null it is set true if more than one distinct reduction
+// supports the type; the first match is still returned so that callers that do
+// not check ambiguity (lowering) are unchanged, since an ambiguous program is
+// rejected in semantics before lowering runs.
+const Symbol *FindUserReductionSymbol(const Scope &scope,
+    const parser::CharBlock &mangledName, const DeclTypeSpec *type,
+    bool *ambiguous) {
+  llvm::SmallVector<const Symbol *, 2> matches;
+  FindUserReductionSymbols(scope, mangledName, type, matches);
+  if (ambiguous) {
+    *ambiguous = matches.size() > 1;
+  }
+  return matches.empty() ? nullptr : matches.front();
+}
+
+const Symbol *FindOperatorUserReductionSymbol(
+    const Scope &scope, const Symbol &operatorSym, const DeclTypeSpec *type) {
+  return FindUserReductionSymbol(
+      scope, MangleDefinedOperator(operatorSym.name()), type);
+}
+
+parser::CharBlock MangledIntrinsicOperatorReductionName(
+    parser::DefinedOperator::IntrinsicOperator op, SemanticsContext &context) {
+  return MakeNameFromOperator(op, context);
 }
 } // namespace Fortran::semantics::omp

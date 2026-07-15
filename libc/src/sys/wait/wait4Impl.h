@@ -15,7 +15,8 @@
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 
-#include <signal.h>
+#include "hdr/signal_macros.h"
+#include "hdr/types/siginfo_t.h"
 #include <sys/syscall.h> // For syscall numbers.
 #include <sys/wait.h>
 

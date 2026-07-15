@@ -91,4 +91,15 @@ def OpenACC_GPUParallelDimsAttr : OpenACC_Attr<"GPUParallelDims", "par_dims"> {
   let hasCustomAssemblyFormat = 1;
 }
 
+def OpenACC_GPUBlockRedundantAttr
+    : OpenACC_Attr<"GPUBlockRedundant", "gpu_block_redundant"> {
+  let summary = "Loop runs redundantly across all thread blocks.";
+  let description = [{
+    Marks an op that executes redundantly on every thread block and therefore
+    must not be assigned block/grid-level work-sharing. Only thread-level
+    parallelism may be assigned, and during GPU code generation its enclosing
+    block dimensions are treated as active (not predicated away).
+  }];
+}
+
 #endif // OPENACCCG_ATTRIBUTES

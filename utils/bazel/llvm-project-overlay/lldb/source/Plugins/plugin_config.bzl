@@ -75,6 +75,7 @@ DEFAULT_PLUGINS = [
     "ProcessMinidump",
     "ProtocolServerMCP",
     "RegisterTypeBuilderClang",
+    "ScriptedFrameProvider",
     "ScriptedProcess",
     "StructuredDataDarwinLog",
     "SymbolFileBreakpad",

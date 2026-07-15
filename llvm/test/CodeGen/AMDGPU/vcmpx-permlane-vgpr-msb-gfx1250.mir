@@ -13,8 +13,8 @@
 # Reversed order (vgpr-lowering then hazard-rec): The V_MOV_B32 inherits the
 # permlane's {dst=0, src0=1}, causing it to write to v44 instead of v300.
 
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass=post-RA-hazard-rec,amdgpu-lower-vgpr-encoding -o - %s | FileCheck %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -start-before=post-RA-hazard-rec -o - %s | FileCheck -check-prefix=ASM %s
+# RUN: llc -mtriple=amdgpu12.50 -run-pass=post-RA-hazard-rec,amdgpu-lower-vgpr-encoding -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu12.50 -start-before=post-RA-hazard-rec -o - %s | FileCheck -check-prefix=ASM %s
 
 # vcmpx + permlane with high VGPR src0 ($vgpr300) and low VGPR vdst ($vgpr0).
 # fixVcmpxPermlaneHazards inserts V_MOV_B32 $vgpr300, $vgpr300 before permlane.

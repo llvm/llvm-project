@@ -122,7 +122,7 @@ bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::usesValueFromCycle(
       return true;
 
     auto *Def = F.getRegInfo().getVRegDef(Reg);
-    if (DefCycle.contains(Def->getParent()))
+    if (CI.contains(DefCycle, Def->getParent()))
       return true;
   }
   return false;
@@ -138,7 +138,7 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::
       continue;
     auto Reg = Op.getReg();
     for (MachineInstr &UserInstr : RegInfo.use_instructions(Reg)) {
-      if (DefCycle.contains(UserInstr.getParent()))
+      if (CI.contains(DefCycle, UserInstr.getParent()))
         continue;
       markDivergent(UserInstr);
 

@@ -1,10 +1,10 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -debug-only=gcn-subtarget -filetype=null %s 2>&1 | FileCheck --check-prefix=WARN %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx700 -debug-only=gcn-subtarget -filetype=null %s 2>&1 | FileCheck --check-prefix=WARN %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx801 -debug-only=gcn-subtarget -o - %s 2>&1 | FileCheck --check-prefix=ON %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -debug-only=gcn-subtarget -o - %s 2>&1 | FileCheck --check-prefix=ON %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -debug-only=gcn-subtarget -o - %s 2>&1 | FileCheck --check-prefix=ON %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -debug-only=gcn-subtarget -o - %s 2>&1 | FileCheck --check-prefix=ON %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -debug-only=gcn-subtarget -o - %s 2>&1 | FileCheck --check-prefix=WARN %s
+; RUN: llc -mtriple=amdgpu6.00 -debug-only=gcn-subtarget -filetype=null %s 2>&1 | FileCheck --check-prefix=WARN %s
+; RUN: llc -mtriple=amdgpu7.00 -debug-only=gcn-subtarget -filetype=null %s 2>&1 | FileCheck --check-prefix=WARN %s
+; RUN: llc -mtriple=amdgpu8.01 -debug-only=gcn-subtarget -o - %s 2>&1 | FileCheck --check-prefix=ON %s
+; RUN: llc -mtriple=amdgpu9.00 -debug-only=gcn-subtarget -o - %s 2>&1 | FileCheck --check-prefix=ON %s
+; RUN: llc -mtriple=amdgpu9.06 -debug-only=gcn-subtarget -o - %s 2>&1 | FileCheck --check-prefix=ON %s
+; RUN: llc -mtriple=amdgpu10.10 -debug-only=gcn-subtarget -o - %s 2>&1 | FileCheck --check-prefix=ON %s
+; RUN: llc -mtriple=amdgpu11.00 -debug-only=gcn-subtarget -o - %s 2>&1 | FileCheck --check-prefix=WARN %s
 
 ; REQUIRES: asserts
 

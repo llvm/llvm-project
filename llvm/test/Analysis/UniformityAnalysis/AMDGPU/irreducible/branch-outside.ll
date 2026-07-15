@@ -39,7 +39,7 @@ exit:
 
 ; CHECK=LABEL: UniformityInfo for function 'nested':
 ; CHECK: CYCLES ASSUMED DIVERGENT:
-; CHECK:  depth=1: entries(P T) Q A C B
+; CHECK:  depth=1: entries(P T) Q A B C
 define amdgpu_kernel void @nested(i32 %a, i32 %b, i32 %c) {
 entry:
  %cond.uni = icmp slt i32 %a, 0

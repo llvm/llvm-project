@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -o - %s -verify
-// RUN: %clang_cc1 -triple spirv-unknown-vulkan1.3-compute -x hlsl -o - %s -verify
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -o - %s -verify
+// RUN: %clang_cc1 -triple spirv-unknown-vulkan1.3-library -x hlsl -o - %s -verify
 
 // expected-error@+1 {{expected HLSL Semantic identifier}}
 void Entry(int GI : ) { }

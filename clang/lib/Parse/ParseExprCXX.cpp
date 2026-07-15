@@ -1865,11 +1865,11 @@ Parser::ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
   return DG;
 }
 
-Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
-                                                SourceLocation Loc,
-                                                Sema::ConditionKind CK,
-                                                bool MissingOK,
-                                                ForRangeInfo *FRI) {
+Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
+                                             SourceLocation Loc,
+                                             Sema::ConditionKind CK,
+                                             bool MissingOK,
+                                             ForRangeInfo *FRI) {
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
   PreferredType.enterCondition(Actions, Tok.getLocation());
 
@@ -1880,15 +1880,75 @@ Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
     return Sema::ConditionError();
   }
 
+  if (Tok.is(tok::kw___extension__)) {
+    // The first clause of a condition may be a declaration used as an
+    // init-statement (C2y), and that declaration may be prefixed by one or more
+    // __extension__ markers. Consume them up front -- mirroring block-statement
+    // parsing -- so the disambiguation below sees the real start of the
+    // declaration. The markers also silence extension diagnostics for the rest
+    // of the condition, including the diagnostic for the init-statement
+    // extension itself.
+    std::optional<ExtensionRAIIObject> ExtensionGuard;
+    ExtensionGuard.emplace(Diags);
+    while (TryConsumeToken(tok::kw___extension__))
+      ;
+  }
+
+  // FIXME(#198244): We need to support GNU attributes in C2y. We had a
+  // discussion about it and decided to wait and see what GCC would end up doing
+  // because as of now GCC does not support it either as an attribute
+  // declaration.
   ParsedAttributes attrs(AttrFactory);
-  MaybeParseCXX11Attributes(attrs);
+  bool ParsedAttrs = MaybeParseCXX11Attributes(attrs);
 
   const auto WarnOnInit = [this, &CK] {
-    Diag(Tok.getLocation(), getLangOpts().CPlusPlus17
-                                ? diag::warn_cxx14_compat_init_statement
-                                : diag::ext_init_statement)
-        << (CK == Sema::ConditionKind::Switch);
+    if (getLangOpts().CPlusPlus)
+      Diag(Tok.getLocation(), getLangOpts().CPlusPlus17
+                                  ? diag::warn_cxx14_compat_init_statement
+                                  : diag::ext_init_statement)
+          << (CK == Sema::ConditionKind::Switch);
+    else
+      Diag(Tok.getLocation(), getLangOpts().C2y
+                                  ? diag::warn_c2y_compat_decl_statement
+                                  : diag::ext_c2y_decl_statement)
+          << (CK == Sema::ConditionKind::Switch);
   };
+
+  if (!getLangOpts().CPlusPlus) {
+    if (isDeclarationStatement() && !isCXXSimpleDeclaration(false)) {
+      // Accept a C2y declaration, *only* if it's not a simple declaration.
+      WarnOnInit();
+      DeclGroupPtrTy DG;
+      SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
+      ParsedAttributes DeclSpecAttrs(AttrFactory);
+      // C2y replaces the init-statement in C++17 to be a declaration instead.
+      DG = ParseDeclaration(DeclaratorContext::SelectionInit, DeclEnd, attrs,
+                            DeclSpecAttrs);
+      StmtResult DeclStmt = Actions.ActOnDeclStmt(DG, DeclStart, DeclEnd);
+      if (InitStmt == nullptr) {
+        if (DeclStmt.isUsable())
+          Diag(DeclStmt.get()->getBeginLoc(), diag::err_expected_expression)
+              << DeclStmt.get()->getSourceRange();
+        else
+          Diag(DeclStart, diag::err_expected_expression);
+      } else
+        *InitStmt = DeclStmt;
+      return ParseCondition(nullptr, Loc, CK, MissingOK);
+    }
+
+    // Handle '(; expr)', '([[...]]; expr)' and '(__attribute__((...)); expr)'
+    // when GNU-style attributes are finalized.
+    if (Tok.is(tok::semi)) {
+      StmtResult Null = Actions.ActOnNullStmt(ConsumeToken());
+      if (ParsedAttrs) {
+        WarnOnInit();
+        *InitStmt = Actions.ActOnAttributedStmt(attrs, Null.get());
+      } else
+        Diag(Null.get()->getBeginLoc(),
+             diag::err_c2y_first_condition_clause_is_not_declaration);
+      return ParseCondition(nullptr, Loc, CK, MissingOK);
+    }
+  }
 
   // Determine what kind of thing we have.
   switch (isCXXConditionDeclarationOrInitStatement(InitStmt, FRI)) {
@@ -1907,7 +1967,7 @@ Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
       }
       ConsumeToken();
       *InitStmt = Actions.ActOnNullStmt(SemiLoc);
-      return ParseCXXCondition(nullptr, Loc, CK, MissingOK);
+      return ParseCondition(nullptr, Loc, CK, MissingOK);
     }
 
     EnterExpressionEvaluationContext Eval(
@@ -1925,7 +1985,7 @@ Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
       WarnOnInit();
       *InitStmt = Actions.ActOnExprStmt(Expr.get());
       ConsumeToken();
-      return ParseCXXCondition(nullptr, Loc, CK, MissingOK);
+      return ParseCondition(nullptr, Loc, CK, MissingOK);
     }
 
     return Actions.ActOnCondition(getCurScope(), Loc, Expr.get(), CK,
@@ -1945,7 +2005,7 @@ Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
                                   attrs, DeclSpecAttrs, /*RequireSemi=*/true);
     }
     *InitStmt = Actions.ActOnDeclStmt(DG, DeclStart, DeclEnd);
-    return ParseCXXCondition(nullptr, Loc, CK, MissingOK);
+    return ParseCondition(nullptr, Loc, CK, MissingOK);
   }
 
   case ConditionOrInitStatement::ForRangeDecl: {

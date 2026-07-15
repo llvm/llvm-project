@@ -503,6 +503,8 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
     SRCS
       fdopen_test.cpp
     DEPENDS
+      libc.hdr.fcntl_macros
+      libc.hdr.sys_stat_macros
       libc.src.fcntl.open
       libc.src.stdio.fclose
       libc.src.stdio.fdopen

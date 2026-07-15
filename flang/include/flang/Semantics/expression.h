@@ -265,6 +265,11 @@ public:
   common::Restorer<bool> AllowWholeAssumedSizeArray(bool yes = true) {
     return common::ScopedSet(isWholeAssumedSizeArrayOk_, yes);
   }
+  // Allows a TYPE(*) assumed-type dummy to appear as an expression for the
+  // lifetime of the returned restorer.
+  common::Restorer<bool> AllowAssumedTypeDummy(bool yes = true) {
+    return common::ScopedSet(isAssumedTypeDummyOk_, yes);
+  }
 
 protected:
   int IntegerTypeSpecKind(const parser::IntegerTypeSpec &);
@@ -425,6 +430,7 @@ private:
       implicitInterfaces_;
   bool isWholeAssumedSizeArrayOk_{false};
   bool isNullPointerOk_{false};
+  bool isAssumedTypeDummyOk_{false};
   bool useSavedTypedExprs_{true};
   bool inWhereBody_{false};
   bool inDataStmtObject_{false};

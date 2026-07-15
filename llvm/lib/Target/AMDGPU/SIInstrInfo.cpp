@@ -237,7 +237,7 @@ bool SIInstrInfo::isSafeToSink(MachineInstr &MI,
       // does not contain SuccToSinkTo and also has divergent exit condition.
       while (FromCycle && !FromCycle->contains(ToCycle)) {
         SmallVector<MachineBasicBlock *, 1> ExitingBlocks;
-        FromCycle->getExitingBlocks(ExitingBlocks);
+        CI->getExitingBlocks(*FromCycle, ExitingBlocks);
 
         // FromCycle has divergent exit condition.
         for (MachineBasicBlock *ExitingBlock : ExitingBlocks) {

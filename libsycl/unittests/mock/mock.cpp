@@ -95,6 +95,10 @@ ol_result_t olLaunchKernel(ol_queue_handle_t Queue, ol_device_handle_t Device,
                                                   NumArgs, ArgPtrs, ArgSizes);
 }
 
+ol_result_t olSyncEvent(ol_event_handle_t Event) {
+  return mock::getMockLiboffload().olSyncEvent(Event);
+}
+
 ol_result_t olMemcpy(ol_queue_handle_t Queue, void *DstPtr,
                      ol_device_handle_t DstDevice, const void *SrcPtr,
                      ol_device_handle_t SrcDevice, size_t Size) {

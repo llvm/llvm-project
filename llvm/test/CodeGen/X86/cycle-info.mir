@@ -225,7 +225,7 @@ body:             |
 ---
 # LEGACY-LABEL: MachineCycleInfo for function: nested_sibling_loops
 # NPM-LABEL: name: nested_sibling_loops
-# CHECK:           depth=1: entries(bb.1) bb.4 bb.5 bb.3 bb.2
+# CHECK:           depth=1: entries(bb.1) bb.3 bb.4 bb.5 bb.2
 # CHECK:               depth=2: entries(bb.4) bb.5
 # CHECK:               depth=2: entries(bb.2)
 name:            nested_sibling_loops
@@ -451,7 +451,7 @@ body:             |
 ---
 # LEGACY-LABEL: MachineCycleInfo for function: irreducible_into_simple_cycle
 # NPM-LABEL: name: irreducible_into_simple_cycle
-# CHECK:           depth=1: entries(bb.2 bb.7 bb.4) bb.6 bb.5 bb.3
+# CHECK:           depth=1: entries(bb.2 bb.7 bb.4) bb.3 bb.5 bb.6
 name:            irreducible_into_simple_cycle
 alignment:       16
 tracksRegLiveness: true
@@ -511,7 +511,7 @@ body:             |
 ---
 # LEGACY-LABEL: MachineCycleInfo for function: irreducible_mountain_bug
 # NPM-LABEL: name: irreducible_mountain_bug
-# CHECK:           depth=1: entries(bb.6) bb.11 bb.10 bb.8 bb.7 bb.9 bb.12
+# CHECK:           depth=1: entries(bb.6) bb.12 bb.11 bb.10 bb.8 bb.9 bb.7
 # CHECK:               depth=2: entries(bb.10 bb.7) bb.8 bb.9
 # CHECK:                   depth=3: entries(bb.8 bb.7) bb.9
 name:            irreducible_mountain_bug

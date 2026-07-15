@@ -10,6 +10,7 @@
 #include "hdr/elf_proxy.h"
 #include "hdr/link_macros.h"
 #include "hdr/stdint_proxy.h"
+#include "hdr/sys_mman_macros.h"
 #include "src/__support/OSUtil/linux/auxv.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/config.h"
@@ -20,7 +21,6 @@
 #include "startup/linux/gnu_property_section.h"
 #include "startup/linux/irelative.h"
 
-#include <sys/mman.h>
 #include <sys/syscall.h>
 
 extern "C" int main(int argc, char **argv, char **envp);

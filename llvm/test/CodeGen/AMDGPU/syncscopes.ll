@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -stop-after=si-late-branch-lowering < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu8.03-amd-amdhsa -stop-after=si-late-branch-lowering < %s | FileCheck --check-prefix=GCN %s
 
 ; GCN-LABEL: name: syncscopes
 ; GCN: FLAT_STORE_DWORD killed renamable $vgpr1_vgpr2, killed renamable $vgpr0, 0, 0, implicit $exec, implicit $flat_scr :: (store syncscope("agent") seq_cst (s32) into %ir.agent_out)

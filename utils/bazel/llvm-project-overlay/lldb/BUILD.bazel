@@ -1220,3 +1220,42 @@ cc_binary(
         "//llvm:config",
     ],
 )
+
+expand_template(
+    name = "lldb-mcp-plist",
+    out = "lldb-mcp-Info.plist",
+    substitutions = {
+        "${LLDB_VERSION}": PACKAGE_VERSION,
+    },
+    template = "tools/lldb-mcp/lldb-mcp-Info.plist.in",
+)
+
+cc_binary(
+    name = "lldb-mcp",
+    srcs = glob([
+        "tools/lldb-mcp/**/*.cpp",
+        "tools/lldb-mcp/**/*.h",
+    ]),
+    additional_linker_inputs = [
+        ":lldb-mcp-plist",
+    ],
+    includes = ["tools/lldb-mcp"],
+    linkopts = select({
+        "@platforms//os:macos": [
+            "-Wl,-sectcreate,__TEXT,__info_plist,$(location :lldb-mcp-plist)",
+        ],
+        "//conditions:default": [],
+    }),
+    deps = [
+        "//lldb:APIHeaders",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:ProtocolHeaders",
+        "//lldb:ProtocolMCP",
+        "//lldb:Utility",
+        "//lldb:liblldb.wrapper",
+        "//llvm:Option",
+        "//llvm:Support",
+        "//llvm:config",
+    ],
+)

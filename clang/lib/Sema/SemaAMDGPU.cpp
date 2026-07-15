@@ -86,6 +86,23 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
       return true;
     }
   }
+  case AMDGPU::BI__builtin_amdgcn_uicmp:
+  case AMDGPU::BI__builtin_amdgcn_uicmpl:
+  case AMDGPU::BI__builtin_amdgcn_sicmp:
+  case AMDGPU::BI__builtin_amdgcn_sicmpl:
+  case AMDGPU::BI__builtin_amdgcn_fcmp:
+  case AMDGPU::BI__builtin_amdgcn_fcmpf: {
+    // These builtins are deprecated in favor of
+    // __builtin_amdgcn_ballot_{w32|w64}. Suggest the replacement matching the
+    // wavefront size of the calling function.
+    bool IsWave32 = Builtin::evaluateRequiredTargetFeatures("wavefrontsize32",
+                                                            CallerFeatureMap);
+    Diag(TheCall->getBeginLoc(), diag::warn_deprecated_builtin)
+        << getASTContext().BuiltinInfo.getQuotedName(BuiltinID)
+        << (IsWave32 ? "__builtin_amdgcn_ballot_w32"
+                     : "__builtin_amdgcn_ballot_w64");
+    return false;
+  }
   case AMDGPU::BI__builtin_amdgcn_get_fpenv:
   case AMDGPU::BI__builtin_amdgcn_set_fpenv:
     return false;

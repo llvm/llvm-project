@@ -47,10 +47,17 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned IncludeLocalEntities : 1;
 
+  /// Extract from system-header declarations during SSAF contributor
+  /// enumeration. Defaults to true to preserve the original behavior.
+  /// Controlled by: --ssaf-no-extract-from-system-headers
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ExtractFromSystemHeaders : 1;
+
   SSAFOptions() {
     ShowExtractors = false;
     ShowFormats = false;
     IncludeLocalEntities = false;
+    ExtractFromSystemHeaders = true;
   };
 };
 

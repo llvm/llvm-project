@@ -21,4 +21,4 @@ fmsub.h x14, x15, x16, x17, 0 # CHECK: :[[@LINE]]:29: error: operand must be a v
 fnmsub.h x18, x19, x20, x21, 0b111 # CHECK: :[[@LINE]]:30: error: operand must be a valid floating point rounding mode mnemonic
 
 # FP registers where integer regs are expected
-fcvt.wu.h ft2, a1 # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
+fcvt.wu.h ft2, a1 # CHECK: :[[@LINE]]:11: error: register must be a GPR

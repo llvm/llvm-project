@@ -364,19 +364,9 @@ void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
     Type *Ty = CB.getArgOperand(I)->getType();
 
     if (CB.paramHasAttr(I, Attribute::ByVal)) {
-      // Indirect calls need strict ABI alignment so we disable optimizations by
-      // not providing a function to optimize.
       Type *ETy = CB.getParamByValType(I);
-      // Mirror the byval alignment computed by SelectionDAGBuilder: prefer an
-      // explicit stack/param alignment, otherwise fall back to the byval type
-      // alignment.
-      MaybeAlign InitialAlign = CB.getParamStackAlign(I);
-      if (!InitialAlign)
-        InitialAlign = CB.getParamAlign(I);
-      Align ByValAlign =
-          InitialAlign.value_or(TLI->getByValTypeAlignment(ETy, DL));
-      Align ParamByValAlign =
-          getDeviceByValParamAlign(/*F=*/nullptr, ETy, ByValAlign, DL);
+      Align ParamByValAlign = getDeviceByValParamAlign(
+          &CB, ETy, I + AttributeList::FirstArgIndex, DL);
 
       O << ".param .align " << ParamByValAlign.value() << " .b8 _["
         << DL.getTypeAllocSize(ETy) << "]";
@@ -1532,12 +1522,10 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       // <a>  = optimal alignment for the element type; always multiple of
       //        PAL.getParamAlignment
       // size = typeallocsize of element type
+      const unsigned ParamIdx = Arg.getArgNo() + AttributeList::FirstArgIndex;
       const Align OptimalAlign =
-          IsKernelFunc
-              ? getPTXParamAlign(
-                    F, ETy, Arg.getArgNo() + AttributeList::FirstArgIndex, DL)
-              : getDeviceByValParamAlign(F, ETy,
-                                         Arg.getParamAlign().valueOrOne(), DL);
+          IsKernelFunc ? getPTXParamAlign(F, ETy, ParamIdx, DL)
+                       : getDeviceByValParamAlign(F, ETy, ParamIdx, DL);
 
       O << "\t.param .align " << OptimalAlign.value() << " .b8 " << ParamSym
         << "[" << DL.getTypeAllocSize(ETy) << "]";

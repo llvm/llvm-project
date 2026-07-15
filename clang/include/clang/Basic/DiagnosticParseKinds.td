@@ -169,6 +169,12 @@ def ext_c2y_generic_with_type_arg : Extension<
 def warn_c2y_compat_generic_with_type_arg : Warning<
   "passing a type argument as the first operand to '_Generic' is incompatible "
   "with C standards before C2y">, InGroup<CPre2yCompat>, DefaultIgnore;
+def warn_c2y_compat_decl_statement : Warning<
+  "'%select{if|switch}0' declaration statements are incompatible with "
+  "C standards before C2y">, DefaultIgnore, InGroup<CPre2yCompat>;
+def ext_c2y_decl_statement : Extension<
+  "'%select{if|switch}0' declaration statements are a C2y extension">,
+  InGroup<C2y>;
 
 def ext_c99_feature : Extension<
   "'%0' is a C99 extension">, InGroup<C99>;
@@ -220,6 +226,9 @@ def ext_c2y_case_range : Extension<
   "case ranges are a C2y extension">, InGroup<C2y>;
 def err_c2y_labeled_break_continue : Error<
   "named %select{'break'|'continue'}0 is only supported in C2y">;
+def err_c2y_first_condition_clause_is_not_declaration : Error<
+  "first clause in condition must be a declaration">;
+def err_c2y_multiple_declarations : Error<"multiple declarations are not allowed">;
 
 // Generic errors.
 def err_expected_expression : Error<"expected expression">;

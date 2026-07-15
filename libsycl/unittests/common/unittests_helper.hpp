@@ -19,7 +19,6 @@
 #include <mock/helpers.hpp>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
-
 namespace unittests {
 
 // This helper is not included to LiboffloadMock to keep LiboffloadMock isolated

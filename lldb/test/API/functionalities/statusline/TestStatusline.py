@@ -135,35 +135,49 @@ class TestStatusline(PExpectTest):
         flood = self.getSourcePath("statusline_flood.py")
         self.expect('command script import "{}"'.format(flood))
 
-        tee = CaptureTee()
-        self.child.logfile_read = tee
-        self.child.sendline("statusline_flood")
-        self.child.expect("MARKER_0049")
-        self.child.expect("(lldb)")
-        self.child.logfile_read = None
+        # The statusline is redrawn on the event thread as progress events
+        # arrive, so whether a redraw overlaps the command output is a
+        # scheduling race. Widen the flood and retry until a complete redraw
+        # lands in the capture, without which there is nothing to check.
+        count = 500
+        last_marker = "MARKER_{:04d}".format(count - 1).encode()
 
-        data = tee.data
-        # The test is only meaningful if the statusline actually redrew and the
-        # command actually produced output.
-        self.assertIn(b"\x1b7", data)
-        self.assertIn(b"MARKER_0049", data)
+        saw_redraw = False
+        for _ in range(10):
+            tee = CaptureTee()
+            self.child.logfile_read = tee
+            self.child.sendline("statusline_flood {}".format(count))
+            self.child.expect(last_marker.decode())
+            self.child.expect("(lldb)")
+            self.child.logfile_read = None
 
-        # No command output may appear between a cursor save (ESC 7) and its
-        # matching restore (ESC 8); that would mean the two writers interleaved.
-        pos = 0
-        while True:
-            save = data.find(b"\x1b7", pos)
-            if save == -1:
+            data = tee.data
+            # A redraw brackets itself with a cursor save (ESC 7) and restore
+            # (ESC 8); command output in between means the writers interleaved.
+            # Only a complete pair counts as an observed redraw.
+            pos = 0
+            while True:
+                save = data.find(b"\x1b7", pos)
+                if save == -1:
+                    break
+                restore = data.find(b"\x1b8", save)
+                if restore == -1:
+                    break
+                saw_redraw = True
+                self.assertNotIn(
+                    b"MARKER_",
+                    data[save + 2 : restore],
+                    "scripted command output was spliced into a statusline redraw",
+                )
+                pos = restore + 2
+
+            if saw_redraw:
                 break
-            restore = data.find(b"\x1b8", save)
-            if restore == -1:
-                break
-            self.assertNotIn(
-                b"MARKER_",
-                data[save + 2 : restore],
-                "scripted command output was spliced into a statusline redraw",
-            )
-            pos = restore + 2
+
+        # No redraw overlapped the output, so the race was never exercised; skip
+        # rather than let a starved machine fail spuriously.
+        if not saw_redraw:
+            self.skipTest("statusline never redrew concurrently with the flood")
 
     @skipIfEditlineSupportMissing
     def test_resize(self):

@@ -158,7 +158,7 @@ void GenericConvergenceVerifier<ContextT>::verify(const DominatorTreeT &DT) {
       return;
 
     auto *DefBB = Token->getParent();
-    if (DefBB == BB || BBCycle->contains(DefBB)) {
+    if (DefBB == BB || CI.contains(*BBCycle, DefBB)) {
       // degenerate occurrence of a loop intrinsic
       return;
     }
@@ -171,7 +171,7 @@ void GenericConvergenceVerifier<ContextT>::verify(const DominatorTreeT &DT) {
 
     while (true) {
       auto *Parent = BBCycle->getParentCycle();
-      if (!Parent || Parent->contains(DefBB))
+      if (!Parent || CI.contains(*Parent, DefBB))
         break;
       BBCycle = Parent;
     };

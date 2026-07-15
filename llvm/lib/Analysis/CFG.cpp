@@ -264,7 +264,7 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
       // ignoring any other blocks inside the loop body.
       OuterL->getExitBlocks(Worklist);
     } else if (OuterC) {
-      OuterC->getExitBlocks(Worklist);
+      CI->getExitBlocks(*OuterC, Worklist);
     } else {
       Worklist.append(succ_begin(BB), succ_end(BB));
     }

@@ -7,7 +7,7 @@ sfence.vma zero, a1, a2 # CHECK: :[[@LINE]]:22: error: unexpected extra operand 
 sfence.vma a0, 0x10
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
 # CHECK: :[[@LINE-2]]:16: note: unexpected extra operand for instruction
-# CHECK: :[[@LINE-3]]:16: note: invalid operand for instruction
+# CHECK: :[[@LINE-3]]:16: note: register must be a GPR
 
 sinval.vma zero, a1, a2 # CHECK: :[[@LINE]]:1: error: invalid instruction
 

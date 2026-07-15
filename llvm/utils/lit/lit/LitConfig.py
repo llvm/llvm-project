@@ -222,7 +222,11 @@ class LitConfig:
         f = inspect.currentframe()
         # Step out of _write_message, and then out of wrapper.
         f = f.f_back.f_back
-        file = os.path.abspath(inspect.getsourcefile(f))
+        # getsourcefile() can return None when the source can't be located
+        # (e.g. lit byte-compiled and packaged into an archive). Fall back to
+        # getfile(), which returns the frame's co_filename and is always a str,
+        # so os.path.abspath() below never raises TypeError.
+        file = os.path.abspath(inspect.getsourcefile(f) or inspect.getfile(f))
         if lit.util.pythonize_bool(self.params.get("use_normalized_slashes")):
             file = file.replace("\\", "/")
         line = inspect.getlineno(f)

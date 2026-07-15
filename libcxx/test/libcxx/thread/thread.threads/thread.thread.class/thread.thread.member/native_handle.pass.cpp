@@ -16,6 +16,9 @@
 
 // native_handle_type native_handle();
 
+// pthread_t and int not comparable.
+// XFAIL: LLVM-LIBC-FIXME
+
 #include <thread>
 #include <new>
 #include <cstdlib>

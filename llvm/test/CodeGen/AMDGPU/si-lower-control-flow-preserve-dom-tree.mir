@@ -1,4 +1,4 @@
-# RUN: llc -mcpu=gfx1201 -mtriple=amdgcn-amd-amdhsa -passes="require<machine-post-dom-tree>,require<machine-dom-tree>,si-lower-control-flow,print<machine-post-dom-tree>,print<machine-dom-tree>" -filetype=null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu12.01-amd-amdhsa -passes="require<machine-post-dom-tree>,require<machine-dom-tree>,si-lower-control-flow,print<machine-post-dom-tree>,print<machine-dom-tree>" -filetype=null %s 2>&1 | FileCheck %s
 
 # CHECK: Inorder PostDominator Tree: 
 # CHECK-NEXT:  [1]  <<exit node>> {4294967295,4294967295} [0]

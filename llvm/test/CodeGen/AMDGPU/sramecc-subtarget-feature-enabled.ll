@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx700 -debug-only=gcn-subtarget -o - %s 2>&1 | FileCheck --check-prefix=WARN %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -debug-only=gcn-subtarget -o - %s 2>&1 | FileCheck --check-prefix=ON %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -debug-only=gcn-subtarget -o - %s 2>&1 | FileCheck --check-prefix=ON %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -debug-only=gcn-subtarget -o - %s 2>&1 | FileCheck --check-prefix=ON %s
+; RUN: llc -mtriple=amdgpu7.00 -debug-only=gcn-subtarget -o - %s 2>&1 | FileCheck --check-prefix=WARN %s
+; RUN: llc -mtriple=amdgpu9.06 -debug-only=gcn-subtarget -o - %s 2>&1 | FileCheck --check-prefix=ON %s
+; RUN: llc -mtriple=amdgpu9.08 -debug-only=gcn-subtarget -o - %s 2>&1 | FileCheck --check-prefix=ON %s
+; RUN: llc -mtriple=amdgpu12.50 -debug-only=gcn-subtarget -o - %s 2>&1 | FileCheck --check-prefix=ON %s
 
 ; REQUIRES: asserts
 

@@ -15,9 +15,9 @@
 #include "src/spawn/file_actions.h"
 
 #include "hdr/fcntl_macros.h"
+#include "hdr/signal_macros.h" // For SIGCHLD
 #include "hdr/types/mode_t.h"
 #include "src/signal/linux/signal_utils.h"
-#include <signal.h> // For SIGCHLD
 #include <spawn.h>
 #include <sys/syscall.h> // For syscall numbers.
 
