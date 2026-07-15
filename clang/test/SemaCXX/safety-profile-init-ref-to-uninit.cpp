@@ -116,8 +116,10 @@ void test_braced_pointer() {
   int *b2 = {&g_uninit};                    // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
   int *b3 [[ref_to_uninit]] = {&g_init};    // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
   int *b4 = {&g_init};                       // OK
-  // Empty {} value-initializes to nullptr, like = nullptr: not uninitialized.
-  int *b5 [[ref_to_uninit]] = {};            // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  // Empty {} value-initializes to nullptr, like = nullptr: a null source is
+  // consistent with marked and unmarked targets alike (paper §8, §4.3; see
+  // test_null_sources).
+  int *b5 [[ref_to_uninit]] = {};            // OK
   int *b6 = {};                              // OK
   (void)b1; (void)b2; (void)b3; (void)b4; (void)b5; (void)b6;
 }
@@ -236,6 +238,46 @@ void test_call_arguments() {
 
   // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
   [[profiles::suppress(std::init)]] { take_ptr(&g_uninit); } // OK: suppressed
+}
+
+// A null pointer refers to no object, so it is consistent with a marked
+// target -- the marker means "zero or more uninitialized objects" (paper §8)
+// -- and with an unmarked one (the paper §4.3 f1(p2) example): it classifies
+// as unknown storage. This covers the literal forms and a named local whose
+// declaration initializer is null.
+void test_null_sources() {
+  take_uninit_ptr(nullptr); // OK: null literal for a marked param
+  take_uninit_ptr(0);       // OK: literal zero
+  take_ptr(nullptr);        // OK
+
+  int *p2 = nullptr;
+  take_uninit_ptr(p2); // OK: the paper §4.3 example
+  take_ptr(p2);        // OK
+
+  int *q [[ref_to_uninit]] = p2; // OK: null is not affirmatively initialized
+  int *q2 = p2;                  // OK
+  (void)q; (void)q2;
+
+  int *z = {};            // value-initializes to null, like = nullptr
+  take_uninit_ptr(z);     // OK
+  int *zb [[ref_to_uninit]] = {nullptr}; // OK: braced null recurses to the literal
+  (void)zb;
+
+  // The null-init classification is parse-order lenient: a reassignment after
+  // the null declaration is not tracked, so passing the now-initialized
+  // pointer to a marked parameter is an accepted missed diagnostic.
+  int *r = nullptr;
+  r = &g_init;
+  take_uninit_ptr(r); // accepted: missed diagnostic (parse-order leniency)
+}
+
+// A zero-initialized *global* null pointer stays classified initialized:
+// an extern pointer may be initialized elsewhere (another translation unit),
+// and keeping globals initialized preserves the marked-direction
+// diagnostics. Deliberate residual strictness.
+int *g_null_ptr;
+void test_null_global() {
+  take_uninit_ptr(g_null_ptr); // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
 }
 
 // A defaulted pointer or reference argument is checked against the parameter's

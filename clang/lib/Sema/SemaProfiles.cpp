@@ -917,7 +917,8 @@ const ValueDecl *SemaProfiles::getDirectlyNamedDecl(const Expr *E) {
 // MismatchingNewDeleteDetector::getNewExprFromInitListOrExpr); a conditional
 // is uninit if either arm is, so a value that may be uninit forces a marked
 // target; a comma yields its right operand. \p EmptyListState classifies an
-// empty braced list: {} value-initializes a pointer to null (Initialized),
+// empty braced list: {} value-initializes a pointer to null, which the
+// pointer recognizer classifies Unknown (the null policy at its null arm),
 // while a glvalue has no empty-list form (Unknown); a multi-element list is
 // Unknown for both. Returns std::nullopt when E is not a pass-through form.
 template <typename RecurseFn>
@@ -962,12 +963,26 @@ pointerRefersToUninitStorage(ASTContext &Ctx, const Expr *E,
     return UninitStorage::Unknown;
   E = E->IgnoreParenImpCasts();
 
+  // An empty braced list value-initializes a pointer to null, so it takes the
+  // null classification below (Unknown), keeping `= {}` and `= nullptr`
+  // consistent.
   if (auto PassThrough = classifyUninitPassThrough(
-          E, /*EmptyListState=*/UninitStorage::Initialized,
+          E, /*EmptyListState=*/UninitStorage::Unknown,
           [&](const Expr *Sub) {
             return pointerRefersToUninitStorage(Ctx, Sub, Opts);
           }))
     return *PassThrough;
+
+  // A null pointer refers to no object, so it is consistent with both a
+  // marked target (the marker means "zero or more uninitialized objects",
+  // paper §8) and an unmarked one (paper §4.3's f1(p2) example): Unknown,
+  // which neither direction diagnoses. A dedicated UninitStorage::Null state
+  // was considered and deferred -- behaviorally identical today; add it only
+  // when a future rule (e.g. construct_at on null) needs to distinguish null
+  // from unclassifiable.
+  if (E->isNullPointerConstant(Ctx, Expr::NPC_ValueDependentIsNotNull) !=
+      Expr::NPCK_NotNull)
+    return UninitStorage::Unknown;
 
   // Array-to-pointer decay has been stripped above, leaving the array glvalue.
   // Clear the top-level drop here, like the member-access arm: neither the CFG
@@ -987,8 +1002,29 @@ pointerRefersToUninitStorage(ASTContext &Ctx, const Expr *E,
   // marker is trusted); an unmarked named pointer is a trusted Initialized
   // pointer (paper §4.3).
   if (const ValueDecl *VD = SemaProfiles::getDirectlyNamedDecl(E)) {
-    if (!VD->hasAttr<RefToUninitAttr>())
+    if (!VD->hasAttr<RefToUninitAttr>()) {
+      // An unmarked *local* whose declaration initializer is null -- a null
+      // pointer constant, or an empty braced list, which value-initializes to
+      // null -- is a null source like the literal (paper §4.3's f1(p2)
+      // example): Unknown. Reassignment after the null init is a documented,
+      // accepted missed diagnostic (parse-order leniency). Deliberately
+      // excluded: globals/extern (an extern pointer may be initialized
+      // elsewhere, and keeping them Initialized preserves the
+      // marked-direction diagnostics) and null-NSDMI fields. A *marked* decl
+      // keeps its marker classification below (respect the explicit marker).
+      if (const auto *Var = dyn_cast<VarDecl>(VD);
+          Var && Var->hasLocalStorage()) {
+        if (const Expr *Init = Var->getInit()) {
+          const Expr *InnerInit = Init->IgnoreParenImpCasts();
+          const auto *ILE = dyn_cast<InitListExpr>(InnerInit);
+          if ((ILE && ILE->getNumInits() == 0) ||
+              InnerInit->isNullPointerConstant(
+                  Ctx, Expr::NPC_ValueDependentIsNotNull) != Expr::NPCK_NotNull)
+            return UninitStorage::Unknown;
+        }
+      }
       return UninitStorage::Initialized;
+    }
     return Opts.TrustRefToUninit ? UninitStorage::Unknown
                                  : UninitStorage::Uninitialized;
   }

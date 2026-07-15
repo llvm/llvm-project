@@ -445,9 +445,12 @@ own (§7.2): declare the copy constructor's parameter ``[[ref_to_uninit]]``.
 Positions that cannot carry the marker -- a variadic argument, a parameter of
 a function called through a function pointer, the implicit object parameter
 -- are checked as unmarked targets; suppress at the call site if the flow is
-intended.  A source whose form the recognizer cannot classify (pointer
-arithmetic, an integer-to-pointer cast) is accepted for marked and unmarked
-targets alike.
+intended.  A null pointer source -- ``nullptr``, ``0``, ``{}``, or a local
+pointer initialized to null -- refers to no object, so it is accepted for
+marked and unmarked targets alike (§4.3, §8: the marker means "zero or more
+uninitialized objects").  A source whose form the recognizer cannot classify
+(pointer arithmetic, an integer-to-pointer cast) is likewise accepted for
+either target.
 
 
 Constructors
