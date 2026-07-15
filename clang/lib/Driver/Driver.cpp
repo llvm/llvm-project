@@ -110,7 +110,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
-#include <cstdlib> // ::getenv
 #include <map>
 #include <memory>
 #include <optional>
