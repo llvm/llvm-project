@@ -130,6 +130,7 @@ static bool isSupportedRISCV(uint32_t Type) {
   case ELF::R_RISCV_TPREL_ADD:
   case ELF::R_RISCV_TPREL_LO12_I:
   case ELF::R_RISCV_TPREL_LO12_S:
+  case ELF::R_RISCV_IRELATIVE:
   case ELFReserved::R_RISCV_TPREL_I:
   case ELFReserved::R_RISCV_TPREL_S:
     return true;
@@ -244,6 +245,9 @@ static size_t getSizeForTypeRISCV(uint32_t Type) {
   case ELF::R_RISCV_TLS_GD_HI20:
     // See extractValueRISCV for why this is necessary.
     return 8;
+  case ELF::R_RISCV_IRELATIVE:
+    // R_RISCV_IRELATIVE operates on a wordclass field.
+    return Relocation::Arch == Triple::riscv64 ? 8 : 4;
   }
 }
 
@@ -871,7 +875,7 @@ bool Relocation::isIRelative(uint32_t Type) {
     return Type == ELF::R_AARCH64_IRELATIVE;
   case Triple::riscv64:
   case Triple::riscv32:
-    llvm_unreachable("not implemented");
+    return Type == ELF::R_RISCV_IRELATIVE;
   case Triple::x86_64:
     return Type == ELF::R_X86_64_IRELATIVE;
   }
