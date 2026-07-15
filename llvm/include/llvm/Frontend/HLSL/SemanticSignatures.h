@@ -19,10 +19,15 @@
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DXILABI.h"
+#include "llvm/Support/Error.h"
 #include <cstdint>
 #include <string>
 
 namespace llvm {
+
+class LLVMContext;
+class MDNode;
+
 namespace hlsl {
 
 // Definitions of the in-memory data layout structures
@@ -81,6 +86,13 @@ struct SemanticSignatureElement {
       return dxbc::SigMinPrecision::Default;
     }
   }
+
+  // Parse a signature element from its metadata representation
+  LLVM_ABI static Expected<SemanticSignatureElement>
+  fromMetadata(const MDNode *Node);
+
+  // Build the metadata representation of this signature element
+  LLVM_ABI MDNode *toMetadata(LLVMContext &Ctx) const;
 };
 
 } // namespace hlsl
