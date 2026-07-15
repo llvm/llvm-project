@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file --mlgo-add-reflection-map="field-attr-name=emitc.field_ref excluded-field-attrs=emitc.other_field" %s | mlir-translate -mlir-to-cpp | FileCheck %s
+// RUN: mlir-opt -split-input-file --mlgo-add-reflection-map="included-field-attrs=emitc.field_ref excluded-field-attrs=emitc.other_field" %s | mlir-translate -mlir-to-cpp | FileCheck %s
 
 /// Test that a reflection map and lookup function are generated in the class.
 

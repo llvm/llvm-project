@@ -96,9 +96,8 @@ def MLGOAddReflectionMapPass : Pass<"mlgo-add-reflection-map", "ModuleOp"> {
   }];
   let dependentDialects = ["emitc::EmitCDialect"];
   let options = [
-    Option<"fieldAttrName", "field-attr-name", "std::string",
-      /*default=*/"",
-      "Attribute key used to extract field names from a field's "
+    ListOption<"includedFieldAttrs", "included-field-attrs", "std::string",
+      "Attribute keys used to extract field names from a field's "
       "attribute dictionary">,
     ListOption<"excludedFieldAttrs", "excluded-field-attrs", "std::string",
       "Attribute keys that, if present on a field, exclude it "

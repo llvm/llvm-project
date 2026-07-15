@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file --mlgo-add-reflection-map="field-attr-name=emitc.field_ref \
+// RUN: mlir-opt -split-input-file --mlgo-add-reflection-map="included-field-attrs=emitc.field_ref,emitc.field_ref_2 \
 // RUN: excluded-field-attrs="emitc.other_field"" %s | FileCheck %s '-D$QUOTE=\22'
 
 /// Tests that a reflection map is created for fields with a certain attribute.
@@ -127,6 +127,33 @@ emitc.class @fooNonStringAttr {
 // CHECK-NOT:     emitc.include
 // CHECK-LABEL: emitc.class @fooNonStringAttr {
 // CHECK-NEXT:    emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = [1]}
+// CHECK-NEXT:    emitc.func @bar() {
+// CHECK-NEXT:      return
+// CHECK-NEXT:    }
+// CHECK-NEXT:  }
+
+// -----
+
+/// Test that the pass matches one of the multiple included attributes.
+
+emitc.class @fooMultipleAttrs {
+  emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref_2 = ["another_feature"]}
+  emitc.field @fieldName1 : !emitc.array<1xf32> {emitc.field_ref = ["some_feature"]}
+  emitc.func @bar() {
+    return
+  }
+}
+
+// CHECK-LABEL: emitc.class @fooMultipleAttrs {
+// CHECK-NEXT:    emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref_2 = ["another_feature"]}
+// CHECK-NEXT:    emitc.field @fieldName1 : !emitc.array<1xf32> {emitc.field_ref = ["some_feature"]}
+// CHECK-NEXT:    emitc.field @reflectionMap : !emitc.opaque<"const std::map<std::string, char*>"> =
+// CHECK-SAME:    #emitc.opaque<"{ { [[$QUOTE]]another_feature[[$QUOTE]], reinterpret_cast<char*>(&fieldName0) }, { [[$QUOTE]]some_feature[[$QUOTE]], reinterpret_cast<char*>(&fieldName1) } }">
+// CHECK-NEXT:    emitc.func @getBufferForName(%{{.*}}: !emitc.opaque<"std::string">) -> !emitc.ptr<!emitc.opaque<"char">> {
+// CHECK-NEXT:      %[[MAP:.*]] = get_field @reflectionMap : !emitc.opaque<"const std::map<std::string, char*>">
+// CHECK-NEXT:      %[[VAL:.*]] = member_call_opaque %[[MAP]] "at"({{.*}}) : !emitc.opaque<"const std::map<std::string, char*>">, (!emitc.opaque<"std::string">) -> !emitc.ptr<!emitc.opaque<"char">>
+// CHECK-NEXT:      return %[[VAL]] : !emitc.ptr<!emitc.opaque<"char">>
+// CHECK-NEXT:    }
 // CHECK-NEXT:    emitc.func @bar() {
 // CHECK-NEXT:      return
 // CHECK-NEXT:    }

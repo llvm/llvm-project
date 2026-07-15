@@ -15,6 +15,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/WalkPatternRewriteDriver.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace mlir;
@@ -51,7 +52,7 @@ class MLGOAddReflectionMapPass
     mlir::ModuleOp moduleOp = getOperation();
 
     RewritePatternSet patterns(&getContext());
-    populateMLGOAddReflectionMapPatterns(patterns, fieldAttrName,
+    populateMLGOAddReflectionMapPatterns(patterns, includedFieldAttrs,
                                          excludedFieldAttrs);
 
     PatternMatchListener listener;
@@ -93,9 +94,11 @@ class MLGOAddReflectionMapPass
 
 class MLGOAddReflectionMapClass : public OpRewritePattern<ClassOp> {
 public:
-  MLGOAddReflectionMapClass(MLIRContext *context, StringRef attrName,
+  MLGOAddReflectionMapClass(MLIRContext *context,
+                            llvm::ArrayRef<std::string> includedFieldAttrs,
                             llvm::ArrayRef<std::string> excludedFieldAttrs)
-      : OpRewritePattern<ClassOp>(context), fieldAttrName(attrName),
+      : OpRewritePattern<ClassOp>(context),
+        includedFieldAttrs(includedFieldAttrs),
         excludedFieldAttrs(excludedFieldAttrs.begin(),
                            excludedFieldAttrs.end()) {}
 
@@ -110,13 +113,16 @@ public:
     std::vector<std::pair<StringRef, StringRef>> fieldNames;
     bool hasError = false;
     classOp.walk([&](FieldOp fieldOp) {
-      if (auto arrayAttr =
-              dyn_cast_if_present<ArrayAttr>(fieldOp->getAttr(fieldAttrName))) {
-        if (!arrayAttr.empty()) {
-          if (auto stringAttr = dyn_cast<StringAttr>(arrayAttr[0])) {
-            fieldNames.emplace_back(stringAttr.getValue(), fieldOp.getName());
-            return;
-          }
+      for (const auto &attr : includedFieldAttrs) {
+        auto arrayAttr = dyn_cast_if_present<ArrayAttr>(fieldOp->getAttr(attr));
+
+        if (!arrayAttr)
+          continue;
+
+        if (!arrayAttr.empty() && isa<StringAttr>(arrayAttr[0])) {
+          fieldNames.emplace_back(cast<StringAttr>(arrayAttr[0]).getValue(),
+                                  fieldOp.getName());
+          return;
         }
       }
 
@@ -129,7 +135,7 @@ public:
 
       (void)rewriter.notifyMatchFailure(fieldOp, [&](Diagnostic &diag) {
         diag << "FieldOp must have a dictionary attribute named '"
-             << fieldAttrName << "' "
+             << includedFieldAttrs << "' "
              << "with an array containing a string attribute";
       });
       hasError = true;
@@ -199,9 +205,10 @@ public:
   }
 
 private:
-  /// The name of the attribute on FieldOps that contains the field name
-  /// metadata for the reflection map.
-  StringRef fieldAttrName;
+  /// The names of the attributes on FieldOps that contain the field name
+  /// metadata for the reflection map. The pass matches the first attribute
+  /// present in the order they are specified in this list.
+  llvm::SmallVector<std::string> includedFieldAttrs;
 
   /// Attributes that, if present on a field, exclude it from the
   /// reflection map.
@@ -209,8 +216,8 @@ private:
 };
 
 void mlir::emitc::populateMLGOAddReflectionMapPatterns(
-    RewritePatternSet &patterns, StringRef fieldAttrName,
+    RewritePatternSet &patterns, llvm::ArrayRef<std::string> includedFieldAttrs,
     llvm::ArrayRef<std::string> excludedFieldAttrs) {
-  patterns.add<MLGOAddReflectionMapClass>(patterns.getContext(), fieldAttrName,
-                                          excludedFieldAttrs);
+  patterns.add<MLGOAddReflectionMapClass>(
+      patterns.getContext(), includedFieldAttrs, excludedFieldAttrs);
 }

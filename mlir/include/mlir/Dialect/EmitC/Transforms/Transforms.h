@@ -43,7 +43,7 @@ void populateWrapFuncInClass(
 //===----------------------------------------------------------------------===//
 
 void populateMLGOAddReflectionMapPatterns(
-    RewritePatternSet &patterns, StringRef fieldAttrName,
+    RewritePatternSet &patterns, ArrayRef<std::string> includedFieldAttrs,
     ArrayRef<std::string> excludedFieldAttrs);
 
 } // namespace emitc
