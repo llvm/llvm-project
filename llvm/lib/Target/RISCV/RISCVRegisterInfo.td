@@ -397,7 +397,10 @@ def SP : GPRRegisterClass<(add X2)> {
 
 // Saved Registers from s0 to s7, for C.MVA01S07 instruction in Zcmp extension
 def SR07 : GPRRegisterClass<(add (sequence "X%u", 8, 9),
-                                 (sequence "X%u", 18, 23))>;
+                                 (sequence "X%u", 18, 23))> {
+  let DiagnosticType = "InvalidRegClassSR07";
+  let DiagnosticString = "register must be GPR from s0 to s7 (x8, x9 or x18-x23)";
+}
 
 def GPRX1X5 :  GPRRegisterClass<(add X1, X5)> {
   let DiagnosticType = "InvalidRegClassGPRX1X5";
