@@ -1,16 +1,10 @@
-# RUN: llvm-mc -triple powerpc64-unknown-linux-gnu -show-encoding %s 2>&1 | \
-# RUN:   FileCheck %s
-
-# RUN: not llvm-mc -triple powerpc64-unknown-linux-gnu %s --defsym=ERR=1 2>&1 | \
+# RUN: not llvm-mc -triple powerpc64-unknown-linux-gnu %s 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=CHECK-ERR
 
-# Valid wrteei operands (0 and 1)
-wrteei 0
-# CHECK: wrteei 0
-wrteei 1
-# CHECK: wrteei 1
+# Valid wrteei encodings are already covered by
+# MC/PowerPC/ppc64-encoding-bookIII.s; this test only checks that invalid
+# operands are rejected.
 
-.ifdef ERR
 # Invalid: register names should be rejected as immediate operands
 wrteei f0
 # CHECK-ERR: [[@LINE-1]]:{{[0-9]+}}: error:
@@ -25,4 +19,3 @@ wrteei 2
 # CHECK-ERR: [[@LINE-1]]:{{[0-9]+}}: error:
 wrteei -1
 # CHECK-ERR: [[@LINE-1]]:{{[0-9]+}}: error:
-.endif
