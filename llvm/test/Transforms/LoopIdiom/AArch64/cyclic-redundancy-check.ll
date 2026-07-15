@@ -3,28 +3,48 @@
 ; RUN: opt -passes=loop-idiom -mtriple=aarch64 -mattr=+aes -S %s | FileCheck --check-prefixes=ALL,AES %s
 
 define i16 @crc16.le.tc8(i8 %msg, i16 %checksum) optsize {
-; ALL-LABEL: define i16 @crc16.le.tc8(
-; ALL-SAME: i8 [[MSG:%.*]], i16 [[CHECKSUM:%.*]]) #[[ATTR0:[0-9]+]] {
-; ALL-NEXT:  [[ENTRY:.*]]:
-; ALL-NEXT:    br label %[[LOOP:.*]]
-; ALL:       [[LOOP]]:
-; ALL-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; ALL-NEXT:    [[CRC:%.*]] = phi i16 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
-; ALL-NEXT:    [[DATA:%.*]] = phi i8 [ [[MSG]], %[[ENTRY]] ], [ [[DATA_NEXT:%.*]], %[[LOOP]] ]
-; ALL-NEXT:    [[CRC_TRUNC:%.*]] = trunc i16 [[CRC]] to i8
-; ALL-NEXT:    [[XOR_DATA_CRC:%.*]] = xor i8 [[DATA]], [[CRC_TRUNC]]
-; ALL-NEXT:    [[AND_DATA_CRC:%.*]] = and i8 [[XOR_DATA_CRC]], 1
-; ALL-NEXT:    [[DATA_NEXT]] = lshr i8 [[DATA]], 1
-; ALL-NEXT:    [[CHECK_SB:%.*]] = icmp eq i8 [[AND_DATA_CRC]], 0
-; ALL-NEXT:    [[CRC_LSHR:%.*]] = lshr i16 [[CRC]], 1
-; ALL-NEXT:    [[XOR:%.*]] = xor i16 [[CRC_LSHR]], -24575
-; ALL-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i16 [[CRC_LSHR]], i16 [[XOR]]
-; ALL-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
-; ALL-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 [[IV]], 7
-; ALL-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
-; ALL:       [[EXIT]]:
-; ALL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT]], %[[LOOP]] ]
-; ALL-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
+; NOAES-LABEL: define i16 @crc16.le.tc8(
+; NOAES-SAME: i8 [[MSG:%.*]], i16 [[CHECKSUM:%.*]]) #[[ATTR0:[0-9]+]] {
+; NOAES-NEXT:  [[ENTRY:.*]]:
+; NOAES-NEXT:    br label %[[LOOP:.*]]
+; NOAES:       [[LOOP]]:
+; NOAES-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; NOAES-NEXT:    [[CRC:%.*]] = phi i16 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
+; NOAES-NEXT:    [[DATA:%.*]] = phi i8 [ [[MSG]], %[[ENTRY]] ], [ [[DATA_NEXT:%.*]], %[[LOOP]] ]
+; NOAES-NEXT:    [[CRC_TRUNC:%.*]] = trunc i16 [[CRC]] to i8
+; NOAES-NEXT:    [[XOR_DATA_CRC:%.*]] = xor i8 [[DATA]], [[CRC_TRUNC]]
+; NOAES-NEXT:    [[AND_DATA_CRC:%.*]] = and i8 [[XOR_DATA_CRC]], 1
+; NOAES-NEXT:    [[DATA_NEXT]] = lshr i8 [[DATA]], 1
+; NOAES-NEXT:    [[CHECK_SB:%.*]] = icmp eq i8 [[AND_DATA_CRC]], 0
+; NOAES-NEXT:    [[CRC_LSHR:%.*]] = lshr i16 [[CRC]], 1
+; NOAES-NEXT:    [[XOR:%.*]] = xor i16 [[CRC_LSHR]], -24575
+; NOAES-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i16 [[CRC_LSHR]], i16 [[XOR]]
+; NOAES-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
+; NOAES-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 [[IV]], 7
+; NOAES-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; NOAES:       [[EXIT]]:
+; NOAES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT]], %[[LOOP]] ]
+; NOAES-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
+;
+; AES-LABEL: define i16 @crc16.le.tc8(
+; AES-SAME: i8 [[MSG:%.*]], i16 [[CHECKSUM:%.*]]) #[[ATTR0:[0-9]+]] {
+; AES-NEXT:  [[ENTRY:.*:]]
+; AES-NEXT:    [[CRC_CAST:%.*]] = zext i16 [[CHECKSUM]] to i24
+; AES-NEXT:    [[DATA_CAST:%.*]] = zext i8 [[MSG]] to i24
+; AES-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i24 [[CRC_CAST]], [[DATA_CAST]]
+; AES-NEXT:    [[CRC_TCBITS:%.*]] = and i24 [[XOR_CRC_DATA]], 255
+; AES-NEXT:    [[CLMUL_MU:%.*]] = call i24 @llvm.clmul.i24(i24 [[CRC_TCBITS]], i24 511)
+; AES-NEXT:    [[QUOT_MASK:%.*]] = and i24 [[CLMUL_MU]], 255
+; AES-NEXT:    [[CLMUL_GP:%.*]] = call i24 @llvm.clmul.i24(i24 [[QUOT_MASK]], i24 81923)
+; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i24 [[CRC_CAST]], [[CLMUL_GP]]
+; AES-NEXT:    [[CRC_LSHR1:%.*]] = lshr i24 [[XOR_CRC_MULT]], 8
+; AES-NEXT:    [[CRC_NEXT2:%.*]] = trunc i24 [[CRC_LSHR1]] to i16
+; AES-NEXT:    br label %[[LOOP:.*]]
+; AES:       [[LOOP]]:
+; AES-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
+; AES:       [[EXIT]]:
+; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT2]], %[[LOOP]] ]
+; AES-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
 ;
 entry:
   br label %loop
@@ -245,27 +265,46 @@ exit:                                              ; preds = %loop
 }
 
 define i16 @crc16.be.tc8.misalign(i8 %msg, i16 %checksum) optsize {
-; ALL-LABEL: define i16 @crc16.be.tc8.misalign(
-; ALL-SAME: i8 [[MSG:%.*]], i16 [[CHECKSUM:%.*]]) #[[ATTR0]] {
-; ALL-NEXT:  [[ENTRY:.*]]:
-; ALL-NEXT:    br label %[[LOOP:.*]]
-; ALL:       [[LOOP]]:
-; ALL-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; ALL-NEXT:    [[CRC:%.*]] = phi i16 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
-; ALL-NEXT:    [[DATA:%.*]] = phi i8 [ [[MSG]], %[[ENTRY]] ], [ [[DATA_NEXT:%.*]], %[[LOOP]] ]
-; ALL-NEXT:    [[CRC_TRUNC:%.*]] = trunc i16 [[CRC]] to i8
-; ALL-NEXT:    [[XOR_DATA_CRC:%.*]] = xor i8 [[DATA]], [[CRC_TRUNC]]
-; ALL-NEXT:    [[DATA_NEXT]] = shl i8 [[DATA]], 1
-; ALL-NEXT:    [[CHECK_SB:%.*]] = icmp sge i8 [[XOR_DATA_CRC]], 0
-; ALL-NEXT:    [[CRC_SHL:%.*]] = shl i16 [[CRC]], 1
-; ALL-NEXT:    [[XOR:%.*]] = xor i16 [[CRC_SHL]], 4129
-; ALL-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i16 [[CRC_SHL]], i16 [[XOR]]
-; ALL-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
-; ALL-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 [[IV]], 7
-; ALL-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
-; ALL:       [[EXIT]]:
-; ALL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT]], %[[LOOP]] ]
-; ALL-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
+; NOAES-LABEL: define i16 @crc16.be.tc8.misalign(
+; NOAES-SAME: i8 [[MSG:%.*]], i16 [[CHECKSUM:%.*]]) #[[ATTR0]] {
+; NOAES-NEXT:  [[ENTRY:.*]]:
+; NOAES-NEXT:    br label %[[LOOP:.*]]
+; NOAES:       [[LOOP]]:
+; NOAES-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; NOAES-NEXT:    [[CRC:%.*]] = phi i16 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
+; NOAES-NEXT:    [[DATA:%.*]] = phi i8 [ [[MSG]], %[[ENTRY]] ], [ [[DATA_NEXT:%.*]], %[[LOOP]] ]
+; NOAES-NEXT:    [[CRC_TRUNC:%.*]] = trunc i16 [[CRC]] to i8
+; NOAES-NEXT:    [[XOR_DATA_CRC:%.*]] = xor i8 [[DATA]], [[CRC_TRUNC]]
+; NOAES-NEXT:    [[DATA_NEXT]] = shl i8 [[DATA]], 1
+; NOAES-NEXT:    [[CHECK_SB:%.*]] = icmp sge i8 [[XOR_DATA_CRC]], 0
+; NOAES-NEXT:    [[CRC_SHL:%.*]] = shl i16 [[CRC]], 1
+; NOAES-NEXT:    [[XOR:%.*]] = xor i16 [[CRC_SHL]], 4129
+; NOAES-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i16 [[CRC_SHL]], i16 [[XOR]]
+; NOAES-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
+; NOAES-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 [[IV]], 7
+; NOAES-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; NOAES:       [[EXIT]]:
+; NOAES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT]], %[[LOOP]] ]
+; NOAES-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
+;
+; AES-LABEL: define i16 @crc16.be.tc8.misalign(
+; AES-SAME: i8 [[MSG:%.*]], i16 [[CHECKSUM:%.*]]) #[[ATTR0]] {
+; AES-NEXT:  [[ENTRY:.*:]]
+; AES-NEXT:    [[CRC_CAST:%.*]] = zext i16 [[CHECKSUM]] to i24
+; AES-NEXT:    [[CRC_ALIGN_TC:%.*]] = lshr i24 [[CRC_CAST]], 8
+; AES-NEXT:    [[CRC_TCBITS:%.*]] = and i24 [[CRC_ALIGN_TC]], 255
+; AES-NEXT:    [[CLMUL_MU:%.*]] = call i24 @llvm.clmul.i24(i24 [[CRC_TCBITS]], i24 273)
+; AES-NEXT:    [[QUOT_LSHR:%.*]] = lshr i24 [[CLMUL_MU]], 8
+; AES-NEXT:    [[CLMUL_GP:%.*]] = call i24 @llvm.clmul.i24(i24 [[QUOT_LSHR]], i24 69665)
+; AES-NEXT:    [[CRC_SHL1:%.*]] = shl i24 [[CRC_CAST]], 8
+; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i24 [[CRC_SHL1]], [[CLMUL_GP]]
+; AES-NEXT:    [[CRC_NEXT2:%.*]] = trunc i24 [[XOR_CRC_MULT]] to i16
+; AES-NEXT:    br label %[[LOOP:.*]]
+; AES:       [[LOOP]]:
+; AES-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
+; AES:       [[EXIT]]:
+; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT2]], %[[LOOP]] ]
+; AES-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
 ;
 entry:
   br label %loop
@@ -356,27 +395,46 @@ exit:                                              ; preds = %loop
 }
 
 define i8 @crc8.be.tc8.data16.misalign(i16 %msg, i8 %checksum) optsize {
-; ALL-LABEL: define i8 @crc8.be.tc8.data16.misalign(
-; ALL-SAME: i16 [[MSG:%.*]], i8 [[CHECKSUM:%.*]]) #[[ATTR0]] {
-; ALL-NEXT:  [[ENTRY:.*]]:
-; ALL-NEXT:    br label %[[LOOP:.*]]
-; ALL:       [[LOOP]]:
-; ALL-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; ALL-NEXT:    [[CRC:%.*]] = phi i8 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
-; ALL-NEXT:    [[DATA:%.*]] = phi i16 [ [[MSG]], %[[ENTRY]] ], [ [[DATA_NEXT:%.*]], %[[LOOP]] ]
-; ALL-NEXT:    [[DATA_TRUNC:%.*]] = trunc i16 [[DATA]] to i8
-; ALL-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i8 [[CRC]], [[DATA_TRUNC]]
-; ALL-NEXT:    [[DATA_NEXT]] = shl i16 [[DATA]], 1
-; ALL-NEXT:    [[CHECK_SB:%.*]] = icmp sge i8 [[XOR_CRC_DATA]], 0
-; ALL-NEXT:    [[CRC_SHL:%.*]] = shl i8 [[CRC]], 1
-; ALL-NEXT:    [[CRC_XOR:%.*]] = xor i8 [[CRC_SHL]], 29
-; ALL-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i8 [[CRC_SHL]], i8 [[CRC_XOR]]
-; ALL-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
-; ALL-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 [[IV]], 7
-; ALL-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
-; ALL:       [[EXIT]]:
-; ALL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i8 [ [[CRC_NEXT]], %[[LOOP]] ]
-; ALL-NEXT:    ret i8 [[CRC_NEXT_LCSSA]]
+; NOAES-LABEL: define i8 @crc8.be.tc8.data16.misalign(
+; NOAES-SAME: i16 [[MSG:%.*]], i8 [[CHECKSUM:%.*]]) #[[ATTR0]] {
+; NOAES-NEXT:  [[ENTRY:.*]]:
+; NOAES-NEXT:    br label %[[LOOP:.*]]
+; NOAES:       [[LOOP]]:
+; NOAES-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; NOAES-NEXT:    [[CRC:%.*]] = phi i8 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
+; NOAES-NEXT:    [[DATA:%.*]] = phi i16 [ [[MSG]], %[[ENTRY]] ], [ [[DATA_NEXT:%.*]], %[[LOOP]] ]
+; NOAES-NEXT:    [[DATA_TRUNC:%.*]] = trunc i16 [[DATA]] to i8
+; NOAES-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i8 [[CRC]], [[DATA_TRUNC]]
+; NOAES-NEXT:    [[DATA_NEXT]] = shl i16 [[DATA]], 1
+; NOAES-NEXT:    [[CHECK_SB:%.*]] = icmp sge i8 [[XOR_CRC_DATA]], 0
+; NOAES-NEXT:    [[CRC_SHL:%.*]] = shl i8 [[CRC]], 1
+; NOAES-NEXT:    [[CRC_XOR:%.*]] = xor i8 [[CRC_SHL]], 29
+; NOAES-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i8 [[CRC_SHL]], i8 [[CRC_XOR]]
+; NOAES-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
+; NOAES-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 [[IV]], 7
+; NOAES-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; NOAES:       [[EXIT]]:
+; NOAES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i8 [ [[CRC_NEXT]], %[[LOOP]] ]
+; NOAES-NEXT:    ret i8 [[CRC_NEXT_LCSSA]]
+;
+; AES-LABEL: define i8 @crc8.be.tc8.data16.misalign(
+; AES-SAME: i16 [[MSG:%.*]], i8 [[CHECKSUM:%.*]]) #[[ATTR0]] {
+; AES-NEXT:  [[ENTRY:.*:]]
+; AES-NEXT:    [[CRC_CAST:%.*]] = zext i8 [[CHECKSUM]] to i16
+; AES-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i16 [[CRC_CAST]], [[MSG]]
+; AES-NEXT:    [[CRC_TCBITS:%.*]] = and i16 [[XOR_CRC_DATA1]], 255
+; AES-NEXT:    [[CLMUL_MU:%.*]] = call i16 @llvm.clmul.i16(i16 [[CRC_TCBITS]], i16 284)
+; AES-NEXT:    [[QUOT_LSHR:%.*]] = lshr i16 [[CLMUL_MU]], 8
+; AES-NEXT:    [[CLMUL_GP:%.*]] = call i16 @llvm.clmul.i16(i16 [[QUOT_LSHR]], i16 285)
+; AES-NEXT:    [[CRC_SHL2:%.*]] = shl i16 [[CRC_CAST]], 8
+; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i16 [[CRC_SHL2]], [[CLMUL_GP]]
+; AES-NEXT:    [[CRC_NEXT3:%.*]] = trunc i16 [[XOR_CRC_MULT]] to i8
+; AES-NEXT:    br label %[[LOOP:.*]]
+; AES:       [[LOOP]]:
+; AES-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
+; AES:       [[EXIT]]:
+; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i8 [ [[CRC_NEXT3]], %[[LOOP]] ]
+; AES-NEXT:    ret i8 [[CRC_NEXT_LCSSA]]
 ;
 entry:
   br label %loop
@@ -401,27 +459,47 @@ exit:                                              ; preds = %loop
 }
 
 define i32 @crc32.le.tc8.data32(i32 %checksum, i32 %msg) optsize {
-; ALL-LABEL: define i32 @crc32.le.tc8.data32(
-; ALL-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR0]] {
-; ALL-NEXT:  [[ENTRY:.*]]:
-; ALL-NEXT:    br label %[[LOOP:.*]]
-; ALL:       [[LOOP]]:
-; ALL-NEXT:    [[CRC:%.*]] = phi i32 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
-; ALL-NEXT:    [[DATA:%.*]] = phi i32 [ [[MSG]], %[[ENTRY]] ], [ [[DATA_NEXT:%.*]], %[[LOOP]] ]
-; ALL-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; ALL-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i32 [[CRC]], [[DATA]]
-; ALL-NEXT:    [[SB_CRC_DATA:%.*]] = and i32 [[XOR_CRC_DATA]], 1
-; ALL-NEXT:    [[CHECK_SB:%.*]] = icmp eq i32 [[SB_CRC_DATA]], 0
-; ALL-NEXT:    [[CRC_LSHR:%.*]] = lshr i32 [[CRC]], 1
-; ALL-NEXT:    [[CRC_XOR:%.*]] = xor i32 [[CRC_LSHR]], 33800
-; ALL-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i32 [[CRC_LSHR]], i32 [[CRC_XOR]]
-; ALL-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
-; ALL-NEXT:    [[DATA_NEXT]] = lshr i32 [[DATA]], 1
-; ALL-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 [[IV]], 7
-; ALL-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
-; ALL:       [[EXIT]]:
-; ALL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT]], %[[LOOP]] ]
-; ALL-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
+; NOAES-LABEL: define i32 @crc32.le.tc8.data32(
+; NOAES-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR0]] {
+; NOAES-NEXT:  [[ENTRY:.*]]:
+; NOAES-NEXT:    br label %[[LOOP:.*]]
+; NOAES:       [[LOOP]]:
+; NOAES-NEXT:    [[CRC:%.*]] = phi i32 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
+; NOAES-NEXT:    [[DATA:%.*]] = phi i32 [ [[MSG]], %[[ENTRY]] ], [ [[DATA_NEXT:%.*]], %[[LOOP]] ]
+; NOAES-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; NOAES-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i32 [[CRC]], [[DATA]]
+; NOAES-NEXT:    [[SB_CRC_DATA:%.*]] = and i32 [[XOR_CRC_DATA]], 1
+; NOAES-NEXT:    [[CHECK_SB:%.*]] = icmp eq i32 [[SB_CRC_DATA]], 0
+; NOAES-NEXT:    [[CRC_LSHR:%.*]] = lshr i32 [[CRC]], 1
+; NOAES-NEXT:    [[CRC_XOR:%.*]] = xor i32 [[CRC_LSHR]], 33800
+; NOAES-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i32 [[CRC_LSHR]], i32 [[CRC_XOR]]
+; NOAES-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
+; NOAES-NEXT:    [[DATA_NEXT]] = lshr i32 [[DATA]], 1
+; NOAES-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 [[IV]], 7
+; NOAES-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; NOAES:       [[EXIT]]:
+; NOAES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT]], %[[LOOP]] ]
+; NOAES-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
+;
+; AES-LABEL: define i32 @crc32.le.tc8.data32(
+; AES-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR0]] {
+; AES-NEXT:  [[ENTRY:.*:]]
+; AES-NEXT:    [[CRC_CAST:%.*]] = zext i32 [[CHECKSUM]] to i40
+; AES-NEXT:    [[DATA_CAST:%.*]] = zext i32 [[MSG]] to i40
+; AES-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i40 [[CRC_CAST]], [[DATA_CAST]]
+; AES-NEXT:    [[CRC_TCBITS:%.*]] = and i40 [[XOR_CRC_DATA1]], 255
+; AES-NEXT:    [[CLMUL_MU:%.*]] = call i40 @llvm.clmul.i40(i40 [[CRC_TCBITS]], i40 273)
+; AES-NEXT:    [[QUOT_MASK:%.*]] = and i40 [[CLMUL_MU]], 255
+; AES-NEXT:    [[CLMUL_GP:%.*]] = call i40 @llvm.clmul.i40(i40 [[QUOT_MASK]], i40 67601)
+; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i40 [[CRC_CAST]], [[CLMUL_GP]]
+; AES-NEXT:    [[CRC_LSHR2:%.*]] = lshr i40 [[XOR_CRC_MULT]], 8
+; AES-NEXT:    [[CRC_NEXT3:%.*]] = trunc i40 [[CRC_LSHR2]] to i32
+; AES-NEXT:    br label %[[LOOP:.*]]
+; AES:       [[LOOP]]:
+; AES-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
+; AES:       [[EXIT]]:
+; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT3]], %[[LOOP]] ]
+; AES-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
 ;
 entry:
   br label %loop
@@ -446,28 +524,48 @@ exit:                                              ; preds = %loop
 }
 
 define i8 @crc8.le.tc8.data32(i8 %checksum, i32 %msg) optsize {
-; ALL-LABEL: define i8 @crc8.le.tc8.data32(
-; ALL-SAME: i8 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR0]] {
-; ALL-NEXT:  [[ENTRY:.*]]:
-; ALL-NEXT:    br label %[[LOOP:.*]]
-; ALL:       [[LOOP]]:
-; ALL-NEXT:    [[CRC:%.*]] = phi i8 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
-; ALL-NEXT:    [[DATA:%.*]] = phi i32 [ [[MSG]], %[[ENTRY]] ], [ [[DATA_NEXT:%.*]], %[[LOOP]] ]
-; ALL-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; ALL-NEXT:    [[DATA_TRUNC:%.*]] = trunc i32 [[DATA]] to i8
-; ALL-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i8 [[CRC]], [[DATA_TRUNC]]
-; ALL-NEXT:    [[SB_CRC_DATA:%.*]] = and i8 [[XOR_CRC_DATA]], 1
-; ALL-NEXT:    [[CHECK_SB:%.*]] = icmp eq i8 [[SB_CRC_DATA]], 0
-; ALL-NEXT:    [[CRC_LSHR:%.*]] = lshr i8 [[CRC]], 1
-; ALL-NEXT:    [[CRC_XOR:%.*]] = xor i8 [[CRC_LSHR]], 59
-; ALL-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i8 [[CRC_LSHR]], i8 [[CRC_XOR]]
-; ALL-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
-; ALL-NEXT:    [[DATA_NEXT]] = lshr i32 [[DATA]], 1
-; ALL-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 [[IV]], 7
-; ALL-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
-; ALL:       [[EXIT]]:
-; ALL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i8 [ [[CRC_NEXT]], %[[LOOP]] ]
-; ALL-NEXT:    ret i8 [[CRC_NEXT_LCSSA]]
+; NOAES-LABEL: define i8 @crc8.le.tc8.data32(
+; NOAES-SAME: i8 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR0]] {
+; NOAES-NEXT:  [[ENTRY:.*]]:
+; NOAES-NEXT:    br label %[[LOOP:.*]]
+; NOAES:       [[LOOP]]:
+; NOAES-NEXT:    [[CRC:%.*]] = phi i8 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
+; NOAES-NEXT:    [[DATA:%.*]] = phi i32 [ [[MSG]], %[[ENTRY]] ], [ [[DATA_NEXT:%.*]], %[[LOOP]] ]
+; NOAES-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; NOAES-NEXT:    [[DATA_TRUNC:%.*]] = trunc i32 [[DATA]] to i8
+; NOAES-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i8 [[CRC]], [[DATA_TRUNC]]
+; NOAES-NEXT:    [[SB_CRC_DATA:%.*]] = and i8 [[XOR_CRC_DATA]], 1
+; NOAES-NEXT:    [[CHECK_SB:%.*]] = icmp eq i8 [[SB_CRC_DATA]], 0
+; NOAES-NEXT:    [[CRC_LSHR:%.*]] = lshr i8 [[CRC]], 1
+; NOAES-NEXT:    [[CRC_XOR:%.*]] = xor i8 [[CRC_LSHR]], 59
+; NOAES-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i8 [[CRC_LSHR]], i8 [[CRC_XOR]]
+; NOAES-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
+; NOAES-NEXT:    [[DATA_NEXT]] = lshr i32 [[DATA]], 1
+; NOAES-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 [[IV]], 7
+; NOAES-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; NOAES:       [[EXIT]]:
+; NOAES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i8 [ [[CRC_NEXT]], %[[LOOP]] ]
+; NOAES-NEXT:    ret i8 [[CRC_NEXT_LCSSA]]
+;
+; AES-LABEL: define i8 @crc8.le.tc8.data32(
+; AES-SAME: i8 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR0]] {
+; AES-NEXT:  [[ENTRY:.*:]]
+; AES-NEXT:    [[CRC_CAST:%.*]] = zext i8 [[CHECKSUM]] to i16
+; AES-NEXT:    [[DATA_CAST:%.*]] = trunc i32 [[MSG]] to i16
+; AES-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i16 [[CRC_CAST]], [[DATA_CAST]]
+; AES-NEXT:    [[CRC_TCBITS:%.*]] = and i16 [[XOR_CRC_DATA1]], 255
+; AES-NEXT:    [[CLMUL_MU:%.*]] = call i16 @llvm.clmul.i16(i16 [[CRC_TCBITS]], i16 107)
+; AES-NEXT:    [[QUOT_MASK:%.*]] = and i16 [[CLMUL_MU]], 255
+; AES-NEXT:    [[CLMUL_GP:%.*]] = call i16 @llvm.clmul.i16(i16 [[QUOT_MASK]], i16 119)
+; AES-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i16 [[CRC_CAST]], [[CLMUL_GP]]
+; AES-NEXT:    [[CRC_LSHR2:%.*]] = lshr i16 [[XOR_CRC_MULT]], 8
+; AES-NEXT:    [[CRC_NEXT3:%.*]] = trunc i16 [[CRC_LSHR2]] to i8
+; AES-NEXT:    br label %[[LOOP:.*]]
+; AES:       [[LOOP]]:
+; AES-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
+; AES:       [[EXIT]]:
+; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i8 [ [[CRC_NEXT3]], %[[LOOP]] ]
+; AES-NEXT:    ret i8 [[CRC_NEXT_LCSSA]]
 ;
 entry:
   br label %loop
@@ -559,7 +657,7 @@ exit:                                              ; preds = %loop
 
 define i64 @crc64.le.tc64(i64 %checksum, i64 %msg) optsize {
 ; ALL-LABEL: define i64 @crc64.le.tc64(
-; ALL-SAME: i64 [[CHECKSUM:%.*]], i64 [[MSG:%.*]]) #[[ATTR0]] {
+; ALL-SAME: i64 [[CHECKSUM:%.*]], i64 [[MSG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; ALL-NEXT:  [[ENTRY:.*]]:
 ; ALL-NEXT:    br label %[[LOOP:.*]]
 ; ALL:       [[LOOP]]:

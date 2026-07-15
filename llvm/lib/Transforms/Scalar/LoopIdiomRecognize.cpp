@@ -265,9 +265,9 @@ private:
   bool avoidLIRForMultiBlockLoop(bool IsMemset = false,
                                  bool IsLoopMemset = false);
   bool optimizeCRCLoop(const PolynomialInfo &Info);
-  bool optimizeCRCLoopUsingClmul(const PolynomialInfo &Info,
+  void optimizeCRCLoopUsingClmul(const PolynomialInfo &Info,
                                  IntegerType *ClmulTy);
-  bool optimizeCRCLoopUsingTableLookup(const PolynomialInfo &Info);
+  void optimizeCRCLoopUsingTableLookup(const PolynomialInfo &Info);
 
   /// @}
   /// \name Noncountable Loop Idiom Handling
@@ -1599,33 +1599,36 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
 
   // The force-crc-clmul flag should cause the clmul optimization to run
   // unconditionally.
-  if (ForceCRCClmul)
-    return optimizeCRCLoopUsingClmul(Info, ClmulTy) ||
-           (!ApplyCodeSizeHeuristics && optimizeCRCLoopUsingTableLookup(Info));
+  if (ForceCRCClmul) {
+    optimizeCRCLoopUsingClmul(Info, ClmulTy);
+    return true;
+  }
 
   // FIXME: Once intrinsic cost modeling is more reliable for clmul, that should
   // be used to determine which optimization to use. Until then, only apply the
   // clmul optimization when optimizing for size, since a lookup table is not
   // viable in that case.
-  if (!ApplyCodeSizeHeuristics)
-    return optimizeCRCLoopUsingTableLookup(Info);
+  if (!ApplyCodeSizeHeuristics) {
+    optimizeCRCLoopUsingTableLookup(Info);
+    return true;
+  }
 
   // The clmul optimization should only be applied if clmul with the required
   // bit width is a fast operation on the target.
-  // On some platforms, TC=8 for clmul seems to be slower than even the
-  // unoptimized loop, so bail on that case as well.
   // TODO: If clmul exists on the target but not for the required width, it
   // might be possible to split into multiple iterations of reduction.
-  if (Info.TripCount <= 8 || !TTI->haveFastClmul(ClmulTy))
-    return false;
+  if (TTI->haveFastClmul(ClmulTy)) {
+    optimizeCRCLoopUsingClmul(Info, ClmulTy);
+    return true;
+  }
 
-  return optimizeCRCLoopUsingClmul(Info, ClmulTy);
+  return false;
 }
 
 // The algorithm used in this optimization is a Polynomial (GF(2)) Barrett
 // Reduction based on Intel's "Fast CRC Computation for Generic Polynomials
 // Using PCLMULQDQ Instruction" white paper (December 2009).
-bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info,
+void LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info,
                                                    IntegerType *ClmulTy) {
   Type *CRCTy = Info.LHS->getType();
   LLVMContext &Ctx = CRCTy->getContext();
@@ -1637,8 +1640,7 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info,
   unsigned ClmulBW = ClmulTy->getBitWidth();
 
   // First, generate the constants required for GF(2) Barrett reduction.
-  auto [Mu, FullGenPoly] =
-      HashRecognize::genBarrettConstants(Info.RHS, TC, Info.IsBigEndian);
+  auto [Mu, FullGenPoly] = HashRecognize::genBarrettConstants(Info);
   Value *MuConst = ConstantInt::get(Ctx, Mu.zext(ClmulBW));
   Value *GenPolyConst = ConstantInt::get(Ctx, FullGenPoly.zext(ClmulBW));
 
@@ -1742,11 +1744,9 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info,
         Ctx, BrInst->getSuccessor(0) == CurLoop->getExitBlock()));
     SE->forgetLoop(CurLoop);
   }
-
-  return true;
 }
 
-bool LoopIdiomRecognize::optimizeCRCLoopUsingTableLookup(
+void LoopIdiomRecognize::optimizeCRCLoopUsingTableLookup(
     const PolynomialInfo &Info) {
   // First, create a new GlobalVariable corresponding to the
   // Sarwate-lookup-table.
@@ -1884,7 +1884,6 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingTableLookup(
       RecursivelyDeleteDeadPHINode(PN);
     SE->forgetLoop(CurLoop);
   }
-  return true;
 }
 
 bool LoopIdiomRecognize::runOnNoncountableLoop() {

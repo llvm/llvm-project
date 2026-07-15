@@ -376,12 +376,12 @@ CRCTable HashRecognize::genSarwateTable(const APInt &GenPoly,
   return Table;
 }
 
-// Perform polynomial (GF(2)) floor division. This is based on the
-// floor_division(S, P) algorithm in
-// https://www.corsix.org/content/barrett-reduction-polynomials. Note that the
-// maximum degree of the returned polynomial is
-// max(0, deg(Dividend) - deg(Divisor)), but the bit width will be the same as
-// that of Dividend.
+/// Perform polynomial (GF(2)) floor division. This is based on the
+/// floor_division(S, P) algorithm in
+/// https://www.corsix.org/content/barrett-reduction-polynomials. Note that the
+/// maximum degree of the returned polynomial is
+/// max(0, deg(Dividend) - deg(Divisor)), but the bit width will be the same as
+/// that of Dividend.
 static APInt floorDivideGF2(APInt Dividend, APInt Divisor) {
   assert(!Divisor.isZero() && "Cannot divide by zero");
 
@@ -407,34 +407,33 @@ static APInt floorDivideGF2(APInt Dividend, APInt Divisor) {
   return Quotient;
 }
 
-// Generate the constants for performing a Polynomial (GF(2)) Barrett Reduction
-// according to Intel's Fast CRC Computation white paper with some adjustments
-// to account for the fact that bit width and trip count can vary.
-std::pair<APInt, APInt> HashRecognize::genBarrettConstants(const APInt &GenPoly,
-                                                           unsigned TripCount,
-                                                           bool IsBigEndian) {
-  unsigned BW = GenPoly.getBitWidth();
+/// Generate the constants for performing a Polynomial (GF(2)) Barrett Reduction
+/// according to Intel's Fast CRC Computation white paper with some adjustments
+/// to account for the fact that bit width and trip count can vary.
+std::pair<APInt, APInt>
+HashRecognize::genBarrettConstants(const PolynomialInfo &Info) {
+  unsigned BW = Info.RHS.getBitWidth();
+  unsigned TC = Info.TripCount;
 
   // Recover the full generating polynomial in normal form by reflecting the LE
   // case and adding the implied x^BW term.
   // deg(P(x)) = BW due to the implied term, and thus P(x) must fit in exactly
   // BW+1 bits.
   APInt FullGenPoly =
-      (IsBigEndian ? GenPoly : GenPoly.reverseBits()).zext(BW + 1);
+      (Info.IsBigEndian ? Info.RHS : Info.RHS.reverseBits()).zext(BW + 1);
   FullGenPoly.setBit(BW);
 
   // Calculate mu = floor(x^(BW+TC) / P(x)).
   // deg(mu) <= deg(x^(BW+TC)) - deg(P(x)) = BW+TC - BW = TC, and thus mu must
   // fit in at most TC+1 bits.
-  unsigned DivBW = BW + TripCount + 1;
-  APInt Mu =
-      floorDivideGF2(APInt::getOneBitSet(DivBW, BW + TripCount), FullGenPoly)
-          .trunc(TripCount + 1);
+  unsigned DivBW = BW + TC + 1;
+  APInt Mu = floorDivideGF2(APInt::getOneBitSet(DivBW, BW + TC), FullGenPoly)
+                 .trunc(TC + 1);
 
   // In the bit-reflected (little-endian) case, mu and P(x) must be
   // bit-reflected across their respective widths for the corresponding Barrett
   // reduction steps.
-  if (!IsBigEndian) {
+  if (!Info.IsBigEndian) {
     Mu = Mu.reverseBits();
     FullGenPoly = FullGenPoly.reverseBits();
   }
@@ -643,8 +642,7 @@ void HashRecognize::print(raw_ostream &OS) const {
   OS.indent(2) << "Computed CRC lookup table:\n";
   genSarwateTable(Info.RHS, Info.IsBigEndian).print(OS);
   OS.indent(2) << "Computed CRC Barrett constants:\n";
-  auto [Mu, FullGenPoly] =
-      genBarrettConstants(Info.RHS, Info.TripCount, Info.IsBigEndian);
+  auto [Mu, FullGenPoly] = genBarrettConstants(Info);
   OS << "Mu = ";
   Mu.print(OS, false);
   OS << ", FullGenPoly = ";
