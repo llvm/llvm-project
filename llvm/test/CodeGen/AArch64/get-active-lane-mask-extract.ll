@@ -598,4 +598,91 @@ if.end:
     ret void
 }
 
+; Test combining of getActiveLaneMask with extract_vector(idx=0) operations.
+
+define <vscale x 8 x i1> @test_8bit_mask_with_32bit_index_and_trip_count(i32 %i, i32 %n) #0 {
+; CHECK-SVE-LABEL: test_8bit_mask_with_32bit_index_and_trip_count:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    whilelo p0.h, w0, w1
+; CHECK-SVE-NEXT:    ret
+;
+; CHECK-SVE2p1-SME2-LABEL: test_8bit_mask_with_32bit_index_and_trip_count:
+; CHECK-SVE2p1-SME2:       // %bb.0:
+; CHECK-SVE2p1-SME2-NEXT:    whilelo p0.h, w0, w1
+; CHECK-SVE2p1-SME2-NEXT:    ret
+    %r = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 %i, i32 %n)
+    %v0 = call <vscale x 8 x i1> @llvm.vector.extract.nxv8i1.nxv16i1.i64(<vscale x 16 x i1> %r, i64 0)
+    ret <vscale x 8 x i1> %v0
+}
+
+define <vscale x 8 x i1> @test_8bit_mask_extractIdx1_with_32bit_index_and_trip_count(i32 %i, i32 %n) #0 {
+; CHECK-SVE-LABEL: test_8bit_mask_extractIdx1_with_32bit_index_and_trip_count:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    whilelo p0.b, w0, w1
+; CHECK-SVE-NEXT:    punpkhi p0.h, p0.b
+; CHECK-SVE-NEXT:    ret
+;
+; CHECK-SVE2p1-SME2-LABEL: test_8bit_mask_extractIdx1_with_32bit_index_and_trip_count:
+; CHECK-SVE2p1-SME2:       // %bb.0:
+; CHECK-SVE2p1-SME2-NEXT:    whilelo p0.b, w0, w1
+; CHECK-SVE2p1-SME2-NEXT:    punpkhi p0.h, p0.b
+; CHECK-SVE2p1-SME2-NEXT:    ret
+    %r = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 %i, i32 %n)
+    %v0 = call <vscale x 8 x i1> @llvm.vector.extract.nxv8i1.nxv16i1.i64(<vscale x 16 x i1> %r, i64 8)
+    ret <vscale x 8 x i1> %v0
+}
+
+define <vscale x 8 x i1> @test_8bit_mask_with_32bit_index_and_trip_count_multiuse(i32 %i, i32 %n) #0 {
+; CHECK-SVE-LABEL: test_8bit_mask_with_32bit_index_and_trip_count_multiuse:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    whilelo p1.b, w0, w1
+; CHECK-SVE-NEXT:    punpklo p0.h, p1.b
+; CHECK-SVE-NEXT:    // fake_use: $p1
+; CHECK-SVE-NEXT:    ret
+;
+; CHECK-SVE2p1-SME2-LABEL: test_8bit_mask_with_32bit_index_and_trip_count_multiuse:
+; CHECK-SVE2p1-SME2:       // %bb.0:
+; CHECK-SVE2p1-SME2-NEXT:    whilelo p1.b, w0, w1
+; CHECK-SVE2p1-SME2-NEXT:    punpklo p0.h, p1.b
+; CHECK-SVE2p1-SME2-NEXT:    // fake_use: $p1
+; CHECK-SVE2p1-SME2-NEXT:    ret
+    %r = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 %i, i32 %n)
+    %v0 = call <vscale x 8 x i1> @llvm.vector.extract.nxv8i1.nxv16i1.i64(<vscale x 16 x i1> %r, i64 0)
+    call void (...) @llvm.fake.use(<vscale x 16 x i1> %r)
+    ret <vscale x 8 x i1> %v0
+}
+
+define <vscale x 4 x i1> @test_4bit_mask_with_2extracts_64bit_index_and_trip_count(i64 %i, i64 %n) #0 {
+; CHECK-SVE-LABEL: test_4bit_mask_with_2extracts_64bit_index_and_trip_count:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    whilelo p0.s, x0, x1
+; CHECK-SVE-NEXT:    ret
+;
+; CHECK-SVE2p1-SME2-LABEL: test_4bit_mask_with_2extracts_64bit_index_and_trip_count:
+; CHECK-SVE2p1-SME2:       // %bb.0:
+; CHECK-SVE2p1-SME2-NEXT:    whilelo p0.s, x0, x1
+; CHECK-SVE2p1-SME2-NEXT:    ret
+    %r = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 %i, i64 %n)
+    %v0 = call <vscale x 8 x i1> @llvm.vector.extract.nxv8i1.nxv16i1.i64(<vscale x 16 x i1> %r, i64 0)
+    %v1 = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv8i1.i64(<vscale x 8 x i1> %v0, i64 0)
+    ret <vscale x 4 x i1> %v1
+}
+
+define <vscale x 1 x i1> @test_1bit_mask_with_64bit_index_and_trip_count(i64 %i, i64 %n) #0 {
+; CHECK-SVE-LABEL: test_1bit_mask_with_64bit_index_and_trip_count:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    whilelo p0.d, x0, x1
+; CHECK-SVE-NEXT:    punpklo p0.h, p0.b
+; CHECK-SVE-NEXT:    ret
+;
+; CHECK-SVE2p1-SME2-LABEL: test_1bit_mask_with_64bit_index_and_trip_count:
+; CHECK-SVE2p1-SME2:       // %bb.0:
+; CHECK-SVE2p1-SME2-NEXT:    whilelo p0.d, x0, x1
+; CHECK-SVE2p1-SME2-NEXT:    punpklo p0.h, p0.b
+; CHECK-SVE2p1-SME2-NEXT:    ret
+    %r = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 %i, i64 %n)
+    %v0 = call <vscale x 1 x i1> @llvm.vector.extract.nxv1i1.nxv16i1.i64(<vscale x 16 x i1> %r, i64 0)
+    ret <vscale x 1 x i1> %v0
+}
+
 attributes #0 = { nounwind }
