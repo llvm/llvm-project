@@ -238,4 +238,116 @@ TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementWrongOperandType) {
       SemanticSignatureElement::fromMetadata(MDNode::get(Ctx, Ops)), Failed());
 }
 
+//===--------------------------------------------------------------------===//
+// Per-operand range/enum validation
+//===--------------------------------------------------------------------===//
+
+// A component type outside dxil::ElementType is rejected
+TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementInvalidCompType) {
+  MDNode *Node = getElement(/*SigId=*/0, "A", /*CompType=*/100,
+                            /*SemanticKind=*/0, /*Indices=*/{0},
+                            /*InterpMode=*/0, /*Rows=*/1, /*Cols=*/1,
+                            /*StartRow=*/0, /*StartCol=*/0, /*UsageMask=*/0,
+                            /*DynIndexMask=*/0, /*GSStream=*/0);
+  EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(Node), Failed());
+}
+
+// A semantic kind outside dxbc::PSV::SemanticKind is rejected
+TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementInvalidSemanticKind) {
+  MDNode *Node = getElement(/*SigId=*/0, "A", /*CompType=*/9,
+                            /*SemanticKind=*/100, /*Indices=*/{0},
+                            /*InterpMode=*/0, /*Rows=*/1, /*Cols=*/1,
+                            /*StartRow=*/0, /*StartCol=*/0, /*UsageMask=*/0,
+                            /*DynIndexMask=*/0, /*GSStream=*/0);
+  EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(Node), Failed());
+}
+
+// An interpolation mode outside dxbc::PSV::InterpolationMode is rejected
+TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementInvalidInterpMode) {
+  MDNode *Node = getElement(/*SigId=*/0, "A", /*CompType=*/9,
+                            /*SemanticKind=*/0, /*Indices=*/{0},
+                            /*InterpMode=*/100, /*Rows=*/1, /*Cols=*/1,
+                            /*StartRow=*/0, /*StartCol=*/0, /*UsageMask=*/0,
+                            /*DynIndexMask=*/0, /*GSStream=*/0);
+  EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(Node), Failed());
+}
+
+// The number of components per row must be within 1-4
+TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementInvalidCols) {
+  for (uint8_t Cols : {uint8_t(0), uint8_t(5)}) {
+    MDNode *Node = getElement(/*SigId=*/0, "A", /*CompType=*/9,
+                              /*SemanticKind=*/0, /*Indices=*/{0},
+                              /*InterpMode=*/0, /*Rows=*/1, Cols,
+                              /*StartRow=*/0, /*StartCol=*/0, /*UsageMask=*/0,
+                              /*DynIndexMask=*/0, /*GSStream=*/0);
+    EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(Node),
+                         Failed());
+  }
+}
+
+// A start column must be within 0-3 or the unallocated sentinel
+TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementInvalidStartCol) {
+  MDNode *Node = getElement(/*SigId=*/0, "A", /*CompType=*/9,
+                            /*SemanticKind=*/0, /*Indices=*/{0},
+                            /*InterpMode=*/0, /*Rows=*/1, /*Cols=*/1,
+                            /*StartRow=*/0, /*StartCol=*/4, /*UsageMask=*/0,
+                            /*DynIndexMask=*/0, /*GSStream=*/0);
+  EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(Node), Failed());
+}
+
+// The row/col sentinels must be set together
+TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementInvalidSentinelPair) {
+  MDNode *RowOnly = getElement(
+      /*SigId=*/0, "A", /*CompType=*/9, /*SemanticKind=*/0, /*Indices=*/{0},
+      /*InterpMode=*/0, /*Rows=*/1, /*Cols=*/1, /*StartRow=*/UnallocatedRow,
+      /*StartCol=*/0, /*UsageMask=*/0, /*DynIndexMask=*/0, /*GSStream=*/0);
+  EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(RowOnly),
+                       Failed());
+
+  MDNode *ColOnly = getElement(
+      /*SigId=*/0, "A", /*CompType=*/9, /*SemanticKind=*/0, /*Indices=*/{0},
+      /*InterpMode=*/0, /*Rows=*/1, /*Cols=*/1, /*StartRow=*/0,
+      /*StartCol=*/UnallocatedCol, /*UsageMask=*/0, /*DynIndexMask=*/0,
+      /*GSStream=*/0);
+  EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(ColOnly),
+                       Failed());
+}
+
+// The usage and dynamic-index masks are 4-bit values
+TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementInvalidMasks) {
+  MDNode *BadUsage = getElement(
+      /*SigId=*/0, "A", /*CompType=*/9, /*SemanticKind=*/0, /*Indices=*/{0},
+      /*InterpMode=*/0, /*Rows=*/1, /*Cols=*/1, /*StartRow=*/0, /*StartCol=*/0,
+      /*UsageMask=*/0x10, /*DynIndexMask=*/0, /*GSStream=*/0);
+  EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(BadUsage),
+                       Failed());
+
+  MDNode *BadDyn = getElement(
+      /*SigId=*/0, "A", /*CompType=*/9, /*SemanticKind=*/0, /*Indices=*/{0},
+      /*InterpMode=*/0, /*Rows=*/1, /*Cols=*/1, /*StartRow=*/0, /*StartCol=*/0,
+      /*UsageMask=*/0, /*DynIndexMask=*/0x10, /*GSStream=*/0);
+  EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(BadDyn),
+                       Failed());
+}
+
+// A geometry shader output stream index must be within 0-3
+TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementInvalidGSStream) {
+  MDNode *Node = getElement(/*SigId=*/0, "A", /*CompType=*/9,
+                            /*SemanticKind=*/0, /*Indices=*/{0},
+                            /*InterpMode=*/0, /*Rows=*/1, /*Cols=*/1,
+                            /*StartRow=*/0, /*StartCol=*/0, /*UsageMask=*/0,
+                            /*DynIndexMask=*/0, /*GSStream=*/4);
+  EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(Node), Failed());
+}
+
+// The number of semantic indices must equal the number of rows
+TEST_F(HLSLSemanticSignatureMetadataTest, MetadataToElementIndicesRowMismatch) {
+  MDNode *Node = getElement(/*SigId=*/0, "A", /*CompType=*/9,
+                            /*SemanticKind=*/0, /*Indices=*/{0},
+                            /*InterpMode=*/0, /*Rows=*/2, /*Cols=*/1,
+                            /*StartRow=*/0, /*StartCol=*/0, /*UsageMask=*/0,
+                            /*DynIndexMask=*/0, /*GSStream=*/0);
+  EXPECT_THAT_EXPECTED(SemanticSignatureElement::fromMetadata(Node), Failed());
+}
+
 } // namespace
