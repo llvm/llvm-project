@@ -448,15 +448,14 @@ static bool isSetregMode(const MachineInstr &MI, const SIInstrInfo &TII) {
 bool AMDGPULowerVGPREncoding::needNopBeforeSetVGPRMSB(
     MachineBasicBlock::instr_iterator I) {
   MachineBasicBlock *CurrentMBB = MBB;
-  MachineBasicBlock::iterator CurrentInstr = I;
   while (true) {
     // Walk the block backward until we hit a non-meta instruction or the
     // beginning of the block.
-    while (CurrentInstr != CurrentMBB->begin()) {
-      CurrentInstr = std::prev(CurrentInstr);
-      if (isSetregMode(*CurrentInstr, *TII))
+    while (I != CurrentMBB->instr_begin()) {
+      I = std::prev(I);
+      if (isSetregMode(*I, *TII))
         return true;
-      if (!CurrentInstr->isMetaInstruction())
+      if (!I->isMetaInstruction())
         return false;
     }
 
@@ -467,7 +466,7 @@ bool AMDGPULowerVGPREncoding::needNopBeforeSetVGPRMSB(
     CurrentMBB = CurrentMBB->getPrevNode();
     if (!CurrentMBB || !CurrentMBB->canFallThrough())
       return false;
-    CurrentInstr = CurrentMBB->end();
+    I = CurrentMBB->instr_end();
   }
   return false;
 }
