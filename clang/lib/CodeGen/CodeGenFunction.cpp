@@ -1204,7 +1204,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   }
 
   if (!CGM.getCodeGenOpts().ZOSPPA1Name)
-    Fn->addFnAttr("zos-ppa1-name", "none");
+    Fn->addFnAttr("zos-ppa1-name", "");
 
   if (CGM.getCodeGenOpts().WarnStackSize != UINT_MAX &&
       !CGM.getDiags().isIgnored(diag::warn_fe_backend_frame_larger_than, Loc))

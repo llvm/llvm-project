@@ -73,6 +73,7 @@ libc_test(
     name = "mprotect_test",
     srcs = ["linux/mprotect_test.cpp"],
     deps = [
+        "//libc:hdr_signal_macros",
         "//libc:hdr_sys_mman_macros",
         "//libc:mmap",
         "//libc:mprotect",
