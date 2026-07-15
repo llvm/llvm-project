@@ -245,3 +245,79 @@ struct HasUniquePtrField {
   }
 };
 } // namespace MakeUnique
+
+namespace ThisMemberAccessSpellings {
+// `this->m`, `(*this).m`, and base-casts of `this`
+// (`static_cast<Base*>(this)->m`, `((Base*)this)->m`) all name the same field of
+// the same object, so a borrow stored through any spelling is routed to the
+// field's origin and the dangling field is caught.
+struct Holder {
+  std::string_view view; // expected-note 2 {{this field dangles}}
+  void via_arrow() {
+    std::string local;
+    this->view = local;   // expected-warning {{stack memory associated with local variable 'local' escapes to the field 'view' which will dangle}}
+  }
+  void via_deref() {
+    std::string local;
+    (*this).view = local; // expected-warning {{stack memory associated with local variable 'local' escapes to the field 'view' which will dangle}}
+  }
+};
+
+struct Base { std::string_view q; }; // expected-note 2 {{this field dangles}}
+struct Derived : Base {
+  void via_static_cast() {
+    std::string local;
+    static_cast<Base *>(this)->q = local; // expected-warning {{stack memory associated with local variable 'local' escapes to the field 'q' which will dangle}}
+  }
+  void via_cstyle_cast() {
+    std::string local;
+    ((Base *)this)->q = local; // expected-warning {{stack memory associated with local variable 'local' escapes to the field 'q' which will dangle}}
+  }
+};
+
+// A field use via a member call through any spelling of `this` keeps the borrow
+// live (use-after-scope).
+struct UseViaMethod {
+  std::string_view view;
+  void touch() const;
+  void via_arrow() {
+    {
+      std::string local;
+      view = local; // expected-warning {{local variable 'local' does not live long enough}}
+    }               // expected-note {{destroyed here}}
+    this->touch();  // expected-note {{later used here}}
+  }
+  void via_deref() {
+    {
+      std::string local;
+      view = local; // expected-warning {{local variable 'local' does not live long enough}}
+    }               // expected-note {{destroyed here}}
+    (*this).touch(); // expected-note {{later used here}}
+  }
+};
+
+// FIXME: These dangling stores are missed. this-member recognition is a
+// structural match on the base spelling, so a base that only sometimes denotes
+// `this` (a ternary) is not recognized; and a non-`this` object's field is not
+// tracked at all, because the field-origin shortcut is keyed on the FieldDecl
+// alone, which uniquely identifies an object only for `this`. Once fields carry
+// their own origins/loans, this-member recognition should be loan-based (does
+// the base carry the `this` loan?), which would also handle
+// `(cond ? this : obj)->m` and stores into any object's field.
+struct Ternary {
+  std::string_view view;
+  void store(Ternary *obj, bool cond) {
+    std::string local;
+    (cond ? this : obj)->view = local; // no-warning (FIXME: should warn for the `this` case)
+  }
+};
+struct Plain { std::string_view view; };
+void local_object_field() {
+  Plain h;
+  {
+    std::string local;
+    h.view = local; // no-warning (FIXME: should warn, dangling field of a local object)
+  }
+  (void)h.view;
+}
+} // namespace ThisMemberAccessSpellings

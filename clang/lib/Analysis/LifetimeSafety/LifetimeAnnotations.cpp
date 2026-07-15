@@ -11,6 +11,8 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/OperatorKinds.h"
@@ -122,6 +124,31 @@ bool isInStlNamespace(const Decl *D) {
 
 bool isPointerLikeType(QualType QT) {
   return isGslPointerType(QT) || QT->isPointerType() || QT->isNullPtrType();
+}
+
+bool isThisExpr(const Expr *E) {
+  E = E->IgnoreParenImpCasts();
+  if (isa<CXXThisExpr>(E))
+    return true;
+  // A derived-to-base / value-preserving pointer cast of `this`, e.g.
+  // `static_cast<Base*>(this)` or `(Base*)this`: an explicit cast that
+  // IgnoreParenImpCasts does not strip. A member access through such a base
+  // view of `this` still names a field of the enclosing object.
+  if (const auto *CE = dyn_cast<CastExpr>(E))
+    switch (CE->getCastKind()) {
+    case CK_DerivedToBase:
+    case CK_UncheckedDerivedToBase:
+    case CK_BaseToDerived:
+    case CK_NoOp:
+      return isThisExpr(CE->getSubExpr());
+    default:
+      break;
+    }
+  // `*this`: a dereference of `this`.
+  if (const auto *UO = dyn_cast<UnaryOperator>(E);
+      UO && UO->getOpcode() == UO_Deref)
+    return isThisExpr(UO->getSubExpr());
+  return false;
 }
 
 static bool isReferenceOrPointerLikeType(QualType QT) {
