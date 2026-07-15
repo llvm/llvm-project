@@ -72,6 +72,7 @@ static_library("LLVMWebAssemblyCodeGen") {
     "//llvm/lib/CodeGen/GlobalISel",
     "//llvm/lib/CodeGen/SelectionDAG",
     "//llvm/lib/IR",
+    "//llvm/lib/IRPrinter",
     "//llvm/lib/MC",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
