@@ -3556,6 +3556,7 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
         CE->getCastKind() == CK_NonAtomicToAtomic ||
         CE->getCastKind() == CK_AtomicToNonAtomic ||
         CE->getCastKind() == CK_NullToPointer ||
+        CE->getCastKind() == CK_ARCReclaimReturnedObject ||
         CE->getCastKind() == CK_IntToOCLSampler)
       return CE->getSubExpr()->isConstantInitializer(Ctx, false, Culprit);
 
