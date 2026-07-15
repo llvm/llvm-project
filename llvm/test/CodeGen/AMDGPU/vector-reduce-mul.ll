@@ -985,18 +985,11 @@ define i16 @test_vector_reduce_mul_v2i16(<2 x i16> %v) {
 ; GFX7-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 16
 ; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX8-SDAG-LABEL: test_vector_reduce_mul_v2i16:
-; GFX8-SDAG:       ; %bb.0: ; %entry
-; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-SDAG-NEXT:    v_mul_lo_u16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX8-GISEL-LABEL: test_vector_reduce_mul_v2i16:
-; GFX8-GISEL:       ; %bb.0: ; %entry
-; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-GISEL-NEXT:    v_mul_lo_u16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX8-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 16
-; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX8-LABEL: test_vector_reduce_mul_v2i16:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_mul_lo_u16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: test_vector_reduce_mul_v2i16:
 ; GFX9:       ; %bb.0: ; %entry
@@ -1239,7 +1232,6 @@ define i16 @test_vector_reduce_mul_v4i16(<4 x i16> %v) {
 ; GFX8-GISEL-NEXT:    v_mul_lo_u16_e32 v2, v0, v1
 ; GFX8-GISEL-NEXT:    v_mul_lo_u16_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-GISEL-NEXT:    v_mul_lo_u16_e32 v0, v2, v0
-; GFX8-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 16
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: test_vector_reduce_mul_v4i16:
@@ -1386,7 +1378,6 @@ define i16 @test_vector_reduce_mul_v8i16(<8 x i16> %v) {
 ; GFX8-GISEL-NEXT:    v_mul_lo_u16_e32 v2, v4, v2
 ; GFX8-GISEL-NEXT:    v_mul_lo_u16_e32 v0, v0, v1
 ; GFX8-GISEL-NEXT:    v_mul_lo_u16_e32 v0, v2, v0
-; GFX8-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 16
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: test_vector_reduce_mul_v8i16:
@@ -1618,7 +1609,6 @@ define i16 @test_vector_reduce_mul_v16i16(<16 x i16> %v) {
 ; GFX8-GISEL-NEXT:    v_mul_lo_u16_e32 v2, v5, v2
 ; GFX8-GISEL-NEXT:    v_mul_lo_u16_e32 v0, v0, v1
 ; GFX8-GISEL-NEXT:    v_mul_lo_u16_e32 v0, v2, v0
-; GFX8-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 16
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: test_vector_reduce_mul_v16i16:

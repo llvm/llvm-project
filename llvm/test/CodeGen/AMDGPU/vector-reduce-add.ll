@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu7.00 < %s | FileCheck -check-prefixes=GFX7,GFX7-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu7.00 < %s | FileCheck -check-prefixes=GFX7,GFX7-GISEL %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu8.01 < %s | FileCheck -check-prefixes=GFX8,GFX8-SDAG %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu8.01 < %s | FileCheck -check-prefixes=GFX8,GFX8-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu8.01 < %s | FileCheck -check-prefixes=GFX8,GFX8-GISEL %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu9.42 < %s | FileCheck -check-prefixes=GFX9,GFX9-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu9.42 < %s | FileCheck -check-prefixes=GFX9,GFX9-GISEL %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu10.10 < %s | FileCheck -check-prefixes=GFX10,GFX10-SDAG %s
@@ -1168,11 +1168,20 @@ define i16 @test_vector_reduce_add_v2i16(<2 x i16> %v) {
 ; GFX7-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 16
 ; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX8-LABEL: test_vector_reduce_add_v2i16:
-; GFX8:       ; %bb.0: ; %entry
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX8-NEXT:    s_setpc_b64 s[30:31]
+; GFX8-SDAG-LABEL: test_vector_reduce_add_v2i16:
+; GFX8-SDAG:       ; %bb.0: ; %entry
+; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-SDAG-NEXT:    v_add_u16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX8-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-GISEL-LABEL: test_vector_reduce_add_v2i16:
+; GFX8-GISEL:       ; %bb.0: ; %entry
+; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-GISEL-NEXT:    s_and_b32 s4, 0xffff, s4
+; GFX8-GISEL-NEXT:    v_add_u16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX8-GISEL-NEXT:    s_lshl_b32 s4, s4, 16
+; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, s4, v0
+; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: test_vector_reduce_add_v2i16:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
@@ -1451,13 +1460,24 @@ define i16 @test_vector_reduce_add_v4i16(<4 x i16> %v) {
 ; GFX7-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 16
 ; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX8-LABEL: test_vector_reduce_add_v4i16:
-; GFX8:       ; %bb.0: ; %entry
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u16_sdwa v2, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-NEXT:    v_add_u16_e32 v0, v0, v1
-; GFX8-NEXT:    v_add_u16_e32 v0, v0, v2
-; GFX8-NEXT:    s_setpc_b64 s[30:31]
+; GFX8-SDAG-LABEL: test_vector_reduce_add_v4i16:
+; GFX8-SDAG:       ; %bb.0: ; %entry
+; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-SDAG-NEXT:    v_add_u16_sdwa v2, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-SDAG-NEXT:    v_add_u16_e32 v0, v0, v1
+; GFX8-SDAG-NEXT:    v_add_u16_e32 v0, v0, v2
+; GFX8-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-GISEL-LABEL: test_vector_reduce_add_v4i16:
+; GFX8-GISEL:       ; %bb.0: ; %entry
+; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-GISEL-NEXT:    v_add_u16_e32 v2, v0, v1
+; GFX8-GISEL-NEXT:    v_add_u16_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-GISEL-NEXT:    s_and_b32 s4, 0xffff, s4
+; GFX8-GISEL-NEXT:    v_add_u16_e32 v0, v2, v0
+; GFX8-GISEL-NEXT:    s_lshl_b32 s4, s4, 16
+; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, s4, v0
+; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: test_vector_reduce_add_v4i16:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
@@ -1620,17 +1640,32 @@ define i16 @test_vector_reduce_add_v8i16(<8 x i16> %v) {
 ; GFX7-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 16
 ; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX8-LABEL: test_vector_reduce_add_v8i16:
-; GFX8:       ; %bb.0: ; %entry
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u16_sdwa v4, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-NEXT:    v_add_u16_sdwa v5, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-NEXT:    v_add_u16_e32 v1, v1, v3
-; GFX8-NEXT:    v_add_u16_e32 v0, v0, v2
-; GFX8-NEXT:    v_add_u16_e32 v2, v5, v4
-; GFX8-NEXT:    v_add_u16_e32 v0, v0, v1
-; GFX8-NEXT:    v_add_u16_e32 v0, v0, v2
-; GFX8-NEXT:    s_setpc_b64 s[30:31]
+; GFX8-SDAG-LABEL: test_vector_reduce_add_v8i16:
+; GFX8-SDAG:       ; %bb.0: ; %entry
+; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-SDAG-NEXT:    v_add_u16_sdwa v4, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-SDAG-NEXT:    v_add_u16_sdwa v5, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-SDAG-NEXT:    v_add_u16_e32 v1, v1, v3
+; GFX8-SDAG-NEXT:    v_add_u16_e32 v0, v0, v2
+; GFX8-SDAG-NEXT:    v_add_u16_e32 v2, v5, v4
+; GFX8-SDAG-NEXT:    v_add_u16_e32 v0, v0, v1
+; GFX8-SDAG-NEXT:    v_add_u16_e32 v0, v0, v2
+; GFX8-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-GISEL-LABEL: test_vector_reduce_add_v8i16:
+; GFX8-GISEL:       ; %bb.0: ; %entry
+; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-GISEL-NEXT:    v_add_u16_e32 v4, v0, v2
+; GFX8-GISEL-NEXT:    v_add_u16_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-GISEL-NEXT:    v_add_u16_e32 v2, v1, v3
+; GFX8-GISEL-NEXT:    v_add_u16_sdwa v1, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-GISEL-NEXT:    v_add_u16_e32 v2, v4, v2
+; GFX8-GISEL-NEXT:    v_add_u16_e32 v0, v0, v1
+; GFX8-GISEL-NEXT:    s_and_b32 s4, 0xffff, s4
+; GFX8-GISEL-NEXT:    v_add_u16_e32 v0, v2, v0
+; GFX8-GISEL-NEXT:    s_lshl_b32 s4, s4, 16
+; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, s4, v0
+; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: test_vector_reduce_add_v8i16:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
@@ -1849,25 +1884,48 @@ define i16 @test_vector_reduce_add_v16i16(<16 x i16> %v) {
 ; GFX7-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 16
 ; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX8-LABEL: test_vector_reduce_add_v16i16:
-; GFX8:       ; %bb.0: ; %entry
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u16_sdwa v8, v2, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-NEXT:    v_add_u16_sdwa v9, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-NEXT:    v_add_u16_sdwa v10, v3, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-NEXT:    v_add_u16_sdwa v11, v1, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-NEXT:    v_add_u16_e32 v2, v2, v6
-; GFX8-NEXT:    v_add_u16_e32 v0, v0, v4
-; GFX8-NEXT:    v_add_u16_e32 v3, v3, v7
-; GFX8-NEXT:    v_add_u16_e32 v1, v1, v5
-; GFX8-NEXT:    v_add_u16_e32 v4, v11, v10
-; GFX8-NEXT:    v_add_u16_e32 v5, v9, v8
-; GFX8-NEXT:    v_add_u16_e32 v1, v1, v3
-; GFX8-NEXT:    v_add_u16_e32 v0, v0, v2
-; GFX8-NEXT:    v_add_u16_e32 v2, v5, v4
-; GFX8-NEXT:    v_add_u16_e32 v0, v0, v1
-; GFX8-NEXT:    v_add_u16_e32 v0, v0, v2
-; GFX8-NEXT:    s_setpc_b64 s[30:31]
+; GFX8-SDAG-LABEL: test_vector_reduce_add_v16i16:
+; GFX8-SDAG:       ; %bb.0: ; %entry
+; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-SDAG-NEXT:    v_add_u16_sdwa v8, v2, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-SDAG-NEXT:    v_add_u16_sdwa v9, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-SDAG-NEXT:    v_add_u16_sdwa v10, v3, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-SDAG-NEXT:    v_add_u16_sdwa v11, v1, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-SDAG-NEXT:    v_add_u16_e32 v2, v2, v6
+; GFX8-SDAG-NEXT:    v_add_u16_e32 v0, v0, v4
+; GFX8-SDAG-NEXT:    v_add_u16_e32 v3, v3, v7
+; GFX8-SDAG-NEXT:    v_add_u16_e32 v1, v1, v5
+; GFX8-SDAG-NEXT:    v_add_u16_e32 v4, v11, v10
+; GFX8-SDAG-NEXT:    v_add_u16_e32 v5, v9, v8
+; GFX8-SDAG-NEXT:    v_add_u16_e32 v1, v1, v3
+; GFX8-SDAG-NEXT:    v_add_u16_e32 v0, v0, v2
+; GFX8-SDAG-NEXT:    v_add_u16_e32 v2, v5, v4
+; GFX8-SDAG-NEXT:    v_add_u16_e32 v0, v0, v1
+; GFX8-SDAG-NEXT:    v_add_u16_e32 v0, v0, v2
+; GFX8-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-GISEL-LABEL: test_vector_reduce_add_v16i16:
+; GFX8-GISEL:       ; %bb.0: ; %entry
+; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-GISEL-NEXT:    v_add_u16_e32 v8, v0, v4
+; GFX8-GISEL-NEXT:    v_add_u16_sdwa v0, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-GISEL-NEXT:    v_add_u16_e32 v4, v1, v5
+; GFX8-GISEL-NEXT:    v_add_u16_sdwa v1, v1, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-GISEL-NEXT:    v_add_u16_e32 v5, v2, v6
+; GFX8-GISEL-NEXT:    v_add_u16_sdwa v2, v2, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-GISEL-NEXT:    v_add_u16_e32 v6, v3, v7
+; GFX8-GISEL-NEXT:    v_add_u16_sdwa v3, v3, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-GISEL-NEXT:    v_add_u16_e32 v5, v8, v5
+; GFX8-GISEL-NEXT:    v_add_u16_e32 v0, v0, v2
+; GFX8-GISEL-NEXT:    v_add_u16_e32 v2, v4, v6
+; GFX8-GISEL-NEXT:    v_add_u16_e32 v1, v1, v3
+; GFX8-GISEL-NEXT:    v_add_u16_e32 v2, v5, v2
+; GFX8-GISEL-NEXT:    v_add_u16_e32 v0, v0, v1
+; GFX8-GISEL-NEXT:    s_and_b32 s4, 0xffff, s4
+; GFX8-GISEL-NEXT:    v_add_u16_e32 v0, v2, v0
+; GFX8-GISEL-NEXT:    s_lshl_b32 s4, s4, 16
+; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, s4, v0
+; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: test_vector_reduce_add_v16i16:
 ; GFX9-SDAG:       ; %bb.0: ; %entry

@@ -208,8 +208,9 @@ static LegalizeMutation bitcastToVectorElement32(unsigned TypeIdx) {
     const LLT Ty = Query.Types[TypeIdx];
     unsigned Size = Ty.getSizeInBits();
     assert(Size % 32 == 0);
-    return std::pair(
-        TypeIdx, LLT::scalarOrVector(ElementCount::getFixed(Size / 32), 32));
+    return std::pair(TypeIdx,
+                     LLT::scalarOrVector(ElementCount::getFixed(Size / 32),
+                                         LLT::integer(32)));
   };
 }
 
