@@ -901,7 +901,7 @@ static void CollectConstructSelectorSet(
           constructs.push_back(leaf);
         }
       } else if (const auto *value{std::get_if<TraitName::Value>(&traitName.u)};
-                 value && *value == TraitName::Value::Simd) {
+          value && *value == TraitName::Value::Simd) {
         // In a construct selector, `simd` is represented as Value::Simd (it can
         // carry simd-specific properties), not as a Directive; treat it as
         // OMPD_simd so it participates in the comparison.
