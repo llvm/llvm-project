@@ -1036,13 +1036,14 @@ llvm.func @scalable_llvm_vector() -> i16 {
 // -----
 
 // CHECK-LABEL: @scalable_vector_matching_store_load
+// CHECK-SAME: %[[ARG:.+]]: vector<[4]xi1>
 llvm.func @scalable_vector_matching_store_load(%arg: vector<[4]xi1>) -> vector<[4]xi1> {
   %0 = llvm.mlir.constant(1 : i32) : i32
   // CHECK-NOT: llvm.alloca
   %1 = llvm.alloca %0 x vector<[4]xi1> : (i32) -> !llvm.ptr
   llvm.store %arg, %1 : vector<[4]xi1>, !llvm.ptr
   %2 = llvm.load %1 : !llvm.ptr -> vector<[4]xi1>
-  // CHECK: llvm.return %[[ARG:.*]] : vector<[4]xi1>
+  // CHECK: llvm.return %[[ARG]] : vector<[4]xi1>
   llvm.return %2 : vector<[4]xi1>
 }
 
