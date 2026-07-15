@@ -84,7 +84,7 @@ delinearizeStaticRCOffset(memref::ReinterpretCastOp rc) {
   return offsetIdxs;
 }
 
-static bool hasExactlyOneReducedNonUnitDim(memref::ReinterpretCastOp rc) {
+static bool hasExactlyOneTruncatedNonUnitDim(memref::ReinterpretCastOp rc) {
   MemRefType srcType = dyn_cast<MemRefType>(rc.getSource().getType());
   MemRefType resType = dyn_cast<MemRefType>(rc.getType());
   assert(srcType.hasStaticShape() && resType.hasStaticShape() &&
@@ -92,16 +92,16 @@ static bool hasExactlyOneReducedNonUnitDim(memref::ReinterpretCastOp rc) {
   assert(srcType.getRank() == resType.getRank() &&
          "expected rank-preserving reinterpret_cast");
 
-  unsigned reducedDims = 0;
+  unsigned truncatedDims = 0;
 
   for (auto [srcSize, resSize] :
        llvm::zip_equal(srcType.getShape(), resType.getShape())) {
     if (srcSize == resSize)
       continue;
 
-    // Only one non-unit source dimension may be reduced.
+    // Only one non-unit source dimension may be truncated.
     if (srcSize != 1 && resSize < srcSize) {
-      ++reducedDims;
+      ++truncatedDims;
       continue;
     }
 
@@ -110,8 +110,8 @@ static bool hasExactlyOneReducedNonUnitDim(memref::ReinterpretCastOp rc) {
     return false;
   }
 
-  // Make sure there is only one reduced dimension.
-  return reducedDims == 1;
+  // Make sure there is only one truncated dimension.
+  return truncatedDims == 1;
 }
 
 /// Returns the unique non-unit dim or nullopt if # non-unit-dims != 1.
@@ -139,7 +139,7 @@ static std::optional<unsigned> getSingleNonUnitDim(MemRefType type) {
 /// * Scalar-shaped results may have arbitrary result strides.
 /// * Non-scalar results must have static offsets, static result strides
 ///   identical to the source identity strides, and exactly one non-unit
-///   source dimension size reduced.
+///   source dimension size truncated.
 ///
 /// Returns nullopt for unsupported reinterpret_casts.
 ///
@@ -221,7 +221,7 @@ getResultNonUnitDimsAndOffsetsForRC(memref::ReinterpretCastOp rc) {
                       }))
       return std::nullopt;
 
-    if (!hasExactlyOneReducedNonUnitDim(rc))
+    if (!hasExactlyOneTruncatedNonUnitDim(rc))
       return std::nullopt;
   }
 
@@ -268,7 +268,7 @@ getResultNonUnitDimsAndOffsetsForRC(memref::ReinterpretCastOp rc) {
 ///   %v = memref.load %src[0, ..., 0]
 ///   memref.store %v, %dst[delinearized(OFF)]
 ///
-///   // BEFORE (same-dimension static slice)
+///   // BEFORE (one truncated non-unit dimension)
 ///   %strided = memref.reinterpret_cast %dst
 ///     to offset: [OFF], sizes: [1, M, K], strides: [M*N, N, 1]
 ///     : memref<1xMxNxf32>
@@ -276,11 +276,11 @@ getResultNonUnitDimsAndOffsetsForRC(memref::ReinterpretCastOp rc) {
 ///   memref.copy %src, %strided
 ///
 ///   // AFTER
-///   // Assuming OFF delinearizes to [0, 0, j]:
+///   // Assuming OFF delinearizes to [0, 0, OFF]:
 ///   scf.for %i = 0 to M step 1 {
 ///     scf.for %k = 0 to K step 1 {
 ///       %v = memref.load %src[0, %i, %k]
-///       memref.store %v, %dst[0, %i, j + %k]
+///       memref.store %v, %dst[0, %i, OFF + %k]
 ///     }
 ///   }
 struct CopyToLoadAndStore : public OpRewritePattern<memref::CopyOp> {
