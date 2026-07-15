@@ -2,7 +2,7 @@
 ; REQUIRES: asserts
 
 ; CHECK: 'foo'
-; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %shift = ashr i32 %val, %k
+; CHECK: Cost of 1 for VF 1: EMIT ir<%shift> = ashr ir<%val>, ir<%k>
 ; CHECK: Cost of 2 for VF 2: WIDEN ir<%shift> = ashr ir<%val>, ir<%k>
 ; CHECK: Cost of 2 for VF 4: WIDEN ir<%shift> = ashr ir<%val>, ir<%k>
 define void @foo(ptr nocapture %p, i32 %k) {

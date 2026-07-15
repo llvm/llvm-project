@@ -7,7 +7,7 @@ target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv8.1m.main-arm-none-eabi"
 
 ; CHECK-COST-LABEL: test
-; CHECK-COST: LV: Found an estimated cost of 1 for VF 1 For instruction:   %or.cond = select i1 %cmp2, i1 true, i1 %cmp3
+; CHECK-COST: Cost of 1 for VF 1: EMIT ir<%or.cond> = select ir<%cmp2>, ir<true>, ir<%cmp3>
 ; CHECK-COST: Cost of 26 for VF 2: WIDEN ir<%or.cond> = select ir<%cmp2>, ir<true>, ir<%cmp3>
 ; CHECK-COST: Cost of 2 for VF 4: WIDEN ir<%or.cond> = select ir<%cmp2>, ir<true>, ir<%cmp3>
 

@@ -13,21 +13,20 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ;
 
 ; CHECK-LABEL: reduction_i8
-; CHECK: LV: Found an estimated cost of {{[0-9]+}} for VF 1 For instruction:   %{{.*}} = phi
-; CHECK: LV: Found an estimated cost of {{[0-9]+}} for VF 1 For instruction:   %{{.*}} = phi
-; CHECK: LV: Found an estimated cost of {{[0-9]+}} for VF 1 For instruction:   %{{.*}} = getelementptr
-; CHECK: LV: Found an estimated cost of {{[0-9]+}} for VF 1 For instruction:   %{{.*}} = load
-; CHECK: LV: Found an estimated cost of {{[0-9]+}} for VF 1 For instruction:   %{{.*}} = zext i8 %{{.*}} to i32
-; CHECK: LV: Found an estimated cost of {{[0-9]+}} for VF 1 For instruction:   %{{.*}} = getelementptr
-; CHECK: LV: Found an estimated cost of {{[0-9]+}} for VF 1 For instruction:   %{{.*}} = load
-; CHECK: LV: Found an estimated cost of {{[0-9]+}} for VF 1 For instruction:   %{{.*}} = zext i8 %{{.*}} to i32
-; CHECK: LV: Found an estimated cost of {{[0-9]+}} for VF 1 For instruction:   %{{.*}} = and i32 %{{.*}}, 255
-; CHECK: LV: Found an estimated cost of {{[0-9]+}} for VF 1 For instruction:   %{{.*}} = add
-; CHECK: LV: Found an estimated cost of {{[0-9]+}} for VF 1 For instruction:   %{{.*}} = add
-; CHECK: LV: Found an estimated cost of {{[0-9]+}} for VF 1 For instruction:   %{{.*}} = add
-; CHECK: LV: Found an estimated cost of {{[0-9]+}} for VF 1 For instruction:   %{{.*}} = trunc
-; CHECK: LV: Found an estimated cost of {{[0-9]+}} for VF 1 For instruction:   %{{.*}} = icmp
-; CHECK: LV: Found an estimated cost of {{[0-9]+}} for VF 1 For instruction:   br
+; CHECK: Cost of {{[0-9]+}} for VF 1: EMIT-SCALAR ir<%indvars.iv> = phi
+; CHECK: Cost of {{[0-9]+}} for VF 1: EMIT-SCALAR ir<%sum.013> = phi
+; CHECK: Cost of {{[0-9]+}} for VF 1: EMIT ir<%arrayidx> = getelementptr
+; CHECK: Cost of {{[0-9]+}} for VF 1: EMIT-SCALAR ir<%0> = load
+; CHECK: Cost of {{[0-9]+}} for VF 1: EMIT-SCALAR ir<%conv> = zext ir<%0> to i32
+; CHECK: Cost of {{[0-9]+}} for VF 1: EMIT ir<%arrayidx2> = getelementptr
+; CHECK: Cost of {{[0-9]+}} for VF 1: EMIT-SCALAR ir<%1> = load
+; CHECK: Cost of {{[0-9]+}} for VF 1: EMIT-SCALAR ir<%conv3> = zext ir<%1> to i32
+; CHECK: Cost of {{[0-9]+}} for VF 1: EMIT ir<%conv4> = and ir<%sum.013>, ir<255>
+; CHECK: Cost of {{[0-9]+}} for VF 1: EMIT ir<%add> = add
+; CHECK: Cost of {{[0-9]+}} for VF 1: EMIT ir<%add5> = add
+; CHECK: Cost of {{[0-9]+}} for VF 1: EMIT ir<%indvars.iv.next> = add
+; CHECK: Cost of {{[0-9]+}} for VF 1: EMIT-SCALAR ir<%lftr.wideiv> = trunc
+; CHECK: Cost of {{[0-9]+}} for VF 1: EMIT ir<%exitcond> = icmp
 ; CHECK: Cost of 1 for VF 2: induction instruction   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
 ; CHECK: Cost of 1 for VF 2: induction instruction   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
 ; CHECK: Cost of 1 for VF 2: WIDEN-REDUCTION-PHI ir<%sum.013> = phi (add) vp<{{.+}}>, vp<[[EXT:%.+]]>

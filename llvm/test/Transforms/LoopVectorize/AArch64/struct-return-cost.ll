@@ -7,9 +7,9 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"
 
 ; CHECK-COST-LABEL: struct_return_widen
-; CHECK-COST: LV: Found an estimated cost of 10 for VF 1 For instruction:   %call = tail call { half, half } @foo(half %in_val)
-; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %extract_a = extractvalue { half, half } %call, 0
-; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %extract_b = extractvalue { half, half } %call, 1
+; CHECK-COST: Cost of 10 for VF 1: EMIT ir<%call> = call ir<%in_val>, ir<@foo>
+; CHECK-COST: Cost of 0 for VF 1: EMIT ir<%extract_a> = extractvalue ir<%call>
+; CHECK-COST: Cost of 0 for VF 1: EMIT ir<%extract_b> = extractvalue ir<%call>
 ;
 ; CHECK-COST: Cost of 10 for VF 2: WIDEN-CALL ir<%call> = call  @foo(ir<%in_val>) (using library function: fixed_vec_foo)
 ; CHECK-COST: Cost of 0 for VF 2: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
@@ -57,9 +57,9 @@ exit:
 }
 
 ; CHECK-COST-LABEL: struct_return_replicate
-; CHECK-COST: LV: Found an estimated cost of 10 for VF 1 For instruction:   %call = tail call { half, half } @foo(half %in_val)
-; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %extract_a = extractvalue { half, half } %call, 0
-; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %extract_b = extractvalue { half, half } %call, 1
+; CHECK-COST: Cost of 10 for VF 1: EMIT ir<%call> = call ir<%in_val>, ir<@foo>
+; CHECK-COST: Cost of 0 for VF 1: EMIT ir<%extract_a> = extractvalue ir<%call>
+; CHECK-COST: Cost of 0 for VF 1: EMIT ir<%extract_b> = extractvalue ir<%call>
 ;
 ; CHECK-COST: Cost of 26 for VF 2: REPLICATE ir<%call> = call @foo(ir<%in_val>)
 ; CHECK-COST: Cost of 0 for VF 2: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
@@ -108,9 +108,9 @@ exit:
 }
 
 ; CHECK-COST-LABEL: struct_return_scalable
-; CHECK-COST: LV: Found an estimated cost of 10 for VF 1 For instruction:   %call = tail call { half, half } @foo(half %in_val)
-; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %extract_a = extractvalue { half, half } %call, 0
-; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %extract_b = extractvalue { half, half } %call, 1
+; CHECK-COST: Cost of 10 for VF 1: EMIT ir<%call> = call ir<%in_val>, ir<@foo>
+; CHECK-COST: Cost of 0 for VF 1: EMIT ir<%extract_a> = extractvalue ir<%call>
+; CHECK-COST: Cost of 0 for VF 1: EMIT ir<%extract_b> = extractvalue ir<%call>
 ;
 ; CHECK-COST: Cost of 26 for VF 2: REPLICATE ir<%call> = call @foo(ir<%in_val>)
 ; CHECK-COST: Cost of 0 for VF 2: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>

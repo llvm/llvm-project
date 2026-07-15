@@ -6,16 +6,17 @@ target triple = "thumbv8.1m.main-none-none-eabi"
 
 define void @pred_loop(ptr %off, ptr %data, ptr %dst, i32 %n) #0 {
 
-; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %i.09 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
-; CHECK-COST-NEXT: LV: Found an estimated cost of 1 for VF 1 For instruction:   %add = add nuw nsw i32 %i.09, 1
-; CHECK-COST-NEXT: LV: Found an estimated cost of 0 for VF 1 For instruction:   %arrayidx = getelementptr inbounds i32, ptr %data, i32 %add
-; CHECK-COST-NEXT: LV: Found an estimated cost of 1 for VF 1 For instruction:   %0 = load i32, ptr %arrayidx, align 4
-; CHECK-COST-NEXT: LV: Found an estimated cost of 1 for VF 1 For instruction:   %add1 = add nsw i32 %0, 5
-; CHECK-COST-NEXT: LV: Found an estimated cost of 0 for VF 1 For instruction:   %arrayidx2 = getelementptr inbounds i32, ptr %dst, i32 %i.09
-; CHECK-COST-NEXT: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i32 %add1, ptr %arrayidx2, align 4
-; CHECK-COST-NEXT: LV: Found an estimated cost of 1 for VF 1 For instruction:   %exitcond.not = icmp eq i32 %add, %n
-; CHECK-COST-NEXT: LV: Found an estimated cost of 0 for VF 1 For instruction:   br i1 %exitcond.not, label %exit.loopexit, label %for.body
-; CHECK-COST-NEXT: LV: Scalar loop costs: 5.
+; CHECK-COST-LABEL: LV: Checking a loop in 'pred_loop'
+; CHECK-COST:      Cost of 0 for VF 1: EMIT-SCALAR ir<%i.09> = phi [ ir<0>, vector.ph ], [ ir<%add>, for.body ]
+; CHECK-COST-NEXT: Cost of 1 for VF 1: EMIT ir<%add> = add nuw nsw ir<%i.09>, ir<1>
+; CHECK-COST-NEXT: Cost of 0 for VF 1: EMIT ir<%arrayidx> = getelementptr inbounds ir<%data>, ir<%add>
+; CHECK-COST-NEXT: Cost of 1 for VF 1: EMIT-SCALAR ir<%0> = load ir<%arrayidx>
+; CHECK-COST-NEXT: Cost of 1 for VF 1: EMIT ir<%add1> = add nsw ir<%0>, ir<5>
+; CHECK-COST-NEXT: Cost of 0 for VF 1: EMIT ir<%arrayidx2> = getelementptr inbounds ir<%dst>, ir<%i.09>
+; CHECK-COST-NEXT: Cost of 1 for VF 1: EMIT store ir<%add1>, ir<%arrayidx2>
+; CHECK-COST-NEXT: Cost of 1 for VF 1: EMIT ir<%exitcond.not> = icmp eq ir<%add>, ir<%n>
+; CHECK-COST-NEXT: Cost of 0 for VF 1: EMIT branch-on-cond ir<%exitcond.not>
+; CHECK-COST:      LV: Scalar loop costs: 5.
 
 entry:
   %cmp8 = icmp sgt i32 %n, 0
@@ -38,26 +39,26 @@ for.body:
 
 define void @if_convert(ptr %a, ptr %b, i32 %start, i32 %end) #0 {
 
-; CHECK-COST-2: LV: Found an estimated cost of 0 for VF 1 For instruction:   %i.032 = phi i32 [ %inc, %if.end ], [ %start, %for.body.preheader ]
-; CHECK-COST-2-NEXT: LV: Found an estimated cost of 0 for VF 1 For instruction:   %arrayidx = getelementptr inbounds i32, ptr %a, i32 %i.032
-; CHECK-COST-2-NEXT: LV: Found an estimated cost of 1 for VF 1 For instruction:   %0 = load i32, ptr %arrayidx, align 4
-; CHECK-COST-2-NEXT: LV: Found an estimated cost of 0 for VF 1 For instruction:   %arrayidx2 = getelementptr inbounds i32, ptr %b, i32 %i.032
-; CHECK-COST-2-NEXT: LV: Found an estimated cost of 1 for VF 1 For instruction:   %1 = load i32, ptr %arrayidx2, align 4
-; CHECK-COST-2-NEXT: LV: Found an estimated cost of 1 for VF 1 For instruction:   %cmp3 = icmp sgt i32 %0, %1
-; CHECK-COST-2-NEXT: LV: Found an estimated cost of 0 for VF 1 For instruction:   br i1 %cmp3, label %if.then, label %if.end
-; CHECK-COST-2-NEXT: LV: Found an estimated cost of 1 for VF 1 For instruction:   %mul = mul nsw i32 %0, 5
-; CHECK-COST-2-NEXT: LV: Found an estimated cost of 1 for VF 1 For instruction:   %add = add nsw i32 %mul, 3
-; CHECK-COST-2-NEXT: LV: Found an estimated cost of 0 for VF 1 For instruction:   %factor = shl i32 %add, 1
-; CHECK-COST-2-NEXT: LV: Found an estimated cost of 1 for VF 1 For instruction:   %sub = sub i32 %0, %1
-; CHECK-COST-2-NEXT: LV: Found an estimated cost of 1 for VF 1 For instruction:   %add7 = add i32 %sub, %factor
-; CHECK-COST-2-NEXT: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i32 %add7, ptr %arrayidx2, align 4
-; CHECK-COST-2-NEXT: LV: Found an estimated cost of 0 for VF 1 For instruction:   br label %if.end
-; CHECK-COST-2-NEXT: LV: Found an estimated cost of 0 for VF 1 For instruction:   %k.0 = phi i32 [ %add, %if.then ], [ %0, %for.body ]
-; CHECK-COST-2-NEXT: LV: Found an estimated cost of 1 for VF 1 For instruction:   store i32 %k.0, ptr %arrayidx, align 4
-; CHECK-COST-2-NEXT: LV: Found an estimated cost of 1 for VF 1 For instruction:   %inc = add nsw i32 %i.032, 1
-; CHECK-COST-2-NEXT: LV: Found an estimated cost of 1 for VF 1 For instruction:   %exitcond.not = icmp eq i32 %inc, %end
-; CHECK-COST-2-NEXT: LV: Found an estimated cost of 0 for VF 1 For instruction:   br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body
-; CHECK-COST-2-NEXT: LV: Scalar loop costs: 8.5.
+; CHECK-COST-2-LABEL: LV: Checking a loop in 'if_convert'
+; CHECK-COST-2:      Cost of 0 for VF 1: EMIT-SCALAR ir<%i.032> = phi [ ir<%start>, vector.ph ], [ ir<%inc>, if.end ]
+; CHECK-COST-2-NEXT: Cost of 0 for VF 1: EMIT ir<%arrayidx> = getelementptr inbounds ir<%a>, ir<%i.032>
+; CHECK-COST-2-NEXT: Cost of 1 for VF 1: EMIT-SCALAR ir<%0> = load ir<%arrayidx>
+; CHECK-COST-2-NEXT: Cost of 0 for VF 1: EMIT ir<%arrayidx2> = getelementptr inbounds ir<%b>, ir<%i.032>
+; CHECK-COST-2-NEXT: Cost of 1 for VF 1: EMIT-SCALAR ir<%1> = load ir<%arrayidx2>
+; CHECK-COST-2-NEXT: Cost of 1 for VF 1: EMIT ir<%cmp3> = icmp sgt ir<%0>, ir<%1>
+; CHECK-COST-2-NEXT: Cost of 0 for VF 1: EMIT branch-on-cond ir<%cmp3>
+; CHECK-COST-2-NEXT: Cost of 1 for VF 1: EMIT ir<%mul> = mul nsw ir<%0>, ir<5>
+; CHECK-COST-2-NEXT: Cost of 1 for VF 1: EMIT ir<%add> = add nsw ir<%mul>, ir<3>
+; CHECK-COST-2-NEXT: Cost of 0 for VF 1: EMIT ir<%factor> = shl ir<%add>, ir<1>
+; CHECK-COST-2-NEXT: Cost of 1 for VF 1: EMIT ir<%sub> = sub ir<%0>, ir<%1>
+; CHECK-COST-2-NEXT: Cost of 1 for VF 1: EMIT ir<%add7> = add ir<%sub>, ir<%factor>
+; CHECK-COST-2-NEXT: Cost of 1 for VF 1: EMIT store ir<%add7>, ir<%arrayidx2>
+; CHECK-COST-2-NEXT: Cost of 0 for VF 1: EMIT-SCALAR ir<%k.0> = phi [ ir<%add>, if.then ], [ ir<%0>, for.body ]
+; CHECK-COST-2-NEXT: Cost of 1 for VF 1: EMIT store ir<%k.0>, ir<%arrayidx>
+; CHECK-COST-2-NEXT: Cost of 1 for VF 1: EMIT ir<%inc> = add nsw ir<%i.032>, ir<1>
+; CHECK-COST-2-NEXT: Cost of 1 for VF 1: EMIT ir<%exitcond.not> = icmp eq ir<%inc>, ir<%end>
+; CHECK-COST-2-NEXT: Cost of 0 for VF 1: EMIT branch-on-cond ir<%exitcond.not>
+; CHECK-COST-2:      LV: Scalar loop costs: 8.5.
 
 entry:
   %cmp31 = icmp slt i32 %start, %end
