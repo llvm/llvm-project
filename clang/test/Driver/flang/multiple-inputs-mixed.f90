@@ -14,6 +14,7 @@
 ! CHECK-FLANG-OPT-NOT: "-fstack-arrays"
 
 ! The -std= option is accepted by both clang and flang, but its acceptable values differ between the two.
+! Currently, -std=c17 is passed to flang, which rejects it. This should be fixed in the future.
 ! A potential solution is to use -Xflang and -Xclang to pass the option to the right frontend; however, -Xclang is rejected.
 
 ! RUN: %clang --driver-mode=flang -### -std=f2018 %S/Inputs/one.f90 -std=c17 %S/Inputs/other.c 2>&1 | FileCheck --check-prefixes=MIXED-OPT %s
