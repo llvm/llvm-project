@@ -13,7 +13,6 @@
 #ifndef FORTRAN_SEMANTICS_OPENMP_UTILS_H
 #define FORTRAN_SEMANTICS_OPENMP_UTILS_H
 
-#include "flang/Common/indirection.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/message.h"
@@ -29,7 +28,6 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -208,6 +206,22 @@ std::optional<DynamicUserCondition> MakeVariantMatchInfo(
     llvm::omp::VariantMatchInfo &vmi,
     const parser::traits::OmpContextSelectorSpecification &ctxSel,
     SemanticsContext &semaCtx);
+
+/// An `llvm::omp::OMPContext` describing the current compilation, used for
+/// OpenMP variant matching. It overrides ISA-trait matching to test against
+/// the target features.
+class OmpVariantMatchContext : public llvm::omp::OMPContext {
+public:
+  OmpVariantMatchContext(bool isDeviceCompilation, llvm::Triple targetTriple,
+      llvm::Triple targetOffloadTriple, std::string targetFeatures,
+      llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits = {});
+  OmpVariantMatchContext(const SemanticsContext &context,
+      llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits = {});
+  bool matchesISATrait(llvm::StringRef rawString) const override;
+
+private:
+  std::string features_;
+};
 
 std::vector<SomeExpr> GetTopLevelDesignators(const SomeExpr &expr);
 const SomeExpr *HasStorageOverlap(

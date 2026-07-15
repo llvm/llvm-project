@@ -34,7 +34,7 @@ TEST(SymbolDocumentation, DetailedDocToMarkup) {
       },
       {
           "brief\n\nfoo\nbar\n",
-          "foo\nbar",
+          "foo bar",
           "foo\nbar",
           "foo bar",
       },
@@ -175,8 +175,7 @@ documentation)",
 
 these are details
 
-More description
-documentation)",
+More description documentation)",
           R"(**\brief** another brief?
 
 these are details
@@ -195,8 +194,7 @@ More description documentation)",
 <b>this is a bold text</b>
 normal text<i>this is an italic text</i>
 <code>this is a code block</code>)",
-          R"(\<b>this is a bold text\</b>
-normal text\<i>this is an italic text\</i>  
+          R"(\<b>this is a bold text\</b> normal text\<i>this is an italic text\</i>  
 \<code>this is a code block\</code>)",
           R"(\<b>this is a bold text\</b>
 normal text\<i>this is an italic text\</i>  
@@ -712,8 +710,7 @@ TEST(SymbolDocumentation, MarkdownCodeSpans) {
       {R"(`multi
 line
 \c span`)",
-       R"(\`multi
-line  
+       R"(\`multi line  
 \\c span\`)",
        R"(`multi
 line  

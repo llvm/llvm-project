@@ -39,7 +39,7 @@ static llvm::cl::opt<bool> useAccReductionCombine(
     "openacc-use-reduction-combine",
     llvm::cl::desc("Whether to generate acc.reduction_combine. Does not "
                    "control reduction for MIN/MAX and logical reductions."),
-    llvm::cl::init(false));
+    llvm::cl::init(true));
 
 static llvm::cl::opt<bool> useAccReductionCombineAll(
     "openacc-use-reduction-combine-all",

@@ -6,7 +6,7 @@
 //===----------------------------------------------------------------------===//
 
 cv.beqimm 0, 0, 0
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: register must be a GPR
 
 cv.beqimm t0, t1, 0
 # CHECK-ERROR: immediate must be an integer in the range [-16, 15]
@@ -34,7 +34,7 @@ cv.beqimm t0, 0, -4098
 //===----------------------------------------------------------------------===//
 
 cv.bneimm 0, 0, 0
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: register must be a GPR
 
 cv.bneimm t0, t1, 0
 # CHECK-ERROR: immediate must be an integer in the range [-16, 15]

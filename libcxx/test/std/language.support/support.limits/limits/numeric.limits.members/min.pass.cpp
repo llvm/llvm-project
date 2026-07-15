@@ -65,14 +65,9 @@ int main(int, char**)
     test<double>(DBL_MIN);
     test<long double>(LDBL_MIN);
 
-    // _BitInt(N): min is 0 for unsigned and -2^(N-1) for signed. The shift
-    // `1 << digits` flowed through the buggy digits field, so this also
-    // exercises the digits fix for non-byte-aligned widths.
-    // TODO: Remove guards for MSan once https://llvm.org/PR204217 is fixed.
-    // MSan does not track _BitInt padding bits, so non-byte-aligned widths
-    // surface as false-positive use-of-uninitialized-value through the
-    // numeric_limits::min() shift; restrict to byte-aligned widths under
-    // memory sanitizer.
+    // _BitInt(N): min is 0 for unsigned and -2^(N-1) for signed.
+    // MSan flags the padding bits of non-byte-aligned widths; guarded below.
+    // TODO: drop the MSan guards once https://llvm.org/PR204217 is fixed.
 #if TEST_HAS_BITINT
     // signed _BitInt(N) min is -2^(N-1). Build via unsigned shift then cast to
     // avoid integer-overflow warnings (-Werror,-Winteger-overflow).

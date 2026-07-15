@@ -25,9 +25,11 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -1040,9 +1042,19 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
     }
   } else {
     // Generate a unique module ID.
+    // Note that this is unique in a build (with some collision probability
+    // inherent to MD5 hashing) as long as each compilation sees modules with
+    // different `SourceFileName`s. Builds using absolute paths or paths
+    // relative to the same base path should be OK. This is similar to the
+    // guarantees for ThinLTO and GlobalValue's GUID.
+    // If desired, a stronger uniqueness guarantee could be computed (with a
+    // small refactoring) with `llvm::getUniqueModuleId`, which hashes the
+    // module content (and, therefore, a compile-time tradeoff).
     SmallString<64> ModuleID;
     llvm::raw_svector_ostream OS(ModuleID);
-    OS << ModuleIDPrefix << llvm::format("%" PRIx64, FatbinWrapper->getGUID());
+    OS << ModuleIDPrefix
+       << llvm::format("%" PRIx64,
+                       llvm::MD5Hash(TheModule.getSourceFileName()));
     llvm::Constant *ModuleIDConstant = makeConstantArray(
         std::string(ModuleID), "", ModuleIDSectionName, 32, /*AddNull=*/true);
 

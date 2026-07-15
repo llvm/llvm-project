@@ -254,7 +254,7 @@ bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode,
   // current MSBs, but the next VALU needs different MSBs, so this
   // S_SET_VGPR_MSB would land right after the setreg. Insert S_NOP to
   // prevent it from being silently dropped.
-  if (needNopBeforeSetVGPRMSB(I))
+  if (needNopBeforeSetVGPRMSB(InsertPt))
     BuildMI(*MBB, InsertPt, {}, TII->get(AMDGPU::S_NOP)).addImm(0);
   MostRecentModeSet =
       BuildMI(*MBB, InsertPt, {}, TII->get(AMDGPU::S_SET_VGPR_MSB))
@@ -471,8 +471,8 @@ bool AMDGPULowerVGPREncoding::updateSetregModeImm(MachineInstr &MI,
   MachineOperand *ImmOp = TII->getNamedOperand(MI, AMDGPU::OpName::imm);
   int64_t OldImm = ImmOp->getImm();
   // Note that Offset is ignored for mode bits here.
-  int64_t NewImm =
-      (OldImm & ~AMDGPU::Hwreg::VGPR_MSB_MASK) | (SetregMode << VGPRMSBShift);
+  int64_t NewImm = (OldImm & ~int64_t(AMDGPU::Hwreg::VGPR_MSB_MASK)) |
+                   (SetregMode << VGPRMSBShift);
   ImmOp->setImm(NewImm);
   return NewImm != OldImm;
 }

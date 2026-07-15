@@ -534,6 +534,9 @@ def InlineDefault : InlineBehavior;
 // A callee without this feature enabled cannot be inlined into a caller with
 // it enabled.
 def InlineInverse : InlineBehavior;
+// The feature must be either enabled in both caller and callee, or disabled in
+// both.
+def InlineMustMatch : InlineBehavior;
 
 //===----------------------------------------------------------------------===//
 // SubtargetFeature - A characteristic of the chip set.

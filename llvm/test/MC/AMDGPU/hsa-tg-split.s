@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx90a -mattr=+xnack,+tgsplit < %s | FileCheck --check-prefix=ASM %s
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx90a -mattr=+xnack,+tgsplit -filetype=obj < %s > %t
+// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx90a -mattr=+xnack < %s | FileCheck --check-prefix=ASM %s
+// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx90a -mattr=+xnack -filetype=obj < %s > %t
 // RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
 
 // OBJDUMP: Contents of section .rodata
@@ -9,10 +9,10 @@
 // OBJDUMP-NEXT: 0030 0000ac00 80000000 00000000 00000000
 
 .amdgcn_target "amdgcn-amd-amdhsa--gfx90a:xnack+"
-// ASM: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx90a:xnack+"
 
 .amdhsa_code_object_version 4
 // ASM: .amdhsa_code_object_version 4
+// ASM: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx90a:xnack+"
 
 .p2align 8
 .type minimal,@function
@@ -27,6 +27,7 @@ minimal:
   .amdhsa_next_free_vgpr 0
   .amdhsa_next_free_sgpr 0
   .amdhsa_accum_offset 4
+  .amdhsa_tg_split 1
 .end_amdhsa_kernel
 
 // ASM: .amdhsa_kernel minimal
