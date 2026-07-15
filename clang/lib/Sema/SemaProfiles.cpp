@@ -1028,10 +1028,12 @@ pointerRefersToUninitStorage(ASTContext &Ctx, const Expr *E,
       // accepted missed diagnostic (parse-order leniency). Deliberately
       // excluded: globals/extern (an extern pointer may be initialized
       // elsewhere, and keeping them Initialized preserves the
-      // marked-direction diagnostics) and null-NSDMI fields. A *marked* decl
-      // keeps its marker classification below (respect the explicit marker).
+      // marked-direction diagnostics), null-NSDMI fields, and parameters --
+      // a ParmVarDecl's getInit() is its *default argument*, which is not
+      // the parameter's value on most calls. A *marked* decl keeps its
+      // marker classification below (respect the explicit marker).
       if (const auto *Var = dyn_cast<VarDecl>(VD);
-          Var && Var->hasLocalStorage()) {
+          Var && Var->hasLocalStorage() && !isa<ParmVarDecl>(Var)) {
         if (const Expr *Init = Var->getInit()) {
           const Expr *InnerInit = Init->IgnoreParenImpCasts();
           const auto *ILE = dyn_cast<InitListExpr>(InnerInit);

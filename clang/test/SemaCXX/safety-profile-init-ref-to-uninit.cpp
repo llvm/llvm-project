@@ -280,6 +280,37 @@ void test_null_global() {
   take_uninit_ptr(g_null_ptr); // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
 }
 
+// A static local is excluded for the same reason as a global (not
+// function-local state; hasLocalStorage is the gate).
+void test_null_static_local() {
+  static int *sp = nullptr;
+  take_uninit_ptr(sp); // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+}
+
+// A *parameter* is excluded too: a ParmVarDecl's initializer is its default
+// argument, which is not the parameter's value on most calls -- a
+// defaulted-null parameter may be passed any caller pointer, so it must keep
+// drawing the marked-target diagnostic.
+void null_default_param(int *cp = nullptr) {
+  take_uninit_ptr(cp); // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+}
+
+// At the *call site* an omitted defaulted argument is the null literal
+// itself: fine for a marked parameter.
+void null_default_marked(int *p [[ref_to_uninit]] = nullptr);
+void test_null_default_marked_param() {
+  null_default_marked();        // OK: the null default argument
+  null_default_marked(nullptr); // OK
+}
+
+// A *marked* pointer initialized to null keeps its marker classification as
+// a source: the explicit marker is respected over the null initializer.
+void test_null_init_marked_decl() {
+  int *m [[ref_to_uninit]] = nullptr;
+  int *m2 = m; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)m2;
+}
+
 // A defaulted pointer or reference argument is checked against the parameter's
 // [[ref_to_uninit]] marking at the call site, like an explicit argument. The
 // declarations themselves stay clean; the diagnostic fires at the call.
