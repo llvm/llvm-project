@@ -31,6 +31,7 @@ define <4 x float> @ret_arbitrary_fp_vector_nan_inf(<4 x i4> %bits) {
   ret <4 x float> %fp
 }
 
+;TODO: this format is not fully supported at the moment in LLVM and may cause crash.
 define float @ret_arbitrary_fp_inf_nzero_sub(i8 %bits) {
 ; CHECK-LABEL: define nofpclass(inf nzero sub) float @ret_arbitrary_fp_inf_nzero_sub
 ; CHECK-SAME: (i8 [[BITS:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -41,6 +42,17 @@ define float @ret_arbitrary_fp_inf_nzero_sub(i8 %bits) {
   ret float %fp
 }
 
+define <2 x float> @ret_arbitrary_fp_vector_no_inf(<2 x i8> %bits) {
+; CHECK-LABEL: define nofpclass(sub) <2 x float> @ret_arbitrary_fp_vector_no_inf
+; CHECK-SAME: (<2 x i8> [[BITS:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    %fp = call nofpclass(sub) <2 x float> @llvm.convert.from.arbitrary.fp.v2f32.v2i8(<2 x i8> [[BITS]], metadata !"Float8E5M2") #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    ret <2 x float> %fp
+;
+  %fp = call <2 x float> @llvm.convert.from.arbitrary.fp.v2f32.v2i8(<2 x i8> %bits, metadata !"Float8E5M2")
+  ret <2 x float> %fp
+}
+
 declare float @llvm.convert.from.arbitrary.fp.f32.i4(i4, metadata)
 declare float @llvm.convert.from.arbitrary.fp.f32.i8(i8, metadata)
 declare <4 x float> @llvm.convert.from.arbitrary.fp.v4f32.v4i4(<4 x i4>, metadata)
+declare <2 x float> @llvm.convert.from.arbitrary.fp.v2f32.v2i8(<2 x i8>, metadata)
