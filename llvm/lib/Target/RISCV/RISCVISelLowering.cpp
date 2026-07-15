@@ -11968,11 +11968,9 @@ static SDValue lowerPZExt(SDValue Src, const SDLoc &DL, SelectionDAG &DAG,
       MVT::getVectorVT(MVT::getIntegerVT(VT.getScalarSizeInBits() / 2),
                        VT.getVectorNumElements() * 2);
   Src = DAG.getBitcast(PPairVT, Src);
-  unsigned ZeroReg = !Subtarget.is64Bit() && PPairVT.getSizeInBits() == 64
-                         ? RISCV::X0_Pair
-                         : RISCV::X0;
-  SDValue Res = DAG.getNode(RISCVISD::PPAIRE, DL, PPairVT, Src,
-                            DAG.getRegister(ZeroReg, PPairVT));
+  SDValue Zero = DAG.getNode(ISD::SPLAT_VECTOR, DL, PPairVT,
+                             DAG.getConstant(0, DL, Subtarget.getXLenVT()));
+  SDValue Res = DAG.getNode(RISCVISD::PPAIRE, DL, PPairVT, Src, Zero);
   return DAG.getBitcast(VT, Res);
 }
 
