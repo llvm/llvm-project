@@ -12919,7 +12919,7 @@ bool Sema::CheckForConstantInitializer(Expr *Init, unsigned DiagID) {
 
   // Under ARC, the initializer is wrapped in `ExprWithCleanups` +
   // `ImplicitCastExpr <ARCReclaimReturnedObject>`. Unwrap both
-  // here so the ObjC-specific path fires under ARC too. 
+  // here so the ObjC-specific path fires under ARC too.
   Init = Init->IgnoreImpCasts();
   if (auto *EWC = dyn_cast<ExprWithCleanups>(Init))
     Init = EWC->getSubExpr()->IgnoreImpCasts();
