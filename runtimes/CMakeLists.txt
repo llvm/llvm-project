@@ -280,7 +280,7 @@ cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_LIB_PATH)
 # config-Fortran.cmake makes use of
 # RUNTIMES_OUTPUT_RESOURCE_DIR, RUNTIMES_INSTALL_RESOURCE_PATH,
 # hence must be included after those variables are defined.
-if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES OR "openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
+if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES OR "openmp" IN_LIST LLVM_ENABLE_RUNTIMES OR "openacc" IN_LIST LLVM_ENABLE_RUNTIMES)
   include(config-Fortran)
 endif ()
 

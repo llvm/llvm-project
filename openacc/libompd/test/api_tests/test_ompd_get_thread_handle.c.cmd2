@@ -1,0 +1,3 @@
+ompd init
+b test_ompd_get_thread_handle.c:11
+ompdtestapi ompd_get_thread_handle

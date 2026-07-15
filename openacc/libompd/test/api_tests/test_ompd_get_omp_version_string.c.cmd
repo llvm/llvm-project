@@ -1,0 +1,2 @@
+ompd init
+ompdtestapi ompd_get_omp_version_string
