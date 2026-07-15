@@ -346,7 +346,7 @@ public:
   /// AST file.
   const uint32_t *SLocEntryOffsets = nullptr;
 
-  // === Source location de-duplication ===
+  // === Source location deduplication ===
 
   /// One segment of the local-to-global source location map. A local raw
   /// location L in [LocalBegin, LocalEnd) maps to global location L + Delta.

@@ -1901,8 +1901,10 @@ ASTReader::remapSLocEntryOffset(ModuleFile &F, uint32_t LocalOffset) const {
         return static_cast<SourceLocation::UIntTy>(static_cast<int64_t>(Low) +
                                                    Seg.Delta);
     }
+    // The segments cover the whole value range, so one always matches.
+    llvm_unreachable("SLocRemap segments must cover every source location");
   }
-  // No remap, or no segment matched. Use the original flat shift.
+  // No remap for this module. Use the flat shift.
   return F.SLocEntryBaseOffset + LocalOffset;
 }
 
@@ -4354,6 +4356,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       // file as it goes, so checking against the map there would treat a file
       // that appears more than once in this module as a duplicate of its own
       // first occurrence.
+      // Entry I's size is the gap to the next offset (block end for the last).
       auto entrySize = [&](unsigned I) -> uint64_t {
         return (I + 1 < N ? Offsets[I + 1] : SLocSpaceSize) - Offsets[I];
       };

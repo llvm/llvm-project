@@ -2399,10 +2399,11 @@ public:
   llvm::Expected<SourceLocation::UIntTy> readSLocOffset(ModuleFile *F,
                                                         unsigned Index);
 
-  /// Identity of an input file, taken from serialized metadata without touching
-  /// the filesystem. It uses the stored name, size, and modification time that
-  /// Clang's own input-file staleness check relies on. An empty Name marks a
-  /// non-file entry (a buffer or expansion), which never deduplicates.
+  /// Identity of an input file, from serialized metadata (no filesystem
+  /// access). Uses the stored name, size, and modification time that Clang's
+  /// own input-file staleness check relies on. ContentHash is not used because
+  /// it is zero unless -fvalidate-ast-input-files-content is set. An empty Name
+  /// marks a non-file entry (a buffer or expansion), which never deduplicates.
   struct SLocFileIdentity {
     StringRef Name;
     off_t Size = 0;
@@ -2421,8 +2422,7 @@ public:
 
   /// Files already loaded into the loaded SLoc address space, keyed by stored
   /// name. Lets a later module reuse an earlier module's copy instead of
-  /// allocating a duplicate range. The key is serialized metadata, so no input
-  /// file is resolved or stat'd at load time.
+  /// allocating a duplicate range.
   llvm::StringMap<PrimaryLoadedFileLoc> PrimaryLoadedFiles;
 
   /// The location of a previously-loaded file matching \p Id (same name, size,
@@ -2437,9 +2437,8 @@ public:
 
   /// Read \p F's SLoc entry records without materializing them, filling
   /// \p Offsets[i] with each entry's local offset and \p Files[i] with its
-  /// file identity (empty Name for non-file entries). File identity comes from
-  /// serialized metadata only, with no input file resolved on disk. Returns
-  /// false on a malformed record.
+  /// file identity (empty Name for non-file entries). Returns false on a
+  /// malformed record.
   bool scanLoadedSLocEntries(ModuleFile &F, SmallVectorImpl<uint32_t> &Offsets,
                              SmallVectorImpl<SLocFileIdentity> &Files);
 
@@ -2567,8 +2566,8 @@ public:
                                                    Seg.Delta)) |
               MacroBit);
       }
-      // No segment matched. This shouldn't happen, so fall through to the
-      // flat shift below.
+      // The segments cover the whole value range, so one always matches.
+      llvm_unreachable("SLocRemap segments must cover every source location");
     }
 
     return Loc.getLocWithOffset(ModuleFile.SLocEntryBaseOffset - 2);
