@@ -345,6 +345,7 @@ body:             |
 ...
 ---
 name:            no_break_lzcnt32_rr
+tracksRegLiveness: true
 registers:       []
 body:             |
   bb.0:
