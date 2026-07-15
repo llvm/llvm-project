@@ -151,10 +151,24 @@ void testComparisons(void) {
 void testNegation(void) {
   float f = 1.5f;
   double d = 2.5;
-  clang_analyzer_dump_float(-f);       // common-warning{{-1.5 IEEEsingle}}
-  clang_analyzer_dump_double(-d);      // common-warning{{-2.5 IEEEdouble}}
-  clang_analyzer_dump_float(-(-f));    // common-warning{{1.5 IEEEsingle}}
-  clang_analyzer_eval(-f < 0.0f);      // common-warning{{TRUE}}
+  clang_analyzer_dump_float(-f);    // common-warning{{-1.5 IEEEsingle}}
+  clang_analyzer_dump_double(-d);   // common-warning{{-2.5 IEEEdouble}}
+  clang_analyzer_dump_float(-(-f)); // common-warning{{1.5 IEEEsingle}}
+  clang_analyzer_eval(-f < 0.0f);   // common-warning{{TRUE}}
+}
+
+//===----------------------------------------------------------------------===//
+// Infinity from an overflowing literal is concrete, but arithmetic on it is
+// not folded and casting it to int is not modeled (both would depend on
+// IEC 60559 semantics / are undefined in C), while comparisons still work.
+//===----------------------------------------------------------------------===//
+
+void testInfinity(void) {
+  float big = 1e400f; // common-warning{{magnitude of floating-point constant too large}}
+  clang_analyzer_dump_float(big);             // common-warning{{+Inf IEEEsingle}}
+  clang_analyzer_dump_float(big + 1.0f);      // common-warning{{Unknown}}
+  clang_analyzer_eval(big > 1.0f);            // common-warning{{TRUE}}
+  clang_analyzer_dump_float((float)(int)big); // common-warning{{Unknown}}
 }
 
 //===----------------------------------------------------------------------===//

@@ -107,6 +107,16 @@ public:
     return Str;
   }
 
+  std::string VisitConcreteFloat(nonloc::ConcreteFloat V) {
+    const llvm::APFloat &F = *V.getValue();
+    std::string Str;
+    llvm::raw_string_ostream OS(Str);
+    llvm::SmallString<16> Buf;
+    F.toString(Buf);
+    OS << "concrete floating-point value '" << Buf << "'";
+    return Str;
+  }
+
   std::string VisitLazyCompoundVal(nonloc::LazyCompoundVal V) {
     return "lazily frozen compound value of " + Visit(V.getRegion());
   }
