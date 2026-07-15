@@ -8852,7 +8852,7 @@ bool AArch64TargetLowering::useSVEForFixedLengthVectorVT(EVT VT,
   case MVT::bf16:
     if (!AllowBF16)
       return false;
-    [[fallthrough]];
+    break;
   case MVT::i8:
   case MVT::i16:
   case MVT::i32:
