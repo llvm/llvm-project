@@ -130,23 +130,6 @@ int test() {
 
 }  // namespace GH35052
 
-namespace GH115118 {
-
-// Currently fails an assertion due to GH199347.
-/*struct foo {
-    foo(const foo&) = default;
-    foo(auto)
-        requires([]<int = 0>() -> bool { return true; }())
-    {}
-};
-
-struct bar {
-    foo x; // check that the lambda gets instantiated.
-};*/
-
-}  // namespace GH115118
-
-
 namespace GH100897 {
 
 template <typename>
@@ -248,5 +231,20 @@ template <int V> constexpr int f() noexcept { return V; }
 
 void h() { constexpr S s; }
 }  // namespace from_constexpr_destructor
+
+namespace GH115118 {
+
+struct foo {
+    foo(const foo&) = default;
+    foo(auto)
+        requires([]<int = 0>() -> bool { return true; }())
+    {}
+};
+
+struct bar {
+    foo x; // check that the lambda gets instantiated.
+};
+
+}  // namespace GH115118
 
 #endif
