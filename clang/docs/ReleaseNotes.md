@@ -863,6 +863,12 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   account when uniquing them. The duplications could substantially increase the
   size of precompiled headers and modules (PCH/PCM), and the time spent loading
   them. (#GH200961)
+- The `counted_by`/`counted_by_or_null` diagnostic that rejects a pointer whose
+  pointee is a struct with a flexible array member (e.g.
+  ``struct with_fam * __sized_by(size) ptr;``) was incorrectly also applied to
+  the `sized_by`/`sized_by_or_null` attributes. Because `sized_by` and
+  `sized_by_or_null` describe the size in bytes rather than a count of elements,
+  they are now correctly accepted on such pointers.
 
 #### Bug Fixes to C++ Support
 
