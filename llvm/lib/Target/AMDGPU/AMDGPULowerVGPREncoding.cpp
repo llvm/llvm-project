@@ -445,7 +445,7 @@ static bool isSetregMode(const MachineInstr &MI, const SIInstrInfo &TII) {
   return HwRegId == AMDGPU::Hwreg::ID_MODE;
 }
 
-/// Backtracks \p I in \p MBB until we hit a non-meta instruction and returns
+/// Backtracks \p It in \p MBB until we hit a non-meta instruction and returns
 /// whether that instruction is a S_SETREG_IMM32_B32(MODE). Returns false when
 /// there are no non-meta instruction in [MBB.instr_begin(), It).
 static bool previousInstrIsSetRegMode(MachineBasicBlock::instr_iterator &It,
