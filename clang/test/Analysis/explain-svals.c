@@ -11,6 +11,8 @@ struct S {
 void clang_analyzer_explain_int(int);
 void clang_analyzer_explain_voidp(void *);
 void clang_analyzer_explain_S(struct S);
+void clang_analyzer_explain_float(float);
+void clang_analyzer_explain_double(double);
 
 int glob;
 
@@ -30,6 +32,11 @@ void test_2(struct S s) {
 
 void test_3(int param) {
   clang_analyzer_explain_voidp(&param); // expected-warning-re{{{{^pointer to parameter 'param'$}}}}
+}
+
+void test_float(void) {
+  clang_analyzer_explain_float(1.5f); // expected-warning-re{{{{^concrete floating-point value '1.5'$}}}}
+  clang_analyzer_explain_double(2.5); // expected-warning-re{{{{^concrete floating-point value '2.5'$}}}}
 }
 
 void test_non_top_level(int param) {
