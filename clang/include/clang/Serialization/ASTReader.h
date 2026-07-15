@@ -2399,11 +2399,9 @@ public:
   llvm::Expected<SourceLocation::UIntTy> readSLocOffset(ModuleFile *F,
                                                         unsigned Index);
 
-  /// Identity of an input file, from serialized metadata (no filesystem
-  /// access). Uses the stored name, size, and modification time that Clang's
-  /// own input-file staleness check relies on. ContentHash is not used because
-  /// it is zero unless -fvalidate-ast-input-files-content is set. An empty Name
-  /// marks a non-file entry (a buffer or expansion), which never deduplicates.
+  /// Identity of an input file, built from serialized metadata so we touch no
+  /// files at load. An empty Name means a non-file entry like a buffer or 
+  /// expansion, and never deduplicates.
   struct SLocFileIdentity {
     StringRef Name;
     off_t Size = 0;

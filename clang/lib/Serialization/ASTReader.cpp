@@ -1868,10 +1868,8 @@ bool ASTReader::scanLoadedSLocEntries(
     }
     Offsets[I] = (uint32_t)Record[0];
     if (Code.get() == SM_SLOC_FILE_ENTRY) {
-      // Identify the file from serialized metadata only. Resolving it on disk
-      // here (getInputFile) would stat and open every input file of every
-      // module at load, which is prohibitive. The stored name, size, and time
-      // are the identity Clang's own staleness check already uses.
+      // File identity comes from serialized metadata, so no input file is
+      // touched on disk at load.
       InputFileInfo IFI = getInputFileInfo(F, Record[4]);
       if (IFI.isValid())
         Files[I] = SLocFileIdentity{IFI.UnresolvedImportedFilename,
