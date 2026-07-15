@@ -102,6 +102,7 @@ private:
 
 //===----------------------------------------------------------------------===//
 // BoolNode
+//===----------------------------------------------------------------------===//
 
 /// A BoolNode denotes a question with a boolean-like result. These nodes branch
 /// to a single node on a successful result, otherwise defaulting to the failure
@@ -133,6 +134,7 @@ private:
 
 //===----------------------------------------------------------------------===//
 // ExitNode
+//===----------------------------------------------------------------------===//
 
 /// An ExitNode is a special sentinel node that denotes the end of matcher.
 struct ExitNode : public MatcherNode {
@@ -147,6 +149,7 @@ struct ExitNode : public MatcherNode {
 
 //===----------------------------------------------------------------------===//
 // SuccessNode
+//===----------------------------------------------------------------------===//
 
 /// A SuccessNode denotes that a given high level pattern has successfully been
 /// matched. This does not terminate the matcher, as there may be multiple
@@ -178,6 +181,7 @@ private:
 
 //===----------------------------------------------------------------------===//
 // SwitchNode
+//===----------------------------------------------------------------------===//
 
 /// A SwitchNode denotes a question with multiple potential results. These nodes
 /// branch to a specific node based on the result of the question.

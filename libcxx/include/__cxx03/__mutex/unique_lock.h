@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MUTEX_UNIQUE_LOCK_H
-#define _LIBCPP___MUTEX_UNIQUE_LOCK_H
+#ifndef _LIBCPP___CXX03___MUTEX_UNIQUE_LOCK_H
+#define _LIBCPP___CXX03___MUTEX_UNIQUE_LOCK_H
 
 #include <__cxx03/__chrono/duration.h>
 #include <__cxx03/__chrono/time_point.h>
@@ -15,12 +15,16 @@
 #include <__cxx03/__memory/addressof.h>
 #include <__cxx03/__mutex/tag_types.h>
 #include <__cxx03/__system_error/system_error.h>
+#include <__cxx03/__utility/move.h>
 #include <__cxx03/__utility/swap.h>
 #include <__cxx03/cerrno>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__cxx03/__undef_macros>
 
 #ifndef _LIBCPP_HAS_NO_THREADS
 
@@ -76,13 +80,8 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI unique_lock& operator=(unique_lock&& __u) _NOEXCEPT {
-    if (__owns_)
-      __m_->unlock();
-
-    __m_        = __u.__m_;
-    __owns_     = __u.__owns_;
-    __u.__m_    = nullptr;
-    __u.__owns_ = false;
+    if (this != std::addressof(__u))
+      unique_lock(std::move(__u)).swap(*this);
     return *this;
   }
 
@@ -172,6 +171,8 @@ inline _LIBCPP_HIDE_FROM_ABI void swap(unique_lock<_Mutex>& __x, unique_lock<_Mu
 
 _LIBCPP_END_NAMESPACE_STD
 
+_LIBCPP_POP_MACROS
+
 #endif // _LIBCPP_HAS_NO_THREADS
 
-#endif // _LIBCPP___MUTEX_UNIQUE_LOCK_H
+#endif // _LIBCPP___CXX03___MUTEX_UNIQUE_LOCK_H

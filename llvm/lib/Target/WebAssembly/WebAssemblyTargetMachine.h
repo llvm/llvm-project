@@ -21,6 +21,16 @@
 
 namespace llvm {
 
+namespace WebAssembly {
+// Exception handling / setjmp-longjmp handling command-line options
+extern cl::opt<bool> WasmDisableExplicitLocals;
+extern cl::opt<bool> WasmEnableEmEH;   // asm.js-style EH
+extern cl::opt<bool> WasmEnableEmSjLj; // asm.js-style SjLJ
+extern cl::opt<bool> WasmEnableEH;     // EH using Wasm EH instructions
+extern cl::opt<bool> WasmEnableSjLj;   // SjLj using Wasm EH instructions
+extern cl::opt<bool> WasmUseLegacyEH;  // Legacy Wasm EH
+} // namespace WebAssembly
+
 class WebAssemblyTargetMachine final : public CodeGenTargetMachineImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<WebAssemblySubtarget>> SubtargetMap;
@@ -65,6 +75,14 @@ public:
                                 SMRange &SourceRange) const override;
 
   bool usesMultivalueABI() const { return UsesMultivalueABI; }
+
+  void registerPassBuilderCallbacks(PassBuilder &PbB) override;
+
+  Error buildCodeGenPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,
+                             raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+                             CodeGenFileType FileType,
+                             const CGPassBuilderOption &Opt, MCContext &Ctx,
+                             PassInstrumentationCallbacks *PIC) override;
 };
 
 } // end namespace llvm

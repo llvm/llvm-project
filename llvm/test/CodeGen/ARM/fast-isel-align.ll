@@ -8,9 +8,6 @@
 ; RUN: llc < %s -O0 -mattr=+strict-align -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi -verify-machineinstrs | FileCheck %s --check-prefix=ARM-STRICT-ALIGN
 ; RUN: llc < %s -O0 -mattr=+strict-align -relocation-model=dynamic-no-pic -mtriple=thumbv7-linux-gnueabi -verify-machineinstrs | FileCheck %s --check-prefix=THUMB-STRICT-ALIGN
 
-; RUN: llc < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-unknown-nacl -verify-machineinstrs | FileCheck %s --check-prefix=ARM
-; RUN: llc < %s -O0 -mattr=+strict-align -relocation-model=dynamic-no-pic -mtriple=armv7-unknown-nacl -verify-machineinstrs | FileCheck %s --check-prefix=ARM-STRICT-ALIGN
-
 ; RUN: llc < %s -O0 -mattr=+strict-align -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-unknown-unknown -verify-machineinstrs | FileCheck %s --check-prefix=ARM-STRICT-ALIGN
 ; RUN: llc < %s -O0  -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=thumbv7-unknown-unknown -mattr=+strict-align -verify-machineinstrs | FileCheck %s --check-prefix=THUMB-STRICT-ALIGN
 ; RUN: llc < %s -O0 -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-unknown-unknown -verify-machineinstrs | FileCheck %s --check-prefix=ARM

@@ -28,17 +28,16 @@ define <4 x bfloat> @fptrunc_v4f32(<4 x float> %a) nounwind {
 ; CHECK-LABEL: fptrunc_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    subq $72, %rsp
+; CHECK-NEXT:    subq $64, %rsp
 ; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    callq __truncsfbf2@PLT
 ; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    vpermilpd $1, (%rsp), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[1,0]
+; CHECK-NEXT:    vmovshdup (%rsp), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[1,1,3,3]
 ; CHECK-NEXT:    callq __truncsfbf2@PLT
-; CHECK-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    vpshufd $255, (%rsp), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[3,3,3,3]
 ; CHECK-NEXT:    callq __truncsfbf2@PLT
@@ -49,24 +48,21 @@ define <4 x bfloat> @fptrunc_v4f32(<4 x float> %a) nounwind {
 ; CHECK-NEXT:    vpextrw $0, %xmm0, %ebp
 ; CHECK-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    vpextrw $0, %xmm0, %r14d
-; CHECK-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    vpextrw $0, %xmm0, %r15d
-; CHECK-NEXT:    vmovshdup (%rsp), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[1,1,3,3]
+; CHECK-NEXT:    vpermilpd $1, (%rsp), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    # xmm0 = mem[1,0]
 ; CHECK-NEXT:    callq __truncsfbf2@PLT
 ; CHECK-NEXT:    vpextrw $0, %xmm0, %eax
-; CHECK-NEXT:    vmovd %r15d, %xmm0
-; CHECK-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrw $2, %r14d, %xmm0, %xmm0
+; CHECK-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    vpinsrw $1, %r14d, %xmm0, %xmm0
+; CHECK-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0
 ; CHECK-NEXT:    vpinsrw $3, %ebp, %xmm0, %xmm0
 ; CHECK-NEXT:    vpinsrw $4, %ebx, %xmm0, %xmm0
 ; CHECK-NEXT:    vpinsrw $5, %ebx, %xmm0, %xmm0
 ; CHECK-NEXT:    vpinsrw $6, %ebx, %xmm0, %xmm0
 ; CHECK-NEXT:    vpinsrw $7, %ebx, %xmm0, %xmm0
-; CHECK-NEXT:    addq $72, %rsp
+; CHECK-NEXT:    addq $64, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r14
-; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
   %b = fptrunc <4 x float> %a to <4 x bfloat>

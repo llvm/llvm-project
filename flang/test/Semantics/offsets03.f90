@@ -30,10 +30,10 @@ end
 ! Common block: objects are in order from COMMON statement and not part of module
 module md                   !CHECK: Module scope: md size=1 alignment=1
   integer(1) :: i
-  integer(2) :: d1          !CHECK: d1, PUBLIC size=2 offset=8:
-  integer(4) :: d2          !CHECK: d2, PUBLIC size=4 offset=4:
-  integer(1) :: d3          !CHECK: d3, PUBLIC size=1 offset=0:
-  real(2) :: d4             !CHECK: d4, PUBLIC size=2 offset=0:
+  integer(2) :: d1          !CHECK: d1, PUBLIC (InCommonBlock) size=2 offset=8:
+  integer(4) :: d2          !CHECK: d2, PUBLIC (InCommonBlock) size=4 offset=4:
+  integer(1) :: d3          !CHECK: d3, PUBLIC (InCommonBlock) size=1 offset=0:
+  real(2) :: d4             !CHECK: d4, PUBLIC (InCommonBlock) size=2 offset=0:
   common /common1/ d3,d2,d1 !CHECK: common1 size=10 offset=0: CommonBlockDetails alignment=4:
   common /common2/ d4       !CHECK: common2 size=2 offset=0: CommonBlockDetails alignment=2:
 end
@@ -71,7 +71,7 @@ end
 subroutine host1
  contains
   subroutine internal
-    common /b/ x(4)  ! CHECK: x (Implicit) size=16 offset=0: ObjectEntity type: REAL(4) shape: 1_8:4_8
+    common /b/ x(4)  ! CHECK: x (Implicit, InCommonBlock) size=16 offset=0: ObjectEntity type: REAL(4) shape: 1_8:4_8
     equivalence(x,y) ! CHECK: y (Implicit) size=4 offset=0: ObjectEntity type: REAL(4)
   end
 end

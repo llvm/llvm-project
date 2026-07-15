@@ -1,5 +1,7 @@
+// clang-format off
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck %S/base.h
 // REQUIRES: ompt
+// clang-format on
 
 #define SCHEDULE runtime
 // Without any schedule specified, the runtime uses static schedule,

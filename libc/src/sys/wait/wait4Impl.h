@@ -12,10 +12,11 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 
-#include <signal.h>
+#include "hdr/signal_macros.h"
+#include "hdr/types/siginfo_t.h"
 #include <sys/syscall.h> // For syscall numbers.
 #include <sys/wait.h>
 
@@ -65,7 +66,9 @@ LIBC_INLINE ErrorOr<pid_t> wait4impl(pid_t pid, int *wait_status, int options,
       *wait_status = W_STOPCODE(info.si_status);
       break;
     case CLD_CONTINUED:
-      *wait_status = __W_CONTINUED;
+      // Set wait_status to a value that the caller can check via WIFCONTINUED.
+      // glibc has a non-POSIX macro definition __W_CONTINUED for this value.
+      *wait_status = 0xffff;
       break;
     default:
       *wait_status = 0;

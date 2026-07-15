@@ -9,6 +9,7 @@
 #include "gtest/gtest.h"
 
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/lldb-defines.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
 
@@ -114,6 +115,14 @@ TEST(ArchSpecTest, TestSetTriple) {
   EXPECT_EQ(ArchSpec::eCore_ppc_ppc970, AS.GetCore());
 
   AS = ArchSpec();
+  EXPECT_TRUE(AS.SetTriple("24-0-apple-unknown"));
+  EXPECT_EQ(uint32_t(llvm::MachO::CPU_TYPE_RISCV), AS.GetMachOCPUType());
+  EXPECT_EQ(0u, AS.GetMachOCPUSubType());
+  EXPECT_TRUE(llvm::StringRef(AS.GetTriple().str())
+                  .consume_front("riscv32-apple-unknown"));
+  EXPECT_EQ(ArchSpec::eCore_riscv32, AS.GetCore());
+
+  AS = ArchSpec();
   EXPECT_TRUE(AS.SetTriple("i686-pc-windows"));
   EXPECT_EQ(llvm::Triple::x86, AS.GetTriple().getArch());
   EXPECT_EQ(llvm::Triple::PC, AS.GetTriple().getVendor());
@@ -129,6 +138,12 @@ TEST(ArchSpecTest, TestSetTriple) {
   EXPECT_STREQ("msp430", AS.GetArchitectureName());
   EXPECT_EQ(ArchSpec::eCore_msp430, AS.GetCore());
 
+  AS = ArchSpec();
+  EXPECT_TRUE(AS.SetTriple("amd64-unknown-openbsd"));
+  EXPECT_EQ(llvm::Triple::x86_64, AS.GetTriple().getArch());
+  EXPECT_STREQ("amd64", AS.GetArchitectureName());
+  EXPECT_EQ(ArchSpec::eCore_x86_64_amd64, AS.GetCore());
+
   // Various flavors of invalid triples.
   AS = ArchSpec();
   EXPECT_FALSE(AS.SetTriple("unknown-unknown-unknown"));
@@ -139,6 +154,71 @@ TEST(ArchSpecTest, TestSetTriple) {
   AS = ArchSpec();
   EXPECT_FALSE(AS.SetTriple(""));
 }
+
+namespace {
+struct AMDGPUModel {
+  uint32_t mach;    // EF_AMDGPU_MACH value.
+  const char *flag; // ELF flag name used in the YAML "Flags" field.
+  const char *name; // Canonical model name, e.g. "gfx942".
+};
+
+// Every AMD GPU model, taken from llvm's AMDGPU_MACH_LIST so the tests track
+// the authoritative list instead of duplicating it.
+const AMDGPUModel kAMDGPUModels[] = {
+#define AMDGPU_MODEL(NUM, ENUM, NAME) {NUM, #ENUM, NAME},
+    AMDGPU_MACH_LIST(AMDGPU_MODEL)
+#undef AMDGPU_MODEL
+};
+
+std::string AMDGPUModelName(const testing::TestParamInfo<AMDGPUModel> &info) {
+  // Test names allow only [A-Za-z0-9_]; the generic models contain dashes.
+  std::string name = info.param.name;
+  for (char &c : name)
+    if (c == '-')
+      c = '_';
+  return name;
+}
+} // namespace
+
+class ArchSpecAMDGPUTest : public ::testing::TestWithParam<AMDGPUModel> {};
+
+// SetTriple() must resolve every AMD GPU triple to the right arch and core.
+// This exercises ArchSpec::UpdateCore(), which refines the core from the GPU
+// model in the triple environment.
+TEST_P(ArchSpecAMDGPUTest, SetTriple) {
+  const AMDGPUModel &model = GetParam();
+  bool is_gcn = llvm::StringRef(model.name).starts_with("gfx");
+  std::string triple =
+      (is_gcn ? "amdgpu" : "r600") + std::string("-amd-amdhsa--") + model.name;
+
+  ArchSpec AS;
+  EXPECT_TRUE(AS.SetTriple(triple));
+  EXPECT_EQ(is_gcn ? llvm::Triple::amdgpu : llvm::Triple::r600,
+            AS.GetTriple().getArch());
+  EXPECT_NE(ArchSpec::eCore_amd_gpu_unknown, AS.GetCore());
+  EXPECT_EQ(model.name, AS.GetClangTargetCPU());
+}
+
+// SetArchitecture() from an ELF header must resolve every AMD GPU model to the
+// right arch, vendor, OS, sub type and core.
+TEST_P(ArchSpecAMDGPUTest, SetArchitectureFromELF) {
+  const AMDGPUModel &model = GetParam();
+  bool is_gcn = llvm::StringRef(model.name).starts_with("gfx");
+
+  ArchSpec AS;
+  EXPECT_TRUE(AS.SetArchitecture(eArchTypeELF, llvm::ELF::EM_AMDGPU, model.mach,
+                                 llvm::ELF::ELFOSABI_AMDGPU_HSA));
+  EXPECT_EQ(is_gcn ? llvm::Triple::amdgpu : llvm::Triple::r600,
+            AS.GetTriple().getArch());
+  EXPECT_EQ(llvm::Triple::AMD, AS.GetTriple().getVendor());
+  EXPECT_EQ(llvm::Triple::AMDHSA, AS.GetTriple().getOS());
+  EXPECT_EQ(model.mach, AS.GetElfCPUSubType());
+  EXPECT_NE(ArchSpec::eCore_amd_gpu_unknown, AS.GetCore());
+  EXPECT_EQ(model.name, AS.GetClangTargetCPU());
+}
+
+INSTANTIATE_TEST_SUITE_P(AMDGPU, ArchSpecAMDGPUTest,
+                         ::testing::ValuesIn(kAMDGPUModels), AMDGPUModelName);
 
 TEST(ArchSpecTest, MergeFrom) {
   {
@@ -393,6 +473,12 @@ TEST(ArchSpecTest, Compatibility) {
     // ios-macabi wins.
     B.MergeFrom(A);
     ASSERT_TRUE(B.IsExactMatch(C));
+  }
+  {
+    ArchSpec A("x86_64-apple-driverkit19.0");
+    ArchSpec B("x86_64-apple-macosx10.15.0");
+    ASSERT_FALSE(A.IsExactMatch(B));
+    ASSERT_TRUE(A.IsCompatibleMatch(B));
   }
 }
 

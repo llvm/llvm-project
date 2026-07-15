@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Test that the store widening optimization correctly transforms to a wider
 ; instruction with a sub register. Recently, the store widening occurs in the

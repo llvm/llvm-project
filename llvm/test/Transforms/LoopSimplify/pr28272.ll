@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; after loop-simplify, we crash on assertion.
 
 ; CHECK-LABEL: @foo
-define void @foo() {
+define void @foo(i1 %arg) {
 entry:
   br label %header
 
@@ -37,7 +37,7 @@ bb54:
 }
 
 ; CHECK-LABEL: @foo2
-define void @foo2() {
+define void @foo2(i1 %arg) {
 entry:
   br label %outer
 
@@ -66,7 +66,7 @@ loop2.if:
                                        i32 1, label %bb]
 
 loop2.if.true:
-  br i1 undef, label %loop2, label %bb
+  br i1 %arg, label %loop2, label %bb
 
 loop2.if.false:
   br label %loop2
@@ -78,29 +78,29 @@ bb:
 ; When LoopSimplify separates nested loops, it might break LCSSA form: values
 ; from the original loop might be used in exit blocks of the outer loop.
 ; CHECK-LABEL: @foo3
-define void @foo3() {
+define void @foo3(i1 %arg) {
 entry:
   br label %bb1
 
 bb1:
-  br i1 undef, label %bb2, label %bb1
+  br i1 %arg, label %bb2, label %bb1
 
 bb2:
   %a = phi i32 [ undef, %bb1 ], [ %a, %bb3 ], [ undef, %bb5 ]
-  br i1 undef, label %bb3, label %bb1
+  br i1 %arg, label %bb3, label %bb1
 
 bb3:
   %b = load ptr, ptr undef
-  br i1 undef, label %bb2, label %bb4
+  br i1 %arg, label %bb2, label %bb4
 
 bb4:
-  br i1 undef, label %bb5, label %bb6
+  br i1 %arg, label %bb5, label %bb6
 
 bb5:
-  br i1 undef, label %bb2, label %bb4
+  br i1 %arg, label %bb2, label %bb4
 
 bb6:
-  br i1 undef, label %bb_end, label %bb1
+  br i1 %arg, label %bb_end, label %bb1
 
 bb_end:
   %x = getelementptr i32, ptr %b
@@ -112,7 +112,7 @@ bb_end:
 ; original loop (before separating it was a subloop of the original loop, and
 ; thus didn't require an lcssa phi nodes).
 ; CHECK-LABEL: @foo4
-define void @foo4() {
+define void @foo4(i1 %arg) {
 bb1:
   br label %bb2
 
@@ -126,7 +126,7 @@ bb2.loopexit:                                     ; preds = %bb3
 bb2:                                              ; preds = %bb2.loopexit, %bb2, %bb1
   %i = phi i32 [ 0, %bb1 ], [ %i, %bb2 ], [ %i.ph, %bb2.loopexit ]
   %x = load i32, ptr undef, align 8
-  br i1 undef, label %bb2, label %bb3.preheader
+  br i1 %arg, label %bb2, label %bb3.preheader
 
 ; CHECK: bb3.preheader:
 bb3.preheader:                                    ; preds = %bb2

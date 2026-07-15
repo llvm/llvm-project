@@ -3,15 +3,10 @@
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 from ._python_test_ops_gen import *
-from .._mlir_libs._mlirPythonTest import (
-    TestAttr,
-    TestType,
-    TestTensorValue,
-    TestIntegerRankedTensorType,
-)
+from ._python_test_ops_gen import _Dialect
 
 
 def register_python_test_dialect(registry):
-    from .._mlir_libs import _mlirPythonTest
+    from .._mlir_libs import _mlirPythonTestNanobind
 
-    _mlirPythonTest.register_dialect(registry)
+    _mlirPythonTestNanobind.register_dialect(registry)

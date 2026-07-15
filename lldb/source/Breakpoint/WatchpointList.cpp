@@ -98,16 +98,14 @@ private:
 
 WatchpointList::wp_collection::iterator
 WatchpointList::GetIDIterator(lldb::watch_id_t watch_id) {
-  return std::find_if(m_watchpoints.begin(),
-                      m_watchpoints.end(),            // Search full range
-                      WatchpointIDMatches(watch_id)); // Predicate
+  return llvm::find_if(m_watchpoints,                  // Search full range
+                       WatchpointIDMatches(watch_id)); // Predicate
 }
 
 WatchpointList::wp_collection::const_iterator
 WatchpointList::GetIDConstIterator(lldb::watch_id_t watch_id) const {
-  return std::find_if(m_watchpoints.begin(),
-                      m_watchpoints.end(),            // Search full range
-                      WatchpointIDMatches(watch_id)); // Predicate
+  return llvm::find_if(m_watchpoints,                  // Search full range
+                       WatchpointIDMatches(watch_id)); // Predicate
 }
 
 WatchpointSP WatchpointList::FindByID(lldb::watch_id_t watch_id) const {
@@ -236,7 +234,7 @@ void WatchpointList::RemoveAll(bool notify) {
       wp_collection::iterator pos, end = m_watchpoints.end();
       for (pos = m_watchpoints.begin(); pos != end; ++pos) {
         if ((*pos)->GetTarget().EventTypeHasListeners(
-                Target::eBroadcastBitBreakpointChanged)) {
+                Target::eBroadcastBitWatchpointChanged)) {
           auto data_sp = std::make_shared<Watchpoint::WatchpointEventData>(
               eWatchpointEventTypeRemoved, *pos);
           (*pos)->GetTarget().BroadcastEvent(

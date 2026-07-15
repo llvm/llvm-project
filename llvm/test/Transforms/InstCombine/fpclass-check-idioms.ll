@@ -5,7 +5,7 @@ define i1 @f32_fcnan_fcinf(float %a) {
 ; CHECK-LABEL: define i1 @f32_fcnan_fcinf(
 ; CHECK-SAME: float [[A:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[A]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq float [[TMP1]], 0x7FF0000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq float [[TMP1]], +inf
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i32 = bitcast float %a to i32
@@ -17,7 +17,7 @@ define i1 @f32_fcnan_fcinf(float %a) {
 define i1 @f32_fcnan_fcinf_strictfp(float %a) strictfp {
 ; CHECK-LABEL: define i1 @f32_fcnan_fcinf_strictfp(
 ; CHECK-SAME: float [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 519)
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], /* (nan inf) */ i32 519)
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i32 = bitcast float %a to i32
@@ -30,7 +30,7 @@ define i1 @f32_not_fcnan_fcinf(float %a) {
 ; CHECK-LABEL: define i1 @f32_not_fcnan_fcinf(
 ; CHECK-SAME: float [[A:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[A]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp one float [[TMP1]], 0x7FF0000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one float [[TMP1]], +inf
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i32 = bitcast float %a to i32
@@ -42,7 +42,7 @@ define i1 @f32_not_fcnan_fcinf(float %a) {
 define i1 @f32_not_fcnan_fcinf_strictfp(float %a) strictfp {
 ; CHECK-LABEL: define i1 @f32_not_fcnan_fcinf_strictfp(
 ; CHECK-SAME: float [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 504)
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], /* (zero sub norm) */ i32 504)
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i32 = bitcast float %a to i32
@@ -55,7 +55,7 @@ define i1 @f64_fcnan_fcinf(double %a) {
 ; CHECK-LABEL: define i1 @f64_fcnan_fcinf(
 ; CHECK-SAME: double [[A:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[A]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq double [[TMP1]], 0x7FF0000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq double [[TMP1]], +inf
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i64 = bitcast double %a to i64
@@ -67,7 +67,7 @@ define i1 @f64_fcnan_fcinf(double %a) {
 define i1 @f64_fcnan_fcinf_strictfp(double %a) strictfp {
 ; CHECK-LABEL: define i1 @f64_fcnan_fcinf_strictfp(
 ; CHECK-SAME: double [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f64(double [[A]], i32 519)
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f64(double [[A]], /* (nan inf) */ i32 519)
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i64 = bitcast double %a to i64
@@ -80,7 +80,7 @@ define i1 @f32_fcinf(float %a) {
 ; CHECK-LABEL: define i1 @f32_fcinf(
 ; CHECK-SAME: float [[A:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[A]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[TMP1]], 0x7FF0000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[TMP1]], +inf
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i32 = bitcast float %a to i32
@@ -92,7 +92,7 @@ define i1 @f32_fcinf(float %a) {
 define i1 @f32_fcinf_strictfp(float %a) strictfp {
 ; CHECK-LABEL: define i1 @f32_fcinf_strictfp(
 ; CHECK-SAME: float [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 516)
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], /* (inf) */ i32 516)
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i32 = bitcast float %a to i32
@@ -104,7 +104,7 @@ define i1 @f32_fcinf_strictfp(float %a) strictfp {
 define i1 @f32_fcposinf(float %a) {
 ; CHECK-LABEL: define i1 @f32_fcposinf(
 ; CHECK-SAME: float [[A:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[A]], 0x7FF0000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[A]], +inf
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i32 = bitcast float %a to i32
@@ -115,7 +115,7 @@ define i1 @f32_fcposinf(float %a) {
 define i1 @f32_fcposinf_strictfp(float %a) strictfp {
 ; CHECK-LABEL: define i1 @f32_fcposinf_strictfp(
 ; CHECK-SAME: float [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 512)
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], /* (pinf) */ i32 512)
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i32 = bitcast float %a to i32
@@ -126,7 +126,7 @@ define i1 @f32_fcposinf_strictfp(float %a) strictfp {
 define i1 @f32_fcneginf(float %a) {
 ; CHECK-LABEL: define i1 @f32_fcneginf(
 ; CHECK-SAME: float [[A:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[A]], 0xFFF0000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[A]], -inf
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i32 = bitcast float %a to i32
@@ -137,7 +137,7 @@ define i1 @f32_fcneginf(float %a) {
 define i1 @f32_fcneginf_strictfp(float %a) strictfp {
 ; CHECK-LABEL: define i1 @f32_fcneginf_strictfp(
 ; CHECK-SAME: float [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 4)
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], /* (ninf) */ i32 4)
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i32 = bitcast float %a to i32
@@ -148,7 +148,7 @@ define i1 @f32_fcneginf_strictfp(float %a) strictfp {
 define i1 @f32_fcposzero(float %a) {
 ; CHECK-LABEL: define i1 @f32_fcposzero(
 ; CHECK-SAME: float [[A:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 64)
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], /* (pzero) */ i32 64)
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i32 = bitcast float %a to i32
@@ -159,7 +159,7 @@ define i1 @f32_fcposzero(float %a) {
 define i1 @f32_fcposzero_strictfp(float %a) strictfp {
 ; CHECK-LABEL: define i1 @f32_fcposzero_strictfp(
 ; CHECK-SAME: float [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 64)
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], /* (pzero) */ i32 64)
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i32 = bitcast float %a to i32
@@ -170,7 +170,7 @@ define i1 @f32_fcposzero_strictfp(float %a) strictfp {
 define i1 @f32_fcnegzero(float %a) {
 ; CHECK-LABEL: define i1 @f32_fcnegzero(
 ; CHECK-SAME: float [[A:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 32)
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], /* (nzero) */ i32 32)
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i32 = bitcast float %a to i32
@@ -181,7 +181,7 @@ define i1 @f32_fcnegzero(float %a) {
 define i1 @f32_fcnegzero_strictfp(float %a) strictfp {
 ; CHECK-LABEL: define i1 @f32_fcnegzero_strictfp(
 ; CHECK-SAME: float [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 32)
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], /* (nzero) */ i32 32)
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i32 = bitcast float %a to i32
@@ -204,7 +204,7 @@ define i1 @f32_fczero(float %a) {
 define i1 @f32_fczero_strictfp(float %a) strictfp {
 ; CHECK-LABEL: define i1 @f32_fczero_strictfp(
 ; CHECK-SAME: float [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 96)
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], /* (zero) */ i32 96)
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i32 = bitcast float %a to i32
@@ -253,7 +253,7 @@ define <2 x i1> @f32_fcnan_fcinf_vec(<2 x float> %a) {
 ; CHECK-LABEL: define <2 x i1> @f32_fcnan_fcinf_vec(
 ; CHECK-SAME: <2 x float> [[A:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[A]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq <2 x float> [[TMP1]], splat (float 0x7FF0000000000000)
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq <2 x float> [[TMP1]], splat (float +inf)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %i32 = bitcast <2 x float> %a to <2 x i32>
@@ -265,7 +265,7 @@ define <2 x i1> @f32_fcnan_fcinf_vec(<2 x float> %a) {
 define <2 x i1> @f32_fcnan_fcinf_vec_strictfp(<2 x float> %a) strictfp {
 ; CHECK-LABEL: define <2 x i1> @f32_fcnan_fcinf_vec_strictfp(
 ; CHECK-SAME: <2 x float> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CMP:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[A]], i32 519)
+; CHECK-NEXT:    [[CMP:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[A]], /* (nan inf) */ i32 519)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %i32 = bitcast <2 x float> %a to <2 x i32>
@@ -278,7 +278,7 @@ define <2 x i1> @f32_fcinf_vec(<2 x float> %a) {
 ; CHECK-LABEL: define <2 x i1> @f32_fcinf_vec(
 ; CHECK-SAME: <2 x float> [[A:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[A]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <2 x float> [[TMP1]], splat (float 0x7FF0000000000000)
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <2 x float> [[TMP1]], splat (float +inf)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %i32 = bitcast <2 x float> %a to <2 x i32>
@@ -290,7 +290,7 @@ define <2 x i1> @f32_fcinf_vec(<2 x float> %a) {
 define <2 x i1> @f32_fcinf_vec_strictfp(<2 x float> %a) strictfp {
 ; CHECK-LABEL: define <2 x i1> @f32_fcinf_vec_strictfp(
 ; CHECK-SAME: <2 x float> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CMP:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[A]], i32 516)
+; CHECK-NEXT:    [[CMP:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[A]], /* (inf) */ i32 516)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %i32 = bitcast <2 x float> %a to <2 x i32>
@@ -389,7 +389,7 @@ define i1 @f32_fcnan_fcinf_wrong_pred(float %a) {
 ; CHECK-LABEL: define i1 @f32_fcnan_fcinf_wrong_pred(
 ; CHECK-SAME: float [[A:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[A]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp one float [[TMP1]], 0x7FF0000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one float [[TMP1]], +inf
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i32 = bitcast float %a to i32
@@ -401,7 +401,7 @@ define i1 @f32_fcnan_fcinf_wrong_pred(float %a) {
 define i1 @f32_fcnan_fcinf_wrong_pred_strictfp(float %a) strictfp {
 ; CHECK-LABEL: define i1 @f32_fcnan_fcinf_wrong_pred_strictfp(
 ; CHECK-SAME: float [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], i32 504)
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], /* (zero sub norm) */ i32 504)
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %i32 = bitcast float %a to i32
@@ -563,6 +563,142 @@ define i1 @f32_fcnan_fcinf_noimplicitfloat_strictfp(float %a) strictfp #0 {
   %i32 = bitcast float %a to i32
   %and = and i32 %i32, 2139095040
   %cmp = icmp eq i32 %and, 2139095040
+  ret i1 %cmp
+}
+
+define i1 @f32_fcsubnormal_fczero(float %a) {
+; CHECK-LABEL: define i1 @f32_fcsubnormal_fczero(
+; CHECK-SAME: float [[A:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], /* (zero sub) */ i32 240)
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %i32 = bitcast float %a to i32
+  %and = and i32 %i32, 2139095040
+  %cmp = icmp eq i32 %and, 0
+  ret i1 %cmp
+}
+
+define i1 @f32_not_fcsubnormal_fczero(float %a) {
+; CHECK-LABEL: define i1 @f32_not_fcsubnormal_fczero(
+; CHECK-SAME: float [[A:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], /* (nan inf norm) */ i32 783)
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %i32 = bitcast float %a to i32
+  %and = and i32 %i32, 2139095040
+  %cmp = icmp ne i32 %and, 0
+  ret i1 %cmp
+}
+
+define <2 x i1> @f64_fcsubnormal_fczero_vec(<2 x double> %a) {
+; CHECK-LABEL: define <2 x i1> @f64_fcsubnormal_fczero_vec(
+; CHECK-SAME: <2 x double> [[A:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f64(<2 x double> [[A]], /* (zero sub) */ i32 240)
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %i64 = bitcast <2 x double> %a to <2 x i64>
+  %and = and <2 x i64> %i64, splat(i64 9218868437227405312)
+  %cmp = icmp eq <2 x i64> %and, zeroinitializer
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @f64_no_fcsubnormal_fczero_vec(<2 x double> %a) {
+; CHECK-LABEL: define <2 x i1> @f64_no_fcsubnormal_fczero_vec(
+; CHECK-SAME: <2 x double> [[A:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f64(<2 x double> [[A]], /* (nan inf norm) */ i32 783)
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %i64 = bitcast <2 x double> %a to <2 x i64>
+  %and = and <2 x i64> %i64, splat(i64 9218868437227405312)
+  %cmp = icmp ne <2 x i64> %and, zeroinitializer
+  ret <2 x i1> %cmp
+}
+
+define i1 @f32_fcsubnormal_fczero_no_implicit_fp(float %a) #0 {
+; CHECK-LABEL: define i1 @f32_fcsubnormal_fczero_no_implicit_fp(
+; CHECK-SAME: float [[A:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[I32:%.*]] = bitcast float [[A]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[I32]], 2139095040
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %i32 = bitcast float %a to i32
+  %and = and i32 %i32, 2139095040
+  %cmp = icmp eq i32 %and, 0
+  ret i1 %cmp
+}
+
+define i1 @f32_fcsubnormal_fczero_invalid_constant1(float %a) {
+; CHECK-LABEL: define i1 @f32_fcsubnormal_fczero_invalid_constant1(
+; CHECK-SAME: float [[A:%.*]]) {
+; CHECK-NEXT:    [[I32:%.*]] = bitcast float [[A]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[I32]], 2139095039
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %i32 = bitcast float %a to i32
+  %and = and i32 %i32, 2139095039
+  %cmp = icmp eq i32 %and, 0
+  ret i1 %cmp
+}
+
+define i1 @f32_fcsubnormal_fczero_invalid_constant2(float %a) {
+; CHECK-LABEL: define i1 @f32_fcsubnormal_fczero_invalid_constant2(
+; CHECK-SAME: float [[A:%.*]]) {
+; CHECK-NEXT:    [[I32:%.*]] = bitcast float [[A]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[I32]], 2139095040
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 2130706432
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %i32 = bitcast float %a to i32
+  %and = and i32 %i32, 2139095040
+  %cmp = icmp eq i32 %and, 2130706432
+  ret i1 %cmp
+}
+
+define i1 @ppc128_fcsubnormal_fczero(ppc_fp128 %a) {
+; CHECK-LABEL: define i1 @ppc128_fcsubnormal_fczero(
+; CHECK-SAME: ppc_fp128 [[A:%.*]]) {
+; CHECK-NEXT:    [[I128:%.*]] = bitcast ppc_fp128 [[A]] to i128
+; CHECK-NEXT:    [[AND:%.*]] = and i128 [[I128]], 170058106710732674489630815774616584192
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i128 [[AND]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %i128 = bitcast ppc_fp128 %a to i128
+  %and = and i128 %i128, 170058106710732674489630815774616584192
+  %cmp = icmp eq i128 %and, 0
+  ret i1 %cmp
+}
+
+define i1 @f32_fcsubnormal_fczero_multiuse1(float %a) {
+; CHECK-LABEL: define i1 @f32_fcsubnormal_fczero_multiuse1(
+; CHECK-SAME: float [[A:%.*]]) {
+; CHECK-NEXT:    [[I32:%.*]] = bitcast float [[A]] to i32
+; CHECK-NEXT:    call void @usei32(i32 [[I32]])
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[I32]], 2139095040
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %i32 = bitcast float %a to i32
+  call void @usei32(i32 %i32)
+  %and = and i32 %i32, 2139095040
+  %cmp = icmp eq i32 %and, 0
+  ret i1 %cmp
+}
+
+define i1 @f32_fcsubnormal_fczero_multiuse2(float %a) {
+; CHECK-LABEL: define i1 @f32_fcsubnormal_fczero_multiuse2(
+; CHECK-SAME: float [[A:%.*]]) {
+; CHECK-NEXT:    [[I32:%.*]] = bitcast float [[A]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[I32]], 2139095040
+; CHECK-NEXT:    call void @usei32(i32 [[AND]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %i32 = bitcast float %a to i32
+  %and = and i32 %i32, 2139095040
+  call void @usei32(i32 %and)
+  %cmp = icmp eq i32 %and, 0
   ret i1 %cmp
 }
 
@@ -748,7 +884,7 @@ define i1 @isnan_idiom_wrong_pred2(double %x) {
 ; CHECK-LABEL: define i1 @isnan_idiom_wrong_pred2(
 ; CHECK-SAME: double [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[X]])
-; CHECK-NEXT:    [[RET:%.*]] = fcmp oeq double [[TMP1]], 0x7FF0000000000000
+; CHECK-NEXT:    [[RET:%.*]] = fcmp oeq double [[TMP1]], +inf
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %bits = bitcast double %x to i64
@@ -877,6 +1013,215 @@ define i1 @isnan_idiom_ppc_fp128(ppc_fp128 %x) {
   ret i1 %ret
 }
 
+define i1 @fpclass_test_normal(float %num) {
+; CHECK-LABEL: define i1 @fpclass_test_normal(
+; CHECK-SAME: float [[NUM:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NUM]], /* (norm) */ i32 264)
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %cast = bitcast float %num to i32
+  %masked = and i32 %cast, 2139095040
+  %test1 = icmp ne i32 %masked, 2139095040
+  %test2 = icmp ne i32 %masked, 0
+  %res = and i1 %test1, %test2
+  ret i1 %res
+}
+
+define i1 @fpclass_test_normal_half(half %num) {
+; CHECK-LABEL: define i1 @fpclass_test_normal_half(
+; CHECK-SAME: half [[NUM:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call i1 @llvm.is.fpclass.f16(half [[NUM]], /* (norm) */ i32 264)
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %cast = bitcast half %num to i16
+  %masked = and i16 %cast, 31744
+  %test1 = icmp ne i16 %masked, 31744
+  %test2 = icmp ne i16 %masked, 0
+  %res = and i1 %test1, %test2
+  ret i1 %res
+}
+
+define <2 x i1> @fpclass_test_normal_half_vec(<2 x half> %num) {
+; CHECK-LABEL: define <2 x i1> @fpclass_test_normal_half_vec(
+; CHECK-SAME: <2 x half> [[NUM:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f16(<2 x half> [[NUM]], /* (norm) */ i32 264)
+; CHECK-NEXT:    ret <2 x i1> [[RES]]
+;
+  %cast = bitcast <2 x half> %num to <2 x i16>
+  %masked = and <2 x i16> %cast, splat(i16 31744)
+  %test1 = icmp ne <2 x i16> %masked, splat(i16 31744)
+  %test2 = icmp ne <2 x i16> %masked, zeroinitializer
+  %res = and <2 x i1> %test1, %test2
+  ret <2 x i1> %res
+}
+
+define i1 @fpclass_test_not_normal(float %num) {
+; CHECK-LABEL: define i1 @fpclass_test_not_normal(
+; CHECK-SAME: float [[NUM:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NUM]], /* (nan inf zero sub) */ i32 759)
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %cast = bitcast float %num to i32
+  %masked = and i32 %cast, 2139095040
+  %test1 = icmp eq i32 %masked, 2139095040
+  %test2 = icmp eq i32 %masked, 0
+  %res = or i1 %test1, %test2
+  ret i1 %res
+}
+
+define <2 x i1> @fpclass_test_not_normal_vec(<2 x float> %num) {
+; CHECK-LABEL: define <2 x i1> @fpclass_test_not_normal_vec(
+; CHECK-SAME: <2 x float> [[NUM:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[NUM]], /* (nan inf zero sub) */ i32 759)
+; CHECK-NEXT:    ret <2 x i1> [[RES]]
+;
+  %cast = bitcast <2 x float> %num to <2 x i32>
+  %masked = and <2 x i32> %cast, splat(i32 2139095040)
+  %test1 = icmp eq <2 x i32> %masked, splat(i32 2139095040)
+  %test2 = icmp eq <2 x i32> %masked, zeroinitializer
+  %res = or <2 x i1> %test1, %test2
+  ret <2 x i1> %res
+}
+
+define i1 @fpclass_test_normal_commuted(float %num) {
+; CHECK-LABEL: define i1 @fpclass_test_normal_commuted(
+; CHECK-SAME: float [[NUM:%.*]]) {
+; CHECK-NEXT:    [[RES:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NUM]], /* (norm) */ i32 264)
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %cast = bitcast float %num to i32
+  %masked = and i32 %cast, 2139095040
+  %test1 = icmp ne i32 %masked, 2139095040
+  %test2 = icmp ne i32 %masked, 0
+  %res = and i1 %test2, %test1
+  ret i1 %res
+}
+
+; Negative tests
+
+define i1 @fpclass_test_normal_fp128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @fpclass_test_normal_fp128(
+; CHECK-SAME: ppc_fp128 [[X:%.*]]) {
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast ppc_fp128 [[X]] to i128
+; CHECK-NEXT:    [[MASKED:%.*]] = and i128 [[BITS]], 170058106710732674489630815774616584192
+; CHECK-NEXT:    [[TEST1:%.*]] = icmp ne i128 [[MASKED]], 170058106710732674489630815774616584192
+; CHECK-NEXT:    [[TEST2:%.*]] = icmp ne i128 [[MASKED]], 0
+; CHECK-NEXT:    [[RES:%.*]] = and i1 [[TEST2]], [[TEST1]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %bits = bitcast ppc_fp128 %x to i128
+  %masked = and i128 %bits, 170058106710732674489630815774616584192
+  %test1 = icmp ne i128 %masked, 170058106710732674489630815774616584192
+  %test2 = icmp ne i128 %masked, 0
+  %res = and i1 %test2, %test1
+  ret i1 %res
+}
+
+define i1 @fpclass_test_normal_mismatch_pred(float %num) {
+; CHECK-LABEL: define i1 @fpclass_test_normal_mismatch_pred(
+; CHECK-SAME: float [[NUM:%.*]]) {
+; CHECK-NEXT:    [[TEST2:%.*]] = call i1 @llvm.is.fpclass.f32(float [[NUM]], /* (zero sub) */ i32 240)
+; CHECK-NEXT:    ret i1 [[TEST2]]
+;
+  %cast = bitcast float %num to i32
+  %masked = and i32 %cast, 2139095040
+  %test1 = icmp ne i32 %masked, 2139095040
+  %test2 = icmp eq i32 %masked, 0
+  %res = and i1 %test1, %test2
+  ret i1 %res
+}
+
+define i1 @fpclass_test_normal_no_implicit_fp(float %num) #0 {
+; CHECK-LABEL: define i1 @fpclass_test_normal_no_implicit_fp(
+; CHECK-SAME: float [[NUM:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast float [[NUM]] to i32
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[CAST]], 2139095040
+; CHECK-NEXT:    [[TEST1:%.*]] = icmp ne i32 [[MASKED]], 2139095040
+; CHECK-NEXT:    [[TEST2:%.*]] = icmp ne i32 [[MASKED]], 0
+; CHECK-NEXT:    [[RES:%.*]] = and i1 [[TEST1]], [[TEST2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %cast = bitcast float %num to i32
+  %masked = and i32 %cast, 2139095040
+  %test1 = icmp ne i32 %masked, 2139095040
+  %test2 = icmp ne i32 %masked, 0
+  %res = and i1 %test1, %test2
+  ret i1 %res
+}
+
+define i1 @fpclass_test_normal_invalid_constant1(float %num) {
+; CHECK-LABEL: define i1 @fpclass_test_normal_invalid_constant1(
+; CHECK-SAME: float [[NUM:%.*]]) {
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast float [[NUM]] to i32
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[CAST]], 2139095039
+; CHECK-NEXT:    [[TEST1:%.*]] = icmp ne i32 [[MASKED]], 2139095039
+; CHECK-NEXT:    [[TEST2:%.*]] = icmp ne i32 [[MASKED]], 0
+; CHECK-NEXT:    [[RES:%.*]] = and i1 [[TEST1]], [[TEST2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %cast = bitcast float %num to i32
+  %masked = and i32 %cast, 2139095039
+  %test1 = icmp ne i32 %masked, 2139095039
+  %test2 = icmp ne i32 %masked, 0
+  %res = and i1 %test1, %test2
+  ret i1 %res
+}
+
+define i1 @fpclass_test_normal_invalid_constant2(float %num) {
+; CHECK-LABEL: define i1 @fpclass_test_normal_invalid_constant2(
+; CHECK-SAME: float [[NUM:%.*]]) {
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast float [[NUM]] to i32
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[CAST]], 2139095040
+; CHECK-NEXT:    [[TEST1:%.*]] = icmp ne i32 [[MASKED]], 2130706432
+; CHECK-NEXT:    [[TEST2:%.*]] = icmp ne i32 [[MASKED]], 0
+; CHECK-NEXT:    [[RES:%.*]] = and i1 [[TEST1]], [[TEST2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %cast = bitcast float %num to i32
+  %masked = and i32 %cast, 2139095040
+  %test1 = icmp ne i32 %masked, 2130706432
+  %test2 = icmp ne i32 %masked, 0
+  %res = and i1 %test1, %test2
+  ret i1 %res
+}
+
+define i1 @fpclass_test_normal_invalid_constant3(float %num) {
+; CHECK-LABEL: define i1 @fpclass_test_normal_invalid_constant3(
+; CHECK-SAME: float [[NUM:%.*]]) {
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast float [[NUM]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[CAST]], 2130706432
+; CHECK-NEXT:    [[RES:%.*]] = icmp ne i32 [[TMP1]], 2130706432
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %cast = bitcast float %num to i32
+  %masked = and i32 %cast, 2139095040
+  %test1 = icmp ne i32 %masked, 2139095040
+  %test2 = icmp ne i32 %masked, 2130706432
+  %res = and i1 %test1, %test2
+  ret i1 %res
+}
+
+define i1 @fpclass_test_normal_multiuse(float %num) {
+; CHECK-LABEL: define i1 @fpclass_test_normal_multiuse(
+; CHECK-SAME: float [[NUM:%.*]]) {
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast float [[NUM]] to i32
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[CAST]], 2139095040
+; CHECK-NEXT:    [[TEST1:%.*]] = icmp ne i32 [[MASKED]], 2139095040
+; CHECK-NEXT:    [[TEST2:%.*]] = icmp ne i32 [[MASKED]], 0
+; CHECK-NEXT:    call void @usei1(i1 [[TEST1]])
+; CHECK-NEXT:    [[RES:%.*]] = and i1 [[TEST1]], [[TEST2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %cast = bitcast float %num to i32
+  %masked = and i32 %cast, 2139095040
+  %test1 = icmp ne i32 %masked, 2139095040
+  %test2 = icmp ne i32 %masked, 0
+  call void @usei1(i1 %test1)
+  %res = and i1 %test1, %test2
+  ret i1 %res
+}
+
 declare void @usei32(i32)
+declare void @usei1(i1)
 
 attributes #0 = { noimplicitfloat }

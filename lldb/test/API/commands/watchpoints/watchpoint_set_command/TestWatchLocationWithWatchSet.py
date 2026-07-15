@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportThreads()
 class WatchLocationUsingWatchpointSetTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -33,7 +34,7 @@ class WatchLocationUsingWatchpointSetTestCase(TestBase):
         # Build dictionary to have unique executable names for each test
         # method.
 
-    @skipIf(oslist=["linux"], archs=["aarch64", "arm"], bugnumber="llvm.org/pr26031")
+    @skipIf(oslist=["linux"], archs=["aarch64", "arm$"], bugnumber="llvm.org/pr26031")
     @skipIfWindows  # This test is flaky on Windows
     def test_watchlocation_using_watchpoint_set(self):
         """Test watching a location with 'watchpoint set expression -w write -s size' option."""

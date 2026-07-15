@@ -4,7 +4,6 @@ include "mlir/IR/OpBase.td"
 
 def TestDialect : Dialect {
   let name = "test";
-  let usePropertiesForAttributes = 0;
 }
 class TestFormat_Op<string fmt, list<Trait> traits = []>
     : Op<TestDialect, "format_op", traits> {
@@ -17,6 +16,7 @@ class TestFormat_Op<string fmt, list<Trait> traits = []>
 
 //===----------------------------------------------------------------------===//
 // custom
+//===----------------------------------------------------------------------===//
 
 // CHECK-LABEL: CustomStringLiteralA::parse
 // CHECK: parseFoo({{.*}}, parser.getBuilder().getI1Type())
@@ -70,7 +70,7 @@ def OptionalGroupA : TestFormat_Op<[{
 // CHECK-LABEL: OptionalGroupB::parse
 // CHECK: if (::mlir::succeeded(parser.parseOptionalKeyword("foo")))
 // CHECK-NEXT: else
-// CHECK-NEXT: result.addAttribute("a", parser.getBuilder().getUnitAttr())
+// CHECK-NEXT: result.getOrAddProperties<OptionalGroupB::Properties>().a = parser.getBuilder().getUnitAttr()
 // CHECK: parser.parseKeyword("bar")
 // CHECK-LABEL: OptionalGroupB::print
 // CHECK: if (!(getAAttr() && getAAttr() != ((false) ? ::mlir::OpBuilder((*this)->getContext()).getUnitAttr() : nullptr)))
@@ -109,3 +109,23 @@ def OptionalGroupC : TestFormat_Op<[{
 def OptionalGroupD : TestFormat_Op<[{
   (custom<Custom>($a, $b)^)? attr-dict
 }], [AttrSizedOperandSegments]>, Arguments<(ins Optional<I64>:$a, Optional<I64>:$b)>;
+
+// CHECK-LABEL: RegionRef::parse
+// CHECK:   auto odsResult = parseCustom(parser, *bodyRegion);
+// CHECK-LABEL: RegionRef::print
+// CHECK:   printCustom(_odsPrinter, *this, getBody());
+def RegionRef : TestFormat_Op<[{
+  $body custom<Custom>(ref($body)) attr-dict
+}]> {
+  let regions = (region AnyRegion:$body);
+}
+
+// CHECK-LABEL: SuccessorRef::parse
+// CHECK:   auto odsResult = parseCustom(parser, successorSuccessor);
+// CHECK-LABEL: SuccessorRef::print
+// CHECK:   printCustom(_odsPrinter, *this, getSuccessor());
+def SuccessorRef : TestFormat_Op<[{
+  $successor custom<Custom>(ref($successor)) attr-dict
+}]> {
+  let successors = (successor AnySuccessor:$successor);
+}

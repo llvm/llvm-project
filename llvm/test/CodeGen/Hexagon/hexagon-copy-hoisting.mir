@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass hexagon-move-phicopy -o - %s | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass hexagon-move-phicopy -o - %s | FileCheck %s
 
 # CHECK-COUNT-1: %4:intregs = COPY %1
 

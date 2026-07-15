@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_PARTITION_COPY_H
-#define _LIBCPP___ALGORITHM_PARTITION_COPY_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_PARTITION_COPY_H
+#define _LIBCPP___CXX03___ALGORITHM_PARTITION_COPY_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__iterator/iterator_traits.h>
@@ -20,7 +20,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator, class _OutputIterator1, class _OutputIterator2, class _Predicate>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_OutputIterator1, _OutputIterator2> partition_copy(
+_LIBCPP_HIDE_FROM_ABI pair<_OutputIterator1, _OutputIterator2> partition_copy(
     _InputIterator __first,
     _InputIterator __last,
     _OutputIterator1 __out_true,
@@ -40,4 +40,4 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_OutputIterator1, _Outp
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_PARTITION_COPY_H
+#endif // _LIBCPP___CXX03___ALGORITHM_PARTITION_COPY_H

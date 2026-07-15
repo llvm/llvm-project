@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c99 %s -emit-llvm -o - | \
+// RUN: %clang_cc1 -Wno-error=return-type -std=c99 %s -emit-llvm -o - | \
 // RUN:    opt -O3 -disable-output
 // PR580
 

@@ -35,6 +35,11 @@ static cl::opt<int, true>
                      cl::Hidden, cl::location(polly::PollyNumThreads),
                      cl::init(0), cl::cat(PollyCategory));
 
+cl::opt<bool> PollyVectorizeMetadata(
+    "polly-annotate-metadata-vectorize",
+    cl::desc("Append vectorize enable/disable metadata from polly"),
+    cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+
 static cl::opt<OMPGeneralSchedulingType, true> XPollyScheduling(
     "polly-scheduling",
     cl::desc("Scheduling type of parallel OpenMP for loops"),
@@ -85,7 +90,8 @@ Value *polly::createLoop(Value *LB, Value *UB, Value *Stride,
                          DominatorTree &DT, BasicBlock *&ExitBB,
                          ICmpInst::Predicate Predicate,
                          ScopAnnotator *Annotator, bool Parallel, bool UseGuard,
-                         bool LoopVectDisabled) {
+                         bool LoopVectDisabled,
+                         bool SkipVectorizeEnableMetadata) {
   Function *F = Builder.GetInsertBlock()->getParent();
   LLVMContext &Context = F->getContext();
 
@@ -123,7 +129,7 @@ Value *polly::createLoop(Value *LB, Value *UB, Value *Stride,
     Annotator->pushLoop(NewLoop, Parallel);
 
   // ExitBB
-  ExitBB = SplitBlock(BeforeBB, &*Builder.GetInsertPoint(), &DT, &LI);
+  ExitBB = SplitBlock(BeforeBB, Builder.GetInsertPoint(), &DT, &LI);
   ExitBB->setName("polly.loop_exit");
 
   // BeforeBB
@@ -158,9 +164,19 @@ Value *polly::createLoop(Value *LB, Value *UB, Value *Stride,
       Builder.CreateICmp(Predicate, IncrementedIV, UB, "polly.loop_cond");
 
   // Create the loop latch and annotate it as such.
-  BranchInst *B = Builder.CreateCondBr(LoopCondition, HeaderBB, ExitBB);
-  if (Annotator)
-    Annotator->annotateLoopLatch(B, NewLoop, Parallel, LoopVectDisabled);
+  CondBrInst *B = Builder.CreateCondBr(LoopCondition, HeaderBB, ExitBB);
+
+  // Emit vectorize.enable=false only for explicit user disable
+  // (LoopVectDisabled). For dist=1 FP loops (SkipVectorizeEnableMetadata), omit
+  // the annotation and let the Loop Vectorizer decide.
+  if (Annotator) {
+    std::optional<bool> EnableVectorizeMetadata;
+    if (LoopVectDisabled)
+      EnableVectorizeMetadata = false;
+    else if (PollyVectorizeMetadata && !SkipVectorizeEnableMetadata)
+      EnableVectorizeMetadata = true;
+    Annotator->annotateLoopLatch(B, Parallel, EnableVectorizeMetadata);
+  }
 
   IV->addIncoming(IncrementedIV, HeaderBB);
   if (GuardBB)
@@ -169,7 +185,7 @@ Value *polly::createLoop(Value *LB, Value *UB, Value *Stride,
     DT.changeImmediateDominator(ExitBB, HeaderBB);
 
   // The loop body should be added here.
-  Builder.SetInsertPoint(HeaderBB->getFirstNonPHI());
+  Builder.SetInsertPoint(HeaderBB->getFirstNonPHIIt());
   return IV;
 }
 
@@ -184,7 +200,7 @@ Value *ParallelLoopGenerator::createParallelLoop(
   Function *SubFn;
   std::tie(IV, SubFn) = createSubFn(Stride, Struct, UsedValues, Map);
   *LoopBody = Builder.GetInsertPoint();
-  Builder.SetInsertPoint(&*BeforeLoop);
+  Builder.SetInsertPoint(BeforeLoop);
 
   // Add one as the upper bound provided by OpenMP is a < comparison
   // whereas the codegenForSequential function creates a <= comparison.

@@ -1,4 +1,4 @@
-# RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -run-pass=none -verify-machineinstrs %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -run-pass=none -verify-machineinstrs %s -filetype=null 2>&1 | FileCheck %s
 
 ---
 name:            noconvergent_invalid

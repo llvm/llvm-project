@@ -4,14 +4,13 @@
 define i64 @test() nounwind readnone {
 ; CHECK-LABEL: test(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    mov.u64 %rd1, 1;
-; CHECK-NEXT:    mov.u64 %rd2, 42;
-; CHECK-NEXT:    st.u64 [%rd1], %rd2;
-; CHECK-NEXT:    ld.global.u64 %rd3, [%rd1];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-NEXT:    mov.b64 %rd1, 1;
+; CHECK-NEXT:    st.b64 [%rd1], 42;
+; CHECK-NEXT:    ld.global.b64 %rd2, [%rd1];
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
   %addr0 = inttoptr i64 1 to ptr
   %addr1 = inttoptr i64 1 to ptr addrspace(1)

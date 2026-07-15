@@ -17,8 +17,8 @@ csrrsi t1, 999, 32 # CHECK: :[[@LINE]]:17: error: immediate must be an integer i
 csrrci x0, 43, -90 # CHECK: :[[@LINE]]:16: error: immediate must be an integer in the range [0, 31]
 
 ## simm12
-ori a0, a1, -2049 # CHECK: :[[@LINE]]:13: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo modifier or an integer in the range [-2048, 2047]
-andi ra, sp, 2048 # CHECK: :[[@LINE]]:14: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo modifier or an integer in the range [-2048, 2047]
+ori a0, a1, -2049 # CHECK: :[[@LINE]]:13: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
+andi ra, sp, 2048 # CHECK: :[[@LINE]]:14: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 
 ## uimm12
 csrrw a0, -1, a0 # CHECK: :[[@LINE]]:11: error: immediate must be an integer in the range [0, 4095]
@@ -38,9 +38,9 @@ bltu t0, t1, 13 # CHECK: :[[@LINE]]:14: error: immediate must be a multiple of 2
 bgeu t0, t1, -13 # CHECK: :[[@LINE]]:14: error: immediate must be a multiple of 2 bytes in the range [-4096, 4094]
 
 ## uimm20
-lui a0, -1 # CHECK: :[[@LINE]]:9: error: operand must be a symbol with %hi/%tprel_hi modifier or an integer in the range [0, 1048575]
-lui s0, 1048576 # CHECK: :[[@LINE]]:9: error: operand must be a symbol with %hi/%tprel_hi modifier or an integer in the range [0, 1048575]
-auipc zero, -0xf # CHECK: :[[@LINE]]:13: error: operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi modifier or an integer in the range [0, 1048575]
+lui a0, -1 # CHECK: :[[@LINE]]:9: error: operand must be a symbol with %hi/%tprel_hi specifier or an integer in the range [0, 1048575]
+lui s0, 1048576 # CHECK: :[[@LINE]]:9: error: operand must be a symbol with %hi/%tprel_hi specifier or an integer in the range [0, 1048575]
+auipc zero, -0xf # CHECK: :[[@LINE]]:13: error: operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi specifier or an integer in the range [0, 1048575]
 
 ## simm21_lsb0
 jal gp, -1048578 # CHECK: :[[@LINE]]:9: error: immediate must be a multiple of 2 bytes in the range [-1048576, 1048574]
@@ -67,11 +67,18 @@ csrrsi t1, 999, %pcrel_lo(4) # CHECK: :[[@LINE]]:17: error: immediate must be an
 csrrci x0, 43, %pcrel_lo(d) # CHECK: :[[@LINE]]:16: error: immediate must be an integer in the range [0, 31]
 
 ## simm12
-ori a0, a1, %hi(foo) # CHECK: :[[@LINE]]:13: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo modifier or an integer in the range [-2048, 2047]
-andi ra, sp, %pcrel_hi(123) # CHECK: :[[@LINE]]:14: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo modifier or an integer in the range [-2048, 2047]
-xori a2, a3, %hi(345) # CHECK: :[[@LINE]]:14: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo modifier or an integer in the range [-2048, 2047]
-add a1, a2, (a3) # CHECK: :[[@LINE]]:13: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo modifier or an integer in the range [-2048, 2047]
-add a1, a2, foo # CHECK: :[[@LINE]]:13: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo modifier or an integer in the range [-2048, 2047]
+ori a0, a1, %hi(foo) # CHECK: :[[@LINE]]:13: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
+andi ra, sp, %pcrel_hi(123) # CHECK: :[[@LINE]]:14: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
+xori a2, a3, %hi(345) # CHECK: :[[@LINE]]:14: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
+add a1, a2, (a3)
+# CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK: :[[@LINE-2]]:13: note: register must be a GPR
+# CHECK: :[[@LINE-3]]:13: note: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
+
+add a1, a2, foo
+# CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK: :[[@LINE-2]]:13: note: register must be a GPR
+# CHECK: :[[@LINE-3]]:13: note: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 
 ## uimm12
 csrrw a0, %lo(1), a0 # CHECK: :[[@LINE]]:11: error: immediate must be an integer in the range [0, 4095]
@@ -117,8 +124,8 @@ bltu t0, t1, %pcrel_lo(4) # CHECK: :[[@LINE]]:14: error: immediate must be a mul
 bgeu t0, t1, %pcrel_lo(d) # CHECK: :[[@LINE]]:14: error: immediate must be a multiple of 2 bytes in the range [-4096, 4094]
 
 ## uimm20
-lui a0, %lo(1) # CHECK: :[[@LINE]]:9: error: operand must be a symbol with %hi/%tprel_hi modifier or an integer in the range [0, 1048575]
-auipc a1, %lo(foo) # CHECK: :[[@LINE]]:11: error: operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi modifier or an integer in the range [0, 1048575]
+lui a0, %lo(1) # CHECK: :[[@LINE]]:9: error: operand must be a symbol with %hi/%tprel_hi specifier or an integer in the range [0, 1048575]
+auipc a1, %lo(foo) # CHECK: :[[@LINE]]:11: error: operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi specifier or an integer in the range [0, 1048575]
 
 ## simm21_lsb0
 jal gp, %lo(1) # CHECK: :[[@LINE]]:9: error: immediate must be a multiple of 2 bytes in the range [-1048576, 1048574]
@@ -133,72 +140,76 @@ jal gp, %pcrel_lo(d) # CHECK: :[[@LINE]]:9: error: immediate must be a multiple 
 # Bare symbol names when an operand modifier is required and unsupported
 # operand modifiers.
 
-lui a0, foo # CHECK: :[[@LINE]]:9: error: operand must be a symbol with %hi/%tprel_hi modifier or an integer in the range [0, 1048575]
-lui a0, %lo(foo) # CHECK: :[[@LINE]]:9: error: operand must be a symbol with %hi/%tprel_hi modifier or an integer in the range [0, 1048575]
-lui a0, %pcrel_lo(foo) # CHECK: :[[@LINE]]:9: error: operand must be a symbol with %hi/%tprel_hi modifier or an integer in the range [0, 1048575]
-lui a0, %pcrel_hi(foo) # CHECK: :[[@LINE]]:9: error: operand must be a symbol with %hi/%tprel_hi modifier or an integer in the range [0, 1048575]
+lui a0, foo # CHECK: :[[@LINE]]:9: error: operand must be a symbol with %hi/%tprel_hi specifier or an integer in the range [0, 1048575]
+lui a0, %lo(foo) # CHECK: :[[@LINE]]:9: error: operand must be a symbol with %hi/%tprel_hi specifier or an integer in the range [0, 1048575]
+lui a0, %pcrel_lo(foo) # CHECK: :[[@LINE]]:9: error: operand must be a symbol with %hi/%tprel_hi specifier or an integer in the range [0, 1048575]
+lui a0, %pcrel_hi(foo) # CHECK: :[[@LINE]]:9: error: operand must be a symbol with %hi/%tprel_hi specifier or an integer in the range [0, 1048575]
 
-auipc a0, foo # CHECK: :[[@LINE]]:11: error: operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi modifier or an integer in the range [0, 1048575]
-auipc a0, %lo(foo) # CHECK: :[[@LINE]]:11: error: operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi modifier or an integer in the range [0, 1048575]
-auipc a0, %hi(foo) # CHECK: :[[@LINE]]:11: error: operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi modifier or an integer in the range [0, 1048575]
-auipc a0, %pcrel_lo(foo) # CHECK: :[[@LINE]]:11: error: operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi modifier or an integer in the range [0, 1048575]
+auipc a0, foo # CHECK: :[[@LINE]]:11: error: operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi specifier or an integer in the range [0, 1048575]
+auipc a0, %lo(foo) # CHECK: :[[@LINE]]:11: error: operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi specifier or an integer in the range [0, 1048575]
+auipc a0, %hi(foo) # CHECK: :[[@LINE]]:11: error: operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi specifier or an integer in the range [0, 1048575]
+auipc a0, %pcrel_lo(foo) # CHECK: :[[@LINE]]:11: error: operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi specifier or an integer in the range [0, 1048575]
 
 # TP-relative symbol names require a %tprel_add modifier.
-add a0, a0, tp, zero # CHECK: :[[@LINE]]:17: error: expected '%' for operand modifier
-add a0, a0, tp, %hi(foo) # CHECK: :[[@LINE]]:17: error: operand must be a symbol with %tprel_add modifier
-add a0, tp, a0, %tprel_add(foo) # CHECK: :[[@LINE]]:13: error: the second input operand must be tp/x4 when using %tprel_add modifier
+add a0, a0, tp, zero # CHECK: :[[@LINE]]:17: error: expected '%' relocation specifier
+add a0, a0, tp, %hi(foo)
+# CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK: :[[@LINE-2]]:17: note: unexpected extra operand for instruction
+# CHECK: :[[@LINE-3]]:17: note: operand must be a symbol with %tprel_add specifier
+
+add a0, tp, a0, %tprel_add(foo) # CHECK: :[[@LINE]]:13: error: the second input operand must be tp/x4 when using %tprel_add specifier
 
 # Unrecognized operand modifier
-addi t0, sp, %modifer(255) # CHECK: :[[@LINE]]:15: error: unrecognized operand modifier
+addi t0, sp, %modifer(255) # CHECK: :[[@LINE]]:15: error: invalid relocation specifier
+addi t0, sp, %pltpcrel(255) # CHECK: :[[@LINE]]:14: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 
 # Use of operand modifier on register name
-addi t1, %lo(t2), 1 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
+addi t1, %lo(t2), 1 # CHECK: :[[@LINE]]:10: error: register must be a GPR
 
 # Invalid mnemonics
 subs t0, t2, t1 # CHECK: :[[@LINE]]:1: error: unrecognized instruction mnemonic
 nandi t0, zero, 0 # CHECK: :[[@LINE]]:1: error: unrecognized instruction mnemonic
 
 # Invalid register names
-addi foo, sp, 10 # CHECK: :[[@LINE]]:6: error: invalid operand for instruction
-slti a10, a2, 0x20 # CHECK: :[[@LINE]]:6: error: invalid operand for instruction
-slt x32, s0, s0 # CHECK: :[[@LINE]]:5: error: invalid operand for instruction
+addi foo, sp, 10 # CHECK: :[[@LINE]]:6: error: register must be a GPR
+slti a10, a2, 0x20 # CHECK: :[[@LINE]]:6: error: register must be a GPR
+slt x32, s0, s0 # CHECK: :[[@LINE]]:5: error: register must be a GPR
 
 # RV64I mnemonics
 addiw a0, sp, 100 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set{{$}}
 sraw t0, s2, zero # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set{{$}}
 
 # Invalid operand types
-xori sp, 22, 220 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
-sub t0, t2, 1 # CHECK: :[[@LINE]]:13: error: invalid operand for instruction
+xori sp, 22, 220 # CHECK: :[[@LINE]]:10: error: register must be a GPR
+sub t0, t2, 1 # CHECK: :[[@LINE]]:13: error: register must be a GPR
 
 # Too many operands
-sltiu s2, s3, 0x50, 0x60 # CHECK: :[[@LINE]]:21: error: invalid operand for instruction
+sltiu s2, s3, 0x50, 0x60 # CHECK: :[[@LINE]]:21: error: unexpected extra operand for instruction
 
 # Memory operand not formatted correctly
-lw a4, a5, 111 # CHECK: :[[@LINE]]:12: error: invalid operand for instruction
+lw a4, a5, 111 # CHECK: :[[@LINE]]:12: error: unexpected extra operand for instruction
 
 # Too few operands
-ori a0, a1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
-xor s2, s2 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
+ori a0, a1 # CHECK: :[[@LINE]]:11: error: too few operands for instruction
+xor s2, s2 # CHECK: :[[@LINE]]:11: error: too few operands for instruction
 
 # Instruction not in the base ISA
 div a4, ra, s0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'M' (Integer Multiplication and Division){{$}}
-amomaxu.w s5, s4, (s3) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'A' (Atomic Instructions) or 'Zaamo' (Atomic Memory Operations){{$}}
-lr.w t0, (t1) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'A' (Atomic Instructions) or 'Zalrsc' (Load-Reserved/Store-Conditional){{$}}
+amomaxu.w s5, s4, (s3) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zaamo' (Atomic Memory Operations){{$}}
+lr.w t0, (t1) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zalrsc' (Load-Reserved/Store-Conditional){{$}}
 fadd.s ft0, ft1, ft2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'F' (Single-Precision Floating-Point){{$}}
 fadd.h ft0, ft1, ft2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zfh' (Half-Precision Floating-Point){{$}}
 fadd.s a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zfinx' (Float in Integer){{$}}
 fadd.d a0, a2, a4 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zdinx' (Double in Integer){{$}}
 fadd.h a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zhinx' (Half Float in Integer){{$}}
-flh ft0, (a0) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zfh' (Half-Precision Floating-Point) or 'Zfhmin' (Half-Precision Floating-Point Minimal){{$}}
+flh ft0, (a0) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zfh' (Half-Precision Floating-Point) or 'Zfhmin' (Half-Precision Floating-Point Minimal) or 'Zfbfmin' (Scalar BF16 Converts){{$}}
 sh1add a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zba' (Address Generation Instructions){{$}}
 clz a0, a1 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zbb' (Basic Bit-Manipulation){{$}}
 clmul a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zbc' (Carry-Less Multiplication) or 'Zbkc' (Carry-less multiply instructions for Cryptography){{$}}
 bset a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zbs' (Single-Bit Instructions){{$}}
-pause # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zihintpause' (Pause Hint){{$}}
 
 # Using floating point registers when integer registers are expected
-addi a2, ft0, 24 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
+addi a2, ft0, 24 # CHECK: :[[@LINE]]:10: error: register must be a GPR
 
 # fence.tso accepts no operands
-fence.tso rw, rw # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
+fence.tso rw, rw # CHECK: :[[@LINE]]:11: error: unexpected extra operand for instruction

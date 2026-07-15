@@ -6,12 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONIMPL_H
-#define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONIMPL_H
-
-#include "lldb/Host/Config.h"
-
-#if LLDB_ENABLE_PYTHON
+#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONIMPL_H
+#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONIMPL_H
 
 #include "lldb-python.h"
 
@@ -81,17 +77,6 @@ public:
   CreateStructuredDataFromScriptObject(ScriptObject obj) override;
 
   StructuredData::GenericSP
-  CreateScriptedBreakpointResolver(const char *class_name,
-                                   const StructuredDataImpl &args_data,
-                                   lldb::BreakpointSP &bkpt_sp) override;
-  bool ScriptedBreakpointResolverSearchCallback(
-      StructuredData::GenericSP implementor_sp,
-      SymbolContext *sym_ctx) override;
-
-  lldb::SearchDepth ScriptedBreakpointResolverSearchDepth(
-      StructuredData::GenericSP implementor_sp) override;
-
-  StructuredData::GenericSP
   CreateFrameRecognizer(const char *class_name) override;
 
   lldb::ValueObjectListSP
@@ -103,9 +88,17 @@ public:
 
   lldb::ScriptedProcessInterfaceUP CreateScriptedProcessInterface() override;
 
-  lldb::ScriptedStopHookInterfaceSP CreateScriptedStopHookInterface() override;
+  lldb::ScriptedHookInterfaceSP CreateScriptedHookInterface() override;
+
+  lldb::ScriptedBreakpointInterfaceSP
+  CreateScriptedBreakpointInterface() override;
 
   lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() override;
+
+  lldb::ScriptedFrameInterfaceSP CreateScriptedFrameInterface() override;
+
+  lldb::ScriptedFrameProviderInterfaceSP
+  CreateScriptedFrameProviderInterface() override;
 
   lldb::ScriptedThreadPlanInterfaceSP
   CreateScriptedThreadPlanInterface() override;
@@ -128,8 +121,9 @@ public:
   GetChildAtIndex(const StructuredData::ObjectSP &implementor,
                   uint32_t idx) override;
 
-  int GetIndexOfChildWithName(const StructuredData::ObjectSP &implementor,
-                              const char *child_name) override;
+  llvm::Expected<uint32_t>
+  GetIndexOfChildWithName(const StructuredData::ObjectSP &implementor,
+                          const char *child_name) override;
 
   bool UpdateSynthProviderInstance(
       const StructuredData::ObjectSP &implementor) override;
@@ -204,7 +198,7 @@ public:
 
   bool GetLongHelpForCommandObject(StructuredData::GenericSP cmd_obj_sp,
                                    std::string &dest) override;
-                                   
+
   StructuredData::ObjectSP
   GetOptionsForCommandObject(StructuredData::GenericSP cmd_obj_sp) override;
 
@@ -213,7 +207,7 @@ public:
 
   bool SetOptionValueForCommandObject(StructuredData::GenericSP cmd_obj_sp,
                                       ExecutionContext *exe_ctx,
-                                      llvm::StringRef long_option, 
+                                      llvm::StringRef long_option,
                                       llvm::StringRef value) override;
 
   void OptionParsingStartedForCommandObject(
@@ -245,7 +239,8 @@ public:
                            const LoadScriptOptions &options,
                            lldb_private::Status &error,
                            StructuredData::ObjectSP *module_sp = nullptr,
-                           FileSpec extra_search_dir = {}) override;
+                           FileSpec extra_search_dir = {},
+                           lldb::TargetSP loaded_into_target_sp = {}) override;
 
   bool IsReservedWord(const char *word) override;
 
@@ -276,8 +271,7 @@ public:
   Status SetBreakpointCommandCallback(BreakpointOptions &bp_options,
                                       const char *command_body_text,
                                       StructuredData::ObjectSP extra_args_sp,
-                                      bool uses_extra_args,
-                                      bool is_callback);
+                                      bool uses_extra_args, bool is_callback);
 
   /// Set a one-liner as the callback for the watchpoint.
   void SetWatchpointCommandCallback(WatchpointOptions *wp_options,
@@ -310,7 +304,12 @@ public:
       AcquireLock = 0x0001,
       InitSession = 0x0002,
       InitGlobals = 0x0004,
-      NoSTDIN = 0x0008
+      NoSTDIN = 0x0008,
+      // Keep sys.stdout/stderr on the real terminal instead of routing them
+      // through the output-lock pipe (see EnterSession). Set by the interactive
+      // interpreter, whose input() needs both the real stdin and stdout for
+      // readline-based line editing and echo.
+      NoOutputRedirect = 0x0010
     };
 
     enum OnLeave {
@@ -407,12 +406,31 @@ public:
 
   bool GetEmbeddedInterpreterModuleObjects();
 
+  /// Point sys.\p py_name at \p file. When \p serialize_terminal_output is true
+  /// and \p file is the debugger's own terminal, the output is routed through a
+  /// lock-synchronized pipe instead (see RedirectTerminalHandleThroughLock) so
+  /// it cannot race the statusline redraw.
   bool SetStdHandle(lldb::FileSP file, const char *py_name,
-                    python::PythonObject &save_file, const char *mode);
+                    python::PythonObject &save_file, const char *mode,
+                    bool serialize_terminal_output);
+
+  /// Pipe-backed sys.stdout/stderr whose writes are serialized against the
+  /// statusline redraw. Defined and documented in the implementation file.
+  class SessionIORedirect;
+
+  /// If \p file is the debugger's own terminal, point sys.\p py_name at a
+  /// pipe-backed file whose writes are serialized through the output lock (see
+  /// SessionIORedirect) and return true. Return false to let SetStdHandle wrap
+  /// \p file normally.
+  bool RedirectTerminalHandleThroughLock(const char *py_name,
+                                         python::PythonObject &save_file,
+                                         const char *mode, File &file);
 
   python::PythonObject m_saved_stdin;
   python::PythonObject m_saved_stdout;
   python::PythonObject m_saved_stderr;
+  std::unique_ptr<SessionIORedirect> m_stdout_redirect;
+  std::unique_ptr<SessionIORedirect> m_stderr_redirect;
   python::PythonModule m_main_module;
   python::PythonDictionary m_session_dict;
   python::PythonDictionary m_sys_module_dict;
@@ -461,7 +479,8 @@ public:
             m_python,
             ScriptInterpreterPythonImpl::Locker::AcquireLock |
                 ScriptInterpreterPythonImpl::Locker::InitSession |
-                ScriptInterpreterPythonImpl::Locker::InitGlobals,
+                ScriptInterpreterPythonImpl::Locker::InitGlobals |
+                ScriptInterpreterPythonImpl::Locker::NoOutputRedirect,
             ScriptInterpreterPythonImpl::Locker::FreeAcquiredLock |
                 ScriptInterpreterPythonImpl::Locker::TearDownSession);
 
@@ -481,7 +500,7 @@ public:
         StreamString run_string;
         run_string.Printf("run_python_interpreter (%s)",
                           m_python->GetDictionaryName());
-        PyRun_SimpleString(run_string.GetData());
+        python::RunSimpleString(run_string.GetData());
       }
     }
     SetIsDone(true);
@@ -499,5 +518,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_ENABLE_PYTHON
-#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONIMPL_H
+#endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONIMPL_H

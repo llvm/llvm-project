@@ -10,9 +10,9 @@
 #define _LIBCPP___PSTL_HANDLE_EXCEPTION_H
 
 #include <__config>
+#include <__new/exceptions.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <new> // __throw_bad_alloc
 #include <optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

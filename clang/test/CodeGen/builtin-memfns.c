@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple i386-pc-linux-gnu -emit-llvm < %s| FileCheck %s
+// RUN: %clang_cc1 -triple i386-pc-linux-gnu -emit-llvm -fexperimental-new-constant-interpreter < %s| FileCheck %s
 
 typedef __WCHAR_TYPE__ wchar_t;
 typedef __SIZE_TYPE__ size_t;
@@ -55,7 +56,7 @@ int test6(char *X) {
 
 // CHECK: @test7
 // PR12094
-int test7(int *p) {
+void test7(int *p) {
   struct snd_pcm_hw_params_t* hwparams;  // incomplete type.
   
   // CHECK: call void @llvm.memset{{.*}} align 4 {{.*}}256, i1 false)

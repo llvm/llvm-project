@@ -110,17 +110,14 @@ bool ThreadPlanStepInstruction::IsPlanStale() {
       SetPlanComplete();
     }
     return (thread.GetRegisterContext()->GetPC(0) != m_instruction_addr);
-  } else if (cur_frame_id < m_stack_id) {
+  } else if (cur_frame_id.IsYoungerThan(m_stack_id)) {
     // If the current frame is younger than the start frame and we are stepping
     // over, then we need to continue, but if we are doing just one step, we're
     // done.
     return !m_step_over;
   } else {
-    if (log) {
-      LLDB_LOGF(log,
-                "ThreadPlanStepInstruction::IsPlanStale - Current frame is "
-                "older than start frame, plan is stale.");
-    }
+    LLDB_LOGF(log, "ThreadPlanStepInstruction::IsPlanStale - Current frame is "
+                   "older than start frame, plan is stale.");
     return true;
   }
 }
@@ -140,7 +137,8 @@ bool ThreadPlanStepInstruction::ShouldStop(Event *event_ptr) {
 
     StackID cur_frame_zero_id = cur_frame_sp->GetStackID();
 
-    if (cur_frame_zero_id == m_stack_id || m_stack_id < cur_frame_zero_id) {
+    if (cur_frame_zero_id == m_stack_id ||
+        m_stack_id.IsYoungerThan(cur_frame_zero_id)) {
       if (thread.GetRegisterContext()->GetPC(0) != m_instruction_addr) {
         if (--m_iteration_count <= 0) {
           SetPlanComplete();
@@ -171,11 +169,8 @@ bool ThreadPlanStepInstruction::ShouldStop(Event *event_ptr) {
                 parent_frame_sp->GetConcreteFrameIndex() ==
                     cur_frame_sp->GetConcreteFrameIndex()) {
               SetPlanComplete();
-              if (log) {
-                LLDB_LOGF(log,
-                          "Frame we stepped into is inlined into the frame "
-                          "we were stepping from, stopping.");
-              }
+              LLDB_LOGF(log, "Frame we stepped into is inlined into the frame "
+                             "we were stepping from, stopping.");
               return true;
             }
           }

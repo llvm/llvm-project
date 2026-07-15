@@ -1,6 +1,6 @@
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
 
-module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
+module {
   func.func @_QQmain() attributes {fir.bindc_name = "mn"} {
     %c7 = arith.constant 7 : index
     %c8 = arith.constant 8 : index
@@ -29,8 +29,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
 #loc5 = loc("test.f90":8:11)
 
 
-// CHECK-DAG: #[[INT:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer", sizeInBits = 32, encoding = DW_ATE_signed>
-// CHECK-DAG: #[[REAL:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "real", sizeInBits = 32, encoding = DW_ATE_float>
+// CHECK-DAG: #[[INT:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer(kind=4)", sizeInBits = 32, encoding = DW_ATE_signed>
+// CHECK-DAG: #[[REAL:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "real(kind=4)", sizeInBits = 32, encoding = DW_ATE_float>
 // CHECK-DAG: #[[D1TY:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type{{.*}}baseType = #[[INT]], elements = #llvm.di_subrange<count = 3 : i64>>
 // CHECK-DAG: #[[D2TY:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type{{.*}}baseType = #[[INT]], elements = #llvm.di_subrange<count = 2 : i64>, #llvm.di_subrange<count = 5 : i64>>
 // CHECK-DAG: #[[D3TY:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type{{.*}}baseType = #[[REAL]], elements = #llvm.di_subrange<count = 6 : i64>, #llvm.di_subrange<count = 8 : i64>, #llvm.di_subrange<count = 7 : i64>>

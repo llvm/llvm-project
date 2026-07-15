@@ -12,19 +12,24 @@
 #include "src/fcntl/open.h"
 #include "src/unistd/close.h"
 #include "src/unistd/pathconf.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
+using LlvmLibcPathconfTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-TEST(LlvmLibcPipeTest, SmokeTest) {
+TEST_F(LlvmLibcPathconfTest, SmokeTest) {
   constexpr const char *FILENAME = "pathconf.test";
   auto TEST_FILE = libc_make_test_file_path(FILENAME);
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_GT(fd, 0);
+
   EXPECT_EQ(LIBC_NAMESPACE::pathconf(FILENAME, _PC_SYNC_IO), -1l);
   EXPECT_EQ(LIBC_NAMESPACE::pathconf(FILENAME, _PC_PATH_MAX),
             static_cast<long>(_POSIX_PATH_MAX));
-  LIBC_NAMESPACE::close(fd);
+  ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 }
 
 // TODO: Functionality tests

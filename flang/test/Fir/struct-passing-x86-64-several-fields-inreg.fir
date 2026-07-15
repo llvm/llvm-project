@@ -1,6 +1,5 @@
 // Test X86-64 passing ABI of struct in registers for the cases where the
 // struct has more than one field.
-// REQUIRES: x86-registered-target
 // RUN: fir-opt -target-rewrite="target=x86_64-unknown-linux-gnu" %s -o - | FileCheck %s
 
 

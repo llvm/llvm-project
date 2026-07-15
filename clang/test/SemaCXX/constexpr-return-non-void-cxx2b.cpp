@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -Wimplicit-fallthrough -verify %s
+// RUN: %clang_cc1 -Wno-error=return-type -std=c++23 -fsyntax-only -Wimplicit-fallthrough -Wconsumed -verify %s
 
 constexpr int f() { } // expected-warning {{non-void function does not return a value}}
 static_assert(__is_same(decltype([] constexpr -> int { }( )), int)); // expected-warning {{non-void lambda does not return a value}}
@@ -33,4 +33,11 @@ constinit bool l = j(); // expected-error {{variable does not have a constant in
                         // expected-note {{required by 'constinit' specifier here}} \
                         // expected-note {{in call to 'j()'}}
 
+}
+
+namespace GH117385 {
+void f() {
+  if consteval {
+  }
+}
 }

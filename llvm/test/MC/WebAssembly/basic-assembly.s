@@ -152,7 +152,6 @@ empty_funcref_table:
 .tabletype empty_exnref_table, exnref
 empty_exnref_table:
 
-# CHECK:           .text
 # CHECK:           .globaltype __stack_pointer, i32
 
 # CHECK-LABEL: empty_func:

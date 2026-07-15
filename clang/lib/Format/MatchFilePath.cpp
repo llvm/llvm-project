@@ -25,9 +25,11 @@ bool matchFilePath(StringRef Pattern, StringRef FilePath) {
   assert(!Pattern.empty());
   assert(!FilePath.empty());
 
+  const auto FilePathBack = FilePath.back();
+
   // No match if `Pattern` ends with a non-meta character not equal to the last
   // character of `FilePath`.
-  if (const auto C = Pattern.back(); !strchr("?*]", C) && C != FilePath.back())
+  if (const auto C = Pattern.back(); !strchr("?*]", C) && C != FilePathBack)
     return false;
 
   constexpr auto Separator = '/';
@@ -49,25 +51,37 @@ bool matchFilePath(StringRef Pattern, StringRef FilePath) {
         return false;
       break;
     case '*': {
-      while (++I < EOP && Pattern[I] == '*') { // Skip consecutive stars.
+      bool Globstar = I == 0 || Pattern[I - 1] == Separator;
+      int StarCount = 1;
+      for (; ++I < EOP && Pattern[I] == '*'; ++StarCount) {
+        // Skip consecutive stars.
       }
+      if (StarCount != 2)
+        Globstar = false;
       const auto K = FilePath.find(Separator, J); // Index of next `Separator`.
       const bool NoMoreSeparatorsInFilePath = K == StringRef::npos;
       if (I == EOP) // `Pattern` ends with a star.
-        return NoMoreSeparatorsInFilePath;
-      // `Pattern` ends with a lone backslash.
-      if (Pattern[I] == '\\' && ++I == EOP)
-        return false;
+        return Globstar || NoMoreSeparatorsInFilePath;
+      if (Pattern[I] != Separator) {
+        // `Pattern` ends with a lone backslash.
+        if (Pattern[I] == '\\' && ++I == EOP)
+          return false;
+        Globstar = false;
+      }
       // The star is followed by a (possibly escaped) `Separator`.
       if (Pattern[I] == Separator) {
-        if (NoMoreSeparatorsInFilePath)
-          return false;
-        J = K; // Skip to next `Separator` in `FilePath`.
-        break;
+        if (!Globstar) {
+          if (NoMoreSeparatorsInFilePath)
+            return false;
+          J = K; // Skip to next `Separator` in `FilePath`.
+          break;
+        }
+        if (++I == EOP)
+          return FilePathBack == Separator;
       }
       // Recurse.
-      for (auto Pat = Pattern.substr(I); J < End && FilePath[J] != Separator;
-           ++J) {
+      for (auto Pat = Pattern.substr(I);
+           J < End && (Globstar || FilePath[J] != Separator); ++J) {
         if (matchFilePath(Pat, FilePath.substr(J)))
           return true;
       }

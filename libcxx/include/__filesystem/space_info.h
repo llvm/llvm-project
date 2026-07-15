@@ -21,7 +21,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-struct _LIBCPP_EXPORTED_FROM_ABI space_info {
+struct space_info {
   uintmax_t capacity;
   uintmax_t free;
   uintmax_t available;

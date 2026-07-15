@@ -1,5 +1,7 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+zfh | FileCheck %s
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+zfh | FileCheck %s
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+zfhmin | FileCheck %s
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+zfhmin | FileCheck %s
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+zfbfmin | FileCheck %s
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+zfbfmin | FileCheck %s
 
 # CHECK: .Lpcrel_hi0:
 # CHECK: auipc a2, %pcrel_hi(a_symbol)

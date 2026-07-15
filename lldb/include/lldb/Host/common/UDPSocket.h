@@ -14,17 +14,17 @@
 namespace lldb_private {
 class UDPSocket : public Socket {
 public:
-  UDPSocket(bool should_close, bool child_processes_inherit);
+  explicit UDPSocket(bool should_close);
 
   static llvm::Expected<std::unique_ptr<UDPSocket>>
-  Connect(llvm::StringRef name, bool child_processes_inherit);
+  CreateConnected(llvm::StringRef name);
 
   std::string GetRemoteConnectionURI() const override;
 
 private:
   UDPSocket(NativeSocket socket);
 
-  size_t Send(const void *buf, const size_t num_bytes) override;
+  ssize_t Send(const void *buf, const size_t num_bytes) override;
   Status Connect(llvm::StringRef name) override;
   Status Listen(llvm::StringRef name, int backlog) override;
 

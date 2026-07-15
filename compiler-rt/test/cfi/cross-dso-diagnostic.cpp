@@ -1,8 +1,9 @@
 // Check that cross-DSO diagnostics print the names of both modules
 
+// RUN: mkdir -p %t.dir && cd %t.dir
 // RUN: %clangxx_cfi_diag -g -DSHARED_LIB -fPIC -shared -o %dynamiclib %s %ld_flags_rpath_so
-// RUN: %clangxx_cfi_diag -g -o %t_exe_suffix %s %ld_flags_rpath_exe
-// RUN: %t_exe_suffix 2>&1 | FileCheck -DDSONAME=%xdynamiclib_namespec %s
+// RUN: %clangxx_cfi_diag -g -o %t.dir/file_exe_suffix %s %ld_flags_rpath_exe
+// RUN: %t.dir/file_exe_suffix 2>&1 | FileCheck -DDSONAME=%xdynamiclib_namespec %s
 
 // UNSUPPORTED: target={{.*windows-msvc.*}}
 // REQUIRES: cxxabi
@@ -32,7 +33,7 @@ int main() {
   }
 
   // CHECK: runtime error: control flow integrity check for type 'void *()' failed during indirect function call
-  // CHECK: dso_symbol defined here
+  // CHECK: cross-dso-diagnostic.cpp:[[@LINE-13]]: note: dso_symbol defined here
   // CHECK: check failed in {{.*}}_exe_suffix, destination function located in {{.*}}[[DSONAME]]
   void *S = fp(); // trigger cfi-icall failure
 

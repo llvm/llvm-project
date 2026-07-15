@@ -5,9 +5,9 @@ define i62 @f(i1 %0) {
 ; CHECK-LABEL: f:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    and x8, x0, #0x1
-; CHECK-NEXT:    sub x8, x8, #1
-; CHECK-NEXT:    tst x8, #0x3fffffffffffffff
+; CHECK-NEXT:    sbfx x8, x0, #0, #1
+; CHECK-NEXT:    mov x9, #4611686018427387903 // =0x3fffffffffffffff
+; CHECK-NEXT:    bics xzr, x9, x8
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %2 = zext i1 %0 to i59

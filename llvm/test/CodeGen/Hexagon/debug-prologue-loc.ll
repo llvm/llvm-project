@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march=hexagon < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=hexagon < %s | FileCheck %s
 
 ; Broken after r326208.
 ; XFAIL: *

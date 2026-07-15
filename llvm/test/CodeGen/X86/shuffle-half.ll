@@ -5,7 +5,6 @@ define <32 x half> @dump_vec() {
 ; CHECK-LABEL: dump_vec:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %cond.load

@@ -1523,3 +1523,107 @@ define <2 x i8> @bool_add_lshr_vec_wrong_shift_amt(<2 x i1> %a, <2 x i1> %b) {
   %lshr = lshr <2 x i8> %add, <i8 1, i8 2>
   ret <2 x i8> %lshr
 }
+
+define i32 @lowbits_of_lshr_mul(i64 %x) {
+; CHECK-LABEL: @lowbits_of_lshr_mul(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[X:%.*]] to i32
+; CHECK-NEXT:    [[CONV:%.*]] = mul i32 [[TMP0]], 15
+; CHECK-NEXT:    ret i32 [[CONV]]
+;
+entry:
+  %mul = mul i64 %x, 64424509440
+  %shift = lshr i64 %mul, 32
+  %conv = trunc i64 %shift to i32
+  ret i32 %conv
+}
+
+define i32 @lowbits_of_lshr_mul_mask(i32 %x) {
+; CHECK-LABEL: @lowbits_of_lshr_mul_mask(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[X:%.*]], 1600
+; CHECK-NEXT:    [[CONV:%.*]] = and i32 [[TMP0]], 32704
+; CHECK-NEXT:    ret i32 [[CONV]]
+;
+entry:
+  %mul = mul i32 %x, 104857600
+  %shift = lshr i32 %mul, 16
+  %conv = and i32 %shift, 32767
+  ret i32 %conv
+}
+
+; Negative tests
+
+define i32 @lowbits_of_lshr_mul_mask_multiuse(i32 %x) {
+; CHECK-LABEL: @lowbits_of_lshr_mul_mask_multiuse(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X:%.*]], 104857600
+; CHECK-NEXT:    call void @use(i32 [[MUL]])
+; CHECK-NEXT:    [[SHIFT:%.*]] = lshr exact i32 [[MUL]], 16
+; CHECK-NEXT:    [[CONV:%.*]] = and i32 [[SHIFT]], 32704
+; CHECK-NEXT:    ret i32 [[CONV]]
+;
+entry:
+  %mul = mul i32 %x, 104857600
+  call void @use(i32 %mul)
+  %shift = lshr i32 %mul, 16
+  %conv = and i32 %shift, 32767
+  ret i32 %conv
+}
+
+define i32 @lowbits_of_lshr_mul_mask_indivisible(i32 %x) {
+; CHECK-LABEL: @lowbits_of_lshr_mul_mask_indivisible(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X:%.*]], 25600
+; CHECK-NEXT:    [[SHIFT:%.*]] = lshr i32 [[MUL]], 16
+; CHECK-NEXT:    [[CONV:%.*]] = and i32 [[SHIFT]], 32767
+; CHECK-NEXT:    ret i32 [[CONV]]
+;
+entry:
+  %mul = mul i32 %x, 25600
+  %shift = lshr i32 %mul, 16
+  %conv = and i32 %shift, 32767
+  ret i32 %conv
+}
+
+; lshr 1, X --> zext (X == 0)
+
+define i32 @lshr_one_i32(i32 %x) {
+; CHECK-LABEL: @lshr_one_i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %shr = lshr i32 1, %x
+  ret i32 %shr
+}
+
+define i64 @lshr_one_i64(i64 %x) {
+; CHECK-LABEL: @lshr_one_i64(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[X:%.*]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = zext i1 [[TMP1]] to i64
+; CHECK-NEXT:    ret i64 [[SHR]]
+;
+  %shr = lshr i64 1, %x
+  ret i64 %shr
+}
+
+define <4 x i32> @lshr_one_v4i32(<4 x i32> %x) {
+; CHECK-LABEL: @lshr_one_v4i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[SHR:%.*]] = zext <4 x i1> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[SHR]]
+;
+  %shr = lshr <4 x i32> <i32 1, i32 1, i32 1, i32 1>, %x
+  ret <4 x i32> %shr
+}
+
+; Negative test: constant is not 1
+define i32 @lshr_two_i32(i32 %x) {
+; CHECK-LABEL: @lshr_two_i32(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 2, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %shr = lshr i32 2, %x
+  ret i32 %shr
+}

@@ -17,7 +17,7 @@ namespace {
 
 class XCOFFAsmParser : public MCAsmParserExtension {
   MCAsmParser *Parser = nullptr;
-  MCAsmLexer *Lexer = nullptr;
+  AsmLexer *Lexer = nullptr;
 
   template <bool (XCOFFAsmParser::*HandlerMethod)(StringRef, SMLoc)>
   void addDirectiveHandler(StringRef Directive) {
@@ -43,14 +43,12 @@ public:
 
 } // end anonymous namespace
 
-namespace llvm {
-
-MCAsmParserExtension *createXCOFFAsmParser() { return new XCOFFAsmParser; }
-
-} // end namespace llvm
-
 // .csect QualName [, Number ]
 bool XCOFFAsmParser::ParseDirectiveCSect(StringRef, SMLoc) {
   report_fatal_error("XCOFFAsmParser directive not yet supported!");
   return false;
+}
+
+MCAsmParserExtension *llvm::createXCOFFAsmParser() {
+  return new XCOFFAsmParser;
 }

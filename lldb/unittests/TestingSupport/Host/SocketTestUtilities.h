@@ -22,7 +22,7 @@
 #include "llvm/Testing/Support/Error.h"
 
 #if LLDB_ENABLE_POSIX
-#include "lldb/Host/posix/DomainSocket.h"
+#include "lldb/Host/common/DomainSocket.h"
 #endif
 
 namespace lldb_private {
@@ -42,6 +42,14 @@ void CreateDomainConnectedSockets(llvm::StringRef path,
 
 bool HostSupportsIPv6();
 bool HostSupportsIPv4();
+#if LLDB_ENABLE_POSIX
+bool HostSupportsDomainSockets();
+#endif
+
+/// Returns true if the name `localhost` maps to a loopback IPv4 address.
+bool HostSupportsLocalhostToIPv4();
+/// Returns true if the name `localhost` maps to a loopback IPv6 address.
+bool HostSupportsLocalhostToIPv6();
 
 /// Return an IP for localhost based on host support.
 ///

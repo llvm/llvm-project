@@ -8,12 +8,16 @@
 // RUN: %clang --target=riscv64 %s -fpatchable-function-entry=1,0 -c -### 2>&1 | FileCheck %s
 // RUN: %clang --target=powerpc-unknown-linux-gnu %s -fpatchable-function-entry=1,0 -c -### 2>&1 | FileCheck %s
 // RUN: %clang --target=powerpc64-unknown-linux-gnu %s -fpatchable-function-entry=1,0 -c -### 2>&1 | FileCheck %s
+// RUN: %clang --target=powerpc64le-unknown-linux-gnu %s -fpatchable-function-entry=1,0 -c -### 2>&1 | FileCheck %s
 // CHECK: "-fpatchable-function-entry=1"
 
 // RUN: %clang --target=aarch64 -fsyntax-only %s -fpatchable-function-entry=1,1 -c -### 2>&1 | FileCheck --check-prefix=11 %s
 // 11: "-fpatchable-function-entry=1" "-fpatchable-function-entry-offset=1"
 // RUN: %clang --target=aarch64 -fsyntax-only %s -fpatchable-function-entry=2,1 -c -### 2>&1 | FileCheck --check-prefix=21 %s
 // 21: "-fpatchable-function-entry=2" "-fpatchable-function-entry-offset=1"
+
+// RUN: %clang --target=aarch64 -fsyntax-only %s -fpatchable-function-entry=1,1,__section_name -c -### 2>&1 | FileCheck --check-prefix=SECTION %s
+// SECTION: "-fpatchable-function-entry=1" "-fpatchable-function-entry-offset=1" "-fpatchable-function-entry-section=__section_name"
 
 // RUN: not %clang --target=powerpc64-ibm-aix-xcoff -fsyntax-only %s -fpatchable-function-entry=1 2>&1 | FileCheck --check-prefix=AIX64 %s
 // AIX64: error: unsupported option '-fpatchable-function-entry=1' for target 'powerpc64-ibm-aix-xcoff'

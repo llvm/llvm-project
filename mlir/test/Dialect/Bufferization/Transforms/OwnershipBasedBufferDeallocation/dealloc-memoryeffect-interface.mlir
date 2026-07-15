@@ -156,3 +156,24 @@ func.func @manual_deallocation(%c: i1, %f: f32, %idx: index) -> f32 {
 //       CHECK:   cf.assert %[[true]], "expected that the block does not have ownership"
 //       CHECK:   memref.dealloc %[[manual_alloc]]
 //       CHECK:   bufferization.dealloc (%[[managed_alloc]] : memref<5xf32>) if (%[[true]])
+
+// -----
+
+// CHECK-LABEL: func.func private @properly_creates_deallocations_in_execute_region(
+// CHECK:           %[[true:.*]] = arith.constant true
+// CHECK:           scf.execute_region no_inline {
+// CHECK:             %[[alloc:.*]] = memref.alloc() {alignment = 64 : i64} : memref<1x63x378x16xui8>
+// CHECK:             bufferization.dealloc (%[[alloc]] : memref<1x63x378x16xui8>) if (%[[true]])
+
+func.func private @properly_creates_deallocations_in_execute_region(%arg1: memref<1x16x252x380xui8> ) -> (memref<1x250x378x16xui8> )  {
+  %alloc = memref.alloc() {alignment = 64 : i64} : memref<1x250x378x16xui8>
+  scf.execute_region no_inline {
+    %subview = memref.subview %arg1[0, 0, 0, 0] [1, 16, 65, 380] [1, 1, 1, 1] : memref<1x16x252x380xui8> to memref<1x16x65x380xui8, strided<[1532160, 95760, 380, 1]>>
+    %alloc_3 = memref.alloc() {alignment = 64 : i64} : memref<1x63x378x16xui8>    
+    test.buffer_based in(%subview: memref<1x16x65x380xui8, strided<[1532160, 95760, 380, 1]>>) out(%alloc_3: memref<1x63x378x16xui8>)
+    %subview_7 = memref.subview %alloc[0, 0, 0, 0] [1, 63, 378, 16] [1, 1, 1, 1] : memref<1x250x378x16xui8> to memref<1x63x378x16xui8, strided<[1512000, 6048, 16, 1]>>
+    test.copy(%alloc_3, %subview_7) : (memref<1x63x378x16xui8>, memref<1x63x378x16xui8, strided<[1512000, 6048, 16, 1]>>)
+    scf.yield
+  }
+  return %alloc : memref<1x250x378x16xui8>
+}

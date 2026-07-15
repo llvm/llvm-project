@@ -101,16 +101,9 @@ define i8 @test_v3i8(<3 x i8> %a) nounwind {
 define i8 @test_v9i8(<9 x i8> %a) nounwind {
 ; CHECK-LABEL: test_v9i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    mov v1.b[9], w8
-; CHECK-NEXT:    mov v1.b[10], w8
-; CHECK-NEXT:    mov v1.b[11], w8
-; CHECK-NEXT:    mov v1.b[12], w8
-; CHECK-NEXT:    mov v1.b[13], w8
-; CHECK-NEXT:    mov v1.b[14], w8
-; CHECK-NEXT:    mov v1.b[15], w8
-; CHECK-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-NEXT:    movi v1.2d, #0xffffffffffffff00
+; CHECK-NEXT:    orr v1.16b, v0.16b, v1.16b
+; CHECK-NEXT:    mov d1, v1.d[1]
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    and x8, x8, x8, lsr #32
@@ -125,12 +118,14 @@ define i8 @test_v9i8(<9 x i8> %a) nounwind {
 define i32 @test_v3i32(<3 x i32> %a) nounwind {
 ; CHECK-LABEL: test_v3i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECK-NEXT:    mov v1.s[3], w8
+; CHECK-NEXT:    mov d1, v1.d[1]
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x8, x8, #32
-; CHECK-NEXT:    and v1.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x9, d1
-; CHECK-NEXT:    and w0, w9, w8
+; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    and w0, w8, w9
 ; CHECK-NEXT:    ret
   %b = call i32 @llvm.vector.reduce.and.v3i32(<3 x i32> %a)
   ret i32 %b
@@ -152,7 +147,7 @@ define i1 @test_v4i1(<4 x i1> %a) nounwind {
 define i24 @test_v4i24(<4 x i24> %a) nounwind {
 ; CHECK-LABEL: test_v4i24:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    lsr x9, x8, #32
@@ -178,7 +173,7 @@ define i32 @test_v16i32(<16 x i32> %a) nounwind {
 ; CHECK-NEXT:    and v1.16b, v1.16b, v3.16b
 ; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    lsr x9, x8, #32

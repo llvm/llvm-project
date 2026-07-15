@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -enable-pipeliner -pipeliner-max-stages=2 -hexagon-bit=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 -enable-pipeliner -pipeliner-max-stages=2 -hexagon-bit=0 < %s | FileCheck %s
 
 ; Very similar to swp-stages4.ll, but the pipelined schedule is a little
 ; different.
@@ -8,7 +8,6 @@
 ; CHECK-DAG: loop0(.LBB0_[[LOOP:.]],
 ; CHECK: .LBB0_[[LOOP]]:
 ; CHECK: = and([[REG0]],#255)
-; CHECK: [[REG0]]{{[:0-9]*}} =
 ; CHECK: endloop
 
 define void @fred(ptr noalias nocapture %src, i32 %srcWidth, i32 %srcHeight, i32 %srcStride, ptr noalias nocapture %dst, i32 %dstStride) #0 {

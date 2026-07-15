@@ -38,7 +38,7 @@ public:
   static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
                                     const lldb::VariableSP &var_sp);
 
-  std::optional<uint64_t> GetByteSize() override;
+  llvm::Expected<uint64_t> GetByteSize() override;
 
   ConstString GetTypeName() override;
 
@@ -64,6 +64,8 @@ public:
 
   bool SetData(DataExtractor &data, Status &error) override;
 
+  bool CanSetValue() override;
+
   lldb::VariableSP GetVariable() override { return m_variable_sp; }
 
 protected:
@@ -75,9 +77,15 @@ protected:
 
   /// The variable that this value object is based upon.
   lldb::VariableSP m_variable_sp;
-  ///< The value that DWARFExpression resolves this variable to before we patch
-  ///< it up.
+
+  /// The value that DWARFExpression resolves this variable to before we patch
+  /// it up.
   Value m_resolved_value;
+
+  /// True when the resolved value has no writable storage in the inferior (an
+  /// implicit location, a constant, or an unresolved location) and so cannot be
+  /// the target of SetValueFromCString() or SetData(). Set by UpdateValue().
+  bool m_resolved_value_is_implicit = false;
 
 private:
   ValueObjectVariable(ExecutionContextScope *exe_scope,

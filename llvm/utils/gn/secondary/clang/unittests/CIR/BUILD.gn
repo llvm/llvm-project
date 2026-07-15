@@ -1,0 +1,11 @@
+# Dummy target because real CIRUnitTests depends on //mlir, which isn't
+# part of the GN build.
+group("CIRUnitTests") {
+  sources = [
+    "CallOpTest.cpp",
+    "ControlFlowTest.cpp",
+    "PointerLikeTest.cpp",
+    "RecordTypeMetadataTest.cpp",
+    "UnionTypeSizeTest.cpp",
+  ]
+}

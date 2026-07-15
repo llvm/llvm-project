@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CLOCALE
-#define _LIBCPP_CLOCALE
+#ifndef _LIBCPP___CXX03_CLOCALE
+#define _LIBCPP___CXX03_CLOCALE
 
 /*
     clocale synopsis
@@ -38,7 +38,7 @@ lconv* localeconv();
 
 #include <__cxx03/locale.h>
 
-#ifndef _LIBCPP_LOCALE_H
+#ifndef _LIBCPP___CXX03_LOCALE_H
 #   error <clocale> tried including <locale.h> but didn't find libc++'s <locale.h> header. \
           This usually means that your header search paths are not configured properly. \
           The header search paths should contain the C++ Standard Library headers before \
@@ -58,4 +58,4 @@ using ::localeconv _LIBCPP_USING_IF_EXISTS;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_CLOCALE
+#endif // _LIBCPP___CXX03_CLOCALE

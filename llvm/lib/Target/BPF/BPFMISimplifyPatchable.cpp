@@ -31,9 +31,12 @@
 #include "BPFCORE.h"
 #include "BPFInstrInfo.h"
 #include "BPFTargetMachine.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/Support/Debug.h"
 #include <set>
@@ -42,17 +45,15 @@ using namespace llvm;
 
 #define DEBUG_TYPE "bpf-mi-simplify-patchable"
 
+static cl::opt<bool>
+    DisableCOREOptimization("disable-bpf-core-optimization", cl::Hidden,
+                            cl::desc("Disable CORE relocation optimization"));
+
 namespace {
 
-struct BPFMISimplifyPatchable : public MachineFunctionPass {
-
-  static char ID;
+struct BPFMISimplifyPatchableImpl {
   const BPFInstrInfo *TII;
   MachineFunction *MF;
-
-  BPFMISimplifyPatchable() : MachineFunctionPass(ID) {
-    initializeBPFMISimplifyPatchablePass(*PassRegistry::getPassRegistry());
-  }
 
 private:
   std::set<MachineInstr *> SkipInsts;
@@ -78,55 +79,67 @@ private:
 
 public:
   // Main entry point for this pass.
-  bool runOnMachineFunction(MachineFunction &MF) override {
-    if (skipFunction(MF.getFunction()))
-      return false;
-
+  bool runOnMachineFunction(MachineFunction &MF) {
     initialize(MF);
     return removeLD();
   }
 };
 
+class BPFMISimplifyPatchableLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  BPFMISimplifyPatchableLegacy() : MachineFunctionPass(ID) {}
+
+  // Main entry point for this pass.
+  bool runOnMachineFunction(MachineFunction &MF) override;
+};
+
 // Initialize class variables.
-void BPFMISimplifyPatchable::initialize(MachineFunction &MFParm) {
+void BPFMISimplifyPatchableImpl::initialize(MachineFunction &MFParm) {
   MF = &MFParm;
   TII = MF->getSubtarget<BPFSubtarget>().getInstrInfo();
   LLVM_DEBUG(dbgs() << "*** BPF simplify patchable insts pass ***\n\n");
 }
 
-static bool isST(unsigned Opcode) {
+static bool isStoreImm(unsigned Opcode) {
   return Opcode == BPF::STB_imm || Opcode == BPF::STH_imm ||
          Opcode == BPF::STW_imm || Opcode == BPF::STD_imm;
 }
 
-static bool isSTX32(unsigned Opcode) {
-  return Opcode == BPF::STB32 || Opcode == BPF::STH32 || Opcode == BPF::STW32;
+static bool isStore32(unsigned Opcode) {
+  return Opcode == BPF::STB32 || Opcode == BPF::STH32 || Opcode == BPF::STW32 ||
+         Opcode == BPF::STBREL32 || Opcode == BPF::STHREL32 ||
+         Opcode == BPF::STWREL32;
 }
 
-static bool isSTX64(unsigned Opcode) {
+static bool isStore64(unsigned Opcode) {
   return Opcode == BPF::STB || Opcode == BPF::STH || Opcode == BPF::STW ||
-         Opcode == BPF::STD;
+         Opcode == BPF::STD || Opcode == BPF::STDREL;
 }
 
-static bool isLDX32(unsigned Opcode) {
-  return Opcode == BPF::LDB32 || Opcode == BPF::LDH32 || Opcode == BPF::LDW32;
+static bool isLoad32(unsigned Opcode) {
+  return Opcode == BPF::LDB32 || Opcode == BPF::LDH32 || Opcode == BPF::LDW32 ||
+         Opcode == BPF::LDBACQ32 || Opcode == BPF::LDHACQ32 ||
+         Opcode == BPF::LDWACQ32;
 }
 
-static bool isLDX64(unsigned Opcode) {
+static bool isLoad64(unsigned Opcode) {
   return Opcode == BPF::LDB || Opcode == BPF::LDH || Opcode == BPF::LDW ||
-         Opcode == BPF::LDD;
+         Opcode == BPF::LDD || Opcode == BPF::LDDACQ;
 }
 
-static bool isLDSX(unsigned Opcode) {
+static bool isLoadSext(unsigned Opcode) {
   return Opcode == BPF::LDBSX || Opcode == BPF::LDHSX || Opcode == BPF::LDWSX;
 }
 
-bool BPFMISimplifyPatchable::isLoadInst(unsigned Opcode) {
-  return isLDX32(Opcode) || isLDX64(Opcode) || isLDSX(Opcode);
+bool BPFMISimplifyPatchableImpl::isLoadInst(unsigned Opcode) {
+  return isLoad32(Opcode) || isLoad64(Opcode) || isLoadSext(Opcode);
 }
 
-void BPFMISimplifyPatchable::checkADDrr(MachineRegisterInfo *MRI,
-    MachineOperand *RelocOp, const GlobalValue *GVal) {
+void BPFMISimplifyPatchableImpl::checkADDrr(MachineRegisterInfo *MRI,
+                                            MachineOperand *RelocOp,
+                                            const GlobalValue *GVal) {
   const MachineInstr *Inst = RelocOp->getParent();
   const MachineOperand *Op1 = &Inst->getOperand(1);
   const MachineOperand *Op2 = &Inst->getOperand(2);
@@ -143,11 +156,11 @@ void BPFMISimplifyPatchable::checkADDrr(MachineRegisterInfo *MRI,
     MachineInstr *DefInst = MO.getParent();
     unsigned Opcode = DefInst->getOpcode();
     unsigned COREOp;
-    if (isLDX64(Opcode) || isLDSX(Opcode))
+    if (isLoad64(Opcode) || isLoadSext(Opcode))
       COREOp = BPF::CORE_LD64;
-    else if (isLDX32(Opcode))
+    else if (isLoad32(Opcode))
       COREOp = BPF::CORE_LD32;
-    else if (isSTX64(Opcode) || isSTX32(Opcode) || isST(Opcode))
+    else if (isStore64(Opcode) || isStore32(Opcode) || isStoreImm(Opcode))
       COREOp = BPF::CORE_ST;
     else
       continue;
@@ -160,7 +173,7 @@ void BPFMISimplifyPatchable::checkADDrr(MachineRegisterInfo *MRI,
     // Reject the form:
     //   %1 = ADD_rr %2, %3
     //   *(type *)(%2 + 0) = %1
-    if (isSTX64(Opcode) || isSTX32(Opcode)) {
+    if (isStore64(Opcode) || isStore32(Opcode)) {
       const MachineOperand &Opnd = DefInst->getOperand(0);
       if (Opnd.isReg() && Opnd.getReg() == MO.getReg())
         continue;
@@ -173,9 +186,11 @@ void BPFMISimplifyPatchable::checkADDrr(MachineRegisterInfo *MRI,
   }
 }
 
-void BPFMISimplifyPatchable::checkShift(MachineRegisterInfo *MRI,
-    MachineBasicBlock &MBB, MachineOperand *RelocOp, const GlobalValue *GVal,
-    unsigned Opcode) {
+void BPFMISimplifyPatchableImpl::checkShift(MachineRegisterInfo *MRI,
+                                            MachineBasicBlock &MBB,
+                                            MachineOperand *RelocOp,
+                                            const GlobalValue *GVal,
+                                            unsigned Opcode) {
   // Relocation operand should be the operand #2.
   MachineInstr *Inst = RelocOp->getParent();
   if (RelocOp != &Inst->getOperand(2))
@@ -187,15 +202,15 @@ void BPFMISimplifyPatchable::checkShift(MachineRegisterInfo *MRI,
   Inst->eraseFromParent();
 }
 
-void BPFMISimplifyPatchable::processCandidate(MachineRegisterInfo *MRI,
-    MachineBasicBlock &MBB, MachineInstr &MI, Register &SrcReg,
-    Register &DstReg, const GlobalValue *GVal, bool IsAma) {
+void BPFMISimplifyPatchableImpl::processCandidate(
+    MachineRegisterInfo *MRI, MachineBasicBlock &MBB, MachineInstr &MI,
+    Register &SrcReg, Register &DstReg, const GlobalValue *GVal, bool IsAma) {
   if (MRI->getRegClass(DstReg) == &BPF::GPR32RegClass) {
     if (IsAma) {
       // We can optimize such a pattern:
       //  %1:gpr = LD_imm64 @"llvm.s:0:4$0:2"
       //  %2:gpr32 = LDW32 %1:gpr, 0
-      //  %3:gpr = SUBREG_TO_REG 0, %2:gpr32, %subreg.sub_32
+      //  %3:gpr = SUBREG_TO_REG %2:gpr32, %subreg.sub_32
       //  %4:gpr = ADD_rr %0:gpr, %3:gpr
       //  or similar patterns below for non-alu32 case.
       auto Begin = MRI->use_begin(DstReg), End = MRI->use_end();
@@ -214,7 +229,7 @@ void BPFMISimplifyPatchable::processCandidate(MachineRegisterInfo *MRI,
     }
 
     BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(BPF::COPY), DstReg)
-        .addReg(SrcReg, 0, BPF::sub_32);
+        .addReg(SrcReg, {}, BPF::sub_32);
     return;
   }
 
@@ -222,9 +237,11 @@ void BPFMISimplifyPatchable::processCandidate(MachineRegisterInfo *MRI,
   processDstReg(MRI, DstReg, SrcReg, GVal, true, IsAma);
 }
 
-void BPFMISimplifyPatchable::processDstReg(MachineRegisterInfo *MRI,
-    Register &DstReg, Register &SrcReg, const GlobalValue *GVal,
-    bool doSrcRegProp, bool IsAma) {
+void BPFMISimplifyPatchableImpl::processDstReg(MachineRegisterInfo *MRI,
+                                               Register &DstReg,
+                                               Register &SrcReg,
+                                               const GlobalValue *GVal,
+                                               bool doSrcRegProp, bool IsAma) {
   auto Begin = MRI->use_begin(DstReg), End = MRI->use_end();
   decltype(End) NextI;
   for (auto I = Begin; I != End; I = NextI) {
@@ -283,17 +300,34 @@ void BPFMISimplifyPatchable::processDstReg(MachineRegisterInfo *MRI,
 //       %17 = CORE_SHIFT(SRA_ri, %14, @"llvm.t:5:63$0:2")
 //    and later on, BTF emit phase will translate to
 //       %r4 = SRA_ri %r4, 63
-void BPFMISimplifyPatchable::processInst(MachineRegisterInfo *MRI,
-    MachineInstr *Inst, MachineOperand *RelocOp, const GlobalValue *GVal) {
+void BPFMISimplifyPatchableImpl::processInst(MachineRegisterInfo *MRI,
+                                             MachineInstr *Inst,
+                                             MachineOperand *RelocOp,
+                                             const GlobalValue *GVal) {
   unsigned Opcode = Inst->getOpcode();
   if (isLoadInst(Opcode)) {
     SkipInsts.insert(Inst);
     return;
   }
 
-  if (Opcode == BPF::ADD_rr)
-    checkADDrr(MRI, RelocOp, GVal);
-  else if (Opcode == BPF::SLL_rr)
+  if (DisableCOREOptimization)
+    return;
+
+  if (Opcode == BPF::ADD_rr) {
+    // If the struct offset is greater than INT16_MAX, skip optimization.
+    StringRef AccessPattern = GVal->getName();
+    size_t FirstDollar = AccessPattern.find_first_of('$');
+    size_t FirstColon = AccessPattern.find_first_of(':');
+    size_t SecondColon = AccessPattern.find_first_of(':', FirstColon + 1);
+    StringRef PatchImmStr =
+        AccessPattern.substr(SecondColon + 1, FirstDollar - SecondColon);
+    int PatchImm = std::stoll(std::string(PatchImmStr));
+    if (PatchImm <= INT16_MAX)
+      checkADDrr(MRI, RelocOp, GVal);
+    return;
+  }
+
+  if (Opcode == BPF::SLL_rr)
     checkShift(MRI, *Inst->getParent(), RelocOp, GVal, BPF::SLL_ri);
   else if (Opcode == BPF::SRA_rr)
     checkShift(MRI, *Inst->getParent(), RelocOp, GVal, BPF::SRA_ri);
@@ -302,7 +336,7 @@ void BPFMISimplifyPatchable::processInst(MachineRegisterInfo *MRI,
 }
 
 /// Remove unneeded Load instructions.
-bool BPFMISimplifyPatchable::removeLD() {
+bool BPFMISimplifyPatchableImpl::removeLD() {
   MachineRegisterInfo *MRI = &MF->getRegInfo();
   MachineInstr *ToErase = nullptr;
   bool Changed = false;
@@ -365,10 +399,28 @@ bool BPFMISimplifyPatchable::removeLD() {
 
 } // namespace
 
-INITIALIZE_PASS(BPFMISimplifyPatchable, DEBUG_TYPE,
+INITIALIZE_PASS(BPFMISimplifyPatchableLegacy, DEBUG_TYPE,
                 "BPF PreEmit SimplifyPatchable", false, false)
 
-char BPFMISimplifyPatchable::ID = 0;
-FunctionPass *llvm::createBPFMISimplifyPatchablePass() {
-  return new BPFMISimplifyPatchable();
+char BPFMISimplifyPatchableLegacy::ID = 0;
+FunctionPass *llvm::createBPFMISimplifyPatchableLegacyPass() {
+  return new BPFMISimplifyPatchableLegacy();
+}
+
+bool BPFMISimplifyPatchableLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  BPFMISimplifyPatchableImpl Impl;
+  return Impl.runOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+BPFMISimplifyPatchablePass::run(MachineFunction &MF,
+                                MachineFunctionAnalysisManager &MFAM) {
+  BPFMISimplifyPatchableImpl Impl;
+  return Impl.runOnMachineFunction(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }

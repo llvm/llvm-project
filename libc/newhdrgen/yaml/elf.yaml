@@ -1,8 +1,0 @@
-header: elf.h
-standards:
-  - Linux
-macros: []
-types: []
-enums: []
-objects: []
-functions: []

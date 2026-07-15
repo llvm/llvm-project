@@ -1,6 +1,6 @@
-# RUN: llvm-mc -triple xtensa < %s -show-encoding \
+# RUN: llvm-mc -triple xtensa --mattr=+density,loop < %s -show-encoding \
 # RUN:     | FileCheck -check-prefix=INSTR -check-prefix=FIXUP %s
-# RUN: llvm-mc -filetype=obj -triple xtensa < %s \
+# RUN: llvm-mc -filetype=obj -triple xtensa --mattr=+density,loop < %s \
 # RUN:     | llvm-readobj -r - | FileCheck -check-prefix=RELOC %s
 
 # Check prefixes:
@@ -75,6 +75,14 @@ beqz a8, func
 # RELOC: R_XTENSA_SLOT0_OP
 # INST:  beqz    a8, func
 # FIXUP: fixup A - offset: 0, value: func, kind: fixup_xtensa_branch_12
+
+beqz.n a8, func
+# INST:  beqz.n    a8, func
+# FIXUP: fixup A - offset: 0, value: func, kind: fixup_xtensa_branch_6
+
+bnez.n a8, func
+# INST:  bnez.n    a8, func
+# FIXUP: fixup A - offset: 0, value: func, kind: fixup_xtensa_branch_6
 
 bge a14, a2, func
 # RELOC: R_XTENSA_SLOT0_OP
@@ -175,3 +183,12 @@ l32r a6, func
 # RELOC: R_XTENSA_SLOT0_OP
 # INSTR: l32r    a6, func
 # FIXUP: fixup A - offset: 0, value: func, kind: fixup_xtensa_l32r_16
+
+loop a3, LBL
+# RELOC: R_XTENSA_SLOT0_OP
+# INSTR: loop    a3, LBL
+# FIXUP: fixup A - offset: 0, value: LBL, kind: fixup_xtensa_loop_8
+
+.fill 200
+
+LBL:

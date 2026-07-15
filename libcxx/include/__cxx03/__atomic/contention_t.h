@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_CONTENTION_T_H
-#define _LIBCPP___ATOMIC_CONTENTION_T_H
+#ifndef _LIBCPP___CXX03___ATOMIC_CONTENTION_T_H
+#define _LIBCPP___CXX03___ATOMIC_CONTENTION_T_H
 
 #include <__cxx03/__atomic/cxx_atomic_impl.h>
 #include <__cxx03/__config>
@@ -19,14 +19,14 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if defined(__linux__) || (defined(_AIX) && !defined(__64BIT__))
+#if defined(__linux__) || defined(__Fuchsia__) || (defined(_AIX) && !defined(__64BIT__))
 using __cxx_contention_t = int32_t;
 #else
 using __cxx_contention_t = int64_t;
-#endif // __linux__ || (_AIX && !__64BIT__)
+#endif // __linux__ || __Fuchsia__ || (_AIX && !__64BIT__)
 
 using __cxx_atomic_contention_t = __cxx_atomic_impl<__cxx_contention_t>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ATOMIC_CONTENTION_T_H
+#endif // _LIBCPP___CXX03___ATOMIC_CONTENTION_T_H

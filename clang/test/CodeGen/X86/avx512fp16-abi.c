@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-linux -emit-llvm  -target-feature +avx512fp16 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-C
 // RUN: %clang_cc1 -triple x86_64-linux -emit-llvm  -target-feature +avx512fp16 -x c++ -std=c++11 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-CPP
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm  -target-feature +avx512fp16 -fexperimental-abi-lowering < %s | FileCheck %s --check-prefixes=CHECK,CHECK-C
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm  -target-feature +avx512fp16 -x c++ -std=c++11 -fexperimental-abi-lowering < %s | FileCheck %s --check-prefixes=CHECK,CHECK-CPP
 
 struct half1 {
   _Float16 a;
@@ -206,6 +208,8 @@ struct fsd {
 
 struct fsd pr52011(void) {
   // CHECK: define{{.*}} { float, double } @
+  struct fsd x;
+  return x;
 }
 
 struct hsd {
@@ -216,6 +220,8 @@ struct hsd {
 
 struct hsd pr52011_2(void) {
   // CHECK: define{{.*}} { half, double } @
+  struct hsd x;
+  return x;
 }
 
 struct hsf {
@@ -226,6 +232,8 @@ struct hsf {
 
 struct hsf pr52011_3(void) {
   // CHECK: define{{.*}} <4 x half> @
+  struct hsf x;
+  return x;
 }
 
 struct fds {
@@ -237,4 +245,6 @@ struct fds {
 struct fds pr52011_4(void) {
   // CHECK-C: define{{.*}} { float, double } @pr52011_4
   // CHECK-CPP: define{{.*}} void @_Z9pr52011_4v({{.*}} sret
+  struct fds x;
+  return x;
 }

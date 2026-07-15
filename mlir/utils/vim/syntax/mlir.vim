@@ -44,6 +44,7 @@ syn keyword mlirOps view
 
 " Math ops.
 syn match mlirOps /\<math\.erf\>/
+syn match mlirOps /\<math\.erfc\>/
 
 " Affine ops.
 syn match mlirOps /\<affine\.apply\>/

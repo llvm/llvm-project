@@ -99,28 +99,27 @@ struct derived_object_info {
 };
 
 /// A helper function that gets (dynamic_ptr, dynamic_type, offset_to_derived) from static_ptr.
-void dyn_cast_get_derived_info(derived_object_info* info, const void* static_ptr)
-{
+derived_object_info dyn_cast_get_derived_info(const void* static_ptr) {
+  derived_object_info info;
 #if __has_feature(cxx_abi_relative_vtable)
-    // The vtable address will point to the first virtual function, which is 8
-    // bytes after the start of the vtable (4 for the offset from top + 4 for
-    // the typeinfo component).
-    const int32_t* vtable =
-        *reinterpret_cast<const int32_t* const*>(static_ptr);
-    info->offset_to_derived = static_cast<std::ptrdiff_t>(vtable[-2]);
-    info->dynamic_ptr = static_cast<const char*>(static_ptr) + info->offset_to_derived;
+  // The vtable address will point to the first virtual function, which is 8
+  // bytes after the start of the vtable (4 for the offset from top + 4 for
+  // the typeinfo component).
+  const int32_t* vtable = *reinterpret_cast<const int32_t* const*>(static_ptr);
+  info.offset_to_derived = static_cast<std::ptrdiff_t>(vtable[-2]);
+  info.dynamic_ptr = static_cast<const char*>(static_ptr) + info.offset_to_derived;
 
-    // The typeinfo component is now a relative offset to a proxy.
-    int32_t offset_to_ti_proxy = vtable[-1];
-    const uint8_t* ptr_to_ti_proxy =
-        reinterpret_cast<const uint8_t*>(vtable) + offset_to_ti_proxy;
-    info->dynamic_type = *(reinterpret_cast<const __class_type_info* const*>(ptr_to_ti_proxy));
+  // The typeinfo component is now a relative offset to a proxy.
+  int32_t offset_to_ti_proxy = vtable[-1];
+  const uint8_t* ptr_to_ti_proxy = reinterpret_cast<const uint8_t*>(vtable) + offset_to_ti_proxy;
+  info.dynamic_type = *(reinterpret_cast<const __class_type_info* const*>(ptr_to_ti_proxy));
 #else
   void** vtable = strip_vtable(*static_cast<void** const*>(static_ptr));
-  info->offset_to_derived = reinterpret_cast<ptrdiff_t>(vtable[-2]);
-  info->dynamic_ptr = static_cast<const char*>(static_ptr) + info->offset_to_derived;
-  info->dynamic_type = static_cast<const __class_type_info*>(vtable[-1]);
+  info.offset_to_derived = reinterpret_cast<ptrdiff_t>(vtable[-2]);
+  info.dynamic_ptr = static_cast<const char*>(static_ptr) + info.offset_to_derived;
+  info.dynamic_type = static_cast<const __class_type_info*>(vtable[-1]);
 #endif
+  return info;
 }
 
 /// A helper function for __dynamic_cast that casts a base sub-object pointer
@@ -591,10 +590,9 @@ __base_class_type_info::has_unambiguous_public_base(__dynamic_cast_info* info,
     // .. and reset the pointer.
     adjustedPtr = nullptr;
   }
-    __base_type->has_unambiguous_public_base(
-            info,
-            static_cast<char*>(adjustedPtr) + offset_to_base,
-            (__offset_flags & __public_mask) ? path_below : not_public_path);
+  __base_type->has_unambiguous_public_base(
+      info, reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(adjustedPtr) + offset_to_base),
+      (__offset_flags & __public_mask) ? path_below : not_public_path);
 }
 
 void
@@ -832,6 +830,10 @@ bool __pointer_to_member_type_info::can_catch_nested(
 #pragma clang diagnostic ignored "-Wmissing-field-initializers"
 #endif
 
+#pragma GCC diagnostic push
+// __dynamic_cast is called by the compiler, so there is no prototype
+#pragma GCC diagnostic ignored "-Wmissing-prototypes"
+
 // __dynamic_cast
 
 // static_ptr: pointer to an object of type static_type; nonnull, and since the
@@ -912,8 +914,7 @@ __dynamic_cast(const void *static_ptr, const __class_type_info *static_type,
                const __class_type_info *dst_type,
                std::ptrdiff_t src2dst_offset) {
     // Get (dynamic_ptr, dynamic_type) from static_ptr
-    derived_object_info derived_info;
-    dyn_cast_get_derived_info(&derived_info, static_ptr);
+    derived_object_info derived_info = dyn_cast_get_derived_info(static_ptr);
 
     // Initialize answer to nullptr.  This will be changed from the search
     //    results if a non-null answer is found.  Regardless, this is what will
@@ -953,6 +954,8 @@ __dynamic_cast(const void *static_ptr, const __class_type_info *static_type,
 
     return const_cast<void*>(dst_ptr);
 }
+
+#pragma GCC diagnostic pop
 
 #ifdef __clang__
 #pragma clang diagnostic pop

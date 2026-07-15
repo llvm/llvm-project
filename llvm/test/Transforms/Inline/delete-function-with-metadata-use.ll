@@ -1,5 +1,4 @@
 ; RUN: opt -passes=inline < %s -S | FileCheck %s
-; RUN: opt -passes=inline < %s -S --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; CHECK: define {{.*}}@f1
 ; CHECK-NOT: define

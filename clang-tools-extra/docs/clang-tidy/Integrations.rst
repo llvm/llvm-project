@@ -83,9 +83,10 @@ possible with the `Clang Tools`_ analyzer.
 .. _Visual Assist: https://docs.wholetomato.com/default.asp?W761
 .. _Clang Power Tools: https://marketplace.visualstudio.com/items?itemName=caphyon.ClangPowerTools
 
-`MS Visual Studio`_  can integrate :program:`clang-tidy` by means of three different tools.
-The `ReSharper C++`_ extension, version 2017.3 and later, provides seamless
-:program:`clang-tidy` integration: checks and quick-fixes run alongside native inspections.
+`MS Visual Studio`_  can integrate :program:`clang-tidy` by means of three
+different tools. The `ReSharper C++`_ extension, version 2017.3 and later,
+provides seamless :program:`clang-tidy` integration: checks and quick-fixes run
+alongside native inspections.
 Apart from that, ReSharper C++ incorporates :program:`clang-tidy` as a separate
 step of its code clean-up process. `Visual Assist`_ build 2210 includes a
 subset of :program:`clang-tidy` checklist to inspect the code as you edit.

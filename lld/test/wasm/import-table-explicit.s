@@ -1,4 +1,4 @@
-# RUN: llvm-mc -mattr=+reference-types -filetype=obj -triple=wasm32-unknown-unknown %s -o %t.o
+# RUN: llvm-mc -mattr=+call-indirect-overlong -filetype=obj -triple=wasm32-unknown-unknown %s -o %t.o
 # RUN: wasm-ld --import-table -o %t.wasm %t.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
 

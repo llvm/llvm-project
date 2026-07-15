@@ -59,7 +59,7 @@ const MCExpr *ConstantPool::addEntry(const MCExpr *Value, MCContext &Context,
   MCSymbol *CPEntryLabel = Context.createTempSymbol();
 
   Entries.push_back(ConstantPoolEntry(CPEntryLabel, Value, Size, Loc));
-  const auto SymRef = MCSymbolRefExpr::create(CPEntryLabel, Context);
+  const auto SymRef = MCSymbolRefExpr::create(CPEntryLabel, Context, Loc);
   if (C)
     CachedConstantEntries[std::make_pair(C->getValue(), Size)] = SymRef;
   if (S)

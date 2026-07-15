@@ -1,9 +1,9 @@
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 \
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 \
 ; RUN:     -mattr=+soft-float -mips16-hard-float -relocation-model=pic \
 ; RUN:     -mips16-constant-islands -verify-machineinstrs  < %s | \
 ; RUN:     FileCheck %s -check-prefix=b-no-short
 
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 \
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 \
 ; RUN:     -mattr=+soft-float -mips16-hard-float -relocation-model=pic \
 ; RUN:     -mips16-constant-islands -verify-machineinstrs < %s | \
 ; RUN:     FileCheck %s -check-prefix=b-long
@@ -33,7 +33,7 @@ x:                                                ; preds = %x, %entry
 
 }
 
-attributes #0 = { noreturn nounwind optsize "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="true" }
+attributes #0 = { noreturn nounwind optsize "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="true" }
 attributes #1 = { nounwind }
 
 !1 = !{i32 45}

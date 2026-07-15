@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O3 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O3 < %s | FileCheck %s
 
 ; CHECK-LABEL: @test_pos1_ir_slt
 ; CHECK: loop0

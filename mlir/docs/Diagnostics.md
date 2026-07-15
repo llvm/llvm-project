@@ -293,7 +293,7 @@ shown below:
 // function should not recurse into the child location. Recursion into nested
 // location is performed as necessary by the caller.
 auto shouldShowFn = [](Location loc) -> bool {
-  FileLineColLoc fileLoc = loc.dyn_cast<FileLineColLoc>();
+  FileLineColLoc fileLoc = dyn_cast<FileLineColLoc>(loc);
 
   // We don't perform any filtering on non-file locations.
   // Reminder: The caller will recurse into any necessary child locations.

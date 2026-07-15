@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wno-objc-root-class %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-default-const-init-unsafe -verify -Wno-objc-root-class %s
 
 typedef struct objc_object {
   Class isa;

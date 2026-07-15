@@ -30,6 +30,19 @@ struct AllocOpInterface
   }
 };
 
+struct AssumeAlignmentOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<AssumeAlignmentOpInterface,
+                                                   memref::AssumeAlignmentOp> {
+  void populateBoundsForShapedValueDim(Operation *op, Value value, int64_t dim,
+                                       ValueBoundsConstraintSet &cstr) const {
+    auto assumeAlignmentOp = cast<memref::AssumeAlignmentOp>(op);
+    assert(value == assumeAlignmentOp.getResult() && "invalid value");
+
+    cstr.bound(value)[dim] ==
+        cstr.getExpr(assumeAlignmentOp.getViewSource(), dim);
+  }
+};
+
 struct CastOpInterface
     : public ValueBoundsOpInterface::ExternalModel<CastOpInterface, CastOp> {
   void populateBoundsForShapedValueDim(Operation *op, Value value, int64_t dim,
@@ -51,10 +64,59 @@ struct DimOpInterface
     auto dimOp = cast<DimOp>(op);
     assert(value == dimOp.getResult() && "invalid value");
 
+    cstr.bound(value) >= 0;
     auto constIndex = dimOp.getConstantIndex();
     if (!constIndex.has_value())
       return;
     cstr.bound(value) == cstr.getExpr(dimOp.getSource(), *constIndex);
+  }
+};
+
+struct ExpandShapeOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<ExpandShapeOpInterface,
+                                                   memref::ExpandShapeOp> {
+  void populateBoundsForShapedValueDim(Operation *op, Value value, int64_t dim,
+                                       ValueBoundsConstraintSet &cstr) const {
+    auto expandOp = cast<memref::ExpandShapeOp>(op);
+    assert(value == expandOp.getResult() && "invalid value");
+    cstr.bound(value)[dim] == expandOp.getMixedOutputShape()[dim];
+  }
+};
+
+struct ExtractStridedMetadataOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<
+          ExtractStridedMetadataOpInterface, memref::ExtractStridedMetadataOp> {
+  void populateBoundsForIndexValue(Operation *op, Value value,
+                                   ValueBoundsConstraintSet &cstr) const {
+    auto metadataOp = cast<memref::ExtractStridedMetadataOp>(op);
+    auto result = llvm::cast<OpResult>(value);
+    assert(result.getOwner() == op && "invalid value");
+    int64_t resultNumber = result.getResultNumber();
+
+    if (resultNumber == 1) {
+      cstr.bound(value) == metadataOp.getConstifiedMixedOffset();
+      return;
+    }
+
+    int64_t sourceRank = metadataOp.getSource().getType().getRank();
+    int64_t sizeStart = 2;
+    int64_t strideStart = sizeStart + sourceRank;
+    if (resultNumber >= sizeStart && resultNumber < strideStart) {
+      int64_t idx = resultNumber - sizeStart;
+      cstr.bound(value) >= 0;
+      cstr.bound(value) == cstr.getExpr(metadataOp.getSource(), idx);
+      return;
+    }
+
+    int64_t strideEnd = strideStart + sourceRank;
+    if (resultNumber >= strideStart && resultNumber < strideEnd) {
+      int64_t idx = resultNumber - strideStart;
+      SmallVector<OpFoldResult> strides =
+          metadataOp.getConstifiedMixedStrides();
+      cstr.bound(value) == strides[idx];
+      return;
+    }
+    llvm_unreachable("unexpected index value from extract_strided_metadata");
   }
 };
 
@@ -83,6 +145,27 @@ struct RankOpInterface
     if (!memrefType)
       return;
     cstr.bound(value) == memrefType.getRank();
+  }
+};
+
+struct CollapseShapeOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<CollapseShapeOpInterface,
+                                                   memref::CollapseShapeOp> {
+  void populateBoundsForShapedValueDim(Operation *op, Value value, int64_t dim,
+                                       ValueBoundsConstraintSet &cstr) const {
+    auto collapseOp = cast<memref::CollapseShapeOp>(op);
+    assert(value == collapseOp.getResult() && "invalid value");
+
+    // Multiply the expressions for the dimensions in the reassociation group.
+    const ReassociationIndices reassocIndices =
+        collapseOp.getReassociationIndices()[dim];
+    AffineExpr productExpr =
+        cstr.getExpr(collapseOp.getSrc(), reassocIndices[0]);
+    for (size_t i = 1; i < reassocIndices.size(); ++i) {
+      productExpr =
+          productExpr * cstr.getExpr(collapseOp.getSrc(), reassocIndices[i]);
+    }
+    cstr.bound(value)[dim] == productExpr;
   }
 };
 
@@ -122,8 +205,16 @@ void mlir::memref::registerValueBoundsOpInterfaceExternalModels(
         memref::AllocOpInterface<memref::AllocaOp>>(*ctx);
     memref::CastOp::attachInterface<memref::CastOpInterface>(*ctx);
     memref::DimOp::attachInterface<memref::DimOpInterface>(*ctx);
+    memref::CollapseShapeOp::attachInterface<memref::CollapseShapeOpInterface>(
+        *ctx);
+    memref::ExpandShapeOp::attachInterface<memref::ExpandShapeOpInterface>(
+        *ctx);
     memref::GetGlobalOp::attachInterface<memref::GetGlobalOpInterface>(*ctx);
     memref::RankOp::attachInterface<memref::RankOpInterface>(*ctx);
     memref::SubViewOp::attachInterface<memref::SubViewOpInterface>(*ctx);
+    memref::AssumeAlignmentOp::attachInterface<
+        memref::AssumeAlignmentOpInterface>(*ctx);
+    memref::ExtractStridedMetadataOp::attachInterface<
+        memref::ExtractStridedMetadataOpInterface>(*ctx);
   });
 }

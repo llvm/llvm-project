@@ -1,6 +1,6 @@
-#include "fp-testing.h"
-#include "testing.h"
 #include "flang/Evaluate/type.h"
+#include "flang/Testing/fp-testing.h"
+#include "flang/Testing/testing.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cmath>
 #include <cstdio>
@@ -142,7 +142,7 @@ template <typename R> void basicTests(int rm, Rounding rounding) {
     Integer8 ix{x};
     TEST(!ix.IsNegative())(ldesc);
     MATCH(x, ix.ToUInt64())(ldesc);
-    vr = R::FromInteger(ix, rounding);
+    vr = R::FromInteger(ix, false, rounding);
     TEST(!vr.value.IsNegative())(ldesc);
     TEST(!vr.value.IsNotANumber())(ldesc);
     TEST(!vr.value.IsZero())(ldesc);
@@ -303,7 +303,7 @@ void inttest(std::int64_t x, int pass, Rounding rounding) {
   ScopedHostFloatingPointEnvironment fpenv;
   Integer8 ix{x};
   ValueWithRealFlags<REAL> real;
-  real = real.value.FromInteger(ix, rounding);
+  real = real.value.FromInteger(ix, false, rounding);
 #ifndef __clang__ // broken and also slow
   fpenv.ClearFlags();
 #endif

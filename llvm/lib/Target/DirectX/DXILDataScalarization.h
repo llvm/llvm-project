@@ -9,14 +9,14 @@
 #ifndef LLVM_TARGET_DIRECTX_DXILDATASCALARIZATION_H
 #define LLVM_TARGET_DIRECTX_DXILDATASCALARIZATION_H
 
-#include "DXILResource.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
 
 /// A pass that transforms Vectors to Arrays
-class DXILDataScalarization : public PassInfoMixin<DXILDataScalarization> {
+class DXILDataScalarization
+    : public OptionalPassInfoMixin<DXILDataScalarization> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };

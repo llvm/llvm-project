@@ -12,6 +12,7 @@
 #include <zxtest/zxtest.h>
 using Test = ::zxtest::Test;
 #define TEST_SKIP(message) ZXTEST_SKIP(message)
+#define TEST_HAS_FAILURE true
 #else
 #include "gtest/gtest.h"
 using Test = ::testing::Test;
@@ -19,6 +20,7 @@ using Test = ::testing::Test;
   do {                                                                         \
     GTEST_SKIP() << message;                                                   \
   } while (0)
+#define TEST_HAS_FAILURE Test::HasFailure()
 #endif
 
 // If EXPECT_DEATH isn't defined, make it a no-op.
@@ -54,6 +56,35 @@ using Test = ::testing::Test;
 // The zxtest library provides a default main function that does the same thing
 // for Fuchsia builds.
 #define SCUDO_NO_TEST_MAIN
+#endif
+
+#if SCUDO_ANDROID
+static void DisableDebuggerdMaybe() {
+  // Disable the debuggerd signal handler on Android, without this we can end
+  // up spending a significant amount of time creating tombstones.
+  signal(SIGSEGV, SIG_DFL);
+  signal(SIGABRT, SIG_DFL);
+}
+
+#define SCUDO_EXPECT_DEATH(X, Y)                                               \
+  EXPECT_DEATH(                                                                \
+      {                                                                        \
+        DisableDebuggerdMaybe();                                               \
+        X;                                                                     \
+      },                                                                       \
+      Y);
+#define SCUDO_ASSERT_DEATH(X, Y)                                               \
+  ASSERT_DEATH(                                                                \
+      {                                                                        \
+        DisableDebuggerdMaybe();                                               \
+        X;                                                                     \
+      },                                                                       \
+      Y);
+#else
+
+#define SCUDO_EXPECT_DEATH(X, Y) EXPECT_DEATH(X, Y);
+#define SCUDO_ASSERT_DEATH(X, Y) ASSERT_DEATH(X, Y);
+
 #endif
 
 extern bool UseQuarantine;

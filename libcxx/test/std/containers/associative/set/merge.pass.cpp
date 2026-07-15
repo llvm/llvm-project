@@ -13,13 +13,13 @@
 // class set
 
 // template <class C2>
-//   void merge(set<key_type, C2, allocator_type>& source);
+//   constexpr void merge(set<key_type, C2, allocator_type>& source); // constexpr since C++26
 // template <class C2>
-//   void merge(set<key_type, C2, allocator_type>&& source);
+//   constexpr void merge(set<key_type, C2, allocator_type>&& source); // constexpr since C++26
 // template <class C2>
-//   void merge(multiset<key_type, C2, allocator_type>& source);
+//   constexpr void merge(multiset<key_type, C2, allocator_type>& source); // constexpr since C++26
 // template <class C2>
-//   void merge(multiset<key_type, C2, allocator_type>&& source);
+//   constexpr void merge(multiset<key_type, C2, allocator_type>&& source); // constexpr since C++26
 
 #include <set>
 #include <cassert>
@@ -27,123 +27,121 @@
 #include "Counter.h"
 
 template <class Set>
-bool set_equal(const Set& set, Set other)
-{
-    return set == other;
+TEST_CONSTEXPR_CXX26 bool set_equal(const Set& set, Set other) {
+  return set == other;
 }
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
-struct throw_comparator
-{
-    bool& should_throw_;
+struct throw_comparator {
+  bool& should_throw_;
 
-    throw_comparator(bool& should_throw) : should_throw_(should_throw) {}
+  throw_comparator(bool& should_throw) : should_throw_(should_throw) {}
 
-    template <class T>
-    bool operator()(const T& lhs, const T& rhs) const
-    {
-        if (should_throw_)
-            throw 0;
-        return lhs < rhs;
-    }
+  template <class T>
+  bool operator()(const T& lhs, const T& rhs) const {
+    if (should_throw_)
+      throw 0;
+    return lhs < rhs;
+  }
 };
 #endif
 
-int main(int, char**)
-{
-    {
-        std::set<int> src{1, 3, 5};
-        std::set<int> dst{2, 4, 5};
-        dst.merge(src);
-        assert(set_equal(src, {5}));
-        assert(set_equal(dst, {1, 2, 3, 4, 5}));
+TEST_CONSTEXPR_CXX26 bool test() {
+  {
+    std::set<int> src{1, 3, 5};
+    std::set<int> dst{2, 4, 5};
+    dst.merge(src);
+    assert(set_equal(src, {5}));
+    assert(set_equal(dst, {1, 2, 3, 4, 5}));
+  }
+
+#if !defined(TEST_HAS_NO_EXCEPTIONS)
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    bool do_throw = false;
+    typedef std::set<Counter<int>, throw_comparator> set_type;
+    set_type src({1, 3, 5}, throw_comparator(do_throw));
+    set_type dst({2, 4, 5}, throw_comparator(do_throw));
+
+    assert(Counter_base::gConstructed == 6);
+
+    do_throw = true;
+    try {
+      dst.merge(src);
+    } catch (int) {
+      do_throw = false;
     }
-
-#ifndef TEST_HAS_NO_EXCEPTIONS
-    {
-        bool do_throw = false;
-        typedef std::set<Counter<int>, throw_comparator> set_type;
-        set_type src({1, 3, 5}, throw_comparator(do_throw));
-        set_type dst({2, 4, 5}, throw_comparator(do_throw));
-
-        assert(Counter_base::gConstructed == 6);
-
-        do_throw = true;
-        try
-        {
-            dst.merge(src);
-        }
-        catch (int)
-        {
-            do_throw = false;
-        }
-        assert(!do_throw);
-        assert(set_equal(src, set_type({1, 3, 5}, throw_comparator(do_throw))));
-        assert(set_equal(dst, set_type({2, 4, 5}, throw_comparator(do_throw))));
-    }
+    assert(!do_throw);
+    assert(set_equal(src, set_type({1, 3, 5}, throw_comparator(do_throw))));
+    assert(set_equal(dst, set_type({2, 4, 5}, throw_comparator(do_throw))));
+  }
 #endif
+  if (!TEST_IS_CONSTANT_EVALUATED)
     assert(Counter_base::gConstructed == 0);
-    struct comparator
+  struct comparator {
+    comparator() = default;
+
+    bool operator()(const Counter<int>& lhs, const Counter<int>& rhs) const { return lhs < rhs; }
+  };
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    typedef std::set<Counter<int>, std::less<Counter<int>>> first_set_type;
+    typedef std::set<Counter<int>, comparator> second_set_type;
+    typedef std::multiset<Counter<int>, comparator> third_set_type;
+
     {
-        comparator() = default;
+      first_set_type first{1, 2, 3};
+      second_set_type second{2, 3, 4};
+      third_set_type third{1, 3};
 
-        bool operator()(const Counter<int>& lhs, const Counter<int>& rhs) const
-        {
-            return lhs < rhs;
-        }
-    };
-    {
-        typedef std::set<Counter<int>, std::less<Counter<int>>> first_set_type;
-        typedef std::set<Counter<int>, comparator> second_set_type;
-        typedef std::multiset<Counter<int>, comparator> third_set_type;
+      assert(Counter_base::gConstructed == 8);
 
-        {
-            first_set_type first{1, 2, 3};
-            second_set_type second{2, 3, 4};
-            third_set_type third{1, 3};
+      first.merge(second);
+      first.merge(third);
 
-            assert(Counter_base::gConstructed == 8);
+      assert(set_equal(first, {1, 2, 3, 4}));
+      assert(set_equal(second, {2, 3}));
+      assert(set_equal(third, {1, 3}));
 
-            first.merge(second);
-            first.merge(third);
-
-            assert(set_equal(first, {1, 2, 3, 4}));
-            assert(set_equal(second, {2, 3}));
-            assert(set_equal(third, {1, 3}));
-
-            assert(Counter_base::gConstructed == 8);
-        }
-        assert(Counter_base::gConstructed == 0);
-        {
-            first_set_type first{1, 2, 3};
-            second_set_type second{2, 3, 4};
-            third_set_type third{1, 3};
-
-            assert(Counter_base::gConstructed == 8);
-
-            first.merge(std::move(second));
-            first.merge(std::move(third));
-
-            assert(set_equal(first, {1, 2, 3, 4}));
-            assert(set_equal(second, {2, 3}));
-            assert(set_equal(third, {1, 3}));
-
-            assert(Counter_base::gConstructed == 8);
-        }
-        assert(Counter_base::gConstructed == 0);
+      assert(Counter_base::gConstructed == 8);
     }
+    assert(Counter_base::gConstructed == 0);
     {
-        std::set<int> first;
-        {
-            std::set<int> second;
-            first.merge(second);
-            first.merge(std::move(second));
-        }
-        {
-            std::multiset<int> second;
-            first.merge(second);
-            first.merge(std::move(second));
-        }
+      first_set_type first{1, 2, 3};
+      second_set_type second{2, 3, 4};
+      third_set_type third{1, 3};
+
+      assert(Counter_base::gConstructed == 8);
+
+      first.merge(std::move(second));
+      first.merge(std::move(third));
+
+      assert(set_equal(first, {1, 2, 3, 4}));
+      assert(set_equal(second, {2, 3}));
+      assert(set_equal(third, {1, 3}));
+
+      assert(Counter_base::gConstructed == 8);
     }
-    return 0;
+    assert(Counter_base::gConstructed == 0);
+  }
+  {
+    std::set<int> first;
+    {
+      std::set<int> second;
+      first.merge(second);
+      first.merge(std::move(second));
+    }
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      std::multiset<int> second;
+      first.merge(second);
+      first.merge(std::move(second));
+    }
+  }
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
+  return 0;
 }

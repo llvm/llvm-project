@@ -14,15 +14,17 @@
 #define LLVM_EXECUTIONENGINE_ORC_REDIRECTIONMANAGER_H
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace orc {
 
 /// Base class for performing redirection of call to symbol to another symbol in
 /// runtime.
-class RedirectionManager {
+class LLVM_ABI RedirectionManager {
 public:
   virtual ~RedirectionManager() = default;
+
   /// Change the redirection destination of given symbols to new destination
   /// symbols.
   virtual Error redirect(JITDylib &JD, const SymbolMap &NewDests) = 0;
@@ -31,7 +33,7 @@ public:
   /// symbol.
   Error redirect(JITDylib &JD, SymbolStringPtr Symbol,
                  ExecutorSymbolDef NewDest) {
-    return redirect(JD, {{Symbol, NewDest}});
+    return redirect(JD, {{std::move(Symbol), NewDest}});
   }
 
 private:
@@ -44,13 +46,14 @@ class RedirectableSymbolManager : public RedirectionManager {
 public:
   /// Create redirectable symbols with given symbol names and initial
   /// desitnation symbol addresses.
-  Error createRedirectableSymbols(ResourceTrackerSP RT, SymbolMap InitialDests);
+  LLVM_ABI Error createRedirectableSymbols(ResourceTrackerSP RT,
+                                           SymbolMap InitialDests);
 
   /// Create a single redirectable symbol with given symbol name and initial
   /// desitnation symbol address.
   Error createRedirectableSymbol(ResourceTrackerSP RT, SymbolStringPtr Symbol,
                                  ExecutorSymbolDef InitialDest) {
-    return createRedirectableSymbols(RT, {{Symbol, InitialDest}});
+    return createRedirectableSymbols(RT, {{std::move(Symbol), InitialDest}});
   }
 
   /// Emit redirectable symbol

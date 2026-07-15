@@ -15,11 +15,15 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Object/OffloadBinary.h"
+#include "llvm/ObjectYAML/ELFYAML.h"
+#include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 using namespace llvm::offloading;
+using namespace llvm::offloading::sycl;
 
 StructType *offloading::getEntryTy(Module &M) {
   LLVMContext &C = M.getContext();
@@ -27,21 +31,23 @@ StructType *offloading::getEntryTy(Module &M) {
       StructType::getTypeByName(C, "struct.__tgt_offload_entry");
   if (!EntryTy)
     EntryTy = StructType::create(
-        "struct.__tgt_offload_entry", PointerType::getUnqual(C),
-        PointerType::getUnqual(C), M.getDataLayout().getIntPtrType(C),
-        Type::getInt32Ty(C), Type::getInt32Ty(C));
+        "struct.__tgt_offload_entry", Type::getInt64Ty(C), Type::getInt16Ty(C),
+        Type::getInt16Ty(C), Type::getInt32Ty(C), PointerType::getUnqual(C),
+        PointerType::getUnqual(C), Type::getInt64Ty(C), Type::getInt64Ty(C),
+        PointerType::getUnqual(C));
   return EntryTy;
 }
 
-// TODO: Rework this interface to be more generic.
 std::pair<Constant *, GlobalVariable *>
-offloading::getOffloadingEntryInitializer(Module &M, Constant *Addr,
-                                          StringRef Name, uint64_t Size,
-                                          int32_t Flags, int32_t Data) {
-  llvm::Triple Triple(M.getTargetTriple());
-  Type *Int8PtrTy = PointerType::getUnqual(M.getContext());
+offloading::getOffloadingEntryInitializer(Module &M, object::OffloadKind Kind,
+                                          Constant *Addr, StringRef Name,
+                                          uint64_t Size, uint32_t Flags,
+                                          uint64_t Data, Constant *AuxAddr) {
+  const llvm::Triple &Triple = M.getTargetTriple();
+  Type *PtrTy = PointerType::getUnqual(M.getContext());
+  Type *Int64Ty = Type::getInt64Ty(M.getContext());
   Type *Int32Ty = Type::getInt32Ty(M.getContext());
-  Type *SizeTy = M.getDataLayout().getIntPtrType(M.getContext());
+  Type *Int16Ty = Type::getInt16Ty(M.getContext());
 
   Constant *AddrName = ConstantDataArray::getString(M.getContext(), Name);
 
@@ -64,23 +70,46 @@ offloading::getOffloadingEntryInitializer(Module &M, Constant *Addr,
 
   // Construct the offloading entry.
   Constant *EntryData[] = {
-      ConstantExpr::getPointerBitCastOrAddrSpaceCast(Addr, Int8PtrTy),
-      ConstantExpr::getPointerBitCastOrAddrSpaceCast(Str, Int8PtrTy),
-      ConstantInt::get(SizeTy, Size),
+      ConstantExpr::getNullValue(Int64Ty),
+      ConstantInt::get(Int16Ty, 1),
+      ConstantInt::get(Int16Ty, Kind),
       ConstantInt::get(Int32Ty, Flags),
-      ConstantInt::get(Int32Ty, Data),
-  };
+      ConstantExpr::getPointerBitCastOrAddrSpaceCast(Addr, PtrTy),
+      ConstantExpr::getPointerBitCastOrAddrSpaceCast(Str, PtrTy),
+      ConstantInt::get(Int64Ty, Size),
+      ConstantInt::get(Int64Ty, Data),
+      AuxAddr ? ConstantExpr::getPointerBitCastOrAddrSpaceCast(AuxAddr, PtrTy)
+              : ConstantExpr::getNullValue(PtrTy)};
   Constant *EntryInitializer = ConstantStruct::get(getEntryTy(M), EntryData);
   return {EntryInitializer, Str};
 }
 
-void offloading::emitOffloadingEntry(Module &M, Constant *Addr, StringRef Name,
-                                     uint64_t Size, int32_t Flags, int32_t Data,
-                                     StringRef SectionName) {
-  llvm::Triple Triple(M.getTargetTriple());
+StringRef offloading::getOffloadEntrySection(Module &M) {
+  return M.getTargetTriple().isOSBinFormatMachO() ? "__LLVM,offload_entries"
+                                                  : "llvm_offload_entries";
+}
 
-  auto [EntryInitializer, NameGV] =
-      getOffloadingEntryInitializer(M, Addr, Name, Size, Flags, Data);
+/// Returns the start/end symbol names for iterating offloading entries in a
+/// given section. Mach-O uses \1section$start$/\1section$end$ convention;
+/// ELF/COFF use __start_/__stop_ prefixes.
+static std::pair<std::string, std::string>
+getOffloadEntryBoundarySymbols(const Triple &T, StringRef SectionName) {
+  if (T.isOSBinFormatMachO()) {
+    std::string SymSection = SectionName.str();
+    std::replace(SymSection.begin(), SymSection.end(), ',', '$');
+    return {"\1section$start$" + SymSection, "\1section$end$" + SymSection};
+  }
+  return {("__start_" + SectionName).str(), ("__stop_" + SectionName).str()};
+}
+
+GlobalVariable *offloading::emitOffloadingEntry(
+    Module &M, object::OffloadKind Kind, Constant *Addr, StringRef Name,
+    uint64_t Size, uint32_t Flags, uint64_t Data, Constant *AuxAddr) {
+  const llvm::Triple &Triple = M.getTargetTriple();
+  StringRef SectionName = getOffloadEntrySection(M);
+
+  auto [EntryInitializer, NameGV] = getOffloadingEntryInitializer(
+      M, Kind, Addr, Name, Size, Flags, Data, AuxAddr);
 
   StringRef Prefix =
       Triple.isNVPTX() ? "$offloading$entry$" : ".offloading.entry.";
@@ -95,12 +124,14 @@ void offloading::emitOffloadingEntry(Module &M, Constant *Addr, StringRef Name,
     Entry->setSection((SectionName + "$OE").str());
   else
     Entry->setSection(SectionName);
-  Entry->setAlignment(Align(1));
+  Entry->setAlignment(Align(object::OffloadBinary::getAlignment()));
+  return Entry;
 }
 
 std::pair<GlobalVariable *, GlobalVariable *>
-offloading::getOffloadEntryArray(Module &M, StringRef SectionName) {
-  llvm::Triple Triple(M.getTargetTriple());
+offloading::getOffloadEntryArray(Module &M) {
+  const llvm::Triple &Triple = M.getTargetTriple();
+  StringRef SectionName = getOffloadEntrySection(M);
 
   auto *ZeroInitilaizer =
       ConstantAggregateZero::get(ArrayType::get(getEntryTy(M), 0u));
@@ -109,13 +140,14 @@ offloading::getOffloadEntryArray(Module &M, StringRef SectionName) {
   auto Linkage = Triple.isOSBinFormatCOFF() ? GlobalValue::WeakODRLinkage
                                             : GlobalValue::ExternalLinkage;
 
-  auto *EntriesB =
-      new GlobalVariable(M, EntryType, /*isConstant=*/true, Linkage, EntryInit,
-                         "__start_" + SectionName);
+  auto [StartName, StopName] =
+      getOffloadEntryBoundarySymbols(Triple, SectionName);
+
+  auto *EntriesB = new GlobalVariable(M, EntryType, /*isConstant=*/true,
+                                      Linkage, EntryInit, StartName);
   EntriesB->setVisibility(GlobalValue::HiddenVisibility);
-  auto *EntriesE =
-      new GlobalVariable(M, EntryType, /*isConstant=*/true, Linkage, EntryInit,
-                         "__stop_" + SectionName);
+  auto *EntriesE = new GlobalVariable(M, EntryType, /*isConstant=*/true,
+                                      Linkage, EntryInit, StopName);
   EntriesE->setVisibility(GlobalValue::HiddenVisibility);
 
   if (Triple.isOSBinFormatELF()) {
@@ -127,6 +159,16 @@ offloading::getOffloadEntryArray(Module &M, StringRef SectionName) {
         M, ZeroInitilaizer->getType(), true, GlobalVariable::InternalLinkage,
         ZeroInitilaizer, "__dummy." + SectionName);
     DummyEntry->setSection(SectionName);
+    DummyEntry->setAlignment(Align(object::OffloadBinary::getAlignment()));
+    appendToCompilerUsed(M, DummyEntry);
+  } else if (Triple.isOSBinFormatMachO()) {
+    // Mach-O needs a dummy variable in the section (like ELF) to ensure the
+    // linker provides the section boundary symbols.
+    auto *DummyEntry = new GlobalVariable(
+        M, ZeroInitilaizer->getType(), true, GlobalVariable::InternalLinkage,
+        ZeroInitilaizer, "__dummy." + SectionName);
+    DummyEntry->setSection(SectionName);
+    DummyEntry->setAlignment(Align(object::OffloadBinary::getAlignment()));
     appendToCompilerUsed(M, DummyEntry);
   } else {
     // The COFF linker will merge sections containing a '$' together into a
@@ -273,6 +315,27 @@ private:
       KernelData.WavefrontSize = V.second.getUInt();
     } else if (IsKey(V.first, ".max_flat_workgroup_size")) {
       KernelData.MaxFlatWorkgroupSize = V.second.getUInt();
+    } else if (IsKey(V.first, ".args")) {
+      auto ArgsArray = V.second.getArray();
+      for (auto ArgIt = ArgsArray.begin(), ArgEnd = ArgsArray.end();
+           ArgIt != ArgEnd; ++ArgIt) {
+        auto ArgMap = ArgIt->getMap();
+
+        auto OffsetIt = ArgMap.find(".offset");
+        if (OffsetIt == ArgMap.end())
+          return createStringError(
+              inconvertibleErrorCode(),
+              "Missing required .offset key in kernel argument metadata map");
+
+        auto SizeIt = ArgMap.find(".size");
+        if (SizeIt == ArgMap.end())
+          return createStringError(
+              inconvertibleErrorCode(),
+              "Missing required .size key in kernel argument metadata map");
+
+        KernelData.ArgMDs.emplace_back(OffsetIt->second.getUInt(),
+                                       SizeIt->second.getUInt());
+      }
     }
 
     return Error::success();
@@ -364,4 +427,82 @@ Error llvm::offloading::amdgpu::getAMDGPUMetaDataFromImage(
     }
   }
   return Error::success();
+}
+
+Error offloading::containerizeImage(std::unique_ptr<MemoryBuffer> &Img,
+                                    llvm::Triple Triple,
+                                    object::ImageKind ImageKind,
+                                    object::OffloadKind OffloadKind,
+                                    int32_t ImageFlags,
+                                    MapVector<StringRef, StringRef> &MetaData) {
+  using namespace object;
+
+  // Create inner OffloadBinary containing the raw image.
+  OffloadBinary::OffloadingImage InnerImage;
+  InnerImage.TheImageKind = ImageKind;
+  InnerImage.TheOffloadKind = OffloadKind;
+  InnerImage.Flags = ImageFlags;
+
+  InnerImage.StringData["triple"] = Triple.getTriple();
+  for (const auto &[Key, Value] : MetaData)
+    InnerImage.StringData[Key] = Value;
+
+  InnerImage.Image = std::move(Img);
+
+  SmallString<0> InnerBinaryData = OffloadBinary::write(InnerImage);
+
+  Img = MemoryBuffer::getMemBufferCopy(InnerBinaryData);
+  return Error::success();
+}
+
+Error offloading::intel::containerizeOpenMPSPIRVImage(
+    std::unique_ptr<MemoryBuffer> &Binary, llvm::Triple Triple,
+    StringRef CompileOpts, StringRef LinkOpts) {
+  constexpr char INTEL_ONEOMP_OFFLOAD_VERSION[] = "1.0";
+
+  assert(Triple.isSPIRV() && Triple.getVendor() == llvm::Triple::Intel &&
+         "Expected SPIR-V triple with Intel vendor");
+
+  MapVector<StringRef, StringRef> MetaData;
+  MetaData["version"] = INTEL_ONEOMP_OFFLOAD_VERSION;
+  if (!CompileOpts.empty())
+    MetaData["compile-opts"] = CompileOpts;
+  if (!LinkOpts.empty())
+    MetaData["link-opts"] = LinkOpts;
+
+  return containerizeImage(Binary, Triple, object::ImageKind::IMG_SPIRV,
+                           object::OffloadKind::OFK_OpenMP, /*ImageFlags=*/0,
+                           MetaData);
+}
+
+void sycl::writeSymbolTable(ArrayRef<StringRef> Names, SmallString<0> &Out) {
+  uint32_t Count = Names.size();
+
+  // Compute the byte offset where string data begins: right after the header
+  // and the entry array.
+  uint32_t StringDataOffset =
+      sizeof(SymbolTableHeader) + Count * sizeof(SymbolTableEntry);
+
+  // Compute total size and reserve to prevent reallocation while writing
+  // entries via pointer (append() could otherwise invalidate the pointer).
+  uint32_t TotalSize = StringDataOffset;
+  for (StringRef N : Names)
+    TotalSize += N.size() + 1;
+  Out.reserve(TotalSize);
+  Out.resize(StringDataOffset);
+
+  // Write the header.
+  auto *Header = reinterpret_cast<SymbolTableHeader *>(Out.data());
+  Header->Count = Count;
+
+  // Write each entry and append the corresponding null-terminated name.
+  auto *Entries = reinterpret_cast<SymbolTableEntry *>(Header + 1);
+  uint32_t CurrentOffset = StringDataOffset;
+  for (uint32_t I = 0; I < Count; ++I) {
+    Entries[I].OffsetToSymbol = CurrentOffset;
+    Entries[I].SymbolSize = Names[I].size();
+    Out.append(Names[I]);
+    Out.push_back('\0');
+    CurrentOffset += Names[I].size() + 1;
+  }
 }

@@ -1,13 +1,16 @@
+import os
+
 import lit.llvm
+import lit.util
 
 lit.llvm.initialize(lit_config, config)
-lit.llvm.llvm_config.use_clang([], [], required=False)
+lit.llvm.llvm_config.clang_setup()
 lit.llvm.llvm_config.use_default_substitutions()
 
 config.name = "Clangd"
 config.suffixes = [".test"]
 config.excludes = ["Inputs"]
-config.test_format = lit.formats.ShTest(not lit.llvm.llvm_config.use_lit_shell)
+config.test_format = lit.formats.ShTest()
 config.test_source_root = config.clangd_source_dir + "/test"
 config.test_exec_root = config.clangd_binary_dir + "/test"
 
@@ -36,6 +39,9 @@ if config.clangd_tidy_checks:
 
 if config.have_zlib:
     config.available_features.add("zlib")
+
+if lit.util.pythonize_bool(config.have_benchmarks):
+    config.available_features.add("have-benchmarks")
 
 # It is not realistically possible to account for all options that could
 # possibly be present in system and user configuration files, so disable

@@ -3,7 +3,6 @@
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 
-; FIXME: Start == End for access group with AddRec.
 define void @runtime_checks_with_symbolic_max_btc_neg_1(ptr %P, ptr %S, i32 %x, i32 %y) {
 ; CHECK-LABEL: 'runtime_checks_with_symbolic_max_btc_neg_1'
 ; CHECK-NEXT:    loop:
@@ -11,15 +10,15 @@ define void @runtime_checks_with_symbolic_max_btc_neg_1(ptr %P, ptr %S, i32 %x, 
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.iv = getelementptr inbounds i32, ptr %P, i32 %iv
-; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:        ptr %S
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP1]]:
-; CHECK-NEXT:          (Low: ((4 * %y) + %P) High: ((4 * %y) + %P))
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: ((4 * %y) + %P) High: inttoptr (i32 -1 to ptr))
 ; CHECK-NEXT:            Member: {((4 * %y) + %P),+,4}<%loop>
-; CHECK-NEXT:        Group [[GRP2]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %S High: (4 + %S))
 ; CHECK-NEXT:            Member: %S
 ; CHECK-EMPTY:
@@ -44,7 +43,6 @@ exit:
   ret void
 }
 
-; FIXME: Start > End for access group with AddRec.
 define void @runtime_check_with_symbolic_max_btc_neg_2(ptr %P, ptr %S, i32 %x, i32 %y) {
 ; CHECK-LABEL: 'runtime_check_with_symbolic_max_btc_neg_2'
 ; CHECK-NEXT:    loop:
@@ -52,15 +50,15 @@ define void @runtime_check_with_symbolic_max_btc_neg_2(ptr %P, ptr %S, i32 %x, i
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP3:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.iv = getelementptr inbounds i32, ptr %P, i32 %iv
-; CHECK-NEXT:        Against group ([[GRP4:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:        ptr %S
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP3]]:
-; CHECK-NEXT:          (Low: ((4 * %y) + %P) High: (-4 + (4 * %y) + %P))
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: ((4 * %y) + %P) High: inttoptr (i32 -1 to ptr))
 ; CHECK-NEXT:            Member: {((4 * %y) + %P),+,4}<%loop>
-; CHECK-NEXT:        Group [[GRP4]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %S High: (4 + %S))
 ; CHECK-NEXT:            Member: %S
 ; CHECK-EMPTY:
@@ -135,4 +133,47 @@ loop.latch:
 exit:
   %res = phi i32 [ %iv.next, %loop.latch ]
   ret i32 %res
+}
+
+; Evaluating at symbolic max BTC wraps around to a positive
+; offset: (2 + (2 * %y) + %P).
+define void @runtime_check_with_symbolic_max_wraps_to_positive_offset(ptr %P, ptr %S, i32 %x, i32 %y) {
+; CHECK-LABEL: 'runtime_check_with_symbolic_max_wraps_to_positive_offset'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.iv = getelementptr inbounds i16, ptr %P, i32 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:        ptr %S
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: ((2 * %y) + %P) High: inttoptr (i32 -1 to ptr))
+; CHECK-NEXT:            Member: {((2 * %y) + %P),+,2}<%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %S High: (4 + %S))
+; CHECK-NEXT:            Member: %S
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %y, %entry ], [ %iv.next, %loop ]
+  %gep.iv = getelementptr inbounds i16 , ptr %P, i32 %iv
+  %l = load i32, ptr %S
+  store i16 0, ptr %gep.iv, align 4
+  %iv.next = add nsw i32 %iv, 1
+  %a = and i32 %l, 2147483648
+  %c.2 = icmp slt i32 %iv.next, %a
+  br i1 %c.2, label %loop, label %exit
+
+exit:
+  ret void
 }

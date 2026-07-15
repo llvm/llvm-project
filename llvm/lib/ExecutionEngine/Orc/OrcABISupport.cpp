@@ -16,9 +16,9 @@ using namespace llvm;
 using namespace llvm::orc;
 
 template <typename ORCABI>
-static bool stubAndPointerRangesOk(ExecutorAddr StubBlockAddr,
-                                   ExecutorAddr PointerBlockAddr,
-                                   unsigned NumStubs) {
+[[maybe_unused]] static bool
+stubAndPointerRangesOk(ExecutorAddr StubBlockAddr,
+                       ExecutorAddr PointerBlockAddr, unsigned NumStubs) {
   constexpr unsigned MaxDisp = ORCABI::StubToPointerMaxDisplacement;
   ExecutorAddr FirstStub = StubBlockAddr;
   ExecutorAddr LastStub = FirstStub + ((NumStubs - 1) * ORCABI::StubSize);
@@ -152,7 +152,7 @@ void OrcAArch64::writeTrampolines(char *TrampolineBlockWorkingMem,
 
   for (unsigned I = 0; I < NumTrampolines; ++I, OffsetToPtr -= TrampolineSize) {
     Trampolines[3 * I + 0] = 0xaa1e03f1;                      // mov x17, x30
-    Trampolines[3 * I + 1] = 0x58000010 | (OffsetToPtr << 3); // adr x16, Lptr
+    Trampolines[3 * I + 1] = 0x58000010 | (OffsetToPtr << 3); // ldr x16, Lptr
     Trampolines[3 * I + 2] = 0xd63f0200;                      // blr x16
   }
 }

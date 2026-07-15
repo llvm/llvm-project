@@ -63,3 +63,11 @@ auto DialectResourceBlobManager::insert(StringRef name,
     nameStorage.resize(name.size() + 1);
   } while (true);
 }
+
+void DialectResourceBlobManager::getBlobMap(
+    llvm::function_ref<void(const llvm::StringMap<BlobEntry> &)> accessor)
+    const {
+  llvm::sys::SmartScopedReader<true> reader(blobMapLock);
+
+  accessor(blobMap);
+}

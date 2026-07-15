@@ -87,14 +87,14 @@ Utility for dumping Clang-style logged diagnostics.\
         return
 
     # Otherwise, print out the diagnostics.
-    print
-    print "**** BUILD DIAGNOSTICS ****"
+    print()
+    print("**** BUILD DIAGNOSTICS ****")
     for file,selected_diags in to_report:
-        print "*** %s ***" % file
+        print(("*** %s ***" % file))
         for d in selected_diags:
-            print " %s:%s:%s: %s: %s" % (
+            print((" %s:%s:%s: %s: %s" % (
                 d.get('filename'), d.get('line'), d.get('column'),
-                d.get('level'), d.get('message'))
+                d.get('level'), d.get('message'))))
 
 if __name__ == "__main__":
     main()

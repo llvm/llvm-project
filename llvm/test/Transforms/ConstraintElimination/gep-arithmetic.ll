@@ -630,3 +630,138 @@ ptr.check:
 exit:
   ret i4 3
 }
+
+define i1 @test_nusw(ptr %p, i32 %x, i32 %y) {
+; CHECK-LABEL: @test_nusw(
+; CHECK-NEXT:    [[X_EXT:%.*]] = zext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[Y_EXT:%.*]] = zext i32 [[Y:%.*]] to i64
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i64 [[X_EXT]], [[Y_EXT]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP1]])
+; CHECK-NEXT:    [[GEP_X:%.*]] = getelementptr nusw i8, ptr [[P:%.*]], i64 [[X_EXT]]
+; CHECK-NEXT:    [[GEP_Y:%.*]] = getelementptr nusw i8, ptr [[P]], i64 [[Y_EXT]]
+; CHECK-NEXT:    ret i1 true
+;
+  %x.ext = zext i32 %x to i64
+  %y.ext = zext i32 %y to i64
+  %cmp1 = icmp ugt i64 %x.ext, %y.ext
+  call void @llvm.assume(i1 %cmp1)
+  %gep.x = getelementptr nusw i8, ptr %p, i64 %x.ext
+  %gep.y = getelementptr nusw i8, ptr %p, i64 %y.ext
+  %cmp2 = icmp ugt ptr %gep.x, %gep.y
+  ret i1 %cmp2
+}
+
+define i1 @test_nusw_nested(ptr %p, i32 %x, i32 %y) {
+; CHECK-LABEL: @test_nusw_nested(
+; CHECK-NEXT:    [[X_EXT:%.*]] = zext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[Y_EXT:%.*]] = zext i32 [[Y:%.*]] to i64
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i64 [[X_EXT]], [[Y_EXT]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP1]])
+; CHECK-NEXT:    [[GEP_X:%.*]] = getelementptr nusw i8, ptr [[P:%.*]], i64 [[X_EXT]]
+; CHECK-NEXT:    [[GEP_X1:%.*]] = getelementptr nusw i8, ptr [[GEP_X]], i64 1
+; CHECK-NEXT:    [[GEP_Y:%.*]] = getelementptr nusw i8, ptr [[P]], i64 [[Y_EXT]]
+; CHECK-NEXT:    ret i1 true
+;
+  %x.ext = zext i32 %x to i64
+  %y.ext = zext i32 %y to i64
+  %cmp1 = icmp ugt i64 %x.ext, %y.ext
+  call void @llvm.assume(i1 %cmp1)
+  %gep.x = getelementptr nusw i8, ptr %p, i64 %x.ext
+  %gep.x1 = getelementptr nusw i8, ptr %gep.x, i64 1
+  %gep.y = getelementptr nusw i8, ptr %p, i64 %y.ext
+  %cmp2 = icmp ugt ptr %gep.x1, %gep.y
+  ret i1 %cmp2
+}
+
+define i1 @test_missing_nusw(ptr %p, i32 %x, i32 %y) {
+; CHECK-LABEL: @test_missing_nusw(
+; CHECK-NEXT:    [[X_EXT:%.*]] = zext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[Y_EXT:%.*]] = zext i32 [[Y:%.*]] to i64
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i64 [[X_EXT]], [[Y_EXT]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP1]])
+; CHECK-NEXT:    [[GEP_X:%.*]] = getelementptr nusw i8, ptr [[P:%.*]], i64 [[X_EXT]]
+; CHECK-NEXT:    [[GEP_X1:%.*]] = getelementptr i8, ptr [[GEP_X]], i64 1
+; CHECK-NEXT:    [[GEP_Y:%.*]] = getelementptr nusw i8, ptr [[P]], i64 [[Y_EXT]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt ptr [[GEP_X1]], [[GEP_Y]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %x.ext = zext i32 %x to i64
+  %y.ext = zext i32 %y to i64
+  %cmp1 = icmp ugt i64 %x.ext, %y.ext
+  call void @llvm.assume(i1 %cmp1)
+  %gep.x = getelementptr nusw i8, ptr %p, i64 %x.ext
+  %gep.x1 = getelementptr i8, ptr %gep.x, i64 1
+  %gep.y = getelementptr nusw i8, ptr %p, i64 %y.ext
+  %cmp2 = icmp ugt ptr %gep.x1, %gep.y
+  ret i1 %cmp2
+}
+
+define i1 @test_nuw(ptr %p, i64 %x, i64 %y) {
+; CHECK-LABEL: @test_nuw(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP1]])
+; CHECK-NEXT:    [[GEP_X:%.*]] = getelementptr nuw i8, ptr [[P:%.*]], i64 [[X]]
+; CHECK-NEXT:    [[GEP_Y:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[Y]]
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp1 = icmp ugt i64 %x, %y
+  call void @llvm.assume(i1 %cmp1)
+  %gep.x = getelementptr nuw i8, ptr %p, i64 %x
+  %gep.y = getelementptr nuw i8, ptr %p, i64 %y
+  %cmp2 = icmp ugt ptr %gep.x, %gep.y
+  ret i1 %cmp2
+}
+
+define i1 @test_nuw_nested(ptr %p, i64 %x, i64 %y) {
+; CHECK-LABEL: @test_nuw_nested(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP1]])
+; CHECK-NEXT:    [[GEP_X:%.*]] = getelementptr nuw i8, ptr [[P:%.*]], i64 [[X]]
+; CHECK-NEXT:    [[GEP_X1:%.*]] = getelementptr nuw i8, ptr [[GEP_X]], i64 1
+; CHECK-NEXT:    [[GEP_Y:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[Y]]
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp1 = icmp ugt i64 %x, %y
+  call void @llvm.assume(i1 %cmp1)
+  %gep.x = getelementptr nuw i8, ptr %p, i64 %x
+  %gep.x1 = getelementptr nuw i8, ptr %gep.x, i64 1
+  %gep.y = getelementptr nuw i8, ptr %p, i64 %y
+  %cmp2 = icmp ugt ptr %gep.x1, %gep.y
+  ret i1 %cmp2
+}
+
+define i1 @test_nuw_nested_missing_nuw(ptr %p, i64 %x, i64 %y) {
+; CHECK-LABEL: @test_nuw_nested_missing_nuw(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP1]])
+; CHECK-NEXT:    [[GEP_X:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[X]]
+; CHECK-NEXT:    [[GEP_X1:%.*]] = getelementptr nuw i8, ptr [[GEP_X]], i64 1
+; CHECK-NEXT:    [[GEP_Y:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[Y]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt ptr [[GEP_X1]], [[GEP_Y]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %cmp1 = icmp ugt i64 %x, %y
+  call void @llvm.assume(i1 %cmp1)
+  %gep.x = getelementptr i8, ptr %p, i64 %x
+  %gep.x1 = getelementptr nuw i8, ptr %gep.x, i64 1
+  %gep.y = getelementptr nuw i8, ptr %p, i64 %y
+  %cmp2 = icmp ugt ptr %gep.x1, %gep.y
+  ret i1 %cmp2
+}
+
+define i1 @test_nuw_incorrect_precondition(ptr %p, i64 %x, i64 %y) {
+; CHECK-LABEL: @test_nuw_incorrect_precondition(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp uge i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP1]])
+; CHECK-NEXT:    [[GEP_X:%.*]] = getelementptr nuw i8, ptr [[P:%.*]], i64 [[X]]
+; CHECK-NEXT:    [[GEP_Y:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[Y]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt ptr [[GEP_X]], [[GEP_Y]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %cmp1 = icmp uge i64 %x, %y
+  call void @llvm.assume(i1 %cmp1)
+  %gep.x = getelementptr nuw i8, ptr %p, i64 %x
+  %gep.y = getelementptr nuw i8, ptr %p, i64 %y
+  %cmp2 = icmp ugt ptr %gep.x, %gep.y
+  ret i1 %cmp2
+}

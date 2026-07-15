@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_COPY_N_H
-#define _LIBCPP___ALGORITHM_COPY_N_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_COPY_N_H
+#define _LIBCPP___CXX03___ALGORITHM_COPY_N_H
 
 #include <__cxx03/__algorithm/copy.h>
 #include <__cxx03/__config>
@@ -27,8 +27,7 @@ template <class _InputIterator,
           __enable_if_t<__has_input_iterator_category<_InputIterator>::value &&
                             !__has_random_access_iterator_category<_InputIterator>::value,
                         int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
-copy_n(_InputIterator __first, _Size __orig_n, _OutputIterator __result) {
+inline _LIBCPP_HIDE_FROM_ABI _OutputIterator copy_n(_InputIterator __first, _Size __orig_n, _OutputIterator __result) {
   typedef decltype(std::__convert_to_integral(__orig_n)) _IntegralSize;
   _IntegralSize __n = __orig_n;
   if (__n > 0) {
@@ -47,8 +46,7 @@ template <class _InputIterator,
           class _Size,
           class _OutputIterator,
           __enable_if_t<__has_random_access_iterator_category<_InputIterator>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
-copy_n(_InputIterator __first, _Size __orig_n, _OutputIterator __result) {
+inline _LIBCPP_HIDE_FROM_ABI _OutputIterator copy_n(_InputIterator __first, _Size __orig_n, _OutputIterator __result) {
   typedef typename iterator_traits<_InputIterator>::difference_type difference_type;
   typedef decltype(std::__convert_to_integral(__orig_n)) _IntegralSize;
   _IntegralSize __n = __orig_n;
@@ -57,4 +55,4 @@ copy_n(_InputIterator __first, _Size __orig_n, _OutputIterator __result) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_COPY_N_H
+#endif // _LIBCPP___CXX03___ALGORITHM_COPY_N_H

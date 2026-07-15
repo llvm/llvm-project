@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/IR/ValueMap.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -35,32 +36,33 @@ class PseudoSourceValueManager {
       GlobalCallEntries;
 
 public:
-  PseudoSourceValueManager(const TargetMachine &TM);
+  LLVM_ABI PseudoSourceValueManager(const TargetMachine &TM);
 
   /// Return a pseudo source value referencing the area below the stack frame of
   /// a function, e.g., the argument space.
-  const PseudoSourceValue *getStack();
+  LLVM_ABI const PseudoSourceValue *getStack();
 
   /// Return a pseudo source value referencing the global offset table
   /// (or something the like).
-  const PseudoSourceValue *getGOT();
+  LLVM_ABI const PseudoSourceValue *getGOT();
 
   /// Return a pseudo source value referencing the constant pool. Since constant
   /// pools are constant, this doesn't need to identify a specific constant
   /// pool entry.
-  const PseudoSourceValue *getConstantPool();
+  LLVM_ABI const PseudoSourceValue *getConstantPool();
 
   /// Return a pseudo source value referencing a jump table. Since jump tables
   /// are constant, this doesn't need to identify a specific jump table.
-  const PseudoSourceValue *getJumpTable();
+  LLVM_ABI const PseudoSourceValue *getJumpTable();
 
   /// Return a pseudo source value referencing a fixed stack frame entry,
   /// e.g., a spill slot.
-  const PseudoSourceValue *getFixedStack(int FI);
+  LLVM_ABI const PseudoSourceValue *getFixedStack(int FI);
 
-  const PseudoSourceValue *getGlobalValueCallEntry(const GlobalValue *GV);
+  LLVM_ABI const PseudoSourceValue *
+  getGlobalValueCallEntry(const GlobalValue *GV);
 
-  const PseudoSourceValue *getExternalSymbolCallEntry(const char *ES);
+  LLVM_ABI const PseudoSourceValue *getExternalSymbolCallEntry(const char *ES);
 };
 
 } // end namespace llvm

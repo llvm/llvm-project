@@ -22,7 +22,7 @@ config.name = "BOLT"
 #
 # For now we require '&&' between commands, until they get globally killed and
 # the test runner updated.
-config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
+config.test_format = lit.formats.ShTest()
 
 # suffixes: A list of file extensions to treat as test files.
 config.suffixes = [
@@ -58,7 +58,7 @@ config.test_exec_root = os.path.join(config.bolt_obj_root, "test")
 supported, errormsg = lit_config.maxIndividualTestTimeIsSupported
 if supported:
     config.available_features.add("lit-max-individual-test-time")
-    lit_config.maxIndividualTestTime = 60
+    config.maxIndividualTestTime = 60
 else:
     lit_config.warning(
         "Setting a timeout per test not supported. "
@@ -110,6 +110,7 @@ tools = [
     ),
     ToolSubst("llvm-boltdiff", unresolved="fatal"),
     ToolSubst("llvm-bolt-heatmap", unresolved="fatal"),
+    ToolSubst("llvm-bolt-binary-analysis", unresolved="fatal"),
     ToolSubst("llvm-bat-dump", unresolved="fatal"),
     ToolSubst("perf2bolt", unresolved="fatal"),
     ToolSubst("yaml2obj", unresolved="fatal"),
@@ -126,6 +127,7 @@ tools = [
         unresolved="fatal",
         extra_args=[link_fdata_cmd],
     ),
+    ToolSubst("process-debug-line", unresolved="fatal"),
     ToolSubst("merge-fdata", unresolved="fatal"),
     ToolSubst("llvm-readobj", unresolved="fatal"),
     ToolSubst("llvm-dwp", unresolved="fatal"),

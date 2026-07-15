@@ -19,6 +19,11 @@ def ConvertHLFIRtoFIR : Pass<"convert-hlfir-to-fir", "::mlir::ModuleOp"> {
 
 def BufferizeHLFIR : Pass<"bufferize-hlfir", "::mlir::ModuleOp"> {
   let summary = "Convert HLFIR operations operating on hlfir.expr into operations on memory";
+  let options = [Option<"optimizeEmptyElementals", "opt-empty-elementals",
+                        "bool", /*default=*/"false",
+                        "When converting hlfir.elemental into a loop nest, "
+                        "check if the resulting expression is an empty array, "
+                        "and make sure none of the loops is executed.">];
 }
 
 def OptimizedBufferization : Pass<"opt-bufferization"> {
@@ -43,10 +48,68 @@ def LowerHLFIROrderedAssignments : Pass<"lower-hlfir-ordered-assignments", "::ml
 
 def SimplifyHLFIRIntrinsics : Pass<"simplify-hlfir-intrinsics"> {
   let summary = "Simplify HLFIR intrinsic operations that don't need to result in runtime calls";
+  let options = [Option<"allowNewSideEffects", "allow-new-side-effects", "bool",
+                        /*default=*/"false",
+                        "If enabled, then the HLFIR operations simplification "
+                        "may introduce operations with side effects. "
+                        "For example, hlfir.matmul may be inlined as "
+                        "and hlfir.eval_in_mem with hlfir.assign inside it."
+                        "The hlfir.assign has a write effect on the memory "
+                        "argument of hlfir.eval_in_mem, which may block "
+                        "some existing MLIR transformations (e.g. CSE) "
+                        "that otherwise would have been possible across "
+                        "the hlfir.matmul.">,
+                 Option<"fpMaxminBehavior", "fp-maxmin-behavior",
+                        "Fortran::common::FPMaxminBehavior",
+                        /*default=*/"Fortran::common::FPMaxminBehavior::Legacy",
+                        "This option defines the FP max/min behavior.",
+                        [{::llvm::cl::values(
+               clEnumValN(Fortran::common::FPMaxminBehavior::Legacy,
+                          "legacy", "cmp+select"),
+               clEnumValN(Fortran::common::FPMaxminBehavior::Portable,
+                          "portable", "same as legacy, except that "
+                          "arith.max/minnumf may be used when nnan "
+                          "and nsz fast math flags are enabled"),
+               clEnumValN(Fortran::common::FPMaxminBehavior::Extremum,
+                          "extremum", "arith.max/minimumf"),
+               clEnumValN(Fortran::common::FPMaxminBehavior::ExtremeNum,
+                          "extremenum", "arith.max/minnumf"))}]>];
+}
+
+def ExpressionSimplification : Pass<"hlfir-expression-simplification"> {
+  let summary = "Simplify Fortran expressions";
 }
 
 def InlineElementals : Pass<"inline-elementals"> {
   let summary = "Inline chained hlfir.elemental operations";
+}
+
+def SeparateAllocatableAssign : Pass<"separate-allocatable-assign"> {
+  let summary = "Separate reallocation from allocatable array assignments";
+  let description = [{
+    Transform `hlfir.assign %rhs to %lhs realloc` into a conditional
+    reallocation of the LHS followed by a non-realloc `hlfir.assign`.
+    This separates host-side allocation from device-side computation
+    for OpenACC/OpenMP offloading and runs at all optimization levels.
+  }];
+}
+
+def InlineHLFIRAssign : Pass<"inline-hlfir-assign"> {
+  let summary = "Inline hlfir.assign operations";
+  let options = [Option<
+      "onlyScalarRHS", "only-scalar-rhs", "bool", /*default=*/"false",
+      "Only inline assignments where RHS is a numeric or logical scalar "
+      "broadcast "
+      "to an array LHS. Used at O0 to avoid runtime calls in "
+      "device code without inlining all array assignments.">];
+}
+
+def InlineHLFIRCopy : Pass<"inline-hlfir-copy"> {
+  let summary = "Inline hlfir.copy_in and hlfir.copy_out operations";
+}
+
+def PropagateFortranVariableAttributes : Pass<"propagate-fortran-attrs"> {
+  let summary = "Propagate FortranVariableFlagsAttr attributes through HLFIR";
 }
 
 #endif //FORTRAN_DIALECT_HLFIR_PASSES

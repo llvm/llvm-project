@@ -17,17 +17,39 @@ def o : JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
 def output : Separate<["--"], "output-file">, Alias<o>, Flags<[HelpHidden]>,
   HelpText<"Alias for -o">;
 
-def library_path_EQ : Joined<["--", "-"], "library-path=">,
-  Flags<[HelpHidden]>, HelpText<"Add <dir> to the library search path">;
+def library_path : JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
+  HelpText<"Add <dir> to the library search path">;
+def library_path_S : Separate<["--", "-"], "library-path">, Flags<[HelpHidden]>,
+  Alias<library_path>;
+def library_path_EQ : Joined<["--", "-"], "library-path=">, Flags<[HelpHidden]>,
+  Alias<library_path>;
 
-def device_libs_EQ : CommaJoined<["--", "-"], "device-libs=">,
-  Flags<[LinkerOnlyOption]>,
-  HelpText<"A comma separated list of device libraries that are linked during the device link.">;
+def library : JoinedOrSeparate<["-"], "l">, MetaVarName<"<libname>">,
+  HelpText<"Search for library <libname>">;
+def library_S : Separate<["--", "-"], "library">, Flags<[HelpHidden]>,
+  Alias<library>;
+def library_EQ : Joined<["--", "-"], "library=">, Flags<[HelpHidden]>,
+  Alias<library>;
 
-def triple : Joined<["--"], "triple">,
-  HelpText<"The device target triple">;
-def arch : Separate<["--", "-"], "arch">,
-  HelpText<"Specify the name of the target architecture.">;
+def whole_archive : Flag<["--", "-"], "whole-archive">,
+  HelpText<"Include all archive members in the link">;
+def no_whole_archive : Flag<["--", "-"], "no-whole-archive">,
+  HelpText<"Disable --whole-archive for the following inputs (default state)">;
+
+def u : JoinedOrSeparate<["-"], "u">, MetaVarName<"<symbol>">,
+  HelpText<"Force undefined symbol during linking">;
+def undefined : JoinedOrSeparate<["--"], "undefined">, Alias<u>;
+def undefined_EQ : Joined<["--"], "undefined=">, Flags<[HelpHidden]>,
+  Alias<u>;
+
+def arch_EQ : Joined<["--", "-"], "arch=">,
+              Flags<[LinkerOnlyOption]>,
+              MetaVarName<"<arch>">,
+              HelpText<"The device architecture">;
+def triple_EQ : Joined<["--", "-"], "triple=">,
+                Flags<[LinkerOnlyOption]>,
+                MetaVarName<"<triple>">,
+                HelpText<"The device target triple">;
 
 def save_temps : Flag<["--", "-"], "save-temps">,
   Flags<[LinkerOnlyOption]>, HelpText<"Save intermediate results">;
@@ -39,14 +61,22 @@ def spirv_dump_device_code_EQ : Joined<["--", "-"], "spirv-dump-device-code=">,
   Flags<[LinkerOnlyOption]>,
   HelpText<"Path to the folder where the tool dumps SPIR-V device code. Other formats aren't dumped.">;
 
-def is_windows_msvc_env : Flag<["--", "-"], "is-windows-msvc-env">,
-  Flags<[LinkerOnlyOption, HelpHidden]>;
+def print_linked_module : Flag<["--"], "print-linked-module">,
+                          Flags<[LinkerOnlyOption]>,
+                          HelpText<"Print the linked module's IR for testing">;
 
-def llvm_spirv_path_EQ : Joined<["--"], "llvm-spirv-path=">,
-  Flags<[LinkerOnlyOption]>, MetaVarName<"<dir>">,
-  HelpText<"Set the system llvm-spirv path">;
-
-// Options to pass to llvm-spirv tool
-def llvm_spirv_options_EQ : Joined<["--", "-"], "llvm-spirv-options=">,
+def ocloc_options_EQ : Joined<["--", "-"], "ocloc-options=">,
   Flags<[LinkerOnlyOption]>,
-  HelpText<"Options that will control llvm-spirv step">;
+  HelpText<"Options passed to ocloc for Intel GPU AOT compilation">;
+
+def opencl_aot_options_EQ : Joined<["--", "-"], "opencl-aot-options=">,
+  Flags<[LinkerOnlyOption]>,
+  HelpText<"Options passed to opencl-aot for Intel CPU AOT compilation">;
+
+def module_split_mode_EQ : Joined<["--", "-"], "module-split-mode=">,
+  Flags<[LinkerOnlyOption]>, MetaVarName<"<mode>">,
+  HelpText<"SYCL device code module split mode. Valid values:\n"
+           "- 'translation_unit' (default) emits one device image per translation unit that contains "
+           "at least one entry point;\n"
+           "- 'kernel' emits one device image per kernel function;\n"
+           "- 'link_unit' emits one device image per linking unit.">;

@@ -41,7 +41,7 @@ void f0(void) { id x = @protocol(P2); }
 @protocol P5 -im1; @end
 @implementation UserP5
 
-- im1 { }
+- im1 { __builtin_unreachable(); }
 
 @end
 

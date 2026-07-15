@@ -22,6 +22,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -58,10 +59,6 @@ const Declaration &FunctionInfo::GetDeclaration() const {
 
 ConstString FunctionInfo::GetName() const { return m_name; }
 
-size_t FunctionInfo::MemorySize() const {
-  return m_name.MemorySize() + m_declaration.MemorySize();
-}
-
 InlineFunctionInfo::InlineFunctionInfo(const char *name,
                                        llvm::StringRef mangled,
                                        const Declaration *decl_ptr,
@@ -88,9 +85,9 @@ void InlineFunctionInfo::DumpStopContext(Stream *s) const {
   //    s->Indent("[inlined] ");
   s->Indent();
   if (m_mangled)
-    s->PutCString(m_mangled.GetName().AsCString());
+    s->PutCString(m_mangled.GetName());
   else
-    s->PutCString(m_name.AsCString());
+    s->PutCString(m_name);
 }
 
 ConstString InlineFunctionInfo::GetName() const {
@@ -115,10 +112,6 @@ Mangled &InlineFunctionInfo::GetMangled() { return m_mangled; }
 
 const Mangled &InlineFunctionInfo::GetMangled() const { return m_mangled; }
 
-size_t InlineFunctionInfo::MemorySize() const {
-  return FunctionInfo::MemorySize() + m_mangled.MemorySize();
-}
-
 /// @name Call site related structures
 /// @{
 
@@ -133,7 +126,7 @@ lldb::addr_t CallEdge::GetLoadAddress(lldb::addr_t unresolved_pc,
                                       Function &caller, Target &target) {
   Log *log = GetLog(LLDBLog::Step);
 
-  const Address &caller_start_addr = caller.GetAddressRange().GetBaseAddress();
+  const Address &caller_start_addr = caller.GetAddress();
 
   ModuleSP caller_module_sp = caller_start_addr.GetModule();
   if (!caller_module_sp) {
@@ -157,39 +150,37 @@ lldb::addr_t CallEdge::GetReturnPCAddress(Function &caller,
   return GetLoadAddress(GetUnresolvedReturnPCAddress(), caller, target);
 }
 
-void DirectCallEdge::ParseSymbolFileAndResolve(ModuleList &images) {
-  if (resolved)
-    return;
+Function *DirectCallEdge::ResolveCallee(ModuleList &images) {
+  if (!m_symbol_name)
+    return nullptr;
 
   Log *log = GetLog(LLDBLog::Step);
   LLDB_LOG(log, "DirectCallEdge: Lazily parsing the call graph for {0}",
-           lazy_callee.symbol_name);
+           m_symbol_name);
 
-  auto resolve_lazy_callee = [&]() -> Function * {
-    ConstString callee_name{lazy_callee.symbol_name};
-    SymbolContextList sc_list;
-    images.FindFunctionSymbols(callee_name, eFunctionNameTypeAuto, sc_list);
-    size_t num_matches = sc_list.GetSize();
-    if (num_matches == 0 || !sc_list[0].symbol) {
-      LLDB_LOG(log,
-               "DirectCallEdge: Found no symbols for {0}, cannot resolve it",
-               callee_name);
-      return nullptr;
-    }
-    Address callee_addr = sc_list[0].symbol->GetAddress();
-    if (!callee_addr.IsValid()) {
-      LLDB_LOG(log, "DirectCallEdge: Invalid symbol address");
-      return nullptr;
-    }
-    Function *f = callee_addr.CalculateSymbolContextFunction();
-    if (!f) {
-      LLDB_LOG(log, "DirectCallEdge: Could not find complete function");
-      return nullptr;
-    }
-    return f;
-  };
-  lazy_callee.def = resolve_lazy_callee();
-  resolved = true;
+  SymbolContextList sc_list;
+  images.FindFunctionSymbols(ConstString(m_symbol_name), eFunctionNameTypeAuto,
+                             sc_list);
+  size_t num_matches = sc_list.GetSize();
+  if (num_matches == 0 || !sc_list[0].symbol) {
+    LLDB_LOG(log, "DirectCallEdge: Found no symbols for {0}, cannot resolve it",
+             m_symbol_name);
+    return nullptr;
+  }
+
+  Address callee_addr = sc_list[0].symbol->GetAddress();
+  if (!callee_addr.IsValid()) {
+    LLDB_LOG(log, "DirectCallEdge: Invalid symbol address");
+    return nullptr;
+  }
+
+  Function *f = callee_addr.CalculateSymbolContextFunction();
+  if (!f) {
+    LLDB_LOG(log, "DirectCallEdge: Could not find complete function");
+    return nullptr;
+  }
+
+  return f;
 }
 
 DirectCallEdge::DirectCallEdge(const char *symbol_name,
@@ -197,14 +188,13 @@ DirectCallEdge::DirectCallEdge(const char *symbol_name,
                                lldb::addr_t caller_address, bool is_tail_call,
                                CallSiteParameterArray &&parameters)
     : CallEdge(caller_address_type, caller_address, is_tail_call,
-               std::move(parameters)) {
-  lazy_callee.symbol_name = symbol_name;
-}
+               std::move(parameters)),
+      m_symbol_name(symbol_name) {}
 
 Function *DirectCallEdge::GetCallee(ModuleList &images, ExecutionContext &) {
-  ParseSymbolFileAndResolve(images);
-  assert(resolved && "Did not resolve lazy callee");
-  return lazy_callee.def;
+  std::call_once(m_resolved_flag,
+                 [&] { m_callee_def = ResolveCallee(images); });
+  return m_callee_def;
 }
 
 IndirectCallEdge::IndirectCallEdge(DWARFExpressionList call_target,
@@ -237,6 +227,13 @@ Function *IndirectCallEdge::GetCallee(ModuleList &images,
     return nullptr;
   }
 
+  if (auto *process = exe_ctx.GetProcessPtr()) {
+    raw_addr = process->FixCodeAddress(raw_addr);
+  } else {
+    LLDB_LOG(log, "IndirectCallEdge: No Process available, unable to call "
+                  "FixCodeAddress on function pointer");
+  }
+
   Address callee_addr;
   if (!exe_ctx.GetTargetPtr()->ResolveLoadAddress(raw_addr, callee_addr)) {
     LLDB_LOG(log, "IndirectCallEdge: Could not resolve callee's load address");
@@ -254,43 +251,28 @@ Function *IndirectCallEdge::GetCallee(ModuleList &images,
 
 /// @}
 
-AddressRange CollapseRanges(llvm::ArrayRef<AddressRange> ranges) {
-  if (ranges.empty())
-    return AddressRange();
-  if (ranges.size() == 1)
-    return ranges[0];
-
-  Address lowest_addr = ranges[0].GetBaseAddress();
-  addr_t highest_addr = lowest_addr.GetFileAddress() + ranges[0].GetByteSize();
-  for (const AddressRange &range : ranges.drop_front()) {
-    Address range_begin = range.GetBaseAddress();
-    addr_t range_end = range_begin.GetFileAddress() + range.GetByteSize();
-    if (range_begin.GetFileAddress() < lowest_addr.GetFileAddress())
-      lowest_addr = range_begin;
-    if (range_end > highest_addr)
-      highest_addr = range_end;
-  }
-  return AddressRange(lowest_addr, highest_addr - lowest_addr.GetFileAddress());
-}
-
 //
 Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
                    lldb::user_id_t type_uid, const Mangled &mangled, Type *type,
-                   AddressRanges ranges)
+                   Address address, AddressRanges ranges)
     : UserID(func_uid), m_comp_unit(comp_unit), m_type_uid(type_uid),
-      m_type(type), m_mangled(mangled), m_block(func_uid),
-      m_ranges(std::move(ranges)), m_range(CollapseRanges(m_ranges)),
-      m_frame_base(), m_flags(), m_prologue_byte_size(0) {
-  m_block.SetParentScope(this);
+      m_type(type), m_mangled(mangled), m_block(*this, func_uid),
+      m_address(std::move(address)), m_prologue_byte_size(0) {
   assert(comp_unit != nullptr);
+  lldb::addr_t base_file_addr = m_address.GetFileAddress();
+  for (const AddressRange &range : ranges)
+    m_block.AddRange(
+        Block::Range(range.GetBaseAddress().GetFileAddress() - base_file_addr,
+                     range.GetByteSize()));
+  m_block.FinalizeRanges();
 }
 
 Function::~Function() = default;
 
-void Function::GetStartLineSourceInfo(SupportFileSP &source_file_sp,
+void Function::GetStartLineSourceInfo(SupportFileNSP &source_file_sp,
                                       uint32_t &line_no) {
   line_no = 0;
-  source_file_sp.reset();
+  source_file_sp = std::make_shared<SupportFile>();
 
   if (m_comp_unit == nullptr)
     return;
@@ -308,33 +290,38 @@ void Function::GetStartLineSourceInfo(SupportFileSP &source_file_sp,
       return;
 
     LineEntry line_entry;
-    if (line_table->FindLineEntryByAddress(GetAddressRange().GetBaseAddress(),
-                                           line_entry, nullptr)) {
+    if (line_table->FindLineEntryByAddress(GetAddress(), line_entry, nullptr)) {
       line_no = line_entry.line;
       source_file_sp = line_entry.file_sp;
     }
   }
 }
 
-void Function::GetEndLineSourceInfo(FileSpec &source_file, uint32_t &line_no) {
-  line_no = 0;
-  source_file.Clear();
-
-  // The -1 is kind of cheesy, but I want to get the last line entry for the
-  // given function, not the first entry of the next.
-  Address scratch_addr(GetAddressRange().GetBaseAddress());
-  scratch_addr.SetOffset(scratch_addr.GetOffset() +
-                         GetAddressRange().GetByteSize() - 1);
-
+llvm::Expected<std::pair<SupportFileNSP, Function::SourceRange>>
+Function::GetSourceInfo() {
+  SupportFileNSP source_file_sp = std::make_shared<SupportFile>();
+  uint32_t start_line;
+  GetStartLineSourceInfo(source_file_sp, start_line);
   LineTable *line_table = m_comp_unit->GetLineTable();
-  if (line_table == nullptr)
-    return;
-
-  LineEntry line_entry;
-  if (line_table->FindLineEntryByAddress(scratch_addr, line_entry, nullptr)) {
-    line_no = line_entry.line;
-    source_file = line_entry.GetFile();
+  if (start_line == 0 || !line_table) {
+    return llvm::createStringErrorV(
+        "Could not find line information for function \"{0}\".", GetName());
   }
+
+  uint32_t end_line = start_line;
+  for (const AddressRange &range : GetAddressRanges()) {
+    for (auto [idx, end] = line_table->GetLineEntryIndexRange(range); idx < end;
+         ++idx) {
+      LineEntry entry;
+      // Ignore entries belonging to inlined functions or #included files.
+      if (line_table->GetLineEntryAtIndex(idx, entry) &&
+          source_file_sp->Equal(*entry.file_sp,
+                                SupportFile::eEqualFileSpecAndChecksumIfSet))
+        end_line = std::max(end_line, entry.line);
+    }
+  }
+  return std::make_pair(std::move(source_file_sp),
+                        SourceRange(start_line, end_line - start_line));
 }
 
 llvm::ArrayRef<std::unique_ptr<CallEdge>> Function::GetCallEdges() {
@@ -353,7 +340,7 @@ llvm::ArrayRef<std::unique_ptr<CallEdge>> Function::GetCallEdges() {
   Block &block = GetBlock(/*can_create*/true);
   SymbolFile *sym_file = block.GetSymbolFile();
   if (!sym_file)
-    return std::nullopt;
+    return {};
 
   // Lazily read call site information from the SymbolFile.
   m_call_edges = sym_file->ParseCallEdgesInFunction(GetID());
@@ -427,13 +414,16 @@ void Function::GetDescription(Stream *s, lldb::DescriptionLevel level,
     llvm::interleaveComma(decl_context, *s, [&](auto &ctx) { ctx.Dump(*s); });
     *s << "}";
   }
-  *s << ", range" << (m_ranges.size() > 1 ? "s" : "") << " = ";
+  *s << ", range" << (m_block.GetNumRanges() > 1 ? "s" : "") << " = ";
   Address::DumpStyle fallback_style =
       level == eDescriptionLevelVerbose
           ? Address::DumpStyleModuleWithFileAddress
           : Address::DumpStyleFileAddress;
-  for (const AddressRange &range : m_ranges)
+  for (unsigned idx = 0; idx < m_block.GetNumRanges(); ++idx) {
+    AddressRange range;
+    m_block.GetRangeAtIndex(idx, range);
     range.Dump(s, target, Address::DumpStyleLoadAddress, fallback_style);
+  }
 }
 
 void Function::Dump(Stream *s, bool show_context) const {
@@ -451,8 +441,7 @@ void Function::Dump(Stream *s, bool show_context) const {
   s->EOL();
   // Dump the root object
   if (m_block.BlockInfoHasBeenParsed())
-    m_block.Dump(s, m_range.GetBaseAddress().GetFileAddress(), INT_MAX,
-                 show_context);
+    m_block.Dump(s, m_address.GetFileAddress(), INT_MAX, show_context);
 }
 
 void Function::CalculateSymbolContext(SymbolContext *sc) {
@@ -461,8 +450,7 @@ void Function::CalculateSymbolContext(SymbolContext *sc) {
 }
 
 ModuleSP Function::CalculateSymbolContextModule() {
-  SectionSP section_sp(m_range.GetBaseAddress().GetSection());
-  if (section_sp)
+  if (SectionSP section_sp = m_address.GetSection())
     return section_sp->GetModule();
 
   return this->GetCompileUnit()->GetModule();
@@ -477,11 +465,11 @@ Function *Function::CalculateSymbolContextFunction() { return this; }
 lldb::DisassemblerSP Function::GetInstructions(const ExecutionContext &exe_ctx,
                                                const char *flavor,
                                                bool prefer_file_cache) {
-  ModuleSP module_sp(GetAddressRange().GetBaseAddress().GetModule());
+  ModuleSP module_sp = GetAddress().GetModule();
   if (module_sp && exe_ctx.HasTargetScope()) {
     return Disassembler::DisassembleRange(
         module_sp->GetArchitecture(), nullptr, nullptr, nullptr, flavor,
-        exe_ctx.GetTargetRef(), GetAddressRange(), !prefer_file_cache);
+        exe_ctx.GetTargetRef(), GetAddressRanges(), !prefer_file_cache);
   }
   return lldb::DisassemblerSP();
 }
@@ -511,11 +499,6 @@ bool Function::GetDisassembly(const ExecutionContext &exe_ctx,
 void Function::DumpSymbolContext(Stream *s) {
   m_comp_unit->DumpSymbolContext(s);
   s->Printf(", Function{0x%8.8" PRIx64 "}", GetID());
-}
-
-size_t Function::MemorySize() const {
-  size_t mem_size = sizeof(Function) + m_block.MemorySize();
-  return mem_size;
 }
 
 bool Function::GetIsOptimized() {
@@ -594,9 +577,39 @@ uint32_t Function::GetPrologueByteSize() {
     if (line_table) {
       LineEntry first_line_entry;
       uint32_t first_line_entry_idx = UINT32_MAX;
-      if (line_table->FindLineEntryByAddress(GetAddressRange().GetBaseAddress(),
-                                             first_line_entry,
-                                             &first_line_entry_idx)) {
+      bool found_first_line_entry = line_table->FindLineEntryByAddress(
+          GetAddress(), first_line_entry, &first_line_entry_idx);
+
+      // When the entry point isn't covered (e.g. WebAssembly), fall back to the
+      // first line entry that begins within the function so the prologue is
+      // still skipped to a real instruction instead of leaving the breakpoint
+      // on the (unexecutable) entry address.
+      if (!found_first_line_entry) {
+        AddressRange entry_range;
+        if (m_block.GetRangeContainingAddress(m_address, entry_range)) {
+          const addr_t func_start_addr = m_address.GetFileAddress();
+          const addr_t func_end_addr =
+              entry_range.GetBaseAddress().GetFileAddress() +
+              entry_range.GetByteSize();
+          const uint32_t line_table_size = line_table->GetSize();
+          for (uint32_t idx = 0; idx < line_table_size; ++idx) {
+            LineEntry line_entry;
+            bool success = line_table->GetLineEntryAtIndex(idx, line_entry);
+            assert(success && "idx is within the line table size");
+            UNUSED_IF_ASSERT_DISABLED(success);
+            const addr_t entry_addr =
+                line_entry.range.GetBaseAddress().GetFileAddress();
+            if (entry_addr >= func_start_addr && entry_addr < func_end_addr) {
+              first_line_entry = line_entry;
+              first_line_entry_idx = idx;
+              found_first_line_entry = true;
+              break;
+            }
+          }
+        }
+      }
+
+      if (found_first_line_entry) {
         // Make sure the first line entry isn't already the end of the prologue
         addr_t prologue_end_file_addr = LLDB_INVALID_ADDRESS;
         addr_t line_zero_end_file_addr = LLDB_INVALID_ADDRESS;
@@ -650,10 +663,15 @@ uint32_t Function::GetPrologueByteSize() {
           }
         }
 
-        const addr_t func_start_file_addr =
-            m_range.GetBaseAddress().GetFileAddress();
-        const addr_t func_end_file_addr =
-            func_start_file_addr + m_range.GetByteSize();
+        AddressRange entry_range;
+        m_block.GetRangeContainingAddress(m_address, entry_range);
+
+        // Deliberately not starting at entry_range.GetBaseAddress() because the
+        // function entry point need not be the first address in the range.
+        const addr_t func_start_file_addr = m_address.GetFileAddress();
+        const addr_t range_end_file_addr =
+            entry_range.GetBaseAddress().GetFileAddress() +
+            entry_range.GetByteSize();
 
         // Now calculate the offset to pass the subsequent line 0 entries.
         uint32_t first_non_zero_line = prologue_end_line_idx;
@@ -665,7 +683,7 @@ uint32_t Function::GetPrologueByteSize() {
               break;
           }
           if (line_entry.range.GetBaseAddress().GetFileAddress() >=
-              func_end_file_addr)
+              range_end_file_addr)
             break;
 
           first_non_zero_line++;
@@ -680,15 +698,15 @@ uint32_t Function::GetPrologueByteSize() {
           }
         }
 
-        // Verify that this prologue end file address in the function's address
-        // range just to be sure
+        // Verify that this prologue end file address inside the function just
+        // to be sure
         if (func_start_file_addr < prologue_end_file_addr &&
-            prologue_end_file_addr < func_end_file_addr) {
+            prologue_end_file_addr < range_end_file_addr) {
           m_prologue_byte_size = prologue_end_file_addr - func_start_file_addr;
         }
 
         if (prologue_end_file_addr < line_zero_end_file_addr &&
-            line_zero_end_file_addr < func_end_file_addr) {
+            line_zero_end_file_addr < range_end_file_addr) {
           m_prologue_byte_size +=
               line_zero_end_file_addr - prologue_end_file_addr;
         }

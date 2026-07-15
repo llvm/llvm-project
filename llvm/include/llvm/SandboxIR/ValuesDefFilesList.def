@@ -1,0 +1,13 @@
+//===- DefFilesList.def -----------------------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// List of all *Values.def across all SandboxIR IR specializations.
+//
+
+#include "llvm/SandboxIR/Values.def"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizerIRValues.def"

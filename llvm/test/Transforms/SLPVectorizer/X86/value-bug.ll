@@ -8,32 +8,32 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; as elements of the vectorized tree.
 ; PR19621
 
-define void @test() {
+define void @test(i1 %arg) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  bb279:
 ; CHECK-NEXT:    br label [[BB283:%.*]]
 ; CHECK:       bb283:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x float> [ undef, [[BB279:%.*]] ], [ [[TMP11:%.*]], [[EXIT:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x float> [ undef, [[BB279]] ], [ undef, [[EXIT]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x float> [ zeroinitializer, [[BB279:%.*]] ], [ [[TMP11:%.*]], [[EXIT:%.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x float> [ zeroinitializer, [[BB279]] ], [ zeroinitializer, [[EXIT]] ]
 ; CHECK-NEXT:    br label [[BB284:%.*]]
 ; CHECK:       bb284:
 ; CHECK-NEXT:    [[TMP2:%.*]] = fpext <2 x float> [[TMP0]] to <2 x double>
-; CHECK-NEXT:    [[TMP3:%.*]] = fsub <2 x double> [[TMP2]], undef
-; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[TMP3]], undef
+; CHECK-NEXT:    [[TMP3:%.*]] = fsub <2 x double> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    br label [[BB21_I:%.*]]
 ; CHECK:       bb21.i:
-; CHECK-NEXT:    br i1 undef, label [[BB22_I:%.*]], label [[EXIT]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB22_I:%.*]], label [[EXIT]]
 ; CHECK:       bb22.i:
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> undef, [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> zeroinitializer, [[TMP4]]
 ; CHECK-NEXT:    br label [[BB32_I:%.*]]
 ; CHECK:       bb32.i:
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x double> [ [[TMP5]], [[BB22_I]] ], [ zeroinitializer, [[BB32_I]] ]
-; CHECK-NEXT:    br i1 undef, label [[BB32_I]], label [[BB21_I]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[BB32_I]], label [[BB21_I]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[TMP7:%.*]] = fpext <2 x float> [[TMP1]] to <2 x double>
-; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[TMP7]], <double undef, double 0.000000e+00>
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x double> undef, [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd <2 x double> [[TMP9]], undef
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[TMP7]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x double> zeroinitializer, [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd <2 x double> [[TMP9]], zeroinitializer
 ; CHECK-NEXT:    [[TMP11]] = fptrunc <2 x double> [[TMP10]] to <2 x float>
 ; CHECK-NEXT:    br label [[BB283]]
 ;
@@ -41,47 +41,47 @@ bb279:
   br label %bb283
 
 bb283:
-  %Av.sroa.8.0 = phi float [ undef, %bb279 ], [ %tmp315, %exit ]
-  %Av.sroa.5.0 = phi float [ undef, %bb279 ], [ %tmp319, %exit ]
-  %Av.sroa.3.0 = phi float [ undef, %bb279 ], [ %tmp307, %exit ]
-  %Av.sroa.0.0 = phi float [ undef, %bb279 ], [ %tmp317, %exit ]
+  %Av.sroa.8.0 = phi float [ zeroinitializer, %bb279 ], [ %tmp315, %exit ]
+  %Av.sroa.5.0 = phi float [ zeroinitializer, %bb279 ], [ %tmp319, %exit ]
+  %Av.sroa.3.0 = phi float [ zeroinitializer, %bb279 ], [ %tmp307, %exit ]
+  %Av.sroa.0.0 = phi float [ zeroinitializer, %bb279 ], [ %tmp317, %exit ]
   br label %bb284
 
 bb284:
   %tmp7.i = fpext float %Av.sroa.3.0 to double
-  %tmp8.i = fsub double %tmp7.i, undef
-  %tmp9.i = fsub double %tmp8.i, undef
+  %tmp8.i = fsub double %tmp7.i, zeroinitializer
+  %tmp9.i = fsub double %tmp8.i, zeroinitializer
   %tmp17.i = fpext float %Av.sroa.8.0 to double
-  %tmp19.i = fsub double %tmp17.i, undef
-  %tmp20.i = fsub double %tmp19.i, undef
+  %tmp19.i = fsub double %tmp17.i, zeroinitializer
+  %tmp20.i = fsub double %tmp19.i, zeroinitializer
   br label %bb21.i
 
 bb21.i:
-  br i1 undef, label %bb22.i, label %exit
+  br i1 %arg, label %bb22.i, label %exit
 
 bb22.i:
-  %tmp24.i = fadd double undef, %tmp9.i
-  %tmp26.i = fadd double undef, %tmp20.i
+  %tmp24.i = fadd double zeroinitializer, %tmp9.i
+  %tmp26.i = fadd double zeroinitializer, %tmp20.i
   br label %bb32.i
 
 bb32.i:
   %xs.0.i = phi double [ %tmp24.i, %bb22.i ], [ 0.000000e+00, %bb32.i ]
   %ys.0.i = phi double [ %tmp26.i, %bb22.i ], [ 0.000000e+00, %bb32.i ]
-  br i1 undef, label %bb32.i, label %bb21.i
+  br i1 %arg, label %bb32.i, label %bb21.i
 
 exit:
   %tmp303 = fpext float %Av.sroa.0.0 to double
-  %tmp304 = fmul double %tmp303, undef
-  %tmp305 = fadd double undef, %tmp304
-  %tmp306 = fadd double %tmp305, undef
+  %tmp304 = fmul double %tmp303, zeroinitializer
+  %tmp305 = fadd double zeroinitializer, %tmp304
+  %tmp306 = fadd double %tmp305, zeroinitializer
   %tmp307 = fptrunc double %tmp306 to float
   %tmp311 = fpext float %Av.sroa.5.0 to double
   %tmp312 = fmul double %tmp311, 0.000000e+00
-  %tmp313 = fadd double undef, %tmp312
-  %tmp314 = fadd double %tmp313, undef
+  %tmp313 = fadd double zeroinitializer, %tmp312
+  %tmp314 = fadd double %tmp313, zeroinitializer
   %tmp315 = fptrunc double %tmp314 to float
-  %tmp317 = fptrunc double undef to float
-  %tmp319 = fptrunc double undef to float
+  %tmp317 = fptrunc double zeroinitializer to float
+  %tmp319 = fptrunc double zeroinitializer to float
   br label %bb283
 }
 
@@ -91,13 +91,13 @@ exit:
 define <4 x double> @constant_folding() {
 ; CHECK-LABEL: @constant_folding(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <4 x double> <double 2.000000e+00, double 1.000000e+00, double undef, double undef>
+; CHECK-NEXT:    ret <4 x double> <double 2.000000e+00, double 1.000000e+00, double 0.000000e+00, double 0.000000e+00>
 ;
 entry:
   %t0 = fadd double 1.000000e+00 , 0.000000e+00
   %t1 = fadd double 1.000000e+00 , 1.000000e+00
   %t2 = fmul double %t0, 1.000000e+00
-  %i1 = insertelement <4 x double> undef, double %t2, i32 1
+  %i1 = insertelement <4 x double> zeroinitializer, double %t2, i32 1
   %t3 = fmul double %t1, 1.000000e+00
   %i2 = insertelement <4 x double> %i1, double %t3, i32 0
   ret <4 x double> %i2

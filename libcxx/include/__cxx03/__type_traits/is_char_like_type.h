@@ -6,13 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_CHAR_LIKE_TYPE_H
-#define _LIBCPP___TYPE_TRAITS_IS_CHAR_LIKE_TYPE_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_IS_CHAR_LIKE_TYPE_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_IS_CHAR_LIKE_TYPE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/conjunction.h>
 #include <__cxx03/__type_traits/is_standard_layout.h>
-#include <__cxx03/__type_traits/is_trivial.h>
+#include <__cxx03/__type_traits/is_trivially_constructible.h>
+#include <__cxx03/__type_traits/is_trivially_copyable.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -21,8 +22,9 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _CharT>
-using _IsCharLikeType = _And<is_standard_layout<_CharT>, is_trivial<_CharT> >;
+using _IsCharLikeType _LIBCPP_NODEBUG =
+    _And<is_standard_layout<_CharT>, is_trivially_default_constructible<_CharT>, is_trivially_copyable<_CharT> >;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_CHAR_LIKE_TYPE_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_CHAR_LIKE_TYPE_H

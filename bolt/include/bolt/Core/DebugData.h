@@ -135,8 +135,6 @@ struct DebugLineTableRowRef {
   uint32_t DwCompileUnitIndex;
   uint32_t RowIndex;
 
-  const static DebugLineTableRowRef NULL_ROW;
-
   bool operator==(const DebugLineTableRowRef &Rhs) const {
     return DwCompileUnitIndex == Rhs.DwCompileUnitIndex &&
            RowIndex == Rhs.RowIndex;
@@ -144,24 +142,6 @@ struct DebugLineTableRowRef {
 
   bool operator!=(const DebugLineTableRowRef &Rhs) const {
     return !(*this == Rhs);
-  }
-
-  static DebugLineTableRowRef fromSMLoc(const SMLoc &Loc) {
-    union {
-      decltype(Loc.getPointer()) Ptr;
-      DebugLineTableRowRef Ref;
-    } U;
-    U.Ptr = Loc.getPointer();
-    return U.Ref;
-  }
-
-  SMLoc toSMLoc() const {
-    union {
-      decltype(SMLoc().getPointer()) Ptr;
-      DebugLineTableRowRef Ref;
-    } U;
-    U.Ref = *this;
-    return SMLoc::getFromPointer(U.Ptr);
   }
 };
 
@@ -195,7 +175,7 @@ public:
 
   /// Returns an offset of an empty address ranges list that is always written
   /// to .debug_ranges
-  uint64_t getEmptyRangesOffset() const { return EmptyRangesOffset; }
+  static uint64_t getEmptyRangesOffset() { return EmptyRangesOffset; }
 
   /// Returns the SectionOffset.
   uint64_t getSectionOffset();
@@ -210,7 +190,7 @@ public:
   static bool classof(const DebugRangesSectionWriter *Writer) {
     return Writer->getKind() == RangesWriterKind::DebugRangesWriter;
   }
-  
+
   /// Append a range to the main buffer.
   void appendToRangeBuffer(const DebugBufferVector &CUBuffer);
 
@@ -346,8 +326,8 @@ public:
   /// Write out entries in to .debug_addr section for CUs.
   virtual std::optional<uint64_t> finalize(const size_t BufferSize);
 
-  /// Return buffer with all the entries in .debug_addr already writen out using
-  /// update(...).
+  /// Return buffer with all the entries in .debug_addr already written out
+  /// using update(...).
   virtual std::unique_ptr<AddressSectionBuffer> releaseBuffer() {
     return std::move(Buffer);
   }
@@ -429,7 +409,7 @@ protected:
   std::mutex WriterMutex;
   std::unique_ptr<AddressSectionBuffer> Buffer;
   std::unique_ptr<raw_svector_ostream> AddressStream;
-  /// Used to track sections that were not modified so that they can be re-used.
+  /// Used to track sections that were not modified so that they can be reused.
   static DenseMap<uint64_t, uint64_t> UnmodifiedAddressOffsets;
 };
 
@@ -491,6 +471,12 @@ public:
     return std::move(StrOffsetsBuffer);
   }
 
+  /// Returns strings of .debug_str_offsets.
+  StringRef getBufferStr() {
+    return StringRef(reinterpret_cast<const char *>(StrOffsetsBuffer->data()),
+                     StrOffsetsBuffer->size());
+  }
+
   /// Initializes Buffer and Stream.
   void initialize(DWARFUnit &Unit);
 
@@ -525,6 +511,12 @@ public:
   }
   std::unique_ptr<DebugStrBufferVector> releaseBuffer() {
     return std::move(StrBuffer);
+  }
+
+  /// Returns strings of .debug_str.
+  StringRef getBufferStr() {
+    return StringRef(reinterpret_cast<const char *>(StrBuffer->data()),
+                     StrBuffer->size());
   }
 
   /// Adds string to .debug_str.
@@ -579,6 +571,13 @@ public:
   /// Offset of an empty location list.
   static constexpr uint32_t EmptyListOffset = 0;
 
+  /// Returns the current size (in bytes) of the serialized location buffer.
+  uint64_t getLocBufferSize() const { return LocBuffer->size(); }
+
+  /// Applies an additional base offset to all non-empty location list offsets
+  /// recorded for this CU.
+  void applyBase(DIEBuilder &DIEBldr, uint64_t Base);
+
   LocWriterKind getKind() const { return Kind; }
 
   static bool classof(const DebugLocWriter *Writer) {
@@ -588,11 +587,6 @@ public:
 protected:
   std::unique_ptr<DebugBufferVector> LocBuffer;
   std::unique_ptr<raw_svector_ostream> LocStream;
-  /// Current offset in the section (updated as new entries are written).
-  /// Starts with 0 here since this only writes part of a full location lists
-  /// section. In the final section, for DWARF4, the first 16 bytes are reserved
-  /// for an empty list.
-  static uint32_t LocSectionOffset;
   uint8_t DwarfVersion{4};
   LocWriterKind Kind{LocWriterKind::DebugLocWriter};
 
@@ -608,6 +602,14 @@ private:
   /// The list of debug info patches to be made once individual
   /// location list writers have been filled
   VectorLocListDebugInfoPatchType LocListDebugInfoPatches;
+  /// Location list attribute patches pending base-address relocation.
+  struct LocListPatch {
+    DIE *Die;
+    dwarf::Attribute Attr;
+    dwarf::Form Form;
+  };
+  /// Accumulated location list patches awaiting base-address adjustment.
+  std::vector<LocListPatch> LocListPatches;
 };
 
 class DebugLoclistWriter : public DebugLocWriter {
@@ -621,11 +623,6 @@ public:
     if (DwarfVersion >= 5) {
       LocBodyBuffer = std::make_unique<DebugBufferVector>();
       LocBodyStream = std::make_unique<raw_svector_ostream>(*LocBodyBuffer);
-    } else {
-      // Writing out empty location list to which all references to empty
-      // location lists will point.
-      const char Zeroes[16] = {0};
-      *LocStream << StringRef(Zeroes, 16);
     }
   }
 
@@ -665,7 +662,6 @@ private:
   std::unique_ptr<raw_svector_ostream> LocBodyStream;
   std::vector<uint32_t> RelativeLocListOffsets;
   uint32_t NumberOfEntries{0};
-  static uint32_t LoclistBaseOffset;
 };
 
 /// Abstract interface for classes that apply modifications to a binary string.
@@ -852,6 +848,97 @@ public:
   // Returns DWARF Version for this line table.
   uint16_t getDwarfVersion() const { return DwarfVersion; }
 };
+
+/// ClusteredRows represents a collection of debug line table row references.
+///
+/// MEMORY LAYOUT AND DESIGN:
+/// This class uses a flexible array member pattern to store all
+/// DebugLineTableRowRef elements in a single contiguous memory allocation.
+/// The memory layout is:
+///
+/// +------------------+
+/// | ClusteredRows    |  <- Object header (Size + first element)
+/// | - Size           |
+/// | - Rows (element) |  <- First DebugLineTableRowRef element
+/// +------------------+
+/// | element[1]       |  <- Additional DebugLineTableRowRef elements
+/// | element[2]       |     stored immediately after the object
+/// | ...              |
+/// | element[Size-1]  |
+/// +------------------+
+///
+/// The 'Rows' member serves as both the first element storage and the base
+/// address for pointer arithmetic to access subsequent elements.
+class ClusteredRows {
+public:
+  ArrayRef<DebugLineTableRowRef> getRows() const {
+    return ArrayRef<DebugLineTableRowRef>(beginPtrConst(), Size);
+  }
+
+  /// Returns the number of elements in the array.
+  uint64_t size() const { return Size; }
+
+  /// We re-purpose SMLoc inside MCInst to store the pointer
+  /// to ClusteredRows. fromSMLoc() and toSMLoc() are helper
+  /// functions to convert between SMLoc and ClusteredRows.
+
+  static const ClusteredRows *fromSMLoc(const SMLoc &Loc) {
+    return reinterpret_cast<const ClusteredRows *>(Loc.getPointer());
+  }
+  SMLoc toSMLoc() const {
+    return SMLoc::getFromPointer(reinterpret_cast<const char *>(this));
+  }
+
+  /// Given a vector of DebugLineTableRowRef, this method
+  /// copies the elements into pre-allocated memory.
+  template <typename T> void populate(const T Vec) {
+    assert(Vec.size() == Size && "Sizes must match");
+    DebugLineTableRowRef *CurRawPtr = beginPtr();
+    for (DebugLineTableRowRef RowRef : Vec) {
+      *CurRawPtr = RowRef;
+      ++CurRawPtr;
+    }
+  }
+
+private:
+  uint64_t Size;
+  DebugLineTableRowRef Rows;
+
+  ClusteredRows(uint64_t Size) : Size(Size) {}
+
+  /// Total size of the object including the array.
+  static uint64_t getTotalSize(uint64_t Size) {
+    assert(Size > 0 && "Size must be greater than 0");
+    return sizeof(ClusteredRows) + (Size - 1) * sizeof(DebugLineTableRowRef);
+  }
+  const DebugLineTableRowRef *beginPtrConst() const {
+    return reinterpret_cast<const DebugLineTableRowRef *>(&Rows);
+  }
+  DebugLineTableRowRef *beginPtr() {
+    return reinterpret_cast<DebugLineTableRowRef *>(&Rows);
+  }
+
+  friend class ClusteredRowsContainer;
+};
+
+/// ClusteredRowsContainer manages the lifecycle of ClusteredRows objects.
+class ClusteredRowsContainer {
+public:
+  ClusteredRows *createClusteredRows(uint64_t Size) {
+    auto *CR = new (std::malloc(ClusteredRows::getTotalSize(Size)))
+        ClusteredRows(Size);
+    Clusters.push_back(CR);
+    return CR;
+  }
+  ~ClusteredRowsContainer() {
+    for (auto *CR : Clusters)
+      std::free(CR);
+  }
+
+private:
+  std::vector<ClusteredRows *> Clusters;
+};
+
 } // namespace bolt
 } // namespace llvm
 

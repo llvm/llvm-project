@@ -80,3 +80,13 @@ bool RegisterContextPOSIX_loongarch64::IsFPR(unsigned int reg) {
   return m_register_info_up->GetRegisterSetFromRegisterIndex(reg) ==
          RegisterInfoPOSIX_loongarch64::FPRegSet;
 }
+
+bool RegisterContextPOSIX_loongarch64::IsLSX(unsigned int reg) {
+  return m_register_info_up->GetRegisterSetFromRegisterIndex(reg) ==
+         RegisterInfoPOSIX_loongarch64::LSXRegSet;
+}
+
+bool RegisterContextPOSIX_loongarch64::IsLASX(unsigned int reg) {
+  return m_register_info_up->GetRegisterSetFromRegisterIndex(reg) ==
+         RegisterInfoPOSIX_loongarch64::LASXRegSet;
+}

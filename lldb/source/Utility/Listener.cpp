@@ -71,12 +71,11 @@ uint32_t Listener::StartListeningForEvents(Broadcaster *broadcaster,
         broadcaster->AddListener(this->shared_from_this(), event_mask);
 
     Log *log = GetLog(LLDBLog::Events);
-    if (log != nullptr)
-      LLDB_LOGF(log,
-                "%p Listener::StartListeningForEvents (broadcaster = %p, "
-                "mask = 0x%8.8x) acquired_mask = 0x%8.8x for %s",
-                static_cast<void *>(this), static_cast<void *>(broadcaster),
-                event_mask, acquired_mask, m_name.c_str());
+    LLDB_LOGF(log,
+              "%p Listener::StartListeningForEvents (broadcaster = %p, "
+              "mask = 0x%8.8x) acquired_mask = 0x%8.8x for %s",
+              static_cast<void *>(this), static_cast<void *>(broadcaster),
+              event_mask, acquired_mask, m_name.c_str());
 
     return acquired_mask;
   }
@@ -166,10 +165,9 @@ void Listener::BroadcasterManagerWillDestruct(BroadcasterManagerSP manager_sp) {
 
 void Listener::AddEvent(EventSP &event_sp) {
   Log *log = GetLog(LLDBLog::Events);
-  if (log != nullptr)
-    LLDB_LOGF(log, "%p Listener('%s')::AddEvent (event_sp = {%p})",
-              static_cast<void *>(this), m_name.c_str(),
-              static_cast<void *>(event_sp.get()));
+  LLDB_LOGF(log, "%p Listener('%s')::AddEvent (event_sp = {%p})",
+            static_cast<void *>(this), m_name.c_str(),
+            static_cast<void *>(event_sp.get()));
 
   std::lock_guard<std::mutex> guard(m_events_mutex);
   m_events.push_back(event_sp);
@@ -205,14 +203,13 @@ bool Listener::FindNextEventInternal(
   if (pos != m_events.end()) {
     event_sp = *pos;
 
-    if (log != nullptr)
-      LLDB_LOGF(log,
-                "%p '%s' Listener::FindNextEventInternal(broadcaster=%p, "
-                "event_type_mask=0x%8.8x, "
-                "remove=%i) event %p",
-                static_cast<void *>(this), GetName(),
-                static_cast<void *>(broadcaster), event_type_mask, remove,
-                static_cast<void *>(event_sp.get()));
+    LLDB_LOGF(log,
+              "%p '%s' Listener::FindNextEventInternal(broadcaster=%p, "
+              "event_type_mask=0x%8.8x, "
+              "remove=%i) event %p",
+              static_cast<void *>(this), GetName(),
+              static_cast<void *>(broadcaster), event_type_mask, remove,
+              static_cast<void *>(event_sp.get()));
 
     if (remove) {
       m_events.erase(pos);
@@ -261,7 +258,9 @@ bool Listener::GetEventInternal(
     Broadcaster *broadcaster, // nullptr for any broadcaster
     uint32_t event_type_mask, EventSP &event_sp) {
   Log *log = GetLog(LLDBLog::Events);
-  LLDB_LOG(log, "this = {0}, timeout = {1} for {2}", this, timeout, m_name);
+
+  LLDB_LOG(log, "{0} Listener('{1}'), timeout = {2}, event_type_mask = {3:x}",
+           this, m_name, timeout, event_type_mask);
 
   std::unique_lock<std::mutex> lock(m_events_mutex);
 
@@ -278,8 +277,7 @@ bool Listener::GetEventInternal(
 
       if (result == std::cv_status::timeout) {
         log = GetLog(LLDBLog::Events);
-        LLDB_LOGF(log, "%p Listener::GetEventInternal() timed out for %s",
-                  static_cast<void *>(this), m_name.c_str());
+        LLDB_LOG(log, "{0} Listener('{1}'), timed out", this, m_name);
         return false;
       } else if (result != std::cv_status::no_timeout) {
         log = GetLog(LLDBLog::Events);
@@ -352,8 +350,7 @@ Listener::StartListeningForEventSpec(const BroadcasterManagerSP &manager_sp,
       this->shared_from_this(), event_spec);
   if (bits_acquired) {
     BroadcasterManagerWP manager_wp(manager_sp);
-    auto iter = llvm::find_if(m_broadcaster_managers, manager_matcher);
-    if (iter == m_broadcaster_managers.end())
+    if (llvm::none_of(m_broadcaster_managers, manager_matcher))
       m_broadcaster_managers.push_back(manager_wp);
   }
 

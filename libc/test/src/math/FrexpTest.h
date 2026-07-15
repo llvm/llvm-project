@@ -33,10 +33,10 @@ public:
     ASSERT_FP_EQ(inf, func(inf, &exponent));
     ASSERT_FP_EQ(neg_inf, func(neg_inf, &exponent));
 
-    ASSERT_FP_EQ(0.0, func(0.0, &exponent));
+    ASSERT_FP_EQ(zero, func(zero, &exponent));
     ASSERT_EQ(exponent, 0);
 
-    ASSERT_FP_EQ(-0.0, func(-0.0, &exponent));
+    ASSERT_FP_EQ(neg_zero, func(neg_zero, &exponent));
     ASSERT_EQ(exponent, 0);
   }
 
@@ -95,7 +95,7 @@ public:
 
   void testRange(FrexpFunc func) {
     using StorageType = typename FPBits::StorageType;
-    constexpr StorageType COUNT = 100'000;
+    constexpr StorageType COUNT = 1'231;
     constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       T x = FPBits(v).get_val();

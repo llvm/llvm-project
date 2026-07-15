@@ -36,56 +36,10 @@ Every change in libc++ must come with appropriate tests. Libc++ has an extensive
 should be run locally by developers before submitting patches and is also run as part of our CI
 infrastructure. The documentation about writing tests and running them is :ref:`here <testing>`.
 
-Coding standards
-================
+Coding Guidelines
+=================
 
-In general, libc++ follows the `LLVM Coding Standards <https://llvm.org/docs/CodingStandards.html>`_.
-There are some deviations from these standards.
-
-Libc++ uses ``__ugly_names``. These names are reserved for implementations, so
-users may not use them in their own applications. When using a name like ``T``,
-a user may have defined a macro that changes the meaning of ``T``. By using
-``__ugly_names`` we avoid that problem. Other standard libraries and compilers
-use these names too. To avoid common clashes with other uglified names used in
-other implementations (e.g. system headers), the test in
-``libcxx/test/libcxx/system_reserved_names.gen.py`` contains the list of
-reserved names that can't be used.
-
-Unqualified function calls are susceptible to
-`argument-dependent lookup (ADL) <https://en.cppreference.com/w/cpp/language/adl>`_.
-This means calling ``move(UserType)`` might not call ``std::move``. Therefore,
-function calls must use qualified names to avoid ADL. Some functions in the
-standard library `require ADL usage <http://eel.is/c++draft/contents#3>`_.
-Names of classes, variables, concepts, and type aliases are not subject to ADL.
-They don't need to be qualified.
-
-Function overloading also applies to operators. Using ``&user_object`` may call
-a user-defined ``operator&``. Use ``std::addressof`` instead. Similarly, to
-avoid invoking a user-defined ``operator,``, make sure to cast the result to
-``void`` when using the ``,``. For example:
-
-.. code-block:: cpp
-
-    for (; __first1 != __last1; ++__first1, (void)++__first2) {
-      ...
-    }
-
-In general, try to follow the style of existing code. There are a few
-exceptions:
-
-- Prefer ``using foo = int`` over ``typedef int foo``. The compilers supported
-  by libc++ accept alias declarations in all standard modes.
-
-Other tips are:
-
-- Keep the number of formatting changes in patches minimal.
-- Provide separate patches for style fixes and for bug fixes or features. Keep in
-  mind that large formatting patches may cause merge conflicts with other patches
-  under review. In general, we prefer to avoid large reformatting patches.
-- Keep patches self-contained. Large and/or complicated patches are harder to
-  review and take a significant amount of time. It's fine to have multiple
-  patches to implement one feature if the feature can be split into
-  self-contained sub-tasks.
+libc++'s coding guidelines are documented :ref:`here <CodingGuidelines>`.
 
 
 Resources
@@ -162,7 +116,7 @@ sure you don't forget anything:
 - Did you add all new named declarations to the ``std`` module?
 - If you added a header:
 
-  - Did you add it to ``include/module.modulemap``?
+  - Did you add it to ``include/module.modulemap.in``?
   - Did you add it to ``include/CMakeLists.txt``?
   - If it's a public header, did you update ``utils/libcxx/header_information.py``?
 
@@ -186,6 +140,17 @@ rule -- for very simple patches, use your judgement. The `"libc++" review group 
 consists of frequent libc++ contributors with a good understanding of the project's
 guidelines -- if you would like to be added to it, please reach out on Discord.
 
+Some tips:
+
+- Keep the number of formatting changes in patches minimal.
+- Provide separate patches for style fixes and for bug fixes or features. Keep in
+  mind that large formatting patches may cause merge conflicts with other patches
+  under review. In general, we prefer to avoid large reformatting patches.
+- Keep patches self-contained. Large and/or complicated patches are harder to
+  review and take a significant amount of time. It's fine to have multiple
+  patches to implement one feature if the feature can be split into
+  self-contained sub-tasks.
+
 Exporting new symbols from the library
 ======================================
 
@@ -200,7 +165,7 @@ Look for the failed build and select the ``artifacts`` tab. There, download the
 abilist for the platform, e.g.:
 
 * C++<version>.
-* MacOS X86_64 and MacOS arm64 for the Apple platform.
+* macOS X86_64 and macOS arm64 for the Apple platform.
 
 
 Pre-commit CI
@@ -209,10 +174,11 @@ Pre-commit CI
 Introduction
 ------------
 
-Unlike most parts of the LLVM project, libc++ uses a pre-commit CI [#]_. This
-CI is hosted on `Buildkite <https://buildkite.com/llvm-project/libcxx-ci>`__ and
-the build results are visible in the review on GitHub. Please make sure
-the CI is green before committing a patch.
+Unlike most parts of the LLVM project, libc++ uses a pre-commit CI [#]_. Some of
+this CI is hosted on `Buildkite <https://buildkite.com/llvm-project/libcxx-ci>`__,
+but some has migrated to the LLVM CI infrastructure. The build results are
+visible in the review on GitHub. Please make sure the CI is green before
+committing a patch.
 
 The CI tests libc++ for all :ref:`supported platforms <SupportedPlatforms>`.
 The build is started for every commit added to a Pull Request. A complete CI
@@ -271,7 +237,7 @@ Below is a short description of the most interesting CI builds [#]_:
 * ``Santitizers`` tests libc++ using the Clang sanitizers.
 * ``Parts disabled`` tests libc++ with certain libc++ features disabled.
 * ``Windows`` tests libc++ using MinGW and clang-cl.
-* ``Apple`` tests libc++ on MacOS.
+* ``Apple`` tests libc++ on macOS.
 * ``ARM`` tests libc++ on various Linux ARM platforms.
 * ``AIX`` tests libc++ on AIX.
 
@@ -281,20 +247,64 @@ Below is a short description of the most interesting CI builds [#]_:
 Infrastructure
 --------------
 
-All files of the CI infrastructure are in the directory ``libcxx/utils/ci``.
-Note that quite a bit of this infrastructure is heavily Linux focused. This is
-the platform used by most of libc++'s Buildkite runners and developers.
+The files for the CI infrastructure are split between the llvm-project
+and the llvm-zorg repositories. All files of the CI infrastructure in
+the llvm-project are in the directory ``libcxx/utils/ci``. Note that
+quite a bit of this infrastructure is heavily Linux focused. This is
+the platform used by most of libc++'s Buildkite runners and
+developers.
 
-Dockerfile
-~~~~~~~~~~
+Dockerfile/Container Images
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Contains the Docker image for the Ubuntu CI. Because the same Docker image is
 used for the ``main`` and ``release`` branch, it should contain no hard-coded
-versions.  It contains the used versions of Clang, various clang-tools,
+versions. It contains the used versions of Clang, various clang-tools,
 GCC, and CMake.
 
 .. note:: This image is pulled from Docker hub and not rebuild when changing
    the Dockerfile.
+
+Updating the CI testing container images
+----------------------------------------
+
+The libcxx linux premerge testing can run on one of three sets of runner
+groups. The three runner group names are ``llvm-premerge-libcxx-runners``,
+``llvm-premerge-libcxx-release-runners`` and ``llvm-premerge-libcxx-next-runners``.
+The runner set currently in use is controlled by the contents of
+https://github.com/llvm/llvm-project/blob/main/.github/workflows/libcxx-build-and-test.yaml.
+By default, it uses ``llvm-premerge-libcxx-runners``. To switch to one of the
+other runner sets, just replace all uses of ``llvm-premerge-libcxx-runners`` in
+the yaml file with the desired runner set.
+
+The container image used by these three runner sets is controlled by the contents
+of the corresponding text files in ``libcxx/utils/ci/images``. The content of these
+files is read by the `Terraform configuration in llvm-zorg
+<https://github.com/llvm/llvm-zorg/blob/main/premerge/premerge_resources/main.tf>`__.
+
+When updating the container image, you can either update just the runner binary (the part
+that connects to Github), or you can update everything (tools, etc.). To update the runner
+binary, bump the value of ``GITHUB_RUNNER_VERSION`` in ``libcxx/utils/ci/docker/docker-compose.yml``.
+To update all of the tools, bump ``BASE_IMAGE_VERSION`` to a newer version of the ``libcxx-linux-builder-base``
+image. You can see all versions of that image at https://github.com/llvm/llvm-project/pkgs/container/libcxx-linux-builder-base.
+
+On push to ``main``, a new version of both the ``libcxx-linux-builder`` and the ``libcxx-android-builder``
+images will be built and pushed to https://github.com/llvm/llvm-project/packages.
+
+You can then update the image used by the actual runners by changing the image encoded in
+``libcxx/utils/ci/images`` and asking an LLVM premerge maintainer (a Google employee) to
+actually deploy the changes to the GKE cluster via Terraform.
+
+Monitoring premerge testing performance
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The llvm-premerge-libcxx runners mentioned above collect metrics regarding the
+time the tests spend queued up before they start running and also the time it
+takes the tests to actually complete running. These metrics are collected and
+aggregated (based on stage and PR), and the results can be seen at the
+`Libc++ Premerge Testing dashboard
+<https://llvm.grafana.net/public-dashboards/0bd453e8b3034733a1b0ff8c7728086d>`__
+.
 
 run-buildbot-container
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -306,7 +316,7 @@ your system.
 run-buildbot
 ~~~~~~~~~~~~
 
-Contains the build script executed on Buildkite. This script can be executed
+This is the script executed by the CI runners. This script can be executed
 locally or inside ``run-buildbot-container``. The script must be called with
 the target to test. For example, ``run-buildbot generic-cxx20`` will build
 libc++ and test it using C++20.

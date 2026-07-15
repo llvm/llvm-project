@@ -10,10 +10,9 @@
 #ifndef FORTRAN_RUNTIME_SUPPORT_H_
 #define FORTRAN_RUNTIME_SUPPORT_H_
 
-#include "flang/ISO_Fortran_binding_wrapper.h"
+#include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/entry-names.h"
 #include <cstddef>
-#include <cstdint>
 
 namespace Fortran::runtime {
 
@@ -33,6 +32,10 @@ extern "C" {
 
 // Predicate: is the storage described by a Descriptor contiguous in memory?
 bool RTDECL(IsContiguous)(const Descriptor &);
+
+// Predicate: is the storage described by a Descriptor contiguous in memory
+// up to the given dimension?
+bool RTDECL(IsContiguousUpTo)(const Descriptor &, int);
 
 // Predicate: is this descriptor describing an assumed-size array?
 bool RTDECL(IsAssumedSize)(const Descriptor &);

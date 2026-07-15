@@ -14,6 +14,7 @@
 #define POLLY_SUPPORT_IRHELPER_H
 
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/ValueHandle.h"
@@ -37,7 +38,7 @@ class Scop;
 class ScopStmt;
 
 /// Same as llvm/Analysis/ScalarEvolutionExpressions.h
-using LoopToScevMapT = llvm::DenseMap<const llvm::Loop *, const llvm::SCEV *>;
+using LoopToScevMapT = llvm::DenseMap<const llvm::Loop *, llvm::SCEVUse>;
 
 /// Enumeration of assumptions Polly can take.
 enum AssumptionKind {
@@ -83,7 +84,7 @@ using RecordedAssumptionsTy = llvm::SmallVector<Assumption, 8>;
 ///
 /// This function will add the assumption to the RecordedAssumptions. This
 /// collection will be added (@see addAssumption) to the assumed context once
-/// all paramaters are known and the context is fully built.
+/// all parameters are known and the context is fully built.
 ///
 /// @param RecordedAssumption container which keeps all recorded assumptions.
 /// @param Kind The assumption kind describing the underlying cause.
@@ -132,7 +133,7 @@ using BoxedLoopsSetTy = llvm::SetVector<const llvm::Loop *>;
 /// isNull(), isInstruction(), isLoad(), isStore(), ..., isMemTransferInst(),
 /// operator bool(), operator!()
 ///
-/// The functions isa, cast, cast_or_null, dyn_cast are modeled te resemble
+/// The functions isa, cast, cast_or_null, dyn_cast are modeled to resemble
 /// those from llvm/Support/Casting.h. Partial template function specialization
 /// is currently not supported in C++ such that those cannot be used directly.
 /// (llvm::isa could, but then llvm:cast etc. would not have the expected
@@ -361,14 +362,6 @@ void simplifyRegion(llvm::Region *R, llvm::DominatorTree *DT,
 /// Split the entry block of a function to store the newly inserted
 ///        allocations outside of all Scops.
 ///
-/// @param EntryBlock The entry block of the current function.
-/// @param P          The pass that currently running.
-///
-void splitEntryBlockForAlloca(llvm::BasicBlock *EntryBlock, llvm::Pass *P);
-
-/// Split the entry block of a function to store the newly inserted
-///        allocations outside of all Scops.
-///
 /// @param DT DominatorTree to be updated.
 /// @param LI LoopInfo to be updated.
 /// @param RI RegionInfo to be updated.
@@ -402,17 +395,8 @@ llvm::Value *expandCodeFor(Scop &S, llvm::ScalarEvolution &SE,
                            llvm::Function *GenFn, llvm::ScalarEvolution &GenSE,
                            const llvm::DataLayout &DL, const char *Name,
                            const llvm::SCEV *E, llvm::Type *Ty,
-                           llvm::Instruction *IP, ValueMapT *VMap,
+                           llvm::BasicBlock::iterator IP, ValueMapT *VMap,
                            LoopToScevMapT *LoopMap, llvm::BasicBlock *RTCBB);
-
-/// Return the condition for the terminator @p TI.
-///
-/// For unconditional branches the "i1 true" condition will be returned.
-///
-/// @param TI The terminator to get the condition from.
-///
-/// @return The condition of @p TI and nullptr if none could be extracted.
-llvm::Value *getConditionFromTerminator(llvm::Instruction *TI);
 
 /// Get the smallest loop that contains @p S but is not in @p S.
 llvm::Loop *getLoopSurroundingScop(Scop &S, llvm::LoopInfo &LI);

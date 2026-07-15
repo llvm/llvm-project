@@ -58,6 +58,7 @@ void b(T x) {
 }
 
 //--- c.cppm
+module;
 #ifdef EXPORT_OPERATOR
 // expected-no-diagnostics
 #endif

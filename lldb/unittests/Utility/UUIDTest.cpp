@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
-
 #include "lldb/Utility/UUID.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/Testing/Support/Error.h"
+#include "gtest/gtest.h"
 
 using namespace lldb_private;
 
@@ -85,4 +87,51 @@ TEST(UUIDTest, StringConverion) {
             UUID("@ABCDEFGHIJKLMNO", 16).GetAsString());
   EXPECT_EQ("40414243-4445-4647-4849-4A4B4C4D4E4F-50515253",
             UUID("@ABCDEFGHIJKLMNOPQRS", 20).GetAsString());
+}
+
+TEST(UUIDTest, Generate) {
+  UUID u16 = UUID::Generate();
+  EXPECT_EQ(u16.GetBytes().size(), 16UL);
+
+  UUID u20 = UUID::Generate(20);
+  EXPECT_EQ(u20.GetBytes().size(), 20UL);
+}
+
+TEST(UUIDTest, DenseMap) {
+  llvm::DenseMap<UUID, uint8_t> uuid_map;
+
+  const UUID a16 = UUID("1234567890123456", 16);
+  const UUID b16 = UUID("1234567890123457", 16);
+  const UUID a20 = UUID("12345678901234567890", 20);
+  const UUID b20 = UUID("12345678900987654321", 20);
+
+  uuid_map[a16] = 0;
+  uuid_map[b16] = 1;
+  uuid_map[a20] = 2;
+  uuid_map[b20] = 3;
+
+  EXPECT_EQ(uuid_map[a16], 0);
+  EXPECT_EQ(uuid_map[b16], 1);
+  EXPECT_EQ(uuid_map[a20], 2);
+  EXPECT_EQ(uuid_map[b20], 3);
+}
+
+TEST(UUIDTest, DenseSet) {
+  llvm::DenseSet<UUID> uuid_set;
+
+  const UUID a16 = UUID("1234567890123456", 16);
+  const UUID b16 = UUID("1234567890123457", 16);
+  const UUID a20 = UUID("12345678901234567890", 20);
+  const UUID b20 = UUID("12345678900987654321", 20);
+
+  EXPECT_TRUE(uuid_set.insert(a16).second);
+  EXPECT_FALSE(uuid_set.insert(a16).second);
+
+  EXPECT_TRUE(uuid_set.insert(a20).second);
+
+  EXPECT_TRUE(uuid_set.contains(a16));
+  EXPECT_TRUE(uuid_set.contains(a20));
+
+  EXPECT_FALSE(uuid_set.contains(b16));
+  EXPECT_FALSE(uuid_set.contains(b20));
 }

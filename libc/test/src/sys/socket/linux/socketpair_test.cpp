@@ -10,28 +10,30 @@
 
 #include "src/unistd/close.h"
 
-#include "src/errno/libc_errno.h"
+#include "hdr/sys_socket_macros.h" // For AF_UNIX and SOCK_DGRAM
+#include "test/UnitTest/ErrnoCheckingTest.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <sys/socket.h> // For AF_UNIX and SOCK_DGRAM
+using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::any_of;
+using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
+using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+using LlvmLibcSocketPairTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-TEST(LlvmLibcSocketPairTest, LocalSocket) {
+TEST_F(LlvmLibcSocketPairTest, LocalSocket) {
   int sockpair[2] = {-1, -1};
-  int result = LIBC_NAMESPACE::socketpair(AF_UNIX, SOCK_DGRAM, 0, sockpair);
-  ASSERT_EQ(result, 0);
-  ASSERT_ERRNO_SUCCESS();
+  ASSERT_THAT(LIBC_NAMESPACE::socketpair(AF_UNIX, SOCK_DGRAM, 0, sockpair),
+              Succeeds(0));
 
   ASSERT_GE(sockpair[0], 0);
   ASSERT_GE(sockpair[1], 0);
 
-  LIBC_NAMESPACE::close(sockpair[0]);
-  LIBC_NAMESPACE::close(sockpair[1]);
-  ASSERT_ERRNO_SUCCESS();
+  ASSERT_THAT(LIBC_NAMESPACE::close(sockpair[0]), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::close(sockpair[1]), Succeeds(0));
 }
 
-TEST(LlvmLibcSocketPairTest, SocketFails) {
+TEST_F(LlvmLibcSocketPairTest, SocketFails) {
   int sockpair[2] = {-1, -1};
-  int result = LIBC_NAMESPACE::socketpair(-1, -1, -1, sockpair);
-  ASSERT_EQ(result, -1);
-  ASSERT_ERRNO_FAILURE();
+  ASSERT_THAT(LIBC_NAMESPACE::socketpair(-1, -1, -1, sockpair),
+              Fails(any_of(EINVAL, EAFNOSUPPORT)));
 }

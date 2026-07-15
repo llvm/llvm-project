@@ -26,6 +26,9 @@ __attribute__((unused, alias("resolver"), deprecated("hahahaha, isn't C great?")
 void func();
 // expected-error@-2 {{alias must point to a defined variable or function}}
 // expected-note@-3 {{must refer to its mangled name}}
+
+void *operator new(unsigned long) __attribute__((alias("A"))); // expected-error {{alias must point to a defined variable or function}} \
+                                                               // expected-note {{the function or variable specified in an alias must refer to its mangled name}}
 #endif
 
 // CHECK: @_ZN4libc4log2Ed ={{.*}} alias double (double), ptr @log2

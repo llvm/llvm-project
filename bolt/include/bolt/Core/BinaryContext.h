@@ -28,6 +28,7 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
@@ -38,14 +39,17 @@
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/RWMutex.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+#include <atomic>
 #include <functional>
 #include <list>
 #include <map>
+#include <mutex>
 #include <optional>
 #include <set>
 #include <string>
@@ -64,6 +68,9 @@ namespace bolt {
 
 class BinaryFunction;
 
+using BinaryFunctionListType = std::vector<BinaryFunction *>;
+using ConstBinaryFunctionListType = std::vector<const BinaryFunction *>;
+
 /// Information on loadable part of the file.
 struct SegmentInfo {
   uint64_t Address;           /// Address of the segment in memory.
@@ -72,14 +79,15 @@ struct SegmentInfo {
   uint64_t FileSize;          /// Size in file.
   uint64_t Alignment;         /// Alignment of the segment.
   bool IsExecutable;          /// Is the executable bit set on the Segment?
+  bool IsWritable;            /// Is the segment writable.
 
   void print(raw_ostream &OS) const {
     OS << "SegmentInfo { Address: 0x" << Twine::utohexstr(Address)
        << ", Size: 0x" << Twine::utohexstr(Size) << ", FileOffset: 0x"
        << Twine::utohexstr(FileOffset) << ", FileSize: 0x"
        << Twine::utohexstr(FileSize) << ", Alignment: 0x"
-       << Twine::utohexstr(Alignment) << ", " << (IsExecutable ? "x" : " ")
-       << "}";
+       << Twine::utohexstr(Alignment) << ", " << (IsExecutable ? "x" : "")
+       << (IsWritable ? "w" : "") << " }";
   };
 };
 
@@ -188,6 +196,9 @@ class BinaryContext {
   /// Unique build ID if available for the binary.
   std::optional<std::string> FileBuildID;
 
+  /// GNU property note indicating AArch64 BTI.
+  bool UsesBTI{false};
+
   /// Set of all sections.
   struct CompareSections {
     bool operator()(const BinarySection *A, const BinarySection *B) const {
@@ -223,11 +234,11 @@ class BinaryContext {
   /// Store all functions in the binary, sorted by original address.
   std::map<uint64_t, BinaryFunction> BinaryFunctions;
 
-  /// A mutex that is used to control parallel accesses to BinaryFunctions
-  mutable llvm::sys::RWMutex BinaryFunctionsMutex;
+  /// Functions to be considered for the output in a sorted order.
+  BinaryFunctionListType OutputFunctions;
 
-  /// Functions injected by BOLT
-  std::vector<BinaryFunction *> InjectedBinaryFunctions;
+  /// Functions injected by BOLT.
+  BinaryFunctionListType InjectedBinaryFunctions;
 
   /// Jump tables for all functions mapped by address.
   std::map<uint64_t, JumpTable *> JumpTables;
@@ -275,17 +286,28 @@ class BinaryContext {
   /// Internal helper for removing section name from a lookup table.
   void deregisterSectionName(const BinarySection &Section);
 
+  /// Mutex used for parallel processing of DWP type units.
+  std::mutex DWPUnitsMutex;
+
 public:
-  static Expected<std::unique_ptr<BinaryContext>>
-  createBinaryContext(Triple TheTriple, StringRef InputFileName,
-                      SubtargetFeatures *Features, bool IsPIC,
-                      std::unique_ptr<DWARFContext> DwCtx,
-                      JournalingStreams Logger);
+  static Expected<std::unique_ptr<BinaryContext>> createBinaryContext(
+      Triple TheTriple, std::shared_ptr<orc::SymbolStringPool> SSP,
+      StringRef InputFileName, SubtargetFeatures *Features, bool IsPIC,
+      std::unique_ptr<DWARFContext> DwCtx, JournalingStreams Logger);
+
+  /// Returns the mutex guarding concurrent access to DWP units.
+  std::mutex &getUnitsMutex() { return DWPUnitsMutex; }
 
   /// Superset of compiler units that will contain overwritten code that needs
   /// new debug info. In a few cases, functions may end up not being
   /// overwritten, but it is okay to re-generate debug info for them.
   std::set<const DWARFUnit *> ProcessedCUs;
+
+  /// DWARF-related container to manage lifecycle of groups of rows from line
+  /// tables associated with instructions. Since binary functions can span
+  /// multiple compilation units, instructions may reference debug line
+  /// information from multiple CUs.
+  ClusteredRowsContainer ClusteredRows;
 
   // Setup MCPlus target builder
   void initializeTarget(std::unique_ptr<MCPlusBuilder> TargetBuilder) {
@@ -319,6 +341,9 @@ public:
   /// Returns true if DWARF4 or lower is used.
   bool isDWARFLegacyUsed() const { return ContainsDwarfLegacy; }
 
+  /// Returns true if DWARFUnit is valid.
+  bool isValidDwarfUnit(DWARFUnit &DU) const;
+
   std::map<unsigned, DwarfLineTable> &getDwarfLineTables() {
     return DwarfLineTablesCUMap;
   }
@@ -333,11 +358,13 @@ public:
                                   std::optional<StringRef> Source,
                                   unsigned CUID, unsigned DWARFVersion);
 
+  /// Input file segment info
+  ///
   /// [start memory address] -> [segment info] mapping.
   std::map<uint64_t, SegmentInfo> SegmentMapInfo;
 
-  /// Symbols that are expected to be undefined in MCContext during emission.
-  std::unordered_set<MCSymbol *> UndefinedSymbols;
+  /// Newly created segments.
+  std::vector<SegmentInfo> NewSegments;
 
   /// [name] -> [BinaryData*] map used for global symbol resolution.
   using SymbolMapType = StringMap<BinaryData *>;
@@ -369,9 +396,13 @@ public:
   }
   void setFileBuildID(StringRef ID) { FileBuildID = std::string(ID); }
 
+  bool usesBTI() const { return UsesBTI; }
+  void setUsesBTI(bool Value) { UsesBTI = Value; }
+
   bool hasSymbolsWithFileName() const { return HasSymbolsWithFileName; }
   void setHasSymbolsWithFileName(bool Value) { HasSymbolsWithFileName = Value; }
 
+  std::shared_ptr<orc::SymbolStringPool> getSymbolStringPool() { return SSP; }
   /// Return true if relocations against symbol with a given name
   /// must be created.
   bool forceSymbolRelocations(StringRef SymbolName) const;
@@ -478,7 +509,7 @@ public:
   ///
   /// As we fold identical functions, multiple symbols can point
   /// to the same BinaryFunction.
-  std::unordered_map<const MCSymbol *, BinaryFunction *> SymbolToFunctionMap;
+  DenseMap<const MCSymbol *, BinaryFunction *> SymbolToFunctionMap;
 
   /// A mutex that is used to control parallel accesses to SymbolToFunctionMap
   mutable llvm::sys::RWMutex SymbolToFunctionMapMutex;
@@ -532,17 +563,32 @@ public:
     return BinaryFunctions;
   }
 
+  /// Return functions meant for the output in a sorted order.
+  BinaryFunctionListType &getOutputBinaryFunctions() { return OutputFunctions; }
+
   /// Create BOLT-injected function
   BinaryFunction *createInjectedBinaryFunction(const std::string &Name,
                                                bool IsSimple = true);
 
-  std::vector<BinaryFunction *> &getInjectedBinaryFunctions() {
+  /// Patch the original binary contents at address \p Address with a sequence
+  /// of instructions from the \p Instructions list. The callee is responsible
+  /// for checking that the sequence doesn't cross any function or section
+  /// boundaries.
+  ///
+  /// Optional \p Name can be assigned to the patch. The name will be emitted to
+  /// the symbol table at \p Address.
+  BinaryFunction *
+  createInstructionPatch(uint64_t Address,
+                         const InstructionListType &Instructions,
+                         const Twine &Name = "");
+
+  BinaryFunctionListType &getInjectedBinaryFunctions() {
     return InjectedBinaryFunctions;
   }
 
   /// Return vector with all functions, i.e. include functions from the input
   /// binary and functions created by BOLT.
-  std::vector<BinaryFunction *> getAllBinaryFunctions();
+  BinaryFunctionListType getAllBinaryFunctions();
 
   /// Construct a jump table for \p Function at \p Address or return an existing
   /// one at that location.
@@ -631,6 +677,8 @@ public:
 
   std::unique_ptr<Triple> TheTriple;
 
+  std::shared_ptr<orc::SymbolStringPool> SSP;
+
   const Target *TheTarget;
 
   std::string TripleName;
@@ -683,6 +731,11 @@ public:
   /// function fragments with
   /// FunctionFragment::getFragmentNum() == FragmentNum::warm()
   bool HasWarmSection{false};
+
+  /// Indicates if the binary should assume large code model
+  /// Can be triggered by the presence of .ltext sections if
+  /// unspecified.
+  bool UseLargeCodeModel{false};
 
   /// Is the binary always loaded at a fixed address. Shared objects and
   /// position-independent executables (PIEs) are examples of binaries that
@@ -745,11 +798,6 @@ public:
     uint64_t PseudoProbeLooseMatchedSampleCount{0};
     ///   the count of call matched samples
     uint64_t CallMatchedSampleCount{0};
-    ///   the number of stale functions that have matching number of blocks in
-    ///   the profile
-    uint64_t NumStaleFuncsWithEqualBlockCount{0};
-    ///   the number of blocks that have matching size but a differing hash
-    uint64_t NumStaleBlocksWithEqualIcount{0};
   } Stats;
 
   // Original binary execution count stats.
@@ -762,6 +810,45 @@ public:
   /// sets this prior to running BOLT passes, so layout passes are aware of the
   /// final addresses functions will have.
   uint64_t LayoutStartAddress{0};
+
+  /// Maximum alignment of objects emitted into the main (hot) and cold code
+  /// sections, populated by the parallel AlignerPass (updateMaxCodeAlignment).
+  std::atomic<uint16_t> MaxMainCodeAlignment{1};
+  std::atomic<uint16_t> MaxColdCodeAlignment{1};
+
+  /// Alignment-related options sourced from CommandLineOpts. Populated by
+  /// RewriteInstance::adjustCommandLineOptions() so passes and the emitter
+  /// can read them via BinaryContext instead of touching opts::* directly.
+  /// Defaults must stay in sync with the cl::init values in
+  /// bolt/lib/Utils/CommandLineOpts.cpp.
+  unsigned AlignText{0};
+  unsigned AlignFunctions{64};
+  unsigned AlignBlocksMinSize{0};
+  unsigned AlignBlocksThreshold{800};
+  unsigned AlignFunctionsMaxBytes{32};
+  unsigned BlockAlignment{16};
+  bool AlignBlocks{false};
+  bool PreserveBlocksAlignment{false};
+  bool UseCompactAligner{true};
+  bool X86AlignBranchBoundaryHotOnly{true};
+
+  /// Fold \p Alignment into the running max for the main code section (when
+  /// \p InMainSection) and/or the cold code section (when \p InColdSection),
+  /// reflecting which output section(s) the object is emitted into. Safe to
+  /// call concurrently.
+  void updateMaxCodeAlignment(uint16_t Alignment, bool InMainSection,
+                              bool InColdSection) {
+    auto AtomicMax = [](std::atomic<uint16_t> &Max, uint16_t Value) {
+      uint16_t Cur = Max.load(std::memory_order_relaxed);
+      while (Value > Cur &&
+             !Max.compare_exchange_weak(Cur, Value, std::memory_order_relaxed))
+        ;
+    };
+    if (InMainSection)
+      AtomicMax(MaxMainCodeAlignment, Alignment);
+    if (InColdSection)
+      AtomicMax(MaxColdCodeAlignment, Alignment);
+  }
 
   /// Old .text info.
   uint64_t OldTextSectionAddress{0};
@@ -778,6 +865,15 @@ public:
   /// Address of the code/function that is going to be executed right before
   /// the execution of the binary is completed.
   std::optional<uint64_t> FiniFunctionAddress;
+
+  /// DT_INIT.
+  std::optional<uint64_t> InitAddress;
+
+  /// DT_INIT_ARRAY. Only used when DT_INIT is not set.
+  std::optional<uint64_t> InitArrayAddress;
+
+  /// DT_INIT_ARRAYSZ. Only used when DT_INIT is not set.
+  std::optional<uint64_t> InitArraySize;
 
   /// DT_FINI.
   std::optional<uint64_t> FiniAddress;
@@ -805,10 +901,16 @@ public:
   /// enum Constants, e.g. DW_EH_PE_omit.
   unsigned LSDAEncoding = dwarf::DW_EH_PE_omit;
 
+  /// Update LSDAEncoding for the binary taking into account
+  /// large code model and position-independent executables.
+  void updateLSDAEncoding();
+
   BinaryContext(std::unique_ptr<MCContext> Ctx,
                 std::unique_ptr<DWARFContext> DwCtx,
-                std::unique_ptr<Triple> TheTriple, const Target *TheTarget,
-                std::string TripleName, std::unique_ptr<MCCodeEmitter> MCE,
+                std::unique_ptr<Triple> TheTriple,
+                std::shared_ptr<orc::SymbolStringPool> SSP,
+                const Target *TheTarget, std::string TripleName,
+                std::unique_ptr<MCCodeEmitter> MCE,
                 std::unique_ptr<MCObjectFileInfo> MOFI,
                 std::unique_ptr<const MCAsmInfo> AsmInfo,
                 std::unique_ptr<const MCInstrInfo> MII,
@@ -837,11 +939,13 @@ public:
            TheTriple->getArch() == llvm::Triple::x86_64;
   }
 
-  bool isRISCV() const { return TheTriple->getArch() == llvm::Triple::riscv64; }
+  bool isRISCV() const { return TheTriple->isRISCV(); }
 
-  // AArch64-specific functions to check if symbol is used to delimit
+  // AArch64/RISC-V functions to check if symbol is used to delimit
   // code/data in .text. Code is marked by $x, data by $d.
   MarkerSymType getMarkerType(const SymbolRef &Symbol) const;
+  MarkerSymType getMarkerType(unsigned SymbolType, uint64_t SymbolSize,
+                              StringRef SymbolName) const;
   bool isMarker(const SymbolRef &Symbol) const;
 
   /// Iterate over all BinaryData.
@@ -898,6 +1002,17 @@ public:
   /// Return <Symbol, Addend> pair corresponding to the \p Address.
   std::pair<const MCSymbol *, uint64_t>
   handleAddressRef(uint64_t Address, BinaryFunction &BF, bool IsPCRel);
+
+  /// When \p Address inside function \p BF is a target of a control transfer
+  /// instruction (branch) from another function, return a corresponding symbol
+  /// that should be used by the branch. For example, main or secondary entry
+  /// point.
+  ///
+  /// This function also performs validations: If \p Address points to an
+  /// invalid instruction or lies within a constant island, return nullptr and
+  /// mark both \p Source and \p Target as ignored.
+  MCSymbol *handleExternalBranchTarget(uint64_t Address, BinaryFunction &Source,
+                                       BinaryFunction &Target);
 
   /// Analyze memory contents at the given \p Address and return the type of
   /// memory contents (such as a possible jump table).
@@ -1064,7 +1179,7 @@ public:
     return FragmentClasses.isEquivalent(LHS, RHS);
   }
 
-  /// Add interprocedural reference for \p Function to \p Address
+  /// Add interprocedural branch reference from \p Function to \p Address.
   void addInterproceduralReference(BinaryFunction *Function, uint64_t Address) {
     InterproceduralReferences.push_back({Function, Address});
   }
@@ -1079,7 +1194,8 @@ public:
   /// argument is false.
   bool handleAArch64Veneer(uint64_t Address, bool MatchOnly = false);
 
-  /// Resolve inter-procedural dependencies from
+  /// Resolve inter-procedural branch dependencies discovered during
+  /// disassembly.
   void processInterproceduralReferences();
 
   /// Skip functions with all parent and child fragments transitively.
@@ -1279,7 +1395,7 @@ public:
   void foldFunction(BinaryFunction &ChildBF, BinaryFunction &ParentBF);
 
   /// Add a Section relocation at a given \p Address.
-  void addRelocation(uint64_t Address, MCSymbol *Symbol, uint64_t Type,
+  void addRelocation(uint64_t Address, MCSymbol *Symbol, uint32_t Type,
                      uint64_t Addend = 0, uint64_t Value = 0);
 
   /// Return a relocation registered at a given \p Address, or nullptr if there
@@ -1292,8 +1408,9 @@ public:
   }
 
   /// Register dynamic relocation at \p Address.
-  void addDynamicRelocation(uint64_t Address, MCSymbol *Symbol, uint64_t Type,
-                            uint64_t Addend, uint64_t Value = 0);
+  void addDynamicRelocation(uint64_t Address, MCSymbol *Symbol, uint32_t Type,
+                            uint64_t Addend, uint64_t Value = 0,
+                            bool IsRELR = false);
 
   /// Return a dynamic relocation registered at a given \p Address, or nullptr
   /// if there is no dynamic relocation at such address.
@@ -1329,12 +1446,14 @@ public:
   /// Populate some internal data structures with debug info.
   void preprocessDebugInfo();
 
+  /// Record DWARF lexical-scope range boundaries into the containing functions'
+  /// BinaryFunction::DebugScopeBoundaryOffsets. Relies on preprocessDebugInfo's
+  /// actions: populated ProcessedCUs and pre-extracted DIEs for split dwarf.
+  void collectDebugScopeBoundaries();
+
   /// Add a filename entry from SrcCUID to DestCUID.
   unsigned addDebugFilenameToUnit(const uint32_t DestCUID,
                                   const uint32_t SrcCUID, unsigned FileIndex);
-
-  /// Return functions in output layout order
-  std::vector<BinaryFunction *> getSortedFunctions();
 
   /// Do the best effort to calculate the size of the function by emitting
   /// its code, and relaxing branch instructions. By default, branch
@@ -1356,6 +1475,12 @@ public:
   computeInstructionSize(const MCInst &Inst,
                          const MCCodeEmitter *Emitter = nullptr) const {
     if (std::optional<uint32_t> Size = MIB->getSize(Inst))
+      return *Size;
+
+    if (MIB->isPseudo(Inst))
+      return 0;
+
+    if (std::optional<uint32_t> Size = MIB->getInstructionSize(Inst))
       return *Size;
 
     if (!Emitter)
@@ -1393,16 +1518,6 @@ public:
   /// count of profiled functions.
   uint64_t getHotThreshold() const;
 
-  /// Return true if instruction \p Inst requires an offset for further
-  /// processing (e.g. assigning a profile).
-  bool keepOffsetForInstruction(const MCInst &Inst) const {
-    if (MIB->isCall(Inst) || MIB->isBranch(Inst) || MIB->isReturn(Inst) ||
-        MIB->isPrefix(Inst) || MIB->isIndirectBranch(Inst)) {
-      return true;
-    }
-    return false;
-  }
-
   /// Return true if the function should be emitted to the output file.
   bool shouldEmit(const BinaryFunction &Function) const;
 
@@ -1423,6 +1538,17 @@ public:
                         bool PrintMCInst = false, bool PrintMemData = false,
                         bool PrintRelocations = false,
                         StringRef Endl = "\n") const;
+
+  /// Print data when embedded in the instruction stream keeping the format
+  /// similar to printInstruction().
+  void printData(raw_ostream &OS, ArrayRef<uint8_t> Data,
+                 uint64_t Offset) const;
+
+  /// Extract data from the binary corresponding to [Address, Address + Size)
+  /// range. Return an empty ArrayRef if the address range does not belong to
+  /// any section in the binary, crosses a section boundary, or falls into a
+  /// virtual section.
+  ArrayRef<uint8_t> extractData(uint64_t Address, uint64_t Size) const;
 
   /// Print a range of instructions.
   template <typename Itr>
@@ -1462,10 +1588,9 @@ public:
   /// won't be used in the main code emitter.
   IndependentCodeEmitter createIndependentMCCodeEmitter() const {
     IndependentCodeEmitter MCEInstance;
-    MCEInstance.LocalCtx.reset(
-        new MCContext(*TheTriple, AsmInfo.get(), MRI.get(), STI.get()));
+    MCEInstance.LocalCtx.reset(new MCContext(*TheTriple, *AsmInfo, *MRI, *STI));
     MCEInstance.LocalMOFI.reset(
-        TheTarget->createMCObjectFileInfo(*MCEInstance.LocalCtx.get(),
+        TheTarget->createMCObjectFileInfo(*MCEInstance.LocalCtx,
                                           /*PIC=*/!HasFixedLoadAddress));
     MCEInstance.LocalCtx->setObjectFileInfo(MCEInstance.LocalMOFI.get());
     MCEInstance.MCE.reset(
@@ -1486,6 +1611,7 @@ public:
     return Streamer;
   }
 
+  bool hasIOAddressMap() const { return IOAddressMap.has_value(); }
   void setIOAddressMap(AddressMap Map) { IOAddressMap = std::move(Map); }
   const AddressMap &getIOAddressMap() const {
     assert(IOAddressMap && "Address map not set yet");

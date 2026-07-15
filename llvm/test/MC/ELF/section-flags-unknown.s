@@ -11,8 +11,9 @@
 # CHECK: {{.*}}.s:[[# @LINE+1]]:27: error: unknown flag
 .section SHF_HEX_GPREL,"s",@progbits
 
-# CHECK: {{.*}}.s:[[# @LINE+1]]:30: error: unknown flag
-.section SHF_ARM_PURECODE,"y",@progbits
+## Test SHF_ARM_PURECODE and SHF_AARCH64_PURECODE section flags
+# CHECK: {{.*}}.s:[[# @LINE+1]]:22: error: unknown flag
+.section purecode,"y",@progbits
 
 # CHECK: {{.*}}.s:[[# @LINE+1]]:30: error: unknown flag
 .section SHF_X86_64_LARGE,"l",@progbits

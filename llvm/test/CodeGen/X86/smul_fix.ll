@@ -10,10 +10,10 @@ declare  <4 x i32> @llvm.smul.fix.v4i32(<4 x i32>, <4 x i32>, i32)
 define i32 @func(i32 %x, i32 %y) nounwind {
 ; X64-LABEL: func:
 ; X64:       # %bb.0:
-; X64-NEXT:    movslq %esi, %rax
-; X64-NEXT:    movslq %edi, %rcx
-; X64-NEXT:    imulq %rax, %rcx
-; X64-NEXT:    movq %rcx, %rax
+; X64-NEXT:    movslq %esi, %rcx
+; X64-NEXT:    movslq %edi, %rax
+; X64-NEXT:    imulq %rcx, %rax
+; X64-NEXT:    movl %eax, %ecx
 ; X64-NEXT:    shrq $32, %rax
 ; X64-NEXT:    shldl $30, %ecx, %eax
 ; X64-NEXT:    # kill: def $eax killed $eax killed $rax

@@ -1,5 +1,5 @@
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck --check-prefixes=GFX11 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 %s 2>&1 | FileCheck --check-prefixes=GFX11-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 %s -filetype=null 2>&1 | FileCheck --check-prefixes=GFX11-ERR --implicit-check-not=error: %s
 
 //===----------------------------------------------------------------------===//
 // ENC_SMEM.
@@ -238,6 +238,22 @@ s_load_b512 s[20:35], s[2:3], s0 glc dlc
 
 s_load_b512 s[20:35], s[2:3], 0x1234 glc dlc
 // GFX11: encoding: [0x01,0x65,0x10,0xf4,0x34,0x12,0x00,0xf8]
+
+// null as dst
+s_load_b32 null, s[2:3], s0
+// GFX11: encoding: [0x01,0x1f,0x00,0xf4,0x00,0x00,0x00,0x00]
+
+s_load_b64 null, s[2:3], s0
+// GFX11: encoding: [0x01,0x1f,0x04,0xf4,0x00,0x00,0x00,0x00]
+
+s_load_b128 null, s[2:3], s0
+// GFX11: encoding: [0x01,0x1f,0x08,0xf4,0x00,0x00,0x00,0x00]
+
+s_load_b256 null, s[2:3], s0
+// GFX11: encoding: [0x01,0x1f,0x0c,0xf4,0x00,0x00,0x00,0x00]
+
+s_load_b512 null, s[2:3], s0
+// GFX11: encoding: [0x01,0x1f,0x10,0xf4,0x00,0x00,0x00,0x00]
 
 s_buffer_load_b32 s5, s[4:7], s0
 // GFX11: encoding: [0x42,0x01,0x20,0xf4,0x00,0x00,0x00,0x00]

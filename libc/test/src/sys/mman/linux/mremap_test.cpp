@@ -6,22 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
+#include "hdr/sys_mman_macros.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/mremap.h"
 #include "src/sys/mman/munmap.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <sys/mman.h>
-
+using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::any_of;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+using LlvmLibcMremapTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-TEST(LlvmLibcMremapTest, NoError) {
+TEST_F(LlvmLibcMremapTest, NoError) {
   size_t initial_size = 128;
   size_t new_size = 256;
-  LIBC_NAMESPACE::libc_errno = 0;
 
   // Allocate memory using mmap.
   void *addr =
@@ -47,9 +47,8 @@ TEST(LlvmLibcMremapTest, NoError) {
   EXPECT_THAT(LIBC_NAMESPACE::munmap(new_addr, new_size), Succeeds());
 }
 
-TEST(LlvmLibcMremapTest, Error_InvalidSize) {
+TEST_F(LlvmLibcMremapTest, Error_InvalidSize) {
   size_t initial_size = 128;
-  LIBC_NAMESPACE::libc_errno = 0;
 
   // Allocate memory using mmap.
   void *addr =
@@ -61,7 +60,7 @@ TEST(LlvmLibcMremapTest, Error_InvalidSize) {
   // Attempt to re-map the memory with an invalid new size (0).
   void *new_addr =
       LIBC_NAMESPACE::mremap(addr, initial_size, 0, MREMAP_MAYMOVE);
-  EXPECT_THAT(new_addr, Fails(EINVAL, MAP_FAILED));
+  EXPECT_THAT(new_addr, Fails(any_of(EINVAL, ENOMEM), MAP_FAILED));
 
   // Clean up the original mapping.
   EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, initial_size), Succeeds());

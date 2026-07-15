@@ -46,24 +46,24 @@ end
 
 program test
   external justfine ! OK to name a BLOCK DATA if not called
-  !WARNING: The global entity 'module_before_1' corresponding to the local procedure 'module_before_1' is not a callable subprogram
+  !WARNING: The global entity 'module_before_1' corresponding to the local procedure 'module_before_1' is not a callable subprogram [-Wexternal-name-conflict]
   external module_before_1
-  !WARNING: The global entity 'block_data_before_1' corresponding to the local procedure 'block_data_before_1' is not a callable subprogram
+  !WARNING: The global entity 'block_data_before_1' corresponding to the local procedure 'block_data_before_1' is not a callable subprogram [-Wexternal-name-conflict]
   external block_data_before_1
-  !WARNING: The global subprogram 'explicit_before_1' should not be referenced via the implicit interface 'explicit_before_1'
+  !WARNING: The global subprogram 'explicit_before_1' should not be referenced via the implicit interface 'explicit_before_1' [-Wexternal-interface-mismatch]
   external explicit_before_1
   external implicit_before_1
-  !WARNING: The global subprogram 'explicit_func_before_1' should not be referenced via the implicit interface 'explicit_func_before_1'
+  !WARNING: The global subprogram 'explicit_func_before_1' should not be referenced via the implicit interface 'explicit_func_before_1' [-Wexternal-interface-mismatch]
   external explicit_func_before_1
   external implicit_func_before_1
-  !WARNING: The global entity 'module_after_1' corresponding to the local procedure 'module_after_1' is not a callable subprogram
+  !WARNING: The global entity 'module_after_1' corresponding to the local procedure 'module_after_1' is not a callable subprogram [-Wexternal-name-conflict]
   external module_after_1
-  !WARNING: The global entity 'block_data_after_1' corresponding to the local procedure 'block_data_after_1' is not a callable subprogram
+  !WARNING: The global entity 'block_data_after_1' corresponding to the local procedure 'block_data_after_1' is not a callable subprogram [-Wexternal-name-conflict]
   external block_data_after_1
-  !WARNING: The global subprogram 'explicit_after_1' should not be referenced via the implicit interface 'explicit_after_1'
+  !WARNING: The global subprogram 'explicit_after_1' should not be referenced via the implicit interface 'explicit_after_1' [-Wexternal-interface-mismatch]
   external explicit_after_1
   external implicit_after_1
-  !WARNING: The global subprogram 'explicit_func_after_1' should not be referenced via the implicit interface 'explicit_func_after_1'
+  !WARNING: The global subprogram 'explicit_func_after_1' should not be referenced via the implicit interface 'explicit_func_after_1' [-Wexternal-interface-mismatch]
   external explicit_func_after_1
   external implicit_func_after_1
   call module_before_1
@@ -76,20 +76,20 @@ program test
   !ERROR: References to the procedure 'explicit_before_2' require an explicit interface
   !BECAUSE: a dummy argument has the allocatable, asynchronous, optional, pointer, target, value, or volatile attribute
   call explicit_before_2(1.)
-  !WARNING: If the procedure's interface were explicit, this reference would be in error
+  !WARNING: If the procedure's interface were explicit, this reference would be in error [-Wknown-bad-implicit-interface]
   !BECAUSE: Dummy argument 'a=' (#1) is not OPTIONAL and is not associated with an actual argument in this procedure reference
   call implicit_before_1
-  !WARNING: If the procedure's interface were explicit, this reference would be in error
+  !WARNING: If the procedure's interface were explicit, this reference would be in error [-Wknown-bad-implicit-interface]
   !BECAUSE: Dummy argument 'a=' (#1) is not OPTIONAL and is not associated with an actual argument in this procedure reference
   call implicit_before_2
   print *, explicit_func_before_1(1.)
   !ERROR: References to the procedure 'explicit_func_before_2' require an explicit interface
   !BECAUSE: a dummy argument has the allocatable, asynchronous, optional, pointer, target, value, or volatile attribute
   print *, explicit_func_before_2(1.)
-  !WARNING: If the procedure's interface were explicit, this reference would be in error
+  !WARNING: If the procedure's interface were explicit, this reference would be in error [-Wknown-bad-implicit-interface]
   !BECAUSE: Dummy argument 'a=' (#1) is not OPTIONAL and is not associated with an actual argument in this procedure reference
   print *, implicit_func_before_1()
-  !WARNING: If the procedure's interface were explicit, this reference would be in error
+  !WARNING: If the procedure's interface were explicit, this reference would be in error [-Wknown-bad-implicit-interface]
   !BECAUSE: Dummy argument 'a=' (#1) is not OPTIONAL and is not associated with an actual argument in this procedure reference
   print *, implicit_func_before_2()
   call module_after_1
@@ -100,20 +100,20 @@ program test
   !ERROR: References to the procedure 'explicit_after_2' require an explicit interface
   !BECAUSE: a dummy argument has the allocatable, asynchronous, optional, pointer, target, value, or volatile attribute
   call explicit_after_2(1.)
-  !WARNING: If the procedure's interface were explicit, this reference would be in error
+  !WARNING: If the procedure's interface were explicit, this reference would be in error [-Wknown-bad-implicit-interface]
   !BECAUSE: Dummy argument 'a=' (#1) is not OPTIONAL and is not associated with an actual argument in this procedure reference
   call implicit_after_1
-  !WARNING: If the procedure's interface were explicit, this reference would be in error
+  !WARNING: If the procedure's interface were explicit, this reference would be in error [-Wknown-bad-implicit-interface]
   !BECAUSE: Dummy argument 'a=' (#1) is not OPTIONAL and is not associated with an actual argument in this procedure reference
   call implicit_after_2
   print *, explicit_func_after_1(1.)
   !ERROR: References to the procedure 'explicit_func_after_2' require an explicit interface
   !BECAUSE: a dummy argument has the allocatable, asynchronous, optional, pointer, target, value, or volatile attribute
   print *, explicit_func_after_2(1.)
-  !WARNING: If the procedure's interface were explicit, this reference would be in error
+  !WARNING: If the procedure's interface were explicit, this reference would be in error [-Wknown-bad-implicit-interface]
   !BECAUSE: Dummy argument 'a=' (#1) is not OPTIONAL and is not associated with an actual argument in this procedure reference
   print *, implicit_func_after_1()
-  !WARNING: If the procedure's interface were explicit, this reference would be in error
+  !WARNING: If the procedure's interface were explicit, this reference would be in error [-Wknown-bad-implicit-interface]
   !BECAUSE: Dummy argument 'a=' (#1) is not OPTIONAL and is not associated with an actual argument in this procedure reference
   print *, implicit_func_after_2()
 end program

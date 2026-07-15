@@ -15,8 +15,6 @@
 
 #include "ObjCPropertyAttributeOrderFixer.h"
 
-#include <algorithm>
-
 namespace clang {
 namespace format {
 
@@ -63,12 +61,12 @@ void ObjCPropertyAttributeOrderFixer::sortPropertyAttributes(
     }
 
     // Most attributes look like identifiers, but `class` is a keyword.
-    if (!Tok->isOneOf(tok::identifier, tok::kw_class)) {
+    if (Tok->isNoneOf(tok::identifier, tok::kw_class)) {
       // If we hit any other kind of token, just bail.
       return;
     }
 
-    const StringRef Attribute{Tok->TokenText};
+    const StringRef Attribute(Tok->TokenText);
     StringRef Value;
 
     // Also handle `getter=getFoo` attributes.

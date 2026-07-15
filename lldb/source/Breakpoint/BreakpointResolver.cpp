@@ -42,9 +42,9 @@ const char *BreakpointResolver::g_ty_to_name[] = {"FileAndLine", "Address",
 
 const char *BreakpointResolver::g_option_names[static_cast<uint32_t>(
     BreakpointResolver::OptionNames::LastOptionName)] = {
-    "AddressOffset", "Exact",     "FileName",     "Inlines",     "Language",
-    "LineNumber",    "Column",    "ModuleName",   "NameMask",    "Offset",
-    "PythonClass",   "Regex",     "ScriptArgs",   "SectionName", "SearchDepth",
+    "AddressOffset", "Exact",      "FileName",   "Inlines",     "Language",
+    "LineNumber",    "Column",     "ModuleName", "NameMask",    "Offset",
+    "PythonClass",   "Regex",      "ScriptArgs", "SectionName", "SearchDepth",
     "SkipPrologue",  "SymbolNames"};
 
 const char *BreakpointResolver::ResolverTyToName(enum ResolverTy type) {
@@ -63,10 +63,63 @@ BreakpointResolver::NameToResolverTy(llvm::StringRef name) {
   return UnknownResolver;
 }
 
+bool BreakpointResolver::ResolverTyInMask(uint64_t mask) {
+  if (mask == eResolverUnknown)
+    return false;
+
+  return (mask & MaskForResolverTy()) != 0;
+}
+
+uint64_t BreakpointResolver::MaskForResolverTy() {
+  ResolverTy thisID = GetResolverTy();
+
+  switch (thisID) {
+  case FileLineResolver:
+    return eResolverFileAndLine;
+  case AddressResolver:
+    return eResolverAddress;
+  case NameResolver:
+    return eResolverName;
+  case FileRegexResolver:
+    return eResolverFileRegex;
+  case PythonResolver:
+    return eResolverPython;
+  case ExceptionResolver:
+    return eResolverException;
+  default:
+    return eResolverUnknown;
+  }
+}
+
+std::string BreakpointResolver::DescribeMask(uint64_t mask) {
+  std::string result;
+  if (mask & eResolverFileAndLine)
+    result.push_back('F');
+  if (mask & eResolverAddress)
+    result.push_back('A');
+  if (mask & eResolverName)
+    result.push_back('N');
+  if (mask & eResolverFileRegex)
+    result.push_back('S');
+  if (mask & eResolverPython)
+    result.push_back('P');
+  if (mask & eResolverException)
+    result.push_back('E');
+  return result;
+}
+
+bool BreakpointResolver::TypeMaskIsValid(uint64_t mask) {
+  if (mask == 0)
+    return false;
+  return (mask & BreakpointResolverAllResolversMask) != 0;
+}
+
 BreakpointResolver::BreakpointResolver(const BreakpointSP &bkpt,
                                        const unsigned char resolverTy,
-                                       lldb::addr_t offset)
-    : m_breakpoint(bkpt), m_offset(offset), SubclassID(resolverTy) {}
+                                       lldb::addr_t offset,
+                                       bool offset_is_insn_count)
+    : m_breakpoint(bkpt), m_offset(offset),
+      m_offset_is_insn_count(offset_is_insn_count), SubclassID(resolverTy) {}
 
 BreakpointResolver::~BreakpointResolver() = default;
 
@@ -207,16 +260,15 @@ bool operator<(const SourceLoc lhs, const SourceLoc rhs) {
 void BreakpointResolver::SetSCMatchesByLine(
     SearchFilter &filter, SymbolContextList &sc_list, bool skip_prologue,
     llvm::StringRef log_ident, uint32_t line, std::optional<uint16_t> column) {
-  llvm::SmallVector<SymbolContext, 16> all_scs;
+  llvm::SmallVector<SymbolContext, 16> all_scs(sc_list.begin(), sc_list.end());
 
-  for (const auto &sc : sc_list) {
-    if (Language::GetGlobalLanguageProperties()
-            .GetEnableFilterForLineBreakpoints())
-      if (Language *lang = Language::FindPlugin(sc.GetLanguage());
-          lang && lang->IgnoreForLineBreakpoints(sc))
-        continue;
-    all_scs.push_back(sc);
-  }
+  // Let the language plugin filter `sc_list`. Because all symbol contexts in
+  // sc_list are assumed to belong to the same File, Line and CU, the code below
+  // assumes they have the same language.
+  if (!sc_list.IsEmpty() && Language::GetGlobalLanguageProperties()
+                                .GetEnableFilterForLineBreakpoints())
+    if (Language *lang = Language::FindPlugin(sc_list[0].GetLanguage()))
+      lang->FilterForLineBreakpoints(all_scs);
 
   while (all_scs.size()) {
     uint32_t closest_line = UINT32_MAX;
@@ -325,7 +377,7 @@ void BreakpointResolver::AddLocation(SearchFilter &filter,
   // If the line number is before the prologue end, move it there...
   bool skipped_prologue = false;
   if (skip_prologue && sc.function) {
-    Address prologue_addr(sc.function->GetAddressRange().GetBaseAddress());
+    Address prologue_addr = sc.function->GetAddress();
     if (prologue_addr.IsValid() && (line_start == prologue_addr)) {
       const uint32_t prologue_byte_size = sc.function->GetPrologueByteSize();
       if (prologue_byte_size) {
@@ -365,7 +417,32 @@ void BreakpointResolver::AddLocation(SearchFilter &filter,
 
 BreakpointLocationSP BreakpointResolver::AddLocation(Address loc_addr,
                                                      bool *new_location) {
-  loc_addr.Slide(m_offset);
+  if (m_offset_is_insn_count) {
+    Target &target = GetBreakpoint()->GetTarget();
+    llvm::Expected<DisassemblerSP> expected_instructions =
+        target.ReadInstructions(loc_addr, m_offset);
+    if (!expected_instructions) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Breakpoints),
+                     expected_instructions.takeError(),
+                     "error: Unable to read instructions at address 0x{0:x}",
+                     loc_addr.GetLoadAddress(&target));
+      return BreakpointLocationSP();
+    }
+
+    const DisassemblerSP instructions = *expected_instructions;
+    if (!instructions ||
+        instructions->GetInstructionList().GetSize() != m_offset) {
+      LLDB_LOG(GetLog(LLDBLog::Breakpoints),
+               "error: Unable to read {0} instructions at address 0x{1:x}",
+               m_offset, loc_addr.GetLoadAddress(&target));
+      return BreakpointLocationSP();
+    }
+
+    loc_addr.Slide(instructions->GetInstructionList().GetTotalByteSize());
+  } else {
+    loc_addr.Slide(m_offset);
+  }
+
   return GetBreakpoint()->AddLocation(loc_addr, new_location);
 }
 

@@ -11,7 +11,7 @@ endmacro()
 
 # MSVC and /arch:AVX is untested and have created problems before. See:
 # https://github.com/llvm/llvm-project/issues/54645
-if(${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
   string(TOLOWER "${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS}" _FLAGS)
   if(_FLAGS MATCHES "/arch:avx[0-9]*")
     log_problematic("Compiling LLVM with MSVC and the /arch:AVX flag is known to cause issues with parts of LLVM.\nSee https://github.com/llvm/llvm-project/issues/54645 for details.\nUse clang-cl if you want to enable AVX instructions.")

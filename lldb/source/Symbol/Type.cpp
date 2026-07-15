@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <iterator>
+#include <memory>
 #include <optional>
 
 #include "lldb/Core/Module.h"
@@ -35,6 +36,7 @@
 #include "lldb/lldb-private-enumerations.h"
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/SaveAndRestore.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -246,7 +248,7 @@ public:
   TypeAppendVisitor(TypeListImpl &type_list) : m_type_list(type_list) {}
 
   bool operator()(const lldb::TypeSP &type) {
-    m_type_list.Append(TypeImplSP(new TypeImpl(type)));
+    m_type_list.Append(std::make_shared<TypeImpl>(type));
     return true;
   }
 
@@ -455,14 +457,18 @@ Type *Type::GetEncodingType() {
   return m_encoding_type;
 }
 
-std::optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
+llvm::Expected<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
   if (m_byte_size_has_value)
     return static_cast<uint64_t>(m_byte_size);
 
   switch (m_encoding_uid_type) {
   case eEncodingInvalid:
+    return llvm::createStringError("could not get type size: invalid encoding");
+
   case eEncodingIsSyntheticUID:
-    break;
+    return llvm::createStringError(
+        "could not get type size: synthetic encoding");
+
   case eEncodingIsUID:
   case eEncodingIsConstUID:
   case eEncodingIsRestrictUID:
@@ -472,18 +478,18 @@ std::optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
     Type *encoding_type = GetEncodingType();
     if (encoding_type)
       if (std::optional<uint64_t> size =
-              encoding_type->GetByteSize(exe_scope)) {
+              llvm::expectedToOptional(encoding_type->GetByteSize(exe_scope))) {
         m_byte_size = *size;
         m_byte_size_has_value = true;
         return static_cast<uint64_t>(m_byte_size);
       }
 
-    if (std::optional<uint64_t> size =
-            GetLayoutCompilerType().GetByteSize(exe_scope)) {
-      m_byte_size = *size;
-      m_byte_size_has_value = true;
-      return static_cast<uint64_t>(m_byte_size);
-    }
+    auto size_or_err = GetLayoutCompilerType().GetByteSize(exe_scope);
+    if (!size_or_err)
+      return size_or_err.takeError();
+    m_byte_size = *size_or_err;
+    m_byte_size_has_value = true;
+    return static_cast<uint64_t>(m_byte_size);
   } break;
 
     // If we are a pointer or reference, then this is just a pointer size;
@@ -498,7 +504,8 @@ std::optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
       }
     } break;
   }
-  return {};
+  return llvm::createStringError(
+      "could not get type size: unexpected encoding");
 }
 
 llvm::Expected<uint32_t> Type::GetNumChildren(bool omit_empty_base_classes) {
@@ -525,9 +532,9 @@ lldb::TypeSP Type::GetTypedefType() {
 
 lldb::Format Type::GetFormat() { return GetForwardCompilerType().GetFormat(); }
 
-lldb::Encoding Type::GetEncoding(uint64_t &count) {
+lldb::Encoding Type::GetEncoding() {
   // Make sure we resolve our type if it already hasn't been.
-  return GetForwardCompilerType().GetEncoding(count);
+  return GetForwardCompilerType().GetEncoding();
 }
 
 bool Type::ReadFromMemory(ExecutionContext *exe_ctx, lldb::addr_t addr,
@@ -539,7 +546,9 @@ bool Type::ReadFromMemory(ExecutionContext *exe_ctx, lldb::addr_t addr,
   }
 
   const uint64_t byte_size =
-      GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr)
+      llvm::expectedToOptional(
+          GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope()
+                              : nullptr))
           .value_or(0);
   if (data.GetByteSize() < byte_size) {
     lldb::DataBufferSP data_sp(new DataBufferHeap(byte_size, '\0'));
@@ -576,6 +585,14 @@ bool Type::WriteToMemory(ExecutionContext *exe_ctx, lldb::addr_t addr,
 const Declaration &Type::GetDeclaration() const { return m_decl; }
 
 bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
+  if (m_resolving_compiler_type) {
+    LLDB_LOG(GetLog(LLDBLog::Symbols),
+             "Cycle detected while resolving type {0:x} ({1})", GetID(),
+             m_name.AsCString("<anonymous>"));
+    return false;
+  }
+  llvm::SaveAndRestore<bool> guard(m_resolving_compiler_type, true);
+
   // TODO: This needs to consider the correct type system to use.
   Type *encoding_type = nullptr;
   if (!m_compiler_type.IsValid()) {
@@ -809,10 +826,12 @@ Type::GetTypeScopeAndBasename(llvm::StringRef name) {
     case ':':
       if (prev_is_colon && template_depth == 0) {
         llvm::StringRef scope_name = name.slice(name_begin, pos.index() - 1);
-        // The itanium demangler uses this string to represent anonymous
+        // The demanglers use these strings to represent anonymous
         // namespaces. Convert it to a more language-agnostic form (which is
         // also used in DWARF).
-        if (scope_name == "(anonymous namespace)")
+        if (scope_name == "(anonymous namespace)" ||
+            scope_name == "`anonymous namespace'" ||
+            scope_name == "`anonymous-namespace'")
           scope_name = "";
         result.scope.push_back(scope_name);
         name_begin = pos.index() + 1;
@@ -1196,7 +1215,7 @@ bool TypeImpl::GetDescription(lldb_private::Stream &strm,
 CompilerType TypeImpl::FindDirectNestedType(llvm::StringRef name) {
   if (name.empty())
     return CompilerType();
-  return GetCompilerType(/*prefer_dynamic=*/false)
+  return GetCompilerType(/*prefer_dynamic=*/true)
       .GetDirectNestedTypeWithName(name);
 }
 
@@ -1229,12 +1248,12 @@ bool TypeMemberFunctionImpl::GetDescription(Stream &stream) {
                   m_type.GetTypeName().AsCString("<unknown>"));
     break;
   case lldb::eMemberFunctionKindInstanceMethod:
-    stream.Printf("instance method %s of type %s", m_name.AsCString(),
-                  m_decl.GetDeclContext().GetName().AsCString());
+    stream.Format("instance method {0} of type {1}", m_name,
+                  m_decl.GetDeclContext().GetName());
     break;
   case lldb::eMemberFunctionKindStaticMethod:
-    stream.Printf("static method %s of type %s", m_name.AsCString(),
-                  m_decl.GetDeclContext().GetName().AsCString());
+    stream.Format("static method {0} of type {1}", m_name,
+                  m_decl.GetDeclContext().GetName());
     break;
   }
   return true;

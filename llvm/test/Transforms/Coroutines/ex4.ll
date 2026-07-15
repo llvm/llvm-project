@@ -1,4 +1,4 @@
-; Fourth example from Doc/Coroutines.rst (coroutine promise)
+; Fourth example from Doc/Coroutines.md (coroutine promise)
 ; RUN: opt < %s -passes='default<O2>' -S | FileCheck %s
 
 define ptr @f(i32 %n) presplitcoroutine {
@@ -27,7 +27,7 @@ cleanup:
   call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 false, token none)
   ret ptr %hdl
 }
 
@@ -63,7 +63,7 @@ declare i32 @llvm.coro.size.i32()
 declare ptr @llvm.coro.begin(token, ptr)
 declare i8 @llvm.coro.suspend(token, i1)
 declare ptr @llvm.coro.free(token, ptr)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 
 declare void @llvm.coro.resume(ptr)
 declare void @llvm.coro.destroy(ptr)

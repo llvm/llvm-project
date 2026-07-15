@@ -1,5 +1,4 @@
 ; RUN: opt < %s -S -passes=debugify,mldst-motion -o - | FileCheck %s
-; RUN: opt < %s -S -passes=debugify,mldst-motion -o - --try-experimental-debuginfo-iterators | FileCheck %s
 
 %struct.S = type { i32 }
 

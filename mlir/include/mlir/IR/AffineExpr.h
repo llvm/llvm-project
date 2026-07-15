@@ -81,19 +81,6 @@ public:
 
   bool operator!() const { return expr == nullptr; }
 
-  template <typename U>
-  [[deprecated("Use llvm::isa<U>() instead")]] constexpr bool isa() const;
-
-  template <typename U>
-  [[deprecated("Use llvm::dyn_cast<U>() instead")]] U dyn_cast() const;
-
-  template <typename U>
-  [[deprecated("Use llvm::dyn_cast_or_null<U>() instead")]] U
-  dyn_cast_or_null() const;
-
-  template <typename U>
-  [[deprecated("Use llvm::cast<U>() instead")]] U cast() const;
-
   MLIRContext *getContext() const;
 
   /// Return the classification for this type.
@@ -288,30 +275,6 @@ AffineExpr getAffineExprFromFlatForm(ArrayRef<int64_t> flatExprs,
 
 raw_ostream &operator<<(raw_ostream &os, AffineExpr expr);
 
-template <typename U>
-constexpr bool AffineExpr::isa() const {
-  if constexpr (std::is_same_v<U, AffineBinaryOpExpr>)
-    return getKind() <= AffineExprKind::LAST_AFFINE_BINARY_OP;
-  if constexpr (std::is_same_v<U, AffineDimExpr>)
-    return getKind() == AffineExprKind::DimId;
-  if constexpr (std::is_same_v<U, AffineSymbolExpr>)
-    return getKind() == AffineExprKind::SymbolId;
-  if constexpr (std::is_same_v<U, AffineConstantExpr>)
-    return getKind() == AffineExprKind::Constant;
-}
-template <typename U>
-U AffineExpr::dyn_cast() const {
-  return llvm::dyn_cast<U>(*this);
-}
-template <typename U>
-U AffineExpr::dyn_cast_or_null() const {
-  return llvm::dyn_cast_or_null<U>(*this);
-}
-template <typename U>
-U AffineExpr::cast() const {
-  return llvm::cast<U>(*this);
-}
-
 /// Simplify an affine expression by flattening and some amount of simple
 /// analysis. This has complexity linear in the number of nodes in 'expr'.
 /// Returns the simplified expression, which is the same as the input expression
@@ -391,14 +354,6 @@ namespace llvm {
 // AffineExpr hash just like pointers
 template <>
 struct DenseMapInfo<mlir::AffineExpr> {
-  static mlir::AffineExpr getEmptyKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::AffineExpr(static_cast<mlir::AffineExpr::ImplType *>(pointer));
-  }
-  static mlir::AffineExpr getTombstoneKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::AffineExpr(static_cast<mlir::AffineExpr::ImplType *>(pointer));
-  }
   static unsigned getHashValue(mlir::AffineExpr val) {
     return mlir::hash_value(val);
   }

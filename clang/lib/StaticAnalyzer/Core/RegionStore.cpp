@@ -17,7 +17,6 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Analysis/Analyses/LiveVariables.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/JsonSupport.h"
 #include "clang/Basic/TargetInfo.h"
@@ -26,10 +25,11 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
+#include <limits>
 #include <optional>
 #include <utility>
 
@@ -43,10 +43,13 @@ using namespace ento;
 namespace {
 class BindingKey {
 public:
-  enum Kind { Default = 0x0, Direct = 0x1 };
-private:
-  enum { Symbolic = 0x2 };
+  enum Kind {
+    Default = 0x0,
+    Direct = 0x1,
+    Symbolic = 0x2,
+  };
 
+private:
   llvm::PointerIntPair<const MemRegion *, 2> P;
   uint64_t Data;
 
@@ -112,6 +115,13 @@ public:
 
   LLVM_DUMP_METHOD void dump() const;
 };
+
+std::string locDescr(Loc L) {
+  std::string S;
+  llvm::raw_string_ostream OS(S);
+  L.dumpToStream(OS);
+  return OS.str();
+}
 } // end anonymous namespace
 
 BindingKey BindingKey::Make(const MemRegion *R, Kind k) {
@@ -174,25 +184,16 @@ public:
 
   RegionBindingsRef(ClusterBindings::Factory &CBFactory,
                     const RegionBindings::TreeTy *T,
-                    RegionBindings::TreeTy::Factory *F,
+                    RegionBindings::TreeTy::Factory *F, bool IsMainAnalysis)
+      : RegionBindingsRef(ParentTy(T, F), CBFactory, IsMainAnalysis) {}
+
+  RegionBindingsRef(const ParentTy &P, ClusterBindings::Factory &CBFactory,
                     bool IsMainAnalysis)
-      : llvm::ImmutableMapRef<const MemRegion *, ClusterBindings>(T, F),
-        CBFactory(&CBFactory), IsMainAnalysis(IsMainAnalysis) {}
+      : ParentTy(P), CBFactory(&CBFactory), IsMainAnalysis(IsMainAnalysis) {}
 
-  RegionBindingsRef(const ParentTy &P,
-                    ClusterBindings::Factory &CBFactory,
-                    bool IsMainAnalysis)
-      : llvm::ImmutableMapRef<const MemRegion *, ClusterBindings>(P),
-        CBFactory(&CBFactory), IsMainAnalysis(IsMainAnalysis) {}
-
-  RegionBindingsRef add(key_type_ref K, data_type_ref D) const {
-    return RegionBindingsRef(static_cast<const ParentTy *>(this)->add(K, D),
-                             *CBFactory, IsMainAnalysis);
-  }
-
-  RegionBindingsRef remove(key_type_ref K) const {
-    return RegionBindingsRef(static_cast<const ParentTy *>(this)->remove(K),
-                             *CBFactory, IsMainAnalysis);
+  RegionBindingsRef removeCluster(const MemRegion *BaseRegion) const {
+    return RegionBindingsRef(ParentTy::remove(BaseRegion), *CBFactory,
+                             IsMainAnalysis);
   }
 
   RegionBindingsRef addBinding(BindingKey K, SVal V) const;
@@ -319,10 +320,87 @@ public:
   }
 
   LLVM_DUMP_METHOD void dump() const { printJson(llvm::errs()); }
+
+protected:
+  RegionBindingsRef
+  commitBindingsToCluster(const MemRegion *BaseRegion,
+                          const ClusterBindings &Bindings) const;
 };
 } // end anonymous namespace
 
+/// This class represents the same as \c RegionBindingsRef, but with a limit on
+/// the number of bindings that can be added.
+class LimitedRegionBindingsRef : public RegionBindingsRef {
+public:
+  LimitedRegionBindingsRef(RegionBindingsRef Base,
+                           SmallVectorImpl<SVal> &EscapedValuesDuringBind,
+                           std::optional<unsigned> BindingsLeft)
+      : RegionBindingsRef(Base),
+        EscapedValuesDuringBind(&EscapedValuesDuringBind),
+        BindingsLeft(BindingsLeft) {}
+
+  bool hasExhaustedBindingLimit() const {
+    return BindingsLeft.has_value() && BindingsLeft.value() == 0;
+  }
+
+  LimitedRegionBindingsRef withValuesEscaped(SVal V) const {
+    EscapedValuesDuringBind->push_back(V);
+    return *this;
+  }
+
+  LimitedRegionBindingsRef
+  withValuesEscaped(nonloc::CompoundVal::iterator Begin,
+                    nonloc::CompoundVal::iterator End) const {
+    for (SVal V : llvm::make_range(Begin, End))
+      withValuesEscaped(V);
+    return *this;
+  }
+
+  LimitedRegionBindingsRef
+  addWithoutDecreasingLimit(const MemRegion *BaseRegion,
+                            data_type_ref BindingKeyAndValue) const {
+    return LimitedRegionBindingsRef{RegionBindingsRef::commitBindingsToCluster(
+                                        BaseRegion, BindingKeyAndValue),
+                                    *EscapedValuesDuringBind, BindingsLeft};
+  }
+
+  LimitedRegionBindingsRef removeCluster(const MemRegion *BaseRegion) const {
+    return LimitedRegionBindingsRef{
+        RegionBindingsRef::removeCluster(BaseRegion), *EscapedValuesDuringBind,
+        BindingsLeft};
+  }
+
+  LimitedRegionBindingsRef addBinding(BindingKey K, SVal V) const {
+    std::optional<unsigned> NewBindingsLeft = BindingsLeft;
+    if (NewBindingsLeft.has_value()) {
+      assert(NewBindingsLeft.value() != 0);
+      NewBindingsLeft.value() -= 1;
+
+      // If we just exhausted the binding limit, highjack
+      // this bind call for the default binding.
+      if (NewBindingsLeft.value() == 0) {
+        withValuesEscaped(V);
+        K = BindingKey::Make(K.getRegion(), BindingKey::Default);
+        V = UnknownVal();
+      }
+    }
+
+    return LimitedRegionBindingsRef{RegionBindingsRef::addBinding(K, V),
+                                    *EscapedValuesDuringBind, NewBindingsLeft};
+  }
+
+  LimitedRegionBindingsRef addBinding(const MemRegion *R, BindingKey::Kind k,
+                                      SVal V) const {
+    return addBinding(BindingKey::Make(R, k), V);
+  }
+
+private:
+  SmallVectorImpl<SVal> *EscapedValuesDuringBind; // nonnull
+  std::optional<unsigned> BindingsLeft;
+};
+
 typedef const RegionBindingsRef& RegionBindingsConstRef;
+typedef const LimitedRegionBindingsRef &LimitedRegionBindingsConstRef;
 
 std::optional<SVal>
 RegionBindingsRef::getDirectBinding(const MemRegion *R) const {
@@ -336,17 +414,21 @@ RegionBindingsRef::getDefaultBinding(const MemRegion *R) const {
   return V ? std::optional<SVal>(*V) : std::nullopt;
 }
 
+RegionBindingsRef RegionBindingsRef::commitBindingsToCluster(
+    const MemRegion *BaseRegion, const ClusterBindings &Bindings) const {
+  return RegionBindingsRef(ParentTy::add(BaseRegion, Bindings), *CBFactory,
+                           IsMainAnalysis);
+}
+
 RegionBindingsRef RegionBindingsRef::addBinding(BindingKey K, SVal V) const {
   const MemRegion *Base = K.getBaseRegion();
 
   const ClusterBindings *ExistingCluster = lookup(Base);
-  ClusterBindings Cluster =
+  ClusterBindings Bindings =
       (ExistingCluster ? *ExistingCluster : CBFactory->getEmptyMap());
-
-  ClusterBindings NewCluster = CBFactory->add(Cluster, K, V);
-  return add(Base, NewCluster);
+  Bindings = CBFactory->add(Bindings, K, V);
+  return commitBindingsToCluster(Base, Bindings);
 }
-
 
 RegionBindingsRef RegionBindingsRef::addBinding(const MemRegion *R,
                                                 BindingKey::Kind k,
@@ -374,8 +456,8 @@ RegionBindingsRef RegionBindingsRef::removeBinding(BindingKey K) {
 
   ClusterBindings NewCluster = CBFactory->remove(*Cluster, K);
   if (NewCluster.isEmpty())
-    return remove(Base);
-  return add(Base, NewCluster);
+    return removeCluster(Base);
+  return commitBindingsToCluster(Base, NewCluster);
 }
 
 RegionBindingsRef RegionBindingsRef::removeBinding(const MemRegion *R,
@@ -409,7 +491,7 @@ private:
   ///
   /// This is controlled by 'region-store-small-struct-limit' option.
   /// To disable all small-struct-dependent behavior, set the option to "0".
-  unsigned SmallStructLimit;
+  const unsigned SmallStructLimit;
 
   /// The largest number of element an array can have and still be
   /// considered "small".
@@ -419,7 +501,13 @@ private:
   ///
   /// This is controlled by 'region-store-small-struct-limit' option.
   /// To disable all small-struct-dependent behavior, set the option to "0".
-  unsigned SmallArrayLimit;
+  const unsigned SmallArrayLimit;
+
+  /// The number of bindings a single bind operation can scatter into.
+  /// For example, binding the initializer-list of an array would recurse and
+  /// bind all the individual array elements, potentially causing scalability
+  /// issues. Nullopt if the limit is disabled.
+  const std::optional<unsigned> RegionStoreMaxBindingFanOutPlusOne;
 
   /// A helper used to populate the work list with the given set of
   /// regions.
@@ -427,21 +515,30 @@ private:
                         ArrayRef<SVal> Values,
                         InvalidatedRegions *TopLevelRegions);
 
+  const AnalyzerOptions &getOptions() {
+    return StateMgr.getOwningEngine().getAnalysisManager().options;
+  }
+
 public:
   RegionStoreManager(ProgramStateManager &mgr)
       : StoreManager(mgr), RBFactory(mgr.getAllocator()),
-        CBFactory(mgr.getAllocator()), SmallStructLimit(0), SmallArrayLimit(0) {
-    ExprEngine &Eng = StateMgr.getOwningEngine();
-    AnalyzerOptions &Options = Eng.getAnalysisManager().options;
-    SmallStructLimit = Options.RegionStoreSmallStructLimit;
-    SmallArrayLimit = Options.RegionStoreSmallArrayLimit;
-  }
+        CBFactory(mgr.getAllocator()),
+        SmallStructLimit(getOptions().RegionStoreSmallStructLimit),
+        SmallArrayLimit(getOptions().RegionStoreSmallArrayLimit),
+        RegionStoreMaxBindingFanOutPlusOne([&]() -> std::optional<unsigned> {
+          unsigned FanOut = getOptions().RegionStoreMaxBindingFanOut;
+          assert(FanOut != std::numeric_limits<unsigned>::max());
+          if (FanOut == 0)
+            return std::nullopt;
+          return FanOut + 1 /*for the default binding*/;
+        }()) {}
 
   /// setImplicitDefaultValue - Set the default binding for the provided
   ///  MemRegion to the value implicitly defined for compound literals when
   ///  the value is not specified.
-  RegionBindingsRef setImplicitDefaultValue(RegionBindingsConstRef B,
-                                            const MemRegion *R, QualType T);
+  LimitedRegionBindingsRef
+  setImplicitDefaultValue(LimitedRegionBindingsConstRef B, const MemRegion *R,
+                          QualType T);
 
   /// ArrayToPointer - Emulates the "decay" of an array to a pointer
   ///  type.  'Array' represents the lvalue of the array being decayed
@@ -453,27 +550,30 @@ public:
 
   /// Creates the Store that correctly represents memory contents before
   /// the beginning of the analysis of the given top-level stack frame.
-  StoreRef getInitialStore(const LocationContext *InitLoc) override {
+  StoreRef getInitialStore(const StackFrame *SF) override {
     bool IsMainAnalysis = false;
-    if (const auto *FD = dyn_cast<FunctionDecl>(InitLoc->getDecl()))
+    if (const auto *FD = dyn_cast<FunctionDecl>(SF->getDecl()))
       IsMainAnalysis = FD->isMain() && !Ctx.getLangOpts().CPlusPlus;
-    return StoreRef(RegionBindingsRef(
-        RegionBindingsRef::ParentTy(RBFactory.getEmptyMap(), RBFactory),
-        CBFactory, IsMainAnalysis).asStore(), *this);
+    return StoreRef(RegionBindingsRef(RegionBindingsRef::ParentTy(
+                                          RBFactory.getEmptyMap(), RBFactory),
+                                      CBFactory, IsMainAnalysis)
+                        .asStore(),
+                    *this);
   }
 
   //===-------------------------------------------------------------------===//
   // Binding values to regions.
   //===-------------------------------------------------------------------===//
-  RegionBindingsRef invalidateGlobalRegion(MemRegion::Kind K, const Stmt *S,
-                                           unsigned Count,
-                                           const LocationContext *LCtx,
+  RegionBindingsRef invalidateGlobalRegion(MemRegion::Kind K,
+                                           ConstCFGElementRef Elem,
+                                           unsigned Count, const StackFrame *SF,
                                            RegionBindingsRef B,
                                            InvalidatedRegions *Invalidated);
 
-  StoreRef invalidateRegions(Store store, ArrayRef<SVal> Values, const Stmt *S,
-                             unsigned Count, const LocationContext *LCtx,
-                             const CallEvent *Call, InvalidatedSymbols &IS,
+  StoreRef invalidateRegions(Store store, ArrayRef<SVal> Values,
+                             ConstCFGElementRef Elem, unsigned Count,
+                             const StackFrame *SF, const CallEvent *Call,
+                             InvalidatedSymbols &IS,
                              RegionAndSymbolInvalidationTraits &ITraits,
                              InvalidatedRegions *Invalidated,
                              InvalidatedRegions *InvalidatedTopLevel) override;
@@ -481,11 +581,13 @@ public:
   bool scanReachableSymbols(Store S, const MemRegion *R,
                             ScanReachableSymbols &Callbacks) override;
 
-  RegionBindingsRef removeSubRegionBindings(RegionBindingsConstRef B,
-                                            const SubRegion *R);
+  LimitedRegionBindingsRef
+  removeSubRegionBindings(LimitedRegionBindingsConstRef B, const SubRegion *R);
   std::optional<SVal>
   getConstantValFromConstArrayInitializer(RegionBindingsConstRef B,
                                           const ElementRegion *R);
+  std::optional<SVal> getConstantValFromInitializer(const FieldRegion *R,
+                                                    bool IsMainAnalysis);
   std::optional<SVal>
   getSValFromInitListExpr(const InitListExpr *ILE,
                           const SmallVector<uint64_t, 2> &ConcreteOffsets,
@@ -494,29 +596,34 @@ public:
                                 QualType ElemT);
 
 public: // Part of public interface to class.
-
-  StoreRef Bind(Store store, Loc LV, SVal V) override {
-    return StoreRef(bind(getRegionBindings(store), LV, V).asStore(), *this);
+  BindResult Bind(Store store, Loc LV, SVal V) override {
+    llvm::SmallVector<SVal, 0> EscapedValuesDuringBind;
+    LimitedRegionBindingsRef BoundedBindings =
+        getRegionBindings(store, EscapedValuesDuringBind);
+    return BindResult{StoreRef(bind(BoundedBindings, LV, V).asStore(), *this),
+                      std::move(EscapedValuesDuringBind)};
   }
 
-  RegionBindingsRef bind(RegionBindingsConstRef B, Loc LV, SVal V);
+  LimitedRegionBindingsRef bind(LimitedRegionBindingsConstRef B, Loc LV,
+                                SVal V);
 
   // BindDefaultInitial is only used to initialize a region with
   // a default value.
-  StoreRef BindDefaultInitial(Store store, const MemRegion *R,
-                              SVal V) override {
+  BindResult BindDefaultInitial(Store store, const MemRegion *R,
+                                SVal V) override {
     RegionBindingsRef B = getRegionBindings(store);
     // Use other APIs when you have to wipe the region that was initialized
     // earlier.
     assert(!(B.getDefaultBinding(R) || B.getDirectBinding(R)) &&
            "Double initialization!");
     B = B.addBinding(BindingKey::Make(R, BindingKey::Default), V);
-    return StoreRef(B.asImmutableMap().getRootWithoutRetain(), *this);
+    return BindResult{
+        StoreRef(B.asImmutableMap().getRootWithoutRetain(), *this), {}};
   }
 
   // BindDefaultZero is used for zeroing constructors that may accidentally
   // overwrite existing bindings.
-  StoreRef BindDefaultZero(Store store, const MemRegion *R) override {
+  BindResult BindDefaultZero(Store store, const MemRegion *R) override {
     // FIXME: The offsets of empty bases can be tricky because of
     // of the so called "empty base class optimization".
     // If a base class has been optimized out
@@ -528,13 +635,17 @@ public: // Part of public interface to class.
     // As a temporary mitigation we don't create bindings for empty bases.
     if (const auto *BR = dyn_cast<CXXBaseObjectRegion>(R))
       if (BR->getDecl()->isEmpty())
-        return StoreRef(store, *this);
+        return BindResult{StoreRef(store, *this), {}};
 
-    RegionBindingsRef B = getRegionBindings(store);
+    llvm::SmallVector<SVal, 0> EscapedValuesDuringBind;
+    LimitedRegionBindingsRef B =
+        getRegionBindings(store, EscapedValuesDuringBind);
     SVal V = svalBuilder.makeZeroVal(Ctx.CharTy);
     B = removeSubRegionBindings(B, cast<SubRegion>(R));
     B = B.addBinding(BindingKey::Make(R, BindingKey::Default), V);
-    return StoreRef(B.asImmutableMap().getRootWithoutRetain(), *this);
+    return BindResult{
+        StoreRef(B.asImmutableMap().getRootWithoutRetain(), *this),
+        std::move(EscapedValuesDuringBind)};
   }
 
   /// Attempt to extract the fields of \p LCV and bind them to the struct region
@@ -547,31 +658,29 @@ public: // Part of public interface to class.
   ///
   /// \returns The updated store bindings, or \c std::nullopt if binding
   ///          non-lazily would be too expensive.
-  std::optional<RegionBindingsRef>
-  tryBindSmallStruct(RegionBindingsConstRef B, const TypedValueRegion *R,
+  std::optional<LimitedRegionBindingsRef>
+  tryBindSmallStruct(LimitedRegionBindingsConstRef B, const TypedValueRegion *R,
                      const RecordDecl *RD, nonloc::LazyCompoundVal LCV);
 
   /// BindStruct - Bind a compound value to a structure.
-  RegionBindingsRef bindStruct(RegionBindingsConstRef B,
-                               const TypedValueRegion* R, SVal V);
+  LimitedRegionBindingsRef bindStruct(LimitedRegionBindingsConstRef B,
+                                      const TypedValueRegion *R, SVal V);
 
   /// BindVector - Bind a compound value to a vector.
-  RegionBindingsRef bindVector(RegionBindingsConstRef B,
-                               const TypedValueRegion* R, SVal V);
+  LimitedRegionBindingsRef bindVector(LimitedRegionBindingsConstRef B,
+                                      const TypedValueRegion *R, SVal V);
 
-  std::optional<RegionBindingsRef>
-  tryBindSmallArray(RegionBindingsConstRef B, const TypedValueRegion *R,
+  std::optional<LimitedRegionBindingsRef>
+  tryBindSmallArray(LimitedRegionBindingsConstRef B, const TypedValueRegion *R,
                     const ArrayType *AT, nonloc::LazyCompoundVal LCV);
 
-  RegionBindingsRef bindArray(RegionBindingsConstRef B,
-                              const TypedValueRegion* R,
-                              SVal V);
+  LimitedRegionBindingsRef bindArray(LimitedRegionBindingsConstRef B,
+                                     const TypedValueRegion *R, SVal V);
 
   /// Clears out all bindings in the given region and assigns a new value
   /// as a Default binding.
-  RegionBindingsRef bindAggregate(RegionBindingsConstRef B,
-                                  const TypedRegion *R,
-                                  SVal DefaultVal);
+  LimitedRegionBindingsRef bindAggregate(LimitedRegionBindingsConstRef B,
+                                         const TypedRegion *R, SVal DefaultVal);
 
   /// Create a new store with the specified binding removed.
   /// \param ST the original store, that is the basis for the new store.
@@ -607,9 +716,6 @@ public: // Part of public interface to class.
   SVal getBinding(Store S, Loc L, QualType T) override {
     return getBinding(getRegionBindings(S), L, T);
   }
-
-  std::optional<SVal>
-  getUniqueDefaultBinding(nonloc::LazyCompoundVal LCV) const;
 
   std::optional<SVal> getDefaultBinding(Store S, const MemRegion *R) override {
     RegionBindingsRef B = getRegionBindings(S);
@@ -683,8 +789,8 @@ public: // Part of public interface to class.
 
   /// removeDeadBindings - Scans the RegionStore of 'state' for dead values.
   ///  It returns a new Store with these values removed.
-  StoreRef removeDeadBindings(Store store, const StackFrameContext *LCtx,
-                              SymbolReaper& SymReaper) override;
+  StoreRef removeDeadBindings(Store store, const StackFrame *SF,
+                              SymbolReaper &SymReaper) override;
 
   //===------------------------------------------------------------------===//
   // Utility methods.
@@ -693,11 +799,17 @@ public: // Part of public interface to class.
   RegionBindingsRef getRegionBindings(Store store) const {
     llvm::PointerIntPair<Store, 1, bool> Ptr;
     Ptr.setFromOpaqueValue(const_cast<void *>(store));
-    return RegionBindingsRef(
-        CBFactory,
-        static_cast<const RegionBindings::TreeTy *>(Ptr.getPointer()),
-        RBFactory.getTreeFactory(),
-        Ptr.getInt());
+    return {CBFactory,
+            static_cast<const RegionBindings::TreeTy *>(Ptr.getPointer()),
+            RBFactory.getTreeFactory(), Ptr.getInt()};
+  }
+
+  LimitedRegionBindingsRef
+  getRegionBindings(Store store,
+                    SmallVectorImpl<SVal> &EscapedValuesDuringBind) const {
+    return LimitedRegionBindingsRef(
+        getRegionBindings(store), EscapedValuesDuringBind,
+        /*BindingsLeft=*/RegionStoreMaxBindingFanOutPlusOne);
   }
 
   void printJson(raw_ostream &Out, Store S, const char *NL = "\n",
@@ -929,7 +1041,7 @@ collectSubRegionBindings(SmallVectorImpl<BindingPair> &Bindings,
     Length = ExtentInt.getLimitedValue() * SVB.getContext().getCharWidth();
   } else if (const FieldRegion *FR = dyn_cast<FieldRegion>(Top)) {
     if (FR->getDecl()->isBitField())
-      Length = FR->getDecl()->getBitWidthValue(SVB.getContext());
+      Length = FR->getDecl()->getBitWidthValue();
   }
 
   for (const auto &StoreEntry : Cluster) {
@@ -986,15 +1098,15 @@ collectSubRegionBindings(SmallVectorImpl<BindingPair> &Bindings,
                            IncludeAllDefaultBindings);
 }
 
-RegionBindingsRef
-RegionStoreManager::removeSubRegionBindings(RegionBindingsConstRef B,
+LimitedRegionBindingsRef
+RegionStoreManager::removeSubRegionBindings(LimitedRegionBindingsConstRef B,
                                             const SubRegion *Top) {
   BindingKey TopKey = BindingKey::Make(Top, BindingKey::Default);
   const MemRegion *ClusterHead = TopKey.getBaseRegion();
 
   if (Top == ClusterHead) {
     // We can remove an entire cluster's bindings all in one go.
-    return B.remove(Top);
+    return B.removeCluster(Top);
   }
 
   const ClusterBindings *Cluster = B.lookup(ClusterHead);
@@ -1027,29 +1139,30 @@ RegionStoreManager::removeSubRegionBindings(RegionBindingsConstRef B,
   }
 
   if (Result.isEmpty())
-    return B.remove(ClusterHead);
-  return B.add(ClusterHead, Result.asImmutableMap());
+    return B.removeCluster(ClusterHead);
+  return B.addWithoutDecreasingLimit(ClusterHead, Result.asImmutableMap());
 }
 
 namespace {
 class InvalidateRegionsWorker : public ClusterAnalysis<InvalidateRegionsWorker>
 {
-  const Stmt *S;
+  ConstCFGElementRef Elem;
   unsigned Count;
-  const LocationContext *LCtx;
+  const StackFrame *SF;
   InvalidatedSymbols &IS;
   RegionAndSymbolInvalidationTraits &ITraits;
   StoreManager::InvalidatedRegions *Regions;
   GlobalsFilterKind GlobalsFilter;
 public:
   InvalidateRegionsWorker(RegionStoreManager &rm, ProgramStateManager &stateMgr,
-                          RegionBindingsRef b, const Stmt *S, unsigned count,
-                          const LocationContext *lctx, InvalidatedSymbols &is,
+                          RegionBindingsRef b, ConstCFGElementRef elem,
+                          unsigned count, const StackFrame *SF,
+                          InvalidatedSymbols &is,
                           RegionAndSymbolInvalidationTraits &ITraitsIn,
                           StoreManager::InvalidatedRegions *r,
                           GlobalsFilterKind GFK)
-      : ClusterAnalysis<InvalidateRegionsWorker>(rm, stateMgr, b), S(S),
-        Count(count), LCtx(lctx), IS(is), ITraits(ITraitsIn), Regions(r),
+      : ClusterAnalysis<InvalidateRegionsWorker>(rm, stateMgr, b), Elem(elem),
+        Count(count), SF(SF), IS(is), ITraits(ITraitsIn), Regions(r),
         GlobalsFilter(GFK) {}
 
   void VisitCluster(const MemRegion *baseR, const ClusterBindings *C);
@@ -1113,7 +1226,7 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
 
     // Invalidate regions contents.
     if (!PreserveRegionsContents)
-      B = B.remove(baseR);
+      B = B.removeCluster(baseR);
   }
 
   if (const auto *TO = dyn_cast<TypedValueRegion>(baseR)) {
@@ -1135,7 +1248,7 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
         for (BoundNodes &Match : Matches) {
           auto *VD = Match.getNodeAs<VarDecl>(DeclBind);
           const VarRegion *ToInvalidate =
-              RM.getRegionManager().getVarRegion(VD, LCtx);
+              RM.getRegionManager().getVarRegion(VD, SF);
           AddToWorkList(ToInvalidate);
         }
       }
@@ -1183,7 +1296,7 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
     // Invalidate the region by setting its default value to
     // conjured symbol. The type of the symbol is irrelevant.
     DefinedOrUnknownSVal V =
-        svalBuilder.conjureSymbolVal(baseR, S, LCtx, Ctx.IntTy, Count);
+        svalBuilder.conjureSymbolVal(baseR, Elem, SF, Ctx.IntTy, Count);
     B = B.addBinding(baseR, BindingKey::Default, V);
     return;
   }
@@ -1205,7 +1318,7 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
     // Invalidate the region by setting its default value to
     // conjured symbol. The type of the symbol is irrelevant.
     DefinedOrUnknownSVal V =
-        svalBuilder.conjureSymbolVal(baseR, S, LCtx, Ctx.IntTy, Count);
+        svalBuilder.conjureSymbolVal(baseR, Elem, SF, Ctx.IntTy, Count);
     B = B.addBinding(baseR, BindingKey::Default, V);
     return;
   }
@@ -1273,13 +1386,13 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
   conjure_default:
       // Set the default value of the array to conjured symbol.
       DefinedOrUnknownSVal V = svalBuilder.conjureSymbolVal(
-          baseR, S, LCtx, AT->getElementType(), Count);
+          baseR, Elem, SF, AT->getElementType(), Count);
       B = B.addBinding(baseR, BindingKey::Default, V);
       return;
   }
 
   DefinedOrUnknownSVal V =
-      svalBuilder.conjureSymbolVal(baseR, S, LCtx, T, Count);
+      svalBuilder.conjureSymbolVal(baseR, Elem, SF, T, Count);
   assert(SymbolManager::canSymbolicate(T) || V.isUnknown());
   B = B.addBinding(baseR, BindingKey::Direct, V);
 }
@@ -1290,9 +1403,9 @@ bool InvalidateRegionsWorker::isInitiallyIncludedGlobalRegion(
   case GFK_None:
     return false;
   case GFK_SystemOnly:
-    return isa<GlobalSystemSpaceRegion>(R->getMemorySpace());
+    return isa<GlobalSystemSpaceRegion>(R->getRawMemorySpace());
   case GFK_All:
-    return isa<NonStaticGlobalSpaceRegion>(R->getMemorySpace());
+    return isa<NonStaticGlobalSpaceRegion>(R->getRawMemorySpace());
   }
 
   llvm_unreachable("unknown globals filter");
@@ -1302,21 +1415,21 @@ bool InvalidateRegionsWorker::includeEntireMemorySpace(const MemRegion *Base) {
   if (isInitiallyIncludedGlobalRegion(Base))
     return true;
 
-  const MemSpaceRegion *MemSpace = Base->getMemorySpace();
+  const MemSpaceRegion *MemSpace = Base->getRawMemorySpace();
   return ITraits.hasTrait(MemSpace,
                           RegionAndSymbolInvalidationTraits::TK_EntireMemSpace);
 }
 
 RegionBindingsRef RegionStoreManager::invalidateGlobalRegion(
-    MemRegion::Kind K, const Stmt *S, unsigned Count,
-    const LocationContext *LCtx, RegionBindingsRef B,
+    MemRegion::Kind K, ConstCFGElementRef Elem, unsigned Count,
+    const StackFrame *SF, RegionBindingsRef B,
     InvalidatedRegions *Invalidated) {
   // Bind the globals memory space to a new symbol that we will use to derive
   // the bindings for all globals.
   const GlobalsSpaceRegion *GS = MRMgr.getGlobalsRegion(K);
-  SVal V =
-      svalBuilder.conjureSymbolVal(/* symbolTag = */ (const void *)GS, S, LCtx,
-                                   /* type does not matter */ Ctx.IntTy, Count);
+  SVal V = svalBuilder.conjureSymbolVal(
+      /* symbolTag = */ (const void *)GS, Elem, SF,
+      /* type does not matter */ Ctx.IntTy, Count);
 
   B = B.removeBinding(GS)
        .addBinding(BindingKey::Make(GS, BindingKey::Default), V);
@@ -1351,8 +1464,8 @@ void RegionStoreManager::populateWorkList(InvalidateRegionsWorker &W,
 }
 
 StoreRef RegionStoreManager::invalidateRegions(
-    Store store, ArrayRef<SVal> Values, const Stmt *S, unsigned Count,
-    const LocationContext *LCtx, const CallEvent *Call, InvalidatedSymbols &IS,
+    Store store, ArrayRef<SVal> Values, ConstCFGElementRef Elem, unsigned Count,
+    const StackFrame *SF, const CallEvent *Call, InvalidatedSymbols &IS,
     RegionAndSymbolInvalidationTraits &ITraits,
     InvalidatedRegions *TopLevelRegions, InvalidatedRegions *Invalidated) {
   GlobalsFilterKind GlobalsFilter;
@@ -1366,7 +1479,7 @@ StoreRef RegionStoreManager::invalidateRegions(
   }
 
   RegionBindingsRef B = getRegionBindings(store);
-  InvalidateRegionsWorker W(*this, StateMgr, B, S, Count, LCtx, IS, ITraits,
+  InvalidateRegionsWorker W(*this, StateMgr, B, Elem, Count, SF, IS, ITraits,
                             Invalidated, GlobalsFilter);
 
   // Scan the bindings and generate the clusters.
@@ -1386,12 +1499,12 @@ StoreRef RegionStoreManager::invalidateRegions(
   // TODO: This could possibly be more precise with modules.
   switch (GlobalsFilter) {
   case GFK_All:
-    B = invalidateGlobalRegion(MemRegion::GlobalInternalSpaceRegionKind, S,
-                               Count, LCtx, B, Invalidated);
+    B = invalidateGlobalRegion(MemRegion::GlobalInternalSpaceRegionKind, Elem,
+                               Count, SF, B, Invalidated);
     [[fallthrough]];
   case GFK_SystemOnly:
-    B = invalidateGlobalRegion(MemRegion::GlobalSystemSpaceRegionKind, S, Count,
-                               LCtx, B, Invalidated);
+    B = invalidateGlobalRegion(MemRegion::GlobalSystemSpaceRegionKind, Elem,
+                               Count, SF, B, Invalidated);
     [[fallthrough]];
   case GFK_None:
     break;
@@ -1542,7 +1655,7 @@ SVal RegionStoreManager::getBinding(RegionBindingsConstRef B, Loc L, QualType T)
   // The location does not have a bound value.  This means that it has
   // the value it had upon its creation and/or entry to the analyzed
   // function/method.  These are either symbolic values or 'undefined'.
-  if (R->hasStackNonParametersStorage()) {
+  if (isa<StackLocalsSpaceRegion>(R->getRawMemorySpace())) {
     // All stack variables are considered to have undefined values
     // upon creation.  All heap allocated blocks are considered to
     // have undefined values as well unless they are explicitly bound
@@ -1694,65 +1807,57 @@ getElementRegionOffsetsWithBase(const ElementRegion *ER) {
 
 /// This is a helper function for `getConstantValFromConstArrayInitializer`.
 ///
-/// Convert array of offsets from `SVal` to `uint64_t` in consideration of
-/// respective array extents.
-/// \param SrcOffsets [in]   The array of offsets of type `SVal` in reversed
-///   order (expectedly received from `getElementRegionOffsetsWithBase`).
-/// \param ArrayExtents [in] The array of extents.
-/// \param DstOffsets [out]  The array of offsets of type `uint64_t`.
+/// Flatten per-dimension SVal offsets into a linear index, bounds-check
+/// against the total allocation, and decompose back into per-dimension
+/// uint64_t indices.
+///
+/// \param SrcOffsets [in]   Per-dimension offsets in reversed order
+///   (as received from `getElementRegionOffsetsWithBase`).
+/// \param ArrayExtents [in] Extents per dimension (outer to inner).
+/// \param DstOffsets [out]  Normalized per-dimension indices.
 /// \returns:
-/// - `std::nullopt` for successful convertion.
-/// - `UndefinedVal` or `UnknownVal` otherwise. It's expected that this SVal
-///   will be returned as a suitable value of the access operation.
-///   which should be returned as a correct
+/// - `std::nullopt` on success.
+/// - `UndefinedVal` if the flat offset is out of bounds.
+/// - `UnknownVal` if any index is symbolic.
 ///
 /// \example:
 ///   const int arr[10][20][30] = {}; // ArrayExtents { 10, 20, 30 }
 ///   int x1 = arr[4][5][6]; // SrcOffsets { NonLoc(6), NonLoc(5), NonLoc(4) }
-///                          // DstOffsets { 4, 5, 6 }
-///                          // returns std::nullopt
-///   int x2 = arr[42][5][-6]; // returns UndefinedVal
-///   int x3 = arr[4][5][x2];  // returns UnknownVal
+///                          // DstOffsets { 4, 5, 6 }, returns std::nullopt
+///   int x2 = arr[0][0][35]; // DstOffsets { 0, 1, 5 }, returns std::nullopt
+///   int x3 = arr[0][25][-5]; // DstOffsets { 1, 4, 25 }, returns std::nullopt
+///   int x4 = arr[10][0][0]; // returns UndefinedVal (flat offset >= total)
+///   int x5 = arr[4][5][x1]; // returns UnknownVal
 static std::optional<SVal>
 convertOffsetsFromSvalToUnsigneds(const SmallVector<SVal, 2> &SrcOffsets,
                                   const SmallVector<uint64_t, 2> ArrayExtents,
                                   SmallVector<uint64_t, 2> &DstOffsets) {
-  // Check offsets for being out of bounds.
-  // C++20 [expr.add] 7.6.6.4 (excerpt):
-  //   If P points to an array element i of an array object x with n
-  //   elements, where i < 0 or i > n, the behavior is undefined.
-  //   Dereferencing is not allowed on the "one past the last
-  //   element", when i == n.
-  // Example:
-  //  const int arr[3][2] = {{1, 2}, {3, 4}};
-  //  arr[0][0];  // 1
-  //  arr[0][1];  // 2
-  //  arr[0][2];  // UB
-  //  arr[1][0];  // 3
-  //  arr[1][1];  // 4
-  //  arr[1][-1]; // UB
-  //  arr[2][0];  // 0
-  //  arr[2][1];  // 0
-  //  arr[-2][0]; // UB
-  DstOffsets.resize(SrcOffsets.size());
+  // Flatten to a linear offset so that both positive overflow and negative
+  // indices across sub-array boundaries resolve to the correct element.
+  int64_t FlatOffset = 0;
   auto ExtentIt = ArrayExtents.begin();
-  auto OffsetIt = DstOffsets.begin();
-  // Reverse `SValOffsets` to make it consistent with `ArrayExtents`.
   for (SVal V : llvm::reverse(SrcOffsets)) {
-    if (auto CI = V.getAs<nonloc::ConcreteInt>()) {
-      // When offset is out of array's bounds, result is UB.
-      const llvm::APSInt &Offset = CI->getValue();
-      if (Offset.isNegative() || Offset.uge(*(ExtentIt++)))
-        return UndefinedVal();
-      // Store index in a reversive order.
-      *(OffsetIt++) = Offset.getZExtValue();
-      continue;
-    }
-    // Symbolic index presented. Return Unknown value.
-    // FIXME: We also need to take ElementRegions with symbolic indexes into
-    // account.
-    return UnknownVal();
+    auto CI = V.getAs<nonloc::ConcreteInt>();
+    if (!CI)
+      return UnknownVal();
+    FlatOffset = FlatOffset * static_cast<int64_t>(*(ExtentIt++)) +
+                 CI->getValue()->getExtValue();
   }
+
+  int64_t TotalSize = 1;
+  for (uint64_t E : ArrayExtents)
+    TotalSize *= static_cast<int64_t>(E);
+
+  if (FlatOffset < 0 || FlatOffset >= TotalSize)
+    return UndefinedVal();
+
+  DstOffsets.resize(ArrayExtents.size());
+  uint64_t Remaining = static_cast<uint64_t>(FlatOffset);
+  for (int I = DstOffsets.size() - 1; I >= 0; --I) {
+    DstOffsets[I] = Remaining % ArrayExtents[I];
+    Remaining /= ArrayExtents[I];
+  }
+
   return std::nullopt;
 }
 
@@ -2003,6 +2108,87 @@ SVal RegionStoreManager::getBindingForElement(RegionBindingsConstRef B,
   return getBindingForFieldOrElementCommon(B, R, R->getElementType());
 }
 
+std::optional<SVal>
+RegionStoreManager::getConstantValFromInitializer(const FieldRegion *R,
+                                                  bool IsMainAnalysis) {
+  SmallVector<const SubRegion *, 4> Path;
+  const MemRegion *Cur = R;
+  while (Cur && !isa<VarRegion>(Cur)) {
+    if (isa<FieldRegion, ElementRegion>(Cur)) {
+      Path.push_back(cast<SubRegion>(Cur));
+      Cur = cast<SubRegion>(Cur)->getSuperRegion();
+    } else {
+      return std::nullopt;
+    }
+  }
+
+  const auto *VR = dyn_cast<VarRegion>(Cur);
+  if (!VR)
+    return std::nullopt;
+
+  const VarDecl *VD = VR->getDecl();
+  QualType LeafTy = R->getDecl()->getType();
+
+  bool TrustInit =
+      (VD->getType().isConstQualified() || LeafTy.isConstQualified() ||
+       (IsMainAnalysis && VD->hasGlobalStorage()));
+  if (!TrustInit)
+    return std::nullopt;
+
+  const Expr *Init = VD->getAnyInitializer();
+  if (!Init)
+    return std::nullopt;
+
+  const Expr *E = Init;
+  for (const SubRegion *SR : llvm::reverse(Path)) {
+    // If E is not an InitListExpr, it may be an ImplicitValueInitExpr
+    // representing zero-initialization of this aggregate element.
+    if (isa<ImplicitValueInitExpr>(E))
+      return svalBuilder.makeZeroVal(LeafTy);
+
+    const auto *ILE = dyn_cast<InitListExpr>(E);
+    if (!ILE)
+      return std::nullopt;
+
+    if (const auto *FR = dyn_cast<FieldRegion>(SR)) {
+      if (ILE->getType()->isUnionType()) {
+        // A union InitListExpr has one init for one member. We can only
+        // resolve if the accessed field matches the initialized member.
+        const FieldDecl *InitField = ILE->getInitializedFieldInUnion();
+        if (InitField != FR->getDecl())
+          return std::nullopt;
+        if (ILE->getNumInits() == 0)
+          return svalBuilder.makeZeroVal(LeafTy);
+        E = ILE->getInit(0);
+      } else {
+        unsigned Idx = FR->getDecl()->getFieldIndex();
+        if (Idx >= ILE->getNumInits())
+          return std::nullopt;
+        E = ILE->getInit(Idx);
+      }
+      continue;
+    }
+
+    if (const auto *ER = dyn_cast<ElementRegion>(SR)) {
+      auto CI = ER->getIndex().getAs<nonloc::ConcreteInt>();
+      if (!CI)
+        return std::nullopt;
+      uint64_t Idx = CI->getValue()->getZExtValue();
+      if (Idx < ILE->getNumInits())
+        E = ILE->getInit(Idx);
+      else if (const Expr *Filler = ILE->getArrayFiller())
+        E = Filler;
+      else
+        return std::nullopt;
+      continue;
+    }
+
+    return std::nullopt;
+  }
+
+  return svalBuilder.getConstantVal(E);
+}
+
 SVal RegionStoreManager::getBindingForField(RegionBindingsConstRef B,
                                             const FieldRegion* R) {
 
@@ -2010,30 +2196,12 @@ SVal RegionStoreManager::getBindingForField(RegionBindingsConstRef B,
   if (const std::optional<SVal> &V = B.getDirectBinding(R))
     return *V;
 
-  // If the containing record was initialized, try to get its constant value.
-  const FieldDecl *FD = R->getDecl();
-  QualType Ty = FD->getType();
-  const MemRegion* superR = R->getSuperRegion();
-  if (const auto *VR = dyn_cast<VarRegion>(superR)) {
-    const VarDecl *VD = VR->getDecl();
-    QualType RecordVarTy = VD->getType();
-    unsigned Index = FD->getFieldIndex();
-    // Either the record variable or the field has an initializer that we can
-    // trust. We trust initializers of constants and, additionally, respect
-    // initializers of globals when analyzing main().
-    if (RecordVarTy.isConstQualified() || Ty.isConstQualified() ||
-        (B.isMainAnalysis() && VD->hasGlobalStorage()))
-      if (const Expr *Init = VD->getAnyInitializer())
-        if (const auto *InitList = dyn_cast<InitListExpr>(Init)) {
-          if (Index < InitList->getNumInits()) {
-            if (const Expr *FieldInit = InitList->getInit(Index))
-              if (std::optional<SVal> V = svalBuilder.getConstantVal(FieldInit))
-                return *V;
-          } else {
-            return svalBuilder.makeZeroVal(Ty);
-          }
-        }
-  }
+  // Try to resolve the field value from the variable's initializer.
+  if (std::optional<SVal> V =
+          getConstantValFromInitializer(R, B.isMainAnalysis()))
+    return *V;
+
+  QualType Ty = R->getDecl()->getType();
 
   // Handle the case where we are accessing into a larger scalar object.
   // For example, this handles:
@@ -2173,7 +2341,7 @@ RegionStoreManager::getBindingForFieldOrElementCommon(RegionBindingsConstRef B,
     SR = dyn_cast<SubRegion>(Base);
   }
 
-  if (R->hasStackNonParametersStorage()) {
+  if (isa<StackLocalsSpaceRegion>(R->getRawMemorySpace())) {
     if (isa<ElementRegion>(R)) {
       // Currently we don't reason specially about Clang-style vectors.  Check
       // if superR is a vector and if so return Unknown.
@@ -2237,7 +2405,7 @@ SVal RegionStoreManager::getBindingForVar(RegionBindingsConstRef B,
 
   // Lazily derive a value for the VarRegion.
   const VarDecl *VD = R->getDecl();
-  const MemSpaceRegion *MS = R->getMemorySpace();
+  const MemSpaceRegion *MS = R->getRawMemorySpace();
 
   // Arguments are always symbolic.
   if (isa<StackArgumentsSpaceRegion>(MS))
@@ -2321,7 +2489,7 @@ RegionStoreManager::getInterestingValues(nonloc::LazyCompoundVal LCV) {
 
     if (auto InnerLCV = V.getAs<nonloc::LazyCompoundVal>()) {
       const SValListTy &InnerList = getInterestingValues(*InnerLCV);
-      List.insert(List.end(), InnerList.begin(), InnerList.end());
+      llvm::append_range(List, InnerList);
     }
 
     List.push_back(V);
@@ -2341,7 +2509,8 @@ NonLoc RegionStoreManager::createLazyBinding(RegionBindingsConstRef B,
 
 SVal RegionStoreManager::getBindingForStruct(RegionBindingsConstRef B,
                                              const TypedValueRegion *R) {
-  const RecordDecl *RD = R->getValueType()->castAs<RecordType>()->getDecl();
+  const RecordDecl *RD =
+      R->getValueType()->castAsCanonical<RecordType>()->getDecl();
   if (!RD->getDefinition())
     return UnknownVal();
 
@@ -2391,22 +2560,38 @@ bool RegionStoreManager::includedInBindings(Store store,
 StoreRef RegionStoreManager::killBinding(Store ST, Loc L) {
   if (std::optional<loc::MemRegionVal> LV = L.getAs<loc::MemRegionVal>())
     if (const MemRegion* R = LV->getRegion())
-      return StoreRef(getRegionBindings(ST).removeBinding(R)
-                                           .asImmutableMap()
-                                           .getRootWithoutRetain(),
+      return StoreRef(getRegionBindings(ST)
+                          .removeBinding(R)
+                          .asImmutableMap()
+                          .getRootWithoutRetain(),
                       *this);
 
   return StoreRef(ST, *this);
 }
 
-RegionBindingsRef
-RegionStoreManager::bind(RegionBindingsConstRef B, Loc L, SVal V) {
+LimitedRegionBindingsRef
+RegionStoreManager::bind(LimitedRegionBindingsConstRef B, Loc L, SVal V) {
+  llvm::TimeTraceScope TimeScope("RegionStoreManager::bind",
+                                 [&L]() { return locDescr(L); });
+
+  if (B.hasExhaustedBindingLimit())
+    return B.withValuesEscaped(V);
+
   // We only care about region locations.
   auto MemRegVal = L.getAs<loc::MemRegionVal>();
   if (!MemRegVal)
     return B;
 
   const MemRegion *R = MemRegVal->getRegion();
+
+  // Binding directly to a symbolic region should be treated as binding
+  // to element 0.
+  if (const auto *SymReg = dyn_cast<SymbolicRegion>(R)) {
+    QualType Ty = SymReg->getPointeeStaticType();
+    if (Ty->isVoidType())
+      Ty = StateMgr.getContext().CharTy;
+    R = GetElementZeroRegion(SymReg, Ty);
+  }
 
   // Check if the region is a struct region.
   if (const TypedValueRegion* TR = dyn_cast<TypedValueRegion>(R)) {
@@ -2421,20 +2606,11 @@ RegionStoreManager::bind(RegionBindingsConstRef B, Loc L, SVal V) {
       return bindAggregate(B, TR, V);
   }
 
-  // Binding directly to a symbolic region should be treated as binding
-  // to element 0.
-  if (const auto *SymReg = dyn_cast<SymbolicRegion>(R)) {
-    QualType Ty = SymReg->getPointeeStaticType();
-    if (Ty->isVoidType())
-      Ty = StateMgr.getContext().CharTy;
-    R = GetElementZeroRegion(SymReg, Ty);
-  }
-
   assert((!isa<CXXThisRegion>(R) || !B.lookup(R)) &&
          "'this' pointer is not an l-value and is not assignable");
 
   // Clear out bindings that may overlap with this binding.
-  RegionBindingsRef NewB = removeSubRegionBindings(B, cast<SubRegion>(R));
+  auto NewB = removeSubRegionBindings(B, cast<SubRegion>(R));
 
   // LazyCompoundVals should be always bound as 'default' bindings.
   auto KeyKind = isa<nonloc::LazyCompoundVal>(V) ? BindingKey::Default
@@ -2442,10 +2618,21 @@ RegionStoreManager::bind(RegionBindingsConstRef B, Loc L, SVal V) {
   return NewB.addBinding(BindingKey::Make(R, KeyKind), V);
 }
 
-RegionBindingsRef
-RegionStoreManager::setImplicitDefaultValue(RegionBindingsConstRef B,
-                                            const MemRegion *R,
-                                            QualType T) {
+LimitedRegionBindingsRef
+RegionStoreManager::setImplicitDefaultValue(LimitedRegionBindingsConstRef B,
+                                            const MemRegion *R, QualType T) {
+  if (B.hasExhaustedBindingLimit())
+    return B;
+
+  // Preserve an existing aggregate default binding. This handles partially
+  // initialized union-containing aggregates where bindAggregate() may already
+  // have installed a more precise default value at offset 0. Still allow
+  // implicit defaults for scalars and pointers so regular zero-initialization
+  // continues to work, e.g. for `new int[10]{}`.
+  if (T->isAggregateType() && B.getDefaultBinding(R).has_value()) {
+    return B;
+  }
+
   SVal V;
 
   if (Loc::isLocType(T))
@@ -2469,9 +2656,11 @@ RegionStoreManager::setImplicitDefaultValue(RegionBindingsConstRef B,
   return B.addBinding(R, BindingKey::Default, V);
 }
 
-std::optional<RegionBindingsRef> RegionStoreManager::tryBindSmallArray(
-    RegionBindingsConstRef B, const TypedValueRegion *R, const ArrayType *AT,
-    nonloc::LazyCompoundVal LCV) {
+std::optional<LimitedRegionBindingsRef> RegionStoreManager::tryBindSmallArray(
+    LimitedRegionBindingsConstRef B, const TypedValueRegion *R,
+    const ArrayType *AT, nonloc::LazyCompoundVal LCV) {
+  if (B.hasExhaustedBindingLimit())
+    return B.withValuesEscaped(LCV);
 
   auto CAT = dyn_cast<ConstantArrayType>(AT);
 
@@ -2488,7 +2677,7 @@ std::optional<RegionBindingsRef> RegionStoreManager::tryBindSmallArray(
   if (ArrSize > SmallArrayLimit)
     return std::nullopt;
 
-  RegionBindingsRef NewB = B;
+  LimitedRegionBindingsRef NewB = B;
 
   for (uint64_t i = 0; i < ArrSize; ++i) {
     auto Idx = svalBuilder.makeArrayIndex(i);
@@ -2503,10 +2692,13 @@ std::optional<RegionBindingsRef> RegionStoreManager::tryBindSmallArray(
   return NewB;
 }
 
-RegionBindingsRef
-RegionStoreManager::bindArray(RegionBindingsConstRef B,
-                              const TypedValueRegion* R,
-                              SVal Init) {
+LimitedRegionBindingsRef
+RegionStoreManager::bindArray(LimitedRegionBindingsConstRef B,
+                              const TypedValueRegion *R, SVal Init) {
+  llvm::TimeTraceScope TimeScope("RegionStoreManager::bindArray",
+                                 [R]() { return R->getDescriptiveName(); });
+  if (B.hasExhaustedBindingLimit())
+    return B.withValuesEscaped(Init);
 
   const ArrayType *AT =cast<ArrayType>(Ctx.getCanonicalType(R->getValueType()));
   QualType ElementTy = AT->getElementType();
@@ -2523,30 +2715,33 @@ RegionStoreManager::bindArray(RegionBindingsConstRef B,
     return bindAggregate(B, R, V);
   }
 
-  // Handle lazy compound values.
-  if (std::optional<nonloc::LazyCompoundVal> LCV =
-          Init.getAs<nonloc::LazyCompoundVal>()) {
-    if (std::optional<RegionBindingsRef> NewB =
-            tryBindSmallArray(B, R, AT, *LCV))
-      return *NewB;
+  // FIXME Single value constant should have been handled before this call to
+  // bindArray. This is only a hotfix to not crash.
+  if (Init.isConstant())
+    return bindAggregate(B, R, Init);
 
+  if (std::optional LCV = Init.getAs<nonloc::LazyCompoundVal>()) {
+    if (std::optional NewB = tryBindSmallArray(B, R, AT, *LCV))
+      return *NewB;
     return bindAggregate(B, R, Init);
   }
 
-  if (Init.isUnknown())
-    return bindAggregate(B, R, UnknownVal());
+  if (isa<nonloc::SymbolVal, UnknownVal, UndefinedVal>(Init))
+    return bindAggregate(B, R, Init);
 
   // Remaining case: explicit compound values.
   const nonloc::CompoundVal& CV = Init.castAs<nonloc::CompoundVal>();
   nonloc::CompoundVal::iterator VI = CV.begin(), VE = CV.end();
   uint64_t i = 0;
 
-  RegionBindingsRef NewB(B);
+  LimitedRegionBindingsRef NewB = B;
 
   for (; Size ? i < *Size : true; ++i, ++VI) {
     // The init list might be shorter than the array length.
     if (VI == VE)
       break;
+    if (NewB.hasExhaustedBindingLimit())
+      return NewB.withValuesEscaped(VI, VE);
 
     NonLoc Idx = svalBuilder.makeArrayIndex(i);
     const ElementRegion *ER = MRMgr.getElementRegion(ElementTy, Idx, R, Ctx);
@@ -2568,9 +2763,14 @@ RegionStoreManager::bindArray(RegionBindingsConstRef B,
   return NewB;
 }
 
-RegionBindingsRef RegionStoreManager::bindVector(RegionBindingsConstRef B,
-                                                 const TypedValueRegion* R,
-                                                 SVal V) {
+LimitedRegionBindingsRef
+RegionStoreManager::bindVector(LimitedRegionBindingsConstRef B,
+                               const TypedValueRegion *R, SVal V) {
+  llvm::TimeTraceScope TimeScope("RegionStoreManager::bindVector",
+                                 [R]() { return R->getDescriptiveName(); });
+  if (B.hasExhaustedBindingLimit())
+    return B.withValuesEscaped(V);
+
   QualType T = R->getValueType();
   const VectorType *VT = T->castAs<VectorType>(); // Use castAs for typedefs.
 
@@ -2589,11 +2789,14 @@ RegionBindingsRef RegionStoreManager::bindVector(RegionBindingsConstRef B,
   nonloc::CompoundVal CV = V.castAs<nonloc::CompoundVal>();
   nonloc::CompoundVal::iterator VI = CV.begin(), VE = CV.end();
   unsigned index = 0, numElements = VT->getNumElements();
-  RegionBindingsRef NewB(B);
+  LimitedRegionBindingsRef NewB = B;
 
   for ( ; index != numElements ; ++index) {
     if (VI == VE)
       break;
+
+    if (NewB.hasExhaustedBindingLimit())
+      return NewB.withValuesEscaped(VI, VE);
 
     NonLoc Idx = svalBuilder.makeArrayIndex(index);
     const ElementRegion *ER = MRMgr.getElementRegion(ElemType, Idx, R, Ctx);
@@ -2608,42 +2811,11 @@ RegionBindingsRef RegionStoreManager::bindVector(RegionBindingsConstRef B,
   return NewB;
 }
 
-std::optional<SVal>
-RegionStoreManager::getUniqueDefaultBinding(nonloc::LazyCompoundVal LCV) const {
-  const MemRegion *BaseR = LCV.getRegion();
-
-  // We only handle base regions.
-  if (BaseR != BaseR->getBaseRegion())
-    return std::nullopt;
-
-  const auto *Cluster = getRegionBindings(LCV.getStore()).lookup(BaseR);
-  if (!Cluster || !llvm::hasSingleElement(*Cluster))
-    return std::nullopt;
-
-  const auto [Key, Value] = *Cluster->begin();
-  return Key.isDirect() ? std::optional<SVal>{} : Value;
-}
-
-std::optional<RegionBindingsRef> RegionStoreManager::tryBindSmallStruct(
-    RegionBindingsConstRef B, const TypedValueRegion *R, const RecordDecl *RD,
-    nonloc::LazyCompoundVal LCV) {
-  // If we try to copy a Conjured value representing the value of the whole
-  // struct, don't try to element-wise copy each field.
-  // That would unnecessarily bind Derived symbols slicing off the subregion for
-  // the field from the whole Conjured symbol.
-  //
-  //   struct Window { int width; int height; };
-  //   Window getWindow(); <-- opaque fn.
-  //   Window w = getWindow(); <-- conjures a new Window.
-  //   Window w2 = w; <-- trivial copy "w", calling "tryBindSmallStruct"
-  //
-  // We should not end up with a new Store for "w2" like this:
-  //   Direct [ 0..31]: Derived{Conj{}, w.width}
-  //   Direct [32..63]: Derived{Conj{}, w.height}
-  // Instead, we should just bind that Conjured value instead.
-  if (std::optional<SVal> Val = getUniqueDefaultBinding(LCV)) {
-    return B.addBinding(BindingKey::Make(R, BindingKey::Default), Val.value());
-  }
+std::optional<LimitedRegionBindingsRef> RegionStoreManager::tryBindSmallStruct(
+    LimitedRegionBindingsConstRef B, const TypedValueRegion *R,
+    const RecordDecl *RD, nonloc::LazyCompoundVal LCV) {
+  if (B.hasExhaustedBindingLimit())
+    return B.withValuesEscaped(LCV);
 
   FieldVector Fields;
 
@@ -2673,7 +2845,7 @@ std::optional<RegionBindingsRef> RegionStoreManager::tryBindSmallStruct(
     Fields.push_back(FD);
   }
 
-  RegionBindingsRef NewB = B;
+  LimitedRegionBindingsRef NewB = B;
 
   for (const FieldDecl *Field : Fields) {
     const FieldRegion *SourceFR = MRMgr.getFieldRegion(Field, LCV.getRegion());
@@ -2686,23 +2858,25 @@ std::optional<RegionBindingsRef> RegionStoreManager::tryBindSmallStruct(
   return NewB;
 }
 
-RegionBindingsRef RegionStoreManager::bindStruct(RegionBindingsConstRef B,
-                                                 const TypedValueRegion *R,
-                                                 SVal V) {
+LimitedRegionBindingsRef
+RegionStoreManager::bindStruct(LimitedRegionBindingsConstRef B,
+                               const TypedValueRegion *R, SVal V) {
+  llvm::TimeTraceScope TimeScope("RegionStoreManager::bindStruct",
+                                 [R]() { return R->getDescriptiveName(); });
+  if (B.hasExhaustedBindingLimit())
+    return B.withValuesEscaped(V);
+
   QualType T = R->getValueType();
   assert(T->isStructureOrClassType());
 
-  const RecordType* RT = T->castAs<RecordType>();
-  const RecordDecl *RD = RT->getDecl();
-
+  const auto *RD = T->castAsRecordDecl();
   if (!RD->isCompleteDefinition())
     return B;
 
   // Handle lazy compound values and symbolic values.
   if (std::optional<nonloc::LazyCompoundVal> LCV =
           V.getAs<nonloc::LazyCompoundVal>()) {
-    if (std::optional<RegionBindingsRef> NewB =
-            tryBindSmallStruct(B, R, RD, *LCV))
+    if (std::optional NewB = tryBindSmallStruct(B, R, RD, *LCV))
       return *NewB;
     return bindAggregate(B, R, V);
   }
@@ -2734,7 +2908,7 @@ RegionBindingsRef RegionStoreManager::bindStruct(RegionBindingsConstRef B,
   const nonloc::CompoundVal& CV = V.castAs<nonloc::CompoundVal>();
   nonloc::CompoundVal::iterator VI = CV.begin(), VE = CV.end();
 
-  RegionBindingsRef NewB(B);
+  LimitedRegionBindingsRef NewB = B;
 
   // In C++17 aggregates may have base classes, handle those as well.
   // They appear before fields in the initializer list / compound value.
@@ -2755,6 +2929,8 @@ RegionBindingsRef RegionStoreManager::bindStruct(RegionBindingsConstRef B,
 
       if (VI == VE)
         break;
+      if (NewB.hasExhaustedBindingLimit())
+        return NewB.withValuesEscaped(VI, VE);
 
       QualType BTy = B.getType();
       assert(BTy->isStructureOrClassType() && "Base classes must be classes!");
@@ -2778,6 +2954,9 @@ RegionBindingsRef RegionStoreManager::bindStruct(RegionBindingsConstRef B,
     if (VI == VE)
       break;
 
+    if (NewB.hasExhaustedBindingLimit())
+      return NewB.withValuesEscaped(VI, VE);
+
     // Skip any unnamed bitfields to stay in sync with the initializers.
     if (FI->isUnnamedBitField())
       continue;
@@ -2794,6 +2973,9 @@ RegionBindingsRef RegionStoreManager::bindStruct(RegionBindingsConstRef B,
     ++VI;
   }
 
+  if (NewB.hasExhaustedBindingLimit())
+    return NewB.withValuesEscaped(VI, VE);
+
   // There may be fewer values in the initialize list than the fields of struct.
   if (FI != FE) {
     NewB = NewB.addBinding(R, BindingKey::Default,
@@ -2803,10 +2985,14 @@ RegionBindingsRef RegionStoreManager::bindStruct(RegionBindingsConstRef B,
   return NewB;
 }
 
-RegionBindingsRef
-RegionStoreManager::bindAggregate(RegionBindingsConstRef B,
-                                  const TypedRegion *R,
-                                  SVal Val) {
+LimitedRegionBindingsRef
+RegionStoreManager::bindAggregate(LimitedRegionBindingsConstRef B,
+                                  const TypedRegion *R, SVal Val) {
+  llvm::TimeTraceScope TimeScope("RegionStoreManager::bindAggregate",
+                                 [R]() { return R->getDescriptiveName(); });
+  if (B.hasExhaustedBindingLimit())
+    return B.withValuesEscaped(Val);
+
   // Remove the old bindings, using 'R' as the root of all regions
   // we will invalidate. Then add the new binding.
   return removeSubRegionBindings(B, R).addBinding(R, BindingKey::Default, Val);
@@ -2821,15 +3007,14 @@ class RemoveDeadBindingsWorker
     : public ClusterAnalysis<RemoveDeadBindingsWorker> {
   SmallVector<const SymbolicRegion *, 12> Postponed;
   SymbolReaper &SymReaper;
-  const StackFrameContext *CurrentLCtx;
+  const StackFrame *CurrentSF;
 
 public:
   RemoveDeadBindingsWorker(RegionStoreManager &rm,
-                           ProgramStateManager &stateMgr,
-                           RegionBindingsRef b, SymbolReaper &symReaper,
-                           const StackFrameContext *LCtx)
-    : ClusterAnalysis<RemoveDeadBindingsWorker>(rm, stateMgr, b),
-      SymReaper(symReaper), CurrentLCtx(LCtx) {}
+                           ProgramStateManager &stateMgr, RegionBindingsRef b,
+                           SymbolReaper &symReaper, const StackFrame *SF)
+      : ClusterAnalysis<RemoveDeadBindingsWorker>(rm, stateMgr, b),
+        SymReaper(symReaper), CurrentSF(SF) {}
 
   // Called by ClusterAnalysis.
   void VisitAddedToCluster(const MemRegion *baseR, const ClusterBindings &C);
@@ -2874,13 +3059,12 @@ void RemoveDeadBindingsWorker::VisitAddedToCluster(const MemRegion *baseR,
     return;
   }
 
-  // CXXThisRegion in the current or parent location context is live.
+  // CXXThisRegion in the current or parent stack frame is live.
   if (const CXXThisRegion *TR = dyn_cast<CXXThisRegion>(baseR)) {
     const auto *StackReg =
         cast<StackArgumentsSpaceRegion>(TR->getSuperRegion());
-    const StackFrameContext *RegCtx = StackReg->getStackFrame();
-    if (CurrentLCtx &&
-        (RegCtx == CurrentLCtx || RegCtx->isParentOf(CurrentLCtx)))
+    const StackFrame *RegSF = StackReg->getStackFrame();
+    if (CurrentSF && (RegSF == CurrentSF || RegSF->isParentOf(CurrentSF)))
       AddToWorkList(TR, &C);
   }
 }
@@ -2953,10 +3137,10 @@ bool RemoveDeadBindingsWorker::UpdatePostponed() {
 }
 
 StoreRef RegionStoreManager::removeDeadBindings(Store store,
-                                                const StackFrameContext *LCtx,
-                                                SymbolReaper& SymReaper) {
+                                                const StackFrame *SF,
+                                                SymbolReaper &SymReaper) {
   RegionBindingsRef B = getRegionBindings(store);
-  RemoveDeadBindingsWorker W(*this, StateMgr, B, SymReaper, LCtx);
+  RemoveDeadBindingsWorker W(*this, StateMgr, B, SymReaper, SF);
   W.GenerateClusters();
 
   // Enqueue the region roots onto the worklist.
@@ -2973,7 +3157,7 @@ StoreRef RegionStoreManager::removeDeadBindings(Store store,
     // If the cluster has been visited, we know the region has been marked.
     // Otherwise, remove the dead entry.
     if (!W.isVisited(Base))
-      B = B.remove(Base);
+      B = B.removeCluster(Base);
   }
 
   return StoreRef(B.asStore(), *this);

@@ -10,9 +10,9 @@
 // attribute name. So this means we never hit the omp-specific parsing and
 // instead handle this through the usual Sema attribute handling in
 // SemaDeclAttr.cpp, which diagnoses this as an unknown attribute.
-[[omp::directive]]; // expected-warning {{unknown attribute 'directive' ignored}}
-[[omp::sequence]]; // expected-warning {{unknown attribute 'sequence' ignored}}
-[[omp::unknown]]; // expected-warning {{unknown attribute 'unknown' ignored}}
+[[omp::directive]]; // expected-warning {{unknown attribute 'omp::directive' ignored}}
+[[omp::sequence]]; // expected-warning {{unknown attribute 'omp::sequence' ignored}}
+[[omp::unknown]]; // expected-warning {{unknown attribute 'omp::unknown' ignored}}
 
 [[omp::directive()]]; // expected-error {{expected an OpenMP directive}}
 [[omp::sequence()]]; // expected-error {{expected an OpenMP 'directive' or 'sequence' attribute argument}}
@@ -49,8 +49,8 @@
 
 // Test that we give a sensible error on an unknown attribute in the omp
 // namespace that has an argument list.
-[[omp::unknown()]]; // expected-warning {{unknown attribute 'unknown' ignored}}
-[[using omp: unknown()]]; // expected-warning {{unknown attribute 'unknown' ignored}}
+[[omp::unknown()]]; // expected-warning {{unknown attribute 'omp::unknown' ignored}}
+[[using omp: unknown()]]; // expected-warning {{unknown attribute 'omp::unknown' ignored}}
 
 // Test that unknown arguments to the omp::sequence are rejected, regardless of
 // what level they're at.

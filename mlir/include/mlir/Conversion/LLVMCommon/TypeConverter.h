@@ -74,8 +74,14 @@ public:
   /// LLVM-compatible type. In particular, if more than one value is returned,
   /// create an LLVM dialect structure type with elements that correspond to
   /// each of the types converted with `convertCallingConventionType`.
-  Type packFunctionResults(TypeRange types,
-                           bool useBarePointerCallConv = false) const;
+  ///
+  /// Populate the converted (unpacked) types into `groupedTypes`, if provided.
+  /// `groupedType` contains one nested vector per input type. In case of a 1:N
+  /// conversion, a nested vector may contain 0 or more then 1 converted type.
+  Type
+  packFunctionResults(TypeRange types, bool useBarePointerCallConv = false,
+                      SmallVector<SmallVector<Type>> *groupedTypes = nullptr,
+                      int64_t *numConvertedTypes = nullptr) const;
 
   /// Convert a non-empty list of types of values produced by an operation into
   /// an LLVM-compatible type. In particular, if more than one value is
@@ -88,15 +94,9 @@ public:
   /// UnrankedMemRefType, are converted following the specific rules for the
   /// calling convention. Calling convention independent types are converted
   /// following the default LLVM type conversions.
-  Type convertCallingConventionType(Type type,
-                                    bool useBarePointerCallConv = false) const;
-
-  /// Promote the bare pointers in 'values' that resulted from memrefs to
-  /// descriptors. 'stdTypes' holds the types of 'values' before the conversion
-  /// to the LLVM-IR dialect (i.e., MemRefType, or any other builtin type).
-  void promoteBarePtrsToDescriptors(ConversionPatternRewriter &rewriter,
-                                    Location loc, ArrayRef<Type> stdTypes,
-                                    SmallVectorImpl<Value> &values) const;
+  LogicalResult
+  convertCallingConventionType(Type type, SmallVectorImpl<Type> &result,
+                               bool useBarePointerCallConv = false) const;
 
   /// Returns the MLIR context.
   MLIRContext &getContext() const;
@@ -109,9 +109,14 @@ public:
   /// Promote the LLVM representation of all operands including promoting MemRef
   /// descriptors to stack and use pointers to struct to avoid the complexity
   /// of the platform-specific C/C++ ABI lowering related to struct argument
-  /// passing.
+  /// passing. (The ArrayRef variant is for 1:N.)
   SmallVector<Value, 4> promoteOperands(Location loc, ValueRange opOperands,
-                                        ValueRange operands, OpBuilder &builder,
+                                        ArrayRef<ValueRange> adaptorOperands,
+                                        OpBuilder &builder,
+                                        bool useBarePtrCallConv = false) const;
+  SmallVector<Value, 4> promoteOperands(Location loc, ValueRange opOperands,
+                                        ValueRange adaptorOperands,
+                                        OpBuilder &builder,
                                         bool useBarePtrCallConv = false) const;
 
   /// Promote the LLVM struct representation of one MemRef descriptor to stack
@@ -160,6 +165,41 @@ public:
 
   /// Check if a memref type can be converted to a bare pointer.
   static bool canConvertToBarePtr(BaseMemRefType type);
+
+  /// Convert a memref type into a list of LLVM IR types that will form the
+  /// memref descriptor. If `unpackAggregates` is true the `sizes` and `strides`
+  /// arrays in the descriptors are unpacked to individual index-typed elements,
+  /// else they are kept as rank-sized arrays of index type. In particular,
+  /// the list will contain:
+  /// - two pointers to the memref element type, followed by
+  /// - an index-typed offset, followed by
+  /// - (if unpackAggregates = true)
+  ///    - one index-typed size per dimension of the memref, followed by
+  ///    - one index-typed stride per dimension of the memref.
+  /// - (if unpackArrregates = false)
+  ///   - one rank-sized array of index-type for the size of each dimension
+  ///   - one rank-sized array of index-type for the stride of each dimension
+  ///
+  /// For example, memref<?x?xf32> is converted to the following list:
+  /// - `!llvm<"float*">` (allocated pointer),
+  /// - `!llvm<"float*">` (aligned pointer),
+  /// - `i64` (offset),
+  /// - `i64`, `i64` (sizes),
+  /// - `i64`, `i64` (strides).
+  /// These types can be recomposed to a memref descriptor struct.
+  SmallVector<Type, 5> getMemRefDescriptorFields(MemRefType type,
+                                                 bool unpackAggregates) const;
+
+  /// Convert an unranked memref type into a list of non-aggregate LLVM IR types
+  /// that will form the unranked memref descriptor. In particular, this list
+  /// contains:
+  /// - an integer rank, followed by
+  /// - a pointer to the memref descriptor struct.
+  /// For example, memref<*xf32> is converted to the following list:
+  /// i64 (rank)
+  /// !llvm<"i8*"> (type-erased pointer).
+  /// These types can be recomposed to a unranked memref descriptor struct.
+  SmallVector<Type, 2> getUnrankedMemRefDescriptorFields() const;
 
 protected:
   /// Pointer to the LLVM dialect.
@@ -212,41 +252,6 @@ private:
 
   /// Convert a memref type into an LLVM type that captures the relevant data.
   Type convertMemRefType(MemRefType type) const;
-
-  /// Convert a memref type into a list of LLVM IR types that will form the
-  /// memref descriptor. If `unpackAggregates` is true the `sizes` and `strides`
-  /// arrays in the descriptors are unpacked to individual index-typed elements,
-  /// else they are kept as rank-sized arrays of index type. In particular,
-  /// the list will contain:
-  /// - two pointers to the memref element type, followed by
-  /// - an index-typed offset, followed by
-  /// - (if unpackAggregates = true)
-  ///    - one index-typed size per dimension of the memref, followed by
-  ///    - one index-typed stride per dimension of the memref.
-  /// - (if unpackArrregates = false)
-  ///   - one rank-sized array of index-type for the size of each dimension
-  ///   - one rank-sized array of index-type for the stride of each dimension
-  ///
-  /// For example, memref<?x?xf32> is converted to the following list:
-  /// - `!llvm<"float*">` (allocated pointer),
-  /// - `!llvm<"float*">` (aligned pointer),
-  /// - `i64` (offset),
-  /// - `i64`, `i64` (sizes),
-  /// - `i64`, `i64` (strides).
-  /// These types can be recomposed to a memref descriptor struct.
-  SmallVector<Type, 5> getMemRefDescriptorFields(MemRefType type,
-                                                 bool unpackAggregates) const;
-
-  /// Convert an unranked memref type into a list of non-aggregate LLVM IR types
-  /// that will form the unranked memref descriptor. In particular, this list
-  /// contains:
-  /// - an integer rank, followed by
-  /// - a pointer to the memref descriptor struct.
-  /// For example, memref<*xf32> is converted to the following list:
-  /// i64 (rank)
-  /// !llvm<"i8*"> (type-erased pointer).
-  /// These types can be recomposed to a unranked memref descriptor struct.
-  SmallVector<Type, 2> getUnrankedMemRefDescriptorFields() const;
 
   /// Convert an unranked memref type to an LLVM type that captures the
   /// runtime rank and a pointer to the static ranked memref desc

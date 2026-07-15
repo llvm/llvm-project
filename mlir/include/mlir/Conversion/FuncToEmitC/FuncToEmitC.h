@@ -10,9 +10,15 @@
 #define MLIR_CONVERSION_FUNCTOEMITC_FUNCTOEMITC_H
 
 namespace mlir {
+class DialectRegistry;
 class RewritePatternSet;
+class TypeConverter;
 
-void populateFuncToEmitCPatterns(RewritePatternSet &patterns);
+void populateFuncToEmitCPatterns(const TypeConverter &typeConverter,
+                                 RewritePatternSet &patterns,
+                                 bool lowerToCpp = true);
+
+void registerConvertFuncToEmitCInterface(DialectRegistry &registry);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_FUNCTOEMITC_FUNCTOEMITC_H

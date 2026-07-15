@@ -12,6 +12,17 @@ void g() {
 }
 }
 
+namespace GH113324 {
+struct S1 {
+  friend void f(S1, int = 42) {}
+};
+
+void test() {
+  S1 s1;
+  f(s1);
+}
+};
+
 struct A1 {
  A1();
  ~A1();

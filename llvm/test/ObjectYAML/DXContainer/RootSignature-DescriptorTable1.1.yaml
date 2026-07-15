@@ -1,0 +1,59 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+--- !dxcontainer
+Header:
+      Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5, 
+                        0x39, 0xE1, 0xFE, 0x31, 0x20, 0xF0, 0xC1 ]
+      Version:
+        Major:           1
+        Minor:           0
+      FileSize:        133
+      PartCount:       1
+      PartOffsets:     [ 36 ]
+Parts:
+- Name:            RTS0
+  Size:            89
+  RootSignature:
+    Version: 2
+    NumRootParameters: 1
+    RootParametersOffset: 24
+    NumStaticSamplers: 0
+    StaticSamplersOffset: 68
+    Parameters:         
+    - ParameterType: DescriptorTable
+      ShaderVisibility: Domain
+      Table:
+        NumRanges: 1
+        Ranges:
+          - RangeType: SRV
+            NumDescriptors: -1
+            BaseShaderRegister: 42
+            RegisterSpace: 43
+            OffsetInDescriptorsFromTableStart: 41
+            DATA_STATIC_WHILE_SET_AT_EXECUTE: true
+    AllowInputAssemblerInputLayout: true
+    DenyGeometryShaderRootAccess: true
+
+# CHECK: - Name:            RTS0
+# CHECK-NEXT:     Size:            89
+# CHECK-NEXT:     RootSignature:
+# CHECK-NEXT:       Version:         2
+# CHECK-NEXT:       NumRootParameters: 1
+# CHECK-NEXT:       RootParametersOffset: 24
+# CHECK-NEXT:       NumStaticSamplers: 0
+# CHECK-NEXT:       StaticSamplersOffset: 68
+# CHECK-NEXT:       Parameters:
+# CHECK-NEXT:         - ParameterType: DescriptorTable
+# CHECK-NEXT:           ShaderVisibility: Domain
+# CHECK-NEXT:           Table:
+# CHECK-NEXT:             NumRanges:       1
+# CHECK-NEXT:             RangesOffset:    44
+# CHECK-NEXT:             Ranges:
+# CHECK-NEXT:               - RangeType:       SRV
+# CHECK-NEXT:                 NumDescriptors:  -1
+# CHECK-NEXT:                 BaseShaderRegister: 42
+# CHECK-NEXT:                 RegisterSpace:   43
+# CHECK-NEXT:                 OffsetInDescriptorsFromTableStart: 41
+# CHECK-NEXT:                 DATA_STATIC_WHILE_SET_AT_EXECUTE: true
+# CHECK-NEXT:       AllowInputAssemblerInputLayout: true
+# CHECK-NEXT:       DenyGeometryShaderRootAccess: true

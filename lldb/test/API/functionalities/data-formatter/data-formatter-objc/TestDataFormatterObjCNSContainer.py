@@ -13,6 +13,8 @@ from ObjCDataFormatterTestCase import ObjCDataFormatterTestCase
 
 
 class ObjCDataFormatterNSContainer(ObjCDataFormatterTestCase):
+    SHARED_BUILD_TESTCASE = False
+
     def test_nscontainers_with_run_command(self):
         """Test formatters for  NS container classes."""
         self.appkit_tester_impl(self.nscontainers_data_formatter_commands, False)
@@ -52,8 +54,9 @@ class ObjCDataFormatterNSContainer(ObjCDataFormatterTestCase):
 
         self.expect(
             "frame variable -d run-target *nscfDictionary",
+            ordered=False,
             patterns=[
-                "\(__NSCFDictionary\) \*nscfDictionary =",
+                r"\(__NSCFDictionary\) \*nscfDictionary =",
                 'key = 0x.* @"foo"',
                 'value = 0x.* @"foo"',
                 'key = 0x.* @"bar"',
@@ -67,8 +70,9 @@ class ObjCDataFormatterNSContainer(ObjCDataFormatterTestCase):
 
         self.expect(
             "frame variable -d run-target *cfDictionaryRef",
+            ordered=False,
             patterns=[
-                "\(const __CFDictionary\) \*cfDictionaryRef =",
+                r"\(const __CFDictionary\) \*cfDictionaryRef =",
                 'key = 0x.* @"foo"',
                 'value = 0x.* @"foo"',
                 'key = 0x.* @"bar"',
@@ -89,18 +93,18 @@ class ObjCDataFormatterNSContainer(ObjCDataFormatterTestCase):
         self.expect(
             "frame variable -d run-target *nscfSet",
             patterns=[
-                "\(__NSCFSet\) \*nscfSet =",
-                '\[0\] = 0x.* @".*"',
-                '\[1\] = 0x.* @".*"',
+                r"\(__NSCFSet\) \*nscfSet =",
+                r'\[0\] = 0x.* @".*"',
+                r'\[1\] = 0x.* @".*"',
             ],
         )
 
         self.expect(
             "frame variable -d run-target *cfSetRef",
             patterns=[
-                "\(const __CFSet\) \*cfSetRef =",
-                '\[0\] = 0x.* @".*"',
-                '\[1\] = 0x.* @".*"',
+                r"\(const __CFSet\) \*cfSetRef =",
+                r'\[0\] = 0x.* @".*"',
+                r'\[1\] = 0x.* @".*"',
             ],
         )
 

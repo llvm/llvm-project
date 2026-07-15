@@ -29,6 +29,6 @@ int main() {
 // CHECK-LABEL: define {{[^@]+}}@main
 // CHECK-SAME: () #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    call void @"_Z74foo$ompvariant$S2$s7$Pppc64le$Pppc64$S3$s9$Pmatch_any$Pbind_to_declarationv"()
+// CHECK-NEXT:    call void @{{"_Z[0-9]+foo\$ompvariant\$.*"}}()
 // CHECK-NEXT:    ret i32 0
 //

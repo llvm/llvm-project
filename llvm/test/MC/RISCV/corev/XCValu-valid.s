@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=riscv32 --mattr=+xcvalu -riscv-no-aliases -show-encoding %s \
+# RUN: llvm-mc -triple=riscv32 --mattr=+xcvalu -M no-aliases -show-encoding %s \
 # RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INSTR
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+xcvalu < %s \
 # RUN:     | llvm-objdump --mattr=+xcvalu --no-print-imm-hex -M no-aliases -d -r - \

@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass if-converter -o - %s -verify-machineinstrs | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass if-converter -o - %s -verify-machineinstrs | FileCheck %s
 
 # CHECK: $r26 = A2_tfr $r1
 # CHECK: S2_pstorerhf_io undef $p0, undef $r0, 0, killed $r1

@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/unistd/pathconf.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 #include "src/sys/statvfs/linux/statfs_utils.h"
 #include "src/unistd/linux/pathconf_utils.h"
 

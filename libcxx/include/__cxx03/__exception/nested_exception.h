@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___EXCEPTION_NESTED_EXCEPTION_H
-#define _LIBCPP___EXCEPTION_NESTED_EXCEPTION_H
+#ifndef _LIBCPP___CXX03___EXCEPTION_NESTED_EXCEPTION_H
+#define _LIBCPP___CXX03___EXCEPTION_NESTED_EXCEPTION_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__exception/exception_ptr.h>
@@ -96,4 +96,4 @@ inline _LIBCPP_HIDE_FROM_ABI void rethrow_if_nested(const _Ep&) {}
 
 } // namespace std
 
-#endif // _LIBCPP___EXCEPTION_NESTED_EXCEPTION_H
+#endif // _LIBCPP___CXX03___EXCEPTION_NESTED_EXCEPTION_H

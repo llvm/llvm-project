@@ -31,12 +31,14 @@ public:
   void printRegName(raw_ostream &O, MCRegister Reg) override;
 
   void printOperand(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                    raw_ostream &O, const char *Modifier = nullptr);
+                    raw_ostream &O);
   void printBranchOperand(const MCInst *MI, uint64_t Address, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printCSRSystemRegister(const MCInst *MI, unsigned OpNo,
                               const MCSubtargetInfo &STI, raw_ostream &O);
   void printFenceArg(const MCInst *MI, unsigned OpNo,
+                     const MCSubtargetInfo &STI, raw_ostream &O);
+  void printSMTVType(const MCInst *MI, unsigned OpNo,
                      const MCSubtargetInfo &STI, raw_ostream &O);
   void printFRMArg(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                    raw_ostream &O);
@@ -48,10 +50,18 @@ public:
                             const MCSubtargetInfo &STI, raw_ostream &O);
   void printVTypeI(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                    raw_ostream &O);
+  void printXSfmmVType(const MCInst *MI, unsigned OpNo,
+                       const MCSubtargetInfo &STI, raw_ostream &O);
   void printVMaskReg(const MCInst *MI, unsigned OpNo,
                      const MCSubtargetInfo &STI, raw_ostream &O);
-  void printRlist(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                  raw_ostream &O);
+  void printVScaleReg(const MCInst *MI, unsigned OpNo,
+                      const MCSubtargetInfo &STI, raw_ostream &O);
+  void printTileLambda(const MCInst *MI, unsigned OpNo,
+                       const MCSubtargetInfo &STI, raw_ostream &O);
+  void printImm(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                raw_ostream &O);
+  void printRegList(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                    raw_ostream &O);
   void printStackAdj(const MCInst *MI, unsigned OpNo,
                      const MCSubtargetInfo &STI, raw_ostream &O,
                      bool Negate = false);

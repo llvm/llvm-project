@@ -12,7 +12,7 @@ target datalayout = "n8:16:32:64"
 
 define float @test(ptr nocapture %A, ptr nocapture %B, i32 %N, i32 %IA, i32 %IB) nounwind uwtable readonly ssp {
 ; CHECK-LABEL: define float @test
-; CHECK-SAME: (ptr nocapture [[A:%.*]], ptr nocapture [[B:%.*]], i32 [[N:%.*]], i32 [[IA:%.*]], i32 [[IB:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]], i32 [[N:%.*]], i32 [[IA:%.*]], i32 [[IB:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[WHILE_BODY_LR_PH:%.*]], label [[WHILE_END:%.*]]

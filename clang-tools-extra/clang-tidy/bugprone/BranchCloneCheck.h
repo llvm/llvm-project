@@ -1,4 +1,4 @@
-//===--- BranchCloneCheck.h - clang-tidy ------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,9 +18,13 @@ namespace clang::tidy::bugprone {
 /// detecting switch statements where two or more consecutive branches are
 /// Type I clones of each other, and for detecting conditional operators where
 /// the true and false expressions are Type I clones of each other.
+/// Additionally, this check also reports situations like
+///   if (some && condition) { if (some && condition) { foo(); } }
+/// where an `if` statement directly contains another `if` statement that has
+/// exactly the same expression as its condition.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/branch-clone.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/branch-clone.html
 class BranchCloneCheck : public ClangTidyCheck {
 public:
   BranchCloneCheck(StringRef Name, ClangTidyContext *Context)

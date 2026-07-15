@@ -65,7 +65,9 @@ private:
     }
     Unexpanded[ID] = std::move(UnexpandedLine);
 
-    auto Expanded = uneof(Macros.expand(ID, Args));
+    auto Expanded = Macros.expand(ID, Args);
+    if (Expanded.size() > 1)
+      Expanded = uneof(Expanded);
     Tokens.append(Expanded.begin(), Expanded.end());
 
     TokenList UnexpandedTokens;
@@ -163,8 +165,7 @@ public:
     UnwrappedLine Result;
     Result.Level = Level;
     for (const Chunk &Chunk : Chunks) {
-      Result.Tokens.insert(Result.Tokens.end(), Chunk.Tokens.begin(),
-                           Chunk.Tokens.end());
+      llvm::append_range(Result.Tokens, Chunk.Tokens);
       assert(!Result.Tokens.empty());
       Result.Tokens.back().Children.append(Chunk.Children.begin(),
                                            Chunk.Children.end());
@@ -215,6 +216,31 @@ TEST_F(MacroCallReconstructorTest, Identifier) {
   EXPECT_TRUE(Unexp.finished());
   Matcher U(Call, Lex);
   EXPECT_THAT(std::move(Unexp).takeResult(), matchesLine(line(U.consume("X"))));
+}
+
+TEST_F(MacroCallReconstructorTest, EmptyDefinition) {
+  auto Macros = createExpander({"X"});
+  Expansion Exp(Lex, *Macros);
+  TokenList Call = Exp.expand("X");
+
+  MacroCallReconstructor Unexp(0, Exp.getUnexpanded());
+  Unexp.addLine(line(Exp.getTokens()));
+  EXPECT_TRUE(Unexp.finished());
+  Matcher U(Call, Lex);
+  EXPECT_THAT(std::move(Unexp).takeResult(), matchesLine(line(U.consume("X"))));
+}
+
+TEST_F(MacroCallReconstructorTest, EmptyExpansion) {
+  auto Macros = createExpander({"A(x)=x"});
+  Expansion Exp(Lex, *Macros);
+  TokenList Call = Exp.expand("A", {""});
+
+  MacroCallReconstructor Unexp(0, Exp.getUnexpanded());
+  Unexp.addLine(line(Exp.getTokens()));
+  EXPECT_TRUE(Unexp.finished());
+  Matcher U(Call, Lex);
+  EXPECT_THAT(std::move(Unexp).takeResult(),
+              matchesLine(line(U.consume("A()"))));
 }
 
 TEST_F(MacroCallReconstructorTest, NestedLineWithinCall) {

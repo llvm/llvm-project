@@ -3,7 +3,7 @@
 
 @.str96 = external constant [37 x i8], align 8    ; <ptr> [#uses=1]
 
-define void @foo() nounwind {
+define void @foo(i1 %arg) nounwind {
 bb:
   br label %ybb1
 
@@ -24,7 +24,7 @@ bb3:                                              ; preds = %ybb2
 
 xbb4:                                              ; preds = %xbb6
   store i32 0, ptr undef, align 8
-  br i1 undef, label %xbb6, label %bb5
+  br i1 %arg, label %xbb6, label %bb5
 
 bb5:                                              ; preds = %xbb4
   call fastcc void @decl_mode_check_failed() nounwind
@@ -44,7 +44,7 @@ bb10:                                             ; preds = %ybb8
   unreachable
 
 ybb12:                                             ; preds = %ybb8
-  br i1 undef, label %bb15, label %ybb13
+  br i1 %arg, label %bb15, label %ybb13
 
 ybb13:                                             ; preds = %ybb12
   %tmp14 = icmp sgt i32 undef, 0                  ; <i1> [#uses=1]

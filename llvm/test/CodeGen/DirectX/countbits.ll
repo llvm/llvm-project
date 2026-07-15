@@ -73,6 +73,11 @@ entry:
   ret <4 x i32> %2
 }
 
+; CHECK-DAG: declare i32 @dx.op.unaryBits.i16(i32, i16) #[[#ATTR0:]]
+; CHECK-DAG: declare i32 @dx.op.unaryBits.i32(i32, i32) #[[#ATTR0]]
+; CHECK-DAG: declare i32 @dx.op.unaryBits.i64(i32, i64) #[[#ATTR0]]
+; CHECK: attributes #[[#ATTR0]] = { nounwind memory(none) }
+
 declare i16 @llvm.ctpop.i16(i16)
 declare i32 @llvm.ctpop.i32(i32)
 declare i64 @llvm.ctpop.i64(i64)

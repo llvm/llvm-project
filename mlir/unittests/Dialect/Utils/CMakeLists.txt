@@ -1,7 +1,8 @@
 add_mlir_unittest(MLIRDialectUtilsTests
   StructuredOpsUtilsTest.cpp
+  ReshapeOpsUtilsTest.cpp
   IndexingUtilsTest.cpp
 )
-target_link_libraries(MLIRDialectUtilsTests
+mlir_target_link_libraries(MLIRDialectUtilsTests
   PRIVATE
   MLIRDialectUtils)

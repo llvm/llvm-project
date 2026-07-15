@@ -516,9 +516,9 @@ module char
     !ERROR: Actual argument associated with coarray dummy argument 'a=' must be a coarray
     call coarray0(matrix11(1,1))
 
-    !WARNING: Actual argument variable length '1' is less than expected length '2'
+    !WARNING: Actual argument variable length '1' is less than expected length '2' [-Wshort-character-actual]
     call scalar(scalar0(1:1))
-    !WARNING: Actual argument expression length '1' is less than expected length '2'
+    !WARNING: Actual argument expression length '1' is less than expected length '2' [-Wshort-character-actual]
     call scalar('a')
   end
 end
@@ -544,3 +544,39 @@ subroutine bug114080(arg, contigArg)
       character(*) :: arg2(10)
     end subroutine sub2
 end subroutine
+
+subroutine bug123807
+  interface
+    subroutine test(s)
+      character(5), intent(inout) :: s(5)
+    end
+  end interface
+  character(30) :: s30a
+  character(30), allocatable :: s30b
+  character(6) :: s30c(5)
+  character(24) :: s24a
+  character(24), allocatable :: s24b
+  character(4) :: s24c(6)
+  allocate(s30b)
+  allocate(s24b)
+  call test(s30a)
+  call test(s30a(6:))
+  !ERROR: Actual argument has fewer characters remaining in storage sequence (24) than dummy argument 's=' (25)
+  call test(s30a(7:))
+  call test(s30b)
+  call test(s30b(6:))
+  !ERROR: Actual argument has fewer characters remaining in storage sequence (24) than dummy argument 's=' (25)
+  call test(s30b(7:))
+  call test(s30c)
+  call test(s30c(1)(6:))
+  !ERROR: Actual argument has fewer characters remaining in storage sequence (24) than dummy argument 's=' (25)
+  call test(s30c(2))
+  !ERROR: Actual argument has fewer characters remaining in storage sequence (24) than dummy argument 's=' (25)
+  call test(s30c(2)(1:))
+  !ERROR: Actual argument has fewer characters remaining in storage sequence (24) than dummy argument 's=' (25)
+  call test(s24a)
+  !ERROR: Actual argument has fewer characters remaining in storage sequence (24) than dummy argument 's=' (25)
+  call test(s24b)
+  !ERROR: Actual argument array has fewer characters (24) than dummy argument 's=' array (25)
+  call test(s24c)
+end

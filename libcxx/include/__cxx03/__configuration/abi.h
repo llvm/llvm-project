@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONFIGURATION_ABI_H
-#define _LIBCPP___CONFIGURATION_ABI_H
+#ifndef _LIBCPP___CXX03___CONFIGURATION_ABI_H
+#define _LIBCPP___CXX03___CONFIGURATION_ABI_H
 
-#include <__config_site>
 #include <__cxx03/__configuration/compiler.h>
+#include <__cxx03/__configuration/config_site_shim.h>
 #include <__cxx03/__configuration/platform.h>
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
@@ -116,20 +116,10 @@
 #  endif
 // Feature macros for disabling pre ABI v1 features. All of these options
 // are deprecated.
-#  if defined(__FreeBSD__) && __FreeBSD__ < 14
+#  if defined(__FreeBSD__)
 #    define _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
 #  endif
 #endif
-
-// We had some bugs where we use [[no_unique_address]] together with construct_at,
-// which causes UB as the call on construct_at could write to overlapping subobjects
-//
-// https://github.com/llvm/llvm-project/issues/70506
-// https://github.com/llvm/llvm-project/issues/70494
-//
-// To fix the bug we had to change the ABI of some classes to remove [[no_unique_address]] under certain conditions.
-// The macro below is used for all classes whose ABI have changed as part of fixing these bugs.
-#define _LIBCPP_ABI_LLVM18_NO_UNIQUE_ADDRESS __attribute__((__abi_tag__("llvm18_nua")))
 
 // Changes the iterator type of select containers (see below) to a bounded iterator that keeps track of whether it's
 // within the bounds of the original container and asserts it on every dereference.
@@ -169,4 +159,4 @@
 #  endif
 #endif
 
-#endif // _LIBCPP___CONFIGURATION_ABI_H
+#endif // _LIBCPP___CXX03___CONFIGURATION_ABI_H

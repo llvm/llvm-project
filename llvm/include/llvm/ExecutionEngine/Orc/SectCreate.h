@@ -15,13 +15,13 @@
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#include "llvm/Support/Compiler.h"
 
 #include <utility>
-#include <vector>
 
 namespace llvm::orc {
 
-class SectCreateMaterializationUnit : public MaterializationUnit {
+class LLVM_ABI SectCreateMaterializationUnit : public MaterializationUnit {
 public:
   struct ExtraSymbolInfo {
     JITSymbolFlags Flags;

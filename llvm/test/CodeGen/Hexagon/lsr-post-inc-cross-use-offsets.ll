@@ -1,4 +1,4 @@
-; RUN: llc -O3 -march=hexagon < %s | FileCheck %s
+; RUN: llc -O3 -mtriple=hexagon < %s | FileCheck %s
 
 ; CHECK: loop0(.[[BLOCK:LBB0_[0-9]+]]
 ; CHECK: .[[BLOCK]]:

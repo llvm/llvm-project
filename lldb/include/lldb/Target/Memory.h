@@ -11,6 +11,8 @@
 
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/lldb-private.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include <map>
 #include <mutex>
 #include <vector>
@@ -31,6 +33,13 @@ public:
 
   size_t Read(lldb::addr_t addr, void *dst, size_t dst_len, Status &error);
 
+  /// Reads multiple memory ranges, serving cache hits from L1 and batching all
+  /// misses through Process::DoReadMemoryRanges. The semantics of the return
+  /// value match Process::ReadMemoryRanges.
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
+  ReadRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
+             llvm::MutableArrayRef<uint8_t> buffer);
+
   uint32_t GetMemoryCacheLineSize() const { return m_L2_cache_line_byte_size; }
 
   void AddInvalidRange(lldb::addr_t base_addr, lldb::addr_t byte_size);
@@ -39,6 +48,11 @@ public:
 
   // Allow external sources to populate data into the L1 memory cache
   void AddL1CacheData(lldb::addr_t addr, const void *src, size_t src_len);
+
+  void AddL1CacheData(lldb::addr_t addr, llvm::ArrayRef<uint8_t> src) {
+    if (!src.empty())
+      AddL1CacheData(addr, src.data(), src.size());
+  }
 
   void AddL1CacheData(lldb::addr_t addr,
                       const lldb::DataBufferSP &data_buffer_sp);
@@ -63,6 +77,11 @@ private:
   const MemoryCache &operator=(const MemoryCache &) = delete;
 
   lldb::DataBufferSP GetL2CacheLine(lldb::addr_t addr, Status &error);
+
+  // If the entire range [addr, addr+len) is covered by a single L1 entry,
+  // returns a pointer into that entry's data at the correct offset. Returns
+  // nullptr on a miss. Caller must hold m_mutex.
+  const uint8_t *FindL1CacheEntry(lldb::addr_t addr, size_t len) const;
 };
 
     
@@ -125,6 +144,8 @@ public:
 
   bool DeallocateMemory(lldb::addr_t ptr);
 
+  bool IsInCache(lldb::addr_t addr) const;
+
 protected:
   typedef std::shared_ptr<AllocatedBlock> AllocatedBlockSP;
 
@@ -133,7 +154,7 @@ protected:
 
   // Classes that inherit from MemoryCache can see and modify these
   Process &m_process;
-  std::recursive_mutex m_mutex;
+  mutable std::recursive_mutex m_mutex;
   typedef std::multimap<uint32_t, AllocatedBlockSP> PermissionsToBlockMap;
   PermissionsToBlockMap m_memory_map;
 

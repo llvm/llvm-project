@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_REPLACE_COPY_H
-#define _LIBCPP___ALGORITHM_REPLACE_COPY_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_REPLACE_COPY_H
+#define _LIBCPP___CXX03___ALGORITHM_REPLACE_COPY_H
 
 #include <__cxx03/__config>
 
@@ -18,7 +18,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator, class _OutputIterator, class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator replace_copy(
+inline _LIBCPP_HIDE_FROM_ABI _OutputIterator replace_copy(
     _InputIterator __first,
     _InputIterator __last,
     _OutputIterator __result,
@@ -34,4 +34,4 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator repla
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_REPLACE_COPY_H
+#endif // _LIBCPP___CXX03___ALGORITHM_REPLACE_COPY_H

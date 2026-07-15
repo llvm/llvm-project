@@ -1,6 +1,6 @@
 # RUN: rm -rf %t && mkdir %t && cd %t
 # RUN: yaml2obj %s -o a.o
-# RUN: not ld.lld a.o -o /dev/null 2>&1 | FileCheck %s --implicit-check-not=error:
+# RUN: not ld.lld a.o 2>&1 | FileCheck %s --implicit-check-not=error:
 
 # CHECK:      error: a.o:(relr): unknown section type 0x13
 # CHECK-NEXT: error: a.o:(regular): unknown section type 0x15

@@ -36,8 +36,8 @@ static unsigned getID(const CFGIntervalNode &I) { return I.ID; }
 
 // `Node` must be one of `CFGBlock` or `CFGIntervalNode`.
 template <typename Node>
-BuildResult<Node> buildInterval(llvm::BitVector &Partitioned,
-                                const Node *Header) {
+static BuildResult<Node> buildInterval(llvm::BitVector &Partitioned,
+                                       const Node *Header) {
   assert(Header != nullptr);
   BuildResult<Node> Interval;
   Interval.Nodes.push_back(Header);
@@ -102,10 +102,10 @@ BuildResult<Node> buildInterval(llvm::BitVector &Partitioned,
 }
 
 template <typename Node>
-void fillIntervalNode(CFGIntervalGraph &Graph,
-                      std::vector<CFGIntervalNode *> &Index,
-                      std::queue<const Node *> &Successors,
-                      llvm::BitVector &Partitioned, const Node *Header) {
+static void fillIntervalNode(CFGIntervalGraph &Graph,
+                             std::vector<CFGIntervalNode *> &Index,
+                             std::queue<const Node *> &Successors,
+                             llvm::BitVector &Partitioned, const Node *Header) {
   BuildResult<Node> Result = buildInterval(Partitioned, Header);
   for (const auto *S : Result.Successors)
     Successors.push(S);
@@ -132,14 +132,14 @@ void fillIntervalNode(CFGIntervalGraph &Graph,
       Count += N->Nodes.size();
     Nodes.reserve(Count);
     for (auto &N : Result.Nodes)
-      Nodes.insert(Nodes.end(), N->Nodes.begin(), N->Nodes.end());
+      llvm::append_range(Nodes, N->Nodes);
     Interval.Nodes = std::move(Nodes);
   }
 }
 
 template <typename Node>
-CFGIntervalGraph partitionIntoIntervalsImpl(unsigned NumBlockIDs,
-                                            const Node *EntryBlock) {
+static CFGIntervalGraph partitionIntoIntervalsImpl(unsigned NumBlockIDs,
+                                                   const Node *EntryBlock) {
   assert(EntryBlock != nullptr);
   CFGIntervalGraph Graph;
   // `Index` maps all of the nodes of the input graph to the interval to which

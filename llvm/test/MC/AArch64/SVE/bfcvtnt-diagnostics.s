@@ -20,8 +20,17 @@ bfcvtnt z0.h, p8/m, z1.s
 // CHECK-NEXT: bfcvtnt z0.h, p8/m, z1.s
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
+// --------------------------------------------------------------------------//
+// Negative tests for instructions that are incompatible with movprfx
+
 movprfx z0.h, p0/m, z7.h
 bfcvtnt z0.h, p0/m, z1.s
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a predicated movprfx with a different element size
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
 // CHECK-NEXT: bfcvtnt z0.h, p0/m, z1.s
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z0, z7
+bfcvtnt z0.h, p7/m, z1.s
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: bfcvtnt z0.h, p7/m, z1.s
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

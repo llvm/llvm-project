@@ -15,7 +15,7 @@ target triple = "nvptx64"
 
 declare void @use(i32)
 
-define weak void @__omp_offloading_50_a3e09bf8_foo_l2(ptr %dyn) #0 {
+define weak ptx_kernel void @__omp_offloading_50_a3e09bf8_foo_l2(ptr %dyn) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_50_a3e09bf8_foo_l2
 ; CHECK-SAME: (ptr [[DYN:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -56,11 +56,9 @@ attributes #0 = { convergent noinline norecurse nounwind "kernel" "frame-pointer
 attributes #1 = { nounwind }
 
 !omp_offload.info = !{!0}
-!nvvm.annotations = !{!1}
 !llvm.module.flags = !{!2, !3, !4}
 
 !0 = !{i32 0, i32 80, i32 -1545561096, !"foo", i32 2, i32 0}
-!1 = !{ptr @__omp_offloading_50_a3e09bf8_foo_l2, !"kernel", i32 1}
 !2 = !{i32 1, !"wchar_size", i32 4}
 !3 = !{i32 7, !"openmp", i32 50}
 !4 = !{i32 7, !"openmp-device", i32 50}

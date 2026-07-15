@@ -118,12 +118,7 @@ public:
 
   /// Construct a PBQP register allocator.
   RegAllocPBQP(char *cPassID = nullptr)
-      : MachineFunctionPass(ID), customPassID(cPassID) {
-    initializeSlotIndexesWrapperPassPass(*PassRegistry::getPassRegistry());
-    initializeLiveIntervalsWrapperPassPass(*PassRegistry::getPassRegistry());
-    initializeLiveStacksPass(*PassRegistry::getPassRegistry());
-    initializeVirtRegMapWrapperLegacyPass(*PassRegistry::getPassRegistry());
-  }
+      : MachineFunctionPass(ID), customPassID(cPassID) {}
 
   /// Return the pass name.
   StringRef getPassName() const override { return "PBQP Register Allocator"; }
@@ -135,13 +130,11 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoPHIs);
+    return MachineFunctionProperties().setNoPHIs();
   }
 
   MachineFunctionProperties getClearedProperties() const override {
-    return MachineFunctionProperties().set(
-      MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 
 private:
@@ -550,8 +543,8 @@ void RegAllocPBQP::getAnalysisUsage(AnalysisUsage &au) const {
   //au.addRequiredID(SplitCriticalEdgesID);
   if (customPassID)
     au.addRequiredID(*customPassID);
-  au.addRequired<LiveStacks>();
-  au.addPreserved<LiveStacks>();
+  au.addRequired<LiveStacksWrapperLegacy>();
+  au.addPreserved<LiveStacksWrapperLegacy>();
   au.addRequired<MachineBlockFrequencyInfoWrapperPass>();
   au.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
   au.addRequired<MachineLoopInfoWrapperPass>();
@@ -621,7 +614,7 @@ void RegAllocPBQP::initializeGraph(PBQPRAGraph &G, VirtRegMap &VRM,
 
     // Compute an initial allowed set for the current vreg.
     std::vector<MCRegister> VRegAllowed;
-    ArrayRef<MCPhysReg> RawPRegOrder = TRC->getRawAllocationOrder(MF);
+    ArrayRef<MCPhysReg> RawPRegOrder = TRI.getRawAllocationOrder(*TRC, MF);
     for (MCPhysReg R : RawPRegOrder) {
       MCRegister PReg(R);
       if (MRI.isReserved(PReg))
@@ -754,6 +747,7 @@ bool RegAllocPBQP::mapPBQPToRegAlloc(const PBQPRAGraph &G,
 void RegAllocPBQP::finalizeAlloc(MachineFunction &MF,
                                  LiveIntervals &LIS,
                                  VirtRegMap &VRM) const {
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   // First allocate registers for the empty intervals.
@@ -764,7 +758,7 @@ void RegAllocPBQP::finalizeAlloc(MachineFunction &MF,
 
     if (PReg == 0) {
       const TargetRegisterClass &RC = *MRI.getRegClass(LI.reg());
-      const ArrayRef<MCPhysReg> RawPRegOrder = RC.getRawAllocationOrder(MF);
+      ArrayRef<MCPhysReg> RawPRegOrder = TRI.getRawAllocationOrder(RC, MF);
       for (MCRegister CandidateReg : RawPRegOrder) {
         if (!VRM.getRegInfo().isReserved(CandidateReg)) {
           PReg = CandidateReg;
@@ -794,6 +788,9 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
   MachineBlockFrequencyInfo &MBFI =
       getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
 
+  auto &LiveStks = getAnalysis<LiveStacksWrapperLegacy>().getLS();
+  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+
   VirtRegMap &VRM = getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
 
   PBQPVirtRegAuxInfo VRAI(
@@ -807,7 +804,7 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
   VirtRegAuxInfo DefaultVRAI(
       MF, LIS, VRM, getAnalysis<MachineLoopInfoWrapperPass>().getLI(), MBFI);
   std::unique_ptr<Spiller> VRegSpiller(
-      createInlineSpiller(*this, MF, VRM, DefaultVRAI));
+      createInlineSpiller({LIS, LiveStks, MDT, MBFI}, MF, VRM, DefaultVRAI));
 
   MF.getRegInfo().freezeReservedRegs();
 

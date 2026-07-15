@@ -1,8 +1,8 @@
-; RUN: llc -O2 -o %t1.o < %s
-; RUN: llc -O2 -o %t2.o < %s
-; RUN: llc -O2 -o %t3.o < %s
-; RUN: llc -O2 -o %t4.o < %s
-; RUN: llc -O2 -o %t5.o < %s
+; RUN: llc -O2 < %s > %t1.o
+; RUN: llc -O2 < %s > %t2.o
+; RUN: llc -O2 < %s > %t3.o
+; RUN: llc -O2 < %s > %t4.o
+; RUN: llc -O2 < %s > %t5.o
 ; RUN: cmp %t1.o %t2.o
 ; RUN: cmp %t1.o %t3.o
 ; RUN: cmp %t1.o %t4.o

@@ -43,11 +43,11 @@ TEST(LlvmLibcTableTest, Iteration) {
     counter[i] = 0;
     if (i >= 256) {
       keys[i].bytes[0] = 2;
-      keys[i].bytes[1] = i % 256;
+      keys[i].bytes[1] = static_cast<uint8_t>(i % 256);
       keys[i].bytes[2] = 0;
     } else {
       keys[i].bytes[0] = 1;
-      keys[i].bytes[1] = i;
+      keys[i].bytes[1] = static_cast<uint8_t>(i);
       keys[i].bytes[2] = 0;
     }
     HashTable::insert(table, {reinterpret_cast<char *>(keys[i].bytes),
@@ -108,7 +108,9 @@ TEST(LlvmLibcTableTest, Insertion) {
             static_cast<void *>(keys[CAP].bytes));
 
   for (size_t i = 0; i <= CAP; ++i) {
-    ASSERT_EQ(strcmp(table->find(keys[i].bytes)->key, keys[i].bytes), 0);
+    auto comp = [](char l, char r) -> int { return l - r; };
+    ASSERT_EQ(
+        inline_strcmp(table->find(keys[i].bytes)->key, keys[i].bytes, comp), 0);
   }
   for (size_t i = CAP + 1; i < 256; ++i) {
     ASSERT_EQ(table->find(keys[i].bytes), static_cast<ENTRY *>(nullptr));

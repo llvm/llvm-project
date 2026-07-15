@@ -32,6 +32,7 @@
 #include "llvm/IR/OperandTraits.h"
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -48,6 +49,7 @@ class AssemblyAnnotationWriter;
 class Constant;
 class ConstantRange;
 class DataLayout;
+struct DenormalFPEnv;
 struct DenormalMode;
 class DISubprogram;
 enum LibFunc : unsigned;
@@ -84,7 +86,8 @@ private:
   unsigned BlockNumEpoch = 0;
 
   mutable Argument *Arguments = nullptr;  ///< The formal arguments
-  size_t NumArgs;
+  uint32_t NumArgs;
+  MaybeAlign PreferredAlign;
   std::unique_ptr<ValueSymbolTable>
       SymTab;                             ///< Symbol table of args/instructions
   AttributeList AttributeSets;            ///< Parameter attributes
@@ -110,11 +113,6 @@ private:
   friend class SymbolTableListTraits<Function>;
 
 public:
-  /// Is this function using intrinsics to record the position of debugging
-  /// information, or non-intrinsic records? See IsNewDbgInfoFormat in
-  /// \ref BasicBlock.
-  bool IsNewDbgInfoFormat;
-
   /// hasLazyArguments/CheckLazyArguments - The argument list of a function is
   /// built on demand, so that the list isn't allocated until the first client
   /// needs it.  The hasLazyArguments predicate returns true if the arg list
@@ -128,9 +126,6 @@ public:
 
   /// \see BasicBlock::convertFromNewDbgValues.
   void convertFromNewDbgValues();
-
-  void setIsNewDbgInfoFormat(bool NewVal);
-  void setNewDbgInfoFormatFlag(bool NewVal);
 
 private:
   friend class TargetLibraryInfoImpl;
@@ -284,23 +279,17 @@ public:
     setValueSubclassData((getSubclassDataFromValue() & 0xc00f) | (ID << 4));
   }
 
-  enum ProfileCountType { PCT_Real, PCT_Synthetic };
-
-  /// Class to represent profile counts.
-  ///
-  /// This class represents both real and synthetic profile counts.
-  class ProfileCount {
-  private:
-    uint64_t Count = 0;
-    ProfileCountType PCT = PCT_Real;
-
-  public:
-    ProfileCount(uint64_t Count, ProfileCountType PCT)
-        : Count(Count), PCT(PCT) {}
-    uint64_t getCount() const { return Count; }
-    ProfileCountType getType() const { return PCT; }
-    bool isSynthetic() const { return PCT == PCT_Synthetic; }
-  };
+  /// Does it have a kernel calling convention?
+  bool hasKernelCallingConv() const {
+    switch (getCallingConv()) {
+    default:
+      return false;
+    case CallingConv::PTX_Kernel:
+    case CallingConv::AMDGPU_KERNEL:
+    case CallingConv::SPIR_KERNEL:
+      return true;
+    }
+  }
 
   /// Set the entry count for this function.
   ///
@@ -308,37 +297,23 @@ public:
   /// pgo data. \p Imports points to a set of GUIDs that needs to
   /// be imported by the function for sample PGO, to enable the same inlines as
   /// the profiled optimized binary.
-  void setEntryCount(ProfileCount Count,
-                     const DenseSet<GlobalValue::GUID> *Imports = nullptr);
-
-  /// A convenience wrapper for setting entry count
-  void setEntryCount(uint64_t Count, ProfileCountType Type = PCT_Real,
+  void setEntryCount(uint64_t Count,
                      const DenseSet<GlobalValue::GUID> *Imports = nullptr);
 
   /// Get the entry count for this function.
   ///
   /// Entry count is the number of times the function was executed.
-  /// When AllowSynthetic is false, only pgo_data will be returned.
-  std::optional<ProfileCount> getEntryCount(bool AllowSynthetic = false) const;
+  std::optional<uint64_t> getEntryCount() const;
 
   /// Return true if the function is annotated with profile data.
   ///
   /// Presence of entry counts from a profile run implies the function has
-  /// profile annotations. If IncludeSynthetic is false, only return true
-  /// when the profile data is real.
-  bool hasProfileData(bool IncludeSynthetic = false) const {
-    return getEntryCount(IncludeSynthetic).has_value();
-  }
+  /// profile annotations.
+  bool hasProfileData() const { return getEntryCount().has_value(); }
 
   /// Returns the set of GUIDs that needs to be imported to the function for
   /// sample PGO, to enable the same inlines as the profiled optimized binary.
   DenseSet<GlobalValue::GUID> getImportGUIDs() const;
-
-  /// Set the section prefix for this function.
-  void setSectionPrefix(StringRef Prefix);
-
-  /// Get the section prefix for this function.
-  std::optional<StringRef> getSectionPrefix() const;
 
   /// hasGC/getGC/setGC/clearGC - The name of the garbage collection algorithm
   ///                             to use during code generation.
@@ -524,6 +499,12 @@ public:
     return AttributeSets.getParamDereferenceableBytes(ArgNo);
   }
 
+  /// Extract the number of dead_on_return bytes for a parameter.
+  /// @param ArgNo Index of an argument, with 0 being the first function arg.
+  DeadOnReturnInfo getDeadOnReturnInfo(unsigned ArgNo) const {
+    return AttributeSets.getDeadOnReturnInfo(ArgNo);
+  }
+
   /// Extract the number of dereferenceable_or_null bytes for a
   /// parameter.
   /// @param ArgNo AttributeList ArgNo, referring to an argument.
@@ -565,7 +546,7 @@ public:
   bool onlyWritesMemory() const;
   void setOnlyWritesMemory();
 
-  /// Determine if the call can access memmory only using pointers based
+  /// Determine if the call can access memory only using pointers based
   /// on its arguments.
   bool onlyAccessesArgMemory() const;
   void setOnlyAccessesArgMemory();
@@ -712,14 +693,8 @@ public:
   /// function.
   DenormalMode getDenormalMode(const fltSemantics &FPType) const;
 
-  /// Return the representational value of "denormal-fp-math". Code interested
-  /// in the semantics of the function should use getDenormalMode instead.
-  DenormalMode getDenormalModeRaw() const;
-
-  /// Return the representational value of "denormal-fp-math-f32". Code
-  /// interested in the semantics of the function should use getDenormalMode
-  /// instead.
-  DenormalMode getDenormalModeF32Raw() const;
+  /// Return the representational value of the denormal_fpenv attribute.
+  DenormalFPEnv getDenormalFPEnv() const;
 
   /// copyAttributesFrom - copy all additional attributes (those not needed to
   /// create a Function) from the Function Src to this one.
@@ -753,7 +728,6 @@ public:
   /// to the newly inserted BB.
   Function::iterator insert(Function::iterator Position, BasicBlock *BB) {
     Function::iterator FIt = BasicBlocks.insert(Position, BB);
-    BB->setIsNewDbgInfoFormat(IsNewDbgInfoFormat);
     return FIt;
   }
 
@@ -785,8 +759,8 @@ public:
 
 private:
   // These need access to the underlying BB list.
-  friend void BasicBlock::removeFromParent();
-  friend iplist<BasicBlock>::iterator BasicBlock::eraseFromParent();
+  LLVM_ABI friend void BasicBlock::removeFromParent();
+  LLVM_ABI friend iplist<BasicBlock>::iterator BasicBlock::eraseFromParent();
   template <class BB_t, class BB_i_t, class BI_t, class II_t>
   friend class InstIterator;
   friend class llvm::SymbolTableListTraits<llvm::BasicBlock>;
@@ -1030,6 +1004,31 @@ public:
   /// Return value: true =>  null pointer dereference is not undefined.
   bool nullPointerIsDefined() const;
 
+  /// Returns the alignment of the given function.
+  ///
+  /// Note that this is the alignment of the code, not the alignment of a
+  /// function pointer.
+  MaybeAlign getAlign() const { return GlobalObject::getAlign(); }
+
+  /// Sets the alignment attribute of the Function.
+  void setAlignment(Align Align) { GlobalObject::setAlignment(Align); }
+
+  /// Sets the alignment attribute of the Function.
+  ///
+  /// This method will be deprecated as the alignment property should always be
+  /// defined.
+  void setAlignment(MaybeAlign Align) { GlobalObject::setAlignment(Align); }
+
+  /// Returns the prefalign of the given function.
+  MaybeAlign getPreferredAlignment() const { return PreferredAlign; }
+
+  /// Sets the prefalign attribute of the Function.
+  void setPreferredAlignment(MaybeAlign Align) { PreferredAlign = Align; }
+
+  /// Return the value for vscale based on the vscale_range attribute or 0 when
+  /// unknown.
+  unsigned getVScaleValue() const;
+
 private:
   void allocHungoffUselist();
   template<int Idx> void setHungoffOperand(Constant *C);
@@ -1042,12 +1041,19 @@ private:
   void setValueSubclassDataBit(unsigned Bit, bool On);
 };
 
+namespace CallingConv {
+
+// TODO: Need similar function for support of argument in position. General
+// version on FunctionType + Attributes + CallingConv::ID?
+LLVM_ABI LLVM_READNONE bool supportsNonVoidReturnType(CallingConv::ID CC);
+} // namespace CallingConv
+
 /// Check whether null pointer dereferencing is considered undefined behavior
 /// for a given function or an address space.
 /// Null pointer access in non-zero address space is not considered undefined.
 /// Return value: false => null pointer dereference is undefined.
 /// Return value: true =>  null pointer dereference is not undefined.
-bool NullPointerIsDefined(const Function *F, unsigned AS = 0);
+LLVM_ABI bool NullPointerIsDefined(const Function *F, unsigned AS = 0);
 
 template <> struct OperandTraits<Function> : public HungoffOperandTraits {};
 

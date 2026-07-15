@@ -2,6 +2,9 @@
 ; RUN: llvm-objdump -ht %t | FileCheck --check-prefix=OBJ %s
 ; RUN: llvm-objdump -ht %t.dwo | FileCheck --check-prefix=DWO %s
 
+; RUN: llc -split-dwarf-file=%t.obj -O0 %s -mtriple=x86_64-unknown-windows-msvc -filetype=obj -o %t.obj
+; RUN: llvm-readobj --section-headers %t.obj | FileCheck --check-prefix=SINGLE %s
+
 ; This test is derived from test/DebugInfo/X86/fission-cu.ll
 ; But it checks that the output objects have the expected sections
 
@@ -27,13 +30,14 @@ source_filename = "test/DebugInfo/X86/fission-cu.ll"
 ; OBJ-NEXT:  0 .text
 ; OBJ-NEXT:  1 .data
 ; OBJ-NEXT:  2 .bss
-; OBJ-NEXT:  3 .debug_abbrev
-; OBJ-NEXT:  4 .debug_info
-; OBJ-NEXT:  5 .debug_str
-; OBJ-NEXT:  6 .debug_addr
-; OBJ-NEXT:  7 .debug_pubnames
-; OBJ-NEXT:  8 .debug_pubtypes
-; OBJ-NEXT:  9 .debug_line
+; OBJ-NEXT:  3 .debug$S
+; OBJ-NEXT:  4 .debug_abbrev
+; OBJ-NEXT:  5 .debug_info
+; OBJ-NEXT:  6 .debug_str
+; OBJ-NEXT:  7 .debug_addr
+; OBJ-NEXT:  8 .debug_pubnames
+; OBJ-NEXT:  9 .debug_pubtypes
+; OBJ-NEXT: 10 .debug_line
 
 ; OBJ:     .debug_abbrev
 ; OBJ:     .debug_info
@@ -55,3 +59,40 @@ source_filename = "test/DebugInfo/X86/fission-cu.ll"
 ; DWO-NEXT: [ 6](sec  4)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 .debug_abbrev.dwo
 ; DWO-NEXT: AUX scnlen 0x33 nreloc 0 nlnno 0 checksum 0x8056e5e4 assoc 4 comdat 0
 ; DWO-EMPTY:
+
+; SINGLE:        Name: .debug_str.dwo
+; SINGLE-NOT:    Name:
+; SINGLE:        Characteristics [
+; SINGLE-NEXT:     IMAGE_SCN_ALIGN_1BYTES
+; SINGLE-NEXT:     IMAGE_SCN_CNT_INITIALIZED_DATA
+; SINGLE-NEXT:     IMAGE_SCN_LNK_REMOVE
+; SINGLE-NEXT:     IMAGE_SCN_MEM_DISCARDABLE
+; SINGLE-NEXT:     IMAGE_SCN_MEM_READ
+; SINGLE-NEXT:   ]
+; SINGLE:        Name: .debug_str_offsets.dwo
+; SINGLE-NOT:    Name:
+; SINGLE:        Characteristics [
+; SINGLE-NEXT:     IMAGE_SCN_ALIGN_1BYTES
+; SINGLE-NEXT:     IMAGE_SCN_CNT_INITIALIZED_DATA
+; SINGLE-NEXT:     IMAGE_SCN_LNK_REMOVE
+; SINGLE-NEXT:     IMAGE_SCN_MEM_DISCARDABLE
+; SINGLE-NEXT:     IMAGE_SCN_MEM_READ
+; SINGLE-NEXT:   ]
+; SINGLE:        Name: .debug_info.dwo
+; SINGLE-NOT:    Name:
+; SINGLE:        Characteristics [
+; SINGLE-NEXT:     IMAGE_SCN_ALIGN_1BYTES
+; SINGLE-NEXT:     IMAGE_SCN_CNT_INITIALIZED_DATA
+; SINGLE-NEXT:     IMAGE_SCN_LNK_REMOVE
+; SINGLE-NEXT:     IMAGE_SCN_MEM_DISCARDABLE
+; SINGLE-NEXT:     IMAGE_SCN_MEM_READ
+; SINGLE-NEXT:   ]
+; SINGLE:        Name: .debug_abbrev.dwo
+; SINGLE-NOT:    Name:
+; SINGLE:        Characteristics [
+; SINGLE-NEXT:     IMAGE_SCN_ALIGN_1BYTES
+; SINGLE-NEXT:     IMAGE_SCN_CNT_INITIALIZED_DATA
+; SINGLE-NEXT:     IMAGE_SCN_LNK_REMOVE
+; SINGLE-NEXT:     IMAGE_SCN_MEM_DISCARDABLE
+; SINGLE-NEXT:     IMAGE_SCN_MEM_READ
+; SINGLE-NEXT:   ]

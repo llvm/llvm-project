@@ -12,16 +12,17 @@
 
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
+#include <__cstddef/size_t.h>
 #include <__memory/addressof.h>
-#include <__memory/allocate_at_least.h>
 #include <__memory/allocator_traits.h>
+#include <__new/allocate.h>
+#include <__new/exceptions.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/is_volatile.h>
 #include <__utility/forward.h>
-#include <new>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -36,7 +37,7 @@ class allocator;
 // These specializations shouldn't be marked _LIBCPP_DEPRECATED_IN_CXX17.
 // Specializing allocator<void> is deprecated, but not using it.
 template <>
-class _LIBCPP_TEMPLATE_VIS allocator<void> {
+class allocator<void> {
 public:
   _LIBCPP_DEPRECATED_IN_CXX17 typedef void* pointer;
   _LIBCPP_DEPRECATED_IN_CXX17 typedef const void* const_pointer;
@@ -49,33 +50,21 @@ public:
 };
 #endif // _LIBCPP_STD_VER <= 17
 
-// This class provides a non-trivial default constructor to the class that derives from it
-// if the condition is satisfied.
-//
-// The second template parameter exists to allow giving a unique type to __non_trivial_if,
-// which makes it possible to avoid breaking the ABI when making this a base class of an
-// existing class. Without that, imagine we have classes D1 and D2, both of which used to
-// have no base classes, but which now derive from __non_trivial_if. The layout of a class
-// that inherits from both D1 and D2 will change because the two __non_trivial_if base
-// classes are not allowed to share the same address.
-//
-// By making those __non_trivial_if base classes unique, we work around this problem and
-// it is safe to start deriving from __non_trivial_if in existing classes.
-template <bool _Cond, class _Unique>
-struct __non_trivial_if {};
+template <bool, class _Unique>
+struct __non_trivially_default_constructible_if {};
 
 template <class _Unique>
-struct __non_trivial_if<true, _Unique> {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __non_trivial_if() _NOEXCEPT {}
+struct __non_trivially_default_constructible_if<true, _Unique> {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __non_trivially_default_constructible_if() {}
 };
 
-// allocator
-//
-// Note: For ABI compatibility between C++20 and previous standards, we make
-//       allocator<void> trivial in C++20.
-
 template <class _Tp>
-class _LIBCPP_TEMPLATE_VIS allocator : private __non_trivial_if<!is_void<_Tp>::value, allocator<_Tp> > {
+class allocator
+// TODO(LLVM 24): Remove the opt-out
+#ifdef _LIBCPP_DEPRECATED_ABI_NON_TRIVIAL_ALLOCATOR
+    : __non_trivially_default_constructible_if<!is_void<_Tp>::value, allocator<_Tp> >
+#endif
+{
   static_assert(!is_const<_Tp>::value, "std::allocator does not support const types");
   static_assert(!is_volatile<_Tp>::value, "std::allocator does not support volatile types");
 
@@ -96,11 +85,11 @@ public:
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp* allocate(size_t __n) {
     static_assert(sizeof(_Tp) >= 0, "cannot allocate memory for an incomplete type");
     if (__n > allocator_traits<allocator>::max_size(*this))
-      __throw_bad_array_new_length();
+      std::__throw_bad_array_new_length();
     if (__libcpp_is_constant_evaluated()) {
       return static_cast<_Tp*>(::operator new(__n * sizeof(_Tp)));
     } else {
-      return static_cast<_Tp*>(std::__libcpp_allocate(__n * sizeof(_Tp), _LIBCPP_ALIGNOF(_Tp)));
+      return std::__libcpp_allocate<_Tp>(__element_count(__n));
     }
   }
 
@@ -115,7 +104,7 @@ public:
     if (__libcpp_is_constant_evaluated()) {
       ::operator delete(__p);
     } else {
-      std::__libcpp_deallocate((void*)__p, __n * sizeof(_Tp), _LIBCPP_ALIGNOF(_Tp));
+      std::__libcpp_deallocate<_Tp>(__p, __element_count(__n));
     }
   }
 
@@ -131,10 +120,11 @@ public:
     typedef allocator<_Up> other;
   };
 
-  _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI pointer address(reference __x) const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI pointer address(reference __x) const _NOEXCEPT {
     return std::addressof(__x);
   }
-  _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI const_pointer address(const_reference __x) const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI const_pointer
+  address(const_reference __x) const _NOEXCEPT {
     return std::addressof(__x);
   }
 
@@ -142,7 +132,7 @@ public:
     return allocate(__n);
   }
 
-  _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI size_type max_size() const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI size_type max_size() const _NOEXCEPT {
     return size_type(~0) / sizeof(_Tp);
   }
 

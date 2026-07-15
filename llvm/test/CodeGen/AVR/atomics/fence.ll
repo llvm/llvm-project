@@ -1,4 +1,4 @@
-; RUN: llc -mattr=avr6 < %s -march=avr | FileCheck %s
+; RUN: llc -mattr=avr6 < %s -mtriple=avr | FileCheck %s
 
 ; Checks that atomic fences are simply removed from IR.
 ; AVR is always singlethreaded so fences do nothing.

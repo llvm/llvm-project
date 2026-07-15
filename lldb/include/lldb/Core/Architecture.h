@@ -12,6 +12,7 @@
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Target/MemoryTagManager.h"
+#include "lldb/Target/RegisterContextUnwind.h"
 
 namespace lldb_private {
 
@@ -128,6 +129,26 @@ public:
                                        DataExtractor &reg_data,
                                        RegisterContext &reg_context) const {
     return false;
+  }
+
+  /// Return an UnwindPlan that allows architecture-defined rules for finding
+  /// saved registers, given a particular set of register values.
+  virtual lldb::UnwindPlanSP GetArchitectureUnwindPlan(
+      lldb_private::Thread &thread, lldb_private::RegisterContextUnwind *regctx,
+      std::shared_ptr<const UnwindPlan> current_unwindplan) {
+    return lldb::UnwindPlanSP();
+  }
+
+  /// Returns whether a given byte sequence is a valid trap instruction for the
+  /// architecture. Some architectures feature instructions that have immediates
+  /// that can take on any value, resulting in a family of valid byte sequences.
+  /// If the observed byte sequence is shorter than the reference then they are
+  /// considered not to match, even if the initial bytes would match.
+  virtual bool IsValidTrapInstruction(llvm::ArrayRef<uint8_t> reference,
+                                      llvm::ArrayRef<uint8_t> observed) const {
+    if (reference.size() > observed.size())
+      return false;
+    return !std::memcmp(reference.data(), observed.data(), reference.size());
   }
 };
 

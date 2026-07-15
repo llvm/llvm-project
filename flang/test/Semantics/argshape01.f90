@@ -113,7 +113,7 @@ program main
   !ERROR: Actual procedure argument has interface incompatible with dummy argument 's=': incompatible dummy argument #1: incompatible dummy data object shapes
   call s8c(s7)
   call s8c(s8)
-  !WARNING: Actual procedure argument has possible interface incompatibility with dummy argument 's=': possibly incompatible dummy argument #1: distinct dummy data object shapes
+  !WARNING: Actual procedure argument has possible interface incompatibility with dummy argument 's=': possibly incompatible dummy argument #1: distinct dummy data object shapes [-Wproc-dummy-arg-shapes]
   call s8c(s8b)
   call s9c(s9)
   call s9c(s9b)
@@ -154,7 +154,7 @@ program main
   !ERROR: Procedure pointer 'ps7' associated with incompatible procedure designator 's8': incompatible dummy argument #1: incompatible dummy data object shapes
   ps7 => s8
   ps8 => s8
-  !WARNING: pointer 'ps8' and s8b may not be completely compatible procedures: possibly incompatible dummy argument #1: distinct dummy data object shapes
+  !WARNING: pointer 'ps8' and s8b may not be completely compatible procedures: possibly incompatible dummy argument #1: distinct dummy data object shapes [-Wproc-dummy-arg-shapes]
   ps8 => s8b
   !ERROR: Procedure pointer 'ps8' associated with incompatible procedure designator 's6': incompatible dummy argument #1: incompatible dummy data object shapes
   ps8 => s6

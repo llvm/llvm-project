@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++20 -x objective-c++ -fobjc-arc -fenable-matrix -triple i686-pc-win32
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++20 -x objective-c++ -fobjc-arc -fenable-matrix -fexperimental-overflow-behavior-types -triple i686-pc-win32
 
 enum class N {};
 
@@ -44,7 +44,8 @@ template <class T> struct S1 {
 };
 
 N t10 = 0 ? S1<X1>() : S1<Y1>(); // expected-error {{from 'S1<B1>' (aka 'S1<int>')}}
-N t11 = 0 ? S1<X1>::S2<X2>() : S1<Y1>::S2<Y2>(); // expected-error {{from 'S1<int>::S2<B2>' (aka 'S2<void>')}}
+// FIXME: needs to compute common sugar for qualified template names
+N t11 = 0 ? S1<X1>::S2<X2>() : S1<Y1>::S2<Y2>(); // expected-error {{from 'S1<int>::S2<B2>' (aka 'S1<int>::S2<void>')}}
 
 template <class T> using Al = S1<T>;
 
@@ -88,7 +89,7 @@ N t19 = 0 ? (__underlying_type(EnumsX::X)){} : (__underlying_type(EnumsY::Y)){};
 // expected-error@-1 {{rvalue of type 'B1' (aka 'int')}}
 
 N t20 = 0 ? (__underlying_type(EnumsX::X)){} : (__underlying_type(EnumsY::X)){};
-// expected-error@-1 {{rvalue of type '__underlying_type(Enums::X)' (aka 'int')}}
+// expected-error@-1 {{rvalue of type '__underlying_type(EnumsB::X)' (aka 'int')}}
 
 using QX = const SB1 *;
 using QY = const ::SB1 *;
@@ -146,3 +147,122 @@ namespace GH67603 {
   }
   template void h<int>();
 } // namespace GH67603
+
+namespace arrays {
+  namespace same_canonical {
+    using ConstB1I = const B1[];
+    using ConstB1C = const B1[1];
+    const ConstB1I a = {0};
+    const ConstB1C b = {0};
+    N ta = a;
+    // expected-error@-1 {{lvalue of type 'const B1[1]' (aka 'const int[1]')}}
+    N tb = b;
+    // expected-error@-1 {{lvalue of type 'const ConstB1C' (aka 'const const int[1]')}}
+    N tc = 0 ? a : b;
+    // expected-error@-1 {{lvalue of type 'const B1[1]' (aka 'const int[1]')}}
+  } // namespace same_canonical
+  namespace same_element {
+    using ConstB1 = const B1;
+    using ConstB1I = ConstB1[];
+    using ConstB1C = ConstB1[1];
+    const ConstB1I a = {0};
+    const ConstB1C b = {0};
+    N ta = a;
+    // expected-error@-1 {{lvalue of type 'const ConstB1[1]' (aka 'const int[1]')}}
+    N tb = b;
+    // expected-error@-1 {{lvalue of type 'const ConstB1C' (aka 'const const int[1]')}}
+    N tc = 0 ? a : b;
+    // expected-error@-1 {{lvalue of type 'ConstB1[1]' (aka 'const int[1]')}}
+  } // namespace same_element
+  namespace balanced_qualifiers {
+    using ConstX1C = const volatile X1[1];
+    using Y1C = volatile Y1[1];
+    extern volatile ConstX1C a;
+    extern const volatile Y1C b;
+    N ta = a;
+    // expected-error@-1 {{lvalue of type 'volatile ConstX1C' (aka 'volatile const volatile int[1]')}}
+    N tb = b;
+    // expected-error@-1 {{lvalue of type 'const volatile Y1C' (aka 'const volatile volatile int[1]')}}
+    N tc = 0 ? a : b;
+    // expected-error@-1 {{lvalue of type 'const volatile volatile B1[1]' (aka 'const volatile volatile int[1]')}}
+  } // namespace balanced_qualifiers
+} // namespace arrays
+
+namespace overflow_behavior_types {
+  namespace same_canonical {
+    using WrapB1 = B1 __attribute__((overflow_behavior(wrap)));
+    using WrapB1_2 = B1 __attribute__((overflow_behavior(wrap)));
+    WrapB1 a = 0;
+    WrapB1_2 b = 0;
+    N ta = a;
+    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'WrapB1' (aka '__ob_wrap B1')}}
+    N tb = b;
+    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'WrapB1_2' (aka '__ob_wrap B1')}}
+    N tc = 0 ? a : b;
+    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type '__ob_wrap B1'}}
+  } // namespace same_canonical
+  namespace same_underlying {
+    using WrapX1 = X1 __attribute__((overflow_behavior(wrap)));
+    using WrapY1 = Y1 __attribute__((overflow_behavior(wrap)));
+    WrapX1 a = 0;
+    WrapY1 b = 0;
+    N ta = a;
+    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'WrapX1' (aka '__ob_wrap X1')}}
+    N tb = b;
+    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'WrapY1' (aka '__ob_wrap Y1')}}
+    N tc = 0 ? a : b;
+    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type '__ob_wrap B1'}}
+  } // namespace same_underlying
+  namespace balanced_qualifiers {
+    using ConstWrapX1 = const volatile X1 __attribute__((overflow_behavior(wrap)));
+    using WrapY1 = volatile Y1 __attribute__((overflow_behavior(wrap)));
+    volatile ConstWrapX1 a = 0;
+    const volatile WrapY1 b = 0;
+    N ta = a;
+    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'volatile ConstWrapX1' (aka '__ob_wrap X1 const volatile')}}
+    N tb = b;
+    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type 'const volatile WrapY1' (aka '__ob_wrap Y1 const volatile')}}
+    N tc = 0 ? a : b;
+    // expected-error@-1 {{cannot initialize a variable of type 'N' with an lvalue of type '__ob_wrap B1 const volatile'}}
+  } // namespace balanced_qualifiers
+} // namespace overflow_behavior_types
+
+namespace member_pointers {
+  template <class T> struct W {
+    X1 a;
+    Y1 b;
+  };
+  struct W1 : W<X2> {};
+  struct W2 : W<Y2> {};
+
+  N t1 = 0 ? &W<X2>::a : &W<Y2>::b;
+  // expected-error@-1 {{rvalue of type 'B1 W<B2>::*'}}
+
+  // FIXME: adjusted MemberPointer does not preserve qualifier
+  N t3 = 0 ? &W1::a : &W2::b;
+  // expected-error@-1 {{rvalue of type 'B1 member_pointers::W<void>::*'}}
+} // namespace member_pointers
+
+namespace FunctionTypeExtInfo {
+  namespace RecordType {
+    class A;
+    void (*x)(__attribute__((swift_async_context)) A *);
+
+    class A;
+    void (*y)(__attribute__((swift_async_context)) A *);
+
+    N t1 = 0 ? x : y;
+    // expected-error@-1 {{lvalue of type 'void (*)(__attribute__((swift_async_context)) A *)'}}
+  } // namespace RecordType
+  namespace TypedefType {
+    class A;
+    using B = A;
+    void (*x)(__attribute__((swift_async_context)) B *);
+
+    using B = A;
+    void (*y)(__attribute__((swift_async_context)) B *);
+
+    N t1 = 0 ? x : y;
+    // expected-error@-1 {{lvalue of type 'void (*)(__attribute__((swift_async_context)) B *)'}}
+  } // namespace TypedefType
+} // namespace FunctionTypeExtInfo

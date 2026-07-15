@@ -10,6 +10,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no host shell to expand arguments
 class LaunchWithShellExpandTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -93,7 +94,7 @@ class LaunchWithShellExpandTestCase(TestBase):
 
         self.runCmd("process kill")
 
-        self.runCmd("process launch -X true -w %s -- foo\ bar" % (self.getBuildDir()))
+        self.runCmd(r"process launch -X true -w %s -- foo\ bar" % (self.getBuildDir()))
 
         process = self.process()
 

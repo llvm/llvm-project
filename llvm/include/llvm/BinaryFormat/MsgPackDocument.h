@@ -18,6 +18,7 @@
 #define LLVM_BINARYFORMAT_MSGPACKDOCUMENT_H
 
 #include "llvm/BinaryFormat/MsgPackReader.h"
+#include "llvm/Support/Compiler.h"
 #include <map>
 
 namespace llvm {
@@ -76,8 +77,14 @@ public:
   // that has no associated Document, and the result of getEmptyNode(), which
   // does have an associated document.
   bool isEmpty() const { return !KindAndDoc || getKind() == Type::Empty; }
-  Type getKind() const { return KindAndDoc->Kind; }
-  Document *getDocument() const { return KindAndDoc->Doc; }
+  Type getKind() const {
+    assert(KindAndDoc);
+    return KindAndDoc->Kind;
+  }
+  Document *getDocument() const {
+    assert(KindAndDoc);
+    return KindAndDoc->Doc;
+  }
 
   int64_t &getInt() {
     assert(getKind() == Type::Int);
@@ -151,17 +158,20 @@ public:
     return *reinterpret_cast<MapDocNode *>(this);
   }
 
-  /// Comparison operator, used for map keys.
+  /// Comparison operator, used for map keys. Compares by value, so nodes
+  /// from different Documents with the same kind and value are ordered
+  /// consistently. Only supports scalar types; Array and Map nodes should
+  /// not be used as map keys.
   friend bool operator<(const DocNode &Lhs, const DocNode &Rhs) {
-    // This has to cope with one or both of the nodes being default-constructed,
-    // such that KindAndDoc is not set.
+    // Cope with default-constructed nodes where KindAndDoc is not set:
+    // isEmpty() returns true both for default-constructed nodes and for
+    // nodes returned by getEmptyNode().
     if (Rhs.isEmpty())
       return false;
-    if (Lhs.KindAndDoc != Rhs.KindAndDoc) {
-      if (Lhs.isEmpty())
-        return true;
+    if (Lhs.isEmpty())
+      return true;
+    if (Lhs.getKind() != Rhs.getKind())
       return (unsigned)Lhs.getKind() < (unsigned)Rhs.getKind();
-    }
     switch (Lhs.getKind()) {
     case Type::Int:
       return Lhs.Int < Rhs.Int;
@@ -177,14 +187,15 @@ public:
     case Type::Binary:
       return Lhs.Raw < Rhs.Raw;
     default:
-      llvm_unreachable("bad map key type");
+      assert(false && "bad map key type");
+      return false;
     }
   }
 
-  /// Equality operator
-  friend bool operator==(const DocNode &Lhs, const DocNode &Rhs) {
-    return !(Lhs < Rhs) && !(Rhs < Lhs);
-  }
+  /// Equality operator. Supports all node types including Array and Map,
+  /// comparing recursively by value. Works correctly for nodes from
+  /// different Documents.
+  LLVM_ABI friend bool operator==(const DocNode &Lhs, const DocNode &Rhs);
 
   /// Inequality operator
   friend bool operator!=(const DocNode &Lhs, const DocNode &Rhs) {
@@ -192,12 +203,12 @@ public:
   }
 
   /// Convert this node to a string, assuming it is scalar.
-  std::string toString() const;
+  LLVM_ABI std::string toString() const;
 
   /// Convert the StringRef and use it to set this DocNode (assuming scalar). If
   /// it is a string, copy the string into the Document's strings list so we do
   /// not rely on S having a lifetime beyond this call. Tag is "" or a YAML tag.
-  StringRef fromString(StringRef S, StringRef Tag = "");
+  LLVM_ABI StringRef fromString(StringRef S, StringRef Tag = "");
 
   /// Convenience assignment operators. This only works if the destination
   /// DocNode has an associated Document, i.e. it was not constructed using the
@@ -205,21 +216,25 @@ public:
   /// remain valid for the lifetime of the Document. Use fromString to avoid
   /// that restriction.
   DocNode &operator=(const char *Val) { return *this = StringRef(Val); }
-  DocNode &operator=(StringRef Val);
-  DocNode &operator=(MemoryBufferRef Val);
-  DocNode &operator=(bool Val);
-  DocNode &operator=(int Val);
-  DocNode &operator=(unsigned Val);
-  DocNode &operator=(int64_t Val);
-  DocNode &operator=(uint64_t Val);
+  LLVM_ABI DocNode &operator=(StringRef Val);
+  LLVM_ABI DocNode &operator=(MemoryBufferRef Val);
+  LLVM_ABI DocNode &operator=(bool Val);
+  LLVM_ABI DocNode &operator=(int Val);
+  LLVM_ABI DocNode &operator=(unsigned Val);
+  LLVM_ABI DocNode &operator=(int64_t Val);
+  LLVM_ABI DocNode &operator=(uint64_t Val);
+  LLVM_ABI DocNode &operator=(double Val);
 
 private:
   // Private constructor setting KindAndDoc, used by methods in Document.
   DocNode(const KindAndDocument *KindAndDoc) : KindAndDoc(KindAndDoc) {}
 
-  void convertToArray();
-  void convertToMap();
+  LLVM_ABI void convertToArray();
+  LLVM_ABI void convertToMap();
 };
+
+/// Namespace-scope declaration for the out-of-line friend operator==.
+LLVM_ABI bool operator==(const DocNode &Lhs, const DocNode &Rhs);
 
 /// A DocNode that is a map.
 class MapDocNode : public DocNode {
@@ -233,7 +248,7 @@ public:
   MapTy::iterator begin() { return Map->begin(); }
   MapTy::iterator end() { return Map->end(); }
   MapTy::iterator find(DocNode Key) { return Map->find(Key); }
-  MapTy::iterator find(StringRef Key);
+  LLVM_ABI MapTy::iterator find(StringRef Key);
   MapTy::iterator erase(MapTy::const_iterator I) { return Map->erase(I); }
   size_t erase(DocNode Key) { return Map->erase(Key); }
   MapTy::iterator erase(MapTy::const_iterator First,
@@ -242,13 +257,13 @@ public:
   }
   /// Member access. The string data must remain valid for the lifetime of the
   /// Document.
-  DocNode &operator[](StringRef S);
+  LLVM_ABI DocNode &operator[](StringRef S);
   /// Member access, with convenience versions for an integer key.
-  DocNode &operator[](DocNode Key);
-  DocNode &operator[](int Key);
-  DocNode &operator[](unsigned Key);
-  DocNode &operator[](int64_t Key);
-  DocNode &operator[](uint64_t Key);
+  LLVM_ABI DocNode &operator[](DocNode Key);
+  LLVM_ABI DocNode &operator[](int Key);
+  LLVM_ABI DocNode &operator[](unsigned Key);
+  LLVM_ABI DocNode &operator[](int64_t Key);
+  LLVM_ABI DocNode &operator[](uint64_t Key);
 };
 
 /// A DocNode that is an array.
@@ -269,7 +284,7 @@ public:
   }
 
   /// Element access. This extends the array if necessary, with empty nodes.
-  DocNode &operator[](size_t Index);
+  LLVM_ABI DocNode &operator[](size_t Index);
 };
 
 /// Simple in-memory representation of a document of msgpack objects with
@@ -401,6 +416,12 @@ public:
     return N.getArray();
   }
 
+  /// Deep copy a DocNode from any Document into this Document. The returned
+  /// node is owned by this Document and is independent of the source node's
+  /// Document. Strings are copied so the source Document's lifetime does not
+  /// need to extend beyond this call.
+  LLVM_ABI DocNode copyNode(DocNode Src);
+
   /// Read a document from a binary msgpack blob, merging into anything already
   /// in the Document. The blob data must remain valid for the lifetime of this
   /// Document (because a string object in the document contains a StringRef
@@ -424,7 +445,7 @@ public:
   /// map entry, a nil node otherwise.
   ///
   /// The default for Merger is to disallow any conflict.
-  bool readFromBlob(
+  LLVM_ABI bool readFromBlob(
       StringRef Blob, bool Multi,
       function_ref<int(DocNode *DestNode, DocNode SrcNode, DocNode MapKey)>
           Merger = [](DocNode *DestNode, DocNode SrcNode, DocNode MapKey) {
@@ -432,7 +453,7 @@ public:
           });
 
   /// Write a MsgPack document to a binary MsgPack blob.
-  void writeToBlob(std::string &Blob);
+  LLVM_ABI void writeToBlob(std::string &Blob);
 
   /// Copy a string into the Document's strings list, and return the copy that
   /// is owned by the Document.
@@ -449,10 +470,10 @@ public:
   bool getHexMode() const { return HexMode; }
 
   /// Convert MsgPack Document to YAML text.
-  void toYAML(raw_ostream &OS);
+  LLVM_ABI void toYAML(raw_ostream &OS);
 
   /// Read YAML text into the MsgPack document. Returns false on failure.
-  bool fromYAML(StringRef S);
+  LLVM_ABI bool fromYAML(StringRef S);
 };
 
 } // namespace msgpack

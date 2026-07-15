@@ -13,20 +13,20 @@
 # RUN: rm -rf %t
 # RUN: mkdir %t
 # # Query the debuginfod server for artifacts
-# RUN: DEBUGINFOD_CACHE_PATH=%t %python %s --server-cmd 'llvm-debuginfod -v -c 3 %S/Inputs' \
+# RUN: env DEBUGINFOD_CACHE_PATH=%t %python %s --server-cmd 'llvm-debuginfod -v -c 3 %S/Inputs' \
 # RUN:   --tool-cmd 'llvm-debuginfod-find --dump --executable 2c39b7557c50162aaeb5a3148c9f76e6e46012e3' | \
 # RUN:   diff - %S/Inputs/main.exe
-# RUN: DEBUGINFOD_CACHE_PATH=%t %python %s --server-cmd 'llvm-debuginfod -v -c 3 %S/Inputs' \
+# RUN: env DEBUGINFOD_CACHE_PATH=%t %python %s --server-cmd 'llvm-debuginfod -v -c 3 %S/Inputs' \
 # RUN:   --tool-cmd 'llvm-debuginfod-find --dump --debuginfo 2c39b7557c50162aaeb5a3148c9f76e6e46012e3' | \
 # RUN:   diff - %S/Inputs/main-debug.exe
 # Debuginfod server does not yet support source files
 
 # # The artifacts should still be present in the cache without needing to query
 # # the server.
-# RUN: DEBUGINFOD_CACHE_PATH=%t llvm-debuginfod-find --dump \
+# RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-debuginfod-find --dump \
 # RUN:   --executable 2c39b7557c50162aaeb5a3148c9f76e6e46012e3 | \
 # RUN:   diff - %S/Inputs/main.exe
-# RUN: DEBUGINFOD_CACHE_PATH=%t llvm-debuginfod-find --dump \
+# RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-debuginfod-find --dump \
 # RUN:   --debuginfo 2c39b7557c50162aaeb5a3148c9f76e6e46012e3 | \
 # RUN:   diff - %S/Inputs/main-debug.exe
 

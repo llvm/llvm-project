@@ -12,6 +12,7 @@
 #include "clang/Basic/DiagnosticLex.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -20,7 +21,9 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <memory>
 #include <optional>
+#include <string_view>
 #include <vector>
 
 using namespace llvm;
@@ -40,12 +43,23 @@ void clang::DiagnosticsTestHelper(DiagnosticsEngine &diag) {
 namespace {
 using testing::AllOf;
 using testing::ElementsAre;
+using testing::HasSubstr;
 using testing::IsEmpty;
+
+MATCHER_P(WithMessage, M,
+          "has diagnostic message that " +
+              ::testing::DescribeMatcher<std::string>(M)) {
+  return testing::ExplainMatchResult(M, arg.getMessage().str(),
+                                     result_listener);
+}
+MATCHER(IsError, "has error severity") {
+  return arg.getLevel() == DiagnosticsEngine::Level::Error;
+}
 
 // Check that DiagnosticErrorTrap works with SuppressAllDiagnostics.
 TEST(DiagnosticTest, suppressAndTrap) {
-  DiagnosticsEngine Diags(new DiagnosticIDs(),
-                          new DiagnosticOptions,
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts,
                           new IgnoringDiagConsumer());
   Diags.setSuppressAllDiagnostics(true);
 
@@ -60,7 +74,7 @@ TEST(DiagnosticTest, suppressAndTrap) {
 
     // Diag that would set FatalErrorOccurred
     // (via non-note following a fatal error).
-    Diags.Report(diag::warn_mt_message) << "warning";
+    Diags.Report(diag::warn_apinotes_message) << "warning";
 
     EXPECT_TRUE(trap.hasErrorOccurred());
     EXPECT_TRUE(trap.hasUnrecoverableErrorOccurred());
@@ -75,8 +89,8 @@ TEST(DiagnosticTest, suppressAndTrap) {
 // Check that FatalsAsError works as intended
 TEST(DiagnosticTest, fatalsAsError) {
   for (unsigned FatalsAsError = 0; FatalsAsError != 2; ++FatalsAsError) {
-    DiagnosticsEngine Diags(new DiagnosticIDs(),
-                            new DiagnosticOptions,
+    DiagnosticOptions DiagOpts;
+    DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts,
                             new IgnoringDiagConsumer());
     Diags.setFatalsAsError(FatalsAsError);
 
@@ -85,7 +99,7 @@ TEST(DiagnosticTest, fatalsAsError) {
 
     // Diag that would set FatalErrorOccurred
     // (via non-note following a fatal error).
-    Diags.Report(diag::warn_mt_message) << "warning";
+    Diags.Report(diag::warn_apinotes_message) << "warning";
 
     EXPECT_TRUE(Diags.hasErrorOccurred());
     EXPECT_EQ(Diags.hasFatalErrorOccurred(), FatalsAsError ? 0u : 1u);
@@ -99,7 +113,8 @@ TEST(DiagnosticTest, fatalsAsError) {
 }
 
 TEST(DiagnosticTest, tooManyErrorsIsAlwaysFatal) {
-  DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions,
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts,
                           new IgnoringDiagConsumer());
   Diags.setFatalsAsError(true);
 
@@ -115,7 +130,8 @@ TEST(DiagnosticTest, tooManyErrorsIsAlwaysFatal) {
 
 // Check that soft RESET works as intended
 TEST(DiagnosticTest, softReset) {
-  DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions,
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts,
                           new IgnoringDiagConsumer());
 
   unsigned numWarnings = 0U, numErrors = 0U;
@@ -138,7 +154,8 @@ TEST(DiagnosticTest, softReset) {
 }
 
 TEST(DiagnosticTest, diagnosticError) {
-  DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions,
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts,
                           new IgnoringDiagConsumer());
   PartialDiagnostic::DiagStorageAllocator Alloc;
   llvm::Expected<std::pair<int, int>> Value = DiagnosticError::create(
@@ -159,18 +176,19 @@ TEST(DiagnosticTest, diagnosticError) {
   EXPECT_EQ(Value->first, 20);
 }
 
+class CaptureDiagnosticConsumer : public DiagnosticConsumer {
+public:
+  SmallVector<StoredDiagnostic> StoredDiags;
+
+  void HandleDiagnostic(DiagnosticsEngine::Level level,
+                        const Diagnostic &Info) override {
+    StoredDiags.push_back(StoredDiagnostic(level, Info));
+  }
+};
+
 TEST(DiagnosticTest, storedDiagEmptyWarning) {
-  DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions);
-
-  class CaptureDiagnosticConsumer : public DiagnosticConsumer {
-  public:
-    SmallVector<StoredDiagnostic> StoredDiags;
-
-    void HandleDiagnostic(DiagnosticsEngine::Level level,
-                          const Diagnostic &Info) override {
-      StoredDiags.push_back(StoredDiagnostic(level, Info));
-    }
-  };
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts);
 
   CaptureDiagnosticConsumer CaptureConsumer;
   Diags.setClient(&CaptureConsumer, /*ShouldOwnClient=*/false);
@@ -179,6 +197,21 @@ TEST(DiagnosticTest, storedDiagEmptyWarning) {
 
   // Make sure an empty warning can round-trip with \c StoredDiagnostic.
   Diags.Report(CaptureConsumer.StoredDiags.front());
+}
+
+// std::string_view is used by downstream consumers.
+TEST(DiagnosticTest, reportAcceptsStringViewMessage) {
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts);
+
+  CaptureDiagnosticConsumer CaptureConsumer;
+  Diags.setClient(&CaptureConsumer, /*ShouldOwnClient=*/false);
+
+  std::string_view SV = "diagnostic";
+  Diags.Report(diag::err_target_unknown_triple) << SV;
+
+  EXPECT_THAT(CaptureConsumer.StoredDiags,
+              ElementsAre(WithMessage(HasSubstr("diagnostic"))));
 }
 
 class SuppressionMappingTest : public testing::Test {
@@ -190,13 +223,24 @@ public:
 protected:
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS =
       llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-  DiagnosticsEngine Diags{new DiagnosticIDs(), new DiagnosticOptions};
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags{DiagnosticIDs::create(), DiagOpts};
 
   llvm::ArrayRef<StoredDiagnostic> diags() {
     return CaptureConsumer.StoredDiags;
   }
 
+  SourceLocation locForFile(llvm::StringRef FileName) {
+    auto Buf = MemoryBuffer::getMemBuffer("", FileName);
+    SourceManager &SM = Diags.getSourceManager();
+    FileID FooID = SM.createFileID(std::move(Buf));
+    return SM.getLocForStartOfFile(FooID);
+  }
+
 private:
+  FileManager FM{{}, FS};
+  SourceManager SM{Diags, FM};
+
   class CaptureDiagnosticConsumer : public DiagnosticConsumer {
   public:
     std::vector<StoredDiagnostic> StoredDiags;
@@ -208,13 +252,6 @@ private:
   };
   CaptureDiagnosticConsumer CaptureConsumer;
 };
-
-MATCHER_P(WithMessage, Msg, "has diagnostic message") {
-  return arg.getMessage() == Msg;
-}
-MATCHER(IsError, "has error severity") {
-  return arg.getLevel() == DiagnosticsEngine::Level::Error;
-}
 
 TEST_F(SuppressionMappingTest, MissingMappingFile) {
   Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";
@@ -255,9 +292,9 @@ TEST_F(SuppressionMappingTest, SuppressesGroup) {
   clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
   EXPECT_THAT(diags(), IsEmpty());
 
-  EXPECT_TRUE(
-      Diags.isSuppressedViaMapping(diag::warn_unused_function, "foo.cpp"));
-  EXPECT_FALSE(Diags.isSuppressedViaMapping(diag::warn_deprecated, "foo.cpp"));
+  SourceLocation FooLoc = locForFile("foo.cpp");
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(diag::warn_unused_function, FooLoc));
+  EXPECT_FALSE(Diags.isSuppressedViaMapping(diag::warn_deprecated, FooLoc));
 }
 
 TEST_F(SuppressionMappingTest, EmitCategoryIsExcluded) {
@@ -271,13 +308,13 @@ TEST_F(SuppressionMappingTest, EmitCategoryIsExcluded) {
   clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
   EXPECT_THAT(diags(), IsEmpty());
 
-  EXPECT_TRUE(
-      Diags.isSuppressedViaMapping(diag::warn_unused_function, "bar.cpp"));
-  EXPECT_FALSE(
-      Diags.isSuppressedViaMapping(diag::warn_unused_function, "foo.cpp"));
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
+                                           locForFile("bar.cpp")));
+  EXPECT_FALSE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
+                                            locForFile("foo.cpp")));
 }
 
-TEST_F(SuppressionMappingTest, LongestMatchWins) {
+TEST_F(SuppressionMappingTest, LastMatchWins) {
   llvm::StringLiteral SuppressionMappingFile = R"(
   [unused]
   src:*clang/*
@@ -289,12 +326,46 @@ TEST_F(SuppressionMappingTest, LongestMatchWins) {
   clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
   EXPECT_THAT(diags(), IsEmpty());
 
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile("clang/lib/Basic/foo.h")));
+  EXPECT_FALSE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile("clang/lib/Sema/bar.h")));
   EXPECT_TRUE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
-                                           "clang/lib/Basic/foo.h"));
+                                           locForFile("clang/lib/Sema/foo.h")));
+}
+
+TEST_F(SuppressionMappingTest, LongShortMatch) {
+  llvm::StringLiteral SuppressionMappingFile = R"(
+  [unused]
+  src:*test/*
+  src:*lld/*=emit)";
+  Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";
+  FS->addFile("foo.txt", /*ModificationTime=*/{},
+              llvm::MemoryBuffer::getMemBuffer(SuppressionMappingFile));
+  clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
+  EXPECT_THAT(diags(), IsEmpty());
+
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
+                                           locForFile("test/t1.cpp")));
   EXPECT_FALSE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
-                                            "clang/lib/Sema/bar.h"));
+                                            locForFile("lld/test/t2.cpp")));
+}
+
+TEST_F(SuppressionMappingTest, ShortLongMatch) {
+  llvm::StringLiteral SuppressionMappingFile = R"(
+  [unused]
+  src:*lld/*=emit
+  src:*test/*)";
+  Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";
+  FS->addFile("foo.txt", /*ModificationTime=*/{},
+              llvm::MemoryBuffer::getMemBuffer(SuppressionMappingFile));
+  clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
+  EXPECT_THAT(diags(), IsEmpty());
+
   EXPECT_TRUE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
-                                           "clang/lib/Sema/foo.h"));
+                                           locForFile("test/t1.cpp")));
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(diag::warn_unused_function,
+                                           locForFile("lld/test/t2.cpp")));
 }
 
 TEST_F(SuppressionMappingTest, IsIgnored) {
@@ -308,9 +379,7 @@ TEST_F(SuppressionMappingTest, IsIgnored) {
   clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
   ASSERT_THAT(diags(), IsEmpty());
 
-  FileManager FM({}, FS);
-  SourceManager SM(Diags, FM);
-
+  SourceManager &SM = Diags.getSourceManager();
   auto ClangID =
       SM.createFileID(llvm::MemoryBuffer::getMemBuffer("", "clang/foo.h"));
   auto NonClangID =
@@ -336,4 +405,69 @@ TEST_F(SuppressionMappingTest, IsIgnored) {
   EXPECT_FALSE(Diags.isIgnored(diag::warn_unused_function,
                                SM.getLocForStartOfFile(ClangID)));
 }
+
+TEST_F(SuppressionMappingTest, ParsingRespectsOtherWarningOpts) {
+  Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";
+  FS->addFile("foo.txt", /*ModificationTime=*/{},
+              llvm::MemoryBuffer::getMemBuffer("[non-existing-warning]"));
+  Diags.getDiagnosticOptions().Warnings.push_back("no-unknown-warning-option");
+  clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
+  EXPECT_THAT(diags(), IsEmpty());
+}
+
+#ifdef _WIN32
+TEST_F(SuppressionMappingTest, CanonicalizesSlashesOnWindows) {
+  llvm::StringLiteral SuppressionMappingFile = R"(#!special-case-list-v4
+  [unused]
+  src:*clang/*
+  src:*clang/lib/Sema/*=emit
+  src:*clang/lib\\Sema/foo*
+  fun:suppress/me)";
+  Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";
+  FS->addFile("foo.txt", /*ModificationTime=*/{},
+              llvm::MemoryBuffer::getMemBuffer(SuppressionMappingFile));
+  clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
+  EXPECT_THAT(diags(), IsEmpty());
+
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile(R"(clang/lib/Basic/bar.h)")));
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile(R"(clang/lib/Basic\bar.h)")));
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile(R"(clang\lib/Basic/bar.h)")));
+  EXPECT_FALSE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile(R"(clang/lib/Sema/baz.h)")));
+  EXPECT_FALSE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile(R"(clang/lib/Sema\baz.h)")));
+
+  // Under slash-agnostic matching, backslashes and forward slashes match each
+  // other, so we match the third pattern.
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile(R"(clang\lib\Sema/foo.h)")));
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile(R"(clang/lib/Sema/foo.h)")));
+}
+#endif
+
+TEST(EscapeSingleCodepointForDiagnosticTest, printableDisplaysQuoted) {
+  EXPECT_EQ(EscapeSingleCodepointForDiagnostic(U'A'), "'A'");
+  // This test fails when msvc is not using /utf-8.
+  // EXPECT_EQ(EscapeSingleCodepointForDiagnostic(U'🤡'), "'🤡' U+1F921");
+  EXPECT_EQ(EscapeSingleCodepointForDiagnostic(U' '), "' '");
+}
+
+TEST(EscapeSingleCodepointForDiagnosticTest, nonPrintableDisplaysNoQuoted) {
+  EXPECT_EQ(EscapeSingleCodepointForDiagnostic(U'\n'), "U+000A");
+  EXPECT_EQ(EscapeSingleCodepointForDiagnostic(U'\0'), "U+0000");
+  EXPECT_EQ(EscapeSingleCodepointForDiagnostic(U'\x1B'), "U+001B");
+}
+
+TEST(EscapeSingleCodepointForDiagnosticTest, nonScalarValues) {
+  // Low and high surrogates:
+  EXPECT_EQ(EscapeSingleCodepointForDiagnostic(0xD800), "<0xD800>");
+  EXPECT_EQ(EscapeSingleCodepointForDiagnostic(0xDFFF), "<0xDFFF>");
+  // Overly large values:
+  EXPECT_EQ(EscapeSingleCodepointForDiagnostic(0x110000), "<0x110000>");
+}
+
 } // namespace

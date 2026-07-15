@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_DISJUNCTION_H
-#define _LIBCPP___TYPE_TRAITS_DISJUNCTION_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_DISJUNCTION_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_DISJUNCTION_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/integral_constant.h>
@@ -43,16 +43,6 @@ struct _OrImpl<false> {
 template <class... _Args>
 using _Or _LIBCPP_NODEBUG = typename _OrImpl<sizeof...(_Args) != 0>::template _Result<false_type, _Args...>;
 
-#if _LIBCPP_STD_VER >= 17
-
-template <class... _Args>
-struct disjunction : _Or<_Args...> {};
-
-template <class... _Args>
-inline constexpr bool disjunction_v = _Or<_Args...>::value;
-
-#endif // _LIBCPP_STD_VER >= 17
-
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_DISJUNCTION_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_DISJUNCTION_H

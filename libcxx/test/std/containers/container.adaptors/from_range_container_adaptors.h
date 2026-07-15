@@ -26,7 +26,7 @@
 #include "unwrap_container_adaptor.h"
 
 template <class Container, class Range>
-concept HasFromRangeCtr = requires (Range&& range) {
+concept HasFromRangeCtr = requires(Range&& range) {
   Container(std::from_range, std::forward<Range>(range));
   Container(std::from_range, std::forward<Range>(range), std::allocator<typename Container::value_type>());
 };
@@ -47,8 +47,8 @@ constexpr bool test_constraints() {
   return true;
 }
 
-template <template <class ...> class Adaptor,
-          template <class ...> class UnderlyingContainer,
+template <template <class...> class Adaptor,
+          template <class...> class UnderlyingContainer,
           class T,
           class Iter,
           class Sent,
@@ -80,12 +80,7 @@ constexpr void test_container_adaptor_with_input(std::vector<T>&& input) {
   }
 }
 
-template <template <class ...> class UnderlyingContainer,
-          class T,
-          class Iter,
-          class Sent,
-          class Comp,
-          class Alloc>
+template <template <class...> class UnderlyingContainer, class T, class Iter, class Sent, class Comp, class Alloc>
 constexpr void test_priority_queue_with_input(std::vector<T>&& input) {
   { // (range)
     std::ranges::subrange in(Iter(input.data()), Sent(Iter(input.data() + input.size())));
@@ -146,8 +141,8 @@ constexpr void test_priority_queue_with_input(std::vector<T>&& input) {
   }
 }
 
-template <template <class ...> class Adaptor,
-          template <class ...> class UnderlyingContainer,
+template <template <class...> class Adaptor,
+          template <class...> class UnderlyingContainer,
           class T,
           class Iter,
           class Sent,
@@ -163,12 +158,7 @@ constexpr void test_container_adaptor() {
   test_with_input({5});
 }
 
-template <template <class ...> class UnderlyingContainer,
-          class T,
-          class Iter,
-          class Sent,
-          class Comp,
-          class Alloc>
+template <template <class...> class UnderlyingContainer, class T, class Iter, class Sent, class Comp, class Alloc>
 constexpr void test_priority_queue() {
   auto test_with_input = &test_priority_queue_with_input<UnderlyingContainer, T, Iter, Sent, Comp, Alloc>;
 
@@ -180,7 +170,7 @@ constexpr void test_priority_queue() {
   test_with_input({5});
 }
 
-template <template <class ...> class Container>
+template <template <class...> class Container>
 constexpr void test_container_adaptor_move_only() {
   MoveOnly input[5];
   std::ranges::subrange in(std::move_iterator{input}, std::move_iterator{input + 5});
@@ -188,18 +178,18 @@ constexpr void test_container_adaptor_move_only() {
   [[maybe_unused]] Container<MoveOnly> c(std::from_range, in);
 }
 
-template <template <class ...> class Adaptor>
+template <template <class...> class Adaptor>
 void test_exception_safety_throwing_copy() {
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
   constexpr int ThrowOn = 3;
-  using T = ThrowingCopy<ThrowOn>;
+  using T               = ThrowingCopy<ThrowOn>;
   test_exception_safety_throwing_copy<ThrowOn, /*Size=*/5>([](T* from, T* to) {
     [[maybe_unused]] Adaptor<T, std::vector<T>> c(std::from_range, std::ranges::subrange(from, to));
   });
 #endif
 }
 
-template <template <class ...> class Adaptor, class T>
+template <template <class...> class Adaptor, class T>
 void test_exception_safety_throwing_allocator() {
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
   T in[] = {0, 1};

@@ -2,6 +2,11 @@
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O0 -mtriple=spirv-unknown-vulkan-compute %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+;; TODO: Enable Vulkan spirv-val once test_builtin_iaddcarry_anon no longer uses
+;; an addrspace(4) sret pointer; generic pointers require the Kernel-only
+;; GenericPointer capability and are rejected by Vulkan validation.
+; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan-compute %s -o - -filetype=obj | spirv-val %}
 
 %i8struct = type {i8, i8}
 %i16struct = type {i16, i16}
@@ -25,9 +30,7 @@
 ; CHECK-SPIRV-DAG:                    [[v4uint:%[a-z0-9_]+]] = OpTypeVector [[uint]] 4
 ; CHECK-SPIRV-DAG:                 [[vecstruct:%[a-z0-9_]+]] = OpTypeStruct [[v4uint]] [[v4uint]]
 ; CHECK-SPIRV-DAG:   [[_ptr_Function_vecstruct:%[a-z0-9_]+]] = OpTypePointer Function [[vecstruct]]
-; CHECK-SPIRV-DAG:               [[struct_anon:%[a-z0-9_.]+]] = OpTypeStruct [[uint]] [[uint]]
-; CHECK-SPIRV-DAG: [[_ptr_Function_struct_anon:%[a-z0-9_]+]] = OpTypePointer Function [[struct_anon]]
-; CHECK-SPIRV-DAG:  [[_ptr_Generic_struct_anon:%[a-z0-9_]+]] = OpTypePointer Generic [[struct_anon]]
+; CHECK-SPIRV-DAG:    [[_ptr_Generic_i32struct:%[a-z0-9_]+]] = OpTypePointer Generic [[i32struct]]
 
 define spir_func void @test_builtin_iaddcarrycc(i8 %a, i8 %b) {
   entry:
@@ -116,9 +119,9 @@ define spir_func void @test_builtin_iaddcarry_anon(i32 %a, i32 %b) {
 ; CHECK-SPIRV:        [[a_4:%[a-z0-9_]+]] = OpFunctionParameter [[uint]]
 ; CHECK-SPIRV:        [[b_4:%[a-z0-9_]+]] = OpFunctionParameter [[uint]]
 ; CHECK-SPIRV:    [[entry_4:%[a-z0-9_]+]] = OpLabel
-; CHECK-SPIRV:     [[var_59:%[a-z0-9_]+]] = OpVariable [[_ptr_Function_struct_anon]] Function
-; CHECK-SPIRV:     [[var_61:%[a-z0-9_]+]] = OpPtrCastToGeneric [[_ptr_Generic_struct_anon]] [[var_59]]
-; CHECK-SPIRV:     [[var_62:%[a-z0-9_]+]] = OpIAddCarry [[struct_anon]] [[a_4]] [[b_4]]
+; CHECK-SPIRV:     [[var_59:%[a-z0-9_]+]] = OpVariable [[_ptr_Function_i32struct]] Function
+; CHECK-SPIRV:     [[var_61:%[a-z0-9_]+]] = OpPtrCastToGeneric [[_ptr_Generic_i32struct]] [[var_59]]
+; CHECK-SPIRV:     [[var_62:%[a-z0-9_]+]] = OpIAddCarry [[i32struct]] [[a_4]] [[b_4]]
 ; CHECK-SPIRV:                              OpStore [[var_61]] [[var_62]]
 
 declare void @_Z17__spirv_IAddCarryIiiE4anonIT_T0_ES1_S2_(ptr addrspace(4) sret(%struct.anon) align 4, i32, i32)

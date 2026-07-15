@@ -9,7 +9,9 @@
 // new_handler.
 //===----------------------------------------------------------------------===//
 
+#include <cstdlib> // std::abort
 #include <exception>
+#include <new>
 #include "abort_message.h"
 #include "cxxabi.h"
 #include "cxa_handlers.h"
@@ -22,8 +24,7 @@
 static constinit const char* cause = "uncaught";
 
 #  ifndef _LIBCXXABI_NO_EXCEPTIONS
-__attribute__((noreturn))
-static void demangling_terminate_handler()
+[[noreturn]] static void demangling_terminate_handler()
 {
     using namespace __cxxabiv1;
     __cxa_eh_globals* globals = __cxa_get_globals_fast();
@@ -76,15 +77,14 @@ static void demangling_terminate_handler()
     }
 }
 #else // !_LIBCXXABI_NO_EXCEPTIONS
-__attribute__((noreturn))
-static void demangling_terminate_handler()
+[[noreturn]] static void demangling_terminate_handler()
 {
+    (void)cause;
     __abort_message("terminating");
 }
 #endif // !_LIBCXXABI_NO_EXCEPTIONS
 
-__attribute__((noreturn))
-static void demangling_unexpected_handler()
+[[noreturn]] static void demangling_unexpected_handler()
 {
     cause = "unexpected";
     std::terminate();
@@ -93,7 +93,7 @@ static void demangling_unexpected_handler()
 static constexpr std::terminate_handler default_terminate_handler = demangling_terminate_handler;
 static constexpr std::terminate_handler default_unexpected_handler = demangling_unexpected_handler;
 #else // !LIBCXXABI_SILENT_TERMINATE
-static constexpr std::terminate_handler default_terminate_handler = ::abort;
+static constexpr std::terminate_handler default_terminate_handler = std::abort;
 static constexpr std::terminate_handler default_unexpected_handler = std::terminate;
 #endif // !LIBCXXABI_SILENT_TERMINATE
 

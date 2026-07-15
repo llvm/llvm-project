@@ -127,7 +127,7 @@ where type is not necessary.
 Arrays are not types in Fortran.
 Being an array is a property of an object or function, not of a type.
 Unlike C, one cannot have an array of arrays or an array of pointers,
-although can can have an array of a derived type that has arrays or
+although one can have an array of a derived type that has arrays or
 pointers as components.
 Arrays are multidimensional, and the number of dimensions is called
 the _rank_ of the array.
@@ -304,7 +304,7 @@ Preprocessing behavior varies across implementations and one should not depend o
 much portability.
 Preprocessing is typically requested by the use of a capitalized filename
 suffix (e.g., "foo.F90") or a compiler command line option.
-(Since the F18 compiler always runs its built-in preprocessing stage,
+(Since Flang always runs its built-in preprocessing stage,
 no special option or filename suffix is required.)
 
 ## "Object Oriented" Programming

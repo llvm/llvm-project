@@ -2,9 +2,7 @@
 ; RUN: llc -mtriple=aarch64 -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64 -global-isel -global-isel-abort=2 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for extract_v4i32_vector_insert
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for extract_v4i32_vector_insert_const
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for extract_v4i32_vector_extract
+; CHECK-GI:       warning: Instruction selection used fallback path for extract_v4i32_vector_extract
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for extract_v4i32_vector_extract_const
 
 define i64 @extract_v2i64_undef_index(<2 x i64> %a, i32 %c) {
@@ -331,7 +329,7 @@ define float @extract_v4i32_minimum(<4 x float> %a, <4 x float> %b, i32 %c) {
 ; CHECK-GI-NEXT:    add sp, sp, #16
 ; CHECK-GI-NEXT:    ret
 entry:
-  %vector = call <4 x float> @llvm.minimum.v4float(<4 x float> %a, <4 x float> %b)
+  %vector = call <4 x float> @llvm.minimum.v4f32(<4 x float> %a, <4 x float> %b)
   %d = extractelement <4 x float> %vector, i32 %c
   ret float %d
 }
@@ -367,7 +365,7 @@ define float @extract_v4i32_minimum_build_vector(<4 x float> %a, <4 x float> %b,
 ; CHECK-GI-NEXT:    add sp, sp, #16
 ; CHECK-GI-NEXT:    ret
 entry:
-  %vector = call <4 x float> @llvm.minimum.v4float(<4 x float> %a, <4 x float> <float 42.0, float 11.0, float 17.0, float 6.0>)
+  %vector = call <4 x float> @llvm.minimum.v4f32(<4 x float> %a, <4 x float> <float 42.0, float 11.0, float 17.0, float 6.0>)
   %d = extractelement <4 x float> %vector, i32 %c
   ret float %d
 }
@@ -381,7 +379,7 @@ define float @extract_v4i32_minimum_build_vector_const(<4 x float> %a, <4 x floa
 ; CHECK-NEXT:    mov s0, v0.s[1]
 ; CHECK-NEXT:    ret
 entry:
-  %vector = call <4 x float> @llvm.minimum.v4float(<4 x float> %a, <4 x float> <float 42.0, float 11.0, float 17.0, float 6.0>)
+  %vector = call <4 x float> @llvm.minimum.v4f32(<4 x float> %a, <4 x float> <float 42.0, float 11.0, float 17.0, float 6.0>)
   %d = extractelement <4 x float> %vector, i32 1
   ret float %d
 }
@@ -391,13 +389,10 @@ define float @extract_v4i32_copysign_build_vector(<4 x float> %a, <4 x float> %b
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-SD-NEXT:    adrp x8, .LCPI16_0
-; CHECK-SD-NEXT:    mvni v1.4s, #128, lsl #24
-; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI16_0]
+; CHECK-SD-NEXT:    fabs v0.4s, v0.4s
 ; CHECK-SD-NEXT:    mov x8, sp
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    bfi x8, x0, #2, #2
-; CHECK-SD-NEXT:    bif v0.16b, v2.16b, v1.16b
 ; CHECK-SD-NEXT:    str q0, [sp]
 ; CHECK-SD-NEXT:    ldr s0, [x8]
 ; CHECK-SD-NEXT:    add sp, sp, #16
@@ -417,7 +412,7 @@ define float @extract_v4i32_copysign_build_vector(<4 x float> %a, <4 x float> %b
 ; CHECK-GI-NEXT:    add sp, sp, #16
 ; CHECK-GI-NEXT:    ret
 entry:
-  %vector = call <4 x float> @llvm.copysign.v4float(<4 x float> %a, <4 x float> <float 42.0, float 11.0, float 17.0, float 6.0>)
+  %vector = call <4 x float> @llvm.copysign.v4f32(<4 x float> %a, <4 x float> <float 42.0, float 11.0, float 17.0, float 6.0>)
   %d = extractelement <4 x float> %vector, i32 %c
   ret float %d
 }
@@ -425,10 +420,7 @@ entry:
 define float @extract_v4i32_copysign_build_vector_const(<4 x float> %a, <4 x float> %b, i32 %c) {
 ; CHECK-SD-LABEL: extract_v4i32_copysign_build_vector_const:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    adrp x8, .LCPI17_0
-; CHECK-SD-NEXT:    mvni v1.4s, #128, lsl #24
-; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI17_0]
-; CHECK-SD-NEXT:    bif v0.16b, v2.16b, v1.16b
+; CHECK-SD-NEXT:    fabs v0.4s, v0.4s
 ; CHECK-SD-NEXT:    mov s0, v0.s[2]
 ; CHECK-SD-NEXT:    ret
 ;
@@ -439,7 +431,7 @@ define float @extract_v4i32_copysign_build_vector_const(<4 x float> %a, <4 x flo
 ; CHECK-GI-NEXT:    mov s0, v0.s[2]
 ; CHECK-GI-NEXT:    ret
 entry:
-  %vector = call <4 x float> @llvm.copysign.v4float(<4 x float> %a, <4 x float> <float 42.0, float 11.0, float 17.0, float 6.0>)
+  %vector = call <4 x float> @llvm.copysign.v4f32(<4 x float> %a, <4 x float> <float 42.0, float 11.0, float 17.0, float 6.0>)
   %d = extractelement <4 x float> %vector, i32 2
   ret float %d
 }
@@ -514,8 +506,8 @@ entry:
   ret i32 %d
 }
 
-define i32 @extract_v4float_fcmp(<4 x float> %a, <4 x float> %b, i32 %c) {
-; CHECK-SD-LABEL: extract_v4float_fcmp:
+define i32 @extract_v4f32_fcmp(<4 x float> %a, <4 x float> %b, i32 %c) {
+; CHECK-SD-LABEL: extract_v4f32_fcmp:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
@@ -530,7 +522,7 @@ define i32 @extract_v4float_fcmp(<4 x float> %a, <4 x float> %b, i32 %c) {
 ; CHECK-SD-NEXT:    add sp, sp, #16
 ; CHECK-SD-NEXT:    ret
 ;
-; CHECK-GI-LABEL: extract_v4float_fcmp:
+; CHECK-GI-LABEL: extract_v4f32_fcmp:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #16
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
@@ -554,8 +546,8 @@ entry:
   ret i32 %d
 }
 
-define i32 @extract_v4float_fcmp_const(<4 x float> %a, <4 x float> %b, i32 %c) {
-; CHECK-SD-LABEL: extract_v4float_fcmp_const:
+define i32 @extract_v4f32_fcmp_const(<4 x float> %a, <4 x float> %b, i32 %c) {
+; CHECK-SD-LABEL: extract_v4f32_fcmp_const:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    movi v1.4s, #1
 ; CHECK-SD-NEXT:    fcmeq v0.4s, v0.4s, v0.4s
@@ -563,7 +555,7 @@ define i32 @extract_v4float_fcmp_const(<4 x float> %a, <4 x float> %b, i32 %c) {
 ; CHECK-SD-NEXT:    mov w0, v0.s[1]
 ; CHECK-SD-NEXT:    ret
 ;
-; CHECK-GI-LABEL: extract_v4float_fcmp_const:
+; CHECK-GI-LABEL: extract_v4f32_fcmp_const:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    fmov v1.4s, #1.00000000
 ; CHECK-GI-NEXT:    fcmge v2.4s, v0.4s, v1.4s
@@ -611,7 +603,7 @@ define i32 @extract_v4i32_select(<4 x i32> %a, <4 x i32> %b, i32 %c, <4 x i1> %c
 ; CHECK-GI-NEXT:    mov w8, w0
 ; CHECK-GI-NEXT:    and x8, x8, #0x3
 ; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #31
-; CHECK-GI-NEXT:    sshr v1.4s, v1.4s, #31
+; CHECK-GI-NEXT:    cmlt v1.4s, v1.4s, #0
 ; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v1.16b
 ; CHECK-GI-NEXT:    str q0, [sp]
 ; CHECK-GI-NEXT:    ldr w0, [x9, x8, lsl #2]
@@ -640,7 +632,7 @@ define i32 @extract_v4i32_select_const(<4 x i32> %a, <4 x i32> %b, i32 %c, <4 x 
 ; CHECK-GI-NEXT:    adrp x8, .LCPI23_0
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI23_0]
 ; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #31
-; CHECK-GI-NEXT:    sshr v1.4s, v1.4s, #31
+; CHECK-GI-NEXT:    cmlt v1.4s, v1.4s, #0
 ; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v1.16b
 ; CHECK-GI-NEXT:    mov s0, v0.s[2]
 ; CHECK-GI-NEXT:    fmov w0, s0
@@ -686,9 +678,9 @@ define i32 @extract_v4i32_abs(<4 x float> %a, i32 %c) {
 ; CHECK-GI-NEXT:    add sp, sp, #16
 ; CHECK-GI-NEXT:    ret
 entry:
-  %ceil = call <4 x float> @llvm.ceil.v4float(<4 x float> %a)
-  %floor = call <4 x float> @llvm.floor.v4float(<4 x float> %ceil)
-  %fabs = call <4 x float> @llvm.fabs.v4float(<4 x float> %floor)
+  %ceil = call <4 x float> @llvm.ceil.v4f32(<4 x float> %a)
+  %floor = call <4 x float> @llvm.floor.v4f32(<4 x float> %ceil)
+  %fabs = call <4 x float> @llvm.fabs.v4f32(<4 x float> %floor)
   %abs = fptosi <4 x float> %fabs to <4 x i32>
   %vector = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %abs, i1 0)
   %d = extractelement <4 x i32> %vector, i32 %c
@@ -714,9 +706,9 @@ define i32 @extract_v4i32_abs_const(<4 x float> %a, i32 %c) {
 ; CHECK-GI-NEXT:    fmov w0, s0
 ; CHECK-GI-NEXT:    ret
 entry:
-  %ceil = call <4 x float> @llvm.ceil.v4float(<4 x float> <float 1.0, float 4.0, float 3.0, float 2.0>)
-  %floor = call <4 x float> @llvm.floor.v4float(<4 x float> %ceil)
-  %fabs = call <4 x float> @llvm.fabs.v4float(<4 x float> %floor)
+  %ceil = call <4 x float> @llvm.ceil.v4f32(<4 x float> <float 1.0, float 4.0, float 3.0, float 2.0>)
+  %floor = call <4 x float> @llvm.floor.v4f32(<4 x float> %ceil)
+  %fabs = call <4 x float> @llvm.fabs.v4f32(<4 x float> %floor)
   %abs = fptosi <4 x float> %fabs to <4 x i32>
   %vector = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %abs, i1 0)
   %d = extractelement <4 x i32> %vector, i32 1
@@ -757,9 +749,9 @@ define i32 @extract_v4i32_abs_half_const(<4 x float> %a, i32 %c) {
 ; CHECK-GI-NEXT:    add sp, sp, #16
 ; CHECK-GI-NEXT:    ret
 entry:
-  %ceil = call <4 x float> @llvm.ceil.v4float(<4 x float> <float 1.0, float 4.0, float 3.0, float 2.0>)
-  %floor = call <4 x float> @llvm.floor.v4float(<4 x float> %ceil)
-  %fabs = call <4 x float> @llvm.fabs.v4float(<4 x float> %floor)
+  %ceil = call <4 x float> @llvm.ceil.v4f32(<4 x float> <float 1.0, float 4.0, float 3.0, float 2.0>)
+  %floor = call <4 x float> @llvm.floor.v4f32(<4 x float> %ceil)
+  %fabs = call <4 x float> @llvm.fabs.v4f32(<4 x float> %floor)
   %abs = fptosi <4 x float> %fabs to <4 x i32>
   %vector = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %abs, i1 0)
   %d = extractelement <4 x i32> %vector, i32 %c
@@ -767,20 +759,35 @@ entry:
 }
 
 define i32 @extract_v4i32_vector_insert(<4 x i32> %a, <2 x i32> %b, i32 %c) {
-; CHECK-LABEL: extract_v4i32_vector_insert:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    bfi x8, x0, #2, #2
-; CHECK-NEXT:    mov v1.d[1], v0.d[0]
-; CHECK-NEXT:    str q1, [sp]
-; CHECK-NEXT:    ldr w0, [x8]
-; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: extract_v4i32_vector_insert:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    sub sp, sp, #16
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-SD-NEXT:    mov d0, v0.d[1]
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    mov x8, sp
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-SD-NEXT:    bfi x8, x0, #2, #2
+; CHECK-SD-NEXT:    mov v1.d[1], v0.d[0]
+; CHECK-SD-NEXT:    str q1, [sp]
+; CHECK-SD-NEXT:    ldr w0, [x8]
+; CHECK-SD-NEXT:    add sp, sp, #16
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v4i32_vector_insert:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    sub sp, sp, #16
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    mov w8, w0
+; CHECK-GI-NEXT:    mov x9, sp
+; CHECK-GI-NEXT:    and x8, x8, #0x3
+; CHECK-GI-NEXT:    mov v1.d[1], v0.d[0]
+; CHECK-GI-NEXT:    str q1, [sp]
+; CHECK-GI-NEXT:    ldr w0, [x9, x8, lsl #2]
+; CHECK-GI-NEXT:    add sp, sp, #16
+; CHECK-GI-NEXT:    ret
 entry:
   %vector = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> %a, <2 x i32> %b, i64 0)
   %d = extractelement <4 x i32> %vector, i32 %c
@@ -788,11 +795,20 @@ entry:
 }
 
 define i32 @extract_v4i32_vector_insert_const(<4 x i32> %a, <2 x i32> %b, i32 %c) {
-; CHECK-LABEL: extract_v4i32_vector_insert_const:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    mov w0, v1.s[1]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: extract_v4i32_vector_insert_const:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    mov w0, v1.s[1]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v4i32_vector_insert_const:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    mov v1.d[1], v0.d[0]
+; CHECK-GI-NEXT:    mov s0, v1.s[1]
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
 entry:
   %vector = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> %a, <2 x i32> %b, i64 0)
   %d = extractelement <4 x i32> %vector, i32 1
@@ -814,6 +830,169 @@ define i32 @extract_v4i32_vector_extract(<4 x i32> %a, <2 x i32> %b, i32 %c) {
 entry:
   %vector = call <4 x i32> @llvm.vector.extract.v2i32.v4i32(<4 x i32> %a, i64 0)
   %d = extractelement <4 x i32> %vector, i32 %c
+  ret i32 %d
+}
+
+define i32 @extract_v4i32_vector_non_zero_insert_const(<4 x i32> %a, <2 x i32> %b, i32 %c) {
+; CHECK-SD-LABEL: extract_v4i32_vector_non_zero_insert_const:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov w0, v0.s[1]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v4i32_vector_non_zero_insert_const:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    mov s0, v0.s[1]
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
+entry:
+  %vector = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> %a, <2 x i32> %b, i64 2)
+  %d = extractelement <4 x i32> %vector, i32 1
+  ret i32 %d
+}
+
+define i32 @extract_v4i32_vector_non_zero_insert(<4 x i32> %a, <2 x i32> %b, i32 %c) {
+; CHECK-SD-LABEL: extract_v4i32_vector_non_zero_insert:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    sub sp, sp, #16
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    mov x8, sp
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-SD-NEXT:    bfi x8, x0, #2, #2
+; CHECK-SD-NEXT:    str q0, [sp]
+; CHECK-SD-NEXT:    ldr w0, [x8]
+; CHECK-SD-NEXT:    add sp, sp, #16
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v4i32_vector_non_zero_insert:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    sub sp, sp, #16
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    mov w8, w0
+; CHECK-GI-NEXT:    mov x9, sp
+; CHECK-GI-NEXT:    and x8, x8, #0x3
+; CHECK-GI-NEXT:    str q0, [sp]
+; CHECK-GI-NEXT:    ldr w0, [x9, x8, lsl #2]
+; CHECK-GI-NEXT:    add sp, sp, #16
+; CHECK-GI-NEXT:    ret
+entry:
+  %vector = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> %a, <2 x i32> %b, i64 2)
+  %d = extractelement <4 x i32> %vector, i32 %c
+  ret i32 %d
+}
+
+define i32 @extract_v8i32_vector_non_half_insert_const(<8 x i32> %a, <2 x i32> %b, i32 %c) {
+; CHECK-SD-LABEL: extract_v8i32_vector_non_half_insert_const:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-SD-NEXT:    mov w0, v2.s[1]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v8i32_vector_non_half_insert_const:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q31_q0
+; CHECK-GI-NEXT:    adrp x8, .LCPI32_0
+; CHECK-GI-NEXT:    fmov d31, d2
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI32_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v31.16b, v0.16b }, v1.16b
+; CHECK-GI-NEXT:    mov s0, v0.s[1]
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
+entry:
+  %vector = call <8 x i32> @llvm.vector.insert.v4i32.v2i32(<8 x i32> %a, <2 x i32> %b, i64 0)
+  %d = extractelement <8 x i32> %vector, i32 1
+  ret i32 %d
+}
+
+define i32 @extract_v4i32_vector_non_half_insert(<8 x i32> %a, <2 x i32> %b, i32 %c) {
+; CHECK-SD-LABEL: extract_v4i32_vector_non_half_insert:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-SD-NEXT:    mov w0, v2.s[1]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v4i32_vector_non_half_insert:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q31_q0
+; CHECK-GI-NEXT:    adrp x8, .LCPI33_0
+; CHECK-GI-NEXT:    fmov d31, d2
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI33_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v31.16b, v0.16b }, v1.16b
+; CHECK-GI-NEXT:    mov s0, v0.s[1]
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
+entry:
+  %vector = call <8 x i32> @llvm.vector.insert.v4i32.v2i32(<8 x i32> %a, <2 x i32> %b, i64 0)
+  %d = extractelement <8 x i32> %vector, i32 1
+  ret i32 %d
+}
+
+define i32 @extract_v8i32_vector_non_half_non_zero_insert_const(<8 x i32> %a, <2 x i32> %b, i32 %c) {
+; CHECK-SD-LABEL: extract_v8i32_vector_non_half_non_zero_insert_const:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov w0, v0.s[1]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v8i32_vector_non_half_non_zero_insert_const:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
+; CHECK-GI-NEXT:    adrp x8, .LCPI34_0
+; CHECK-GI-NEXT:    fmov d1, d2
+; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI34_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v3.16b
+; CHECK-GI-NEXT:    mov s0, v0.s[1]
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
+entry:
+  %vector = call <8 x i32> @llvm.vector.insert.v4i32.v2i32(<8 x i32> %a, <2 x i32> %b, i64 2)
+  %d = extractelement <8 x i32> %vector, i32 1
+  ret i32 %d
+}
+
+define i32 @extract_v8i32_vector_non_half_non_zero_insert(<8 x i32> %a, <2 x i32> %b, i32 %c) {
+; CHECK-SD-LABEL: extract_v8i32_vector_non_half_non_zero_insert:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-SD-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-SD-NEXT:    and x8, x0, #0x7
+; CHECK-SD-NEXT:    stp q0, q1, [sp, #-32]!
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-SD-NEXT:    mov x9, sp
+; CHECK-SD-NEXT:    ldr w0, [x9, x8, lsl #2]
+; CHECK-SD-NEXT:    add sp, sp, #32
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v8i32_vector_non_half_non_zero_insert:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-GI-NEXT:    sub x9, sp, #48
+; CHECK-GI-NEXT:    mov x29, sp
+; CHECK-GI-NEXT:    and sp, x9, #0xffffffffffffffe0
+; CHECK-GI-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -8
+; CHECK-GI-NEXT:    .cfi_offset w29, -16
+; CHECK-GI-NEXT:    mov v3.16b, v0.16b
+; CHECK-GI-NEXT:    adrp x8, .LCPI35_0
+; CHECK-GI-NEXT:    mov x9, sp
+; CHECK-GI-NEXT:    fmov d4, d2
+; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI35_0]
+; CHECK-GI-NEXT:    mov w8, w0
+; CHECK-GI-NEXT:    and x8, x8, #0x7
+; CHECK-GI-NEXT:    tbl v0.16b, { v3.16b, v4.16b }, v0.16b
+; CHECK-GI-NEXT:    stp q0, q1, [sp]
+; CHECK-GI-NEXT:    ldr w0, [x9, x8, lsl #2]
+; CHECK-GI-NEXT:    mov sp, x29
+; CHECK-GI-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ret
+entry:
+  %vector = call <8 x i32> @llvm.vector.insert.v4i32.v2i32(<8 x i32> %a, <2 x i32> %b, i64 2)
+  %d = extractelement <8 x i32> %vector, i32 %c
   ret i32 %d
 }
 
@@ -919,10 +1098,10 @@ define i32 @extract_v4i32_shuffle(<4 x i32> %a, <4 x i32> %b, i32 %c) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #16
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GI-NEXT:    adrp x8, .LCPI35_0
+; CHECK-GI-NEXT:    adrp x8, .LCPI41_0
 ; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    mov x9, sp
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI35_0]
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI41_0]
 ; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    mov w8, w0
 ; CHECK-GI-NEXT:    and x8, x8, #0x3
@@ -1043,31 +1222,32 @@ entry:
 define i32 @extract_v4i32_phi(i64 %val, i32  %limit, ptr %ptr) {
 ; CHECK-SD-LABEL: extract_v4i32_phi:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov x8, #1 // =0x1
 ; CHECK-SD-NEXT:    dup v1.2s, w0
-; CHECK-SD-NEXT:    adrp x8, .LCPI41_0
 ; CHECK-SD-NEXT:    movi v0.2s, #16
-; CHECK-SD-NEXT:    ldr d2, [x8, :lo12:.LCPI41_0]
+; CHECK-SD-NEXT:    movk x8, #2, lsl #32
+; CHECK-SD-NEXT:    fmov d2, x8
 ; CHECK-SD-NEXT:    add v1.2s, v1.2s, v2.2s
-; CHECK-SD-NEXT:  .LBB41_1: // %loop
+; CHECK-SD-NEXT:  .LBB47_1: // %loop
 ; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-SD-NEXT:    fmov w8, s1
 ; CHECK-SD-NEXT:    add v1.2s, v1.2s, v0.2s
 ; CHECK-SD-NEXT:    cmp w8, w1
 ; CHECK-SD-NEXT:    add w0, w8, #10
 ; CHECK-SD-NEXT:    str w0, [x2, w8, sxtw #2]
-; CHECK-SD-NEXT:    b.lo .LBB41_1
+; CHECK-SD-NEXT:    b.lo .LBB47_1
 ; CHECK-SD-NEXT:  // %bb.2: // %ret
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: extract_v4i32_phi:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI41_0
+; CHECK-GI-NEXT:    adrp x8, .LCPI47_0
 ; CHECK-GI-NEXT:    dup v0.2d, x0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI41_0]
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI47_0]
 ; CHECK-GI-NEXT:    add v1.2d, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    movi v0.2s, #16
 ; CHECK-GI-NEXT:    xtn v1.2s, v1.2d
-; CHECK-GI-NEXT:  .LBB41_1: // %loop
+; CHECK-GI-NEXT:  .LBB47_1: // %loop
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-GI-NEXT:    fmov w8, s1
 ; CHECK-GI-NEXT:    fmov w9, s1
@@ -1075,7 +1255,7 @@ define i32 @extract_v4i32_phi(i64 %val, i32  %limit, ptr %ptr) {
 ; CHECK-GI-NEXT:    cmp w8, w1
 ; CHECK-GI-NEXT:    add w0, w9, #10
 ; CHECK-GI-NEXT:    str w0, [x2, w8, sxtw #2]
-; CHECK-GI-NEXT:    b.lo .LBB41_1
+; CHECK-GI-NEXT:    b.lo .LBB47_1
 ; CHECK-GI-NEXT:  // %bb.2: // %ret
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1098,4 +1278,33 @@ loop:
 
 ret:
   ret i32 %3
+}
+
+define <3 x ptr> @v3move(<3 x ptr> %a, <3 x ptr> %b, <3 x ptr> %x) {
+; CHECK-SD-LABEL: v3move:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fmov d1, d7
+; CHECK-SD-NEXT:    fmov d0, d6
+; CHECK-SD-NEXT:    ldr d2, [sp]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: v3move:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ldr x8, [sp]
+; CHECK-GI-NEXT:    fmov d0, d6
+; CHECK-GI-NEXT:    fmov d1, d7
+; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    ret
+entry:
+  ret <3 x ptr> %x
+}
+
+define ptr @v3ext(<3 x ptr> %a, <3 x ptr> %b, <3 x ptr> %x) {
+; CHECK-LABEL: v3ext:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr x0, [sp]
+; CHECK-NEXT:    ret
+entry:
+  %c = extractelement <3 x ptr> %x, i32 2
+  ret ptr %c
 }

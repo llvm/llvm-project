@@ -8,6 +8,11 @@
 
 // UNSUPPORTED: no-wide-characters
 
+// towctrans and wctrans were added in Android API 26.
+// TODO: Switch from UNSUPPORTED to XFAIL once the Android CI Docker sysroot is
+// updated.
+// UNSUPPORTED: LIBCXX-ANDROID-FIXME && target={{.+}}-android{{(eabi)?(21|22|23|24|25)}}
+
 // <wctype.h>
 
 #include <wctype.h>

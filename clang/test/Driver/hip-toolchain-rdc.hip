@@ -5,6 +5,7 @@
 // RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib2 \
 // RUN:   -fuse-ld=lld -B%S/Inputs/lld -fgpu-rdc -nogpuinc \
 // RUN:   --no-offload-new-driver -fhip-dump-offload-linker-script \
+// RUN:   -flto-partitions=8 \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck -check-prefixes=CHECK,LNX %s
@@ -16,6 +17,7 @@
 // RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib2 \
 // RUN:   -fuse-ld=lld -B%S/Inputs/lld -fgpu-rdc -nogpuinc \
 // RUN:   --no-offload-new-driver -fhip-dump-offload-linker-script \
+// RUN:   -flto-partitions=8 \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck -check-prefixes=CHECK,MSVC %s
@@ -92,25 +94,27 @@
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" [[HOST:"x86_64-[^"]+"]]
 // CHECK-SAME: "-emit-llvm-bc"
+// CHECK-SAME: "-flto=full" "-flto-unit"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
-// CHECK-SAME: "-fcuda-is-device" "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
+// CHECK-SAME: "-fcuda-is-device" "-fno-threadsafe-statics" "-fvisibility=hidden"
 // CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
 // CHECK-SAME: "-target-cpu" "gfx803"
 // CHECK-SAME: "-fgpu-rdc"
-// CHECK-SAME: {{.*}} "-o" [[A_BC1:".*bc"]] "-x" "hip"
+// CHECK-SAME: {{.*}} "-o" [[A_BC1:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC]]
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" [[HOST]]
 // CHECK-SAME: "-emit-llvm-bc"
+// CHECK-SAME: "-flto=full" "-flto-unit"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip"
-// CHECK-SAME: "-fcuda-is-device" "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
+// CHECK-SAME: "-fcuda-is-device" "-fno-threadsafe-statics" "-fvisibility=hidden"
 // CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
 // CHECK-SAME: "-target-cpu" "gfx803"
 // CHECK-SAME: "-fgpu-rdc"
-// CHECK-SAME: {{.*}} "-o" [[B_BC1:".*bc"]] "-x" "hip"
+// CHECK-SAME: {{.*}} "-o" [[B_BC1:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC]]
 
 // CHECK-NOT: "*.llvm-link"
@@ -124,28 +128,31 @@
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" [[HOST]]
 // CHECK-SAME: "-emit-llvm-bc"
+// CHECK-SAME: "-flto=full" "-flto-unit"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
 // CHECK-SAME: "-fcuda-is-device"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
 // CHECK-SAME: "-target-cpu" "gfx900"
-// CHECK-SAME: {{.*}} "-o" [[A_BC2:".*bc"]] "-x" "hip"
+// CHECK-SAME: {{.*}} "-o" [[A_BC2:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC]]
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" [[HOST]]
 // CHECK-SAME: "-emit-llvm-bc"
+// CHECK-SAME: "-flto=full" "-flto-unit"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip"
 // CHECK-SAME: "-fcuda-is-device"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
 // CHECK-SAME: "-target-cpu" "gfx900"
 // CHECK-SAME: "-fgpu-rdc"
-// CHECK-SAME: {{.*}} "-o" [[B_BC2:".*bc"]] "-x" "hip"
+// CHECK-SAME: {{.*}} "-o" [[B_BC2:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC]]
 
 // CHECK-NOT: "*.llvm-link"
 // CHECK-NOT: ".*opt"
 // CHECK-NOT: ".*llc"
 // CHECK: {{".*lld.*"}} {{.*}} "-plugin-opt=-amdgpu-internalize-symbols"
+// CHECK-SAME: "--lto-partitions={{[0-9]+}}"
 // CHECK-SAME: "-plugin-opt=mcpu=gfx900"
 // CHECK-SAME: "-o" "[[IMG_DEV2:.*.out]]" [[A_BC2]] [[B_BC2]]
 
@@ -160,3 +167,27 @@
 // output the executable
 // LNX: [[LD:".*ld.*"]] {{.*}}"-o" "a.out" {{.*}} [[A_OBJ_HOST]] [[B_OBJ_HOST]] [[OBJBUNDLE]]
 // MSVC: [[LD:".*lld-link.*"]] {{.*}}"-out:a.exe" {{.*}} [[A_OBJ_HOST]] [[B_OBJ_HOST]] [[OBJBUNDLE]]
+
+// Check -flto-partitions
+
+// RUN: %clang -### -fgpu-rdc --offload-arch=gfx90a -nogpulib -nogpuinc --no-offload-new-driver \
+// RUN:   -L. -foffload-lto %s 2>&1 | FileCheck -check-prefix=LTO_DEFAULT %s
+// LTO_DEFAULT: lld
+// LTO_DEFAULT-NOT: "--lto-partitions=
+
+// RUN: %clang -### -fgpu-rdc --offload-arch=gfx90a -nogpulib -nogpuinc --offload-new-driver \
+// RUN:   -L. -foffload-lto %s 2>&1 | FileCheck -check-prefix=LTO_DEFAULT_NEW %s
+// LTO_DEFAULT_NEW: clang-linker-wrapper
+// LTO_DEFAULT_NEW-NOT: "--device-compiler=amdgcn-amd-amdhsa=-flto-partitions=
+
+// RUN: %clang -### -fgpu-rdc --offload-arch=gfx90a -nogpulib -nogpuinc --no-offload-new-driver \
+// RUN:   -L. -foffload-lto -flto-partitions=42 %s 2>&1 | FileCheck -check-prefix=LTO_PARTS %s
+// LTO_PARTS: lld{{.*}}"--lto-partitions=42"
+
+// RUN: not %clang -### -fgpu-rdc --offload-arch=gfx90a -nogpulib -nogpuinc --no-offload-new-driver \
+// RUN:   -L. -foffload-lto -flto-partitions=a %s 2>&1 | FileCheck -check-prefix=LTO_PARTS_INV0 %s
+// LTO_PARTS_INV0: clang: error: invalid integral value 'a' in '-flto-partitions=a'
+
+// RUN: not %clang -### -fgpu-rdc --offload-arch=gfx90a -nogpulib -nogpuinc --no-offload-new-driver \
+// RUN:   -L. -foffload-lto -flto-partitions=0 %s 2>&1 | FileCheck -check-prefix=LTO_PARTS_INV1 %s
+// LTO_PARTS_INV1: clang: error: invalid integral value '0' in '-flto-partitions=0'

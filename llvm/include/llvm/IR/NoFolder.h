@@ -28,12 +28,13 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 /// NoFolder - Create "constants" (actually, instructions) with no folding.
-class NoFolder final : public IRBuilderFolder {
-  virtual void anchor();
+class LLVM_ABI NoFolder final : public IRBuilderFolder {
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
 public:
   explicit NoFolder() = default;
@@ -79,7 +80,8 @@ public:
     return nullptr;
   }
 
-  Value *FoldSelect(Value *C, Value *True, Value *False) const override {
+  Value *FoldSelect(Value *C, Value *True, Value *False,
+                    FastMathFlags FMF) const override {
     return nullptr;
   }
 
@@ -112,8 +114,8 @@ public:
     return nullptr;
   }
 
-  Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
-                             Instruction *FMFSource) const override {
+  Value *FoldIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Ops, Type *Ty,
+                       FastMathFlags FMF, Function *CtxF) const override {
     return nullptr;
   }
 

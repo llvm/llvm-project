@@ -9,10 +9,16 @@
 #ifndef LLVM_CLANG_CIR_CIRGENACTION_H
 #define LLVM_CLANG_CIR_CIRGENACTION_H
 
+#include "clang/CodeGen/ModuleLinker.h"
 #include "clang/Frontend/FrontendAction.h"
+#include "llvm/ADT/SmallVector.h"
 
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/OwningOpRef.h"
+
+namespace llvm {
+class LLVMContext;
+} // namespace llvm
 
 namespace mlir {
 class MLIRContext;
@@ -25,7 +31,11 @@ class CIRGenConsumer;
 class CIRGenAction : public clang::ASTFrontendAction {
 public:
   enum class OutputType {
+    EmitAssembly,
     EmitCIR,
+    EmitLLVM,
+    EmitBC,
+    EmitObj,
   };
 
 private:
@@ -35,8 +45,13 @@ private:
 
   mlir::MLIRContext *MLIRCtx;
 
+  std::unique_ptr<llvm::LLVMContext> Ctx;
+  llvm::SmallVector<clang::LinkModule> LinkModules;
+
 protected:
   CIRGenAction(OutputType Action, mlir::MLIRContext *MLIRCtx = nullptr);
+
+  bool BeginSourceFileAction(clang::CompilerInstance &CI) override;
 
   std::unique_ptr<clang::ASTConsumer>
   CreateASTConsumer(clang::CompilerInstance &CI,
@@ -53,6 +68,34 @@ class EmitCIRAction : public CIRGenAction {
 
 public:
   EmitCIRAction(mlir::MLIRContext *MLIRCtx = nullptr);
+};
+
+class EmitLLVMAction : public CIRGenAction {
+  virtual void anchor();
+
+public:
+  EmitLLVMAction(mlir::MLIRContext *MLIRCtx = nullptr);
+};
+
+class EmitBCAction : public CIRGenAction {
+  virtual void anchor();
+
+public:
+  EmitBCAction(mlir::MLIRContext *MLIRCtx = nullptr);
+};
+
+class EmitAssemblyAction : public CIRGenAction {
+  virtual void anchor();
+
+public:
+  EmitAssemblyAction(mlir::MLIRContext *MLIRCtx = nullptr);
+};
+
+class EmitObjAction : public CIRGenAction {
+  virtual void anchor();
+
+public:
+  EmitObjAction(mlir::MLIRContext *MLIRCtx = nullptr);
 };
 
 } // namespace cir

@@ -265,7 +265,7 @@ define void @tf_bug(ptr %ptr) nounwind {
 ; PIC-NEXT:  L4$pb:
 ; PIC-NEXT:    popl %edi
 ; PIC-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; PIC-NEXT:    movl (_id-L4$pb)+4(%edi), %edx
+; PIC-NEXT:    movl _id-L4$pb+4(%edi), %edx
 ; PIC-NEXT:    movl _id-L4$pb(%edi), %eax
 ; PIC-NEXT:    .p2align 4
 ; PIC-NEXT:  LBB4_1: ## %atomicrmw.start

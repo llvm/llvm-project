@@ -1,6 +1,7 @@
 # RUN: llc -mtriple=amdgcn-- -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
-# CHECK-LABEL: MachineUniformityInfo for function: divergent_cycle_1
-# CHECK-NEXT: CYCLES ASSSUMED DIVERGENT:
+# RUN: llc -mtriple=amdgcn-- -passes='print<machine-uniformity>' -filetype=null %s 2>&1 | FileCheck %s
+# CHECK-LABEL: MachineUniformityInfo for function:  @divergent_cycle_1
+# CHECK-NEXT: CYCLES ASSUMED DIVERGENT:
 # CHECK-NEXT: depth=1: entries(bb.3 bb.1) bb.4 bb.2
 # CHECK-NEXT: CYCLES WITH DIVERGENT EXIT:
 # CHECK-NEXT: depth=2: entries(bb.4 bb.1) bb.2
@@ -60,7 +61,7 @@ body:             |
     S_ENDPGM 0
 ...
 
-# CHECK-LABEL: MachineUniformityInfo for function: uniform_cycle_1
+# CHECK-LABEL: MachineUniformityInfo for function:  @uniform_cycle_1
 ---
 name:            uniform_cycle_1
 tracksRegLiveness: true

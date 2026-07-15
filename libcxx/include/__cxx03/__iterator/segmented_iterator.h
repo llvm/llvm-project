@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___SEGMENTED_ITERATOR_H
-#define _LIBCPP___SEGMENTED_ITERATOR_H
+#ifndef _LIBCPP___CXX03___SEGMENTED_ITERATOR_H
+#define _LIBCPP___CXX03___SEGMENTED_ITERATOR_H
 
 // Segmented iterators are iterators over (not necessarily contiguous) sub-ranges.
 //
@@ -76,4 +76,4 @@ using __is_segmented_iterator = __has_specialization<__segmented_iterator_traits
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___SEGMENTED_ITERATOR_H
+#endif // _LIBCPP___CXX03___SEGMENTED_ITERATOR_H

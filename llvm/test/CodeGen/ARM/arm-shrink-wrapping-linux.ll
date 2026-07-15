@@ -41,8 +41,8 @@ define fastcc ptr @wrongUseOfPostDominate(ptr readonly %s, i32 %off, ptr readnon
 ; ENABLE-NEXT:    bhs .LBB0_6
 ; ENABLE-NEXT:  @ %bb.5: @ %while.body
 ; ENABLE-NEXT:    @ in Loop: Header=BB0_4 Depth=1
-; ENABLE-NEXT:    cmp r0, r2
 ; ENABLE-NEXT:    mov r1, r3
+; ENABLE-NEXT:    cmp r0, r2
 ; ENABLE-NEXT:    blo .LBB0_4
 ; ENABLE-NEXT:  .LBB0_6: @ %if.end29
 ; ENABLE-NEXT:    pop {r11, pc}
@@ -131,8 +131,8 @@ define fastcc ptr @wrongUseOfPostDominate(ptr readonly %s, i32 %off, ptr readnon
 ; DISABLE-NEXT:    bhs .LBB0_6
 ; DISABLE-NEXT:  @ %bb.5: @ %while.body
 ; DISABLE-NEXT:    @ in Loop: Header=BB0_4 Depth=1
-; DISABLE-NEXT:    cmp r0, r2
 ; DISABLE-NEXT:    mov r1, r3
+; DISABLE-NEXT:    cmp r0, r2
 ; DISABLE-NEXT:    blo .LBB0_4
 ; DISABLE-NEXT:  .LBB0_6: @ %if.end29
 ; DISABLE-NEXT:    pop {r11, pc}

@@ -10,6 +10,8 @@
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
+// UNSUPPORTED: c++03
+
 #include <cstdalign>
 
 #ifndef __alignas_is_defined

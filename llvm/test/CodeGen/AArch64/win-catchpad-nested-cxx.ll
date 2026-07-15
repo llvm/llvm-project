@@ -45,12 +45,12 @@ handler2:
 ; CHECK-LABEL: $cppxdata$try_in_catch:
 ; CHECK-NEXT: .word   429065506
 ; CHECK-NEXT: .word   4
-; CHECK-NEXT: .word   ($stateUnwindMap$try_in_catch)
+; CHECK-NEXT: .word   $stateUnwindMap$try_in_catch
 ; CHECK-NEXT: .word   2
-; CHECK-NEXT: .word   ($tryMap$try_in_catch)
+; CHECK-NEXT: .word   $tryMap$try_in_catch
 ; ip2state num + ptr
 ; CHECK-NEXT: .word   7
-; CHECK-NEXT: .word   ($ip2state$try_in_catch)
+; CHECK-NEXT: .word   $ip2state$try_in_catch
 ; unwindhelp offset
 ; CHECK-NEXT: .word   -16
 ; CHECK-NEXT: .word   0
@@ -62,12 +62,12 @@ handler2:
 ; CHECK-NEXT: .word   0
 ; CHECK-NEXT: .word   3
 ; CHECK-NEXT: .word   1
-; CHECK-NEXT: .word   ($handlerMap$0$try_in_catch)
+; CHECK-NEXT: .word   $handlerMap$0$try_in_catch
 ; CHECK-NEXT: .word   2
 ; CHECK-NEXT: .word   2
 ; CHECK-NEXT: .word   3
 ; CHECK-NEXT: .word   1
-; CHECK-NEXT: .word   ($handlerMap$1$try_in_catch)
+; CHECK-NEXT: .word   $handlerMap$1$try_in_catch
 
 ; CHECK: $handlerMap$0$try_in_catch:
 ; CHECK-NEXT:   .word   64

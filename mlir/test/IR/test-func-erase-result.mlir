@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-func-erase-result -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-func-erase-result -split-input-file -verify-diagnostics | FileCheck %s
 
 // CHECK: func private @f(){{$}}
 // CHECK-NOT: attributes{{.*}}result
@@ -66,3 +66,10 @@ func.func private @f() -> (
   f32 {test.erase_this_result},
   tensor<3xf32>
 )
+
+// -----
+
+// Erasing no results from a void llvm.func (0 results) is a no-op and should
+// succeed. Previously this crashed with an assertion in LLVMFunctionType::clone.
+// CHECK: llvm.func @llvm_func(!llvm.ptr, i64)
+llvm.func @llvm_func(!llvm.ptr, i64)

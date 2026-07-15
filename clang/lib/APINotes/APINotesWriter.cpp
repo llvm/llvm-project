@@ -50,6 +50,9 @@ class APINotesWriter::Implementation {
   /// Indexed by context ID, provides the parent context ID.
   llvm::DenseMap<uint32_t, uint32_t> ParentContexts;
 
+  /// Mapping from context IDs to the kind of context.
+  llvm::DenseMap<unsigned, uint8_t> ContextKinds;
+
   /// Mapping from context IDs to the identifier ID holding the name.
   llvm::DenseMap<unsigned, unsigned> ContextNames;
 
@@ -79,8 +82,8 @@ class APINotesWriter::Implementation {
 
   /// Information about C++ methods.
   ///
-  /// Indexed by the context ID and name ID.
-  llvm::DenseMap<SingleDeclTableKey,
+  /// Indexed by the context ID, name ID, and optional parameter selector.
+  llvm::DenseMap<FunctionTableKey,
                  llvm::SmallVector<std::pair<VersionTuple, CXXMethodInfo>, 1>>
       CXXMethods;
 
@@ -97,9 +100,9 @@ class APINotesWriter::Implementation {
 
   /// Information about global functions.
   ///
-  /// Indexed by the context ID, identifier ID.
+  /// Indexed by the context ID, identifier ID, and optional parameter selector.
   llvm::DenseMap<
-      SingleDeclTableKey,
+      FunctionTableKey,
       llvm::SmallVector<std::pair<VersionTuple, GlobalFunctionInfo>, 1>>
       GlobalFunctions;
 
@@ -132,6 +135,42 @@ class APINotesWriter::Implementation {
     // Add to the identifier table if missing.
     return IdentifierIDs.try_emplace(Identifier, IdentifierIDs.size() + 1)
         .first->second;
+  }
+
+  FunctionTableKey getFunctionKey(uint32_t ParentContextID, StringRef Name) {
+    std::optional<FunctionTableKey> Key =
+        getFunctionKeyImpl(ParentContextID, Name,
+                           [this](StringRef S) -> std::optional<IdentifierID> {
+                             return getIdentifier(S);
+                           });
+    assert(Key && "Writer identifier lookup should not fail");
+    return *Key;
+  }
+
+  FunctionTableKey getFunctionKey(uint32_t ParentContextID, StringRef Name,
+                                  ArrayRef<StringRef> Parameters) {
+    std::optional<FunctionTableKey> Key =
+        getFunctionKeyImpl(ParentContextID, Name, Parameters,
+                           [this](StringRef S) -> std::optional<IdentifierID> {
+                             return getIdentifier(S);
+                           });
+    assert(Key && "Writer identifier lookup should not fail");
+    return *Key;
+  }
+
+  FunctionTableKey getFunctionKey(std::optional<Context> ParentContext,
+                                  StringRef Name) {
+    uint32_t ParentContextID =
+        ParentContext ? ParentContext->id.Value : static_cast<uint32_t>(-1);
+    return getFunctionKey(ParentContextID, Name);
+  }
+
+  FunctionTableKey getFunctionKey(std::optional<Context> ParentContext,
+                                  StringRef Name,
+                                  ArrayRef<StringRef> Parameters) {
+    uint32_t ParentContextID =
+        ParentContext ? ParentContext->id.Value : static_cast<uint32_t>(-1);
+    return getFunctionKey(ParentContextID, Name, Parameters);
   }
 
   /// Retrieve the ID for the given selector.
@@ -462,6 +501,25 @@ void emitVersionedInfo(
   }
 }
 
+static unsigned getFunctionTableKeyLength(const FunctionTableKey &Key) {
+  return FunctionTableKeyBaseLength +
+         (Key.parameterTypeIDs ? Key.parameterTypeIDs->size() * sizeof(uint32_t)
+                               : 0);
+}
+
+static void emitFunctionTableKey(raw_ostream &OS, const FunctionTableKey &Key) {
+  llvm::support::endian::Writer writer(OS, llvm::endianness::little);
+  writer.write<uint32_t>(Key.parentContextID);
+  writer.write<uint32_t>(Key.nameID);
+  writer.write<uint8_t>(Key.parameterTypeIDs ? FunctionKeyHasParameterSelector
+                                             : 0);
+  writer.write<uint16_t>(Key.parameterTypeIDs ? Key.parameterTypeIDs->size()
+                                              : 0);
+  if (Key.parameterTypeIDs)
+    for (IdentifierID TypeID : *Key.parameterTypeIDs)
+      writer.write<uint32_t>(TypeID);
+}
+
 /// On-disk hash table info key base for handling versioned data.
 template <typename Derived, typename KeyType, typename UnversionedDataType>
 class VersionedTableInfo {
@@ -507,6 +565,12 @@ void emitCommonEntityInfo(raw_ostream &OS, const CommonEntityInfo &CEI) {
   llvm::support::endian::Writer writer(OS, llvm::endianness::little);
 
   uint8_t payload = 0;
+  if (auto safety = CEI.getSwiftSafety()) {
+    payload = static_cast<unsigned>(*safety);
+    payload <<= 1;
+    payload |= 0x01;
+  }
+  payload <<= 2;
   if (auto swiftPrivate = CEI.isSwiftPrivate()) {
     payload |= 0x01;
     if (*swiftPrivate)
@@ -536,7 +600,8 @@ unsigned getCommonEntityInfoSize(const CommonEntityInfo &CEI) {
 // in on-disk hash tables.
 unsigned getCommonTypeInfoSize(const CommonTypeInfo &CTI) {
   return 2 + (CTI.getSwiftBridge() ? CTI.getSwiftBridge()->size() : 0) + 2 +
-         (CTI.getNSErrorDomain() ? CTI.getNSErrorDomain()->size() : 0) +
+         (CTI.getNSErrorDomain() ? CTI.getNSErrorDomain()->size() : 0) + 2 +
+         (CTI.getSwiftConformance() ? CTI.getSwiftConformance()->size() : 0) +
          getCommonEntityInfoSize(CTI);
 }
 
@@ -554,6 +619,12 @@ void emitCommonTypeInfo(raw_ostream &OS, const CommonTypeInfo &CTI) {
   if (auto nsErrorDomain = CTI.getNSErrorDomain()) {
     writer.write<uint16_t>(nsErrorDomain->size() + 1);
     OS.write(nsErrorDomain->c_str(), CTI.getNSErrorDomain()->size());
+  } else {
+    writer.write<uint16_t>(0);
+  }
+  if (auto conformance = CTI.getSwiftConformance()) {
+    writer.write<uint16_t>(conformance->size() + 1);
+    OS.write(conformance->c_str(), conformance->size());
   } else {
     writer.write<uint16_t>(0);
   }
@@ -785,17 +856,15 @@ public:
 
 /// Used to serialize the on-disk C++ method table.
 class CXXMethodTableInfo
-    : public VersionedTableInfo<CXXMethodTableInfo, SingleDeclTableKey,
+    : public VersionedTableInfo<CXXMethodTableInfo, FunctionTableKey,
                                 CXXMethodInfo> {
 public:
-  unsigned getKeyLength(key_type_ref) {
-    return sizeof(uint32_t) + sizeof(uint32_t);
+  unsigned getKeyLength(key_type_ref Key) {
+    return getFunctionTableKeyLength(Key);
   }
 
   void EmitKey(raw_ostream &OS, key_type_ref Key, unsigned) {
-    llvm::support::endian::Writer writer(OS, llvm::endianness::little);
-    writer.write<uint32_t>(Key.parentContextID);
-    writer.write<uint32_t>(Key.nameID);
+    emitFunctionTableKey(OS, Key);
   }
 
   hash_value_type ComputeHash(key_type_ref key) {
@@ -1058,14 +1127,45 @@ void APINotesWriter::Implementation::writeGlobalVariableBlock(
 }
 
 namespace {
+void emitBoundsSafetyInfo(raw_ostream &OS, const BoundsSafetyInfo &BSI) {
+  llvm::support::endian::Writer writer(OS, llvm::endianness::little);
+  uint8_t flags = 0;
+  if (auto kind = BSI.getKind()) {
+    assert(*kind <= BoundsSafetyInfo::BoundsSafetyKind::EndedBy);
+    flags |= 0x01;                // 1 bit
+    flags |= (uint8_t)*kind << 1; // 3 bits
+  }
+  flags <<= 4;
+  if (auto level = BSI.getLevel()) {
+    assert(*level < (1u << 3));
+    flags |= 0x01;                 // 1 bit
+    flags |= (uint8_t)*level << 1; // 3 bits
+  }
+
+  writer.write<uint8_t>(flags);
+  writer.write<uint16_t>(BSI.ExternalBounds.size());
+  writer.write(
+      ArrayRef<char>{BSI.ExternalBounds.data(), BSI.ExternalBounds.size()});
+}
+
+unsigned getBoundsSafetyInfoSize(const BoundsSafetyInfo &BSI) {
+  return 1 + sizeof(uint16_t) + BSI.ExternalBounds.size();
+}
+
 unsigned getParamInfoSize(const ParamInfo &PI) {
-  return getVariableInfoSize(PI) + 1;
+  unsigned BSISize = 0;
+  if (auto BSI = PI.BoundsSafety)
+    BSISize = getBoundsSafetyInfoSize(*BSI);
+  return getVariableInfoSize(PI) + 1 + BSISize;
 }
 
 void emitParamInfo(raw_ostream &OS, const ParamInfo &PI) {
   emitVariableInfo(OS, PI);
 
   uint8_t flags = 0;
+  if (PI.BoundsSafety)
+    flags |= 0x01;
+  flags <<= 2;
   if (auto noescape = PI.isNoEscape()) {
     flags |= 0x01;
     if (*noescape)
@@ -1083,6 +1183,8 @@ void emitParamInfo(raw_ostream &OS, const ParamInfo &PI) {
 
   llvm::support::endian::Writer writer(OS, llvm::endianness::little);
   writer.write<uint8_t>(flags);
+  if (auto BSI = PI.BoundsSafety)
+    emitBoundsSafetyInfo(OS, *BSI);
 }
 
 /// Retrieve the serialized size of the given FunctionInfo, for use in on-disk
@@ -1093,6 +1195,7 @@ unsigned getFunctionInfoSize(const FunctionInfo &FI) {
   for (const auto &P : FI.Params)
     size += getParamInfoSize(P);
   size += sizeof(uint16_t) + FI.ResultType.size();
+  size += sizeof(uint16_t) + FI.SwiftReturnOwnership.size();
   return size;
 }
 
@@ -1105,6 +1208,8 @@ void emitFunctionInfo(raw_ostream &OS, const FunctionInfo &FI) {
   flags <<= 3;
   if (auto RCC = FI.getRetainCountConvention())
     flags |= static_cast<uint8_t>(RCC.value()) + 1;
+  flags <<= 0x01;
+  flags |= FI.UnsafeBufferUsage;
 
   llvm::support::endian::Writer writer(OS, llvm::endianness::little);
 
@@ -1117,22 +1222,22 @@ void emitFunctionInfo(raw_ostream &OS, const FunctionInfo &FI) {
     emitParamInfo(OS, PI);
 
   writer.write<uint16_t>(FI.ResultType.size());
-  writer.write(ArrayRef<char>{FI.ResultType.data(), FI.ResultType.size()});
+  writer.write(ArrayRef<char>{FI.ResultType});
+  writer.write<uint16_t>(FI.SwiftReturnOwnership.size());
+  writer.write(ArrayRef<char>{FI.SwiftReturnOwnership});
 }
 
 /// Used to serialize the on-disk global function table.
 class GlobalFunctionTableInfo
-    : public VersionedTableInfo<GlobalFunctionTableInfo, SingleDeclTableKey,
+    : public VersionedTableInfo<GlobalFunctionTableInfo, FunctionTableKey,
                                 GlobalFunctionInfo> {
 public:
-  unsigned getKeyLength(key_type_ref) {
-    return sizeof(uint32_t) + sizeof(uint32_t);
+  unsigned getKeyLength(key_type_ref Key) {
+    return getFunctionTableKeyLength(Key);
   }
 
   void EmitKey(raw_ostream &OS, key_type_ref Key, unsigned) {
-    llvm::support::endian::Writer writer(OS, llvm::endianness::little);
-    writer.write<uint32_t>(Key.parentContextID);
-    writer.write<uint32_t>(Key.nameID);
+    emitFunctionTableKey(OS, Key);
   }
 
   hash_value_type ComputeHash(key_type_ref Key) {
@@ -1270,7 +1375,8 @@ public:
     return 2 + (TI.SwiftImportAs ? TI.SwiftImportAs->size() : 0) +
            2 + (TI.SwiftRetainOp ? TI.SwiftRetainOp->size() : 0) +
            2 + (TI.SwiftReleaseOp ? TI.SwiftReleaseOp->size() : 0) +
-           2 + (TI.SwiftConformance ? TI.SwiftConformance->size() : 0) +
+           2 + (TI.SwiftDestroyOp ? TI.SwiftDestroyOp->size() : 0) +
+           2 + (TI.SwiftDefaultOwnership ? TI.SwiftDefaultOwnership->size() : 0) +
            3 + getCommonTypeInfoSize(TI);
     // clang-format on
   }
@@ -1318,9 +1424,15 @@ public:
     } else {
       writer.write<uint16_t>(0);
     }
-    if (auto Conformance = TI.SwiftConformance) {
-      writer.write<uint16_t>(Conformance->size() + 1);
-      OS.write(Conformance->c_str(), Conformance->size());
+    if (auto DefaultOwnership = TI.SwiftDefaultOwnership) {
+      writer.write<uint16_t>(DefaultOwnership->size() + 1);
+      OS.write(DefaultOwnership->c_str(), DefaultOwnership->size());
+    } else {
+      writer.write<uint16_t>(0);
+    }
+    if (auto DestroyOp = TI.SwiftDestroyOp) {
+      writer.write<uint16_t>(DestroyOp->size() + 1);
+      OS.write(DestroyOp->c_str(), DestroyOp->size());
     } else {
       writer.write<uint16_t>(0);
     }
@@ -1438,6 +1550,7 @@ ContextID APINotesWriter::addContext(std::optional<ContextID> ParentCtxID,
 
     Implementation->ContextNames[NextID] = NameID;
     Implementation->ParentContexts[NextID] = RawParentCtxID;
+    Implementation->ContextKinds[NextID] = static_cast<uint8_t>(Kind);
   }
 
   // Add this version information.
@@ -1482,7 +1595,7 @@ void APINotesWriter::addObjCMethod(ContextID CtxID, ObjCSelectorRef Selector,
     assert(Implementation->ParentContexts.contains(CtxID.Value));
     uint32_t ParentCtxID = Implementation->ParentContexts[CtxID.Value];
     ContextTableKey CtxKey(ParentCtxID,
-                           static_cast<uint8_t>(ContextKind::ObjCClass),
+                           Implementation->ContextKinds[CtxID.Value],
                            Implementation->ContextNames[CtxID.Value]);
     assert(Implementation->Contexts.contains(CtxKey));
     auto &VersionedVec = Implementation->Contexts[CtxKey].second;
@@ -1505,8 +1618,16 @@ void APINotesWriter::addObjCMethod(ContextID CtxID, ObjCSelectorRef Selector,
 void APINotesWriter::addCXXMethod(ContextID CtxID, llvm::StringRef Name,
                                   const CXXMethodInfo &Info,
                                   VersionTuple SwiftVersion) {
-  IdentifierID NameID = Implementation->getIdentifier(Name);
-  SingleDeclTableKey Key(CtxID.Value, NameID);
+  FunctionTableKey Key = Implementation->getFunctionKey(CtxID.Value, Name);
+  Implementation->CXXMethods[Key].push_back({SwiftVersion, Info});
+}
+
+void APINotesWriter::addCXXMethod(ContextID CtxID, llvm::StringRef Name,
+                                  llvm::ArrayRef<llvm::StringRef> Parameters,
+                                  const CXXMethodInfo &Info,
+                                  VersionTuple SwiftVersion) {
+  FunctionTableKey Key =
+      Implementation->getFunctionKey(CtxID.Value, Name, Parameters);
   Implementation->CXXMethods[Key].push_back({SwiftVersion, Info});
 }
 
@@ -1531,8 +1652,15 @@ void APINotesWriter::addGlobalFunction(std::optional<Context> Ctx,
                                        llvm::StringRef Name,
                                        const GlobalFunctionInfo &Info,
                                        VersionTuple SwiftVersion) {
-  IdentifierID NameID = Implementation->getIdentifier(Name);
-  SingleDeclTableKey Key(Ctx, NameID);
+  FunctionTableKey Key = Implementation->getFunctionKey(Ctx, Name);
+  Implementation->GlobalFunctions[Key].push_back({SwiftVersion, Info});
+}
+
+void APINotesWriter::addGlobalFunction(
+    std::optional<Context> Ctx, llvm::StringRef Name,
+    llvm::ArrayRef<llvm::StringRef> Parameters, const GlobalFunctionInfo &Info,
+    VersionTuple SwiftVersion) {
+  FunctionTableKey Key = Implementation->getFunctionKey(Ctx, Name, Parameters);
   Implementation->GlobalFunctions[Key].push_back({SwiftVersion, Info});
 }
 

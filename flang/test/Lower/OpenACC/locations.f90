@@ -53,7 +53,7 @@ module acc_locations
     !CHECK: acc.loop
 
     !CHECK:        acc.yield loc("{{.*}}locations.f90":44:11)
-    !CHECK-NEXT: } attributes {{.*}} loc(fused["{{.*}}locations.f90":44:11, "{{.*}}locations.f90":45:5])
+    !CHECK-NEXT: } attributes {{.*}} loc(fused<#acc.loop_loc<directive = loc("{{[^"]*}}locations.f90":44:11), loops = loc("{{[^"]*}}locations.f90":45:5)>>["{{[^"]*}}locations.f90":44:11, "{{[^"]*}}locations.f90":45:5])
 
     !CHECK:        acc.yield loc("{{.*}}locations.f90":43:11)
     !CHECK-NEXT: } loc("{{.*}}locations.f90":43:11)
@@ -87,7 +87,7 @@ module acc_locations
     !CHECK: acc.parallel
     !CHECK: acc.loop
     !CHECK:      acc.yield loc("{{.*}}locations.f90":82:11)
-    !CHECK-NEXT: } {{.*}} loc(fused["{{.*}}locations.f90":82:11, "{{.*}}locations.f90":83:5])
+    !CHECK-NEXT: } {{.*}} loc(fused<#acc.loop_loc<directive = loc("{{[^"]*}}locations.f90":82:11), loops = loc("{{[^"]*}}locations.f90":83:5)>>["{{[^"]*}}locations.f90":82:11, "{{[^"]*}}locations.f90":83:5])
     !CHECK:      acc.yield loc("{{.*}}locations.f90":82:11)
     !CHECK-NEXT: } loc("{{.*}}locations.f90":82:11)
   end subroutine
@@ -106,7 +106,7 @@ module acc_locations
     !CHECK: acc.parallel
     !CHECK: acc.loop
     !CHECK:      acc.yield loc("{{.*}}locations.f90":99:11)
-    !CHECK-NEXT: } {{.*}} loc(fused["{{.*}}locations.f90":99:11, "{{.*}}locations.f90":100:5])
+    !CHECK-NEXT: } {{.*}} loc(fused<#acc.loop_loc<directive = loc("{{[^"]*}}locations.f90":99:11), loops = loc("{{[^"]*}}locations.f90":100:5)>>["{{[^"]*}}locations.f90":99:11, "{{[^"]*}}locations.f90":100:5])
     !CHECK:      acc.yield loc("{{.*}}locations.f90":99:11)
     !CHECK-NEXT: } loc("{{.*}}locations.f90":99:11)
   end subroutine
@@ -114,7 +114,7 @@ module acc_locations
   subroutine atomic_read_loc()
     integer(4) :: x
     integer(8) :: y
-  
+
     !$acc atomic read
     y = x
   end
@@ -123,10 +123,10 @@ module acc_locations
   subroutine atomic_capture_loc()
     implicit none
     integer :: k, v, i
-  
+
     k = 1
     v = 0
-  
+
     !$acc atomic capture
     v = k
     k = (i + 1) * 3.14
@@ -142,13 +142,13 @@ module acc_locations
   subroutine atomic_update_loc()
     implicit none
     integer :: x, y, z
-    
-    !$acc atomic 
+
+    !$acc atomic
     y = y + 1
 ! CHECK: acc.atomic.update %{{.*}} : !fir.ref<i32> {
-! CHECK: ^bb0(%{{.*}}: i32 loc("{{.*}}locations.f90":142:3)):
-! CHECK: } loc("{{.*}}locations.f90":142:3)
-    
+! CHECK: ^bb0(%{{.*}}: i32 loc("{{.*}}locations.f90":146:11)):
+! CHECK: } loc("{{.*}}locations.f90":146:11)
+
     !$acc atomic update
     z = x * z
   end subroutine
@@ -169,8 +169,32 @@ module acc_locations
 
 ! CHECK-LABEL: func.func @_QMacc_locationsPacc_loop_fused_locations
 ! CHECK: acc.loop
-! CHECK: } attributes {collapse = [3]{{.*}}} loc(fused["{{.*}}locations.f90":160:11, "{{.*}}locations.f90":161:5, "{{.*}}locations.f90":162:7, "{{.*}}locations.f90":163:9])
+! CHECK: } attributes {collapse = [3]{{.*}}} loc(fused<#acc.loop_loc<directive = loc("{{[^"]*}}locations.f90":160:11), loops = loc("{{[^"]*}}locations.f90":161:5), loc("{{[^"]*}}locations.f90":162:7), loc("{{[^"]*}}locations.f90":163:9)>>["{{[^"]*}}locations.f90":160:11, "{{[^"]*}}locations.f90":161:5, "{{[^"]*}}locations.f90":162:7, "{{[^"]*}}locations.f90":163:9])
 
+  subroutine data_end_locations(arr)
+    real, dimension(10) :: arr
+
+    !$acc data copy(arr)
+    !CHECK-LABEL: acc.copyin
+    !CHECK-SAME:  loc("{{.*}}locations.f90":177:21)
+
+    !$acc end data
+    !CHECK-LABEL: acc.copyout
+    !CHECK-SAME:  loc("{{.*}}locations.f90":181:11)
+  end subroutine
+
+  subroutine acc_kernel_with_loop_locations(arr)
+    real, dimension(10) :: arr
+    integer :: i
+
+    !$acc kernels
+    do i = 1, 10
+      arr(i) = arr(i) + 1
+    end do
+    !$acc end kernels
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMacc_locationsPacc_kernel_with_loop_locations
+! CHECK: acc.loop
+! CHECK: } attributes {{.*}} loc(fused<#acc.loop_loc<loops = loc("{{[^"]*}}locations.f90":191:5)>>["{{[^"]*}}locations.f90":191:5])
 end module
-
-

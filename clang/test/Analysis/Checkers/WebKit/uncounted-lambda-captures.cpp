@@ -1,12 +1,9 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=webkit.UncountedLambdaCapturesChecker -verify %s
 
-struct RefCountable {
-  void ref() {}
-  void deref() {}
-  void method();
-  void constMethod() const;
-  int trivial() { return 123; }
-  RefCountable* next();
+#include "mock-types.h"
+
+struct A {
+  static void b();
 };
 
 RefCountable* make_obj();
@@ -16,26 +13,27 @@ template <typename Callback> void call(Callback callback) {
   someFunction();
   callback();
 }
+void callAsync(const WTF::Function<void()>&);
 
 void raw_ptr() {
   RefCountable* ref_countable = make_obj();
   auto foo1 = [ref_countable](){
-    // expected-warning@-1{{Captured raw-pointer 'ref_countable' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Captured variable 'ref_countable' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
     ref_countable->method();
   };
   auto foo2 = [&ref_countable](){
-    // expected-warning@-1{{Captured raw-pointer 'ref_countable' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Captured variable 'ref_countable' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
     ref_countable->method();
   };
   auto foo3 = [&](){
     ref_countable->method();
-    // expected-warning@-1{{Implicitly captured raw-pointer 'ref_countable' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'ref_countable' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
     ref_countable = nullptr;
   };
 
   auto foo4 = [=](){
     ref_countable->method();
-    // expected-warning@-1{{Implicitly captured raw-pointer 'ref_countable' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'ref_countable' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
   };
 
   call(foo1);
@@ -54,13 +52,11 @@ void references() {
   RefCountable automatic;
   RefCountable& ref_countable_ref = automatic;
   auto foo1 = [ref_countable_ref](){ ref_countable_ref.constMethod(); };
-  // expected-warning@-1{{Captured reference 'ref_countable_ref' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
   auto foo2 = [&ref_countable_ref](){ ref_countable_ref.method(); };
-  // expected-warning@-1{{Captured reference 'ref_countable_ref' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+  // expected-warning@-1{{Captured variable 'ref_countable_ref' is a raw reference to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
   auto foo3 = [&](){ ref_countable_ref.method(); };
-  // expected-warning@-1{{Implicitly captured reference 'ref_countable_ref' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+  // expected-warning@-1{{Implicitly captured variable 'ref_countable_ref' is a raw reference to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
   auto foo4 = [=](){ ref_countable_ref.constMethod(); };
-  // expected-warning@-1{{Implicitly captured reference 'ref_countable_ref' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
 
   call(foo1);
   call(foo2);
@@ -113,7 +109,7 @@ void noescape_lambda() {
     otherObj->method();
   }, [&](RefCountable& obj) {
     otherObj->method();
-    // expected-warning@-1{{Implicitly captured raw-pointer 'otherObj' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+    // expected-warning@-1{{Implicitly captured variable 'otherObj' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
   });
   ([&] {
     someObj->method();
@@ -121,7 +117,7 @@ void noescape_lambda() {
 }
 
 void lambda_capture_param(RefCountable* obj) {
-  auto someLambda = [&] {
+  auto someLambda = [&]() {
     obj->method();
   };
   someLambda();
@@ -143,9 +139,131 @@ struct RefCountableWithLambdaCapturingThis {
   void method_captures_this_unsafe() {
     auto lambda = [&]() {
       nonTrivial();
-      // expected-warning@-1{{Implicitly captured raw-pointer 'this' to ref-counted type or CheckedPtr-capable type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+      // expected-warning@-1{{Implicitly captured variable 'this' is a raw pointer to RefPtr-capable type 'RefCountableWithLambdaCapturingThis' [webkit.UncountedLambdaCapturesChecker]}}
     };
     call(lambda);
+  }
+
+  void method_captures_this_unsafe_capture_local_var_explicitly() {
+    RefCountable* x = make_obj();
+    call([this, protectedThis = RefPtr { this }, x]() {
+      // expected-warning@-1{{Captured variable 'x' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
+      nonTrivial();
+      x->method();
+    });
+  }
+
+  void method_captures_this_with_other_protected_var() {
+    RefCountable* x = make_obj();
+    call([this, protectedX = RefPtr { x }]() {
+      // expected-warning@-1{{Captured variable 'this' is a raw pointer to RefPtr-capable type 'RefCountableWithLambdaCapturingThis' [webkit.UncountedLambdaCapturesChecker]}}
+      nonTrivial();
+      protectedX->method();
+    });
+  }
+
+  void method_captures_this_unsafe_capture_local_var_explicitly_with_deref() {
+    RefCountable* x = make_obj();
+    call([this, protectedThis = Ref { *this }, x]() {
+      // expected-warning@-1{{Captured variable 'x' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
+      nonTrivial();
+      x->method();
+    });
+  }
+
+  void method_captures_this_unsafe_local_var_via_vardecl() {
+    RefCountable* x = make_obj();
+    auto lambda = [this, protectedThis = Ref { *this }, x]() {
+      // expected-warning@-1{{Captured variable 'x' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
+      nonTrivial();
+      x->method();
+    };
+    call(lambda);
+  }
+
+  void method_captures_this_with_guardian() {
+    auto lambda = [this, protectedThis = Ref { *this }]() {
+      nonTrivial();
+    };
+    call(lambda);
+  }
+
+  void method_captures_this_with_guardian_refptr() {
+    auto lambda = [this, protectedThis = RefPtr { &*this }]() {
+      nonTrivial();
+    };
+    call(lambda);
+  }
+
+  void forEach(const WTF::Function<void(RefCountable&)>&);
+  void method_captures_this_with_lambda_with_no_escape() {
+    auto run = [&]([[clang::noescape]] const WTF::Function<void(RefCountable&)>& func) {
+      forEach(func);
+    };
+    run([&](RefCountable&) {
+      nonTrivial();
+    });
+  }
+
+  static void callLambda([[clang::noescape]] const WTF::Function<RefPtr<RefCountable>()>&);
+  void method_captures_this_in_template_method() {
+    RefCountable* obj = make_obj();
+    WTF::HashMap<int, RefPtr<RefCountable>> nextMap;
+    nextMap.ensure(3, [&] {
+      return obj->next();
+    });
+    nextMap+[&] {
+      return obj->next();
+    };
+    WTF::HashMap<int, RefPtr<RefCountable>>::ifAny(nextMap, [&](auto& item) -> bool {
+      return item->next() && obj->next();
+    });
+    callLambda([&]() -> RefPtr<RefCountable> {
+      return obj->next();
+    });
+    WTF::HashMap<int, RefPtr<RefCountable>> anotherMap([&] {
+      return obj->next();
+    });
+  }
+
+  void callAsyncNoescape([[clang::noescape]] WTF::Function<bool(RefCountable&)>&&);
+  void method_temp_lambda(RefCountable* obj) {
+    callAsyncNoescape([this, otherObj = RefPtr { obj }](auto& obj) {
+      return otherObj == &obj;
+    });
+  }
+
+  void method_nested_lambda() {
+    callAsync([this, protectedThis = Ref { *this }] {
+      callAsync([this, protectedThis = static_cast<const Ref<RefCountableWithLambdaCapturingThis>&&>(protectedThis)] {
+        nonTrivial();
+      });
+    });
+  }
+
+  void method_nested_lambda2() {
+    callAsync([this, protectedThis = RefPtr { this }] {
+      callAsync([this, protectedThis = std::move(*protectedThis)] {
+        nonTrivial();
+      });
+    });
+  }
+
+  void method_nested_lambda3() {
+    callAsync([this, protectedThis = RefPtr { this }] {
+      callAsync([this] {
+        // expected-warning@-1{{Captured variable 'this' is a raw pointer to RefPtr-capable type 'RefCountableWithLambdaCapturingThis' [webkit.UncountedLambdaCapturesChecker]}}
+        nonTrivial();
+      });
+    });
+  }
+
+  void method_nested_lambda4() {
+    callAsync([this, protectedThis = RefPtr { this }] {
+      callAsync([this, protectedThis = WTF::move(*protectedThis)] {
+        nonTrivial();
+      });
+    });
   }
 };
 
@@ -174,3 +292,231 @@ void trivial_lambda() {
   };
   trivial_lambda();
 }
+
+bool call_lambda_var_decl() {
+  RefCountable* ref_countable = make_obj();
+  auto lambda1 = [&]() -> bool {
+    return ref_countable->next();
+  };
+  auto lambda2 = [=]() -> bool {
+    return ref_countable->next();
+  };
+  return lambda1() && lambda2();
+}
+
+void lambda_with_args(RefCountable* obj) {
+  auto trivial_lambda = [&](int v) {
+    obj->method();
+  };
+  trivial_lambda(1);
+}
+
+void callFunctionOpaque(WTF::Function<void()>&&);
+void callFunction(WTF::Function<void()>&& function) {
+  someFunction();
+  function();
+}
+
+void lambda_converted_to_function(RefCountable* obj)
+{
+  callFunction([&]() {
+    obj->method();
+    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
+  });
+  callFunctionOpaque([&]() {
+    obj->method();
+    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
+  });
+}
+
+struct TemplateFunctionCallsLambda {
+  void ref() const;
+  void deref() const;
+
+  RefCountable* obj();
+
+  template <typename T>
+  RefPtr<T> method(T* t) {
+    auto ret = ([&]() -> RefPtr<T> {
+      if constexpr (T::isEncodable)
+        return t;
+      return obj() ? t : nullptr;
+    })();
+    return ret;
+  }
+};
+
+class Iterator {
+public:
+  Iterator(void* array, unsigned long sizeOfElement, unsigned int index);
+  Iterator(const Iterator&);
+  Iterator& operator=(const Iterator&);
+  bool operator==(const Iterator&);
+
+  Iterator& operator++();
+  int& operator*();
+
+private:
+  void* current { nullptr };
+  unsigned long sizeOfElement { 0 };
+};
+
+void ranges_for_each(RefCountable* obj) {
+  int array[] = { 1, 2, 3, 4, 5 };
+  std::ranges::for_each(Iterator(array, sizeof(*array), 0), Iterator(array, sizeof(*array), 5), [&](int& item) {
+    obj->method();
+    ++item;
+  });
+}
+
+class IntCollection {
+public:
+  int* begin();
+  int* end();
+  const int* begin() const;
+  const int* end() const;
+};
+
+class RefCountedObj {
+public:
+  void ref();
+  void deref();
+
+  bool allOf(const IntCollection&);
+  bool isMatch(int);
+
+  void call() const;
+  void callLambda([[clang::noescape]] const WTF::Function<void ()>& callback) const;
+  void doSomeWork() const;
+};
+
+bool RefCountedObj::allOf(const IntCollection& collection) {
+  return std::ranges::all_of(collection, [&](auto& number) {
+    return isMatch(number);
+  });
+}
+
+void RefCountedObj::callLambda([[clang::noescape]] const WTF::Function<void ()>& callback) const
+{
+    callback();
+}
+
+void RefCountedObj::call() const
+{
+    auto lambda = [&] {
+        doSomeWork();
+    };
+    callLambda(lambda);
+}
+
+void scope_exit(RefCountable* obj) {
+  auto scope = WTF::makeScopeExit([&] {
+    obj->method();
+  });
+  someFunction();
+  WTF::ScopeExit scope2([&] {
+    obj->method();
+  });
+  someFunction();
+}
+
+void doWhateverWith(WTF::ScopeExit& obj);
+
+void scope_exit_with_side_effect(RefCountable* obj) {
+  auto scope = WTF::makeScopeExit([&] {
+    obj->method();
+    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
+  });
+  doWhateverWith(scope);
+}
+
+void scope_exit_static(RefCountable* obj) {
+  static auto scope = WTF::makeScopeExit([&] {
+    obj->method();
+    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
+  });
+}
+
+WTF::Function<void()> scope_exit_take_lambda(RefCountable* obj) {
+  auto scope = WTF::makeScopeExit([&] {
+    obj->method();
+    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
+  });
+  return scope.take();
+}
+
+// FIXME: Ideally, we treat release() as a trivial function.
+void scope_exit_release(RefCountable* obj) {
+  auto scope = WTF::makeScopeExit([&] {
+    obj->method();
+    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
+  });
+  scope.release();
+}
+
+void make_visitor(RefCountable* obj) {
+  auto visitor = WTF::makeVisitor([&] {
+    obj->method();
+  });
+}
+
+void use_visitor(RefCountable* obj) {
+  auto visitor = WTF::makeVisitor([&] {
+    obj->method();
+  });
+  WTF::visit(visitor, obj);
+}
+
+template <typename Visitor, typename ObjectType>
+void bad_visit(Visitor&, ObjectType*) {
+  someFunction();
+}
+
+void static_visitor(RefCountable* obj) {
+  static auto visitor = WTF::makeVisitor([&] {
+    obj->method();
+    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
+  });
+}
+
+void make_visitor_with_multiple_lambdas(RefCountable* obj) {
+  auto* otherObj = make_obj();
+  auto visitor = WTF::makeVisitor([&] {
+    obj->method();
+    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
+  }, [&] {
+    otherObj->method();
+    // expected-warning@-1{{Implicitly captured variable 'otherObj' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
+  });
+  bad_visit(visitor, obj);
+}
+
+void bad_use_visitor(RefCountable* obj) {
+  auto visitor = WTF::makeVisitor([&] {
+    obj->method();
+    // expected-warning@-1{{Implicitly captured variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [webkit.UncountedLambdaCapturesChecker]}}
+  });
+  bad_visit(visitor, obj);
+}
+
+class LambdaInConstructorDestructor {
+public:
+  LambdaInConstructorDestructor() {
+    call([this]() {
+      // expected-warning@-1{{Captured variable 'this' is a raw pointer to RefPtr-capable type 'LambdaInConstructorDestructor' [webkit.UncountedLambdaCapturesChecker]}}
+      doWork();
+    });
+  }
+
+  ~LambdaInConstructorDestructor() {
+    call([this]() {
+      // expected-warning@-1{{Captured variable 'this' is a raw pointer to RefPtr-capable type 'LambdaInConstructorDestructor' [webkit.UncountedLambdaCapturesChecker]}}
+      doWork();
+    });
+  }
+
+  void ref() const;
+  void deref() const;
+
+  void doWork();
+};

@@ -2,7 +2,7 @@
 ; operand are inserted at the correct positions, and don't break rules of
 ; instruction domination and PHI nodes grouping at top of basic block.
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpName %[[#Foo:]] "foo"
@@ -36,8 +36,17 @@ ok:
   br label %exit
 
 exit:
+  store i64 %r1, ptr @g1
+  store i64 %r2, ptr @g2
+  store ptr addrspace(4) %r3, ptr @g3
+  store ptr addrspace(4) %r4, ptr @g4
   ret void
 }
+
+@g1 = internal global i64 0
+@g2 = internal global i64 0
+@g3 = internal global ptr addrspace(4) null
+@g4 = internal global ptr addrspace(4) null
 
 define spir_kernel void @bar(i64 %arg_val, i64 %arg_val_def, ptr addrspace(4) byval(%struct) %arg_ptr, ptr addrspace(4) %arg_ptr_def) {
 entry:
@@ -55,5 +64,9 @@ ok:
   br label %exit
 
 exit:
+  store i64 %r1, ptr @g1
+  store i64 %r2, ptr @g2
+  store ptr addrspace(4) %r3, ptr @g3
+  store ptr addrspace(4) %r4, ptr @g4
   ret void
 }

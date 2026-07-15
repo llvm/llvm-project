@@ -1,7 +1,7 @@
-; RUN: llc -march=mipsel -mcpu=mips32r5 -mattr=+fp64,+msa,-nooddspreg \
+; RUN: llc -mtriple=mipsel -mcpu=mips32r5 -mattr=+fp64,+msa,-nooddspreg \
 ; RUN:   -verify-machineinstrs -no-integrated-as -relocation-model=pic < %s | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,ODDSPREG
-; RUN: llc -march=mipsel -mcpu=mips32r5 -mattr=+fp64,+msa,+nooddspreg \
+; RUN: llc -mtriple=mipsel -mcpu=mips32r5 -mattr=+fp64,+msa,+nooddspreg \
 ; RUN:   -verify-machineinstrs -no-integrated-as -relocation-model=pic < %s | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,NOODDSPREG
 
@@ -97,7 +97,6 @@ entry:
 ; ALL:            lw $[[R0:[0-9]+]], %got(v4f32)(
 ; ALL:            ld.w $w12, 0($[[R0]])
 ; ALL:            move.v $w[[W0:13]], $w12
-; NOODDSPREG:     move.v $w[[W0:12]], $w13
 ; ALL:            teqi $zero, 1
 ; ALL-NOT: st.w
 ; ALL-NOT: ld.w

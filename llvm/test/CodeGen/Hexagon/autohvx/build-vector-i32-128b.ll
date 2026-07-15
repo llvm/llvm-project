@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Check that vector is produced with vxor
 ; CHECK: v{{[0-9]*}} = vxor

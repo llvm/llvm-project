@@ -38,7 +38,7 @@ ExternalProject_Add(DXC
                     ${GIT_SETTINGS}
                     SOURCE_DIR ${SOURCE_DIR}
                     BINARY_DIR ${BINARY_DIR}
-                    CMAKE_ARGS -C ${SOURCE_DIR}/cmake/caches/PredefinedParams.cmake -DLLVM_INCLUDE_TESTS=On
+                    CMAKE_ARGS -C ${SOURCE_DIR}/cmake/caches/PredefinedParams.cmake -DLLVM_INCLUDE_TESTS=Off -DCLANG_INCLUDE_TESTS=Off -DHLSL_INCLUDE_TESTS=Off
                     BUILD_COMMAND ${CMAKE_COMMAND} --build ${BINARY_DIR} --target llvm-dis
                     BUILD_BYPRODUCTS ${BINARY_DIR}/bin/llvm-dis
                     INSTALL_COMMAND ""

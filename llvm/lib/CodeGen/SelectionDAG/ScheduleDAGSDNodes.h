@@ -94,7 +94,7 @@ class InstrItineraryData;
     /// are input.  This SUnit graph is similar to the SelectionDAG, but
     /// excludes nodes that aren't interesting to scheduling, and represents
     /// flagged together nodes with a single SUnit.
-    void BuildSchedGraph(AAResults *AA);
+    void BuildSchedGraph();
 
     /// InitNumRegDefsLeft - Determine the # of regs defined by this node.
     ///

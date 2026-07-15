@@ -13,6 +13,7 @@ import traceback
 
 import lit.Test
 import lit.util
+from lit.TestRunner import TestUpdaterException
 
 
 _lit_config = None
@@ -75,6 +76,10 @@ def _execute_test_handle_errors(test, lit_config):
     try:
         result = test.config.test_format.execute(test, lit_config)
         return _adapt_result(result)
+    except TestUpdaterException as e:
+        if lit_config.debug:
+            raise
+        return lit.Test.Result(lit.Test.UNRESOLVED, str(e))
     except:
         if lit_config.debug:
             raise

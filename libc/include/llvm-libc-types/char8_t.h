@@ -9,8 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_CHAR8_T_H
 #define LLVM_LIBC_TYPES_CHAR8_T_H
 
-#if !defined(__cplusplus) && defined(__STDC_VERSION__) &&                      \
-    __STDC_VERSION__ >= 202311L
+#if !(defined(__cplusplus) && defined(__cpp_char8_t))
 typedef unsigned char char8_t;
 #endif
 

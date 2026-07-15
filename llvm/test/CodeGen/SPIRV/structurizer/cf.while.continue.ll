@@ -45,53 +45,53 @@
 ; }
 
 ; CHECK: %[[#func_15:]] = OpFunction %[[#uint:]] DontInline %[[#]]
-; CHECK:    %[[#bb35:]] = OpLabel
+; CHECK:    %[[#bb36:]] = OpLabel
 ; CHECK:                  OpReturnValue %[[#]]
 ; CHECK:                  OpFunctionEnd
+
 ; CHECK: %[[#func_16:]] = OpFunction %[[#void:]] DontInline %[[#]]
-; CHECK:    %[[#bb36:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb37:]]
 ; CHECK:    %[[#bb37:]] = OpLabel
-; CHECK:                  OpLoopMerge %[[#bb38:]] %[[#bb39:]] None
-; CHECK:                  OpBranchConditional %[[#]] %[[#bb40:]] %[[#bb38:]]
-; CHECK:    %[[#bb40:]] = OpLabel
-; CHECK:                  OpSelectionMerge %[[#bb41:]] None
-; CHECK:                  OpBranchConditional %[[#]] %[[#bb41:]] %[[#bb42:]]
-; CHECK:    %[[#bb42:]] = OpLabel
-; CHECK:                  OpSelectionMerge %[[#bb43:]] None
-; CHECK:                  OpBranchConditional %[[#]] %[[#bb43:]] %[[#bb44:]]
-; CHECK:    %[[#bb44:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb43:]]
-; CHECK:    %[[#bb43:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb41:]]
-; CHECK:    %[[#bb41:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb39:]]
-; CHECK:    %[[#bb39:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb37:]]
-; CHECK:    %[[#bb38:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb45:]]
-; CHECK:    %[[#bb45:]] = OpLabel
-; CHECK:                  OpLoopMerge %[[#bb46:]] %[[#bb47:]] None
-; CHECK:                  OpBranchConditional %[[#]] %[[#bb46:]] %[[#bb48:]]
-; CHECK:    %[[#bb48:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb49:]]
-; CHECK:    %[[#bb49:]] = OpLabel
-; CHECK:                  OpLoopMerge %[[#bb50:]] %[[#bb51:]] None
-; CHECK:                  OpBranchConditional %[[#]] %[[#bb51:]] %[[#bb50:]]
-; CHECK:    %[[#bb51:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb49:]]
-; CHECK:    %[[#bb50:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb47:]]
-; CHECK:    %[[#bb47:]] = OpLabel
-; CHECK:                  OpBranch %[[#bb45:]]
-; CHECK:    %[[#bb46:]] = OpLabel
+; CHECK:                  OpBranch %[[#bb38:]]
+; CHECK:     %[[#bb38]] = OpLabel
+; CHECK:                  OpLoopMerge %[[#bb39:]] %[[#bb40:]] None
+; CHECK:                  OpBranchConditional %[[#]] %[[#bb41:]] %[[#bb39]]
+; CHECK:     %[[#bb39]] = OpLabel
+; CHECK:                  OpBranch %[[#bb42:]]
+; CHECK:     %[[#bb42]] = OpLabel
+; CHECK:                  OpLoopMerge %[[#bb43:]] %[[#bb44:]] None
+; CHECK:                  OpBranchConditional %[[#]] %[[#bb43]] %[[#bb45:]]
+; CHECK:     %[[#bb45]] = OpLabel
+; CHECK:                  OpBranch %[[#bb46:]]
+; CHECK:     %[[#bb46]] = OpLabel
+; CHECK:                  OpLoopMerge %[[#bb47:]] %[[#bb48:]] None
+; CHECK:                  OpBranchConditional %[[#]] %[[#bb48]] %[[#bb47]]
+; CHECK:     %[[#bb47]] = OpLabel
+; CHECK:                  OpBranch %[[#bb44]]
+; CHECK:     %[[#bb44]] = OpLabel
+; CHECK:                  OpBranch %[[#bb42]]
+; CHECK:     %[[#bb48]] = OpLabel
+; CHECK:                  OpBranch %[[#bb46]]
+; CHECK:     %[[#bb43]] = OpLabel
+; CHECK:     %[[#bb41]] = OpLabel
+; CHECK:                  OpSelectionMerge %[[#bb49:]] None
+; CHECK:                  OpBranchConditional %[[#]] %[[#bb49]] %[[#bb50:]]
+; CHECK:     %[[#bb50]] = OpLabel
+; CHECK:                  OpSelectionMerge %[[#bb51:]] None
+; CHECK:                  OpBranchConditional %[[#]] %[[#bb51]] %[[#bb52:]]
+; CHECK:     %[[#bb52]] = OpLabel
+; CHECK:                  OpBranch %[[#bb51]]
+; CHECK:     %[[#bb51]] = OpLabel
+; CHECK:                  OpBranch %[[#bb49]]
+; CHECK:     %[[#bb49]] = OpLabel
+; CHECK:                  OpBranch %[[#bb40]]
+; CHECK:     %[[#bb40]] = OpLabel
+; CHECK:                  OpBranch %[[#bb38]]
 ; CHECK:                  OpFunctionEnd
-; CHECK: %[[#func_33:]] = OpFunction %[[#void:]] None %[[#]]
-; CHECK:    %[[#bb52:]] = OpLabel
+
+; CHECK: %[[#func_34:]] = OpFunction %[[#void]] None %[[#]]
+; CHECK:    %[[#bb53:]] = OpLabel
 ; CHECK:                  OpReturn
 ; CHECK:                  OpFunctionEnd
-
-
 
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-G1"
 target triple = "spirv-unknown-vulkan1.3-compute"

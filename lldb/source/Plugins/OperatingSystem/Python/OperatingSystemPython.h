@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_OperatingSystemPython_h_
-#define liblldb_OperatingSystemPython_h_
+#ifndef LLDB_SOURCE_PLUGINS_OPERATINGSYSTEM_PYTHON_OPERATINGSYSTEMPYTHON_H
+#define LLDB_SOURCE_PLUGINS_OPERATINGSYSTEM_PYTHON_OPERATINGSYSTEMPYTHON_H
 
 #include "lldb/Host/Config.h"
 
@@ -60,6 +60,8 @@ public:
   // Method for lazy creation of threads on demand
   lldb::ThreadSP CreateThread(lldb::tid_t tid, lldb::addr_t context) override;
 
+  bool DoesPluginReportAllThreads() override;
+
 protected:
   bool IsValid() const {
     return m_script_object_sp && m_script_object_sp->IsValid();
@@ -82,4 +84,4 @@ protected:
 
 #endif // LLDB_ENABLE_PYTHON
 
-#endif // liblldb_OperatingSystemPython_h_
+#endif // LLDB_SOURCE_PLUGINS_OPERATINGSYSTEM_PYTHON_OPERATINGSYSTEMPYTHON_H

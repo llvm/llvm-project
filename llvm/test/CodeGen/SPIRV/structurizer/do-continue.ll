@@ -21,7 +21,7 @@ entry:
 ; Here a the loop header had to be split in two:
 ; - 1 header for the loop
 ; - 1 header for the condition.
-; In SPIR-V, a loop header cannot directly 
+
 ; CHECK: %[[#do_header:]] = OpLabel
 ; CHECK:                    OpLoopMerge %[[#do_merge:]] %[[#do_latch:]] None
 ; CHECK:                    OpBranch %[[#new_header:]]
@@ -34,26 +34,20 @@ do_header:
   store i32 0, ptr %var
   br i1 true, label %if.then, label %if.end
 
-; CHECK: %[[#if_then]] = OpLabel
-; CHECK:                 OpBranch %[[#if_merge]]
-if.then:
-  store i32 0, ptr %var
-  br label %do_latch
-
 ; CHECK: %[[#if_end]] = OpLabel
 ; CHECK:                OpBranch %[[#if_merge]]
 if.end:
   store i32 0, ptr %var
   br label %do_latch
 
+; CHECK: %[[#if_then]] = OpLabel
+; CHECK:                 OpBranch %[[#if_merge]]
+if.then:
+  store i32 0, ptr %var
+  br label %do_latch
+
 ; CHECK: %[[#if_merge]] = OpLabel
 ; CHECK:                  OpBranchConditional %[[#]] %[[#do_latch]] %[[#do_merge]]
-
-; CHECK: %[[#do_latch]] = OpLabel
-; CHECK:                  OpBranch %[[#do_header]]
-do_latch:
-  store i32 0, ptr %var
-  br i1 true, label %do_header, label %do.end
 
 ; CHECK: %[[#do_merge]] = OpLabel
 ; CHECK:                  OpBranch %[[#do2_header:]]
@@ -80,12 +74,6 @@ do3_header:
 ; CHECK: %[[#do3_body]] = OpLabel
 ; CHECK:                  OpBranchConditional %[[#]] %[[#do3_continue]] %[[#do3_merge]]
 
-; CHECK: %[[#do3_continue]] = OpLabel
-; CHECK:                      OpBranch %[[#do3_header]]
-do3_continue:
-  store i32 0, ptr %var
-  br i1 true, label %do3_header, label %do3_merge
-
 ; CHECK: %[[#do3_merge]] = OpLabel
 ; CHECK:                   OpBranch %[[#do2_new_latch:]]
 do3_merge:
@@ -95,16 +83,28 @@ do3_merge:
 ; CHECK: %[[#do2_new_latch]] = OpLabel
 ; CHECK:                       OpBranchConditional %[[#]] %[[#do2_continue]] %[[#do2_merge]]
 
+; CHECK: %[[#do2_merge]] = OpLabel
+; CHECK:                   OpReturn
+do2_merge:
+  ret void
+
 ; CHECK: %[[#do2_continue]] = OpLabel
 ; CHECK:                      OpBranch %[[#do2_header]]
 do2_continue:
   store i32 0, ptr %var
   br i1 true, label %do2_header, label %do2_merge
 
-; CHECK: %[[#do2_merge]] = OpLabel
-; CHECK:                   OpReturn
-do2_merge:
-  ret void
+; CHECK: %[[#do3_continue]] = OpLabel
+; CHECK:                      OpBranch %[[#do3_header]]
+do3_continue:
+  store i32 0, ptr %var
+  br i1 true, label %do3_header, label %do3_merge
+
+; CHECK: %[[#do_latch]] = OpLabel
+; CHECK:                  OpBranch %[[#do_header]]
+do_latch:
+  store i32 0, ptr %var
+  br i1 true, label %do_header, label %do.end
 }
 
 declare token @llvm.experimental.convergence.entry() #1

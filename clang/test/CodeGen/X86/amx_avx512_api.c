@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -flax-vector-conversions=none -ffreestanding -triple=x86_64-unknown-unknown \
-// RUN: -target-feature +amx-avx512 -target-feature +avx10.2-512 \
+// RUN: -target-feature +amx-avx512 -target-feature +avx10.2 \
 // RUN: -emit-llvm -o - -Werror -pedantic | FileCheck %s --check-prefixes=CHECK
 
 #include <immintrin.h>
@@ -16,18 +16,18 @@ __m512 test_tile_cvtrowd2ps(__tile1024i a, unsigned b) {
  return __tile_cvtrowd2ps(a, b);
 }
 
-__m512bh test_tile_cvtrowps2pbf16h(__tile1024i a, unsigned b) {
-  //CHECK-LABEL: @test_tile_cvtrowps2pbf16h
+__m512bh test_tile_cvtrowps2bf16h(__tile1024i a, unsigned b) {
+  //CHECK-LABEL: @test_tile_cvtrowps2bf16h
   //CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
-  //CHECK-DAG: call <32 x bfloat> @llvm.x86.tcvtrowps2pbf16h.internal
- return __tile_cvtrowps2pbf16h(a, b);
+  //CHECK-DAG: call <32 x bfloat> @llvm.x86.tcvtrowps2bf16h.internal
+ return __tile_cvtrowps2bf16h(a, b);
 }
 
-__m512bh test_tile_cvtrowps2pbf16l(__tile1024i a, unsigned b) {
-  //CHECK-LABEL: @test_tile_cvtrowps2pbf16l
+__m512bh test_tile_cvtrowps2bf16l(__tile1024i a, unsigned b) {
+  //CHECK-LABEL: @test_tile_cvtrowps2bf16l
   //CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
-  //CHECK-DAG: call <32 x bfloat> @llvm.x86.tcvtrowps2pbf16l.internal
- return __tile_cvtrowps2pbf16l(a, b);
+  //CHECK-DAG: call <32 x bfloat> @llvm.x86.tcvtrowps2bf16l.internal
+ return __tile_cvtrowps2bf16l(a, b);
 }
 
 __m512h test_tile_cvtrowps2phh(__tile1024i a, unsigned b) {

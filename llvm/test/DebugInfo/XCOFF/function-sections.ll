@@ -40,6 +40,7 @@ entry:
 ; CHECK:               .file   "1.c"
 ; CHECK-NEXT:          .csect ..text..[PR],5
 ; CHECK-NEXT:          .rename ..text..[PR],""
+; CHECK-NEXT:          .machine "COM"
 ; CHECK-NEXT:          .csect .foo[PR],5
 ; CHECK-NEXT:          .globl  foo[DS]                         # -- Begin function foo
 ; CHECK-NEXT:          .globl  .foo[PR]
@@ -59,7 +60,7 @@ entry:
 ; CHECK-NEXT:          .vbyte  4, 0x00000000                   # Traceback table begin
 ; CHECK-NEXT:          .byte   0x00                            # Version = 0
 ; CHECK-NEXT:          .byte   0x09                            # Language = CPlusPlus
-; CHECK-NEXT:          .byte   0x20                            # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+; CHECK-NEXT:          .byte   0x20                            # -IsGlobalLinkage, -IsOutOfLineEpilogOrPrologue
 ; CHECK-NEXT:                                          # +HasTraceBackTableOffset, -IsInternalProcedure
 ; CHECK-NEXT:                                          # -HasControlledStorage, -IsTOCless
 ; CHECK-NEXT:                                          # -IsFloatingPointPresent
@@ -94,7 +95,7 @@ entry:
 ; CHECK-NEXT:          .vbyte  4, 0x00000000                   # Traceback table begin
 ; CHECK-NEXT:          .byte   0x00                            # Version = 0
 ; CHECK-NEXT:          .byte   0x09                            # Language = CPlusPlus
-; CHECK-NEXT:          .byte   0x20                            # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+; CHECK-NEXT:          .byte   0x20                            # -IsGlobalLinkage, -IsOutOfLineEpilogOrPrologue
 ; CHECK-NEXT:                                          # +HasTraceBackTableOffset, -IsInternalProcedure
 ; CHECK-NEXT:                                          # -HasControlledStorage, -IsTOCless
 ; CHECK-NEXT:                                          # -IsFloatingPointPresent

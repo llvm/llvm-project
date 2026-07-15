@@ -38,6 +38,9 @@
 ;; }
 
 ; RUN: opt -passes=inline %s -S | FileCheck %s
+;; We should not perform additional discarding of non-cold contexts when
+;; rebuilding the tries after inlining, even with a very low threshold.
+; RUN: opt -passes=inline -memprof-callsite-cold-threshold=1 %s -S | FileCheck %s
 
 ; ModuleID = 'memprof_inline2.cc'
 source_filename = "memprof_inline2.cc"

@@ -1,5 +1,4 @@
 // REQUIRES: host-supports-jit
-// UNSUPPORTED: system-aix
 // RUN: cat %s | clang-repl -Xcc -Xclang -Xcc -verify | FileCheck %s
 
 // expected-no-diagnostics

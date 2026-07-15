@@ -21,32 +21,20 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
 #include <optional>
 
 using namespace llvm;
 
-namespace llvm {
-void initializeLanaiMemAluCombinerPass(PassRegistry &);
-} // namespace llvm
-
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLanaiTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLanaiTarget() {
   // Register the target.
   RegisterTargetMachine<LanaiTargetMachine> registered_target(
       getTheLanaiTarget());
   PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeLanaiAsmPrinterPass(PR);
   initializeLanaiDAGToDAGISelLegacyPass(PR);
-}
-
-static std::string computeDataLayout() {
-  // Data layout (keep in sync with clang/lib/Basic/Targets.cpp)
-  return "E"        // Big endian
-         "-m:e"     // ELF name manging
-         "-p:32:32" // 32-bit pointers, 32 bit aligned
-         "-i64:64"  // 64 bit integers, 64 bit aligned
-         "-a:0:32"  // 32 bit alignment of objects of aggregate type
-         "-n32"     // 32 bit native integer width
-         "-S64";    // 64 bit natural stack alignment
+  initializeLanaiMemAluCombinerLegacyPass(PR);
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
@@ -59,7 +47,7 @@ LanaiTargetMachine::LanaiTargetMachine(
     std::optional<CodeModel::Model> CodeModel, CodeGenOptLevel OptLevel,
     bool JIT)
     : CodeGenTargetMachineImpl(
-          T, computeDataLayout(), TT, Cpu, FeatureString, Options,
+          T, TT.computeDataLayout(), TT, Cpu, FeatureString, Options,
           getEffectiveRelocModel(RM),
           getEffectiveCodeModel(CodeModel, CodeModel::Medium), OptLevel),
       Subtarget(TT, Cpu, FeatureString, *this, Options, getCodeModel(),
@@ -70,7 +58,7 @@ LanaiTargetMachine::LanaiTargetMachine(
 
 TargetTransformInfo
 LanaiTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(LanaiTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<LanaiTTIImpl>(this, F));
 }
 
 MachineFunctionInfo *LanaiTargetMachine::createMachineFunctionInfo(
@@ -111,18 +99,18 @@ void LanaiPassConfig::addIRPasses() {
 
 // Install an instruction selector pass.
 bool LanaiPassConfig::addInstSelector() {
-  addPass(createLanaiISelDag(getLanaiTargetMachine()));
+  addPass(createLanaiISelDagLegacyPass(getLanaiTargetMachine()));
   return false;
 }
 
 // Implemented by targets that want to run passes immediately before
 // machine code is emitted.
 void LanaiPassConfig::addPreEmitPass() {
-  addPass(createLanaiDelaySlotFillerPass(getLanaiTargetMachine()));
+  addPass(createLanaiDelaySlotFillerLegacyPass(getLanaiTargetMachine()));
 }
 
 // Run passes after prolog-epilog insertion and before the second instruction
 // scheduling pass.
 void LanaiPassConfig::addPreSched2() {
-  addPass(createLanaiMemAluCombinerPass());
+  addPass(createLanaiMemAluCombinerLegacyPass());
 }

@@ -1,10 +1,20 @@
 set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
+  Analysis
   BinaryFormat
+  BitReader
+  BitWriter
+  Core
+  FrontendOffloading
+  IRReader
+  Linker
+  MC
   Option
   Object
-  TargetParser
   Support
+  Target
+  TargetParser
+  TransformUtils
   )
 
 set(LLVM_TARGET_DEFINITIONS SYCLLinkOpts.td)

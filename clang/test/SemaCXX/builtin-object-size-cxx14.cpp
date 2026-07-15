@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx14 -std=c++14 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++2a %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++2b %s
+
 
 typedef __SIZE_TYPE__ size_t;
 
@@ -118,4 +120,14 @@ namespace InvalidBase {
 constexpr int bos_new() { // cxx14-error {{constant expression}}
   void *p = new int; // cxx14-note {{until C++20}}
   return __builtin_object_size(p, 0);
+}
+
+
+namespace GH129397 {
+
+struct incomplete;
+void test(incomplete &ref) {
+  __builtin_object_size(&ref, 1);
+}
+
 }

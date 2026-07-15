@@ -4,7 +4,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 tx.s -o tx.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64 ty.s -o ty.o
 
-# RUN: echo 'SECTIONS{.foo :{ KEEP(*x.o(.foo)) KEEP(*y.o(.foo)) }}' > 1.t
+# RUN: echo 'SECTIONS{.foo :{ KEEP(:*x.o(.foo)) KEEP(*y.o(.foo)) }}' > 1.t
 # RUN: ld.lld -o 1 -T 1.t tx.o ty.o
 # RUN: llvm-objdump -s 1 | FileCheck --check-prefix=FIRSTY %s
 # FIRSTY:      Contents of section .foo:
@@ -18,7 +18,7 @@
 
 ## Now the same tests but without KEEP. Checking that file name inside
 ## KEEP is parsed fine.
-# RUN: echo 'SECTIONS{.foo :{ *x.o(.foo) *y.o(.foo) }}' > 3.t
+# RUN: echo 'SECTIONS{.foo :{ :*x.o(.foo) *y.o(.foo) }}' > 3.t
 # RUN: ld.lld -o 3 -T 3.t tx.o ty.o
 # RUN: llvm-objdump -s 3 | FileCheck --check-prefix=FIRSTY %s
 
@@ -41,6 +41,7 @@
 # RUN: cp ty.o dir2/filename-spec2.o
 # RUN: llvm-ar rc dir1/lib1.a dir1/filename-spec1.o
 # RUN: llvm-ar rc dir2/lib2.a dir2/filename-spec2.o
+# RUN: llvm-ar rc combined.a tx.o ty.o
 
 ## Verify matching of archive library names.
 # RUN: echo 'SECTIONS{.foo :{ *lib2*(.foo) *lib1*(.foo) }}' > 7.t
@@ -55,7 +56,7 @@
 # RUN: llvm-objdump -s 8 | FileCheck --check-prefix=SECONDFIRST %s
 
 ## Verify matching of archive library names in KEEP.
-# RUN: echo 'SECTIONS{.foo :{ KEEP(*lib2*(.foo)) KEEP(*lib1*(.foo)) }}' > 9.t
+# RUN: echo 'SECTIONS{.foo :{ KEEP(*lib2.a:(.foo)) KEEP(*lib1*(.foo)) }}' > 9.t
 # RUN: ld.lld -o 9 -T 9.t --whole-archive \
 # RUN:   dir1/lib1.a dir2/lib2.a
 # RUN: llvm-objdump -s 9 | FileCheck --check-prefix=SECONDFIRST %s
@@ -71,6 +72,11 @@
 # RUN: echo 'SECTIONS{.foo :{ KEEP(*dir2*(.foo)) KEEP("lib1().a"(.foo)) }}' > 11.t
 # RUN: ld.lld -o 11 -T 11.t --whole-archive 'lib1().a' dir2/lib2.a
 # RUN: llvm-objdump -s 11 | FileCheck --check-prefix=SECONDFIRST %s
+
+## Verify that matching files excluded from an archive will not match files within one.
+# RUN: echo 'SECTIONS{.foo :{ KEEP(:*x.o(.foo)) KEEP(*y.o(.foo)) KEEP(*x.o(.foo)) }}' > 12.t
+# RUN: ld.lld -o 12 -T 12.t --whole-archive combined.a
+# RUN: llvm-objdump -s 12 | FileCheck --check-prefix=SECONDFIRST %s
 
 #--- tx.s
 .global _start

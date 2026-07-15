@@ -101,7 +101,7 @@ class MergedLoadStoreMotion {
   // where Size0 and Size1 are the #instructions on the two sides of
   // the diamond. The constant chosen here is arbitrary. Compiler Time
   // Control is enforced by the check Size0 * Size1 < MagicCompileTimeControl.
-  const int MagicCompileTimeControl = 250;
+  const unsigned MagicCompileTimeControl = 250;
 
   const bool SplitFooterBB;
 public:
@@ -137,8 +137,8 @@ BasicBlock *MergedLoadStoreMotion::getDiamondTail(BasicBlock *BB) {
 bool MergedLoadStoreMotion::isDiamondHead(BasicBlock *BB) {
   if (!BB)
     return false;
-  auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
-  if (!BI || !BI->isConditional())
+  auto *BI = dyn_cast<CondBrInst>(BB->getTerminator());
+  if (!BI)
     return false;
 
   BasicBlock *Succ0 = BI->getSuccessor(0);
@@ -281,7 +281,7 @@ void MergedLoadStoreMotion::sinkStoresAndGEPs(BasicBlock *BB, StoreInst *S0,
     auto *GEP0 = cast<GetElementPtrInst>(Ptr0);
     auto *GEP1 = cast<GetElementPtrInst>(Ptr1);
     Instruction *GEPNew = GEP0->clone();
-    GEPNew->insertBefore(SNew);
+    GEPNew->insertBefore(SNew->getIterator());
     GEPNew->applyMergedLocation(GEP0->getDebugLoc(), GEP1->getDebugLoc());
     SNew->setOperand(1, GEPNew);
     GEP0->replaceAllUsesWith(GEPNew);
@@ -317,9 +317,8 @@ bool MergedLoadStoreMotion::mergeStores(BasicBlock *HeadBB) {
   if (!SplitFooterBB && TailBB->hasNPredecessorsOrMore(3))
     return false;
   // #Instructions in Pred1 for Compile Time Control
-  auto InstsNoDbg = Pred1->instructionsWithoutDebug();
-  int Size1 = std::distance(InstsNoDbg.begin(), InstsNoDbg.end());
-  int NStores = 0;
+  unsigned Size1 = Pred1->size();
+  unsigned NStores = 0;
 
   for (BasicBlock::reverse_iterator RBI = Pred0->rbegin(), RBE = Pred0->rend();
        RBI != RBE;) {

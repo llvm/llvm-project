@@ -38,18 +38,18 @@ entry:
   %b = alloca i32, align 4
   br i1 true, label %cond1_true, label %cond1_false
 
-; CHECK:  %[[#cond1_true]] = OpLabel
-; CHECK:                     OpStore %[[#reg_0]] %[[#]]
-; CHECK:                     OpBranch %[[#cond1_merge]]
-cond1_true:
-  %2 = load i32, ptr %a, align 4
-  br label %cond1_merge
-
 ; CHECK:  %[[#cond1_false]] = OpLabel
 ; CHECK:                      OpStore %[[#reg_0]] %[[#]]
 ; CHECK:                      OpBranch %[[#cond1_merge]]
 cond1_false:
-  %3 = load i32, ptr %b, align 4
+  %2 = load i32, ptr %b, align 4
+  br label %cond1_merge
+
+; CHECK:  %[[#cond1_true]] = OpLabel
+; CHECK:                     OpStore %[[#reg_0]] %[[#]]
+; CHECK:                     OpBranch %[[#cond1_merge]]
+cond1_true:
+  %3 = load i32, ptr %a, align 4
   br label %cond1_merge
 
 ; CHECK: %[[#cond1_merge]] = OpLabel
@@ -58,7 +58,7 @@ cond1_false:
 ; CHECK:                     OpSelectionMerge %[[#cond2_merge:]] None
 ; CHECK:                     OpBranchConditional %[[#cond]] %[[#cond2_true:]] %[[#cond2_merge]]
 cond1_merge:
-  %cond = phi i32 [ %2, %cond1_true ], [ %3, %cond1_false ]
+  %cond = phi i32 [ %3, %cond1_true ], [ %2, %cond1_false ]
   %tobool1 = icmp ne i32 %cond, 0
   br i1 %tobool1, label %cond2_true, label %cond2_merge
 
@@ -76,20 +76,20 @@ cond2_merge:
   %call2 = call spir_func noundef i32 @fn() #4 [ "convergencectrl"(token %0) ]
   br i1 true, label %cond3_true, label %cond3_false
 
-; CHECK:  %[[#cond3_true]] = OpLabel
-; CHECK:                     OpFunctionCall
-; CHECK:                     OpStore %[[#reg_1]] %[[#]]
-; CHECK:                     OpBranch %[[#cond3_merge]]
-cond3_true:
-  %call5 = call spir_func noundef i32 @fn1() #4 [ "convergencectrl"(token %0) ]
-  br label %cond3_merge
-
 ; CHECK:  %[[#cond3_false]] = OpLabel
 ; CHECK:                      OpFunctionCall
 ; CHECK:                      OpStore %[[#reg_1]] %[[#]]
 ; CHECK:                      OpBranch %[[#cond3_merge]]
 cond3_false:
   %call7 = call spir_func noundef i32 @fn2() #4 [ "convergencectrl"(token %0) ]
+  br label %cond3_merge
+
+; CHECK:  %[[#cond3_true]] = OpLabel
+; CHECK:                     OpFunctionCall
+; CHECK:                     OpStore %[[#reg_1]] %[[#]]
+; CHECK:                     OpBranch %[[#cond3_merge]]
+cond3_true:
+  %call5 = call spir_func noundef i32 @fn1() #4 [ "convergencectrl"(token %0) ]
   br label %cond3_merge
 
 ; CHECK:  %[[#cond3_merge]] = OpLabel

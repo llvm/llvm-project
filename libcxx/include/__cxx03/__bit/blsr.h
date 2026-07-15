@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___BIT_BLSR_H
-#define _LIBCPP___BIT_BLSR_H
+#ifndef _LIBCPP___CXX03___BIT_BLSR_H
+#define _LIBCPP___CXX03___BIT_BLSR_H
 
 #include <__cxx03/__config>
 
@@ -17,18 +17,14 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR unsigned __libcpp_blsr(unsigned __x) _NOEXCEPT {
-  return __x ^ (__x & -__x);
-}
+inline _LIBCPP_HIDE_FROM_ABI unsigned __libcpp_blsr(unsigned __x) _NOEXCEPT { return __x ^ (__x & -__x); }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR unsigned long __libcpp_blsr(unsigned long __x) _NOEXCEPT {
-  return __x ^ (__x & -__x);
-}
+inline _LIBCPP_HIDE_FROM_ABI unsigned long __libcpp_blsr(unsigned long __x) _NOEXCEPT { return __x ^ (__x & -__x); }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR unsigned long long __libcpp_blsr(unsigned long long __x) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI unsigned long long __libcpp_blsr(unsigned long long __x) _NOEXCEPT {
   return __x ^ (__x & -__x);
 }
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___BIT_BLSR_H
+#endif // _LIBCPP___CXX03___BIT_BLSR_H

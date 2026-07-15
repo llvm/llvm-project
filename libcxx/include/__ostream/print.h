@@ -18,8 +18,8 @@
 #  include <__ostream/basic_ostream.h>
 #  include <format>
 #  include <ios>
-#  include <locale>
 #  include <print>
+#  include <streambuf>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
@@ -49,21 +49,11 @@ __vprint_nonunicode(ostream& __os, string_view __fmt, format_args __args, bool _
     if (__write_nl)
       __o += '\n';
 
-    const char* __str = __o.data();
-    size_t __len      = __o.size();
-
 #    if _LIBCPP_HAS_EXCEPTIONS
     try {
 #    endif // _LIBCPP_HAS_EXCEPTIONS
-      typedef ostreambuf_iterator<char> _Ip;
-      if (std::__pad_and_output(
-              _Ip(__os),
-              __str,
-              (__os.flags() & ios_base::adjustfield) == ios_base::left ? __str + __len : __str,
-              __str + __len,
-              __os,
-              __os.fill())
-              .failed())
+      if (auto __rdbuf = __os.rdbuf();
+          !__rdbuf || __rdbuf->sputn(__o.data(), __o.size()) != static_cast<streamsize>(__o.size()))
         __os.setstate(ios_base::badbit | ios_base::failbit);
 
 #    if _LIBCPP_HAS_EXCEPTIONS
@@ -92,12 +82,14 @@ _LIBCPP_HIDE_FROM_ABI inline void vprint_nonunicode(ostream& __os, string_view _
 //   native Unicode API;
 // Whether the returned FILE* is "a terminal capable of displaying Unicode"
 // is determined in the same way as the print(FILE*, ...) overloads.
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_EXPORTED_FROM_ABI FILE* __get_ostream_file(ostream& __os);
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 #    if _LIBCPP_HAS_UNICODE
 template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
 _LIBCPP_HIDE_FROM_ABI void __vprint_unicode(ostream& __os, string_view __fmt, format_args __args, bool __write_nl) {
-#      if _LIBCPP_AVAILABILITY_HAS_PRINT == 0
+#      ifndef _LIBCPP_WIN32API
   return std::__vprint_nonunicode(__os, __fmt, __args, __write_nl);
 #      else
   FILE* __file = std::__get_ostream_file(__os);
@@ -120,13 +112,10 @@ _LIBCPP_HIDE_FROM_ABI void __vprint_unicode(ostream& __os, string_view __fmt, fo
 #        endif // _LIBCPP_HAS_EXCEPTIONS
     ostream::sentry __s(__os);
     if (__s) {
-#        ifndef _LIBCPP_WIN32API
-      __print::__vprint_unicode_posix(__file, __fmt, __args, __write_nl, true);
-#        elif _LIBCPP_HAS_WIDE_CHARACTERS
-    __print::__vprint_unicode_windows(__file, __fmt, __args, __write_nl, true);
-#        else
-#          error "Windows builds with wchar_t disabled are not supported."
-#        endif
+      auto __result = std::vformat(__fmt, __args);
+      if (__write_nl)
+        __result.push_back('\n');
+      __print::__output_unicode_windows(__file, __result);
     }
 
 #        if _LIBCPP_HAS_EXCEPTIONS
@@ -134,7 +123,7 @@ _LIBCPP_HIDE_FROM_ABI void __vprint_unicode(ostream& __os, string_view __fmt, fo
     __os.__set_badbit_and_consider_rethrow();
   }
 #        endif // _LIBCPP_HAS_EXCEPTIONS
-#      endif   // _LIBCPP_AVAILABILITY_HAS_PRINT
+#      endif   // _LIBCPP_WIN32API
 }
 
 template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).

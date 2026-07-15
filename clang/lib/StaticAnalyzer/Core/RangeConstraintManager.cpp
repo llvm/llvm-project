@@ -109,7 +109,7 @@ public:
 //                           RangeSet implementation
 //===----------------------------------------------------------------------===//
 
-RangeSet::ContainerType RangeSet::Factory::EmptySet{};
+const RangeSet::ContainerType RangeSet::Factory::EmptySet{};
 
 RangeSet RangeSet::Factory::add(RangeSet LHS, RangeSet RHS) {
   ContainerType Result;
@@ -983,7 +983,7 @@ public:
   }
 
   /// Check equivalence data for consistency.
-  [[nodiscard]] LLVM_ATTRIBUTE_UNUSED static bool
+  [[nodiscard]] [[maybe_unused]] static bool
   isClassDataConsistent(ProgramStateRef State);
 
   [[nodiscard]] QualType getType() const {
@@ -1041,8 +1041,7 @@ private:
 //                             Constraint functions
 //===----------------------------------------------------------------------===//
 
-[[nodiscard]] LLVM_ATTRIBUTE_UNUSED bool
-areFeasible(ConstraintRangeTy Constraints) {
+[[nodiscard]] [[maybe_unused]] bool areFeasible(ConstraintRangeTy Constraints) {
   return llvm::none_of(
       Constraints,
       [](const std::pair<EquivalenceClass, RangeSet> &ClassConstraint) {
@@ -1134,7 +1133,7 @@ template <class EndTy>
   return End;
 }
 
-[[nodiscard]] LLVM_ATTRIBUTE_UNUSED inline std::optional<RangeSet>
+[[nodiscard]] [[maybe_unused]] inline std::optional<RangeSet>
 intersect(RangeSet::Factory &F, const RangeSet *End) {
   // This is an extraneous conversion from a raw pointer into
   // std::optional<RangeSet>
@@ -1394,6 +1393,54 @@ private:
     return infer(T);
   }
 
+  /// Infer the range of an additive or multiplicative binary operator from the
+  /// ranges of its operands.
+  RangeSet inferFromCorners(BinaryOperator::Opcode Op, Range LHS, Range RHS,
+                            QualType T) {
+    const bool IsUnsigned = T->isUnsignedIntegerOrEnumerationType();
+
+    auto Eval = [&](const llvm::APSInt &L,
+                    const llvm::APSInt &R) -> std::optional<llvm::APSInt> {
+      bool Overflow = false;
+      llvm::APInt Result;
+      switch (Op) {
+      case BO_Add:
+        Result = IsUnsigned ? L.uadd_ov(R, Overflow) : L.sadd_ov(R, Overflow);
+        break;
+      case BO_Sub:
+        Result = IsUnsigned ? L.usub_ov(R, Overflow) : L.ssub_ov(R, Overflow);
+        break;
+      case BO_Mul:
+        Result = IsUnsigned ? L.umul_ov(R, Overflow) : L.smul_ov(R, Overflow);
+        break;
+      default:
+        llvm_unreachable("only +, - and * are handled here");
+      }
+      if (Overflow)
+        return std::nullopt;
+      return llvm::APSInt(Result, IsUnsigned);
+    };
+
+    // Fold over the four corners of the [LHS] x [RHS] rectangle, computing each
+    // one lazily and merging it into the running [Min, Max].
+    std::optional<llvm::APSInt> Min, Max;
+    for (const llvm::APSInt &L : {LHS.From(), LHS.To()}) {
+      for (const llvm::APSInt &R : {RHS.From(), RHS.To()}) {
+        std::optional<llvm::APSInt> Corner = Eval(L, R);
+        // A disengaged corner means the operation overflowed the result type,
+        // so the true result may wrap around and we cannot bound it.
+        if (!Corner.has_value())
+          return infer(T);
+        if (!Min || Corner.value() < *Min)
+          Min = Corner;
+        if (!Max || Corner.value() > *Max)
+          Max = Corner;
+      }
+    }
+    return RangeSet{RangeFactory, ValueFactory.getValue(Min.value()),
+                    ValueFactory.getValue(Max.value())};
+  }
+
   /// Return a symmetrical range for the given range and type.
   ///
   /// If T is signed, return the smallest range [-x..x] that covers the original
@@ -1471,7 +1518,7 @@ private:
     return getRangeForNegatedExpr(
         [SSE, State = this->State]() -> SymbolRef {
           if (SSE->getOpcode() == BO_Sub)
-            return State->getSymbolManager().getSymSymExpr(
+            return State->getSymbolManager().acquire<SymSymExpr>(
                 SSE->getRHS(), BO_Sub, SSE->getLHS(), SSE->getType());
           return nullptr;
         },
@@ -1481,8 +1528,8 @@ private:
   std::optional<RangeSet> getRangeForNegatedSym(SymbolRef Sym) {
     return getRangeForNegatedExpr(
         [Sym, State = this->State]() {
-          return State->getSymbolManager().getUnarySymExpr(Sym, UO_Minus,
-                                                           Sym->getType());
+          return State->getSymbolManager().acquire<UnarySymExpr>(
+              Sym, UO_Minus, Sym->getType());
         },
         Sym->getType());
   }
@@ -1495,7 +1542,7 @@ private:
     if (!IsCommutative)
       return std::nullopt;
 
-    SymbolRef Commuted = State->getSymbolManager().getSymSymExpr(
+    SymbolRef Commuted = State->getSymbolManager().acquire<SymSymExpr>(
         SSE->getRHS(), Op, SSE->getLHS(), SSE->getType());
     if (const RangeSet *Range = getConstraint(State, Commuted))
       return *Range;
@@ -1540,7 +1587,8 @@ private:
 
       // Let's find an expression e.g. (x < y).
       BinaryOperatorKind QueriedOP = OperatorRelationsTable::getOpFromIndex(i);
-      const SymSymExpr *SymSym = SymMgr.getSymSymExpr(LHS, QueriedOP, RHS, T);
+      const SymSymExpr *SymSym =
+          SymMgr.acquire<SymSymExpr>(LHS, QueriedOP, RHS, T);
       const RangeSet *QueriedRangeSet = getConstraint(State, SymSym);
 
       // If ranges were not previously found,
@@ -1548,7 +1596,7 @@ private:
       if (!QueriedRangeSet) {
         const BinaryOperatorKind ROP =
             BinaryOperator::reverseComparisonOp(QueriedOP);
-        SymSym = SymMgr.getSymSymExpr(RHS, ROP, LHS, T);
+        SymSym = SymMgr.acquire<SymSymExpr>(RHS, ROP, LHS, T);
         QueriedRangeSet = getConstraint(State, SymSym);
       }
 
@@ -1841,6 +1889,27 @@ RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_Rem>(Range LHS,
   return {RangeFactory, ValueFactory.getValue(Min), ValueFactory.getValue(Max)};
 }
 
+template <>
+RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_Add>(Range LHS,
+                                                            Range RHS,
+                                                            QualType T) {
+  return inferFromCorners(BO_Add, LHS, RHS, T);
+}
+
+template <>
+RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_Sub>(Range LHS,
+                                                            Range RHS,
+                                                            QualType T) {
+  return inferFromCorners(BO_Sub, LHS, RHS, T);
+}
+
+template <>
+RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_Mul>(Range LHS,
+                                                            Range RHS,
+                                                            QualType T) {
+  return inferFromCorners(BO_Mul, LHS, RHS, T);
+}
+
 RangeSet SymbolicRangeInferrer::VisitBinaryOperator(RangeSet LHS,
                                                     BinaryOperator::Opcode Op,
                                                     RangeSet RHS, QualType T) {
@@ -1859,6 +1928,12 @@ RangeSet SymbolicRangeInferrer::VisitBinaryOperator(RangeSet LHS,
     return VisitBinaryOperator<BO_And>(LHS, RHS, T);
   case BO_Rem:
     return VisitBinaryOperator<BO_Rem>(LHS, RHS, T);
+  case BO_Add:
+    return VisitBinaryOperator<BO_Add>(LHS, RHS, T);
+  case BO_Sub:
+    return VisitBinaryOperator<BO_Sub>(LHS, RHS, T);
+  case BO_Mul:
+    return VisitBinaryOperator<BO_Mul>(LHS, RHS, T);
   default:
     return infer(T);
   }

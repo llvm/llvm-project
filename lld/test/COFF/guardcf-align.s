@@ -1,10 +1,11 @@
 # REQUIRES: x86
+# RUN: mkdir -p %t.dir
 # RUN: llvm-mc -triple x86_64-windows-msvc -filetype=obj -o %t.obj %s
 # RUN: yaml2obj %p/Inputs/guardcf-align-foobar.yaml \
-# RUN:     > %T/guardcf-align-foobar.obj
-# RUN: lld-link -out:%T/guardcf-align.exe -entry:main -guard:cf \
-# RUN:     %t.obj %T/guardcf-align-foobar.obj
-# RUN: llvm-readobj --coff-load-config %T/guardcf-align.exe | FileCheck %s
+# RUN:     > %t.dir/guardcf-align-foobar.obj
+# RUN: lld-link -out:%t.dir/guardcf-align.exe -entry:main -guard:cf \
+# RUN:     %t.obj %t.dir/guardcf-align-foobar.obj
+# RUN: llvm-readobj --coff-load-config %t.dir/guardcf-align.exe | FileCheck %s
 
 # Check that the gfids table contains at least one entry that ends in 0
 # and no entries that end in something other than 0.

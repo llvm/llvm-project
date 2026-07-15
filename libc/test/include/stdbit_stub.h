@@ -2,7 +2,7 @@
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
-// SPDSList-License-Identifier: Apache-2.0 WITH LLVM-exception
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,19 +17,19 @@
 #include <stdbool.h> // bool in C
 
 #define STDBIT_STUB_FUNCTION(FUNC_NAME, LEADING_VAL)                           \
-  unsigned FUNC_NAME##_uc(unsigned char x) __NOEXCEPT {                        \
+  unsigned FUNC_NAME##_uc(unsigned char __attribute__((unused)) x) {           \
     return LEADING_VAL##AU;                                                    \
   }                                                                            \
-  unsigned FUNC_NAME##_us(unsigned short x) __NOEXCEPT {                       \
+  unsigned FUNC_NAME##_us(unsigned short __attribute__((unused)) x) {          \
     return LEADING_VAL##BU;                                                    \
   }                                                                            \
-  unsigned FUNC_NAME##_ui(unsigned int x) __NOEXCEPT {                         \
+  unsigned FUNC_NAME##_ui(unsigned int __attribute__((unused)) x) {            \
     return LEADING_VAL##CU;                                                    \
   }                                                                            \
-  unsigned FUNC_NAME##_ul(unsigned long x) __NOEXCEPT {                        \
+  unsigned FUNC_NAME##_ul(unsigned long __attribute__((unused)) x) {           \
     return LEADING_VAL##DU;                                                    \
   }                                                                            \
-  unsigned FUNC_NAME##_ull(unsigned long long x) __NOEXCEPT {                  \
+  unsigned FUNC_NAME##_ull(unsigned long long __attribute__((unused)) x) {     \
     return LEADING_VAL##EU;                                                    \
   }
 
@@ -46,27 +46,51 @@ STDBIT_STUB_FUNCTION(stdc_first_trailing_one, 0x1)
 STDBIT_STUB_FUNCTION(stdc_count_zeros, 0x2)
 STDBIT_STUB_FUNCTION(stdc_count_ones, 0x3)
 
-bool stdc_has_single_bit_uc(unsigned char x) __NOEXCEPT { return false; }
-bool stdc_has_single_bit_us(unsigned short x) __NOEXCEPT { return false; }
-bool stdc_has_single_bit_ui(unsigned x) __NOEXCEPT { return false; }
-bool stdc_has_single_bit_ul(unsigned long x) __NOEXCEPT { return false; }
-bool stdc_has_single_bit_ull(unsigned long long x) __NOEXCEPT { return false; }
+bool stdc_has_single_bit_uc(unsigned char __attribute__((unused)) x) {
+  return false;
+}
+bool stdc_has_single_bit_us(unsigned short __attribute__((unused)) x) {
+  return false;
+}
+bool stdc_has_single_bit_ui(unsigned __attribute__((unused)) x) {
+  return false;
+}
+bool stdc_has_single_bit_ul(unsigned long __attribute__((unused)) x) {
+  return false;
+}
+bool stdc_has_single_bit_ull(unsigned long long __attribute__((unused)) x) {
+  return false;
+}
 
 STDBIT_STUB_FUNCTION(stdc_bit_width, 0x4)
 
-unsigned char stdc_bit_floor_uc(unsigned char x) __NOEXCEPT { return 0x5AU; }
-unsigned short stdc_bit_floor_us(unsigned short x) __NOEXCEPT { return 0x5BU; }
-unsigned stdc_bit_floor_ui(unsigned x) __NOEXCEPT { return 0x5CU; }
-unsigned long stdc_bit_floor_ul(unsigned long x) __NOEXCEPT { return 0x5DUL; }
-unsigned long long stdc_bit_floor_ull(unsigned long long x) __NOEXCEPT {
+unsigned char stdc_bit_floor_uc(unsigned char __attribute__((unused)) x) {
+  return 0x5AU;
+}
+unsigned short stdc_bit_floor_us(unsigned short __attribute__((unused)) x) {
+  return 0x5BU;
+}
+unsigned stdc_bit_floor_ui(unsigned __attribute__((unused)) x) { return 0x5CU; }
+unsigned long stdc_bit_floor_ul(unsigned long __attribute__((unused)) x) {
+  return 0x5DUL;
+}
+unsigned long long stdc_bit_floor_ull(unsigned long long
+                                      __attribute__((unused)) x) {
   return 0x5EULL;
 }
 
-unsigned char stdc_bit_ceil_uc(unsigned char x) __NOEXCEPT { return 0x6AU; }
-unsigned short stdc_bit_ceil_us(unsigned short x) __NOEXCEPT { return 0x6BU; }
-unsigned stdc_bit_ceil_ui(unsigned x) __NOEXCEPT { return 0x6CU; }
-unsigned long stdc_bit_ceil_ul(unsigned long x) __NOEXCEPT { return 0x6DUL; }
-unsigned long long stdc_bit_ceil_ull(unsigned long long x) __NOEXCEPT {
+unsigned char stdc_bit_ceil_uc(unsigned char __attribute__((unused)) x) {
+  return 0x6AU;
+}
+unsigned short stdc_bit_ceil_us(unsigned short __attribute__((unused)) x) {
+  return 0x6BU;
+}
+unsigned stdc_bit_ceil_ui(unsigned __attribute__((unused)) x) { return 0x6CU; }
+unsigned long stdc_bit_ceil_ul(unsigned long __attribute__((unused)) x) {
+  return 0x6DUL;
+}
+unsigned long long stdc_bit_ceil_ull(unsigned long long
+                                     __attribute__((unused)) x) {
   return 0x6EULL;
 }
 

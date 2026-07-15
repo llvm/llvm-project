@@ -15,9 +15,9 @@
 # RUN: llvm-mc -filetype=obj -triple=s390x -defsym ADDEND=2147483648 %t/addend.s -o %t/2.o
 # RUN: llvm-mc -filetype=obj -triple=s390x -defsym ADDEND=2147483649 %t/addend.s -o %t/3.o
 
-# RUN: ld.lld --section-start=.text=0x0 %t/1.o -o %t/1out
-# RUN: ld.lld --section-start=.text=0x0 %t/2.o -o %t/2out
-# RUN: not ld.lld --section-start=.text=0x0 %t/3.o -o /dev/null 2>&1 | FileCheck %s -DFILE=%t/3.o --check-prefix RANGE
+# RUN: ld.lld --image-base=0 -Ttext=0 %t/1.o -o %t/1out
+# RUN: ld.lld --image-base=0 -Ttext=0 %t/2.o -o %t/2out
+# RUN: not ld.lld --image-base=0 -Ttext=0 %t/3.o -o /dev/null 2>&1 | FileCheck %s -DFILE=%t/3.o --check-prefix RANGE
 
 # RANGE: error: [[FILE]]:(.text+0x0): relocation R_390_PC32 out of range
 

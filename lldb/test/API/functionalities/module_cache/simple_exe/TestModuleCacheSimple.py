@@ -9,7 +9,10 @@ import os
 import time
 
 
+@skipIfWasm  # modules carry no build ID to cache on
 class ModuleCacheTestcaseSimple(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)

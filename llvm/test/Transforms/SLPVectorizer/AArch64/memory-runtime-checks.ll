@@ -600,15 +600,27 @@ bb15:                                             ; preds = %bb15, %bb14
 define void @test_bounds_removed_before_runtime_checks(ptr %A, ptr %B, i1 %c) {
 ; CHECK-LABEL: @test_bounds_removed_before_runtime_checks(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <2 x i32> <i32 10, i32 300>, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul float 1.000000e+01, 2.000000e+01
+; CHECK-NEXT:    [[TMP2:%.*]] = fptosi float [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul float 3.000000e+01, 2.000000e+01
+; CHECK-NEXT:    [[TMP4:%.*]] = fptosi float [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt i32 100, [[TMP2]]
+; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], i32 [[TMP2]], i32 10
+; CHECK-NEXT:    [[TMP7:%.*]] = select i1 false, i32 0, i32 [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i32 200, [[TMP4]]
+; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i32 [[TMP4]], i32 300
+; CHECK-NEXT:    [[TMP10:%.*]] = select i1 false, i32 0, i32 [[TMP9]]
+; CHECK-NEXT:    store i32 [[TMP7]], ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT:%.*]], ptr [[A]], i64 0, i32 1
+; CHECK-NEXT:    store i32 [[TMP10]], ptr [[TMP12]], align 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB23:%.*]], label [[BB14:%.*]]
 ; CHECK:       bb14:
-; CHECK-NEXT:    [[TMP15:%.*]] = sext i32 10 to i64
+; CHECK-NEXT:    [[TMP15:%.*]] = sext i32 [[TMP7]] to i64
 ; CHECK-NEXT:    [[TMP16:%.*]] = add nsw i64 2, [[TMP15]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[TMP13]], i64 [[TMP16]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[TMP17]], i64 3
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT:%.*]], ptr [[A]], i64 0, i32 2
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT]], ptr [[A]], i64 0, i32 2
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[TMP20]], align 8
 ; CHECK-NEXT:    [[TMP21:%.*]] = load i8, ptr [[TMP19]], align 1
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT]], ptr [[A]], i64 0, i32 3
@@ -661,8 +673,8 @@ define void @single_membound(ptr %arg, ptr %arg1, double %x) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = fsub double 1.000000e+00, [[TMP12]]
 ; CHECK-NEXT:    br label [[BB15:%.*]]
 ; CHECK:       bb15:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[TMP]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[TMP13]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[TMP]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[TMP13]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[TMP1]], <double 2.000000e+01, double 3.000000e+01>
 ; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[TMP9]], align 8
 ; CHECK-NEXT:    ret void
@@ -1231,13 +1243,13 @@ define void @crash_no_tracked_instructions(ptr %arg, ptr %arg.2, ptr %arg.3, i1 
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[T19:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
 ; CHECK-NEXT:    [[T20:%.*]] = load float, ptr [[ARG_3:%.*]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> <float 0.000000e+00, float poison>, float [[T20]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> <float 0.000000e+00, float poison>, float [[T20]], i64 1
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB22:%.*]], label [[BB30:%.*]]
 ; CHECK:       bb22:
 ; CHECK-NEXT:    [[T23:%.*]] = fmul float [[T20]], 9.900000e+01
 ; CHECK-NEXT:    [[T25:%.*]] = getelementptr inbounds float, ptr [[T19]], i64 2
 ; CHECK-NEXT:    [[T26:%.*]] = fmul float [[T23]], 1.000000e+01
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[T23]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[T23]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x float> [[TMP2]], <float 9.900000e+01, float 1.000000e+01>
 ; CHECK-NEXT:    store float [[T26]], ptr [[T25]], align 4

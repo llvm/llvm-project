@@ -18,6 +18,10 @@ class X86TargetStreamer : public MCTargetStreamer {
 public:
   X86TargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {}
 
+  virtual void emitCode16() {}
+  virtual void emitCode32() {}
+  virtual void emitCode64() {}
+
   virtual bool emitFPOProc(const MCSymbol *ProcSym, unsigned ParamsSize,
                            SMLoc L = {}) {
     return false;

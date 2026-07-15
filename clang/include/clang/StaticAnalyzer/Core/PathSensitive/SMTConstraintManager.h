@@ -16,6 +16,7 @@
 
 #include "clang/Basic/JsonSupport.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/BasicValueFactory.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/RangedConstraintManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SMTConv.h"
 #include <optional>
@@ -51,17 +52,19 @@ public:
     QualType RetTy;
     bool hasComparison;
 
-    llvm::SMTExprRef Exp =
-        SMTConv::getExpr(Solver, Ctx, Sym, &RetTy, &hasComparison);
-
+    std::optional<llvm::SMTExprRef> Exp =
+        SMTConv::getExpr(Solver, Ctx, Sym, RetTy, &hasComparison);
+    if (!Exp)
+      return assumeSymUnsupported(State, Sym, Assumption);
     // Create zero comparison for implicit boolean cast, with reversed
     // assumption
     if (!hasComparison && !RetTy->isBooleanType())
       return assumeExpr(
           State, Sym,
-          SMTConv::getZeroExpr(Solver, Ctx, Exp, RetTy, !Assumption));
+          SMTConv::getZeroExpr(Solver, Ctx, Exp.value(), RetTy, !Assumption));
 
-    return assumeExpr(State, Sym, Assumption ? Exp : Solver->mkNot(Exp));
+    return assumeExpr(State, Sym,
+                      Assumption ? Exp.value() : Solver->mkNot(Exp.value()));
   }
 
   ProgramStateRef assumeSymInclusiveRange(ProgramStateRef State, SymbolRef Sym,
@@ -69,8 +72,11 @@ public:
                                           const llvm::APSInt &To,
                                           bool InRange) override {
     ASTContext &Ctx = getBasicVals().getContext();
-    return assumeExpr(
-        State, Sym, SMTConv::getRangeExpr(Solver, Ctx, Sym, From, To, InRange));
+    std::optional<llvm::SMTExprRef> Expr =
+        SMTConv::getRangeExpr(Solver, Ctx, Sym, From, To, InRange);
+    if (!Expr)
+      return assumeSymUnsupported(State, Sym, false);
+    return assumeExpr(State, Sym, Expr.value());
   }
 
   ProgramStateRef assumeSymUnsupported(ProgramStateRef State, SymbolRef Sym,
@@ -88,13 +94,16 @@ public:
 
     QualType RetTy;
     // The expression may be casted, so we cannot call getZ3DataExpr() directly
-    llvm::SMTExprRef VarExp = SMTConv::getExpr(Solver, Ctx, Sym, &RetTy);
-    llvm::SMTExprRef Exp =
-        SMTConv::getZeroExpr(Solver, Ctx, VarExp, RetTy, /*Assumption=*/true);
+    std::optional<llvm::SMTExprRef> VarExp =
+        SMTConv::getExpr(Solver, Ctx, Sym, RetTy);
+    if (!VarExp)
+      return ConditionTruthVal();
+    llvm::SMTExprRef Exp = SMTConv::getZeroExpr(Solver, Ctx, VarExp.value(),
+                                                RetTy, /*Assumption=*/true);
 
     // Negate the constraint
-    llvm::SMTExprRef NotExp =
-        SMTConv::getZeroExpr(Solver, Ctx, VarExp, RetTy, /*Assumption=*/false);
+    llvm::SMTExprRef NotExp = SMTConv::getZeroExpr(Solver, Ctx, VarExp.value(),
+                                                   RetTy, /*Assumption=*/false);
 
     ConditionTruthVal isSat = checkModel(State, Sym, Exp);
     ConditionTruthVal isNotSat = checkModel(State, Sym, NotExp);
@@ -154,7 +163,7 @@ public:
         return nullptr;
 
       // This is the only solution, store it
-      return &BVF.getValue(Value);
+      return BVF.getValue(Value).get();
     }
 
     if (const SymbolCast *SC = dyn_cast<SymbolCast>(Sym)) {
@@ -167,16 +176,24 @@ public:
       const llvm::APSInt *Value;
       if (!(Value = getSymVal(State, CastSym)))
         return nullptr;
-      return &BVF.Convert(SC->getType(), *Value);
+      return BVF.Convert(SC->getType(), *Value).get();
+    }
+
+    if (const auto *USE = dyn_cast<UnarySymExpr>(Sym)) {
+      const llvm::APSInt *Value;
+      if (!(Value = getSymVal(State, USE->getOperand())))
+        return nullptr;
+      std::optional<APSIntPtr> Res = BVF.evalAPSInt(USE->getOpcode(), *Value);
+      return Res ? Res.value().get() : nullptr;
     }
 
     if (const BinarySymExpr *BSE = dyn_cast<BinarySymExpr>(Sym)) {
       const llvm::APSInt *LHS, *RHS;
       if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(BSE)) {
         LHS = getSymVal(State, SIE->getLHS());
-        RHS = &SIE->getRHS();
+        RHS = SIE->getRHS().get();
       } else if (const IntSymExpr *ISE = dyn_cast<IntSymExpr>(BSE)) {
-        LHS = &ISE->getLHS();
+        LHS = ISE->getLHS().get();
         RHS = getSymVal(State, ISE->getRHS());
       } else if (const SymSymExpr *SSM = dyn_cast<SymSymExpr>(BSE)) {
         // Early termination to avoid expensive call
@@ -195,7 +212,9 @@ public:
       std::tie(ConvertedRHS, RTy) = SMTConv::fixAPSInt(Ctx, *RHS);
       SMTConv::doIntTypeConversion<llvm::APSInt, &SMTConv::castAPSInt>(
           Solver, Ctx, ConvertedLHS, LTy, ConvertedRHS, RTy);
-      return BVF.evalAPSInt(BSE->getOpcode(), ConvertedLHS, ConvertedRHS);
+      std::optional<APSIntPtr> Res =
+          BVF.evalAPSInt(BSE->getOpcode(), ConvertedLHS, ConvertedRHS);
+      return Res ? Res.value().get() : nullptr;
     }
 
     llvm_unreachable("Unsupported expression to get symbol value!");
@@ -278,10 +297,8 @@ public:
     if (const SymbolCast *SC = dyn_cast<SymbolCast>(Sym))
       return canReasonAbout(SVB.makeSymbolVal(SC->getOperand()));
 
-    // UnarySymExpr support is not yet implemented in the Z3 wrapper.
-    if (isa<UnarySymExpr>(Sym)) {
-      return false;
-    }
+    if (const auto *USE = dyn_cast<UnarySymExpr>(Sym))
+      return canReasonAbout(SVB.makeSymbolVal(USE->getOperand()));
 
     if (const BinarySymExpr *BSE = dyn_cast<BinarySymExpr>(Sym)) {
       if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(BSE))
@@ -298,8 +315,10 @@ public:
     llvm_unreachable("Unsupported expression to reason about!");
   }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Dumps SMT formula
   LLVM_DUMP_METHOD void dump() const { Solver->dump(); }
+#endif
 
 protected:
   // Check whether a new model is satisfiable, and update the program state.
@@ -321,8 +340,6 @@ protected:
 
     // Construct the logical AND of all the constraints
     if (I != IE) {
-      std::vector<llvm::SMTExprRef> ASTs;
-
       llvm::SMTExprRef Constraint = I++->second;
       while (I != IE) {
         Constraint = Solver->mkAnd(Constraint, I++->second);
@@ -350,12 +367,7 @@ protected:
     addStateConstraints(NewState);
 
     std::optional<bool> res = Solver->check();
-    if (!res)
-      Cached[hash] = ConditionTruthVal();
-    else
-      Cached[hash] = ConditionTruthVal(*res);
-
-    return Cached[hash];
+    return Cached[hash] = res ? ConditionTruthVal(*res) : ConditionTruthVal();
   }
 
   // Cache the result of an SMT query (true, false, unknown). The key is the

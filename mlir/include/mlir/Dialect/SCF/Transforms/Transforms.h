@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_SCF_TRANSFORMS_TRANSFORMS_H_
 #define MLIR_DIALECT_SCF_TRANSFORMS_TRANSFORMS_H_
 
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Utils/AffineCanonicalizationUtils.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -41,6 +42,11 @@ LogicalResult forallToForLoop(RewriterBase &rewriter, ForallOp forallOp,
 /// The conversion is only supported for forall operations with no results.
 LogicalResult forallToParallelLoop(RewriterBase &rewriter, ForallOp forallOp,
                                    ParallelOp *result = nullptr);
+
+/// Try converting scf.forall into an scf.parallel loop.
+/// The conversion is only supported for parallel operations with no results.
+FailureOr<scf::LoopNest> parallelForToNestedFors(RewriterBase &rewriter,
+                                                 ParallelOp parallelOp);
 
 /// Fuses all adjacent scf.parallel operations with identical bounds and step
 /// into one scf.parallel operations. Uses a naive aliasing and dependency
@@ -136,7 +142,7 @@ struct PipeliningOption {
   /// The callback passes the operation created along with the part of the
   /// pipeline and the iteration index. The iteration index is always 0 for the
   /// kernel. For the prologue and epilogue, it corresponds to the iteration
-  /// peeled out of the loop in the range [0, maxStage[.
+  /// peeled out of the loop in the range [0, maxStage].
   using AnnotationlFnType =
       std::function<void(Operation *, PipelinerPart, unsigned)>;
   AnnotationlFnType annotateFn = nullptr;

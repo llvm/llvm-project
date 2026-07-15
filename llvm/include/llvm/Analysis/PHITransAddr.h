@@ -15,12 +15,45 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class AssumptionCache;
 class DominatorTree;
 class DataLayout;
 class TargetLibraryInfo;
+
+/// Storage of either a normal Value address, or a select condition together
+/// with a pair of addresses for the "true" and "false" variant of a
+/// select-dependent address.  If the addresses are not present (both null), V
+/// is a normal address; otherwise V is a select condition and the pair holds
+/// the "true" and "false" addresses.
+class SelectAddr {
+public:
+  using SelectAddrs = std::pair<Value *, Value *>;
+
+  SelectAddr(Value *Addr) : V(Addr), Addrs(nullptr, nullptr) {}
+  SelectAddr(Value *Cond, SelectAddrs Addrs) : V(Cond), Addrs(Addrs) {
+    assert(Cond && "Condition must be present");
+    assert(hasSelectAddrs() && "Addrs must be present");
+  }
+
+  bool hasSelectAddrs() const { return Addrs.first && Addrs.second; }
+
+  Value *getAddr() const {
+    assert(!hasSelectAddrs() && "this is a select address");
+    return V;
+  }
+
+  std::pair<Value *, SelectAddrs> getSelectCondAndAddrs() const {
+    assert(hasSelectAddrs() && "this is not a select address");
+    return {V, Addrs};
+  }
+
+private:
+  Value *V;
+  SelectAddrs Addrs;
+};
 
 /// PHITransAddr - An address value which tracks and handles phi translation.
 /// As we walk "up" the CFG through predecessors, we need to ensure that the
@@ -57,6 +90,12 @@ public:
 
   Value *getAddr() const { return Addr; }
 
+  /// If the address expression depends on a select instruction (possibly
+  /// through casts or GEPs), return that select's condition.  Otherwise return
+  /// nullptr.  This is used to drive translation of both sides of a
+  /// select-dependent address (see the \p Cond overload of translateValue).
+  LLVM_ABI Value *getSelectCondition() const;
+
   /// needsPHITranslationFromBlock - Return true if moving from the specified
   /// BasicBlock to its predecessors requires PHI translation.
   bool needsPHITranslationFromBlock(BasicBlock *BB) const {
@@ -70,13 +109,22 @@ public:
   /// isPotentiallyPHITranslatable - If this needs PHI translation, return true
   /// if we have some hope of doing it.  This should be used as a filter to
   /// avoid calling PHITranslateValue in hopeless situations.
-  bool isPotentiallyPHITranslatable() const;
+  LLVM_ABI bool isPotentiallyPHITranslatable() const;
 
   /// translateValue - PHI translate the current address up the CFG from
   /// CurBB to Pred, updating our state to reflect any needed changes.  If
   /// 'MustDominate' is true, the translated value must dominate PredBB.
-  Value *translateValue(BasicBlock *CurBB, BasicBlock *PredBB,
-                        const DominatorTree *DT, bool MustDominate);
+  LLVM_ABI Value *translateValue(BasicBlock *CurBB, BasicBlock *PredBB,
+                                 const DominatorTree *DT, bool MustDominate);
+
+  /// PHI translate the current address from \p CurBB to \p PredBB, and if the
+  /// resulting address depends on a select instruction with condition \p Cond,
+  /// translate both the "true" and the "false" side. Returns a pair of
+  /// addresses (true, false); either may be null on failure.
+  LLVM_ABI SelectAddr::SelectAddrs translateValue(BasicBlock *CurBB,
+                                                  BasicBlock *PredBB,
+                                                  const DominatorTree *DT,
+                                                  Value *Cond);
 
   /// translateWithInsertion - PHI translate this value into the specified
   /// predecessor block, inserting a computation of the value if it is
@@ -85,20 +133,22 @@ public:
   /// All newly created instructions are added to the NewInsts list.  This
   /// returns null on failure.
   ///
-  Value *translateWithInsertion(BasicBlock *CurBB, BasicBlock *PredBB,
-                                const DominatorTree &DT,
-                                SmallVectorImpl<Instruction *> &NewInsts);
+  LLVM_ABI Value *
+  translateWithInsertion(BasicBlock *CurBB, BasicBlock *PredBB,
+                         const DominatorTree &DT,
+                         SmallVectorImpl<Instruction *> &NewInsts);
 
-  void dump() const;
+  LLVM_ABI void dump() const;
 
   /// verify - Check internal consistency of this data structure.  If the
   /// structure is valid, it returns true.  If invalid, it prints errors and
   /// returns false.
-  bool verify() const;
+  LLVM_ABI bool verify() const;
 
 private:
   Value *translateSubExpr(Value *V, BasicBlock *CurBB, BasicBlock *PredBB,
-                          const DominatorTree *DT);
+                          const DominatorTree *DT, Value *Cond = nullptr,
+                          bool CondVal = false);
 
   /// insertTranslatedSubExpr - Insert a computation of the PHI translated
   /// version of 'V' for the edge PredBB->CurBB into the end of the PredBB

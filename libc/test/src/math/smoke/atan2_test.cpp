@@ -13,6 +13,18 @@
 using LlvmLibcAtan2Test = LIBC_NAMESPACE::testing::FPTest<double>;
 
 TEST_F(LlvmLibcAtan2Test, SpecialNumbers) {
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::atan2(sNaN, sNaN),
+                              FE_INVALID);
+  EXPECT_MATH_ERRNO(0);
+
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::atan2(sNaN, 1.0),
+                              FE_INVALID);
+  EXPECT_MATH_ERRNO(0);
+
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::atan2(1.0, sNaN),
+                              FE_INVALID);
+  EXPECT_MATH_ERRNO(0);
+
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atan2(aNaN, zero));
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atan2(1.0, aNaN));
   EXPECT_FP_EQ_ALL_ROUNDING(0.0, LIBC_NAMESPACE::atan2(zero, zero));

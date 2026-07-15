@@ -132,6 +132,8 @@ def relocatable: F<"relocatable">, HelpText<"Create relocatable object file">;
 
 defm reproduce: EEq<"reproduce", "Dump linker invocation and input files for debugging">;
 
+defm rpath: Eq<"rpath", "Add a DT_RUNPATH to the output">;
+
 defm rsp_quoting: Eq<"rsp-quoting", "Quoting style for response files">,
   MetaVarName<"[posix,windows]">;
 
@@ -230,9 +232,15 @@ def import_table: FF<"import-table">,
 def initial_heap: JJ<"initial-heap=">,
   HelpText<"Initial size of the heap">;
 
+def page_size: JJ<"page-size=">,
+  HelpText<"The Wasm page size (Defaults to 65536)">;
+
 def initial_memory: JJ<"initial-memory=">,
   HelpText<"Initial size of the linear memory">;
 
+def cooperative_threading: FF<"cooperative-threading">,
+  HelpText<"Enable cooperative multithreading.">;
+  
 def max_memory: JJ<"max-memory=">,
   HelpText<"Maximum size of the linear memory">;
 
@@ -245,8 +253,9 @@ def no_entry: FF<"no-entry">,
 def no_shlib_sigcheck: FF<"no-shlib-sigcheck">,
   HelpText<"Do not check signatures of functions defined in shared libraries.">;
 
-def stack_first: FF<"stack-first">,
-  HelpText<"Place stack at start of linear memory rather than after data">;
+defm stack_first: B<"stack-first",
+    "Place stack at start of linear memory (default)",
+    "Place the stack after static data region">;
 
 def table_base: JJ<"table-base=">,
   HelpText<"Table offset at which to place address taken functions (Defaults to 1)">;
@@ -314,6 +323,6 @@ def thinlto_prefix_replace_eq: JJ<"thinlto-prefix-replace=">;
 def lto_debug_pass_manager: FF<"lto-debug-pass-manager">,
   HelpText<"Debug new pass manager">;
 
-// Experimental PIC mode.
+// Legacy experimental PIC flag. Remove this at some point in the future.
 def experimental_pic: FF<"experimental-pic">,
-  HelpText<"Enable Experimental PIC">;
+  HelpText<"Legacy enable Experimental PIC flag; ignored">;

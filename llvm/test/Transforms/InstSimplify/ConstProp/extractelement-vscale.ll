@@ -22,30 +22,24 @@ define i32 @extractconstant_shuffle_in_range(i32 %v) {
 ; CHECK-SAME: i32 [[V:%.*]]) {
 ; CHECK-NEXT:    ret i32 1024
 ;
-  %in = insertelement <vscale x 4 x i32> undef, i32 1024, i32 0
-  %splat = shufflevector <vscale x 4 x i32> %in, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
-  %r = extractelement <vscale x 4 x i32> %splat, i32 1
+  %r = extractelement <vscale x 4 x i32> splat (i32 1024), i32 1
   ret i32 %r
 }
 
 define i32 @extractconstant_shuffle_maybe_out_of_range(i32 %v) {
 ; CHECK-LABEL: define i32 @extractconstant_shuffle_maybe_out_of_range(
 ; CHECK-SAME: i32 [[V:%.*]]) {
-; CHECK-NEXT:    ret i32 extractelement (<vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 1024, i32 0), <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer), i32 4)
+; CHECK-NEXT:    ret i32 extractelement (<vscale x 4 x i32> splat (i32 1024), i32 4)
 ;
-  %in = insertelement <vscale x 4 x i32> undef, i32 1024, i32 0
-  %splat = shufflevector <vscale x 4 x i32> %in, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
-  %r = extractelement <vscale x 4 x i32> %splat, i32 4
+  %r = extractelement <vscale x 4 x i32> splat (i32 1024), i32 4
   ret i32 %r
 }
 
 define i32 @extractconstant_shuffle_invalid_index(i32 %v) {
 ; CHECK-LABEL: define i32 @extractconstant_shuffle_invalid_index(
 ; CHECK-SAME: i32 [[V:%.*]]) {
-; CHECK-NEXT:    ret i32 extractelement (<vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 1024, i32 0), <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer), i32 -1)
+; CHECK-NEXT:    ret i32 extractelement (<vscale x 4 x i32> splat (i32 1024), i32 -1)
 ;
-  %in = insertelement <vscale x 4 x i32> undef, i32 1024, i32 0
-  %splat = shufflevector <vscale x 4 x i32> %in, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
-  %r = extractelement <vscale x 4 x i32> %splat, i32 -1
+  %r = extractelement <vscale x 4 x i32> splat (i32 1024), i32 -1
   ret i32 %r
 }

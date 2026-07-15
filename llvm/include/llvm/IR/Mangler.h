@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -25,6 +26,17 @@ class Triple;
 class Twine;
 class raw_ostream;
 
+// TODO: The weird assignment of HybridPatchableTargetSuffix below is a
+// temporary workaround for a linker failure that is only hit when compiling
+// llvm for arm64ec on windows. The description and context of the issue is at
+// https://github.com/llvm/llvm-project/issues/143575.
+// An upstream MSVC bug is filed at
+// https://developercommunity.visualstudio.com/t/MSVC-Linker-Issue-When-Cross-
+// Compiling-L/10920141.
+constexpr char HybridPatchableTargetSuffixArr[] = "$hp_target";
+constexpr std::string_view HybridPatchableTargetSuffix =
+    HybridPatchableTargetSuffixArr;
+
 class Mangler {
   /// We need to give global values the same name every time they are mangled.
   /// This keeps track of the number we give to anonymous ones.
@@ -34,37 +46,41 @@ public:
   /// Print the appropriate prefix and the specified global variable's name.
   /// If the global variable doesn't have a name, this fills in a unique name
   /// for the global.
-  void getNameWithPrefix(raw_ostream &OS, const GlobalValue *GV,
-                         bool CannotUsePrivateLabel) const;
-  void getNameWithPrefix(SmallVectorImpl<char> &OutName, const GlobalValue *GV,
-                         bool CannotUsePrivateLabel) const;
+  LLVM_ABI void getNameWithPrefix(raw_ostream &OS, const GlobalValue *GV,
+                                  bool CannotUsePrivateLabel) const;
+  LLVM_ABI void getNameWithPrefix(SmallVectorImpl<char> &OutName,
+                                  const GlobalValue *GV,
+                                  bool CannotUsePrivateLabel) const;
 
   /// Print the appropriate prefix and the specified name as the global variable
   /// name. GVName must not be empty.
-  static void getNameWithPrefix(raw_ostream &OS, const Twine &GVName,
-                                const DataLayout &DL);
-  static void getNameWithPrefix(SmallVectorImpl<char> &OutName,
-                                const Twine &GVName, const DataLayout &DL);
+  LLVM_ABI static void getNameWithPrefix(raw_ostream &OS, const Twine &GVName,
+                                         const DataLayout &DL);
+  LLVM_ABI static void getNameWithPrefix(SmallVectorImpl<char> &OutName,
+                                         const Twine &GVName,
+                                         const DataLayout &DL);
 };
 
-void emitLinkerFlagsForGlobalCOFF(raw_ostream &OS, const GlobalValue *GV,
-                                  const Triple &TT, Mangler &Mangler);
+LLVM_ABI void emitLinkerFlagsForGlobalCOFF(raw_ostream &OS,
+                                           const GlobalValue *GV,
+                                           const Triple &TT, Mangler &Mangler);
 
-void emitLinkerFlagsForUsedCOFF(raw_ostream &OS, const GlobalValue *GV,
-                                const Triple &T, Mangler &M);
+LLVM_ABI void emitLinkerFlagsForUsedCOFF(raw_ostream &OS, const GlobalValue *GV,
+                                         const Triple &T, Mangler &M);
 
 /// Returns the ARM64EC mangled function name unless the input is already
 /// mangled.
-std::optional<std::string> getArm64ECMangledFunctionName(StringRef Name);
+LLVM_ABI std::optional<std::string>
+getArm64ECMangledFunctionName(StringRef Name);
 
 /// Returns the ARM64EC demangled function name, unless the input is not
 /// mangled.
-std::optional<std::string> getArm64ECDemangledFunctionName(StringRef Name);
+LLVM_ABI std::optional<std::string>
+getArm64ECDemangledFunctionName(StringRef Name);
 
 /// Check if an ARM64EC function name is mangled.
 bool inline isArm64ECMangledFunctionName(StringRef Name) {
-  return Name[0] == '#' ||
-         (Name[0] == '?' && Name.find("@$$h") != StringRef::npos);
+  return Name[0] == '#' || (Name[0] == '?' && Name.contains("@$$h"));
 }
 
 } // End llvm namespace

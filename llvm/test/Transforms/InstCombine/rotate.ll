@@ -191,7 +191,7 @@ define i32 @rotl_i32(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 32, [[Y:%.*]]
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X]], [[SUB]]
-; CHECK-NEXT:    [[R:%.*]] = or i32 [[SHR]], [[SHL]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[SHR]], [[SHL]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %sub = sub i32 32, %y
@@ -208,7 +208,7 @@ define i37 @rotr_i37(i37 %x, i37 %y) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i37 37, [[Y:%.*]]
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i37 [[X:%.*]], [[SUB]]
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i37 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = or i37 [[SHR]], [[SHL]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i37 [[SHR]], [[SHL]]
 ; CHECK-NEXT:    ret i37 [[R]]
 ;
   %sub = sub i37 37, %y
@@ -225,7 +225,7 @@ define i8 @rotr_i8_commute(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i8 8, [[Y:%.*]]
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], [[SUB]]
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[SHL]], [[SHR]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i8 [[SHL]], [[SHR]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sub = sub i8 8, %y
@@ -242,7 +242,7 @@ define <4 x i32> @rotl_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub <4 x i32> splat (i32 32), [[Y:%.*]]
 ; CHECK-NEXT:    [[SHL:%.*]] = shl <4 x i32> [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr <4 x i32> [[X]], [[SUB]]
-; CHECK-NEXT:    [[R:%.*]] = or <4 x i32> [[SHL]], [[SHR]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint <4 x i32> [[SHL]], [[SHR]]
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %sub = sub <4 x i32> <i32 32, i32 32, i32 32, i32 32>, %y
@@ -259,7 +259,7 @@ define <3 x i42> @rotr_v3i42(<3 x i42> %x, <3 x i42> %y) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub <3 x i42> splat (i42 42), [[Y:%.*]]
 ; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i42> [[X:%.*]], [[SUB]]
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr <3 x i42> [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = or <3 x i42> [[SHR]], [[SHL]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint <3 x i42> [[SHR]], [[SHL]]
 ; CHECK-NEXT:    ret <3 x i42> [[R]]
 ;
   %sub = sub <3 x i42> <i42 42, i42 42, i42 42>, %y
@@ -838,7 +838,7 @@ define i24 @rotl_select_weird_type(i24 %x, i24 %shamt) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i24 24, [[SHAMT]]
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i24 [[X:%.*]], [[SUB]]
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i24 [[X]], [[SHAMT]]
-; CHECK-NEXT:    [[OR:%.*]] = or i24 [[SHL]], [[SHR]]
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i24 [[SHL]], [[SHR]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i24 [[X]], i24 [[OR]]
 ; CHECK-NEXT:    ret i24 [[R]]
 ;
@@ -980,4 +980,141 @@ define i16 @check_rotate_masked_16bit(i8 %shamt, i32 %cond) {
   %or = or i32 %shr, %shl
   %trunc = trunc i32 %or to i16
   ret i16 %trunc
+}
+
+define i32 @rotl_i32_add(i32 %x, i32 %y) {
+; CHECK-LABEL: @rotl_i32_add(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 32, [[Y:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X]], [[SUB]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[SHR]], [[SHL]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sub = sub i32 32, %y
+  %shl = shl i32 %x, %y
+  %shr = lshr i32 %x, %sub
+  %r = add i32 %shr, %shl
+  ret i32 %r
+}
+
+define i32 @rotr_i32_add(i32 %x, i32 %y) {
+; CHECK-LABEL: @rotr_i32_add(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 32, [[Y:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = lshr i32 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[SHR:%.*]] = shl i32 [[X]], [[SUB]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[SHR]], [[SHL]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sub = sub i32 32, %y
+  %shl = lshr i32 %x, %y
+  %shr = shl i32 %x, %sub
+  %r = add i32 %shr, %shl
+  ret i32 %r
+}
+
+define i32 @fshr_i32_add(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @fshr_i32_add(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 32, [[Z:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = lshr i32 [[X:%.*]], [[Z]]
+; CHECK-NEXT:    [[SHR:%.*]] = shl i32 [[Y:%.*]], [[SUB]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[SHR]], [[SHL]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sub = sub i32 32, %z
+  %shl = lshr i32 %x, %z
+  %shr = shl i32 %y, %sub
+  %r = add i32 %shr, %shl
+  ret i32 %r
+}
+
+define i32 @fshl_i32_add(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @fshl_i32_add(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 32, [[Z:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[Y:%.*]], [[Z]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X:%.*]], [[SUB]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[SHR]], [[SHL]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sub = sub i32 32, %z
+  %shl = shl i32 %y, %z
+  %shr = lshr i32 %x, %sub
+  %r = add i32 %shr, %shl
+  ret i32 %r
+}
+
+define i32 @rotl_i32_add_greater(i32 %x, i32 %y) {
+; CHECK-LABEL: @rotl_i32_add_greater(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 33, [[Y:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X]], [[SUB]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[SHR]], [[SHL]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sub = sub i32 33, %y
+  %shl = shl i32 %x, %y
+  %shr = lshr i32 %x, %sub
+  %r = add i32 %shr, %shl
+  ret i32 %r
+}
+
+define i32 @rotr_i32_add_greater(i32 %x, i32 %y) {
+; CHECK-LABEL: @rotr_i32_add_greater(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 34, [[Y:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = lshr i32 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[SHR:%.*]] = shl i32 [[X]], [[SUB]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[SHR]], [[SHL]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sub = sub i32 34, %y
+  %shl = lshr i32 %x, %y
+  %shr = shl i32 %x, %sub
+  %r = add i32 %shr, %shl
+  ret i32 %r
+}
+
+define i32 @not_rotl_i32_add_less(i32 %x, i32 %y) {
+; CHECK-LABEL: @not_rotl_i32_add_less(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 31, [[Y:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X]], [[SUB]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[SHR]], [[SHL]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sub = sub i32 31, %y
+  %shl = shl i32 %x, %y
+  %shr = lshr i32 %x, %sub
+  %r = add i32 %shr, %shl
+  ret i32 %r
+}
+
+; PR165306
+define <8 x i64> @fold_rot_fshr_v8i64(<8 x i64> %x, <8 x i64> %y) {
+; CHECK-LABEL: @fold_rot_fshr_v8i64(
+; CHECK-NEXT:    [[OR:%.*]] = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> [[X:%.*]], <8 x i64> [[X]], <8 x i64> [[Y:%.*]])
+; CHECK-NEXT:    ret <8 x i64> [[OR]]
+;
+  %trunc = trunc <8 x i64> %y to <8 x i6>
+  %neg = sub <8 x i6> zeroinitializer, %trunc
+  %zext = zext <8 x i6> %neg to <8 x i64>
+  %shl = shl <8 x i64> %x, %zext
+  %mask = and <8 x i64> %y, splat (i64 63)
+  %lshr = lshr <8 x i64> %x, %mask
+  %or = or <8 x i64> %shl, %lshr
+  ret <8 x i64> %or
+}
+
+; PR165306
+define i32 @fold_rot_fshl_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: @fold_rot_fshl_i32(
+; CHECK-NEXT:    [[OR:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[X]], i32 [[Y:%.*]])
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %trunc = trunc i32 %y to i5
+  %neg = sub i5 0, %trunc
+  %zext = zext i5 %neg to i32
+  %lshr = lshr i32 %x, %zext
+  %mask = and i32 %y, 31
+  %shl = shl i32 %x, %mask
+  %or = or i32 %shl, %lshr
+  ret i32 %or
 }

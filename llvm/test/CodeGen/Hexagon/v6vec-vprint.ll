@@ -1,5 +1,5 @@
-; RUN: llc -no-integrated-as -march=hexagon -mcpu=hexagonv60 -mattr=+hvxv60,hvx-length64b -disable-hexagon-shuffle=0 -O2 -enable-hexagon-vector-print < %s | FileCheck --check-prefix=CHECK %s
-; RUN: llc -no-integrated-as -march=hexagon -mcpu=hexagonv60 -mattr=+hvxv60,hvx-length64b -disable-hexagon-shuffle=0 -O2 -enable-hexagon-vector-print -trace-hex-vector-stores-only < %s | FileCheck --check-prefix=VSTPRINT %s
+; RUN: llc -no-integrated-as -mtriple=hexagon -mcpu=hexagonv60 -mattr=+hvxv60,hvx-length64b -disable-hexagon-shuffle=0 -O2 -enable-hexagon-vector-print < %s | FileCheck --check-prefix=CHECK %s
+; RUN: llc -no-integrated-as -mtriple=hexagon -mcpu=hexagonv60 -mattr=+hvxv60,hvx-length64b -disable-hexagon-shuffle=0 -O2 -enable-hexagon-vector-print -trace-hex-vector-stores-only < %s | FileCheck --check-prefix=VSTPRINT %s
 ;   generate .long XXXX which is a vector debug print instruction.
 ; CHECK: .long 0x1dffe0
 ; CHECK: .long 0x1dffe0
@@ -22,7 +22,7 @@ entry:
 ; Function Attrs: nounwind readnone
 declare <16 x i32> @llvm.hexagon.V6.vaddw(<16 x i32>, <16 x i32>) #1
 
-attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
 
 !llvm.ident = !{!0}

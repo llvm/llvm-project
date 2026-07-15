@@ -75,7 +75,7 @@ const char *getEdgeKindName(Edge::Kind K) {
   case RequestTLVPAndTransformToPCRel32TLVPLoadREXRelaxable:
     return "RequestTLVPAndTransformToPCRel32TLVPLoadREXRelaxable";
   default:
-    return getGenericEdgeKindName(static_cast<Edge::Kind>(K));
+    return getGenericEdgeKindName(K);
   }
 }
 
@@ -84,6 +84,30 @@ const char NullPointerContent[PointerSize] = {0x00, 0x00, 0x00, 0x00,
 
 const char PointerJumpStubContent[6] = {
     static_cast<char>(0xFFu), 0x25, 0x00, 0x00, 0x00, 0x00};
+
+const char ReentryTrampolineContent[5] = {
+  static_cast<char>(0xe8), 0x00, 0x00, 0x00, 0x00
+};
+
+void GOTTableManager::registerExistingEntries() {
+  for (auto *EntrySym : GOTSection->symbols()) {
+    assert(EntrySym->getBlock().edges_size() == 1 &&
+           "GOT block edge count != 1");
+    registerPreExistingEntry(EntrySym->getBlock().edges().begin()->getTarget(),
+                             *EntrySym);
+  }
+}
+
+void PLTTableManager::registerExistingEntries() {
+  for (auto *EntrySym : StubsSection->symbols()) {
+    assert(EntrySym->getBlock().edges_size() == 1 &&
+           "PLT block edge count != 1");
+    auto &GOTSym = EntrySym->getBlock().edges().begin()->getTarget();
+    assert(GOTSym.getBlock().edges_size() == 1 && "GOT block edge count != 1");
+    registerPreExistingEntry(GOTSym.getBlock().edges().begin()->getTarget(),
+                             *EntrySym);
+  }
+}
 
 Error optimizeGOTAndStubAccesses(LinkGraph &G) {
   LLVM_DEBUG(dbgs() << "Optimizing GOT entries and stubs:\n");
@@ -135,7 +159,7 @@ Error optimizeGOTAndStubAccesses(LinkGraph &G) {
         }
 
         // Transform call/jmp instructions
-        if (Op == 0xff && TargetInRangeForImmU32) {
+        if (Op == 0xff && DisplacementInRangeForImmS32) {
           if (ModRM == 0x15) {
             // ABI says we can convert "call *foo@GOTPCREL(%rip)" to "nop; call
             // foo" But lld convert it to "addr32 call foo, because that makes
@@ -161,7 +185,7 @@ Error optimizeGOTAndStubAccesses(LinkGraph &G) {
               dbgs() << "\n";
             });
           }
-          E.setKind(x86_64::Pointer32);
+          E.setKind(x86_64::BranchPCRel32);
           E.setTarget(GOTTarget);
           continue;
         }

@@ -42,7 +42,7 @@ typedef void *rwlock_t;
 typedef void *process_t;                          // Process type is HANDLE
 typedef void *thread_t;                           // Host thread type
 typedef void *file_t;                             // Host file type
-typedef unsigned int __w64 socket_t;              // Host socket type
+typedef uintptr_t socket_t;                       // Host socket type
 typedef void *thread_arg_t;                       // Host thread argument type
 typedef unsigned thread_result_t;                 // Host thread result type
 typedef thread_result_t (*thread_func_t)(void *); // Host thread function type
@@ -83,6 +83,7 @@ typedef uint64_t user_id_t;
 typedef uint64_t pid_t;
 typedef uint64_t tid_t;
 typedef uint64_t offset_t;
+typedef uint32_t frame_list_id_t;
 typedef int32_t break_id_t;
 typedef int32_t watch_id_t;
 typedef uint32_t wp_resource_id_t;

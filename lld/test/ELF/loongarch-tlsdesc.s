@@ -14,19 +14,20 @@
 # RUN: ld.lld -shared -z now a.64.o c.64.o -o rel.64.so -z rel
 # RUN: llvm-readobj -r -x .got rel.64.so | FileCheck --check-prefix=GD64-REL %s
 
-## FIXME: The transition frome TLSDESC to IE/LE has not yet been implemented.
-## Keep the dynamic relocations and hand them over to dynamic linker.
-
+## Transition from TLSDESC to IE/LE.
 # RUN: ld.lld -e 0 -z now a.64.o c.64.o -o a.64.le
-# RUN: llvm-readobj -r -x .got a.64.le | FileCheck --check-prefix=LE64-RELA %s
+# RUN: llvm-readobj -r -x .got a.64.le 2>&1 | FileCheck --check-prefix=LE64-RELA %s
+# RUN: llvm-objdump --no-show-raw-insn -d a.64.le | FileCheck --check-prefix=LE64 %s
 
 # RUN: ld.lld -e 0 -z now a.64.o c.64.so -o a.64.ie
 # RUN: llvm-readobj -r -x .got a.64.ie | FileCheck --check-prefix=IE64-RELA %s
+# RUN: llvm-objdump --no-show-raw-insn -d a.64.ie | FileCheck --check-prefix=IE64 %s
 
 ## 32-bit code is mostly the same. We only test a few variants.
 
 # RUN: ld.lld -shared -z now a.32.o c.32.o -o rel.32.so -z rel
 # RUN: llvm-readobj -r -x .got rel.32.so | FileCheck --check-prefix=GD32-REL %s
+# RUN: llvm-objdump --no-show-raw-insn -h -d rel.32.so | FileCheck %s --check-prefix=GD32
 
 # GD64-RELA:      .rela.dyn {
 # GD64-RELA-NEXT:   0x20400 R_LARCH_TLS_DESC64 - 0x7FF
@@ -64,32 +65,59 @@
 # GD64-NEXT:          jirl $ra, $ra, 0
 # GD64-NEXT:          add.d $a2, $a0, $tp
 
-## &.got[c]-. = 0x23e0+16 - 0x10308: 0x10 pages, page offset 0x3f0
+## &.got[c]-. = 0x203e0+16 - 0x10308: 0x10 pages, page offset 0x3f0
 # GD64:        10308: pcalau12i $a0, 16
 # GD64-NEXT:          addi.d $a0, $a0, 1008
 # GD64-NEXT:          ld.d $ra, $a0, 0
 # GD64-NEXT:          jirl $ra, $ra, 0
 # GD64-NEXT:          add.d $a3, $a0, $tp
 
-# LE64-RELA:      .rela.dyn {
-# LE64-RELA-NEXT:   0x30250 R_LARCH_TLS_DESC64 - 0x8
-# LE64-RELA-NEXT:   0x30260 R_LARCH_TLS_DESC64 - 0x800
-# LE64-RELA-NEXT:   0x30270 R_LARCH_TLS_DESC64 - 0x7FF
-# LE64-RELA-NEXT: }
-# LE64-RELA:      Hex dump of section '.got':
-# LE64-RELA-NEXT: 0x00030250 00000000 00000000 00000000 00000000 .
-# LE64-RELA-NEXT: 0x00030260 00000000 00000000 00000000 00000000 .
-# LE64-RELA-NEXT: 0x00030270 00000000 00000000 00000000 00000000 .
+# LE64-RELA: could not find section '.got'
+
+# LE64-LABEL: <.text>:
+## st_value(a) = 8
+# LE64-NEXT:         nop
+# LE64-NEXT:         nop
+# LE64-NEXT:         nop
+# LE64-NEXT:         ori     $a0, $zero, 8
+# LE64-NEXT:         add.d   $a1, $a0, $tp
+## st_value(b) = 2047
+# LE64-NEXT:         nop
+# LE64-NEXT:         nop
+# LE64-NEXT:         nop
+# LE64-NEXT:         ori     $a0, $zero, 2047
+# LE64-NEXT:         add.d   $a2, $a0, $tp
+## st_value(c) = 2048
+# LE64-NEXT:         nop
+# LE64-NEXT:         nop
+# LE64-NEXT:         nop
+# LE64-NEXT:         ori     $a0, $zero, 2048
+# LE64-NEXT:         add.d   $a3, $a0, $tp
 
 # IE64-RELA:      .rela.dyn {
-# IE64-RELA-NEXT:   0x303D8 R_LARCH_TLS_DESC64 - 0x8
-# IE64-RELA-NEXT:   0x303F8 R_LARCH_TLS_DESC64 - 0x7FF
-# IE64-RELA-NEXT:   0x303E8 R_LARCH_TLS_DESC64 c 0x0
+# IE64-RELA-NEXT:   0x303A8 R_LARCH_TLS_TPREL64 c 0x0
 # IE64-RELA-NEXT: }
 # IE64-RELA:      Hex dump of section '.got':
-# IE64-RELA-NEXT: 0x000303d8 00000000 00000000 00000000 00000000 .
-# IE64-RELA-NEXT: 0x000303e8 00000000 00000000 00000000 00000000 .
-# IE64-RELA-NEXT: 0x000303f8 00000000 00000000 00000000 00000000 .
+# IE64-RELA-NEXT: 0x000303a8 00000000 00000000                  .
+
+## a and b are optimized to use LE. c is optimized to IE.
+# IE64-LABEL: <.text>:
+# IE64-NEXT:         nop
+# IE64-NEXT:         nop
+# IE64-NEXT:         nop
+# IE64-NEXT:         ori     $a0, $zero, 8
+# IE64-NEXT:         add.d   $a1, $a0, $tp
+# IE64-NEXT:         nop
+# IE64-NEXT:         nop
+# IE64-NEXT:         nop
+# IE64-NEXT:         ori     $a0, $zero, 2047
+# IE64-NEXT:         add.d   $a2, $a0, $tp
+## &.got[c]-. = 0x303a8 - 0x202b8: 0x10 pages, page offset 0x3a8
+# IE64-NEXT:         nop
+# IE64-NEXT:         nop
+# IE64-NEXT:  202b8: pcalau12i $a0, 16
+# IE64-NEXT:         ld.d      $a0, $a0, 936
+# IE64-NEXT:         add.d   $a3, $a0, $tp
 
 # GD32-REL:      .rel.dyn {
 # GD32-REL-NEXT:    0x20270 R_LARCH_TLS_DESC32 -
@@ -99,6 +127,29 @@
 # GD32-REL:      Hex dump of section '.got':
 # GD32-REL-NEXT: 0x00020260 00000000 00000000 00000000 00000000 .
 # GD32-REL-NEXT: 0x00020270 00000000 ff070000                   .
+
+# GD32:      .got     00000018 00020260
+
+## &.got[a]-. = 0x20260 - 0x101c4
+# GD32:        101c4: pcaddu12i $a0, 32
+# GD32-NEXT:          addi.w $a0, $a0, 608
+# GD32-NEXT:          ld.w $ra, $a0, 0
+# GD32-NEXT:          jirl $ra, $ra, 0
+# GD32-NEXT:          add.w $a1, $a0, $tp
+
+## &.got[b]-. = 0x20260+16 - 0x101d8
+# GD32:        101d8: pcaddu12i $a0, 32
+# GD32-NEXT:          addi.w $a0, $a0, 624
+# GD32-NEXT:          ld.w $ra, $a0, 0
+# GD32-NEXT:          jirl $ra, $ra, 0
+# GD32-NEXT:          add.w $a2, $a0, $tp
+
+## &.got[c]-. = 0x20260+8 - 0x101ec
+# GD32:        101ec: pcaddu12i $a0, 32
+# GD32-NEXT:          addi.w $a0, $a0, 616
+# GD32-NEXT:          ld.w $ra, $a0, 0
+# GD32-NEXT:          jirl $ra, $ra, 0
+# GD32-NEXT:          add.w $a3, $a0, $tp
 
 #--- a.s
 .macro add dst, src1, src2

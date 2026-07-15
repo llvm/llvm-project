@@ -15,6 +15,7 @@
 #define LLVM_TRANSFORMS_SCALAR_EARLYCSE_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -27,13 +28,14 @@ class Function;
 /// canonicalize things as it goes. It is intended to be fast and catch obvious
 /// cases so that instcombine and other passes are more effective. It is
 /// expected that a later pass of GVN will catch the interesting/hard cases.
-struct EarlyCSEPass : PassInfoMixin<EarlyCSEPass> {
+struct EarlyCSEPass : OptionalPassInfoMixin<EarlyCSEPass> {
   EarlyCSEPass(bool UseMemorySSA = false) : UseMemorySSA(UseMemorySSA) {}
 
   /// Run the pass over the function.
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   bool UseMemorySSA;
 };

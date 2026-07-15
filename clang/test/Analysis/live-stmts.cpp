@@ -44,6 +44,8 @@ int testThatDumperWorks(int x, int y, int z) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} <IntegralToBoolean>
 // CHECK-NEXT: `-ImplicitCastExpr {{.*}} <LValueToRValue>
 // CHECK-NEXT:   `-DeclRefExpr {{.*}} 'x' 'int'
+// CHECK-EMPTY:
+// CHECK-EMPTY:
 // CHECK: [ B4 (live expressions at block exit) ]
 // CHECK-EMPTY:
 // CHECK-NEXT: DeclRefExpr {{.*}} 'y' 'int'

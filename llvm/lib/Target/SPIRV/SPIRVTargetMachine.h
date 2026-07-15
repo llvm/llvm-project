@@ -35,6 +35,8 @@ public:
     return &Subtarget;
   }
 
+  SPIRVSubtarget *getMutableSubtargetImpl() { return &Subtarget; }
+
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
@@ -43,6 +45,8 @@ public:
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
+
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
 };
 } // namespace llvm
 

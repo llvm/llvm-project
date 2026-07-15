@@ -21,10 +21,6 @@
 
 ; CHECK: .debug_info contents:
 
-; CHECK:  DW_TAG_subroutine_type [[subroutine_abbrev]] *
-; CHECK-NEXT:         DW_AT_type [DW_FORM_ref4]       {{.*}}
-; CHECK-NEXT:         DW_AT_calling_convention [DW_FORM_data1]        (DW_CC_BORLAND_msfastcall)
-
 ; CHECK: DW_TAG_subprogram [{{.*}}] *
 ; CHECK:                 DW_AT_low_pc
 ; CHECK:                 DW_AT_high_pc
@@ -36,6 +32,10 @@
 ; CHECK:                 DW_AT_calling_convention [DW_FORM_data1]        (DW_CC_BORLAND_msfastcall)
 ; CHECK:                 DW_AT_type
 ; CHECK:                 DW_AT_external
+
+; CHECK:  DW_TAG_subroutine_type [[subroutine_abbrev]] *
+; CHECK-NEXT:         DW_AT_type [DW_FORM_ref4]       {{.*}}
+; CHECK-NEXT:         DW_AT_calling_convention [DW_FORM_data1]        (DW_CC_BORLAND_msfastcall)
 
 ; ModuleID = 't.cpp'
 source_filename = "t.cpp"
@@ -56,7 +56,7 @@ entry:
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
-attributes #0 = { nounwind readnone "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pentium4" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind readnone "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pentium4" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!2}

@@ -9,7 +9,7 @@
 #ifndef LLVM_LIB_TARGET_AVR_MCTARGETDESC_AVRMCELFSTREAMER_H
 #define LLVM_LIB_TARGET_AVR_MCTARGETDESC_AVRMCELFSTREAMER_H
 
-#include "MCTargetDesc/AVRMCExpr.h"
+#include "MCTargetDesc/AVRMCAsmInfo.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -41,9 +41,10 @@ public:
                       std::move(Emitter)),
         MCII(createAVRMCInstrInfo()) {}
 
-  void emitValueForModiferKind(
-      const MCSymbol *Sym, unsigned SizeInBytes, SMLoc Loc = SMLoc(),
-      AVRMCExpr::VariantKind ModifierKind = AVRMCExpr::VK_AVR_None);
+  void
+  emitValueForModiferKind(const MCSymbol *Sym, unsigned SizeInBytes,
+                          SMLoc Loc = SMLoc(),
+                          AVRMCExpr::Specifier ModifierKind = AVR::S_AVR_NONE);
 };
 
 MCStreamer *createAVRELFStreamer(Triple const &TT, MCContext &Context,

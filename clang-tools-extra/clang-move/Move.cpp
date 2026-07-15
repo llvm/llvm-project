@@ -75,7 +75,7 @@ std::string MakeAbsolutePath(StringRef CurrentDir, StringRef Path) {
     return "";
   llvm::SmallString<128> InitialDirectory(CurrentDir);
   llvm::SmallString<128> AbsolutePath(Path);
-  llvm::sys::fs::make_absolute(InitialDirectory, AbsolutePath);
+  llvm::sys::path::make_absolute(InitialDirectory, AbsolutePath);
   return CleanPath(std::move(AbsolutePath));
 }
 
@@ -314,7 +314,7 @@ CharSourceRange getFullRange(const Decl *D,
   const auto &SM = D->getASTContext().getSourceManager();
   SourceRange Full(SM.getExpansionLoc(D->getBeginLoc()), getLocForEndOfDecl(D));
   // Expand to comments that are associated with the Decl.
-  if (const auto *Comment = D->getASTContext().getRawCommentForDeclNoCache(D)) {
+  if (const auto *Comment = D->getASTContext().getRawCommentNoCache(D)) {
     if (SM.isBeforeInTranslationUnit(Full.getEnd(), Comment->getEndLoc()))
       Full.setEnd(Comment->getEndLoc());
     // FIXME: Don't delete a preceding comment, if there are no other entities
@@ -464,7 +464,7 @@ getUsedDecls(const HelperDeclRefGraph *RG,
   for (const auto *D : Decls) {
     auto Result = RG->getReachableNodes(
         HelperDeclRGBuilder::getOutmostClassOrFunDecl(D));
-    Nodes.insert(Result.begin(), Result.end());
+    Nodes.insert_range(Result);
   }
   llvm::DenseSet<const Decl *> Results;
   for (const auto *Node : Nodes)

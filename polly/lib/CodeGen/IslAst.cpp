@@ -29,11 +29,9 @@
 #include "polly/CodeGen/IslAst.h"
 #include "polly/CodeGen/CodeGeneration.h"
 #include "polly/DependenceInfo.h"
-#include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
 #include "polly/ScopDetection.h"
 #include "polly/ScopInfo.h"
-#include "polly/ScopPass.h"
 #include "polly/Support/GICHelper.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Function.h"
@@ -82,6 +80,13 @@ static cl::opt<bool> UseContext("polly-ast-use-context",
 static cl::opt<bool> DetectParallel("polly-ast-detect-parallel",
                                     cl::desc("Detect parallelism"), cl::Hidden,
                                     cl::cat(PollyCategory));
+
+extern cl::opt<bool> PollyVectorizeMetadata;
+
+static cl::opt<bool>
+    PollyPrintAst("polly-print-ast",
+                  cl::desc("Print the ISL abstract syntax tree"),
+                  cl::cat(PollyCategory));
 
 STATISTIC(ScopsProcessed, "Number of SCoPs processed");
 STATISTIC(ScopsBeneficial, "Number of beneficial SCoPs");
@@ -134,7 +139,7 @@ static isl_printer *printLine(__isl_take isl_printer *Printer,
 }
 
 /// Return all broken reductions as a string of clauses (OpenMP style).
-static const std::string getBrokenReductionsStr(const isl::ast_node &Node) {
+static std::string getBrokenReductionsStr(const isl::ast_node &Node) {
   IslAstInfo::MemoryAccessSet *BrokenReductions;
   std::string str;
 
@@ -498,7 +503,8 @@ IslAst::IslAst(IslAst &&O)
 
 void IslAst::init(const Dependences &D) {
   bool PerformParallelTest = PollyParallel || DetectParallel ||
-                             PollyVectorizerChoice != VECTORIZER_NONE;
+                             PollyVectorizerChoice != VECTORIZER_NONE ||
+                             PollyVectorizeMetadata;
   auto ScheduleTree = S.getScheduleTree();
 
   // Skip AST and code generation if there was no benefit achieved.
@@ -659,15 +665,6 @@ static std::unique_ptr<IslAstInfo> runIslAst(
   return Ast;
 }
 
-IslAstInfo IslAstAnalysis::run(Scop &S, ScopAnalysisManager &SAM,
-                               ScopStandardAnalysisResults &SAR) {
-  auto GetDeps = [&](Dependences::AnalysisLevel Lvl) -> const Dependences & {
-    return SAM.getResult<DependenceAnalysis>(S, SAR).getDependences(Lvl);
-  };
-
-  return std::move(*runIslAst(S, GetDeps));
-}
-
 static __isl_give isl_printer *cbPrintUser(__isl_take isl_printer *P,
                                            __isl_take isl_ast_print_options *O,
                                            __isl_keep isl_ast_node *Node,
@@ -767,99 +764,19 @@ void IslAstInfo::print(raw_ostream &OS) {
   isl_printer_free(P);
 }
 
-AnalysisKey IslAstAnalysis::Key;
-PreservedAnalyses IslAstPrinterPass::run(Scop &S, ScopAnalysisManager &SAM,
-                                         ScopStandardAnalysisResults &SAR,
-                                         SPMUpdater &U) {
-  auto &Ast = SAM.getResult<IslAstAnalysis>(S, SAR);
-  Ast.print(OS);
-  return PreservedAnalyses::all();
-}
-
-void IslAstInfoWrapperPass::releaseMemory() { Ast.reset(); }
-
-bool IslAstInfoWrapperPass::runOnScop(Scop &Scop) {
-  auto GetDeps = [this](Dependences::AnalysisLevel Lvl) -> const Dependences & {
-    return getAnalysis<DependenceInfo>().getDependences(Lvl);
+std::unique_ptr<IslAstInfo>
+polly::runIslAstGen(Scop &S, DependenceAnalysis::Result &DA) {
+  auto GetDeps = [&](Dependences::AnalysisLevel Lvl) -> const Dependences & {
+    return DA.getDependences(Lvl);
   };
 
-  Ast = runIslAst(Scop, GetDeps);
-
-  return false;
-}
-
-void IslAstInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
-  // Get the Common analysis usage of ScopPasses.
-  ScopPass::getAnalysisUsage(AU);
-  AU.addRequiredTransitive<ScopInfoRegionPass>();
-  AU.addRequired<DependenceInfo>();
-
-  AU.addPreserved<DependenceInfo>();
-}
-
-void IslAstInfoWrapperPass::printScop(raw_ostream &OS, Scop &S) const {
-  OS << "Printing analysis 'Polly - Generate an AST of the SCoP (isl)'"
-     << S.getName() << "' in function '" << S.getFunction().getName() << "':\n";
-  if (Ast)
-    Ast->print(OS);
-}
-
-char IslAstInfoWrapperPass::ID = 0;
-
-Pass *polly::createIslAstInfoWrapperPassPass() {
-  return new IslAstInfoWrapperPass();
-}
-
-INITIALIZE_PASS_BEGIN(IslAstInfoWrapperPass, "polly-ast",
-                      "Polly - Generate an AST of the SCoP (isl)", false,
-                      false);
-INITIALIZE_PASS_DEPENDENCY(ScopInfoRegionPass);
-INITIALIZE_PASS_DEPENDENCY(DependenceInfo);
-INITIALIZE_PASS_END(IslAstInfoWrapperPass, "polly-ast",
-                    "Polly - Generate an AST from the SCoP (isl)", false, false)
-
-//===----------------------------------------------------------------------===//
-
-namespace {
-/// Print result from IslAstInfoWrapperPass.
-class IslAstInfoPrinterLegacyPass final : public ScopPass {
-public:
-  static char ID;
-
-  IslAstInfoPrinterLegacyPass() : IslAstInfoPrinterLegacyPass(outs()) {}
-  explicit IslAstInfoPrinterLegacyPass(llvm::raw_ostream &OS)
-      : ScopPass(ID), OS(OS) {}
-
-  bool runOnScop(Scop &S) override {
-    IslAstInfoWrapperPass &P = getAnalysis<IslAstInfoWrapperPass>();
-
-    OS << "Printing analysis '" << P.getPassName() << "' for region: '"
-       << S.getRegion().getNameStr() << "' in function '"
-       << S.getFunction().getName() << "':\n";
-    P.printScop(OS, S);
-
-    return false;
+  std::unique_ptr<IslAstInfo> Result = runIslAst(S, GetDeps);
+  if (PollyPrintAst) {
+    outs() << "Printing analysis 'Polly - Generate an AST of the SCoP (isl)'"
+           << S.getName() << "' in function '" << S.getFunction().getName()
+           << "':\n";
+    if (Result)
+      Result->print(llvm::outs());
   }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    ScopPass::getAnalysisUsage(AU);
-    AU.addRequired<IslAstInfoWrapperPass>();
-    AU.setPreservesAll();
-  }
-
-private:
-  llvm::raw_ostream &OS;
-};
-
-char IslAstInfoPrinterLegacyPass::ID = 0;
-} // namespace
-
-Pass *polly::createIslAstInfoPrinterLegacyPass(raw_ostream &OS) {
-  return new IslAstInfoPrinterLegacyPass(OS);
+  return Result;
 }
-
-INITIALIZE_PASS_BEGIN(IslAstInfoPrinterLegacyPass, "polly-print-ast",
-                      "Polly - Print the AST from a SCoP (isl)", false, false);
-INITIALIZE_PASS_DEPENDENCY(IslAstInfoWrapperPass);
-INITIALIZE_PASS_END(IslAstInfoPrinterLegacyPass, "polly-print-ast",
-                    "Polly - Print the AST from a SCoP (isl)", false, false)

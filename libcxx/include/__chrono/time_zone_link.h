@@ -14,7 +14,7 @@
 
 #include <version>
 // Enable the contents of the header only when libc++ was built with experimental features enabled.
-#if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#if _LIBCPP_HAS_EXPERIMENTAL_TZDB
 
 #  include <__compare/strong_order.h>
 #  include <__config>
@@ -29,9 +29,9 @@
 _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #  if _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace chrono {
 
@@ -67,13 +67,13 @@ operator<=>(const time_zone_link& __x, const time_zone_link& __y) noexcept {
 
 } // namespace chrono
 
+_LIBCPP_END_NAMESPACE_STD
+
 #  endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM &&
          // _LIBCPP_HAS_LOCALIZATION
 
-_LIBCPP_END_NAMESPACE_STD
-
 _LIBCPP_POP_MACROS
 
-#endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
 
 #endif // _LIBCPP___CHRONO_TIME_ZONE_LINK_H

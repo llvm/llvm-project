@@ -1584,7 +1584,7 @@ define void @pr40060(i32, i32) {
 ; EGPR-NEXT:    testl %eax, %eax # encoding: [0x85,0xc0]
 ; EGPR-NEXT:    jns bar # TAILCALL
 ; EGPR-NEXT:    # encoding: [0x79,A]
-; EGPR-NEXT:    # fixup A - offset: 1, value: bar-1, kind: FK_PCRel_1
+; EGPR-NEXT:    # fixup A - offset: 1, value: bar, kind: FK_PCRel_1
 ; EGPR-NEXT:  # %bb.1:
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %3 = tail call i32 @llvm.x86.bmi.bextr.32(i32 %0, i32 %1)
@@ -1635,10 +1635,10 @@ define i32 @blsr32_branch(i32 %x) {
 ; EGPR-NEXT:    .cfi_offset %rbx, -16
 ; EGPR-NEXT:    blsrl %edi, %ebx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x60,0xf3,0xcf]
 ; EGPR-NEXT:    jne .LBB53_2 # encoding: [0x75,A]
-; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB53_2-1, kind: FK_PCRel_1
+; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB53_2, kind: FK_PCRel_1
 ; EGPR-NEXT:  # %bb.1:
 ; EGPR-NEXT:    callq bar # encoding: [0xe8,A,A,A,A]
-; EGPR-NEXT:    # fixup A - offset: 1, value: bar-4, kind: reloc_branch_4byte_pcrel
+; EGPR-NEXT:    # fixup A - offset: 1, value: bar, kind: reloc_branch_4byte_pcrel
 ; EGPR-NEXT:  .LBB53_2:
 ; EGPR-NEXT:    movl %ebx, %eax # encoding: [0x89,0xd8]
 ; EGPR-NEXT:    popq %rbx # encoding: [0x5b]
@@ -1707,10 +1707,10 @@ define i64 @blsr64_branch(i64 %x) {
 ; EGPR-NEXT:    .cfi_offset %rbx, -16
 ; EGPR-NEXT:    blsrq %rdi, %rbx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xe0,0xf3,0xcf]
 ; EGPR-NEXT:    jne .LBB54_2 # encoding: [0x75,A]
-; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB54_2-1, kind: FK_PCRel_1
+; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB54_2, kind: FK_PCRel_1
 ; EGPR-NEXT:  # %bb.1:
 ; EGPR-NEXT:    callq bar # encoding: [0xe8,A,A,A,A]
-; EGPR-NEXT:    # fixup A - offset: 1, value: bar-4, kind: reloc_branch_4byte_pcrel
+; EGPR-NEXT:    # fixup A - offset: 1, value: bar, kind: reloc_branch_4byte_pcrel
 ; EGPR-NEXT:  .LBB54_2:
 ; EGPR-NEXT:    movq %rbx, %rax # encoding: [0x48,0x89,0xd8]
 ; EGPR-NEXT:    popq %rbx # encoding: [0x5b]
@@ -1764,10 +1764,10 @@ define i32 @blsi32_branch(i32 %x) {
 ; EGPR-NEXT:    .cfi_offset %rbx, -16
 ; EGPR-NEXT:    blsil %edi, %ebx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x60,0xf3,0xdf]
 ; EGPR-NEXT:    jne .LBB55_2 # encoding: [0x75,A]
-; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB55_2-1, kind: FK_PCRel_1
+; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB55_2, kind: FK_PCRel_1
 ; EGPR-NEXT:  # %bb.1:
 ; EGPR-NEXT:    callq bar # encoding: [0xe8,A,A,A,A]
-; EGPR-NEXT:    # fixup A - offset: 1, value: bar-4, kind: reloc_branch_4byte_pcrel
+; EGPR-NEXT:    # fixup A - offset: 1, value: bar, kind: reloc_branch_4byte_pcrel
 ; EGPR-NEXT:  .LBB55_2:
 ; EGPR-NEXT:    movl %ebx, %eax # encoding: [0x89,0xd8]
 ; EGPR-NEXT:    popq %rbx # encoding: [0x5b]
@@ -1836,10 +1836,10 @@ define i64 @blsi64_branch(i64 %x) {
 ; EGPR-NEXT:    .cfi_offset %rbx, -16
 ; EGPR-NEXT:    blsiq %rdi, %rbx # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xe0,0xf3,0xdf]
 ; EGPR-NEXT:    jne .LBB56_2 # encoding: [0x75,A]
-; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB56_2-1, kind: FK_PCRel_1
+; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB56_2, kind: FK_PCRel_1
 ; EGPR-NEXT:  # %bb.1:
 ; EGPR-NEXT:    callq bar # encoding: [0xe8,A,A,A,A]
-; EGPR-NEXT:    # fixup A - offset: 1, value: bar-4, kind: reloc_branch_4byte_pcrel
+; EGPR-NEXT:    # fixup A - offset: 1, value: bar, kind: reloc_branch_4byte_pcrel
 ; EGPR-NEXT:  .LBB56_2:
 ; EGPR-NEXT:    movq %rbx, %rax # encoding: [0x48,0x89,0xd8]
 ; EGPR-NEXT:    popq %rbx # encoding: [0x5b]
@@ -1878,7 +1878,7 @@ define void @pr42118_i32(i32 %x) {
 ; EGPR-NEXT:    testl %eax, %eax # encoding: [0x85,0xc0]
 ; EGPR-NEXT:    je bar # TAILCALL
 ; EGPR-NEXT:    # encoding: [0x74,A]
-; EGPR-NEXT:    # fixup A - offset: 1, value: bar-1, kind: FK_PCRel_1
+; EGPR-NEXT:    # fixup A - offset: 1, value: bar, kind: FK_PCRel_1
 ; EGPR-NEXT:  # %bb.1:
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %tmp = sub i32 0, %x
@@ -1931,7 +1931,7 @@ define void @pr42118_i64(i64 %x) {
 ; EGPR-NEXT:    testq %rax, %rax # encoding: [0x48,0x85,0xc0]
 ; EGPR-NEXT:    je bar # TAILCALL
 ; EGPR-NEXT:    # encoding: [0x74,A]
-; EGPR-NEXT:    # fixup A - offset: 1, value: bar-1, kind: FK_PCRel_1
+; EGPR-NEXT:    # fixup A - offset: 1, value: bar, kind: FK_PCRel_1
 ; EGPR-NEXT:  # %bb.1:
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %tmp = sub i64 0, %x
@@ -2020,4 +2020,206 @@ define i64 @blsi_cflag_64(i64 %x, i64 %y) nounwind {
   %and = and i64 %sub, %x
   %cond = select i1 %tobool, i64 %y, i64 %and
   ret i64 %cond
+}
+
+define i64 @blsi64_not(i64 %x) nounwind {
+; X86-LABEL: blsi64_not:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    sbbl %esi, %edx
+; X86-NEXT:    andl %esi, %edx
+; X86-NEXT:    andl %ecx, %eax
+; X86-NEXT:    notl %edx
+; X86-NEXT:    notl %eax
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+;
+; X64-LABEL: blsi64_not:
+; X64:       # %bb.0:
+; X64-NEXT:    blsiq %rdi, %rax
+; X64-NEXT:    notq %rax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: blsi64_not:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    blsiq %rdi, %rax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf8,0xf3,0xdf]
+; EGPR-NEXT:    notq %rax # encoding: [0x48,0xf7,0xd0]
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %neg = sub i64 0, %x
+  %and = and i64 %x, %neg
+  %not = xor i64 %and, -1
+  ret i64 %not
+}
+
+define i32 @blsi32_not(i32 %x) nounwind {
+; X86-LABEL: blsi32_not:
+; X86:       # %bb.0:
+; X86-NEXT:    blsil {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    notl %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: blsi32_not:
+; X64:       # %bb.0:
+; X64-NEXT:    blsil %edi, %eax
+; X64-NEXT:    notl %eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: blsi32_not:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    blsil %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf3,0xdf]
+; EGPR-NEXT:    notl %eax # encoding: [0xf7,0xd0]
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %neg = sub i32 0, %x
+  %and = and i32 %x, %neg
+  %not = xor i32 %and, -1
+  ret i32 %not
+}
+define i8 @blsi8(i8 %x) {
+; X86-LABEL: blsi8:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    blsil %eax, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: blsi8:
+; X64:       # %bb.0:
+; X64-NEXT:    blsil %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: blsi8:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    blsil %edi, %eax # encoding: [0xc4,0xe2,0x78,0xf3,0xdf]
+; EGPR-NEXT:    # kill: def $al killed $al killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %neg = sub i8 0, %x
+  %and = and i8 %x, %neg
+  ret i8 %and
+}
+
+define i16 @blsi16(i16 %x) {
+; X86-LABEL: blsi16:
+; X86:       # %bb.0:
+; X86-NEXT:    blsil {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: blsi16:
+; X64:       # %bb.0:
+; X64-NEXT:    blsil %edi, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: blsi16:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    blsil %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf3,0xdf]
+; EGPR-NEXT:    # kill: def $ax killed $ax killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %neg = sub i16 0, %x
+  %and = and i16 %x, %neg
+  ret i16 %and
+}
+
+define i8 @blsi8_trunc(i32 %x) {
+; X86-LABEL: blsi8_trunc:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    blsil %eax, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: blsi8_trunc:
+; X64:       # %bb.0:
+; X64-NEXT:    blsil %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: blsi8_trunc:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    blsil %edi, %eax # encoding: [0xc4,0xe2,0x78,0xf3,0xdf]
+; EGPR-NEXT:    # kill: def $al killed $al killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %t = trunc i32 %x to i8
+  %neg = sub i8 0, %t
+  %and = and i8 %t, %neg
+  ret i8 %and
+}
+
+define i16 @blsi16_trunc(i32 %x) {
+; X86-LABEL: blsi16_trunc:
+; X86:       # %bb.0:
+; X86-NEXT:    blsil {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: blsi16_trunc:
+; X64:       # %bb.0:
+; X64-NEXT:    blsil %edi, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: blsi16_trunc:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    blsil %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf3,0xdf]
+; EGPR-NEXT:    # kill: def $ax killed $ax killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %t = trunc i32 %x to i16
+  %neg = sub i16 0, %t
+  %and = and i16 %t, %neg
+  ret i16 %and
+}
+
+define i8 @blsmsk8(i8 %x) nounwind {
+; X86-LABEL: blsmsk8:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    blsmskl %eax, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: blsmsk8:
+; X64:       # %bb.0:
+; X64-NEXT:    blsmskl %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: blsmsk8:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    blsmskl %edi, %eax # encoding: [0xc4,0xe2,0x78,0xf3,0xd7]
+; EGPR-NEXT:    # kill: def $al killed $al killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %y = add i8 %x, -1
+  %z = xor i8 %x, %y
+  ret i8 %z
+}
+
+define i8 @blsmsk8_trunc(i32 %x) nounwind {
+; X86-LABEL: blsmsk8_trunc:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    blsmskl %eax, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: blsmsk8_trunc:
+; X64:       # %bb.0:
+; X64-NEXT:    blsmskl %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: blsmsk8_trunc:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    blsmskl %edi, %eax # encoding: [0xc4,0xe2,0x78,0xf3,0xd7]
+; EGPR-NEXT:    # kill: def $al killed $al killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %t = trunc i32 %x to i8
+  %y = add i8 %t, -1
+  %z = xor i8 %t, %y
+  ret i8 %z
 }

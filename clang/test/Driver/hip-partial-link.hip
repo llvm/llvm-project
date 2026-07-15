@@ -1,4 +1,4 @@
-// REQUIRES: x86-registered-target, amdgpu-registered-target, lld, system-linux
+// REQUIRES: x86-registered-target, amdgpu-registered-target, lld
 
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu --no-offload-new-driver \
 // RUN:   --offload-arch=gfx906 -c -nostdinc -nogpuinc -nohipwrapperinc \
@@ -32,11 +32,11 @@
 // LD-R: Found undefined HIP fatbin symbol: __hip_fatbin_[[ID2:[0-9a-f]+]]
 // LD-R: Found undefined HIP gpubin handle symbol: __hip_gpubin_handle_[[ID1]]
 // LD-R: Found undefined HIP gpubin handle symbol: __hip_gpubin_handle_[[ID2]]
-// LD-R: "{{.*}}/clang-offload-bundler" {{.*}}-unbundle
-// LD-R: "{{.*}}/lld" -flavor gnu -m elf64_amdgpu
-// LD-R: "{{.*}}/clang-offload-bundler"
-// LD-R: "{{.*}}/clang{{.*}}" -target x86_64-unknown-linux-gnu
-// LD-R: "{{.*}}/ld.lld" {{.*}} -r
+// LD-R: "{{.*[/\\]}}clang-offload-bundler" {{.*}}-unbundle
+// LD-R: "{{.*[/\\]}}lld" -flavor gnu -m elf64_amdgpu
+// LD-R: "{{.*[/\\]}}clang-offload-bundler"
+// LD-R: "{{.*[/\\]}}clang{{.*}}" -target x86_64-unknown-linux-gnu
+// LD-R: "{{.*[/\\]}}ld.lld" {{.*}} -r
 
 // RUN: llvm-nm  %t.lib.o | FileCheck -check-prefix=OBJ %s
 // OBJ:  B __hip_cuid_[[ID1:[0-9a-f]+]]
@@ -62,11 +62,11 @@
 // STATIC: Found undefined HIP fatbin symbol: __hip_fatbin_[[ID2:[0-9a-f]+]]
 // STATIC: Found undefined HIP gpubin handle symbol: __hip_gpubin_handle_[[ID1]]
 // STATIC: Found undefined HIP gpubin handle symbol: __hip_gpubin_handle_[[ID2]]
-// STATIC: "{{.*}}/clang-offload-bundler" {{.*}}-unbundle
-// STATIC: "{{.*}}/lld" -flavor gnu -m elf64_amdgpu
-// STATIC: "{{.*}}/clang-offload-bundler"
-// STATIC: "{{.*}}/clang{{.*}}" -target x86_64-unknown-linux-gnu
-// STATIC: "{{.*}}/llvm-ar"
+// STATIC: "{{.*[/\\]}}clang-offload-bundler" {{.*}}-unbundle
+// STATIC: "{{.*[/\\]}}lld" -flavor gnu -m elf64_amdgpu
+// STATIC: "{{.*[/\\]}}clang-offload-bundler"
+// STATIC: "{{.*[/\\]}}clang{{.*}}" -target x86_64-unknown-linux-gnu
+// STATIC: "{{.*[/\\]}}llvm-ar"
 
 // RUN: %clang -v --target=x86_64-unknown-linux-gnu --no-offload-new-driver \
 // RUN:   --hip-link -no-hip-rt -fgpu-rdc --offload-arch=gfx906 \

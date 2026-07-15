@@ -1,25 +1,15 @@
-from __future__ import print_function
-
 import errno
 import itertools
 import math
 import numbers
 import os
+import pathlib
 import platform
 import re
 import signal
 import subprocess
 import sys
 import threading
-
-
-def is_string(value):
-    try:
-        # Python 2 and Python 3 are different here.
-        return isinstance(value, basestring)
-    except NameError:
-        return isinstance(value, str)
-
 
 def pythonize_bool(value):
     if value is None:
@@ -28,7 +18,7 @@ def pythonize_bool(value):
         return value
     if isinstance(value, numbers.Number):
         return value != 0
-    if is_string(value):
+    if isinstance(value, str):
         if value.lower() in ("1", "true", "on", "yes"):
             return True
         if value.lower() in ("", "0", "false", "off", "no"):
@@ -38,76 +28,6 @@ def pythonize_bool(value):
 
 def make_word_regex(word):
     return r"\b" + word + r"\b"
-
-
-def to_bytes(s):
-    """Return the parameter as type 'bytes', possibly encoding it.
-
-    In Python2, the 'bytes' type is the same as 'str'. In Python3, they
-    are distinct.
-
-    """
-    if isinstance(s, bytes):
-        # In Python2, this branch is taken for both 'str' and 'bytes'.
-        # In Python3, this branch is taken only for 'bytes'.
-        return s
-    # In Python2, 's' is a 'unicode' object.
-    # In Python3, 's' is a 'str' object.
-    # Encode to UTF-8 to get 'bytes' data.
-    return s.encode("utf-8")
-
-
-def to_string(b):
-    """Return the parameter as type 'str', possibly encoding it.
-
-    In Python2, the 'str' type is the same as 'bytes'. In Python3, the
-    'str' type is (essentially) Python2's 'unicode' type, and 'bytes' is
-    distinct.
-
-    """
-    if isinstance(b, str):
-        # In Python2, this branch is taken for types 'str' and 'bytes'.
-        # In Python3, this branch is taken only for 'str'.
-        return b
-    if isinstance(b, bytes):
-        # In Python2, this branch is never taken ('bytes' is handled as 'str').
-        # In Python3, this is true only for 'bytes'.
-        try:
-            return b.decode("utf-8")
-        except UnicodeDecodeError:
-            # If the value is not valid Unicode, return the default
-            # repr-line encoding.
-            return str(b)
-
-    # By this point, here's what we *don't* have:
-    #
-    #  - In Python2:
-    #    - 'str' or 'bytes' (1st branch above)
-    #  - In Python3:
-    #    - 'str' (1st branch above)
-    #    - 'bytes' (2nd branch above)
-    #
-    # The last type we might expect is the Python2 'unicode' type. There is no
-    # 'unicode' type in Python3 (all the Python3 cases were already handled). In
-    # order to get a 'str' object, we need to encode the 'unicode' object.
-    try:
-        return b.encode("utf-8")
-    except AttributeError:
-        raise TypeError("not sure how to convert %s to %s" % (type(b), str))
-
-
-def to_unicode(s):
-    """Return the parameter as type which supports unicode, possibly decoding
-    it.
-
-    In Python2, this is the unicode type. In Python3 it's the str type.
-
-    """
-    if isinstance(s, bytes):
-        # In Python2, this branch is taken for both 'str' and 'bytes'.
-        # In Python3, this branch is taken only for 'bytes'.
-        return s.decode("utf-8")
-    return s
 
 
 def usable_core_count():
@@ -120,11 +40,6 @@ def usable_core_count():
         n = len(os.sched_getaffinity(0))
     except AttributeError:
         n = os.cpu_count() or 1
-
-    # On Windows with more than 60 processes, multiprocessing's call to
-    # _winapi.WaitForMultipleObjects() prints an error and lit hangs.
-    if platform.system() == "Windows":
-        return min(n, 60)
 
     return n
 
@@ -139,50 +54,19 @@ def abs_path_preserve_drive(path):
         # Since Python 3.8, os.path.realpath resolves sustitute drives,
         # so we should not use it. In Python 3.7, os.path.realpath
         # was implemented as os.path.abspath.
+        if isinstance(path, pathlib.Path):
+            return path.absolute()
         return os.path.abspath(path)
     else:
         # On UNIX, the current directory always has symbolic links resolved,
         # so any program accepting relative paths cannot preserve symbolic
         # links in paths and we should always use os.path.realpath.
+        if isinstance(path, pathlib.Path):
+            return path.resolve()
         return os.path.realpath(path)
 
-def mkdir(path):
-    try:
-        if platform.system() == "Windows":
-            from ctypes import windll
-            from ctypes import GetLastError, WinError
 
-            path = os.path.abspath(path)
-            # Make sure that the path uses backslashes here, in case
-            # python would have happened to use forward slashes, as the
-            # NT path format only supports backslashes.
-            path = path.replace("/", "\\")
-            NTPath = to_unicode(r"\\?\%s" % path)
-            if not windll.kernel32.CreateDirectoryW(NTPath, None):
-                raise WinError(GetLastError())
-        else:
-            os.mkdir(path)
-    except OSError:
-        e = sys.exc_info()[1]
-        # ignore EEXIST, which may occur during a race condition
-        if e.errno != errno.EEXIST:
-            raise
-
-
-def mkdir_p(path):
-    """mkdir_p(path) - Make the "path" directory, if it does not exist; this
-    will also make directories for any missing parent directories."""
-    if not path or os.path.exists(path):
-        return
-
-    parent = os.path.dirname(path)
-    if parent != path:
-        mkdir_p(parent)
-
-    mkdir(path)
-
-
-def listdir_files(dirname, suffixes=None, exclude_filenames=None):
+def listdir_files(dirname, suffixes=None, exclude_filenames=None, prefixes=None):
     """Yields files in a directory.
 
     Filenames that are not excluded by rules below are yielded one at a time, as
@@ -214,12 +98,15 @@ def listdir_files(dirname, suffixes=None, exclude_filenames=None):
         exclude_filenames = set()
     if suffixes is None:
         suffixes = {""}
+    if prefixes is None:
+        prefixes = {""}
     for filename in os.listdir(dirname):
         if (
             os.path.isdir(os.path.join(dirname, filename))
             or filename.startswith(".")
             or filename in exclude_filenames
             or not any(filename.endswith(sfx) for sfx in suffixes)
+            or not any(filename.startswith(pfx) for pfx in prefixes)
         ):
             continue
         yield filename
@@ -271,8 +158,13 @@ def whichTools(tools, paths):
     return None
 
 
-def printHistogram(items, title="Items"):
+def printHistogram(items, slowest_limit, title="Items"):
     items.sort(key=lambda item: item[1])
+    total = len(items)
+    if slowest_limit == "all":
+        slowest_count = total
+    else:
+        slowest_count = min(slowest_limit, total)
 
     maxValue = max([v for _, v in items])
 
@@ -293,11 +185,11 @@ def printHistogram(items, title="Items"):
 
     barW = 40
     hr = "-" * (barW + 34)
-    print("Slowest %s:" % title)
+    print("Slowest %s (%d of %d):" % (title, slowest_count, total))
     print(hr)
-    for name, value in reversed(items[-20:]):
+    for name, value in reversed(items[-slowest_count:]):
         print("%.2fs: %s" % (value, name))
-    print("\n%s Times:" % title)
+    print("\nTest Times (%d):" % total)
     print(hr)
     pDigits = int(math.ceil(math.log(maxValue, 10)))
     pfDigits = max(0, 3 - pDigits)
@@ -376,7 +268,7 @@ def executeCommand(
 
     """
     if input is not None:
-        input = to_bytes(input)
+        input = input.encode("utf-8")
     err_out = subprocess.STDOUT if redirect_stderr else subprocess.PIPE
     p = subprocess.Popen(
         command,
@@ -412,8 +304,8 @@ def executeCommand(
             timerObject.cancel()
 
     # Ensure the resulting output is always of string type.
-    out = to_string(out)
-    err = "" if redirect_stderr else to_string(err)
+    out = out.decode("utf-8", errors="replace")
+    err = "" if redirect_stderr else err.decode("utf-8", errors="replace")
 
     if hitTimeOut[0]:
         raise ExecuteCommandTimeoutException(
@@ -551,3 +443,66 @@ def killProcessAndChildren(pid):
             psutilProc.kill()
         except psutil.NoSuchProcess:
             pass
+
+
+def memoize(f):
+    cache = {}  # Unbounded
+
+    def make_key(args, kwargs):
+        return args, tuple(kwargs.items())
+
+    def memoized(*args, **kwargs):
+        key = make_key(args, kwargs)
+        if key not in cache:
+            cache[key] = f(*args, **kwargs)
+        return cache[key]
+
+    return memoized
+
+
+@memoize
+def runCommandCached(lit_config, cmd, allow_failure, **kwargs):
+    """
+    Run a command with subprocess.run, with a cache global to this llvm-lit invocation
+    If allow_failure is False, lit_config.fatal will be invoked if the command fails.
+    All additional kwargs are passed to subprocess.run
+    """
+    try:
+        result = subprocess.run(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, **kwargs
+        )
+        return result.stdout
+    except (FileNotFoundError, PermissionError) as e:
+        msg = f"Failed to run {cmd}: {e}"
+    except subprocess.CalledProcessError as e:
+        msg = f"Failed to run {cmd}\nrc:{e.returncode}\nstdout:{e.stdout}\ne.stderr{e.stderr}"
+
+    if not allow_failure:
+        lit_config.fatal(msg)
+
+    return None
+
+
+def get_windows_extended_path(path: str) -> str:
+    """
+    Return *path* in Windows extended-length (``\\\\?\\``) form.
+
+    On non-Windows platforms the path is returned unchanged. On Windows,
+    the path is made absolute and given the ``\\\\?\\`` prefix so it can
+    exceed the Win32 ``MAX_PATH`` (260-character) limit. UNC paths
+    (those beginning with ``\\\\``) are converted to the ``\\\\?\\UNC\\``
+    form instead.
+
+    Args:
+        path: The filesystem path to normalize.
+
+    Returns:
+        The original path on non-Windows platforms, otherwise the
+        absolute path in extended-length form.
+    """
+    if not platform.system() == "Windows":
+        return path
+    path = os.path.abspath(path)
+    if path.startswith("\\\\"):
+        return "\\\\?\\UNC\\{0}".format(path[2:])
+    return "\\\\?\\{0}".format(path)

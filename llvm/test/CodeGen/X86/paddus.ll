@@ -450,7 +450,7 @@ define <64 x i8> @test13(<64 x i8> %x) {
 ;
 ; AVX512-LABEL: test13:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; AVX512-NEXT:    vpcmpneqb %zmm1, %zmm0, %k1
 ; AVX512-NEXT:    vpsubb %zmm1, %zmm0, %zmm1 {%k1}
 ; AVX512-NEXT:    vmovdqa64 %zmm1, %zmm0
@@ -659,7 +659,7 @@ define <64 x i8> @test17(<64 x i8> %x) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm1
 ; AVX512-NEXT:    vpcmpltub %zmm0, %zmm1, %k1
-; AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 = -1
 ; AVX512-NEXT:    vmovdqu8 %zmm0, %zmm1 {%k1}
 ; AVX512-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; AVX512-NEXT:    retq
@@ -1230,7 +1230,7 @@ define <32 x i16> @test31(<32 x i16> %x) {
 ;
 ; AVX512-LABEL: test31:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; AVX512-NEXT:    vpcmpneqw %zmm1, %zmm0, %k1
 ; AVX512-NEXT:    vpsubw %zmm1, %zmm0, %zmm1 {%k1}
 ; AVX512-NEXT:    vmovdqa64 %zmm1, %zmm0
@@ -1513,7 +1513,7 @@ define <32 x i16> @test35(<32 x i16> %x) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm1
 ; AVX512-NEXT:    vpcmpltuw %zmm0, %zmm1, %k1
-; AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 = -1
 ; AVX512-NEXT:    vmovdqu16 %zmm0, %zmm1 {%k1}
 ; AVX512-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; AVX512-NEXT:    retq

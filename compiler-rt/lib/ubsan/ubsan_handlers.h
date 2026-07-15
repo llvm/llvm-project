@@ -90,6 +90,9 @@ struct OutOfBoundsData {
 /// \brief Handle an array index out of bounds error.
 RECOVERABLE(out_of_bounds, OutOfBoundsData *Data, ValueHandle Index)
 
+/// \brief Handle an local object access out of bounds error.
+RECOVERABLE(local_out_of_bounds)
+
 struct UnreachableData {
   SourceLocation Loc;
 };

@@ -13,14 +13,14 @@
 
 namespace llvm {
 
-class PeepholeOptimizerPass : public PassInfoMixin<PeepholeOptimizerPass> {
+class PeepholeOptimizerPass
+    : public OptionalPassInfoMixin<PeepholeOptimizerPass> {
 public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 
   MachineFunctionProperties getRequiredProperties() const {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 };
 

@@ -3,10 +3,10 @@
 abseil-duration-addition
 ========================
 
-Check for cases where addition should be performed in the ``absl::Time`` domain.
-When adding two values, and one is known to be an ``absl::Time``, we can infer
-that the other should be interpreted as an ``absl::Duration`` of a similar
-scale, and make that inference explicit.
+Checks for cases where addition should be performed in the ``absl::Time``
+domain. When adding two values, and one is known to be an ``absl::Time``,
+we can infer that the other should be interpreted as an ``absl::Duration``
+of a similar scale, and make that inference explicit.
 
 Examples:
 

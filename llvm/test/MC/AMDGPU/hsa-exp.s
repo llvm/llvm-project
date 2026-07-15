@@ -13,14 +13,11 @@
 // ELF: Section: .text
 // ELF: }
 
-.text
-// ASM: .text
-
 .amdgcn_target "amdgcn-unknown-amdhsa--gfx700"
-// ASM: .amdgcn_target "amdgcn-unknown-amdhsa--gfx700"
 
 .amdhsa_code_object_version 4
 // ASM: .amdhsa_code_object_version 4
+// ASM: .amdgcn_target "amdgcn-unknown-amdhsa-unknown-gfx700"
 
 .set my_is_ptr64, 1
 

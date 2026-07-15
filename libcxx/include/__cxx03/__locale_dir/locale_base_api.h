@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_H
-#define _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_H
+#ifndef _LIBCPP___CXX03___LOCALE_DIR_LOCALE_BASE_API_H
+#define _LIBCPP___CXX03___LOCALE_DIR_LOCALE_BASE_API_H
 
 #if defined(_LIBCPP_MSVCRT_LIKE)
 #  include <__cxx03/__locale_dir/locale_base_api/win32.h>
@@ -17,7 +17,7 @@
 #  include <__cxx03/__locale_dir/locale_base_api/android.h>
 #elif defined(__sun__)
 #  include <__cxx03/__locale_dir/locale_base_api/solaris.h>
-#elif defined(_NEWLIB_VERSION)
+#elif _LIBCPP_LIBC_NEWLIB
 #  include <__cxx03/__locale_dir/locale_base_api/newlib.h>
 #elif defined(__OpenBSD__)
 #  include <__cxx03/__locale_dir/locale_base_api/openbsd.h>
@@ -95,4 +95,4 @@ except that locale_t is used instead of the current global locale.
 The variadic functions may be implemented as templates with a parameter pack instead of variadic functions.
 */
 
-#endif // _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_H
+#endif // _LIBCPP___CXX03___LOCALE_DIR_LOCALE_BASE_API_H

@@ -38,9 +38,7 @@ using namespace llvm;
 namespace {
   struct PPCTLSDynamicCall : public MachineFunctionPass {
     static char ID;
-    PPCTLSDynamicCall() : MachineFunctionPass(ID) {
-      initializePPCTLSDynamicCallPass(*PassRegistry::getPassRegistry());
-    }
+    PPCTLSDynamicCall() : MachineFunctionPass(ID) {}
 
     const PPCInstrInfo *TII;
 

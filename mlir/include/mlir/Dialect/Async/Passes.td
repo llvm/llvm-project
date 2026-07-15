@@ -11,10 +11,9 @@
 
 include "mlir/Pass/PassBase.td"
 
-def AsyncParallelFor : Pass<"async-parallel-for", "ModuleOp"> {
+def AsyncParallelForPass : Pass<"async-parallel-for", "ModuleOp"> {
   let summary = "Convert scf.parallel operations to multiple async compute ops "
                 "executed concurrently for non-overlapping iteration ranges";
-  let constructor = "mlir::createAsyncParallelForPass()";
 
   let options = [
     Option<"asyncDispatch", "async-dispatch",
@@ -41,21 +40,20 @@ def AsyncParallelFor : Pass<"async-parallel-for", "ModuleOp"> {
   ];
 }
 
-def AsyncToAsyncRuntime : Pass<"async-to-async-runtime", "ModuleOp"> {
+def AsyncToAsyncRuntimePass : Pass<"async-to-async-runtime", "ModuleOp"> {
   let summary = "Lower all high level async operations (e.g. async.execute) to"
                 "the explicit async.runtime and async.coro operations";
-  let constructor = "mlir::createAsyncToAsyncRuntimePass()";
   let dependentDialects = ["async::AsyncDialect", "func::FuncDialect", "cf::ControlFlowDialect"];
 }
 
-def AsyncFuncToAsyncRuntime : Pass<"async-func-to-async-runtime", "ModuleOp"> {
+def AsyncFuncToAsyncRuntimePass
+    : Pass<"async-func-to-async-runtime", "ModuleOp"> {
   let summary = "Lower async.func operations to the explicit async.runtime and"
                 "async.coro operations";
-  let constructor = "mlir::createAsyncFuncToAsyncRuntimePass()";
   let dependentDialects = ["async::AsyncDialect", "func::FuncDialect"];
 }
 
-def AsyncRuntimeRefCounting : Pass<"async-runtime-ref-counting"> {
+def AsyncRuntimeRefCountingPass : Pass<"async-runtime-ref-counting"> {
   let summary = "Automatic reference counting for Async runtime operations";
   let description = [{
     This pass works at the async runtime abtraction level, after all
@@ -68,18 +66,17 @@ def AsyncRuntimeRefCounting : Pass<"async-runtime-ref-counting"> {
     See: https://llvm.org/docs/Coroutines.html#switched-resume-lowering
   }];
 
-  let constructor = "mlir::createAsyncRuntimeRefCountingPass()";
   let dependentDialects = ["async::AsyncDialect"];
 }
 
-def AsyncRuntimeRefCountingOpt : Pass<"async-runtime-ref-counting-opt"> {
+def AsyncRuntimeRefCountingOptPass : Pass<"async-runtime-ref-counting-opt"> {
   let summary = "Optimize automatic reference counting operations for the"
                 "Async runtime by removing redundant operations";
-  let constructor = "mlir::createAsyncRuntimeRefCountingOptPass()";
+
   let dependentDialects = ["async::AsyncDialect"];
 }
 
-def AsyncRuntimePolicyBasedRefCounting
+def AsyncRuntimePolicyBasedRefCountingPass
     : Pass<"async-runtime-policy-based-ref-counting"> {
   let summary = "Policy based reference counting for Async runtime operations";
   let description = [{
@@ -107,7 +104,6 @@ def AsyncRuntimePolicyBasedRefCounting
     automatic reference counting.
   }];
 
-  let constructor = "mlir::createAsyncRuntimePolicyBasedRefCountingPass()";
   let dependentDialects = ["async::AsyncDialect"];
 }
 

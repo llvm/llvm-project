@@ -40,9 +40,14 @@ entry:
   ; CHECK: insertelement <4 x i32> %{{.*}}, i32 [[ie1]], i64 1
   ; CHECK: insertelement <4 x i32> %{{.*}}, i32 [[ie2]], i64 2
   ; CHECK: insertelement <4 x i32> %{{.*}}, i32 [[ie3]], i64 3
-  %2 = call <4 x i32> @llvm.bitreverse.v4i32(<4 x i32> %a) 
+  %2 = call <4 x i32> @llvm.bitreverse.v4i32(<4 x i32> %a)
   ret <4 x i32> %2
 }
+
+; CHECK-DAG: declare i16 @dx.op.unary.i16(i32, i16) #[[#ATTR0:]]
+; CHECK-DAG: declare i32 @dx.op.unary.i32(i32, i32) #[[#ATTR0]]
+; CHECK-DAG: declare i64 @dx.op.unary.i64(i32, i64) #[[#ATTR0]]
+; CHECK: attributes #[[#ATTR0]] = { nounwind memory(none) }
 
 declare i16 @llvm.bitreverse.i16(i16)
 declare i32 @llvm.bitreverse.i32(i32)

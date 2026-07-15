@@ -29,9 +29,15 @@ static_assert(std::is_trivially_default_constructible_v<std::sorted_unique_t>);
 static_assert(!HasImplicitDefaultCtor<std::sorted_unique_t>);
 
 constexpr bool test() {
-  { [[maybe_unused]] std::sorted_unique_t s; }
-  { [[maybe_unused]] std::same_as<const std::sorted_unique_t&> decltype(auto) s = (std::sorted_unique); }
-  { [[maybe_unused]] std::same_as<const std::sorted_unique_t> decltype(auto) copy = std::sorted_unique; }
+  {
+    [[maybe_unused]] std::sorted_unique_t s;
+  }
+  {
+    [[maybe_unused]] std::same_as<const std::sorted_unique_t&> decltype(auto) s = (std::sorted_unique);
+  }
+  {
+    [[maybe_unused]] std::same_as<const std::sorted_unique_t> decltype(auto) copy = std::sorted_unique;
+  }
 
   return true;
 }

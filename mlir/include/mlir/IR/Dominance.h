@@ -47,7 +47,10 @@ public:
   /// Invalidate dominance info. This can be used by clients that make major
   /// changes to the CFG and don't have a good way to update it.
   void invalidate();
-  void invalidate(Region *region);
+
+  /// Invalidate dominance info of the \p region, if \p recursive is true, it
+  /// invalidates the dominance information of child regions.
+  void invalidate(Region *region, bool recursive = true);
 
   /// Finds the nearest common dominator block for the two given blocks a
   /// and b. If no common dominator can be found, this function will return
@@ -113,12 +116,12 @@ protected:
   llvm::PointerIntPair<DomTree *, 1, bool>
   getDominanceInfo(Region *region, bool needsDomTree) const;
 
-  /// Return "true" if the specified block A properly (post)dominates block B.
-  bool properlyDominatesImpl(Block *a, Block *b) const;
-
-  /// Return "true" if the specified op A properly (post)dominates op B.
-  bool properlyDominatesImpl(Operation *a, Operation *b,
-                             bool enclosingOpOk = true) const;
+  /// Return "true" if block iterator A properly (post)dominates block iterator
+  /// B. If `enclosingOk` is set, A is considered to (post)dominate B if A
+  /// encloses B.
+  bool properlyDominatesImpl(Block *aBlock, Block::iterator aIt, Block *bBlock,
+                             Block::iterator bIt,
+                             bool enclosingOk = true) const;
 
   /// A mapping of regions to their base dominator tree and a cached
   /// "hasSSADominance" bit. This map does not contain dominator trees for
@@ -151,9 +154,7 @@ public:
   /// The `enclosingOpOk` flag says whether we should return true if the B op
   /// is enclosed by a region on A.
   bool properlyDominates(Operation *a, Operation *b,
-                         bool enclosingOpOk = true) const {
-    return super::properlyDominatesImpl(a, b, enclosingOpOk);
-  }
+                         bool enclosingOpOk = true) const;
 
   /// Return true if operation A dominates operation B, i.e. if A and B are the
   /// same operation or A properly dominates B.
@@ -188,8 +189,17 @@ public:
   /// Graph regions have only a single block. To be consistent with "proper
   /// dominance" of ops, the single block is considered to properly dominate
   /// itself in a graph region.
-  bool properlyDominates(Block *a, Block *b) const {
-    return super::properlyDominatesImpl(a, b);
+  bool properlyDominates(Block *a, Block *b) const;
+
+  bool properlyDominates(Block *aBlock, Block::iterator aIt, Block *bBlock,
+                         Block::iterator bIt, bool enclosingOk = true) const {
+    return super::properlyDominatesImpl(aBlock, aIt, bBlock, bIt, enclosingOk);
+  }
+
+  bool dominates(Block *aBlock, Block::iterator aIt, Block *bBlock,
+                 Block::iterator bIt, bool enclosingOk = true) const {
+    return (aBlock == bBlock && aIt == bIt) ||
+           super::properlyDominatesImpl(aBlock, aIt, bBlock, bIt, enclosingOk);
   }
 };
 
@@ -200,9 +210,7 @@ public:
 
   /// Return true if operation A properly postdominates operation B.
   bool properlyPostDominates(Operation *a, Operation *b,
-                             bool enclosingOpOk = true) const {
-    return super::properlyDominatesImpl(a, b, enclosingOpOk);
-  }
+                             bool enclosingOpOk = true) const;
 
   /// Return true if operation A postdominates operation B.
   bool postDominates(Operation *a, Operation *b) const {
@@ -210,13 +218,23 @@ public:
   }
 
   /// Return true if the specified block A properly postdominates block B.
-  bool properlyPostDominates(Block *a, Block *b) const {
-    return super::properlyDominatesImpl(a, b);
-  }
+  bool properlyPostDominates(Block *a, Block *b) const;
 
   /// Return true if the specified block A postdominates block B.
   bool postDominates(Block *a, Block *b) const {
     return a == b || properlyPostDominates(a, b);
+  }
+
+  bool properlyPostDominates(Block *aBlock, Block::iterator aIt, Block *bBlock,
+                             Block::iterator bIt,
+                             bool enclosingOk = true) const {
+    return super::properlyDominatesImpl(aBlock, aIt, bBlock, bIt, enclosingOk);
+  }
+
+  bool postDominates(Block *aBlock, Block::iterator aIt, Block *bBlock,
+                     Block::iterator bIt, bool enclosingOk = true) const {
+    return (aBlock == bBlock && aIt == bIt) ||
+           super::properlyDominatesImpl(aBlock, aIt, bBlock, bIt, enclosingOk);
   }
 };
 

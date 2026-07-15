@@ -18,6 +18,7 @@ static_library("mach-core") {
   include_dirs = [ "//lldb/source" ]
   sources = [
     "ProcessMachCore.cpp",
+    "RegisterContextUnifiedCore.cpp",
     "ThreadMachCore.cpp",
   ]
 }

@@ -1,14 +1,13 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK: %[[#Char:]] = OpTypeInt 8 0
-; CHECK: %[[#PtrChar:]] = OpTypePointer Function %[[#Char]]
-; CHECK: %[[#Int:]] = OpTypeInt 32 0
-; CHECK: %[[#PtrInt:]] = OpTypePointer Function %[[#Int]]
+; CHECK-DAG: %[[#Char:]] = OpTypeInt 8 0
+; CHECK-DAG: %[[#PtrChar:]] = OpTypePointer Function %[[#Char]]
+; CHECK-DAG: %[[#Int:]] = OpTypeInt 32 0
+; CHECK-DAG: %[[#PtrInt:]] = OpTypePointer Function %[[#Int]]
 ; CHECK: %[[#R1:]] = OpFunctionCall %[[#PtrChar]] %[[#]]
 ; CHECK: %[[#R2:]] = OpFunctionCall %[[#PtrInt]] %[[#]]
 ; CHECK: %[[#Casted:]] = OpBitcast %[[#PtrChar]] %[[#R2]]
-; CHECK: OpPhi %[[#PtrChar]] %[[#R1]] %[[#]] %[[#Casted]] %[[#]]
 ; CHECK: OpPhi %[[#PtrChar]] %[[#R1]] %[[#]] %[[#Casted]] %[[#]]
 
 define ptr @foo(i1 %arg) {

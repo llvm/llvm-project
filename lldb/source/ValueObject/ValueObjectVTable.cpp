@@ -26,12 +26,12 @@ public:
                          uint64_t addr_size)
       : ValueObject(parent), m_func_idx(func_idx), m_addr_size(addr_size) {
     SetFormat(eFormatPointer);
-    SetName(ConstString(llvm::formatv("[{0}]", func_idx).str()));
+    SetName(llvm::formatv("[{0}]", func_idx).str());
   }
 
   ~ValueObjectVTableChild() override = default;
 
-  std::optional<uint64_t> GetByteSize() override { return m_addr_size; };
+  llvm::Expected<uint64_t> GetByteSize() override { return m_addr_size; };
 
   llvm::Expected<uint32_t> CalculateNumChildren(uint32_t max) override {
     return 0;
@@ -73,6 +73,8 @@ protected:
       return false;
     }
 
+    parent_addr = process_sp->FixCodeAddress(parent_addr);
+
     // Each `vtable_entry_addr` points to the function pointer.
     addr_t vtable_entry_addr = parent_addr + m_func_idx * m_addr_size;
     addr_t vfunc_ptr =
@@ -83,6 +85,8 @@ protected:
           vtable_entry_addr);
       return false;
     }
+
+    vfunc_ptr = process_sp->FixCodeAddress(vfunc_ptr);
 
     // Set our value to be the load address of the function pointer in memory
     // and our type to be the function pointer type.
@@ -154,10 +158,10 @@ ValueObjectVTable::ValueObjectVTable(ValueObject &parent)
   SetFormat(eFormatPointer);
 }
 
-std::optional<uint64_t> ValueObjectVTable::GetByteSize() {
+llvm::Expected<uint64_t> ValueObjectVTable::GetByteSize() {
   if (m_vtable_symbol)
     return m_vtable_symbol->GetByteSize();
-  return std::nullopt;
+  return llvm::createStringError("no symbol for vtable");
 }
 
 llvm::Expected<uint32_t> ValueObjectVTable::CalculateNumChildren(uint32_t max) {
@@ -252,7 +256,7 @@ bool ValueObjectVTable::UpdateValue() {
   m_num_vtable_entries = (vtable_end_addr - vtable_start_addr) / m_addr_size;
 
   m_value.SetValueType(Value::ValueType::LoadAddress);
-  m_value.GetScalar() = parent->GetAddressOf();
+  m_value.GetScalar() = parent->GetAddressOf().address;
   auto type_system_or_err =
       target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeC_plus_plus);
   if (type_system_or_err) {

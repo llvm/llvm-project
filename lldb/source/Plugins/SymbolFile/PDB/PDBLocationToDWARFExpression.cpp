@@ -25,7 +25,7 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::npdb;
-using namespace lldb_private::dwarf;
+using namespace llvm::dwarf;
 using namespace llvm::pdb;
 
 static std::unique_ptr<IPDBFrameData>
@@ -76,12 +76,11 @@ DWARFExpression ConvertPDBLocationToDWARFExpression(
   llvm::Triple::ArchType arch_type = architecture.GetMachine();
   ByteOrder byte_order = architecture.GetByteOrder();
   uint32_t address_size = architecture.GetAddressByteSize();
-  uint32_t byte_size = architecture.GetDataByteSize();
   if (byte_order == eByteOrderInvalid || address_size == 0)
     return DWARFExpression();
 
   RegisterKind register_kind = eRegisterKindDWARF;
-  StreamBuffer<32> stream(Stream::eBinary, address_size, byte_order);
+  StreamBuffer<32> stream(Stream::eBinary, byte_order);
   switch (symbol.getLocationType()) {
   case PDB_LocType::Static:
   case PDB_LocType::TLS: {
@@ -174,7 +173,7 @@ DWARFExpression ConvertPDBLocationToDWARFExpression(
 
   DataBufferSP buffer =
       std::make_shared<DataBufferHeap>(stream.GetData(), stream.GetSize());
-  DataExtractor extractor(buffer, byte_order, address_size, byte_size);
+  DataExtractor extractor(buffer, byte_order, address_size);
   DWARFExpression result(extractor);
   result.SetRegisterKind(register_kind);
 

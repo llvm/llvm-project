@@ -38,21 +38,17 @@ template <> struct ScalarEnumerationTraits<AMXProgModelEnum> {
 
 struct X86MachineFunctionInfo final : public yaml::MachineFunctionInfo {
   AMXProgModelEnum AMXProgModel;
-  bool FPClobberedByCall;
-  bool HasPushSequences;
 
   X86MachineFunctionInfo() = default;
   X86MachineFunctionInfo(const llvm::X86MachineFunctionInfo &MFI);
 
   void mappingImpl(yaml::IO &YamlIO) override;
-  ~X86MachineFunctionInfo() = default;
+  ~X86MachineFunctionInfo() override = default;
 };
 
 template <> struct MappingTraits<X86MachineFunctionInfo> {
   static void mapping(IO &YamlIO, X86MachineFunctionInfo &MFI) {
     YamlIO.mapOptional("amxProgModel", MFI.AMXProgModel);
-    YamlIO.mapOptional("FPClobberedByCall", MFI.FPClobberedByCall, false);
-    YamlIO.mapOptional("hasPushSequences", MFI.HasPushSequences, false);
   }
 };
 } // end namespace yaml
@@ -153,9 +149,6 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// other tools to detect the extended record.
   bool HasSwiftAsyncContext = false;
 
-  /// Ajust stack for push2/pop2
-  bool PadForPush2Pop2 = false;
-
   /// Candidate registers for push2/pop2
   std::set<Register> CandidatesForPush2Pop2;
 
@@ -215,9 +208,7 @@ public:
   const DenseMap<int, unsigned>& getWinEHXMMSlotInfo() const {
     return WinEHXMMSlotInfo; }
 
-  unsigned getCalleeSavedFrameSize() const {
-    return CalleeSavedFrameSize + 8 * padForPush2Pop2();
-  }
+  unsigned getCalleeSavedFrameSize() const { return CalleeSavedFrameSize; }
   void setCalleeSavedFrameSize(unsigned bytes) { CalleeSavedFrameSize = bytes; }
 
   unsigned getBytesToPopOnReturn() const { return BytesToPopOnReturn; }
@@ -287,9 +278,6 @@ public:
 
   bool hasSwiftAsyncContext() const { return HasSwiftAsyncContext; }
   void setHasSwiftAsyncContext(bool v) { HasSwiftAsyncContext = v; }
-
-  bool padForPush2Pop2() const { return PadForPush2Pop2; }
-  void setPadForPush2Pop2(bool V) { PadForPush2Pop2 = V; }
 
   bool isCandidateForPush2Pop2(Register Reg) const {
     return CandidatesForPush2Pop2.find(Reg) != CandidatesForPush2Pop2.end();

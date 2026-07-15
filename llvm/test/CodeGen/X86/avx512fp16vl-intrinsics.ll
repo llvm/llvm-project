@@ -1131,7 +1131,7 @@ declare <16 x i1> @llvm.x86.avx512fp16.fpclass.ph.256(<16 x half>, i32)
 define i8 @test_int_x86_avx512_fpclass_ph_128(<8 x half> %x0) {
 ; CHECK-LABEL: test_int_x86_avx512_fpclass_ph_128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfpclassph $2, %xmm0, %k1
+; CHECK-NEXT:    vfpclassph $2, %xmm0, %k1 # k1 = isPositiveZero(xmm0)
 ; CHECK-NEXT:    vfpclassph $4, %xmm0, %k0 {%k1}
 ; CHECK-NEXT:    kmovd %k0, %eax
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
@@ -1146,7 +1146,7 @@ define i8 @test_int_x86_avx512_fpclass_ph_128(<8 x half> %x0) {
 define i16 @test_int_x86_avx512_fpclass_ph_256(<16 x half> %x0) {
 ; CHECK-LABEL: test_int_x86_avx512_fpclass_ph_256:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfpclassph $2, %ymm0, %k1
+; CHECK-NEXT:    vfpclassph $2, %ymm0, %k1 # k1 = isPositiveZero(ymm0)
 ; CHECK-NEXT:    vfpclassph $4, %ymm0, %k0 {%k1}
 ; CHECK-NEXT:    kmovd %k0, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax

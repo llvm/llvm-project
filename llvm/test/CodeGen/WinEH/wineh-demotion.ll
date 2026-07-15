@@ -1,5 +1,7 @@
 ; RUN: opt -mtriple=x86_64-pc-windows-msvc -S -win-eh-prepare  < %s | FileCheck %s
 ; RUN: opt -mtriple=x86_64-pc-windows-msvc -S -passes=win-eh-prepare  < %s | FileCheck %s
+; RUN: %if aarch64-registered-target %{ opt -mtriple=aarch64-pc-windows-msvc -S -win-eh-prepare  < %s | FileCheck %s %}
+; RUN: %if aarch64-registered-target %{ opt -mtriple=aarch64-pc-windows-msvc -S -passes=win-eh-prepare  < %s | FileCheck %s %}
 
 declare i32 @__CxxFrameHandler3(...)
 

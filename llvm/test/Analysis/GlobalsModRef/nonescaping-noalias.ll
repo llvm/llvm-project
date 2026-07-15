@@ -62,7 +62,7 @@ define ptr @test1_tls_noopt(ptr %coro, ptr %param) presplitcoroutine {
 ; CHECK-NEXT:    store i32 [[V]], ptr [[PARAM]], align 4
 ; CHECK-NEXT:    ret ptr [[CORO]]
 ; CHECK:       suspend:
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.coro.end(ptr [[CORO]], i1 false, token none)
+; CHECK-NEXT:    call void @llvm.coro.end(ptr [[CORO]], i1 false, token none)
 ; CHECK-NEXT:    ret ptr [[CORO]]
 ;
 entry:
@@ -79,7 +79,7 @@ resume:
   ret ptr %coro
 
 suspend:
-  call i1 @llvm.coro.end(ptr %coro, i1 0, token none)
+  call void @llvm.coro.end(ptr %coro, i1 0, token none)
   ret ptr %coro
 }
 
@@ -175,3 +175,24 @@ entry:
   %v = load i32, ptr @g1
   ret i32 %v
 }
+
+define i32 @test6(ptr %param) {
+; Ensure that we can fold a store to a load of a global across a set of
+; calls that cannot use in any way a non-escaping global.
+;
+; CHECK-LABEL: @test6(
+; CHECK: store i32 42, ptr @g1
+; CHECK-NOT: load i32
+; CHECK: ret i32 42
+entry:
+  store i32 42, ptr @g1
+  %1 = call ptr @_FortranAioBeginExternalFormattedOutput(ptr null, i64 3, ptr null, i32 6, ptr null, i32 2)
+  %2 = call i1 @_FortranAioOutputAscii(ptr %1, ptr null, i64 4)
+  %3 = call i32 @_FortranAioEndIoStatement(ptr %1)
+  %v = load i32, ptr @g1
+  ret i32 %v
+}
+declare ptr @_FortranAioBeginExternalFormattedOutput(ptr, i64, ptr, i32, ptr, i32) #0
+declare zeroext i1 @_FortranAioOutputAscii(ptr, ptr, i64) #0
+declare i32 @_FortranAioEndIoStatement(ptr) #0
+attributes #0 = { nocallback nosync }

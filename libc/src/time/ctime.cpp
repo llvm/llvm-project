@@ -6,23 +6,33 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ctime.h"
-#include "src/__support/CPP/limits.h"
+#include "src/time/ctime.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "time_utils.h"
+#include "src/__support/macros/null_check.h"
+#include "src/time/time_constants.h"
+#include "src/time/time_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-using LIBC_NAMESPACE::time_utils::TimeConstants;
-
 LLVM_LIBC_FUNCTION(char *, ctime, (const time_t *t_ptr)) {
-  if (t_ptr == nullptr || *t_ptr > cpp::numeric_limits<int32_t>::max()) {
+  LIBC_CRASH_ON_NULLPTR(t_ptr);
+
+  auto lt_res = time_utils::localtime(t_ptr);
+  if (!lt_res) {
+    libc_errno = lt_res.error();
     return nullptr;
   }
-  static char buffer[TimeConstants::ASCTIME_BUFFER_SIZE];
-  return time_utils::asctime(time_utils::localtime(t_ptr), buffer,
-                             TimeConstants::ASCTIME_MAX_BYTES);
+
+  static char buffer[time_constants::ASCTIME_BUFFER_SIZE];
+  auto res = time_utils::asctime(lt_res.value(), buffer,
+                                 time_constants::ASCTIME_MAX_BYTES);
+  if (!res) {
+    libc_errno = res.error();
+    return nullptr;
+  }
+  return res.value();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

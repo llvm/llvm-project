@@ -19,9 +19,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // [expos.only.func]
 
@@ -43,10 +43,11 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr auto __synth_three_way = []<class _Tp, cl
 };
 
 template <class _Tp, class _Up = _Tp>
-using __synth_three_way_result = decltype(std::__synth_three_way(std::declval<_Tp&>(), std::declval<_Up&>()));
-
-#endif // _LIBCPP_STD_VER >= 20
+using __synth_three_way_result _LIBCPP_NODEBUG =
+    decltype(std::__synth_three_way(std::declval<_Tp&>(), std::declval<_Up&>()));
 
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___COMPARE_SYNTH_THREE_WAY_H

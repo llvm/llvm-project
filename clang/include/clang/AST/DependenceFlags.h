@@ -293,7 +293,7 @@ inline TypeDependence toSemanticDependence(TypeDependence D) {
 }
 
 inline NestedNameSpecifierDependence
-toNestedNameSpecifierDependendence(TypeDependence D) {
+toNestedNameSpecifierDependence(TypeDependence D) {
   return Dependence(D).nestedNameSpecifier();
 }
 

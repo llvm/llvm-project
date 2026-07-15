@@ -6,7 +6,7 @@
  * with libc available.
  * REQUIRES: system-linux
  *
- * RUN: %clang %cflags -fPIC -shared %s -o %t.so -Wl,-q -fuse-ld=lld
+ * RUN: %clangxx %cxxflags -fPIC -shared %s -o %t.so -Wl,-q -fuse-ld=lld
  * RUN: llvm-bolt %t.so -o %t.so.bolt --relocs
  */
 

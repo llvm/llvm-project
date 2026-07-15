@@ -341,7 +341,7 @@ const FunctionDecl *findTarget(const FunctionDecl *FD) {
 
 // Returns the beginning location for a FunctionDecl. Returns location of
 // template keyword for templated functions.
-const SourceLocation getBeginLoc(const FunctionDecl *FD) {
+SourceLocation getBeginLoc(const FunctionDecl *FD) {
   // Include template parameter list.
   if (auto *FTD = FD->getDescribedFunctionTemplate())
     return FTD->getBeginLoc();

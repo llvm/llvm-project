@@ -350,7 +350,7 @@ void Watchpoint::DumpWithLevel(Stream *s,
          description_level <= lldb::eDescriptionLevelVerbose);
 
   s->Printf("Watchpoint %u: addr = 0x%8.8" PRIx64
-            " size = %u state = %s type = %s%s%s",
+            ", size = %u, state = %s, type = %s%s%s",
             GetID(), GetLoadAddress(), m_byte_size,
             IsEnabled() ? "enabled" : "disabled", m_watch_read ? "r" : "",
             m_watch_write ? "w" : "", m_watch_modify ? "m" : "");
@@ -477,8 +477,7 @@ void Watchpoint::SetCondition(const char *condition) {
 const char *Watchpoint::GetConditionText() const {
   if (m_condition_up)
     return m_condition_up->GetUserText();
-  else
-    return nullptr;
+  return nullptr;
 }
 
 void Watchpoint::SendWatchpointChangedEvent(
@@ -534,8 +533,7 @@ Watchpoint::WatchpointEventData::GetWatchpointEventTypeFromEvent(
 
   if (data == nullptr)
     return eWatchpointEventTypeInvalidType;
-  else
-    return data->GetWatchpointEventType();
+  return data->GetWatchpointEventType();
 }
 
 WatchpointSP Watchpoint::WatchpointEventData::GetWatchpointFromEvent(

@@ -9,6 +9,22 @@ The analyzer contains a number of checkers which can aid in debugging. Enable
 them by using the "-analyzer-checker=" flag, followed by the name of the
 checker.
 
+These checkers are especially useful when analyzing a specific function, using
+the `-analyze-function` flag. The flag accepts the function name for C code,
+like `-analyze-function=myfunction`.
+For C++ code, due to overloading, the function name must include the
+parameter list, like `-analyze-function="myfunction(int, _Bool)"`.
+
+Note that `bool` must be spelled as `_Bool` in the parameter list.
+Refer to the output of `-analyzer-display-progress` to find the fully qualified
+function name.
+
+There are cases when this name can still collide. For example with template
+function instances with non-deducible (aka. explicit) template parameters.
+In such cases, prefer passing a USR instead of a function name can resolve this
+ambiguity, like this: `-analyze-function="c:@S@Window@F@overloaded#I#"`.
+
+Use the `clang-extdef-mapping` tool to find the USR for different functions.
 
 General Analysis Dumpers
 ========================
@@ -317,15 +333,10 @@ ExprInspection checks
   The value can be represented either as a range set or as a concrete integer.
   For the rest of the types function prints ``n/a`` (aka not available).
 
-  **Note:** This function will print nothing for clang built with Z3 constraint manager.
-  This may cause crashes of your tests. To manage this use one of the test constraining
-  techniques:
-
-  * llvm-lit commands ``REQUIRES no-z3`` or ``UNSUPPORTED z3`` `See for details. <https://llvm.org/docs/TestingGuide.html#constraining-test-execution>`_
-
-  * a preprocessor directive ``#ifndef ANALYZER_CM_Z3``
-
-  * a clang command argument ``-analyzer-constraints=range``
+  **Note:** This function will print nothing when clang uses Z3 as the
+  constraint manager (which is an unsupported and badly broken analysis mode
+  that's distinct from the supported and stable "Z3 refutation" aka "Z3
+  crosscheck" mode).
 
   Example usage::
 

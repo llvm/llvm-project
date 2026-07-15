@@ -129,10 +129,6 @@ MinidumpFile::create(MemoryBufferRef Source) {
       continue;
     }
 
-    if (Type == DenseMapInfo<StreamType>::getEmptyKey() ||
-        Type == DenseMapInfo<StreamType>::getTombstoneKey())
-      return createError("Cannot handle one of the minidump streams");
-
     // Update the directory map, checking for duplicate stream types.
     if (!StreamMap.try_emplace(Type, StreamDescriptor.index()).second)
       return createError("Duplicate stream type");
@@ -145,7 +141,7 @@ MinidumpFile::create(MemoryBufferRef Source) {
 
 iterator_range<MinidumpFile::FallibleMemory64Iterator>
 MinidumpFile::getMemory64List(Error &Err) const {
-  ErrorAsOutParameter ErrAsOutParam(&Err);
+  ErrorAsOutParameter ErrAsOutParam(Err);
   auto end = FallibleMemory64Iterator::end(Memory64Iterator::end());
   Expected<minidump::Memory64ListHeader> ListHeader = getMemoryList64Header();
   if (!ListHeader) {

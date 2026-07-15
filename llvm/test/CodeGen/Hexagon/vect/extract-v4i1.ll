@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Test that the compiler generates the correct code when sign-extending a
 ; predicate register when it is converted from one vector predicate type

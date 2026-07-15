@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mtriple=hexagon-unknown-linux-musl < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mtriple=hexagon-unknown-linux-musl < %s | FileCheck %s
 
 ; Check that we update the stack pointer before we do allocframe, so that
 ; the LR/FP are stored in the location required by the Linux ABI.

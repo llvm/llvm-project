@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "BinaryOpSingleOutputPerf.h"
+#include "PerfTest.h"
 #include "src/math/fmull.h"
 
 static constexpr size_t LONG_DOUBLE_ROUNDS = 40;
@@ -16,8 +16,8 @@ float fmull_placeholder_binary(long double x, long double y) {
 }
 
 int main() {
-  BINARY_OP_SINGLE_OUTPUT_PERF_EX(float, long double, LIBC_NAMESPACE::fmull,
-                                  fmull_placeholder_binary, LONG_DOUBLE_ROUNDS,
-                                  "fmull_perf.log")
+  BINARY_INPUT_SINGLE_OUTPUT_PERF_EX(float, long double, LIBC_NAMESPACE::fmull,
+                                     fmull_placeholder_binary,
+                                     LONG_DOUBLE_ROUNDS, "fmull_perf.log")
   return 0;
 }

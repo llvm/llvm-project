@@ -196,8 +196,10 @@ struct NestedTemplates1 {
 
 template <typename T, typename U, int a>
 void foo2() {
+  // FIXME: Here the template keyword is dropped because the failed condition
+  // for a static assert is always printed with canonical types.
   static_assert(::ns::NestedTemplates1<T, a>::NestedTemplates2::template NestedTemplates3<U>::value, "message");
-  // expected-error@-1{{static assertion failed due to requirement '::ns::NestedTemplates1<int, 3>::NestedTemplates2::template NestedTemplates3<float>::value': message}}
+  // expected-error@-1{{static assertion failed due to requirement 'ns::NestedTemplates1<int, 3>::NestedTemplates2::NestedTemplates3<float>::value': message}}
 }
 template void foo2<int, float, 3>();
 // expected-note@-1{{in instantiation of function template specialization 'foo2<int, float, 3>' requested here}}
@@ -276,13 +278,13 @@ namespace Diagnostics {
   // The note above is intended to match "evaluates to '\n' (0x0A, 10) == '<U+0000>' (0x00, 0)'", but if we write it as it is,
   // the "\n" cannot be consumed by the diagnostic consumer.
   static_assert((signed char)10 == (char)-123, ""); // expected-error {{failed}} \
-                                                    // expected-note {{evaluates to '10 == '<85>' (0x85, -123)'}}
+                                                    // expected-note {{evaluates to '10 == '<0x85>' (0x85, -123)'}}
   static_assert((char)-4 == (unsigned char)-8, ""); // expected-error {{failed}} \
-                                                    // expected-note {{evaluates to ''<FC>' (0xFC, -4) == 248'}}
+                                                    // expected-note {{evaluates to ''<0xFC>' (0xFC, -4) == 248'}}
   static_assert((char)-128 == (char)-123, ""); // expected-error {{failed}} \
-                                               // expected-note {{evaluates to ''<80>' (0x80, -128) == '<85>' (0x85, -123)'}}
+                                               // expected-note {{evaluates to ''<0x80>' (0x80, -128) == '<0x85>' (0x85, -123)'}}
   static_assert('\xA0' == (char)'\x20', ""); // expected-error {{failed}} \
-                                             // expected-note {{evaluates to ''<A0>' (0xA0, -96) == ' ' (0x20, 32)'}}
+                                             // expected-note {{evaluates to ''<0xA0>' (0xA0, -96) == ' ' (0x20, 32)'}}
   static_assert((char16_t)L'ゆ' == L"C̵̭̯̠̎͌ͅť̺"[1], ""); // expected-error {{failed}} \
                                                   // expected-note {{evaluates to 'u'ゆ' (0x3086, 12422) == L'̵' (0x335, 821)'}}
   static_assert(L"＼／"[1] == u'\xFFFD', ""); // expected-error {{failed}} \

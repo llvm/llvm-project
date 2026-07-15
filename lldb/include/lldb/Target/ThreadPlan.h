@@ -283,6 +283,15 @@ namespace lldb_private {
 //  report_run_vote argument to the constructor works like report_stop_vote, and
 //  is a way for a plan to instruct a sub-plan on how to respond to
 //  ShouldReportStop.
+//
+//  Reverse execution:
+//
+//  Every thread plan has an associated RunDirection (forward or backward).
+//  For ThreadPlanBase, this direction is the Process's base direction.
+//  Whenever we resume the target, we need to ensure that the topmost thread
+//  plans for each runnable thread all agree on their direction. This is
+//  ensured in ThreadList::WillResume(), which chooses a direction and then
+//  discards thread plans incompatible with that direction.
 
 class ThreadPlan : public std::enable_shared_from_this<ThreadPlan>,
                    public UserID {
@@ -496,6 +505,10 @@ public:
   }
 
   virtual lldb::StateType GetPlanRunState() = 0;
+
+  virtual lldb::RunDirection GetDirection() const {
+    return lldb::RunDirection::eRunForward;
+  }
 
 protected:
   // Constructors and Destructors

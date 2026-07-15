@@ -9,6 +9,7 @@
 #include "lldb/Host/posix/MainLoopPosix.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/PosixApi.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Status.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Errno.h"
@@ -99,6 +100,7 @@ public:
   ~RunImpl() = default;
 
   Status Poll();
+
   void ProcessReadEvents();
 
 private:
@@ -159,6 +161,22 @@ MainLoopPosix::RunImpl::RunImpl(MainLoopPosix &loop) : loop(loop) {
   read_fds.reserve(loop.m_read_fds.size());
 }
 
+static int StartPoll(llvm::MutableArrayRef<struct pollfd> fds,
+                     std::optional<MainLoopPosix::TimePoint> point) {
+#if HAVE_PPOLL
+  return ppoll(fds.data(), fds.size(), ToTimeSpec(point),
+               /*sigmask=*/nullptr);
+#else
+  using namespace std::chrono;
+  int timeout = -1;
+  if (point) {
+    nanoseconds dur = std::max(*point - steady_clock::now(), nanoseconds(0));
+    timeout = ceil<milliseconds>(dur).count();
+  }
+  return poll(fds.data(), fds.size(), timeout);
+#endif
+}
+
 Status MainLoopPosix::RunImpl::Poll() {
   read_fds.clear();
 
@@ -169,11 +187,9 @@ Status MainLoopPosix::RunImpl::Poll() {
     pfd.revents = 0;
     read_fds.push_back(pfd);
   }
+  int ready = StartPoll(read_fds, loop.GetNextWakeupTime());
 
-  if (ppoll(read_fds.data(), read_fds.size(),
-            ToTimeSpec(loop.GetNextWakeupTime()),
-            /*sigmask=*/nullptr) == -1 &&
-      errno != EINTR)
+  if (ready == -1 && errno != EINTR)
     return Status(errno, eErrorTypePOSIX);
 
   return Status();
@@ -193,7 +209,7 @@ void MainLoopPosix::RunImpl::ProcessReadEvents() {
 #endif
 
 MainLoopPosix::MainLoopPosix() {
-  Status error = m_interrupt_pipe.CreateNew(/*child_process_inherit=*/false);
+  Status error = m_interrupt_pipe.CreateNew();
   assert(error.Success());
 
   // Make the write end of the pipe non-blocking.
@@ -226,13 +242,13 @@ MainLoopPosix::~MainLoopPosix() {
 #endif
   m_read_fds.erase(m_interrupt_pipe.GetReadFileDescriptor());
   m_interrupt_pipe.Close();
-  assert(m_read_fds.size() == 0); 
+  assert(m_read_fds.size() == 0);
   assert(m_signals.size() == 0);
 }
 
 MainLoopPosix::ReadHandleUP
 MainLoopPosix::RegisterReadObject(const IOObjectSP &object_sp,
-                                 const Callback &callback, Status &error) {
+                                  const Callback &callback, Status &error) {
   if (!object_sp || !object_sp->IsValid()) {
     error = Status::FromErrorString("IO object is not valid.");
     return nullptr;
@@ -372,14 +388,16 @@ void MainLoopPosix::ProcessSignal(int signo) {
   }
 }
 
-void MainLoopPosix::Interrupt() {
+bool MainLoopPosix::Interrupt() {
   if (m_interrupting.exchange(true))
-    return;
+    return true;
 
   char c = '.';
-  size_t bytes_written;
-  Status error = m_interrupt_pipe.Write(&c, 1, bytes_written);
-  assert(error.Success());
-  UNUSED_IF_ASSERT_DISABLED(error);
-  assert(bytes_written == 1);
+  llvm::Expected<size_t> result_or_err = m_interrupt_pipe.Write(&c, 1);
+  if (!result_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Host), result_or_err.takeError(),
+                   "interrupt pipe write failed: {0}");
+    return false;
+  }
+  return *result_or_err != 0;
 }

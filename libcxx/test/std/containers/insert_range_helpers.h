@@ -33,7 +33,7 @@
 // `std::vector`).
 template <class T, std::size_t N = 32>
 class Buffer {
- public:
+public:
   constexpr Buffer() = default;
 
   constexpr Buffer(std::initializer_list<T> input) {
@@ -45,8 +45,9 @@ class Buffer {
   // Makes initializing `Buffer<char>` nicer -- allows writing `buf = "abc"` instead of `buf = {'a', 'b', 'c'}`.
   // To make the two forms equivalent, omits the terminating null.
   template <std::size_t N2>
-  constexpr Buffer(const char (&input) [N2])
-  requires std::same_as<T, char> {
+  constexpr Buffer(const char (&input)[N2])
+    requires std::same_as<T, char>
+  {
     static_assert(N2 <= N);
     std::ranges::copy(input, data_);
     // Omit the terminating null.
@@ -57,9 +58,9 @@ class Buffer {
   constexpr const T* end() const { return data_ + size_; }
   constexpr std::size_t size() const { return size_; }
 
- private:
+private:
   std::size_t size_ = 0;
-  T data_[N] = {};
+  T data_[N]        = {};
 };
 
 template <class T>
@@ -72,14 +73,13 @@ struct TestCase {
 
 template <class T, class PtrT, class Func>
 constexpr void for_all_iterators_and_allocators(Func f) {
-  using Iterators = types::type_list<
-    cpp20_input_iterator<PtrT>,
-    forward_iterator<PtrT>,
-    bidirectional_iterator<PtrT>,
-    random_access_iterator<PtrT>,
-    contiguous_iterator<PtrT>,
-    PtrT
-  >;
+  using Iterators =
+      types::type_list< cpp20_input_iterator<PtrT>,
+                        forward_iterator<PtrT>,
+                        bidirectional_iterator<PtrT>,
+                        random_access_iterator<PtrT>,
+                        contiguous_iterator<PtrT>,
+                        PtrT >;
 
   types::for_each(Iterators{}, [=]<class Iter>() {
     f.template operator()<Iter, sentinel_wrapper<Iter>, std::allocator<T>>();
@@ -94,17 +94,16 @@ constexpr void for_all_iterators_and_allocators(Func f) {
       f.template operator()<Iter, Iter, safe_allocator<T>>();
     }
   });
+  // This is added because otherwise there would be no input-only sized range, which has fewer guarantees than a
+  // forward and sized range. We don't want to put it in the for_each above to avoid a combinatorial explosion.
+  f.template operator()<cpp20_input_iterator<PtrT>, sized_sentinel<cpp20_input_iterator<PtrT>>, std::allocator<T>>();
 }
 
 // Uses a shorter list of iterator types for use in `constexpr` mode for cases when running the full set in would take
 // too long.
 template <class T, class PtrT, class Func>
 constexpr void for_all_iterators_and_allocators_constexpr(Func f) {
-  using Iterators = types::type_list<
-    cpp20_input_iterator<PtrT>,
-    forward_iterator<PtrT>,
-    PtrT
-  >;
+  using Iterators = types::type_list< cpp20_input_iterator<PtrT>, forward_iterator<PtrT>, PtrT >;
 
   types::for_each(Iterators{}, [=]<class Iter>() {
     f.template operator()<Iter, sentinel_wrapper<Iter>, std::allocator<T>>();

@@ -23,6 +23,8 @@
 // RUN:  | grep -v "__sanitizer_weak_hook"                                         \
 // RUN:  | grep -v "__sanitizer_override_function"                                 \
 // RUN:  | grep -v "__sanitizer_override_function_by_addr"                         \
+// RUN:  | grep -v "__ubsan_handle_dynamic_type_cache_miss"                        \
+// RUN:  | grep -v "__ubsan_handle_dynamic_type_cache_miss_abort"                  \
 // RUN:  | grep -v "__sanitizer_register_weak_function"                            \
 // RUN:  | sed -e "s/.*(//" -e "s/).*//" > %t.imports
 //

@@ -18,11 +18,12 @@ namespace internal {
 // A simple in-place heapsort implementation.
 // Follow the implementation in https://en.wikipedia.org/wiki/Heapsort.
 
-LIBC_INLINE void heap_sort(const Array &array) {
-  size_t end = array.size();
+template <typename A, typename F>
+LIBC_INLINE void heap_sort(const A &array, const F &is_less) {
+  size_t end = array.len();
   size_t start = end / 2;
 
-  auto left_child = [](size_t i) -> size_t { return 2 * i + 1; };
+  const auto left_child = [](size_t i) -> size_t { return 2 * i + 1; };
 
   while (end > 1) {
     if (start > 0) {
@@ -40,12 +41,11 @@ LIBC_INLINE void heap_sort(const Array &array) {
     while (left_child(root) < end) {
       size_t child = left_child(root);
       // If there are two children, set child to the greater.
-      if (child + 1 < end &&
-          array.elem_compare(child, array.get(child + 1)) < 0)
+      if ((child + 1 < end) && is_less(array.get(child), array.get(child + 1)))
         ++child;
 
       // If the root is less than the greater child
-      if (array.elem_compare(root, array.get(child)) >= 0)
+      if (!is_less(array.get(root), array.get(child)))
         break;
 
       // Swap the root with the greater child and continue sifting down.

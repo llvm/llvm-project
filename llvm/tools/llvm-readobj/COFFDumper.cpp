@@ -17,6 +17,7 @@
 #include "Win64EHDumper.h"
 #include "llvm-readobj.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/COFF.h"
@@ -95,6 +96,7 @@ public:
   void printCOFFExports() override;
   void printCOFFDirectives() override;
   void printCOFFBaseReloc() override;
+  void printCOFFPseudoReloc() override;
   void printCOFFDebugDirectory() override;
   void printCOFFTLSDirectory() override;
   void printCOFFResources() override;
@@ -108,6 +110,7 @@ public:
   void printStackMap() const override;
   void printAddrsig() override;
   void printCGProfile() override;
+  void printStringTable() override;
 
 private:
   StringRef getSymbolName(uint32_t Index);
@@ -338,221 +341,244 @@ void COFFDumper::printBinaryBlockWithRelocs(StringRef Label,
   }
 }
 
-const EnumEntry<COFF::MachineTypes> ImageFileMachineType[] = {
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_UNKNOWN  ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_AM33     ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_AMD64    ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_ARM      ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_ARM64    ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_ARM64EC  ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_ARM64X   ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_ARMNT    ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_EBC      ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_I386     ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_IA64     ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_M32R     ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_MIPS16   ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_MIPSFPU  ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_MIPSFPU16),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_POWERPC  ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_POWERPCFP),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_R4000    ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_SH3      ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_SH3DSP   ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_SH4      ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_SH5      ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_THUMB    ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_WCEMIPSV2)
-};
+constexpr EnumStringDef<COFF::MachineTypes> ImageFileMachineTypeDefs[] = {
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_UNKNOWN),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_AM33),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_AMD64),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_ARM),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_ARM64),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_ARM64EC),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_ARM64X),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_ARMNT),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_EBC),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_I386),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_IA64),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_M32R),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_MIPS16),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_MIPSFPU),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_MIPSFPU16),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_POWERPC),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_POWERPCFP),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_R4000),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_SH3),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_SH3DSP),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_SH4),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_SH5),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_THUMB),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_WCEMIPSV2)};
+constexpr auto ImageFileMachineType =
+    BUILD_ENUM_STRINGS(ImageFileMachineTypeDefs);
 
-const EnumEntry<COFF::Characteristics> ImageFileCharacteristics[] = {
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_RELOCS_STRIPPED        ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_EXECUTABLE_IMAGE       ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_LINE_NUMS_STRIPPED     ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_LOCAL_SYMS_STRIPPED    ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_AGGRESSIVE_WS_TRIM     ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_LARGE_ADDRESS_AWARE    ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_BYTES_REVERSED_LO      ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_32BIT_MACHINE          ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_DEBUG_STRIPPED         ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_NET_RUN_FROM_SWAP      ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_SYSTEM                 ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_DLL                    ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_UP_SYSTEM_ONLY         ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_BYTES_REVERSED_HI      )
-};
+constexpr EnumStringDef<COFF::Characteristics> ImageFileCharacteristicsDefs[] =
+    {LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_RELOCS_STRIPPED),
+     LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_EXECUTABLE_IMAGE),
+     LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_LINE_NUMS_STRIPPED),
+     LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_LOCAL_SYMS_STRIPPED),
+     LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_AGGRESSIVE_WS_TRIM),
+     LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_LARGE_ADDRESS_AWARE),
+     LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_BYTES_REVERSED_LO),
+     LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_32BIT_MACHINE),
+     LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_DEBUG_STRIPPED),
+     LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP),
+     LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_NET_RUN_FROM_SWAP),
+     LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_SYSTEM),
+     LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_DLL),
+     LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_UP_SYSTEM_ONLY),
+     LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_BYTES_REVERSED_HI)};
+constexpr auto ImageFileCharacteristics =
+    BUILD_ENUM_STRINGS(ImageFileCharacteristicsDefs);
 
-const EnumEntry<COFF::WindowsSubsystem> PEWindowsSubsystem[] = {
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SUBSYSTEM_UNKNOWN                ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SUBSYSTEM_NATIVE                 ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SUBSYSTEM_WINDOWS_GUI            ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SUBSYSTEM_WINDOWS_CUI            ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SUBSYSTEM_POSIX_CUI              ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SUBSYSTEM_WINDOWS_CE_GUI         ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SUBSYSTEM_EFI_APPLICATION        ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER     ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SUBSYSTEM_EFI_ROM                ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SUBSYSTEM_XBOX                   ),
+constexpr EnumStringDef<COFF::WindowsSubsystem> PEWindowsSubsystemDefs[] = {
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SUBSYSTEM_UNKNOWN),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SUBSYSTEM_NATIVE),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SUBSYSTEM_WINDOWS_GUI),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SUBSYSTEM_WINDOWS_CUI),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SUBSYSTEM_POSIX_CUI),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SUBSYSTEM_WINDOWS_CE_GUI),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SUBSYSTEM_EFI_APPLICATION),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SUBSYSTEM_EFI_ROM),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SUBSYSTEM_XBOX),
 };
+constexpr auto PEWindowsSubsystem = BUILD_ENUM_STRINGS(PEWindowsSubsystemDefs);
 
-const EnumEntry<COFF::DLLCharacteristics> PEDLLCharacteristics[] = {
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_HIGH_ENTROPY_VA      ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE         ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_FORCE_INTEGRITY      ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_NX_COMPAT            ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_NO_ISOLATION         ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_NO_SEH               ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_NO_BIND              ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_APPCONTAINER         ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_WDM_DRIVER           ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_GUARD_CF             ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_TERMINAL_SERVER_AWARE),
+constexpr EnumStringDef<COFF::DLLCharacteristics> PEDLLCharacteristicsDefs[] = {
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_HIGH_ENTROPY_VA),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_FORCE_INTEGRITY),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_NX_COMPAT),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_NO_ISOLATION),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_NO_SEH),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_NO_BIND),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_APPCONTAINER),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_WDM_DRIVER),
+    LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_GUARD_CF),
+    LLVM_READOBJ_ENUM_ENT(COFF,
+                          IMAGE_DLL_CHARACTERISTICS_TERMINAL_SERVER_AWARE),
 };
+constexpr auto PEDLLCharacteristics =
+    BUILD_ENUM_STRINGS(PEDLLCharacteristicsDefs);
 
-static const EnumEntry<COFF::ExtendedDLLCharacteristics>
-    PEExtendedDLLCharacteristics[] = {
-        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT),
+// clang-format off
+constexpr EnumStringDef<COFF::ExtendedDLLCharacteristics> PEExtendedDLLCharacteristicsDefs[] = {
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT                                ),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT_STRICT_MODE                    ),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_EX_CET_SET_CONTEXT_IP_VALIDATION_RELAXED_MODE),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_EX_CET_DYNAMIC_APIS_ALLOW_IN_PROC_ONLY       ),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_EX_CET_RESERVED_1                            ),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_EX_CET_RESERVED_2                            ),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_EX_FORWARD_CFI_COMPAT                        ),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_EX_HOTPATCH_COMPATIBLE                       ),
 };
+constexpr auto PEExtendedDLLCharacteristics = BUILD_ENUM_STRINGS(PEExtendedDLLCharacteristicsDefs);
+// clang-format on
 
-static const EnumEntry<COFF::SectionCharacteristics>
-ImageSectionCharacteristics[] = {
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_TYPE_NOLOAD           ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_TYPE_NO_PAD           ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_CNT_CODE              ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_CNT_INITIALIZED_DATA  ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_CNT_UNINITIALIZED_DATA),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_LNK_OTHER             ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_LNK_INFO              ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_LNK_REMOVE            ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_LNK_COMDAT            ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_GPREL                 ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_MEM_PURGEABLE         ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_MEM_16BIT             ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_MEM_LOCKED            ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_MEM_PRELOAD           ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_ALIGN_1BYTES          ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_ALIGN_2BYTES          ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_ALIGN_4BYTES          ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_ALIGN_8BYTES          ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_ALIGN_16BYTES         ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_ALIGN_32BYTES         ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_ALIGN_64BYTES         ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_ALIGN_128BYTES        ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_ALIGN_256BYTES        ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_ALIGN_512BYTES        ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_ALIGN_1024BYTES       ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_ALIGN_2048BYTES       ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_ALIGN_4096BYTES       ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_ALIGN_8192BYTES       ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_LNK_NRELOC_OVFL       ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_MEM_DISCARDABLE       ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_MEM_NOT_CACHED        ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_MEM_NOT_PAGED         ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_MEM_SHARED            ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_MEM_EXECUTE           ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_MEM_READ              ),
-  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_MEM_WRITE             )
+constexpr EnumStringDef<COFF::SectionCharacteristics>
+    ImageSectionCharacteristicsDefs[] = {
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_TYPE_NOLOAD),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_TYPE_NO_PAD),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_CNT_CODE),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_CNT_INITIALIZED_DATA),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_CNT_UNINITIALIZED_DATA),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_LNK_OTHER),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_LNK_INFO),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_LNK_REMOVE),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_LNK_COMDAT),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_GPREL),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_MEM_PURGEABLE),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_MEM_16BIT),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_MEM_LOCKED),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_MEM_PRELOAD),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_ALIGN_1BYTES),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_ALIGN_2BYTES),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_ALIGN_4BYTES),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_ALIGN_8BYTES),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_ALIGN_16BYTES),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_ALIGN_32BYTES),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_ALIGN_64BYTES),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_ALIGN_128BYTES),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_ALIGN_256BYTES),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_ALIGN_512BYTES),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_ALIGN_1024BYTES),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_ALIGN_2048BYTES),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_ALIGN_4096BYTES),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_ALIGN_8192BYTES),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_LNK_NRELOC_OVFL),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_MEM_DISCARDABLE),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_MEM_NOT_CACHED),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_MEM_NOT_PAGED),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_MEM_SHARED),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_MEM_EXECUTE),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_MEM_READ),
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_MEM_WRITE)};
+constexpr auto ImageSectionCharacteristics =
+    BUILD_ENUM_STRINGS(ImageSectionCharacteristicsDefs);
+
+constexpr EnumStringDef<COFF::SymbolBaseType> ImageSymTypeDefs[] = {
+    {{"Null"}, COFF::IMAGE_SYM_TYPE_NULL},
+    {{"Void"}, COFF::IMAGE_SYM_TYPE_VOID},
+    {{"Char"}, COFF::IMAGE_SYM_TYPE_CHAR},
+    {{"Short"}, COFF::IMAGE_SYM_TYPE_SHORT},
+    {{"Int"}, COFF::IMAGE_SYM_TYPE_INT},
+    {{"Long"}, COFF::IMAGE_SYM_TYPE_LONG},
+    {{"Float"}, COFF::IMAGE_SYM_TYPE_FLOAT},
+    {{"Double"}, COFF::IMAGE_SYM_TYPE_DOUBLE},
+    {{"Struct"}, COFF::IMAGE_SYM_TYPE_STRUCT},
+    {{"Union"}, COFF::IMAGE_SYM_TYPE_UNION},
+    {{"Enum"}, COFF::IMAGE_SYM_TYPE_ENUM},
+    {{"MOE"}, COFF::IMAGE_SYM_TYPE_MOE},
+    {{"Byte"}, COFF::IMAGE_SYM_TYPE_BYTE},
+    {{"Word"}, COFF::IMAGE_SYM_TYPE_WORD},
+    {{"UInt"}, COFF::IMAGE_SYM_TYPE_UINT},
+    {{"DWord"}, COFF::IMAGE_SYM_TYPE_DWORD},
 };
+constexpr auto ImageSymType = BUILD_ENUM_STRINGS(ImageSymTypeDefs);
 
-const EnumEntry<COFF::SymbolBaseType> ImageSymType[] = {
-  { "Null"  , COFF::IMAGE_SYM_TYPE_NULL   },
-  { "Void"  , COFF::IMAGE_SYM_TYPE_VOID   },
-  { "Char"  , COFF::IMAGE_SYM_TYPE_CHAR   },
-  { "Short" , COFF::IMAGE_SYM_TYPE_SHORT  },
-  { "Int"   , COFF::IMAGE_SYM_TYPE_INT    },
-  { "Long"  , COFF::IMAGE_SYM_TYPE_LONG   },
-  { "Float" , COFF::IMAGE_SYM_TYPE_FLOAT  },
-  { "Double", COFF::IMAGE_SYM_TYPE_DOUBLE },
-  { "Struct", COFF::IMAGE_SYM_TYPE_STRUCT },
-  { "Union" , COFF::IMAGE_SYM_TYPE_UNION  },
-  { "Enum"  , COFF::IMAGE_SYM_TYPE_ENUM   },
-  { "MOE"   , COFF::IMAGE_SYM_TYPE_MOE    },
-  { "Byte"  , COFF::IMAGE_SYM_TYPE_BYTE   },
-  { "Word"  , COFF::IMAGE_SYM_TYPE_WORD   },
-  { "UInt"  , COFF::IMAGE_SYM_TYPE_UINT   },
-  { "DWord" , COFF::IMAGE_SYM_TYPE_DWORD  }
+constexpr EnumStringDef<COFF::SymbolComplexType> ImageSymDTypeDefs[] = {
+    {{"Null"}, COFF::IMAGE_SYM_DTYPE_NULL},
+    {{"Pointer"}, COFF::IMAGE_SYM_DTYPE_POINTER},
+    {{"Function"}, COFF::IMAGE_SYM_DTYPE_FUNCTION},
+    {{"Array"}, COFF::IMAGE_SYM_DTYPE_ARRAY},
 };
+constexpr auto ImageSymDType = BUILD_ENUM_STRINGS(ImageSymDTypeDefs);
 
-const EnumEntry<COFF::SymbolComplexType> ImageSymDType[] = {
-  { "Null"    , COFF::IMAGE_SYM_DTYPE_NULL     },
-  { "Pointer" , COFF::IMAGE_SYM_DTYPE_POINTER  },
-  { "Function", COFF::IMAGE_SYM_DTYPE_FUNCTION },
-  { "Array"   , COFF::IMAGE_SYM_DTYPE_ARRAY    }
+constexpr EnumStringDef<COFF::SymbolStorageClass> ImageSymClassDefs[] = {
+    {{"EndOfFunction"}, COFF::IMAGE_SYM_CLASS_END_OF_FUNCTION},
+    {{"Null"}, COFF::IMAGE_SYM_CLASS_NULL},
+    {{"Automatic"}, COFF::IMAGE_SYM_CLASS_AUTOMATIC},
+    {{"External"}, COFF::IMAGE_SYM_CLASS_EXTERNAL},
+    {{"Static"}, COFF::IMAGE_SYM_CLASS_STATIC},
+    {{"Register"}, COFF::IMAGE_SYM_CLASS_REGISTER},
+    {{"ExternalDef"}, COFF::IMAGE_SYM_CLASS_EXTERNAL_DEF},
+    {{"Label"}, COFF::IMAGE_SYM_CLASS_LABEL},
+    {{"UndefinedLabel"}, COFF::IMAGE_SYM_CLASS_UNDEFINED_LABEL},
+    {{"MemberOfStruct"}, COFF::IMAGE_SYM_CLASS_MEMBER_OF_STRUCT},
+    {{"Argument"}, COFF::IMAGE_SYM_CLASS_ARGUMENT},
+    {{"StructTag"}, COFF::IMAGE_SYM_CLASS_STRUCT_TAG},
+    {{"MemberOfUnion"}, COFF::IMAGE_SYM_CLASS_MEMBER_OF_UNION},
+    {{"UnionTag"}, COFF::IMAGE_SYM_CLASS_UNION_TAG},
+    {{"TypeDefinition"}, COFF::IMAGE_SYM_CLASS_TYPE_DEFINITION},
+    {{"UndefinedStatic"}, COFF::IMAGE_SYM_CLASS_UNDEFINED_STATIC},
+    {{"EnumTag"}, COFF::IMAGE_SYM_CLASS_ENUM_TAG},
+    {{"MemberOfEnum"}, COFF::IMAGE_SYM_CLASS_MEMBER_OF_ENUM},
+    {{"RegisterParam"}, COFF::IMAGE_SYM_CLASS_REGISTER_PARAM},
+    {{"BitField"}, COFF::IMAGE_SYM_CLASS_BIT_FIELD},
+    {{"Block"}, COFF::IMAGE_SYM_CLASS_BLOCK},
+    {{"Function"}, COFF::IMAGE_SYM_CLASS_FUNCTION},
+    {{"EndOfStruct"}, COFF::IMAGE_SYM_CLASS_END_OF_STRUCT},
+    {{"File"}, COFF::IMAGE_SYM_CLASS_FILE},
+    {{"Section"}, COFF::IMAGE_SYM_CLASS_SECTION},
+    {{"WeakExternal"}, COFF::IMAGE_SYM_CLASS_WEAK_EXTERNAL},
+    {{"CLRToken"}, COFF::IMAGE_SYM_CLASS_CLR_TOKEN},
 };
+constexpr auto ImageSymClass = BUILD_ENUM_STRINGS(ImageSymClassDefs);
 
-const EnumEntry<COFF::SymbolStorageClass> ImageSymClass[] = {
-  { "EndOfFunction"  , COFF::IMAGE_SYM_CLASS_END_OF_FUNCTION  },
-  { "Null"           , COFF::IMAGE_SYM_CLASS_NULL             },
-  { "Automatic"      , COFF::IMAGE_SYM_CLASS_AUTOMATIC        },
-  { "External"       , COFF::IMAGE_SYM_CLASS_EXTERNAL         },
-  { "Static"         , COFF::IMAGE_SYM_CLASS_STATIC           },
-  { "Register"       , COFF::IMAGE_SYM_CLASS_REGISTER         },
-  { "ExternalDef"    , COFF::IMAGE_SYM_CLASS_EXTERNAL_DEF     },
-  { "Label"          , COFF::IMAGE_SYM_CLASS_LABEL            },
-  { "UndefinedLabel" , COFF::IMAGE_SYM_CLASS_UNDEFINED_LABEL  },
-  { "MemberOfStruct" , COFF::IMAGE_SYM_CLASS_MEMBER_OF_STRUCT },
-  { "Argument"       , COFF::IMAGE_SYM_CLASS_ARGUMENT         },
-  { "StructTag"      , COFF::IMAGE_SYM_CLASS_STRUCT_TAG       },
-  { "MemberOfUnion"  , COFF::IMAGE_SYM_CLASS_MEMBER_OF_UNION  },
-  { "UnionTag"       , COFF::IMAGE_SYM_CLASS_UNION_TAG        },
-  { "TypeDefinition" , COFF::IMAGE_SYM_CLASS_TYPE_DEFINITION  },
-  { "UndefinedStatic", COFF::IMAGE_SYM_CLASS_UNDEFINED_STATIC },
-  { "EnumTag"        , COFF::IMAGE_SYM_CLASS_ENUM_TAG         },
-  { "MemberOfEnum"   , COFF::IMAGE_SYM_CLASS_MEMBER_OF_ENUM   },
-  { "RegisterParam"  , COFF::IMAGE_SYM_CLASS_REGISTER_PARAM   },
-  { "BitField"       , COFF::IMAGE_SYM_CLASS_BIT_FIELD        },
-  { "Block"          , COFF::IMAGE_SYM_CLASS_BLOCK            },
-  { "Function"       , COFF::IMAGE_SYM_CLASS_FUNCTION         },
-  { "EndOfStruct"    , COFF::IMAGE_SYM_CLASS_END_OF_STRUCT    },
-  { "File"           , COFF::IMAGE_SYM_CLASS_FILE             },
-  { "Section"        , COFF::IMAGE_SYM_CLASS_SECTION          },
-  { "WeakExternal"   , COFF::IMAGE_SYM_CLASS_WEAK_EXTERNAL    },
-  { "CLRToken"       , COFF::IMAGE_SYM_CLASS_CLR_TOKEN        }
+constexpr EnumStringDef<COFF::COMDATType> ImageCOMDATSelectDefs[] = {
+    {{"NoDuplicates"}, COFF::IMAGE_COMDAT_SELECT_NODUPLICATES},
+    {{"Any"}, COFF::IMAGE_COMDAT_SELECT_ANY},
+    {{"SameSize"}, COFF::IMAGE_COMDAT_SELECT_SAME_SIZE},
+    {{"ExactMatch"}, COFF::IMAGE_COMDAT_SELECT_EXACT_MATCH},
+    {{"Associative"}, COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE},
+    {{"Largest"}, COFF::IMAGE_COMDAT_SELECT_LARGEST},
+    {{"Newest"}, COFF::IMAGE_COMDAT_SELECT_NEWEST},
 };
+constexpr auto ImageCOMDATSelect = BUILD_ENUM_STRINGS(ImageCOMDATSelectDefs);
 
-const EnumEntry<COFF::COMDATType> ImageCOMDATSelect[] = {
-  { "NoDuplicates", COFF::IMAGE_COMDAT_SELECT_NODUPLICATES },
-  { "Any"         , COFF::IMAGE_COMDAT_SELECT_ANY          },
-  { "SameSize"    , COFF::IMAGE_COMDAT_SELECT_SAME_SIZE    },
-  { "ExactMatch"  , COFF::IMAGE_COMDAT_SELECT_EXACT_MATCH  },
-  { "Associative" , COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE  },
-  { "Largest"     , COFF::IMAGE_COMDAT_SELECT_LARGEST      },
-  { "Newest"      , COFF::IMAGE_COMDAT_SELECT_NEWEST       }
-};
-
-const EnumEntry<COFF::DebugType> ImageDebugType[] = {
-    {"Unknown", COFF::IMAGE_DEBUG_TYPE_UNKNOWN},
-    {"COFF", COFF::IMAGE_DEBUG_TYPE_COFF},
-    {"CodeView", COFF::IMAGE_DEBUG_TYPE_CODEVIEW},
-    {"FPO", COFF::IMAGE_DEBUG_TYPE_FPO},
-    {"Misc", COFF::IMAGE_DEBUG_TYPE_MISC},
-    {"Exception", COFF::IMAGE_DEBUG_TYPE_EXCEPTION},
-    {"Fixup", COFF::IMAGE_DEBUG_TYPE_FIXUP},
-    {"OmapToSrc", COFF::IMAGE_DEBUG_TYPE_OMAP_TO_SRC},
-    {"OmapFromSrc", COFF::IMAGE_DEBUG_TYPE_OMAP_FROM_SRC},
-    {"Borland", COFF::IMAGE_DEBUG_TYPE_BORLAND},
-    {"Reserved10", COFF::IMAGE_DEBUG_TYPE_RESERVED10},
-    {"CLSID", COFF::IMAGE_DEBUG_TYPE_CLSID},
-    {"VCFeature", COFF::IMAGE_DEBUG_TYPE_VC_FEATURE},
-    {"POGO", COFF::IMAGE_DEBUG_TYPE_POGO},
-    {"ILTCG", COFF::IMAGE_DEBUG_TYPE_ILTCG},
-    {"MPX", COFF::IMAGE_DEBUG_TYPE_MPX},
-    {"Repro", COFF::IMAGE_DEBUG_TYPE_REPRO},
-    {"ExtendedDLLCharacteristics",
+constexpr EnumStringDef<COFF::DebugType> ImageDebugTypeDefs[] = {
+    {{"Unknown"}, COFF::IMAGE_DEBUG_TYPE_UNKNOWN},
+    {{"COFF"}, COFF::IMAGE_DEBUG_TYPE_COFF},
+    {{"CodeView"}, COFF::IMAGE_DEBUG_TYPE_CODEVIEW},
+    {{"FPO"}, COFF::IMAGE_DEBUG_TYPE_FPO},
+    {{"Misc"}, COFF::IMAGE_DEBUG_TYPE_MISC},
+    {{"Exception"}, COFF::IMAGE_DEBUG_TYPE_EXCEPTION},
+    {{"Fixup"}, COFF::IMAGE_DEBUG_TYPE_FIXUP},
+    {{"OmapToSrc"}, COFF::IMAGE_DEBUG_TYPE_OMAP_TO_SRC},
+    {{"OmapFromSrc"}, COFF::IMAGE_DEBUG_TYPE_OMAP_FROM_SRC},
+    {{"Borland"}, COFF::IMAGE_DEBUG_TYPE_BORLAND},
+    {{"Reserved10"}, COFF::IMAGE_DEBUG_TYPE_RESERVED10},
+    {{"CLSID"}, COFF::IMAGE_DEBUG_TYPE_CLSID},
+    {{"VCFeature"}, COFF::IMAGE_DEBUG_TYPE_VC_FEATURE},
+    {{"POGO"}, COFF::IMAGE_DEBUG_TYPE_POGO},
+    {{"ILTCG"}, COFF::IMAGE_DEBUG_TYPE_ILTCG},
+    {{"MPX"}, COFF::IMAGE_DEBUG_TYPE_MPX},
+    {{"Repro"}, COFF::IMAGE_DEBUG_TYPE_REPRO},
+    {{"ExtendedDLLCharacteristics"},
      COFF::IMAGE_DEBUG_TYPE_EX_DLLCHARACTERISTICS},
 };
+constexpr auto ImageDebugType = BUILD_ENUM_STRINGS(ImageDebugTypeDefs);
 
-static const EnumEntry<COFF::WeakExternalCharacteristics>
-WeakExternalCharacteristics[] = {
-  { "NoLibrary"       , COFF::IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY },
-  { "Library"         , COFF::IMAGE_WEAK_EXTERN_SEARCH_LIBRARY   },
-  { "Alias"           , COFF::IMAGE_WEAK_EXTERN_SEARCH_ALIAS     },
-  { "AntiDependency"  , COFF::IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY  },
+constexpr EnumStringDef<COFF::WeakExternalCharacteristics>
+    WeakExternalCharacteristicsDefs[] = {
+        {{"NoLibrary"}, COFF::IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY},
+        {{"Library"}, COFF::IMAGE_WEAK_EXTERN_SEARCH_LIBRARY},
+        {{"Alias"}, COFF::IMAGE_WEAK_EXTERN_SEARCH_ALIAS},
+        {{"AntiDependency"}, COFF::IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY},
 };
+constexpr auto WeakExternalCharacteristics =
+    BUILD_ENUM_STRINGS(WeakExternalCharacteristicsDefs);
 
-const EnumEntry<uint32_t> SubSectionTypes[] = {
+constexpr EnumStringDef<uint32_t> SubSectionTypesDefs[] = {
     LLVM_READOBJ_ENUM_CLASS_ENT(DebugSubsectionKind, Symbols),
     LLVM_READOBJ_ENUM_CLASS_ENT(DebugSubsectionKind, Lines),
     LLVM_READOBJ_ENUM_CLASS_ENT(DebugSubsectionKind, StringTable),
@@ -567,21 +593,25 @@ const EnumEntry<uint32_t> SubSectionTypes[] = {
     LLVM_READOBJ_ENUM_CLASS_ENT(DebugSubsectionKind, MergedAssemblyInput),
     LLVM_READOBJ_ENUM_CLASS_ENT(DebugSubsectionKind, CoffSymbolRVA),
 };
+constexpr auto SubSectionTypes = BUILD_ENUM_STRINGS(SubSectionTypesDefs);
 
-const EnumEntry<uint32_t> FrameDataFlags[] = {
+constexpr EnumStringDef<uint32_t> FrameDataFlagsDefs[] = {
     LLVM_READOBJ_ENUM_ENT(FrameData, HasSEH),
     LLVM_READOBJ_ENUM_ENT(FrameData, HasEH),
     LLVM_READOBJ_ENUM_ENT(FrameData, IsFunctionStart),
 };
+constexpr auto FrameDataFlags = BUILD_ENUM_STRINGS(FrameDataFlagsDefs);
 
-const EnumEntry<uint8_t> FileChecksumKindNames[] = {
-  LLVM_READOBJ_ENUM_CLASS_ENT(FileChecksumKind, None),
-  LLVM_READOBJ_ENUM_CLASS_ENT(FileChecksumKind, MD5),
-  LLVM_READOBJ_ENUM_CLASS_ENT(FileChecksumKind, SHA1),
-  LLVM_READOBJ_ENUM_CLASS_ENT(FileChecksumKind, SHA256),
+constexpr EnumStringDef<uint8_t> FileChecksumKindNamesDefs[] = {
+    LLVM_READOBJ_ENUM_CLASS_ENT(FileChecksumKind, None),
+    LLVM_READOBJ_ENUM_CLASS_ENT(FileChecksumKind, MD5),
+    LLVM_READOBJ_ENUM_CLASS_ENT(FileChecksumKind, SHA1),
+    LLVM_READOBJ_ENUM_CLASS_ENT(FileChecksumKind, SHA256),
 };
+constexpr auto FileChecksumKindNames =
+    BUILD_ENUM_STRINGS(FileChecksumKindNamesDefs);
 
-const EnumEntry<uint32_t> PELoadConfigGuardFlags[] = {
+constexpr EnumStringDef<uint32_t> PELoadConfigGuardFlagsDefs[] = {
     LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags, CF_INSTRUMENTED),
     LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags, CFW_INSTRUMENTED),
     LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags, CF_FUNCTION_TABLE_PRESENT),
@@ -626,6 +656,8 @@ const EnumEntry<uint32_t> PELoadConfigGuardFlags[] = {
     LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags,
                                 CF_FUNCTION_TABLE_SIZE_19BYTES),
 };
+constexpr auto PELoadConfigGuardFlags =
+    BUILD_ENUM_STRINGS(PELoadConfigGuardFlagsDefs);
 
 template <typename T>
 static std::error_code getSymbolAuxData(const COFFObjectFile *Obj,
@@ -645,10 +677,11 @@ void COFFDumper::cacheRelocations() {
   for (const SectionRef &S : Obj->sections()) {
     const coff_section *Section = Obj->getCOFFSection(S);
 
-    append_range(RelocMap[Section], S.relocations());
+    auto &RM = RelocMap[Section];
+    append_range(RM, S.relocations());
 
     // Sort relocations by address.
-    llvm::sort(RelocMap[Section], [](RelocationRef L, RelocationRef R) {
+    llvm::sort(RM, [](RelocationRef L, RelocationRef R) {
       return L.getOffset() < R.getOffset();
     });
   }
@@ -670,7 +703,8 @@ void COFFDumper::printFileHeaders() {
 
   {
     DictScope D(W, "ImageFileHeader");
-    W.printEnum("Machine", Obj->getMachine(), ArrayRef(ImageFileMachineType));
+    W.printEnum("Machine", Obj->getMachine(),
+                EnumStrings(ImageFileMachineType));
     W.printNumber("SectionCount", Obj->getNumberOfSections());
     W.printHex   ("TimeDateStamp", FormattedTime, Obj->getTimeDateStamp());
     W.printHex   ("PointerToSymbolTable", Obj->getPointerToSymbolTable());
@@ -678,7 +712,7 @@ void COFFDumper::printFileHeaders() {
     W.printNumber("StringTableSize", Obj->getStringTableSize());
     W.printNumber("OptionalHeaderSize", Obj->getSizeOfOptionalHeader());
     W.printFlags("Characteristics", Obj->getCharacteristics(),
-                 ArrayRef(ImageFileCharacteristics));
+                 EnumStrings(ImageFileCharacteristics));
   }
 
   // Print PE header. This header does not exist if this is an object file and
@@ -740,9 +774,9 @@ void COFFDumper::printPEHeader(const PEHeader *Hdr) {
   W.printNumber("SizeOfImage", Hdr->SizeOfImage);
   W.printNumber("SizeOfHeaders", Hdr->SizeOfHeaders);
   W.printHex   ("CheckSum", Hdr->CheckSum);
-  W.printEnum("Subsystem", Hdr->Subsystem, ArrayRef(PEWindowsSubsystem));
+  W.printEnum("Subsystem", Hdr->Subsystem, EnumStrings(PEWindowsSubsystem));
   W.printFlags("Characteristics", Hdr->DLLCharacteristics,
-               ArrayRef(PEDLLCharacteristics));
+               EnumStrings(PEDLLCharacteristics));
   W.printNumber("SizeOfStackReserve", Hdr->SizeOfStackReserve);
   W.printNumber("SizeOfStackCommit", Hdr->SizeOfStackCommit);
   W.printNumber("SizeOfHeapReserve", Hdr->SizeOfHeapReserve);
@@ -777,7 +811,7 @@ void COFFDumper::printCOFFDebugDirectory() {
     W.printHex("TimeDateStamp", FormattedTime, D.TimeDateStamp);
     W.printHex("MajorVersion", D.MajorVersion);
     W.printHex("MinorVersion", D.MinorVersion);
-    W.printEnum("Type", D.Type, ArrayRef(ImageDebugType));
+    W.printEnum("Type", D.Type, EnumStrings(ImageDebugType));
     W.printHex("SizeOfData", D.SizeOfData);
     W.printHex("AddressOfRawData", D.AddressOfRawData);
     W.printHex("PointerToRawData", D.PointerToRawData);
@@ -812,7 +846,7 @@ void COFFDumper::printCOFFDebugDirectory() {
         // but that might change in the future
         uint16_t Characteristics = RawData[0];
         W.printFlags("ExtendedCharacteristics", Characteristics,
-                     ArrayRef(PEExtendedDLLCharacteristics));
+                     EnumStrings(PEExtendedDLLCharacteristics));
       }
       W.printBinaryBlock("RawData", RawData);
     }
@@ -1067,7 +1101,8 @@ void COFFDumper::printCOFFLoadConfig(const T *Conf, LoadConfigTables &Tables) {
   W.printHex("GuardCFCheckDispatch", Conf->GuardCFCheckDispatch);
   W.printHex("GuardCFFunctionTable", Conf->GuardCFFunctionTable);
   W.printNumber("GuardCFFunctionCount", Conf->GuardCFFunctionCount);
-  W.printFlags("GuardFlags", Conf->GuardFlags, ArrayRef(PELoadConfigGuardFlags),
+  W.printFlags("GuardFlags", Conf->GuardFlags,
+               EnumStrings(PELoadConfigGuardFlags),
                (uint32_t)COFF::GuardFlags::CF_FUNCTION_TABLE_SIZE_MASK);
 
   Tables.GuardFidTableVA = Conf->GuardCFFunctionTable;
@@ -1213,7 +1248,7 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
       W.printHex("IgnoredSubsectionKind", SubType);
       SubType &= ~SubsectionIgnoreFlag;
     }
-    W.printEnum("SubSectionType", SubType, ArrayRef(SubSectionTypes));
+    W.printEnum("SubSectionType", SubType, EnumStrings(SubSectionTypes));
     W.printHex("SubSectionSize", SubSectionSize);
 
     // Get the contents of the subsection.
@@ -1270,14 +1305,15 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
         reportError(errorCodeToError(EC), Obj->getFileName());
 
       W.printString("LinkageName", LinkageName);
-      if (FunctionLineTables.count(LinkageName) != 0) {
+      auto [It, Inserted] =
+          FunctionLineTables.try_emplace(LinkageName, Contents);
+      if (!Inserted) {
         // Saw debug info for this function already?
         reportError(errorCodeToError(object_error::parse_failed),
                     Obj->getFileName());
         return;
       }
 
-      FunctionLineTables[LinkageName] = Contents;
       FunctionNames.push_back(LinkageName);
       break;
     }
@@ -1310,7 +1346,7 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
         W.printHex("MaxStackSize", FD.MaxStackSize);
         W.printHex("PrologSize", FD.PrologSize);
         W.printHex("SavedRegsSize", FD.SavedRegsSize);
-        W.printFlags("Flags", FD.Flags, ArrayRef(FrameDataFlags));
+        W.printFlags("Flags", FD.Flags, EnumStrings(FrameDataFlags));
 
         // The FrameFunc string is a small RPN program. It can be broken up into
         // statements that end in the '=' operator, which assigns the value on
@@ -1429,7 +1465,7 @@ void COFFDumper::printCodeViewFileChecksums(StringRef Subsection) {
     W.printHex("Filename", Filename, FC.FileNameOffset);
     W.printHex("ChecksumSize", FC.Checksum.size());
     W.printEnum("ChecksumKind", uint8_t(FC.Kind),
-                ArrayRef(FileChecksumKindNames));
+                EnumStrings(FileChecksumKindNames));
 
     W.printBinary("ChecksumBytes", FC.Checksum);
   }
@@ -1569,7 +1605,7 @@ void COFFDumper::printSectionHeaders() {
     W.printNumber("RelocationCount", Section->NumberOfRelocations);
     W.printNumber("LineNumberCount", Section->NumberOfLinenumbers);
     W.printFlags("Characteristics", Section->Characteristics,
-                 ArrayRef(ImageSectionCharacteristics),
+                 EnumStrings(ImageSectionCharacteristics),
                  COFF::SectionCharacteristics(0x00F00000));
 
     if (opts::SectionRelocations) {
@@ -1706,10 +1742,11 @@ void COFFDumper::printSymbol(const SymbolRef &Sym) {
   W.printString("Name", SymbolName);
   W.printNumber("Value", Symbol.getValue());
   W.printNumber("Section", SectionName, Symbol.getSectionNumber());
-  W.printEnum("BaseType", Symbol.getBaseType(), ArrayRef(ImageSymType));
-  W.printEnum("ComplexType", Symbol.getComplexType(), ArrayRef(ImageSymDType));
+  W.printEnum("BaseType", Symbol.getBaseType(), EnumStrings(ImageSymType));
+  W.printEnum("ComplexType", Symbol.getComplexType(),
+              EnumStrings(ImageSymDType));
   W.printEnum("StorageClass", Symbol.getStorageClass(),
-              ArrayRef(ImageSymClass));
+              EnumStrings(ImageSymClass));
   W.printNumber("AuxSymbolCount", Symbol.getNumberOfAuxSymbols());
 
   for (uint8_t I = 0; I < Symbol.getNumberOfAuxSymbols(); ++I) {
@@ -1732,7 +1769,7 @@ void COFFDumper::printSymbol(const SymbolRef &Sym) {
       DictScope AS(W, "AuxWeakExternal");
       W.printNumber("Linked", getSymbolName(Aux->TagIndex), Aux->TagIndex);
       W.printEnum("Search", Aux->Characteristics,
-                  ArrayRef(WeakExternalCharacteristics));
+                  EnumStrings(WeakExternalCharacteristics));
 
     } else if (Symbol.isFileRecord()) {
       const char *FileName;
@@ -1757,7 +1794,7 @@ void COFFDumper::printSymbol(const SymbolRef &Sym) {
       W.printNumber("LineNumberCount", Aux->NumberOfLinenumbers);
       W.printHex("Checksum", Aux->CheckSum);
       W.printNumber("Number", AuxNumber);
-      W.printEnum("Selection", Aux->Selection, ArrayRef(ImageCOMDATSelect));
+      W.printEnum("Selection", Aux->Selection, EnumStrings(ImageCOMDATSelect));
 
       if (Section && Section->Characteristics & COFF::IMAGE_SCN_LNK_COMDAT
           && Aux->Selection == COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE) {
@@ -1814,7 +1851,7 @@ void COFFDumper::printUnwindInfo() {
   }
   default:
     W.printEnum("unsupported Image Machine", Obj->getMachine(),
-                ArrayRef(ImageFileMachineType));
+                EnumStrings(ImageFileMachineType));
     break;
   }
 }
@@ -1988,6 +2025,264 @@ void COFFDumper::printCOFFBaseReloc() {
   }
 }
 
+void COFFDumper::printCOFFPseudoReloc() {
+  ListScope D(W, "PseudoReloc");
+
+  // Pseudo-relocations are only meaningful with PE image files.
+  if (!Obj->getDOSHeader())
+    return;
+
+  const StringRef RelocBeginName = Obj->getArch() == Triple::x86
+                                       ? "___RUNTIME_PSEUDO_RELOC_LIST__"
+                                       : "__RUNTIME_PSEUDO_RELOC_LIST__";
+  const StringRef RelocEndName = Obj->getArch() == Triple::x86
+                                     ? "___RUNTIME_PSEUDO_RELOC_LIST_END__"
+                                     : "__RUNTIME_PSEUDO_RELOC_LIST_END__";
+
+  const uint32_t Count = Obj->getNumberOfSymbols();
+  // Skip if no symbol was found (maybe stripped).
+  if (Count == 0)
+    return;
+
+  struct SymbolEntry {
+    uint32_t RVA;
+    COFFSymbolRef Symbol;
+    const coff_section *Section;
+    StringRef SymbolName;
+  };
+  SmallVector<SymbolEntry> RVASymbolMap;
+  COFFSymbolRef RelocBegin, RelocEnd;
+  for (uint32_t i = 0; i < Count; ++i) {
+    COFFSymbolRef Sym;
+    if (Expected<COFFSymbolRef> SymOrErr = Obj->getSymbol(i)) {
+      Sym = *SymOrErr;
+    } else {
+      reportUniqueWarning(SymOrErr.takeError());
+      continue;
+    }
+
+    i += Sym.getNumberOfAuxSymbols();
+
+    if (Sym.getSectionNumber() <= 0)
+      continue;
+
+    StringRef Name;
+    if (Expected<StringRef> NameOrErr = Obj->getSymbolName(Sym)) {
+      Name = *NameOrErr;
+    } else {
+      reportUniqueWarning(NameOrErr.takeError());
+      continue;
+    }
+
+    if (Name == RelocBeginName)
+      RelocBegin = Sym;
+    else if (Name == RelocEndName)
+      RelocEnd = Sym;
+
+    const coff_section *Sec = nullptr;
+    if (Expected<const coff_section *> SecOrErr =
+            Obj->getSection(Sym.getSectionNumber())) {
+      Sec = *SecOrErr;
+    } else {
+      reportUniqueWarning(SecOrErr.takeError());
+      continue;
+    }
+
+    RVASymbolMap.push_back(
+        {Sec->VirtualAddress + Sym.getValue(), Sym, Sec, Name});
+  }
+
+  if (!RelocBegin.getRawPtr() || !RelocEnd.getRawPtr()) {
+    reportUniqueWarning(createStringError(
+        "the marker symbols for runtime pseudo-relocation were not found"));
+    return;
+  }
+
+  const coff_section *Section = nullptr;
+  if (Expected<const coff_section *> SecOrErr =
+          Obj->getSection(RelocBegin.getSectionNumber())) {
+    Section = *SecOrErr;
+  } else {
+    reportUniqueWarning(SecOrErr.takeError());
+    return;
+  }
+
+  if (RelocBegin.getSectionNumber() != RelocEnd.getSectionNumber()) {
+    reportUniqueWarning(createStringError(
+        "the end marker symbol for runtime pseudo-relocation must "
+        "point to the same section where the begin marker points to: "
+        "expected %d, but got %d",
+        RelocBegin.getSectionNumber(), RelocEnd.getSectionNumber()));
+    return;
+  }
+
+  // Skip if the relocation list is empty.
+  if (RelocBegin.getValue() == RelocEnd.getValue())
+    return;
+
+  if (RelocEnd.getValue() < RelocBegin.getValue()) {
+    reportUniqueWarning(createStringError(
+        "the end marker symbol for runtime pseudo-relocation must point "
+        "to a higher address than where the begin marker points to: "
+        "expected >=0x%x, but got 0x%x",
+        RelocBegin.getValue(), RelocEnd.getValue()));
+    return;
+  }
+
+  ArrayRef<uint8_t> Data;
+  if (auto E = Obj->getSectionContents(Section, Data)) {
+    reportUniqueWarning(std::move(E));
+    return;
+  }
+
+  if (const uint32_t Begin = RelocBegin.getValue(), End = RelocEnd.getValue();
+      Begin >= Data.size() || End > Data.size()) {
+    reportUniqueWarning(
+        createStringError("the marker symbol of runtime pseudo-relocation "
+                          "points past the end of the section 0x%x: got 0x%x",
+                          Data.size(), Begin >= Data.size() ? Begin : End));
+    return;
+  }
+
+  const ArrayRef<uint8_t> RawRelocs =
+      Data.take_front(RelocEnd.getValue()).drop_front(RelocBegin.getValue());
+  struct alignas(4) PseudoRelocationHeader {
+    PseudoRelocationHeader(uint32_t Signature)
+        : Zero1(0), Zero2(0), Signature(Signature) {}
+    support::ulittle32_t Zero1;
+    support::ulittle32_t Zero2;
+    support::ulittle32_t Signature;
+  };
+  const PseudoRelocationHeader HeaderV2(1);
+  if (RawRelocs.size() < sizeof(HeaderV2) ||
+      (memcmp(RawRelocs.data(), &HeaderV2, sizeof(HeaderV2)) != 0)) {
+    reportUniqueWarning(
+        createStringError("invalid runtime pseudo-relocation records"));
+    return;
+  }
+
+  struct alignas(4) PseudoRelocationRecord {
+    support::ulittle32_t Symbol;
+    support::ulittle32_t Target;
+    support::ulittle32_t BitSize;
+  };
+  ArrayRef<PseudoRelocationRecord> RelocRecords(
+      reinterpret_cast<const PseudoRelocationRecord *>(
+          RawRelocs.data() + sizeof(PseudoRelocationHeader)),
+      (RawRelocs.size() - sizeof(PseudoRelocationHeader)) /
+          sizeof(PseudoRelocationRecord));
+
+  struct CachingImportedSymbolLookup {
+    struct SizedImportDirectoryEntry {
+      uint32_t StartRVA;
+      uint32_t EndRVA;
+      ImportDirectoryEntryRef EntryRef;
+    };
+
+    CachingImportedSymbolLookup(const COFFObjectFile *Obj) : Obj(Obj) {
+      for (auto D : Obj->import_directories()) {
+        auto &Entry = ImportDirectories.emplace_back();
+        Entry.EntryRef = D;
+        Entry.EndRVA = 0;
+        if (auto E = D.getImportAddressTableRVA(Entry.StartRVA))
+          reportError(std::move(E), Obj->getFileName());
+      }
+      if (ImportDirectories.empty())
+        return;
+      llvm::sort(ImportDirectories, [](const auto &x, const auto &y) {
+        return x.StartRVA < y.StartRVA;
+      });
+    }
+
+    Expected<StringRef> find(COFFDumper *Self, uint32_t EntryRVA) {
+      static constexpr char Msg[] =
+          "the address referenced by pseudo-relocation is not a valid import "
+          "entry: 0x%x";
+      if (auto Ite = ImportedSymbols.find(EntryRVA);
+          Ite != ImportedSymbols.end())
+        return Ite->second;
+
+      auto Ite = llvm::upper_bound(
+          ImportDirectories, EntryRVA,
+          [](uint32_t RVA, const auto &D) { return RVA < D.StartRVA; });
+      if (Ite == ImportDirectories.begin())
+        return createStringError(Msg, EntryRVA);
+
+      --Ite;
+      uint32_t RVA = Ite->StartRVA;
+      if (Ite->EndRVA != 0 && Ite->EndRVA <= RVA)
+        return createStringError(Msg, EntryRVA);
+      // Search with linear iteration to care if padding or garbage exist
+      // between ImportDirectoryEntry.
+      for (auto S : Ite->EntryRef.imported_symbols()) {
+        if (RVA == EntryRVA) {
+          StringRef &NameDst = ImportedSymbols[RVA];
+          if (auto E = S.getSymbolName(NameDst)) {
+            Self->reportUniqueWarning(std::move(E));
+            NameDst = "(no symbol)";
+          }
+          return NameDst;
+        }
+        RVA += Obj->is64() ? 8 : 4;
+        if (EntryRVA < RVA)
+          return createStringError(Msg, EntryRVA);
+      }
+      Ite->EndRVA = RVA;
+
+      return createStringError(Msg, EntryRVA);
+    }
+
+  private:
+    const COFFObjectFile *Obj;
+    SmallVector<SizedImportDirectoryEntry> ImportDirectories;
+    DenseMap<uint32_t, StringRef> ImportedSymbols;
+  };
+  CachingImportedSymbolLookup ImportedSymbols(Obj);
+  llvm::stable_sort(RVASymbolMap,
+                    [](const auto &x, const auto &y) { return x.RVA < y.RVA; });
+  RVASymbolMap.erase(
+      llvm::unique(RVASymbolMap,
+                   [](const auto &x, const auto &y) { return x.RVA == y.RVA; }),
+      RVASymbolMap.end());
+
+  for (const auto &Reloc : RelocRecords) {
+    DictScope Entry(W, "Entry");
+
+    W.printHex("Symbol", Reloc.Symbol);
+    if (Expected<StringRef> SymOrErr =
+            ImportedSymbols.find(this, Reloc.Symbol)) {
+      W.printString("SymbolName", *SymOrErr);
+    } else {
+      reportUniqueWarning(SymOrErr.takeError());
+      W.printString("SymbolName", "(missing)");
+    }
+
+    W.printHex("Target", Reloc.Target);
+    if (auto Ite = llvm::upper_bound(
+            RVASymbolMap, Reloc.Target.value(),
+            [](uint32_t RVA, const auto &Sym) { return RVA < Sym.RVA; });
+        Ite == RVASymbolMap.begin()) {
+      W.printSymbolOffset("TargetSymbol", "(base)", Reloc.Target);
+    } else if (const uint32_t Offset = Reloc.Target.value() - (--Ite)->RVA;
+               Offset == 0) {
+      W.printString("TargetSymbol", Ite->SymbolName);
+    } else if (Offset < Ite->Section->VirtualSize) {
+      W.printSymbolOffset("TargetSymbol", Ite->SymbolName, Offset);
+    } else if (++Ite == RVASymbolMap.end()) {
+      W.printSymbolOffset("TargetSymbol", "(base)", Reloc.Target);
+    } else if (Expected<StringRef> NameOrErr =
+                   Obj->getSectionName(Ite->Section)) {
+      W.printSymbolOffset("TargetSymbol", *NameOrErr,
+                          Reloc.Target - Ite->Section->VirtualAddress);
+    } else {
+      reportUniqueWarning(NameOrErr.takeError());
+      W.printSymbolOffset("TargetSymbol", "(base)", Reloc.Target);
+    }
+
+    W.printNumber("BitWidth", Reloc.BitSize);
+  }
+}
+
 void COFFDumper::printCOFFResources() {
   ListScope ResourcesD(W, "Resources");
   for (const SectionRef &S : Obj->sections()) {
@@ -2059,8 +2354,7 @@ void COFFDumper::printResourceDirectoryTable(
       std::vector<UTF16> EndianCorrectedNameString;
       if (llvm::sys::IsBigEndianHost) {
         EndianCorrectedNameString.resize(RawEntryNameString.size() + 1);
-        std::copy(RawEntryNameString.begin(), RawEntryNameString.end(),
-                  EndianCorrectedNameString.begin() + 1);
+        llvm::copy(RawEntryNameString, EndianCorrectedNameString.begin() + 1);
         EndianCorrectedNameString[0] = UNI_UTF16_BYTE_ORDER_MARK_SWAPPED;
         RawEntryNameString = ArrayRef(EndianCorrectedNameString);
       }
@@ -2217,6 +2511,17 @@ void COFFDumper::printCGProfile() {
   }
 }
 
+void COFFDumper::printStringTable() {
+  DictScope DS(W, "StringTable");
+  StringRef StrTable = Obj->getStringTable();
+  uint32_t StrTabSize = StrTable.size();
+  W.printNumber("Length", StrTabSize);
+  // Print strings from the fifth byte, since the first four bytes contain the
+  // length (in bytes) of the string table (including the length field).
+  if (StrTabSize > 4)
+    printAsStringList(StrTable, 4);
+}
+
 StringRef COFFDumper::getSymbolName(uint32_t Index) {
   Expected<COFFSymbolRef> Sym = Obj->getSymbol(Index);
   if (!Sym)
@@ -2274,6 +2579,6 @@ void COFFDumper::printCOFFTLSDirectory(
   W.printHex("AddressOfCallBacks", TlsTable->AddressOfCallBacks);
   W.printHex("SizeOfZeroFill", TlsTable->SizeOfZeroFill);
   W.printFlags("Characteristics", TlsTable->Characteristics,
-               ArrayRef(ImageSectionCharacteristics),
+               EnumStrings(ImageSectionCharacteristics),
                COFF::SectionCharacteristics(COFF::IMAGE_SCN_ALIGN_MASK));
 }

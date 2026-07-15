@@ -1,4 +1,4 @@
-//===--- DefinitionsInHeadersCheck.cpp - clang-tidy------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DefinitionsInHeadersCheck.h"
+#include "../utils/FileExtensionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
@@ -27,17 +28,17 @@ AST_MATCHER_P(NamedDecl, usesHeaderFileExtension, FileExtensionsSet,
 
 DefinitionsInHeadersCheck::DefinitionsInHeadersCheck(StringRef Name,
                                                      ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      HeaderFileExtensions(Context->getHeaderFileExtensions()) {}
+    : ClangTidyCheck(Name, Context) {}
 
 void DefinitionsInHeadersCheck::registerMatchers(MatchFinder *Finder) {
   auto DefinitionMatcher =
       anyOf(functionDecl(isDefinition(), unless(isDeleted())),
             varDecl(isDefinition()));
-  Finder->addMatcher(namedDecl(DefinitionMatcher,
-                               usesHeaderFileExtension(HeaderFileExtensions))
-                         .bind("name-decl"),
-                     this);
+  Finder->addMatcher(
+      namedDecl(DefinitionMatcher,
+                usesHeaderFileExtension(getHeaderFileExtensions()))
+          .bind("name-decl"),
+      this);
 }
 
 void DefinitionsInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
@@ -93,7 +94,8 @@ void DefinitionsInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
       }
     }
 
-    bool IsFullSpec = FD->getTemplateSpecializationKind() != TSK_Undeclared;
+    const bool IsFullSpec =
+        FD->getTemplateSpecializationKind() != TSK_Undeclared;
     diag(FD->getLocation(),
          "%select{function|full function template specialization}0 %1 defined "
          "in a header file; function definitions in header files can lead to "

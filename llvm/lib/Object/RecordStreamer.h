@@ -10,6 +10,7 @@
 #define LLVM_LIB_OBJECT_RECORDSTREAMER_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCStreamer.h"
@@ -32,7 +33,7 @@ private:
   // Map of aliases created by .symver directives, saved so we can update
   // their symbol binding after parsing complete. This maps from each
   // aliasee to its list of aliases.
-  DenseMap<const MCSymbol *, std::vector<StringRef>> SymverAliasMap;
+  MapVector<const MCSymbol *, std::vector<StringRef>> SymverAliasMap;
 
   /// Get the state recorded for the given symbol.
   State getSymbolState(const MCSymbol *Sym);
@@ -53,9 +54,10 @@ public:
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         Align ByteAlignment) override;
 
-  // Ignore COFF-specific directives; we do not need any information from them,
-  // but the default implementation of these methods crashes, so we override
-  // them with versions that do nothing.
+  // Ignore format-specific directives; we do not need any information from
+  // them, but the default implementation of these methods crashes, so we
+  // override them with versions that do nothing.
+  void emitSubsectionsViaSymbols() override {};
   void beginCOFFSymbolDef(const MCSymbol *Symbol) override {}
   void emitCOFFSymbolStorageClass(int StorageClass) override {}
   void emitCOFFSymbolType(int Type) override {}

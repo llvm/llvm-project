@@ -16,21 +16,17 @@
 #include "lldb/ValueObject/ValueObject.h"
 #include <optional>
 
-namespace lldb_private {
-class ConstString;
-}
-
 using namespace lldb_private;
 
 lldb::ValueObjectSP ValueObjectCast::Create(ValueObject &parent,
-                                            ConstString name,
+                                            llvm::StringRef name,
                                             const CompilerType &cast_type) {
   ValueObjectCast *cast_valobj_ptr =
       new ValueObjectCast(parent, name, cast_type);
   return cast_valobj_ptr->GetSP();
 }
 
-ValueObjectCast::ValueObjectCast(ValueObject &parent, ConstString name,
+ValueObjectCast::ValueObjectCast(ValueObject &parent, llvm::StringRef name,
                                  const CompilerType &cast_type)
     : ValueObject(parent), m_cast_type(cast_type) {
   SetName(name);
@@ -49,7 +45,7 @@ llvm::Expected<uint32_t> ValueObjectCast::CalculateNumChildren(uint32_t max) {
   return *children_count <= max ? *children_count : max;
 }
 
-std::optional<uint64_t> ValueObjectCast::GetByteSize() {
+llvm::Expected<uint64_t> ValueObjectCast::GetByteSize() {
   ExecutionContext exe_ctx(GetExecutionContextRef());
   return m_value.GetValueByteSize(nullptr, &exe_ctx);
 }

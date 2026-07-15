@@ -131,7 +131,7 @@ void MemprofThread::Init(const InitOptions *options) {
 }
 
 thread_return_t
-MemprofThread::ThreadStart(tid_t os_id,
+MemprofThread::ThreadStart(ThreadID os_id,
                            atomic_uintptr_t *signal_thread_is_registered) {
   Init();
   memprofThreadRegistry().StartThread(tid(), os_id, ThreadType::Regular,

@@ -9,6 +9,7 @@ set(CLANG_TOOLS_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/..")
 
 llvm_canonicalize_cmake_booleans(
   CLANG_TIDY_ENABLE_STATIC_ANALYZER
+  CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS
   CLANG_PLUGIN_SUPPORT
   LLVM_INSTALL_TOOLCHAIN_ONLY
   )
@@ -18,13 +19,6 @@ configure_lit_site_cfg(
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
   MAIN_CONFIG
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
-  )
-
-configure_lit_site_cfg(
-  ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
-  ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py
-  MAIN_CONFIG
-  ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.cfg.py
   )
 
 set(CLANG_TOOLS_TEST_DEPS
@@ -50,11 +44,14 @@ set(CLANG_TOOLS_TEST_DEPS
   clang-resource-headers
 
   clang-tidy
+
+  # Some tests invoke clang directly (e.g., to precompile modules).
+  clang
 )
 
 # Add lit test dependencies.
 set(LLVM_UTILS_DEPS
-  FileCheck count not
+  FileCheck count not split-file
 )
 foreach(dep ${LLVM_UTILS_DEPS})
   if(TARGET ${dep})
@@ -86,4 +83,8 @@ add_lit_testsuite(check-clang-extra "Running clang-tools-extra/test"
 
 add_lit_testsuites(CLANG-EXTRA ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${CLANG_TOOLS_TEST_DEPS}
+   SKIP "^clang-doc"
   )
+
+add_subdirectory(clang-doc)
+add_subdirectory(Unit)

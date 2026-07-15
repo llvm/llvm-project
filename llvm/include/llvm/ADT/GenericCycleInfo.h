@@ -9,7 +9,7 @@
 /// \file
 /// \brief Find all cycles in a control-flow graph, including irreducible loops.
 ///
-/// See docs/CycleTerminology.rst for a formal definition of cycles.
+/// See docs/CycleTerminology.md for a formal definition of cycles.
 ///
 /// Briefly:
 /// - A cycle is a generalization of a loop which can represent
@@ -32,6 +32,7 @@
 #include "llvm/ADT/GenericSSAContext.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -61,11 +62,14 @@ private:
   /// Child cycles, if any.
   std::vector<std::unique_ptr<GenericCycle>> Children;
 
-  /// Basic blocks that are contained in the cycle, including entry blocks,
-  /// and including blocks that are part of a child cycle.
-  using BlockSetVectorT = SetVector<BlockT *, SmallVector<BlockT *, 8>,
-                                    DenseSet<const BlockT *>, 8>;
-  BlockSetVectorT Blocks;
+  /// This cycle's blocks (its own and its nested cycles') occupy the half-open
+  /// range [IdxBegin, IdxEnd) of GenericCycleInfo::BlockLayout. The
+  /// ranges are nested like an Euler tour of the cycle tree, so containment is
+  /// an interval test (see contains()).
+  ///
+  /// During construction (before layoutBlocks), IdxEnd accumulates the number
+  /// of this cycle's own blocks (those whose innermost cycle is this one).
+  unsigned IdxBegin = 0, IdxEnd = 0;
 
   /// Depth of the cycle in the tree. The root "cycle" is at depth 0.
   ///
@@ -74,13 +78,16 @@ private:
   ///       always have the same depth.
   unsigned Depth = 0;
 
+  /// The cycle info that owns this cycle. Used by contains(BlockT*).
+  const GenericCycleInfo<ContextT> *CI = nullptr;
+
   /// Cache for the results of GetExitBlocks
   mutable SmallVector<BlockT *, 4> ExitBlocksCache;
 
   void clear() {
     Entries.clear();
     Children.clear();
-    Blocks.clear();
+    IdxBegin = IdxEnd = 0;
     Depth = 0;
     ParentCycle = nullptr;
     clearCache();
@@ -88,11 +95,6 @@ private:
 
   void appendEntry(BlockT *Block) {
     Entries.push_back(Block);
-    clearCache();
-  }
-
-  void appendBlock(BlockT *Block) {
-    Blocks.insert(Block);
     clearCache();
   }
 
@@ -131,13 +133,11 @@ public:
     clearCache();
   }
 
-  /// \brief Return whether \p Block is contained in the cycle.
-  bool contains(const BlockT *Block) const { return Blocks.contains(Block); }
+  /// \brief Return whether \p Block is contained in the cycle. O(1).
+  bool contains(const BlockT *Block) const;
 
-  /// \brief Returns true iff this cycle contains \p C.
-  ///
-  /// Note: Non-strict containment check, i.e. returns true if C is the
-  /// same cycle.
+  /// \brief Returns true iff this cycle contains \p C. O(1). Non-strict, i.e.
+  /// returns true if C is the same cycle.
   bool contains(const GenericCycle *C) const;
 
   const GenericCycle *getParentCycle() const { return ParentCycle; }
@@ -155,7 +155,7 @@ public:
   void getExitingBlocks(SmallVectorImpl<BlockT *> &TmpStorage) const;
 
   /// Return the preheader block for this cycle. Pre-header is well-defined for
-  /// reducible cycle in docs/LoopTerminology.rst as: the only one entering
+  /// reducible cycle in docs/LoopTerminology.md as: the only one entering
   /// block and its only edge is to the entry block. Return null for irreducible
   /// cycles.
   BlockT *getCyclePreheader() const;
@@ -198,15 +198,12 @@ public:
 
   /// Iteration over blocks in the cycle (including entry blocks).
   //@{
-  using const_block_iterator = typename BlockSetVectorT::const_iterator;
+  using const_block_iterator =
+      typename SmallVector<BlockT *, 8>::const_iterator;
 
-  const_block_iterator block_begin() const {
-    return const_block_iterator{Blocks.begin()};
-  }
-  const_block_iterator block_end() const {
-    return const_block_iterator{Blocks.end()};
-  }
-  size_t getNumBlocks() const { return Blocks.size(); }
+  const_block_iterator block_begin() const;
+  const_block_iterator block_end() const;
+  size_t getNumBlocks() const { return IdxEnd - IdxBegin; }
   iterator_range<const_block_iterator> blocks() const {
     return llvm::make_range(block_begin(), block_end());
   }
@@ -230,13 +227,9 @@ public:
 
   Printable printEntries(const ContextT &Ctx) const {
     return Printable([this, &Ctx](raw_ostream &Out) {
-      bool First = true;
-      for (auto *Entry : Entries) {
-        if (!First)
-          Out << ' ';
-        First = false;
-        Out << Ctx.print(Entry);
-      }
+      ListSeparator LS(" ");
+      for (auto *Entry : Entries)
+        Out << LS << Ctx.print(Entry);
     });
   }
 
@@ -244,7 +237,7 @@ public:
     return Printable([this, &Ctx](raw_ostream &Out) {
       Out << "depth=" << Depth << ": entries(" << printEntries(Ctx) << ')';
 
-      for (auto *Block : Blocks) {
+      for (auto *Block : blocks()) {
         if (isEntry(Block))
           continue;
 
@@ -265,12 +258,14 @@ public:
 
 private:
   ContextT Context;
+  unsigned BlockNumberEpoch;
 
-  /// Map basic blocks to their inner-most containing cycle.
-  DenseMap<BlockT *, CycleT *> BlockMap;
+  /// Map basic block numbers to their inner-most containing cycle.
+  SmallVector<CycleT *> BlockMap;
 
-  /// Map basic blocks to their top level containing cycle.
-  DenseMap<BlockT *, CycleT *> BlockMapTopLevel;
+  /// Euler tour of the cycle forest: every cycle's blocks form a contiguous
+  /// slice [IdxBegin, IdxEnd) of this array, nested inside its parent's.
+  SmallVector<BlockT *, 8> BlockLayout;
 
   /// Top-level cycles discovered by any DFS.
   ///
@@ -284,10 +279,38 @@ private:
   /// the subtree.
   void moveTopLevelCycleToNewParent(CycleT *NewParent, CycleT *Child);
 
+  void verifyBlockNumberEpoch(const FunctionT *Fn) const;
+  void addToBlockMap(BlockT *Block, CycleT *Cycle);
+
+  /// Build BlockLayout and every cycle's [IdxBegin, IdxEnd) slice
+  /// from the innermost-cycle map and the current cycle tree.
+  void layoutBlocks(ArrayRef<BlockT *> Order);
+
 public:
   GenericCycleInfo() = default;
-  GenericCycleInfo(GenericCycleInfo &&) = default;
-  GenericCycleInfo &operator=(GenericCycleInfo &&) = default;
+  GenericCycleInfo(GenericCycleInfo &&Other) { *this = std::move(Other); }
+  GenericCycleInfo &operator=(GenericCycleInfo &&Other) {
+    if (this == &Other)
+      return *this;
+    Context = std::move(Other.Context);
+    BlockNumberEpoch = Other.BlockNumberEpoch;
+    BlockMap = std::move(Other.BlockMap);
+    BlockLayout = std::move(Other.BlockLayout);
+    TopLevelCycles = std::move(Other.TopLevelCycles);
+    // The moved cycles carry a back-reference to their owning info (used by
+    // GenericCycle::contains(BlockT*) and blocks()); re-point it at this
+    // object.
+    SmallVector<CycleT *, 8> Worklist;
+    for (auto &TLC : TopLevelCycles)
+      Worklist.push_back(TLC.get());
+    while (!Worklist.empty()) {
+      CycleT *C = Worklist.pop_back_val();
+      C->CI = this;
+      for (auto &Child : C->Children)
+        Worklist.push_back(Child.get());
+    }
+    return *this;
+  }
 
   void clear();
   void compute(FunctionT &F);
@@ -298,8 +321,9 @@ public:
 
   CycleT *getCycle(const BlockT *Block) const;
   CycleT *getSmallestCommonCycle(CycleT *A, CycleT *B) const;
+  CycleT *getSmallestCommonCycle(BlockT *A, BlockT *B) const;
   unsigned getCycleDepth(const BlockT *Block) const;
-  CycleT *getTopLevelParentCycle(BlockT *Block);
+  CycleT *getTopLevelParentCycle(const BlockT *Block) const;
 
   /// Assumes that \p Cycle is the innermost cycle containing \p Block.
   /// \p Block will be appended to \p Cycle and all of its parent cycles.

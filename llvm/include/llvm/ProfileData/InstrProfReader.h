@@ -18,9 +18,13 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/Object/BuildID.h"
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/ProfileData/MemProf.h"
+#include "llvm/ProfileData/MemProfSummary.h"
+#include "llvm/ProfileData/MemProfYAML.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/LineIterator.h"
@@ -123,6 +127,9 @@ public:
 
   virtual bool instrEntryBBEnabled() const = 0;
 
+  /// Return true if the profile instruments all loop entries.
+  virtual bool instrLoopEntriesEnabled() const = 0;
+
   /// Return true if the profile has single byte counters representing coverage.
   virtual bool hasSingleByteCoverage() const = 0;
 
@@ -152,7 +159,7 @@ public:
   virtual InstrProfSymtab &getSymtab() = 0;
 
   /// Compute the sum of counts and return in Sum.
-  void accumulateCounts(CountSumOrPercent &Sum, bool IsCS);
+  LLVM_ABI void accumulateCounts(CountSumOrPercent &Sum, bool IsCS);
 
 protected:
   std::unique_ptr<InstrProfSymtab> Symtab;
@@ -197,7 +204,7 @@ public:
 
   /// Factory method to create an appropriately typed reader for the given
   /// instrprof file.
-  static Expected<std::unique_ptr<InstrProfReader>> create(
+  LLVM_ABI static Expected<std::unique_ptr<InstrProfReader>> create(
       const Twine &Path, vfs::FileSystem &FS,
       const InstrProfCorrelator *Correlator = nullptr,
       const object::BuildIDFetcher *BIDFetcher = nullptr,
@@ -205,7 +212,7 @@ public:
           InstrProfCorrelator::ProfCorrelatorKind::NONE,
       std::function<void(Error)> Warn = nullptr);
 
-  static Expected<std::unique_ptr<InstrProfReader>> create(
+  LLVM_ABI static Expected<std::unique_ptr<InstrProfReader>> create(
       std::unique_ptr<MemoryBuffer> Buffer,
       const InstrProfCorrelator *Correlator = nullptr,
       const object::BuildIDFetcher *BIDFetcher = nullptr,
@@ -236,7 +243,7 @@ public:
 ///
 /// Each record consists of a function name, a function hash, a number of
 /// counters, and then each counter value, in that order.
-class TextInstrProfReader : public InstrProfReader {
+class LLVM_ABI TextInstrProfReader : public InstrProfReader {
 private:
   /// The profile data file contents.
   std::unique_ptr<MemoryBuffer> DataBuffer;
@@ -272,6 +279,11 @@ public:
   bool instrEntryBBEnabled() const override {
     return static_cast<bool>(ProfileKind &
                              InstrProfKind::FunctionEntryInstrumentation);
+  }
+
+  bool instrLoopEntriesEnabled() const override {
+    return static_cast<bool>(ProfileKind &
+                             InstrProfKind::LoopEntriesInstrumentation);
   }
 
   bool hasSingleByteCoverage() const override {
@@ -337,6 +349,7 @@ private:
   uint64_t Version;
   uint64_t CountersDelta;
   uint64_t BitmapDelta;
+  uint64_t UniformCountersDelta;
   uint64_t NamesDelta;
   const RawInstrProf::ProfileData<IntPtrT> *Data;
   const RawInstrProf::ProfileData<IntPtrT> *DataEnd;
@@ -346,6 +359,8 @@ private:
   const char *CountersEnd;
   const char *BitmapStart;
   const char *BitmapEnd;
+  const char *UniformCountersStart;
+  const char *UniformCountersEnd;
   const char *NamesStart;
   const char *NamesEnd;
   const char *VNamesStart = nullptr;
@@ -396,6 +411,10 @@ public:
 
   bool instrEntryBBEnabled() const override {
     return (Version & VARIANT_MASK_INSTR_ENTRY) != 0;
+  }
+
+  bool instrLoopEntriesEnabled() const override {
+    return (Version & VARIANT_MASK_INSTR_LOOP_ENTRIES) != 0;
   }
 
   bool hasSingleByteCoverage() const override {
@@ -453,11 +472,13 @@ private:
   Error readFuncHash(NamedInstrProfRecord &Record);
   Error readRawCounts(InstrProfRecord &Record);
   Error readRawBitmapBytes(InstrProfRecord &Record);
+  Error readRawUniformCounters(InstrProfRecord &Record);
   Error readValueProfilingData(InstrProfRecord &Record);
   bool atEnd() const { return Data == DataEnd; }
 
   void advanceData() {
-    // `CountersDelta` is a constant zero when using debug info correlation.
+    // `CountersDelta` and `BitmapDelta` are constant zero when using debug info
+    // correlation.
     if (!Correlator && !BIDFetcherCorrelator) {
       // The initial CountersDelta is the in-memory address difference between
       // the data and counts sections:
@@ -466,6 +487,7 @@ private:
       // with respect to the next record.
       CountersDelta -= sizeof(*Data);
       BitmapDelta -= sizeof(*Data);
+      UniformCountersDelta -= sizeof(*Data);
     }
     Data++;
     ValueDataStart += CurValueDataSize;
@@ -520,7 +542,7 @@ public:
   static StringRef GetInternalKey(StringRef K) { return K; }
   static StringRef GetExternalKey(StringRef K) { return K; }
 
-  hash_value_type ComputeHash(StringRef K);
+  LLVM_ABI hash_value_type ComputeHash(StringRef K);
 
   static std::pair<offset_type, offset_type>
   ReadKeyDataLength(const unsigned char *&D) {
@@ -537,9 +559,10 @@ public:
     return StringRef((const char *)D, N);
   }
 
-  bool readValueProfilingData(const unsigned char *&D,
-                              const unsigned char *const End);
-  data_type ReadData(StringRef K, const unsigned char *D, offset_type N);
+  LLVM_ABI bool readValueProfilingData(const unsigned char *&D,
+                                       const unsigned char *const End);
+  LLVM_ABI data_type ReadData(StringRef K, const unsigned char *D,
+                              offset_type N);
 
   // Used for testing purpose only.
   void setValueProfDataEndianness(llvm::endianness Endianness) {
@@ -564,6 +587,7 @@ struct InstrProfReaderIndexBase {
   virtual bool isIRLevelProfile() const = 0;
   virtual bool hasCSIRLevelProfile() const = 0;
   virtual bool instrEntryBBEnabled() const = 0;
+  virtual bool instrLoopEntriesEnabled() const = 0;
   virtual bool hasSingleByteCoverage() const = 0;
   virtual bool functionEntryOnly() const = 0;
   virtual bool hasMemoryProfile() const = 0;
@@ -628,6 +652,10 @@ public:
     return (FormatVersion & VARIANT_MASK_INSTR_ENTRY) != 0;
   }
 
+  bool instrLoopEntriesEnabled() const override {
+    return (FormatVersion & VARIANT_MASK_INSTR_LOOP_ENTRIES) != 0;
+  }
+
   bool hasSingleByteCoverage() const override {
     return (FormatVersion & VARIANT_MASK_BYTE_COVERAGE) != 0;
   }
@@ -671,6 +699,8 @@ private:
   /// The MemProf version.
   memprof::IndexedVersion Version =
       static_cast<memprof::IndexedVersion>(memprof::MinimumSupportedVersion);
+  /// MemProf summary (if available, version >= 4).
+  std::unique_ptr<memprof::MemProfSummary> MemProfSum;
   /// MemProf profile schema (if available).
   memprof::MemProfSchema Schema;
   /// MemProf record profile data on-disk indexed via llvm::md5(FunctionName).
@@ -685,24 +715,39 @@ private:
   const unsigned char *CallStackBase = nullptr;
   // The number of elements in the radix tree array.
   unsigned RadixTreeSize = 0;
+  /// The data access profiles, deserialized from binary data.
+  std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData;
 
-  Error deserializeV12(const unsigned char *Start, const unsigned char *Ptr);
-  Error deserializeV3(const unsigned char *Start, const unsigned char *Ptr);
+  Error deserializeV2(const unsigned char *Start, const unsigned char *Ptr);
+  Error deserializeRadixTreeBased(const unsigned char *Start,
+                                  const unsigned char *Ptr,
+                                  memprof::IndexedVersion Version);
 
 public:
   IndexedMemProfReader() = default;
 
-  Error deserialize(const unsigned char *Start, uint64_t MemProfOffset);
+  LLVM_ABI Error deserialize(const unsigned char *Start,
+                             uint64_t MemProfOffset);
 
-  Expected<memprof::MemProfRecord>
+  LLVM_ABI Expected<memprof::MemProfRecord>
   getMemProfRecord(const uint64_t FuncNameHash) const;
 
-  DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>>
+  LLVM_ABI DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>>
   getMemProfCallerCalleePairs() const;
+
+  // Returns non-owned pointer to data access profile data.
+  memprof::DataAccessProfData *getDataAccessProfileData() const {
+    return DataAccessProfileData.get();
+  }
+
+  // Return the entire MemProf profile.
+  LLVM_ABI memprof::AllMemProfData getAllMemProfData() const;
+
+  memprof::MemProfSummary *getSummary() const { return MemProfSum.get(); }
 };
 
 /// Reader for the indexed binary instrprof format.
-class IndexedInstrProfReader : public InstrProfReader {
+class LLVM_ABI IndexedInstrProfReader : public InstrProfReader {
 private:
   /// The profile data file contents.
   std::unique_ptr<MemoryBuffer> DataBuffer;
@@ -753,6 +798,10 @@ public:
     return Index->instrEntryBBEnabled();
   }
 
+  bool instrLoopEntriesEnabled() const override {
+    return Index->instrLoopEntriesEnabled();
+  }
+
   bool hasSingleByteCoverage() const override {
     return Index->hasSingleByteCoverage();
   }
@@ -786,7 +835,7 @@ public:
   /// functions, MismatchedFuncSum returns the maximum. If \c FuncName is not
   /// found, try to lookup \c DeprecatedFuncName to handle profiles built by
   /// older compilers.
-  Expected<InstrProfRecord>
+  Expected<NamedInstrProfRecord>
   getInstrProfRecord(StringRef FuncName, uint64_t FuncHash,
                      StringRef DeprecatedFuncName = "",
                      uint64_t *MismatchedFuncSum = nullptr);
@@ -800,6 +849,10 @@ public:
   DenseMap<uint64_t, SmallVector<memprof::CallEdgeTy, 0>>
   getMemProfCallerCalleePairs() {
     return MemProfReader.getMemProfCallerCalleePairs();
+  }
+
+  memprof::AllMemProfData getAllMemProfData() const {
+    return MemProfReader.getAllMemProfData();
   }
 
   /// Fill Counts with the profile data for the given function name.
@@ -851,6 +904,17 @@ public:
       assert(Summary && "No profile summary");
       return *Summary;
     }
+  }
+
+  /// Return the MemProf summary. Will be null if unavailable (version < 4).
+  memprof::MemProfSummary *getMemProfSummary() const {
+    return MemProfReader.getSummary();
+  }
+
+  /// Returns non-owned pointer to the data access profile data.
+  /// Will be null if unavailable (version < 4).
+  memprof::DataAccessProfData *getDataAccessProfileData() const {
+    return MemProfReader.getDataAccessProfileData();
   }
 
   Error readBinaryIds(std::vector<llvm::object::BuildID> &BinaryIds) override;

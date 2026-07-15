@@ -47,8 +47,8 @@
 //        corresponds to offset, second member corresponds to size of LDS global
 //        being replaced and third represents the total aligned size. It will
 //        have name "llvm.amdgcn.sw.lds.<kernel-name>.md". This global will have
-//        an intializer with static LDS related offsets and sizes initialized.
-//        But for dynamic LDS related entries, offsets will be intialized to
+//        an initializer with static LDS related offsets and sizes initialized.
+//        But for dynamic LDS related entries, offsets will be initialized to
 //        previous static LDS allocation end offset. Sizes for them will be zero
 //        initially. These dynamic LDS offset and size values will be updated
 //        within the kernel, since kernel can read the dynamic LDS size
@@ -104,7 +104,6 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/ReplaceConstant.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerCommon.h"
@@ -174,9 +173,8 @@ struct FunctionsAndLDSAccess {
 
 class AMDGPUSwLowerLDS {
 public:
-  AMDGPUSwLowerLDS(Module &Mod, const AMDGPUTargetMachine &TM,
-                   DomTreeCallback Callback)
-      : M(Mod), AMDGPUTM(TM), IRB(M.getContext()), DTCallback(Callback) {}
+  AMDGPUSwLowerLDS(Module &Mod, DomTreeCallback Callback)
+      : M(Mod), IRB(M.getContext()), DTCallback(Callback) {}
   bool run();
   void getUsesOfLDSByNonKernels();
   void getNonKernelsWithLDSArguments(const CallGraph &CG);
@@ -192,8 +190,7 @@ public:
   void getLDSMemoryInstructions(Function *Func,
                                 SetVector<Instruction *> &LDSInstructions);
   void replaceKernelLDSAccesses(Function *Func);
-  Value *getTranslatedGlobalMemoryGEPOfLDSPointer(Value *LoadMallocPtr,
-                                                  Value *LDSPtr);
+  Value *getTranslatedGlobalMemoryPtrOfLDS(Value *LoadMallocPtr, Value *LDSPtr);
   void translateLDSMemoryOperationsToGlobalMemory(
       Function *Func, Value *LoadMallocPtr,
       SetVector<Instruction *> &LDSInstructions);
@@ -215,7 +212,6 @@ public:
 
 private:
   Module &M;
-  const AMDGPUTargetMachine &AMDGPUTM;
   IRBuilder<> IRB;
   DomTreeCallback DTCallback;
   FunctionsAndLDSAccess FuncLDSAccessInfo;
@@ -228,7 +224,7 @@ template <typename T> SetVector<T> sortByName(std::vector<T> &&V) {
   sort(V, [](const auto *L, const auto *R) {
     return L->getName() < R->getName();
   });
-  return {SetVector<T>(V.begin(), V.end())};
+  return {SetVector<T>(llvm::from_range, V)};
 }
 
 SetVector<GlobalVariable *> AMDGPUSwLowerLDS::getOrderedNonKernelAllLDSGlobals(
@@ -273,7 +269,7 @@ void AMDGPUSwLowerLDS::getNonKernelsWithLDSArguments(const CallGraph &CG) {
       Function *CalledFunc = CallerCGN->getFunction();
       if (!CalledFunc || CalledFunc->isDeclaration())
         continue;
-      if (AMDGPU::isKernelLDS(CalledFunc))
+      if (AMDGPU::isKernel(*CalledFunc))
         continue;
       for (auto AI = CalledFunc->arg_begin(), E = CalledFunc->arg_end();
            AI != E; ++AI) {
@@ -299,8 +295,7 @@ void AMDGPUSwLowerLDS::getUsesOfLDSByNonKernels() {
     for (User *V : GV->users()) {
       if (auto *I = dyn_cast<Instruction>(V)) {
         Function *F = I->getFunction();
-        if (!isKernelLDS(F) && F->hasFnAttribute(Attribute::SanitizeAddress) &&
-            !F->isDeclaration())
+        if (!isKernel(*F) && !F->isDeclaration())
           FuncLDSAccessInfo.NonKernelToLDSAccessMap[F].insert(GV);
       }
     }
@@ -379,7 +374,7 @@ void AMDGPUSwLowerLDS::buildSwDynLDSGlobal(Function *Func) {
 
 void AMDGPUSwLowerLDS::populateSwLDSAttributeAndMetadata(Function *Func) {
   auto &LDSParams = FuncLDSAccessInfo.KernelToLDSParametersMap[Func];
-  bool IsDynLDSUsed = LDSParams.SwDynLDS ? true : false;
+  bool IsDynLDSUsed = LDSParams.SwDynLDS;
   uint32_t Offset = LDSParams.LDSSize;
   recordLDSAbsoluteAddress(M, LDSParams.SwLDS, 0);
   addLDSSizeAttribute(Func, Offset, IsDynLDSUsed);
@@ -526,7 +521,7 @@ static void replacesUsesOfGlobalInFunction(Function *Func, GlobalVariable *GV,
   auto ReplaceUsesLambda = [Func](const Use &U) -> bool {
     auto *V = U.getUser();
     if (auto *Inst = dyn_cast<Instruction>(V)) {
-      auto *Func1 = Inst->getParent()->getParent();
+      auto *Func1 = Inst->getFunction();
       if (Func == Func1)
         return true;
     }
@@ -655,20 +650,37 @@ void AMDGPUSwLowerLDS::getLDSMemoryInstructions(
       } else if (AtomicCmpXchgInst *XCHG = dyn_cast<AtomicCmpXchgInst>(&Inst)) {
         if (XCHG->getPointerAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
           LDSInstructions.insert(&Inst);
+      } else if (AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(&Inst)) {
+        if (ASC->getSrcAddressSpace() == AMDGPUAS::LOCAL_ADDRESS &&
+            ASC->getDestAddressSpace() == AMDGPUAS::FLAT_ADDRESS)
+          LDSInstructions.insert(&Inst);
+      } else if (AnyMemIntrinsic *MI = dyn_cast<AnyMemIntrinsic>(&Inst)) {
+        if (MI->getDestAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+          LDSInstructions.insert(&Inst);
+        } else if (auto *MTI = dyn_cast<AnyMemTransferInst>(MI)) {
+          if (MTI->getSourceAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
+            LDSInstructions.insert(&Inst);
+        }
       } else
         continue;
     }
   }
 }
 
-Value *
-AMDGPUSwLowerLDS::getTranslatedGlobalMemoryGEPOfLDSPointer(Value *LoadMallocPtr,
+Value *AMDGPUSwLowerLDS::getTranslatedGlobalMemoryPtrOfLDS(Value *LoadMallocPtr,
                                                            Value *LDSPtr) {
   assert(LDSPtr && "Invalid LDS pointer operand");
-  Value *PtrToInt = IRB.CreatePtrToInt(LDSPtr, IRB.getInt32Ty());
-  Value *GEP =
-      IRB.CreateInBoundsGEP(IRB.getInt8Ty(), LoadMallocPtr, {PtrToInt});
-  return GEP;
+  Type *LDSPtrType = LDSPtr->getType();
+  LLVMContext &Ctx = M.getContext();
+  const DataLayout &DL = M.getDataLayout();
+  Type *IntTy = DL.getIntPtrType(Ctx, AMDGPUAS::LOCAL_ADDRESS);
+  if (auto *VecPtrTy = dyn_cast<VectorType>(LDSPtrType)) {
+    // Handle vector of pointers
+    ElementCount NumElements = VecPtrTy->getElementCount();
+    IntTy = VectorType::get(IntTy, NumElements);
+  }
+  Value *GepIndex = IRB.CreatePtrToInt(LDSPtr, IntTy);
+  return IRB.CreateInBoundsGEP(IRB.getInt8Ty(), LoadMallocPtr, {GepIndex});
 }
 
 void AMDGPUSwLowerLDS::translateLDSMemoryOperationsToGlobalMemory(
@@ -681,28 +693,26 @@ void AMDGPUSwLowerLDS::translateLDSMemoryOperationsToGlobalMemory(
     if (LoadInst *LI = dyn_cast<LoadInst>(Inst)) {
       Value *LIOperand = LI->getPointerOperand();
       Value *Replacement =
-          getTranslatedGlobalMemoryGEPOfLDSPointer(LoadMallocPtr, LIOperand);
-      LoadInst *NewLI = IRB.CreateAlignedLoad(LI->getType(), Replacement,
-                                              LI->getAlign(), LI->isVolatile());
-      NewLI->setAtomic(LI->getOrdering(), LI->getSyncScopeID());
+          getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, LIOperand);
+      LoadInst *NewLI =
+          IRB.CreateLoad(LI->getType(), Replacement, LI->getProperties());
       AsanInfo.Instructions.insert(NewLI);
       LI->replaceAllUsesWith(NewLI);
       LI->eraseFromParent();
     } else if (StoreInst *SI = dyn_cast<StoreInst>(Inst)) {
       Value *SIOperand = SI->getPointerOperand();
       Value *Replacement =
-          getTranslatedGlobalMemoryGEPOfLDSPointer(LoadMallocPtr, SIOperand);
-      StoreInst *NewSI = IRB.CreateAlignedStore(
-          SI->getValueOperand(), Replacement, SI->getAlign(), SI->isVolatile());
-      NewSI->setAtomic(SI->getOrdering(), SI->getSyncScopeID());
+          getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, SIOperand);
+      StoreInst *NewSI = IRB.CreateStore(SI->getValueOperand(), Replacement,
+                                         SI->getProperties());
       AsanInfo.Instructions.insert(NewSI);
       SI->replaceAllUsesWith(NewSI);
       SI->eraseFromParent();
     } else if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(Inst)) {
       Value *RMWPtrOperand = RMW->getPointerOperand();
       Value *RMWValOperand = RMW->getValOperand();
-      Value *Replacement = getTranslatedGlobalMemoryGEPOfLDSPointer(
-          LoadMallocPtr, RMWPtrOperand);
+      Value *Replacement =
+          getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, RMWPtrOperand);
       AtomicRMWInst *NewRMW = IRB.CreateAtomicRMW(
           RMW->getOperation(), Replacement, RMWValOperand, RMW->getAlign(),
           RMW->getOrdering(), RMW->getSyncScopeID());
@@ -712,8 +722,8 @@ void AMDGPUSwLowerLDS::translateLDSMemoryOperationsToGlobalMemory(
       RMW->eraseFromParent();
     } else if (AtomicCmpXchgInst *XCHG = dyn_cast<AtomicCmpXchgInst>(Inst)) {
       Value *XCHGPtrOperand = XCHG->getPointerOperand();
-      Value *Replacement = getTranslatedGlobalMemoryGEPOfLDSPointer(
-          LoadMallocPtr, XCHGPtrOperand);
+      Value *Replacement =
+          getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, XCHGPtrOperand);
       AtomicCmpXchgInst *NewXCHG = IRB.CreateAtomicCmpXchg(
           Replacement, XCHG->getCompareOperand(), XCHG->getNewValOperand(),
           XCHG->getAlign(), XCHG->getSuccessOrdering(),
@@ -722,6 +732,59 @@ void AMDGPUSwLowerLDS::translateLDSMemoryOperationsToGlobalMemory(
       AsanInfo.Instructions.insert(NewXCHG);
       XCHG->replaceAllUsesWith(NewXCHG);
       XCHG->eraseFromParent();
+    } else if (AnyMemIntrinsic *MI = dyn_cast<AnyMemIntrinsic>(Inst)) {
+      Value *NewDest = MI->getRawDest();
+      if (MI->getDestAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
+        NewDest = getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, NewDest);
+      CallInst *NewMI = nullptr;
+      if (AnyMemSetInst *MSI = dyn_cast<AnyMemSetInst>(MI)) {
+        if (MI->isAtomic()) {
+          NewMI = IRB.CreateElementUnorderedAtomicMemSet(
+              NewDest, MSI->getValue(), MSI->getLength(),
+              MSI->getDestAlign().valueOrOne(), MSI->getElementSizeInBytes());
+        } else {
+          NewMI = IRB.CreateMemSet(NewDest, MSI->getValue(), MSI->getLength(),
+                                   MSI->getDestAlign(),
+                                   cast<MemSetInst>(MI)->isVolatile());
+        }
+      } else if (AnyMemTransferInst *MTI = dyn_cast<AnyMemTransferInst>(MI)) {
+        Value *NewSrc = MTI->getRawSource();
+        if (MTI->getSourceAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
+          NewSrc = getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, NewSrc);
+        if (MI->isAtomic()) {
+          if (MI->getIntrinsicID() ==
+              Intrinsic::memmove_element_unordered_atomic) {
+            NewMI = IRB.CreateElementUnorderedAtomicMemMove(
+                NewDest, MTI->getDestAlign().valueOrOne(), NewSrc,
+                MTI->getSourceAlign().valueOrOne(), MTI->getLength(),
+                MTI->getElementSizeInBytes());
+          } else {
+            NewMI = IRB.CreateElementUnorderedAtomicMemCpy(
+                NewDest, MTI->getDestAlign().valueOrOne(), NewSrc,
+                MTI->getSourceAlign().valueOrOne(), MTI->getLength(),
+                MTI->getElementSizeInBytes());
+          }
+        } else {
+          NewMI = IRB.CreateMemTransferInst(
+              MI->getIntrinsicID(), NewDest, MTI->getDestAlign(), NewSrc,
+              MTI->getSourceAlign(), MTI->getLength(),
+              cast<MemTransferInst>(MI)->isVolatile());
+        }
+      } else
+        reportFatalUsageError("Unimplemented LDS lowering memory intrinsic");
+      AsanInfo.Instructions.insert(NewMI);
+      MI->replaceAllUsesWith(NewMI);
+      MI->eraseFromParent();
+    } else if (AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(Inst)) {
+      Value *AIOperand = ASC->getPointerOperand();
+      Value *Replacement =
+          getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, AIOperand);
+      Value *NewAI = IRB.CreateAddrSpaceCast(Replacement, ASC->getType());
+      // Note: No need to add the instruction to AsanInfo instructions to be
+      // instrumented list. FLAT_ADDRESS ptr would have been already
+      // instrumented by asan pass prior to this pass.
+      ASC->replaceAllUsesWith(NewAI);
+      ASC->eraseFromParent();
     } else
       report_fatal_error("Unimplemented LDS lowering instruction");
   }
@@ -757,6 +820,7 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
   auto *PrevEntryBlock = &Func->getEntryBlock();
   SetVector<Instruction *> LDSInstructions;
   getLDSMemoryInstructions(Func, LDSInstructions);
+  const DataLayout &DL = M.getDataLayout();
 
   // Create malloc block.
   auto *MallocBlock = BasicBlock::Create(Ctx, "Malloc", Func, PrevEntryBlock);
@@ -764,13 +828,26 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
   // Create WIdBlock block which has instructions related to selection of
   // {0,0,0} indiex work item in the work group.
   auto *WIdBlock = BasicBlock::Create(Ctx, "WId", Func, MallocBlock);
-  IRB.SetInsertPoint(WIdBlock, WIdBlock->begin());
+
+  // Move constant-size allocas from the original entry block to the new entry
+  // block (WIdBlock) so they remain static allocas. Splice the leading cluster
+  // in bulk, then move any stragglers that are interleaved with other
+  // instructions.
+  auto SplitIt = PrevEntryBlock->getFirstNonPHIOrDbgOrAlloca();
+  WIdBlock->splice(WIdBlock->end(), PrevEntryBlock, PrevEntryBlock->begin(),
+                   SplitIt);
+  for (Instruction &I : make_early_inc_range(*PrevEntryBlock))
+    if (auto *AI = dyn_cast<AllocaInst>(&I))
+      if (isa<ConstantInt>(AI->getArraySize()))
+        AI->moveBefore(*WIdBlock, WIdBlock->end());
+
+  IRB.SetInsertPoint(WIdBlock, WIdBlock->end());
   DebugLoc FirstDL =
       getOrCreateDebugLoc(&*PrevEntryBlock->begin(), Func->getSubprogram());
   IRB.SetCurrentDebugLocation(FirstDL);
-  Value *WIdx = IRB.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {}, {});
-  Value *WIdy = IRB.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_y, {}, {});
-  Value *WIdz = IRB.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_z, {}, {});
+  Value *WIdx = IRB.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {});
+  Value *WIdy = IRB.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_y, {});
+  Value *WIdz = IRB.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_z, {});
   Value *XYOr = IRB.CreateOr(WIdx, WIdy);
   Value *XYZOr = IRB.CreateOr(XYOr, WIdz);
   Value *WIdzCond = IRB.CreateICmpEQ(XYZOr, IRB.getInt32(0));
@@ -835,7 +912,7 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
           "Dynamic LDS size query is only supported for CO V5 and later.");
     // Get size from hidden dyn_lds_size argument of kernel
     Value *ImplicitArg =
-        IRB.CreateIntrinsic(Intrinsic::amdgcn_implicitarg_ptr, {}, {});
+        IRB.CreateIntrinsic(Intrinsic::amdgcn_implicitarg_ptr, {});
     Value *HiddenDynLDSSize = IRB.CreateInBoundsGEP(
         ImplicitArg->getType(), ImplicitArg,
         {ConstantInt::get(Int64Ty, COV5_HIDDEN_DYN_LDS_SIZE_ARG)});
@@ -850,8 +927,9 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
 
   // Create a call to malloc function which does device global memory allocation
   // with size equals to all LDS global accesses size in this kernel.
-  Value *ReturnAddress =
-      IRB.CreateIntrinsic(Intrinsic::returnaddress, {}, {IRB.getInt32(0)});
+  Value *ReturnAddress = IRB.CreateIntrinsic(
+      Intrinsic::returnaddress, IRB.getPtrTy(DL.getProgramAddressSpace()),
+      {IRB.getInt32(0)});
   FunctionCallee MallocFunc = M.getOrInsertFunction(
       StringRef("__asan_malloc_impl"),
       FunctionType::get(Int64Ty, {Int64Ty, Int64Ty}, false));
@@ -877,7 +955,7 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
   XYZCondPhi->addIncoming(IRB.getInt1(0), WIdBlock);
   XYZCondPhi->addIncoming(IRB.getInt1(1), MallocBlock);
 
-  IRB.CreateIntrinsic(Intrinsic::amdgcn_s_barrier, {}, {});
+  IRB.CreateIntrinsic(Intrinsic::amdgcn_s_barrier, {});
 
   // Load malloc pointer from Sw LDS.
   Value *LoadMallocPtr =
@@ -906,7 +984,7 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
 
   // Cond Free Block
   IRB.SetInsertPoint(CondFreeBlock, CondFreeBlock->begin());
-  IRB.CreateIntrinsic(Intrinsic::amdgcn_s_barrier, {}, {});
+  IRB.CreateIntrinsic(Intrinsic::amdgcn_s_barrier, {});
   IRB.CreateCondBr(XYZCondPhi, FreeBlock, EndBlock);
 
   // Free Block
@@ -916,8 +994,9 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
   FunctionCallee AsanFreeFunc = M.getOrInsertFunction(
       StringRef("__asan_free_impl"),
       FunctionType::get(IRB.getVoidTy(), {Int64Ty, Int64Ty}, false));
-  Value *ReturnAddr =
-      IRB.CreateIntrinsic(Intrinsic::returnaddress, {}, IRB.getInt32(0));
+  Value *ReturnAddr = IRB.CreateIntrinsic(
+      Intrinsic::returnaddress, IRB.getPtrTy(DL.getProgramAddressSpace()),
+      IRB.getInt32(0));
   Value *RAPToInt = IRB.CreatePtrToInt(ReturnAddr, Int64Ty);
   Value *MallocPtrToInt = IRB.CreatePtrToInt(LoadMallocPtr, Int64Ty);
   IRB.CreateCall(AsanFreeFunc, {MallocPtrToInt, RAPToInt});
@@ -948,12 +1027,13 @@ Constant *AMDGPUSwLowerLDS::getAddressesOfVariablesInKernel(
 
   SmallVector<Constant *> Elements;
   for (auto *GV : Variables) {
-    if (!LDSParams.LDSToReplacementIndicesMap.contains(GV)) {
+    auto It = LDSParams.LDSToReplacementIndicesMap.find(GV);
+    if (It == LDSParams.LDSToReplacementIndicesMap.end()) {
       Elements.push_back(
           PoisonValue::get(IRB.getPtrTy(AMDGPUAS::GLOBAL_ADDRESS)));
       continue;
     }
-    auto &Indices = LDSParams.LDSToReplacementIndicesMap[GV];
+    auto &Indices = It->second;
     Constant *GEPIdx[] = {ConstantInt::get(Int32Ty, Indices[0]),
                           ConstantInt::get(Int32Ty, Indices[1]),
                           ConstantInt::get(Int32Ty, Indices[2])};
@@ -972,7 +1052,6 @@ void AMDGPUSwLowerLDS::buildNonKernelLDSBaseTable(
   auto &Kernels = NKLDSParams.OrderedKernels;
   if (Kernels.empty())
     return;
-  Type *Int32Ty = IRB.getInt32Ty();
   const size_t NumberKernels = Kernels.size();
   ArrayType *AllKernelsOffsetsType =
       ArrayType::get(IRB.getPtrTy(AMDGPUAS::LOCAL_ADDRESS), NumberKernels);
@@ -980,12 +1059,7 @@ void AMDGPUSwLowerLDS::buildNonKernelLDSBaseTable(
   for (size_t i = 0; i < NumberKernels; i++) {
     Function *Func = Kernels[i];
     auto &LDSParams = FuncLDSAccessInfo.KernelToLDSParametersMap[Func];
-    GlobalVariable *SwLDS = LDSParams.SwLDS;
-    assert(SwLDS);
-    Constant *GEPIdx[] = {ConstantInt::get(Int32Ty, 0)};
-    Constant *GEP =
-        ConstantExpr::getGetElementPtr(SwLDS->getType(), SwLDS, GEPIdx, true);
-    OverallConstantExprElts[i] = GEP;
+    OverallConstantExprElts[i] = LDSParams.SwLDS;
   }
   Constant *init =
       ConstantArray::get(AllKernelsOffsetsType, OverallConstantExprElts);
@@ -1050,7 +1124,7 @@ void AMDGPUSwLowerLDS::lowerNonKernelLDSAccesses(
   SetVector<Instruction *> LDSInstructions;
   getLDSMemoryInstructions(Func, LDSInstructions);
 
-  auto *KernelId = IRB.CreateIntrinsic(Intrinsic::amdgcn_lds_kernel_id, {}, {});
+  auto *KernelId = IRB.CreateIntrinsic(Intrinsic::amdgcn_lds_kernel_id, {});
   GlobalVariable *LDSBaseTable = NKLDSParams.LDSBaseTable;
   GlobalVariable *LDSOffsetTable = NKLDSParams.LDSOffsetTable;
   auto &OrdereLDSGlobals = NKLDSParams.OrdereLDSGlobals;
@@ -1062,8 +1136,7 @@ void AMDGPUSwLowerLDS::lowerNonKernelLDSAccesses(
       IRB.CreateLoad(IRB.getPtrTy(AMDGPUAS::GLOBAL_ADDRESS), BaseLoad);
 
   for (GlobalVariable *GV : LDSGlobals) {
-    const auto *GVIt =
-        std::find(OrdereLDSGlobals.begin(), OrdereLDSGlobals.end(), GV);
+    const auto *GVIt = llvm::find(OrdereLDSGlobals, GV);
     assert(GVIt != OrdereLDSGlobals.end());
     uint32_t GVOffset = std::distance(OrdereLDSGlobals.begin(), GVIt);
 
@@ -1109,10 +1182,21 @@ void AMDGPUSwLowerLDS::initAsanInfo() {
   uint64_t Offset;
   int Scale;
   bool OrShadowOffset;
-  llvm::getAddressSanitizerParams(Triple(AMDGPUTM.getTargetTriple()), LongSize,
-                                  false, &Offset, &Scale, &OrShadowOffset);
+  llvm::getAddressSanitizerParams(M.getTargetTriple(), LongSize, false, &Offset,
+                                  &Scale, &OrShadowOffset);
   AsanInfo.Scale = Scale;
   AsanInfo.Offset = Offset;
+}
+
+static bool hasFnWithSanitizeAddressAttr(FunctionVariableMap &LDSAccesses) {
+  for (auto &K : LDSAccesses) {
+    Function *F = K.first;
+    if (!F)
+      continue;
+    if (F->hasFnAttribute(Attribute::SanitizeAddress))
+      return true;
+  }
+  return false;
 }
 
 bool AMDGPUSwLowerLDS::run() {
@@ -1120,10 +1204,19 @@ bool AMDGPUSwLowerLDS::run() {
 
   CallGraph CG = CallGraph(M);
 
-  Changed |= eliminateConstantExprUsesOfLDSFromAllInstructions(M);
+  Changed |=
+      eliminateGVConstantExprUsesFromAllInstructions(M, isLDSVariableToLower);
 
   // Get all the direct and indirect access of LDS for all the kernels.
-  LDSUsesInfoTy LDSUsesInfo = getTransitiveUsesOfLDS(CG, M);
+  GVUsesInfoTy LDSUsesInfo = getTransitiveUsesOfLDSForLowering(CG, M);
+
+  // Flag to decide whether to lower all the LDS accesses
+  // based on sanitize_address attribute.
+  bool LowerAllLDS = hasFnWithSanitizeAddressAttr(LDSUsesInfo.DirectAccess) ||
+                     hasFnWithSanitizeAddressAttr(LDSUsesInfo.IndirectAccess);
+
+  if (!LowerAllLDS)
+    return Changed;
 
   // Utility to group LDS access into direct, indirect, static and dynamic.
   auto PopulateKernelStaticDynamicLDS = [&](FunctionVariableMap &LDSAccesses,
@@ -1133,9 +1226,7 @@ bool AMDGPUSwLowerLDS::run() {
       if (!F || K.second.empty())
         continue;
 
-      assert(isKernelLDS(F));
-      if (!F->hasFnAttribute(Attribute::SanitizeAddress))
-        continue;
+      assert(isKernel(*F));
 
       // Only inserts if key isn't already in the map.
       FuncLDSAccessInfo.KernelToLDSParametersMap.insert(
@@ -1161,8 +1252,8 @@ bool AMDGPUSwLowerLDS::run() {
     }
   };
 
-  PopulateKernelStaticDynamicLDS(LDSUsesInfo.direct_access, true);
-  PopulateKernelStaticDynamicLDS(LDSUsesInfo.indirect_access, false);
+  PopulateKernelStaticDynamicLDS(LDSUsesInfo.DirectAccess, true);
+  PopulateKernelStaticDynamicLDS(LDSUsesInfo.IndirectAccess, false);
 
   // Get address sanitizer scale.
   initAsanInfo();
@@ -1176,10 +1267,13 @@ bool AMDGPUSwLowerLDS::run() {
         LDSParams.IndirectAccess.DynamicLDSGlobals.empty()) {
       Changed = false;
     } else {
-      removeFnAttrFromReachable(CG, Func,
-                                {"amdgpu-no-workitem-id-x",
-                                 "amdgpu-no-workitem-id-y",
-                                 "amdgpu-no-workitem-id-z"});
+      removeFnAttrFromReachable(
+          CG, Func,
+          {"amdgpu-no-workitem-id-x", "amdgpu-no-workitem-id-y",
+           "amdgpu-no-workitem-id-z", "amdgpu-no-heap-ptr"});
+      if (!LDSParams.IndirectAccess.StaticLDSGlobals.empty() ||
+          !LDSParams.IndirectAccess.DynamicLDSGlobals.empty())
+        removeFnAttrFromReachable(CG, Func, {"amdgpu-no-lds-kernel-id"});
       reorderStaticDynamicIndirectLDSSet(LDSParams);
       buildSwLDSGlobal(Func);
       buildSwDynLDSGlobal(Func);
@@ -1199,6 +1293,7 @@ bool AMDGPUSwLowerLDS::run() {
   // Get non-kernels with LDS ptr as argument and called by kernels.
   getNonKernelsWithLDSArguments(CG);
 
+  // Lower LDS accesses in non-kernels.
   if (!FuncLDSAccessInfo.NonKernelToLDSAccessMap.empty() ||
       !FuncLDSAccessInfo.NonKernelsWithLDSArgument.empty()) {
     NonKernelLDSParameters NKLDSParams;
@@ -1217,7 +1312,7 @@ bool AMDGPUSwLowerLDS::run() {
     }
     for (Function *Func : FuncLDSAccessInfo.NonKernelsWithLDSArgument) {
       auto &K = FuncLDSAccessInfo.NonKernelToLDSAccessMap;
-      if (K.find(Func) != K.end())
+      if (K.contains(Func))
         continue;
       SetVector<llvm::GlobalVariable *> Vec;
       lowerNonKernelLDSAccesses(Func, Vec, NKLDSParams);
@@ -1242,9 +1337,7 @@ bool AMDGPUSwLowerLDS::run() {
     for (Instruction *Inst : AsanInfo.Instructions) {
       SmallVector<InterestingMemoryOperand, 1> InterestingOperands;
       getInterestingMemoryOperands(M, Inst, InterestingOperands);
-      for (auto &Operand : InterestingOperands) {
-        OperandsToInstrument.push_back(Operand);
-      }
+      llvm::append_range(OperandsToInstrument, InterestingOperands);
     }
     for (auto &Operand : OperandsToInstrument) {
       Value *Addr = Operand.getPtr();
@@ -1261,12 +1354,8 @@ bool AMDGPUSwLowerLDS::run() {
 
 class AMDGPUSwLowerLDSLegacy : public ModulePass {
 public:
-  const AMDGPUTargetMachine *AMDGPUTM;
   static char ID;
-  AMDGPUSwLowerLDSLegacy(const AMDGPUTargetMachine *TM)
-      : ModulePass(ID), AMDGPUTM(TM) {
-    initializeAMDGPUSwLowerLDSLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  AMDGPUSwLowerLDSLegacy() : ModulePass(ID) {}
   bool runOnModule(Module &M) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addPreserved<DominatorTreeWrapperPass>();
@@ -1293,18 +1382,14 @@ bool AMDGPUSwLowerLDSLegacy::runOnModule(Module &M) {
   auto DTCallback = [&DTW](Function &F) -> DominatorTree * {
     return DTW ? &DTW->getDomTree() : nullptr;
   };
-  if (!AMDGPUTM) {
-    auto &TPC = getAnalysis<TargetPassConfig>();
-    AMDGPUTM = &TPC.getTM<AMDGPUTargetMachine>();
-  }
-  AMDGPUSwLowerLDS SwLowerLDSImpl(M, *AMDGPUTM, DTCallback);
+
+  AMDGPUSwLowerLDS SwLowerLDSImpl(M, DTCallback);
   bool IsChanged = SwLowerLDSImpl.run();
   return IsChanged;
 }
 
-ModulePass *
-llvm::createAMDGPUSwLowerLDSLegacyPass(const AMDGPUTargetMachine *TM) {
-  return new AMDGPUSwLowerLDSLegacy(TM);
+ModulePass *llvm::createAMDGPUSwLowerLDSLegacyPass() {
+  return new AMDGPUSwLowerLDSLegacy();
 }
 
 PreservedAnalyses AMDGPUSwLowerLDSPass::run(Module &M,
@@ -1317,7 +1402,7 @@ PreservedAnalyses AMDGPUSwLowerLDSPass::run(Module &M,
   auto DTCallback = [&FAM](Function &F) -> DominatorTree * {
     return &FAM.getResult<DominatorTreeAnalysis>(F);
   };
-  AMDGPUSwLowerLDS SwLowerLDSImpl(M, TM, DTCallback);
+  AMDGPUSwLowerLDS SwLowerLDSImpl(M, DTCallback);
   bool IsChanged = SwLowerLDSImpl.run();
   if (!IsChanged)
     return PreservedAnalyses::all();

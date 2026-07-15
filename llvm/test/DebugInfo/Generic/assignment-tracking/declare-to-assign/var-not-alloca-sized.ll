@@ -1,5 +1,4 @@
 ; RUN: opt -passes=declare-to-assign -S %s -o - | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators -passes=declare-to-assign -S %s -o - | FileCheck %s
 
 ;; The variable doesn't fill the whole alloca which has a range of different
 ;; sized stores to it, overlapping (or not) the variable in various ways. Check
@@ -17,7 +16,7 @@ entry:
   %0 = alloca [4 x i16], align 4
   call void @llvm.dbg.declare(metadata ptr %0, metadata !15, metadata !DIExpression()), !dbg !16
 ; CHECK: %0 = alloca [4 x i16], align 4, !DIAssignID ![[ID1:[0-9]+]]
-; CHECK-NEXT: #dbg_assign(i1 undef, ![[#]], !DIExpression(), ![[ID1]], ptr %0, !DIExpression(),
+; CHECK-NEXT: #dbg_assign(i1 poison, ![[#]], !DIExpression(), ![[ID1]], ptr %0, !DIExpression(),
   %a = getelementptr inbounds [4 x i16], ptr %0, i32 0, i32 0
   %a.5 = getelementptr inbounds [4 x i16], ptr %0, i32 0, i32 1
   %b = getelementptr inbounds [4 x i16], ptr %0, i32 0, i32 2

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple i386-pc-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple i386-pc-linux-gnu -emit-llvm -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
 
 struct AStruct { 
   int i;
@@ -27,7 +28,7 @@ void foo(void) {
 }
 
 // CHECK: @f1.l0 = internal global i32 ptrtoint (ptr @f1 to i32)
-int f1(void) { static int l0 = (unsigned) f1; }
+void f1(void) { static int l0 = (unsigned) f1; }
 
 // PR7044
 char *f2(char key) {

@@ -114,10 +114,14 @@ define <2 x float> @select_fcmp_fadd_vec(<2 x float> %x) {
 }
 
 
+; Should not fold, because the fmul by identity may produce a different NaN
+; value.
 define float @select_fcmp_fmul_nonrefinement(float %x, float %y) {
 ; CHECK-LABEL: @select_fcmp_fmul_nonrefinement(
-; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    ret float [[FMUL]]
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp oeq float [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[FCMP]], float [[Y]], float [[FMUL]]
+; CHECK-NEXT:    ret float [[SEL]]
 ;
   %fcmp = fcmp oeq float %x, 1.0
   %fmul = fmul float %y, %x
@@ -137,8 +141,10 @@ define float @select_fcmp_fmul(float %x) {
 
 define float @select_fcmp_fdiv_nonrefinement(float %x, float %y) {
 ; CHECK-LABEL: @select_fcmp_fdiv_nonrefinement(
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    ret float [[FDIV]]
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp oeq float [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[FCMP]], float [[Y]], float [[FDIV]]
+; CHECK-NEXT:    ret float [[SEL]]
 ;
   %fcmp = fcmp oeq float %x, 1.0
   %fdiv = fdiv float %y, %x
@@ -189,7 +195,7 @@ define <4 x float> @select_fcmp_shufflevector_select(<4 x float> %x) {
 ; The hexfloat constant is PI / 2.
 define float @select_fcmp_sin_nonrefinement(float %x) {
 ; CHECK-LABEL: @select_fcmp_sin_nonrefinement(
-; CHECK-NEXT:    [[FCMP:%.*]] = fcmp oeq float [[X:%.*]], 0x3FF921FB60000000
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp oeq float [[X:%.*]], f0x3FC90FDB
 ; CHECK-NEXT:    [[SIN:%.*]] = call float @llvm.sin.f32(float [[X]])
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[FCMP]], float 1.000000e+00, float [[SIN]]
 ; CHECK-NEXT:    ret float [[SEL]]
@@ -214,7 +220,7 @@ define float @select_fcmp_sin(float %x) {
 ; The hexfloat constant is PI.
 define float @select_fcmp_cos_nonrefinement(float %x) {
 ; CHECK-LABEL: @select_fcmp_cos_nonrefinement(
-; CHECK-NEXT:    [[FCMP:%.*]] = fcmp oeq float [[X:%.*]], 0x400921FB60000000
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp oeq float [[X:%.*]], f0x40490FDB
 ; CHECK-NEXT:    [[COS:%.*]] = call float @llvm.cos.f32(float [[X]])
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[FCMP]], float -1.000000e+00, float [[COS]]
 ; CHECK-NEXT:    ret float [[SEL]]

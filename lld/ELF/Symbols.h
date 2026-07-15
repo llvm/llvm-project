@@ -40,17 +40,25 @@ const ELFSyncStream &operator<<(const ELFSyncStream &, const Symbol *);
 void printTraceSymbol(const Symbol &sym, StringRef name);
 
 enum {
-  NEEDS_GOT = 1 << 0,
-  NEEDS_PLT = 1 << 1,
-  HAS_DIRECT_RELOC = 1 << 2,
+  // True if an undefined or shared symbol is used from a live section.
+  //
+  // NOTE: In Writer.cpp the field is used to mark local defined symbols
+  // which are referenced by relocations when -r or --emit-relocs is given.
+  USED = 1 << 0,
+  NEEDS_GOT = 1 << 1,
+  NEEDS_PLT = 1 << 2,
+  HAS_DIRECT_RELOC = 1 << 3,
   // True if this symbol needs a canonical PLT entry, or (during
   // postScanRelocations) a copy relocation.
-  NEEDS_COPY = 1 << 3,
-  NEEDS_TLSDESC = 1 << 4,
-  NEEDS_TLSGD = 1 << 5,
-  NEEDS_TLSGD_TO_IE = 1 << 6,
+  NEEDS_COPY = 1 << 4,
+  NEEDS_TLSDESC = 1 << 5,
+  NEEDS_TLSGD = 1 << 6,
   NEEDS_GOT_DTPREL = 1 << 7,
   NEEDS_TLSIE = 1 << 8,
+  NEEDS_GOT_AUTH = 1 << 9,
+  NEEDS_GOT_NONAUTH = 1 << 10,
+  NEEDS_TLSDESC_AUTH = 1 << 11,
+  NEEDS_TLSDESC_NONAUTH = 1 << 12,
 };
 
 // The base class for real symbol classes.
@@ -97,10 +105,10 @@ public:
 
   uint8_t symbolKind;
 
-  // The partition whose dynamic symbol table contains this symbol's definition.
-  uint8_t partition;
-
   // True if this symbol is preemptible at load time.
+  //
+  // Primarily set in two locations, (a) parseVersionAndComputeIsPreemptible and
+  // (b) demoteSymbolsAndComputeIsPreemptible.
   LLVM_PREFERRED_TYPE(bool)
   uint8_t isPreemptible : 1;
 
@@ -110,13 +118,6 @@ public:
   // are unreferenced except by other bitcode objects.
   LLVM_PREFERRED_TYPE(bool)
   uint8_t isUsedInRegularObj : 1;
-
-  // True if an undefined or shared symbol is used from a live section.
-  //
-  // NOTE: In Writer.cpp the field is used to mark local defined symbols
-  // which are referenced by relocations when -r or --emit-relocs is given.
-  LLVM_PREFERRED_TYPE(bool)
-  uint8_t used : 1;
 
   // Used by a Defined symbol with protected or default visibility, to record
   // whether it is required to be exported into .dynsym. This is set when any of
@@ -128,25 +129,10 @@ public:
   //   file/bitcode sets this property, unless suppressed by LTO
   //   canBeOmittedFromSymbolTable().
   LLVM_PREFERRED_TYPE(bool)
-  uint8_t exportDynamic : 1;
+  uint8_t isExported : 1;
 
-  // True if the symbol is in the --dynamic-list file. A Defined symbol with
-  // protected or default visibility with this property is required to be
-  // exported into .dynsym.
   LLVM_PREFERRED_TYPE(bool)
-  uint8_t inDynamicList : 1;
-
-  // Used to track if there has been at least one undefined reference to the
-  // symbol. For Undefined and SharedSymbol, the binding may change to STB_WEAK
-  // if the first undefined reference from a non-shared object is weak.
-  LLVM_PREFERRED_TYPE(bool)
-  uint8_t referenced : 1;
-
-  // Used to track if this symbol will be referenced after wrapping is performed
-  // (i.e. this will be true for foo if __real_foo is referenced, and will be
-  // true for __wrap_foo if foo is referenced).
-  LLVM_PREFERRED_TYPE(bool)
-  uint8_t referencedAfterWrap : 1;
+  uint8_t ltoCanOmit : 1;
 
   // True if this symbol is specified by --trace-symbol option.
   LLVM_PREFERRED_TYPE(bool)
@@ -163,7 +149,6 @@ public:
     stOther = (stOther & ~3) | visibility;
   }
 
-  bool includeInDynsym(Ctx &) const;
   uint8_t computeBinding(Ctx &) const;
   bool isGlobal() const { return binding == llvm::ELF::STB_GLOBAL; }
   bool isWeak() const { return binding == llvm::ELF::STB_WEAK; }
@@ -251,8 +236,13 @@ protected:
   Symbol(Kind k, InputFile *file, StringRef name, uint8_t binding,
          uint8_t stOther, uint8_t type)
       : file(file), nameData(name.data()), nameSize(name.size()), type(type),
-        binding(binding), stOther(stOther), symbolKind(k), exportDynamic(false),
-        archSpecificBit(false) {}
+        binding(binding), stOther(stOther), symbolKind(k), isPreemptible(false),
+        isUsedInRegularObj(false), isExported(false), ltoCanOmit(false),
+        traced(false), hasVersionSuffix(false), isInIplt(false),
+        gotInIgot(false), folded(false), archSpecificBit(false),
+        scriptDefined(false), dsoDefined(false), dsoProtected(false),
+        versionScriptAssigned(false), thunkAccessed(false),
+        inDynamicList(false), referenced(false), referencedAfterWrap(false) {}
 
   void overwrite(Symbol &sym, Kind k) const {
     if (sym.traced)
@@ -311,18 +301,20 @@ public:
 
   // Temporary flags used to communicate which symbol entries need PLT and GOT
   // entries during postScanRelocations();
-  std::atomic<uint16_t> flags;
+  std::atomic<uint16_t> flags = 0;
 
   // A ctx.symAux index used to access GOT/PLT entry indexes. This is allocated
   // in postScanRelocations().
-  uint32_t auxIdx;
-  uint32_t dynsymIndex;
+  uint32_t auxIdx = 0;
+  uint32_t dynsymIndex = 0;
 
   // If `file` is SharedFile (for SharedSymbol or copy-relocated Defined), this
   // represents the Verdef index within the input DSO, which will be converted
   // to a Verneed index in the output. Otherwise, this represents the Verdef
   // index (VER_NDX_LOCAL, VER_NDX_GLOBAL, or a named version).
-  uint16_t versionId;
+  // VER_NDX_LOCAL indicates a defined symbol that has been localized by a
+  // version script's local: directive or --exclude-libs.
+  uint16_t versionId = 0;
   LLVM_PREFERRED_TYPE(bool)
   uint8_t versionScriptAssigned : 1;
 
@@ -330,18 +322,36 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   uint8_t thunkAccessed : 1;
 
+  // True if the symbol is in the --dynamic-list file. A Defined symbol with
+  // protected or default visibility with this property is required to be
+  // exported into .dynsym.
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t inDynamicList : 1;
+
+  // Used to track if there has been at least one undefined reference to the
+  // symbol. For Undefined and SharedSymbol, the binding may change to STB_WEAK
+  // if the first undefined reference from a non-shared object is weak.
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t referenced : 1;
+
+  // Used to track if this symbol will be referenced after wrapping is performed
+  // (i.e. this will be true for foo if __real_foo is referenced, and will be
+  // true for __wrap_foo if foo is referenced).
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t referencedAfterWrap : 1;
+
   void setFlags(uint16_t bits) {
     flags.fetch_or(bits, std::memory_order_relaxed);
   }
   bool hasFlag(uint16_t bit) const {
-    assert(bit && (bit & (bit - 1)) == 0 && "bit must be a power of 2");
+    assert(llvm::has_single_bit(bit) && "bit must be a power of 2");
     return flags.load(std::memory_order_relaxed) & bit;
   }
 
   bool needsDynReloc() const {
     return flags.load(std::memory_order_relaxed) &
            (NEEDS_COPY | NEEDS_GOT | NEEDS_PLT | NEEDS_TLSDESC | NEEDS_TLSGD |
-            NEEDS_TLSGD_TO_IE | NEEDS_GOT_DTPREL | NEEDS_TLSIE);
+            NEEDS_GOT_DTPREL | NEEDS_TLSIE);
   }
   void allocateAux(Ctx &ctx) {
     assert(auxIdx == 0);
@@ -365,7 +375,6 @@ public:
           SectionBase *section)
       : Symbol(DefinedKind, file, name, binding, stOther, type), value(value),
         size(size), section(section) {
-    exportDynamic = ctx.arg.exportDynamic;
   }
   void overwrite(Symbol &sym) const;
 
@@ -403,7 +412,6 @@ public:
                uint8_t stOther, uint8_t type, uint64_t alignment, uint64_t size)
       : Symbol(CommonKind, file, name, binding, stOther, type),
         alignment(alignment), size(size) {
-    exportDynamic = ctx.arg.exportDynamic;
   }
   void overwrite(Symbol &sym) const {
     Symbol::overwrite(sym, CommonKind);
@@ -447,7 +455,6 @@ public:
                uint32_t alignment)
       : Symbol(SharedKind, &file, name, binding, stOther, type), value(value),
         size(size), alignment(alignment) {
-    exportDynamic = true;
     dsoProtected = visibility() == llvm::ELF::STV_PROTECTED;
     // GNU ifunc is a mechanism to allow user-supplied functions to
     // resolve PLT slot values at load-time. This is contrary to the
@@ -518,7 +525,6 @@ union SymbolUnion {
 
 template <typename... T> Defined *makeDefined(T &&...args) {
   auto *sym = getSpecificAllocSingleton<SymbolUnion>().Allocate();
-  memset(sym, 0, sizeof(Symbol));
   auto &s = *new (reinterpret_cast<Defined *>(sym)) Defined(std::forward<T>(args)...);
   return &s;
 }
@@ -527,6 +533,7 @@ void reportDuplicate(Ctx &, const Symbol &sym, const InputFile *newFile,
                      InputSectionBase *errSec, uint64_t errOffset);
 void maybeWarnUnorderableSymbol(Ctx &, const Symbol *sym);
 bool computeIsPreemptible(Ctx &, const Symbol &sym);
+void parseVersionAndComputeIsPreemptible(Ctx &);
 
 } // namespace lld::elf
 

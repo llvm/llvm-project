@@ -139,7 +139,7 @@ def _ParseIndexPage(index_page_html):
 
 
 def _ReadSymbolPage(path, name, qual_name):
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         return _ParseSymbolPage(f.read(), name, qual_name)
 
 
@@ -156,7 +156,7 @@ def _GetSymbols(pool, root_dir, index_page_name, namespace, variants_to_accept):
     #      contains the defined header.
     #   2. Parse the symbol page to get the defined header.
     index_page_path = os.path.join(root_dir, index_page_name)
-    with open(index_page_path, "r") as f:
+    with open(index_page_path, "r", encoding="utf-8") as f:
         # Read each symbol page in parallel.
         results = []  # (symbol_name, promise of [header...])
         for symbol_name, symbol_page_path, variant in _ParseIndexPage(f.read()):

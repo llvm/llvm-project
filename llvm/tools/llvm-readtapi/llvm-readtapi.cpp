@@ -17,7 +17,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -45,12 +45,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "TapiOpts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "TapiOpts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -60,7 +61,8 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class TAPIOptTable : public opt::GenericOptTable {
 public:
-  TAPIOptTable() : opt::GenericOptTable(InfoTable) {
+  TAPIOptTable()
+      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {
     setGroupedShortOptions(true);
   }
 };
@@ -356,17 +358,19 @@ static void stubifyDirectory(const StringRef InputPath, Context &Ctx) {
     SmallString<PATH_MAX> NormalizedPath(Path);
     replace_extension(NormalizedPath, "");
 
+    auto [It, Inserted] = Dylibs.try_emplace(NormalizedPath.str());
+
     if ((IF->getFileType() == FileType::MachO_DynamicLibrary) ||
         (IF->getFileType() == FileType::MachO_DynamicLibrary_Stub)) {
       OriginalNames[NormalizedPath.c_str()] = IF->getPath();
 
       // Don't add this MachO dynamic library because we already have a
       // text-based stub recorded for this path.
-      if (Dylibs.count(NormalizedPath.c_str()))
+      if (!Inserted)
         continue;
     }
 
-    Dylibs[NormalizedPath.c_str()] = std::move(IF);
+    It->second = std::move(IF);
   }
 
   for (auto &Lib : Dylibs) {
@@ -483,8 +487,7 @@ static void setStubOptions(opt::InputArgList &Args, StubOptions &Opt) {
   Opt.TraceLibs = Args.hasArg(OPT_t);
 }
 
-int main(int Argc, char **Argv) {
-  InitLLVM X(Argc, Argv);
+int llvm_readtapi_main(int Argc, char **Argv, const llvm::ToolContext &) {
   BumpPtrAllocator A;
   StringSaver Saver(A);
   TAPIOptTable Tbl;

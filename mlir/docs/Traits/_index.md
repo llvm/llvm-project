@@ -8,10 +8,9 @@ mechanism which abstracts implementation details and properties that are common
 across many different attributes/operations/types/etc.. `Traits` may be used to
 specify special properties and constraints of the object, including whether an
 operation has side effects or that its output has the same type as the input.
-Some examples of operation traits are `Commutative`, `SingleResult`,
-`Terminator`, etc. See the more comprehensive list of
-[operation traits](#operation-traits-list) below for more examples of what is
-possible.
+Some examples of operation traits are `Commutative`, `Terminator`, etc. See the
+more comprehensive list of [operation traits](#operation-traits-list) below for
+more examples of what is possible.
 
 ## Defining a Trait
 
@@ -273,6 +272,16 @@ trait. In particular, broadcasting behavior is not allowed. See the comments on
 This trait provides APIs and verifiers for operations that can only be nested
 within regions that are attached to operations of `ParentOpType`.
 
+### HasAncestor
+
+*   `OpTrait::HasAncestor<typename AncestorOpType>` -- `HasAncestor<string op>`
+    or `AncestorOneOf<list<string> opList>`
+
+This trait provides APIs and verifiers for operations that must appear somewhere
+inside a region attached to an operation of `AncestorOpType`. Unlike `HasParent`,
+which checks only the immediate parent, `HasAncestor` walks the full ancestor
+chain.
+
 ### IsolatedFromAbove
 
 *   `OpTrait::IsIsolatedFromAbove` -- `IsolatedFromAbove`
@@ -340,3 +349,17 @@ This trait removes the requirement on regions held by an operation to have
 [terminator operations](../LangRef.md/#control-flow-and-ssacfg-regions) at the end of a block.
 This requires that these regions have a single block. An example of operation
 using this trait is the top-level `ModuleOp`.
+
+### TokenProducerTrait
+
+*   `OpTrait::TokenProducerTrait` -- `TokenProducerTrait`
+
+This trait marks operations that are allowed to produce builtin `token` values
+as operation results or as region entry block arguments.
+
+### TokenConsumerTrait
+
+*   `OpTrait::TokenConsumerTrait` -- `TokenConsumerTrait`
+
+This trait marks operations that are allowed to consume builtin `token` values
+as operands.

@@ -10,12 +10,7 @@
 #include "COFFLinkerContext.h"
 #include "InputFiles.h"
 #include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Memory.h"
-#include "lld/Common/Strings.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Demangle/Demangle.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -28,8 +23,8 @@ static_assert(sizeof(SymbolUnion) <= 48,
               "symbols should be optimized for memory usage");
 
 // Returns a symbol name for an error message.
-static std::string maybeDemangleSymbol(const COFFLinkerContext &ctx,
-                                       StringRef symName) {
+std::string maybeDemangleSymbol(const COFFLinkerContext &ctx,
+                                StringRef symName) {
   if (ctx.config.demangle) {
     std::string prefix;
     StringRef prefixless = symName;
@@ -51,6 +46,13 @@ std::string toString(const COFFLinkerContext &ctx, coff::Symbol &b) {
 std::string toCOFFString(const COFFLinkerContext &ctx,
                          const Archive::Symbol &b) {
   return maybeDemangleSymbol(ctx, b.getName());
+}
+
+const COFFSyncStream &
+coff::operator<<(const COFFSyncStream &s,
+                 const llvm::object::Archive::Symbol *sym) {
+  s << maybeDemangleSymbol(s.ctx, sym->getName());
+  return s;
 }
 
 namespace coff {
@@ -89,7 +91,14 @@ bool Symbol::isLive() const {
   return true;
 }
 
-// MinGW specific.
+Defined *Symbol::getDefined() {
+  if (auto d = dyn_cast<Defined>(this))
+    return d;
+  if (auto u = dyn_cast<Undefined>(this))
+    return u->getDefinedWeakAlias();
+  return nullptr;
+}
+
 void Symbol::replaceKeepingName(Symbol *other, size_t size) {
   StringRef origName = getName();
   memcpy(this, other, size);
@@ -155,10 +164,10 @@ bool Undefined::resolveWeakAlias() {
 MemoryBufferRef LazyArchive::getMemberBuffer() {
   Archive::Child c =
       CHECK(sym.getMember(), "could not get the member for symbol " +
-                                 toCOFFString(file->ctx, sym));
+                                 toCOFFString(file->symtab.ctx, sym));
   return CHECK(c.getMemoryBufferRef(),
                "could not get the buffer for the member defining symbol " +
-                   toCOFFString(file->ctx, sym));
+                   toCOFFString(file->symtab.ctx, sym));
 }
 } // namespace coff
 } // namespace lld

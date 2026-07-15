@@ -28,7 +28,7 @@ define ptr @test3(i32 %n) {
 ; CHECK:       sw.default:
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi ptr [ @g4, [[SW_DEFAULT]] ], [ getelementptr inbounds (i32, ptr inttoptr (i32 mul (i32 ptrtoint (ptr @g3 to i32), i32 2) to ptr), i32 1), [[SW_BB2]] ], [ @g2, [[SW_BB1]] ], [ @g1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi ptr [ @g4, [[SW_DEFAULT]] ], [ getelementptr inbounds (i32, ptr inttoptr (i32 add (i32 ptrtoint (ptr @g3 to i32), i32 2) to ptr), i32 1), [[SW_BB2]] ], [ @g2, [[SW_BB1]] ], [ @g1, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret ptr [[RETVAL_0]]
 ;
 entry:
@@ -51,6 +51,6 @@ sw.default:
   br label %return
 
 return:
-  %retval.0 = phi ptr [ @g4, %sw.default ], [ getelementptr inbounds (i32, ptr inttoptr (i32 mul (i32 ptrtoint (ptr @g3 to i32), i32 2) to ptr), i32 1), %sw.bb2 ], [ @g2, %sw.bb1 ], [ @g1, %sw.bb ]
+  %retval.0 = phi ptr [ @g4, %sw.default ], [ getelementptr inbounds (i32, ptr inttoptr (i32 add (i32 ptrtoint (ptr @g3 to i32), i32 2) to ptr), i32 1), %sw.bb2 ], [ @g2, %sw.bb1 ], [ @g1, %sw.bb ]
   ret ptr %retval.0
 }

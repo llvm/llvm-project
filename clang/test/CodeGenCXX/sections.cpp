@@ -18,19 +18,19 @@ int D = 1;
 #pragma data_seg(".data")
 int a = 1;
 extern const Mutable mutable_custom_section;
-const Mutable mutable_custom_section; // expected-warning {{`#pragma const_seg` for section ".my_const" will not apply to 'mutable_custom_section' due to the presence of a mutable field}}
+const Mutable mutable_custom_section; // expected-warning {{`#pragma const_seg` for section '".my_const"' will not apply to 'mutable_custom_section' due to the presence of a mutable field}}
 extern const Normal normal_custom_section;
 const Normal normal_custom_section;
 struct NonTrivialDtor {
   ~NonTrivialDtor();
 };
 extern const NonTrivialDtor non_trivial_dtor_custom_section;
-const NonTrivialDtor non_trivial_dtor_custom_section; // expected-warning {{`#pragma const_seg` for section ".my_const" will not apply to 'non_trivial_dtor_custom_section' due to the presence of a non-trivial destructor}}
+const NonTrivialDtor non_trivial_dtor_custom_section; // expected-warning {{`#pragma const_seg` for section '".my_const"' will not apply to 'non_trivial_dtor_custom_section' due to the presence of a non-trivial destructor}}
 struct NonTrivialCtor {
   NonTrivialCtor();
 };
 extern const NonTrivialCtor non_trivial_ctor_custom_section;
-const NonTrivialCtor non_trivial_ctor_custom_section; // expected-warning {{`#pragma const_seg` for section ".my_const" will not apply to 'non_trivial_ctor_custom_section' due to the presence of a non-trivial constructor}}
+const NonTrivialCtor non_trivial_ctor_custom_section; // expected-warning {{`#pragma const_seg` for section '".my_const"' will not apply to 'non_trivial_ctor_custom_section' due to the presence of a non-trivial constructor}}
 #pragma data_seg(push, label, ".data2")
 extern const int b;
 const int b = 1;

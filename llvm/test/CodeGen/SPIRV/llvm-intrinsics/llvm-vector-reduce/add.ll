@@ -21,7 +21,7 @@
 ; CHECK-DAG: %[[LongVec3:.*]] = OpTypeVector %[[Long]] 3
 
 ; CHECK: OpFunction
-; CHECK: %[[Shuffle1:.*]] = OpVectorShuffle %[[CharVec2]] %[[#]] %[[#]] 1 -1
+; CHECK: %[[Shuffle1:.*]] = OpVectorShuffle %[[CharVec2]] %[[#]] %[[#]] 1 0xFFFFFFFF
 ; CHECK: %[[Added1:.*]] = OpIAdd %[[CharVec2]] %[[#]] %[[#]]
 ; CHECK: %[[Vec2CharR:.*]] = OpCompositeExtract %[[Char]] %[[Added1]] 0
 ; CHECK: OpReturnValue %[[Vec2CharR]]
@@ -38,7 +38,7 @@
 ; CHECK: OpFunctionEnd
 
 ; CHECK: OpFunction
-; CHECK: %[[Shuffle1:.*]] = OpVectorShuffle %[[ShortVec2]] %[[#]] %[[#]] 1 -1
+; CHECK: %[[Shuffle1:.*]] = OpVectorShuffle %[[ShortVec2]] %[[#]] %[[#]] 1 0xFFFFFFFF
 ; CHECK: %[[Added1:.*]] = OpIAdd %[[ShortVec2]] %[[#]] %[[#]]
 ; CHECK: %[[Vec2ShortR:.*]] = OpCompositeExtract %[[Short]] %[[Added1]] 0
 ; CHECK: OpReturnValue %[[Vec2ShortR]]
@@ -55,7 +55,7 @@
 ; CHECK: OpFunctionEnd
 
 ; CHECK: OpFunction
-; CHECK: %[[Shuffle1:.*]] = OpVectorShuffle %[[IntVec2]] %[[#]] %[[#]] 1 -1
+; CHECK: %[[Shuffle1:.*]] = OpVectorShuffle %[[IntVec2]] %[[#]] %[[#]] 1 0xFFFFFFFF
 ; CHECK: %[[Added1:.*]] = OpIAdd %[[IntVec2]] %[[#]] %[[#]]
 ; CHECK: %[[Vec2IntR:.*]] = OpCompositeExtract %[[Int]] %[[Added1]] 0
 ; CHECK: OpReturnValue %[[Vec2IntR]]
@@ -72,7 +72,7 @@
 ; CHECK: OpFunctionEnd
 
 ; CHECK: OpFunction
-; CHECK: %[[Shuffle1:.*]] = OpVectorShuffle %[[LongVec2]] %[[#]] %[[#]] 1 -1
+; CHECK: %[[Shuffle1:.*]] = OpVectorShuffle %[[LongVec2]] %[[#]] %[[#]] 1 0xFFFFFFFF
 ; CHECK: %[[Added1:.*]] = OpIAdd %[[LongVec2]] %[[#]] %[[#]]
 ; CHECK: %[[Vec2LongR:.*]] = OpCompositeExtract %[[Long]] %[[Added1]] 0
 ; CHECK: OpReturnValue %[[Vec2LongR]]

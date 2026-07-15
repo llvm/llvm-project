@@ -17,7 +17,6 @@
 #include "Config.h"
 #include "InputFiles.h"
 #include "Symbols.h"
-#include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/STLExtras.h"
@@ -86,10 +85,9 @@ Symbol *SymbolTable::insert(StringRef name) {
   Symbol *sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
   symVector.push_back(sym);
 
-  // *sym was not initialized by a constructor. Initialize all Symbol fields.
-  memset(static_cast<void *>(sym), 0, sizeof(Symbol));
+  // make<SymbolUnion>() value-initializes the storage, so the Symbol fields
+  // are zero. Set the ones that need a non-zero value.
   sym->setName(name);
-  sym->partition = 1;
   sym->versionId = VER_NDX_GLOBAL;
   if (pos != StringRef::npos)
     sym->hasVersionSuffix = true;
@@ -203,7 +201,7 @@ void SymbolTable::handleDynamicList() {
       syms = findByVersion(ver);
 
     for (Symbol *sym : syms)
-      sym->inDynamicList = true;
+      sym->isExported = sym->inDynamicList = true;
   }
 }
 
@@ -314,15 +312,7 @@ void SymbolTable::scanVersionScript() {
   bool asteriskReported = false;
   auto assignAsterisk = [&](SymbolVersion &pat, VersionDefinition *ver,
                             bool isLocal) {
-    // Avoid issuing a warning if both '--retain-symbol-file' and a version
-    // script with `global: *` are used.
-    //
-    // '--retain-symbol-file' adds a "*" pattern to
-    // 'config->versionDefinitions[VER_NDX_LOCAL].nonLocalPatterns', see
-    // 'readConfigs()' in 'Driver.cpp'. Note that it is not '.localPatterns',
-    // and may seem counterintuitive, but still works as expected. Here we can
-    // exploit that and skip analyzing the pattern added for this option.
-    if (!asteriskReported && (isLocal || ver->id > VER_NDX_LOCAL)) {
+    if (!asteriskReported) {
       if ((isLocal && globalAsteriskFound) ||
           (!isLocal && localAsteriskFound)) {
         Warn(ctx)
@@ -350,17 +340,8 @@ void SymbolTable::scanVersionScript() {
         assignAsterisk(pat, &v, true);
   }
 
-  // Symbol themselves might know their versions because symbols
-  // can contain versions in the form of <name>@<version>.
-  // Let them parse and update their names to exclude version suffix.
-  for (Symbol *sym : symVector)
-    if (sym->hasVersionSuffix)
-      sym->parseSymbolVersion(ctx);
-
-  // isPreemptible is false at this point. To correctly compute the binding of a
-  // Defined (which is used by includeInDynsym(ctx)), we need to know if it is
-  // VER_NDX_LOCAL or not. Compute symbol versions before handling
-  // --dynamic-list.
+  // Handle --dynamic-list. If a specified symbol is also matched by local: in a
+  // version script, the version script takes precedence.
   handleDynamicList();
 }
 

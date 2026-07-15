@@ -27,6 +27,7 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/GenericCycleInfo.h"
 #include "llvm/ADT/StringExtras.h"
+#include <iterator>
 
 #define DEBUG_TYPE "generic-cycle-impl"
 
@@ -34,50 +35,56 @@ namespace llvm {
 
 template <typename ContextT>
 bool GenericCycle<ContextT>::contains(const GenericCycle *C) const {
-  if (!C)
-    return false;
+  // Containment check using the Euler tour representation.
+  return C && IdxBegin <= C->IdxBegin && C->IdxEnd <= IdxEnd;
+}
 
-  if (Depth > C->Depth)
-    return false;
-  while (Depth < C->Depth)
-    C = C->ParentCycle;
-  return this == C;
+template <typename ContextT>
+bool GenericCycle<ContextT>::contains(const BlockT *Block) const {
+  return contains(CI->getCycle(Block));
+}
+
+template <typename ContextT>
+auto GenericCycle<ContextT>::block_begin() const -> const_block_iterator {
+  return CI->BlockLayout.begin() + IdxBegin;
+}
+
+template <typename ContextT>
+auto GenericCycle<ContextT>::block_end() const -> const_block_iterator {
+  return CI->BlockLayout.begin() + IdxEnd;
 }
 
 template <typename ContextT>
 void GenericCycle<ContextT>::getExitBlocks(
     SmallVectorImpl<BlockT *> &TmpStorage) const {
   if (!ExitBlocksCache.empty()) {
-    TmpStorage = ExitBlocksCache;
+    TmpStorage.append(ExitBlocksCache.begin(), ExitBlocksCache.end());
     return;
   }
 
-  TmpStorage.clear();
-
   size_t NumExitBlocks = 0;
   for (BlockT *Block : blocks()) {
-    llvm::append_range(TmpStorage, successors(Block));
+    llvm::append_range(ExitBlocksCache, successors(Block));
 
-    for (size_t Idx = NumExitBlocks, End = TmpStorage.size(); Idx < End;
+    for (size_t Idx = NumExitBlocks, End = ExitBlocksCache.size(); Idx < End;
          ++Idx) {
-      BlockT *Succ = TmpStorage[Idx];
+      BlockT *Succ = ExitBlocksCache[Idx];
       if (!contains(Succ)) {
-        auto ExitEndIt = TmpStorage.begin() + NumExitBlocks;
-        if (std::find(TmpStorage.begin(), ExitEndIt, Succ) == ExitEndIt)
-          TmpStorage[NumExitBlocks++] = Succ;
+        auto ExitEndIt = ExitBlocksCache.begin() + NumExitBlocks;
+        if (std::find(ExitBlocksCache.begin(), ExitEndIt, Succ) == ExitEndIt)
+          ExitBlocksCache[NumExitBlocks++] = Succ;
       }
     }
 
-    TmpStorage.resize(NumExitBlocks);
+    ExitBlocksCache.resize(NumExitBlocks);
   }
-  ExitBlocksCache.append(TmpStorage.begin(), TmpStorage.end());
+
+  TmpStorage.append(ExitBlocksCache.begin(), ExitBlocksCache.end());
 }
 
 template <typename ContextT>
 void GenericCycle<ContextT>::getExitingBlocks(
     SmallVectorImpl<BlockT *> &TmpStorage) const {
-  TmpStorage.clear();
-
   for (BlockT *Block : blocks()) {
     for (BlockT *Succ : successors(Block)) {
       if (!contains(Succ)) {
@@ -129,7 +136,7 @@ auto GenericCycle<ContextT>::getCyclePredecessor() const -> BlockT * {
 /// \brief Verify that this is actually a well-formed cycle in the CFG.
 template <typename ContextT> void GenericCycle<ContextT>::verifyCycle() const {
 #ifndef NDEBUG
-  assert(!Blocks.empty() && "Cycle cannot be empty.");
+  assert(getNumBlocks() != 0 && "Cycle cannot be empty.");
   DenseSet<BlockT *> Blocks;
   for (BlockT *BB : blocks()) {
     assert(Blocks.insert(BB).second); // duplicates in block list?
@@ -227,6 +234,7 @@ void GenericCycle<ContextT>::verifyCycleNest() const {
 /// \brief Helper class for computing cycle information.
 template <typename ContextT> class GenericCycleInfoCompute {
   using BlockT = typename ContextT::BlockT;
+  using FunctionT = typename ContextT::FunctionT;
   using CycleInfoT = GenericCycleInfo<ContextT>;
   using CycleT = typename CycleInfoT::CycleT;
 
@@ -248,39 +256,41 @@ template <typename ContextT> class GenericCycleInfoCompute {
     }
   };
 
-  DenseMap<BlockT *, DFSInfo> BlockDFSInfo;
+  // Indexed by block number.
+  SmallVector<DFSInfo, 8> BlockDFSInfo;
   SmallVector<BlockT *, 8> BlockPreorder;
 
   GenericCycleInfoCompute(const GenericCycleInfoCompute &) = delete;
   GenericCycleInfoCompute &operator=(const GenericCycleInfoCompute &) = delete;
 
+  DFSInfo getDFSInfo(BlockT *B) const {
+    unsigned Number = GraphTraits<BlockT *>::getNumber(B);
+    return BlockDFSInfo[Number];
+  }
+
+  DFSInfo &getOrInsertDFSInfo(BlockT *B) {
+    unsigned Number = GraphTraits<BlockT *>::getNumber(B);
+    return BlockDFSInfo[Number];
+  }
+
 public:
   GenericCycleInfoCompute(CycleInfoT &Info) : Info(Info) {}
 
-  void run(BlockT *EntryBlock);
+  void run(FunctionT *F);
 
   static void updateDepth(CycleT *SubTree);
 
 private:
-  void dfs(BlockT *EntryBlock);
+  void dfs(FunctionT *F, BlockT *EntryBlock);
 };
 
 template <typename ContextT>
-auto GenericCycleInfo<ContextT>::getTopLevelParentCycle(BlockT *Block)
-    -> CycleT * {
-  auto Cycle = BlockMapTopLevel.find(Block);
-  if (Cycle != BlockMapTopLevel.end())
-    return Cycle->second;
-
-  auto MapIt = BlockMap.find(Block);
-  if (MapIt == BlockMap.end())
-    return nullptr;
-
-  auto *C = MapIt->second;
-  while (C->ParentCycle)
-    C = C->ParentCycle;
-  BlockMapTopLevel.try_emplace(Block, C);
-  return C;
+auto GenericCycleInfo<ContextT>::getTopLevelParentCycle(
+    const BlockT *Block) const -> CycleT * {
+  CycleT *Cycle = getCycle(Block);
+  while (Cycle && Cycle->ParentCycle)
+    Cycle = Cycle->ParentCycle;
+  return Cycle;
 }
 
 template <typename ContextT>
@@ -298,49 +308,117 @@ void GenericCycleInfo<ContextT>::moveTopLevelCycleToNewParent(CycleT *NewParent,
   *Pos = std::move(CurrentContainer.back());
   CurrentContainer.pop_back();
   Child->ParentCycle = NewParent;
+  // This only relinks the cycle tree and does NOT touch BlockLayout, so it
+  // leaves every cycle's [IdxBegin, IdxEnd) range stale, i.e. BlockLayout is
+  // left invalid. The caller must call layoutBlocks() before any
+  // range-dependent query is used.
+}
 
-  NewParent->Blocks.insert(Child->block_begin(), Child->block_end());
+template <typename ContextT>
+void GenericCycleInfo<ContextT>::verifyBlockNumberEpoch(
+    const FunctionT *Fn) const {
+  assert(BlockNumberEpoch ==
+             GraphTraits<const FunctionT *>::getNumberEpoch(Fn) &&
+         "CycleInfo used with outdated block number epoch");
+}
 
-  for (auto &It : BlockMapTopLevel)
-    if (It.second == Child)
-      It.second = NewParent;
-  NewParent->clearCache();
-  Child->clearCache();
+template <typename ContextT>
+void GenericCycleInfo<ContextT>::addToBlockMap(BlockT *Block, CycleT *Cycle) {
+  // The caller should ensure that BlockMap is large enough.
+  verifyBlockNumberEpoch(Block->getParent());
+  unsigned Number = GraphTraits<BlockT *>::getNumber(Block);
+  BlockMap[Number] = Cycle;
 }
 
 template <typename ContextT>
 void GenericCycleInfo<ContextT>::addBlockToCycle(BlockT *Block, CycleT *Cycle) {
-  // FixMe: Appending NewBlock is fine as a set of blocks in a cycle. When
-  // printing, cycle NewBlock is at the end of list but it should be in the
-  // middle to represent actual traversal of a cycle.
-  Cycle->appendBlock(Block);
-  BlockMap.try_emplace(Block, Cycle);
+  // Make sure BlockMap is large enough for the new block.
+  unsigned Number = GraphTraits<BlockT *>::getNumber(Block);
+  if (Number >= BlockMap.size())
+    BlockMap.resize(GraphTraits<FunctionT *>::getMaxNumber(Block->getParent()));
 
-  CycleT *ParentCycle = Cycle->getParentCycle();
-  while (ParentCycle) {
-    Cycle = ParentCycle;
-    Cycle->appendBlock(Block);
-    ParentCycle = Cycle->getParentCycle();
+  // Insert Block at the end of Cycle's slice and shift every later cycle's
+  // range right. contain it below. The forest is an Euler tour, so a subtree
+  // ending at or before Pos is entirely earlier and is skipped.
+  unsigned Pos = Cycle->IdxEnd;
+  BlockLayout.insert(BlockLayout.begin() + Pos, Block);
+  SmallVector<CycleT *, 8> Worklist(toplevel_cycles());
+  while (!Worklist.empty()) {
+    CycleT *C = Worklist.pop_back_val();
+    if (C->IdxEnd <= Pos)
+      continue;
+    if (C->IdxBegin >= Pos) {
+      ++C->IdxBegin;
+      ++C->IdxEnd;
+    }
+    for (auto &Child : C->Children)
+      Worklist.push_back(Child.get());
+  }
+  addToBlockMap(Block, Cycle);
+  // Cycle and its ancestors gain the new block: extend each one's slice and
+  // invalidate its exit-block cache in a single walk up the tree.
+  for (CycleT *C = Cycle; C; C = C->getParentCycle()) {
+    ++C->IdxEnd;
+    C->clearCache();
+  }
+}
+
+template <typename ContextT>
+void GenericCycleInfo<ContextT>::layoutBlocks(ArrayRef<BlockT *> Order) {
+  if (TopLevelCycles.empty())
+    return;
+
+  // Walk the cycle forest as an Euler tour. On entry, a cycle's IdxEnd still
+  // holds its own-block count (accumulated during run()); reserve that many
+  // slots for its own region [Cursor, Cursor + count). Its children take the
+  // following slots, so on leaving, Cursor is the cycle's real range end, which
+  // overwrites the now-consumed count in IdxEnd.
+  struct Frame {
+    CycleT *C;
+    typename CycleT::const_child_iterator ChildCur, ChildEnd;
+  };
+  SmallVector<Frame, 8> Stack;
+  unsigned Cursor = 0;
+  auto enter = [&](CycleT *C) {
+    Cursor += C->IdxEnd; // IdxEnd currently holds C's own-block count.
+    C->IdxBegin = Cursor;
+    Stack.push_back({C, C->child_begin(), C->child_end()});
+  };
+  for (CycleT *TLC : toplevel_cycles()) {
+    enter(TLC);
+    while (!Stack.empty()) {
+      Frame &F = Stack.back();
+      if (F.ChildCur != F.ChildEnd) {
+        enter(*F.ChildCur++);
+      } else {
+        F.C->IdxEnd = Cursor;
+        Stack.pop_back();
+      }
+    }
   }
 
-  BlockMapTopLevel.try_emplace(Block, Cycle);
-  Cycle->clearCache();
+  // Place every block into its innermost cycle's own region.
+  BlockLayout.resize_for_overwrite(Cursor);
+  for (BlockT *B : llvm::reverse(Order))
+    if (CycleT *C = getCycle(B))
+      BlockLayout[--C->IdxBegin] = B;
 }
 
 /// \brief Main function of the cycle info computations.
 template <typename ContextT>
-void GenericCycleInfoCompute<ContextT>::run(BlockT *EntryBlock) {
+void GenericCycleInfoCompute<ContextT>::run(FunctionT *F) {
+  BlockT *EntryBlock = GraphTraits<FunctionT *>::getEntryNode(F);
   LLVM_DEBUG(errs() << "Entry block: " << Info.Context.print(EntryBlock)
                     << "\n");
-  dfs(EntryBlock);
+  dfs(F, EntryBlock);
 
   SmallVector<BlockT *, 8> Worklist;
 
   for (BlockT *HeaderCandidate : llvm::reverse(BlockPreorder)) {
-    const DFSInfo CandidateInfo = BlockDFSInfo.lookup(HeaderCandidate);
+    const DFSInfo CandidateInfo = getDFSInfo(HeaderCandidate);
 
     for (BlockT *Pred : predecessors(HeaderCandidate)) {
-      const DFSInfo PredDFSInfo = BlockDFSInfo.lookup(Pred);
+      const DFSInfo PredDFSInfo = getDFSInfo(Pred);
       // This automatically ignores unreachable predecessors since they have
       // zeros in their DFSInfo.
       if (CandidateInfo.isAncestorOf(PredDFSInfo))
@@ -354,9 +432,13 @@ void GenericCycleInfoCompute<ContextT>::run(BlockT *EntryBlock) {
     LLVM_DEBUG(errs() << "Found cycle for header: "
                       << Info.Context.print(HeaderCandidate) << "\n");
     std::unique_ptr<CycleT> NewCycle = std::make_unique<CycleT>();
+    NewCycle->CI = &Info;
     NewCycle->appendEntry(HeaderCandidate);
-    NewCycle->appendBlock(HeaderCandidate);
-    Info.BlockMap.try_emplace(HeaderCandidate, NewCycle.get());
+    Info.addToBlockMap(HeaderCandidate, NewCycle.get());
+    // The header is this cycle's first own block. Until layoutBlocks runs,
+    // IdxEnd accumulates this cycle's own-block count (see the IdxBegin/
+    // IdxEnd doc comment), so layoutBlocks needs no separate counting pass.
+    ++NewCycle->IdxEnd;
 
     // Helper function to process (non-back-edge) predecessors of a discovered
     // block and either add them to the worklist or recognize that the given
@@ -366,7 +448,7 @@ void GenericCycleInfoCompute<ContextT>::run(BlockT *EntryBlock) {
 
       bool IsEntry = false;
       for (BlockT *Pred : predecessors(Block)) {
-        const DFSInfo PredDFSInfo = BlockDFSInfo.lookup(Pred);
+        const DFSInfo PredDFSInfo = getDFSInfo(Pred);
         if (CandidateInfo.isAncestorOf(PredDFSInfo)) {
           Worklist.push_back(Pred);
         } else if (!PredDFSInfo) {
@@ -412,11 +494,9 @@ void GenericCycleInfoCompute<ContextT>::run(BlockT *EntryBlock) {
                      << Info.Context.print(BlockParent->getHeader()) << "\n");
         }
       } else {
-        Info.BlockMap.try_emplace(Block, NewCycle.get());
-        assert(!is_contained(NewCycle->Blocks, Block));
-        NewCycle->Blocks.insert(Block);
+        Info.addToBlockMap(Block, NewCycle.get());
+        ++NewCycle->IdxEnd; // Block's innermost cycle is NewCycle.
         ProcessPredecessors(Block);
-        Info.BlockMapTopLevel.try_emplace(Block, NewCycle.get());
       }
     } while (!Worklist.empty());
 
@@ -431,6 +511,10 @@ void GenericCycleInfoCompute<ContextT>::run(BlockT *EntryBlock) {
     TLC->ParentCycle = nullptr;
     updateDepth(TLC);
   }
+
+  // The cycle tree and the block-to-innermost-cycle map are complete; lay out
+  // every cycle's blocks into the shared contiguous BlockLayout.
+  Info.layoutBlocks(BlockPreorder);
 }
 
 /// \brief Recompute depth values of \p SubTree and all descendants.
@@ -444,59 +528,68 @@ void GenericCycleInfoCompute<ContextT>::updateDepth(CycleT *SubTree) {
 ///
 /// Fills BlockDFSInfo with start/end counters and BlockPreorder.
 template <typename ContextT>
-void GenericCycleInfoCompute<ContextT>::dfs(BlockT *EntryBlock) {
-  SmallVector<unsigned, 8> DFSTreeStack;
-  SmallVector<BlockT *, 8> TraverseStack;
+void GenericCycleInfoCompute<ContextT>::dfs(FunctionT *F, BlockT *EntryBlock) {
+  BlockDFSInfo.resize(GraphTraits<FunctionT *>::getMaxNumber(F));
+
+  // Successors are visited in reverse order to match the legacy
+  // single-LIFO-stack traversal, keeping cycle identification and block order
+  // unchanged.
+  using SuccIt = decltype(successors(EntryBlock).begin());
+  struct Frame {
+    BlockT *Block;
+    std::reverse_iterator<SuccIt> Cur, End;
+  };
+  SmallVector<Frame, 8> Stack;
   unsigned Counter = 0;
-  TraverseStack.emplace_back(EntryBlock);
 
-  do {
-    BlockT *Block = TraverseStack.back();
+  auto open = [&](BlockT *Block) {
+    getOrInsertDFSInfo(Block).Start = ++Counter;
+    BlockPreorder.push_back(Block);
     LLVM_DEBUG(errs() << "DFS visiting block: " << Info.Context.print(Block)
-                      << "\n");
-    if (!BlockDFSInfo.count(Block)) {
-      // We're visiting the block for the first time. Open its DFSInfo, add
-      // successors to the traversal stack, and remember the traversal stack
-      // depth at which the block was opened, so that we can correctly record
-      // its end time.
-      LLVM_DEBUG(errs() << "  first encountered at depth "
-                        << TraverseStack.size() << "\n");
+                      << ", preorder number: " << Counter << "\n");
+    auto Succs = successors(Block);
+    Stack.push_back({Block, std::make_reverse_iterator(Succs.end()),
+                     std::make_reverse_iterator(Succs.begin())});
+  };
 
-      DFSTreeStack.emplace_back(TraverseStack.size());
-      llvm::append_range(TraverseStack, successors(Block));
-
-      bool Added = BlockDFSInfo.try_emplace(Block, ++Counter).second;
-      (void)Added;
-      assert(Added);
-      BlockPreorder.push_back(Block);
-      LLVM_DEBUG(errs() << "  preorder number: " << Counter << "\n");
-    } else {
-      assert(!DFSTreeStack.empty());
-      if (DFSTreeStack.back() == TraverseStack.size()) {
-        LLVM_DEBUG(errs() << "  ended at " << Counter << "\n");
-        BlockDFSInfo.find(Block)->second.End = Counter;
-        DFSTreeStack.pop_back();
-      } else {
-        LLVM_DEBUG(errs() << "  already done\n");
+  open(EntryBlock);
+  while (!Stack.empty()) {
+    Frame &Top = Stack.back();
+    BlockT *Next = nullptr;
+    while (Top.Cur != Top.End) {
+      BlockT *Succ = *Top.Cur++;
+      if (getOrInsertDFSInfo(Succ).Start == 0) {
+        Next = Succ;
+        break;
       }
-      TraverseStack.pop_back();
+      LLVM_DEBUG(errs() << "  already visited successor: "
+                        << Info.Context.print(Succ) << "\n");
     }
-  } while (!TraverseStack.empty());
-  assert(DFSTreeStack.empty());
+    if (Next) {
+      open(Next);
+    } else {
+      // Top's subtree is complete. Its end counter is the largest preorder
+      // number in the subtree.
+      getOrInsertDFSInfo(Top.Block).End = Counter;
+      LLVM_DEBUG(errs() << "DFS block " << Info.Context.print(Top.Block)
+                        << " ended at " << Counter << "\n");
+      Stack.pop_back();
+    }
+  }
 
-  LLVM_DEBUG(
+  LLVM_DEBUG({
     errs() << "Preorder:\n";
-    for (int i = 0, e = BlockPreorder.size(); i != e; ++i) {
-      errs() << "  " << Info.Context.print(BlockPreorder[i]) << ": " << i << "\n";
-    }
-  );
+    for (int I = 0, E = BlockPreorder.size(); I != E; ++I)
+      errs() << "  " << Info.Context.print(BlockPreorder[I]) << ": " << I
+             << "\n";
+  });
 }
 
 /// \brief Reset the object to its initial state.
 template <typename ContextT> void GenericCycleInfo<ContextT>::clear() {
   TopLevelCycles.clear();
   BlockMap.clear();
-  BlockMapTopLevel.clear();
+  BlockLayout.clear();
 }
 
 /// \brief Compute the cycle info for a function.
@@ -504,10 +597,12 @@ template <typename ContextT>
 void GenericCycleInfo<ContextT>::compute(FunctionT &F) {
   GenericCycleInfoCompute<ContextT> Compute(*this);
   Context = ContextT(&F);
+  BlockNumberEpoch = GraphTraits<FunctionT *>::getNumberEpoch(&F);
+  BlockMap.resize(GraphTraits<FunctionT *>::getMaxNumber(&F));
 
   LLVM_DEBUG(errs() << "Computing cycles for function: " << F.getName()
                     << "\n");
-  Compute.run(&F.front());
+  Compute.run(&F);
 }
 
 template <typename ContextT>
@@ -530,7 +625,9 @@ void GenericCycleInfo<ContextT>::splitCriticalEdge(BlockT *Pred, BlockT *Succ,
 template <typename ContextT>
 auto GenericCycleInfo<ContextT>::getCycle(const BlockT *Block) const
     -> CycleT * {
-  return BlockMap.lookup(Block);
+  verifyBlockNumberEpoch(Block->getParent());
+  unsigned Number = GraphTraits<const BlockT *>::getNumber(Block);
+  return Number < BlockMap.size() ? BlockMap[Number] : nullptr;
 }
 
 /// \brief Find the innermost cycle containing both given cycles.
@@ -560,6 +657,17 @@ auto GenericCycleInfo<ContextT>::getSmallestCommonCycle(CycleT *A,
   }
 
   return A;
+}
+
+/// \brief Find the innermost cycle containing both given blocks.
+///
+/// \returns the innermost cycle containing both \p A and \p B
+///          or nullptr if there is no such cycle.
+template <typename ContextT>
+auto GenericCycleInfo<ContextT>::getSmallestCommonCycle(BlockT *A,
+                                                        BlockT *B) const
+    -> CycleT * {
+  return getSmallestCommonCycle(getCycle(A), getCycle(B));
 }
 
 /// \brief get the depth for the cycle which containing a given block.
@@ -593,9 +701,9 @@ void GenericCycleInfo<ContextT>::verifyCycleNest(bool VerifyFull) const {
         Cycle->verifyCycleNest();
       // Check the block map entries for blocks contained in this cycle.
       for (BlockT *BB : Cycle->blocks()) {
-        auto MapIt = BlockMap.find(BB);
-        assert(MapIt != BlockMap.end());
-        assert(Cycle->contains(MapIt->second));
+        CycleT *CycleInBlockMap = getCycle(BB);
+        assert(CycleInBlockMap != nullptr);
+        assert(Cycle->contains(CycleInBlockMap));
       }
     }
   }

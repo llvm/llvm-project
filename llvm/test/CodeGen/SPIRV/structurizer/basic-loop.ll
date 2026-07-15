@@ -21,6 +21,11 @@ header:
   %2 = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token %0) ]
   br i1 true, label %body, label %merge
 
+; CHECK: %[[#merge]] = OpLabel
+; CHECK:               OpReturnValue %[[#]]
+merge:
+  ret i32 0
+
 ; CHECK: %[[#body]] = OpLabel
 ; CHECK:              OpBranch %[[#continue]]
 body:
@@ -31,11 +36,6 @@ continue:
   br label %header
 ; CHECK: %[[#continue]] = OpLabel
 ; CHECK:                  OpBranch %[[#header]]
-
-; CHECK: %[[#merge]] = OpLabel
-; CHECK:               OpReturnValue %[[#]]
-merge:
-  ret i32 0
 }
 
 ; Function Attrs: convergent nocallback nofree nosync nounwind willreturn memory(none)

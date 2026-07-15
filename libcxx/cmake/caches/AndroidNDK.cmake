@@ -33,5 +33,6 @@ set(CMAKE_CXX_COMPILER_WORKS ON CACHE BOOL "")
 
 # Use adb to push tests to a locally-connected device (e.g. emulator) and run
 # them.
-set(LIBCXX_TEST_CONFIG "llvm-libc++-android-ndk.cfg.in" CACHE STRING "")
-set(LIBCXXABI_TEST_CONFIG "llvm-libc++abi-android-ndk.cfg.in" CACHE STRING "")
+set(LIBCXX_TEST_CONFIG "llvm-libc++-android.cfg.in" CACHE STRING "")
+set(LIBCXXABI_TEST_CONFIG "llvm-libc++abi-android.cfg.in" CACHE STRING "")
+set(LIBCXX_ASSERTION_HANDLER_FILE "vendor/android/android_assertion_handler.in" CACHE STRING "")

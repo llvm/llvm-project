@@ -1,5 +1,5 @@
-; RUN: llc -O0 -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O0 -mtriple=spirv-unknown-vulkan %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan %s -o - -filetype=obj | spirv-val %}
 
 ; Make sure SPIRV operation function calls for cross are lowered correctly.
 
@@ -15,7 +15,7 @@ entry:
   ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#vec3_float_16]]
   ; CHECK: %[[#arg1:]] = OpFunctionParameter %[[#vec3_float_16]]
   ; CHECK: %[[#]] = OpExtInst %[[#vec3_float_16]] %[[#op_ext_glsl]] Cross %[[#arg0]] %[[#arg1]]
-  %hlsl.cross = call <3 x half> @llvm.spv.cross.v4f16(<3 x half> %a, <3 x half> %b)
+  %hlsl.cross = call <3 x half> @llvm.spv.cross.v3f16(<3 x half> %a, <3 x half> %b)
   ret <3 x half> %hlsl.cross
 }
 
@@ -25,9 +25,9 @@ entry:
   ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#vec3_float_32]]
   ; CHECK: %[[#arg1:]] = OpFunctionParameter %[[#vec3_float_32]]
   ; CHECK: %[[#]] = OpExtInst %[[#vec3_float_32]] %[[#op_ext_glsl]] Cross %[[#arg0]] %[[#arg1]]
-  %hlsl.cross = call <3 x float> @llvm.spv.cross.v4f32(<3 x float> %a, <3 x float> %b)
+  %hlsl.cross = call <3 x float> @llvm.spv.cross.v3f32(<3 x float> %a, <3 x float> %b)
   ret <3 x float> %hlsl.cross
 }
 
-declare <3 x half> @llvm.spv.cross.v4f16(<3 x half>, <3 x half>)
-declare <3 x float> @llvm.spv.cross.v4f32(<3 x float>, <3 x float>)
+declare <3 x half> @llvm.spv.cross.v3f16(<3 x half>, <3 x half>)
+declare <3 x float> @llvm.spv.cross.v3f32(<3 x float>, <3 x float>)

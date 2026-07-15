@@ -227,6 +227,12 @@ OPTIONS
  Show modified condition/decision coverage (MC/DC) for each applicable boolean
  expression.
 
+.. option:: -show-mcdc-non-executed-vectors
+
+ When showing MC/DC details, also list test vectors that were not executed (for
+ example in a ``Not executed`` section after the executed vectors). By default,
+ only executed test vectors are shown.
+
 .. option:: -show-line-counts
 
  Show the execution counts for each line. Defaults to true, unless another
@@ -288,6 +294,10 @@ OPTIONS
 .. option:: -ignore-filename-regex=<PATTERN>
 
  Skip source code files with file paths that match the given regular expression.
+
+.. option:: -include-filename-regex=<PATTERN>
+
+ Only include source code files with file paths that match the given regular expression.
 
 .. option:: -format=<FORMAT>
 
@@ -380,6 +390,11 @@ OPTIONS
  Fail if an object file cannot be found for a binary ID present in the profile,
  neither on the command line nor via binary ID lookup.
 
+.. option:: -empty-profile
+
+ Display the baseline coverage of the binaries with all zero execution counts.
+ Mutually exclusive with -instr-profile.
+
 .. program:: llvm-cov report
 
 .. _llvm-cov-report:
@@ -470,6 +485,11 @@ OPTIONS
  Fail if an object file cannot be found for a binary ID present in the profile,
  neither on the command line nor via binary ID lookup.
 
+.. option:: -empty-profile
+
+ Display the baseline coverage of the binaries with all zero execution counts.
+ Mutually exclusive with -instr-profile.
+
 .. program:: llvm-cov export
 
 .. _llvm-cov-export:
@@ -534,6 +554,12 @@ OPTIONS
 
  Skip exporting per-function coverage data.
 
+.. option:: -show-mcdc-non-executed-vectors
+
+ When MC/DC data is present in the export, include test vectors that were not
+ executed (for JSON, these appear with ``"executed": false`` alongside executed
+ vectors). By default, only executed MC/DC test vectors are exported.
+
 .. option:: -num-threads=N, -j=N
 
  Use N threads to export coverage data. When N=0, llvm-cov auto-detects an
@@ -561,6 +587,11 @@ OPTIONS
 
  Fail if an object file cannot be found for a binary ID present in the profile,
  neither on the command line nor via binary ID lookup.
+
+.. option:: -empty-profile
+
+ Export the baseline coverage of the binaries with all zero execution counts.
+ Mutually exclusive with -instr-profile.
 
 CONVERT-FOR-TESTING COMMAND
 ---------------------------

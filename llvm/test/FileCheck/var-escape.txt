@@ -1,0 +1,29 @@
+; RUN: echo -e "WINPATH=A:\windows\style\path"              >  %t.1
+; RUN: echo -e "NOT_ESCAPED=shouldn't be escaped [a-Z]\+$"  >> %t.1
+; RUN: echo -e 'ESCAPED=\\ \f\v needs\to "be" escaped\000'  >> %t.1
+; RUN: echo -e '$NUMERIC=DEADBEEF'                          >> %t.1
+
+VARS:      WINPATH=[[WINPATH:.*]]
+VARS-NEXT: NOT_ESCAPED=[[NOT_ESCAPED:.*]]
+VARS-NEXT: ESCAPED=[[ESCAPED:.*]]
+VARS-NEXT: $NUMERIC=[[#%X,$NUMERIC:]]
+; Trigger a failed match, to show variables values
+VARS-NEXT: [[WINPATH]] [[NOT_ESCAPED]] [[ESCAPED]] [[#$NUMERIC + 0]]
+
+; RUN: %ProtectFileCheckOutput not FileCheck \
+; RUN:   -dump-input=never --strict-whitespace --check-prefix=VARS --input-file=%t.1 %s 2>&1 \
+; RUN: | FileCheck %s
+
+CHECK: with "WINPATH" equal to "A:\windows\style\path"
+CHECK: with "NOT_ESCAPED" equal to "shouldn't be escaped [a-Z]\+$"
+CHECK: with "ESCAPED" equal to "\\ \014\013 needs\to \"be\" escaped\000" (escaped value)
+CHECK: with "$NUMERIC + 0" equal to "DEADBEEF"
+
+; Test escaping of the name of a numeric substitution, which might contain
+; characters that need escaping. 
+; RUN: echo -e "VARNAME: [[#%,10\t]]" > %t.2
+; RUN: echo 42 \
+; RUN: | %ProtectFileCheckOutput not FileCheck \
+; RUN:   -dump-input=never -vv --strict-whitespace --check-prefix=VARNAME %t.2 2>&1 \
+; RUN: | FileCheck %s --check-prefix=CHECK-VARNAME
+CHECK-VARNAME: with "%,10\t" equal to "10"

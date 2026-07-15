@@ -68,9 +68,26 @@ public:
 
   /// Returns true if a cast between SrcAS and DestAS is a noop.
   bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
-    // Addrspacecasts are always noops.
-    return true;
+    return getPointerSize(SrcAS) == getPointerSize(DestAS);
   }
+  ScheduleDAGInstrs *
+  createMachineScheduler(MachineSchedContext *C) const override;
+
+  ScheduleDAGInstrs *
+  createPostMachineScheduler(MachineSchedContext *C) const override;
+
+  size_t clearLinkerOptimizationHints(
+      const SmallPtrSetImpl<MachineInstr *> &MIs) const override;
+
+  /// Returns the optimisation level that enables GlobalISel.
+  unsigned getEnableGlobalISelAtO() const;
+
+  /// This function checks whether the opt level is explicitly set to none,
+  /// or whether GlobalISel was enabled due to SDAG encountering an optnone
+  /// function. If the opt level is greater than the level we automatically
+  /// enable globalisel at, and it wasn't enabled via CLI, we know that it must
+  /// be because of an optnone function.
+  bool isGlobalISelOptNone() const;
 
 private:
   bool isLittle;

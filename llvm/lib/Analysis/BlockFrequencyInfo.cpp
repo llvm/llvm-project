@@ -207,7 +207,7 @@ BlockFrequencyInfo::getBlockProfileCount(const BasicBlock *BB,
   if (!BFI)
     return std::nullopt;
 
-  return BFI->getBlockProfileCount(*getFunction(), BB, AllowSynthetic);
+  return BFI->getBlockProfileCount(*getFunction(), BB);
 }
 
 std::optional<uint64_t>
@@ -302,9 +302,7 @@ INITIALIZE_PASS_END(BlockFrequencyInfoWrapperPass, "block-freq",
 char BlockFrequencyInfoWrapperPass::ID = 0;
 
 BlockFrequencyInfoWrapperPass::BlockFrequencyInfoWrapperPass()
-    : FunctionPass(ID) {
-  initializeBlockFrequencyInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+    : FunctionPass(ID) {}
 
 BlockFrequencyInfoWrapperPass::~BlockFrequencyInfoWrapperPass() = default;
 

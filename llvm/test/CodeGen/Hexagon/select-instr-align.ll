@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-align-loads=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-align-loads=0 < %s | FileCheck %s
 
 ; CHECK-LABEL: aligned_load:
 ; CHECK: = vmem({{.*}})

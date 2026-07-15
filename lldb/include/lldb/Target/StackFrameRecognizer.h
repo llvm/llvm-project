@@ -180,7 +180,7 @@ class ValueObjectRecognizerSynthesizedValue : public ValueObject {
     SetName(parent.GetName());
   }
 
-  std::optional<uint64_t> GetByteSize() override {
+  llvm::Expected<uint64_t> GetByteSize() override {
     return m_parent->GetByteSize();
   }
   lldb::ValueType GetValueType() const override { return m_type; }
@@ -196,7 +196,6 @@ class ValueObjectRecognizerSynthesizedValue : public ValueObject {
   CompilerType GetCompilerTypeImpl() override {
     return m_parent->GetCompilerType();
   }
-  bool IsSynthetic() override { return true; }
 
  private:
   lldb::ValueType m_type;

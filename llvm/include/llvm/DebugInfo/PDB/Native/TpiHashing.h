@@ -10,12 +10,13 @@
 #define LLVM_DEBUGINFO_PDB_NATIVE_TPIHASHING_H
 
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
 namespace pdb {
 
-Expected<uint32_t> hashTypeRecord(const llvm::codeview::CVType &Type);
+LLVM_ABI Expected<uint32_t> hashTypeRecord(const llvm::codeview::CVType &Type);
 
 struct TagRecordHash {
   explicit TagRecordHash(codeview::ClassRecord CR, uint32_t Full,
@@ -63,7 +64,7 @@ private:
 
 /// Given a CVType referring to a class, structure, union, or enum, compute
 /// the hash of its forward decl and full decl.
-Expected<TagRecordHash> hashTagRecord(const codeview::CVType &Type);
+LLVM_ABI Expected<TagRecordHash> hashTagRecord(const codeview::CVType &Type);
 
 } // end namespace pdb
 } // end namespace llvm

@@ -10,6 +10,7 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/FileUtilities.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -47,23 +48,34 @@ private:
 
 static void printIR(Operation *op, bool printModuleScope, raw_ostream &out,
                     OpPrintingFlags flags) {
-  // Otherwise, check to see if we are not printing at module scope.
+  // Check to see if we are not printing at module scope.
   if (!printModuleScope)
-    return op->print(out << " //----- //\n",
-                     op->getBlock() ? flags.useLocalScope() : flags);
+    return op->print(out, op->getBlock() ? flags.useLocalScope() : flags);
 
   // Otherwise, we are printing at module scope.
-  out << " ('" << op->getName() << "' operation";
-  if (auto symbolName =
-          op->getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName()))
-    out << ": @" << symbolName.getValue();
-  out << ") //----- //\n";
-
   // Find the top-level operation.
   auto *topLevelOp = op;
   while (auto *parentOp = topLevelOp->getParentOp())
     topLevelOp = parentOp;
   topLevelOp->print(out, flags);
+}
+
+static void printIRHeader(raw_ostream &out, StringRef title, Pass *pass,
+                          Operation *op, bool printModuleScope,
+                          bool failed = false) {
+  out << "// -----// IR Dump " << title << " " << pass->getName();
+  if (failed)
+    out << " Failed";
+  out << ": ";
+  pass->printAsTextualPipeline(out);
+  if (printModuleScope) {
+    out << " ('" << op->getName() << "' operation";
+    if (auto symbolName =
+            op->getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName()))
+      out << ": @" << symbolName.getValue();
+    out << ")";
+  }
+  out << " //----- //\n";
 }
 
 /// Instrumentation hooks.
@@ -75,8 +87,7 @@ void IRPrinterInstrumentation::runBeforePass(Pass *pass, Operation *op) {
     beforePassFingerPrints.try_emplace(pass, op);
 
   config->printBeforeIfEnabled(pass, op, [&](raw_ostream &out) {
-    out << "// -----// IR Dump Before " << pass->getName() << " ("
-        << pass->getArgument() << ")";
+    printIRHeader(out, "Before", pass, op, config->shouldPrintAtModuleScope());
     printIR(op, config->shouldPrintAtModuleScope(), out,
             config->getOpPrintingFlags());
     out << "\n\n";
@@ -106,8 +117,7 @@ void IRPrinterInstrumentation::runAfterPass(Pass *pass, Operation *op) {
   }
 
   config->printAfterIfEnabled(pass, op, [&](raw_ostream &out) {
-    out << "// -----// IR Dump After " << pass->getName() << " ("
-        << pass->getArgument() << ")";
+    printIRHeader(out, "After", pass, op, config->shouldPrintAtModuleScope());
     printIR(op, config->shouldPrintAtModuleScope(), out,
             config->getOpPrintingFlags());
     out << "\n\n";
@@ -121,8 +131,8 @@ void IRPrinterInstrumentation::runAfterPassFailed(Pass *pass, Operation *op) {
     beforePassFingerPrints.erase(pass);
 
   config->printAfterIfEnabled(pass, op, [&](raw_ostream &out) {
-    out << formatv("// -----// IR Dump After {0} Failed ({1})", pass->getName(),
-                   pass->getArgument());
+    printIRHeader(out, "After", pass, op, config->shouldPrintAtModuleScope(),
+                  /*failed=*/true);
     printIR(op, config->shouldPrintAtModuleScope(), out,
             config->getOpPrintingFlags());
     out << "\n\n";
@@ -210,22 +220,26 @@ struct BasicIRPrinterConfig : public PassManager::IRPrinterConfig {
 /// `op` first, `op` last). This information is used to construct the directory
 /// tree for the `FileTreeIRPrinterConfig` below.
 /// The counter for `op` will be incremented by this call.
-static std::pair<SmallVector<std::pair<std::string, StringRef>>, std::string>
+static std::pair<SmallVector<std::pair<std::string, std::string>>, std::string>
 getOpAndSymbolNames(Operation *op, StringRef passName,
                     llvm::DenseMap<Operation *, unsigned> &counters) {
-  SmallVector<std::pair<std::string, StringRef>> pathElements;
+  SmallVector<std::pair<std::string, std::string>> pathElements;
   SmallVector<unsigned> countPrefix;
 
   Operation *iter = op;
   ++counters.try_emplace(op, -1).first->second;
   while (iter) {
     countPrefix.push_back(counters[iter]);
-    StringAttr symbolName =
+    StringAttr symbolNameAttr =
         iter->getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName());
+    std::string symbolName =
+        symbolNameAttr ? symbolNameAttr.str() : "no-symbol-name";
+    llvm::replace(symbolName, '/', '_');
+    llvm::replace(symbolName, '\\', '_');
+
     std::string opName =
         llvm::join(llvm::split(iter->getName().getStringRef().str(), '.'), "_");
-    pathElements.emplace_back(opName, symbolName ? symbolName.strref()
-                                                 : "no-symbol-name");
+    pathElements.emplace_back(std::move(opName), std::move(symbolName));
     iter = iter->getParentOp();
   }
   // Return in the order of top level (module) down to `op`.

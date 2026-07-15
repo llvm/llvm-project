@@ -7,10 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___SYSTEM_ERROR_ERROR_CATEGORY_H
-#define _LIBCPP___SYSTEM_ERROR_ERROR_CATEGORY_H
+#ifndef _LIBCPP___CXX03___SYSTEM_ERROR_ERROR_CATEGORY_H
+#define _LIBCPP___CXX03___SYSTEM_ERROR_ERROR_CATEGORY_H
 
-#include <__cxx03/__compare/ordering.h>
 #include <__cxx03/__config>
 #include <__cxx03/string>
 
@@ -32,7 +31,7 @@ public:
 #if defined(_LIBCPP_ERROR_CATEGORY_DEFINE_LEGACY_INLINE_FUNCTIONS)
   error_category() noexcept;
 #else
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 error_category() _NOEXCEPT = default;
+  _LIBCPP_HIDE_FROM_ABI error_category() _NOEXCEPT = default;
 #endif
   error_category(const error_category&)            = delete;
   error_category& operator=(const error_category&) = delete;
@@ -45,19 +44,9 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI bool operator==(const error_category& __rhs) const _NOEXCEPT { return this == &__rhs; }
 
-#if _LIBCPP_STD_VER >= 20
-
-  _LIBCPP_HIDE_FROM_ABI strong_ordering operator<=>(const error_category& __rhs) const noexcept {
-    return compare_three_way()(this, std::addressof(__rhs));
-  }
-
-#else // _LIBCPP_STD_VER >= 20
-
   _LIBCPP_HIDE_FROM_ABI bool operator!=(const error_category& __rhs) const _NOEXCEPT { return !(*this == __rhs); }
 
   _LIBCPP_HIDE_FROM_ABI bool operator<(const error_category& __rhs) const _NOEXCEPT { return this < &__rhs; }
-
-#endif // _LIBCPP_STD_VER >= 20
 
   friend class _LIBCPP_HIDDEN __do_message;
 };
@@ -72,4 +61,4 @@ __attribute__((__const__)) _LIBCPP_EXPORTED_FROM_ABI const error_category& syste
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___SYSTEM_ERROR_ERROR_CATEGORY_H
+#endif // _LIBCPP___CXX03___SYSTEM_ERROR_ERROR_CATEGORY_H

@@ -31,7 +31,6 @@
 // CHECK-NEXT:     FEAT_FlagM                                             Enable Armv8.4-A Flag Manipulation instructions
 // CHECK-NEXT:     FEAT_FlagM2                                            Enable alternative NZCV format for floating point comparisons
 // CHECK-NEXT:     FEAT_HBC                                               Enable Armv8.8-A Hinted Conditional Branches Extension
-// CHECK-NEXT:     FEAT_HCX                                               Enable Armv8.7-A HCRX_EL2 system register
 // CHECK-NEXT:     FEAT_I8MM                                              Enable Matrix Multiply Int8 Extension
 // CHECK-NEXT:     FEAT_JSCVT                                             Enable Armv8.3-A JavaScript FP conversion instructions
 // CHECK-NEXT:     FEAT_LOR                                               Enable Armv8.1-A Limited Ordering Regions extension
@@ -61,6 +60,7 @@
 // CHECK-NEXT:     FEAT_SSBS, FEAT_SSBS2                                  Enable Speculative Store Bypass Safe bit
 // CHECK-NEXT:     FEAT_SVE                                               Enable Scalable Vector Extension (SVE) instructions
 // CHECK-NEXT:     FEAT_SVE2                                              Enable Scalable Vector Extension 2 (SVE2) instructions
+// CHECK-NEXT:     FEAT_SVE2p1                                            Enable Scalable Vector Extension 2.1 instructions
 // CHECK-NEXT:     FEAT_TLBIOS, FEAT_TLBIRANGE                            Enable Armv8.4-A TLB Range and Maintenance instructions
 // CHECK-NEXT:     FEAT_TRBE                                              Enable Trace Buffer Extension
 // CHECK-NEXT:     FEAT_TRF                                               Enable Armv8.4-A Trace extension

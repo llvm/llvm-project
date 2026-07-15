@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; Check that we generate 'cmpb.eq' instruction for a byte comparision.
 
 @g0 = common global i8 0, align 1

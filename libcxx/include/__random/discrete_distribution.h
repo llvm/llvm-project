@@ -28,14 +28,14 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _IntType = int>
-class _LIBCPP_TEMPLATE_VIS discrete_distribution {
+class discrete_distribution {
   static_assert(__libcpp_random_is_valid_inttype<_IntType>::value, "IntType must be a supported integer type");
 
 public:
   // types
   typedef _IntType result_type;
 
-  class _LIBCPP_TEMPLATE_VIS param_type {
+  class param_type {
     vector<double> __p_;
 
   public:
@@ -52,7 +52,7 @@ public:
     template <class _UnaryOperation>
     _LIBCPP_HIDE_FROM_ABI param_type(size_t __nw, double __xmin, double __xmax, _UnaryOperation __fw);
 
-    _LIBCPP_HIDE_FROM_ABI vector<double> probabilities() const;
+    [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI vector<double> probabilities() const;
 
     friend _LIBCPP_HIDE_FROM_ABI bool operator==(const param_type& __x, const param_type& __y) {
       return __x.__p_ == __y.__p_;
@@ -92,20 +92,20 @@ public:
 
   // generating functions
   template <class _URNG>
-  _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
     return (*this)(__g, __p_);
   }
   template <class _URNG>
-  _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
 
   // property functions
-  _LIBCPP_HIDE_FROM_ABI vector<double> probabilities() const { return __p_.probabilities(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI vector<double> probabilities() const { return __p_.probabilities(); }
 
-  _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
   _LIBCPP_HIDE_FROM_ABI void param(const param_type& __p) { __p_ = __p; }
 
-  _LIBCPP_HIDE_FROM_ABI result_type min() const { return 0; }
-  _LIBCPP_HIDE_FROM_ABI result_type max() const { return __p_.__p_.size(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type min() const { return 0; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type max() const { return __p_.__p_.size(); }
 
   friend _LIBCPP_HIDE_FROM_ABI bool operator==(const discrete_distribution& __x, const discrete_distribution& __y) {
     return __x.__p_ == __y.__p_;

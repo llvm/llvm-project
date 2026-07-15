@@ -106,8 +106,14 @@ export namespace std {
 
   using std::has_unique_object_representations;
 
-  // using std::reference_constructs_from_temporary;
-  // using std::reference_converts_from_temporary;
+#if _LIBCPP_STD_VER >= 23
+#  if __has_builtin(__reference_constructs_from_temporary)
+  using std::reference_constructs_from_temporary;
+#  endif
+#  if __has_builtin(__reference_converts_from_temporary)
+  using std::reference_converts_from_temporary;
+#  endif
+#endif
 
   // [meta.unary.prop.query], type property queries
   using std::alignment_of;
@@ -284,8 +290,14 @@ export namespace std {
   using std::is_unbounded_array_v;
   using std::is_unsigned_v;
   using std::is_volatile_v;
-  // using std::reference_constructs_from_temporary_v;
-  // using std::reference_converts_from_temporary_v;
+#if _LIBCPP_STD_VER >= 23
+#  if __has_builtin(__reference_constructs_from_temporary)
+  using std::reference_constructs_from_temporary_v;
+#  endif
+#  if __has_builtin(__reference_converts_from_temporary)
+  using std::reference_converts_from_temporary_v;
+#  endif
+#endif
 
   // [meta.unary.prop.query], type property queries
   using std::alignment_of_v;
@@ -318,6 +330,9 @@ export namespace std {
 
   // [meta.const.eval], constant evaluation context
   using std::is_constant_evaluated;
+#if _LIBCPP_STD_VER >= 26 && __has_builtin(__builtin_is_within_lifetime)
+  using std::is_within_lifetime;
+#endif
 
   // [depr.meta.types]
   using std::aligned_storage;

@@ -264,6 +264,9 @@
 ; RUN: opt -passes-ep-vectorizer-start=bad -passes=no-op-function \
 ; RUN:       /dev/null -disable-output 2>&1 | FileCheck %s -check-prefix=PASSES-EP-VECTORIZERSTART-ERR
 ; PASSES-EP-VECTORIZERSTART-ERR: Could not parse -passes-ep-vectorizer-start pipeline: unknown function pass 'bad'
+; RUN: opt -passes-ep-vectorizer-end=bad -passes=no-op-function \
+; RUN:       /dev/null -disable-output 2>&1 | FileCheck %s -check-prefix=PASSES-EP-VECTORIZEREND-ERR
+; PASSES-EP-VECTORIZEREND-ERR: Could not parse -passes-ep-vectorizer-end pipeline: unknown function pass 'bad'
 ; RUN: opt -passes-ep-pipeline-start=bad -passes=no-op-function \
 ; RUN:       /dev/null -disable-output 2>&1 | FileCheck %s -check-prefix=PASSES-EP-PIPELINESTART-ERR
 ; PASSES-EP-PIPELINESTART-ERR: Could not parse -passes-ep-pipeline-start pipeline: unknown pass name 'bad'

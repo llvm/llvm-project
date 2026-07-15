@@ -8,14 +8,13 @@
 #ifndef MLIR_CONVERSION_GPUCOMMON_GPUCOMMONPASS_H_
 #define MLIR_CONVERSION_GPUCOMMON_GPUCOMMONPASS_H_
 
-#include "mlir/Dialect/GPU/Transforms/Utils.h"
+#include "mlir/Dialect/GPU/Utils/GPUUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringRef.h"
 #include <functional>
-#include <vector>
 
 namespace llvm {
 class LLVMContext;
@@ -62,9 +61,10 @@ struct FunctionCallBuilder {
 
 /// Collect a set of patterns to convert from the GPU dialect to LLVM and
 /// populate converter for gpu types.
-void populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
-                                         RewritePatternSet &patterns,
-                                         bool kernelBarePtrCallConv = false);
+void populateGpuToLLVMConversionPatterns(
+    LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    bool kernelBarePtrCallConv = false,
+    bool kernelIntersperseSizeCallConv = false);
 
 /// A function that maps a MemorySpace enum to a target-specific integer value.
 using MemorySpaceMapping = std::function<unsigned(gpu::AddressSpace)>;

@@ -21,11 +21,11 @@ define <8 x i8> @vuzpi8(ptr %A, ptr %B) nounwind {
 define <16 x i8> @vuzpi8_Qres(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vuzpi8_Qres:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr d17, [r1]
-; CHECK-NEXT:    vldr d16, [r0]
-; CHECK-NEXT:    vuzp.8 d16, d17
-; CHECK-NEXT:    vmov r0, r1, d16
-; CHECK-NEXT:    vmov r2, r3, d17
+; CHECK-NEXT:    vldr d16, [r1]
+; CHECK-NEXT:    vldr d18, [r0]
+; CHECK-NEXT:    vuzp.8 d18, d16
+; CHECK-NEXT:    vmov r0, r1, d18
+; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <8 x i8>, ptr %A
 	%tmp2 = load <8 x i8>, ptr %B
@@ -53,11 +53,11 @@ define <4 x i16> @vuzpi16(ptr %A, ptr %B) nounwind {
 define <8 x i16> @vuzpi16_Qres(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vuzpi16_Qres:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr d17, [r1]
-; CHECK-NEXT:    vldr d16, [r0]
-; CHECK-NEXT:    vuzp.16 d16, d17
-; CHECK-NEXT:    vmov r0, r1, d16
-; CHECK-NEXT:    vmov r2, r3, d17
+; CHECK-NEXT:    vldr d16, [r1]
+; CHECK-NEXT:    vldr d18, [r0]
+; CHECK-NEXT:    vuzp.16 d18, d16
+; CHECK-NEXT:    vmov r0, r1, d18
+; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <4 x i16>, ptr %A
 	%tmp2 = load <4 x i16>, ptr %B
@@ -221,11 +221,11 @@ define <8 x i8> @vuzpi8_undef(ptr %A, ptr %B) nounwind {
 define <16 x i8> @vuzpi8_undef_Qres(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vuzpi8_undef_Qres:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr d17, [r1]
-; CHECK-NEXT:    vldr d16, [r0]
-; CHECK-NEXT:    vuzp.8 d16, d17
-; CHECK-NEXT:    vmov r0, r1, d16
-; CHECK-NEXT:    vmov r2, r3, d17
+; CHECK-NEXT:    vldr d16, [r1]
+; CHECK-NEXT:    vldr d18, [r0]
+; CHECK-NEXT:    vuzp.8 d18, d16
+; CHECK-NEXT:    vmov r0, r1, d18
+; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <8 x i8>, ptr %A
 	%tmp2 = load <8 x i8>, ptr %B
@@ -269,11 +269,11 @@ define <16 x i16> @vuzpQi16_undef_QQres(ptr %A, ptr %B) nounwind {
 define <8 x i16> @vuzp_lower_shufflemask_undef(ptr %A, ptr %B) {
 ; CHECK-LABEL: vuzp_lower_shufflemask_undef:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldr d17, [r1]
-; CHECK-NEXT:    vldr d18, [r0]
-; CHECK-NEXT:    vuzp.16 d18, d17
+; CHECK-NEXT:    vldr d16, [r1]
+; CHECK-NEXT:    vldr d17, [r0]
+; CHECK-NEXT:    vuzp.16 d17, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
-; CHECK-NEXT:    vmov r2, r3, d17
+; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
 entry:
 	%tmp1 = load <4 x i16>, ptr %A
@@ -285,13 +285,13 @@ entry:
 define <4 x i32> @vuzp_lower_shufflemask_zeroed(ptr %A, ptr %B) {
 ; CHECK-LABEL: vuzp_lower_shufflemask_zeroed:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldr d18, [r0]
-; CHECK-NEXT:    vorr d19, d18, d18
-; CHECK-NEXT:    vldr d17, [r1]
-; CHECK-NEXT:    vtrn.32 d19, d17
-; CHECK-NEXT:    vdup.32 d16, d18[0]
-; CHECK-NEXT:    vmov r2, r3, d17
-; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vldr d17, [r0]
+; CHECK-NEXT:    vorr d18, d17, d17
+; CHECK-NEXT:    vldr d16, [r1]
+; CHECK-NEXT:    vtrn.32 d18, d16
+; CHECK-NEXT:    vdup.32 d18, d17[0]
+; CHECK-NEXT:    vmov r2, r3, d16
+; CHECK-NEXT:    vmov r0, r1, d18
 ; CHECK-NEXT:    mov pc, lr
 entry:
   %tmp1 = load <2 x i32>, ptr %A
@@ -322,19 +322,19 @@ define <8 x i8> @cmpsel_trunc(<8 x i8> %in0, <8 x i8> %in1, <8 x i32> %cmp0, <8 
 ; truncate from i32 to i16 and one vmovn.i16 to perform the final truncation for i8.
 ; CHECK-LABEL: cmpsel_trunc:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    add r12, sp, #16
-; CHECK-NEXT:    vld1.64 {d16, d17}, [r12]
 ; CHECK-NEXT:    mov r12, sp
+; CHECK-NEXT:    vld1.64 {d16, d17}, [r12]
+; CHECK-NEXT:    add r12, sp, #16
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r12]
-; CHECK-NEXT:    add r12, sp, #48
-; CHECK-NEXT:    vld1.64 {d20, d21}, [r12]
 ; CHECK-NEXT:    add r12, sp, #32
+; CHECK-NEXT:    vld1.64 {d20, d21}, [r12]
+; CHECK-NEXT:    add r12, sp, #48
 ; CHECK-NEXT:    vcgt.u32 q8, q10, q8
 ; CHECK-NEXT:    vld1.64 {d20, d21}, [r12]
 ; CHECK-NEXT:    vcgt.u32 q9, q10, q9
 ; CHECK-NEXT:    vmov d20, r2, r3
-; CHECK-NEXT:    vmovn.i32 d17, q8
-; CHECK-NEXT:    vmovn.i32 d16, q9
+; CHECK-NEXT:    vmovn.i32 d16, q8
+; CHECK-NEXT:    vmovn.i32 d17, q9
 ; CHECK-NEXT:    vmov d18, r0, r1
 ; CHECK-NEXT:    vmovn.i16 d16, q8
 ; CHECK-NEXT:    vbsl d16, d18, d20
@@ -453,45 +453,45 @@ define <10 x i8> @vuzp_wide_type(<10 x i8> %tr0, <10 x i8> %tr1,
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    add r12, sp, #32
-; CHECK-NEXT:    add lr, sp, #48
-; CHECK-NEXT:    vld1.32 {d17[0]}, [r12:32]
 ; CHECK-NEXT:    add r12, sp, #24
+; CHECK-NEXT:    add lr, sp, #48
 ; CHECK-NEXT:    vld1.32 {d16[0]}, [r12:32]
-; CHECK-NEXT:    add r12, sp, #56
-; CHECK-NEXT:    vld1.32 {d19[0]}, [r12:32]
+; CHECK-NEXT:    add r12, sp, #32
+; CHECK-NEXT:    vld1.32 {d17[0]}, [r12:32]
 ; CHECK-NEXT:    vld1.32 {d18[0]}, [lr:32]
-; CHECK-NEXT:    add lr, sp, #40
-; CHECK-NEXT:    vld1.32 {d20[0]}, [lr:32]
+; CHECK-NEXT:    add lr, sp, #56
+; CHECK-NEXT:    vld1.32 {d19[0]}, [lr:32]
 ; CHECK-NEXT:    ldr r12, [sp, #68]
 ; CHECK-NEXT:    ldr r4, [r12]
-; CHECK-NEXT:    vmov.32 d23[0], r4
+; CHECK-NEXT:    vmov.32 d21[0], r4
+; CHECK-NEXT:    add r4, sp, #40
+; CHECK-NEXT:    vld1.32 {d22[0]}, [r4:32]
 ; CHECK-NEXT:    add r4, sp, #64
 ; CHECK-NEXT:    vld1.32 {d24[0]}, [r4:32]
-; CHECK-NEXT:    add r4, sp, #36
-; CHECK-NEXT:    vcgt.u32 q10, q12, q10
-; CHECK-NEXT:    vld1.32 {d17[1]}, [r4:32]
 ; CHECK-NEXT:    add r4, sp, #28
+; CHECK-NEXT:    vcgt.u32 q11, q12, q11
 ; CHECK-NEXT:    vld1.32 {d16[1]}, [r4:32]
-; CHECK-NEXT:    add r4, sp, #60
-; CHECK-NEXT:    vld1.32 {d19[1]}, [r4:32]
+; CHECK-NEXT:    add r4, sp, #36
+; CHECK-NEXT:    vld1.32 {d17[1]}, [r4:32]
 ; CHECK-NEXT:    add r4, sp, #52
 ; CHECK-NEXT:    vld1.32 {d18[1]}, [r4:32]
+; CHECK-NEXT:    add r4, sp, #60
+; CHECK-NEXT:    vld1.32 {d19[1]}, [r4:32]
 ; CHECK-NEXT:    add r4, r12, #4
 ; CHECK-NEXT:    vcgt.u32 q8, q9, q8
-; CHECK-NEXT:    vmovn.i32 d19, q10
-; CHECK-NEXT:    vmov.u8 lr, d23[3]
+; CHECK-NEXT:    vmovn.i32 d19, q11
+; CHECK-NEXT:    vmov.u8 lr, d21[3]
 ; CHECK-NEXT:    vmovn.i32 d18, q8
-; CHECK-NEXT:    vmovn.i16 d22, q9
-; CHECK-NEXT:    vldr d18, .LCPI23_0
-; CHECK-NEXT:    vmov.8 d17[0], lr
-; CHECK-NEXT:    vtbl.8 d16, {d22, d23}, d18
+; CHECK-NEXT:    vldr d16, .LCPI23_0
+; CHECK-NEXT:    vmovn.i16 d20, q9
 ; CHECK-NEXT:    vmov d19, r2, r3
-; CHECK-NEXT:    vld1.8 {d17[1]}, [r4]
-; CHECK-NEXT:    add r4, sp, #8
 ; CHECK-NEXT:    vmov d18, r0, r1
-; CHECK-NEXT:    vshl.i8 q8, q8, #7
+; CHECK-NEXT:    vmov.8 d23[0], lr
+; CHECK-NEXT:    vld1.8 {d23[1]}, [r4]
+; CHECK-NEXT:    add r4, sp, #8
+; CHECK-NEXT:    vtbl.8 d22, {d20, d21}, d16
 ; CHECK-NEXT:    vld1.64 {d20, d21}, [r4]
+; CHECK-NEXT:    vshl.i8 q8, q11, #7
 ; CHECK-NEXT:    vshr.s8 q8, q8, #7
 ; CHECK-NEXT:    vbsl q8, q9, q10
 ; CHECK-NEXT:    vmov r0, r1, d16
@@ -534,4 +534,60 @@ define %struct.uint8x8x2_t @vuzp_extract_subvector(<16 x i8> %t) #0 {
   %.fca.0.0.insert = insertvalue %struct.uint8x8x2_t undef, <8 x i8> %vuzp.i, 0, 0
   %.fca.0.1.insert = insertvalue %struct.uint8x8x2_t %.fca.0.0.insert, <8 x i8> %vuzp1.i, 0, 1
   ret %struct.uint8x8x2_t %.fca.0.1.insert
+}
+
+define void @test_15xi16(ptr %next.gep, ptr %next.gep13) {
+; CHECK-LABEL: test_15xi16:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    .save {r4, r5, r6, lr}
+; CHECK-NEXT:    push {r4, r5, r6, lr}
+; CHECK-NEXT:    add r2, r0, #2
+; CHECK-NEXT:    add r3, r0, #6
+; CHECK-NEXT:    vld1.16 {d16, d17}, [r2]!
+; CHECK-NEXT:    vld1.16 {d18}, [r2]!
+; CHECK-NEXT:    vmov.u16 r12, d18[0]
+; CHECK-NEXT:    ldr r2, [r2]
+; CHECK-NEXT:    vmov.u16 r4, d16[0]
+; CHECK-NEXT:    vld1.16 {d20, d21}, [r3]!
+; CHECK-NEXT:    vld1.16 {d19}, [r3]!
+; CHECK-NEXT:    vmov.u16 r5, d20[0]
+; CHECK-NEXT:    vmov.u16 lr, d18[2]
+; CHECK-NEXT:    vmov.u16 r6, d17[0]
+; CHECK-NEXT:    vmov.16 d23[0], r12
+; CHECK-NEXT:    vmov.16 d22[0], r4
+; CHECK-NEXT:    vmov.u16 r4, d19[0]
+; CHECK-NEXT:    vmov.u16 r12, d19[2]
+; CHECK-NEXT:    vmov.16 d24[0], r5
+; CHECK-NEXT:    vmov.u16 r5, d16[2]
+; CHECK-NEXT:    vmov.16 d23[1], lr
+; CHECK-NEXT:    vmov.u16 lr, d21[0]
+; CHECK-NEXT:    vmov.16 d25[0], r4
+; CHECK-NEXT:    vmov.u16 r4, d20[2]
+; CHECK-NEXT:    vmov.16 d22[1], r5
+; CHECK-NEXT:    vmov.u16 r5, d17[2]
+; CHECK-NEXT:    vmov.16 d23[2], r2
+; CHECK-NEXT:    ldr r2, [r3]
+; CHECK-NEXT:    vmov.16 d22[2], r6
+; CHECK-NEXT:    vmov.16 d24[1], r4
+; CHECK-NEXT:    vmov.u16 r4, d21[2]
+; CHECK-NEXT:    vmov.16 d25[1], r12
+; CHECK-NEXT:    vmov.16 d24[2], lr
+; CHECK-NEXT:    vmov.16 d25[2], r2
+; CHECK-NEXT:    add r2, r0, #30
+; CHECK-NEXT:    add r0, r0, #34
+; CHECK-NEXT:    vld1.16 {d23[3]}, [r2:16]
+; CHECK-NEXT:    vmov.16 d22[3], r5
+; CHECK-NEXT:    vmov.16 d24[3], r4
+; CHECK-NEXT:    vld1.16 {d25[3]}, [r0:16]
+; CHECK-NEXT:    vst1.16 {d22, d23}, [r1]!
+; CHECK-NEXT:    vst1.16 {d24, d25}, [r1]
+; CHECK-NEXT:    pop {r4, r5, r6, lr}
+; CHECK-NEXT:    mov pc, lr
+  %a = getelementptr inbounds nuw i8, ptr %next.gep, i32 2
+  %b = load <15 x i16>, ptr %a, align 2
+  %c = getelementptr inbounds nuw i8, ptr %next.gep, i32 6
+  %d = load <15 x i16>, ptr %c, align 2
+  %interleaved.vec = shufflevector <15 x i16> %b, <15 x i16> %d, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29>
+  store <16 x i16> %interleaved.vec, ptr %next.gep13, align 2
+  ret void
 }

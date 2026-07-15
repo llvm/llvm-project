@@ -240,13 +240,13 @@ void A57ChainingConstraint::addInterChainConstraint(PBQPRAGraph &G, unsigned Rd,
   if (Chains.count(Ra)) {
     if (Rd != Ra) {
       LLVM_DEBUG(dbgs() << "Moving acc chain from " << printReg(Ra, TRI)
-                        << " to " << printReg(Rd, TRI) << '\n';);
+                        << " to " << printReg(Rd, TRI) << '\n');
       Chains.remove(Ra);
       Chains.insert(Rd);
     }
   } else {
     LLVM_DEBUG(dbgs() << "Creating new acc chain for " << printReg(Rd, TRI)
-                      << '\n';);
+                      << '\n');
     Chains.insert(Rd);
   }
 
@@ -271,7 +271,7 @@ void A57ChainingConstraint::addInterChainConstraint(PBQPRAGraph &G, unsigned Rd,
       assert(edge != G.invalidEdgeId() &&
              "PBQP error ! The edge should exist !");
 
-      LLVM_DEBUG(dbgs() << "Refining constraint !\n";);
+      LLVM_DEBUG(dbgs() << "Refining constraint !\n");
 
       if (G.getEdgeNode1Id(edge) == node2) {
         std::swap(node1, node2);
@@ -333,7 +333,7 @@ void A57ChainingConstraint::apply(PBQPRAGraph &G) {
         SmallVector<unsigned, 8> toDel;
         if(regJustKilledBefore(LIs, r, MI)) {
           LLVM_DEBUG(dbgs() << "Killing chain " << printReg(r, TRI) << " at ";
-                     MI.print(dbgs()););
+                     MI.print(dbgs()));
           toDel.push_back(r);
         }
 

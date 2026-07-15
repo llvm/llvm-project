@@ -15,7 +15,7 @@ func.func @merge_constants() -> (index, index, index, index) {
 
 // CHECK-LABEL: func @simple_hoist
 func.func @simple_hoist(%arg0: memref<8xi32>) -> i32 {
-  // CHECK: arith.constant 88 : i32 loc(#[[UnknownLoc:.*]])
+  // CHECK: arith.constant 88 : i32 loc(#[[ConstLoc2:.*]])
   // CHECK: arith.constant 42 : i32 loc(#[[ConstLoc0:.*]])
   // CHECK: arith.constant 0 : index loc(#[[ConstLoc1:.*]])
   %0 = arith.constant 42 : i32 loc("simple_hoist":0:0)
@@ -26,9 +26,9 @@ func.func @simple_hoist(%arg0: memref<8xi32>) -> i32 {
 
   return %2 : i32
 }
-// CHECK-DAG: #[[UnknownLoc]] = loc(unknown)
 // CHECK-DAG: #[[ConstLoc0]] = loc("simple_hoist":0:0)
 // CHECK-DAG: #[[ConstLoc1]] = loc("simple_hoist":1:0)
+// CHECK-DAG: #[[ConstLoc2]] = loc("simple_hoist":2:0)
 
 // -----
 

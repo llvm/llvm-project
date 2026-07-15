@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_UNWRAP_REF_H
-#define _LIBCPP___TYPE_TRAITS_UNWRAP_REF_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_UNWRAP_REF_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_UNWRAP_REF_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/functional.h>
@@ -29,30 +29,9 @@ struct __unwrap_reference<reference_wrapper<_Tp> > {
   typedef _LIBCPP_NODEBUG _Tp& type;
 };
 
-#if _LIBCPP_STD_VER >= 20
 template <class _Tp>
-struct unwrap_reference : __unwrap_reference<_Tp> {};
-
-template <class _Tp>
-using unwrap_reference_t = typename unwrap_reference<_Tp>::type;
-
-template <class _Tp>
-struct unwrap_ref_decay : unwrap_reference<__decay_t<_Tp> > {};
-
-template <class _Tp>
-using unwrap_ref_decay_t = typename unwrap_ref_decay<_Tp>::type;
-#endif // _LIBCPP_STD_VER >= 20
-
-template <class _Tp>
-struct __unwrap_ref_decay
-#if _LIBCPP_STD_VER >= 20
-    : unwrap_ref_decay<_Tp>
-#else
-    : __unwrap_reference<__decay_t<_Tp> >
-#endif
-{
-};
+struct __unwrap_ref_decay : __unwrap_reference<__decay_t<_Tp> > {};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_UNWRAP_REF_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_UNWRAP_REF_H

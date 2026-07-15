@@ -11,22 +11,21 @@ define void @test_three_blocks(ptr nocapture %Output, ptr nocapture readonly %Co
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[MAXJ]], -1
 ; CHECK-NEXT:    [[XTRAITER:%.*]] = and i32 [[MAXJ]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[TMP0]], 3
-; CHECK-NEXT:    br i1 [[TMP1]], label [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA:%.*]], label [[FOR_BODY_PREHEADER_NEW:%.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[FOR_BODY_EPIL_PREHEADER:%.*]], label [[FOR_BODY_PREHEADER_NEW:%.*]]
 ; CHECK:       for.body.preheader.new:
 ; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i32 [[MAXJ]], [[XTRAITER]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.cond.cleanup.loopexit.unr-lcssa.loopexit:
+; CHECK:       for.cond.cleanup.loopexit.unr-lcssa:
 ; CHECK-NEXT:    [[TEMP_1_LCSSA_PH_PH:%.*]] = phi i32 [ [[TEMP_1_3:%.*]], [[FOR_INC_3:%.*]] ]
 ; CHECK-NEXT:    [[J_010_UNR_PH:%.*]] = phi i32 [ [[INC_3:%.*]], [[FOR_INC_3]] ]
 ; CHECK-NEXT:    [[TEMP_09_UNR_PH:%.*]] = phi i32 [ [[TEMP_1_3]], [[FOR_INC_3]] ]
-; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]]
-; CHECK:       for.cond.cleanup.loopexit.unr-lcssa:
-; CHECK-NEXT:    [[TEMP_1_LCSSA_PH:%.*]] = phi i32 [ poison, [[FOR_BODY_PREHEADER]] ], [ [[TEMP_1_LCSSA_PH_PH]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT:%.*]] ]
-; CHECK-NEXT:    [[J_010_UNR:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[J_010_UNR_PH]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
-; CHECK-NEXT:    [[TEMP_09_UNR:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[TEMP_09_UNR_PH]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
-; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i32 [[XTRAITER]], 0
-; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[FOR_BODY_EPIL_PREHEADER:%.*]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
+; CHECK-NEXT:    [[LCMP_MOD1:%.*]] = icmp ne i32 [[XTRAITER]], 0
+; CHECK-NEXT:    br i1 [[LCMP_MOD1]], label [[FOR_BODY_EPIL_PREHEADER]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
 ; CHECK:       for.body.epil.preheader:
+; CHECK-NEXT:    [[J_010_UNR:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[J_010_UNR_PH]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA:%.*]] ]
+; CHECK-NEXT:    [[TEMP_09_UNR:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[TEMP_09_UNR_PH]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i32 [[XTRAITER]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD]])
 ; CHECK-NEXT:    br label [[FOR_BODY_EPIL:%.*]]
 ; CHECK:       for.body.epil:
 ; CHECK-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds i32, ptr [[CONDITION:%.*]], i32 [[J_010_UNR]]
@@ -75,7 +74,7 @@ define void @test_three_blocks(ptr nocapture %Output, ptr nocapture readonly %Co
 ; CHECK-NEXT:    [[TEMP_1_LCSSA_PH1:%.*]] = phi i32 [ [[TEMP_1_EPIL]], [[FOR_INC_EPIL]] ], [ [[TEMP_1_EPIL_1]], [[FOR_INC_EPIL_1]] ], [ [[TEMP_1_EPIL_2]], [[FOR_INC_EPIL_2]] ]
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT]]
 ; CHECK:       for.cond.cleanup.loopexit:
-; CHECK-NEXT:    [[TEMP_1_LCSSA:%.*]] = phi i32 [ [[TEMP_1_LCSSA_PH]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]] ], [ [[TEMP_1_LCSSA_PH1]], [[FOR_COND_CLEANUP_LOOPEXIT_EPILOG_LCSSA]] ]
+; CHECK-NEXT:    [[TEMP_1_LCSSA:%.*]] = phi i32 [ [[TEMP_1_LCSSA_PH_PH]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]] ], [ [[TEMP_1_LCSSA_PH1]], [[FOR_COND_CLEANUP_LOOPEXIT_EPILOG_LCSSA]] ]
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[TEMP_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TEMP_1_LCSSA]], [[FOR_COND_CLEANUP_LOOPEXIT]] ]
@@ -135,7 +134,7 @@ define void @test_three_blocks(ptr nocapture %Output, ptr nocapture readonly %Co
 ; CHECK-NEXT:    [[INC_3]] = add nuw i32 [[J_010]], 4
 ; CHECK-NEXT:    [[NITER_NEXT_3]] = add i32 [[NITER]], 4
 ; CHECK-NEXT:    [[NITER_NCMP_3:%.*]] = icmp eq i32 [[NITER_NEXT_3]], [[UNROLL_ITER]]
-; CHECK-NEXT:    br i1 [[NITER_NCMP_3]], label [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT]], label [[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_3]], label [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]], label [[FOR_BODY]]
 ;
 entry:
   %cmp8 = icmp eq i32 %MaxJ, 0
@@ -354,24 +353,23 @@ define void @test_four_blocks(ptr nocapture %Output, ptr nocapture readonly %Con
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[MAXJ]], -2
 ; CHECK-NEXT:    [[XTRAITER:%.*]] = and i32 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 3
-; CHECK-NEXT:    br i1 [[TMP2]], label [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA:%.*]], label [[FOR_BODY_LR_PH_NEW:%.*]]
+; CHECK-NEXT:    br i1 [[TMP2]], label [[FOR_BODY_EPIL_PREHEADER:%.*]], label [[FOR_BODY_LR_PH_NEW:%.*]]
 ; CHECK:       for.body.lr.ph.new:
 ; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i32 [[TMP0]], [[XTRAITER]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.cond.cleanup.loopexit.unr-lcssa.loopexit:
+; CHECK:       for.cond.cleanup.loopexit.unr-lcssa:
 ; CHECK-NEXT:    [[TEMP_1_LCSSA_PH_PH:%.*]] = phi i32 [ [[TEMP_1_3:%.*]], [[FOR_INC_3:%.*]] ]
 ; CHECK-NEXT:    [[I_UNR_PH:%.*]] = phi i32 [ [[I2_3:%.*]], [[FOR_INC_3]] ]
 ; CHECK-NEXT:    [[J_027_UNR_PH:%.*]] = phi i32 [ [[INC_3:%.*]], [[FOR_INC_3]] ]
 ; CHECK-NEXT:    [[TEMP_026_UNR_PH:%.*]] = phi i32 [ [[TEMP_1_3]], [[FOR_INC_3]] ]
-; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]]
-; CHECK:       for.cond.cleanup.loopexit.unr-lcssa:
-; CHECK-NEXT:    [[TEMP_1_LCSSA_PH:%.*]] = phi i32 [ poison, [[FOR_BODY_LR_PH]] ], [ [[TEMP_1_LCSSA_PH_PH]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT:%.*]] ]
-; CHECK-NEXT:    [[I_UNR:%.*]] = phi i32 [ [[DOTPRE]], [[FOR_BODY_LR_PH]] ], [ [[I_UNR_PH]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
-; CHECK-NEXT:    [[J_027_UNR:%.*]] = phi i32 [ 1, [[FOR_BODY_LR_PH]] ], [ [[J_027_UNR_PH]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
-; CHECK-NEXT:    [[TEMP_026_UNR:%.*]] = phi i32 [ 0, [[FOR_BODY_LR_PH]] ], [ [[TEMP_026_UNR_PH]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
-; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i32 [[XTRAITER]], 0
-; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[FOR_BODY_EPIL_PREHEADER:%.*]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
+; CHECK-NEXT:    [[LCMP_MOD1:%.*]] = icmp ne i32 [[XTRAITER]], 0
+; CHECK-NEXT:    br i1 [[LCMP_MOD1]], label [[FOR_BODY_EPIL_PREHEADER]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
 ; CHECK:       for.body.epil.preheader:
+; CHECK-NEXT:    [[I_UNR:%.*]] = phi i32 [ [[DOTPRE]], [[FOR_BODY_LR_PH]] ], [ [[I_UNR_PH]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA:%.*]] ]
+; CHECK-NEXT:    [[J_027_UNR:%.*]] = phi i32 [ 1, [[FOR_BODY_LR_PH]] ], [ [[J_027_UNR_PH]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[TEMP_026_UNR:%.*]] = phi i32 [ 0, [[FOR_BODY_LR_PH]] ], [ [[TEMP_026_UNR_PH]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i32 [[XTRAITER]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD]])
 ; CHECK-NEXT:    br label [[FOR_BODY_EPIL:%.*]]
 ; CHECK:       for.body.epil:
 ; CHECK-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds i32, ptr [[CONDITION:%.*]], i32 [[J_027_UNR]]
@@ -450,7 +448,7 @@ define void @test_four_blocks(ptr nocapture %Output, ptr nocapture readonly %Con
 ; CHECK-NEXT:    [[TEMP_1_LCSSA_PH1:%.*]] = phi i32 [ [[TEMP_1_EPIL]], [[FOR_INC_EPIL]] ], [ [[TEMP_1_EPIL_1]], [[FOR_INC_EPIL_1]] ], [ [[TEMP_1_EPIL_2]], [[FOR_INC_EPIL_2]] ]
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT]]
 ; CHECK:       for.cond.cleanup.loopexit:
-; CHECK-NEXT:    [[TEMP_1_LCSSA:%.*]] = phi i32 [ [[TEMP_1_LCSSA_PH]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]] ], [ [[TEMP_1_LCSSA_PH1]], [[FOR_COND_CLEANUP_LOOPEXIT_EPILOG_LCSSA]] ]
+; CHECK-NEXT:    [[TEMP_1_LCSSA:%.*]] = phi i32 [ [[TEMP_1_LCSSA_PH_PH]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]] ], [ [[TEMP_1_LCSSA_PH1]], [[FOR_COND_CLEANUP_LOOPEXIT_EPILOG_LCSSA]] ]
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[TEMP_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TEMP_1_LCSSA]], [[FOR_COND_CLEANUP_LOOPEXIT]] ]
@@ -551,7 +549,7 @@ define void @test_four_blocks(ptr nocapture %Output, ptr nocapture readonly %Con
 ; CHECK-NEXT:    [[INC_3]] = add nuw i32 [[J_027]], 4
 ; CHECK-NEXT:    [[NITER_NEXT_3]] = add i32 [[NITER]], 4
 ; CHECK-NEXT:    [[NITER_NCMP_3:%.*]] = icmp eq i32 [[NITER_NEXT_3]], [[UNROLL_ITER]]
-; CHECK-NEXT:    br i1 [[NITER_NCMP_3]], label [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT]], label [[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_3]], label [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]], label [[FOR_BODY]]
 ;
 entry:
   %cmp25 = icmp ugt i32 %MaxJ, 1

@@ -110,7 +110,7 @@ module;
 
 module AOK1;
 
-export import C; // expected-error {{export declaration can only be used within a module purview}}
+export import C; // expected-error {{export declaration can only be used within a module interface}}
 
 int theAnswer () { return 42; }
 

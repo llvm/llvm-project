@@ -77,6 +77,7 @@
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "TargetInfo/X86TargetInfo.h"
 #include "X86DisassemblerDecoder.h"
+#include "llvm-c/Visibility.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCExpr.h"
@@ -84,6 +85,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
@@ -100,7 +102,7 @@ using namespace llvm::X86Disassembler;
 // this information is known, we have narrowed down to a single instruction.
 struct ModRMDecision {
   uint8_t modrm_type;
-  uint32_t instructionIDs;
+  uint16_t instructionIDs;
 };
 
 // Specifies which set of ModR/M->instruction tables to look at
@@ -120,70 +122,54 @@ struct ContextDecision {
 
 #include "X86GenDisassemblerTables.inc"
 
-static InstrUID decode(OpcodeType type, InstructionContext insnContext,
-                       uint8_t opcode, uint8_t modRM) {
-  const struct ModRMDecision *dec;
-
-  switch (type) {
+static const ModRMDecision &
+getDecision(OpcodeType Type, InstructionContext Context, uint8_t Opcode) {
+  const OpcodeDecision *Decision;
+  switch (Type) {
   case ONEBYTE:
-    dec = &ONEBYTE_SYM.opcodeDecisions[insnContext].modRMDecisions[opcode];
+    Decision = &ONEBYTE_SYM.opcodeDecisions[Context];
     break;
   case TWOBYTE:
-    dec = &TWOBYTE_SYM.opcodeDecisions[insnContext].modRMDecisions[opcode];
+    Decision = &TWOBYTE_SYM.opcodeDecisions[Context];
     break;
   case THREEBYTE_38:
-    dec = &THREEBYTE38_SYM.opcodeDecisions[insnContext].modRMDecisions[opcode];
+    Decision = &THREEBYTE38_SYM.opcodeDecisions[Context];
     break;
   case THREEBYTE_3A:
-    dec = &THREEBYTE3A_SYM.opcodeDecisions[insnContext].modRMDecisions[opcode];
+    Decision = &THREEBYTE3A_SYM.opcodeDecisions[Context];
     break;
-  case XOP8_MAP:
-    dec = &XOP8_MAP_SYM.opcodeDecisions[insnContext].modRMDecisions[opcode];
-    break;
-  case XOP9_MAP:
-    dec = &XOP9_MAP_SYM.opcodeDecisions[insnContext].modRMDecisions[opcode];
-    break;
-  case XOPA_MAP:
-    dec = &XOPA_MAP_SYM.opcodeDecisions[insnContext].modRMDecisions[opcode];
-    break;
-  case THREEDNOW_MAP:
-    dec =
-        &THREEDNOW_MAP_SYM.opcodeDecisions[insnContext].modRMDecisions[opcode];
-    break;
-  case MAP4:
-    dec = &MAP4_SYM.opcodeDecisions[insnContext].modRMDecisions[opcode];
-    break;
-  case MAP5:
-    dec = &MAP5_SYM.opcodeDecisions[insnContext].modRMDecisions[opcode];
-    break;
-  case MAP6:
-    dec = &MAP6_SYM.opcodeDecisions[insnContext].modRMDecisions[opcode];
-    break;
-  case MAP7:
-    dec = &MAP7_SYM.opcodeDecisions[insnContext].modRMDecisions[opcode];
+  default:
+    static_assert(XOP8_MAP == 4 && MAP7 == 11);
+    unsigned DecisionIndex =
+        SPARSE_OPCODE_DECISION_INDICES_SYM[Type - XOP8_MAP][Context];
+    Decision = &SPARSE_OPCODE_DECISIONS_SYM[DecisionIndex];
     break;
   }
+  return Decision->modRMDecisions[Opcode];
+}
 
-  switch (dec->modrm_type) {
+static LLVM_ATTRIBUTE_NOINLINE InstrUID
+decodeModRM(const ModRMDecision &Decision, uint8_t ModRM) {
+  switch (Decision.modrm_type) {
   default:
     llvm_unreachable("Corrupt table!  Unknown modrm_type");
     return 0;
   case MODRM_ONEENTRY:
-    return modRMTable[dec->instructionIDs];
+    llvm_unreachable("MODRM_ONEENTRY does not require a ModR/M byte");
   case MODRM_SPLITRM:
-    if (modFromModRM(modRM) == 0x3)
-      return modRMTable[dec->instructionIDs + 1];
-    return modRMTable[dec->instructionIDs];
+    if (modFromModRM(ModRM) == 0x3)
+      return modRMTable[Decision.instructionIDs + 1];
+    return modRMTable[Decision.instructionIDs];
   case MODRM_SPLITREG:
-    if (modFromModRM(modRM) == 0x3)
-      return modRMTable[dec->instructionIDs + ((modRM & 0x38) >> 3) + 8];
-    return modRMTable[dec->instructionIDs + ((modRM & 0x38) >> 3)];
+    if (modFromModRM(ModRM) == 0x3)
+      return modRMTable[Decision.instructionIDs + ((ModRM & 0x38) >> 3) + 8];
+    return modRMTable[Decision.instructionIDs + ((ModRM & 0x38) >> 3)];
   case MODRM_SPLITMISC:
-    if (modFromModRM(modRM) == 0x3)
-      return modRMTable[dec->instructionIDs + (modRM & 0x3f) + 8];
-    return modRMTable[dec->instructionIDs + ((modRM & 0x38) >> 3)];
+    if (modFromModRM(ModRM) == 0x3)
+      return modRMTable[Decision.instructionIDs + (ModRM & 0x3f) + 8];
+    return modRMTable[Decision.instructionIDs + ((ModRM & 0x38) >> 3)];
   case MODRM_FULL:
-    return modRMTable[dec->instructionIDs + modRM];
+    return modRMTable[Decision.instructionIDs + ModRM];
   }
 }
 
@@ -327,6 +313,14 @@ static int readPrefixes(struct InternalInstruction *insn) {
     default: // Not a prefix byte
       isPrefix = false;
       break;
+    }
+
+    if (isREX(insn, byte)) {
+      insn->rexPrefix = byte;
+      isPrefix = true;
+      LLVM_DEBUG(dbgs() << format("Found REX prefix 0x%hhx", byte));
+    } else if (isPrefix) {
+      insn->rexPrefix = 0;
     }
 
     if (isPrefix)
@@ -506,11 +500,6 @@ static int readPrefixes(struct InternalInstruction *insn) {
     LLVM_DEBUG(dbgs() << format("Found REX2 prefix 0x%hhx 0x%hhx",
                                 insn->rex2ExtensionPrefix[0],
                                 insn->rex2ExtensionPrefix[1]));
-  } else if (isREX(insn, byte)) {
-    if (peek(insn, nextByte))
-      return -1;
-    insn->rexPrefix = byte;
-    LLVM_DEBUG(dbgs() << format("Found REX prefix 0x%hhx", byte));
   } else
     --insn->readerCursor;
 
@@ -806,10 +795,6 @@ static int readModRM(struct InternalInstruction *insn) {
       if (index > 7)                                                           \
         *valid = 0;                                                            \
       return prefix##_TMM0 + index;                                            \
-    case TYPE_TMM_PAIR:                                                        \
-      if (index > 7)                                                           \
-        *valid = 0;                                                            \
-      return prefix##_TMM0_TMM1 + (index / 2);                                 \
     case TYPE_VK:                                                              \
       index &= 0xf;                                                            \
       if (index > 7)                                                           \
@@ -1094,55 +1079,15 @@ static int getInstructionIDWithAttrMask(uint16_t *instructionID,
                                         struct InternalInstruction *insn,
                                         uint16_t attrMask) {
   auto insnCtx = InstructionContext(x86DisassemblerContexts[attrMask]);
-  const ContextDecision *decision;
-  switch (insn->opcodeType) {
-  case ONEBYTE:
-    decision = &ONEBYTE_SYM;
-    break;
-  case TWOBYTE:
-    decision = &TWOBYTE_SYM;
-    break;
-  case THREEBYTE_38:
-    decision = &THREEBYTE38_SYM;
-    break;
-  case THREEBYTE_3A:
-    decision = &THREEBYTE3A_SYM;
-    break;
-  case XOP8_MAP:
-    decision = &XOP8_MAP_SYM;
-    break;
-  case XOP9_MAP:
-    decision = &XOP9_MAP_SYM;
-    break;
-  case XOPA_MAP:
-    decision = &XOPA_MAP_SYM;
-    break;
-  case THREEDNOW_MAP:
-    decision = &THREEDNOW_MAP_SYM;
-    break;
-  case MAP4:
-    decision = &MAP4_SYM;
-    break;
-  case MAP5:
-    decision = &MAP5_SYM;
-    break;
-  case MAP6:
-    decision = &MAP6_SYM;
-    break;
-  case MAP7:
-    decision = &MAP7_SYM;
-    break;
-  }
+  const ModRMDecision &Decision =
+      getDecision(insn->opcodeType, insnCtx, insn->opcode);
 
-  if (decision->opcodeDecisions[insnCtx]
-          .modRMDecisions[insn->opcode]
-          .modrm_type != MODRM_ONEENTRY) {
+  if (Decision.modrm_type != MODRM_ONEENTRY) {
     if (readModRM(insn))
       return -1;
-    *instructionID =
-        decode(insn->opcodeType, insnCtx, insn->opcode, insn->modRM);
+    *instructionID = decodeModRM(Decision, insn->modRM);
   } else {
-    *instructionID = decode(insn->opcodeType, insnCtx, insn->opcode, 0);
+    *instructionID = modRMTable[Decision.instructionIDs];
   }
 
   return 0;
@@ -1890,8 +1835,10 @@ MCDisassembler::DecodeStatus X86GenericDisassembler::getInstruction(
   Insn.operands = x86OperandSets[Insn.spec->operands];
   Insn.length = Insn.readerCursor - Insn.startLocation;
   Size = Insn.length;
-  if (Size > 15)
+  if (Size > 15) {
     LLVM_DEBUG(dbgs() << "Instruction exceeds 15-byte limit");
+    return Fail;
+  }
 
   bool Ret = translateInstruction(Instr, Insn, this);
   if (!Ret) {
@@ -2319,7 +2266,6 @@ static bool translateRM(MCInst &mcInst, const OperandSpecifier &operand,
   case TYPE_YMM:
   case TYPE_ZMM:
   case TYPE_TMM:
-  case TYPE_TMM_PAIR:
   case TYPE_VK_PAIR:
   case TYPE_VK:
   case TYPE_DEBUGREG:

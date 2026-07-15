@@ -451,120 +451,200 @@ define <vscale x 2 x double> @dupq_f64(<vscale x 2 x double> %a) {
 ;
 
 define <vscale x 16 x i8> @dupq_lane_i8(<vscale x 16 x i8> %a, i64 %idx) {
-; CHECK-LABEL: dupq_lane_i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    index z1.d, #0, #1
-; CHECK-NEXT:    add x8, x0, x0
-; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    and z1.d, z1.d, #0x1
-; CHECK-NEXT:    add z1.d, z1.d, z2.d
-; CHECK-NEXT:    tbl z0.d, { z0.d }, z1.d
-; CHECK-NEXT:    ret
+; SVE-LABEL: dupq_lane_i8:
+; SVE:       // %bb.0:
+; SVE-NEXT:    index z1.d, #0, #1
+; SVE-NEXT:    add x8, x0, x0
+; SVE-NEXT:    mov z2.d, x8
+; SVE-NEXT:    and z1.d, z1.d, #0x1
+; SVE-NEXT:    orr z1.d, z1.d, z2.d
+; SVE-NEXT:    tbl z0.d, { z0.d }, z1.d
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: dupq_lane_i8:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    index z1.d, #0, #1
+; SVE2-NEXT:    add x8, x0, x0
+; SVE2-NEXT:    mov z2.d, x8
+; SVE2-NEXT:    and z1.d, z1.d, #0x1
+; SVE2-NEXT:    add z1.d, z1.d, z2.d
+; SVE2-NEXT:    tbl z0.d, { z0.d }, z1.d
+; SVE2-NEXT:    ret
   %out = call <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8> %a, i64 %idx)
   ret <vscale x 16 x i8> %out
 }
 
 ; NOTE: Identical operation to dupq_lane_i8 (i.e. element type is irrelevant).
 define <vscale x 8 x i16> @dupq_lane_i16(<vscale x 8 x i16> %a, i64 %idx) {
-; CHECK-LABEL: dupq_lane_i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    index z1.d, #0, #1
-; CHECK-NEXT:    add x8, x0, x0
-; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    and z1.d, z1.d, #0x1
-; CHECK-NEXT:    add z1.d, z1.d, z2.d
-; CHECK-NEXT:    tbl z0.d, { z0.d }, z1.d
-; CHECK-NEXT:    ret
+; SVE-LABEL: dupq_lane_i16:
+; SVE:       // %bb.0:
+; SVE-NEXT:    index z1.d, #0, #1
+; SVE-NEXT:    add x8, x0, x0
+; SVE-NEXT:    mov z2.d, x8
+; SVE-NEXT:    and z1.d, z1.d, #0x1
+; SVE-NEXT:    orr z1.d, z1.d, z2.d
+; SVE-NEXT:    tbl z0.d, { z0.d }, z1.d
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: dupq_lane_i16:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    index z1.d, #0, #1
+; SVE2-NEXT:    add x8, x0, x0
+; SVE2-NEXT:    mov z2.d, x8
+; SVE2-NEXT:    and z1.d, z1.d, #0x1
+; SVE2-NEXT:    add z1.d, z1.d, z2.d
+; SVE2-NEXT:    tbl z0.d, { z0.d }, z1.d
+; SVE2-NEXT:    ret
   %out = call <vscale x 8 x i16> @llvm.aarch64.sve.dupq.lane.nxv8i16(<vscale x 8 x i16> %a, i64 %idx)
   ret <vscale x 8 x i16> %out
 }
 
 ; NOTE: Identical operation to dupq_lane_i8 (i.e. element type is irrelevant).
 define <vscale x 4 x i32> @dupq_lane_i32(<vscale x 4 x i32> %a, i64 %idx) {
-; CHECK-LABEL: dupq_lane_i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    index z1.d, #0, #1
-; CHECK-NEXT:    add x8, x0, x0
-; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    and z1.d, z1.d, #0x1
-; CHECK-NEXT:    add z1.d, z1.d, z2.d
-; CHECK-NEXT:    tbl z0.d, { z0.d }, z1.d
-; CHECK-NEXT:    ret
+; SVE-LABEL: dupq_lane_i32:
+; SVE:       // %bb.0:
+; SVE-NEXT:    index z1.d, #0, #1
+; SVE-NEXT:    add x8, x0, x0
+; SVE-NEXT:    mov z2.d, x8
+; SVE-NEXT:    and z1.d, z1.d, #0x1
+; SVE-NEXT:    orr z1.d, z1.d, z2.d
+; SVE-NEXT:    tbl z0.d, { z0.d }, z1.d
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: dupq_lane_i32:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    index z1.d, #0, #1
+; SVE2-NEXT:    add x8, x0, x0
+; SVE2-NEXT:    mov z2.d, x8
+; SVE2-NEXT:    and z1.d, z1.d, #0x1
+; SVE2-NEXT:    add z1.d, z1.d, z2.d
+; SVE2-NEXT:    tbl z0.d, { z0.d }, z1.d
+; SVE2-NEXT:    ret
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32> %a, i64 %idx)
   ret <vscale x 4 x i32> %out
 }
 
 ; NOTE: Identical operation to dupq_lane_i8 (i.e. element type is irrelevant).
 define <vscale x 2 x i64> @dupq_lane_i64(<vscale x 2 x i64> %a, i64 %idx) {
-; CHECK-LABEL: dupq_lane_i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    index z1.d, #0, #1
-; CHECK-NEXT:    add x8, x0, x0
-; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    and z1.d, z1.d, #0x1
-; CHECK-NEXT:    add z1.d, z1.d, z2.d
-; CHECK-NEXT:    tbl z0.d, { z0.d }, z1.d
-; CHECK-NEXT:    ret
+; SVE-LABEL: dupq_lane_i64:
+; SVE:       // %bb.0:
+; SVE-NEXT:    index z1.d, #0, #1
+; SVE-NEXT:    add x8, x0, x0
+; SVE-NEXT:    mov z2.d, x8
+; SVE-NEXT:    and z1.d, z1.d, #0x1
+; SVE-NEXT:    orr z1.d, z1.d, z2.d
+; SVE-NEXT:    tbl z0.d, { z0.d }, z1.d
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: dupq_lane_i64:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    index z1.d, #0, #1
+; SVE2-NEXT:    add x8, x0, x0
+; SVE2-NEXT:    mov z2.d, x8
+; SVE2-NEXT:    and z1.d, z1.d, #0x1
+; SVE2-NEXT:    add z1.d, z1.d, z2.d
+; SVE2-NEXT:    tbl z0.d, { z0.d }, z1.d
+; SVE2-NEXT:    ret
   %out = call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> %a, i64 %idx)
   ret <vscale x 2 x i64> %out
 }
 
 ; NOTE: Identical operation to dupq_lane_i8 (i.e. element type is irrelevant).
 define <vscale x 8 x half> @dupq_lane_f16(<vscale x 8 x half> %a, i64 %idx) {
-; CHECK-LABEL: dupq_lane_f16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    index z1.d, #0, #1
-; CHECK-NEXT:    add x8, x0, x0
-; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    and z1.d, z1.d, #0x1
-; CHECK-NEXT:    add z1.d, z1.d, z2.d
-; CHECK-NEXT:    tbl z0.d, { z0.d }, z1.d
-; CHECK-NEXT:    ret
+; SVE-LABEL: dupq_lane_f16:
+; SVE:       // %bb.0:
+; SVE-NEXT:    index z1.d, #0, #1
+; SVE-NEXT:    add x8, x0, x0
+; SVE-NEXT:    mov z2.d, x8
+; SVE-NEXT:    and z1.d, z1.d, #0x1
+; SVE-NEXT:    orr z1.d, z1.d, z2.d
+; SVE-NEXT:    tbl z0.d, { z0.d }, z1.d
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: dupq_lane_f16:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    index z1.d, #0, #1
+; SVE2-NEXT:    add x8, x0, x0
+; SVE2-NEXT:    mov z2.d, x8
+; SVE2-NEXT:    and z1.d, z1.d, #0x1
+; SVE2-NEXT:    add z1.d, z1.d, z2.d
+; SVE2-NEXT:    tbl z0.d, { z0.d }, z1.d
+; SVE2-NEXT:    ret
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.dupq.lane.nxv8f16(<vscale x 8 x half> %a, i64 %idx)
   ret <vscale x 8 x half> %out
 }
 
 ; NOTE: Identical operation to dupq_lane_i8 (i.e. element type is irrelevant).
 define <vscale x 8 x bfloat> @dupq_lane_bf16(<vscale x 8 x bfloat> %a, i64 %idx) #0 {
-; CHECK-LABEL: dupq_lane_bf16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    index z1.d, #0, #1
-; CHECK-NEXT:    add x8, x0, x0
-; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    and z1.d, z1.d, #0x1
-; CHECK-NEXT:    add z1.d, z1.d, z2.d
-; CHECK-NEXT:    tbl z0.d, { z0.d }, z1.d
-; CHECK-NEXT:    ret
+; SVE-LABEL: dupq_lane_bf16:
+; SVE:       // %bb.0:
+; SVE-NEXT:    index z1.d, #0, #1
+; SVE-NEXT:    add x8, x0, x0
+; SVE-NEXT:    mov z2.d, x8
+; SVE-NEXT:    and z1.d, z1.d, #0x1
+; SVE-NEXT:    orr z1.d, z1.d, z2.d
+; SVE-NEXT:    tbl z0.d, { z0.d }, z1.d
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: dupq_lane_bf16:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    index z1.d, #0, #1
+; SVE2-NEXT:    add x8, x0, x0
+; SVE2-NEXT:    mov z2.d, x8
+; SVE2-NEXT:    and z1.d, z1.d, #0x1
+; SVE2-NEXT:    add z1.d, z1.d, z2.d
+; SVE2-NEXT:    tbl z0.d, { z0.d }, z1.d
+; SVE2-NEXT:    ret
   %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> %a, i64 %idx)
   ret <vscale x 8 x bfloat> %out
 }
 
 ; NOTE: Identical operation to dupq_lane_i8 (i.e. element type is irrelevant).
 define <vscale x 4 x float> @dupq_lane_f32(<vscale x 4 x float> %a, i64 %idx) {
-; CHECK-LABEL: dupq_lane_f32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    index z1.d, #0, #1
-; CHECK-NEXT:    add x8, x0, x0
-; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    and z1.d, z1.d, #0x1
-; CHECK-NEXT:    add z1.d, z1.d, z2.d
-; CHECK-NEXT:    tbl z0.d, { z0.d }, z1.d
-; CHECK-NEXT:    ret
+; SVE-LABEL: dupq_lane_f32:
+; SVE:       // %bb.0:
+; SVE-NEXT:    index z1.d, #0, #1
+; SVE-NEXT:    add x8, x0, x0
+; SVE-NEXT:    mov z2.d, x8
+; SVE-NEXT:    and z1.d, z1.d, #0x1
+; SVE-NEXT:    orr z1.d, z1.d, z2.d
+; SVE-NEXT:    tbl z0.d, { z0.d }, z1.d
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: dupq_lane_f32:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    index z1.d, #0, #1
+; SVE2-NEXT:    add x8, x0, x0
+; SVE2-NEXT:    mov z2.d, x8
+; SVE2-NEXT:    and z1.d, z1.d, #0x1
+; SVE2-NEXT:    add z1.d, z1.d, z2.d
+; SVE2-NEXT:    tbl z0.d, { z0.d }, z1.d
+; SVE2-NEXT:    ret
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.dupq.lane.nxv4f32(<vscale x 4 x float> %a, i64 %idx)
   ret <vscale x 4 x float> %out
 }
 
 ; NOTE: Identical operation to dupq_lane_i8 (i.e. element type is irrelevant).
 define <vscale x 2 x double> @dupq_lane_f64(<vscale x 2 x double> %a, i64 %idx) {
-; CHECK-LABEL: dupq_lane_f64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    index z1.d, #0, #1
-; CHECK-NEXT:    add x8, x0, x0
-; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    and z1.d, z1.d, #0x1
-; CHECK-NEXT:    add z1.d, z1.d, z2.d
-; CHECK-NEXT:    tbl z0.d, { z0.d }, z1.d
-; CHECK-NEXT:    ret
+; SVE-LABEL: dupq_lane_f64:
+; SVE:       // %bb.0:
+; SVE-NEXT:    index z1.d, #0, #1
+; SVE-NEXT:    add x8, x0, x0
+; SVE-NEXT:    mov z2.d, x8
+; SVE-NEXT:    and z1.d, z1.d, #0x1
+; SVE-NEXT:    orr z1.d, z1.d, z2.d
+; SVE-NEXT:    tbl z0.d, { z0.d }, z1.d
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: dupq_lane_f64:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    index z1.d, #0, #1
+; SVE2-NEXT:    add x8, x0, x0
+; SVE2-NEXT:    mov z2.d, x8
+; SVE2-NEXT:    and z1.d, z1.d, #0x1
+; SVE2-NEXT:    add z1.d, z1.d, z2.d
+; SVE2-NEXT:    tbl z0.d, { z0.d }, z1.d
+; SVE2-NEXT:    ret
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.dupq.lane.nxv2f64(<vscale x 2 x double> %a, i64 %idx)
   ret <vscale x 2 x double> %out
 }
@@ -601,9 +681,9 @@ define dso_local <vscale x 4 x float> @dupq_f32_repeat_complex(float %x, float %
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-NEXT:    mov z0.d, d0
 ; CHECK-NEXT:    ret
-  %1 = insertelement <4 x float> undef, float %x, i64 0
+  %1 = insertelement <4 x float> poison, float %x, i64 0
   %2 = insertelement <4 x float> %1, float %y, i64 1
-  %3 = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> %2, i64 0)
+  %3 = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> poison, <4 x float> %2, i64 0)
   %4 = bitcast <vscale x 4 x float> %3 to <vscale x 2 x double>
   %5 = shufflevector <vscale x 2 x double> %4, <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
   %6 = bitcast <vscale x 2 x double> %5 to <vscale x 4 x float>
@@ -618,9 +698,9 @@ define dso_local <vscale x 8 x half> @dupq_f16_repeat_complex(half %x, half %y) 
 ; CHECK-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-NEXT:    mov z0.s, s0
 ; CHECK-NEXT:    ret
-  %1 = insertelement <8 x half> undef, half %x, i64 0
+  %1 = insertelement <8 x half> poison, half %x, i64 0
   %2 = insertelement <8 x half> %1, half %y, i64 1
-  %3 = call <vscale x 8 x half> @llvm.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> undef, <8 x half> %2, i64 0)
+  %3 = call <vscale x 8 x half> @llvm.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> poison, <8 x half> %2, i64 0)
   %4 = bitcast <vscale x 8 x half> %3 to <vscale x 4 x float>
   %5 = shufflevector <vscale x 4 x float> %4, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
   %6 = bitcast <vscale x 4 x float> %5 to <vscale x 8 x half>

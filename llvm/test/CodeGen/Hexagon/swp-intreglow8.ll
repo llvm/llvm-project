@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -verify-machineinstrs < %s
+; RUN: llc -mtriple=hexagon -verify-machineinstrs < %s
 ; REQUIRES: asserts
 
 ; Test that we constrain the new register operands for instructions

@@ -5,7 +5,6 @@
 ; RUN: opt -S -passes='function(load-store-vectorizer)' --mcpu=hawaii -mattr=+unaligned-access-mode,+unaligned-scratch-access,+max-private-element-size-16 < %s | FileCheck -check-prefixes=CHECK,UNALIGNED %s
 
 target triple = "amdgcn--"
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
 
 define amdgpu_kernel void @load_unknown_offset_align1_i8(ptr addrspace(1) noalias %out, i32 %offset) #0 {
 ; ALIGNED-LABEL: @load_unknown_offset_align1_i8(
@@ -22,8 +21,8 @@ define amdgpu_kernel void @load_unknown_offset_align1_i8(ptr addrspace(1) noalia
 ; UNALIGNED-NEXT:    [[ALLOCA:%.*]] = alloca [128 x i8], align 1, addrspace(5)
 ; UNALIGNED-NEXT:    [[PTR0:%.*]] = getelementptr inbounds [128 x i8], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[OFFSET:%.*]]
 ; UNALIGNED-NEXT:    [[TMP1:%.*]] = load <2 x i8>, ptr addrspace(5) [[PTR0]], align 1
-; UNALIGNED-NEXT:    [[VAL01:%.*]] = extractelement <2 x i8> [[TMP1]], i32 0
-; UNALIGNED-NEXT:    [[VAL12:%.*]] = extractelement <2 x i8> [[TMP1]], i32 1
+; UNALIGNED-NEXT:    [[VAL01:%.*]] = extractelement <2 x i8> [[TMP1]], i64 0
+; UNALIGNED-NEXT:    [[VAL12:%.*]] = extractelement <2 x i8> [[TMP1]], i64 1
 ; UNALIGNED-NEXT:    [[ADD:%.*]] = add i8 [[VAL01]], [[VAL12]]
 ; UNALIGNED-NEXT:    store i8 [[ADD]], ptr addrspace(1) [[OUT:%.*]], align 1
 ; UNALIGNED-NEXT:    ret void
@@ -53,8 +52,8 @@ define amdgpu_kernel void @load_unknown_offset_align1_i16(ptr addrspace(1) noali
 ; UNALIGNED-NEXT:    [[ALLOCA:%.*]] = alloca [128 x i16], align 1, addrspace(5)
 ; UNALIGNED-NEXT:    [[PTR0:%.*]] = getelementptr inbounds [128 x i16], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[OFFSET:%.*]]
 ; UNALIGNED-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr addrspace(5) [[PTR0]], align 1
-; UNALIGNED-NEXT:    [[VAL01:%.*]] = extractelement <2 x i16> [[TMP1]], i32 0
-; UNALIGNED-NEXT:    [[VAL12:%.*]] = extractelement <2 x i16> [[TMP1]], i32 1
+; UNALIGNED-NEXT:    [[VAL01:%.*]] = extractelement <2 x i16> [[TMP1]], i64 0
+; UNALIGNED-NEXT:    [[VAL12:%.*]] = extractelement <2 x i16> [[TMP1]], i64 1
 ; UNALIGNED-NEXT:    [[ADD:%.*]] = add i16 [[VAL01]], [[VAL12]]
 ; UNALIGNED-NEXT:    store i16 [[ADD]], ptr addrspace(1) [[OUT:%.*]], align 2
 ; UNALIGNED-NEXT:    ret void
@@ -86,8 +85,8 @@ define amdgpu_kernel void @load_unknown_offset_align1_i32(ptr addrspace(1) noali
 ; UNALIGNED-NEXT:    [[ALLOCA:%.*]] = alloca [128 x i32], align 1, addrspace(5)
 ; UNALIGNED-NEXT:    [[PTR0:%.*]] = getelementptr inbounds [128 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[OFFSET:%.*]]
 ; UNALIGNED-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(5) [[PTR0]], align 1
-; UNALIGNED-NEXT:    [[VAL01:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; UNALIGNED-NEXT:    [[VAL12:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; UNALIGNED-NEXT:    [[VAL01:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
+; UNALIGNED-NEXT:    [[VAL12:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
 ; UNALIGNED-NEXT:    [[ADD:%.*]] = add i32 [[VAL01]], [[VAL12]]
 ; UNALIGNED-NEXT:    store i32 [[ADD]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; UNALIGNED-NEXT:    ret void
@@ -118,8 +117,8 @@ define amdgpu_kernel void @load_alloca16_unknown_offset_align1_i32(ptr addrspace
 ; UNALIGNED-NEXT:    [[ALLOCA:%.*]] = alloca [128 x i32], align 16, addrspace(5)
 ; UNALIGNED-NEXT:    [[PTR0:%.*]] = getelementptr inbounds [128 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[OFFSET:%.*]]
 ; UNALIGNED-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(5) [[PTR0]], align 4
-; UNALIGNED-NEXT:    [[VAL01:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; UNALIGNED-NEXT:    [[VAL12:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; UNALIGNED-NEXT:    [[VAL01:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
+; UNALIGNED-NEXT:    [[VAL12:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
 ; UNALIGNED-NEXT:    [[ADD:%.*]] = add i32 [[VAL01]], [[VAL12]]
 ; UNALIGNED-NEXT:    store i32 [[ADD]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; UNALIGNED-NEXT:    ret void
@@ -246,10 +245,10 @@ define amdgpu_kernel void @merge_private_load_4_vector_elts_loads_v4i32() {
 ; CHECK-LABEL: @merge_private_load_4_vector_elts_loads_v4i32(
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [8 x i32], align 4, addrspace(5)
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr addrspace(5) [[ALLOCA]], align 4
-; CHECK-NEXT:    [[LOAD01:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[LOAD12:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[LOAD23:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[LOAD34:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
+; CHECK-NEXT:    [[LOAD01:%.*]] = extractelement <4 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[LOAD12:%.*]] = extractelement <4 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[LOAD23:%.*]] = extractelement <4 x i32> [[TMP1]], i64 2
+; CHECK-NEXT:    [[LOAD34:%.*]] = extractelement <4 x i32> [[TMP1]], i64 3
 ; CHECK-NEXT:    ret void
 ;
   %alloca = alloca [8 x i32], align 1, addrspace(5)
@@ -268,10 +267,10 @@ define amdgpu_kernel void @merge_private_load_4_vector_elts_loads_v4i8() {
 ; CHECK-LABEL: @merge_private_load_4_vector_elts_loads_v4i8(
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [8 x i8], align 4, addrspace(5)
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr addrspace(5) [[ALLOCA]], align 4
-; CHECK-NEXT:    [[LOAD01:%.*]] = extractelement <4 x i8> [[TMP1]], i32 0
-; CHECK-NEXT:    [[LOAD12:%.*]] = extractelement <4 x i8> [[TMP1]], i32 1
-; CHECK-NEXT:    [[LOAD23:%.*]] = extractelement <4 x i8> [[TMP1]], i32 2
-; CHECK-NEXT:    [[LOAD34:%.*]] = extractelement <4 x i8> [[TMP1]], i32 3
+; CHECK-NEXT:    [[LOAD01:%.*]] = extractelement <4 x i8> [[TMP1]], i64 0
+; CHECK-NEXT:    [[LOAD12:%.*]] = extractelement <4 x i8> [[TMP1]], i64 1
+; CHECK-NEXT:    [[LOAD23:%.*]] = extractelement <4 x i8> [[TMP1]], i64 2
+; CHECK-NEXT:    [[LOAD34:%.*]] = extractelement <4 x i8> [[TMP1]], i64 3
 ; CHECK-NEXT:    ret void
 ;
   %alloca = alloca [8 x i8], align 1, addrspace(5)
@@ -334,8 +333,8 @@ define i32 @private_load_2xi16_align2_not_alloca(ptr addrspace(5) %p) #0 {
 ;
 ; UNALIGNED-LABEL: @private_load_2xi16_align2_not_alloca(
 ; UNALIGNED-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr addrspace(5) [[P:%.*]], align 2
-; UNALIGNED-NEXT:    [[P_01:%.*]] = extractelement <2 x i16> [[TMP1]], i32 0
-; UNALIGNED-NEXT:    [[P_12:%.*]] = extractelement <2 x i16> [[TMP1]], i32 1
+; UNALIGNED-NEXT:    [[P_01:%.*]] = extractelement <2 x i16> [[TMP1]], i64 0
+; UNALIGNED-NEXT:    [[P_12:%.*]] = extractelement <2 x i16> [[TMP1]], i64 1
 ; UNALIGNED-NEXT:    [[ZEXT_0:%.*]] = zext i16 [[P_01]] to i32
 ; UNALIGNED-NEXT:    [[ZEXT_1:%.*]] = zext i16 [[P_12]] to i32
 ; UNALIGNED-NEXT:    [[SHL_1:%.*]] = shl i32 [[ZEXT_1]], 16
@@ -365,8 +364,8 @@ define i32 @private_load_2xi16_align1_not_alloca(ptr addrspace(5) %p) #0 {
 ;
 ; UNALIGNED-LABEL: @private_load_2xi16_align1_not_alloca(
 ; UNALIGNED-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr addrspace(5) [[P:%.*]], align 1
-; UNALIGNED-NEXT:    [[P_01:%.*]] = extractelement <2 x i16> [[TMP1]], i32 0
-; UNALIGNED-NEXT:    [[P_12:%.*]] = extractelement <2 x i16> [[TMP1]], i32 1
+; UNALIGNED-NEXT:    [[P_01:%.*]] = extractelement <2 x i16> [[TMP1]], i64 0
+; UNALIGNED-NEXT:    [[P_12:%.*]] = extractelement <2 x i16> [[TMP1]], i64 1
 ; UNALIGNED-NEXT:    [[ZEXT_0:%.*]] = zext i16 [[P_01]] to i32
 ; UNALIGNED-NEXT:    [[ZEXT_1:%.*]] = zext i16 [[P_12]] to i32
 ; UNALIGNED-NEXT:    [[SHL_1:%.*]] = shl i32 [[ZEXT_1]], 16
@@ -398,8 +397,8 @@ define void @load_alloca16_unknown_offset_align1_i8(ptr addrspace(1) noalias %ou
 ; UNALIGNED-NEXT:    [[ALLOCA:%.*]] = alloca [128 x i8], align 16, addrspace(5)
 ; UNALIGNED-NEXT:    [[PTR0:%.*]] = getelementptr inbounds [128 x i8], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[OFFSET:%.*]]
 ; UNALIGNED-NEXT:    [[TMP1:%.*]] = load <2 x i8>, ptr addrspace(5) [[PTR0]], align 1
-; UNALIGNED-NEXT:    [[VAL01:%.*]] = extractelement <2 x i8> [[TMP1]], i32 0
-; UNALIGNED-NEXT:    [[VAL12:%.*]] = extractelement <2 x i8> [[TMP1]], i32 1
+; UNALIGNED-NEXT:    [[VAL01:%.*]] = extractelement <2 x i8> [[TMP1]], i64 0
+; UNALIGNED-NEXT:    [[VAL12:%.*]] = extractelement <2 x i8> [[TMP1]], i64 1
 ; UNALIGNED-NEXT:    [[ADD:%.*]] = add i8 [[VAL01]], [[VAL12]]
 ; UNALIGNED-NEXT:    store i8 [[ADD]], ptr addrspace(1) [[OUT:%.*]], align 1
 ; UNALIGNED-NEXT:    ret void

@@ -42,7 +42,7 @@ define i32 @test(ptr %X) {
 ;
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@test
-; TUNIT-SAME: (ptr nocapture nofree nonnull readonly [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+; TUNIT-SAME: (ptr nofree nonnull readonly captures(none) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]], align 8
 ; TUNIT-NEXT:    store i32 1, ptr [[S]], align 8
@@ -56,7 +56,7 @@ define i32 @test(ptr %X) {
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@test
-; CGSCC-SAME: (ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+; CGSCC-SAME: (ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]], align 8
 ; CGSCC-NEXT:    [[VAL4:%.*]] = getelementptr [[STRUCT_SS]], ptr [[S]], i32 0, i32 1

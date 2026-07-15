@@ -60,6 +60,14 @@ func.func @int_vector4_invalid(%arg0: vector<2xi16>) {
   return
 }
 
+// -----
+
+func.func @int_vector_invalid_bitwidth(%arg0: vector<2xi12>) {
+  // expected-error @+1 {{failed to legalize operation 'arith.addi'}}
+  %0 = arith.addi %arg0, %arg0: vector<2xi12>
+  return
+}
+
 ///===----------------------------------------------------------------------===//
 // Constant ops
 //===----------------------------------------------------------------------===//
@@ -110,6 +118,16 @@ func.func @unsupported_constant_tensor_2xf64_0() {
   // expected-error @+1 {{failed to legalize operation 'arith.constant'}}
   %1 = arith.constant dense<0.0> : tensor<2xf64>
   return
+}
+
+// -----
+
+// Regression test: arith.trunci on tensor types should not crash
+// (https://github.com/llvm/llvm-project/issues/178214).
+func.func @trunci_tensor_no_crash(%arg0: tensor<1xi32>) -> tensor<1xi16> {
+  // expected-error @+1 {{failed to legalize operation 'arith.trunci'}}
+  %0 = arith.trunci %arg0 : tensor<1xi32> to tensor<1xi16>
+  return %0 : tensor<1xi16>
 }
 
 // -----

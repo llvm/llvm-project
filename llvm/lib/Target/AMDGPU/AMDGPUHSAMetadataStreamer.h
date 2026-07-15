@@ -23,6 +23,7 @@
 
 namespace llvm {
 
+class AMDGPUTargetMachine;
 class AMDGPUTargetStreamer;
 class Argument;
 class DataLayout;
@@ -35,9 +36,7 @@ class Type;
 
 namespace AMDGPU {
 
-namespace IsaInfo {
-class AMDGPUTargetID;
-}
+class TargetID;
 
 namespace HSAMD {
 
@@ -47,8 +46,7 @@ public:
 
   virtual bool emitTo(AMDGPUTargetStreamer &TargetStreamer) = 0;
 
-  virtual void begin(const Module &Mod,
-                     const IsaInfo::AMDGPUTargetID &TargetID) = 0;
+  virtual void begin(const Module &Mod, const TargetID &TargetID) = 0;
 
   virtual void end() = 0;
 
@@ -59,7 +57,8 @@ protected:
   virtual void emitVersion() = 0;
   virtual void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
                                     msgpack::ArrayDocNode Args) = 0;
-  virtual void emitKernelAttrs(const Function &Func,
+  virtual void emitKernelAttrs(const AMDGPUTargetMachine &TM,
+                               const MachineFunction &MF,
                                msgpack::MapDocNode Kern) = 0;
 };
 
@@ -94,13 +93,14 @@ protected:
 
   void emitVersion() override;
 
-  void emitTargetID(const IsaInfo::AMDGPUTargetID &TargetID);
+  void emitTargetID(const TargetID &TargetID);
 
   void emitPrintf(const Module &Mod);
 
   void emitKernelLanguage(const Function &Func, msgpack::MapDocNode Kern);
 
-  void emitKernelAttrs(const Function &Func, msgpack::MapDocNode Kern) override;
+  void emitKernelAttrs(const AMDGPUTargetMachine &TM, const MachineFunction &MF,
+                       msgpack::MapDocNode Kern) override;
 
   void emitKernelArgs(const MachineFunction &MF, msgpack::MapDocNode Kern);
 
@@ -128,12 +128,11 @@ protected:
 
 public:
   MetadataStreamerMsgPackV4() = default;
-  ~MetadataStreamerMsgPackV4() = default;
+  ~MetadataStreamerMsgPackV4() override = default;
 
   bool emitTo(AMDGPUTargetStreamer &TargetStreamer) override;
 
-  void begin(const Module &Mod,
-             const IsaInfo::AMDGPUTargetID &TargetID) override;
+  void begin(const Module &Mod, const TargetID &TargetID) override;
 
   void end() override;
 
@@ -146,11 +145,12 @@ protected:
   void emitVersion() override;
   void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
                             msgpack::ArrayDocNode Args) override;
-  void emitKernelAttrs(const Function &Func, msgpack::MapDocNode Kern) override;
+  void emitKernelAttrs(const AMDGPUTargetMachine &TM, const MachineFunction &MF,
+                       msgpack::MapDocNode Kern) override;
 
 public:
   MetadataStreamerMsgPackV5() = default;
-  ~MetadataStreamerMsgPackV5() = default;
+  ~MetadataStreamerMsgPackV5() override = default;
 };
 
 class MetadataStreamerMsgPackV6 final : public MetadataStreamerMsgPackV5 {
@@ -159,7 +159,10 @@ protected:
 
 public:
   MetadataStreamerMsgPackV6() = default;
-  ~MetadataStreamerMsgPackV6() = default;
+  ~MetadataStreamerMsgPackV6() override = default;
+
+  void emitKernelAttrs(const AMDGPUTargetMachine &TM, const MachineFunction &MF,
+                       msgpack::MapDocNode Kern) override;
 };
 
 } // end namespace HSAMD

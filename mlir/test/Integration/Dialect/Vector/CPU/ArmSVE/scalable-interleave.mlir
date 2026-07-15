@@ -7,8 +7,8 @@
 func.func @entry() {
   %f1 = arith.constant 1.0 : f32
   %f2 = arith.constant 2.0 : f32
-  %v1 = vector.splat %f1 : vector<[4]xf32>
-  %v2 = vector.splat %f2 : vector<[4]xf32>
+  %v1 = vector.broadcast %f1 : f32 to vector<[4]xf32>
+  %v2 = vector.broadcast %f2 : f32 to vector<[4]xf32>
   vector.print %v1 : vector<[4]xf32>
   vector.print %v2 : vector<[4]xf32>
   //

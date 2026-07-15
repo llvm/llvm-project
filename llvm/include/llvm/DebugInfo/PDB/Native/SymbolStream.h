@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_PDB_NATIVE_SYMBOLSTREAM_H
 
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
+#include "llvm/Support/Compiler.h"
 
 #include "llvm/Support/Error.h"
 
@@ -21,20 +22,20 @@ namespace pdb {
 
 class SymbolStream {
 public:
-  SymbolStream(std::unique_ptr<msf::MappedBlockStream> Stream);
-  ~SymbolStream();
-  Error reload();
+  LLVM_ABI SymbolStream(std::unique_ptr<msf::MappedBlockStream> Stream);
+  LLVM_ABI ~SymbolStream();
+  LLVM_ABI Error reload();
 
   const codeview::CVSymbolArray &getSymbolArray() const {
     return SymbolRecords;
   }
 
-  codeview::CVSymbol readRecord(uint32_t Offset) const;
+  LLVM_ABI codeview::CVSymbol readRecord(uint32_t Offset) const;
 
-  iterator_range<codeview::CVSymbolArray::Iterator>
+  LLVM_ABI iterator_range<codeview::CVSymbolArray::Iterator>
   getSymbols(bool *HadError) const;
 
-  Error commit();
+  LLVM_ABI Error commit();
 
 private:
   codeview::CVSymbolArray SymbolRecords;

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_TEMPORARY_BUFFER_H
-#define _LIBCPP___MEMORY_TEMPORARY_BUFFER_H
+#ifndef _LIBCPP___CXX03___MEMORY_TEMPORARY_BUFFER_H
+#define _LIBCPP___CXX03___MEMORY_TEMPORARY_BUFFER_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__utility/pair.h>
@@ -22,7 +22,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI _LIBCPP_DEPRECATED_IN_CXX17 pair<_Tp*, ptrdiff_t>
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI pair<_Tp*, ptrdiff_t>
 get_temporary_buffer(ptrdiff_t __n) _NOEXCEPT {
   pair<_Tp*, ptrdiff_t> __r(0, 0);
   const ptrdiff_t __m =
@@ -57,7 +57,7 @@ get_temporary_buffer(ptrdiff_t __n) _NOEXCEPT {
 }
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_IN_CXX17 void return_temporary_buffer(_Tp* __p) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI void return_temporary_buffer(_Tp* __p) _NOEXCEPT {
   std::__libcpp_deallocate_unsized((void*)__p, _LIBCPP_ALIGNOF(_Tp));
 }
 
@@ -72,4 +72,4 @@ struct __return_temporary_buffer {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_TEMPORARY_BUFFER_H
+#endif // _LIBCPP___CXX03___MEMORY_TEMPORARY_BUFFER_H

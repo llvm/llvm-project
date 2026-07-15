@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_MERGE_H
-#define _LIBCPP___ALGORITHM_MERGE_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_MERGE_H
+#define _LIBCPP___CXX03___ALGORITHM_MERGE_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__algorithm/comp_ref_type.h>
@@ -22,7 +22,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Compare, class _InputIterator1, class _InputIterator2, class _OutputIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator __merge(
+_LIBCPP_HIDE_FROM_ABI _OutputIterator __merge(
     _InputIterator1 __first1,
     _InputIterator1 __last1,
     _InputIterator2 __first2,
@@ -44,7 +44,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator __merge(
 }
 
 template <class _InputIterator1, class _InputIterator2, class _OutputIterator, class _Compare>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
+inline _LIBCPP_HIDE_FROM_ABI _OutputIterator
 merge(_InputIterator1 __first1,
       _InputIterator1 __last1,
       _InputIterator2 __first2,
@@ -55,7 +55,7 @@ merge(_InputIterator1 __first1,
 }
 
 template <class _InputIterator1, class _InputIterator2, class _OutputIterator>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
+inline _LIBCPP_HIDE_FROM_ABI _OutputIterator
 merge(_InputIterator1 __first1,
       _InputIterator1 __last1,
       _InputIterator2 __first2,
@@ -66,4 +66,4 @@ merge(_InputIterator1 __first1,
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_MERGE_H
+#endif // _LIBCPP___CXX03___ALGORITHM_MERGE_H

@@ -50,6 +50,7 @@
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Utils/TriggerCrashPass.h"
 #include <cassert>
 #include <optional>
 #include <string>
@@ -99,6 +100,11 @@ static cl::opt<bool> DisableConstantHoisting("disable-constant-hoisting",
     cl::Hidden, cl::desc("Disable ConstantHoisting"));
 static cl::opt<bool> DisableCGP("disable-cgp", cl::Hidden,
     cl::desc("Disable Codegen Prepare"));
+
+static cl::opt<bool>
+    TriggerCrash("codegen-pipeline-trigger-crash", cl::init(false), cl::Hidden,
+                 cl::desc("Trigger crash in codegen pipeline"));
+
 static cl::opt<bool> DisableCopyProp("disable-copyprop", cl::Hidden,
     cl::desc("Disable Copy Propagation pass"));
 static cl::opt<bool> DisablePartialLibcallInlining("disable-partial-libcall-inlining",
@@ -110,14 +116,12 @@ static cl::opt<bool> EnableImplicitNullChecks(
     "enable-implicit-null-checks",
     cl::desc("Fold null checks into faulting memory operations"),
     cl::init(false), cl::Hidden);
-static cl::opt<bool> DisableMergeICmps("disable-mergeicmps",
-    cl::desc("Disable MergeICmps Pass"),
-    cl::init(false), cl::Hidden);
-static cl::opt<bool> PrintLSR("print-lsr-output", cl::Hidden,
-    cl::desc("Print LLVM IR produced by the loop-reduce pass"));
 static cl::opt<bool>
     PrintISelInput("print-isel-input", cl::Hidden,
                    cl::desc("Print LLVM IR input to isel pass"));
+cl::opt<bool>
+    PrintRegUsage("print-regusage", cl::Hidden,
+                  cl::desc("Print register usage details collected for IPRA"));
 static cl::opt<cl::boolOrDefault>
     VerifyMachineCode("verify-machineinstrs", cl::Hidden,
                       cl::desc("Verify generated machine code"));
@@ -136,12 +140,18 @@ static cl::opt<cl::boolOrDefault> DebugifyCheckAndStripAll(
 static cl::opt<RunOutliner> EnableMachineOutliner(
     "enable-machine-outliner", cl::desc("Enable the machine outliner"),
     cl::Hidden, cl::ValueOptional, cl::init(RunOutliner::TargetDefault),
-    cl::values(clEnumValN(RunOutliner::AlwaysOutline, "always",
-                          "Run on all functions guaranteed to be beneficial"),
-               clEnumValN(RunOutliner::NeverOutline, "never",
-                          "Disable all outlining"),
-               // Sentinel value for unspecified option.
-               clEnumValN(RunOutliner::AlwaysOutline, "", "")));
+    cl::values(
+        clEnumValN(RunOutliner::AlwaysOutline, "always",
+                   "Run on all functions guaranteed to be beneficial"),
+        clEnumValN(RunOutliner::OptimisticPGO, "optimistic-pgo",
+                   "Outline cold code only. If a code block does not have "
+                   "profile data, optimistically assume it is cold."),
+        clEnumValN(RunOutliner::ConservativePGO, "conservative-pgo",
+                   "Outline cold code only. If a code block does not have "
+                   "profile, data, conservatively assume it is hot."),
+        clEnumValN(RunOutliner::NeverOutline, "never", "Disable all outlining"),
+        // Sentinel value for unspecified option.
+        clEnumValN(RunOutliner::AlwaysOutline, "", "")));
 static cl::opt<bool> EnableGlobalMergeFunc(
     "enable-global-merge-func", cl::Hidden,
     cl::desc("Enable global merge functions that are based on hash function"));
@@ -259,9 +269,27 @@ static cl::opt<bool> DisableSelectOptimize(
     cl::desc("Disable the select-optimization pass from running"));
 
 /// Enable garbage-collecting empty basic blocks.
+static cl::opt<bool> EnableGCEmptyBlocks(
+    "enable-gc-empty-basic-blocks", cl::init(false), cl::Hidden,
+    cl::desc("Enable garbage-collecting empty basic blocks"));
+
 static cl::opt<bool>
-    GCEmptyBlocks("gc-empty-basic-blocks", cl::init(false), cl::Hidden,
-                  cl::desc("Enable garbage-collecting empty basic blocks"));
+    SplitStaticData("split-static-data", cl::Hidden, cl::init(false),
+                    cl::desc("Split static data sections into hot and cold "
+                             "sections using profile information"));
+
+/// Enable matching and inference when using propeller.
+static cl::opt<bool> BasicBlockSectionMatchInfer(
+    "basic-block-section-match-infer",
+    cl::desc(
+        "Enable matching and inference when generating basic block sections"),
+    cl::init(false), cl::Optional);
+
+cl::opt<bool> EmitBBHash(
+    "emit-bb-hash",
+    cl::desc(
+        "Emit the hash of basic block in the SHT_LLVM_BB_ADDR_MAP section."),
+    cl::init(false), cl::Optional);
 
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
@@ -321,7 +349,7 @@ static IdentifyingPassPtr overridePass(AnalysisID StandardID,
   if (StandardID == &MachineLICMID)
     return applyDisable(TargetID, DisablePostRAMachineLICM);
 
-  if (StandardID == &MachineSinkingID)
+  if (StandardID == &MachineSinkingLegacyID)
     return applyDisable(TargetID, DisableMachineSink);
 
   if (StandardID == &PostRAMachineSinkingID)
@@ -386,8 +414,6 @@ struct InsertedPass {
 
 namespace llvm {
 
-extern cl::opt<bool> EnableFSDiscriminator;
-
 class PassConfigImpl {
 public:
   // List of passes explicitly substituted by this target. Normally this is
@@ -418,8 +444,8 @@ static const PassInfo *getPassInfo(StringRef PassName) {
   const PassRegistry &PR = *PassRegistry::getPassRegistry();
   const PassInfo *PI = PR.getPassInfo(PassName);
   if (!PI)
-    report_fatal_error(Twine('\"') + Twine(PassName) +
-                       Twine("\" pass is not registered."));
+    reportFatalUsageError(Twine('\"') + Twine(PassName) +
+                          Twine("\" pass is not registered."));
   return PI;
 }
 
@@ -435,7 +461,7 @@ getPassNameAndInstanceNum(StringRef PassName) {
 
   unsigned InstanceNum = 0;
   if (!InstanceNumStr.empty() && InstanceNumStr.getAsInteger(10, InstanceNum))
-    report_fatal_error("invalid pass instance specifier " + PassName);
+    reportFatalUsageError("invalid pass instance specifier " + PassName);
 
   return std::make_pair(Name, InstanceNum);
 }
@@ -462,54 +488,53 @@ void TargetPassConfig::setStartStopPasses() {
   StopBefore = getPassIDFromName(StopBeforeName);
   StopAfter = getPassIDFromName(StopAfterName);
   if (StartBefore && StartAfter)
-    report_fatal_error(Twine(StartBeforeOptName) + Twine(" and ") +
-                       Twine(StartAfterOptName) + Twine(" specified!"));
+    reportFatalUsageError(Twine(StartBeforeOptName) + Twine(" and ") +
+                          Twine(StartAfterOptName) + Twine(" specified!"));
   if (StopBefore && StopAfter)
-    report_fatal_error(Twine(StopBeforeOptName) + Twine(" and ") +
-                       Twine(StopAfterOptName) + Twine(" specified!"));
+    reportFatalUsageError(Twine(StopBeforeOptName) + Twine(" and ") +
+                          Twine(StopAfterOptName) + Twine(" specified!"));
   Started = (StartAfter == nullptr) && (StartBefore == nullptr);
 }
 
 CGPassBuilderOption llvm::getCGPassBuilderOption() {
   CGPassBuilderOption Opt;
 
-#define SET_OPTION(Option)                                                     \
+#define SET_OPTION_IF_PRESENT(Option)                                          \
   if (Option.getNumOccurrences())                                              \
     Opt.Option = Option;
 
-  SET_OPTION(EnableFastISelOption)
-  SET_OPTION(EnableGlobalISelAbort)
-  SET_OPTION(EnableGlobalISelOption)
-  SET_OPTION(EnableIPRA)
+  SET_OPTION_IF_PRESENT(EnableGlobalISelAbort)
+  SET_OPTION_IF_PRESENT(EnableIPRA)
+
+#define SET_OPTION(Option) Opt.Option = Option;
+
   SET_OPTION(OptimizeRegAlloc)
+  SET_OPTION(EnableFastISelOption)
+  SET_OPTION(EnableGlobalISelOption)
   SET_OPTION(VerifyMachineCode)
   SET_OPTION(DisableAtExitBasedGlobalDtorLowering)
   SET_OPTION(DisableExpandReductions)
   SET_OPTION(PrintAfterISel)
   SET_OPTION(FSProfileFile)
-  SET_OPTION(GCEmptyBlocks)
-
-#define SET_BOOLEAN_OPTION(Option) Opt.Option = Option;
-
-  SET_BOOLEAN_OPTION(EarlyLiveIntervals)
-  SET_BOOLEAN_OPTION(EnableBlockPlacementStats)
-  SET_BOOLEAN_OPTION(EnableGlobalMergeFunc)
-  SET_BOOLEAN_OPTION(EnableImplicitNullChecks)
-  SET_BOOLEAN_OPTION(EnableMachineOutliner)
-  SET_BOOLEAN_OPTION(MISchedPostRA)
-  SET_BOOLEAN_OPTION(DisableMergeICmps)
-  SET_BOOLEAN_OPTION(DisableLSR)
-  SET_BOOLEAN_OPTION(DisableConstantHoisting)
-  SET_BOOLEAN_OPTION(DisableCGP)
-  SET_BOOLEAN_OPTION(DisablePartialLibcallInlining)
-  SET_BOOLEAN_OPTION(DisableSelectOptimize)
-  SET_BOOLEAN_OPTION(PrintLSR)
-  SET_BOOLEAN_OPTION(PrintISelInput)
-  SET_BOOLEAN_OPTION(DebugifyAndStripAll)
-  SET_BOOLEAN_OPTION(DebugifyCheckAndStripAll)
-  SET_BOOLEAN_OPTION(DisableRAFSProfileLoader)
-  SET_BOOLEAN_OPTION(DisableCFIFixup)
-  SET_BOOLEAN_OPTION(EnableMachineFunctionSplitter)
+  SET_OPTION(EnableGCEmptyBlocks)
+  SET_OPTION(EarlyLiveIntervals)
+  SET_OPTION(EnableBlockPlacementStats)
+  SET_OPTION(EnableGlobalMergeFunc)
+  SET_OPTION(EnableImplicitNullChecks)
+  SET_OPTION(EnableMachineOutliner)
+  SET_OPTION(MISchedPostRA)
+  SET_OPTION(DisableLSR)
+  SET_OPTION(DisableConstantHoisting)
+  SET_OPTION(DisableCGP)
+  SET_OPTION(DisablePartialLibcallInlining)
+  SET_OPTION(DisableSelectOptimize)
+  SET_OPTION(PrintISelInput)
+  SET_OPTION(PrintRegUsage)
+  SET_OPTION(DebugifyAndStripAll)
+  SET_OPTION(DebugifyCheckAndStripAll)
+  SET_OPTION(DisableRAFSProfileLoader)
+  SET_OPTION(DisableCFIFixup)
+  SET_OPTION(EnableMachineFunctionSplitter)
 
   return Opt;
 }
@@ -582,17 +607,20 @@ TargetPassConfig::TargetPassConfig(TargetMachine &TM, PassManagerBase &PM)
     : ImmutablePass(ID), PM(&PM), TM(&TM) {
   Impl = new PassConfigImpl();
 
+  PassRegistry &PR = *PassRegistry::getPassRegistry();
   // Register all target independent codegen passes to activate their PassIDs,
   // including this pass itself.
-  initializeCodeGen(*PassRegistry::getPassRegistry());
+  initializeCodeGen(PR);
+
+  initializeLibcallLoweringInfoWrapperPass(PR);
 
   // Also register alias analysis passes required by codegen passes.
-  initializeBasicAAWrapperPassPass(*PassRegistry::getPassRegistry());
-  initializeAAResultsWrapperPassPass(*PassRegistry::getPassRegistry());
+  initializeBasicAAWrapperPassPass(PR);
+  initializeAAResultsWrapperPassPass(PR);
 
-  if (EnableIPRA.getNumOccurrences())
+  if (EnableIPRA.getNumOccurrences()) {
     TM.Options.EnableIPRA = EnableIPRA;
-  else {
+  } else {
     // If not explicitly specified, use target default.
     TM.Options.EnableIPRA |= TM.useIPRA();
   }
@@ -632,9 +660,9 @@ CodeGenTargetMachineImpl::createPassConfig(PassManagerBase &PM) {
 
 TargetPassConfig::TargetPassConfig()
   : ImmutablePass(ID) {
-  report_fatal_error("Trying to construct TargetPassConfig without a target "
-                     "machine. Scheduling a CodeGen pass without a target "
-                     "triple set?");
+  reportFatalUsageError("trying to construct TargetPassConfig without a target "
+                        "machine. Scheduling a CodeGen pass without a target "
+                        "triple set?");
 }
 
 bool TargetPassConfig::willCompleteCodeGenPipeline() {
@@ -735,7 +763,7 @@ void TargetPassConfig::addPass(Pass *P) {
   if (StartAfter == PassID && StartAfterCount++ == StartAfterInstanceNum)
     Started = true;
   if (Stopped && !Started)
-    report_fatal_error("Cannot stop compilation after pass that is not run");
+    reportFatalUsageError("Cannot stop compilation after pass that is not run");
 }
 
 /// Add a CodeGen pass at this point in the pipeline after checking for target
@@ -774,9 +802,9 @@ void TargetPassConfig::addPrintPass(const std::string &Banner) {
 }
 
 void TargetPassConfig::addVerifyPass(const std::string &Banner) {
-  bool Verify = VerifyMachineCode == cl::BOU_TRUE;
+  bool Verify = VerifyMachineCode == cl::boolOrDefault::BOU_TRUE;
 #ifdef EXPENSIVE_CHECKS
-  if (VerifyMachineCode == cl::BOU_UNSET)
+  if (VerifyMachineCode == cl::boolOrDefault::BOU_UNSET)
     Verify = TM->isMachineVerifierClean();
 #endif
   if (Verify)
@@ -788,26 +816,26 @@ void TargetPassConfig::addDebugifyPass() {
 }
 
 void TargetPassConfig::addStripDebugPass() {
-  PM->add(createStripDebugMachineModulePass(/*OnlyDebugified=*/true));
+  PM->add(createStripDebugMachineModuleLegacyPass(/*OnlyDebugified=*/true));
 }
 
 void TargetPassConfig::addCheckDebugPass() {
-  PM->add(createCheckDebugMachineModulePass());
+  PM->add(createCheckDebugMachineModuleLegacyPass());
 }
 
 void TargetPassConfig::addMachinePrePasses(bool AllowDebugify) {
   if (AllowDebugify && DebugifyIsSafe &&
-      (DebugifyAndStripAll == cl::BOU_TRUE ||
-       DebugifyCheckAndStripAll == cl::BOU_TRUE))
+      (DebugifyAndStripAll == cl::boolOrDefault::BOU_TRUE ||
+       DebugifyCheckAndStripAll == cl::boolOrDefault::BOU_TRUE))
     addDebugifyPass();
 }
 
 void TargetPassConfig::addMachinePostPasses(const std::string &Banner) {
   if (DebugifyIsSafe) {
-    if (DebugifyCheckAndStripAll == cl::BOU_TRUE) {
+    if (DebugifyCheckAndStripAll == cl::boolOrDefault::BOU_TRUE) {
       addCheckDebugPass();
       addStripDebugPass();
-    } else if (DebugifyAndStripAll == cl::BOU_TRUE)
+    } else if (DebugifyAndStripAll == cl::boolOrDefault::BOU_TRUE)
       addStripDebugPass();
   }
   addVerifyPass(Banner);
@@ -836,18 +864,7 @@ void TargetPassConfig::addIRPasses() {
       addPass(createLoopStrengthReducePass());
       if (EnableLoopTermFold)
         addPass(createLoopTermFoldPass());
-      if (PrintLSR)
-        addPass(createPrintFunctionPass(dbgs(),
-                                        "\n\n*** Code after LSR ***\n"));
     }
-
-    // The MergeICmpsPass tries to create memcmp calls by grouping sequences of
-    // loads and compares. ExpandMemCmpPass then tries to expand those calls
-    // into optimally-sized loads and compares. The transforms are enabled by a
-    // target lowering hook.
-    if (!DisableMergeICmps)
-      addPass(createMergeICmpsLegacyPass());
-    addPass(createExpandMemCmpLegacyPass());
   }
 
   // Run GC lowering passes for builtin collectors
@@ -893,14 +910,16 @@ void TargetPassConfig::addIRPasses() {
 
   if (EnableGlobalMergeFunc)
     addPass(createGlobalMergeFuncPass());
+
+  if (TM->getTargetTriple().isOSWindows())
+    addPass(createWindowsSecureHotPatchingPass());
 }
 
 /// Turn exception handling constructs into something the code generators can
 /// handle.
 void TargetPassConfig::addPassesToHandleExceptions() {
-  const MCAsmInfo *MCAI = TM->getMCAsmInfo();
-  assert(MCAI && "No MCAsmInfo");
-  switch (MCAI->getExceptionHandlingType()) {
+  const MCAsmInfo &MCAI = TM->getMCAsmInfo();
+  switch (MCAI.getExceptionHandlingType()) {
   case ExceptionHandling::SjLj:
     // SjLj piggy-backs on dwarf for this bit. The cleanups done apply to both
     // Dwarf EH prepare needs to be run after SjLj prepare. Otherwise,
@@ -956,10 +975,7 @@ void TargetPassConfig::addISelPrepare() {
   if (requiresCodeGenSCCOrder())
     addPass(new DummyCGSCCPass);
 
-  if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createObjCARCContractPass());
-
-  addPass(createCallBrPass());
+  addPass(createInlineAsmPreparePass());
 
   // Add both the safe stack and the stack protection passes: each of them will
   // only protect functions that have corresponding attributes.
@@ -978,17 +994,17 @@ void TargetPassConfig::addISelPrepare() {
 
 bool TargetPassConfig::addCoreISelPasses() {
   // Enable FastISel with -fast-isel, but allow that to be overridden.
-  TM->setO0WantsFastISel(EnableFastISelOption != cl::BOU_FALSE);
+  TM->setO0WantsFastISel(EnableFastISelOption != cl::boolOrDefault::BOU_FALSE);
 
   // Determine an instruction selector.
   enum class SelectorType { SelectionDAG, FastISel, GlobalISel };
   SelectorType Selector;
 
-  if (EnableFastISelOption == cl::BOU_TRUE)
+  if (EnableFastISelOption == cl::boolOrDefault::BOU_TRUE)
     Selector = SelectorType::FastISel;
-  else if (EnableGlobalISelOption == cl::BOU_TRUE ||
+  else if (EnableGlobalISelOption == cl::boolOrDefault::BOU_TRUE ||
            (TM->Options.EnableGlobalISel &&
-            EnableGlobalISelOption != cl::BOU_FALSE))
+            EnableGlobalISelOption != cl::boolOrDefault::BOU_FALSE))
     Selector = SelectorType::GlobalISel;
   else if (TM->getOptLevel() == CodeGenOptLevel::None &&
            TM->getO0WantsFastISel())
@@ -1018,7 +1034,7 @@ bool TargetPassConfig::addCoreISelPasses() {
   if (Selector != SelectorType::GlobalISel || !isGlobalISelAbortEnabled())
     DebugifyIsSafe = false;
 
-  // Add instruction selector passes.
+  // Add instruction selector passes for global isel if enabled.
   if (Selector == SelectorType::GlobalISel) {
     SaveAndRestore SavedAddingMachinePasses(AddingMachinePasses, true);
     if (addIRTranslator())
@@ -1040,18 +1056,19 @@ bool TargetPassConfig::addCoreISelPasses() {
 
     if (addGlobalInstructionSelect())
       return true;
+  }
 
-    // Pass to reset the MachineFunction if the ISel failed.
+  // Pass to reset the MachineFunction if the ISel failed. Outside of the above
+  // if so that the verifier is not added to it.
+  if (Selector == SelectorType::GlobalISel)
     addPass(createResetMachineFunctionPass(
         reportDiagnosticWhenGlobalISelFallback(), isGlobalISelAbortEnabled()));
 
-    // Provide a fallback path when we do not want to abort on
-    // not-yet-supported input.
-    if (!isGlobalISelAbortEnabled() && addInstSelector())
+  // Run the SDAG InstSelector, providing a fallback path when we do not want to
+  // abort on not-yet-supported input.
+  if (Selector != SelectorType::GlobalISel || !isGlobalISelAbortEnabled())
+    if (addInstSelector())
       return true;
-
-  } else if (addInstSelector())
-    return true;
 
   // Expand pseudo-instructions emitted by ISel. Don't run the verifier before
   // FinalizeISel.
@@ -1068,10 +1085,17 @@ bool TargetPassConfig::addISelPasses() {
     addPass(createLowerEmuTLSPass());
 
   PM->add(createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
+  // ObjCARCContract operates on ObjC intrinsics and must run before
+  // PreISelIntrinsicLowering.
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(createObjCARCContractPass());
   addPass(createPreISelIntrinsicLoweringPass());
-  addPass(createExpandLargeDivRemPass());
-  addPass(createExpandLargeFpConvertPass());
+  addPass(createExpandIRInstsPass(getOptLevel()));
   addIRPasses();
+
+  if (TriggerCrash)
+    addPass(createTriggerCrashFunctionPass());
+
   addCodeGenPrepare();
   addPassesToHandleExceptions();
   addISelPrepare();
@@ -1220,28 +1244,21 @@ void TargetPassConfig::addMachinePasses() {
   if (TM->Options.EnableMachineOutliner &&
       getOptLevel() != CodeGenOptLevel::None &&
       EnableMachineOutliner != RunOutliner::NeverOutline) {
-    bool RunOnAllFunctions =
-        (EnableMachineOutliner == RunOutliner::AlwaysOutline);
-    bool AddOutliner =
-        RunOnAllFunctions || TM->Options.SupportsDefaultOutlining;
-    if (AddOutliner)
-      addPass(createMachineOutlinerPass(RunOnAllFunctions));
+    if (EnableMachineOutliner != RunOutliner::TargetDefault ||
+        TM->Options.SupportsDefaultOutlining)
+      addPass(createMachineOutlinerPass(EnableMachineOutliner));
   }
 
-  if (GCEmptyBlocks)
-    addPass(llvm::createGCEmptyBasicBlocksPass());
+  if (EnableGCEmptyBlocks)
+    addPass(llvm::createGCEmptyBasicBlocksLegacyPass());
 
   if (EnableFSDiscriminator)
     addPass(createMIRAddFSDiscriminatorsPass(
         sampleprof::FSDiscriminatorPass::PassLast));
 
-  bool NeedsBBSections =
-      TM->getBBSectionsType() != llvm::BasicBlockSection::None;
-  // Machine function splitter uses the basic block sections feature. Both
-  // cannot be enabled at the same time. We do not apply machine function
-  // splitter if -basic-block-sections is requested.
-  if (!NeedsBBSections && (TM->Options.EnableMachineFunctionSplitter ||
-                           EnableMachineFunctionSplitter)) {
+  if (TM->Options.EnableMachineFunctionSplitter ||
+      EnableMachineFunctionSplitter || SplitStaticData ||
+      TM->Options.EnableStaticDataPartitioning) {
     const std::string ProfileFile = getFSProfileFile(TM);
     if (!ProfileFile.empty()) {
       if (EnableFSDiscriminator) {
@@ -1256,15 +1273,39 @@ void TargetPassConfig::addMachinePasses() {
                "performance.\n";
       }
     }
+  }
+
+  // Machine function splitter uses the basic block sections feature.
+  // When used along with `-basic-block-sections=`, the basic-block-sections
+  // feature takes precedence. This means functions eligible for
+  // basic-block-sections optimizations (`=all`, or `=list=` with function
+  // included in the list profile) will get that optimization instead.
+  if (TM->Options.EnableMachineFunctionSplitter ||
+      EnableMachineFunctionSplitter)
     addPass(createMachineFunctionSplitterPass());
+
+  if (SplitStaticData || TM->Options.EnableStaticDataPartitioning) {
+    // The static data splitter pass is a machine function pass. and
+    // static data annotator pass is a module-wide pass. See the file comment
+    // in StaticDataAnnotator.cpp for the motivation.
+    addPass(createStaticDataSplitterLegacyPass());
+    addPass(createStaticDataAnnotatorLegacyPass());
   }
   // We run the BasicBlockSections pass if either we need BB sections or BB
   // address map (or both).
-  if (NeedsBBSections || TM->Options.BBAddrMap) {
+  if (TM->getBBSectionsType() != llvm::BasicBlockSection::None ||
+      TM->Options.BBAddrMap) {
+    if (EmitBBHash || BasicBlockSectionMatchInfer)
+      addPass(llvm::createMachineBlockHashInfoPass());
     if (TM->getBBSectionsType() == llvm::BasicBlockSection::List) {
       addPass(llvm::createBasicBlockSectionsProfileReaderWrapperPass(
           TM->getBBSectionsFuncListBuf()));
-      addPass(llvm::createBasicBlockPathCloningPass());
+      if (BasicBlockSectionMatchInfer)
+        addPass(llvm::createBasicBlockMatchingAndInferencePass());
+      else {
+        addPass(llvm::createBasicBlockPathCloningPass());
+        addPass(llvm::createInsertCodePrefetchPass());
+      }
     }
     addPass(llvm::createBasicBlockSectionsPass());
   }
@@ -1272,7 +1313,7 @@ void TargetPassConfig::addMachinePasses() {
   addPostBBSections();
 
   if (!DisableCFIFixup && TM->Options.EnableCFIFixup)
-    addPass(createCFIFixup());
+    addPass(createCFIFixupLegacy());
 
   PM->add(createStackFrameLayoutAnalysisPass());
 
@@ -1313,7 +1354,7 @@ void TargetPassConfig::addMachineSSAOptimization() {
   addPass(&EarlyMachineLICMID);
   addPass(&MachineCSELegacyID);
 
-  addPass(&MachineSinkingID);
+  addPass(&MachineSinkingLegacyID);
 
   addPass(&PeepholeOptimizerLegacyID);
   // Clean-up the dead code that may have been generated by peephole
@@ -1327,10 +1368,12 @@ void TargetPassConfig::addMachineSSAOptimization() {
 
 bool TargetPassConfig::getOptimizeRegAlloc() const {
   switch (OptimizeRegAlloc) {
-  case cl::BOU_UNSET:
+  case cl::boolOrDefault::BOU_UNSET:
     return getOptLevel() != CodeGenOptLevel::None;
-  case cl::BOU_TRUE:  return true;
-  case cl::BOU_FALSE: return false;
+  case cl::boolOrDefault::BOU_TRUE:
+    return true;
+  case cl::boolOrDefault::BOU_FALSE:
+    return false;
   }
   llvm_unreachable("Invalid optimize-regalloc state");
 }
@@ -1394,7 +1437,8 @@ bool TargetPassConfig::isCustomizedRegAlloc() {
 bool TargetPassConfig::addRegAssignAndRewriteFast() {
   if (RegAlloc != (RegisterRegAlloc::FunctionPassCtor)&useDefaultRegisterAllocator &&
       RegAlloc != (RegisterRegAlloc::FunctionPassCtor)&createFastRegisterAllocator)
-    report_fatal_error("Must use fast (default) register allocator for unoptimized regalloc.");
+    reportFatalUsageError(
+        "Must use fast (default) register allocator for unoptimized regalloc.");
 
   addPass(createRegAllocPass(false));
 

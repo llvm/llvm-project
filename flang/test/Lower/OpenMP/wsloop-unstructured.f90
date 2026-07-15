@@ -24,12 +24,12 @@ end subroutine sub
 ! that all blocks are terminated
 
 ! CHECK-LABEL:   func.func @_QPsub(
-! CHECK-SAME:                      %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "imax"},
-! CHECK-SAME:                      %[[VAL_1:.*]]: !fir.ref<i32> {fir.bindc_name = "jmax"},
+! CHECK-SAME:                      %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "imax", fir.read_only},
+! CHECK-SAME:                      %[[VAL_1:.*]]: !fir.ref<i32> {fir.bindc_name = "jmax", fir.read_only},
 ! CHECK-SAME:                      %[[VAL_2:.*]]: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "x"},
 ! CHECK-SAME:                      %[[VAL_3:.*]]: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "y"}) {
 ! [...]
-! CHECK:             omp.wsloop {
+! CHECK:             omp.wsloop private({{.*}}) {
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_53:.*]], %[[VAL_54:.*]]) : i32 = ({{.*}}) to ({{.*}}) inclusive step ({{.*}}) {
 ! [...]
 ! CHECK:                 cf.br ^bb1

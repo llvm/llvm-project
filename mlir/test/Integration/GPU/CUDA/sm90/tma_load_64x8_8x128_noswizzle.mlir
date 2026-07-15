@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s \
 // RUN:  -gpu-lower-to-nvvm-pipeline="cubin-chip=sm_90 cubin-features=+ptx80 opt-level=3" \
-// RUN:  | mlir-cpu-runner \
+// RUN:  | mlir-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
 // RUN:   --entry-point-result=void \
@@ -18,7 +18,7 @@
 // RUN:         -expand-strided-metadata --nvvm-attach-target="module=main_kernel features=+ptx80 chip=sm_90 O=3" \
 // RUN:  | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm,convert-index-to-llvm{index-bitwidth=32},canonicalize,cse))' \
 // RUN:  | mlir-opt --gpu-to-llvm --gpu-module-to-binary=format=%gpu_compilation_format -canonicalize -cse -reconcile-unrealized-casts \
-// RUN:  | mlir-cpu-runner \
+// RUN:  | mlir-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
 // RUN:   --entry-point-result=void \
@@ -68,8 +68,8 @@ module @mymod {
     %3 = nvgpu.tma.create.descriptor %cast box[%c64, %c8] : memref<*xf32> -> <tensor = memref<64x8xf32, 3>, swizzle = none, l2promo = none, oob = zero, interleave = none>
     %4 = nvgpu.tma.create.descriptor %cast_3 box[%c8, %c128] : memref<*xf32> -> <tensor = memref<8x128xf32, 3>, swizzle = none, l2promo = none, oob = zero, interleave = none>
     gpu.launch blocks(%arg0, %arg1, %arg2) in (%arg6 = %c1, %arg7 = %c1, %arg8 = %c1) threads(%arg3, %arg4, %arg5) in (%arg9 = %c128, %arg10 = %c1, %arg11 = %c1) {
-      %5 = gpu.block_dim  x
-      %6 = gpu.thread_id  x
+      %5 = gpu.block_dim x
+      %6 = gpu.thread_id x
       %7 = memref.get_global @bufferLhsGlobal : memref<64x8xf32, 3>
       %8 = memref.get_global @bufferRhsGlobal : memref<8x128xf32, 3>
       %9 = nvgpu.mbarrier.create -> <memorySpace = #gpu.address_space<workgroup>>
@@ -80,8 +80,8 @@ module @mymod {
         nvgpu.mbarrier.arrive.expect_tx %9[%c0], %c6144 : <memorySpace = #gpu.address_space<workgroup>>
         %11 = memref.load %7[%c0, %c0] : memref<64x8xf32, 3>
         %12 = memref.load %8[%c0, %c0] : memref<8x128xf32, 3>
-        gpu.printf "[GPU] TMA BEFORE lhs[45][7] %f\0A" %11 : f32
-        gpu.printf "[GPU] TMA BEFORE rhs[7][0] %f\0A" %12 : f32
+        gpu.printf "[GPU] TMA BEFORE lhs[45][7] %f\0A", %11 : f32
+        gpu.printf "[GPU] TMA BEFORE rhs[7][0] %f\0A", %12 : f32
         nvgpu.tma.async.load %3[%c0, %c0], %9[%c0] to %7 : <tensor = memref<64x8xf32, 3>, swizzle = none, l2promo = none, oob = zero, interleave = none>, <memorySpace = #gpu.address_space<workgroup>> -> memref<64x8xf32, 3>
         nvgpu.tma.async.load %4[%c0, %c0], %9[%c0] to %8 : <tensor = memref<8x128xf32, 3>, swizzle = none, l2promo = none, oob = zero, interleave = none>, <memorySpace = #gpu.address_space<workgroup>> -> memref<8x128xf32, 3>
       } else {
@@ -92,8 +92,8 @@ module @mymod {
       scf.if %10 {
         %11 = memref.load %7[%c45, %c7] : memref<64x8xf32, 3>
         %12 = memref.load %8[%c7, %c0] : memref<8x128xf32, 3>
-        gpu.printf "[GPU] TMA LOADED lhs[45][7] %f\0A" %11 : f32
-        gpu.printf "[GPU] TMA LOADED rhs[7][0] %f\0A" %12 : f32
+        gpu.printf "[GPU] TMA LOADED lhs[45][7] %f\0A", %11 : f32
+        gpu.printf "[GPU] TMA LOADED rhs[7][0] %f\0A", %12 : f32
       }
       gpu.terminator
     }

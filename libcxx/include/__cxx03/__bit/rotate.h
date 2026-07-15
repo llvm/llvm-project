@@ -6,10 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___BIT_ROTATE_H
-#define _LIBCPP___BIT_ROTATE_H
+#ifndef _LIBCPP___CXX03___BIT_ROTATE_H
+#define _LIBCPP___CXX03___BIT_ROTATE_H
 
-#include <__cxx03/__concepts/arithmetic.h>
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/is_unsigned_integer.h>
 #include <__cxx03/limits>
@@ -24,7 +23,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // to optimize the code. On x86 this function becomes the ROL instruction and
 // the rotr function becomes the ROR instruction.
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp __rotl(_Tp __x, int __s) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI _Tp __rotl(_Tp __x, int __s) _NOEXCEPT {
   static_assert(__libcpp_is_unsigned_integer<_Tp>::value, "__rotl requires an unsigned integer type");
   const int __N = numeric_limits<_Tp>::digits;
   int __r       = __s % __N;
@@ -39,7 +38,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp __rotl(_Tp __x, int __s)
 }
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp __rotr(_Tp __x, int __s) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI _Tp __rotr(_Tp __x, int __s) _NOEXCEPT {
   static_assert(__libcpp_is_unsigned_integer<_Tp>::value, "__rotr requires an unsigned integer type");
   const int __N = numeric_limits<_Tp>::digits;
   int __r       = __s % __N;
@@ -53,20 +52,6 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp __rotr(_Tp __x, int __s)
   return (__x << -__r) | (__x >> (__N + __r));
 }
 
-#if _LIBCPP_STD_VER >= 20
-
-template <__libcpp_unsigned_integer _Tp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp rotl(_Tp __t, int __cnt) noexcept {
-  return std::__rotl(__t, __cnt);
-}
-
-template <__libcpp_unsigned_integer _Tp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp rotr(_Tp __t, int __cnt) noexcept {
-  return std::__rotr(__t, __cnt);
-}
-
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___BIT_ROTATE_H
+#endif // _LIBCPP___CXX03___BIT_ROTATE_H

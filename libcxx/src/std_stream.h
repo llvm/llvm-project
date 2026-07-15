@@ -24,6 +24,7 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 static const int __limit = 8;
 
@@ -86,7 +87,7 @@ void __stdinbuf<_CharT>::imbue(const locale& __loc) {
   __encoding_      = __cv_->encoding();
   __always_noconv_ = __cv_->always_noconv();
   if (__encoding_ > __limit)
-    __throw_runtime_error("unsupported locale for standard input");
+    std::__throw_runtime_error("unsupported locale for standard input");
 }
 
 template <class _CharT>
@@ -380,6 +381,7 @@ void __stdoutbuf<_CharT>::imbue(const locale& __loc) {
   __always_noconv_ = __cv_->always_noconv();
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

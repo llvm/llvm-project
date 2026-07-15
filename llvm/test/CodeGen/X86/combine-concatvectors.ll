@@ -72,7 +72,7 @@ alloca_0:
   br label %loop.4942
 
 loop.4942:                                        ; preds = %loop.4942, %alloca_0
-  br i1 undef, label %loop.4942, label %ifmerge.1298
+  br i1 poison, label %loop.4942, label %ifmerge.1298
 
 ifmerge.1298:                                     ; preds = %loop.4942
   %gepload4638 = load float, ptr getelementptr inbounds ([49216 x i8], ptr @qa_, i64 0, i64 28324), align 4

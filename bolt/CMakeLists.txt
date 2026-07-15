@@ -1,4 +1,11 @@
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
 
 set(LLVM_SUBPROJECT_TITLE "BOLT")
 
@@ -46,6 +53,10 @@ if(BOLT_BUILT_STANDALONE)
   set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin)
   set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})
 
+  separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
+  add_definitions(${LLVM_DEFINITIONS_LIST})
+  list(APPEND CMAKE_REQUIRED_DEFINITIONS ${LLVM_DEFINITIONS_LIST})
+
   include(AddLLVM)
   include(TableGen)
   include_directories(${LLVM_INCLUDE_DIRS})
@@ -82,7 +93,8 @@ endforeach()
 
 set(BOLT_ENABLE_RUNTIME_default OFF)
 if ((CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64"
-    OR CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
+    OR CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$"
+    OR CMAKE_SYSTEM_PROCESSOR STREQUAL "riscv64")
     AND (CMAKE_SYSTEM_NAME STREQUAL "Linux"
       OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     AND (NOT CMAKE_CROSSCOMPILING))
@@ -136,7 +148,7 @@ if (LLVM_INCLUDE_TESTS)
 endif()
 
 if (BOLT_ENABLE_RUNTIME)
-  message(STATUS "Building BOLT runtime libraries for X86")
+  message(STATUS "Building BOLT runtime libraries for ${CMAKE_SYSTEM_PROCESSOR}")
   set(extra_args "")
   if(CMAKE_SYSROOT)
     list(APPEND extra_args -DCMAKE_SYSROOT=${CMAKE_SYSROOT})
@@ -163,8 +175,8 @@ if (BOLT_ENABLE_RUNTIME)
   add_llvm_install_targets(install-bolt_rt
     DEPENDS bolt_rt bolt
     COMPONENT bolt)
-  set(LIBBOLT_RT_INSTR "${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-bins/lib/libbolt_rt_instr.a")
-  set(LIBBOLT_RT_HUGIFY "${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-bins/lib/libbolt_rt_hugify.a")
+  set(LIBBOLT_RT_INSTR "${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-bins/lib${LLVM_LIBDIR_SUFFIX}/libbolt_rt_instr.a")
+  set(LIBBOLT_RT_HUGIFY "${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-bins/lib${LLVM_LIBDIR_SUFFIX}/libbolt_rt_hugify.a")
 endif()
 
 find_program(GNU_LD_EXECUTABLE NAMES ${LLVM_DEFAULT_TARGET_TRIPLE}-ld.bfd ld.bfd DOC "GNU ld")
@@ -202,3 +214,11 @@ endif()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/bolt/RuntimeLibs/RuntimeLibraryVariables.inc.in
                ${CMAKE_CURRENT_BINARY_DIR}/include/bolt/RuntimeLibs/RuntimeLibraryVariables.inc @ONLY)
+
+set(BOLT_ENUM_TARGETS "")
+foreach(t ${BOLT_TARGETS_TO_BUILD})
+  set(BOLT_ENUM_TARGETS "${BOLT_ENUM_TARGETS}BOLT_TARGET(${t})\n")
+endforeach(t)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/bolt/Core/TargetConfig.def.in
+               ${CMAKE_CURRENT_BINARY_DIR}/include/bolt/Core/TargetConfig.def @ONLY)

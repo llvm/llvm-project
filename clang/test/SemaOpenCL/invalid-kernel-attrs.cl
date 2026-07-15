@@ -44,3 +44,5 @@ __kernel __attribute__((reqd_work_group_size(8,16,-32))) void neg2(){} // expect
 // 4294967294 is a negative integer if treated as signed.
 // Should compile successfully, since we expect an unsigned.
 __kernel __attribute__((reqd_work_group_size(8,16,4294967294))) void ok1(){}
+
+__kernel __attribute__((reqd_work_group_size(0,0,0))) void ok_zeros(){}

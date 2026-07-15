@@ -1,17 +1,17 @@
 ; RUN: llc -mtriple=powerpc64le-unknown-linux-gnu --verify-machineinstrs \
-; RUN: -stop-after=prologepilog < %s | FileCheck \
+; RUN: -stop-after=prolog-epilog < %s | FileCheck \
 ; RUN: --check-prefixes=CHECK,CHECK64,ELFV2 %s
 
 ; RUN: llc -mtriple=powerpc64-unknown-aix-xcoff -mcpu=pwr4 \
-; RUN: --verify-machineinstrs --mattr=-altivec -stop-after=prologepilog < %s | \
+; RUN: --verify-machineinstrs --mattr=-altivec -stop-after=prolog-epilog < %s | \
 ; RUN: FileCheck --check-prefixes=CHECK,CHECK64,V1ANDAIX  %s
 
 ; RUN: llc -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 --verify-machineinstrs \
-; RUN: -stop-after=prologepilog < %s | FileCheck \
+; RUN: -stop-after=prolog-epilog < %s | FileCheck \
 ; RUN: --check-prefixes=CHECK,CHECK64,V1ANDAIX %s
 
 ; RUN: llc -mtriple=powerpc-unknown-aix-xcoff -mcpu=pwr4 \
-; RUN: --verify-machineinstrs --mattr=-altivec -stop-after=prologepilog < %s | \
+; RUN: --verify-machineinstrs --mattr=-altivec -stop-after=prolog-epilog < %s | \
 ; RUN: FileCheck --check-prefixes=CHECK,CHECK32  %s
 
 define dso_local signext i32 @test(i32 signext %n) {
@@ -26,7 +26,7 @@ entry:
 declare signext i32 @do_something(ptr)
 
 ; CHECK: name:            test
-; CHECK: alignment:       16
+; CHECK: alignment:       4
 ; CHECK: liveins:
 ; CHECK64:   - { reg: '$x3', virtual-reg: '' }
 ; CHECK32:   - { reg: '$r3', virtual-reg: '' }
@@ -53,7 +53,7 @@ declare signext i32 @do_something(ptr)
 ; CHECK64-NEXT:       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
 ; CHECK64-NEXT:       local-offset: 0, debug-info-variable: '', debug-info-expression: '',
 ; CHECK64-NEXT:       debug-info-location: '' }
-; CHECK64-NEXT:   - { id: 1, name: '', type: default, offset: -16, size: 8, alignment: 8,
+; CHECK64-NEXT:   - { id: 1, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8,
 ; CHECK64-NEXT:       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
 ; CHECK64-NEXT:       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 
@@ -72,7 +72,7 @@ declare signext i32 @do_something(ptr)
 ; CHECK32-NEXT:       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
 ; CHECK32-NEXT:       local-offset: 0, debug-info-variable: '', debug-info-expression: '',
 ; CHECK32-NEXT:       debug-info-location: '' }
-; CHECK32-NEXT:   - { id: 1, name: '', type: default, offset: -8, size: 4, alignment: 4,
+; CHECK32-NEXT:   - { id: 1, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4,
 ; CHECK32-NEXT:       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
 ; CHECK32-NEXT:       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 

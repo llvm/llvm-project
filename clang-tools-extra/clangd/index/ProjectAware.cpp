@@ -35,6 +35,10 @@ public:
   /// Query all indexes while prioritizing the associated one (if any).
   bool refs(const RefsRequest &Req,
             llvm::function_ref<void(const Ref &)> Callback) const override;
+  /// Query all indexes while prioritizing the associated one (if any).
+  bool containedRefs(const ContainedRefsRequest &Req,
+                     llvm::function_ref<void(const ContainedRefsResult &)>
+                         Callback) const override;
 
   /// Queries only the associates index when Req.RestrictForCodeCompletion is
   /// set, otherwise queries all.
@@ -46,6 +50,11 @@ public:
   void relations(const RelationsRequest &Req,
                  llvm::function_ref<void(const SymbolID &, const Symbol &)>
                      Callback) const override;
+
+  void
+  reverseRelations(const RelationsRequest &,
+                   llvm::function_ref<void(const SymbolID &, const Symbol &)>)
+      const override;
 
   llvm::unique_function<IndexContents(llvm::StringRef) const>
   indexedFiles() const override;
@@ -94,6 +103,15 @@ bool ProjectAwareIndex::refs(
   return false;
 }
 
+bool ProjectAwareIndex::containedRefs(
+    const ContainedRefsRequest &Req,
+    llvm::function_ref<void(const ContainedRefsResult &)> Callback) const {
+  trace::Span Tracer("ProjectAwareIndex::refersTo");
+  if (auto *Idx = getIndex())
+    return Idx->containedRefs(Req, Callback);
+  return false;
+}
+
 bool ProjectAwareIndex::fuzzyFind(
     const FuzzyFindRequest &Req,
     llvm::function_ref<void(const Symbol &)> Callback) const {
@@ -109,6 +127,14 @@ void ProjectAwareIndex::relations(
   trace::Span Tracer("ProjectAwareIndex::relations");
   if (auto *Idx = getIndex())
     return Idx->relations(Req, Callback);
+}
+
+void ProjectAwareIndex::reverseRelations(
+    const RelationsRequest &Req,
+    llvm::function_ref<void(const SymbolID &, const Symbol &)> Callback) const {
+  trace::Span Tracer("ProjectAwareIndex::relations");
+  if (auto *Idx = getIndex())
+    return Idx->reverseRelations(Req, Callback);
 }
 
 llvm::unique_function<IndexContents(llvm::StringRef) const>

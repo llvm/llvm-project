@@ -28,11 +28,12 @@
 
 // UNSUPPORTED: android
 
+#include "defines.h"
 #include <string.h>
 
 
 // Don't inline function otherwise stacktrace changes.
-__attribute__((noinline)) void bad_function() {
+ATTRIBUTE_NOINLINE void bad_function() {
   char buffer[] = "hello";
   // CHECK: strncpy-param-overlap: memory ranges
   // CHECK: [{{0x.*,[ ]*0x.*}}) and [{{0x.*,[ ]*0x.*}}) overlap

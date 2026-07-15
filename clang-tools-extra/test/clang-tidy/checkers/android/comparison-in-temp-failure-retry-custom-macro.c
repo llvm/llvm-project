@@ -2,7 +2,7 @@
 
 #define MY_TEMP_FAILURE_RETRY(x) \
   ({                             \
-    typeof(x) __z;               \
+    __typeof__(x) __z;           \
     do                           \
       __z = (x);                 \
     while (__z == -1);           \
@@ -11,7 +11,7 @@
 
 #define MY_OTHER_TEMP_FAILURE_RETRY(x) \
   ({                                   \
-    typeof(x) __z;                     \
+    __typeof__(x) __z;                 \
     do                                 \
       __z = (x);                       \
     while (__z == -1);                 \

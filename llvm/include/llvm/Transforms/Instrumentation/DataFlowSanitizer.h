@@ -9,22 +9,26 @@
 #define LLVM_TRANSFORMS_INSTRUMENTATION_DATAFLOWSANITIZER_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <string>
 #include <vector>
 
 namespace llvm {
 class Module;
 
-class DataFlowSanitizerPass : public PassInfoMixin<DataFlowSanitizerPass> {
+class DataFlowSanitizerPass
+    : public RequiredPassInfoMixin<DataFlowSanitizerPass> {
 private:
   std::vector<std::string> ABIListFiles;
+  IntrusiveRefCntPtr<vfs::FileSystem> FS;
 
 public:
   DataFlowSanitizerPass(
-      const std::vector<std::string> &ABIListFiles = std::vector<std::string>())
-      : ABIListFiles(ABIListFiles) {}
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
+      const std::vector<std::string> &ABIListFiles = std::vector<std::string>(),
+      IntrusiveRefCntPtr<vfs::FileSystem> FS = vfs::getRealFileSystem())
+      : ABIListFiles(ABIListFiles), FS(std::move(FS)) {}
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // namespace llvm

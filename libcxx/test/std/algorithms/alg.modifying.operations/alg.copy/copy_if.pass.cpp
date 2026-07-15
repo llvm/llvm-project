@@ -19,75 +19,48 @@
 
 #include "test_macros.h"
 #include "test_iterators.h"
+#include "type_algorithms.h"
 
-struct Pred
-{
-    TEST_CONSTEXPR_CXX14 bool operator()(int i) {return i % 3 == 0;}
+struct Pred {
+  TEST_CONSTEXPR_CXX14 bool operator()(int i) { return i % 3 == 0; }
 };
 
-template <class InIter, class OutIter>
-TEST_CONSTEXPR_CXX20 void
-test_copy_if()
-{
+template <class InIter>
+struct TestOutIters {
+  template <class OutIter>
+  TEST_CONSTEXPR_CXX20 void operator()() {
     const unsigned N = 1000;
-    int ia[N] = {};
+    int ia[N]        = {};
     for (unsigned i = 0; i < N; ++i)
-        ia[i] = i;
+      ia[i] = i;
     int ib[N] = {0};
 
-    OutIter r = std::copy_if(InIter(ia), InIter(ia+N), OutIter(ib), Pred());
-    assert(base(r) == ib+N/3+1);
-    for (unsigned i = 0; i < N/3+1; ++i)
-        assert(ib[i] % 3 == 0);
-}
+    OutIter r = std::copy_if(InIter(ia), InIter(ia + N), OutIter(ib), Pred());
+    assert(base(r) == ib + N / 3 + 1);
+    for (unsigned i = 0; i < N / 3 + 1; ++i)
+      assert(ib[i] % 3 == 0);
+  }
+};
 
-TEST_CONSTEXPR_CXX20 bool
-test()
-{
-    test_copy_if<cpp17_input_iterator<const int*>, cpp17_output_iterator<int*> >();
-    test_copy_if<cpp17_input_iterator<const int*>, cpp17_input_iterator<int*> >();
-    test_copy_if<cpp17_input_iterator<const int*>, forward_iterator<int*> >();
-    test_copy_if<cpp17_input_iterator<const int*>, bidirectional_iterator<int*> >();
-    test_copy_if<cpp17_input_iterator<const int*>, random_access_iterator<int*> >();
-    test_copy_if<cpp17_input_iterator<const int*>, int*>();
+struct TestInIters {
+  template <class InIter>
+  TEST_CONSTEXPR_CXX20 void operator()() {
+    types::for_each(
+        types::concatenate_t<types::cpp17_input_iterator_list<int*>, types::type_list<cpp17_output_iterator<int*> > >(),
+        TestOutIters<InIter>());
+  }
+};
 
-    test_copy_if<forward_iterator<const int*>, cpp17_output_iterator<int*> >();
-    test_copy_if<forward_iterator<const int*>, cpp17_input_iterator<int*> >();
-    test_copy_if<forward_iterator<const int*>, forward_iterator<int*> >();
-    test_copy_if<forward_iterator<const int*>, bidirectional_iterator<int*> >();
-    test_copy_if<forward_iterator<const int*>, random_access_iterator<int*> >();
-    test_copy_if<forward_iterator<const int*>, int*>();
-
-    test_copy_if<bidirectional_iterator<const int*>, cpp17_output_iterator<int*> >();
-    test_copy_if<bidirectional_iterator<const int*>, cpp17_input_iterator<int*> >();
-    test_copy_if<bidirectional_iterator<const int*>, forward_iterator<int*> >();
-    test_copy_if<bidirectional_iterator<const int*>, bidirectional_iterator<int*> >();
-    test_copy_if<bidirectional_iterator<const int*>, random_access_iterator<int*> >();
-    test_copy_if<bidirectional_iterator<const int*>, int*>();
-
-    test_copy_if<random_access_iterator<const int*>, cpp17_output_iterator<int*> >();
-    test_copy_if<random_access_iterator<const int*>, cpp17_input_iterator<int*> >();
-    test_copy_if<random_access_iterator<const int*>, forward_iterator<int*> >();
-    test_copy_if<random_access_iterator<const int*>, bidirectional_iterator<int*> >();
-    test_copy_if<random_access_iterator<const int*>, random_access_iterator<int*> >();
-    test_copy_if<random_access_iterator<const int*>, int*>();
-
-    test_copy_if<const int*, cpp17_output_iterator<int*> >();
-    test_copy_if<const int*, cpp17_input_iterator<int*> >();
-    test_copy_if<const int*, forward_iterator<int*> >();
-    test_copy_if<const int*, bidirectional_iterator<int*> >();
-    test_copy_if<const int*, random_access_iterator<int*> >();
-    test_copy_if<const int*, int*>();
-
+TEST_CONSTEXPR_CXX20 bool test() {
+  types::for_each(types::cpp17_input_iterator_list<const int*>(), TestInIters());
   return true;
 }
 
-int main(int, char**)
-{
-    test();
+int main(int, char**) {
+  test();
 
 #if TEST_STD_VER > 17
-    static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

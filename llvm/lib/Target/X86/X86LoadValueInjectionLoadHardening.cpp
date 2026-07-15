@@ -115,9 +115,9 @@ struct MachineGadgetGraph : ImmutableGraph<MachineInstr *, int> {
   static constexpr MachineInstr *const ArgNodeSentinel = nullptr;
 
   using GraphT = ImmutableGraph<MachineInstr *, int>;
-  using Node = typename GraphT::Node;
-  using Edge = typename GraphT::Edge;
-  using size_type = typename GraphT::size_type;
+  using Node = GraphT::Node;
+  using Edge = GraphT::Edge;
+  using size_type = GraphT::size_type;
   MachineGadgetGraph(std::unique_ptr<Node[]> Nodes,
                      std::unique_ptr<Edge[]> Edges, size_type NodesSize,
                      size_type EdgesSize, int NumFences = 0, int NumGadgets = 0)
@@ -133,17 +133,27 @@ struct MachineGadgetGraph : ImmutableGraph<MachineInstr *, int> {
   int NumGadgets;
 };
 
-class X86LoadValueInjectionLoadHardeningPass : public MachineFunctionPass {
-public:
-  X86LoadValueInjectionLoadHardeningPass() : MachineFunctionPass(ID) {}
+constexpr StringRef X86LVILHPassName =
+    "X86 Load Value Injection (LVI) Load Hardening";
 
-  StringRef getPassName() const override {
-    return "X86 Load Value Injection (LVI) Load Hardening";
-  }
+class X86LoadValueInjectionLoadHardeningLegacy : public MachineFunctionPass {
+public:
+  X86LoadValueInjectionLoadHardeningLegacy() : MachineFunctionPass(ID) {}
+
+  StringRef getPassName() const override { return X86LVILHPassName; }
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   static char ID;
+};
+
+class X86LoadValueInjectionLoadHardeningImpl {
+public:
+  X86LoadValueInjectionLoadHardeningImpl() = default;
+
+  bool run(MachineFunction &MF, const MachineLoopInfo &MLI,
+           const MachineDominatorTree &MDT,
+           const MachineDominanceFrontier &MDF);
 
 private:
   using GraphBuilder = ImmutableGraphBuilder<MachineGadgetGraph>;
@@ -171,8 +181,8 @@ private:
   trimMitigatedEdges(std::unique_ptr<MachineGadgetGraph> Graph) const;
   int insertFences(MachineFunction &MF, MachineGadgetGraph &G,
                    EdgeSet &CutEdges /* in, out */) const;
-  bool instrUsesRegToAccessMemory(const MachineInstr &I, unsigned Reg) const;
-  bool instrUsesRegToBranch(const MachineInstr &I, unsigned Reg) const;
+  bool instrUsesRegToAccessMemory(const MachineInstr &I, Register Reg) const;
+  bool instrUsesRegToBranch(const MachineInstr &I, Register Reg) const;
   inline bool isFence(const MachineInstr *MI) const {
     return MI && (MI->getOpcode() == X86::LFENCE ||
                   (STI->useLVIControlFlowIntegrity() && MI->isCall()));
@@ -191,10 +201,10 @@ template <>
 struct DOTGraphTraits<MachineGadgetGraph *> : DefaultDOTGraphTraits {
   using GraphType = MachineGadgetGraph;
   using Traits = llvm::GraphTraits<GraphType *>;
-  using NodeRef = typename Traits::NodeRef;
-  using EdgeRef = typename Traits::EdgeRef;
-  using ChildIteratorType = typename Traits::ChildIteratorType;
-  using ChildEdgeIteratorType = typename Traits::ChildEdgeIteratorType;
+  using NodeRef = Traits::NodeRef;
+  using EdgeRef = Traits::EdgeRef;
+  using ChildIteratorType = Traits::ChildIteratorType;
+  using ChildEdgeIteratorType = Traits::ChildEdgeIteratorType;
 
   DOTGraphTraits(bool IsSimple = false) : DefaultDOTGraphTraits(IsSimple) {}
 
@@ -227,17 +237,14 @@ struct DOTGraphTraits<MachineGadgetGraph *> : DefaultDOTGraphTraits {
 
 } // end namespace llvm
 
-constexpr MachineInstr *MachineGadgetGraph::ArgNodeSentinel;
-constexpr int MachineGadgetGraph::GadgetEdgeSentinel;
+char X86LoadValueInjectionLoadHardeningLegacy::ID = 0;
 
-char X86LoadValueInjectionLoadHardeningPass::ID = 0;
-
-void X86LoadValueInjectionLoadHardeningPass::getAnalysisUsage(
+void X86LoadValueInjectionLoadHardeningLegacy::getAnalysisUsage(
     AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
   AU.addRequired<MachineLoopInfoWrapperPass>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
-  AU.addRequired<MachineDominanceFrontier>();
+  AU.addRequired<MachineDominanceFrontierWrapperPass>();
   AU.setPreservesCFG();
 }
 
@@ -247,30 +254,21 @@ static void writeGadgetGraph(raw_ostream &OS, MachineFunction &MF,
              "Speculative gadgets for \"" + MF.getName() + "\" function");
 }
 
-bool X86LoadValueInjectionLoadHardeningPass::runOnMachineFunction(
-    MachineFunction &MF) {
-  LLVM_DEBUG(dbgs() << "***** " << getPassName() << " : " << MF.getName()
+bool X86LoadValueInjectionLoadHardeningImpl::run(
+    MachineFunction &MF, const MachineLoopInfo &MLI,
+    const MachineDominatorTree &MDT, const MachineDominanceFrontier &MDF) {
+  LLVM_DEBUG(dbgs() << "***** " << X86LVILHPassName << " : " << MF.getName()
                     << " *****\n");
   STI = &MF.getSubtarget<X86Subtarget>();
-  if (!STI->useLVILoadHardening())
-    return false;
 
   // FIXME: support 32-bit
   if (!STI->is64Bit())
     report_fatal_error("LVI load hardening is only supported on 64-bit", false);
 
-  // Don't skip functions with the "optnone" attr but participate in opt-bisect.
-  const Function &F = MF.getFunction();
-  if (!F.hasOptNone() && skipFunction(F))
-    return false;
-
   ++NumFunctionsConsidered;
   TII = STI->getInstrInfo();
   TRI = STI->getRegisterInfo();
   LLVM_DEBUG(dbgs() << "Building gadget graph...\n");
-  const auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  const auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  const auto &MDF = getAnalysis<MachineDominanceFrontier>();
   std::unique_ptr<MachineGadgetGraph> Graph = getGadgetGraph(MF, MLI, MDT, MDF);
   LLVM_DEBUG(dbgs() << "Building gadget graph... Done\n");
   if (Graph == nullptr)
@@ -322,7 +320,7 @@ bool X86LoadValueInjectionLoadHardeningPass::runOnMachineFunction(
 }
 
 std::unique_ptr<MachineGadgetGraph>
-X86LoadValueInjectionLoadHardeningPass::getGadgetGraph(
+X86LoadValueInjectionLoadHardeningImpl::getGadgetGraph(
     MachineFunction &MF, const MachineLoopInfo &MLI,
     const MachineDominatorTree &MDT,
     const MachineDominanceFrontier &MDF) const {
@@ -335,14 +333,14 @@ X86LoadValueInjectionLoadHardeningPass::getGadgetGraph(
   L.computePhiInfo();
 
   GraphBuilder Builder;
-  using GraphIter = typename GraphBuilder::BuilderNodeRef;
+  using GraphIter = GraphBuilder::BuilderNodeRef;
   DenseMap<MachineInstr *, GraphIter> NodeMap;
   int FenceCount = 0, GadgetCount = 0;
   auto MaybeAddNode = [&NodeMap, &Builder](MachineInstr *MI) {
-    auto Ref = NodeMap.find(MI);
-    if (Ref == NodeMap.end()) {
+    auto [Ref, Inserted] = NodeMap.try_emplace(MI);
+    if (Inserted) {
       auto I = Builder.addVertex(MI);
-      NodeMap[MI] = I;
+      Ref->second = I;
       return std::pair<GraphIter, bool>{I, true};
     }
     return std::pair<GraphIter, bool>{Ref->getSecond(), false};
@@ -414,7 +412,6 @@ X86LoadValueInjectionLoadHardeningPass::getGadgetGraph(
 
             // Check whether the use propagates to more defs.
             NodeAddr<InstrNode *> Owner{Use.Addr->getOwner(DFG)};
-            rdf::NodeList AnalyzedChildDefs;
             for (const auto &ChildDef :
                  Owner.Addr->members_if(DataFlowGraph::IsDef, DFG)) {
               if (!DefsVisited.insert(ChildDef.Id).second)
@@ -492,7 +489,7 @@ X86LoadValueInjectionLoadHardeningPass::getGadgetGraph(
   NumGadgets += GadgetCount;
 
   // Traverse CFG to build the rest of the graph
-  SmallSet<MachineBasicBlock *, 8> BlocksVisited;
+  SmallPtrSet<MachineBasicBlock *, 8> BlocksVisited;
   std::function<void(MachineBasicBlock *, GraphIter, unsigned)> TraverseCFG =
       [&](MachineBasicBlock *MBB, GraphIter GI, unsigned ParentDepth) {
         unsigned LoopDepth = MLI.getLoopDepth(MBB);
@@ -536,7 +533,7 @@ X86LoadValueInjectionLoadHardeningPass::getGadgetGraph(
 }
 
 // Returns the number of remaining gadget edges that could not be eliminated
-int X86LoadValueInjectionLoadHardeningPass::elimMitigatedEdgesAndNodes(
+int X86LoadValueInjectionLoadHardeningImpl::elimMitigatedEdgesAndNodes(
     MachineGadgetGraph &G, EdgeSet &ElimEdges /* in, out */,
     NodeSet &ElimNodes /* in, out */) const {
   if (G.NumFences > 0) {
@@ -591,7 +588,7 @@ int X86LoadValueInjectionLoadHardeningPass::elimMitigatedEdgesAndNodes(
 }
 
 std::unique_ptr<MachineGadgetGraph>
-X86LoadValueInjectionLoadHardeningPass::trimMitigatedEdges(
+X86LoadValueInjectionLoadHardeningImpl::trimMitigatedEdges(
     std::unique_ptr<MachineGadgetGraph> Graph) const {
   NodeSet ElimNodes{*Graph};
   EdgeSet ElimEdges{*Graph};
@@ -607,7 +604,7 @@ X86LoadValueInjectionLoadHardeningPass::trimMitigatedEdges(
   return Graph;
 }
 
-int X86LoadValueInjectionLoadHardeningPass::hardenLoadsWithPlugin(
+int X86LoadValueInjectionLoadHardeningImpl::hardenLoadsWithPlugin(
     MachineFunction &MF, std::unique_ptr<MachineGadgetGraph> Graph) const {
   int FencesInserted = 0;
 
@@ -652,7 +649,7 @@ int X86LoadValueInjectionLoadHardeningPass::hardenLoadsWithPlugin(
   return FencesInserted;
 }
 
-int X86LoadValueInjectionLoadHardeningPass::hardenLoadsWithHeuristic(
+int X86LoadValueInjectionLoadHardeningImpl::hardenLoadsWithHeuristic(
     MachineFunction &MF, std::unique_ptr<MachineGadgetGraph> Graph) const {
   // If `MF` does not have any fences, then no gadgets would have been
   // mitigated at this point.
@@ -718,7 +715,7 @@ int X86LoadValueInjectionLoadHardeningPass::hardenLoadsWithHeuristic(
   return FencesInserted;
 }
 
-int X86LoadValueInjectionLoadHardeningPass::insertFences(
+int X86LoadValueInjectionLoadHardeningImpl::insertFences(
     MachineFunction &MF, MachineGadgetGraph &G,
     EdgeSet &CutEdges /* in, out */) const {
   int FencesInserted = 0;
@@ -762,8 +759,8 @@ int X86LoadValueInjectionLoadHardeningPass::insertFences(
   return FencesInserted;
 }
 
-bool X86LoadValueInjectionLoadHardeningPass::instrUsesRegToAccessMemory(
-    const MachineInstr &MI, unsigned Reg) const {
+bool X86LoadValueInjectionLoadHardeningImpl::instrUsesRegToAccessMemory(
+    const MachineInstr &MI, Register Reg) const {
   if (!MI.mayLoadOrStore() || MI.getOpcode() == X86::MFENCE ||
       MI.getOpcode() == X86::SFENCE || MI.getOpcode() == X86::LFENCE)
     return false;
@@ -780,14 +777,14 @@ bool X86LoadValueInjectionLoadHardeningPass::instrUsesRegToAccessMemory(
       MI.getOperand(MemRefBeginIdx + X86::AddrBaseReg);
   const MachineOperand &IndexMO =
       MI.getOperand(MemRefBeginIdx + X86::AddrIndexReg);
-  return (BaseMO.isReg() && BaseMO.getReg() != X86::NoRegister &&
+  return (BaseMO.isReg() && BaseMO.getReg().isValid() &&
           TRI->regsOverlap(BaseMO.getReg(), Reg)) ||
-         (IndexMO.isReg() && IndexMO.getReg() != X86::NoRegister &&
+         (IndexMO.isReg() && IndexMO.getReg().isValid() &&
           TRI->regsOverlap(IndexMO.getReg(), Reg));
 }
 
-bool X86LoadValueInjectionLoadHardeningPass::instrUsesRegToBranch(
-    const MachineInstr &MI, unsigned Reg) const {
+bool X86LoadValueInjectionLoadHardeningImpl::instrUsesRegToBranch(
+    const MachineInstr &MI, Register Reg) const {
   if (!MI.isConditionalBranch())
     return false;
   for (const MachineOperand &Use : MI.uses())
@@ -796,14 +793,53 @@ bool X86LoadValueInjectionLoadHardeningPass::instrUsesRegToBranch(
   return false;
 }
 
-INITIALIZE_PASS_BEGIN(X86LoadValueInjectionLoadHardeningPass, PASS_KEY,
+bool X86LoadValueInjectionLoadHardeningLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  // Don't skip functions with the "optnone" attr but participate in opt-bisect.
+  // Note: Not needed for new PM impl, where it is handled at the PM level.
+  const Function &F = MF.getFunction();
+  if (!F.hasOptNone() && skipFunction(F))
+    return false;
+
+  // Bail early (without computing analyses) if LVI load hardening is disabled.
+  if (!MF.getSubtarget<X86Subtarget>().useLVILoadHardening()) {
+    return false;
+  }
+
+  const auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  const auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  const auto &MDF = getAnalysis<MachineDominanceFrontierWrapperPass>().getMDF();
+
+  X86LoadValueInjectionLoadHardeningImpl Impl;
+  return Impl.run(MF, MLI, MDT, MDF);
+}
+
+PreservedAnalyses X86LoadValueInjectionLoadHardeningPass::run(
+    MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
+  // Bail early (without computing analyses) if LVI load hardening is disabled.
+  if (!MF.getSubtarget<X86Subtarget>().useLVILoadHardening()) {
+    return PreservedAnalyses::all();
+  }
+
+  const auto &MLI = MFAM.getResult<MachineLoopAnalysis>(MF);
+  const auto &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  const auto &MDF = MFAM.getResult<MachineDominanceFrontierAnalysis>(MF);
+
+  X86LoadValueInjectionLoadHardeningImpl Impl;
+  const bool Modified = Impl.run(MF, MLI, MDT, MDF);
+  return Modified ? getMachineFunctionPassPreservedAnalyses()
+                        .preserveSet<CFGAnalyses>()
+                  : PreservedAnalyses::all();
+}
+
+INITIALIZE_PASS_BEGIN(X86LoadValueInjectionLoadHardeningLegacy, PASS_KEY,
                       "X86 LVI load hardening", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontier)
-INITIALIZE_PASS_END(X86LoadValueInjectionLoadHardeningPass, PASS_KEY,
+INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontierWrapperPass)
+INITIALIZE_PASS_END(X86LoadValueInjectionLoadHardeningLegacy, PASS_KEY,
                     "X86 LVI load hardening", false, false)
 
-FunctionPass *llvm::createX86LoadValueInjectionLoadHardeningPass() {
-  return new X86LoadValueInjectionLoadHardeningPass();
+FunctionPass *llvm::createX86LoadValueInjectionLoadHardeningLegacyPass() {
+  return new X86LoadValueInjectionLoadHardeningLegacy();
 }

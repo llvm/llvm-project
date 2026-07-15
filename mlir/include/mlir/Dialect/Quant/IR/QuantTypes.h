@@ -23,9 +23,11 @@ namespace detail {
 
 struct QuantizedTypeStorage;
 struct AnyQuantizedTypeStorage;
+struct UniformQuantizedSubChannelTypeStorage;
 struct UniformQuantizedTypeStorage;
 struct UniformQuantizedPerAxisTypeStorage;
 struct CalibratedQuantizedTypeStorage;
+struct QuantileTypeStorage;
 
 } // namespace detail
 
@@ -142,9 +144,11 @@ public:
   /// Casts from a type based on the storageType to a corresponding type based
   /// on this type (returns nullptr if the cast is not valid).
   /// Examples:
+  ///  `candidate type` -> `return type`
   ///   i8 -> !quant.uniform<i8:f32, 1.0>
   ///   tensor<4xi8> -> tensor<4x!quant.uniform<i8:f32, 1.0}>>
   ///   vector<4xi8> -> vector<4x!quant.uniform<i8:f32, 1.0>>
+  ///   It is assumed above that this type's quantization is `<i8:f32, 1.0>`.
   Type castFromStorageType(Type candidateType);
 
   /// Casts from a type based on a QuantizedType to a corresponding type based
@@ -252,7 +256,7 @@ public:
 ///   Per-layer, optional parameters omitted:
 ///     !quant<uniform[StorageType]{Scale}>
 ///
-///   StorageType: 'i'|'u' NumBits
+///   StorageType: 'i'|'u' NumBits, 'f4', 'F8E5M2', 'bf8', 'quantile'
 ///   ExpressedType: 'f16', 'f32', 'bf16', 'f64'
 ///   Scale: A legal double value
 ///   ZeroPoint: An integer value
@@ -310,7 +314,7 @@ public:
 ///   Per-axis, optional parameters omitted:
 ///     !quant<uniform[StorageType]{Scale}>
 ///
-///   StorageType: 'i'|'u' NumBits
+///   StorageType: 'i'|'u' NumBits, 'f4', 'hf8', 'bf8', 'quantile'
 ///   ExpressedType: 'f16', 'f32', 'bf16', 'f64'
 ///   QuantizedDim: An integer value
 ///   QuantParams: (Scale ':' ZeroPoint)+
@@ -382,6 +386,136 @@ public:
   }
 };
 
+/// Represents sub-channel (also known as blockwise quantization).
+///
+/// Syntax synopsis:
+///   UniformQuantizedSubChannelType ::= '!quant.uniform' '<'
+///       storageType ('<' storageMin ':' storageMax '>')? ':'
+///       expressedType ':' BlockSizeInfo ',' ScaleZeroTensor '>'
+///   BlockSizeInfo: '{' '}' | '{' AxisBlock (',' AxisBlock)* '}'
+///   AxisBlock ::= AxisSpec ':' BlockSizeSpec
+///   ScaleZeroTensor ::= ScaleZeroDenseExp | ScaleZeroList
+///   ScaleZeroDenseExp ::= '{' ScaleZeroTensor (',' ScaleZeroTensor)* '}'
+///   ScaleZeroList  ::= ScaleZero (',' ScaleZero)*
+///   ScaleZero ::= Scale (':' ZeroPoint)?
+///
+///   StorageType: 'i'|'u' NumBits, 'f4', 'hf8', 'bf8', 'quantile'
+///   ExpressedType: 'f16', 'f32', 'bf16', 'f64'
+///   AxisSpec: An integer value
+///   BlockSizeSpec: An integer value
+///   Scale: An attribute (usually floating-point value)
+///   ZeroPoint: An attribute (usually integer value)
+class UniformQuantizedSubChannelType
+    : public Type::TypeBase<UniformQuantizedSubChannelType, QuantizedType,
+                            detail::UniformQuantizedSubChannelTypeStorage> {
+public:
+  using Base::Base;
+  using Base::getChecked;
+
+  static constexpr StringLiteral name = "quant.uniform_sub_channel";
+
+  /// Gets an instance of the type with all parameters specified but not
+  /// checked.
+  static UniformQuantizedSubChannelType
+  get(unsigned flags, Type storageType, Type expressedType,
+      DenseElementsAttr scales, DenseElementsAttr zeroPoints,
+      ArrayRef<int32_t> quantizedDimensions, ArrayRef<int64_t> blockSizes,
+      int64_t storageTypeMin, int64_t storageTypeMax);
+
+  /// Gets an instance of the type with all specified parameters checked.
+  /// Returns a nullptr convertible type on failure.
+  static UniformQuantizedSubChannelType
+  getChecked(function_ref<InFlightDiagnostic()> emitError, unsigned flags,
+             Type storageType, Type expressedType, DenseElementsAttr scales,
+             DenseElementsAttr zeroPoints,
+             ArrayRef<int32_t> quantizedDimensions,
+             ArrayRef<int64_t> blockSizes, int64_t storageTypeMin,
+             int64_t storageTypeMax);
+
+  /// Verifies construction invariants and issues errors/warnings.
+  static LogicalResult
+  verifyInvariants(function_ref<InFlightDiagnostic()> emitError, unsigned flags,
+                   Type storageType, Type expressedType,
+                   DenseElementsAttr scales, DenseElementsAttr zeroPoints,
+                   ArrayRef<int32_t> quantizedDimensions,
+                   ArrayRef<int64_t> blockSizes, int64_t storageTypeMin,
+                   int64_t storageTypeMax);
+
+  /// Gets the quantization scales. The scales are organized in a
+  /// multi-dimensional tensor. The size of each dimension in the scales tensor
+  /// is determined by the number of blocks along the corresponding dimension in
+  /// the quantized data tensor.
+  ///
+  /// For example, if the quantized data tensor has shape [X0, X1, ..., XR-1]
+  /// and the block sizes are [B0, B1, ..., BR-1], then the scales tensor will
+  /// have shape [X0/B0, X1/B1, ..., XR-1/BR-1].
+  ///
+  /// The scale value for a specific element in the quantized data tensor at
+  /// position [i0, i1, ..., iR-1] is determined by accessing the corresponding
+  /// element in the scales tensor at position [i0/B0, i1/B1, ..., iR-1/BR-1].
+  DenseElementsAttr getScales() const;
+
+  /// Gets the quantization zero-points. The zero-points are organized in a
+  /// multi-dimensional tensor. The size of each dimension in the zero-point
+  /// tensor is determined by the number of blocks along the corresponding
+  /// dimension in the quantized data tensor.
+  ///
+  /// For example, if the quantized data tensor has shape [X0, X1, ..., XR-1]
+  /// and the block sizes are [B0, B1, ..., BR-1], then the zero-point tensor
+  /// will have shape [X0/B0, X1/B1, ..., XR-1/BR-1].
+  ///
+  /// The zero-point value for a specific element in the quantized data tensor
+  /// at position [i0, i1, ..., iR-1] is determined by accessing the
+  /// corresponding element in the zero-point tensor at position [i0/B0, i1/B1,
+  /// ..., iR-1/BR-1].
+  DenseElementsAttr getZeroPoints() const;
+
+  /// Gets the quantized dimensions. Each element in the returned list
+  /// represents an axis of the quantized data tensor that has a specified block
+  /// size. The order of elements corresponds to the order of block sizes
+  /// returned by `getBlockSizes()`.
+  ///
+  /// It means that the data tensor is quantized along the `i`-th dimension in
+  /// the returned list using the `i`-th block size from `getBlockSizes()`.
+  ///
+  /// Note that the type expression does not have to specify the block size for
+  /// all axes in the data tensor. Any unspecified block size for an axis `i`
+  /// defaults to the tensor dimension size of that axis.
+  ///
+  /// For example, for a quantized type:
+  /// `tensor<8x4x2x!quant.uniform<i8:f32:{1:2, 0:8}, {{1.0, 2.0}, {3.0, 4.0}}>`
+  ///
+  /// `getQuantizedDimensions()` returns [1, 0].
+  /// `getBlockSizes()` returns [2, 8].
+  ///
+  /// This indicates that:
+  ///  * Axis 1 (second dimension) is quantized with a block size of 2.
+  ///  * Axis 0 (first dimension) is quantized with a block size of 8.
+  ///  Since axis 2 is not specified, it implicitly has a block size equal to
+  ///  the size of the third dimension (which is 2 in this case).
+  ArrayRef<int32_t> getQuantizedDimensions() const;
+
+  /// Gets the block sizes for the quantized dimensions. The `i`-th element in
+  /// the returned list corresponds to the block size for the `i`-th dimension
+  /// in the list returned by `getQuantizedDimensions()`.
+  ///
+  /// See `getQuantizedDimensions()` for more details and examples.
+  ArrayRef<int64_t> getBlockSizes() const;
+
+  /// Gets the block size information. This returns a list of pairs, where each
+  /// pair represents a quantized dimension and its corresponding block size.
+  ///
+  /// For example, for the type:
+  ///  `tensor<8x4x!quant.uniform<i8:f32:{1:2, 0:8}, {{2.0, 3.0}}>`
+  ///
+  /// This method returns:
+  ///  `[(1, 2), (0, 8)]`
+  ///
+  /// This list indicates that axis 1 has a block size of 2, and axis 0 has a
+  /// block size of 8.
+  const SmallVector<std::pair<int32_t, int64_t>> getBlockSizeInfo() const;
+};
+
 /// A quantized type that infers its range from given min/max values.
 ///
 /// Typical syntax:
@@ -414,6 +548,125 @@ public:
   double getMax() const;
 };
 
+/*Syntax:
+
+    ```
+    quantile-type ::= `!quant.quantile` `<` type `:` type `,` `{` float-list `}`
+   (`,` `<` int `,` int `>`)? `>`
+    ```
+
+    A quantile type represents a quantile-based floating point encoding, where
+    discrete storage values are totally defined by the floating-point values
+   entries in a quantile lookup table of F8/F16/F32/F64.
+
+    Optionally, explicit minimum and maximum storage values can be specified
+    after the LUT as `<min:max>`.
+
+    This type is used for weight compression schemes like NF4 (NormalizedFloat4)
+    and similar quantile-based formats.
+
+    Example:
+
+   MLIR:
+    !quant.quantile<ui4:f16, {-1.0,-0.696,0.0,0.079,1.0}>
+    !quant.quantile<ui4:f16, {-1.0,-0.696,0.0,0.079,1.0}, <-8,7>>
+
+    As an additional explanation for better understanding and readability of the
+   above example, the quantile type can be broken down as follows:
+    - `!quant.quantile`: This indicates that we are defining a quantile type.
+    - `<ui4:f16`: This specifies the storage type and the quantile type. In this
+   case, `ui4` indicates an unsigned 4-bit integer storage type, and `f16`
+   indicates that the quantile values are represented as 16-bit floating-point
+   numbers.
+    - `{-1.0,-0.696,0.0,0.079,1.0}`: This is the quantile lookup table (LUT)
+   that defines the discrete storage values. Each value in the LUT corresponds
+   to a specific quantized value that can be stored in the `ui4` storage type.
+    - `, <-8,7>`: This optional part specifies the explicit minimum and maximum
+   storage values. In this case, the minimum storage value is -8 and the maximum
+   storage value is 7.
+*/
+
+class QuantileType
+    : public Type::TypeBase<QuantileType, QuantizedType,
+                            detail::QuantileTypeStorage,
+                            mlir::QuantStorageTypeInterface::Trait> {
+public:
+  using ImplType = detail::QuantileTypeStorage;
+  using Base::Base;
+
+  // Get the underlying type used for to store raw values.
+  Type getStorageType() const;
+
+  // Get primitive expressed type of data in quantiles.
+  // Note that we may convert FP8 data to FP16 for storage,
+  // but we should treat its expressed type as FP8 rather than FP16.
+  Type getQuantileType() const;
+
+  /// Return the quantile table of this float type.
+  ArrayRef<double> getQuantiles() const;
+
+  /// Return the explicit storage minimum, if set.
+  std::optional<int64_t> getStorageMin() const;
+
+  /// Return the explicit storage maximum, if set.
+  std::optional<int64_t> getStorageMax() const;
+
+  // Get a quantile float type with specified quantile table.
+  static QuantileType get(mlir::MLIRContext *ctx, Type storageType,
+                          Type quantileType, ArrayRef<double> quantiles = {},
+                          std::optional<int64_t> storageMin = std::nullopt,
+                          std::optional<int64_t> storageMax = std::nullopt);
+
+  static QuantileType
+  getChecked(function_ref<InFlightDiagnostic()> emitError,
+             mlir::MLIRContext *ctx, Type storageType, Type quantileType,
+             ArrayRef<double> quantiles,
+             std::optional<int64_t> storageMin = std::nullopt,
+             std::optional<int64_t> storageMax = std::nullopt);
+
+  static LogicalResult verifyInvariants(
+      function_ref<InFlightDiagnostic()> emitError, Type storageType,
+      Type quantileType, ArrayRef<double> quantiles,
+      std::optional<int64_t> storageMin, std::optional<int64_t> storageMax);
+
+  /// Methods for support type inquiry through isa, cast, and dyn_cast.
+  static bool classof(mlir::Type type);
+
+  // Printer
+  void print(mlir::AsmPrinter &printer) const;
+
+  static constexpr llvm::StringLiteral getMnemonic() { return {"quantile"}; }
+
+  static constexpr llvm::StringLiteral name = "quantile";
+
+  // Returns true if the type defaults to signed (e.g., si8, i8 or float types),
+  // false otherwise
+  bool shouldDefaultToSigned() const;
+
+  // Get the bit width of the storage type.
+  unsigned getStorageWidth() const;
+
+  // Get the default minimum and maximum values for the storage type.
+  int64_t getDefaultMinimum([[maybe_unused]] bool isSigned) const;
+  int64_t getDefaultMaximum([[maybe_unused]] bool isSigned) const;
+
+  // Get the string representation of the storage type
+  std::string getStorageTypeName([[maybe_unused]] bool isSigned) const;
+
+  // Get whether the type is a packed quantile float type
+  bool isPacked() const;
+
+  // Get the logical bit width of the quantile float type, which is the bit
+  // width of the represented floating point value.
+  unsigned getLogicalBitWidth() const;
+
+  // Get the number of quantized values stored in one byte for this quantile
+  // float type.
+  unsigned getElementsPerByte() const;
+
+  // Get the preferred alignment in bytes for this quantile float type, if any.
+  std::optional<unsigned> getPreferredAlignmentBytes() const;
+};
 } // namespace quant
 } // namespace mlir
 

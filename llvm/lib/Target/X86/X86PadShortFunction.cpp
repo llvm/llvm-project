@@ -60,8 +60,7 @@ namespace {
     }
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     StringRef getPassName() const override {
@@ -101,6 +100,7 @@ FunctionPass *llvm::createX86PadShortFunctions() {
 /// runOnMachineFunction - Loop over all of the basic blocks, inserting
 /// NOOP instructions before early exits.
 bool PadShortFunc::runOnMachineFunction(MachineFunction &MF) {
+  LLVM_DEBUG(dbgs() << "Start X86PadShortFunctionPass\n";);
   if (skipFunction(MF.getFunction()))
     return false;
 
@@ -150,7 +150,7 @@ bool PadShortFunc::runOnMachineFunction(MachineFunction &MF) {
       MadeChange = true;
     }
   }
-
+  LLVM_DEBUG(dbgs() << "End X86PadShortFunctionPass\n";);
   return MadeChange;
 }
 
@@ -163,7 +163,8 @@ void PadShortFunc::findReturns(MachineBasicBlock *MBB, unsigned int Cycles) {
     return;
 
   if (hasReturn) {
-    ReturnBBs[MBB] = std::max(ReturnBBs[MBB], Cycles);
+    unsigned int &NumCycles = ReturnBBs[MBB];
+    NumCycles = std::max(NumCycles, Cycles);
     return;
   }
 
@@ -180,10 +181,9 @@ void PadShortFunc::findReturns(MachineBasicBlock *MBB, unsigned int Cycles) {
 bool PadShortFunc::cyclesUntilReturn(MachineBasicBlock *MBB,
                                      unsigned int &Cycles) {
   // Return cached result if BB was previously visited
-  DenseMap<MachineBasicBlock*, VisitedBBInfo>::iterator it
-    = VisitedBBs.find(MBB);
-  if (it != VisitedBBs.end()) {
-    VisitedBBInfo BBInfo = it->second;
+  auto [It, Inserted] = VisitedBBs.try_emplace(MBB);
+  if (!Inserted) {
+    VisitedBBInfo BBInfo = It->second;
     Cycles += BBInfo.Cycles;
     return BBInfo.HasReturn;
   }
@@ -195,7 +195,7 @@ bool PadShortFunc::cyclesUntilReturn(MachineBasicBlock *MBB,
     // functions do not count because the called function will be padded,
     // if necessary.
     if (MI.isReturn() && !MI.isCall()) {
-      VisitedBBs[MBB] = VisitedBBInfo(true, CyclesToEnd);
+      It->second = VisitedBBInfo(true, CyclesToEnd);
       Cycles += CyclesToEnd;
       return true;
     }
@@ -203,7 +203,7 @@ bool PadShortFunc::cyclesUntilReturn(MachineBasicBlock *MBB,
     CyclesToEnd += TSM.computeInstrLatency(&MI);
   }
 
-  VisitedBBs[MBB] = VisitedBBInfo(false, CyclesToEnd);
+  It->second = VisitedBBInfo(false, CyclesToEnd);
   Cycles += CyclesToEnd;
   return false;
 }

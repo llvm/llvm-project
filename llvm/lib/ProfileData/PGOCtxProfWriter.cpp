@@ -13,14 +13,25 @@
 #include "llvm/ProfileData/PGOCtxProfWriter.h"
 #include "llvm/Bitstream/BitCodeEnums.h"
 #include "llvm/ProfileData/CtxInstrContextNode.h"
-#include "llvm/Support/JSON.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/YAMLTraits.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace llvm::ctx_profile;
 
+static cl::opt<bool>
+    IncludeEmptyOpt("ctx-prof-include-empty", cl::init(false),
+                    cl::desc("Also write profiles with all-zero counters. "
+                             "Intended for testing/debugging."));
+
 PGOCtxProfileWriter::PGOCtxProfileWriter(
-    raw_ostream &Out, std::optional<unsigned> VersionOverride)
-    : Writer(Out, 0) {
+    raw_ostream &Out, std::optional<unsigned> VersionOverride,
+    bool IncludeEmpty)
+    : Writer(Out, 0),
+      IncludeEmpty(IncludeEmptyOpt.getNumOccurrences() > 0 ? IncludeEmptyOpt
+                                                           : IncludeEmpty) {
   static_assert(ContainerMagic.size() == 4);
   Out.write(ContainerMagic.data(), ContainerMagic.size());
   Writer.EnterBlockInfoBlock();
@@ -40,9 +51,21 @@ PGOCtxProfileWriter::PGOCtxProfileWriter(
     };
     DescribeBlock(PGOCtxProfileBlockIDs::ProfileMetadataBlockID, "Metadata");
     DescribeRecord(PGOCtxProfileRecords::Version, "Version");
+    DescribeBlock(PGOCtxProfileBlockIDs::ContextsSectionBlockID, "Contexts");
+    DescribeBlock(PGOCtxProfileBlockIDs::ContextRootBlockID, "Root");
+    DescribeRecord(PGOCtxProfileRecords::Guid, "GUID");
+    DescribeRecord(PGOCtxProfileRecords::TotalRootEntryCount,
+                   "TotalRootEntryCount");
+    DescribeRecord(PGOCtxProfileRecords::Counters, "Counters");
+    DescribeBlock(PGOCtxProfileBlockIDs::UnhandledBlockID, "Unhandled");
     DescribeBlock(PGOCtxProfileBlockIDs::ContextNodeBlockID, "Context");
     DescribeRecord(PGOCtxProfileRecords::Guid, "GUID");
-    DescribeRecord(PGOCtxProfileRecords::CalleeIndex, "CalleeIndex");
+    DescribeRecord(PGOCtxProfileRecords::CallsiteIndex, "CalleeIndex");
+    DescribeRecord(PGOCtxProfileRecords::Counters, "Counters");
+    DescribeBlock(PGOCtxProfileBlockIDs::FlatProfilesSectionBlockID,
+                  "FlatProfiles");
+    DescribeBlock(PGOCtxProfileBlockIDs::FlatProfileBlockID, "Flat");
+    DescribeRecord(PGOCtxProfileRecords::Guid, "GUID");
     DescribeRecord(PGOCtxProfileRecords::Counters, "Counters");
   }
   Writer.ExitBlock();
@@ -52,55 +75,125 @@ PGOCtxProfileWriter::PGOCtxProfileWriter(
                     SmallVector<unsigned, 1>({Version}));
 }
 
-void PGOCtxProfileWriter::writeCounters(const ContextNode &Node) {
+void PGOCtxProfileWriter::writeCounters(ArrayRef<uint64_t> Counters) {
   Writer.EmitCode(bitc::UNABBREV_RECORD);
   Writer.EmitVBR(PGOCtxProfileRecords::Counters, VBREncodingBits);
-  Writer.EmitVBR(Node.counters_size(), VBREncodingBits);
-  for (uint32_t I = 0U; I < Node.counters_size(); ++I)
-    Writer.EmitVBR64(Node.counters()[I], VBREncodingBits);
+  Writer.EmitVBR(Counters.size(), VBREncodingBits);
+  for (uint64_t C : Counters)
+    Writer.EmitVBR64(C, VBREncodingBits);
+}
+
+void PGOCtxProfileWriter::writeGuid(ctx_profile::GUID Guid) {
+  Writer.EmitRecord(PGOCtxProfileRecords::Guid, SmallVector<uint64_t, 1>{Guid});
+}
+
+void PGOCtxProfileWriter::writeCallsiteIndex(uint32_t CallsiteIndex) {
+  Writer.EmitRecord(PGOCtxProfileRecords::CallsiteIndex,
+                    SmallVector<uint64_t, 1>{CallsiteIndex});
+}
+
+void PGOCtxProfileWriter::writeRootEntryCount(uint64_t TotalRootEntryCount) {
+  Writer.EmitRecord(PGOCtxProfileRecords::TotalRootEntryCount,
+                    SmallVector<uint64_t, 1>{TotalRootEntryCount});
 }
 
 // recursively write all the subcontexts. We do need to traverse depth first to
 // model the context->subcontext implicitly, and since this captures call
 // stacks, we don't really need to be worried about stack overflow and we can
 // keep the implementation simple.
-void PGOCtxProfileWriter::writeImpl(std::optional<uint32_t> CallerIndex,
+void PGOCtxProfileWriter::writeNode(uint32_t CallsiteIndex,
                                     const ContextNode &Node) {
+  // A node with no counters is an error. We don't expect this to happen from
+  // the runtime, rather, this is interesting for testing the reader.
+  if (!IncludeEmpty && (Node.counters_size() > 0 && Node.entrycount() == 0))
+    return;
   Writer.EnterSubblock(PGOCtxProfileBlockIDs::ContextNodeBlockID, CodeLen);
-  Writer.EmitRecord(PGOCtxProfileRecords::Guid,
-                    SmallVector<uint64_t, 1>{Node.guid()});
-  if (CallerIndex)
-    Writer.EmitRecord(PGOCtxProfileRecords::CalleeIndex,
-                      SmallVector<uint64_t, 1>{*CallerIndex});
-  writeCounters(Node);
-  for (uint32_t I = 0U; I < Node.callsites_size(); ++I)
-    for (const auto *Subcontext = Node.subContexts()[I]; Subcontext;
-         Subcontext = Subcontext->next())
-      writeImpl(I, *Subcontext);
+  writeGuid(Node.guid());
+  writeCallsiteIndex(CallsiteIndex);
+  writeCounters({Node.counters(), Node.counters_size()});
+  writeSubcontexts(Node);
   Writer.ExitBlock();
 }
 
-void PGOCtxProfileWriter::write(const ContextNode &RootNode) {
-  writeImpl(std::nullopt, RootNode);
+void PGOCtxProfileWriter::writeSubcontexts(const ContextNode &Node) {
+  for (uint32_t I = 0U; I < Node.callsites_size(); ++I)
+    for (const auto *Subcontext = Node.subContexts()[I]; Subcontext;
+         Subcontext = Subcontext->next())
+      writeNode(I, *Subcontext);
+}
+
+void PGOCtxProfileWriter::startContextSection() {
+  Writer.EnterSubblock(PGOCtxProfileBlockIDs::ContextsSectionBlockID, CodeLen);
+}
+
+void PGOCtxProfileWriter::startFlatSection() {
+  Writer.EnterSubblock(PGOCtxProfileBlockIDs::FlatProfilesSectionBlockID,
+                       CodeLen);
+}
+
+void PGOCtxProfileWriter::endContextSection() { Writer.ExitBlock(); }
+void PGOCtxProfileWriter::endFlatSection() { Writer.ExitBlock(); }
+
+void PGOCtxProfileWriter::writeContextual(const ContextNode &RootNode,
+                                          const ContextNode *Unhandled,
+                                          uint64_t TotalRootEntryCount) {
+  if (!IncludeEmpty && (!TotalRootEntryCount || (RootNode.counters_size() > 0 &&
+                                                 RootNode.entrycount() == 0)))
+    return;
+  Writer.EnterSubblock(PGOCtxProfileBlockIDs::ContextRootBlockID, CodeLen);
+  writeGuid(RootNode.guid());
+  writeRootEntryCount(TotalRootEntryCount);
+  writeCounters({RootNode.counters(), RootNode.counters_size()});
+
+  Writer.EnterSubblock(PGOCtxProfileBlockIDs::UnhandledBlockID, CodeLen);
+  for (const auto *P = Unhandled; P; P = P->next())
+    writeFlat(P->guid(), P->counters(), P->counters_size());
+  Writer.ExitBlock();
+
+  writeSubcontexts(RootNode);
+  Writer.ExitBlock();
+}
+
+void PGOCtxProfileWriter::writeFlat(ctx_profile::GUID Guid,
+                                    const uint64_t *Buffer, size_t Size) {
+  Writer.EnterSubblock(PGOCtxProfileBlockIDs::FlatProfileBlockID, CodeLen);
+  writeGuid(Guid);
+  writeCounters({Buffer, Size});
+  Writer.ExitBlock();
 }
 
 namespace {
-// A structural representation of the JSON input.
-struct DeserializableCtx {
+
+/// Representation of the context node suitable for yaml serialization /
+/// deserialization.
+using SerializableFlatProfileRepresentation =
+    std::pair<ctx_profile::GUID, std::vector<uint64_t>>;
+
+struct SerializableCtxRepresentation {
   ctx_profile::GUID Guid = 0;
   std::vector<uint64_t> Counters;
-  std::vector<std::vector<DeserializableCtx>> Callsites;
+  std::vector<std::vector<SerializableCtxRepresentation>> Callsites;
+};
+
+struct SerializableRootRepresentation : public SerializableCtxRepresentation {
+  uint64_t TotalRootEntryCount = 0;
+  std::vector<SerializableFlatProfileRepresentation> Unhandled;
+};
+
+struct SerializableProfileRepresentation {
+  std::vector<SerializableRootRepresentation> Contexts;
+  std::vector<SerializableFlatProfileRepresentation> FlatProfiles;
 };
 
 ctx_profile::ContextNode *
 createNode(std::vector<std::unique_ptr<char[]>> &Nodes,
-           const std::vector<DeserializableCtx> &DCList);
+           const std::vector<SerializableCtxRepresentation> &DCList);
 
 // Convert a DeserializableCtx into a ContextNode, potentially linking it to
 // its sibling (e.g. callee at same callsite) "Next".
 ctx_profile::ContextNode *
 createNode(std::vector<std::unique_ptr<char[]>> &Nodes,
-           const DeserializableCtx &DC,
+           const SerializableCtxRepresentation &DC,
            ctx_profile::ContextNode *Next = nullptr) {
   auto AllocSize = ctx_profile::ContextNode::getAllocSize(DC.Counters.size(),
                                                           DC.Callsites.size());
@@ -115,10 +208,11 @@ createNode(std::vector<std::unique_ptr<char[]>> &Nodes,
   return Ret;
 }
 
-// Convert a list of DeserializableCtx into a linked list of ContextNodes.
+// Convert a list of SerializableCtxRepresentation into a linked list of
+// ContextNodes.
 ctx_profile::ContextNode *
 createNode(std::vector<std::unique_ptr<char[]>> &Nodes,
-           const std::vector<DeserializableCtx> &DCList) {
+           const std::vector<SerializableCtxRepresentation> &DCList) {
   ctx_profile::ContextNode *List = nullptr;
   for (const auto &DC : DCList)
     List = createNode(Nodes, DC, List);
@@ -126,38 +220,77 @@ createNode(std::vector<std::unique_ptr<char[]>> &Nodes,
 }
 } // namespace
 
-namespace llvm {
-namespace json {
-bool fromJSON(const Value &E, DeserializableCtx &R, Path P) {
-  json::ObjectMapper Mapper(E, P);
-  return Mapper && Mapper.map("Guid", R.Guid) &&
-         Mapper.map("Counters", R.Counters) &&
-         Mapper.mapOptional("Callsites", R.Callsites);
-}
-} // namespace json
-} // namespace llvm
+LLVM_YAML_IS_SEQUENCE_VECTOR(SerializableCtxRepresentation)
+LLVM_YAML_IS_SEQUENCE_VECTOR(std::vector<SerializableCtxRepresentation>)
+LLVM_YAML_IS_SEQUENCE_VECTOR(SerializableRootRepresentation)
+LLVM_YAML_IS_SEQUENCE_VECTOR(SerializableFlatProfileRepresentation)
+template <> struct yaml::MappingTraits<SerializableCtxRepresentation> {
+  static void mapping(yaml::IO &IO, SerializableCtxRepresentation &SCR) {
+    IO.mapRequired("Guid", SCR.Guid);
+    IO.mapRequired("Counters", SCR.Counters);
+    IO.mapOptional("Callsites", SCR.Callsites);
+  }
+};
 
-Error llvm::createCtxProfFromJSON(StringRef Profile, raw_ostream &Out) {
-  auto P = json::parse(Profile);
-  if (!P)
-    return P.takeError();
+template <> struct yaml::MappingTraits<SerializableRootRepresentation> {
+  static void mapping(yaml::IO &IO, SerializableRootRepresentation &R) {
+    yaml::MappingTraits<SerializableCtxRepresentation>::mapping(IO, R);
+    IO.mapRequired("TotalRootEntryCount", R.TotalRootEntryCount);
+    IO.mapOptional("Unhandled", R.Unhandled);
+  }
+};
 
-  json::Path::Root R("");
-  std::vector<DeserializableCtx> DCList;
-  if (!fromJSON(*P, DCList, R))
-    return R.getError();
-  // Nodes provides memory backing for the ContextualNodes.
+template <> struct yaml::MappingTraits<SerializableProfileRepresentation> {
+  static void mapping(yaml::IO &IO, SerializableProfileRepresentation &SPR) {
+    IO.mapOptional("Contexts", SPR.Contexts);
+    IO.mapOptional("FlatProfiles", SPR.FlatProfiles);
+  }
+};
+
+template <> struct yaml::MappingTraits<SerializableFlatProfileRepresentation> {
+  static void mapping(yaml::IO &IO,
+                      SerializableFlatProfileRepresentation &SFPR) {
+    IO.mapRequired("Guid", SFPR.first);
+    IO.mapRequired("Counters", SFPR.second);
+  }
+};
+
+Error llvm::createCtxProfFromYAML(StringRef Profile, raw_ostream &Out) {
+  yaml::Input In(Profile);
+  SerializableProfileRepresentation SPR;
+  In >> SPR;
+  if (In.error())
+    return createStringError(In.error(), "incorrect yaml content");
   std::vector<std::unique_ptr<char[]>> Nodes;
   std::error_code EC;
   if (EC)
     return createStringError(EC, "failed to open output");
   PGOCtxProfileWriter Writer(Out);
-  for (const auto &DC : DCList) {
-    auto *TopList = createNode(Nodes, DC);
-    if (!TopList)
-      return createStringError(
-          "Unexpected error converting internal structure to ctx profile");
-    Writer.write(*TopList);
+
+  if (!SPR.Contexts.empty()) {
+    Writer.startContextSection();
+    for (const auto &DC : SPR.Contexts) {
+      auto *TopList = createNode(Nodes, DC);
+      if (!TopList)
+        return createStringError(
+            "Unexpected error converting internal structure to ctx profile");
+
+      ctx_profile::ContextNode *FirstUnhandled = nullptr;
+      for (const auto &U : DC.Unhandled) {
+        SerializableCtxRepresentation Unhandled;
+        Unhandled.Guid = U.first;
+        Unhandled.Counters = U.second;
+        FirstUnhandled = createNode(Nodes, Unhandled, FirstUnhandled);
+      }
+      Writer.writeContextual(*TopList, FirstUnhandled, DC.TotalRootEntryCount);
+    }
+    Writer.endContextSection();
+  }
+  if (!SPR.FlatProfiles.empty()) {
+    Writer.startFlatSection();
+    for (const auto &[Guid, Counters] : SPR.FlatProfiles)
+      Writer.writeFlat(Guid, Counters.data(), Counters.size());
+    Writer.endFlatSection();
   }
   if (EC)
     return createStringError(EC, "failed to write output");

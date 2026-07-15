@@ -46,6 +46,10 @@ typedef struct {
 
 /**
  * Retrieve the character data associated with the given string.
+ *
+ * The returned data is a reference and not owned by the user. This data
+ * is only valid while the `CXString` is valid. This function is similar
+ * to `std::string::c_str()`.
  */
 CINDEX_LINKAGE const char *clang_getCString(CXString string);
 

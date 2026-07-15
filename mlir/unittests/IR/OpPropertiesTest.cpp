@@ -96,10 +96,9 @@ inline llvm::hash_code computeHash(const TestProperties &prop) {
   // We hash `b` which is a float using its underlying array of char:
   unsigned char const *p = reinterpret_cast<unsigned char const *>(&prop.b);
   ArrayRef<unsigned char> bBytes{p, sizeof(prop.b)};
-  return llvm::hash_combine(
-      prop.a, llvm::hash_combine_range(bBytes.begin(), bBytes.end()),
-      llvm::hash_combine_range(prop.array.begin(), prop.array.end()),
-      StringRef(*prop.label));
+  return llvm::hash_combine(prop.a, llvm::hash_combine_range(bBytes),
+                            llvm::hash_combine_range(prop.array),
+                            StringRef(*prop.label));
 }
 
 /// A custom operation for the purpose of showcasing how to use "properties".
@@ -400,8 +399,9 @@ TEST(OpPropertiesTest, withoutPropertiesDiscardableAttrs) {
             "other_attr");
 
   EXPECT_EQ(op->getAttrs().size(), 2u);
-  EXPECT_TRUE(op->getInherentAttr("inherent_attr") != std::nullopt);
-  EXPECT_TRUE(op->getDiscardableAttr("other_attr") != Attribute());
+  EXPECT_EQ(op->getInherentAttr("inherent_attr"), std::nullopt);
+  EXPECT_NE(op->getDiscardableAttr("inherent_attr"), Attribute());
+  EXPECT_NE(op->getDiscardableAttr("other_attr"), Attribute());
 
   std::string output;
   llvm::raw_string_ostream os(output);

@@ -1,6 +1,6 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -passes=amdgpu-attributor -o %t.bc %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj < %t.bc | llvm-readelf --notes - | FileCheck %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %t.bc | FileCheck --check-prefix=CHECK %s
+; RUN: opt -mtriple=amdgpu9.00-amd-amdhsa -passes=amdgpu-attributor -o %t.bc %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -filetype=obj < %t.bc | llvm-readelf --notes - | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa < %t.bc | FileCheck --check-prefix=CHECK %s
 
 declare void @function1()
 
@@ -286,7 +286,7 @@ define amdgpu_kernel void @test_kernel71(ptr addrspace(1) %sink) #2 {
 define amdgpu_kernel void @test_kernel72() #2 {
   %ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep = getelementptr inbounds i8, ptr addrspace(4) %ptr, i32 42
-  store ptr addrspace(4) %gep, ptr addrspace(1) undef, align 8
+  store ptr addrspace(4) %gep, ptr addrspace(1) poison, align 8
   ret void
 }
 

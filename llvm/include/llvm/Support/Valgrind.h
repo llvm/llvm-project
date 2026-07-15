@@ -15,16 +15,17 @@
 #ifndef LLVM_SUPPORT_VALGRIND_H
 #define LLVM_SUPPORT_VALGRIND_H
 
+#include "llvm/Support/Compiler.h"
 #include <cstddef>
 
 namespace llvm {
 namespace sys {
   // True if Valgrind is controlling this process.
-  bool RunningOnValgrind();
+LLVM_ABI bool RunningOnValgrind();
 
-  // Discard valgrind's translation of code in the range [Addr .. Addr + Len).
-  // Otherwise valgrind may continue to execute the old version of the code.
-  void ValgrindDiscardTranslations(const void *Addr, size_t Len);
+// Discard valgrind's translation of code in the range [Addr .. Addr + Len).
+// Otherwise valgrind may continue to execute the old version of the code.
+LLVM_ABI void ValgrindDiscardTranslations(const void *Addr, size_t Len);
 } // namespace sys
 } // end namespace llvm
 

@@ -13,6 +13,7 @@
 #include "TreeTestBase.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendAction.h"
@@ -126,7 +127,7 @@ SyntaxTreeTest::buildTree(StringRef Code, const TestClangConfig &ClangConfig) {
   FS->addFile(FileName, time_t(), llvm::MemoryBuffer::getMemBufferCopy(""));
 
   if (!Diags->getClient())
-    Diags->setClient(new TextDiagnosticPrinter(llvm::errs(), DiagOpts.get()));
+    Diags->setClient(new TextDiagnosticPrinter(llvm::errs(), DiagOpts));
   Diags->setSeverityForGroup(diag::Flavor::WarningOrError, "unused-value",
                              diag::Severity::Ignored, SourceLocation());
 
@@ -151,11 +152,11 @@ SyntaxTreeTest::buildTree(StringRef Code, const TestClangConfig &ClangConfig) {
   Invocation->getFrontendOpts().DisableFree = false;
   Invocation->getPreprocessorOpts().addRemappedFile(
       FileName, llvm::MemoryBuffer::getMemBufferCopy(Code).release());
-  CompilerInstance Compiler;
-  Compiler.setInvocation(Invocation);
-  Compiler.setDiagnostics(Diags.get());
-  Compiler.setFileManager(FileMgr.get());
-  Compiler.setSourceManager(SourceMgr.get());
+  CompilerInstance Compiler(Invocation);
+  Compiler.setDiagnostics(Diags);
+  Compiler.setVirtualFileSystem(FS);
+  Compiler.setFileManager(FileMgr);
+  Compiler.setSourceManager(SourceMgr);
 
   syntax::TranslationUnit *Root = nullptr;
   BuildSyntaxTreeAction Recorder(Root, this->TM, this->TB, this->Arena);

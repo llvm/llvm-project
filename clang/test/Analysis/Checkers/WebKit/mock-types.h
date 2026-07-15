@@ -1,5 +1,249 @@
+#ifndef std_move
+#define std_move
+
+namespace std {
+
+template <typename T> struct remove_reference {
+typedef T type;
+};
+
+template <typename T> struct remove_reference<T&> {
+typedef T type;
+};
+
+template <typename T> T&& move(T& t) { return static_cast<T&&>(t); }
+template <typename T> T&& move(T&& t) { return t; }
+
+}
+
+#endif
+
 #ifndef mock_types_1103988513531
 #define mock_types_1103988513531
+
+namespace std {
+
+template<typename T, typename U>
+T exchange(T& t, U&& u)
+{
+  T r = static_cast<T&&>(t);
+  t = static_cast<U&&>(u);
+  return r;
+}
+
+template<typename T>
+T exchange(T& t, decltype(nullptr))
+{
+  T r = static_cast<T&&>(t);
+  t = static_cast<T>(t);
+  return r;
+}
+
+template <typename T>
+class unique_ptr {
+private:
+  void *t;
+
+public:
+  unique_ptr() : t(nullptr) { }
+  unique_ptr(T *t) : t(t) { }
+  ~unique_ptr() {
+    if (t)
+      delete static_cast<T*>(t);
+  }
+  template <typename U> unique_ptr(unique_ptr<U>&& u)
+    : t(u.t)
+  {
+    u.t = nullptr;
+  }
+  T *get() const { return static_cast<T*>(t); }
+  T *operator->() const { return get(); }
+  T &operator*() const { return *get(); }
+  unique_ptr &operator=(T *) { return *this; }
+  explicit operator bool() const { return !!t; }
+};
+
+namespace ranges {
+
+template<typename IteratorType, typename CallbackType>
+void for_each(IteratorType first, IteratorType last, CallbackType callback) {
+  for (auto it = first; !(it == last); ++it)
+    callback(*it);
+}
+
+struct all_of_impl {
+  template <typename Collection, typename Predicate>
+  constexpr bool operator()(const Collection& collection, Predicate predicate) const {
+    for (auto it = collection.begin(), end = collection.end(); it != end; ++it) {
+      if (!predicate(*it))
+        return false;
+    }
+    return true;
+  }
+};
+inline constexpr auto all_of = all_of_impl {};
+
+}
+
+}
+
+namespace WTF {
+
+template<typename T> typename std::remove_reference<T>::type&& move(T&& t);
+
+namespace Detail {
+
+template<typename Out, typename... In>
+class CallableWrapperBase {
+public:
+    virtual ~CallableWrapperBase() { }
+    virtual Out call(In...) = 0;
+};
+
+template<typename, typename, typename...> class CallableWrapper;
+
+template<typename CallableType, typename Out, typename... In>
+class CallableWrapper : public CallableWrapperBase<Out, In...> {
+public:
+    explicit CallableWrapper(CallableType& callable)
+        : m_callable(callable) { }
+    Out call(In... in) final { return m_callable(in...); }
+
+private:
+    CallableType m_callable;
+};
+
+} // namespace Detail
+
+template<typename> class Function;
+
+template<typename Out, typename... In> Function<Out(In...)> adopt(Detail::CallableWrapperBase<Out, In...>*);
+
+template <typename Out, typename... In>
+class Function<Out(In...)> {
+public:
+    using Impl = Detail::CallableWrapperBase<Out, In...>;
+
+    Function() = default;
+
+    template<typename FunctionType>
+    Function(FunctionType f)
+        : m_callableWrapper(new Detail::CallableWrapper<FunctionType, Out, In...>(f)) { }
+
+    Out operator()(In... in) const { return m_callableWrapper->call(in...); }
+    explicit operator bool() const { return !!m_callableWrapper; }
+
+private:
+    enum AdoptTag { Adopt };
+    Function(Impl* impl, AdoptTag)
+        : m_callableWrapper(impl)
+    {
+    }
+
+    friend Function adopt<Out, In...>(Impl*);
+
+    std::unique_ptr<Impl> m_callableWrapper;
+};
+
+template<typename Out, typename... In> Function<Out(In...)> adopt(Detail::CallableWrapperBase<Out, In...>* impl)
+{
+    return Function<Out(In...)>(impl, Function<Out(In...)>::Adopt);
+}
+
+template <typename KeyType, typename ValueType>
+class HashMap {
+public:
+  HashMap();
+  HashMap([[clang::noescape]] const Function<ValueType()>&);
+  void ensure(const KeyType&, [[clang::noescape]] const Function<ValueType()>&);
+  bool operator+([[clang::noescape]] const Function<ValueType()>&) const;
+  static void ifAny(HashMap, [[clang::noescape]] const Function<bool(ValueType)>&);
+
+  template <typename U> ValueType* find(U&) const;
+  template <typename U> bool contains(U&) const;
+  template <typename U> ValueType* get(U&) const;
+  template <typename U> ValueType* inlineGet(U&) const;
+  template <typename U> void add(U&) const;
+  template <typename U> void remove(U&) const;
+
+private:
+  ValueType* m_table { nullptr };
+};
+
+class ScopeExit final {
+public:
+  template<typename ExitFunctionParameter>
+  explicit ScopeExit(ExitFunctionParameter&& exitFunction)
+    : m_exitFunction(std::move(exitFunction)) {
+  }
+
+  ScopeExit(ScopeExit&& other)
+    : m_exitFunction(std::move(other.m_exitFunction))
+    , m_execute(std::move(other.m_execute)) {
+  }
+
+  ~ScopeExit() {
+    if (m_execute)
+      m_exitFunction();
+  }
+
+  WTF::Function<void()> take() {
+    m_execute = false;
+    return std::move(m_exitFunction);
+  }
+
+  void release() { m_execute = false; }
+
+  ScopeExit(const ScopeExit&) = delete;
+  ScopeExit& operator=(const ScopeExit&) = delete;
+  ScopeExit& operator=(ScopeExit&&) = delete;
+
+private:
+  WTF::Function<void()> m_exitFunction;
+  bool m_execute { true };
+};
+
+template<typename ExitFunction> ScopeExit makeScopeExit(ExitFunction&&);
+template<typename ExitFunction>
+ScopeExit makeScopeExit(ExitFunction&& exitFunction)
+{
+    return ScopeExit(std::move(exitFunction));
+}
+
+// Visitor adapted from http://stackoverflow.com/questions/25338795/is-there-a-name-for-this-tuple-creation-idiom
+
+template<class A, class... B> struct Visitor : Visitor<A>, Visitor<B...> {
+    Visitor(A a, B... b)
+        : Visitor<A>(a)
+        , Visitor<B...>(b...)
+    {
+    }
+
+    using Visitor<A>::operator ();
+    using Visitor<B...>::operator ();
+};
+
+template<class A> struct Visitor<A> : A {
+    Visitor(A a)
+        : A(a)
+    {
+    }
+
+    using A::operator();
+};
+
+template<class... F> Visitor<F...> makeVisitor(F... f)
+{
+    return Visitor<F...>(f...);
+}
+
+void opaqueFunction();
+template <typename Visitor, typename... Variants> void visit(Visitor&& v, Variants&&... values)
+{
+  opaqueFunction();
+}
+
+};
 
 template<typename T>
 struct RawPtrTraits {
@@ -46,7 +290,10 @@ template<typename T> struct DefaultRefDerefTraits {
 template <typename T, typename PtrTraits = RawPtrTraits<T>, typename RefDerefTraits = DefaultRefDerefTraits<T>> struct Ref {
   typename PtrTraits::StorageType t;
 
+  enum AdoptTag { Adopt };
+
   Ref() : t{} {};
+  Ref(T &t, AdoptTag) : t(&t) { }
   Ref(T &t) : t(&RefDerefTraits::ref(t)) { }
   Ref(const Ref& o) : t(RefDerefTraits::refIfNotNull(PtrTraits::unwrap(o.t))) { }
   Ref(Ref&& o) : t(o.leakRef()) { }
@@ -73,10 +320,19 @@ template <typename T, typename PtrTraits = RawPtrTraits<T>, typename RefDerefTra
   T* leakRef() { return PtrTraits::exchange(t, nullptr); }
 };
 
+template <typename T> Ref<T> adoptRef(T& t) {
+  using Ref = Ref<T>;
+  return Ref(t, Ref::Adopt);
+}
+
+template<typename T> class RefPtr;
+template<typename T> RefPtr<T> adoptRef(T*);
+
 template <typename T> struct RefPtr {
   T *t;
 
-  RefPtr() : t(new T) {}
+  RefPtr() : t(nullptr) { }
+
   RefPtr(T *t)
     : t(t) {
     if (t)
@@ -85,6 +341,26 @@ template <typename T> struct RefPtr {
   RefPtr(Ref<T>&& o)
     : t(o.leakRef())
   { }
+  RefPtr(RefPtr&& o)
+    : t(o.t)
+  {
+    o.t = nullptr;
+  }
+  RefPtr(const RefPtr& o)
+    : t(o.t)
+  {
+    if (t)
+      t->ref();
+  }
+  RefPtr operator=(const RefPtr& o)
+  {
+    if (t)
+      t->deref();
+    t = o.t;
+    if (t)
+      t->ref();
+    return *this;
+  }
   ~RefPtr() {
     if (t)
       t->deref();
@@ -101,16 +377,28 @@ template <typename T> struct RefPtr {
     t = o.t;
     o.t = tmp;
   }
+  operator T*() { return t; }
   T *get() const { return t; }
   T *operator->() const { return t; }
-  T &operator*() { return *t; }
+  T &operator*() const { return *t; }
   RefPtr &operator=(T *t) {
     RefPtr o(t);
     swap(o);
     return *this;
   }
   operator bool() const { return t; }
+
+private:
+  friend RefPtr adoptRef<T>(T*);
+
+  // call_with_adopt_ref in call-args.cpp requires this method to be private.
+  enum AdoptTag { Adopt };
+  RefPtr(T *t, AdoptTag) : t(t) { }
 };
+
+template <typename T> RefPtr<T> adoptRef(T* t) {
+  return RefPtr<T>(t, RefPtr<T>::Adopt);
+}
 
 template <typename T> bool operator==(const RefPtr<T> &, const RefPtr<T> &) {
   return false;
@@ -130,12 +418,21 @@ template <typename T> bool operator!=(const RefPtr<T> &, T &) { return false; }
 
 struct RefCountable {
   static Ref<RefCountable> create();
-  void ref() {}
-  void deref() {}
+  static std::unique_ptr<RefCountable> makeUnique();
+  void ref() { ++m_refCount; }
+  void deref() {
+    --m_refCount;
+    if (!--m_refCount)
+      delete this;
+  }
+  ~RefCountable();
   void method();
   void constMethod() const;
   int trivial() { return 123; }
   RefCountable* next();
+  
+private:
+  unsigned m_refCount { 0 };
 };
 
 template <typename T> T *downcast(T *t) { return t; }
@@ -176,17 +473,22 @@ public:
   }
   T *get() const { return t; }
   T *operator->() const { return t; }
-  T &operator*() { return *t; }
-  CheckedPtr &operator=(T *) { return *this; }
+  T &operator*() const { return *t; }
+  CheckedPtr &operator=(T *);
   operator bool() const { return t; }
 };
 
 class CheckedObj {
 public:
-  void incrementCheckedPtrCount();
-  void decrementCheckedPtrCount();
+  void incrementCheckedPtrCount() { ++m_ptrCount; }
+  void decrementCheckedPtrCount() { --m_ptrCount; }
   void method();
+  void constMethod() const;
   int trivial() { return 123; }
+  CheckedObj* next();
+
+private:
+  unsigned m_ptrCount { 0 };
 };
 
 class RefCountableAndCheckable {
@@ -216,34 +518,102 @@ public:
     u.t = nullptr;
   }
   T &get() const { return *t; }
+  operator T&() const { return *t; }
   T *operator->() const { return t; }
   UniqueRef &operator=(T &) { return *this; }
 };
 
-namespace std {
-
-template <typename T>
-class unique_ptr {
+class WeakPtrImpl {
 private:
-  T *t;
+  void* ptr { nullptr };
+  mutable unsigned m_refCount { 0 };
+
+  template <typename U> friend class CanMakeWeakPtr;
+  template <typename U> friend class WeakPtr;
 
 public:
-  unique_ptr() : t(nullptr) { }
-  unique_ptr(T *t) : t(t) { }
-  ~unique_ptr() {
-    if (t)
-      delete t;
-  }
-  template <typename U> unique_ptr(unique_ptr<U>&& u)
-    : t(u.t)
+  template <typename T>
+  static Ref<WeakPtrImpl> create(T& t)
   {
-    u.t = nullptr;
+    return adoptRef(*new WeakPtrImpl(t));
   }
-  T *get() const { return t; }
-  T *operator->() const { return t; }
-  T &operator*() { return *t; }
-  unique_ptr &operator=(T *) { return *this; }
+
+  void ref() const { m_refCount++; }
+  void deref() const {
+    m_refCount--;
+    if (!m_refCount)
+      delete const_cast<WeakPtrImpl*>(this);
+  }
+
+  template <typename T>
+  T* get() { return static_cast<T*>(ptr); }
+  operator bool() const { return !!ptr; }
+  void clear() { ptr = nullptr; }
+
+private:
+  template <typename T>
+  WeakPtrImpl(T& t)
+    : ptr(static_cast<void*>(&t))
+  { }
 };
+
+template <typename T>
+class CanMakeWeakPtr {
+private:
+  RefPtr<WeakPtrImpl> impl;
+
+  template <typename U> friend class CanMakeWeakPtr;
+  template <typename U> friend class WeakPtr;
+
+  WeakPtrImpl& [[clang::annotate_type("webkit.nodelete")]] createWeakPtrImpl() {
+    if (!impl)
+      impl = WeakPtrImpl::create(static_cast<T&>(*this));
+    return *impl;
+  }
+
+public:
+  ~CanMakeWeakPtr() {
+    if (!impl)
+      return;
+    impl->clear();
+    impl = nullptr;
+  }
+};
+
+template <typename T>
+class WeakPtr {
+private:
+  RefPtr<WeakPtrImpl> impl;
+
+public:
+  WeakPtr(T& t)
+    : impl(t.createWeakPtrImpl()) {
+  }
+  WeakPtr(T* t)
+    : impl(t ? &t->createWeakPtrImpl() : nullptr) {
+  }
+
+  template <typename U>
+  WeakPtr<T> operator=(U& obj) {
+    impl = obj.createWeakPtrImpl();
+    return *this;
+  }
+
+  template <typename U>
+  WeakPtr<T> operator=(U* obj) {
+    if (obj)
+      impl = obj->createWeakPtrImpl();
+    else
+      impl = nullptr;
+    return *this;
+  }
+
+  T* operator->() { return get(); }
+  operator T*() { return get(); }
+
+  T* get() {
+    return impl ? impl->get<T>() : nullptr;
+  }
 
 };
 

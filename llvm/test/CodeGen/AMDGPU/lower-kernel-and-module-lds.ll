@@ -1,5 +1,5 @@
-; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s
-; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu-- -amdgpu-lower-module-lds --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu-- -passes=amdgpu-lower-module-lds --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s
 
 @lds.size.1.align.1 = internal unnamed_addr addrspace(3) global [1 x i8] poison, align 1
 @lds.size.2.align.2 = internal unnamed_addr addrspace(3) global [2 x i8] poison, align 2
@@ -84,7 +84,7 @@ define amdgpu_kernel void @calls_f0() {
 define void @f0() {
 ; CHECK-LABEL: define void @f0()
 ; CHECK-NEXT: store i8 1, ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.module.lds.t, ptr addrspace(3) @llvm.amdgcn.module.lds, i32 0, i32 1), align 8, !noalias !24
-; CHECK-NEXT: store i8 8, ptr addrspace(3) @llvm.amdgcn.module.lds, align 8, !noalias !24
+; CHECK-NEXT: store i8 8, ptr addrspace(3) @llvm.amdgcn.module.lds, align 8, !noalias !29
 ; CHECK-NEXT: ret void
   store i8 1, ptr addrspace(3) @lds.size.1.align.1, align 1
 

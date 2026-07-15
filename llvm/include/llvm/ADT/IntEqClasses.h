@@ -22,6 +22,7 @@
 #define LLVM_ADT_INTEQCLASSES_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -44,7 +45,7 @@ public:
   /// grow - Increase capacity to hold 0 .. N-1, putting new integers in unique
   /// equivalence classes.
   /// This requires an uncompressed map.
-  void grow(unsigned N);
+  LLVM_ABI void grow(unsigned N);
 
   /// clear - Clear all classes so that grow() will assign a unique class to
   /// every integer.
@@ -56,16 +57,16 @@ public:
   /// Join the equivalence classes of a and b. After joining classes,
   /// findLeader(a) == findLeader(b). This requires an uncompressed map.
   /// Returns the new leader.
-  unsigned join(unsigned a, unsigned b);
+  LLVM_ABI unsigned join(unsigned a, unsigned b);
 
   /// findLeader - Compute the leader of a's equivalence class. This is the
   /// smallest member of the class.
   /// This requires an uncompressed map.
-  unsigned findLeader(unsigned a) const;
+  LLVM_ABI unsigned findLeader(unsigned a) const;
 
   /// compress - Compress equivalence classes by numbering them 0 .. M.
   /// This makes the equivalence class map immutable.
-  void compress();
+  LLVM_ABI void compress();
 
   /// getNumClasses - Return the number of equivalence classes after compress()
   /// was called.
@@ -80,7 +81,7 @@ public:
 
   /// uncompress - Change back to the uncompressed representation that allows
   /// editing.
-  void uncompress();
+  LLVM_ABI void uncompress();
 };
 
 } // End llvm namespace

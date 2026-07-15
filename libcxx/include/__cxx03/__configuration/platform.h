@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONFIGURATION_PLATFORM_H
-#define _LIBCPP___CONFIGURATION_PLATFORM_H
+#ifndef _LIBCPP___CXX03___CONFIGURATION_PLATFORM_H
+#define _LIBCPP___CXX03___CONFIGURATION_PLATFORM_H
 
-#include <__config_site>
+#include <__cxx03/__configuration/config_site_shim.h>
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
 #  pragma GCC system_header
@@ -51,4 +51,4 @@
 #  define _LIBCPP_BIG_ENDIAN
 #endif // __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
 
-#endif // _LIBCPP___CONFIGURATION_PLATFORM_H
+#endif // _LIBCPP___CXX03___CONFIGURATION_PLATFORM_H

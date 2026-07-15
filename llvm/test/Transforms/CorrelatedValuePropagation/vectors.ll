@@ -87,7 +87,7 @@ define <vscale x 2 x i16> @infer_nowrap_scalable(<vscale x 2 x i8> %a) {
 ; CHECK-LABEL: define range(i16 1, 257) <vscale x 2 x i16> @infer_nowrap_scalable(
 ; CHECK-SAME: <vscale x 2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <vscale x 2 x i8> [[A]] to <vscale x 2 x i16>
-; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw <vscale x 2 x i16> [[ZEXT]], shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> poison, i16 1, i64 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw <vscale x 2 x i16> [[ZEXT]], splat (i16 1)
 ; CHECK-NEXT:    ret <vscale x 2 x i16> [[RES]]
 ;
   %zext = zext <vscale x 2 x i8> %a to <vscale x 2 x i16>
@@ -217,6 +217,33 @@ define <2 x float> @sitofp(<2 x i8> %a) {
   %zext = zext <2 x i8> %a to <2 x i16>
   %res = sitofp <2 x i16> %zext to <2 x float>
   ret <2 x float> %res
+}
+
+; The and is redundant when the icmp condition guarantees the value is in range.
+define <16 x i16> @select_and_icmp_vector(<16 x i16> noundef %x) {
+; CHECK-LABEL: define range(i16 0, 25) <16 x i16> @select_and_icmp_vector(
+; CHECK-SAME: <16 x i16> noundef [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <16 x i16> [[X]], splat (i16 8)
+; CHECK-NEXT:    [[SEL:%.*]] = select <16 x i1> [[CMP]], <16 x i16> [[X]], <16 x i16> splat (i16 24)
+; CHECK-NEXT:    ret <16 x i16> [[SEL]]
+;
+  %and = and <16 x i16> %x, splat (i16 7)
+  %cmp = icmp ult <16 x i16> %x, splat (i16 8)
+  %sel = select <16 x i1> %cmp, <16 x i16> %and, <16 x i16> splat (i16 24)
+  ret <16 x i16> %sel
+}
+
+define <2 x i16> @select_and_icmp_nonsplat(<2 x i16> noundef %x) {
+; CHECK-LABEL: define range(i16 0, 31) <2 x i16> @select_and_icmp_nonsplat(
+; CHECK-SAME: <2 x i16> noundef [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i16> [[X]], <i16 4, i16 8>
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i16> [[X]], <2 x i16> <i16 24, i16 30>
+; CHECK-NEXT:    ret <2 x i16> [[SEL]]
+;
+  %and = and <2 x i16> %x, splat (i16 7)
+  %cmp = icmp ult <2 x i16> %x, <i16 4, i16 8>
+  %sel = select <2 x i1> %cmp, <2 x i16> %and, <2 x i16> <i16 24, i16 30>
+  ret <2 x i16> %sel
 }
 
 define <2 x i16> @and(<2 x i8> %a) {
@@ -351,4 +378,56 @@ define <2 x i1> @insertelement_fold2() {
   %ie1 = insertelement <2 x i32> <i32 poison, i32 20>, i32 10, i64 0
   %icmp1 = icmp slt <2 x i32> %ie1, <i32 1024, i32 1024>
   ret <2 x i1> %icmp1
+}
+
+@g = external global i32
+
+define <2 x i16> @insertelement_constexpr() {
+; CHECK-LABEL: define <2 x i16> @insertelement_constexpr() {
+; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x i16> poison, i16 ptrtoint (ptr @g to i16), i32 0
+; CHECK-NEXT:    ret <2 x i16> [[INS]]
+;
+  %ins = insertelement <2 x i16> poison, i16 ptrtoint (ptr @g to i16), i32 0
+  ret <2 x i16> %ins
+}
+
+; Cannot infer nowrap flags, as shufflevector moves the wrapping lane (0 - 1) to a position
+; where the select condition is true.
+define <2 x i16> @select_of_shufflevector() {
+; CHECK-LABEL: define <2 x i16> @select_of_shufflevector() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[V:%.*]] = bitcast <1 x i32> splat (i32 1) to <2 x i16>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i16> [[V]], zeroinitializer
+; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i16> zeroinitializer, [[V]]
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i16> [[NEG]], <2 x i16> zeroinitializer, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[SELECT:%.*]] = select <2 x i1> [[CMP]], <2 x i16> [[SHUFFLE]], <2 x i16> zeroinitializer
+; CHECK-NEXT:    ret <2 x i16> [[SELECT]]
+;
+entry:
+  %v = bitcast <1 x i32> <i32 1> to <2 x i16>
+  %cmp = icmp eq <2 x i16> %v, zeroinitializer
+  %neg = sub <2 x i16> zeroinitializer, %v
+  %shuffle = shufflevector <2 x i16> %neg, <2 x i16> zeroinitializer, <2 x i32> <i32 1, i32 0>
+  %select = select <2 x i1> %cmp, <2 x i16> %shuffle, <2 x i16> zeroinitializer
+  ret <2 x i16> %select
+}
+
+; Could infer nowrap flags, as shufflevector reads the non-wrapping lane, yet conservatively do not.
+define <2 x i16> @select_of_shufflevector_2() {
+; CHECK-LABEL: define <2 x i16> @select_of_shufflevector_2() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[V:%.*]] = bitcast <1 x i32> splat (i32 1) to <2 x i16>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i16> [[V]], zeroinitializer
+; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i16> zeroinitializer, [[V]]
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i16> [[NEG]], <2 x i16> zeroinitializer, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[SELECT:%.*]] = select <2 x i1> [[CMP]], <2 x i16> [[SHUFFLE]], <2 x i16> zeroinitializer
+; CHECK-NEXT:    ret <2 x i16> [[SELECT]]
+;
+entry:
+  %v = bitcast <1 x i32> <i32 1> to <2 x i16>
+  %cmp = icmp eq <2 x i16> %v, zeroinitializer
+  %neg = sub <2 x i16> zeroinitializer, %v
+  %shuffle = shufflevector <2 x i16> %neg, <2 x i16> zeroinitializer, <2 x i32> <i32 1, i32 0>
+  %select = select <2 x i1> %cmp, <2 x i16> %shuffle, <2 x i16> zeroinitializer
+  ret <2 x i16> %select
 }

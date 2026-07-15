@@ -9,9 +9,10 @@
 #ifndef LLVM_LIB_TARGET_CSKY_CSKYTARGETSTREAMER_H
 #define LLVM_LIB_TARGET_CSKY_CSKYTARGETSTREAMER_H
 
-#include "MCTargetDesc/CSKYMCExpr.h"
+#include "MCTargetDesc/CSKYMCAsmInfo.h"
 #include "llvm/MC/ConstantPools.h"
 #include "llvm/MC/MCStreamer.h"
+#include <map>
 
 namespace llvm {
 
@@ -46,7 +47,7 @@ class CSKYTargetStreamer : public MCTargetStreamer {
 public:
   typedef struct {
     const MCSymbol *sym;
-    CSKYMCExpr::VariantKind kind;
+    CSKY::Specifier kind;
   } SymbolIndex;
 
 protected:
@@ -75,12 +76,6 @@ public:
 };
 
 template <> struct DenseMapInfo<CSKYTargetStreamer::SymbolIndex> {
-  static inline CSKYTargetStreamer::SymbolIndex getEmptyKey() {
-    return {nullptr, CSKYMCExpr::VK_CSKY_Invalid};
-  }
-  static inline CSKYTargetStreamer::SymbolIndex getTombstoneKey() {
-    return {nullptr, CSKYMCExpr::VK_CSKY_Invalid};
-  }
   static unsigned getHashValue(const CSKYTargetStreamer::SymbolIndex &V) {
     return hash_combine(DenseMapInfo<const MCSymbol *>::getHashValue(V.sym),
                         DenseMapInfo<int>::getHashValue(V.kind));

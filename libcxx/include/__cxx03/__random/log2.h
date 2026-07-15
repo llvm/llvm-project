@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_LOG2_H
-#define _LIBCPP___RANDOM_LOG2_H
+#ifndef _LIBCPP___CXX03___RANDOM_LOG2_H
+#define _LIBCPP___CXX03___RANDOM_LOG2_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/conditional.h>
@@ -63,4 +63,4 @@ struct __log2 {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANDOM_LOG2_H
+#endif // _LIBCPP___CXX03___RANDOM_LOG2_H

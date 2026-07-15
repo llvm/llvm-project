@@ -14,14 +14,13 @@
 namespace llvm {
 
 class SILoadStoreOptimizerPass
-    : public PassInfoMixin<SILoadStoreOptimizerPass> {
+    : public OptionalPassInfoMixin<SILoadStoreOptimizerPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 
   MachineFunctionProperties getRequiredProperties() const {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 };
 

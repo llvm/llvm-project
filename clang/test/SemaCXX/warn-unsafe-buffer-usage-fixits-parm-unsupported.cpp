@@ -3,6 +3,7 @@
 
 typedef int * TYPEDEF_PTR;
 #define MACRO_PTR int*
+#define MACRO_PTR_TO_CONST const int*
 
 // We CANNOT fix a pointer whose type is defined in a typedef or a
 // macro. Because if the typedef is changed after the fix, the fix
@@ -17,6 +18,13 @@ void typedefPointer(TYPEDEF_PTR p) {  // expected-warning{{'p' is an unsafe poin
 // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE+1]]
 void macroPointer(MACRO_PTR p) {  // expected-warning{{'p' is an unsafe pointer used for buffer access}}
   if (++p) {  // expected-note{{used in pointer arithmetic here}}
+  }
+}
+
+// CHECK-NOT: fix-it:"{{.*}}":{[[@LINE+2]]
+void macroPointer2(const int *p) {
+  MACRO_PTR_TO_CONST *q = &p;  // expected-warning{{'q' is an unsafe pointer used for buffer access}}
+  if (++q) {  // expected-note{{used in pointer arithmetic here}}
   }
 }
 
@@ -118,7 +126,7 @@ void isArrayDecayToPointerUPC(int a[][10], int (*b)[10]) {
 // expected-warning@-2{{'b' is an unsafe pointer used for buffer access}}
   int tmp;
 
-  tmp = a[5][5] + b[5][5];  // expected-warning2{{unsafe buffer access}}  expected-note2{{used in buffer access here}}
+  tmp = a[5][5] + b[5][5];  // expected-note2{{used in buffer access here}}
 }
 
 // parameter having default values:

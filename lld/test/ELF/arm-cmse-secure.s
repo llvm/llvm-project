@@ -9,7 +9,7 @@
 /// Create the secure app and import library.
 // RUN: ld.lld -e secure_entry --section-start .gnu.sgstubs=0x20000 --cmse-implib implib.o secureapp.o --out-implib=implib.lib -o secureapp
 /// Link the non-secure app against the import library.
-// RUN: ld.lld -e nonsecure_entry -Ttext=0x8000 implib.lib nonsecureapp.o -o nonsecureapp
+// RUN: ld.lld -e nonsecure_entry --image-base=0x8000 -Ttext=0x8000 implib.lib nonsecureapp.o -o nonsecureapp
 // RUN: llvm-readelf -s implib.lib | FileCheck %s
 // RUN: llvm-objdump -d --no-show-raw-insn secureapp | FileCheck %s --check-prefixes=SECUREDISS
 // RUN: llvm-objdump -d --no-show-raw-insn nonsecureapp | FileCheck %s --check-prefixes=NONSECUREDISS

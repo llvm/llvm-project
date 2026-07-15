@@ -244,13 +244,13 @@ SparseSolver<LatticeKey, LatticeVal, KeyInfo>::getValueState(LatticeKey Key) {
 template <class LatticeKey, class LatticeVal, class KeyInfo>
 void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::UpdateState(LatticeKey Key,
                                                                 LatticeVal LV) {
-  auto I = ValueState.find(Key);
-  if (I != ValueState.end() && I->second == LV)
+  auto [I, Inserted] = ValueState.try_emplace(Key);
+  if (!Inserted && I->second == LV)
     return; // No change.
 
   // Update the state of the given LatticeKey and add its corresponding LLVM
   // value to the work list.
-  ValueState[Key] = std::move(LV);
+  I->second = std::move(LV);
   if (Value *V = KeyInfo::getValueFromLatticeKey(Key))
     ValueWorkList.push_back(V);
 }
@@ -291,12 +291,12 @@ void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::getFeasibleSuccessors(
   if (TI.getNumSuccessors() == 0)
     return;
 
-  if (BranchInst *BI = dyn_cast<BranchInst>(&TI)) {
-    if (BI->isUnconditional()) {
-      Succs[0] = true;
-      return;
-    }
+  if (isa<UncondBrInst>(&TI)) {
+    Succs[0] = true;
+    return;
+  }
 
+  if (CondBrInst *BI = dyn_cast<CondBrInst>(&TI)) {
     LatticeVal BCValue;
     if (AggressiveUndef)
       BCValue =

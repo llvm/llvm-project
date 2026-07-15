@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SYMBOL_DECLARATION_H
-#define LLDB_SYMBOL_DECLARATION_H
+#ifndef LLDB_CORE_DECLARATION_H
+#define LLDB_CORE_DECLARATION_H
 
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-private.h"
@@ -150,14 +150,6 @@ public:
     return m_file && m_line != 0 && m_line != LLDB_INVALID_LINE_NUMBER;
   }
 
-  /// Get the memory cost of this object.
-  ///
-  /// \return
-  ///     The number of bytes that this object occupies in memory.
-  ///     The returned value does not include the bytes for any
-  ///     shared string values.
-  size_t MemorySize() const;
-
   /// Set accessor for the declaration file specification.
   ///
   /// \param[in] file_spec
@@ -194,4 +186,4 @@ bool operator==(const Declaration &lhs, const Declaration &rhs);
 
 } // namespace lldb_private
 
-#endif // LLDB_SYMBOL_DECLARATION_H
+#endif // LLDB_CORE_DECLARATION_H

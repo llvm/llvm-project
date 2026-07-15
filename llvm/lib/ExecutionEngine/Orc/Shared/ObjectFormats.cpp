@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace llvm {
 namespace orc {
@@ -30,20 +31,32 @@ StringRef ELFInitSectionNames[3]{
     ELFCtorArrayFuncSectionName,
 };
 
+StringRef ELFFiniSectionNames[3]{
+    ELFFiniArrayFuncSectionName,
+    ELFFiniFuncSectionName,
+    ELFDtorArrayFuncSectionName,
+};
+
 StringRef ELFThreadBSSSectionName = ".tbss";
 StringRef ELFThreadDataSectionName = ".tdata";
 
 bool isMachOInitializerSection(StringRef QualifiedName) {
-  for (auto &InitSection : MachOInitSectionNames)
-    if (InitSection == QualifiedName)
-      return true;
-  return false;
+  return llvm::is_contained(MachOInitSectionNames, QualifiedName);
 }
 
 bool isELFInitializerSection(StringRef SecName) {
   for (StringRef InitSection : ELFInitSectionNames) {
     StringRef Name = SecName;
     if (Name.consume_front(InitSection) && (Name.empty() || Name[0] == '.'))
+      return true;
+  }
+  return false;
+}
+
+bool isELFFinalizerSection(StringRef SecName) {
+  for (StringRef FiniSection : ELFFiniSectionNames) {
+    StringRef Name = SecName;
+    if (Name.consume_front(FiniSection) && (Name.empty() || Name[0] == '.'))
       return true;
   }
   return false;

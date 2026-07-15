@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -o - -fsyntax-only %s -verify
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -o - -fsyntax-only %s -fexperimental-new-constant-interpreter -verify
 
  groupshared float a[10];
 
@@ -48,12 +49,7 @@
     static groupshared float g;
   };
 
-  // expected-error@+1 {{parameter may not be qualified with an address space}}
-  float foo2(groupshared float a) {
-    return a;
-  }
-
-// expected-note@+2 {{parameter may not be qualified with an address space}}
+// expected-note@+2 {{candidate template ignored: substitution failure [with T = GSF]}}
 template<typename T>
   T tfoo(T t) {
      return t;
@@ -67,8 +63,7 @@ template<typename T>
 // it is caused by return type check is after pointer check which is acceptable.
 // expected-error@+1 {{pointers are unsupported in HLSL}}
 groupshared void (*fp)();
-// expected-error@+2 {{pointers are unsupported in HLSL}}
-// expected-error@+1 {{parameter may not be qualified with an address space}}
+// expected-error@+1 {{pointers are unsupported in HLSL}}
 void (*fp2)(groupshared float);
 // NOTE: HLSL not support trailing return types.
 // expected-warning@#func{{'auto' type specifier is a HLSL 202y extension}}
@@ -102,5 +97,4 @@ _Static_assert(S3<groupshared float>::value, "");
 
 // Can you overload based on the qualifier?
 void func(float f) {}
-// expected-error@+1 {{parameter may not be qualified with an address space}}
 void func(groupshared float f) {}

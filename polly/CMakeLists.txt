@@ -2,6 +2,14 @@
 if (NOT DEFINED LLVM_MAIN_SRC_DIR)
   project(Polly)
   cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
+
   set(POLLY_STANDALONE_BUILD TRUE)
 endif()
 set(LLVM_SUBPROJECT_TITLE "Polly")
@@ -13,6 +21,11 @@ if(POLLY_STANDALONE_BUILD)
   # Where is LLVM installed?
   find_package(LLVM CONFIG REQUIRED)
   set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${LLVM_CMAKE_DIR})
+
+  separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
+  add_definitions(${LLVM_DEFINITIONS_LIST})
+  list(APPEND CMAKE_REQUIRED_DEFINITIONS ${LLVM_DEFINITIONS_LIST})
+
   include(HandleLLVMOptions)
   include(AddLLVM)
 
@@ -29,11 +42,7 @@ if(POLLY_STANDALONE_BUILD)
 
   # Enable unit tests if available.
   set(POLLY_GTEST_AVAIL 0)
-  set(UNITTEST_DIR ${LLVM_THIRD_PARTY_DIR}/unittest)
-  if(EXISTS ${UNITTEST_DIR}/googletest/include/gtest/gtest.h)
-    if (NOT TARGET gtest)
-      add_subdirectory(${UNITTEST_DIR} third-party/unittest)
-    endif()
+  if(TARGET llvm_gtest)
     set(POLLY_GTEST_AVAIL 1)
   endif()
 
@@ -115,6 +124,14 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     PATTERN "CMakeFiles" EXCLUDE
     )
 endif()
+
+# add_llvm_pass_plugin() already declares the option, but we need access to
+# it earlier than that.
+set(link_into_tools_default OFF)
+if (LLVM_TOOL_POLLY_BUILD)
+  set(link_into_tools_default ON)
+endif()
+option(LLVM_POLLY_LINK_INTO_TOOLS "Statically link Polly into tools (if available)" ${link_into_tools_default})
 
 add_definitions( -D_GNU_SOURCE )
 

@@ -77,6 +77,7 @@
 #include "BPF.h"
 #include "BPFCORE.h"
 #include "BPFTargetMachine.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/BTF/BTF.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -97,7 +98,6 @@
 #define DEBUG_TYPE "bpf-abstract-member-access"
 
 namespace llvm {
-constexpr StringRef BPFCoreSharedInfo::AmaAttr;
 uint32_t BPFCoreSharedInfo::SeqNum;
 
 Instruction *BPFCoreSharedInfo::insertPassThrough(Module *M, BasicBlock *BB,
@@ -109,7 +109,7 @@ Instruction *BPFCoreSharedInfo::insertPassThrough(Module *M, BasicBlock *BB,
                                          BPFCoreSharedInfo::SeqNum++);
 
   auto *NewInst = CallInst::Create(Fn, {SeqNumVal, Input});
-  NewInst->insertBefore(Before);
+  NewInst->insertBefore(Before->getIterator());
   return NewInst;
 }
 } // namespace llvm
@@ -209,7 +209,7 @@ bool BPFAbstractMemberAccess::run(Function &F) {
   if (SP && SP->isDefinition()) {
     for (DIType *Ty: SP->getType()->getTypeArray())
       CheckAnonRecordType(nullptr, Ty);
-    for (const DINode *DN : SP->getRetainedNodes()) {
+    for (const MDNode *DN : SP->getRetainedNodes()) {
       if (const auto *DV = dyn_cast<DILocalVariable>(DN))
         CheckAnonRecordType(nullptr, DV->getType());
     }
@@ -414,9 +414,7 @@ static void replaceWithGEP(CallInst *Call, uint32_t DimensionIndex,
 
   Constant *Zero =
       ConstantInt::get(Type::getInt32Ty(Call->getParent()->getContext()), 0);
-  SmallVector<Value *, 4> IdxList;
-  for (unsigned I = 0; I < Dimension; ++I)
-    IdxList.push_back(Zero);
+  SmallVector<Value *, 4> IdxList(Dimension, Zero);
   IdxList.push_back(Call->getArgOperand(GEPIndex));
 
   auto *GEP = GetElementPtrInst::CreateInBounds(getBaseElementType(Call),
@@ -836,8 +834,9 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
   // Put the access chain into a stack with the top as the head of the chain.
   while (Call) {
     CallStack.push(std::make_pair(Call, CInfo));
-    CInfo = AIChain[Call].second;
-    Call = AIChain[Call].first;
+    auto &Chain = AIChain[Call];
+    CInfo = Chain.second;
+    Call = Chain.first;
   }
 
   // The access offset from the base of the head of chain is also
@@ -960,11 +959,26 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
 
     // Access Index
     uint64_t AccessIndex = CInfo.AccessIndex;
-    AccessKey += ":" + std::to_string(AccessIndex);
-
     MDNode *MDN = CInfo.Metadata;
     // At this stage, it cannot be pointer type.
     auto *CTy = cast<DICompositeType>(stripQualifiers(cast<DIType>(MDN)));
+
+    uint64_t BTFIndex = AccessIndex;
+    if (CTy->getTag() == dwarf::DW_TAG_structure_type) {
+      DINodeArray Elements = CTy->getElements();
+      uint64_t Offset = getBTFRecordElementOffset(Elements[AccessIndex]);
+      // Find this element's position in the stable offset order without
+      // sorting the whole record for every CO-RE access.
+      BTFIndex = 0;
+      for (unsigned I = 0; I < Elements.size(); ++I) {
+        uint64_t ElementOffset = getBTFRecordElementOffset(Elements[I]);
+        if (ElementOffset < Offset ||
+            (ElementOffset == Offset && I < AccessIndex))
+          ++BTFIndex;
+      }
+    }
+    AccessKey += ":" + std::to_string(BTFIndex);
+
     PatchImm = GetFieldInfo(InfoKind, CTy, AccessIndex, PatchImm,
                             CInfo.RecordAlignment);
   }
@@ -1102,29 +1116,18 @@ bool BPFAbstractMemberAccess::transformGEPChain(CallInst *Call,
   //   %4 = bitcast %struct.net_device** %dev1 to i64*
   // it is transformed to:
   //   %6 = load llvm.sk_buff:0:50$0:0:0:2:0
-  //   %7 = bitcast %struct.sk_buff* %2 to i8*
-  //   %8 = getelementptr i8, i8* %7, %6
-  //   %9 = bitcast i8* %8 to i64*
-  //   using %9 instead of %4
+  //   %8 = getelementptr i8, i8* %2, %6
+  //   using %8 instead of %4
   // The original Call inst is removed.
 
   // Load the global variable.
   auto *LDInst = new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "",
                               Call->getIterator());
 
-  // Generate a BitCast
-  auto *BCInst =
-      new BitCastInst(Base, PointerType::getUnqual(BB->getContext()));
-  BCInst->insertBefore(Call);
-
   // Generate a GetElementPtr
-  auto *GEP = GetElementPtrInst::Create(Type::getInt8Ty(BB->getContext()),
-                                        BCInst, LDInst);
-  GEP->insertBefore(Call);
-
-  // Generate a BitCast
-  auto *BCInst2 = new BitCastInst(GEP, Call->getType());
-  BCInst2->insertBefore(Call);
+  auto *GEP = GetElementPtrInst::Create(Type::getInt8Ty(BB->getContext()), Base,
+                                        LDInst);
+  GEP->insertBefore(Call->getIterator());
 
   // For the following code,
   //    Block0:
@@ -1132,8 +1135,7 @@ bool BPFAbstractMemberAccess::transformGEPChain(CallInst *Call,
   //      if (...) goto Block1 else ...
   //    Block1:
   //      %6 = load llvm.sk_buff:0:50$0:0:0:2:0
-  //      %7 = bitcast %struct.sk_buff* %2 to i8*
-  //      %8 = getelementptr i8, i8* %7, %6
+  //      %8 = getelementptr i8, i8* %2, %6
   //      ...
   //      goto CommonExit
   //    Block2:
@@ -1141,8 +1143,7 @@ bool BPFAbstractMemberAccess::transformGEPChain(CallInst *Call,
   //      if (...) goto Block3 else ...
   //    Block3:
   //      %6 = load llvm.bpf_map:0:40$0:0:0:2:0
-  //      %7 = bitcast %struct.sk_buff* %2 to i8*
-  //      %8 = getelementptr i8, i8* %7, %6
+  //      %8 = getelementptr i8, i8* %2, %6
   //      ...
   //      goto CommonExit
   //    CommonExit
@@ -1156,8 +1157,7 @@ bool BPFAbstractMemberAccess::transformGEPChain(CallInst *Call,
   //    Block_Common:
   //      PHI = [llvm.sk_buff:0:50$0:0:0:2:0, llvm.bpf_map:0:40$0:0:0:2:0]
   //      %6 = load PHI
-  //      %7 = bitcast %struct.sk_buff* %2 to i8*
-  //      %8 = getelementptr i8, i8* %7, %6
+  //      %8 = getelementptr i8, i8* %2, %6
   //      ...
   //      goto CommonExit
   //  For the above code, we cannot perform proper relocation since
@@ -1172,7 +1172,7 @@ bool BPFAbstractMemberAccess::transformGEPChain(CallInst *Call,
   // This approach is also used in other places when global var
   // representing a relocation is used.
   Instruction *PassThroughInst =
-      BPFCoreSharedInfo::insertPassThrough(M, BB, BCInst2, Call);
+      BPFCoreSharedInfo::insertPassThrough(M, BB, GEP, Call);
   Call->replaceAllUsesWith(PassThroughInst);
   Call->eraseFromParent();
 

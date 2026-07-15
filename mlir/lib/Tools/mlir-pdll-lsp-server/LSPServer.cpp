@@ -10,16 +10,39 @@
 
 #include "PDLLServer.h"
 #include "Protocol.h"
-#include "mlir/Tools/lsp-server-support/Logging.h"
-#include "mlir/Tools/lsp-server-support/Transport.h"
-#include "llvm/ADT/FunctionExtras.h"
-#include "llvm/ADT/StringMap.h"
+#include "llvm/Support/LSP/Logging.h"
+#include "llvm/Support/LSP/Protocol.h"
+#include "llvm/Support/LSP/Transport.h"
 #include <optional>
 
 #define DEBUG_TYPE "pdll-lsp-server"
 
 using namespace mlir;
 using namespace mlir::lsp;
+
+using llvm::lsp::Callback;
+using llvm::lsp::CompletionList;
+using llvm::lsp::CompletionParams;
+using llvm::lsp::DidChangeTextDocumentParams;
+using llvm::lsp::DidCloseTextDocumentParams;
+using llvm::lsp::DidOpenTextDocumentParams;
+using llvm::lsp::DocumentLinkParams;
+using llvm::lsp::DocumentSymbol;
+using llvm::lsp::DocumentSymbolParams;
+using llvm::lsp::Hover;
+using llvm::lsp::InitializedParams;
+using llvm::lsp::InitializeParams;
+using llvm::lsp::InlayHintsParams;
+using llvm::lsp::JSONTransport;
+using llvm::lsp::Location;
+using llvm::lsp::Logger;
+using llvm::lsp::MessageHandler;
+using llvm::lsp::NoParams;
+using llvm::lsp::OutgoingNotification;
+using llvm::lsp::PublishDiagnosticsParams;
+using llvm::lsp::ReferenceParams;
+using llvm::lsp::TextDocumentPositionParams;
+using llvm::lsp::TextDocumentSyncKind;
 
 //===----------------------------------------------------------------------===//
 // LSPServer
@@ -114,6 +137,7 @@ struct LSPServer {
 
 //===----------------------------------------------------------------------===//
 // Initialization
+//===----------------------------------------------------------------------===//
 
 void LSPServer::onInitialize(const InitializeParams &params,
                              Callback<llvm::json::Value> reply) {
@@ -164,6 +188,7 @@ void LSPServer::onShutdown(const NoParams &, Callback<std::nullptr_t> reply) {
 
 //===----------------------------------------------------------------------===//
 // Document Change
+//===----------------------------------------------------------------------===//
 
 void LSPServer::onDocumentDidOpen(const DidOpenTextDocumentParams &params) {
   PublishDiagnosticsParams diagParams(params.textDocument.uri,
@@ -198,6 +223,7 @@ void LSPServer::onDocumentDidChange(const DidChangeTextDocumentParams &params) {
 
 //===----------------------------------------------------------------------===//
 // Definitions and References
+//===----------------------------------------------------------------------===//
 
 void LSPServer::onGoToDefinition(const TextDocumentPositionParams &params,
                                  Callback<std::vector<Location>> reply) {
@@ -215,6 +241,7 @@ void LSPServer::onReference(const ReferenceParams &params,
 
 //===----------------------------------------------------------------------===//
 // DocumentLink
+//===----------------------------------------------------------------------===//
 
 void LSPServer::onDocumentLink(const DocumentLinkParams &params,
                                Callback<std::vector<DocumentLink>> reply) {
@@ -225,6 +252,7 @@ void LSPServer::onDocumentLink(const DocumentLinkParams &params,
 
 //===----------------------------------------------------------------------===//
 // Hover
+//===----------------------------------------------------------------------===//
 
 void LSPServer::onHover(const TextDocumentPositionParams &params,
                         Callback<std::optional<Hover>> reply) {
@@ -233,6 +261,7 @@ void LSPServer::onHover(const TextDocumentPositionParams &params,
 
 //===----------------------------------------------------------------------===//
 // Document Symbols
+//===----------------------------------------------------------------------===//
 
 void LSPServer::onDocumentSymbol(const DocumentSymbolParams &params,
                                  Callback<std::vector<DocumentSymbol>> reply) {
@@ -243,6 +272,7 @@ void LSPServer::onDocumentSymbol(const DocumentSymbolParams &params,
 
 //===----------------------------------------------------------------------===//
 // Code Completion
+//===----------------------------------------------------------------------===//
 
 void LSPServer::onCompletion(const CompletionParams &params,
                              Callback<CompletionList> reply) {
@@ -251,6 +281,7 @@ void LSPServer::onCompletion(const CompletionParams &params,
 
 //===----------------------------------------------------------------------===//
 // Signature Help
+//===----------------------------------------------------------------------===//
 
 void LSPServer::onSignatureHelp(const TextDocumentPositionParams &params,
                                 Callback<SignatureHelp> reply) {
@@ -259,6 +290,7 @@ void LSPServer::onSignatureHelp(const TextDocumentPositionParams &params,
 
 //===----------------------------------------------------------------------===//
 // Inlay Hints
+//===----------------------------------------------------------------------===//
 
 void LSPServer::onInlayHint(const InlayHintsParams &params,
                             Callback<std::vector<InlayHint>> reply) {
@@ -269,6 +301,7 @@ void LSPServer::onInlayHint(const InlayHintsParams &params,
 
 //===----------------------------------------------------------------------===//
 // PDLL ViewOutput
+//===----------------------------------------------------------------------===//
 
 void LSPServer::onPDLLViewOutput(
     const PDLLViewOutputParams &params,

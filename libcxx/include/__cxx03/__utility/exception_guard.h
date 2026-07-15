@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_TRANSACTION_H
-#define _LIBCPP___UTILITY_TRANSACTION_H
+#ifndef _LIBCPP___CXX03___UTILITY_TRANSACTION_H
+#define _LIBCPP___CXX03___UTILITY_TRANSACTION_H
 
 #include <__cxx03/__assert>
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/is_nothrow_constructible.h>
-#include <__cxx03/__utility/exchange.h>
 #include <__cxx03/__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -65,12 +64,10 @@ template <class _Rollback>
 struct __exception_guard_exceptions {
   __exception_guard_exceptions() = delete;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit __exception_guard_exceptions(_Rollback __rollback)
+  _LIBCPP_HIDE_FROM_ABI explicit __exception_guard_exceptions(_Rollback __rollback)
       : __rollback_(std::move(__rollback)), __completed_(false) {}
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-  __exception_guard_exceptions(__exception_guard_exceptions&& __other)
-      _NOEXCEPT_(is_nothrow_move_constructible<_Rollback>::value)
+  _LIBCPP_HIDE_FROM_ABI __exception_guard_exceptions(__exception_guard_exceptions&& __other)
       : __rollback_(std::move(__other.__rollback_)), __completed_(__other.__completed_) {
     __other.__completed_ = true;
   }
@@ -79,9 +76,9 @@ struct __exception_guard_exceptions {
   __exception_guard_exceptions& operator=(__exception_guard_exceptions const&) = delete;
   __exception_guard_exceptions& operator=(__exception_guard_exceptions&&)      = delete;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __complete() _NOEXCEPT { __completed_ = true; }
+  _LIBCPP_HIDE_FROM_ABI void __complete() _NOEXCEPT { __completed_ = true; }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 ~__exception_guard_exceptions() {
+  _LIBCPP_HIDE_FROM_ABI ~__exception_guard_exceptions() {
     if (!__completed_)
       __rollback_();
   }
@@ -96,12 +93,9 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(__exception_guard_exceptions);
 template <class _Rollback>
 struct __exception_guard_noexceptions {
   __exception_guard_noexceptions() = delete;
-  _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NODEBUG explicit __exception_guard_noexceptions(_Rollback) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_NODEBUG explicit __exception_guard_noexceptions(_Rollback) {}
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NODEBUG
-  __exception_guard_noexceptions(__exception_guard_noexceptions&& __other)
-      _NOEXCEPT_(is_nothrow_move_constructible<_Rollback>::value)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_NODEBUG __exception_guard_noexceptions(__exception_guard_noexceptions&& __other)
       : __completed_(__other.__completed_) {
     __other.__completed_ = true;
   }
@@ -110,11 +104,9 @@ struct __exception_guard_noexceptions {
   __exception_guard_noexceptions& operator=(__exception_guard_noexceptions const&) = delete;
   __exception_guard_noexceptions& operator=(__exception_guard_noexceptions&&)      = delete;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NODEBUG void __complete() _NOEXCEPT {
-    __completed_ = true;
-  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_NODEBUG void __complete() _NOEXCEPT { __completed_ = true; }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NODEBUG ~__exception_guard_noexceptions() {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_NODEBUG ~__exception_guard_noexceptions() {
     _LIBCPP_ASSERT_INTERNAL(__completed_, "__exception_guard not completed with exceptions disabled");
   }
 
@@ -133,7 +125,7 @@ using __exception_guard = __exception_guard_exceptions<_Rollback>;
 #endif
 
 template <class _Rollback>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __exception_guard<_Rollback> __make_exception_guard(_Rollback __rollback) {
+_LIBCPP_HIDE_FROM_ABI __exception_guard<_Rollback> __make_exception_guard(_Rollback __rollback) {
   return __exception_guard<_Rollback>(std::move(__rollback));
 }
 
@@ -141,4 +133,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___UTILITY_TRANSACTION_H
+#endif // _LIBCPP___CXX03___UTILITY_TRANSACTION_H

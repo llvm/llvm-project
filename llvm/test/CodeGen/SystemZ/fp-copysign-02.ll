@@ -1,4 +1,4 @@
-; Test f128 copysign operations on z14.
+; Test f128 copysign libcalls on z14.
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z14 | FileCheck %s
 

@@ -9,10 +9,11 @@
 #ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_MSVC_H
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_MSVC_H
 
-#include "AMDGPU.h"
-#include "Cuda.h"
-#include "LazyDetector.h"
 #include "clang/Driver/Compilation.h"
+#include "clang/Driver/CudaInstallationDetector.h"
+#include "clang/Driver/LazyDetector.h"
+#include "clang/Driver/RocmInstallationDetector.h"
+#include "clang/Driver/SyclInstallationDetector.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "llvm/Frontend/Debug/Options.h"
@@ -38,6 +39,19 @@ public:
 };
 } // end namespace visualstudio
 
+class LLVM_LIBRARY_VISIBILITY ARM64XObjcopy : public Tool {
+public:
+  ARM64XObjcopy(const ToolChain &TC)
+      : Tool("ARM64XObjcopy", "llvm-objcopy", TC) {}
+
+  bool hasIntegratedCPP() const override { return false; }
+
+  void ConstructJob(Compilation &C, const JobAction &JA,
+                    const InputInfo &Output, const InputInfoList &Inputs,
+                    const llvm::opt::ArgList &TCArgs,
+                    const char *LinkingOutput) const override;
+};
+
 } // end namespace tools
 
 namespace toolchains {
@@ -48,7 +62,7 @@ public:
                 const llvm::opt::ArgList &Args);
 
   llvm::opt::DerivedArgList *
-  TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
+  TranslateArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
                 Action::OffloadKind DeviceOffloadKind) const override;
 
   UnwindTableLevel
@@ -97,8 +111,11 @@ public:
   void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                          llvm::opt::ArgStringList &CC1Args) const override;
 
-  void AddHIPRuntimeLibArgs(const llvm::opt::ArgList &Args,
-                            llvm::opt::ArgStringList &CmdArgs) const override;
+  void addOffloadRTLibs(unsigned ActiveKinds, const llvm::opt::ArgList &Args,
+                        llvm::opt::ArgStringList &CmdArgs) const override;
+
+  void addSYCLIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                          llvm::opt::ArgStringList &CC1Args) const override;
 
   bool getWindowsSDKLibraryPath(
       const llvm::opt::ArgList &Args, std::string &path) const;
@@ -110,8 +127,11 @@ public:
                      const llvm::opt::ArgList &Args) const override;
 
   std::string ComputeEffectiveClangTriple(const llvm::opt::ArgList &Args,
+                                          BoundArch BA,
                                           types::ID InputType) const override;
-  SanitizerMask getSupportedSanitizers() const override;
+  SanitizerMask
+  getSupportedSanitizers(BoundArch BA,
+                         Action::OffloadKind DeviceOffloadKind) const override;
 
   void printVerboseInfo(raw_ostream &OS) const override;
 
@@ -119,7 +139,7 @@ public:
 
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                        llvm::opt::ArgStringList &CC1Args,
+                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
                         Action::OffloadKind DeviceOffloadKind) const override;
 
 protected:
@@ -130,14 +150,18 @@ protected:
                                      const Twine &subfolder2 = "",
                                      const Twine &subfolder3 = "") const;
 
+  Tool *getTool(Action::ActionClass AC) const override;
   Tool *buildLinker() const override;
   Tool *buildAssembler() const override;
+
 private:
   std::optional<llvm::StringRef> WinSdkDir, WinSdkVersion, WinSysRoot;
   std::string VCToolChainPath;
   llvm::ToolsetLayout VSLayout = llvm::ToolsetLayout::OlderVS;
   LazyDetector<CudaInstallationDetector> CudaInstallation;
   LazyDetector<RocmInstallationDetector> RocmInstallation;
+  LazyDetector<SYCLInstallationDetector> SYCLInstallation;
+  mutable std::unique_ptr<tools::ARM64XObjcopy> Objcopy;
 };
 
 } // end namespace toolchains

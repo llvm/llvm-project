@@ -20,7 +20,7 @@ include "mlir/Dialect/Transform/Interfaces/MatchInterfaces.td"
 include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
 
-def DebugEmitRemarkAtOp : TransformDialectOp<"debug.emit_remark_at",
+def EmitRemarkAtOp : TransformDialectOp<"debug.emit_remark_at",
   [MatchOpInterface,
    DeclareOpInterfaceMethods<TransformOpInterface>,
    MemoryEffectsOpInterface, NavigationTransformOpTrait]> {
@@ -39,7 +39,7 @@ def DebugEmitRemarkAtOp : TransformDialectOp<"debug.emit_remark_at",
   let assemblyFormat = "$at `,` $message attr-dict `:` type($at)";
 }
 
-def DebugEmitParamAsRemarkOp 
+def EmitParamAsRemarkOp
   : TransformDialectOp<"debug.emit_param_as_remark",
     [MatchOpInterface,
      DeclareOpInterfaceMethods<TransformOpInterface>,

@@ -12,7 +12,6 @@
 
 #include "LLVMContextImpl.h"
 #include "AttributeImpl.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringMapEntry.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/IR/DiagnosticHandler.h"
@@ -26,7 +25,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
-#include <utility>
 
 using namespace llvm;
 
@@ -39,7 +37,8 @@ LLVMContextImpl::LLVMContextImpl(LLVMContext &C)
       X86_FP80Ty(C, Type::X86_FP80TyID), FP128Ty(C, Type::FP128TyID),
       PPC_FP128Ty(C, Type::PPC_FP128TyID), X86_AMXTy(C, Type::X86_AMXTyID),
       Int1Ty(C, 1), Int8Ty(C, 8), Int16Ty(C, 16), Int32Ty(C, 32),
-      Int64Ty(C, 64), Int128Ty(C, 128) {}
+      Int64Ty(C, 64), Int128Ty(C, 128), Byte1Ty(C, 1), Byte8Ty(C, 8),
+      Byte16Ty(C, 16), Byte32Ty(C, 32), Byte64Ty(C, 64), Byte128Ty(C, 128) {}
 
 LLVMContextImpl::~LLVMContextImpl() {
 #ifndef NDEBUG
@@ -58,9 +57,8 @@ LLVMContextImpl::~LLVMContextImpl() {
 
 #ifndef NDEBUG
   // Check for metadata references from leaked Values.
-  for (auto &Pair : ValueMetadata)
-    Pair.first->dump();
-  assert(ValueMetadata.empty() && "Values with metadata have been leaked");
+  assert((Metadatas.empty() || MetadataRecycleSize + 1 == Metadatas.size()) &&
+         "Values with metadata have been leaked");
 #endif
 
   // Drop references for MDNodes.  Do this before Values get deleted to avoid
@@ -109,6 +107,7 @@ LLVMContextImpl::~LLVMContextImpl() {
   ArrayConstants.freeConstants();
   StructConstants.freeConstants();
   VectorConstants.freeConstants();
+  ConstantPtrAuths.freeConstants();
   InlineAsms.freeConstants();
 
   CAZConstants.clear();
@@ -120,6 +119,10 @@ LLVMContextImpl::~LLVMContextImpl() {
   IntOneConstants.clear();
   IntConstants.clear();
   IntSplatConstants.clear();
+  ByteZeroConstants.clear();
+  ByteOneConstants.clear();
+  ByteConstants.clear();
+  ByteSplatConstants.clear();
   FPConstants.clear();
   FPSplatConstants.clear();
   CDSConstants.clear();
@@ -145,33 +148,6 @@ LLVMContextImpl::~LLVMContextImpl() {
   // Destroy ValuesAsMetadata.
   for (auto &Pair : ValuesAsMetadata)
     delete Pair.second;
-}
-
-void LLVMContextImpl::dropTriviallyDeadConstantArrays() {
-  SmallSetVector<ConstantArray *, 4> WorkList;
-
-  // When ArrayConstants are of substantial size and only a few in them are
-  // dead, starting WorkList with all elements of ArrayConstants can be
-  // wasteful. Instead, starting WorkList with only elements that have empty
-  // uses.
-  for (ConstantArray *C : ArrayConstants)
-    if (C->use_empty())
-      WorkList.insert(C);
-
-  while (!WorkList.empty()) {
-    ConstantArray *C = WorkList.pop_back_val();
-    if (C->use_empty()) {
-      for (const Use &Op : C->operands()) {
-        if (auto *COp = dyn_cast<ConstantArray>(Op))
-          WorkList.insert(COp);
-      }
-      C->destroyConstant();
-    }
-  }
-}
-
-void Module::dropTriviallyDeadConstantArrays() {
-  Context.pImpl->dropTriviallyDeadConstantArrays();
 }
 
 namespace llvm {
@@ -207,7 +183,7 @@ unsigned MDNodeOpsKey::calculateHash(MDNode *N, unsigned Offset) {
 }
 
 unsigned MDNodeOpsKey::calculateHash(ArrayRef<Metadata *> Ops) {
-  return hash_combine_range(Ops.begin(), Ops.end());
+  return hash_combine_range(Ops);
 }
 
 StringMapEntry<uint32_t> *LLVMContextImpl::getOrInsertBundleTag(StringRef Tag) {

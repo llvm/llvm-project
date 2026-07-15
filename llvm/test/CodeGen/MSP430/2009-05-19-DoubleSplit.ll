@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=msp430
+; RUN: llc < %s -mtriple=msp430
 
 define i16 @test(double %d) nounwind {
 entry:

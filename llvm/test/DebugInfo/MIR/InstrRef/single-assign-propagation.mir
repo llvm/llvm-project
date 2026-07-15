@@ -1,4 +1,4 @@
-# RUN: llc %s -march=x86-64 -run-pass=livedebugvalues -o - \
+# RUN: llc %s -mtriple=x86_64 -run-pass=livedebugvalues -o - \
 # RUN:       -experimental-debug-variable-locations=true \
 # RUN:     | FileCheck %s -implicit-check-not=DBG_VALUE \
 # RUN:        --check-prefixes=CHECK,COMMON

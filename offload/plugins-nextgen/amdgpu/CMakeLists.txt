@@ -10,12 +10,11 @@ target_include_directories(omptarget.rtl.amdgpu PRIVATE
 
 if(hsa-runtime64_FOUND AND NOT "amdgpu" IN_LIST LIBOMPTARGET_DLOPEN_PLUGINS)
   message(STATUS "Building AMDGPU plugin linked against libhsa")
-  target_link_libraries(omptarget.rtl.amdgpu PRIVATE hsa-runtime64::hsa-runtime64 LLVMFrontendOffloading)
+  target_link_libraries(omptarget.rtl.amdgpu PRIVATE hsa-runtime64::hsa-runtime64)
 else()
   message(STATUS "Building AMDGPU plugin for dlopened libhsa")
   target_include_directories(omptarget.rtl.amdgpu PRIVATE dynamic_hsa)
   target_sources(omptarget.rtl.amdgpu PRIVATE dynamic_hsa/hsa.cpp)
-  target_link_libraries(omptarget.rtl.amdgpu PRIVATE LLVMFrontendOffloading)
 endif()
 
 # Configure testing for the AMDGPU plugin. We will build tests if we could a
@@ -24,7 +23,7 @@ option(LIBOMPTARGET_FORCE_AMDGPU_TESTS "Build AMDGPU libomptarget tests" OFF)
 if (LIBOMPTARGET_FOUND_AMDGPU_GPU OR LIBOMPTARGET_FORCE_AMDGPU_TESTS)
   # Report to the parent scope that we are building a plugin for amdgpu
   set(LIBOMPTARGET_SYSTEM_TARGETS
-      "${LIBOMPTARGET_SYSTEM_TARGETS} amdgcn-amd-amdhsa" PARENT_SCOPE)
+      "${LIBOMPTARGET_SYSTEM_TARGETS} amdgpu-amd-amdhsa" PARENT_SCOPE)
   list(APPEND LIBOMPTARGET_TESTED_PLUGINS "omptarget.rtl.amdgpu")
   set(LIBOMPTARGET_TESTED_PLUGINS "${LIBOMPTARGET_TESTED_PLUGINS}" PARENT_SCOPE)
 else()

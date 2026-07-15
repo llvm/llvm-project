@@ -34,19 +34,24 @@ function(add_startup_object name)
       RUNTIME_OUTPUT_DIRECTORY ${LIBC_LIBRARY_DIR}
       RUNTIME_OUTPUT_NAME ${name}.o)
     target_link_options(${fq_target_name}.exe PRIVATE
+                        ${LIBC_COMPILE_OPTIONS_DEFAULT}
                         "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm")
   endif()
 endfunction()
 
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
-  add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
-endif()
-
 add_startup_object(
   crt1
-  ALIAS
+  SRC
+    start.cpp
   DEPENDS
-  .${LIBC_TARGET_ARCHITECTURE}.crt1
+    libc.config.app_h
+    libc.src.__support.RPC.rpc_client
+    libc.src.__support.GPU.utils
+    libc.src.stdlib.exit
+    libc.src.stdlib.atexit
+  COMPILE_OPTIONS
+    -ffreestanding # To avoid compiler warnings about calling the main function.
+    -fno-builtin
 )
 
 add_custom_target(libc-startup)

@@ -30,6 +30,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cassert>
@@ -120,7 +121,8 @@ struct Symbol {
 /// This data structure contains rarely used symbol fields and is optionally
 /// referenced by a Symbol.
 struct Uncommon {
-  Word CommonSize, CommonAlign;
+  support::ulittle64_t CommonSize;
+  Word CommonAlign;
 
   /// COFF-specific: the name of the symbol that a weak external resolves to
   /// if not defined.
@@ -136,7 +138,7 @@ struct Header {
   /// when the format changes, but it does not need to be incremented if a
   /// change to LLVM would cause it to create a different symbol table.
   Word Version;
-  enum { kCurrentVersion = 3 };
+  enum { kCurrentVersion = 4 };
 
   /// The producer's version string (LLVM_VERSION_STRING " " LLVM_REVISION).
   /// Consumers should rebuild the symbol table from IR if the producer's
@@ -162,8 +164,9 @@ struct Header {
 
 /// Fills in Symtab and StrtabBuilder with a valid symbol and string table for
 /// Mods.
-Error build(ArrayRef<Module *> Mods, SmallVector<char, 0> &Symtab,
-            StringTableBuilder &StrtabBuilder, BumpPtrAllocator &Alloc);
+LLVM_ABI Error build(ArrayRef<Module *> Mods, SmallVector<char, 0> &Symtab,
+                     StringTableBuilder &StrtabBuilder,
+                     BumpPtrAllocator &Alloc);
 
 /// This represents a symbol that has been read from a storage::Symbol and
 /// possibly a storage::Uncommon.
@@ -175,7 +178,8 @@ struct Symbol {
   uint32_t Flags;
 
   // Copied from storage::Uncommon.
-  uint32_t CommonSize, CommonAlign;
+  uint64_t CommonSize;
+  uint32_t CommonAlign;
   StringRef COFFWeakExternFallbackName;
   StringRef SectionName;
 
@@ -373,7 +377,7 @@ struct FileContents {
 };
 
 /// Reads the contents of a bitcode file, creating its irsymtab if necessary.
-Expected<FileContents> readBitcode(const BitcodeFileContents &BFC);
+LLVM_ABI Expected<FileContents> readBitcode(const BitcodeFileContents &BFC);
 
 } // end namespace irsymtab
 } // end namespace llvm

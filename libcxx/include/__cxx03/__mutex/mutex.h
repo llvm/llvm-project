@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MUTEX_MUTEX_H
-#define _LIBCPP___MUTEX_MUTEX_H
+#ifndef _LIBCPP___CXX03___MUTEX_MUTEX_H
+#define _LIBCPP___CXX03___MUTEX_MUTEX_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__thread/support.h>
@@ -21,11 +21,11 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_THREAD_SAFETY_ANNOTATION(capability("mutex")) mutex {
+class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_CAPABILITY("mutex") mutex {
   __libcpp_mutex_t __m_ = _LIBCPP_MUTEX_INITIALIZER;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR mutex() = default;
+  _LIBCPP_HIDE_FROM_ABI mutex() = default;
 
   mutex(const mutex&)            = delete;
   mutex& operator=(const mutex&) = delete;
@@ -36,9 +36,9 @@ public:
   ~mutex() _NOEXCEPT;
 #  endif
 
-  void lock() _LIBCPP_THREAD_SAFETY_ANNOTATION(acquire_capability());
-  bool try_lock() _NOEXCEPT _LIBCPP_THREAD_SAFETY_ANNOTATION(try_acquire_capability(true));
-  void unlock() _NOEXCEPT _LIBCPP_THREAD_SAFETY_ANNOTATION(release_capability());
+  _LIBCPP_ACQUIRE_CAPABILITY() void lock();
+  _LIBCPP_TRY_ACQUIRE_CAPABILITY(true) bool try_lock() _NOEXCEPT;
+  _LIBCPP_RELEASE_CAPABILITY void unlock() _NOEXCEPT;
 
   typedef __libcpp_mutex_t* native_handle_type;
   _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() { return &__m_; }
@@ -50,4 +50,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_HAS_NO_THREADS
 
-#endif // _LIBCPP___MUTEX_MUTEX_H
+#endif // _LIBCPP___CXX03___MUTEX_MUTEX_H

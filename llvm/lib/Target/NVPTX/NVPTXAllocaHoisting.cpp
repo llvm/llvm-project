@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXAllocaHoisting.h"
+#include "NVPTX.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -46,7 +47,7 @@ bool NVPTXAllocaHoisting::runOnFunction(Function &function) {
     for (BasicBlock::iterator BI = I->begin(), BE = I->end(); BI != BE;) {
       AllocaInst *allocaInst = dyn_cast<AllocaInst>(BI++);
       if (allocaInst && isa<ConstantInt>(allocaInst->getArraySize())) {
-        allocaInst->moveBefore(firstTerminatorInst);
+        allocaInst->moveBefore(firstTerminatorInst->getIterator());
         functionModified = true;
       }
     }
@@ -56,10 +57,6 @@ bool NVPTXAllocaHoisting::runOnFunction(Function &function) {
 }
 
 char NVPTXAllocaHoisting::ID = 0;
-
-namespace llvm {
-void initializeNVPTXAllocaHoistingPass(PassRegistry &);
-}
 
 INITIALIZE_PASS(
     NVPTXAllocaHoisting, "alloca-hoisting",

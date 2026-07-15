@@ -91,7 +91,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   }
 
   // Set up the module to build for our target.
-  M->setTargetTriple(TM->getTargetTriple().normalize());
+  M->setTargetTriple(TM->getTargetTriple());
   M->setDataLayout(TM->createDataLayout());
 
   // Build up a PM to do instruction selection.
@@ -140,8 +140,10 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
     return 1;
   }
   ExitOnError ExitOnErr(std::string(ExecName) + ": error:");
-  TM = ExitOnErr(codegen::createTargetMachineForTriple(
-      Triple::normalize(TargetTriple), OLvl));
+
+  Triple TT(Triple::normalize(TargetTriple));
+
+  TM = ExitOnErr(codegen::createTargetMachineForTriple(TT, OLvl));
   assert(TM && "Could not allocate target machine!");
 
   // Make sure we print the summary and the current unit when LLVM errors out.

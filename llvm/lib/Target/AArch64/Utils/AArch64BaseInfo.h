@@ -19,9 +19,12 @@
 // FIXME: Is it easiest to fix this layering violation by moving the .inc
 // #includes from AArch64MCTargetDesc.h to here?
 #include "MCTargetDesc/AArch64MCTargetDesc.h" // For AArch64::X0 and friends.
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 
@@ -247,6 +250,38 @@ static inline bool atomicBarrierDroppedOnZero(unsigned Opcode) {
   return false;
 }
 
+inline unsigned CheckFixedPointOperandConstant(APFloat &FVal, unsigned RegWidth,
+                                               bool isReciprocal) {
+  // An FCVT[SU] instruction performs: convertToInt(Val * 2^fbits) where fbits
+  // is between 1 and 32 for a destination w-register, or 1 and 64 for an
+  // x-register.
+  //
+  // By this stage, we've detected (fp_to_[su]int (fmul Val, THIS_NODE)) so we
+  // want THIS_NODE to be 2^fbits. This is much easier to deal with using
+  // integers.
+  bool IsExact;
+
+  if (isReciprocal)
+    if (!FVal.getExactInverse(&FVal))
+      return 0;
+
+  // fbits is between 1 and 64 in the worst-case, which means the fmul
+  // could have 2^64 as an actual operand. Need 65 bits of precision.
+  APSInt IntVal(65, true);
+  FVal.convertToInteger(IntVal, APFloat::rmTowardZero, &IsExact);
+
+  // N.b. isPowerOf2 also checks for > 0.
+  if (!IsExact || !IntVal.isPowerOf2())
+    return 0;
+  unsigned FBits = IntVal.logBase2();
+
+  // Checks above should have guaranteed that we haven't lost information in
+  // finding FBits, but it must still be in range.
+  if (FBits == 0 || FBits > RegWidth)
+    return 0;
+  return FBits;
+}
+
 namespace AArch64CC {
 
 // The CondCodes constants map directly to the 4-bit encoding of the condition
@@ -306,6 +341,36 @@ inline static CondCode getInvertedCondCode(CondCode Code) {
   return static_cast<CondCode>(static_cast<unsigned>(Code) ^ 0x1);
 }
 
+/// getSwappedCondition - assume the flags are set by MI(a,b), return
+/// the condition code if we modify the instructions such that flags are
+/// set by MI(b,a).
+inline static CondCode getSwappedCondition(CondCode CC) {
+  switch (CC) {
+  default:
+    return AL;
+  case EQ:
+    return EQ;
+  case NE:
+    return NE;
+  case HS:
+    return LS;
+  case LO:
+    return HI;
+  case HI:
+    return LO;
+  case LS:
+    return HS;
+  case GE:
+    return LE;
+  case LT:
+    return GT;
+  case GT:
+    return LT;
+  case LE:
+    return GE;
+  }
+}
+
 /// Given a condition code, return NZCV flags that would satisfy that condition.
 /// The flag bits are in the format expected by the ccmp instructions.
 /// Note that many different flag settings can satisfy a given condition code,
@@ -332,15 +397,36 @@ inline static unsigned getNZCVToSatisfyCondCode(CondCode Code) {
   }
 }
 
+/// True, if a given condition code can be used in a fused compare-and-branch
+/// instructions, false otherwise.
+inline static bool isValidCBCond(AArch64CC::CondCode Code) {
+  switch (Code) {
+  default:
+    return false;
+  case AArch64CC::EQ:
+  case AArch64CC::NE:
+  case AArch64CC::HS:
+  case AArch64CC::LO:
+  case AArch64CC::HI:
+  case AArch64CC::LS:
+  case AArch64CC::GE:
+  case AArch64CC::LT:
+  case AArch64CC::GT:
+  case AArch64CC::LE:
+    return true;
+  }
+}
+
 } // end namespace AArch64CC
 
 struct SysAlias {
-  const char *Name;
+  StringTable::Offset Name;
   uint16_t Encoding;
   FeatureBitset FeaturesRequired;
 
-  constexpr SysAlias(const char *N, uint16_t E) : Name(N), Encoding(E) {}
-  constexpr SysAlias(const char *N, uint16_t E, FeatureBitset F)
+  constexpr SysAlias(StringTable::Offset N, uint16_t E)
+      : Name(N), Encoding(E) {}
+  constexpr SysAlias(StringTable::Offset N, uint16_t E, FeatureBitset F)
       : Name(N), Encoding(E), FeaturesRequired(F) {}
 
   bool haveFeatures(FeatureBitset ActiveFeatures) const {
@@ -351,19 +437,49 @@ struct SysAlias {
   FeatureBitset getRequiredFeatures() const { return FeaturesRequired; }
 };
 
+#define GET_SysAliasRegUse_DECL
+#include "AArch64GenSystemOperands.inc"
+
 struct SysAliasReg : SysAlias {
   bool NeedsReg;
-  constexpr SysAliasReg(const char *N, uint16_t E, bool R)
+  constexpr SysAliasReg(StringTable::Offset N, uint16_t E, bool R)
       : SysAlias(N, E), NeedsReg(R) {}
-  constexpr SysAliasReg(const char *N, uint16_t E, bool R, FeatureBitset F)
+  constexpr SysAliasReg(StringTable::Offset N, uint16_t E, bool R,
+                        FeatureBitset F)
       : SysAlias(N, E, F), NeedsReg(R) {}
+};
+
+struct SysAliasOptionalReg : SysAlias {
+  SysAliasRegUse RegUse;
+  constexpr SysAliasOptionalReg(StringTable::Offset N, uint16_t E,
+                                SysAliasRegUse R)
+      : SysAlias(N, E), RegUse(R) {}
+  constexpr SysAliasOptionalReg(StringTable::Offset N, uint16_t E,
+                                SysAliasRegUse R, FeatureBitset F)
+      : SysAlias(N, E, F), RegUse(R) {}
+};
+
+struct TLBIPSysAlias : SysAliasOptionalReg {
+  bool AllowWithTLBID;
+
+  constexpr TLBIPSysAlias(StringTable::Offset N, uint16_t E, SysAliasRegUse R,
+                          FeatureBitset F, bool AllowWithTLBID)
+      : SysAliasOptionalReg(N, E, R, F), AllowWithTLBID(AllowWithTLBID) {}
+
+  bool haveFeatures(FeatureBitset ActiveFeatures) const {
+    return SysAliasOptionalReg::haveFeatures(ActiveFeatures) &&
+           (ActiveFeatures[llvm::AArch64::FeatureAll] ||
+            ActiveFeatures[llvm::AArch64::FeatureD128] ||
+            (AllowWithTLBID && ActiveFeatures[llvm::AArch64::FeatureTLBID]));
+  }
 };
 
 struct SysAliasImm : SysAlias {
   uint16_t ImmValue;
-  constexpr SysAliasImm(const char *N, uint16_t E, uint16_t I)
+  constexpr SysAliasImm(StringTable::Offset N, uint16_t E, uint16_t I)
       : SysAlias(N, E), ImmValue(I) {}
-  constexpr SysAliasImm(const char *N, uint16_t E, uint16_t I, FeatureBitset F)
+  constexpr SysAliasImm(StringTable::Offset N, uint16_t E, uint16_t I,
+                        FeatureBitset F)
       : SysAlias(N, E, F), ImmValue(I) {}
 };
 
@@ -371,79 +487,80 @@ namespace AArch64SVCR {
   struct SVCR : SysAlias{
     using SysAlias::SysAlias;
   };
-  #define GET_SVCR_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_SVCRValues_DECL
+#define GET_SVCRsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace AArch64AT{
   struct AT : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_AT_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_ATValues_DECL
+#define GET_ATsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace AArch64DB {
   struct DB : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_DB_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_DBValues_DECL
+#define GET_DBsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace AArch64DBnXS {
   struct DBnXS : SysAliasImm {
     using SysAliasImm::SysAliasImm;
   };
-  #define GET_DBNXS_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_DBnXSValues_DECL
+#define GET_DBnXSsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace  AArch64DC {
   struct DC : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_DC_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_DCValues_DECL
+#define GET_DCsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace  AArch64IC {
   struct IC : SysAliasReg {
     using SysAliasReg::SysAliasReg;
   };
-  #define GET_IC_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_ICValues_DECL
+#define GET_ICsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace  AArch64ISB {
   struct ISB : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_ISB_DECL
-  #include "AArch64GenSystemOperands.inc"
-}
-
-namespace  AArch64TSB {
-  struct TSB : SysAlias {
-    using SysAlias::SysAlias;
-  };
-  #define GET_TSB_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_ISBValues_DECL
+#define GET_ISBsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace AArch64PRFM {
   struct PRFM : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_PRFM_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_PRFMValues_DECL
+#define GET_PRFMsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace AArch64SVEPRFM {
   struct SVEPRFM : SysAlias {
     using SysAlias::SysAlias;
   };
-#define GET_SVEPRFM_DECL
+#define GET_SVEPRFMValues_DECL
+#define GET_SVEPRFMsList_DECL
 #include "AArch64GenSystemOperands.inc"
 }
 
@@ -451,25 +568,28 @@ namespace AArch64RPRFM {
 struct RPRFM : SysAlias {
   using SysAlias::SysAlias;
 };
-#define GET_RPRFM_DECL
+#define GET_RPRFMValues_DECL
+#define GET_RPRFMsList_DECL
 #include "AArch64GenSystemOperands.inc"
 } // namespace AArch64RPRFM
 
 namespace AArch64SVEPredPattern {
   struct SVEPREDPAT {
-    const char *Name;
+    StringTable::Offset Name;
     uint16_t Encoding;
   };
-#define GET_SVEPREDPAT_DECL
+#define GET_SVEPREDPATValues_DECL
+#define GET_SVEPREDPATsList_DECL
 #include "AArch64GenSystemOperands.inc"
 }
 
 namespace AArch64SVEVecLenSpecifier {
   struct SVEVECLENSPECIFIER {
-    const char *Name;
+    StringTable::Offset Name;
     uint16_t Encoding;
   };
-#define GET_SVEVECLENSPECIFIER_DECL
+#define GET_SVEVECLENSPECIFIERValues_DECL
+#define GET_SVEVECLENSPECIFIERsList_DECL
 #include "AArch64GenSystemOperands.inc"
 } // namespace AArch64SVEVecLenSpecifier
 
@@ -551,12 +671,12 @@ LLVM_DECLARE_ENUM_AS_BITMASK(TailFoldingOpts,
                              /* LargestValue */ (long)TailFoldingOpts::Reverse);
 
 namespace AArch64ExactFPImm {
-  struct ExactFPImm {
-    const char *Name;
-    int Enum;
-    const char *Repr;
-  };
-#define GET_EXACTFPIMM_DECL
+struct ExactFPImm {
+  int Enum;
+  StringTable::Offset Repr;
+};
+#define GET_ExactFPImmValues_DECL
+#define GET_ExactFPImmsList_DECL
 #include "AArch64GenSystemOperands.inc"
 }
 
@@ -564,51 +684,25 @@ namespace AArch64PState {
   struct PStateImm0_15 : SysAlias{
     using SysAlias::SysAlias;
   };
-  #define GET_PSTATEIMM0_15_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_PStateImm0_15Values_DECL
+#define GET_PStateImm0_15sList_DECL
+#include "AArch64GenSystemOperands.inc"
 
   struct PStateImm0_1 : SysAlias{
     using SysAlias::SysAlias;
   };
-  #define GET_PSTATEIMM0_1_DECL
-  #include "AArch64GenSystemOperands.inc"
-}
-
-namespace AArch64PSBHint {
-  struct PSB : SysAlias {
-    using SysAlias::SysAlias;
-  };
-  #define GET_PSB_DECL
-  #include "AArch64GenSystemOperands.inc"
-}
-
-namespace AArch64PHint {
-struct PHint {
-  const char *Name;
-  const char *AltName;
-  unsigned Encoding;
-  FeatureBitset FeaturesRequired;
-
-  bool haveFeatures(FeatureBitset ActiveFeatures) const {
-    return ActiveFeatures[llvm::AArch64::FeatureAll] ||
-           (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
-  }
-};
-
-#define GET_PHINT_DECL
+#define GET_PStateImm0_1Values_DECL
+#define GET_PStateImm0_1sList_DECL
 #include "AArch64GenSystemOperands.inc"
-
-const PHint *lookupPHintByName(StringRef);
-const PHint *lookupPHintByEncoding(uint16_t);
-} // namespace AArch64PHint
-
-namespace AArch64BTIHint {
-  struct BTI : SysAlias {
-    using SysAlias::SysAlias;
-  };
-  #define GET_BTI_DECL
-  #include "AArch64GenSystemOperands.inc"
 }
+
+namespace AArch64TIndexHint {
+struct TIndex : SysAlias {
+  using SysAlias::SysAlias;
+};
+#define GET_TINDEX_DECL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64TIndexHint
 
 namespace AArch64SME {
 enum ToggleCondition : unsigned {
@@ -700,8 +794,7 @@ AArch64StringToVectorLayout(StringRef LayoutStr) {
 
 namespace AArch64SysReg {
   struct SysReg {
-    const char *Name;
-    const char *AltName;
+    StringTable::Offset Name;
     unsigned Encoding;
     bool Readable;
     bool Writeable;
@@ -713,31 +806,61 @@ namespace AArch64SysReg {
     }
   };
 
-  #define GET_SYSREG_DECL
-  #include "AArch64GenSystemOperands.inc"
-
-  const SysReg *lookupSysRegByName(StringRef);
-  const SysReg *lookupSysRegByEncoding(uint16_t);
+#define GET_SysRegsList_DECL
+#define GET_SysRegValues_DECL
+#include "AArch64GenSystemOperands.inc"
 
   uint32_t parseGenericRegister(StringRef Name);
   std::string genericRegisterString(uint32_t Bits);
 }
 
 namespace AArch64TLBI {
-  struct TLBI : SysAliasReg {
-    using SysAliasReg::SysAliasReg;
-  };
-  #define GET_TLBITable_DECL
-  #include "AArch64GenSystemOperands.inc"
+struct TLBI : SysAliasOptionalReg {
+  using SysAliasOptionalReg::SysAliasOptionalReg;
+};
+#define GET_TLBITable_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
-namespace AArch64PRCTX {
-  struct PRCTX : SysAliasReg {
-    using SysAliasReg::SysAliasReg;
-  };
-  #define GET_PRCTX_DECL
-  #include "AArch64GenSystemOperands.inc"
-}
+namespace AArch64TLBIP {
+struct TLBIP : TLBIPSysAlias {
+  using TLBIPSysAlias::TLBIPSysAlias;
+};
+#define GET_TLBIPTable_DECL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64TLBIP
+
+namespace AArch64GIC {
+struct GIC : SysAliasReg {
+  using SysAliasReg::SysAliasReg;
+};
+#define GET_GICTable_DECL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64GIC
+
+namespace AArch64GICR {
+struct GICR : SysAliasReg {
+  using SysAliasReg::SysAliasReg;
+};
+#define GET_GICRTable_DECL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64GICR
+
+namespace AArch64GSB {
+struct GSB : SysAlias {
+  using SysAlias::SysAlias;
+};
+#define GET_GSBTable_DECL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64GSB
+
+namespace AArch64PLBI {
+struct PLBI : SysAliasOptionalReg {
+  using SysAliasOptionalReg::SysAliasOptionalReg;
+};
+#define GET_PLBITable_DECL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64PLBI
 
 namespace AArch64II {
 /// Target Operand Flag enum.
@@ -871,6 +994,16 @@ AArch64StringToPACKeyID(StringRef Name) {
   if (Name == "db")
     return AArch64PACKey::DB;
   return std::nullopt;
+}
+
+inline static unsigned getBTIHintNum(bool CallTarget, bool JumpTarget) {
+  unsigned HintNum = 32;
+  if (CallTarget)
+    HintNum |= 2;
+  if (JumpTarget)
+    HintNum |= 4;
+  assert(HintNum != 32 && "No target kinds!");
+  return HintNum;
 }
 
 namespace AArch64 {

@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march=hexagon < %s -debug-only=packets 2>&1 | FileCheck %s
+; RUN: llc -O2 -mtriple=hexagon < %s -debug-only=packets 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; CHECK: Finalizing packet:

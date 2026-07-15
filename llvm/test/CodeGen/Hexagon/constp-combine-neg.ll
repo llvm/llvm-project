@@ -1,9 +1,9 @@
 ; XFAIL: *
 ; Implement generic selection of a constant.
 
-; RUN: llc -O2 -march=hexagon < %s | FileCheck %s --check-prefix=CHECK-TEST1
-; RUN: llc -O2 -march=hexagon < %s | FileCheck %s --check-prefix=CHECK-TEST2
-; RUN: llc -O2 -march=hexagon < %s | FileCheck %s --check-prefix=CHECK-TEST3
+; RUN: llc -O2 -mtriple=hexagon < %s | FileCheck %s --check-prefix=CHECK-TEST1
+; RUN: llc -O2 -mtriple=hexagon < %s | FileCheck %s --check-prefix=CHECK-TEST2
+; RUN: llc -O2 -mtriple=hexagon < %s | FileCheck %s --check-prefix=CHECK-TEST3
 define i32 @main() #0 {
 entry:
   %l = alloca [7 x i32], align 8
@@ -22,5 +22,5 @@ entry:
 ; CHECK-TEST2: combine(#6,#-4)
 ; CHECK-TEST3: combine(#-10,#-8)
 
-attributes #0 = { "less-precise-fpmad"="false" "frame-pointer"="non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { "less-precise-fpmad"="false" "frame-pointer"="non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "use-soft-float"="false" }
 

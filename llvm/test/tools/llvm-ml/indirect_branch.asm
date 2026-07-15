@@ -1,5 +1,5 @@
-; RUN: llvm-ml -m64 -filetype=s %s /Fo - | FileCheck %s --check-prefixes=CHECK-64,CHECK
-; RUN: llvm-ml -m32 -filetype=s %s /Fo - | FileCheck %s --check-prefixes=CHECK-32,CHECK
+; RUN: llvm-ml64 -filetype=s %s /Fo - | FileCheck %s --check-prefixes=CHECK-64,CHECK
+; RUN: llvm-ml -filetype=s %s /Fo - | FileCheck %s --check-prefixes=CHECK-32,CHECK
 
 ifdef rax
   extern fn_ref_extern : qword

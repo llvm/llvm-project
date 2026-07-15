@@ -1,8 +1,9 @@
+
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
 void fn(float x[2]) { }
 
-// CHECK-LABEL: define void {{.*}}call{{.*}}
+// CHECK-LABEL: define hidden void {{.*}}call{{.*}}
 // CHECK: [[Arr:%.*]] = alloca [2 x float]
 // CHECK: [[Tmp:%.*]] = alloca [2 x float]
 // CHECK: call void @llvm.memset.p0.i32(ptr align 4 [[Arr]], i8 0, i32 8, i1 false)
@@ -20,21 +21,21 @@ struct Obj {
 
 void fn2(Obj O[4]) { }
 
-// CHECK-LABEL: define void {{.*}}call2{{.*}}
+// CHECK-LABEL: define hidden void {{.*}}call2{{.*}}
 // CHECK: [[Arr:%.*]] = alloca [4 x %struct.Obj]
 // CHECK: [[Tmp:%.*]] = alloca [4 x %struct.Obj]
-// CHECK: call void @llvm.memset.p0.i32(ptr align 4 [[Arr]], i8 0, i32 32, i1 false)
-// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp]], ptr align 4 [[Arr]], i32 32, i1 false)
-// CHECK: call void {{.*}}fn2{{.*}}(ptr noundef byval([4 x %struct.Obj]) align 4 [[Tmp]])
+// CHECK: call void @llvm.memset.p0.i32(ptr align 1 [[Arr]], i8 0, i32 32, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[Tmp]], ptr align 1 [[Arr]], i32 32, i1 false)
+// CHECK: call void {{.*}}fn2{{.*}}(ptr noundef byval([4 x %struct.Obj]) align 1 [[Tmp]])
 void call2() {
-  Obj Arr[4] = {};
+  Obj Arr[4] = {{0, 0}, {0, 0}, {0, 0}, {0, 0}};
   fn2(Arr);
 }
 
 
 void fn3(float x[2][2]) { }
 
-// CHECK-LABEL: define void {{.*}}call3{{.*}}
+// CHECK-LABEL: define hidden void {{.*}}call3{{.*}}
 // CHECK: [[Arr:%.*]] = alloca [2 x [2 x float]]
 // CHECK: [[Tmp:%.*]] = alloca [2 x [2 x float]]
 // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Arr]], ptr align 4 {{.*}}, i32 16, i1 false)
@@ -45,7 +46,7 @@ void call3() {
   fn3(Arr);
 }
 
-// CHECK-LABEL: define void {{.*}}call4{{.*}}(ptr
+// CHECK-LABEL: define hidden void {{.*}}call4{{.*}}(ptr
 // CHECK-SAME: noundef byval([2 x [2 x float]]) align 4 [[Arr:%.*]])
 // CHECK: [[Tmp:%.*]] = alloca [2 x [2 x float]]
 // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp]], ptr align 4 [[Arr]], i32 16, i1 false)
@@ -58,7 +59,7 @@ void call4(float Arr[2][2]) {
 // Verify that each template instantiation codegens to a unique and correctly
 // mangled function name.
 
-// CHECK-LABEL: define void {{.*}}template_call{{.*}}(ptr
+// CHECK-LABEL: define hidden void {{.*}}template_call{{.*}}(ptr
 
 // CHECK-SAME: noundef byval([2 x float]) align 4 [[FA2:%[0-9A-Z]+]],
 // CHECK-SAME: ptr noundef byval([4 x float]) align 4 [[FA4:%[0-9A-Z]+]],
@@ -85,16 +86,16 @@ void template_call(float FA2[2], float FA4[4], int IA3[3]) {
 
 
 // Verify that Array parameter element access correctly codegens.
-// CHECK-LABEL: define void {{.*}}element_access{{.*}}(ptr
+// CHECK-LABEL: define hidden void {{.*}}element_access{{.*}}(ptr
 // CHECK-SAME: noundef byval([2 x float]) align 4 [[FA2:%[0-9A-Z]+]]
 
 // CHECK: [[Addr:%.*]] = getelementptr inbounds [2 x float], ptr [[FA2]], i32 0, i32 0
 // CHECK: [[Tmp:%.*]] = load float, ptr [[Addr]]
-// CHECK: call void @_Z11template_fnIfEvT_(float noundef [[Tmp]])
+// CHECK: call void @_Z11template_fnIfEvT_(float noundef nofpclass(nan inf) [[Tmp]])
 
 // CHECK: [[Idx0:%.*]] = getelementptr inbounds [2 x float], ptr [[FA2]], i32 0, i32 0
 // CHECK: [[Val0:%.*]] = load float, ptr [[Idx0]]
-// CHECK: [[Sum:%.*]] = fadd float [[Val0]], 5.000000e+00
+// CHECK: [[Sum:%.*]] = fadd reassoc nnan ninf nsz arcp afn float [[Val0]], 5.000000e+00
 // CHECK: [[Idx1:%.*]] = getelementptr inbounds [2 x float], ptr [[FA2]], i32 0, i32 1
 // CHECK: store float [[Sum]], ptr [[Idx1]]
 

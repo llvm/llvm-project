@@ -75,6 +75,11 @@ typedef union {
 #undef CRT_HAS_128BIT
 #endif
 
+// The core SPIR-V specification does not support 128-bit integers.
+#if defined(__SPIRV__)
+#undef CRT_HAS_128BIT
+#endif
+
 #ifdef CRT_HAS_128BIT
 typedef int ti_int __attribute__((mode(TI)));
 typedef unsigned tu_int __attribute__((mode(TI)));
@@ -223,7 +228,7 @@ typedef union {
 #define CRT_HAS_TF_MODE
 #endif
 
-#if __STDC_VERSION__ >= 199901L
+#if __STDC_VERSION__ >= 199901L && !defined(_MSC_VER)
 typedef float _Complex Fcomplex;
 typedef double _Complex Dcomplex;
 typedef long double _Complex Lcomplex;

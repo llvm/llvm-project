@@ -157,8 +157,8 @@ void ThunkInserter<Derived, InsertedThunksTy>::createThunkFunction(
   // generate one.  At least GlobalISel asserts if this invariant isn't
   // respected.
 
-  // Set MF properties. We never use vregs...
-  MF.getProperties().set(MachineFunctionProperties::Property::NoVRegs);
+  // Set MF properties. We never use vregs.
+  MF.getProperties().setNoVRegs();
 }
 
 template <typename Derived, typename InsertedThunksTy>

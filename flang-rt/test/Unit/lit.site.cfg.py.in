@@ -1,0 +1,15 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+import os
+
+config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
+config.llvm_build_mode = "@LLVM_BUILD_MODE@"
+config.flang_rt_source_dir = "@FLANG_RT_SOURCE_DIR@"
+config.flangrt_binary_dir = "@FLANG_RT_BINARY_DIR@"
+config.flang_rt_binary_test_dir = os.path.dirname(__file__)
+
+import lit.llvm
+lit.llvm.initialize(lit_config, config)
+
+# Let the main config do the real work.
+lit_config.load_config(config, os.path.join(config.flang_rt_source_dir, 'test', 'Unit', 'lit.cfg.py'))

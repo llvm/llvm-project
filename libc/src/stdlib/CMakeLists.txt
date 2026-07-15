@@ -62,7 +62,49 @@ add_entrypoint_object(
   HDRS
     getenv.h
   DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    .environ_internal
+)
+
+# GCC-12 crashed when building environ_internal during GIMPLE pass: waccess.
+set(environ_internal_gcc12_workaround "")
+if((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND
+   (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "12") AND
+   (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "13"))
+  set(environ_internal_gcc12_workaround "-Wno-stringop-overflow"
+      "-fdisable-tree-waccess1" "-fdisable-tree-waccess2"
+      "-fdisable-tree-waccess3")
+endif()
+
+set(environ_internal_deps
   libc.config.app_h
+  libc.hdr.types.size_t
+  libc.src.__support.alloc_checker
+  libc.src.__support.CPP.new
+  libc.src.__support.CPP.optional
+  libc.src.__support.CPP.string_view
+  libc.src.__support.macros.attributes
+  libc.src.__support.macros.config
+  libc.src.string.memory_utils.inline_memcpy
+)
+set(environ_internal_compile_options ${environ_internal_gcc12_workaround})
+
+if("libc.src.unistd.environ" IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
+  list(APPEND environ_internal_deps libc.src.unistd.environ)
+  list(APPEND environ_internal_compile_options "-DLIBC_COPT_SUPPORT_ENVIRON")
+endif()
+
+add_object_library(
+  environ_internal
+  SRCS
+    environ_internal.cpp
+  HDRS
+    environ_internal.h
+  COMPILE_OPTIONS
+    ${environ_internal_compile_options}
+  DEPENDS
+    ${environ_internal_deps}
 )
 
 add_entrypoint_object(
@@ -73,6 +115,8 @@ add_entrypoint_object(
     strfromf.h
   DEPENDS
     .str_from_util
+    libc.src.__support.CPP.limits
+    libc.src.stdio.printf_core.error_mapper
 )
 
 add_entrypoint_object(
@@ -83,6 +127,8 @@ add_entrypoint_object(
     strfromd.h
   DEPENDS
     .str_from_util
+    libc.src.__support.CPP.limits
+    libc.src.stdio.printf_core.error_mapper
 )
 
 add_entrypoint_object(
@@ -93,6 +139,8 @@ add_entrypoint_object(
     strfroml.h
   DEPENDS
     .str_from_util
+    libc.src.__support.CPP.limits
+    libc.src.stdio.printf_core.error_mapper
 )
 
 add_header_library(
@@ -185,6 +233,30 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  a64l
+  SRCS
+    a64l.cpp
+  HDRS
+    a64l.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
+    libc.src.__support.ctype_utils
+)
+
+add_entrypoint_object(
+  l64a
+  SRCS
+    l64a.cpp
+  HDRS
+    l64a.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
+    libc.src.__support.ctype_utils
+)
+
+add_entrypoint_object(
   abs
   SRCS
     abs.cpp
@@ -265,8 +337,10 @@ add_header_library(
     heap_sort.h
     quick_sort.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.include.stdlib
     libc.src.__support.CPP.cstddef
+    libc.src.string.memory_utils.inline_memcpy    
 )
 
 add_entrypoint_object(
@@ -277,6 +351,7 @@ add_entrypoint_object(
     qsort.h
   DEPENDS
     .qsort_util
+    libc.hdr.stdint_proxy
     libc.hdr.types.size_t
 )
 
@@ -288,6 +363,7 @@ add_entrypoint_object(
     qsort_r.h
   DEPENDS
     .qsort_util
+    libc.hdr.stdint_proxy
     libc.hdr.types.size_t
 )
 
@@ -323,7 +399,109 @@ add_entrypoint_object(
     .rand_util
 )
 
-if(NOT LIBC_TARGET_OS_IS_GPU)
+add_entrypoint_object(
+  memalignment
+  SRCS
+    memalignment.cpp
+  HDRS
+    memalignment.h
+  DEPENDS
+    libc.src.__support.common
+    libc.hdr.types.size_t
+)
+
+add_entrypoint_object(
+  mkstemp
+  SRCS
+    mkstemp.cpp
+  HDRS
+    mkstemp.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getrandom
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
+  mbtowc
+  SRCS
+    mbtowc.cpp
+  HDRS
+    mbtowc.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.libc_errno
+    libc.src.__support.wchar.mbrtowc
+    libc.src.__support.wchar.mbstate
+)
+
+add_entrypoint_object(
+  mblen
+  SRCS
+    mblen.cpp
+  HDRS
+    mblen.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.libc_errno
+    libc.src.__support.wchar.mbrtowc
+    libc.src.__support.wchar.mbstate
+)
+
+add_entrypoint_object(
+  mbstowcs
+  SRCS
+    mbstowcs.cpp
+  HDRS
+    mbstowcs.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.libc_errno
+    libc.src.__support.wchar.mbstate
+    libc.src.__support.wchar.mbsnrtowcs
+)
+
+add_entrypoint_object(
+  wctomb
+  SRCS
+    wctomb.cpp
+  HDRS
+    wctomb.h
+  DEPENDS
+    libc.hdr.types.wchar_t
+    libc.src.__support.wchar.wcrtomb
+    libc.src.__support.wchar.mbstate
+    libc.src.__support.libc_errno
+)
+
+add_entrypoint_object(
+  wcstombs
+  SRCS
+    wcstombs.cpp
+  HDRS
+    wcstombs.h
+  DEPENDS
+    libc.hdr.types.wchar_t
+    libc.src.__support.wchar.mbstate
+    libc.src.__support.wchar.wcsnrtombs
+    libc.src.__support.libc_errno
+)
+
+if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
   if(LLVM_LIBC_INCLUDE_SCUDO)
     set(SCUDO_DEPS "")
 
@@ -349,7 +527,7 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
 
     list(APPEND SCUDO_DEPS RTScudoStandalone.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
         RTScudoStandaloneCWrappers.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO})
-    
+
     if (COMPILER_RT_BUILD_GWP_ASAN)
       list(APPEND SCUDO_DEPS
         RTGwpAsan.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
@@ -388,33 +566,14 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
       DEPENDS
         ${SCUDO_DEPS}
     )
-  else()
-    # Only use freelist malloc for baremetal targets.
-    add_entrypoint_object(
-      freelist_malloc
-      SRCS
-        freelist_malloc.cpp
-      HDRS
-        malloc.h
-      DEPENDS
-        libc.src.__support.freelist_heap
-    )
-    get_target_property(freelist_malloc_is_skipped libc.src.stdlib.freelist_malloc "SKIPPED")
-    if(LIBC_TARGET_OS_IS_BAREMETAL AND NOT freelist_malloc_is_skipped)
-      add_entrypoint_object(
-        malloc
-        ALIAS
-        DEPENDS
-          .freelist_malloc
-      )
-    else()
-      add_entrypoint_external(
-        malloc
-      )
-    endif()
-
     add_entrypoint_external(
-      free
+      posix_memalign
+      DEPENDS
+        ${SCUDO_DEPS}
+    )
+  else()
+    add_entrypoint_external(
+      malloc
     )
     add_entrypoint_external(
       calloc
@@ -425,8 +584,28 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
     add_entrypoint_external(
       aligned_alloc
     )
+    add_entrypoint_external(
+      free
+    )
+    add_entrypoint_external(
+      mallopt
+    )
+    add_entrypoint_external(
+      posix_memalign
+    )
   endif()
 endif()
+
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+endif()
+
+add_entrypoint_object(
+  realpath
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.realpath
+)
 
 if(NOT LLVM_LIBC_FULL_BUILD)
   return()
@@ -509,11 +688,21 @@ add_entrypoint_object(
     libc.src.__support.str_to_integer
 )
 
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
-endif()
+add_entrypoint_object(
+  setenv
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setenv
+)
 
-if(LIBC_TARGET_OS_IS_GPU)
+add_entrypoint_object(
+  unsetenv
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.unsetenv
+)
+
+if(LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU)
   add_entrypoint_object(
     malloc
     ALIAS
@@ -557,7 +746,7 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.osutil
 )
 
-# TODO: Move all exit functions to linux specific 
+# TODO: Move all exit functions to linux specific
 
 if(TARGET libc.src.__support.threads.mutex)
 add_header_library(
@@ -581,7 +770,7 @@ add_entrypoint_object(
   HDRS
     atexit.h
   CXX_STANDARD
-    20 # For constinit 
+    20 # For constinit
   DEPENDS
     .exit_handler
 )
@@ -593,7 +782,7 @@ add_entrypoint_object(
   HDRS
     at_quick_exit.h
   CXX_STANDARD
-    20 # For constinit 
+    20 # For constinit
   DEPENDS
     .exit_handler
     .atexit
@@ -619,11 +808,22 @@ add_entrypoint_object(
     ${exit_deps}
 )
 
+add_header_library(
+  abort_utils
+  HDRS
+    abort_utils.h
+  DEPENDS
+    .${LIBC_TARGET_OS}.abort_utils
+)
+
 add_entrypoint_object(
   abort
-  ALIAS
+  SRCS
+    abort.cpp
+  HDRS
+    abort.h
   DEPENDS
-    .${LIBC_TARGET_OS}.abort
+    .abort_utils
 )
 
 add_entrypoint_object(

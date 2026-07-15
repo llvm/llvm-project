@@ -10,8 +10,4 @@
 
 #include "src/complex/crealf128.h"
 
-#if defined(LIBC_TYPES_HAS_CFLOAT128)
-
 LIST_CREAL_TESTS(cfloat128, float128, LIBC_NAMESPACE::crealf128)
-
-#endif // LIBC_TYPES_HAS_CFLOAT128

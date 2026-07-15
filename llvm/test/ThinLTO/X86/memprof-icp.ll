@@ -69,9 +69,10 @@
 
 ; RUN: split-file %s %t
 
-;; For now explicitly turn on this handling, which is off by default.
-; RUN: opt -thinlto-bc %t/main.ll -enable-memprof-indirect-call-support=true >%t/main.o
-; RUN: opt -thinlto-bc %t/foo.ll -enable-memprof-indirect-call-support=true >%t/foo.o
+; RUN: opt -thinlto-bc %t/main.ll >%t/main.o
+;; Check that -module-summary-max-indirect-edges correctly overrides
+;; -icp-max-prom with a higher max when building summary.
+; RUN: opt -thinlto-bc -icp-max-prom=1 -module-summary-max-indirect-edges=2 %t/foo.ll >%t/foo.o
 
 ;; Check that we get the synthesized callsite records. There should be 2, one
 ;; for each profiled target in the VP metadata. They will have the same stackIds
@@ -83,12 +84,14 @@
 ;; -enable-memprof-indirect-call-support flag is false.
 ; RUN: opt -thinlto-bc %t/foo.ll -enable-memprof-indirect-call-support=false >%t/foo.noicp.o
 ; RUN: llvm-dis %t/foo.noicp.o -o - | FileCheck %s --implicit-check-not "stackIds: (16345663650247127235)"
-;; Currently this should be off by default as well.
-; RUN: opt -thinlto-bc %t/foo.ll -o - | llvm-dis -o - | FileCheck %s --implicit-check-not "stackIds: (16345663650247127235)"
 
 ;; First perform in-process ThinLTO
 ; RUN: llvm-lto2 run %t/main.o %t/foo.o -enable-memprof-context-disambiguation \
 ; RUN:	-enable-memprof-indirect-call-support=true \
+;; Check that -module-summary-max-indirect-edges correctly overrides
+;; -icp-max-prom with a higher max when performing memprof ICP.
+; RUN:	-icp-max-prom=1 \
+; RUN:	-module-summary-max-indirect-edges=2 \
 ; RUN:  -supports-hot-cold-new \
 ; RUN:  -r=%t/foo.o,_Z3fooR2B0j,plx \
 ; RUN:  -r=%t/foo.o,_ZN2B03barEj.abc,plx \
@@ -113,11 +116,17 @@
 ; RUN:	-thinlto-threads=1 \
 ; RUN:  -memprof-verify-ccg -memprof-verify-nodes -stats \
 ; RUN:  -pass-remarks=. -save-temps \
+; RUN:	-memprof-export-to-dot -memprof-dot-file-path-prefix=%t. \
 ; RUN:  -o %t.out 2>&1 | FileCheck %s --check-prefix=STATS \
 ; RUN:  --check-prefix=STATS-BE --check-prefix=REMARKS-MAIN \
 ; RUN:  --check-prefix=REMARKS-FOO --check-prefix=REMARKS-FOO-IMPORT
 
 ; RUN: llvm-dis %t.out.2.4.opt.bc -o - | FileCheck %s --check-prefix=IR --check-prefix=IR-IMPORT
+
+;; We should print both potential indirect callees after initially matching
+;; stack nodes to the summary.
+; RUN: cat %t.ccg.poststackupdate.dot | FileCheck %s --check-prefix=DOT
+; DOT: {OrigId: 0 NodeId: 10\n_Z3fooR2B0j -\> _ZN1B3barEj\n_Z3fooR2B0j -\> _ZN2B03barEj}
 
 ;; Try again but with distributed ThinLTO
 ; RUN: llvm-lto2 run %t/main.o %t/foo.o -enable-memprof-context-disambiguation \
@@ -232,6 +241,7 @@
 ; RUN: llvm-lto2 run %t/main.o %t/foo.o -enable-memprof-context-disambiguation \
 ; RUN:	-import-instr-limit=0 \
 ; RUN:	-memprof-require-definition-for-promotion \
+; RUN:	-icp-allow-decls=false \
 ; RUN:	-enable-memprof-indirect-call-support=true \
 ; RUN:  -supports-hot-cold-new \
 ; RUN:  -r=%t/foo.o,_Z3fooR2B0j,plx \
@@ -302,13 +312,13 @@
 
 ; IR-NOIMPORT: foo
 ; IR: define {{.*}} @_Z3fooR2B0j(
-; IR:   %[[R1:[0-9]+]] = icmp eq ptr %0, @_ZN1B3barEj
+; IR:   %[[R1:[0-9]+]] = icmp eq ptr %0, @_ZN1B3barEj{{$}}
 ; IR:   br i1 %[[R1]], label %if.true.direct_targ, label %if.false.orig_indirect
 ; IR: if.true.direct_targ:
 ; IR-IMPORT:   call {{.*}} @_Znwm(i64 noundef 4) #[[NOTCOLD:[0-9]+]]
 ; IR-NOIMPORT: call {{.*}} @_ZN1B3barEj(
 ; IR: if.false.orig_indirect:
-; IR:   %[[R2:[0-9]+]] = icmp eq ptr %0, @_ZN2B03barEj
+; IR:   %[[R2:[0-9]+]] = icmp eq ptr %0, @_ZN2B03barEj{{$}}
 ; IR:   br i1 %[[R2]], label %if.true.direct_targ1, label %if.false.orig_indirect2
 ; IR: if.true.direct_targ1:
 ; IR-IMPORT:   call {{.*}} @_Znwm(i64 noundef 4) #[[NOTCOLD]]
@@ -320,13 +330,13 @@
 ;; We should still compare against the original versions of bar since that is
 ;; what is in the vtable. However, we should have called the cloned versions
 ;; that perform cold allocations, which were subsequently inlined.
-; IR:   %[[R3:[0-9]+]] = icmp eq ptr %0, @_ZN1B3barEj
+; IR:   %[[R3:[0-9]+]] = icmp eq ptr %0, @_ZN1B3barEj{{$}}
 ; IR:   br i1 %[[R3]], label %if.true.direct_targ, label %if.false.orig_indirect
 ; IR: if.true.direct_targ:
 ; IR-IMPORT:   call {{.*}} @_Znwm(i64 noundef 4) #[[COLD:[0-9]+]]
 ; IR-NOIMPORT: call {{.*}} @_ZN1B3barEj.memprof.1(
 ; IR: if.false.orig_indirect:
-; IR:   %[[R4:[0-9]+]] = icmp eq ptr %0, @_ZN2B03barEj
+; IR:   %[[R4:[0-9]+]] = icmp eq ptr %0, @_ZN2B03barEj{{$}}
 ; IR:   br i1 %[[R4]], label %if.true.direct_targ1, label %if.false.orig_indirect2
 ; IR: if.true.direct_targ1:
 ; IR-IMPORT:   call {{.*}} @_Znwm(i64 noundef 4) #[[COLD]]

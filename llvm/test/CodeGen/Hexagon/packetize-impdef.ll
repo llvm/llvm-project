@@ -1,4 +1,4 @@
-; RUN: llc -O3 -march=hexagon < %s | FileCheck %s
+; RUN: llc -O3 -mtriple=hexagon < %s | FileCheck %s
 ; REQUIRES: asserts
 ;
 ; Check that IMPLICIT_DEFs are packetized correctly

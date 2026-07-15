@@ -22,6 +22,9 @@
 // REQUIRES: no-exceptions
 // UNSUPPORTED: c++03, c++11, c++14
 
+// No member named 'regex'.
+// XFAIL: LLVM-LIBC-FIXME
+
 #include <cstddef>
 #include <limits>
 #include <new>

@@ -132,17 +132,15 @@ define i8 @foo2([6 x i8] %0, [6 x i8] %1, [6 x i8] %2) {
 define i8 @foo3([9 x i8] %0, [9 x i8] %1) {
 ; CHECK-LABEL: foo3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    push r16
 ; CHECK-NEXT:    push r28
 ; CHECK-NEXT:    push r29
 ; CHECK-NEXT:    in r28, 61
 ; CHECK-NEXT:    in r29, 62
-; CHECK-NEXT:    ldd r24, Y+6
-; CHECK-NEXT:    sub r16, r24
 ; CHECK-NEXT:    mov r24, r16
+; CHECK-NEXT:    ldd r25, Y+5
+; CHECK-NEXT:    sub r24, r25
 ; CHECK-NEXT:    pop r29
 ; CHECK-NEXT:    pop r28
-; CHECK-NEXT:    pop r16
 ; CHECK-NEXT:    ret
   %3 = extractvalue [9 x i8] %0, 0
   %4 = extractvalue [9 x i8] %1, 0

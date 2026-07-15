@@ -1,0 +1,16 @@
+; REQUIRES: x86
+
+; RUN: echo > %t.s
+; RUN: llvm-mc -filetype=obj -triple=i686-windows %t.s -o %t.obj
+; RUN: lld-link -machine:x86 -dll -noentry -safeseh:no -out:%t.dll -def:%s %t.obj
+; RUN: llvm-readobj --coff-exports %t.dll | FileCheck %s
+
+; CHECK:      Export {
+; CHECK-NEXT:   Ordinal: 1
+; CHECK-NEXT:   Name: func
+; CHECK-NEXT:   ForwardedTo: other.dll.func
+; CHECK-NEXT: }
+
+LIBRARY test.dll
+EXPORTS
+        func = other.dll.func

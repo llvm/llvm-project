@@ -1,4 +1,4 @@
-; RUN: llc -O0 -march=hexagon -mcpu=hexagonv60 -mattr=+hvxv60,hvx-length64b < %s | FileCheck %s
+; RUN: llc -O0 -mtriple=hexagon -mcpu=hexagonv60 -mattr=+hvxv60,hvx-length64b < %s | FileCheck %s
 
 ; CHECK: vmem
 
@@ -74,7 +74,7 @@ entry:
   ret i32 0
 }
 
-attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
-attributes #2 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #2 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 attributes #3 = { nounwind }

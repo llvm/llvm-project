@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -filetype=obj < %s | llvm-objdump -d - | FileCheck %s
+; RUN: llc -mtriple=hexagon -filetype=obj < %s | llvm-objdump -d - | FileCheck %s
 
 ; The output assembly (textual) contains the instruction
 ;   r29 = add(r29,#4294967136)

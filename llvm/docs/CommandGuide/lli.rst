@@ -43,11 +43,6 @@ GENERAL OPTIONS
 
  Print a summary of command line options.
 
-.. option:: -load=pluginfilename
-
- Causes :program:`lli` to load the plugin (shared object) named *pluginfilename* and use
- it for optimization.
-
 .. option:: -stats
 
  Print statistics from the code-generation passes. This is only meaningful for
@@ -106,11 +101,6 @@ FLOATING POINT OPTIONS
 .. option:: -enable-no-nans-fp-math
 
  Enable optimizations that assume no NAN values.
-
-.. option:: -enable-unsafe-fp-math
-
- Causes :program:`lli` to enable optimizations that may decrease floating point
- precision.
 
 .. option:: -soft-float
 

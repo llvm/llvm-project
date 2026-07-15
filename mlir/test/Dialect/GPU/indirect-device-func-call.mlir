@@ -6,7 +6,7 @@ gpu.module @kernels {
     func.func @hello(%arg0 : f32) {
         %tid_x = gpu.thread_id x
         %csti8 = arith.constant 2 : i8
-        gpu.printf "Hello from %lld, %d, %f\n" %tid_x, %csti8, %arg0  : index, i8, f32
+        gpu.printf "Hello from %lld, %d, %f\n", %tid_x, %csti8, %arg0  : index, i8, f32
         return
     }
     // CHECK-LABEL: @hello_indirect

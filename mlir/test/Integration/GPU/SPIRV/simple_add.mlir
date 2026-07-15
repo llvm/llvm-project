@@ -1,9 +1,18 @@
 // RUN: mlir-opt %s -test-spirv-cpu-runner-pipeline \
-// RUN: | mlir-cpu-runner - -e main --entry-point-result=void --shared-libs=%mlir_runner_utils,%mlir_spirv_cpu_runtime --link-nested-modules \
+// RUN: | mlir-runner - -e main --entry-point-result=void --shared-libs=%mlir_runner_utils,%mlir_spirv_cpu_runtime --link-nested-modules \
 // RUN: | FileCheck %s
 
 // CHECK: data =
-// CHECK-RAW: [[[7.7,    0,    0], [7.7,    0,    0], [7.7,    0,    0]], [[0,    7.7,    0], [0,    7.7,    0], [0,    7.7,    0]], [[0,    0,    7.7], [0,    0,    7.7], [0,    0,    7.7]]]
+// CHECK{LITERAL}: [[[7.7,    0,    0],
+// CHECK{LITERAL}: [7.7,    0,    0],
+// CHECK{LITERAL}: [7.7,    0,    0]],
+// CHECK{LITERAL}: [[0,    7.7,    0],
+// CHECK{LITERAL}: [0,    7.7,    0],
+// CHECK{LITERAL}: [0,    7.7,    0]],
+// CHECK{LITERAL}: [[0,    0,    7.7],
+// CHECK{LITERAL}: [0,    0,    7.7],
+// CHECK{LITERAL}: [0,    0,    7.7]]]
+
 module attributes {
   gpu.container_module,
   spirv.target_env = #spirv.target_env<

@@ -12,7 +12,6 @@
 #include "InputElement.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
-#include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Reproduce.h"
 #include "llvm/BinaryFormat/Wasm.h"
@@ -47,7 +46,7 @@ std::string toString(const wasm::InputFile *file) {
 namespace wasm {
 
 std::string replaceThinLTOSuffix(StringRef path) {
-  auto [suffix, repl] = config->thinLTOObjectSuffixReplace;
+  auto [suffix, repl] = ctx.arg.thinLTOObjectSuffixReplace;
   if (path.consume_back(suffix))
     return (path + repl).str();
   return std::string(path);
@@ -55,10 +54,10 @@ std::string replaceThinLTOSuffix(StringRef path) {
 
 void InputFile::checkArch(Triple::ArchType arch) const {
   bool is64 = arch == Triple::wasm64;
-  if (is64 && !config->is64) {
+  if (is64 && !ctx.arg.is64) {
     fatal(toString(this) +
           ": must specify -mwasm64 to process wasm64 object files");
-  } else if (config->is64.value_or(false) != is64) {
+  } else if (ctx.arg.is64.value_or(false) != is64) {
     fatal(toString(this) +
           ": wasm32 object file can't be linked in wasm64 mode");
   }
@@ -92,7 +91,7 @@ InputFile *createObjectFile(MemoryBufferRef mb, StringRef archiveName,
     auto *obj = cast<WasmObjectFile>(bin.get());
     if (obj->hasUnmodeledTypes())
       fatal(toString(mb.getBufferIdentifier()) +
-            "file has unmodeled reference or GC types");
+            " file has unmodeled reference or GC types");
     if (obj->isSharedObject())
       return make<SharedFile>(mb);
     return make<ObjFile>(mb, archiveName, lazy);
@@ -133,6 +132,7 @@ int64_t ObjFile::calcNewAddend(const WasmRelocation &reloc) const {
   case R_WASM_FUNCTION_OFFSET_I32:
   case R_WASM_FUNCTION_OFFSET_I64:
   case R_WASM_MEMORY_ADDR_LOCREL_I32:
+  case R_WASM_MEMORY_ADDR_LOCREL_I64:
     return reloc.Addend;
   case R_WASM_SECTION_OFFSET_I32:
     return getSectionSymbol(reloc.Index)->section->getOffset(reloc.Addend);
@@ -144,7 +144,7 @@ int64_t ObjFile::calcNewAddend(const WasmRelocation &reloc) const {
 // Translate from the relocation's index into the final linked output value.
 uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
                                const InputChunk *chunk) const {
-  const Symbol* sym = nullptr;
+  const Symbol *sym = nullptr;
   if (reloc.Type != R_WASM_TYPE_INDEX_LEB) {
     sym = symbols[reloc.Index];
 
@@ -169,7 +169,7 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
     uint32_t index = getFunctionSymbol(reloc.Index)->getTableIndex();
     if (reloc.Type == R_WASM_TABLE_INDEX_REL_SLEB ||
         reloc.Type == R_WASM_TABLE_INDEX_REL_SLEB64)
-      index -= config->tableBase;
+      index -= ctx.arg.tableBase;
     return index;
   }
   case R_WASM_MEMORY_ADDR_LEB:
@@ -182,12 +182,14 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
   case R_WASM_MEMORY_ADDR_I64:
   case R_WASM_MEMORY_ADDR_TLS_SLEB:
   case R_WASM_MEMORY_ADDR_TLS_SLEB64:
-  case R_WASM_MEMORY_ADDR_LOCREL_I32: {
+  case R_WASM_MEMORY_ADDR_LOCREL_I32:
+  case R_WASM_MEMORY_ADDR_LOCREL_I64: {
     if (isa<UndefinedData>(sym) || sym->isShared() || sym->isUndefWeak())
       return 0;
     auto D = cast<DefinedData>(sym);
     uint64_t value = D->getVA() + reloc.Addend;
-    if (reloc.Type == R_WASM_MEMORY_ADDR_LOCREL_I32) {
+    if (reloc.Type == R_WASM_MEMORY_ADDR_LOCREL_I32 ||
+        reloc.Type == R_WASM_MEMORY_ADDR_LOCREL_I64) {
       const auto *segment = cast<InputSegment>(chunk);
       uint64_t p = segment->outputSeg->startVA + segment->outputSegmentOffset +
                    reloc.Offset - segment->getInputSectionOffset();
@@ -209,7 +211,7 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
     return getTagSymbol(reloc.Index)->getTagIndex();
   case R_WASM_FUNCTION_OFFSET_I32:
   case R_WASM_FUNCTION_OFFSET_I64: {
-    if (isa<UndefinedFunction>(sym)) {
+    if (isa<UndefinedFunction>(sym) || sym->isShared()) {
       return tombstone ? tombstone : reloc.Addend;
     }
     auto *f = cast<DefinedFunction>(sym);
@@ -255,13 +257,14 @@ static void setRelocs(const std::vector<T *> &chunks,
   }
 }
 
-// An object file can have two approaches to tables.  With the reference-types
-// feature enabled, input files that define or use tables declare the tables
-// using symbols, and record each use with a relocation.  This way when the
-// linker combines inputs, it can collate the tables used by the inputs,
-// assigning them distinct table numbers, and renumber all the uses as
-// appropriate.  At the same time, the linker has special logic to build the
-// indirect function table if it is needed.
+// An object file can have two approaches to tables.  With the
+// reference-types feature or call-indirect-overlong feature enabled
+// (explicitly, or implied by the reference-types feature), input files that
+// define or use tables declare the tables using symbols, and record each use
+// with a relocation.  This way when the linker combines inputs, it can collate
+// the tables used by the inputs, assigning them distinct table numbers, and
+// renumber all the uses as appropriate.  At the same time, the linker has
+// special logic to build the indirect function table if it is needed.
 //
 // However, MVP object files (those that target WebAssembly 1.0, the "minimum
 // viable product" version of WebAssembly) neither write table symbols nor
@@ -284,9 +287,9 @@ void ObjFile::addLegacyIndirectFunctionTableIfNeeded(
     return;
 
   // It's possible for an input to define tables and also use the indirect
-  // function table, but forget to compile with -mattr=+reference-types.
-  // For these newer files, we require symbols for all tables, and
-  // relocations for all of their uses.
+  // function table, but forget to compile with -mattr=+call-indirect-overlong
+  // or -mattr=+reference-types. For these newer files, we require symbols for
+  // all tables, and relocations for all of their uses.
   if (tableSymbolCount != 0) {
     error(toString(this) +
           ": expected one symbol table entry for each of the " +
@@ -359,7 +362,7 @@ void ObjFile::addLegacyIndirectFunctionTableIfNeeded(
 }
 
 static bool shouldMerge(const WasmSection &sec) {
-  if (config->optimize == 0)
+  if (ctx.arg.optimize == 0)
     return false;
   // Sadly we don't have section attributes yet for custom sections, so we
   // currently go by the name alone.
@@ -382,7 +385,7 @@ static bool shouldMerge(const WasmSegment &seg) {
   // On a regular link we don't merge sections if -O0 (default is -O1). This
   // sometimes makes the linker significantly faster, although the output will
   // be bigger.
-  if (config->optimize == 0)
+  if (ctx.arg.optimize == 0)
     return false;
 
   // A mergeable section with size 0 is useless because they don't have
@@ -422,8 +425,10 @@ ObjFile::ObjFile(MemoryBufferRef m, StringRef archiveName, bool lazy)
   // https://github.com/llvm/llvm-project/issues/98778
   checkArch(wasmObj->getArch());
 
-  // If this isn't part of an archive, it's eagerly linked, so mark it live.
-  if (archiveName.empty())
+  // Unless we are processing this as a lazy object file (e.g. part of an
+  // archive file or within `--start-lib`/`--end-lib`, it's eagerly linked, so
+  // mark it live.
+  if (!lazy)
     markLive();
 }
 
@@ -450,6 +455,9 @@ void SharedFile::parse() {
         break;
       case WASM_SYMBOL_TYPE_DATA:
         s = symtab->addSharedData(name, flags, this);
+        break;
+      case WASM_SYMBOL_TYPE_TAG:
+        s = symtab->addSharedTag(name, flags, this, wasmSym.Signature);
         break;
       default:
         continue;
@@ -559,7 +567,6 @@ void ObjFile::parse(bool ignoreComdats) {
 
   typeMap.resize(getWasmObj()->types().size());
   typeIsUsed.resize(getWasmObj()->types().size(), false);
-
 
   // Populate `Segments`.
   for (const WasmSegment &s : wasmObj->dataSegments()) {
@@ -844,7 +851,7 @@ BitcodeFile::BitcodeFile(MemoryBufferRef m, StringRef archiveName,
   this->archiveName = std::string(archiveName);
 
   std::string path = mb.getBufferIdentifier().str();
-  if (config->thinLTOIndexOnly)
+  if (ctx.arg.thinLTOIndexOnly)
     path = replaceThinLTOSuffix(mb.getBufferIdentifier());
 
   // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
@@ -884,7 +891,8 @@ void BitcodeFile::parseLazy() {
 
 void BitcodeFile::parse(StringRef symName) {
   if (doneLTO) {
-    error(toString(this) + ": attempt to add bitcode file after LTO (" + symName + ")");
+    error(toString(this) + ": attempt to add bitcode file after LTO (" +
+          symName + ")");
     return;
   }
 

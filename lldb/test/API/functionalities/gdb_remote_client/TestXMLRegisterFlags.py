@@ -194,10 +194,10 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
         self.expect(
             "register read cpsr x0",
             substrs=[
-                "    cpsr = 0xeeee7777\n"
-                "         = (msb = 1, lsb = 1)\n"
-                "      x0 = 0xeeeeeeee77777777\n"
-                "         = (msb = 1, lsb = 1)"
+                "  cpsr = 0xeeee7777\n"
+                "       = (msb = 1, lsb = 1)\n"
+                "    x0 = 0xeeeeeeee77777777\n"
+                "       = (msb = 1, lsb = 1)"
             ],
         )
 
@@ -237,10 +237,10 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
         self.expect(
             "register read r0 fpc",
             substrs=[
-                "      r0 = 0x77777777eeeeeeee\n"
-                "         = (msb = 0, lsb = 0)\n"
-                "     fpc = 0x7777eeee\n"
-                "         = (msb = 0, lsb = 0)\n"
+                "   r0 = 0x77777777eeeeeeee\n"
+                "      = (msb = 0, lsb = 0)\n"
+                "  fpc = 0x7777eeee\n"
+                "      = (msb = 0, lsb = 0)\n"
             ],
         )
 
@@ -266,10 +266,10 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
         self.expect(
             "register read cpsr x0",
             substrs=[
-                "    cpsr = 0xeeee7777\n"
-                "         = (correct = 1)\n"
-                "      x0 = 0xeeeeeeee77777777\n"
-                "         = (foo = 1)"
+                "  cpsr = 0xeeee7777\n"
+                "       = (correct = 1)\n"
+                "    x0 = 0xeeeeeeee77777777\n"
+                "       = (foo = 1)"
             ],
         )
 
@@ -450,13 +450,13 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
         self.expect(
             "register read cpsr",
             substrs=[
-                "    cpsr = 0xeeee7777\n"
-                "         = {\n"
-                "             this_is_a_long_field_3 = 0\n"
-                "             this_is_a_long_field_2 = 1\n"
-                "             this_is_a_long_field_1 = 1\n"
-                "             this_is_a_long_field_0 = 1\n"
-                "           }"
+                "  cpsr = 0xeeee7777\n"
+                "       = {\n"
+                "           this_is_a_long_field_3 = 0\n"
+                "           this_is_a_long_field_2 = 1\n"
+                "           this_is_a_long_field_1 = 1\n"
+                "           this_is_a_long_field_0 = 1\n"
+                "         }"
             ],
         )
 
@@ -487,7 +487,7 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
     @skipIfXmlSupportMissing
     @skipIfRemote
     def test_xml_includes(self):
-        # Certain targets e.g. s390x QEMU split their defintions over multiple
+        # Certain targets e.g. s390x QEMU split their definitions over multiple
         # files that are included into target.xml.
         self.setup_multidoc_test(
             {
@@ -678,7 +678,7 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
           <reg name="cpsr" regnum="33" bitsize="32" type="cpsr_flags"/>"""
         )
 
-        self.expect("register read cpsr", patterns=["\(E = 1\)$"])
+        self.expect("register read cpsr", patterns=[r"\(E = 1\)$"])
 
     @skipIfXmlSupportMissing
     @skipIfRemote
@@ -701,7 +701,7 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
         )
 
         self.expect("register info cpsr", patterns=["E: 1 = def, 2 = geh$"])
-        self.expect("register read cpsr", patterns=["\(E = def \| geh\)$"])
+        self.expect("register read cpsr", patterns=[r"\(E = def \| geh\)$"])
 
     @skipIfXmlSupportMissing
     @skipIfRemote
@@ -725,7 +725,7 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
         )
 
         self.expect("register info cpsr", patterns=["E: 1 = def$"])
-        self.expect("register read cpsr", patterns=["\(E = def\)$"])
+        self.expect("register read cpsr", patterns=[r"\(E = def\)$"])
 
     @skipIfXmlSupportMissing
     @skipIfRemote
@@ -1005,16 +1005,14 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
         expected_info = [
             dedent(
                 """\
-             f2: 1 = valid
-
-             f1: 1 = valid$"""
+             f2, f1: 1 = valid$"""
             )
         ]
         self.expect("register info x0", patterns=expected_info)
 
         self.expect("register info cpsr", patterns=expected_info)
 
-        expected_read = ["\(f2 = valid, f1 = valid\)$"]
+        expected_read = [r"\(f2 = valid, f1 = valid\)$"]
         self.expect("register read x0", patterns=expected_read)
         self.expect("register read cpsr", patterns=expected_read)
 
@@ -1055,4 +1053,4 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
             ],
         )
 
-        self.expect("register read x0", patterns=["\(foo = foo_1, foo = foo_0\)$"])
+        self.expect("register read x0", patterns=[r"\(foo = foo_1, foo = foo_0\)$"])

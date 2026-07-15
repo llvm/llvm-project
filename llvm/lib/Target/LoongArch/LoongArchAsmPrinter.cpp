@@ -15,15 +15,18 @@
 #include "LoongArch.h"
 #include "LoongArchMachineFunctionInfo.h"
 #include "MCTargetDesc/LoongArchInstPrinter.h"
+#include "MCTargetDesc/LoongArchMCAsmInfo.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "TargetInfo/LoongArchTargetInfo.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace llvm;
 
@@ -38,6 +41,11 @@ cl::opt<bool> LArchAnnotateTableJump(
 // Simple pseudo-instructions have their lowering (with expansion to real
 // instructions) auto-generated.
 #include "LoongArchGenMCPseudoLowering.inc"
+
+LoongArchTargetStreamer &LoongArchAsmPrinter::getTargetStreamer() const {
+  return static_cast<LoongArchTargetStreamer &>(
+      *OutStreamer->getTargetStreamer());
+}
 
 void LoongArchAsmPrinter::emitInstruction(const MachineInstr *MI) {
   LoongArch_MC::verifyInstructionPredicates(
@@ -90,20 +98,29 @@ bool LoongArchAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
         return false;
       }
       break;
-    case 'w': // Print LSX registers.
-      if (MO.getReg().id() >= LoongArch::VR0 &&
-          MO.getReg().id() <= LoongArch::VR31)
-        break;
-      // The modifier is 'w' but the operand is not an LSX register; Report an
-      // unknown operand error.
-      return true;
     case 'u': // Print LASX registers.
-      if (MO.getReg().id() >= LoongArch::XR0 &&
-          MO.getReg().id() <= LoongArch::XR31)
-        break;
-      // The modifier is 'u' but the operand is not an LASX register; Report an
-      // unknown operand error.
-      return true;
+    case 'w': // Print LSX registers.
+    {
+      // If the operand is an LASX, LSX or floating point register, print the
+      // name of LASX or LSX register with the same index in that register
+      // class.
+      unsigned RegID = MO.getReg().id(), FirstReg;
+      if (RegID >= LoongArch::XR0 && RegID <= LoongArch::XR31)
+        FirstReg = LoongArch::XR0;
+      else if (RegID >= LoongArch::VR0 && RegID <= LoongArch::VR31)
+        FirstReg = LoongArch::VR0;
+      else if (RegID >= LoongArch::F0_64 && RegID <= LoongArch::F31_64)
+        FirstReg = LoongArch::F0_64;
+      else if (RegID >= LoongArch::F0 && RegID <= LoongArch::F31)
+        FirstReg = LoongArch::F0;
+      else
+        return true;
+      OS << '$'
+         << LoongArchInstPrinter::getRegisterName(
+                RegID - FirstReg +
+                (ExtraCode[0] == 'u' ? LoongArch::XR0 : LoongArch::VR0));
+      return false;
+    }
       // TODO: handle other extra codes if any.
     }
   }
@@ -151,9 +168,10 @@ bool LoongArchAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   else if (OffsetMO.isImm())
     OS << ", " << OffsetMO.getImm();
   else if (OffsetMO.isGlobal() || OffsetMO.isBlockAddress() ||
-           OffsetMO.isMCSymbol())
-    OS << ", " << *MCO.getExpr();
-  else
+           OffsetMO.isMCSymbol() || OffsetMO.isCPI()) {
+    OS << ", ";
+    MAI.printExpr(OS, *MCO.getExpr());
+  } else
     return true;
 
   return false;
@@ -203,11 +221,7 @@ void LoongArchAsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(
     const MachineInstr &MI) {
   const Function &F = MF->getFunction();
   if (F.hasFnAttribute("patchable-function-entry")) {
-    unsigned Num;
-    if (F.getFnAttribute("patchable-function-entry")
-            .getValueAsString()
-            .getAsInteger(10, Num))
-      return;
+    unsigned Num = F.getFnAttributeAsParsedInteger("patchable-function-entry");
     emitNops(Num);
     return;
   }
@@ -236,7 +250,7 @@ void LoongArchAsmPrinter::emitSled(const MachineInstr &MI, SledKind Kind) {
   // The count here should be adjusted accordingly if the implementation
   // changes.
   const int8_t NoopsInSledCount = 11;
-  OutStreamer->emitCodeAlignment(Align(4), &getSubtargetInfo());
+  OutStreamer->emitCodeAlignment(Align(4), getSubtargetInfo());
   MCSymbol *BeginOfSled = OutContext.createTempSymbol("xray_sled_begin");
   MCSymbol *EndOfSled = OutContext.createTempSymbol("xray_sled_end");
   OutStreamer->emitLabel(BeginOfSled);
@@ -256,12 +270,15 @@ void LoongArchAsmPrinter::emitJumpTableInfo() {
 
   assert(TM.getTargetTriple().isOSBinFormatELF());
 
-  unsigned Size = getDataLayout().getPointerSize();
   auto *LAFI = MF->getInfo<LoongArchMachineFunctionInfo>();
   unsigned EntrySize = LAFI->getJumpInfoSize();
+  auto JTI = MF->getJumpTableInfo();
 
-  if (0 == EntrySize)
+  if (!JTI || 0 == EntrySize)
     return;
+
+  unsigned Size = getDataLayout().getPointerSize();
+  const auto &JT = JTI->getJumpTables();
 
   // Emit an additional section to store the correlation info as pairs of
   // addresses, each pair contains the address of a jump instruction (jr) and
@@ -270,15 +287,38 @@ void LoongArchAsmPrinter::emitJumpTableInfo() {
       ".discard.tablejump_annotate", ELF::SHT_PROGBITS, 0));
 
   for (unsigned Idx = 0; Idx < EntrySize; ++Idx) {
+    int JTIIdx = LAFI->getJumpInfoJTIIndex(Idx);
+    if (JT[JTIIdx].MBBs.empty())
+      continue;
     OutStreamer->emitValue(
         MCSymbolRefExpr::create(LAFI->getJumpInfoJrMI(Idx)->getPreInstrSymbol(),
                                 OutContext),
         Size);
     OutStreamer->emitValue(
-        MCSymbolRefExpr::create(
-            GetJTISymbol(LAFI->getJumpInfoJTIMO(Idx)->getIndex()), OutContext),
-        Size);
+        MCSymbolRefExpr::create(GetJTISymbol(JTIIdx), OutContext), Size);
   }
+}
+
+// Emit .dtprelword or .dtpreldword directive
+// and value for debug thread local expression.
+void LoongArchAsmPrinter::emitDebugValue(const MCExpr *Value,
+                                         unsigned Size) const {
+  if (auto *Expr = dyn_cast<MCSpecifierExpr>(Value)) {
+    if (Expr->getSpecifier() == LoongArchMCExpr::VK_DTPREL) {
+      switch (Size) {
+      case 4:
+        getTargetStreamer().emitDTPRel32Value(Expr->getSubExpr());
+        break;
+      case 8:
+        getTargetStreamer().emitDTPRel64Value(Expr->getSubExpr());
+        break;
+      default:
+        llvm_unreachable("Unexpected size of expression value.");
+      }
+      return;
+    }
+  }
+  AsmPrinter::emitDebugValue(Value, Size);
 }
 
 bool LoongArchAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
@@ -288,8 +328,14 @@ bool LoongArchAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
+char LoongArchAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(LoongArchAsmPrinter, "loongarch-asm-printer",
+                "LoongArch Assembly Printer", false, false)
+
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeLoongArchAsmPrinter() {
   RegisterAsmPrinter<LoongArchAsmPrinter> X(getTheLoongArch32Target());
   RegisterAsmPrinter<LoongArchAsmPrinter> Y(getTheLoongArch64Target());
 }

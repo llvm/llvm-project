@@ -1,4 +1,4 @@
-//===----- detail.h - HLSL definitions for intrinsics ----------===//
+//===----- hlsl_detail.h - HLSL definitions for intrinsics ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,6 +13,14 @@ namespace hlsl {
 
 namespace __detail {
 
+template <typename T, typename U> struct is_same {
+  static const bool value = false;
+};
+
+template <typename T> struct is_same<T, T> {
+  static const bool value = true;
+};
+
 template <bool B, typename T> struct enable_if {};
 
 template <typename T> struct enable_if<true, T> {
@@ -21,6 +29,12 @@ template <typename T> struct enable_if<true, T> {
 
 template <bool B, class T = void>
 using enable_if_t = typename enable_if<B, T>::Type;
+
+template <typename U, typename T, int R, int C>
+constexpr enable_if_t<sizeof(U) == sizeof(T), matrix<U, R, C>>
+bit_cast(matrix<T, R, C> M) {
+  return __builtin_bit_cast(matrix<U, R, C>, M);
+}
 
 template <typename U, typename T, int N>
 constexpr enable_if_t<sizeof(U) == sizeof(T), vector<U, N>>
@@ -32,6 +46,10 @@ template <typename U, typename T>
 constexpr enable_if_t<sizeof(U) == sizeof(T), U> bit_cast(T F) {
   return __builtin_bit_cast(U, F);
 }
+
+template <typename T> struct is_arithmetic {
+  static const bool Value = __is_arithmetic(T);
+};
 
 } // namespace __detail
 } // namespace hlsl

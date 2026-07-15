@@ -32,7 +32,7 @@ def SPIRVCompositeTypeLayoutPass
 }
 
 def SPIRVLowerABIAttributesPass : Pass<"spirv-lower-abi-attrs", "spirv::ModuleOp"> {
-  let summary = "Decorate SPIR-V composite type with layout info";
+  let summary = "Lower SPIR-V ABI attributes to global variables and entry points";
   let description = [{
     Operation pass that lowers the ABI attributes specified during
     SPIR-V Lowering. Specifically:
@@ -75,6 +75,13 @@ def SPIRVUpdateVCEPass : Pass<"spirv-update-vce", "spirv::ModuleOp"> {
 def SPIRVWebGPUPreparePass : Pass<"spirv-webgpu-prepare", "spirv::ModuleOp"> {
   let summary = "Prepare SPIR-V to target WebGPU by expanding unsupported ops "
                 "and replacing with supported ones";
+}
+
+def SPIRVReplicatedConstantCompositePass
+    : Pass<"spirv-promote-to-replicated-constants", "spirv::ModuleOp"> {
+  let summary = "Convert splat composite constants and spec constants to "
+                "corresponding replicated constant composite ops defined by "
+                "SPV_EXT_replicated_composites";
 }
 
 #endif // MLIR_DIALECT_SPIRV_TRANSFORMS_PASSES

@@ -1,7 +1,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 -mattr=-altivec < %s | \
 ; RUN:   FileCheck --check-prefix=CHECK32 %s
 
-; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 -mattr=-altivec < %s | \
+; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 -mattr=-altivec --code-model=small < %s | \
 ; RUN:   FileCheck --check-prefix=CHECK64 %s
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 \
@@ -10,7 +10,7 @@
 ; RUN: llvm-objdump -r -d --symbol-description %t.o | FileCheck -D#NFA=2 --check-prefixes=CHECKRELOC,CHECKRELOC32 %s
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 \
-; RUN:     -mattr=-altivec -filetype=obj -o %t64.o < %s
+; RUN:     -mattr=-altivec --code-model=small -filetype=obj -o %t64.o < %s
 ; RUN: llvm-readobj --symbols %t64.o | FileCheck --check-prefixes=CHECKSYM,CHECKSYM64 %s
 ; RUN: llvm-objdump -r -d --symbol-description %t64.o | FileCheck -D#NFA=2 --check-prefixes=CHECKRELOC,CHECKRELOC64 %s
 
@@ -44,8 +44,7 @@ declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)
 ; CHECKSYM-NEXT:     Value (SymbolTableIndex): 0x0
 ; CHECKSYM-NEXT:     Section: N_DEBUG
 ; CHECKSYM-NEXT:     Source Language ID: TB_CPLUSPLUS (0x9)
-; CHECKSYM32-NEXT:   CPU Version ID: TCPU_COM (0x3)
-; CHECKSYM64-NEXT:   CPU Version ID: TCPU_PPC64 (0x2)
+; CHECKSYM-NEXT:     CPU Version ID: TCPU_COM (0x3)
 ; CHECKSYM-NEXT:     StorageClass: C_FILE (0x67)
 ; CHECKSYM-NEXT:     NumberOfAuxEntries: 2
 ; CHECKSYM:   }

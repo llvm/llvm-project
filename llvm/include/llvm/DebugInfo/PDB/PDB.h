@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <memory>
 
@@ -19,11 +20,11 @@ namespace pdb {
 
 class IPDBSession;
 
-Error loadDataForPDB(PDB_ReaderType Type, StringRef Path,
-                     std::unique_ptr<IPDBSession> &Session);
+LLVM_ABI Error loadDataForPDB(PDB_ReaderType Type, StringRef Path,
+                              std::unique_ptr<IPDBSession> &Session);
 
-Error loadDataForEXE(PDB_ReaderType Type, StringRef Path,
-                     std::unique_ptr<IPDBSession> &Session);
+LLVM_ABI Error loadDataForEXE(PDB_ReaderType Type, StringRef Path,
+                              std::unique_ptr<IPDBSession> &Session);
 
 } // end namespace pdb
 } // end namespace llvm

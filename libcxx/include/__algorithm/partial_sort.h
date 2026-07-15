@@ -45,7 +45,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _RandomAccessIterator __part
   for (; __i != __last; ++__i) {
     if (__comp(*__i, *__first)) {
       _IterOps<_AlgPolicy>::iter_swap(__i, __first);
-      std::__sift_down<_AlgPolicy>(__first, __comp, __len, __first);
+      std::__sift_down<_AlgPolicy, false>(__first, __comp, __len, 0);
     }
   }
   std::__sort_heap<_AlgPolicy>(std::move(__first), std::move(__middle), __comp);

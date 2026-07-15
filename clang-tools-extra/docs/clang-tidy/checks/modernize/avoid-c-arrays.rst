@@ -5,8 +5,6 @@ modernize-avoid-c-arrays
 
 `cppcoreguidelines-avoid-c-arrays` redirects here as an alias for this check.
 
-`hicpp-avoid-c-arrays` redirects here as an alias for this check.
-
 Finds C-style array types and recommend to use ``std::array<>`` /
 ``std::vector<>``. All types of C arrays are diagnosed.
 
@@ -61,6 +59,9 @@ such headers between C code, and C++ code.
 Similarly, the ``main()`` function is ignored. Its second and third parameters
 can be either ``char* argv[]`` or ``char** argv``, but cannot be
 ``std::array<>``.
+
+Options
+-------
 
 .. option:: AllowStringArrays
 

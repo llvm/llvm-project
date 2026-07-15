@@ -21,13 +21,13 @@ define void @test1(ptr %a, ptr %b, ptr %c) {
 ; NOSLP-NEXT:    [[I0:%.*]] = load double, ptr [[A:%.*]], align 8
 ; NOSLP-NEXT:    [[I1:%.*]] = load double, ptr [[B:%.*]], align 8
 ; NOSLP-NEXT:    [[MUL:%.*]] = fmul double [[I0]], [[I1]]
-; NOSLP-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 8
+; NOSLP-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
 ; NOSLP-NEXT:    [[I3:%.*]] = load double, ptr [[ARRAYIDX3]], align 8
-; NOSLP-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 8
+; NOSLP-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 8
 ; NOSLP-NEXT:    [[I4:%.*]] = load double, ptr [[ARRAYIDX4]], align 8
 ; NOSLP-NEXT:    [[MUL5:%.*]] = fmul double [[I3]], [[I4]]
 ; NOSLP-NEXT:    store double [[MUL]], ptr [[C:%.*]], align 8
-; NOSLP-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 8
+; NOSLP-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 8
 ; NOSLP-NEXT:    store double [[MUL5]], ptr [[ARRAYIDX5]], align 8
 ; NOSLP-NEXT:    ret void
 ;

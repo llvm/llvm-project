@@ -7,9 +7,11 @@ body: |
   bb.0:
     liveins: $w0
     ; CHECK-LABEL: name: test_fptosi_s32_s32
-    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[DEF]](s32)
-    ; CHECK: $w0 = COPY [[FPTOSI]](s32)
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[DEF]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[FPTOSI]](s32)
     %0:_(s32) = G_IMPLICIT_DEF
     %1:_(s32) = G_FPTOSI %0
     $w0 = COPY %1
@@ -21,9 +23,11 @@ body: |
   bb.0:
     liveins: $w0
     ; CHECK-LABEL: name: test_fptoui_s32_s32
-    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[DEF]](s32)
-    ; CHECK: $w0 = COPY [[FPTOUI]](s32)
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[DEF]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[FPTOUI]](s32)
     %0:_(s32) = G_IMPLICIT_DEF
     %1:_(s32) = G_FPTOUI %0
     $w0 = COPY %1
@@ -35,9 +39,11 @@ body: |
   bb.0:
     liveins: $x0
     ; CHECK-LABEL: name: test_fptosi_s32_s64
-    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[DEF]](s32)
-    ; CHECK: $w0 = COPY [[FPTOSI]](s32)
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[DEF]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[FPTOSI]](s32)
     %0:_(s32) = G_IMPLICIT_DEF
     %1:_(s32) = G_FPTOSI %0
     $w0 = COPY %1
@@ -49,9 +55,11 @@ body: |
   bb.0:
     liveins: $x0
     ; CHECK-LABEL: name: test_fptoui_s32_s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[COPY]](s64)
-    ; CHECK: $w0 = COPY [[FPTOUI]](s32)
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[COPY]](s64)
+    ; CHECK-NEXT: $w0 = COPY [[FPTOUI]](s32)
     %0:_(s64) = COPY $x0
     %1:_(s32) = G_FPTOUI %0
     $w0 = COPY %1
@@ -63,9 +71,11 @@ body: |
   bb.0:
     liveins: $w0
     ; CHECK-LABEL: name: test_fptosi_s64_s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[FPTOSI:%[0-9]+]]:_(s64) = G_FPTOSI [[COPY]](s32)
-    ; CHECK: $x0 = COPY [[FPTOSI]](s64)
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[FPTOSI:%[0-9]+]]:_(s64) = G_FPTOSI [[COPY]](s32)
+    ; CHECK-NEXT: $x0 = COPY [[FPTOSI]](s64)
     %0:_(s32) = COPY $w0
     %1:_(s64) = G_FPTOSI %0
     $x0 = COPY %1
@@ -77,9 +87,11 @@ body: |
   bb.0:
     liveins: $w0
     ; CHECK-LABEL: name: test_fptoui_s64_s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[FPTOUI:%[0-9]+]]:_(s64) = G_FPTOUI [[COPY]](s32)
-    ; CHECK: $x0 = COPY [[FPTOUI]](s64)
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[FPTOUI:%[0-9]+]]:_(s64) = G_FPTOUI [[COPY]](s32)
+    ; CHECK-NEXT: $x0 = COPY [[FPTOUI]](s64)
     %0:_(s32) = COPY $w0
     %1:_(s64) = G_FPTOUI %0
     $x0 = COPY %1
@@ -91,9 +103,11 @@ body: |
   bb.0:
     liveins: $x0
     ; CHECK-LABEL: name: test_fptosi_s64_s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[FPTOSI:%[0-9]+]]:_(s64) = G_FPTOSI [[COPY]](s64)
-    ; CHECK: $x0 = COPY [[FPTOSI]](s64)
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[FPTOSI:%[0-9]+]]:_(s64) = G_FPTOSI [[COPY]](s64)
+    ; CHECK-NEXT: $x0 = COPY [[FPTOSI]](s64)
     %0:_(s64) = COPY $x0
     %1:_(s64) = G_FPTOSI %0
     $x0 = COPY %1
@@ -105,9 +119,11 @@ body: |
   bb.0:
     liveins: $x0
     ; CHECK-LABEL: name: test_fptoui_s64_s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[FPTOUI:%[0-9]+]]:_(s64) = G_FPTOUI [[COPY]](s64)
-    ; CHECK: $x0 = COPY [[FPTOUI]](s64)
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[FPTOUI:%[0-9]+]]:_(s64) = G_FPTOUI [[COPY]](s64)
+    ; CHECK-NEXT: $x0 = COPY [[FPTOUI]](s64)
     %0:_(s64) = COPY $x0
     %1:_(s64) = G_FPTOUI %0
     $x0 = COPY %1
@@ -121,10 +137,12 @@ body: |
   bb.0:
     liveins: $w0
     ; CHECK-LABEL: name: test_fptosi_s1_s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s32)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[FPTOSI]](s32)
-    ; CHECK: $x0 = COPY [[ANYEXT]](s64)
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s32)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[FPTOSI]](s32)
+    ; CHECK-NEXT: $x0 = COPY [[ANYEXT]](s64)
     %0:_(s32) = COPY $w0
     %1:_(s1) = G_FPTOSI %0
     %2:_(s64) = G_ANYEXT %1
@@ -137,9 +155,11 @@ body: |
   bb.0:
     liveins: $w0
     ; CHECK-LABEL: name: test_fptoui_s1_s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[COPY]](s32)
-    ; CHECK: $w0 = COPY [[FPTOUI]](s32)
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[COPY]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[FPTOUI]](s32)
     %0:_(s32) = COPY $w0
     %1:_(s1) = G_FPTOUI %0
     %2:_(s32) = G_ANYEXT %1
@@ -152,9 +172,11 @@ body: |
   bb.0:
     liveins: $x0
     ; CHECK-LABEL: name: test_fptosi_s8_s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s64)
-    ; CHECK: $w0 = COPY [[FPTOSI]](s32)
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s64)
+    ; CHECK-NEXT: $w0 = COPY [[FPTOSI]](s32)
     %0:_(s64) = COPY $x0
     %1:_(s8) = G_FPTOSI %0
     %2:_(s32) = G_ANYEXT %1
@@ -167,9 +189,11 @@ body: |
   bb.0:
     liveins: $x0
     ; CHECK-LABEL: name: test_fptoui_s8_s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[COPY]](s64)
-    ; CHECK: $w0 = COPY [[FPTOUI]](s32)
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[COPY]](s64)
+    ; CHECK-NEXT: $w0 = COPY [[FPTOUI]](s32)
     %0:_(s64) = COPY $x0
     %1:_(s8) = G_FPTOUI %0
     %2:_(s32) = G_ANYEXT %1
@@ -182,9 +206,11 @@ body: |
   bb.0:
     liveins: $w0
     ; CHECK-LABEL: name: test_fptosi_s16_s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s32)
-    ; CHECK: $w0 = COPY [[FPTOSI]](s32)
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[FPTOSI]](s32)
     %0:_(s32) = COPY $w0
     %1:_(s16) = G_FPTOSI %0
     %2:_(s32) = G_ANYEXT %1
@@ -197,9 +223,11 @@ body: |
   bb.0:
     liveins: $w0
     ; CHECK-LABEL: name: test_fptoui_s16_s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[COPY]](s32)
-    ; CHECK: $w0 = COPY [[FPTOUI]](s32)
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[COPY]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[FPTOUI]](s32)
     %0:_(s32) = COPY $w0
     %1:_(s16) = G_FPTOUI %0
     %2:_(s32) = G_ANYEXT %1
@@ -212,9 +240,11 @@ body: |
   bb.0:
     liveins: $q0
     ; CHECK-LABEL: name: test_fptoui_v4s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[FPTOUI:%[0-9]+]]:_(<4 x s32>) = G_FPTOUI [[COPY]](<4 x s32>)
-    ; CHECK: $q0 = COPY [[FPTOUI]](<4 x s32>)
+    ; CHECK: liveins: $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[FPTOUI:%[0-9]+]]:_(<4 x s32>) = G_FPTOUI [[COPY]](<4 x s32>)
+    ; CHECK-NEXT: $q0 = COPY [[FPTOUI]](<4 x s32>)
     %0:_(<4 x s32>) = COPY $q0
     %1:_(<4 x s32>) = G_FPTOUI %0
     $q0 = COPY %1
@@ -226,9 +256,11 @@ body: |
   bb.0:
     liveins: $q0
     ; CHECK-LABEL: name: test_fptosi_v4s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[FPTOSI:%[0-9]+]]:_(<4 x s32>) = G_FPTOSI [[COPY]](<4 x s32>)
-    ; CHECK: $q0 = COPY [[FPTOSI]](<4 x s32>)
+    ; CHECK: liveins: $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[FPTOSI:%[0-9]+]]:_(<4 x s32>) = G_FPTOSI [[COPY]](<4 x s32>)
+    ; CHECK-NEXT: $q0 = COPY [[FPTOSI]](<4 x s32>)
     %0:_(<4 x s32>) = COPY $q0
     %1:_(<4 x s32>) = G_FPTOSI %0
     $q0 = COPY %1

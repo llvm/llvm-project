@@ -87,6 +87,19 @@ Error NativeSession::createFromPdb(std::unique_ptr<MemoryBuffer> Buffer,
   return Error::success();
 }
 
+static Error validatePdbMagic(StringRef PdbPath) {
+  file_magic Magic;
+  if (auto EC = identify_magic(PdbPath, Magic))
+    return make_error<RawError>(EC);
+
+  if (Magic != file_magic::pdb)
+    return make_error<RawError>(
+        raw_error_code::invalid_format,
+        "The input file did not contain the pdb file magic.");
+
+  return Error::success();
+}
+
 static Expected<std::unique_ptr<PDBFile>>
 loadPdbFile(StringRef PdbPath, std::unique_ptr<BumpPtrAllocator> &Allocator) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> ErrorOrBuffer =
@@ -97,10 +110,8 @@ loadPdbFile(StringRef PdbPath, std::unique_ptr<BumpPtrAllocator> &Allocator) {
   std::unique_ptr<llvm::MemoryBuffer> Buffer = std::move(*ErrorOrBuffer);
 
   PdbPath = Buffer->getBufferIdentifier();
-  file_magic Magic;
-  auto EC = identify_magic(PdbPath, Magic);
-  if (EC || Magic != file_magic::pdb)
-    return make_error<RawError>(EC);
+  if (auto EC = validatePdbMagic(PdbPath))
+    return std::move(EC);
 
   auto Stream = std::make_unique<MemoryBufferByteStream>(
       std::move(Buffer), llvm::endianness::little);
@@ -152,10 +163,8 @@ Error NativeSession::createFromExe(StringRef ExePath,
   if (!PdbPath)
     return PdbPath.takeError();
 
-  file_magic Magic;
-  auto EC = identify_magic(PdbPath.get(), Magic);
-  if (EC || Magic != file_magic::pdb)
-    return make_error<RawError>(EC);
+  if (auto EC = validatePdbMagic(PdbPath.get()))
+    return EC;
 
   auto Allocator = std::make_unique<BumpPtrAllocator>();
   auto File = loadPdbFile(PdbPath.get(), Allocator);
@@ -246,27 +255,21 @@ bool NativeSession::addressForRVA(uint32_t RVA, uint32_t &Section,
 
 std::unique_ptr<PDBSymbol>
 NativeSession::findSymbolByAddress(uint64_t Address, PDB_SymType Type) {
-  uint32_t Section;
-  uint32_t Offset;
-  addressForVA(Address, Section, Offset);
-  return findSymbolBySectOffset(Section, Offset, Type);
+  if (AddrToModuleIndex.empty())
+    parseSectionContribs();
+
+  return Cache.findSymbolByVA(Address, Type);
 }
 
 std::unique_ptr<PDBSymbol> NativeSession::findSymbolByRVA(uint32_t RVA,
                                                           PDB_SymType Type) {
-  uint32_t Section;
-  uint32_t Offset;
-  addressForRVA(RVA, Section, Offset);
-  return findSymbolBySectOffset(Section, Offset, Type);
+  return findSymbolByAddress(getLoadAddress() + RVA, Type);
 }
 
 std::unique_ptr<PDBSymbol>
 NativeSession::findSymbolBySectOffset(uint32_t Sect, uint32_t Offset,
                                       PDB_SymType Type) {
-  if (AddrToModuleIndex.empty())
-    parseSectionContribs();
-
-  return Cache.findSymbolBySectOffset(Sect, Offset, Type);
+  return findSymbolByAddress(getVAFromSectOffset(Sect, Offset), Type);
 }
 
 std::unique_ptr<IPDBEnumLineNumbers>
@@ -401,21 +404,26 @@ uint64_t NativeSession::getVAFromSectOffset(uint32_t Section,
 bool NativeSession::moduleIndexForVA(uint64_t VA, uint16_t &ModuleIndex) const {
   ModuleIndex = 0;
   auto Iter = AddrToModuleIndex.find(VA);
-  if (Iter == AddrToModuleIndex.end())
-    return false;
-  ModuleIndex = Iter.value();
-  return true;
+  if (Iter.valid() && !IMap::KeyTraits::startLess(VA, Iter.start())) {
+    ModuleIndex = Iter.value();
+    return true;
+  }
+  return false;
 }
 
 bool NativeSession::moduleIndexForSectOffset(uint32_t Sect, uint32_t Offset,
                                              uint16_t &ModuleIndex) const {
-  ModuleIndex = 0;
-  auto Iter = AddrToModuleIndex.find(getVAFromSectOffset(Sect, Offset));
-  if (Iter == AddrToModuleIndex.end())
-    return false;
-  ModuleIndex = Iter.value();
-  return true;
+  return moduleIndexForVA(getVAFromSectOffset(Sect, Offset), ModuleIndex);
 }
+
+#ifndef NDEBUG
+void NativeSession::checkSymbolRange(uint64_t Start, uint64_t Stop) const {
+  auto Iter = AddrToModuleIndex.find(Start);
+  assert(Iter.valid() && !IMap::KeyTraits::startLess(Start, Iter.start()) &&
+         !IMap::KeyTraits::stopLess(Iter.stop(), Stop - 1) &&
+         "Symbol range is not within a single contiguous module range");
+}
+#endif
 
 void NativeSession::parseSectionContribs() {
   auto Dbi = Pdb->getPDBDbiStream();

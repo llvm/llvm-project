@@ -8,7 +8,7 @@
 
 // The test suite needs to define the ABI macros on the command line when
 // modules are enabled.
-// UNSUPPORTED: clang-modules-build
+// ADDITIONAL_COMPILE_FLAGS: -fno-modules
 
 // <utility>
 

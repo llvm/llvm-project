@@ -70,6 +70,22 @@ cpp::enable_if_t<cpp::is_fixed_point_v<T>, cpp::string> describeValue(T Value) {
 cpp::string_view describeValue(const cpp::string &Value) { return Value; }
 cpp::string_view describeValue(cpp::string_view Value) { return Value; }
 
+cpp::string describeValue(cpp::wstring_view Value) {
+  // TODO: Print `Value` as UTF-8 once `StringConverter` supports `wchar_t`.
+  if (Value.empty())
+    return "{}";
+
+  cpp::string S;
+  S += '{';
+  for (const wchar_t *Iter = Value.begin(); Iter + 1 != Value.end(); ++Iter) {
+    S += cpp::to_string(*Iter);
+    S += ',';
+  }
+  S += cpp::to_string(Value.back());
+  S += '}';
+  return S;
+}
+
 template <typename ValType>
 bool test(RunContext *Ctx, TestCond Cond, ValType LHS, ValType RHS,
           const char *LHSStr, const char *RHSStr, Location Loc) {
@@ -158,13 +174,13 @@ int Test::runTests(const TestOptions &Options) {
     }
 
     tlog << green << "[ RUN      ] " << reset << TestName << '\n';
-    [[maybe_unused]] const uint64_t start_time = clock();
+    [[maybe_unused]] const uint64_t start_time = static_cast<uint64_t>(clock());
     RunContext Ctx;
     T->SetUp();
     T->setContext(&Ctx);
     T->Run();
     T->TearDown();
-    [[maybe_unused]] const uint64_t end_time = clock();
+    [[maybe_unused]] const uint64_t end_time = static_cast<uint64_t>(clock());
     switch (Ctx.status()) {
     case RunContext::RunResult::Fail:
       tlog << red << "[  FAILED  ] " << reset << TestName << '\n';
@@ -217,12 +233,15 @@ namespace internal {
                            TYPE RHS, const char *LHSStr, const char *RHSStr,   \
                            Location Loc)
 
+TEST_SPECIALIZATION(wchar_t);
+
 TEST_SPECIALIZATION(char);
 TEST_SPECIALIZATION(short);
 TEST_SPECIALIZATION(int);
 TEST_SPECIALIZATION(long);
 TEST_SPECIALIZATION(long long);
 
+TEST_SPECIALIZATION(signed char);
 TEST_SPECIALIZATION(unsigned char);
 TEST_SPECIALIZATION(unsigned short);
 TEST_SPECIALIZATION(unsigned int);
@@ -248,6 +267,7 @@ TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<256>);
 TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<320>);
 
 TEST_SPECIALIZATION(LIBC_NAMESPACE::cpp::string_view);
+TEST_SPECIALIZATION(LIBC_NAMESPACE::cpp::wstring_view);
 TEST_SPECIALIZATION(LIBC_NAMESPACE::cpp::string);
 
 #ifdef LIBC_COMPILER_HAS_FIXED_POINT

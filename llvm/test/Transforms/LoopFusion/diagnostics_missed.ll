@@ -5,63 +5,10 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 @B = common global [1024 x i32] zeroinitializer, align 16, !dbg !0
 
-; CHECK: remark: diagnostics_missed.c:18:3: [non_adjacent]: entry and for.end: Loops are not adjacent
-define void @non_adjacent(ptr noalias %A) !dbg !14 {
-entry:
-  br label %for.body
-
-for.cond.cleanup:                                 ; preds = %for.inc
-  br label %for.end
-
-for.body:                                         ; preds = %entry, %for.inc
-  %i.02 = phi i64 [ 0, %entry ], [ %inc, %for.inc ]
-  %sub = add nsw i64 %i.02, -3
-  %add = add nuw nsw i64 %i.02, 3
-  %mul = mul nsw i64 %sub, %add
-  %rem = srem i64 %mul, %i.02
-  %conv = trunc i64 %rem to i32
-  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %i.02
-  store i32 %conv, ptr %arrayidx, align 4
-  br label %for.inc
-
-for.inc:                                          ; preds = %for.body
-  %inc = add nuw nsw i64 %i.02, 1, !dbg !26
-  %exitcond1 = icmp ne i64 %inc, 100
-  br i1 %exitcond1, label %for.body, label %for.cond.cleanup, !llvm.loop !28
-
-for.end:                                          ; preds = %for.cond.cleanup
-  br label %for.body6
-
-for.cond.cleanup5:                                ; preds = %for.inc13
-  br label %for.end15
-
-for.body6:                                        ; preds = %for.end, %for.inc13
-  %i1.01 = phi i64 [ 0, %for.end ], [ %inc14, %for.inc13 ]
-  %sub7 = add nsw i64 %i1.01, -3
-  %add8 = add nuw nsw i64 %i1.01, 3
-  %mul9 = mul nsw i64 %sub7, %add8
-  %rem10 = srem i64 %mul9, %i1.01
-  %conv11 = trunc i64 %rem10 to i32
-  %arrayidx12 = getelementptr inbounds [1024 x i32], ptr @B, i64 0, i64 %i1.01
-  store i32 %conv11, ptr %arrayidx12, align 4
-  br label %for.inc13
-
-for.inc13:                                        ; preds = %for.body6
-  %inc14 = add nuw nsw i64 %i1.01, 1, !dbg !31
-  %exitcond = icmp ne i64 %inc14, 100
-  br i1 %exitcond, label %for.body6, label %for.cond.cleanup5, !llvm.loop !33
-
-for.end15:                                        ; preds = %for.cond.cleanup5
-  ret void
-}
-
 ; CHECK: remark: diagnostics_missed.c:28:3: [different_bounds]: entry and for.end: Loop trip counts are not the same
 define void @different_bounds(ptr noalias %A) !dbg !36 {
 entry:
   br label %for.body
-
-for.cond.cleanup:                                 ; preds = %for.inc
-  br label %for.end
 
 for.body:                                         ; preds = %entry, %for.inc
   %i.02 = phi i64 [ 0, %entry ], [ %inc, %for.inc ]
@@ -77,9 +24,9 @@ for.body:                                         ; preds = %entry, %for.inc
 for.inc:                                          ; preds = %for.body
   %inc = add nuw nsw i64 %i.02, 1, !dbg !43
   %exitcond1 = icmp ne i64 %inc, 100
-  br i1 %exitcond1, label %for.body, label %for.cond.cleanup, !llvm.loop !45
+  br i1 %exitcond1, label %for.body, label %for.end, !llvm.loop !45
 
-for.end:                                          ; preds = %for.cond.cleanup
+for.end:                                          ; preds = %for.inc
   br label %for.body6
 
 for.cond.cleanup5:                                ; preds = %for.inc13

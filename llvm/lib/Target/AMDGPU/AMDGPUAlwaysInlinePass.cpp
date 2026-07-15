@@ -65,7 +65,7 @@ recursivelyVisitUsers(GlobalValue &GV,
       continue;
 
     if (Instruction *I = dyn_cast<Instruction>(U)) {
-      Function *F = I->getParent()->getParent();
+      Function *F = I->getFunction();
       if (!AMDGPU::isEntryFunctionCC(F->getCallingConv())) {
         // FIXME: This is a horrible hack. We should always respect noinline,
         // and just let us hit the error when we can't handle this.
@@ -96,8 +96,7 @@ static bool alwaysInlineImpl(Module &M, bool GlobalOpt) {
 
   for (GlobalAlias &A : M.aliases()) {
     if (Function* F = dyn_cast<Function>(A.getAliasee())) {
-      if (TT.getArch() == Triple::amdgcn &&
-          A.getLinkage() != GlobalValue::InternalLinkage)
+      if (TT.isAMDGCN() && A.getLinkage() != GlobalValue::InternalLinkage)
         continue;
       Changed = true;
       A.replaceAllUsesWith(F);

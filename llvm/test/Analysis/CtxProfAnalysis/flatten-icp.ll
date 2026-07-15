@@ -1,5 +1,5 @@
 ; RUN: split-file %s %t
-; RUN: llvm-ctxprof-util fromJSON --input %t/profile.json --output %t/profile.ctxprofdata
+; RUN: llvm-ctxprof-util fromYAML --input %t/profile.yaml --output %t/profile.ctxprofdata
 ;
 ; In the given profile, in one of the contexts the indirect call is taken, the
 ; target we're trying to ICP - GUID:2000 - doesn't appear at all. That should
@@ -45,11 +45,20 @@ attributes #1 = { noinline }
 !1 = !{i64 3000}
 !2 = !{i64 4000}
 
-;--- profile.json
-[ {
-  "Guid": 4000, "Counters":[10], "Callsites": [
-    [{"Guid":3000, "Counters":[10], "Callsites":[[{"Guid":1000, "Counters":[10]}]]}],
-    [{"Guid":3000, "Counters":[10], "Callsites":[[{"Guid":9000, "Counters":[10]}]]}]
-  ]
-}
-]
+;--- profile.yaml
+Contexts:
+  - Guid: 4000
+    TotalRootEntryCount: 10
+    Counters: [10]
+    Callsites:  -
+                  - Guid: 3000
+                    Counters: [10]
+                    Callsites: -
+                                - Guid: 1000
+                                  Counters: [10]
+                -
+                  - Guid: 3000
+                    Counters: [10]
+                    Callsites: -
+                                - Guid: 9000
+                                  Counters: [10]

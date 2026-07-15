@@ -22,6 +22,15 @@
 // LA64-SAME: "{{.*}}/Inputs/multilib_loongarch_linux_sdk/lib/gcc/loongarch64-unknown-linux-gnu/12.1.0/crtbegin.o"
 // LA64-SAME: "-L{{.*}}/Inputs/multilib_loongarch_linux_sdk/lib/gcc/loongarch64-unknown-linux-gnu/12.1.0"
 // LA64-SAME: {{^}} "-L{{.*}}/Inputs/multilib_loongarch_linux_sdk/lib/gcc/loongarch64-unknown-linux-gnu/12.1.0/../../../../loongarch64-unknown-linux-gnu/lib/../lib64"
-// LA64-SAME: {{^}} "-L{{.*}}/Inputs/multilib_loongarch_linux_sdk/sysroot/usr/lib/../lib64"
+// LA64-SAME: {{^}} "-L{{.*}}/Inputs/multilib_loongarch_linux_sdk/sysroot/usr{{/|\\\\}}lib64"
 // LA64-SAME: {{^}} "-L{{.*}}/Inputs/multilib_loongarch_linux_sdk/lib/gcc/loongarch64-unknown-linux-gnu/12.1.0/../../../../loongarch64-unknown-linux-gnu/lib"
 // LA64-SAME: {{^}} "-L{{.*}}/Inputs/multilib_loongarch_linux_sdk/sysroot/usr/lib"
+
+/// -X is always passed on LoongArch; --no-relax only with -mno-relax.
+// RUN: %clang --target=loongarch64-unknown-linux-gnu -### %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=LA64-RELAX %s
+// RUN: %clang --target=loongarch64-unknown-linux-gnu -mno-relax -### %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=LA64-NORELAX %s
+// LA64-RELAX:     "-X"
+// LA64-RELAX-NOT: "--no-relax"
+// LA64-NORELAX:   "-X" "--no-relax"

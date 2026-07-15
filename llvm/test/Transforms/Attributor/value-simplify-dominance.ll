@@ -141,13 +141,13 @@ declare void @usei32(i32) nocallback
 define internal i32 @remote_write_and_read(ptr %p) norecurse {
 ; TUNIT: Function Attrs: norecurse
 ; TUNIT-LABEL: define {{[^@]+}}@remote_write_and_read
-; TUNIT-SAME: (ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P:%.*]]) #[[ATTR2]] {
+; TUNIT-SAME: (ptr noalias nofree noundef nonnull writeonly align 4 captures(none) dereferenceable(4) [[P:%.*]]) #[[ATTR2]] {
 ; TUNIT-NEXT:    call void @usei32(i32 noundef 42)
 ; TUNIT-NEXT:    ret i32 undef
 ;
 ; CGSCC: Function Attrs: norecurse
 ; CGSCC-LABEL: define {{[^@]+}}@remote_write_and_read
-; CGSCC-SAME: (ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[P:%.*]]) #[[ATTR2]] {
+; CGSCC-SAME: (ptr noalias nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[P:%.*]]) #[[ATTR2]] {
 ; CGSCC-NEXT:    store i32 42, ptr [[P]], align 4
 ; CGSCC-NEXT:    [[L:%.*]] = load i32, ptr [[P]], align 4
 ; CGSCC-NEXT:    call void @usei32(i32 [[L]])
@@ -164,14 +164,14 @@ define i32 @local_stack_remote_write_and_read() norecurse {
 ; TUNIT-LABEL: define {{[^@]+}}@local_stack_remote_write_and_read
 ; TUNIT-SAME: () #[[ATTR2]] {
 ; TUNIT-NEXT:    [[A:%.*]] = alloca i32, align 4
-; TUNIT-NEXT:    [[R:%.*]] = call i32 @remote_write_and_read(ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]])
+; TUNIT-NEXT:    [[R:%.*]] = call i32 @remote_write_and_read(ptr noalias nofree noundef nonnull writeonly align 4 captures(none) dereferenceable(4) [[A]])
 ; TUNIT-NEXT:    ret i32 42
 ;
 ; CGSCC: Function Attrs: norecurse
 ; CGSCC-LABEL: define {{[^@]+}}@local_stack_remote_write_and_read
 ; CGSCC-SAME: () #[[ATTR2]] {
 ; CGSCC-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CGSCC-NEXT:    [[R:%.*]] = call i32 @remote_write_and_read(ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A]])
+; CGSCC-NEXT:    [[R:%.*]] = call i32 @remote_write_and_read(ptr noalias nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[A]])
 ; CGSCC-NEXT:    ret i32 [[R]]
 ;
   %a = alloca i32

@@ -50,6 +50,10 @@ entry:
   ret <4 x float> %2
 }
 
+; CHECK-DAG: declare half @dx.op.unary.f16(i32, half) #[[#ATTR0:]]
+; CHECK-DAG: declare float @dx.op.unary.f32(i32, float) #[[#ATTR0]]
+; CHECK: attributes #[[#ATTR0]] = { nounwind memory(none) }
+
 declare half  @llvm.dx.frac.f16(half)
 declare float @llvm.dx.frac.f32(float)
 declare <4 x float> @llvm.dx.frac.v4f32(<4 x float>)
