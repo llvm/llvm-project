@@ -63,8 +63,9 @@ struct __cpu_parallel_mismatch {
             return std::mismatch(std::move(__brick_first1), std::move(__brick_last1), std::move(__brick_first2), __pred)
                 .first;
           },
-          less<>{},
-          true);
+          less<>{}, // `less` here means the lowest index among the mismatches
+          true      // `true` here means we want the first mismatch, not the last
+      );
       if (!__res) {
         return std::nullopt; // Failed to run the algorithm, propagate the error.
       }
