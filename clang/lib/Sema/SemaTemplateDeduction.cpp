@@ -4128,21 +4128,21 @@ static void AddFriendTemplateDeductionCandidate(
   if (!FailedTSC)
     return;
 
-  Decl *Declaration = TD->getTemplatedDecl();
+  Decl *TemplatedDecl = TD->getTemplatedDecl();
   for (TemplateSpecCandidate &Candidate : *FailedTSC) {
     if (Candidate.Specialization &&
-        declaresSameEntity(Candidate.Specialization, Declaration))
+        declaresSameEntity(Candidate.Specialization, TemplatedDecl))
       return;
   }
 
   FailedTSC->addCandidate().set(
-      DeclAccessPair::make(TD, AS_public), Declaration,
+      DeclAccessPair::make(TD, AS_public), TemplatedDecl,
       MakeDeductionFailureInfo(S.Context, Result, Info));
 }
 
 bool Sema::DeduceTemplateArguments(
     FriendTemplateDecl *FTD, ClassTemplateDecl *PatternCTD,
-    ClassTemplateDecl *CandidateCTD, ArrayRef<TemplateParameterList *> TPL,
+    ClassTemplateDecl *CandidateCTD, ArrayRef<TemplateParameterList *> TPLs,
     ArrayRef<TemplateArgument> PatternArgs,
     ArrayRef<TemplateArgument> CandidateArgs, SourceLocation Loc,
     TemplateSpecCandidateSet *FailedTSC,
@@ -4161,7 +4161,7 @@ bool Sema::DeduceTemplateArguments(
   }
 
   SmallVector<TemplateArgumentList *, 2> DeducedArgLists;
-  for (TemplateParameterList *Params : TPL) {
+  for (TemplateParameterList *Params : TPLs) {
     TemplateDeductionInfo Info(Loc, Params->getDepth());
     SFINAETrap Trap(*this, Info);
     SmallVector<DeducedTemplateArgument, 4> Deduced(Params->size());
@@ -4202,26 +4202,26 @@ bool Sema::DeduceTemplateArguments(
   for (TemplateArgumentList *Args : llvm::reverse(DeducedArgLists))
     DeducedArgs.addOuterTemplateArguments(FTD, Args->asArray(),
                                           /*Final=*/true);
-  if (!TPL.empty())
-    DeducedArgs.addOuterRetainedLevels(TPL.front()->getDepth());
+  if (!TPLs.empty())
+    DeducedArgs.addOuterRetainedLevels(TPLs.front()->getDepth());
 
   if (DeducedArgs.isAnyArgInstantiationDependent() &&
-      llvm::any_of(TPL, [](TemplateParameterList *Params) {
+      llvm::any_of(TPLs, [](TemplateParameterList *Params) {
         return Params->hasAssociatedConstraints();
       }))
     return false;
 
-  SmallVector<TemplateArgumentLoc, 8> PatternArgsLoc;
-  PatternArgsLoc.reserve(PatternArgs.size());
+  SmallVector<TemplateArgumentLoc, 8> PatternArgLocs;
+  PatternArgLocs.reserve(PatternArgs.size());
   for (const TemplateArgument &Arg : PatternArgs)
-    PatternArgsLoc.push_back(
+    PatternArgLocs.push_back(
         getTrivialTemplateArgumentLoc(Arg, QualType(), Loc));
 
   {
     TemplateDeductionInfo Info(Loc);
     SFINAETrap Trap(*this, Info);
     TemplateDeductionResult Result = CheckDeducedTemplateArgumentList(
-        *this, CandidateCTD, PatternArgsLoc, CandidateArgs, DeducedArgs, Info);
+        *this, CandidateCTD, PatternArgLocs, CandidateArgs, DeducedArgs, Info);
     if (Result == TemplateDeductionResult::Success && Trap.hasErrorOccurred())
       Result = TemplateDeductionResult::SubstitutionFailure;
     if (Result != TemplateDeductionResult::Success) {
@@ -4231,7 +4231,7 @@ bool Sema::DeduceTemplateArguments(
     }
   }
 
-  for (TemplateParameterList *Params : TPL) {
+  for (TemplateParameterList *Params : TPLs) {
     SmallVector<AssociatedConstraint, 3> Constraints;
     Params->getAssociatedConstraints(Constraints);
     if (Constraints.empty())

@@ -2429,9 +2429,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      FriendDecl *D1, FriendDecl *D2) {
   if ((D1->getFriendType() && D2->getFriendDecl()) ||
-      (D1->getFriendDecl() && D2->getFriendType())) {
-      return false;
-  }
+      (D1->getFriendDecl() && D2->getFriendType()))
+    return false;
   if (D1->getFriendType() && D2->getFriendType())
     return IsStructurallyEquivalent(Context,
                                     D1->getFriendType()->getType(),
@@ -2452,12 +2451,11 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       FTD1->getFriendTypeTemplateParameterLists();
   ArrayRef<TemplateParameterList *> TPL2 =
       FTD2->getFriendTypeTemplateParameterLists();
-  bool EquivalentTemplateParameterLists = llvm::equal(
-      TPL1, TPL2,
-      [&Context](TemplateParameterList *LHS, TemplateParameterList *RHS) {
-        return IsStructurallyEquivalent(Context, LHS, RHS);
-      });
-  if (!EquivalentTemplateParameterLists)
+  if (!llvm::equal(
+          TPL1, TPL2,
+          [&Context](TemplateParameterList *LHS, TemplateParameterList *RHS) {
+            return IsStructurallyEquivalent(Context, LHS, RHS);
+          }))
     return false;
 
   TemplateName TN1 = FTD1->getFriendTemplateName();
@@ -2465,21 +2463,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   if (TN1.isNull() != TN2.isNull())
     return false;
 
-  if (TN1.isNull()) {
-    if ((FTD1->getFriendType() && FTD2->getFriendDecl()) ||
-        (FTD1->getFriendDecl() && FTD2->getFriendType()))
-      return false;
-
-    if (FTD1->getFriendDecl() && FTD2->getFriendDecl())
-      return IsStructurallyEquivalent(Context, FTD1->getFriendDecl(),
-                                      FTD2->getFriendDecl());
-
-    if (FTD1->getFriendType() && FTD2->getFriendType())
-      return IsStructurallyEquivalent(Context, FTD1->getFriendType()->getType(),
-                                      FTD2->getFriendType()->getType());
-
-    return false;
-  }
+  if (TN1.isNull())
+    return IsStructurallyEquivalent(Context, static_cast<FriendDecl *>(FTD1),
+                                    static_cast<FriendDecl *>(FTD2));
 
   return IsStructurallyEquivalent(Context, TN1, TN2);
 }

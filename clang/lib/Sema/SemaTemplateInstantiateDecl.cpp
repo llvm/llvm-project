@@ -1990,42 +1990,38 @@ Decl *TemplateDeclInstantiator::VisitIndirectFieldDecl(IndirectFieldDecl *D) {
   return IndirectField;
 }
 
-static bool
-LookupQualifiedFriendType(Sema &SemaRef, NestedNameSpecifierLoc QualifierLoc,
-                          DeclarationName Name, SourceLocation NameLoc,
-                          bool HasTemplateKeyword, TemplateName &Template) {
+static TemplateName LookupQualifiedFriendClassTemplate(
+    Sema &SemaRef, NestedNameSpecifierLoc QualifierLoc, DeclarationName Name,
+    SourceLocation NameLoc, bool HasTemplateKeyword) {
   if (!QualifierLoc)
-    return false;
+    return {};
 
   CXXScopeSpec SS;
   SS.Adopt(QualifierLoc);
 
   DeclContext *DC = SemaRef.computeDeclContext(SS, /*EnteringContext=*/true);
   if (DC && !DC->isDependentContext() &&
-      SemaRef.RequireCompleteDeclContext(SS, DC)) {
+      SemaRef.RequireCompleteDeclContext(SS, DC))
     DC = nullptr;
-  }
 
   if (!DC)
-    return false;
+    return {};
 
   LookupResult Result(SemaRef, Name, NameLoc, Sema::LookupOrdinaryName,
                       SemaRef.forRedeclarationInCurContext());
   if (!SemaRef.LookupQualifiedName(Result, DC))
-    return false;
+    return {};
 
   auto *CTD = Result.getAsSingle<ClassTemplateDecl>();
   if (!CTD)
-    return false;
+    return {};
 
   auto *FoundUsingShadow =
       dyn_cast<UsingShadowDecl>(Result.getRepresentativeDecl());
 
-  Template = SemaRef.Context.getQualifiedTemplateName(
+  return SemaRef.Context.getQualifiedTemplateName(
       QualifierLoc.getNestedNameSpecifier(), HasTemplateKeyword,
       FoundUsingShadow ? TemplateName(FoundUsingShadow) : TemplateName(CTD));
-
-  return true;
 }
 
 TypeSourceInfo *
@@ -2050,19 +2046,18 @@ Sema::SubstFriendType(TypeSourceInfo *TSI,
   if (!QualifierLoc)
     return nullptr;
 
-  TemplateName InstTemplate;
-  if (!LookupQualifiedFriendType(*this, QualifierLoc, FriendCTD->getDeclName(),
-                                 TSTL.getTemplateNameLoc(),
-                                 TSTL.getTemplateKeywordLoc().isValid(),
-                                 InstTemplate))
+  TemplateName InstTemplate = LookupQualifiedFriendClassTemplate(
+      *this, QualifierLoc, FriendCTD->getDeclName(), TSTL.getTemplateNameLoc(),
+      TSTL.getTemplateKeywordLoc().isValid());
+  if (InstTemplate.isNull())
     return SubstType(TSI, TemplateArgs, Loc, Entity);
 
-  SmallVector<TemplateArgumentLoc, 4> FriendArgs;
+  SmallVector<TemplateArgumentLoc, 4> FriendArgLocs;
   for (unsigned I = 0, N = TSTL.getNumArgs(); I != N; ++I)
-    FriendArgs.push_back(TSTL.getArgLoc(I));
+    FriendArgLocs.push_back(TSTL.getArgLoc(I));
 
   TemplateArgumentListInfo InstArgs(TSTL.getLAngleLoc(), TSTL.getRAngleLoc());
-  if (SubstTemplateArguments(FriendArgs, TemplateArgs, InstArgs))
+  if (SubstTemplateArguments(FriendArgLocs, TemplateArgs, InstArgs))
     return nullptr;
 
   QualType InstTy = CheckTemplateIdType(
@@ -2078,9 +2073,9 @@ Sema::SubstFriendType(TypeSourceInfo *TSI,
   return TLB.getTypeSourceInfo(Context, InstTy);
 }
 
-template <typename FriendTy>
 bool TemplateDeclInstantiator::InstantiateFriendPackExpansion(
-    FriendTy *D, TypeSourceInfo *TSI, ArrayRef<TemplateParameterList *> TPL) {
+    FriendDecl *D, TypeSourceInfo *TSI,
+    ArrayRef<TemplateParameterList *> TPLs) {
   SmallVector<UnexpandedParameterPack, 2> Unexpanded;
   SemaRef.collectUnexpandedParameterPacks(TSI->getTypeLoc(), Unexpanded);
   assert(!Unexpanded.empty() && "Pack expansion without packs");
@@ -2102,11 +2097,11 @@ bool TemplateDeclInstantiator::InstantiateFriendPackExpansion(
 
   for (unsigned I = 0; I != *NumExpansions; I++) {
     Sema::ArgPackSubstIndexRAII SubstIndex(SemaRef, I);
-    SmallVector<TemplateParameterList *, 1> InstTPL;
-    if (SubstTemplateParameterLists(TPL, InstTPL))
+    SmallVector<TemplateParameterList *, 1> InstTPLs;
+    if (SubstTemplateParameterLists(TPLs, InstTPLs))
       return true;
 
-    TypeSourceInfo *InstTy = SemaRef.SubstType(
+    TypeSourceInfo *InstTy = SemaRef.SubstFriendType(
         TSI, TemplateArgs, D->getEllipsisLoc(), DeclarationName());
     if (!InstTy)
       return true;
@@ -2114,9 +2109,9 @@ bool TemplateDeclInstantiator::InstantiateFriendPackExpansion(
     FriendDecl *FD;
     if (isa<FriendTemplateDecl>(D))
       FD = FriendTemplateDecl::Create(SemaRef.Context, Owner, D->getLocation(),
-                                      InstTy, D->getFriendLoc(), InstTPL);
+                                      InstTy, D->getFriendLoc(), InstTPLs);
     else {
-      assert(InstTPL.empty() && "unexpected template parameter lists");
+      assert(InstTPLs.empty() && "unexpected template parameter lists");
       FD = FriendDecl::Create(SemaRef.Context, Owner, D->getLocation(), InstTy,
                               D->getFriendLoc());
     }
@@ -2921,6 +2916,10 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
     if (!QualifierLoc)
       return nullptr;
   }
+  if (isFriend && FunctionTemplate && D->getQualifier().isDependent() &&
+      SemaRef.CheckDependentFriend(D->getLocation(), QualifierLoc,
+                                   /*TPLs=*/{}, /*IsInstantiation=*/true))
+    return nullptr;
 
   AssociatedConstraint TrailingRequiresClause = D->getTrailingRequiresClause();
 
@@ -3335,6 +3334,10 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
     if (!QualifierLoc)
       return nullptr;
   }
+  if (isFriend && FunctionTemplate && D->getQualifier().isDependent() &&
+      SemaRef.CheckDependentFriend(D->getLocation(), QualifierLoc,
+                                   /*TPLs=*/{}, /*IsInstantiation=*/true))
+    return nullptr;
 
   DeclContext *DC = Owner;
   if (isFriend) {
@@ -4859,9 +4862,13 @@ Decl *TemplateDeclInstantiator::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
   if (SubstTemplateParameterLists(FriendTPLs, InstTPLs))
     return nullptr;
 
-  NestedNameSpecifierLoc QualifierLoc =
-      FriendTSI ? FriendTSI->getTypeLoc().getPrefix()
-                : NestedNameSpecifierLoc();
+  NestedNameSpecifierLoc QualifierLoc;
+  if (FriendTSI)
+    QualifierLoc = FriendTSI->getTypeLoc().getPrefix();
+  else if (NamedDecl *Friend = D->getFriendDecl()) {
+    if (FunctionDecl *FriendFD = Friend->getAsFunction())
+      QualifierLoc = FriendFD->getQualifierLoc();
+  }
 
   NestedNameSpecifierLoc InstQualifierLoc = QualifierLoc;
   if (QualifierLoc && QualifierLoc.getNestedNameSpecifier().isDependent()) {
@@ -4876,16 +4883,16 @@ Decl *TemplateDeclInstantiator::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
   FriendTemplateDecl *InstFriend = nullptr;
   if (FriendTSI) {
     TemplateName InstTemplate;
-    if (auto FriendDNT =
+    if (auto FriendDNTL =
             FriendTSI->getTypeLoc().getAs<DependentNameTypeLoc>()) {
-      LookupQualifiedFriendType(SemaRef, InstQualifierLoc,
-                                FriendDNT.getTypePtr()->getIdentifier(),
-                                FriendDNT.getNameLoc(),
-                                /*HasTemplateKeyword=*/false, InstTemplate);
+      InstTemplate = LookupQualifiedFriendClassTemplate(
+          SemaRef, InstQualifierLoc, FriendDNTL.getTypePtr()->getIdentifier(),
+          FriendDNTL.getNameLoc(),
+          /*HasTemplateKeyword=*/false);
     }
 
     if (InstTemplate.isNull()) {
-      if (TypeSourceInfo *InstFriendTSI = SemaRef.SubstType(
+      if (TypeSourceInfo *InstFriendTSI = SemaRef.SubstFriendType(
               FriendTSI, TemplateArgs, D->getLocation(), DeclarationName())) {
         InstFriend = FriendTemplateDecl::Create(SemaRef.Context, Owner,
                                                 D->getLocation(), InstFriendTSI,
@@ -5055,10 +5062,11 @@ TemplateDeclInstantiator::SubstTemplateParams(TemplateParameterList *L) {
 }
 
 bool TemplateDeclInstantiator::SubstTemplateParameterLists(
-    ArrayRef<TemplateParameterList *> TPL,
-    SmallVectorImpl<TemplateParameterList *> &InstTPL) {
+    ArrayRef<TemplateParameterList *> TPLs,
+    SmallVectorImpl<TemplateParameterList *> &InstTPLs) {
+  llvm::SaveAndRestore RAII(EvaluateConstraints, false);
   LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true);
-  for (TemplateParameterList *L : TPL) {
+  for (TemplateParameterList *L : TPLs) {
     TemplateParameterList *InstParams = SubstTemplateParams(L);
     if (!InstParams)
       return true;
@@ -5076,7 +5084,7 @@ bool TemplateDeclInstantiator::SubstTemplateParameterLists(
           InstParams->getRAngleLoc(), InstRequiresClause.get());
     }
 
-    InstTPL.push_back(InstParams);
+    InstTPLs.push_back(InstParams);
   }
   return false;
 }

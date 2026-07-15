@@ -19,7 +19,6 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Sema/DelayedDiagnostic.h"
-#include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Template.h"
@@ -356,23 +355,24 @@ SubstTemplateParameterList(Sema &S, TemplateParameterList *TPL, DeclContext *DC,
 static AccessResult
 DeduceTemplateArguments(Sema &S, FriendTemplateDecl *FTD, DeclContext *DC,
                         const TemplateSpecializationType *TST,
-                        ArrayRef<TemplateParameterList *> TPLists,
+                        ArrayRef<TemplateParameterList *> TPLs,
                         TemplateSpecCandidateSet *FailedTSC,
                         MultiLevelTemplateArgumentList &DeducedArgs) {
-  const auto *RD = dyn_cast<CXXRecordDecl>(DC);
-  if (!RD)
+  const auto *CandidateRD = dyn_cast<CXXRecordDecl>(DC);
+  if (!CandidateRD)
     return AR_inaccessible;
 
-  ClassTemplateDecl *CandidateCTD = RD->getDescribedClassTemplate();
+  ClassTemplateDecl *CandidateCTD = CandidateRD->getDescribedClassTemplate();
   ArrayRef<TemplateArgument> CandidateArgs;
   if (CandidateCTD) {
     CandidateArgs = CandidateCTD->getInjectedTemplateArgs(S.Context);
   } else {
-    const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(RD);
-    if (!Spec)
+    const auto *CandidateSpec =
+        dyn_cast<ClassTemplateSpecializationDecl>(CandidateRD);
+    if (!CandidateSpec)
       return AR_inaccessible;
-    CandidateCTD = Spec->getSpecializedTemplate();
-    CandidateArgs = Spec->getTemplateArgs().asArray();
+    CandidateCTD = CandidateSpec->getSpecializedTemplate();
+    CandidateArgs = CandidateSpec->getTemplateArgs().asArray();
   }
 
   auto *PatternCTD = dyn_cast_if_present<ClassTemplateDecl>(
@@ -381,12 +381,12 @@ DeduceTemplateArguments(Sema &S, FriendTemplateDecl *FTD, DeclContext *DC,
                                          GetClassTemplatePattern(PatternCTD)))
     return AR_inaccessible;
 
-  if (S.DeduceTemplateArguments(FTD, PatternCTD, CandidateCTD, TPLists,
+  if (S.DeduceTemplateArguments(FTD, PatternCTD, CandidateCTD, TPLs,
                                 TST->template_arguments(), CandidateArgs,
                                 FTD->getLocation(), FailedTSC, DeducedArgs))
     return AR_accessible;
 
-  return RD->isDependentContext() ? AR_dependent : AR_inaccessible;
+  return CandidateRD->isDependentContext() ? AR_dependent : AR_inaccessible;
 }
 
 static bool HasSameFunctionType(Sema &S, QualType FriendType,
@@ -713,20 +713,23 @@ static AccessResult MatchesFriend(Sema &S, FriendTemplateDecl *FTD,
                                   TagTypeKind FriendTagKind,
                                   ClassTemplateDecl *ContextCTD,
                                   const TemplateSpecializationType *FriendTST,
-                                  ArrayRef<TemplateParameterList *> TPL,
+                                  ArrayRef<TemplateParameterList *> TPLs,
                                   TemplateParameterList *MemberTPL,
                                   TemplateSpecCandidateSet *FailedTSC) {
   if (FriendName != ContextCTD->getDeclName())
     return AR_inaccessible;
 
-  CXXRecordDecl *ContextRD = ContextCTD->getTemplatedDecl();
-  if ((FriendTagKind == TagTypeKind::Union) != ContextRD->isUnion())
+  if ((FriendTagKind == TagTypeKind::Union) !=
+      ContextCTD->getTemplatedDecl()->isUnion())
     return AR_inaccessible;
 
+  DeclContext *ContextDC = ContextCTD->getDeclContext();
+  AccessResult OnFailure =
+      ContextDC->isDependentContext() ? AR_dependent : AR_inaccessible;
+
   MultiLevelTemplateArgumentList DeducedArgs;
-  AccessResult QualifierResult =
-      DeduceTemplateArguments(S, FTD, ContextCTD->getDeclContext(), FriendTST,
-                              TPL, FailedTSC, DeducedArgs);
+  AccessResult QualifierResult = DeduceTemplateArguments(
+      S, FTD, ContextDC, FriendTST, TPLs, FailedTSC, DeducedArgs);
   if (QualifierResult != AR_accessible)
     return QualifierResult;
 
@@ -737,21 +740,18 @@ static AccessResult MatchesFriend(Sema &S, FriendTemplateDecl *FTD,
   TemplateDeductionInfo Info(FTD->getLocation());
   Sema::SFINAETrap Trap(S, Info);
   LocalInstantiationScope InstantiationScope(S);
-  TemplateParameterList *InstTPL = SubstTemplateParameterList(
-      S, MemberTPL, ContextCTD->getDeclContext(), DeducedArgs);
+  TemplateParameterList *InstTPL =
+      SubstTemplateParameterList(S, MemberTPL, ContextDC, DeducedArgs);
   if (!InstTPL || Trap.hasErrorOccurred())
-    return ContextCTD->getDeclContext()->isDependentContext() ? AR_dependent
-                                                              : AR_inaccessible;
+    return OnFailure;
 
-  DeclContext *ContextDC = ContextCTD->getDeclContext();
   Sema::TemplateCompareNewDeclInfo FriendInfo(ContextDC, ContextDC,
                                               FTD->getLocation());
   if (S.TemplateParameterListsAreEqual(
           FriendInfo, InstTPL, ContextCTD, ContextCTD->getTemplateParameters(),
           /*Complain=*/false, Sema::TPL_TemplateMatch))
     return AR_accessible;
-  return ContextCTD->getDeclContext()->isDependentContext() ? AR_dependent
-                                                            : AR_inaccessible;
+  return OnFailure;
 }
 
 static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
@@ -764,21 +764,21 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
   if (!FriendTST)
     return MatchesFriend(S, EC, FriendCTD);
 
-  ArrayRef<TemplateParameterList *> TPLists =
+  ArrayRef<TemplateParameterList *> TPLs =
       FTD->getFriendTypeTemplateParameterLists();
-  if (TPLists.empty())
+  if (TPLs.empty())
     return AR_inaccessible;
 
   AccessResult OnFailure = AR_inaccessible;
-  for (CXXRecordDecl *RD : EC.Records) {
-    ClassTemplateDecl *ContextCTD = GetClassTemplateDecl(RD);
+  for (CXXRecordDecl *ContextRD : EC.Records) {
+    ClassTemplateDecl *ContextCTD = GetClassTemplateDecl(ContextRD);
     if (!ContextCTD)
       continue;
 
-    AccessResult Result = MatchesFriend(
-        S, FTD, FriendCTD->getDeclName(),
-        FriendCTD->getTemplatedDecl()->getTagKind(), ContextCTD, FriendTST,
-        TPLists.drop_back(), TPLists.back(), FailedTSC);
+    AccessResult Result =
+        MatchesFriend(S, FTD, FriendCTD->getDeclName(),
+                      FriendCTD->getTemplatedDecl()->getTagKind(), ContextCTD,
+                      FriendTST, TPLs.drop_back(), TPLs.back(), FailedTSC);
     if (Result == AR_accessible)
       return AR_accessible;
     if (Result == AR_dependent)
@@ -789,21 +789,21 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
 }
 
 static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
-                                  FriendTemplateDecl *FriendTD,
-                                  TemplateName Template,
+                                  FriendTemplateDecl *FTD,
+                                  TemplateName FriendTemplate,
                                   ClassTemplateDecl *FriendCTD,
                                   TemplateSpecCandidateSet *FailedTSC) {
-  NestedNameSpecifier Qualifier = Template.getQualifier();
-  if (Template.getAsUsingShadowDecl())
+  NestedNameSpecifier Qualifier = FriendTemplate.getQualifier();
+  if (FriendTemplate.getAsUsingShadowDecl())
     Qualifier = FriendCTD->getTemplatedDecl()->getQualifier();
-  return MatchesFriend(S, EC, FriendTD, FriendCTD, Qualifier, FailedTSC);
+  return MatchesFriend(S, EC, FTD, FriendCTD, Qualifier, FailedTSC);
 }
 
 static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
-                                  FriendTemplateDecl *FriendTD,
+                                  FriendTemplateDecl *FTD,
                                   ClassTemplateDecl *FriendCTD,
                                   TemplateSpecCandidateSet *FailedTSC) {
-  return MatchesFriend(S, EC, FriendTD, FriendCTD,
+  return MatchesFriend(S, EC, FTD, FriendCTD,
                        FriendCTD->getTemplatedDecl()->getQualifier(),
                        FailedTSC);
 }
@@ -812,7 +812,7 @@ static AccessResult MatchesFriend(Sema &S, FriendTemplateDecl *FTD,
                                   FunctionDecl *FriendFD,
                                   FunctionDecl *ContextFD,
                                   const TemplateSpecializationType *FriendTST,
-                                  ArrayRef<TemplateParameterList *> TPL,
+                                  ArrayRef<TemplateParameterList *> TPLs,
                                   TemplateSpecCandidateSet *FailedTSC) {
   if (!MightInstantiateTo(S.Context, ContextFD->getDeclName(),
                           FriendFD->getDeclName()))
@@ -831,7 +831,7 @@ static AccessResult MatchesFriend(Sema &S, FriendTemplateDecl *FTD,
 
   MultiLevelTemplateArgumentList DeducedArgs;
   AccessResult QualifierResult = DeduceTemplateArguments(
-      S, FTD, ContextDC, FriendTST, TPL, FailedTSC, DeducedArgs);
+      S, FTD, ContextDC, FriendTST, TPLs, FailedTSC, DeducedArgs);
   if (QualifierResult != AR_accessible)
     return QualifierResult;
 
@@ -927,7 +927,7 @@ static AccessResult MatchesFriend(Sema &S, FriendTemplateDecl *FTD,
 }
 
 static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
-                                  FriendTemplateDecl *FriendTD,
+                                  FriendTemplateDecl *FTD,
                                   FunctionDecl *FriendFD,
                                   TemplateSpecCandidateSet *FailedTSC) {
   const auto *FriendTST = GetQualifierClassTemplateSpecializationType(
@@ -935,15 +935,15 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
   if (!FriendTST)
     return AR_inaccessible;
 
-  ArrayRef<TemplateParameterList *> TPLists =
-      FriendTD->getFriendTypeTemplateParameterLists();
-  if (TPLists.empty())
+  ArrayRef<TemplateParameterList *> TPLs =
+      FTD->getFriendTypeTemplateParameterLists();
+  if (TPLs.empty())
     return AR_inaccessible;
 
   AccessResult OnFailure = AR_inaccessible;
-  for (FunctionDecl *FD : EC.Functions) {
+  for (FunctionDecl *ContextFD : EC.Functions) {
     AccessResult Result =
-        MatchesFriend(S, FriendTD, FriendFD, FD, FriendTST, TPLists, FailedTSC);
+        MatchesFriend(S, FTD, FriendFD, ContextFD, FriendTST, TPLs, FailedTSC);
     if (Result == AR_accessible)
       return AR_accessible;
 
@@ -954,27 +954,17 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
 }
 
 static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
-                                  FriendTemplateDecl *FTD,
-                                  FunctionTemplateDecl *FriendTemplate,
+                                  FriendTemplateDecl *FTD, NamedDecl *Friend,
                                   TemplateSpecCandidateSet *FailedTSC) {
-  return MatchesFriend(S, EC, FTD, FriendTemplate->getTemplatedDecl(),
-                       FailedTSC);
-}
-
-static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
-                                  FriendTemplateDecl *FTD, NamedDecl *ND,
-                                  TemplateSpecCandidateSet *FailedTSC) {
-  TemplateName Template = FTD->getFriendTemplateName();
-  if (auto *CTD =
-          dyn_cast_if_present<ClassTemplateDecl>(Template.getAsTemplateDecl()))
-    return MatchesFriend(S, EC, FTD, Template, CTD, FailedTSC);
-  if (auto *CTD = dyn_cast<ClassTemplateDecl>(ND))
-    return MatchesFriend(S, EC, FTD, CTD, FailedTSC);
-  if (auto *FunctionTD = dyn_cast<FunctionTemplateDecl>(ND))
-    return MatchesFriend(S, EC, FTD, FunctionTD, FailedTSC);
-  if (auto *FD = dyn_cast<FunctionDecl>(ND))
-    return MatchesFriend(S, EC, FTD, FD, FailedTSC);
-  return MatchesFriend(S, EC, ND);
+  TemplateName FriendTemplate = FTD->getFriendTemplateName();
+  if (auto *FriendCTD = dyn_cast_if_present<ClassTemplateDecl>(
+          FriendTemplate.getAsTemplateDecl()))
+    return MatchesFriend(S, EC, FTD, FriendTemplate, FriendCTD, FailedTSC);
+  if (auto *FriendCTD = dyn_cast<ClassTemplateDecl>(Friend))
+    return MatchesFriend(S, EC, FTD, FriendCTD, FailedTSC);
+  if (FunctionDecl *FriendFD = Friend->getAsFunction())
+    return MatchesFriend(S, EC, FTD, FriendFD, FailedTSC);
+  return MatchesFriend(S, EC, Friend);
 }
 
 static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
@@ -994,24 +984,24 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
     if (!FriendQTST)
       return OnFailure;
 
-    ArrayRef<TemplateParameterList *> TPLists =
+    ArrayRef<TemplateParameterList *> TPLs =
         FTD->getFriendTypeTemplateParameterLists();
-    if (TPLists.empty())
+    if (TPLs.empty())
       return OnFailure;
 
-    TemplateName FriendTemplateName = FriendTST->getTemplateName();
+    TemplateName FriendTemplate = FriendTST->getTemplateName();
     DeclarationName FriendName;
-    if (TemplateDecl *FriendTemplate = FriendTemplateName.getAsTemplateDecl())
-      FriendName = FriendTemplate->getDeclName();
-    else if (DependentTemplateName *FriendTemplate =
-                 FriendTemplateName.getAsDependentTemplateName())
-      FriendName = FriendTemplate->getName().getIdentifier();
+    if (TemplateDecl *TD = FriendTemplate.getAsTemplateDecl())
+      FriendName = TD->getDeclName();
+    else if (DependentTemplateName *DTN =
+                 FriendTemplate.getAsDependentTemplateName())
+      FriendName = DTN->getName().getIdentifier();
 
     TagTypeKind FriendTagKind =
         TypeWithKeyword::getTagTypeKindForKeyword(FriendTST->getKeyword());
 
-    for (CXXRecordDecl *RD : EC.Records) {
-      ClassTemplateDecl *ContextCTD = GetClassTemplateDecl(RD);
+    for (CXXRecordDecl *ContextRD : EC.Records) {
+      ClassTemplateDecl *ContextCTD = GetClassTemplateDecl(ContextRD);
       if (!ContextCTD)
         continue;
 
@@ -1024,8 +1014,8 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
 
       MultiLevelTemplateArgumentList DeducedArgs;
       AccessResult Result =
-          DeduceTemplateArguments(S, FTD, RD->getDeclContext(), FriendQTST,
-                                  TPLists, FailedTSC, DeducedArgs);
+          DeduceTemplateArguments(S, FTD, ContextRD->getDeclContext(),
+                                  FriendQTST, TPLs, FailedTSC, DeducedArgs);
       if (Result != AR_accessible) {
         if (Result == AR_dependent)
           OnFailure = AR_dependent;
@@ -1043,10 +1033,10 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
           FriendTSI, DeducedArgs, FTD->getLocation(), DeclarationName());
       if (InstFriendTSI && !Trap.hasErrorOccurred() &&
           S.Context.hasSameType(InstFriendTSI->getType(),
-                                S.Context.getCanonicalTagType(RD)))
+                                S.Context.getCanonicalTagType(ContextRD)))
         return AR_accessible;
 
-      if (RD->isDependentContext())
+      if (ContextRD->isDependentContext())
         OnFailure = AR_dependent;
     }
 
@@ -1062,21 +1052,21 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
   if (!FriendTST)
     return OnFailure;
 
-  ArrayRef<TemplateParameterList *> TPLists =
+  ArrayRef<TemplateParameterList *> TPLs =
       FTD->getFriendTypeTemplateParameterLists();
-  if (TPLists.empty())
+  if (TPLs.empty())
     return OnFailure;
 
   TagTypeKind FriendTagKind =
       TypeWithKeyword::getTagTypeKindForKeyword(FriendDNT->getKeyword());
-  for (CXXRecordDecl *RD : EC.Records) {
-    if (RD->getDeclName() != FriendDNT->getIdentifier())
+  for (CXXRecordDecl *ContextRD : EC.Records) {
+    if (ContextRD->getDeclName() != FriendDNT->getIdentifier())
       continue;
 
-    if (ClassTemplateDecl *ContextCTD = GetClassTemplateDecl(RD)) {
+    if (ClassTemplateDecl *ContextCTD = GetClassTemplateDecl(ContextRD)) {
       AccessResult Result = MatchesFriend(
           S, FTD, FriendDNT->getIdentifier(), FriendTagKind, ContextCTD,
-          FriendTST, TPLists.drop_back(), TPLists.back(), FailedTSC);
+          FriendTST, TPLs.drop_back(), TPLs.back(), FailedTSC);
       if (Result == AR_accessible)
         return AR_accessible;
       if (Result == AR_dependent)
@@ -1084,13 +1074,13 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
       continue;
     }
 
-    if ((FriendTagKind == TagTypeKind::Union) != RD->isUnion())
+    if ((FriendTagKind == TagTypeKind::Union) != ContextRD->isUnion())
       continue;
 
     MultiLevelTemplateArgumentList DeducedArgs;
     AccessResult Result =
-        DeduceTemplateArguments(S, FTD, RD->getDeclContext(), FriendTST,
-                                TPLists, FailedTSC, DeducedArgs);
+        DeduceTemplateArguments(S, FTD, ContextRD->getDeclContext(), FriendTST,
+                                TPLs, FailedTSC, DeducedArgs);
     if (Result == AR_accessible)
       return AR_accessible;
     if (Result == AR_dependent)
@@ -1123,11 +1113,11 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
   if (FTD->isInvalidDecl())
     return AR_accessible;
 
-  if (NamedDecl *ND = FTD->getFriendDecl())
-    return MatchesFriend(S, EC, FTD, ND, FailedTSC);
+  if (NamedDecl *Friend = FTD->getFriendDecl())
+    return MatchesFriend(S, EC, FTD, Friend, FailedTSC);
 
-  if (TypeSourceInfo *TSI = FTD->getFriendType())
-    return MatchesFriend(S, EC, FTD, TSI, FailedTSC);
+  if (TypeSourceInfo *FriendTSI = FTD->getFriendType())
+    return MatchesFriend(S, EC, FTD, FriendTSI, FailedTSC);
 
   return AR_inaccessible;
 }

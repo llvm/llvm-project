@@ -6422,7 +6422,7 @@ public:
                                      TemplateIdAnnotation *TemplateId);
 
   bool CheckDependentFriend(SourceLocation Loc, NestedNameSpecifierLoc NNSLoc,
-                            ArrayRef<TemplateParameterList *> TPL,
+                            ArrayRef<TemplateParameterList *> TPLs,
                             bool IsInstantiation = false);
 
   MSPropertyDecl *HandleMSProperty(Scope *S, RecordDecl *TagD,
@@ -12804,7 +12804,7 @@ public:
   bool DeduceTemplateArguments(FriendTemplateDecl *FTD,
                                ClassTemplateDecl *PatternCTD,
                                ClassTemplateDecl *CandidateCTD,
-                               ArrayRef<TemplateParameterList *> TPL,
+                               ArrayRef<TemplateParameterList *> TPLs,
                                ArrayRef<TemplateArgument> PatternArgs,
                                ArrayRef<TemplateArgument> CandidateArgs,
                                SourceLocation Loc,

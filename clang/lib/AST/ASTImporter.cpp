@@ -4649,8 +4649,7 @@ ExpectedDecl ASTNodeImporter::VisitFriendDecl(FriendDecl *D) {
   const auto *RD = cast<CXXRecordDecl>(DC);
   SmallVector<FriendDecl *, 2> ImportedEquivalentFriends;
   for (FriendDecl *ImportedFriend : RD->friends())
-    if (ImportedFriend->getKind() == Decl::Friend &&
-        IsEquivalentFriend(Importer, D, ImportedFriend))
+    if (IsEquivalentFriend(Importer, D, ImportedFriend))
       ImportedEquivalentFriends.push_back(ImportedFriend);
 
   FriendCountAndPosition CountAndPosition =
@@ -4748,21 +4747,15 @@ ExpectedDecl ASTNodeImporter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
         return TSIOrErr.takeError();
     }
   } else {
-    if (auto TemplateOrErr = import(FromTemplate))
-      ToTemplate = *TemplateOrErr;
-    else
-      return TemplateOrErr.takeError();
+    if (Error Err = importInto(ToTemplate, FromTemplate))
+      return std::move(Err);
   }
 
-  ArrayRef<TemplateParameterList *> TPLs =
+  ArrayRef<TemplateParameterList *> FromTPLs =
       D->getFriendTypeTemplateParameterLists();
-  SmallVector<TemplateParameterList *, 1> ToParams(TPLs.size());
-  for (unsigned I = 0, N = TPLs.size(); I != N; ++I) {
-    if (auto ParamsOrErr = import(TPLs[I]))
-      ToParams[I] = *ParamsOrErr;
-    else
-      return ParamsOrErr.takeError();
-  }
+  SmallVector<TemplateParameterList *, 1> ToTPLs(FromTPLs.size());
+  if (Error Err = ImportContainerChecked(FromTPLs, ToTPLs))
+    return std::move(Err);
 
   auto LocationOrErr = import(D->getLocation());
   if (!LocationOrErr)
@@ -4779,13 +4772,13 @@ ExpectedDecl ASTNodeImporter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
   FriendTemplateDecl *FTD;
   if (ToTemplate.isNull()) {
     if (GetImportedOrCreateDecl(FTD, D, Importer.getToContext(), DC,
-                                *LocationOrErr, ToFU, *FriendLocOrErr, ToParams,
+                                *LocationOrErr, ToFU, *FriendLocOrErr, ToTPLs,
                                 *EllipsisLocOrErr))
       return FTD;
   } else {
     if (GetImportedOrCreateDecl(FTD, D, Importer.getToContext(), DC,
                                 *LocationOrErr, ToTemplate, *FriendLocOrErr,
-                                ToParams, *EllipsisLocOrErr))
+                                ToTPLs, *EllipsisLocOrErr))
       return FTD;
   }
 

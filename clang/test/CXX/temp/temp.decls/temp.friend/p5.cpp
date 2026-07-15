@@ -790,12 +790,14 @@ namespace test33 {
     template <class> struct D {
       struct M;
       template <class> struct N;
+      static void f();
     };
   };
 
   struct B {
     struct M;
     template <class> struct N;
+    static void f();
   };
 
   struct C {
@@ -819,6 +821,15 @@ namespace test33 {
   template struct Y<A>;
   template struct Y<C>;
   // expected-note@-1 {{in instantiation of template class 'test33::Y<test33::C>' requested here}}
+
+  template <class P> struct Z {
+    template <class U> friend void P::template D<U>::f();
+    // expected-error@-1 {{nested name specifier 'test33::C::template D<U>' in friend declaration must end with a simple-template-id naming a class template, but 'D' is an alias template}}
+  };
+
+  template struct Z<A>;
+  template struct Z<C>;
+  // expected-note@-1 {{in instantiation of template class 'test33::Z<test33::C>' requested here}}
 }
 
 namespace test34 {

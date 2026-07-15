@@ -18172,7 +18172,7 @@ static void DiagnoseDependentFriendNotMember(Sema &S, SourceLocation Loc,
 
 bool Sema::CheckDependentFriend(SourceLocation Loc,
                                 NestedNameSpecifierLoc NNSLoc,
-                                ArrayRef<TemplateParameterList *> TPL,
+                                ArrayRef<TemplateParameterList *> TPLs,
                                 bool IsInstantiation) {
   NestedNameSpecifier NNS = NNSLoc.getNestedNameSpecifier();
   if (!NNS.isDependent() && !IsInstantiation)
@@ -18192,11 +18192,11 @@ bool Sema::CheckDependentFriend(SourceLocation Loc,
     return true;
   }
 
-  if (TPL.empty())
+  if (TPLs.empty())
     return false;
 
   SmallVector<NamedDecl *, 4> UndeducedParameters;
-  for (TemplateParameterList *Params : TPL) {
+  for (TemplateParameterList *Params : TPLs) {
     llvm::SmallBitVector UsedParameters(Params->size());
     MarkUsedTemplateParameters(TST->template_arguments(),
                                /*OnlyDeduced=*/true, Params->getDepth(),
@@ -18316,10 +18316,10 @@ DeclResult Sema::ActOnTemplatedFriendTag(
 
   assert(SS.isNotEmpty() && "valid templated tag with no SS and no direct?");
 
-  ArrayRef<TemplateParameterList *> TPL = TempParamLists;
+  ArrayRef<TemplateParameterList *> TPLs = TempParamLists;
   if (TemplateParams)
-    TPL = TPL.drop_back();
-  if (CheckDependentFriend(TagLoc, QualifierLoc, TPL))
+    TPLs = TPLs.drop_back();
+  if (CheckDependentFriend(TagLoc, QualifierLoc, TPLs))
     return true;
 
   TypeSourceInfo *TSI = nullptr;
@@ -18771,13 +18771,10 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
   if (DC->isRecord())
     CheckFriendAccess(ND);
 
-  FunctionDecl *FD;
-  if (FunctionTemplateDecl *FTD = dyn_cast<FunctionTemplateDecl>(ND))
-    FD = FTD->getTemplatedDecl();
-  else
-    FD = cast<FunctionDecl>(ND);
+  FunctionDecl *FD = ND->getAsFunction();
+  assert(FD && "Expected a function declaration!");
 
-  if (TemplateParams.size() && SS.isValid() &&
+  if (!TemplateParams.empty() && SS.isValid() &&
       CheckDependentFriend(NameInfo.getLoc(), SS.getWithLocInContext(Context),
                            FD->getTemplateParameterLists())) {
     ND->setInvalidDecl();
@@ -18827,15 +18824,15 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
       Diag(FD->getLocation(), diag::err_friend_decl_with_def_arg_must_be_def);
   }
 
-  ArrayRef<TemplateParameterList *> TPL = FD->getTemplateParameterLists();
+  ArrayRef<TemplateParameterList *> TPLs = FD->getTemplateParameterLists();
   FriendDecl *Friend;
-  if (TPL.size() > 0 && SS.isValid()) {
-    if (CheckTemplateDeclScope(S, TPL.back()))
+  if (!TPLs.empty() && SS.isValid()) {
+    if (CheckTemplateDeclScope(S, TPLs.back()))
       return nullptr;
 
     Friend =
         FriendTemplateDecl::Create(Context, CurContext, D.getIdentifierLoc(),
-                                   ND, DS.getFriendSpecLoc(), TPL);
+                                   ND, DS.getFriendSpecLoc(), TPLs);
   } else {
     Friend = FriendDecl::Create(Context, CurContext, D.getIdentifierLoc(), ND,
                                 DS.getFriendSpecLoc());

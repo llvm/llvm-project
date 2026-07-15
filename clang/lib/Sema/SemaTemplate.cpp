@@ -9574,7 +9574,7 @@ bool Sema::CheckDependentFunctionTemplateSpecialization(
   bool IsFriend = FD->getFriendObjectKind() != Decl::FOK_None;
   if (Previous.empty()) {
     NestedNameSpecifier FriendQualifier = FD->getQualifier();
-    if (IsFriend && FriendQualifier && FriendQualifier.isDependent() &&
+    if (IsFriend && FriendQualifier.isDependent() &&
         FriendQualifier.getKind() == NestedNameSpecifier::Kind::Type &&
         FriendQualifier.getAsType()->getAs<TemplateSpecializationType>()) {
       FD->setDependentTemplateSpecialization(
@@ -11430,7 +11430,6 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
     LookupQualifiedName(Result, Ctx, SS);
   else
     LookupName(Result, CurScope);
-
   unsigned DiagID = 0;
   Decl *Referenced = nullptr;
   switch (Result.getResultKind()) {

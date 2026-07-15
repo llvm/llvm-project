@@ -731,8 +731,8 @@ enum class TemplateSubstitutionKind : char {
       SubstTemplateParams(TemplateParameterList *List);
 
     bool SubstTemplateParameterLists(
-        ArrayRef<TemplateParameterList *> TPL,
-        SmallVectorImpl<TemplateParameterList *> &InstTPL);
+        ArrayRef<TemplateParameterList *> TPLs,
+        SmallVectorImpl<TemplateParameterList *> &InstTPLs);
 
     bool SubstQualifier(const DeclaratorDecl *OldDecl,
                         DeclaratorDecl *NewDecl);
@@ -744,10 +744,9 @@ enum class TemplateSubstitutionKind : char {
         ArrayRef<TemplateArgument> Converted,
         VarTemplateSpecializationDecl *PrevDecl = nullptr);
 
-    template <typename FriendTy>
     bool
-    InstantiateFriendPackExpansion(FriendTy *D, TypeSourceInfo *TSI,
-                                   ArrayRef<TemplateParameterList *> TPL = {});
+    InstantiateFriendPackExpansion(FriendDecl *D, TypeSourceInfo *TSI,
+                                   ArrayRef<TemplateParameterList *> TPLs = {});
 
     Decl *InstantiateTypedefNameDecl(TypedefNameDecl *D, bool IsTypeAlias);
     Decl *InstantiateTypeAliasTemplateDecl(TypeAliasTemplateDecl *D);

@@ -10867,8 +10867,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
         // qualifier is dependent, its type is dependent, or its template-id is
         // dependent.
         isDependentSpecialization =
-            DC->isDependentContext() ||
-            (NewFD->getQualifier() && NewFD->getQualifier().isDependent()) ||
+            DC->isDependentContext() || NewFD->getQualifier().isDependent() ||
             NewFD->getType()->isDependentType() ||
             (HasExplicitTemplateArgs &&
              TemplateSpecializationType::
@@ -12535,7 +12534,7 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
       // template struct A<B>;
       if (NewFD->getFriendObjectKind() == Decl::FriendObjectKind::FOK_None ||
           (!Destructor->getFunctionObjectParameterType()->isDependentType() &&
-           !Destructor->getDeclName().getCXXNameType()->isDependentType())) {
+           !Destructor->getDeclName().isDependentName())) {
         CanQualType ClassType =
             Context.getCanonicalTagType(Destructor->getParent());
 
