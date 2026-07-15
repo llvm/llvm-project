@@ -1,6 +1,4 @@
-================================================
-API Notes: Annotations Without Modifying Headers
-================================================
+# API Notes: Annotations Without Modifying Headers
 
 **The Problem:** You have headers you want to use, but you also want to add
 extra information to the API. You don't want to put that information in the
@@ -11,9 +9,9 @@ want to modify them at all.
 **Incomplete solution:** Redeclare all the interesting parts of the API in your
 own header and add the attributes you want. Unfortunately, this:
 
-* doesn't work with attributes that must be present on a definition
-* doesn't allow changing the definition in other ways
-* requires your header to be included in any client code to take effect
+- doesn't work with attributes that must be present on a definition
+- doesn't allow changing the definition in other ways
+- requires your header to be included in any client code to take effect
 
 **Better solution:** Provide a "sidecar" file with the information you want to
 add, and have that automatically get picked up by the module-building logic in
@@ -22,14 +20,11 @@ the compiler.
 That's API notes.
 
 API notes use a YAML-based file format. YAML is a format best explained by
-example, so here is a `small example
-<https://github.com/llvm/llvm-project/blob/main/clang/test/APINotes/Inputs/Frameworks/SomeKit.framework/Headers/SomeKit.apinotes>`_
+example, so here is a [small example](https://github.com/llvm/llvm-project/blob/main/clang/test/APINotes/Inputs/Frameworks/SomeKit.framework/Headers/SomeKit.apinotes)
 from the compiler test suite of API
 notes for a hypothetical "SomeKit" framework.
 
-
-Usage
-=====
+## Usage
 
 API notes files are found relative to the module map that defines a module,
 under the name "SomeKit.apinotes" for a module named "SomeKit". Additionally, a
@@ -42,33 +37,29 @@ PrivateHeaders directory as well, though it does not need an additional
 "_private" suffix on its name.
 
 Clang will search for API notes files next to module maps only when passed the
-``-fapinotes-modules`` option.
+`-fapinotes-modules` option.
 
-
-Limitations
-===========
+## Limitations
 
 - Since they're identified by module name, API notes cannot be used to modify
   arbitrary textual headers.
 
-
-"Versioned" API Notes
-=====================
+## "Versioned" API Notes
 
 Many API notes affect how a C API is imported into Swift. In order to change
 that behavior while still remaining backwards-compatible, API notes can be
 selectively applied based on the Swift compatibility version provided to the
-compiler (e.g. ``-fapi-notes-swift-version=5``). The rule is that an
+compiler (e.g. `-fapi-notes-swift-version=5`). The rule is that an
 explicitly-versioned API note applies to that version *and all earlier
 versions,* and any applicable explicitly-versioned API note takes precedence
 over an unversioned API note.
 
-
-Reference
-=========
+## Reference
 
 An API notes file contains a YAML dictionary with the following top-level
 entries:
+
+```{eval-rst}
 
 :Name:
 
@@ -513,3 +504,4 @@ declaration kind), all of which are optional:
     - Selector: "initWithFrame:"
       MethodKind: Instance
       DesignatedInit: true
+```
