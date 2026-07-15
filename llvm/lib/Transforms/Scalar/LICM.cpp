@@ -2431,9 +2431,9 @@ bool pointerInvalidatedByBlock(BasicBlock &BB, MemorySSA &MSSA,
       for (const auto &MA : *Accesses) {
         const auto *OtherMA = dyn_cast<MemoryUseOrDef>(&MA);
         if (!OtherMA || OtherMA == &MUD)
-            continue;
+          continue;
         if (MUD.getBlock() != OtherMA->getBlock() ||
-               !MSSA.locallyDominates(OtherMA, &MUD))
+            !MSSA.locallyDominates(OtherMA, &MUD))
           return true;
       }
     return false;
@@ -2443,7 +2443,7 @@ bool pointerInvalidatedByBlock(BasicBlock &BB, MemorySSA &MSSA,
     for (const auto &MA : *Accesses)
       if (const auto *MD = dyn_cast<MemoryDef>(&MA))
         if (MUD.getBlock() != MD->getBlock() ||
-               !MSSA.locallyDominates(MD, &MUD))
+            !MSSA.locallyDominates(MD, &MUD))
           return true;
   return false;
 }
