@@ -52,7 +52,7 @@ public:
 
   /// Returns true if this StackID corresponds to a frame younger (i.e. higher
   /// on the call stack) than `other`, and false otherwise (including when the
-  /// frames are not comparable).
+  /// frames are not comparable, in some cases where this can be detected).
   bool IsYoungerThan(const StackID &other) const;
 
 protected:
