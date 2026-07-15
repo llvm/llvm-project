@@ -470,7 +470,7 @@ public:
     assert(!empty() && "Getting last element of empty vector.");
     return (*this)[size() - 1];
   }
-  
+
   /// Returns true if bit \p Idx is set.
   bool test(unsigned Idx) const {
     return (*this)[Idx];
