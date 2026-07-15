@@ -7,6 +7,7 @@ import lldbsuite.test.lldbutil as lldbutil
 class TestSwiftExplicitModulePrivateTypeGeneric(lldbtest.TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @expectedFailureWindows  # https://github.com/swiftlang/llvm-project/issues/13444
     @skipEmbeddedSwift
     @swiftTest
     def test(self):

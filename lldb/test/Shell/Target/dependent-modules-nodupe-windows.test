@@ -1,4 +1,6 @@
 # REQUIRES: target-windows
+# https://github.com/swiftlang/llvm-project/issues/13444
+# XFAIL: target-windows
 
 # Checks that dependent modules preloaded by LLDB are not duplicated when the
 # process actually loads the DLL.
