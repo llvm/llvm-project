@@ -1659,6 +1659,65 @@ void test_aggregate_nested() {
   (void)a; (void)b;
 }
 
+// A pointer *element* of an array is a binding position with no declaration to
+// carry the marker (like a variadic argument), so it is checked as an unmarked
+// target and paper §4.3's rules apply per pointer element. The enclosing array
+// variable's own site no-ops (an array is not a pointer/reference), so each
+// violating element fires exactly once.
+void test_array_element_pointer() {
+  int *a1[2] = {&g_uninit, &g_init}; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int *a2[2] = {&g_init, &g_init};   // OK
+  int *base [[ref_to_uninit]] = &g_uninit;
+  int *a3[1] = {base};        // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int *a4[1] = {allocate(3)}; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  // Null sources stay accepted: {} value-initializes the elements to null and
+  // nullptr is a null source, consistent with an unmarked target (paper §4.3).
+  int *a5[2] = {};                 // OK
+  int *a6[2] = {nullptr, &g_init}; // OK
+  (void)a1; (void)a2; (void)base; (void)a3; (void)a4; (void)a5; (void)a6;
+}
+
+// Parse-order store credit applies to element sources like any other binding:
+// after the whole-entity store, &u refers to initialized memory.
+void test_array_element_store_credit() {
+  int u [[uninit]];
+  u = 5;
+  int *a[1] = {&u}; // OK: credited by the store above
+  (void)a;
+}
+
+// Composition with nested aggregates: an array-of-struct element recurses back
+// into the member gate (the field's own marker governs), and a struct's array
+// member reaches the element gate.
+struct WithPtrArray { int *a[2]; };
+
+void test_array_element_nested() {
+  AggPtr arr1[1] = {{&g_uninit}};        // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  AggPtrMarked arr2[1] = {{&g_uninit}};  // OK: the field carries the marker
+  AggPtrMarked arr3[1] = {{&g_init}};    // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  WithPtrArray w = {{&g_uninit, &g_init}}; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)arr1; (void)arr2; (void)arr3; (void)w;
+}
+
+// A designated array element (a C99 extension in C++) is the same element
+// binding.
+void test_array_element_designated() {
+  // expected-warning@+2 {{array designators are a C99 extension}} no-profiles-warning@+2 {{array designators are a C99 extension}}
+  // expected-error@+1 {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int *d[3] = {[1] = &g_uninit};
+  (void)d;
+}
+
+// A dependent element source defers on the pattern and is rebuilt at
+// instantiation, where the Decl-less check fires per specialization (like
+// template_throw_bad).
+template <typename T>
+void template_array_element_bad() {
+  T *a[1] = {(T *)&g_uninit}; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)a;
+}
+template void template_array_element_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_array_element_bad<int>' requested here}}
+
 // An aggregate temporary built from an init list is checked the same way
 // wherever it appears -- as a call argument, a return value, or a new-expression
 // initializer. The enclosing pointer (the parameter, the return type, the
@@ -1749,6 +1808,15 @@ void template_aggregate_paren_bad() {
   (void)a;
 }
 template void template_aggregate_paren_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_aggregate_paren_bad<int>' requested here}}
+
+// A parenthesized aggregate's array elements are the same unmarked element
+// bindings as the braced form; the hook runs only in the build phase, so the
+// verify pass adds no second diagnostic.
+void test_array_element_paren() {
+  int *pa[2](&g_uninit, &g_init); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int *pb[2](&g_init, nullptr);   // OK
+  (void)pa; (void)pb;
+}
 
 // A plain pointer *variable* with a braced initializer is checked once at its
 // own variable site (EK_Variable); the aggregate field hooks are scoped to a

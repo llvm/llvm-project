@@ -445,7 +445,8 @@ on an object recognized as uninitialized storage is rejected, and so is
 copying a class object out of one.  For the copy, the escape is the paper's
 own (§7.2): declare the copy constructor's parameter ``[[ref_to_uninit]]``.
 Positions that cannot carry the marker -- a variadic argument, a parameter of
-a function called through a function pointer, the implicit object parameter
+a function called through a function pointer, the implicit object parameter,
+a pointer element of an array in aggregate initialization
 -- are checked as unmarked targets; suppress at the call site if the flow is
 intended.  A null pointer source -- ``nullptr``, ``0``, ``{}``, or a local
 variable initialized to null -- refers to no object, so it is accepted for

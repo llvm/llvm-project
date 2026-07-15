@@ -1596,16 +1596,24 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
           // std::init / ref_to_uninit (paper §5): in C++ a pointer field
           // initialized by an enclosing aggregate's init list is copy-
           // initialized here (a scalar member never reaches CheckScalarType).
-          // Scoped to an aggregate subobject (EK_Member) so the enclosing
-          // variable/argument/return is left to its own site, which already
-          // handles a braced source via the recognizer. No Decl is passed: the
-          // init list can appear in a template independently of whether the
-          // aggregate is one, so checkInitProfileRefToUninit defers on an
-          // instantiation-dependent source and suppression comes from the
-          // parse-time stack. (A reference field is routed to
-          // CheckReferenceType above.)
+          // Scoped to an aggregate subobject (a field, or an array / vector /
+          // complex element) so the enclosing variable/argument/return is left
+          // to its own site, which already handles a braced source via the
+          // recognizer. An element position has no declaration to carry the
+          // marker (Entity.getDecl() is null for the element kinds), so it is
+          // checked as an unmarked target -- like a variadic argument or a
+          // function-pointer parameter -- and the rules of paper §4.3 apply
+          // per pointer element. No Decl is passed: the init list can appear
+          // in a template independently of whether the aggregate is one, so
+          // checkInitProfileRefToUninit defers on an instantiation-dependent
+          // source and suppression comes from the parse-time stack. (A
+          // reference field is routed to CheckReferenceType above; an array
+          // of references is ill-formed.)
           if (!Result.isInvalid() &&
-              Entity.getKind() == InitializedEntity::EK_Member)
+              (Entity.getKind() == InitializedEntity::EK_Member ||
+               Entity.getKind() == InitializedEntity::EK_ArrayElement ||
+               Entity.getKind() == InitializedEntity::EK_VectorElement ||
+               Entity.getKind() == InitializedEntity::EK_ComplexElement))
             SemaRef.Profiles().checkInitProfileRefToUninitBinding(
                 expr->getExprLoc(), Entity.getDecl(), ElemType, expr);
 
@@ -6050,6 +6058,17 @@ static void TryOrBuildParenListInitialization(
           E->getExprLoc(), /*isDirectInit=*/false, E);
       if (!HandleInitializedEntity(SubEntity, SubKind, E))
         return;
+
+      // std::init / ref_to_uninit (paper §5): a pointer element initialized
+      // from a C++20 parenthesized aggregate list is an element binding,
+      // checked exactly like the braced-list hook in CheckSubElementType. An
+      // element cannot carry the marker (null target: unmarked, paper §4.3).
+      // Only in the build phase, so the verify pass does not double-diagnose;
+      // the trailing value-initialized filler below has no source expression
+      // and stays unchecked (value-initialization is null, a non-source).
+      if (!VerifyOnly)
+        S.Profiles().checkInitProfileRefToUninitBinding(
+            E->getExprLoc(), /*Target=*/nullptr, AT->getElementType(), E);
     }
     //   ...and value-initialized for each k < i <= n;
     if (ArrayLength > Args.size() || Entity.isVariableLengthArrayNew()) {
