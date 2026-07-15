@@ -381,7 +381,7 @@ define i1 @andn_cmp_swap_ops(i64 %x, i64 %y) {
   ret i1 %cmp
 }
 
-; Use a 'test' for the final i8 compare.
+; Use a 'test' (not an 'and') because 'andn' only works for i32/i64.
 define i1 @andn_cmp_i8(i8 %x, i8 %y) {
 ; X86-LABEL: andn_cmp_i8:
 ; X86:       # %bb.0:
