@@ -14097,11 +14097,6 @@ const SCEV *ScalarEvolution::getElementSize(Instruction *Inst) {
     return nullptr;
   }
 
-  // Derive the index type from the access's actual pointer operand rather than
-  // a generic address-space-0 pointer. On targets whose data layout uses
-  // different index widths per address space, the element-size SCEV must match
-  // the width of the access function's SCEV; otherwise delinearization would
-  // divide SCEVs of mismatched types.
   Type *ETy = getEffectiveSCEVType(PtrTy);
   return getSizeOfExpr(ETy, Ty);
 }
