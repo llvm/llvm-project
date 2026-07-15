@@ -289,7 +289,7 @@ ASTNodeUP DILParser::ParseEqualityExpression() {
     Token token = CurToken();
     m_dil_lexer.Advance();
     auto rhs = ParseRelationalExpression();
-    assert(lhs && "ASTNodeUP must not contain a nullptr");
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
     lhs = std::make_unique<BinaryOpNode>(
         token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
         std::move(lhs), std::move(rhs));
@@ -315,7 +315,7 @@ ASTNodeUP DILParser::ParseRelationalExpression() {
     Token token = CurToken();
     m_dil_lexer.Advance();
     auto rhs = ParseShiftExpression();
-    assert(lhs && "ASTNodeUP must not contain a nullptr");
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
     lhs = std::make_unique<BinaryOpNode>(
         token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
         std::move(lhs), std::move(rhs));
