@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -filetype=obj < %s | llvm-objdump -s -j .rodata - | FileCheck --check-prefix=OBJDUMP %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 < %s | FileCheck --check-prefix=ASM %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -filetype=obj < %s | llvm-objdump -s -j .rodata - | FileCheck --check-prefix=GFX1250-OBJDUMP %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck --check-prefix=GFX1250-ASM %s
+; RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -filetype=obj < %s | llvm-objdump -s -j .rodata - | FileCheck --check-prefix=OBJDUMP %s
+; RUN: llc -mtriple=amdgpu9.42-amd-amdhsa < %s | FileCheck --check-prefix=ASM %s
+; RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -filetype=obj < %s | llvm-objdump -s -j .rodata - | FileCheck --check-prefix=GFX1250-OBJDUMP %s
+; RUN: llc -mtriple=amdgpu12.50-amd-amdhsa < %s | FileCheck --check-prefix=GFX1250-ASM %s
 
 ; OBJDUMP: Contents of section .rodata:
 ; OBJDUMP-NEXT: 0000 00000000 00000000 10010000 00000000  ................

@@ -53,7 +53,6 @@ MLGO
 ContentAddressableStorage
 CIBestPractices
 AIToolPolicy
-CalleeTypeMetadata
 CallGraphSection
 InterfaceExportAnnotations
 PCSectionsMetadata
