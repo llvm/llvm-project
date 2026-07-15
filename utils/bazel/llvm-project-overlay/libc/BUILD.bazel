@@ -2994,6 +2994,7 @@ libc_support_library(
         ":__support_macros_config",
         ":errno",
         ":hdr_errno_macros",
+        ":hdr_signal_macros",
     ],
 )
 
