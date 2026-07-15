@@ -4919,13 +4919,18 @@ static StringRef getCanonicalArchString(Compilation &C,
 /// incompatible pair if a conflict occurs.
 static std::optional<std::pair<llvm::StringRef, llvm::StringRef>>
 getConflictOffloadArchCombination(const llvm::DenseSet<StringRef> &Archs,
-                                  llvm::Triple Triple) {
+                                  const llvm::Triple &Triple) {
   if (!Triple.isAMDGPU())
     return std::nullopt;
 
-  std::set<StringRef> ArchSet;
-  llvm::copy(Archs, std::inserter(ArchSet, ArchSet.begin()));
-  return getConflictTargetIDCombination(Triple, ArchSet);
+  // Sort for a deterministic conflicting pair in the diagnostic.
+  llvm::SmallVector<StringRef> ArchList(Archs.begin(), Archs.end());
+  llvm::sort(ArchList);
+
+  llvm::SmallVector<clang::TargetIDEntry> Entries;
+  for (StringRef Arch : ArchList)
+    Entries.emplace_back(Triple, Arch);
+  return getConflictTargetIDCombination(Entries);
 }
 
 llvm::SmallVector<BoundArch>

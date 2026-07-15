@@ -25,8 +25,7 @@ llvm::StringRef getProcessorFromTargetID(const llvm::Triple &T,
 // does not show up in any target IDs. Otherwise the target ID combination is
 // invalid.
 std::optional<std::pair<llvm::StringRef, llvm::StringRef>>
-getConflictTargetIDCombination(const llvm::Triple &T,
-                               const std::set<llvm::StringRef> &TargetIDs) {
+getConflictTargetIDCombination(llvm::ArrayRef<TargetIDEntry> Entries) {
   struct Info {
     llvm::StringRef TargetID;
     bool HasXnack;
@@ -34,7 +33,7 @@ getConflictTargetIDCombination(const llvm::Triple &T,
   };
 
   llvm::SmallDenseMap<llvm::AMDGPU::GPUKind, Info> Seen;
-  for (llvm::StringRef ID : TargetIDs) {
+  for (const auto &[T, ID] : Entries) {
     std::optional<llvm::AMDGPU::TargetID> Parsed =
         llvm::AMDGPU::TargetID::parse(T, ID);
     if (!Parsed)

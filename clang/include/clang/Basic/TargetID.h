@@ -9,13 +9,11 @@
 #ifndef LLVM_CLANG_BASIC_TARGETID_H
 #define LLVM_CLANG_BASIC_TARGETID_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
-#include <set>
 #include <string>
-
-namespace llvm {
-class Triple;
-}
+#include <utility>
 
 namespace clang {
 
@@ -24,12 +22,16 @@ namespace clang {
 llvm::StringRef getProcessorFromTargetID(const llvm::Triple &T,
                                          llvm::StringRef OffloadArch);
 
+/// A device triple paired with a target ID (processor and feature modifiers)
+/// for that triple, e.g. {amdgcn-amd-amdhsa, "gfx906:xnack+"}.
+using TargetIDEntry = std::pair<const llvm::Triple &, llvm::StringRef>;
+
 /// Get the conflicted pair of target IDs for a compilation or a bundled code
-/// object, assuming \p TargetIDs are canonicalized. If there is no conflicts,
-/// returns std::nullopt.
+/// object. Two entries conflict when they resolve to the same processor but
+/// disagree on whether a feature (xnack/sramecc) is explicitly specified. If
+/// there is no conflict, returns std::nullopt.
 std::optional<std::pair<llvm::StringRef, llvm::StringRef>>
-getConflictTargetIDCombination(const llvm::Triple &T,
-                               const std::set<llvm::StringRef> &TargetIDs);
+getConflictTargetIDCombination(llvm::ArrayRef<TargetIDEntry> Entries);
 
 /// Sanitize a target ID string for use in a file name.
 /// Replaces invalid characters (like ':') with safe characters (like '@').

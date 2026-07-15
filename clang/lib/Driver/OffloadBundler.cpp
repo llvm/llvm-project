@@ -16,6 +16,7 @@
 
 #include "clang/Driver/OffloadBundler.h"
 #include "clang/Basic/OffloadArch.h"
+#include "clang/Basic/TargetID.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1523,8 +1524,17 @@ CheckHeterogeneousArchive(StringRef ArchiveName,
     if (CodeObjectFileError)
       return CodeObjectFileError;
 
-    auto &&ConflictingArchs = clang::getConflictTargetIDCombination(BundleIds);
-    if (ConflictingArchs) {
+    // A single bundle may contain several triples. Pair each target ID with its
+    // own triple; the conflict check groups by resolved processor, which is
+    // spelling-independent.
+    llvm::SmallVector<clang::TargetIDEntry> Entries;
+    for (StringRef BundleId : BundleIds) {
+      OffloadTargetInfo Info(BundleId, BundlerConfig);
+      Entries.emplace_back(Info.Triple, Info.TargetID);
+    }
+
+    if (auto &&ConflictingArchs =
+            clang::getConflictTargetIDCombination(Entries)) {
       std::string ErrMsg =
           Twine("conflicting TargetIDs [" + ConflictingArchs.value().first +
                 ", " + ConflictingArchs.value().second + "] found in " +
