@@ -443,6 +443,12 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
       return;
     } else {
       Features.reset(new SubtargetFeatures(*FeaturesOrErr));
+      // EF_RISCV_RVE selects the E ABI even when the input has no
+      // .riscv.attributes architecture string. ObjectFile::getFeatures()
+      // currently derives RVC from e_flags but not RVE, so preserve this ABI
+      // constraint explicitly for register analysis and code generation.
+      if (File->getPlatformFlags() & ELF::EF_RISCV_RVE)
+        Features->AddFeature("e");
     }
   }
 
@@ -5671,6 +5677,17 @@ void RewriteInstance::updateELFSymbolTable(
     Expected<StringRef> SymbolName = Symbol.getName(StringSection);
     assert(SymbolName && "cannot get symbol name");
 
+    // Mapping symbols can share the exact address of a function entry, but
+    // they are code/data metadata rather than function aliases. Let the
+    // marker-specific path below handle them; otherwise addExtraSymbols()
+    // creates invalid split names such as "$xrv64i...cold.0".
+    auto IsMarkerSymbol = [&]() {
+      return BC->getMarkerType(Symbol.getType(), Symbol.st_size,
+                               *SymbolName) != MarkerSymType::NONE;
+    };
+    if (Function && IsMarkerSymbol())
+      Function = nullptr;
+
     auto updateSymbolValue = [&](const StringRef Name,
                                  std::optional<uint64_t> Value = std::nullopt) {
       NewSymbol.st_value = Value ? *Value : getNewValueForSymbol(Name);
@@ -5722,10 +5739,6 @@ void RewriteInstance::updateELFSymbolTable(
       // update their addresses to reflect the output layout.
       // Skip AArch64/RISC-V marker symbols ($d, $x) inside functions —
       // BOLT generates its own via addExtraSymbols.
-      auto IsMarkerSymbol = [&]() {
-        return BC->getMarkerType(Symbol.getType(), Symbol.st_size,
-                                 *SymbolName) != MarkerSymType::NONE;
-      };
       const bool IsLocalLabel = Symbol.getType() == ELF::STT_NOTYPE &&
                                 Symbol.getBinding() == ELF::STB_LOCAL &&
                                 Symbol.st_size == 0 && !IsMarkerSymbol();
