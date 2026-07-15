@@ -2455,8 +2455,7 @@ define i16 @mul_select_extra_use_mul(i16 %x, i1 %cond) {
 
 define i16 @mul_add_one(i16 range(i16 0, 2) %x, i16 %y) {
 ; CHECK-LABEL: @mul_add_one(
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[X:%.*]], 1
-; CHECK-NEXT:    [[RET:%.*]] = mul i16 [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = shl i16 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret i16 [[RET]]
 ;
   %add = add i16 %x, 1
@@ -2468,7 +2467,7 @@ define i16 @mul_add_one_extra_use(i16 range(i16 0, 2) %x, i16 %y) {
 ; CHECK-LABEL: @mul_add_one_extra_use(
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[X:%.*]], 1
 ; CHECK-NEXT:    call void @use16(i16 [[ADD]])
-; CHECK-NEXT:    [[RET:%.*]] = mul i16 [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = shl i16 [[Y:%.*]], [[X]]
 ; CHECK-NEXT:    ret i16 [[RET]]
 ;
   %add = add i16 %x, 1
@@ -2479,8 +2478,7 @@ define i16 @mul_add_one_extra_use(i16 range(i16 0, 2) %x, i16 %y) {
 
 define <4 x i16> @mul_add_one_vec(<4 x i16> range(i16 0, 2) %x, <4 x i16> %y) {
 ; CHECK-LABEL: @mul_add_one_vec(
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <4 x i16> [[X:%.*]], splat (i16 1)
-; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i16> [[Y:%.*]], [[ADD]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl <4 x i16> [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret <4 x i16> [[MUL]]
 ;
   %add = add <4 x i16> %x, splat (i16 1)
@@ -2508,6 +2506,17 @@ define i16 @neg_mul_add_two(i16 range(i16 0, 2) %x, i16 %y) {
   %add = add i16 %x, 2
   %ret = mul i16 %add, %y
   ret i16 %ret
+}
+
+define i1 @neg_mul_add_one_i1(i1 %x, i1 %y) {
+; CHECK-LABEL: @mul_add_one_i1(
+; CHECK-NEXT:    [[ADD:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    [[RET:%.*]] = and i1 [[Y:%.*]], [[ADD]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %add = add i1 %x, 1
+  %ret = mul i1 %add, %y
+  ret i1 %ret
 }
 
 !0 = !{!"function_entry_count", i64 1000}
