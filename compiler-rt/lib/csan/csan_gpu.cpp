@@ -14,7 +14,7 @@
 #include <gpuintrin.h>
 #include <stdint.h>
 
-#include "sanitizer/gpu_sanitizer.h"
+#include "sanitizer/csan_interface.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "shared/rpc.h"
 

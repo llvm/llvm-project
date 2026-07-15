@@ -14,7 +14,7 @@
 
 #include "PluginInterface.h"
 
-#include "sanitizer/gpu_sanitizer.h"
+#include "sanitizer/csan_interface.h"
 
 #include "shared/rpc.h"
 #include "shared/rpc_opcodes.h"

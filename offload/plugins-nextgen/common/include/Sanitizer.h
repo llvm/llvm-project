@@ -9,7 +9,7 @@
 #ifndef OFFLOAD_PLUGINS_NEXTGEN_COMMON_SANITIZER_H
 #define OFFLOAD_PLUGINS_NEXTGEN_COMMON_SANITIZER_H
 
-#include "sanitizer/gpu_sanitizer.h"
+#include "sanitizer/csan_interface.h"
 
 #include "llvm/ADT/DenseSet.h"
 
