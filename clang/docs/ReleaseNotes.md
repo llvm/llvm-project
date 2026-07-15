@@ -116,6 +116,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   as being of type `std::size_t` instead of `int`,
   matching the deduction of array sizes from `int(&)[N]`.
   This is a breaking change for code that depended on the previously deduced type. (#GH195033)
+- Clang now rejects C++ declarations that combine the `auto` type specifier
+  with another type specifier, such as `auto int`.
 - Clang now rejects nested local classes defined in a different
   block scope than their parent class. (#GH193472)
 
@@ -258,6 +260,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 - Clang now propagates `constinit` and `constexpr` in structured bindings with tuple-like initializers.
 
+- Clang now has partial support for [P1306R5](https://wg21.link/P1306R5) Expansion Statements. Iterating expansion
+  statements currently cannot be expanded and will result in a diagnostic, but other types of expansion statements work.
+
 #### C++23 Feature Support
 
 - Partially implement Itanium mangling for pack indexing. Partially substituted packs are not yet supported. (#GH112003)
@@ -270,6 +275,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 #### Resolutions to C++ Defect Reports
 
+- Clang now implements [CWG1504](https://cplusplus.github.io/CWG/issues/1504.html)
+  which makes pointer arithmetic after derived-base conversion undefined behavior,
+  allowing devirtualization of calls through non-zero array subscripts.
 - Implemented [CWG1780 Explicit instantiation/specialization of generic lambda
   operator()](https://cplusplus.github.io/CWG/issues/1780.html)
 - Clang now allows omitting `typename` before a template name in a
@@ -318,6 +326,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### Non-comprehensive list of changes in this release
 
+- Clang can now devirtualize virtual function calls on objects accessed through
+  array subscript expressions with non-zero constant indices, based on the
+  resolution of [CWG1504](https://cplusplus.github.io/CWG/issues/1504.html).
 - Added support for floating point and pointer values in most `__atomic_`
   builtins.
 - Added `__builtin_stdc_rotate_left` and `__builtin_stdc_rotate_right`
@@ -736,6 +747,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 - Added a clearer diagnostic for uninitialized decomposition declarations. (#GH90107)
 
+- Fixed missing sentinel attribute diagnostic discrepancy with explicit object
+  parameters in variadic functions. (#GH200007)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -810,6 +824,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   (#GH191829)
 - Fixed a crash in the constant evaluator when an ill-formed array new-expression whose bound could not be determined (e.g. `new int[]()`) was used in a constant expression. (#GH200139)
 - Clang now defines the GCC-compatible predefined macros `__WCHAR_MIN__`, `__WINT_MIN__`, and `__SIG_ATOMIC_MIN__`. (#GH199678)
+- Fix a crash in addUnsizedArray due assert not verifying we have a Base before doing checks on it. (#GH44212)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -844,6 +859,10 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed a preprocessor assertion failure triggered when parsing an invalid template-id starting with `::template operator`. (#GH186582)
 - Fixed a crash when a function template is defined as a non-template friend with a global scope qualifier. (#GH185341)
 - Fixed a bug of incorrect template depth for abbreviated templates. (#GH200682)
+- Fixed valid C++ code that uses an address-of-function-template expression,
+  such as `decltype(&T::func<Args...>)`, in SFINAE checks when substituting the
+  function template's trailing return type fails, such as when the return type
+  contains a `decltype` probe that calls a deleted function.
 - Clang now rejects constant template parameters with block pointer types, since these are not implemented anyway and would lead to crashes. (#GH189247)
 - Fixed some concept bugs introduced in Clang 22 (#GH197597)
 - Clang no longer reject call expressions whose type is a not-yet-deduced auto type. (#GH207565)
@@ -999,6 +1018,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 #### Arm and AArch64 Support
 
+- On Apple AArch64 targets, `__GCC_DESTRUCTIVE_SIZE` is now `128` (down from `256`)
+  to match the 128-byte cache line used by Apple cores, avoiding needless
+  over-alignment. This value is implementation-defined and should not be relied upon
+  in an ABI-sensitive way.
+
 - Support has been added for the following processors (-mcpu identifiers in parenthesis):
 
   - Arm AGI CPU (armagicpu).
@@ -1032,6 +1056,17 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - When targeting Windows x64 with EGPR (`-mapx-features=egpr`), Clang now
   automatically enables V3 unwind info (`-fwinx64-eh-unwind=v3`) if no
   explicit unwind version was specified.
+
+- In MSVC compatibility mode, scalar and vector deleting destructors now call
+  ``__global_delete`` (or ``__global_array_delete`` for the array ``delete[]``
+  path) instead of directly referencing ``::operator delete``.
+  This matches MSVC's behavior and fixes ``LNK2001`` linker errors in
+  environments where no global ``::operator delete`` exists. When the
+  translation unit contains a ``::delete`` expression, a ``__global_delete``
+  forwarding body that calls ``::operator delete`` is emitted automatically.
+  Otherwise, if no body is emitted, an `/ALTERNATENAME` linker directive will
+  cause the linker to use the generated `__empty_global_delete` trap function
+  instead.
 
 - Clang now supports `-std:c++26preview` for compatibility with MSVC. This enables C++26 features.
 
