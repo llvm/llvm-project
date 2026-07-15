@@ -127,11 +127,40 @@ void template_never_instantiated() {
   (void)x;
 }
 
+// Default-initialization that is not a genuine no-op contradicts the marker
+// exactly like a written initializer (paper §4.2 rule 2, §5.3): something is
+// initialized, so the object is not left uninitialized.
+struct MixedInner { MixedInner(); };
+struct Mixed { int x; MixedInner s; };
+struct WithNSDMIMember { int a; int b = 0; };
+struct Polymorphic { virtual void f(); int x; };
+struct TrivialAgg { int x; };
+
+void test_default_init_not_noop() {
+  Mixed s4 [[uninit]];            // expected-error {{variable 's4' cannot be both '[[uninit]]' and have an initializer under profile 'std::init'}}
+  WithNSDMIMember q [[uninit]];   // expected-error {{variable 'q' cannot be both '[[uninit]]' and have an initializer under profile 'std::init'}}
+  Polymorphic v [[uninit]];       // expected-error {{variable 'v' cannot be both '[[uninit]]' and have an initializer under profile 'std::init'}}
+  [[uninit]] Mixed arr[2];        // expected-error {{variable 'arr' cannot be both '[[uninit]]' and have an initializer under profile 'std::init'}}
+  TrivialAgg t [[uninit]];        // OK: a genuine no-op, 't.x' really is left
+                                  // indeterminate
+  (void)s4; (void)q; (void)v; (void)arr; (void)t;
+}
+
+// A `= P()` value-initialization zeroes the object -- an initialization the
+// marker contradicts; the `= P{}` list form was already rejected (pinned
+// here), and the two must not diverge.
+struct P { int a; int b; };
+void test_value_init() {
+  P p [[uninit]] = P();   // expected-error {{variable 'p' cannot be both '[[uninit]]' and have an initializer under profile 'std::init'}}
+  P p2 [[uninit]] = P{};  // expected-error {{variable 'p2' cannot be both '[[uninit]]' and have an initializer under profile 'std::init'}}
+  (void)p; (void)p2;
+}
+
 // An NSDMI in a class template is checked once, when its initializer is
 // instantiated (here forced by initializing the specialization).
 template <typename T>
 struct WithTemplatedNSDMI {
-  T m [[uninit]] = T{}; // expected-error {{variable 'm' cannot be both '[[uninit]]' and have an initializer under profile 'std::init'}}
+  T m [[uninit]] = T{}; // expected-error {{member 'm' cannot be both '[[uninit]]' and have an initializer under profile 'std::init'}}
 };
 void use_templated_nsdmi() {
   WithTemplatedNSDMI<int> w = {}; // expected-note {{in instantiation of default member initializer 'WithTemplatedNSDMI<int>::m' requested here}}

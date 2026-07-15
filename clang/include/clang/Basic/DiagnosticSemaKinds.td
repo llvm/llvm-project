@@ -14162,8 +14162,15 @@ def err_init_static_runtime_init : ProfileRuleError<
   "non-local variable %1 requires constant initialization under "
   "profile '%0'">;
 def err_init_uninit_with_initializer : ProfileRuleError<
-  "variable %1 cannot be both '[[uninit]]' and have an initializer "
-  "under profile '%0'">;
+  "%select{variable|member}2 %1 cannot be both '[[uninit]]' and have an "
+  "initializer under profile '%0'">;
+def err_init_uninit_member_initialized : ProfileRuleError<
+  "member %1 cannot be marked '[[uninit]]' under profile '%0'; "
+  "default-initialization of its type %2 does not leave it uninitialized">;
+def note_init_uninit_member_type : Note<
+  "%select{default-initialization of %0 runs a constructor|"
+  "no subobject of %0 is left uninitialized|"
+  "%0 has no usable default constructor}1">;
 def err_uninit_attr_invalid_subject : Error<
   "'uninit' attribute cannot be applied to %select{a reference|"
   "a function parameter|a structured binding}0">;

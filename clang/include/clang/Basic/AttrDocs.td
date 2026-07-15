@@ -895,7 +895,12 @@ rule still applies.
 
 A declaration or non-static data member with both ``[[uninit]]``
 and an initializer is ill-formed under the initialization profile (the
-marker contradicts the explicit initialization).
+marker contradicts the explicit initialization). The same applies when
+default-initialization of the entity's type is not a genuine no-op -- a
+non-trivial default constructor, a default member initializer, or a virtual
+table pointer initializes something, and a type with nothing left
+indeterminate has nothing to acknowledge -- so the marker is rejected there
+too.
 
 On a non-static data member the marker also excuses the member from the
 profile's requirement that every constructor initialize it. A scalar marked

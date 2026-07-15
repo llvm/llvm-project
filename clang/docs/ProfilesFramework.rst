@@ -219,7 +219,9 @@ Rule                        Diagnoses
 ``ctor_uninit_member``      A constructor that leaves a member or base subobject
                             uninitialized.
 ``static_runtime_init``     A non-local variable with a runtime initializer.
-``uninit_with_initializer`` ``[[uninit]]`` combined with an initializer.
+``uninit_with_initializer`` ``[[uninit]]`` combined with an initializer, or
+                            on an entity whose default-initialization is not
+                            a no-op.
 ``pointer_marker``          ``[[uninit]]`` on a pointer.
 ``union_marker``            ``[[uninit]]`` on a union object or member.
 ``static_marker``           ``[[uninit]]`` on a variable with static or thread
@@ -252,7 +254,9 @@ either be initialized or carry ``[[uninit]]`` (rule ``uninit_decl``):
 A class type with a user-provided default constructor is trusted to
 initialize its members (§5.1), and a data member that is itself marked
 ``[[uninit]]`` is acknowledged -- a type whose only indeterminate scalars are
-all marked does not trigger the rule.
+all marked does not trigger the rule.  Marking a variable of such a type
+``[[uninit]]`` is likewise consistent: its default-initialization is a
+genuine no-op.
 
 
 Where ``[[uninit]]`` May Not Go
@@ -281,8 +285,29 @@ guarantee -- are rejected:
 
 Each of these keys on the array element type, so an array of pointers or of
 unions is rejected exactly like a single one.  A no-op initialization -- the
-trivial default-initialization of a scalar or aggregate -- is consistent with
-the marker and accepted.
+trivial default-initialization of a scalar or aggregate that leaves a scalar
+subobject indeterminate -- is consistent with the marker; any other
+synthesized initialization contradicts it and is rejected (§5.3): a member or
+base with a user-provided default constructor, a default member initializer,
+a virtual table pointer, or a value-initialization (``= P()``), all of which
+initialize something.  The same rule covers a marked data member whose type's
+default-initialization is not a no-op:
+
+.. code-block:: c++
+
+   struct Str { Str() : cap(0) {} int cap; };
+   struct S { int x; Str s; };
+
+   void g() {
+     S s4 [[uninit]];   // error: 's4.s' is default-constructed, so 's4' is
+                        // not left uninitialized (uninit_with_initializer, §5.3)
+   }
+
+   struct Buf {
+     Str s [[uninit]];  // error: default-initialization of 'Str' runs a
+                        // constructor, so 's' cannot be left uninitialized
+     int n [[uninit]];  // OK: a scalar member really is left uninitialized
+   };
 
 
 Reads of Uninitialized Objects
@@ -463,8 +488,11 @@ Global and Static Variables
 ---------------------------
 
 Variables with static or thread storage duration are zero-initialized, so
-they are never uninitialized (which is why ``[[uninit]]`` is rejected on
-them, above).  Non-local variables with static storage duration must
+they are never uninitialized: ``[[uninit]]`` on one is rejected -- by
+``static_marker`` when nothing else initializes the object, and by
+``uninit_with_initializer`` when a written initializer or a non-no-op
+default-initialization already contradicts the marker (exactly one of the
+pair fires).  Non-local variables with static storage duration must
 additionally be initialized at compile time (rule ``static_runtime_init``,
 §3), because cross-translation-unit initialization order can otherwise
 produce a read of a not-yet-initialized object:

@@ -13,11 +13,11 @@ struct PlainFieldPrefix {
 };
 
 struct FieldWithNSDMI {
-  int m [[uninit]] = 0; // expected-error {{variable 'm' cannot be both '[[uninit]]' and have an initializer under profile 'std::init'}}
+  int m [[uninit]] = 0; // expected-error {{member 'm' cannot be both '[[uninit]]' and have an initializer under profile 'std::init'}}
 };
 
 struct FieldWithNSDMIPrefix {
-  [[uninit]] int m = 0; // expected-error {{variable 'm' cannot be both '[[uninit]]' and have an initializer under profile 'std::init'}}
+  [[uninit]] int m = 0; // expected-error {{member 'm' cannot be both '[[uninit]]' and have an initializer under profile 'std::init'}}
 };
 
 // A static data member is a zero-initialized static object, so its definition
@@ -33,7 +33,7 @@ int WithStaticDataMember::t; // expected-error {{'[[uninit]]' cannot be applied 
 struct MultipleFields {
   int a [[uninit]];
   int b = 0;
-  int c [[uninit]] = 0; // expected-error {{variable 'c' cannot be both '[[uninit]]' and have an initializer under profile 'std::init'}}
+  int c [[uninit]] = 0; // expected-error {{member 'c' cannot be both '[[uninit]]' and have an initializer under profile 'std::init'}}
 };
 
 template <typename T>
@@ -139,3 +139,94 @@ struct LeakMarker {
 // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
 [[profiles::suppress(std::init)]] LeakMarker<int *> leak_marker_use{nullptr}; // expected-note {{in instantiation of template class 'LeakMarker<int *>' requested here}}
 // expected-error@#leak-marker-field {{'[[uninit]]' cannot be applied to a pointer under profile 'std::init'; initialize the pointer (for example to 'nullptr')}}
+
+// std::init / uninit_with_initializer, field flavor (paper §4.2 rule 2,
+// §5.3): [[uninit]] on a member whose type's default-initialization is not a
+// genuine no-op is a contradiction -- something is initialized, or nothing
+// is left uninitialized. Diagnosed at the marker, with the reason at the
+// member type.
+namespace std { enum class byte : unsigned char {}; }
+
+struct RunsCtor { RunsCtor() : cap(0) {} int cap; };
+struct TrivialAgg { int a; };
+
+struct MemberRunsCtor {
+  RunsCtor s [[uninit]]; // expected-error {{member 's' cannot be marked '[[uninit]]' under profile 'std::init'; default-initialization of its type 'RunsCtor' does not leave it uninitialized}} \
+                         // expected-note {{default-initialization of 'RunsCtor' runs a constructor}}
+};
+
+struct MemberVacuousKinds {
+  int x [[uninit]];        // OK: a scalar member really is left uninitialized
+  TrivialAgg t [[uninit]]; // OK: trivial aggregate, a genuine no-op
+  std::byte b [[uninit]];  // OK: std::byte may stay uninitialized (paper §4)
+};
+
+// An NSDMI'd marked member is the NSDMI flavor's to diagnose -- exactly one
+// diagnostic, no field-flavor double (hasInClassInitializer is style-based,
+// so the skip holds even while the NSDMI is late-parse-pending).
+struct MemberNSDMIOnce {
+  RunsCtor s [[uninit]] = RunsCtor(); // expected-error {{member 's' cannot be both '[[uninit]]' and have an initializer under profile 'std::init'}}
+};
+
+// A union- or pointer-typed marked member draws only union_marker /
+// pointer_marker -- no field-flavor pile-on. Load-bearing for the union: V's
+// implicitly deleted default constructor is unusable, so without the
+// base-element-type skip the member would draw both diagnostics.
+union V { RunsCtor s; };
+struct MemberUnionOnly {
+  V v [[uninit]]; // expected-error {{'[[uninit]]' cannot be applied to a data member of union type under profile 'std::init'}}
+};
+struct MemberPointerOnly {
+  int *p [[uninit]]; // expected-error {{'[[uninit]]' cannot be applied to a pointer under profile 'std::init'; initialize the pointer (for example to 'nullptr')}}
+};
+
+// A member type with a deleted (or absent) default constructor can never be
+// left default-initialized, so the marker is unsatisfiable.
+struct NoDefault { NoDefault() = delete; int x; };
+struct MemberDeletedCtor {
+  NoDefault n [[uninit]]; // expected-error {{member 'n' cannot be marked '[[uninit]]' under profile 'std::init'; default-initialization of its type 'NoDefault' does not leave it uninitialized}} \
+                          // expected-note {{'NoDefault' has no usable default constructor}}
+};
+
+// An all-determinate type leaves nothing to acknowledge.
+struct Empty {};
+struct MemberEmpty {
+  Empty e [[uninit]]; // expected-error {{member 'e' cannot be marked '[[uninit]]' under profile 'std::init'; default-initialization of its type 'Empty' does not leave it uninitialized}} \
+                      // expected-note {{no subobject of 'Empty' is left uninitialized}}
+};
+
+// A written member-initializer in some constructor does not rescue the
+// marker: both branches contradict it (the member is initialized either
+// way).
+struct MemberCtorInit {
+  RunsCtor s [[uninit]]; // expected-error {{member 's' cannot be marked '[[uninit]]' under profile 'std::init'; default-initialization of its type 'RunsCtor' does not leave it uninitialized}} \
+                         // expected-note {{default-initialization of 'RunsCtor' runs a constructor}}
+  MemberCtorInit() : s{} {}
+};
+
+// Arrays key on the base element type, like the other marker rules.
+struct MemberArrayOfCtor {
+  RunsCtor arr [[uninit]][2]; // expected-error {{member 'arr' cannot be marked '[[uninit]]' under profile 'std::init'; default-initialization of its type 'RunsCtor[2]' does not leave it uninitialized}} \
+                              // expected-note {{default-initialization of 'RunsCtor' runs a constructor}}
+};
+
+// A dependent marked member defers on the pattern and fires once at
+// instantiation, when the substituted type's vacuity is known.
+template <typename T>
+struct DependentVacuity {
+  T m [[uninit]]; // #dependent-vacuity-member
+};
+template struct DependentVacuity<long>; // OK: vacuous for a scalar
+template struct DependentVacuity<RunsCtor>; // expected-note {{in instantiation of template class 'DependentVacuity<RunsCtor>' requested here}}
+// expected-error@#dependent-vacuity-member {{member 'm' cannot be marked '[[uninit]]' under profile 'std::init'; default-initialization of its type 'RunsCtor' does not leave it uninitialized}}
+// expected-note@#dependent-vacuity-member {{default-initialization of 'RunsCtor' runs a constructor}}
+
+// Suppression: rule-targeted on the field, and whole-profile on the class.
+struct SuppressedFieldMarker {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init, rule: "uninit_with_initializer")]] RunsCtor s [[uninit]]; // OK: suppressed
+};
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+struct [[profiles::suppress(std::init)]] SuppressedClassFieldMarker {
+  RunsCtor s [[uninit]]; // OK: suppressed by the class-level attribute
+};

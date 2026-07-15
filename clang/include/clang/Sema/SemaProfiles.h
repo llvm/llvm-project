@@ -198,6 +198,22 @@ public:
   bool defaultInitLeavesScalarIndeterminate(QualType T,
                                             bool HonorUninitMarkers = false);
 
+  /// True if default-initialization of \p T is a genuine no-op that leaves
+  /// the object (or every array element) uninitialized -- the only state
+  /// consistent with an [[uninit]] marker. A non-trivial default constructor
+  /// (user-provided anywhere in the subtree, a default member initializer, a
+  /// virtual table pointer) initializes something, contradicting the marker
+  /// (paper §4.2 rule 2, §5.3); a deleted or absent default constructor makes
+  /// default-initialization ill-formed, not a no-op (the marker is
+  /// unsatisfiable); an all-scalars-determinate type (e.g. an
+  /// empty struct) has nothing uninitialized. Type-level (not a query on the
+  /// synthesized construct-expression) because the field flavor and
+  /// static_marker's no-initializer arm have no construct-expression, and
+  /// getBaseElementType handles arrays and scalars uniformly. Shared by
+  /// uninit_with_initializer and static_marker (through their common
+  /// initializer guard) and the field-marker flavor.
+  bool defaultInitIsVacuous(QualType T);
+
   /// If \p E (stripped of parens and implicit casts) directly names a
   /// declaration -- a DeclRefExpr or a MemberExpr -- return that declaration;
   /// otherwise null. The std::init checks read [[ref_to_uninit]] /

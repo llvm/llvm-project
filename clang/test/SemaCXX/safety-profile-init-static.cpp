@@ -129,6 +129,22 @@ void test_local_static_running_ctor() {
   (void)w;
 }
 
+struct MixedAgg { int x; WithCtor s; };
+void test_local_static_mixed() {
+  // A default-initialization that is not a no-op (a member's user-provided
+  // constructor runs) is a real initializer too, so the mixed aggregate
+  // SWITCHES to uninit_with_initializer; static_marker stays silent -- the
+  // shared vacuity guard keeps the pair complementary (exactly one error).
+  static MixedAgg m [[uninit]]; // expected-error {{variable 'm' cannot be both '[[uninit]]' and have an initializer under profile 'std::init'}}
+  (void)m;
+}
+
+// At namespace scope the same case additionally draws the independent
+// static_runtime_init (the member's constructor is a runtime initializer) --
+// a pre-existing pairing, not a static_marker double.
+MixedAgg g_mixed_marked [[uninit]]; // expected-error {{variable 'g_mixed_marked' cannot be both '[[uninit]]' and have an initializer under profile 'std::init'}} \
+                                    // expected-error {{non-local variable 'g_mixed_marked' requires constant initialization under profile 'std::init'}}
+
 // Suppression: rule-targeted and whole-profile.
 // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
 [[profiles::suppress(std::init, rule: "static_marker")]] int g_marker_suppressed_rule [[uninit]];

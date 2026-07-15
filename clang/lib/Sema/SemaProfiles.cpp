@@ -568,6 +568,56 @@ bool SemaProfiles::defaultInitLeavesScalarIndeterminate(QualType T,
                                                   HonorUninitMarkers, Visited);
 }
 
+bool SemaProfiles::defaultInitIsVacuous(QualType T) {
+  QualType BaseTy = getASTContext().getBaseElementType(T);
+  if (const auto *RD = BaseTy->getAsCXXRecordDecl()) {
+    // A non-trivial default constructor (user-provided anywhere in the
+    // subtree, a default member initializer, a virtual table pointer)
+    // initializes something, contradicting an [[uninit]] marker (paper §4.2
+    // rule 2, §5.3). hasTrivialDefaultConstructor asserts without a
+    // definition.
+    if (!RD->hasDefinition() || !RD->hasTrivialDefaultConstructor())
+      return false;
+    // A deleted default constructor keeps the triviality bit, but makes
+    // default-initialization ill-formed rather than a no-op: the entity can
+    // never be left default-initialized, so the marker is unsatisfiable. Only
+    // a declared deleted constructor is visible here; a lazily *implicitly*
+    // deleted one of an otherwise trivial type escapes this scan -- a missed
+    // diagnostic (never a false positive), like the framework's other
+    // conservative omissions.
+    for (const CXXConstructorDecl *Ctor : RD->getDefinition()->ctors())
+      if (Ctor->isDefaultConstructor() && Ctor->isDeleted())
+        return false;
+  }
+  // The factual (HonorUninitMarkers=false) walk: an all-scalars-determinate
+  // type (e.g. an empty struct) has nothing uninitialized, so the marker
+  // contradicts it too, while a type whose only indeterminate scalars are
+  // themselves marked members really is left uninitialized.
+  return defaultInitLeavesScalarIndeterminate(T, /*HonorUninitMarkers=*/false);
+}
+
+// Whether the declaration initializer \p Init is a vacuous
+// default-initialization of \p T: one that runs no code and leaves the object
+// factually uninitialized, hence consistent with an [[uninit]] marker. No
+// initializer at all (a scalar default-init synthesizes none) is vacuous; a
+// synthesized trivial default-constructor call is vacuous iff the type's
+// default-initialization is (defaultInitIsVacuous); anything else -- a
+// user-written initializer, a `= P()` value-initialization (a
+// CXXTemporaryObjectExpr, which zeroes), any zero-initializing construction
+// -- initializes the object and contradicts the marker. The shared guard of
+// static_marker and uninit_with_initializer keeps the pair complementary by
+// construction: exactly one of the two fires for a marked static.
+static bool isVacuousDefaultInit(SemaProfiles &SP, const Expr *Init,
+                                 QualType T) {
+  if (!Init)
+    return true;
+  if (const auto *CCE = dyn_cast<CXXConstructExpr>(Init->IgnoreImplicit()))
+    return CCE->getConstructor()->isDefaultConstructor() &&
+           !isa<CXXTemporaryObjectExpr>(CCE) &&
+           !CCE->requiresZeroInitialization() && SP.defaultInitIsVacuous(T);
+  return false;
+}
+
 void SemaProfiles::checkInitProfileUninitDecl(const VarDecl *Var) {
   // std::init / uninit_decl: a definition without any initializer (after
   // attempted default-initialization) must either carry [[uninit]] or
@@ -609,12 +659,14 @@ void SemaProfiles::checkInitProfileStaticMarker(const VarDecl *Var) {
   // duration is zero-initialized by language rule (paper §3), so it is an
   // initialized object; marking it [[uninit]] contradicts paper §4.2 ("an
   // initialized object marked [[uninit]] is an error"). The case with a real
-  // initializer -- explicit, or a constructor that actually runs -- is
-  // already caught by uninit_with_initializer (R4, in
-  // CheckCompleteVariableDeclaration); this covers the zero-initialized,
-  // no-real-initializer case R4 treats as a consistent no-op. The factual
-  // (HonorUninitMarkers=false) walk matches R4: a static object whose only
-  // indeterminate scalars are themselves marked is still zero-initialized.
+  // initializer -- explicit, or a default-initialization that is not a no-op
+  // -- is already caught by uninit_with_initializer (R4, in
+  // CheckCompleteVariableDeclaration); this covers the vacuous-initialization
+  // case R4 treats as consistent. The guard is the shared
+  // isVacuousDefaultInit, so the pair stays complementary by construction and
+  // exactly one of static_marker / uninit_with_initializer fires (this one
+  // runs first, from ActOnUninitializedDecl, after the synthesized
+  // default-initialization is attached).
   static constexpr StringRef Profile = "std::init";
   QualType BaseTy = getASTContext().getBaseElementType(Var->getType());
   if (!Var->isInvalidDecl() &&
@@ -628,10 +680,7 @@ void SemaProfiles::checkInitProfileStaticMarker(const VarDecl *Var) {
       !BaseTy->isUnionType() && !BaseTy->isPointerType() &&
       shouldEmitProfileViolation(Profile, "static_marker", Var->getLocation(),
                                  Var) &&
-      (!Var->getInit() ||
-       (BaseTy->isRecordType() &&
-        defaultInitLeavesScalarIndeterminate(Var->getType(),
-                                             /*HonorUninitMarkers=*/false)))) {
+      isVacuousDefaultInit(*this, Var->getInit(), Var->getType())) {
     bool IsThread = Var->getStorageDuration() == SD_Thread;
     Diag(Var->getLocation(), diag::err_init_uninit_static_marker)
         << Profile << Var->getDeclName() << IsThread;
@@ -683,18 +732,18 @@ void SemaProfiles::checkInitProfileUninitWithInitializer(const ValueDecl *D,
   // Gate the (possibly recursive) type walk below on enforcement.
   if (!shouldEmitProfileViolation(Profile, Rule, Loc, D))
     return;
-  // A synthesized default-initialization that leaves the object indeterminate
-  // (a trivial or aggregate type, no user-written initializer) is consistent
-  // with the marker: the object really is left uninitialized, to be
-  // initialized later (e.g. via construct_at), mirroring the scalar case. Only
-  // a real initializer -- an explicit one, or a constructor that actually runs
-  // -- contradicts the marker.
-  if (const auto *CCE = dyn_cast<CXXConstructExpr>(Init->IgnoreImplicit()))
-    if (CCE->getConstructor()->isDefaultConstructor() &&
-        defaultInitLeavesScalarIndeterminate(D->getType()))
-      return;
+  // A vacuous default-initialization -- a synthesized trivial
+  // default-constructor call that runs no code and leaves the object
+  // indeterminate -- is consistent with the marker: the object really is left
+  // uninitialized, to be initialized later (e.g. via construct_at), mirroring
+  // the scalar case. Anything else -- an explicit initializer, a `= P()`
+  // value-initialization, or a default-initialization that initializes
+  // something (a non-trivial default constructor, paper §4.2 rule 2, §5.3) --
+  // contradicts it.
+  if (isVacuousDefaultInit(*this, Init, D->getType()))
+    return;
   Diag(Loc, diag::err_init_uninit_with_initializer)
-      << Profile << D->getDeclName();
+      << Profile << D->getDeclName() << isa<FieldDecl>(D);
 }
 
 void SemaProfiles::checkInitProfileMarkerPlacement(const Decl *D) {
@@ -1467,9 +1516,75 @@ void runStdInitCtorUninitMemberCallback(Sema &S, CXXConstructorDecl *Ctor) {
   }
 }
 
+void runStdInitUninitFieldMarkerCallback(Sema &S, CXXRecordDecl *RD) {
+  // std::init / uninit_with_initializer, field flavor (paper §4.2 rule 2,
+  // §5.3): [[uninit]] on a data member claims default-initialization leaves
+  // the member uninitialized. When the member type's default-initialization
+  // is not a no-op (a non-trivial default constructor initializes something)
+  // or leaves nothing indeterminate (nothing to acknowledge), the marker is a
+  // contradiction, just like a variable's explicit initializer. The NSDMI
+  // case is the ActOnFinishCXXInClassMemberInitializer flavor's to diagnose;
+  // this covers the initializer-less member, which only the class walk sees.
+  //
+  // A union's members are union_marker's territory (the marker is banned on
+  // them wholesale, paper §5.6).
+  if (RD->isUnion())
+    return;
+  for (const FieldDecl *F : RD->fields()) {
+    const auto *UA = F->getAttr<UninitAttr>();
+    // hasInClassInitializer is style-based, so it is true even while a
+    // late-parsed NSDMI is still pending.
+    if (!UA || F->isInvalidDecl() || F->hasInClassInitializer())
+      continue;
+    QualType BaseTy = S.Context.getBaseElementType(F->getType());
+    // A union- or pointer-typed member (keyed on the same base element type)
+    // already draws union_marker / pointer_marker and keeps the marker; do
+    // not pile a second diagnostic on top. Load-bearing for union members: a
+    // union with a non-trivial member has a deleted -- hence non-trivial --
+    // default constructor and would otherwise draw both.
+    if (BaseTy->isUnionType() || BaseTy->isPointerType())
+      continue;
+    // std::byte may be left uninitialized (paper §4), mirroring
+    // checkInitProfileUninitDecl.
+    if (BaseTy->isStdByteType())
+      continue;
+    if (S.Profiles().defaultInitIsVacuous(F->getType()))
+      continue;
+    // Decl-aware gate: defers on templated patterns (instantiations re-fire
+    // through CheckCompletedCXXClass) and honors [[profiles::suppress]] on
+    // the field or the enclosing class. Diagnose at the attribute -- the
+    // marker is the thing to delete -- like union_marker / pointer_marker.
+    if (!S.Profiles().shouldEmitProfileViolation(
+            "std::init", "uninit_with_initializer", UA->getLocation(), F))
+      continue;
+    S.Diag(UA->getLocation(), diag::err_init_uninit_member_initialized)
+        << "std::init" << F->getDeclName() << F->getType();
+    // Distinguish the non-vacuity reasons for the note: a non-trivial default
+    // constructor runs code (0); a trivial one that leaves no subobject
+    // uninitialized has nothing to acknowledge (1); a deleted or absent one
+    // makes the marker unsatisfiable (2).
+    unsigned Reason = 1;
+    if (const auto *MemberRD = BaseTy->getAsCXXRecordDecl();
+        MemberRD && MemberRD->hasDefinition()) {
+      const CXXRecordDecl *Def = MemberRD->getDefinition();
+      bool Deleted = !Def->hasDefaultConstructor();
+      for (const CXXConstructorDecl *Ctor : Def->ctors())
+        if (Ctor->isDefaultConstructor() && Ctor->isDeleted())
+          Deleted = true;
+      if (Deleted)
+        Reason = 2;
+      else if (!Def->hasTrivialDefaultConstructor())
+        Reason = 0;
+    }
+    S.Diag(F->getTypeSpecStartLoc(), diag::note_init_uninit_member_type)
+        << BaseTy << Reason;
+  }
+}
+
 // Class-finalization opt-in table (pattern 3).
 constexpr FinalizationProfile<CXXRecordDecl> ClassFinalizationProfiles[] = {
     {"test::class_final", &runTestClassFinalCallback},
+    {"std::init", &runStdInitUninitFieldMarkerCallback},
 };
 
 // Constructor-finalization opt-in table (pattern 4).
