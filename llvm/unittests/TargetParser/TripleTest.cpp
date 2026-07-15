@@ -1483,6 +1483,24 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::spirv64, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ChipStar, T.getOS());
+
+  T = Triple("arm-unknown-trusty-musl");
+  EXPECT_EQ(Triple::arm, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Trusty, T.getOS());
+  EXPECT_EQ(Triple::Musl, T.getEnvironment());
+
+  T = Triple("aarch64-unknown-trusty-musl");
+  EXPECT_EQ(Triple::aarch64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Trusty, T.getOS());
+  EXPECT_EQ(Triple::Musl, T.getEnvironment());
+
+  T = Triple("x86_64-unknown-trusty-musl");
+  EXPECT_EQ(Triple::x86_64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Trusty, T.getOS());
+  EXPECT_EQ(Triple::Musl, T.getEnvironment());
 }
 
 TEST(TripleTest, EnumConstructor) {
