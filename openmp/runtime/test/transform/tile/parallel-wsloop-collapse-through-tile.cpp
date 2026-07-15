@@ -1,9 +1,7 @@
 // RUN: %libomp-cxx-compile-and-run | FileCheck %s --match-full-lines
+// RUN: %libomp-cxx-compile -O2 && %libomp-run | FileCheck %s --match-full-lines
 
-// After tiling `i`, the logical loops are `floor_i`, `tile_i`, and `j`, so
-// `collapse(3)` must reach through the tile guard to include `j`. CodeGen must
-// then keep that guard around the collapsed body once, instead of emitting `j`
-// again as a normal nested loop.
+// collapse(3) reaches through a tiled loop to include the inner `j` loop.
 
 #ifndef HEADER
 #define HEADER
@@ -25,8 +23,6 @@ int main() {
 #endif /* HEADER */
 
 // CHECK:      do
-
-// Full tile (.floor.i=0): i=0..3
 // CHECK-NEXT: i=0 j=0
 // CHECK-NEXT: i=0 j=1
 // CHECK-NEXT: i=1 j=0
@@ -35,8 +31,6 @@ int main() {
 // CHECK-NEXT: i=2 j=1
 // CHECK-NEXT: i=3 j=0
 // CHECK-NEXT: i=3 j=1
-
-// Partial tile (.floor.i=4): i=4,5 in bounds; i=6,7 skipped by the predicate
 // CHECK-NEXT: i=4 j=0
 // CHECK-NEXT: i=4 j=1
 // CHECK-NEXT: i=5 j=0

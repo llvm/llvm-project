@@ -32,11 +32,9 @@ extern "C" void body(...) {}
 // IR-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTNEW_STEP:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTCAPTURE_EXPR_2:%.*]] = alloca i32, align 4
-// IR-NEXT:    [[DOTTILE_0_IV_I:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTFLOOR_0_IV_I:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTCAPTURE_EXPR_5:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTCAPTURE_EXPR_7:%.*]] = alloca i32, align 4
-// IR-NEXT:    [[DOTTILE_0_IV__FLOOR_0_IV_I:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTCAPTURE_EXPR_11:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTCAPTURE_EXPR_13:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTFLOOR_0_IV__FLOOR_0_IV_I:%.*]] = alloca i32, align 4
@@ -45,8 +43,8 @@ extern "C" void body(...) {}
 // IR-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTFLOOR_0_IV__FLOOR_0_IV_I17:%.*]] = alloca i32, align 4
-// IR-NEXT:    [[DOTTILE_CNT_0_IV__FLOOR_0_IV_I:%.*]] = alloca i32, align 4
-// IR-NEXT:    [[DOTTILE_CNT_0_IV_I:%.*]] = alloca i32, align 4
+// IR-NEXT:    [[DOTTILE_0_IV__FLOOR_0_IV_I:%.*]] = alloca i32, align 4
+// IR-NEXT:    [[DOTTILE_0_IV_I:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2:[0-9]+]])
 // IR-NEXT:    store i32 [[START]], ptr [[START_ADDR]], align 4
 // IR-NEXT:    store i32 [[END]], ptr [[END_ADDR]], align 4
@@ -124,52 +122,64 @@ extern "C" void body(...) {}
 // IR-NEXT:    [[MUL:%.*]] = mul i32 [[TMP22]], 3
 // IR-NEXT:    [[ADD21:%.*]] = add i32 0, [[MUL]]
 // IR-NEXT:    store i32 [[ADD21]], ptr [[DOTFLOOR_0_IV__FLOOR_0_IV_I17]], align 4
-// IR-NEXT:    store i32 0, ptr [[DOTTILE_CNT_0_IV__FLOOR_0_IV_I]], align 4
+// IR-NEXT:    [[TMP23:%.*]] = load i32, ptr [[DOTFLOOR_0_IV__FLOOR_0_IV_I17]], align 4
+// IR-NEXT:    store i32 [[TMP23]], ptr [[DOTTILE_0_IV__FLOOR_0_IV_I]], align 4
 // IR-NEXT:    br label %[[FOR_COND:.*]]
 // IR:       [[FOR_COND]]:
-// IR-NEXT:    [[TMP23:%.*]] = load i32, ptr [[DOTTILE_CNT_0_IV__FLOOR_0_IV_I]], align 4
-// IR-NEXT:    [[CMP22:%.*]] = icmp ult i32 [[TMP23]], 3
-// IR-NEXT:    [[TMP24:%.*]] = load i32, ptr [[DOTFLOOR_0_IV__FLOOR_0_IV_I17]], align 4
-// IR-NEXT:    [[TMP25:%.*]] = load i32, ptr [[DOTTILE_CNT_0_IV__FLOOR_0_IV_I]], align 4
-// IR-NEXT:    [[ADD23:%.*]] = add i32 [[TMP24]], [[TMP25]]
-// IR-NEXT:    [[TMP26:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_7]], align 4
-// IR-NEXT:    [[ADD24:%.*]] = add i32 [[TMP26]], 1
-// IR-NEXT:    [[CMP25:%.*]] = icmp ult i32 [[ADD23]], [[ADD24]]
-// IR-NEXT:    [[OMP_TILE_INVARIANT_PRED_BOUND:%.*]] = and i1 [[CMP22]], [[CMP25]]
-// IR-NEXT:    br i1 [[OMP_TILE_INVARIANT_PRED_BOUND]], label %[[FOR_BODY:.*]], label %[[FOR_END41:.*]]
+// IR-NEXT:    [[TMP24:%.*]] = load i32, ptr [[DOTTILE_0_IV__FLOOR_0_IV_I]], align 4
+// IR-NEXT:    [[TMP25:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_7]], align 4
+// IR-NEXT:    [[ADD22:%.*]] = add i32 [[TMP25]], 1
+// IR-NEXT:    [[TMP26:%.*]] = load i32, ptr [[DOTFLOOR_0_IV__FLOOR_0_IV_I17]], align 4
+// IR-NEXT:    [[ADD23:%.*]] = add i32 [[TMP26]], 3
+// IR-NEXT:    [[CMP24:%.*]] = icmp ult i32 [[ADD22]], [[ADD23]]
+// IR-NEXT:    br i1 [[CMP24]], label %[[COND_TRUE25:.*]], label %[[COND_FALSE27:.*]]
+// IR:       [[COND_TRUE25]]:
+// IR-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_7]], align 4
+// IR-NEXT:    [[ADD26:%.*]] = add i32 [[TMP27]], 1
+// IR-NEXT:    br label %[[COND_END29:.*]]
+// IR:       [[COND_FALSE27]]:
+// IR-NEXT:    [[TMP28:%.*]] = load i32, ptr [[DOTFLOOR_0_IV__FLOOR_0_IV_I17]], align 4
+// IR-NEXT:    [[ADD28:%.*]] = add i32 [[TMP28]], 3
+// IR-NEXT:    br label %[[COND_END29]]
+// IR:       [[COND_END29]]:
+// IR-NEXT:    [[COND30:%.*]] = phi i32 [ [[ADD26]], %[[COND_TRUE25]] ], [ [[ADD28]], %[[COND_FALSE27]] ]
+// IR-NEXT:    [[CMP31:%.*]] = icmp ult i32 [[TMP24]], [[COND30]]
+// IR-NEXT:    br i1 [[CMP31]], label %[[FOR_BODY:.*]], label %[[FOR_END50:.*]]
 // IR:       [[FOR_BODY]]:
-// IR-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTFLOOR_0_IV__FLOOR_0_IV_I17]], align 4
-// IR-NEXT:    [[TMP28:%.*]] = load i32, ptr [[DOTTILE_CNT_0_IV__FLOOR_0_IV_I]], align 4
-// IR-NEXT:    [[ADD26:%.*]] = add i32 [[TMP27]], [[TMP28]]
-// IR-NEXT:    store i32 [[ADD26]], ptr [[DOTTILE_0_IV__FLOOR_0_IV_I]], align 4
 // IR-NEXT:    [[TMP29:%.*]] = load i32, ptr [[DOTTILE_0_IV__FLOOR_0_IV_I]], align 4
-// IR-NEXT:    [[MUL27:%.*]] = mul i32 [[TMP29]], 4
-// IR-NEXT:    [[ADD28:%.*]] = add i32 0, [[MUL27]]
-// IR-NEXT:    store i32 [[ADD28]], ptr [[DOTFLOOR_0_IV_I]], align 4
-// IR-NEXT:    store i32 0, ptr [[DOTTILE_CNT_0_IV_I]], align 4
-// IR-NEXT:    br label %[[FOR_COND29:.*]]
-// IR:       [[FOR_COND29]]:
-// IR-NEXT:    [[TMP30:%.*]] = load i32, ptr [[DOTTILE_CNT_0_IV_I]], align 4
-// IR-NEXT:    [[CMP30:%.*]] = icmp ult i32 [[TMP30]], 4
-// IR-NEXT:    [[TMP31:%.*]] = load i32, ptr [[DOTFLOOR_0_IV_I]], align 4
-// IR-NEXT:    [[TMP32:%.*]] = load i32, ptr [[DOTTILE_CNT_0_IV_I]], align 4
-// IR-NEXT:    [[ADD31:%.*]] = add i32 [[TMP31]], [[TMP32]]
-// IR-NEXT:    [[TMP33:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_2]], align 4
-// IR-NEXT:    [[ADD32:%.*]] = add i32 [[TMP33]], 1
-// IR-NEXT:    [[CMP33:%.*]] = icmp ult i32 [[ADD31]], [[ADD32]]
-// IR-NEXT:    [[OMP_TILE_INVARIANT_PRED_BOUND34:%.*]] = and i1 [[CMP30]], [[CMP33]]
-// IR-NEXT:    br i1 [[OMP_TILE_INVARIANT_PRED_BOUND34]], label %[[FOR_BODY35:.*]], label %[[FOR_END:.*]]
-// IR:       [[FOR_BODY35]]:
-// IR-NEXT:    [[TMP34:%.*]] = load i32, ptr [[DOTFLOOR_0_IV_I]], align 4
-// IR-NEXT:    [[TMP35:%.*]] = load i32, ptr [[DOTTILE_CNT_0_IV_I]], align 4
-// IR-NEXT:    [[ADD36:%.*]] = add i32 [[TMP34]], [[TMP35]]
-// IR-NEXT:    store i32 [[ADD36]], ptr [[DOTTILE_0_IV_I]], align 4
+// IR-NEXT:    [[MUL32:%.*]] = mul i32 [[TMP29]], 4
+// IR-NEXT:    [[ADD33:%.*]] = add i32 0, [[MUL32]]
+// IR-NEXT:    store i32 [[ADD33]], ptr [[DOTFLOOR_0_IV_I]], align 4
+// IR-NEXT:    [[TMP30:%.*]] = load i32, ptr [[DOTFLOOR_0_IV_I]], align 4
+// IR-NEXT:    store i32 [[TMP30]], ptr [[DOTTILE_0_IV_I]], align 4
+// IR-NEXT:    br label %[[FOR_COND34:.*]]
+// IR:       [[FOR_COND34]]:
+// IR-NEXT:    [[TMP31:%.*]] = load i32, ptr [[DOTTILE_0_IV_I]], align 4
+// IR-NEXT:    [[TMP32:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_2]], align 4
+// IR-NEXT:    [[ADD35:%.*]] = add i32 [[TMP32]], 1
+// IR-NEXT:    [[TMP33:%.*]] = load i32, ptr [[DOTFLOOR_0_IV_I]], align 4
+// IR-NEXT:    [[ADD36:%.*]] = add i32 [[TMP33]], 4
+// IR-NEXT:    [[CMP37:%.*]] = icmp ult i32 [[ADD35]], [[ADD36]]
+// IR-NEXT:    br i1 [[CMP37]], label %[[COND_TRUE38:.*]], label %[[COND_FALSE40:.*]]
+// IR:       [[COND_TRUE38]]:
+// IR-NEXT:    [[TMP34:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_2]], align 4
+// IR-NEXT:    [[ADD39:%.*]] = add i32 [[TMP34]], 1
+// IR-NEXT:    br label %[[COND_END42:.*]]
+// IR:       [[COND_FALSE40]]:
+// IR-NEXT:    [[TMP35:%.*]] = load i32, ptr [[DOTFLOOR_0_IV_I]], align 4
+// IR-NEXT:    [[ADD41:%.*]] = add i32 [[TMP35]], 4
+// IR-NEXT:    br label %[[COND_END42]]
+// IR:       [[COND_END42]]:
+// IR-NEXT:    [[COND43:%.*]] = phi i32 [ [[ADD39]], %[[COND_TRUE38]] ], [ [[ADD41]], %[[COND_FALSE40]] ]
+// IR-NEXT:    [[CMP44:%.*]] = icmp ult i32 [[TMP31]], [[COND43]]
+// IR-NEXT:    br i1 [[CMP44]], label %[[FOR_BODY45:.*]], label %[[FOR_END:.*]]
+// IR:       [[FOR_BODY45]]:
 // IR-NEXT:    [[TMP36:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // IR-NEXT:    [[TMP37:%.*]] = load i32, ptr [[DOTTILE_0_IV_I]], align 4
 // IR-NEXT:    [[TMP38:%.*]] = load i32, ptr [[DOTNEW_STEP]], align 4
-// IR-NEXT:    [[MUL37:%.*]] = mul i32 [[TMP37]], [[TMP38]]
-// IR-NEXT:    [[ADD38:%.*]] = add i32 [[TMP36]], [[MUL37]]
-// IR-NEXT:    store i32 [[ADD38]], ptr [[I]], align 4
+// IR-NEXT:    [[MUL46:%.*]] = mul i32 [[TMP37]], [[TMP38]]
+// IR-NEXT:    [[ADD47:%.*]] = add i32 [[TMP36]], [[MUL46]]
+// IR-NEXT:    store i32 [[ADD47]], ptr [[I]], align 4
 // IR-NEXT:    [[TMP39:%.*]] = load i32, ptr [[START_ADDR]], align 4
 // IR-NEXT:    [[TMP40:%.*]] = load i32, ptr [[END_ADDR]], align 4
 // IR-NEXT:    [[TMP41:%.*]] = load i32, ptr [[STEP_ADDR]], align 4
@@ -177,25 +187,25 @@ extern "C" void body(...) {}
 // IR-NEXT:    call void (...) @body(i32 noundef [[TMP39]], i32 noundef [[TMP40]], i32 noundef [[TMP41]], i32 noundef [[TMP42]])
 // IR-NEXT:    br label %[[FOR_INC:.*]]
 // IR:       [[FOR_INC]]:
-// IR-NEXT:    [[TMP43:%.*]] = load i32, ptr [[DOTTILE_CNT_0_IV_I]], align 4
+// IR-NEXT:    [[TMP43:%.*]] = load i32, ptr [[DOTTILE_0_IV_I]], align 4
 // IR-NEXT:    [[INC:%.*]] = add i32 [[TMP43]], 1
-// IR-NEXT:    store i32 [[INC]], ptr [[DOTTILE_CNT_0_IV_I]], align 4
-// IR-NEXT:    br label %[[FOR_COND29]], !llvm.loop [[LOOP2:![0-9]+]]
+// IR-NEXT:    store i32 [[INC]], ptr [[DOTTILE_0_IV_I]], align 4
+// IR-NEXT:    br label %[[FOR_COND34]], !llvm.loop [[LOOP2:![0-9]+]]
 // IR:       [[FOR_END]]:
-// IR-NEXT:    br label %[[FOR_INC39:.*]]
-// IR:       [[FOR_INC39]]:
-// IR-NEXT:    [[TMP44:%.*]] = load i32, ptr [[DOTTILE_CNT_0_IV__FLOOR_0_IV_I]], align 4
-// IR-NEXT:    [[INC40:%.*]] = add i32 [[TMP44]], 1
-// IR-NEXT:    store i32 [[INC40]], ptr [[DOTTILE_CNT_0_IV__FLOOR_0_IV_I]], align 4
+// IR-NEXT:    br label %[[FOR_INC48:.*]]
+// IR:       [[FOR_INC48]]:
+// IR-NEXT:    [[TMP44:%.*]] = load i32, ptr [[DOTTILE_0_IV__FLOOR_0_IV_I]], align 4
+// IR-NEXT:    [[INC49:%.*]] = add i32 [[TMP44]], 1
+// IR-NEXT:    store i32 [[INC49]], ptr [[DOTTILE_0_IV__FLOOR_0_IV_I]], align 4
 // IR-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP4:![0-9]+]]
-// IR:       [[FOR_END41]]:
+// IR:       [[FOR_END50]]:
 // IR-NEXT:    br label %[[OMP_BODY_CONTINUE:.*]]
 // IR:       [[OMP_BODY_CONTINUE]]:
 // IR-NEXT:    br label %[[OMP_INNER_FOR_INC:.*]]
 // IR:       [[OMP_INNER_FOR_INC]]:
 // IR-NEXT:    [[TMP45:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
-// IR-NEXT:    [[ADD42:%.*]] = add i32 [[TMP45]], 1
-// IR-NEXT:    store i32 [[ADD42]], ptr [[DOTOMP_IV]], align 4
+// IR-NEXT:    [[ADD51:%.*]] = add i32 [[TMP45]], 1
+// IR-NEXT:    store i32 [[ADD51]], ptr [[DOTOMP_IV]], align 4
 // IR-NEXT:    br label %[[OMP_INNER_FOR_COND]]
 // IR:       [[OMP_INNER_FOR_END]]:
 // IR-NEXT:    br label %[[OMP_LOOP_EXIT:.*]]
