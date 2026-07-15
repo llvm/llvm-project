@@ -2592,6 +2592,16 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
     _LIBUNWIND_TRACE_UNWINDING("Possible signal handler frame: lastStack=%p",
                                reinterpret_cast<void *>(lastStack));
 
+    pint_t returnAddressInStack = reinterpret_cast<pint_t *>(lastStack)[2];
+    if (vapi_glue_addr_begin <= returnAddressInStack &&
+        returnAddressInStack < vapi_glue_addr_end) {
+      _LIBUNWIND_TRACE_UNWINDING(
+          "The return address in stack %p is within the range of VAPI address,"
+          " set isKnownVapiNotActive to true\n",
+          reinterpret_cast<void *>(returnAddressInStack));
+      setIsKnownVapiNotActive(true);
+    }
+
     sigcontext *sigContext = reinterpret_cast<sigcontext *>(
         reinterpret_cast<char *>(lastStack) + STKMINALIGN);
     returnAddress = sigContext->sc_jmpbuf.jmp_context.iar;
