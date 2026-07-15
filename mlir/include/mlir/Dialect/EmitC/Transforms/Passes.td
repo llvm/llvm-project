@@ -67,10 +67,10 @@ def MLGOAddReflectionMapPass : Pass<"mlgo-add-reflection-map", "ModuleOp"> {
     EmitC classes, enabling runtime lookup of class fields by name. 
     This requires that the class has fields with attributes.
     Each `emitc.field` is expected to have an attribute (configured by the
-    `field-attr-name` option) that is an array containing a single string
-    attribute. If a field possesses both the attribute specified by
-    `field-attr-name` and an attribute specified in `excluded-field-attrs`,
-    the `field-attr-name` attribute takes precedence and the field will be
+    `included-field-attrs` option) that is an array containing a single string
+    attribute. If a field possesses both an attribute specified by
+    `included-field-attrs` and an attribute specified in `excluded-field-attrs`,
+    the `included-field-attrs` attribute takes precedence and the field will be
     included in the reflection map.
     
     Example:
