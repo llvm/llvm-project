@@ -9,6 +9,7 @@
 #include <__config>
 #include <__locale>
 #include <algorithm>
+#include <atomic>
 #include <ios>
 #include <limits>
 #include <memory>
@@ -111,13 +112,6 @@ locale ios_base::imbue(const locale& newloc) {
 
 locale ios_base::getloc() const { return __loc_; }
 
-// xalloc
-#if _LIBCPP_HAS_C_ATOMIC_IMP && _LIBCPP_HAS_THREADS
-atomic<int> ios_base::__xindex_{0};
-#else
-int ios_base::__xindex_ = 0;
-#endif
-
 template <typename _Tp>
 static size_t __ios_new_cap(size_t __req_size, size_t __current_cap) { // Precondition: __req_size > __current_cap
   const size_t mx = std::numeric_limits<size_t>::max() / sizeof(_Tp);
@@ -127,7 +121,17 @@ static size_t __ios_new_cap(size_t __req_size, size_t __current_cap) { // Precon
     return mx;
 }
 
-int ios_base::xalloc() { return __xindex_++; }
+int ios_base::xalloc() {
+#if _LIBCPP_HAS_THREADS
+  constinit static atomic<int> xindex = 0;
+#else
+  // If we don't have atomics, fall back to single-threaded implementation.
+  // FIXME: Should "single-threaded" be a separate option from
+  // _LIBCPP_HAS_THREADS?
+  static int xindex = 0;
+#endif // _LIBCPP_HAS_THREADS
+  return xindex++;
+}
 
 long& ios_base::iword(int index) {
   size_t req_size = static_cast<size_t>(index) + 1;

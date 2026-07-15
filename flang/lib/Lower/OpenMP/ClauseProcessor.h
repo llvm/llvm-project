@@ -60,7 +60,6 @@ public:
   bool processAlign(mlir::omp::AlignClauseOps &result) const;
   bool processAllocator(lower::StatementContext &stmtCtx,
                         mlir::omp::AllocatorClauseOps &result) const;
-  bool processBare(mlir::omp::BareClauseOps &result) const;
   bool processBind(mlir::omp::BindClauseOps &result) const;
   bool processCancelDirectiveName(
       mlir::omp::CancelDirectiveNameClauseOps &result) const;
@@ -98,7 +97,8 @@ public:
   bool processInitializer(
       lower::SymMap &symMap,
       ReductionProcessor::GenInitValueCBTy &genInitValueCB,
-      const parser::OmpStylizedInstance *parserInitInstance = nullptr) const;
+      const parser::OmpStylizedInstance *parserInitInstance = nullptr,
+      unsigned instanceIdx = 0) const;
   bool processMergeable(mlir::omp::MergeableClauseOps &result) const;
   bool processNogroup(mlir::omp::NogroupClauseOps &result) const;
   bool processNotinbranch(mlir::omp::NotinbranchClauseOps &result) const;
@@ -111,6 +111,7 @@ public:
                          mlir::omp::NumThreadsClauseOps &result) const;
   bool processOrder(mlir::omp::OrderClauseOps &result) const;
   bool processOrdered(mlir::omp::OrderedClauseOps &result) const;
+  bool processPartial(std::optional<int64_t> &result) const;
   bool processPriority(lower::StatementContext &stmtCtx,
                        mlir::omp::PriorityClauseOps &result) const;
   bool processProcBind(mlir::omp::ProcBindClauseOps &result) const;
@@ -124,7 +125,6 @@ public:
   bool processThreadLimit(lower::StatementContext &stmtCtx,
                           mlir::omp::ThreadLimitClauseOps &result) const;
   bool processUntied(mlir::omp::UntiedClauseOps &result) const;
-
   bool processDetach(mlir::omp::DetachClauseOps &result) const;
   // 'Repeatable' clauses: They can appear multiple times in the clause list.
   bool processAffinity(mlir::omp::AffinityClauseOps &result) const;
@@ -137,6 +137,9 @@ public:
                          DefaultMapsTy &result) const;
   bool processDepend(lower::SymMap &symMap, lower::StatementContext &stmtCtx,
                      mlir::omp::DependClauseOps &result) const;
+  bool
+  processDynGroupprivate(lower::StatementContext &stmtCtx,
+                         mlir::omp::DynGroupprivateClauseOps &result) const;
   bool
   processEnter(llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const;
   bool processIf(omp::clause::If::DirectiveNameModifier directiveName,

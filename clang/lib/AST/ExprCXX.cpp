@@ -1770,18 +1770,6 @@ PackIndexingExpr::CreateDeserialized(ASTContext &Context,
   return new (Storage) PackIndexingExpr(EmptyShell{});
 }
 
-QualType SubstNonTypeTemplateParmExpr::getParameterType(
-    const ASTContext &Context) const {
-  // Note that, for a class type NTTP, we will have an lvalue of type 'const
-  // T', so we can't just compute this from the type and value category.
-
-  QualType Type = getType();
-
-  if (isReferenceParameter())
-    return Context.getLValueReferenceType(Type);
-  return Type.getUnqualifiedType();
-}
-
 SubstNonTypeTemplateParmPackExpr::SubstNonTypeTemplateParmPackExpr(
     QualType T, ExprValueKind ValueKind, SourceLocation NameLoc,
     const TemplateArgument &ArgPack, Decl *AssociatedDecl, unsigned Index,
@@ -2042,4 +2030,16 @@ CXXFoldExpr::CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
   SubExprs[SubExpr::LHS] = LHS;
   SubExprs[SubExpr::RHS] = RHS;
   setDependence(computeDependence(this));
+}
+
+CXXExpansionSelectExpr::CXXExpansionSelectExpr(EmptyShell Empty)
+    : Expr(CXXExpansionSelectExprClass, Empty) {}
+
+CXXExpansionSelectExpr::CXXExpansionSelectExpr(const ASTContext &C,
+                                               InitListExpr *Range, Expr *Idx)
+    : Expr(CXXExpansionSelectExprClass, C.DependentTy, VK_PRValue,
+           OK_Ordinary) {
+  setDependence(ExprDependence::TypeValueInstantiation);
+  SubExprs[RANGE] = Range;
+  SubExprs[INDEX] = Idx;
 }

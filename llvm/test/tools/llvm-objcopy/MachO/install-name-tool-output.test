@@ -1,0 +1,31 @@
+## This test checks writing install-name-tool changes to a separate output file.
+
+# RUN: yaml2obj %s -o %t
+
+## Writing separate files produces the same output as editing in place.
+# RUN: llvm-install-name-tool -id /usr/lib/id1 -o %t.short %t
+# RUN: llvm-install-name-tool -id /usr/lib/id1 --output %t.long %t
+# RUN: llvm-install-name-tool -id /usr/lib/id1 %t
+
+# RUN: cmp %t %t.short
+# RUN: cmp %t %t.long
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000006
+  ncmds:           1
+  sizeofcmds:      72
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:                        LC_ID_DYLIB
+    cmdsize:                    72
+    dylib:
+      name:                     24
+      timestamp:                2
+      current_version:          82115073
+      compatibility_version:    65536
+    Content:                    '/usr/lib/original-id'

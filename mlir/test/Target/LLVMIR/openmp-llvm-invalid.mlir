@@ -132,7 +132,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
     // expected-error @below {{unsupported host op found in device}}
     // expected-error @below {{LLVM Translation failed for operation: omp.parallel}}
     omp.parallel {
-      omp.target {
+      omp.target kernel_type(generic) {
         omp.terminator
       }
       omp.terminator
@@ -145,7 +145,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
 
 module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
   llvm.func @host_op_in_device_sibling_target(%x: !llvm.ptr, %expr: i32) {
-    omp.target {
+    omp.target kernel_type(generic) {
       omp.terminator
     }
     // expected-error @below {{unsupported host op found in device}}

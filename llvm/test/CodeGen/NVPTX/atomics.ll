@@ -8,14 +8,23 @@ declare float @llvm.nvvm.atomic.load.add.f32.p0(ptr %addr, float %val)
 define float @atomic_add_f32_generic(ptr %addr, float %val) {
 ; CHECK-LABEL: atomic_add_f32_generic(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .pred %p<2>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r2, [atomic_add_f32_generic_param_1];
 ; CHECK-NEXT:    ld.param.b64 %rd1, [atomic_add_f32_generic_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [atomic_add_f32_generic_param_1];
-; CHECK-NEXT:    atom.add.f32 %r2, [%rd1], %r1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.volatile.b32 %r4, [%rd1];
+; CHECK-NEXT:  $L__BB0_1: // %atomicrmw.start
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    add.rn.f32 %r3, %r4, %r2;
+; CHECK-NEXT:    atom.cas.b32 %r1, [%rd1], %r4, %r3;
+; CHECK-NEXT:    setp.ne.b32 %p1, %r1, %r4;
+; CHECK-NEXT:    mov.b32 %r4, %r1;
+; CHECK-NEXT:    @%p1 bra $L__BB0_1;
+; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %ret = call float @llvm.nvvm.atomic.load.add.f32.p0(ptr %addr, float %val)
   ret float %ret
@@ -27,14 +36,23 @@ declare float @llvm.nvvm.atomic.load.add.f32.p1(ptr addrspace(1) %addr, float %v
 define float @atomic_add_f32_addrspace1(ptr addrspace(1) %addr, float %val) {
 ; CHECK-LABEL: atomic_add_f32_addrspace1(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .pred %p<2>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r2, [atomic_add_f32_addrspace1_param_1];
 ; CHECK-NEXT:    ld.param.b64 %rd1, [atomic_add_f32_addrspace1_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [atomic_add_f32_addrspace1_param_1];
-; CHECK-NEXT:    atom.global.add.f32 %r2, [%rd1], %r1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ld.volatile.global.b32 %r4, [%rd1];
+; CHECK-NEXT:  $L__BB1_1: // %atomicrmw.start
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    add.rn.f32 %r3, %r4, %r2;
+; CHECK-NEXT:    atom.global.cas.b32 %r1, [%rd1], %r4, %r3;
+; CHECK-NEXT:    setp.ne.b32 %p1, %r1, %r4;
+; CHECK-NEXT:    mov.b32 %r4, %r1;
+; CHECK-NEXT:    @%p1 bra $L__BB1_1;
+; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %ret = call float @llvm.nvvm.atomic.load.add.f32.p1(ptr addrspace(1) %addr, float %val)
   ret float %ret

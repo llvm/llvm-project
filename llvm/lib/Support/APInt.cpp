@@ -1239,7 +1239,7 @@ unsigned APInt::nearestLogBase2() const {
 // the libc sqrt function is called. The result is rounded and then converted
 // back to a uint64_t which is then used to construct the result. Finally,
 // the Babylonian method for computing square roots is used.
-APInt APInt::sqrt() const {
+APInt APInt::sqrtFloor() const {
 
   // Determine the magnitude of the value.
   unsigned magnitude = getActiveBits();
@@ -1248,13 +1248,12 @@ APInt APInt::sqrt() const {
   // rounding errors in libc sqrt for small values.
   if (magnitude <= 5) {
     static const uint8_t results[32] = {
-      /*     0 */ 0,
-      /*  1- 2 */ 1, 1,
-      /*  3- 6 */ 2, 2, 2, 2,
-      /*  7-12 */ 3, 3, 3, 3, 3, 3,
-      /* 13-20 */ 4, 4, 4, 4, 4, 4, 4, 4,
-      /* 21-30 */ 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-      /*    31 */ 6
+        /*     0 */ 0,
+        /*  1- 3 */ 1, 1, 1,
+        /*  4- 8 */ 2, 2, 2, 2, 2,
+        /*  9-15 */ 3, 3, 3, 3, 3, 3, 3,
+        /* 16-24 */ 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        /* 25-31 */ 5, 5, 5, 5, 5, 5, 5,
     };
     return APInt(BitWidth, results[ (isSingleWord() ? U.VAL : U.pVal[0]) ]);
   }
@@ -1264,9 +1263,9 @@ APInt APInt::sqrt() const {
   // libc sqrt function which will probably use a hardware sqrt computation.
   // This should be faster than the algorithm below.
   if (magnitude < 52) {
-    return APInt(BitWidth,
-                 uint64_t(::round(::sqrt(double(isSingleWord() ? U.VAL
-                                                               : U.pVal[0])))));
+    return APInt(
+        BitWidth,
+        uint64_t(::floor(::sqrt(double(isSingleWord() ? U.VAL : U.pVal[0])))));
   }
 
   // Okay, all the short cuts are exhausted. We must compute it. The following
@@ -1294,23 +1293,7 @@ APInt APInt::sqrt() const {
       break;
     x_old = x_new;
   }
-
-  // Make sure we return the closest approximation
-  // NOTE: The rounding calculation below is correct. It will produce an
-  // off-by-one discrepancy with results from pari/gp. That discrepancy has been
-  // determined to be a rounding issue with pari/gp as it begins to use a
-  // floating point representation after 192 bits. There are no discrepancies
-  // between this algorithm and pari/gp for bit widths < 192 bits.
-  APInt square(x_old * x_old);
-  if (this->ult(square))
-    return x_old;
-  APInt delta(2 * x_old + 1);
-  APInt offset(*this - square);
-  assert(offset.ule(delta) && "Error in APInt::sqrt computation");
-  APInt midpoint(delta.udiv(two));
-  if (offset.ult(midpoint))
-    return x_old;
-  return x_old + 1;
+  return x_old;
 }
 
 /// \returns the multiplicative inverse of an odd APInt modulo 2^BitWidth.
@@ -2991,14 +2974,10 @@ llvm::APIntOps::SolveQuadraticEquationWrap(APInt A, APInt B, APInt C,
 
   APInt D = SqrB - 4*A*C;
   assert(D.isNonNegative() && "Negative discriminant");
-  APInt SQ = D.sqrt();
+  APInt SQ = D.sqrtFloor();
 
   APInt Q = SQ * SQ;
   bool InexactSQ = Q != D;
-  // The calculated SQ may actually be greater than the exact (non-integer)
-  // value. If that's the case, decrement SQ to get a value that is lower.
-  if (Q.sgt(D))
-    SQ -= 1;
 
   APInt X;
   APInt Rem;
@@ -3258,4 +3237,24 @@ APInt llvm::APIntOps::clmulr(const APInt &LHS, const APInt &RHS) {
 APInt llvm::APIntOps::clmulh(const APInt &LHS, const APInt &RHS) {
   assert(LHS.getBitWidth() == RHS.getBitWidth());
   return clmulr(LHS, RHS).lshr(1);
+}
+
+APInt llvm::APIntOps::pext(const APInt &Val, const APInt &Mask) {
+  unsigned BW = Val.getBitWidth();
+  assert(BW == Mask.getBitWidth() && "Operand mismatch");
+  APInt Result = APInt::getZero(BW);
+  for (unsigned I = 0, P = 0; I != BW; ++I)
+    if (Mask[I])
+      Result.setBitVal(P++, Val[I]);
+  return Result;
+}
+
+APInt llvm::APIntOps::pdep(const APInt &Val, const APInt &Mask) {
+  unsigned BW = Val.getBitWidth();
+  assert(BW == Mask.getBitWidth() && "Operand mismatch");
+  APInt Result = APInt::getZero(BW);
+  for (unsigned I = 0, P = 0; I != BW; ++I)
+    if (Mask[I])
+      Result.setBitVal(I, Val[P++]);
+  return Result;
 }

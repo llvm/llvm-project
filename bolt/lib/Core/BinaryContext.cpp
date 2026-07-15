@@ -35,6 +35,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include <algorithm>
 #include <functional>
 #include <iterator>
@@ -48,6 +49,7 @@ using namespace llvm;
 namespace opts {
 
 extern cl::opt<bool> LargeCodeModel;
+extern cl::opt<bool> UpdateDebugSections;
 
 static cl::opt<bool>
     NoHugePages("no-huge-pages",
@@ -780,6 +782,9 @@ void BinaryContext::populateJumpTables() {
         analyzeJumpTable(JT->getAddress(), JT->Type, *(JT->Parents[0]),
                          NextJTAddress, &JT->EntriesAsAddress, &JT->IsSplit);
     if (!Success) {
+      // Re-analysis here is stricter than during disassembly (the referenced
+      // function is now disassembled), so it may fail on a table we accepted
+      // earlier. Ignore the owning function(s) instead of aborting.
       LLVM_DEBUG({
         dbgs() << "failed to analyze ";
         JT->print(dbgs());
@@ -788,7 +793,16 @@ void BinaryContext::populateJumpTables() {
           NextJTI->second->print(dbgs());
         }
       });
-      llvm_unreachable("jump table heuristic failure");
+      JT->EntriesAsAddress.clear();
+      JT->IsSplit = false;
+      // Keep JT in the map so it is still freed by ~BinaryContext.
+      for (BinaryFunction *Frag : JT->Parents) {
+        this->errs()
+            << "BOLT-WARNING: unable to analyze jump table in function "
+            << *Frag << "; ignoring the function\n";
+        Frag->setIgnored();
+      }
+      continue;
     }
     for (BinaryFunction *Frag : JT->Parents) {
       if (JT->IsSplit)
@@ -1961,6 +1975,87 @@ void BinaryContext::preprocessDebugInfo() {
   }
 }
 
+void BinaryContext::collectDebugScopeBoundaries() {
+  // Record DWARF lexical-scope boundaries (inlined_subroutine / lexical_block)
+  // into each containing BinaryFunction, so disassembly keeps an offset for the
+  // boundary instructions (see BinaryFunction::DebugScopeBoundaryOffsets) and
+  // translateInputToOutputRange() can map scope ranges precisely.
+
+  auto recordRange = [&](uint64_t LowPC, uint64_t HighPC) {
+    BinaryFunction *BF = getBinaryFunctionContainingAddress(LowPC);
+    if (!BF)
+      return;
+    BF->addDebugScopeBoundaryOffset(
+        static_cast<uint32_t>(LowPC - BF->getAddress()));
+    // Mark HighPC only if it lies strictly inside the same function.
+    if (HighPC > LowPC && getBinaryFunctionContainingAddress(HighPC) == BF)
+      BF->addDebugScopeBoundaryOffset(
+          static_cast<uint32_t>(HighPC - BF->getAddress()));
+  };
+
+  // Record the boundaries of a single scope DIE.
+  auto processScopeDie = [&](const DWARFDie &Die) {
+    const dwarf::Tag Tag = Die.getTag();
+    if (Tag != dwarf::DW_TAG_inlined_subroutine &&
+        Tag != dwarf::DW_TAG_lexical_block && Tag != dwarf::DW_TAG_try_block &&
+        Tag != dwarf::DW_TAG_catch_block)
+      return;
+    if (Expected<DWARFAddressRangesVector> Ranges = Die.getAddressRanges()) {
+      for (const DWARFAddressRange &R : *Ranges)
+        recordRange(R.LowPC, R.HighPC);
+    } else {
+      consumeError(Ranges.takeError());
+    }
+  };
+
+  for (const std::unique_ptr<DWARFUnit> &CUPtr : DwCtx->compile_units()) {
+    DWARFUnit *CU = CUPtr.get();
+    if (!ProcessedCUs.count(CU))
+      continue;
+
+    // Extract only the CU DIE (the .dwo's, for split DWARF). This is cheap (one
+    // DIE) and sets the unit's range/addr/str-offset bases that
+    // getAddressRanges needs, without materializing the full DIE array.
+    DWARFDie CUDie = CU->getNonSkeletonUnitDIE(/*ExtractUnitDIEOnly=*/true);
+    if (!CUDie)
+      continue;
+    DWARFUnit *DIEUnit = CUDie.getDwarfUnit();
+
+    // For split DWARF, preprocessDWODebugInfo already fully extracts the .dwo's
+    // DIE array.
+    if (DIEUnit->isDWOUnit()) {
+      for (const DWARFDebugInfoEntry &Entry : DIEUnit->dies())
+        processScopeDie(DWARFDie(DIEUnit, &Entry));
+      continue;
+    }
+    // Walk the unit's DIEs by streaming them one at a time. Track nesting depth
+    // with a counter: a DIE with children descends a level (++), a null entry
+    // (sibling-chain terminator) ascends (--), the unit-end offset limits the
+    // walk. This is done to avoid recording all DIEs in a vector like
+    // DWARFUnit's extractDIEsToVector() does, since that is more work than
+    // needed if we just want to lookup specific tags.
+    DWARFDataExtractor DebugInfoData = DIEUnit->getDebugInfoExtractor();
+    uint64_t DIEOffset = DIEUnit->getOffset() + DIEUnit->getHeaderSize();
+    const uint64_t NextCUOffset = DIEUnit->getNextUnitOffset();
+    DWARFDebugInfoEntry DIEEntry;
+    int32_t CurrentDepth = 1;
+    while (CurrentDepth > 0 && DIEOffset < NextCUOffset &&
+           DIEEntry.extractFast(*DIEUnit, &DIEOffset, DebugInfoData,
+                                NextCUOffset, 0)) {
+      const DWARFAbbreviationDeclaration *Abbrev =
+          DIEEntry.getAbbreviationDeclarationPtr();
+      if (!Abbrev) {
+        // End of the current sibling chain.
+        --CurrentDepth;
+        continue;
+      }
+      processScopeDie(DWARFDie(DIEUnit, &DIEEntry));
+      if (Abbrev->hasChildren())
+        ++CurrentDepth;
+    }
+  }
+}
+
 bool BinaryContext::shouldEmit(const BinaryFunction &Function) const {
   if (Function.isPseudo())
     return false;
@@ -2461,11 +2556,11 @@ void BinaryContext::addRelocation(uint64_t Address, MCSymbol *Symbol,
 
 void BinaryContext::addDynamicRelocation(uint64_t Address, MCSymbol *Symbol,
                                          uint32_t Type, uint64_t Addend,
-                                         uint64_t Value) {
+                                         uint64_t Value, bool IsRELR) {
   ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
   assert(Section && "cannot find section for address");
   Section->addDynamicRelocation(Address - Section->getAddress(), Symbol, Type,
-                                Addend, Value);
+                                Addend, Value, IsRELR);
 }
 
 bool BinaryContext::removeRelocationAt(uint64_t Address) {

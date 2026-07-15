@@ -37,6 +37,7 @@
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/DebuggerEvents.h"
+#include "lldb/Core/Diagnostics.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Progress.h"
 #include "lldb/Core/StructuredDataImpl.h"
@@ -51,7 +52,6 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/TargetList.h"
 #include "lldb/Utility/Args.h"
-#include "lldb/Utility/Diagnostics.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Version/Version.h"
 
@@ -167,8 +167,11 @@ SBDebugger::GetDiagnosticFromEvent(const lldb::SBEvent &event) {
 
 SBBroadcaster SBDebugger::GetBroadcaster() {
   LLDB_INSTRUMENT_VA(this);
-  SBBroadcaster broadcaster(&m_opaque_sp->GetBroadcaster(), false);
-  return broadcaster;
+
+  if (m_opaque_sp)
+    return SBBroadcaster(&m_opaque_sp->GetBroadcaster(), false);
+
+  return SBBroadcaster();
 }
 
 void SBDebugger::Initialize() {
@@ -1338,7 +1341,7 @@ void SBDebugger::SetTerminalWidth(uint32_t term_width) {
 uint32_t SBDebugger::GetTerminalHeight() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return (m_opaque_sp ? m_opaque_sp->GetTerminalWidth() : 0);
+  return (m_opaque_sp ? m_opaque_sp->GetTerminalHeight() : 0);
 }
 
 void SBDebugger::SetTerminalHeight(uint32_t term_height) {
@@ -1346,6 +1349,14 @@ void SBDebugger::SetTerminalHeight(uint32_t term_height) {
 
   if (m_opaque_sp)
     m_opaque_sp->SetTerminalHeight(term_height);
+}
+
+void SBDebugger::SetTerminalDimensions(uint32_t term_width,
+                                       uint32_t term_height) {
+  LLDB_INSTRUMENT_VA(this, term_width, term_height);
+
+  if (m_opaque_sp)
+    m_opaque_sp->SetTerminalDimensions(term_width, term_height);
 }
 
 const char *SBDebugger::GetPrompt() const {
@@ -1631,11 +1642,12 @@ bool SBDebugger::EnableLog(const char *channel, const char **categories) {
   if (m_opaque_sp) {
     uint32_t log_options =
         LLDB_LOG_OPTION_PREPEND_TIMESTAMP | LLDB_LOG_OPTION_PREPEND_THREAD_NAME;
-    std::string error;
-    llvm::raw_string_ostream error_stream(error);
-    return m_opaque_sp->EnableLog(channel, GetCategoryArray(categories), "",
-                                  log_options, /*buffer_size=*/0,
-                                  eLogHandlerStream, error_stream);
+    llvm::Error err = m_opaque_sp->EnableLog(
+        channel, GetCategoryArray(categories), "", log_options,
+        /*buffer_size=*/0, eLogHandlerStream);
+    bool succeeded = !bool(err);
+    llvm::consumeError(std::move(err));
+    return succeeded;
   } else
     return false;
 }

@@ -59,10 +59,6 @@ const Declaration &FunctionInfo::GetDeclaration() const {
 
 ConstString FunctionInfo::GetName() const { return m_name; }
 
-size_t FunctionInfo::MemorySize() const {
-  return m_name.MemorySize() + m_declaration.MemorySize();
-}
-
 InlineFunctionInfo::InlineFunctionInfo(const char *name,
                                        llvm::StringRef mangled,
                                        const Declaration *decl_ptr,
@@ -115,10 +111,6 @@ const Declaration &InlineFunctionInfo::GetCallSite() const {
 Mangled &InlineFunctionInfo::GetMangled() { return m_mangled; }
 
 const Mangled &InlineFunctionInfo::GetMangled() const { return m_mangled; }
-
-size_t InlineFunctionInfo::MemorySize() const {
-  return FunctionInfo::MemorySize() + m_mangled.MemorySize();
-}
 
 /// @name Call site related structures
 /// @{
@@ -509,11 +501,6 @@ void Function::DumpSymbolContext(Stream *s) {
   s->Printf(", Function{0x%8.8" PRIx64 "}", GetID());
 }
 
-size_t Function::MemorySize() const {
-  size_t mem_size = sizeof(Function) + m_block.MemorySize();
-  return mem_size;
-}
-
 bool Function::GetIsOptimized() {
   bool result = false;
 
@@ -590,8 +577,39 @@ uint32_t Function::GetPrologueByteSize() {
     if (line_table) {
       LineEntry first_line_entry;
       uint32_t first_line_entry_idx = UINT32_MAX;
-      if (line_table->FindLineEntryByAddress(GetAddress(), first_line_entry,
-                                             &first_line_entry_idx)) {
+      bool found_first_line_entry = line_table->FindLineEntryByAddress(
+          GetAddress(), first_line_entry, &first_line_entry_idx);
+
+      // When the entry point isn't covered (e.g. WebAssembly), fall back to the
+      // first line entry that begins within the function so the prologue is
+      // still skipped to a real instruction instead of leaving the breakpoint
+      // on the (unexecutable) entry address.
+      if (!found_first_line_entry) {
+        AddressRange entry_range;
+        if (m_block.GetRangeContainingAddress(m_address, entry_range)) {
+          const addr_t func_start_addr = m_address.GetFileAddress();
+          const addr_t func_end_addr =
+              entry_range.GetBaseAddress().GetFileAddress() +
+              entry_range.GetByteSize();
+          const uint32_t line_table_size = line_table->GetSize();
+          for (uint32_t idx = 0; idx < line_table_size; ++idx) {
+            LineEntry line_entry;
+            bool success = line_table->GetLineEntryAtIndex(idx, line_entry);
+            assert(success && "idx is within the line table size");
+            UNUSED_IF_ASSERT_DISABLED(success);
+            const addr_t entry_addr =
+                line_entry.range.GetBaseAddress().GetFileAddress();
+            if (entry_addr >= func_start_addr && entry_addr < func_end_addr) {
+              first_line_entry = line_entry;
+              first_line_entry_idx = idx;
+              found_first_line_entry = true;
+              break;
+            }
+          }
+        }
+      }
+
+      if (found_first_line_entry) {
         // Make sure the first line entry isn't already the end of the prologue
         addr_t prologue_end_file_addr = LLDB_INVALID_ADDRESS;
         addr_t line_zero_end_file_addr = LLDB_INVALID_ADDRESS;

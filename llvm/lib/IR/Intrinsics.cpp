@@ -34,6 +34,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
@@ -49,9 +50,18 @@ static bool isSignatureValid(FunctionType *FTy,
 #define GET_INTRINSIC_NAME_TABLE
 #include "llvm/IR/IntrinsicImpl.inc"
 
+/// Table of required target features indexed by enum value.
+#define GET_INTRINSIC_TARGET_FEATURES_TABLE
+#include "llvm/IR/IntrinsicImpl.inc"
+
 StringRef Intrinsic::getBaseName(ID id) {
   assert(id < num_intrinsics && "Invalid intrinsic ID!");
   return IntrinsicNameTable[IntrinsicNameOffsetTable[id]];
+}
+
+StringRef Intrinsic::getRequiredTargetFeatures(ID id) {
+  assert(id < num_intrinsics && "invalid intrinsic ID!");
+  return IntrinsicTargetFeaturesTable[IntrinsicTargetFeaturesOffsetTable[id]];
 }
 
 StringRef Intrinsic::getName(ID id) {
@@ -357,10 +367,10 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_EXTERNREF:
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Pointer, 10));
+    OutputTable.push_back(IITDescriptor::get(IITDescriptor::WasmExternref, 0));
     return;
   case IIT_FUNCREF:
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Pointer, 20));
+    OutputTable.push_back(IITDescriptor::get(IITDescriptor::WasmFuncref, 0));
     return;
   case IIT_PTR:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Pointer, 0));
@@ -370,9 +380,17 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
         IITDescriptor::get(IITDescriptor::Pointer, Infos[NextElt++]));
     return;
   case IIT_ANY: {
-    unsigned OverloadInfo = Infos[NextElt++];
+    unsigned OverloadIndex = Infos[NextElt++];
+    unsigned ArgKindEnums = Infos[NextElt++];
+    unsigned Packed = (ArgKindEnums << 8) | OverloadIndex;
     OutputTable.push_back(
-        IITDescriptor::get(IITDescriptor::Overloaded, OverloadInfo));
+        IITDescriptor::get(IITDescriptor::Overloaded, Packed));
+    return;
+  }
+  case IIT_MATCH: {
+    unsigned OverloadIndex = Infos[NextElt++];
+    OutputTable.push_back(
+        IITDescriptor::get(IITDescriptor::Match, OverloadIndex));
     return;
   }
   case IIT_EXTEND_ARG: {
@@ -549,7 +567,10 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return Type::getPPC_FP128Ty(Context);
   case IITDescriptor::AArch64Svcount:
     return TargetExtType::get(Context, "aarch64.svcount");
-
+  case IITDescriptor::WasmExternref:
+    return TargetExtType::get(Context, "wasm.externref");
+  case IITDescriptor::WasmFuncref:
+    return TargetExtType::get(Context, "wasm.funcref");
   case IITDescriptor::Integer:
     return IntegerType::get(Context, D.IntegerWidth);
   case IITDescriptor::Vector:
@@ -563,10 +584,12 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
       Elts.push_back(DecodeFixedType(Infos, OverloadTys, Context));
     return StructType::get(Context, Elts);
   }
-  // For any overload kind or partially dependent type, substitute it with the
-  // corresponding concrete type from OverloadTys.
+  // For any overload type or partially dependent type, substitute it with the
+  // corresponding concrete type from OverloadTys. Additionally, do the same
+  // for the fully dependent type that matches an overload type.
   case IITDescriptor::Overloaded:
   case IITDescriptor::VecOfAnyPtrsToElt:
+  case IITDescriptor::Match:
     return OverloadTys[D.getOverloadIndex()];
   case IITDescriptor::Extend:
     return OverloadTys[D.getOverloadIndex()]->getExtendedType();
@@ -940,11 +963,47 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
 
   IITDescriptor D = Infos.consume_front();
 
-  auto PrintMsg = [&OS, &Position, Ty](bool IsValid,
-                                       const Twine &Expected) -> bool {
+  // Print error message when the (non-dependent) type for current position is
+  // invalid.
+  auto PrintMsg = [&OS, &Position,
+                   Ty](bool IsValid, const Twine &Expected,
+                       std::optional<unsigned> OIdx = std::nullopt) -> bool {
     if (IsValid)
       return false;
-    OS << Position << " type expected " << Expected << ", but got " << *Ty;
+    OS << Position << " type";
+    if (OIdx)
+      OS << " (overload type " << *OIdx << ")";
+    OS << " expected " << Expected << ", but got " << *Ty;
+    return true;
+  };
+
+  // Print message when an overload type is invalid as a result of its use in
+  // current dependent type. DependentQualifier describes the "function" applied
+  // to the overload type to get the dependent type.
+  auto PrintMsgInvalidOverloadTy =
+      [&OS, &Position, &OverloadTys](const Twine &DependentQualifier,
+                                     const Twine &Expected,
+                                     unsigned OIdx) -> bool {
+    OS << Position << " is " << DependentQualifier << " overload type " << OIdx
+       << ", so overload type " << OIdx << " expected " << Expected
+       << ", but got " << *OverloadTys[OIdx];
+    return true;
+  };
+
+  // Print message when a dependent type is invalid.
+  auto PrintMsgInvalidDepType =
+      [&OS, &Position, &OverloadTys,
+       Ty](bool IsValid, const Twine &DependentQualifier, const Twine &Expected,
+           unsigned OIdx) -> bool {
+    if (IsValid)
+      return false;
+    bool IsMatching = DependentQualifier.isSingleStringRef() &&
+                      DependentQualifier.getSingleStringRef() == "matching";
+    OS << Position << " type (" << DependentQualifier << " overload type "
+       << OIdx << ") expected " << Expected;
+    if (!IsMatching)
+      OS << " (overload type " << OIdx << " is " << *OverloadTys[OIdx] << ")";
+    OS << ", but got " << *Ty;
     return true;
   };
 
@@ -984,6 +1043,14 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return PrintMsg(isa<TargetExtType>(Ty) &&
                         cast<TargetExtType>(Ty)->getName() == "aarch64.svcount",
                     "aarch64.svcount");
+  case IITDescriptor::WasmExternref:
+    return PrintMsg(isa<TargetExtType>(Ty) &&
+                        cast<TargetExtType>(Ty)->getName() == "wasm.externref",
+                    "wasm.externref");
+  case IITDescriptor::WasmFuncref:
+    return PrintMsg(isa<TargetExtType>(Ty) &&
+                        cast<TargetExtType>(Ty)->getName() == "wasm.funcref",
+                    "wasm.funcref");
   case IITDescriptor::Vector: {
     VectorType *VT = dyn_cast<VectorType>(Ty);
     StringRef Scalable = D.VectorWidth.isScalable() ? "vscale " : "";
@@ -1025,81 +1092,145 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return false;
   }
 
-  case IITDescriptor::Overloaded:
-    // If this is the second occurrence of an argument,
-    // verify that the later instance matches the previous instance.
-    if (D.getOverloadIndex() < OverloadTys.size())
-      return Ty != OverloadTys[D.getOverloadIndex()];
-
-    if (D.getOverloadIndex() > OverloadTys.size() ||
-        D.getOverloadKind() == IITDescriptor::AK_MatchType)
-      return IsDeferredCheck || DeferCheck(Ty);
-
-    assert(D.getOverloadIndex() == OverloadTys.size() && !IsDeferredCheck &&
+  case IITDescriptor::Overloaded: {
+    unsigned OIdx = D.getOverloadIndex();
+    assert(OIdx == OverloadTys.size() && !IsDeferredCheck &&
            "Table consistency error");
     OverloadTys.push_back(Ty);
 
-    switch (D.getOverloadKind()) {
-    case IITDescriptor::AK_Any:
-      return false; // Success
-    case IITDescriptor::AK_AnyInteger:
-      return !Ty->isIntOrIntVectorTy();
-    case IITDescriptor::AK_AnyFloat:
-      return !Ty->isFPOrFPVectorTy();
-    case IITDescriptor::AK_AnyVector:
-      return !isa<VectorType>(Ty);
-    case IITDescriptor::AK_AnyPointer:
-      return !isa<PointerType>(Ty);
-    default:
-      break;
+    IITDescriptor::AnyKindVectorConstraint VC;
+    IITDescriptor::AnyKindElementConstraint EC;
+    std::tie(VC, EC) = D.getOverloadConstraints();
+
+    bool IsValid = [&]() {
+      switch (VC) {
+      case IITDescriptor::VC_None:
+        return true;
+      case IITDescriptor::VC_Vector:
+        return isa<VectorType>(Ty);
+      case IITDescriptor::VC_Scalar:
+        return !isa<VectorType>(Ty);
+      }
+      llvm_unreachable("invalid vector constraint");
+    }();
+
+    IsValid &= [&]() {
+      Type *ETy = Ty->getScalarType();
+      switch (EC) {
+      case IITDescriptor::EC_None:
+        return true;
+      case IITDescriptor::EC_Integer:
+        return ETy->isIntegerTy();
+      case IITDescriptor::EC_Float:
+        return ETy->isFloatingPointTy();
+      case IITDescriptor::EC_Pointer:
+        return ETy->isPointerTy();
+      }
+      llvm_unreachable("invalid element constraint");
+    }();
+
+    if (IsValid)
+      return false;
+
+    static constexpr StringLiteral VectorKinds[] = {
+        "",
+        "vector",
+        "scalar",
+    };
+    static constexpr StringLiteral ElementKinds[] = {
+        "",
+        "integer",
+        "fp",
+        "pointer",
+    };
+
+    if (EC == IITDescriptor::EC_None) {
+      // No constraint on element type.
+      // Expected = any {vector | scalar} type.
+      StringLiteral VK = ArrayRef(VectorKinds)[VC];
+      return PrintMsg(false, formatv("any {} type", VK), OIdx);
     }
-    llvm_unreachable("all argument kinds not covered");
 
-  case IITDescriptor::Extend: {
-    // If this is a forward reference, defer the check for later.
-    if (D.getOverloadIndex() >= OverloadTys.size())
-      return IsDeferredCheck || DeferCheck(Ty);
-
-    Type *NewTy = OverloadTys[D.getOverloadIndex()]->getExtendedType();
-    return Ty != NewTy;
+    StringLiteral EK = ArrayRef(ElementKinds)[EC];
+    switch (VC) {
+    case IITDescriptor::VC_None:
+      // Expected = any EK or EK vector.
+      return PrintMsg(false, formatv("any {0} or {0} vector", EK), OIdx);
+    case IITDescriptor::VC_Vector:
+      return PrintMsg(false, formatv("any {} vector", EK), OIdx);
+    case IITDescriptor::VC_Scalar:
+      return PrintMsg(false, formatv("any {} type", EK), OIdx);
+    }
+    llvm_unreachable("invalid vector constraint");
   }
+
+  case IITDescriptor::Match: {
+    unsigned OIdx = D.getOverloadIndex();
+    if (OIdx >= OverloadTys.size())
+      return IsDeferredCheck || DeferCheck(Ty);
+    return PrintMsgInvalidDepType(Ty == OverloadTys[OIdx], "matching",
+                                  formatv("{}", *OverloadTys[OIdx]), OIdx);
+  }
+
+  case IITDescriptor::Extend:
   case IITDescriptor::Trunc: {
+    unsigned OIdx = D.getOverloadIndex();
     // If this is a forward reference, defer the check for later.
-    if (D.getOverloadIndex() >= OverloadTys.size())
+    if (OIdx >= OverloadTys.size())
       return IsDeferredCheck || DeferCheck(Ty);
 
-    Type *NewTy = OverloadTys[D.getOverloadIndex()]->getTruncatedType();
-    return Ty != NewTy;
+    Type *OTy = OverloadTys[OIdx];
+    bool IsExtend = D.Kind == IITDescriptor::Extend;
+    StringRef Qualifier = IsExtend ? "extended" : "truncated";
+    if (!OTy->isIntOrIntVectorTy())
+      return PrintMsgInvalidOverloadTy(Qualifier, "int or vector of int", OIdx);
+
+    Type *NewTy = IsExtend ? OTy->getExtendedType() : OTy->getTruncatedType();
+    return PrintMsgInvalidDepType(Ty == NewTy, Qualifier, formatv("{}", *NewTy),
+                                  OIdx);
   }
   case IITDescriptor::OneNthEltsVec: {
+    unsigned OIdx = D.getOverloadIndex();
+    unsigned Divisor = D.getVectorDivisor();
     // If this is a forward reference, defer the check for later.
-    if (D.getOverloadIndex() >= OverloadTys.size())
+    if (OIdx >= OverloadTys.size())
       return IsDeferredCheck || DeferCheck(Ty);
-    auto *VTy = dyn_cast<VectorType>(OverloadTys[D.getOverloadIndex()]);
-    if (!VTy)
-      return true;
-    if (!VTy->getElementCount().isKnownMultipleOf(D.getVectorDivisor()))
-      return true;
-    return VectorType::getOneNthElementsVectorType(VTy, D.getVectorDivisor()) !=
-           Ty;
+    Type *OTy = OverloadTys[OIdx];
+    auto *OVecTy = dyn_cast<VectorType>(OTy);
+    auto Qualifier = formatv("1/nth (n={}) elements vector of", Divisor);
+    if (!OVecTy)
+      return PrintMsgInvalidOverloadTy(Qualifier, "vector", OIdx);
+    if (!OVecTy->getElementCount().isKnownMultipleOf(Divisor))
+      return PrintMsgInvalidOverloadTy(
+          Qualifier, formatv("vector with multiple of {} elements", Divisor),
+          OIdx);
+    Type *Expected = VectorType::getOneNthElementsVectorType(OVecTy, Divisor);
+    return PrintMsgInvalidDepType(Expected == Ty, Qualifier,
+                                  formatv("{}", *Expected), OIdx);
   }
   case IITDescriptor::SameVecWidth: {
-    if (D.getOverloadIndex() >= OverloadTys.size()) {
+    unsigned OIdx = D.getOverloadIndex();
+    if (OIdx >= OverloadTys.size()) {
       // Defer check and subsequent check for the vector element type.
       Infos.consume_front();
       return IsDeferredCheck || DeferCheck(Ty);
     }
-    auto *ReferenceType =
-        dyn_cast<VectorType>(OverloadTys[D.getOverloadIndex()]);
-    auto *ThisArgType = dyn_cast<VectorType>(Ty);
+    auto *OVecTy = dyn_cast<VectorType>(OverloadTys[OIdx]);
+    auto *ThisArgVecType = dyn_cast<VectorType>(Ty);
     // Both must be vectors of the same number of elements or neither.
-    if ((ReferenceType != nullptr) != (ThisArgType != nullptr))
-      return true;
+    StringRef Qualifier = "same vector width of";
+    if (OVecTy && !ThisArgVecType)
+      return PrintMsgInvalidDepType(false, Qualifier, "vector", OIdx);
+    if (!OVecTy && ThisArgVecType)
+      return PrintMsgInvalidDepType(false, Qualifier, "scalar", OIdx);
     Type *EltTy = Ty;
-    if (ThisArgType) {
-      if (ReferenceType->getElementCount() != ThisArgType->getElementCount())
-        return true;
-      EltTy = ThisArgType->getElementType();
+    if (ThisArgVecType) {
+      ElementCount Expected = OVecTy->getElementCount();
+      if (Expected != ThisArgVecType->getElementCount())
+        return PrintMsgInvalidDepType(
+            false, Qualifier, formatv("vector with {} elements", Expected),
+            OIdx);
+      EltTy = ThisArgVecType->getElementType();
       Position.push_vector_element();
     }
     return matchIntrinsicType(EltTy, Infos, Position, OverloadTys,
@@ -1112,6 +1243,8 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
         return true;
       // If forward referencing, already add the pointer-vector type and
       // defer the checks for later.
+      assert(D.getOverloadIndex() == OverloadTys.size() &&
+             "Table consistency error");
       OverloadTys.push_back(Ty);
       return DeferCheck(Ty);
     }
@@ -1123,45 +1256,69 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     }
 
     // Verify the overloaded type "matches" the Ref type.
-    // i.e. Ty is a vector with the same width as Ref.
-    // Composed of pointers to the same element type as Ref.
+    // i.e. Ty is a vector with the same width as Ref and composed of pointers.
+
+    StringRef Qualifier = "vector of pointers to elements of";
     auto *ReferenceType = dyn_cast<VectorType>(OverloadTys[RefOverloadIndex]);
+    if (!ReferenceType)
+      return PrintMsgInvalidOverloadTy(Qualifier, "vector", RefOverloadIndex);
+
     auto *ThisArgVecTy = dyn_cast<VectorType>(Ty);
-    if (!ThisArgVecTy || !ReferenceType ||
-        (ReferenceType->getElementCount() != ThisArgVecTy->getElementCount()))
-      return true;
-    return !ThisArgVecTy->getElementType()->isPointerTy();
+    if (!ThisArgVecTy)
+      return PrintMsgInvalidDepType(false, Qualifier, "vector",
+                                    RefOverloadIndex);
+
+    auto ExpectedCount = ReferenceType->getElementCount();
+    auto Expected =
+        formatv("vector of pointers with {} elements", ExpectedCount);
+    bool IsValid = ThisArgVecTy->getElementCount() == ExpectedCount &&
+                   ThisArgVecTy->getElementType()->isPointerTy();
+    return PrintMsgInvalidDepType(IsValid, Qualifier, Expected,
+                                  RefOverloadIndex);
   }
   case IITDescriptor::VecElement: {
-    if (D.getOverloadIndex() >= OverloadTys.size())
-      return IsDeferredCheck ? true : DeferCheck(Ty);
-    auto *ReferenceType =
-        dyn_cast<VectorType>(OverloadTys[D.getOverloadIndex()]);
-    return !ReferenceType || Ty != ReferenceType->getElementType();
+    unsigned OIdx = D.getOverloadIndex();
+    if (OIdx >= OverloadTys.size())
+      return IsDeferredCheck || DeferCheck(Ty);
+    StringRef Qualifier = "vector element of";
+    auto *OVecTy = dyn_cast<VectorType>(OverloadTys[OIdx]);
+    if (!OVecTy)
+      return PrintMsgInvalidOverloadTy(Qualifier, "vector", OIdx);
+    Type *Expected = OVecTy->getElementType();
+    return PrintMsgInvalidDepType(Expected == Ty, Qualifier,
+                                  formatv("{}", *Expected), OIdx);
   }
   case IITDescriptor::Subdivide2:
   case IITDescriptor::Subdivide4: {
+    unsigned OIdx = D.getOverloadIndex();
     // If this is a forward reference, defer the check for later.
-    if (D.getOverloadIndex() >= OverloadTys.size())
+    if (OIdx >= OverloadTys.size())
       return IsDeferredCheck || DeferCheck(Ty);
 
-    Type *NewTy = OverloadTys[D.getOverloadIndex()];
-    if (auto *VTy = dyn_cast<VectorType>(NewTy)) {
-      int SubDivs = D.Kind == IITDescriptor::Subdivide2 ? 1 : 2;
-      NewTy = VectorType::getSubdividedVectorType(VTy, SubDivs);
-      return Ty != NewTy;
-    }
-    return true;
+    int SubDivs = D.Kind == IITDescriptor::Subdivide2 ? 1 : 2;
+    auto *OVecTy = dyn_cast<VectorType>(OverloadTys[OIdx]);
+    auto Qualifier =
+        formatv("subdivided by {} vector of", SubDivs == 1 ? 2 : 4);
+    if (!OVecTy)
+      return PrintMsgInvalidOverloadTy(Qualifier, "vector", OIdx);
+
+    // TODO: Verify that the element type of the overload type is subdivisible
+    // by 2 or 4.
+    Type *Expected = VectorType::getSubdividedVectorType(OVecTy, SubDivs);
+    return PrintMsgInvalidDepType(Expected == Ty, Qualifier,
+                                  formatv("{}", *Expected), OIdx);
   }
   case IITDescriptor::VecOfBitcastsToInt: {
-    if (D.getOverloadIndex() >= OverloadTys.size())
+    unsigned OIdx = D.getOverloadIndex();
+    if (OIdx >= OverloadTys.size())
       return IsDeferredCheck || DeferCheck(Ty);
-    auto *ReferenceType =
-        dyn_cast<VectorType>(OverloadTys[D.getOverloadIndex()]);
-    auto *ThisArgVecTy = dyn_cast<VectorType>(Ty);
-    if (!ThisArgVecTy || !ReferenceType)
-      return true;
-    return ThisArgVecTy != VectorType::getInteger(ReferenceType);
+    auto *OVecTy = dyn_cast<VectorType>(OverloadTys[OIdx]);
+    StringRef Qualifier = "vector of bitcasts to int of";
+    if (!OVecTy)
+      return PrintMsgInvalidOverloadTy(Qualifier, "vector", OIdx);
+    Type *Expected = VectorType::getInteger(OVecTy);
+    return PrintMsgInvalidDepType(Expected == Ty, Qualifier,
+                                  formatv("{}", *Expected), OIdx);
   }
   case IITDescriptor::VarArg:
     // VarArg token should be consumed by `getIntrinsicInfoTableEntries`, so we
@@ -1191,22 +1348,9 @@ static bool isSignatureValid(FunctionType *FTy,
   Pos.IsRet = true;
   Pos.Num = 0;
 
-  // Temporary fix to print an error message if `matchIntrinsicType` fails but
-  // does not print an error message. This will be removed once all failing
-  // cases in `matchIntrinsicType` start generating error messages.
-  uint64_t OSPos = OS.tell();
-  auto PrintMsg = [OSPos, &OS](StringRef Msg) {
-    if (OS.tell() != OSPos)
-      return;
-    OS << Msg;
-  };
-
   if (matchIntrinsicType(FTy->getReturnType(), Infos, Pos, OverloadTys,
-                         DeferredChecks, false, OS)) {
-    PrintMsg("intrinsic has incorrect return type!");
+                         DeferredChecks, false, OS))
     return false;
-  }
-  unsigned NumDeferredReturnChecks = DeferredChecks.size();
 
   if (FTy->getNumParams() != NumArgs) {
     OS << "intrinsic has incorrect number of args. Expected " << NumArgs
@@ -1218,22 +1362,15 @@ static bool isSignatureValid(FunctionType *FTy,
   for (const auto &[Idx, Ty] : llvm::enumerate(FTy->params())) {
     Pos.Num = Idx;
     if (matchIntrinsicType(Ty, Infos, Pos, OverloadTys, DeferredChecks, false,
-                           OS)) {
-      PrintMsg("intrinsic has incorrect argument type!");
+                           OS))
       return false;
-    }
   }
 
   for (unsigned I = 0, E = DeferredChecks.size(); I != E; ++I) {
     auto &[DefTy, DefInfos, DefPosition] = DeferredChecks[I];
-    if (!matchIntrinsicType(DefTy, DefInfos, DefPosition, OverloadTys,
-                            DeferredChecks, true, OS))
-      continue;
-    if (I < NumDeferredReturnChecks)
-      PrintMsg("intrinsic has incorrect return type!");
-    else
-      PrintMsg("intrinsic has incorrect argument type!");
-    return false;
+    if (matchIntrinsicType(DefTy, DefInfos, DefPosition, OverloadTys,
+                           DeferredChecks, true, OS))
+      return false;
   }
 
   if (!Infos.empty()) {
@@ -1335,5 +1472,16 @@ Intrinsic::ID Intrinsic::getDeinterleaveIntrinsicID(unsigned Factor) {
   return InterleaveIntrinsics[Factor - 2].Deinterleave;
 }
 
+LLVM_ABI void Intrinsic::printFPClassMask(raw_ostream &OS,
+                                          const Constant *ImmArgVal) {
+  uint64_t Val = cast<ConstantInt>(ImmArgVal)->getZExtValue();
+  OS << static_cast<FPClassTest>(Val);
+}
+
 #define GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS
+#include "llvm/IR/IntrinsicImpl.inc"
+
+// Emit the default-argument values table and lookup function
+// (Intrinsic::getAllDefaultArgValues).
+#define GET_INTRINSIC_DEFAULT_ARG_VALUES
 #include "llvm/IR/IntrinsicImpl.inc"
