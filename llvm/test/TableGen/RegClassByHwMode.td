@@ -98,7 +98,7 @@ include "Common/RegClassByHwModeCommon.td"
 // ASMMATCHER-NEXT:   MCK_Imm, // user defined class 'ImmAsmOperand'
 
 // ASMMATCHER: static unsigned validateOperandClass(MCParsedAsmOperand &GOp, MatchClassKind Kind, const MCSubtargetInfo &STI) {
-// ASMMATCHER: if (Operand.isToken() && Kind <= MCK_LAST_TOKEN)
+// ASMMATCHER: if (Kind <= MCK_LAST_TOKEN) {
 
 // ASMMATCHER: switch (Kind) {
 
