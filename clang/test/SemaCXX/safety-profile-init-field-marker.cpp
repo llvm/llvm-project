@@ -221,6 +221,36 @@ template struct DependentVacuity<RunsCtor>; // expected-note {{in instantiation 
 // expected-error@#dependent-vacuity-member {{member 'm' cannot be marked '[[uninit]]' under profile 'std::init'; default-initialization of its type 'RunsCtor' does not leave it uninitialized}}
 // expected-note@#dependent-vacuity-member {{default-initialization of 'RunsCtor' runs a constructor}}
 
+// A marked field of an *anonymous* struct is checked when the anonymous
+// record itself is finalized: the enclosing class's walk sees only the
+// unnamed anonymous-record member, which cannot carry the attribute.
+struct WithAnonStruct {
+  struct {
+    RunsCtor s [[uninit]]; // expected-error {{member 's' cannot be marked '[[uninit]]' under profile 'std::init'; default-initialization of its type 'RunsCtor' does not leave it uninitialized}} \
+                           // expected-note {{default-initialization of 'RunsCtor' runs a constructor}}
+  };
+};
+
+// An anonymous struct inside a union is itself not a union, so its
+// non-vacuous marked member draws the member diagnostic (exactly one): its
+// members are variant members, where the marker is just as unsatisfiable.
+union UnionWithAnonStruct {
+  struct {
+    RunsCtor s [[uninit]]; // expected-error {{member 's' cannot be marked '[[uninit]]' under profile 'std::init'; default-initialization of its type 'RunsCtor' does not leave it uninitialized}} \
+                           // expected-note {{default-initialization of 'RunsCtor' runs a constructor}}
+  };
+  int tag;
+};
+
+// A local class is finalized like any other.
+void local_class_field_marker() {
+  struct Local {
+    RunsCtor s [[uninit]]; // expected-error {{member 's' cannot be marked '[[uninit]]' under profile 'std::init'; default-initialization of its type 'RunsCtor' does not leave it uninitialized}} \
+                           // expected-note {{default-initialization of 'RunsCtor' runs a constructor}}
+  };
+  (void)sizeof(Local);
+}
+
 // Suppression: rule-targeted on the field, and whole-profile on the class.
 struct SuppressedFieldMarker {
   // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}

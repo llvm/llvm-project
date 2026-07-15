@@ -1384,12 +1384,57 @@ void test_reseat_clears_credit(int *p [[ref_to_uninit]],
   (void)x; (void)y; (void)z;
 }
 
+// The credit map keys on local VarDecls, so a [[ref_to_uninit]] *member*
+// pointer is never credited: a read through it keeps failing even after a
+// store through the exact same lvalue (no per-object tracking).
+struct WithMarkedPtrField {
+  int *p [[ref_to_uninit]] = &g_uninit;
+};
+void test_member_pointer_never_credited(WithMarkedPtrField w) {
+  *w.p = 5;
+  int x = *w.p; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  (void)x;
+}
+
+// A member store through a marked class-typed pointer is a subobject store:
+// trusted as a write (paper §4.5) but never crediting, so the member read
+// after it still fails.
+void test_member_store_never_credits(Inner *ptr [[ref_to_uninit]]) {
+  ptr->m = 5;
+  int y = ptr->m; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  (void)y;
+}
+
+// The reverse direction applies through the assignment funnel too: a
+// credited marked pointer refers to initialized memory, so assigning it to
+// another marked pointer is the requires-uninit error -- while an unmarked
+// target now accepts it (paper §4.3: "p no longer refers to uninitialized
+// memory").
+void test_assign_credited_to_marked(int *p [[ref_to_uninit]],
+                                    int *q [[ref_to_uninit]]) {
+  *p = 5;
+  q = p; // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+}
+void test_credited_to_unmarked(int *p [[ref_to_uninit]]) {
+  *p = 5;
+  int *s = p; // OK: the credited pointee is initialized
+  (void)s;
+}
+
 // A store through a marked *reference* credits its referent; a reference
 // cannot be reseated, so the credit is never cleared.
 void test_marked_ref_store_credit(int &r [[ref_to_uninit]]) {
   r = 5;
   int x = r; // OK: the store initialized the referent
   (void)x;
+}
+
+// ...and the reference gets the reverse direction too: after the store its
+// referent is initialized, so a marked reference can no longer bind to it.
+void test_marked_ref_reverse_direction(int &r [[ref_to_uninit]]) {
+  r = 5;
+  int &r3 [[ref_to_uninit]] = r; // expected-error {{reference marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  (void)r3;
 }
 
 void test_marked_ref_read_before_store(int &r [[ref_to_uninit]]) {

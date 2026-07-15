@@ -342,6 +342,28 @@ void test_no_credit_contexts() {
   (void)q; (void)qv; (void)qw;
 }
 
+// A suppressed store still initializes: the credit is recorded regardless
+// of [[profiles::suppress]], so suppression cannot manufacture later false
+// positives.
+void test_suppressed_store_credits() {
+  int u [[uninit]];
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init)]] { u = 5; }
+  int *q = &u; // OK: the suppressed store still credited u
+  (void)q;
+}
+
+// A nested assignment credits both targets: the inner assignment completes
+// (and records) before the outer one.
+void test_nested_assignment_credit() {
+  int u [[uninit]];
+  int v [[uninit]];
+  u = (v = 5);
+  int *qu = &u; // OK
+  int *qv = &v; // OK
+  (void)qu; (void)qv;
+}
+
 // The credit keys on the unique VarDecl: a same-named sibling-scope local is
 // a distinct declaration, so credit does not leak between them.
 void test_sibling_scope_credit(bool c) {

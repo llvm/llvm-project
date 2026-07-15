@@ -448,9 +448,10 @@ Positions that cannot carry the marker -- a variadic argument, a parameter of
 a function called through a function pointer, the implicit object parameter
 -- are checked as unmarked targets; suppress at the call site if the flow is
 intended.  A null pointer source -- ``nullptr``, ``0``, ``{}``, or a local
-pointer initialized to null -- refers to no object, so it is accepted for
+variable initialized to null -- refers to no object, so it is accepted for
 marked and unmarked targets alike (§4.3, §8: the marker means "zero or more
-uninitialized objects").  A source whose form the recognizer cannot classify
+uninitialized objects"); a *parameter* with a null default argument is not a
+null source (callers may pass any pointer).  A source whose form the recognizer cannot classify
 (pointer arithmetic, an integer-to-pointer cast) is likewise accepted for
 either target.
 
