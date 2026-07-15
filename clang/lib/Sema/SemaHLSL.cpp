@@ -5187,6 +5187,8 @@ static bool hasConstantBufferLayout(QualType QT) {
     return false;
 
   if (const auto *RD = Ty->getAsCXXRecordDecl()) {
+    if (!RD->hasDefinition())
+      return false;
     for (const auto *FD : RD->fields()) {
       if (hasConstantBufferLayout(FD->getType()))
         return true;
