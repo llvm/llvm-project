@@ -2229,6 +2229,24 @@ void test_variable_braced_once() {
   (void)p;
 }
 
+// An array new-expression's pointer elements are the same unmarked element
+// bindings, for constant and variable bounds alike. The scalar
+// new-initializer check stays out of array news -- a lone initializer (a
+// one-element braced list, peeled by the single-element pass-through, or a
+// single C++20 paren argument) binds the first *element*, already checked by
+// the element hooks -- so each violation fires exactly once. Scalar
+// allocations keep their single variable-like check.
+void test_array_new_element(int n) {
+  (void)new int *[2]{&g_uninit, &g_init}; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)new int *[2]{&g_uninit};          // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)new int *[1](&g_uninit);          // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)new int *[n]{&g_uninit};          // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)new int *[n](&g_uninit);          // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)new int *[2]{};                   // OK: value-initialized null elements
+  (void)new int *(&g_uninit);             // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)new int *{&g_uninit};             // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+
 // std::init / ref_to_uninit (paper §5): a source whose syntactic form the
 // recognizer does not model -- pointer arithmetic, an integer-to-pointer cast,
 // or a call through a function pointer -- is unknown, not initialized. A marked

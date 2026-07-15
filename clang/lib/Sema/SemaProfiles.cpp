@@ -1746,9 +1746,13 @@ void SemaProfiles::checkInitProfileNewInitializer(QualType AllocType,
   // [[ref_to_uninit]], so binding it to uninitialized memory is always the
   // unmarked-direction violation. A braced `new T*{&x}` presents the
   // InitListExpr, which the recognizer's single-element pass-through looks
-  // through. An instantiation-dependent allocated type (note that a
-  // dependent-pointee `T*` still passes isPointerType) defers to the
-  // instantiation rebuild, which re-runs this check with the concrete type.
+  // through -- which is why the caller invokes this for scalar allocations
+  // only: for an array new, AllocType is the element type and the lone
+  // initializer of `new T*[k]{&x}` would be peeled to the same binding the
+  // aggregate element hooks already diagnose. An instantiation-dependent
+  // allocated type (note that a dependent-pointee `T*` still passes
+  // isPointerType) defers to the instantiation rebuild, which re-runs this
+  // check with the concrete type.
   if (!AllocType->isPointerType() ||
       AllocType->isInstantiationDependentType() || !Init)
     return;

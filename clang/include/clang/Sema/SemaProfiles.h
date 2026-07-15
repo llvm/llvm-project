@@ -475,7 +475,9 @@ public:
   /// allocated pointer binds it like a variable initialization, and a heap
   /// pointer object cannot carry [[ref_to_uninit]]. \p Init is the single
   /// written initializer expression, or null when there is none (a no-op).
-  /// Hosts the cluster from Sema::BuildCXXNew. An instantiation-dependent
+  /// Hosts the cluster from Sema::BuildCXXNew, which calls it for scalar
+  /// allocations only: an array new's written elements are each checked by
+  /// the aggregate element hooks instead. An instantiation-dependent
   /// allocated type defers to the instantiation rebuild.
   void checkInitProfileNewInitializer(QualType AllocType, Expr *Init);
 
