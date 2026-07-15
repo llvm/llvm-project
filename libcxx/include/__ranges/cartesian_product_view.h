@@ -32,6 +32,7 @@
 #include <__ranges/zip_view.h>
 #include <__tuple/tuple_transform.h>
 #include <__type_traits/common_type.h>
+#include <__type_traits/is_const.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/maybe_const.h>
 #include <__utility/forward.h>
@@ -119,15 +120,13 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator<false> end()
     requires((!__simple_view<_First> || ... || !__simple_view<_Vs>) && __cartesian_product_is_common<_First, _Vs...>)
   {
-    constexpr bool __is_const_ = false;
-    return __end_impl<__is_const_>(*this);
+    return __end_impl(*this);
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator<true> end() const
     requires __cartesian_product_is_common<const _First, const _Vs...>
   {
-    constexpr bool __is_const_ = true;
-    return __end_impl<__is_const_>(*this);
+    return __end_impl(*this);
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr default_sentinel_t end() const noexcept { return default_sentinel; }
@@ -145,9 +144,8 @@ public:
   }
 
 private:
-  template <bool _IsConst>
-  _LIBCPP_HIDE_FROM_ABI static constexpr __iterator<_IsConst>
-  __end_impl(__maybe_const<_IsConst, cartesian_product_view>& __self) {
+  template <class _Self>
+  _LIBCPP_HIDE_FROM_ABI static constexpr auto __end_impl(_Self& __self) {
     const auto __ranges_to_iterators = [__end_is_empty = __self.__end_is_empty(),
                                         &__b = __self.__bases_]<std::size_t... _Ip>(std::index_sequence<_Ip...>) {
       const auto __begin_or_first_end = []<class _IsFirst>(_IsFirst, auto& __rng, bool __empty) {
@@ -158,7 +156,8 @@ private:
       return std::make_tuple(
           __begin_or_first_end(std::bool_constant<_Ip == 0>{}, std::get<_Ip>(__b), __end_is_empty)...);
     };
-    __iterator<_IsConst> __it(__self, __ranges_to_iterators(std::make_index_sequence<1 + sizeof...(_Vs)>{}));
+    __iterator<std::is_const_v<_Self>> __it(
+        __self, __ranges_to_iterators(std::make_index_sequence<1 + sizeof...(_Vs)>{}));
     return __it;
   }
 
