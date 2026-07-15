@@ -116,6 +116,7 @@ class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {
   SlotIndexes *Indexes = nullptr;
   MachineDominatorTree *DT = nullptr;
   AMDGPUNextUseAnalysis *NUA = nullptr;
+  bool TgSplit = false;
   // Spilled registers are kept here to avoid respilling.
   // TODO: Support spilling of a register more than once.
   DenseSet<Register> SpilledRegs;

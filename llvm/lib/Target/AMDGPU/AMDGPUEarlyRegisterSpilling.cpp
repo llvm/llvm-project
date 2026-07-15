@@ -1380,7 +1380,8 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
              !TII->isEXP(*InstrOfCandidateReg) &&
              (!TII->isFLAT(*InstrOfCandidateReg) ||
               (!TII->mayAccessVMEMThroughFlat(*InstrOfCandidateReg) &&
-               !TII->mayAccessLDSThroughFlat(*InstrOfCandidateReg))))) {
+               !TII->mayAccessLDSThroughFlat(*InstrOfCandidateReg,
+                                             TgSplit))))) {
           WhereToSpill = InstrOfCandidateReg->getNextNode()->getIterator();
           if (WhereToSpill == SpillBlock->end())
             WhereToSpill = SpillBlock->instr_end();
@@ -1510,6 +1511,9 @@ bool AMDGPUEarlyRegisterSpilling::runOnMachineFunction(MachineFunction &MF) {
   DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   NUA = &getAnalysis<AMDGPUNextUseAnalysisLegacyPass>().getNextUseAnalysis();
   NUA->setConfig(AMDGPUNextUseAnalysis::Config::Graphics());
+
+  TgSplit =
+      ST.hasTgSplitSupport() && AMDGPU::isTgSplitEnabled(MF.getFunction());
 
   unsigned VgprNum = getMaxPressure(MF).getVGPRNum(false);
   unsigned Occupancy =
