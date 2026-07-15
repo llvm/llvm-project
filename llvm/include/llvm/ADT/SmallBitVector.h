@@ -470,9 +470,28 @@ public:
     assert(!empty() && "Getting last element of empty vector.");
     return (*this)[size() - 1];
   }
-
+  
+  /// Returns true if bit \p Idx is set.
   bool test(unsigned Idx) const {
     return (*this)[Idx];
+  }
+
+  /// Returns true if all bits in the range [Begin, End) are set.
+  bool test_all(unsigned Begin, unsigned End) const {
+    for (unsigned i = Begin; i < End; ++i) {
+      if (!test(i))
+        return false;
+    }
+    return true;
+  }
+
+  /// Returns true if any of the bits in the range [Begin, End) are set.
+  bool test_any(unsigned Begin, unsigned End) const {
+    for (unsigned i = Begin; i < End; ++i) {
+      if (test(i))
+        return true;
+    }
+    return false;
   }
 
   // Push single bit to end of vector.
