@@ -55,10 +55,11 @@ static bool assignIdxToM0(MachineFunction &MF) {
       MI.removeOperand(DefIdx);
 
       // Add a copy from the index register to M0 and rewrite MI to read M0.
+      // No kill flag is set on the M0 use: kill flags are deprecated and are a
+      // no-op on the reserved M0 register.
       BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(AMDGPU::COPY), AMDGPU::M0)
           .add(IdxOp);
       IdxOp.setReg(AMDGPU::M0);
-      IdxOp.setIsKill();
       Changed = true;
     }
   }
