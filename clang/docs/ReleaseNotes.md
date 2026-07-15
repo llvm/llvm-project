@@ -205,6 +205,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 #### Improvements
 
+- The lock-order-reversal check in ``alpha.unix.PthreadLock`` is now disabled by default.
+  It can be re-enabled with the ``WarnOnLockOrderReversal`` option.
+
 #### Moved checkers
 
 (release-notes-sanitizers)=
