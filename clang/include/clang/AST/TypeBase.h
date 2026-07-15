@@ -2813,6 +2813,12 @@ public:
   /// Check if the type is the CUDA device builtin texture type.
   bool isCUDADeviceBuiltinTextureType() const;
 
+  /// Check if the type is the AMDGPU named barrier type, or an array thereof.
+  bool isAMDGPUNamedBarrierType() const;
+  /// Check if the type is the AMDGPU named barrier type/a RecordType of a named
+  /// barrier wrapper, or an array thereof.
+  bool isAMDGPUNamedBarrierTypeOrWrapper() const;
+
   /// Return the implicit lifetime for this type, which must not be dependent.
   Qualifiers::ObjCLifetime getObjCARCImplicitLifetime() const;
 

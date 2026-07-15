@@ -56,6 +56,8 @@ const LangASMap AMDGPUTargetInfo::AMDGPUAddrSpaceMap = {
     llvm::AMDGPUAS::PRIVATE_ADDRESS, // hlsl_input
     llvm::AMDGPUAS::PRIVATE_ADDRESS, // hlsl_output
     llvm::AMDGPUAS::GLOBAL_ADDRESS,  // hlsl_push_constant
+    llvm::AMDGPUAS::FLAT_ADDRESS,    // wasm_funcref
+    llvm::AMDGPUAS::LOCAL_ADDRESS,   // amdgpu_barrier
 };
 
 } // namespace targets
@@ -199,6 +201,7 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
 
   AddrSpaceMap = &AMDGPUAddrSpaceMap;
   UseAddrSpaceMapMangling = true;
+  HasAMDGPUTypes = true;
 
   if (Triple.isAMDGCN()) {
     // __bf16 is always available as a load/store only type on AMDGCN.

@@ -54,6 +54,7 @@ static const unsigned ARM64AddrSpaceMap[] = {
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
+    0,  // amdgpu_barrier
 };
 
 using AArch64FeatureSet = llvm::SmallDenseSet<StringRef, 32>;

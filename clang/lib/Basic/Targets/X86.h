@@ -55,6 +55,7 @@ static const unsigned X86AddrSpaceMap[] = {
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
+    0,  // amdgpu_barrier
 };
 
 // X86 target abstract base class; x86-32 and x86-64 are very close, so

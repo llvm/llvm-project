@@ -2748,6 +2748,8 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
     return "hlsl_push_constant";
   case LangAS::wasm_funcref:
     return "__funcref";
+  case LangAS::amdgpu_barrier:
+    return "amdgpu_barrier";
   default:
     return std::to_string(toTargetAddressSpace(AS));
   }

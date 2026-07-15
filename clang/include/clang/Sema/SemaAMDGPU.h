@@ -89,6 +89,9 @@ public:
   void AddPotentiallyUnguardedBuiltinUser(FunctionDecl *FD);
   bool HasPotentiallyUnguardedBuiltinUsage(FunctionDecl *FD) const;
   void DiagnoseUnguardedBuiltinUsage(FunctionDecl *FD);
+
+  /// Called in `ActOnFields` - whenever a C/C++ Record is being finalized.
+  void checkNamedBarrierWrapper(RecordDecl *R);
 };
 } // namespace clang
 

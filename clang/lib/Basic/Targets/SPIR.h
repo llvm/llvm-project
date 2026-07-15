@@ -59,6 +59,7 @@ static const unsigned SPIRDefIsPrivMap[] = {
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
+    0,  // amdgpu_barrier
 };
 
 // Used by both the SPIR and SPIR-V targets.
@@ -97,6 +98,7 @@ static const unsigned SPIRDefIsGenMap[] = {
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
+    0,  // amdgpu_barrier
 };
 
 // Base class for SPIR and SPIR-V target info.
@@ -310,6 +312,7 @@ public:
   BaseSPIRVTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : BaseSPIRTargetInfo(Triple, Opts) {
     assert(Triple.isSPIRV() && "Invalid architecture for SPIR-V.");
+    HasAMDGPUTypes = (Triple.getVendor() == llvm::Triple::AMD);
   }
 
   llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
