@@ -34,10 +34,10 @@ enum Iostat IODEF(EndIoStatement)(Cookie cookie) {
 
 template <int KIND, typename INT = CppTypeFor<TypeCategory::Integer, KIND>>
 inline RT_API_ATTRS bool FormattedScalarIntegerOutput(
-    IoStatementState &io, INT x, const char *whence) {
+    IoStatementState &io, INT x, const char *whence, bool isSigned = true) {
   if (io.CheckFormattedStmtType<Direction::Output>(whence)) {
     auto edit{io.GetNextDataEdit()};
-    return edit && EditIntegerOutput<KIND>(io, *edit, x, /*isSigned=*/true);
+    return edit && EditIntegerOutput<KIND>(io, *edit, x, isSigned);
   } else {
     return false;
   }

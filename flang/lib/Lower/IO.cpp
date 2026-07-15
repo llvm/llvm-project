@@ -24,9 +24,11 @@
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Lower/VectorSubscripts.h"
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Stop.h"
 #include "flang/Optimizer/Builder/Todo.h"
@@ -702,6 +704,89 @@ static mlir::func::FuncOp getOutputFunc(mlir::Location loc,
                                                                    builder);
 }
 
+static mlir::func::FuncOp getIntegerOutputFunc(mlir::Location loc,
+                                               fir::FirOpBuilder &builder,
+                                               mlir::IntegerType type) {
+  if (type.isUnsigned())
+    return {};
+  switch (type.getWidth()) {
+  case 8:
+    return fir::runtime::getIORuntimeFunc<mkIOKey(OutputInteger8)>(loc,
+                                                                   builder);
+  case 16:
+    return fir::runtime::getIORuntimeFunc<mkIOKey(OutputInteger16)>(loc,
+                                                                    builder);
+  case 32:
+    return fir::runtime::getIORuntimeFunc<mkIOKey(OutputInteger32)>(loc,
+                                                                    builder);
+  case 64:
+    return fir::runtime::getIORuntimeFunc<mkIOKey(OutputInteger64)>(loc,
+                                                                    builder);
+  case 128:
+    return fir::runtime::getIORuntimeFunc<mkIOKey(OutputInteger128)>(loc,
+                                                                     builder);
+  }
+  return {};
+}
+
+/// In CUDA device code, keep formatted output on the thin scalar I/O ABI when
+/// an integer array expression would otherwise require OutputDescriptor.
+static bool genCudaDeviceIntegerArrayOutput(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    mlir::Value cookie, const Fortran::lower::SomeExpr &expr, mlir::Type itemTy,
+    Fortran::lower::StatementContext &stmtCtx) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  if (!cuf::isCUDADeviceContext(builder.getRegion()))
+    return false;
+  auto seqTy = mlir::dyn_cast<fir::SequenceType>(itemTy);
+  if (!seqTy)
+    return false;
+  auto intTy = mlir::dyn_cast<mlir::IntegerType>(seqTy.getEleTy());
+  if (!intTy)
+    return false;
+  mlir::func::FuncOp outputFunc = getIntegerOutputFunc(loc, builder, intTy);
+  if (!outputFunc)
+    return false;
+
+  fir::ExtendedValue arrayExv = converter.genExprValue(loc, expr, stmtCtx);
+  auto *array = arrayExv.getBoxOf<fir::ArrayBoxValue>();
+  if (!array)
+    return false;
+  mlir::Value base = array->getAddr();
+  if (!base)
+    return false;
+
+  hlfir::LoopNest loopNest =
+      hlfir::genLoopNest(loc, builder, array->getExtents(),
+                         /*isUnordered=*/false);
+  builder.setInsertionPointToStart(loopNest.body);
+
+  mlir::Value element;
+  if (mlir::isa<fir::SequenceType>(base.getType())) {
+    llvm::SmallVector<mlir::Value> zeroBasedIndices;
+    mlir::Value one =
+        builder.createIntegerConstant(loc, builder.getIndexType(), 1);
+    for (mlir::Value index : loopNest.oneBasedIndices)
+      zeroBasedIndices.push_back(
+          mlir::arith::SubIOp::create(builder, loc, index, one));
+    element = fir::ArrayFetchOp::create(builder, loc, seqTy.getEleTy(), base,
+                                        zeroBasedIndices, mlir::ValueRange{});
+  } else {
+    mlir::Value shape = builder.genShape(loc, *array);
+    mlir::Type refTy = fir::ReferenceType::get(seqTy.getEleTy());
+    mlir::Value elementAddr = fir::ArrayCoorOp::create(
+        builder, loc, refTy, base, shape, /*slice=*/mlir::Value{},
+        loopNest.oneBasedIndices, /*typeparams=*/mlir::ValueRange{});
+    element = fir::LoadOp::create(builder, loc, elementAddr);
+  }
+  mlir::Type argType = outputFunc.getFunctionType().getInput(1);
+  element = builder.createConvertWithVolatileCast(loc, argType, element);
+  fir::CallOp::create(builder, loc, outputFunc,
+                      mlir::ValueRange{cookie, element});
+  builder.setInsertionPointAfter(loopNest.outerOp);
+  return true;
+}
+
 /// Generate a sequence of output data transfer calls.
 static void genOutputItemList(
     Fortran::lower::AbstractConverter &converter, mlir::Value cookie,
@@ -723,6 +808,10 @@ static void genOutputItemList(
     if (!expr)
       fir::emitFatalError(loc, "internal error: could not get evaluate::Expr");
     mlir::Type itemTy = converter.genType(*expr);
+    if (isFormatted && !checkResult &&
+        genCudaDeviceIntegerArrayOutput(converter, loc, cookie, *expr, itemTy,
+                                        stmtCtx))
+      continue;
     mlir::func::FuncOp outputFunc =
         getOutputFunc(loc, builder, itemTy, isFormatted);
     mlir::Type argType = outputFunc.getFunctionType().getInput(1);

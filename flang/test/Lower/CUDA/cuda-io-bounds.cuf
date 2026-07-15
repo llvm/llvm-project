@@ -1,0 +1,17 @@
+! RUN: bbc -emit-fir -fcuda %s -o - | FileCheck %s --implicit-check-not=_FortranAioOutputDescriptor
+
+module cuda_io_bounds
+contains
+  attributes(global) subroutine bounds(a)
+    real, intent(inout) :: a(:)
+    print *, lbound(a), ubound(a)
+  end subroutine
+end module
+
+! CHECK-LABEL: func.func @_QMcuda_io_boundsPbounds
+! CHECK: fir.do_loop
+! CHECK: fir.call @_FortranAioOutputInteger32
+! CHECK: fir.do_loop
+! CHECK: fir.call @_FortranAioOutputInteger32
+! CHECK: fir.call @_FortranAioEndIoStatement
+! CHECK: func.func private @_FortranAioOutputInteger32
