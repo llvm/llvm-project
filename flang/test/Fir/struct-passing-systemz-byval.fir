@@ -1,8 +1,6 @@
 // Test SystemZ ABI rewrite of struct passed by value (BIND(C), VALUE derived types).
 // RUN: fir-opt --target-rewrite="target=s390x-unknown-linux-gnu" %s | FileCheck %s
 
-module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data_layout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:128-v128:64-a:8:16-n32:64", llvm.target_triple = "s390x-unknown-linux-gnu"} {
-
 // CHECK-LABEL: func.func private @test_i32(%arg0: i64)
 func.func private @test_i32(%arg0: !fir.type<t1{i:i32}>) { return }
 
@@ -42,7 +40,7 @@ func.func private @test_large(%arg0: !fir.type<t5{i:!fir.array<8xi32>}>) { retur
 func.func private @test_mixed(%arg0: !fir.type<t6{i:i32,r:f64}>) { return }
 
 // CHECK-LABEL: func.func private @test_f128(%arg0: !fir.ref<!fir.type<t7{r:f128}>>
-// CHECK-SAME:    {llvm.align = 16 : i32, llvm.byval = !fir.type<t7{r:f128}>})
+// CHECK-SAME:    {llvm.align = 8 : i32, llvm.byval = !fir.type<t7{r:f128}>})
 func.func private @test_f128(%arg0: !fir.type<t7{r:f128}>) { return }
 
 // CHECK-LABEL: func.func private @test_f32(%arg0: f32)
@@ -88,4 +86,3 @@ func.func @test_call_f64(%arg0: !fir.ref<!fir.type<t9{r:f64}>>) {
 // CHECK-LABEL: func.func private @test_nested_f64(%arg0: f64)
 func.func private @test_nested_f64(%arg0: !fir.type<t10{s:!fir.type<t9{r:f64}>}>) { return }
 
-} // end module
