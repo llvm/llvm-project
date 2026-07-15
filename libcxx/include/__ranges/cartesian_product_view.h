@@ -354,9 +354,11 @@ public:
   }
 
 private:
-  using _Parent      = __maybe_const<_IsConst, cartesian_product_view>;
+  using _Parent _LIBCPP_NODEBUG = __maybe_const<_IsConst, cartesian_product_view>;
+  using _MultiIter _LIBCPP_NODEBUG =
+      tuple<iterator_t<__maybe_const<_IsConst, _First>>, iterator_t<__maybe_const<_IsConst, _Vs>>...>;
+
   _Parent* __parent_ = nullptr;
-  using _MultiIter   = tuple<iterator_t<__maybe_const<_IsConst, _First>>, iterator_t<__maybe_const<_IsConst, _Vs>>...>;
   _MultiIter __current_;
 
   template <std::size_t _Np = sizeof...(_Vs)>
