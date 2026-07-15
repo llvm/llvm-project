@@ -11,7 +11,7 @@ end
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare
 ! CHECK: %[[SUB1_ACTIVE:.*]] = fir.call @_FortranACUFDeviceIsActive() {{.*}} : () -> i1
 ! CHECK-NEXT: fir.if %[[SUB1_ACTIVE]] {
-! CHECK: cuf.free %[[DECL]]#0 : !fir.ref<!fir.array<10xi32>>
+! CHECK: cuf.free %[[DECL]]#0 : !fir.ref<!fir.array<10xi32>>{{.*}}
 ! CHECK-NEXT: }
 ! CHECK: return
 ! CHECK: }
@@ -26,7 +26,7 @@ end
 ! CHECK-NEXT: fir.if %[[SUB2_ACTIVE]] {
 ! CHECK: fir.if
 ! CHECK: cuf.deallocate
-! CHECK: cuf.free
+! CHECK: cuf.free{{.*}}
 ! CHECK-NEXT: }
 
 program main
@@ -39,6 +39,6 @@ end
 ! CHECK: %[[ACTIVE:.*]] = fir.call @_FortranACUFDeviceIsActive() {{.*}} : () -> i1
 ! CHECK-NEXT: fir.if %[[ACTIVE]] {
 ! CHECK: cuf.deallocate
-! CHECK: cuf.free
+! CHECK: cuf.free{{.*}}
 ! CHECK-NEXT: }
 ! CHECK-NEXT: return
