@@ -40,15 +40,16 @@ struct Float128 {
       bits = fputil::cast<Float128>(value).bits;
     } else if constexpr (cpp::is_integral_v<T>) {
       Sign sign = Sign::POS;
-
+      cpp::make_unsigned_t<T> Uvalue = static_cast<cpp::make_unsigned_t<T>>(value);
+        
       if constexpr (cpp::is_signed_v<T>) {
         if (value < 0) {
           sign = Sign::NEG;
-          value = -value;
+          Uvalue = ~static_cast<cpp::make_unsigned_t<T>>(value) + 1;
         }
       }
 
-      fputil::DyadicFloat<FPBits<Float128>::STORAGE_LEN> xd(sign, 0, value);
+      fputil::DyadicFloat<FPBits<Float128>::STORAGE_LEN> xd(sign, 0, Uvalue);
       bits = xd.template as<Float128, /*ShouldSignalExceptions=*/true>().bits;
 
     } else if constexpr (cpp::is_convertible_v<T, Float128>) {
