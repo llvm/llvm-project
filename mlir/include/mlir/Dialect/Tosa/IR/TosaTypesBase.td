@@ -172,7 +172,19 @@ def AtLeastRankOne : And<[
   CPred<"::llvm::cast<::mlir::RankedTensorType>($_self).getRank() >= 1">]>;
 
 def IsValidBlockScaledTensorType
-    : CPred<"::mlir::succeeded(::mlir::tosa::verifyBlockScaledTensorType($_self, false))">;
+    : CPred<"::mlir::succeeded(::mlir::tosa::"
+            "verifyBlockScaledTensorType($_self))">;
+
+// Analogous to ShapedContainerType, but with additional 'summary' information.
+// This is used to provide more informative error messages when a type predicate
+// is false.
+class TosaShapedContainerType<list<Type> allowedTypes, Pred containerPred, string descr, string cppType = "::mlir::Type"> :
+    Type<And<[containerPred,
+              Concat<"[](::mlir::Type elementType) { return ",
+                SubstLeaves<"$_self", "elementType",
+                AnyTypeOf<allowedTypes>.predicate>,
+                "; }(::llvm::cast<::mlir::ShapedType>($_self).getElementType())">]>,
+         descr # " of " # AnyTypeOf<allowedTypes>.summary # " values" # "{{::mlir::tosa::getTosaTensorTypeErrorMessage($_self)}}", cppType>;
 
 // We include unranked tensors as a supported type for all possible tosa
 // Tensors as unranked does not guarantee invalid. If unranked tensors exist
@@ -181,13 +193,13 @@ def IsValidBlockScaledTensorType
 class TosaTensorOf<list<Type> allowedTypes,
                    list<Pred> extraRankedTensorPreds = [],
                    string summary = "tosa-conformant tensor">
-    : TensorOf<allowedTypes,
-               [Or<[
+    : TosaShapedContainerType<allowedTypes,
+               And<[Or<[
                     IsUnrankedTensorTypePred, 
                     And<!listconcat([IsRankedTensorTypePred, HasNo0Dimensions], extraRankedTensorPreds)>
                 ]>,
-                IsValidBlockScaledTensorType],
-               summary>;
+                IsValidBlockScaledTensorType]>,
+               summary, "::mlir::TensorType">;
 
 class TosaTensorRankOf<list<Type> allowedTypes, list<int> ranks>
     : TosaTensorOf<allowedTypes,

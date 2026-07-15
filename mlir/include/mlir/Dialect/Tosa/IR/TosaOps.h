@@ -25,6 +25,8 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
 
+#include <string>
+
 //===----------------------------------------------------------------------===//
 // TOSA dialect and structs includes.
 //===----------------------------------------------------------------------===//
@@ -141,9 +143,14 @@ Type getStorageElementTypeOrSelf(Type type);
 // Returns the storage element type for a given value
 Type getStorageElementTypeOrSelf(Value value);
 
-// Verify a block scaled tensor type is valid
-LogicalResult verifyBlockScaledTensorType(mlir::Type type,
-                                          bool allowScaleValues);
+// Verify that a given type is a valid block scaled tensor type
+LogicalResult verifyBlockScaledTensorType(
+    mlir::Type type,
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError = nullptr,
+    bool allowScaleValues = false);
+
+// Collect error messages for a given type
+std::string getTosaTensorTypeErrorMessage(mlir::Type type);
 
 } // namespace tosa
 } // namespace mlir
