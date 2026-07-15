@@ -397,15 +397,15 @@ multiclass AtomicHintPatterns<int Order, int Hint, code Pred, code GIPred> {
 }
 
 let AddedComplexity = 15 in {
-  defm : AtomicHintPatternsAddrMode<0, [{ return isAtomicSTSHH_KEEP(N); }], [{ return isAtomicSTSHH_KEEP(MI); }]>;
-  defm : AtomicHintPatternsAddrMode<1, [{ return isAtomicSTSHH_STRM(N); }], [{ return isAtomicSTSHH_STRM(MI); }]>;
+  defm : AtomicHintPatternsAddrMode<48, [{ return isAtomicSTSHH_KEEP(N); }], [{ return isAtomicSTSHH_KEEP(MI); }]>;
+  defm : AtomicHintPatternsAddrMode<49, [{ return isAtomicSTSHH_STRM(N); }], [{ return isAtomicSTSHH_STRM(MI); }]>;
 
-  defm : AtomicHintPatterns<2, 0, [{ return isAtomicSTSHH_KEEP(N); }], [{ return isAtomicSTSHH_KEEP(MI); }]>;
-  defm : AtomicHintPatterns<5, 0, [{ return isAtomicSTSHH_KEEP(N); }], [{ return isAtomicSTSHH_KEEP(MI); }]>;
-  defm : AtomicHintPatterns<7, 0, [{ return isAtomicSTSHH_KEEP(N); }], [{ return isAtomicSTSHH_KEEP(MI); }]>;
-  defm : AtomicHintPatterns<2, 1, [{ return isAtomicSTSHH_STRM(N); }], [{ return isAtomicSTSHH_STRM(MI); }]>;
-  defm : AtomicHintPatterns<5, 1, [{ return isAtomicSTSHH_STRM(N); }], [{ return isAtomicSTSHH_STRM(MI); }]>;
-  defm : AtomicHintPatterns<7, 1, [{ return isAtomicSTSHH_STRM(N); }], [{ return isAtomicSTSHH_STRM(MI); }]>;
+  defm : AtomicHintPatterns<2, 48, [{ return isAtomicSTSHH_KEEP(N); }], [{ return isAtomicSTSHH_KEEP(MI); }]>;
+  defm : AtomicHintPatterns<5, 48, [{ return isAtomicSTSHH_KEEP(N); }], [{ return isAtomicSTSHH_KEEP(MI); }]>;
+  defm : AtomicHintPatterns<7, 48, [{ return isAtomicSTSHH_KEEP(N); }], [{ return isAtomicSTSHH_KEEP(MI); }]>;
+  defm : AtomicHintPatterns<2, 49, [{ return isAtomicSTSHH_STRM(N); }], [{ return isAtomicSTSHH_STRM(MI); }]>;
+  defm : AtomicHintPatterns<5, 49, [{ return isAtomicSTSHH_STRM(N); }], [{ return isAtomicSTSHH_STRM(MI); }]>;
+  defm : AtomicHintPatterns<7, 49, [{ return isAtomicSTSHH_STRM(N); }], [{ return isAtomicSTSHH_STRM(MI); }]>;
 }
 
 //===----------------------------------

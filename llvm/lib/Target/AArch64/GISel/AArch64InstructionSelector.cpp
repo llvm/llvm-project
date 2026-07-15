@@ -2616,7 +2616,7 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     }
 
     // Add the ordering and hint operands, before erasing the store.
-    unsigned HintImm = Hint == AArch64AtomicStoreHint::HINT_STSHH_KEEP ? 0 : 1;
+    unsigned HintImm = Hint == AArch64AtomicStoreHint::HINT_STSHH_KEEP ? 48 : 49;
     StrPseudo.addImm((int)Ordering);
     StrPseudo.addImm(HintImm);
 
