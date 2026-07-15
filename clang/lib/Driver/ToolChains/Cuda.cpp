@@ -915,9 +915,14 @@ void CudaToolChain::addClangTargetOptions(
     BoundArch BA, Action::OffloadKind DeviceOffloadingKind) const {
   HostTC.addClangTargetOptions(DriverArgs, CC1Args, BA, DeviceOffloadingKind);
 
+  bool UseLLVMOffload =
+      getTriple().getEnvironment() == llvm::Triple::LLVM &&
+      DriverArgs.hasFlag(options::OPT_foffload_via_llvm,
+                         options::OPT_fno_offload_via_llvm, false);
+
   StringRef GpuArch = DriverArgs.getLastArgValue(options::OPT_march_EQ);
   assert((DeviceOffloadingKind == Action::OFK_OpenMP ||
-          DeviceOffloadingKind == Action::OFK_Cuda) &&
+          DeviceOffloadingKind == Action::OFK_Cuda || UseLLVMOffload) &&
          "Only OpenMP or CUDA offloading kinds are supported for NVIDIA GPUs.");
 
   CC1Args.append({"-fcuda-is-device", "-mllvm",
@@ -936,14 +941,6 @@ void CudaToolChain::addClangTargetOptions(
       DriverArgs.hasArg(options::OPT_S))
     return;
 
-  // For now, we don't use any Offload/OpenMP device runtime when we offload
-  // CUDA via LLVM/Offload. We should split the Offload/OpenMP device runtime
-  // and include the "generic" (or CUDA-specific) parts.
-  // When using LLVM offload path, we use __clang_gpu_device_functions.h
-  // instead of libdevice.
-  bool UseLLVMOffload = getTriple().getEnvironment() == llvm::Triple::LLVM ||
-                        DriverArgs.hasFlag(options::OPT_foffload_via_llvm,
-                                           options::OPT_fno_offload_via_llvm, false);
   if (UseLLVMOffload)
     return;
 
