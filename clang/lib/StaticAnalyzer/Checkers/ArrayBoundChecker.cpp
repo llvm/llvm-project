@@ -93,6 +93,20 @@ public:
   }
 };
 
+struct CheckFlags {
+  unsigned CheckUnderflow : 1;
+  unsigned OffsetObviouslyNonnegative : 1;
+  unsigned AcceptPastTheEnd : 1;
+};
+
+// FIXME: This will be removed in a follow-up change:
+enum class BadOffsetKind { Negative, Overflowing, Indeterminate };
+
+class CheckResult;
+
+CheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB, NonLoc Offset,
+                        std::optional<NonLoc> Extent, CheckFlags Flags);
+
 class CheckResult {
 public:
   /// When true, the bounds check noticed that the value of an unsigned
@@ -104,19 +118,38 @@ public:
   bool isCorruptedState() const { return IsCorruptedState; }
 
   /// When true, the checked offset may be in bounds.
+  /// As an exceptional case, this is also true for idiomatic expressions that
+  /// define a past-the-end pointer (and do not dereference it).
   bool mayBeValid() const { return static_cast<bool>(ValidState); }
 
   /// When true, the checked offset may be negative.
   bool mayUnderflow() const { return MayUnderflow; }
   /// When true, the checked offset may be >= the extent of the region.
+  /// As an exceptional case, this is also false for idiomatic expressions that
+  /// define a past-the-end pointer (and do not dereference it).
   bool mayOverflow() const { return MayOverflowExtent.has_value(); }
   /// When true, the checked offset may be out of bounds.
   bool mayBeInvalid() const { return MayUnderflow || MayOverflowExtent; }
 
+  /// Returns the extent of the accessed region if it is relevant (because the
+  /// offset may overflow it), otherwise returns std::nullopt.
+  std::optional<NonLoc> extentIfRelevant() const { return MayOverflowExtent; }
+
   /// Returns the program state that should be used for continuing the analysis
   /// after this bounds check. This returns null if mayBeValid() is false, in
-  /// that case use the state before the check as the state of the error node.
+  /// that case the state before the check should be used in the error node.
+  /// Note that we also have a valid state in the exception case when the
+  /// 'access' calculates the past-the-end pointer without dereferencing it.
   ProgramStateRef getValidState() const { return ValidState; }
+
+  /// FIXME: This is a temporary hack to postpone the removal of BadOffsetKind.
+  /// Will be removed in a follow-up change.
+  BadOffsetKind getBadOffsetKind() const {
+    assert(mayBeInvalid() && "this is only used when the access is invalid");
+    return (MayUnderflow ? (MayOverflowExtent ? BadOffsetKind::Indeterminate
+                                              : BadOffsetKind::Negative)
+                         : BadOffsetKind::Overflowing);
+  }
 
   /// When the access was ambiguous (that is, mayBeValid() && mayBeInvalid()),
   /// returns the note "assuming in bounds" note that is relevant for the bug
@@ -126,15 +159,16 @@ public:
   std::string getMessage(PathSensitiveBugReport &BR, StringRef RegName,
                          SizeUnit SU) const;
 
+  friend CheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB,
+                                 NonLoc Offset, std::optional<NonLoc> Extent,
+                                 CheckFlags Flags);
+
 private:
   // Offset of the accessed location, measured from the start of the region.
   // As of now, the offset and the extent are always measured in bytes, but it
   // may be necessary to change this in the future.
   const NonLoc Offset;
 
-public:
-  // FIXME: The following members should be private and they will become
-  // private soon in a follow-up commit.
   explicit CheckResult(NonLoc Offs) : Offset(Offs) {}
 
   bool IsCorruptedState = false;
@@ -146,8 +180,6 @@ public:
 struct Messages {
   std::string Short, Full;
 };
-
-enum class BadOffsetKind { Negative, Overflowing, Indeterminate };
 
 constexpr llvm::StringLiteral Adjectives[] = {"a negative", "an overflowing",
                                               "a negative or overflowing"};
@@ -188,9 +220,6 @@ class ArrayBoundChecker : public Checker<check::PostStmt<ArraySubscriptExpr>,
 
   static bool isOffsetObviouslyNonnegative(const Expr *E, CheckerContext &C);
 
-  static bool isIdiomaticPastTheEndPtr(const Expr *E, ProgramStateRef State,
-                                       NonLoc Offset, NonLoc Limit,
-                                       CheckerContext &C);
   static bool isInAddressOf(const Stmt *S, ASTContext &AC);
 
 public:
@@ -610,27 +639,83 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
   auto [Reg, ByteOffset] = *RawOffset;
 
   const MemSpaceRegion *Space = Reg->getMemorySpace(State);
-  DefinedOrUnknownSVal Extent = getDynamicExtent(State, Reg, SVB);
-  // The state updates will be reported as a single note tag, which will be
-  // composed by this helper class.
-  CheckResult Res(ByteOffset);
+  auto Extent = getDynamicExtent(State, Reg, SVB).getAs<NonLoc>();
+
+  // A symbolic region in unknown space represents an unknown pointer that
+  // may point into the middle of an array, so we don't look for underflows.
+  // Both conditions are significant because we want to check underflows in
+  // symbolic regions on the heap (which may be introduced by checkers like
+  // MallocChecker that call SValBuilder::getConjuredHeapSymbolVal()) and
+  // non-symbolic regions (e.g. a field subregion of a symbolic region) in
+  // unknown space.
+
+  CheckFlags Flags = {
+      /*CheckUnderflow=*/!(isa<SymbolicRegion>(Reg) &&
+                           isa<UnknownSpaceRegion>(Space)),
+      /*OffsetObviouslyNonnegative=*/isOffsetObviouslyNonnegative(E, C),
+      /*AcceptPastTheEnd=*/isa<ArraySubscriptExpr>(E) &&
+          isInAddressOf(E, C.getASTContext()),
+  };
+
+  CheckResult Res = checkBounds(State, SVB, ByteOffset, Extent, Flags);
+
+  if (Res.isCorruptedState()) {
+    C.addSink();
+    return;
+  }
+
+  const NoteTag *T = nullptr;
+
+  if (Res.mayBeInvalid()) {
+    if (!Res.mayBeValid()) {
+      std::string RegName = getRegionName(Space, Reg);
+      Messages Msgs = getNonTaintMsgs(C.getASTContext(), RegName, ByteOffset,
+                                      Res.extentIfRelevant(), Location,
+                                      Res.getBadOffsetKind());
+      reportOOB(C, State, Msgs, ByteOffset, Res.extentIfRelevant());
+      return;
+    }
+
+    if (isTainted(State, ByteOffset)) {
+      // Diagnostic detail: saying "tainted offset" is always correct, but
+      // the common case is that 'idx' is tainted in 'arr[idx]' and then it's
+      // nicer to say "tainted index".
+      const char *OffsetName = "offset";
+      if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
+        if (isTainted(State, ASE->getIdx(), C.getStackFrame()))
+          OffsetName = "index";
+
+      std::string RegName = getRegionName(Space, Reg);
+      Messages Msgs = getTaintMsgs(RegName, OffsetName, Res.mayUnderflow());
+      reportOOB(C, State, Msgs, ByteOffset, Extent, /*IsTaintBug=*/true);
+      return;
+    }
+
+    std::string RN = getRegionName(Space, Reg);
+    SizeUnit SU = SizeUnit::forExpr(E, C);
+    T = C.getNoteTag([Res, RN, SU](PathSensitiveBugReport &BR) -> std::string {
+      return Res.getMessage(BR, RN, SU);
+    });
+  }
+
+  C.addTransition(Res.getValidState(), T);
+}
+
+namespace {
+
+CheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB, NonLoc Offset,
+                        std::optional<NonLoc> Extent, CheckFlags Flags) {
+
+  CheckResult Res(Offset);
 
   // CHECK LOWER BOUND
-  if (!(isa<SymbolicRegion>(Reg) && isa<UnknownSpaceRegion>(Space))) {
-    // A symbolic region in unknown space represents an unknown pointer that
-    // may point into the middle of an array, so we don't look for underflows.
-    // Both conditions are significant because we want to check underflows in
-    // symbolic regions on the heap (which may be introduced by checkers like
-    // MallocChecker that call SValBuilder::getConjuredHeapSymbolVal()) and
-    // non-symbolic regions (e.g. a field subregion of a symbolic region) in
-    // unknown space.
-    auto [PrecedesLowerBound, WithinLowerBound] = compareValueToThreshold(
-        State, ByteOffset, SVB.makeZeroArrayIndex(), SVB);
+  if (Flags.CheckUnderflow) {
+    auto [PrecedesLowerBound, WithinLowerBound] =
+        compareValueToThreshold(State, Offset, SVB.makeZeroArrayIndex(), SVB);
 
     if (PrecedesLowerBound) {
       // The analyzer thinks that the offset may be invalid (negative)...
-
-      if (isOffsetObviouslyNonnegative(E, C)) {
+      if (Flags.OffsetObviouslyNonnegative) {
         // ...but the offset is obviously non-negative (clear array subscript
         // with an unsigned index), so we're in a buggy situation.
 
@@ -649,25 +734,19 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
 
         if (!WithinLowerBound) {
           // The state is completely nonsense -- let's just sink it!
-          C.addSink();
-          return;
+          Res.IsCorruptedState = true;
+          return Res;
         }
         // Otherwise continue on the 'WithinLowerBound' branch where the
         // unsigned index _is_ non-negative. Don't mention this assumption as a
         // note tag, because it would just confuse the users!
       } else {
+        Res.MayUnderflow = true;
+
         if (!WithinLowerBound) {
           // ...and it cannot be valid (>= 0), so report an error.
-          std::string RegName = getRegionName(Space, Reg);
-          Messages Msgs = getNonTaintMsgs(C.getASTContext(), RegName,
-                                          ByteOffset, /*Extent=*/std::nullopt,
-                                          Location, BadOffsetKind::Negative);
-          reportOOB(C, PrecedesLowerBound, Msgs, ByteOffset, std::nullopt);
-          return;
+          return Res;
         }
-        // ...but it can be valid as well, so the checker will (optimistically)
-        // assume that it's valid and mention this in the note tag.
-        Res.MayUnderflow = true;
       }
     }
 
@@ -679,83 +758,45 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
   }
 
   // CHECK UPPER BOUND
-  if (auto KnownSize = Extent.getAs<NonLoc>()) {
+  if (Extent) {
     // In a situation where both underflow and overflow are possible (but the
     // index is either tainted or known to be invalid), the logic of this
     // checker will first assume that the offset is non-negative, and then
     // (with this additional assumption) it will detect an overflow error.
     // In this situation the warning message should mention both possibilities.
-    bool AlsoMentionUnderflow = Res.mayUnderflow();
 
     auto [WithinUpperBound, ExceedsUpperBound] =
-        compareValueToThreshold(State, ByteOffset, *KnownSize, SVB);
+        compareValueToThreshold(State, Offset, *Extent, SVB);
 
     if (ExceedsUpperBound) {
       // The offset may be invalid (>= Size)...
+      Res.MayOverflowExtent = Extent;
+
       if (!WithinUpperBound) {
         // ...and it cannot be within bounds, so report an error, unless we can
         // definitely determine that this is an idiomatic `&array[size]`
         // expression that calculates the past-the-end pointer.
-        if (isIdiomaticPastTheEndPtr(E, ExceedsUpperBound, ByteOffset,
-                                     *KnownSize, C)) {
-          // The use of 'goto' is a temporary solution, will be eliminated in
-          // the next steps of the refactoring.
-          goto NormalTransition;
+        if (Flags.AcceptPastTheEnd) {
+          auto [EqualsToThreshold, NotEqualToThreshold] =
+              compareValueToThreshold(State, Offset, *Extent, SVB,
+                                      /*CheckEquality=*/true);
+          if (EqualsToThreshold && !NotEqualToThreshold) {
+            Res.MayOverflowExtent = std::nullopt;
+            Res.ValidState = EqualsToThreshold;
+          }
         }
-
-        BadOffsetKind Problem = AlsoMentionUnderflow
-                                    ? BadOffsetKind::Indeterminate
-                                    : BadOffsetKind::Overflowing;
-        std::string RegName = getRegionName(Space, Reg);
-        Messages Msgs = getNonTaintMsgs(C.getASTContext(), RegName, ByteOffset,
-                                        *KnownSize, Location, Problem);
-        reportOOB(C, ExceedsUpperBound, Msgs, ByteOffset, KnownSize);
-        return;
+        return Res;
       }
-      // ...and it can be valid as well...
-      if (isTainted(State, ByteOffset)) {
-        // ...but it's tainted, so report an error.
-
-        // Diagnostic detail: saying "tainted offset" is always correct, but
-        // the common case is that 'idx' is tainted in 'arr[idx]' and then it's
-        // nicer to say "tainted index".
-        const char *OffsetName = "offset";
-        if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
-          if (isTainted(State, ASE->getIdx(), C.getStackFrame()))
-            OffsetName = "index";
-
-        std::string RegName = getRegionName(Space, Reg);
-        Messages Msgs = getTaintMsgs(RegName, OffsetName, AlsoMentionUnderflow);
-        reportOOB(C, ExceedsUpperBound, Msgs, ByteOffset, KnownSize,
-                  /*IsTaintBug=*/true);
-        return;
-      }
-      // ...and it isn't tainted, so the checker will (optimistically) assume
-      // that the offset is in bounds and mention this in the note tag.
-      Res.MayOverflowExtent = *KnownSize;
     }
-
-    // Actually update the state. The "if" only fails in the extremely unlikely
-    // case when compareValueToThreshold returns {nullptr, nullptr} because
-    // evalBinOpNN fails to evaluate the less-than operator.
     if (WithinUpperBound)
       State = WithinUpperBound;
   }
 
-NormalTransition:
-  // Add a transition, reporting the state updates that we accumulated.
-  const NoteTag *T = nullptr;
-
-  if (Res.mayBeInvalid()) {
-    std::string RN = getRegionName(Reg->getMemorySpace(C.getState()), Reg);
-    SizeUnit SU = SizeUnit::forExpr(E, C);
-    T = C.getNoteTag([Res, RN, SU](PathSensitiveBugReport &BR) -> std::string {
-      return Res.getMessage(BR, RN, SU);
-    });
-  }
-
-  C.addTransition(State, T);
+  Res.ValidState = State;
+  return Res;
 }
+
+} // anonymous namespace
 
 void ArrayBoundChecker::markPartsInteresting(PathSensitiveBugReport &BR,
                                              ProgramStateRef ErrorState,
@@ -849,18 +890,6 @@ bool ArrayBoundChecker::isInAddressOf(const Stmt *S, ASTContext &ACtx) {
   } while (isa_and_nonnull<ParenExpr, ImplicitCastExpr>(S));
   const auto *UnaryOp = dyn_cast_or_null<UnaryOperator>(S);
   return UnaryOp && UnaryOp->getOpcode() == UO_AddrOf;
-}
-
-bool ArrayBoundChecker::isIdiomaticPastTheEndPtr(const Expr *E,
-                                                 ProgramStateRef State,
-                                                 NonLoc Offset, NonLoc Limit,
-                                                 CheckerContext &C) {
-  if (isa<ArraySubscriptExpr>(E) && isInAddressOf(E, C.getASTContext())) {
-    auto [EqualsToThreshold, NotEqualToThreshold] = compareValueToThreshold(
-        State, Offset, Limit, C.getSValBuilder(), /*CheckEquality=*/true);
-    return EqualsToThreshold && !NotEqualToThreshold;
-  }
-  return false;
 }
 
 void ento::registerArrayBoundChecker(CheckerManager &mgr) {
