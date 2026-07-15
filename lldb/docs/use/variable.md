@@ -1341,13 +1341,13 @@ the flag `--recognizer-function`.
 (lldb) type synthetic add --python-class my_child_provider --recognizer-function is_generated_object
 ```
 
-## API-attached synthetic children class
+## API-attached synthetic child provider
 
 In some situations, a value's type or a program's debug information do not contain
-sufficient information to determine the appropriate synthetic children provider.
+sufficient information to determine the appropriate synthetic child provider.
 
 In these cases, you may use {any}`SBValue.SetTypeSynthetic` to manually attach
-(or override the system's choice of) a synthetic children provider for a value.
+(or override the system's choice of) a synthetic child provider for a value.
 
 This can be done even without a corresponding registration with the `type synthetic add`
 command.
