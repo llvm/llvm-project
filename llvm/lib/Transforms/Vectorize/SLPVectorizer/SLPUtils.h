@@ -30,9 +30,9 @@ class Value;
 
 namespace llvm::slpvectorizer {
 
-/// Limits the number of uses analyzed by some helpers, to keep compile time
-/// in check.
-inline constexpr unsigned UsesLimit = 64;
+/// Limit of the number of uses for potentially transformed instructions/values,
+/// used in checks to avoid compile-time explode.
+inline constexpr int UsesLimit = 64;
 
 /// \returns True if the value is a constant (but not globals/constant
 /// expressions).
@@ -98,13 +98,14 @@ bool isCommutative(const Instruction *I, const Value *ValWithUses,
 bool isCommutative(const Instruction *I);
 
 /// Checks if the operand is commutative. In commutative operations, not all
-/// operands might be commutable, e.g. for fmuladd only the first two
-/// operands are commutable.
+/// operands might commutable, e.g. for fmuladd only 2 first operands are
+/// commutable.
 bool isCommutableOperand(const Instruction *I, Value *ValWithUses, unsigned Op,
                          bool IsCopyable = false);
 
 /// \returns number of operands of \p I, considering commutativity. Returns 2
 /// for commutative intrinsics.
+/// \param I The instruction to check for commutativity
 unsigned getNumberOfPotentiallyCommutativeOps(Instruction *I);
 
 /// \returns inserting or extracting index of InsertElement, ExtractElement
@@ -147,8 +148,10 @@ bool isUsedOutsideBlock(Value *V);
 /// scheduled in the current basic block.
 bool doesNotNeedToBeScheduled(Value *V);
 
-/// Checks if the specified array of instructions does not require
-/// scheduling.
+/// Checks if the specified array of instructions does not require scheduling.
+/// It is so if all either instructions have operands that do not require
+/// scheduling or their users do not require scheduling since they are phis or
+/// in other basic blocks.
 bool doesNotNeedToSchedule(ArrayRef<Value *> VL);
 
 /// \returns inserting or extracting index of InsertElement / ExtractElement
