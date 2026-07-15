@@ -555,6 +555,12 @@ features cannot lower the translation-unit ABI level;
 - The lock-order-reversal check in ``alpha.unix.PthreadLock`` is now disabled by default.
   It can be re-enabled with the ``WarnOnLockOrderReversal`` option.
 
+- The analyzer now models concrete floating-point values. Floating-point
+  literals, simple arithmetic operations, and casts between floating-point types
+  are tracked as concrete values instead of being treated as unknown. Only
+  results that are exact (independent of rounding mode and evaluation precision)
+  are modeled. Fixes #GH82910.
+
 #### Moved checkers
 
 #### Diagnostic changes
