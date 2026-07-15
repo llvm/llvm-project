@@ -568,14 +568,9 @@ void Sema::Initialize() {
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
   }
 
-  if (Context.getTargetInfo().getTriple().isAMDGPU() ||
-      (Context.getTargetInfo().getTriple().isSPIRV() &&
-       Context.getTargetInfo().getTriple().getVendor() == llvm::Triple::AMD) ||
+  if (Context.getTargetInfo().hasAMDGPUTypes() ||
       (Context.getAuxTargetInfo() &&
-       (Context.getAuxTargetInfo()->getTriple().isAMDGPU() ||
-        (Context.getAuxTargetInfo()->getTriple().isSPIRV() &&
-         Context.getAuxTargetInfo()->getTriple().getVendor() ==
-             llvm::Triple::AMD)))) {
+       (Context.getAuxTargetInfo()->hasAMDGPUTypes()))) {
 #define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
   addImplicitTypedef(Name, Context.SingletonId);
 #include "clang/Basic/AMDGPUTypes.def"

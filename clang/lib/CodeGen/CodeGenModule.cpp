@@ -6222,6 +6222,9 @@ LangAS CodeGenModule::GetGlobalVarAddressSpace(const VarDecl *D) {
 
   if (LangOpts.CUDA && LangOpts.CUDAIsDevice) {
     if (D) {
+      if (D->getType()->isAMDGPUNamedBarrierTypeOrWrapper())
+        return LangAS::amdgpu_barrier;
+
       if (D->hasAttr<CUDAConstantAttr>())
         return LangAS::cuda_constant;
       if (D->hasAttr<CUDASharedAttr>())
