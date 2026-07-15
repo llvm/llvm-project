@@ -149,9 +149,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Extensions ``cl_khr_extended_bit_ops``, ``cl_khr_integer_dot_product``,
   ``cl_khr_subgroup_extended_types``, ``cl_khr_subgroup_rotate``,
   ``cl_khr_subgroup_shuffle``, and ``cl_khr_subgroup_shuffle_relative`` are
-  promoted to core features in OpenCL C 3.1. Built-in functions from these
-  extensions are available in OpenCL C 3.1 without explicitly enabling them via
-  ``-cl-ext=+ext``.
+  promoted to optional core features in OpenCL C 3.1. Their extension macros
+  are defined automatically in OpenCL C 3.1 without needing ``-cl-ext=+ext``.
 
 ### Target Specific Changes
 
