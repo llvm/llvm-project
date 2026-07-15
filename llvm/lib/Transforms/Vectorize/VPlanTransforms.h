@@ -398,6 +398,12 @@ struct VPlanTransforms {
   static void convertToAbstractRecipes(VPlan &Plan, VPCostContext &Ctx,
                                        VFRange &Range);
 
+  /// Try to narrow wide and replicating recipes to single scalar recipes for
+  /// loops with the same VF, when the values are known to be uniform. Also
+  /// narrows masked div/rem intrinsics with a safe divisor to unmasked scalar
+  /// operations.
+  static void narrowToSingleScalarRecipes(VPlan &Plan);
+
   /// Perform instcombine-like simplifications on recipes in \p Plan.
   static void simplifyRecipes(VPlan &Plan);
 
