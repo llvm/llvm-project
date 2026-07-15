@@ -30,7 +30,6 @@ set(python_plugin_sources
   Interfaces/ScriptedPlatformPythonInterface.cpp
   Interfaces/ScriptedProcessPythonInterface.cpp
   Interfaces/ScriptedPythonInterface.cpp
-  Interfaces/ScriptedStopHookPythonInterface.cpp
   Interfaces/ScriptedHookPythonInterface.cpp
   Interfaces/ScriptedBreakpointPythonInterface.cpp
   Interfaces/ScriptedThreadPlanPythonInterface.cpp
