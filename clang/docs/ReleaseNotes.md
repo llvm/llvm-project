@@ -203,6 +203,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 %   - New checkers and features
 %   - Improvements
 %   - Moved checkers
+%   - Diagnostic changes
 
 #### Improvements
 
@@ -210,6 +211,10 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   It can be re-enabled with the ``WarnOnLockOrderReversal`` option.
 
 #### Moved checkers
+
+#### Diagnostic changes
+
+- For self-assignments during initialization (`T v = v;`), `core.uninitialized.Assign` will not report them as uninitialized accesses (except C++ reference types), and the checks will be delayed until the first accesses of these variables; `deadcode.DeadStores` will not report them as dead stores. (#GH187530)
 
 (release-notes-sanitizers)=
 
