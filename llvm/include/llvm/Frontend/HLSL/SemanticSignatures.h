@@ -21,7 +21,6 @@
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
-#include <string>
 
 namespace llvm {
 

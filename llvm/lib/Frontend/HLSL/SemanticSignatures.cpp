@@ -15,7 +15,6 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 using namespace llvm::hlsl;
