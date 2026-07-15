@@ -10,8 +10,6 @@
 ; CHECK-ERROR: LLVM ERROR: OpTypeFloat type with bfloat requires the following SPIR-V extension: SPV_KHR_bfloat16
 
 ;--- valid.ll
-target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64"
-target triple = "spir64-unknown-unknown"
 
 ; CHECK-DAG: OpCapability BFloat16TypeKHR
 ; CHECK-DAG: OpExtension "SPV_KHR_bfloat16"
@@ -51,8 +49,6 @@ entry:
 ; GLSL.std.450 defines its floating-point operands as IEEE 754 encoded
 ; OpTypeFloat, so FClamp on bfloat is not currently representable in a
 ; spirv-val-valid module. Check the lowering with FileCheck only.
-target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64"
-target triple = "spir64-unknown-unknown"
 
 ; CHECK-DAG: %[[#glsl:]] = OpExtInstImport "GLSL.std.450"
 ; CHECK-DAG: %[[#BFLOAT:]] = OpTypeFloat 16 0
