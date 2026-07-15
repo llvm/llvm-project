@@ -1928,8 +1928,28 @@ void OmpStructureChecker::Leave(const parser::OmpThreadprivateDirective &x) {
 void OmpStructureChecker::Enter(const parser::OmpDeclareSimdDirective &x) {
   const parser::OmpDirectiveName &dirName{x.v.DirName()};
 
+  unsigned version{context_.langOptions().OpenMPVersion};
+
   const Scope &containingScope = context_.FindScope(dirName.source);
   const Scope &progUnitScope = GetProgramUnitContaining(containingScope);
+
+  // OpenMP 6.0, 9.8 declare_simd Directive, Fortran restriction:
+  // "Any declare_simd directive must appear in the specification part of a
+  // subroutine subprogram, function subprogram, or interface body to which it
+  // applies."
+  // An interface body has a Subprogram scope as well, so checking the scope
+  // kind is sufficient to accept the three allowed contexts, while rejecting
+  // modules, main programs and block data. A BLOCK construct has a scope of
+  // its own, which excludes its specification part from that of the enclosing
+  // subprogram. Placing the directive in an execution part is diagnosed by the
+  // parser.
+  if (GetProgramUnitOrBlockConstructContaining(containingScope).kind() !=
+      Scope::Kind::Subprogram) {
+    context_.Say(dirName.source,
+        "%s directive must appear in the specification part of a subroutine subprogram, function subprogram, or interface body"_err_en_US,
+        GetUpperName(dirName.v, version));
+    return;
+  }
 
   // A DECLARE SIMD directive may legally appear in an interface body, but it
   // applies to the external procedure being declared rather than to any
