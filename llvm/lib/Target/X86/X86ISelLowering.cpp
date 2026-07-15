@@ -61527,6 +61527,13 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  auto peekThroughBitcastsAndExtracts = [](SDValue V) {
+    while (V.getOpcode() == ISD::BITCAST ||
+           V.getOpcode() == ISD::EXTRACT_SUBVECTOR)
+      V = V.getOperand(0);
+    return V;
+  };
+
   // Match concat_vector style patterns.
   SmallVector<SDValue, 2> SubVectorOps;
   if (collectConcatOps(N, SubVectorOps, DAG)) {
@@ -61546,8 +61553,9 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
                          SubVectorOps[0], DAG.getVectorIdxConstant(0, dl));
 
     // Attempt to recursively combine to a shuffle.
-    if (all_of(SubVectorOps, [](SDValue SubOp) {
-          return isTargetShuffle(peekThroughBitcasts(SubOp).getOpcode());
+    if (all_of(SubVectorOps, [&](SDValue SubOp) {
+          SubOp = peekThroughBitcastsAndExtracts(SubOp);
+          return isTargetShuffle(SubOp.getOpcode());
         })) {
       SDValue Op(N, 0);
       if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
@@ -61600,13 +61608,6 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
       return getConstVector(VecEltBits, VecUndefElts, OpVT, DAG, dl);
     }
   }
-
-  auto peekThroughBitcastsAndExtracts = [](SDValue V) {
-    while (V.getOpcode() == ISD::BITCAST ||
-           V.getOpcode() == ISD::EXTRACT_SUBVECTOR)
-      V = V.getOperand(0);
-    return V;
-  };
 
   // Attempt to recursively combine to a shuffle.
   if (isTargetShuffle(peekThroughBitcasts(Vec).getOpcode()) &&
