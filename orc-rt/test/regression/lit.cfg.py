@@ -22,7 +22,7 @@ test_tools_dir = os.path.join(config.orc_rt_obj_root, "test", "tools")
 
 llvm_config.with_environment(
     "PATH",
-    os.path.join(config.orc_rt_obj_root, "tools", "orc-executor"),
+    os.path.join(config.orc_rt_obj_root, "tools", "ogre"),
     append_path=True)
 llvm_config.with_environment("PATH", test_tools_dir, append_path=True)
 

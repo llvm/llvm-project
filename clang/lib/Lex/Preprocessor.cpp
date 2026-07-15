@@ -102,6 +102,9 @@ Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
       CurSubmoduleState(&NullSubmoduleState) {
   OwnsHeaderSearch = OwnsHeaders;
 
+  // Only record check points if we might highlight diagnostic snippets.
+  RecordCheckPoints = getDiagnostics().getShowColors();
+
   // Default to discarding comments.
   KeepComments = false;
   KeepMacroComments = false;
@@ -1014,7 +1017,8 @@ void Preprocessor::Lex(Token &Result) {
     }
   }
 
-  if (CurLexer && ++CheckPointCounter == CheckPointStepSize) {
+  if (RecordCheckPoints && CurLexer &&
+      ++CheckPointCounter == CheckPointStepSize) {
     CheckPoints[CurLexer->getFileID()].push_back(CurLexer->BufferPtr);
     CheckPointCounter = 0;
   }
