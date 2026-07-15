@@ -520,8 +520,7 @@ void Preprocessor::SuggestTypoedDirective(const Token &Tok,
   // it. #elifdef/#elifndef stay eligible so that pre-C23/C++23 code still
   // gets the "did you mean #elif" suggestion.
   if (tok::PPKeywordKind K = getIdentifierInfo(Directive)->getPPKeywordID();
-      K != tok::pp_not_keyword && K != tok::pp_elifdef &&
-      K != tok::pp_elifndef)
+      K != tok::pp_not_keyword && K != tok::pp_elifdef && K != tok::pp_elifndef)
     return;
 
   // The scan only feeds this diagnostic; skip it when the diagnostic is
