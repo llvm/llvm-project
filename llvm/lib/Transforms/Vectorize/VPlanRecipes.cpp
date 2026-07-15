@@ -331,12 +331,7 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
 
   LLVM_DEBUG({
     dbgs() << "Cost of " << RecipeCost << " for VF " << VF << ": ";
-    if (auto SlotTracker = Ctx.getSlotTracker()) {
-      print(dbgs(), "", *SlotTracker);
-      dbgs() << "\n";
-    } else {
-      dump();
-    }
+    dump();
   });
   return RecipeCost;
 }
@@ -675,6 +670,9 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::GetElementPtr:
   case Instruction::PHI:
   case Instruction::Switch:
+  case Instruction::AtomicRMW:
+  case Instruction::AtomicCmpXchg:
+  case Instruction::Fence:
   case VPInstruction::AnyOf:
   case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:

@@ -101,11 +101,13 @@ static inline orc_rt_WrapperFunctionBuffer
 orc_rt_CreateWrapperFunctionBufferFromRange(const char *Data, size_t Size) {
   orc_rt_WrapperFunctionBuffer B;
   B.Size = Size;
+  // If Size is 0 ValuePtr must be 0 or it is considered an out-of-band error.
+  B.Data.ValuePtr = 0;
   if (B.Size > sizeof(B.Data.Value)) {
     char *Tmp = (char *)malloc(Size);
     memcpy(Tmp, Data, Size);
     B.Data.ValuePtr = Tmp;
-  } else
+  } else if (Size != 0)
     memcpy(B.Data.Value, Data, Size);
   return B;
 }
