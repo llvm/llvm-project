@@ -318,7 +318,8 @@ analysis verifies reads of uninitialized locals, of ``[[uninit]]`` members
 within the defining constructor's body, and of ``[[uninit]]`` members of
 constructor-less aggregate locals; reads through ``[[ref_to_uninit]]``
 pointers and references and reads of subobjects of ``[[uninit]]`` objects are
-rejected outright:
+rejected outright -- unless a prior whole-entity store credits the storage
+as initialized (see `Binding Pointers and References`_):
 
 .. code-block:: c++
 
@@ -374,8 +375,9 @@ Writes to Subobjects of Uninitialized Objects
 Piecemeal delayed initialization of an ``[[uninit]]`` object through its
 members or elements cannot be validated statically (§5.4, §5.5), so a store
 to a *proper subobject* of an ``[[uninit]]`` entity is rejected (rule
-``uninit_write``); writing the whole entity is that entity's initialization
-and stays legal:
+``uninit_write``); writing the whole entity is that entity's initialization,
+stays legal, and credits the entity as initialized for everything after it
+in parse order (see `Binding Pointers and References`_):
 
 .. code-block:: c++
 
@@ -409,12 +411,12 @@ A pointer or reference must be bound consistently with its
 ``[[ref_to_uninit]]`` marking (rule ``ref_to_uninit``, §4.3): a marked
 pointer, reference, or function return may only refer to uninitialized
 memory, and an unmarked one only to initialized memory.  Whether a source
-refers to uninitialized memory is recognized from its form alone, with no
-flow analysis: the address or a subobject of an ``[[uninit]]`` entity, the
-value or dereference of a marked pointer or reference, pointer and reference
-casts of those, a call to a marked function, and a ``new`` expression that
-default-initializes a type with indeterminate scalars (``new int``,
-``new int[n]``; §1.2):
+refers to uninitialized memory is recognized from its form -- the address or
+a subobject of an ``[[uninit]]`` entity, the value or dereference of a
+marked pointer or reference, pointer and reference casts of those, a call to
+a marked function, and a ``new`` expression that default-initializes a type
+with indeterminate scalars (``new int``, ``new int[n]``; §1.2) -- refined by
+one parse-order fact, whole-entity stores (below):
 
 .. code-block:: c++
 
@@ -451,6 +453,25 @@ marked and unmarked targets alike (§4.3, §8: the marker means "zero or more
 uninitialized objects").  A source whose form the recognizer cannot classify
 (pointer arithmetic, an integer-to-pointer cast) is likewise accepted for
 either target.
+
+The parse-order refinement: a *whole-entity store* credits its target as
+initialized (§4.2, §4.5).  After ``u = 5;`` the ``[[uninit]]`` variable
+``u`` counts as initialized, and after ``*p = 5;`` the marked pointer's
+pointee does, for every later ``*p`` access -- until ``p`` is reseated
+(``p = q``, ``p += n``, ``p++``), which withdraws the credit; a store
+through a marked *reference* credits its referent permanently.  The credit
+works in both directions: ``int *q = &u;`` after the store is accepted, and
+``int *r [[ref_to_uninit]] = &u;`` is now rejected -- a credited entity
+requires an unmarked target (§4.2).  Element accesses (``p[i]``) are never
+credited in either direction (§5.4's random-access ban applies even to
+``p[0]``), element stores earn no credit, and address escapes (passing
+``&u`` to a ``[[ref_to_uninit]]`` parameter) never count -- the paper
+reserves callee-initialization for ``now_init()`` (§6.2).  Class-typed
+whole-object assignment never credits either: it is a member ``operator=``
+call on uninitialized storage, rejected as above.  The credit is purely
+parse-order, with no dominance or flow analysis: a store under a condition
+credits everything after it, so a binding on the untaken path is a missed
+diagnostic (see `Limitations`_).
 
 
 Constructors
@@ -550,6 +571,9 @@ false positive.
   initialized by the most-derived class).
 - A read of a tracked member inside another member's default initializer is
   not detected.
+- Whole-entity store credit is parse-order only: a store under a condition
+  (or inside a lambda body) credits every later use in parse order, so a
+  read or binding on a path that skips the store is a missed diagnostic.
 - In a template, a violation in non-dependent code is diagnosed at definition
   time and may be repeated at instantiation.
 

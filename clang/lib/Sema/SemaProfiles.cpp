@@ -871,12 +871,30 @@ enum class UninitStorage { Initialized, Uninitialized, Unknown };
 // a scalar write through the marker is the pointee's initialization (paper
 // §4.5), and verifying class-type writes (construct_at) is a deferred slice,
 // so a store through the marker must be neither banned nor endorsed.
+// SubscriptBase: the classification runs below an element access (p[i]),
+// where pointee store credit must not apply: element-wise state is
+// untrackable by design (paper §5.4/§5.5 ban random access through the
+// marker), so only the whole-`*p` form is ever credited. Purely syntactic:
+// p[0] is not credited even though it denotes the same storage as *p.
+//
+// Credit: when non-null, the recognizers consult the parse-order store
+// credit recorded by SemaProfiles::recordInitProfileStore -- a credited
+// entity classifies as Initialized. Null in the constexpr presets; the
+// checking entry points attach it via withCredit.
 struct UninitAccessOpts {
   bool DropTopLevelUninit = false;
   bool TrustRefToUninit = false;
+  bool SubscriptBase = false;
+  const SemaProfiles *Credit = nullptr;
 
   UninitAccessOpts withoutTopLevelDrop() const {
-    return {false, TrustRefToUninit};
+    return {false, TrustRefToUninit, SubscriptBase, Credit};
+  }
+  UninitAccessOpts withSubscriptBase() const {
+    return {DropTopLevelUninit, TrustRefToUninit, true, Credit};
+  }
+  UninitAccessOpts withCredit(const SemaProfiles *SP) const {
+    return {DropTopLevelUninit, TrustRefToUninit, SubscriptBase, SP};
   }
 };
 
@@ -1025,6 +1043,17 @@ pointerRefersToUninitStorage(ASTContext &Ctx, const Expr *E,
       }
       return UninitStorage::Initialized;
     }
+    // Parse-order store credit: after a whole-`*p` store, the marked
+    // pointer's pointee counts as initialized (paper §4.3: "p no longer
+    // refers to uninitialized memory") for further whole-`*p` accesses --
+    // until the pointer is reseated, which clears the credit. The consult
+    // sits before the TrustRefToUninit branch (under the write preset the
+    // outcome merely changes Unknown to Initialized, both "not
+    // Uninitialized": no preset regression) and is skipped below an element
+    // access (SubscriptBase), preserving §5.4's random-access ban.
+    if (Opts.Credit && !Opts.SubscriptBase &&
+        Opts.Credit->hasPointeeStoreCredit(VD))
+      return UninitStorage::Initialized;
     return Opts.TrustRefToUninit ? UninitStorage::Unknown
                                  : UninitStorage::Uninitialized;
   }
@@ -1083,11 +1112,16 @@ static UninitStorage glvalueDenotesUninitStorage(ASTContext &Ctx, const Expr *E,
   // Under the top-level drop the [[uninit]] arm is skipped: a value access of
   // a directly named [[uninit]] object is the flow-based passes' territory, so
   // only a [[ref_to_uninit]] reference (or indirection, handled below) still
-  // counts.
+  // counts. Parse-order store credit clears both arms: a whole-entity store
+  // is the [[uninit]] entity's initialization (paper §4.2/§4.5), and a store
+  // through a marked reference initializes its referent (§4.3; references
+  // cannot be reseated, so that credit never lapses).
   auto DeclDenotesUninit = [&](const ValueDecl *VD) {
-    return (!Opts.DropTopLevelUninit && VD->hasAttr<UninitAttr>()) ||
+    return (!Opts.DropTopLevelUninit && VD->hasAttr<UninitAttr>() &&
+            !(Opts.Credit && Opts.Credit->hasWholeObjectStoreCredit(VD))) ||
            (!Opts.TrustRefToUninit && VD->getType()->isReferenceType() &&
-            VD->hasAttr<RefToUninitAttr>());
+            VD->hasAttr<RefToUninitAttr>() &&
+            !(Opts.Credit && Opts.Credit->hasPointeeStoreCredit(VD)));
   };
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
     return DeclDenotesUninit(DRE->getDecl()) ? UninitStorage::Uninitialized
@@ -1114,8 +1148,13 @@ static UninitStorage glvalueDenotesUninitStorage(ASTContext &Ctx, const Expr *E,
   // it returns is uninitialized.
   if (const auto *CE = dyn_cast<CallExpr>(E))
     return classifyRefToUninitCallee(CE, Opts);
+  // An element access classifies like its base, but pointee store credit
+  // must not apply below it (SubscriptBase): `*p = 5;` never legalizes
+  // `p[1]` -- the pointee may be an array with only element 0 written, and
+  // element-wise state is untrackable by design (paper §5.4/§5.5).
   if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
-    return pointerRefersToUninitStorage(Ctx, ASE->getBase(), Opts);
+    return pointerRefersToUninitStorage(Ctx, ASE->getBase(),
+                                        Opts.withSubscriptBase());
 
   // *p, where p points to uninitialized storage.
   if (const auto *UO = dyn_cast<UnaryOperator>(E))
@@ -1132,15 +1171,17 @@ static UninitStorage glvalueDenotesUninitStorage(ASTContext &Ctx, const Expr *E,
 }
 
 // Dispatches a binding source to the pointer or glvalue recognizer.
-static UninitStorage classifyUninitSource(ASTContext &Ctx, const Expr *E,
-                                          bool IsReference) {
-  return IsReference ? glvalueDenotesUninitStorage(Ctx, E)
-                     : pointerRefersToUninitStorage(Ctx, E);
+static UninitStorage
+classifyUninitSource(ASTContext &Ctx, const Expr *E, bool IsReference,
+                     UninitAccessOpts Opts = UninitBindAccess) {
+  return IsReference ? glvalueDenotesUninitStorage(Ctx, E, Opts)
+                     : pointerRefersToUninitStorage(Ctx, E, Opts);
 }
 
 bool SemaProfiles::refersToUninitializedMemory(const Expr *E,
                                                bool IsReference) const {
-  return classifyUninitSource(getASTContext(), E, IsReference) ==
+  return classifyUninitSource(getASTContext(), E, IsReference,
+                              UninitBindAccess.withCredit(this)) ==
          UninitStorage::Uninitialized;
 }
 
@@ -1166,8 +1207,8 @@ void SemaProfiles::checkInitProfileRefToUninit(SourceLocation Loc,
   static constexpr StringRef Rule = "ref_to_uninit";
   if (!shouldEmitProfileViolation(Profile, Rule, Loc, D))
     return;
-  UninitStorage SrcState =
-      classifyUninitSource(getASTContext(), Src, IsReference);
+  UninitStorage SrcState = classifyUninitSource(
+      getASTContext(), Src, IsReference, UninitBindAccess.withCredit(this));
   unsigned IsRef = IsReference ? 1 : 0;
   // A marked target is a violation only against an affirmatively Initialized
   // source: an Unknown one (pointer arithmetic, an integer-to-pointer cast, a
@@ -1218,11 +1259,17 @@ void SemaProfiles::checkInitProfileRefCapture(SourceLocation Loc,
     return;
   // Mirrors the glvalue recognizer's named-entity arm: the captured variable
   // denotes uninitialized storage if it is [[uninit]], or if it is a
-  // [[ref_to_uninit]] reference (the capture binds to its referent). A copy
-  // capture is not this check's: it reads the variable in the enclosing
+  // [[ref_to_uninit]] reference (the capture binds to its referent) -- in
+  // both cases unless parse-order store credit says it has been initialized
+  // (u = 5; then a by-ref capture of u is accepted, symmetric with &u). A
+  // copy capture is not this check's: it reads the variable in the enclosing
   // function's CFG, which is the flow-based uninit_read pass's territory.
-  if (!Var->hasAttr<UninitAttr>() &&
-      !(Var->getType()->isReferenceType() && Var->hasAttr<RefToUninitAttr>()))
+  bool UninitNoCredit =
+      Var->hasAttr<UninitAttr>() && !hasWholeObjectStoreCredit(Var);
+  bool RefNoCredit = Var->getType()->isReferenceType() &&
+                     Var->hasAttr<RefToUninitAttr>() &&
+                     !hasPointeeStoreCredit(Var);
+  if (!UninitNoCredit && !RefNoCredit)
     return;
   // The only Expr-less deferral here: an instantiation-dependent captured
   // type defers to instantiation, where TreeTransform's unconditional lambda
@@ -1335,7 +1382,8 @@ void SemaProfiles::checkInitProfileReadThrough(SourceLocation Loc,
     return;
   if (!shouldEmitProfileViolation("std::init", "uninit_read", Loc))
     return;
-  if (glvalueDenotesUninitStorage(getASTContext(), Glvalue, UninitReadAccess) !=
+  if (glvalueDenotesUninitStorage(getASTContext(), Glvalue,
+                                  UninitReadAccess.withCredit(this)) !=
       UninitStorage::Uninitialized)
     return;
   Diag(Loc, diag::err_init_uninit_read_through)
@@ -1360,7 +1408,8 @@ void SemaProfiles::checkInitProfileSubobjectWrite(SourceLocation Loc,
     return;
   if (!shouldEmitProfileViolation("std::init", "uninit_write", Loc))
     return;
-  if (glvalueDenotesUninitStorage(getASTContext(), LHS, UninitWriteAccess) !=
+  if (glvalueDenotesUninitStorage(getASTContext(), LHS,
+                                  UninitWriteAccess.withCredit(this)) !=
       UninitStorage::Uninitialized)
     return;
   Diag(Loc, diag::err_init_uninit_subobject_write)
@@ -1409,6 +1458,85 @@ void SemaProfiles::checkInitProfileIncDec(Expr *Operand, SourceLocation OpLoc) {
   checkInitProfileReadThrough(Operand->getExprLoc(), Operand,
                               Operand->getType());
   checkInitProfileSubobjectWrite(OpLoc, Operand);
+  // Record last: the pre-store checks above must see pre-store state (there
+  // is no RHS). ++u credits the whole entity; ++p reseats a marked pointer.
+  recordInitProfileStore(Operand);
+}
+
+void SemaProfiles::recordInitProfileStore(const Expr *LHS) {
+  if (!getLangOpts().Profiles || !LHS)
+    return;
+  // A store in an unevaluated or discarded-statement context never executes
+  // (mirroring shouldEmitProfileViolation's context checks), so it earns no
+  // credit. There is deliberately no enforcement or [[profiles::suppress]]
+  // gate -- a suppressed store still initializes; failing to credit it would
+  // turn suppression into later false positives -- and no in-template gate:
+  // non-dependent code in a template is checked at definition time and must
+  // find pattern-time credit (instantiations rebuild their DeclRefExprs
+  // against fresh decls, so they re-record independently).
+  if (SemaRef.isUnevaluatedContext())
+    return;
+  if (SemaRef.currentEvaluationContext().isDiscardedStatementContext())
+    return;
+  const Expr *E = LHS->IgnoreParenImpCasts();
+  // *p = e: a store through the exact whole-`*p` lvalue of a marked
+  // local/parameter pointer is the pointee's initialization (paper
+  // §4.3/§4.5: for a built-in type, a write is its initialization).
+  // Class-typed pointees never get here: `*sp = S{...}` resolves to a member
+  // operator= (already rejected as a call on uninitialized storage), so
+  // PointeeStored is only ever set for built-in-typed pointee stores.
+  // Subscript stores (p[i] = e) are deliberately neither credited nor
+  // invalidating: the paper bans element-wise tracking (§5.4/§5.5).
+  if (const auto *UO = dyn_cast<UnaryOperator>(E);
+      UO && UO->getOpcode() == UO_Deref) {
+    if (const auto *VD =
+            dyn_cast_or_null<VarDecl>(getDirectlyNamedDecl(UO->getSubExpr()));
+        VD && VD->hasLocalStorage() && VD->getType()->isPointerType() &&
+        VD->hasAttr<RefToUninitAttr>())
+      InitStoreCredit[VD] |= PointeeStored;
+    return;
+  }
+  // Only a directly named local-storage variable can be credited: a
+  // MemberExpr's FieldDecl fails the VarDecl cast (fields are the CFG
+  // passes' territory) and statics fail hasLocalStorage.
+  const auto *VD = dyn_cast_or_null<VarDecl>(getDirectlyNamedDecl(E));
+  if (!VD || !VD->hasLocalStorage())
+    return;
+  // u = e (also u @= e and ++u, via the inc-dec host): assigning the whole
+  // [[uninit]] entity is its initialization (paper §4.2/§4.5).
+  if (VD->hasAttr<UninitAttr>()) {
+    InitStoreCredit[VD] |= WholeStored;
+    return;
+  }
+  if (!VD->hasAttr<RefToUninitAttr>())
+    return;
+  if (VD->getType()->isReferenceType()) {
+    // r = e stores through the marked reference to its referent; a reference
+    // cannot be reseated, so the credit is never cleared.
+    InitStoreCredit[VD] |= PointeeStored;
+  } else if (VD->getType()->isPointerType()) {
+    // p = q / p += n / ++p reseats the marked pointer: any pointee credit no
+    // longer describes the new pointee. The clear lives here in the tail
+    // funnel -- not in checkInitProfilePointerAssignment, which runs only
+    // for plain assignment and would miss compound reseats.
+    InitStoreCredit[VD] &= ~unsigned(PointeeStored);
+  }
+}
+
+bool SemaProfiles::hasWholeObjectStoreCredit(const ValueDecl *VD) const {
+  const auto *Var = dyn_cast<VarDecl>(VD);
+  if (!Var)
+    return false;
+  auto It = InitStoreCredit.find(Var);
+  return It != InitStoreCredit.end() && (It->second & WholeStored);
+}
+
+bool SemaProfiles::hasPointeeStoreCredit(const ValueDecl *VD) const {
+  const auto *Var = dyn_cast<VarDecl>(VD);
+  if (!Var)
+    return false;
+  auto It = InitStoreCredit.find(Var);
+  return It != InitStoreCredit.end() && (It->second & PointeeStored);
 }
 
 void SemaProfiles::checkInitProfileThrowOperand(const Expr *Operand) {

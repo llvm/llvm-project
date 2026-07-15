@@ -14553,6 +14553,15 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
     }
   }
 
+  // std::init: a completed built-in assignment is a store; record parse-order
+  // whole-entity store credit (paper §4.2/§4.5). Deliberately at the tail: a
+  // simple assignment's RHS lvalue-to-rvalue load is checked inside
+  // CheckSingleAssignmentConstraints above, so recording earlier would let
+  // `*p = *p;` credit itself and silently pass its own RHS read. Invalid
+  // assignments returned early and record nothing.
+  if (getLangOpts().Profiles)
+    Profiles().recordInitProfileStore(LHSExpr);
+
   // C11 6.5.16p3: The type of an assignment expression is the type of the
   // left operand would have after lvalue conversion.
   // C11 6.3.2.1p2: ...this is called lvalue conversion. If the lvalue has

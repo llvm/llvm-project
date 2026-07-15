@@ -119,19 +119,20 @@ void test_compound_and_incdec_stores() {
              // expected-error {{read of a subobject of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
 }
 
-// Writes through a [[ref_to_uninit]] pointer or reference are the deferred
-// construct_at slice: for a built-in type the write is the pointee's
-// initialization (paper §4.5), so they are neither banned nor endorsed. A
-// compound assignment through the marker still *reads* the old value, which
-// is a genuine uninit_read violation (full coverage in
-// safety-profile-init-ref-to-uninit.cpp).
+// Writes through a [[ref_to_uninit]] pointer or reference: for a built-in
+// type the write is the pointee's initialization (paper §4.5), so they are
+// legal -- and a whole-`*p` store credits the pointee as initialized in
+// parse order, so the compound assignment below may read the value it wrote.
+// An element store (p[3]) neither credits nor invalidates (§5.4/§5.5). A
+// compound assignment through a still-uncredited marker reads uninitialized
+// memory (full coverage in safety-profile-init-ref-to-uninit.cpp).
 [[ref_to_uninit]] int &get_uninit_ref();
 void test_write_through_ref_to_uninit(int *p [[ref_to_uninit]],
                                       int &r [[ref_to_uninit]],
                                       Pair *ptr [[ref_to_uninit]]) {
-  *p = 5;              // OK
-  p[3] = 0;            // OK
-  *p += 1;             // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  *p = 5;              // OK (and credits p's pointee)
+  p[3] = 0;            // OK (no credit, no invalidation)
+  *p += 1;             // OK: the whole-*p store above credited the pointee
   r = 5;               // OK
   ptr->x = 5;          // OK
   get_uninit_ref() = 5; // OK
@@ -151,6 +152,9 @@ T *construct_at(T *p [[ref_to_uninit]], Args &&...args);
 void test_construct_at_pattern() {
   Pair s [[uninit]];
   construct_at(&s, 1, 2); // OK: the marked parameter accepts &s
+  // The address escape earns no store credit -- paper §6.2 reserves
+  // callee-initialization for now_init(); only whole-entity stores credit
+  // (stores-only policy) -- so the subobject write below stays an error.
   s.x = 1; // expected-error {{writing a member of an '[[uninit]]' object does not initialize it under profile 'std::init'; initialize the whole object}}
 }
 
@@ -256,4 +260,99 @@ void template_two_rules_never_instantiated() {
   WithPtrMember s [[uninit]];
   s.p = &g_uninit_int; // expected-error {{writing a member of an '[[uninit]]' object does not initialize it under profile 'std::init'; initialize the whole object}} \
                        // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+
+// Parse-order whole-entity store credit (paper §4.2/§4.5): assigning the
+// whole [[uninit]] entity is its initialization, so bindings after the store
+// (in parse order) treat it as initialized -- and the paper's reverse
+// direction applies: the credited entity now REQUIRES an unmarked target
+// (§4.2's `p4 = &x` error). Purely parse-order, no flow analysis: a store
+// under a condition credits everything after it (§1.2 "consider all branches
+// executed" -- the untaken path is a missed diagnostic, never a false
+// positive).
+void take_int_ptr(int *q);
+void test_whole_store_credit() {
+  int u [[uninit]];
+  u = 5;
+  int *q = &u;      // OK: u is initialized (rejected before the store)
+  take_int_ptr(&u); // OK
+  int &br = u;      // OK
+  int *r [[ref_to_uninit]] = &u; // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  (void)q; (void)br; (void)r;
+}
+
+void test_binding_before_store() {
+  int u [[uninit]];
+  int *q = &u; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  u = 5;
+  (void)q;
+}
+
+void test_conditional_store_credit(bool c) {
+  int u [[uninit]];
+  if (c)
+    u = 5;
+  int *q = &u; // OK: parse-order credit (§1.2); the untaken path is an
+               // accepted missed diagnostic
+  (void)q;
+}
+
+// Compound assignment and ++/-- store, so they credit the whole entity --
+// while their own old-value read keeps the flow-based read-before-init
+// error (recorded after the pre-store checks: no self-crediting).
+void test_compound_store_credit() {
+  int u [[uninit]]; // expected-note {{variable 'u' is declared here}}
+  u += 1;       // expected-error {{variable 'u' is read before initialization under profile 'std::init'}}
+  int *q = &u;  // OK: the compound store credited u
+  int v [[uninit]]; // expected-note {{variable 'v' is declared here}}
+  ++v;          // expected-error {{variable 'v' is read before initialization under profile 'std::init'}}
+  int *qv = &v; // OK
+  int w [[uninit]]; // expected-note {{variable 'w' is declared here}}
+  w = w + 1;    // expected-error {{variable 'w' is read before initialization under profile 'std::init'}}
+  (void)q; (void)qv;
+}
+
+// Class-typed whole-object assignment never credits: it resolves to a member
+// operator= -- already rejected as a call on uninitialized storage -- and
+// never reaches the built-in assignment funnel (crediting an erroneous
+// statement would misstate the object's state). The class remedy remains
+// construct_at through [[ref_to_uninit]] (paper §4.5; unmodeled slice).
+void test_class_store_never_credits() {
+  Pair s [[uninit]];
+  s = Pair{1, 2}; // expected-error {{calling member function 'operator=' binds its implicit object parameter to uninitialized memory under profile 'std::init'}}
+  s.x = 3;        // expected-error {{writing a member of an '[[uninit]]' object does not initialize it under profile 'std::init'; initialize the whole object}}
+  int y = s.x;    // expected-error {{read of a subobject of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
+  (void)y;
+}
+
+// A store in an unevaluated or discarded context never executes, so it earns
+// no credit.
+void test_no_credit_contexts() {
+  int u [[uninit]];
+  (void)sizeof(u = 5); // expected-warning {{expression with side effects has no effect in an unevaluated context}} \
+                       // no-profiles-warning {{expression with side effects has no effect in an unevaluated context}}
+  int *q = &u; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int v [[uninit]];
+  using TT = decltype((v = 5)); // expected-warning {{expression with side effects has no effect in an unevaluated context}} \
+                                // no-profiles-warning {{expression with side effects has no effect in an unevaluated context}}
+  int *qv = &v; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int w [[uninit]];
+  if constexpr (false) { w = 5; }
+  int *qw = &w; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)q; (void)qv; (void)qw;
+}
+
+// The credit keys on the unique VarDecl: a same-named sibling-scope local is
+// a distinct declaration, so credit does not leak between them.
+void test_sibling_scope_credit(bool c) {
+  if (c) {
+    int u [[uninit]];
+    u = 5;
+    int *q = &u; // OK: this u is credited
+    (void)q;
+  } else {
+    int u [[uninit]];
+    int *q = &u; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+    (void)q;
+  }
 }

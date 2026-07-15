@@ -20,6 +20,7 @@
 #include "clang/Basic/Profiles.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/SemaBase.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -360,8 +361,53 @@ public:
 
   /// std::init: the check pair a built-in ++/-- hosts -- the old-value load
   /// (read-through) and the store (subobject-write). Hosts the cluster from
-  /// Sema::CreateBuiltinUnaryOp's increment/decrement arm.
+  /// Sema::CreateBuiltinUnaryOp's increment/decrement arm. Records the store
+  /// credit last, after both pre-store checks.
   void checkInitProfileIncDec(Expr *Operand, SourceLocation OpLoc);
+
+  /// std::init: record parse-order whole-entity store credit for \p LHS, the
+  /// left operand of a completed built-in assignment (called from the tail
+  /// of Sema::CheckAssignmentOperands) or the operand of a built-in ++/--.
+  /// Assigning a whole [[uninit]] local is its initialization (paper
+  /// §4.2/§4.5), and a store through the exact `*p` / `r` lvalue of a
+  /// [[ref_to_uninit]] local or parameter initializes the pointee (§4.3); a
+  /// store to a marked *pointer* itself reseats it and clears its pointee
+  /// credit. Element stores (p[i] = e) neither credit nor invalidate
+  /// (§5.4/§5.5 ban element-wise tracking), and escapes never credit (§6.2
+  /// reserves callee-initialization for now_init()). Purely parse-order --
+  /// no dominance or flow analysis -- so the credit errs only toward missed
+  /// diagnostics. Deliberately not gated on enforcement or
+  /// [[profiles::suppress]]: a suppressed store still initializes, and
+  /// failing to credit it would turn suppression into later false positives.
+  void recordInitProfileStore(const Expr *LHS);
+
+  /// True if \p VD is a local [[uninit]] variable credited by a recorded
+  /// whole-entity store; the recognizers then classify it as initialized
+  /// (which also enables the paper's reverse-direction rule: a credited
+  /// entity requires an unmarked target).
+  bool hasWholeObjectStoreCredit(const ValueDecl *VD) const;
+
+  /// True if \p VD is a [[ref_to_uninit]] local/parameter pointer or
+  /// reference credited by a recorded store through it; the storage behind
+  /// it then classifies as initialized (until a pointer is reseated --
+  /// references cannot be reseated, so their credit is never cleared).
+  bool hasPointeeStoreCredit(const ValueDecl *VD) const;
+
+  /// Store-credit bits for recordInitProfileStore.
+  enum InitStoreCreditFlags : unsigned {
+    /// The [[uninit]] entity itself was assigned (u = e, u @= e, ++u).
+    WholeStored = 1u << 0,
+    /// The storage behind the [[ref_to_uninit]] entity was written through
+    /// the exact *p / r lvalue.
+    PointeeStored = 1u << 1,
+  };
+
+  /// Parse-order store credit, keyed by the credited local/parameter (only
+  /// local-storage VarDecls carrying the relevant marker are ever inserted).
+  /// Never cleared across the translation unit: the keys are unique
+  /// declarations, and template instantiations build fresh declarations, so
+  /// pattern-time and instantiation-time state stay independent.
+  llvm::DenseMap<const VarDecl *, unsigned> InitStoreCredit;
 
   /// std::init / ref_to_uninit (paper §5): a thrown pointer copy-initializes
   /// the exception object, which cannot carry [[ref_to_uninit]]; a no-op for

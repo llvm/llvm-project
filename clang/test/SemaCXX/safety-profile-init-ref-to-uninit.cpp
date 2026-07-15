@@ -470,8 +470,10 @@ template void template_init_capture_bad<int>(); // expected-note {{in instantiat
 void test_ref_captures() {
   int x [[uninit]];
   int ok = 0;
-  auto c1 = [&x] { x = 1; }; // expected-error {{capturing 'x' by reference binds a reference to uninitialized memory under profile 'std::init'}}
-  auto c2 = [&] { x = 1; };  // expected-error {{capturing 'x' by reference binds a reference to uninitialized memory under profile 'std::init'}}
+  // The bodies must not assign x: a body store would credit it in parse
+  // order and silence the capture check (see test_ref_capture_body_store).
+  auto c1 = [&x] { (void)x; }; // expected-error {{capturing 'x' by reference binds a reference to uninitialized memory under profile 'std::init'}}
+  auto c2 = [&] { (void)x; };  // expected-error {{capturing 'x' by reference binds a reference to uninitialized memory under profile 'std::init'}}
   auto c3 = [&ok] { ok = 1; }; // OK: initialized
   int *rtu [[ref_to_uninit]] = &g_uninit;
   auto c4 = [&rtu] { (void)rtu; }; // OK: the pointer object itself is initialized
@@ -479,20 +481,40 @@ void test_ref_captures() {
   auto c5 = [&ur] { (void)ur; }; // expected-error {{capturing 'ur' by reference binds a reference to uninitialized memory under profile 'std::init'}}
   // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
   [[profiles::suppress(std::init, rule: "ref_to_uninit")]] {
-    auto c6 = [&x] { x = 2; }; // OK: suppressed
+    auto c6 = [&x] { (void)x; }; // OK: suppressed
     (void)c6;
   }
   (void)c1; (void)c2; (void)c3; (void)c4; (void)c5;
 }
 
+// Parse-order store credit reaches the capture check both ways -- accepted
+// leniencies of the scope-less credit map (false negatives only):
+void test_ref_capture_after_store() {
+  int u [[uninit]];
+  u = 5;
+  auto c = [&u] { (void)u; }; // OK: the store initialized u (symmetric
+                              // with binding &u after the store)
+  (void)c;
+}
+
+void test_ref_capture_body_store() {
+  int u [[uninit]];
+  auto L = [&] { u = 5; }; // OK: the body's own store credits u at parse
+                           // order, silencing this capture check -- the
+                           // deliberate leniency (no FunctionScopeInfo
+                           // scoping), pinned here
+  int *q = &u;             // OK: credited by the body store above
+  (void)L; (void)q;
+}
+
 // A by-reference capture of a variable with a non-dependent type fires at
 // definition time, and again when TreeTransform's unconditional lambda
 // rebuild re-processes the capture at instantiation -- the accepted
-// repetition.
+// repetition. (The body must not assign x, as in test_ref_captures.)
 template <typename T>
 void template_ref_capture_bad() {
   int x [[uninit]];
-  auto c = [&x] { x = 1; }; // expected-error 2 {{capturing 'x' by reference binds a reference to uninitialized memory under profile 'std::init'}}
+  auto c = [&x] { (void)x; }; // expected-error 2 {{capturing 'x' by reference binds a reference to uninitialized memory under profile 'std::init'}}
   (void)c;
 }
 template void template_ref_capture_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_ref_capture_bad<int>' requested here}}
@@ -991,9 +1013,11 @@ void test_read_negatives(int *p [[ref_to_uninit]], int &r [[ref_to_uninit]],
   (void)r;                         // OK: discarded value
   (void)*p;                        // OK: discarded value
   int *ap [[ref_to_uninit]] = &*p; // OK: address-of is not a read
-  *p = 5;                          // OK: write, not a read
-  ptr->m = 5;                      // OK: write, not a read
   int &r2 [[ref_to_uninit]] = *p;  // OK: reference binding, not a read
+  *p = 5;                          // OK: write, not a read (and it credits
+                                   // p's pointee, so it stays after the
+                                   // marked bindings above)
+  ptr->m = 5;                      // OK: write, not a read
   int *q [[ref_to_uninit]] = base; // OK: reads the pointer value, not through it
   (void)ap; (void)q; (void)r2;
 }
@@ -1228,18 +1252,26 @@ void template_global_read_never_instantiated() {
 // [[ref_to_uninit]] pointer or reference is diagnosed; the shift forms load
 // through their LHS promotion instead and must fire exactly once. Reading an
 // unmarked pointer's pointee is trusted, and ++ on the marked pointer itself
-// reads the (initialized) pointer object, not through it.
+// reads the (initialized) pointer object, not through it. Each form gets a
+// fresh marker: a compound form both reads (the error) and stores, and the
+// store credits the pointee for everything after it in parse order (see
+// test_pointee_store_credit) -- except through an element access, which
+// never sees the credit (p[i] below, after *p's store; paper §5.4).
 void test_compound_read_through(int *p [[ref_to_uninit]], int *q,
                                 int &r [[ref_to_uninit]],
-                                Inner *ptr [[ref_to_uninit]], int i) {
+                                Inner *ptr [[ref_to_uninit]], int i,
+                                int *p2 [[ref_to_uninit]],
+                                int *p3 [[ref_to_uninit]],
+                                int &r2 [[ref_to_uninit]],
+                                int *p4 [[ref_to_uninit]]) {
   *p += 1;     // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
   p[i] -= 1;   // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
   r *= 2;      // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
   ptr->m |= 1; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
-  ++*p;        // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
-  (*p)--;      // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
-  ++r;         // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
-  *p <<= 1;    // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  ++*p2;       // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  (*p3)--;     // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  ++r2;        // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  *p4 <<= 1;   // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
   *q += 1;     // OK: an unmarked pointer is trusted initialized
   ++p;         // OK: reads the pointer object itself, not through it
 }
@@ -1257,6 +1289,124 @@ void template_compound_read_bad(int *p [[ref_to_uninit]]) {
   *p += 1; // expected-error 2 {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
 }
 template void template_compound_read_bad<int>(int *); // expected-note {{in instantiation of function template specialization 'template_compound_read_bad<int>' requested here}}
+
+// Parse-order pointee store credit (paper §4.3/§4.5): a whole-`*p` store
+// through a [[ref_to_uninit]] pointer is the pointee's initialization, so
+// whole-`*p` accesses after it (in parse order) are legal -- and the paper's
+// reverse direction applies: the credited pointer now refers to initialized
+// memory and REQUIRES an unmarked target. Element accesses never see the
+// credit in either direction (§5.4's random-access ban), and reseating the
+// pointer clears it.
+void test_pointee_store_credit(int *p [[ref_to_uninit]]) {
+  *p = 5;      // OK: the write initializes the pointee (and credits it)
+  *p = 7;      // OK: further whole-entity stores stay legal
+  int x = *p;  // OK: credited (rejected before the store)
+  int *r2 [[ref_to_uninit]] = p; // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  (void)x; (void)r2;
+}
+
+void test_pointee_read_before_store(int *p [[ref_to_uninit]]) {
+  int x = *p; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  *p = 5;
+  (void)x;
+}
+
+// The credit is recorded at the tail of the assignment, after the RHS is
+// checked: a self-assignment's RHS read must not be silenced by its own
+// store (the key recording-order regression test).
+void test_pointee_no_self_credit(int *p [[ref_to_uninit]]) {
+  *p = *p; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+}
+
+// Element stores neither credit nor invalidate (§5.4/§5.5: element-wise
+// state is untrackable by design)...
+void test_subscript_store_no_credit(int *p [[ref_to_uninit]]) {
+  p[0] = 1;
+  int x = *p; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  (void)x;
+}
+
+// ...and element reads never see pointee credit: `*p = 5;` must not legalize
+// p[1] (the pointee may be an array with only element 0 written). The model
+// is purely syntactic, so even p[0] -- the same storage as *p -- stays an
+// error: only the whole-`*p` form is credited.
+void test_subscript_read_not_credited(int *p [[ref_to_uninit]], int i) {
+  *p = 5;
+  int x = p[i]; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  int y = p[0]; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  (void)x; (void)y;
+}
+
+// Reseating the pointer -- plain assignment, compound arithmetic, or ++ --
+// clears its pointee credit: the credit described the old pointee.
+void test_reseat_clears_credit(int *p [[ref_to_uninit]],
+                               int *q [[ref_to_uninit]], int n) {
+  *p = 5;
+  p = q;
+  int x = *p; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  *p = 5;
+  p += n;
+  int y = *p; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  *p = 5;
+  p++;
+  int z = *p; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  (void)x; (void)y; (void)z;
+}
+
+// A store through a marked *reference* credits its referent; a reference
+// cannot be reseated, so the credit is never cleared.
+void test_marked_ref_store_credit(int &r [[ref_to_uninit]]) {
+  r = 5;
+  int x = r; // OK: the store initialized the referent
+  (void)x;
+}
+
+void test_marked_ref_read_before_store(int &r [[ref_to_uninit]]) {
+  int x = r; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  r = 5;
+  (void)x;
+}
+
+// Store credit is recorded at pattern-parse time too: non-dependent
+// store-then-read inside a template is checked at definition time (the
+// documented phase-7 trade-off) and must find the pattern-time credit;
+// instantiations rebuild every DeclRefExpr against fresh declarations and
+// re-record independently.
+template <typename T>
+void template_store_then_read(int *p [[ref_to_uninit]]) {
+  *p = 5;
+  int x = *p; // OK at definition time and at instantiation
+  (void)x;
+}
+template void template_store_then_read<int>(int *);
+
+// A store in a discarded if-constexpr branch is not instantiated, so the
+// rebuilt read finds no credit at that instantiation -- while the pattern's
+// store did credit the definition-time check (a dependent condition
+// discards nothing at parse).
+template <bool B>
+void template_discarded_store(int *p [[ref_to_uninit]]) {
+  if constexpr (B)
+    *p = 5;
+  int x = *p; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  (void)x;
+}
+template void template_discarded_store<true>(int *);  // OK: store instantiated
+template void template_discarded_store<false>(int *); // expected-note {{in instantiation of function template specialization 'template_discarded_store<false>' requested here}}
+
+// Known residual gap (documented definition-time-purity trade-off): a store
+// with a *type-dependent RHS* routes through the overloaded-operator path at
+// pattern time and never reaches the built-in assignment funnel, so it earns
+// no pattern-time credit and the following non-dependent read
+// false-positives at definition time. The instantiation is clean (its
+// rebuilt store re-records first) -- exactly one error total.
+template <typename T>
+void template_dependent_rhs_store(int *p [[ref_to_uninit]], T t) {
+  *p = t;
+  int x = *p; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  (void)x;
+}
+template void template_dependent_rhs_store<int>(int *, int);
 
 // std::init / ref_to_uninit (paper §5): a pointer/reference member given a
 // *written* constructor member-initializer is checked with the enclosing
