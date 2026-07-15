@@ -87,4 +87,3 @@ __device__ void test_rsq_h(_Float16* out, _Float16 a) {
 __device__ void test_sqrt_f16(_Float16* out, _Float16 a) {
   *out = __builtin_amdgcn_sqrth(a);
 }
-
