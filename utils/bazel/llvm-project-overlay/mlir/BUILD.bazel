@@ -6099,6 +6099,7 @@ cc_library(
         ":NVVMDialect",
         ":Pass",
         ":SCFTransforms",
+        ":VectorDialect",
         "//llvm:Support",
     ],
 )
@@ -9380,27 +9381,6 @@ cc_library(
 )
 
 cc_library(
-    name = "OpenACCToLLVMIRTranslation",
-    srcs = glob(["lib/Target/LLVMIR/Dialect/OpenACC/*.cpp"]),
-    hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/OpenACC/*.h"]),
-    includes = ["include"],
-    deps = [
-        ":Analysis",
-        ":IR",
-        ":LLVMDialect",
-        ":OpenACCDialect",
-        ":OpenMPCommon",
-        ":Support",
-        ":ToLLVMIRTranslation",
-        ":TransformUtils",
-        "//llvm:Core",
-        "//llvm:FrontendOpenMP",
-        "//llvm:Support",
-        "//llvm:TargetParser",
-    ],
-)
-
-cc_library(
     name = "OpenMPToLLVMIRTranslation",
     srcs = glob(["lib/Target/LLVMIR/Dialect/OpenMP/*.cpp"]),
     hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/OpenMP/*.h"]),
@@ -9470,7 +9450,6 @@ cc_library(
         ":LLVMIRToNVVMTranslation",
         ":LLVMToLLVMIRTranslation",
         ":NVVMToLLVMIRTranslation",
-        ":OpenACCToLLVMIRTranslation",
         ":OpenMPToLLVMIRTranslation",
         ":PtrToLLVMIRTranslation",
         ":ROCDLToLLVMIRTranslation",
@@ -10070,7 +10049,6 @@ cc_library(
         ":IR",
         ":LLVMDialect",
         ":LLVMToLLVMIRTranslation",
-        ":OpenACCToLLVMIRTranslation",
         ":OpenMPToLLVMIRTranslation",
         ":ParseUtilities",
         ":Parser",
@@ -10265,7 +10243,6 @@ cc_binary(
         ":LLVMDialect",
         ":LLVMToLLVMIRTranslation",
         ":MlirJitRunner",
-        ":OpenACCToLLVMIRTranslation",
         ":OpenMPToLLVMIRTranslation",
         ":ToLLVMIRTranslation",
         "//llvm:AsmParser",

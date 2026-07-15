@@ -4,6 +4,8 @@
 ; RUN: llc < %s -mtriple=i686-unknown -mattr=+xop | FileCheck %s --check-prefixes=CHECK,X86XOP
 ; RUN: llc < %s -mtriple=i686-unknown -mattr=+avx512bw,+avx512vl,+gfni | FileCheck %s --check-prefixes=CHECK,GFNI,X86GFNI
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx512bw,+avx512vl,+gfni | FileCheck %s --check-prefixes=CHECK,GFNI,X64GFNI
+; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx512bw,+avx512vl,+avx512bmm | FileCheck %s --check-prefixes=CHECK,BMM
+; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx512bw,+avx512vl,+gfni,+avx512bmm | FileCheck %s --check-prefixes=CHECK,BMM
 
 ; These tests just check that the plumbing is in place for @llvm.bitreverse. The
 ; actual output is massive at the moment as llvm.bitreverse is not yet legal.
@@ -98,6 +100,12 @@ define <2 x i16> @test_bitreverse_v2i16(<2 x i16> %a) nounwind {
 ; X64GFNI-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
 ; X64GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; X64GFNI-NEXT:    retq
+;
+; BMM-LABEL: test_bitreverse_v2i16:
+; BMM:       # %bb.0:
+; BMM-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
+; BMM-NEXT:    vbitrevb %xmm0, %xmm0
+; BMM-NEXT:    retq
   %b = call <2 x i16> @llvm.bitreverse.v2i16(<2 x i16> %a)
   ret <2 x i16> %b
 }
@@ -194,6 +202,14 @@ define i64 @test_bitreverse_i64(i64 %a) nounwind {
 ; X64GFNI-NEXT:    vmovq %xmm0, %rax
 ; X64GFNI-NEXT:    bswapq %rax
 ; X64GFNI-NEXT:    retq
+;
+; BMM-LABEL: test_bitreverse_i64:
+; BMM:       # %bb.0:
+; BMM-NEXT:    vmovq %rdi, %xmm0
+; BMM-NEXT:    vbitrevb %xmm0, %xmm0
+; BMM-NEXT:    vmovq %xmm0, %rax
+; BMM-NEXT:    bswapq %rax
+; BMM-NEXT:    retq
   %b = call i64 @llvm.bitreverse.i64(i64 %a)
   ret i64 %b
 }
@@ -267,6 +283,14 @@ define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ; X64GFNI-NEXT:    vmovd %xmm0, %eax
 ; X64GFNI-NEXT:    bswapl %eax
 ; X64GFNI-NEXT:    retq
+;
+; BMM-LABEL: test_bitreverse_i32:
+; BMM:       # %bb.0:
+; BMM-NEXT:    vmovd %edi, %xmm0
+; BMM-NEXT:    vbitrevb %xmm0, %xmm0
+; BMM-NEXT:    vmovd %xmm0, %eax
+; BMM-NEXT:    bswapl %eax
+; BMM-NEXT:    retq
   %b = call i32 @llvm.bitreverse.i32(i32 %a)
   ret i32 %b
 }
@@ -345,6 +369,15 @@ define i24 @test_bitreverse_i24(i24 %a) nounwind {
 ; X64GFNI-NEXT:    bswapl %eax
 ; X64GFNI-NEXT:    shrl $8, %eax
 ; X64GFNI-NEXT:    retq
+;
+; BMM-LABEL: test_bitreverse_i24:
+; BMM:       # %bb.0:
+; BMM-NEXT:    vmovd %edi, %xmm0
+; BMM-NEXT:    vbitrevb %xmm0, %xmm0
+; BMM-NEXT:    vmovd %xmm0, %eax
+; BMM-NEXT:    bswapl %eax
+; BMM-NEXT:    shrl $8, %eax
+; BMM-NEXT:    retq
   %b = call i24 @llvm.bitreverse.i24(i24 %a)
   ret i24 %b
 }
@@ -423,6 +456,15 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ; X64GFNI-NEXT:    rolw $8, %ax
 ; X64GFNI-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64GFNI-NEXT:    retq
+;
+; BMM-LABEL: test_bitreverse_i16:
+; BMM:       # %bb.0:
+; BMM-NEXT:    vmovd %edi, %xmm0
+; BMM-NEXT:    vbitrevb %xmm0, %xmm0
+; BMM-NEXT:    vmovd %xmm0, %eax
+; BMM-NEXT:    rolw $8, %ax
+; BMM-NEXT:    # kill: def $ax killed $ax killed $eax
+; BMM-NEXT:    retq
   %b = call i16 @llvm.bitreverse.i16(i16 %a)
   ret i16 %b
 }
@@ -488,6 +530,14 @@ define i8 @test_bitreverse_i8(i8 %a) {
 ; X64GFNI-NEXT:    vmovd %xmm0, %eax
 ; X64GFNI-NEXT:    # kill: def $al killed $al killed $eax
 ; X64GFNI-NEXT:    retq
+;
+; BMM-LABEL: test_bitreverse_i8:
+; BMM:       # %bb.0:
+; BMM-NEXT:    vmovd %edi, %xmm0
+; BMM-NEXT:    vbitrevb %xmm0, %xmm0
+; BMM-NEXT:    vmovd %xmm0, %eax
+; BMM-NEXT:    # kill: def $al killed $al killed $eax
+; BMM-NEXT:    retq
   %b = call i8 @llvm.bitreverse.i8(i8 %a)
   ret i8 %b
 }
@@ -557,6 +607,15 @@ define i4 @test_bitreverse_i4(i4 %a) {
 ; X64GFNI-NEXT:    shrb $4, %al
 ; X64GFNI-NEXT:    # kill: def $al killed $al killed $eax
 ; X64GFNI-NEXT:    retq
+;
+; BMM-LABEL: test_bitreverse_i4:
+; BMM:       # %bb.0:
+; BMM-NEXT:    vmovd %edi, %xmm0
+; BMM-NEXT:    vbitrevb %xmm0, %xmm0
+; BMM-NEXT:    vmovd %xmm0, %eax
+; BMM-NEXT:    shrb $4, %al
+; BMM-NEXT:    # kill: def $al killed $al killed $eax
+; BMM-NEXT:    retq
   %b = call i4 @llvm.bitreverse.i4(i4 %a)
   ret i4 %b
 }
@@ -584,6 +643,11 @@ define <2 x i16> @fold_v2i16() {
 ; GFNI:       # %bb.0:
 ; GFNI-NEXT:    vmovss {{.*#+}} xmm0 = [61440,240,0,0,0,0,0,0]
 ; GFNI-NEXT:    ret{{[l|q]}}
+;
+; BMM-LABEL: fold_v2i16:
+; BMM:       # %bb.0:
+; BMM-NEXT:    vmovss {{.*#+}} xmm0 = [61440,240,0,0,0,0,0,0]
+; BMM-NEXT:    retq
   %b = call <2 x i16> @llvm.bitreverse.v2i16(<2 x i16> <i16 15, i16 3840>)
   ret <2 x i16> %b
 }
@@ -644,6 +708,12 @@ define i8 @identity_i8(i8 %a) {
 ; X64GFNI-NEXT:    movl %edi, %eax
 ; X64GFNI-NEXT:    # kill: def $al killed $al killed $eax
 ; X64GFNI-NEXT:    retq
+;
+; BMM-LABEL: identity_i8:
+; BMM:       # %bb.0:
+; BMM-NEXT:    movl %edi, %eax
+; BMM-NEXT:    # kill: def $al killed $al killed $eax
+; BMM-NEXT:    retq
   %b = call i8 @llvm.bitreverse.i8(i8 %a)
   %c = call i8 @llvm.bitreverse.i8(i8 %b)
   ret i8 %c
@@ -667,6 +737,10 @@ define <2 x i16> @identity_v2i16(<2 x i16> %a) {
 ; GFNI-LABEL: identity_v2i16:
 ; GFNI:       # %bb.0:
 ; GFNI-NEXT:    ret{{[l|q]}}
+;
+; BMM-LABEL: identity_v2i16:
+; BMM:       # %bb.0:
+; BMM-NEXT:    retq
   %b = call <2 x i16> @llvm.bitreverse.v2i16(<2 x i16> %a)
   %c = call <2 x i16> @llvm.bitreverse.v2i16(<2 x i16> %b)
   ret <2 x i16> %c
@@ -863,6 +937,17 @@ define i128 @test_bitreverse_i128(i128 %a) nounwind {
 ; X64GFNI-NEXT:    vmovq %xmm0, %rax
 ; X64GFNI-NEXT:    vpextrq $1, %xmm0, %rdx
 ; X64GFNI-NEXT:    retq
+;
+; BMM-LABEL: test_bitreverse_i128:
+; BMM:       # %bb.0:
+; BMM-NEXT:    vmovq %rdi, %xmm0
+; BMM-NEXT:    vmovq %rsi, %xmm1
+; BMM-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; BMM-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8]
+; BMM-NEXT:    vbitrevb %xmm0, %xmm0
+; BMM-NEXT:    vmovq %xmm0, %rax
+; BMM-NEXT:    vpextrq $1, %xmm0, %rdx
+; BMM-NEXT:    retq
   %b = call i128 @llvm.bitreverse.i128(i128 %a)
   ret i128 %b
 }
@@ -1158,6 +1243,22 @@ define i256 @test_bitreverse_i256(i256 %a) nounwind {
 ; X64GFNI-NEXT:    vmovdqu %ymm0, (%rdi)
 ; X64GFNI-NEXT:    vzeroupper
 ; X64GFNI-NEXT:    retq
+;
+; BMM-LABEL: test_bitreverse_i256:
+; BMM:       # %bb.0:
+; BMM-NEXT:    movq %rdi, %rax
+; BMM-NEXT:    vmovq %rsi, %xmm0
+; BMM-NEXT:    vmovq %rdx, %xmm1
+; BMM-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; BMM-NEXT:    vmovq %rcx, %xmm1
+; BMM-NEXT:    vmovq %r8, %xmm2
+; BMM-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; BMM-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; BMM-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,23,22,21,20,19,18,17,16,31,30,29,28,27,26,25,24]
+; BMM-NEXT:    vbitrevb %ymm0, %ymm0
+; BMM-NEXT:    vmovdqu %ymm0, (%rdi)
+; BMM-NEXT:    vzeroupper
+; BMM-NEXT:    retq
   %b = call i256 @llvm.bitreverse.i256(i256 %a)
   ret i256 %b
 }
@@ -1718,6 +1819,28 @@ define i512 @test_bitreverse_i512(i512 %a) nounwind {
 ; X64GFNI-NEXT:    vmovdqu64 %zmm0, (%rdi)
 ; X64GFNI-NEXT:    vzeroupper
 ; X64GFNI-NEXT:    retq
+;
+; BMM-LABEL: test_bitreverse_i512:
+; BMM:       # %bb.0:
+; BMM-NEXT:    movq %rdi, %rax
+; BMM-NEXT:    vmovq %rsi, %xmm0
+; BMM-NEXT:    vmovq %rdx, %xmm1
+; BMM-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; BMM-NEXT:    vmovq %rcx, %xmm1
+; BMM-NEXT:    vmovq %r8, %xmm2
+; BMM-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; BMM-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; BMM-NEXT:    vpshufd {{.*#+}} xmm1 = mem[2,3,0,1]
+; BMM-NEXT:    vmovq %r9, %xmm2
+; BMM-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
+; BMM-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
+; BMM-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; BMM-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
+; BMM-NEXT:    vpshufb {{.*#+}} zmm0 = zmm0[7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,23,22,21,20,19,18,17,16,31,30,29,28,27,26,25,24,39,38,37,36,35,34,33,32,47,46,45,44,43,42,41,40,55,54,53,52,51,50,49,48,63,62,61,60,59,58,57,56]
+; BMM-NEXT:    vbitrevb %zmm0, %zmm0
+; BMM-NEXT:    vmovdqu64 %zmm0, (%rdi)
+; BMM-NEXT:    vzeroupper
+; BMM-NEXT:    retq
   %b = call i512 @llvm.bitreverse.i512(i512 %a)
   ret i512 %b
 }
@@ -2555,6 +2678,52 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; X64GFNI-NEXT:    vmovdqu64 %zmm1, (%rdi)
 ; X64GFNI-NEXT:    vzeroupper
 ; X64GFNI-NEXT:    retq
+;
+; BMM-LABEL: large_promotion:
+; BMM:       # %bb.0:
+; BMM-NEXT:    movq %rdi, %rax
+; BMM-NEXT:    vmovq %rsi, %xmm0
+; BMM-NEXT:    vmovq %rdx, %xmm1
+; BMM-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; BMM-NEXT:    vmovq %rcx, %xmm1
+; BMM-NEXT:    vmovq %r8, %xmm2
+; BMM-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; BMM-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; BMM-NEXT:    vpshufd {{.*#+}} xmm1 = mem[2,3,0,1]
+; BMM-NEXT:    vmovq %r9, %xmm2
+; BMM-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
+; BMM-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
+; BMM-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; BMM-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
+; BMM-NEXT:    vpshufb {{.*#+}} zmm0 = zmm0[7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,23,22,21,20,19,18,17,16,31,30,29,28,27,26,25,24,39,38,37,36,35,34,33,32,47,46,45,44,43,42,41,40,55,54,53,52,51,50,49,48,63,62,61,60,59,58,57,56]
+; BMM-NEXT:    vbitrevb %zmm0, %zmm0
+; BMM-NEXT:    vpmovsxbw {{.*#+}} xmm1 = [23,24,25,26,23,28,29,30]
+; BMM-NEXT:    vpermw %zmm0, %zmm1, %zmm1
+; BMM-NEXT:    vpmovsxbw {{.*#+}} xmm2 = [15,16,17,18,15,20,21,22]
+; BMM-NEXT:    vpermw %zmm0, %zmm2, %zmm2
+; BMM-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
+; BMM-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
+; BMM-NEXT:    vpsrldq {{.*#+}} ymm2 = ymm2[6,7,8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,ymm2[22,23,24,25,26,27,28,29,30,31],zero,zero,zero,zero,zero,zero
+; BMM-NEXT:    vpunpcklqdq {{.*#+}} ymm1 = ymm1[0],ymm2[0],ymm1[2],ymm2[2]
+; BMM-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; BMM-NEXT:    vpmovsxbw {{.*#+}} ymm3 = [16,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
+; BMM-NEXT:    vpermi2w %ymm2, %ymm0, %ymm3
+; BMM-NEXT:    vinserti64x4 $1, %ymm1, %zmm3, %zmm1
+; BMM-NEXT:    vpbroadcastq {{[0-9]+}}(%rsp), %zmm2
+; BMM-NEXT:    vpshufb {{.*#+}} zmm2 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm2[63,62,61,60,59,58,57,56]
+; BMM-NEXT:    vbitrevb %zmm2, %zmm2
+; BMM-NEXT:    vextracti32x4 $3, %zmm2, %xmm2
+; BMM-NEXT:    vpextrq $1, %xmm2, %rcx
+; BMM-NEXT:    shrq $48, %rcx
+; BMM-NEXT:    vmovd %ecx, %xmm2
+; BMM-NEXT:    vporq %zmm1, %zmm2, %zmm1
+; BMM-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
+; BMM-NEXT:    vpextrq $1, %xmm0, %rcx
+; BMM-NEXT:    shrq $48, %rcx
+; BMM-NEXT:    movw %cx, 64(%rdi)
+; BMM-NEXT:    vmovdqu64 %zmm1, (%rdi)
+; BMM-NEXT:    vzeroupper
+; BMM-NEXT:    retq
   %Z = call i528 @llvm.bitreverse.i528(i528 %A)
   ret i528 %Z
 }
