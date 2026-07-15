@@ -66,6 +66,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 #### C++2c Feature Support
 
+- Clang now supports [P3533R2](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3533r2.html) (constexpr virtual inheritance).
+
 #### C++23 Feature Support
 
 #### C++20 Feature Support
@@ -156,6 +158,14 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 ### Target Specific Changes
 
 #### AMDGPU Support
+
+- Deprecated the following builtins in favor of `__builtin_amdgcn_ballot_w32` or
+  `__builtin_amdgcn_ballot_w64`:
+  - `__builtin_amdgcn_uicmp`
+  - `__builtin_amdgcn_uicmpl`
+  - `__builtin_amdgcn_sicmpl`
+  - `__builtin_amdgcn_fcmp`
+  - `__builtin_amdgcn_fcmpf`
 
 #### NVPTX Support
 
