@@ -6,6 +6,7 @@ add_entrypoint_object(
     ../wait.h
   DEPENDS
     libc.hdr.signal_macros
+    libc.hdr.types.pid_t
     libc.hdr.types.siginfo_t
     libc.include.sys_wait
     libc.include.sys_syscall
@@ -36,6 +37,7 @@ add_entrypoint_object(
     ../waitpid.h
   DEPENDS
     libc.hdr.signal_macros
+    libc.hdr.types.pid_t
     libc.hdr.types.siginfo_t
     libc.include.sys_wait
     libc.include.sys_syscall
