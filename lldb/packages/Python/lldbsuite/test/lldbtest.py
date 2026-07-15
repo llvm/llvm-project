@@ -825,25 +825,7 @@ class Base(unittest.TestCase):
         previous contents."""
         bdir = self.getBuildDir()
         if os.path.isdir(bdir) and not self.SHARED_BUILD_TESTCASE:
-            # Tolerate files vanishing mid-walk. Clang's implicit module
-            # build leaves behind `*.pcm.lock` lockfiles whose lifetime is
-            # tied to the holding process; a concurrent or just-exited
-            # clang can unlink one between rmtree's scandir and unlink,
-            # raising ENOENT. The dir is going away anyway, so treat
-            # already-gone entries as success.
-            def _ignore_enoent(func, path, exc_info):
-                if (
-                    isinstance(exc_info[1], OSError)
-                    and exc_info[1].errno == errno.ENOENT
-                ):
-                    return
-                raise exc_info[1]
-
-            # Delete via the \\?\ extended-length path form so rmtree can remove
-            # build artifacts whose full path exceeds MAX_PATH (260) on Windows.
-            shutil.rmtree(
-                lldbutil.get_extended_windows_path(bdir), onerror=_ignore_enoent
-            )
+            lldbutil.remove_tree(bdir)
         lldbutil.mkdir_p(bdir)
 
     def getBuildArtifact(self, name="a.out"):
@@ -2314,7 +2296,7 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
         with open(src, "w") as f:
             f.write(new_content)
 
-        self.addTearDownHook(lambda: os.remove(src))
+        self.addTearDownHook(lambda: os.remove(lldbutil.get_extended_windows_path(src)))
 
     def setUp(self):
         # Works with the test driver to conditionally skip tests via
@@ -3176,7 +3158,7 @@ FileCheck output:
 def remove_file(file, num_retries=1, sleep_duration=0.5):
     for i in range(num_retries + 1):
         try:
-            os.remove(file)
+            os.remove(lldbutil.get_extended_windows_path(file))
             return True
         except:
             time.sleep(sleep_duration)
