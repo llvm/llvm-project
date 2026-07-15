@@ -15,12 +15,14 @@
 
 ! The -std= option is accepted by both clang and flang, but its acceptable values differ between the two.
 ! A potential solution is to use -Xflang and -Xclang to pass the option to the right frontend; however, -Xclang is rejected.
+
 ! RUN: %clang --driver-mode=flang -### -std=f2018 %S/Inputs/one.f90 -std=c17 %S/Inputs/other.c 2>&1 | FileCheck --check-prefixes=MIXED-OPT %s
-! RUN: not %clang --driver-mode=flang -### -Xflang -std=f2018 %S/Inputs/one.f90 -Xclang -std=c17 %S/Inputs/other.c 2>&1 | FileCheck --check-prefixes=SEPARATE-MIXED-OPT %s
-! SEPARATE-MIXED-OPT: error: unknown argument '-Xclang'
 ! MIXED-OPT-LABEL: "{{[^"]*}}flang{{[^"/]*}}" "-fc1"
 ! MIXED-OPT: "-std=f2018"
 ! MIXED-OPT: "-std=c17"
 ! MIXED-OPT-LABEL: "{{[^"]*}}clang{{[^"/]*}}" "-cc1"
 ! MIXED-OPT-NOT: "-std=f2018"
 ! MIXED-OPT: "-std=c17"
+
+! RUN: not %clang --driver-mode=flang -### -Xflang -std=f2018 %S/Inputs/one.f90 -Xclang -std=c17 %S/Inputs/other.c 2>&1 | FileCheck --check-prefixes=SEPARATE-MIXED-OPT %s
+! SEPARATE-MIXED-OPT: error: unknown argument '-Xclang'
