@@ -27,7 +27,7 @@
 ; CYCLES-BEFORE-NEXT:    depth=1: entries(indirect1 indirect fallthrough)
 ; CYCLES-BEFORE-NEXT:        depth=2: entries(indirect fallthrough)
 ; CYCLES-AFTER-NEXT:  CycleInfo for function: switch_entry_multiple_targets1
-; CYCLES-AFTER-NEXT:     depth=1: entries(irr.guard) indirect1 indirect fallthrough irr.guard1 irr.guard2
+; CYCLES-AFTER-NEXT:     depth=1: entries(irr.guard) indirect1 indirect fallthrough irr.guard2 irr.guard1
 ; CYCLES-AFTER-NEXT:         depth=2: entries(irr.guard2) indirect fallthrough
 ;
 ; CYCLES-BEFORE-NEXT: CycleInfo for function: switch_header_no_indirect
@@ -65,7 +65,7 @@
 ; CYCLES-BEFORE-NEXT:    depth=1: entries(switch_header) switch_regular mid
 ; CYCLES-BEFORE-NEXT:        depth=2: entries(switch_regular mid)
 ; CYCLES-AFTER-NEXT:  CycleInfo for function: switch_header_and_regular
-; CYCLES-AFTER-NEXT:     depth=1: entries(switch_header) switch_regular mid switch_header.target.mid switch_header.target.switch_regular irr.guard
+; CYCLES-AFTER-NEXT:     depth=1: entries(switch_header) switch_regular mid irr.guard switch_header.target.mid switch_header.target.switch_regular
 ; CYCLES-AFTER-NEXT:         depth=2: entries(irr.guard) switch_regular mid
 ;
 ; CYCLES-BEFORE-NEXT: CycleInfo for function: switch_only
@@ -77,7 +77,7 @@
 ; CYCLES-BEFORE-NEXT:    depth=1: entries(sw2 block block1)
 ; CYCLES-BEFORE-NEXT:        depth=2: entries(block block1)
 ; CYCLES-AFTER-NEXT:  CycleInfo for function: entry_multiple_switch
-; CYCLES-AFTER-NEXT:     depth=1: entries(irr.guard) sw2 block block1 irr.guard1 sw2.target.block1 sw2.target.block irr.guard2
+; CYCLES-AFTER-NEXT:     depth=1: entries(irr.guard) sw2 block block1 irr.guard2 irr.guard1 sw2.target.block1 sw2.target.block
 ; CYCLES-AFTER-NEXT:         depth=2: entries(irr.guard2) block block1
 ;
 ; CYCLES-BEFORE-NEXT: CycleInfo for function: switch_exit_with_separate_entries
@@ -96,21 +96,21 @@
 ; CYCLES-BEFORE-NEXT:    depth=1: entries(sw3 sw1 sw2)
 ; CYCLES-BEFORE-NEXT:        depth=2: entries(sw1 sw2)
 ; CYCLES-AFTER-NEXT:  CycleInfo for function: switch_only_multiple
-; CYCLES-AFTER-NEXT:     depth=1: entries(irr.guard) sw3 sw1 sw2 sw2.target.sw3 sw1.target.sw3 irr.guard1 sw2.target.sw1 sw3.target.sw1 irr.guard2
+; CYCLES-AFTER-NEXT:     depth=1: entries(irr.guard) sw3 sw1 sw2 sw2.target.sw1 irr.guard2 sw2.target.sw3 sw1.target.sw3 irr.guard1 sw3.target.sw1
 ; CYCLES-AFTER-NEXT:         depth=2: entries(irr.guard2) sw1 sw2 sw2.target.sw1
 ;
 ; CYCLES-BEFORE-NEXT: CycleInfo for function: switch_bypass
 ; CYCLES-BEFORE-NEXT:    depth=1: entries(l1 sw) l2
 ; CYCLES-BEFORE-NEXT:        depth=2: entries(sw l2)
 ; CYCLES-AFTER-NEXT:  CycleInfo for function: switch_bypass
-; CYCLES-AFTER-NEXT:     depth=1: entries(irr.guard) l1 sw l2 sw.target.l1 irr.guard1
+; CYCLES-AFTER-NEXT:     depth=1: entries(irr.guard) l1 sw l2 irr.guard1 sw.target.l1
 ; CYCLES-AFTER-NEXT:         depth=2: entries(irr.guard1) sw l2
 ;
 ; CYCLES-BEFORE-NEXT: CycleInfo for function: switch_multiple_with_exit
 ; CYCLES-BEFORE-NEXT:    depth=1: entries(l3 l1 l2)
 ; CYCLES-BEFORE-NEXT:        depth=2: entries(l1 l2)
 ; CYCLES-AFTER-NEXT:  CycleInfo for function: switch_multiple_with_exit
-; CYCLES-AFTER-NEXT:     depth=1: entries(irr.guard) l3 l1 l2 irr.guard1 irr.guard2
+; CYCLES-AFTER-NEXT:     depth=1: entries(irr.guard) l3 l1 l2 irr.guard2 irr.guard1
 ; CYCLES-AFTER-NEXT:         depth=2: entries(irr.guard2) l1 l2
 ;
 ; CYCLES-BEFORE-NEXT: CycleInfo for function: switch_nested
@@ -119,7 +119,7 @@
 ; CYCLES-AFTER-NEXT:  CycleInfo for function: switch_nested
 ; CYCLES-AFTER-NEXT:     depth=1: entries(irr.guard) bb bh
 ; CYCLES-AFTER-NEXT:     depth=1: entries(irr.guard1) b h
-;
+
 define void @loop_1(i32 %Value, i1 %PredEntry, i1 %PredD) {
 ; CHECK-LABEL: define void @loop_1(
 ; CHECK-SAME: i32 [[VALUE:%.*]], i1 [[PREDENTRY:%.*]], i1 [[PREDD:%.*]]) {

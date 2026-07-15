@@ -738,7 +738,9 @@ BasicBlock *llvm::SplitMultiBrEdge(BasicBlock *MultiBrBlock, BasicBlock *Succ,
                                    DomTreeUpdater *DTU, CycleInfo *CI,
                                    LoopInfo *LI, bool *UpdatedLI) {
   Instruction *Term = MultiBrBlock->getTerminator();
-  assert(Term && "expected terminator");
+  assert((isa_and_present<SwitchInst>(Term) ||
+          isa_and_present<CallBrInst>(Term)) &&
+         "expected callbr or switch terminator");
   assert(SuccIdx < Term->getNumSuccessors() &&
          Succ == Term->getSuccessor(SuccIdx) && "invalid successor index");
 
@@ -765,7 +767,7 @@ BasicBlock *llvm::SplitMultiBrEdge(BasicBlock *MultiBrBlock, BasicBlock *Succ,
     // from the MultiBrBlock to the successor.
     for (PHINode &PN : Succ->phis()) {
       int BBIdx = PN.getBasicBlockIndex(MultiBrBlock);
-      assert(BBIdx != -1 && "expected incoming value form MultiBrBlock");
+      assert(BBIdx != -1 && "expected incoming value from MultiBrBlock");
       PN.setIncomingBlock(BBIdx, BrTarget);
     }
 

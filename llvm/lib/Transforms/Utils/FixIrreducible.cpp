@@ -292,13 +292,14 @@ static bool fixIrreducible(CycleRef C, CycleInfo &CI, DominatorTree &DT,
   }
 
   for (BasicBlock *P : Predecessors) {
-    if (isa<UncondBrInst>(P->getTerminator())) {
-      assert(P->getTerminator()->getSuccessor(0) == Header);
+    Instruction *Term = P->getTerminator();
+    if (isa<UncondBrInst>(Term)) {
+      assert(Term->getSuccessor(0) == Header);
       CHub.addBranch(P, Header);
 
       LLVM_DEBUG(dbgs() << "Added internal branch: " << printBasicBlock(P)
                         << " -> " << printBasicBlock(Header) << '\n');
-    } else if (CondBrInst *Branch = dyn_cast<CondBrInst>(P->getTerminator())) {
+    } else if (CondBrInst *Branch = dyn_cast<CondBrInst>(Term)) {
       BasicBlock *Succ0 = Branch->getSuccessor(0) == Header ? Header : nullptr;
       BasicBlock *Succ1 = Branch->getSuccessor(1) == Header ? Header : nullptr;
       assert(Succ0 || Succ1);
@@ -308,10 +309,8 @@ static bool fixIrreducible(CycleRef C, CycleInfo &CI, DominatorTree &DT,
                         << " -> " << printBasicBlock(Succ0)
                         << (Succ0 && Succ1 ? " " : "") << printBasicBlock(Succ1)
                         << '\n');
-    } else if (isa<CallBrInst>(P->getTerminator()) ||
-               isa<SwitchInst>(P->getTerminator())) {
+    } else if (isa<CallBrInst>(Term) || isa<SwitchInst>(Term)) {
       BasicBlock *NewSucc = nullptr;
-      Instruction *Term = P->getTerminator();
       for (unsigned I = 0; I < Term->getNumSuccessors(); ++I) {
         BasicBlock *Succ = Term->getSuccessor(I);
         if (Succ != Header)
@@ -340,14 +339,15 @@ static bool fixIrreducible(CycleRef C, CycleInfo &CI, DominatorTree &DT,
   }
 
   for (BasicBlock *P : Predecessors) {
-    if (UncondBrInst *Branch = dyn_cast<UncondBrInst>(P->getTerminator())) {
+    Instruction *Term = P->getTerminator();
+    if (UncondBrInst *Branch = dyn_cast<UncondBrInst>(Term)) {
       BasicBlock *Succ0 = Branch->getSuccessor();
       Succ0 = CI.contains(C, Succ0) ? Succ0 : nullptr;
       CHub.addBranch(P, Succ0);
 
       LLVM_DEBUG(dbgs() << "Added external branch: " << printBasicBlock(P)
                         << " -> " << printBasicBlock(Succ0) << '\n');
-    } else if (CondBrInst *Branch = dyn_cast<CondBrInst>(P->getTerminator())) {
+    } else if (CondBrInst *Branch = dyn_cast<CondBrInst>(Term)) {
       BasicBlock *Succ0 = Branch->getSuccessor(0);
       Succ0 = CI.contains(C, Succ0) ? Succ0 : nullptr;
       BasicBlock *Succ1 = Branch->getSuccessor(1);
@@ -358,10 +358,8 @@ static bool fixIrreducible(CycleRef C, CycleInfo &CI, DominatorTree &DT,
                         << " -> " << printBasicBlock(Succ0)
                         << (Succ0 && Succ1 ? " " : "") << printBasicBlock(Succ1)
                         << '\n');
-    } else if (isa<CallBrInst>(P->getTerminator()) ||
-               isa<SwitchInst>(P->getTerminator())) {
+    } else if (isa<CallBrInst>(Term) || isa<SwitchInst>(Term)) {
       SmallDenseMap<BasicBlock *, BasicBlock *> MultiBrTargets;
-      Instruction *Term = P->getTerminator();
       for (unsigned I = 0; I < Term->getNumSuccessors(); ++I) {
         BasicBlock *Succ = Term->getSuccessor(I);
         if (!CI.contains(C, Succ))

@@ -170,14 +170,15 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
   unsigned NumExitingBlocks = ExitingBlocks.size();
   for (unsigned I = 0; I < NumExitingBlocks; ++I) {
     BasicBlock *BB = ExitingBlocks[I];
-    if (UncondBrInst *Branch = dyn_cast<UncondBrInst>(BB->getTerminator())) {
+    Instruction *Term = BB->getTerminator();
+    if (UncondBrInst *Branch = dyn_cast<UncondBrInst>(Term)) {
       BasicBlock *Succ0 = Branch->getSuccessor(0);
       Succ0 = L->contains(Succ0) ? nullptr : Succ0;
       CHub.addBranch(BB, Succ0);
 
-      LLVM_DEBUG(dbgs() << "Added extiting branch: " << printBasicBlock(BB)
+      LLVM_DEBUG(dbgs() << "Added exiting branch: " << printBasicBlock(BB)
                         << " -> " << printBasicBlock(Succ0) << '\n');
-    } else if (CondBrInst *Branch = dyn_cast<CondBrInst>(BB->getTerminator())) {
+    } else if (CondBrInst *Branch = dyn_cast<CondBrInst>(Term)) {
       BasicBlock *Succ0 = Branch->getSuccessor(0);
       Succ0 = L->contains(Succ0) ? nullptr : Succ0;
 
@@ -185,14 +186,12 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
       Succ1 = L->contains(Succ1) ? nullptr : Succ1;
       CHub.addBranch(BB, Succ0, Succ1);
 
-      LLVM_DEBUG(dbgs() << "Added extiting branch: " << printBasicBlock(BB)
+      LLVM_DEBUG(dbgs() << "Added exiting branch: " << printBasicBlock(BB)
                         << " -> " << printBasicBlock(Succ0)
                         << (Succ0 && Succ1 ? " " : "") << printBasicBlock(Succ1)
                         << '\n');
-    } else if (isa<CallBrInst>(BB->getTerminator()) ||
-               isa<SwitchInst>(BB->getTerminator())) {
+    } else if (isa<CallBrInst>(Term) || isa<SwitchInst>(Term)) {
       SmallDenseMap<BasicBlock *, BasicBlock *> BrTargets;
-      Instruction *Term = BB->getTerminator();
       for (unsigned J = 0; J < Term->getNumSuccessors(); ++J) {
         BasicBlock *Succ = Term->getSuccessor(J);
         if (L->contains(Succ))
@@ -205,7 +204,7 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
                                                &DTU, nullptr, &LI, &UpdatedLI);
 
         if (!ExistingTarget) {
-          // SplitMutliBrEdge modifies the CFG because it creates an
+          // SplitMultiBrEdge modifies the CFG because it creates an
           // intermediate block. So we need to set the changed flag no matter
           // what the ControlFlowHub is going to do later.
           Changed = true;
@@ -219,7 +218,7 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
           // predecessors of the guard blocks, which, in the case of callbr or
           // switch terminator, are the new intermediate target blocks instead
           // of themselves. If only one exiting block is generated, the
-          // branchning block itself is overwritten, while further blocks are
+          // branching block itself is overwritten, while further blocks are
           // appended as additional exiting blocks.
           if (BrTargets.empty())
             ExitingBlocks[I] = NewSucc;
@@ -233,7 +232,9 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
                           << printBasicBlock(Succ) << '\n');
       }
     } else {
-      llvm_unreachable("unsupported block terminator");
+      reportFatalUsageError(
+          "unsupported block terminator: unify-loop-exits "
+          "only supports br, callbr, and switch instructions");
     }
   }
 
