@@ -244,6 +244,7 @@ static void copyMetadataForAtomic(Instruction &Dest,
     case LLVMContext::MD_tbaa:
     case LLVMContext::MD_tbaa_struct:
     case LLVMContext::MD_alias_scope:
+    case LLVMContext::MD_mem_cache_hint:
     case LLVMContext::MD_noalias:
     case LLVMContext::MD_noalias_addrspace:
     case LLVMContext::MD_access_group:
@@ -254,8 +255,6 @@ static void copyMetadataForAtomic(Instruction &Dest,
       if (ID == Ctx.getMDKindID("amdgpu.no.remote.memory"))
         Dest.setMetadata(ID, N);
       else if (ID == Ctx.getMDKindID("amdgpu.no.fine.grained.memory"))
-        Dest.setMetadata(ID, N);
-      else if (ID == Ctx.getMDKindID("aarch64.atomic.hint"))
         Dest.setMetadata(ID, N);
 
       // Losing amdgpu.ignore.denormal.mode, but it doesn't matter for current

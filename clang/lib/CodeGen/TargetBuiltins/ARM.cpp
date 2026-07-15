@@ -2106,11 +2106,15 @@ static Value *EmitAtomicStoreWithHintBuiltin(CodeGenFunction &CGF,
 
   // Attach the hint if valid
   if (getAtomicStoreHintFromMD(HintArg) != AArch64AtomicStoreHint::HINT_NONE) {
-    MDNode *HintMDVal =
-        MDNode::get(CGM.getLLVMContext(),
-                    llvm::ConstantAsMetadata::get(Builder.getInt32(HintArg)));
-    Store->setMetadata(CGM.getModule().getMDKindID("aarch64.atomic.hint"),
-                       HintMDVal);
+    LLVMContext &Ctx = CGM.getLLVMContext();
+    MDNode *AtomicHint = MDNode::get(
+        Ctx, {MDString::get(Ctx, "aarch64.atomic_hint"),
+              llvm::ConstantAsMetadata::get(Builder.getInt32(HintArg))});
+    MDNode *HintNode = MDNode::get(
+        CGM.getLLVMContext(),
+        {llvm::ConstantAsMetadata::get(Builder.getInt32(1)), AtomicHint});
+
+    Store->setMetadata(llvm::LLVMContext::MD_mem_cache_hint, HintNode);
   }
 
   return Store;
