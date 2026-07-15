@@ -811,9 +811,9 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
       SchedDom =
           isl_set_intersect_params(SchedDom, isl_set_copy(DefinedBehavior));
       Dom = isl_set_intersect_params(Dom, DefinedBehavior);
-      assert(isl_set_is_subset(SchedDom, AccDom) &&
+      assert(isl_set_is_subset(SchedDom, AccDom) != isl_bool_false &&
              "Access relation not defined on full schedule domain");
-      assert(isl_set_is_subset(Dom, AccDom) &&
+      assert(isl_set_is_subset(Dom, AccDom) != isl_bool_false &&
              "Access relation not defined on full domain");
       isl_set_free(AccDom);
       isl_set_free(SchedDom);
