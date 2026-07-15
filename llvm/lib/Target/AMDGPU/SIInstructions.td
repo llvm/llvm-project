@@ -3571,6 +3571,20 @@ def : GCNPat <
 >;
 
 def : GCNPat <
+  (v2i32 (UniformUnaryFrag<trunc> v2i64:$a)),
+  (v2i32 (REG_SEQUENCE SReg_64,
+         (i32 (EXTRACT_SUBREG $a, sub0)), sub0,
+         (i32 (EXTRACT_SUBREG $a, sub2)), sub1))
+>;
+
+def : GCNPat <
+  (v2i32 (DivergentUnaryFrag<trunc> v2i64:$a)),
+  (v2i32 (REG_SEQUENCE VReg_64,
+         (i32 (EXTRACT_SUBREG $a, sub0)), sub0,
+         (i32 (EXTRACT_SUBREG $a, sub2)), sub1))
+>;
+
+def : GCNPat <
   (i1 (UniformUnaryFrag<trunc> i32:$a)),
   (S_CMP_EQ_U32 (S_AND_B32 (i32 1), $a), (i32 1))
 >;

@@ -7,10 +7,10 @@ define void @ptr_induction(ptr %p, ptr noalias %q, ptr noalias %p.end) #0 {
 ; CHECK-LABEL: define void @ptr_induction(
 ; CHECK-SAME: ptr [[P:%.*]], ptr noalias [[Q:%.*]], ptr noalias [[P_END:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[P2:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[P_END1:%.*]] = ptrtoint ptr [[P_END]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[P_END1]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[P2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[P_END1]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP8]], 1
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x ptr> poison, ptr [[Q]], i64 0
@@ -22,7 +22,7 @@ define void @ptr_induction(ptr %p, ptr noalias %q, ptr noalias %p.end) #0 {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP2]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[P]], %[[VECTOR_PH]] ], [ [[PTR_IND7:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[TMP1]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[TMP3]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <vscale x 2 x i64> [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
@@ -63,15 +63,15 @@ define i1 @scalarize_ptr_induction(ptr %start, ptr %end, ptr noalias %dst, i1 %c
 ; CHECK-LABEL: define i1 @scalarize_ptr_induction(
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[END:%.*]], ptr noalias [[DST:%.*]], i1 [[C:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
 ; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -12
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[START]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[END1]], [[TMP4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP5]], -12
 ; CHECK-NEXT:    [[TMP2:%.*]] = udiv i64 [[TMP1]], 12
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
-; CHECK-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i8, ptr [[START]], i64 4
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i8, ptr [[START]], i64 4
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x ptr> poison, ptr [[DST]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 2 x ptr> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT6:%.*]] = insertelement <vscale x 2 x ptr> poison, ptr [[END]], i64 0

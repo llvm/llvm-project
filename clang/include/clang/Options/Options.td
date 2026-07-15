@@ -982,6 +982,14 @@ def _ssaf_compilation_unit_id :
     "produced SSAF TU summary. Required when '--ssaf-tu-summary-file=' is "
     "set.">,
   MarshallingInfoString<SSAFOpts<"CompilationUnitId">>;
+def _ssaf_include_local_entities :
+  Flag<["--"], "ssaf-include-local-entities">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<
+    "Include block-scope (function-local) declarations in extracted SSAF "
+    "summaries. By default they are omitted.">,
+  MarshallingInfoFlag<SSAFOpts<"IncludeLocalEntities">>;
 def Xarch__
     : JoinedAndSeparate<["-"], "Xarch_">,
       Flags<[NoXarchOption]>,
@@ -6093,6 +6101,12 @@ defm backchain : BoolMOption<"backchain",
   PosFlag<SetTrue, [], [ClangOption], "Link stack frames through backchain on System Z">,
   NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option]>>;
 
+defm zos_ppa1_name : BoolMOption<"zos-ppa1-name",
+  CodeGenOpts<"ZOSPPA1Name">, DefaultTrue,
+  PosFlag<SetTrue, [], [], "Emit the function name in PPA1 on z/OS">,
+  NegFlag<SetFalse, [], [], "Do not emit the function name in PPA1 on z/OS">,
+  BothFlags<[TargetSpecific], [ClangOption, CC1Option]>>;
+
 def mno_warn_nonportable_cfstrings : Flag<["-"], "mno-warn-nonportable-cfstrings">, Group<m_Group>;
 def mno_omit_leaf_frame_pointer : Flag<["-"], "mno-omit-leaf-frame-pointer">, Group<m_Group>;
 def momit_leaf_frame_pointer : Flag<["-"], "momit-leaf-frame-pointer">, Group<m_Group>,
@@ -9739,6 +9753,9 @@ def dxc_Zss : DXCFlag<"Zss">,
               HelpText<"Compute Shader Hash considering source information">;
 def dxc_Zsb : DXCFlag<"Zsb">,
               HelpText<"Compute Shader Hash considering only output binary">;
+def dxc_source_in_debug_module
+    : DXCFlag<"Qsource_in_debug_module">,
+      HelpText<"Embed source code into PDB debug module">;
 def dxil_validator_version : Option<["/", "-"], "validator-version", KIND_SEPARATE>,
   Group<dxc_Group>, Flags<[HelpHidden]>,
   Visibility<[DXCOption, ClangOption, CC1Option]>,
