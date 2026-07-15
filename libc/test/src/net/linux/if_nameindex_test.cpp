@@ -25,7 +25,7 @@
 #include "src/__support/fixedvector.h"
 #include "src/net/if_freenameindex.h"
 #include "src/net/if_nameindex.h"
-#include "src/net/linux/if_nameindex.h"
+#include "src/net/linux/if_nameindex_impl.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/memory_utils/inline_memset.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
@@ -43,6 +43,7 @@ using LIBC_NAMESPACE::cpp::string;
 using LIBC_NAMESPACE::cpp::string_view;
 using LIBC_NAMESPACE::cpp::tuple;
 
+// TODO: Add optional::value_or, then return optional<T>.
 template <typename T, size_t CAPACITY>
 static T
 pop_front_or(FixedVector<T, CAPACITY> &vec,
@@ -162,10 +163,8 @@ struct LlvmLibcIfNameIndexSocketTest : public LlvmLibcIfNameIndexTest {
   }
 };
 
-} // namespace
-
-FakeNetworkSyscallPolicyData LlvmLibcIfNameIndexTest::policy_data;
-
+/// A helper struct used to construct netlink messages. Name is the attribute
+/// we're most interested in.
 struct AttrName {
   string_view name;
   bool null_terminate = true;
@@ -178,6 +177,9 @@ struct AttrName {
   static constexpr uint16_t TYPE = IFLA_IFNAME;
 };
 
+/// A helper struct used to construct netlink messages with integer attributes.
+/// The attributes themselves are not important. We're just testing that we can
+/// skip over them correctly.
 template <uint16_t ATTR_TYPE> struct AttrInt {
   unsigned int value;
   size_t payload_len() const { return sizeof(unsigned int); }
@@ -186,9 +188,12 @@ template <uint16_t ATTR_TYPE> struct AttrInt {
   }
   static constexpr uint16_t TYPE = ATTR_TYPE;
 };
-
 using AttrMtu = AttrInt<IFLA_MTU>;
 using AttrTxqlen = AttrInt<IFLA_TXQLEN>;
+
+} // namespace
+
+FakeNetworkSyscallPolicyData LlvmLibcIfNameIndexTest::policy_data;
 
 template <typename... Attrs>
 static size_t build_ifinfomsg_packet(uint8_t *buf, unsigned int index,

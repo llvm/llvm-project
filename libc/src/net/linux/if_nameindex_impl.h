@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_NET_LINUX_IF_NAMEINDEX_H
-#define LLVM_LIBC_SRC_NET_LINUX_IF_NAMEINDEX_H
+#ifndef LLVM_LIBC_SRC_NET_LINUX_IF_NAMEINDEX_IMPL_H
+#define LLVM_LIBC_SRC_NET_LINUX_IF_NAMEINDEX_IMPL_H
 
 #include "hdr/errno_macros.h"
 #include "hdr/net_if_macros.h"
@@ -35,14 +35,14 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace net {
 
-template <typename Policy> ErrorOr<struct if_nameindex *> if_nameindex() {
-  ErrorOr<int> fd_or_err =
-      Policy::socket(AF_NETLINK, SOCK_RAW | SOCK_CLOEXEC, NETLINK_ROUTE);
-  if (!fd_or_err.has_value())
-    return Error(fd_or_err.error());
-  int fd = *fd_or_err;
-  cpp::scope_exit close_fd([fd]() { Policy::close(fd); });
-
+namespace detail {
+/// Sends a RTM_GETLINK dump request packet on the given socket. The kernel will
+/// respond with one or more messages containing the list of network interfaces
+/// and their attributes.
+template <typename Policy>
+ErrorOr<ssize_t> send_netlink_dump_request(int sockfd) {
+  // The message consists of a standard netlink header followed by the
+  // RTM_GETLINK payload.
   struct {
     struct nlmsghdr nlh;
     struct ifinfomsg ifm;
@@ -53,12 +53,28 @@ template <typename Policy> ErrorOr<struct if_nameindex *> if_nameindex() {
   req.nlh.nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
   req.ifm.ifi_family = AF_UNSPEC;
 
-  ErrorOr<ssize_t> send_res =
-      Policy::sendto(fd, &req, req.nlh.nlmsg_len, 0, nullptr, 0);
+  return Policy::sendto(sockfd, &req, req.nlh.nlmsg_len, 0, nullptr, 0);
+}
+
+/// A reasonable buffer size for netlink messages (see NLMSG_GOODSIZE in the
+/// kernel).
+constexpr size_t NLMSG_BUFFER_SIZE = 8192;
+} // namespace detail
+
+template <typename Policy> ErrorOr<struct if_nameindex *> if_nameindex() {
+  ErrorOr<int> fd_or_err =
+      Policy::socket(AF_NETLINK, SOCK_RAW | SOCK_CLOEXEC, NETLINK_ROUTE);
+  if (!fd_or_err.has_value())
+    return Error(fd_or_err.error());
+  int fd = *fd_or_err;
+  cpp::scope_exit close_fd([fd]() { Policy::close(fd); });
+
+  ErrorOr<ssize_t> send_res = detail::send_netlink_dump_request<Policy>(fd);
   if (!send_res.has_value())
     return Error(send_res.error());
 
-  alignas(struct nlmsghdr) uint8_t buf[4096];
+  // TODO: Figure out if we need to dynamically allocate a buffer.
+  alignas(struct nlmsghdr) uint8_t buf[detail::NLMSG_BUFFER_SIZE];
   ErrorOr<ssize_t> recv_res =
       Policy::recvfrom(fd, buf, sizeof(buf), 0, nullptr, nullptr);
   if (!recv_res.has_value())
@@ -100,35 +116,35 @@ template <typename Policy> ErrorOr<struct if_nameindex *> if_nameindex() {
     auto *rta = reinterpret_cast<struct rtattr *>(
         ifm_payload.subspan(NLMSG_ALIGN(sizeof(struct ifinfomsg))).data());
     for (; RTA_OK(rta, attrlen); rta = RTA_NEXT(rta, attrlen)) {
-      if (rta->rta_type == IFLA_IFNAME) {
-        size_t rta_payload_len = RTA_PAYLOAD(rta);
-        auto index = static_cast<unsigned int>(ifm->ifi_index);
-        const char *name_data = reinterpret_cast<const char *>(RTA_DATA(rta));
-        size_t name_len = internal::strnlen(name_data, rta_payload_len);
+      if (rta->rta_type != IFLA_IFNAME)
+        continue;
 
-        size_t total_size = 2 * sizeof(struct if_nameindex) + name_len + 1;
-        AllocChecker ac;
-        uint8_t *buffer = new (ac) uint8_t[total_size];
-        if (!ac)
-          return Error(ENOBUFS);
+      size_t rta_payload_len = RTA_PAYLOAD(rta);
+      auto index = static_cast<unsigned int>(ifm->ifi_index);
+      const char *name_data = reinterpret_cast<const char *>(RTA_DATA(rta));
+      size_t name_len = internal::strnlen(name_data, rta_payload_len);
 
-        cpp::span<uint8_t> buffer_span(buffer, total_size);
-        cpp::span<struct if_nameindex> result(
-            reinterpret_cast<struct if_nameindex *>(buffer_span.data()), 2);
-        cpp::span<char> string_span(
-            reinterpret_cast<char *>(result.end()),
-            reinterpret_cast<char *>(buffer_span.end()));
+      size_t total_size = 2 * sizeof(struct if_nameindex) + name_len + 1;
+      AllocChecker ac;
+      uint8_t *buffer = new (ac) uint8_t[total_size];
+      if (!ac)
+        return Error(ENOBUFS);
 
-        result[0].if_index = index;
-        result[0].if_name = string_span.data();
-        inline_memcpy(string_span.data(), name_data, name_len);
-        string_span[name_len] = '\0';
+      cpp::span<uint8_t> buffer_span(buffer, total_size);
+      cpp::span<struct if_nameindex> result(
+          reinterpret_cast<struct if_nameindex *>(buffer_span.data()), 2);
+      cpp::span<char> string_span(reinterpret_cast<char *>(result.end()),
+                                  reinterpret_cast<char *>(buffer_span.end()));
 
-        result[1].if_index = 0;
-        result[1].if_name = nullptr;
+      result[0].if_index = index;
+      result[0].if_name = string_span.data();
+      inline_memcpy(string_span.data(), name_data, name_len);
+      string_span[name_len] = '\0';
 
-        return result.data();
-      }
+      result[1].if_index = 0;
+      result[1].if_name = nullptr;
+
+      return result.data();
     }
   }
 
@@ -145,4 +161,4 @@ template <typename Policy> ErrorOr<struct if_nameindex *> if_nameindex() {
 } // namespace net
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_NET_LINUX_IF_NAMEINDEX_H
+#endif // LLVM_LIBC_SRC_NET_LINUX_IF_NAMEINDEX_IMPL_H

@@ -44,9 +44,9 @@ add_entrypoint_object(
 )
 
 add_header_library(
-  if_nameindex_internal
+  if_nameindex_impl
   HDRS
-    if_nameindex.h
+    if_nameindex_impl.h
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.net_if_macros
@@ -71,7 +71,7 @@ add_entrypoint_object(
   HDRS
     ../if_nameindex.h
   DEPENDS
-    .if_nameindex_internal
+    .if_nameindex_impl
     libc.hdr.types.struct_if_nameindex
     libc.src.__support.OSUtil.linux.network_syscall_policy
     libc.src.__support.common

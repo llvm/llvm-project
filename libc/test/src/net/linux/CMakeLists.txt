@@ -47,7 +47,7 @@ add_libc_unittest(
     libc.src.__support.fixedvector
     libc.src.net.if_freenameindex
     libc.src.net.if_nameindex
-    libc.src.net.linux.if_nameindex_internal
+    libc.src.net.linux.if_nameindex_impl
     libc.src.string.memory_utils.inline_memcpy
     libc.src.string.memory_utils.inline_memset
     libc.test.UnitTest.ErrnoCheckingTest
