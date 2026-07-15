@@ -92,9 +92,9 @@ public:
   /// Barrett Reduction.
   /// Returns a pair of Mu of bitwidth TC+1 and FullGenPoly of bitwidth BW+1.
   /// Mu is used in the first clmul operation. Mu = floor(x^(BW+TC) / P(x)).
-  /// FullGenPoly is used in the second clmul operation, and is \p Info.RHS
-  /// with the implied BW'th bit.
-  /// Endianness is accounted for using \p Info.IsBigEndian.
+  /// FullGenPoly is used in the second clmul operation, and is Info.RHS with
+  /// the implied BW'th bit.
+  /// Endianness is accounted for using Info.IsBigEndian.
   LLVM_ABI static std::pair<APInt, APInt>
   genBarrettConstants(const PolynomialInfo &Info);
 
