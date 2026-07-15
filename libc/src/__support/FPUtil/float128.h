@@ -40,7 +40,6 @@ struct Float128 {
       bits = fputil::cast<Float128>(value).bits;
     } else if constexpr (cpp::is_integral_v<T>) {
       using unsigned_t = cpp::make_unsigned_t<T>;
-      ;
       Sign sign = Sign::POS;
       auto unsigned_value = static_cast<usnsigned_t>(value);
 
