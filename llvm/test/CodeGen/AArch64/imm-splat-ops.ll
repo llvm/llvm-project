@@ -11,8 +11,9 @@ define <2 x i32> @and_v2i32(<2 x i32> %a) {
 ;
 ; CHECK-SVE-LABEL: and_v2i32:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    fmov v1.2s, #1.00000000
-; CHECK-SVE-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    and z0.s, z0.s, #0x3f800000
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %and = and <2 x i32> %a, splat (i32 1065353216)
@@ -46,8 +47,9 @@ define <2 x i32> @and_low_8_v2i32(<2 x i32> %a) {
 ;
 ; CHECK-SVE-LABEL: and_low_8_v2i32:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi d1, #0x0000ff000000ff
-; CHECK-SVE-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    and z0.s, z0.s, #0xff
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %and = and <2 x i32> %a, splat (i32 255)
@@ -81,8 +83,9 @@ define <2 x i32> @and_low_16_v2i32(<2 x i32> %a) {
 ;
 ; CHECK-SVE-LABEL: and_low_16_v2i32:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi d1, #0x00ffff0000ffff
-; CHECK-SVE-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    and z0.s, z0.s, #0xffff
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %and = and <2 x i32> %a, splat (i32 65535)
@@ -153,8 +156,9 @@ define <2 x i32> @xor_v2i32(<2 x i32> %a) {
 ;
 ; CHECK-SVE-LABEL: xor_v2i32:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.2s, #127
-; CHECK-SVE-NEXT:    eor v0.8b, v0.8b, v1.8b
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    eor z0.s, z0.s, #0x7f
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %and = xor <2 x i32> %a, splat (i32 127)
@@ -188,8 +192,9 @@ define <2 x i32> @or_v2i32(<2 x i32> %a) {
 ;
 ; CHECK-SVE-LABEL: or_v2i32:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    mvni v1.2s, #127
-; CHECK-SVE-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    orr z0.s, z0.s, #0xffffff80
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %or = or <2 x i32> %a, splat (i32 -128)
@@ -224,9 +229,9 @@ define <1 x i64> @add_v1i64(<1 x i64> %a) {
 ;
 ; CHECK-SVE-LABEL: add_v1i64:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    mov w8, #33 // =0x21
-; CHECK-SVE-NEXT:    fmov d1, x8
-; CHECK-SVE-NEXT:    add d0, d0, d1
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    add z0.d, z0.d, #33 // =0x21
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %add = add <1 x i64> %a, splat (i64 33)
@@ -261,8 +266,9 @@ define <2 x i32> @add_v2i32(<2 x i32> %a) {
 ;
 ; CHECK-SVE-LABEL: add_v2i32:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.2s, #1
-; CHECK-SVE-NEXT:    add v0.2s, v0.2s, v1.2s
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    add z0.s, z0.s, #1 // =0x1
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %add = add <2 x i32> %a, splat (i32 1)
@@ -296,8 +302,9 @@ define <4 x i16> @add_v4i16(<4 x i16> %a) {
 ;
 ; CHECK-SVE-LABEL: add_v4i16:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.4h, #16
-; CHECK-SVE-NEXT:    add v0.4h, v0.4h, v1.4h
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    add z0.h, z0.h, #16 // =0x10
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %add = add <4 x i16> %a, splat (i16 16)
@@ -331,8 +338,9 @@ define <8 x i8> @add_v8i8(<8 x i8> %a) {
 ;
 ; CHECK-SVE-LABEL: add_v8i8:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.8b, #2
-; CHECK-SVE-NEXT:    add v0.8b, v0.8b, v1.8b
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    add z0.b, z0.b, #2 // =0x2
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %add = add <8 x i8> %a, splat (i8 2)
@@ -386,9 +394,9 @@ define <1 x i64> @sub_v1i64(<1 x i64> %a) {
 ;
 ; CHECK-SVE-LABEL: sub_v1i64:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    mov w8, #64 // =0x40
-; CHECK-SVE-NEXT:    fmov d1, x8
-; CHECK-SVE-NEXT:    sub d0, d0, d1
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    sub z0.d, z0.d, #64 // =0x40
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %sub = sub <1 x i64> %a, splat (i64 64)
@@ -423,8 +431,9 @@ define <2 x i32> @sub_v2i32(<2 x i32> %a) {
 ;
 ; CHECK-SVE-LABEL: sub_v2i32:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.2s, #2, lsl #8
-; CHECK-SVE-NEXT:    sub v0.2s, v0.2s, v1.2s
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    sub z0.s, z0.s, #512 // =0x200
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %sub = sub <2 x i32> %a, splat (i32 512)
@@ -458,8 +467,9 @@ define <4 x i16> @sub_v4i16(<4 x i16> %a) {
 ;
 ; CHECK-SVE-LABEL: sub_v4i16:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.4h, #99
-; CHECK-SVE-NEXT:    sub v0.4h, v0.4h, v1.4h
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    sub z0.h, z0.h, #99 // =0x63
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %sub = sub <4 x i16> %a, splat (i16 99)
@@ -493,8 +503,9 @@ define <8 x i8> @sub_v8i8(<8 x i8> %a) {
 ;
 ; CHECK-SVE-LABEL: sub_v8i8:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.8b, #7
-; CHECK-SVE-NEXT:    sub v0.8b, v0.8b, v1.8b
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    sub z0.b, z0.b, #7 // =0x7
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %sub = sub <8 x i8> %a, splat (i8 7)
@@ -572,8 +583,9 @@ define <2 x i32> @mul_v2i32(<2 x i32> %a) {
 ;
 ; CHECK-SVE-LABEL: mul_v2i32:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.2s, #33
-; CHECK-SVE-NEXT:    mul v0.2s, v0.2s, v1.2s
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    mul z0.s, z0.s, #33
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %mul = mul <2 x i32> %a, splat (i32 33)
@@ -607,8 +619,9 @@ define <4 x i16> @mul_v4i16(<4 x i16> %a) {
 ;
 ; CHECK-SVE-LABEL: mul_v4i16:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    mvni v1.4h, #32
-; CHECK-SVE-NEXT:    mul v0.4h, v0.4h, v1.4h
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    mul z0.h, z0.h, #-33
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %mul = mul <4 x i16> %a, splat (i16 -33)
@@ -642,8 +655,9 @@ define <8 x i8> @mul_v8i8(<8 x i8> %a) {
 ;
 ; CHECK-SVE-LABEL: mul_v8i8:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v1.8b, #253
-; CHECK-SVE-NEXT:    mul v0.8b, v0.8b, v1.8b
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    mul z0.b, z0.b, #-3
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
   %mul = mul <8 x i8> %a, splat (i8 -3)
