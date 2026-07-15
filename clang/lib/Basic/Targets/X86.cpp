@@ -175,11 +175,12 @@ bool X86TargetInfo::initFeatureMap(
     }
 
     if (Feature == "+apxf" || Feature == "-apxf") {
-      std::vector<StringRef> APXFeatures;
-      llvm::X86::expandAPXFeatures(Feature == "-apxf", getTriple().isOSWindows(),
-                                   APXFeatures);
-      UpdatedFeaturesVec.insert(UpdatedFeaturesVec.end(), APXFeatures.begin(),
-                                APXFeatures.end());
+      char Sign = Feature[0];
+      for (const char *Sub : {"egpr", "push2pop2", "ppx", "ndd", "ccmp", "nf",
+                              "zu", "jmpabs"})
+        UpdatedFeaturesVec.push_back(Sign + std::string(Sub));
+      if (Sign == '-')
+        UpdatedFeaturesVec.push_back("-cf");
       continue;
     }
 

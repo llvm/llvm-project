@@ -37,7 +37,7 @@ int __attribute__((target("sha"))) good_target_but_not_for_fmv() { return 5; }
 
 // 'apxf' and the individual APX sub-features are all valid in a 'target'
 // attribute when used to enable the feature on a single (non-multiversioned)
-// function, so none of these produce a diagnostic. 
+// function, so none of these produce a diagnostic.
 int __attribute__((target("apxf"))) apx_supported(void) { return 6; }
 int __attribute__((target("no-apxf"))) no_apx_supported(void) { return 7; }
 int __attribute__((target("egpr"))) egpr_enabled(void) { return 8; }
