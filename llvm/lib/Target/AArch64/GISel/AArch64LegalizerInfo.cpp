@@ -934,7 +934,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .moreElementsToNextPow2(0)
       .widenScalarOrEltToNextPow2OrMinSize(0)
       .minScalar(0, s32)
-      .widenScalarOrEltToNextPow2OrMinSize(1, /*MinSize=*/HasFP16 ? 16 : 32)
+      .widenScalarIf(
+          [HasFP16](const LegalityQuery &Query) {
+            return (!HasFP16 && Query.Types[1].getScalarType().isFloat16()) ||
+                   Query.Types[1].getScalarType().isBFloat16();
+          },
+          changeElementTo(1, f32))
       .widenScalarIf(
           [=](const LegalityQuery &Query) {
             return Query.Types[0].getScalarSizeInBits() <= 64 &&
@@ -980,7 +985,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .moreElementsToNextPow2(0)
       .widenScalarToNextPow2(0, /*MinSize=*/32)
       .minScalar(0, s32)
-      .widenScalarOrEltToNextPow2OrMinSize(1, /*MinSize=*/HasFP16 ? 16 : 32)
+      .widenScalarIf(
+          [HasFP16](const LegalityQuery &Query) {
+            return (!HasFP16 && Query.Types[1].getScalarType().isFloat16()) ||
+                   Query.Types[1].getScalarType().isBFloat16();
+          },
+          changeElementTo(1, f32))
       .widenScalarIf(
           [=](const LegalityQuery &Query) {
             unsigned ITySize = Query.Types[0].getScalarSizeInBits();
