@@ -325,8 +325,8 @@ static bool warnByDefaultOnWrongCase(StringRef Include) {
 ///
 /// \returns a similar string if exists. If no similar string exists,
 /// returns std::nullopt.
-static std::optional<StringRef>
-findSimilarStr(StringRef LHS, const std::vector<StringRef> &Candidates) {
+static std::optional<StringRef> findSimilarStr(StringRef LHS,
+                                               ArrayRef<StringRef> Candidates) {
   // We need to check if `Candidates` has the exact case-insensitive string
   // because the Levenshtein distance match does not care about it.
   for (StringRef C : Candidates) {
@@ -515,25 +515,23 @@ void Preprocessor::SuggestTypoedDirective(const Token &Tok,
   // directives.
   if (getLangOpts().AsmPreprocessor) return;
 
-  // A known non-conditional directive (e.g. #include or #define inside a
-  // skipped conditional block) is not a typo of a conditional don't scan
-  // it. #elifdef/#elifndef stay eligible so that pre-C23/C++23 code still
-  // gets the "did you mean #elif" suggestion.
-  if (tok::PPKeywordKind K = getIdentifierInfo(Directive)->getPPKeywordID();
-      K != tok::pp_not_keyword && K != tok::pp_elifdef && K != tok::pp_elifndef)
-    return;
-
   // The scan only feeds this diagnostic; skip it when the diagnostic is
   // disabled at this location (e.g. -w).
   if (getDiagnostics().isIgnored(diag::warn_pp_invalid_directive,
                                  Tok.getLocation()))
     return;
 
-  std::vector<StringRef> Candidates = {
-      "if", "ifdef", "ifndef", "elif", "else", "endif"
-  };
-  if (LangOpts.C23 || LangOpts.CPlusPlus23)
-    Candidates.insert(Candidates.end(), {"elifdef", "elifndef"});
+  // A known directive (e.g. #include or #define inside a skipped conditional
+  // block) is not a typo of a conditional; don't scan it.
+  if (getIdentifierInfo(Directive)->getPPKeywordID() != tok::pp_not_keyword)
+    return;
+
+  static constexpr StringRef AllCandidates[] = {
+      "if", "ifdef", "ifndef", "elif", "else", "endif", "elifdef", "elifndef"};
+  ArrayRef<StringRef> Candidates(AllCandidates);
+  // #elifdef/#elifndef are only suggested in C23/C++23 and later.
+  if (!LangOpts.C23 && !LangOpts.CPlusPlus23)
+    Candidates = Candidates.drop_back(2);
 
   if (std::optional<StringRef> Sugg = findSimilarStr(Directive, Candidates)) {
     // Directive cannot be coming from macro.
