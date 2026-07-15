@@ -738,9 +738,8 @@ define i1 @sle_a_known_pos(i8 %a, i8 %b) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A_POS]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[A]], [[B:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[A]], [[B]]
-; CHECK-NEXT:    [[RES:%.*]] = xor i1 [[T_1]], [[C_1]]
+; CHECK-NEXT:    [[RES:%.*]] = xor i1 true, [[C_1]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
 entry:
@@ -761,9 +760,7 @@ define i1 @sle_first_op_known_pos(i8 %idx) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 2, [[IDX:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 2, [[IDX]]
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i8 1, [[IDX]]
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 3, [[IDX]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_1]]
 ; CHECK-NEXT:    ret i1 [[RES_2]]
@@ -788,8 +785,7 @@ define i1 @sle_len_known_positive_via_idx(i8 %len, i8 %idx) {
 ; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[IDX_POS]], [[IDX_SLE_LEN]]
 ; CHECK-NEXT:    br i1 [[AND_1]], label [[THEN_1:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then.1:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[IDX]], [[LEN]]
-; CHECK-NEXT:    [[RES:%.*]] = xor i1 [[T_1]], true
+; CHECK-NEXT:    [[RES:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    ret i1 [[RES]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
