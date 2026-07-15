@@ -208,6 +208,24 @@ define spir_kernel void @sdiv_and_srem_i4_shared(i4 %x, i4 %y, ptr addrspace(1) 
 }
 
 ; ----------------------------------------------------------------------------
+; trunc i64 to i24 feeding icmp slt: the i24 value is widened to i32 and must
+; be sign-extended in the widened register before the signed compare.
+; CHECK: OpFunction
+; CHECK: %[[#A:]] = OpFunctionParameter
+; CHECK: OpFunctionParameter
+; CHECK: %[[#T:]] = OpUConvert %[[#I32]] {{%[0-9]+}}
+; CHECK: %[[#SHL_T:]] = OpShiftLeftLogical %[[#I32]] %[[#T]] %[[#K8]]
+; CHECK: %[[#SX_T:]] = OpShiftRightArithmetic %[[#I32]] %[[#SHL_T]] %[[#K8]]
+; CHECK: OpSLessThan {{%[0-9]+}} %[[#SX_T]] {{%[0-9]+}}
+define spir_kernel void @trunc_i24_icmp_slt(i64 %a, ptr addrspace(1) %out) {
+  %t = trunc i64 %a to i24
+  %c = icmp slt i24 %t, 0
+  %r = sext i1 %c to i8
+  store i8 %r, ptr addrspace(1) %out
+  ret void
+}
+
+; ----------------------------------------------------------------------------
 ; Negative test: unsigned compare must NOT emit sign-extension shifts.
 ; CHECK: OpFunction
 ; CHECK: %[[#X7:]] = OpFunctionParameter

@@ -564,6 +564,9 @@ static void widenSignSensitiveOps(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     return SExted;
   };
 
+  // TODO: when the same narrow vreg feeds multiple sign-sensitive ops (e.g.
+  // sdiv %x, %y and srem %x, %y), emit one shared G_SEXT_INREG instead of one
+  // per use.
   for (MachineInstr *MI : Info.Worklist) {
     unsigned N = MI->getNumOperands();
     MachineOperand &LHS = MI->getOperand(N - 2);
