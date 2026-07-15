@@ -91,8 +91,8 @@ STATISTIC(NumEliminated, "Number of tail calls removed");
 STATISTIC(NumRetDuped,   "Number of return duplicated");
 STATISTIC(NumAccumAdded, "Number of accumulators introduced");
 STATISTIC(NumTREPreventedCold,
-          "Number of tail calls/recursions prevented due to cold calling "
-          "convention or attribute");
+          "Number of tail calls/recursion eliminations prevented due to cold "
+          "calling convention or attribute");
 
 static cl::opt<bool> ForceDisableBFI(
     "tre-disable-entrycount-recompute", cl::init(false), cl::Hidden,
@@ -124,9 +124,6 @@ static bool shouldDisableTailCallsForCold(const CallBase *CB,
 
   if (!PSI || !PSI->hasProfileSummary())
     return false;
-
-  if (Caller && PSI->isFunctionEntryCold(Caller))
-    return true;
 
   if (CB && BFI && PSI->isColdCallSite(*CB, BFI))
     return true;
@@ -298,14 +295,12 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE,
 
       // Special-case operand bundles "clang.arc.attachedcall", "ptrauth", and
       // "kcfi".
-      bool IsNoTail =
-          CI->isNoTailCall() ||
-          shouldDisableTailCallsForCold(CI, &F, PSI, BFI) ||
-          CI->hasOperandBundlesOtherThan(
-              {LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_ptrauth,
-               LLVMContext::OB_kcfi});
-      if (!CI->isNoTailCall() &&
-          shouldDisableTailCallsForCold(CI, &F, PSI, BFI))
+      bool DisableForCold = shouldDisableTailCallsForCold(CI, &F, PSI, BFI);
+      bool IsNoTail = CI->isNoTailCall() || DisableForCold ||
+                      CI->hasOperandBundlesOtherThan(
+                          {LLVMContext::OB_clang_arc_attachedcall,
+                           LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi});
+      if (!CI->isNoTailCall() && DisableForCold)
         ++NumTREPreventedCold;
 
       if (!IsNoTail && CI->doesNotAccessMemory()) {
