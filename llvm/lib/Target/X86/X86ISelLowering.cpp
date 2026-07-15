@@ -61610,7 +61610,7 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   }
 
   // Attempt to recursively combine to a shuffle.
-  if (isTargetShuffle(peekThroughBitcasts(Vec).getOpcode()) &&
+  if (isTargetShuffle(peekThroughBitcastsAndExtracts(Vec).getOpcode()) &&
       isTargetShuffle(peekThroughBitcastsAndExtracts(SubVec).getOpcode())) {
     SDValue Op(N, 0);
     if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
