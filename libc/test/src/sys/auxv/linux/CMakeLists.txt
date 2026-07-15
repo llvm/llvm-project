@@ -6,7 +6,7 @@ add_libc_unittest(
   SRCS
     getauxval_test.cpp
   DEPENDS
-    libc.include.sys_auxv
+    libc.hdr.sys_auxv_macros
     libc.src.errno.errno
     libc.src.sys.auxv.getauxval
     libc.test.UnitTest.ErrnoCheckingTest

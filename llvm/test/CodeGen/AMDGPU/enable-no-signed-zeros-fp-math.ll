@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck --check-prefixes=GCN,GCN-FMF,GCN-SAFE %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck --check-prefixes=GCN,GCN-FMF,GCN-SAFE %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 

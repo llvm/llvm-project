@@ -236,7 +236,7 @@ void overrides_potential(bool cond) {
   {
     MyObj s;
     q = &s;       // expected-warning {{does not live long enough}}
-    p = q;
+    p = q;        // expected-note {{local variable 'q' aliases the storage of local variable 's'}}
   }               // expected-note {{local variable 's' is destroyed here}}
 
   if (cond) {
@@ -448,7 +448,7 @@ void loan_from_previous_iteration(MyObj safe, bool condition) {
     p = &x;     // expected-warning {{does not live long enough}}
 
     if (condition)
-      q = p;
+      q = p;    // expected-note {{local variable 'p' aliases the storage of local variable 'x'}}
     (void)*p;
     (void)*q;   // expected-note {{later used here}}
   }             // expected-note {{local variable 'x' is destroyed here}}
@@ -846,12 +846,25 @@ void lifetimebound_multiple_args_potential(bool cond) {
     MyObj obj1;
     if (cond) {
       MyObj obj2;
-      v = Choose(true,
+      v = Choose(true,             // expected-note {{result of call to 'Choose' aliases the storage of local variable 'obj1'}} \
+                                   // expected-note {{result of call to 'Choose' aliases the storage of local variable 'obj2'}}
                  obj1,             // expected-warning {{local variable 'obj1' does not live long enough}}
                  obj2);            // expected-warning {{local variable 'obj2' does not live long enough}}
     }                              // expected-note {{local variable 'obj2' is destroyed here}}
   }                                // expected-note {{local variable 'obj1' is destroyed here}}
   v.use();                         // expected-note 2 {{later used here}}
+}
+
+// FIXME: Detect this.
+void func_pointer() {
+  View p;
+  View (*func_ptr)(View v [[clang::lifetimebound]]);
+  {
+   MyObj s;
+   View a = Identity(s);
+   p = func_ptr(a);
+  }
+  p.use();
 }
 
 View SelectFirst(View a [[clang::lifetimebound]], View b);
@@ -940,7 +953,7 @@ void lifetimebound_partial_safety(bool cond) {
   
   if (cond) {
     MyObj temp_obj;
-    v = Choose(true, 
+    v = Choose(true,      // expected-note {{result of call to 'Choose' aliases the storage of local variable 'temp_obj'}}
                safe_obj,
                temp_obj); // expected-warning {{local variable 'temp_obj' does not live long enough}}
   }                       // expected-note {{local variable 'temp_obj' is destroyed here}}
@@ -1223,7 +1236,9 @@ void conditional_operator_lifetimebound(bool cond) {
   MyObj* p;
   {
     MyObj a, b;
-    p = Identity(cond ? &a    // expected-warning {{local variable 'a' does not live long enough}}
+    p = Identity(cond ? &a    // expected-warning {{local variable 'a' does not live long enough}} \
+                              // expected-note {{result of call to 'Identity' aliases the storage of local variable 'a'}} \
+                              // expected-note {{result of call to 'Identity' aliases the storage of local variable 'b'}}
                       : &b);  // expected-warning {{local variable 'b' does not live long enough}}
   }  // expected-note {{local variable 'b' is destroyed here}} expected-note {{local variable 'a' is destroyed here}}
   (void)*p;  // expected-note 2 {{later used here}}
@@ -1233,8 +1248,11 @@ void conditional_operator_lifetimebound_nested(bool cond) {
   MyObj* p;
   {
     MyObj a, b;
-    p = Identity(cond ? Identity(&a)    // expected-warning {{local variable 'a' does not live long enough}}
-                      : Identity(&b));  // expected-warning {{local variable 'b' does not live long enough}}
+    p = Identity(cond ? Identity(&a)    // expected-warning {{local variable 'a' does not live long enough}} \
+                                        // expected-note 2 {{result of call to 'Identity' aliases the storage of local variable 'a'}} \
+                                        // expected-note {{result of call to 'Identity' aliases the storage of local variable 'b'}}
+                      : Identity(&b));  // expected-warning {{local variable 'b' does not live long enough}} \
+                                        // expected-note {{result of call to 'Identity' aliases the storage of local variable 'b'}}
   }  // expected-note {{local variable 'b' is destroyed here}} expected-note {{local variable 'a' is destroyed here}}
   (void)*p;  // expected-note 2 {{later used here}}
 }
@@ -1243,9 +1261,15 @@ void conditional_operator_lifetimebound_nested_deep(bool cond) {
   MyObj* p;
   {
     MyObj a, b, c, d;
-    p = Identity(cond ? Identity(cond ? &a     // expected-warning {{local variable 'a' does not live long enough}}
+    p = Identity(cond ? Identity(cond ? &a     // expected-warning {{local variable 'a' does not live long enough}} \
+                                               // expected-note 2 {{result of call to 'Identity' aliases the storage of local variable 'a'}} \
+                                               // expected-note 2 {{result of call to 'Identity' aliases the storage of local variable 'b'}} \
+                                               // expected-note {{result of call to 'Identity' aliases the storage of local variable 'c'}} \
+                                               // expected-note {{result of call to 'Identity' aliases the storage of local variable 'd'}}
                                       : &b)    // expected-warning {{local variable 'b' does not live long enough}}
-                      : Identity(cond ? &c     // expected-warning {{local variable 'c' does not live long enough}}
+                      : Identity(cond ? &c     // expected-warning {{local variable 'c' does not live long enough}} \
+                                               // expected-note {{result of call to 'Identity' aliases the storage of local variable 'c'}} \
+                                               // expected-note {{result of call to 'Identity' aliases the storage of local variable 'd'}}
                                       : &d));  // expected-warning {{local variable 'd' does not live long enough}}
   }  // expected-note {{local variable 'a' is destroyed here}} expected-note {{local variable 'd' is destroyed here}} expected-note {{local variable 'b' is destroyed here}} expected-note {{local variable 'c' is destroyed here}}
   (void)*p;  // expected-note 4 {{later used here}}
@@ -1586,7 +1610,8 @@ void range_based_for_use_after_scope() {
   View v;
   {
     MyObjStorage s;
-    for (const MyObj &o : s) { // expected-warning {{local variable 's' does not live long enough}}
+    for (const MyObj &o : s) { // expected-warning {{local variable 's' does not live long enough}} \
+                               // expected-note {{local variable '__range2' aliases the storage of local variable 's'}}
       v = o;
     }
   } // expected-note {{local variable 's' is destroyed here}}
@@ -2772,7 +2797,7 @@ void chained_defaulted_assignment_propagation() {
     std::string str{"abc"};
     S a = getS(str); // expected-warning {{local variable 'str' does not live long enough}} \
                      // expected-note {{result of call to 'getS' aliases the storage of local variable 'str'}}
-    c = b = a;       // expected-note {{local variable 'a' aliases the storage of local variable 'str'}}\
+    c = b = a;       // expected-note {{local variable 'a' aliases the storage of local variable 'str'}} \
                      // expected-note {{expression aliases the storage of local variable 'str'}}
   }                  // expected-note {{local variable 'str' is destroyed here}}
   use(c);            // expected-note {{later used here}}
@@ -3953,7 +3978,7 @@ void test_reference_to_pointer() {
 
 struct [[gsl::Pointer]] MyContainer {
   View stored;
-  void set(View s [[clang::lifetime_capture_by(this)]]);
+  void set(View s [[clang::lifetime_capture_by_this]]);
 };
 
 void member_capture() {
@@ -3968,7 +3993,7 @@ void member_capture() {
 // FIXME: Add support for simple containers without annotations.
 struct SimpleContainer {
   View stored;
-  void set(View s [[clang::lifetime_capture_by(this)]]);
+  void set(View s [[clang::lifetime_capture_by_this]]);
 };
 
 void member_capture_simple_container() {
@@ -4131,4 +4156,117 @@ void test_loop_cond_bind(bool cond) {
     int x, y;
     consume_loop_cond_bind(cond ? &x : &y); // no-warning
   }
+}
+
+//===----------------------------------------------------------------------===//
+// buildOriginFlowChain
+//===----------------------------------------------------------------------===//
+
+void used_variable_reassigned() {
+  View p, q, r;
+  {
+    MyObj a;
+    p = a; // expected-warning {{local variable 'a' does not live long enough}}
+    q = p; // expected-note {{local variable 'p' aliases the storage of local variable 'a'}}
+    r = q; // expected-note {{local variable 'q' aliases the storage of local variable 'a'}}
+  }        // expected-note {{destroyed here}}
+  r.use(); // expected-note {{later used here}}
+
+  MyObj b;
+  r = b;
+  r.use();
+}
+
+void multi_reassigned(bool condition) {
+  MyObj v1, v2, v3;
+  View p1, p2, p3, p4;
+  {
+    MyObj v4;
+
+    p1 = v1;
+    p2 = v2;
+    p3 = v3;
+    p4 = v4;    // expected-warning {{local variable 'v4' does not live long enough}}
+
+    while (condition) {
+      View temp = p1;
+      p1 = p2;  // expected-note {{local variable 'p2' aliases the storage of local variable 'v4'}}
+      p2 = p3;  // expected-note {{local variable 'p3' aliases the storage of local variable 'v4'}}
+      p3 = p4;  // expected-note {{local variable 'p4' aliases the storage of local variable 'v4'}}
+      p4 = temp;
+    }
+  }  // expected-note {{destroyed here}}
+
+  p1.use();  // expected-note {{later used here}}
+}
+
+#define BRANCH(con) \
+  if (con) {} else {}
+
+#define BRANCH10(con) \
+  BRANCH(con); \
+  BRANCH(con); \
+  BRANCH(con); \
+  BRANCH(con); \
+  BRANCH(con); \
+  BRANCH(con); \
+  BRANCH(con); \
+  BRANCH(con); \
+  BRANCH(con); \
+  BRANCH(con)
+
+#define BRANCH100(con) \
+  BRANCH10(con); \
+  BRANCH10(con); \
+  BRANCH10(con); \
+  BRANCH10(con); \
+  BRANCH10(con); \
+  BRANCH10(con); \
+  BRANCH10(con); \
+  BRANCH10(con); \
+  BRANCH10(con); \
+  BRANCH10(con)
+
+void test_exponential_paths(bool c) {
+  View v;
+  {
+    MyObj a;
+    View p = a;  // expected-warning{{local variable 'a' does not live long enough}}
+    BRANCH100(c);
+    v = p;  // expected-note {{local variable 'p' aliases the storage of local variable 'a'}}
+  }         // expected-note {{local variable 'a' is destroyed here}}
+  v.use();  // expected-note {{later used here}}
+}
+
+void test_multiple_paths(bool cond) {
+  View v;
+  {
+    MyObj a;
+    View p1, p2, p3;
+    p1 = a;     // expected-warning {{local variable 'a' does not live long enough}}
+    p2 = p1;
+    if (cond) {
+      p3 = p1;  // expected-note {{local variable 'p1' aliases the storage of local variable 'a'}}
+    } else {
+      p3 = p2;
+    }
+
+    v = p3; // expected-note {{local variable 'p3' aliases the storage of local variable 'a'}}
+  }         // expected-note {{local variable 'a' is destroyed here}}
+  v.use();  // expected-note {{later used here}}
+}
+
+void test_cyclic_cfg(int n) {
+  View v;
+  {
+    MyObj a;
+    View p;
+    p = a;  // expected-warning {{local variable 'a' does not live long enough}}
+    while (n > 0) {
+      p = p;
+      n--;
+    }
+    v = p;  // expected-note {{local variable 'p' aliases the storage of local variable 'a'}}
+  }         // expected-note {{local variable 'a' is destroyed here}}
+  v.use();  // expected-note {{later used here}}
 }

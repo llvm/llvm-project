@@ -91,7 +91,7 @@ define void @scev_expand_vscale_mul(ptr %dst, i64 %n) {
 ; CHECK-NEXT:  Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop.preheader>:
-; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = vscale i64
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = call i64 @llvm.vscale()
 ; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = shl nuw vp<[[VP2]]>, ir<2>
 ; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%n>, vp<[[VP3]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
@@ -204,11 +204,10 @@ exit:
 define void @scev_smax_expanded(ptr %dst, i64 %n) {
 ; CHECK-LABEL: VPlan for loop in 'scev_smax_expanded'
 ; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
-; CHECK-NEXT:  Live-in ir<%smax> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    IR   %smax = call i64 @llvm.smax.i64(i64 %n, i64 1)
-; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%smax>, ir<4>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = call i64 @llvm.smax(ir<%n>, ir<1>)
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP2]]>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ;
@@ -231,13 +230,12 @@ exit:
 define void @scev_smin_expanded(ptr %dst, i64 %n) {
 ; CHECK-LABEL: VPlan for loop in 'scev_smin_expanded'
 ; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
-; CHECK-NEXT:  Live-in ir<%1> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    IR   %0 = add nsw i64 %n, -1
-; CHECK-NEXT:    IR   %smin = call i64 @llvm.smin.i64(i64 %0, i64 0)
-; CHECK-NEXT:    IR   %1 = sub i64 %n, %smin
-; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%1>, ir<4>
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = add nsw ir<%n>, ir<-1>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP3:%[0-9]+]]> = call i64 @llvm.smin(vp<[[VP2]]>, ir<0>)
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = sub ir<%n>, vp<[[VP3]]>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP4]]>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ;
@@ -262,13 +260,12 @@ exit:
 define void @scev_ptrtoint_expanded(ptr %start, ptr %end) {
 ; CHECK-LABEL: VPlan for loop in 'scev_ptrtoint_expanded'
 ; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
-; CHECK-NEXT:  Live-in ir<%0> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    IR   %start2 = ptrtoint ptr %start to i64
-; CHECK-NEXT:    IR   %end1 = ptrtoint ptr %end to i64
-; CHECK-NEXT:    IR   %0 = sub i64 %end1, %start2
-; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%0>, ir<4>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = ptrtoint ir<%end> to i64
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP3:%[0-9]+]]> = ptrtoint ir<%start> to i64
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = sub vp<[[VP2]]>, vp<[[VP3]]>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP4]]>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ;

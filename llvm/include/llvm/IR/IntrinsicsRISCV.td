@@ -2061,6 +2061,16 @@ class RVPBinaryIntrinsic
   def int_riscv_pabd  : RVPBinaryIntrinsic;
   def int_riscv_pabdu : RVPBinaryIntrinsic;
 
+  // Packed Saturating and Rounding Shifts.
+  class RVPShiftIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMMatchType<0>, llvm_i32_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pssha  : RVPShiftIntrinsic;
+  def int_riscv_psshar : RVPShiftIntrinsic;
+  def int_riscv_psshl  : RVPShiftIntrinsic;
+  def int_riscv_psshlr : RVPShiftIntrinsic;
+
   // Packed Exchanged Addition and Subtraction.
   def int_riscv_pas  : RVPBinaryIntrinsic;
   def int_riscv_psa  : RVPBinaryIntrinsic;
@@ -2076,6 +2086,32 @@ class RVPBinaryIntrinsic
                               [IntrNoMem, IntrSpeculatable]>;
   def int_riscv_predsum  : RVPReductionIntrinsic;
   def int_riscv_predsumu : RVPReductionIntrinsic;
+
+  // Packed Merge
+  class RVPTernaryIntrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, LLVMMatchType<0>,
+                             LLVMMatchType<0>],
+                            [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pmerge : RVPTernaryIntrinsic;
+
+  // Packed Absolute Difference Sum.
+  def int_riscv_pabdsumu
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [llvm_anyvector_ty, LLVMMatchType<1>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pabdsumau
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, llvm_anyvector_ty,
+                               LLVMMatchType<1>],
+                              [IntrNoMem, IntrSpeculatable]>;
+
+  // Packed Saturating Absolute Value
+  class RVPUnaryIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMMatchType<0>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_psabs : RVPUnaryIntrinsic;
 } // TargetPrefix = "riscv"
 
 //===----------------------------------------------------------------------===//
