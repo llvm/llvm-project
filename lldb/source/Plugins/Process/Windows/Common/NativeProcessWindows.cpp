@@ -415,11 +415,9 @@ static bool GetLoadedModulePath(HANDLE process, HMODULE module,
 
   // Canonicalize through a handle to the image file so the reported path
   // matches the on-disk name exactly.
-  AutoHandle file(::CreateFileW(wpath.c_str(), 0,
-                                FILE_SHARE_READ | FILE_SHARE_WRITE |
-                                    FILE_SHARE_DELETE,
-                                nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,
-                                nullptr));
+  AutoHandle file(::CreateFileW(
+      wpath.c_str(), 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+      nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr));
 
   if (!file.IsValid())
     return llvm::convertWideToUTF8(wpath, path);
