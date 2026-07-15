@@ -10,9 +10,11 @@ pipeline state validation part (`PSV0`). To assist with the construction of, and
 interaction with, these parts, a semantic signature is represented as metadata
 (`dx.semantic.signatures`) in the LLVM IR. The metadata can then be converted to
 its binary form, as defined in
-[llvm/include/llvm/Frontend/HLSL/SemanticSignatures.h](https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Frontend/HLSL/SemanticSignatures.h).
+[SemanticSignatures.h].
 This document serves as a reference for the metadata representation of a
 semantic signature for users to interface with.
+
+[SemanticSignatures.h]: https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Frontend/HLSL/SemanticSignatures.h
 
 ## Metadata Representation
 
@@ -89,10 +91,10 @@ retains all information needed to serialize into `ISG1`, `OSG1` and `PSV0`.
 |------------------------|-----------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Signature ID           | i32             | dense 0-based index within the entry function signature list; matches the operand of `llvm.dx.load.input` / `llvm.dx.store.output`                                                                                                 |
 | Semantic Name          | metadata string | the semantic name (e.g. `!"TEXCOORD"`, `!"SV_Position"`)                                                                                                                                                                           |
-| Component Type         | i32             | component type; see [`llvm::dxil::ElementType`](https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Support/DXILABI.h).                                                                                               |
-| Semantic Kind          | i32             | semantic kind; `Arbitrary` (0) for user-defined semantics, the corresponding `SV_*` value otherwise. See [`SEMANTIC_KIND`](https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/BinaryFormat/DXContainerConstants.def) |
+| Component Type         | i32             | component type; see [`llvm::dxil::ElementType`][ElementType].                                                                                                                                                                     |
+| Semantic Kind          | i32             | semantic kind; `Arbitrary` (0) for user-defined semantics, the corresponding `SV_*` value otherwise. See [`SEMANTIC_KIND`][DXContainerConstants]                                                                                 |
 | Semantic Indices       | metadata node   | reference to a [semantic indices](#semantic-indices) node                                                                                                                                                                          |
-| Interpolation Mode     | i32             | interpolation mode; see [`INTERPOLATION_MODE`](https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/BinaryFormat/DXContainerConstants.def)                                                                             |
+| Interpolation Mode     | i32             | interpolation mode; see [`INTERPOLATION_MODE`][DXContainerConstants]                                                                                                                                                             |
 | Rows                   | i32             | number of consecutive register rows occupied                                                                                                                                                                                       |
 | Cols                   | i8              | number of components per row (1–4)                                                                                                                                                                                                 |
 | Start Row              | i32             | starting register row; `-1` (`0xFFFFFFFF`) if unallocated                                                                                                                                                                          |
@@ -111,6 +113,9 @@ The following container fields are derived from the operands above:
 - **AlwaysReads / NeverWrites**: `UsageMask` is written to `AlwaysReads` for
   inputs; for outputs `NeverWrites = ~UsageMask & DeclaredMask`.
 - **MinPrecision**: from `CompType` plus the `UseMinPrecision` module flag.
+
+[ElementType]: https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Support/DXILABI.h
+[DXContainerConstants]: https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/BinaryFormat/DXContainerConstants.def
 
 ## Semantic Indices
 
