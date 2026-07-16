@@ -452,11 +452,10 @@ protected:
       ArrayRef<Relocation<ELFT>> Relocations, const Elf_Shdr *RelocSymTab);
   // Read the SHT_LLVM_CALL_GRAPH type section and process its contents to
   // populate call graph related data structures which will be used to dump call
-  // graph info. Returns false if there is no SHT_LLVM_CALL_GRAPH type section
-  // in the input file.
-  bool
-  processCallGraphSection(const Elf_Shdr *CGSection,
-                          SmallVectorImpl<FunctionCallgraphInfo> &FuncCGInfos);
+  // graph info. Returns an empty vector if there is no SHT_LLVM_CALL_GRAPH
+  // type section or if parsing fails.
+  SmallVector<FunctionCallgraphInfo, 16>
+  processCallGraphSection(const Elf_Shdr *CGSection);
 
   std::string getProgramHeadersNumString();
 
@@ -5335,9 +5334,9 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCGProfile() {
 }
 
 template <class ELFT>
-bool ELFDumper<ELFT>::processCallGraphSection(
-    const Elf_Shdr *CGSection,
-    SmallVectorImpl<FunctionCallgraphInfo> &FuncCGInfos) {
+SmallVector<FunctionCallgraphInfo, 16>
+ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
+  SmallVector<FunctionCallgraphInfo, 16> FuncCGInfos;
   ArrayRef<uint8_t> Contents = cantFail(Obj.getSectionContents(*CGSection));
   DataExtractor Data(Contents, Obj.isLE());
   DataExtractor::Cursor C(0);
@@ -5351,7 +5350,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(
                                 std::to_string(FormatVersionNumber) +
                                 "] in SHT_LLVM_CALL_GRAPH type section"),
                     FileName);
-      return false;
+      return {};
     }
 
     uint8_t FlagsVal = Data.getU8(C);
@@ -5360,7 +5359,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(
           createError("failed while reading call graph info's Flags: " +
                       toString(C.takeError())),
           FileName);
-      return false;
+      return {};
     }
     callgraph::Flags CGFlags = static_cast<callgraph::Flags>(FlagsVal);
     constexpr callgraph::Flags ValidFlags = callgraph::IsIndirectTarget |
@@ -5371,7 +5370,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(
       reportWarning(createError("unsupported Flags value [" +
                                 std::to_string(FlagsVal) + "] "),
                     FileName);
-      return false;
+      return {};
     }
 
     uint64_t FuncAddrOffset = C.tell();
@@ -5383,7 +5382,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(
               "failed while reading call graph info function entry PC: " +
               toString(C.takeError())),
           FileName);
-      return false;
+      return {};
     }
 
     bool IsETREL = this->Obj.getHeader().e_type == ELF::ET_REL;
@@ -5399,7 +5398,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(
       reportWarning(createError("failed while reading function type ID: " +
                                 toString(C.takeError())),
                     FileName);
-      return false;
+      return {};
     }
     CGInfo.FunctionTypeID = TypeID;
     if (IsIndirectTarget && TypeID == 0)
@@ -5413,7 +5412,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(
             createError("failed while reading number of direct callees: " +
                         toString(C.takeError())),
             FileName);
-        return false;
+        return {};
       }
       // Read unique direct callees and populate FuncCGInfos.
       for (uint64_t I = 0; I < NumDirectCallees; ++I) {
@@ -5424,7 +5423,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(
           reportWarning(createError("failed while reading direct callee: " +
                                     toString(C.takeError())),
                         FileName);
-          return false;
+          return {};
         }
         CGInfo.DirectCallees.insert((IsETREL ? CalleeOffset : Callee));
       }
@@ -5438,7 +5437,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(
                 "failed while reading number of indirect target type IDs: " +
                 toString(C.takeError())),
             FileName);
-        return false;
+        return {};
       }
       // Read unique indirect target type IDs and populate FuncCGInfos.
       for (uint64_t I = 0; I < NumIndirectTargetTypeIDs; ++I) {
@@ -5448,7 +5447,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(
               createError("failed while reading indirect target type ID: " +
                           toString(C.takeError())),
               FileName);
-          return false;
+          return {};
         }
         CGInfo.IndirectTypeIDs.insert(TargetType);
       }
@@ -5460,7 +5459,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(
     reportUniqueWarning(
         "SHT_LLVM_CALL_GRAPH type section has unknown type ID for " +
         Twine(UnknownCount) + " indirect targets");
-  return true;
+  return FuncCGInfos;
 }
 
 template <class ELFT>
@@ -8339,14 +8338,13 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
   }
 
   std::unique_ptr<ListScope> CGI;
-  SmallVector<FunctionCallgraphInfo, 16> FuncCGInfos;
   for (const auto &CGMapEntry : *MapOrErr) {
     const Elf_Shdr *CGSection = CGMapEntry.first;
     const Elf_Shdr *CGRelSection = CGMapEntry.second;
 
-    FuncCGInfos.clear();
-    if (!this->processCallGraphSection(CGSection, FuncCGInfos) ||
-        FuncCGInfos.empty())
+    SmallVector<FunctionCallgraphInfo, 16> FuncCGInfos =
+        this->processCallGraphSection(CGSection);
+    if (FuncCGInfos.empty())
       continue;
 
     std::vector<Relocation<ELFT>> Relocations;
