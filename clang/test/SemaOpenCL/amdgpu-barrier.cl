@@ -23,7 +23,7 @@ void foo() {
 
     // Wrappers cannot have >1 field.
     struct WrapperHasTooManyFields { // expected-note {{'WrapperHasTooManyFields' is not a named barrier wrapper because it has more than one field}}
-        __amdgpu_named_workgroup_barrier_t x; // expected-error {{fields of type '__amdgpu_named_workgroup_barrier_t' are only allowed in named barrier wrappers}}
+        __amdgpu_named_workgroup_barrier_t x; // expected-error {{field with barrier type '__amdgpu_named_workgroup_barrier_t' seen in a structure that is not a named barrier wrapper}}
         int other;
     };
 

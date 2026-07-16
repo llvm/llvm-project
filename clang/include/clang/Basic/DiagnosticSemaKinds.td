@@ -14279,7 +14279,7 @@ def note_acc_reduction_combiner_forming
 
 // AMDGCN type diagnostics
 def err_amdgcn_invalid_field_not_a_wrapper : Error<
-  "fields of type %0 are only allowed in named barrier wrappers">;
+  "field with barrier type %0 seen in a structure that is not a named barrier wrapper">;
 def note_amdgcn_not_a_named_barrier_wrapper_too_many_fields : Note<
   "%0 is not a named barrier wrapper because it has more than one field">;
 
