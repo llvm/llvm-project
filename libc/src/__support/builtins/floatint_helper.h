@@ -28,6 +28,8 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace builtins {
 
+// TODO: use constructors after adding Float128/64/32/16 classes.
+
 // Convert the integer I to the floating-point type F, rounding to nearest
 // (ties to even) per the current rounding mode.  Handles signed and unsigned
 // I alike; mirrors compiler-rt's __float<i><f> / __floatun<i><f>.
