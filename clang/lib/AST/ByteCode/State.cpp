@@ -23,8 +23,10 @@ bool State::shouldRelaxDiag(const SourceLocation &Loc, diag::kind DiagId) {
     return false;
   switch (DiagId) {
   case diag::note_constexpr_invalid_cast_ptrtoint:
+    addExtendedDiag(Loc, diag::warn_relaxed_constant_fold_cast);
+    return true;
   case diag::note_constexpr_null_subobject:
-    EvalStatus.CastOrNull = Loc;
+    addExtendedDiag(Loc, diag::warn_relaxed_constant_fold_null);
     return true;
   default:
     return false;
@@ -106,6 +108,13 @@ PartialDiagnostic &State::addDiag(SourceLocation Loc, diag::kind DiagId) {
   PartialDiagnostic PD(DiagId, Ctx.getDiagAllocator());
   EvalStatus.Diag->push_back(std::make_pair(Loc, PD));
   return EvalStatus.Diag->back().second;
+}
+
+void State::addExtendedDiag(SourceLocation Loc, diag::kind DiagId) {
+  if (!EvalStatus.ExtendedDiag)
+    return;
+  PartialDiagnostic PD(DiagId, Ctx.getDiagAllocator());
+  EvalStatus.ExtendedDiag->push_back(std::make_pair(Loc, PD));
 }
 
 OptionalDiagnostic State::diag(SourceLocation Loc, diag::kind DiagId,

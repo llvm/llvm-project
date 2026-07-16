@@ -1038,9 +1038,13 @@ def warn_npot_ms_struct : Warning<
   "ms_struct may not produce Microsoft-compatible layouts with fundamental "
   "data types with sizes that aren't a power of two">,
   DefaultError, InGroup<IncompatibleMSStruct>;
-def warn_relaxed_constant_fold : Extension<
+def warn_relaxed_constant_fold_cast : Extension<
   "folding constant expression involving "
   "cast that performs the conversions of a reinterpret_cast "
+  "is a Microsoft extension">,
+  InGroup<MicrosoftRelaxedConstantFold>;
+def warn_relaxed_constant_fold_null : Extension<
+  "folding constant expression that takes field address of null pointer "
   "is a Microsoft extension">,
   InGroup<MicrosoftRelaxedConstantFold>;
 

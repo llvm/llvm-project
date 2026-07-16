@@ -641,7 +641,7 @@ public:
 
     /// Location where we spot ptr to int cast or null subobject while
     /// evaluating constant expression in MS compatibility mode.
-    SourceLocation CastOrNull;
+    SmallVectorImpl<PartialDiagnosticAt> *ExtendedDiag = nullptr;
 
     EvalStatus() = default;
 

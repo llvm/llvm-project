@@ -2578,9 +2578,11 @@ VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
 
   Eval->IsEvaluating = true;
 
+  SmallVector<PartialDiagnosticAt> MSWarning;
   ASTContext &Ctx = getASTContext();
   Expr::EvalResult EStatus;
   EStatus.Diag = Notes;
+  EStatus.ExtendedDiag = &MSWarning;
   bool Result =
       Init->EvaluateAsInitializer(Ctx, this, EStatus, IsConstantInitialization);
   Eval->Evaluated = std::move(EStatus.Val);
@@ -2601,9 +2603,10 @@ VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
   if (!Result)
     Eval->Evaluated = APValue();
   else {
-    if (EStatus.CastOrNull.isValid())
-      getASTContext().getDiagnostics().Report(EStatus.CastOrNull,
-                                              diag::warn_relaxed_constant_fold);
+    if (!MSWarning.empty())
+      for (auto &Info : MSWarning)
+        getASTContext().getDiagnostics().Report(Info.first,
+                                                Info.second.getDiagID());
     if (Eval->Evaluated.needsCleanup())
       Ctx.addDestruction(&Eval->Evaluated);
   }

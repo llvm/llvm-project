@@ -6707,8 +6707,10 @@ Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
   ExprResult Result = E;
   // Check the expression is a constant expression.
   SmallVector<PartialDiagnosticAt, 8> Notes;
+  SmallVector<PartialDiagnosticAt> MSWarning;
   Expr::EvalResult Eval;
   Eval.Diag = &Notes;
+  Eval.ExtendedDiag = &MSWarning;
 
   assert(CCE != CCEKind::TempArgStrict && "unnexpected CCE Kind");
 
@@ -6729,10 +6731,10 @@ Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
     Value = Eval.Val;
     // For -fms-compatibility mode we relax some requirements
     // for constant folding in non-SFINAE contexts
-    bool CantFold = isSFINAEContext() && Eval.CastOrNull.isValid();
+    bool CantFold = isSFINAEContext() && !MSWarning.empty();
     if (Notes.empty() && !CantFold) {
-      if (Eval.CastOrNull.isValid())
-        Diag(Eval.CastOrNull, diag::warn_relaxed_constant_fold);
+      for (auto &Info : MSWarning)
+        Diag(Info.first, Info.second);
       // It's a constant expression.
       Expr *E = Result.get();
       if (const auto *CE = dyn_cast<ConstantExpr>(E)) {

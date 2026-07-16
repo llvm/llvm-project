@@ -206,6 +206,8 @@ private:
 
   PartialDiagnostic &addDiag(SourceLocation Loc, diag::kind DiagId);
 
+  void addExtendedDiag(SourceLocation Loc, diag::kind DiagId);
+
   OptionalDiagnostic diag(SourceLocation Loc, diag::kind DiagId,
                           unsigned ExtraNotes, bool IsCCEDiag);
 
