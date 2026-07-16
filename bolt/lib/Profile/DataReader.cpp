@@ -1055,19 +1055,6 @@ ErrorOr<BasicSampleInfo> DataReader::parseSampleInfo() {
   return BasicSampleInfo(std::move(Address), Occurrences);
 }
 
-/// Return if \p Flag line was present in the line.
-ErrorOr<bool> DataReader::maybeParseFlag(StringRef Flag) {
-  if (!ParsingBuf.consume_front(Flag))
-    return false;
-  Col += Flag.size();
-
-  if (!checkAndConsumeNewLine()) {
-    reportError((Twine("malformed ") + Flag + " line").str());
-    return make_error_code(llvm::errc::io_error);
-  }
-  return true;
-}
-
 ErrorOr<bool> DataReader::maybeParseNoLBRFlag() {
   if (!ParsingBuf.consume_front("no_lbr"))
     return false;
@@ -1085,6 +1072,19 @@ ErrorOr<bool> DataReader::maybeParseNoLBRFlag() {
 
   if (!checkAndConsumeNewLine()) {
     reportError("malformed no_lbr line");
+    return make_error_code(llvm::errc::io_error);
+  }
+  return true;
+}
+
+/// Return if \p Flag line was present in the line.
+ErrorOr<bool> DataReader::maybeParseFlag(StringRef Flag) {
+  if (!ParsingBuf.consume_front(Flag))
+    return false;
+  Col += Flag.size();
+
+  if (!checkAndConsumeNewLine()) {
+    reportError((Twine("malformed ") + Flag + " line").str());
     return make_error_code(llvm::errc::io_error);
   }
   return true;
