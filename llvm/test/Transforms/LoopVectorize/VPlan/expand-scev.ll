@@ -260,13 +260,12 @@ exit:
 define void @scev_ptrtoint_expanded(ptr %start, ptr %end) {
 ; CHECK-LABEL: VPlan for loop in 'scev_ptrtoint_expanded'
 ; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
-; CHECK-NEXT:  Live-in ir<%0> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    IR   %start2 = ptrtoint ptr %start to i64
-; CHECK-NEXT:    IR   %end1 = ptrtoint ptr %end to i64
-; CHECK-NEXT:    IR   %0 = sub i64 %end1, %start2
-; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%0>, ir<4>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = ptrtoint ir<%end> to i64
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP3:%[0-9]+]]> = ptrtoint ir<%start> to i64
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = sub vp<[[VP2]]>, vp<[[VP3]]>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP4]]>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ;
@@ -316,6 +315,46 @@ loop:
 
 exit:
   ret i32 %add
+}
+
+; SCEV expansion of trip count with an AddRec from the outer loop.
+define void @scev_addrec_expanded(ptr %dst) {
+; CHECK-LABEL: VPlan for loop in 'scev_addrec_expanded'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-NEXT:  Live-in ir<%2> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<outer>:
+; CHECK-NEXT:    IR   %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+; CHECK-NEXT:    IR   %0 = add i64 %outer.iv, 4
+; CHECK-NEXT:    IR   %1 = udiv i64 %0, 3
+; CHECK-NEXT:    IR   %2 = add nuw nsw i64 %1, 1
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%2>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+;
+entry:
+  br label %outer
+
+outer:
+  %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+  br label %inner
+
+inner:
+  %iv = phi i64 [ 0, %outer ], [ %iv.next, %inner ]
+  %gep = getelementptr i8, ptr %dst, i64 %iv
+  store i8 0, ptr %gep
+  %iv.next = add nuw i64 %iv, 3
+  %bound = add i64 %outer.iv, 5
+  %cmp.inner = icmp ult i64 %iv.next, %bound
+  br i1 %cmp.inner, label %inner, label %outer.latch
+
+outer.latch:
+  %outer.iv.next = add nuw i64 %outer.iv, 1
+  %cmp.outer = icmp ult i64 %outer.iv.next, 100
+  br i1 %cmp.outer, label %outer, label %exit
+
+exit:
+  ret void
 }
 
 !0 = distinct !{!0, !1, !2}

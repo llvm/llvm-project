@@ -1560,41 +1560,6 @@ public:
   }
 };
 
-class TanPattern : public SPIRVToLLVMConversion<spirv::GLTanOp> {
-public:
-  using SPIRVToLLVMConversion<spirv::GLTanOp>::SPIRVToLLVMConversion;
-
-  LogicalResult
-  matchAndRewrite(spirv::GLTanOp tanOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto dstType = getTypeConverter()->convertType(tanOp.getType());
-    if (!dstType)
-      return rewriter.notifyMatchFailure(tanOp, "type conversion failed");
-
-    rewriter.replaceOpWithNewOp<LLVM::TanOp>(tanOp, dstType,
-                                             adaptor.getOperands());
-    return success();
-  }
-};
-
-class TanhPattern : public SPIRVToLLVMConversion<spirv::GLTanhOp> {
-public:
-  using SPIRVToLLVMConversion<spirv::GLTanhOp>::SPIRVToLLVMConversion;
-
-  LogicalResult
-  matchAndRewrite(spirv::GLTanhOp tanhOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto srcType = tanhOp.getType();
-    auto dstType = getTypeConverter()->convertType(srcType);
-    if (!dstType)
-      return rewriter.notifyMatchFailure(tanhOp, "type conversion failed");
-
-    rewriter.replaceOpWithNewOp<LLVM::TanhOp>(tanhOp, dstType,
-                                              adaptor.getOperands());
-    return success();
-  }
-};
-
 // `llvm.intr.abs` requires an `is_int_min_poison` immarg that `spirv.GL.SAbs`
 // does not carry; default to `false` to preserve SPIR-V's well-defined
 // behavior on INT_MIN.
@@ -2070,8 +2035,9 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::GLAsinOp, LLVM::ASinOp>,
       DirectConversionPattern<spirv::GLAcosOp, LLVM::ACosOp>,
       DirectConversionPattern<spirv::GLAtanOp, LLVM::ATanOp>,
-      InverseSqrtPattern, SAbsPattern, TanPattern, TanhPattern, FractPattern,
-      GLFMixPattern,
+      DirectConversionPattern<spirv::GLTanOp, LLVM::TanOp>,
+      DirectConversionPattern<spirv::GLTanhOp, LLVM::TanhOp>,
+      InverseSqrtPattern, SAbsPattern, FractPattern, GLFMixPattern,
 
       // OpenCL extended instruction set ops
       DirectConversionPattern<spirv::CLCeilOp, LLVM::FCeilOp>,
