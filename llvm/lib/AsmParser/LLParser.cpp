@@ -641,16 +641,49 @@ bool LLParser::parseTopLevelEntities() {
 
 /// toplevelentity
 ///   ::= 'module' 'asm' STRINGCONSTANT
+///   ::= 'module' 'asm' '(' 'property_name1:' STRINGCONSTANT ','
+///                          'property_name2:' STRINGCONSTANT ')'
+///                      STRINGCONSTANT
 bool LLParser::parseModuleAsm() {
   assert(Lex.getKind() == lltok::kw_module);
   Lex.Lex();
 
   std::string AsmStr;
-  if (parseToken(lltok::kw_asm, "expected 'module asm'") ||
-      parseStringConstant(AsmStr))
+  if (parseToken(lltok::kw_asm, "expected 'module asm'"))
     return true;
 
-  M->appendModuleInlineAsm(AsmStr);
+  Module::GlobalAsmProperties Props;
+  if (EatIfPresent(lltok::lparen)) {
+    while (true) {
+      std::string Key, Value;
+      SMLoc Loc = Lex.getLoc();
+      if (Lex.getKind() != lltok::LabelStr)
+        return error(Loc, "expected property name followed by ':'");
+
+      Key = Lex.getStrVal();
+      Lex.Lex();
+
+      if (parseStringConstant(Value))
+        return true;
+
+      if (!Props.set(Key, Value))
+        return error(Loc, "unknown property name");
+
+      if (EatIfPresent(lltok::rparen))
+        break;
+      if (parseToken(lltok::comma, "expected ',' or ')'"))
+        return true;
+    }
+  }
+
+  do {
+    std::string AsmStrPart;
+    if (parseStringConstant(AsmStrPart))
+      return true;
+    AsmStr += AsmStrPart + "\n";
+  } while (Lex.getKind() == lltok::StringConstant);
+
+  M->appendModuleInlineAsm({AsmStr, Props});
   return false;
 }
 
@@ -8929,7 +8962,7 @@ int LLParser::parseAlloc(Instruction *&Inst, PerFunctionState &PFS) {
 
 /// parseLoad
 ///   ::= 'load' 'volatile'? TypeAndValue (',' 'align' i32)?
-///   ::= 'load' 'atomic' 'volatile'? TypeAndValue
+///   ::= 'load' 'atomic' 'volatile'? 'elementwise'? TypeAndValue
 ///       'singlethread'? AtomicOrdering (',' 'align' i32)?
 int LLParser::parseLoad(Instruction *&Inst, PerFunctionState &PFS) {
   Value *Val; LocTy Loc;
@@ -8950,6 +8983,12 @@ int LLParser::parseLoad(Instruction *&Inst, PerFunctionState &PFS) {
     Lex.Lex();
   }
 
+  bool IsElementwise = false;
+  if (Lex.getKind() == lltok::kw_elementwise) {
+    IsElementwise = true;
+    Lex.Lex();
+  }
+
   Type *Ty;
   LocTy ExplicitTypeLoc = Lex.getLoc();
   if (parseType(Ty) ||
@@ -8961,8 +9000,17 @@ int LLParser::parseLoad(Instruction *&Inst, PerFunctionState &PFS) {
 
   if (!Val->getType()->isPointerTy() || !Ty->isFirstClassType())
     return error(Loc, "load operand must be a pointer to a first class type");
+
+  if (IsElementwise && !isAtomic)
+    return error(Loc, "elementwise load must be atomic");
+
+  if (IsElementwise && !isa<FixedVectorType>(Ty))
+    return error(ExplicitTypeLoc,
+                 "atomic elementwise load operand must have fixed vector type");
+
   if (isAtomic && !Alignment)
     return error(Loc, "atomic load must have explicit non-zero alignment");
+
   if (Ordering == AtomicOrdering::Release ||
       Ordering == AtomicOrdering::AcquireRelease)
     return error(Loc, "atomic load cannot use Release ordering");
@@ -8972,7 +9020,10 @@ int LLParser::parseLoad(Instruction *&Inst, PerFunctionState &PFS) {
     return error(ExplicitTypeLoc, "loading unsized types is not allowed");
   if (!Alignment)
     Alignment = M->getDataLayout().getABITypeAlign(Ty);
-  Inst = new LoadInst(Ty, Val, "", isVolatile, *Alignment, Ordering, SSID);
+  Inst = new LoadInst(Ty, Val, "",
+                      LoadStoreInstProperties{isVolatile, *Alignment, Ordering,
+                                              SSID, IsElementwise},
+                      /*InsertBefore=*/nullptr);
   return AteExtraComma ? InstExtraComma : InstNormal;
 }
 
@@ -9200,13 +9251,15 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
     if (!ScalarTy->isFPOrFPVectorTy()) {
       return error(ValLoc, "atomicrmw " +
                                AtomicRMWInst::getOperationName(Operation) +
-                               " operand must be a floating point type");
+                               " operand must be a floating point or fixed "
+                               "vector of floating point type");
     }
   } else {
-    if (!ScalarTy->isIntegerTy()) {
-      return error(ValLoc, "atomicrmw " +
-                               AtomicRMWInst::getOperationName(Operation) +
-                               " operand must be an integer");
+    if (!ScalarTy->isIntOrIntVectorTy()) {
+      return error(
+          ValLoc,
+          "atomicrmw " + AtomicRMWInst::getOperationName(Operation) +
+              " operand must be an integer or fixed vector of integer type");
     }
   }
 
@@ -9962,7 +10015,11 @@ bool LLParser::addGlobalValueToIndex(
       if (!GV)
         return error(Loc, "Reference to undefined global \"" + Name + "\"");
 
-      VI = Index->getOrInsertValueInfo(GV);
+      // Be a little lenient here, to accomodate older files without GUIDs
+      // already computed and assigned as metadata.
+      GUID = GV->getGUIDOrFallback();
+
+      VI = Index->getOrInsertValueInfo(GV, GUID);
     } else {
       assert(
           (!GlobalValue::isLocalLinkage(Linkage) || !SourceFileName.empty()) &&

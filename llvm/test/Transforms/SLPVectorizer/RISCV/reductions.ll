@@ -337,9 +337,9 @@ entry:
 define void @reduce_or_2() {
 ; ZVFHMIN-LABEL: @reduce_or_2(
 ; ZVFHMIN-NEXT:    [[TMP6:%.*]] = shl i64 0, 0
-; ZVFHMIN-NEXT:    [[TMP7:%.*]] = insertelement <16 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison>, i64 [[TMP6]], i32 15
+; ZVFHMIN-NEXT:    [[TMP7:%.*]] = insertelement <16 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison>, i64 [[TMP6]], i64 15
 ; ZVFHMIN-NEXT:    [[TMP8:%.*]] = icmp ult <16 x i64> [[TMP7]], zeroinitializer
-; ZVFHMIN-NEXT:    [[TMP4:%.*]] = insertelement <16 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0>, i64 [[TMP6]], i32 6
+; ZVFHMIN-NEXT:    [[TMP4:%.*]] = insertelement <16 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0>, i64 [[TMP6]], i64 6
 ; ZVFHMIN-NEXT:    [[TMP5:%.*]] = icmp ult <16 x i64> [[TMP4]], zeroinitializer
 ; ZVFHMIN-NEXT:    [[RDX_OP:%.*]] = or <16 x i1> [[TMP8]], [[TMP5]]
 ; ZVFHMIN-NEXT:    [[TMP1:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[RDX_OP]])
@@ -351,9 +351,9 @@ define void @reduce_or_2() {
 ;
 ; ZVFHDEFAULT-LABEL: @reduce_or_2(
 ; ZVFHDEFAULT-NEXT:    [[TMP6:%.*]] = shl i64 0, 0
-; ZVFHDEFAULT-NEXT:    [[TMP7:%.*]] = insertelement <16 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison>, i64 [[TMP6]], i32 15
+; ZVFHDEFAULT-NEXT:    [[TMP7:%.*]] = insertelement <16 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison>, i64 [[TMP6]], i64 15
 ; ZVFHDEFAULT-NEXT:    [[TMP8:%.*]] = icmp ult <16 x i64> [[TMP7]], zeroinitializer
-; ZVFHDEFAULT-NEXT:    [[TMP4:%.*]] = insertelement <16 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0>, i64 [[TMP6]], i32 6
+; ZVFHDEFAULT-NEXT:    [[TMP4:%.*]] = insertelement <16 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0>, i64 [[TMP6]], i64 6
 ; ZVFHDEFAULT-NEXT:    [[TMP5:%.*]] = icmp ult <16 x i64> [[TMP4]], zeroinitializer
 ; ZVFHDEFAULT-NEXT:    [[RDX_OP:%.*]] = or <16 x i1> [[TMP8]], [[TMP5]]
 ; ZVFHDEFAULT-NEXT:    [[TMP1:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[RDX_OP]])
@@ -372,7 +372,7 @@ define void @reduce_or_2() {
 ;
 ; ZVFH512-LABEL: @reduce_or_2(
 ; ZVFH512-NEXT:    [[TMP5:%.*]] = shl i64 0, 0
-; ZVFH512-NEXT:    [[TMP6:%.*]] = insertelement <32 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison>, i64 [[TMP5]], i32 15
+; ZVFH512-NEXT:    [[TMP6:%.*]] = insertelement <32 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison>, i64 [[TMP5]], i64 15
 ; ZVFH512-NEXT:    [[TMP7:%.*]] = shufflevector <32 x i64> [[TMP6]], <32 x i64> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 15, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30>
 ; ZVFH512-NEXT:    [[TMP4:%.*]] = icmp ult <32 x i64> [[TMP7]], zeroinitializer
 ; ZVFH512-NEXT:    [[TMP1:%.*]] = call i1 @llvm.vector.reduce.or.v32i1(<32 x i1> [[TMP4]])

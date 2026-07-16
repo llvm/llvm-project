@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=riscv64 -mattr=+v -verify-machineinstrs -stop-after prologepilog -o - %s | FileCheck %s --check-prefix=MIR
+# RUN: llc -mtriple=riscv64 -mattr=+v -verify-machineinstrs -stop-after prolog-epilog -o - %s | FileCheck %s --check-prefix=MIR
 # RUN: llc -mtriple=riscv64 -mattr=+v -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=ASM
 
 ---

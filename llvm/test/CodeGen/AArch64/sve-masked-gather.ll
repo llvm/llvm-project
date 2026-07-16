@@ -103,10 +103,8 @@ define <vscale x 16 x i8> @masked_gather_nxv1i8(<vscale x 2 x ptr> %wide.ptrs, <
 ; CHECK-NEXT:    uzp1 p0.d, p0.d, p1.d
 ; CHECK-NEXT:    ld1b { z0.d }, p0/z, [z0.d]
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    uzp1 z1.s, z0.s, z0.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
-; CHECK-NEXT:    uzp1 z1.h, z1.h, z1.h
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
 ; CHECK-NEXT:    ret
   %ptrs = call <vscale x 1 x ptr> @llvm.vector.extract.nxv1p0.nxv2p0(<vscale x 2 x ptr> %wide.ptrs, i64 0)
   %r = call <vscale x 1 x i8> @llvm.masked.gather.nxv1i8(<vscale x 1 x ptr> align 1 %ptrs, <vscale x 1 x i1> %mask, <vscale x 1 x i8> poison)
@@ -121,8 +119,7 @@ define <vscale x 8 x i16> @masked_gather_nxv1i16(<vscale x 2 x ptr> %wide.ptrs, 
 ; CHECK-NEXT:    uzp1 p0.d, p0.d, p1.d
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [z0.d]
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    uzp1 z1.s, z0.s, z0.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    ret
   %ptrs = call <vscale x 1 x ptr> @llvm.vector.extract.nxv1p0.nxv2p0(<vscale x 2 x ptr> %wide.ptrs, i64 0)
   %r = call <vscale x 1 x i16> @llvm.masked.gather.nxv1i16(<vscale x 1 x ptr> align 2 %ptrs, <vscale x 1 x i1> %mask, <vscale x 1 x i16> poison)

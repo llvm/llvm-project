@@ -435,18 +435,30 @@ public:
     case RecurKind::UMax:
     case RecurKind::FMin:
     case RecurKind::FMax:
+    case RecurKind::FindIV:
     case RecurKind::FindLast:
       return true;
     case RecurKind::AnyOf:
     case RecurKind::FAdd:
+    case RecurKind::FSub:
     case RecurKind::FMulAdd:
       // We can't promote f16/bf16 fadd reductions and scalable vectors can't be
       // expanded.
       if (Ty->isBFloatTy() || (Ty->isHalfTy() && !ST->hasVInstructionsF16()))
         return false;
       return true;
-    default:
+    case RecurKind::Mul:
+    case RecurKind::FMul:
+    case RecurKind::FMinNum:
+    case RecurKind::FMaxNum:
+    case RecurKind::FMinimum:
+    case RecurKind::FMaximum:
+    case RecurKind::FMinimumNum:
+    case RecurKind::FMaximumNum:
+    case RecurKind::FAddChainWithSubs:
       return false;
+    case RecurKind::None:
+      llvm_unreachable("Unknown reduction kind.");
     }
   }
 
