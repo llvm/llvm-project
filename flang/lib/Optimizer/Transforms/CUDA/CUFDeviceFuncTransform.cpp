@@ -16,6 +16,7 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/IR/IRMapping.h"
@@ -216,6 +217,10 @@ class CUFDeviceFuncTransform
       if (op.getCallee()) {
         auto func = symbolTable.lookup<mlir::func::FuncOp>(
             op.getCallee()->getLeafReference());
+        // ACCRoutineToGPUFunc moves the materialized specialized routine into
+        // the GPU module later in the pipeline.
+        if (mlir::acc::isAccRoutine(func))
+          return;
         if (deviceFuncs.count(func) == 0)
           funcsToClone.insert(func);
       }
