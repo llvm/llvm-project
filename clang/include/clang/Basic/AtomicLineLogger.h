@@ -47,6 +47,15 @@ public:
     return *this;
   }
 
+  template <typename RangeT>
+  void logArray(StringRef Prefix, StringRef Sep, const RangeT &Arr) {
+    if (FormattingOS) {
+      *FormattingOS << Prefix;
+      for (const auto &C : Arr)
+        *FormattingOS << Sep << C;
+    }
+  }
+
   friend class AtomicLineLogger;
 };
 

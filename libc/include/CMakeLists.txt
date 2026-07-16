@@ -212,6 +212,16 @@ add_header_macro(
 )
 
 add_header_macro(
+  alloca
+  ../libc/include/alloca.yaml
+  alloca.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.alloca_macros
+    .llvm-libc-types.size_t
+)
+
+add_header_macro(
   assert
   ../libc/include/assert.yaml
   assert.h

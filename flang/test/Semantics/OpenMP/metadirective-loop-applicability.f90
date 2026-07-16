@@ -116,3 +116,18 @@ subroutine f09(n, a)
     end do
   end do
 end subroutine
+
+! MATCH_ANY is satisfied by a compile-time-true user condition, so its
+! loop-associated variant still requires a loop.
+subroutine f10()
+  logical, parameter :: use_variant = .true.
+  !ERROR: This construct should contain a DO-loop or a loop-nest-generating construct
+  !$omp metadirective when(user={condition(use_variant)}, implementation={extension(match_any)}: do) default(nothing)
+end subroutine
+
+! MATCH_NONE is not satisfied when the user condition is true, so its
+! loop-associated variant cannot be selected and needs no loop.
+subroutine f11()
+  logical, parameter :: use_variant = .true.
+  !$omp metadirective when(user={condition(use_variant)}, implementation={extension(match_none)}: do) default(nothing)
+end subroutine

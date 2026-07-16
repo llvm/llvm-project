@@ -1328,38 +1328,47 @@ static llvm::Error CheckScalarOperandsHaveSameType(const Scalar &lhs,
                                                    const Scalar &rhs,
                                                    LocationAtom opcode,
                                                    size_t address_size) {
+  auto mismatch = [&](const char *what) {
+    return llvm::createStringError("%s requires operands to have the same %s",
+                                   DW_OP_value_to_name(opcode), what);
+  };
+
   // Scalar does not preserve the original DWARF DIE, but it does carry the
   // pieces of base-type information used by the evaluator: kind, size, and
   // integer signedness.
   if (lhs.GetType() != rhs.GetType())
-    return llvm::createStringError("%s requires operands to have the same type",
-                                   DW_OP_value_to_name(opcode));
+    return mismatch("type");
 
-  if (lhs.GetByteSize() != rhs.GetByteSize())
-    return llvm::createStringError("%s requires operands to have the same type",
-                                   DW_OP_value_to_name(opcode));
-
-  // Only integer scalars have signedness, so non-integer operands have no
-  // further scalar type information to compare after kind and size match.
-  if (lhs.GetType() != Scalar::e_int)
+  // Only integer scalars have signedness. Non-integer operands (e.g. floats)
+  // have no further scalar type information to compare once kind and size
+  // match.
+  if (lhs.GetType() != Scalar::e_int) {
+    if (lhs.GetByteSize() != rhs.GetByteSize())
+      return mismatch("size");
     return llvm::Error::success();
+  }
 
   // DWARF generic values are address-sized integers with unspecified
-  // signedness. LLDB does not explicitly preserve genericness on the expression
-  // stack, so treat integers at least as wide as the generic type as
-  // potentially generic to keep existing expressions compatible. For example,
-  // DW_OP_constu and DW_OP_consts currently do not always use to_generic due to
+  // signedness. LLDB does not explicitly preserve genericness on the
+  // expression stack, so treat integers at least as wide as the generic type
+  // as potentially generic and compatible with one another, regardless of
+  // exact width or signedness. This keeps common expressions working: e.g.
+  // DW_OP_breg produces a register-sized value while DW_OP_const* produces an
+  // address-sized one, yet both are meant to be generic. DW_OP_constu and
+  // DW_OP_consts also do not always use to_generic due to
   // https://github.com/llvm/llvm-project/issues/47431. A precise fix would
   // require tracking genericness directly, which is a larger type-system
-  // change, so do not use signedness to reject these operands here.
-  if (address_size != 0 && lhs.GetByteSize() >= address_size)
+  // change.
+  if (address_size != 0 && lhs.GetByteSize() >= address_size &&
+      rhs.GetByteSize() >= address_size)
     return llvm::Error::success();
 
-  // For non-generic integer operands, signedness is part of the base-type
-  // information preserved by Scalar, so require it to match.
+  // For non-generic integer operands, size and signedness are part of the
+  // base-type information preserved by Scalar, so require them to match.
+  if (lhs.GetByteSize() != rhs.GetByteSize())
+    return mismatch("size");
   if (lhs.IsSigned() != rhs.IsSigned())
-    return llvm::createStringError("%s requires operands to have the same type",
-                                   DW_OP_value_to_name(opcode));
+    return mismatch("signedness");
 
   return llvm::Error::success();
 }
@@ -1715,7 +1724,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
-      stack.back().GetScalar() = stack.back().GetScalar() == tmp.GetScalar();
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar() == tmp.GetScalar());
       break;
 
     case DW_OP_ge:
@@ -1725,7 +1735,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
-      stack.back().GetScalar() = stack.back().GetScalar() >= tmp.GetScalar();
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar() >= tmp.GetScalar());
       break;
 
     case DW_OP_gt:
@@ -1735,7 +1746,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
-      stack.back().GetScalar() = stack.back().GetScalar() > tmp.GetScalar();
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar() > tmp.GetScalar());
       break;
 
     case DW_OP_le:
@@ -1745,7 +1757,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
-      stack.back().GetScalar() = stack.back().GetScalar() <= tmp.GetScalar();
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar() <= tmp.GetScalar());
       break;
 
     case DW_OP_lt:
@@ -1755,7 +1768,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
-      stack.back().GetScalar() = stack.back().GetScalar() < tmp.GetScalar();
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar() < tmp.GetScalar());
       break;
 
     case DW_OP_ne:
@@ -1765,7 +1779,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
-      stack.back().GetScalar() = stack.back().GetScalar() != tmp.GetScalar();
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar() != tmp.GetScalar());
       break;
 
     case DW_OP_lit0:
