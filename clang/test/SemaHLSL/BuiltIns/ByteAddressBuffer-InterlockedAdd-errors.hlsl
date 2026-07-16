@@ -1,6 +1,13 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header \
-// RUN:   -triple dxil-pc-shadermodel6.6-compute %s -fsyntax-only -verify \
+// RUN:   -triple dxil-pc-shadermodel6.6-library %s -fsyntax-only -verify \
 // RUN:   -verify-ignore-unexpected=note,warning
+
+// notes that are ignored are strictly ones of the form:
+// (frontend): candidate function not viable: requires X arguments, but Y was provided
+// or
+// (frontend): candidate function not viable: no known conversion from X to Y for Nth argument
+// which is in line with expectations, but is difficult to exactly match since
+// the notes are not tied to explicit source lines, but just (frontend).
 
 RWByteAddressBuffer BAB : register(u0);
 RasterizerOrderedByteAddressBuffer ROVB : register(u1);

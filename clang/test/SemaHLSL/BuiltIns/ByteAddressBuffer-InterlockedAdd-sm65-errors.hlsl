@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header \
-// RUN:   -triple dxil-pc-shadermodel6.5-compute %s -fsyntax-only -verify \
-// RUN:   -verify-ignore-unexpected=note,warning
+// RUN:   -triple dxil-pc-shadermodel6.5-library %s -fsyntax-only -verify \
+// RUN:   -verify-ignore-unexpected=warning
 
 RWByteAddressBuffer BAB : register(u0);
 RasterizerOrderedByteAddressBuffer ROVB : register(u1);
