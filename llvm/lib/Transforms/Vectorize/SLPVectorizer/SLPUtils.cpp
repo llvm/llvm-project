@@ -224,7 +224,7 @@ bool allSameOpcode(ArrayRef<Value *> VL) {
   bool IsCmpOp = isa<CmpInst>(MainOp);
   CmpInst::Predicate BasePred = IsCmpOp ? cast<CmpInst>(MainOp)->getPredicate()
                                         : CmpInst::BAD_ICMP_PREDICATE;
-  return all_of(iterator_range(It, VL.end()), [&](Value *V) {
+  return all_of(make_range(It, VL.end()), [&](Value *V) {
     if (auto *CI = dyn_cast<CmpInst>(V))
       return BasePred == CI->getPredicate();
     if (auto *I = dyn_cast<Instruction>(V))
