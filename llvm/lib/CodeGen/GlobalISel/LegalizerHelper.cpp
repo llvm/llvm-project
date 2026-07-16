@@ -9734,7 +9734,7 @@ LegalizerHelper::lowerExtract(MachineInstr &MI) {
     Register ResultReg = DstReg;
     if (DstTy.isPointer())
       ResultReg =
-          MRI.createGenericVirtualRegister(LLT::scalar(DstTy.getSizeInBits()));
+          MRI.createGenericVirtualRegister(LLT::integer(DstTy.getSizeInBits()));
 
     if (Offset == 0)
       MIRBuilder.buildTrunc(ResultReg, SrcReg);
