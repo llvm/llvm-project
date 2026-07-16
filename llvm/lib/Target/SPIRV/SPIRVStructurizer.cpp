@@ -1202,9 +1202,7 @@ PreservedAnalyses SPIRVStructurizerWrapper::run(Function &F,
   LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
   ConvergenceRegionInfo &RegionInfo =
       AM.getResult<SPIRVConvergenceRegionAnalysis>(F);
-  if (!SPIRVStructurizerImpl(LI, RegionInfo).run(F))
-    return PreservedAnalyses::all();
-  PreservedAnalyses PA;
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
+  return SPIRVStructurizerImpl(LI, RegionInfo).run(F)
+             ? PreservedAnalyses::none()
+             : PreservedAnalyses::all();
 }
