@@ -1223,6 +1223,95 @@ define float @v_copysign_f32_0_f16(half %sign) {
   ret float %result
 }
 
+define amdgpu_ps float @s_copysign_f32_0_fneg(float inreg %sign) {
+; SIVI-LABEL: s_copysign_f32_0_fneg:
+; SIVI:       ; %bb.0:
+; SIVI-NEXT:    s_xor_b32 s0, s0, 0x80000000
+; SIVI-NEXT:    s_and_b32 s0, 0x80000000, s0
+; SIVI-NEXT:    v_mov_b32_e32 v0, s0
+; SIVI-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: s_copysign_f32_0_fneg:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_xor_b32 s0, s0, 0x80000000
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_and_b32 s0, 0x80000000, s0
+; GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-NEXT:    ; return to shader part epilog
+  %sign.ext = fneg float %sign
+  %result = call float @llvm.copysign.f32(float 0.0, float %sign.ext)
+  ret float %result
+}
+
+define float @v_copysign_f32_0_fneg(float %sign) {
+; SIVI-LABEL: v_copysign_f32_0_fneg:
+; SIVI:       ; %bb.0:
+; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SIVI-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; SIVI-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
+; SIVI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_copysign_f32_0_fneg:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %sign.ext = fneg float %sign
+  %result = call float @llvm.copysign.f32(float 0.0, float %sign.ext)
+  ret float %result
+}
+
+define amdgpu_ps <2 x float> @s_copysign_v2f32_0_fneg(<2 x float> inreg %sign) {
+; SIVI-LABEL: s_copysign_v2f32_0_fneg:
+; SIVI:       ; %bb.0:
+; SIVI-NEXT:    s_xor_b32 s1, s1, 0x80000000
+; SIVI-NEXT:    s_xor_b32 s0, s0, 0x80000000
+; SIVI-NEXT:    s_and_b32 s0, 0x80000000, s0
+; SIVI-NEXT:    s_and_b32 s1, 0x80000000, s1
+; SIVI-NEXT:    v_mov_b32_e32 v0, s0
+; SIVI-NEXT:    v_mov_b32_e32 v1, s1
+; SIVI-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: s_copysign_v2f32_0_fneg:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_xor_b32 s0, s0, 0x80000000
+; GFX11-NEXT:    s_xor_b32 s1, s1, 0x80000000
+; GFX11-NEXT:    s_and_b32 s0, 0x80000000, s0
+; GFX11-NEXT:    s_and_b32 s1, 0x80000000, s1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    ; return to shader part epilog
+  %sign.ext = fneg <2 x float> %sign
+  %result = call <2 x float> @llvm.copysign.v2f32(<2 x float> zeroinitializer, <2 x float> %sign.ext)
+  ret <2 x float> %result
+}
+
+define <2 x float> @v_copysign_v2f32_0_fneg(<2 x float> %sign) {
+; SIVI-LABEL: v_copysign_v2f32_0_fneg:
+; SIVI:       ; %bb.0:
+; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SIVI-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; SIVI-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; SIVI-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
+; SIVI-NEXT:    v_and_b32_e32 v1, 0x80000000, v1
+; SIVI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_copysign_v2f32_0_fneg:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
+; GFX11-NEXT:    v_and_b32_e32 v1, 0x80000000, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %sign.ext = fneg <2 x float> %sign
+  %result = call <2 x float> @llvm.copysign.v2f32(<2 x float> zeroinitializer, <2 x float> %sign.ext)
+  ret <2 x float> %result
+}
+
 declare float @llvm.copysign.f32(float, float) #0
 declare <2 x float> @llvm.copysign.v2f32(<2 x float>, <2 x float>) #0
 declare <3 x float> @llvm.copysign.v3f32(<3 x float>, <3 x float>) #0
