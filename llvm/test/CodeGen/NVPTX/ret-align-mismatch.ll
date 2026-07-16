@@ -33,7 +33,7 @@ define internal alignstack(4) %struct.big @internal_ret_align4() {
 ; CHECK:         ld.param.b32 {{%r[0-9]+}}, [retval0];
 
 define %struct.big @caller_align4() {
-  %r = call %struct.big @internal_ret_align4()
+  %r = call alignstack(4) %struct.big @internal_ret_align4()
   ret %struct.big %r
 }
 
@@ -55,7 +55,7 @@ define internal alignstack(16) %struct.big @internal_ret_align16() {
 ; CHECK:         ld.param.v4.b32 {{{%r[0-9]+, %r[0-9]+, %r[0-9]+, %r[0-9]+}}}, [retval0];
 
 define %struct.big @caller_align16() {
-  %r = call %struct.big @internal_ret_align16()
+  %r = call alignstack(16) %struct.big @internal_ret_align16()
   ret %struct.big %r
 }
 

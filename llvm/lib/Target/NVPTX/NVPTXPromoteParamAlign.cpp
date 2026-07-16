@@ -284,7 +284,7 @@ static bool propagateByValParamLoadAlign(Function &F) {
     if (ETy->isEmptyTy())
       continue;
     const unsigned ParamIdx = Arg.getArgNo() + AttributeList::FirstArgIndex;
-    const Align ParamAlign = getDeviceByValParamAlign(&F, ETy, ParamIdx, DL);
+    const Align ParamAlign = getPTXParamAlign(&F, ETy, ParamIdx, DL);
     Changed |= propagateAlignmentToLoads(&Arg, ParamAlign, DL);
   }
   return Changed;

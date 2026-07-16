@@ -117,7 +117,7 @@ define void @st_param_v2_i8_ii() {
 ; CHECK-NEXT:    call.uni call_v2_i8, (param0);
 ; CHECK-NEXT:    } // callseq 5
 ; CHECK-NEXT:    ret;
-  call void @call_v2_i8(%struct.char2 { i8 1, i8 2 })
+  call void @call_v2_i8(%struct.char2 alignstack(2) { i8 1, i8 2 })
   ret void
 }
 define void @st_param_v2_i8_ir(i8 %val) {
@@ -135,7 +135,7 @@ define void @st_param_v2_i8_ir(i8 %val) {
 ; CHECK-NEXT:    ret;
   %struct.ir0 = insertvalue %struct.char2 poison, i8 1, 0
   %struct.ir1 = insertvalue %struct.char2 %struct.ir0, i8 %val, 1
-  call void @call_v2_i8(%struct.char2 %struct.ir1)
+  call void @call_v2_i8(%struct.char2 alignstack(2) %struct.ir1)
   ret void
 }
 define void @st_param_v2_i8_ri(i8 %val) {
@@ -153,7 +153,7 @@ define void @st_param_v2_i8_ri(i8 %val) {
 ; CHECK-NEXT:    ret;
   %struct.ri0 = insertvalue %struct.char2 poison, i8 %val, 0
   %struct.ri1 = insertvalue %struct.char2 %struct.ri0, i8 2, 1
-  call void @call_v2_i8(%struct.char2 %struct.ri1)
+  call void @call_v2_i8(%struct.char2 alignstack(2) %struct.ri1)
   ret void
 }
 
@@ -169,7 +169,7 @@ define void @st_param_v2_i16_ii() {
 ; CHECK-NEXT:    call.uni call_v2_i16, (param0);
 ; CHECK-NEXT:    } // callseq 8
 ; CHECK-NEXT:    ret;
-  call void @call_v2_i16(%struct.short2 { i16 1, i16 2 })
+  call void @call_v2_i16(%struct.short2 alignstack(4) { i16 1, i16 2 })
   ret void
 }
 define void @st_param_v2_i16_ir(i16 %val) {
@@ -187,7 +187,7 @@ define void @st_param_v2_i16_ir(i16 %val) {
 ; CHECK-NEXT:    ret;
   %struct.ir0 = insertvalue %struct.short2 poison, i16 1, 0
   %struct.ir1 = insertvalue %struct.short2 %struct.ir0, i16 %val, 1
-  call void @call_v2_i16(%struct.short2 %struct.ir1)
+  call void @call_v2_i16(%struct.short2 alignstack(4) %struct.ir1)
   ret void
 }
 define void @st_param_v2_i16_ri(i16 %val) {
@@ -205,7 +205,7 @@ define void @st_param_v2_i16_ri(i16 %val) {
 ; CHECK-NEXT:    ret;
   %struct.ri0 = insertvalue %struct.short2 poison, i16 %val, 0
   %struct.ri1 = insertvalue %struct.short2 %struct.ri0, i16 2, 1
-  call void @call_v2_i16(%struct.short2 %struct.ri1)
+  call void @call_v2_i16(%struct.short2 alignstack(4) %struct.ri1)
   ret void
 }
 
@@ -221,7 +221,7 @@ define void @st_param_v2_i32_ii() {
 ; CHECK-NEXT:    call.uni call_v2_i32, (param0);
 ; CHECK-NEXT:    } // callseq 11
 ; CHECK-NEXT:    ret;
-  call void @call_v2_i32(%struct.int2 { i32 1, i32 2 })
+  call void @call_v2_i32(%struct.int2 alignstack(8) { i32 1, i32 2 })
   ret void
 }
 define void @st_param_v2_i32_ir(i32 %val) {
@@ -239,7 +239,7 @@ define void @st_param_v2_i32_ir(i32 %val) {
 ; CHECK-NEXT:    ret;
   %struct.ir0 = insertvalue %struct.int2 poison, i32 1, 0
   %struct.ir1 = insertvalue %struct.int2 %struct.ir0, i32 %val, 1
-  call void @call_v2_i32(%struct.int2 %struct.ir1)
+  call void @call_v2_i32(%struct.int2 alignstack(8) %struct.ir1)
   ret void
 }
 define void @st_param_v2_i32_ri(i32 %val) {
@@ -257,7 +257,7 @@ define void @st_param_v2_i32_ri(i32 %val) {
 ; CHECK-NEXT:    ret;
   %struct.ri0 = insertvalue %struct.int2 poison, i32 %val, 0
   %struct.ri1 = insertvalue %struct.int2 %struct.ri0, i32 2, 1
-  call void @call_v2_i32(%struct.int2 %struct.ri1)
+  call void @call_v2_i32(%struct.int2 alignstack(8) %struct.ri1)
   ret void
 }
 
@@ -273,7 +273,7 @@ define void @st_param_v2_i64_ii() {
 ; CHECK-NEXT:    call.uni call_v2_i64, (param0);
 ; CHECK-NEXT:    } // callseq 14
 ; CHECK-NEXT:    ret;
-  call void @call_v2_i64(%struct.longlong2 { i64 1, i64 2 })
+  call void @call_v2_i64(%struct.longlong2 alignstack(16) { i64 1, i64 2 })
   ret void
 }
 define void @st_param_v2_i64_ir(i64 %val) {
@@ -291,7 +291,7 @@ define void @st_param_v2_i64_ir(i64 %val) {
 ; CHECK-NEXT:    ret;
   %struct.ir0 = insertvalue %struct.longlong2 poison, i64 1, 0
   %struct.ir1 = insertvalue %struct.longlong2 %struct.ir0, i64 %val, 1
-  call void @call_v2_i64(%struct.longlong2 %struct.ir1)
+  call void @call_v2_i64(%struct.longlong2 alignstack(16) %struct.ir1)
   ret void
 }
 define void @st_param_v2_i64_ri(i64 %val) {
@@ -309,7 +309,7 @@ define void @st_param_v2_i64_ri(i64 %val) {
 ; CHECK-NEXT:    ret;
   %struct.ri0 = insertvalue %struct.longlong2 poison, i64 %val, 0
   %struct.ri1 = insertvalue %struct.longlong2 %struct.ri0, i64 2, 1
-  call void @call_v2_i64(%struct.longlong2 %struct.ri1)
+  call void @call_v2_i64(%struct.longlong2 alignstack(16) %struct.ri1)
   ret void
 }
 
@@ -325,7 +325,7 @@ define void @st_param_v2_f32_ii(float %val) {
 ; CHECK-NEXT:    call.uni call_v2_f32, (param0);
 ; CHECK-NEXT:    } // callseq 17
 ; CHECK-NEXT:    ret;
-  call void @call_v2_f32(%struct.float2 { float 1.0, float 2.0 })
+  call void @call_v2_f32(%struct.float2 alignstack(8) { float 1.0, float 2.0 })
   ret void
 }
 define void @st_param_v2_f32_ir(float %val) {
@@ -343,7 +343,7 @@ define void @st_param_v2_f32_ir(float %val) {
 ; CHECK-NEXT:    ret;
   %struct.ir0 = insertvalue %struct.float2 poison, float 1.0, 0
   %struct.ir1 = insertvalue %struct.float2 %struct.ir0, float %val, 1
-  call void @call_v2_f32(%struct.float2 %struct.ir1)
+  call void @call_v2_f32(%struct.float2 alignstack(8) %struct.ir1)
   ret void
 }
 define void @st_param_v2_f32_ri(float %val) {
@@ -361,7 +361,7 @@ define void @st_param_v2_f32_ri(float %val) {
 ; CHECK-NEXT:    ret;
   %struct.ri0 = insertvalue %struct.float2 poison, float %val, 0
   %struct.ri1 = insertvalue %struct.float2 %struct.ri0, float 2.0, 1
-  call void @call_v2_f32(%struct.float2 %struct.ri1)
+  call void @call_v2_f32(%struct.float2 alignstack(8) %struct.ri1)
   ret void
 }
 
@@ -377,7 +377,7 @@ define void @st_param_v2_f64_ii(double %val) {
 ; CHECK-NEXT:    call.uni call_v2_f64, (param0);
 ; CHECK-NEXT:    } // callseq 20
 ; CHECK-NEXT:    ret;
-  call void @call_v2_f64(%struct.double2 { double 1.0, double 2.0 })
+  call void @call_v2_f64(%struct.double2 alignstack(16) { double 1.0, double 2.0 })
   ret void
 }
 define void @st_param_v2_f64_ir(double %val) {
@@ -395,7 +395,7 @@ define void @st_param_v2_f64_ir(double %val) {
 ; CHECK-NEXT:    ret;
   %struct.ir0 = insertvalue %struct.double2 poison, double 1.0, 0
   %struct.ir1 = insertvalue %struct.double2 %struct.ir0, double %val, 1
-  call void @call_v2_f64(%struct.double2 %struct.ir1)
+  call void @call_v2_f64(%struct.double2 alignstack(16) %struct.ir1)
   ret void
 }
 define void @st_param_v2_f64_ri(double %val) {
@@ -413,7 +413,7 @@ define void @st_param_v2_f64_ri(double %val) {
 ; CHECK-NEXT:    ret;
   %struct.ri0 = insertvalue %struct.double2 poison, double %val, 0
   %struct.ri1 = insertvalue %struct.double2 %struct.ri0, double 2.0, 1
-  call void @call_v2_f64(%struct.double2 %struct.ri1)
+  call void @call_v2_f64(%struct.double2 alignstack(16) %struct.ri1)
   ret void
 }
 
@@ -436,7 +436,7 @@ define void @st_param_v4_i8_iiii() {
 ; CHECK-NEXT:    call.uni call_v4_i8, (param0);
 ; CHECK-NEXT:    } // callseq 23
 ; CHECK-NEXT:    ret;
-  call void @call_v4_i8(%struct.char4 { i8 1, i8 2, i8 3, i8 4 })
+  call void @call_v4_i8(%struct.char4 alignstack(4) { i8 1, i8 2, i8 3, i8 4 })
   ret void
 }
 define void @st_param_v4_i8_irrr(i8 %b, i8 %c, i8 %d) {
@@ -461,7 +461,7 @@ define void @st_param_v4_i8_irrr(i8 %b, i8 %c, i8 %d) {
   %struct.irrr1 = insertvalue %struct.char4 %struct.irrr0, i8 %b, 1
   %struct.irrr2 = insertvalue %struct.char4 %struct.irrr1, i8 %c, 2
   %struct.irrr3 = insertvalue %struct.char4 %struct.irrr2, i8 %d, 3
-  call void @call_v4_i8(%struct.char4 %struct.irrr3)
+  call void @call_v4_i8(%struct.char4 alignstack(4) %struct.irrr3)
   ret void
 }
 define void @st_param_v4_i8_rirr(i8 %a, i8 %c, i8 %d) {
@@ -486,7 +486,7 @@ define void @st_param_v4_i8_rirr(i8 %a, i8 %c, i8 %d) {
   %struct.rirr1 = insertvalue %struct.char4 %struct.rirr0, i8 2, 1
   %struct.rirr2 = insertvalue %struct.char4 %struct.rirr1, i8 %c, 2
   %struct.rirr3 = insertvalue %struct.char4 %struct.rirr2, i8 %d, 3
-  call void @call_v4_i8(%struct.char4 %struct.rirr3)
+  call void @call_v4_i8(%struct.char4 alignstack(4) %struct.rirr3)
   ret void
 }
 define void @st_param_v4_i8_rrir(i8 %a, i8 %b, i8 %d) {
@@ -511,7 +511,7 @@ define void @st_param_v4_i8_rrir(i8 %a, i8 %b, i8 %d) {
   %struct.rrir1 = insertvalue %struct.char4 %struct.rrir0, i8 %b, 1
   %struct.rrir2 = insertvalue %struct.char4 %struct.rrir1, i8 3, 2
   %struct.rrir3 = insertvalue %struct.char4 %struct.rrir2, i8 %d, 3
-  call void @call_v4_i8(%struct.char4 %struct.rrir3)
+  call void @call_v4_i8(%struct.char4 alignstack(4) %struct.rrir3)
   ret void
 }
 define void @st_param_v4_i8_rrri(i8 %a, i8 %b, i8 %c) {
@@ -536,7 +536,7 @@ define void @st_param_v4_i8_rrri(i8 %a, i8 %b, i8 %c) {
   %struct.rrri1 = insertvalue %struct.char4 %struct.rrri0, i8 %b, 1
   %struct.rrri2 = insertvalue %struct.char4 %struct.rrri1, i8 %c, 2
   %struct.rrri3 = insertvalue %struct.char4 %struct.rrri2, i8 4, 3
-  call void @call_v4_i8(%struct.char4 %struct.rrri3)
+  call void @call_v4_i8(%struct.char4 alignstack(4) %struct.rrri3)
   ret void
 }
 define void @st_param_v4_i8_iirr(i8 %c, i8 %d) {
@@ -559,7 +559,7 @@ define void @st_param_v4_i8_iirr(i8 %c, i8 %d) {
   %struct.iirr1 = insertvalue %struct.char4 %struct.iirr0, i8 2, 1
   %struct.iirr2 = insertvalue %struct.char4 %struct.iirr1, i8 %c, 2
   %struct.iirr3 = insertvalue %struct.char4 %struct.iirr2, i8 %d, 3
-  call void @call_v4_i8(%struct.char4 %struct.iirr3)
+  call void @call_v4_i8(%struct.char4 alignstack(4) %struct.iirr3)
   ret void
 }
 define void @st_param_v4_i8_irir(i8 %b, i8 %d) {
@@ -583,7 +583,7 @@ define void @st_param_v4_i8_irir(i8 %b, i8 %d) {
   %struct.irir1 = insertvalue %struct.char4 %struct.irir0, i8 %b, 1
   %struct.irir2 = insertvalue %struct.char4 %struct.irir1, i8 3, 2
   %struct.irir3 = insertvalue %struct.char4 %struct.irir2, i8 %d, 3
-  call void @call_v4_i8(%struct.char4 %struct.irir3)
+  call void @call_v4_i8(%struct.char4 alignstack(4) %struct.irir3)
   ret void
 }
 define void @st_param_v4_i8_irri(i8 %b, i8 %c) {
@@ -607,7 +607,7 @@ define void @st_param_v4_i8_irri(i8 %b, i8 %c) {
   %struct.irri1 = insertvalue %struct.char4 %struct.irri0, i8 %b, 1
   %struct.irri2 = insertvalue %struct.char4 %struct.irri1, i8 %c, 2
   %struct.irri3 = insertvalue %struct.char4 %struct.irri2, i8 4, 3
-  call void @call_v4_i8(%struct.char4 %struct.irri3)
+  call void @call_v4_i8(%struct.char4 alignstack(4) %struct.irri3)
   ret void
 }
 define void @st_param_v4_i8_riir(i8 %a, i8 %d) {
@@ -631,7 +631,7 @@ define void @st_param_v4_i8_riir(i8 %a, i8 %d) {
   %struct.riir1 = insertvalue %struct.char4 %struct.riir0, i8 2, 1
   %struct.riir2 = insertvalue %struct.char4 %struct.riir1, i8 3, 2
   %struct.riir3 = insertvalue %struct.char4 %struct.riir2, i8 %d, 3
-  call void @call_v4_i8(%struct.char4 %struct.riir3)
+  call void @call_v4_i8(%struct.char4 alignstack(4) %struct.riir3)
   ret void
 }
 define void @st_param_v4_i8_riri(i8 %a, i8 %c) {
@@ -655,7 +655,7 @@ define void @st_param_v4_i8_riri(i8 %a, i8 %c) {
   %struct.riri1 = insertvalue %struct.char4 %struct.riri0, i8 2, 1
   %struct.riri2 = insertvalue %struct.char4 %struct.riri1, i8 %c, 2
   %struct.riri3 = insertvalue %struct.char4 %struct.riri2, i8 4, 3
-  call void @call_v4_i8(%struct.char4 %struct.riri3)
+  call void @call_v4_i8(%struct.char4 alignstack(4) %struct.riri3)
   ret void
 }
 define void @st_param_v4_i8_rrii(i8 %a, i8 %b) {
@@ -678,7 +678,7 @@ define void @st_param_v4_i8_rrii(i8 %a, i8 %b) {
   %struct.rrii1 = insertvalue %struct.char4 %struct.rrii0, i8 %b, 1
   %struct.rrii2 = insertvalue %struct.char4 %struct.rrii1, i8 3, 2
   %struct.rrii3 = insertvalue %struct.char4 %struct.rrii2, i8 4, 3
-  call void @call_v4_i8(%struct.char4 %struct.rrii3)
+  call void @call_v4_i8(%struct.char4 alignstack(4) %struct.rrii3)
   ret void
 }
 define void @st_param_v4_i8_iiir(i8 %d) {
@@ -700,7 +700,7 @@ define void @st_param_v4_i8_iiir(i8 %d) {
   %struct.iiir1 = insertvalue %struct.char4 %struct.iiir0, i8 2, 1
   %struct.iiir2 = insertvalue %struct.char4 %struct.iiir1, i8 3, 2
   %struct.iiir3 = insertvalue %struct.char4 %struct.iiir2, i8 %d, 3
-  call void @call_v4_i8(%struct.char4 %struct.iiir3)
+  call void @call_v4_i8(%struct.char4 alignstack(4) %struct.iiir3)
   ret void
 }
 define void @st_param_v4_i8_iiri(i8 %c) {
@@ -722,7 +722,7 @@ define void @st_param_v4_i8_iiri(i8 %c) {
   %struct.iiri1 = insertvalue %struct.char4 %struct.iiri0, i8 2, 1
   %struct.iiri2 = insertvalue %struct.char4 %struct.iiri1, i8 %c, 2
   %struct.iiri3 = insertvalue %struct.char4 %struct.iiri2, i8 4, 3
-  call void @call_v4_i8(%struct.char4 %struct.iiri3)
+  call void @call_v4_i8(%struct.char4 alignstack(4) %struct.iiri3)
   ret void
 }
 define void @st_param_v4_i8_irii(i8 %b) {
@@ -744,7 +744,7 @@ define void @st_param_v4_i8_irii(i8 %b) {
   %struct.irii1 = insertvalue %struct.char4 %struct.irii0, i8 %b, 1
   %struct.irii2 = insertvalue %struct.char4 %struct.irii1, i8 3, 2
   %struct.irii3 = insertvalue %struct.char4 %struct.irii2, i8 4, 3
-  call void @call_v4_i8(%struct.char4 %struct.irii3)
+  call void @call_v4_i8(%struct.char4 alignstack(4) %struct.irii3)
   ret void
 }
 define void @st_param_v4_i8_riii(i8 %a) {
@@ -766,7 +766,7 @@ define void @st_param_v4_i8_riii(i8 %a) {
   %struct.riii1 = insertvalue %struct.char4 %struct.riii0, i8 2, 1
   %struct.riii2 = insertvalue %struct.char4 %struct.riii1, i8 3, 2
   %struct.riii3 = insertvalue %struct.char4 %struct.riii2, i8 4, 3
-  call void @call_v4_i8(%struct.char4 %struct.riii3)
+  call void @call_v4_i8(%struct.char4 alignstack(4) %struct.riii3)
   ret void
 }
 
@@ -782,7 +782,7 @@ define void @st_param_v4_i16_iiii() {
 ; CHECK-NEXT:    call.uni call_v4_i16, (param0);
 ; CHECK-NEXT:    } // callseq 38
 ; CHECK-NEXT:    ret;
-  call void @call_v4_i16(%struct.short4 { i16 1, i16 2, i16 3, i16 4 })
+  call void @call_v4_i16(%struct.short4 alignstack(8) { i16 1, i16 2, i16 3, i16 4 })
   ret void
 }
 define void @st_param_v4_i16_irrr(i16 %b, i16 %c, i16 %d) {
@@ -804,7 +804,7 @@ define void @st_param_v4_i16_irrr(i16 %b, i16 %c, i16 %d) {
   %struct.irrr1 = insertvalue %struct.short4 %struct.irrr0, i16 %b, 1
   %struct.irrr2 = insertvalue %struct.short4 %struct.irrr1, i16 %c, 2
   %struct.irrr3 = insertvalue %struct.short4 %struct.irrr2, i16 %d, 3
-  call void @call_v4_i16(%struct.short4 %struct.irrr3)
+  call void @call_v4_i16(%struct.short4 alignstack(8) %struct.irrr3)
   ret void
 }
 define void @st_param_v4_i16_rirr(i16 %a, i16 %c, i16 %d) {
@@ -826,7 +826,7 @@ define void @st_param_v4_i16_rirr(i16 %a, i16 %c, i16 %d) {
   %struct.rirr1 = insertvalue %struct.short4 %struct.rirr0, i16 2, 1
   %struct.rirr2 = insertvalue %struct.short4 %struct.rirr1, i16 %c, 2
   %struct.rirr3 = insertvalue %struct.short4 %struct.rirr2, i16 %d, 3
-  call void @call_v4_i16(%struct.short4 %struct.rirr3)
+  call void @call_v4_i16(%struct.short4 alignstack(8) %struct.rirr3)
   ret void
 }
 define void @st_param_v4_i16_rrir(i16 %a, i16 %b, i16 %d) {
@@ -848,7 +848,7 @@ define void @st_param_v4_i16_rrir(i16 %a, i16 %b, i16 %d) {
   %struct.rrir1 = insertvalue %struct.short4 %struct.rrir0, i16 %b, 1
   %struct.rrir2 = insertvalue %struct.short4 %struct.rrir1, i16 3, 2
   %struct.rrir3 = insertvalue %struct.short4 %struct.rrir2, i16 %d, 3
-  call void @call_v4_i16(%struct.short4 %struct.rrir3)
+  call void @call_v4_i16(%struct.short4 alignstack(8) %struct.rrir3)
   ret void
 }
 define void @st_param_v4_i16_rrri(i16 %a, i16 %b, i16 %c) {
@@ -870,7 +870,7 @@ define void @st_param_v4_i16_rrri(i16 %a, i16 %b, i16 %c) {
   %struct.rrri1 = insertvalue %struct.short4 %struct.rrri0, i16 %b, 1
   %struct.rrri2 = insertvalue %struct.short4 %struct.rrri1, i16 %c, 2
   %struct.rrri3 = insertvalue %struct.short4 %struct.rrri2, i16 4, 3
-  call void @call_v4_i16(%struct.short4 %struct.rrri3)
+  call void @call_v4_i16(%struct.short4 alignstack(8) %struct.rrri3)
   ret void
 }
 define void @st_param_v4_i16_iirr(i16 %c, i16 %d) {
@@ -893,7 +893,7 @@ define void @st_param_v4_i16_iirr(i16 %c, i16 %d) {
   %struct.iirr1 = insertvalue %struct.short4 %struct.iirr0, i16 2, 1
   %struct.iirr2 = insertvalue %struct.short4 %struct.iirr1, i16 %c, 2
   %struct.iirr3 = insertvalue %struct.short4 %struct.iirr2, i16 %d, 3
-  call void @call_v4_i16(%struct.short4 %struct.iirr3)
+  call void @call_v4_i16(%struct.short4 alignstack(8) %struct.iirr3)
   ret void
 }
 define void @st_param_v4_i16_irir(i16 %b, i16 %d) {
@@ -914,7 +914,7 @@ define void @st_param_v4_i16_irir(i16 %b, i16 %d) {
   %struct.irir1 = insertvalue %struct.short4 %struct.irir0, i16 %b, 1
   %struct.irir2 = insertvalue %struct.short4 %struct.irir1, i16 3, 2
   %struct.irir3 = insertvalue %struct.short4 %struct.irir2, i16 %d, 3
-  call void @call_v4_i16(%struct.short4 %struct.irir3)
+  call void @call_v4_i16(%struct.short4 alignstack(8) %struct.irir3)
   ret void
 }
 define void @st_param_v4_i16_irri(i16 %b, i16 %c) {
@@ -935,7 +935,7 @@ define void @st_param_v4_i16_irri(i16 %b, i16 %c) {
   %struct.irri1 = insertvalue %struct.short4 %struct.irri0, i16 %b, 1
   %struct.irri2 = insertvalue %struct.short4 %struct.irri1, i16 %c, 2
   %struct.irri3 = insertvalue %struct.short4 %struct.irri2, i16 4, 3
-  call void @call_v4_i16(%struct.short4 %struct.irri3)
+  call void @call_v4_i16(%struct.short4 alignstack(8) %struct.irri3)
   ret void
 }
 define void @st_param_v4_i16_riir(i16 %a, i16 %d) {
@@ -956,7 +956,7 @@ define void @st_param_v4_i16_riir(i16 %a, i16 %d) {
   %struct.riir1 = insertvalue %struct.short4 %struct.riir0, i16 2, 1
   %struct.riir2 = insertvalue %struct.short4 %struct.riir1, i16 3, 2
   %struct.riir3 = insertvalue %struct.short4 %struct.riir2, i16 %d, 3
-  call void @call_v4_i16(%struct.short4 %struct.riir3)
+  call void @call_v4_i16(%struct.short4 alignstack(8) %struct.riir3)
   ret void
 }
 define void @st_param_v4_i16_riri(i16 %a, i16 %c) {
@@ -977,7 +977,7 @@ define void @st_param_v4_i16_riri(i16 %a, i16 %c) {
   %struct.riri1 = insertvalue %struct.short4 %struct.riri0, i16 2, 1
   %struct.riri2 = insertvalue %struct.short4 %struct.riri1, i16 %c, 2
   %struct.riri3 = insertvalue %struct.short4 %struct.riri2, i16 4, 3
-  call void @call_v4_i16(%struct.short4 %struct.riri3)
+  call void @call_v4_i16(%struct.short4 alignstack(8) %struct.riri3)
   ret void
 }
 define void @st_param_v4_i16_rrii(i16 %a, i16 %b) {
@@ -1000,7 +1000,7 @@ define void @st_param_v4_i16_rrii(i16 %a, i16 %b) {
   %struct.rrii1 = insertvalue %struct.short4 %struct.rrii0, i16 %b, 1
   %struct.rrii2 = insertvalue %struct.short4 %struct.rrii1, i16 3, 2
   %struct.rrii3 = insertvalue %struct.short4 %struct.rrii2, i16 4, 3
-  call void @call_v4_i16(%struct.short4 %struct.rrii3)
+  call void @call_v4_i16(%struct.short4 alignstack(8) %struct.rrii3)
   ret void
 }
 define void @st_param_v4_i16_iiir(i16 %d) {
@@ -1023,7 +1023,7 @@ define void @st_param_v4_i16_iiir(i16 %d) {
   %struct.iiir1 = insertvalue %struct.short4 %struct.iiir0, i16 2, 1
   %struct.iiir2 = insertvalue %struct.short4 %struct.iiir1, i16 3, 2
   %struct.iiir3 = insertvalue %struct.short4 %struct.iiir2, i16 %d, 3
-  call void @call_v4_i16(%struct.short4 %struct.iiir3)
+  call void @call_v4_i16(%struct.short4 alignstack(8) %struct.iiir3)
   ret void
 }
 define void @st_param_v4_i16_iiri(i16 %c) {
@@ -1046,7 +1046,7 @@ define void @st_param_v4_i16_iiri(i16 %c) {
   %struct.iiri1 = insertvalue %struct.short4 %struct.iiri0, i16 2, 1
   %struct.iiri2 = insertvalue %struct.short4 %struct.iiri1, i16 %c, 2
   %struct.iiri3 = insertvalue %struct.short4 %struct.iiri2, i16 4, 3
-  call void @call_v4_i16(%struct.short4 %struct.iiri3)
+  call void @call_v4_i16(%struct.short4 alignstack(8) %struct.iiri3)
   ret void
 }
 define void @st_param_v4_i16_irii(i16 %b) {
@@ -1069,7 +1069,7 @@ define void @st_param_v4_i16_irii(i16 %b) {
   %struct.irii1 = insertvalue %struct.short4 %struct.irii0, i16 %b, 1
   %struct.irii2 = insertvalue %struct.short4 %struct.irii1, i16 3, 2
   %struct.irii3 = insertvalue %struct.short4 %struct.irii2, i16 4, 3
-  call void @call_v4_i16(%struct.short4 %struct.irii3)
+  call void @call_v4_i16(%struct.short4 alignstack(8) %struct.irii3)
   ret void
 }
 define void @st_param_v4_i16_riii(i16 %a) {
@@ -1092,7 +1092,7 @@ define void @st_param_v4_i16_riii(i16 %a) {
   %struct.riii1 = insertvalue %struct.short4 %struct.riii0, i16 2, 1
   %struct.riii2 = insertvalue %struct.short4 %struct.riii1, i16 3, 2
   %struct.riii3 = insertvalue %struct.short4 %struct.riii2, i16 4, 3
-  call void @call_v4_i16(%struct.short4 %struct.riii3)
+  call void @call_v4_i16(%struct.short4 alignstack(8) %struct.riii3)
   ret void
 }
 
@@ -1108,7 +1108,7 @@ define void @st_param_v4_i32_iiii() {
 ; CHECK-NEXT:    call.uni call_v4_i32, (param0);
 ; CHECK-NEXT:    } // callseq 53
 ; CHECK-NEXT:    ret;
-  call void @call_v4_i32(%struct.int4 { i32 1, i32 2, i32 3, i32 4 })
+  call void @call_v4_i32(%struct.int4 alignstack(16) { i32 1, i32 2, i32 3, i32 4 })
   ret void
 }
 define void @st_param_v4_i32_irrr(i32 %b, i32 %c, i32 %d) {
@@ -1130,7 +1130,7 @@ define void @st_param_v4_i32_irrr(i32 %b, i32 %c, i32 %d) {
   %struct.irrr1 = insertvalue %struct.int4 %struct.irrr0, i32 %b, 1
   %struct.irrr2 = insertvalue %struct.int4 %struct.irrr1, i32 %c, 2
   %struct.irrr3 = insertvalue %struct.int4 %struct.irrr2, i32 %d, 3
-  call void @call_v4_i32(%struct.int4 %struct.irrr3)
+  call void @call_v4_i32(%struct.int4 alignstack(16) %struct.irrr3)
   ret void
 }
 define void @st_param_v4_i32_rirr(i32 %a, i32 %c, i32 %d) {
@@ -1152,7 +1152,7 @@ define void @st_param_v4_i32_rirr(i32 %a, i32 %c, i32 %d) {
   %struct.rirr1 = insertvalue %struct.int4 %struct.rirr0, i32 2, 1
   %struct.rirr2 = insertvalue %struct.int4 %struct.rirr1, i32 %c, 2
   %struct.rirr3 = insertvalue %struct.int4 %struct.rirr2, i32 %d, 3
-  call void @call_v4_i32(%struct.int4 %struct.rirr3)
+  call void @call_v4_i32(%struct.int4 alignstack(16) %struct.rirr3)
   ret void
 }
 define void @st_param_v4_i32_rrir(i32 %a, i32 %b, i32 %d) {
@@ -1174,7 +1174,7 @@ define void @st_param_v4_i32_rrir(i32 %a, i32 %b, i32 %d) {
   %struct.rrir1 = insertvalue %struct.int4 %struct.rrir0, i32 %b, 1
   %struct.rrir2 = insertvalue %struct.int4 %struct.rrir1, i32 3, 2
   %struct.rrir3 = insertvalue %struct.int4 %struct.rrir2, i32 %d, 3
-  call void @call_v4_i32(%struct.int4 %struct.rrir3)
+  call void @call_v4_i32(%struct.int4 alignstack(16) %struct.rrir3)
   ret void
 }
 define void @st_param_v4_i32_rrri(i32 %a, i32 %b, i32 %c) {
@@ -1196,7 +1196,7 @@ define void @st_param_v4_i32_rrri(i32 %a, i32 %b, i32 %c) {
   %struct.rrri1 = insertvalue %struct.int4 %struct.rrri0, i32 %b, 1
   %struct.rrri2 = insertvalue %struct.int4 %struct.rrri1, i32 %c, 2
   %struct.rrri3 = insertvalue %struct.int4 %struct.rrri2, i32 4, 3
-  call void @call_v4_i32(%struct.int4 %struct.rrri3)
+  call void @call_v4_i32(%struct.int4 alignstack(16) %struct.rrri3)
   ret void
 }
 define void @st_param_v4_i32_iirr(i32 %c, i32 %d) {
@@ -1217,7 +1217,7 @@ define void @st_param_v4_i32_iirr(i32 %c, i32 %d) {
   %struct.iirr1 = insertvalue %struct.int4 %struct.iirr0, i32 2, 1
   %struct.iirr2 = insertvalue %struct.int4 %struct.iirr1, i32 %c, 2
   %struct.iirr3 = insertvalue %struct.int4 %struct.iirr2, i32 %d, 3
-  call void @call_v4_i32(%struct.int4 %struct.iirr3)
+  call void @call_v4_i32(%struct.int4 alignstack(16) %struct.iirr3)
   ret void
 }
 define void @st_param_v4_i32_irir(i32 %b, i32 %d) {
@@ -1238,7 +1238,7 @@ define void @st_param_v4_i32_irir(i32 %b, i32 %d) {
   %struct.irir1 = insertvalue %struct.int4 %struct.irir0, i32 %b, 1
   %struct.irir2 = insertvalue %struct.int4 %struct.irir1, i32 3, 2
   %struct.irir3 = insertvalue %struct.int4 %struct.irir2, i32 %d, 3
-  call void @call_v4_i32(%struct.int4 %struct.irir3)
+  call void @call_v4_i32(%struct.int4 alignstack(16) %struct.irir3)
   ret void
 }
 define void @st_param_v4_i32_irri(i32 %b, i32 %c) {
@@ -1259,7 +1259,7 @@ define void @st_param_v4_i32_irri(i32 %b, i32 %c) {
   %struct.irri1 = insertvalue %struct.int4 %struct.irri0, i32 %b, 1
   %struct.irri2 = insertvalue %struct.int4 %struct.irri1, i32 %c, 2
   %struct.irri3 = insertvalue %struct.int4 %struct.irri2, i32 4, 3
-  call void @call_v4_i32(%struct.int4 %struct.irri3)
+  call void @call_v4_i32(%struct.int4 alignstack(16) %struct.irri3)
   ret void
 }
 define void @st_param_v4_i32_riir(i32 %a, i32 %d) {
@@ -1280,7 +1280,7 @@ define void @st_param_v4_i32_riir(i32 %a, i32 %d) {
   %struct.riir1 = insertvalue %struct.int4 %struct.riir0, i32 2, 1
   %struct.riir2 = insertvalue %struct.int4 %struct.riir1, i32 3, 2
   %struct.riir3 = insertvalue %struct.int4 %struct.riir2, i32 %d, 3
-  call void @call_v4_i32(%struct.int4 %struct.riir3)
+  call void @call_v4_i32(%struct.int4 alignstack(16) %struct.riir3)
   ret void
 }
 define void @st_param_v4_i32_riri(i32 %a, i32 %c) {
@@ -1301,7 +1301,7 @@ define void @st_param_v4_i32_riri(i32 %a, i32 %c) {
   %struct.riri1 = insertvalue %struct.int4 %struct.riri0, i32 2, 1
   %struct.riri2 = insertvalue %struct.int4 %struct.riri1, i32 %c, 2
   %struct.riri3 = insertvalue %struct.int4 %struct.riri2, i32 4, 3
-  call void @call_v4_i32(%struct.int4 %struct.riri3)
+  call void @call_v4_i32(%struct.int4 alignstack(16) %struct.riri3)
   ret void
 }
 define void @st_param_v4_i32_rrii(i32 %a, i32 %b) {
@@ -1322,7 +1322,7 @@ define void @st_param_v4_i32_rrii(i32 %a, i32 %b) {
   %struct.rrii1 = insertvalue %struct.int4 %struct.rrii0, i32 %b, 1
   %struct.rrii2 = insertvalue %struct.int4 %struct.rrii1, i32 3, 2
   %struct.rrii3 = insertvalue %struct.int4 %struct.rrii2, i32 4, 3
-  call void @call_v4_i32(%struct.int4 %struct.rrii3)
+  call void @call_v4_i32(%struct.int4 alignstack(16) %struct.rrii3)
   ret void
 }
 define void @st_param_v4_i32_iiir(i32 %d) {
@@ -1342,7 +1342,7 @@ define void @st_param_v4_i32_iiir(i32 %d) {
   %struct.iiir1 = insertvalue %struct.int4 %struct.iiir0, i32 2, 1
   %struct.iiir2 = insertvalue %struct.int4 %struct.iiir1, i32 3, 2
   %struct.iiir3 = insertvalue %struct.int4 %struct.iiir2, i32 %d, 3
-  call void @call_v4_i32(%struct.int4 %struct.iiir3)
+  call void @call_v4_i32(%struct.int4 alignstack(16) %struct.iiir3)
   ret void
 }
 define void @st_param_v4_i32_iiri(i32 %c) {
@@ -1362,7 +1362,7 @@ define void @st_param_v4_i32_iiri(i32 %c) {
   %struct.iiri1 = insertvalue %struct.int4 %struct.iiri0, i32 2, 1
   %struct.iiri2 = insertvalue %struct.int4 %struct.iiri1, i32 %c, 2
   %struct.iiri3 = insertvalue %struct.int4 %struct.iiri2, i32 4, 3
-  call void @call_v4_i32(%struct.int4 %struct.iiri3)
+  call void @call_v4_i32(%struct.int4 alignstack(16) %struct.iiri3)
   ret void
 }
 define void @st_param_v4_i32_irii(i32 %b) {
@@ -1382,7 +1382,7 @@ define void @st_param_v4_i32_irii(i32 %b) {
   %struct.irii1 = insertvalue %struct.int4 %struct.irii0, i32 %b, 1
   %struct.irii2 = insertvalue %struct.int4 %struct.irii1, i32 3, 2
   %struct.irii3 = insertvalue %struct.int4 %struct.irii2, i32 4, 3
-  call void @call_v4_i32(%struct.int4 %struct.irii3)
+  call void @call_v4_i32(%struct.int4 alignstack(16) %struct.irii3)
   ret void
 }
 define void @st_param_v4_i32_riii(i32 %a) {
@@ -1402,7 +1402,7 @@ define void @st_param_v4_i32_riii(i32 %a) {
   %struct.riii1 = insertvalue %struct.int4 %struct.riii0, i32 2, 1
   %struct.riii2 = insertvalue %struct.int4 %struct.riii1, i32 3, 2
   %struct.riii3 = insertvalue %struct.int4 %struct.riii2, i32 4, 3
-  call void @call_v4_i32(%struct.int4 %struct.riii3)
+  call void @call_v4_i32(%struct.int4 alignstack(16) %struct.riii3)
   ret void
 }
 
@@ -1418,7 +1418,7 @@ define void @st_param_v4_f32_iiii() {
 ; CHECK-NEXT:    call.uni call_v4_f32, (param0);
 ; CHECK-NEXT:    } // callseq 68
 ; CHECK-NEXT:    ret;
-  call void @call_v4_f32(%struct.float4 { float 1.0, float 2.0, float 3.0, float 4.0 })
+  call void @call_v4_f32(%struct.float4 alignstack(16) { float 1.0, float 2.0, float 3.0, float 4.0 })
   ret void
 }
 define void @st_param_v4_f32_irrr(float %b, float %c, float %d) {
@@ -1440,7 +1440,7 @@ define void @st_param_v4_f32_irrr(float %b, float %c, float %d) {
   %struct.irrr1 = insertvalue %struct.float4 %struct.irrr0, float %b, 1
   %struct.irrr2 = insertvalue %struct.float4 %struct.irrr1, float %c, 2
   %struct.irrr3 = insertvalue %struct.float4 %struct.irrr2, float %d, 3
-  call void @call_v4_f32(%struct.float4 %struct.irrr3)
+  call void @call_v4_f32(%struct.float4 alignstack(16) %struct.irrr3)
   ret void
 }
 define void @st_param_v4_f32_rirr(float %a, float %c, float %d) {
@@ -1462,7 +1462,7 @@ define void @st_param_v4_f32_rirr(float %a, float %c, float %d) {
   %struct.rirr1 = insertvalue %struct.float4 %struct.rirr0, float 2.0, 1
   %struct.rirr2 = insertvalue %struct.float4 %struct.rirr1, float %c, 2
   %struct.rirr3 = insertvalue %struct.float4 %struct.rirr2, float %d, 3
-  call void @call_v4_f32(%struct.float4 %struct.rirr3)
+  call void @call_v4_f32(%struct.float4 alignstack(16) %struct.rirr3)
   ret void
 }
 define void @st_param_v4_f32_rrir(float %a, float %b, float %d) {
@@ -1484,7 +1484,7 @@ define void @st_param_v4_f32_rrir(float %a, float %b, float %d) {
   %struct.rrir1 = insertvalue %struct.float4 %struct.rrir0, float %b, 1
   %struct.rrir2 = insertvalue %struct.float4 %struct.rrir1, float 3.0, 2
   %struct.rrir3 = insertvalue %struct.float4 %struct.rrir2, float %d, 3
-  call void @call_v4_f32(%struct.float4 %struct.rrir3)
+  call void @call_v4_f32(%struct.float4 alignstack(16) %struct.rrir3)
   ret void
 }
 define void @st_param_v4_f32_rrri(float %a, float %b, float %c) {
@@ -1506,7 +1506,7 @@ define void @st_param_v4_f32_rrri(float %a, float %b, float %c) {
   %struct.rrri1 = insertvalue %struct.float4 %struct.rrri0, float %b, 1
   %struct.rrri2 = insertvalue %struct.float4 %struct.rrri1, float %c, 2
   %struct.rrri3 = insertvalue %struct.float4 %struct.rrri2, float 4.0, 3
-  call void @call_v4_f32(%struct.float4 %struct.rrri3)
+  call void @call_v4_f32(%struct.float4 alignstack(16) %struct.rrri3)
   ret void
 }
 define void @st_param_v4_f32_iirr(float %c, float %d) {
@@ -1527,7 +1527,7 @@ define void @st_param_v4_f32_iirr(float %c, float %d) {
   %struct.iirr1 = insertvalue %struct.float4 %struct.iirr0, float 2.0, 1
   %struct.iirr2 = insertvalue %struct.float4 %struct.iirr1, float %c, 2
   %struct.iirr3 = insertvalue %struct.float4 %struct.iirr2, float %d, 3
-  call void @call_v4_f32(%struct.float4 %struct.iirr3)
+  call void @call_v4_f32(%struct.float4 alignstack(16) %struct.iirr3)
   ret void
 }
 define void @st_param_v4_f32_irir(float %b, float %d) {
@@ -1548,7 +1548,7 @@ define void @st_param_v4_f32_irir(float %b, float %d) {
   %struct.irir1 = insertvalue %struct.float4 %struct.irir0, float %b, 1
   %struct.irir2 = insertvalue %struct.float4 %struct.irir1, float 3.0, 2
   %struct.irir3 = insertvalue %struct.float4 %struct.irir2, float %d, 3
-  call void @call_v4_f32(%struct.float4 %struct.irir3)
+  call void @call_v4_f32(%struct.float4 alignstack(16) %struct.irir3)
   ret void
 }
 define void @st_param_v4_f32_irri(float %b, float %c) {
@@ -1569,7 +1569,7 @@ define void @st_param_v4_f32_irri(float %b, float %c) {
   %struct.irri1 = insertvalue %struct.float4 %struct.irri0, float %b, 1
   %struct.irri2 = insertvalue %struct.float4 %struct.irri1, float %c, 2
   %struct.irri3 = insertvalue %struct.float4 %struct.irri2, float 4.0, 3
-  call void @call_v4_f32(%struct.float4 %struct.irri3)
+  call void @call_v4_f32(%struct.float4 alignstack(16) %struct.irri3)
   ret void
 }
 define void @st_param_v4_f32_riir(float %a, float %d) {
@@ -1590,7 +1590,7 @@ define void @st_param_v4_f32_riir(float %a, float %d) {
   %struct.riir1 = insertvalue %struct.float4 %struct.riir0, float 2.0, 1
   %struct.riir2 = insertvalue %struct.float4 %struct.riir1, float 3.0, 2
   %struct.riir3 = insertvalue %struct.float4 %struct.riir2, float %d, 3
-  call void @call_v4_f32(%struct.float4 %struct.riir3)
+  call void @call_v4_f32(%struct.float4 alignstack(16) %struct.riir3)
   ret void
 }
 define void @st_param_v4_f32_riri(float %a, float %c) {
@@ -1611,7 +1611,7 @@ define void @st_param_v4_f32_riri(float %a, float %c) {
   %struct.riri1 = insertvalue %struct.float4 %struct.riri0, float 2.0, 1
   %struct.riri2 = insertvalue %struct.float4 %struct.riri1, float %c, 2
   %struct.riri3 = insertvalue %struct.float4 %struct.riri2, float 4.0, 3
-  call void @call_v4_f32(%struct.float4 %struct.riri3)
+  call void @call_v4_f32(%struct.float4 alignstack(16) %struct.riri3)
   ret void
 }
 define void @st_param_v4_f32_rrii(float %a, float %b) {
@@ -1632,7 +1632,7 @@ define void @st_param_v4_f32_rrii(float %a, float %b) {
   %struct.rrii1 = insertvalue %struct.float4 %struct.rrii0, float %b, 1
   %struct.rrii2 = insertvalue %struct.float4 %struct.rrii1, float 3.0, 2
   %struct.rrii3 = insertvalue %struct.float4 %struct.rrii2, float 4.0, 3
-  call void @call_v4_f32(%struct.float4 %struct.rrii3)
+  call void @call_v4_f32(%struct.float4 alignstack(16) %struct.rrii3)
   ret void
 }
 define void @st_param_v4_f32_iiir(float %d) {
@@ -1652,7 +1652,7 @@ define void @st_param_v4_f32_iiir(float %d) {
   %struct.iiir1 = insertvalue %struct.float4 %struct.iiir0, float 2.0, 1
   %struct.iiir2 = insertvalue %struct.float4 %struct.iiir1, float 3.0, 2
   %struct.iiir3 = insertvalue %struct.float4 %struct.iiir2, float %d, 3
-  call void @call_v4_f32(%struct.float4 %struct.iiir3)
+  call void @call_v4_f32(%struct.float4 alignstack(16) %struct.iiir3)
   ret void
 }
 define void @st_param_v4_f32_iiri(float %c) {
@@ -1672,7 +1672,7 @@ define void @st_param_v4_f32_iiri(float %c) {
   %struct.iiri1 = insertvalue %struct.float4 %struct.iiri0, float 2.0, 1
   %struct.iiri2 = insertvalue %struct.float4 %struct.iiri1, float %c, 2
   %struct.iiri3 = insertvalue %struct.float4 %struct.iiri2, float 4.0, 3
-  call void @call_v4_f32(%struct.float4 %struct.iiri3)
+  call void @call_v4_f32(%struct.float4 alignstack(16) %struct.iiri3)
   ret void
 }
 define void @st_param_v4_f32_irii(float %b) {
@@ -1692,7 +1692,7 @@ define void @st_param_v4_f32_irii(float %b) {
   %struct.irii1 = insertvalue %struct.float4 %struct.irii0, float %b, 1
   %struct.irii2 = insertvalue %struct.float4 %struct.irii1, float 3.0, 2
   %struct.irii3 = insertvalue %struct.float4 %struct.irii2, float 4.0, 3
-  call void @call_v4_f32(%struct.float4 %struct.irii3)
+  call void @call_v4_f32(%struct.float4 alignstack(16) %struct.irii3)
   ret void
 }
 define void @st_param_v4_f32_riii(float %a) {
@@ -1712,7 +1712,7 @@ define void @st_param_v4_f32_riii(float %a) {
   %struct.riii1 = insertvalue %struct.float4 %struct.riii0, float 2.0, 1
   %struct.riii2 = insertvalue %struct.float4 %struct.riii1, float 3.0, 2
   %struct.riii3 = insertvalue %struct.float4 %struct.riii2, float 4.0, 3
-  call void @call_v4_f32(%struct.float4 %struct.riii3)
+  call void @call_v4_f32(%struct.float4 alignstack(16) %struct.riii3)
   ret void
 }
 

@@ -1390,12 +1390,8 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
            "byval arg must have indirect type");
     Type *ETy = (IsByVal ? Arg.IndirectType : Arg.Ty);
 
-    const Align ArgAlign = [&]() {
-      const unsigned ParamIdx = ArgI + AttributeList::FirstArgIndex;
-      if (IsByVal)
-        return getDeviceByValParamAlign(CB, ETy, ParamIdx, DL);
-      return getPTXParamAlign(CB, Arg.Ty, ParamIdx, DL);
-    }();
+    const Align ArgAlign =
+        getPTXParamAlign(CB, ETy, ArgI + AttributeList::FirstArgIndex, DL);
 
     const unsigned TySize = DL.getTypeAllocSize(ETy);
     assert((!IsByVal || TySize == ArgOuts[0].Flags.getByValSize()) &&
