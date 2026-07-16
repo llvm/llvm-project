@@ -115,7 +115,7 @@ public:
     return ranges::reserve_hint(__r_);
   }
 
-#  endif //_LIBCPP_STD_VER >= 26
+#  endif // _LIBCPP_STD_VER >= 26
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(owning_view);
 

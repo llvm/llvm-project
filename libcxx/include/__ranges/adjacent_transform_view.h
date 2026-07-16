@@ -164,7 +164,7 @@ public:
     return __inner_.reserve_hint();
   }
 
-#  endif //_LIBCPP_STD_VER >= 26
+#  endif // _LIBCPP_STD_VER >= 26
 };
 
 template <forward_range _View, move_constructible _Fn, size_t _Np>

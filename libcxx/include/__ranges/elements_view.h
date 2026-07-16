@@ -148,7 +148,7 @@ public:
     return ranges::reserve_hint(__base_);
   }
 
-#  endif //_LIBCPP_STD_VER >= 26
+#  endif // _LIBCPP_STD_VER >= 26
 
 private:
   _LIBCPP_NO_UNIQUE_ADDRESS _View __base_ = _View();

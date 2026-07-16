@@ -157,7 +157,7 @@ public:
     return std::__to_unsigned_like(__s < __count_ ? 0 : __s - __count_);
   }
 
-#  endif //_LIBCPP_STD_VER >= 26
+#  endif // _LIBCPP_STD_VER >= 26
 };
 
 template <class _Range>

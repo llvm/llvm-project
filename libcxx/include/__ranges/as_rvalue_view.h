@@ -115,7 +115,7 @@ public:
     return ranges::reserve_hint(__base_);
   }
 
-#  endif //_LIBCPP_STD_VER >= 26
+#  endif // _LIBCPP_STD_VER >= 26
 };
 
 template <class _Range>

@@ -147,7 +147,7 @@ public:
     return std::__to_unsigned_like(ranges::__div_ceil(__s, __stride_));
   }
 
-#  endif //_LIBCPP_STD_VER >= 26
+#  endif // _LIBCPP_STD_VER >= 26
 }; // class stride_view
 
 template <class _Range>

@@ -163,7 +163,7 @@ public:
     return static_cast<_ST>(__sz);
   }
 
-#  endif //_LIBCPP_STD_VER >= 26
+#  endif // _LIBCPP_STD_VER >= 26
 };
 
 struct __adjacent_view_iter_access {
