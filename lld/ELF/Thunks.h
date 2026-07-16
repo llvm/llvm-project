@@ -60,7 +60,7 @@ public:
   // enabled.
   virtual bool needsSyntheticLandingPad() { return false; }
 
-  virtual uint64_t getDestVA() const;
+  uint64_t getDestVA() const;
 
   Defined *getThunkTargetSym() const { return syms[0]; }
 

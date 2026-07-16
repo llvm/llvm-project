@@ -4086,11 +4086,36 @@ InputSection *ThunkSection::getTargetInputSection() const {
 
 bool ThunkSection::assignOffsets(bool sort) {
   if (sort) {
-    // We ignore branches that are in different directions.
-    // For branches in same direction, we want to order them by their
-    // destination VA such that upgrading a short thunk to long doesn't make
-    // following thunks out of reach in subsequent passes. This helps with
-    // quicker convergence.
+    // For thunk section before sorting:
+    //    destA
+    //    destB
+    //    ...
+    //    backwards A
+    //    backwards B
+    //    forward C
+    //    forward D
+    //    ...
+    //    destC
+    //    destD
+    //
+    // Sorting will rearrange thunks as follows:
+    //
+    //    destA
+    //    destB
+    //    ...
+    //    backwards B
+    //    backwards A
+    //    ...
+    //    forwards D
+    //    forwards C
+    //    ...
+    //    destC
+    //    destD
+    //
+    // Since we iterate on thunks from first to last in a thunk section while
+    // doing upgradation, any thunk that is found to be out of range is
+    // guarranted to not invalidate thunks that we have already iterated on.
+    // This allows quicker convergence.
     uint64_t sectionVA = getVA();
     llvm::stable_sort(thunks, [sectionVA](const Thunk *a, const Thunk *b) {
       bool aFwd = a->getDestVA() > sectionVA;
