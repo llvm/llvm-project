@@ -40,16 +40,16 @@ end program
 ! MAN: hlfir.declare {{.*}} {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMmFmod_subEloc_arr"}
 ! MAN: hlfir.declare {{.*}} {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMmFmod_subEloc_ptr"}
 
-! COMMON-block pointer: unattributed, CUDA attributes may not appear in COMMON.
-! UNI: hlfir.declare {{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMmFcommon_subEcom_ptr"}
-! MAN: hlfir.declare {{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMmFcommon_subEcom_ptr"}
-
 ! Saved subprogram locals use Managed because their static descriptors cannot
 ! be registered as Unified device symbols.
 ! UNI: hlfir.declare {{.*}} {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMmFmod_subEsaved_arr"}
 ! UNI: hlfir.declare {{.*}} {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMmFmod_subEsaved_ptr"}
 ! MAN: hlfir.declare {{.*}} {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMmFmod_subEsaved_arr"}
 ! MAN: hlfir.declare {{.*}} {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMmFmod_subEsaved_ptr"}
+
+! COMMON-block pointer: unattributed, CUDA attributes may not appear in COMMON.
+! UNI: hlfir.declare {{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMmFcommon_subEcom_ptr"}
+! MAN: hlfir.declare {{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMmFcommon_subEcom_ptr"}
 
 ! Main-program local: Unified under -gpu=unified, Managed under
 ! -gpu=managed.
