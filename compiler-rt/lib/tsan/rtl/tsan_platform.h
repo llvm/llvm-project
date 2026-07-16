@@ -222,8 +222,8 @@ C/C++ on linux/aarch64 (47-bit VMA)
 2800 0000 0000 - 4000 0000 0000: -
 4000 0000 0000 - 5000 0000 0000: metainfo                       (16384 GB)
 5000 0000 0000 - 5555 0000 0000: -
-5555 0000 0000 - 5600 0000 0000: main binary (PIE)                (684 GB)
-5600 0000 0000 - 7c00 0000 0000: -
+5555 0000 0000 - 5c00 0000 0000: main binary (PIE)               (6828 GB)
+5c00 0000 0000 - 7c00 0000 0000: -
 7c00 0000 0000 - 7fff ffff ffff: modules and main thread stack   (4096 GB)
 */
 struct MappingAarch64_47 {
@@ -234,7 +234,7 @@ struct MappingAarch64_47 {
   static const uptr kMetaShadowBeg = 0x0400000000000ull;
   static const uptr kMetaShadowEnd = 0x0500000000000ull;
   static const uptr kMidAppMemBeg = 0x0555500000000ull;
-  static const uptr kMidAppMemEnd = 0x0560000000000ull;
+  static const uptr kMidAppMemEnd = 0x05c0000000000ull;
   static const uptr kHiAppMemBeg = 0x07c0000000000ull;
   static const uptr kHiAppMemEnd = 0x0800000000000ull;
   static const uptr kHeapMemBeg = 0x07c0000000000ull;
