@@ -1115,8 +1115,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
             --N;
         }
         if (ShrinkDemandedConstant(I, 1, DemandedMaskRHS) ||
-            SimplifyDemandedBits(I, 1, DemandedMaskRHS, RHSKnown, Q,
-                                 Depth + 1))
+            SimplifyDemandedBits(I, 1, DemandedMaskRHS, RHSKnown, Q, Depth + 1))
           return I;
 
         Value *X;
