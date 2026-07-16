@@ -451,9 +451,39 @@ bool decodeTextSection(const uint8_t *Text, uint64_t TextSize,
                        std::vector<InternalDecodedInst> &Decoded) {
   Decoded.reserve(Decoded.size() + TextSize / MinInstSize);
   uint64_t Pos = 0;
+  // Per-call decode cache: byte-identical instructions reuse the first decode
+  // instead of re-running the disassembler; DI.Offset is set per occurrence, so
+  // reuse is safe. The key is the full window the disassembler may inspect (up
+  // to getMaxInstLength() bytes, clamped to what remains in .text); keying on
+  // fewer bytes is unsafe because two positions sharing a short prefix can
+  // decode differently. A StringMap keys on the raw window, so its length is
+  // part of the key and a truncated tail cannot alias a longer instruction.
+  const unsigned MaxInstLen = S.MAI->getMaxInstLength(S.STI.get());
+  struct DecodeCacheEntry {
+    MCInst Inst;
+    uint32_t Size;
+    std::string Mnemonic;
+  };
+  StringMap<DecodeCacheEntry> LocalCache;
   while (Pos < TextSize) {
     InternalDecodedInst DI;
     DI.Offset = Pos;
+
+    unsigned KeyN =
+        static_cast<unsigned>(std::min<uint64_t>(MaxInstLen, TextSize - Pos));
+    StringRef Key(reinterpret_cast<const char *>(Text + Pos), KeyN);
+
+    StringMap<DecodeCacheEntry>::iterator It = LocalCache.find(Key);
+    if (It != LocalCache.end() && It->second.Size <= (TextSize - Pos)) {
+      DI.Size = It->second.Size;
+      DI.Inst = It->second.Inst;
+      DI.Mnemonic = It->second.Mnemonic;
+      // Only successful decodes are stored, so a hit is always a success.
+      DI.DecodeSucceeded = true;
+      Pos += DI.Size;
+      Decoded.emplace_back(std::move(DI));
+      continue;
+    }
 
     ArrayRef<uint8_t> Bytes(Text + Pos, TextSize - Pos);
     uint64_t InstSize = 0;
@@ -479,6 +509,11 @@ bool decodeTextSection(const uint8_t *Text, uint64_t TextSize,
         DI.Mnemonic = UnknownMnemonic.str();
       }
     }
+    // Cache only successful decodes whose key window covers the instruction
+    // (Size <= KeyN); a shorter key could alias a different decode.
+    if (Status != MCDisassembler::Fail && DI.Size <= KeyN)
+      LocalCache.try_emplace(Key,
+                             DecodeCacheEntry{DI.Inst, DI.Size, DI.Mnemonic});
     Pos += DI.Size;
     Decoded.emplace_back(std::move(DI));
   }
