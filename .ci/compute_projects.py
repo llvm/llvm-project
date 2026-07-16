@@ -75,6 +75,7 @@ DEPENDENTS_TO_TEST = {
 # but not necessarily run for testing. The only case of this currently is lldb
 # which needs some runtimes enabled for tests.
 DEPENDENT_RUNTIMES_TO_BUILD = {
+    "flang": {"openmp"},
     "lldb": {"libcxx", "libcxxabi", "libunwind", "compiler-rt"}
 }
 
@@ -153,7 +154,7 @@ PROJECT_CHECK_TARGETS = {
     "libunwind": "check-unwind",
     "lldb": "check-lldb",
     "llvm": "check-llvm",
-    "clang": "check-clang",
+    "clang": "check-clang check-clang-python",
     "CIR": "check-clang-cir",
     "bolt": "check-bolt",
     "lld": "check-lld",

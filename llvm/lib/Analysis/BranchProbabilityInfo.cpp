@@ -101,67 +101,24 @@ static const uint32_t LBH_NONTAKEN_WEIGHT = 4;
 /// This is the probability for a branch being taken to a block that terminates
 /// (eventually) in unreachable. These are predicted as unlikely as possible.
 /// All reachable probability will proportionally share the remaining part.
-static const BranchProbability UR_TAKEN_PROB = BranchProbability::getRaw(1);
+static constexpr BranchProbability UR_TAKEN_PROB = BranchProbability::getRaw(1);
 
 /// Heuristics and lookup tables for non-loop branches:
 /// Pointer Heuristics (PH)
 static const uint32_t PH_TAKEN_WEIGHT = 20;
 static const uint32_t PH_NONTAKEN_WEIGHT = 12;
-static const BranchProbability
+static constexpr BranchProbability
     PtrTakenProb(PH_TAKEN_WEIGHT, PH_TAKEN_WEIGHT + PH_NONTAKEN_WEIGHT);
-static const BranchProbability
+static constexpr BranchProbability
     PtrUntakenProb(PH_NONTAKEN_WEIGHT, PH_TAKEN_WEIGHT + PH_NONTAKEN_WEIGHT);
-
-using ProbabilityList = SmallVector<BranchProbability>;
-using ProbabilityTable = std::map<CmpInst::Predicate, ProbabilityList>;
-
-/// Pointer comparisons:
-static const ProbabilityTable PointerTable{
-    {ICmpInst::ICMP_NE, {PtrTakenProb, PtrUntakenProb}}, /// p != q -> Likely
-    {ICmpInst::ICMP_EQ, {PtrUntakenProb, PtrTakenProb}}, /// p == q -> Unlikely
-};
 
 /// Zero Heuristics (ZH)
 static const uint32_t ZH_TAKEN_WEIGHT = 20;
 static const uint32_t ZH_NONTAKEN_WEIGHT = 12;
-static const BranchProbability
+static constexpr BranchProbability
     ZeroTakenProb(ZH_TAKEN_WEIGHT, ZH_TAKEN_WEIGHT + ZH_NONTAKEN_WEIGHT);
-static const BranchProbability
+static constexpr BranchProbability
     ZeroUntakenProb(ZH_NONTAKEN_WEIGHT, ZH_TAKEN_WEIGHT + ZH_NONTAKEN_WEIGHT);
-
-/// Integer compares with 0:
-static const ProbabilityTable ICmpWithZeroTable{
-    {CmpInst::ICMP_EQ, {ZeroUntakenProb, ZeroTakenProb}},  /// X == 0 -> Unlikely
-    {CmpInst::ICMP_NE, {ZeroTakenProb, ZeroUntakenProb}},  /// X != 0 -> Likely
-    {CmpInst::ICMP_SLT, {ZeroUntakenProb, ZeroTakenProb}}, /// X < 0  -> Unlikely
-    {CmpInst::ICMP_SGT, {ZeroTakenProb, ZeroUntakenProb}}, /// X > 0  -> Likely
-};
-
-/// Integer compares with -1:
-static const ProbabilityTable ICmpWithMinusOneTable{
-    {CmpInst::ICMP_EQ, {ZeroUntakenProb, ZeroTakenProb}},  /// X == -1 -> Unlikely
-    {CmpInst::ICMP_NE, {ZeroTakenProb, ZeroUntakenProb}},  /// X != -1 -> Likely
-    // InstCombine canonicalizes X >= 0 into X > -1
-    {CmpInst::ICMP_SGT, {ZeroTakenProb, ZeroUntakenProb}}, /// X >= 0  -> Likely
-};
-
-/// Integer compares with 1:
-static const ProbabilityTable ICmpWithOneTable{
-    // InstCombine canonicalizes X <= 0 into X < 1
-    {CmpInst::ICMP_SLT, {ZeroUntakenProb, ZeroTakenProb}}, /// X <= 0 -> Unlikely
-};
-
-/// strcmp and similar functions return zero, negative, or positive, if the
-/// first string is equal, less, or greater than the second. We consider it
-/// likely that the strings are not equal, so a comparison with zero is
-/// probably false, but also a comparison with any other number is also
-/// probably false given that what exactly is returned for nonzero values is
-/// not specified. Any kind of comparison other than equality we know
-/// nothing about.
-static const ProbabilityTable ICmpWithLibCallTable{
-    {CmpInst::ICMP_EQ, {ZeroUntakenProb, ZeroTakenProb}},
-    {CmpInst::ICMP_NE, {ZeroTakenProb, ZeroUntakenProb}},
-};
 
 // Floating-Point Heuristics (FPH)
 static const uint32_t FPH_TAKEN_WEIGHT = 20;
@@ -174,20 +131,14 @@ static const uint32_t FPH_ORD_WEIGHT = 1024 * 1024 - 1;
 /// exceptional case, so the result is unlikely.
 static const uint32_t FPH_UNO_WEIGHT = 1;
 
-static const BranchProbability FPOrdTakenProb(FPH_ORD_WEIGHT,
-                                              FPH_ORD_WEIGHT + FPH_UNO_WEIGHT);
-static const BranchProbability
+static constexpr BranchProbability
+    FPOrdTakenProb(FPH_ORD_WEIGHT, FPH_ORD_WEIGHT + FPH_UNO_WEIGHT);
+static constexpr BranchProbability
     FPOrdUntakenProb(FPH_UNO_WEIGHT, FPH_ORD_WEIGHT + FPH_UNO_WEIGHT);
-static const BranchProbability
+static constexpr BranchProbability
     FPTakenProb(FPH_TAKEN_WEIGHT, FPH_TAKEN_WEIGHT + FPH_NONTAKEN_WEIGHT);
-static const BranchProbability
+static constexpr BranchProbability
     FPUntakenProb(FPH_NONTAKEN_WEIGHT, FPH_TAKEN_WEIGHT + FPH_NONTAKEN_WEIGHT);
-
-/// Floating-Point compares:
-static const ProbabilityTable FCmpTable{
-    {FCmpInst::FCMP_ORD, {FPOrdTakenProb, FPOrdUntakenProb}}, /// !isnan -> Likely
-    {FCmpInst::FCMP_UNO, {FPOrdUntakenProb, FPOrdTakenProb}}, /// isnan -> Unlikely
-};
 
 /// Set of dedicated "absolute" execution weights for a block. These weights are
 /// meaningful relative to each other and their derivatives only.
@@ -716,11 +667,16 @@ bool BPIConstruction::calcPointerHeuristics(const BasicBlock *BB) {
 
   assert(CI->getOperand(1)->getType()->isPointerTy());
 
-  auto Search = PointerTable.find(CI->getPredicate());
-  if (Search == PointerTable.end())
+  switch (CI->getPredicate()) {
+  case ICmpInst::ICMP_NE: // p != q -> Likely
+    BPI.setEdgeProbability(BB, {PtrTakenProb, PtrUntakenProb});
+    return true;
+  case ICmpInst::ICMP_EQ: // p == q -> Unlikely
+    BPI.setEdgeProbability(BB, {PtrUntakenProb, PtrTakenProb});
+    return true;
+  default:
     return false;
-  BPI.setEdgeProbability(BB, Search->second);
-  return true;
+  }
 }
 
 // Compute the unlikely successors to the block BB in the loop L, specifically
@@ -1182,33 +1138,62 @@ bool BPIConstruction::calcZeroHeuristics(const BasicBlock *BB,
       if (Function *CalledFn = Call->getCalledFunction())
         TLI->getLibFunc(*CalledFn, Func);
 
-  ProbabilityTable::const_iterator Search;
+  bool Likely;
   if (Func == LibFunc_strcasecmp ||
       Func == LibFunc_strcmp ||
       Func == LibFunc_strncasecmp ||
       Func == LibFunc_strncmp ||
       Func == LibFunc_memcmp ||
       Func == LibFunc_bcmp) {
-    Search = ICmpWithLibCallTable.find(CI->getPredicate());
-    if (Search == ICmpWithLibCallTable.end())
-      return false;
+    /// strcmp and similar functions return zero, negative, or positive, if the
+    /// first string is equal, less, or greater than the second. We consider it
+    /// likely that the strings are not equal, so a comparison with zero is
+    /// probably false, but also a comparison with any other number is also
+    /// probably false given that what exactly is returned for nonzero values is
+    /// not specified. Any kind of comparison other than equality we know
+    /// nothing about.
+    // clang-format off
+    switch (CI->getPredicate()) {
+    case CmpInst::ICMP_EQ: Likely = false; break;
+    case CmpInst::ICMP_NE: Likely = true; break;
+    default: return false;
+    }
+    // clang-format on
   } else if (CV->isZero()) {
-    Search = ICmpWithZeroTable.find(CI->getPredicate());
-    if (Search == ICmpWithZeroTable.end())
-      return false;
+    // clang-format off
+    switch (CI->getPredicate()) {
+    case CmpInst::ICMP_EQ: Likely = false; break;
+    case CmpInst::ICMP_NE: Likely = true; break;
+    case CmpInst::ICMP_SLT: Likely = false; break;
+    case CmpInst::ICMP_SGT: Likely = true; break;
+    default: return false;
+    }
+    // clang-format on
   } else if (CV->isOne()) {
-    Search = ICmpWithOneTable.find(CI->getPredicate());
-    if (Search == ICmpWithOneTable.end())
-      return false;
+    // clang-format off
+    switch (CI->getPredicate()) {
+    case CmpInst::ICMP_SLT: Likely = false; break;
+    default: return false;
+    }
+    // clang-format on
   } else if (CV->isMinusOne()) {
-    Search = ICmpWithMinusOneTable.find(CI->getPredicate());
-    if (Search == ICmpWithMinusOneTable.end())
-      return false;
+    // clang-format off
+    switch (CI->getPredicate()) {
+    case CmpInst::ICMP_EQ: Likely = false; break;
+    case CmpInst::ICMP_NE: Likely = true; break;
+    // InstCombine canonicalizes X >= 0 into X > -1
+    case CmpInst::ICMP_SGT: Likely = true; break;
+    default: return false;
+    }
+    // clang-format on
   } else {
     return false;
   }
 
-  BPI.setEdgeProbability(BB, Search->second);
+  if (Likely)
+    BPI.setEdgeProbability(BB, {ZeroTakenProb, ZeroUntakenProb});
+  else
+    BPI.setEdgeProbability(BB, {ZeroUntakenProb, ZeroTakenProb});
   return true;
 }
 
@@ -1222,21 +1207,20 @@ bool BPIConstruction::calcFloatingPointHeuristics(const BasicBlock *BB) {
   if (!FCmp)
     return false;
 
-  ProbabilityList ProbList;
   if (FCmp->isEquality()) {
-    ProbList = !FCmp->isTrueWhenEqual() ?
-      // f1 == f2 -> Unlikely
-      ProbabilityList({FPTakenProb, FPUntakenProb}) :
-      // f1 != f2 -> Likely
-      ProbabilityList({FPUntakenProb, FPTakenProb});
+    if (!FCmp->isTrueWhenEqual()) // f1 == f2 -> Unlikely
+      BPI.setEdgeProbability(BB, {FPTakenProb, FPUntakenProb});
+    else // f1 != f2 -> Likely
+      BPI.setEdgeProbability(BB, {FPUntakenProb, FPTakenProb});
+  } else if (FCmp->getPredicate() == FCmpInst::FCMP_ORD) {
+    BPI.setEdgeProbability(
+        BB, {FPOrdTakenProb, FPOrdUntakenProb}); // !isnan -> Likely
+  } else if (FCmp->getPredicate() == FCmpInst::FCMP_UNO) {
+    BPI.setEdgeProbability(
+        BB, {FPOrdUntakenProb, FPOrdTakenProb}); // isnan -> Unlikely
   } else {
-    auto Search = FCmpTable.find(FCmp->getPredicate());
-    if (Search == FCmpTable.end())
-      return false;
-    ProbList = Search->second;
+    return false;
   }
-
-  BPI.setEdgeProbability(BB, ProbList);
   return true;
 }
 void BPIConstruction::calculate(const Function &F, const LoopInfo &LoopI,
@@ -1376,7 +1360,7 @@ BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
 
 /// Set the edge probability for all edges at once.
 void BranchProbabilityInfo::setEdgeProbability(
-    const BasicBlock *Src, const SmallVectorImpl<BranchProbability> &Probs) {
+    const BasicBlock *Src, ArrayRef<BranchProbability> Probs) {
   assert(Src->getTerminator()->getNumSuccessors() == Probs.size());
   MutableArrayRef<BranchProbability> P = allocEdges(Src);
   uint64_t TotalNumerator = 0;

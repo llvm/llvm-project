@@ -303,6 +303,7 @@ int __prof_rocm::memcpyDeviceToHost(void *Dst, const void *Src, size_t Size) {
   return hipMemcpy(Dst, Src, Size, 2 /* DToH */);
 }
 
+[[maybe_unused]]
 static int hipModuleGetGlobal(void **DevPtr, size_t *Bytes, void *Module,
                               const char *Name) {
   ensureHipLoaded();

@@ -155,6 +155,71 @@ TEST(ArchSpecTest, TestSetTriple) {
   EXPECT_FALSE(AS.SetTriple(""));
 }
 
+namespace {
+struct AMDGPUModel {
+  uint32_t mach;    // EF_AMDGPU_MACH value.
+  const char *flag; // ELF flag name used in the YAML "Flags" field.
+  const char *name; // Canonical model name, e.g. "gfx942".
+};
+
+// Every AMD GPU model, taken from llvm's AMDGPU_MACH_LIST so the tests track
+// the authoritative list instead of duplicating it.
+const AMDGPUModel kAMDGPUModels[] = {
+#define AMDGPU_MODEL(NUM, ENUM, NAME) {NUM, #ENUM, NAME},
+    AMDGPU_MACH_LIST(AMDGPU_MODEL)
+#undef AMDGPU_MODEL
+};
+
+std::string AMDGPUModelName(const testing::TestParamInfo<AMDGPUModel> &info) {
+  // Test names allow only [A-Za-z0-9_]; the generic models contain dashes.
+  std::string name = info.param.name;
+  for (char &c : name)
+    if (c == '-')
+      c = '_';
+  return name;
+}
+} // namespace
+
+class ArchSpecAMDGPUTest : public ::testing::TestWithParam<AMDGPUModel> {};
+
+// SetTriple() must resolve every AMD GPU triple to the right arch and core.
+// This exercises ArchSpec::UpdateCore(), which refines the core from the GPU
+// model in the triple environment.
+TEST_P(ArchSpecAMDGPUTest, SetTriple) {
+  const AMDGPUModel &model = GetParam();
+  bool is_gcn = llvm::StringRef(model.name).starts_with("gfx");
+  std::string triple =
+      (is_gcn ? "amdgpu" : "r600") + std::string("-amd-amdhsa--") + model.name;
+
+  ArchSpec AS;
+  EXPECT_TRUE(AS.SetTriple(triple));
+  EXPECT_EQ(is_gcn ? llvm::Triple::amdgpu : llvm::Triple::r600,
+            AS.GetTriple().getArch());
+  EXPECT_NE(ArchSpec::eCore_amd_gpu_unknown, AS.GetCore());
+  EXPECT_EQ(model.name, AS.GetClangTargetCPU());
+}
+
+// SetArchitecture() from an ELF header must resolve every AMD GPU model to the
+// right arch, vendor, OS, sub type and core.
+TEST_P(ArchSpecAMDGPUTest, SetArchitectureFromELF) {
+  const AMDGPUModel &model = GetParam();
+  bool is_gcn = llvm::StringRef(model.name).starts_with("gfx");
+
+  ArchSpec AS;
+  EXPECT_TRUE(AS.SetArchitecture(eArchTypeELF, llvm::ELF::EM_AMDGPU, model.mach,
+                                 llvm::ELF::ELFOSABI_AMDGPU_HSA));
+  EXPECT_EQ(is_gcn ? llvm::Triple::amdgpu : llvm::Triple::r600,
+            AS.GetTriple().getArch());
+  EXPECT_EQ(llvm::Triple::AMD, AS.GetTriple().getVendor());
+  EXPECT_EQ(llvm::Triple::AMDHSA, AS.GetTriple().getOS());
+  EXPECT_EQ(model.mach, AS.GetElfCPUSubType());
+  EXPECT_NE(ArchSpec::eCore_amd_gpu_unknown, AS.GetCore());
+  EXPECT_EQ(model.name, AS.GetClangTargetCPU());
+}
+
+INSTANTIATE_TEST_SUITE_P(AMDGPU, ArchSpecAMDGPUTest,
+                         ::testing::ValuesIn(kAMDGPUModels), AMDGPUModelName);
+
 TEST(ArchSpecTest, MergeFrom) {
   {
     ArchSpec A;

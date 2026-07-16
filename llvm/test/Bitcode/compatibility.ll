@@ -16,7 +16,8 @@ target triple = "x86_64-apple-macosx10.10.0"
 
 ;; Module-level assembly
 module asm "beep boop"
-; CHECK: module asm "beep boop"
+; CHECK: module asm
+; CHECK-NEXT: "beep boop"
 
 ;; Comdats
 $comdat.any = comdat any
@@ -865,6 +866,8 @@ define void @atomics(ptr %word) {
   ; CHECK: %atomicrmw_no_align.xchg = atomicrmw xchg ptr %word, i32 12 monotonic
   %atomicrmw_no_align.add = atomicrmw add ptr %word, i32 13 monotonic
   ; CHECK: %atomicrmw_no_align.add = atomicrmw add ptr %word, i32 13 monotonic
+  %atomicrmw_no_align.vector.add = atomicrmw add ptr %word, <2 x i16> <i16 13, i16 14> monotonic
+  ; CHECK: %atomicrmw_no_align.vector.add = atomicrmw add ptr %word, <2 x i16> <i16 13, i16 14> monotonic
   %atomicrmw_no_align.sub = atomicrmw sub ptr %word, i32 14 monotonic
   ; CHECK: %atomicrmw_no_align.sub = atomicrmw sub ptr %word, i32 14 monotonic
   %atomicrmw_no_align.and = atomicrmw and ptr %word, i32 15 monotonic
@@ -1032,6 +1035,12 @@ define void @elementwise_atomics(ptr %word, <4 x i32> %ival, <4 x float> %fval) 
 
 ; CHECK: %atomicrmw.fadd = atomicrmw elementwise fadd ptr %word, <4 x float> %fval seq_cst, align 16
   %atomicrmw.fadd = atomicrmw elementwise fadd ptr %word, <4 x float> %fval seq_cst, align 16
+
+; CHECK: %load.elementwise = load atomic elementwise <4 x i32>, ptr %word monotonic, align 4
+  %load.elementwise = load atomic elementwise <4 x i32>, ptr %word monotonic, align 4
+
+; CHECK: %load.elementwise.volatile = load atomic volatile elementwise <4 x float>, ptr %word seq_cst, align 4
+  %load.elementwise.volatile = load atomic volatile elementwise <4 x float>, ptr %word seq_cst, align 4
 
   ret void
 }

@@ -451,16 +451,17 @@ define void @test_prefer_vector_addressing(ptr %start, ptr %ms, ptr noalias %src
 ; CHECK-LABEL: define void @test_prefer_vector_addressing(
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[MS:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
-; CHECK-NEXT:    [[MS1:%.*]] = ptrtoint ptr [[MS]] to i64
 ; CHECK-NEXT:    [[GEP_START:%.*]] = getelementptr i8, ptr [[START]], i64 3
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[MS]] to i64
+; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[START2]], 3
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[MS1]], i64 [[TMP0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[UMAX]], -3
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP10]], i64 [[TMP0]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[START2]]
-; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP2]], i64 1)
+; CHECK-NEXT:    [[TMP23:%.*]] = add i64 [[TMP2]], -3
+; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP23]], i64 1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], [[UMIN]]
-; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[TMP3]], 3
+; CHECK-NEXT:    [[TMP24:%.*]] = add i64 [[TMP3]], -3
+; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[TMP24]], 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[UMIN]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP6]], 4
