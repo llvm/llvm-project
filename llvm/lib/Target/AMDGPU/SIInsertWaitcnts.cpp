@@ -1143,7 +1143,8 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
           continue;
         unsigned RelScore = RegScore - LB - 1;
         if (ID < REGUNITS_END) {
-          OS << ' ' << RelScore << ":vRU" << ID;
+          OS << ' ' << RelScore << ':'
+             << printRegUnit(static_cast<MCRegUnit>(ID), &Context->TRI);
         } else {
           assert(ID >= LDSDMA_BEGIN && ID < LDSDMA_END &&
                  "Unhandled/unexpected ID value!");
@@ -1160,7 +1161,8 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
           if (RegScore <= LB)
             continue;
           unsigned RelScore = RegScore - LB - 1;
-          OS << ' ' << RelScore << ":sRU" << static_cast<unsigned>(ID);
+          OS << ' ' << RelScore << ':'
+             << printRegUnit(static_cast<MCRegUnit>(ID), &Context->TRI);
         }
       }
 
@@ -2498,7 +2500,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   // waits on VA_VDST if the instruction it would precede is not a VALU
   // instruction, since hardware handles VALU->VGPR->VALU hazards in
   // expert scheduling mode.
-  if (TII.isVALU(MI, /*AllowLDSDMA=*/true) && !SIInstrInfo::isLDSDMA(MI))
+  if (TII.isVALU(MI, /*AllowLDSDMA=*/false))
     Wait.set(AMDGPU::VA_VDST, ~0u);
 
   // Since the translation for VMEM addresses occur in-order, we can apply the

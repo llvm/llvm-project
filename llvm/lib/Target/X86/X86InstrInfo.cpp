@@ -4993,22 +4993,14 @@ bool X86InstrInfo::isRedundantFlagInstr(const MachineInstr &FlagI,
     }
     return FlagI.isIdenticalTo(OI);
   }
-  case X86::LZCNT16rr:
-  case X86::LZCNT32rr:
-  case X86::LZCNT64rr:
-  case X86::TZCNT16rr:
-  case X86::TZCNT32rr:
-  case X86::TZCNT64rr: {
-    if (ImmMask != 0 && !SrcReg2.isValid() && ImmValue == 1 &&
-        OI.getOperand(1).isReg() && SrcReg == OI.getOperand(1).getReg()) {
-      return true;
-    }
-    return false;
-  }
   default:
     return false;
   }
 }
+
+#define CASE_EVEX(OP)                                                          \
+  case X86::OP:                                                                \
+  case X86::OP##_EVEX:
 
 /// Check whether the definition can be converted
 /// to remove a comparison against zero.
@@ -5179,22 +5171,22 @@ inline static bool isDefConvertible(const MachineInstr &MI, bool &NoSignFlag,
   CASE_ND(OR32rm)
   CASE_ND(OR16rm)
   CASE_ND(OR8rm)
-  case X86::ANDN32rr:
-  case X86::ANDN32rm:
-  case X86::ANDN64rr:
-  case X86::ANDN64rm:
-  case X86::BLSI32rr:
-  case X86::BLSI32rm:
-  case X86::BLSI64rr:
-  case X86::BLSI64rm:
-  case X86::BLSMSK32rr:
-  case X86::BLSMSK32rm:
-  case X86::BLSMSK64rr:
-  case X86::BLSMSK64rm:
-  case X86::BLSR32rr:
-  case X86::BLSR32rm:
-  case X86::BLSR64rr:
-  case X86::BLSR64rm:
+  CASE_EVEX(ANDN32rr)
+  CASE_EVEX(ANDN32rm)
+  CASE_EVEX(ANDN64rr)
+  CASE_EVEX(ANDN64rm)
+  CASE_EVEX(BLSI32rr)
+  CASE_EVEX(BLSI32rm)
+  CASE_EVEX(BLSI64rr)
+  CASE_EVEX(BLSI64rm)
+  CASE_EVEX(BLSMSK32rr)
+  CASE_EVEX(BLSMSK32rm)
+  CASE_EVEX(BLSMSK64rr)
+  CASE_EVEX(BLSMSK64rm)
+  CASE_EVEX(BLSR32rr)
+  CASE_EVEX(BLSR32rm)
+  CASE_EVEX(BLSR64rr)
+  CASE_EVEX(BLSR64rm)
   case X86::BLCFILL32rr:
   case X86::BLCFILL32rm:
   case X86::BLCFILL64rr:
@@ -5223,10 +5215,10 @@ inline static bool isDefConvertible(const MachineInstr &MI, bool &NoSignFlag,
   case X86::BLSIC32rm:
   case X86::BLSIC64rr:
   case X86::BLSIC64rm:
-  case X86::BZHI32rr:
-  case X86::BZHI32rm:
-  case X86::BZHI64rr:
-  case X86::BZHI64rm:
+  CASE_EVEX(BZHI32rr)
+  CASE_EVEX(BZHI32rm)
+  CASE_EVEX(BZHI64rr)
+  CASE_EVEX(BZHI64rm)
   case X86::T1MSKC32rr:
   case X86::T1MSKC32rm:
   case X86::T1MSKC64rr:
@@ -5240,10 +5232,10 @@ inline static bool isDefConvertible(const MachineInstr &MI, bool &NoSignFlag,
     // overflow flag.
     ClearsOverflowFlag = true;
     return true;
-  case X86::BEXTR32rr:
-  case X86::BEXTR64rr:
-  case X86::BEXTR32rm:
-  case X86::BEXTR64rm:
+  CASE_EVEX(BEXTR32rr)
+  CASE_EVEX(BEXTR64rr)
+  CASE_EVEX(BEXTR32rm)
+  CASE_EVEX(BEXTR64rm)
   case X86::BEXTRI32ri:
   case X86::BEXTRI32mi:
   case X86::BEXTRI64ri:
@@ -5285,17 +5277,18 @@ static std::pair<X86::CondCode, unsigned> isUseDefConvertible(const MachineInstr
   case X86::BSR32rr:
   case X86::BSR64rr:
     return std::make_pair(X86::COND_E, 2U);
-  case X86::BLSI32rr:
-  case X86::BLSI64rr:
+  CASE_EVEX(BLSI32rr)
+  CASE_EVEX(BLSI64rr)
     return std::make_pair(X86::COND_AE, 1U);
-  case X86::BLSR32rr:
-  case X86::BLSR64rr:
-  case X86::BLSMSK32rr:
-  case X86::BLSMSK64rr:
+  CASE_EVEX(BLSR32rr)
+  CASE_EVEX(BLSR64rr)
+  CASE_EVEX(BLSMSK32rr)
+  CASE_EVEX(BLSMSK64rr)
     return std::make_pair(X86::COND_B, 1U);
     // TODO: TBM instructions.
   }
 }
+#undef CASE_EVEX
 
 /// Check if there exists an earlier instruction that
 /// operates on the same source operands and sets flags in the same way as

@@ -1,10 +1,10 @@
 // REQUIRES: zlib && !zstd
-// UNSUPPORTED: target={{.*}}-darwin{{.*}}, target={{.*}}-aix{{.*}}, target={{.*}}-zos{{.*}}
+// REQUIRES: x86-registered-target
 
 //
 // Generate the host binary to be bundled.
 //
-// RUN: %clang -O0 -target %itanium_abi_triple %s -c -emit-llvm -o %t.bc
+// RUN: %clang -O0 -target x86_64-unknown-linux-gnu %s -c -emit-llvm -o %t.bc
 
 //
 // Generate an empty file to help with the checks of empty files.
@@ -107,8 +107,8 @@
 // Check -bundle-align option.
 //
 
-// RUN: clang-offload-bundler -bundle-align=4096 -type=bc -targets=host-%itanium_abi_triple,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu -input=%t.bc -input=%t.tgt1 -input=%t.tgt2 -output=%t.bundle3.bc -compress
-// RUN: clang-offload-bundler -type=bc -targets=host-%itanium_abi_triple,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu -output=%t.res.bc -output=%t.res.tgt1 -output=%t.res.tgt2 -input=%t.bundle3.bc -unbundle
+// RUN: clang-offload-bundler -bundle-align=4096 -type=bc -targets=host-x86_64-unknown-linux-gnu,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu -input=%t.bc -input=%t.tgt1 -input=%t.tgt2 -output=%t.bundle3.bc -compress
+// RUN: clang-offload-bundler -type=bc -targets=host-x86_64-unknown-linux-gnu,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu -output=%t.res.bc -output=%t.res.tgt1 -output=%t.res.tgt2 -input=%t.bundle3.bc -unbundle
 // RUN: diff %t.bc %t.res.bc
 // RUN: diff %t.tgt1 %t.res.tgt1
 // RUN: diff %t.tgt2 %t.res.tgt2
