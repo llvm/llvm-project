@@ -1247,16 +1247,14 @@ define float @v_copysign_f32_0_fneg(float %sign) {
 ; SIVI-LABEL: v_copysign_f32_0_fneg:
 ; SIVI:       ; %bb.0:
 ; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SIVI-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
-; SIVI-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
+; SIVI-NEXT:    s_brev_b32 s4, 1
+; SIVI-NEXT:    v_bfi_b32 v0, v0, 0, s4
 ; SIVI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_copysign_f32_0_fneg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
+; GFX11-NEXT:    v_bfi_b32 v0, v0, 0, 0x80000000
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sign.ext = fneg float %sign
   %result = call float @llvm.copysign.f32(float 0.0, float %sign.ext)
@@ -1292,20 +1290,16 @@ define <2 x float> @v_copysign_v2f32_0_fneg(<2 x float> %sign) {
 ; SIVI-LABEL: v_copysign_v2f32_0_fneg:
 ; SIVI:       ; %bb.0:
 ; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SIVI-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
-; SIVI-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
-; SIVI-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
-; SIVI-NEXT:    v_and_b32_e32 v1, 0x80000000, v1
+; SIVI-NEXT:    s_brev_b32 s4, 1
+; SIVI-NEXT:    v_bfi_b32 v0, v0, 0, s4
+; SIVI-NEXT:    v_bfi_b32 v1, v1, 0, s4
 ; SIVI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_copysign_v2f32_0_fneg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
-; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
-; GFX11-NEXT:    v_and_b32_e32 v1, 0x80000000, v1
+; GFX11-NEXT:    v_bfi_b32 v0, v0, 0, 0x80000000
+; GFX11-NEXT:    v_bfi_b32 v1, v1, 0, 0x80000000
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sign.ext = fneg <2 x float> %sign
   %result = call <2 x float> @llvm.copysign.v2f32(<2 x float> zeroinitializer, <2 x float> %sign.ext)
