@@ -27722,7 +27722,9 @@ performInterleavedStoreCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     Ops.append({Chain, DAG.getConstant(IID, DL, MVT::i32)});
     Ops.append(ValueInterleaveOps);
     Ops.append({Pred, BasePtr});
-    return DAG.getNode(ISD::INTRINSIC_VOID, DL, MVT::Other, Ops);
+    return DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID, DL,
+                                   DAG.getVTList(MVT::Other), Ops,
+                                   MemN->getMemoryVT(), MemN->getMemOperand());
   } else {
 
     static constexpr Intrinsic::ID NEONStores[] = {Intrinsic::aarch64_neon_st2,
@@ -27734,7 +27736,6 @@ performInterleavedStoreCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
         DAG.getTargetConstant(NEONStores[NumParts - 2], DL, MVT::i64));
     Ops.append(ValueInterleaveOps);
     Ops.push_back(BasePtr);
-    auto *MemN = cast<MemSDNode>(N);
     return DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID, DL,
                                    DAG.getVTList(MVT::Other), Ops,
                                    MemN->getMemoryVT(), MemN->getMemOperand());
@@ -30659,6 +30660,7 @@ static SDValue performVectorDeinterleaveCombine(
   SDVTList ResVTList = DAG.getVTList(ResVTs);
 
   SDValue Res;
+  MemSDNode *MemNode = dyn_cast<MemSDNode>(WideVec);
   if (IsScalable) {
     if (NumParts == 3)
       return SDValue();
@@ -30699,7 +30701,9 @@ static SDValue performVectorDeinterleaveCombine(
                                             : Intrinsic::aarch64_sve_ld4_sret;
     SDValue NewLdOps[] = {Chain, DAG.getConstant(IID, DL, MVT::i32), Pred,
                           BasePtr};
-    Res = DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL, ResVTList, NewLdOps);
+    Res = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, ResVTList,
+                                  NewLdOps, MemNode->getMemoryVT(),
+                                  MemNode->getMemOperand());
   } else {
     auto *Load = dyn_cast<LoadSDNode>(WideVec);
     if (!Load || !Load->hasNUsesOfValue(NumParts, 0) || !Load->isSimple() ||
@@ -30713,9 +30717,9 @@ static SDValue performVectorDeinterleaveCombine(
         Load->getChain(),
         DAG.getTargetConstant(NEONLoads[NumParts - 2], DL, MVT::i64),
         Load->getBasePtr()};
-    Res =
-        DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, ResVTList, NewLdOps,
-                                Load->getMemoryVT(), Load->getMemOperand());
+    Res = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, ResVTList,
+                                  NewLdOps, MemNode->getMemoryVT(),
+                                  MemNode->getMemOperand());
   }
 
   // We can now generate a structured load!
