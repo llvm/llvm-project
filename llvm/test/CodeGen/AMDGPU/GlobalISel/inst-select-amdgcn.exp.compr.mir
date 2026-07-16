@@ -1,7 +1,6 @@
-# RUN: llc -mtriple=amdgpu6.00 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
-# RUN: not llc -mtriple=amdgpu11.00 -run-pass=instruction-select -verify-machineinstrs -global-isel-abort=0 %s -o - 2>&1 | FileCheck --check-prefix=ERR %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx600 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
 
-# ERR: error: <unknown>:0:0: in function exp0 void (): intrinsic not supported on subtarget
+# Note: gfx11+ rejection of llvm.amdgcn.exp.compr is now enforced at IR translation (see llvm.amdgcn.exp.compr.ll), not during instruction selection.
 
 ---
 name: exp0

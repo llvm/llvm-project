@@ -171,4 +171,4 @@ TEST_F(QueueingRunnerTest, ConcurrentProducerAndDrainer) {
   EXPECT_FALSE(Q.pop_back()) << "Queue should be empty after final drain";
 }
 
-} // end anonymous namespace
+} // namespace
