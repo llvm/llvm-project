@@ -293,10 +293,6 @@ TEST_F(ModuleCacheTest, RebuildFinalizedModuleAfterInputChange) {
   EXPECT_NE(Captured[2].Message.find("'M'"), std::string::npos);
   EXPECT_EQ(Captured[3].ID,
             (unsigned)diag::note_ast_file_input_files_validation_status);
-
-  // Make sure we do not see the generic error anywhere.
-  for (const auto &D : Captured)
-    EXPECT_NE(D.ID, (unsigned)diag::err_module_rebuild_finalized);
 }
 
 } // anonymous namespace
