@@ -481,10 +481,9 @@ body: |
     ; GFX6-NEXT: [[SELECT3:%[0-9]+]]:_(f32) = G_SELECT [[FCMP1]](s1), [[C4]], [[C5]]
     ; GFX6-NEXT: [[FMUL1:%[0-9]+]]:_(s32) = G_FMUL [[INT5]], [[SELECT3]]
     ; GFX6-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL1]](s32)
-    ; GFX6-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC]](s16)
-    ; GFX6-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC1]](s16)
-    ; GFX6-NEXT: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C6]](s32)
+    ; GFX6-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[FPTRUNC]](s16)
+    ; GFX6-NEXT: [[ZEXT1:%[0-9]+]]:_(i32) = G_ZEXT [[FPTRUNC1]](s16)
+    ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[ZEXT1]], [[C]](i32)
     ; GFX6-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[ZEXT]], [[SHL]]
     ; GFX6-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](i32)
     ; GFX6-NEXT: $vgpr0 = COPY [[BITCAST2]](<2 x s16>)
@@ -570,10 +569,9 @@ body: |
     ; GFX6-NEXT: [[SELECT3:%[0-9]+]]:_(f32) = nnan nsz G_SELECT [[FCMP1]](s1), [[C4]], [[C5]]
     ; GFX6-NEXT: [[FMUL1:%[0-9]+]]:_(s32) = nnan nsz G_FMUL [[INT5]], [[SELECT3]]
     ; GFX6-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = nnan nsz G_FPTRUNC [[FMUL1]](s32)
-    ; GFX6-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC]](s16)
-    ; GFX6-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC1]](s16)
-    ; GFX6-NEXT: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C6]](s32)
+    ; GFX6-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[FPTRUNC]](s16)
+    ; GFX6-NEXT: [[ZEXT1:%[0-9]+]]:_(i32) = G_ZEXT [[FPTRUNC1]](s16)
+    ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[ZEXT1]], [[C]](i32)
     ; GFX6-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[ZEXT]], [[SHL]]
     ; GFX6-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](i32)
     ; GFX6-NEXT: $vgpr0 = COPY [[BITCAST2]](<2 x s16>)

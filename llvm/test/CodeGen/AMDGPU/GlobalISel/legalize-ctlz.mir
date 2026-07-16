@@ -177,9 +177,10 @@ body: |
     ; CHECK-NEXT: [[UMIN1:%[0-9]+]]:_(s32) = G_UMIN [[AMDGPU_FFBH_U32_1]], [[C2]]
     ; CHECK-NEXT: [[SUB1:%[0-9]+]]:_(s32) = nuw G_SUB [[UMIN1]], [[C3]]
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[SUB1]](s32)
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C1]]
-    ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C1]]
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND2]], [[C3]](s32)
+    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(i32) = G_CONSTANT i32 65535
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(i32) = G_AND [[COPY1]], [[C4]]
+    ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(i32) = G_AND [[COPY2]], [[C4]]
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[AND2]], [[C]](i32)
     ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[AND1]], [[SHL]]
     ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](i32)
     ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)

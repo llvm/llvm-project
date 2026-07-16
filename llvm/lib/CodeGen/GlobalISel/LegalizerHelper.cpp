@@ -9342,7 +9342,7 @@ LegalizerHelper::lowerMergeValues(MachineInstr &MI) {
   auto [DstReg, DstTy, Src0Reg, Src0Ty] = MI.getFirst2RegLLTs();
   unsigned PartSize = Src0Ty.getSizeInBits();
 
-  LLT WideTy = LLT::scalar(DstTy.getSizeInBits());
+  LLT WideTy = LLT::integer(DstTy.getSizeInBits());
   Register ResultReg = MIRBuilder.buildZExt(WideTy, Src0Reg).getReg(0);
 
   for (unsigned I = 2; I != NumOps; ++I) {
