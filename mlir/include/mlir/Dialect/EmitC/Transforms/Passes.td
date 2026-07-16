@@ -63,15 +63,13 @@ def WrapFuncInClassPass : Pass<"wrap-emitc-func-in-class", "ModuleOp"> {
 def MLGOAddReflectionMapPass : Pass<"mlgo-add-reflection-map", "ModuleOp"> {
   let summary = "Add a reflection map and a helper method to EmitC classes for runtime field lookup.";
   let description = [{
-    This pass adds a `reflectionMap` field and an accompanying `getBufferForName` method to 
-    EmitC classes, enabling runtime lookup of class fields by name. 
-    This requires that the class has fields with attributes.
+    This pass adds a `reflectionMap` field and an accompanying `getBufferForName`
+    method to EmitC classes, enabling runtime lookup of class fields by name. 
     Each `emitc.field` is expected to have an attribute (configured by the
     `included-field-attrs` option) that is an array containing a single string
-    attribute. If a field possesses both an attribute specified by
-    `included-field-attrs` and an attribute specified in `excluded-field-attrs`,
-    the `included-field-attrs` attribute takes precedence and the field will be
-    included in the reflection map.
+    attribute which will be used as the reflection map key. If none of the specified
+    attributes are present on the field, the field will be excluded from the
+    reflection map.
     
     Example:
 
@@ -98,10 +96,7 @@ def MLGOAddReflectionMapPass : Pass<"mlgo-add-reflection-map", "ModuleOp"> {
   let options = [
     ListOption<"includedFieldAttrs", "included-field-attrs", "std::string",
       "Attribute keys used to extract field names from a field's "
-      "attribute dictionary">,
-    ListOption<"excludedFieldAttrs", "excluded-field-attrs", "std::string",
-      "Attribute keys that, if present on a field, exclude it "
-      "from the reflection map">
+      "attribute dictionary">
   ];
 }
 

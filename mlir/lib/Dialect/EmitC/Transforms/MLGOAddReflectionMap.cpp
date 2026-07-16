@@ -52,8 +52,7 @@ class MLGOAddReflectionMapPass
     mlir::ModuleOp moduleOp = getOperation();
 
     RewritePatternSet patterns(&getContext());
-    populateMLGOAddReflectionMapPatterns(patterns, includedFieldAttrs,
-                                         excludedFieldAttrs);
+    populateMLGOAddReflectionMapPatterns(patterns, includedFieldAttrs);
 
     PatternMatchListener listener;
     walkAndApplyPatterns(moduleOp, std::move(patterns), &listener);
@@ -99,9 +98,8 @@ class MLGOAddReflectionMapPass
 /// and a lookup method.
 ///
 /// Fields to be mapped are identified via `includedFieldAttrs` attributes
-/// (e.g., `emitc.field_ref`). Fields containing `excludedFieldAttrs` are
-/// skipped. All other fields must match one of the inclusion/exclusion filters,
-/// otherwise the pattern fails.
+/// (e.g., `emitc.field_ref`). Fields that do not have a matching attribute
+/// are omitted from the reflection map.
 ///
 /// Before:
 /// ```mlir
@@ -131,12 +129,9 @@ class MLGOAddReflectionMapPass
 class MLGOAddReflectionMapClass : public OpRewritePattern<ClassOp> {
 public:
   MLGOAddReflectionMapClass(MLIRContext *context,
-                            llvm::ArrayRef<std::string> includedFieldAttrs,
-                            llvm::ArrayRef<std::string> excludedFieldAttrs)
+                            llvm::ArrayRef<std::string> includedFieldAttrs)
       : OpRewritePattern<ClassOp>(context),
-        includedFieldAttrs(includedFieldAttrs),
-        excludedFieldAttrs(excludedFieldAttrs.begin(),
-                           excludedFieldAttrs.end()) {}
+        includedFieldAttrs(includedFieldAttrs) {}
 
   LogicalResult matchAndRewrite(ClassOp classOp,
                                 PatternRewriter &rewriter) const override {
@@ -149,7 +144,6 @@ public:
     // includedFieldAttrs to use the first element of the array attribute
     // as the reflection map key
     std::vector<std::pair<StringRef, StringRef>> fieldNames;
-    bool hasError = false;
     classOp.walk([&](FieldOp fieldOp) {
       for (const auto &attr : includedFieldAttrs) {
         auto arrayAttr = dyn_cast_if_present<ArrayAttr>(fieldOp->getAttr(attr));
@@ -163,25 +157,9 @@ public:
           return;
         }
       }
-
-      // If one of the attributes in excludedFieldAttrs is present,
-      // don't add this FieldOp
-      bool shouldIgnore =
-          llvm::any_of(excludedFieldAttrs, [&fieldOp](StringRef ignoreAttr) {
-            return fieldOp->hasAttr(ignoreAttr);
-          });
-      if (shouldIgnore)
-        return;
-
-      (void)rewriter.notifyMatchFailure(fieldOp, [&](Diagnostic &diag) {
-        diag << "FieldOp must have a dictionary attribute named '"
-             << includedFieldAttrs << "' "
-             << "with an array containing a string attribute";
-      });
-      hasError = true;
     });
 
-    if (hasError || fieldNames.empty())
+    if (fieldNames.empty())
       return failure();
 
     // Create reflection map contents
@@ -252,15 +230,10 @@ private:
   /// metadata for the reflection map. The pass matches the first attribute
   /// present in the order they are specified in this list.
   llvm::SmallVector<std::string> includedFieldAttrs;
-
-  /// Attributes that, if present on a field, exclude it from the
-  /// reflection map.
-  llvm::SmallVector<std::string> excludedFieldAttrs;
 };
 
 void mlir::emitc::populateMLGOAddReflectionMapPatterns(
-    RewritePatternSet &patterns, llvm::ArrayRef<std::string> includedFieldAttrs,
-    llvm::ArrayRef<std::string> excludedFieldAttrs) {
+    RewritePatternSet &patterns, llvm::ArrayRef<std::string> includedFieldAttrs) {
   patterns.add<MLGOAddReflectionMapClass>(
-      patterns.getContext(), includedFieldAttrs, excludedFieldAttrs);
+      patterns.getContext(), includedFieldAttrs);
 }

@@ -1,7 +1,7 @@
-// RUN: mlir-opt -split-input-file --mlgo-add-reflection-map="included-field-attrs=emitc.field_ref,emitc.field_ref_2 \
-// RUN: excluded-field-attrs="emitc.other_field"" %s | FileCheck %s '-D$QUOTE=\22'
+// RUN: mlir-opt -split-input-file --mlgo-add-reflection-map="included-field-attrs=emitc.field_ref,emitc.field_ref_2" %s | FileCheck %s '-D$QUOTE=\22'
 
-/// Tests that a reflection map is created for fields with a certain attribute.
+/// Tests that a reflection map is created for fields with an attribute in the
+/// included-field-attrs option.
 
 emitc.class @foo {
   emitc.field @fieldName0 : !emitc.array<1xf32>  {emitc.field_ref = ["another_feature"]}
@@ -28,10 +28,10 @@ emitc.class @foo {
 
 // -----
 
-/// Test that a reflection map is created for fields with a certain named attribute
-/// but not ones with an attribute present in the ignore-attributes option.
+/// Tests that a reflection map is created for fields in the included-field-attrs
+/// option and skips fields without matching attributes.
 
-emitc.class @foo_excluded_attrs {
+emitc.class @foo_mixed_attrs {
   emitc.field @fieldName0 : !emitc.array<1xf32>  {emitc.field_ref = ["another_feature"]}
   emitc.field @fieldName1 : !emitc.array<1xf32>  {emitc.other_field = ["some_feature"]}
   emitc.func @bar() {
@@ -40,7 +40,7 @@ emitc.class @foo_excluded_attrs {
   }
 }
 
-// CHECK:       emitc.class @foo_excluded_attrs {
+// CHECK:       emitc.class @foo_mixed_attrs {
 // CHECK-NEXT:    emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = ["another_feature"]}
 // CHECK-NEXT:    emitc.field @fieldName1 : !emitc.array<1xf32> {emitc.other_field = ["some_feature"]}
 // CHECK-NEXT:    emitc.field @reflectionMap : !emitc.opaque<"const std::map<std::string, char*>"> = 
@@ -50,6 +50,27 @@ emitc.class @foo_excluded_attrs {
 // CHECK-NEXT:      %[[VAL1:.*]] = member_call_opaque %[[MAP1]] "at"({{.*}}) : !emitc.opaque<"const std::map<std::string, char*>">, (!emitc.opaque<"std::string">) -> !emitc.ptr<!emitc.opaque<"char">>
 // CHECK-NEXT:      return %[[VAL1]] : !emitc.ptr<!emitc.opaque<"char">>
 // CHECK-NEXT:    }
+// CHECK-NEXT:    emitc.func @bar() {
+// CHECK-NEXT:      %{{.*}} = get_field @fieldName0 : !emitc.array<1xf32>
+// CHECK-NEXT:      return
+// CHECK-NEXT:    }
+// CHECK-NEXT:  }
+
+// -----
+
+/// Test that the pass bails out and leaves IR unchanged if no fields contain
+/// any of the attributes specified in included-field-attrs
+
+emitc.class @foo_unsupported_attr {
+  emitc.field @fieldName0 : !emitc.array<1xf32>  {emitc.other_field = ["another_feature"]}
+  emitc.func @bar() {
+    %0 = get_field @fieldName0 : !emitc.array<1xf32>
+    return
+  }
+}
+
+// CHECK:       emitc.class @foo_unsupported_attr {
+// CHECK-NEXT:    emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.other_field = ["another_feature"]}
 // CHECK-NEXT:    emitc.func @bar() {
 // CHECK-NEXT:      %{{.*}} = get_field @fieldName0 : !emitc.array<1xf32>
 // CHECK-NEXT:      return

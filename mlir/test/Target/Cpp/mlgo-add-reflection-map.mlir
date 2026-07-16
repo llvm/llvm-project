@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file --mlgo-add-reflection-map="included-field-attrs=emitc.field_ref excluded-field-attrs=emitc.other_field" %s | mlir-translate -mlir-to-cpp | FileCheck %s
+// RUN: mlir-opt -split-input-file --mlgo-add-reflection-map="included-field-attrs=emitc.field_ref" %s | mlir-translate -mlir-to-cpp | FileCheck %s
 
 /// Test that a reflection map and lookup function are generated in the class.
 
@@ -30,9 +30,9 @@ emitc.class @foo {
 
 // -----
 
-/// Test that fields with excluded attributes are ignored.
+/// Test that fields without included attributes are ignored.
 
-emitc.class @foo_excluded_attrs {
+emitc.class @foo_unsupported_attrs {
   emitc.field @fieldName0 : !emitc.array<1xf32>  {emitc.field_ref = ["another_feature"]}
   emitc.field @fieldName1 : !emitc.array<1xf32>  {emitc.other_field = ["some_feature"]}
   emitc.func @bar() {
@@ -43,7 +43,7 @@ emitc.class @foo_excluded_attrs {
 
 // CHECK:       #include <map>
 // CHECK-NEXT:  #include <string>
-// CHECK-NEXT:  class foo_excluded_attrs {
+// CHECK-NEXT:  class foo_unsupported_attrs {
 // CHECK-NEXT:   public:
 // CHECK-NEXT:    float fieldName0[1];
 // CHECK-NEXT:    float fieldName1[1];
