@@ -1699,7 +1699,9 @@ static bool checkOrAndOpImpliedByOther(
 
   Value *A, *B;
   CmpPredicate Pred;
-  assert(match(CmpToCheck, m_ICmpLike(Pred, m_Value(A), m_Value(B))));
+  bool Matched = match(CmpToCheck, m_ICmpLike(Pred, m_Value(A), m_Value(B)));
+  (void)Matched;
+  assert(Matched && "expected icmp-like match");
   // Check if the second condition can be simplified now.
   if (auto ImpliedCondition = checkCondition(Pred, A, B, CmpToCheck, Info)) {
     if (IsOr == *ImpliedCondition)
