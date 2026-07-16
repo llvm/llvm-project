@@ -162,14 +162,20 @@ The pre-packaged source tarballs will be automatically generated via the
 `Release Sources
 <https://github.com/llvm/llvm-project/actions/workflows/release-sources.yml>`_
 workflow on GitHub.  This workflow will create an artifact containing all the
-release tarballs and the artifact attestation.  The Release Manager should
-download the artifact, verify the tarballs, sign them, and then upload them to
-the release page.
+release tarballs and the artifact attestation.  Additionally the `Release
+Documentation
+<https://github.com/llvm/llvm-project/actions/workflows/release-documentation.yml>`_
+workflow will run and create an artifact containing the man pages and the
+artifact attestation. The Release Manager should download the artifacts from
+both workflows, verify the tarballs, sign them, and then upload them to the
+release page.
 
 ::
 
-  $ unzip artifact.zip
   $ gh auth login
+  $ unzip source-artifact.zip
+  $ for f in *.xz; do gh attestation verify --owner llvm $f && gpg -b $f; done
+  $ unzip documentation-artifact.zip
   $ for f in *.xz; do gh attestation verify --owner llvm $f && gpg -b $f; done
 
 Tarballs, release binaries,  or any other release artifacts must be uploaded to
