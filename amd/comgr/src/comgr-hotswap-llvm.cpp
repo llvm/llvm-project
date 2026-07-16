@@ -331,6 +331,9 @@ LLVMState initLLVM(const TargetIdentifier &TI) {
   if (!resolveRequiredOpcodeViaParse("s_get_pc_i64 s[0:1]", "s_get_pc_i64", S,
                                      S.SGetPcI64Opcode))
     return S;
+  if (!resolveRequiredOpcodeViaParse("s_add_nc_u64 s[0:1], s[0:1], 0",
+                                     "s_add_nc_u64", S, S.SAddNcU64Opcode))
+    return S;
   if (!resolveRequiredOpcodeViaParse("s_add_u32 s0, s0, 0", "s_add_u32", S,
                                      S.SAddU32Opcode))
     return S;

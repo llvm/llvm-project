@@ -550,6 +550,7 @@ struct LLVMState {
   /// matching disassembled mnemonic strings.
   unsigned GlobalWbOpcode = 0;
   unsigned SGetPcI64Opcode = 0;
+  unsigned SAddNcU64Opcode = 0;
   unsigned SAddU32Opcode = 0;
   unsigned SAddcU32Opcode = 0;
   unsigned SSetPcI64Opcode = 0;
@@ -883,13 +884,25 @@ evaluateDirectControlFlowTarget(const InternalDecodedInst &DI,
 
 /// Collect branch and call targets used to protect interior entry points from
 /// trampoline coalescing. Absolute addresses in TextAddr .. TextAddr +
-/// TextSize are converted to text-relative offsets. Register-target control
-/// flow sets HasUnresolvedTargets so callers can disable transformations that
+/// TextSize are converted to text-relative offsets. Canonical PC-materialized
+/// register calls are resolved when their target value has one provable
+/// straight-line definition and no direct, indirect, or declared entry can
+/// bypass that definition. Canonical local-function returns are bounded to
+/// the continuations of calls that preserve the same link register, provided
+/// no interior call, overlapping external alias, or reachable fallthrough can
+/// enter the function without that link definition. \p DeclaredEntries
+/// contains text-relative function and kernel entry offsets; \p FunctionRanges
+/// supplies the symbol ranges used for the return proof; \p ExternalEntries
+/// identifies externally reachable symbol and kernel entries, including
+/// aliases at a local function's start. Other register-target control flow
+/// sets HasUnresolvedTargets so callers can disable transformations that
 /// consume possible destinations.
-std::optional<DirectControlFlowInfo>
-collectDirectBranchTargets(llvm::ArrayRef<InternalDecodedInst> Decoded,
-                           const LLVMState &LS, uint64_t TextAddr,
-                           uint64_t TextSize);
+std::optional<DirectControlFlowInfo> collectDirectBranchTargets(
+    llvm::ArrayRef<InternalDecodedInst> Decoded, const LLVMState &LS,
+    uint64_t TextAddr, uint64_t TextSize,
+    llvm::ArrayRef<uint64_t> DeclaredEntries,
+    llvm::ArrayRef<ElfView::FunctionTextRange> FunctionRanges = {},
+    llvm::ArrayRef<uint64_t> ExternalEntries = {});
 
 [[nodiscard]] bool emitReplacementCode(PatchContext &Ctx, uint64_t InstOffset,
                                        uint32_t InstSize,

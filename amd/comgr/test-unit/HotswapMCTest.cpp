@@ -91,6 +91,7 @@ TEST(InitLLVM, ValidGfx1250) {
   EXPECT_LT(S.SDelayAluOpcode, S.MCII->getNumOpcodes());
   EXPECT_LT(S.SEndPgmOpcode, S.MCII->getNumOpcodes());
   EXPECT_LT(S.SEndPgmSavedOpcode, S.MCII->getNumOpcodes());
+  EXPECT_LT(S.SAddNcU64Opcode, S.MCII->getNumOpcodes());
   EXPECT_LT(S.SAddPcI64Opcode, S.MCII->getNumOpcodes());
   EXPECT_LT(S.SCallI64Opcode, S.MCII->getNumOpcodes());
   EXPECT_LT(S.SSwapPcI64Opcode, S.MCII->getNumOpcodes());
@@ -555,7 +556,7 @@ TEST(CollectDirectBranchTargets, MarksRegisterTargetCallUnresolved) {
 
   std::optional<DirectControlFlowInfo> Info =
       collectDirectBranchTargets(Decoded, S, /*TextAddr=*/0,
-                                 /*TextSize=*/0x1000);
+                                 /*TextSize=*/0x1000, /*DeclaredEntries=*/{});
   ASSERT_TRUE(Info);
   EXPECT_TRUE(Info->Targets.empty());
   EXPECT_TRUE(Info->HasUnresolvedTargets);
@@ -578,9 +579,385 @@ TEST(CollectDirectBranchTargets, IgnoresSetPcWithoutTreatingItAsCall) {
 
   std::optional<DirectControlFlowInfo> Info =
       collectDirectBranchTargets(Decoded, S, /*TextAddr=*/0,
-                                 /*TextSize=*/0x1000);
+                                 /*TextSize=*/0x1000, /*DeclaredEntries=*/{});
   ASSERT_TRUE(Info);
   EXPECT_TRUE(Info->Targets.empty());
+  EXPECT_FALSE(Info->HasUnresolvedTargets);
+}
+
+TEST(CollectDirectBranchTargets, ResolvesProductionPcMaterializedCall) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  llvm::SmallVector<uint8_t> Bytes =
+      assembleSingleInst("s_get_pc_i64 s[0:1]\n"
+                         "s_add_nc_u64 s[0:1], s[0:1], 0xffffffffffed1230\n"
+                         "v_mov_b32 v0, v1\n"
+                         "s_swap_pc_i64 s[30:31], s[0:1]",
+                         S);
+  ASSERT_FALSE(Bytes.empty());
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
+  ASSERT_EQ(Decoded.size(), 4u);
+  for (InternalDecodedInst &DI : Decoded)
+    DI.Offset += 0x12EDCC;
+
+  // This is the exact address calculation from the production reproducer:
+  // 0x1a000 + 0x12edcc + 4 - 0x12edd0 = 0x1a000.
+  std::optional<DirectControlFlowInfo> Info =
+      collectDirectBranchTargets(Decoded, S, /*TextAddr=*/0x1A000,
+                                 /*TextSize=*/0x150000,
+                                 /*DeclaredEntries=*/{});
+  ASSERT_TRUE(Info);
+  ASSERT_EQ(Info->Targets.size(), 1u);
+  EXPECT_TRUE(Info->Targets.contains(0));
+  EXPECT_FALSE(Info->HasUnresolvedTargets);
+}
+
+TEST(CollectDirectBranchTargets, RejectsClobberedPcMaterializedCall) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  llvm::SmallVector<uint8_t> Bytes =
+      assembleSingleInst("s_get_pc_i64 s[0:1]\n"
+                         "s_add_nc_u64 s[0:1], s[0:1], -4\n"
+                         "s_mov_b32 s0, 0\n"
+                         "s_swap_pc_i64 s[30:31], s[0:1]",
+                         S);
+  ASSERT_FALSE(Bytes.empty());
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
+  ASSERT_EQ(Decoded.size(), 4u);
+
+  std::optional<DirectControlFlowInfo> Info =
+      collectDirectBranchTargets(Decoded, S, /*TextAddr=*/0,
+                                 /*TextSize=*/0x1000, /*DeclaredEntries=*/{});
+  ASSERT_TRUE(Info);
+  EXPECT_TRUE(Info->Targets.empty());
+  EXPECT_TRUE(Info->HasUnresolvedTargets);
+}
+
+TEST(CollectDirectBranchTargets, RejectsAlternateEntryIntoMaterialization) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  llvm::SmallVector<uint8_t> Bytes =
+      assembleSingleInst("s_branch 1\n"
+                         "s_get_pc_i64 s[0:1]\n"
+                         "s_add_nc_u64 s[0:1], s[0:1], 4\n"
+                         "s_swap_pc_i64 s[30:31], s[0:1]",
+                         S);
+  ASSERT_FALSE(Bytes.empty());
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
+  ASSERT_EQ(Decoded.size(), 4u);
+
+  // The branch enters at the add without executing s_get_pc_i64, so the
+  // apparent linear definition chain does not prove the register value.
+  std::optional<DirectControlFlowInfo> Info =
+      collectDirectBranchTargets(Decoded, S, /*TextAddr=*/0,
+                                 /*TextSize=*/0x1000, /*DeclaredEntries=*/{});
+  ASSERT_TRUE(Info);
+  EXPECT_TRUE(Info->Targets.contains(8));
+  EXPECT_TRUE(Info->HasUnresolvedTargets);
+}
+
+TEST(CollectDirectBranchTargets, RejectsDeclaredEntryIntoMaterialization) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  llvm::SmallVector<uint8_t> Bytes =
+      assembleSingleInst("s_get_pc_i64 s[0:1]\n"
+                         "s_add_nc_u64 s[0:1], s[0:1], 4\n"
+                         "s_swap_pc_i64 s[30:31], s[0:1]",
+                         S);
+  ASSERT_FALSE(Bytes.empty());
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
+  ASSERT_EQ(Decoded.size(), 3u);
+  llvm::SmallVector<uint64_t, 1> DeclaredEntries{Decoded[1].Offset};
+
+  // A function or kernel entry at the add can bypass s_get_pc_i64, even when
+  // no direct branch in .text exposes that alternate path.
+  std::optional<DirectControlFlowInfo> Info = collectDirectBranchTargets(
+      Decoded, S, /*TextAddr=*/0, /*TextSize=*/0x1000, DeclaredEntries);
+  ASSERT_TRUE(Info);
+  EXPECT_TRUE(Info->Targets.empty());
+  EXPECT_TRUE(Info->HasUnresolvedTargets);
+}
+
+TEST(CollectDirectBranchTargets, RejectsUndecodedMaterializationSlot) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  llvm::SmallVector<uint8_t> Bytes =
+      assembleSingleInst("s_get_pc_i64 s[0:1]\n"
+                         "s_add_nc_u64 s[0:1], s[0:1], 8\n"
+                         "v_mov_b32 v0, v1\n"
+                         "s_swap_pc_i64 s[30:31], s[0:1]",
+                         S);
+  ASSERT_FALSE(Bytes.empty());
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
+  ASSERT_EQ(Decoded.size(), 4u);
+  Decoded[2].DecodeSucceeded = false;
+  Decoded[2].Inst = llvm::MCInst();
+  Decoded[2].Mnemonic = "<unknown>";
+
+  std::optional<DirectControlFlowInfo> Info =
+      collectDirectBranchTargets(Decoded, S, /*TextAddr=*/0,
+                                 /*TextSize=*/0x1000,
+                                 /*DeclaredEntries=*/{});
+  ASSERT_TRUE(Info);
+  EXPECT_TRUE(Info->Targets.empty());
+  EXPECT_TRUE(Info->HasUnresolvedTargets);
+}
+
+TEST(CollectDirectBranchTargets, RejectsUnboundedIndirectEntry) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  llvm::SmallVector<uint8_t> Bytes =
+      assembleSingleInst("s_set_pc_i64 s[4:5]\n"
+                         "s_get_pc_i64 s[0:1]\n"
+                         "s_add_nc_u64 s[0:1], s[0:1], 4\n"
+                         "s_swap_pc_i64 s[30:31], s[0:1]",
+                         S);
+  ASSERT_FALSE(Bytes.empty());
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
+  ASSERT_EQ(Decoded.size(), 4u);
+  ASSERT_EQ(Decoded[0].Inst.getOpcode(), S.SSetPcI64Opcode);
+
+  std::optional<DirectControlFlowInfo> Info =
+      collectDirectBranchTargets(Decoded, S, /*TextAddr=*/0,
+                                 /*TextSize=*/0x1000,
+                                 /*DeclaredEntries=*/{});
+  ASSERT_TRUE(Info);
+  EXPECT_TRUE(Info->Targets.empty());
+  EXPECT_TRUE(Info->HasUnresolvedTargets);
+}
+
+TEST(CollectDirectBranchTargets, BoundsCanonicalSetPcReturn) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  llvm::SmallVector<uint8_t> Bytes =
+      assembleSingleInst("s_nop 0\n"
+                         "s_set_pc_i64 s[30:31]\n"
+                         "s_branch -2\n"
+                         "s_get_pc_i64 s[0:1]\n"
+                         "s_add_nc_u64 s[0:1], s[0:1], -16\n"
+                         "s_swap_pc_i64 s[30:31], s[0:1]",
+                         S);
+  ASSERT_FALSE(Bytes.empty());
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
+  ASSERT_EQ(Decoded.size(), 6u);
+  ASSERT_EQ(Decoded[1].Inst.getOpcode(), S.SSetPcI64Opcode);
+  ASSERT_EQ(Decoded[3].Inst.getOpcode(), S.SGetPcI64Opcode);
+  llvm::SmallVector<uint64_t, 1> DeclaredEntries{0};
+  llvm::SmallVector<ElfView::FunctionTextRange, 1> FunctionRanges{
+      {0, Decoded[3].Offset}};
+
+  // The helper preserves the link pair from its entry through s_set_pc_i64.
+  // The block laid out after the return can branch back into the epilogue,
+  // matching the production CFG, but it preserves the pair as well. The
+  // materialized call is therefore the return's sole possible source.
+  std::optional<DirectControlFlowInfo> Info = collectDirectBranchTargets(
+      Decoded, S, /*TextAddr=*/0, /*TextSize=*/0x1000, DeclaredEntries,
+      FunctionRanges);
+  ASSERT_TRUE(Info);
+  ASSERT_EQ(Info->Targets.size(), 2u);
+  EXPECT_TRUE(Info->Targets.contains(0));
+  EXPECT_TRUE(Info->Targets.contains(Decoded[1].Offset));
+  EXPECT_FALSE(Info->HasUnresolvedTargets);
+}
+
+TEST(CollectDirectBranchTargets, RejectsClobberedSetPcReturn) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  llvm::SmallVector<uint8_t> Bytes =
+      assembleSingleInst("s_mov_b32 s31, 0\n"
+                         "s_set_pc_i64 s[30:31]\n"
+                         "s_get_pc_i64 s[0:1]\n"
+                         "s_add_nc_u64 s[0:1], s[0:1], -12\n"
+                         "s_swap_pc_i64 s[30:31], s[0:1]",
+                         S);
+  ASSERT_FALSE(Bytes.empty());
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
+  ASSERT_EQ(Decoded.size(), 5u);
+  llvm::SmallVector<uint64_t, 1> DeclaredEntries{0};
+  llvm::SmallVector<ElfView::FunctionTextRange, 1> FunctionRanges{
+      {0, Decoded[2].Offset}};
+
+  // A partial link-pair definition makes the return target arbitrary, so the
+  // PC-materialized call must remain unresolved.
+  std::optional<DirectControlFlowInfo> Info = collectDirectBranchTargets(
+      Decoded, S, /*TextAddr=*/0, /*TextSize=*/0x1000, DeclaredEntries,
+      FunctionRanges);
+  ASSERT_TRUE(Info);
+  EXPECT_TRUE(Info->Targets.empty());
+  EXPECT_TRUE(Info->HasUnresolvedTargets);
+}
+
+TEST(CollectDirectBranchTargets, RejectsAlternateEntryIntoReturnFunction) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  llvm::SmallVector<uint8_t> Bytes =
+      assembleSingleInst("s_nop 0\n"
+                         "s_set_pc_i64 s[30:31]\n"
+                         "s_branch -2\n"
+                         "s_branch -2\n"
+                         "s_get_pc_i64 s[0:1]\n"
+                         "s_add_nc_u64 s[0:1], s[0:1], -20\n"
+                         "s_swap_pc_i64 s[30:31], s[0:1]",
+                         S);
+  ASSERT_FALSE(Bytes.empty());
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
+  ASSERT_EQ(Decoded.size(), 7u);
+  llvm::SmallVector<uint64_t, 1> DeclaredEntries{0};
+  llvm::SmallVector<ElfView::FunctionTextRange, 1> FunctionRanges{
+      {0, Decoded[3].Offset}};
+
+  // The branch at the function end enters a block laid out after the return,
+  // which can branch back to the epilogue without a call-defined link pair.
+  std::optional<DirectControlFlowInfo> Info = collectDirectBranchTargets(
+      Decoded, S, /*TextAddr=*/0, /*TextSize=*/0x1000, DeclaredEntries,
+      FunctionRanges);
+  ASSERT_TRUE(Info);
+  EXPECT_TRUE(Info->Targets.contains(Decoded[2].Offset));
+  EXPECT_TRUE(Info->HasUnresolvedTargets);
+}
+
+TEST(CollectDirectBranchTargets,
+     RejectsInteriorPcMaterializedCallIntoReturnFunction) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  llvm::SmallVector<uint8_t> Bytes =
+      assembleSingleInst("s_nop 0\n"
+                         "s_set_pc_i64 s[30:31]\n"
+                         "s_get_pc_i64 s[4:5]\n"
+                         "s_add_nc_u64 s[4:5], s[4:5], -12\n"
+                         "s_swap_pc_i64 s[30:31], s[4:5]\n"
+                         "s_get_pc_i64 s[6:7]\n"
+                         "s_add_nc_u64 s[6:7], s[6:7], -20\n"
+                         "s_swap_pc_i64 s[2:3], s[6:7]",
+                         S);
+  ASSERT_FALSE(Bytes.empty());
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
+  ASSERT_EQ(Decoded.size(), 8u);
+  llvm::SmallVector<uint64_t, 1> DeclaredEntries{0};
+  llvm::SmallVector<ElfView::FunctionTextRange, 1> FunctionRanges{
+      {0, Decoded[2].Offset}};
+
+  // The first call enters the helper normally, but the second enters at its
+  // s_set_pc_i64 with a different link pair. Every known call into the range
+  // participates in the return proof, including register-materialized calls.
+  std::optional<DirectControlFlowInfo> Info = collectDirectBranchTargets(
+      Decoded, S, /*TextAddr=*/0, /*TextSize=*/0x1000, DeclaredEntries,
+      FunctionRanges);
+  ASSERT_TRUE(Info);
+  EXPECT_TRUE(Info->Targets.empty());
+  EXPECT_TRUE(Info->HasUnresolvedTargets);
+}
+
+TEST(CollectDirectBranchTargets, RejectsExternalAliasAtLocalFunctionEntry) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  llvm::SmallVector<uint8_t> Bytes =
+      assembleSingleInst("s_nop 0\n"
+                         "s_set_pc_i64 s[30:31]\n"
+                         "s_get_pc_i64 s[0:1]\n"
+                         "s_add_nc_u64 s[0:1], s[0:1], -12\n"
+                         "s_swap_pc_i64 s[30:31], s[0:1]",
+                         S);
+  ASSERT_FALSE(Bytes.empty());
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
+  ASSERT_EQ(Decoded.size(), 5u);
+  llvm::SmallVector<uint64_t, 1> DeclaredEntries{0};
+  llvm::SmallVector<uint64_t, 1> ExternalEntries{0};
+  llvm::SmallVector<ElfView::FunctionTextRange, 1> FunctionRanges{
+      {0, Decoded[2].Offset}};
+
+  // A global function or kernel alias at the local helper's start can enter
+  // without a call-defined link pair, even though it is not an interior entry.
+  std::optional<DirectControlFlowInfo> Info = collectDirectBranchTargets(
+      Decoded, S, /*TextAddr=*/0, /*TextSize=*/0x1000, DeclaredEntries,
+      FunctionRanges, ExternalEntries);
+  ASSERT_TRUE(Info);
+  EXPECT_TRUE(Info->Targets.empty());
+  EXPECT_TRUE(Info->HasUnresolvedTargets);
+}
+
+TEST(CollectDirectBranchTargets, RejectsFallthroughIntoReturnFunction) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  llvm::SmallVector<uint8_t> Bytes =
+      assembleSingleInst("s_nop 0\n"
+                         "s_nop 0\n"
+                         "s_set_pc_i64 s[30:31]\n"
+                         "s_get_pc_i64 s[0:1]\n"
+                         "s_add_nc_u64 s[0:1], s[0:1], -12\n"
+                         "s_swap_pc_i64 s[30:31], s[0:1]",
+                         S);
+  ASSERT_FALSE(Bytes.empty());
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
+  ASSERT_EQ(Decoded.size(), 6u);
+  llvm::SmallVector<uint64_t, 2> DeclaredEntries{0, Decoded[1].Offset};
+  llvm::SmallVector<ElfView::FunctionTextRange, 1> FunctionRanges{
+      {Decoded[1].Offset, Decoded[3].Offset}};
+
+  // The declared entry at zero reaches the local helper by fallthrough and
+  // does not define s[30:31], so the helper's return cannot be bounded.
+  std::optional<DirectControlFlowInfo> Info = collectDirectBranchTargets(
+      Decoded, S, /*TextAddr=*/0, /*TextSize=*/0x1000, DeclaredEntries,
+      FunctionRanges);
+  ASSERT_TRUE(Info);
+  EXPECT_TRUE(Info->Targets.empty());
+  EXPECT_TRUE(Info->HasUnresolvedTargets);
+}
+
+TEST(CollectDirectBranchTargets, AllowsUnreachablePaddingBeforeReturnFunction) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  llvm::SmallVector<uint8_t> Bytes =
+      assembleSingleInst("s_branch -1\n"
+                         "s_nop 0\n"
+                         "s_nop 0\n"
+                         "s_nop 0\n"
+                         "s_set_pc_i64 s[30:31]\n"
+                         "s_get_pc_i64 s[0:1]\n"
+                         "s_add_nc_u64 s[0:1], s[0:1], -12\n"
+                         "s_swap_pc_i64 s[30:31], s[0:1]",
+                         S);
+  ASSERT_FALSE(Bytes.empty());
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
+  ASSERT_EQ(Decoded.size(), 8u);
+  llvm::SmallVector<uint64_t, 2> DeclaredEntries{0, Decoded[3].Offset};
+  llvm::SmallVector<ElfView::FunctionTextRange, 1> FunctionRanges{
+      {Decoded[3].Offset, Decoded[5].Offset}};
+
+  // The nops before the helper are unreachable because their backward
+  // fallthrough chain terminates at an unconditional branch. This mirrors the
+  // padding before the production HSACO's second helper.
+  std::optional<DirectControlFlowInfo> Info = collectDirectBranchTargets(
+      Decoded, S, /*TextAddr=*/0, /*TextSize=*/0x1000, DeclaredEntries,
+      FunctionRanges);
+  ASSERT_TRUE(Info);
+  EXPECT_TRUE(Info->Targets.contains(Decoded[3].Offset));
   EXPECT_FALSE(Info->HasUnresolvedTargets);
 }
 
@@ -599,7 +976,7 @@ TEST(CollectDirectBranchTargets, HandlesImmediateAbsoluteTargetCall) {
 
   std::optional<DirectControlFlowInfo> Info =
       collectDirectBranchTargets(Decoded, S, /*TextAddr=*/0x200,
-                                 /*TextSize=*/0x40);
+                                 /*TextSize=*/0x40, /*DeclaredEntries=*/{});
   ASSERT_TRUE(Info);
   ASSERT_EQ(Info->Targets.size(), 1u);
   EXPECT_TRUE(Info->Targets.contains(0x10));
@@ -607,7 +984,7 @@ TEST(CollectDirectBranchTargets, HandlesImmediateAbsoluteTargetCall) {
 
   std::optional<DirectControlFlowInfo> OutsideInfo =
       collectDirectBranchTargets(Decoded, S, /*TextAddr=*/0x220,
-                                 /*TextSize=*/0x40);
+                                 /*TextSize=*/0x40, /*DeclaredEntries=*/{});
   ASSERT_TRUE(OutsideInfo);
   EXPECT_TRUE(OutsideInfo->Targets.empty());
   EXPECT_FALSE(OutsideInfo->HasUnresolvedTargets);
@@ -616,7 +993,7 @@ TEST(CollectDirectBranchTargets, HandlesImmediateAbsoluteTargetCall) {
       collectDirectBranchTargets(
           Decoded, S,
           /*TextAddr=*/std::numeric_limits<uint64_t>::max() - 0x10,
-          /*TextSize=*/0x20);
+          /*TextSize=*/0x20, /*DeclaredEntries=*/{});
   EXPECT_FALSE(OverflowInfo);
 }
 
@@ -634,7 +1011,7 @@ TEST(CollectDirectBranchTargets, CollectsPcRelativeCall) {
 
   std::optional<DirectControlFlowInfo> Info =
       collectDirectBranchTargets(Decoded, S, /*TextAddr=*/0,
-                                 /*TextSize=*/0x1000);
+                                 /*TextSize=*/0x1000, /*DeclaredEntries=*/{});
   ASSERT_TRUE(Info);
   ASSERT_EQ(Info->Targets.size(), 1u);
   EXPECT_TRUE(
