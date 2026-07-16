@@ -410,6 +410,10 @@ public:
   /// a C++ class.
   bool isCXXInstanceMember() const;
 
+  // Determine whether this declaration is a direct or indirect field. For use
+  // with filtered_decl_iterator.
+  bool isDirectOrIndirectFieldDecl() const;
+
   /// Determine if the declaration obeys the reserved identifier rules of the
   /// given language.
   ReservedIdentifierStatus isReserved(const LangOptions &LangOpts) const;
@@ -4601,6 +4605,24 @@ public:
   // Whether there are any fields (non-static data members) in this record.
   bool noload_field_empty() const {
     return noload_field_begin() == noload_field_end();
+  }
+
+  // Iterator access to direct or indirect field members. The field iterator
+  // only visits the non-static data members of this class, ignoring any static
+  // data members, functions, constructors, destructors, etc.
+  using direct_or_indirect_field_iterator =
+      filtered_decl_iterator<NamedDecl,
+                             &NamedDecl::isDirectOrIndirectFieldDecl>;
+  using direct_or_indirect_field_range =
+      llvm::iterator_range<direct_or_indirect_field_iterator>;
+
+  direct_or_indirect_field_range direct_or_indirect_fields() const {
+    return direct_or_indirect_field_range(direct_or_indirect_field_begin(),
+                                          direct_or_indirect_field_end());
+  }
+  direct_or_indirect_field_iterator direct_or_indirect_field_begin() const;
+  direct_or_indirect_field_iterator direct_or_indirect_field_end() const {
+    return direct_or_indirect_field_iterator(decl_iterator());
   }
 
   /// Note that the definition of this type is now complete.

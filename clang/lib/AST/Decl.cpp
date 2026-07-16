@@ -1128,6 +1128,14 @@ bool NamedDecl::isPlaceholderVar(const LangOptions &LangOpts) const {
   return false;
 }
 
+static bool isDirectOrIndirectFieldDeclKind(Decl::Kind K) {
+  return FieldDecl::classofKind(K) || IndirectFieldDecl::classofKind(K);
+}
+
+bool NamedDecl::isDirectOrIndirectFieldDecl() const {
+  return isDirectOrIndirectFieldDeclKind(getKind());
+}
+
 ReservedIdentifierStatus
 NamedDecl::isReserved(const LangOptions &LangOpts) const {
   const IdentifierInfo *II = getIdentifier();
@@ -5280,6 +5288,15 @@ RecordDecl::field_iterator RecordDecl::field_begin() const {
   return field_iterator(decl_iterator(FirstDecl));
 }
 
+RecordDecl::direct_or_indirect_field_iterator
+RecordDecl::direct_or_indirect_field_begin() const {
+  if (hasExternalLexicalStorage() && !hasLoadedFieldsFromExternalStorage())
+    LoadFieldsFromExternalStorage();
+  if (RecordDecl *D = getDefinition(); D && D != this)
+    return D->direct_or_indirect_field_begin();
+  return direct_or_indirect_field_iterator(decl_iterator(FirstDecl));
+}
+
 RecordDecl::field_iterator RecordDecl::noload_field_begin() const {
   return field_iterator(decl_iterator(getDefinitionOrSelf()->FirstDecl));
 }
@@ -5333,14 +5350,13 @@ void RecordDecl::LoadFieldsFromExternalStorage() const {
 
   SmallVector<Decl*, 64> Decls;
   setHasLoadedFieldsFromExternalStorage(true);
-  Source->FindExternalLexicalDecls(this, [](Decl::Kind K) {
-    return FieldDecl::classofKind(K) || IndirectFieldDecl::classofKind(K);
-  }, Decls);
+  Source->FindExternalLexicalDecls(this, isDirectOrIndirectFieldDeclKind,
+                                   Decls);
 
 #ifndef NDEBUG
   // Check that all decls we got were FieldDecls.
   for (unsigned i=0, e=Decls.size(); i != e; ++i)
-    assert(isa<FieldDecl>(Decls[i]) || isa<IndirectFieldDecl>(Decls[i]));
+    assert(cast<NamedDecl>(Decls[i])->isDirectOrIndirectFieldDecl());
 #endif
 
   if (Decls.empty())

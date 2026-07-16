@@ -4127,7 +4127,7 @@ namespace {
     llvm::SmallPtrSet<ValueDecl*, 4> UninitializedFields;
 
     // At the beginning, all fields are uninitialized.
-    for (auto *I : RD->decls()) {
+    for (auto *I : RD->direct_or_indirect_fields()) {
       if (auto *FD = dyn_cast<FieldDecl>(I)) {
         UninitializedFields.insert(FD);
       } else if (auto *IFD = dyn_cast<IndirectFieldDecl>(I)) {
@@ -5586,7 +5586,7 @@ bool Sema::SetCtorInitializers(CXXConstructorDecl *Constructor, bool AnyErrors,
   }
 
   // Fields.
-  for (auto *Mem : ClassDecl->decls()) {
+  for (auto *Mem : ClassDecl->direct_or_indirect_fields()) {
     if (auto *F = dyn_cast<FieldDecl>(Mem)) {
       // C++ [class.bit]p2:
       //   A declaration for a bit-field that omits the identifier declares an
