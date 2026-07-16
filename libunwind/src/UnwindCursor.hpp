@@ -2596,7 +2596,7 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
     if (vapi_glue_addr_begin <= returnAddressInStack &&
         returnAddressInStack < vapi_glue_addr_end) {
       _LIBUNWIND_TRACE_UNWINDING(
-          "The return address in stack %p is within the range of VAPI address,"
+          "The return address in stack %p is within the range of VAPI address;"
           " set isKnownVapiNotActive to true\n",
           reinterpret_cast<void *>(returnAddressInStack));
       setIsKnownVapiNotActive(true);
