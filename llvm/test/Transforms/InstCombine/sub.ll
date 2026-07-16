@@ -130,6 +130,17 @@ define i32 @sub_or_no_fold_arbitrary_c(i32 %x) {
   ret i32 %r
 }
 
+define i32 @sub_or_no_fold_near_miss(i32 %x) {
+; CHECK-LABEL: @sub_or_no_fold_near_miss(
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], -2
+; CHECK-NEXT:    [[R:%.*]] = sub nsw i32 -2, [[OR]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %or = or i32 %x, -2
+  %r = sub i32 -2, %or
+  ret i32 %r
+}
+
 define i32 @sub_or_no_fold_diff_c(i32 %x) {
 ; CHECK-LABEL: @sub_or_no_fold_diff_c(
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], 2147483646
