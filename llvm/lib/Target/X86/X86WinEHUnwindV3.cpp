@@ -47,22 +47,21 @@ STATISTIC(SubFragmentSplits,
 static constexpr unsigned MaxV3PrologOps = 31;
 static constexpr unsigned MaxV3Epilogs = 7;
 static constexpr unsigned MaxV3EpilogOps = 31;
+static constexpr unsigned EpilogDistanceThreshold = 32767;
 
-/// Maximum approximate instruction distance allowed between two adjacent
-/// epilogs, and between the last epilog and the funclet end, before the
-/// funclet is split into a new chained sub-fragment. V3 encodes each epilog's
-/// position as a signed 16-bit EpilogOffset: a delta from the previous epilog,
-/// with the tail-closest epilog encoded relative to the fragment end. The exact
-/// byte offsets aren't known until MC layout, so the approximate instruction
-/// count is used as a proxy, with margin for the average emitted instruction
-/// size.
-static cl::opt<unsigned> EpilogDistanceThreshold(
-    "x86-wineh-unwindv3-epilog-distance-threshold", cl::Hidden,
+/// Approximate byte distance between an epilog and its fragment tail beyond
+/// which the funclet is split into a new chained sub-fragment. The V3
+/// EpilogOffset field is a signed 16-bit byte offset measured from the
+/// fragment tail, so each fragment must span less than 32 KiB of code. The
+/// exact byte offsets aren't known until MC layout, so (like the V2 pass) an
+/// approximate byte count is used as a proxy — instructions are charged
+/// ApproxBytesPerInstr each and alignment padding is added.
+static cl::opt<unsigned> ApproxBytesPerInstr(
+    "x86-wineh-unwindv3-instr-avg-size", cl::Hidden,
     cl::desc(
-        "Maximum approximate instruction distance between adjacent epilogs "
-        "(or between the last epilog and the funclet end) before "
-        "splitting into a new chained unwind info for Unwind v3."),
-    cl::init(3000));
+        "Average size of an instruction. This value is used in determining "
+        "split points for chained unwinder info"),
+    cl::init(7));
 
 /// After reporting a recoverable error for `MF`, erase all SEH pseudo-
 /// instructions and clear the WinCFI flag so the AsmPrinter doesn't try to
@@ -98,20 +97,20 @@ static void suppressWinCFI(MachineFunction &MF) {
 
 namespace {
 
-/// A V3 epilog and the approximate instruction position where it begins, used
+/// A V3 epilog and the approximate byte position where it begins, used
 /// as a candidate sub-fragment split point.
 struct EpilogSplitPoint {
   MachineInstr *BeginEpilog;
-  unsigned ApproxInstrPos;
+  unsigned ApproxBytePos;
 };
 
 /// Per-funclet analysis results.
 struct FuncletInfo {
   unsigned PrologOpCount = 0;
   unsigned MaxEpilogOpCount = 0;
-  /// Approximate instruction position at the end of the funclet, used as the
+  /// Approximate byte position at the end of the funclet, used as the
   /// initial fragment tail reference for size-based splitting.
-  unsigned EndInstrPos = 0;
+  unsigned EndBytePos = 0;
   /// SEH_BeginEpilogue instructions (with approximate positions), used as
   /// candidate insertion points for sub-fragment splitting.
   SmallVector<EpilogSplitPoint, 8> Epilogs;
@@ -132,12 +131,12 @@ public:
 private:
   /// Analyze one funclet (or the main function body) starting at Iter.
   /// Advances Iter past the analyzed region, stopping at the next funclet
-  /// entry or the end of the function. ApproxInstrPos is a running count of
-  /// emitted instructions across the whole function, used to estimate the
-  /// byte distance between epilogs and their fragment tail.
+  /// entry or the end of the function. ApproxBytePos is a running estimate of
+  /// the byte position across the whole function, used to estimate the byte
+  /// distance between epilogs and their fragment tail.
   static FuncletInfo analyzeFunclet(MachineFunction &MF,
                                     MachineFunction::iterator &Iter,
-                                    unsigned &ApproxInstrPos);
+                                    unsigned &ApproxBytePos);
 };
 
 } // end anonymous namespace
@@ -154,7 +153,7 @@ FunctionPass *llvm::createX86WinEHUnwindV3Pass() {
 
 FuncletInfo X86WinEHUnwindV3::analyzeFunclet(MachineFunction &MF,
                                              MachineFunction::iterator &Iter,
-                                             unsigned &ApproxInstrPos) {
+                                             unsigned &ApproxBytePos) {
   FuncletInfo Info;
   bool InEpilog = false;
   bool SeenProlog = false;
@@ -168,12 +167,20 @@ FuncletInfo X86WinEHUnwindV3::analyzeFunclet(MachineFunction &MF,
     if (MBB.isEHFuncletEntry() && SeenProlog)
       break;
 
+    // Account for worst-case scenario of padding inserted to align this block.
+    Align A = MBB.getAlignment();
+    unsigned MaxPadding = A.value() - 1;
+    if (unsigned MaxBytes = MBB.getMaxBytesForAlignment())
+      MaxPadding = std::min(MaxPadding, MaxBytes);
+    ApproxBytePos += MaxPadding;
+
     for (MachineInstr &MI : MBB) {
-      // Approximate the number of emitted instructions. This estimates how
-      // far each epilog sits from its fragment tail; the exact byte offsets
-      // aren't available until MC layout.
+      // Approximate the emitted byte size, mirroring the V2 pass. This
+      // estimates how far each epilog sits from its fragment tail; the exact
+      // byte offsets aren't available until MC layout, so each real
+      // instruction is charged ApproxBytesPerInstr bytes.
       if (!MI.isPseudo() && !MI.isMetaInstruction())
-        ApproxInstrPos++;
+        ApproxBytePos += ApproxBytesPerInstr;
 
       switch (MI.getOpcode()) {
       case X86::SEH_PushReg:
@@ -195,9 +202,9 @@ FuncletInfo X86WinEHUnwindV3::analyzeFunclet(MachineFunction &MF,
         InEpilog = true;
         CurrentEpilogOpCount = 0;
         LLVM_DEBUG(dbgs() << "  epilog " << Info.Epilogs.size()
-                          << " begins at approx instruction position "
-                          << ApproxInstrPos << "\n");
-        Info.Epilogs.push_back({&MI, ApproxInstrPos});
+                          << " begins at approx byte position " << ApproxBytePos
+                          << "\n");
+        Info.Epilogs.push_back({&MI, ApproxBytePos});
         break;
       case X86::SEH_EndEpilogue:
         InEpilog = false;
@@ -210,10 +217,10 @@ FuncletInfo X86WinEHUnwindV3::analyzeFunclet(MachineFunction &MF,
     }
   }
 
-  Info.EndInstrPos = ApproxInstrPos;
+  Info.EndBytePos = ApproxBytePos;
   LLVM_DEBUG(dbgs() << "  funclet has " << Info.Epilogs.size()
-                    << " epilog(s); ends at approx instruction position "
-                    << ApproxInstrPos << "\n");
+                    << " epilog(s); ends at approx byte position "
+                    << ApproxBytePos << "\n");
   return Info;
 }
 
@@ -244,7 +251,7 @@ bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
   }
 
   bool Changed = false;
-  unsigned ApproxInstrPos = 0;
+  unsigned ApproxBytePos = 0;
   MachineFunction::iterator Iter = MF.begin();
 
   LLVM_DEBUG(dbgs() << "X86WinEHUnwindV3: processing " << MF.getName() << "\n");
@@ -252,7 +259,7 @@ bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
   // Process each funclet (and the main function body) independently.
   // Each funclet gets its own UNWIND_INFO, so V3 limits apply per funclet.
   while (Iter != MF.end()) {
-    FuncletInfo Info = analyzeFunclet(MF, Iter, ApproxInstrPos);
+    FuncletInfo Info = analyzeFunclet(MF, Iter, ApproxBytePos);
 
     if (Info.PrologOpCount > MaxV3PrologOps) {
       Ctx.diagnose(DiagnosticInfoResourceLimit(
@@ -309,7 +316,7 @@ bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
       if (EpilogsInFragment > 0) {
         bool ExceedsEpilogCount = EpilogsInFragment >= MaxV3Epilogs;
         bool ExceedsDistance =
-            Epilog.ApproxInstrPos - LastEpilog->ApproxInstrPos >=
+            Epilog.ApproxBytePos - LastEpilog->ApproxBytePos >=
             EpilogDistanceThreshold;
         if (ExceedsEpilogCount || ExceedsDistance) {
           LLVM_DEBUG({
@@ -320,8 +327,8 @@ bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
             else
               dbgs() << "epilog distance threshold (gap from previous epilog "
                         "at "
-                     << LastEpilog->ApproxInstrPos << " to epilog at "
-                     << Epilog.ApproxInstrPos << ")\n";
+                     << LastEpilog->ApproxBytePos << " to epilog at "
+                     << Epilog.ApproxBytePos << ")\n";
           });
           SplitAfter(*LastEpilog);
           EpilogsInFragment = 0;
@@ -334,12 +341,12 @@ bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
 
     // If the last epilog is too far from the funclet end, split after it so the
     // trailing code becomes its own epilog-free chained fragment.
-    if (LastEpilog && Info.EndInstrPos - LastEpilog->ApproxInstrPos >=
+    if (LastEpilog && Info.EndBytePos - LastEpilog->ApproxBytePos >=
                           EpilogDistanceThreshold) {
       LLVM_DEBUG(dbgs() << "  splitting after last epilog " << LastEpilogIdx
                         << " to isolate the trailing tail (gap from epilog at "
-                        << LastEpilog->ApproxInstrPos << " to funclet end "
-                        << Info.EndInstrPos << ")\n");
+                        << LastEpilog->ApproxBytePos << " to funclet end "
+                        << Info.EndBytePos << ")\n");
       SplitAfter(*LastEpilog);
     }
   }

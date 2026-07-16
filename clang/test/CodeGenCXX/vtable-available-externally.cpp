@@ -225,8 +225,8 @@ struct A {
 void A::foo() {}
 
 // Because key function is inline we will generate vtable as linkonce_odr.
-// CHECK-TEST10-DAG: @_ZTVN6Test101DE = linkonce_odr constant
-// CHECK-FORCE-EMIT-DAG: @_ZTVN6Test101DE = linkonce_odr constant
+// CHECK-TEST10-DAG: @_ZTVN6Test101DE = linkonce_odr unnamed_addr constant
+// CHECK-FORCE-EMIT-DAG: @_ZTVN6Test101DE = linkonce_odr unnamed_addr constant
 struct D : A {
   void bar();
 };
@@ -260,8 +260,8 @@ struct F : A {
 inline void F::cat() {}
 
 // no key function, vtable will be generated everywhere it will be used
-// CHECK-TEST10-DAG: @_ZTVN6Test101EE = linkonce_odr constant
-// CHECK-FORCE-EMIT-DAG: @_ZTVN6Test101EE = linkonce_odr constant
+// CHECK-TEST10-DAG: @_ZTVN6Test101EE = linkonce_odr unnamed_addr constant
+// CHECK-FORCE-EMIT-DAG: @_ZTVN6Test101EE = linkonce_odr unnamed_addr constant
 
 struct E : A {};
 
@@ -453,7 +453,7 @@ void testcaseB() {
 namespace Test18 {
 // Here vtable will be only emitted because it is referenced by assume-load
 // after the Derived construction.
-// CHECK-FORCE-EMIT-DAG: @_ZTVN6Test187DerivedE = linkonce_odr constant {{.*}} @_ZTIN6Test187DerivedE, {{.*}} @_ZN6Test184Base3funEv, {{.*}} @_ZN6Test184BaseD2Ev, {{.*}} @_ZN6Test187DerivedD0Ev
+// CHECK-FORCE-EMIT-DAG: @_ZTVN6Test187DerivedE = linkonce_odr unnamed_addr constant {{.*}} @_ZTIN6Test187DerivedE, {{.*}} @_ZN6Test184Base3funEv, {{.*}} @_ZN6Test184BaseD2Ev, {{.*}} @_ZN6Test187DerivedD0Ev
 // CHECK-FORCE-EMIT-DAG: define linkonce_odr void @_ZN6Test187DerivedD0Ev
 // CHECK-FORCE-EMIT-DAG: define linkonce_odr void @_ZN6Test184BaseD2Ev
 // CHECK-FORCE-EMIT-DAG: define linkonce_odr noundef i32 @_ZN6Test184Base3funEv
@@ -476,7 +476,7 @@ int foo() {
 
 namespace TestTemplates {
 
-// CHECK-FORCE-EMIT-DAG: @_ZTVN13TestTemplates8TemplateIiEE = linkonce_odr constant {{.*}} @_ZTIN13TestTemplates8TemplateIiEE, {{.*}} @_ZN13TestTemplates8TemplateIiE3fooEi, {{.*}}@_ZN13TestTemplates8TemplateIiE22thisShouldBeEmittedTooEi, {{.*}}@_ZN13TestTemplates8TemplateIiED1Ev, {{.*}}@_ZN13TestTemplates8TemplateIiED0Ev
+// CHECK-FORCE-EMIT-DAG: @_ZTVN13TestTemplates8TemplateIiEE = linkonce_odr unnamed_addr constant {{.*}} @_ZTIN13TestTemplates8TemplateIiEE, {{.*}} @_ZN13TestTemplates8TemplateIiE3fooEi, {{.*}}@_ZN13TestTemplates8TemplateIiE22thisShouldBeEmittedTooEi, {{.*}}@_ZN13TestTemplates8TemplateIiED1Ev, {{.*}}@_ZN13TestTemplates8TemplateIiED0Ev
 // CHECK-FORCE-EMIT-DAG: define linkonce_odr noundef i32 @_ZN13TestTemplates8TemplateIiE22thisShouldBeEmittedTooEi
 
 template<class T>

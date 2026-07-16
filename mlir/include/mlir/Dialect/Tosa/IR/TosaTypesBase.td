@@ -109,7 +109,12 @@ def Tosa_MXFPValue
 def Tosa_MXFPScale
     : AnyTypeOf<[F8E8M0FNU], "micro-scaling format scale number">;
 
-def Tosa_BlockScaled : Tosa_Type<"BlockScaled", "block_scaled"> {
+def Tosa_BlockScaled
+    : Tosa_Type<"BlockScaled", "block_scaled",
+                [DeclareTypeInterfaceMethods<
+                    DenseElementTypeInterface, ["getDenseElementBitSize",
+                                                "convertToAttribute",
+                                                "convertFromAttribute"]>]> {
   let summary = "Block scaled tensor element type.";
 
   let description = [{
@@ -121,17 +126,26 @@ def Tosa_BlockScaled : Tosa_Type<"BlockScaled", "block_scaled"> {
       specifying the block size along the innermost dimension.
     `scale_type` - The type of the scale value associated with each block.
     `value_type` - The type of the data values in each block.
+    `scale_values` - Optional array of per-block scale values. If not provided,
+      the type is assumed to be dynamically quantized at runtime.
 
   }];
 
   let parameters = (ins
     EnumParameter<Tosa_BlockShape>:$block_shape,
     Tosa_MXFPScale:$scale_type,
-    Tosa_MXFPValue:$value_type
+    Tosa_MXFPValue:$value_type,
+    OptionalArrayRefParameter<"Attribute">:$scale_values
   );
 
   let assemblyFormat =
-      "`<` $block_shape```:```$scale_type```:```$value_type `>`";
+      "`<` $block_shape```:```$scale_type```:```$value_type "
+      "(`,` `{` custom<ScaleValues>($scale_values, ref($scale_type))^ `}`)? "
+      "`>`";
+
+  let extraClassDeclaration = [{
+    bool hasScaleValues() const { return !getScaleValues().empty(); }
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -158,8 +172,7 @@ def AtLeastRankOne : And<[
   CPred<"::llvm::cast<::mlir::RankedTensorType>($_self).getRank() >= 1">]>;
 
 def IsValidBlockScaledTensorType
-    : CPred<"::mlir::succeeded(::mlir::OpTrait::tosa::"
-            "verifyBlockScaledTensorType($_self))">;
+    : CPred<"::mlir::succeeded(::mlir::tosa::verifyBlockScaledTensorType($_self, false))">;
 
 class TosaTensorOf<list<Type> allowedTypes,
                    string summary = "tosa-conformant tensor">

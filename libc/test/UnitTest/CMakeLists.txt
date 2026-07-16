@@ -222,3 +222,13 @@ add_header_library(
     libc.src.__support.macros.properties.architectures
     libc.src.errno.errno
 )
+
+add_header_library(
+  ConstraintHandlerCheckingTest
+  HDRS
+    ConstraintHandlerCheckingTest.h
+  DEPENDS
+    libc.hdr.types.constraint_handler_t
+    libc.hdr.types.errno_t
+    libc.src.stdlib.set_constraint_handler_s
+)

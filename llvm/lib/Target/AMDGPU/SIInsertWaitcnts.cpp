@@ -2498,7 +2498,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   // waits on VA_VDST if the instruction it would precede is not a VALU
   // instruction, since hardware handles VALU->VGPR->VALU hazards in
   // expert scheduling mode.
-  if (TII.isVALU(MI, /*AllowLDSDMA=*/true) && !SIInstrInfo::isLDSDMA(MI))
+  if (TII.isVALU(MI, /*AllowLDSDMA=*/false))
     Wait.set(AMDGPU::VA_VDST, ~0u);
 
   // Since the translation for VMEM addresses occur in-order, we can apply the
@@ -3627,6 +3627,17 @@ bool SIInsertWaitcnts::run() {
         Modified = true;
       }
     }
+  }
+
+  if (MFI->isEntryFunction() && ST.hasRequiresInitialUnclausedVmem()) {
+    // Hardware entrypoints must begin with a specific sequence:
+    //   GLOBAL_WB SCOPE:SCOPE_CU
+    //   V_NOP
+    MachineBasicBlock::iterator I = EntryBB.begin();
+    BuildMI(EntryBB, I, DebugLoc(), TII.get(AMDGPU::GLOBAL_WB))
+        .addImm(AMDGPU::CPol::SCOPE_CU);
+    BuildMI(EntryBB, I, DebugLoc(), TII.get(AMDGPU::V_NOP_e32));
+    Modified = true;
   }
 
   return Modified;

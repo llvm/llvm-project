@@ -35,12 +35,6 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
 
-static llvm::cl::opt<bool> useAccReductionCombine(
-    "openacc-use-reduction-combine",
-    llvm::cl::desc("Whether to generate acc.reduction_combine. Does not "
-                   "control reduction for MIN/MAX and logical reductions."),
-    llvm::cl::init(false));
-
 static llvm::cl::opt<bool> useAccReductionCombineAll(
     "openacc-use-reduction-combine-all",
     llvm::cl::desc("Whether to generate acc.reduction_combine for all types "
@@ -1160,8 +1154,6 @@ static bool useAccReductionCombineOp(mlir::Type elementType,
                                      mlir::acc::ReductionOperator op) {
   if (useAccReductionCombineAll)
     return true;
-  if (!useAccReductionCombine)
-    return false;
   // LOGICAL operators do not have mlir operators and requires FIR specific
   // logic to interpret the TRUE and FALSE values from the storage (implemented
   // in fir.convert to i1).

@@ -115,6 +115,25 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
     return (ty)builtin(__rs1, __rs2, __rd);                                    \
   }
 
+#define __packed_psabs(name, ty, builtin)                                      \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {           \
+    return builtin(__rs1);                                                     \
+  }
+
+#define __packed_widen_convert(name, rty, ty)                                  \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
+    return __builtin_convertvector(__rs1, rty);                                \
+  }
+#define __packed_widen_high2(name, rty, ty)                                    \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
+    return (rty)__builtin_shufflevector((ty){0}, __rs1, 0, 2, 1, 3);           \
+  }
+#define __packed_widen_high4(name, rty, ty)                                    \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
+    return (rty)__builtin_shufflevector((ty){0}, __rs1, 0, 4, 1, 5, 2, 6, 3,   \
+                                        7);                                    \
+  }
+
 /* Packed Reverse: reverse the order of the elements. Lowered to a single
  * rev8/rev16/ppairoe.* by the backend's packed reverse-shuffle handling. */
 #define __packed_reverse2(name, ty)                                            \
@@ -450,6 +469,16 @@ __packed_unary_op(pnot_u16x4, uint16x4_t, ~)
 __packed_unary_op(pnot_i32x2, int32x2_t, ~)
 __packed_unary_op(pnot_u32x2, uint32x2_t, ~)
 
+/* Packed Widening Convert */
+__packed_widen_convert(pwcvt_i16x4, int16x4_t, int8x4_t)
+__packed_widen_convert(pwcvt_i32x2, int32x2_t, int16x2_t)
+__packed_widen_convert(pwcvtu_u16x4, uint16x4_t, uint8x4_t)
+__packed_widen_convert(pwcvtu_u32x2, uint32x2_t, uint16x2_t)
+__packed_widen_high4(pwcvth_i16x4, int16x4_t, int8x4_t)
+__packed_widen_high4(pwcvth_u16x4, uint16x4_t, uint8x4_t)
+__packed_widen_high2(pwcvth_i32x2, int32x2_t, int16x2_t)
+__packed_widen_high2(pwcvth_u32x2, uint32x2_t, uint16x2_t)
+
 /* Packed Reverse (32-bit) */
 __packed_reverse4(prev_i8x4, int8x4_t)
 __packed_reverse4(prev_u8x4, uint8x4_t)
@@ -562,6 +591,14 @@ __packed_abdsum(pabdsumu_u8x8_u64, uint64_t, uint8x8_t, __builtin_riscv_pabdsumu
 __packed_abdsum_acc(pabdsumau_u8x8_u32, uint32_t, uint8x8_t, __builtin_riscv_pabdsumau_u8x8_u32)
 __packed_abdsum_acc(pabdsumau_u8x8_u64, uint64_t, uint8x8_t, __builtin_riscv_pabdsumau_u8x8_u64)
 
+/* Packed Saturating Absolute Value (32-bit) */
+__packed_psabs(psabs_i8x4, int8x4_t, __builtin_riscv_psabs_i8x4)
+__packed_psabs(psabs_i16x2, int16x2_t, __builtin_riscv_psabs_i16x2)
+
+/* Packed Saturating Absolute Value (64-bit) */
+__packed_psabs(psabs_i8x8, int8x8_t, __builtin_riscv_psabs_i8x8)
+__packed_psabs(psabs_i16x4, int16x4_t, __builtin_riscv_psabs_i16x4)
+
 // clang-format on
 
 #undef __packed_splat2
@@ -583,6 +620,10 @@ __packed_abdsum_acc(pabdsumau_u8x8_u64, uint64_t, uint8x8_t, __builtin_riscv_pab
 #undef __packed_binary_builtin_cast
 #undef __packed_reduction
 #undef __packed_merge_builtin
+#undef __packed_psabs
+#undef __packed_widen_convert
+#undef __packed_widen_high2
+#undef __packed_widen_high4
 #undef __packed_reverse2
 #undef __packed_reverse4
 #undef __packed_reverse8

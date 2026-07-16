@@ -831,6 +831,7 @@ add_fp_unittest(
     libc.src.__support.builtins.addsf3
     libc.src.__support.builtins.addtf3
     libc.src.__support.builtins.divdf3
+    libc.src.__support.builtins.divsf3
     libc.src.__support.builtins.divtf3
     libc.src.__support.builtins.muldf3
     libc.src.__support.builtins.mulsf3
