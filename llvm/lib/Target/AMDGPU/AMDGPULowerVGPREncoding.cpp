@@ -401,13 +401,14 @@ void AMDGPULowerVGPREncoding::lowerLoadStoreIdx(MachineInstr &MI) {
   unsigned Offset = LdSt.getOffsetOp().getImm();
   unsigned NumDwords = LdSt.getBitWidth() / 32;
 
-  // A statically out-of-range dword offset would fold into a base VGPR outside
-  // the addressable register file - an out-of-bounds access of the VGPR
-  // "as memory" (address space 13) region. When the whole file is addressable
-  // the index is allowed to wrap; otherwise it must stay in range.
-#ifndef NDEBUG
+  // A statically out-of-range dword offset is an out-of-bounds (undefined
+  // behavior) access of the VGPR "as memory" (address space 13) region. Rather
+  // than diagnose it or emit an invalid register, mask the base into the
+  // addressable VGPR range below so the access is accepted and verifier-clean,
+  // matching the downstream implementation.
   unsigned NumAddressableVGPRs = ST->getAddressableNumVGPRs(
       MI.getMF()->getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize());
+#ifndef NDEBUG
   bool AllowOffsetWrap =
       NumAddressableVGPRs == AMDGPU::IsaInfo::getTotalNumVGPRs(*ST);
   assert((AllowOffsetWrap || Offset + NumDwords <= NumAddressableVGPRs) &&
@@ -418,9 +419,11 @@ void AMDGPULowerVGPREncoding::lowerLoadStoreIdx(MachineInstr &MI) {
       IsStore ? AMDGPU::V_MOVRELD_B32_e32 : AMDGPU::V_MOVRELS_B32_e32;
 
   // The dword index is (M0 + $offset). Fold $offset into the base register so
-  // each dword i reads/writes VGPR($offset + i) relative to M0.
+  // each dword i reads/writes VGPR($offset + i) relative to M0. Mask the offset
+  // into the addressable range so a statically out-of-bounds offset still
+  // resolves to a valid register.
   for (unsigned i = 0; i < NumDwords; ++i) {
-    Register Base = AMDGPU::VGPR0 + Offset + i;
+    Register Base = AMDGPU::VGPR0 + ((Offset + i) & (NumAddressableVGPRs - 1));
     Register Sub = Data;
     if (NumDwords != 1)
       Sub = TRI->getSubReg(Data, TRI->getSubRegFromChannel(i));
