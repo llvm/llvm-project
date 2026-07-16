@@ -1058,24 +1058,35 @@ parsed_inst_t ExpressionParser::parseBlockLikeOp(OpBuilder &builder) {
   return {ValueRange{successor->getArguments()}};
 }
 
-#define REGISTER_PRIMARY_WASM_INST_PARSER(opcode)                              \
+// We can't use SFINAE in combination with deleted default instantiation
+// to identify which parsers are registered due to GCC < 14.1 bug, so we
+// use a constexpr variable to register them.
+// This is in order to avoid having to have only one "registration" of the
+// opcode.
+#define REGISTER_PARSER_OPCODE_PARSER(parserType, opcode, builderName,         \
+                                      parserName)                              \
   template <>                                                                  \
-  constexpr bool ExpressionParser::TopLevelInstParserRegistry::                \
-      hasParserForOpcode<opcode> = true;                                       \
+  constexpr bool parserType::hasParserForOpcode<opcode> = true;                \
   template <>                                                                  \
-  inline parsed_inst_t                                                         \
-  ExpressionParser::TopLevelInstParserRegistry::parseInstrWithOpCode<opcode>(  \
-      OpBuilder & builder, ExpressionParser & exprParser)
+  inline parsed_inst_t parserType::parseInstrWithOpCode<opcode>(               \
+      OpBuilder & (builderName), ExpressionParser & (parserName))
 
-REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::block) {
+#define REGISTER_PRIMARY_WASM_INST_PARSER(opcode, builderName, parserName)     \
+  REGISTER_PARSER_OPCODE_PARSER(ExpressionParser::TopLevelInstParserRegistry,  \
+                                opcode, builderName, parserName)
+
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::block, builder,
+                                  exprParser) {
   return exprParser.parseBlockLikeOp<BlockOp>(builder);
 }
 
-REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::loop) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::loop, builder,
+                                  exprParser) {
   return exprParser.parseBlockLikeOp<LoopOp>(builder);
 }
 
-REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::ifOpCode) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::ifOpCode, builder,
+                                  exprParser) {
   auto opLoc = exprParser.currentOpLoc;
   auto funcType = exprParser.parseBlockFuncType(builder);
   if (failed(funcType))
@@ -1120,7 +1131,8 @@ REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::ifOpCode) {
   return {ValueRange{successor->getArguments()}};
 }
 
-REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::branchIf) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::branchIf, builder,
+                                  exprParser) {
   auto level = exprParser.parser.parseLiteral<uint32_t>();
   if (failed(level))
     return failure();
@@ -1147,7 +1159,8 @@ REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::branchIf) {
   return {*branchArgs};
 }
 
-REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::call) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::call, builder,
+                                  exprParser) {
   auto loc = *exprParser.currentOpLoc;
   auto funcIdx = exprParser.parser.parseLiteral<uint32_t>();
   if (failed(funcIdx))
@@ -1165,7 +1178,8 @@ REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::call) {
   return {callOp.getResults()};
 }
 
-REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::localGet) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::localGet, builder,
+                                  exprParser) {
   FailureOr<uint32_t> id = exprParser.parser.parseLiteral<uint32_t>();
   Location instLoc = *exprParser.currentOpLoc;
   if (failed(id))
@@ -1178,7 +1192,8 @@ REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::localGet) {
                .getResult()}};
 }
 
-REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::globalGet) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::globalGet,
+                                  builder, exprParser) {
   FailureOr<uint32_t> id = exprParser.parser.parseLiteral<uint32_t>();
   Location instLoc = *exprParser.currentOpLoc;
   if (failed(id))
@@ -1215,11 +1230,13 @@ parsed_inst_t ExpressionParser::parseSetOrTee(OpBuilder &builder) {
           ->getResults()};
 }
 
-REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::localSet) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::localSet, builder,
+                                  exprParser) {
   return exprParser.parseSetOrTee<LocalSetOp>(builder);
 }
 
-REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::localTee) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::localTee, builder,
+                                  exprParser) {
   return exprParser.parseSetOrTee<LocalTeeOp>(builder);
 }
 
@@ -1291,19 +1308,23 @@ parsed_inst_t ExpressionParser::parseConstInst(
   return {{constOp.getResult()}};
 }
 
-REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::constI32) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::constI32, builder,
+                                  exprParser) {
   return exprParser.parseConstInst<int32_t>(builder);
 }
 
-REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::constI64) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::constI64, builder,
+                                  exprParser) {
   return exprParser.parseConstInst<int64_t>(builder);
 }
 
-REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::constFP32) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::constFP32,
+                                  builder, exprParser) {
   return exprParser.parseConstInst<float>(builder);
 }
 
-REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::constFP64) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::constFP64,
+                                  builder, exprParser) {
   return exprParser.parseConstInst<double>(builder);
 }
 
@@ -1434,11 +1455,13 @@ inline parsed_inst_t ExpressionParser::buildConvertOp(OpBuilder &builder,
   return {{op.getResult()}};
 }
 
-REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::demoteF64ToF32) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::demoteF64ToF32,
+                                  builder, exprParser) {
   return exprParser.buildConvertOp<DemoteOp, double, float>(builder);
 }
 
-REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::wrap) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::wrap, builder,
+                                  exprParser) {
   return exprParser.buildConvertOp<WrapOp, int64_t, int32_t>(builder);
 }
 
@@ -1505,7 +1528,8 @@ BUILD_SLICE_EXTEND_PARSER(64, 32)
 
 #undef BUILD_SLICE_EXTEND_PARSER
 
-REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::promoteF32ToF64) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::promoteF32ToF64,
+                                  builder, exprParser) {
   return exprParser.buildConvertOp<PromoteOp, float, double>(builder);
 }
 
