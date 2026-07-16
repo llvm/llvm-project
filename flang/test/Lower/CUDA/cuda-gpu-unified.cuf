@@ -1,7 +1,10 @@
 ! RUN: bbc -emit-hlfir -fcuda -gpu=unified %s -o - | FileCheck %s
 
 ! Under -gpu=unified, plain (unattributed) allocatables and pointers are backed
-! by CUDA managed memory at the ALLOCATE site (unified allocator index, idx 4).
+! by CUDA managed memory: the unified allocator index (idx 4) is baked into the
+! descriptor at creation (declaration / module global) and at the ALLOCATE site,
+! so runtime-driven allocations (allocate-on-assignment, SOURCE=, ...) also use
+! managed memory.
 
 module m
   real, allocatable :: mod_arr(:)
@@ -31,6 +34,14 @@ contains
     common /blk/ com_ptr
     allocate(com_ptr(100))
     deallocate(com_ptr)
+  end subroutine
+  ! Allocate-on-assignment: assign_arr is never explicitly ALLOCATEd, so the
+  ! unified allocator index must be baked into its descriptor at declaration for
+  ! the runtime realloc to use managed memory.
+  subroutine alloc_on_assign(src)
+    real :: src(:)
+    real, allocatable :: assign_arr(:)
+    assign_arr = src
   end subroutine
 end module
 
@@ -73,10 +84,20 @@ end program
 ! CHECK:       hlfir.declare {{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMmFcommon_subEcom_ptr"}
 ! CHECK:       fir.embox {{.*}} {allocator_idx = 4 : i32}
 
+! Allocate-on-assignment: the descriptor is created with the unified allocator
+! index at declaration, so the runtime realloc for the assignment gets managed
+! memory even though there is no explicit ALLOCATE.
+! CHECK-LABEL: func.func @_QMmPalloc_on_assign(
+! CHECK:       fir.embox {{.*}} {allocator_idx = 4 : i32}
+! CHECK:       hlfir.declare {{.*}} uniq_name = "_QMmFalloc_on_assignEassign_arr"
+! CHECK:       hlfir.assign {{.*}} realloc
+
 ! Main-program local allocatable.
 ! CHECK-LABEL: func.func @_QQmain()
 ! CHECK:       fir.embox {{.*}} {allocator_idx = 4 : i32}
 
-! The module global itself carries no CUDA data attribute.
+! The module global carries no CUDA data attribute, but its descriptor is created
+! with the unified allocator index so runtime allocations use managed memory.
 ! CHECK:     fir.global @_QMmEmod_arr : !fir.box<!fir.heap<!fir.array<?xf32>>>
 ! CHECK-NOT: fir.global @_QMmEmod_arr {data_attr
+! CHECK:     fir.embox {{.*}} {allocator_idx = 4 : i32}
