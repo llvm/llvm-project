@@ -15,6 +15,7 @@
 #include "L0Kernel.h"
 #include "L0Plugin.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MathExtras.h"
 
 #include <algorithm>
@@ -62,17 +63,6 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
                                      KEnv.IsCooperative);
 }
 
-static bool allBytesEqual(const unsigned char *buf, size_t size) {
-  if (size == 0)
-    return true;
-  unsigned char FirstByte = buf[0];
-  for (size_t i = 1; i < size; ++i) {
-    if (buf[i] != FirstByte)
-      return false;
-  }
-  return true;
-}
-
 Error L0QueueTy::memoryFill(void *Ptr, const void *Pattern, size_t PatternSize,
                             size_t Size) {
   if (Size == 0 || PatternSize == 0)
@@ -84,8 +74,8 @@ Error L0QueueTy::memoryFill(void *Ptr, const void *Pattern, size_t PatternSize,
     return memoryFillImpl(Ptr, Pattern, PatternSize, Size);
   }
 
-  const auto *PatternBytes = static_cast<const unsigned char *>(Pattern);
-  if (allBytesEqual(PatternBytes, PatternSize)) {
+  llvm::StringRef PatternRef(static_cast<const char*>(Pattern), PatternSize);
+  if (PatternRef.find_first_not_of(PatternRef[0]) == llvm::StringRef::npos) {
     // All pattern bytes equal, substutition of 1 as PatternSize is equivalent,
     // so native L0 memory fill is still possible.
     return memoryFillImpl(Ptr, Pattern, 1, Size);
