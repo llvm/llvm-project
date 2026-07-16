@@ -9,15 +9,9 @@
 #include "llvm/Transforms/IPO/MergeFunctions.h"
 
 #include "llvm/ADT/SetVector.h"
-#include "llvm/Analysis/BlockFrequencyInfo.h"
-#include "llvm/Analysis/BranchProbabilityInfo.h"
-#include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/PostDominators.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/PassInstrumentation.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 #include <memory>
@@ -26,35 +20,10 @@ using namespace llvm;
 
 namespace {
 
-class MergeFunctionsTest : public testing::Test {
-protected:
+TEST(MergeFunctions, TrueOutputModuleTest) {
   LLVMContext Ctx;
-  ModuleAnalysisManager MAM;
-  FunctionAnalysisManager FAM;
-
-  MergeFunctionsTest() {
-    FAM.registerPass([&] { return TargetLibraryAnalysis(); });
-    FAM.registerPass([&] { return DominatorTreeAnalysis(); });
-    FAM.registerPass([&] { return PostDominatorTreeAnalysis(); });
-    FAM.registerPass([&] { return LoopAnalysis(); });
-    FAM.registerPass([&] { return BranchProbabilityAnalysis(); });
-    FAM.registerPass([&] { return BlockFrequencyAnalysis(); });
-    FAM.registerPass([&] { return PassInstrumentationAnalysis(); });
-    FAM.registerPass([&] { return ModuleAnalysisManagerFunctionProxy(MAM); });
-    MAM.registerPass([&] { return PassInstrumentationAnalysis(); });
-    MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
-  }
-
-  std::unique_ptr<Module> parseModule(StringRef IR) {
-    SMDiagnostic Err;
-    std::unique_ptr<Module> M = parseAssemblyString(IR, Err, Ctx);
-    EXPECT_TRUE(M);
-    return M;
-  }
-};
-
-TEST_F(MergeFunctionsTest, TrueOutputModuleTest) {
-  std::unique_ptr<Module> M = parseModule(R"invalid(
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M(parseAssemblyString(R"invalid(
         @.str = private unnamed_addr constant [10 x i8] c"On f: %d\0A\00", align 1
         @.str.1 = private unnamed_addr constant [13 x i8] c"On main: %d\0A\00", align 1
 
@@ -95,14 +64,17 @@ TEST_F(MergeFunctionsTest, TrueOutputModuleTest) {
                 %4 = add nsw i32 %3, 2
                 ret i32 %4
         }
-    )invalid");
+    )invalid",
+                                                Err, Ctx));
 
   // Expects true after merging _slice_add10 and _slice_add10_alt
-  EXPECT_TRUE(MergeFunctionsPass::runOnModule(*M, MAM));
+  EXPECT_TRUE(MergeFunctionsPass::runOnModule(*M));
 }
 
-TEST_F(MergeFunctionsTest, TrueOutputFunctionsTest) {
-  std::unique_ptr<Module> M = parseModule(R"invalid(
+TEST(MergeFunctions, TrueOutputFunctionsTest) {
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M(parseAssemblyString(R"invalid(
         @.str = private unnamed_addr constant [10 x i8] c"On f: %d\0A\00", align 1
         @.str.1 = private unnamed_addr constant [13 x i8] c"On main: %d\0A\00", align 1
 
@@ -143,14 +115,15 @@ TEST_F(MergeFunctionsTest, TrueOutputFunctionsTest) {
                 %4 = add nsw i32 %3, 2
                 ret i32 %4
         }
-    )invalid");
+    )invalid",
+                                                Err, Ctx));
 
   SetVector<Function *> FunctionsSet;
   for (Function &F : *M)
     FunctionsSet.insert(&F);
 
   DenseMap<Function *, Function *> MergeResult =
-      MergeFunctionsPass::runOnFunctions(FunctionsSet.getArrayRef(), MAM);
+      MergeFunctionsPass::runOnFunctions(FunctionsSet.getArrayRef());
 
   // Expects that both functions (_slice_add10 and _slice_add10_alt)
   // be mapped to the same new function
@@ -161,8 +134,10 @@ TEST_F(MergeFunctionsTest, TrueOutputFunctionsTest) {
       EXPECT_EQ(P.second, NewFunction);
 }
 
-TEST_F(MergeFunctionsTest, FalseOutputModuleTest) {
-  std::unique_ptr<Module> M = parseModule(R"invalid(
+TEST(MergeFunctions, FalseOutputModuleTest) {
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M(parseAssemblyString(R"invalid(
         @.str = private unnamed_addr constant [10 x i8] c"On f: %d\0A\00", align 1
         @.str.1 = private unnamed_addr constant [13 x i8] c"On main: %d\0A\00", align 1
 
@@ -203,14 +178,17 @@ TEST_F(MergeFunctionsTest, FalseOutputModuleTest) {
                 %4 = add nsw i32 %3, 2
                 ret i32 %0
         }
-    )invalid");
+    )invalid",
+                                                Err, Ctx));
 
   // Expects false after trying to merge _slice_add10 and _slice_add10_alt
-  EXPECT_FALSE(MergeFunctionsPass::runOnModule(*M, MAM));
+  EXPECT_FALSE(MergeFunctionsPass::runOnModule(*M));
 }
 
-TEST_F(MergeFunctionsTest, FalseOutputFunctionsTest) {
-  std::unique_ptr<Module> M = parseModule(R"invalid(
+TEST(MergeFunctions, FalseOutputFunctionsTest) {
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M(parseAssemblyString(R"invalid(
         @.str = private unnamed_addr constant [10 x i8] c"On f: %d\0A\00", align 1
         @.str.1 = private unnamed_addr constant [13 x i8] c"On main: %d\0A\00", align 1
 
@@ -251,14 +229,15 @@ TEST_F(MergeFunctionsTest, FalseOutputFunctionsTest) {
                 %4 = add nsw i32 %3, 2
                 ret i32 %0
         }
-    )invalid");
+    )invalid",
+                                                Err, Ctx));
 
   SetVector<Function *> FunctionsSet;
   for (Function &F : *M)
     FunctionsSet.insert(&F);
 
   DenseMap<Function *, Function *> MergeResult =
-      MergeFunctionsPass::runOnFunctions(FunctionsSet.getArrayRef(), MAM);
+      MergeFunctionsPass::runOnFunctions(FunctionsSet.getArrayRef());
 
   // Expects empty map
   EXPECT_EQ(MergeResult.size(), 0u);
