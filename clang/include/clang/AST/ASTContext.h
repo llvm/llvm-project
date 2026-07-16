@@ -1110,6 +1110,10 @@ public:
       RawCommentLookupKey Key, const SourceLocation RepresentativeLoc,
       const std::map<unsigned, RawComment *> &CommentsInFile) const;
 
+  /// Return the documentation comment attached to a given declaration,
+  /// without looking into cache.
+  RawComment *getRawCommentForDeclNoCache(const Decl *D) const;
+
   /// Return the documentation comment attached to a given declaration or
   /// macro, without looking into cache.
   RawComment *getRawCommentNoCache(RawCommentLookupKey Key) const;

@@ -328,6 +328,10 @@ RawComment *ASTContext::getRawCommentNoCacheImpl(
   return CommentBeforeDecl;
 }
 
+RawComment *ASTContext::getRawCommentForDeclNoCache(const Decl *D) const {
+  return getRawCommentNoCache(D);
+}
+
 RawComment *ASTContext::getRawCommentNoCache(RawCommentLookupKey Key) const {
   const auto Locs = getLocsForCommentSearch(Key, SourceMgr);
 
