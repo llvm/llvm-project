@@ -1,8 +1,8 @@
 # Xqcicli - Qualcomm uC Conditional Load Immediate Instructions
 # RUN: not llvm-mc -triple riscv32 -mattr=+xqcicli < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK,CHECK-PLUS %s
+# RUN:     | FileCheck -check-prefixes=CHECK-PLUS %s
 # RUN: not llvm-mc -triple riscv32 -mattr=-xqcicli < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK,CHECK-MINUS %s
+# RUN:     | FileCheck -check-prefixes=CHECK-MINUS %s
 
 # CHECK-PLUS: :[[@LINE+2]]:9: error: register must be a GPR excluding zero (x0)
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
@@ -16,7 +16,8 @@ qc.lieq x2, x0, x6, 10
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.lieq x2, x4, x0, 10
 
-# CHECK: :[[@LINE+1]]:{{19: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:19: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.lieq x2, x4, x6
 
 # CHECK-PLUS: :[[@LINE+1]]:21: error: immediate must be an integer in the range [-16, 15]
@@ -38,7 +39,8 @@ qc.lige x4, x0, x20, 2
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.lige x4, x8, x0, 2
 
-# CHECK: :[[@LINE+1]]:{{20: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:20: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.lige x4, x8, x20
 
 # CHECK-PLUS: :[[@LINE+1]]:22: error: immediate must be an integer in the range [-16, 15]
@@ -60,7 +62,8 @@ qc.lilt x19, x0, x10, 3
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.lilt x19, x9, x0, 3
 
-# CHECK: :[[@LINE+1]]:{{21: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:21: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.lilt x19, x9, x10
 
 # CHECK-PLUS: :[[@LINE+1]]:23: error: immediate must be an integer in the range [-16, 15]
@@ -82,7 +85,8 @@ qc.line x18, x0, x6, 10
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.line x18, x14, x0, 10
 
-# CHECK: :[[@LINE+1]]:{{21: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:21: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.line x18, x14, x6
 
 # CHECK-PLUS: :[[@LINE+1]]:23: error: immediate must be an integer in the range [-16, 15]
@@ -104,7 +108,8 @@ qc.ligeu x2, x0, x6, 10
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.ligeu x2, x4, x0, 10
 
-# CHECK: :[[@LINE+1]]:{{20: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:20: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.ligeu x2, x4, x6
 
 # CHECK-PLUS: :[[@LINE+1]]:22: error: immediate must be an integer in the range [-16, 15]
@@ -126,7 +131,8 @@ qc.liltu x1, x0, x12, 13
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.liltu x1, x19, x0, 13
 
-# CHECK: :[[@LINE+1]]:{{22: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:22: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.liltu x1, x19, x12
 
 # CHECK-PLUS: :[[@LINE+1]]:24: error: immediate must be an integer in the range [-16, 15]
@@ -144,7 +150,8 @@ qc.lieqi x0, x1, 15, 12
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.lieqi x7, x0, 15, 12
 
-# CHECK: :[[@LINE+1]]:{{20: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:20: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.lieqi x7, x1, 15
 
 # CHECK-PLUS: :[[@LINE+1]]:18: error: immediate must be an integer in the range [-16, 15]
@@ -165,7 +172,8 @@ qc.ligei x0, x11, -4, 9
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.ligei x17, x0, -4, 9
 
-# CHECK: :[[@LINE+1]]:{{22: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:22: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.ligei x17, x11, -4
 
 # CHECK-PLUS: :[[@LINE+1]]:20: error: immediate must be an integer in the range [-16, 15]
@@ -186,7 +194,8 @@ qc.lilti x0, x11, -14, 2
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.lilti x9, x0, -14, 2
 
-# CHECK: :[[@LINE+1]]:{{22: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:22: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.lilti x9, x11, -14
 
 # CHECK-PLUS: :[[@LINE+1]]:19: error: immediate must be an integer in the range [-16, 15]
@@ -207,7 +216,8 @@ qc.linei x0, x1, 10, 12
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.linei x5, x0, 10, 12
 
-# CHECK: :[[@LINE+1]]:{{20: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:20: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.linei x5, x1, 10
 
 # CHECK-PLUS: :[[@LINE+1]]:18: error: immediate must be an integer in the range [-16, 15]
@@ -228,7 +238,8 @@ qc.ligeui x0, x12, 7, -12
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.ligeui x2, x0, 7, -12
 
-# CHECK: :[[@LINE+1]]:{{21: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:21: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.ligeui x2, x12, 7
 
 # CHECK-PLUS: :[[@LINE+1]]:20: error: immediate must be an integer in the range [0, 31]
@@ -249,7 +260,8 @@ qc.liltui x0, x25, 31, 12
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.liltui x3, x0, 31, 12
 
-# CHECK: :[[@LINE+1]]:{{22: error: too few operands for instruction|1: error: invalid instruction}}
+# CHECK-PLUS: :[[@LINE+2]]:22: error: too few operands for instruction
+# CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.liltui x3, x25, 31
 
 # CHECK-PLUS: :[[@LINE+1]]:20: error: immediate must be an integer in the range [0, 31]

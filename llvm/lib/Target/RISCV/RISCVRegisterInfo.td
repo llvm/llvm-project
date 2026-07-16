@@ -319,7 +319,10 @@ def GPR : GPRRegisterClass<(add (sequence "X%u", 10, 17),
                                 (sequence "X%u", 28, 31),
                                 (sequence "X%u", 8, 9),
                                 (sequence "X%u", 18, 27),
-                                (sequence "X%u", 0, 4))>;
+                                (sequence "X%u", 0, 4))> {
+  let DiagnosticType = "InvalidRegClassGPR";
+  let DiagnosticString = "register must be a GPR";
+}
 
 def YGPR : RegisterClass<"RISCV", [YLenVT], 64,
                          (add (sequence "X%u_Y", 10, 17),
@@ -332,7 +335,10 @@ def YGPR : RegisterClass<"RISCV", [YLenVT], 64,
   let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X0_Y, 32, /*RVELimit=*/16>";
 }
 
-def GPRX0 : GPRRegisterClass<(add X0)>;
+def GPRX0 : GPRRegisterClass<(add X0)> {
+  let DiagnosticType = "InvalidRegClassGPRX0";
+  let DiagnosticString = "register must be zero (x0)";
+}
 
 def GPRX1 : GPRRegisterClass<(add X1)> {
   let DiagnosticType = "InvalidRegClassGPRX1";
@@ -391,7 +397,10 @@ def SP : GPRRegisterClass<(add X2)> {
 
 // Saved Registers from s0 to s7, for C.MVA01S07 instruction in Zcmp extension
 def SR07 : GPRRegisterClass<(add (sequence "X%u", 8, 9),
-                                 (sequence "X%u", 18, 23))>;
+                                 (sequence "X%u", 18, 23))> {
+  let DiagnosticType = "InvalidRegClassSR07";
+  let DiagnosticString = "register must be GPR from s0 to s7 (x8, x9 or x18-x23)";
+}
 
 def GPRX1X5 :  GPRRegisterClass<(add X1, X5)> {
   let DiagnosticType = "InvalidRegClassGPRX1X5";
@@ -570,6 +579,7 @@ def GPRF16C : RISCVRegisterClass<[f16], 16, (add (sequence "X%u_H", 10, 15),
                                                  (sequence "X%u_H", 8, 9))> {
   let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X8_H, 8>";
 }
+def GPRF16X0 : RISCVRegisterClass<[f16], 16, (add X0_H)>;
 def GPRF16NoX0 : RISCVRegisterClass<[f16], 16, (sub GPRF16, X0_H)>;
 
 def GPRF32 : RISCVRegisterClass<[f32], 32, (add (sequence "X%u_W", 10, 17),
@@ -584,6 +594,7 @@ def GPRF32C : RISCVRegisterClass<[f32], 32, (add (sequence "X%u_W", 10, 15),
                                                  (sequence "X%u_W", 8, 9))> {
   let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X8_W, 8>";
 }
+def GPRF32X0 : RISCVRegisterClass<[f32], 32, (add X0_W)>;
 def GPRF32NoX0 : RISCVRegisterClass<[f32], 32, (sub GPRF32, X0_W)>;
 
 //===----------------------------------------------------------------------===//
@@ -1024,6 +1035,6 @@ def MR0 : RISCVRegisterClass<[i8, v8i1], 8, (add M0)>;
 // Register categories.
 //
 
-def GeneralPurposeRegisters : RegisterCategory<[GPR]>;
+def GeneralPurposeRegisters : RegisterCategory<[GPR, GPRF16, GPRF32]>;
 
-def FixedRegisters : RegisterCategory<[GPRX0]>;
+def FixedRegisters : RegisterCategory<[GPRX0, GPRF16X0, GPRF32X0]>;

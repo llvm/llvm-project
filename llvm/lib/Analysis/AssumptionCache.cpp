@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -132,9 +133,11 @@ void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
   // an assertion failure. Avoid this by counting the number of expected
   // matches.
 #ifndef NDEBUG
+  SmallDenseSet<std::pair<Value *, unsigned>, 16> Seen;
   DenseMap<Value *, int> ExpectedMatches;
   for (auto &AV : Affected)
-    if (AffectedValues.find_as(AV.Assume) != AffectedValues.end())
+    if (Seen.insert({AV.Assume, AV.Index}).second &&
+        AffectedValues.find_as(AV.Assume) != AffectedValues.end())
       ExpectedMatches[AV.Assume]++;
 #endif
 

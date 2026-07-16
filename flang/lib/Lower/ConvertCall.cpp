@@ -3035,6 +3035,8 @@ genIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic *intrinsic,
       loweredActuals.push_back(std::nullopt);
       continue;
     }
+    if (arg.value()->isConditionalArg())
+      TODO(loc, "lowering conditional arguments to HLFIR");
     auto *expr =
         Fortran::evaluate::UnwrapExpr<Fortran::lower::SomeExpr>(arg.value());
     if (!expr) {
@@ -3135,16 +3137,17 @@ genProcedureRef(CallContext &callContext) {
   fir::FirOpBuilder &builder = callContext.getBuilder();
   if (auto *intrinsic = callContext.procRef.proc().GetSpecificIntrinsic())
     return genIntrinsicRef(intrinsic, callContext);
-  // Intercept non BIND(C) module procedure reference that have lowering
-  // handlers defined for there name. Otherwise, lower them as user
-  // procedure calls and expect the implementation to be part of
-  // runtime libraries with the proper name mangling.
-  if (Fortran::lower::isIntrinsicModuleProcRef(callContext.procRef) &&
-      !callContext.isBindcCall())
+  // Intercept module procedure references that have lowering handlers defined
+  // for their name. Otherwise, lower them as user procedure calls and expect
+  // the implementation to be part of runtime libraries with the proper name
+  // mangling.
+  if (Fortran::lower::isIntrinsicModuleProcRef(callContext.procRef)) {
+    const bool isBindcCall = callContext.isBindcCall();
     if (std::optional<fir::IntrinsicHandlerEntry> intrinsicEntry =
             fir::lookupIntrinsicHandler(builder, callContext.getProcedureName(),
-                                        callContext.resultType))
+                                        callContext.resultType, isBindcCall))
       return genIntrinsicRef(nullptr, *intrinsicEntry, callContext);
+  }
 
   if (callContext.isStatementFunctionCall())
     return genStmtFunctionRef(loc, callContext.converter, callContext.symMap,
@@ -3160,6 +3163,8 @@ genProcedureRef(CallContext &callContext) {
            Fortran::lower::CallerInterface>::PassedEntity &arg :
        caller.getPassedArguments())
     if (const auto *actual = arg.entity) {
+      if (actual->isConditionalArg())
+        TODO(loc, "lowering conditional arguments to HLFIR");
       const auto *expr = actual->UnwrapExpr();
       if (!expr) {
         // TYPE(*) actual argument.

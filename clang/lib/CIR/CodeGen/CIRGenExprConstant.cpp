@@ -1304,18 +1304,10 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     return cir::IntAttr::get(ty, value.getInt());
   }
   case APValue::Float: {
-    const llvm::APFloat &init = value.getFloat();
-    if (&init.getSemantics() == &llvm::APFloat::IEEEhalf() &&
-        !cgm.getASTContext().getLangOpts().NativeHalfType &&
-        cgm.getASTContext().getTargetInfo().useFP16ConversionIntrinsics()) {
-      cgm.errorNYI("ConstExprEmitter::tryEmitPrivate half");
-      return {};
-    }
-
     mlir::Type ty = cgm.convertType(destType);
     assert(mlir::isa<cir::FPTypeInterface>(ty) &&
            "expected floating-point type");
-    return cir::FPAttr::get(ty, init);
+    return cir::FPAttr::get(ty, value.getFloat());
   }
   case APValue::Array: {
     const ArrayType *arrayTy = cgm.getASTContext().getAsArrayType(destType);
@@ -1423,6 +1415,11 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     const auto *fieldDecl = cast<FieldDecl>(memberDecl);
     const auto *mpt = destType->castAs<MemberPointerType>();
     const auto *destClass = mpt->getMostRecentCXXRecordDecl();
+    if (fieldDecl->hasAttr<NoUniqueAddressAttr>()) {
+      assert(!cir::MissingFeatures::noUniqueAddressLayout());
+      cgm.errorNYI("ConstExprEmitter::tryEmitPrivate: no_unique_address field");
+      return {};
+    }
     std::optional<llvm::SmallVector<int32_t>> path =
         cgm.buildMemberPath(destClass, fieldDecl);
     if (!path)
