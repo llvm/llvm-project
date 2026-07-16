@@ -32,7 +32,7 @@ emitc.class @foo {
 
 /// Test that fields with excluded attributes are ignored.
 
-emitc.class @fooExcluded {
+emitc.class @foo_excluded_attrs {
   emitc.field @fieldName0 : !emitc.array<1xf32>  {emitc.field_ref = ["another_feature"]}
   emitc.field @fieldName1 : !emitc.array<1xf32>  {emitc.other_field = ["some_feature"]}
   emitc.func @bar() {
@@ -43,7 +43,7 @@ emitc.class @fooExcluded {
 
 // CHECK:       #include <map>
 // CHECK-NEXT:  #include <string>
-// CHECK-NEXT:  class fooExcluded {
+// CHECK-NEXT:  class foo_excluded_attrs {
 // CHECK-NEXT:   public:
 // CHECK-NEXT:    float fieldName0[1];
 // CHECK-NEXT:    float fieldName1[1];
@@ -61,7 +61,7 @@ emitc.class @fooExcluded {
 
 /// Test that headers aren't added if the pass bails out.
 
-emitc.class @fooNoAttrs {
+emitc.class @negative_foo_no_attrs {
   emitc.field @fieldName0 : !emitc.array<1xf32>
   emitc.func @bar() {
     return
@@ -70,7 +70,7 @@ emitc.class @fooNoAttrs {
 
 // CHECK-NOT:   #include <map>
 // CHECK-NOT:   #include <string>
-// CHECK:       class fooNoAttrs {
+// CHECK:       class negative_foo_no_attrs {
 // CHECK-NEXT:   public:
 // CHECK-NEXT:    float fieldName0[1];
 // CHECK-NEXT:    void bar() {

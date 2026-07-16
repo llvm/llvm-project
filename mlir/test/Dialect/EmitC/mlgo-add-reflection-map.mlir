@@ -31,7 +31,7 @@ emitc.class @foo {
 /// Test that a reflection map is created for fields with a certain named attribute
 /// but not ones with an attribute present in the ignore-attributes option.
 
-emitc.class @fooExcluded {
+emitc.class @foo_excluded_attrs {
   emitc.field @fieldName0 : !emitc.array<1xf32>  {emitc.field_ref = ["another_feature"]}
   emitc.field @fieldName1 : !emitc.array<1xf32>  {emitc.other_field = ["some_feature"]}
   emitc.func @bar() {
@@ -40,7 +40,7 @@ emitc.class @fooExcluded {
   }
 }
 
-// CHECK:       emitc.class @fooExcluded {
+// CHECK:       emitc.class @foo_excluded_attrs {
 // CHECK-NEXT:    emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = ["another_feature"]}
 // CHECK-NEXT:    emitc.field @fieldName1 : !emitc.array<1xf32> {emitc.other_field = ["some_feature"]}
 // CHECK-NEXT:    emitc.field @reflectionMap : !emitc.opaque<"const std::map<std::string, char*>"> = 
@@ -60,7 +60,7 @@ emitc.class @fooExcluded {
 
 /// Test that the pass bails out and leaves IR unchanged if fields don't have any attributes
 
-emitc.class @fooNoAttrs {
+emitc.class @negative_foo_no_attrs {
   emitc.field @fieldName0 : !emitc.array<1xf32>
   emitc.func @bar() {
     return
@@ -68,7 +68,7 @@ emitc.class @fooNoAttrs {
 }
 
 // CHECK-NOT:     emitc.include
-// CHECK-LABEL: emitc.class @fooNoAttrs {
+// CHECK-LABEL: emitc.class @negative_foo_no_attrs {
 // CHECK-NEXT:    emitc.field @fieldName0 : !emitc.array<1xf32>
 // CHECK-NEXT:    emitc.func @bar() {
 // CHECK-NEXT:      return
@@ -79,14 +79,14 @@ emitc.class @fooNoAttrs {
 
 /// Test that the pass bails out and leaves IR unchanged if the ClassOp doesn't have any fields
 
-emitc.class @fooNoFields {
+emitc.class @negative_foo_no_fields {
   emitc.func @bar() {
     return
   }
 }
 
 // CHECK-NOT:     emitc.include
-// CHECK-LABEL: emitc.class @fooNoFields {
+// CHECK-LABEL: emitc.class @negative_foo_no_fields {
 // CHECK-NEXT:    emitc.func @bar() {
 // CHECK-NEXT:      return
 // CHECK-NEXT:    }
@@ -97,11 +97,11 @@ emitc.class @fooNoFields {
 /// Test that a reflection map is still created in the case that there are no
 /// functions in the class
 
-emitc.class @fooNoOperator {
+emitc.class @foo_no_operator {
   emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = ["another_feature"]}
 }
 
-// CHECK-LABEL: emitc.class @fooNoOperator {
+// CHECK-LABEL: emitc.class @foo_no_operator {
 // CHECK-NEXT:    emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = ["another_feature"]}
 // CHECK-NEXT:    emitc.field @reflectionMap : !emitc.opaque<"const std::map<std::string, char*>"> = 
 // CHECK-SAME:    #emitc.opaque<"{ { [[$QUOTE]]another_feature[[$QUOTE]], reinterpret_cast<char*>(&fieldName0) } }">
@@ -117,7 +117,7 @@ emitc.class @fooNoOperator {
 /// Test that the pass bails out if a FieldOp has the specified dictionary attribute
 /// with an array containing a type other than string
 
-emitc.class @fooNonStringAttr {
+emitc.class @negative_foo_non_string_attr {
   emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = [1]}
   emitc.func @bar() {
     return
@@ -125,7 +125,7 @@ emitc.class @fooNonStringAttr {
 }
 
 // CHECK-NOT:     emitc.include
-// CHECK-LABEL: emitc.class @fooNonStringAttr {
+// CHECK-LABEL: emitc.class @negative_foo_non_string_attr {
 // CHECK-NEXT:    emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = [1]}
 // CHECK-NEXT:    emitc.func @bar() {
 // CHECK-NEXT:      return
@@ -136,7 +136,7 @@ emitc.class @fooNonStringAttr {
 
 /// Test that the pass matches one of the multiple included attributes.
 
-emitc.class @fooMultipleAttrs {
+emitc.class @foo_multiple_attrs {
   emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref_2 = ["another_feature"]}
   emitc.field @fieldName1 : !emitc.array<1xf32> {emitc.field_ref = ["some_feature"]}
   emitc.func @bar() {
@@ -144,7 +144,7 @@ emitc.class @fooMultipleAttrs {
   }
 }
 
-// CHECK-LABEL: emitc.class @fooMultipleAttrs {
+// CHECK-LABEL: emitc.class @foo_multiple_attrs {
 // CHECK-NEXT:    emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref_2 = ["another_feature"]}
 // CHECK-NEXT:    emitc.field @fieldName1 : !emitc.array<1xf32> {emitc.field_ref = ["some_feature"]}
 // CHECK-NEXT:    emitc.field @reflectionMap : !emitc.opaque<"const std::map<std::string, char*>"> =
