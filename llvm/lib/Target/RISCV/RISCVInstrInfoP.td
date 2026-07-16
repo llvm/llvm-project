@@ -1889,6 +1889,9 @@ def riscv_pshl : RVSDNode<"PSHL", SDT_RISCVPackedShift>;
 def riscv_psrl : RVSDNode<"PSRL", SDT_RISCVPackedShift>;
 def riscv_psra : RVSDNode<"PSRA", SDT_RISCVPackedShift>;
 def riscv_pssha : RVSDNode<"PSSHA", SDT_RISCVPackedShift>;
+def riscv_psshar : RVSDNode<"PSSHAR", SDT_RISCVPackedShift>;
+def riscv_psshl : RVSDNode<"PSSHL", SDT_RISCVPackedShift>;
+def riscv_psshlr : RVSDNode<"PSSHLR", SDT_RISCVPackedShift>;
 
 // RV32 packed narrowing shift.
 def SDT_RISCVPackedNarrowingShift
@@ -1917,6 +1920,11 @@ def SDT_RISCVPZip : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                          SDTCisSameAs<0, 1>,
                                          SDTCisSameAs<0, 2>]>;
 def riscv_pzip : RVSDNode<"PZIP", SDT_RISCVPZip>;
+
+def SDT_RISCVPWZip : SDTypeProfile<1, 2, [SDTCisVec<0>,
+                                          SDTCisSubVecOfVec<1, 0>,
+                                          SDTCisSameAs<1, 2>]>;
+def riscv_pwzip : RVSDNode<"PWZIP", SDT_RISCVPWZip>;
 
 // Deinterleave the even/odd lanes of two packed vectors.
 def SDT_RISCVPUnzip : SDTypeProfile<1, 2, [SDTCisVec<0>,
@@ -2104,6 +2112,9 @@ let Predicates = [HasStdExtP] in {
   // 16-bit signed saturation shift left patterns
   def : PatGprImm<riscv_pssha, PSSLAI_H, uimm4, XLenVecI16VT>;
   def : PatGprShift<riscv_pssha, PSSHA_HS, XLenVecI16VT>;
+  def : PatGprShift<riscv_psshar, PSSHAR_HS, XLenVecI16VT>;
+  def : PatGprShift<riscv_psshl, PSSHL_HS, XLenVecI16VT>;
+  def : PatGprShift<riscv_psshlr, PSSHLR_HS, XLenVecI16VT>;
 
   // 8-bit logical shift left/right
   def : PatGprShiftMask<riscv_pshl, PSLL_BS, shiftMask32, XLenVecI8VT>;
@@ -2287,14 +2298,10 @@ let append Predicates = [IsRV32] in {
   def : Pat<(v2i32 (zext (v2i16 GPR:$rs))), (WZIP16P GPR:$rs, (v2i16 X0))>;
 
   // Packed zip.
-  def : Pat<(v8i8 (riscv_pzip (v8i8 GPRPair:$rs1),
-                               (v8i8 GPRPair:$rs2))),
-            (WZIP8P (i32 (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_even)),
-                    (i32 (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_even)))>;
-  def : Pat<(v4i16 (riscv_pzip (v4i16 GPRPair:$rs1),
-                                (v4i16 GPRPair:$rs2))),
-            (WZIP16P (i32 (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_even)),
-                     (i32 (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_even)))>;
+  def : Pat<(v8i8 (riscv_pwzip (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
+            (WZIP8P GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i16 (riscv_pwzip (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (WZIP16P GPR:$rs1, GPR:$rs2)>;
 
   // Sign-extend patterns using pwadd with zero
   def : Pat<(v4i16 (sext (v4i8 GPR:$rs))), (PWADD_B GPR:$rs, (v4i8 X0))>;
@@ -2431,10 +2438,16 @@ let append Predicates = [IsRV32] in {
   // 16-bit signed saturation shift left patterns
   def : PatGprPairImm<riscv_pssha, PSSLAI_DH, uimm4, v4i16>;
   def : PatGprPairShift<riscv_pssha, PSSHA_DHS, v4i16>;
+  def : PatGprPairShift<riscv_psshar, PSSHAR_DHS, v4i16>;
+  def : PatGprPairShift<riscv_psshl, PSSHL_DHS, v4i16>;
+  def : PatGprPairShift<riscv_psshlr, PSSHLR_DHS, v4i16>;
 
   // 32-bit signed saturation shift left patterns
   def : PatGprPairImm<riscv_pssha, PSSLAI_DW, uimm5, v2i32>;
   def : PatGprPairShift<riscv_pssha, PSSHA_DWS, v2i32>;
+  def : PatGprPairShift<riscv_psshar, PSSHAR_DWS, v2i32>;
+  def : PatGprPairShift<riscv_psshl, PSSHL_DWS, v2i32>;
+  def : PatGprPairShift<riscv_psshlr, PSSHLR_DWS, v2i32>;
 
   // 8-bit logical shift left/right
   def : PatGprPairShiftMask<riscv_pshl, PSLL_DBS, shiftMask32, v8i8>;
@@ -2696,6 +2709,9 @@ let append Predicates = [IsRV64] in {
   // 32-bit signed saturation shift left patterns
   def : PatGprImm<riscv_pssha, PSSLAI_W, uimm5, v2i32>;
   def : PatGprShift<riscv_pssha, PSSHA_WS, v2i32>;
+  def : PatGprShift<riscv_psshar, PSSHAR_WS, v2i32>;
+  def : PatGprShift<riscv_psshl, PSSHL_WS, v2i32>;
+  def : PatGprShift<riscv_psshlr, PSSHLR_WS, v2i32>;
 
   // 32-bit logical shift left/right
   def : PatGprShiftMask<riscv_pshl, PSLL_WS, shiftMask32, v2i32>;
@@ -2804,6 +2820,18 @@ let append Predicates = [IsRV64] in {
             (UNZIP16P GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v4i16 (riscv_punzipo (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
             (UNZIP16HP GPR:$rs1, GPR:$rs2)>;
+
+  // Match undef to X0 to avoid false dependency.
+  // FIXME: Match operand 0 too?
+  // FIXME: Enable BreakFalseDep pass?
+  def : Pat<(v8i8 (riscv_punzipe (v8i8 GPR:$rs1), (v8i8 undef))),
+            (UNZIP8P GPR:$rs1, (v8i8 X0))>;
+  def : Pat<(v8i8 (riscv_punzipo (v8i8 GPR:$rs1), (v8i8 undef))),
+            (UNZIP8HP GPR:$rs1, (v8i8 X0))>;
+  def : Pat<(v4i16 (riscv_punzipe (v4i16 GPR:$rs1), (v4i16 undef))),
+            (UNZIP16P GPR:$rs1, (v4i16 X0))>;
+  def : Pat<(v4i16 (riscv_punzipo (v4i16 GPR:$rs1), (v4i16 undef))),
+            (UNZIP16HP GPR:$rs1, (v4i16 X0))>;
 
   // Packed zip.
   def : Pat<(v8i8 (riscv_pzip (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
