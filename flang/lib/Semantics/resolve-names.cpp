@@ -10616,7 +10616,8 @@ void DeclarationVisitor::SetImplicitCUDADataAttr(Symbol &symbol) {
   // program, or component) so generic resolution still selects the
   // unified specific; fall back to Managed elsewhere (module scope,
   // device subprograms), which uses the same allocator.
-  if (cudaEnabled && (cudaManaged || cudaUnified)) {
+  // COMMON objects may not carry managed/unified attributes.
+  if (cudaEnabled && (cudaManaged || cudaUnified) && !object->commonBlock()) {
     const Scope &owner{symbol.owner()};
     const bool unifiedAllowed{!IsCUDADeviceContext(&owner) &&
         (owner.IsDerivedType() || owner.kind() == Scope::Kind::MainProgram ||
