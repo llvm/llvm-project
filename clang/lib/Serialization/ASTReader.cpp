@@ -3010,6 +3010,11 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
           << FileChange.Kind << (FileChange.Old && FileChange.New)
           << llvm::itostr(FileChange.Old.value_or(0))
           << llvm::itostr(FileChange.New.value_or(0));
+      if (getModuleManager()
+              .getModuleCache()
+              .getInMemoryModuleCache()
+              .isPCMFinal(F.FileName))
+        Diag(diag::note_fe_ast_file_modified_finalized) << F.ModuleName;
 
       // Print the import stack.
       if (ImportStack.size() > 1) {
@@ -3300,7 +3305,8 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       // loaded module files, ignore missing inputs.
       if (!DisableValidation && F.Kind != MK_ExplicitModule &&
           F.Kind != MK_PrebuiltModule) {
-        bool Complain = (ClientLoadCapabilities & ARR_OutOfDate) == 0;
+        bool Complain =
+            !canRecoverFromOutOfDate(F.FileName, ClientLoadCapabilities);
 
         // If we are reading a module, we will create a verification timestamp,
         // so we verify all input files.  Otherwise, verify only user input

@@ -159,6 +159,12 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### OpenCL Specific Changes
 
+- Extensions ``cl_khr_extended_bit_ops``, ``cl_khr_integer_dot_product``,
+  ``cl_khr_subgroup_extended_types``, ``cl_khr_subgroup_rotate``,
+  ``cl_khr_subgroup_shuffle``, and ``cl_khr_subgroup_shuffle_relative`` are
+  promoted to core features in OpenCL C 3.1. A target claiming OpenCL C 3.1
+  conformance without supporting one of these features is now diagnosed.
+
 ### Target Specific Changes
 
 #### AMDGPU Support
