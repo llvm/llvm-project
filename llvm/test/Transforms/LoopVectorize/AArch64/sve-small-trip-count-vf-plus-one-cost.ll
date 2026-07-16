@@ -10,7 +10,7 @@ define void @tc3_udiv_i8_reject(ptr noalias %a, ptr noalias %b,
 ; IR-NOT: vector.body:
 ;
 ; DBG-LABEL: LV: Checking a loop in 'tc3_udiv_i8_reject'
-; DBG: LV: Picking VF=2 with 1 scalar iteration remaining.
+; DBG: LV: Picking MaxVF=2 with 1 scalar iteration remaining.
 ; DBG: LV: Scalar loop costs: 9.
 ; DBG: Cost for VF 2: 19
 ; DBG: LV: Rejecting VF 2 for one-scalar-tail low trip count: vector cost 37 >= scalar cost 27.
@@ -36,43 +36,12 @@ exit:
   ret void
 }
 
-define void @tc3_udiv_i8_user_vf2(ptr noalias %a, ptr noalias %b,
-                                  ptr noalias %c) #0 {
-; IR-LABEL: define void @tc3_udiv_i8_user_vf2(
-; IR-NOT: vector.body
-
-; DBG-LABEL: LV: Checking a loop in 'tc3_udiv_i8_user_vf2'
-; DBG: LV: Using user VF 2.
-; DBG: LV: Scalar loop costs: 9.
-; DBG: Cost for VF 2: 19
-; DBG: LV: Rejecting VF 2 for one-scalar-tail low trip count: vector cost 37 >= scalar cost 27.
-; DBG: LV: Vectorization is possible but not beneficial.
-entry:
-  br label %loop
-
-loop:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %pa = getelementptr inbounds i8, ptr %a, i64 %iv
-  %pb = getelementptr inbounds i8, ptr %b, i64 %iv
-  %pc = getelementptr inbounds i8, ptr %c, i64 %iv
-  %va = load i8, ptr %pa, align 1
-  %vb = load i8, ptr %pb, align 1
-  %div = udiv i8 %va, %vb
-  store i8 %div, ptr %pc, align 1
-  %iv.next = add nuw nsw i64 %iv, 1
-  %exitcond = icmp eq i64 %iv.next, 3
-  br i1 %exitcond, label %exit, label %loop, !llvm.loop !2
-
-exit:
-  ret void
-}
-
 define void @tc3_smin_i8_reject(ptr noalias %a, ptr noalias %b) #0 {
 ; IR-LABEL: define void @tc3_smin_i8_reject(
 ; IR-NOT: vector.body
 
 ; DBG-LABEL: LV: Checking a loop in 'tc3_smin_i8_reject'
-; DBG: LV: Picking VF=2 with 1 scalar iteration remaining.
+; DBG: LV: Picking MaxVF=2 with 1 scalar iteration remaining.
 ; DBG: LV: Scalar loop costs: 10.
 ; DBG: Cost for VF 2: 15
 ; DBG: LV: Rejecting VF 2 for one-scalar-tail low trip count: vector cost 35 >= scalar cost 30.
@@ -131,7 +100,7 @@ define void @tc5_udiv_i8_reject_ic2(ptr noalias %a, ptr noalias %b, ptr noalias 
 
 ; DBG-LABEL: LV: Checking a loop in 'tc5_udiv_i8_reject_ic2'
 ; DBG-NOT: LV: Selecting VF: 2.
-; DBG Rejecting VF 2
+; DBG: Rejecting VF 2
 entry:
   br label %loop
 
@@ -146,7 +115,37 @@ loop:
   store i8 %div, ptr %pc, align 1
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, 5
-  br i1 %exitcond, label %exit, label %loop, !llvm.loop !4
+  br i1 %exitcond, label %exit, label %loop, !llvm.loop !2
+
+exit:
+  ret void
+}
+
+define void @tc5_sin_f32_select_smaller_vf(ptr noalias %a,
+                                             ptr noalias %c) #0 {
+; IR-LABEL: define void @tc5_sin_f32_select_smaller_vf(
+; IR: vector.body
+
+; DBG-LABEL: LV: Checking a loop in 'tc5_sin_f32_select_smaller_vf' 
+; DBG: Picking MaxVF=4 with 1 scalar iteration remaining.
+; DBG: LV: Rejecting VF 4 for one-scalar-tail low trip count: vector cost 88 >= scalar cost 80.
+; DBG-NOT: Selecting VF: 4
+; DBG: LV: Selecting VF: 2.
+
+
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %pa = getelementptr inbounds float, ptr %a, i64 %iv
+  %pc = getelementptr inbounds float, ptr %c, i64 %iv
+  %va = load float, ptr %pa, align 4
+  %sin = tail call float @llvm.sin.f32(float %va)
+  store float %sin, ptr %pc, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 5
+  br i1 %exitcond, label %exit, label %loop
 
 exit:
   ret void
@@ -154,11 +153,11 @@ exit:
 
 declare i8 @llvm.smin.i8(i8, i8)
 
+declare float @llvm.sin.f32(float)
+
 attributes #0 = { vscale_range(1,16) "target-features"="+sve" }
 
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.vectorize.enable", i1 true}
 !2 = distinct !{!2, !3}
-!3 = !{!"llvm.loop.vectorize.width", i32 2}
-!4 = distinct !{!4, !5}
-!5 = !{!"llvm.loop.interleave.count", i32 2}
+!3 = !{!"llvm.loop.interleave.count", i32 2}

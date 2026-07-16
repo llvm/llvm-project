@@ -375,6 +375,87 @@ exit:
   ret void
 }
 
+; For this example, vectorization should not take place as the
+; scalar cost is better than the vectorized cost.
+define void @tc3_udiv_i8_reject(ptr noalias %a, ptr noalias %b,
+; CHECK-LABEL: define void @tc3_udiv_i8_reject(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[PA:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[PB:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IV]]
+; CHECK-NEXT:    [[PC:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 [[IV]]
+; CHECK-NEXT:    [[VA:%.*]] = load i8, ptr [[PA]], align 1
+; CHECK-NEXT:    [[VB:%.*]] = load i8, ptr [[PB]], align 1
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[VA]], [[VB]]
+; CHECK-NEXT:    store i8 [[DIV]], ptr [[PC]], align 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], 3
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+  ptr noalias %c) #0 {
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %pa = getelementptr inbounds i8, ptr %a, i64 %iv
+  %pb = getelementptr inbounds i8, ptr %b, i64 %iv
+  %pc = getelementptr inbounds i8, ptr %c, i64 %iv
+  %va = load i8, ptr %pa, align 1
+  %vb = load i8, ptr %pb, align 1
+  %div = udiv i8 %va, %vb
+  store i8 %div, ptr %pc, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 3
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @tc3_smin_i8_reject(ptr noalias %a, ptr noalias %b) #0 {
+; CHECK-LABEL: define void @tc3_smin_i8_reject(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[SCALAR_PH:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
+; CHECK-NEXT:    [[MIN:%.*]] = tail call i8 @llvm.smin.i8(i8 [[TMP1]], i8 [[TMP2]])
+; CHECK-NEXT:    store i8 [[MIN]], ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], 3
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %arrayidx = getelementptr inbounds i8, ptr %b, i64 %iv
+  %0 = load i8, ptr %arrayidx, align 1
+  %arrayidx2 = getelementptr inbounds i8, ptr %a, i64 %iv
+  %1 = load i8, ptr %arrayidx2, align 1
+  %min = tail call i8 @llvm.smin.i8(i8 %0, i8 %1)
+  store i8 %min, ptr %arrayidx, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 3
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 attributes #0 = { vscale_range(1,16) "target-features"="+sve" }
 
 !0 = distinct !{!0, !1}
