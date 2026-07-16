@@ -54,6 +54,11 @@ struct TestInt {
     assert(!std::isgreater(T(0), std::numeric_limits<T>::max()));
     assert(!std::isgreater(std::numeric_limits<T>::max(), std::numeric_limits<T>::max()));
 
+    if (std::is_signed<T>::value) {
+      assert(std::isgreater(T(-1), std::numeric_limits<T>::lowest()));
+      assert(!std::isgreater(std::numeric_limits<T>::lowest(), T(-1)));
+    }
+
     return true;
   }
 
