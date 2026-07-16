@@ -6321,6 +6321,10 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   CI->setAttributes(Attrs);
   CI->setCallingConv(static_cast<llvm::CallingConv::ID>(CallingConv));
 
+  // If this call can return twice (e.g. setjmp), mark the enclosing function
+  if (CI->hasFnAttr(llvm::Attribute::ReturnsTwice))
+    CurFn->addFnAttr(llvm::Attribute::ContainsReturnsTwiceCall);
+
   // Apply various metadata.
 
   if (!CI->getType()->isVoidTy())

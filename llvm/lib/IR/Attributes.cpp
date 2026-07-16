@@ -2793,6 +2793,11 @@ bool AttributeFuncs::areOutlineCompatible(const Function &A,
 void AttributeFuncs::mergeAttributesForInlining(Function &Caller,
                                                 const Function &Callee) {
   mergeFnAttrs(Caller, Callee);
+
+  // If the callee contained a returns_twice call (e.g. setjmp), those calls
+  // are now directly in the caller's body, so propagate the attribute.
+  if (Callee.hasFnAttribute(Attribute::ContainsReturnsTwiceCall))
+    Caller.addFnAttr(Attribute::ContainsReturnsTwiceCall);
 }
 
 void AttributeFuncs::mergeAttributesForOutlining(Function &Base,
