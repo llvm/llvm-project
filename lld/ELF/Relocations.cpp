@@ -1971,7 +1971,8 @@ bool ThunkCreator::createThunks(uint32_t pass,
           // Ordering thunks by their destination allows for quicker
           // convergence. Bulk of thunks are created in pass 0. So sorting them
           // then has most impact and should be sufficient in most cases.
-          addressesChanged |= p.first->assignOffsets(pass == 0);
+          addressesChanged |=
+              p.first->assignOffsets(pass == 0 && ctx.arg.zSortThunkSection);
         }
       });
 

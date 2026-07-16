@@ -450,6 +450,7 @@ struct Config {
   bool zRodynamic;
   bool zSectionHeader;
   bool zShstk;
+  bool zSortThunkSection;
   bool zStartStopGC;
   uint8_t zStartStopVisibility;
   bool zText;

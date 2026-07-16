@@ -1669,6 +1669,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zRodynamic = hasZOption(args, "rodynamic");
   ctx.arg.zSeparate = getZSeparate(args);
   ctx.arg.zShstk = hasZOption(args, "shstk");
+  ctx.arg.zSortThunkSection =
+      getZFlag(args, "sort-thunksection", "nosort-thunksection", false);
   ctx.arg.zStackSize = args::getZOptionValue(args, OPT_z, "stack-size", 0);
   ctx.arg.zStartStopGC =
       getZFlag(args, "start-stop-gc", "nostart-stop-gc", true);

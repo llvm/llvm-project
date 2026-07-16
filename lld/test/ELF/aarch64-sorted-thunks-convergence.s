@@ -1,9 +1,11 @@
 // REQUIRES: aarch64
 // RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t
-// RUN: ld.lld %t -o %t1 2>&1 | FileCheck %s --allow-empty
-// RUN: rm %t %t1
+// RUN: ld.lld %t -z sort-thunksection -o /dev/null 2>&1 | FileCheck %s --allow-empty --check-prefix=SORT
+// RUN: not ld.lld -z nosort-thunksection %t -o /dev/null 2>&1 | FileCheck --check-prefix=NOSORT %s
+// RUN: rm %t
 
-// CHECK-NOT: error: address assignment did not converge
+// SORT-NOT: error: address assignment did not converge
+// NOSORT: error: address assignment did not converge
 
 // This test assumes pass limit of 30. Initially, only last thunk is out of range
 // but as out of range thunks get promoted to long thunks, they force previous
