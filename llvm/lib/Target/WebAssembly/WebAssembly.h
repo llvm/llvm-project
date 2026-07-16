@@ -18,6 +18,8 @@
 #include "GISel/WebAssemblyRegisterBankInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/PassManager.h"
@@ -86,6 +88,20 @@ public:
 FunctionPass *
 createWebAssemblyReduceToAnyAllTrueLegacyPass(WebAssemblyTargetMachine &TM);
 
+class WebAssemblyCoalesceFeaturesAndStripAtomicsPass
+    : public RequiredPassInfoMixin<
+          WebAssemblyCoalesceFeaturesAndStripAtomicsPass> {
+  WebAssemblyTargetMachine &TM;
+
+public:
+  WebAssemblyCoalesceFeaturesAndStripAtomicsPass(WebAssemblyTargetMachine &TM)
+      : TM(TM) {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+ModulePass *createWebAssemblyCoalesceFeaturesAndStripAtomicsLegacyPass(
+    WebAssemblyTargetMachine &TM);
+
 // GlobalISel
 InstructionSelector *
 createWebAssemblyInstructionSelector(const WebAssemblyTargetMachine &,
@@ -107,19 +123,43 @@ public:
 
 FunctionPass *createWebAssemblyISelDagLegacyPass(WebAssemblyTargetMachine &TM,
                                                  CodeGenOptLevel OptLevel);
-FunctionPass *createWebAssemblyArgumentMove();
+
+class WebAssemblyArgumentMovePass
+    : public RequiredPassInfoMixin<WebAssemblyArgumentMovePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createWebAssemblyArgumentMoveLegacyPass();
 FunctionPass *createWebAssemblySetP2AlignOperands();
 FunctionPass *createWebAssemblyCleanCodeAfterTrap();
 
 // Late passes.
 FunctionPass *createWebAssemblyReplacePhysRegs();
-FunctionPass *createWebAssemblyNullifyDebugValueLists();
+
+class WebAssemblyNullifyDebugValueListsPass
+    : public RequiredPassInfoMixin<WebAssemblyNullifyDebugValueListsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createWebAssemblyNullifyDebugValueListsLegacyPass();
 FunctionPass *createWebAssemblyOptimizeLiveIntervals();
 FunctionPass *createWebAssemblyMemIntrinsicResults();
 FunctionPass *createWebAssemblyRegStackify(CodeGenOptLevel OptLevel);
 FunctionPass *createWebAssemblyRegColoring();
 FunctionPass *createWebAssemblyFixBrTableDefaults();
-FunctionPass *createWebAssemblyFixIrreducibleControlFlow();
+
+class WebAssemblyFixIrreducibleControlFlowPass
+    : public RequiredPassInfoMixin<WebAssemblyFixIrreducibleControlFlowPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createWebAssemblyFixIrreducibleControlFlowLegacyPass();
 FunctionPass *createWebAssemblyLateEHPrepare();
 FunctionPass *createWebAssemblyCFGSort();
 FunctionPass *createWebAssemblyCFGStackify();
@@ -135,7 +175,7 @@ ModulePass *createWebAssemblyMCLowerPrePass();
 void initializeWebAssemblyOptimizeReturnedLegacyPass(PassRegistry &);
 void initializeWebAssemblyRefTypeMem2LocalLegacyPass(PassRegistry &);
 void initializeWebAssemblyAddMissingPrototypesLegacyPass(PassRegistry &);
-void initializeWebAssemblyArgumentMovePass(PassRegistry &);
+void initializeWebAssemblyArgumentMoveLegacyPass(PassRegistry &);
 void initializeWebAssemblyAsmPrinterPass(PassRegistry &);
 void initializeWebAssemblyCleanCodeAfterTrapPass(PassRegistry &);
 void initializeWebAssemblyCFGSortPass(PassRegistry &);
@@ -146,13 +186,13 @@ void initializeWebAssemblyExceptionInfoPass(PassRegistry &);
 void initializeWebAssemblyExplicitLocalsPass(PassRegistry &);
 void initializeWebAssemblyFixBrTableDefaultsPass(PassRegistry &);
 void initializeWebAssemblyFixFunctionBitcastsLegacyPass(PassRegistry &);
-void initializeWebAssemblyFixIrreducibleControlFlowPass(PassRegistry &);
+void initializeWebAssemblyFixIrreducibleControlFlowLegacyPass(PassRegistry &);
 void initializeWebAssemblyLateEHPreparePass(PassRegistry &);
 void initializeWebAssemblyLowerBrUnlessPass(PassRegistry &);
 void initializeWebAssemblyLowerEmscriptenEHSjLjLegacyPass(PassRegistry &);
 void initializeWebAssemblyMCLowerPrePassPass(PassRegistry &);
 void initializeWebAssemblyMemIntrinsicResultsPass(PassRegistry &);
-void initializeWebAssemblyNullifyDebugValueListsPass(PassRegistry &);
+void initializeWebAssemblyNullifyDebugValueListsLegacyPass(PassRegistry &);
 void initializeWebAssemblyOptimizeLiveIntervalsPass(PassRegistry &);
 void initializeWebAssemblyPeepholePass(PassRegistry &);
 void initializeWebAssemblyRegColoringPass(PassRegistry &);
@@ -160,6 +200,8 @@ void initializeWebAssemblyRegNumberingPass(PassRegistry &);
 void initializeWebAssemblyRegStackifyPass(PassRegistry &);
 void initializeWebAssemblyReplacePhysRegsPass(PassRegistry &);
 void initializeWebAssemblySetP2AlignOperandsPass(PassRegistry &);
+void initializeWebAssemblyCoalesceFeaturesAndStripAtomicsLegacyPass(
+    PassRegistry &);
 
 namespace WebAssembly {
 enum TargetIndex {

@@ -57,6 +57,9 @@ public:
   /// The GPU kernel this analysis result is for
   const FunctionT &getFunction() const;
 
+  /// The cycle info this analysis was computed with.
+  const CycleInfoT &getCycleInfo() const;
+
   /// Whether \p V is divergent at its definition.
   bool isDivergentAtDef(ConstValueRefT V) const;
 
