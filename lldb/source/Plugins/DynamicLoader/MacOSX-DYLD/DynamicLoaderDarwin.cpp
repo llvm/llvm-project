@@ -904,16 +904,6 @@ lldb_private::ArchSpec DynamicLoaderDarwin::ImageInfo::GetArchitecture() const {
   return arch_spec;
 }
 
-const DynamicLoaderDarwin::Segment *
-DynamicLoaderDarwin::ImageInfo::FindSegment(ConstString name) const {
-  const size_t num_segments = segments.size();
-  for (size_t i = 0; i < num_segments; ++i) {
-    if (segments[i].name == name)
-      return &segments[i];
-  }
-  return nullptr;
-}
-
 // Dump an image info structure to the file handle provided.
 void DynamicLoaderDarwin::ImageInfo::PutToLog(Log *log) const {
   if (!log)
