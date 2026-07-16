@@ -1402,6 +1402,22 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
         Mul->setHasNoSignedWrap(OBO->hasNoSignedWrap());
         return Mul;
       }
+
+      // (X * (C2 + 1)) / C2 -> X + (X / C2)
+      if (*C1 == *C2 + 1 && (!IsSigned || C2->isStrictlyPositive()) &&
+          (IsSigned || !C2->isAllOnes())) {
+        auto *NewDiv =
+            Builder.CreateBinOp(I.getOpcode(), X, ConstantInt::get(Ty, *C2),
+                                I.getName() + (IsSigned ? ".sdiv" : ".udiv"));
+        cast<Instruction>(NewDiv)->setIsExact(I.isExact());
+        if (IsSigned) {
+          auto *Add = BinaryOperator::CreateNSWAdd(X, NewDiv);
+          auto *OBO = cast<OverflowingBinaryOperator>(Op0);
+          Add->setHasNoUnsignedWrap(OBO->hasNoUnsignedWrap());
+          return Add;
+        }
+        return BinaryOperator::CreateNUWAdd(X, NewDiv);
+      }
     }
 
     if ((IsSigned && match(Op0, m_NSWShl(m_Value(X), m_APInt(C1))) &&
