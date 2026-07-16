@@ -1212,17 +1212,16 @@ define double @v_copysign_f64_0_fneg(double %sign) {
 ; SIVI-LABEL: v_copysign_f64_0_fneg:
 ; SIVI:       ; %bb.0:
 ; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SIVI-NEXT:    v_xor_b32_e32 v0, 0x80000000, v1
-; SIVI-NEXT:    v_and_b32_e32 v1, 0x80000000, v0
+; SIVI-NEXT:    s_brev_b32 s4, 1
+; SIVI-NEXT:    v_bfi_b32 v1, v1, 0, s4
 ; SIVI-NEXT:    v_mov_b32_e32 v0, 0
 ; SIVI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_copysign_f64_0_fneg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_xor_b32_e32 v0, 0x80000000, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_and_b32 v1, 0x80000000, v0
+; GFX11-NEXT:    v_bfi_b32 v1, v1, 0, 0x80000000
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %neg.sign = fneg double %sign
   %result = call double @llvm.copysign.f64(double 0.0, double %neg.sign)
@@ -1258,10 +1257,9 @@ define <2 x double> @v_copysign_v2f64_0_fneg(<2 x double> %sign) {
 ; SIVI-LABEL: v_copysign_v2f64_0_fneg:
 ; SIVI:       ; %bb.0:
 ; SIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SIVI-NEXT:    v_xor_b32_e32 v0, 0x80000000, v3
-; SIVI-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
-; SIVI-NEXT:    v_and_b32_e32 v1, 0x80000000, v1
-; SIVI-NEXT:    v_and_b32_e32 v3, 0x80000000, v0
+; SIVI-NEXT:    s_brev_b32 s4, 1
+; SIVI-NEXT:    v_bfi_b32 v1, v1, 0, s4
+; SIVI-NEXT:    v_bfi_b32 v3, v3, 0, s4
 ; SIVI-NEXT:    v_mov_b32_e32 v0, 0
 ; SIVI-NEXT:    v_mov_b32_e32 v2, 0
 ; SIVI-NEXT:    s_setpc_b64 s[30:31]
@@ -1269,11 +1267,10 @@ define <2 x double> @v_copysign_v2f64_0_fneg(<2 x double> %sign) {
 ; GFX11-LABEL: v_copysign_v2f64_0_fneg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_xor_b32_e32 v0, 0x80000000, v1
-; GFX11-NEXT:    v_xor_b32_e32 v2, 0x80000000, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_and_b32 v1, 0x80000000, v0
-; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_and_b32 v3, 0x80000000, v2
+; GFX11-NEXT:    v_bfi_b32 v1, v1, 0, 0x80000000
+; GFX11-NEXT:    v_bfi_b32 v3, v3, 0, 0x80000000
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %neg.sign = fneg <2 x double> %sign
   %result = call <2 x double> @llvm.copysign.v2f64(<2 x double> zeroinitializer, <2 x double> %neg.sign)

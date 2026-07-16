@@ -2421,6 +2421,11 @@ def : GCNPat <
 >;
 
 def : GCNPat <
+  (DivergentBinFrag<fcopysign> (fp16vt fpimm_zero), (fneg fp16vt:$src1)),
+  (V_BFI_B32_e64 VGPR_32:$src1, (i32 0), (S_MOV_B32 (i32 0x00008000)))
+>;
+
+def : GCNPat <
   (fcopysign (fp16vt fpimm_pos_zero), fp16vt:$src1),
   (V_AND_B32_e32 (S_MOV_B32 (i32 0x00008000)), VGPR_32:$src1)
 >;
@@ -2489,6 +2494,12 @@ def : GCNPat <
   (V_AND_B16_t16_e64 0, (S_MOV_B32 (i32 0x00008000)), 0, VGPR_16:$src1)
 >;
 
+def : GCNPat <
+  (DivergentBinFrag<fcopysign> (fp16vt fpimm_zero), (fneg fp16vt:$src1)),
+  (EXTRACT_SUBREG (V_BFI_B32_e64 (REG_SEQUENCE VGPR_32, VGPR_16:$src1, lo16, (i16 (IMPLICIT_DEF)), hi16),
+                  (i32 0), (S_MOV_B32 (i32 0x00008000))), lo16)
+>;
+
 // TODO: Handle 0 magnitude special case
 def : GCNPat <
   (fcopysign f32:$src0, fp16vt:$src1),
@@ -2551,6 +2562,11 @@ def : GCNPat <
 def : GCNPat <
   (fcopysign build_vector_fpimm_pos_zero_v2<fp16vt>, fp16vt:$src1),
   (V_AND_B32_e32 (S_MOV_B32 (i32 0x80008000)), VGPR_32:$src1)
+>;
+
+def : GCNPat <
+  (DivergentBinFrag<fcopysign> build_vector_fpimm_pos_zero_v2<fp16vt>, (fneg fp16vt:$src1)),
+  (V_BFI_B32_e64 VGPR_32:$src1, (i32 0), (S_MOV_B32 (i32 0x80008000)))
 >;
 
 }
@@ -2933,8 +2949,28 @@ def : AMDGPUPat <
 >;
 
 def : AMDGPUPat <
+  (DivergentBinFrag<fcopysign> (f32 fpimm_zero), (fneg f32:$src1)),
+  (V_BFI_B32_e64 VGPR_32:$src1, (i32 0), (S_MOV_B32 (i32 0x80000000)))
+>;
+
+def : AMDGPUPat <
   (fcopysign (f32 fpimm_pos_zero), (f32 VGPR_32:$src1)),
   (V_AND_B32_e32 (S_MOV_B32 (i32 0x80000000)), $src1)
+>;
+
+def : AMDGPUPat <
+  (DivergentBinFrag<and> (extractelt (v2i32 (bitconvert (f64 (fneg f64:$src1)))), (i32 1)),
+       (i32 -2147483648)),
+  (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$src1, sub1)),
+                 (i32 0), (S_MOV_B32 (i32 0x80000000)))
+>;
+
+
+def : AMDGPUPat <
+  (DivergentBinFrag<and> (i32 (bitconvert (extractelt (v2f32 (bitconvert (fneg f64:$src1))), (i32 1)))),
+       (i32 -2147483648)),
+  (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$src1, sub1)),
+                 (i32 0), (S_MOV_B32 (i32 0x80000000)))
 >;
 
 def : AMDGPUPat <

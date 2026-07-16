@@ -8260,39 +8260,28 @@ define bfloat @v_copysign_bf16_0_fneg(bfloat %sign) {
 ; GFX8-LABEL: v_copysign_bf16_0_fneg:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
-; GFX8-NEXT:    v_and_b32_e32 v0, 0x8000, v0
+; GFX8-NEXT:    s_mov_b32 s4, 0x8000
+; GFX8-NEXT:    v_bfi_b32 v0, v0, 0, s4
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_copysign_bf16_0_fneg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
-; GFX9-NEXT:    v_and_b32_e32 v0, 0x8000, v0
+; GFX9-NEXT:    s_mov_b32 s4, 0x8000
+; GFX9-NEXT:    v_bfi_b32 v0, v0, 0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_copysign_bf16_0_fneg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
-; GFX10-NEXT:    v_and_b32_e32 v0, 0x8000, v0
+; GFX10-NEXT:    v_bfi_b32 v0, v0, 0, 0x8000
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11TRUE16-LABEL: v_copysign_bf16_0_fneg:
-; GFX11TRUE16:       ; %bb.0:
-; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11TRUE16-NEXT:    v_xor_b16 v0.l, 0x8000, v0.l
-; GFX11TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11TRUE16-NEXT:    v_and_b16 v0.l, 0x8000, v0.l
-; GFX11TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11FAKE16-LABEL: v_copysign_bf16_0_fneg:
-; GFX11FAKE16:       ; %bb.0:
-; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11FAKE16-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
-; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11FAKE16-NEXT:    v_and_b32_e32 v0, 0x8000, v0
-; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: v_copysign_bf16_0_fneg:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_bfi_b32 v0, v0, 0, 0x8000
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sign.ext = fneg bfloat %sign
   %result = call bfloat @llvm.copysign.bf16(bfloat 0.0, bfloat %sign.ext)
   ret bfloat %result
@@ -8416,23 +8405,20 @@ define <2 x bfloat> @v_copysign_v2bf16_0_fneg(<2 x bfloat> %sign) {
 ; GFX9-LABEL: v_copysign_v2bf16_0_fneg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
-; GFX9-NEXT:    v_and_b32_e32 v0, 0x80008000, v0
+; GFX9-NEXT:    s_mov_b32 s4, 0x80008000
+; GFX9-NEXT:    v_bfi_b32 v0, v0, 0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_copysign_v2bf16_0_fneg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
-; GFX10-NEXT:    v_and_b32_e32 v0, 0x80008000, v0
+; GFX10-NEXT:    v_bfi_b32 v0, v0, 0, 0x80008000
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_copysign_v2bf16_0_fneg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_and_b32_e32 v0, 0x80008000, v0
+; GFX11-NEXT:    v_bfi_b32 v0, v0, 0, 0x80008000
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %sign.ext = fneg <2 x bfloat> %sign
   %result = call <2 x bfloat> @llvm.copysign.v2bf16(<2 x bfloat> zeroinitializer, <2 x bfloat> %sign.ext)
