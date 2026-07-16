@@ -425,8 +425,10 @@ public:
   class TopLevelInstParserRegistry {
   public:
     template <std::byte opCode>
-    static parsed_inst_t parseInstrWithOpCode(OpBuilder &,
-                                              ExpressionParser &) = delete;
+    static constexpr bool hasParserForOpcode = false;
+
+    template <std::byte opCode>
+    static parsed_inst_t parseInstrWithOpCode(OpBuilder &, ExpressionParser &) = delete;
   };
 
 private:
@@ -446,26 +448,20 @@ unreachableHandler(OpBuilder &, ExpressionParser &expressionParser) {
 template <typename ParserRegistry>
 class InstDispatcher {
 private:
-  /// used to check if a parser is registered in the parser registry for a
-  /// given opcode.
-  /// Default to unreachable handler.
-  template <std::byte opCode, typename = void>
-  struct ParserInfo : std::false_type {
-    static constexpr auto handler = unreachableHandler;
-  };
+  using dispatch_t = parsed_inst_t (*)(OpBuilder &, ExpressionParser &);
+
   template <std::byte opCode>
-  struct ParserInfo<
-      opCode,
-      std::void_t<
-          decltype(&ParserRegistry::template parseInstrWithOpCode<opCode>)>>
-      : std::true_type {
-    static constexpr auto handler =
-        ParserRegistry::template parseInstrWithOpCode<opCode>;
-  };
+  static constexpr dispatch_t getHandlerForOpCode() {
+    if constexpr (ParserRegistry::template hasParserForOpcode<opCode>)
+      return ParserRegistry::template parseInstrWithOpCode<opCode>;
+    else
+      return unreachableHandler;
+  }
 
 public:
   template <std::byte opCode>
-  static constexpr bool isValidInst = ParserInfo<opCode>::value;
+  static constexpr bool isValidInst =
+      ParserRegistry::template hasParserForOpcode<opCode>;
 
 private:
   static inline parsed_inst_t
@@ -476,8 +472,6 @@ private:
            << static_cast<int>(opCode);
   }
 
-  using dispatch_t = parsed_inst_t (*)(OpBuilder &, ExpressionParser &);
-
   template <std::byte... opCodes>
   static inline parsed_inst_t dispatchImpl(std::byte opCode, OpBuilder &builder,
                                            ExpressionParser &exprParser,
@@ -485,7 +479,7 @@ private:
     static constexpr std::array<bool, 256> opcodeValidityMap{
         isValidInst<opCodes>...};
     static constexpr std::array<dispatch_t, 256> dispatchTable{
-        ParserInfo<opCodes>::handler...};
+        getHandlerForOpCode<opCodes>()...};
     if (opcodeValidityMap[static_cast<size_t>(opCode)]) {
       return dispatchTable[static_cast<size_t>(opCode)](builder, exprParser);
     }
@@ -1059,27 +1053,24 @@ parsed_inst_t ExpressionParser::parseBlockLikeOp(OpBuilder &builder) {
   return {ValueRange{successor->getArguments()}};
 }
 
-template <>
-inline parsed_inst_t
-ExpressionParser::TopLevelInstParserRegistry::parseInstrWithOpCode<
-    WasmBinaryEncoding::OpCode::block>(OpBuilder &builder,
-                                       ExpressionParser &exprParser) {
+#define REGISTER_PRIMARY_WASM_INST_PARSER(opcode)                              \
+  template <>                                                                  \
+  constexpr bool ExpressionParser::TopLevelInstParserRegistry::                \
+      hasParserForOpcode<opcode> = true;                                       \
+  template <>                                                                  \
+  inline parsed_inst_t                                                         \
+  ExpressionParser::TopLevelInstParserRegistry::parseInstrWithOpCode<opcode>(  \
+      OpBuilder & builder, ExpressionParser & exprParser)
+
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::block) {
   return exprParser.parseBlockLikeOp<BlockOp>(builder);
 }
 
-template <>
-inline parsed_inst_t
-ExpressionParser::TopLevelInstParserRegistry::parseInstrWithOpCode<
-    WasmBinaryEncoding::OpCode::loop>(OpBuilder &builder,
-                                      ExpressionParser &exprParser) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::loop) {
   return exprParser.parseBlockLikeOp<LoopOp>(builder);
 }
 
-template <>
-inline parsed_inst_t
-ExpressionParser::TopLevelInstParserRegistry::parseInstrWithOpCode<
-    WasmBinaryEncoding::OpCode::ifOpCode>(OpBuilder &builder,
-                                          ExpressionParser &exprParser) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::ifOpCode) {
   auto opLoc = exprParser.currentOpLoc;
   auto funcType = exprParser.parseBlockFuncType(builder);
   if (failed(funcType))
@@ -1124,11 +1115,7 @@ ExpressionParser::TopLevelInstParserRegistry::parseInstrWithOpCode<
   return {ValueRange{successor->getArguments()}};
 }
 
-template <>
-inline parsed_inst_t
-ExpressionParser::TopLevelInstParserRegistry::parseInstrWithOpCode<
-    WasmBinaryEncoding::OpCode::branchIf>(OpBuilder &builder,
-                                          ExpressionParser &exprParser) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::branchIf) {
   auto level = exprParser.parser.parseLiteral<uint32_t>();
   if (failed(level))
     return failure();
@@ -1155,11 +1142,7 @@ ExpressionParser::TopLevelInstParserRegistry::parseInstrWithOpCode<
   return {*branchArgs};
 }
 
-template <>
-inline parsed_inst_t
-ExpressionParser::TopLevelInstParserRegistry::parseInstrWithOpCode<
-    WasmBinaryEncoding::OpCode::call>(OpBuilder &builder,
-                                      ExpressionParser &exprParser) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::call) {
   auto loc = *exprParser.currentOpLoc;
   auto funcIdx = exprParser.parser.parseLiteral<uint32_t>();
   if (failed(funcIdx))
@@ -1177,11 +1160,7 @@ ExpressionParser::TopLevelInstParserRegistry::parseInstrWithOpCode<
   return {callOp.getResults()};
 }
 
-template <>
-inline parsed_inst_t
-ExpressionParser::TopLevelInstParserRegistry::parseInstrWithOpCode<
-    WasmBinaryEncoding::OpCode::localGet>(OpBuilder &builder,
-                                          ExpressionParser &exprParser) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::localGet) {
   FailureOr<uint32_t> id = exprParser.parser.parseLiteral<uint32_t>();
   Location instLoc = *exprParser.currentOpLoc;
   if (failed(id))
@@ -1194,11 +1173,7 @@ ExpressionParser::TopLevelInstParserRegistry::parseInstrWithOpCode<
                .getResult()}};
 }
 
-template <>
-inline parsed_inst_t
-ExpressionParser::TopLevelInstParserRegistry::parseInstrWithOpCode<
-    WasmBinaryEncoding::OpCode::globalGet>(OpBuilder &builder,
-                                           ExpressionParser &exprParser) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::globalGet) {
   FailureOr<uint32_t> id = exprParser.parser.parseLiteral<uint32_t>();
   Location instLoc = *exprParser.currentOpLoc;
   if (failed(id))
@@ -1235,19 +1210,11 @@ parsed_inst_t ExpressionParser::parseSetOrTee(OpBuilder &builder) {
           ->getResults()};
 }
 
-template <>
-inline parsed_inst_t
-ExpressionParser::TopLevelInstParserRegistry::parseInstrWithOpCode<
-    WasmBinaryEncoding::OpCode::localSet>(OpBuilder &builder,
-                                          ExpressionParser &exprParser) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::localSet) {
   return exprParser.parseSetOrTee<LocalSetOp>(builder);
 }
 
-template <>
-inline parsed_inst_t
-ExpressionParser::TopLevelInstParserRegistry::parseInstrWithOpCode<
-    WasmBinaryEncoding::OpCode::localTee>(OpBuilder &builder,
-                                          ExpressionParser &exprParser) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::localTee) {
   return exprParser.parseSetOrTee<LocalTeeOp>(builder);
 }
 
@@ -1319,35 +1286,19 @@ parsed_inst_t ExpressionParser::parseConstInst(
   return {{constOp.getResult()}};
 }
 
-template <>
-inline parsed_inst_t
-ExpressionParser::TopLevelInstParserRegistry::parseInstrWithOpCode<
-    WasmBinaryEncoding::OpCode::constI32>(OpBuilder &builder,
-                                          ExpressionParser &exprParser) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::constI32) {
   return exprParser.parseConstInst<int32_t>(builder);
 }
 
-template <>
-inline parsed_inst_t
-ExpressionParser::TopLevelInstParserRegistry::parseInstrWithOpCode<
-    WasmBinaryEncoding::OpCode::constI64>(OpBuilder &builder,
-                                          ExpressionParser &exprParser) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::constI64) {
   return exprParser.parseConstInst<int64_t>(builder);
 }
 
-template <>
-inline parsed_inst_t
-ExpressionParser::TopLevelInstParserRegistry::parseInstrWithOpCode<
-    WasmBinaryEncoding::OpCode::constFP32>(OpBuilder &builder,
-                                           ExpressionParser &exprParser) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::constFP32) {
   return exprParser.parseConstInst<float>(builder);
 }
 
-template <>
-inline parsed_inst_t
-ExpressionParser::TopLevelInstParserRegistry::parseInstrWithOpCode<
-    WasmBinaryEncoding::OpCode::constFP64>(OpBuilder &builder,
-                                           ExpressionParser &exprParser) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::constFP64) {
   return exprParser.parseConstInst<double>(builder);
 }
 
@@ -1370,6 +1321,9 @@ inline parsed_inst_t ExpressionParser::buildNumericOp(
 
 // Convenience macro for generating numerical operations.
 #define BUILD_NUMERIC_OP(OP_NAME, N_ARGS, PREFIX, SUFFIX, TYPE)                \
+  template <>                                                                  \
+  constexpr bool ExpressionParser::TopLevelInstParserRegistry::                \
+      hasParserForOpcode<WasmBinaryEncoding::OpCode::PREFIX##SUFFIX> = true;   \
   template <>                                                                  \
   inline parsed_inst_t ExpressionParser::TopLevelInstParserRegistry::          \
       parseInstrWithOpCode<WasmBinaryEncoding::OpCode::PREFIX##SUFFIX>(        \
@@ -1475,23 +1429,18 @@ inline parsed_inst_t ExpressionParser::buildConvertOp(OpBuilder &builder,
   return {{op.getResult()}};
 }
 
-template <>
-inline parsed_inst_t
-ExpressionParser::TopLevelInstParserRegistry::parseInstrWithOpCode<
-    WasmBinaryEncoding::OpCode::demoteF64ToF32>(OpBuilder &builder,
-                                                ExpressionParser &exprParser) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::demoteF64ToF32) {
   return exprParser.buildConvertOp<DemoteOp, double, float>(builder);
 }
 
-template <>
-inline parsed_inst_t
-ExpressionParser::TopLevelInstParserRegistry::parseInstrWithOpCode<
-    WasmBinaryEncoding::OpCode::wrap>(OpBuilder &builder,
-                                      ExpressionParser &exprParser) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::wrap) {
   return exprParser.buildConvertOp<WrapOp, int64_t, int32_t>(builder);
 }
 
 #define BUILD_CONVERSION_OP(IN_T, OUT_T, SOURCE_OP, TARGET_OP)                 \
+  template <>                                                                  \
+  constexpr bool ExpressionParser::TopLevelInstParserRegistry::                \
+      hasParserForOpcode<WasmBinaryEncoding::OpCode::SOURCE_OP> = true;        \
   template <>                                                                  \
   inline parsed_inst_t ExpressionParser::TopLevelInstParserRegistry::          \
       parseInstrWithOpCode<WasmBinaryEncoding::OpCode::SOURCE_OP>(             \
@@ -1528,6 +1477,11 @@ BUILD_CONVERSION_OP(int32_t, int64_t, extendU, ExtendUI32Op)
 
 #define BUILD_SLICE_EXTEND_PARSER(IT_WIDTH, EXTRACT_WIDTH)                     \
   template <>                                                                  \
+  constexpr bool                                                               \
+      ExpressionParser::TopLevelInstParserRegistry::hasParserForOpcode<        \
+          WasmBinaryEncoding::OpCode::extendI##IT_WIDTH##EXTRACT_WIDTH##S> =   \
+          true;                                                                \
+  template <>                                                                  \
   parsed_inst_t                                                                \
   ExpressionParser::TopLevelInstParserRegistry::parseInstrWithOpCode<          \
       WasmBinaryEncoding::OpCode::extendI##IT_WIDTH##EXTRACT_WIDTH##S>(        \
@@ -1546,15 +1500,15 @@ BUILD_SLICE_EXTEND_PARSER(64, 32)
 
 #undef BUILD_SLICE_EXTEND_PARSER
 
-template <>
-inline parsed_inst_t
-ExpressionParser::TopLevelInstParserRegistry::parseInstrWithOpCode<
-    WasmBinaryEncoding::OpCode::promoteF32ToF64>(OpBuilder &builder,
-                                                 ExpressionParser &exprParser) {
+REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::promoteF32ToF64) {
   return exprParser.buildConvertOp<PromoteOp, float, double>(builder);
 }
 
 #define BUILD_REINTERPRET_PARSER(WIDTH, FP_TYPE)                               \
+  template <>                                                                  \
+  constexpr bool                                                               \
+      ExpressionParser::TopLevelInstParserRegistry::hasParserForOpcode<        \
+          WasmBinaryEncoding::OpCode::reinterpretF##WIDTH##AsI##WIDTH> = true; \
   template <>                                                                  \
   inline parsed_inst_t                                                         \
   ExpressionParser::TopLevelInstParserRegistry::parseInstrWithOpCode<          \
@@ -1564,6 +1518,10 @@ ExpressionParser::TopLevelInstParserRegistry::parseInstrWithOpCode<
         builder);                                                              \
   }                                                                            \
                                                                                \
+  template <>                                                                  \
+  constexpr bool                                                               \
+      ExpressionParser::TopLevelInstParserRegistry::hasParserForOpcode<        \
+          WasmBinaryEncoding::OpCode::reinterpretI##WIDTH##AsF##WIDTH> = true; \
   template <>                                                                  \
   inline parsed_inst_t                                                         \
   ExpressionParser::TopLevelInstParserRegistry::parseInstrWithOpCode<          \
