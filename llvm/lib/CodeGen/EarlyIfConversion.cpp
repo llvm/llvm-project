@@ -820,7 +820,7 @@ namespace {
 class EarlyIfConverter {
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
-  MCSchedModel SchedModel;
+  const TargetSubtargetInfo *STI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   MachineDominatorTree *DomTree = nullptr;
   MachineLoopInfo *Loops = nullptr;
@@ -1099,8 +1099,8 @@ bool EarlyIfConverter::shouldConvertIf() {
   if (EnableDataDependentBranchAnalysis)
     DataDependent = isConditionDataDependent();
 
-  unsigned CritLimit = DataDependent ? SchedModel.MispredictPenalty
-                                     : SchedModel.MispredictPenalty / 2;
+  unsigned CritLimit = DataDependent ? STI->getMispredictionPenalty()
+                                     : STI->getMispredictionPenalty() / 2;
 
   MachineBasicBlock &MBB = *IfConv.Head;
   MachineOptimizationRemarkEmitter MORE(*MBB.getParent(), nullptr);
@@ -1278,14 +1278,13 @@ bool EarlyIfConverter::run(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** EARLY IF-CONVERSION **********\n"
                     << "********** Function: " << MF.getName() << '\n');
 
+  STI = &MF.getSubtarget();
   // Only run if conversion if the target wants it.
-  const TargetSubtargetInfo &STI = MF.getSubtarget();
-  if (!STI.enableEarlyIfConversion())
+  if (!STI->enableEarlyIfConversion())
     return false;
 
-  TII = STI.getInstrInfo();
-  TRI = STI.getRegisterInfo();
-  SchedModel = STI.getSchedModel();
+  TII = STI->getInstrInfo();
+  TRI = STI->getRegisterInfo();
   MRI = &MF.getRegInfo();
   MinInstr = nullptr;
 
