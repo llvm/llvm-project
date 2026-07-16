@@ -232,8 +232,9 @@ body: |
     ; GFX8-NEXT: [[SEXT_INREG6:%[0-9]+]]:_(s32) = G_SEXT_INREG [[ANYEXT]], 1
     ; GFX8-NEXT: [[SEXT_INREG7:%[0-9]+]]:_(s32) = G_SEXT_INREG [[ANYEXT1]], 1
     ; GFX8-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[SEXT_INREG6]](s32), [[SEXT_INREG7]](s32)
-    ; GFX8-NEXT: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[BITCAST]](<2 x s16>)
-    ; GFX8-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C1]](s32)
+    ; GFX8-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[BITCAST]](<2 x s16>)
+    ; GFX8-NEXT: [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; GFX8-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST1]], [[C2]](i32)
     ; GFX8-NEXT: [[SEXT_INREG8:%[0-9]+]]:_(s32) = G_SEXT_INREG [[BITCAST1]], 16
     ; GFX8-NEXT: [[SEXT_INREG9:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LSHR]], 16
     ; GFX8-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[SEXT_INREG8]](s32), [[SEXT_INREG9]](s32)

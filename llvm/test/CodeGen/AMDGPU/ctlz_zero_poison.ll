@@ -2405,28 +2405,13 @@ define <2 x i16> @v_ctlz_zero_poison_v2i16(<2 x i16> %val) {
 ; GFX9-GISEL-LABEL: v_ctlz_zero_poison_v2i16:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_pk_lshrrev_b16 v1, 1, v0 op_sel_hi:[0,1]
-; GFX9-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
-; GFX9-GISEL-NEXT:    v_pk_lshrrev_b16 v1, 2, v0 op_sel_hi:[0,1]
-; GFX9-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
-; GFX9-GISEL-NEXT:    v_pk_lshrrev_b16 v1, 4, v0 op_sel_hi:[0,1]
-; GFX9-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
-; GFX9-GISEL-NEXT:    v_pk_lshrrev_b16 v1, 8, v0 op_sel_hi:[0,1]
-; GFX9-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
-; GFX9-GISEL-NEXT:    v_xor_b32_e32 v0, -1, v0
-; GFX9-GISEL-NEXT:    v_pk_lshrrev_b16 v1, 1, v0 op_sel_hi:[0,1]
-; GFX9-GISEL-NEXT:    v_and_b32_e32 v1, 0x55555555, v1
-; GFX9-GISEL-NEXT:    v_pk_sub_i16 v0, v0, v1
-; GFX9-GISEL-NEXT:    v_and_b32_e32 v1, 0x33333333, v0
-; GFX9-GISEL-NEXT:    v_pk_lshrrev_b16 v0, 2, v0 op_sel_hi:[0,1]
-; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0x33333333, v0
-; GFX9-GISEL-NEXT:    v_pk_add_u16 v0, v1, v0
-; GFX9-GISEL-NEXT:    v_pk_lshrrev_b16 v1, 4, v0 op_sel_hi:[0,1]
-; GFX9-GISEL-NEXT:    v_pk_add_u16 v0, v0, v1
-; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0xf0f0f0f, v0
-; GFX9-GISEL-NEXT:    s_movk_i32 s4, 0x101
-; GFX9-GISEL-NEXT:    v_pk_mul_lo_u16 v0, v0, s4 op_sel_hi:[1,0]
-; GFX9-GISEL-NEXT:    v_pk_lshrrev_b16 v0, 8, v0 op_sel_hi:[0,1]
+; GFX9-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX9-GISEL-NEXT:    v_ffbh_u32_e32 v0, v0
+; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX9-GISEL-NEXT:    v_ffbh_u32_e32 v1, v1
+; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX9-GISEL-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %ctlz = call <2 x i16> @llvm.ctlz.v2i16(<2 x i16> %val, i1 true)
   ret <2 x i16> %ctlz
@@ -2466,14 +2451,17 @@ define <3 x i16> @v_ctlz_zero_poison_v3i16(<3 x i16> %val) {
 ; GFX9-GISEL-LABEL: v_ctlz_zero_poison_v3i16:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff0000, v0
+; GFX9-GISEL-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX9-GISEL-NEXT:    v_ffbh_u32_e32 v2, v2
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX9-GISEL-NEXT:    v_ffbh_u32_e32 v0, v0
-; GFX9-GISEL-NEXT:    s_mov_b32 s4, 0x5040100
+; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX9-GISEL-NEXT:    v_ffbh_u32_e32 v1, v1
-; GFX9-GISEL-NEXT:    v_perm_b32 v0, v2, v0, s4
+; GFX9-GISEL-NEXT:    v_ffbh_u32_e32 v2, v2
+; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX9-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX9-GISEL-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
+; GFX9-GISEL-NEXT:    v_lshl_or_b32 v1, s4, 16, v1
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %ctlz = call <3 x i16> @llvm.ctlz.v3i16(<3 x i16> %val, i1 true)
   ret <3 x i16> %ctlz
@@ -2521,17 +2509,20 @@ define <4 x i16> @v_ctlz_zero_poison_v4i16(<4 x i16> %val) {
 ; GFX9-GISEL-LABEL: v_ctlz_zero_poison_v4i16:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff0000, v1
-; GFX9-GISEL-NEXT:    v_and_b32_e32 v3, 0xffff0000, v0
-; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX9-GISEL-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
+; GFX9-GISEL-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX9-GISEL-NEXT:    v_ffbh_u32_e32 v0, v0
+; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX9-GISEL-NEXT:    v_ffbh_u32_e32 v1, v1
+; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX9-GISEL-NEXT:    v_ffbh_u32_e32 v2, v2
 ; GFX9-GISEL-NEXT:    v_ffbh_u32_e32 v3, v3
-; GFX9-GISEL-NEXT:    v_ffbh_u32_e32 v1, v1
-; GFX9-GISEL-NEXT:    v_ffbh_u32_e32 v0, v0
-; GFX9-GISEL-NEXT:    s_mov_b32 s4, 0x5040100
-; GFX9-GISEL-NEXT:    v_perm_b32 v0, v3, v0, s4
-; GFX9-GISEL-NEXT:    v_perm_b32 v1, v2, v1, s4
+; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX9-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX9-GISEL-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
+; GFX9-GISEL-NEXT:    v_lshl_or_b32 v1, v3, 16, v1
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %ctlz = call <4 x i16> @llvm.ctlz.v4i16(<4 x i16> %val, i1 true)
   ret <4 x i16> %ctlz

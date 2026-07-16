@@ -580,10 +580,11 @@ body: |
     ; GFX8-NEXT: [[AND8:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C2]]
     ; GFX8-NEXT: [[AND9:%[0-9]+]]:_(s32) = G_AND [[ANYEXT1]], [[C2]]
     ; GFX8-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[AND8]](s32), [[AND9]](s32)
-    ; GFX8-NEXT: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[BITCAST]](<2 x s16>)
-    ; GFX8-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C1]](s32)
+    ; GFX8-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[BITCAST]](<2 x s16>)
+    ; GFX8-NEXT: [[C3:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; GFX8-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST1]], [[C3]](i32)
     ; GFX8-NEXT: [[AND10:%[0-9]+]]:_(s32) = G_AND [[BITCAST1]], [[C]]
-    ; GFX8-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[AND10]](s32), [[LSHR]](s32)
+    ; GFX8-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[AND10]](s32), [[LSHR]](i32)
     ; GFX8-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR1]](<2 x s32>)
     ; GFX8-NEXT: $vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s32>)
     ;

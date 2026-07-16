@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu6.00-mesa-mesa3d < %s | FileCheck -check-prefixes=GCN,GFX6 %s
 ; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu9.00-mesa-mesa3d < %s | FileCheck -check-prefixes=GCN,GFX9 %s
 ; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu10.10-mesa-mesa3d < %s | FileCheck -check-prefixes=GFX10PLUS,GFX10 %s
-; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu11.00-mesa-mesa3d -mattr=+real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11,GFX11-TRUE16 %s
+; RUN: llc -global-isel -mtriple=amdgpu11.00-mesa-mesa3d -mattr=+real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11,GFX11-TRUE16 %s
 ; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu11.00-mesa-mesa3d -mattr=-real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11,GFX11-FAKE16 %s
 
 ; FIXME: regbankcombiner regression, related to:
