@@ -493,14 +493,13 @@ private:
   void analyzeCycleExitDivergence(Cycle DefCycle);
 
   /// \brief Mark as divergent all uses of \p I that are outside \p DefCycle.
-  void propagateTemporalDivergence(const InstructionT &I,
-                                   const Cycle &DefCycle);
+  void propagateTemporalDivergence(const InstructionT &I, Cycle DefCycle);
 
   /// \brief Push all users of \p Val (in the region) to the worklist.
   void pushUsers(const InstructionT &I);
   void pushUsers(ConstValueRefT V);
 
-  bool usesValueFromCycle(const InstructionT &I, const Cycle &DefCycle) const;
+  bool usesValueFromCycle(const InstructionT &I, Cycle DefCycle) const;
 
   /// \brief Whether \p Def is divergent when read in \p ObservingBlock.
   bool isTemporalDivergent(const BlockT &ObservingBlock,
