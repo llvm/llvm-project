@@ -2074,7 +2074,7 @@ void LoopInterchangeTransform::reduction2Memory() {
 
   LoopInterchangeLegality::InnerReduction SR = InnerReductions[0];
   BasicBlock *InnerLoopHeader = InnerLoop->getHeader();
-  IRBuilder<> Builder(&*(InnerLoopHeader->getFirstNonPHIIt()));
+  IRBuilder<> Builder(InnerLoopHeader, InnerLoopHeader->getFirstNonPHIIt());
 
   // Check if it's the first iteration.
   LLVMContext &Context = InnerLoopHeader->getContext();
@@ -2487,8 +2487,13 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   Instruction *OuterLoopPredecessorBI = OuterLoopPredecessor->getTerminator();
 
   BasicBlock *InnerLoopHeaderSuccessor = InnerLoopHeader->getUniqueSuccessor();
-  if (!InnerLoopHeaderSuccessor)
+
+  // FIXME: IR modification should not stop partway through.
+  if (!InnerLoopHeaderSuccessor) {
+    LLVM_DEBUG(
+        dbgs() << "Inner loop header does not have a unique successor\n");
     return false;
+  }
 
   // Adjust Loop Preheader and headers.
   // The branches in the outer loop predecessor and the outer loop header can

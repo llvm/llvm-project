@@ -165,6 +165,10 @@ private:
   /// attribute.
   LLVM_ABI bool isNobuiltinFnDef() const;
 
+  /// Returns true if the global is a function definition with the noipa
+  /// attribute.
+  LLVM_ABI bool isNoipaFnDef() const;
+
 protected:
   /// The intrinsic ID for this subclass (which must be a Function).
   ///
@@ -506,8 +510,12 @@ public:
   /// Return true if this global's definition can be substituted with an
   /// *arbitrary* definition at link time or load time. We cannot do any IPO or
   /// inlining across interposable call edges, since the callee can be
-  /// replaced with something arbitrary.
-  LLVM_ABI bool isInterposable() const;
+  /// replaced with something arbitrary. For most IPO passes, the `noipa`
+  /// attribute on a function definition is also treated as if it were
+  /// interposable (and thus blocking interprocedural analysis). Passes
+  /// which already have their own distinct control attributes (e.g. inlining)
+  /// may set `CheckNoIPA = false` when calling this.
+  LLVM_ABI bool isInterposable(bool CheckNoIPA = true) const;
   LLVM_ABI bool canBenefitFromLocalAlias() const;
 
   bool hasExternalLinkage() const { return isExternalLinkage(getLinkage()); }
@@ -589,17 +597,57 @@ private:
   /// used as the key for a global lookup (e.g. profile or ThinLTO).
   LLVM_ABI std::string getGlobalIdentifier() const;
 
+  /// Assign a GUID to this value based on its current name and linkage.
+  /// This GUID will remain the same even if those change. This method is
+  /// idempotent -- if a GUID has already been assigned, calling it again
+  /// will do nothing.
+  ///
+  /// This is private (exposed only to \c AssignGUIDPass), as users don't need
+  /// to call it. GUIDs are assigned only by \c AssignGUIDPass. The pass
+  /// pipeline should be set up such that GUIDs are always available when
+  /// needed. If not, the GUID assignment pass should be moved (or run again)
+  /// such that they are.
+  void assignGUID();
+
+  // assignGUID needs to be accessible from AssignGUIDPass, which is called
+  // early in the pipeline to make GUIDs available to later passes. But we'd
+  // rather not expose it publicly, as no-one else should call it.
+  friend class AssignGUIDPass;
+
+  MDNode *getGUIDMetadata() const;
+
 public:
   /// Return a 64-bit global unique ID constructed from the name of a global
   /// symbol. Since this call doesn't supply the linkage or defining filename,
   /// the GUID computation will assume that the global has external linkage.
   LLVM_ABI static GUID getGUIDAssumingExternalLinkage(StringRef GlobalName);
 
-  /// Return a 64-bit global unique ID constructed from global value name
-  /// (i.e. returned by getGlobalIdentifier()).
-  GUID getGUID() const {
-    return getGUIDAssumingExternalLinkage(getGlobalIdentifier());
-  }
+  /// Recompute and assign a GUID to this value, replacing the existing GUID.
+  LLVM_ABI void reassignGUID();
+
+  /// Return a 64-bit global unique ID for this value. It is based on the
+  /// "original" name and linkage of this value (i.e. whenever its GUID was
+  /// assigned). This might not match the current name and linkage.
+  ///
+  /// The \c AssignGUIDPass must be run before this is called, otherwise
+  /// GUIDs won't be available. This pass can be run multiple times as it does
+  /// nothing if GUID metadata is already present.
+  LLVM_ABI GUID getGUID() const;
+
+  /// Return the GUID for this value if it has been assigned, nullopt
+  /// otherwise. This should only need to be used in some exceptional
+  /// situations. If possible whatever code needs access to a GUID should
+  /// be set up to run after AssignGUIDPass, in which case it will always
+  /// be available.
+  LLVM_ABI std::optional<GUID> getGUIDIfAssigned() const;
+
+  /// Return the GUID for this value if it has been assigned, otherwise fall
+  /// back to computing it based on its current name and linkage.
+  ///
+  /// This is to be used in situations where we need a GUID but can't guarantee
+  /// that it's been computed. Notably, if we're reading from bitcode files
+  /// that might pre-date the storage of GUIDs in metadata.
+  LLVM_ABI GUID getGUIDOrFallback() const;
 
   /// @name Materialization
   /// Materialization is used to construct functions only as they're needed.

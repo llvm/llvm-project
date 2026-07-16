@@ -496,8 +496,8 @@ def github_link(issues, meeting_voted, status):
         link_github_issue(issue, meeting_voted, status)
 
 @github_cmd.command('create')
-@click.argument('csvfiles', nargs=-1, type=click.File('r'))
-@click.option('--load-github-from', type=click.File('r'), required=False,
+@click.argument('csvfiles', nargs=-1, type=click.File('r', encoding='utf-8'))
+@click.option('--load-github-from', type=click.File('r', encoding='utf-8'), required=False,
     help='Optionally load the Github Conformance tracking data from the given file. Useful to avoid '
          'running into API call limits when testing locally. See `conformance github download`.')
 @click.option('--labels', type=str, multiple=True,
@@ -572,7 +572,7 @@ def github_create(csvfiles, load_github_from, labels):
 
 
 @github_cmd.command('download')
-@click.option('--output', '-o', type=click.File('w'), default='-',
+@click.option('--output', '-o', type=click.File('w', encoding='utf-8'), default='-',
     help='Save the data to the provided file. Default is stdout.')
 def github_download(output):
     """Download libc++ conformance tracking data from Github issues and save it locally."""
@@ -587,7 +587,7 @@ def csv_cmd():
 
 
 @csv_cmd.command('validate')
-@click.argument('files', nargs=-1, type=click.File('r'))
+@click.argument('files', nargs=-1, type=click.File('r', encoding='utf-8'))
 def csv_validate(files):
     """Validate the format of the provided CSV files."""
     for file in files:
@@ -598,10 +598,10 @@ def csv_validate(files):
 
 
 @csv_cmd.command('synchronize')
-@click.argument('files', nargs=-1, type=click.File('r'))
-@click.option('--output', '-o', type=click.File('w'), default='-',
+@click.argument('files', nargs=-1, type=click.File('r', encoding='utf-8'))
+@click.option('--output', '-o', type=click.File('w', encoding='utf-8'), default='-',
     help='Write the generated CSV to the specified file. Defaults to stdout.')
-@click.option('--load-github-from', type=click.File('r'), required=False,
+@click.option('--load-github-from', type=click.File('r', encoding='utf-8'), required=False,
     help='Optionally load the Github Conformance tracking data from the given file. Useful to avoid '
          'running into API call limits when testing locally. See `conformance github download`.')
 def csv_synchronize(files, output, load_github_from):
@@ -622,9 +622,9 @@ def csv_synchronize(files, output, load_github_from):
 
 @csv_cmd.command('create')
 @click.argument('issues', nargs=-1)
-@click.option('--output', '-o', type=click.File('w'), default='-',
+@click.option('--output', '-o', type=click.File('w', encoding='utf-8'), default='-',
     help='Write the generated CSV to the specified file. Defaults to stdout.')
-@click.option('--load-github-from', type=click.File('r'), required=False,
+@click.option('--load-github-from', type=click.File('r', encoding='utf-8'), required=False,
     help='Optionally load the Github Conformance tracking data from the given file. Useful to avoid '
          'running into API call limits when testing locally. See `conformance github download`.')
 def csv_create(issues, output, load_github_from):

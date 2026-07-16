@@ -73,6 +73,7 @@ namespace {
 class PHIEliminationImpl {
   MachineRegisterInfo *MRI = nullptr; // Machine register information
   LiveVariables *LV = nullptr;
+  SlotIndexes *SI = nullptr;
   LiveIntervals *LIS = nullptr;
   MachineLoopInfo *MLI = nullptr;
   MachineDominatorTree *MDT = nullptr;
@@ -126,6 +127,7 @@ class PHIEliminationImpl {
 public:
   PHIEliminationImpl(MachineFunctionPass *P) : P(P) {
     auto *LVWrapper = P->getAnalysisIfAvailable<LiveVariablesWrapperPass>();
+    auto *SIWrapper = P->getAnalysisIfAvailable<SlotIndexesWrapperPass>();
     auto *LISWrapper = P->getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
     auto *MLIWrapper = P->getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
     auto *MDTWrapper =
@@ -138,6 +140,7 @@ public:
         P->getAnalysisIfAvailable<MachineBlockFrequencyInfoWrapperPass>();
 
     LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
+    SI = SIWrapper ? &SIWrapper->getSI() : nullptr;
     LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
     MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
     MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
@@ -148,6 +151,7 @@ public:
 
   PHIEliminationImpl(MachineFunction &MF, MachineFunctionAnalysisManager &AM)
       : LV(AM.getCachedResult<LiveVariablesAnalysis>(MF)),
+        SI(AM.getCachedResult<SlotIndexesAnalysis>(MF)),
         LIS(AM.getCachedResult<LiveIntervalsAnalysis>(MF)),
         MLI(AM.getCachedResult<MachineLoopAnalysis>(MF)),
         MDT(AM.getCachedResult<MachineDominatorTreeAnalysis>(MF)),
@@ -286,16 +290,16 @@ bool PHIEliminationImpl::run(MachineFunction &MF) {
   for (MachineInstr *DefMI : ImpDefs) {
     Register DefReg = DefMI->getOperand(0).getReg();
     if (MRI->use_nodbg_empty(DefReg)) {
-      if (LIS)
-        LIS->RemoveMachineInstrFromMaps(*DefMI);
+      if (SI)
+        SI->removeMachineInstrFromMaps(*DefMI);
       DefMI->eraseFromParent();
     }
   }
 
   // Clean up the lowered PHI instructions.
   for (auto &I : LoweredPHIs) {
-    if (LIS)
-      LIS->RemoveMachineInstrFromMaps(*I.first);
+    if (SI)
+      SI->removeMachineInstrFromMaps(*I.first);
     MF.deleteMachineInstr(I.first);
   }
 
@@ -485,9 +489,13 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
   }
 
   // Update LiveIntervals for the new copy or implicit def.
-  if (LIS) {
-    SlotIndex DestCopyIndex = LIS->InsertMachineInstrInMaps(*PHICopy);
+  SlotIndex DestCopyIndex;
+  if (SI)
+    DestCopyIndex = SI->insertMachineInstrInMaps(*PHICopy);
 
+  if (LIS) {
+    assert(DestCopyIndex.isValid() &&
+           "Expected a valid SlotIndex if LIS is available.");
     SlotIndex MBBStartIndex = LIS->getMBBStartIdx(&MBB);
     if (IncomingReg) {
       // Add the region from the beginning of MBB to the copy instruction to
@@ -694,9 +702,14 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
         LV->recomputeForSingleDefVirtReg(SrcReg);
     }
 
+    if (SI && NewSrcInstr)
+      SI->insertMachineInstrInMaps(*NewSrcInstr);
+
     if (LIS) {
       if (NewSrcInstr) {
-        LIS->InsertMachineInstrInMaps(*NewSrcInstr);
+        assert(
+            SI &&
+            "Expected SI to be available to insert new MI if LIS is available");
         LIS->addSegmentToEndOfBlock(IncomingReg, *NewSrcInstr);
       }
 
@@ -759,8 +772,8 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
 
   // Really delete the PHI instruction now, if it is not in the LoweredPHIs map.
   if (EliminateNow) {
-    if (LIS)
-      LIS->RemoveMachineInstrFromMaps(*MPhi);
+    if (SI)
+      SI->removeMachineInstrFromMaps(*MPhi);
     MF.deleteMachineInstr(MPhi);
   }
 }

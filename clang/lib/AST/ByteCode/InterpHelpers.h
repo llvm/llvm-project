@@ -118,6 +118,10 @@ inline bool Invalid(InterpState &S, CodePtr OpPC) {
 template <typename SizeT>
 bool CheckArraySize(InterpState &S, CodePtr OpPC, SizeT *NumElements,
                     unsigned ElemSize, bool IsNoThrow) {
+
+  if (ElemSize == 0)
+    return true;
+
   // FIXME: Both the SizeT::from() as well as the
   // NumElements.toAPSInt() in this function are rather expensive.
 

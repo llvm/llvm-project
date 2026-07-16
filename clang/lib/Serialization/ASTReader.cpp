@@ -276,6 +276,23 @@ void ChainedASTReaderListener::readModuleFileExtension(
 
 ASTReaderListener::~ASTReaderListener() = default;
 
+static LLVM_ATTRIBUTE_NOINLINE bool diagnoseLanguageOptionFlagMismatch(
+    DiagnosticsEngine *Diags, StringRef Description, bool SerializedValue,
+    bool CurrentValue, StringRef ModuleFilename) {
+  if (!Diags)
+    return true;
+  return Diags->Report(diag::err_ast_file_langopt_mismatch)
+         << Description << SerializedValue << CurrentValue << ModuleFilename;
+}
+
+static LLVM_ATTRIBUTE_NOINLINE bool diagnoseLanguageOptionValueMismatch(
+    DiagnosticsEngine *Diags, StringRef Description, StringRef ModuleFilename) {
+  if (!Diags)
+    return true;
+  return Diags->Report(diag::err_ast_file_langopt_value_mismatch)
+         << Description << ModuleFilename;
+}
+
 /// Compare the given set of language options against an existing set of
 /// language options.
 ///
@@ -298,16 +315,12 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
         (CK::Compatibility == CK::Compatible &&                                \
          !AllowCompatibleDifferences)) {                                       \
       if (ExistingLangOpts.Name != LangOpts.Name) {                            \
-        if (Diags) {                                                           \
-          if (Bits == 1)                                                       \
-            Diags->Report(diag::err_ast_file_langopt_mismatch)                 \
-                << Description << LangOpts.Name << ExistingLangOpts.Name       \
-                << ModuleFilename;                                             \
-          else                                                                 \
-            Diags->Report(diag::err_ast_file_langopt_value_mismatch)           \
-                << Description << ModuleFilename;                              \
-        }                                                                      \
-        return true;                                                           \
+        if (Bits == 1)                                                         \
+          return diagnoseLanguageOptionFlagMismatch(                           \
+              Diags, Description, LangOpts.Name, ExistingLangOpts.Name,        \
+              ModuleFilename);                                                 \
+        return diagnoseLanguageOptionValueMismatch(Diags, Description,         \
+                                                   ModuleFilename);            \
       }                                                                        \
     }                                                                          \
   }
@@ -318,10 +331,8 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
         (CK::Compatibility == CK::Compatible &&                                \
          !AllowCompatibleDifferences)) {                                       \
       if (ExistingLangOpts.Name != LangOpts.Name) {                            \
-        if (Diags)                                                             \
-          Diags->Report(diag::err_ast_file_langopt_value_mismatch)             \
-              << Description << ModuleFilename;                                \
-        return true;                                                           \
+        return diagnoseLanguageOptionValueMismatch(Diags, Description,         \
+                                                   ModuleFilename);            \
       }                                                                        \
     }                                                                          \
   }
@@ -332,10 +343,8 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
         (CK::Compatibility == CK::Compatible &&                                \
          !AllowCompatibleDifferences)) {                                       \
       if (ExistingLangOpts.get##Name() != LangOpts.get##Name()) {              \
-        if (Diags)                                                             \
-          Diags->Report(diag::err_ast_file_langopt_value_mismatch)             \
-              << Description << ModuleFilename;                                \
-        return true;                                                           \
+        return diagnoseLanguageOptionValueMismatch(Diags, Description,         \
+                                                   ModuleFilename);            \
       }                                                                        \
     }                                                                          \
   }
@@ -343,25 +352,19 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
 #include "clang/Basic/LangOptions.def"
 
   if (ExistingLangOpts.ModuleFeatures != LangOpts.ModuleFeatures) {
-    if (Diags)
-      Diags->Report(diag::err_ast_file_langopt_value_mismatch)
-          << "module features" << ModuleFilename;
-    return true;
+    return diagnoseLanguageOptionValueMismatch(Diags, "module features",
+                                               ModuleFilename);
   }
 
   if (ExistingLangOpts.ObjCRuntime != LangOpts.ObjCRuntime) {
-    if (Diags)
-      Diags->Report(diag::err_ast_file_langopt_value_mismatch)
-          << "target Objective-C runtime" << ModuleFilename;
-    return true;
+    return diagnoseLanguageOptionValueMismatch(
+        Diags, "target Objective-C runtime", ModuleFilename);
   }
 
   if (ExistingLangOpts.CommentOpts.BlockCommandNames !=
       LangOpts.CommentOpts.BlockCommandNames) {
-    if (Diags)
-      Diags->Report(diag::err_ast_file_langopt_value_mismatch)
-          << "block command names" << ModuleFilename;
-    return true;
+    return diagnoseLanguageOptionValueMismatch(Diags, "block command names",
+                                               ModuleFilename);
   }
 
   // Sanitizer feature mismatches are treated as compatible differences. If
@@ -8524,6 +8527,12 @@ Decl *ASTReader::getPredefinedDecl(PredefinedDeclIDs ID) {
     NewLoaded = Context.getBuiltinMSVaListDecl();
     break;
 
+  case PREDEF_DECL_BUILTIN_ZOS_VA_LIST_ID:
+    if (Context.BuiltinZOSVaListDecl)
+      return Context.BuiltinZOSVaListDecl;
+    NewLoaded = Context.getBuiltinZOSVaListDecl();
+    break;
+
   case PREDEF_DECL_BUILTIN_MS_GUID_ID:
     // ASTContext::getMSGuidTagDecl won't create MSGuidTagDecl conditionally.
     return Context.getMSGuidTagDecl();
@@ -9712,7 +9721,7 @@ void ASTReader::ReadExtVectorDecls(SmallVectorImpl<TypedefNameDecl *> &Decls) {
 }
 
 void ASTReader::ReadUnusedLocalTypedefNameCandidates(
-    llvm::SmallSetVector<const TypedefNameDecl *, 4> &Decls) {
+    llvm::SmallPtrSetImpl<const TypedefNameDecl *> &Decls) {
   for (unsigned I = 0, N = UnusedLocalTypedefNameCandidates.size(); I != N;
        ++I) {
     TypedefNameDecl *D = dyn_cast_or_null<TypedefNameDecl>(
@@ -12594,6 +12603,9 @@ void OMPClauseReader::VisitOMPAllocateClause(OMPAllocateClause *C) {
 }
 
 void OMPClauseReader::VisitOMPNumTeamsClause(OMPNumTeamsClause *C) {
+  C->setModifier(Record.readEnum<OpenMPNumTeamsClauseModifier>());
+  C->setModifierLoc(Record.readSourceLocation());
+  C->setModifierExpr(Record.readSubExpr());
   VisitOMPClauseWithPreInit(C);
   C->setLParenLoc(Record.readSourceLocation());
   unsigned NumVars = C->varlist_size();

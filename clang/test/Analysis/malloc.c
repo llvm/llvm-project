@@ -1,6 +1,5 @@
 // RUN: %clang_analyze_cc1 -Wno-strict-prototypes -Wno-error=implicit-int -verify %s \
 // RUN:   -Wno-alloc-size \
-// RUN:   -Wno-stringop-overread \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=alpha.deadcode.UnreachableCode \
 // RUN:   -analyzer-checker=unix \
@@ -71,6 +70,27 @@ void t3(void) {
   if (1024 < size)
     return;
   int *p = malloc(size); // No warning expected as the the user input is bound
+  free(p);
+}
+
+void t3_mul_bounded(void) {
+  size_t size = 0;
+  scanf("%zu", &size);
+  if (65536 < size)
+    return;
+  // A bounded tainted size stays bounded after multiplication by a constant,
+  // so the product cannot reach a dangerous magnitude. The 64-bit size_t
+  // product must not warn (used to be a false positive because the range of
+  // the multiplication was not inferred from its operands).
+  int *p = malloc(size * sizeof(int)); // No warning expected as the product is bound
+  free(p);
+}
+
+void t3_mul_unbounded(void) {
+  size_t size = 0;
+  scanf("%zu", &size);
+  // Without a bound the product is still attacker-controlled and can overflow.
+  int *p = malloc(size * sizeof(int)); // expected-warning{{malloc is called with a tainted (potentially attacker controlled) value}}
   free(p);
 }
 
@@ -1018,6 +1038,21 @@ void testWinWcsdupContentIsDefined(const wchar_t *s, unsigned validIndex) {
   wchar_t result = s2[1];// no warning
   free(s2);
 }
+
+struct if_nameindex { char x; };
+struct if_nameindex *if_nameindex(void);
+void if_freenameindex(struct if_nameindex *ptr);
+
+char testIfnameindex() {
+  struct if_nameindex *i = if_nameindex();
+  return i->x; // expected-warning {{Potential leak of memory pointed to by}}
+}
+
+void testIffreenameindex() {
+  struct if_nameindex *i = if_nameindex();
+  char x = i->x;
+  if_freenameindex(i);
+} // no warning
 
 // ----------------------------------------------------------------------------
 // Test the system library functions to which the pointer can escape.

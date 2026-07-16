@@ -20,27 +20,10 @@ using namespace clang;
 using namespace ento;
 using llvm::APSInt;
 
-/// Optionally conjure and return a symbol for offset when processing
-/// \p Elem.
-/// If \p Other is a location, conjure a symbol for \p Symbol
-/// (offset) if it is unknown so that memory arithmetic always
-/// results in an ElementRegion.
-/// \p Count The number of times the current basic block was visited.
-static SVal conjureOffsetSymbolOnLocation(SVal Symbol, SVal Other,
-                                          ConstCFGElementRef Elem, QualType Ty,
-                                          SValBuilder &svalBuilder,
-                                          unsigned Count,
-                                          const StackFrame *SF) {
-  if (isa<Loc>(Other) && Ty->isIntegralOrEnumerationType() &&
-      Symbol.isUnknown()) {
-    return svalBuilder.conjureSymbolVal(Elem, SF, Ty, Count);
-  }
-  return Symbol;
-}
-
 void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
                                      ExplodedNode *Pred,
                                      ExplodedNodeSet &Dst) {
+  const StackFrame *SF = Pred->getStackFrame();
 
   Expr *LHS = B->getLHS()->IgnoreParens();
   Expr *RHS = B->getRHS()->IgnoreParens();
@@ -51,19 +34,14 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
   getCheckerManager().runCheckersForPreStmt(CheckedSet, Pred, B, *this);
 
   // With both the LHS and RHS evaluated, process the operation itself.
-  for (ExplodedNodeSet::iterator it=CheckedSet.begin(), ei=CheckedSet.end();
-         it != ei; ++it) {
-
-    ProgramStateRef state = (*it)->getState();
-    const StackFrame *SF = (*it)->getStackFrame();
-    SVal LeftV = state->getSVal(LHS, SF);
-    SVal RightV = state->getSVal(RHS, SF);
+  for (ExplodedNode *N : CheckedSet) {
+    ProgramStateRef State = N->getState();
+    SVal LeftV = State->getSVal(LHS, SF);
+    SVal RightV = State->getSVal(RHS, SF);
 
     BinaryOperator::Opcode Op = B->getOpcode();
 
     if (Op == BO_Assign) {
-      // EXPERIMENTAL: "Conjured" symbols.
-      // FIXME: Handle structs.
       if (RightV.isUnknown()) {
         unsigned Count = getNumVisitedCurrent();
         RightV = svalBuilder.conjureSymbolVal(nullptr, getCFGElementRef(), SF,
@@ -72,44 +50,45 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
       // Simulate the effects of a "store":  bind the value of the RHS
       // to the L-Value represented by the LHS.
       SVal ExprVal = B->isGLValue() ? LeftV : RightV;
-      evalStore(Tmp2, B, LHS, *it, state->BindExpr(B, SF, ExprVal), LeftV,
+      evalStore(Tmp2, B, LHS, N, State->BindExpr(B, SF, ExprVal), LeftV,
                 RightV);
       continue;
     }
 
     if (!B->isAssignmentOp()) {
-      NodeBuilder Bldr(*it, Tmp2, *currBldrCtx);
-
       if (B->isAdditiveOp()) {
-        // TODO: This can be removed after we enable history tracking with
-        // SymSymExpr.
-        unsigned Count = getNumVisitedCurrent();
-        RightV = conjureOffsetSymbolOnLocation(
-            RightV, LeftV, getCFGElementRef(), RHS->getType(), svalBuilder,
-            Count, SF);
-        LeftV = conjureOffsetSymbolOnLocation(LeftV, RightV, getCFGElementRef(),
-                                              LHS->getType(), svalBuilder,
-                                              Count, SF);
+        // Ensure that if `p` is a pointer and `i` is an integer with Unknown
+        // value, then `p+i`, `i+p` and `p-i` are evaluated to element regions
+        // (with a symbolic offset) instead of Unknown.
+        auto ConjureIfNeeded = [this, SF](SVal &V, SVal Other, QualType VTy) {
+          if (isa<Loc>(Other) && VTy->isIntegralOrEnumerationType() &&
+              V.isUnknown()) {
+            V = svalBuilder.conjureSymbolVal(getCFGElementRef(), SF, VTy,
+                                             getNumVisitedCurrent());
+          }
+        };
+        ConjureIfNeeded(RightV, LeftV, RHS->getType());
+        ConjureIfNeeded(LeftV, RightV, LHS->getType());
       }
 
       // Although we don't yet model pointers-to-members, we do need to make
       // sure that the members of temporaries have a valid 'this' pointer for
       // other checks.
       if (B->getOpcode() == BO_PtrMemD)
-        state = createTemporaryRegionIfNeeded(state, SF, LHS);
+        State = createTemporaryRegionIfNeeded(State, SF, LHS);
 
       // Process non-assignments except commas or short-circuited
       // logical expressions (LAnd and LOr).
-      SVal Result = evalBinOp(state, Op, LeftV, RightV, B->getType());
+      SVal Result = evalBinOp(State, Op, LeftV, RightV, B->getType());
       if (!Result.isUnknown()) {
-        state = state->BindExpr(B, SF, Result);
+        State = State->BindExpr(B, SF, Result);
       } else {
         // If we cannot evaluate the operation escape the operands.
-        state = escapeValues(state, LeftV, PSK_EscapeOther);
-        state = escapeValues(state, RightV, PSK_EscapeOther);
+        State = escapeValues(State, LeftV, PSK_EscapeOther);
+        State = escapeValues(State, RightV, PSK_EscapeOther);
       }
 
-      Bldr.generateNode(B, *it, state);
+      Tmp2.insert(Engine.makePostStmtNode(B, State, N));
       continue;
     }
 
@@ -133,60 +112,51 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
     // Perform a load (the LHS).  This performs the checks for
     // null dereferences, and so on.
     ExplodedNodeSet Tmp;
-    SVal location = LeftV;
-    evalLoad(Tmp, B, LHS, *it, state, location);
+    evalLoad(Tmp, B, LHS, N, State, LeftV);
 
     for (ExplodedNode *N : Tmp) {
-      state = N->getState();
-      const StackFrame *SF = N->getStackFrame();
-      SVal V = state->getSVal(LHS, SF);
+      State = N->getState();
+      SVal V = State->getSVal(LHS, SF);
 
-      // Get the computation type.
-      QualType CTy =
-        cast<CompoundAssignOperator>(B)->getComputationResultType();
-      CTy = getContext().getCanonicalType(CTy);
-
-      QualType CLHSTy =
-        cast<CompoundAssignOperator>(B)->getComputationLHSType();
-      CLHSTy = getContext().getCanonicalType(CLHSTy);
-
-      QualType LTy = getContext().getCanonicalType(LHS->getType());
+      // Determine the relevant types.
+      const ASTContext &ACtx = getContext();
+      const auto *CAOpB = cast<CompoundAssignOperator>(B);
+      QualType CTy = ACtx.getCanonicalType(CAOpB->getComputationResultType());
+      QualType CLHSTy = ACtx.getCanonicalType(CAOpB->getComputationLHSType());
+      QualType LTy = ACtx.getCanonicalType(LHS->getType());
 
       // Promote LHS.
       V = svalBuilder.evalCast(V, CLHSTy, LTy);
 
       // Compute the result of the operation.
-      SVal Result = svalBuilder.evalCast(evalBinOp(state, Op, V, RightV, CTy),
+      SVal Result = svalBuilder.evalCast(evalBinOp(State, Op, V, RightV, CTy),
                                          B->getType(), CTy);
 
-      // EXPERIMENTAL: "Conjured" symbols.
-      // FIXME: Handle structs.
-
-      SVal LHSVal;
+      SVal StoredInLeftV;
 
       if (Result.isUnknown()) {
         // The symbolic value is actually for the type of the left-hand side
         // expression, not the computation type, as this is the value the
         // LValue on the LHS will bind to.
-        LHSVal = svalBuilder.conjureSymbolVal(/*symbolTag=*/nullptr,
-                                              getCFGElementRef(), SF, LTy,
-                                              getNumVisitedCurrent());
+        StoredInLeftV = svalBuilder.conjureSymbolVal(
+            /*symbolTag=*/nullptr, getCFGElementRef(), SF, LTy,
+            getNumVisitedCurrent());
         // However, we need to convert the symbol to the computation type.
-        Result = svalBuilder.evalCast(LHSVal, CTy, LTy);
+        Result = svalBuilder.evalCast(StoredInLeftV, CTy, LTy);
       } else {
         // The left-hand side may bind to a different value then the
         // computation type.
-        LHSVal = svalBuilder.evalCast(Result, LTy, CTy);
+        StoredInLeftV = svalBuilder.evalCast(Result, LTy, CTy);
       }
 
       // In C++, assignment and compound assignment operators return an
       // lvalue.
       if (B->isGLValue())
-        state = state->BindExpr(B, SF, location);
+        State = State->BindExpr(B, SF, LeftV);
       else
-        state = state->BindExpr(B, SF, Result);
+        State = State->BindExpr(B, SF, Result);
 
-      evalStore(Tmp2, B, LHS, N, state, location, LHSVal);
+      evalStore(Tmp2, B, LHS, N, State, LeftV, StoredInLeftV);
     }
   }
 
@@ -618,6 +588,27 @@ void ExprEngine::VisitDeclStmt(const DeclStmt *DS, ExplodedNode *Pred,
     //TODO:AZ: remove explicit insertion after refactoring is done.
     Dst.insert(Pred);
     return;
+  }
+
+  // Self-assignment initialization in variable declaration,
+  // i.e., `int x = x;`,
+  // is a C idiom to suppress warnings of unused variables.
+  // This filter will not match variables of C++ record types, but will match
+  // C++ references. Allow references continuing here to make the undefined
+  // value checker report self-assignments of C++ references.
+  if (const Expr *EI = VD->getInit()) {
+    // Ignore InitListExpr if exists.
+    if (const auto *IL = dyn_cast<InitListExpr>(EI);
+        IL && IL->getNumInits() == 1)
+      EI = IL->getInit(0);
+
+    // Ignore parentheses and implict casts.
+    if (const auto *DR = dyn_cast<DeclRefExpr>(EI->IgnoreParenImpCasts())) {
+      if (VD == DR->getDecl() && !VD->getType()->isReferenceType()) {
+        Dst.insert(Pred);
+        return;
+      }
+    }
   }
 
   // FIXME: all pre/post visits should eventually be handled by ::Visit().

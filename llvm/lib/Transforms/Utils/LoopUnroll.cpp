@@ -1284,6 +1284,10 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // Loop over the PHI nodes in the original block, setting incoming values.
   for (PHINode *PN : OrigPHINode) {
     if (CompletelyUnroll) {
+      // The RAUW below disconnects the original PHI from its users.
+      // Invalidate cached SCEVs while the def-use chain is still intact.
+      if (SE)
+        SE->forgetValue(PN);
       PN->replaceAllUsesWith(PN->getIncomingValueForBlock(Preheader));
       PN->eraseFromParent();
     } else if (ULO.Count > 1) {
@@ -1727,18 +1731,21 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
   if (RdxDesc.IntermediateStore)
     return std::nullopt;
 
+  BasicBlock *Latch = L->getLoopLatch();
+  if (!Latch)
+    return std::nullopt;
+  Instruction *LatchInst =
+      cast<Instruction>(Phi.getIncomingValueForBlock(Latch));
   // Don't unroll reductions with constant ops; those can be folded to a
-  // single induction update.
-  if (any_of(cast<Instruction>(Phi.getIncomingValueForBlock(L->getLoopLatch()))
-                 ->operands(),
-             IsaPred<Constant>))
+  // single induction update. For calls (e.g. fmuladd or min/max
+  // intrinsics), the called function is itself a Constant operand and is
+  // not a reduction operand, so restrict the check to the argument list.
+  auto Ops = isa<CallBase>(LatchInst) ? cast<CallBase>(LatchInst)->args()
+                                      : LatchInst->operands();
+  if (any_of(Ops, IsaPred<Constant>))
     return std::nullopt;
 
-  BasicBlock *Latch = L->getLoopLatch();
-  if (!Latch ||
-      !is_contained(
-          cast<Instruction>(Phi.getIncomingValueForBlock(Latch))->operands(),
-          &Phi))
+  if (!is_contained(LatchInst->operands(), &Phi))
     return std::nullopt;
 
   return RdxDesc;
