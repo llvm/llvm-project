@@ -211,6 +211,13 @@ int main(int, char**) {
       }
 
       {
+        // reverse_copy(first, last, dest)
+        assert_non_throwing([=, &policy] {
+          (void)std::reverse_copy(policy, std::move(first1), std::move(last1), std::move(dest));
+        });
+      }
+
+      {
         auto pred = maybe_throw(tokens[5], [](int x) -> bool { return x % 2 == 0; });
 
         // is_partitioned(first, last, pred)

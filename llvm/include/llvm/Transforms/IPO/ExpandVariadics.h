@@ -14,7 +14,6 @@ namespace llvm {
 
 class Module;
 class ModulePass;
-class OptimizationLevel;
 
 enum class ExpandVariadicsMode {
   Unspecified, // Use the implementation defaults

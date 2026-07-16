@@ -207,8 +207,7 @@ typedef unsigned char a8;
 typedef unsigned short a16;
 typedef unsigned int a32;
 typedef unsigned long long a64;
-#if !SANITIZER_GO &&                                      \
-    (defined(__SIZEOF_INT128__) ||                        \
+#if (defined(__SIZEOF_INT128__) ||                        \
      (__clang_major__ * 100 + __clang_minor__ >= 302)) && \
     !defined(__mips64) && !defined(__s390x__)
 __extension__ typedef __int128 a128;
@@ -411,10 +410,18 @@ SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic32_load(ThreadState *thr, uptr cpc, uptr pc, u8 *a);
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic64_load(ThreadState *thr, uptr cpc, uptr pc, u8 *a);
+#if __TSAN_HAS_INT128
+SANITIZER_INTERFACE_ATTRIBUTE
+void __tsan_go_atomic128_load(ThreadState* thr, uptr cpc, uptr pc, u8* a);
+#endif
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic32_store(ThreadState *thr, uptr cpc, uptr pc, u8 *a);
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic64_store(ThreadState *thr, uptr cpc, uptr pc, u8 *a);
+#if __TSAN_HAS_INT128
+SANITIZER_INTERFACE_ATTRIBUTE
+void __tsan_go_atomic128_store(ThreadState* thr, uptr cpc, uptr pc, u8* a);
+#endif
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic32_fetch_add(ThreadState *thr, uptr cpc, uptr pc, u8 *a);
 SANITIZER_INTERFACE_ATTRIBUTE
@@ -437,6 +444,11 @@ void __tsan_go_atomic32_compare_exchange(ThreadState *thr, uptr cpc, uptr pc,
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic64_compare_exchange(ThreadState *thr, uptr cpc, uptr pc,
                                          u8 *a);
+#if __TSAN_HAS_INT128
+SANITIZER_INTERFACE_ATTRIBUTE
+void __tsan_go_atomic128_compare_exchange(ThreadState* thr, uptr cpc, uptr pc,
+                                          u8* a);
+#endif
 
 }  // extern "C"
 
