@@ -50,6 +50,17 @@ entry:
   ret <2 x i32> %vector
 }
 
+define <2 x i32> @extract_v2i32_v8i32_mid(<8 x i32> %a) {
+; CHECK-LABEL: extract_v2i32_v8i32_mid:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
+entry:
+  %vector = call <2 x i32> @llvm.vector.extract.subvector.v2i32.v8i32(<8 x i32> %a, i64 4)
+  ret <2 x i32> %vector
+}
+
 define <2 x i32> @extract_v2i32_v8i32_high(<8 x i32> %a) {
 ; CHECK-LABEL: extract_v2i32_v8i32_high:
 ; CHECK:       // %bb.0: // %entry
@@ -143,6 +154,16 @@ define <4 x i16> @extract_v4i16_v16i16_low(<16 x i16> %a) {
 ; CHECK-NEXT:    ret
 entry:
   %vector = call <4 x i16> @llvm.vector.extract.subvector.v4i16.v16i16(<16 x i16> %a, i64 0)
+  ret <4 x i16> %vector
+}
+
+define <4 x i16> @extract_v4i16_v16i16_mid(<16 x i16> %a) {
+; CHECK-LABEL: extract_v4i16_v16i16_mid:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov d0, v1.d[1]
+; CHECK-NEXT:    ret
+entry:
+  %vector = call <4 x i16> @llvm.vector.extract.subvector.v4i16.v16i16(<16 x i16> %a, i64 12)
   ret <4 x i16> %vector
 }
 
@@ -251,6 +272,16 @@ define <8 x i8> @extract_v8i8_v32i8_low(<32 x i8> %a) {
 ; CHECK-NEXT:    ret
 entry:
   %vector = call <8 x i8> @llvm.vector.extract.subvector.v8i8.v32i8(<32 x i8> %a, i64 0)
+  ret <8 x i8> %vector
+}
+
+define <8 x i8> @extract_v8i8_v32i8_mid(<32 x i8> %a) {
+; CHECK-LABEL: extract_v8i8_v32i8_mid:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov d0, v0.d[1]
+; CHECK-NEXT:    ret
+entry:
+  %vector = call <8 x i8> @llvm.vector.extract.subvector.v8i8.v32i8(<32 x i8> %a, i64 8)
   ret <8 x i8> %vector
 }
 
