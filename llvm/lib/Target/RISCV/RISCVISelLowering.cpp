@@ -2091,7 +2091,7 @@ RISCVTargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
   // spend eagerly computing the RHS condition should scale with how expensive a
   // mispredicted branch is. A branch only costs the full penalty when actually
   // mispredicted, so scale it down by an assumed misprediction rate (~25%).
-  int BaseCost = Subtarget.getSchedModel().MispredictPenalty / 4;
+  int BaseCost = Subtarget.getMispredictionPenalty() / 4;
   if (BrMergingBaseCostThresh.getNumOccurrences() > 1)
     BaseCost = BrMergingBaseCostThresh;
 
