@@ -136,6 +136,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 #### Bug Fixes to C++ Support
 
+- Fixed a crash when a using-declaration naming an unresolvable member of a
+  dependent base was shadowed by an invalid using-declaration. (#GH209427)
+
 #### Bug Fixes to AST Handling
 
 #### Miscellaneous Bug Fixes
