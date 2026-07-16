@@ -29168,8 +29168,10 @@ static SDValue foldMaskedShiftToUSHL(SelectionDAG &DAG,
                                      bool IsSRL) {
   using namespace llvm::SDPatternMatch;
   EVT VT = N->getValueType(0);
+  // ushl only exists for 64 and 128 bit vectors.
   if (!Subtarget->isNeonAvailable() || !VT.isFixedLengthVector() ||
-      !VT.isInteger() || !DAG.getTargetLoweringInfo().isTypeLegal(VT))
+      !VT.isInteger() || !(VT.is64BitVector() || VT.is128BitVector()) ||
+      !DAG.getTargetLoweringInfo().isTypeLegal(VT))
     return SDValue();
 
   unsigned EltSize = VT.getScalarSizeInBits();

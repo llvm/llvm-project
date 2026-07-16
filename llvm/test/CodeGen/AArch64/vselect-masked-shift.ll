@@ -244,3 +244,34 @@ entry:
 }
 
 attributes #0 = { "target-features"="+sve" }
+
+define <8 x i32> @neg_masked_shl_v8i32_sve_vls(<8 x i32> %x, <8 x i32> %amt) #1 {
+; CHECK-LABEL: neg_masked_shl_v8i32_sve_vls:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    // kill: def $q3 killed $q3 def $z3
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    splice z2.s, p0, z2.s, z3.s
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    and z2.s, z2.s, #0x3f
+; CHECK-NEXT:    cmplo p0.s, p1/z, z2.s, #32
+; CHECK-NEXT:    lsl z0.s, p1/m, z0.s, z2.s
+; CHECK-NEXT:    mov z1.s, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    and z0.d, z1.d, z0.d
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
+; CHECK-NEXT:    ret
+entry:
+  %m = and <8 x i32> %amt, splat (i32 63)
+  %shl = shl <8 x i32> %x, %m
+  %ok = icmp ult <8 x i32> %m, splat (i32 32)
+  %res = select <8 x i1> %ok, <8 x i32> %shl, <8 x i32> zeroinitializer
+  ret <8 x i32> %res
+}
+
+attributes #1 = { "target-features"="+sve" vscale_range(2,2) }
