@@ -118,6 +118,25 @@ llvm.func @test_allocate_array_global() {
 
 // -----
 
+// Verifies that array size is correctly calculated from a stack alloca:
+// [10 x i32] = 40 bytes, rounded up to alignment 64 => 64 bytes.
+//
+// CHECK-LABEL: define void @test_allocate_array_stack
+// CHECK:   %[[TID:.*]] = call i32 @__kmpc_global_thread_num(
+// CHECK:   %[[ALLOC:.*]] = call ptr @__kmpc_aligned_alloc(i32 %[[TID]], i64 64, i64 64, ptr null)
+// CHECK:   %[[TID_FREE:.*]] = call i32 @__kmpc_global_thread_num(
+// CHECK:   call void @__kmpc_free(i32 %[[TID_FREE]], ptr %[[ALLOC]], ptr null)
+// CHECK:   ret void
+llvm.func @test_allocate_array_stack() {
+  %one = llvm.mlir.constant(1 : i64) : i64
+  %arr = llvm.alloca %one x !llvm.array<10 x i32> : (i64) -> !llvm.ptr
+  omp.allocate_dir (%arr : !llvm.ptr) align(64)
+  omp.allocate_free (%arr : !llvm.ptr)
+  llvm.return
+}
+
+// -----
+
 // Verifies that loads and stores after omp.allocate_dir use the OMP-allocated
 // pointer rather than the original storage.
 //
@@ -135,5 +154,38 @@ llvm.func @test_allocate_use(%arg0: !llvm.ptr) {
   llvm.store %c42, %arg0 : i32, !llvm.ptr
   %v = llvm.load %arg0 : !llvm.ptr -> i32
   omp.allocate_free (%arg0 : !llvm.ptr)
+  llvm.return
+}
+
+// -----
+
+// Verifies remapping when a global has multiple GEP users (COMMON block shape).
+//
+// CHECK-LABEL: define void @test_allocate_global_gep_users
+// CHECK:   %[[TID:.*]] = call i32 @__kmpc_global_thread_num(
+// CHECK:   %[[ALLOC:.*]] = call ptr @__kmpc_alloc(i32 %[[TID]], i64 8, ptr null)
+// CHECK:   %[[GEP4:.*]] = getelementptr i8, ptr %[[ALLOC]], i64 4
+// CHECK:   store i32 1, ptr %[[ALLOC]], align 4
+// CHECK:   store i32 2, ptr %[[GEP4]], align 4
+// CHECK:   %[[TID_FREE:.*]] = call i32 @__kmpc_global_thread_num(
+// CHECK:   call void @__kmpc_free(i32 %[[TID_FREE]], ptr %[[ALLOC]], ptr null)
+// CHECK:   ret void
+llvm.mlir.global internal @common_like() : !llvm.array<2 x i32> {
+  %0 = llvm.mlir.zero : !llvm.array<2 x i32>
+  llvm.return %0 : !llvm.array<2 x i32>
+}
+
+llvm.func @test_allocate_global_gep_users() {
+  %base = llvm.mlir.addressof @common_like : !llvm.ptr
+  %c0 = llvm.mlir.constant(0 : i64) : i64
+  %c1 = llvm.mlir.constant(1 : i64) : i64
+  %m0 = llvm.getelementptr %base[%c0, %c0] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.array<2 x i32>
+  %m1 = llvm.getelementptr %base[%c0, %c1] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.array<2 x i32>
+  omp.allocate_dir (%base : !llvm.ptr)
+  %one = llvm.mlir.constant(1 : i32) : i32
+  %two = llvm.mlir.constant(2 : i32) : i32
+  llvm.store %one, %m0 : i32, !llvm.ptr
+  llvm.store %two, %m1 : i32, !llvm.ptr
+  omp.allocate_free (%base : !llvm.ptr)
   llvm.return
 }

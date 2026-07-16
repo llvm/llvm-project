@@ -6921,6 +6921,64 @@ static Value getBaseValueForTypeLookup(Value value) {
   return value;
 }
 
+// Determine the LLVM type whose storage size should be allocated for an
+// OpenMP allocate directive list item. Opaque pointers lose element type, so
+// trace through declare wrappers to the underlying global or stack allocation.
+static llvm::Type *
+getAllocatedLlvmTypeForVariable(Value var,
+                                LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Type *llvmVarTy = moduleTranslation.convertType(var.getType());
+  if (!llvmVarTy->isPointerTy())
+    return llvmVarTy;
+
+  Value baseVar = getBaseValueForTypeLookup(var);
+  if (Operation *globalOp = getGlobalOpFromValue(baseVar))
+    if (auto gop = dyn_cast<LLVM::GlobalOp>(globalOp))
+      return moduleTranslation.convertType(gop.getGlobalType());
+
+  if (auto allocaOp =
+          dyn_cast_if_present<LLVM::AllocaOp>(baseVar.getDefiningOp()))
+    return moduleTranslation.convertType(allocaOp.getElemType());
+
+  if (llvm::Value *baseLlvm = moduleTranslation.lookupValue(baseVar))
+    if (auto *allocaInst = dyn_cast<llvm::AllocaInst>(baseLlvm))
+      return allocaInst->getAllocatedType();
+
+  return llvmVarTy;
+}
+
+// For dynamically-sized stack allocations, compute the allocation size from
+// the alloca's element count at runtime.
+static std::optional<llvm::Value *>
+getDynamicAllocatedSize(Value var, LLVM::ModuleTranslation &moduleTranslation,
+                        llvm::IRBuilderBase &builder,
+                        const llvm::DataLayout &dataLayout) {
+  Value baseVar = getBaseValueForTypeLookup(var);
+  if (auto allocaOp =
+          dyn_cast_if_present<LLVM::AllocaOp>(baseVar.getDefiningOp())) {
+    if (Value arraySize = allocaOp.getArraySize()) {
+      llvm::Type *elemTy =
+          moduleTranslation.convertType(allocaOp.getElemType());
+      llvm::Value *numElems = moduleTranslation.lookupValue(arraySize);
+      uint64_t elemSize = dataLayout.getTypeStoreSize(elemTy).getFixedValue();
+      return builder.CreateMul(numElems, builder.getInt64(elemSize));
+    }
+  }
+  if (llvm::Value *baseLlvm = moduleTranslation.lookupValue(baseVar)) {
+    if (auto *allocaInst = dyn_cast<llvm::AllocaInst>(baseLlvm)) {
+      if (allocaInst->isArrayAllocation() &&
+          !llvm::isa<llvm::ArrayType>(allocaInst->getAllocatedType())) {
+        uint64_t elemSize =
+            dataLayout.getTypeStoreSize(allocaInst->getAllocatedType())
+                .getFixedValue();
+        return builder.CreateMul(allocaInst->getArraySize(),
+                                 builder.getInt64(elemSize));
+      }
+    }
+  }
+  return std::nullopt;
+}
+
 static llvm::SmallString<64>
 getDeclareTargetRefPtrSuffix(LLVM::GlobalOp globalOp,
                              llvm::OpenMPIRBuilder &ompBuilder,
@@ -10244,21 +10302,14 @@ convertAllocateDirOp(Operation &opInst, llvm::IRBuilderBase &builder,
   }
 
   for (Value var : vars) {
-    llvm::Type *llvmVarTy = moduleTranslation.convertType(var.getType());
-
-    // Opaque pointers lose element type. Trace to GlobalOp for type
-    // Falls back to llvmVarTy when not from a global.
-    llvm::Type *typeToInspect = llvmVarTy;
-    if (llvmVarTy->isPointerTy()) {
-      Value baseVar = getBaseValueForTypeLookup(var);
-      if (Operation *globalOp = getGlobalOpFromValue(baseVar)) {
-        if (auto gop = dyn_cast<LLVM::GlobalOp>(globalOp))
-          typeToInspect = moduleTranslation.convertType(gop.getGlobalType());
-      }
-    }
+    llvm::Type *typeToInspect =
+        getAllocatedLlvmTypeForVariable(var, moduleTranslation);
 
     llvm::Value *size;
-    if (auto arrTy = llvm::dyn_cast<llvm::ArrayType>(typeToInspect)) {
+    if (std::optional<llvm::Value *> dynamicSize = getDynamicAllocatedSize(
+            var, moduleTranslation, builder, dataLayout)) {
+      size = *dynamicSize;
+    } else if (auto arrTy = llvm::dyn_cast<llvm::ArrayType>(typeToInspect)) {
       llvm::Value *elementCount = builder.getInt64(1);
       llvm::Type *currentType = arrTy;
       while (auto nestedArrTy = llvm::dyn_cast<llvm::ArrayType>(currentType)) {
@@ -10301,11 +10352,11 @@ convertAllocateDirOp(Operation &opInst, llvm::IRBuilderBase &builder,
     if (llvm::Value *baseLlvm = moduleTranslation.lookupValue(baseVar)) {
       llvm::Value *boundPtr = builder.CreatePointerBitCastOrAddrSpaceCast(
           allocCall, baseLlvm->getType());
-      moduleTranslation.remapAllValuesWith(baseLlvm, boundPtr);
+      moduleTranslation.remapAllValuesWith(baseLlvm, boundPtr, &builder);
     } else if (llvm::Value *varLlvm = moduleTranslation.lookupValue(var)) {
       llvm::Value *boundPtr = builder.CreatePointerBitCastOrAddrSpaceCast(
           allocCall, varLlvm->getType());
-      moduleTranslation.remapAllValuesWith(varLlvm, boundPtr);
+      moduleTranslation.remapAllValuesWith(varLlvm, boundPtr, &builder);
     }
   }
 
