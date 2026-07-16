@@ -3205,9 +3205,11 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
 
   Value memref = mapping.lookupOrDefault(op.getMemref());
   MemRefType memrefTy = dyn_cast<MemRefType>(memref.getType());
-  if (!memref || memrefTy.getRank() != 1) {
-    (void)accSupport.emitNYI(loc,
-                             "reduction: multi-rank MemRefTy or non-MemRefTy");
+  if (!memref) {
+    (void)accSupport.emitNYI(loc, "reduction: non-MemRefTy accumulate array");
+  }
+  if (memrefTy.getRank() != 1) {
+    (void)accSupport.emitNYI(loc, "reduction: multi-rank accumulate array");
   }
 
   FailureOr<arith::AtomicRMWKind> kindOr = getReductionKind(
