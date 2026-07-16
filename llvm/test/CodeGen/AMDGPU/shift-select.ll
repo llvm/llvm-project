@@ -1,7 +1,8 @@
-; RUN: llc -mtriple=amdgpu6.00 -stop-after=instruction-select < %s | FileCheck -check-prefixes=GCN,GFX6 %s
-; RUN: llc -mtriple=amdgpu8.03 -stop-after=instruction-select < %s | FileCheck -check-prefixes=GCN,GFX8PLUS %s
-; RUN: llc -mtriple=amdgpu10.10 -stop-after=instruction-select < %s | FileCheck -check-prefixes=GCN,GFX8PLUS %s
-; RUN: llc -mtriple=amdgpu11.00 -amdgpu-enable-vopd=0 -stop-after=instruction-select < %s | FileCheck -check-prefixes=GCN,GFX8PLUS %s
+; FIXME: use NPM when GIsel passes have been ported.
+; RUN: llc -enable-new-pm=0 -mtriple=amdgpu6.00 -stop-after=instruction-select < %s | FileCheck -check-prefixes=GCN,GFX6 %s
+; RUN: llc -enable-new-pm=0 -mtriple=amdgpu8.03 -stop-after=instruction-select < %s | FileCheck -check-prefixes=GCN,GFX8PLUS %s
+; RUN: llc -enable-new-pm=0 -mtriple=amdgpu10.10 -stop-after=instruction-select < %s | FileCheck -check-prefixes=GCN,GFX8PLUS %s
+; RUN: llc -enable-new-pm=0 -mtriple=amdgpu11.00 -amdgpu-enable-vopd=0 -stop-after=instruction-select < %s | FileCheck -check-prefixes=GCN,GFX8PLUS %s
 
 ; GCN-LABEL: name:            s_shl_i32
 ; GCN: S_LSHL_B32

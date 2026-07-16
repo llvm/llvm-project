@@ -190,6 +190,7 @@ define void @issue63986_reduced_expanded(i64 %idxprom) {
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s5
 ; CHECK-NEXT:  .LBB1_6: ; %loop-memcpy-residual
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_add_i32 s6, s8, 1
 ; CHECK-NEXT:    v_cmp_lt_u64_e32 vcc, s[6:7], v[0:1]
 ; CHECK-NEXT:    s_mov_b64 s[8:9], 1
@@ -205,6 +206,7 @@ define void @issue63986_reduced_expanded(i64 %idxprom) {
 ; CHECK-NEXT:    s_and_b64 vcc, exec, 0
 ; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
 ; CHECK-NEXT:  .LBB1_9: ; %loop-memcpy-expansion2
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_mov_b64 vcc, vcc
 ; CHECK-NEXT:    s_cbranch_vccz .LBB1_9
 ; CHECK-NEXT:  ; %bb.10: ; %DummyReturnBlock

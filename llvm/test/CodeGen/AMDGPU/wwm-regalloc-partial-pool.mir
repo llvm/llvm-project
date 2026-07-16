@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -O0 -amdgpu-stress-vgpr=1 -amdgpu-num-vgprs-for-wwm-alloc=2 -start-before=si-lower-sgpr-spills -stop-after=regallocfast,1 -verify-machineinstrs -o - %s | FileCheck %s
-# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -O0 -amdgpu-num-vgprs-for-wwm-alloc=0 -start-before=si-lower-sgpr-spills -stop-after=regallocfast,1 -verify-machineinstrs -o - %s | FileCheck --check-prefix=ZERO %s
+# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -O0 -amdgpu-stress-vgpr=1 -amdgpu-num-vgprs-for-wwm-alloc=2 -start-before=si-lower-sgpr-spills -stop-after=regallocfast,2 -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -O0 -amdgpu-num-vgprs-for-wwm-alloc=0 -start-before=si-lower-sgpr-spills -stop-after=regallocfast,2 -verify-machineinstrs -o - %s | FileCheck --check-prefix=ZERO %s
 
 # CHECK-LABEL: name: partial_pool
 # CHECK-COUNT-2: flags: [ WWM_REG ]

@@ -1044,7 +1044,7 @@ entry:
 
 define void @memmove_p1_p3(ptr addrspace(1) align 1 %dst, ptr addrspace(3) align 1 readonly %src, i64 %sz) {
 ; CHECK-LABEL: memmove_p1_p3:
-; CHECK:       ; %bb.0: ; %entry
+; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v5, v3
 ; CHECK-NEXT:    v_mov_b32_e32 v6, 0
@@ -1099,7 +1099,6 @@ define void @memmove_p1_p3(ptr addrspace(1) align 1 %dst, ptr addrspace(3) align
 ; CHECK-NEXT:  .LBB7_6: ; %Flow7
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-entry:
   tail call void @llvm.memmove.p1.p3.i64(ptr addrspace(1) noundef nonnull align 1 %dst, ptr addrspace(3) noundef nonnull align 1 %src, i64 %sz, i1 false)
   ret void
 }

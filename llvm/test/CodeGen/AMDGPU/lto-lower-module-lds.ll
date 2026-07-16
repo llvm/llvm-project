@@ -25,13 +25,13 @@
 ; Unified O3
 ; RUN: llvm-lto2 run -unified-lto=full -O3 -cg-opt-level 3 %t.unified.bc -o %t.s -r %t.unified.bc,test,px -debug-pass-manager -debug-pass=Structure 2>&1 | FileCheck %s
 
-; First print will be from the New PM during the full LTO pipeline.
-; Second print will be from the legacy PM during the CG pipeline.
-; These will be updated when NPM becomes default for AMDGPU CG pipeline.
+; NPM is default for both full LTO and CG pipelines.
 
+; CHECK-NOT: ModulePass Manager
 ; CHECK: Running pass: AMDGPULowerModuleLDSPass on [module]
-; CHECK: ModulePass Manager
-; CHECK:   Lower uses of LDS variables from non-kernel functions
+; CHECK: Running pass: SelectionDAGISelPass on test
+; CHECK: Running pass: PrologEpilogInserterPass on test
+; CHECK: Running pass: AMDGPUAsmPrinterPass on test
 
 ; Test -force-new-pm-codegen=true.
 

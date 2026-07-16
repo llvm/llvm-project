@@ -1,15 +1,15 @@
 ; -enable-misched=false makes the register usage more predictable
 ; -regalloc=fast just makes the test run faster
-; RUN: llc -mtriple=amdgpu9.00 -amdgpu-function-calls=false -enable-misched=false -sgpr-regalloc=fast -vgpr-regalloc=fast -wwm-regalloc=fast < %s | FileCheck %s --check-prefixes=GCN,GFX9
-; RUN: llc -mtriple=amdgpu9.0a -amdgpu-function-calls=false -enable-misched=false -sgpr-regalloc=fast -vgpr-regalloc=fast -wwm-regalloc=fast < %s | FileCheck %s --check-prefixes=GCN,GFX90A
-; RUN: llc -mtriple=amdgpu10.10 -amdgpu-function-calls=false -enable-misched=false -sgpr-regalloc=fast -vgpr-regalloc=fast -wwm-regalloc=fast < %s | FileCheck %s --check-prefixes=GCN,GFX10WGP-WAVE32
-; RUN: llc -mtriple=amdgpu10.10 -mattr=+wavefrontsize64 -amdgpu-function-calls=false -enable-misched=false -sgpr-regalloc=fast -vgpr-regalloc=fast -wwm-regalloc=fast < %s | FileCheck %s --check-prefixes=GCN,GFX10WGP-WAVE64
-; RUN: llc -mtriple=amdgpu10.10 -mattr=+cumode -amdgpu-function-calls=false -enable-misched=false -sgpr-regalloc=fast -vgpr-regalloc=fast -wwm-regalloc=fast < %s | FileCheck %s --check-prefixes=GCN,GFX10CU-WAVE32
-; RUN: llc -mtriple=amdgpu10.10 -mattr=+cumode,+wavefrontsize64 -amdgpu-function-calls=false -enable-misched=false -sgpr-regalloc=fast -vgpr-regalloc=fast -wwm-regalloc=fast < %s | FileCheck %s --check-prefixes=GCN,GFX10CU-WAVE64
-; RUN: llc -mtriple=amdgpu11.00 -amdgpu-function-calls=false -enable-misched=false -sgpr-regalloc=fast -vgpr-regalloc=fast -wwm-regalloc=fast < %s | FileCheck %s --check-prefixes=GCN,GFX11WGP-WAVE32
-; RUN: llc -mtriple=amdgpu11.00 -mattr=+wavefrontsize64 -amdgpu-function-calls=false -enable-misched=false -sgpr-regalloc=fast -vgpr-regalloc=fast -wwm-regalloc=fast < %s | FileCheck %s --check-prefixes=GCN,GFX11WGP-WAVE64
-; RUN: llc -mtriple=amdgpu11.00 -mattr=+cumode -amdgpu-function-calls=false -enable-misched=false -sgpr-regalloc=fast -vgpr-regalloc=fast -wwm-regalloc=fast < %s | FileCheck %s --check-prefixes=GCN,GFX11CU-WAVE32
-; RUN: llc -mtriple=amdgpu11.00 -mattr=+cumode,+wavefrontsize64 -amdgpu-function-calls=false -enable-misched=false -sgpr-regalloc=fast -vgpr-regalloc=fast -wwm-regalloc=fast < %s | FileCheck %s --check-prefixes=GCN,GFX11CU-WAVE64
+; RUN: llc -mtriple=amdgpu9.00 -amdgpu-function-calls=false -enable-misched=false -sgpr-regalloc-npm=fast -vgpr-regalloc-npm=fast -wwm-regalloc-npm=fast < %s | FileCheck %s --check-prefixes=GCN,GFX9
+; RUN: llc -mtriple=amdgpu9.0a -amdgpu-function-calls=false -enable-misched=false -sgpr-regalloc-npm=fast -vgpr-regalloc-npm=fast -wwm-regalloc-npm=fast < %s | FileCheck %s --check-prefixes=GCN,GFX90A
+; RUN: llc -mtriple=amdgpu10.10 -amdgpu-function-calls=false -enable-misched=false -sgpr-regalloc-npm=fast -vgpr-regalloc-npm=fast -wwm-regalloc-npm=fast < %s | FileCheck %s --check-prefixes=GCN,GFX10WGP-WAVE32
+; RUN: llc -mtriple=amdgpu10.10 -mattr=+wavefrontsize64 -amdgpu-function-calls=false -enable-misched=false -sgpr-regalloc-npm=fast -vgpr-regalloc-npm=fast -wwm-regalloc-npm=fast < %s | FileCheck %s --check-prefixes=GCN,GFX10WGP-WAVE64
+; RUN: llc -mtriple=amdgpu10.10 -mattr=+cumode -amdgpu-function-calls=false -enable-misched=false -sgpr-regalloc-npm=fast -vgpr-regalloc-npm=fast -wwm-regalloc-npm=fast < %s | FileCheck %s --check-prefixes=GCN,GFX10CU-WAVE32
+; RUN: llc -mtriple=amdgpu10.10 -mattr=+cumode,+wavefrontsize64 -amdgpu-function-calls=false -enable-misched=false -sgpr-regalloc-npm=fast -vgpr-regalloc-npm=fast -wwm-regalloc-npm=fast < %s | FileCheck %s --check-prefixes=GCN,GFX10CU-WAVE64
+; RUN: llc -mtriple=amdgpu11.00 -amdgpu-function-calls=false -enable-misched=false -sgpr-regalloc-npm=fast -vgpr-regalloc-npm=fast -wwm-regalloc-npm=fast < %s | FileCheck %s --check-prefixes=GCN,GFX11WGP-WAVE32
+; RUN: llc -mtriple=amdgpu11.00 -mattr=+wavefrontsize64 -amdgpu-function-calls=false -enable-misched=false -sgpr-regalloc-npm=fast -vgpr-regalloc-npm=fast -wwm-regalloc-npm=fast < %s | FileCheck %s --check-prefixes=GCN,GFX11WGP-WAVE64
+; RUN: llc -mtriple=amdgpu11.00 -mattr=+cumode -amdgpu-function-calls=false -enable-misched=false -sgpr-regalloc-npm=fast -vgpr-regalloc-npm=fast -wwm-regalloc-npm=fast < %s | FileCheck %s --check-prefixes=GCN,GFX11CU-WAVE32
+; RUN: llc -mtriple=amdgpu11.00 -mattr=+cumode,+wavefrontsize64 -amdgpu-function-calls=false -enable-misched=false -sgpr-regalloc-npm=fast -vgpr-regalloc-npm=fast -wwm-regalloc-npm=fast < %s | FileCheck %s --check-prefixes=GCN,GFX11CU-WAVE64
 
 define internal void @use256vgprs() {
   %v0 = call i32 asm sideeffect "; def $0", "=v"()
