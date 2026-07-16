@@ -4993,18 +4993,6 @@ bool X86InstrInfo::isRedundantFlagInstr(const MachineInstr &FlagI,
     }
     return FlagI.isIdenticalTo(OI);
   }
-  case X86::LZCNT16rr:
-  case X86::LZCNT32rr:
-  case X86::LZCNT64rr:
-  case X86::TZCNT16rr:
-  case X86::TZCNT32rr:
-  case X86::TZCNT64rr: {
-    if (ImmMask != 0 && !SrcReg2.isValid() && ImmValue == 1 &&
-        OI.getOperand(1).isReg() && SrcReg == OI.getOperand(1).getReg()) {
-      return true;
-    }
-    return false;
-  }
   default:
     return false;
   }
