@@ -194,9 +194,6 @@ extern "C" {
 void __llvmRegisterFunction(const char *Binary, const char *KernelID,
                             char *KernelName, const char *KernelName1, int,
                             uint3 *, uint3 *, dim3 *, dim3 *, int *) {
-  // printf("%s :: %p :: %p : %s : %s \n", __PRETTY_FUNCTION__, Binary,
-  // KernelID,
-  //        KernelName, KernelName1);
   ol_symbol_handle_t Kernel;
   ol_program_handle_t Program = olKGetProgram(Binary);
   ol_result_t Result = olGetSymbol(
@@ -207,18 +204,11 @@ void __llvmRegisterFunction(const char *Binary, const char *KernelID,
     abort();
   }
 
-  // printf("K %p : %p\n", KernelID, Kernel);
   olKRegisterKernel(KernelID, Kernel);
 }
 
 const char *__llvmRegisterFatBinary(const char *Binary) {
-
   const auto *FW = reinterpret_cast<const FatbinWrapperTy *>(Binary);
-  // printf("%s : %i : %s (%p:%p) :: %i\n", __PRETTY_FUNCTION__, FW->Magic,
-  //        FW->Data, FW->Data, FW->DataEnd, FW->Version);
-
-  // printf("%s : %s : %lu\n", FW->Data, HIP_FATBIN_MAGIC_STR,
-  //        HIP_FATBIN_MAGIC_STR_LEN);
   if (FW->Magic == 0x466243b1) {
     readTUFatbin(Binary, FW);
   } else if (FW->Magic == 0x48495046) {

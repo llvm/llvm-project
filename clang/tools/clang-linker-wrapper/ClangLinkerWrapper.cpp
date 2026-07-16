@@ -799,8 +799,6 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
   M.setTargetTriple(Triple(
       Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple())));
 
-  llvm::errs() << "Switching on offload kind: " << getOffloadKindName(Kind)
-               << "\n";
   switch (Kind) {
   case OFK_OpenMP:
     if (Error Err = offloading::wrapOpenMPBinaries(
@@ -980,8 +978,6 @@ Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
 bundleLinkedOutput(ArrayRef<OffloadingImage> Images, const ArgList &Args,
                    OffloadKind Kind) {
   llvm::TimeTraceScope TimeScope("Bundle linked output");
-  llvm::errs() << "Bundling on offload kind: " << getOffloadKindName(Kind)
-               << "\n";
   if (usesLLVMOffloadWrapper(Images))
     return bundleOpenMP(Images);
 

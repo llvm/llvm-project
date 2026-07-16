@@ -174,8 +174,6 @@ Error_t GetDeviceProperties(DeviceProp_t *DeviceProp, int DeviceNo) {
   return Success;
 }
 
-// Error_t GetDeviceAttribute()
-
 static Error_t getQueueFromStream(Stream_t Stream, ol_queue_handle_t *Queue) {
   if (!Stream)
     return ErrorInvalidValue;
