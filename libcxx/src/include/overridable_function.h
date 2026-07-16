@@ -44,7 +44,7 @@
 // GOT: if `f` was overridden by the user in another TU, the addresses will be different.
 //
 // When pointer authentication is used, the above mechanism doesn't work (yet) so we use
-// a different strategy placing `f`'s definition (in the libc++ built library) inside 
+// a different strategy placing `f`'s definition (in the libc++ built library) inside
 // a special section, which we do using the `__section__` attribute via the
 // OVERRIDABLE_FUNCTION macro. Then, when comes the time to check whether the function has
 // been overridden, we take the address of the function and we check whether it falls inside
