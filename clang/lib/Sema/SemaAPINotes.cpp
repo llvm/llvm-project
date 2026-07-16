@@ -1036,21 +1036,15 @@ struct APINotesParameterSelectorSet {
       add(*Candidates.Desugared);
   }
 
-  bool contains(ArrayRef<std::string> Parameters) const {
-    for (const APINotesParameterSelector &Selector : Selectors) {
-      if (Selector.Parameters.size() != Parameters.size())
-        continue;
+  void add(ArrayRef<SmallVector<std::string, 4>> ParameterSelectors) {
+    for (const auto &Selector : ParameterSelectors)
+      add(ArrayRef<std::string>(Selector));
+  }
 
-      bool Matches = true;
-      for (unsigned I = 0, E = Parameters.size(); I != E; ++I) {
-        if (Selector.Parameters[I] == Parameters[I])
-          continue;
-        Matches = false;
-        break;
-      }
-      if (Matches)
+  bool contains(ArrayRef<std::string> Parameters) const {
+    for (const APINotesParameterSelector &Selector : Selectors)
+      if (ArrayRef<std::string>(Selector.Parameters) == Parameters)
         return true;
-    }
 
     return false;
   }
@@ -1114,14 +1108,6 @@ getAPINotesParameterSelectorCandidates(const Sema &S, const FunctionDecl *FD) {
     Candidates.Desugared = std::move(Desugared);
 
   return Candidates;
-}
-
-static APINotesParameterSelectorSet
-makeParameterSelectorSet(ArrayRef<SmallVector<std::string, 4>> Selectors) {
-  APINotesParameterSelectorSet Set;
-  for (const SmallVector<std::string, 4> &Selector : Selectors)
-    Set.add(Selector);
-  return Set;
 }
 
 static void collectOverloadParameterSelectors(const Sema &S, FunctionDecl *FD,
@@ -1256,8 +1242,8 @@ void Sema::ProcessAPINotes(Decl *D) {
             SmallVector<SmallVector<std::string, 4>, 4> RawAPINotesSelectors;
             if (Reader->collectGlobalFunctionParameterSelectors(
                     FD->getName(), RawAPINotesSelectors, APINotesContext)) {
-              APINotesParameterSelectorSet APINotesSelectors =
-                  makeParameterSelectorSet(RawAPINotesSelectors);
+              APINotesParameterSelectorSet APINotesSelectors;
+              APINotesSelectors.add(RawAPINotesSelectors);
               diagnoseUnmatchedParameterSelectors(
                   *this, FD->getLocation(), FD->getName(), APINotesSelectors,
                   DeclarationSelectors);
@@ -1478,8 +1464,8 @@ void Sema::ProcessAPINotes(Decl *D) {
               SmallVector<SmallVector<std::string, 4>, 4> RawAPINotesSelectors;
               if (Reader->collectCXXMethodParameterSelectors(
                       Context->id, MethodName, RawAPINotesSelectors)) {
-                APINotesParameterSelectorSet APINotesSelectors =
-                    makeParameterSelectorSet(RawAPINotesSelectors);
+                APINotesParameterSelectorSet APINotesSelectors;
+                APINotesSelectors.add(RawAPINotesSelectors);
                 diagnoseUnmatchedParameterSelectors(
                     *this, CXXMethod->getLocation(), MethodName,
                     APINotesSelectors, DeclarationSelectors);
