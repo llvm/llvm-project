@@ -12,6 +12,9 @@
 
 let Component = "Parse" in {
 let CategoryName = "Parse Issue" in {
+// C2y compatibility with C89.
+defm decl_statement : C2yCompat<"'%select{if|switch}0' declaration statements are">;
+
 // C++11 compatibility with C++98.
 defm enum_fixed_underlying_type : CXX11Compat<
   "enumeration types with a fixed underlying type are",
@@ -169,7 +172,6 @@ def ext_c2y_generic_with_type_arg : Extension<
 def warn_c2y_compat_generic_with_type_arg : Warning<
   "passing a type argument as the first operand to '_Generic' is incompatible "
   "with C standards before C2y">, InGroup<CPre2yCompat>, DefaultIgnore;
-defm decl_statement : C2yCompat<"'%select{if|switch}0' declaration statements are">;
 
 def ext_c99_feature : Extension<
   "'%0' is a C99 extension">, InGroup<C99>;
