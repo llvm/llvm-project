@@ -1973,9 +1973,10 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
     // Allocatable result must be freed, other results are stack allocated.
     const auto *allocatable = result.getBoxOf<fir::MutableBoxValue>();
     const bool mustFree = allocatable != nullptr;
-    // A CUDA allocatable result is allocated with the CUDA allocator and must
-    // be released with the CUDA-aware deallocation, not the host free emitted
-    // by the plain hlfir.expr move + destroy path.
+    // A CUDA allocatable result lives in device/managed/unified memory: it was
+    // allocated with the CUDA allocator and cannot be moved into an hlfir.expr
+    // whose buffer would be released with the host deallocator. Keep it as a
+    // variable and release it with the CUDA-aware deallocation.
     const Fortran::semantics::Symbol *resultSym = nullptr;
     cuf::DataAttributeAttr resultCudaAttr;
     if (mustFree && caller.getInterfaceDetails()) {
@@ -1983,42 +1984,33 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
       resultCudaAttr = Fortran::lower::translateSymbolCUFDataAttribute(
           builder.getContext(), *resultSym);
     }
-    const bool isCudaAllocatableResult = static_cast<bool>(resultCudaAttr);
-    auto genCudaResultCleanUp = [&]() {
+    if (resultCudaAttr) {
       callContext.stmtCtx.attachCleanup([&converter = callContext.converter,
                                          loc, box = *allocatable, resultSym]() {
         Fortran::lower::genDeallocateIfAllocated(converter, box, loc,
                                                  resultSym);
       });
-    };
+      return hlfir::EntityWithAttributes{resultEntity};
+    }
     resultEntity = loadTrivialScalar(loc, builder, resultEntity);
     if (resultEntity.isVariable()) {
       // If the result has no finalization, it can be moved into an expression.
-      // Do not let a CUDA result own the buffer (mustFree=false) so its
-      // destruction emits no host free; it is released by genCudaResultCleanUp.
       mlir::Value asExpr = hlfir::AsExprOp::create(
-          builder, loc, resultEntity,
-          builder.createBool(loc, isCudaAllocatableResult ? false : mustFree));
+          builder, loc, resultEntity, builder.createBool(loc, mustFree));
       if (!isElemental) {
         // Insert clean-up for the expression, except for elemental call where
         // the cleaned-up is inserted at the array level.
         callContext.stmtCtx.attachCleanup([bldr = &builder, loc, asExpr]() {
           hlfir::DestroyOp::create(*bldr, loc, asExpr, /*finalize=*/false);
         });
-        if (isCudaAllocatableResult)
-          genCudaResultCleanUp();
       }
       return hlfir::EntityWithAttributes{asExpr};
     }
-    if (allocatable) {
-      if (isCudaAllocatableResult)
-        genCudaResultCleanUp();
-      else
-        callContext.stmtCtx.attachCleanup(
-            [bldr = &builder, loc, box = *allocatable]() {
-              fir::factory::genFreememIfAllocated(*bldr, loc, box);
-            });
-    }
+    if (allocatable)
+      callContext.stmtCtx.attachCleanup(
+          [bldr = &builder, loc, box = *allocatable]() {
+            fir::factory::genFreememIfAllocated(*bldr, loc, box);
+          });
     return hlfir::EntityWithAttributes{resultEntity};
   }
   // If the result has finalization, it cannot be moved because use of its
