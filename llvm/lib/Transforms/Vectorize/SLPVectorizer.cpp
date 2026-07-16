@@ -69,6 +69,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -25227,7 +25228,13 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
   UncondBrInst::Create(Tail, VecBB);
   UncondBrInst::Create(Tail, ScalarBB);
   ChkBuilder.SetInsertPoint(BB);
-  ChkBuilder.CreateCondBr(Cond, ScalarBB, VecBB);
+  CondBrInst *Guard = ChkBuilder.CreateCondBr(Cond, ScalarBB, VecBB);
+  // The scalar fallback is taken only when the runtime alias check detects a
+  // conflict, which is expected to be rare, so bias the guard towards the
+  // vector path. Only annotate profiled functions, to avoid injecting profile
+  // data into functions that have none.
+  if (!ProfcheckDisableMetadataFixes && Fn->getEntryCount())
+    setBranchWeights(*Guard, {1, 127}, /*IsExpected=*/false);
 
   // The continuation block is the new predecessor of the original successors.
   for (BasicBlock *Succ : successors(Term))

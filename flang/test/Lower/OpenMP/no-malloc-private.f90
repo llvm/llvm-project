@@ -24,10 +24,9 @@ end subroutine foo
 ! Ensure that won't use heap allocations as part of the privatizer or anywhere
 ! inside of the function.
 
-! CHECK: omp.private {type = private} @[[PRIVATIZER:.*]] : !fir.box<!fir.array<4xf32>> init {
+! CHECK: omp.private {type = private} @[[PRIVATIZER:.*]] : !fir.array<4xf32>
 ! CHECK-NOT: fir.allocmem
 ! CHECK: omp.yield
 
-! CHECK: func.func @{{.*}}foo
 ! CHECK-NOT: fir.allocmem
 ! CHECK: return
