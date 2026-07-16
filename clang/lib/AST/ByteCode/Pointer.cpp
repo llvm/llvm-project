@@ -815,9 +815,45 @@ bool Pointer::pointToSameBlock(const Pointer &A, const Pointer &B) {
   return A.block() == B.block();
 }
 
-bool Pointer::hasSameArray(const Pointer &A, const Pointer &B) {
-  return hasSameBase(A, B) && A.BS.Base == B.BS.Base &&
-         A.getFieldDesc()->IsArray;
+bool Pointer::elemsOfSameArray(const Pointer &A, const Pointer &B) {
+  assert(hasSameBase(A, B));
+  assert(A.isBlockPointer());
+  assert(B.isBlockPointer());
+
+  if (A.BS.Base == B.BS.Base)
+    return true;
+
+  if (A.isBaseClass() || B.isBaseClass())
+    return false;
+
+  if (A.getField() || B.getField())
+    return false;
+
+  auto closestArray = [](const Pointer &P) -> PtrView {
+    if (P.isArrayRoot())
+      return P.view();
+
+    PtrView V = P.view();
+    if (V.isArrayElement() || V.isOnePastEnd())
+      V = V.expand().getArray();
+
+    if (P.isRoot())
+      return P.view();
+
+    while (!V.isRoot() && !V.getFieldDesc()->IsArray) {
+      if (V.isArrayElement()) {
+        V = V.expand().getArray();
+        break;
+      }
+      V = V.getBase();
+    }
+    return V;
+  };
+
+  if (closestArray(A) != closestArray(B))
+    return false;
+
+  return true;
 }
 
 bool Pointer::pointsToLiteral() const {
