@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu10.10 < %s | FileCheck %s --check-prefixes=GCN,FAKE16,PREGFX12,PREGFX12-FAKE16
 ; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu11.00 -mattr=+real-true16 < %s | FileCheck %s --check-prefixes=GCN,PREGFX12,TRUE16
 ; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu11.00 -mattr=-real-true16 < %s | FileCheck %s --check-prefixes=GCN,FAKE16,PREGFX12,PREGFX12-FAKE16
-; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu12.00 < %s | FileCheck %s --check-prefixes=GCN,FAKE16,GFX12
+; RUN: llc -global-isel -mtriple=amdgpu12.00 < %s | FileCheck %s --check-prefixes=GCN,FAKE16,GFX12
 
 define amdgpu_ps void @s_fptoui_f16_to_i16(half inreg %x, ptr addrspace(1) %out) {
 ; PREGFX12-FAKE16-LABEL: s_fptoui_f16_to_i16:

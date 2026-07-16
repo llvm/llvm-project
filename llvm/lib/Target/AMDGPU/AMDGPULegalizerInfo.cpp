@@ -1156,9 +1156,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   FPTruncActions.scalarize(0).lower();
 
   getActionDefinitionsBuilder(G_FPEXT)
-    .legalFor({{S64, S32}, {S32, S16}})
-    .narrowScalarFor({{S64, S16}}, changeTo(0, S32))
-    .scalarize(0);
+      .legalFor({{S64, S32}, {S32, S16}})
+      .narrowScalarFor({{S64, S16}}, changeElementSizeTo(0, S32))
+      .scalarize(0);
 
   auto &FSubActions = getActionDefinitionsBuilder({G_FSUB, G_STRICT_FSUB});
   if (ST.has16BitInsts()) {
@@ -1224,7 +1224,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   // TODO: Split s1->s64 during regbankselect for VALU.
   auto &IToFP = getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
                     .legalFor({{S32, S32}, {S64, S32}})
-                    .widenScalarFor({{S16, S32}}, changeTo(0, S32))
+                    .widenScalarFor({{S16, S32}}, changeElementSizeTo(0, S32))
                     .lowerIf(typeIs(1, S1))
                     .customFor({{S32, S64}, {S64, S64}});
   if (ST.has16BitInsts())
@@ -1237,8 +1237,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   auto &FPToI = getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
                     .legalFor({{S32, S32}, {S32, S64}})
                     .customFor({{S64, S32}, {S64, S64}})
-                    .widenScalarFor({{S32, S16}}, changeTo(1, S32))
-                    .narrowScalarFor({{S64, S16}}, changeTo(0, S32));
+                    .widenScalarFor({{S32, S16}}, changeElementSizeTo(1, S32))
+                    .narrowScalarFor({{S64, S16}}, changeElementSizeTo(0, S32));
   if (ST.has16BitInsts())
     FPToI.legalFor({{S16, S16}});
   else
@@ -1254,7 +1254,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .legalFor({{S32, S32}, {S32, S64}, {S16, S32}})
     .legalFor(ST.has16BitInsts(), {{S16, S16}})
     .legalFor(ST.hasVCvtPkIU16F32(), {{V2S16, V2S32}})
-    .narrowScalarFor({{S64, S16}}, changeTo(0, S32));
+    .narrowScalarFor({{S64, S16}}, changeElementSizeTo(0, S32));
 
   // If available, widen width <16 to i16, intead of i32 so v_cvt_i16/u16_f16 can be used.
   if (ST.has16BitInsts())
@@ -1933,14 +1933,15 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     // TODO: Support 16-bit shift amounts for all types
     Shifts.widenScalarIf(
-      [=](const LegalityQuery &Query) {
-        // Use 16-bit shift amounts for any 16-bit shift. Otherwise we want a
-        // 32-bit amount.
-        const LLT ValTy = Query.Types[0];
-        const LLT AmountTy = Query.Types[1];
-        return ValTy.isScalar() && ValTy.getSizeInBits() <= 16 &&
-               AmountTy.getSizeInBits() < 16;
-      }, changeTo(1, S16));
+        [=](const LegalityQuery &Query) {
+          // Use 16-bit shift amounts for any 16-bit shift. Otherwise we want a
+          // 32-bit amount.
+          const LLT ValTy = Query.Types[0];
+          const LLT AmountTy = Query.Types[1];
+          return ValTy.isScalar() && ValTy.getSizeInBits() <= 16 &&
+                 AmountTy.getSizeInBits() < 16;
+        },
+        changeElementSizeTo(1, S16));
     Shifts.maxScalarIf(typeIs(0, S16), 1, S16);
     Shifts.clampScalar(1, S32, S32);
     Shifts.widenScalarToNextPow2(0, 16);
@@ -2070,7 +2071,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           .legalForCartesianProduct(AllS64Vectors, {S64})
           .clampNumElements(0, V16S32, V32S32)
           .clampNumElements(0, V2S64, V16S64)
-          .fewerElementsIf(isWideVec16(0), changeTo(0, V2S16))
+          .fewerElementsIf(isWideVec16(0),
+                           changeElementCountTo(0, ElementCount::getFixed(2)))
           .moreElementsIf(isIllegalRegisterType(ST, 0),
                           moreElementsToNextExistingRegClass(0));
 
@@ -2136,7 +2138,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                             oneMoreElement(BigTyIdx))
             .fewerElementsIf(all(typeIs(0, S16), vectorWiderThan(1, 32),
                                  elementTypeIs(1, S16)),
-                             changeTo(1, V2S16))
+                             changeElementCountTo(1, ElementCount::getFixed(2)))
             // Clamp the little scalar to s8-s256 and make it a power of 2. It's
             // not worth considering the multiples of 64 since 2*192 and 2*384
             // are not valid.
@@ -2157,12 +2159,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     if (Op == G_MERGE_VALUES) {
       Builder.widenScalarIf(
-        // TODO: Use 16-bit shifts if legal for 8-bit values?
-        [=](const LegalityQuery &Query) {
-          const LLT Ty = Query.Types[LitTyIdx];
-          return Ty.getSizeInBits() < 32;
-        },
-        changeTo(LitTyIdx, S32));
+          // TODO: Use 16-bit shifts if legal for 8-bit values?
+          [=](const LegalityQuery &Query) {
+            const LLT Ty = Query.Types[LitTyIdx];
+            return Ty.getSizeInBits() < 32;
+          },
+          changeElementSizeTo(LitTyIdx, S32));
     }
 
     Builder.widenScalarIf(

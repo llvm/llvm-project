@@ -29,8 +29,8 @@ define i8 @v_lshr_i8(i8 %value, i8 %amount) {
 ; GFX10PLUS-LABEL: v_lshr_i8:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX10PLUS-NEXT:    v_and_b32_e32 v1, 0xff, v1
+; GFX10PLUS-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX10PLUS-NEXT:    v_lshrrev_b16 v0, v1, v0
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %result = lshr i8 %value, %amount
