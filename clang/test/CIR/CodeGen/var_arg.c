@@ -1,24 +1,17 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -std=c23 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
+// RUN: %clang_cc1 -std=c23 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefixes=LLVM,LLVM-CIR
+// RUN: %clang_cc1 -std=c23 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=OGCG,LLVM
 //
 // C23 is required for __builtin_c23_va_start and for variadic functions with
-// no named parameters; the *-C23 prefixes check the guarded functions at the
-// end of this file. The LLVM-C23 checks are shared between the ClangIR
-// pipeline and OG CodeGen.
-// RUN: %clang_cc1 -std=c23 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir %s -o %t.c23.cir
-// RUN: FileCheck --input-file=%t.c23.cir %s -check-prefix=CIR-C23
-// RUN: %clang_cc1 -std=c23 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.c23.ll
-// RUN: FileCheck --input-file=%t-cir.c23.ll %s -check-prefix=LLVM-C23
-// RUN: %clang_cc1 -std=c23 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.c23.ll
-// RUN: FileCheck --input-file=%t.c23.ll %s -check-prefix=LLVM-C23
+// no named parameters. LLVM checks lines where the ClangIR pipeline and OG
+// CodeGen emit identical LLVM IR; LLVM-CIR and OGCG check the lines where
+// the two pipelines differ.
 
 // CIR: !rec___va_list_tag = !cir.struct<"__va_list_tag" {!u32i, !u32i, !cir.ptr<!void>, !cir.ptr<!void>}
 // LLVM: %struct.__va_list_tag = type { i32, i32, ptr, ptr }
-// OGCG: %struct.__va_list_tag = type { i32, i32, ptr, ptr }
 
 int varargs(int count, ...) {
     __builtin_va_list args;
@@ -44,22 +37,22 @@ int varargs(int count, ...) {
 // CIR:   %[[RETVAL:.+]] = cir.load{{.*}} %[[RET_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:   cir.return %[[RETVAL]] : !s32i
 
-// LLVM-LABEL: define dso_local i32 @varargs(
-// LLVM:   %[[COUNT_ADDR:.+]] = alloca i32{{.*}}
-// LLVM:   %[[RET_ADDR:.+]] = alloca i32{{.*}}
-// LLVM:   %[[VAAREA:.+]] = alloca [1 x %struct.__va_list_tag]{{.*}}
-// LLVM:   %[[RES_ADDR:.+]] = alloca i32{{.*}}
-// LLVM:   %[[VA_PTR0:.+]] = getelementptr %struct.__va_list_tag, ptr %[[VAAREA]], i32 0
-// LLVM:   call void @llvm.va_start.p0(ptr %[[VA_PTR0]])
-// LLVM:   %[[VA_PTR1:.+]] = getelementptr %struct.__va_list_tag, ptr %[[VAAREA]], i32 0
-// LLVM:   %[[VA_ARG:.+]] = va_arg ptr %[[VA_PTR1]], i32
-// LLVM:   store i32 %[[VA_ARG]], ptr %[[RES_ADDR]], {{.*}}
-// LLVM:   %[[VA_PTR2:.+]] = getelementptr %struct.__va_list_tag, ptr %[[VAAREA]], i32 0
-// LLVM:   call void @llvm.va_end.p0(ptr %[[VA_PTR2]])
-// LLVM:   %[[TMP_LOAD:.+]] = load i32, ptr %[[RES_ADDR]], {{.*}}
-// LLVM:   store i32 %[[TMP_LOAD]], ptr %[[RET_ADDR]], {{.*}}
-// LLVM:   %[[RETVAL:.+]] = load i32, ptr %[[RET_ADDR]], {{.*}}
-// LLVM:   ret i32 %[[RETVAL]]
+// LLVM-CIR-LABEL: define dso_local i32 @varargs(
+// LLVM-CIR:   %[[COUNT_ADDR:.+]] = alloca i32{{.*}}
+// LLVM-CIR:   %[[RET_ADDR:.+]] = alloca i32{{.*}}
+// LLVM-CIR:   %[[VAAREA:.+]] = alloca [1 x %struct.__va_list_tag]{{.*}}
+// LLVM-CIR:   %[[RES_ADDR:.+]] = alloca i32{{.*}}
+// LLVM-CIR:   %[[VA_PTR0:.+]] = getelementptr %struct.__va_list_tag, ptr %[[VAAREA]], i32 0
+// LLVM-CIR:   call void @llvm.va_start.p0(ptr %[[VA_PTR0]])
+// LLVM-CIR:   %[[VA_PTR1:.+]] = getelementptr %struct.__va_list_tag, ptr %[[VAAREA]], i32 0
+// LLVM-CIR:   %[[VA_ARG:.+]] = va_arg ptr %[[VA_PTR1]], i32
+// LLVM-CIR:   store i32 %[[VA_ARG]], ptr %[[RES_ADDR]], {{.*}}
+// LLVM-CIR:   %[[VA_PTR2:.+]] = getelementptr %struct.__va_list_tag, ptr %[[VAAREA]], i32 0
+// LLVM-CIR:   call void @llvm.va_end.p0(ptr %[[VA_PTR2]])
+// LLVM-CIR:   %[[TMP_LOAD:.+]] = load i32, ptr %[[RES_ADDR]], {{.*}}
+// LLVM-CIR:   store i32 %[[TMP_LOAD]], ptr %[[RET_ADDR]], {{.*}}
+// LLVM-CIR:   %[[RETVAL:.+]] = load i32, ptr %[[RET_ADDR]], {{.*}}
+// LLVM-CIR:   ret i32 %[[RETVAL]]
 
 // OGCG-LABEL: define dso_local i32 @varargs
 // OGCG:   %[[COUNT_ADDR:.+]] = alloca i32
@@ -117,22 +110,22 @@ int stdarg_start(int count, ...) {
 // CIR:   %[[RETVAL:.+]] = cir.load{{.*}} %[[RET_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:   cir.return %[[RETVAL]] : !s32i
 
-// LLVM-LABEL: define dso_local i32 @stdarg_start(
-// LLVM:   %[[COUNT_ADDR:.+]] = alloca i32{{.*}}
-// LLVM:   %[[RET_ADDR:.+]] = alloca i32{{.*}}
-// LLVM:   %[[VAAREA:.+]] = alloca [1 x %struct.__va_list_tag]{{.*}}
-// LLVM:   %[[RES_ADDR:.+]] = alloca i32{{.*}}
-// LLVM:   %[[VA_PTR0:.+]] = getelementptr %struct.__va_list_tag, ptr %[[VAAREA]], i32 0
-// LLVM:   call void @llvm.va_start.p0(ptr %[[VA_PTR0]])
-// LLVM:   %[[VA_PTR1:.+]] = getelementptr %struct.__va_list_tag, ptr %[[VAAREA]], i32 0
-// LLVM:   %[[VA_ARG:.+]] = va_arg ptr %[[VA_PTR1]], i32
-// LLVM:   store i32 %[[VA_ARG]], ptr %[[RES_ADDR]], {{.*}}
-// LLVM:   %[[VA_PTR2:.+]] = getelementptr %struct.__va_list_tag, ptr %[[VAAREA]], i32 0
-// LLVM:   call void @llvm.va_end.p0(ptr %[[VA_PTR2]])
-// LLVM:   %[[TMP_LOAD:.+]] = load i32, ptr %[[RES_ADDR]], {{.*}}
-// LLVM:   store i32 %[[TMP_LOAD]], ptr %[[RET_ADDR]], {{.*}}
-// LLVM:   %[[RETVAL:.+]] = load i32, ptr %[[RET_ADDR]], {{.*}}
-// LLVM:   ret i32 %[[RETVAL]]
+// LLVM-CIR-LABEL: define dso_local i32 @stdarg_start(
+// LLVM-CIR:   %[[COUNT_ADDR:.+]] = alloca i32{{.*}}
+// LLVM-CIR:   %[[RET_ADDR:.+]] = alloca i32{{.*}}
+// LLVM-CIR:   %[[VAAREA:.+]] = alloca [1 x %struct.__va_list_tag]{{.*}}
+// LLVM-CIR:   %[[RES_ADDR:.+]] = alloca i32{{.*}}
+// LLVM-CIR:   %[[VA_PTR0:.+]] = getelementptr %struct.__va_list_tag, ptr %[[VAAREA]], i32 0
+// LLVM-CIR:   call void @llvm.va_start.p0(ptr %[[VA_PTR0]])
+// LLVM-CIR:   %[[VA_PTR1:.+]] = getelementptr %struct.__va_list_tag, ptr %[[VAAREA]], i32 0
+// LLVM-CIR:   %[[VA_ARG:.+]] = va_arg ptr %[[VA_PTR1]], i32
+// LLVM-CIR:   store i32 %[[VA_ARG]], ptr %[[RES_ADDR]], {{.*}}
+// LLVM-CIR:   %[[VA_PTR2:.+]] = getelementptr %struct.__va_list_tag, ptr %[[VAAREA]], i32 0
+// LLVM-CIR:   call void @llvm.va_end.p0(ptr %[[VA_PTR2]])
+// LLVM-CIR:   %[[TMP_LOAD:.+]] = load i32, ptr %[[RES_ADDR]], {{.*}}
+// LLVM-CIR:   store i32 %[[TMP_LOAD]], ptr %[[RET_ADDR]], {{.*}}
+// LLVM-CIR:   %[[RETVAL:.+]] = load i32, ptr %[[RET_ADDR]], {{.*}}
+// LLVM-CIR:   ret i32 %[[RETVAL]]
 
 // OGCG-LABEL: define dso_local i32 @stdarg_start
 // OGCG:   %[[COUNT_ADDR:.+]] = alloca i32
@@ -180,10 +173,10 @@ void stdarg_copy() {
 // CIR:    %{{.*}} = cir.cast array_to_ptrdecay %{{.*}} : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
 // CIR:    cir.va_copy %{{.*}} to %{{.*}} : !cir.ptr<!rec___va_list_tag>, !cir.ptr<!rec___va_list_tag>
 
-// LLVM-LABEL: @stdarg_copy
-// LLVM:   %{{.*}} = getelementptr %struct.__va_list_tag, ptr %{{.*}}
-// LLVM:   %{{.*}} = getelementptr %struct.__va_list_tag, ptr %{{.*}}
-// LLVM:   call void @llvm.va_copy.p0(ptr %{{.*}}, ptr %{{.*}}
+// LLVM-CIR-LABEL: @stdarg_copy
+// LLVM-CIR:   %{{.*}} = getelementptr %struct.__va_list_tag, ptr %{{.*}}
+// LLVM-CIR:   %{{.*}} = getelementptr %struct.__va_list_tag, ptr %{{.*}}
+// LLVM-CIR:   call void @llvm.va_copy.p0(ptr %{{.*}}, ptr %{{.*}}
 
 // OGCG-LABEL: @stdarg_copy
 // OGCG:   %{{.*}} = getelementptr inbounds [1 x %struct.__va_list_tag], ptr %{{.*}}
@@ -215,22 +208,22 @@ int varargs_new(char *fmt, ...) {
 // CIR:   %[[RETVAL:.+]] = cir.load{{.*}} %[[RET_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:   cir.return %[[RETVAL]] : !s32i
 
-// LLVM-LABEL: define dso_local i32 @varargs_new(
-// LLVM:   %[[FMT_ADDR:.+]] = alloca ptr
-// LLVM:   %[[RET_ADDR:.+]] = alloca i32{{.*}}
-// LLVM:   %[[VAAREA:.+]] = alloca [1 x %struct.__va_list_tag]{{.*}}
-// LLVM:   %[[RES_ADDR:.+]] = alloca i32{{.*}}
-// LLVM:   %[[VA_PTR0:.+]] = getelementptr %struct.__va_list_tag, ptr %[[VAAREA]], i32 0
-// LLVM:   call void @llvm.va_start.p0(ptr %[[VA_PTR0]])
-// LLVM:   %[[VA_PTR1:.+]] = getelementptr %struct.__va_list_tag, ptr %[[VAAREA]], i32 0
-// LLVM:   %[[VA_ARG:.+]] = va_arg ptr %[[VA_PTR1]], i32
-// LLVM:   store i32 %[[VA_ARG]], ptr %[[RES_ADDR]], {{.*}}
-// LLVM:   %[[VA_PTR2:.+]] = getelementptr %struct.__va_list_tag, ptr %[[VAAREA]], i32 0
-// LLVM:   call void @llvm.va_end.p0(ptr %[[VA_PTR2]])
-// LLVM:   %[[TMP_LOAD:.+]] = load i32, ptr %[[RES_ADDR]], {{.*}}
-// LLVM:   store i32 %[[TMP_LOAD]], ptr %[[RET_ADDR]], {{.*}}
-// LLVM:   %[[RETVAL:.+]] = load i32, ptr %[[RET_ADDR]], {{.*}}
-// LLVM:   ret i32 %[[RETVAL]]
+// LLVM-CIR-LABEL: define dso_local i32 @varargs_new(
+// LLVM-CIR:   %[[FMT_ADDR:.+]] = alloca ptr
+// LLVM-CIR:   %[[RET_ADDR:.+]] = alloca i32{{.*}}
+// LLVM-CIR:   %[[VAAREA:.+]] = alloca [1 x %struct.__va_list_tag]{{.*}}
+// LLVM-CIR:   %[[RES_ADDR:.+]] = alloca i32{{.*}}
+// LLVM-CIR:   %[[VA_PTR0:.+]] = getelementptr %struct.__va_list_tag, ptr %[[VAAREA]], i32 0
+// LLVM-CIR:   call void @llvm.va_start.p0(ptr %[[VA_PTR0]])
+// LLVM-CIR:   %[[VA_PTR1:.+]] = getelementptr %struct.__va_list_tag, ptr %[[VAAREA]], i32 0
+// LLVM-CIR:   %[[VA_ARG:.+]] = va_arg ptr %[[VA_PTR1]], i32
+// LLVM-CIR:   store i32 %[[VA_ARG]], ptr %[[RES_ADDR]], {{.*}}
+// LLVM-CIR:   %[[VA_PTR2:.+]] = getelementptr %struct.__va_list_tag, ptr %[[VAAREA]], i32 0
+// LLVM-CIR:   call void @llvm.va_end.p0(ptr %[[VA_PTR2]])
+// LLVM-CIR:   %[[TMP_LOAD:.+]] = load i32, ptr %[[RES_ADDR]], {{.*}}
+// LLVM-CIR:   store i32 %[[TMP_LOAD]], ptr %[[RET_ADDR]], {{.*}}
+// LLVM-CIR:   %[[RETVAL:.+]] = load i32, ptr %[[RET_ADDR]], {{.*}}
+// LLVM-CIR:   ret i32 %[[RETVAL]]
 
 // OGCG-LABEL: define dso_local i32 @varargs_new
 // OGCG:   %[[FMT_ADDR:.+]] = alloca ptr
@@ -264,11 +257,8 @@ int varargs_new(char *fmt, ...) {
 // OGCG:   %[[VAL:.+]] = load i32, ptr %[[RES_ADDR]]
 // OGCG:   ret i32 %[[VAL]]
 
-// C23 only: __builtin_c23_va_start and variadic functions with no named
-// parameters. Ensure that __builtin_va_start(list, 0) and
-// __builtin_c23_va_start(list) have the same codegen.
-#if __STDC_VERSION__ >= 202311L
-
+// Ensure that __builtin_va_start(list, 0) and __builtin_c23_va_start(list)
+// have the same codegen.
 void noargs(...) {
     __builtin_va_list list;
     __builtin_va_start(list, 0);
@@ -276,20 +266,20 @@ void noargs(...) {
     __builtin_va_end(list);
 }
 
-// CIR-C23-LABEL: cir.func {{.*}} @noargs(
-// CIR-C23:   %[[VAAREA:.+]] = cir.alloca "list" {{.*}} : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
-// CIR-C23:   %[[VA_PTR0:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
-// CIR-C23-NEXT:   cir.va_start %[[VA_PTR0]] : !cir.ptr<!rec___va_list_tag>
-// CIR-C23:   %[[VA_PTR1:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
-// CIR-C23-NEXT:   cir.va_start %[[VA_PTR1]] : !cir.ptr<!rec___va_list_tag>
-// CIR-C23:   %[[VA_PTR2:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
-// CIR-C23-NEXT:   cir.va_end %[[VA_PTR2]] : !cir.ptr<!rec___va_list_tag>
+// CIR-LABEL: cir.func {{.*}} @noargs(
+// CIR:   %[[VAAREA:.+]] = cir.alloca "list" {{.*}} : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+// CIR:   %[[VA_PTR0:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
+// CIR-NEXT:   cir.va_start %[[VA_PTR0]] : !cir.ptr<!rec___va_list_tag>
+// CIR:   %[[VA_PTR1:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
+// CIR-NEXT:   cir.va_start %[[VA_PTR1]] : !cir.ptr<!rec___va_list_tag>
+// CIR:   %[[VA_PTR2:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
+// CIR-NEXT:   cir.va_end %[[VA_PTR2]] : !cir.ptr<!rec___va_list_tag>
 
-// LLVM-C23-LABEL: define {{.*}}void @noargs(...)
-// LLVM-C23:   %[[VAAREA:.+]] = alloca [1 x %struct.__va_list_tag]
-// LLVM-C23:   call void @llvm.va_start.p0(ptr %{{.+}})
-// LLVM-C23:   call void @llvm.va_start.p0(ptr %{{.+}})
-// LLVM-C23:   call void @llvm.va_end.p0(ptr %{{.+}})
+// LLVM-LABEL: define {{.*}}void @noargs(...)
+// LLVM:   %[[VAAREA:.+]] = alloca [1 x %struct.__va_list_tag]
+// LLVM:   call void @llvm.va_start.p0(ptr %{{.+}})
+// LLVM:   call void @llvm.va_start.p0(ptr %{{.+}})
+// LLVM:   call void @llvm.va_end.p0(ptr %{{.+}})
 
 void with_param(int count, ...) {
     __builtin_va_list list;
@@ -297,12 +287,10 @@ void with_param(int count, ...) {
     __builtin_va_end(list);
 }
 
-// CIR-C23-LABEL: cir.func {{.*}} @with_param(
-// CIR-C23:   cir.va_start %{{.+}} : !cir.ptr<!rec___va_list_tag>
-// CIR-C23:   cir.va_end %{{.+}} : !cir.ptr<!rec___va_list_tag>
+// CIR-LABEL: cir.func {{.*}} @with_param(
+// CIR:   cir.va_start %{{.+}} : !cir.ptr<!rec___va_list_tag>
+// CIR:   cir.va_end %{{.+}} : !cir.ptr<!rec___va_list_tag>
 
-// LLVM-C23-LABEL: define {{.*}}void @with_param(i32 noundef %{{.+}}, ...)
-// LLVM-C23:   call void @llvm.va_start.p0(ptr %{{.+}})
-// LLVM-C23:   call void @llvm.va_end.p0(ptr %{{.+}})
-
-#endif // __STDC_VERSION__ >= 202311L
+// LLVM-LABEL: define {{.*}}void @with_param(i32 noundef %{{.+}}, ...)
+// LLVM:   call void @llvm.va_start.p0(ptr %{{.+}})
+// LLVM:   call void @llvm.va_end.p0(ptr %{{.+}})
