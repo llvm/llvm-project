@@ -2034,6 +2034,114 @@ define <2 x i32> @sdiv_select_one_false_poison_vec(<2 x i32> %a, i1 %b) {
 }
 
 !0 = !{!"function_entry_count", i64 1000}
+
+; positive sdiv
+define i32 @sdiv_mul_nsw_add(i32 %x) {
+; CHECK-LABEL: @sdiv_mul_nsw_add(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[X:%.*]], 5
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[MUL]], 4
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %mul = mul nsw i32 %x, 5
+  %div = sdiv i32 %mul, 4
+  ret i32 %div
+}
+
+; positive sdiv exact
+define i32 @sdiv_exact_mul_nsw_add(i32 %x) {
+; CHECK-LABEL: @sdiv_exact_mul_nsw_add(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr exact i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[DIV:%.*]] = add nsw i32 [[X]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %mul = mul nsw i32 %x, 5
+  %div = sdiv exact i32 %mul, 4
+  ret i32 %div
+}
+
+; positive udiv
+define i32 @udiv_mul_nuw_add(i32 %x) {
+; CHECK-LABEL: @udiv_mul_nuw_add(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i32 [[X:%.*]], 6
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[MUL]], 5
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %mul = mul nuw i32 %x, 6
+  %div = udiv i32 %mul, 5
+  ret i32 %div
+}
+
+; positive sdiv vector
+define <2 x i32> @sdiv_mul_nsw_add_vec(<2 x i32> %x) {
+; CHECK-LABEL: @sdiv_mul_nsw_add_vec(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw <2 x i32> [[X:%.*]], splat (i32 5)
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv <2 x i32> [[MUL]], splat (i32 4)
+; CHECK-NEXT:    ret <2 x i32> [[DIV]]
+;
+  %mul = mul nsw <2 x i32> %x, <i32 5, i32 5>
+  %div = sdiv <2 x i32> %mul, <i32 4, i32 4>
+  ret <2 x i32> %div
+}
+
+; negative sdiv: negative divisor
+define i32 @sdiv_mul_nsw_add_neg_div(i32 %x) {
+; CHECK-LABEL: @sdiv_mul_nsw_add_neg_div(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[X:%.*]], -3
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[MUL]], -4
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %mul = mul nsw i32 %x, -3
+  %div = sdiv i32 %mul, -4
+  ret i32 %div
+}
+
+; negative sdiv: wrong constant
+define i32 @sdiv_mul_nsw_add_wrong_const(i32 %x) {
+; CHECK-LABEL: @sdiv_mul_nsw_add_wrong_const(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[X:%.*]], 6
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[MUL]], 4
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %mul = mul nsw i32 %x, 6
+  %div = sdiv i32 %mul, 4
+  ret i32 %div
+}
+
+; negative sdiv: no nsw
+define i32 @sdiv_mul_add_no_nsw(i32 %x) {
+; CHECK-LABEL: @sdiv_mul_add_no_nsw(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X:%.*]], 5
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[MUL]], 4
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %mul = mul i32 %x, 5
+  %div = sdiv i32 %mul, 4
+  ret i32 %div
+}
+
+; negative udiv: no nuw
+define i32 @udiv_mul_add_no_nuw(i32 %x) {
+; CHECK-LABEL: @udiv_mul_add_no_nuw(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X:%.*]], 6
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[MUL]], 5
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %mul = mul i32 %x, 6
+  %div = udiv i32 %mul, 5
+  ret i32 %div
+}
+
+; positive udiv exact
+define i32 @udiv_exact_mul_nuw_add(i32 %x) {
+; CHECK-LABEL: @udiv_exact_mul_nuw_add(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i32 [[X:%.*]], 6
+; CHECK-NEXT:    [[DIV:%.*]] = udiv exact i32 [[MUL]], 5
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %mul = mul nuw i32 %x, 6
+  %div = udiv exact i32 %mul, 5
+  ret i32 %div
+}
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF1]] = !{!"unknown", !"instcombine"}
