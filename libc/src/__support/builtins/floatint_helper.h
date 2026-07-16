@@ -34,9 +34,6 @@ namespace builtins {
 template <typename F, typename I> LIBC_INLINE constexpr F floatint(I x) {
   using UI = cpp::make_unsigned_t<I>;
 
-  if (x == 0)
-    return F(0);
-
   Sign sign = Sign::POS;
   UI mag = static_cast<UI>(x);
   if constexpr (cpp::is_signed_v<I>) {
