@@ -1070,12 +1070,15 @@ enum class VariableCleanUp { Finalize, Deallocate };
 /// 7.5.6.3 point 3 or if it is an allocatable that must be deallocated. Note
 /// that deallocation will trigger finalization if the type has any.
 static std::optional<VariableCleanUp>
-needDeallocationOrFinalization(const Fortran::lower::pft::Variable &var) {
+needDeallocationOrFinalization(const Fortran::lower::pft::Variable &var,
+                               bool deallocateMainProgramVariable = false) {
   if (!var.hasSymbol())
     return std::nullopt;
   const Fortran::semantics::Symbol &sym = var.getSymbol();
   const Fortran::semantics::Scope &owner = sym.owner();
   if (owner.kind() == Fortran::semantics::Scope::Kind::MainProgram) {
+    if (deallocateMainProgramVariable)
+      return VariableCleanUp::Deallocate;
     // The standard does not require finalizing main program variables.
     return std::nullopt;
   }
@@ -1276,6 +1279,7 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
   auto *builder = &converter.getFirOpBuilder();
   bool needsHostCudaCleanup = needCUDAAlloc(var.getSymbol()) &&
                               !cuf::isCUDADeviceContext(builder->getRegion());
+  bool deallocateMainProgramVariable = false;
   if (needsHostCudaCleanup) {
     cuf::DataAttributeAttr dataAttr =
         Fortran::lower::translateSymbolCUFDataAttribute(builder->getContext(),
@@ -1287,8 +1291,9 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
     // Free the CUF storage, including in the main program: this is storage
     // cleanup, not finalization, so it must not be skipped there.
     if (dataAttr.getValue() != cuf::DataAttribute::Shared) {
-      bool isMainProgram =
-          sym->owner().kind() == Fortran::semantics::Scope::Kind::MainProgram;
+      deallocateMainProgramVariable =
+          sym->owner().kind() == Fortran::semantics::Scope::Kind::MainProgram &&
+          Fortran::semantics::IsAllocatable(*sym);
       Fortran::lower::StatementContext &cudaCleanupCtx =
           converter.getCudaCleanupCtx();
       cudaCleanupCtx.attachCleanup([builder, loc, exv, sym]() {
@@ -1297,22 +1302,11 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
                 builder->getContext(), *sym);
         cuf::FreeOp::create(*builder, loc, fir::getBase(exv), dataAttr);
       });
-      // Main-program allocatables skip normal deallocation. Attach this after
-      // descriptor cleanup so it runs first (cleanups are LIFO).
-      if (isMainProgram && Fortran::semantics::IsAllocatable(*sym)) {
-        auto *converterPtr = &converter;
-        cudaCleanupCtx.attachCleanup([converterPtr, loc, exv, sym]() {
-          if (const fir::MutableBoxValue *mutableBox =
-                  exv.getBoxOf<fir::MutableBoxValue>())
-            Fortran::lower::genDeallocateIfAllocated(*converterPtr, *mutableBox,
-                                                     loc, sym);
-        });
-      }
     }
   }
 
   if (std::optional<VariableCleanUp> cleanup =
-          needDeallocationOrFinalization(var)) {
+          needDeallocationOrFinalization(var, deallocateMainProgramVariable)) {
     auto *builder = &converter.getFirOpBuilder();
     mlir::Location loc = converter.getCurrentLocation();
     fir::ExtendedValue exv =
