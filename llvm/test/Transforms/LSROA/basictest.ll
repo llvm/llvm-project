@@ -55,8 +55,6 @@ entry:
 
   %res = add i32 %a, %b
   ret i32 %res
-
-
 }
 
 define i32 @test_simple_struct_aliasing() {
@@ -86,8 +84,6 @@ entry:
 
   %res = add i32 %a, %b
   ret i32 %res
-
-
 }
 
 define i32 @test_simple_struct_partial_write_read() {
@@ -107,7 +103,6 @@ entry:
   store i32 0, ptr %ptr0
   %a = load i32, ptr %ptr0
   call void @llvm.lifetime.end.p0(ptr %tmp)
-
 
   ret i32 %a
 }
