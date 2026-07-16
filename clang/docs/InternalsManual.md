@@ -1,7 +1,7 @@
 # "Clang" CFE Internals Manual
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Introduction
@@ -2115,7 +2115,7 @@ void recoveryExpr(int abc) {
 The `ASTImporter` class imports nodes of an `ASTContext` into another
 `ASTContext`. Please refer to the document {doc}`ASTImporter: Merging Clang
 ASTs <LibASTImporter>` for an introduction. And please read through the
-high-level [description of the import algorithm](LibASTImporter.html#algorithm-of-the-import), this is essential for
+high-level [description of the import algorithm](LibASTImporter.md#algorithm-of-the-import), this is essential for
 understanding further implementation details of the importer.
 
 (templated)=
@@ -2919,7 +2919,7 @@ diagnostics purpose, and inject that in the `ConstraintSatisfaction`.
 
 ## The CodeGen Library
 
-CodeGen takes an {ref}`AST <AST>` as input and produces [LLVM IR code](//llvm.org/docs/LangRef.html) from it.
+CodeGen takes an {ref}`AST <AST>` as input and produces [LLVM IR code](https://llvm.org/docs/LangRef.html) from it.
 
 ## How to change Clang
 
@@ -2930,7 +2930,7 @@ allowing the programmer to pass semantic information along to the compiler for
 various uses. For example, attributes may be used to alter the code generation
 for a program construct, or to provide extra semantic information for static
 analysis. This document explains how to add a custom attribute to Clang.
-Documentation on existing attributes can be found [here](//clang.llvm.org/docs/AttributeReference.html).
+Documentation on existing attributes can be found [here](https://clang.llvm.org/docs/AttributeReference.html).
 
 #### Attribute Basics
 

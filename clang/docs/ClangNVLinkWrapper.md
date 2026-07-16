@@ -1,10 +1,8 @@
 # Clang nvlink Wrapper
 
 ```{contents}
-:local: true
+:local:
 ```
-
-(clang-nvlink-wrapper-1)=
 
 ## Introduction
 

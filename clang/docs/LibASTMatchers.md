@@ -119,4 +119,3 @@ The free-standing functions are an indication that this matcher is just a
 combination of other matchers, as is for example the case with [callee](LibASTMatchersReference.html#callee1Anchor).
 
 % FIXME: "... macros (see below)" --- there isn't anything below
-

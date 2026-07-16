@@ -9,7 +9,7 @@ about how the AST is structured.
 Knowledge about {doc}`matching the Clang AST <LibASTMatchers>` and the [reference for the matchers](https://clang.llvm.org/docs/LibASTMatchersReference.html) are also useful.
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Introduction
@@ -136,7 +136,7 @@ Imported->getTranslationUnitDecl()->dump();
 
 Since we set **minimal import** in the constructor of the importer, the AST will not contain the declaration of the members (once we run the test tool).
 
-```bash
+```
 TranslationUnitDecl 0x68b9a8 <<invalid sloc>> <invalid sloc>
 `-CXXRecordDecl 0x6c7e30 <line:2:7, col:13> col:13 class MyClass definition
   `-DefinitionData pass_in_registers standard_layout trivially_copyable trivial literal
@@ -163,7 +163,7 @@ Imported->getTranslationUnitDecl()->dump();
 
 This time the AST is going to contain the members too.
 
-```bash
+```
 TranslationUnitDecl 0x68b9a8 <<invalid sloc>> <invalid sloc>
 `-CXXRecordDecl 0x6c7e30 <line:2:7, col:13> col:13 class MyClass definition
   |-DefinitionData pass_in_registers standard_layout trivially_copyable trivial literal
@@ -253,7 +253,7 @@ int main() {
 
 We may extend the `CMakeLists.txt` under let's say `clang/tools` with the build and link instructions:
 
-```bash
+```cmake
 add_clang_executable(astimporter-demo ASTImporterDemo.cpp)
 clang_target_link_libraries(astimporter-demo
   PRIVATE
@@ -269,7 +269,7 @@ clang_target_link_libraries(astimporter-demo
 
 Then we can build and execute the new tool.
 
-```bash
+```console
 $ ninja astimporter-demo && ./bin/astimporter-demo
 ```
 
@@ -326,7 +326,7 @@ int main() {
 
 When we run the tool we have the following warning:
 
-```bash
+```console
 to.cc:7:14: warning: type 'X<int>' has incompatible definitions in different translation units [-Wodr]
       struct X<int> { int i; };
              ^
@@ -343,7 +343,7 @@ Note, because of these diagnostics we had to call `enableSourceFileDiagnostics` 
 Since we could not import the specified declaration (`From`), we get an error in the return value.
 The AST does not contain the conflicting definition, so we are left with the original AST.
 
-```bash
+```
 ERROR: NameConflict
 TranslationUnitDecl 0xe54a48 <<invalid sloc>> <invalid sloc>
 |-ClassTemplateDecl 0xe91020 <to.cc:3:7, line:4:17> col:14 X
@@ -470,7 +470,7 @@ if (!ImportedOrErr) {
 
 If we take a look at the AST, then we can see that the Decl with the definition is created, but the field is missing.
 
-```bash
+```
 |-CXXRecordDecl 0xf66678 <line:9:7, col:13> col:13 class Y
 `-CXXRecordDecl 0xf66730 prev 0xf66678 <:10:7, col:13> col:13 class Y definition
   |-DefinitionData pass_in_registers empty aggregate standard_layout trivially_copyable pod trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
@@ -484,7 +484,7 @@ If we take a look at the AST, then we can see that the Decl with the definition 
 ```
 
 We do not remove the erroneous nodes because by the time when we recognize the error it is too late to remove the node, there may be additional references to that already in the AST.
-This is aligned with the overall [design principle of the Clang AST](InternalsManual.html#immutability): Clang AST nodes (types, declarations, statements, expressions, and so on) are generally designed to be **immutable once created**.
+This is aligned with the overall [design principle of the Clang AST](InternalsManual.md#immutability): Clang AST nodes (types, declarations, statements, expressions, and so on) are generally designed to be **immutable once created**.
 Thus, clients of the ASTImporter library should always check if there is any associated error for the node which they inspect in the destination context.
 We recommend skipping the processing of those nodes which have an error associated with them.
 
@@ -522,14 +522,14 @@ int main() {
 
 Let's generate the AST files for the two source files:
 
-```bash
+```console
 $ clang -cc1 -emit-pch -o bar.ast bar.c
 $ clang -cc1 -emit-pch -o main.ast main.c
 ```
 
 Then, let's check how the merged AST would look like if we consider only the `bar()` function:
 
-```bash
+```console
 $ clang -cc1 -ast-merge bar.ast -ast-merge main.ast /dev/null -ast-dump
 TranslationUnitDecl 0x12b0738 <<invalid sloc>> <invalid sloc>
 |-FunctionDecl 0x12b1470 </path/bar.h:4:1, col:9> col:5 used bar 'int ()'
@@ -547,13 +547,13 @@ The first two declarations are from `bar.ast`, the third is from `main.ast`.
 
 Now, let's create an object file from the merged AST:
 
-```bash
+```console
 $ clang -cc1 -ast-merge bar.ast -ast-merge main.ast /dev/null -emit-obj -o main.o
 ```
 
 Next, we may call the linker and execute the created binary file.
 
-```bash
+```console
 $ clang -o a.out main.o
 $ ./a.out
 $ echo $?
@@ -590,7 +590,7 @@ int main() {
 
 We shall generate the AST files, merge them, create the executable and then run it:
 
-```bash
+```console
 $ clang++ -x c++-header -o foo.ast foo.cpp
 $ clang++ -x c++-header -o main.ast main.cpp
 $ clang++ -cc1 -x c++ -ast-merge foo.ast -ast-merge main.ast /dev/null -ast-dump

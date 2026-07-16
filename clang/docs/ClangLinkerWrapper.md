@@ -1,10 +1,8 @@
 # Clang Linker Wrapper
 
 ```{contents}
-:local: true
+:local:
 ```
-
-(clang-linker-wrapper-1)=
 
 ## Introduction
 

@@ -1,7 +1,7 @@
 # Tutorial for building tools using LibTooling and LibASTMatchers
 
 This document is intended to show how to build a useful source-to-source
-translation tool based on Clang's [LibTooling](LibTooling.html). It is
+translation tool based on Clang's [LibTooling](LibTooling.md). It is
 explicitly aimed at people who are new to Clang, so all you should need
 is a working knowledge of C++ and the command line.
 
@@ -113,7 +113,7 @@ With that done, Ninja will be able to compile our tool. Let's give it
 something to compile! Put the following into
 `clang-tools-extra/loop-convert/LoopConvert.cpp`. A detailed explanation of
 why the different parts are needed can be found in the [LibTooling
-documentation](LibTooling.html).
+documentation](LibTooling.md).
 
 ```c++
 // Declares clang::SyntaxOnlyAction.
@@ -179,7 +179,7 @@ Clang recently introduced the {doc}`ASTMatcher
 library <LibASTMatchers>` to provide a simple, powerful, and
 concise way to describe specific patterns in the AST. Implemented as a
 DSL powered by macros and templates (see
-[ASTMatchers.h](../doxygen/ASTMatchers_8h_source.html) if you're
+[ASTMatchers.h](https://clang.llvm.org/doxygen/ASTMatchers_8h_source.html) if you're
 curious), matchers offer the feel of algebraic data types common to
 functional programming languages.
 

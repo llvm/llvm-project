@@ -1,7 +1,7 @@
 # Driver Design & Internals
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Introduction
@@ -20,7 +20,7 @@ Although the driver is part of and driven by the Clang project, it is
 logically a separate tool which shares many of the same goals as Clang:
 
 ```{contents} Features
-:local: true
+:local:
 ```
 
 ### GCC Compatibility
@@ -68,7 +68,7 @@ monolithic task.
 
 ```{contents}
 :depth: 1
-:local: true
+:local:
 ```
 
 ### Internals Introduction

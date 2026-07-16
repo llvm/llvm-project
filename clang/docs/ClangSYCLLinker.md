@@ -1,10 +1,8 @@
 # Clang SYCL Linker
 
 ```{contents}
-:local: true
+:local:
 ```
-
-(clang-sycl-linker-1)=
 
 ## Introduction
 

@@ -3,7 +3,7 @@
 A tutorial on how to write a source-to-source translation tool using Clang Transformer.
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## What is Clang Transformer?
@@ -370,8 +370,8 @@ introductions on clang's site:
 - {doc}`Matching the Clang AST <LibASTMatchers>`
 - [AST Matcher Reference](https://clang.llvm.org/docs/LibASTMatchersReference.html)
 
-```{rubric} Footnotes
-```
+:::{rubric} Footnotes
+:::
 
 [^f1]: Technically, it binds it to the string "str", to which our
     variable `s` is bound. But, the choice of that id string is

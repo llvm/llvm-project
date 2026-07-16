@@ -1,10 +1,8 @@
 # Clang Offload Bundler
 
 ```{contents}
-:local: true
+:local:
 ```
-
-(clang-offload-bundler-1)=
 
 ## Introduction
 
@@ -95,36 +93,23 @@ Multiple text and binary file formats are supported for bundling/unbundling. See
 formats. Use the `File Type` column to determine the value to pass to the
 `--type` option based on the type of input files while bundling/unbundling.
 
-> ```{eval-rst}
-> .. table:: Supported File Formats
->    :name: supported-file-formats-table
->
->    +--------------------------+----------------+-------------+
->    | File Format              | File Type      | Text/Binary |
->    +==========================+================+=============+
->    | CPP output               |        i       |     Text    |
->    +--------------------------+----------------+-------------+
->    | C++ CPP output           |       ii       |     Text    |
->    +--------------------------+----------------+-------------+
->    | CUDA/HIP output          |       cui      |     Text    |
->    +--------------------------+----------------+-------------+
->    | Dependency               |        d       |     Text    |
->    +--------------------------+----------------+-------------+
->    | LLVM                     |       ll       |     Text    |
->    +--------------------------+----------------+-------------+
->    | LLVM Bitcode             |       bc       |    Binary   |
->    +--------------------------+----------------+-------------+
->    | Assembler                |        s       |     Text    |
->    +--------------------------+----------------+-------------+
->    | Object                   |        o       |    Binary   |
->    +--------------------------+----------------+-------------+
->    | Archive of bundled files |        a       |    Binary   |
->    +--------------------------+----------------+-------------+
->    | Precompiled header       |       gch      |    Binary   |
->    +--------------------------+----------------+-------------+
->    | Clang AST file           |       ast      |    Binary   |
->    +--------------------------+----------------+-------------+
-> ```
+```{table} Supported File Formats
+:name: supported-file-formats-table
+
+| File Format              | File Type | Text/Binary |
+| ------------------------ | --------- | ----------- |
+| CPP output               | i         | Text        |
+| C++ CPP output           | ii        | Text        |
+| CUDA/HIP output          | cui       | Text        |
+| Dependency               | d         | Text        |
+| LLVM                     | ll        | Text        |
+| LLVM Bitcode             | bc        | Binary      |
+| Assembler                | s         | Text        |
+| Object                   | o         | Binary      |
+| Archive of bundled files | a         | Binary      |
+| Precompiled header       | gch       | Binary      |
+| Clang AST file           | ast       | Binary      |
+```
 
 (clang-bundled-code-object-layout-text)=
 
@@ -171,38 +156,26 @@ bundle file is:
 
 The layout of a bundled code object is defined by the following table:
 
-> ```{eval-rst}
-> .. table:: Bundled Code Object Layout
->   :name: bundled-code-object-layout-table
->
->   =================================== ======= ================ ===============================
->   Field                               Type    Size in Bytes    Description
->   =================================== ======= ================ ===============================
->   Magic String                        string  24               ``__CLANG_OFFLOAD_BUNDLE__``
->   Number Of Bundle Entries            integer 8                Number of bundle entries.
->   1st Bundle Entry Code Object Offset integer 8                Byte offset from beginning of
->                                                                bundled code object to 1st code
->                                                                object.
->   1st Bundle Entry Code Object Size   integer 8                Byte size of 1st code object.
->   1st Bundle Entry ID Length          integer 8                Character length of bundle
->                                                                entry ID of 1st code object.
->   1st Bundle Entry ID                 string  1st Bundle Entry Bundle entry ID of 1st code
->                                               ID Length        object. This is not NUL
->                                                                terminated. See
->                                                                :ref:`clang-bundle-entry-id`.
->   \...
->   Nth Bundle Entry Code Object Offset integer 8
->   Nth Bundle Entry Code Object Size   integer 8
->   Nth Bundle Entry ID Length          integer 8
->   Nth Bundle Entry ID                 string  1st Bundle Entry
->                                               ID Length
->   1st Bundle Entry Code Object        bytes   1st Bundle Entry
->                                               Code Object Size
->   \...
->   Nth Bundle Entry Code Object        bytes   Nth Bundle Entry
->                                               Code Object Size
->   =================================== ======= ================ ===============================
-> ```
+```{table} Bundled Code Object Layout
+:name: bundled-code-object-layout-table
+
+| Field                               | Type    | Size in Bytes                     | Description |
+| ----------------------------------- | ------- | --------------------------------- | ----------- |
+| Magic String                        | string  | 24                                | `__CLANG_OFFLOAD_BUNDLE__` |
+| Number Of Bundle Entries            | integer | 8                                 | Number of bundle entries. |
+| 1st Bundle Entry Code Object Offset | integer | 8                                 | Byte offset from beginning of bundled code object to 1st code object. |
+| 1st Bundle Entry Code Object Size   | integer | 8                                 | Byte size of 1st code object. |
+| 1st Bundle Entry ID Length          | integer | 8                                 | Character length of bundle entry ID of 1st code object. |
+| 1st Bundle Entry ID                 | string  | 1st Bundle Entry ID Length        | Bundle entry ID of 1st code object. This is not NUL terminated. See {ref}`clang-bundle-entry-id`. |
+| ...                                 |         |                                   | |
+| Nth Bundle Entry Code Object Offset | integer | 8                                 | |
+| Nth Bundle Entry Code Object Size   | integer | 8                                 | |
+| Nth Bundle Entry ID Length          | integer | 8                                 | |
+| Nth Bundle Entry ID                 | string  | 1st Bundle Entry ID Length        | |
+| 1st Bundle Entry Code Object        | bytes   | 1st Bundle Entry Code Object Size | |
+| ...                                 |         |                                   | |
+| Nth Bundle Entry Code Object        | bytes   | Nth Bundle Entry Code Object Size | |
+```
 
 (clang-bundle-entry-id)=
 
@@ -225,38 +198,16 @@ Where:
 : The runtime responsible for managing the bundled entry code object. See
   {ref}`clang-offload-kind-table`.
 
-  ```{eval-rst}
-  .. table:: Bundled Code Object Offload Kind
-      :name: clang-offload-kind-table
+```{table} Bundled Code Object Offload Kind
+:name: clang-offload-kind-table
 
-      ============= ==============================================================
-      Offload Kind  Description
-      ============= ==============================================================
-      host          Host code object. ``clang-offload-bundler`` always includes
-                    this entry as the first bundled code object entry. For an
-                    embedded bundled code object, this entry is not used by the
-                    runtime and so is generally an empty code object.
-
-      hip           Offload code object for the HIP language. Used for all
-                    HIP language offload code objects when the
-                    ``clang-offload-bundler`` is used to bundle code objects as
-                    intermediate steps of the tool chain. Also used for AMD GPU
-                    code objects before ABI version V4 when the
-                    ``clang-offload-bundler`` is used to create a *fat binary*
-                    to be loaded by the HIP runtime. The fat binary can be
-                    loaded directly from a file, or be embedded in the host code
-                    object as a data section with the name ``.hip_fatbin``.
-
-      hipv4         Offload code object for the HIP language. Used for AMD GPU
-                    code objects with at least ABI version V4 and above when the
-                    ``clang-offload-bundler`` is used to create a *fat binary*
-                    to be loaded by the HIP runtime. The fat binary can be
-                    loaded directly from a file, or be embedded in the host code
-                    object as a data section with the name ``.hip_fatbin``.
-
-      openmp        Offload code object for the OpenMP language extension.
-      ============= ==============================================================
-  ```
+| Offload Kind | Description |
+| ------------ | ----------- |
+| host         | Host code object. `clang-offload-bundler` always includes this entry as the first bundled code object entry. For an embedded bundled code object, this entry is not used by the runtime and so is generally an empty code object. |
+| hip          | Offload code object for the HIP language. Used for all HIP language offload code objects when `clang-offload-bundler` is used to bundle code objects as intermediate steps of the tool chain. Also used for AMD GPU code objects before ABI version V4 when `clang-offload-bundler` is used to create a *fat binary* to be loaded by the HIP runtime. The fat binary can be loaded directly from a file, or be embedded in the host code object as a data section with the name `.hip_fatbin`. |
+| hipv4        | Offload code object for the HIP language. Used for AMD GPU code objects with at least ABI version V4 and above when `clang-offload-bundler` is used to create a *fat binary* to be loaded by the HIP runtime. The fat binary can be loaded directly from a file, or be embedded in the host code object as a data section with the name `.hip_fatbin`. |
+| openmp       | Offload code object for the OpenMP language extension. |
+```
 
 Note: The distinction between the `hip` and `hipv4` offload kinds is historically based.
 Originally, these designations might have indicated different versions of the
@@ -290,11 +241,11 @@ without differentiation based on offload kind.
 
 ### Bundled Code Object Composition
 
-> - Each entry of a bundled code object must have a different bundle entry ID.
-> - There can be multiple entries for the same processor provided they differ
->   in target feature settings.
-> - If there is an entry with a target feature specified as *Any*, then all
->   entries must specify that target feature as *Any* for the same processor.
+- Each entry of a bundled code object must have a different bundle entry ID.
+- There can be multiple entries for the same processor provided they differ
+  in target feature settings.
+- If there is an entry with a target feature specified as *Any*, then all
+  entries must specify that target feature as *Any* for the same processor.
 
 There may be additional target-specific restrictions.
 
@@ -302,12 +253,12 @@ There may be additional target-specific restrictions.
 
 ### Compatibility Rules for Bundle Entry ID
 
-> A code object, specified using its Bundle Entry ID, can be loaded and
-> executed on a target processor if:
->
-> - Their offload kinds are the same or compatible.
-> - Their target triples are compatible.
-> - Their Target IDs are compatible as defined in {ref}`compatibility-target-id`.
+A code object, specified using its Bundle Entry ID, can be loaded and
+executed on a target processor if:
+
+- Their offload kinds are the same or compatible.
+- Their target triples are compatible.
+- Their Target IDs are compatible as defined in {ref}`compatibility-target-id`.
 
 (clang-target-id)=
 
@@ -365,11 +316,11 @@ Where:
 
 ### Compatibility Rules for Target ID
 
-> A code object compiled for a Target ID is considered compatible for a
-> target if:
->
-> - Their processor is the same.
-> - Their feature set is compatible as defined above.
+A code object compiled for a Target ID is considered compatible for a
+target if:
+
+- Their processor is the same.
+- Their feature set is compatible as defined above.
 
 There are two forms of target ID:
 
@@ -430,37 +381,37 @@ The clang-offload-bundler determines whether a device binary is compatible
 with a target by comparing bundle IDs. Two bundle IDs are considered
 compatible if:
 
-> - Their offload kinds are the same
-> - Their target triples are the same
-> - Their Target IDs are the same
+- Their offload kinds are the same
+- Their target triples are the same
+- Their Target IDs are the same
 
 ### Creating a Heterogeneous Device Archive
 
 1. Compile source file(s) to generate object file(s)
 
-> ```
-> clang -O2 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa,amdgcn-amd-amdhsa,\
->    nvptx64-nvidia-cuda, nvptx64-nvidia-cuda \
->   -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906:sramecc-:xnack+ \
->   -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906:sramecc+:xnack+ \
->   -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_70 \
->   -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_80 \
->   -c func_1.c -o func_1.o
->
-> clang -O2 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa,amdgcn-amd-amdhsa,
->   nvptx64-nvidia-cuda, nvptx64-nvidia-cuda \
->   -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906:sramecc-:xnack+ \
->   -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906:sramecc+:xnack+ \
->   -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_70 \
->   -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_80 \
->   -c func_2.c -o func_2.o
-> ```
+   ```
+   clang -O2 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa,amdgcn-amd-amdhsa,\
+      nvptx64-nvidia-cuda, nvptx64-nvidia-cuda \
+     -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906:sramecc-:xnack+ \
+     -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906:sramecc+:xnack+ \
+     -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_70 \
+     -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_80 \
+     -c func_1.c -o func_1.o
+
+   clang -O2 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa,amdgcn-amd-amdhsa,
+     nvptx64-nvidia-cuda, nvptx64-nvidia-cuda \
+     -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906:sramecc-:xnack+ \
+     -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906:sramecc+:xnack+ \
+     -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_70 \
+     -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_80 \
+     -c func_2.c -o func_2.o
+   ```
 
 2. Create a heterogeneous device archive by combining all the object file(s)
 
-> ```
-> llvm-ar cr libFatArchive.a func_1.o func_2.o
-> ```
+   ```
+   llvm-ar cr libFatArchive.a func_1.o func_2.o
+   ```
 
 ### Extracting a Device Specific Archive
 
@@ -484,8 +435,8 @@ The following cases may arise during compatibility testing:
   error without creating an archive.
 
 The created archive file does not contain an index of the symbols and device
-binary files are named as \<<Parent Bundle Name>-\<DeviceBinary's TargetID>>,
-with ':' replaced with '\_'.
+binary files are named as `<Parent Bundle Name>-<DeviceBinary's TargetID>`,
+with ':' replaced with `_`.
 
 ### Usage
 

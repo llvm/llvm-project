@@ -17,7 +17,7 @@ of executing the action. The only part left is to implement the
 CreateASTConsumer method that returns an ASTConsumer per translation
 unit.
 
-```
+```cpp
 class FindNamedClassAction : public clang::ASTFrontendAction {
 public:
   virtual std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(
@@ -35,7 +35,7 @@ different entry points, but for our use case the only one needed is
 HandleTranslationUnit, which is called with the ASTContext for the
 translation unit.
 
-```
+```cpp
 class FindNamedClassConsumer : public clang::ASTConsumer {
 public:
   virtual void HandleTranslationUnit(clang::ASTContext &Context) {
@@ -54,15 +54,15 @@ private:
 Now that everything is hooked up, the next step is to implement a
 RecursiveASTVisitor to extract the relevant information from the AST.
 
-The RecursiveASTVisitor provides hooks of the form bool
-VisitNodeType(NodeType \*) for most AST nodes; the exception are TypeLoc
+The RecursiveASTVisitor provides hooks of the form `bool
+VisitNodeType(NodeType *)` for most AST nodes; the exception are TypeLoc
 nodes, which are passed by-value. We only need to implement the methods
 for the relevant node types.
 
 Let's start by writing a RecursiveASTVisitor that visits all
 CXXRecordDecl's.
 
-```
+```cpp
 class FindNamedClassVisitor
   : public RecursiveASTVisitor<FindNamedClassVisitor> {
 public:
@@ -83,7 +83,7 @@ of the Clang AST to drill through to the parts that are interesting for
 us. For example, to find all class declaration with a certain name, we
 can check for a specific qualified name:
 
-```
+```cpp
 bool VisitCXXRecordDecl(CXXRecordDecl *Declaration) {
   if (Declaration->getQualifiedNameAsString() == "n::m::C")
     Declaration->dump();
@@ -102,7 +102,7 @@ The ASTContext is available from the CompilerInstance during the call to
 CreateASTConsumer. We can thus extract it there and hand it into our
 freshly created FindNamedClassConsumer:
 
-```
+```cpp
 virtual std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(
   clang::CompilerInstance &Compiler, llvm::StringRef InFile) {
   return std::make_unique<FindNamedClassConsumer>(&Compiler.getASTContext());
@@ -113,7 +113,7 @@ Now that the ASTContext is available in the RecursiveASTVisitor, we can
 do more interesting things with AST nodes, like looking up their source
 locations:
 
-```
+```cpp
 bool VisitCXXRecordDecl(CXXRecordDecl *Declaration) {
   if (Declaration->getQualifiedNameAsString() == "n::m::C") {
     // getFullLoc uses the ASTContext's SourceManager to resolve the source
@@ -132,7 +132,7 @@ bool VisitCXXRecordDecl(CXXRecordDecl *Declaration) {
 
 Now we can combine all of the above into a small example program:
 
-```
+```cpp
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -192,7 +192,7 @@ int main(int argc, char **argv) {
 We store this into a file called FindClassDecls.cpp and create the
 following CMakeLists.txt to link it:
 
-```
+```cmake
 set(LLVM_LINK_COMPONENTS
   Support
   )
@@ -212,7 +212,7 @@ target_link_libraries(find-class-decls
 When running this tool over a small code snippet it will output all
 declarations of a class n::m::C it found:
 
-```
+```console
 $ ./bin/find-class-decls "namespace n { namespace m { class C {}; } }"
 Found declaration at 1:29
 ```

@@ -245,12 +245,11 @@ expression type, it may choose to save an object (`LastValue`) of type 'value'
 while allocating memory to it (`SetValueWithAlloc()`), or not (
 `SetValueNoAlloc()`).
 
-```{eval-rst}
-.. graphviz::
-    :name: valuesynthesis
-    :caption: Value Synthesis
-    :alt: Shows how an object of type 'Value' is synthesized
-    :align: center
+```{graphviz}
+:name: valuesynthesis
+:caption: Value Synthesis
+:alt: Shows how an object of type 'Value' is synthesized
+:align: center
 
      digraph "valuesynthesis" {
          rankdir="LR";
@@ -427,12 +426,11 @@ This is achieved using an extension in the `libclangInterpreter` library.
 To automatically print the value of an expression, simply write the expression
 in the global scope **without a semicolon**.
 
-```{eval-rst}
-.. graphviz::
-    :name: automaticprintf
-    :caption: Automatic PrintF
-    :alt: Shows how Automatic PrintF can be used
-    :align: center
+```{graphviz}
+:name: automaticprintf
+:caption: Automatic PrintF
+:alt: Shows how Automatic PrintF can be used
+:align: center
 
      digraph "AutomaticPrintF" {
          size="6,4";
@@ -475,12 +473,11 @@ But if the value parameter is made optional and it is omitted (i.e., that the
 user does not want to utilize it elsewhere), then the last value can be
 validated and pushed into the `dump()` function.
 
-```{eval-rst}
-.. graphviz::
-    :name: parsing
-    :caption: Parsing Mechanism
-    :alt: Shows the Parsing Mechanism for Pretty Printing
-    :align: center
+```{graphviz}
+:name: parsing
+:caption: Parsing Mechanism
+:alt: Shows the Parsing Mechanism for Pretty Printing
+:align: center
 
 
      digraph "prettyprint" {

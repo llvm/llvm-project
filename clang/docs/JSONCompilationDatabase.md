@@ -44,7 +44,7 @@ techniques.
 Clang's tooling interface supports reading compilation databases; see
 the {doc}`LibTooling documentation <LibTooling>`. libclang and its
 Python bindings also support this (since clang 3.2); see
-[CXCompilationDatabase.h](/doxygen/group__COMPILATIONDB.html).
+[CXCompilationDatabase.h](https://clang.llvm.org/doxygen/group__COMPILATIONDB.html).
 
 ## Format
 
