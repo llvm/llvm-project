@@ -1,22 +1,20 @@
-=====================================
-AArch64 Optimization and Flags Status
-=====================================
+# AArch64 Optimization and Flags Status
 
-Overview
---------
+## Overview
 
 This page summarizes default-off BOLT optimization flags that users may
 explicitly enable when optimizing AArch64 binaries.
 
 BOLT is to be used with binaries linked with
-relocations (``--emit-relocs`` or ``-Wl,-q``) and representative profile data.
+relocations (`--emit-relocs` or `-Wl,-q`) and representative profile data.
 
-Main Code-Layout Optimizations
-------------------------------
+## Main Code-Layout Optimizations
+
 The following code-layout optimizations are typically the first options to
 consider when optimizing AArch64 binaries with representative profile data.
 They typically provide the largest performance gains among BOLT optimizations.
 
+```{eval-rst}
 .. list-table::
      :header-rows: 1
      :widths: 34 42
@@ -35,11 +33,13 @@ They typically provide the largest performance gains among BOLT optimizations.
          | ``--split-eh``
        - Split hot and cold code
 
+```
 
-Other Supported Optimizations
------------------------------
+## Other Supported Optimizations
+
 The following optimizations are also supported for AArch64.
 
+```{eval-rst}
 .. list-table::
      :header-rows: 1
      :widths: 34 42
@@ -63,13 +63,15 @@ The following optimizations are also supported for AArch64.
        - Inline functions
      * - ``--icf=safe|all``
        - Fold identical functions
+```
 
-Supported Flags With Limitations
---------------------------------
+## Supported Flags With Limitations
+
 The following flags are implemented for AArch64, but require specific runtime
 or option conditions. Enabling them without the required conditions may report
 an error or perform no transformation.
 
+```{eval-rst}
 .. list-table::
      :header-rows: 1
      :widths: 30 28 44
@@ -94,16 +96,17 @@ an error or perform no transformation.
      * - ``--split-strategy=cdsplit``
        - Split functions using cache-directed splitting
        - Requires ``--compact-code-model`` on AArch64.
+```
 
-Unsupported Flags
------------------
+## Unsupported Flags
 
-The following flags are not available for AArch64. ``Not applicable to
-AArch64`` means the optimization targets architectural features or mechanisms
-that do not apply to AArch64. ``Not implemented for AArch64`` means the
+The following flags are not available for AArch64. `Not applicable to
+AArch64` means the optimization targets architectural features or mechanisms
+that do not apply to AArch64. `Not implemented for AArch64` means the
 optimization could be relevant, but is not currently implemented for this
 target.
 
+```{eval-rst}
 .. list-table::
      :header-rows: 1
      :widths: 30 28 42
@@ -143,3 +146,5 @@ target.
      * - ``--insert-retpolines``
        - Insert retpolines
        - Not applicable to AArch64.
+```
+
