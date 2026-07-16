@@ -185,6 +185,7 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
   if (VGPRThresholdPercentOpt > 0) {
     [[maybe_unused]] unsigned OriginalVGPRExcessLimit = VGPRExcessLimit;
     [[maybe_unused]] unsigned OriginalVGPRCriticalLimit = VGPRCriticalLimit;
+    abort();
     VGPRExcessLimit = (VGPRThresholdPercentOpt * VGPRExcessLimit + 99) / 100;
     VGPRCriticalLimit =
         (VGPRThresholdPercentOpt * VGPRCriticalLimit + 99) / 100;
