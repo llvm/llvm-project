@@ -13,7 +13,7 @@ define void @d() {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr @d, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[BROADCAST_SPLAT]], i32 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[BROADCAST_SPLAT]], /* (none) */ i32 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x float> zeroinitializer, <2 x float> splat (float 1.000000e+00)
 ; CHECK-NEXT:    store <2 x float> [[TMP3]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2

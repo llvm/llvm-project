@@ -227,3 +227,17 @@ namespace DefinitionInBody {
     return 5;
   }
 }
+
+namespace InheritedCtor {
+  struct S {
+    constexpr S(int = ; // both-note {{to match this}} \
+                        // both-error {{expected ';' at end of declaration list}} \
+                        // both-error {{expected expression}}
+  }; // both-error {{expected ')'}}
+
+  struct SS : S {
+    using S::S;
+  };
+
+  SS ss{42};
+}

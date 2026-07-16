@@ -15,9 +15,12 @@
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 
-#include <signal.h>
+#include "hdr/signal_macros.h"
+#include "hdr/sys_wait_macros.h"
+#include "hdr/types/pid_t.h"
+#include "hdr/types/siginfo_t.h"
+#include "hdr/types/struct_rusage.h"
 #include <sys/syscall.h> // For syscall numbers.
-#include <sys/wait.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {

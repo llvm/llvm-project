@@ -101,7 +101,7 @@ jobs:
             install-python: false
             install-macos-dependencies: true
           - platform: Linux x86_64
-            runner: llvm-premerge-libcxx-next-runners
+            runner: llvm-premerge-libcxx-runners
             cc: clang-22
             cxx: clang++-22
             install-python: true
