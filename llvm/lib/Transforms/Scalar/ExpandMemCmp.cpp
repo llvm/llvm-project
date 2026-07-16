@@ -56,7 +56,6 @@ static cl::opt<unsigned> MaxLoadsPerMemcmpOptSize(
 
 namespace {
 
-
 // Return the known alignment of the pointer argument \p ArgNo of \p CI,
 // combining the alignment of the underlying pointer value with any align
 // attribute on the call site itself.
