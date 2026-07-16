@@ -12,8 +12,8 @@
 
 #include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/Allocatable.h"
-#include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/CUDA.h"
+#include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertProcedureDesignator.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/CustomIntrinsicCall.h"
@@ -1985,12 +1985,11 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
     }
     const bool isCudaAllocatableResult = static_cast<bool>(resultCudaAttr);
     auto genCudaResultCleanUp = [&]() {
-      callContext.stmtCtx.attachCleanup(
-          [&converter = callContext.converter, loc, box = *allocatable,
-           resultSym]() {
-            Fortran::lower::genDeallocateIfAllocated(converter, box, loc,
-                                                     resultSym);
-          });
+      callContext.stmtCtx.attachCleanup([&converter = callContext.converter,
+                                         loc, box = *allocatable, resultSym]() {
+        Fortran::lower::genDeallocateIfAllocated(converter, box, loc,
+                                                 resultSym);
+      });
     };
     resultEntity = loadTrivialScalar(loc, builder, resultEntity);
     if (resultEntity.isVariable()) {
