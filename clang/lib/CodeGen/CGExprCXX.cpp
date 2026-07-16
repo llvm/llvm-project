@@ -2116,9 +2116,11 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
       // TU that only does ::delete (with the deleting destructor defined in
       // another TU) would emit no forwarder, leaving the wrapper bound to the
       // trapping empty fallback and crashing at runtime.
-      if (const FunctionDecl *OD = E->getOperatorDelete();
-          OD && !isa<CXXMethodDecl>(OD))
-        CGM.getOrCreateMSVCGlobalDeleteWrapper(OD);
+      const FunctionDecl *OD = E->getOperatorDelete();
+      assert(!isa<CXXMethodDecl>(OD) &&
+             "global ::delete should resolve to a namespace-scope "
+             "operator delete");
+      CGM.getOrCreateMSVCGlobalDeleteWrapper(OD);
     }
   }
 
