@@ -268,8 +268,13 @@ def ACCSpecializeForDevice : Pass<"acc-specialize-for-device", "mlir::func::Func
       acc.declare_enter, acc.declare_exit
     - Compute constructs (inline region): acc.parallel, acc.serial, acc.kernels
     - Runtime ops (erased): acc.init, acc.shutdown, acc.set, acc.wait
+                  (folded if known): acc.on_device
   }];
   let dependentDialects = ["mlir::acc::OpenACCDialect"];
+  let options = [
+    ListOption<"theDeviceTypes", "the-device-types", "int64_t",
+               "List of integers which represent the device we are specializing for">
+  ];
 }
 
 def ACCSpecializeForHost : Pass<"acc-specialize-for-host", "mlir::func::FuncOp"> {
@@ -534,6 +539,35 @@ def ACCBindRoutine
     call target.
   }];
   let options = [ AccDeviceTypeOption ];
+}
+
+def ACCCGToGPU : InterfacePass<"acc-cg-to-gpu", "mlir::FunctionOpInterface"> {
+  let summary = "Lower acc.compute_region to gpu.launch";
+  let description = [{
+    Generate GPU code for acc.compute_region loop nests by converting them to
+    gpu.launch and mapping acc.par_dims parallelism to GPU block and thread
+    dimensions.
+  }];
+  let options = [
+    AccDeviceTypeOption,
+    Option<"maxWorkgroupSharedMemory", "max-workgroup-shared-memory", "int64_t",
+        "49152",
+        "Maximum workgroup shared memory budget in bytes.">,
+    Option<"maxThreadPrivateStack", "max-thread-private-stack", "int64_t",
+        "16384",
+        "Maximum thread-private stack allocation in bytes.">,
+    Option<"subgroupSize", "subgroup-size", "int64_t", "32",
+        "Subgroup size used for block-dimension alignment and reductions.">
+  ];
+  let dependentDialects = [
+    "mlir::arith::ArithDialect",
+    "mlir::complex::ComplexDialect",
+    "mlir::gpu::GPUDialect",
+    "mlir::acc::OpenACCDialect",
+    "mlir::scf::SCFDialect",
+    "mlir::NVVM::NVVMDialect",
+    "mlir::memref::MemRefDialect"
+  ];
 }
 
 #endif // MLIR_DIALECT_OPENACC_TRANSFORMS_PASSES

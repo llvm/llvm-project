@@ -95,7 +95,7 @@ int f(int i) {
 // CIR:         cir.call @_ZZ1fiENK3$_0clEiM1Ai({{.*}}, {{.*}}, %[[ZERO]])
 
 // LLVM-LABEL: define{{.*}} i32 @_Z1fi(
-// LLVM:         call void @llvm.memcpy{{.*}}({{.*}}, ptr @[[F_A]]
+// LLVM:         call void @llvm.memcpy{{.*}}({{.*}}, ptr align 4 @[[F_A]]
 // LLVM:         call{{.*}} i32 @"_ZZ1fiENK3$_0clEiM1Ai"(ptr {{.*}} %{{.*}}, i32 {{.*}} %{{.*}}, i64 0)
 
 namespace PR42276 {

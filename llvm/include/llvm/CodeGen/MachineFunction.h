@@ -70,7 +70,8 @@ class PseudoSourceValueManager;
 class raw_ostream;
 class SlotIndexes;
 class StringRef;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetSubtargetInfo;
 struct WinEHFuncInfo;
 

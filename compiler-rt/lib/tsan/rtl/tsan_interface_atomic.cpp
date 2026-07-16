@@ -350,12 +350,13 @@ struct OpFetchAdd {
 
 struct OpFetchSub {
   template <typename T>
-  static T NoTsanAtomic(morder mo, volatile T *a, T v) {
+  [[maybe_unused]] static T NoTsanAtomic(morder mo, volatile T* a, T v) {
     return func_sub(a, v);
   }
 
   template <typename T>
-  static T Atomic(ThreadState *thr, uptr pc, morder mo, volatile T *a, T v) {
+  [[maybe_unused]] static T Atomic(ThreadState* thr, uptr pc, morder mo,
+                                   volatile T* a, T v) {
     return AtomicRMW<T, func_sub>(thr, pc, a, v, mo);
   }
 };
@@ -386,24 +387,26 @@ struct OpFetchOr {
 
 struct OpFetchXor {
   template <typename T>
-  static T NoTsanAtomic(morder mo, volatile T *a, T v) {
+  [[maybe_unused]] static T NoTsanAtomic(morder mo, volatile T* a, T v) {
     return func_xor(a, v);
   }
 
   template <typename T>
-  static T Atomic(ThreadState *thr, uptr pc, morder mo, volatile T *a, T v) {
+  [[maybe_unused]] static T Atomic(ThreadState* thr, uptr pc, morder mo,
+                                   volatile T* a, T v) {
     return AtomicRMW<T, func_xor>(thr, pc, a, v, mo);
   }
 };
 
 struct OpFetchNand {
   template <typename T>
-  static T NoTsanAtomic(morder mo, volatile T *a, T v) {
+  [[maybe_unused]] static T NoTsanAtomic(morder mo, volatile T* a, T v) {
     return func_nand(a, v);
   }
 
   template <typename T>
-  static T Atomic(ThreadState *thr, uptr pc, morder mo, volatile T *a, T v) {
+  [[maybe_unused]] static T Atomic(ThreadState* thr, uptr pc, morder mo,
+                                   volatile T* a, T v) {
     return AtomicRMW<T, func_nand>(thr, pc, a, v, mo);
   }
 };
