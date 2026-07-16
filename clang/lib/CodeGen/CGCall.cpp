@@ -168,7 +168,7 @@ CodeGenTypes::arrangeFreeFunctionType(CanQual<FunctionNoProtoType> FTNP) {
   // variadic type.
   return arrangeLLVMFunctionInfo(FTNP->getReturnType().getUnqualifiedType(),
                                  FnInfoOpts::None, {}, FTNP->getExtInfo(), {},
-                                 RequiredArgs(0));
+                                 RequiredArgs(0), /*ABIInfoFD=*/nullptr);
 }
 
 static void addExtParameterInfosForCall(
@@ -246,7 +246,8 @@ arrangeLLVMFunctionInfo(CodeGenTypes &CGT, bool instanceMethod,
   FnInfoOpts opts =
       instanceMethod ? FnInfoOpts::IsInstanceMethod : FnInfoOpts::None;
   return CGT.arrangeLLVMFunctionInfo(resultType, opts, prefix,
-                                     FTP->getExtInfo(), paramInfos, Required);
+                                     FTP->getExtInfo(), paramInfos, Required,
+                                     /*ABIInfoFD=*/nullptr);
 }
 
 using CanQualTypeList = SmallVector<CanQualType, 16>;
@@ -624,7 +625,7 @@ CodeGenTypes::arrangeObjCMessageSendSignature(const ObjCMethodDecl *MD,
 
   return arrangeLLVMFunctionInfo(GetReturnType(MD->getReturnType()),
                                  FnInfoOpts::None, argTys, einfo, extParamInfos,
-                                 required);
+                                 required, /*ABIInfoFD=*/nullptr);
 }
 
 const CGFunctionInfo &
@@ -658,7 +659,7 @@ CodeGenTypes::arrangeUnprototypedMustTailThunk(const CXXMethodDecl *MD) {
   CanQual<FunctionProtoType> FTP = GetFormalType(MD);
   CanQualType ArgTys[] = {DeriveThisType(MD->getParent(), MD)};
   return arrangeLLVMFunctionInfo(Context.VoidTy, FnInfoOpts::None, ArgTys,
-                                 FTP->getExtInfo(), {}, RequiredArgs(1));
+                                 FTP->getExtInfo(), {}, RequiredArgs(1), MD);
 }
 
 const CGFunctionInfo &
@@ -678,7 +679,7 @@ CodeGenTypes::arrangeMSCtorClosure(const CXXConstructorDecl *CD,
       /*IsVariadic=*/false, /*IsCXXMethod=*/true);
   return arrangeLLVMFunctionInfo(Context.VoidTy, FnInfoOpts::IsInstanceMethod,
                                  ArgTys, FunctionType::ExtInfo(CC), {},
-                                 RequiredArgs::All);
+                                 RequiredArgs::All, /*ABIInfoFD=*/nullptr);
 }
 
 /// Arrange a call as unto a free function, except possibly with an
@@ -753,10 +754,10 @@ CodeGenTypes::arrangeBlockFunctionDeclaration(const FunctionProtoType *proto,
   CanQualTypeList argTypes = getArgTypesForDeclaration(Context, params);
 
   // FIXME: Use the block's target features when arranging its invoke function.
-  return arrangeLLVMFunctionInfo(GetReturnType(proto->getReturnType()),
-                                 FnInfoOpts::None, argTypes,
-                                 proto->getExtInfo(), paramInfos,
-                                 RequiredArgs::forPrototypePlus(proto, 1));
+  return arrangeLLVMFunctionInfo(
+      GetReturnType(proto->getReturnType()), FnInfoOpts::None, argTypes,
+      proto->getExtInfo(), paramInfos, RequiredArgs::forPrototypePlus(proto, 1),
+      /*ABIInfoFD=*/nullptr);
 }
 
 const CGFunctionInfo &
@@ -777,14 +778,14 @@ CodeGenTypes::arrangeBuiltinFunctionDeclaration(QualType resultType,
 
   return arrangeLLVMFunctionInfo(GetReturnType(resultType), FnInfoOpts::None,
                                  argTypes, FunctionType::ExtInfo(), {},
-                                 RequiredArgs::All);
+                                 RequiredArgs::All, /*ABIInfoFD=*/nullptr);
 }
 
 const CGFunctionInfo &CodeGenTypes::arrangeBuiltinFunctionDeclaration(
     CanQualType resultType, ArrayRef<CanQualType> argTypes) {
   return arrangeLLVMFunctionInfo(resultType, FnInfoOpts::None, argTypes,
-                                 FunctionType::ExtInfo(), {},
-                                 RequiredArgs::All);
+                                 FunctionType::ExtInfo(), {}, RequiredArgs::All,
+                                 /*ABIInfoFD=*/nullptr);
 }
 
 const CGFunctionInfo &CodeGenTypes::arrangeDeviceKernelCallerDeclaration(
@@ -794,7 +795,8 @@ const CGFunctionInfo &CodeGenTypes::arrangeDeviceKernelCallerDeclaration(
   return arrangeLLVMFunctionInfo(GetReturnType(resultType), FnInfoOpts::None,
                                  argTypes,
                                  FunctionType::ExtInfo(CC_DeviceKernel),
-                                 /*paramInfos=*/{}, RequiredArgs::All);
+                                 /*paramInfos=*/{}, RequiredArgs::All,
+                                 /*ABIInfoFD=*/nullptr);
 }
 
 /// Arrange a call to a C++ method, passing the given arguments.
@@ -822,8 +824,8 @@ const CGFunctionInfo &CodeGenTypes::arrangeCXXMethodCall(
 
 const CGFunctionInfo &CodeGenTypes::arrangeNullaryFunction() {
   return arrangeLLVMFunctionInfo(getContext().VoidTy, FnInfoOpts::None, {},
-                                 FunctionType::ExtInfo(), {},
-                                 RequiredArgs::All);
+                                 FunctionType::ExtInfo(), {}, RequiredArgs::All,
+                                 /*ABIInfoFD=*/nullptr);
 }
 
 const CGFunctionInfo &CodeGenTypes::arrangeCall(const CGFunctionInfo &signature,

@@ -3394,7 +3394,7 @@ void CodeGenFunction::EmitLambdaInAllocaImplFn(
     ArgTypes.push_back(I->type);
   *ImplFnInfo = &CGM.getTypes().arrangeLLVMFunctionInfo(
       FnInfo.getReturnType(), FnInfoOpts::IsDelegateCall, ArgTypes,
-      FnInfo.getExtInfo(), {}, FnInfo.getRequiredArgs());
+      FnInfo.getExtInfo(), {}, FnInfo.getRequiredArgs(), CallOp);
 
   // Create mangled name as if this was a method named __impl. If for some
   // reason the name doesn't look as expected then just tack __impl to the
