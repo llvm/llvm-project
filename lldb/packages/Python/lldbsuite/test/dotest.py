@@ -388,6 +388,7 @@ def parseOptionsAndInitTestdirs():
         )
         sys.stdout.flush()
 
+        # debug_with is always lowercased by argparse
         if args.debug_with == "xcode":
             xcode.attach(os.getpid())
 

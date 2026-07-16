@@ -350,6 +350,7 @@ def create_parser():
         "--debug-with",
         dest="debug_with",
         choices=["xcode"],
+        type=str.lower,
         help="Suspend the process after launch, and instruct the specified debugger to attach to it",
     )
     X("-t", "Turn on tracing of lldb command and other detailed test executions")
