@@ -33,8 +33,10 @@
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <memory>
 
 namespace llvm {
 
@@ -42,6 +44,10 @@ template <typename ContextT> class GenericCycleInfo;
 template <typename ContextT> class GenericCycleInfoCompute;
 
 /// A possibly irreducible generalization of a \ref Loop.
+///
+/// Cycles are stored by value in GenericCycleInfo::Cycles in preorder of the
+/// cycle forest: a cycle is immediately followed by its descendants. Child
+/// iteration is therefore pointer arithmetic over that array.
 template <typename ContextT> class GenericCycle {
 public:
   using BlockT = typename ContextT::BlockT;
@@ -50,37 +56,31 @@ public:
   template <typename> friend class GenericCycleInfoCompute;
 
 private:
-  /// The parent cycle. Is null for the root "cycle". Top-level cycles point
-  /// at the root.
+  /// The parent cycle. Is null for top-level cycles.
   GenericCycle *ParentCycle = nullptr;
 
   /// The entry block(s) of the cycle. The header is the only entry if
-  /// this is a loop. Is empty for the root "cycle", to avoid
-  /// unnecessary memory use.
+  /// this is a loop.
   SmallVector<BlockT *, 1> Entries;
-
-  /// Child cycles, if any.
-  std::vector<std::unique_ptr<GenericCycle>> Children;
 
   /// This cycle's blocks (its own and its nested cycles') occupy the half-open
   /// range [IdxBegin, IdxEnd) of GenericCycleInfo::BlockLayout. The
   /// ranges are nested like an Euler tour of the cycle tree, so containment is
   /// an interval test (see contains()).
   ///
-  /// During construction (before layoutBlocks), IdxEnd accumulates the number
-  /// of this cycle's own blocks (those whose innermost cycle is this one).
+  /// During construction (before the forest is flattened), IdxEnd accumulates
+  /// the number of this cycle's own blocks (those whose innermost cycle is
+  /// this one).
   unsigned IdxBegin = 0, IdxEnd = 0;
 
-  /// Depth of the cycle in the tree. The root "cycle" is at depth 0.
-  ///
-  /// \note Depths are not necessarily contiguous. However, child loops always
-  ///       have strictly greater depth than their parents, and sibling loops
-  ///       always have the same depth.
+  /// Depth of the cycle in the tree: top-level cycles are at depth 1 and each
+  /// nested cycle is one deeper (getCycleDepth() returns 0 for blocks outside
+  /// any cycle). Sibling cycles share a depth.
   unsigned Depth = 0;
 
-  /// Preorder number of this cycle in the forest, assigned by layoutBlocks.
-  /// Indexes per-cycle side tables in GenericCycleInfo.
-  unsigned ID = 0;
+  /// Number of cycles nested inside this one: the subtree occupies
+  /// [this, this + 1 + NumDescendants) of GenericCycleInfo::Cycles.
+  unsigned NumDescendants = 0;
 
   void appendEntry(BlockT *Block) { Entries.push_back(Block); }
 
@@ -125,36 +125,37 @@ public:
 
   size_t getNumBlocks() const { return IdxEnd - IdxBegin; }
 
-  /// Iteration over child cycles.
+  /// Iteration over child cycles: the first child (if any) immediately
+  /// follows this cycle in the preorder array, and each next sibling follows
+  /// the previous child's subtree.
   //@{
-  using const_child_iterator_base =
-      typename std::vector<std::unique_ptr<GenericCycle>>::const_iterator;
   struct const_child_iterator
-      : iterator_adaptor_base<const_child_iterator, const_child_iterator_base,
-                              std::random_access_iterator_tag, GenericCycle *,
-                              std::ptrdiff_t, GenericCycle *, GenericCycle *> {
-    using Base =
-        iterator_adaptor_base<const_child_iterator, const_child_iterator_base,
-                              std::random_access_iterator_tag, GenericCycle *,
-                              std::ptrdiff_t, GenericCycle *, GenericCycle *>;
+      : iterator_facade_base<const_child_iterator, std::forward_iterator_tag,
+                             GenericCycle *, std::ptrdiff_t, GenericCycle *,
+                             GenericCycle *> {
+    const GenericCycle *C = nullptr;
 
     const_child_iterator() = default;
-    explicit const_child_iterator(const_child_iterator_base I) : Base(I) {}
+    explicit const_child_iterator(const GenericCycle *C) : C(C) {}
 
-    const const_child_iterator_base &wrapped() { return Base::wrapped(); }
-    GenericCycle *operator*() const { return Base::I->get(); }
+    GenericCycle *operator*() const { return const_cast<GenericCycle *>(C); }
+    const_child_iterator &operator++() {
+      C += 1 + C->NumDescendants;
+      return *this;
+    }
+    bool operator==(const const_child_iterator &Other) const {
+      return C == Other.C;
+    }
   };
 
   const_child_iterator child_begin() const {
-    return const_child_iterator{Children.begin()};
+    return const_child_iterator{this + 1};
   }
   const_child_iterator child_end() const {
-    return const_child_iterator{Children.end()};
+    return const_child_iterator{this + 1 + NumDescendants};
   }
-  size_t getNumChildren() const { return Children.size(); }
   iterator_range<const_child_iterator> children() const {
-    return llvm::make_range(const_child_iterator{Children.begin()},
-                            const_child_iterator{Children.end()});
+    return llvm::make_range(child_begin(), child_end());
   }
   //@}
 
@@ -202,23 +203,18 @@ private:
   /// slice [IdxBegin, IdxEnd) of this array, nested inside its parent's.
   SmallVector<BlockT *, 8> BlockLayout;
 
+  /// All cycles in forest preorder: every cycle is immediately followed by
+  /// its descendants, and skipping a top-level cycle's subtree lands on the
+  /// next top-level cycle.
+  std::unique_ptr<CycleT[]> Cycles;
   unsigned NumCycles = 0;
 
-  /// getExitBlocks caches, indexed by CycleT::ID. Empty until the first
-  /// query, then sized to NumCycles.
+  /// getExitBlocks caches, indexed by the cycle's preorder index. Empty until
+  /// the first query, then sized to NumCycles.
   mutable SmallVector<SmallVector<BlockT *, 0>, 0> ExitBlocksCaches;
 
-  /// Top-level cycles discovered by any DFS.
-  ///
-  /// Note: The implementation treats the nullptr as the parent of
-  /// every top-level cycle. See \ref contains for an example.
-  std::vector<std::unique_ptr<CycleT>> TopLevelCycles;
-
-  /// Move \p Child to \p NewParent by manipulating Children vectors.
-  ///
-  /// Note: This is an incomplete operation that does not update the depth of
-  /// the subtree.
-  void moveTopLevelCycleToNewParent(CycleT *NewParent, CycleT *Child);
+  /// The preorder index of \p C, i.e. its offset in the Cycles array.
+  unsigned getCycleIndex(const CycleT &C) const { return &C - Cycles.get(); }
 
   void verifyBlockNumberEpoch(const FunctionT *Fn) const {
     assert(BlockNumberEpoch ==
@@ -226,10 +222,6 @@ private:
            "CycleInfo used with outdated block number epoch");
   }
   void addToBlockMap(BlockT *Block, CycleT *Cycle);
-
-  /// Build BlockLayout and every cycle's [IdxBegin, IdxEnd) slice
-  /// from the innermost-cycle map and the current cycle tree.
-  void layoutBlocks(ArrayRef<BlockT *> Order);
 
 public:
   GenericCycleInfo() = default;
@@ -242,6 +234,10 @@ public:
 
   const FunctionT *getFunction() const { return Context.getFunction(); }
   const ContextT &getSSAContext() const { return Context; }
+
+  /// All cycles in forest preorder.
+  MutableArrayRef<CycleT> cycles() { return {Cycles.get(), NumCycles}; }
+  ArrayRef<CycleT> cycles() const { return {Cycles.get(), NumCycles}; }
 
   /// \brief Find the innermost cycle containing \p Block.
   ///
@@ -325,32 +321,17 @@ public:
 
   /// Iteration over top-level cycles.
   //@{
-  using const_toplevel_iterator_base =
-      typename std::vector<std::unique_ptr<CycleT>>::const_iterator;
-  struct const_toplevel_iterator
-      : iterator_adaptor_base<const_toplevel_iterator,
-                              const_toplevel_iterator_base> {
-    using Base = iterator_adaptor_base<const_toplevel_iterator,
-                                       const_toplevel_iterator_base>;
-
-    const_toplevel_iterator() = default;
-    explicit const_toplevel_iterator(const_toplevel_iterator_base I)
-        : Base(I) {}
-
-    const const_toplevel_iterator_base &wrapped() { return Base::wrapped(); }
-    CycleT *operator*() const { return Base::I->get(); }
-  };
+  using const_toplevel_iterator = typename CycleT::const_child_iterator;
 
   const_toplevel_iterator toplevel_begin() const {
-    return const_toplevel_iterator{TopLevelCycles.begin()};
+    return const_toplevel_iterator{Cycles.get()};
   }
   const_toplevel_iterator toplevel_end() const {
-    return const_toplevel_iterator{TopLevelCycles.end()};
+    return const_toplevel_iterator{Cycles.get() + NumCycles};
   }
 
   iterator_range<const_toplevel_iterator> toplevel_cycles() const {
-    return llvm::make_range(const_toplevel_iterator{TopLevelCycles.begin()},
-                            const_toplevel_iterator{TopLevelCycles.end()});
+    return llvm::make_range(toplevel_begin(), toplevel_end());
   }
   //@}
 };
