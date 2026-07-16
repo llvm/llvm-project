@@ -101,7 +101,7 @@ LLVMInitializeWebAssemblyTarget() {
   initializeWebAssemblyRefTypeMem2LocalLegacyPass(PR);
   initializeWebAssemblyArgumentMoveLegacyPass(PR);
   initializeWebAssemblyAsmPrinterPass(PR);
-  initializeWebAssemblySetP2AlignOperandsPass(PR);
+  initializeWebAssemblySetP2AlignOperandsLegacyPass(PR);
   initializeWebAssemblyReplacePhysRegsPass(PR);
   initializeWebAssemblyOptimizeLiveIntervalsPass(PR);
   initializeWebAssemblyMemIntrinsicResultsPass(PR);
@@ -387,7 +387,7 @@ bool WebAssemblyPassConfig::addInstSelector() {
   // Set the p2align operands. This information is present during ISel, however
   // it's inconvenient to collect. Collect it now, and update the immediate
   // operands.
-  addPass(createWebAssemblySetP2AlignOperands());
+  addPass(createWebAssemblySetP2AlignOperandsLegacyPass());
 
   // Eliminate range checks and add default targets to br_table instructions.
   addPass(createWebAssemblyFixBrTableDefaults());
@@ -547,7 +547,7 @@ bool WebAssemblyPassConfig::addGlobalInstructionSelect() {
   // We insert only if ISelDAG won't insert these at a later point.
   if (isGlobalISelAbortEnabled()) {
     addPass(createWebAssemblyArgumentMoveLegacyPass());
-    addPass(createWebAssemblySetP2AlignOperands());
+    addPass(createWebAssemblySetP2AlignOperandsLegacyPass());
     addPass(createWebAssemblyFixBrTableDefaults());
     addPass(createWebAssemblyCleanCodeAfterTrap());
   }

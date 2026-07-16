@@ -155,7 +155,7 @@ Error WebAssemblyCodeGenPassBuilder::addInstSelector(
   // Set the p2align operands. This information is present during ISel, however
   // it's inconvenient to collect. Collect it now, and update the immediate
   // operands.
-  // TODO(boomanaiden154): WebAssemblySetP2AlignOperands
+  addMachineFunctionPass(WebAssemblySetP2AlignOperandsPass(), PMW);
 
   // Eliminate range checks and add default targets to br_table instructions.
   // TODO(boomanaiden154): WebAssemblyFixBrTableDefaults

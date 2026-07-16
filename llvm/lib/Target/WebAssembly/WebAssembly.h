@@ -132,7 +132,15 @@ public:
 };
 
 FunctionPass *createWebAssemblyArgumentMoveLegacyPass();
-FunctionPass *createWebAssemblySetP2AlignOperands();
+
+class WebAssemblySetP2AlignOperandsPass
+    : public RequiredPassInfoMixin<WebAssemblySetP2AlignOperandsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createWebAssemblySetP2AlignOperandsLegacyPass();
 FunctionPass *createWebAssemblyCleanCodeAfterTrap();
 
 // Late passes.
@@ -199,7 +207,7 @@ void initializeWebAssemblyRegColoringPass(PassRegistry &);
 void initializeWebAssemblyRegNumberingPass(PassRegistry &);
 void initializeWebAssemblyRegStackifyPass(PassRegistry &);
 void initializeWebAssemblyReplacePhysRegsPass(PassRegistry &);
-void initializeWebAssemblySetP2AlignOperandsPass(PassRegistry &);
+void initializeWebAssemblySetP2AlignOperandsLegacyPass(PassRegistry &);
 void initializeWebAssemblyCoalesceFeaturesAndStripAtomicsLegacyPass(
     PassRegistry &);
 
