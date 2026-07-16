@@ -120,22 +120,39 @@ define amdgpu_kernel void @s_shl_v2i64_imm_s(ptr addrspace(1) %out, <2 x i64> %r
 }
 
 define amdgpu_kernel void @v_shl_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
-; GCN-LABEL: v_shl_v2i64:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GCN-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GCN-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
-; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    s_clause 0x1
-; GCN-NEXT:    global_load_b128 v[0:3], v8, s[2:3] offset:16 scale_offset
-; GCN-NEXT:    global_load_b128 v[4:7], v8, s[2:3] scale_offset
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    v_lshlrev_b64_e32 v[2:3], v2, v[6:7]
-; GCN-NEXT:    v_lshlrev_b64_e32 v[0:1], v0, v[4:5]
-; GCN-NEXT:    global_store_b128 v8, v[0:3], s[0:1] scale_offset
-; GCN-NEXT:    s_endpgm
+; GFX1250-LABEL: v_shl_v2i64:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
+; GFX1250-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_clause 0x1
+; GFX1250-NEXT:    global_load_b128 v[0:3], v8, s[2:3] offset:16 scale_offset
+; GFX1250-NEXT:    global_load_b128 v[4:7], v8, s[2:3] scale_offset
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    v_lshlrev_b64_e32 v[2:3], v2, v[6:7]
+; GFX1250-NEXT:    v_lshlrev_b64_e32 v[0:1], v0, v[4:5]
+; GFX1250-NEXT:    global_store_b128 v8, v[0:3], s[0:1] scale_offset
+; GFX1250-NEXT:    s_endpgm
+;
+; GFX1251-LABEL: v_shl_v2i64:
+; GFX1251:       ; %bb.0:
+; GFX1251-NEXT:    global_wb
+; GFX1251-NEXT:    v_nop
+; GFX1251-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1251-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
+; GFX1251-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
+; GFX1251-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-NEXT:    s_clause 0x1
+; GFX1251-NEXT:    global_load_b128 v[0:3], v8, s[2:3] scale_offset
+; GFX1251-NEXT:    global_load_b128 v[4:7], v8, s[2:3] offset:16 scale_offset
+; GFX1251-NEXT:    s_wait_loadcnt 0x0
+; GFX1251-NEXT:    v_lshlrev_b64_e32 v[2:3], v6, v[2:3]
+; GFX1251-NEXT:    v_lshlrev_b64_e32 v[0:1], v4, v[0:1]
+; GFX1251-NEXT:    global_store_b128 v8, v[0:3], s[0:1] scale_offset
+; GFX1251-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <2 x i64>, ptr addrspace(1) %in, i64 %tid.ext

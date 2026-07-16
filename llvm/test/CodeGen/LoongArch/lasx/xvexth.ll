@@ -6,7 +6,9 @@ define void @xvexth_h_b(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: xvexth_h_b:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvexth.h.b $xr0, $xr0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vpermi.w $vr1, $vr0, 238
+; CHECK-NEXT:    vext2xv.h.b $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -23,7 +25,9 @@ define void @xvexth_h_b_poison(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: xvexth_h_b_poison:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvexth.h.b $xr0, $xr0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vpermi.w $vr1, $vr0, 238
+; CHECK-NEXT:    vext2xv.h.b $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -40,7 +44,9 @@ define void @xvexth_w_h(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: xvexth_w_h:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvexth.w.h $xr0, $xr0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vpermi.w $vr1, $vr0, 238
+; CHECK-NEXT:    vext2xv.w.h $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -56,7 +62,9 @@ define void @xvexth_w_h_poison(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: xvexth_w_h_poison:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvexth.w.h $xr0, $xr0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vpermi.w $vr1, $vr0, 238
+; CHECK-NEXT:    vext2xv.w.h $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -72,7 +80,9 @@ define void @xvexth_d_w(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: xvexth_d_w:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvexth.d.w $xr0, $xr0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vpermi.w $vr1, $vr0, 238
+; CHECK-NEXT:    vext2xv.d.w $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -88,7 +98,9 @@ define void @xvexth_d_w_poison(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: xvexth_d_w_poison:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvexth.d.w $xr0, $xr0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vpermi.w $vr1, $vr0, 46
+; CHECK-NEXT:    vext2xv.d.w $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -104,7 +116,9 @@ define void @xvexth_hu_bu(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: xvexth_hu_bu:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvexth.hu.bu $xr0, $xr0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vpermi.w $vr1, $vr0, 238
+; CHECK-NEXT:    vext2xv.hu.bu $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -121,7 +135,9 @@ define void @xvexth_hu_bu_poison(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: xvexth_hu_bu_poison:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvexth.hu.bu $xr0, $xr0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vpermi.w $vr1, $vr0, 238
+; CHECK-NEXT:    vext2xv.hu.bu $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -138,7 +154,9 @@ define void @xvexth_wu_hu(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: xvexth_wu_hu:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvexth.wu.hu $xr0, $xr0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vpermi.w $vr1, $vr0, 238
+; CHECK-NEXT:    vext2xv.wu.hu $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -154,7 +172,9 @@ define void @xvexth_wu_hu_poison(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: xvexth_wu_hu_poison:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvexth.wu.hu $xr0, $xr0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vpermi.w $vr1, $vr0, 238
+; CHECK-NEXT:    vext2xv.wu.hu $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -170,7 +190,9 @@ define void @xvexth_du_wu(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: xvexth_du_wu:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvexth.du.wu $xr0, $xr0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vpermi.w $vr1, $vr0, 238
+; CHECK-NEXT:    vext2xv.du.wu $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -186,7 +208,9 @@ define void @xvexth_du_wu_poison(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: xvexth_du_wu_poison:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvexth.du.wu $xr0, $xr0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vpermi.w $vr1, $vr0, 46
+; CHECK-NEXT:    vext2xv.du.wu $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:

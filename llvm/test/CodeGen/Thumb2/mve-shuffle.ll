@@ -337,11 +337,11 @@ define arm_aapcs_vfpcc <8 x i16> @shuffle2step_i16(<16 x i16> %src) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .pad #32
 ; CHECK-NEXT:    sub sp, #32
-; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    add r0, sp, #16
 ; CHECK-NEXT:    vshr.u32 q2, q1, #16
 ; CHECK-NEXT:    vstrh.32 q2, [r0, #8]
 ; CHECK-NEXT:    vshr.u32 q2, q0, #16
-; CHECK-NEXT:    add r1, sp, #16
+; CHECK-NEXT:    mov r1, sp
 ; CHECK-NEXT:    vstrh.32 q2, [r0]
 ; CHECK-NEXT:    vstrh.32 q1, [r1, #8]
 ; CHECK-NEXT:    vstrh.32 q0, [r1]
@@ -627,11 +627,11 @@ define arm_aapcs_vfpcc <16 x i8> @shuffle2step_i8(<32 x i8> %src) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .pad #32
 ; CHECK-NEXT:    sub sp, #32
-; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    add r0, sp, #16
 ; CHECK-NEXT:    vshr.u16 q2, q1, #8
 ; CHECK-NEXT:    vstrb.16 q2, [r0, #8]
 ; CHECK-NEXT:    vshr.u16 q2, q0, #8
-; CHECK-NEXT:    add r1, sp, #16
+; CHECK-NEXT:    mov r1, sp
 ; CHECK-NEXT:    vstrb.16 q2, [r0]
 ; CHECK-NEXT:    vstrb.16 q1, [r1, #8]
 ; CHECK-NEXT:    vstrb.16 q0, [r1]

@@ -207,11 +207,11 @@ define void @vld2_v8i16_align1(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    .pad #32
 ; CHECK-NEXT:    sub sp, #32
 ; CHECK-NEXT:    vldrb.u8 q0, [r0, #16]
-; CHECK-NEXT:    add r2, sp, #16
+; CHECK-NEXT:    mov r2, sp
 ; CHECK-NEXT:    vshr.u32 q1, q0, #16
 ; CHECK-NEXT:    vstrh.32 q1, [r2, #8]
 ; CHECK-NEXT:    vldrb.u8 q1, [r0]
-; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    add r0, sp, #16
 ; CHECK-NEXT:    vshr.u32 q2, q1, #16
 ; CHECK-NEXT:    vstrh.32 q2, [r2]
 ; CHECK-NEXT:    vstrh.32 q0, [r0, #8]

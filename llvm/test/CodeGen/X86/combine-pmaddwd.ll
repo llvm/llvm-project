@@ -369,7 +369,10 @@ define <8 x i32> @sext_pairwise_add(<16 x i16> %x) {
 ;
 ; AVX512-LABEL: sext_pairwise_add:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX512-NEXT:    vpmovsxwd %ymm0, %zmm0
+; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512-NEXT:    vphaddd %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX512-NEXT:    retq
   %1 = sext <16 x i16> %x to <16 x i32>
   %2 = shufflevector <16 x i32> %1, <16 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
@@ -402,7 +405,11 @@ define <8 x i32> @combine_with_mul(<16 x i16> %v) {
 ;
 ; AVX512-LABEL: combine_with_mul:
 ; AVX512:       # %bb.0: # %bb1
-; AVX512-NEXT:    vpmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [4096,1,4096,1,4096,1,4096,1,4096,1,4096,1,4096,1,4096,1]
+; AVX512-NEXT:    vpmovsxwd %ymm0, %zmm0
+; AVX512-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512-NEXT:    vphaddd %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX512-NEXT:    retq
 bb1:
   %0 = sext <16 x i16> %v to <16 x i32>
@@ -437,7 +444,11 @@ define <8 x i32> @combine_with_shl(<16 x i16> %v) {
 ;
 ; AVX512-LABEL: combine_with_shl:
 ; AVX512:       # %bb.0: # %bb1
-; AVX512-NEXT:    vpmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [4096,1,4096,1,4096,1,4096,1,4096,1,4096,1,4096,1,4096,1]
+; AVX512-NEXT:    vpmovsxwd %ymm0, %zmm0
+; AVX512-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512-NEXT:    vphaddd %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX512-NEXT:    retq
 bb1:
   %0 = sext <16 x i16> %v to <16 x i32>

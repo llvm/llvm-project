@@ -6,7 +6,10 @@ define void @vsllwil_h_b(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: vsllwil_h_b:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvsllwil.h.b $xr0, $xr0, 1
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vpermi.w $vr1, $vr0, 68
+; CHECK-NEXT:    vext2xv.h.b $xr0, $xr1
+; CHECK-NEXT:    xvslli.h $xr0, $xr0, 1
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -24,7 +27,10 @@ define void @vsllwil_w_h(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: vsllwil_w_h:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvsllwil.w.h $xr0, $xr0, 15
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vpermi.w $vr1, $vr0, 68
+; CHECK-NEXT:    vext2xv.w.h $xr0, $xr1
+; CHECK-NEXT:    xvslli.w $xr0, $xr0, 15
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -41,7 +47,10 @@ define void @vsllwil_d_w(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: vsllwil_d_w:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvsllwil.d.w $xr0, $xr0, 31
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vpermi.w $vr1, $vr0, 68
+; CHECK-NEXT:    vext2xv.d.w $xr0, $xr1
+; CHECK-NEXT:    xvslli.d $xr0, $xr0, 31
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -58,7 +67,10 @@ define void @vsllwil_hu_bu(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: vsllwil_hu_bu:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvsllwil.hu.bu $xr0, $xr0, 1
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vpermi.w $vr1, $vr0, 68
+; CHECK-NEXT:    vext2xv.hu.bu $xr0, $xr1
+; CHECK-NEXT:    xvslli.h $xr0, $xr0, 1
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -76,7 +88,10 @@ define void @vsllwil_wu_hu(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: vsllwil_wu_hu:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvsllwil.wu.hu $xr0, $xr0, 15
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vpermi.w $vr1, $vr0, 68
+; CHECK-NEXT:    vext2xv.wu.hu $xr0, $xr1
+; CHECK-NEXT:    xvslli.w $xr0, $xr0, 15
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -93,7 +108,10 @@ define void @vsllwil_du_wu(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: vsllwil_du_wu:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvsllwil.du.wu $xr0, $xr0, 31
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vpermi.w $vr1, $vr0, 68
+; CHECK-NEXT:    vext2xv.du.wu $xr0, $xr1
+; CHECK-NEXT:    xvslli.d $xr0, $xr0, 31
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:

@@ -62,12 +62,12 @@ define amdgpu_kernel void @add_v2_ss(ptr addrspace(1) %a, <2 x i64> %x, <2 x i64
 ; GFX1251-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1251-SDAG-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX1251-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1251-SDAG-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
-; GFX1251-SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
-; GFX1251-SDAG-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
-; GFX1251-SDAG-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
+; GFX1251-SDAG-NEXT:    v_mov_b64_e32 v[0:1], s[12:13]
+; GFX1251-SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[14:15]
+; GFX1251-SDAG-NEXT:    v_mov_b64_e32 v[4:5], s[8:9]
+; GFX1251-SDAG-NEXT:    v_mov_b64_e32 v[6:7], s[10:11]
 ; GFX1251-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1251-SDAG-NEXT:    v_pk_add_nc_u64 v[0:3], v[0:3], v[4:7]
+; GFX1251-SDAG-NEXT:    v_pk_add_nc_u64 v[0:3], v[4:7], v[0:3]
 ; GFX1251-SDAG-NEXT:    global_store_b128 v8, v[0:3], s[0:1]
 ; GFX1251-SDAG-NEXT:    s_endpgm
 ;
@@ -672,12 +672,12 @@ define amdgpu_kernel void @sub_v2_ss(ptr addrspace(1) %a, <2 x i64> %x, <2 x i64
 ; GFX1251-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1251-SDAG-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX1251-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1251-SDAG-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
-; GFX1251-SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[10:11]
-; GFX1251-SDAG-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
-; GFX1251-SDAG-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
+; GFX1251-SDAG-NEXT:    v_mov_b64_e32 v[0:1], s[12:13]
+; GFX1251-SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[14:15]
+; GFX1251-SDAG-NEXT:    v_mov_b64_e32 v[4:5], s[8:9]
+; GFX1251-SDAG-NEXT:    v_mov_b64_e32 v[6:7], s[10:11]
 ; GFX1251-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1251-SDAG-NEXT:    v_pk_sub_nc_u64 v[0:3], v[0:3], v[4:7]
+; GFX1251-SDAG-NEXT:    v_pk_sub_nc_u64 v[0:3], v[4:7], v[0:3]
 ; GFX1251-SDAG-NEXT:    global_store_b128 v8, v[0:3], s[0:1]
 ; GFX1251-SDAG-NEXT:    s_endpgm
 ;

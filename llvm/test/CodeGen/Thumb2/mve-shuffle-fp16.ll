@@ -181,11 +181,11 @@ define arm_aapcs_vfpcc <8 x half> @shuffle2step_f16(<16 x half> %src) {
 ; CHECKFP16-NEXT:    sub sp, #32
 ; CHECKFP16-NEXT:    vmov q4, q1
 ; CHECKFP16-NEXT:    vshr.u32 q1, q1, #16
-; CHECKFP16-NEXT:    add r6, sp, #16
+; CHECKFP16-NEXT:    mov r6, sp
 ; CHECKFP16-NEXT:    vmov.u16 r0, q0[0]
 ; CHECKFP16-NEXT:    vstrh.32 q1, [r6, #8]
 ; CHECKFP16-NEXT:    vshr.u32 q1, q0, #16
-; CHECKFP16-NEXT:    mov r5, sp
+; CHECKFP16-NEXT:    add r5, sp, #16
 ; CHECKFP16-NEXT:    vstrh.32 q1, [r6]
 ; CHECKFP16-NEXT:    vstrh.32 q4, [r5, #8]
 ; CHECKFP16-NEXT:    vstrh.32 q0, [r5]

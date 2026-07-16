@@ -61,22 +61,22 @@ define void @failing(ptr %0, ptr %1) nounwind {
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    movdqu 1024(%rdx,%rsi), %xmm5
 ; CHECK-NEXT:    movdqu 1040(%rdx,%rsi), %xmm6
-; CHECK-NEXT:    movq %xmm5, %rdi
-; CHECK-NEXT:    movq %xmm6, %r8
-; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[2,3,2,3]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm7 = xmm5[2,3,2,3]
+; CHECK-NEXT:    movq %xmm7, %rdi
+; CHECK-NEXT:    pshufd {{.*#+}} xmm7 = xmm6[2,3,2,3]
+; CHECK-NEXT:    movq %xmm7, %r8
 ; CHECK-NEXT:    movq %xmm5, %r9
-; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm6[2,3,2,3]
-; CHECK-NEXT:    movq %xmm5, %r10
-; CHECK-NEXT:    negq %r8
-; CHECK-NEXT:    movq %rcx, %r8
-; CHECK-NEXT:    sbbq %r10, %r8
+; CHECK-NEXT:    movq %xmm6, %r10
+; CHECK-NEXT:    negq %r10
+; CHECK-NEXT:    movq %rcx, %r10
+; CHECK-NEXT:    sbbq %r8, %r10
 ; CHECK-NEXT:    setge %r8b
 ; CHECK-NEXT:    movzbl %r8b, %r8d
 ; CHECK-NEXT:    negq %r8
 ; CHECK-NEXT:    movq %r8, %xmm5
-; CHECK-NEXT:    negq %rdi
-; CHECK-NEXT:    movq %rcx, %rdi
-; CHECK-NEXT:    sbbq %r9, %rdi
+; CHECK-NEXT:    negq %r9
+; CHECK-NEXT:    movq %rcx, %r8
+; CHECK-NEXT:    sbbq %rdi, %r8
 ; CHECK-NEXT:    setge %dil
 ; CHECK-NEXT:    movzbl %dil, %edi
 ; CHECK-NEXT:    negq %rdi
