@@ -10,6 +10,8 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
+namespace shared = LIBC_NAMESPACE::shared;
+
 TEST(LlvmLibcSharedBuiltinsTest, AllFloat) {
   EXPECT_FP_EQ(3.0f, LIBC_NAMESPACE::shared::addsf3(1.0f, 2.0f));
   EXPECT_FP_EQ(3.0f, LIBC_NAMESPACE::shared::divsf3(6.0f, 2.0f));
@@ -38,3 +40,25 @@ TEST(LlvmLibcSharedBuiltinsTest, AllFloat128) {
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT128
+
+TEST(LlvmLibcSharedBuiltinsTest, ExtendConversion) {
+  EXPECT_FP_EQ(1.5, shared::extendsfdf2(1.5f));
+#ifdef LIBC_TYPES_HAS_FLOAT128
+  EXPECT_FP_EQ(float128(1.5), shared::extenddftf2(1.5));
+  EXPECT_FP_EQ(float128(1.5), shared::extendsftf2(1.5f));
+#if LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+  EXPECT_FP_EQ(float128(1.5), shared::extendxftf2(1.5L));
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+#endif // LIBC_TYPES_HAS_FLOAT128
+}
+
+TEST(LlvmLibcSharedBuiltinsTest, TruncateConversion) {
+  EXPECT_FP_EQ(1.5f, shared::truncdfsf2(1.5));
+#ifdef LIBC_TYPES_HAS_FLOAT128
+  EXPECT_FP_EQ(1.5, shared::trunctfdf2(float128(1.5)));
+  EXPECT_FP_EQ(1.5f, shared::trunctfsf2(float128(1.5)));
+#if LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+  EXPECT_FP_EQ(1.5L, shared::trunctfxf2(float128(1.5)));
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+#endif // LIBC_TYPES_HAS_FLOAT128
+}
