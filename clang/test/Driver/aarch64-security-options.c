@@ -13,6 +13,9 @@
 // RUN: %clang --target=aarch64 -c %s -### -mbranch-protection=standard                                2>&1 | \
 // RUN: FileCheck %s --check-prefix=RA-NON-LEAF --check-prefix=KEY-A --check-prefix=BTE-ON --check-prefix=GCS-ON --check-prefix=WARN
 
+// RUN: not %clang -target arm64-apple-darwin -c %s -### -mbranch-protection=standard -fptrauth-returns 2>&1 | \
+// RUN: FileCheck %s --check-prefixes=RA-INCOMPATIBLE-PTRAUTHRETURNS
+
 // If the -msign-return-address and -mbranch-protection are both used, the
 // right-most one controls return address signing.
 // RUN: %clang --target=aarch64 -c %s -### -msign-return-address=non-leaf -mbranch-protection=none     2>&1 | \
@@ -43,14 +46,22 @@
 
 // RUN: %clang -target aarch64 -c %s -### -mbranch-protection=none -mharden-pac-ret=none 2>&1 | \
 // RUN: FileCheck %s --check-prefixes=NO-RA-HARDEN
+// RUN: %clang -target arm64-apple-darwin -c %s -### -fno-ptrauth-returns -mharden-pac-ret=none 2>&1 | \
+// RUN: FileCheck %s --check-prefixes=NO-RA-HARDEN
 
 // RUN: %clang -target aarch64 -c %s -### -mbranch-protection=none -mharden-pac-ret=load-return-address 2>&1 | \
+// RUN: FileCheck %s --check-prefixes=NO-RA-HARDEN
+// RUN: %clang -target arm64-apple-darwin -c %s -### -fno-ptrauth-returns -mharden-pac-ret=load-return-address 2>&1 | \
 // RUN: FileCheck %s --check-prefixes=NO-RA-HARDEN
 
 // RUN: %clang -target aarch64 -c %s -### -mbranch-protection=pac-ret -mharden-pac-ret=none 2>&1 | \
 // RUN: FileCheck %s --check-prefixes=RA-HARDEN-NONE
+// RUN: %clang -target arm64-apple-darwin -c %s -### -fptrauth-returns -mharden-pac-ret=none 2>&1 | \
+// RUN: FileCheck %s --check-prefixes=RA-HARDEN-NONE
 
 // RUN: %clang -target aarch64 -c %s -### -mbranch-protection=pac-ret -mharden-pac-ret=load-return-address 2>&1 | \
+// RUN: FileCheck %s --check-prefixes=RA-HARDEN-LRA
+// RUN: %clang -target arm64-apple-darwin -c %s -### -fptrauth-returns -mharden-pac-ret=load-return-address 2>&1 | \
 // RUN: FileCheck %s --check-prefixes=RA-HARDEN-LRA
 
 // RUN: %clang -target aarch64 -c %s -### -mbranch-protection=standard -mharden-pac-ret=none 2>&1 | \
@@ -61,6 +72,12 @@
 
 // RUN: not %clang -target aarch64 -c %s -### -mbranch-protection=standard -mharden-pac-ret=foo 2>&1 | \
 // RUN: FileCheck %s --check-prefixes=BAD-HARDEN-PROTECTION
+// RUN: not %clang -target arm64-apple-darwin -c %s -### -fptrauth-returns -mharden-pac-ret=foo 2>&1 | \
+// RUN: FileCheck %s --check-prefixes=BAD-HARDEN-PROTECTION
+
+// RUN: not %clang -target aarch64 -c %s -### -mbranch-protection=standard -mharden-pac-ret=load-return-address -mexecute-only 2>&1 | \
+// RUN: FileCheck %s --check-prefixes=RA-HARDEN-INCOMPATIBLE-EXEC-ONLY
+// RUN: %clang -target aarch64 -c %s -### -mbranch-protection=standard -mharden-pac-ret=none -mexecute-only
 
 // ABSENT-RA-HARDEN-NOT: "-mharden-pac-ret"
 // NO-RA-HARDEN:         ignoring '-mharden-pac-ret' as it requires return address signing
@@ -68,6 +85,7 @@
 // RA-HARDEN-NONE:       "-mharden-pac-ret=none"
 // RA-HARDEN-LRA:        "-mharden-pac-ret=load-return-address"
 // BAD-HARDEN-PROTECTION: unsupported argument 'foo' to option '-mharden-pac-ret='
+// RA-HARDEN-INCOMPATIBLE-EXEC-ONLY: the combination of '-mharden-pac-ret=load-return-address' and '-mexecute-only' is incompatible
 
 // RA-OFF: "-msign-return-address=none"
 // RA-NON-LEAF: "-msign-return-address=non-leaf"
@@ -75,6 +93,8 @@
 
 // KEY-A: "-msign-return-address-key=a_key"
 // KEY-NOT: "-msign-return-address-key"
+
+// RA-INCOMPATIBLE-PTRAUTHRETURNS: the combination of '-mbranch-protection=standard' and '-fptrauth-returns' is incompatible
 
 // BTE-OFF-NOT: "-mbranch-target-enforce"
 // BTE-ON: "-mbranch-target-enforce"

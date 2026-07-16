@@ -1383,9 +1383,10 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
 
   // Check CmdArgs because some toolchains bypass the driver args and add to
   // the frontend args directly.
-  bool HasPtrauthReturns = llvm::is_contained(CmdArgs, "-fptrauth-returns") ||
-                           Args.hasArgNoClaim(options::OPT_fno_ptrauth_returns,
-                                              options::OPT_fptrauth_returns);
+  bool HasPtrauthReturns =
+      llvm::is_contained(CmdArgs, "-fptrauth-returns") ||
+      Args.hasFlagNoClaim(options::OPT_fptrauth_returns,
+                          options::OPT_fno_ptrauth_returns, false);
 
   if (HardenPACRetArg) {
     if (!isAArch64) {
@@ -1397,6 +1398,13 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
     if (ArgValue != "none" && ArgValue != "load-return-address") {
       D.Diag(diag::err_drv_unsupported_option_argument)
           << HardenPACRetArg->getSpelling() << ArgValue;
+      return;
+    }
+    if (ArgValue != "none" &&
+        Args.hasFlagNoClaim(options::OPT_mexecute_only,
+                            options::OPT_mno_execute_only, false)) {
+      D.Diag(diag::err_drv_incompatible_options)
+          << HardenPACRetArg->getAsString(Args) << "-mexecute-only";
       return;
     }
   }
