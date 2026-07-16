@@ -2385,7 +2385,10 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
     // attribute-specifier without attribute (`[[]]`) isn't in AST.
     // `__declspec()` is only applied to declarations, so we can ignore it.
     if (!isa<CompoundStmt>(Body.get()) || BodyStartsWithAttr)
-      Diag(BodyBeginLoc, diag::ext_expansion_stmt_missing_braces);
+      Diag(BodyBeginLoc,
+           isa<CompoundStmt>(Body.get()->stripLabelLikeStatements())
+               ? diag::ext_expansion_stmt_body_attr
+               : diag::ext_expansion_stmt_body_not_compound_stmt);
 
     return Actions.FinishCXXExpansionStmt(ForRangeStmt.get(), Body.get());
   }
