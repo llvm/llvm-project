@@ -358,6 +358,12 @@ public:
   AppleMachOAArch64TargetInfo(const llvm::Triple &Triple,
                               const TargetOptions &Opts);
 
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    // Apple AArch64 cores use a 128-byte cache line, unlike the ARM-documented
+    // value of 256 used by the generic aarch64 triple.
+    return std::make_pair(128, 64);
+  }
+
 protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const override;
@@ -369,6 +375,13 @@ public:
   DarwinAArch64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
 
   BuiltinVaListKind getBuiltinVaListKind() const override;
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    // Apple AArch64 cores use a 128-byte cache line, so 128 (not the generic
+    // AArch64 value of 256) is the right destructive interference size. These
+    // values are implementation-defined and not part of the ABI.
+    return std::make_pair(128, 64);
+  }
 
  protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,

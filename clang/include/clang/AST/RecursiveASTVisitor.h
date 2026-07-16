@@ -1733,16 +1733,12 @@ DEF_TRAVERSE_DECL(FriendDecl, {
 })
 
 DEF_TRAVERSE_DECL(FriendTemplateDecl, {
-  TemplateName Template = D->getFriendTemplateName();
-  if (Template.isNull()) {
-    if (D->getFriendType())
-      TRY_TO(TraverseTypeLoc(D->getFriendType()->getTypeLoc()));
-    else
-      TRY_TO(TraverseDecl(D->getFriendDecl()));
-  } else {
-    TRY_TO(TraverseTemplateName(Template));
-  }
-  for (TemplateParameterList *TPL : D->getFriendTypeTemplateParameterLists()) {
+  if (D->getFriendType())
+    TRY_TO(TraverseTypeLoc(D->getFriendType()->getTypeLoc()));
+  else
+    TRY_TO(TraverseDecl(D->getFriendDecl()));
+  for (unsigned I = 0, E = D->getNumTemplateParameters(); I < E; ++I) {
+    TemplateParameterList *TPL = D->getTemplateParameterList(I);
     for (TemplateParameterList::iterator ITPL = TPL->begin(), ETPL = TPL->end();
          ITPL != ETPL; ++ITPL) {
       TRY_TO(TraverseDecl(*ITPL));
@@ -1912,6 +1908,14 @@ DEF_TRAVERSE_DECL(UsingDirectiveDecl, {
 DEF_TRAVERSE_DECL(UsingShadowDecl, {})
 
 DEF_TRAVERSE_DECL(ConstructorUsingShadowDecl, {})
+
+DEF_TRAVERSE_DECL(CXXExpansionStmtDecl, {
+  if (D->getInstantiations() &&
+      getDerived().shouldVisitTemplateInstantiations())
+    TRY_TO(TraverseStmt(D->getInstantiations()));
+
+  TRY_TO(TraverseStmt(D->getExpansionPattern()));
+})
 
 DEF_TRAVERSE_DECL(OMPThreadPrivateDecl, {
   for (auto *I : D->varlist()) {
@@ -3164,6 +3168,10 @@ DEF_TRAVERSE_STMT(RequiresExpr, {
   for (concepts::Requirement *Req : S->getRequirements())
     TRY_TO(TraverseConceptRequirement(Req));
 })
+
+DEF_TRAVERSE_STMT(CXXExpansionStmtPattern, {})
+DEF_TRAVERSE_STMT(CXXExpansionStmtInstantiation, {})
+DEF_TRAVERSE_STMT(CXXExpansionSelectExpr, {})
 
 // These literals (all of them) do not need any action.
 DEF_TRAVERSE_STMT(IntegerLiteral, {})

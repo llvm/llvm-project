@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -stop-after=finalize-isel < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.00 -stop-after=finalize-isel < %s | FileCheck %s
 
 ; This test verifies that instruction selection will propagate alias metadata
 ; to split loads and stores.

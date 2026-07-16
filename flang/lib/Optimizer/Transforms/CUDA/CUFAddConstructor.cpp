@@ -117,11 +117,57 @@ static mlir::Value computeGlobalSize(fir::FirOpBuilder &builder,
     size = dl.getTypeSizeInBits(structTy) / 8;
   }
   if (!size) {
+    if (auto s =
+            fir::getTypeSizeAndAlignment(loc, globalOp.getType(), dl, kindMap))
+      size = s->first;
+  }
+  if (!size) {
+    // A global embedding descriptor (allocatable/pointer) components has no
+    // structural size; size it via its LLVM type, which inlines the
+    // descriptors.
+    mlir::Type llvmTy = typeConverter.convertType(globalOp.getType());
+    if (llvmTy && mlir::isa<mlir::DataLayoutTypeInterface>(llvmTy))
+      size = dl.getTypeSizeInBits(llvmTy) / 8;
+  }
+  if (!size) {
     size = fir::getTypeSizeAndAlignmentOrCrash(loc, globalOp.getType(), dl,
                                                kindMap)
                .first;
   }
   return builder.createIntegerConstant(loc, idxTy, *size);
+}
+
+/// Storage size in bytes of \p globalOp as a raw integer (see computeGlobalSize
+/// for the box vs declared-type handling).
+static uint64_t getGlobalSizeInBytes(mlir::Location loc,
+                                     const mlir::DataLayout &dl,
+                                     const fir::KindMapping &kindMap,
+                                     fir::LLVMTypeConverter &typeConverter,
+                                     fir::GlobalOp globalOp) {
+  std::optional<uint64_t> size;
+  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(globalOp.getType())) {
+    mlir::Type structTy = typeConverter.convertBoxTypeAsStruct(boxTy);
+    size = dl.getTypeSizeInBits(structTy) / 8;
+  }
+  if (!size) {
+    if (auto s =
+            fir::getTypeSizeAndAlignment(loc, globalOp.getType(), dl, kindMap))
+      size = s->first;
+  }
+  if (!size) {
+    // A global embedding descriptor (allocatable/pointer) components has no
+    // structural size; size it via its LLVM type, which inlines the
+    // descriptors.
+    mlir::Type llvmTy = typeConverter.convertType(globalOp.getType());
+    if (llvmTy && mlir::isa<mlir::DataLayoutTypeInterface>(llvmTy))
+      size = dl.getTypeSizeInBits(llvmTy) / 8;
+  }
+  if (!size) {
+    size = fir::getTypeSizeAndAlignmentOrCrash(loc, globalOp.getType(), dl,
+                                               kindMap)
+               .first;
+  }
+  return *size;
 }
 
 /// Emit a call to a CUF registration runtime function with the canonical
@@ -208,21 +254,51 @@ struct CUFAddConstructor
                           getName() + "pass");
     }
 
-    // Symbol reference to CUFRegisterAllocator.
-    builder.setInsertionPointToEnd(mod.getBody());
-    auto registerFuncOp = mlir::LLVM::LLVMFuncOp::create(
-        builder, loc, RTNAME_STRING(CUFRegisterAllocator), funcTy);
-    registerFuncOp.setVisibility(mlir::SymbolTable::Visibility::Private);
-    auto cufRegisterAllocatorRef = mlir::SymbolRefAttr::get(
-        mod.getContext(), RTNAME_STRING(CUFRegisterAllocator));
-    builder.setInsertionPointToEnd(mod.getBody());
+    bool needAllocatorRegistration = false;
+    mod.walk([&](fir::DeclareOp declOp) {
+      if (declOp.getFortranAttrs() &&
+          fir::bitEnumContainsAny(*declOp.getFortranAttrs(),
+                                  fir::FortranVariableFlagsEnum::allocatable |
+                                      fir::FortranVariableFlagsEnum::pointer)) {
+        needAllocatorRegistration = true;
+        return mlir::WalkResult::interrupt();
+      }
+      return mlir::WalkResult::advance();
+    });
+    if (!needAllocatorRegistration) {
+      mod.walk([&](fir::GlobalOp globalOp) {
+        if (globalOp.getDataAttrAttr()) {
+          if (auto baseBoxType =
+                  mlir::dyn_cast<fir::BaseBoxType>(globalOp.getType())) {
+            if (baseBoxType.isPointerOrAllocatable()) {
+              needAllocatorRegistration = true;
+              return mlir::WalkResult::interrupt();
+            }
+          }
+        }
+        return mlir::WalkResult::advance();
+      });
+    }
 
     // Create the constructor function that call CUFRegisterAllocator.
+    builder.setInsertionPointToEnd(mod.getBody());
     auto func = mlir::LLVM::LLVMFuncOp::create(builder, loc,
                                                cudaFortranCtorName, funcTy);
     func.setLinkage(mlir::LLVM::Linkage::Internal);
-    builder.setInsertionPointToStart(func.addEntryBlock(builder));
-    mlir::LLVM::CallOp::create(builder, loc, funcTy, cufRegisterAllocatorRef);
+    auto entryBlock = func.addEntryBlock(builder);
+    builder.setInsertionPointToStart(entryBlock);
+
+    if (needAllocatorRegistration) {
+      // Symbol reference to CUFRegisterAllocator.
+      builder.setInsertionPointToEnd(mod.getBody());
+      auto registerFuncOp = mlir::LLVM::LLVMFuncOp::create(
+          builder, loc, RTNAME_STRING(CUFRegisterAllocator), funcTy);
+      registerFuncOp.setVisibility(mlir::SymbolTable::Visibility::Private);
+      auto cufRegisterAllocatorRef = mlir::SymbolRefAttr::get(
+          mod.getContext(), RTNAME_STRING(CUFRegisterAllocator));
+      builder.setInsertionPointToStart(entryBlock);
+      mlir::LLVM::CallOp::create(builder, loc, funcTy, cufRegisterAllocatorRef);
+    }
 
     auto gpuMod = symTab.lookup<mlir::gpu::GPUModuleOp>(cudaDeviceModuleName);
     if (gpuMod) {
@@ -288,6 +364,18 @@ struct CUFAddConstructor
                                       typeConverter, registeredMod, func,
                                       /*addrGlobal=*/globalOp,
                                       /*nameGlobal=*/globalOp);
+              // Under -gpu=mem:unified, also register the global as
+              // device-resident so a matching host symbol from another
+              // translation unit is not treated as host memory.
+              if (cudaUnified) {
+                uint64_t szBytes = getGlobalSizeInBytes(
+                    loc, *dl, kindMap, typeConverter, globalOp);
+                cuf::RegisterVariableStaticOp::create(
+                    builder, loc,
+                    mlir::SymbolRefAttr::get(ctx, globalOp.getSymName()),
+                    builder.getStringAttr(globalOp.getSymName()),
+                    builder.getI64IntegerAttr(szBytes));
+              }
             }
           } break;
           default:

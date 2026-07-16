@@ -234,15 +234,19 @@ DistributeLayoutAttr setupLoadMatrixAnchorLayout(
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
 /// Sets up the anchor layout for a store scatter operation.
+/// `numSg` is only used for Subgroup-kind layouts.
 DistributeLayoutAttr setupStoreScatterAnchorLayout(LayoutKind layoutKind,
                                                    VectorType vectorTy,
                                                    int contigChunkSize,
+                                                   int numSg,
                                                    const uArch::uArch *uArch);
 
 /// Sets up the anchor layout for a store matrix operation.
+/// `numSg` is only used for Subgroup-kind layouts.
 DistributeLayoutAttr setupStoreMatrixAnchorLayout(LayoutKind layoutKind,
                                                   VectorType vectorTy,
                                                   int contigChunkSize,
+                                                  int numSg,
                                                   const uArch::uArch *uArch);
 
 /// If the consumer layout has only inst_data (no lane_layout/lane_data),

@@ -1162,7 +1162,8 @@ int ARMTTIImpl::getNumMemOps(const IntrinsicInst *I) const {
     const Align DstAlign = MC->getDestAlign().valueOrOne();
     const Align SrcAlign = MC->getSourceAlign().valueOrOne();
 
-    MOp = MemOp::Copy(Size, /*DstAlignCanChange*/ false, DstAlign, SrcAlign,
+    // Use the most restrictive of memset, memcpy, memmove.
+    MOp = MemOp::Move(Size, /*DstAlignCanChange*/ false, DstAlign, SrcAlign,
                       /*IsVolatile*/ false);
     DstAddrSpace = MC->getDestAddressSpace();
     SrcAddrSpace = MC->getSourceAddressSpace();

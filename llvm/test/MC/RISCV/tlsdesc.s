@@ -44,21 +44,21 @@ start:                                  # @start
 	auipc x1, %tlsdesc_call(1234) # ERR: :[[#@LINE]]:12: error: operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi specifier or an integer in the range
 	auipc a0, %tlsdesc_hi(a+b) # ERR: :[[#@LINE]]:12: error: operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi specifier or an integer in the range
 
-	lw   a0, t0, %tlsdesc_load_lo(a_symbol) # ERR: :[[#@LINE]]:15: error: invalid operand for instruction
+	lw   a0, t0, %tlsdesc_load_lo(a_symbol) # ERR: :[[#@LINE]]:15: error: unexpected extra operand for instruction
 	lw   a0, t0, %tlsdesc_load_lo(a_symbol)(a4)
 # ERR: :[[#@LINE-1]]:2: error: invalid instruction, any one of the following would fix this:
-# ERR: :[[#@LINE-2]]:15: note: invalid operand for instruction
+# ERR: :[[#@LINE-2]]:15: note: unexpected extra operand for instruction
 # ERR: :[[#@LINE-3]]:11: note: invalid operand for instruction
 # ERR: :[[#@LINE-4]]:11: note: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 # ERR: :[[#@LINE-5]]:11: note: immediate must be an integer in the range [-2048, 2047]
 
-	addi a0, t0, %tlsdesc_add_lo(a_symbol)(a4) # ERR: :[[#@LINE]]:41: error: invalid operand for instruction
-	addi a0, %tlsdesc_add_lo(a_symbol) # ERR: :[[#@LINE]]:11: error: invalid operand for instruction
-	addi x1, %tlsdesc_load_lo(a_symbol)(a0) # ERR: :[[#@LINE]]:11: error: invalid operand for instruction
+	addi a0, t0, %tlsdesc_add_lo(a_symbol)(a4) # ERR: :[[#@LINE]]:41: error: unexpected extra operand for instruction
+	addi a0, %tlsdesc_add_lo(a_symbol) # ERR: :[[#@LINE]]:11: error: register must be a GPR
+	addi x1, %tlsdesc_load_lo(a_symbol)(a0) # ERR: :[[#@LINE]]:11: error: register must be a GPR
 
 	jalr x5, 0(a1), %tlsdesc_hi(a_symbol)
 # ERR: :[[#@LINE-1]]:2: error: invalid instruction, any one of the following would fix this:
-# ERR: :[[#@LINE-2]]:18: note: invalid operand for instruction
+# ERR: :[[#@LINE-2]]:18: note: unexpected extra operand for instruction
 # ERR: :[[#@LINE-3]]:18: note: operand must be a symbol with %tlsdesc_call specifier
 	jalr x1, 0(a1), %tlsdesc_call(a_symbol) # ERR: :[[#@LINE]]:13: error: the output operand must be t0/x5 when using %tlsdesc_call specifier
 .endif
