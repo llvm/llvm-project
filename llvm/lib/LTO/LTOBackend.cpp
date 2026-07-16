@@ -30,6 +30,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/RunCodeGen.h"
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/Error.h"
@@ -479,36 +480,28 @@ static void codegen(const Config &Conf, TargetMachine *TM,
   std::unique_ptr<CachedFileStream> &Stream = *StreamOrErr;
   TM->Options.ObjectFilenameForDebug = Stream->ObjectPathName;
 
-  // Create the codegen pipeline in its own scope so it gets deleted before
-  // Stream->commit() is called. The commit function of CacheStream deletes
-  // the raw stream, which is too early as streamers (e.g. MCAsmStreamer)
-  // keep the pointer and may use it until their destruction. See #138194.
-  {
-    legacy::PassManager CodeGenPasses;
-    TargetLibraryInfoImpl TLII(Mod.getTargetTriple(), TM->Options.VecLib);
-    CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
-    CodeGenPasses.add(new RuntimeLibraryInfoWrapper(
-        TM->Options.MCOptions.ABIName, TM->Options.VecLib));
+  CodeGenPipelineConfig CGConfig;
+  CGConfig.DebugPassManager = Conf.DebugPassManager;
+  CGConfig.VerifyEach = Conf.VerifyEach;
+  // No need to make index available if the module is empty.
+  // In theory these passes should not use the index for an empty
+  // module, however, this guards against doing any unnecessary summary-based
+  // analysis in the case of a ThinLTO build where this might be an empty
+  // regular LTO combined module, with a large combined index from ThinLTO.
+  if (!isEmptyModule(Mod))
+    CGConfig.SummaryIndex = &CombinedIndex;
 
-    // No need to make index available if the module is empty.
-    // In theory these passes should not use the index for an empty
-    // module, however, this guards against doing any unnecessary summary-based
-    // analysis in the case of a ThinLTO build where this might be an empty
-    // regular LTO combined module, with a large combined index from ThinLTO.
-    if (!isEmptyModule(Mod))
-      CodeGenPasses.add(
-          createImmutableModuleSummaryIndexWrapperPass(&CombinedIndex));
-    if (Conf.PreCodeGenPassesHook)
-      Conf.PreCodeGenPassesHook(CodeGenPasses);
-    if (TM->addPassesToEmitFile(CodeGenPasses, *Stream->OS,
-                                DwoOut ? &DwoOut->os() : nullptr,
-                                Conf.CGFileType))
-      report_fatal_error("Failed to setup codegen");
-    CodeGenPasses.run(Mod);
+  // runCodeGenPipeline() keeps the pipeline local to itself so that it gets
+  // deleted before Stream->commit() is called below. The commit function of
+  // CacheStream deletes the raw stream, which is too early as streamers (e.g.
+  // MCAsmStreamer) keep the pointer and may use it until their destruction.
+  // See #138194.
+  if (Error Err = runCodeGenPipeline(*TM, Mod, *Stream->OS, DwoOut,
+                                     Conf.CGFileType, CGConfig))
+    report_fatal_error(std::move(Err));
 
-    if (DwoOut)
-      DwoOut->keep();
-  }
+  if (DwoOut)
+    DwoOut->keep();
 
   if (Error Err = Stream->commit())
     report_fatal_error(std::move(Err));

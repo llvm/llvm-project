@@ -9,6 +9,7 @@
 #include "llvm/Passes/RunCodeGen.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
+#include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -32,17 +33,17 @@ static cl::opt<cl::boolOrDefault>
                         "option will default to what the target prefers."),
                cl::init(cl::boolOrDefault::BOU_UNSET));
 
-static Error
-runCodeGenPipelineLegacy(TargetMachine &TM, Module &M, raw_pwrite_stream &OS,
-                         std::unique_ptr<ToolOutputFile> &DwoOS,
-                         CodeGenFileType CGFT, bool PrintPipelinePasses,
-                         bool DisableVerify, bool DisableSimplifyLibCalls) {
+static Error runCodeGenPipelineLegacy(TargetMachine &TM, Module &M,
+                                      raw_pwrite_stream &OS,
+                                      std::unique_ptr<ToolOutputFile> &DwoOS,
+                                      CodeGenFileType CGFT,
+                                      const CodeGenPipelineConfig &Config) {
   legacy::PassManager CodeGenPasses;
   CodeGenPasses.add(
       createTargetTransformInfoWrapperPass(TM.getTargetIRAnalysis()));
   // Add LibraryInfo.
   TargetLibraryInfoImpl TLII(TM.getTargetTriple(), TM.Options.VecLib);
-  if (DisableSimplifyLibCalls)
+  if (Config.DisableSimplifyLibCalls)
     TLII.disableAllFunctions();
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
 
@@ -50,8 +51,12 @@ runCodeGenPipelineLegacy(TargetMachine &TM, Module &M, raw_pwrite_stream &OS,
   CodeGenPasses.add(
       new RuntimeLibraryInfoWrapper(Options.MCOptions.ABIName, Options.VecLib));
 
+  if (Config.SummaryIndex)
+    CodeGenPasses.add(
+        createImmutableModuleSummaryIndexWrapperPass(Config.SummaryIndex));
+
   if (TM.addPassesToEmitFile(CodeGenPasses, OS, DwoOS ? &DwoOS->os() : nullptr,
-                             CGFT, DisableVerify))
+                             CGFT, Config.DisableVerify))
     return createStringError("Failed to construct CodeGen pipeline");
   CodeGenPasses.run(M);
 
@@ -61,8 +66,8 @@ runCodeGenPipelineLegacy(TargetMachine &TM, Module &M, raw_pwrite_stream &OS,
 static Error runCodeGenPipelineNewPM(TargetMachine &TM, Module &M,
                                      raw_pwrite_stream &OS,
                                      std::unique_ptr<ToolOutputFile> &DwoOS,
-                                     CodeGenFileType CGFT, bool DisableVerify,
-                                     IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
+                                     CodeGenFileType CGFT,
+                                     const CodeGenPipelineConfig &Config) {
   ModulePassManager MPM;
   MachineFunctionAnalysisManager MFAM;
   LoopAnalysisManager LAM;
@@ -70,23 +75,32 @@ static Error runCodeGenPipelineNewPM(TargetMachine &TM, Module &M,
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
   CGPassBuilderOption Opt = getCGPassBuilderOption();
-  Opt.DisableVerify = DisableVerify;
+  Opt.DisableVerify = Config.DisableVerify;
   MachineModuleInfo MMI(&TM);
   PassInstrumentationCallbacks PIC;
   PipelineTuningOptions PTOptions;
   TargetMachine *TMPointer = &TM;
-  PassBuilder PB(TMPointer, PTOptions, std::nullopt, &PIC, VFS);
+  // Only resolve the fallback once we know we need one: under clang's IO
+  // sandbox, calling vfs::getRealFileSystem() at all is fatal.
+  PassBuilder PB(TMPointer, PTOptions, std::nullopt, &PIC,
+                 Config.VFS ? Config.VFS : vfs::getRealFileSystem());
 
-  StandardInstrumentations SI(M.getContext(), /*DebugLogging=*/false);
+  StandardInstrumentations SI(M.getContext(), Config.DebugPassManager,
+                              Config.VerifyEach);
   SI.registerCallbacks(PIC, &MAM);
 
-  TargetLibraryInfoImpl TLII(M.getTargetTriple());
+  TargetLibraryInfoImpl TLII(M.getTargetTriple(), TM.Options.VecLib);
   FAM.registerPass([&] { return TargetLibraryAnalysis(TLII); });
   MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
   MAM.registerPass([&] {
     const llvm::TargetOptions &Options = TM.Options;
     return RuntimeLibraryAnalysis(Options.MCOptions.ABIName, Options.VecLib);
   });
+
+  if (Config.SummaryIndex)
+    MAM.registerPass([&] {
+      return ImmutableModuleSummaryIndexAnalysis(Config.SummaryIndex);
+    });
 
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
@@ -108,15 +122,11 @@ static Error runCodeGenPipelineNewPM(TargetMachine &TM, Module &M,
 Error llvm::runCodeGenPipeline(TargetMachine &TM, Module &M,
                                raw_pwrite_stream &OS,
                                std::unique_ptr<ToolOutputFile> &DwoOS,
-                               CodeGenFileType CGFT, bool PrintPipelinePasses,
-                               bool DisableVerify, bool DisableSimplifyLibCalls,
-                               IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
+                               CodeGenFileType CGFT,
+                               const CodeGenPipelineConfig &Config) {
   if (ForceNewPM == cl::boolOrDefault::BOU_TRUE ||
-      (TM.shouldDefaultToNewPM() &&
-       ForceNewPM != cl::boolOrDefault::BOU_FALSE)) {
-    return runCodeGenPipelineNewPM(TM, M, OS, DwoOS, CGFT, DisableVerify, VFS);
-  }
+      (TM.shouldDefaultToNewPM() && ForceNewPM != cl::boolOrDefault::BOU_FALSE))
+    return runCodeGenPipelineNewPM(TM, M, OS, DwoOS, CGFT, Config);
 
-  return runCodeGenPipelineLegacy(TM, M, OS, DwoOS, CGFT, PrintPipelinePasses,
-                                  DisableVerify, DisableSimplifyLibCalls);
+  return runCodeGenPipelineLegacy(TM, M, OS, DwoOS, CGFT, Config);
 }
