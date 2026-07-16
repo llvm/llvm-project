@@ -57,4 +57,3 @@ Similarly:
 
 Removing ``struct`` would cause ``Foo`` to refer to the function instead of
 the type.
-
