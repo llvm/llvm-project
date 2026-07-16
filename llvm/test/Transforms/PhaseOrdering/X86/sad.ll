@@ -484,15 +484,15 @@ define dso_local i32 @sad_unroll_nonzero_initial(ptr %arg, ptr %arg1, ptr %arg2,
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <16 x i8> [[TMP4]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub nsw <16 x i32> [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = tail call <16 x i32> @llvm.abs.v16i32(<16 x i32> [[TMP7]], i1 true)
-; CHECK-NEXT:    [[TMP11:%.*]] = add nuw nsw <16 x i32> [[TMP10]], <i32 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
+; CHECK-NEXT:    [[I11:%.*]] = add nuw nsw <16 x i32> [[TMP10]], <i32 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
 ; CHECK-NEXT:    [[TMP12:%.*]] = load <16 x i8>, ptr [[ARG2]], align 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = load <16 x i8>, ptr [[ARG3]], align 1
 ; CHECK-NEXT:    [[TMP14:%.*]] = zext <16 x i8> [[TMP12]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP15:%.*]] = zext <16 x i8> [[TMP13]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP16:%.*]] = sub nsw <16 x i32> [[TMP14]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = tail call <16 x i32> @llvm.abs.v16i32(<16 x i32> [[TMP16]], i1 true)
-; CHECK-NEXT:    [[TMP20:%.*]] = add nuw nsw <16 x i32> [[TMP11]], [[TMP19]]
-; CHECK-NEXT:    [[TMP29:%.*]] = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP20]])
+; CHECK-NEXT:    [[I20:%.*]] = add nuw nsw <16 x i32> [[I11]], [[TMP19]]
+; CHECK-NEXT:    [[TMP29:%.*]] = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[I20]])
 ; CHECK-NEXT:    ret i32 [[TMP29]]
 ;
 bb:

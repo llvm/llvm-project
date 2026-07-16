@@ -64,7 +64,8 @@ define void @dont_hoist_variant_address(ptr %dst, ptr %src, i32 %n) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[A1]], [[SRC2]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 16
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP4]], 15
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
@@ -211,22 +212,22 @@ define void @load_store_noalias_via_tbaa(ptr %p, ptr %q, ptr %n) {
 ; CHECK-NEXT:    [[P6:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[N5:%.*]] = ptrtoint ptr [[N]] to i64
 ; CHECK-NEXT:    [[P2:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[P2]], -3074457345618258603
 ; CHECK-NEXT:    [[N1:%.*]] = ptrtoint ptr [[N]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[N5]], 3074457345618258603
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[P6]], 3074457345618258603
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP17:%.*]] = mul i64 [[N1]], 3074457345618258603
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP4]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[N1]] to i2
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[P2]] to i2
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[N5]] to i2
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[P6]] to i2
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i2 [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext i2 [[TMP7]] to i64
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[TMP8]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[N1]], 3074457345618258603
-; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[P2]], 3074457345618258603
+; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[N5]], 3074457345618258603
+; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[P6]], 3074457345618258603
 ; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP9]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = lshr i64 [[TMP11]], 2
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P]], i64 4

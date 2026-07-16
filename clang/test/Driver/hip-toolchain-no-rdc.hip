@@ -37,29 +37,14 @@
 // RUN: 2>&1 | FileCheck -check-prefixes=LKONLY %s
 
 // RUN: %clang -### --target=x86_64-linux-gnu --no-offload-new-driver \
-// RUN:   --offload-arch=amdgcnspirv --offload-arch=gfx900 \
+// RUN:   --offload-arch=amdgcnspirv --offload-arch=gfx900 -no-use-spirv-backend \
 // RUN:   %s -nogpuinc -nogpulib \
 // RUN: 2>&1 | FileCheck -check-prefixes=AMDGCNSPIRV %s
 
 // RUN: %clang -### --target=x86_64-linux-gnu --offload-new-driver \
-// RUN:   --offload-arch=amdgcnspirv --offload-arch=gfx900 \
+// RUN:   --offload-arch=amdgcnspirv --offload-arch=gfx900 -no-use-spirv-backend \
 // RUN:   %s -nogpuinc -nogpulib \
 // RUN: 2>&1 | FileCheck -check-prefixes=AMDGCNSPIRV-NEW %s
-
-// SPIR-V requires the LTO pipeline; --no-lto must not be passed.
-// RUN: %clang -### --target=x86_64-linux-gnu -fno-gpu-rdc \
-// RUN:   --offload-arch=amdgcnspirv -nogpuinc -nogpulib \
-// RUN:   %s 2>&1 | FileCheck -check-prefixes=SPIRV-NO-LTO %s
-// SPIRV-NO-LTO: {{".*clang-linker-wrapper}}
-// SPIRV-NO-LTO-NOT: "--no-lto"
-// SPIRV-NO-LTO-SAME: "--emit-fatbin-only"
-
-// Profile generation needs LTO, so the linker wrapper must not get --no-lto.
-// RUN: %clang -### --target=x86_64-linux-gnu -fno-gpu-rdc -fprofile-generate \
-// RUN:   -x hip --cuda-gpu-arch=gfx900 -nogpuinc -nogpulib --offload-new-driver \
-// RUN:   %s 2>&1 | FileCheck -check-prefixes=PGO -implicit-check-not="--no-lto" %s
-// PGO: {{".*clang-linker-wrapper}}
-// PGO-SAME: "--emit-fatbin-only"
 
 //
 // Compile device code in a.cu to code object for gfx803.
@@ -67,7 +52,8 @@
 
 // CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
-// CHECK-SAME: "-emit-llvm-bc"
+// OLD-SAME: "-emit-obj"
+// NEW-SAME: "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
 // CHECK-SAME: "-fcuda-is-device" "-fno-threadsafe-statics" "-mllvm" "-amdgpu-internalize-symbols"
 // CHECK-SAME: "-fvisibility=hidden"
@@ -122,7 +108,6 @@
 
 // NEW: [[WRAPPER:".*clang-linker-wrapper]]"
 // NEW-SAME: "--device-compiler=amdgcn-amd-amdhsa=-flto=full"
-// NEW-SAME: "--no-lto"
 // NEW-SAME: "--host-triple=x86_64-unknown-linux-gnu"
 // NEW-SAME: "--emit-fatbin-only"
 // NEW-SAME: "-o" "[[HIPFB_A:.*.hipfb]]" "[[PACKAGE_A]]"
@@ -197,7 +182,6 @@
 
 // NEW: [[WRAPPER:".*clang-linker-wrapper]]"
 // NEW-SAME: "--device-compiler=amdgcn-amd-amdhsa=-flto=full"
-// NEW-SAME: "--no-lto"
 // NEW-SAME: "--emit-fatbin-only"
 // NEW-SAME: "-o" "[[HIPFB_B:.*.hipfb]]" "[[PACKAGE_B]]"
 
@@ -230,14 +214,14 @@
 // Check mixed AMDGCNSPIRV and concrete GPU arch.
 //
 
-// AMDGCNSPIRV: "-cc1" "-triple" "spirv64-amd-amdhsa" {{.*}}"-emit-llvm-bc" {{.*}}"-flto=full"{{.*}} "-fembed-bitcode=marker" "-disable-llvm-passes" {{.*}} "-o" "[[AMDGCNSPV_BC:.*bc]]"
+// AMDGCNSPIRV: "-cc1" "-triple" "amdgcn-amd-amdhsa" {{.*}}"-emit-obj" {{.*}} "-target-cpu" "gfx900"{{.*}} "-o" "[[GFX900_OBJ:.*o]]"
+// AMDGCNSPIRV: {{".*lld.*"}} {{.*}}"-plugin-opt=mcpu=gfx900" {{.*}} "-o" "[[GFX900_CO:.*out]]" {{.*}}"[[GFX900_OBJ]]"
+// AMDGCNSPIRV: "-cc1" "-triple" "spirv64-amd-amdhsa" {{.*}}"-emit-llvm-bc" {{.*}}"-flto=full"{{.*}} "-fembed-bitcode=marker" "-disable-llvm-optzns" {{.*}} "-o" "[[AMDGCNSPV_BC:.*bc]]"
 // AMDGCNSPIRV: {{".*llvm-link.*"}} "-o" "[[AMDGCNSPV_TMP:.*bc]]" "[[AMDGCNSPV_BC]]"
 // AMDGCNSPIRV: {{".*llvm-spirv.*"}} "--spirv-max-version=1.6" "--spirv-ext=+all" {{.*}} "[[AMDGCNSPV_TMP]]" {{.*}}"-o" "[[AMDGCNSPV_CO:.*out]]"
-// AMDGCNSPIRV: "-cc1" "-triple" "amdgcn-amd-amdhsa" {{.*}}"-emit-llvm-bc" {{.*}}"-flto=full"{{.*}} "-target-cpu" "gfx900"{{.*}} "-o" "[[GFX900_BC:.*bc]]"
-// AMDGCNSPIRV: {{".*lld.*"}} {{.*}}"-plugin-opt=mcpu=gfx900" {{.*}} "-o" "[[GFX900_CO:.*out]]" {{.*}}"[[GFX900_BC]]"
 // AMDGCNSPIRV: {{".*clang-offload-bundler.*"}} "-type=o"
-// AMDGCNSPIRV-SAME: "-targets={{.*}}hip-spirv64-amd-amdhsa--amdgcnspirv,hip-amdgcn-amd-amdhsa--gfx900"
-// AMDGCNSPIRV-SAME: "-input=[[AMDGCNSPV_CO]]" "-input=[[GFX900_CO]]"
+// AMDGCNSPIRV-SAME: "-targets={{.*}}hipv4-amdgcn-amd-amdhsa--gfx900,hipv4-spirv64-amd-amdhsa--amdgcnspirv"
+// AMDGCNSPIRV-SAME: "-input=[[GFX900_CO]]" "-input=[[AMDGCNSPV_CO]]"
 // AMDGCNSPIRV-NEW: "-cc1" "-triple" "spirv64-amd-amdhsa" {{.*}}"-emit-llvm-bc" {{.*}} "-o" "[[AMDGCNSPV_BC:[^"]*]]"
 
 // Check verbose printing with the new driver.

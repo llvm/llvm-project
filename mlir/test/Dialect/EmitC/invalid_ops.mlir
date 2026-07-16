@@ -756,14 +756,14 @@ emitc.field @testField : !emitc.array<1xf32>
 
 // -----
 
-// expected-error @+1 {{'emitc.get_field' op  must be nested within an emitc.class operation}}
+// expected-error @+1 {{'emitc.get_field' op expects ancestor op 'emitc.class'}}
 %1 = emitc.get_field @testField : !emitc.array<1xf32>
 
 // -----
 
 emitc.func @testMethod() {
   %0 = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
-  // expected-error @+1 {{'emitc.get_field' op  must be nested within an emitc.class operation}}
+  // expected-error @+1 {{'emitc.get_field' op expects ancestor op 'emitc.class'}}
   %1 = get_field @testField : !emitc.array<1xf32>
   %2 = subscript %1[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
   return
@@ -979,5 +979,21 @@ func.func @address_of(%arg0: !emitc.lvalue<i32>) {
 func.func @dereference(%arg0: !emitc.ptr<i32>) {
   // expected-error @+1 {{failed to verify that input and result reference the same type}}
   %1 = "emitc.dereference"(%arg0) : (!emitc.ptr<i32>) -> !emitc.lvalue<i8>
+  return
+}
+
+// -----
+
+func.func @pre_increment_unmatch_type(%arg0: !emitc.lvalue<i32>) {
+  // expected-error @+1 {{failed to verify that input and result reference the same type}}
+  %1 = "emitc.pre_increment"(%arg0) : (!emitc.lvalue<i32>) -> i8
+  return
+}
+
+// -----
+
+func.func @post_decrement_unmatch_type(%arg0: !emitc.lvalue<i32>) {
+  // expected-error @+1 {{failed to verify that input and result reference the same type}}
+  %1 = "emitc.post_decrement"(%arg0) : (!emitc.lvalue<i32>) -> i8
   return
 }

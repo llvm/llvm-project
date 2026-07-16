@@ -42,6 +42,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
 #include <atomic>
@@ -3481,6 +3482,17 @@ unsigned X86::getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand,
   }
 }
 
+unsigned X86::getMOVriOpcode(bool Use64BitReg, int64_t Imm) {
+  if (!Use64BitReg)
+    return X86::MOV32ri;
+
+  if (isUInt<32>(Imm))
+    return X86::MOV32ri64;
+  if (isInt<32>(Imm))
+    return X86::MOV64ri32;
+  return X86::MOV64ri;
+}
+
 /// Get the VPCMP immediate for the given condition.
 unsigned X86::getVPCMPImmForCond(ISD::CondCode CC) {
   switch (CC) {
@@ -4986,6 +4998,10 @@ bool X86InstrInfo::isRedundantFlagInstr(const MachineInstr &FlagI,
   }
 }
 
+#define CASE_EVEX(OP)                                                          \
+  case X86::OP:                                                                \
+  case X86::OP##_EVEX:
+
 /// Check whether the definition can be converted
 /// to remove a comparison against zero.
 inline static bool isDefConvertible(const MachineInstr &MI, bool &NoSignFlag,
@@ -5155,22 +5171,22 @@ inline static bool isDefConvertible(const MachineInstr &MI, bool &NoSignFlag,
   CASE_ND(OR32rm)
   CASE_ND(OR16rm)
   CASE_ND(OR8rm)
-  case X86::ANDN32rr:
-  case X86::ANDN32rm:
-  case X86::ANDN64rr:
-  case X86::ANDN64rm:
-  case X86::BLSI32rr:
-  case X86::BLSI32rm:
-  case X86::BLSI64rr:
-  case X86::BLSI64rm:
-  case X86::BLSMSK32rr:
-  case X86::BLSMSK32rm:
-  case X86::BLSMSK64rr:
-  case X86::BLSMSK64rm:
-  case X86::BLSR32rr:
-  case X86::BLSR32rm:
-  case X86::BLSR64rr:
-  case X86::BLSR64rm:
+  CASE_EVEX(ANDN32rr)
+  CASE_EVEX(ANDN32rm)
+  CASE_EVEX(ANDN64rr)
+  CASE_EVEX(ANDN64rm)
+  CASE_EVEX(BLSI32rr)
+  CASE_EVEX(BLSI32rm)
+  CASE_EVEX(BLSI64rr)
+  CASE_EVEX(BLSI64rm)
+  CASE_EVEX(BLSMSK32rr)
+  CASE_EVEX(BLSMSK32rm)
+  CASE_EVEX(BLSMSK64rr)
+  CASE_EVEX(BLSMSK64rm)
+  CASE_EVEX(BLSR32rr)
+  CASE_EVEX(BLSR32rm)
+  CASE_EVEX(BLSR64rr)
+  CASE_EVEX(BLSR64rm)
   case X86::BLCFILL32rr:
   case X86::BLCFILL32rm:
   case X86::BLCFILL64rr:
@@ -5199,10 +5215,10 @@ inline static bool isDefConvertible(const MachineInstr &MI, bool &NoSignFlag,
   case X86::BLSIC32rm:
   case X86::BLSIC64rr:
   case X86::BLSIC64rm:
-  case X86::BZHI32rr:
-  case X86::BZHI32rm:
-  case X86::BZHI64rr:
-  case X86::BZHI64rm:
+  CASE_EVEX(BZHI32rr)
+  CASE_EVEX(BZHI32rm)
+  CASE_EVEX(BZHI64rr)
+  CASE_EVEX(BZHI64rm)
   case X86::T1MSKC32rr:
   case X86::T1MSKC32rm:
   case X86::T1MSKC64rr:
@@ -5216,10 +5232,10 @@ inline static bool isDefConvertible(const MachineInstr &MI, bool &NoSignFlag,
     // overflow flag.
     ClearsOverflowFlag = true;
     return true;
-  case X86::BEXTR32rr:
-  case X86::BEXTR64rr:
-  case X86::BEXTR32rm:
-  case X86::BEXTR64rm:
+  CASE_EVEX(BEXTR32rr)
+  CASE_EVEX(BEXTR64rr)
+  CASE_EVEX(BEXTR32rm)
+  CASE_EVEX(BEXTR64rm)
   case X86::BEXTRI32ri:
   case X86::BEXTRI32mi:
   case X86::BEXTRI64ri:
@@ -5261,17 +5277,18 @@ static std::pair<X86::CondCode, unsigned> isUseDefConvertible(const MachineInstr
   case X86::BSR32rr:
   case X86::BSR64rr:
     return std::make_pair(X86::COND_E, 2U);
-  case X86::BLSI32rr:
-  case X86::BLSI64rr:
+  CASE_EVEX(BLSI32rr)
+  CASE_EVEX(BLSI64rr)
     return std::make_pair(X86::COND_AE, 1U);
-  case X86::BLSR32rr:
-  case X86::BLSR64rr:
-  case X86::BLSMSK32rr:
-  case X86::BLSMSK64rr:
+  CASE_EVEX(BLSR32rr)
+  CASE_EVEX(BLSR64rr)
+  CASE_EVEX(BLSMSK32rr)
+  CASE_EVEX(BLSMSK64rr)
     return std::make_pair(X86::COND_B, 1U);
     // TODO: TBM instructions.
   }
 }
+#undef CASE_EVEX
 
 /// Check if there exists an earlier instruction that
 /// operates on the same source operands and sets flags in the same way as
@@ -6743,6 +6760,62 @@ static bool hasPartialRegUpdate(unsigned Opcode, const X86Subtarget &Subtarget,
   case X86::VPMULLQZrr:
   case X86::VPMULLQZrrkz:
     return Subtarget.hasMULLQFalseDeps();
+  case X86::VPCOMPRESSBZ128rrkz:
+  case X86::VPCOMPRESSBZ256rrkz:
+  case X86::VPCOMPRESSBZrrkz:
+  case X86::VPCOMPRESSWZ128rrkz:
+  case X86::VPCOMPRESSWZ256rrkz:
+  case X86::VPCOMPRESSWZrrkz:
+  case X86::VPCOMPRESSDZ128rrkz:
+  case X86::VPCOMPRESSDZ256rrkz:
+  case X86::VPCOMPRESSDZrrkz:
+  case X86::VPCOMPRESSQZ128rrkz:
+  case X86::VPCOMPRESSQZ256rrkz:
+  case X86::VPCOMPRESSQZrrkz:
+  case X86::VCOMPRESSPSZ128rrkz:
+  case X86::VCOMPRESSPSZ256rrkz:
+  case X86::VCOMPRESSPSZrrkz:
+  case X86::VCOMPRESSPDZ128rrkz:
+  case X86::VCOMPRESSPDZ256rrkz:
+  case X86::VCOMPRESSPDZrrkz:
+    return Subtarget.hasCOMPRESSFalseDeps();
+  case X86::VPEXPANDBZ128rmkz:
+  case X86::VPEXPANDBZ128rrkz:
+  case X86::VPEXPANDBZ256rmkz:
+  case X86::VPEXPANDBZ256rrkz:
+  case X86::VPEXPANDBZrmkz:
+  case X86::VPEXPANDBZrrkz:
+  case X86::VPEXPANDWZ128rmkz:
+  case X86::VPEXPANDWZ128rrkz:
+  case X86::VPEXPANDWZ256rmkz:
+  case X86::VPEXPANDWZ256rrkz:
+  case X86::VPEXPANDWZrmkz:
+  case X86::VPEXPANDWZrrkz:
+  case X86::VPEXPANDDZ128rmkz:
+  case X86::VPEXPANDDZ128rrkz:
+  case X86::VPEXPANDDZ256rmkz:
+  case X86::VPEXPANDDZ256rrkz:
+  case X86::VPEXPANDDZrmkz:
+  case X86::VPEXPANDDZrrkz:
+  case X86::VPEXPANDQZ128rmkz:
+  case X86::VPEXPANDQZ128rrkz:
+  case X86::VPEXPANDQZ256rmkz:
+  case X86::VPEXPANDQZ256rrkz:
+  case X86::VPEXPANDQZrmkz:
+  case X86::VPEXPANDQZrrkz:
+  case X86::VEXPANDPSZ128rmkz:
+  case X86::VEXPANDPSZ128rrkz:
+  case X86::VEXPANDPSZ256rmkz:
+  case X86::VEXPANDPSZ256rrkz:
+  case X86::VEXPANDPSZrmkz:
+  case X86::VEXPANDPSZrrkz:
+  case X86::VEXPANDPDZ128rmkz:
+  case X86::VEXPANDPDZ128rrkz:
+  case X86::VEXPANDPDZ256rmkz:
+  case X86::VEXPANDPDZ256rrkz:
+  case X86::VEXPANDPDZrmkz:
+  case X86::VEXPANDPDZrrkz:
+    return Subtarget.hasEXPANDFalseDeps();
   // GPR
   case X86::POPCNT32rm:
   case X86::POPCNT32rr:
@@ -6753,11 +6826,25 @@ static bool hasPartialRegUpdate(unsigned Opcode, const X86Subtarget &Subtarget,
   case X86::LZCNT32rr:
   case X86::LZCNT64rm:
   case X86::LZCNT64rr:
+    return Subtarget.hasLZCNTFalseDeps();
   case X86::TZCNT32rm:
   case X86::TZCNT32rr:
   case X86::TZCNT64rm:
   case X86::TZCNT64rr:
-    return Subtarget.hasLZCNTFalseDeps();
+    return Subtarget.hasTZCNTFalseDeps();
+  case X86::BLSR32rr:
+  case X86::BLSR32rm:
+  case X86::BLSR64rr:
+  case X86::BLSR64rm:
+  case X86::BLSI32rr:
+  case X86::BLSI32rm:
+  case X86::BLSI64rr:
+  case X86::BLSI64rm:
+  case X86::BLSMSK32rr:
+  case X86::BLSMSK32rm:
+  case X86::BLSMSK64rr:
+  case X86::BLSMSK64rm:
+    return Subtarget.hasBLSFalseDeps() && !ForLoadFold; // Preserve load folding
   }
 
   return false;
@@ -7628,10 +7715,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
         return NewMI;
 
       Register NewSrc = MI.getOperand(0).getReg();
-      if (MRI.isSSA()) {
-        const TargetRegisterClass &RC = *MF.getRegInfo().getRegClass(SrcReg);
-        NewSrc = MRI.createVirtualRegister(&RC);
-      }
+      if (MRI.isSSA())
+        NewSrc = MRI.createVirtualRegister(getRegClass(NewMI->getDesc(), 1));
 
       CopyMI = BuildMI(*NewMI->getParent(), *NewMI, MI.getDebugLoc(),
                        get(TargetOpcode::COPY))
@@ -10388,7 +10473,7 @@ X86InstrInfo::describeLoadedValue(const MachineInstr &MI, Register Reg) const {
     if (Reg == MI.getOperand(0).getReg())
       Expr = DIExpression::appendExt(Expr, 32, 64, true);
     else
-      assert(X86MCRegisterClasses[X86::GR32RegClassID].contains(Reg) &&
+      assert(getX86MCRegisterClass(X86::GR32RegClassID).contains(Reg) &&
              "Unhandled sub-register case for MOVSX64rr32");
 
     return ParamLoadedValue(MI.getOperand(1), Expr);

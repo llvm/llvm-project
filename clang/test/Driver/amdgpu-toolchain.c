@@ -1,5 +1,9 @@
 // RUN: %clang -### --target=amdgcn--amdhsa -x assembler -mcpu=kaveri %s 2>&1 | FileCheck -check-prefix=AS_LINK %s
 // RUN: %clang -### -g --target=amdgcn--amdhsa -mcpu=kaveri -nogpulib %s 2>&1 | FileCheck -check-prefix=DWARF_VER %s
+
+// RUN: %clang -### --target=amdgpu7--amdhsa -x assembler -mcpu=kaveri %s 2>&1 | FileCheck -check-prefix=AS_LINK %s
+// RUN: %clang -### -g --target=amdgpu7--amdhsa -mcpu=kaveri -nogpulib %s 2>&1 | FileCheck -check-prefix=DWARF_VER %s
+
 // RUN: %clang -### --target=amdgcn-amd-amdpal -x assembler -mcpu=kaveri %s 2>&1 | FileCheck -check-prefix=AS_LINK %s
 // RUN: %clang -### -g --target=amdgcn-amd-amdpal -mcpu=kaveri %s 2>&1 | FileCheck -check-prefix=DWARF_VER %s
 // RUN: %clang -### --target=amdgcn-mesa-mesa3d -x assembler -mcpu=kaveri %s 2>&1 | FileCheck -check-prefix=AS_LINK %s
@@ -29,6 +33,10 @@
 
 // RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx90a:xnack+:sramecc- -nogpulib \
 // RUN:   -L. -fconvergent-functions %s 2>&1 | FileCheck -check-prefix=MCPU %s
+
+// RUN: %clang -### --target=amdgpu9.0a-amd-amdhsa -mcpu=gfx90a:xnack+:sramecc- -nogpulib \
+// RUN:   -L. -fconvergent-functions %s 2>&1 | FileCheck -check-prefix=MCPU %s
+
 // MCPU: ld.lld{{.*}}"-plugin-opt=mcpu=gfx90a"{{.*}}"-plugin-opt=-mattr=+xnack,-sramecc"{{.*}}
 
 // RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx906 -nogpulib \
@@ -63,3 +71,9 @@
 // RUN:   | FileCheck -check-prefixes=UBSAN %s
 //      UBSAN: ld.lld
 // UBSAN-SAME: "[[RESOURCE_DIR:.+]]{{/|\\\\}}lib{{/|\\\\}}amdgcn-amd-amdhsa{{/|\\\\}}libclang_rt.ubsan_minimal.a"
+
+// RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx906 -nogpulib \
+// RUN:   -resource-dir=%S/Inputs/resource_dir_with_amdgpu_per_target_subdir \
+// RUN:   -fprofile-generate %s 2>&1 | FileCheck -check-prefixes=PROFILE-AMDGPU %s
+//      PROFILE-AMDGPU: ld.lld
+// PROFILE-AMDGPU-SAME: "[[RESOURCE_DIR:.+]]{{/|\\\\}}lib{{/|\\\\}}amdgpu-amd-amdhsa{{/|\\\\}}libclang_rt.profile.a"

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck -enable-var-scope -check-prefixes=GCN,O2 %s
-; RUN: llc -O0 -mtriple=amdgcn < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,O2 %s
+; RUN: llc -O0 -mtriple=amdgpu6.00 < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}zext_grp_size_128:
 ; O2-NOT: and_b32

@@ -15,6 +15,7 @@
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/macros/config.h"
@@ -174,7 +175,7 @@ LIBC_INLINE constexpr float16 cbrtf16(float16 x) {
 
   uint32_t r_bits = r_m | (static_cast<uint32_t>(out_e | sign_bit)
                            << FloatBits::FRACTION_LEN);
-  return static_cast<float16>(FloatBits(r_bits).get_val());
+  return fputil::cast<float16>(FloatBits(r_bits).get_val());
 }
 
 } // namespace math

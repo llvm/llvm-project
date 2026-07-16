@@ -107,6 +107,41 @@ func.func @dereference(%arg0: !emitc.ptr<i32>) {
   return
 }
 
+// CHECK-LABEL: void inc_dec() {
+func.func @inc_dec() {
+  // CHECK-NEXT: int32_t [[V1:[^ ]*]] = 0;
+  %v = "emitc.variable"() <{value = 0 : i32}> : () -> !emitc.lvalue<i32>
+  // CHECK-NEXT: int32_t [[V2:[^ ]*]] = ++[[V1]];
+  %0 = emitc.pre_increment %v : !emitc.lvalue<i32>
+  // CHECK-NEXT: int32_t [[V3:[^ ]*]] = [[V1]]++;
+  %1 = emitc.post_increment %v : !emitc.lvalue<i32>
+  // CHECK-NEXT: int32_t [[V4:[^ ]*]] = --[[V1]];
+  %2 = emitc.pre_decrement %v : !emitc.lvalue<i32>
+  // CHECK-NEXT: int32_t [[V5:[^ ]*]] = [[V1]]--;
+  %3 = emitc.post_decrement %v : !emitc.lvalue<i32>
+  return
+}
+
+// CHECK-LABEL: int32_t inc_dec_expression() {
+func.func @inc_dec_expression() -> i32 {
+  // CHECK-NEXT: int32_t [[V1:[^ ]*]] = 0;
+  %v = "emitc.variable"() <{value = 0 : i32}> : () -> !emitc.lvalue<i32>
+  %inc = emitc.expression %v : (!emitc.lvalue<i32>) -> i32 {
+    %0 = emitc.post_increment %v : !emitc.lvalue<i32>
+    emitc.yield %0 : i32
+  }
+  // CHECK-NEXT: int32_t [[V2:[^ ]*]] = [[V1]]++;
+  %dec = emitc.expression %v : (!emitc.lvalue<i32>) -> i32 {
+    %0 = emitc.post_decrement %v : !emitc.lvalue<i32>
+    emitc.yield %0 : i32
+  }
+  // CHECK-NEXT: int32_t [[V3:[^ ]*]] = [[V1]]--;
+  %r = emitc.add %inc, %dec : (i32, i32) -> i32
+  // CHECK-NEXT: int32_t [[V4:[^ ]*]] = [[V2]] + [[V3]];
+  // CHECK-NEXT: return [[V4]];
+  return %r : i32
+}
+
 // CHECK: void array_type(int32_t v1[3], float v2[10][20])
 func.func @array_type(%arg0: !emitc.array<3xi32>, %arg1: !emitc.array<10x20xf32>) {
   return

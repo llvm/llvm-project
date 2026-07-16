@@ -14,6 +14,7 @@
 #include "flang/Common/reference.h"
 #include "flang/Common/visit.h"
 #include "flang/Semantics/module-dependences.h"
+#include "flang/Semantics/omp-declare-variant.h"
 #include "flang/Support/Fortran.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
@@ -307,6 +308,13 @@ public:
     openACCRoutineInfos_.push_back(info);
   }
 
+  const std::vector<OmpDeclareVariantEntry> &ompDeclareVariants() const {
+    return ompDeclareVariants_;
+  }
+  void addOmpDeclareVariant(OmpDeclareVariantEntry &&entry) {
+    ompDeclareVariants_.push_back(std::move(entry));
+  }
+
 private:
   bool isInterface_{false}; // true if this represents an interface-body
   bool isDummy_{false}; // true when interface of dummy procedure
@@ -325,6 +333,7 @@ private:
   std::vector<std::int64_t> cudaLaunchBounds_, cudaClusterDims_;
   // OpenACC routine information
   std::vector<OpenACCRoutineInfo> openACCRoutineInfos_;
+  std::vector<OmpDeclareVariantEntry> ompDeclareVariants_;
 
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const SubprogramDetails &);
@@ -547,6 +556,9 @@ public:
   bool isDECStructure() const { return isDECStructure_; }
   bool isEnumerationType() const { return isEnumerationType_; }
   void set_isEnumerationType(bool x = true) { isEnumerationType_ = x; }
+  // Name of the hidden component created for an enumeration type to hold
+  // the 1-based enumerator ordinal.
+  static constexpr char ordinalComponentName[]{"__ordinal"};
   int enumeratorCount() const { return enumeratorCount_; }
   void set_enumeratorCount(int n) { enumeratorCount_ = n; }
   std::map<SourceName, SymbolRef> &finals() { return finals_; }
@@ -925,8 +937,8 @@ public:
       // OpenMP special variables
       OmpInVar, OmpOrigVar, OmpOutVar, OmpPrivVar,
       // OpenMP miscellaneous flags
-      OmpCommonBlock, OmpReduction, OmpInReduction, OmpAligned, OmpNontemporal,
-      OmpAllocate, OmpDeclarativeAllocateDirective,
+      OmpReserved, OmpCommonBlock, OmpReduction, OmpInReduction, OmpAligned,
+      OmpNontemporal, OmpAllocate, OmpDeclarativeAllocateDirective,
       OmpExecutableAllocateDirective, OmpDeclareSimd, OmpDeclareTarget,
       OmpThreadprivate, OmpDeclareReduction, OmpFlushed, OmpCriticalLock,
       OmpIfSpecified, OmpNone, OmpPreDetermined, OmpExplicit, OmpImplicit,

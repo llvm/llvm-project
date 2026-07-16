@@ -12,7 +12,6 @@
 
 #include "X86.h"
 #include "X86AsmPrinter.h"
-#include "X86ISelDAGToDAG.h"
 #include "X86TargetMachine.h"
 
 #include "llvm/CodeGen/AtomicExpand.h"

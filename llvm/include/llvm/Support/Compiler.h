@@ -171,10 +171,12 @@
 /// for both functions and classes. On windows its turned in to dllimport for
 /// library consumers, for other platforms its a default visibility attribute.
 ///
-/// LLVM_ABI_FOR_TEST is for annotating symbols that are only exported because
-/// they are imported from a test. These symbols are not technically part of the
-/// LLVM public interface and could be conditionally excluded when not building
-/// tests in the future.
+/// LLVM_ABI_FOR_TEST is for annotating symbols that are exported from a
+/// library-internal header solely so that unit tests can link against them.
+/// Symbols in LLVM's public headers are part of the LLVM public interface and
+/// should use LLVM_ABI. LLVM_ABI_FOR_TEST is reserved for internal headers,
+/// whose symbols could be conditionally excluded when not building tests in the
+/// future.
 ///
 #ifndef LLVM_ABI_GENERATING_ANNOTATIONS
 // Marker to add to classes or functions in public headers that should not have
@@ -354,6 +356,15 @@
 #define LLVM_ATTRIBUTE_ALWAYS_INLINE __forceinline
 #else
 #define LLVM_ATTRIBUTE_ALWAYS_INLINE inline
+#endif
+
+/// LLVM_ATTRIBUTE_ALWAYS_INLINE_UNLESS_DEBUG - Like
+/// LLVM_ATTRIBUTE_ALWAYS_INLINE but disabled in debug builds to avoid stack
+/// overflow with deep recursion.
+#if defined(NDEBUG)
+#define LLVM_ATTRIBUTE_ALWAYS_INLINE_UNLESS_DEBUG LLVM_ATTRIBUTE_ALWAYS_INLINE
+#else
+#define LLVM_ATTRIBUTE_ALWAYS_INLINE_UNLESS_DEBUG inline
 #endif
 
 /// LLVM_ATTRIBUTE_NO_DEBUG - On compilers where we have a directive to do
