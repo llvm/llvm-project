@@ -4291,6 +4291,7 @@ Target::StopHookCommandLine::HandleStop(ExecutionContext &exc_ctx,
 
   CommandReturnObject result(false);
   result.SetImmediateOutputStream(output_sp);
+  result.SetImmediateErrorStream(output_sp);
   result.SetInteractive(false);
   Debugger &debugger = exc_ctx.GetTargetPtr()->GetDebugger();
   CommandInterpreterRunOptions options;
@@ -4605,6 +4606,7 @@ Target::HookCommandLine::HandleStop(ExecutionContext &exc_ctx,
 
   CommandReturnObject result(false);
   result.SetImmediateOutputStream(output_sp);
+  result.SetImmediateErrorStream(output_sp);
   result.SetInteractive(false);
   Debugger &debugger = exc_ctx.GetTargetPtr()->GetDebugger();
   CommandInterpreterRunOptions options;
