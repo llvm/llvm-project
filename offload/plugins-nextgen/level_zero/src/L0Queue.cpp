@@ -74,9 +74,10 @@ Error L0QueueTy::memoryFill(void *Ptr, const void *Pattern, size_t PatternSize,
     return memoryFillImpl(Ptr, Pattern, PatternSize, Size);
   }
 
-  llvm::StringRef PatternRef(static_cast<const char *>(Pattern), PatternSize);
-  if (PatternRef.find_first_not_of(PatternRef[0]) == llvm::StringRef::npos) {
-    // All pattern bytes equal, substutition of 1 as PatternSize is equivalent,
+  auto PatternBytes = static_cast<const unsigned char *>(Pattern);
+  // Check if all bytes are equal.
+  if (std::memcmp(PatternBytes, PatternBytes + 1, PatternSize - 1) == 0) {
+    // Substitution of 1 as PatternSize is equivalent,
     // so native L0 memory fill is still possible.
     return memoryFillImpl(Ptr, Pattern, 1, Size);
   }
@@ -120,8 +121,12 @@ static std::vector<unsigned char> extendPattern(unsigned char *Buf, size_t Size,
   const size_t NumPatterns =
       std::max(static_cast<size_t>(1), (MinExtendedSize + Size - 1) / Size);
   std::vector<unsigned char> Extended(NumPatterns * Size);
-  for (size_t i = 0; i < NumPatterns; i++)
-    std::copy_n(Buf, Size, Extended.begin() + i * Size);
+  // Seed the pattern.
+  std::copy_n(Buf, Size, Extended.begin());
+  // Replicate the pattern until we reach the desired size.
+  for (size_t Offset = Size; Offset < Extended.size(); ++Offset) {
+    Extended[Offset] = Extended[Offset - Size];
+  }
   return Extended;
 }
 
