@@ -23,7 +23,7 @@ namespace llvm {
 // Use class instead of using to allow forward declarations.
 class CycleInfo : public GenericCycleInfo<SSAContext> {};
 
-using Cycle = CycleInfo::CycleT;
+using Cycle = CycleInfo::Cycle;
 
 } // namespace llvm
 

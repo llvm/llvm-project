@@ -142,7 +142,7 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::
         continue;
       markDivergent(UserInstr);
 
-      recordTemporalDivergence(Reg, &UserInstr, &DefCycle);
+      recordTemporalDivergence(Reg, &UserInstr, DefCycle);
     }
   }
 }

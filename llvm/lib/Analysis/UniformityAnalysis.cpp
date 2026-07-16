@@ -129,7 +129,7 @@ void llvm::GenericUniformityAnalysisImpl<
     if (CI.contains(DefCycle, UserInstr->getParent()))
       continue;
     markDivergent(*UserInstr);
-    recordTemporalDivergence(&I, UserInstr, &DefCycle);
+    recordTemporalDivergence(&I, UserInstr, DefCycle);
   }
 }
 

@@ -178,10 +178,10 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
     }
   }
 
-  SmallPtrSet<const Cycle *, 8> CyclesWithHoles;
+  DenseSet<Cycle> CyclesWithHoles;
   if (CI && ExclusionSet) {
     for (auto *BB : *ExclusionSet) {
-      if (const Cycle *C = CI->getTopLevelParentCycle(BB))
+      if (Cycle C = CI->getTopLevelParentCycle(BB))
         CyclesWithHoles.insert(C);
     }
   }
@@ -194,10 +194,10 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
     }
   }
 
-  SmallPtrSet<const Cycle *, 2> StopCycles;
+  DenseSet<Cycle> StopCycles;
   if (CI) {
     for (auto *StopSetBB : StopSet) {
-      if (const Cycle *C = CI->getTopLevelParentCycle(StopSetBB))
+      if (Cycle C = CI->getTopLevelParentCycle(StopSetBB))
         StopCycles.insert(C);
     }
   }
@@ -232,12 +232,12 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
         return true;
     }
 
-    const Cycle *OuterC = nullptr;
+    Cycle OuterC;
     if (CI) {
       OuterC = CI->getTopLevelParentCycle(BB);
       if (OuterC) {
         if (CyclesWithHoles.count(OuterC))
-          OuterC = nullptr;
+          OuterC = Cycle();
         else if (StopCycles.contains(OuterC))
           return true;
       } else {
@@ -264,7 +264,7 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
       // ignoring any other blocks inside the loop body.
       OuterL->getExitBlocks(Worklist);
     } else if (OuterC) {
-      CI->getExitBlocks(*OuterC, Worklist);
+      CI->getExitBlocks(OuterC, Worklist);
     } else {
       Worklist.append(succ_begin(BB), succ_end(BB));
     }
@@ -358,7 +358,7 @@ bool llvm::isPotentiallyReachable(
       // If cycle info is available, we can know for sure whether or not a
       // block is part of a cycle.
       if (CI)
-        return CI->getCycle(BB) != nullptr;
+        return CI->getCycle(BB).isValid();
 
       // If only loop info is available, even if the block is not part of a
       // natural loop, it may still be part of an irreducible cycle.

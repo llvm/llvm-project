@@ -23,7 +23,7 @@
 namespace llvm {
 
 class MachineCycleInfo : public GenericCycleInfo<MachineSSAContext> {};
-using MachineCycle = MachineCycleInfo::CycleT;
+using MachineCycle = MachineCycleInfo::Cycle;
 
 /// Legacy analysis pass which computes a \ref MachineCycleInfo.
 class LLVM_ABI MachineCycleInfoWrapperPass : public MachineFunctionPass {
