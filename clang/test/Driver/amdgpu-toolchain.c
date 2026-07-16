@@ -71,3 +71,9 @@
 // RUN:   | FileCheck -check-prefixes=UBSAN %s
 //      UBSAN: ld.lld
 // UBSAN-SAME: "[[RESOURCE_DIR:.+]]{{/|\\\\}}lib{{/|\\\\}}amdgcn-amd-amdhsa{{/|\\\\}}libclang_rt.ubsan_minimal.a"
+
+// RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx906 -nogpulib \
+// RUN:   -resource-dir=%S/Inputs/resource_dir_with_amdgpu_per_target_subdir \
+// RUN:   -fprofile-generate %s 2>&1 | FileCheck -check-prefixes=PROFILE-AMDGPU %s
+//      PROFILE-AMDGPU: ld.lld
+// PROFILE-AMDGPU-SAME: "[[RESOURCE_DIR:.+]]{{/|\\\\}}lib{{/|\\\\}}amdgpu-amd-amdhsa{{/|\\\\}}libclang_rt.profile.a"

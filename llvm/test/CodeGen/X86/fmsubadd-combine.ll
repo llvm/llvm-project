@@ -147,6 +147,228 @@ entry:
   ret <8 x double> %subadd
 }
 
+define <8 x double> @mul_subadd_pd512_partial(<8 x double> %C, <8 x double> %D, <8 x double> %B) {
+; NOFMA-LABEL: mul_subadd_pd512_partial:
+; NOFMA:       # %bb.0:
+; NOFMA-NEXT:    vmulpd %ymm3, %ymm1, %ymm1
+; NOFMA-NEXT:    vaddpd %ymm5, %ymm1, %ymm3
+; NOFMA-NEXT:    vmulpd %ymm2, %ymm0, %ymm0
+; NOFMA-NEXT:    vaddpd %ymm4, %ymm0, %ymm2
+; NOFMA-NEXT:    vsubpd %ymm4, %ymm0, %ymm0
+; NOFMA-NEXT:    vblendpd {{.*#+}} ymm0 = ymm2[0],ymm0[1],ymm2[2],ymm0[3]
+; NOFMA-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; NOFMA-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
+; NOFMA-NEXT:    vextractf128 $1, %ymm5, %xmm2
+; NOFMA-NEXT:    vshufpd {{.*#+}} xmm2 = xmm2[1,0]
+; NOFMA-NEXT:    vsubsd %xmm2, %xmm1, %xmm1
+; NOFMA-NEXT:    vextractf128 $1, %ymm3, %xmm2
+; NOFMA-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; NOFMA-NEXT:    vinsertf128 $1, %xmm1, %ymm3, %ymm1
+; NOFMA-NEXT:    retq
+;
+; FMA3_256-LABEL: mul_subadd_pd512_partial:
+; FMA3_256:       # %bb.0:
+; FMA3_256-NEXT:    vmulpd %ymm3, %ymm1, %ymm1
+; FMA3_256-NEXT:    vmovapd %ymm2, %ymm3
+; FMA3_256-NEXT:    vfmadd213pd {{.*#+}} ymm3 = (ymm0 * ymm3) + ymm4
+; FMA3_256-NEXT:    vaddpd %ymm5, %ymm1, %ymm6
+; FMA3_256-NEXT:    vfmsub213pd {{.*#+}} ymm2 = (ymm0 * ymm2) - ymm4
+; FMA3_256-NEXT:    vblendpd {{.*#+}} ymm0 = ymm3[0],ymm2[1],ymm3[2],ymm2[3]
+; FMA3_256-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; FMA3_256-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
+; FMA3_256-NEXT:    vextractf128 $1, %ymm5, %xmm2
+; FMA3_256-NEXT:    vshufpd {{.*#+}} xmm2 = xmm2[1,0]
+; FMA3_256-NEXT:    vsubsd %xmm2, %xmm1, %xmm1
+; FMA3_256-NEXT:    vextractf128 $1, %ymm6, %xmm2
+; FMA3_256-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; FMA3_256-NEXT:    vinsertf128 $1, %xmm1, %ymm6, %ymm1
+; FMA3_256-NEXT:    retq
+;
+; FMA3_512-LABEL: mul_subadd_pd512_partial:
+; FMA3_512:       # %bb.0:
+; FMA3_512-NEXT:    vmulpd %zmm1, %zmm0, %zmm1
+; FMA3_512-NEXT:    vaddpd %zmm2, %zmm1, %zmm0
+; FMA3_512-NEXT:    vsubpd %ymm2, %ymm1, %ymm3
+; FMA3_512-NEXT:    vshufpd {{.*#+}} zmm0 = zmm0[0],zmm3[1],zmm0[2],zmm3[3],zmm0[4],zmm3[5],zmm0[6],zmm3[7]
+; FMA3_512-NEXT:    vextractf32x4 $3, %zmm1, %xmm1
+; FMA3_512-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
+; FMA3_512-NEXT:    vextractf32x4 $3, %zmm2, %xmm2
+; FMA3_512-NEXT:    vshufpd {{.*#+}} xmm2 = xmm2[1,0]
+; FMA3_512-NEXT:    vsubsd %xmm2, %xmm1, %xmm1
+; FMA3_512-NEXT:    movb $-128, %al
+; FMA3_512-NEXT:    kmovw %eax, %k1
+; FMA3_512-NEXT:    vbroadcastsd %xmm1, %zmm0 {%k1}
+; FMA3_512-NEXT:    retq
+;
+; FMA4-LABEL: mul_subadd_pd512_partial:
+; FMA4:       # %bb.0:
+; FMA4-NEXT:    vmulpd %ymm3, %ymm1, %ymm1
+; FMA4-NEXT:    vfmaddpd {{.*#+}} ymm3 = (ymm0 * ymm2) + ymm4
+; FMA4-NEXT:    vaddpd %ymm5, %ymm1, %ymm6
+; FMA4-NEXT:    vfmsubpd {{.*#+}} ymm0 = (ymm0 * ymm2) - ymm4
+; FMA4-NEXT:    vblendpd {{.*#+}} ymm0 = ymm3[0],ymm0[1],ymm3[2],ymm0[3]
+; FMA4-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; FMA4-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
+; FMA4-NEXT:    vextractf128 $1, %ymm5, %xmm2
+; FMA4-NEXT:    vshufpd {{.*#+}} xmm2 = xmm2[1,0]
+; FMA4-NEXT:    vsubsd %xmm2, %xmm1, %xmm1
+; FMA4-NEXT:    vextractf128 $1, %ymm6, %xmm2
+; FMA4-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; FMA4-NEXT:    vinsertf128 $1, %xmm1, %ymm6, %ymm1
+; FMA4-NEXT:    retq
+  %A = fmul contract <8 x double> %C, %D
+  %i = fadd contract <8 x double> %A, %B
+  %i1 = shufflevector <8 x double> %i, <8 x double> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %i2 = fsub contract <8 x double> %A, %B
+  %i3 = shufflevector <8 x double> %i2, <8 x double> poison, <2 x i32> <i32 1, i32 3>
+  %i4 = shufflevector <4 x double> %i1, <4 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison>
+  %i5 = shufflevector <2 x double> %i3, <2 x double> poison, <6 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison>
+  %i6 = shufflevector <6 x double> %i4, <6 x double> %i5, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 6, i32 7>
+  %A7 = extractelement <8 x double> %A, i64 7
+  %B7 = extractelement <8 x double> %B, i64 7
+  %add7 = fsub contract double %A7, %B7
+  %i7 = shufflevector <6 x double> %i6, <6 x double> <double undef, double poison, double poison, double poison, double poison, double poison>, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 poison>
+  %vecinsert8 = insertelement <8 x double> %i7, double %add7, i64 7
+  ret <8 x double> %vecinsert8
+}
+
+define <8 x double> @mul_subadd_pd512_partial_avx(<8 x double> %C, <8 x double> %D, <8 x double> %B) {
+; NOFMA-LABEL: mul_subadd_pd512_partial_avx:
+; NOFMA:       # %bb.0:
+; NOFMA-NEXT:    vmulpd %ymm3, %ymm1, %ymm1
+; NOFMA-NEXT:    vmulpd %ymm2, %ymm0, %ymm0
+; NOFMA-NEXT:    vaddpd %ymm4, %ymm0, %ymm2
+; NOFMA-NEXT:    vsubpd %ymm4, %ymm0, %ymm0
+; NOFMA-NEXT:    vblendpd {{.*#+}} ymm0 = ymm2[0],ymm0[1],ymm2[2],ymm0[3]
+; NOFMA-NEXT:    vsubpd %ymm5, %ymm1, %ymm2
+; NOFMA-NEXT:    vaddpd %ymm5, %ymm1, %ymm1
+; NOFMA-NEXT:    vblendpd {{.*#+}} ymm1 = ymm1[0,1,2],ymm2[3]
+; NOFMA-NEXT:    retq
+;
+; FMA3_256-LABEL: mul_subadd_pd512_partial_avx:
+; FMA3_256:       # %bb.0:
+; FMA3_256-NEXT:    vmulpd %ymm3, %ymm1, %ymm1
+; FMA3_256-NEXT:    vfmsubadd213pd {{.*#+}} ymm0 = (ymm2 * ymm0) -/+ ymm4
+; FMA3_256-NEXT:    vsubpd %ymm5, %ymm1, %ymm2
+; FMA3_256-NEXT:    vaddpd %ymm5, %ymm1, %ymm1
+; FMA3_256-NEXT:    vblendpd {{.*#+}} ymm1 = ymm1[0,1,2],ymm2[3]
+; FMA3_256-NEXT:    retq
+;
+; FMA3_512-LABEL: mul_subadd_pd512_partial_avx:
+; FMA3_512:       # %bb.0:
+; FMA3_512-NEXT:    vmulpd %zmm1, %zmm0, %zmm1
+; FMA3_512-NEXT:    vaddpd %ymm2, %ymm1, %ymm0
+; FMA3_512-NEXT:    vsubpd %ymm2, %ymm1, %ymm3
+; FMA3_512-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm3[1],ymm0[2],ymm3[3]
+; FMA3_512-NEXT:    vaddpd %zmm2, %zmm1, %zmm3
+; FMA3_512-NEXT:    vinsertf64x4 $0, %ymm0, %zmm3, %zmm0
+; FMA3_512-NEXT:    movb $-128, %al
+; FMA3_512-NEXT:    kmovw %eax, %k1
+; FMA3_512-NEXT:    vsubpd %zmm2, %zmm1, %zmm0 {%k1}
+; FMA3_512-NEXT:    retq
+;
+; FMA4-LABEL: mul_subadd_pd512_partial_avx:
+; FMA4:       # %bb.0:
+; FMA4-NEXT:    vmulpd %ymm3, %ymm1, %ymm1
+; FMA4-NEXT:    vfmsubaddpd {{.*#+}} ymm0 = (ymm0 * ymm2) -/+ ymm4
+; FMA4-NEXT:    vsubpd %ymm5, %ymm1, %ymm2
+; FMA4-NEXT:    vaddpd %ymm5, %ymm1, %ymm1
+; FMA4-NEXT:    vblendpd {{.*#+}} ymm1 = ymm1[0,1,2],ymm2[3]
+; FMA4-NEXT:    retq
+  %A = fmul contract <8 x double> %C, %D
+  %i = shufflevector <8 x double> %A, <8 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %i1 = shufflevector <8 x double> %B, <8 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %i2 = fadd contract <4 x double> %i, %i1
+  %i3 = fsub contract <4 x double> %i, %i1
+  %i4 = shufflevector <4 x double> %i2, <4 x double> %i3, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+  %foldExtExtBinop = fsub contract <8 x double> %A, %B
+  %i5 = shufflevector <4 x double> %i4, <4 x double> <double undef, double poison, double poison, double poison>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 4, i32 poison, i32 poison>
+  %i6 = fadd contract <8 x double> %A, %B
+  %i7 = shufflevector <8 x double> %i6, <8 x double> poison, <8 x i32> <i32 4, i32 poison, i32 6, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %vecinsert71 = shufflevector <8 x double> %i5, <8 x double> %i7, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 5, i32 10, i32 poison>
+  %vecinsert8 = shufflevector <8 x double> %vecinsert71, <8 x double> %foldExtExtBinop, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 15>
+  ret <8 x double> %vecinsert8
+}
+
+define <8 x double> @buildvector_mul_subadd_pd512(<8 x double> %C, <8 x double> %D, <8 x double> %B) {
+; NOFMA-LABEL: buildvector_mul_subadd_pd512:
+; NOFMA:       # %bb.0: # %bb
+; NOFMA-NEXT:    vmulpd %ymm3, %ymm1, %ymm1
+; NOFMA-NEXT:    vmulpd %ymm2, %ymm0, %ymm0
+; NOFMA-NEXT:    vaddsd %xmm4, %xmm0, %xmm2
+; NOFMA-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; NOFMA-NEXT:    vextractf128 $1, %ymm4, %xmm6
+; NOFMA-NEXT:    vaddsd %xmm6, %xmm3, %xmm7
+; NOFMA-NEXT:    vaddsd %xmm5, %xmm1, %xmm8
+; NOFMA-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; NOFMA-NEXT:    vextractf128 $1, %ymm5, %xmm5
+; NOFMA-NEXT:    vaddsd %xmm5, %xmm1, %xmm9
+; NOFMA-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; NOFMA-NEXT:    vshufpd {{.*#+}} xmm4 = xmm4[1,0]
+; NOFMA-NEXT:    vsubsd %xmm4, %xmm0, %xmm0
+; NOFMA-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm2[0],xmm0[0]
+; NOFMA-NEXT:    vshufpd {{.*#+}} xmm2 = xmm3[1,0]
+; NOFMA-NEXT:    vshufpd {{.*#+}} xmm3 = xmm6[1,0]
+; NOFMA-NEXT:    vsubsd %xmm3, %xmm2, %xmm2
+; NOFMA-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm7[0],xmm2[0]
+; NOFMA-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
+; NOFMA-NEXT:    vshufpd {{.*#+}} xmm3 = xmm5[1,0]
+; NOFMA-NEXT:    vsubsd %xmm3, %xmm1, %xmm1
+; NOFMA-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm9[0],xmm1[0]
+; NOFMA-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; NOFMA-NEXT:    vinsertf128 $1, %xmm1, %ymm8, %ymm1
+; NOFMA-NEXT:    retq
+;
+; FMA3_256-LABEL: buildvector_mul_subadd_pd512:
+; FMA3_256:       # %bb.0: # %bb
+; FMA3_256-NEXT:    vfmsubadd213pd {{.*#+}} ymm0 = (ymm2 * ymm0) -/+ ymm4
+; FMA3_256-NEXT:    vfmsubadd213pd {{.*#+}} ymm1 = (ymm3 * ymm1) -/+ ymm5
+; FMA3_256-NEXT:    retq
+;
+; FMA3_512-LABEL: buildvector_mul_subadd_pd512:
+; FMA3_512:       # %bb.0: # %bb
+; FMA3_512-NEXT:    vfmsubadd213pd {{.*#+}} zmm0 = (zmm1 * zmm0) -/+ zmm2
+; FMA3_512-NEXT:    retq
+;
+; FMA4-LABEL: buildvector_mul_subadd_pd512:
+; FMA4:       # %bb.0: # %bb
+; FMA4-NEXT:    vfmsubaddpd {{.*#+}} ymm0 = (ymm0 * ymm2) -/+ ymm4
+; FMA4-NEXT:    vfmsubaddpd {{.*#+}} ymm1 = (ymm1 * ymm3) -/+ ymm5
+; FMA4-NEXT:    retq
+bb:
+  %A = fmul contract <8 x double> %C, %D
+  %A0 = extractelement <8 x double> %A, i32 0
+  %B0 = extractelement <8 x double> %B, i32 0
+  %sub0 = fadd contract double %A0, %B0
+  %A2 = extractelement <8 x double> %A, i32 2
+  %B2 = extractelement <8 x double> %B, i32 2
+  %sub2 = fadd contract double %A2, %B2
+  %A4 = extractelement <8 x double> %A, i32 4
+  %B4 = extractelement <8 x double> %B, i32 4
+  %sub4 = fadd contract double %A4, %B4
+  %A6 = extractelement <8 x double> %A, i32 6
+  %B6 = extractelement <8 x double> %B, i32 6
+  %sub6 = fadd contract double %A6, %B6
+  %A1 = extractelement <8 x double> %A, i32 1
+  %B1 = extractelement <8 x double> %B, i32 1
+  %add1 = fsub contract double %A1, %B1
+  %A3 = extractelement <8 x double> %A, i32 3
+  %B3 = extractelement <8 x double> %B, i32 3
+  %add3 = fsub contract double %A3, %B3
+  %A7 = extractelement <8 x double> %A, i32 7
+  %B7 = extractelement <8 x double> %B, i32 7
+  %add7 = fsub contract double %A7, %B7
+  %vecinsert1 = insertelement <8 x double> undef, double %sub0, i32 0
+  %vecinsert2 = insertelement <8 x double> %vecinsert1, double %add1, i32 1
+  %vecinsert3 = insertelement <8 x double> %vecinsert2, double %sub2, i32 2
+  %vecinsert4 = insertelement <8 x double> %vecinsert3, double %add3, i32 3
+  %vecinsert5 = insertelement <8 x double> %vecinsert4, double %sub4, i32 4
+  ; element 5 is undef
+  %vecinsert7 = insertelement <8 x double> %vecinsert5, double %sub6, i32 6
+  %vecinsert8 = insertelement <8 x double> %vecinsert7, double %add7, i32 7
+  ret <8 x double> %vecinsert8
+}
+
 define <16 x float> @mul_subadd_ps512(<16 x float> %A, <16 x float> %B, <16 x float> %C) {
 ; NOFMA-LABEL: mul_subadd_ps512:
 ; NOFMA:       # %bb.0: # %entry
@@ -182,6 +404,479 @@ entry:
   %Add = fadd contract <16 x float> %AB, %C
   %subadd = shufflevector <16 x float> %Add, <16 x float> %Sub, <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
   ret <16 x float> %subadd
+}
+
+define <16 x float> @mul_subadd_ps512_partial(<16 x float> %C, <16 x float> %D, <16 x float> %B) {
+; NOFMA-LABEL: mul_subadd_ps512_partial:
+; NOFMA:       # %bb.0:
+; NOFMA-NEXT:    vmulps %ymm3, %ymm1, %ymm1
+; NOFMA-NEXT:    vmulps %ymm2, %ymm0, %ymm0
+; NOFMA-NEXT:    vmovaps {{.*#+}} ymm2 = [0,1,2,3,4,6,7,u]
+; NOFMA-NEXT:    vpermilps %ymm2, %ymm0, %ymm0
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm3 = xmm1[0,0,0,0]
+; NOFMA-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm3
+; NOFMA-NEXT:    vblendps {{.*#+}} ymm3 = ymm0[0,1,2,3,4,5,6],ymm3[7]
+; NOFMA-NEXT:    vpermilps %ymm2, %ymm4, %ymm2
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm4 = xmm5[0,0,0,0]
+; NOFMA-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm4
+; NOFMA-NEXT:    vblendps {{.*#+}} ymm4 = ymm2[0,1,2,3,4,5,6],ymm4[7]
+; NOFMA-NEXT:    vaddps %ymm4, %ymm3, %ymm3
+; NOFMA-NEXT:    vextractf128 $1, %ymm1, %xmm4
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm6 = xmm4[1,0],xmm1[3,0]
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm6 = xmm1[1,1],xmm6[2,0]
+; NOFMA-NEXT:    vextractf128 $1, %ymm5, %xmm7
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm8 = xmm7[1,0],xmm5[3,0]
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm8 = xmm5[1,1],xmm8[2,0]
+; NOFMA-NEXT:    vsubps %xmm8, %xmm6, %xmm6
+; NOFMA-NEXT:    vsubps %ymm2, %ymm0, %ymm0
+; NOFMA-NEXT:    vblendps {{.*#+}} ymm0 = ymm3[0],ymm0[1],ymm3[2],ymm0[3],ymm3[4,5],ymm0[6],ymm3[7]
+; NOFMA-NEXT:    vaddps %xmm5, %xmm1, %xmm1
+; NOFMA-NEXT:    vinsertps {{.*#+}} xmm1 = xmm6[0],xmm1[2],xmm6[2,3]
+; NOFMA-NEXT:    vshufpd {{.*#+}} xmm2 = xmm4[1,0]
+; NOFMA-NEXT:    vshufpd {{.*#+}} xmm4 = xmm7[1,0]
+; NOFMA-NEXT:    vaddps %xmm4, %xmm2, %xmm5
+; NOFMA-NEXT:    vsubps %xmm4, %xmm2, %xmm2
+; NOFMA-NEXT:    vblendps {{.*#+}} xmm2 = xmm5[0],xmm2[1],xmm5[2,3]
+; NOFMA-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,u,5,6]
+; NOFMA-NEXT:    vextractf128 $1, %ymm3, %xmm3
+; NOFMA-NEXT:    vblendps {{.*#+}} xmm3 = xmm1[0,1,2],xmm3[3]
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm3 = xmm3[3,0,1,2]
+; NOFMA-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
+; NOFMA-NEXT:    vinsertf128 $1, %xmm1, %ymm3, %ymm1
+; NOFMA-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
+; NOFMA-NEXT:    vshufpd {{.*#+}} ymm1 = ymm1[0],ymm2[1],ymm1[2],ymm2[2]
+; NOFMA-NEXT:    retq
+;
+; FMA3_256-LABEL: mul_subadd_ps512_partial:
+; FMA3_256:       # %bb.0:
+; FMA3_256-NEXT:    vmulps %ymm3, %ymm1, %ymm1
+; FMA3_256-NEXT:    vmulps %ymm2, %ymm0, %ymm0
+; FMA3_256-NEXT:    vmovaps {{.*#+}} ymm2 = [0,1,2,3,4,6,7,u]
+; FMA3_256-NEXT:    vpermilps %ymm2, %ymm0, %ymm0
+; FMA3_256-NEXT:    vshufps {{.*#+}} xmm3 = xmm1[0,0,0,0]
+; FMA3_256-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm3
+; FMA3_256-NEXT:    vblendps {{.*#+}} ymm3 = ymm0[0,1,2,3,4,5,6],ymm3[7]
+; FMA3_256-NEXT:    vpermilps %ymm2, %ymm4, %ymm2
+; FMA3_256-NEXT:    vshufps {{.*#+}} xmm4 = xmm5[0,0,0,0]
+; FMA3_256-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm4
+; FMA3_256-NEXT:    vblendps {{.*#+}} ymm4 = ymm2[0,1,2,3,4,5,6],ymm4[7]
+; FMA3_256-NEXT:    vaddps %ymm4, %ymm3, %ymm3
+; FMA3_256-NEXT:    vextractf128 $1, %ymm1, %xmm4
+; FMA3_256-NEXT:    vshufps {{.*#+}} xmm6 = xmm4[1,0],xmm1[3,0]
+; FMA3_256-NEXT:    vshufps {{.*#+}} xmm6 = xmm1[1,1],xmm6[2,0]
+; FMA3_256-NEXT:    vextractf128 $1, %ymm5, %xmm7
+; FMA3_256-NEXT:    vshufps {{.*#+}} xmm8 = xmm7[1,0],xmm5[3,0]
+; FMA3_256-NEXT:    vshufps {{.*#+}} xmm8 = xmm5[1,1],xmm8[2,0]
+; FMA3_256-NEXT:    vsubps %xmm8, %xmm6, %xmm6
+; FMA3_256-NEXT:    vsubps %ymm2, %ymm0, %ymm0
+; FMA3_256-NEXT:    vblendps {{.*#+}} ymm0 = ymm3[0],ymm0[1],ymm3[2],ymm0[3],ymm3[4,5],ymm0[6],ymm3[7]
+; FMA3_256-NEXT:    vaddps %xmm5, %xmm1, %xmm1
+; FMA3_256-NEXT:    vinsertps {{.*#+}} xmm1 = xmm6[0],xmm1[2],xmm6[2,3]
+; FMA3_256-NEXT:    vshufpd {{.*#+}} xmm2 = xmm4[1,0]
+; FMA3_256-NEXT:    vshufpd {{.*#+}} xmm4 = xmm7[1,0]
+; FMA3_256-NEXT:    vaddps %xmm4, %xmm2, %xmm5
+; FMA3_256-NEXT:    vsubps %xmm4, %xmm2, %xmm2
+; FMA3_256-NEXT:    vblendps {{.*#+}} xmm2 = xmm5[0],xmm2[1],xmm5[2,3]
+; FMA3_256-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,u,5,6]
+; FMA3_256-NEXT:    vextractf128 $1, %ymm3, %xmm3
+; FMA3_256-NEXT:    vblendps {{.*#+}} xmm3 = xmm1[0,1,2],xmm3[3]
+; FMA3_256-NEXT:    vshufps {{.*#+}} xmm3 = xmm3[3,0,1,2]
+; FMA3_256-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
+; FMA3_256-NEXT:    vinsertf128 $1, %xmm1, %ymm3, %ymm1
+; FMA3_256-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
+; FMA3_256-NEXT:    vshufpd {{.*#+}} ymm1 = ymm1[0],ymm2[1],ymm1[2],ymm2[2]
+; FMA3_256-NEXT:    retq
+;
+; FMA3_512-LABEL: mul_subadd_ps512_partial:
+; FMA3_512:       # %bb.0:
+; FMA3_512-NEXT:    vmulps %zmm1, %zmm0, %zmm0
+; FMA3_512-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [0,1,2,3,4,6,7,8,9,10,11,13,0,0,0,0]
+; FMA3_512-NEXT:    vpermps %zmm0, %zmm1, %zmm3
+; FMA3_512-NEXT:    vpermps %zmm2, %zmm1, %zmm1
+; FMA3_512-NEXT:    vaddps %zmm1, %zmm3, %zmm4
+; FMA3_512-NEXT:    vsubps %zmm1, %zmm3, %zmm1
+; FMA3_512-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
+; FMA3_512-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,3,3,3]
+; FMA3_512-NEXT:    vextractf64x4 $1, %zmm2, %ymm2
+; FMA3_512-NEXT:    vpermpd {{.*#+}} ymm2 = ymm2[3,3,3,3]
+; FMA3_512-NEXT:    vaddps %xmm2, %xmm0, %xmm3
+; FMA3_512-NEXT:    vsubps %xmm2, %xmm0, %xmm0
+; FMA3_512-NEXT:    vblendps {{.*#+}} xmm2 = xmm3[0],xmm0[1],xmm3[2,3]
+; FMA3_512-NEXT:    vpmovsxbd {{.*#+}} zmm3 = [0,17,2,19,4,0,5,22,7,24,9,26,0,27,0,0]
+; FMA3_512-NEXT:    vpermi2ps %zmm1, %zmm4, %zmm3
+; FMA3_512-NEXT:    vpmovsxbq {{.*#+}} zmm0 = [0,1,2,3,4,5,6,8]
+; FMA3_512-NEXT:    vpermi2pd %zmm2, %zmm3, %zmm0
+; FMA3_512-NEXT:    retq
+;
+; FMA4-LABEL: mul_subadd_ps512_partial:
+; FMA4:       # %bb.0:
+; FMA4-NEXT:    vmulps %ymm3, %ymm1, %ymm1
+; FMA4-NEXT:    vmulps %ymm2, %ymm0, %ymm0
+; FMA4-NEXT:    vmovaps {{.*#+}} ymm2 = [0,1,2,3,4,6,7,u]
+; FMA4-NEXT:    vpermilps %ymm2, %ymm0, %ymm0
+; FMA4-NEXT:    vshufps {{.*#+}} xmm3 = xmm1[0,0,0,0]
+; FMA4-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm3
+; FMA4-NEXT:    vblendps {{.*#+}} ymm3 = ymm0[0,1,2,3,4,5,6],ymm3[7]
+; FMA4-NEXT:    vpermilps %ymm2, %ymm4, %ymm2
+; FMA4-NEXT:    vshufps {{.*#+}} xmm4 = xmm5[0,0,0,0]
+; FMA4-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm4
+; FMA4-NEXT:    vblendps {{.*#+}} ymm4 = ymm2[0,1,2,3,4,5,6],ymm4[7]
+; FMA4-NEXT:    vaddps %ymm4, %ymm3, %ymm3
+; FMA4-NEXT:    vextractf128 $1, %ymm1, %xmm4
+; FMA4-NEXT:    vshufps {{.*#+}} xmm6 = xmm4[1,0],xmm1[3,0]
+; FMA4-NEXT:    vshufps {{.*#+}} xmm6 = xmm1[1,1],xmm6[2,0]
+; FMA4-NEXT:    vextractf128 $1, %ymm5, %xmm7
+; FMA4-NEXT:    vshufps {{.*#+}} xmm8 = xmm7[1,0],xmm5[3,0]
+; FMA4-NEXT:    vshufps {{.*#+}} xmm8 = xmm5[1,1],xmm8[2,0]
+; FMA4-NEXT:    vsubps %xmm8, %xmm6, %xmm6
+; FMA4-NEXT:    vsubps %ymm2, %ymm0, %ymm0
+; FMA4-NEXT:    vblendps {{.*#+}} ymm0 = ymm3[0],ymm0[1],ymm3[2],ymm0[3],ymm3[4,5],ymm0[6],ymm3[7]
+; FMA4-NEXT:    vaddps %xmm5, %xmm1, %xmm1
+; FMA4-NEXT:    vinsertps {{.*#+}} xmm1 = xmm6[0],xmm1[2],xmm6[2,3]
+; FMA4-NEXT:    vshufpd {{.*#+}} xmm2 = xmm4[1,0]
+; FMA4-NEXT:    vshufpd {{.*#+}} xmm4 = xmm7[1,0]
+; FMA4-NEXT:    vaddps %xmm4, %xmm2, %xmm5
+; FMA4-NEXT:    vsubps %xmm4, %xmm2, %xmm2
+; FMA4-NEXT:    vblendps {{.*#+}} xmm2 = xmm5[0],xmm2[1],xmm5[2,3]
+; FMA4-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,u,5,6]
+; FMA4-NEXT:    vextractf128 $1, %ymm3, %xmm3
+; FMA4-NEXT:    vblendps {{.*#+}} xmm3 = xmm1[0,1,2],xmm3[3]
+; FMA4-NEXT:    vshufps {{.*#+}} xmm3 = xmm3[3,0,1,2]
+; FMA4-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
+; FMA4-NEXT:    vinsertf128 $1, %xmm1, %ymm3, %ymm1
+; FMA4-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
+; FMA4-NEXT:    vshufpd {{.*#+}} ymm1 = ymm1[0],ymm2[1],ymm1[2],ymm2[2]
+; FMA4-NEXT:    retq
+  %A = fmul contract <16 x float> %C, %D
+  %i = shufflevector <16 x float> %A, <16 x float> poison, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 13>
+  %i1 = shufflevector <16 x float> %B, <16 x float> poison, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 13>
+  %i2 = fadd contract <12 x float> %i, %i1
+  %i3 = fsub contract <12 x float> %i, %i1
+  %i4 = shufflevector <12 x float> %i2, <12 x float> %i3, <12 x i32> <i32 0, i32 13, i32 2, i32 15, i32 4, i32 5, i32 18, i32 7, i32 20, i32 9, i32 22, i32 23>
+  %i5 = shufflevector <16 x float> %A, <16 x float> poison, <2 x i32> <i32 14, i32 15>
+  %i6 = shufflevector <16 x float> %B, <16 x float> poison, <2 x i32> <i32 14, i32 15>
+  %i7 = fadd contract <2 x float> %i5, %i6
+  %i8 = fsub contract <2 x float> %i5, %i6
+  %i9 = shufflevector <12 x float> %i4, <12 x float> <float undef, float undef, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison, float poison>, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 12, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 13, i32 11, i32 poison, i32 poison>
+  %i10 = shufflevector <2 x float> %i7, <2 x float> %i8, <16 x i32> <i32 0, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %vecinsert161 = shufflevector <16 x float> %i9, <16 x float> %i10, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 16, i32 17>
+  ret <16 x float> %vecinsert161
+}
+
+define <16 x float> @mul_subadd_ps512_partial_avx(<16 x float> %C, <16 x float> %D, <16 x float> %B) {
+; NOFMA-LABEL: mul_subadd_ps512_partial_avx:
+; NOFMA:       # %bb.0:
+; NOFMA-NEXT:    vmulps %ymm2, %ymm0, %ymm0
+; NOFMA-NEXT:    vmovaps {{.*#+}} ymm2 = [0,1,2,3,4,6,7,u]
+; NOFMA-NEXT:    vpermilps %ymm2, %ymm0, %ymm0
+; NOFMA-NEXT:    vmulps %ymm3, %ymm1, %ymm1
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm3 = xmm1[0,0,0,0]
+; NOFMA-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm3
+; NOFMA-NEXT:    vblendps {{.*#+}} ymm3 = ymm0[0,1,2,3,4,5,6],ymm3[7]
+; NOFMA-NEXT:    vpermilps %ymm2, %ymm4, %ymm2
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm4 = xmm5[0,0,0,0]
+; NOFMA-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm4
+; NOFMA-NEXT:    vblendps {{.*#+}} ymm4 = ymm2[0,1,2,3,4,5,6],ymm4[7]
+; NOFMA-NEXT:    vaddps %ymm4, %ymm3, %ymm3
+; NOFMA-NEXT:    vsubps %ymm2, %ymm0, %ymm0
+; NOFMA-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm4 = xmm2[1,0],xmm1[3,0]
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[1,2],xmm4[2,0]
+; NOFMA-NEXT:    vextractf128 $1, %ymm5, %xmm4
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm6 = xmm4[1,0],xmm5[3,0]
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm5 = xmm5[1,2],xmm6[2,0]
+; NOFMA-NEXT:    vsubps %xmm5, %xmm1, %xmm6
+; NOFMA-NEXT:    vaddps %xmm5, %xmm1, %xmm1
+; NOFMA-NEXT:    vshufpd {{.*#+}} xmm5 = xmm2[1,0]
+; NOFMA-NEXT:    vshufpd {{.*#+}} xmm7 = xmm4[1,0]
+; NOFMA-NEXT:    vaddss %xmm7, %xmm5, %xmm5
+; NOFMA-NEXT:    vsubps %xmm4, %xmm2, %xmm2
+; NOFMA-NEXT:    vinsertps {{.*#+}} xmm2 = xmm5[0],xmm2[3],zero,zero
+; NOFMA-NEXT:    vblendps {{.*#+}} xmm1 = xmm6[0],xmm1[1],xmm6[2,3]
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm4 = xmm6[3,3,3,3]
+; NOFMA-NEXT:    vinsertf128 $1, %xmm4, %ymm1, %ymm1
+; NOFMA-NEXT:    vextractf128 $1, %ymm3, %xmm4
+; NOFMA-NEXT:    vshufps {{.*#+}} ymm4 = ymm4[3,1],ymm1[0,3],ymm4[7,5],ymm1[4,7]
+; NOFMA-NEXT:    vshufps {{.*#+}} ymm1 = ymm4[0,2],ymm1[1,2],ymm4[4,6],ymm1[5,6]
+; NOFMA-NEXT:    vblendps {{.*#+}} ymm0 = ymm3[0],ymm0[1],ymm3[2],ymm0[3],ymm3[4,5],ymm0[6],ymm3[7]
+; NOFMA-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5,5,6]
+; NOFMA-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm2
+; NOFMA-NEXT:    vshufpd {{.*#+}} ymm1 = ymm1[0],ymm2[1],ymm1[2],ymm2[2]
+; NOFMA-NEXT:    retq
+;
+; FMA3_256-LABEL: mul_subadd_ps512_partial_avx:
+; FMA3_256:       # %bb.0:
+; FMA3_256-NEXT:    vmulps %ymm2, %ymm0, %ymm0
+; FMA3_256-NEXT:    vmovaps {{.*#+}} ymm2 = [0,1,2,3,4,6,7,u]
+; FMA3_256-NEXT:    vpermilps %ymm2, %ymm0, %ymm0
+; FMA3_256-NEXT:    vmulps %ymm3, %ymm1, %ymm1
+; FMA3_256-NEXT:    vshufps {{.*#+}} xmm3 = xmm1[0,0,0,0]
+; FMA3_256-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm3
+; FMA3_256-NEXT:    vblendps {{.*#+}} ymm3 = ymm0[0,1,2,3,4,5,6],ymm3[7]
+; FMA3_256-NEXT:    vpermilps %ymm2, %ymm4, %ymm2
+; FMA3_256-NEXT:    vshufps {{.*#+}} xmm4 = xmm5[0,0,0,0]
+; FMA3_256-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm4
+; FMA3_256-NEXT:    vblendps {{.*#+}} ymm4 = ymm2[0,1,2,3,4,5,6],ymm4[7]
+; FMA3_256-NEXT:    vaddps %ymm4, %ymm3, %ymm3
+; FMA3_256-NEXT:    vsubps %ymm2, %ymm0, %ymm0
+; FMA3_256-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; FMA3_256-NEXT:    vshufps {{.*#+}} xmm4 = xmm2[1,0],xmm1[3,0]
+; FMA3_256-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[1,2],xmm4[2,0]
+; FMA3_256-NEXT:    vextractf128 $1, %ymm5, %xmm4
+; FMA3_256-NEXT:    vshufps {{.*#+}} xmm6 = xmm4[1,0],xmm5[3,0]
+; FMA3_256-NEXT:    vshufps {{.*#+}} xmm5 = xmm5[1,2],xmm6[2,0]
+; FMA3_256-NEXT:    vsubps %xmm5, %xmm1, %xmm6
+; FMA3_256-NEXT:    vaddps %xmm5, %xmm1, %xmm1
+; FMA3_256-NEXT:    vshufpd {{.*#+}} xmm5 = xmm2[1,0]
+; FMA3_256-NEXT:    vshufpd {{.*#+}} xmm7 = xmm4[1,0]
+; FMA3_256-NEXT:    vaddss %xmm7, %xmm5, %xmm5
+; FMA3_256-NEXT:    vsubps %xmm4, %xmm2, %xmm2
+; FMA3_256-NEXT:    vinsertps {{.*#+}} xmm2 = xmm5[0],xmm2[3],zero,zero
+; FMA3_256-NEXT:    vblendps {{.*#+}} xmm1 = xmm6[0],xmm1[1],xmm6[2,3]
+; FMA3_256-NEXT:    vshufps {{.*#+}} xmm4 = xmm6[3,3,3,3]
+; FMA3_256-NEXT:    vinsertf128 $1, %xmm4, %ymm1, %ymm1
+; FMA3_256-NEXT:    vextractf128 $1, %ymm3, %xmm4
+; FMA3_256-NEXT:    vshufps {{.*#+}} ymm4 = ymm4[3,1],ymm1[0,3],ymm4[7,5],ymm1[4,7]
+; FMA3_256-NEXT:    vshufps {{.*#+}} ymm1 = ymm4[0,2],ymm1[1,2],ymm4[4,6],ymm1[5,6]
+; FMA3_256-NEXT:    vblendps {{.*#+}} ymm0 = ymm3[0],ymm0[1],ymm3[2],ymm0[3],ymm3[4,5],ymm0[6],ymm3[7]
+; FMA3_256-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5,5,6]
+; FMA3_256-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm2
+; FMA3_256-NEXT:    vshufpd {{.*#+}} ymm1 = ymm1[0],ymm2[1],ymm1[2],ymm2[2]
+; FMA3_256-NEXT:    retq
+;
+; FMA3_512-LABEL: mul_subadd_ps512_partial_avx:
+; FMA3_512:       # %bb.0:
+; FMA3_512-NEXT:    vpmovsxbd {{.*#+}} ymm3 = [0,1,2,3,4,6,7,8]
+; FMA3_512-NEXT:    vpermps %zmm2, %zmm3, %zmm4
+; FMA3_512-NEXT:    vmulps %zmm1, %zmm0, %zmm0
+; FMA3_512-NEXT:    vpermps %zmm0, %zmm3, %zmm1
+; FMA3_512-NEXT:    vaddps %ymm4, %ymm1, %ymm3
+; FMA3_512-NEXT:    vsubps %ymm4, %ymm1, %ymm1
+; FMA3_512-NEXT:    vblendps {{.*#+}} ymm1 = ymm3[0],ymm1[1],ymm3[2],ymm1[3],ymm3[4,5],ymm1[6],ymm3[7]
+; FMA3_512-NEXT:    vpmovsxbd {{.*#+}} xmm3 = [1,2,3,5]
+; FMA3_512-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
+; FMA3_512-NEXT:    vpermps %ymm0, %ymm3, %ymm4
+; FMA3_512-NEXT:    vextractf64x4 $1, %zmm2, %ymm2
+; FMA3_512-NEXT:    vpermps %ymm2, %ymm3, %ymm3
+; FMA3_512-NEXT:    vsubps %xmm3, %xmm4, %xmm5
+; FMA3_512-NEXT:    vaddps %xmm3, %xmm4, %xmm3
+; FMA3_512-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,3,3,3]
+; FMA3_512-NEXT:    vpermpd {{.*#+}} ymm2 = ymm2[3,3,3,3]
+; FMA3_512-NEXT:    vaddps %xmm2, %xmm0, %xmm4
+; FMA3_512-NEXT:    vsubps %xmm2, %xmm0, %xmm0
+; FMA3_512-NEXT:    vblendps {{.*#+}} xmm2 = xmm4[0],xmm0[1],xmm4[2,3]
+; FMA3_512-NEXT:    vblendps {{.*#+}} xmm0 = xmm5[0],xmm3[1],xmm5[2,3]
+; FMA3_512-NEXT:    vshufps {{.*#+}} xmm3 = xmm5[3,3,3,3]
+; FMA3_512-NEXT:    vinsertf32x4 $1, %xmm3, %zmm0, %zmm0
+; FMA3_512-NEXT:    vpmovsxbd {{.*#+}} zmm3 = [0,1,2,3,4,0,5,6,7,16,17,18,0,20,0,0]
+; FMA3_512-NEXT:    vpermi2ps %zmm0, %zmm1, %zmm3
+; FMA3_512-NEXT:    vpmovsxbq {{.*#+}} zmm0 = [0,1,2,3,4,5,6,8]
+; FMA3_512-NEXT:    vpermi2pd %zmm2, %zmm3, %zmm0
+; FMA3_512-NEXT:    retq
+;
+; FMA4-LABEL: mul_subadd_ps512_partial_avx:
+; FMA4:       # %bb.0:
+; FMA4-NEXT:    vmulps %ymm2, %ymm0, %ymm0
+; FMA4-NEXT:    vmovaps {{.*#+}} ymm2 = [0,1,2,3,4,6,7,u]
+; FMA4-NEXT:    vpermilps %ymm2, %ymm0, %ymm0
+; FMA4-NEXT:    vmulps %ymm3, %ymm1, %ymm1
+; FMA4-NEXT:    vshufps {{.*#+}} xmm3 = xmm1[0,0,0,0]
+; FMA4-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm3
+; FMA4-NEXT:    vblendps {{.*#+}} ymm3 = ymm0[0,1,2,3,4,5,6],ymm3[7]
+; FMA4-NEXT:    vpermilps %ymm2, %ymm4, %ymm2
+; FMA4-NEXT:    vshufps {{.*#+}} xmm4 = xmm5[0,0,0,0]
+; FMA4-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm4
+; FMA4-NEXT:    vblendps {{.*#+}} ymm4 = ymm2[0,1,2,3,4,5,6],ymm4[7]
+; FMA4-NEXT:    vaddps %ymm4, %ymm3, %ymm3
+; FMA4-NEXT:    vsubps %ymm2, %ymm0, %ymm0
+; FMA4-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; FMA4-NEXT:    vshufps {{.*#+}} xmm4 = xmm2[1,0],xmm1[3,0]
+; FMA4-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[1,2],xmm4[2,0]
+; FMA4-NEXT:    vextractf128 $1, %ymm5, %xmm4
+; FMA4-NEXT:    vshufps {{.*#+}} xmm6 = xmm4[1,0],xmm5[3,0]
+; FMA4-NEXT:    vshufps {{.*#+}} xmm5 = xmm5[1,2],xmm6[2,0]
+; FMA4-NEXT:    vsubps %xmm5, %xmm1, %xmm6
+; FMA4-NEXT:    vaddps %xmm5, %xmm1, %xmm1
+; FMA4-NEXT:    vshufpd {{.*#+}} xmm5 = xmm2[1,0]
+; FMA4-NEXT:    vshufpd {{.*#+}} xmm7 = xmm4[1,0]
+; FMA4-NEXT:    vaddss %xmm7, %xmm5, %xmm5
+; FMA4-NEXT:    vsubps %xmm4, %xmm2, %xmm2
+; FMA4-NEXT:    vinsertps {{.*#+}} xmm2 = xmm5[0],xmm2[3],zero,zero
+; FMA4-NEXT:    vblendps {{.*#+}} xmm1 = xmm6[0],xmm1[1],xmm6[2,3]
+; FMA4-NEXT:    vshufps {{.*#+}} xmm4 = xmm6[3,3,3,3]
+; FMA4-NEXT:    vinsertf128 $1, %xmm4, %ymm1, %ymm1
+; FMA4-NEXT:    vextractf128 $1, %ymm3, %xmm4
+; FMA4-NEXT:    vshufps {{.*#+}} ymm4 = ymm4[3,1],ymm1[0,3],ymm4[7,5],ymm1[4,7]
+; FMA4-NEXT:    vshufps {{.*#+}} ymm1 = ymm4[0,2],ymm1[1,2],ymm4[4,6],ymm1[5,6]
+; FMA4-NEXT:    vblendps {{.*#+}} ymm0 = ymm3[0],ymm0[1],ymm3[2],ymm0[3],ymm3[4,5],ymm0[6],ymm3[7]
+; FMA4-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5,5,6]
+; FMA4-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm2
+; FMA4-NEXT:    vshufpd {{.*#+}} ymm1 = ymm1[0],ymm2[1],ymm1[2],ymm2[2]
+; FMA4-NEXT:    retq
+  %A = fmul contract <16 x float> %C, %D
+  %i = shufflevector <16 x float> %A, <16 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 6, i32 7, i32 8>
+  %i1 = shufflevector <16 x float> %B, <16 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 6, i32 7, i32 8>
+  %i2 = fadd contract <8 x float> %i, %i1
+  %i3 = fsub contract <8 x float> %i, %i1
+  %i4 = shufflevector <8 x float> %i2, <8 x float> %i3, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 5, i32 14, i32 7>
+  %i5 = shufflevector <16 x float> %A, <16 x float> poison, <4 x i32> <i32 9, i32 10, i32 11, i32 13>
+  %i6 = shufflevector <16 x float> %B, <16 x float> poison, <4 x i32> <i32 9, i32 10, i32 11, i32 13>
+  %i7 = fsub contract <4 x float> %i5, %i6
+  %i8 = fadd contract <4 x float> %i5, %i6
+  %i9 = shufflevector <16 x float> %A, <16 x float> poison, <2 x i32> <i32 14, i32 15>
+  %i10 = shufflevector <16 x float> %B, <16 x float> poison, <2 x i32> <i32 14, i32 15>
+  %i11 = fadd contract <2 x float> %i9, %i10
+  %i12 = fsub contract <2 x float> %i9, %i10
+  %i13 = shufflevector <8 x float> %i4, <8 x float> <float undef, float undef, float poison, float poison, float poison, float poison, float poison, float poison>, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 8, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 9, i32 poison, i32 poison, i32 poison>
+  %i14 = shufflevector <4 x float> %i7, <4 x float> %i8, <16 x i32> <i32 0, i32 5, i32 2, i32 poison, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %vecinsert141 = shufflevector <16 x float> %i13, <16 x float> %i14, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 16, i32 17, i32 18, i32 12, i32 20, i32 poison, i32 poison>
+  %i15 = shufflevector <2 x float> %i11, <2 x float> %i12, <16 x i32> <i32 0, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %vecinsert162 = shufflevector <16 x float> %vecinsert141, <16 x float> %i15, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 16, i32 17>
+  ret <16 x float> %vecinsert162
+}
+
+define <16 x float> @buildvector_mul_subadd_ps512(<16 x float> %C, <16 x float> %D, <16 x float> %B) {
+; NOFMA-LABEL: buildvector_mul_subadd_ps512:
+; NOFMA:       # %bb.0: # %bb
+; NOFMA-NEXT:    vmulps %ymm3, %ymm1, %ymm1
+; NOFMA-NEXT:    vmulps %ymm2, %ymm0, %ymm0
+; NOFMA-NEXT:    vaddss %xmm4, %xmm0, %xmm2
+; NOFMA-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
+; NOFMA-NEXT:    vshufpd {{.*#+}} xmm6 = xmm4[1,0]
+; NOFMA-NEXT:    vaddss %xmm6, %xmm3, %xmm3
+; NOFMA-NEXT:    vextractf128 $1, %ymm0, %xmm6
+; NOFMA-NEXT:    vextractf128 $1, %ymm4, %xmm7
+; NOFMA-NEXT:    vaddss %xmm7, %xmm6, %xmm8
+; NOFMA-NEXT:    vshufpd {{.*#+}} xmm9 = xmm6[1,0]
+; NOFMA-NEXT:    vshufpd {{.*#+}} xmm10 = xmm7[1,0]
+; NOFMA-NEXT:    vaddss %xmm10, %xmm9, %xmm9
+; NOFMA-NEXT:    vinsertps {{.*#+}} xmm8 = xmm8[0,1],xmm9[0],xmm8[3]
+; NOFMA-NEXT:    vaddss %xmm5, %xmm1, %xmm9
+; NOFMA-NEXT:    vshufpd {{.*#+}} xmm10 = xmm1[1,0]
+; NOFMA-NEXT:    vshufpd {{.*#+}} xmm11 = xmm5[1,0]
+; NOFMA-NEXT:    vaddss %xmm11, %xmm10, %xmm10
+; NOFMA-NEXT:    vextractf128 $1, %ymm1, %xmm11
+; NOFMA-NEXT:    vshufpd {{.*#+}} xmm12 = xmm11[1,0]
+; NOFMA-NEXT:    vextractf128 $1, %ymm5, %xmm13
+; NOFMA-NEXT:    vshufpd {{.*#+}} xmm14 = xmm13[1,0]
+; NOFMA-NEXT:    vaddss %xmm14, %xmm12, %xmm12
+; NOFMA-NEXT:    vmovshdup {{.*#+}} xmm14 = xmm0[1,1,3,3]
+; NOFMA-NEXT:    vmovshdup {{.*#+}} xmm15 = xmm4[1,1,3,3]
+; NOFMA-NEXT:    vsubss %xmm15, %xmm14, %xmm14
+; NOFMA-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm14[0],xmm2[2,3]
+; NOFMA-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm3[0],xmm2[3]
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm3 = xmm4[3,3,3,3]
+; NOFMA-NEXT:    vsubss %xmm3, %xmm0, %xmm0
+; NOFMA-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1,2],xmm0[0]
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm2 = xmm6[3,3,3,3]
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm3 = xmm7[3,3,3,3]
+; NOFMA-NEXT:    vsubss %xmm3, %xmm2, %xmm2
+; NOFMA-NEXT:    vinsertps {{.*#+}} xmm2 = xmm8[0,1,2],xmm2[0]
+; NOFMA-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm1[1,1,3,3]
+; NOFMA-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm5[1,1,3,3]
+; NOFMA-NEXT:    vsubss %xmm4, %xmm3, %xmm3
+; NOFMA-NEXT:    vinsertps {{.*#+}} xmm3 = xmm9[0],xmm3[0],xmm9[2,3]
+; NOFMA-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0,1],xmm10[0],xmm3[3]
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm4 = xmm5[3,3,3,3]
+; NOFMA-NEXT:    vsubss %xmm4, %xmm1, %xmm1
+; NOFMA-NEXT:    vinsertps {{.*#+}} xmm1 = xmm3[0,1,2],xmm1[0]
+; NOFMA-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm11[1,1,3,3]
+; NOFMA-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm13[1,1,3,3]
+; NOFMA-NEXT:    vsubss %xmm4, %xmm3, %xmm3
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm3 = xmm3[0,0],xmm12[0,0]
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm4 = xmm11[3,3,3,3]
+; NOFMA-NEXT:    vshufps {{.*#+}} xmm5 = xmm13[3,3,3,3]
+; NOFMA-NEXT:    vsubss %xmm5, %xmm4, %xmm4
+; NOFMA-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0,1,2],xmm4[0]
+; NOFMA-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; NOFMA-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
+; NOFMA-NEXT:    retq
+;
+; FMA3_256-LABEL: buildvector_mul_subadd_ps512:
+; FMA3_256:       # %bb.0: # %bb
+; FMA3_256-NEXT:    vfmsubadd213ps {{.*#+}} ymm0 = (ymm2 * ymm0) -/+ ymm4
+; FMA3_256-NEXT:    vfmsubadd213ps {{.*#+}} ymm1 = (ymm3 * ymm1) -/+ ymm5
+; FMA3_256-NEXT:    retq
+;
+; FMA3_512-LABEL: buildvector_mul_subadd_ps512:
+; FMA3_512:       # %bb.0: # %bb
+; FMA3_512-NEXT:    vfmsubadd213ps {{.*#+}} zmm0 = (zmm1 * zmm0) -/+ zmm2
+; FMA3_512-NEXT:    retq
+;
+; FMA4-LABEL: buildvector_mul_subadd_ps512:
+; FMA4:       # %bb.0: # %bb
+; FMA4-NEXT:    vfmsubaddps {{.*#+}} ymm0 = (ymm0 * ymm2) -/+ ymm4
+; FMA4-NEXT:    vfmsubaddps {{.*#+}} ymm1 = (ymm1 * ymm3) -/+ ymm5
+; FMA4-NEXT:    retq
+bb:
+  %A = fmul contract <16 x float> %C, %D
+  %A0 = extractelement <16 x float> %A, i32 0
+  %B0 = extractelement <16 x float> %B, i32 0
+  %sub0 = fadd contract float %A0, %B0
+  %A2 = extractelement <16 x float> %A, i32 2
+  %B2 = extractelement <16 x float> %B, i32 2
+  %sub2 = fadd contract float %A2, %B2
+  %A4 = extractelement <16 x float> %A, i32 4
+  %B4 = extractelement <16 x float> %B, i32 4
+  %sub4 = fadd contract float %A4, %B4
+  %A6 = extractelement <16 x float> %A, i32 6
+  %B6 = extractelement <16 x float> %B, i32 6
+  %sub6 = fadd contract float %A6, %B6
+  %A8 = extractelement <16 x float> %A, i32 8
+  %B8 = extractelement <16 x float> %B, i32 8
+  %sub8 = fadd contract float %A8, %B8
+  %A10 = extractelement <16 x float> %A, i32 10
+  %B10 = extractelement <16 x float> %B, i32 10
+  %sub10 = fadd contract float %A10, %B10
+  %A12 = extractelement <16 x float> %A, i32 12
+  %B12 = extractelement <16 x float> %B, i32 12
+  %sub12 = fadd contract float %A12, %B12
+  %A14 = extractelement <16 x float> %A, i32 14
+  %B14 = extractelement <16 x float> %B, i32 14
+  %sub14 = fadd contract float %A14, %B14
+  %A1 = extractelement <16 x float> %A, i32 1
+  %B1 = extractelement <16 x float> %B, i32 1
+  %add1 = fsub contract float %A1, %B1
+  %A3 = extractelement <16 x float> %A, i32 3
+  %B3 = extractelement <16 x float> %B, i32 3
+  %add3 = fsub contract float %A3, %B3
+  %A5 = extractelement <16 x float> %A, i32 5
+  %B5 = extractelement <16 x float> %B, i32 5
+  %add5 = fsub contract float %A5, %B5
+  %A7 = extractelement <16 x float> %A, i32 7
+  %B7 = extractelement <16 x float> %B, i32 7
+  %add7 = fsub contract float %A7, %B7
+  %A9 = extractelement <16 x float> %A, i32 9
+  %B9 = extractelement <16 x float> %B, i32 9
+  %add9 = fsub contract float %A9, %B9
+  %A11 = extractelement <16 x float> %A, i32 11
+  %B11 = extractelement <16 x float> %B, i32 11
+  %add11 = fsub contract float %A11, %B11
+  %A13 = extractelement <16 x float> %A, i32 13
+  %B13 = extractelement <16 x float> %B, i32 13
+  %add13 = fsub contract float %A13, %B13
+  %A15 = extractelement <16 x float> %A, i32 15
+  %B15 = extractelement <16 x float> %B, i32 15
+  %add15 = fsub contract float %A15, %B15
+  %vecinsert1 = insertelement <16 x float> undef, float %sub0, i32 0
+  %vecinsert2 = insertelement <16 x float> %vecinsert1, float %add1, i32 1
+  %vecinsert3 = insertelement <16 x float> %vecinsert2, float %sub2, i32 2
+  %vecinsert4 = insertelement <16 x float> %vecinsert3, float %add3, i32 3
+  %vecinsert5 = insertelement <16 x float> %vecinsert4, float %sub4, i32 4
+  ; element 5 is undef
+  %vecinsert7 = insertelement <16 x float> %vecinsert5, float %sub6, i32 6
+  %vecinsert8 = insertelement <16 x float> %vecinsert7, float %add7, i32 7
+  %vecinsert9 = insertelement <16 x float> %vecinsert8, float %sub8, i32 8
+  %vecinsert10 = insertelement <16 x float> %vecinsert9, float %add9, i32 9
+  %vecinsert11 = insertelement <16 x float> %vecinsert10, float %sub10, i32 10
+  %vecinsert12 = insertelement <16 x float> %vecinsert11, float %add11, i32 11
+  ; element 12 is undef
+  %vecinsert14 = insertelement <16 x float> %vecinsert12, float %add13, i32 13
+  %vecinsert15 = insertelement <16 x float> %vecinsert14, float %sub14, i32 14
+  %vecinsert16 = insertelement <16 x float> %vecinsert15, float %add15, i32 15
+  ret <16 x float> %vecinsert16
 }
 
 ; This should not be matched to fmsubadd because the mul is on the wrong side of the fsub.

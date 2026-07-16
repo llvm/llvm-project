@@ -845,6 +845,10 @@ public:
         SimplifyAndSetOp);
   }
 
+  InstructionCost getBranchMispredictPenalty() const override {
+    return getST()->getMispredictionPenalty();
+  }
+
   std::optional<unsigned>
   getCacheSize(TargetTransformInfo::CacheLevel Level) const override {
     return std::optional<unsigned>(

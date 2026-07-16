@@ -201,7 +201,7 @@ void InProcessControllerAccess::disconnect() {
 }
 
 void InProcessControllerAccess::callController(
-    OnCallHandlerCompleteFn OnComplete, HandlerTag T,
+    OnControllerCallReturnFn OnComplete, HandlerTag T,
     WrapperFunctionBuffer ArgBytes) {
   assert(C && "callController called before connect");
   if (C->EnterMessageScope(C)) {
@@ -223,7 +223,7 @@ void InProcessControllerAccess::sendWrapperResult(
 }
 
 uint64_t InProcessControllerAccess::registerPendingHandler(
-    OnCallHandlerCompleteFn OnComplete) {
+    OnControllerCallReturnFn OnComplete) {
   std::scoped_lock<std::mutex> Lock(M);
   PendingCalls[NextPendingCall] = std::move(OnComplete);
   return NextPendingCall++;
@@ -259,7 +259,7 @@ void InProcessControllerAccess::callWrapperEntry(
 void InProcessControllerAccess::returnJITDispatchResult(
     uint64_t CallId, orc_rt_WrapperFunctionBuffer ResultBytes) {
 
-  OnCallHandlerCompleteFn OnComplete;
+  OnControllerCallReturnFn OnComplete;
   {
     std::scoped_lock<std::mutex> Lock(M);
     auto I = PendingCalls.find(CallId);

@@ -256,13 +256,8 @@ computeMemrefMeta(OpType xferOp, PatternRewriter &rewriter) {
       offsetVal = meta.getOffset();
   }
 
-  if constexpr (llvm::is_one_of<std::decay_t<OpType>, vector::TransferReadOp,
-                                vector::TransferWriteOp>::value) {
-    AffineMap permMap = xferOp.getPermutationMap();
-    // Adjust strides according to the permutation map (e.g., for transpose)
-    adjustStridesForPermutation(permMap, strides);
-  }
-
+  // Strides are returned in original memref order; permutation is applied in
+  // computeOffsets only where offsets are indexed in vector order.
   return {strides, offsetVal};
 }
 
@@ -312,13 +307,18 @@ static Value computeOffsets(VectorTransferOpInterface xferOp,
     return stepOp;
   });
 
+  // Local offsets are indexed in vector order, so permute strides; the base
+  // offset below uses the original memref-order strides.
+  SmallVector<Value> permutedStrides(strides.begin(), strides.end());
+  adjustStridesForPermutation(xferOp.getPermutationMap(), permutedStrides);
+
   // Multiply step vectors by corresponding strides
-  size_t memrefRank = strides.size();
+  size_t memrefRank = permutedStrides.size();
   size_t vectorRank = vectorShape.size();
   SmallVector<Value> strideMultiplied;
   for (size_t i = 0; i < vectorRank; ++i) {
     size_t memrefDim = memrefRank - vectorRank + i;
-    Value strideValue = strides[memrefDim];
+    Value strideValue = permutedStrides[memrefDim];
     auto mulType = dyn_cast<VectorType>(stepVectors[i].getType());
     auto bcastOp =
         vector::BroadcastOp::create(rewriter, loc, mulType, strideValue);
