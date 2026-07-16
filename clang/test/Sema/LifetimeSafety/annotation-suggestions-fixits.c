@@ -1,23 +1,18 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c17 -fexperimental-lifetime-safety-c \
-// RUN:   -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis \
 // RUN:   -Wlifetime-safety-suggestions -Wno-dangling \
 // RUN:   -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -fsyntax-only -std=c23 -fexperimental-lifetime-safety-c \
-// RUN:   -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis \
 // RUN:   -Wlifetime-safety-suggestions -Wno-dangling \
 // RUN:   -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s --check-prefix=CHECK-C23
 // RUN: %clang_cc1 -fsyntax-only -std=c17 -fexperimental-lifetime-safety-c \
-// RUN:   -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis \
 // RUN:   -Wlifetime-safety-suggestions -Wno-dangling \
 // RUN:   '-DLIFETIMEBOUND_MACRO=__attribute__((lifetimebound))' \
 // RUN:   -lifetime-safety-lifetimebound-macro=LIFETIMEBOUND_MACRO \
 // RUN:   -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s --check-prefix=CHECK-MACRO
 // RUN: cp %s %t.c
 // RUN: %clang_cc1 -std=c17 -fexperimental-lifetime-safety-c \
-// RUN:   -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis \
 // RUN:   -Wlifetime-safety-suggestions -Wno-dangling -fixit %t.c
 // RUN: %clang_cc1 -fsyntax-only -std=c17 -fexperimental-lifetime-safety-c \
-// RUN:   -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis \
 // RUN:   -Werror=lifetime-safety-suggestions -Wno-dangling %t.c
 
 int *return_pointer(int *p) {
