@@ -290,6 +290,21 @@ namespace clang {
     }
   };
 
+  class GenericAssociationTypeRAIIObject {
+    Parser &P;
+    bool OldVal;
+
+  public:
+    GenericAssociationTypeRAIIObject(Parser &p, bool Value = true)
+        : P(p), OldVal(P.ParsingGenericAssociationType) {
+      P.ParsingGenericAssociationType = Value;
+    }
+
+    void restore() { P.ParsingGenericAssociationType = OldVal; }
+
+    ~GenericAssociationTypeRAIIObject() { restore(); }
+  };
+
   /// Activates OpenMP parsing mode to preseve OpenMP specific annotation
   /// tokens.
   class ParsingOpenMPDirectiveRAII {

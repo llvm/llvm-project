@@ -279,6 +279,7 @@ class Parser : public CodeCompletionHandler {
 
 public:
   friend class ColonProtectionRAIIObject;
+  friend class GenericAssociationTypeRAIIObject;
   friend class PoisonSEHIdentifiersRAIIObject;
   friend class ParenBraceBracketBalancer;
   friend class BalancedDelimiterTracker;
@@ -4497,6 +4498,11 @@ private:
   /// ColonProtectionRAIIObject RAII object.
   bool ColonIsSacred;
 
+  // ParsingGenericAssociationType - Currently parsing the typename in
+  // _Generic association. This is to consume the colon if what comes after it
+  // is a type.
+  bool ParsingGenericAssociationType;
+
   /// ParseCXXAmbiguousParenExpression - We have parsed the left paren of a
   /// parenthesized ambiguous type-id. This uses tentative parsing to
   /// disambiguate based on the context past the parens.
@@ -8682,6 +8688,13 @@ private:
   bool isCXXTypeId(TentativeCXXTypeIdContext Context) {
     bool isAmbiguous;
     return isCXXTypeId(Context, isAmbiguous);
+  }
+
+  bool isNextCXXTypeId(TentativeCXXTypeIdContext Context, bool &isAmbiguous);
+
+  bool isNextCXXTypeId(TentativeCXXTypeIdContext Context) {
+    bool isAmbiguous;
+    return isNextCXXTypeId(Context, isAmbiguous);
   }
 
   /// TPResult - Used as the result value for functions whose purpose is to

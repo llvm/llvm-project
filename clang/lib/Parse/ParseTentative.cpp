@@ -616,6 +616,14 @@ bool Parser::isCXXTypeId(TentativeCXXTypeIdContext Context, bool &isAmbiguous) {
   return TPR == TPResult::True;
 }
 
+bool Parser::isNextCXXTypeId(TentativeCXXTypeIdContext Context,
+                             bool &isAmbiguous) {
+  RevertingTentativeParsingAction PA(*this);
+  ConsumeToken();
+  bool ret = isCXXTypeId(Context, isAmbiguous);
+  return ret;
+}
+
 CXX11AttributeKind
 Parser::isCXX11AttributeSpecifier(bool Disambiguate,
                                   bool OuterMightBeMessageSend) {
