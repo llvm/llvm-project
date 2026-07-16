@@ -25,39 +25,36 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-namespace tgammabf16_internal {
-
-LIBC_INLINE_VAR constexpr double PI = 0x1.921fb54442d18p+1;
-LIBC_INLINE_VAR constexpr double LOG_SQRT_2_PI = 0x1.d67f1c864beb5p-1;
-
-// Paul Godfrey's exact Lanczos approximation coefficients (g=7, n=9)
-// Reference: "A note on the computation of the convergent Lanczos complex Gamma
-// approximation" by Paul Godfrey (2001).
-// Original:
-// https://web.archive.org/web/20060915161115/http://my.fit.edu/~gabdo/gamma.txt
-// Mirror: http://www.mrob.com/pub/ries/lanczos-gamma.html
-LIBC_INLINE_VAR constexpr double LANCZOS_COEFFS[9] = {
-    0x1.ffffffffff950p-1,  0x1.52429b6c30b05p+9,  -0x1.3ac8e8ed4171bp+10,
-    0x1.81a9661d3b4d8p+9,  -0x1.613ae51a32f5dp+7, 0x1.903c27f8b9c81p+3,
-    -0x1.1bcb2992b2855p-3, 0x1.4f0514e4e324fp-17, 0x1.435508f3faeefp-23};
-
-} // namespace tgammabf16_internal
-
 LIBC_INLINE bfloat16 tgammabf16(bfloat16 x) {
   using FPBits = fputil::FPBits<bfloat16>;
-  using namespace tgammabf16_internal;
+  // The hexadecimal literals were generated with Sollya:
+  // > display = hexadecimal;
+  // > round(pi, D, RN);
+  // > round(log(sqrt(2 * pi)), D, RN);
+  constexpr double PI = 0x1.921fb54442d18p+1;
+  constexpr double LOG_SQRT_2_PI = 0x1.d67f1c864beb5p-1;
+  // Paul Godfrey's exact Lanczos approximation coefficients (g=7, n=9)
+  // Reference: "A note on the computation of the convergent Lanczos complex
+  // Gamma approximation" by Paul Godfrey (2001).
+  // Original:
+  // https://web.archive.org/web/20060915161115/http://my.fit.edu/~gabdo/gamma.txt
+  // Mirror: http://www.mrob.com/pub/ries/lanczos-gamma.html
+  constexpr double LANCZOS_COEFFS[9] = {
+      0x1.ffffffffff950p-1,  0x1.52429b6c30b05p+9,  -0x1.3ac8e8ed4171bp+10,
+      0x1.81a9661d3b4d8p+9,  -0x1.613ae51a32f5dp+7, 0x1.903c27f8b9c81p+3,
+      -0x1.1bcb2992b2855p-3, 0x1.4f0514e4e324fp-17, 0x1.435508f3faeefp-23};
 
   FPBits xbits(x);
+  uint16_t x_abs = xbits.uintval() & 0x7fffU;
 
-  if (LIBC_UNLIKELY(xbits.is_nan())) {
-    if (xbits.is_signaling_nan()) {
-      fputil::raise_except_if_required(FE_INVALID);
-      return FPBits::quiet_nan().get_val();
+  if (LIBC_UNLIKELY(x_abs >= FPBits::EXP_MASK)) {
+    if (xbits.is_nan()) {
+      if (xbits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits::quiet_nan().get_val();
+      }
+      return x;
     }
-    return x;
-  }
-
-  if (LIBC_UNLIKELY(xbits.is_inf())) {
     if (xbits.is_pos())
       return x;
     fputil::set_errno_if_required(EDOM);
@@ -72,7 +69,6 @@ LIBC_INLINE bfloat16 tgammabf16(bfloat16 x) {
   }
 
   if (LIBC_UNLIKELY(xbits.is_neg())) {
-    uint16_t x_abs = xbits.uintval() & 0x7fffU;
     int biased_exp = x_abs >> FPBits::FRACTION_LEN;
     if (biased_exp >= FPBits::EXP_BIAS) {
       int e = biased_exp - FPBits::EXP_BIAS;
@@ -107,10 +103,12 @@ LIBC_INLINE bfloat16 tgammabf16(bfloat16 x) {
   double x_eval = xd;
   double res;
 
-  // Fast path for tiny positive inputs to prevent exact-boundary overshoots
-  // For tiny x, Gamma(x) ~= 1/x - gamma
+  // Fast path for tiny positive inputs to prevent exact-boundary overshoots.
+  // EULER_GAMMA is the Euler-Mascheroni constant. Its correctly rounded
+  // binary64 value was generated with MPFR's mpfr_const_euler.
   if (LIBC_UNLIKELY(xf > 0.0f && xf < 0x1.0p-8f)) {
-    res = (1.0 / xd) - 0x1.2788cfc6fb619p-1;
+    constexpr double EULER_GAMMA = 0x1.2788cfc6fb619p-1;
+    res = (1.0 / xd) - EULER_GAMMA;
   } else {
     if (reflection) {
       x_eval = 1.0 - xd;

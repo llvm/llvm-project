@@ -681,3 +681,8 @@ math_mpfr_test(name = "logf16")
 math_mpfr_test(name = "log2f16")
 
 math_mpfr_test(name = "log10f16")
+
+math_mpfr_test(
+    name = "tgammabf16",
+    deps = ["//libc:__support_fputil_bfloat16"],
+)
