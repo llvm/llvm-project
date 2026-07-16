@@ -40,6 +40,9 @@ int main(int argc, char **argv) {
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
     return mlir::createCIRSimplifyPass();
   });
+  ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
+    return mlir::createLoopDistributionPass();
+  });
 
   mlir::PassPipelineRegistration<CIRToLLVMPipelineOptions> pipeline(
       "cir-to-llvm", "",
