@@ -8527,6 +8527,12 @@ Decl *ASTReader::getPredefinedDecl(PredefinedDeclIDs ID) {
     NewLoaded = Context.getBuiltinMSVaListDecl();
     break;
 
+  case PREDEF_DECL_BUILTIN_ZOS_VA_LIST_ID:
+    if (Context.BuiltinZOSVaListDecl)
+      return Context.BuiltinZOSVaListDecl;
+    NewLoaded = Context.getBuiltinZOSVaListDecl();
+    break;
+
   case PREDEF_DECL_BUILTIN_MS_GUID_ID:
     // ASTContext::getMSGuidTagDecl won't create MSGuidTagDecl conditionally.
     return Context.getMSGuidTagDecl();
@@ -9715,7 +9721,7 @@ void ASTReader::ReadExtVectorDecls(SmallVectorImpl<TypedefNameDecl *> &Decls) {
 }
 
 void ASTReader::ReadUnusedLocalTypedefNameCandidates(
-    llvm::SmallSetVector<const TypedefNameDecl *, 4> &Decls) {
+    llvm::SmallPtrSetImpl<const TypedefNameDecl *> &Decls) {
   for (unsigned I = 0, N = UnusedLocalTypedefNameCandidates.size(); I != N;
        ++I) {
     TypedefNameDecl *D = dyn_cast_or_null<TypedefNameDecl>(

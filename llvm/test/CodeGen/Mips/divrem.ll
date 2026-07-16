@@ -12,6 +12,8 @@
 ; RUN: llc -mtriple=mips64 -mcpu=mips64r2 -mno-check-zero-division -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,ACC64,NOCHECK
 ; RUN: llc -mtriple=mips64 -mcpu=mips64r6 -mno-check-zero-division -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,GPR64,NOCHECK
 
+; RUN: llc -mtriple=mipsel -mcpu=mips32 -O0 -mno-check-zero-division -relocation-model=pic < %s | FileCheck %s -check-prefixes=NOCHECK
+
 ; FileCheck Prefixes:
 ;   ALL - All targets
 ;   ACC32 - Accumulator based multiply/divide on 32-bit targets

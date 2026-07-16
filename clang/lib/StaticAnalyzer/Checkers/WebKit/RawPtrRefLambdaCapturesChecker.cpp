@@ -1,4 +1,4 @@
-//=======- UncountedLambdaCapturesChecker.cpp --------------------*- C++ -*-==//
+//=======- RawPtrRefLambdaCapturesChecker.cpp --------------------*- C++ -*-==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -36,7 +36,7 @@ public:
 
   virtual std::optional<bool> isUnsafePtr(QualType) const = 0;
   virtual bool isPtrType(const std::string &) const = 0;
-  virtual const char *ptrKind(QualType QT) const = 0;
+  virtual const char *typeName() const = 0;
 
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
                     BugReporter &BRArg) const {
@@ -542,19 +542,20 @@ public:
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
 
-    if (Capture.isExplicit()) {
+    if (Capture.isExplicit())
       Os << "Captured ";
-    } else {
+    else
       Os << "Implicitly captured ";
-    }
-    if (isa<PointerType>(T) || isa<ObjCObjectPointerType>(T)) {
-      Os << "raw-pointer ";
-    } else {
-      Os << "reference ";
-    }
-
+    Os << "variable ";
     printQuotedQualifiedName(Os, CapturedVar);
-    Os << " to " << ptrKind(T) << " type is unsafe.";
+
+    bool IsUnsafePtr = CapturedVar->getType() == T;
+    if (IsUnsafePtr)
+      Os << " is a ";
+    else
+      Os << " contains a ";
+    auto *CapturedType = T.getTypePtrOrNull();
+    printPointer(Os, CapturedType);
 
     PathDiagnosticLocation BSLoc(Location, BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
@@ -572,41 +573,66 @@ public:
       Os << "Implicitly captured ";
     }
 
-    Os << "raw-pointer 'this' to " << ptrKind(T) << " type is unsafe.";
+    Os << "variable 'this' is a raw pointer to " << typeName();
+    if (auto *RD = T->getPointeeCXXRecordDecl()) {
+      Os << " ";
+      printQuotedQualifiedName(Os, RD);
+    }
 
     PathDiagnosticLocation BSLoc(Capture.getLocation(), BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
     BR->emitReport(std::move(Report));
+  }
+
+  virtual void printPointer(llvm::raw_svector_ostream &Os,
+                            const Type *T) const {
+    T = T->getUnqualifiedDesugaredType();
+    bool IsPtr = isa<PointerType>(T) || isa<ObjCObjectPointerType>(T);
+    Os << (IsPtr ? "raw pointer" : "raw reference") << " to ";
+    Os << typeName();
+
+    if (auto *RD = T->getPointeeType()->getAsRecordDecl()) {
+      Os << " ";
+      printQuotedQualifiedName(Os, RD);
+    } else if (auto *ObjCDecl = getObjCDeclFromObjCPtr(T)) {
+      Os << " ";
+      printQuotedQualifiedName(Os, ObjCDecl);
+    }
   }
 };
 
 class UncountedLambdaCapturesChecker : public RawPtrRefLambdaCapturesChecker {
 public:
   UncountedLambdaCapturesChecker()
-      : RawPtrRefLambdaCapturesChecker("Lambda capture of uncounted or "
-                                       "unchecked variable") {}
+      : RawPtrRefLambdaCapturesChecker("Lambda capture of uncounted variable") {
+  }
 
   std::optional<bool> isUnsafePtr(QualType QT) const final {
-    auto result1 = isUncountedPtr(QT);
-    auto result2 = isUncheckedPtr(QT);
-    if (result1 && *result1)
-      return true;
-    if (result2 && *result2)
-      return true;
-    if (result1)
-      return *result1;
-    return result2;
+    return isUncountedPtr(QT.getCanonicalType());
   }
 
   virtual bool isPtrType(const std::string &Name) const final {
-    return isRefType(Name) || isCheckedPtr(Name);
+    return isRefType(Name);
   }
 
-  const char *ptrKind(QualType QT) const final {
-    if (isUncounted(QT))
-      return "uncounted";
-    return "unchecked";
+  const char *typeName() const final { return "RefPtr-capable type"; }
+};
+
+class UncheckedLambdaCapturesChecker : public RawPtrRefLambdaCapturesChecker {
+public:
+  UncheckedLambdaCapturesChecker()
+      : RawPtrRefLambdaCapturesChecker("Lambda capture of unchecked variable") {
   }
+
+  std::optional<bool> isUnsafePtr(QualType QT) const final {
+    return isUncheckedPtr(QT.getCanonicalType());
+  }
+
+  virtual bool isPtrType(const std::string &Name) const final {
+    return isCheckedPtr(Name);
+  }
+
+  const char *typeName() const final { return "CheckedPtr-capable type"; }
 };
 
 class UnretainedLambdaCapturesChecker : public RawPtrRefLambdaCapturesChecker {
@@ -627,7 +653,30 @@ public:
     return isRetainPtrOrOSPtr(Name);
   }
 
-  const char *ptrKind(QualType QT) const final { return "unretained"; }
+  const char *typeName() const final { return "RetainPtr-capable type"; }
+
+  void printPointer(llvm::raw_svector_ostream &Os, const Type *T) const final {
+    if (auto *ObjCPtr = dyn_cast<ObjCObjectPointerType>(T)) {
+      for (ObjCProtocolDecl *P : ObjCPtr->quals()) {
+        if (const auto *II = P->getIdentifier()) {
+          auto Name = II->getName();
+          if (Name.starts_with("OS_")) {
+            Os << typeName() << " ";
+            printQuotedQualifiedName(Os, P);
+            return;
+          }
+        }
+      }
+    }
+    if (!isa<ObjCObjectPointerType>(T) && T->getAs<TypedefType>()) {
+      auto Typedef = T->getAs<TypedefType>();
+      assert(Typedef);
+      Os << typeName() << " ";
+      printQuotedQualifiedName(Os, Typedef->getDecl());
+      return;
+    }
+    return RawPtrRefLambdaCapturesChecker::printPointer(Os, T);
+  }
 };
 
 } // namespace
@@ -637,6 +686,15 @@ void ento::registerUncountedLambdaCapturesChecker(CheckerManager &Mgr) {
 }
 
 bool ento::shouldRegisterUncountedLambdaCapturesChecker(
+    const CheckerManager &mgr) {
+  return true;
+}
+
+void ento::registerUncheckedLambdaCapturesChecker(CheckerManager &Mgr) {
+  Mgr.registerChecker<UncheckedLambdaCapturesChecker>();
+}
+
+bool ento::shouldRegisterUncheckedLambdaCapturesChecker(
     const CheckerManager &mgr) {
   return true;
 }
