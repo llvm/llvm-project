@@ -306,3 +306,21 @@ entry:
   %vector = call <8 x i8> @llvm.vector.extract.subvector.v8i8.v8i8(<8 x i8> %a, i64 0)
   ret <8 x i8> %vector
 }
+
+define <2 x i10> @extract_v2i10_v4i10_low(<4 x i10> %a) {
+; CHECK-LABEL: extract_v2i10_v4i10_low:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    ret
+  %vector = call <2 x i10> @llvm.vector.extract.subvector.v2i10.v4i10(<4 x i10> %a, i64 0)
+  ret <2 x i10> %vector
+}
+
+define <2 x i10> @extract_v2i10_v4i10_high(<4 x i10> %a) {
+; CHECK-LABEL: extract_v2i10_v4i10_high:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip2 v0.4h, v0.4h, v0.4h
+; CHECK-NEXT:    ret
+  %vector = call <2 x i10> @llvm.vector.extract.subvector.v2i10.v4i10(<4 x i10> %a, i64 2)
+  ret <2 x i10> %vector
+}
