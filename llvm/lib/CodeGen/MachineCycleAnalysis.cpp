@@ -151,7 +151,7 @@ bool llvm::isCycleInvariant(const MachineCycleInfo &CI,
       } else if (!MO.isDead()) {
         // A def that isn't dead can't be moved.
         return false;
-      } else if (any_of(Cycle.getEntries(),
+      } else if (any_of(CI.getEntries(Cycle),
                         [&](const MachineBasicBlock *Block) {
                           return Block->isLiveIn(Reg);
                         })) {

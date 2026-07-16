@@ -20,6 +20,12 @@ contains
   subroutine mod_sub()
     real, allocatable :: loc_arr(:)
     real, pointer :: loc_ptr(:)
+    real, allocatable, save :: saved_arr(:)
+    real, pointer, save :: saved_ptr(:)
+  end subroutine
+  subroutine common_sub()
+    real, pointer :: com_ptr(:)
+    common /blk/ com_ptr
   end subroutine
 end module
 
@@ -34,6 +40,17 @@ end program
 ! MAN: hlfir.declare {{.*}} {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMmFmod_subEloc_arr"}
 ! MAN: hlfir.declare {{.*}} {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMmFmod_subEloc_ptr"}
 
+! Saved subprogram locals use Managed because their static descriptors cannot
+! be registered as Unified device symbols.
+! UNI: hlfir.declare {{.*}} {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMmFmod_subEsaved_arr"}
+! UNI: hlfir.declare {{.*}} {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMmFmod_subEsaved_ptr"}
+! MAN: hlfir.declare {{.*}} {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMmFmod_subEsaved_arr"}
+! MAN: hlfir.declare {{.*}} {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMmFmod_subEsaved_ptr"}
+
+! COMMON-block pointer: unattributed, CUDA attributes may not appear in COMMON.
+! UNI: hlfir.declare {{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMmFcommon_subEcom_ptr"}
+! MAN: hlfir.declare {{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMmFcommon_subEcom_ptr"}
+
 ! Main-program local: Unified under -gpu=unified, Managed under
 ! -gpu=managed.
 ! UNI: hlfir.declare {{.*}} {data_attr = #cuf.cuda<unified>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEprog_arr"}
@@ -46,9 +63,18 @@ end program
 ! MAN: fir.global @_QMmEmod_arr {data_attr = #cuf.cuda<managed>}
 ! MAN: fir.global @_QMmEmod_ptr {data_attr = #cuf.cuda<managed>}
 
+! UNI: fir.global internal @_QMmFmod_subEsaved_arr {data_attr = #cuf.cuda<managed>}
+! UNI: fir.global internal @_QMmFmod_subEsaved_ptr {data_attr = #cuf.cuda<managed>}
+! MAN: fir.global internal @_QMmFmod_subEsaved_arr {data_attr = #cuf.cuda<managed>}
+! MAN: fir.global internal @_QMmFmod_subEsaved_ptr {data_attr = #cuf.cuda<managed>}
+
 ! Derived-type components: Unified under -gpu=unified, Managed under
 ! -gpu=managed. Checked via the symbol table.
 ! UNI-SYM: comp_arr, ALLOCATABLE {{.*}} cudaDataAttr: Unified
 ! UNI-SYM: comp_ptr, POINTER {{.*}} cudaDataAttr: Unified
 ! MAN-SYM: comp_arr, ALLOCATABLE {{.*}} cudaDataAttr: Managed
 ! MAN-SYM: comp_ptr, POINTER {{.*}} cudaDataAttr: Managed
+! UNI-SYM: saved_arr, ALLOCATABLE, SAVE {{.*}} cudaDataAttr: Managed
+! UNI-SYM: saved_ptr, POINTER, SAVE {{.*}} cudaDataAttr: Managed
+! MAN-SYM: saved_arr, ALLOCATABLE, SAVE {{.*}} cudaDataAttr: Managed
+! MAN-SYM: saved_ptr, POINTER, SAVE {{.*}} cudaDataAttr: Managed

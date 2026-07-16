@@ -10556,6 +10556,27 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         const TargetOptions &Options = DAG.getTarget().Options;
         if (Options.EmitCallSiteInfo)
           CSInfo.ArgRegPairs.emplace_back(VA.getLocReg(), i);
+        if (IsArm64ECVarArgExitThunk) {
+          Register FPReg;
+          switch (VA.getLocReg()) {
+          case AArch64::X0:
+            FPReg = AArch64::D0;
+            break;
+          case AArch64::X1:
+            FPReg = AArch64::D1;
+            break;
+          case AArch64::X2:
+            FPReg = AArch64::D2;
+            break;
+          case AArch64::X3:
+            FPReg = AArch64::D3;
+            break;
+          }
+          if (FPReg) {
+            RegsToPass.emplace_back(FPReg, Arg);
+            RegsUsed.insert(FPReg);
+          }
+        }
       }
     } else {
       assert(VA.isMemLoc());
@@ -27379,11 +27400,6 @@ static SDValue performSTORECombine(SDNode *N,
   if (SDValue Res = combineStoreValueFPToInt(ST, DCI, DAG, Subtarget))
     return Res;
 
-  auto hasValidElementTypeForFPTruncStore = [](EVT VT) {
-    EVT EltVT = VT.getVectorElementType();
-    return EltVT == MVT::f32 || EltVT == MVT::f64;
-  };
-
   // Cast ptr32 and ptr64 pointers to the default address space before a store.
   unsigned AddrSpace = ST->getAddressSpace();
   if (AddrSpace == ARM64AS::PTR64 || AddrSpace == ARM64AS::PTR32_SPTR ||
@@ -27400,16 +27416,24 @@ static SDValue performSTORECombine(SDNode *N,
   if (SDValue Res = combineI8TruncStore(ST, DAG, Subtarget))
     return Res;
 
+  auto hasValidElementTypeForFPTruncStore = [](EVT DstVT, EVT SrcVT) {
+    if (DstVT.getScalarType() == MVT::bf16)
+      return false;
+    EVT EltVT = SrcVT.getVectorElementType();
+    return EltVT == MVT::f32 || EltVT == MVT::f64;
+  };
+
   // If this is an FP_ROUND followed by a store, fold this into a truncating
   // store. We can do this even if this is already a truncstore.
   // We purposefully don't care about legality of the nodes here as we know
   // they can be split down into something legal.
   if (DCI.isBeforeLegalizeOps() && Value.getOpcode() == ISD::FP_ROUND &&
-      Value.getNode()->hasOneUse() && ST->isUnindexed() &&
+      Value->hasOneUse() && ST->isUnindexed() &&
       Subtarget->useSVEForFixedLengthVectors() &&
       ValueVT.isFixedLengthVector() &&
       ValueVT.getFixedSizeInBits() >= Subtarget->getMinSVEVectorSizeInBits() &&
-      hasValidElementTypeForFPTruncStore(Value.getOperand(0).getValueType()))
+      hasValidElementTypeForFPTruncStore(Value.getValueType(),
+                                         Value.getOperand(0).getValueType()))
     return DAG.getTruncStore(Chain, DL, Value.getOperand(0), Ptr, MemVT,
                              ST->getMemOperand());
 
@@ -34071,11 +34095,9 @@ AArch64TargetLowering::LowerFixedLengthFPRoundToSVE(SDValue Op,
   EVT ContainerSrcVT = getContainerForFixedLengthVector(DAG, SrcVT);
   EVT RoundVT = ContainerSrcVT.changeVectorElementType(
       *DAG.getContext(), VT.getVectorElementType());
-  SDValue Pg = getPredicateForVector(DAG, DL, RoundVT);
 
   Val = convertToScalableVector(DAG, ContainerSrcVT, Val);
-  Val = DAG.getNode(AArch64ISD::FP_ROUND_MERGE_PASSTHRU, DL, RoundVT, Pg, Val,
-                    Op.getOperand(1), DAG.getPOISON(RoundVT));
+  Val = DAG.getNode(Op.getOpcode(), DL, RoundVT, Val, Op.getOperand(1));
   Val = getSVESafeBitCast(ContainerSrcVT.changeTypeToInteger(), Val, DAG);
   Val = convertFromScalableVector(DAG, SrcVT.changeTypeToInteger(), Val);
 

@@ -318,10 +318,6 @@ static cl::opt<unsigned> SLPRuntimeAliasChecksMaxScalarCostPercent(
 // it has no negative effect on the llvm benchmarks.
 static const unsigned AliasedCheckLimit = 10;
 
-// Limit of the number of uses for potentially transformed instructions/values,
-// used in checks to avoid compile-time explode.
-static constexpr int UsesLimit = 64;
-
 // Another limit for the alias checks: The maximum distance between load/store
 // instructions where alias checks are done.
 // This limit is useful for very large basic blocks.
@@ -533,142 +529,6 @@ static SmallVector<int> calculateShufflevectorMask(ArrayRef<Value *> VL) {
   return Mask;
 }
 
-#if !defined(NDEBUG)
-/// Print a short descriptor of the instruction bundle suitable for debug output.
-static std::string shortBundleName(ArrayRef<Value *> VL, int Idx = -1) {
-  std::string Result;
-  raw_string_ostream OS(Result);
-  if (Idx >= 0)
-    OS << "Idx: " << Idx << ", ";
-  OS << "n=" << VL.size() << " [" << *VL.front() << ", ..]";
-  return Result;
-}
-#endif
-
-/// \returns True if \p I is commutative, handles CmpInst and BinaryOperator.
-/// For BinaryOperator, it also checks if \p InstWithUses is used in specific
-/// patterns that make it effectively commutative (like equality comparisons
-/// with zero).
-/// In most cases, users should not call this function directly (since \p I and
-/// \p InstWithUses are the same). However, when analyzing interchangeable
-/// instructions, we need to use the converted opcode along with the original
-/// uses.
-/// \param I The instruction to check for commutativity
-/// \param ValWithUses The value whose uses are analyzed for special
-/// patterns
-static bool isCommutative(const Instruction *I, const Value *ValWithUses,
-                          bool IsCopyable = false) {
-  if (auto *Cmp = dyn_cast<CmpInst>(I))
-    return Cmp->isCommutative();
-  if (auto *BO = dyn_cast<BinaryOperator>(I))
-    return BO->isCommutative() ||
-           (BO->getOpcode() == Instruction::Sub &&
-            ValWithUses->hasUseList() &&
-            !ValWithUses->hasNUsesOrMore(UsesLimit) &&
-            all_of(
-                ValWithUses->uses(),
-                [&](const Use &U) {
-                  // Commutative, if icmp eq/ne sub, 0
-                  CmpPredicate Pred;
-                  if (match(U.getUser(),
-                            m_ICmp(Pred, m_Specific(U.get()), m_Zero())) &&
-                      (Pred == ICmpInst::ICMP_EQ || Pred == ICmpInst::ICMP_NE))
-                    return true;
-                  // Commutative, if abs(sub nsw, true) or abs(sub, false).
-                  ConstantInt *Flag;
-                  auto *I = dyn_cast<BinaryOperator>(U.get());
-                  return match(U.getUser(),
-                               m_Intrinsic<Intrinsic::abs>(
-                                   m_Specific(U.get()), m_ConstantInt(Flag))) &&
-                         ((!IsCopyable && I && !I->hasNoSignedWrap()) ||
-                          Flag->isOne());
-                })) ||
-           (BO->getOpcode() == Instruction::FSub &&
-            ValWithUses->hasUseList() &&
-            !ValWithUses->hasNUsesOrMore(UsesLimit) &&
-            all_of(ValWithUses->uses(), [](const Use &U) {
-              return match(U.getUser(),
-                           m_Intrinsic<Intrinsic::fabs>(m_Specific(U.get())));
-            }));
-  return I->isCommutative();
-}
-
-/// Checks if the operand is commutative. In commutative operations, not all
-/// operands might commutable, e.g. for fmuladd only 2 first operands are
-/// commutable.
-static bool isCommutableOperand(const Instruction *I, Value *ValWithUses,
-                                unsigned Op, bool IsCopyable = false) {
-  assert(::isCommutative(I, ValWithUses, IsCopyable) &&
-         "The instruction is not commutative.");
-  if (isa<CmpInst>(I))
-    return true;
-  if (auto *BO = dyn_cast<BinaryOperator>(I)) {
-    switch (BO->getOpcode()) {
-    case Instruction::Sub:
-    case Instruction::FSub:
-      return true;
-    default:
-      break;
-    }
-  }
-  return I->isCommutableOperand(Op);
-}
-
-/// This is a helper function to check whether \p I is commutative.
-/// This is a convenience wrapper that calls the two-parameter version of
-/// isCommutative with the same instruction for both parameters. This is
-/// the common case where the instruction being checked for commutativity
-/// is the same as the instruction whose uses are analyzed for special
-/// patterns (see the two-parameter version above for details).
-/// \param I The instruction to check for commutativity
-/// \returns true if the instruction is commutative, false otherwise
-static bool isCommutative(const Instruction *I) { return isCommutative(I, I); }
-
-/// \returns number of operands of \p I, considering commutativity. Returns 2
-/// for commutative intrinsics.
-/// \param I The instruction to check for commutativity
-static unsigned getNumberOfPotentiallyCommutativeOps(Instruction *I) {
-  if (isa<IntrinsicInst>(I) && isCommutative(I)) {
-    // IntrinsicInst::isCommutative returns true if swapping the first "two"
-    // arguments to the intrinsic produces the same result.
-    constexpr unsigned IntrinsicNumOperands = 2;
-    return IntrinsicNumOperands;
-  }
-  return I->getNumOperands();
-}
-
-/// \returns inserting or extracting index of InsertElement, ExtractElement or
-/// InsertValue instruction, using Offset as base offset for index.
-/// \returns std::nullopt if the index is not an immediate.
-static std::optional<unsigned> getElementIndex(const Value *Inst,
-                                               unsigned Offset = 0) {
-  if (auto Index = getInsertExtractIndex<InsertElementInst>(Inst, Offset))
-    return Index;
-  if (auto Index = getInsertExtractIndex<ExtractElementInst>(Inst, Offset))
-    return Index;
-
-  unsigned Index = Offset;
-
-  const auto *IV = dyn_cast<InsertValueInst>(Inst);
-  if (!IV)
-    return std::nullopt;
-
-  Type *CurrentType = IV->getType();
-  for (unsigned I : IV->indices()) {
-    if (const auto *ST = dyn_cast<StructType>(CurrentType)) {
-      Index *= ST->getNumElements();
-      CurrentType = ST->getElementType(I);
-    } else if (const auto *AT = dyn_cast<ArrayType>(CurrentType)) {
-      Index *= AT->getNumElements();
-      CurrentType = AT->getElementType();
-    } else {
-      return std::nullopt;
-    }
-    Index += I;
-  }
-  return Index;
-}
-
 namespace {
 /// Specifies the way the mask should be analyzed for undefs/poisonous elements
 /// in the shuffle mask.
@@ -863,21 +723,6 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
   return Vec2 ? TargetTransformInfo::SK_PermuteTwoSrc
               : TargetTransformInfo::SK_PermuteSingleSrc;
 }
-
-/// Checks if the provided value does not require scheduling. It does not
-/// require scheduling if this is not an instruction or it is an instruction
-/// that does not read/write memory and all operands are either not instructions
-/// or phi nodes or instructions from different blocks.
-static bool areAllOperandsNonInsts(Value *V);
-/// Checks if the provided value does not require scheduling. It does not
-/// require scheduling if this is not an instruction or it is an instruction
-/// that does not read/write memory and all users are phi nodes or instructions
-/// from the different blocks.
-static bool isUsedOutsideBlock(Value *V);
-/// Checks if the specified value does not require scheduling. It does not
-/// require scheduling if all operands and all users do not need to be scheduled
-/// in the current basic block.
-static bool doesNotNeedToBeScheduled(Value *V);
 
 /// \returns true if \p Opcode is allowed as part of the main/alternate
 /// instruction for SLP vectorization.
@@ -1883,78 +1728,6 @@ static SmallVector<Constant *> replicateMask(ArrayRef<Constant *> Val,
   for (auto [I, V] : enumerate(Val))
     std::fill_n(NewVal.begin() + I * VF, VF, V);
   return NewVal;
-}
-
-static void inversePermutation(ArrayRef<unsigned> Indices,
-                               SmallVectorImpl<int> &Mask) {
-  Mask.clear();
-  const unsigned E = Indices.size();
-  Mask.resize(E, PoisonMaskElem);
-  for (unsigned I = 0; I < E; ++I)
-    Mask[Indices[I]] = I;
-}
-
-/// Reorders the list of scalars in accordance with the given \p Mask.
-static void reorderScalars(SmallVectorImpl<Value *> &Scalars,
-                           ArrayRef<int> Mask) {
-  assert(!Mask.empty() && "Expected non-empty mask.");
-  SmallVector<Value *> Prev(Scalars.size(),
-                            PoisonValue::get(Scalars.front()->getType()));
-  Prev.swap(Scalars);
-  for (unsigned I = 0, E = Prev.size(); I < E; ++I)
-    if (Mask[I] != PoisonMaskElem)
-      Scalars[Mask[I]] = Prev[I];
-}
-
-/// Checks if the provided value does not require scheduling. It does not
-/// require scheduling if this is not an instruction or it is an instruction
-/// that does not read/write memory and all operands are either not instructions
-/// or phi nodes or instructions from different blocks.
-static bool areAllOperandsNonInsts(Value *V) {
-  auto *I = dyn_cast<Instruction>(V);
-  if (!I)
-    return true;
-  return !mayHaveNonDefUseDependency(*I) &&
-    all_of(I->operands(), [I](Value *V) {
-      auto *IO = dyn_cast<Instruction>(V);
-      if (!IO)
-        return true;
-      return isa<PHINode>(IO) || IO->getParent() != I->getParent();
-    });
-}
-
-/// Checks if the provided value does not require scheduling. It does not
-/// require scheduling if this is not an instruction or it is an instruction
-/// that does not read/write memory and all users are phi nodes or instructions
-/// from the different blocks.
-static bool isUsedOutsideBlock(Value *V) {
-  auto *I = dyn_cast<Instruction>(V);
-  if (!I)
-    return true;
-  // Limits the number of uses to save compile time.
-  return !I->mayReadOrWriteMemory() && !I->hasNUsesOrMore(UsesLimit) &&
-         all_of(I->users(), [I](User *U) {
-           auto *IU = dyn_cast<Instruction>(U);
-           if (!IU)
-             return true;
-           return IU->getParent() != I->getParent() || isa<PHINode>(IU);
-         });
-}
-
-/// Checks if the specified value does not require scheduling. It does not
-/// require scheduling if all operands and all users do not need to be scheduled
-/// in the current basic block.
-static bool doesNotNeedToBeScheduled(Value *V) {
-  return areAllOperandsNonInsts(V) && isUsedOutsideBlock(V);
-}
-
-/// Checks if the specified array of instructions does not require scheduling.
-/// It is so if all either instructions have operands that do not require
-/// scheduling or their users do not require scheduling since they are phis or
-/// in other basic blocks.
-static bool doesNotNeedToSchedule(ArrayRef<Value *> VL) {
-  return !VL.empty() &&
-         (all_of(VL, isUsedOutsideBlock) || all_of(VL, areAllOperandsNonInsts));
 }
 
 /// Returns true if widened type of \p Ty elements with size \p Sz represents
@@ -3403,7 +3176,7 @@ public:
       // arguments to the intrinsic produces the same result.
       Instruction *MainOp = S.getMainOp();
       unsigned NumOperands = MainOp->getNumOperands();
-      ArgSize = ::getNumberOfPotentiallyCommutativeOps(MainOp);
+      ArgSize = getNumberOfPotentiallyCommutativeOps(MainOp);
       OpsVec.resize(ArgSize);
       unsigned NumLanes = VL.size();
       for (OperandDataVec &Ops : OpsVec)
@@ -5839,27 +5612,26 @@ private:
           // Same applies even for non-commutative cmps, because we can invert
           // their predicate potentially and, thus, reorder the operands.
           bool IsCommutativeUser =
-              ::isCommutative(User) &&
-              ::isCommutableOperand(User, User, U.getOperandNo());
+              isCommutative(User) &&
+              isCommutableOperand(User, User, U.getOperandNo());
           if (!IsCommutativeUser) {
             Instruction *MainOp = TE->getMatchingMainOpOrAltOp(User);
             IsCommutativeUser =
-                ::isCommutative(MainOp, User) &&
-                ::isCommutableOperand(MainOp, User, U.getOperandNo());
+                isCommutative(MainOp, User) &&
+                isCommutableOperand(MainOp, User, U.getOperandNo());
           }
           // The commutative user with the same operands can be safely
           // considered as non-commutative, operands reordering does not change
           // the semantics.
           assert(
               (!IsCommutativeUser ||
-               (((::isCommutative(User) &&
-                  ::isCommutableOperand(User, User, 0) &&
-                  ::isCommutableOperand(User, User, 1)) ||
-                 (::isCommutative(TE->getMatchingMainOpOrAltOp(User), User) &&
-                  ::isCommutableOperand(TE->getMatchingMainOpOrAltOp(User),
-                                        User, 0) &&
-                  ::isCommutableOperand(TE->getMatchingMainOpOrAltOp(User),
-                                        User, 1))))) &&
+               (((isCommutative(User) && isCommutableOperand(User, User, 0) &&
+                  isCommutableOperand(User, User, 1)) ||
+                 (isCommutative(TE->getMatchingMainOpOrAltOp(User), User) &&
+                  isCommutableOperand(TE->getMatchingMainOpOrAltOp(User), User,
+                                      0) &&
+                  isCommutableOperand(TE->getMatchingMainOpOrAltOp(User), User,
+                                      1))))) &&
               "Expected commutative user with 2 first commutable operands");
           bool IsCommutativeWithSameOps =
               IsCommutativeUser && User->getOperand(0) == User->getOperand(1);
@@ -5910,7 +5682,7 @@ private:
             }
           }
           for (unsigned OpIdx :
-               seq<unsigned>(::getNumberOfPotentiallyCommutativeOps(
+               seq<unsigned>(getNumberOfPotentiallyCommutativeOps(
                    P.first->getMainOp()))) {
             if (P.first->getOperand(OpIdx)[Lane] == Op &&
                 getScheduleCopyableData(EdgeInfo(P.first, OpIdx), Op))
@@ -8931,7 +8703,7 @@ bool BoUpSLP::isProfitableToReorder() const {
             return TE->State == TreeEntry::SplitVectorize &&
                    !TE->ReorderIndices.empty() && TE->UserTreeIndex.UserTE &&
                    TE->UserTreeIndex.UserTE->State == TreeEntry::Vectorize &&
-                   ::isCommutative(TE->UserTreeIndex.UserTE->getMainOp());
+                   isCommutative(TE->UserTreeIndex.UserTE->getMainOp());
           });
       if (ReorderedSplitsCnt <= 1 &&
           static_cast<unsigned>(count_if(
@@ -12451,10 +12223,10 @@ class InstructionsCompatibilityAnalysis {
       return false;
     Instruction *SMain = S.getMainOp();
     Instruction *SAlt = S.isAltShuffle() ? S.getAltOp() : nullptr;
-    const bool IsCommutative = ::isCommutative(SMain);
+    const bool IsCommutative = isCommutative(SMain);
     const bool IsAltCommutative =
-        S.isAltShuffle() ? ::isCommutative(SAlt) : false;
-    const bool IsMainCommutative = ::isCommutative(MainOp);
+        S.isAltShuffle() ? isCommutative(SAlt) : false;
+    const bool IsMainCommutative = isCommutative(MainOp);
     SmallVector<BoUpSLP::ValueList> Ops;
     buildOriginalOperands(S, SMain, Ops);
     // Support only binary operations for now.
@@ -12567,7 +12339,7 @@ class InstructionsCompatibilityAnalysis {
           S.getMatchingMainOpOrAltOp(I) == S.getMainOp() ? SMain : SAlt;
       const bool IsCommutativeInst =
           (MatchingOp == SMain ? IsCommutative : IsAltCommutative) ||
-          ::isCommutative(I, MatchingOp);
+          isCommutative(I, MatchingOp);
       if (S.isAltShuffle() && MatchingOp == SAlt &&
           any_of(VOps, [&](const BoUpSLP::ValueList &Ops) {
             auto *I = dyn_cast<BinaryOperator>(Ops[0]);
@@ -23711,6 +23483,21 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
            return !SI || isCommutative(SI);
          })))
       I->setHasNoUnsignedWrap(/*b=*/false);
+    // A sub feeding icmp eq/ne 0 may have its operands swapped; nsw does not
+    // survive a - b -> b - a (a - b can be INT_MIN while b - a overflows).
+    if (!MinBWs.contains(E) && Opcode == Instruction::Sub &&
+        any_of(Scalars, [](Value *Scalar) {
+          auto *SI = dyn_cast<Instruction>(Scalar);
+          if (!SI || SI->getOpcode() != Instruction::Sub || !isCommutative(SI))
+            return false;
+          return any_of(SI->uses(), [](const Use &U) {
+            CmpPredicate Pred;
+            return match(U.getUser(),
+                         m_ICmp(Pred, m_Specific(U.get()), m_Zero())) &&
+                   ICmpInst::isEquality(Pred);
+          });
+        }))
+      I->setHasNoSignedWrap(/*b=*/false);
     // Interchanging add/sub negates the constant: nsw only survives if the
     // constant isn't INT_MIN (negating it would overflow); nuw never
     // survives a nonzero constant, since that flips the valid range from
@@ -23745,6 +23532,18 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             const auto *CI = dyn_cast<ConstantInt>(Op);
             return CI && CI->getValue().isMinSignedValue();
           });
+        }))
+      I->setHasNoSignedWrap(/*b=*/false);
+    // shl nsw X, BW-1 is not equivalent to mul nsw X, INT_MIN: shl nsw never
+    // poisons at X = -1 (shifted-out bits match the sign bit), but mul nsw
+    // does. A shl lane converted to mul this way must drop nsw.
+    if (!MinBWs.contains(E) && Opcode == Instruction::Mul &&
+        any_of(UniqueInsts, [&](Value *V) {
+          auto *SI = cast<Instruction>(V);
+          if (SI->getOpcode() != Instruction::Shl)
+            return false;
+          const auto *CI = dyn_cast<ConstantInt>(SI->getOperand(1));
+          return CI && CI->getValue() == CI->getBitWidth() - 1;
         }))
       I->setHasNoSignedWrap(/*b=*/false);
     if (auto *ICmp = dyn_cast<ICmpInst>(I); ICmp && It == MinBWs.end())
@@ -29879,8 +29678,8 @@ class HorizontalReduction {
     if (I->isAssociative())
       return ReductionOrdering::Unordered;
 
-    return ::isCommutative(I) ? ReductionOrdering::Ordered
-                              : ReductionOrdering::None;
+    return isCommutative(I) ? ReductionOrdering::Ordered
+                            : ReductionOrdering::None;
   }
 
   static Value *getRdxOperand(Instruction *I, unsigned Index) {

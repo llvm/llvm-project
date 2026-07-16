@@ -2550,8 +2550,8 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     mlir::Attribute attr;
     if (parser.parseAttribute(attr).failed())
       return failure();
-    if (!mlir::isa<cir::CXXCtorAttr, cir::CXXDtorAttr, cir::CXXAssignAttr>(
-            attr))
+    if (!mlir::isa<cir::CXXCtorAttr, cir::CXXDtorAttr, cir::CXXAssignAttr,
+                   cir::FuncIdentityAttr>(attr))
       return parser.emitError(attrLoc,
                               "expected a function info attribute, got ")
              << attr;
