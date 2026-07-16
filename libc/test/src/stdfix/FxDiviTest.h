@@ -1,0 +1,189 @@
+//===-- Utility class to test fxdivi functions ------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "test/UnitTest/Test.h"
+
+#include "hdr/signal_macros.h"
+#include "src/__support/CPP/limits.h"
+#include "src/__support/fixed_point/fx_rep.h"
+
+namespace cpp = LIBC_NAMESPACE::cpp;
+
+template <typename FXType, typename IntType>
+class FxDiviTest : public LIBC_NAMESPACE::testing::Test {
+  using FXRep = LIBC_NAMESPACE::fixed_point::FXRep<FXType>;
+
+  static constexpr FXType fx_max = FXRep::MAX();
+  static constexpr FXType fx_min = FXRep::MIN();
+  static constexpr FXType fx_zero = FXRep::ZERO();
+  static constexpr FXType epsilon = FXRep::EPS();
+  static constexpr FXType one_half = FXRep::ONE_HALF();
+  static constexpr FXType one_fourth = FXRep::ONE_FOURTH();
+  static constexpr FXType one_eighth = FXRep::ONE_EIGHTH();
+
+  static constexpr bool is_signed = (FXRep::SIGN_LEN > 0);
+  static constexpr bool has_integral = (FXRep::INTEGRAL_LEN > 0);
+  static constexpr int F = FXRep::FRACTION_LEN;
+
+  static constexpr auto abs_diff = [](FXType a, FXType b) {
+    return (a > b) ? (a - b) : (b - a);
+  };
+
+public:
+  typedef FXType (*FxDiviFunc)(IntType, IntType);
+
+  void testBasicNumbers(FxDiviFunc func) {
+    EXPECT_TRUE(abs_diff(func(1, 3), static_cast<FXType>(
+                                         0.33333333333333333333)) <= epsilon);
+    EXPECT_TRUE(abs_diff(func(2, 3), static_cast<FXType>(
+                                         0.66666666666666666667)) <= epsilon);
+    EXPECT_TRUE(abs_diff(func(3, 4), 3 * one_fourth) <= epsilon);
+    EXPECT_TRUE(abs_diff(func(5, 7), static_cast<FXType>(
+                                         0.71428571428571428571)) <= epsilon);
+    if constexpr (is_signed) {
+      EXPECT_TRUE(
+          abs_diff(func(-5, 7), static_cast<FXType>(-0.71428571428571428571)) <=
+          epsilon);
+    }
+    EXPECT_TRUE(abs_diff(func(1043, 2764),
+                         static_cast<FXType>(0.37735166425470332851)) <=
+                epsilon);
+    EXPECT_TRUE(abs_diff(func(60000, 720293),
+                         static_cast<FXType>(0.08329943509099769122)) <=
+                epsilon);
+
+    EXPECT_EQ(func(128, 256), one_half);
+    EXPECT_EQ(func(1, 2), one_half);
+    EXPECT_EQ(func(1, 4), one_fourth);
+    EXPECT_EQ(func(1, 8), one_eighth);
+    EXPECT_EQ(func(1, 16), static_cast<FXType>(0.0625));
+    if constexpr (is_signed) {
+      EXPECT_EQ(func(-1, 2), -one_half);
+      EXPECT_EQ(func(1, -4), -one_fourth);
+      EXPECT_EQ(func(-1, 8), -one_eighth);
+      EXPECT_EQ(func(1, -16), static_cast<FXType>(-0.0625));
+    }
+
+    if constexpr (has_integral) {
+      EXPECT_TRUE(
+          abs_diff(func(27, 23), static_cast<FXType>(1.17391304347826086957)) <=
+          epsilon);
+    }
+  }
+
+  void testEdgeCases(FxDiviFunc func) {
+    constexpr IntType int_max = cpp::numeric_limits<IntType>::max();
+
+    EXPECT_EQ(func(0, 10), fx_zero);
+    if constexpr (is_signed) {
+      EXPECT_EQ(func(0, -10), fx_zero);
+    }
+
+    if constexpr (is_signed && (F < cpp::numeric_limits<IntType>::digits)) {
+      constexpr IntType edge = static_cast<IntType>(1) << F;
+      EXPECT_EQ(func(-edge, edge), static_cast<FXType>(-1));
+      if constexpr (has_integral) {
+        EXPECT_TRUE(abs_diff(func(edge - 1, edge),
+                             static_cast<FXType>(1) - epsilon) <= epsilon);
+      } else {
+        EXPECT_EQ(func(edge - 1, edge), fx_max);
+      }
+    }
+
+    if constexpr (has_integral) {
+      EXPECT_EQ(func(int_max, int_max), static_cast<FXType>(1));
+      EXPECT_TRUE(abs_diff(func(int_max - 1, int_max),
+                           static_cast<FXType>(1) - epsilon) <= epsilon);
+    } else {
+      EXPECT_EQ(func(int_max, int_max), fx_max);
+      EXPECT_EQ(func(int_max - 1, int_max), fx_max);
+      EXPECT_EQ(func(27, 23), fx_max);
+    }
+
+    EXPECT_EQ(func(1, int_max), fx_zero);
+
+    if constexpr (is_signed) {
+      constexpr IntType int_min = cpp::numeric_limits<IntType>::min();
+
+      if constexpr (has_integral) {
+        EXPECT_TRUE(abs_diff(func(int_min, int_max), static_cast<FXType>(-1)) <=
+                    epsilon);
+        EXPECT_EQ(func(int_min, int_min), static_cast<FXType>(1));
+      } else {
+        EXPECT_EQ(func(int_min, int_max), fx_min);
+        EXPECT_EQ(func(int_min, int_min), fx_max);
+      }
+
+      EXPECT_EQ(func(int_min, 1), fx_min);
+      EXPECT_TRUE(abs_diff(func(1, int_min), fx_zero) <= epsilon);
+
+      if constexpr (has_integral) {
+        EXPECT_EQ(func(3, -1), static_cast<FXType>(-3));
+        EXPECT_EQ(func(-3, -1), static_cast<FXType>(3));
+        EXPECT_EQ(func(3, 1), static_cast<FXType>(3));
+        EXPECT_EQ(func(-3, 1), static_cast<FXType>(-3));
+      }
+      EXPECT_EQ(func(int_min, -1), fx_max);
+      EXPECT_EQ(func(int_max, -1), fx_min);
+    }
+  }
+
+  void testWideOperands(FxDiviFunc func) {
+    if constexpr (sizeof(IntType) * 8 > 32) {
+      constexpr IntType big_pow2 = static_cast<IntType>(1) << 40;
+
+      if constexpr (has_integral) {
+        EXPECT_EQ(func(big_pow2, big_pow2), static_cast<FXType>(1));
+      } else {
+        EXPECT_EQ(func(big_pow2, big_pow2), fx_max);
+      }
+      EXPECT_EQ(func(big_pow2, big_pow2 << 1), one_half);
+      if constexpr (is_signed) {
+        EXPECT_EQ(func(-big_pow2, big_pow2), static_cast<FXType>(-1));
+      }
+
+      constexpr IntType big_non_pow2 = big_pow2 + 7;
+      EXPECT_TRUE(abs_diff(func(3, big_non_pow2), fx_zero) <= epsilon);
+      EXPECT_EQ(func(big_non_pow2, big_non_pow2 << 1), one_half);
+    }
+  }
+
+  void testInvalidNumbers(FxDiviFunc func) {
+    EXPECT_DEATH([func] { func(1, 0); }, WITH_SIGNAL(-1));
+    if constexpr (is_signed) {
+      EXPECT_DEATH([func] { func(-1, 0); }, WITH_SIGNAL(-1));
+    }
+  }
+};
+
+#if defined(LIBC_ADD_NULL_CHECKS)
+#define LIST_FXDIVI_TESTS(Name, FXType, IntType, func)                         \
+  using LlvmLibc##Name##Divi##Test = FxDiviTest<FXType, IntType>;              \
+  TEST_F(LlvmLibc##Name##Divi##Test, InvalidNumbers) {                         \
+    testInvalidNumbers(&func);                                                 \
+  }                                                                            \
+  TEST_F(LlvmLibc##Name##Divi##Test, BasicNumbers) {                           \
+    testBasicNumbers(&func);                                                   \
+  }                                                                            \
+  TEST_F(LlvmLibc##Name##Divi##Test, EdgeCases) { testEdgeCases(&func); }      \
+  TEST_F(LlvmLibc##Name##Divi##Test, WideOperands) {                           \
+    testWideOperands(&func);                                                   \
+  }                                                                            \
+  static_assert(true, "Require semicolon.")
+#else
+#define LIST_FXDIVI_TESTS(Name, FXType, IntType, func)                         \
+  using LlvmLibc##Name##Divi##Test = FxDiviTest<FXType, IntType>;              \
+  TEST_F(LlvmLibc##Name##Divi##Test, BasicNumbers) {                           \
+    testBasicNumbers(&func);                                                   \
+  }                                                                            \
+  TEST_F(LlvmLibc##Name##Divi##Test, EdgeCases) { testEdgeCases(&func); }      \
+  TEST_F(LlvmLibc##Name##Divi##Test, WideOperands) {                           \
+    testWideOperands(&func);                                                   \
+  }                                                                            \
+  static_assert(true, "Require semicolon.")
+#endif // LIBC_ADD_NULL_CHECKS

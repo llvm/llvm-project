@@ -1,4 +1,4 @@
-//===-- Implementation header for rdivi ------------------------*- C++ -*-===//
+//===-- Implementation header for lkdivi ------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STDFIX_RDIVI_H
-#define LLVM_LIBC_SRC_STDFIX_RDIVI_H
+#ifndef LLVM_LIBC_SRC_STDFIX_LKDIVI_H
+#define LLVM_LIBC_SRC_STDFIX_LKDIVI_H
 
 #include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-fract rdivi(int n, int d);
+long accum lkdivi(long int n, long int d);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_STDFIX_RDIVI_H
+#endif // LLVM_LIBC_SRC_STDFIX_LKDIVI_H

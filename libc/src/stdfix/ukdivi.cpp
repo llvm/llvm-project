@@ -1,4 +1,4 @@
-//===-- Implementation header for rdivi ------------------------*- C++ -*-===//
+//===-- Implementation of ukdivi function ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STDFIX_RDIVI_H
-#define LLVM_LIBC_SRC_STDFIX_RDIVI_H
-
-#include "include/llvm-libc-macros/stdfix-macros.h"
-#include "src/__support/macros/config.h"
+#include "ukdivi.h"
+#include "src/__support/common.h"
+#include "src/__support/fixed_point/fx_bits.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-fract rdivi(int n, int d);
+LLVM_LIBC_FUNCTION(unsigned accum, ukdivi, (unsigned int n, unsigned int d)) {
+  return fixed_point::fxdivi<unsigned accum, unsigned int>(n, d);
+}
 
 } // namespace LIBC_NAMESPACE_DECL
-
-#endif // LLVM_LIBC_SRC_STDFIX_RDIVI_H
