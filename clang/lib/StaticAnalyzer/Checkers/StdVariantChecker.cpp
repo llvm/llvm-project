@@ -226,8 +226,11 @@ private:
     if (ArgSVal.isUnknown())
       return false;
 
-    const auto &ArgType =
-        ArgSVal.getType(C.getASTContext())->getPointeeType().getTypePtr();
+    QualType SValType = ArgSVal.getType(C.getASTContext());
+    if (SValType.isNull() || !SValType->isPointerType())
+      return false;
+
+    const auto &ArgType = SValType->getPointeeType().getTypePtr();
     // We have to make sure that the argument is an std::variant.
     // There is another std::get with std::pair argument
     if (!isStdVariant(ArgType))
