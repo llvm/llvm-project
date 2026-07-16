@@ -23,6 +23,8 @@ struct TestFloat {
   template <class T>
   static TEST_CONSTEXPR_CXX23 bool test() {
     assert(std::isgreater(std::numeric_limits<T>::max(), T(0)));
+    assert(!std::isgreater(T(0), std::numeric_limits<T>::max()));
+    assert(!std::isgreater(std::numeric_limits<T>::max(), std::numeric_limits<T>::max()));
 
     return true;
   }
@@ -40,6 +42,8 @@ struct TestInt {
   template <class T>
   static TEST_CONSTEXPR_CXX23 bool test() {
     assert(std::isgreater(std::numeric_limits<T>::max(), T(0)));
+    assert(!std::isgreater(T(0), std::numeric_limits<T>::max()));
+    assert(!std::isgreater(std::numeric_limits<T>::max(), std::numeric_limits<T>::max()));
 
     return true;
   }
@@ -58,14 +62,17 @@ struct ConvertibleTo {
   operator T() const { return T(1); }
 };
 
-template <typename T>
-struct ZeroConvertibleTo {
-  operator T() const { return T(0); }
-};
-
 int main(int, char**) {
   types::for_each(types::floating_point_types(), TestFloat());
   types::for_each(types::integral_types(), TestInt());
+
+  // Make sure we can call `std::isgreater` with mixed-type promotions with __promote_t<_A1, _A2>.
+  {
+    assert(std::isgreater(2.0, 1));     // double vs int
+    assert(!std::isgreater(1, 2.0f));   // int vs float
+    assert(std::isgreater(2.0L, 1.0f)); // long double vs float
+    assert(!std::isgreater(std::numeric_limits<double>::quiet_NaN(), 0));
+  }
 
   return 0;
 }
