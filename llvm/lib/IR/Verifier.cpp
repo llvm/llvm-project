@@ -4582,15 +4582,29 @@ void Verifier::visitLoadInst(LoadInst &LI) {
     Check(LI.getOrdering() != AtomicOrdering::Release &&
               LI.getOrdering() != AtomicOrdering::AcquireRelease,
           "Load cannot have Release ordering", &LI);
-    Check(ElTy->getScalarType()->isIntOrPtrTy() ||
-              ElTy->getScalarType()->isByteTy() ||
-              ElTy->getScalarType()->isFloatingPointTy(),
+
+    Type *ScalarTy = ElTy;
+    if (LI.isElementwise()) {
+      auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
+      Check(VecTy,
+            "atomic elementwise load operand must have fixed vector type!", &LI,
+            ElTy);
+      if (VecTy) {
+        checkAtomicMemAccessSize(ScalarTy, &LI);
+        ScalarTy = VecTy->getElementType();
+      }
+    }
+
+    Check(ScalarTy->getScalarType()->isIntOrPtrTy() ||
+              ScalarTy->getScalarType()->isByteTy() ||
+              ScalarTy->getScalarType()->isFloatingPointTy(),
           "atomic load operand must have integer, byte, pointer, floating "
           "point, or vector type!",
           ElTy, &LI);
 
-    checkAtomicMemAccessSize(ElTy, &LI);
+    checkAtomicMemAccessSize(ScalarTy, &LI);
   } else {
+    Check(!LI.isElementwise(), "non-atomic load cannot be elementwise", &LI);
     Check(LI.getSyncScopeID() == SyncScope::System,
           "Non-atomic load cannot have SynchronizationScope specified", &LI);
   }
@@ -5906,6 +5920,17 @@ void Verifier::visitInstruction(Instruction &I) {
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_mem_cache_hint))
     visitMemCacheHintMetadata(I, MD);
+
+  if (MDNode *MD = I.getMetadata("amdgpu.expected.active.lanes")) {
+    Check(MD->getNumOperands() == 1,
+          "!amdgpu.expected.active.lanes must have exactly one operand", &I,
+          MD);
+    ConstantInt *CI =
+        mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(0));
+    Check(CI && CI->getType()->isIntegerTy(32),
+          "!amdgpu.expected.active.lanes operand must be an i32 constant", &I,
+          MD);
+  }
 
   if (MDNode *N = I.getDebugLoc().getAsMDNode()) {
     CheckDI(isa<DILocation>(N), "invalid !dbg metadata attachment", &I, N);

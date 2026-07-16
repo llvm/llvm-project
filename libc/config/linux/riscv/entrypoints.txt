@@ -4,6 +4,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.arpa.inet.htons
     libc.src.arpa.inet.inet_addr
     libc.src.arpa.inet.inet_aton
+    libc.src.arpa.inet.inet_ntoa
     libc.src.arpa.inet.inet_ntop
     libc.src.arpa.inet.ntohl
     libc.src.arpa.inet.ntohs
@@ -1187,6 +1188,14 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.idivuk
     libc.src.stdfix.idivulk
     libc.src.stdfix.rdivi
+    libc.src.stdfix.divir
+    libc.src.stdfix.divilr
+    libc.src.stdfix.divik
+    libc.src.stdfix.divilk
+    libc.src.stdfix.diviur
+    libc.src.stdfix.diviulr
+    libc.src.stdfix.diviuk
+    libc.src.stdfix.diviulk
   )
 endif()
 

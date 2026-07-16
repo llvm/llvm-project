@@ -35,6 +35,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
+#include <tuple>
 
 using namespace llvm;
 
@@ -126,6 +127,39 @@ static bool canRemat(const MachineInstr &MI) {
   return false;
 }
 
+// Split relocation flags for 64-bit global-address materialization into a
+// common base and the hi/lo relocation variants.
+static std::tuple<unsigned, unsigned, unsigned>
+splitGlobalAddressRelocFlags(const GCNSubtarget &ST,
+                             const MachineOperand &SrcOp) {
+  unsigned SrcFlags = SrcOp.getTargetFlags();
+
+  // Infer the relocation type from the existing flags on the global operand.
+  // The relocation type should have been determined earlier in the pipeline.
+  unsigned LoReloc = SIInstrInfo::MO_ABS32_LO;
+  unsigned HiReloc = SIInstrInfo::MO_ABS32_HI;
+
+  if (SrcFlags & SIInstrInfo::MO_REL32) {
+    LoReloc = SIInstrInfo::MO_REL32_LO;
+    HiReloc = SIInstrInfo::MO_REL32_HI;
+  } else if (SrcFlags & SIInstrInfo::MO_GOTPCREL32_LO) {
+    LoReloc = SIInstrInfo::MO_GOTPCREL32_LO;
+    HiReloc = SIInstrInfo::MO_GOTPCREL32_HI;
+  } else if (SrcFlags & SIInstrInfo::MO_GOTPCREL64) {
+    // For 64-bit GOT-relative, use the 64-bit relocation.
+    LoReloc = SIInstrInfo::MO_GOTPCREL64;
+    HiReloc = SIInstrInfo::MO_GOTPCREL64;
+  }
+
+  unsigned BaseFlags =
+      SrcFlags & ~(SIInstrInfo::MO_ABS32_LO | SIInstrInfo::MO_ABS32_HI |
+                   SIInstrInfo::MO_REL32_LO | SIInstrInfo::MO_REL32_HI |
+                   SIInstrInfo::MO_GOTPCREL32_LO |
+                   SIInstrInfo::MO_GOTPCREL32_HI | SIInstrInfo::MO_GOTPCREL64);
+
+  return std::make_tuple(BaseFlags, LoReloc, HiReloc);
+}
+
 bool SIInstrInfo::isReMaterializableImpl(
     const MachineInstr &MI) const {
 
@@ -203,7 +237,7 @@ bool SIInstrInfo::isSafeToSink(MachineInstr &MI,
       // does not contain SuccToSinkTo and also has divergent exit condition.
       while (FromCycle && !FromCycle->contains(ToCycle)) {
         SmallVector<MachineBasicBlock *, 1> ExitingBlocks;
-        FromCycle->getExitingBlocks(ExitingBlocks);
+        CI->getExitingBlocks(*FromCycle, ExitingBlocks);
 
         // FromCycle has divergent exit condition.
         for (MachineBasicBlock *ExitingBlock : ExitingBlocks) {
@@ -1913,6 +1947,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MBB.findDebugLoc(MI);
   const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
+
   switch (MI.getOpcode()) {
   default: return TargetInstrInfo::expandPostRAPseudo(MI);
   case AMDGPU::S_MOV_B64_term:
@@ -2037,10 +2072,25 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     if (ST.hasVMovB64Inst() && Mov64RC->contains(Dst)) {
       MI.setDesc(Mov64Desc);
       if (SrcOp.isReg() || isInlineConstant(MI, 1) ||
-          isUInt<32>(SrcOp.getImm()) || ST.has64BitLiterals())
+          (SrcOp.isImm() &&
+           (isUInt<32>(SrcOp.getImm()) || ST.has64BitLiterals())) ||
+          (SrcOp.isGlobal() && ST.has64BitLiterals()))
         break;
     }
-    if (SrcOp.isImm()) {
+    if (SrcOp.isGlobal()) {
+      // The address is unknown until link time, so the PK_MOV inline-constant
+      // shortcut cannot apply.
+      const GlobalValue *GV = SrcOp.getGlobal();
+      int64_t Offset = SrcOp.getOffset();
+      unsigned BaseFlags, LoReloc, HiReloc;
+      std::tie(BaseFlags, LoReloc, HiReloc) =
+          splitGlobalAddressRelocFlags(ST, SrcOp);
+
+      BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_e32), DstLo)
+          .addGlobalAddress(GV, Offset, BaseFlags | LoReloc);
+      BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_e32), DstHi)
+          .addGlobalAddress(GV, Offset, BaseFlags | HiReloc);
+    } else if (SrcOp.isImm()) {
       APInt Imm(64, SrcOp.getImm());
       APInt Lo(32, Imm.getLoBits(32).getZExtValue());
       APInt Hi(32, Imm.getHiBits(32).getZExtValue());
@@ -2102,6 +2152,25 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       break;
     }
 
+    if (SrcOp.isGlobal()) {
+      Register Dst = MI.getOperand(0).getReg();
+      Register DstLo = RI.getSubReg(Dst, AMDGPU::sub0);
+      Register DstHi = RI.getSubReg(Dst, AMDGPU::sub1);
+      const GlobalValue *GV = SrcOp.getGlobal();
+      int64_t Offset = SrcOp.getOffset();
+      unsigned BaseFlags, LoReloc, HiReloc;
+      std::tie(BaseFlags, LoReloc, HiReloc) =
+          splitGlobalAddressRelocFlags(ST, SrcOp);
+
+      BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), DstLo)
+          .addGlobalAddress(GV, Offset, BaseFlags | LoReloc);
+      BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), DstHi)
+          .addGlobalAddress(GV, Offset, BaseFlags | HiReloc);
+      MI.eraseFromParent();
+      break;
+    }
+
+    // SrcOp is immediate
     APInt Imm(64, SrcOp.getImm());
     if (Imm.isIntN(32) || isInlineConstant(Imm)) {
       MI.setDesc(get(AMDGPU::S_MOV_B64));
