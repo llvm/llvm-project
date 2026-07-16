@@ -102,7 +102,7 @@ bool L0DeviceTy::isDeviceIPorNewer(uint32_t Version) const {
 /// Scan the device's command queue groups in a single query, selecting the
 /// default compute group and detecting cooperative kernel support. Returns an
 /// Error if the device exposes no compute queue group.
-Expected<QueueGroupInfoTy> L0DeviceTy::scanQueueGroups() {
+Expected<DeviceQueueConfigInfoTy> L0DeviceTy::scanQueueGroups() {
   uint32_t Count = 0;
   const auto zeDevice = getZeDevice();
   CALL_ZE_RET_ERROR(zeDeviceGetCommandQueueGroupProperties, zeDevice, &Count,
@@ -113,15 +113,15 @@ Expected<QueueGroupInfoTy> L0DeviceTy::scanQueueGroups() {
   CALL_ZE_RET_ERROR(zeDeviceGetCommandQueueGroupProperties, zeDevice, &Count,
                     Properties.data());
 
-  QueueGroupInfoTy Info;
+  DeviceQueueConfigInfoTy Info;
   bool FoundComputeGroup = false;
   for (uint32_t I = 0; I < Count; I++) {
     if (!FoundComputeGroup &&
         (Properties[I].flags & ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE)) {
       Info.DefaultCmdQueueGroup =
-          ComputeGroupInfoTy{/*Ordinal=*/I,
-                             /*NumQueues=*/Properties[I].numQueues,
-                             Properties[I].maxMemoryFillPatternSize};
+          ComputeQueueGroupInfoTy{/*Ordinal=*/I,
+                                  /*NumQueues=*/Properties[I].numQueues,
+                                  Properties[I].maxMemoryFillPatternSize};
       FoundComputeGroup = true;
     }
     // TODO: track exactly which queue groups support cooperative kernels
@@ -196,7 +196,7 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
   auto QueueGroupInfoOrErr = scanQueueGroups();
   if (!QueueGroupInfoOrErr)
     return QueueGroupInfoOrErr.takeError();
-  QueueGroupInfo = *QueueGroupInfoOrErr;
+  QueueConfig = *QueueGroupInfoOrErr;
   QueueCache.setCommandMode(getPlugin().getOptions().CommandMode);
 
   if (auto Err = MemAllocator.initDevicePools(*this, Options))
@@ -550,9 +550,8 @@ Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   Info.add("Single FP Capabilities", SingleFPCapabilities, "",
            DeviceInfo::SINGLE_FP_CONFIG);
 
-  Info.add("Cooperative launch support",
-           QueueGroupInfo.SupportsCooperativeKernels, "",
-           DeviceInfo::COOPERATIVE_LAUNCH_SUPPORT);
+  Info.add("Cooperative launch support", QueueConfig.SupportsCooperativeKernels,
+           "", DeviceInfo::COOPERATIVE_LAUNCH_SUPPORT);
   return Info;
 }
 

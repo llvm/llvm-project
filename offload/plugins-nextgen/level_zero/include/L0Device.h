@@ -77,7 +77,7 @@ struct L0DeviceIdTy {
 };
 
 /// Properties of a compute command queue group.
-struct ComputeGroupInfoTy {
+struct ComputeQueueGroupInfoTy {
   /// Command queue group ordinal.
   uint32_t Ordinal = std::numeric_limits<uint32_t>::max();
   /// Number of queues in the group.
@@ -88,9 +88,9 @@ struct ComputeGroupInfoTy {
 };
 
 /// Results of scanning a device's command queue groups.
-struct QueueGroupInfoTy {
+struct DeviceQueueConfigInfoTy {
   /// The compute command queue group selected as the device default.
-  ComputeGroupInfoTy DefaultCmdQueueGroup;
+  ComputeQueueGroupInfoTy DefaultCmdQueueGroup;
   /// Whether any command queue group on this device supports cooperative
   /// kernels.
   bool SupportsCooperativeKernels = false;
@@ -127,7 +127,7 @@ class L0DeviceTy final : public GenericDeviceTy {
 
   /// Command queue group info for this device. Value is unspecified unless the
   /// device reached a valid initialized state.
-  QueueGroupInfoTy QueueGroupInfo;
+  DeviceQueueConfigInfoTy QueueConfig;
 
   /// Command queue index for each device.
   uint32_t ComputeIndex = 0;
@@ -153,7 +153,7 @@ class L0DeviceTy final : public GenericDeviceTy {
   /// Scan the device's command queue groups, selecting the default compute
   /// group and detecting cooperative kernel support. Returns an Error if the
   /// device exposes no compute queue group.
-  Expected<QueueGroupInfoTy> scanQueueGroups();
+  Expected<DeviceQueueConfigInfoTy> scanQueueGroups();
 
   /// Helper function to call global constructors or destructors.
   Error callGlobalCtorDtorCommon(GenericPluginTy &Plugin, DeviceImageTy &Image,
@@ -191,7 +191,7 @@ public:
   ze_device_handle_t getZeDevice() const { return zeDevice; }
 
   bool supportsCooperativeKernels() const {
-    return QueueGroupInfo.SupportsCooperativeKernels;
+    return QueueConfig.SupportsCooperativeKernels;
   }
 
   const L0ContextTy &getL0Context() const { return l0Context; }
@@ -357,14 +357,14 @@ public:
   const std::string_view getUuid() const { return DeviceUuid; }
 
   uint32_t getComputeEngine() const {
-    return QueueGroupInfo.DefaultCmdQueueGroup.Ordinal;
+    return QueueConfig.DefaultCmdQueueGroup.Ordinal;
   }
   uint32_t getNumComputeQueues() const {
-    return QueueGroupInfo.DefaultCmdQueueGroup.NumQueues;
+    return QueueConfig.DefaultCmdQueueGroup.NumQueues;
   }
 
   size_t getMaxMemFillPatternSize() {
-    return QueueGroupInfo.DefaultCmdQueueGroup.MaxMemFillPatternSize;
+    return QueueConfig.DefaultCmdQueueGroup.MaxMemFillPatternSize;
   }
 
   void reportDeviceInfo() const;
