@@ -913,9 +913,8 @@ bool TGLexer::prepSkipRegion(bool MustNeverBeFalse) {
 
   do {
     // Skip all symbols to the line end.
-    while (CurPtr != CurBuf.end() && *CurPtr != '\n') {
+    while (CurPtr != CurBuf.end() && *CurPtr != '\n')
       ++CurPtr;
-    }
 
     // Find the first non-whitespace symbol in the next line(s).
     if (!prepSkipLineBegin())
