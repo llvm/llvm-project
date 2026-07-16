@@ -625,7 +625,10 @@ constexpr const char *saveTempsValues[] = {
 
 LinkerDriver::LinkerDriver(Ctx &ctx) : ctx(ctx) {}
 
-void LinkerDriver::cleanupLTO() { lto.reset(); }
+void LinkerDriver::cleanupLTO() {
+  if (lto)
+    lto->cleanupLTO();
+}
 
 void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   ELFOptTable parser;

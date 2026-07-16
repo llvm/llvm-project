@@ -38,10 +38,13 @@ using namespace llvm;
 lto::DTLTO::BackgroundDeletion::BackgroundDeletion()
     : DefaultThreadPool(hardware_concurrency(1)) {}
 
-lto::DTLTO::BackgroundDeletion::~BackgroundDeletion() {
+lto::DTLTO::BackgroundDeletion::~BackgroundDeletion() { waitForTasks(); }
+
+void lto::DTLTO::BackgroundDeletion::waitForTasks() {
   wait();
   for (const std::string &Warning : Warnings)
     errs() << "warning: could not remove the file " << Warning << "\n";
+  Warnings.clear();
 }
 
 void lto::DTLTO::BackgroundDeletion::remove(std::vector<std::string> &&Files,
@@ -56,9 +59,6 @@ void lto::DTLTO::BackgroundDeletion::remove(std::vector<std::string> &&Files,
     {
       TimeTraceScope TimeScope("Remove DTLTO temporary files");
       for (const std::string &Path : Files) {
-        if (Path.empty())
-          continue;
-
         std::error_code EC = sys::fs::remove(Path, true);
         if (!EC ||
             EC == std::make_error_code(std::errc::no_such_file_or_directory))
@@ -71,6 +71,8 @@ void lto::DTLTO::BackgroundDeletion::remove(std::vector<std::string> &&Files,
       timeTraceProfilerFinishThread();
   });
 }
+
+void lto::DTLTO::cleanupAfterRun() { BackgroundDeleter.waitForTasks(); }
 
 // Remove temporary files created to enable distribution.
 void lto::DTLTO::cleanup() {

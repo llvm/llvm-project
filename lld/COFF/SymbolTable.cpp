@@ -1511,6 +1511,9 @@ void SymbolTable::compileBitcodeFiles() {
   }
 }
 
-void SymbolTable::cleanupLTO() { lto.reset(); }
+void SymbolTable::cleanupLTO() {
+  if (lto)
+    lto->cleanupLTO();
+}
 
 } // namespace lld::coff

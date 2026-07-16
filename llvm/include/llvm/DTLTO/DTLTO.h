@@ -100,6 +100,8 @@ public:
   /// Cache) for each task identifier.
   virtual Error run(AddStreamFn AddStream, FileCache Cache = {}) override;
 
+  void cleanupAfterRun() override;
+
 private:
   /// DTLTO archive support.
   ///
@@ -369,6 +371,7 @@ private:
     ~BackgroundDeletion();
 
     void remove(std::vector<std::string> &&Files, const Config &Conf);
+    void waitForTasks();
 
     std::vector<std::string> Warnings;
   };

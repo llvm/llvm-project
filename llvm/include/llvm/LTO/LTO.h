@@ -438,6 +438,10 @@ public:
   /// Cache) for each task identifier.
   virtual Error run(AddStreamFn AddStream, FileCache Cache = {});
 
+  /// Performs any cleanup that should happen after run() returns. Most LTO
+  /// implementations have no post-run cleanup.
+  virtual void cleanupAfterRun() {}
+
   /// Static method that returns a list of libcall symbols that can be generated
   /// by LTO but might not be visible from bitcode symbol table.
   static SmallVector<const char *> getRuntimeLibcallSymbols(const Triple &TT);

@@ -156,6 +156,11 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
 
 BitcodeCompiler::~BitcodeCompiler() = default;
 
+void BitcodeCompiler::cleanupLTO() {
+  if (ltoObj)
+    ltoObj->cleanupAfterRun();
+}
+
 static void undefine(Symbol *s) { replaceSymbol<Undefined>(s, s->getName()); }
 
 void BitcodeCompiler::add(BitcodeFile &f) {
