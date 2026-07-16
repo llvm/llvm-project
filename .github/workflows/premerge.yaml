@@ -199,7 +199,14 @@ jobs:
           path: |
             comments-Windows-AMD64
 
-  premerge-compute-macos-self-hosted:
+  # Computes which projects/check-targets to build and test on the
+  # self-hosted macOS runners. This job intentionally runs on a
+  # GitHub-hosted runner rather than a self-hosted one, since self-hosted
+  # macOS capacity is limited and shouldn't be spent just to compute what
+  # to build. Its outputs feed premerge-check-macos below, which does the
+  # actual build/test on the self-hosted runners, so changes here directly
+  # affect what runs there.
+  premerge-compute-macos:
     name: Compute macOS Projects
     if: >-
         github.repository_owner == 'llvm' &&
@@ -255,14 +262,16 @@ jobs:
           echo "macos-projects=${projects_to_build}" >> $GITHUB_OUTPUT
           echo "macos-check-targets=${project_check_targets}" >> $GITHUB_OUTPUT
 
-  premerge-check-macos-self-hosted-runners:
+  premerge-check-macos:
     name: Build and Test macOS arm64
-    needs: premerge-compute-macos-self-hosted
+    needs: premerge-compute-macos
     runs-on: [self-hosted, macos, apple-runners]
+    # Skip the self-hosted runner entirely if there is nothing to build,
+    # rather than tying up a runner slot for a no-op run.
     if: >-
         github.repository_owner == 'llvm' &&
         (github.event_name != 'pull_request' || github.event.action != 'closed') &&
-        needs.premerge-compute-macos-self-hosted.outputs.macos-projects != ''
+        needs.premerge-compute-macos.outputs.macos-projects != ''
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -277,8 +286,8 @@ jobs:
         env:
           SCCACHE_BUCKET: sccache-bucket
           SCCACHE_REGION: us-west-2
-          PROJECTS: ${{ needs.premerge-compute-macos-self-hosted.outputs.macos-projects }}
-          CHECK_TARGETS: ${{ needs.premerge-compute-macos-self-hosted.outputs.macos-check-targets }}
+          PROJECTS: ${{ needs.premerge-compute-macos.outputs.macos-projects }}
+          CHECK_TARGETS: ${{ needs.premerge-compute-macos.outputs.macos-check-targets }}
           CLANG_TOOLCHAIN_PROGRAM_TIMEOUT: 120
         run: |
           export SCCACHE_IDLE_TIMEOUT=0
