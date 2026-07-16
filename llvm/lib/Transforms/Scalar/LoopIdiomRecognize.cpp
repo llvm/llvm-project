@@ -1646,14 +1646,6 @@ void LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info,
 
   IRBuilder<> Builder(CurLoop->getLoopPreheader()->getTerminator());
 
-  auto ShlOrLShr = [&Builder](Value *Op, int ShlAmt, const Twine &Name) {
-    if (ShlAmt > 0)
-      return Builder.CreateShl(Op, ShlAmt, Name);
-    if (ShlAmt < 0)
-      return Builder.CreateLShr(Op, -ShlAmt, Name);
-    return Op;
-  };
-
   auto LoTCBits = [TC, &Builder, &Ctx](Value *Op, const Twine &Name) {
     unsigned OpBW = Op->getType()->getIntegerBitWidth();
     assert(OpBW >= TC && "Bit width should be at least TripCount");
@@ -1688,9 +1680,12 @@ void LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info,
   }
 
   // Align the current CRC with TripCount (multiply or divide by x^(TC-CRCBW)).
-  ClmulMuInput = Info.IsBigEndian
-                     ? ShlOrLShr(ClmulMuInput, int(TC - CRCBW), "crc.align.tc")
-                     : ClmulMuInput;
+  if (Info.IsBigEndian && TC != CRCBW) {
+    ClmulMuInput =
+        TC > CRCBW
+            ? Builder.CreateShl(ClmulMuInput, TC - CRCBW, "crc.align.tc")
+            : Builder.CreateLShr(ClmulMuInput, CRCBW - TC, "crc.align.tc");
+  }
 
   // Zero out any bits above (TC-1) for calculation since the original loop
   // doesn't use them in the significant bit checks.
