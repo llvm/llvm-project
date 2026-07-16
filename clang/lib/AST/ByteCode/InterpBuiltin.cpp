@@ -2299,11 +2299,9 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
 
 static std::optional<unsigned> computeFullDescSize(const ASTContext &ASTCtx,
                                                    const Descriptor *Desc) {
-  if (Desc->isPrimitive())
+  if (Desc->isPrimitive() || Desc->isArray())
     return ASTCtx.getTypeSizeInChars(Desc->getType()).getQuantity();
-  if (Desc->isArray())
-    return ASTCtx.getTypeSizeInChars(Desc->getElemQualType()).getQuantity() *
-           Desc->getNumElems();
+
   if (Desc->isRecord()) {
     // Can't use Descriptor::getType() as that may return a pointer type. Look
     // at the decl directly.

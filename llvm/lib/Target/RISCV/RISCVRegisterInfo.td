@@ -237,12 +237,12 @@ let RegAltNameIndices = [ABIRegAltName] in {
   }
   def X8_Y : RISCVCapReg<X8, "x8", ["s0", "fp"]>, DwarfRegAlias<X8>;
   def X9_Y : RISCVCapReg<X9, "x9", ["s1"]>, DwarfRegAlias<X9>;
-  def X10_Y : RISCVCapReg<X10, "x10", ["a0"]>, DwarfRegAlias<X0>;
-  def X11_Y : RISCVCapReg<X11, "x11", ["a1"]>, DwarfRegAlias<X1>;
-  def X12_Y : RISCVCapReg<X12, "x12", ["a2"]>, DwarfRegAlias<X2>;
-  def X13_Y : RISCVCapReg<X13, "x13", ["a3"]>, DwarfRegAlias<X3>;
-  def X14_Y : RISCVCapReg<X14, "x14", ["a4"]>, DwarfRegAlias<X4>;
-  def X15_Y : RISCVCapReg<X15, "x15", ["a5"]>, DwarfRegAlias<X5>;
+  def X10_Y : RISCVCapReg<X10, "x10", ["a0"]>, DwarfRegAlias<X10>;
+  def X11_Y : RISCVCapReg<X11, "x11", ["a1"]>, DwarfRegAlias<X11>;
+  def X12_Y : RISCVCapReg<X12, "x12", ["a2"]>, DwarfRegAlias<X12>;
+  def X13_Y : RISCVCapReg<X13, "x13", ["a3"]>, DwarfRegAlias<X13>;
+  def X14_Y : RISCVCapReg<X14, "x14", ["a4"]>, DwarfRegAlias<X14>;
+  def X15_Y : RISCVCapReg<X15, "x15", ["a5"]>, DwarfRegAlias<X15>;
   let CostPerUse = [0, 1] in {
   def X16_Y : RISCVCapReg<X16, "x16", ["a6"]>, DwarfRegAlias<X16>;
   def X17_Y : RISCVCapReg<X17, "x17", ["a7"]>, DwarfRegAlias<X17>;

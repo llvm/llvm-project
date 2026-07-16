@@ -5983,3 +5983,17 @@ define <4 x i16> @test_psabs_v4i16(<4 x i16> %a) {
   %res = call <4 x i16> @llvm.riscv.psabs.v4i16(<4 x i16> %a)
   ret <4 x i16> %res
 }
+
+define <2 x i32> @test_return_zero() {
+; RV32-LABEL: test_return_zero:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    li a0, 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_return_zero:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a0, 0
+; RV64-NEXT:    ret
+  ret <2 x i32> splat (i32 0)
+}

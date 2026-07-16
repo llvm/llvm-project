@@ -312,7 +312,7 @@ void mock::MockLiboffload::initDefault() {
                             ol_device_handle_t DstDevice, const void *SrcPtr,
                             ol_device_handle_t SrcDevice,
                             size_t Size) -> ol_result_t {
-        if (!Queue || !DstDevice || !DstDevice)
+        if (!Queue || !DstDevice || !SrcDevice)
           return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
         if (!DstPtr || !SrcPtr)
           return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);

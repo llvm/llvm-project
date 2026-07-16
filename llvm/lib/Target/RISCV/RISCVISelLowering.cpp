@@ -2091,7 +2091,7 @@ RISCVTargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
   // spend eagerly computing the RHS condition should scale with how expensive a
   // mispredicted branch is. A branch only costs the full penalty when actually
   // mispredicted, so scale it down by an assumed misprediction rate (~25%).
-  int BaseCost = Subtarget.getSchedModel().MispredictPenalty / 4;
+  int BaseCost = Subtarget.getMispredictionPenalty() / 4;
   if (BrMergingBaseCostThresh.getNumOccurrences() > 1)
     BaseCost = BrMergingBaseCostThresh;
 
@@ -2849,6 +2849,10 @@ bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
 // TODO: This is very conservative.
 bool RISCVTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
                                                   unsigned Index) const {
+  if (Subtarget.hasStdExtP() && !Subtarget.is64Bit() &&
+      (ResVT == MVT::v4i8 || ResVT == MVT::v2i16))
+    return (Index % ResVT.getVectorNumElements()) == 0;
+
   if (!Subtarget.hasVInstructions())
     return false;
 
@@ -4740,49 +4744,6 @@ static SDValue lowerBuildVectorViaPacking(SDValue Op, SelectionDAG &DAG,
                      DAG.getBuildVector(WideVecVT, DL, NewOperands));
 }
 
-static SDValue lowerBuildVectorAsRV32PNarrowingShift(SDValue Op,
-                                                     SelectionDAG &DAG) {
-  // Match a legalized single-source deinterleave shuffle:
-  //   BUILD_VECTOR extractelt(src, 0), extractelt(src, 2), ...
-  //   BUILD_VECTOR extractelt(src, 1), extractelt(src, 3), ...
-  // and lower it to an RV32 P narrowing shift.
-  MVT VT = Op.getSimpleValueType();
-  if (VT != MVT::v4i8 && VT != MVT::v2i16)
-    return SDValue();
-
-  using namespace SDPatternMatch;
-  MVT SrcVT = VT == MVT::v4i8 ? MVT::v8i8 : MVT::v4i16;
-  unsigned EltBits = VT.getVectorElementType().getSizeInBits();
-  SDValue Src;
-  SmallVector<int, 4> ExtractIndices;
-  for (SDValue Lane : Op->op_values()) {
-    if (Lane.isUndef()) {
-      ExtractIndices.push_back(-1);
-      continue;
-    }
-
-    SDValue LaneSrc;
-    int64_t Idx;
-    if (!sd_match(Lane, m_ExtractElt(m_Value(LaneSrc), m_ConstInt(Idx))))
-      return SDValue();
-
-    if (LaneSrc.getSimpleValueType() != SrcVT || (Src && Src != LaneSrc))
-      return SDValue();
-
-    Src = LaneSrc;
-    ExtractIndices.push_back(Idx);
-  }
-
-  unsigned Index = 0;
-  if (!Src ||
-      !ShuffleVectorInst::isDeInterleaveMaskOfFactor(ExtractIndices, 2, Index))
-    return SDValue();
-
-  SDLoc DL(Op);
-  return DAG.getNode(RISCVISD::PNSRL, DL, VT, Src,
-                     DAG.getConstant(Index * EltBits, DL, MVT::i32));
-}
-
 static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
   MVT VT = Op.getSimpleValueType();
@@ -4794,9 +4755,6 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   SDLoc DL(Op);
 
   if (Subtarget.isRV32() && Subtarget.hasStdExtP()) {
-    if (SDValue V = lowerBuildVectorAsRV32PNarrowingShift(Op, DAG))
-      return V;
-
     if (VT == MVT::v2i16) {
       SDValue Lo = DAG.getBitcast(
           MVT::v2i16,
@@ -6484,6 +6442,61 @@ static SDValue lowerVECTOR_SHUFFLEAsPUnzip(ShuffleVectorSDNode *SVN,
   return DAG.getNode(Opc, DL, VT, V1, V2);
 }
 
+// Match a legalized single-source deinterleave shuffle where the source
+// vector was split into two extract_subvectors of the same vector, e.g.
+//   t20: v4i8 = extract_subvector t5, 0
+//   t19: v4i8 = extract_subvector t5, 4
+//   t21: v4i8 = vector_shuffle<0,2,4,6> t20, t19
+// and lower it to an RV32 P narrowing shift on the original source.
+static SDValue
+lowerVECTOR_SHUFFLEAsRV32PNarrowingShift(ShuffleVectorSDNode *SVN,
+                                         const RISCVSubtarget &Subtarget,
+                                         SelectionDAG &DAG) {
+  MVT VT = SVN->getSimpleValueType(0);
+  if (Subtarget.is64Bit() || (VT != MVT::v4i8 && VT != MVT::v2i16))
+    return SDValue();
+
+  SDValue V1 = SVN->getOperand(0);
+  SDValue V2 = SVN->getOperand(1);
+
+  // The inputs should be two extract_subvectors from the same source.
+  using namespace llvm::SDPatternMatch;
+  SDValue Src;
+  int64_t V1Index, V2Index;
+  if (!sd_match(V1, m_ExtractSubvector(m_Value(Src), m_ConstInt(V1Index))) ||
+      !sd_match(V2, m_ExtractSubvector(m_Specific(Src), m_ConstInt(V2Index))))
+    return SDValue();
+
+  // The source vector should be twice the size.
+  unsigned NumElts = VT.getVectorNumElements();
+  if (Src.getValueType().getVectorNumElements() != 2 * NumElts)
+    return SDValue();
+
+  // The two extract_subvectors should be from different halves.
+  if ((V1Index != 0 || V2Index != NumElts) &&
+      (V1Index != NumElts || V2Index != 0))
+    return SDValue();
+
+  // Translate the shuffle mask, which indexes into the concatenation of V1
+  // and V2, into indices into Src.
+  SmallVector<int, 4> Indices(NumElts, -1);
+  for (auto [I, M] : enumerate(SVN->getMask())) {
+    if (M < 0)
+      continue;
+    int64_t Base = static_cast<unsigned>(M) < NumElts ? V1Index : V2Index;
+    Indices[I] = Base + (M % NumElts);
+  }
+
+  unsigned Index = 0;
+  if (!ShuffleVectorInst::isDeInterleaveMaskOfFactor(Indices, 2, Index))
+    return SDValue();
+
+  unsigned EltBits = VT.getVectorElementType().getSizeInBits();
+  SDLoc DL(SVN);
+  return DAG.getNode(RISCVISD::PNSRL, DL, VT, Src,
+                     DAG.getConstant(Index * EltBits, DL, MVT::i32));
+}
+
 SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
                                                  SelectionDAG &DAG) const {
   SDValue V1 = Op.getOperand(0);
@@ -6571,6 +6584,9 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
     if (SDValue V = lowerVECTOR_SHUFFLEAsPUnzip(SVN, DAG, Subtarget.is64Bit()))
       return V;
     if (SDValue V = lowerVECTOR_SHUFFLEAsPZip(SVN, DAG))
+      return V;
+    if (SDValue V =
+            lowerVECTOR_SHUFFLEAsRV32PNarrowingShift(SVN, Subtarget, DAG))
       return V;
     return SDValue();
   }

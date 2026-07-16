@@ -130,7 +130,7 @@ public:
     notifyDisconnected();
   }
 
-  void callController(OnCallHandlerCompleteFn OnComplete, HandlerTag T,
+  void callController(OnControllerCallReturnFn OnComplete, HandlerTag T,
                       WrapperFunctionBuffer ArgBytes) override {
     // Simulate a call to the controller by running the requested function via
     // the test-supplied Post hook (or inline, if no hook was provided).
@@ -163,7 +163,7 @@ public:
   void sendWrapperResult(uint64_t CallId,
                          WrapperFunctionBuffer ResultBytes) override {
     // Respond to a simulated call by the controller.
-    OnCallHandlerCompleteFn OnComplete;
+    OnControllerCallReturnFn OnComplete;
     {
       std::scoped_lock<std::mutex> Lock(M);
       if (Shutdown) {
@@ -192,7 +192,7 @@ public:
       ShutdownCV.notify_all();
   }
 
-  void callFromController(OnCallHandlerCompleteFn OnComplete,
+  void callFromController(OnControllerCallReturnFn OnComplete,
                           orc_rt_WrapperFunction Fn,
                           WrapperFunctionBuffer ArgBytes) {
     size_t CId = 0;
@@ -263,7 +263,7 @@ private:
   bool Shutdown = false;
   size_t Outstanding = 0;
   size_t CallId = 0;
-  std::unordered_map<size_t, OnCallHandlerCompleteFn> Pending;
+  std::unordered_map<size_t, OnControllerCallReturnFn> Pending;
   std::condition_variable ShutdownCV;
   OnConnectFn OnConnect;
 };
@@ -273,7 +273,7 @@ public:
   CallViaMockControllerAccess(MockControllerAccess &CA,
                               orc_rt_WrapperFunction Fn)
       : CA(CA), Fn(Fn) {}
-  void operator()(Session::OnCallHandlerCompleteFn OnComplete,
+  void operator()(Session::OnControllerCallReturnFn OnComplete,
                   WrapperFunctionBuffer ArgBytes) {
     CA.callFromController(std::move(OnComplete), Fn, std::move(ArgBytes));
   }

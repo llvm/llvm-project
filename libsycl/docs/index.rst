@@ -116,7 +116,7 @@ TODO for added SYCL classes
   * to implement submit & copy with accessors (low priority)
   * get_info & properties
   * ctors that accepts context (blocked by lack of liboffload support)
-  * nd_range kernel submissions
+  * nd_range kernel submissions: offset is not supported by liboffload now, SYCL2020 deprecated feature
   * cross-context events wait (host tasks are needed)
   * implement check if lambda arguments are device copyable (requires clang support of corresponding builtins) unless FE will fully cover it
   * kernel instantiating on host (debugging purposes)

@@ -38,6 +38,12 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
   ASTContext::GetBuiltinTypeError error;
   getContext().GetBuiltinType(builtinID, error, &iceArguments);
   assert(error == ASTContext::GE_None && "Should not codegen an error");
+
+  if (builtinID == RISCV::BI__builtin_riscv_ntl_load)
+    iceArguments |= (1 << 1);
+  if (builtinID == RISCV::BI__builtin_riscv_ntl_store)
+    iceArguments |= (1 << 2);
+
   for (auto [idx, arg] : llvm::enumerate(e->arguments()))
     ops.push_back(emitScalarOrConstFoldImmArg(iceArguments, idx, arg));
 
@@ -154,9 +160,31 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
   // Zihintntl
   case RISCV::BI__builtin_riscv_ntl_load:
   case RISCV::BI__builtin_riscv_ntl_store: {
-    cgm.errorNYI(e->getSourceRange(),
-                 std::string("unimplemented RISC-V builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
+    unsigned domainVal = 5; // Default __RISCV_NTLH_ALL
+    unsigned domainArgNo =
+        builtinID == RISCV::BI__builtin_riscv_ntl_load ? 1 : 2;
+    if (e->getNumArgs() > domainArgNo) {
+      const std::optional<llvm::APSInt> result =
+          e->getArg(domainArgNo)->getIntegerConstantExpr(getContext());
+      assert(result && "Expected NTLH domain argument to be a constant");
+      domainVal = result->getZExtValue();
+    }
+
+    mlir::Location loc = getLoc(e->getSourceRange());
+    mlir::Attribute domainAttr = builder.getI32IntegerAttr(domainVal);
+    Address addr(ops[0],
+                 cgm.getNaturalPointeeTypeAlignment(e->getArg(0)->getType()));
+    if (builtinID == RISCV::BI__builtin_riscv_ntl_load) {
+      auto load = builder.createLoad(loc, addr, /*isVolatile=*/false,
+                                     /*isNontemporal=*/true);
+      load->setAttr("cir.riscv_nontemporal_domain", domainAttr);
+      return load.getResult();
+    }
+
+    mlir::Value val = emitToMemory(ops[1], e->getArg(1)->getType());
+    auto store = builder.createStore(loc, val, addr, /*isVolatile=*/false,
+                                     /*isNontemporal=*/true);
+    store->setAttr("cir.riscv_nontemporal_domain", domainAttr);
     return mlir::Value{};
   }
 

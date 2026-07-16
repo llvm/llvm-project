@@ -384,8 +384,6 @@ Expected<L0QueueTy *> L0QueueCacheTy::getQueue() {
   case CommandModeTy::InOrder:
     Queue = new L0InorderQueueTy(Device);
     break;
-  default:
-    return Plugin::error(ErrorCode::UNIMPLEMENTED, "Unsupported command mode");
   }
   if (auto Err = Queue->init()) {
     delete Queue;

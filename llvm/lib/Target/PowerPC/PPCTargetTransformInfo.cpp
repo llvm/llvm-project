@@ -352,20 +352,22 @@ bool PPCTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
   TargetSchedModel SchedModel;
   SchedModel.init(ST);
 
-  // FIXME: Sure there is no other way to get TTI? This should be cheap though.
-  TargetTransformInfo TTI =
-      TM.getTargetTransformInfo(*L->getHeader()->getParent());
-
   // Do not convert small short loops to CTR loop.
   unsigned ConstTripCount = SE.getSmallConstantTripCount(L);
   if (ConstTripCount && ConstTripCount < SmallCTRLoopThreshold) {
     SmallPtrSet<const Value *, 32> EphValues;
     CodeMetrics::collectEphemeralValues(L, &AC, EphValues);
-    CodeMetrics Metrics;
-    for (BasicBlock *BB : L->blocks())
-      Metrics.analyzeBasicBlock(BB, TTI, EphValues);
+    InstructionCost NumInsts;
+    for (BasicBlock *BB : L->blocks()) {
+      for (Instruction &I : *BB) {
+        if (EphValues.count(&I))
+          continue;
+        SmallVector<const Value *, 4> Operands(I.operand_values());
+        NumInsts += getInstructionCost(&I, Operands, TTI::TCK_CodeSize);
+      }
+    }
     // 6 is an approximate latency for the mtctr instruction.
-    if (Metrics.NumInsts <= (6 * SchedModel.getIssueWidth()))
+    if (NumInsts <= (6 * SchedModel.getIssueWidth()))
       return false;
   }
 

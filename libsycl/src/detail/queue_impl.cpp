@@ -39,6 +39,18 @@ static void setKernelLaunchArgs(const detail::UnifiedRangeView &Range,
     }
   }
 
+  // We have the following mapping between dimensions with SPIR-V builtins:
+  // 1D: id[0] -> x
+  // 2D: id[0] -> y, id[1] -> x
+  // 3D: id[0] -> z, id[1] -> y, id[2] -> x
+  // So in order to ensure the correctness we update all the kernel
+  // parameters accordingly.
+  if (Range.MDims > 1) {
+    // TODO: Offset is not supported in liboffload so just ignore it for now.
+    std::swap(GlobalSize[0], GlobalSize[Range.MDims - 1]);
+    std::swap(GroupSize[0], GroupSize[Range.MDims - 1]);
+  }
+
   ArgsToSet.Dimensions = Range.MDims;
   ArgsToSet.NumGroups.x = GlobalSize[0] / GroupSize[0];
   ArgsToSet.NumGroups.y = GlobalSize[1] / GroupSize[1];

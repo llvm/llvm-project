@@ -1527,12 +1527,11 @@ bool llvm::isConstantOrConstantVector(const MachineInstr &MI,
 }
 
 std::optional<APInt>
-llvm::isConstantOrConstantSplatVector(MachineInstr &MI,
+llvm::isConstantOrConstantSplatVector(Register Def,
                                       const MachineRegisterInfo &MRI) {
-  Register Def = MI.getOperand(0).getReg();
   if (auto C = getIConstantVRegValWithLookThrough(Def, MRI))
     return C->Value;
-  auto MaybeCst = getIConstantSplatSExtVal(MI, MRI);
+  auto MaybeCst = getIConstantSplatSExtVal(Def, MRI);
   if (!MaybeCst)
     return std::nullopt;
   const unsigned ScalarSize = MRI.getType(Def).getScalarSizeInBits();
@@ -1540,9 +1539,8 @@ llvm::isConstantOrConstantSplatVector(MachineInstr &MI,
 }
 
 std::optional<APFloat>
-llvm::isConstantOrConstantSplatVectorFP(MachineInstr &MI,
+llvm::isConstantOrConstantSplatVectorFP(Register Def,
                                         const MachineRegisterInfo &MRI) {
-  Register Def = MI.getOperand(0).getReg();
   if (auto FpConst = getFConstantVRegValWithLookThrough(Def, MRI))
     return FpConst->Value;
   auto MaybeCstFP = getFConstantSplat(Def, MRI, /*allowUndef=*/false);

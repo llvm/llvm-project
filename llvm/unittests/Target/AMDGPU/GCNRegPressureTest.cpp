@@ -8,6 +8,8 @@
 
 #include "GCNRegPressure.h"
 #include "AMDGPUUnitTests.h"
+#include "GCNSubtarget.h"
+#include "SIRegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
@@ -144,4 +146,57 @@ body:             |
   // Register pressure should be the one at the block's live-ins.
   EXPECT_EQ(RPTracker.moveMaxPressure().getVGPRNum(false), 1U);
   EXPECT_EQ(RPTrackerNoLiveIns.moveMaxPressure().getVGPRNum(false), 1U);
+}
+
+// Tests the correct handling of multiple uses of the same virtual register
+// in bumpDownwardPressure (speculative estimate of register pressure).
+TEST_F(GCNRegPressureTest, BumpDownwardPressureLastUseAfterCommit) {
+  StringRef MIR = R"(
+name:            BumpDownwardPressureLastUseAfterCommit
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vreg_256_align2 = IMPLICIT_DEF
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %0
+    S_ENDPGM 0
+...
+)";
+  ASSERT_TRUE(parseMIR(MIR));
+  MachineFunction &MF = getMF("BumpDownwardPressureLastUseAfterCommit");
+  const LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const SIRegisterInfo *TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
+
+  MachineBasicBlock &MBB = *MF.getBlockNumbered(0);
+
+  SmallVector<MachineInstr *, 8> Instrs;
+  for (MachineInstr &MI : MBB)
+    Instrs.push_back(&MI);
+  // 0: def %0, 1: def %1, 2: U1 (use %1), 3: U2 (last use %1),
+  // 4: use %0, 5: S_ENDPGM
+  MachineInstr *DefV0 = Instrs[0];
+  MachineInstr *DefV1 = Instrs[1];
+  MachineInstr *U1 = Instrs[2];
+  MachineInstr *U2 = Instrs[3];
+
+  GCNDownwardRPTracker RPTracker(LIS);
+  GCNRPTracker::LiveRegSet Empty;
+  RPTracker.reset(MRI, Empty);
+
+  // Commit the defs and the first use of %1 via the externally-managed
+  // iterator (same as while scheduling).
+  RPTracker.advance(DefV0, /*UseInternalIterator=*/false);
+  RPTracker.advance(DefV1, /*UseInternalIterator=*/false);
+  RPTracker.advance(U1, /*UseInternalIterator=*/false);
+
+  // After committing U1, both %0 (1 VGPR) and %1 (vreg_256 = 8 VGPRs) are live.
+  EXPECT_EQ(RPTracker.getPressure().getArchVGPRNum(), 9U);
+
+  // Speculate the last use of %1. %1 must die here, dropping its 8 VGPRs and
+  // leaving only %0 live.
+  GCNRegPressure P = RPTracker.bumpDownwardPressure(U2, TRI);
+  EXPECT_EQ(P.getArchVGPRNum(), 1U);
 }

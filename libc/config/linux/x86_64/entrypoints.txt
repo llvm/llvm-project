@@ -1193,6 +1193,14 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.idivuk
     libc.src.stdfix.idivulk
     libc.src.stdfix.rdivi
+    libc.src.stdfix.divir
+    libc.src.stdfix.divilr
+    libc.src.stdfix.divik
+    libc.src.stdfix.divilk
+    libc.src.stdfix.diviur
+    libc.src.stdfix.diviulr
+    libc.src.stdfix.diviuk
+    libc.src.stdfix.diviulk
   )
 endif()
 
@@ -1571,7 +1579,37 @@ set(TARGET_LIBMVEC_ENTRYPOINTS)
 
 if(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE)
 list(APPEND TARGET_LIBMVEC_ENTRYPOINTS
+    libc.src.mathvec.acosf
+    libc.src.mathvec.acoshf
+    libc.src.mathvec.acospif
+    libc.src.mathvec.asinf
+    libc.src.mathvec.asinhf
+    libc.src.mathvec.asinpif
+    libc.src.mathvec.atanf
+    libc.src.mathvec.atanhf
+    libc.src.mathvec.cbrtf
+    libc.src.mathvec.cosf
+    libc.src.mathvec.coshf
+    libc.src.mathvec.cospif
+    libc.src.mathvec.erff
+    libc.src.mathvec.exp2f
+    libc.src.mathvec.exp2m1f
+    libc.src.mathvec.exp10f
+    libc.src.mathvec.exp10m1f
     libc.src.mathvec.expf
+    libc.src.mathvec.expm1f
+    libc.src.mathvec.log10f
+    libc.src.mathvec.log1pf
+    libc.src.mathvec.log2f
+    libc.src.mathvec.logf
+    libc.src.mathvec.rsqrtf
+    libc.src.mathvec.sinf
+    libc.src.mathvec.sinhf
+    libc.src.mathvec.sinpif
+    libc.src.mathvec.sqrtf
+    libc.src.mathvec.tanf
+    libc.src.mathvec.tanhf
+    libc.src.mathvec.tanpif
   )
 endif()
 

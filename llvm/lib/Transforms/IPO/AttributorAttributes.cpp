@@ -223,7 +223,7 @@ static bool mayBeInCycle(const CycleInfo *CI, const Instruction *I,
     return false;
   if (CPtr)
     *CPtr = C;
-  return !HeaderOnly || BB == C->getHeader();
+  return !HeaderOnly || BB == CI->getHeader(*C);
 }
 
 /// Checks if a type could have padding bytes.

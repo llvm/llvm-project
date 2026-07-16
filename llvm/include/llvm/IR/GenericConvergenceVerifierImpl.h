@@ -170,13 +170,13 @@ void GenericConvergenceVerifier<ContextT>::verify(const DominatorTreeT &DT) {
           {Context.print(User), CI.print(BBCycle)});
 
     while (true) {
-      auto *Parent = BBCycle->getParentCycle();
+      auto *Parent = CI.getParentCycle(*BBCycle);
       if (!Parent || CI.contains(*Parent, DefBB))
         break;
       BBCycle = Parent;
     };
 
-    Check(BBCycle->isReducible() && BB == BBCycle->getHeader(),
+    Check(CI.isReducible(*BBCycle) && BB == CI.getHeader(*BBCycle),
           "Cycle heart must dominate all blocks in the cycle.",
           {Context.print(User), Context.printAsOperand(BB), CI.print(BBCycle)});
     Check(!CycleHearts.count(BBCycle),

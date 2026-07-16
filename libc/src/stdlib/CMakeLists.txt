@@ -710,6 +710,12 @@ if(LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU)
       .${LIBC_TARGET_OS}.malloc
   )
   add_entrypoint_object(
+    malloc_usable_size
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.malloc_usable_size
+  )
+  add_entrypoint_object(
     free
     ALIAS
     DEPENDS

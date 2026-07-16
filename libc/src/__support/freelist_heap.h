@@ -50,6 +50,7 @@ public:
   void free(void *ptr);
   void *realloc(void *ptr, size_t size);
   void *calloc(size_t num, size_t size);
+  size_t allocation_size(const void *ptr) const;
 
   cpp::span<cpp::byte> region() const { return {begin, end}; }
 
@@ -64,7 +65,7 @@ private:
 
   bool shrink_in_place(BlockRef block, size_t size);
 
-  bool is_valid_ptr(void *ptr) { return ptr >= begin && ptr < end; }
+  bool is_valid_ptr(const void *ptr) const { return ptr >= begin && ptr < end; }
 
   cpp::byte *begin;
   cpp::byte *end;
@@ -163,6 +164,15 @@ LIBC_INLINE void FreeListHeap::free(void *ptr) {
   }
   // Add back to the freelist
   free_store.insert(block);
+}
+
+LIBC_INLINE size_t FreeListHeap::allocation_size(const void *ptr) const {
+  if (!is_valid_ptr(ptr))
+    return 0;
+  BlockRef block = BlockRef::from_usable_space(ptr);
+  if (!block.used())
+    return 0;
+  return block.inner_size();
 }
 
 LIBC_INLINE bool FreeListHeap::shrink_in_place(BlockRef block, size_t size) {

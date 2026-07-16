@@ -1698,6 +1698,12 @@ Value *InstCombinerImpl::takeLog2(Value *Op, unsigned Depth, bool AssumeNonZero,
         });
   }
 
+  // log2(X + 1) IIF X[0,1] -> X
+  if (Op->getType()->getScalarSizeInBits() != 1 &&
+      match(Op, m_Add(m_Value(X), m_One())) &&
+      computeKnownBits(X, cast<Instruction>(Op)).countMaxActiveBits() == 1)
+    return IfFold([&]() { return X; });
+
   return nullptr;
 }
 

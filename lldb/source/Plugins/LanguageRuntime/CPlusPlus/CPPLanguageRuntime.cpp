@@ -470,6 +470,23 @@ CPPLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
   StackFrameSP frame = thread.GetStackFrameAtIndex(0);
 
   if (frame) {
+    Address func_start_address =
+        sc.function ? sc.function->GetAddress() : symbol->GetAddress();
+    lldb::addr_t func_start =
+        func_start_address.GetLoadAddress(target_sp.get());
+
+    if (func_start == LLDB_INVALID_ADDRESS)
+      return ret_plan_sp;
+
+    // Advance past the prologue if we stopped there.
+    uint32_t prologue_size = sc.function ? sc.function->GetPrologueByteSize()
+                                         : symbol->GetPrologueByteSize();
+    if (curr_pc < func_start + prologue_size) {
+      func_start_address.Slide(prologue_size);
+      return std::make_shared<ThreadPlanRunToAddress>(
+          thread, func_start_address, stop_others);
+    }
+
     ValueObjectSP value_sp = frame->FindVariable(g_this);
 
     CPPLanguageRuntime::LibCppStdFunctionCallableInfo callable_info =

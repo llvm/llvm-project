@@ -2274,7 +2274,7 @@ bool LowerTypeTestsModule::lower() {
               GlobalVariable::ExternalLinkage,
               M.getDataLayout().getProgramAddressSpace(), FunctionName, &M);
           F->setMetadata(
-              LLVMContext::MD_unique_id,
+              LLVMContext::MD_guid,
               MDTuple::get(M.getContext(), {FuncMD->getOperand(2).get()}));
         }
         // If the function is available_externally, remove its definition so
@@ -2284,12 +2284,12 @@ bool LowerTypeTestsModule::lower() {
         // following the code path below to replace the type metadata.
         if (F->hasAvailableExternallyLinkage()) {
           // Maintain !guid metadata.
-          auto *OrigGUIDMD = F->getMetadata(LLVMContext::MD_unique_id);
+          auto *OrigGUIDMD = F->getMetadata(LLVMContext::MD_guid);
           F->setLinkage(GlobalValue::ExternalLinkage);
           F->deleteBody();
           F->setComdat(nullptr);
           F->clearMetadata();
-          F->setMetadata(LLVMContext::MD_unique_id, OrigGUIDMD);
+          F->setMetadata(LLVMContext::MD_guid, OrigGUIDMD);
         }
 
         // Update the linkage for extern_weak declarations when a definition
@@ -2456,7 +2456,11 @@ bool LowerTypeTestsModule::lower() {
           report_fatal_error(
               "Expected branch funnel operand to be global value");
 
-        GlobalTypeMember *GTM = GlobalTypeMembers[Base];
+        auto It = GlobalTypeMembers.find(Base);
+        if (It == GlobalTypeMembers.end())
+          reportFatalUsageError("Expected branch funnel operand to be a "
+                                "defined global value with type metadata");
+        GlobalTypeMember *GTM = It->second;
         Targets.push_back(GTM);
         GlobalClassesTy::member_iterator NewSet =
             GlobalClasses.findLeader(GlobalClasses.insert(GTM));

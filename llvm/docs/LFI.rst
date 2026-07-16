@@ -295,8 +295,13 @@ before moving it back into ``sp`` with a safe ``add``.
 Link register modification
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-When the link register is modified, we write the modified value to a
-temporary, before loading it back into ``x30`` with a safe ``add``.
+When the link register is modified, it is guarded back into the sandbox with a
+safe ``add x30, x27, w30, uxtw``. This guard is deferred until the next
+control-flow instruction rather than emitted immediately after the
+modification. Deferral keeps a signed return address intact so that a following
+authentication instruction (such as ``autiasp``) can run before the guard,
+which would otherwise destroy the pointer authentication signature. See
+`Pointer Authentication Code (PAC) support`_.
 
 +---------------------------+-------------------------------+
 |         Original          |           Rewritten           |
@@ -315,6 +320,97 @@ temporary, before loading it back into ``x30`` with a safe ``add``.
 |                           |    ret                        |
 |                           |                               |
 +---------------------------+-------------------------------+
+
+Pointer Authentication Code (PAC) support
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+LFI is compatible with Arm Pointer Authentication Code (PAC) instructions,
+which are used to sign and authenticate ``x30`` to protect against control-flow
+hijacking.
+
+The typical use is ``-mbranch-protection=pac-ret``, which signs only the return
+address in ``x30`` using the hint-space ``paciasp`` and ``autiasp``
+instructions. The combined authenticate-and-branch and authenticate-and-return
+instructions covered below require Armv8.3-a and are not produced by
+``-mbranch-protection``. They can appear in hand-written assembly or from
+environments that sign all code pointers, so the rewriter still sandboxes them
+rather than passing them through unmodified.
+
+To gain the security benefit of PAC under LFI, the hardware must implement
+``FEAT_FPAC``, so that authentication failures fault immediately. Without
+``FEAT_FPAC``, a failed authentication produces a poisoned pointer, which LFI
+still keeps confined to the sandbox by masking it, but the mask overwrites the
+poison caused by the authentication failure.
+
++-------------------+------------------------------+
+|     Original      |          Rewritten           |
++-------------------+------------------------------+
+| .. code-block::   | .. code-block::              |
+|                   |                              |
+|    paciasp        |    paciasp                   |
+|                   |                              |
++-------------------+------------------------------+
+| .. code-block::   | .. code-block::              |
+|                   |                              |
+|    autiasp        |    autiasp                   |
+|    ret            |    add x30, x27, w30, uxtw   |
+|                   |    ret                       |
+|                   |                              |
++-------------------+------------------------------+
+
+Authenticated returns (``retaa``/``retab``) combine authentication with return,
+and must be expanded during rewriting.
+
++-----------------+-------------------------------+
+|    Original     |           Rewritten           |
++-----------------+-------------------------------+
+| .. code-block:: | .. code-block::               |
+|                 |                               |
+|    retaa        |    autiasp                    |
+|                 |    add x30, x27, w30, uxtw    |
+|                 |    ret                        |
+|                 |                               |
++-----------------+-------------------------------+
+| .. code-block:: | .. code-block::               |
+|                 |                               |
+|    retab        |    autibsp                    |
+|                 |    add x30, x27, w30, uxtw    |
+|                 |    ret                        |
+|                 |                               |
++-----------------+-------------------------------+
+
+Authenticated branches (``braa``/``brab``/``braaz``/``brabz``) and calls
+(``blraa``/``blrab``/``blraaz``/``blrabz``) combine authentication with an
+indirect branch or call. They are expanded by first authenticating the target
+register in place, then performing a normal sandboxed branch or call.
+
++-------------------+-------------------------------+
+|     Original      |           Rewritten           |
++-------------------+-------------------------------+
+| .. code-block::   | .. code-block::               |
+|                   |                               |
+|    braa xN, xM    |    autia xN, xM               |
+|                   |    add x28, x27, wN, uxtw     |
+|                   |    br x28                     |
+|                   |                               |
++-------------------+-------------------------------+
+| .. code-block::   | .. code-block::               |
+|                   |                               |
+|    braaz xN       |    autiza xN                  |
+|                   |    add x28, x27, wN, uxtw     |
+|                   |    br x28                     |
+|                   |                               |
++-------------------+-------------------------------+
+| .. code-block::   | .. code-block::               |
+|                   |                               |
+|    blraa xN, xM   |    autia xN, xM               |
+|                   |    add x28, x27, wN, uxtw     |
+|                   |    blr x28                    |
+|                   |                               |
++-------------------+-------------------------------+
+
+Authenticated exception returns (``eret``/``eretaa``/``eretab``) are privileged
+and are not supported: the rewriter reports an error for them.
 
 System instructions
 ~~~~~~~~~~~~~~~~~~~

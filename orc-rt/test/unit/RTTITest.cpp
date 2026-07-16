@@ -25,7 +25,7 @@ class MyDerivedA : public RTTIExtends<MyDerivedA, MyBase> {};
 
 class MyDerivedB : public RTTIExtends<MyDerivedB, MyBase> {};
 
-} // end anonymous namespace
+} // namespace
 
 TEST(ExtensibleRTTITest, BaseCheck) {
   MyBase MB;

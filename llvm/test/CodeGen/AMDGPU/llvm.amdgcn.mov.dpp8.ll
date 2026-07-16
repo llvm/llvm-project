@@ -8,7 +8,7 @@
 ; RUN: not llc -global-isel=0 -mtriple=amdgpu9.00 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
 ; RUN: not llc -global-isel=1 -global-isel-abort=0 -mtriple=amdgpu9.00 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
 
-; ERR: error: <unknown>:0:0: in function dpp8_test void (ptr addrspace(1), i32): intrinsic not supported on subtarget
+; ERR: error: <unknown>:0:0: in function @dpp8_test void (ptr addrspace(1), i32): llvm.amdgcn.mov.dpp8 requires target feature 'dpp8'
 
 ; GFX10PLUS-LABEL: {{^}}dpp8_test:
 ; GFX10PLUS: v_mov_b32_e32 [[SRC:v[0-9]+]], s{{[0-9]+}}

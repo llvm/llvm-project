@@ -1668,7 +1668,7 @@ protected:
   void DumpRegion(CommandReturnObject &result, Target &target,
                   const MemoryRegionInfo &range_info, lldb::addr_t load_addr) {
     lldb_private::Address addr;
-    ConstString section_name;
+    llvm::StringRef section_name;
     if (target.ResolveLoadAddress(load_addr, addr)) {
       SectionSP section_sp(addr.GetSection());
       if (section_sp) {
@@ -1685,7 +1685,7 @@ protected:
         range_info.GetRange().GetRangeBase(),
         range_info.GetRange().GetRangeEnd(), range_info.GetReadable(),
         range_info.GetWritable(), range_info.GetExecutable(), name ? " " : "",
-        name, section_name ? " " : "", section_name);
+        name, !section_name.empty() ? " " : "", section_name);
     LazyBool memory_tagged = range_info.GetMemoryTagged();
     if (memory_tagged == eLazyBoolYes)
       result.AppendMessage("memory tagging: enabled");

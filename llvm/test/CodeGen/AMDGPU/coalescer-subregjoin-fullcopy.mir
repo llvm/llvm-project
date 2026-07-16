@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx600 -run-pass register-coalescer -verify-machineinstrs -o - %s | FileCheck --check-prefix=GCN %s
+# RUN: llc -mtriple=amdgpu8.03 -run-pass register-coalescer -verify-machineinstrs -o - %s | FileCheck --check-prefix=GCN %s
 #
 # See bug http://llvm.org/PR33152 for details of the bug this test is checking
 # for.
@@ -17,11 +17,10 @@
 --- |
   target triple = "amdgcn--amdpal"
 
-  define amdgpu_ps void @main() #0 {
+  define amdgpu_ps void @main() {
     ret void
   }
 
-  attributes #0 = { "target-cpu"="gfx803" }
 ...
 
 ---

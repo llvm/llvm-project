@@ -37,6 +37,11 @@ struct UnifiedRangeView {
   UnifiedRangeView(sycl::range<Dims> &N)
       : MGlobalSize(&(N[0])), MDims(size_t(Dims)) {}
 
+  template <int Dims>
+  UnifiedRangeView(sycl::nd_range<Dims> &N)
+      : MGlobalSize(&(N.MGlobalSize[0])), MLocalSize(&(N.MLocalSize[0])),
+        MOffset(&(N.MOffset[0])), MDims{size_t(Dims)} {}
+
   UnifiedRangeView(const size_t *GlobalSize, const size_t *LocalSize,
                    const size_t *Offset, size_t Dims)
       : MGlobalSize(GlobalSize), MLocalSize(LocalSize), MOffset(Offset),

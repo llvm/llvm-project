@@ -17,8 +17,7 @@ define i1 @or_non_negative_bounds(i64 %a, i64 %b, i64 %c, i64 %d) {
 ; CHECK-NEXT:    br i1 [[AND_3]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[THEN]]:
 ; CHECK-NEXT:    [[IDX:%.*]] = add nsw i64 [[D]], [[B]]
-; CHECK-NEXT:    [[RES:%.*]] = icmp ult i64 [[IDX]], [[A]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -76,8 +75,7 @@ define i1 @or_non_negative_nested(i64 %a, i64 %b, i64 %c) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[O2]], -1
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[RES:%.*]] = icmp sge i64 [[C]], 0
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    ret i1 false
 ;

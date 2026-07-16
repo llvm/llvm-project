@@ -1,0 +1,36 @@
+// RUN: cir-opt %s -cir-idiom-recognizer | FileCheck %s
+
+// The pass reads only the tag on the callee, so recognition also works on
+// parsed CIR assembly with no AST behind it.
+
+!s32i = !cir.int<s, 32>
+
+module {
+
+cir.func private @_ZSt4findIPiiET_S1_S1_RKT0_(!cir.ptr<!s32i>, !cir.ptr<!s32i>, !cir.ptr<!s32i>) -> !cir.ptr<!s32i> func_info<#cir.func_identity<"std::find">>
+
+cir.func @caller(%a: !cir.ptr<!s32i>, %b: !cir.ptr<!s32i>, %v: !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {
+  %r = cir.call @_ZSt4findIPiiET_S1_S1_RKT0_(%a, %b, %v) : (!cir.ptr<!s32i>, !cir.ptr<!s32i>, !cir.ptr<!s32i>) -> !cir.ptr<!s32i>
+  cir.return %r : !cir.ptr<!s32i>
+}
+// The operands are threaded into the raised op in order, first to last.
+// CHECK: cir.func @caller(%[[A:.*]]: !cir.ptr<!s32i>, %[[B:.*]]: !cir.ptr<!s32i>, %[[V:.*]]: !cir.ptr<!s32i>)
+// CHECK: cir.std.find(%[[A]] :{{.*}}, %[[B]] :{{.*}}, %[[V]] :{{.*}}, @_ZSt4findIPiiET_S1_S1_RKT0_)
+
+// A musttail call must stay a call.
+cir.func @musttail_caller(%a: !cir.ptr<!s32i>, %b: !cir.ptr<!s32i>, %v: !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {
+  %r = cir.call @_ZSt4findIPiiET_S1_S1_RKT0_(%a, %b, %v) musttail : (!cir.ptr<!s32i>, !cir.ptr<!s32i>, !cir.ptr<!s32i>) -> !cir.ptr<!s32i>
+  cir.return %r : !cir.ptr<!s32i>
+}
+// CHECK-LABEL: @musttail_caller
+// CHECK: cir.call @_ZSt4findIPiiET_S1_S1_RKT0_({{.*}}) musttail
+
+// An indirect call has no callee to resolve.
+cir.func @indirect_caller(%f: !cir.ptr<!cir.func<(!cir.ptr<!s32i>, !cir.ptr<!s32i>, !cir.ptr<!s32i>) -> !cir.ptr<!s32i>>>, %a: !cir.ptr<!s32i>, %b: !cir.ptr<!s32i>, %v: !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {
+  %r = cir.call %f(%a, %b, %v) : (!cir.ptr<!cir.func<(!cir.ptr<!s32i>, !cir.ptr<!s32i>, !cir.ptr<!s32i>) -> !cir.ptr<!s32i>>>, !cir.ptr<!s32i>, !cir.ptr<!s32i>, !cir.ptr<!s32i>) -> !cir.ptr<!s32i>
+  cir.return %r : !cir.ptr<!s32i>
+}
+// CHECK-LABEL: @indirect_caller
+// CHECK-NOT: cir.std.find
+
+}

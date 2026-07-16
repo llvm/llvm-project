@@ -13,6 +13,7 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0TRACE_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0TRACE_H
 
+#include "OffloadError.h"
 #include "Shared/Debug.h"
 #include "omptarget.h"
 #include <string>
@@ -40,7 +41,7 @@ using namespace llvm::offload::debug;
 
 #define CALL_ZE_RET_ERROR_MTX(Fn, Mtx, ...)                                   \
   CALL_ZE_RET_MTX(                                                            \
-    Plugin::error(ErrorCode::UNKNOWN, "%s failed with error %d, %s",          \
+    Plugin::error(getOffloadErrorCode(rc), "%s failed with error %d, %s",     \
     #Fn, rc, getZeErrorName(rc)), Fn, Mtx, __VA_ARGS__)
 
 /// For thread-safe functions.
@@ -57,7 +58,7 @@ using namespace llvm::offload::debug;
 
 #define CALL_ZE_RET_ERROR(Fn, ...)                                             \
   CALL_ZE_RET(                                                                 \
-    Plugin::error(ErrorCode::UNKNOWN, "%s failed with error %d, %s",           \
+    Plugin::error(getOffloadErrorCode(rc), "%s failed with error %d, %s",      \
     #Fn, rc, getZeErrorName(rc)), Fn, __VA_ARGS__)
 
 #define CALL_ZE_SILENT(Fn, ...)                                                \
@@ -72,7 +73,7 @@ using namespace llvm::offload::debug;
     ze_result_t rc;                                                            \
     CALL_ZE(rc, Fn, __VA_ARGS__);                                              \
     if (rc != ZE_RESULT_SUCCESS) {                                             \
-      HandleErrFn(Plugin::error(ErrorCode::UNKNOWN, "%s failed with error %d," \
+      HandleErrFn(Plugin::error(getOffloadErrorCode(rc), "%s failed with error %d," \
                   " %s",   #Fn, rc, getZeErrorName(rc)));                      \
     }                                                                          \
   } while (0)
@@ -83,7 +84,7 @@ using namespace llvm::offload::debug;
     CALL_ZE(rc, Fn, __VA_ARGS__);                                              \
     if (rc != ZE_RESULT_SUCCESS) {                                             \
       Err = joinErrors(std::move(Err),                                         \
-        Plugin::error(ErrorCode::UNKNOWN, "%s failed with error %d,"           \
+        Plugin::error(getOffloadErrorCode(rc), "%s failed with error %d,"      \
                   " %s",   #Fn, rc, getZeErrorName(rc)));                      \
     }                                                                          \
   } while (0)
@@ -98,7 +99,7 @@ using namespace llvm::offload::debug;
 
 #define CALL_ZE_EXT_RET_ERROR(Device, Name, ...)                               \
   CALL_ZE_EXT_SILENT_RET(Device,                                               \
-      Plugin::error(ErrorCode::UNKNOWN, "%s failed with code %d, %s",          \
+      Plugin::error(getOffloadErrorCode(rc), "%s failed with code %d, %s",     \
 			 #Name, rc, getZeErrorName(rc)), Name, __VA_ARGS__)
 
 #define FOREACH_ZE_ERROR_CODE(Fn)                                              \
@@ -150,6 +151,61 @@ inline const char *getZeErrorName(int32_t Error) {
     FOREACH_ZE_ERROR_CODE(CASE_TO_STRING)
   default:
     return "ZE_RESULT_ERROR_UNKNOWN";
+  }
+}
+
+inline error::ErrorCode getOffloadErrorCode(ze_result_t Error) {
+  switch (Error) {
+  case ZE_RESULT_ERROR_OUT_OF_HOST_MEMORY:
+  case ZE_RESULT_ERROR_OUT_OF_DEVICE_MEMORY:
+    return error::ErrorCode::OUT_OF_RESOURCES;
+  case ZE_RESULT_ERROR_MODULE_BUILD_FAILURE:
+    return error::ErrorCode::COMPILE_FAILURE;
+  case ZE_RESULT_ERROR_MODULE_LINK_FAILURE:
+    return error::ErrorCode::LINK_FAILURE;
+  case ZE_RESULT_ERROR_DEVICE_LOST:
+  case ZE_RESULT_ERROR_DEVICE_REQUIRES_RESET:
+  case ZE_RESULT_ERROR_DEVICE_IN_LOW_POWER_STATE:
+    return error::ErrorCode::BACKEND_FAILURE;
+  case ZE_RESULT_ERROR_UNINITIALIZED:
+    return error::ErrorCode::UNINITIALIZED;
+  case ZE_RESULT_ERROR_NOT_AVAILABLE:
+  case ZE_RESULT_ERROR_DEPENDENCY_UNAVAILABLE:
+  case ZE_RESULT_ERROR_UNSUPPORTED_VERSION:
+  case ZE_RESULT_ERROR_UNSUPPORTED_FEATURE:
+  case ZE_RESULT_ERROR_UNSUPPORTED_SIZE:
+  case ZE_RESULT_ERROR_UNSUPPORTED_ALIGNMENT:
+  case ZE_RESULT_ERROR_UNSUPPORTED_ENUMERATION:
+  case ZE_RESULT_ERROR_UNSUPPORTED_IMAGE_FORMAT:
+    return error::ErrorCode::UNSUPPORTED;
+  case ZE_RESULT_ERROR_INVALID_NULL_HANDLE:
+    return error::ErrorCode::INVALID_NULL_HANDLE;
+  case ZE_RESULT_ERROR_INVALID_NULL_POINTER:
+    return error::ErrorCode::INVALID_NULL_POINTER;
+  case ZE_RESULT_ERROR_INVALID_SIZE:
+    return error::ErrorCode::INVALID_SIZE;
+  case ZE_RESULT_ERROR_INVALID_ENUMERATION:
+    return error::ErrorCode::INVALID_ENUMERATION;
+  case ZE_RESULT_ERROR_INVALID_NATIVE_BINARY:
+  case ZE_RESULT_ERROR_INVALID_MODULE_UNLINKED:
+    return error::ErrorCode::INVALID_BINARY;
+  case ZE_RESULT_ERROR_INVALID_GLOBAL_NAME:
+  case ZE_RESULT_ERROR_INVALID_KERNEL_NAME:
+  case ZE_RESULT_ERROR_INVALID_FUNCTION_NAME:
+    return error::ErrorCode::NOT_FOUND;
+  case ZE_RESULT_ERROR_INSUFFICIENT_PERMISSIONS:
+  case ZE_RESULT_ERROR_INVALID_ARGUMENT:
+  case ZE_RESULT_ERROR_INVALID_SYNCHRONIZATION_OBJECT:
+  case ZE_RESULT_ERROR_INVALID_GROUP_SIZE_DIMENSION:
+  case ZE_RESULT_ERROR_INVALID_GLOBAL_WIDTH_DIMENSION:
+  case ZE_RESULT_ERROR_INVALID_KERNEL_ARGUMENT_INDEX:
+  case ZE_RESULT_ERROR_INVALID_KERNEL_ARGUMENT_SIZE:
+  case ZE_RESULT_ERROR_INVALID_KERNEL_ATTRIBUTE_VALUE:
+  case ZE_RESULT_ERROR_INVALID_COMMAND_LIST_TYPE:
+  case ZE_RESULT_ERROR_OVERLAPPING_REGIONS:
+    return error::ErrorCode::INVALID_ARGUMENT;
+  default:
+    return error::ErrorCode::UNKNOWN;
   }
 }
 

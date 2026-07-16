@@ -1711,6 +1711,16 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {
   EXPECT_TOKEN(Tokens[3], tok::kw_requires, TT_RequiresExpression);
   EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_RequiresExpressionLParen);
   EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_RequiresExpressionLBrace);
+
+  Tokens = annotate("template <typename T>\n"
+                    "struct S {\n"
+                    "  template <typename Foo>\n"
+                    "    requires T::template Has<Foo>\n"
+                    "  void func(Foo);\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 30u) << Tokens;
+  EXPECT_TOKEN(Tokens[20], tok::greater, TT_TemplateCloser);
+  EXPECT_TRUE(Tokens[20]->ClosesRequiresClause);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsPragmaRegion) {

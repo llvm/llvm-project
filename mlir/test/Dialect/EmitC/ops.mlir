@@ -148,6 +148,15 @@ func.func @unary(%arg0: i32) {
   return
 }
 
+func.func @inc_dec(%arg0: !emitc.ptr<i32>) {
+  %v = "emitc.variable"() <{value = 0 : i32}> : () -> !emitc.lvalue<i32>
+  %0 = emitc.pre_increment %v : !emitc.lvalue<i32>
+  %1 = emitc.post_increment %v : !emitc.lvalue<i32>
+  %2 = emitc.pre_decrement %v : !emitc.lvalue<i32>
+  %3 = emitc.post_decrement %v : !emitc.lvalue<i32>
+  return
+}
+
 func.func @test_if(%arg0: i1, %arg1: f32) {
   emitc.if %arg0 {
      %0 = emitc.call_opaque "func_const"(%arg1) : (f32) -> i32

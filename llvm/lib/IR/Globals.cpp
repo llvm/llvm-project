@@ -88,7 +88,7 @@ void GlobalValue::assignGUID() {
   const GUID G =
       GlobalValue::getGUIDAssumingExternalLinkage(getGlobalIdentifier());
   setMetadata(
-      LLVMContext::MD_unique_id,
+      LLVMContext::MD_guid,
       MDNode::get(getContext(), {ConstantAsMetadata::get(ConstantInt::get(
                                     Type::getInt64Ty(getContext()), G))}));
 }
@@ -96,7 +96,7 @@ void GlobalValue::assignGUID() {
 void GlobalValue::reassignGUID() {
   if (!getGUIDMetadata())
     return;
-  eraseMetadata(LLVMContext::MD_unique_id);
+  eraseMetadata(LLVMContext::MD_guid);
   assignGUID();
 }
 
@@ -139,7 +139,7 @@ std::optional<GlobalValue::GUID> GlobalValue::getGUIDIfAssigned() const {
 
 MDNode *GlobalValue::getGUIDMetadata() const {
   if (auto *GO = dyn_cast<GlobalObject>(this))
-    return GO->getMetadata(LLVMContext::MD_unique_id);
+    return GO->getMetadata(LLVMContext::MD_guid);
   return nullptr;
 }
 
@@ -472,7 +472,7 @@ bool GlobalObject::hasMetadataOtherThanDebugLocAndGuid() const {
   SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
   getAllMetadata(MDs);
   for (const auto &V : MDs)
-    if (V.first != LLVMContext::MD_dbg && V.first != LLVMContext::MD_unique_id)
+    if (V.first != LLVMContext::MD_dbg && V.first != LLVMContext::MD_guid)
       return true;
   return false;
 }

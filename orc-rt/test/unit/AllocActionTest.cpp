@@ -49,7 +49,7 @@ WrapperFunctionBuffer makeIntPtrArgBuffer(int *P) {
   return B;
 }
 
-} // anonymous namespace
+} // namespace
 
 static orc_rt_WrapperFunctionBuffer noopAction(const char *ArgData,
                                                size_t ArgSize) {
