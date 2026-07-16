@@ -2011,9 +2011,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
             if (!SeenOr.insert(Op).second)
               continue;
             OrWorklist.push_back(Op);
-            Info.addFact(CmpInst::ICMP_SGE, Op,
-                         ConstantInt::getNullValue(Op->getType()), CB.NumIn,
-                         CB.NumOut, DFSInStack);
+            Info.addFact(Pred, Op, B, CB.NumIn, CB.NumOut, DFSInStack);
           }
         }
       }
