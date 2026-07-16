@@ -14,6 +14,7 @@
 #include "bolt/Profile/DataReader.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Passes/MCF.h"
+#include "bolt/Utils/NameResolver.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -242,6 +243,22 @@ Error DataReader::preprocessProfile(BinaryContext &BC) {
 
   if (opts::DumpData)
     dump();
+
+  if (SymbolsMode) {
+    for (auto &BFI : BC.getBinaryFunctions()) {
+      BinaryFunction &Function = BFI.second;
+      for (StringRef Name : Function.getNames()) {
+        auto It = NamesToBranches.find(NameResolver::restore(Name));
+        if (It == NamesToBranches.end())
+          continue;
+        setBranchData(Function, &It->second);
+        It->second.setEntryCounts(Function);
+        It->second.Used = true;
+        break;
+      }
+    }
+    return Error::success();
+  }
 
   if (collectedInBoltedBinary())
     outs() << "BOLT-INFO: profile collection done on a binary already "
@@ -1038,6 +1055,19 @@ ErrorOr<BasicSampleInfo> DataReader::parseSampleInfo() {
   return BasicSampleInfo(std::move(Address), Occurrences);
 }
 
+/// Return if \p Flag line was present in the line.
+ErrorOr<bool> DataReader::maybeParseFlag(StringRef Flag) {
+  if (!ParsingBuf.consume_front(Flag))
+    return false;
+  Col += Flag.size();
+
+  if (!checkAndConsumeNewLine()) {
+    reportError((Twine("malformed ") + Flag + " line").str());
+    return make_error_code(llvm::errc::io_error);
+  }
+  return true;
+}
+
 ErrorOr<bool> DataReader::maybeParseNoLBRFlag() {
   if (!ParsingBuf.consume_front("no_lbr"))
     return false;
@@ -1055,18 +1085,6 @@ ErrorOr<bool> DataReader::maybeParseNoLBRFlag() {
 
   if (!checkAndConsumeNewLine()) {
     reportError("malformed no_lbr line");
-    return make_error_code(llvm::errc::io_error);
-  }
-  return true;
-}
-
-ErrorOr<bool> DataReader::maybeParseBATFlag() {
-  if (!ParsingBuf.consume_front("boltedcollection"))
-    return false;
-  Col += 16;
-
-  if (!checkAndConsumeNewLine()) {
-    reportError("malformed boltedcollection line");
     return make_error_code(llvm::errc::io_error);
   }
   return true;
@@ -1138,6 +1156,25 @@ std::error_code DataReader::parseInNoLBRMode() {
   return std::error_code();
 }
 
+std::error_code DataReader::parseInSymbolsMode() {
+  while (!ParsingBuf.empty()) {
+    ErrorOr<StringRef> NameOrErr = parseString('\n');
+    if (std::error_code EC = NameOrErr.getError())
+      return EC;
+    StringRef Name = NameOrErr.get();
+    if (Name.empty())
+      continue;
+    // Use branch entry data rather since basic samples only apply in no_lbr
+    // mode.
+    FuncBranchData &FBD = NamesToBranches.try_emplace(Name, Name).first->second;
+    FBD.EntryData.emplace_back(Location(0),
+                               Location(/*IsSymbol=*/true, Name, 0),
+                               /*Mispreds=*/0, /*Branches=*/1);
+  }
+
+  return std::error_code();
+}
+
 std::error_code DataReader::parse() {
   auto GetOrCreateFuncEntry = [&](StringRef Name) {
     return NamesToBranches.try_emplace(Name, Name).first;
@@ -1149,12 +1186,21 @@ std::error_code DataReader::parse() {
 
   Col = 0;
   Line = 1;
+  ErrorOr<bool> SymbolsFlagOrErr = maybeParseFlag("symbols");
+  if (!SymbolsFlagOrErr)
+    return SymbolsFlagOrErr.getError();
+  SymbolsMode = *SymbolsFlagOrErr;
+
+  // Symbols mode ignores other headers.
+  if (SymbolsMode)
+    return parseInSymbolsMode();
+
   ErrorOr<bool> FlagOrErr = maybeParseNoLBRFlag();
   if (!FlagOrErr)
     return FlagOrErr.getError();
   NoLBRMode = *FlagOrErr;
 
-  ErrorOr<bool> BATFlagOrErr = maybeParseBATFlag();
+  ErrorOr<bool> BATFlagOrErr = maybeParseFlag("boltedcollection");
   if (!BATFlagOrErr)
     return BATFlagOrErr.getError();
   BATMode = *BATFlagOrErr;
