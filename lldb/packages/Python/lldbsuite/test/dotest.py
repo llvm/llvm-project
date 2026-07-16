@@ -381,14 +381,14 @@ def parseOptionsAndInitTestdirs():
             setting_list = setting[0].split("=", 1)
             configuration.settings.append((setting_list[0], setting_list[1]))
 
-    if args.d or args.attach_xcode:
+    if args.d or args.debug_with:
         sys.stdout.write(
             "Suspending the process %d to wait for debugger to attach...\n"
             % os.getpid()
         )
         sys.stdout.flush()
 
-        if args.attach_xcode:
+        if args.debug_with == "xcode":
             xcode.attach(os.getpid())
 
         os.kill(os.getpid(), signal.SIGSTOP)
