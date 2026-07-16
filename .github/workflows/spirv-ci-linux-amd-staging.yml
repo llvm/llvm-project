@@ -249,7 +249,7 @@ jobs:
             -DCMAKE_HIP_COMPILER=$PWD/$LLVM_BUILD/bin/clang++ \
             -DCMAKE_PREFIX_PATH="$PWD/$STAGING;$PWD/$LLVM_BUILD" \
             -DCMAKE_INSTALL_PREFIX=$PWD/$STAGING \
-            -DAMDGPU_TARGETS="gfx942" \
+            -DAMDGPU_TARGETS="gfx942;amdgcnspirv" \
             -DBUILD_TEST=OFF \
             -DBUILD_BENCHMARK=OFF \
             -DCMAKE_HIP_FLAGS="--rocm-path=$PWD/$STAGING"
@@ -552,6 +552,7 @@ jobs:
   # Select the gfx942 test runner the same way TheRock CI does.
   pick_runner:
     name: Select gfx942 test runner
+    needs: [build]
     runs-on: azure-linux-scale-rocm
     timeout-minutes: 5
     outputs:
@@ -631,8 +632,7 @@ jobs:
         env:
           LD_LIBRARY_PATH: ${{ github.workspace }}/${{ env.STAGING }}/lib
         run: |
-          ctest --test-dir examples-build-hip-basic --output-on-failure -j $(nproc) \
-            -E '^hip_cooperative_groups$' # TODO: ISSUE #3143
+          ctest --test-dir examples-build-hip-basic --output-on-failure -j $(nproc)
 
       # Applications.
       - name: ROCm Examples build Applications
@@ -654,8 +654,7 @@ jobs:
         env:
           LD_LIBRARY_PATH: ${{ github.workspace }}/${{ env.STAGING }}/lib
         run: |
-          ctest --test-dir examples-build-Applications --output-on-failure -j $(nproc) \
-            -E '^(applications_optical_flow|applications_monte_carlo_pi)$' # TODO: ISSUE #3143
+          ctest --test-dir examples-build-Applications --output-on-failure -j $(nproc)
 
       # Libraries.
       - name: ROCm Examples build Libraries
@@ -683,5 +682,4 @@ jobs:
         env:
           LD_LIBRARY_PATH: ${{ github.workspace }}/${{ env.STAGING }}/lib
         run: |
-          ctest --test-dir examples-build-Libraries --output-on-failure -j $(nproc) \
-            -E '^(hiprand_simple_distributions_cpp|rocrand_simple_distributions_cpp)$' # TODO: ISSUE #3143
+          ctest --test-dir examples-build-Libraries --output-on-failure -j $(nproc)
