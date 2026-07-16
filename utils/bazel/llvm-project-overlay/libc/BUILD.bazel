@@ -4323,6 +4323,7 @@ libc_support_library(
 libc_support_library(
     name = "__support_threads_linux_thread",
     srcs = ["src/__support/threads/linux/thread.cpp"],
+    copt_sets = ["threading"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],

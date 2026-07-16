@@ -1,0 +1,103 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//libc:libc_build_rules.bzl", "libc_startup_library", "libc_support_library")
+load("//libc:platforms.bzl", "PLATFORM_CPU_X86_64")
+load("//libc/startup:startup_rules.bzl", "libc_startup_object", "merge_relocatable_object")
+
+package(
+    default_visibility = ["//visibility:public"],
+)
+
+libc_support_library(
+    name = "gnu_property_section",
+    srcs = ["gnu_property_section.cpp"],
+    hdrs = ["gnu_property_section.h"],
+    deps = [
+        "//libc:__support_cpp_string_view",
+        "//libc:__support_macros_attributes",
+        "//libc:__support_macros_config",
+        "//libc:hdr_elf_proxy",
+        "//libc:hdr_link_macros",
+        "//libc:string_memory_utils",
+    ],
+)
+
+libc_support_library(
+    name = "irelative_hdr",
+    hdrs = ["irelative.h"],
+    deps = [
+        "//libc:__support_macros_config",
+        "//libc:hdr_link_macros",
+        "//libc:hdr_stdint_proxy",
+    ],
+)
+
+libc_startup_library(
+    name = "do_start",
+    srcs = ["do_start.cpp"],
+    hdrs = [
+        "do_start.h",
+    ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":gnu_property_section",
+        ":irelative_hdr",
+        "//libc:__support_macros_config",
+        "//libc:__support_osutil_linux_auxv",
+        "//libc:__support_osutil_syscall",
+        "//libc:__support_threads_thread",
+        "//libc:__support_threads_thread_headers",
+        "//libc:_r_debug",
+        "//libc:atexit",
+        "//libc:config_app_h",
+        "//libc:config_linux_app_h",
+        "//libc:environ",
+        "//libc:exit",
+        "//libc:hdr_elf_proxy",
+        "//libc:hdr_link_macros",
+        "//libc:hdr_pthread_macros",
+        "//libc:hdr_stdint_proxy",
+        "//libc:hdr_sys_auxv_macros",
+        "//libc:hdr_sys_mman_macros",
+        "//libc:program_invocation_name",
+        "//libc:program_invocation_short_name",
+        "//libc:types_struct_link_map",
+        "//libc:types_struct_r_debug",
+    ] + select({
+        PLATFORM_CPU_X86_64: [
+            "//libc/startup/linux/x86_64:irelative",
+            "//libc/startup/linux/x86_64:tls",
+        ],
+        "//conditions:default": [],
+    }),
+)
+
+merge_relocatable_object(
+    name = "crt1",
+    deps = [
+        ":do_start",
+        ":gnu_property_section",
+    ] + select({
+        PLATFORM_CPU_X86_64: [
+            "//libc/startup/linux/x86_64:irelative",
+            "//libc/startup/linux/x86_64:start",
+            "//libc/startup/linux/x86_64:tls",
+        ],
+        "//conditions:default": [],
+    }),
+)
+
+libc_startup_object(
+    name = "crti",
+    src = "crti.cpp",
+)
+
+libc_startup_object(
+    name = "crtn",
+    src = "crtn.cpp",
+)

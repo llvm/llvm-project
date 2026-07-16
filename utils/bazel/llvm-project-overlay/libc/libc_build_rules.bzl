@@ -75,21 +75,46 @@ def libc_release_copts():
     })
     return copts + platform_copts
 
-def _libc_library(name, deps = [], **kwargs):
+# Allowlisted sets of copts that may be used for a single libc library target.
+# Adding copts here is discouraged, as it complicates the build.
+_LIBC_LIBRARY_COPT_SETS = {
+    "startup_object": [
+        "-ffreestanding",
+        "-fno-builtin",
+        "-fno-omit-frame-pointer",
+        "-fno-stack-protector",
+    ],
+    "threading": [
+        "-fno-omit-frame-pointer",
+        "-Wno-frame-address",
+    ],
+}
+
+def _libc_library(
+        name,
+        deps = [],
+        copt_sets = [],
+        **kwargs):
     """Internal macro to serve as a base for all other libc library rules.
 
     Args:
       name: Target name.
       deps: cc_library deps.
+      copt_sets: Which sets of allow-listed copts to include.
       **kwargs: All other attributes relevant for the cc_library rule.
     """
 
     for attr in ["copts", "local_defines"]:
         if attr in kwargs:
             fail("disallowed attribute: '{}' in rule: '{}'".format(attr, name))
+
+    copts = []
+    for feature in copt_sets:
+        copts.extend(_LIBC_LIBRARY_COPT_SETS[feature])
+
     cc_library(
         name = name,
-        copts = libc_common_copts(),
+        copts = libc_common_copts() + copts,
         local_defines = LIBC_CONFIGURE_OPTIONS,
         deps = deps + libc_common_deps(),
         linkstatic = 1,
@@ -101,6 +126,20 @@ def _libc_library(name, deps = [], **kwargs):
 # libc_support_library.
 def libc_support_library(name, **kwargs):
     _libc_library(name = name, **kwargs)
+
+def libc_startup_library(name, **kwargs):
+    """Add target for a libc startup library.
+
+    Args:
+      name: Target name.
+      **kwargs: Other attributes relevant for a cc_library.
+    """
+
+    _libc_library(
+        name = name,
+        copt_sets = ["startup_object"],
+        **kwargs
+    )
 
 def libc_function(name, **kwargs):
     """Add target for a libc function.
