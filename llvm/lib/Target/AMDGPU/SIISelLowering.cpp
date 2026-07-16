@@ -7825,6 +7825,13 @@ SDValue SITargetLowering::lowerIntrinsicLoad(MemSDNode *M, bool IsFormat,
 
   bool IsD16 = IsFormat && (EltType.getSizeInBits() == 16);
 
+  if (IsFormat && !IsD16 && EltType.getSizeInBits() < 32) {
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        DAG.getMachineFunction().getFunction(),
+        "unsupported sub-dword format buffer load", DL.getDebugLoc()));
+    return DAG.getMergeValues({DAG.getPOISON(LoadVT), M->getOperand(0)}, DL);
+  }
+
   assert(M->getNumValues() == 2 || M->getNumValues() == 3);
   bool IsTFE = M->getNumValues() == 3;
 
@@ -12408,6 +12415,14 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     EVT VDataVT = VData.getValueType();
     EVT EltType = VDataVT.getScalarType();
     bool IsD16 = IsFormat && (EltType.getSizeInBits() == 16);
+
+    if (IsFormat && !IsD16 && EltType.getSizeInBits() < 32) {
+      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+          DAG.getMachineFunction().getFunction(),
+          "unsupported sub-dword format buffer store", DL.getDebugLoc()));
+      return Chain;
+    }
+
     if (IsD16) {
       VData = handleD16VData(VData, DAG);
       VDataVT = VData.getValueType();
@@ -12458,6 +12473,13 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     EVT VDataVT = VData.getValueType();
     EVT EltType = VDataVT.getScalarType();
     bool IsD16 = IsFormat && (EltType.getSizeInBits() == 16);
+
+    if (IsFormat && !IsD16 && EltType.getSizeInBits() < 32) {
+      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+          DAG.getMachineFunction().getFunction(),
+          "unsupported sub-dword format buffer store", DL.getDebugLoc()));
+      return Chain;
+    }
 
     if (IsD16) {
       VData = handleD16VData(VData, DAG);
