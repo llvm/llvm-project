@@ -283,7 +283,7 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
 
     // If we haven't found a binary, or we don't have a SymbolFile, see
     // if there is an external search tool that can find it.
-    if (!module_sp || !module_sp->GetSymbolFile(/*can_create=*/ false)) {
+    if (!module_sp || !module_sp->GetSymbolFile(/*can_create=*/false)) {
       PluginManager::DownloadObjectAndSymbolFile(module_spec, error,
                                                  force_symbol_search);
       if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
