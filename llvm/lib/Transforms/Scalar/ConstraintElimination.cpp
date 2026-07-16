@@ -23,6 +23,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
@@ -48,6 +49,7 @@
 
 using namespace llvm;
 using namespace PatternMatch;
+using namespace SCEVPatternMatch;
 
 #define DEBUG_TYPE "constraint-elimination"
 
@@ -975,50 +977,37 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (!LoopPred || !L->isLoopInvariant(B))
     return;
 
-  auto *AR = dyn_cast_or_null<SCEVAddRecExpr>(SE.getSCEV(PN));
-  if (!AR || AR->getLoop() != L)
-    return;
-
-  const SCEV *StartSCEV = AR->getStart();
-  Value *StartValue = nullptr;
-  if (auto *C = dyn_cast<SCEVConstant>(StartSCEV)) {
-    StartValue = C->getValue();
+  Value *StartValue = PN->getIncomingValueForBlock(LoopPred);
+  BasicBlock *BackedgeBB = PN->getIncomingBlock(0) == LoopPred
+                               ? PN->getIncomingBlock(1)
+                               : PN->getIncomingBlock(0);
+  Value *Backedge = PN->getIncomingValueForBlock(BackedgeBB);
+  const APInt *StepOffset = nullptr;
+  const SCEV *StartSCEV = nullptr;
+  OverflowingBinaryOperator *Inc = nullptr;
+  if (match(Backedge, m_c_Add(m_Specific(PN), m_APInt(StepOffset)))) {
+    if (StepOffset->isZero())
+      return;
+    Inc = cast<OverflowingBinaryOperator>(Backedge);
   } else {
-    StartValue = PN->getIncomingValueForBlock(LoopPred);
-    assert(SE.getSCEV(StartValue) == StartSCEV && "inconsistent start value");
+    const SCEV *Expr = SE.getSCEV(PN);
+    if (!match(Expr,
+               m_scev_AffineAddRec(m_SCEV(StartSCEV), m_scev_APInt(StepOffset),
+                                   m_SpecificLoop(L))))
+      return;
   }
 
   DomTreeNode *DTN = DT.getNode(InLoopSucc);
-  auto IncUnsigned = SE.getMonotonicPredicateType(AR, CmpInst::ICMP_UGT);
-  auto IncSigned = SE.getMonotonicPredicateType(AR, CmpInst::ICMP_SGT);
-  bool MonotonicallyIncreasingUnsigned =
-      IncUnsigned == ScalarEvolution::MonotonicallyIncreasing;
-  bool MonotonicallyIncreasingSigned =
-      IncSigned == ScalarEvolution::MonotonicallyIncreasing;
-  // If SCEV guarantees that AR does not wrap, PN >= StartValue can be added
-  // unconditionally.
-  if (MonotonicallyIncreasingUnsigned)
-    WorkList.push_back(
-        FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_UGE, PN, StartValue));
-  if (MonotonicallyIncreasingSigned)
-    WorkList.push_back(
-        FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SGE, PN, StartValue));
-
-  APInt StepOffset;
-  if (auto *C = dyn_cast<SCEVConstant>(AR->getStepRecurrence(SE)))
-    StepOffset = C->getAPInt();
-  else
-    return;
 
   // If we looked through `PN + C`, only derive facts when that add is
   // really the induction's post-increment.
-  if (IncStep && (*IncStep != StepOffset || StepOffset.isNegative()))
+  if (IncStep && (*IncStep != *StepOffset || StepOffset->isNegative()))
     return;
 
   // Handle negative steps.
-  if (StepOffset.isNegative()) {
+  if (StepOffset->isNegative()) {
     // TODO: Extend to allow steps > -1.
-    if (!(-StepOffset).isOne())
+    if (!(-*StepOffset).isOne())
       return;
 
     // AR may wrap.
@@ -1041,17 +1030,44 @@ void State::addInfoForInductions(BasicBlock &BB) {
     return;
   }
 
+  // Monotonicity is only used if the step is non-negative. If Inc is set it
+  // reduces to the induction wrap flags. If that fails, try to refine via SCEV.
+  bool MonotonicallyIncreasingUnsigned = Inc && Inc->hasNoUnsignedWrap();
+  bool MonotonicallyIncreasingSigned = Inc && Inc->hasNoSignedWrap();
+  if (!(MonotonicallyIncreasingUnsigned && MonotonicallyIncreasingSigned)) {
+    const SCEVAddRecExpr *IndAR = cast<SCEVAddRecExpr>(SE.getSCEV(PN));
+    if (!MonotonicallyIncreasingUnsigned)
+      MonotonicallyIncreasingUnsigned =
+          SE.getMonotonicPredicateType(IndAR, CmpInst::ICMP_UGT) ==
+          ScalarEvolution::MonotonicallyIncreasing;
+    if (!MonotonicallyIncreasingSigned)
+      MonotonicallyIncreasingSigned =
+          SE.getMonotonicPredicateType(IndAR, CmpInst::ICMP_SGT) ==
+          ScalarEvolution::MonotonicallyIncreasing;
+  }
+
+  // If the induction is known not to wrap, PN >= StartValue can be added
+  // unconditionally.
+  if (MonotonicallyIncreasingUnsigned)
+    WorkList.push_back(
+        FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_UGE, PN, StartValue));
+  if (MonotonicallyIncreasingSigned)
+    WorkList.push_back(
+        FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SGE, PN, StartValue));
+
   // Make sure AR either steps by 1 or that the value we compare against is a
   // GEP based on the same start value and all offsets are a multiple of the
   // step size, to guarantee that the induction will reach the value.
-  if (StepOffset.isZero() || StepOffset.isNegative())
+  if (StepOffset->isZero() || StepOffset->isNegative())
     return;
 
-  if (!StepOffset.isOne()) {
+  if (!StepOffset->isOne()) {
     // Check whether B-Start is known to be a multiple of StepOffset.
+    if (!StartSCEV)
+      StartSCEV = SE.getSCEV(StartValue);
     const SCEV *BMinusStart = SE.getMinusSCEV(SE.getSCEV(B), StartSCEV);
     if (isa<SCEVCouldNotCompute>(BMinusStart) ||
-        !SE.getConstantMultiple(BMinusStart).urem(StepOffset).isZero())
+        !SE.getConstantMultiple(BMinusStart).urem(*StepOffset).isZero())
       return;
   }
 
@@ -1062,7 +1078,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
     if (!StartC)
       return;
     bool Overflow = false;
-    APInt Sum = StartC->getValue().uadd_ov(StepOffset, Overflow);
+    APInt Sum = StartC->getValue().uadd_ov(*StepOffset, Overflow);
     if (Overflow)
       return;
     LowerBound = ConstantInt::get(StartValue->getType(), Sum);
@@ -1092,7 +1108,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
   // Try to add condition from header to the dedicated exit blocks. When exiting
   // either with EQ or NE in the header, we know that the induction value must
   // be u<= B, as other exits may only exit earlier.
-  assert(!StepOffset.isNegative() && "induction must be increasing");
+  assert(!StepOffset->isNegative() && "induction must be increasing");
   assert((Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE) &&
          "unsupported predicate");
   ConditionTy Precond = {CmpInst::ICMP_ULE, LowerBound, B};
@@ -1978,6 +1994,26 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         else
           Info.transferToOtherSystem(Pred, A, B, CB.NumIn, CB.NumOut,
                                      DFSInStack);
+      }
+
+      // (X | Y) >s -1 implies X >s -1 and Y >s -1, because the sign bit of an
+      // OR is the OR of the operand sign bits. Look through this
+      // canonicalization by InstCombine.
+      if (Pred == CmpInst::ICMP_SGT && match(B, m_AllOnes())) {
+        SmallVector<Value *> OrWorklist = {A};
+        SmallPtrSet<Value *, 4> SeenOr;
+        Value *X, *Y;
+        while (!OrWorklist.empty()) {
+          Value *Cur = OrWorklist.pop_back_val();
+          if (!match(Cur, m_Or(m_Value(X), m_Value(Y))))
+            continue;
+          for (Value *Op : {X, Y}) {
+            if (!SeenOr.insert(Op).second)
+              continue;
+            OrWorklist.push_back(Op);
+            Info.addFact(Pred, Op, B, CB.NumIn, CB.NumOut, DFSInStack);
+          }
+        }
       }
 
       if (ReproducerModule && DFSInStack.size() > ReproducerCondStack.size()) {

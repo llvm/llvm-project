@@ -41,6 +41,7 @@
 #include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
+#include "flang/Semantics/expression.h"
 #include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/tools.h"
@@ -4873,7 +4874,7 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
 static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
-    semantics::SemanticsContext &semaCtx, const clause::Combiner &combiner,
+    semantics::SemanticsContext &semaCtx, const StylizedInstance &combinerInst,
     const parser::OmpStylizedInstance &parserInst) {
   // Extract the typed assignment from the parser-level instance, if
   // the combiner is an assignment statement (as opposed to a call).
@@ -4887,8 +4888,12 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
         assign = &*wrapper->v;
   }
   ReductionProcessor::GenCombinerCBTy genCombinerCB;
-  const StylizedInstance &inst = combiner.v.front();
-  semantics::SomeExpr evalExpr = std::get<StylizedInstance::Instance>(inst.t);
+  // combinerInst is the combiner instance for the type currently being lowered
+  // (one per listed type, in typeNameList order): a multi-type declare
+  // reduction carries a distinct stylized instance per type so omp_out/omp_in
+  // are re-typed for each. Single-type is index 0 of one.
+  semantics::SomeExpr evalExpr =
+      std::get<StylizedInstance::Instance>(combinerInst.t);
 
   genCombinerCB = [&, evalExpr, assign](fir::FirOpBuilder &builder,
                                         mlir::Location loc, mlir::Type type,
@@ -4896,7 +4901,8 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
                                         bool isByRef) {
     lower::SymMapScope scope(symTable);
     mlir::Value ompOutVar;
-    for (const Object &object : std::get<StylizedInstance::Variables>(inst.t)) {
+    for (const Object &object :
+         std::get<StylizedInstance::Variables>(combinerInst.t)) {
       mlir::Value addr = lhs;
       mlir::Type type = lhs.getType();
       std::string name = object.sym()->name().ToString();
@@ -5048,24 +5054,33 @@ static bool isSimpleReductionType(mlir::Type reductionType) {
   return false;
 }
 
-// Getting the type from a symbol compared to a DeclSpec is simpler since we do
-// not need to consider derived vs intrinsic types. Semantics is guaranteed to
-// generate these symbols.
+// Compute the reduction's element type from the given combiner instance's
+// stylized declaration symbol (omp_out), without checking whether lowering
+// supports it. A multi-type declare reduction carries one combiner instance per
+// listed type (typeNameList order), so the caller passes the instance for the
+// type being lowered. Shared by getReductionType (same-file, enforces support
+// with a TODO) and materializeUserReduction (skips an unsupported requested
+// type via isSimpleReductionType instead of aborting the consumer).
+// Getting the type from that symbol compared to the declared type-list (a
+// DeclarationTypeSpec) is simpler since we do not need to consider derived vs
+// intrinsic types. Semantics is guaranteed to generate these symbols.
 static mlir::Type
-getReductionType(lower::AbstractConverter &converter,
-                 const parser::OmpReductionSpecifier &specifier) {
-  const auto &combinerExpression =
-      std::get<std::optional<parser::OmpCombinerExpression>>(specifier.t)
-          .value();
-  const parser::OmpStylizedInstance &combinerInstance =
-      combinerExpression.v.front();
+computeReductionType(lower::AbstractConverter &converter,
+                     const parser::OmpStylizedInstance &combinerInstance) {
   const std::list<parser::OmpStylizedDeclaration> &declList =
       std::get<std::list<parser::OmpStylizedDeclaration>>(combinerInstance.t);
   const parser::OmpStylizedDeclaration &decl = declList.front();
   const auto &name = std::get<parser::ObjectName>(decl.var.t);
   const auto &symbol = semantics::SymbolRef(*name.symbol);
-  mlir::Type reductionType = converter.genType(symbol);
+  return converter.genType(symbol);
+}
 
+// Return the reduction's element type, emitting a TODO if lowering does not
+// support it.
+static mlir::Type
+getReductionType(lower::AbstractConverter &converter,
+                 const parser::OmpStylizedInstance &combinerInstance) {
+  mlir::Type reductionType = computeReductionType(converter, combinerInstance);
   if (!isSimpleReductionType(reductionType))
     TODO(converter.getCurrentLocation(),
          "declare reduction currently only supports trivial types, "
@@ -5101,10 +5116,20 @@ appendCombiner(const parser::OmpDeclareReductionDirective &construct,
   llvm_unreachable("Expecting reduction combiner");
 }
 
-static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
-                   semantics::SemanticsContext &semaCtx,
-                   lower::pft::Evaluation &eval,
-                   const parser::OmpDeclareReductionDirective &construct) {
+// Lower a single declare-reduction directive. Serves both same-file lowering
+// (symOpt null, no filter) and separate-compilation materialization of an
+// imported reduction (symOpt is the source symbol, with a fresh SymMap).
+// When \p requestedOpName is non-empty (the lazy clause-driven path), only the
+// per-type instance whose scoped op name equals it is emitted, and lowerability
+// is checked per-type rather than for the whole declaration; same-file callers
+// pass an empty filter and lower every listed type as before. Mirrors
+// genOpenMPDeclareMapperImpl.
+static void genOpenMPDeclareReductionImpl(
+    lower::AbstractConverter &converter, lower::SymMap &symTable,
+    semantics::SemanticsContext &semaCtx,
+    const parser::OmpDeclareReductionDirective &construct,
+    const semantics::Symbol *symOpt = nullptr,
+    llvm::StringRef requestedOpName = {}) {
   if (semaCtx.langOptions().OpenMPSimd)
     return;
 
@@ -5142,6 +5167,10 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
       initExpr ? initExpr->v.begin()
                : std::list<parser::OmpStylizedInstance>::const_iterator{};
 
+  // Index of the type currently being lowered within the parallel per-type
+  // lists: typeNameList.v, the clause-level combiner instances (combiner.v),
+  // and the clause-level initializer instances. Single-type is index 0 of one.
+  unsigned instanceIdx = 0;
   for (const auto &typeSpec : typeNameList.v) {
     (void)typeSpec; // Currently unused
 
@@ -5149,7 +5178,25 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
            "Mismatched combiner instance count");
     const parser::OmpStylizedInstance &parserInst = *parserInstIt++;
 
-    mlir::Type reductionType = getReductionType(converter, specifier);
+    mlir::Type reductionType;
+    if (requestedOpName.empty()) {
+      // Same-file path: lower every listed type, emitting a TODO on an
+      // unsupported one exactly as before.
+      reductionType = getReductionType(converter, parserInst);
+    } else {
+      // Lazy per-type path: check lowerability for THIS type alone (not the
+      // whole-declaration gate), so a multi-type declaration with an
+      // unsupported sibling still materializes the requested supported type.
+      // An unsupported requested type is left unmaterialized (the clause then
+      // keeps its TODO).
+      reductionType = computeReductionType(converter, parserInst);
+      if (!isSimpleReductionType(reductionType)) {
+        if (initExpr)
+          ++parserInitInstIt;
+        ++instanceIdx;
+        continue;
+      }
+    }
     bool isByRef = ReductionProcessor::doReductionByRef(reductionType);
     // Compute the canonical reduction name the same way
     // processReductionArguments does.
@@ -5160,51 +5207,104 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                   common::visitors{
                       [&](const clause::DefinedOperator::IntrinsicOperator
                               &intrOp) -> std::string {
-                        ReductionProcessor::ReductionIdentifier redId =
-                            ReductionProcessor::getReductionType(intrOp);
-                        return ReductionProcessor::getReductionName(
-                            redId, converter.getFirOpBuilder().getKindMap(),
-                            reductionType, isByRef);
+                        // Directive side of the intrinsic-operator USER
+                        // reduction naming contract (clause side:
+                        // ReductionProcessor::processReductionArguments site
+                        // 2). A user `declare reduction(+:t)` is scoped by its
+                        // owning scope exactly like the defined-operator and
+                        // named paths, so two declarations for the same
+                        // (operator, type) in different scopes get distinct ops
+                        // instead of colliding on the one global builtin name.
+                        // Only user reductions reach here (builtins are created
+                        // directly by createDeclareReduction), so this always
+                        // scopes. The intrinsic-operator parse node carries no
+                        // reduction symbol: symOpt supplies it for separate
+                        // compilation; same-file it is resolved from the
+                        // current (declaration) scope under the operator's
+                        // mangled name (MakeNameFromOperator), which resolves
+                        // to the same ultimate the clause side finds, so both
+                        // name the op identically.
+                        const semantics::Symbol *redSymPtr = symOpt;
+                        if (!redSymPtr) {
+                          parser::CharBlock mangledOpName = semantics::omp::
+                              MangledIntrinsicOperatorReductionName(
+                                  ReductionProcessor::toParserIntrinsicOperator(
+                                      intrOp),
+                                  semaCtx);
+                          redSymPtr = semantics::omp::FindUserReductionSymbol(
+                              converter.getCurrentScope(), mangledOpName);
+                        }
+                        if (!redSymPtr)
+                          TODO(converter.getCurrentLocation(),
+                               "OpenMP user-defined intrinsic-operator declare "
+                               "reduction symbol was not found for lowering");
+                        const semantics::Symbol &redSym =
+                            redSymPtr->GetUltimate();
+                        return ReductionProcessor::getScopedUserReductionName(
+                            converter, redSym, reductionType, isByRef);
                       },
                       [&](const clause::DefinedOperator::DefinedOpName &opName)
                           -> std::string {
                         // Directive side of the user-defined operator reduction
                         // naming contract (the clause side is in
-                        // ReductionProcessor::processReductionArguments).
-                        // opName.v.sym() is the reduction symbol
-                        // "op<spelling>". Only single-declaration, single-type
-                        // reductions are supported; otherwise emit a clean
-                        // TODO.
+                        // ReductionProcessor::processReductionArguments). Name
+                        // the op via getScopedUserReductionName from the
+                        // symbol's ultimate (name, owner) plus the per-type
+                        // suffix, byte-identical to the clause reference.
+                        // symOpt supplies the source symbol for separate
+                        // compilation, else opName.v.sym(). Runs once per
+                        // listed type (the enclosing loop walks typeNameList in
+                        // lockstep with the per-type combiner/initializer
+                        // instances), emitting one op per (operator, type);
+                        // single-type is N=1.
                         const semantics::Symbol &redSym =
-                            opName.v.sym()->GetUltimate();
+                            symOpt ? symOpt->GetUltimate()
+                                   : opName.v.sym()->GetUltimate();
                         const auto *userDetails =
                             redSym.detailsIf<semantics::UserReductionDetails>();
-                        if (!userDetails || typeNameList.v.size() != 1 ||
-                            userDetails->GetDeclList().size() != 1 ||
-                            userDetails->GetTypeList().size() != 1)
+                        if (!userDetails)
                           TODO(converter.getCurrentLocation(),
                                "OpenMP user-defined operator declare reduction "
-                               "with multiple declarations or multiple types");
+                               "without user reduction details");
                         return ReductionProcessor::getScopedUserReductionName(
-                            converter, redSym);
+                            converter, redSym, reductionType, isByRef);
                       },
                   },
                   defOp.u);
             },
             [&](const clause::ProcedureDesignator &pd) -> std::string {
-              // Qualify the name with the scope in which the user-defined
-              // reduction is declared so that reductions with the same name
-              // in different scopes produce distinct omp.declare_reduction ops.
-              const semantics::Symbol *sym = pd.v.sym();
-              std::string name = sym->name().ToString();
-              return converter.mangleName(name, sym->GetUltimate().owner());
+              // Directive side of the named-reduction naming contract (clause
+              // side in ReductionProcessor::processReductionArguments). Name
+              // the op via getScopedUserReductionName from the source symbol's
+              // ultimate (name, owner) plus the per-type suffix, byte-identical
+              // to the clause reference. symOpt supplies the source symbol for
+              // separate compilation, else pd.v.sym(); GetUltimate keeps the
+              // name stable across a plain `use`. reductionType is the declared
+              // element type (already canonical), so unlike the clause side it
+              // needs no namingType normalization.
+              const semantics::Symbol &redSym =
+                  (symOpt ? *symOpt : *pd.v.sym()).GetUltimate();
+              return ReductionProcessor::getScopedUserReductionName(
+                  converter, redSym, reductionType, isByRef);
             },
         },
         redOp.u);
 
+    // Lazy path: emit only the op the clause requested, skipping this
+    // declaration's other listed types (keeping the per-type iterators in
+    // lockstep). Single-type is the N==1 case where the one name matches.
+    if (!requestedOpName.empty() && reductionNameStr != requestedOpName) {
+      if (initExpr)
+        ++parserInitInstIt;
+      ++instanceIdx;
+      continue;
+    }
+
+    assert(instanceIdx < combiner.v.size() &&
+           "Mismatched combiner instance count");
     ReductionProcessor::GenCombinerCBTy genCombinerCB =
-        processReductionCombiner(converter, symTable, semaCtx, combiner,
-                                 parserInst);
+        processReductionCombiner(converter, symTable, semaCtx,
+                                 combiner.v[instanceIdx], parserInst);
     const parser::OmpStylizedInstance *parserInitInst = nullptr;
     if (initExpr) {
       assert(parserInitInstIt != initExpr->v.end() &&
@@ -5228,7 +5328,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
     ReductionProcessor::GenInitValueCBTy genInitValueCB;
     ClauseProcessor cp(converter, semaCtx, clauses);
-    if (!cp.processInitializer(symTable, genInitValueCB, parserInitInst)) {
+    if (!cp.processInitializer(symTable, genInitValueCB, parserInitInst,
+                               instanceIdx)) {
       // No initializer clause provided. Per OpenMP, initialize as
       // default-initialized using the shared inline init helper.
       const semantics::DerivedTypeSpec *derivedTypeSpec = nullptr;
@@ -5281,6 +5382,75 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
         mlir::omp::DeclareReductionOp>(
         converter, reductionNameStr, redType, converter.getCurrentLocation(),
         isByRef, genCombinerCB, genInitValueCB, reductionSym);
+    ++instanceIdx;
+  }
+}
+
+// Same-file delegator for a declare-reduction directive. Mirrors the
+// declare-mapper delegator: it forwards the enclosing SymMap so the combiner/
+// initializer callbacks share the current scope. Separate-compilation
+// materialization instead calls genOpenMPDeclareReductionImpl directly with a
+// fresh SymMap and the source reduction symbol.
+static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval,
+                   const parser::OmpDeclareReductionDirective &construct) {
+  genOpenMPDeclareReductionImpl(converter, symTable, semaCtx, construct);
+}
+
+// Lazily materialize the omp.declare_reduction op the reduction clause resolved
+// but did not find, for separate compilation. The clause side has already
+// resolved the exact imported reduction symbol and computed the per-type scoped
+// op name it needs; this emits exactly that one op (idempotently) instead of an
+// eager pre-pass materializing every accessible reduction. Called from the
+// clause bind sites in ReductionProcessor.cpp when the op is absent and the
+// reduction's defining module is a mod file.
+void Fortran::lower::materializeUserReduction(
+    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
+    const semantics::Symbol &resolvedReduction, llvm::StringRef requestedOpName,
+    mlir::Type requestedType, bool isByRef) {
+  // Per-type lowerability: an unsupported requested element type is not
+  // materialized, so the clause keeps its TODO. Checked here (not the
+  // all-types isLowerableUserReductionDecl gate) so a multi-type declaration
+  // with an unsupported sibling still materializes the requested supported
+  // type. The combiner-in-clause form is skipped per-declaration below.
+  (void)isByRef;
+  if (!isSimpleReductionType(requestedType))
+    return;
+  const semantics::Symbol &ultimate = resolvedReduction.GetUltimate();
+  const auto *userDetails =
+      ultimate.detailsIf<semantics::UserReductionDetails>();
+  if (!userDetails)
+    return;
+  for (const auto *decl : userDetails->GetDeclList()) {
+    const auto *reductionDecl =
+        std::get_if<parser::OmpDeclareReductionDirective>(&decl->u);
+    if (!reductionDecl)
+      continue;
+    // The combiner-in-clause form (OpenMP 6.0 `declare reduction(id:type)
+    // combiner(...)`) is not lowered even in the same-file path; skip it so an
+    // imported one does not abort. A referenced one still gets the clause TODO.
+    const auto &specifier =
+        DEREF(parser::omp::GetFirstArgument<parser::OmpReductionSpecifier>(
+            reductionDecl->v));
+    const auto &combinerExpr =
+        std::get<std::optional<parser::OmpCombinerExpression>>(specifier.t);
+    if (!combinerExpr.has_value())
+      continue;
+    // Mod-file reading runs only ResolveNames, so an imported combiner and
+    // initializer carry bound names but null typedExpr/typedCall (the same-file
+    // path fills these later in PerformStatementSemantics). Lowering reads the
+    // typed forms, so run expression analysis over this imported directive now;
+    // the genOpenMPDeclareReductionImpl -> createDeclareReductionHelper
+    // lookupSymbol cache makes a repeat call idempotent.
+    semantics::ExprChecker checker{semaCtx};
+    parser::Walk(*reductionDecl, checker);
+    // Fresh, materialization-local SymMap: the combiner/initializer callbacks
+    // created inside the impl capture it by reference and run synchronously
+    // during createDeclareReductionHelper, so it must outlive the impl call.
+    lower::SymMap materializeSymTable;
+    genOpenMPDeclareReductionImpl(converter, materializeSymTable, semaCtx,
+                                  *reductionDecl, &ultimate, requestedOpName);
   }
 }
 
@@ -6447,3 +6617,7 @@ void Fortran::lower::materializeOpenMPDeclareMappers(
     }
   }
 }
+
+// Walk scopes and materialize omp.declare_reduction ops for user-defined
+// operator reductions imported from modules (deleted: replaced by lazy,
+// clause-driven materialization).
