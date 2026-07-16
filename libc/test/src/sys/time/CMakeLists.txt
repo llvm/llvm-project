@@ -60,7 +60,8 @@ add_libc_unittest(
   SRCS
     gettimeofday_test.cpp
   DEPENDS
-    libc.include.sys_time
     libc.src.sys.time.gettimeofday
     libc.hdr.types.struct_timeval
+    libc.src.errno.errno
+    libc.test.UnitTest.ErrnoCheckingTest
 )
