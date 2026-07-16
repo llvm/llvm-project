@@ -444,6 +444,11 @@ static std::optional<unsigned> allocateEntryStubScratchSgprs(
     return std::nullopt;
   }
 
+  // getKernelSgprCount includes VCC's two implicit SGPRs when the kernel uses
+  // VCC. Unlike findSafeSgprScratchBlock, this pre-decode entry-stub path has
+  // no instruction usage summary that can prove whether those two slots are
+  // non-numbered. Treat the full metadata count as numbered and possibly skip
+  // two usable SGPRs rather than risk overlapping a declared register.
   unsigned ScratchBase = (*SgprCount + 1) & ~1u;
   if (ScratchBase > MaxSgprs || MaxSgprs - ScratchBase < ScratchSgprs) {
     log() << "hotswap: error: entry trampoline: kernel '" << KD.KernelName

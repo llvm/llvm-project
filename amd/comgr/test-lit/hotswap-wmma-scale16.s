@@ -175,16 +175,67 @@ test_wmma_scale_16x16:
 .amdhsa_kernel test_wmma_scale16_16x16
   .amdhsa_next_free_vgpr 52
   .amdhsa_next_free_sgpr 2
+  .amdhsa_wavefront_size32 1
 .end_amdhsa_kernel
 .amdhsa_kernel test_wmma_scale16_32x16
   .amdhsa_next_free_vgpr 44
   .amdhsa_next_free_sgpr 2
+  .amdhsa_wavefront_size32 1
 .end_amdhsa_kernel
 .amdhsa_kernel test_wmma_scale16_32x16_src2_neg_half
   .amdhsa_next_free_vgpr 44
   .amdhsa_next_free_sgpr 2
+  .amdhsa_wavefront_size32 1
 .end_amdhsa_kernel
 .amdhsa_kernel test_wmma_scale_16x16
   .amdhsa_next_free_vgpr 52
   .amdhsa_next_free_sgpr 2
+  .amdhsa_wavefront_size32 1
 .end_amdhsa_kernel
+
+.amdgpu_metadata
+  amdhsa.version:
+    - 3
+    - 0
+  amdhsa.kernels:
+    - .name: test_wmma_scale16_16x16
+      .symbol: test_wmma_scale16_16x16.kd
+      .sgpr_count: 2
+      .vgpr_count: 52
+      .kernarg_segment_size: 0
+      .group_segment_fixed_size: 0
+      .private_segment_fixed_size: 0
+      .kernarg_segment_align: 8
+      .wavefront_size: 32
+      .max_flat_workgroup_size: 256
+    - .name: test_wmma_scale16_32x16
+      .symbol: test_wmma_scale16_32x16.kd
+      .sgpr_count: 2
+      .vgpr_count: 44
+      .kernarg_segment_size: 0
+      .group_segment_fixed_size: 0
+      .private_segment_fixed_size: 0
+      .kernarg_segment_align: 8
+      .wavefront_size: 32
+      .max_flat_workgroup_size: 256
+    - .name: test_wmma_scale16_32x16_src2_neg_half
+      .symbol: test_wmma_scale16_32x16_src2_neg_half.kd
+      .sgpr_count: 2
+      .vgpr_count: 44
+      .kernarg_segment_size: 0
+      .group_segment_fixed_size: 0
+      .private_segment_fixed_size: 0
+      .kernarg_segment_align: 8
+      .wavefront_size: 32
+      .max_flat_workgroup_size: 256
+    - .name: test_wmma_scale_16x16
+      .symbol: test_wmma_scale_16x16.kd
+      .sgpr_count: 2
+      .vgpr_count: 52
+      .kernarg_segment_size: 0
+      .group_segment_fixed_size: 0
+      .private_segment_fixed_size: 0
+      .kernarg_segment_align: 8
+      .wavefront_size: 32
+      .max_flat_workgroup_size: 256
+.end_amdgpu_metadata

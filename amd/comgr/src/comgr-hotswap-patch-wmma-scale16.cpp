@@ -189,8 +189,9 @@ static SmallVector<uint8_t> rewriteScale16ToScale(const uint8_t *OrigRaw,
   // idempotency. Baking 0x100 here keeps wrap-emitted trampolines
   // bit-identical across passes and avoids the SALU stall. Same trick
   // PR #2 (VOP3PX2 wrap pass) uses in its LdScalePrefix bytes.
-  Rewritten[6] &= 0x03;                         // clear scale_src2[5:0]
-  Rewritten[7] = (Rewritten[7] & 0xF8) | 0x04;  // set scale_src2[8]=1, clear [7:6]
+  Rewritten[6] &= 0x03; // clear scale_src2[5:0]
+  Rewritten[7] =
+      (Rewritten[7] & 0xF8) | 0x04; // set scale_src2[8]=1, clear [7:6]
 
   return Rewritten;
 }
@@ -242,8 +243,8 @@ static uint32_t patchWmmaScale16_16x16(PatchContext &Ctx, size_t Idx) {
 
   std::string KernelName =
       Ctx.Elf.findKernelAtAddress(DI.Offset + Ctx.Elf.textAddr());
-  std::optional<unsigned> KdVgprs =
-      Ctx.Elf.getKernelVgprCount(KernelName, Ctx.Config.VgprGranuleSize);
+  std::optional<unsigned> KdVgprs = Ctx.Elf.getKernelVgprCount(
+      KernelName, getKernelVgprGranuleSize(Ctx, KernelName));
   unsigned KdCount = KdVgprs.value_or(Ctx.Config.MaxVgprs);
 
   VgprAllocator Alloc(Ctx.Liveness.LiveBefore[Idx], KdCount,
@@ -313,11 +314,15 @@ static uint32_t patchWmmaScale16_16x16(PatchContext &Ctx, size_t Idx) {
                      PreambleBytes.end());
   Replacement.insert(Replacement.end(), WmmaBytes.begin(), WmmaBytes.end());
 
+  unsigned Extra = Alloc.extraVgprsNeeded();
+  if (checkKernelVgprBump(Ctx, KernelName, Extra, PatchRequirement::Optional) !=
+      VgprBumpDecision::Apply)
+    return 0;
+
   if (!emitToTrampoline(Ctx, DI.Offset, DI.Size, Replacement))
     return 0;
 
   KernelPatchStats &Stats = Ctx.KernelStats[KernelName];
-  unsigned Extra = Alloc.extraVgprsNeeded();
   if (Extra > Stats.ExtraVgprs)
     Stats.ExtraVgprs = Extra;
   Stats.ScratchReused += ScratchCount - Extra;
@@ -552,8 +557,8 @@ static uint32_t patchWmmaScale16_32x16(PatchContext &Ctx, size_t Idx) {
 
   std::string KernelName =
       Ctx.Elf.findKernelAtAddress(DI.Offset + Ctx.Elf.textAddr());
-  std::optional<unsigned> KdVgprs =
-      Ctx.Elf.getKernelVgprCount(KernelName, Ctx.Config.VgprGranuleSize);
+  std::optional<unsigned> KdVgprs = Ctx.Elf.getKernelVgprCount(
+      KernelName, getKernelVgprGranuleSize(Ctx, KernelName));
   unsigned KdCount = KdVgprs.value_or(Ctx.Config.MaxVgprs);
 
   VgprAllocator Alloc(Ctx.Liveness.LiveBefore[Idx], KdCount,
@@ -642,8 +647,8 @@ static uint32_t patchWmmaScale16_32x16(PatchContext &Ctx, size_t Idx) {
 
     WOS << "v_wmma_scale_f32_16x16x128_f8f6f4" << " v[" << HalfD << ":"
         << (HalfD + 7) << "]," << " v[" << HalfA << ":" << (HalfA + 7) << "],"
-        << " v[" << BBase << ":" << (BBase + 7) << "]," << " " << CStr
-        << "," << " " << ScaleAStr << ", " << ScaleBStr
+        << " v[" << BBase << ":" << (BBase + 7) << "]," << " " << CStr << ","
+        << " " << ScaleAStr << ", " << ScaleBStr
         << " matrix_a_fmt:MATRIX_FMT_FP4 matrix_b_fmt:MATRIX_FMT_FP4";
 
     if (Half == 1)
@@ -697,11 +702,15 @@ static uint32_t patchWmmaScale16_32x16(PatchContext &Ctx, size_t Idx) {
     Replacement.insert(Replacement.end(), HalfBytes.begin(), HalfBytes.end());
   }
 
+  unsigned Extra = Alloc.extraVgprsNeeded();
+  if (checkKernelVgprBump(Ctx, KernelName, Extra, PatchRequirement::Optional) !=
+      VgprBumpDecision::Apply)
+    return 0;
+
   if (!emitToTrampoline(Ctx, DI.Offset, DI.Size, Replacement))
     return 0;
 
   KernelPatchStats &Stats = Ctx.KernelStats[KernelName];
-  unsigned Extra = Alloc.extraVgprsNeeded();
   if (Extra > Stats.ExtraVgprs)
     Stats.ExtraVgprs = Extra;
   Stats.ScratchReused += ScratchCount - Extra;

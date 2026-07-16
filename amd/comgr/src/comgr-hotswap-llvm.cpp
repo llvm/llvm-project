@@ -398,6 +398,22 @@ LLVMState initLLVM(const TargetIdentifier &TI) {
     return S;
   }
 
+  SmallVector<MCInst, 2> VccDefInsts = parseAsmToMCInsts("s_mov_b64 vcc, 0", S);
+  if (VccDefInsts.size() != 1 || VccDefInsts.front().getNumOperands() == 0 ||
+      !VccDefInsts.front().getOperand(0).isReg()) {
+    log() << "hotswap: error: initLLVM: failed to recover VCC from a scalar "
+             "move for CPU '"
+          << S.Cpu << "'.\n";
+    return S;
+  }
+  S.VCCRegister = MCRegister(VccDefInsts.front().getOperand(0).getReg());
+  if (!S.VCCRegister.isValid()) {
+    log() << "hotswap: error: initLLVM: scalar move has no valid VCC "
+             "destination for CPU '"
+          << S.Cpu << "'.\n";
+    return S;
+  }
+
   S.Valid = true;
   return S;
 }

@@ -35,6 +35,22 @@ necessarily that the output bytes changed. If the source/target ISA pair and
 rewrite options select no enabled transformation, the output is a copy of the
 input.
 
+## Register accounting
+
+A patch that allocates VGPRs above the kernel descriptor's existing allocation
+is checked before any replacement bytes are emitted. The proposed allocation,
+rounded to the target and kernel wavefront mode's VGPR granule, must retain
+enough waves per execution unit to admit one workgroup at the kernel metadata's
+`.max_flat_workgroup_size`. Optional patches are declined when that invariant
+would be violated; required patches fail the rewrite. This also protects
+cluster dispatches, whose constituent workgroups must each remain schedulable.
+
+When a VGPR bump is committed, hotswap updates both the kernel descriptor and
+the runtime-visible `.vgpr_count` metadata. Missing or malformed workgroup
+metadata is not treated as permission to grow the allocation. SGPR and LDS
+usage are outside this differential check: SGPRs are not occupancy-limiting on
+the supported gfx125x path, and current hotswap patches do not increase LDS.
+
 ## Transpiler (cross-gen)
 
 The transpiler is the heavier sibling to the byte-level rewrite. It raises

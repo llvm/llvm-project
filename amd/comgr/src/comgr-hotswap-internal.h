@@ -13,6 +13,7 @@
 ///   comgr-hotswap-elf.cpp       ELF parsing, binary helpers, trampoline growth
 ///   comgr-hotswap-llvm.cpp      LLVM MC infrastructure (disasm/asm/encode)
 ///   comgr-hotswap-b0a0.cpp      GFX1250 B0-to-A0 policy + public API
+///   comgr-hotswap-occupancy.cpp VGPR/workgroup capacity policy
 ///
 //===----------------------------------------------------------------------===//
 
@@ -332,12 +333,17 @@ public:
   /// field; it is reserved and must remain unchanged on gfx10+.
   bool updateKernelDescriptorSgprCount(llvm::StringRef KernelName,
                                        unsigned RequiredSgprs,
-                                       bool UpdateDescriptor = true);
+                                       bool UpdateDescriptor);
 
   /// Update metadata SGPR counts for every named kernel in one parse and
   /// serialization pass. All requested kernels must be present.
   bool updateKernelMetadataSgprCounts(
       const llvm::StringMap<unsigned> &RequiredSgprs);
+
+  /// Update metadata VGPR counts for every named kernel in one parse and
+  /// serialization pass. All requested kernels must be present.
+  bool updateKernelMetadataVgprCounts(
+      const llvm::StringMap<unsigned> &RequiredVgprs);
 
   /// Retag every gfx1250 kernel in the AMDGPU metadata note with \p Revision.
   /// The revision strings used by gfx1250 ("A0" and "B0") have equal encoded
@@ -358,6 +364,21 @@ public:
   /// Returns std::nullopt if the descriptor is not found.
   std::optional<unsigned> getKernelVgprCount(llvm::StringRef KernelName,
                                              unsigned VgprGranuleSize) const;
+
+  /// Read \c .vgpr_count from the AMDGPU metadata note for \p KernelName.
+  std::optional<unsigned>
+  getKernelMetadataVgprCount(llvm::StringRef KernelName) const;
+
+  /// Read \c .max_flat_workgroup_size from the AMDGPU metadata note for
+  /// \p KernelName. Returns std::nullopt if the note, kernel, or key is absent
+  /// or malformed.
+  std::optional<unsigned>
+  getKernelMaxFlatWorkgroupSize(llvm::StringRef KernelName) const;
+
+  /// Read \c .wavefront_size from the AMDGPU metadata note for \p KernelName.
+  /// Returns std::nullopt if the note, kernel, or key is absent or malformed.
+  std::optional<unsigned>
+  getKernelWavefrontSize(llvm::StringRef KernelName) const;
 
   /// Read `group_segment_fixed_size` from the kernel descriptor for
   /// \p KernelName, i.e. the **static** (compile-time-fixed) LDS allocation
@@ -392,11 +413,14 @@ public:
   std::optional<KernelClusterDims>
   getKernelClusterDims(llvm::StringRef KernelName) const;
 
-  /// Update the RSRC1 VGPR granule count in the kernel descriptor for
-  /// \p KernelName by adding \p ExtraVgprs. The SGPR granule field is
-  /// not updated because it is reserved on GFX10+.
-  void updateKernelDescriptor(llvm::StringRef KernelName, unsigned ExtraVgprs,
-                              unsigned VgprGranuleSize);
+  /// Ensure the RSRC1 VGPR granule count in the kernel descriptor for
+  /// \p KernelName covers \p RequiredVgprs. Returns false if the descriptor
+  /// is missing, the granule is invalid, or the required count cannot be
+  /// encoded. The SGPR granule field is not updated because it is reserved on
+  /// GFX10+.
+  bool updateKernelDescriptorVgprCount(llvm::StringRef KernelName,
+                                       unsigned RequiredVgprs,
+                                       unsigned VgprGranuleSize);
 
   /// Virtual address at which growWithTrampolines appends the trampoline pool:
   /// the first page-aligned address above every existing allocatable section.
@@ -567,6 +591,11 @@ struct LLVMState {
   /// SCC, recovered from the implicit definition on a parsed scalar compare.
   /// This avoids scanning target register names in policy code.
   llvm::MCRegister SCCRegister;
+
+  /// VCC super-register, recovered from the destination of a parsed scalar
+  /// move. Policy code uses regsOverlap against this cached identity so VCC_LO,
+  /// VCC_HI, and tuple aliases are handled by LLVM MC.
+  llvm::MCRegister VCCRegister;
 
   bool Valid = false;
 
@@ -778,6 +807,38 @@ struct KernelPatchStats {
   unsigned ScratchAboveKd = 0;
 };
 
+/// Hardware limits needed to determine whether a VGPR allocation can still
+/// admit every wave of one maximum-size workgroup.
+struct SubtargetOccupancyLimits {
+  unsigned EUsPerCU = 0;
+  unsigned MaxWavesPerCU = 0;
+  unsigned MaxFlatWorkgroupSize = 0;
+  unsigned VgprAllocGranule = 0;
+  unsigned TotalNumVgprs = 0;
+  bool Wave64HalvesVgprCapacity = false;
+};
+
+struct WorkgroupCapacity {
+  unsigned RequiredWavesPerEU = 0;
+  unsigned AchievableWavesPerEU = 0;
+};
+
+enum class PatchRequirement {
+  Optional,
+  Required,
+};
+
+enum class VgprBumpDecision {
+  Apply,
+  Decline,
+  Fail,
+};
+
+struct KernelWorkgroupMetadata {
+  unsigned MaxFlatWorkgroupSize = 0;
+  unsigned WavefrontSize = 0;
+};
+
 struct SafeSgprUsageSummary {
   bool Valid = true;
   bool UsesVcc = false;
@@ -826,7 +887,41 @@ struct PatchContext {
   std::optional<SafeSgprUsageSummary> WholeObjectSgprUsage;
   llvm::DenseMap<std::pair<uint64_t, uint64_t>, SafeSgprUsageSummary>
       FunctionSgprUsage{0};
+  // Occupancy checks may run at several patch sites in one kernel. Cache the
+  // immutable metadata so the AMDGPU note is parsed at most once per field.
+  llvm::StringMap<std::optional<KernelWorkgroupMetadata>>
+      WorkgroupMetadataCache;
+  llvm::StringMap<unsigned> KernelVgprGranuleCache;
 };
+
+/// Return occupancy limits for \p Processor from COMGR's ISA metadata table.
+std::optional<SubtargetOccupancyLimits>
+getSubtargetOccupancyLimits(llvm::StringRef Processor);
+
+/// Compute the VGPR-limited capacity after allocation rounding and the waves
+/// per EU needed to admit one maximum-size workgroup. Returns std::nullopt for
+/// invalid or unsupported inputs.
+std::optional<WorkgroupCapacity>
+computeWorkgroupCapacity(unsigned Vgprs, unsigned MaxFlatWorkgroupSize,
+                         unsigned WavefrontSize,
+                         const SubtargetOccupancyLimits &Limits);
+
+/// Apply when capacity is preserved; otherwise decline optional patches and
+/// fail required patches.
+VgprBumpDecision decideVgprBump(PatchRequirement Requirement,
+                                const WorkgroupCapacity &Capacity);
+
+/// Return the descriptor/allocation granule for the kernel's wavefront mode.
+/// Falls back to RewriteConfig::VgprGranuleSize for metadata-free objects; a
+/// growth check will still decline those objects because capacity is unknown.
+unsigned getKernelVgprGranuleSize(PatchContext &Ctx,
+                                  llvm::StringRef KernelName);
+
+/// Preflight a patch site's aggregate VGPR demand before it emits bytes.
+VgprBumpDecision checkKernelVgprBump(PatchContext &Ctx,
+                                     llvm::StringRef KernelName,
+                                     unsigned ExtraVgprs,
+                                     PatchRequirement Requirement);
 
 /// A block of numbered SGPRs that is not referenced in the function being
 /// patched, or anywhere in the code object when the site may be reached by a

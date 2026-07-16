@@ -55,7 +55,8 @@ static constexpr unsigned Gfx1250MaxVgprs = 1024;
 // GFX1250 wave32 VGPR ENCODING granularity is 16 (per
 // AMDGPUBaseInfo::getVGPREncodingGranule with Feature1024AddressableVGPRs),
 // not the 8 used by earlier GFX10/11 wave32. Used by ElfView's KD
-// decode/encode helpers (getKernelVgprCount / updateKernelDescriptor) to
+// decode/encode helpers (getKernelVgprCount /
+// updateKernelDescriptorVgprCount) to
 // interpret COMPUTE_PGM_RSRC1.GRANULATED_WORKITEM_VGPR_COUNT.
 // GFX12 wave32: 106 user-addressable SGPRs (s0-s105); s106-s107 are VCC.
 static constexpr unsigned Gfx1250MaxSgprs = 106;
@@ -64,7 +65,7 @@ static constexpr unsigned Gfx1250VgprGranuleSize = 16;
 /// Build the default RewriteConfig used for the GFX1250 B0-to-A0 rewrite:
 /// fills in the identity source / target ISA (both gfx1250) and the
 /// AMDGPU register granularity constants consumed by
-/// ElfView::updateKernelDescriptor. Instruction-encoding state is not
+/// ElfView::updateKernelDescriptorVgprCount. Instruction-encoding state is not
 /// carried in RewriteConfig; see LLVMState for the s_branch opcode and
 /// pre-encoded s_nop bytes.
 static RewriteConfig makeGfx1250B0A0Config() {
@@ -476,7 +477,8 @@ static bool updateNumberedSgprHighWatermark(const MCRegisterInfo &MRI,
 }
 
 static bool isVccRegister(const LLVMState &LS, MCRegister Reg) {
-  return Reg.isValid() && StringRef(LS.MRI->getName(Reg)).starts_with("VCC");
+  return Reg.isValid() && LS.VCCRegister.isValid() &&
+         LS.MRI->regsOverlap(Reg, LS.VCCRegister);
 }
 
 static bool instructionUsesVcc(const LLVMState &LS,
@@ -2128,7 +2130,7 @@ static std::optional<uint32_t> runPerInstPass(uint32_t (*Fn)(PatchContext &,
 /// (in-place -> trampoline -> WMMA split -> scratch). Each pass gets a
 /// chance to claim the instruction; first non-zero return wins. Also runs
 /// the whole-function WMMA-hazard pass after the per-instruction loop and
-/// records per-kernel stats via ElfView::updateKernelDescriptor.
+/// records per-kernel stats via ElfView::updateKernelDescriptorVgprCount.
 /// Returns the total number of applied patches across all passes.
 static std::optional<uint32_t> applyGfx1250B0toA0Rules(
     std::vector<InternalDecodedInst> &Decoded, uint8_t *Text, uint64_t TextSize,
@@ -2254,20 +2256,42 @@ static std::optional<uint32_t> applyGfx1250B0toA0Rules(
     unsigned Sgprs;
   };
   StringMap<ResourceCounts> CountsBefore;
+  StringMap<unsigned> VgprGranules;
+  StringMap<unsigned> RequiredVgprCounts;
   StringMap<unsigned> RequiredSgprCounts;
   for (const StringMapEntry<KernelPatchStats> &KV : KernelStats) {
     StringRef KName = KV.first();
     const KernelPatchStats &Stats = KV.second;
     if (KName.empty())
       continue;
+    unsigned VgprGranule = getKernelVgprGranuleSize(Ctx, KName);
+    VgprGranules.try_emplace(KName, VgprGranule);
     std::optional<unsigned> VgprsBefore =
-        Elf.getKernelVgprCount(KName, Config.VgprGranuleSize);
+        Elf.getKernelVgprCount(KName, VgprGranule);
     std::optional<unsigned> SgprsBefore = Elf.getKernelSgprCount(KName);
     CountsBefore.try_emplace(KName, ResourceCounts{VgprsBefore.value_or(0),
                                                    SgprsBefore.value_or(0)});
-    if (Stats.ExtraVgprs > 0)
-      Elf.updateKernelDescriptor(KName, Stats.ExtraVgprs,
-                                 Config.VgprGranuleSize);
+    if (Stats.ExtraVgprs > 0) {
+      // Every current VGPR-growing patch preflights before emitting bytes.
+      // Keep this required-policy check as a fail-safe so a future path cannot
+      // silently emit a kernel that no longer admits one maximum workgroup.
+      if (checkKernelVgprBump(Ctx, KName, Stats.ExtraVgprs,
+                              PatchRequirement::Required) !=
+          VgprBumpDecision::Apply)
+        return std::nullopt;
+      if (!VgprsBefore) {
+        log() << "hotswap: error: failed to read VGPR count for kernel "
+              << KName << "\n";
+        return std::nullopt;
+      }
+      if (Stats.ExtraVgprs >
+          std::numeric_limits<unsigned>::max() - *VgprsBefore) {
+        log() << "hotswap: error: VGPR count for kernel " << KName
+              << " overflows unsigned after hotswap scratch allocation\n";
+        return std::nullopt;
+      }
+      RequiredVgprCounts.try_emplace(KName, *VgprsBefore + Stats.ExtraVgprs);
+    }
     if (Stats.ExtraSgprs > 0) {
       if (!SgprsBefore) {
         log() << "hotswap: error: failed to read SGPR count for kernel "
@@ -2285,9 +2309,28 @@ static std::optional<uint32_t> applyGfx1250B0toA0Rules(
     }
   }
 
+  if (!Elf.updateKernelMetadataVgprCounts(RequiredVgprCounts)) {
+    log() << "hotswap: error: failed to update kernel VGPR metadata\n";
+    return std::nullopt;
+  }
   if (!Elf.updateKernelMetadataSgprCounts(RequiredSgprCounts)) {
     log() << "hotswap: error: failed to update kernel SGPR metadata\n";
     return std::nullopt;
+  }
+  for (const StringMapEntry<unsigned> &Required : RequiredVgprCounts) {
+    StringMap<unsigned>::const_iterator Granule =
+        VgprGranules.find(Required.first());
+    if (Granule == VgprGranules.end()) {
+      log() << "hotswap: error: missing VGPR granule for kernel "
+            << Required.first() << "\n";
+      return std::nullopt;
+    }
+    if (!Elf.updateKernelDescriptorVgprCount(Required.first(), Required.second,
+                                             Granule->second)) {
+      log() << "hotswap: error: failed to update VGPR descriptor count for "
+            << Required.first() << "\n";
+      return std::nullopt;
+    }
   }
 
   for (const StringMapEntry<KernelPatchStats> &KV : KernelStats) {
@@ -2301,8 +2344,14 @@ static std::optional<uint32_t> applyGfx1250B0toA0Rules(
             << KName << "\n";
       return std::nullopt;
     }
+    StringMap<unsigned>::const_iterator Granule = VgprGranules.find(KName);
+    if (Granule == VgprGranules.end()) {
+      log() << "hotswap: error: missing VGPR granule for kernel " << KName
+            << "\n";
+      return std::nullopt;
+    }
     std::optional<unsigned> VgprsAfter =
-        Elf.getKernelVgprCount(KName, Config.VgprGranuleSize);
+        Elf.getKernelVgprCount(KName, Granule->second);
     std::optional<unsigned> SgprsAfter = Elf.getKernelSgprCount(KName);
     log() << "hotswap: liveness: kernel " << KName
           << ": vgprs_before=" << Before->second.Vgprs

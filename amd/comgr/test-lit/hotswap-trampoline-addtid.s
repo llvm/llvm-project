@@ -85,6 +85,7 @@ test_addtid_load:
 .amdhsa_kernel test_addtid_load
   .amdhsa_next_free_vgpr 6
   .amdhsa_next_free_sgpr 1
+  .amdhsa_wavefront_size32 1
 .end_amdhsa_kernel
 
 // ---- Kernel 2: ds_load_addtid_b32 with offset:0 ------------------------------
@@ -136,6 +137,7 @@ test_addtid_load_zero:
 .amdhsa_kernel test_addtid_load_zero
   .amdhsa_next_free_vgpr 7
   .amdhsa_next_free_sgpr 1
+  .amdhsa_wavefront_size32 1
 .end_amdhsa_kernel
 
 // ---- Kernel 3: ds_store_addtid_b32 ------------------------------------------
@@ -190,7 +192,45 @@ test_addtid_store:
 .amdhsa_kernel test_addtid_store
   .amdhsa_next_free_vgpr 9
   .amdhsa_next_free_sgpr 1
+  .amdhsa_wavefront_size32 1
 .end_amdhsa_kernel
+
+.amdgpu_metadata
+  amdhsa.version:
+    - 3
+    - 0
+  amdhsa.kernels:
+    - .name: test_addtid_load
+      .symbol: test_addtid_load.kd
+      .sgpr_count: 1
+      .vgpr_count: 6
+      .kernarg_segment_size: 0
+      .group_segment_fixed_size: 0
+      .private_segment_fixed_size: 0
+      .kernarg_segment_align: 8
+      .wavefront_size: 32
+      .max_flat_workgroup_size: 256
+    - .name: test_addtid_load_zero
+      .symbol: test_addtid_load_zero.kd
+      .sgpr_count: 1
+      .vgpr_count: 7
+      .kernarg_segment_size: 0
+      .group_segment_fixed_size: 0
+      .private_segment_fixed_size: 0
+      .kernarg_segment_align: 8
+      .wavefront_size: 32
+      .max_flat_workgroup_size: 256
+    - .name: test_addtid_store
+      .symbol: test_addtid_store.kd
+      .sgpr_count: 1
+      .vgpr_count: 9
+      .kernarg_segment_size: 0
+      .group_segment_fixed_size: 0
+      .private_segment_fixed_size: 0
+      .kernarg_segment_align: 8
+      .wavefront_size: 32
+      .max_flat_workgroup_size: 256
+.end_amdgpu_metadata
 
 // COM: Idempotency: rewriting the output a second time must produce
 // COM: identical bytes (the patched body has no ADDTID mnemonic so the

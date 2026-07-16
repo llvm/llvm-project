@@ -98,6 +98,13 @@ TEST(InitLLVM, ValidGfx1250) {
   EXPECT_LT(S.SPrefetchInstPcRelOpcode, S.MCII->getNumOpcodes());
   EXPECT_LT(S.SPrefetchDataPcRelOpcode, S.MCII->getNumOpcodes());
   EXPECT_TRUE(S.SCCRegister.isValid());
+  ASSERT_TRUE(S.VCCRegister.isValid());
+  bool SawVccSubregister = false;
+  for (llvm::MCPhysReg Sub : S.MRI->subregs(S.VCCRegister)) {
+    SawVccSubregister = true;
+    EXPECT_TRUE(S.MRI->regsOverlap(S.VCCRegister, llvm::MCRegister(Sub)));
+  }
+  EXPECT_TRUE(SawVccSubregister);
   EXPECT_EQ(S.SNopBytes.size(), MinInstSize);
 }
 
@@ -1128,6 +1135,49 @@ TEST(SafeSgprScratchBlock, RejectsRegisterBeyondAddressableLimit) {
 
   EXPECT_FALSE(findSafeSgprScratchBlock(Ctx, /*TextOffset=*/0, /*Count=*/1,
                                         /*Alignment=*/1, "unit test"));
+}
+
+TEST(SafeSgprScratchBlock, RejectsAlignmentOverflow) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  llvm::SmallVector<uint8_t> Text = assembleSingleInst("s_mov_b32 s4, s0", S);
+  ASSERT_FALSE(Text.empty());
+
+  comgr_test::KernelDescriptorElfOptions Options;
+  Options.MetadataSgprCount = std::numeric_limits<unsigned>::max();
+  comgr_test::KernelDescriptorElf Obj =
+      comgr_test::makeKernelDescriptorElf(Text, Options);
+  llvm::Expected<ElfView> ViewOrErr =
+      ElfView::create(Obj.Bytes.data(), Obj.Bytes.size());
+  ASSERT_TRUE((bool)ViewOrErr) << llvm::toString(ViewOrErr.takeError());
+  ElfView &View = *ViewOrErr;
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(View.textData(), View.textSize(), S, Decoded));
+  RewriteConfig Config;
+  Config.MaxSgprs = 106;
+  std::vector<Trampoline> Trampolines;
+  std::vector<NopSled> Sleds;
+  LivenessInfo Liveness;
+  llvm::StringMap<KernelPatchStats> KernelStats;
+  std::vector<ScratchPatchInfo> ScratchPatches;
+  DirectControlFlowInfo ControlFlow;
+  PatchContext Ctx{Config,
+                   Decoded,
+                   View.textData(),
+                   View.textSize(),
+                   /*PoolBaseOffset=*/0,
+                   S,
+                   Trampolines,
+                   Sleds,
+                   View,
+                   Liveness,
+                   KernelStats,
+                   ScratchPatches,
+                   ControlFlow};
+
+  EXPECT_FALSE(findSafeSgprScratchBlock(Ctx, /*TextOffset=*/0, /*Count=*/1,
+                                        /*Alignment=*/2, "unit test"));
 }
 
 TEST(SafeSgprScratchBlock, CommitRejectsObjectWithoutKernelDescriptor) {

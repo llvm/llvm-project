@@ -1,6 +1,8 @@
-// COM: A far patch can live in an ordinary device function shared by multiple
-// COM: kernels. The tensor descriptor save and set-PC return safely reuse one
-// COM: global scratch block, charged to both possible callers.
+// COM: A far patch can live in a zero-size ordinary device function shared by
+// COM: multiple kernels. The tensor descriptor save and set-PC return safely
+// COM: reuse one global scratch block, charged to both possible callers. The
+// COM: missing .size directive exercises zero-size function-range inference on
+// COM: the far path.
 
 // RUN: %clang -target amdgcn-amd-amdhsa -mcpu=gfx1250 -nostdlib %s -o %t.elf
 // RUN: hotswap-rewrite %t.elf \
@@ -46,8 +48,6 @@
 device_tensor:
   tensor_load_to_lds s[0:3], s[4:11]
   s_set_pc_i64 s[30:31]
-.Ldevice_tensor_end:
-.size device_tensor, .Ldevice_tensor_end-device_tensor
 
 .globl kernel_a
 .type kernel_a,@function

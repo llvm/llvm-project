@@ -66,15 +66,21 @@ struct KernelDescriptorElfOptions {
   bool ZeroSizeKernelSym = false;
   std::optional<uint64_t> KernelDescriptorSymbolValue;
   uint32_t GroupSegmentFixedSize = 0;
+  uint32_t ComputePgmRsrc1 = 0;
   uint32_t ComputePgmRsrc3 = 0;
   std::optional<std::string> MetadataKernelName;
   std::optional<unsigned> MetadataSgprCount;
+  std::optional<unsigned> MetadataVgprCount;
+  std::optional<unsigned> MetadataMaxFlatWorkgroupSize;
+  std::optional<unsigned> MetadataWavefrontSize;
   std::optional<std::string> MetadataGfx1250Revision;
   bool MetadataOmitSgprCount = false;
   bool MetadataSgprCountAsString = false;
   // When non-empty, emit these kernel metadata entries instead of the single
   // entry described by MetadataKernelName / MetadataSgprCount.
   std::vector<MetadataKernel> MetadataKernels;
+  bool MetadataOmitVgprCount = false;
+  bool MetadataVgprCountAsString = false;
 };
 
 struct KernelDescriptorElf {
@@ -110,6 +116,19 @@ makeAmdgpuMetadataBlob(const KernelDescriptorElfOptions &Options) {
         Kernel[".sgpr_count"] =
             static_cast<uint64_t>(Options.MetadataSgprCount.value_or(0));
     }
+    if (!Options.MetadataOmitVgprCount) {
+      if (Options.MetadataVgprCountAsString)
+        Kernel[".vgpr_count"] = Doc.getNode("not-an-integer", /*Copy=*/true);
+      else
+        Kernel[".vgpr_count"] =
+            static_cast<uint64_t>(Options.MetadataVgprCount.value_or(0));
+    }
+    if (Options.MetadataMaxFlatWorkgroupSize)
+      Kernel[".max_flat_workgroup_size"] =
+          static_cast<uint64_t>(*Options.MetadataMaxFlatWorkgroupSize);
+    if (Options.MetadataWavefrontSize)
+      Kernel[".wavefront_size"] =
+          static_cast<uint64_t>(*Options.MetadataWavefrontSize);
     if (Options.MetadataGfx1250Revision)
       Kernel[".gfx1250_revision"] =
           Doc.getNode(*Options.MetadataGfx1250Revision, /*Copy=*/true);
@@ -182,7 +201,9 @@ makeKernelDescriptorElf(llvm::ArrayRef<uint8_t> Text,
   const bool HasMetadataNote =
       Options.MetadataSgprCount || Options.MetadataGfx1250Revision ||
       Options.MetadataOmitSgprCount || Options.MetadataSgprCountAsString ||
-      !Options.MetadataKernels.empty();
+      Options.MetadataMaxFlatWorkgroupSize || Options.MetadataWavefrontSize ||
+      Options.MetadataVgprCount || Options.MetadataOmitVgprCount ||
+      Options.MetadataVgprCountAsString || !Options.MetadataKernels.empty();
   std::vector<uint8_t> MetadataNote;
   if (HasMetadataNote) {
     std::string MetadataBlob = makeAmdgpuMetadataBlob(Options);
@@ -300,6 +321,9 @@ makeKernelDescriptorElf(llvm::ArrayRef<uint8_t> Text,
                   offsetof(hsa::kernel_descriptor_t, group_segment_fixed_size),
               &Options.GroupSegmentFixedSize,
               sizeof(Options.GroupSegmentFixedSize));
+  std::memcpy(Buf + RodataOff +
+                  offsetof(hsa::kernel_descriptor_t, compute_pgm_rsrc1),
+              &Options.ComputePgmRsrc1, sizeof(Options.ComputePgmRsrc1));
   std::memcpy(Buf + RodataOff +
                   offsetof(hsa::kernel_descriptor_t, compute_pgm_rsrc3),
               &Options.ComputePgmRsrc3, sizeof(Options.ComputePgmRsrc3));

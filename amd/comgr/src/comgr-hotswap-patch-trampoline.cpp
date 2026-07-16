@@ -688,8 +688,8 @@ std::optional<ScratchAlloc> tryAllocScratchVgpr(PatchContext &Ctx, size_t Idx) {
   std::string KernelName =
       Ctx.Elf.findKernelAtAddress(DI.Offset + Ctx.Elf.textAddr());
   unsigned KdVgprs = 0;
-  if (std::optional<unsigned> Opt =
-          Ctx.Elf.getKernelVgprCount(KernelName, Ctx.Config.VgprGranuleSize))
+  if (std::optional<unsigned> Opt = Ctx.Elf.getKernelVgprCount(
+          KernelName, getKernelVgprGranuleSize(Ctx, KernelName)))
     KdVgprs = *Opt;
 
   VgprAllocator Alloc(Ctx.Liveness.LiveBefore[Idx], KdVgprs,
@@ -1357,6 +1357,12 @@ bool patchDsAddtid(PatchContext &Ctx, size_t Idx) {
     std::string TmpName = ("v" + Twine(StoreScratch->Vgpr)).str();
     AsmLines = buildAddtidStoreAsm(TmpName, RegName, Offset, ToMnem);
   }
+
+  if (StoreScratch && checkKernelVgprBump(Ctx, StoreScratch->KernelName,
+                                          StoreScratch->ExtraVgprsNeeded,
+                                          PatchRequirement::Optional) !=
+                          VgprBumpDecision::Apply)
+    return false;
 
   std::string Combined;
   for (const std::string &Line : AsmLines)
