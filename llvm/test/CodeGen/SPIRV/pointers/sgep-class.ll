@@ -11,7 +11,7 @@
 ; CHECK-DAG: %[[#ptr_Derived:]] = OpTypePointer Function %[[#Derived]]
 ; CHECK-DAG: %[[#ptr_Base:]] = OpTypePointer Function %[[#Base]]
 ; CHECK-DAG: %[[#ptr_int:]] = OpTypePointer Function %[[#int]]
-; CHECK-DAG: %[[#idx_0:]] = OpConstant %[[#int]] 0
+; CHECK-DAG: %[[#idx_0:]] = OpConstantNull %[[#int]]
 
 define spir_func void @class_access(ptr %d) convergent {
 entry:

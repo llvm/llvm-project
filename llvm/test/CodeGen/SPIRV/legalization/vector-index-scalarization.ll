@@ -12,7 +12,7 @@
 ; CHECK-DAG: %[[#ptr_arr6int:]] = OpTypePointer Function %[[#arr6int]]
 ; CHECK-DAG: %[[#ptr_f_int:]] = OpTypePointer Function %[[#int]]
 ; CHECK-DAG: %[[#ptr_p_int:]] = OpTypePointer Private %[[#int]]
-; CHECK-DAG: %[[#c0:]] = OpConstant %[[#int]] 0
+; CHECK-DAG: %[[#c0:]] = OpConstantNull %[[#int]]
 ; CHECK-DAG: %[[#c1:]] = OpConstant %[[#int]] 1
 ; CHECK-DAG: %[[#c2:]] = OpConstant %[[#int]] 2
 ; CHECK-DAG: %[[#c3:]] = OpConstant %[[#int]] 3

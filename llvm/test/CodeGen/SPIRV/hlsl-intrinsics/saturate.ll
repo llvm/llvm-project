@@ -10,17 +10,17 @@
 ; CHECK-DAG: %[[#vec4_float_32:]] = OpTypeVector %[[#float_32]] 4
 ; CHECK-DAG: %[[#float_64:]] = OpTypeFloat 64
 ; CHECK-DAG: %[[#vec4_float_64:]] = OpTypeVector %[[#float_64]] 4
-; CHECK-DAG: %[[#zero_float_16:]] = OpConstant %[[#float_16]] 0
-; CHECK-DAG: %[[#vec4_zero_float_16:]] = OpConstantComposite %[[#vec4_float_16]] %[[#zero_float_16]] %[[#zero_float_16]] %[[#zero_float_16]]
+; CHECK-DAG: %[[#zero_float_16:]] = OpConstantNull %[[#float_16]]
+; CHECK-DAG: %[[#vec4_zero_float_16:]] = OpConstantNull %[[#vec4_float_16]]
 ; CHECK-DAG: %[[#one_float_16:]] = OpConstant %[[#float_16]] 15360
 ; CHECK-DAG: %[[#vec4_one_float_16:]] = OpConstantComposite %[[#vec4_float_16]] %[[#one_float_16]] %[[#one_float_16]] %[[#one_float_16]]
-; CHECK-DAG: %[[#zero_float_32:]] = OpConstant %[[#float_32]] 0
-; CHECK-DAG: %[[#vec4_zero_float_32:]] = OpConstantComposite %[[#vec4_float_32]] %[[#zero_float_32]] %[[#zero_float_32]] %[[#zero_float_32]]
+; CHECK-DAG: %[[#zero_float_32:]] = OpConstantNull %[[#float_32]]
+; CHECK-DAG: %[[#vec4_zero_float_32:]] = OpConstantNull %[[#vec4_float_32]]
 ; CHECK-DAG: %[[#one_float_32:]] = OpConstant %[[#float_32]] 1
 ; CHECK-DAG: %[[#vec4_one_float_32:]] = OpConstantComposite %[[#vec4_float_32]] %[[#one_float_32]] %[[#one_float_32]] %[[#one_float_32]]
 
-; CHECK-DAG: %[[#zero_float_64:]] = OpConstant %[[#float_64]] 0
-; CHECK-DAG: %[[#vec4_zero_float_64:]] = OpConstantComposite %[[#vec4_float_64]] %[[#zero_float_64]] %[[#zero_float_64]] %[[#zero_float_64]]
+; CHECK-DAG: %[[#zero_float_64:]] = OpConstantNull %[[#float_64]]
+; CHECK-DAG: %[[#vec4_zero_float_64:]] = OpConstantNull %[[#vec4_float_64]]
 ; CHECK-DAG: %[[#one_float_64:]] = OpConstant %[[#float_64]] 1
 ; CHECK-DAG: %[[#vec4_one_float_64:]] = OpConstantComposite %[[#vec4_float_64]] %[[#one_float_64]] %[[#one_float_64]] %[[#one_float_64]]
 

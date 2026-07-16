@@ -7,7 +7,7 @@ target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:
 @.str.2 = private unnamed_addr constant [2 x i8] c"S\00", align 1
 
 ; CHECK-DAG: [[int:%[0-9]+]] = OpTypeInt 32 0
-; CHECK-DAG: [[zero:%[0-9]+]] = OpConstant [[int]] 0
+; CHECK-DAG: [[zero:%[0-9]+]] = OpConstantNull [[int]]
 
 ; CHECK-DAG: [[ArrayType:%.+]] = OpTypeRuntimeArray [[int]]
 ; CHECK-DAG: [[BufferType:%.+]] = OpTypeStruct [[ArrayType]]

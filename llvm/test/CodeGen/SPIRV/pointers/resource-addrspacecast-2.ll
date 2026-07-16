@@ -6,7 +6,7 @@
 %S2 = type { { [10 x { i32, i32 } ] }, i32 }
 
 ; CHECK-DAG:                     %[[#uint:]] = OpTypeInt 32 0
-; CHECK-DAG:                   %[[#uint_0:]] = OpConstant %[[#uint]] 0
+; CHECK-DAG:                   %[[#uint_0:]] = OpConstantNull %[[#uint]]
 ; CHECK-DAG:                   %[[#uint_1:]] = OpConstant %[[#uint]] 1
 ; CHECK-DAG:                   %[[#uint_3:]] = OpConstant %[[#uint]] 3
 ; CHECK-DAG:                  %[[#uint_10:]] = OpConstant %[[#uint]] 10

@@ -13,7 +13,7 @@
 ; CHECK-DAG: %[[image_2d:[0-9]+]] = OpTypeImage %[[float]] 2D 2 0 0 1 Unknown
 ; CHECK-DAG: %[[image_3d:[0-9]+]] = OpTypeImage %[[float]] 3D 2 0 0 1 Unknown
 
-; CHECK-DAG: %[[lod0:[0-9]+]] = OpConstant %[[uint]] 0
+; CHECK-DAG: %[[lod0:[0-9]+]] = OpConstantNull %[[uint]]
 ; CHECK-DAG: %[[uint_1:[0-9]+]] = OpConstant %[[uint]] 1
 ; CHECK-DAG: %[[coord_2d:[0-9]+]] = OpConstantNull %[[v2uint]]
 ; CHECK-DAG: %[[coord_3d:[0-9]+]] = OpConstantNull %[[v3uint]]

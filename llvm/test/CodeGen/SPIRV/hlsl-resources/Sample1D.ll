@@ -11,7 +11,7 @@
 ; CHECK-DAG: %[[sampled_image:[0-9]+]] = OpTypeSampledImage %[[image]]
 ; CHECK-DAG: %[[sampler:[0-9]+]] = OpTypeSampler
 
-; CHECK-DAG: %[[coord0:[0-9]+]] = OpConstant %[[float]] 0{{$}}
+; CHECK-DAG: %[[coord0:[0-9]+]] = OpConstantNull %[[float]]
 ; CHECK-DAG: %[[coord1:[0-9]+]] = OpConstant %[[float]] 0.5
 ; CHECK-DAG: %[[offset1:[0-9]+]] = OpConstant %[[int]] 1
 ; CHECK-DAG: %[[minlod_val:[0-9]+]] = OpConstant %[[float]] 1

@@ -2,7 +2,7 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan-compute %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 
 ; CHECK-DAG: %[[#Int:]] = OpTypeInt 32 0
-; CHECK-DAG: %[[#Const0:]] = OpConstant %[[#Int]] 0
+; CHECK-DAG: %[[#Const0:]] = OpConstantNull %[[#Int]]
 ; CHECK-DAG: %[[#Const1:]] = OpConstant %[[#Int]] 1
 ; CHECK-DAG: %[[#Const2:]] = OpConstant %[[#Int]] 2
 ; CHECK-DAG: %[[#Const3:]] = OpConstant %[[#Int]] 3

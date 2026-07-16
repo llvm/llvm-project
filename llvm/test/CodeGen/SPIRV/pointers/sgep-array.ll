@@ -6,11 +6,11 @@
 
 ; CHECK-DAG:           %[[#uint:]] = OpTypeInt 32 0
 ; CHECK-DAG:          %[[#ulong:]] = OpTypeInt 64 0
-; CHECK-DAG:        %[[#ulong_0:]] = OpConstant %[[#ulong]] 0
+; CHECK-DAG:        %[[#ulong_0:]] = OpConstantNull %[[#ulong]]
 ; CHECK-DAG:        %[[#ulong_1:]] = OpConstant %[[#ulong]] 1
 ; CHECK-DAG:        %[[#ulong_2:]] = OpConstant %[[#ulong]] 2
 ; CHECK-DAG:        %[[#ulong_3:]] = OpConstant %[[#ulong]] 3
-; CHECK-DAG:         %[[#uint_0:]] = OpConstant %[[#uint]] 0
+; CHECK-DAG:         %[[#uint_0:]] = OpConstantNull %[[#uint]]
 ; CHECK-DAG:         %[[#uint_1:]] = OpConstant %[[#uint]] 1
 ; CHECK-DAG:         %[[#uint_5:]] = OpConstant %[[#uint]] 5
 ; CHECK-DAG:       %[[#ptr_uint:]] = OpTypePointer Function %[[#uint]]

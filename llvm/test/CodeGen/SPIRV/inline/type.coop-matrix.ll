@@ -10,7 +10,7 @@
 ; CHECK: [[uint32_4:%[0-9]+]] = OpConstant [[uint32_t]] 4
 %cols = type target("spirv.IntegralConstant", i32, 4)
 %rows = type target("spirv.IntegralConstant", i32, 4)
-; CHECK: [[uint32_0:%[0-9]+]] = OpConstant [[uint32_t]] 0
+; CHECK: [[uint32_0:%[0-9]+]] = OpConstantNull [[uint32_t]]
 %use = type target("spirv.IntegralConstant", i32, 0) ; MatrixAKHR
 
 ; CHECK: OpUnknown(4456, 7) [[coop_t:%[0-9]+]] [[float_t]] [[uint32_2]] [[uint32_4]] [[uint32_4]] [[uint32_0]]

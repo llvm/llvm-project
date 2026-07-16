@@ -6,9 +6,9 @@
 ; CHECK-DAG:  %[[#float_fp:]] = OpTypePointer Function %[[#float]]
 ; CHECK-DAG:  %[[#float_pp:]] = OpTypePointer Private %[[#float]]
 ; CHECK-DAG:   %[[#uint_fp:]] = OpTypePointer Function %[[#uint]]
-; CHECK-DAG:    %[[#uint_0:]] = OpConstant %[[#uint]] 0
+; CHECK-DAG:    %[[#uint_0:]] = OpConstantNull %[[#uint]]
 ; CHECK-DAG:    %[[#uint_4:]] = OpConstant %[[#uint]] 4
-; CHECK-DAG:    %[[#float_0:]] = OpConstant %[[#float]] 0
+; CHECK-DAG:    %[[#float_0:]] = OpConstantNull %[[#float]]
 ; CHECK-DAG:        %[[#sf:]] = OpTypeStruct %[[#float]]
 ; CHECK-DAG:        %[[#su:]] = OpTypeStruct %[[#uint]]
 ; CHECK-DAG:       %[[#ssu:]] = OpTypeStruct %[[#su]]

@@ -16,7 +16,7 @@
 ; CHECK-DAG: [[BufferPtrType:%[0-9]+]] = OpTypePointer UniformConstant [[BufferType]]
 ; CHECK-DAG: [[ArraySize:%[0-9]+]] = OpConstant [[int]] 3
 ; CHECK-DAG: [[One:%[0-9]+]] = OpConstant [[int]] 1
-; CHECK-DAG: [[Zero:%[0-9]+]] = OpConstant [[int]] 0{{$}}
+; CHECK-DAG: [[Zero:%[0-9]+]] = OpConstantNull [[int]]
 ; CHECK-DAG: [[BufferArrayType:%[0-9]+]] = OpTypeArray [[BufferType]] [[ArraySize]]
 ; CHECK-DAG: [[ArrayPtrType:%[0-9]+]] = OpTypePointer UniformConstant [[BufferArrayType]]
 ; CHECK-DAG: [[Var]] = OpVariable [[ArrayPtrType]] UniformConstant

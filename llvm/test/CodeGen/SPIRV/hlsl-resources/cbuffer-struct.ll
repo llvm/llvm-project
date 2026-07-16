@@ -5,7 +5,7 @@
 ; CHECK-DAG: %[[VEC4:[0-9]+]] = OpTypeVector %[[FLOAT]] 4
 ; CHECK-DAG: %[[PTR_VEC4:[0-9]+]] = OpTypePointer Uniform %[[VEC4]]
 ; CHECK-DAG: %[[INT:[0-9]+]] = OpTypeInt 32 0
-; CHECK-DAG: %[[ZERO:[0-9]+]] = OpConstant %[[INT]] 0{{$}}
+; CHECK-DAG: %[[ZERO:[0-9]+]] = OpConstantNull %[[INT]]
 
 ; CHECK-DAG: %[[STRUCT_MATRIX:[0-9]+]] = OpTypeStruct %[[VEC4]] %[[VEC4]] %[[VEC4]] %[[VEC4]]
 ; CHECK-DAG: %[[PTR_MATRIX:[0-9]+]] = OpTypePointer Uniform %[[STRUCT_MATRIX]]
@@ -33,7 +33,7 @@
 ; CHECK-DAG: OpMemberDecorate %[[STRUCT_MATRIX]] 3 Offset 48
 
 ; CHECK-DAG: %[[ONE:[0-9]+]] = OpConstant %[[INT]] 1{{$}}
-; CHECK-DAG: %[[ZERO_64:[0-9]+]] = OpConstant %[[INT64]] 0{{$}}
+; CHECK-DAG: %[[ZERO_64:[0-9]+]] = OpConstantNull %[[INT64]]
 ; CHECK-DAG: %[[ONE_64:[0-9]+]] = OpConstant %[[INT64]] 1{{$}}
 ; CHECK-DAG: %[[TWO_64:[0-9]+]] = OpConstant %[[INT64]] 2{{$}}
 ; CHECK-DAG: %[[THREE_64:[0-9]+]] = OpConstant %[[INT64]] 3{{$}}

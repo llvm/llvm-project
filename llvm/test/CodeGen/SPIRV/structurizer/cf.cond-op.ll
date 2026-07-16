@@ -15,7 +15,7 @@ target triple = "spirv-unknown-vulkan1.3-compute"
 
 ; CHECK-DAG: %[[#int_ty:]] = OpTypeInt 32 0
 
-; CHECK-DAG: %[[#int_0:]] = OpConstant %[[#]] 0
+; CHECK-DAG: %[[#int_0:]] = OpConstantNull %[[#]]
 ; CHECK-DAG: %[[#int_1:]] = OpConstant %[[#]] 1
 ; CHECK-DAG: %[[#true:]] = OpConstantTrue
 ; CHECK-DAG: %[[#false:]] = OpConstantFalse

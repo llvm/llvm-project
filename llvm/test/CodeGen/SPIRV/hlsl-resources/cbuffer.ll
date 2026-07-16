@@ -7,7 +7,7 @@
 ; CHECK-DAG: OpMemberDecorate %[[__cblayout_MyCBuffer:[0-9]+]] 0 Offset 0
 ; CHECK-DAG: OpMemberDecorate %[[__cblayout_MyCBuffer]] 1 Offset 16
 ; CHECK-DAG: %[[uint:[0-9]+]] = OpTypeInt 32 0
-; CHECK-DAG: %[[uint_0:[0-9]+]] = OpConstant %[[uint]] 0{{$}}
+; CHECK-DAG: %[[uint_0:[0-9]+]] = OpConstantNull %[[uint]]
 ; CHECK-DAG: %[[uint_1:[0-9]+]] = OpConstant %[[uint]] 1{{$}}
 ; CHECK-DAG: %[[float:[0-9]+]] = OpTypeFloat 32
 ; CHECK-DAG: %[[v4float:[0-9]+]] = OpTypeVector %[[float]] 4

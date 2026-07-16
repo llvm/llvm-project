@@ -8,7 +8,7 @@ define internal spir_func void @main() #3 {
 ; CHECK-DAG:   OpName %[[#switch_0:]] "reg1"
 ; CHECK-DAG:   OpName %[[#switch_1:]] "reg"
 
-; CHECK-DAG:   %[[#int_0:]] = OpConstant %[[#]] 0
+; CHECK-DAG:   %[[#int_0:]] = OpConstantNull %[[#]]
 ; CHECK-DAG:   %[[#int_1:]] = OpConstant %[[#]] 1
 
 ; CHECK:       %[[#entry:]] = OpLabel
