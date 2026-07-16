@@ -348,6 +348,17 @@ public:
 
 _LIBCPP_END_NAMESPACE_STD
 
+#else
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+template <class _Tp>
+class optional<_Tp&> {
+  static_assert(false, "instantiation of optional with a reference type is ill-formed");
+};
+
+_LIBCPP_END_NAMESPACE_STD
+
 #endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_POP_MACROS

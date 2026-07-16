@@ -30,6 +30,9 @@ class optional;
 template <class _Tp>
 class optional<_Tp&>;
 
+template <class _Tp>
+optional(_Tp) -> optional<_Tp>;
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBPP_STD_VER >= 17
