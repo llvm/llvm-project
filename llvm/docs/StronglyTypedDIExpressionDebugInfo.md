@@ -11,8 +11,8 @@ properties:
 
 * The core C++ API is just `SmallVector<uint64_t>` and a `get` function.
   * Code can inspect and edit the representation with no hard dependencies.
-  * The cost to `#include` the support code for this is light on templates and
-    other things which make compilation slow.
+  * The cost to `#include` the support code for this is light, making it fast
+    to compile.
   * The representation is pretty compact, and plays nice with the cache and
     branch predictor.
 
@@ -54,13 +54,13 @@ By way of analogy:
 * `DIExprRef` is to `std::string_view`/`llvm::StringRef`, as
 * `DIExprBuf` is to `std::string`/`llvm::SmallString`.
 
-```{note}
+:::{note}
 The analogy isn't airtight. The `DIExpression *` doesn't actually point to a
 contiguous view of `DIOp::Op`s. In the new hierarchy it acts more as an opaque
 handle to a `unique`d expression.
 
 There is also no equivalent to `std::char_traits`.
-```
+:::
 
 ### `DIOp::Op`
 
@@ -72,7 +72,7 @@ The alternative types of `Op` have `PascalCase`-ified names corresponding to
 the `DW_OP_*` names currently in use, and all live in `namespace DIOp`, next to
 `Op`. For example:
 
-```{list-table}
+:::{list-table}
 :header-rows: 1
 * - Old
   - New
@@ -84,7 +84,7 @@ the `DW_OP_*` names currently in use, and all live in `namespace DIOp`, next to
   - `DIOp::LLVMFragment(24, 8)`
 * - `{DW_OP_addr, 42, DW_OP_plus_uconst, 8, DW_OP_deref}`
   - `{DIOp::Addr(42), DIOp::PlusUConst(8), DIOp::Deref()}`
-```
+:::
 
 The new type is not `POD`, but is standard layout and trivially destructible.
 This enables a couple optimizations:
@@ -142,6 +142,27 @@ Double buffered internally, to avoid extra allocations for chained mutations.
 Can also be reused by e.g. a pass which needs to update many expressions, to
 further reduce allocations.
 
+:::{note}
+The double buffering essentially just codifies an existing pattern whereby most
+mutation method for `DIExpression` looks like:
+
+```cpp
+// check preconditions...
+
+// start making a new expression:
+SmallVector<uint64_t> NewOps;
+
+// push to NewOps...
+
+// unique the new expression:
+return DIExpression::get(NewOPs);
+```
+
+As `DIExprBuf` is intended to be reused for e.g. all expression updates within
+a pass, this change means the difference between `O(N)` and `O(1)` allocations,
+while not cluttering the interface with mutable buffer parameters.
+:::
+
 Since mutations on this type can be chained without `unique`ing the
 intermediate results, there is some potential improvement to RSS, although
 the overall contribution of `DIExpression` to the memory used during
@@ -168,6 +189,7 @@ public:
   explicit DIExprBuf(const DIExpression *From);
   explicit DIExprBuf(DIExprRef From, LLVMContext *Ctx = nullptr);
 
+  // Any operation on *this invalidates the returned DIExprRef
   DIExprRef asRef() const;
 
   DIExprBuf &clear();
@@ -191,13 +213,13 @@ Eventually, we can consider supporting a new syntax in the IR to track the
 logical encapsulation of each operation and more directly track the
 implementation:
 
-```{list-table}
+:::{list-table}
 :header-rows: 1
 * - Old
   - New
 * - `DIExpression(DW_OP_addr, 42, DW_OP_plus_uconst, 8, DW_OP_deref)`
   - `DIExpression(DIOp::Addr(42), DIOp::PlusUConst(8), DIOp::Deref())`
-```
+:::
 
 This can be bi-direction and forward compatible from existing IR. As the
 bitcode does not change in any event (it is still always `vector<uint64_t>`)
@@ -211,7 +233,7 @@ profiling shows that replacing the `vector<uint64_t>` representation with
 and RSS, with some significant improvements in some cases and some significant
 regressions in others:
 
-```{table} instructions:u
+:::{table} instructions:u
 |                       | Old                  | New          |
 | :-------------------- | -------------------: | -----------: |
 | stage1-O3             | `   60554M (-0.02%)` | `   60563M`  |
@@ -223,9 +245,9 @@ regressions in others:
 | stage2-O3             | `   52437M (-0.04%)` | `   52460M`  |
 | stage2-O0-g           | `   16219M (-0.01%)` | `   16221M`  |
 | stage2-clang          | `34618385M (+0.07%)` | `34592728M`  |
-```
+:::
 
-```{table} max-rss
+:::{table} max-rss
 |                       | Old                | New       |
 | :-------------------- | -----------------: | --------: |
 | stage1-O3             | `2780MiB (-0.82%)` | `2803MiB` |
@@ -237,7 +259,7 @@ regressions in others:
 | stage2-O3             | `2590MiB (+0.17%)` | `2586MiB` |
 | stage2-O0-g           | `2493MiB (+0.14%)` | `2490MiB` |
 | stage2-clang          | `2321MiB (+0.91%)` | `2300MiB` |
-```
+:::
 
 However, the situation does get marginally worse once we have eliminated
 `DW_OP_LLVM_fragment`/`DIOp::LLVMFragment`, since the existing representation
