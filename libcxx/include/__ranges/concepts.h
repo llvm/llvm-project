@@ -91,7 +91,7 @@ concept approximately_sized_range = range<_Tp> && requires(_Tp& __t) { ranges::r
 template <class _Tp>
 concept sized_range = approximately_sized_range<_Tp> && requires(_Tp& __t) { ranges::size(__t); };
 
-#  else // _LIBCPP_STD_VER < 26
+#  else
 
 // [range.sized]
 template <class _Tp>
