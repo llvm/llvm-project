@@ -245,8 +245,14 @@ def CallConvLowering : Pass<"cir-call-conv-lowering", "mlir::ModuleOp"> {
            /*default=*/"\"\"",
            "Function attribute name carrying a pre-built FunctionClassification "
            "DictionaryAttr (alternative to target=, used by tests)">,
-    Option<"x86AvxAbiLevel", "x86-avx-abi-level", "unsigned", /*default=*/"0",
-           "AVX ABI level for the x86_64 target (0=None, 1=AVX, 2=AVX512)">,
+    Option<"x86AvxAbiLevel", "x86-avx-abi-level", "llvm::abi::X86AVXABILevel",
+           /*default=*/"llvm::abi::X86AVXABILevel::None",
+           "AVX ABI level for the x86_64 target",
+           [{::llvm::cl::values(
+             clEnumValN(llvm::abi::X86AVXABILevel::None, "none", "No AVX"),
+             clEnumValN(llvm::abi::X86AVXABILevel::AVX, "avx", "AVX"),
+             clEnumValN(llvm::abi::X86AVXABILevel::AVX512, "avx512", "AVX512")
+           )}]>,
   ];
 }
 

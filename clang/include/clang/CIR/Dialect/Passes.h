@@ -14,6 +14,7 @@
 #define CLANG_CIR_DIALECT_PASSES_H
 
 #include "mlir/Pass/Pass.h"
+#include "llvm/ABI/TargetInfo.h"
 
 namespace clang {
 class ASTContext;
@@ -28,8 +29,9 @@ std::unique_ptr<Pass> createCIREHABILoweringPass();
 std::unique_ptr<Pass> createCXXABILoweringPass();
 std::unique_ptr<Pass> createTargetLoweringPass();
 std::unique_ptr<Pass> createCallConvLoweringPass();
-std::unique_ptr<Pass> createCallConvLoweringPass(llvm::StringRef target,
-                                                 unsigned x86AvxAbiLevel);
+std::unique_ptr<Pass>
+createCallConvLoweringPass(llvm::StringRef target,
+                           llvm::abi::X86AVXABILevel x86AvxAbiLevel);
 std::unique_ptr<Pass> createHoistAllocasPass();
 std::unique_ptr<Pass> createLoweringPreparePass();
 std::unique_ptr<Pass> createLoweringPreparePass(clang::ASTContext *astCtx);

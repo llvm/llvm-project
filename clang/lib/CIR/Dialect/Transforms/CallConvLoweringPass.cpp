@@ -102,13 +102,8 @@ static mlir::Type abiTypeToCIR(const llvm::abi::Type *ty, MLIRContext *ctx) {
         return cir::IntType::get(ctx, intTy->getSizeInBits().getFixedValue(),
                                  intTy->isSigned());
       })
-      .Case([&](const llvm::abi::FloatType *fltTy) -> mlir::Type {
-        const llvm::fltSemantics *sem = fltTy->getSemantics();
-        if (sem == &llvm::APFloat::IEEEsingle())
-          return cir::SingleType::get(ctx);
-        if (sem == &llvm::APFloat::IEEEdouble())
-          return cir::DoubleType::get(ctx);
-        return nullptr;
+      .Case([&](const llvm::abi::FloatType *fltTy) {
+        return cir::getFloatingPointType(*fltTy->getSemantics(), ctx);
       })
       .Case([&](const llvm::abi::PointerType *) {
         return cir::PointerType::get(cir::VoidType::get(ctx));
@@ -252,29 +247,29 @@ classifyX86_64Function(cir::FuncOp func, const DataLayout &dl,
 /// The classifier targets this pass drives internally via a shared
 /// ABITypeMapper/TargetInfo.  (The classification-attr injection mode is
 /// orthogonal -- it names an arbitrary attribute, not a fixed target -- and
-/// stays string-keyed.)  The name/enum pairs below are the single source of
-/// truth for both parsing the `target` pass option and the unknown-target
-/// diagnostic in classifyFunction.
-enum class CallConvTarget { Test, X86_64 };
+/// stays string-keyed.)  kCallConvTargetNames is the single source of truth
+/// for both parsing the `target` pass option and the unknown-target
+/// diagnostic in classifyFunction; it is indexed by the enum value below.
+enum class CallConvTarget { Test, X86_64, Last = X86_64 };
 
-const std::pair<llvm::StringRef, CallConvTarget> kCallConvTargets[] = {
-    {"test", CallConvTarget::Test},
-    {"x86_64", CallConvTarget::X86_64},
-};
+constexpr llvm::StringRef kCallConvTargetNames[] = {"test", "x86_64"};
+static_assert(std::size(kCallConvTargetNames) ==
+                  static_cast<size_t>(CallConvTarget::Last) + 1,
+              "kCallConvTargetNames must have one entry per CallConvTarget");
 
 std::optional<CallConvTarget> parseCallConvTarget(StringRef target) {
-  for (const auto &[name, value] : kCallConvTargets)
-    if (target == name)
-      return value;
+  for (size_t i = 0; i < std::size(kCallConvTargetNames); ++i)
+    if (target == kCallConvTargetNames[i])
+      return static_cast<CallConvTarget>(i);
   return std::nullopt;
 }
 
 std::string supportedCallConvTargets() {
   std::string result;
-  for (const auto &entry : kCallConvTargets) {
+  for (llvm::StringRef name : kCallConvTargetNames) {
     if (!result.empty())
       result += ", ";
-    result += entry.first.str();
+    result += name.str();
   }
   return result;
 }
@@ -373,11 +368,9 @@ void CallConvLoweringPass::runOnOperation() {
   std::unique_ptr<llvm::abi::TargetInfo> x86Target;
   if (parseCallConvTarget(target) == CallConvTarget::X86_64) {
     x86TypeMapper.emplace(dl);
-    auto avx =
-        static_cast<llvm::abi::X86AVXABILevel>(x86AvxAbiLevel.getValue());
     x86Target = llvm::abi::createX86_64TargetInfo(
-        x86TypeMapper->getTypeBuilder(), avx, /*Has64BitPointers=*/true,
-        llvm::abi::ABICompatInfo());
+        x86TypeMapper->getTypeBuilder(), x86AvxAbiLevel.getValue(),
+        /*Has64BitPointers=*/true, llvm::abi::ABICompatInfo());
   }
 
   // Classify every cir.func up front.  No IR mutation happens here, so
@@ -473,7 +466,7 @@ std::unique_ptr<Pass> mlir::createCallConvLoweringPass() {
 
 std::unique_ptr<Pass>
 mlir::createCallConvLoweringPass(llvm::StringRef target,
-                                 unsigned x86AvxAbiLevel) {
+                                 llvm::abi::X86AVXABILevel x86AvxAbiLevel) {
   CallConvLoweringOptions options;
   options.target = target.str();
   options.x86AvxAbiLevel = x86AvxAbiLevel;

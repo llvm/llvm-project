@@ -23,6 +23,7 @@
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypesDetails.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -36,6 +37,17 @@ bool cir::isSized(mlir::Type ty) {
     return sizedTy.isSized();
   assert(!cir::MissingFeatures::unsizedTypes());
   return false;
+}
+
+mlir::Type cir::getFloatingPointType(const llvm::fltSemantics &sem,
+                                     mlir::MLIRContext *ctx) {
+  if (&sem == &llvm::APFloat::IEEEsingle())
+    return cir::SingleType::get(ctx);
+  if (&sem == &llvm::APFloat::IEEEdouble())
+    return cir::DoubleType::get(ctx);
+  llvm_unreachable("getFloatingPointType: floating-point semantics not yet "
+                   "handled; add a case here as new float kinds become "
+                   "supported");
 }
 
 //===----------------------------------------------------------------------===//
