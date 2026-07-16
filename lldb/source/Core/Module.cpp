@@ -1259,7 +1259,7 @@ void Module::SectionFileAddressesChanged() {
 }
 
 UnwindTable &Module::GetUnwindTable() {
-  if (!m_symfile_spec)
+  if (!m_symfile_up)
     SymbolLocator::DownloadSymbolFileAsync(GetUUID());
   return m_unwind_table;
 }
