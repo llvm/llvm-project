@@ -27,6 +27,7 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/LogicalResult.h"
 
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <variant>
@@ -420,7 +421,11 @@ public:
   template <typename OpToCreate>
   parsed_inst_t parseBlockLikeOp(OpBuilder &);
 
-  std::optional<Location> getCurrentOpLoc() { return currentOpLoc; }
+  Location getCurrentOpLoc() {
+    assert(currentOpLoc.has_value() &&
+           "expects current opcode location to be set");
+    return *currentOpLoc;
+  }
 
   class TopLevelInstParserRegistry {
   public:
@@ -467,7 +472,7 @@ private:
   static inline parsed_inst_t
   invalidOpcodeDiag(OpBuilder &, ExpressionParser &expressionParser,
                     std::byte opCode) {
-    return emitError(*(expressionParser.getCurrentOpLoc()),
+    return emitError(expressionParser.getCurrentOpLoc(),
                      "unknown instruction opcode: ")
            << static_cast<int>(opCode);
   }
@@ -1089,11 +1094,11 @@ REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::ifOpCode) {
   Region *curRegion = curBlock->getParent();
   auto resTypes = funcType->getResults();
   llvm::SmallVector<Location> locations{};
-  locations.resize(resTypes.size(), *exprParser.getCurrentOpLoc());
+  locations.resize(resTypes.size(), exprParser.getCurrentOpLoc());
   auto *successor =
       builder.createBlock(curRegion, curRegion->end(), resTypes, locations);
   builder.setInsertionPointToEnd(curBlock);
-  auto ifOp = IfOp::create(builder, *exprParser.getCurrentOpLoc(),
+  auto ifOp = IfOp::create(builder, exprParser.getCurrentOpLoc(),
                            conditionValue->front(), *inputOps, successor);
   auto *ifEntryBlock = ifOp.createIfBlock();
   constexpr auto ifElseFilter =
@@ -1135,7 +1140,7 @@ REGISTER_PRIMARY_WASM_INST_PARSER(WasmBinaryEncoding::OpCode::branchIf) {
   auto branchArgs = exprParser.popOperands(inputTypes);
   if (failed(branchArgs))
     return failure();
-  BranchIfOp::create(builder, *exprParser.getCurrentOpLoc(), condition->front(),
+  BranchIfOp::create(builder, exprParser.getCurrentOpLoc(), condition->front(),
                      builder.getUI32IntegerAttr(*level), *branchArgs,
                      elseBlock);
   builder.setInsertionPointToStart(elseBlock);
