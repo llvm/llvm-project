@@ -48,6 +48,7 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -462,7 +463,7 @@ private:
   const DominatorTreeT &DT;
 
   // Recognized cycles with divergent exits.
-  SmallPtrSet<const CycleT *, 16> DivergentExitCycles;
+  SmallSetVector<const CycleT *, 8> DivergentExitCycles;
 
   // Cycles assumed to be divergent.
   //
@@ -919,7 +920,7 @@ void GenericUniformityAnalysisImpl<ContextT>::propagateCycleExitDivergence(
   LLVM_DEBUG(dbgs() << "\tOuter-most exiting cycle: "
                     << Context.print(CI.getHeader(*OuterDivCycle)) << "\n");
 
-  if (!DivergentExitCycles.insert(OuterDivCycle).second)
+  if (!DivergentExitCycles.insert(OuterDivCycle))
     return;
 
   // Exit divergence does not matter if the cycle itself is assumed to
