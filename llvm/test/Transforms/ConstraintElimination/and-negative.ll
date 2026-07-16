@@ -8,8 +8,7 @@ define i1 @and_negative_slt(i64 %a, i64 %b) {
 ; CHECK-NEXT:    [[O:%.*]] = and i64 [[A]], [[B]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[O]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
-; CHECK-NEXT:    [[RES:%.*]] = icmp slt i64 [[B]], 0
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %o = and i64 %a, %b
   %c = icmp slt i64 %o, 0
@@ -43,8 +42,7 @@ define i1 @and_negative_nested(i64 %a, i64 %b, i64 %c) {
 ; CHECK-NEXT:    [[O2:%.*]] = and i64 [[O1]], [[C]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[O2]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[RES:%.*]] = icmp slt i64 [[C]], 0
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %o1 = and i64 %a, %b
   %o2 = and i64 %o1, %c

@@ -116,20 +116,14 @@ else:
 ; single (%b & %c & %d) <s 0 test.
 define noundef i64 @and_slt_canonicalization(ptr noundef %p, i64 noundef %a, i64 noundef %b, i64 noundef %c, i64 noundef %d) {
 ; CHECK-LABEL: define noundef i64 @and_slt_canonicalization(
-; CHECK-SAME: ptr nofree noundef readonly captures(none) [[P:%.*]], i64 noundef [[A:%.*]], i64 noundef [[B:%.*]], i64 noundef [[C:%.*]], i64 noundef [[D:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: ptr nofree noundef readonly captures(none) [[P:%.*]], i64 noundef [[A:%.*]], i64 noundef [[B:%.*]], i64 noundef [[C:%.*]], i64 noundef [[D:%.*]]) local_unnamed_addr #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP_3:%.*]] = icmp slt i64 [[A]], [[B]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[C]], [[B]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], [[D]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i64 [[TMP1]], 0
 ; CHECK-NEXT:    [[AND_3:%.*]] = and i1 [[CMP_3]], [[TMP2]]
-; CHECK-NEXT:    br i1 [[AND_3]], label %[[CONT:.*]], label %[[ELSE:.*]]
-; CHECK:       [[CONT]]:
-; CHECK-NEXT:    [[OOB:%.*]] = icmp sgt i64 [[A]], -1
-; CHECK-NEXT:    br i1 [[OOB]], label %[[TRAP:.*]], label %[[CONT1:.*]]
-; CHECK:       [[TRAP]]:
-; CHECK-NEXT:    tail call void @llvm.trap()
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    br i1 [[AND_3]], label %[[CONT1:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[CONT1]]:
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[D]]
 ; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[ARRAYIDX]], align 8

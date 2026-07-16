@@ -1997,20 +1997,25 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
       }
 
       // (X | Y) >s -1 implies X >s -1 and Y >s -1, because the sign bit of an
-      // OR is the OR of the operand sign bits. Look through this
-      // canonicalization by InstCombine.
-      if (Pred == CmpInst::ICMP_SGT && match(B, m_AllOnes())) {
-        SmallVector<Value *> OrWorklist = {A};
-        SmallPtrSet<Value *, 4> SeenOr;
-        Value *X, *Y;
-        while (!OrWorklist.empty()) {
-          Value *Cur = OrWorklist.pop_back_val();
-          if (!match(Cur, m_Or(m_Value(X), m_Value(Y))))
+      // OR is the OR of the operand sign bits. Similarly, (X & Y) <s 0 implies
+      // X <s 0 and Y <s 0. Look through these canonical forms produced by
+      // InstCombine so the sign facts on the operands are available to the
+      // solver.
+      if ((Pred == CmpInst::ICMP_SGT && match(B, m_AllOnes())) ||
+          (Pred == CmpInst::ICMP_SLT && match(B, m_Zero()))) {
+        unsigned Opc =
+            Pred == CmpInst::ICMP_SGT ? Instruction::Or : Instruction::And;
+        SmallVector<Value *> Worklist = {A};
+        SmallPtrSet<Value *, 4> Seen;
+        while (!Worklist.empty()) {
+          Value *Cur = Worklist.pop_back_val();
+          auto *BO = dyn_cast<BinaryOperator>(Cur);
+          if (!BO || BO->getOpcode() != Opc)
             continue;
-          for (Value *Op : {X, Y}) {
-            if (!SeenOr.insert(Op).second)
+          for (Value *Op : {BO->getOperand(0), BO->getOperand(1)}) {
+            if (!Seen.insert(Op).second)
               continue;
-            OrWorklist.push_back(Op);
+            Worklist.push_back(Op);
             Info.addFact(Pred, Op, B, CB.NumIn, CB.NumOut, DFSInStack);
           }
         }
