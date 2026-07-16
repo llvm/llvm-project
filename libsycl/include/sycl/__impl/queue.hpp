@@ -349,7 +349,7 @@ public:
   event parallel_for(nd_range<Dims> executionRange,
                      const std::vector<event> &depEvents, Rest &&...rest) {
     if (executionRange.get_global_range() != range<Dims>{} &&
-        (executionRange.get_local_range() == range<Dims>{} ||
+        (executionRange.get_local_range().size() == 0 ||
          executionRange.get_global_range() % executionRange.get_local_range() !=
              range<Dims>{}))
       throw sycl::exception(sycl::make_error_code(sycl::errc::nd_range),
