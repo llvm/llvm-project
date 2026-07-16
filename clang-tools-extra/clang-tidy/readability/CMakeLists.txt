@@ -53,6 +53,7 @@ add_clang_library(clangTidyReadabilityModule STATIC
   RedundantSmartptrGetCheck.cpp
   RedundantStringCStrCheck.cpp
   RedundantStringInitCheck.cpp
+  RedundantTagCheck.cpp
   RedundantTypenameCheck.cpp
   ReferenceToConstructedTemporaryCheck.cpp
   SimplifyBooleanExprCheck.cpp
@@ -68,6 +69,7 @@ add_clang_library(clangTidyReadabilityModule STATIC
   UseAnyOfAllOfCheck.cpp
   UseConcisePreprocessorDirectivesCheck.cpp
   UseStdMinMaxCheck.cpp
+
 
   LINK_LIBS
   clangTidy

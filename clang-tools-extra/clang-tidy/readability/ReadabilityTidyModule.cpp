@@ -55,6 +55,7 @@
 #include "RedundantSmartptrGetCheck.h"
 #include "RedundantStringCStrCheck.h"
 #include "RedundantStringInitCheck.h"
+#include "RedundantTagCheck.h"
 #include "RedundantTypenameCheck.h"
 #include "ReferenceToConstructedTemporaryCheck.h"
 #include "SimplifyBooleanExprCheck.h"
@@ -70,7 +71,6 @@
 #include "UseAnyOfAllOfCheck.h"
 #include "UseConcisePreprocessorDirectivesCheck.h"
 #include "UseStdMinMaxCheck.h"
-
 namespace clang::tidy {
 namespace readability {
 namespace {
@@ -202,6 +202,8 @@ public:
         "readability-use-concise-preprocessor-directives");
     CheckFactories.registerCheck<UseStdMinMaxCheck>(
         "readability-use-std-min-max");
+    CheckFactories.registerCheck<RedundantTagCheck>(
+        "readability-redundant-tag");
   }
 };
 
