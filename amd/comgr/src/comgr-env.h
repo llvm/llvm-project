@@ -33,6 +33,11 @@ LogLevel resolveLogLevel();
 /// Return whether the environment requests temps be saved.
 bool shouldSaveTemps();
 bool shouldSaveLLVMTemps();
+
+/// True when AMD_COMGR_HOTSWAP_ENTRY_STUB_SYMBOLS is exactly "1": add the
+/// debug-only `<kernel>.stub` symbols the B0->B0 fast path skips by default.
+bool shouldAddEntryTrampolineSymbols();
+
 std::optional<bool> shouldUseVFS();
 
 /// If the environment requests logs be redirected, return the string identifier

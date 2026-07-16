@@ -27,6 +27,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "comgr-env.h"
 #include "comgr-hotswap-internal.h"
 
 #include "llvm/ADT/DenseSet.h"
@@ -1976,11 +1977,38 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
   }
   ElfView &Elf = *ViewOrErr;
 
-  LLVMState LS = initLLVM(TargetIdent);
-  if (!LS.Valid) {
-    log() << "hotswap: error: retargetCodeObject: initLLVM failed "
-          << "for CPU '" << TargetIdent.Processor << "'; aborting rewrite.\n";
-    return AMD_COMGR_STATUS_ERROR;
+  // The CPU name and s_nop padding bytes are the only rewrite state the fast
+  // path needs; both are also carried by LLVMState on the MC path. Holding them
+  // as standalone locals lets the shared tail work off them regardless of which
+  // path ran, so the fast path never builds an LLVMState.
+  const StringRef TargetCpu = TargetIdent.Processor;
+  static constexpr uint8_t SNop[4] = {0x00, 0x00, 0x80, 0xbf};
+  SmallVector<uint8_t, 4> SNopBytes(SNop, SNop + sizeof(SNop));
+
+  // B0->B0 entry-only fast path: no instruction patches means no .text decode,
+  // so skip the whole LLVM MC layer and emit entry stubs from a pre-encoded
+  // byte template. UseB0B0EntryFastPath is decided by the caller from the
+  // source/target stepping; the template bytes and the HWSD workaround are
+  // gfx1250-specific, which that flag already accounts for.
+  const bool UseFastAppend = Options.RunEntryTrampolines &&
+                             !RunInstructionPatches &&
+                             Options.UseB0B0EntryFastPath;
+
+  // The MC layer (disassembler, encoder, register info) is only initialized on
+  // the non-fast path. The fast path leaves LS default-constructed and unused:
+  // it works entirely off TargetCpu / SNopBytes above, and every LS access
+  // below is guarded by a condition that is false on the fast path.
+  LLVMState LS;
+  if (UseFastAppend) {
+    log() << "hotswap: entry trampolines: B0->B0 fast path (no MC/.text "
+             "disassembly)\n";
+  } else {
+    LS = initLLVM(TargetIdent);
+    if (!LS.Valid) {
+      log() << "hotswap: error: retargetCodeObject: initLLVM failed "
+            << "for CPU '" << TargetIdent.Processor << "'; aborting rewrite.\n";
+      return AMD_COMGR_STATUS_ERROR;
+    }
   }
 
   RewriteConfig Config = makeGfx1250B0A0Config();
@@ -2070,8 +2098,12 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
 
   std::vector<KernelEntryTrampolineFixup> EntryFixups;
   if (Options.RunEntryTrampolines) {
-    std::optional<uint32_t> EntryCount = appendKernelEntryTrampolines(
-        Elf, LS, Config.MaxSgprs, Growth, EntryFixups);
+    std::optional<uint32_t> EntryCount =
+        UseFastAppend
+            ? appendKernelEntryTrampolinesFast(Elf, TargetCpu, Config.MaxSgprs,
+                                               Growth, EntryFixups)
+            : appendKernelEntryTrampolines(Elf, LS, Config.MaxSgprs, Growth,
+                                           EntryFixups);
     if (!EntryCount)
       return AMD_COMGR_STATUS_ERROR;
     Count += *EntryCount;
@@ -2084,7 +2116,7 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
     return AMD_COMGR_STATUS_ERROR;
 
   if (!Growth.empty()) {
-    Result = Elf.growWithTrampolines(Growth, LS.SNopBytes);
+    Result = Elf.growWithTrampolines(Growth, SNopBytes);
     if (!Result) {
       log() << "hotswap: error: retargetCodeObject: "
             << "ElfView::growWithTrampolines returned null with "
@@ -2102,7 +2134,7 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
       GrowthTotal += T.Bytes.size();
     }
     patchDebugSections(*Result, Deferred, Elf, GrowthTotal);
-    if (!rewriteKernelEntryDescriptorOffsets(*Result, PoolVAddr, LS.Cpu,
+    if (!rewriteKernelEntryDescriptorOffsets(*Result, PoolVAddr, TargetCpu,
                                              EntryFixups))
       return AMD_COMGR_STATUS_ERROR;
 
@@ -2111,7 +2143,15 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
     // `info dispatches`). This grows only the non-alloc .symtab/.strtab and
     // returns a new buffer; failure is non-fatal (the rewritten code object is
     // still correct, just missing the debug-only symbol).
-    if (!EntryFixups.empty()) {
+    //
+    // FAST PATH: this .symtab/.strtab rebuild + full buffer copy scales with
+    // kernel count and is pure overhead for a load-time-critical path (the ROCr
+    // loader trampoline adds no such symbols). The symbols are only a debugging
+    // aid, so the fast path skips them by default. Set
+    // AMD_COMGR_HOTSWAP_ENTRY_STUB_SYMBOLS=1 to re-enable (e.g. for rocgdb).
+    const bool AddStubSymbols =
+        !UseFastAppend || env::shouldAddEntryTrampolineSymbols();
+    if (!EntryFixups.empty() && AddStubSymbols) {
       std::unique_ptr<WritableMemoryBuffer> WithSyms =
           addKernelEntryTrampolineSymbols(*Result, Elf.textSectionIndex(),
                                           Elf.textAddr(), Elf.textSize(),

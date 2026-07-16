@@ -15,6 +15,7 @@
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/MathExtras.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -323,6 +324,220 @@ makeKernelDescriptorElf(llvm::ArrayRef<uint8_t> Text,
   }
 
   return Result;
+}
+
+// Options for an ELF carrying several kernel descriptors, for tests that need
+// more than one kernel (descriptor-cache dedup ordering, batched SGPR updates).
+// Kept separate from makeKernelDescriptorElf so the single-kernel fixture used
+// by most tests is untouched.
+struct MultiKernelDescriptorElfOptions {
+  struct Kernel {
+    std::string Name;
+    // STT_FUNC entry symbol value; must lie within [TextAddr,
+    // TextAddr+TextSize).
+    uint64_t EntryVAddr = 0;
+    // STT_OBJECT `<name>.kd` symbol value; must be >= RodataAddr. The dedup
+    // path keys on (name, KdVAddr), so repeat a (Name, KdVAddr) pair to emit a
+    // duplicate symbol and vary KdVAddr to emit a distinct descriptor.
+    uint64_t KdVAddr = 0;
+    int64_t EntryOffset = 0; // kernel_code_entry_byte_offset in the descriptor
+    uint32_t ComputePgmRsrc3 = 0;
+    // When true, add an amdhsa.kernels metadata entry (with SgprCount) for this
+    // kernel. Leave false to model a descriptor that has no metadata entry.
+    bool EmitMetadata = false;
+    unsigned MetadataSgprCount = 0;
+  };
+
+  uint16_t ElfType = llvm::ELF::ET_DYN;
+  uint64_t TextAddr = 0x1000;
+  uint64_t TextSize = 0x400;
+  uint64_t RodataAddr = 0x2000;
+  std::vector<Kernel> Kernels;
+};
+
+inline std::vector<uint8_t>
+makeMultiKernelMetadataBlob(const MultiKernelDescriptorElfOptions &Options) {
+  KernelDescriptorElfOptions MetaOpts;
+  for (const MultiKernelDescriptorElfOptions::Kernel &K : Options.Kernels)
+    if (K.EmitMetadata)
+      MetaOpts.MetadataKernels.push_back({K.Name, K.MetadataSgprCount});
+  if (MetaOpts.MetadataKernels.empty())
+    return {};
+  std::string Blob = makeAmdgpuMetadataBlob(MetaOpts);
+  return makeAmdgpuMetadataNote(Blob);
+}
+
+inline std::vector<uint8_t>
+makeMultiKernelDescriptorElf(const MultiKernelDescriptorElfOptions &Options) {
+  using namespace llvm::ELF;
+  namespace hsa = llvm::amdhsa;
+
+  static constexpr uint64_t ShOff = sizeof(Elf64_Ehdr);
+  static constexpr uint64_t TextOffset = 0x240;
+  static constexpr uint64_t KdBytes = sizeof(hsa::kernel_descriptor_t);
+  static constexpr char ShStrTab[] =
+      "\0.text\0.rodata\0.strtab\0.symtab\0.shstrtab\0";
+
+  const size_t NumKernels = Options.Kernels.size();
+  assert(NumKernels > 0 && "multi-kernel ELF needs at least one kernel");
+
+  // .rodata must span the highest descriptor block. Each KdVAddr must sit at or
+  // above RodataAddr; distinct KdVAddrs get distinct blocks, duplicates reuse.
+  uint64_t RodataSpan = KdBytes;
+  for (const MultiKernelDescriptorElfOptions::Kernel &K : Options.Kernels) {
+    assert(K.KdVAddr >= Options.RodataAddr && "kd vaddr below .rodata");
+    assert(K.EntryVAddr >= Options.TextAddr &&
+           K.EntryVAddr < Options.TextAddr + Options.TextSize &&
+           "entry vaddr outside .text");
+    RodataSpan = std::max(RodataSpan, K.KdVAddr - Options.RodataAddr + KdBytes);
+  }
+
+  // String table: null byte, then per kernel "<name>\0" and "<name>.kd\0".
+  // Duplicates are emitted verbatim so repeated symbols stay independent.
+  std::string StrTab;
+  StrTab.push_back('\0');
+  std::vector<uint32_t> FuncNameOff(NumKernels), KdNameOff(NumKernels);
+  for (size_t I = 0; I < NumKernels; ++I) {
+    FuncNameOff[I] = static_cast<uint32_t>(StrTab.size());
+    StrTab += Options.Kernels[I].Name;
+    StrTab.push_back('\0');
+    KdNameOff[I] = static_cast<uint32_t>(StrTab.size());
+    StrTab += Options.Kernels[I].Name;
+    StrTab += ".kd";
+    StrTab.push_back('\0');
+  }
+
+  std::vector<uint8_t> MetadataNote = makeMultiKernelMetadataBlob(Options);
+  const bool HasMetadataNote = !MetadataNote.empty();
+
+  // Symbols: null [0], then per kernel a STT_FUNC entry and STT_OBJECT .kd.
+  const uint64_t SymCount = 1 + 2 * NumKernels;
+
+  const uint64_t RodataOff = alignTo8(TextOffset + Options.TextSize);
+  const uint64_t StrTabOff = alignTo8(RodataOff + RodataSpan);
+  const uint64_t SymTabOff = alignTo8(StrTabOff + StrTab.size());
+  const uint64_t ShStrTabOff =
+      alignTo8(SymTabOff + SymCount * sizeof(Elf64_Sym));
+  const uint64_t NoteOff =
+      HasMetadataNote ? alignTo4(ShStrTabOff + sizeof(ShStrTab)) : 0;
+  const uint64_t PhOff =
+      HasMetadataNote ? alignTo8(NoteOff + MetadataNote.size()) : 0;
+  const uint64_t ContentEnd = HasMetadataNote ? PhOff + sizeof(Elf64_Phdr)
+                                              : ShStrTabOff + sizeof(ShStrTab);
+  const uint64_t BufSize = alignTo8(ContentEnd + 64);
+
+  std::vector<uint8_t> Bytes(BufSize, 0);
+  uint8_t *Buf = Bytes.data();
+  std::memcpy(Buf + StrTabOff, StrTab.data(), StrTab.size());
+  std::memcpy(Buf + ShStrTabOff, ShStrTab, sizeof(ShStrTab));
+  if (HasMetadataNote)
+    std::memcpy(Buf + NoteOff, MetadataNote.data(), MetadataNote.size());
+
+  Elf64_Ehdr Ehdr = makeElf64Ehdr(EM_AMDGPU);
+  Ehdr.e_ident[EI_OSABI] = ELFOSABI_AMDGPU_HSA;
+  Ehdr.e_type = Options.ElfType;
+  Ehdr.e_version = EV_CURRENT;
+  Ehdr.e_shoff = ShOff;
+  if (HasMetadataNote) {
+    Ehdr.e_phoff = PhOff;
+    Ehdr.e_phentsize = sizeof(Elf64_Phdr);
+    Ehdr.e_phnum = 1;
+  }
+  Ehdr.e_ehsize = sizeof(Elf64_Ehdr);
+  Ehdr.e_shentsize = sizeof(Elf64_Shdr);
+  Ehdr.e_shnum = 6;
+  Ehdr.e_shstrndx = 5;
+  std::memcpy(Buf, &Ehdr, sizeof(Ehdr));
+
+  Elf64_Shdr TextSh{};
+  TextSh.sh_name = 1;
+  TextSh.sh_type = SHT_PROGBITS;
+  TextSh.sh_flags = SHF_ALLOC | SHF_EXECINSTR;
+  TextSh.sh_offset = TextOffset;
+  TextSh.sh_addr = Options.TextAddr;
+  TextSh.sh_size = Options.TextSize;
+  TextSh.sh_addralign = 4;
+  std::memcpy(Buf + ShOff + 1 * sizeof(Elf64_Shdr), &TextSh, sizeof(TextSh));
+
+  Elf64_Shdr RodataSh{};
+  RodataSh.sh_name = 7;
+  RodataSh.sh_type = SHT_PROGBITS;
+  RodataSh.sh_flags = SHF_ALLOC;
+  RodataSh.sh_offset = RodataOff;
+  RodataSh.sh_addr = Options.RodataAddr;
+  RodataSh.sh_size = RodataSpan;
+  RodataSh.sh_addralign = 8;
+  std::memcpy(Buf + ShOff + 2 * sizeof(Elf64_Shdr), &RodataSh,
+              sizeof(RodataSh));
+
+  Elf64_Shdr StrtabSh{};
+  StrtabSh.sh_name = 15;
+  StrtabSh.sh_type = SHT_STRTAB;
+  StrtabSh.sh_offset = StrTabOff;
+  StrtabSh.sh_size = StrTab.size();
+  std::memcpy(Buf + ShOff + 3 * sizeof(Elf64_Shdr), &StrtabSh,
+              sizeof(StrtabSh));
+
+  Elf64_Shdr SymtabSh{};
+  SymtabSh.sh_name = 23;
+  SymtabSh.sh_type = SHT_SYMTAB;
+  SymtabSh.sh_offset = SymTabOff;
+  SymtabSh.sh_size = SymCount * sizeof(Elf64_Sym);
+  SymtabSh.sh_link = 3; // .strtab section index
+  SymtabSh.sh_info = 1; // one past the last local symbol (only sym[0] is local)
+  SymtabSh.sh_entsize = sizeof(Elf64_Sym);
+  std::memcpy(Buf + ShOff + 4 * sizeof(Elf64_Shdr), &SymtabSh,
+              sizeof(SymtabSh));
+
+  Elf64_Shdr ShstrSh{};
+  ShstrSh.sh_name = 31;
+  ShstrSh.sh_type = SHT_STRTAB;
+  ShstrSh.sh_offset = ShStrTabOff;
+  ShstrSh.sh_size = sizeof(ShStrTab);
+  std::memcpy(Buf + ShOff + 5 * sizeof(Elf64_Shdr), &ShstrSh, sizeof(ShstrSh));
+
+  if (HasMetadataNote) {
+    Elf64_Phdr NotePhdr{};
+    NotePhdr.p_type = PT_NOTE;
+    NotePhdr.p_offset = NoteOff;
+    NotePhdr.p_filesz = MetadataNote.size();
+    NotePhdr.p_memsz = MetadataNote.size();
+    NotePhdr.p_align = 4;
+    std::memcpy(Buf + PhOff, &NotePhdr, sizeof(NotePhdr));
+  }
+
+  // Descriptor blocks and symbols, one pair per kernel entry.
+  for (size_t I = 0; I < NumKernels; ++I) {
+    const MultiKernelDescriptorElfOptions::Kernel &K = Options.Kernels[I];
+    const uint64_t KdBlockOff = RodataOff + (K.KdVAddr - Options.RodataAddr);
+    std::memcpy(
+        Buf + KdBlockOff +
+            offsetof(hsa::kernel_descriptor_t, kernel_code_entry_byte_offset),
+        &K.EntryOffset, sizeof(K.EntryOffset));
+    std::memcpy(Buf + KdBlockOff +
+                    offsetof(hsa::kernel_descriptor_t, compute_pgm_rsrc3),
+                &K.ComputePgmRsrc3, sizeof(K.ComputePgmRsrc3));
+
+    Elf64_Sym FuncSym{};
+    FuncSym.st_name = FuncNameOff[I];
+    FuncSym.setBindingAndType(STB_GLOBAL, STT_FUNC);
+    FuncSym.st_shndx = 1;
+    FuncSym.st_value = K.EntryVAddr;
+    FuncSym.st_size = 0x40;
+    std::memcpy(Buf + SymTabOff + (1 + 2 * I) * sizeof(Elf64_Sym), &FuncSym,
+                sizeof(FuncSym));
+
+    Elf64_Sym KdSym{};
+    KdSym.st_name = KdNameOff[I];
+    KdSym.setBindingAndType(STB_GLOBAL, STT_OBJECT);
+    KdSym.st_shndx = 2;
+    KdSym.st_value = K.KdVAddr;
+    KdSym.st_size = KdBytes;
+    std::memcpy(Buf + SymTabOff + (2 + 2 * I) * sizeof(Elf64_Sym), &KdSym,
+                sizeof(KdSym));
+  }
+
+  return Bytes;
 }
 
 } // namespace comgr_test

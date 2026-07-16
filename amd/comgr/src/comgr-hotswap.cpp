@@ -230,6 +230,13 @@ hotswapRewrite(amd_comgr_data_t input, const char *source_isa_name,
   Options.RunEntryTrampolines = RunEntryTrampolines;
   Options.MaskPolicy =
       getMaskWorkaroundPolicy(TargetIdent, StrictMode, Options.RunB0A0Patches);
+  // Fast entry-trampoline path is B0->B0 only. Match the stepping defaults used
+  // by shouldRunB0A0Patches: an unspecified source is treated as B0, but the
+  // target must explicitly be B0 (unspecified defaults to A0), so the fast path
+  // fails closed to the MC path when the target stepping is unknown.
+  Options.UseB0B0EntryFastPath = TargetIdent.Ident.Processor == "gfx1250" &&
+                                 SourceIdent.IsB0.value_or(true) &&
+                                 TargetIdent.IsB0.value_or(false);
 
   std::unique_ptr<llvm::MemoryBuffer> OutBuffer;
   amd_comgr_status_t Status = hotswap::retargetCodeObject(

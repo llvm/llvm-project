@@ -16,6 +16,7 @@
 #include "comgr-hotswap-internal.h"
 
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Twine.h"
 
 #include <algorithm>
@@ -279,8 +280,8 @@ bool hasKernelEntryTrampolinePrefix(ArrayRef<uint8_t> Bytes,
          std::equal(Prefix.begin(), Prefix.end(), Bytes.begin());
 }
 
-static std::optional<uint64_t>
-checkedAlignTo(uint64_t Value, uint64_t Alignment, StringRef Context) {
+std::optional<uint64_t> checkedAlignTo(uint64_t Value, uint64_t Alignment,
+                                       StringRef Context) {
   if (Alignment == 0)
     return Value;
 
@@ -290,7 +291,7 @@ checkedAlignTo(uint64_t Value, uint64_t Alignment, StringRef Context) {
   return checkedAddUint64(Value, Alignment - Remainder, Context);
 }
 
-static std::optional<uint64_t> entryVAddr(const KernelDescriptorInfo &KD) {
+std::optional<uint64_t> entryVAddr(const KernelDescriptorInfo &KD) {
   if (KD.EntryOffset >= 0)
     return checkedAddUint64(
         KD.VAddr, static_cast<uint64_t>(KD.EntryOffset),
@@ -644,6 +645,9 @@ bool rewriteKernelEntryDescriptorOffsets(
 
   bool Ok = true;
   ElfView &OutElf = *ViewOrErr;
+  // Collect SGPR bumps and apply them in one batched metadata rewrite after the
+  // loop; a per-fixup update reparses/reserializes the whole note (O(n^2)).
+  StringMap<unsigned> SgprBumps;
   for (const KernelEntryTrampolineFixup &Fixup : Fixups) {
     std::optional<uint64_t> KdVAddr =
         OutElf.getKernelDescriptorVAddr(Fixup.KernelName);
@@ -671,13 +675,17 @@ bool rewriteKernelEntryDescriptorOffsets(
     }
     bool UpdatedEntry =
         OutElf.updateKernelDescriptorEntryOffset(Fixup.KernelName, *NewOffset);
-    bool UpdatedSgprs = OutElf.updateKernelDescriptorSgprCount(
-        Fixup.KernelName, Fixup.RequiredSgprs,
-        /*UpdateDescriptor=*/false);
+    if (!Fixup.SkipSgprReservation && Fixup.RequiredSgprs != 0) {
+      unsigned &Bump = SgprBumps[Fixup.KernelName];
+      Bump = std::max(Bump, Fixup.RequiredSgprs);
+    }
     bool UpdatedInstPref = OutElf.updateKernelDescriptorInstPrefSize(
         Fixup.KernelName, TargetCpu, Fixup.InstPrefLines);
-    Ok = UpdatedEntry && UpdatedSgprs && UpdatedInstPref && Ok;
+    Ok = UpdatedEntry && UpdatedInstPref && Ok;
   }
+
+  if (!SgprBumps.empty())
+    Ok = OutElf.updateKernelMetadataSgprCounts(SgprBumps) && Ok;
   return Ok;
 }
 

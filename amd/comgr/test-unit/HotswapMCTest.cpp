@@ -258,6 +258,243 @@ TEST(EncodeSetPCLongBranch, RejectsMisalignedScratchPair) {
   EXPECT_FALSE(encodeSetPCLongBranch(S, 0, 0x1000, /*SgprBase=*/3));
 }
 
+// -- buildKernelEntryTrampolineFast ------------------------------------------
+//
+// The fast path emits its entry stub from a pre-encoded byte template, patching
+// the two PC-relative delta immediates and the scratch SGPR register fields.
+// These tests disassemble the emitted bytes and confirm (a) the stub names one
+// consistent scratch pair across all six SGPR fields, and (b) the runtime PC
+// arithmetic -- s_get_pc_i64 then the two-word add-with-carry -- lands exactly
+// on the original entry. They pass ScratchSgpr=100 so the decoded bytes match
+// the historical fixed-pair layout. Checking the decoded immediates rather than
+// the raw template guards against a bad PC-base offset or a wrong delta word,
+// which the disassembly-mnemonic lit test cannot catch.
+
+// Disassemble a fast stub and reconstruct the entry vaddr it jumps to,
+// modelling the on-hardware two's-complement add-with-carry across the
+// scratch pair. Also asserts the structure (one consistent scratch pair,
+// expected opcodes).
+static uint64_t decodeFastStubTarget(const LLVMState &S, uint64_t StubVAddr,
+                                     llvm::ArrayRef<uint8_t> Bytes) {
+  std::vector<InternalDecodedInst> Dec;
+  EXPECT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Dec));
+  EXPECT_GE(Dec.size(), 6u);
+
+  // Body layout: global_wb, v_nop, s_get_pc_i64, s_add_co_u32 (delta lo),
+  // s_add_co_ci_u32 (delta hi), s_set_pc_i64.
+  EXPECT_EQ(Dec[0].Inst.getOpcode(), S.GlobalWbOpcode);
+  EXPECT_EQ(Dec[1].Inst.getOpcode(), S.VNopInst.getOpcode());
+  EXPECT_EQ(Dec[2].Inst.getOpcode(), S.SGetPcI64Opcode);
+  EXPECT_EQ(Dec[3].Inst.getOpcode(), S.SAddU32Opcode);
+  EXPECT_EQ(Dec[4].Inst.getOpcode(), S.SAddcU32Opcode);
+  EXPECT_EQ(Dec[5].Inst.getOpcode(), S.SSetPcI64Opcode);
+  const llvm::MCInst &GetPc = Dec[2].Inst;
+  const llvm::MCInst &AddLo = Dec[3].Inst;
+  const llvm::MCInst &AddHi = Dec[4].Inst;
+  const llvm::MCInst &SetPc = Dec[5].Inst;
+
+  // s_get_pc, s_set_pc, and both add destinations must all name the same fixed
+  // scratch pair the template hard-codes (s[100:101]).
+  EXPECT_TRUE(GetPc.getOperand(0).isReg() && SetPc.getOperand(0).isReg() &&
+              AddLo.getOperand(0).isReg() && AddHi.getOperand(0).isReg());
+  const llvm::MCRegister Pair = GetPc.getOperand(0).getReg();
+  EXPECT_EQ(SetPc.getOperand(0).getReg(), Pair);
+  EXPECT_EQ(AddLo.getOperand(0).getReg(), AddLo.getOperand(1).getReg());
+  EXPECT_EQ(AddHi.getOperand(0).getReg(), AddHi.getOperand(1).getReg());
+
+  // The 32-bit literal is the trailing dword of each 8-byte add. Read it from
+  // the disassembler-reported instruction span rather than the decoded operand:
+  // the AMDGPU disassembler models s_add_co_ci_u32's literal as an expr, so
+  // getImm() on it is unreliable, while s_add_co_u32's is a plain imm.
+  EXPECT_EQ(Dec[3].Size, 8u);
+  EXPECT_EQ(Dec[4].Size, 8u);
+  const uint32_t Lo = readDword(Bytes.data() + Dec[3].Offset + Dec[3].Size - 4);
+  const uint32_t Hi = readDword(Bytes.data() + Dec[4].Offset + Dec[4].Size - 4);
+
+  // PC base is the address of the instruction after s_get_pc_i64.
+  const uint64_t PcBase = StubVAddr + Dec[2].Offset + Dec[2].Size;
+
+  // Model the hardware add-with-carry across the 64-bit pair rather than a
+  // plain 64-bit add, so a delta that carries out of the low word is exercised.
+  const uint32_t BaseLo = static_cast<uint32_t>(PcBase);
+  const uint32_t BaseHi = static_cast<uint32_t>(PcBase >> 32);
+  const uint64_t SumLo = static_cast<uint64_t>(BaseLo) + Lo;
+  const uint32_t ResLo = static_cast<uint32_t>(SumLo);
+  const uint32_t Carry = static_cast<uint32_t>(SumLo >> 32);
+  const uint32_t ResHi = BaseHi + Hi + Carry;
+  return (static_cast<uint64_t>(ResHi) << 32) | ResLo;
+}
+
+TEST(BuildKernelEntryTrampolineFast, ForwardDeltaLandsOnEntry) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  const uint64_t StubVAddr = 0x100000;
+  const uint64_t EntryVAddr = 0x180000; // forward
+  llvm::SmallVector<uint8_t> Bytes = buildKernelEntryTrampolineFast(
+      StubVAddr, EntryVAddr, /*ScratchSgpr=*/100);
+  ASSERT_EQ(Bytes.size(), KernelEntryStubStride);
+  EXPECT_EQ(decodeFastStubTarget(S, StubVAddr, Bytes), EntryVAddr);
+}
+
+TEST(BuildKernelEntryTrampolineFast, BackwardDeltaLandsOnEntry) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  const uint64_t StubVAddr = 0x180000;
+  const uint64_t EntryVAddr = 0x100000; // backward: negative delta
+  llvm::SmallVector<uint8_t> Bytes = buildKernelEntryTrampolineFast(
+      StubVAddr, EntryVAddr, /*ScratchSgpr=*/100);
+  ASSERT_EQ(Bytes.size(), KernelEntryStubStride);
+  EXPECT_EQ(decodeFastStubTarget(S, StubVAddr, Bytes), EntryVAddr);
+}
+
+TEST(BuildKernelEntryTrampolineFast, CarryProducingDeltaLandsOnEntry) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  // Pc base low word is near the top of 32 bits, and the entry is far enough
+  // above that the low-word add overflows and must carry into the high word.
+  const uint64_t StubVAddr = 0xFFFFF000;
+  const uint64_t EntryVAddr = 0x1'0002'0000; // crosses the 4 GiB boundary
+  llvm::SmallVector<uint8_t> Bytes = buildKernelEntryTrampolineFast(
+      StubVAddr, EntryVAddr, /*ScratchSgpr=*/100);
+  ASSERT_EQ(Bytes.size(), KernelEntryStubStride);
+  EXPECT_EQ(decodeFastStubTarget(S, StubVAddr, Bytes), EntryVAddr);
+}
+
+// The fast path emits its stub body from a checked-in, generated byte template
+// (comgr-hotswap-entry-trampoline-fast-stub.inc) instead of running the MC
+// layer at rewrite time. This test is the guarantee those bytes never silently
+// drift from what the assembler produces: assemble the six body instructions
+// through the MC layer here and memcmp against the body
+// buildKernelEntryTrampolineFast emits. The two s_add immediates are the
+// PC-relative delta the runtime writes, so they are zeroed on both sides before
+// comparing (imm=0 would otherwise assemble to the shorter inline-constant form
+// -- we assemble with a literal to force the 32-bit-literal encoding the
+// template uses, then zero the words).
+TEST(BuildKernelEntryTrampolineFast, StubTemplateMatchesMCOutput) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+
+  // The template is spelled with the fixed s[100:101] scratch pair; build with
+  // that pair so the SGPR register-field bytes match the assembled
+  // instructions.
+  llvm::SmallVector<uint8_t> Stub = buildKernelEntryTrampolineFast(
+      /*StubVAddr=*/0x1000, /*EntryVAddr=*/0x2000, /*ScratchSgpr=*/100);
+  ASSERT_EQ(Stub.size(), KernelEntryStubStride);
+  llvm::SmallVector<uint8_t> Body(Stub.begin(),
+                                  Stub.begin() + FastEntryStubBodyBytes);
+
+  // Assemble the six body instructions through the MC layer. The s_add
+  // immediates use a literal to force the 32-bit-literal encoding.
+  static const char *const BodyAsm[] = {
+      "global_wb",
+      "v_nop",
+      "s_get_pc_i64 s[100:101]",
+      "s_add_co_u32 s100, s100, 0xdeadbeef",
+      "s_add_co_ci_u32 s101, s101, 0xdeadbeef",
+      "s_set_pc_i64 s[100:101]",
+  };
+  llvm::SmallVector<uint8_t> Assembled;
+  for (const char *Asm : BodyAsm) {
+    llvm::SmallVector<uint8_t> Inst = assembleSingleInst(Asm, S);
+    ASSERT_FALSE(Inst.empty()) << "failed to assemble: " << Asm;
+    Assembled.append(Inst.begin(), Inst.end());
+  }
+  ASSERT_EQ(Assembled.size(), FastEntryStubBodyBytes);
+
+  // Zero the PC-relative delta words on both sides (the runtime writes them;
+  // the template carries zero; the assembled form carries the 0xdeadbeef
+  // literal).
+  for (uint64_t Off : {FastEntryDeltaLoOffset, FastEntryDeltaHiOffset})
+    for (uint64_t I = 0; I < 4; ++I)
+      Body[Off + I] = Assembled[Off + I] = 0;
+
+  EXPECT_EQ(Body, Assembled);
+}
+
+// The stub's six SGPR register fields must encode whatever scratch pair the
+// allocator picked -- not the s[100:101] the template is spelled with. Build
+// with an even base other than 100 and confirm the decoded pair matches, and
+// that the delta still lands on the entry (the field patch must not disturb the
+// delta words).
+TEST(BuildKernelEntryTrampolineFast, PatchesScratchSgprRegisterFields) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  const uint64_t StubVAddr = 0x100000;
+  const uint64_t EntryVAddr = 0x140000;
+  const unsigned ScratchSgpr = 8; // aligned pair s[8:9]
+  llvm::SmallVector<uint8_t> Bytes =
+      buildKernelEntryTrampolineFast(StubVAddr, EntryVAddr, ScratchSgpr);
+  ASSERT_EQ(Bytes.size(), KernelEntryStubStride);
+
+  std::vector<InternalDecodedInst> Dec;
+  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Dec));
+  ASSERT_GE(Dec.size(), 6u);
+  const llvm::MCInst &GetPc = Dec[2].Inst;
+  ASSERT_TRUE(GetPc.getOperand(0).isReg());
+  // s_get_pc names the low SGPR of the pair; s[8:9] decodes as SGPR8.
+  EXPECT_EQ(GetPc.getOperand(0).getReg(), Dec[5].Inst.getOperand(0).getReg());
+  EXPECT_EQ(decodeFastStubTarget(S, StubVAddr, Bytes), EntryVAddr);
+}
+
+// A kernel whose live SGPR count leaves no aligned scratch pair below MaxSgprs
+// must decline cleanly (nullopt), never clobber a live SGPR or crash. This is
+// the correctness guarantee the per-kernel scratch allocation adds over a fixed
+// pair: MetadataSgprCount is set to the top of the addressable range.
+TEST(KernelEntryTrampolineFast, DeclinesWhenNoScratchPairFits) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+
+  llvm::SmallVector<uint8_t> EndPgm = assembleSingleInst("s_endpgm", S);
+  ASSERT_EQ(EndPgm.size(), MinInstSize);
+  llvm::SmallVector<uint8_t> Text(EndPgm.begin(), EndPgm.end());
+
+  comgr_test::KernelDescriptorElfOptions Opts;
+  // 106 SGPRs used: no aligned pair fits below the 106-SGPR gfx1250 limit.
+  Opts.MetadataSgprCount = 106;
+  comgr_test::KernelDescriptorElf Obj =
+      comgr_test::makeKernelDescriptorElf(Text, Opts);
+  llvm::Expected<ElfView> View =
+      ElfView::create(Obj.Bytes.data(), Obj.Bytes.size());
+  ASSERT_TRUE((bool)View) << llvm::toString(View.takeError());
+
+  std::vector<Trampoline> Growth;
+  std::vector<KernelEntryTrampolineFixup> Fixups;
+  std::optional<uint32_t> Count = appendKernelEntryTrampolinesFast(
+      *View, "gfx1250", /*MaxSgprs=*/106, Growth, Fixups);
+  EXPECT_FALSE(Count.has_value());
+}
+
+// The complement of the decline case: a modest SGPR count leaves room, so the
+// fast path installs one trampoline and records the bumped scratch pair in the
+// fixup (SkipSgprReservation=false), exactly like the MC path.
+TEST(KernelEntryTrampolineFast, AllocatesPerKernelScratchAndBumpsReservation) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+
+  llvm::SmallVector<uint8_t> EndPgm = assembleSingleInst("s_endpgm", S);
+  ASSERT_EQ(EndPgm.size(), MinInstSize);
+  llvm::SmallVector<uint8_t> Text(EndPgm.begin(), EndPgm.end());
+
+  comgr_test::KernelDescriptorElfOptions Opts;
+  Opts.MetadataSgprCount = 8; // scratch pair lands at s[8:9]
+  comgr_test::KernelDescriptorElf Obj =
+      comgr_test::makeKernelDescriptorElf(Text, Opts);
+  llvm::Expected<ElfView> View =
+      ElfView::create(Obj.Bytes.data(), Obj.Bytes.size());
+  ASSERT_TRUE((bool)View) << llvm::toString(View.takeError());
+
+  std::vector<Trampoline> Growth;
+  std::vector<KernelEntryTrampolineFixup> Fixups;
+  std::optional<uint32_t> Count = appendKernelEntryTrampolinesFast(
+      *View, "gfx1250", /*MaxSgprs=*/106, Growth, Fixups);
+  ASSERT_TRUE(Count.has_value());
+  EXPECT_EQ(*Count, 1u);
+  ASSERT_EQ(Fixups.size(), 1u);
+  // Scratch pair is s[8:9]; the fixup records the top of the pair (base + 2).
+  EXPECT_EQ(Fixups[0].RequiredSgprs, 10u);
+  EXPECT_FALSE(Fixups[0].SkipSgprReservation);
+}
+
 TEST(IsSBranchReachable, CoversBoundariesAlignmentAndPcOverflow) {
   constexpr uint64_t PositiveLimit =
       static_cast<uint64_t>(BranchOffsetMax + 1) * MinInstSize;
@@ -970,6 +1207,81 @@ TEST(KernelEntryTrampoline, ClampsInstPrefSizeAndAvoidsPrefetchGuard) {
   ASSERT_TRUE(KdVAddr.has_value());
   const uint64_t StubVAddr = PoolVAddr + Fixups[0].StubTextOffset;
   EXPECT_EQ(KDs[0].EntryOffset, static_cast<int64_t>(StubVAddr - *KdVAddr));
+}
+
+// rewriteKernelEntryDescriptorOffsets aggregates per-kernel SGPR bumps into a
+// single batched metadata update. Drive it with a fixup list covering the
+// aggregation cases: a kernel appearing twice (take the max), a kernel that
+// skips the reservation, and a kernel with a zero requirement. Only the
+// max-aggregated kernel's metadata SGPR count should be raised.
+TEST(RewriteKernelEntryDescriptorOffsets, AggregatesSgprBumpsMaxSkipZero) {
+  comgr_test::MultiKernelDescriptorElfOptions Opts;
+  Opts.Kernels = {
+      {"k_max", 0x1000, 0x2000, /*EntryOffset=*/-0x1000,
+       /*ComputePgmRsrc3=*/0, /*EmitMetadata=*/true, /*MetadataSgprCount=*/8},
+      {"k_skip", 0x1100, 0x2100, /*EntryOffset=*/-0x1000,
+       /*ComputePgmRsrc3=*/0, /*EmitMetadata=*/true, /*MetadataSgprCount=*/8},
+      {"k_zero", 0x1200, 0x2200, /*EntryOffset=*/-0x1000,
+       /*ComputePgmRsrc3=*/0, /*EmitMetadata=*/true, /*MetadataSgprCount=*/8},
+  };
+  std::vector<uint8_t> Bytes = comgr_test::makeMultiKernelDescriptorElf(Opts);
+
+  std::unique_ptr<llvm::WritableMemoryBuffer> Buf =
+      llvm::WritableMemoryBuffer::getNewUninitMemBuffer(Bytes.size());
+  ASSERT_NE(Buf, nullptr);
+  std::memcpy(Buf->getBufferStart(), Bytes.data(), Bytes.size());
+
+  // Two fixups name k_max with different RequiredSgprs -> aggregate to the max
+  // (12). k_skip sets SkipSgprReservation, k_zero has RequiredSgprs == 0; both
+  // must leave the metadata count untouched.
+  const uint64_t PoolVAddr = 0x4000;
+  std::vector<KernelEntryTrampolineFixup> Fixups = {
+      {"k_max", /*StubTextOffset=*/0, /*RequiredSgprs=*/10, /*InstPrefLines=*/0,
+       /*SkipSgprReservation=*/false},
+      {"k_max", /*StubTextOffset=*/KernelEntryStubStride, /*RequiredSgprs=*/12,
+       /*InstPrefLines=*/0, /*SkipSgprReservation=*/false},
+      {"k_skip", /*StubTextOffset=*/2 * KernelEntryStubStride,
+       /*RequiredSgprs=*/20, /*InstPrefLines=*/0, /*SkipSgprReservation=*/true},
+      {"k_zero", /*StubTextOffset=*/3 * KernelEntryStubStride,
+       /*RequiredSgprs=*/0, /*InstPrefLines=*/0, /*SkipSgprReservation=*/false},
+  };
+
+  ASSERT_TRUE(
+      rewriteKernelEntryDescriptorOffsets(*Buf, PoolVAddr, "gfx1250", Fixups));
+
+  uint8_t *OutData = reinterpret_cast<uint8_t *>(Buf->getBufferStart());
+  llvm::Expected<ElfView> OutView =
+      ElfView::create(OutData, Buf->getBufferSize());
+  ASSERT_TRUE((bool)OutView) << llvm::toString(OutView.takeError());
+  EXPECT_EQ(OutView->getKernelSgprCount("k_max"), 12u);
+  EXPECT_EQ(OutView->getKernelSgprCount("k_skip"), 8u);
+  EXPECT_EQ(OutView->getKernelSgprCount("k_zero"), 8u);
+}
+
+// A fixup naming a kernel with no descriptor must fail the whole rewrite, even
+// when another fixup in the batch is valid.
+TEST(RewriteKernelEntryDescriptorOffsets, PropagatesMissingDescriptorFailure) {
+  comgr_test::MultiKernelDescriptorElfOptions Opts;
+  Opts.Kernels = {
+      {"present", 0x1000, 0x2000, /*EntryOffset=*/-0x1000,
+       /*ComputePgmRsrc3=*/0, /*EmitMetadata=*/true, /*MetadataSgprCount=*/8},
+  };
+  std::vector<uint8_t> Bytes = comgr_test::makeMultiKernelDescriptorElf(Opts);
+
+  std::unique_ptr<llvm::WritableMemoryBuffer> Buf =
+      llvm::WritableMemoryBuffer::getNewUninitMemBuffer(Bytes.size());
+  ASSERT_NE(Buf, nullptr);
+  std::memcpy(Buf->getBufferStart(), Bytes.data(), Bytes.size());
+
+  std::vector<KernelEntryTrampolineFixup> Fixups = {
+      {"present", /*StubTextOffset=*/0, /*RequiredSgprs=*/10,
+       /*InstPrefLines=*/0, /*SkipSgprReservation=*/false},
+      {"absent", /*StubTextOffset=*/KernelEntryStubStride, /*RequiredSgprs=*/10,
+       /*InstPrefLines=*/0, /*SkipSgprReservation=*/false},
+  };
+
+  EXPECT_FALSE(rewriteKernelEntryDescriptorOffsets(*Buf, /*PoolVAddr=*/0x4000,
+                                                   "gfx1250", Fixups));
 }
 
 // Count symbols named \p Name in the .symtab of the ELF held in \p Buf.

@@ -41,6 +41,13 @@ bool shouldSaveLLVMTemps() {
   return SaveTemps && StringRef(SaveTemps) != "0";
 }
 
+bool shouldAddEntryTrampolineSymbols() {
+  // Opt-in (exactly "1"): the B0->B0 fast path skips the debug-only stub
+  // symbols by default on the load-time-critical path.
+  static char *AddSyms = COMGR_GETENV("AMD_COMGR_HOTSWAP_ENTRY_STUB_SYMBOLS");
+  return AddSyms && StringRef(AddSyms) == "1";
+}
+
 std::optional<bool> shouldUseVFS() {
   if (shouldSaveTemps())
     return false;

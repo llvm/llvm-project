@@ -132,6 +132,30 @@ static_assert(KernelEntryStubStride % KernelEntryInstPrefUnitBytes == 0,
 static constexpr uint32_t KernelEntryStubInstPrefLines =
     KernelEntryStubStride / KernelEntryInstPrefUnitBytes;
 
+// B0->B0 fast-path stub layout (see comgr-hotswap-entry-trampoline-fast.cpp).
+// Pre-encoded gfx1250 stub; the two PC-relative delta immediates and the
+// per-kernel scratch SGPR register fields are patched per kernel. All offsets
+// are into the 256-byte stub.
+static constexpr uint64_t FastEntryStubBodyBytes = 40; // body: to s_set_pc_i64
+static constexpr uint64_t FastEntryPrefixBytes = 16;   // global_wb + v_nop
+static constexpr uint64_t FastEntryPcBaseOffset = 20;  // s_add (after s_get_pc)
+static constexpr uint64_t FastEntryDeltaLoOffset = 24; // s_add_co_u32 imm32
+static constexpr uint64_t FastEntryDeltaHiOffset = 32; // s_add_co_ci_u32 imm32
+
+// SGPR register-field byte offsets within the stub body. The scratch pair is
+// s[N:N+1] with N = ScratchBase (even). Verified by llvm-mc round-trip on
+// gfx1250 (see the encoding table in comgr-hotswap-entry-trampoline-fast.cpp):
+//   s_get_pc_i64 sdst         : byte = 0x80 | N
+//   s_add_co_u32 src0/sdst    : byte = N
+//   s_add_co_ci_u32 src0/sdst : byte = N + 1
+//   s_set_pc_i64 src          : byte = N
+static constexpr uint64_t FastEntryGetPcSdstOffset = 18;
+static constexpr uint64_t FastEntryAddLoSrc0Offset = 20;
+static constexpr uint64_t FastEntryAddLoSdstOffset = 22;
+static constexpr uint64_t FastEntryAddHiSrc0Offset = 28;
+static constexpr uint64_t FastEntryAddHiSdstOffset = 30;
+static constexpr uint64_t FastEntrySetPcSrcOffset = 36;
+
 struct KernelDescriptorInfo {
   std::string KernelName;
   uint64_t VAddr = 0;
@@ -424,6 +448,7 @@ private:
   mutable std::optional<std::vector<KernelDescriptorInfo>>
       KernelDescriptorCache;
   mutable llvm::StringMap<uint64_t> KernelDescriptorFileOffsetCache;
+  mutable llvm::StringMap<uint64_t> KernelDescriptorVAddrCache;
   mutable KernelSgprCacheState SgprCacheState =
       KernelSgprCacheState::Uninitialized;
   mutable llvm::StringMap<std::optional<unsigned>> KernelSgprCountCache;
@@ -932,6 +957,11 @@ struct KernelEntryTrampolineFixup {
   uint64_t StubTextOffset = 0;
   unsigned RequiredSgprs = 0;
   uint32_t InstPrefLines = 0;
+  // Both the MC path and the fast path allocate a per-kernel scratch pair above
+  // the kernel's live SGPR count and bump the descriptor SGPR reservation, so
+  // this is normally false. It stays reserved for a caller that installs a stub
+  // using a pair already counted in the reservation (no bump needed).
+  bool SkipSgprReservation = false;
 };
 
 /// Build a 256-byte, entry-aligned HotSwap kernel-entry stub at
@@ -974,6 +1004,30 @@ bool rewriteKernelEntryDescriptorOffsets(
     llvm::StringRef TargetCpu,
     llvm::ArrayRef<KernelEntryTrampolineFixup> Fixups);
 
+/// Resolve the virtual address of a kernel descriptor's entry point. Shared by
+/// the MC and fast entry-trampoline paths.
+std::optional<uint64_t> entryVAddr(const KernelDescriptorInfo &KD);
+
+/// Round Value up to a multiple of Alignment, reporting overflow against
+/// Context. Shared by the MC and fast entry-trampoline paths.
+std::optional<uint64_t> checkedAlignTo(uint64_t Value, uint64_t Alignment,
+                                       llvm::StringRef Context);
+
+/// B0->B0 FAST PATH (comgr-hotswap-entry-trampoline-fast.cpp): emit entry stubs
+/// from a pre-encoded gfx1250 byte template with no LLVM MC layer. Same
+/// append/fixup contract as appendKernelEntryTrampolines: the scratch pair is
+/// allocated per kernel above its live SGPR count and \p ScratchSgpr is patched
+/// into the stub's SGPR register fields, so the descriptor SGPR reservation is
+/// bumped exactly like the MC path. Selected automatically for pure B0->B0
+/// entry-only rewrites.
+llvm::SmallVector<uint8_t> buildKernelEntryTrampolineFast(uint64_t StubVAddr,
+                                                          uint64_t EntryVAddr,
+                                                          unsigned ScratchSgpr);
+std::optional<uint32_t> appendKernelEntryTrampolinesFast(
+    const ElfView &Elf, llvm::StringRef TargetCpu, unsigned MaxSgprs,
+    std::vector<Trampoline> &Growth,
+    std::vector<KernelEntryTrampolineFixup> &OutFixups);
+
 /// Add a `<kernel_name>.stub` STT_FUNC symbol to the code object's `.symtab`
 /// for each appended kernel-entry stub, so tools that resolve a dispatch's
 /// entry address to a name (e.g. rocgdb `info dispatches`, which reads the
@@ -997,6 +1051,12 @@ struct Gfx1250RewriteOptions {
   bool RunB0A0Patches = true;
   bool RunEntryTrampolines = false;
   MaskWorkaroundPolicy MaskPolicy = MaskWorkaroundPolicy::None;
+  // Source and target are both gfx1250 B0. Only then may the entry-trampoline
+  // rewrite take the no-MC fast path; the source/target stepping needed to
+  // decide this is known to the caller but not recoverable from TargetIdent
+  // alone. A0->A0 and A0->B0 also run without instruction patches, so this must
+  // be set explicitly rather than inferred inside retargetCodeObject.
+  bool UseB0B0EntryFastPath = false;
 };
 
 /// Run the selected GFX1250 hotswap rewrite passes on \p ElfData / \p ElfSize.

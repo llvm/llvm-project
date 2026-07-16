@@ -908,3 +908,40 @@ TEST(ElfView, UpdateKernelDescriptorSgprCountRejectsDescriptorLimitFirst) {
   EXPECT_EQ(*MetadataSgprs, 200u);
   EXPECT_EQ(readReservedSgprs(Obj.Bytes, Obj.KernelDescriptorOffset), 8u);
 }
+
+// -- kernel-descriptor cache dedup --------------------------------------------
+
+// The descriptor cache dedups by (name, vaddr): the same kernel name can appear
+// at more than one descriptor vaddr, and a repeat of an already-seen
+// (name, vaddr) pair must be dropped regardless of ordering. This pins the
+// A@x, A@y, A@x case, which a "remember only the last vaddr per name" dedup
+// would mishandle by re-adding the trailing A@x.
+TEST(ElfView, KernelDescriptorCacheDedupsByNameAndVAddrAcrossOrdering) {
+  comgr_test::MultiKernelDescriptorElfOptions Opts;
+  Opts.TextAddr = 0x1000;
+  Opts.TextSize = 0x400;
+  Opts.RodataAddr = 0x2000;
+  // Distinct descriptor vaddrs for the two "A" instances, and a "B" in between,
+  // then a duplicate of the first A. Expect three unique descriptors:
+  // A@0x2000, B@0x2100, A@0x2200 -- the trailing A@0x2000 duplicate is dropped.
+  Opts.Kernels = {
+      {"kern_a", 0x1000, 0x2000, /*EntryOffset=*/-0x1000},
+      {"kern_b", 0x1100, 0x2100, /*EntryOffset=*/-0x1000},
+      {"kern_a", 0x1200, 0x2200, /*EntryOffset=*/-0x1000},
+      {"kern_a", 0x1000, 0x2000, /*EntryOffset=*/-0x1000}, // dup of first
+  };
+  std::vector<uint8_t> Bytes = comgr_test::makeMultiKernelDescriptorElf(Opts);
+
+  llvm::Expected<ElfView> ViewOrErr =
+      ElfView::create(Bytes.data(), Bytes.size());
+  ASSERT_TRUE((bool)ViewOrErr) << llvm::toString(ViewOrErr.takeError());
+
+  llvm::ArrayRef<KernelDescriptorInfo> KDs = ViewOrErr->kernelDescriptors();
+  ASSERT_EQ(KDs.size(), 3u);
+  EXPECT_EQ(KDs[0].KernelName, "kern_a");
+  EXPECT_EQ(KDs[0].VAddr, 0x2000u);
+  EXPECT_EQ(KDs[1].KernelName, "kern_b");
+  EXPECT_EQ(KDs[1].VAddr, 0x2100u);
+  EXPECT_EQ(KDs[2].KernelName, "kern_a");
+  EXPECT_EQ(KDs[2].VAddr, 0x2200u);
+}
