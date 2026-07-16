@@ -22,8 +22,10 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CGData/CodeGenData.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/LTO/LTO.h"
@@ -58,6 +60,12 @@ enum class LTOBitcodeEmbedding {
   EmbedPostMergePreOptimized = 2
 };
 
+enum class LTONewPMEnablementLevel {
+  Auto,         // Use the target dependent default.
+  ForceEnable,  // Always enable regardless of the target default.
+  ForceDisable, // Always disable regardless of the target default.
+};
+
 static cl::opt<LTOBitcodeEmbedding> EmbedBitcode(
     "lto-embed-bitcode", cl::init(LTOBitcodeEmbedding::DoNotEmbed),
     cl::values(clEnumValN(LTOBitcodeEmbedding::DoNotEmbed, "none",
@@ -73,6 +81,18 @@ static cl::opt<bool> ThinLTOAssumeMerged(
     "thinlto-assume-merged", cl::init(false),
     cl::desc("Assume the input has already undergone ThinLTO function "
              "importing and the other pre-optimization pipeline changes."));
+
+static cl::opt<LTONewPMEnablementLevel> EnableNPMForBackend(
+    "enable-npm-for-backend", cl::init(LTONewPMEnablementLevel::Auto),
+    cl::values(
+        clEnumValN(LTONewPMEnablementLevel::Auto, "auto",
+                   "Use the target dependent default"),
+        clEnumValN(LTONewPMEnablementLevel::ForceEnable, "force-on",
+                   "Always enable NPM regardless of the target default"),
+        clEnumValN(LTONewPMEnablementLevel::ForceDisable, "force-disable",
+                   "Always disable NewPM regardless of the target default")),
+    cl::desc(
+        "option to enable or disable NewPM to drive the CodeGen pipeline."));
 
 static cl::list<std::string>
     SaveModulesList("filter-save-modules", cl::value_desc("module names"),
@@ -480,7 +500,64 @@ static void codegen(const Config &Conf, TargetMachine *TM,
   // Stream->commit() is called. The commit function of CacheStream deletes
   // the raw stream, which is too early as streamers (e.g. MCAsmStreamer)
   // keep the pointer and may use it until their destruction. See #138194.
-  {
+  if (EnableNPMForBackend == LTONewPMEnablementLevel::ForceEnable ||
+      (EnableNPMForBackend == LTONewPMEnablementLevel::Auto &&
+       TM->shouldDefaultToNewPM())) {
+    MachineModuleInfo MMI(TM);
+    PassInstrumentationCallbacks PIC;
+    MachineFunctionAnalysisManager MFAM;
+    LoopAnalysisManager LAM;
+    FunctionAnalysisManager FAM;
+    CGSCCAnalysisManager CGAM;
+    ModuleAnalysisManager MAM;
+    PassBuilder PB(TM, PipelineTuningOptions(), std::nullopt, &PIC);
+
+    StandardInstrumentations SI(Mod.getContext(), Conf.DebugPassManager,
+                                Conf.VerifyEach);
+    SI.registerCallbacks(PIC, &MAM);
+
+    TargetLibraryInfoImpl TLII(Mod.getTargetTriple(), TM->Options.VecLib);
+    FAM.registerPass([&] { return TargetLibraryAnalysis(TLII); });
+    MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
+    MAM.registerPass([&] {
+      return RuntimeLibraryAnalysis(
+          Mod.getTargetTriple(), TM->Options.ExceptionModel,
+          TM->Options.FloatABIType, TM->Options.EABIVersion,
+          TM->Options.MCOptions.ABIName, TM->Options.VecLib);
+    });
+
+    if (!isEmptyModule(Mod))
+      MAM.registerPass(
+          [&] { return ImmutableModuleSummaryIndexAnalysis(&CombinedIndex); });
+
+    PB.registerModuleAnalyses(MAM);
+    PB.registerCGSCCAnalyses(CGAM);
+    PB.registerFunctionAnalyses(FAM);
+    PB.registerLoopAnalyses(LAM);
+    PB.registerMachineFunctionAnalyses(MFAM);
+    PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
+
+    ModulePassManager MPM;
+    FunctionPassManager FPM;
+
+    if (Error Err = TM->buildCodeGenPipeline(
+            MPM, MAM, *Stream->OS, DwoOut ? &DwoOut->os() : nullptr,
+            Conf.CGFileType, CGPassBuilderOption(), MMI.getContext(), &PIC))
+      return;
+
+    if (PrintPipelinePasses) {
+      std::string PipelineStr;
+      raw_string_ostream OutS(PipelineStr);
+      MPM.printPipeline(OutS, [&PIC](StringRef ClassName) {
+        auto PassName = PIC.getPassNameForClassName(ClassName);
+        return PassName.empty() ? ClassName : PassName;
+      });
+      outs() << PipelineStr << '\n';
+    } else {
+      MPM.run(Mod, MAM);
+    }
+
+  } else {
     legacy::PassManager CodeGenPasses;
     TargetLibraryInfoImpl TLII(Mod.getTargetTriple(), TM->Options.VecLib);
     CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
@@ -504,10 +581,10 @@ static void codegen(const Config &Conf, TargetMachine *TM,
                                 Conf.CGFileType))
       report_fatal_error("Failed to setup codegen");
     CodeGenPasses.run(Mod);
-
-    if (DwoOut)
-      DwoOut->keep();
   }
+
+  if (DwoOut)
+    DwoOut->keep();
 
   if (Error Err = Stream->commit())
     report_fatal_error(std::move(Err));
