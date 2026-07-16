@@ -14,7 +14,7 @@ define <4 x i1> @sub_nsw_icmp_eq_zero(i8 %a0, i8 %a1, i8 %a2, i8 %a3, ptr %pl) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> [[TMP1]], i8 [[A1]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[A2]], i64 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i8> [[TMP3]], i8 [[A3]], i64 3
-; CHECK-NEXT:    [[TMP5:%.*]] = sub nsw <4 x i8> [[TMP0]], [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub <4 x i8> [[TMP0]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i8> [[TMP5]], zeroinitializer
 ; CHECK-NEXT:    ret <4 x i1> [[TMP6]]
 ;
