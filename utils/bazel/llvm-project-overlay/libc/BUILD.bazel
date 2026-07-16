@@ -125,6 +125,27 @@ config_setting(
     flag_values = {":modular_format": "enable"},
 )
 
+# A flag to control whether LLVM libc is built in overlay or full build mode.
+string_flag(
+    name = "build_mode",
+    build_setting_default = "overlay",
+    values = [
+        "overlay",  # Build over the system libc
+        "full",  # Build as a standalone libc
+    ],
+)
+
+config_setting(
+    name = "full_build",
+    flag_values = {":build_mode": "full"},
+)
+
+config_setting(
+    name = "full_build_linux",
+    constraint_values = ["@platforms//os:linux"],
+    flag_values = {":build_mode": "full"},
+)
+
 ########################### Header Generation ##################################
 
 py_binary(
@@ -283,16 +304,12 @@ cc_library(
     hdrs = [header.target_name for header in LLVM_LIBC_HEADERS],
     includes = ["staging/include"],
     textual_hdrs = ["staging/" + f for f in STATIC_AND_CONDITIONAL_HEADERS],
-    deps = [
-        ":copy_llvm_libc_static_headers",
-        ":copy_modular_format_header",
-    ],
 )
 
 # Textual versions of the static headers. These are taken from the source tree
 # and are separate from the generated headers above. They are used for
 # testing purposes.
-libc_support_library(
+cc_library(
     name = "public_headers_deps",
     textual_hdrs = STATIC_AND_CONDITIONAL_HEADERS,
 )

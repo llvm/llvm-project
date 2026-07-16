@@ -12,7 +12,7 @@ is discoverable with the following command:
 """
 
 # This list of definitions is used to customize LLVM libc.
-LIBC_CONFIGURE_OPTIONS = [
+LIBC_CONFIGURE_COMMON_OPTIONS = [
     # Documentation in libc/docs/dev/printf_behavior.rst
     # "LIBC_COPT_FLOAT_TO_STR_NO_SPECIALIZE_LD",
     # "LIBC_COPT_FLOAT_TO_STR_NO_TABLE",
@@ -39,7 +39,6 @@ LIBC_CONFIGURE_OPTIONS = [
     # "LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS",
     # "LIBC_COPT_SCANF_DISABLE_FLOAT",
     # "LIBC_COPT_SCANF_DISABLE_INDEX_MODE",
-    "LIBC_COPT_STDIO_USE_SYSTEM_FILE",
     "LIBC_COPT_STRING_LENGTH_IMPL=clang_vector",
     "LIBC_COPT_FIND_FIRST_CHARACTER_IMPL=word",
     # "LIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH",
@@ -52,9 +51,27 @@ LIBC_CONFIGURE_OPTIONS = [
     # Documentation in libc/docs/configure.rst
     "LIBC_THREAD_MODE=LIBC_THREAD_MODE_PLATFORM",
 
-    # Documentation in libc/src/__support/libc_errno.h
-    "LIBC_ERRNO_MODE=LIBC_ERRNO_MODE_SYSTEM_INLINE",
-
     # Documentation in libc/src/__support/time/monotonicity.h
     "LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY",
 ]
+
+LIBC_CONFIGURE_OVERLAY_OPTIONS = [
+    # Documentation in libc/docs/dev/printf_behavior.rst
+    "LIBC_COPT_STDIO_USE_SYSTEM_FILE",
+
+    # Documentation in libc/src/__support/libc_errno.h
+    "LIBC_ERRNO_MODE=LIBC_ERRNO_MODE_SYSTEM_INLINE",
+]
+
+LIBC_CONFIGURE_FULL_BUILD_OPTIONS = [
+    # Documentation in libc/src/__support/libc_errno.h
+    "LIBC_ERRNO_MODE=LIBC_ERRNO_MODE_THREAD_LOCAL",
+
+    # Defined for targets which support threads.
+    "LIBC_COPT_SUPPORT_THREADS",
+]
+
+LIBC_CONFIGURE_OPTIONS = LIBC_CONFIGURE_COMMON_OPTIONS + select({
+    "//libc:full_build": LIBC_CONFIGURE_FULL_BUILD_OPTIONS,
+    "//conditions:default": LIBC_CONFIGURE_OVERLAY_OPTIONS,
+})
