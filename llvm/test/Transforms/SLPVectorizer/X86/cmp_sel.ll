@@ -12,7 +12,7 @@ define i32 @foo(ptr noalias nocapture %A, ptr noalias nocapture %B, double %G) {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[B:%.*]], i64 10
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = fcmp une <2 x double> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[G:%.*]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[G:%.*]], i64 0
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = select <2 x i1> [[TMP2]], <2 x double> [[SHUFFLE]], <2 x double> splat (double 1.000000e+00)
 ; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[A:%.*]], align 8
