@@ -1881,6 +1881,22 @@ struct RemoveTestDialectOps : public RewritePattern {
   }
 };
 
+/// This pattern replaces the single result of test.cast with its two operands
+/// to test composing a partial 1:N replacement with an erasure.
+struct ReplaceTestDialectOpWithOperands : public ConversionPattern {
+  ReplaceTestDialectOpWithOperands(MLIRContext *context)
+      : ConversionPattern("test.cast", /*benefit=*/2, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<ValueRange> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (op->getNumOperands() != 2 || op->getNumResults() != 1)
+      return failure();
+    rewriter.replaceOpWithMultiple(op, {op->getOperands()});
+    return success();
+  }
+};
+
 struct TestUnknownRootOpDriver
     : public mlir::PassWrapper<TestUnknownRootOpDriver, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestUnknownRootOpDriver)
@@ -1893,7 +1909,8 @@ struct TestUnknownRootOpDriver
   }
   void runOnOperation() override {
     mlir::RewritePatternSet patterns(&getContext());
-    patterns.add<RemoveTestDialectOps>(&getContext());
+    patterns.add<RemoveTestDialectOps, ReplaceTestDialectOpWithOperands>(
+        &getContext());
 
     mlir::ConversionTarget target(getContext());
     target.addIllegalDialect<TestDialect>();

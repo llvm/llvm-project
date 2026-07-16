@@ -138,8 +138,10 @@ struct ConversionValueMapping {
   /// false positives.
   bool isMappedTo(Value value) const { return mappedTo.contains(value); }
 
-  /// Lookup a value in the mapping.
-  ValueVector lookup(const ValueVector &from) const;
+  /// Lookup a value in the mapping. A missing optional means that there is no
+  /// mapping, an empty vector is an explicit mapping to no values, and a
+  /// non-empty vector contains the mapped values.
+  std::optional<ValueVector> lookup(const ValueVector &from) const;
 
   template <typename T>
   struct IsValueVector : std::is_same<std::decay_t<T>, ValueVector> {};
@@ -220,11 +222,12 @@ static bool isPureTypeConversion(const ValueVector &values) {
   return op && op->hasAttr(kPureTypeConversionMarker);
 }
 
-ValueVector ConversionValueMapping::lookup(const ValueVector &from) const {
+std::optional<ValueVector>
+ConversionValueMapping::lookup(const ValueVector &from) const {
   auto it = mapping.find(from);
   if (it == mapping.end()) {
     // No mapping found: The lookup stops here.
-    return {};
+    return std::nullopt;
   }
   return it->second;
 }
@@ -945,12 +948,16 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   ///
   /// If `skipPureTypeConversions` is "true", materializations that are pure
   /// type conversions are not considered.
+  ///
+  /// If `followDroppedValues` is "false", explicit mappings to no values are
+  /// treated as leaves. Otherwise, they are followed as dropped values.
   ValueVector lookupOrDefault(Value from, TypeRange desiredTypes = {},
-                              bool skipPureTypeConversions = false) const;
+                              bool skipPureTypeConversions = false,
+                              bool followDroppedValues = false) const;
 
   /// Lookup the given value within the map, or return an empty vector if the
-  /// value is not mapped. If it is mapped, this follows the same behavior
-  /// as `lookupOrDefault`.
+  /// value is not mapped. Unlike the default `lookupOrDefault` behavior, this
+  /// follows explicit mappings to no values.
   ValueVector lookupOrNull(Value from, TypeRange desiredTypes = {}) const;
 
   //===--------------------------------------------------------------------===//
@@ -1362,9 +1369,10 @@ void ConversionPatternRewriterImpl::applyRewrites() {
 //===----------------------------------------------------------------------===//
 
 ValueVector ConversionPatternRewriterImpl::lookupOrDefault(
-    Value from, TypeRange desiredTypes, bool skipPureTypeConversions) const {
+    Value from, TypeRange desiredTypes, bool skipPureTypeConversions,
+    bool followDroppedValues) const {
   // Helper function that looks up a single value.
-  auto lookup = [&](const ValueVector &values) -> ValueVector {
+  auto lookup = [&](const ValueVector &values) -> std::optional<ValueVector> {
     assert(!values.empty() && "expected non-empty value vector");
 
     // If the pattern rollback is enabled, use the mapping to look up the
@@ -1376,32 +1384,37 @@ ValueVector ConversionPatternRewriterImpl::lookupOrDefault(
     // already been materialized in IR.
     Operation *op = getCommonDefiningOp(values);
     if (!op)
-      return {};
+      return std::nullopt;
     auto castOp = dyn_cast<UnrealizedConversionCastOp>(op);
     if (!castOp)
-      return {};
+      return std::nullopt;
     if (!this->unresolvedMaterializations.contains(castOp))
-      return {};
+      return std::nullopt;
     if (castOp.getOutputs() != values)
-      return {};
-    return castOp.getInputs();
+      return std::nullopt;
+    if (castOp.getInputs().empty())
+      return std::nullopt;
+    return ValueVector(castOp.getInputs());
   };
 
   // Helper function that looks up each value in `values` individually and then
-  // composes the results. If that fails, it tries to look up the entire vector
-  // at once.
-  auto composedLookup = [&](const ValueVector &values) -> ValueVector {
+  // composes the results. If no singleton mapping can be followed, it tries to
+  // look up the entire vector at once.
+  auto composedLookup =
+      [&](const ValueVector &values) -> std::optional<ValueVector> {
     // If possible, replace each value with (one or multiple) mapped values.
     ValueVector next;
+    bool foundMapping = false;
     for (Value v : values) {
-      ValueVector r = lookup({v});
-      if (!r.empty()) {
-        llvm::append_range(next, r);
-      } else {
+      std::optional<ValueVector> r = lookup({v});
+      if (!r || (r->empty() && !followDroppedValues)) {
         next.push_back(v);
+        continue;
       }
+      foundMapping = true;
+      llvm::append_range(next, *r);
     }
-    if (next != values) {
+    if (foundMapping) {
       // At least one value was replaced.
       return next;
     }
@@ -1414,11 +1427,9 @@ ValueVector ConversionPatternRewriterImpl::lookupOrDefault(
     // be stored (and looked up) in the mapping. But for performance reasons,
     // we choose to reuse existing IR (when possible) instead of creating it
     // multiple times.
-    ValueVector r = lookup(values);
-    if (r.empty()) {
-      // No mapping found: The lookup stops here.
-      return {};
-    }
+    std::optional<ValueVector> r = lookup(values);
+    if (r && r->empty() && !followDroppedValues)
+      return std::nullopt;
     return r;
   };
 
@@ -1443,10 +1454,12 @@ ValueVector ConversionPatternRewriterImpl::lookupOrDefault(
       desiredValue = current;
 
     // Lookup next value in the mapping.
-    ValueVector next = composedLookup(current);
-    if (next.empty())
+    std::optional<ValueVector> next = composedLookup(current);
+    if (!next)
       break;
-    current = std::move(next);
+    if (next->empty())
+      return {};
+    current = std::move(*next);
   } while (true);
 
   // If the desired values were found use them, otherwise default to the leaf
@@ -1461,7 +1474,9 @@ ValueVector ConversionPatternRewriterImpl::lookupOrDefault(
 ValueVector
 ConversionPatternRewriterImpl::lookupOrNull(Value from,
                                             TypeRange desiredTypes) const {
-  ValueVector result = lookupOrDefault(from, desiredTypes);
+  ValueVector result = lookupOrDefault(from, desiredTypes,
+                                       /*skipPureTypeConversions=*/false,
+                                       /*followDroppedValues=*/true);
   if (result == ValueVector{from} ||
       (!desiredTypes.empty() && TypeRange(ValueRange(result)) != desiredTypes))
     return {};
