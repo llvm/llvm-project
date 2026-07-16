@@ -2148,6 +2148,7 @@ VPIRAttributes::VPIRAttributes(CallInst &CI, const Function &Variant) {
   AttributeList VariantAttrs = Variant.getAttributes();
   FunctionType *VariantTy = Variant.getFunctionType();
 
+  // TODO: Support additional attributes.
   static constexpr Attribute::AttrKind Allowed[] = {
       Attribute::Alignment, Attribute::NonNull, Attribute::NoFPClass,
       Attribute::Range};
