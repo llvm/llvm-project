@@ -396,6 +396,14 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   be detected by watching the directories or by comparing their modification
   times.
 
+- Added `__builtin_pointee_address_space`, which returns a Clang
+  address-space identifier for a pointer or array expression. It reports the
+  AST pointee type address space for OpenCL and explicit address-space-qualified
+  pointer types, and can report CUDA/HIP declaration address spaces for known
+  `__device__`, `__shared__`, and `__constant__` variables. Clang also now
+  emits predefined `__CLANG_ADDRESS_SPACE_*` macros for these values, including
+  separate CUDA and HIP macro names.
+
 ### New Compiler Flags
 
 - Added `-fpch-base-dir-is-cwd` to serialize precompiled header input paths
