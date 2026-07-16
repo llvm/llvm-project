@@ -144,6 +144,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   WebKit/RawPtrRefLambdaCapturesChecker.cpp
   WebKit/RawPtrRefLocalVarsChecker.cpp
   WebKit/RawPtrRefMemberChecker.cpp
+  WebKit/RawPtrRefSafetyModel.cpp
 
   LINK_LIBS
   clangAST
