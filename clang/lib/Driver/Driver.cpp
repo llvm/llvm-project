@@ -745,12 +745,17 @@ static llvm::Triple computeTargetTriple(const Driver &D, StringRef TargetTriple,
     } else if (A->getOption().matches(options::OPT_m32) ||
                A->getOption().matches(options::OPT_maix32)) {
       if (D.IsFlangMode()) {
-        // On AIX, flang assumes 32-bit mode compile by default
-        if (!Target.isOSAIX()) {
-          D.Diag(diag::err_drv_unsupported_opt_for_target)
-              << A->getAsString(Args) << Target.str();
-        } else if (llvm::sys::Process::GetEnv("OBJECT_MODE")) {
+        // Flang does not support 32-bit compilation.
+        // On an AIX host, -m32/-maix32 is always an error.
+        // On a non-AIX host, it is an error only when targeting AIX.
+        llvm::Triple HostTriple(D.getTargetTriple());
+        if (HostTriple.isOSAIX() || Target.isOSAIX()) {
           D.Diag(diag::err_drv_compile_mode_unsupported);
+        } else {
+          AT = Target.get32BitArchVariant().getArch();
+          if (AT == llvm::Triple::ppcle)
+            D.Diag(diag::err_drv_unsupported_opt_for_target)
+                << A->getAsString(Args) << Target.str();
         }
       } else {
         AT = Target.get32BitArchVariant().getArch();
