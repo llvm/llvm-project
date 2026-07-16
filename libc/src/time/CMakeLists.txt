@@ -256,8 +256,6 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.clock_gettime
 )
 
-# Gettimeofday has been moved to sys/time.h
-
 add_entrypoint_object(
   clock_getres
   ALIAS
