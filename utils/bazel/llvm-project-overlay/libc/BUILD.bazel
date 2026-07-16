@@ -2037,6 +2037,7 @@ libc_support_library(
         "src/__support/fixed_point/fx_rep.h",
     ],
     deps = [
+        ":__support_big_int",
         ":__support_cpp_algorithm",
         ":__support_cpp_bit",
         ":__support_cpp_limits",
@@ -2047,6 +2048,7 @@ libc_support_library(
         ":__support_macros_null_check",
         ":__support_macros_optimization",
         ":__support_math_extras",
+        ":__support_uint128",
         ":hdr_stdint_proxy",
         ":llvm_libc_macros_stdfix_macros",
     ],
