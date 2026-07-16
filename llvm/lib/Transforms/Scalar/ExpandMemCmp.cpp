@@ -57,6 +57,17 @@ static cl::opt<unsigned> MaxLoadsPerMemcmpOptSize(
 namespace {
 
 
+// Return the known alignment of the pointer argument \p ArgNo of \p CI,
+// combining the alignment of the underlying pointer value with any align
+// attribute on the call site itself.
+static Align getMemCmpArgAlignment(const CallInst *CI, unsigned ArgNo,
+                                   const DataLayout &DL) {
+  Align A = CI->getArgOperand(ArgNo)->getPointerAlignment(DL);
+  if (MaybeAlign ParamAlign = CI->getParamAlign(ArgNo))
+    A = std::max(A, *ParamAlign);
+  return A;
+}
+
 // This class provides helper functions to expand a memcmp library call into an
 // inline expansion.
 class MemCmpExpansion {
@@ -323,8 +334,8 @@ MemCmpExpansion::LoadPair MemCmpExpansion::getLoadPair(Type *LoadSizeType,
   // Get the memory source at offset `OffsetBytes`.
   Value *LhsSource = CI->getArgOperand(0);
   Value *RhsSource = CI->getArgOperand(1);
-  Align LhsAlign = LhsSource->getPointerAlignment(DL);
-  Align RhsAlign = RhsSource->getPointerAlignment(DL);
+  Align LhsAlign = getMemCmpArgAlignment(CI, 0, DL);
+  Align RhsAlign = getMemCmpArgAlignment(CI, 1, DL);
   if (OffsetBytes > 0) {
     auto *ByteType = Type::getInt8Ty(CI->getContext());
     LhsSource = Builder.CreateConstGEP1_64(ByteType, LhsSource, OffsetBytes);
@@ -873,8 +884,8 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
     // does not exceed the base alignment is guaranteed to be naturally aligned.
     // MemCmpExpansion additionally skips overlapping loads and merged tail
     // expansions in this mode, as those are not naturally aligned.
-    const Align LhsAlign = CI->getArgOperand(0)->getPointerAlignment(*DL);
-    const Align RhsAlign = CI->getArgOperand(1)->getPointerAlignment(*DL);
+    const Align LhsAlign = getMemCmpArgAlignment(CI, 0, *DL);
+    const Align RhsAlign = getMemCmpArgAlignment(CI, 1, *DL);
     const uint64_t MinAlign = std::min(LhsAlign.value(), RhsAlign.value());
     llvm::erase_if(Options.LoadSizes, [&](unsigned LoadSize) {
       return LoadSize > MinAlign || !isPowerOf2_64(LoadSize);

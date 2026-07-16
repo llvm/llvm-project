@@ -443,3 +443,199 @@ define i1 @bcmp_size_16_align_4(ptr align 4 %a, ptr align 4 %b) {
   %z = icmp eq i32 %r, 0
   ret i1 %z
 }
+
+; Alignment known only from the call-site argument attributes (the pointer
+; values themselves are unannotated) is enough to expand.
+define i1 @bcmp_size_8_callsite_align_8(ptr %a, ptr %b) {
+; RV32-LABEL: define i1 @bcmp_size_8_callsite_align_8(
+; RV32-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
+; RV32-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A]], align 8
+; RV32-NEXT:    [[TMP2:%.*]] = load i32, ptr [[B]], align 8
+; RV32-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP1]], [[TMP2]]
+; RV32-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[A]], i64 4
+; RV32-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[B]], i64 4
+; RV32-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP4]], align 4
+; RV32-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP5]], align 4
+; RV32-NEXT:    [[TMP8:%.*]] = xor i32 [[TMP6]], [[TMP7]]
+; RV32-NEXT:    [[TMP9:%.*]] = or i32 [[TMP3]], [[TMP8]]
+; RV32-NEXT:    [[TMP10:%.*]] = icmp ne i32 [[TMP9]], 0
+; RV32-NEXT:    [[TMP11:%.*]] = zext i1 [[TMP10]] to i32
+; RV32-NEXT:    [[Z:%.*]] = icmp eq i32 [[TMP11]], 0
+; RV32-NEXT:    ret i1 [[Z]]
+;
+; RV64-LABEL: define i1 @bcmp_size_8_callsite_align_8(
+; RV64-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
+; RV64-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A]], align 8
+; RV64-NEXT:    [[TMP2:%.*]] = load i64, ptr [[B]], align 8
+; RV64-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[TMP1]], [[TMP2]]
+; RV64-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i32
+; RV64-NEXT:    [[Z:%.*]] = icmp eq i32 [[TMP4]], 0
+; RV64-NEXT:    ret i1 [[Z]]
+;
+; RV32-UNALIGNED-LABEL: define i1 @bcmp_size_8_callsite_align_8(
+; RV32-UNALIGNED-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
+; RV32-UNALIGNED-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A]], align 8
+; RV32-UNALIGNED-NEXT:    [[TMP2:%.*]] = load i32, ptr [[B]], align 8
+; RV32-UNALIGNED-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP1]], [[TMP2]]
+; RV32-UNALIGNED-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[A]], i64 4
+; RV32-UNALIGNED-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[B]], i64 4
+; RV32-UNALIGNED-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP4]], align 4
+; RV32-UNALIGNED-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP5]], align 4
+; RV32-UNALIGNED-NEXT:    [[TMP8:%.*]] = xor i32 [[TMP6]], [[TMP7]]
+; RV32-UNALIGNED-NEXT:    [[TMP9:%.*]] = or i32 [[TMP3]], [[TMP8]]
+; RV32-UNALIGNED-NEXT:    [[TMP10:%.*]] = icmp ne i32 [[TMP9]], 0
+; RV32-UNALIGNED-NEXT:    [[TMP11:%.*]] = zext i1 [[TMP10]] to i32
+; RV32-UNALIGNED-NEXT:    [[Z:%.*]] = icmp eq i32 [[TMP11]], 0
+; RV32-UNALIGNED-NEXT:    ret i1 [[Z]]
+;
+; RV64-UNALIGNED-LABEL: define i1 @bcmp_size_8_callsite_align_8(
+; RV64-UNALIGNED-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
+; RV64-UNALIGNED-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A]], align 8
+; RV64-UNALIGNED-NEXT:    [[TMP2:%.*]] = load i64, ptr [[B]], align 8
+; RV64-UNALIGNED-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[TMP1]], [[TMP2]]
+; RV64-UNALIGNED-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i32
+; RV64-UNALIGNED-NEXT:    [[Z:%.*]] = icmp eq i32 [[TMP4]], 0
+; RV64-UNALIGNED-NEXT:    ret i1 [[Z]]
+;
+  %r = call i32 @bcmp(ptr align 8 %a, ptr align 8 %b, iXLen 8)
+  %z = icmp eq i32 %r, 0
+  ret i1 %z
+}
+
+; If only one call-site argument is aligned, the common alignment is one byte,
+; so only byte loads are legal and the compare stays a libcall.
+define i1 @bcmp_size_8_callsite_align_mixed(ptr %a, ptr %b) {
+; RV32-LABEL: define i1 @bcmp_size_8_callsite_align_mixed(
+; RV32-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
+; RV32-NEXT:    [[TMP1:%.*]] = load i8, ptr [[A]], align 8
+; RV32-NEXT:    [[TMP2:%.*]] = load i8, ptr [[B]], align 1
+; RV32-NEXT:    [[TMP3:%.*]] = xor i8 [[TMP1]], [[TMP2]]
+; RV32-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[A]], i64 1
+; RV32-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[B]], i64 1
+; RV32-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP4]], align 1
+; RV32-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP5]], align 1
+; RV32-NEXT:    [[TMP8:%.*]] = xor i8 [[TMP6]], [[TMP7]]
+; RV32-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[A]], i64 2
+; RV32-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[B]], i64 2
+; RV32-NEXT:    [[TMP11:%.*]] = load i8, ptr [[TMP9]], align 2
+; RV32-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP10]], align 1
+; RV32-NEXT:    [[TMP13:%.*]] = xor i8 [[TMP11]], [[TMP12]]
+; RV32-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[A]], i64 3
+; RV32-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[B]], i64 3
+; RV32-NEXT:    [[TMP16:%.*]] = load i8, ptr [[TMP14]], align 1
+; RV32-NEXT:    [[TMP17:%.*]] = load i8, ptr [[TMP15]], align 1
+; RV32-NEXT:    [[TMP18:%.*]] = xor i8 [[TMP16]], [[TMP17]]
+; RV32-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[A]], i64 4
+; RV32-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[B]], i64 4
+; RV32-NEXT:    [[TMP21:%.*]] = load i8, ptr [[TMP19]], align 4
+; RV32-NEXT:    [[TMP22:%.*]] = load i8, ptr [[TMP20]], align 1
+; RV32-NEXT:    [[TMP23:%.*]] = xor i8 [[TMP21]], [[TMP22]]
+; RV32-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[A]], i64 5
+; RV32-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[B]], i64 5
+; RV32-NEXT:    [[TMP26:%.*]] = load i8, ptr [[TMP24]], align 1
+; RV32-NEXT:    [[TMP27:%.*]] = load i8, ptr [[TMP25]], align 1
+; RV32-NEXT:    [[TMP28:%.*]] = xor i8 [[TMP26]], [[TMP27]]
+; RV32-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[A]], i64 6
+; RV32-NEXT:    [[TMP30:%.*]] = getelementptr i8, ptr [[B]], i64 6
+; RV32-NEXT:    [[TMP31:%.*]] = load i8, ptr [[TMP29]], align 2
+; RV32-NEXT:    [[TMP32:%.*]] = load i8, ptr [[TMP30]], align 1
+; RV32-NEXT:    [[TMP33:%.*]] = xor i8 [[TMP31]], [[TMP32]]
+; RV32-NEXT:    [[TMP34:%.*]] = getelementptr i8, ptr [[A]], i64 7
+; RV32-NEXT:    [[TMP35:%.*]] = getelementptr i8, ptr [[B]], i64 7
+; RV32-NEXT:    [[TMP36:%.*]] = load i8, ptr [[TMP34]], align 1
+; RV32-NEXT:    [[TMP37:%.*]] = load i8, ptr [[TMP35]], align 1
+; RV32-NEXT:    [[TMP38:%.*]] = xor i8 [[TMP36]], [[TMP37]]
+; RV32-NEXT:    [[TMP39:%.*]] = or i8 [[TMP3]], [[TMP8]]
+; RV32-NEXT:    [[TMP40:%.*]] = or i8 [[TMP13]], [[TMP18]]
+; RV32-NEXT:    [[TMP41:%.*]] = or i8 [[TMP23]], [[TMP28]]
+; RV32-NEXT:    [[TMP42:%.*]] = or i8 [[TMP33]], [[TMP38]]
+; RV32-NEXT:    [[TMP43:%.*]] = or i8 [[TMP39]], [[TMP40]]
+; RV32-NEXT:    [[TMP44:%.*]] = or i8 [[TMP41]], [[TMP42]]
+; RV32-NEXT:    [[TMP45:%.*]] = or i8 [[TMP43]], [[TMP44]]
+; RV32-NEXT:    [[TMP46:%.*]] = icmp ne i8 [[TMP45]], 0
+; RV32-NEXT:    [[TMP47:%.*]] = zext i1 [[TMP46]] to i32
+; RV32-NEXT:    [[Z:%.*]] = icmp eq i32 [[TMP47]], 0
+; RV32-NEXT:    ret i1 [[Z]]
+;
+; RV64-LABEL: define i1 @bcmp_size_8_callsite_align_mixed(
+; RV64-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
+; RV64-NEXT:    [[TMP1:%.*]] = load i8, ptr [[A]], align 8
+; RV64-NEXT:    [[TMP2:%.*]] = load i8, ptr [[B]], align 1
+; RV64-NEXT:    [[TMP3:%.*]] = xor i8 [[TMP1]], [[TMP2]]
+; RV64-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[A]], i64 1
+; RV64-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[B]], i64 1
+; RV64-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP4]], align 1
+; RV64-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP5]], align 1
+; RV64-NEXT:    [[TMP8:%.*]] = xor i8 [[TMP6]], [[TMP7]]
+; RV64-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[A]], i64 2
+; RV64-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[B]], i64 2
+; RV64-NEXT:    [[TMP11:%.*]] = load i8, ptr [[TMP9]], align 2
+; RV64-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP10]], align 1
+; RV64-NEXT:    [[TMP13:%.*]] = xor i8 [[TMP11]], [[TMP12]]
+; RV64-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[A]], i64 3
+; RV64-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[B]], i64 3
+; RV64-NEXT:    [[TMP16:%.*]] = load i8, ptr [[TMP14]], align 1
+; RV64-NEXT:    [[TMP17:%.*]] = load i8, ptr [[TMP15]], align 1
+; RV64-NEXT:    [[TMP18:%.*]] = xor i8 [[TMP16]], [[TMP17]]
+; RV64-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[A]], i64 4
+; RV64-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[B]], i64 4
+; RV64-NEXT:    [[TMP21:%.*]] = load i8, ptr [[TMP19]], align 4
+; RV64-NEXT:    [[TMP22:%.*]] = load i8, ptr [[TMP20]], align 1
+; RV64-NEXT:    [[TMP23:%.*]] = xor i8 [[TMP21]], [[TMP22]]
+; RV64-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[A]], i64 5
+; RV64-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[B]], i64 5
+; RV64-NEXT:    [[TMP26:%.*]] = load i8, ptr [[TMP24]], align 1
+; RV64-NEXT:    [[TMP27:%.*]] = load i8, ptr [[TMP25]], align 1
+; RV64-NEXT:    [[TMP28:%.*]] = xor i8 [[TMP26]], [[TMP27]]
+; RV64-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[A]], i64 6
+; RV64-NEXT:    [[TMP30:%.*]] = getelementptr i8, ptr [[B]], i64 6
+; RV64-NEXT:    [[TMP31:%.*]] = load i8, ptr [[TMP29]], align 2
+; RV64-NEXT:    [[TMP32:%.*]] = load i8, ptr [[TMP30]], align 1
+; RV64-NEXT:    [[TMP33:%.*]] = xor i8 [[TMP31]], [[TMP32]]
+; RV64-NEXT:    [[TMP34:%.*]] = getelementptr i8, ptr [[A]], i64 7
+; RV64-NEXT:    [[TMP35:%.*]] = getelementptr i8, ptr [[B]], i64 7
+; RV64-NEXT:    [[TMP36:%.*]] = load i8, ptr [[TMP34]], align 1
+; RV64-NEXT:    [[TMP37:%.*]] = load i8, ptr [[TMP35]], align 1
+; RV64-NEXT:    [[TMP38:%.*]] = xor i8 [[TMP36]], [[TMP37]]
+; RV64-NEXT:    [[TMP39:%.*]] = or i8 [[TMP3]], [[TMP8]]
+; RV64-NEXT:    [[TMP40:%.*]] = or i8 [[TMP13]], [[TMP18]]
+; RV64-NEXT:    [[TMP41:%.*]] = or i8 [[TMP23]], [[TMP28]]
+; RV64-NEXT:    [[TMP42:%.*]] = or i8 [[TMP33]], [[TMP38]]
+; RV64-NEXT:    [[TMP43:%.*]] = or i8 [[TMP39]], [[TMP40]]
+; RV64-NEXT:    [[TMP44:%.*]] = or i8 [[TMP41]], [[TMP42]]
+; RV64-NEXT:    [[TMP45:%.*]] = or i8 [[TMP43]], [[TMP44]]
+; RV64-NEXT:    [[TMP46:%.*]] = icmp ne i8 [[TMP45]], 0
+; RV64-NEXT:    [[TMP47:%.*]] = zext i1 [[TMP46]] to i32
+; RV64-NEXT:    [[Z:%.*]] = icmp eq i32 [[TMP47]], 0
+; RV64-NEXT:    ret i1 [[Z]]
+;
+; RV32-UNALIGNED-LABEL: define i1 @bcmp_size_8_callsite_align_mixed(
+; RV32-UNALIGNED-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
+; RV32-UNALIGNED-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A]], align 8
+; RV32-UNALIGNED-NEXT:    [[TMP2:%.*]] = load i32, ptr [[B]], align 1
+; RV32-UNALIGNED-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP1]], [[TMP2]]
+; RV32-UNALIGNED-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[A]], i64 4
+; RV32-UNALIGNED-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[B]], i64 4
+; RV32-UNALIGNED-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP4]], align 4
+; RV32-UNALIGNED-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP5]], align 1
+; RV32-UNALIGNED-NEXT:    [[TMP8:%.*]] = xor i32 [[TMP6]], [[TMP7]]
+; RV32-UNALIGNED-NEXT:    [[TMP9:%.*]] = or i32 [[TMP3]], [[TMP8]]
+; RV32-UNALIGNED-NEXT:    [[TMP10:%.*]] = icmp ne i32 [[TMP9]], 0
+; RV32-UNALIGNED-NEXT:    [[TMP11:%.*]] = zext i1 [[TMP10]] to i32
+; RV32-UNALIGNED-NEXT:    [[Z:%.*]] = icmp eq i32 [[TMP11]], 0
+; RV32-UNALIGNED-NEXT:    ret i1 [[Z]]
+;
+; RV64-UNALIGNED-LABEL: define i1 @bcmp_size_8_callsite_align_mixed(
+; RV64-UNALIGNED-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
+; RV64-UNALIGNED-NEXT:    [[TMP1:%.*]] = load i64, ptr [[A]], align 8
+; RV64-UNALIGNED-NEXT:    [[TMP2:%.*]] = load i64, ptr [[B]], align 1
+; RV64-UNALIGNED-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[TMP1]], [[TMP2]]
+; RV64-UNALIGNED-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i32
+; RV64-UNALIGNED-NEXT:    [[Z:%.*]] = icmp eq i32 [[TMP4]], 0
+; RV64-UNALIGNED-NEXT:    ret i1 [[Z]]
+;
+  %r = call i32 @bcmp(ptr align 8 %a, ptr %b, iXLen 8)
+  %z = icmp eq i32 %r, 0
+  ret i1 %z
+}
+
