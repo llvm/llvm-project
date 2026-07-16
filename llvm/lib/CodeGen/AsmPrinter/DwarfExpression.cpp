@@ -378,7 +378,6 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
   }
 
   auto Reg = DwarfRegs[0];
-  bool FBReg = isFrameRegister(TRI, MachineReg);
   int SignedOffset = 0;
   assert(!Reg.isSubRegister() && "full register expected");
 
@@ -410,7 +409,7 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
     }
   }
 
-  if (FBReg)
+  if (isFrameRegister(TRI, MachineReg))
     addFBReg(SignedOffset);
   else
     addBReg(Reg.DwarfRegNo, SignedOffset);
