@@ -10,6 +10,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Target/TargetMachine.h"
@@ -401,6 +402,28 @@ void AMDGPUCombinerHelper::applyFoldableFneg(MachineInstr &MI,
   MI.eraseFromParent();
 }
 
+bool AMDGPUCombinerHelper::matchFoldFAbsFptrunc(MachineInstr &Fabs,
+                                                MachineInstr &Fptrunc) const {
+  Register Round = Fptrunc.getOperand(0).getReg();
+  if (!MRI.hasOneNonDBGUse(Round))
+    return false;
+
+  LLT SrcTy = MRI.getType(Fptrunc.getOperand(1).getReg());
+  return isLegalOrBeforeLegalizer({TargetOpcode::G_FABS, {SrcTy}});
+}
+
+void AMDGPUCombinerHelper::applyFoldFAbsFptrunc(MachineInstr &Fabs,
+                                                MachineInstr &Fptrunc) const {
+  // fabs (fptrunc x) -> fptrunc (fabs x)
+  Register Dst = Fabs.getOperand(0).getReg();
+  Register Src = Fptrunc.getOperand(1).getReg();
+  Builder.setInstrAndDebugLoc(Fabs);
+  Register Abs =
+      Builder.buildFAbs(MRI.getType(Src), Src, Fabs.getFlags()).getReg(0);
+  Builder.buildFPTrunc(Dst, Abs, Fptrunc.getFlags());
+  Fabs.eraseFromParent();
+}
+
 // TODO: Should return converted value / extension source and avoid introducing
 // intermediate fptruncs in the apply function.
 static bool isFPExtFromF16OrConst(const MachineRegisterInfo &MRI,
@@ -470,15 +493,15 @@ bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
     return false;
 
   Register SelectCondReg = Sel.getOperand(1).getReg();
-  MachineInstr *SelectTrue = MRI.getVRegDef(Sel.getOperand(2).getReg());
-  MachineInstr *SelectFalse = MRI.getVRegDef(Sel.getOperand(3).getReg());
+  Register SelectTrueReg = Sel.getOperand(2).getReg();
+  Register SelectFalseReg = Sel.getOperand(3).getReg();
 
   const auto SelectTrueVal =
-      isConstantOrConstantSplatVectorFP(*SelectTrue, MRI);
+      isConstantOrConstantSplatVectorFP(SelectTrueReg, MRI);
   if (!SelectTrueVal)
     return false;
   const auto SelectFalseVal =
-      isConstantOrConstantSplatVectorFP(*SelectFalse, MRI);
+      isConstantOrConstantSplatVectorFP(SelectFalseReg, MRI);
   if (!SelectFalseVal)
     return false;
 

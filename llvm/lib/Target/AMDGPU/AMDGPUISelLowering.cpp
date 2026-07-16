@@ -30,6 +30,7 @@
 
 using namespace llvm;
 
+#define GET_CALLING_CONV_IMPL
 #include "AMDGPUGenCallingConv.inc"
 
 static cl::opt<bool> AMDGPUBypassSlowDiv(
@@ -1546,16 +1547,20 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI,
   const GlobalValue *GV = G->getGlobal();
 
   if (!MFI->isModuleEntryFunction()) {
-    auto IsNamedBarrier = AMDGPU::isNamedBarrier(*cast<GlobalVariable>(GV));
-    if (std::optional<uint32_t> Address =
-            AMDGPUMachineFunctionInfo::getLDSAbsoluteAddress(*GV)) {
+    bool IsNamedBarrier = AMDGPU::isNamedBarrier(*cast<GlobalVariable>(GV));
+    std::optional<uint32_t> Address =
+        AMDGPUMachineFunctionInfo::getLDSAbsoluteAddress(*GV);
+    if (!Address && IsNamedBarrier)
+      llvm_unreachable("named barrier should have an assigned address");
+    if (Address) {
       if (IsNamedBarrier) {
         unsigned BarCnt = cast<GlobalVariable>(GV)->getGlobalSize(DL) / 16;
         MFI->recordNumNamedBarriers(Address.value(), BarCnt);
       }
-      return DAG.getConstant(*Address, SDLoc(Op), Op.getValueType());
-    } else if (IsNamedBarrier) {
-      llvm_unreachable("named barrier should have an assigned address");
+      // A constant byte offset (e.g. from a GEP into an array of named
+      // barriers) folds directly into the fixed LDS address.
+      return DAG.getConstant(*Address + G->getOffset(), SDLoc(Op),
+                             Op.getValueType());
     }
   }
 
@@ -1582,15 +1587,14 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI,
       return DAG.getPOISON(Op.getValueType());
     }
 
-    // XXX: What does the value of G->getOffset() mean?
-    assert(G->getOffset() == 0 &&
-         "Do not know what to do with an non-zero offset");
-
     // TODO: We could emit code to handle the initialization somewhere.
     // We ignore the initializer for now and legalize it to allow selection.
     // The initializer will anyway get errored out during assembly emission.
     unsigned Offset = MFI->allocateLDSGlobal(DL, *cast<GlobalVariable>(GV));
-    return DAG.getConstant(Offset, SDLoc(Op), Op.getValueType());
+    // A constant byte offset (e.g. from a GEP into an array of named barriers)
+    // folds directly into the allocated LDS address.
+    return DAG.getConstant(Offset + G->getOffset(), SDLoc(Op),
+                           Op.getValueType());
   }
   return SDValue();
 }
@@ -2011,13 +2015,12 @@ SDValue AMDGPUTargetLowering::SplitVectorStore(SDValue Op,
 }
 
 // This is a shortcut for integer division because we have fast i32<->f32
-// conversions, and fast f32 reciprocal instructions. The fractional part of a
-// float is enough to accurately represent up to a 24-bit integer.
-SDValue AMDGPUTargetLowering::LowerDIVREM24(SDValue Op, SelectionDAG &DAG,
-                                            bool Sign) const {
+// conversions, and fast f32 reciprocal instructions.
+SDValue AMDGPUTargetLowering::LowerDIVREMToFloat(SDValue Op, SelectionDAG &DAG,
+                                                 bool Sign) const {
   SDLoc DL(Op);
   EVT VT = Op.getValueType();
-  assert(VT == MVT::i32 && "LowerDIVREM24 expects an i32");
+  assert(VT == MVT::i32 && "LowerDIVREMToFloat expects an i32");
 
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
@@ -2034,10 +2037,7 @@ SDValue AMDGPUTargetLowering::LowerDIVREM24(SDValue Op, SelectionDAG &DAG,
   } else {
     KnownBits LHSKnown = DAG.computeKnownBits(LHS);
     KnownBits RHSKnown = DAG.computeKnownBits(RHS);
-    APInt U24Max = APInt::getLowBitsSet(32, 24);
-    if (LHSKnown.getMaxValue().ugt(U24Max) ||
-        RHSKnown.getMaxValue().ugt(U24Max))
-      return SDValue();
+
     LHSSignBits = LHSKnown.countMinLeadingZeros();
     RHSSignBits = RHSKnown.countMinLeadingZeros();
   }
@@ -2047,6 +2047,14 @@ SDValue AMDGPUTargetLowering::LowerDIVREM24(SDValue Op, SelectionDAG &DAG,
   unsigned DivBits = BitSize - SignBits;
   if (Sign)
     ++DivBits;
+
+  // In order to avoid problems due to 1 ulp accuracy issues with v_rcp_f32,
+  // limit LowerDIVREMToFloat to:
+  //   [-0x400000,0x3FFFFF] for Sign
+  //   [ 0x000000,0x3FFFFF] for !Sign
+  // This matches what is done in expandDivRemToFloatImpl.
+  if (DivBits > (Sign ? 23 : 22))
+    return SDValue();
 
   ISD::NodeType ToFp = Sign ? ISD::SINT_TO_FP : ISD::UINT_TO_FP;
   ISD::NodeType ToInt = Sign ? ISD::FP_TO_SINT : ISD::FP_TO_UINT;
@@ -2366,7 +2374,7 @@ SDValue AMDGPUTargetLowering::LowerUDIVREM(SDValue Op,
   }
 
   if (VT == MVT::i32) {
-    if (SDValue Res = LowerDIVREM24(Op, DAG, false))
+    if (SDValue Res = LowerDIVREMToFloat(Op, DAG, false))
       return Res;
   }
 
@@ -2421,7 +2429,7 @@ SDValue AMDGPUTargetLowering::LowerSDIVREM(SDValue Op,
   SDValue NegOne = DAG.getAllOnesConstant(DL, VT);
 
   if (VT == MVT::i32) {
-    if (SDValue Res = LowerDIVREM24(Op, DAG, true))
+    if (SDValue Res = LowerDIVREMToFloat(Op, DAG, true))
       return Res;
   }
 
@@ -5545,6 +5553,16 @@ SDValue AMDGPUTargetLowering::performFAbsCombine(SDNode *N,
                                   DAG.getConstant(0x7fff, SL, SrcVT));
     return DAG.getNode(ISD::FP16_TO_FP, SL, N->getValueType(0), IntFAbs);
   }
+  case ISD::FP_ROUND: {
+    SDLoc SL(N);
+    SDValue CvtSrc = N0.getOperand(0);
+
+    // fabs (fp_round x) -> fp_round (fabs x)
+    SDValue Abs = DAG.getNode(ISD::FABS, SL, CvtSrc.getValueType(), CvtSrc,
+                              N->getFlags());
+    return DAG.getNode(ISD::FP_ROUND, SL, N->getValueType(0), Abs,
+                       N0.getOperand(1), N0->getFlags());
+  }
   default:
     return SDValue();
   }
@@ -5558,7 +5576,7 @@ SDValue AMDGPUTargetLowering::performRcpCombine(SDNode *N,
 
   // XXX - Should this flush denormals?
   const APFloat &Val = CFP->getValueAPF();
-  APFloat One(Val.getSemantics(), "1.0");
+  APFloat One = APFloat::getOne(Val.getSemantics());
   return DCI.DAG.getConstantFP(One / Val, SDLoc(N), N->getValueType(0));
 }
 
@@ -5841,11 +5859,26 @@ bool AMDGPUTargetLowering::SimplifyDemandedBitsForTargetNode(
     switch (Op.getConstantOperandVal(0)) {
     case Intrinsic::amdgcn_readfirstlane:
     case Intrinsic::amdgcn_readlane:
-    case Intrinsic::amdgcn_set_inactive:
     case Intrinsic::amdgcn_wwm: {
       if (SimplifyDemandedBits(Op.getOperand(1), OriginalDemandedBits,
                                OriginalDemandedElts, Known, TLO, Depth + 1))
         return true;
+      break;
+    }
+    case Intrinsic::amdgcn_set_inactive:
+    case Intrinsic::amdgcn_set_inactive_chain_arg: {
+      // The result is operand 1 in active lanes and operand 2 in inactive
+      // lanes, so the known bits are the intersection of both operands.
+      KnownBits KnownValue, KnownInactive;
+      if (SimplifyDemandedBits(Op.getOperand(1), OriginalDemandedBits,
+                               OriginalDemandedElts, KnownValue, TLO,
+                               Depth + 1))
+        return true;
+      if (SimplifyDemandedBits(Op.getOperand(2), OriginalDemandedBits,
+                               OriginalDemandedElts, KnownInactive, TLO,
+                               Depth + 1))
+        return true;
+      Known = KnownValue.intersectWith(KnownInactive);
       break;
     }
     default:

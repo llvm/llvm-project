@@ -64,7 +64,7 @@ void func2() {
 
 // CHECK: define{{.*}} void @_Z5func2v()
 // CHECK:   %[[ARR:.*]] = alloca [2 x i32], i64 1, align 4
-// CHECK:   call void @llvm.memcpy{{.*}}(ptr %[[ARR]], ptr @[[FUNC2_ARR]], i64 8, i1 false)
+// CHECK:   call void @llvm.memcpy{{.*}}(ptr align 4 %[[ARR]], ptr align 4 @[[FUNC2_ARR]], i64 8, i1 false)
 // CHECK:   ret void
 
 void func3() {
@@ -72,7 +72,7 @@ void func3() {
 }
 // CHECK: define{{.*}} void @_Z5func3v()
 // CHECK:  %[[ARR_ALLOCA:.*]] = alloca [2 x i32], i64 1, align 4
-// CHECK:  call void @llvm.memcpy{{.*}}(ptr %[[ARR_ALLOCA]], ptr @[[FUNC3_ARR]], i64 8, i1 false)
+// CHECK:  call void @llvm.memcpy{{.*}}(ptr align 4 %[[ARR_ALLOCA]], ptr align 4 @[[FUNC3_ARR]], i64 8, i1 false)
 
 void func4() {
   int arr[2][1] = {{5}, {6}};
@@ -81,7 +81,7 @@ void func4() {
 // CHECK: define{{.*}} void @_Z5func4v()
 // CHECK:  %[[ARR_ALLOCA:.*]] = alloca [2 x [1 x i32]], i64 1, align 4
 // CHECK:  %[[INIT:.*]] = alloca i32, i64 1, align 4
-// CHECK:  call void @llvm.memcpy{{.*}}(ptr %[[ARR_ALLOCA]], ptr @[[FUNC4_ARR]], i64 8, i1 false)
+// CHECK:  call void @llvm.memcpy{{.*}}(ptr align 4 %[[ARR_ALLOCA]], ptr align 4 @[[FUNC4_ARR]], i64 8, i1 false)
 // CHECK:  %[[ARR_1:.*]] = getelementptr [2 x [1 x i32]], ptr %[[ARR_ALLOCA]], i32 0, i64 1
 // CHECK:  %[[ELE_PTR:.*]] = getelementptr [1 x i32], ptr %[[ARR_1]], i32 0, i64 0
 // CHECK:  %[[TMP:.*]] = load i32, ptr %[[ELE_PTR]], align 4
@@ -92,7 +92,7 @@ void func5() {
 }
 // CHECK: define{{.*}} void @_Z5func5v()
 // CHECK:   %[[ARR:.*]] = alloca [2 x [1 x i32]], i64 1, align 4
-// CHECK:   call void @llvm.memcpy{{.*}}(ptr %[[ARR]], ptr @[[FUNC5_ARR]], i64 8, i1 false)
+// CHECK:   call void @llvm.memcpy{{.*}}(ptr align 4 %[[ARR]], ptr align 4 @[[FUNC5_ARR]], i64 8, i1 false)
 // CHECK:   ret void
 
 void func6() {
@@ -114,7 +114,7 @@ void func7() {
 }
 // CHECK: define{{.*}} void @_Z5func7v()
 // CHECK:   %[[ARR:.*]] = alloca [1 x ptr], i64 1, align 8
-// CHECK:   call void @llvm.memcpy{{.*}}(ptr %[[ARR]], ptr @[[FUNC7_ARR]], i64 8, i1 false)
+// CHECK:   call void @llvm.memcpy{{.*}}(ptr align 8 %[[ARR]], ptr align 8 @[[FUNC7_ARR]], i64 8, i1 false)
 // CHECK:   ret void
 
 void func8(int p[10]) {}
