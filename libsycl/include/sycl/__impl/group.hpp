@@ -28,7 +28,7 @@ template <int> class nd_item;
 
 // SYCL2020 4.9.1.7. group class.
 /// The group class encapsulates all functionality required to represent a
-///  particular work-group within a parallel execution.
+/// particular work-group within a parallel execution.
 template <int Dimensions = 1> class group {
 public:
   using id_type = id<Dimensions>;
@@ -139,7 +139,7 @@ protected:
     }
   }
 
-  template <int dimensions> friend class sycl::nd_item;
+  friend class sycl::nd_item<Dimensions>;
 };
 
 _LIBSYCL_END_NAMESPACE_SYCL

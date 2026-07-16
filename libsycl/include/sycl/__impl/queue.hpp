@@ -419,7 +419,7 @@ private:
       static_assert(
           std::is_convertible_v<sycl::nd_item<Dims>, LambdaArgType>,
           "Kernel argument of a sycl::parallel_for with sycl::nd_range "
-          "must be sycl::nd_item");
+          "must be sycl::nd_item or be convertible from sycl::nd_item");
     } else {
       static_assert(
           std::is_convertible_v<sycl::item<Dims>, LambdaArgType> ||
