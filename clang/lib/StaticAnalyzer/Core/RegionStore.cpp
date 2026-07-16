@@ -2729,6 +2729,12 @@ RegionStoreManager::bindArray(LimitedRegionBindingsConstRef B,
   if (isa<nonloc::SymbolVal, UnknownVal, UndefinedVal>(Init))
     return bindAggregate(B, R, Init);
 
+  // We may get non-CompoundVal accidentally due to imprecise cast logic or
+  // that we are binding symbolic array value. Kill the element values, and if
+  // the value is symbolic go and bind it as a "default" binding.
+  if (!isa<nonloc::CompoundVal>(Init))
+    return bindAggregate(B, R, UnknownVal());
+
   // Remaining case: explicit compound values.
   const nonloc::CompoundVal& CV = Init.castAs<nonloc::CompoundVal>();
   nonloc::CompoundVal::iterator VI = CV.begin(), VE = CV.end();
