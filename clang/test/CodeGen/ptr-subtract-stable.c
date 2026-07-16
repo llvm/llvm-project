@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -O2 -triple x86_64-windows-msvc -fstable-pointer-subtraction -fms-extensions %s -o - | FileCheck %s
+// RUN: %clang -S -emit-llvm -O2 --target=x86_64-windows-msvc -fstable-pointer-subtraction -fms-extensions %s -o - | FileCheck %s
 
 // Check that pointer subtraction isn't nuw/nsv and sdiv isn't exact
 // CHECK-LABEL: i64 @sub(ptr noundef %p, ptr noundef %q)
