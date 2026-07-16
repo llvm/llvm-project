@@ -7824,6 +7824,9 @@ let Visibility = [CC1Option, CC1AsOption, FC1Option] in {
 def tune_cpu : Separate<["-"], "tune-cpu">,
   HelpText<"Tune for a specific cpu type">,
   MarshallingInfoString<TargetOpts<"TuneCPU">>;
+def finput_charset: Separate<["-"], "finput-charset">, MetaVarName<"<encoding>">,
+  HelpText<"Specify the encoding of source files.">,
+  MarshallingInfoString<LangOpts<"InputEncoding">>;
 def fexec_charset : Separate<["-"], "fexec-charset">, MetaVarName<"<encoding>">,
   HelpText<"Set the <encoding> for ordinary string and character literals. "
            "Supported character encodings include ISO-8859-1, UTF-8, IBM1047, "

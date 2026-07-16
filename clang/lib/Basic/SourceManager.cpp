@@ -214,32 +214,23 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
         // Create fallback converter in place
         llvm::ErrorOr<llvm::TextEncodingConverter> FallbackConverter =
             llvm::TextEncodingConverter::create("IBM-1047", "UTF-8");
-        // Only attempt conversion if the fallback converter was created
-        // successfully
-        if (FallbackConverter) {
-          UTF8Buf.clear();
-          UTF8Buf.reserve(OriginalBuf.size() + 1);
-          std::error_code FallbackEC =
-              FallbackConverter->convert(OriginalBuf, UTF8Buf);
-          if (!FallbackEC) {
-            // Conversion with fallback encoding succeeded
-            auto NewBuf = std::make_unique<llvm::SmallVectorMemoryBuffer>(
-                std::move(UTF8Buf), Buffer->getBufferIdentifier());
-            Buffer = std::move(NewBuf);
-          } else {
-            // Fallback conversion also failed, emit an error
-            Diag.Report(Loc, diag::err_encoding_conversion_failed)
-                << ContentsEntry->getName() << FallbackEC.message();
-            return std::nullopt;
-          }
-        }
+        if (!FallbackConverter)
+          llvm::report_fatal_error(
+              llvm::Twine(
+                  "Failed to create IBM-1047 to UTF-8 fallback converter: ") +
+              FallbackConverter.getError().message());
+
+        UTF8Buf.clear();
+        UTF8Buf.reserve(OriginalBuf.size() + 1);
+        std::error_code FallbackEC =
+            FallbackConverter->convert(OriginalBuf, UTF8Buf);
+        assert(!FallbackEC && "Fallback conversion failed");
       }
-    } else {
-      // TODO: Reclaim memory if the buffer size exceeds the content.
-      auto NewBuf = std::make_unique<llvm::SmallVectorMemoryBuffer>(
-          std::move(UTF8Buf), Buffer->getBufferIdentifier());
-      Buffer = std::move(NewBuf);
     }
+    // TODO: Reclaim memory if the buffer size exceeds the content.
+    auto NewBuf = std::make_unique<llvm::SmallVectorMemoryBuffer>(
+        std::move(UTF8Buf), Buffer->getBufferIdentifier());
+    Buffer = std::move(NewBuf);
   }
 
   // Check that the file's size fits in an 'unsigned' (with room for a
