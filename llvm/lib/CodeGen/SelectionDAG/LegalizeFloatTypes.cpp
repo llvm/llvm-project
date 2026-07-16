@@ -1019,16 +1019,15 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_LOAD(SDNode *N) {
     // If softening widens the integer representation (e.g. x86_fp80 -> i96),
     // load the original memory width and extend to the softened type.
     EVT MemVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
-    if (NVT.bitsGT(MemVT))
-      NewL = DAG.getLoad(L->getAddressingMode(), ISD::EXTLOAD, NVT, dl,
-                         L->getChain(), L->getBasePtr(), L->getOffset(),
-                         L->getPointerInfo(), MemVT, L->getBaseAlign(),
-                         MMOFlags, L->getAAInfo());
-    else
-      NewL = DAG.getLoad(L->getAddressingMode(), L->getExtensionType(), NVT, dl,
-                         L->getChain(), L->getBasePtr(), L->getOffset(),
-                         L->getPointerInfo(), NVT, L->getBaseAlign(), MMOFlags,
-                         L->getAAInfo());
+    ISD::LoadExtType ExtType = L->getExtensionType();
+    EVT LoadMemVT = NVT;
+    if (NVT.bitsGT(MemVT)) {
+      ExtType = ISD::EXTLOAD;
+      LoadMemVT = MemVT;
+    }
+    NewL = DAG.getLoad(L->getAddressingMode(), ExtType, NVT, dl, L->getChain(),
+                       L->getBasePtr(), L->getOffset(), L->getPointerInfo(),
+                       LoadMemVT, L->getBaseAlign(), MMOFlags, L->getAAInfo());
     // Legalized the chain result - switch anything that used the old chain to
     // use the new one.
     ReplaceValueWith(SDValue(N, 1), NewL.getValue(1));
