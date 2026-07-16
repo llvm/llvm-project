@@ -54,7 +54,7 @@ under Linux.
 
 Start with cloning LLVM repo:
 
-```
+```console
 > git clone https://github.com/llvm/llvm-project.git
 > mkdir build
 > cd build
@@ -72,14 +72,14 @@ of BOLT, you can improve the processing time by linking against one of
 memory allocation libraries with good support for concurrency. E.g. to
 use jemalloc:
 
-```
+```console
 > sudo yum install jemalloc-devel
 > LD_PRELOAD=/usr/lib64/libjemalloc.so llvm-bolt ....
 ```
 
 Or if you rather use tcmalloc:
 
-```
+```console
 > sudo yum install gperftools-devel
 > LD_PRELOAD=/usr/lib64/libtcmalloc_minimal.so llvm-bolt ....
 ```
@@ -115,7 +115,7 @@ This assumes you can run your program from a command line with a typical
 input. In this case, simply prepend the command line invocation with
 `perf`:
 
-```
+```console
 $ perf record -e cycles:u -j any,u -o perf.data -- <executable> <args> ...
 ```
 
@@ -126,7 +126,7 @@ perf data with LBR (branch information). The exact perf command to use
 will depend on the service. E.g., to collect the data for all processes
 running on the server for the next 3 minutes use:
 
-```
+```console
 $ perf record -e cycles:u -j any,u -a -o perf.data -- sleep 180
 ```
 
@@ -153,7 +153,7 @@ BOLT are expected to be lower.
 If perf record is not available to you, you may collect profile by first
 instrumenting the binary with BOLT and then running it.
 
-```
+```console
 llvm-bolt <executable> -instrument -o <instrumented-executable>
 ```
 
@@ -176,7 +176,7 @@ running `strip -g` is okay).
 
 Make sure `perf` is in your `PATH`, and execute `perf2bolt`:
 
-```
+```console
 $ perf2bolt -p perf.data -o perf.fdata <executable>
 ```
 
@@ -193,7 +193,7 @@ Once you have `perf.fdata` ready, you can use it for optimizations
 with BOLT. Assuming your environment is setup to include the right path,
 execute `llvm-bolt`:
 
-```
+```console
 $ llvm-bolt <executable> -o <executable>.bolt -data=perf.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold -split-eh -dyno-stats
 ```
 
@@ -220,7 +220,7 @@ generate multiple profiles for each one of them. To generate a single
 binary that can benefit all modes (assuming the profiles don’t
 contradict each other) you can use `merge-fdata` tool:
 
-```
+```console
 $ merge-fdata *.fdata > combined.fdata
 ```
 
@@ -236,4 +236,3 @@ accepted by BOLT: perf.data, fdata, YAML, and pre-aggregated.
 
 BOLT is licensed under the [Apache License v2.0 with LLVM
 Exceptions](https://github.com/llvm/llvm-project/blob/main/LICENSE.TXT).
-
