@@ -110,6 +110,8 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   // indirect jump.
   setOperationAction(ISD::BR_JT, MVT::Other, Custom);
 
+  setOperationAction({ISD::TRAP, ISD::DEBUGTRAP}, MVT::Other, Legal);
+
   setOperationAction(ISD::BR_CC, MVT::i32, Legal);
   setOperationAction(ISD::BR_CC, MVT::i64, Expand);
 
@@ -351,6 +353,7 @@ void XtensaTargetLowering::LowerAsmOperandForConstraint(
 // Calling conventions
 //===----------------------------------------------------------------------===//
 
+#define GET_CALLING_CONV_IMPL
 #include "XtensaGenCallingConv.inc"
 
 static const MCPhysReg IntRegs[] = {Xtensa::A2, Xtensa::A3, Xtensa::A4,
@@ -653,8 +656,9 @@ XtensaTargetLowering::LowerCall(CallLoweringInfo &CLI,
       SDValue Address = DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr,
                                     DAG.getIntPtrConstant(Offset, DL));
       SDValue SizeNode = DAG.getConstant(Flags.getByValSize(), DL, MVT::i32);
+      Align Alignment = Flags.getNonZeroByValAlign();
       SDValue Memcpy = DAG.getMemcpy(
-          Chain, DL, Address, ArgValue, SizeNode, Flags.getNonZeroByValAlign(),
+          Chain, DL, Address, ArgValue, SizeNode, Alignment, Alignment,
           /*isVolatile=*/false, /*AlwaysInline=*/false,
           /*CI=*/nullptr, std::nullopt, MachinePointerInfo(),
           MachinePointerInfo());
@@ -1279,7 +1283,8 @@ SDValue XtensaTargetLowering::LowerVACOPY(SDValue Op, SelectionDAG &DAG) const {
 
   return DAG.getMemcpy(Chain, DL, DstPtr, SrcPtr,
                        DAG.getConstant(VAListSize, SDLoc(Op), MVT::i32),
-                       Align(4), /*isVolatile*/ false, /*AlwaysInline*/ true,
+                       Align(4), Align(4), /*isVolatile*/ false,
+                       /*AlwaysInline*/ true,
                        /*CI=*/nullptr, std::nullopt, MachinePointerInfo(DstSV),
                        MachinePointerInfo(SrcSV));
 }

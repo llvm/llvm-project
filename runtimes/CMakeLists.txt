@@ -1,5 +1,12 @@
 # This file handles building LLVM runtime sub-projects.
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
 
 # This file can be used in two ways: the bootstrapping build calls it from
 # llvm/runtimes/CMakeLists.txt where we reuse the build tree of the top-level
@@ -296,7 +303,9 @@ option(LLVM_INCLUDE_DOCS "Generate build targets for the runtimes documentation.
 option(LLVM_ENABLE_SPHINX "Use Sphinx to generate the runtimes documentation." OFF)
 option(RUNTIMES_EXECUTE_ONLY_CODE "Compile runtime libraries as execute-only." OFF)
 
-include(HandleDoxygen)
+if(NOT HAVE_LLVM_LIT)
+  include(HandleDoxygen)
+endif()
 
 if (RUNTIMES_EXECUTE_ONLY_CODE)
   # If a target doesn't support or recognise -mexecute-only, Clang will simply ignore the flag.

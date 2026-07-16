@@ -50,8 +50,11 @@ be passed down to downstream AOT compilation tools like 'ocloc' and 'opencl-aot'
     -help-hidden                  Display all available options
     -help                         Display available options (--help-hidden for more)
     -L <dir>                      Add <dir> to the library search path
-    --bc-library <name>           Add LLVM bitcode library <name> (with extension) to the link. A relative <name> is resolved against -L paths; an absolute path is taken as-is.
-    --module-split-mode=<mode>    Module split mode: 'source' (default), 'kernel', or 'none'
+    -l <libname>                  Search for library <libname>
+    --whole-archive               Include all archive members in the link
+    --no-whole-archive            Only include archive members that resolve undefined symbols (default)
+    -u <symbol>                   Force undefined symbol during linking
+    --module-split-mode=<mode>    Module split mode: 'translation_unit' (default), 'kernel', or 'link_unit'
     --ocloc-options=<value>       Options passed to ocloc for Intel GPU AOT compilation
     --opencl-aot-options=<value>  Options passed to opencl-aot for Intel CPU AOT compilation
     -o <path>                     Path to file to write output
@@ -61,8 +64,49 @@ be passed down to downstream AOT compilation tools like 'ocloc' and 'opencl-aot'
     -v                            Print verbose information
     -spirv-dump-device-code=<dir> Directory to dump SPIR-V IR code into
 
-Example
-=======
+Library Linking
+===============
+
+Device bitcode libraries can be packaged into archive libraries (``.a`` files)
+using ``llvm-ar`` and linked using the ``-l`` option:
+
+.. code-block:: console
+
+  llvm-ar rc libdevice.a func1.bc func2.bc func3.bc
+  clang-sycl-linker input.bc -l device -L /path/to/libs
+
+The linker supports standard archive library search semantics:
+
+* ``-l <name>`` searches for ``lib<name>.a`` in the directories specified by ``-L``
+* ``-l :<exact-name>`` searches for the exact filename in the ``-L`` paths
+* Absolute paths can be passed as positional arguments: ``clang-sycl-linker input.bc /path/to/libdevice.a``
+
+By default, archive linking is **lazy** - only archive members (individual ``.bc`` files)
+that resolve undefined symbols are extracted and linked. This happens at file
+granularity: if any symbol in a ``.bc`` file is needed, all symbols in that file
+are included. The linker uses a symbol-driven fixed-point algorithm: it
+repeatedly scans archives to extract members that resolve currently undefined
+symbols until no more extractions occur.
+
+To force extraction of all archive members regardless of symbol resolution, use
+``--whole-archive``:
+
+.. code-block:: console
+
+  clang-sycl-linker input.bc --whole-archive -l device --no-whole-archive -l other
+
+The ``-u <symbol>`` option can be used to force a symbol to be undefined, which
+can trigger extraction of archive members that define that symbol:
+
+.. code-block:: console
+
+  clang-sycl-linker input.bc -u my_init_function -l device
+
+Examples
+========
+
+Basic Usage
+-----------
 
 This tool is intended to be invoked when targeting any of the target offloading
 toolchains. When the --sycl-link option is passed to the clang driver, the
@@ -74,3 +118,24 @@ generate the final executable.
 .. code-block:: console
 
   clang-sycl-linker --triple spirv64 --arch bmg_g21 input.bc
+
+Linking with Device Libraries
+------------------------------
+
+To link device bitcode libraries, first package them into archive files:
+
+.. code-block:: console
+
+  # Create device library archives
+  llvm-ar rc libmath.a sin.bc cos.bc tan.bc
+  llvm-ar rc libutils.a helper1.bc helper2.bc
+
+  # Link with lazy loading (only needed members extracted)
+  clang-sycl-linker --triple spirv64 kernel.bc -l math -l utils -L /path/to/libs -o kernel.spv
+
+  # Force all members to be included from libmath.a
+  clang-sycl-linker --triple spirv64 kernel.bc --whole-archive -l math --no-whole-archive -l utils -L /path/to/libs -o kernel.spv
+
+  # Use exact archive filename or absolute path
+  clang-sycl-linker --triple spirv64 kernel.bc -l :libmath.a -L /path/to/libs -o kernel.spv
+  clang-sycl-linker --triple spirv64 kernel.bc /absolute/path/libmath.a -o kernel.spv

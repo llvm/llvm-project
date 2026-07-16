@@ -651,11 +651,13 @@ struct CheckColoredDiagnosticsAction : public clang::ASTFrontendAction {
       : ShouldShowColor(ShouldShowColor) {}
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &Compiler,
                                                  StringRef) override {
-    if (Compiler.getDiagnosticOpts().ShowColors != ShouldShowColor)
+    bool HasColors =
+        Compiler.getDiagnosticOpts().getShowColors() ==
+        (ShouldShowColor ? ShowColorsKind::On : ShowColorsKind::Off);
+    if (!HasColors)
       Compiler.getDiagnostics().Report(
           Compiler.getDiagnostics().getCustomDiagID(
-              DiagnosticsEngine::Fatal,
-              "getDiagnosticOpts().ShowColors != ShouldShowColor"));
+              DiagnosticsEngine::Fatal, "getShowColors() != expected"));
     return std::make_unique<ASTConsumer>();
   }
 
@@ -684,6 +686,30 @@ TEST(runToolOnCodeWithArgs, DiagnosticsColor) {
   EXPECT_FALSE(runToolOnCodeWithArgs(
       std::make_unique<CheckColoredDiagnosticsAction>(false), "",
       {"-fcolor-diagnostics"}));
+}
+
+TEST(getAbsolutePath, BackslashPath) {
+  auto FS = llvm::vfs::getRealFileSystem();
+  llvm::Expected<std::string> Path = getAbsolutePath(*FS, "a\\b.cc");
+  if (!Path)
+    FAIL() << llvm::toString(Path.takeError());
+
+  llvm::ErrorOr<std::string> CWD = FS->getCurrentWorkingDirectory();
+  ASSERT_TRUE(CWD) << CWD.getError().message();
+
+#if defined(_WIN32)
+  SmallString<128> Expected(*CWD);
+  llvm::sys::path::append(Expected, "a", "b.cc");
+  llvm::sys::path::make_preferred(Expected);
+  EXPECT_EQ(std::string(Expected), *Path);
+#else
+  SmallString<128> Expected(*CWD);
+  llvm::sys::path::append(Expected, "a\\b.cc");
+  SmallString<128> WithSlash(*CWD);
+  llvm::sys::path::append(WithSlash, "a/b.cc");
+  EXPECT_EQ(std::string(Expected), *Path);
+  EXPECT_NE(std::string(WithSlash), *Path);
+#endif
 }
 
 TEST(ClangToolTest, ArgumentAdjusters) {

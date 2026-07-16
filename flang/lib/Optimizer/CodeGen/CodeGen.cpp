@@ -1325,6 +1325,70 @@ static mlir::SymbolRefAttr getMalloc(fir::AllocMemOp op,
   return getMallocInModule(mod, op, rewriter, indexType);
 }
 
+template <typename ModuleOp>
+static mlir::SymbolRefAttr
+getAlignedAllocInModule(ModuleOp mod, fir::AllocMemOp op,
+                        mlir::ConversionPatternRewriter &rewriter,
+                        mlir::Type indexType) {
+  static constexpr char alignedAllocName[] = "aligned_alloc";
+  if (auto func =
+          mod.template lookupSymbol<mlir::LLVM::LLVMFuncOp>(alignedAllocName))
+    return mlir::SymbolRefAttr::get(func);
+  if (auto userFunc =
+          mod.template lookupSymbol<mlir::func::FuncOp>(alignedAllocName))
+    return mlir::SymbolRefAttr::get(userFunc);
+
+  mlir::OpBuilder moduleBuilder(mod.getBodyRegion());
+  auto alignedDecl = mlir::LLVM::LLVMFuncOp::create(
+      moduleBuilder, op.getLoc(), alignedAllocName,
+      mlir::LLVM::LLVMFunctionType::get(getLlvmPtrType(op.getContext()),
+                                        {indexType, indexType},
+                                        /*isVarArg=*/false));
+  return mlir::SymbolRefAttr::get(alignedDecl);
+}
+
+static mlir::SymbolRefAttr
+getAlignedAlloc(fir::AllocMemOp op, mlir::ConversionPatternRewriter &rewriter,
+                mlir::Type indexType) {
+  if (auto mod = op->getParentOfType<mlir::gpu::GPUModuleOp>())
+    return getAlignedAllocInModule(mod, op, rewriter, indexType);
+  auto mod = op->getParentOfType<mlir::ModuleOp>();
+  return getAlignedAllocInModule(mod, op, rewriter, indexType);
+}
+
+template <typename ModuleOp>
+static mlir::SymbolRefAttr
+getPosixMemalignInModule(ModuleOp mod, fir::AllocMemOp op,
+                         mlir::ConversionPatternRewriter &rewriter,
+                         mlir::Type indexType) {
+  static constexpr char posixMemalignName[] = "posix_memalign";
+  if (auto func =
+          mod.template lookupSymbol<mlir::LLVM::LLVMFuncOp>(posixMemalignName))
+    return mlir::SymbolRefAttr::get(func);
+  if (auto userFunc =
+          mod.template lookupSymbol<mlir::func::FuncOp>(posixMemalignName))
+    return mlir::SymbolRefAttr::get(userFunc);
+
+  // int posix_memalign(void **memptr, size_t alignment, size_t size);
+  mlir::OpBuilder moduleBuilder(mod.getBodyRegion());
+  auto decl = mlir::LLVM::LLVMFuncOp::create(
+      moduleBuilder, op.getLoc(), posixMemalignName,
+      mlir::LLVM::LLVMFunctionType::get(
+          mlir::IntegerType::get(op.getContext(), 32),
+          {getLlvmPtrType(op.getContext()), indexType, indexType},
+          /*isVarArg=*/false));
+  return mlir::SymbolRefAttr::get(decl);
+}
+
+static mlir::SymbolRefAttr
+getPosixMemalign(fir::AllocMemOp op, mlir::ConversionPatternRewriter &rewriter,
+                 mlir::Type indexType) {
+  if (auto mod = op->getParentOfType<mlir::gpu::GPUModuleOp>())
+    return getPosixMemalignInModule(mod, op, rewriter, indexType);
+  auto mod = op->getParentOfType<mlir::ModuleOp>();
+  return getPosixMemalignInModule(mod, op, rewriter, indexType);
+}
+
 /// Return value of the stride in bytes between adjacent elements
 /// of LLVM type \p llTy. The result is returned as a value of
 /// \p idxTy integer type.
@@ -1373,6 +1437,69 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
         mlir::IntegerType::get(rewriter.getContext(), mallocTyWidth);
     if (mallocTyWidth != ity.getIntOrFloatBitWidth())
       size = integerCast(loc, rewriter, mallocTy, size);
+
+    std::optional<uint64_t> alignment = heap.getAlignment();
+    if (alignment && *alignment > 16) {
+      auto mod = heap->getParentOfType<mlir::ModuleOp>();
+      llvm::Triple triple = mod ? fir::getTargetTriple(mod) : llvm::Triple{};
+      bool isGpu = heap->getParentOfType<mlir::gpu::GPUModuleOp>() != nullptr ||
+                   triple.isNVPTX() || triple.isAMDGPU() || triple.isSPIRV();
+
+      if (!isGpu && !triple.isOSWindows()) {
+        mlir::Value alignVal = fir::genConstantIndex(
+            loc, mallocTy, rewriter, static_cast<std::int64_t>(*alignment));
+
+        if (triple.isOSDarwin()) {
+          // aligned_alloc requires macOS 10.15+, so use posix_memalign instead
+          mlir::Type ptrTy = ::getLlvmPtrType(heap.getContext());
+          mlir::Value memptr;
+          {
+            mlir::OpBuilder::InsertionGuard guard(rewriter);
+            mlir::Operation *parentOp =
+                rewriter.getInsertionBlock()->getParentOp();
+            mlir::Region *parentRegion =
+                rewriter.getInsertionBlock()->getParent();
+            mlir::Block *insertBlock =
+                getBlockForAllocaInsert(parentOp, parentRegion);
+            rewriter.setInsertionPointToStart(insertBlock);
+            mlir::Value one = fir::genConstantIndex(loc, mallocTy, rewriter, 1);
+            memptr =
+                mlir::LLVM::AllocaOp::create(rewriter, loc, ptrTy, ptrTy, one);
+          }
+          mlir::Value nullPtr =
+              mlir::LLVM::ZeroOp::create(rewriter, loc, ptrTy);
+          mlir::LLVM::StoreOp::create(rewriter, loc, nullPtr, memptr);
+          heap->setAttr("callee", getPosixMemalign(heap, rewriter, mallocTy));
+          mlir::LLVM::CallOp::create(
+              rewriter, loc,
+              mlir::TypeRange{
+                  mlir::IntegerType::get(rewriter.getContext(), 32)},
+              mlir::ValueRange{memptr, alignVal, size},
+              addLLVMOpBundleAttrs(rewriter, heap->getAttrs(), 3));
+          mlir::Value newPtr =
+              mlir::LLVM::LoadOp::create(rewriter, loc, ptrTy, memptr);
+          rewriter.replaceOp(heap, newPtr);
+          return mlir::success();
+        }
+
+        mlir::Value alignMinusOne = fir::genConstantIndex(
+            loc, mallocTy, rewriter, static_cast<std::int64_t>(*alignment - 1));
+        mlir::Value sizePlus = mlir::LLVM::AddOp::create(
+            rewriter, loc, mallocTy, size, alignMinusOne);
+        mlir::Value notAlignMinusOne =
+            fir::genConstantIndex(loc, mallocTy, rewriter,
+                                  ~static_cast<std::int64_t>(*alignment - 1));
+        mlir::Value roundedSize = mlir::LLVM::AndOp::create(
+            rewriter, loc, mallocTy, sizePlus, notAlignMinusOne);
+        heap->setAttr("callee", getAlignedAlloc(heap, rewriter, mallocTy));
+        rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
+            heap, ::getLlvmPtrType(heap.getContext()),
+            mlir::ValueRange{alignVal, roundedSize},
+            addLLVMOpBundleAttrs(rewriter, heap->getAttrs(), 2));
+        return mlir::success();
+      }
+    }
+
     heap->setAttr("callee", getMalloc(heap, rewriter, mallocTy));
     rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
         heap, ::getLlvmPtrType(heap.getContext()), size,
@@ -3713,6 +3840,8 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
         loadOp.setTBAATags(*optionalTag);
       else
         attachTBAATag(loadOp, load.getType(), load.getType(), nullptr);
+      if (load.getInvariant())
+        loadOp.setInvariant(true);
       if (std::optional<mlir::ArrayAttr> optionalAccessGroups =
               load.getAccessGroups())
         loadOp.setAccessGroups(*optionalAccessGroups);
@@ -4614,12 +4743,97 @@ struct MustBeDeadConversion : public fir::FIROpConversion<FromOp> {
   }
 };
 
-struct ShapeOpConversion : public MustBeDeadConversion<fir::ShapeOp> {
-  using MustBeDeadConversion::MustBeDeadConversion;
+// Shape can now be lowered into an llvm struct
+struct ShapeOpConversion : public fir::FIROpConversion<fir::ShapeOp> {
+  using FIROpConversion::FIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::ShapeOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    if (op->use_empty()) {
+      rewriter.eraseOp(op);
+      return mlir::success();
+    }
+    auto loc = op.getLoc();
+    auto shapeTy = mlir::cast<fir::ShapeType>(op.getType());
+    mlir::Type llvmShapeTy = convertType(shapeTy);
+    mlir::Type i64Ty = mlir::IntegerType::get(rewriter.getContext(), 64);
+    mlir::Value structVal =
+        mlir::LLVM::UndefOp::create(rewriter, loc, llvmShapeTy);
+    for (auto [i, extent] : llvm::enumerate(adaptor.getExtents())) {
+      mlir::Value extentI64 =
+          integerCast(loc, rewriter, i64Ty, extent, /*fold=*/true);
+      structVal = mlir::LLVM::InsertValueOp::create(rewriter, loc, structVal,
+                                                    extentI64, i);
+    }
+    rewriter.replaceOp(op, structVal);
+    return mlir::success();
+  }
 };
 
-struct ShapeShiftOpConversion : public MustBeDeadConversion<fir::ShapeShiftOp> {
-  using MustBeDeadConversion::MustBeDeadConversion;
+struct ShapeExtentsOpConversion
+    : public fir::FIROpConversion<fir::ShapeExtentsOp> {
+  using FIROpConversion::FIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::ShapeExtentsOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto loc = op.getLoc();
+
+    mlir::Type ty = op.getShape().getType();
+    unsigned rank;
+    if (auto shapeTy = mlir::dyn_cast<fir::ShapeType>(ty))
+      rank = shapeTy.getRank();
+    else if (auto ssTy = mlir::dyn_cast<fir::ShapeShiftType>(ty))
+      rank = ssTy.getRank();
+    else
+      return mlir::failure();
+    if (rank != op.getNumResults())
+      return mlir::failure();
+
+    mlir::Type i64Ty = mlir::IntegerType::get(rewriter.getContext(), 64);
+    mlir::Value llvmShape = adaptor.getShape();
+    llvm::SmallVector<mlir::Value> results;
+    for (unsigned i = 0; i < op.getNumResults(); ++i) {
+      mlir::Value extentI64 = mlir::LLVM::ExtractValueOp::create(
+          rewriter, loc, i64Ty, llvmShape, i);
+      mlir::Type resultTy = convertType(op.getExtents()[i].getType());
+      results.push_back(
+          integerCast(loc, rewriter, resultTy, extentI64, /*fold=*/true));
+    }
+    rewriter.replaceOp(op, results);
+    return mlir::success();
+  }
+};
+
+struct ShapeShiftOpConversion : public fir::FIROpConversion<fir::ShapeShiftOp> {
+  using FIROpConversion::FIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::ShapeShiftOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    if (op->use_empty()) {
+      rewriter.eraseOp(op);
+      return mlir::success();
+    }
+    auto loc = op.getLoc();
+    auto ssTy = mlir::cast<fir::ShapeShiftType>(op.getType());
+    mlir::Type llvmTy = convertType(ssTy);
+    mlir::Type i64Ty = mlir::IntegerType::get(rewriter.getContext(), 64);
+    mlir::Value structVal = mlir::LLVM::UndefOp::create(rewriter, loc, llvmTy);
+    // Pack extent operands only; lower bounds are not part of the LLVM shape
+    // bundle consumed by fir.shape_extents.
+    for (auto [i, pair] : llvm::enumerate(adaptor.getPairs())) {
+      if (!(i & 1))
+        continue;
+      mlir::Value extentI64 =
+          integerCast(loc, rewriter, i64Ty, pair, /*fold=*/true);
+      structVal = mlir::LLVM::InsertValueOp::create(rewriter, loc, structVal,
+                                                    extentI64, i / 2);
+    }
+    rewriter.replaceOp(op, structVal);
+    return mlir::success();
+  }
 };
 
 struct ShiftOpConversion : public MustBeDeadConversion<fir::ShiftOp> {
@@ -4917,14 +5131,14 @@ void fir::populateFIRToLLVMConversionPatterns(
       LogicalOrOpConversion, MulcOpConversion, NegcOpConversion,
       NeqvOpConversion, NoReassocOpConversion, PrefetchOpConversion,
       SelectCaseOpConversion, SelectOpConversion, SelectRankOpConversion,
-      SelectTypeOpConversion, ShapeOpConversion, ShapeShiftOpConversion,
-      ShiftOpConversion, SliceOpConversion, StoreOpConversion,
-      StringLitOpConversion, SubcOpConversion, TypeDescOpConversion,
-      TypeInfoOpConversion, UnboxCharOpConversion, UnboxProcOpConversion,
-      UndefOpConversion, UnreachableOpConversion, UseStmtOpConversion,
-      ModuleDebugImportsOpConversion, XArrayCoorOpConversion,
-      XEmboxOpConversion, XReboxOpConversion, ZeroOpConversion>(converter,
-                                                                options);
+      SelectTypeOpConversion, ShapeOpConversion, ShapeExtentsOpConversion,
+      ShapeShiftOpConversion, ShiftOpConversion, SliceOpConversion,
+      StoreOpConversion, StringLitOpConversion, SubcOpConversion,
+      TypeDescOpConversion, TypeInfoOpConversion, UnboxCharOpConversion,
+      UnboxProcOpConversion, UndefOpConversion, UnreachableOpConversion,
+      UseStmtOpConversion, ModuleDebugImportsOpConversion,
+      XArrayCoorOpConversion, XEmboxOpConversion, XReboxOpConversion,
+      ZeroOpConversion>(converter, options);
 
   // Patterns that are populated without a type converter do not trigger
   // target materializations for the operands of the root op.

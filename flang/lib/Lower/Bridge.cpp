@@ -12,6 +12,7 @@
 
 #include "flang/Lower/Bridge.h"
 
+#include "flang/Evaluate/tools.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CUDA.h"
 #include "flang/Lower/CallInterface.h"
@@ -49,7 +50,6 @@
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
@@ -597,6 +597,16 @@ public:
           u);
     }
 
+    // Declare any `acc routine` bind(name) targets not otherwise declared, so a
+    // live symbol exists for later passes. No-op for targets already lowered in
+    // this unit.
+    if (getFoldingContext().languageFeatures().IsEnabled(
+            Fortran::common::LanguageFeature::OpenACC))
+      createBuilderOutsideOfFuncOpAndDo([&]() {
+        Fortran::lower::materializeOpenACCRoutineBindTargets(*this,
+                                                             getModuleOp());
+      });
+
     // Once all the code has been translated, create global runtime type info
     // data structures for the derived types that have been processed, as well
     // as fir.type_info operations for the dispatch tables.
@@ -608,8 +618,10 @@ public:
       createBuilderOutsideOfFuncOpAndDo([&]() {
         fir::runtime::genMain(*builder, toLocation(),
                               bridge.getEnvironmentDefaults(),
-                              getFoldingContext().languageFeatures().IsEnabled(
-                                  Fortran::common::LanguageFeature::CUDA),
+                              (getFoldingContext().languageFeatures().IsEnabled(
+                                   Fortran::common::LanguageFeature::CUDA) &&
+                               getFoldingContext().languageFeatures().IsEnabled(
+                                   Fortran::common::LanguageFeature::CUDAInit)),
                               getFoldingContext().languageFeatures().IsEnabled(
                                   Fortran::common::LanguageFeature::Coarray));
       });
@@ -2406,7 +2418,8 @@ private:
     Fortran::lower::omp::ReductionProcessor rp;
     bool result = rp.processReductionArguments<fir::DeclareReductionOp>(
         toLocation(), *this, info.reduceOperatorList, reduceVars,
-        reduceVarByRef, reductionDeclSymbols, info.reduceSymList);
+        reduceVarByRef, reductionDeclSymbols, info.reduceSymList,
+        /*reductionObjects=*/{}, getSymbolMap());
     if (!result)
       TODO(toLocation(), "Lowering unrecognised reduction type");
 
@@ -3661,6 +3674,13 @@ private:
     const Fortran::parser::OpenACCCombinedConstruct *accCombined =
         std::get_if<Fortran::parser::OpenACCCombinedConstruct>(&acc.u);
 
+    // TODO: Determining curEval here re-walks the nested evaluations to the
+    // collapse/DO CONCURRENT depth that the construct absorbs, mirroring the
+    // descent genOpenACCConstruct already performs (visitLoopControl in
+    // OpenACC.cpp). That duplication is fragile and couples this code to
+    // genOpenACCConstruct's internals. Move the responsibility for determining
+    // curEval into genOpenACCConstruct -- where the absorbed evaluations are
+    // actually decided -- and return it from there.
     Fortran::lower::pft::Evaluation *curEval = &getEval();
     // Determine collapse depth/force and loopCount
     bool collapseForce = false;
@@ -3689,11 +3709,15 @@ private:
 
       if (curEval->lowerAsStructured()) {
         curEval = &curEval->getFirstNestedEvaluation();
-        for (uint64_t i = 1; i < loopCount; i++) {
-          if (!curEval->hasNestedEvaluations())
-            break;
-          curEval = &*std::next(curEval->getNestedEvaluations().begin());
-        }
+        // A DO CONCURRENT holds all controls in one construct; the per-level
+        // descent would overshoot into its body and drop it.
+        const auto *outerDo = curEval->getIf<Fortran::parser::DoConstruct>();
+        if (!(outerDo && outerDo->IsDoConcurrent()))
+          for (uint64_t i = 1; i < loopCount; i++) {
+            if (!curEval->hasNestedEvaluations())
+              break;
+            curEval = &*std::next(curEval->getNestedEvaluations().begin());
+          }
       }
     }
 
@@ -5363,9 +5387,14 @@ private:
     mlir::Value rhsVal = getRefFromValue(rhs.getBase());
     mlir::Value lhsVal = getRefFromValue(lhs.getBase());
     // Get shape from the rhs if available otherwise get it from lhs.
-    mlir::Value shape = getShapeFromDecl(rhs.getBase());
-    if (!shape)
-      shape = getShapeFromDecl(lhs.getBase());
+    mlir::Value shape;
+    if (fir::isa_ref_type(rhsVal.getType()) ||
+        fir::isa_ref_type(lhsVal.getType())) {
+      if (mlir::Value rhsShape = getShapeFromDecl(rhs.getBase()))
+        shape = rhsShape;
+      else
+        shape = getShapeFromDecl(lhs.getBase());
+    }
 
     // device = host
     if (lhsIsDevice && !rhsIsDevice) {
@@ -5422,8 +5451,13 @@ private:
       }
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::DeviceHost);
-      cuf::DataTransferOp::create(builder, loc, rhsVal, lhsVal, shape,
-                                  transferKindAttr, hasManagedOrUnifedSymbols);
+      if (fir::isa_trivial(rhsVal.getType())) {
+        fir::StoreOp::create(builder, loc, rhsVal, lhsVal);
+      } else {
+        cuf::DataTransferOp::create(builder, loc, rhsVal, lhsVal, shape,
+                                    transferKindAttr,
+                                    hasManagedOrUnifedSymbols);
+      }
       return;
     }
 
@@ -5538,8 +5572,18 @@ private:
 
     // Helper to generate the code evaluating the right-hand side.
     auto evaluateRhs = [&](Fortran::lower::StatementContext &stmtCtx) {
+      const Fortran::lower::SomeExpr *rhsExpr = &assign.rhs;
+      std::optional<Fortran::lower::SomeExpr> rewritten;
+      if (bridge.getLoweringOptions().getSplitSumExpressionTree() &&
+          Fortran::evaluate::CanBuildSplitSumExpressionTree(assign.lhs,
+                                                            assign.rhs)) {
+        rewritten =
+            Fortran::evaluate::TryBuildSplitSumExpressionTree(assign.rhs);
+        if (rewritten)
+          rhsExpr = &*rewritten;
+      }
       hlfir::Entity rhs = Fortran::lower::convertExprToHLFIR(
-          loc, *this, assign.rhs, localSymbols, stmtCtx);
+          loc, *this, *rhsExpr, localSymbols, stmtCtx);
       // Load trivial scalar RHS to allow the loads to be hoisted outside of
       // loops early if possible. This also dereferences pointer and
       // allocatable RHS: the target is being assigned from.
@@ -6592,13 +6636,6 @@ private:
         if (sym.name() == "numeric_storage_size" && owner.IsModule() &&
             DEREF(owner.symbol()).name() == "iso_fortran_env")
           continue;
-
-        if (Fortran::evaluate::IsCoarray(sym) &&
-            !Fortran::semantics::IsAllocatable(sym) &&
-            Fortran::semantics::IsSaved(sym)) {
-          mlir::Location loc = toLocation();
-          TODO(loc, "non-ALLOCATABLE SAVE Coarray outside the main program.");
-        }
       }
       Fortran::lower::defineModuleVariable(*this, var);
     }
@@ -7144,6 +7181,7 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   fir::setAtomicFineGrainedMemory(*module, targetOpts.atomicFineGrainedMemory);
   fir::setAtomicRemoteMemory(*module, targetOpts.atomicRemoteMemory);
   fir::setTargetFeatures(*module, targetMachine.getTargetFeatureString());
+  fir::setTargetABI(*module, targetOpts.abi);
   fir::support::setMLIRDataLayout(*module, targetMachine.createDataLayout());
   fir::setIdent(*module, Fortran::common::getFlangFullVersion());
   fir::setRelocationModel(*module, cgOpts.getRelocationModel());

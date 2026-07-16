@@ -43,15 +43,29 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 bool CheckDummy(InterpState &S, CodePtr OpPC, const Block *B, AccessKinds AK);
 
 /// Checks if a pointer is in range.
-bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                AccessKinds AK);
+bool CheckRange(InterpState &S, CodePtr OpPC, PtrView Ptr, AccessKinds AK);
+inline bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                       AccessKinds AK) {
+  if (!Ptr.isBlockPointer()) {
+    assert(!Ptr.isOnePastEnd());
+    return true;
+  }
+  return CheckRange(S, OpPC, Ptr.view(), AK);
+}
 
 /// Checks if a field from which a pointer is going to be derived is valid.
 bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                 CheckSubobjectKind CSK);
 
 /// Checks if a pointer points to a mutable field.
-bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
+bool CheckMutable(InterpState &S, CodePtr OpPC, PtrView Ptr,
+                  AccessKinds AK = AK_Read);
+inline bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                         AccessKinds AK = AK_Read) {
+  if (!Ptr.isBlockPointer())
+    return true;
+  return CheckMutable(S, OpPC, Ptr.view(), AK);
+}
 
 /// Checks if a value can be loaded from a block.
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
@@ -70,7 +84,7 @@ UnsignedOrNone evaluateBuiltinObjectSize(const ASTContext &ASTCtx,
                                          unsigned Kind, Pointer &Ptr);
 
 template <typename T>
-static bool handleOverflow(InterpState &S, CodePtr OpPC, const T &SrcValue) {
+bool handleOverflow(InterpState &S, CodePtr OpPC, const T &SrcValue) {
   const Expr *E = S.Current->getExpr(OpPC);
   S.CCEDiag(E, diag::note_constexpr_overflow) << SrcValue << E->getType();
   return S.noteUndefinedBehavior();
@@ -104,6 +118,10 @@ inline bool Invalid(InterpState &S, CodePtr OpPC) {
 template <typename SizeT>
 bool CheckArraySize(InterpState &S, CodePtr OpPC, SizeT *NumElements,
                     unsigned ElemSize, bool IsNoThrow) {
+
+  if (ElemSize == 0)
+    return true;
+
   // FIXME: Both the SizeT::from() as well as the
   // NumElements.toAPSInt() in this function are rather expensive.
 

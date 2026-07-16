@@ -80,7 +80,7 @@ entry:
   ret void
 }
 ; IMPORT: define weak void @linkoncefunc()
-; IMPORT2: declare void @linkoncefunc()
+; IMPORT2: declare !guid !{{[0-9]+}} void @linkoncefunc()
 define linkonce void @linkoncefunc() #0 {
 entry:
   ret void
@@ -92,7 +92,7 @@ entry:
   ret void
 }
 ; IMPORT: define weak void @weakfunc()
-; IMPORT2: declare void @weakfunc()
+; IMPORT2: declare !guid !{{[0-9]+}} void @weakfunc()
 define weak void @weakfunc() #0 {
 entry:
   ret void

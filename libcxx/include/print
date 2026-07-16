@@ -52,13 +52,15 @@ namespace std {
 #    pragma GCC system_header
 #  endif
 
+#  if _LIBCPP_STD_VER >= 23
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#  ifdef _LIBCPP_WIN32API
+#    ifdef _LIBCPP_WIN32API
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_EXPORTED_FROM_ABI bool __is_windows_terminal(FILE* __stream);
 
-#    if _LIBCPP_HAS_WIDE_CHARACTERS
+#      if _LIBCPP_HAS_WIDE_CHARACTERS
 // A wrapper for WriteConsoleW which is used to write to the Windows
 // console. This function is in the dylib to avoid pulling in windows.h
 // in the library headers. The function itself uses some private parts
@@ -69,11 +71,9 @@ _LIBCPP_EXPORTED_FROM_ABI bool __is_windows_terminal(FILE* __stream);
 //
 // Note the function is only implemented on the Windows platform.
 _LIBCPP_EXPORTED_FROM_ABI void __write_to_windows_console(FILE* __stream, wstring_view __view);
-#    endif // _LIBCPP_HAS_WIDE_CHARACTERS
+#      endif // _LIBCPP_HAS_WIDE_CHARACTERS
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
-#  endif   // _LIBCPP_WIN32API
-
-#  if _LIBCPP_STD_VER >= 23
+#    endif   // _LIBCPP_WIN32API
 
 #    if _LIBCPP_HAS_UNICODE
 // This is the code to transcode UTF-8 to UTF-16. This is used on
@@ -338,9 +338,9 @@ println(FILE* _LIBCPP_DIAGNOSE_NULLPTR __stream, format_string<_Args...> __fmt, 
 #    endif // _LIBCPP_HAS_UNICODE
 }
 
-template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
+template <class _Void = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE inline void println(FILE* _LIBCPP_DIAGNOSE_NULLPTR __stream) {
-  std::print(__stream, "\n");
+  std::print(__stream, (_Void(), "\n"));
 }
 
 template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
@@ -378,9 +378,9 @@ _LIBCPP_HIDE_FROM_ABI inline void vprint_nonunicode(string_view __fmt, format_ar
   std::vprint_nonunicode(stdout, __fmt, __args);
 }
 
-#  endif // _LIBCPP_STD_VER >= 23
-
 _LIBCPP_END_NAMESPACE_STD
+
+#  endif // _LIBCPP_STD_VER >= 23
 
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 

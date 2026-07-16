@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Allocator.h"
@@ -37,24 +38,58 @@ namespace llvm {
 // Immutable AVL-Tree Definition.
 //===----------------------------------------------------------------------===//
 
-template <typename ImutInfo> class ImutAVLFactory;
+template <typename ImutInfo, bool Canonicalize = true> class ImutAVLFactory;
 template <typename ImutInfo> class ImutIntervalAVLFactory;
-template <typename ImutInfo> class ImutAVLTreeInOrderIterator;
-template <typename ImutInfo> class ImutAVLTreeGenericIterator;
+template <typename ImutInfo, bool Canonicalize = true>
+class ImutAVLTreeInOrderIterator;
 
-template <typename ImutInfo >
-class ImutAVLTree {
+namespace ImutAVLDetail {
+/// The intrusive doubly-linked chain of same-digest trees in the factory's
+/// canonicalization cache. Held as an (empty) base so that, when
+/// canonicalization is disabled, the empty base optimization removes it
+/// entirely. Kept separate from the cached digest below so that the two
+/// pointers pack without the tail padding that grouping a trailing 32-bit field
+/// with them would introduce.
+template <typename Tree, bool Canonicalize> struct CanonicalLinks {
+  Tree *Prev = nullptr;
+  Tree *Next = nullptr;
+};
+template <typename Tree> struct CanonicalLinks<Tree, false> {};
+
+/// The cached structural digest, used only for canonicalization. Stored as an
+/// LLVM_NO_UNIQUE_ADDRESS member so it occupies no space when disabled and
+/// packs alongside the adjacent 32-bit fields when enabled.
+template <bool Canonicalize> struct CanonicalDigest {
+  uint32_t Digest = 0;
+};
+template <> struct CanonicalDigest<false> {};
+
+/// The factory-side canonicalization cache: digest -> tree chain.
+/// Empty when canonicalization is disabled.
+template <typename Tree, bool Canonicalize> struct CanonicalCache {
+  DenseMap<unsigned, Tree *> Cache;
+};
+template <typename Tree> struct CanonicalCache<Tree, false> {};
+} // namespace ImutAVLDetail
+
+template <typename ImutInfo, bool Canonicalize = true>
+class ImutAVLTree
+    : private ImutAVLDetail::CanonicalLinks<ImutAVLTree<ImutInfo, Canonicalize>,
+                                            Canonicalize> {
 public:
   using key_type_ref = typename ImutInfo::key_type_ref;
   using value_type = typename ImutInfo::value_type;
   using value_type_ref = typename ImutInfo::value_type_ref;
-  using Factory = ImutAVLFactory<ImutInfo>;
-  using iterator = ImutAVLTreeInOrderIterator<ImutInfo>;
+  using Factory = ImutAVLFactory<ImutInfo, Canonicalize>;
+  using iterator = ImutAVLTreeInOrderIterator<ImutInfo, Canonicalize>;
 
-  friend class ImutAVLFactory<ImutInfo>;
+  friend class ImutAVLFactory<ImutInfo, Canonicalize>;
   friend class ImutIntervalAVLFactory<ImutInfo>;
-  friend class ImutAVLTreeGenericIterator<ImutInfo>;
 
+private:
+  using CanonLinks = ImutAVLDetail::CanonicalLinks<ImutAVLTree, Canonicalize>;
+
+public:
   //===----------------------------------------------------===//
   // Public Interface.
   //===----------------------------------------------------===//
@@ -206,11 +241,11 @@ public:
   //===----------------------------------------------------===//
 
 private:
-  Factory *factory;
+  // Field order places the traversal-hot fields (left, right, value) first so
+  // that in a node that straddles a cache line they land in the earlier line;
+  // the cold factory back-pointer (only touched on create/destroy) goes last.
   ImutAVLTree *left;
   ImutAVLTree *right;
-  ImutAVLTree *prev = nullptr;
-  ImutAVLTree *next = nullptr;
 
   unsigned height : 28;
   LLVM_PREFERRED_TYPE(bool)
@@ -221,8 +256,9 @@ private:
   unsigned IsCanonicalized : 1;
 
   value_type value;
-  uint32_t digest = 0;
   uint32_t refCount = 0;
+  LLVM_NO_UNIQUE_ADDRESS ImutAVLDetail::CanonicalDigest<Canonicalize> digest;
+  Factory *factory;
 
   //===----------------------------------------------------===//
   // Internal methods (node manipulation; used by Factory).
@@ -230,11 +266,10 @@ private:
 
 private:
   /// Internal constructor that is only called by ImutAVLFactory.
-  ImutAVLTree(Factory *f, ImutAVLTree* l, ImutAVLTree* r, value_type_ref v,
+  ImutAVLTree(Factory *f, ImutAVLTree *l, ImutAVLTree *r, value_type_ref v,
               unsigned height)
-    : factory(f), left(l), right(r), height(height), IsMutable(true),
-      IsDigestCached(false), IsCanonicalized(false), value(v)
-  {
+      : left(l), right(r), height(height), IsMutable(true),
+        IsDigestCached(false), IsCanonicalized(false), value(v), factory(f) {
     if (left) left->retain();
     if (right) right->retain();
   }
@@ -303,10 +338,10 @@ private:
     // Check the lowest bit to determine if digest has actually been
     // pre-computed.
     if (hasCachedDigest())
-      return digest;
+      return digest.Digest;
 
     uint32_t X = computeDigest(getLeft(), getRight(), getValue());
-    digest = X;
+    digest.Digest = X;
     markedCachedDigest();
     return X;
   }
@@ -324,19 +359,21 @@ public:
       destroy();
   }
 
-  void destroy() {
+  LLVM_ATTRIBUTE_NOINLINE void destroy() {
     if (left)
       left->release();
     if (right)
       right->release();
-    if (IsCanonicalized) {
-      if (next)
-        next->prev = prev;
+    if constexpr (Canonicalize) {
+      if (IsCanonicalized) {
+        if (this->Next)
+          this->Next->Prev = this->Prev;
 
-      if (prev)
-        prev->next = next;
-      else
-        factory->Cache[factory->maskCacheIndex(computeDigest())] = next;
+        if (this->Prev)
+          this->Prev->Next = this->Next;
+        else
+          factory->Cache[factory->maskCacheIndex(computeDigest())] = this->Next;
+      }
     }
 
     // We need to clear the mutability bit in case we are
@@ -346,26 +383,30 @@ public:
   }
 };
 
-template <typename ImutInfo>
-struct IntrusiveRefCntPtrInfo<ImutAVLTree<ImutInfo>> {
-  static void retain(ImutAVLTree<ImutInfo> *Tree) { Tree->retain(); }
-  static void release(ImutAVLTree<ImutInfo> *Tree) { Tree->release(); }
+template <typename ImutInfo, bool Canonicalize>
+struct IntrusiveRefCntPtrInfo<ImutAVLTree<ImutInfo, Canonicalize>> {
+  static void retain(ImutAVLTree<ImutInfo, Canonicalize> *Tree) {
+    Tree->retain();
+  }
+  static void release(ImutAVLTree<ImutInfo, Canonicalize> *Tree) {
+    Tree->release();
+  }
 };
 
 //===----------------------------------------------------------------------===//
 // Immutable AVL-Tree Factory class.
 //===----------------------------------------------------------------------===//
 
-template <typename ImutInfo >
-class ImutAVLFactory {
-  friend class ImutAVLTree<ImutInfo>;
+template <typename ImutInfo, bool Canonicalize>
+class ImutAVLFactory
+    : private ImutAVLDetail::CanonicalCache<ImutAVLTree<ImutInfo, Canonicalize>,
+                                            Canonicalize> {
+  friend class ImutAVLTree<ImutInfo, Canonicalize>;
 
-  using TreeTy = ImutAVLTree<ImutInfo>;
+  using TreeTy = ImutAVLTree<ImutInfo, Canonicalize>;
   using value_type_ref = typename TreeTy::value_type_ref;
   using key_type_ref = typename TreeTy::key_type_ref;
-  using CacheTy = DenseMap<unsigned, TreeTy*>;
 
-  CacheTy Cache;
   uintptr_t Allocator;
   std::vector<TreeTy*> createdNodes;
   std::vector<TreeTy*> freeNodes;
@@ -395,15 +436,13 @@ public:
 
   TreeTy* add(TreeTy* T, value_type_ref V) {
     T = add_internal(V,T);
-    markImmutable(T);
-    recoverNodes();
+    recoverNodes(T);
     return T;
   }
 
   TreeTy* remove(TreeTy* T, key_type_ref V) {
     T = remove_internal(V,T);
-    markImmutable(T);
-    recoverNodes();
+    recoverNodes(T);
     return T;
   }
 
@@ -430,17 +469,6 @@ protected:
     unsigned hl = getHeight(L);
     unsigned hr = getHeight(R);
     return (hl > hr ? hl : hr) + 1;
-  }
-
-  static bool compareTreeWithSection(TreeTy* T,
-                                     typename TreeTy::iterator& TI,
-                                     typename TreeTy::iterator& TE) {
-    typename TreeTy::iterator I = T->begin(), E = T->end();
-    for ( ; I!=E ; ++I, ++TI) {
-      if (TI == TE || !I->isElementEqual(&*TI))
-        return false;
-    }
-    return true;
   }
 
   //===--------------------------------------------------===//
@@ -473,11 +501,20 @@ protected:
     return createNode(newLeft, getValue(oldTree), newRight);
   }
 
-  void recoverNodes() {
-    for (unsigned i = 0, n = createdNodes.size(); i < n; ++i) {
-      TreeTy *N = createdNodes[i];
-      if (N->isMutable() && N->refCount == 0)
+  void recoverNodes(TreeTy *Result) {
+    // Mark Result's nodes immutable and reclaim the intermediates discarded
+    // during balancing, in one pass. Nodes are built bottom-up, so a node
+    // precedes its parents in createdNodes; visiting in reverse thus reaches
+    // each node only once its reference count is final. Unreferenced nodes are
+    // unreachable and destroyed; the rest belong to Result. Result is kept
+    // despite its zero count -- the caller has not taken ownership yet.
+    for (TreeTy *N : llvm::reverse(createdNodes)) {
+      if (!N->isMutable())
+        continue; // Already reclaimed while destroying an unreachable parent.
+      if (N != Result && N->refCount == 0)
         N->destroy();
+      else
+        N->markImmutable();
     }
     createdNodes.clear();
   }
@@ -607,17 +644,10 @@ protected:
                        getValue(T), getRight(T));
   }
 
-  /// Clears the mutable bits of a root and all of its descendants.
-  void markImmutable(TreeTy* T) {
-    if (!T || !T->isMutable())
-      return;
-    T->markImmutable();
-    markImmutable(getLeft(T));
-    markImmutable(getRight(T));
-  }
-
 public:
   TreeTy *getCanonicalTree(TreeTy *TNew) {
+    static_assert(Canonicalize,
+                  "getCanonicalTree requires a canonicalizing factory");
     if (!TNew)
       return nullptr;
 
@@ -627,22 +657,22 @@ public:
     // Search the hashtable for another tree with the same digest, and
     // if find a collision compare those trees by their contents.
     unsigned digest = TNew->computeDigest();
-    TreeTy *&entry = Cache[maskCacheIndex(digest)];
+    TreeTy *&entry = this->Cache[maskCacheIndex(digest)];
     if (entry) {
-      for (TreeTy *T = entry ; T != nullptr; T = T->next) {
-        // Compare the Contents('T') with Contents('TNew')
-        typename TreeTy::iterator TI = T->begin(), TE = T->end();
-        if (!compareTreeWithSection(TNew, TI, TE))
+      for (TreeTy *T = entry; T != nullptr; T = T->Next) {
+        // Compare the contents of 'T' with 'TNew'. isEqual skips subtrees that
+        // are shared by pointer, so for structurally-shared persistent trees
+        // (the common case, e.g. one derived from the other) this is linear in
+        // the number of differing nodes rather than in the tree size.
+        if (!TNew->isEqual(*T))
           continue;
-        if (TI != TE)
-          continue; // T has more contents than TNew.
         // Trees did match!  Return 'T'.
         if (TNew->refCount == 0)
           TNew->destroy();
         return T;
       }
-      entry->prev = TNew;
-      TNew->next = entry;
+      entry->Prev = TNew;
+      TNew->Next = entry;
     }
 
     entry = TNew;
@@ -652,177 +682,125 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-// Immutable AVL-Tree Iterators.
+// Immutable AVL-Tree Iterator.
 //===----------------------------------------------------------------------===//
 
-template <typename ImutInfo> class ImutAVLTreeGenericIterator {
-  SmallVector<uintptr_t,20> stack;
-
+/// Bidirectional in-order iterator over the nodes of an ImutAVLTree.
+///
+/// The iterator keeps the chain of ancestors from the root down to the current
+/// node on an explicit stack of plain node pointers, and decides which way to
+/// move next by inspecting whether it is ascending from a node's left or right
+/// child. This avoids storing any per-node visit-state: there is no need to
+/// remember "have I already visited this node's left/right subtree", because
+/// that is recovered by comparing the child we just left against the parent's
+/// left and right pointers.
+///
+/// A node's parent cannot be cached in the node itself, because these trees are
+/// persistent and structurally shared: a single node may appear as the child of
+/// different parents across different tree versions. The ancestor stack is
+/// therefore the per-traversal parent chain.
+template <typename ImutInfo, bool Canonicalize>
+class ImutAVLTreeInOrderIterator {
 public:
   using iterator_category = std::bidirectional_iterator_tag;
-  using value_type = ImutAVLTree<ImutInfo>;
+  using value_type = ImutAVLTree<ImutInfo, Canonicalize>;
   using difference_type = std::ptrdiff_t;
   using pointer = value_type *;
   using reference = value_type &;
 
-  enum VisitFlag { VisitedNone=0x0, VisitedLeft=0x1, VisitedRight=0x3,
-                   Flags=0x3 };
+  using TreeTy = ImutAVLTree<ImutInfo, Canonicalize>;
 
-  using TreeTy = ImutAVLTree<ImutInfo>;
+private:
+  // Path[0] is the root and Path.back() is the current node. An empty path is
+  // the end iterator. The invariant is that Path always holds the exact chain
+  // of ancestors of the current node, root-most first.
+  SmallVector<TreeTy *, 20> Path;
 
-  ImutAVLTreeGenericIterator() = default;
-  ImutAVLTreeGenericIterator(const TreeTy *Root) {
-    if (Root) stack.push_back(reinterpret_cast<uintptr_t>(Root));
+  // Descend along left children, pushing each node; lands on the minimum of the
+  // subtree rooted at T (i.e. the first node in an in-order traversal of T).
+  void descendToMin(TreeTy *T) {
+    for (; T; T = T->getLeft())
+      Path.push_back(T);
   }
 
-  TreeTy &operator*() const {
-    assert(!stack.empty());
-    return *reinterpret_cast<TreeTy *>(stack.back() & ~Flags);
-  }
-  TreeTy *operator->() const { return &*this; }
-
-  uintptr_t getVisitState() const {
-    assert(!stack.empty());
-    return stack.back() & Flags;
+  // Descend along right children, pushing each node; lands on the maximum of
+  // the subtree rooted at T (i.e. the last node in an in-order traversal of T).
+  void descendToMax(TreeTy *T) {
+    for (; T; T = T->getRight())
+      Path.push_back(T);
   }
 
-  bool atEnd() const { return stack.empty(); }
-
-  bool atBeginning() const {
-    return stack.size() == 1 && getVisitState() == VisitedNone;
+  // Pop the current node and ascend until we reach an ancestor from its *left*
+  // child, i.e. the first ancestor whose subtree is not yet fully visited. That
+  // ancestor is the in-order successor of the subtree we just left; if there is
+  // none, Path is emptied (the end iterator). Shared by operator++ and
+  // skipSubTree, whose only difference is whether the current node's right
+  // subtree is descended into first.
+  void ascendFromRightChild() {
+    TreeTy *Child = Path.pop_back_val();
+    while (!Path.empty() && Path.back()->getRight() == Child)
+      Child = Path.pop_back_val();
   }
 
-  void skipToParent() {
-    assert(!stack.empty());
-    stack.pop_back();
-    if (stack.empty())
-      return;
-    switch (getVisitState()) {
-      case VisitedNone:
-        stack.back() |= VisitedLeft;
-        break;
-      case VisitedLeft:
-        stack.back() |= VisitedRight;
-        break;
-      default:
-        llvm_unreachable("Unreachable.");
-    }
+  // Mirror of ascendFromRightChild for reverse traversal (operator--).
+  void ascendFromLeftChild() {
+    TreeTy *Child = Path.pop_back_val();
+    while (!Path.empty() && Path.back()->getLeft() == Child)
+      Child = Path.pop_back_val();
   }
-
-  bool operator==(const ImutAVLTreeGenericIterator &x) const {
-    return stack == x.stack;
-  }
-
-  bool operator!=(const ImutAVLTreeGenericIterator &x) const {
-    return !(*this == x);
-  }
-
-  ImutAVLTreeGenericIterator &operator++() {
-    assert(!stack.empty());
-    TreeTy* Current = reinterpret_cast<TreeTy*>(stack.back() & ~Flags);
-    assert(Current);
-    switch (getVisitState()) {
-      case VisitedNone:
-        if (TreeTy* L = Current->getLeft())
-          stack.push_back(reinterpret_cast<uintptr_t>(L));
-        else
-          stack.back() |= VisitedLeft;
-        break;
-      case VisitedLeft:
-        if (TreeTy* R = Current->getRight())
-          stack.push_back(reinterpret_cast<uintptr_t>(R));
-        else
-          stack.back() |= VisitedRight;
-        break;
-      case VisitedRight:
-        skipToParent();
-        break;
-      default:
-        llvm_unreachable("Unreachable.");
-    }
-    return *this;
-  }
-
-  ImutAVLTreeGenericIterator &operator--() {
-    assert(!stack.empty());
-    TreeTy* Current = reinterpret_cast<TreeTy*>(stack.back() & ~Flags);
-    assert(Current);
-    switch (getVisitState()) {
-      case VisitedNone:
-        stack.pop_back();
-        break;
-      case VisitedLeft:
-        stack.back() &= ~Flags; // Set state to "VisitedNone."
-        if (TreeTy* L = Current->getLeft())
-          stack.push_back(reinterpret_cast<uintptr_t>(L) | VisitedRight);
-        break;
-      case VisitedRight:
-        stack.back() &= ~Flags;
-        stack.back() |= VisitedLeft;
-        if (TreeTy* R = Current->getRight())
-          stack.push_back(reinterpret_cast<uintptr_t>(R) | VisitedRight);
-        break;
-      default:
-        llvm_unreachable("Unreachable.");
-    }
-    return *this;
-  }
-};
-
-template <typename ImutInfo> class ImutAVLTreeInOrderIterator {
-  using InternalIteratorTy = ImutAVLTreeGenericIterator<ImutInfo>;
-
-  InternalIteratorTy InternalItr;
 
 public:
-  using iterator_category = std::bidirectional_iterator_tag;
-  using value_type = ImutAVLTree<ImutInfo>;
-  using difference_type = std::ptrdiff_t;
-  using pointer = value_type *;
-  using reference = value_type &;
-
-  using TreeTy = ImutAVLTree<ImutInfo>;
-
-  ImutAVLTreeInOrderIterator(const TreeTy* Root) : InternalItr(Root) {
-    if (Root)
-      ++*this; // Advance to first element.
+  ImutAVLTreeInOrderIterator() = default; // end() iterator.
+  ImutAVLTreeInOrderIterator(const TreeTy *Root) {
+    descendToMin(const_cast<TreeTy *>(Root));
   }
 
-  ImutAVLTreeInOrderIterator() : InternalItr() {}
-
+  // Two iterators are equal iff they sit on the same node (or are both end()).
+  // Within a single tree a node has a unique root-to-node path, so the current
+  // node alone identifies the position; comparing the whole path is therefore
+  // unnecessary. Comparing iterators from different trees is not meaningful, as
+  // for any standard container.
   bool operator==(const ImutAVLTreeInOrderIterator &x) const {
-    return InternalItr == x.InternalItr;
+    if (Path.empty() || x.Path.empty())
+      return Path.empty() == x.Path.empty();
+    return Path.back() == x.Path.back();
   }
-
   bool operator!=(const ImutAVLTreeInOrderIterator &x) const {
     return !(*this == x);
   }
 
-  TreeTy &operator*() const { return *InternalItr; }
-  TreeTy *operator->() const { return &*InternalItr; }
+  TreeTy &operator*() const { return *Path.back(); }
+  TreeTy *operator->() const { return Path.back(); }
 
   ImutAVLTreeInOrderIterator &operator++() {
-    do ++InternalItr;
-    while (!InternalItr.atEnd() &&
-           InternalItr.getVisitState() != InternalIteratorTy::VisitedLeft);
-
+    assert(!Path.empty() && "Incrementing the end iterator");
+    if (TreeTy *R = Path.back()->getRight())
+      // The in-order successor is the minimum of the right subtree.
+      descendToMin(R);
+    else
+      // No right subtree: the successor is the nearest ancestor reached from a
+      // left child.
+      ascendFromRightChild();
     return *this;
   }
 
   ImutAVLTreeInOrderIterator &operator--() {
-    do --InternalItr;
-    while (!InternalItr.atBeginning() &&
-           InternalItr.getVisitState() != InternalIteratorTy::VisitedLeft);
-
+    assert(!Path.empty() && "Decrementing the end iterator");
+    if (TreeTy *L = Path.back()->getLeft())
+      // The in-order predecessor is the maximum of the left subtree.
+      descendToMax(L);
+    else
+      // Mirror of operator++.
+      ascendFromLeftChild();
     return *this;
   }
 
+  /// Move to the in-order successor of the entire subtree rooted at the current
+  /// node, i.e. skip the current node together with its right subtree. This is
+  /// exactly the ascent half of operator++.
   void skipSubTree() {
-    InternalItr.skipToParent();
-
-    while (!InternalItr.atEnd() &&
-           InternalItr.getVisitState() != InternalIteratorTy::VisitedLeft)
-      ++InternalItr;
+    assert(!Path.empty() && "Skipping past the end iterator");
+    ascendFromRightChild();
   }
 };
 
@@ -967,12 +945,13 @@ template <typename T> struct ImutContainerInfo<T *> : ImutProfileInfo<T *> {
 // Immutable Set
 //===----------------------------------------------------------------------===//
 
-template <typename ValT, typename ValInfo = ImutContainerInfo<ValT>>
+template <typename ValT, typename ValInfo = ImutContainerInfo<ValT>,
+          bool Canonicalize = true>
 class ImmutableSet {
 public:
   using value_type = typename ValInfo::value_type;
   using value_type_ref = typename ValInfo::value_type_ref;
-  using TreeTy = ImutAVLTree<ValInfo>;
+  using TreeTy = ImutAVLTree<ValInfo, Canonicalize>;
 
 private:
   IntrusiveRefCntPtr<TreeTy> Root;
@@ -986,14 +965,11 @@ public:
 
   class Factory {
     typename TreeTy::Factory F;
-    const bool Canonicalize;
 
   public:
-    Factory(bool canonicalize = true)
-      : Canonicalize(canonicalize) {}
+    Factory() = default;
 
-    Factory(BumpPtrAllocator& Alloc, bool canonicalize = true)
-      : F(Alloc), Canonicalize(canonicalize) {}
+    Factory(BumpPtrAllocator &Alloc) : F(Alloc) {}
 
     Factory(const Factory& RHS) = delete;
     void operator=(const Factory& RHS) = delete;
@@ -1012,7 +988,10 @@ public:
     /// factory object that created the set is destroyed.
     [[nodiscard]] ImmutableSet add(ImmutableSet Old, value_type_ref V) {
       TreeTy *NewT = F.add(Old.Root.get(), V);
-      return ImmutableSet(Canonicalize ? F.getCanonicalTree(NewT) : NewT);
+      if constexpr (Canonicalize)
+        return ImmutableSet(F.getCanonicalTree(NewT));
+      else
+        return ImmutableSet(NewT);
     }
 
     /// Creates a new immutable set that contains all of the values
@@ -1024,7 +1003,10 @@ public:
     /// factory object that created the set is destroyed.
     [[nodiscard]] ImmutableSet remove(ImmutableSet Old, value_type_ref V) {
       TreeTy *NewT = F.remove(Old.Root.get(), V);
-      return ImmutableSet(Canonicalize ? F.getCanonicalTree(NewT) : NewT);
+      if constexpr (Canonicalize)
+        return ImmutableSet(F.getCanonicalTree(NewT));
+      else
+        return ImmutableSet(NewT);
     }
 
     BumpPtrAllocator& getAllocator() { return F.getAllocator(); }
@@ -1041,13 +1023,24 @@ public:
     return Root ? Root->contains(V) : false;
   }
 
+  /// Compares two sets for equality. For a canonicalizing factory, sets with
+  /// equal contents share the same tree, so this is an O(1) pointer comparison
+  /// (like ImmutableList); only sets created by the same factory may be
+  /// compared. Otherwise it is a structural comparison.
   bool operator==(const ImmutableSet &RHS) const {
-    return Root && RHS.Root ? Root->isEqual(*RHS.Root.get()) : Root == RHS.Root;
+    if constexpr (Canonicalize)
+      return Root == RHS.Root;
+    else
+      return Root && RHS.Root ? Root->isEqual(*RHS.Root.get())
+                              : Root == RHS.Root;
   }
 
   bool operator!=(const ImmutableSet &RHS) const {
-    return Root && RHS.Root ? Root->isNotEqual(*RHS.Root.get())
-                            : Root != RHS.Root;
+    if constexpr (Canonicalize)
+      return Root != RHS.Root;
+    else
+      return Root && RHS.Root ? Root->isNotEqual(*RHS.Root.get())
+                              : Root != RHS.Root;
   }
 
   TreeTy *getRoot() {
@@ -1093,12 +1086,13 @@ public:
 };
 
 // NOTE: This may some day replace the current ImmutableSet.
-template <typename ValT, typename ValInfo = ImutContainerInfo<ValT>>
+template <typename ValT, typename ValInfo = ImutContainerInfo<ValT>,
+          bool Canonicalize = true>
 class ImmutableSetRef {
 public:
   using value_type = typename ValInfo::value_type;
   using value_type_ref = typename ValInfo::value_type_ref;
-  using TreeTy = ImutAVLTree<ValInfo>;
+  using TreeTy = ImutAVLTree<ValInfo, Canonicalize>;
   using FactoryTy = typename TreeTy::Factory;
 
 private:
@@ -1129,9 +1123,12 @@ public:
     return Root ? Root->contains(V) : false;
   }
 
-  ImmutableSet<ValT> asImmutableSet(bool canonicalize = true) const {
-    return ImmutableSet<ValT>(
-        canonicalize ? Factory->getCanonicalTree(Root.get()) : Root.get());
+  ImmutableSet<ValT, ValInfo, Canonicalize> asImmutableSet() const {
+    using SetTy = ImmutableSet<ValT, ValInfo, Canonicalize>;
+    if constexpr (Canonicalize)
+      return SetTy(Factory->getCanonicalTree(Root.get()));
+    else
+      return SetTy(Root.get());
   }
 
   TreeTy *getRootWithoutRetain() const { return Root.get(); }

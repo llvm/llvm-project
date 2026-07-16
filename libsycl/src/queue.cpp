@@ -35,18 +35,25 @@ bool queue::is_in_order() const { return impl->isInOrder(); }
 
 void queue::wait() { impl->wait(); }
 
+void queue::wait_and_throw() { impl->waitAndThrow(); }
+
+void queue::throw_asynchronous() { impl->throwAsynchronous(); }
+
+event queue::memcpy(void *dest, const void *src, std::size_t numBytes,
+                    const std::vector<event> &depEvents) {
+  std::shared_ptr<detail::EventImpl> EventImplPtr =
+      impl->memcpy(dest, src, numBytes, detail::getSyclObjImpls(depEvents));
+  assert(EventImplPtr);
+  return detail::createSyclObjFromImpl<event>(EventImplPtr);
+}
+
 event queue::getLastEvent() {
   return detail::createSyclObjFromImpl<event>(impl->getLastEvent());
 }
 
 void queue::setKernelParameters(const std::vector<event> &Events,
                                 const detail::UnifiedRangeView &Range) {
-  std::vector<detail::EventImplPtr> DepEventImplRefs;
-  DepEventImplRefs.reserve(Events.size());
-  for (const auto &Event : Events) {
-    DepEventImplRefs.push_back(detail::getSyclObjImpl(Event));
-  }
-  return impl->setKernelParameters(std::move(DepEventImplRefs), Range);
+  return impl->setKernelParameters(detail::getSyclObjImpls(Events), Range);
 }
 
 void queue::submitKernelImpl(detail::DeviceKernelInfo &KernelInfo,

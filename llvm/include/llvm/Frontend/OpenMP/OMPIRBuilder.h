@@ -594,12 +594,13 @@ public:
     /// The basic block to which control should be transferred to
     /// implement the FiniCB. Memoized to avoid generating finalization
     /// multiple times.
-    Expected<BasicBlock *> getFiniBB(IRBuilderBase &Builder);
+    LLVM_ABI Expected<BasicBlock *> getFiniBB(IRBuilderBase &Builder);
 
     /// For cases where there is an unavoidable existing finalization block
     /// (e.g. loop finialization after omp sections). The existing finalization
     /// block must not contain any non-finalization code.
-    Error mergeFiniBB(IRBuilderBase &Builder, BasicBlock *ExistingFiniBB);
+    LLVM_ABI Error mergeFiniBB(IRBuilderBase &Builder,
+                               BasicBlock *ExistingFiniBB);
 
   private:
     /// Access via getFiniBB.
@@ -1496,11 +1497,6 @@ public:
   /// \param Loc The location where the flush directive was encountered
   LLVM_ABI void createFlush(const LocationDescription &Loc);
 
-  /// Generator for '#omp taskwait'
-  ///
-  /// \param Loc The location where the taskwait directive was encountered.
-  LLVM_ABI void createTaskwait(const LocationDescription &Loc);
-
   /// Generator for '#omp taskyield'
   ///
   /// \param Loc The location where the taskyield directive was encountered.
@@ -1539,7 +1535,14 @@ public:
   LLVM_ABI void emitTaskDependency(IRBuilderBase &Builder, Value *Entry,
                                    const DependData &Dep);
 
-  /// Return the LLVM struct type matching runtime `kmp_task_affinity_info_t`.
+  /// Generator for '#omp taskwait'
+  ///
+  /// \param Loc The location where the taskwait directive was encountered.
+  /// \param Dependencies dependencies as specified by the 'depend' clause.
+  LLVM_ABI void createTaskwait(const LocationDescription &Loc,
+                               DependenciesInfo Dependencies = {});
+
+  ///  Return the LLVM struct type matching runtime `kmp_task_affinity_info_t`.
   /// `{ kmp_intptr_t base_addr; size_t len; flags (bitfield storage as i32) }`
   LLVM_ABI llvm::StructType *getKmpTaskAffinityInfoTy();
 
@@ -2046,7 +2049,7 @@ private:
   ///
   /// \param DescriptorAddr Address of the descriptor to initialize
   /// \param DataPtr Pointer to the actual data the descriptor should reference
-  /// \param ElemType Type of elements in the array (may be array type)
+  /// \param SrcDescriptorAddr Address of the descriptor to copy metadata from
   /// \param DescriptorType Type of the descriptor structure
   /// \param DataPtrPtrGen Callback to get the base_ptr field in the descriptor
   ///
@@ -2056,6 +2059,22 @@ private:
       Type *DescriptorType,
       function_ref<InsertPointOrErrorTy(InsertPointTy, Value *, Value *&)>
           DataPtrPtrGen);
+
+  /// Allocate a by-ref reduction descriptor, copy \p SrcDescriptorAddr into it,
+  /// and update its data pointer to reference \p DataPtr.
+  ///
+  /// \param AllocaIP Insertion point for the descriptor allocation.
+  /// \param RI Reduction info containing descriptor type and access callback.
+  /// \param DataPtr Pointer to the actual data the descriptor should reference.
+  /// \param SrcDescriptorAddr Address of the descriptor to copy metadata from.
+  /// \param DescriptorPtrTy Pointer type expected by the descriptor consumer.
+  ///
+  /// \return The new descriptor address, or an Error if descriptor generation
+  ///         fails.
+  Expected<Value *> createReductionDescriptorCopy(
+      InsertPointTy AllocaIP, const ReductionInfo &RI, Value *DataPtr,
+      Value *SrcDescriptorAddr, Type *DescriptorPtrTy,
+      const Twine &Name = ".omp.reduction.byref_descriptor");
 
   /// Emits reduction function.
   /// \param ReducerName Name of the function calling the reduction.
@@ -2165,7 +2184,7 @@ public:
   /// 4. Call the OpenMP runtime on the GPU to reduce across teams.
   ///    The last team writes the global reduced value to memory.
   ///
-  ///     ret = __kmpc_nvptx_teams_reduce_nowait(...,
+  ///     ret = __kmpc_gpu_teams_reduce_nowait(...,
   ///             reduceData, shuffleReduceFn, interWarpCpyFn,
   ///             scratchpadCopyFn, loadAndReduceFn)
   ///
@@ -2330,18 +2349,26 @@ public:
   /// \param IsByRef For each reduction clause, whether the reduction is by-ref.
   /// \param IsTeamsReduction   Optional flag set if it is a teams
   ///                           reduction.
+  /// \param IsSPMD             Optional flag set when the surrounding kernel
+  ///                           is compiled in SPMD execution mode (every
+  ///                           reduction private is then known to be a
+  ///                           per-thread scratch alloca).  When false, the
+  ///                           teams-reduction call site emits per-thread
+  ///                           scratch and copies the team-local value in so
+  ///                           the runtime's cross-team work cannot race on
+  ///                           team-shared LDS storage produced by Generic
+  ///                           globalization (Generic-SPMD case after
+  ///                           OpenMPOpt SPMD-ization).
   /// \param GridValue          Optional GPU grid value.
-  /// \param ReductionBufNum    Optional OpenMPCUDAReductionBufNumValue to be
   /// used for teams reduction.
   /// \param SrcLocInfo         Source location information global.
   LLVM_ABI InsertPointOrErrorTy createReductionsGPU(
       const LocationDescription &Loc, InsertPointTy AllocaIP,
       InsertPointTy CodeGenIP, ArrayRef<ReductionInfo> ReductionInfos,
       ArrayRef<bool> IsByRef, bool IsNoWait = false,
-      bool IsTeamsReduction = false,
+      bool IsTeamsReduction = false, bool IsSPMD = false,
       ReductionGenCBKind ReductionGenCBKind = ReductionGenCBKind::MLIR,
-      std::optional<omp::GV> GridValue = {}, unsigned ReductionBufNum = 1024,
-      Value *SrcLocInfo = nullptr);
+      std::optional<omp::GV> GridValue = {}, Value *SrcLocInfo = nullptr);
 
   // TODO: provide atomic and non-atomic reduction generators for reduction
   // operators defined by the OpenMP specification.
@@ -2415,6 +2442,39 @@ public:
 
   ///}
 
+  /// Emit the host runtime lookups that redirect the `in_reduction`
+  /// list items of an `omp.target` region to their per-task reduction-private
+  /// storage.
+  ///
+  /// This owns the complete runtime-generation path for target `in_reduction`.
+  /// It computes the executing thread's gtid once for the whole target body (so
+  /// a target with several in_reduction items does not emit a redundant
+  /// `__kmpc_global_thread_num` per item), then for each item emits
+  /// `__kmpc_task_reduction_get_th_data(gtid, /*descriptor=*/null, origPtr)`
+  /// with the address-space normalization required by the runtime entry point.
+  /// The NULL descriptor makes the runtime walk the enclosing taskgroups to
+  /// find the matching `task_reduction` registration for the item. The lookups
+  /// are emitted at \p Loc, which must be inside the target task body.
+  ///
+  /// The front-end-specific work (matching each `in_reduction` item to its
+  /// mapped storage and binding the generated private pointer back to the
+  /// right value) stays with the caller: each generated private pointer is
+  /// handed back through \p MapPrivateCB.
+  ///
+  /// \param Loc          Insertion point for the target body.
+  /// \param OrigPtrs     Per item, the mapped original pointer used as the
+  ///                     runtime `orig` argument.
+  /// \param ResultPtrTys Per item, the type the returned private pointer must
+  ///                     have (for address-space normalization). Must have the
+  ///                     same length as \p OrigPtrs.
+  /// \param MapPrivateCB Called once per item, in list order, with the item
+  ///                     index and the generated per-task private pointer.
+  /// \returns The insertion point after the emitted lookups.
+  LLVM_ABI InsertPointTy createTargetInReduction(
+      const LocationDescription &Loc, ArrayRef<Value *> OrigPtrs,
+      ArrayRef<Type *> ResultPtrTys,
+      function_ref<void(unsigned, Value *)> MapPrivateCB);
+
   /// Return the insertion point used by the underlying IRBuilder.
   InsertPointTy getInsertionPoint() { return Builder.saveIP(); }
 
@@ -2431,9 +2491,9 @@ public:
 
   LLVM_ABI Function *getOrCreateRuntimeFunctionPtr(omp::RuntimeFunction FnID);
 
-  CallInst *createRuntimeFunctionCall(FunctionCallee Callee,
-                                      ArrayRef<Value *> Args,
-                                      StringRef Name = "");
+  LLVM_ABI CallInst *createRuntimeFunctionCall(FunctionCallee Callee,
+                                               ArrayRef<Value *> Args,
+                                               StringRef Name = "");
 
   /// Return the (LLVM-IR) string describing the source location \p LocStr.
   LLVM_ABI Constant *getOrCreateSrcLocStr(StringRef LocStr,
@@ -2560,7 +2620,7 @@ public:
 
   /// Helper that contains information about regions we need to outline
   /// during finalization.
-  struct OutlineInfo {
+  struct LLVM_ABI OutlineInfo {
     using PostOutlineCBTy = std::function<void(Function &)>;
     PostOutlineCBTy PostOutlineCB;
     BasicBlock *EntryBB, *ExitBB, *OuterAllocBB;
@@ -2570,18 +2630,18 @@ public:
     // TODO: this should be safe to enable by default
     bool FixUpNonEntryAllocas = false;
 
-    LLVM_ABI virtual ~OutlineInfo() = default;
+    virtual ~OutlineInfo() = default;
 
     /// Collect all blocks in between EntryBB and ExitBB in both the given
     /// vector and set.
-    LLVM_ABI void collectBlocks(SmallPtrSetImpl<BasicBlock *> &BlockSet,
-                                SmallVectorImpl<BasicBlock *> &BlockVector);
+    void collectBlocks(SmallPtrSetImpl<BasicBlock *> &BlockSet,
+                       SmallVectorImpl<BasicBlock *> &BlockVector);
 
     /// Create a CodeExtractor instance based on the information stored in this
     /// structure, the list of collected blocks from a previous call to
     /// \c collectBlocks and a flag stating whether arguments must be passed in
     /// address space 0.
-    LLVM_ABI virtual std::unique_ptr<CodeExtractor>
+    virtual std::unique_ptr<CodeExtractor>
     createCodeExtractor(ArrayRef<BasicBlock *> Blocks,
                         bool ArgsInZeroAddressSpace, Twine Suffix = Twine(""));
 
@@ -2728,7 +2788,6 @@ public:
     SmallVector<int32_t, 3> MaxThreads = {-1};
     int32_t MinThreads = 1;
     int32_t ReductionDataSize = 0;
-    int32_t ReductionBufferLength = 0;
   };
 
   /// Container to pass LLVM IR runtime values or constants related to the
@@ -3413,11 +3472,8 @@ public:
   /// \param Loc The insert and source location description.
   /// \param TeamsReductionDataSize The maximal size of all the reduction data
   ///        for teams reduction.
-  /// \param TeamsReductionBufferLength The number of elements (each of up to
-  ///        \p TeamsReductionDataSize size), in the teams reduction buffer.
   LLVM_ABI void createTargetDeinit(const LocationDescription &Loc,
-                                   int32_t TeamsReductionDataSize = 0,
-                                   int32_t TeamsReductionBufferLength = 1024);
+                                   int32_t TeamsReductionDataSize = 0);
 
   ///}
 

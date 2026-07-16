@@ -121,7 +121,7 @@ foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
     SUITE
       libc-stdfix-tests
     HDRS
-      IdivTest.h
+      IdivFxTest.h
     SRCS
       idiv${suffix}_test.cpp
     DEPENDS
@@ -142,6 +142,23 @@ foreach(suffix IN ITEMS r)
       ${suffix}divi_test.cpp
     DEPENDS
       libc.src.stdfix.${suffix}divi
+      libc.src.__support.fixed_point.fx_bits
+      libc.hdr.signal_macros
+  )
+endforeach()
+
+foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
+  add_libc_test(
+    divi${suffix}_test
+    SUITE
+      libc-stdfix-tests
+    HDRS
+      DiviFxTest.h
+    SRCS
+      divi${suffix}_test.cpp
+    DEPENDS
+      libc.src.stdfix.divi${suffix}
+      libc.src.__support.fixed_point.fx_rep
       libc.src.__support.fixed_point.fx_bits
       libc.hdr.signal_macros
   )

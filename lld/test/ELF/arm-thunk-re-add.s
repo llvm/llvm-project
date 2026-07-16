@@ -136,4 +136,5 @@ callers:
 // RUN: llvm-objdump --no-print-imm-hex -d %t.so --start-address=0x1000004 --stop-address=0x100001c | FileCheck --check-prefix=CHECK1 %s
 // RUN: llvm-objdump --no-print-imm-hex -d %t.so --start-address=0x1100008 --stop-address=0x1100022 | FileCheck --check-prefix=CHECK2 %s
 // RUN: llvm-objdump --no-print-imm-hex -d %t.so --start-address=0x1100020 --stop-address=0x1100064 --triple=armv7aeb-linux-gnueabihf | FileCheck --check-prefix=CHECK3 %s
+// RUN: rm %t %t.so
 

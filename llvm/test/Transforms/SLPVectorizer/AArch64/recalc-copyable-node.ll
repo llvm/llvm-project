@@ -5,14 +5,14 @@ define { double, double } @test1(ptr %0, double %.unpack753, double %factor828) 
 ; CHECK-LABEL: define { double, double } @test1(
 ; CHECK-SAME: ptr [[TMP0:%.*]], double [[DOTUNPACK753:%.*]], double [[FACTOR828:%.*]]) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> <double poison, double 1.000000e+00>, double [[DOTUNPACK753]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> <double poison, double 1.000000e+00>, double [[DOTUNPACK753]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> <double 0.000000e+00, double poison>, <2 x i32> <i32 2, i32 0>
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul <2 x double> [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[TMP7]], zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x double> [[TMP7]], <2 x double> [[TMP5]], <2 x i32> <i32 1, i32 2>
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x double> <double poison, double f0xC1502A98AE76C8B4>, double [[FACTOR828]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x double> <double poison, double f0xC1502A98AE76C8B4>, double [[FACTOR828]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul <2 x double> [[TMP9]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = fadd contract <2 x double> [[TMP11]], zeroinitializer
 ; CHECK-NEXT:    [[TMP13:%.*]] = fmul <2 x double> [[TMP12]], zeroinitializer
@@ -26,21 +26,21 @@ define { double, double } @test1(ptr %0, double %.unpack753, double %factor828) 
 ; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <4 x double> <double poison, double poison, double -0.000000e+00, double poison>, <4 x double> [[TMP20]], <4 x i32> <i32 4, i32 5, i32 2, i32 poison>
 ; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <4 x double> [[TMP21]], <4 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP23:%.*]] = fadd contract <4 x double> [[TMP19]], [[TMP22]]
-; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x double> <double poison, double 1.000000e+00, double poison, double poison>, double [[DOTUNPACK753]], i32 0
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x double> <double poison, double 1.000000e+00, double poison, double poison>, double [[DOTUNPACK753]], i64 0
 ; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <4 x double> [[TMP24]], <4 x double> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP26:%.*]] = fmul <4 x double> [[TMP23]], [[TMP25]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = shufflevector <4 x double> [[TMP24]], <4 x double> <double 0.000000e+00, double poison, double poison, double poison>, <4 x i32> <i32 4, i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP28:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP29:%.*]] = shufflevector <4 x double> [[TMP27]], <4 x double> [[TMP28]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP30:%.*]] = fadd <4 x double> [[TMP29]], [[TMP26]]
-; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <4 x double> [[TMP30]], i32 0
+; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <4 x double> [[TMP30]], i64 0
 ; CHECK-NEXT:    [[TMP32:%.*]] = call { double, double } @__divdc3(double [[TMP31]])
 ; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr null)
-; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <4 x double> [[TMP30]], i32 1
+; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <4 x double> [[TMP30]], i64 1
 ; CHECK-NEXT:    [[TMP34:%.*]] = call { double, double } @__divdc3(double [[TMP33]])
-; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <4 x double> [[TMP30]], i32 2
+; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <4 x double> [[TMP30]], i64 2
 ; CHECK-NEXT:    [[TMP36:%.*]] = call { double, double } @__divdc3(double [[TMP35]])
-; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <4 x double> [[TMP30]], i32 3
+; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <4 x double> [[TMP30]], i64 3
 ; CHECK-NEXT:    [[TMP38:%.*]] = call { double, double } @__divdc3(double [[TMP37]])
 ; CHECK-NEXT:    ret { double, double } [[TMP38]]
 ;
