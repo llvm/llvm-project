@@ -213,17 +213,12 @@ public:
   ///
   /// Often this will be able to simply return the declaration info.
   const CGFunctionInfo &arrangeCall(const CGFunctionInfo &declFI,
-                                    const CallArgList &args);
-  const CGFunctionInfo &arrangeCall(const CGFunctionInfo &declFI,
                                     const CallArgList &args,
                                     const FunctionDecl *ABIInfoFD);
 
   /// Free functions are functions that are compatible with an ordinary
   /// C function pointer type.
   const CGFunctionInfo &arrangeFunctionDeclaration(const GlobalDecl GD);
-  const CGFunctionInfo &arrangeFreeFunctionCall(const CallArgList &Args,
-                                                const FunctionType *Ty,
-                                                bool ChainCall);
   const CGFunctionInfo &arrangeFreeFunctionCall(const CallArgList &Args,
                                                 const FunctionType *Ty,
                                                 bool ChainCall,
@@ -271,13 +266,6 @@ public:
   /// C++ methods have some special rules and also have implicit parameters.
   const CGFunctionInfo &arrangeCXXMethodDeclaration(const CXXMethodDecl *MD);
   const CGFunctionInfo &arrangeCXXStructorDeclaration(GlobalDecl GD);
-  const CGFunctionInfo &arrangeCXXConstructorCall(const CallArgList &Args,
-                                                  const CXXConstructorDecl *D,
-                                                  CXXCtorType CtorKind,
-                                                  unsigned ExtraPrefixArgs,
-                                                  unsigned ExtraSuffixArgs,
-                                                  bool PassProtoArgs = true);
-
   const CGFunctionInfo &arrangeCXXConstructorCall(
       const CallArgList &Args, const CXXConstructorDecl *D,
       CXXCtorType CtorKind, unsigned ExtraPrefixArgs, unsigned ExtraSuffixArgs,

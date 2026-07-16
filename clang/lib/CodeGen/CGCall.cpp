@@ -503,14 +503,6 @@ getExtParameterInfosForCall(const FunctionProtoType *proto, unsigned prefixArgs,
 /// given CXXConstructorDecl.
 const CGFunctionInfo &CodeGenTypes::arrangeCXXConstructorCall(
     const CallArgList &args, const CXXConstructorDecl *D, CXXCtorType CtorKind,
-    unsigned ExtraPrefixArgs, unsigned ExtraSuffixArgs, bool PassProtoArgs) {
-  return arrangeCXXConstructorCall(args, D, CtorKind, ExtraPrefixArgs,
-                                   ExtraSuffixArgs,
-                                   /*FD=*/nullptr, PassProtoArgs);
-}
-
-const CGFunctionInfo &CodeGenTypes::arrangeCXXConstructorCall(
-    const CallArgList &args, const CXXConstructorDecl *D, CXXCtorType CtorKind,
     unsigned ExtraPrefixArgs, unsigned ExtraSuffixArgs,
     const FunctionDecl *ABIInfoFD, bool PassProtoArgs) {
   CanQualTypeList ArgTypes;
@@ -736,11 +728,6 @@ arrangeFreeFunctionLikeCall(CodeGenTypes &CGT, CodeGenModule &CGM,
 /// because the function might be unprototyped, in which case it's
 /// target-dependent in crazy ways.
 const CGFunctionInfo &CodeGenTypes::arrangeFreeFunctionCall(
-    const CallArgList &args, const FunctionType *fnType, bool chainCall) {
-  return arrangeFreeFunctionCall(args, fnType, chainCall, /*FD=*/nullptr);
-}
-
-const CGFunctionInfo &CodeGenTypes::arrangeFreeFunctionCall(
     const CallArgList &args, const FunctionType *fnType, bool chainCall,
     const FunctionDecl *ABIInfoFD) {
   return arrangeFreeFunctionLikeCall(*this, CGM, args, fnType,
@@ -752,6 +739,8 @@ const CGFunctionInfo &CodeGenTypes::arrangeFreeFunctionCall(
 const CGFunctionInfo &
 CodeGenTypes::arrangeBlockFunctionCall(const CallArgList &args,
                                        const FunctionType *fnType) {
+  // FIXME: Pass the enclosing function's ABI information so block calls use
+  // the caller's target features.
   return arrangeFreeFunctionLikeCall(*this, CGM, args, fnType, 1,
                                      /*chainCall=*/false, nullptr);
 }
@@ -763,6 +752,7 @@ CodeGenTypes::arrangeBlockFunctionDeclaration(const FunctionProtoType *proto,
       getExtParameterInfosForCall(proto, 1, params.size());
   CanQualTypeList argTypes = getArgTypesForDeclaration(Context, params);
 
+  // FIXME: Use the block's target features when arranging its invoke function.
   return arrangeLLVMFunctionInfo(GetReturnType(proto->getReturnType()),
                                  FnInfoOpts::None, argTypes,
                                  proto->getExtInfo(), paramInfos,
@@ -834,11 +824,6 @@ const CGFunctionInfo &CodeGenTypes::arrangeNullaryFunction() {
   return arrangeLLVMFunctionInfo(getContext().VoidTy, FnInfoOpts::None, {},
                                  FunctionType::ExtInfo(), {},
                                  RequiredArgs::All);
-}
-
-const CGFunctionInfo &CodeGenTypes::arrangeCall(const CGFunctionInfo &signature,
-                                                const CallArgList &args) {
-  return arrangeCall(signature, args, /*FD=*/nullptr);
 }
 
 const CGFunctionInfo &CodeGenTypes::arrangeCall(const CGFunctionInfo &signature,

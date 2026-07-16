@@ -369,8 +369,10 @@ CGObjCRuntime::getMessageSendInfo(const ObjCMethodDecl *method,
     const CGFunctionInfo &signature =
       CGM.getTypes().arrangeObjCMessageSendSignature(method, callArgs[0].Ty);
 
+    // FIXME: Propagate the enclosing function's ABI information when arranging
+    // Objective-C message sends.
     const CGFunctionInfo &signatureForCall =
-      CGM.getTypes().arrangeCall(signature, callArgs);
+        CGM.getTypes().arrangeCall(signature, callArgs, /*ABIInfoFD=*/nullptr);
 
     return MessageSendInfo(signatureForCall, signatureType);
   }
