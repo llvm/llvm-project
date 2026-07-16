@@ -14,6 +14,8 @@ declare <2 x half> @llvm.convert.from.arbitrary.fp.v2f16.v2i8(<2 x i8>, metadata
 
 declare half @llvm.convert.from.arbitrary.fp.f16.i8(i8, metadata)
 declare double @llvm.convert.from.arbitrary.fp.f64.i8(i8, metadata)
+declare bfloat @llvm.convert.from.arbitrary.fp.bf16.i8(i8, metadata)
+declare <2 x bfloat> @llvm.convert.from.arbitrary.fp.v2bf16.v2i8(<2 x i8>, metadata)
 
 ; Float8E5M2
 ; Layout: sign(1) exp(5) mant(2), bias=15
@@ -1423,4 +1425,211 @@ define <2 x half> @from_f8e4m3fn_v2f16(<2 x i8> %x) {
 ; CHECK-NEXT:    ret;
   %r = call <2 x half> @llvm.convert.from.arbitrary.fp.v2f16.v2i8(<2 x i8> %x, metadata !"Float8E4M3FN")
   ret <2 x half> %r
+}
+
+define bfloat @from_f8e5m2_bf16(i8 %x) {
+; CHECK-LABEL: from_f8e5m2_bf16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<6>;
+; CHECK-NEXT:    .reg .b16 %rs<32>;
+; CHECK-NEXT:    .reg .b32 %r<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b8 %rs1, [from_f8e5m2_bf16_param_0];
+; CHECK-NEXT:    shl.b16 %rs2, %rs1, 8;
+; CHECK-NEXT:    and.b16 %rs3, %rs2, -32768;
+; CHECK-NEXT:    and.b16 %rs4, %rs1, 3;
+; CHECK-NEXT:    cvt.u32.u16 %r1, %rs4;
+; CHECK-NEXT:    shl.b32 %r2, %r1, 16;
+; CHECK-NEXT:    clz.b32 %r3, %r2;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r3;
+; CHECK-NEXT:    sub.s16 %rs6, 126, %rs5;
+; CHECK-NEXT:    shl.b16 %rs7, %rs6, 7;
+; CHECK-NEXT:    or.b16 %rs8, %rs3, %rs7;
+; CHECK-NEXT:    sub.s16 %rs9, 15, %rs5;
+; CHECK-NEXT:    cvt.u32.u16 %r4, %rs9;
+; CHECK-NEXT:    mov.b16 %rs10, 1;
+; CHECK-NEXT:    shl.b16 %rs11, %rs10, %r4;
+; CHECK-NEXT:    xor.b16 %rs12, %rs4, %rs11;
+; CHECK-NEXT:    add.s16 %rs13, %rs5, -8;
+; CHECK-NEXT:    cvt.u32.u16 %r5, %rs13;
+; CHECK-NEXT:    shl.b16 %rs14, %rs12, %r5;
+; CHECK-NEXT:    or.b16 %rs15, %rs8, %rs14;
+; CHECK-NEXT:    shr.u16 %rs16, %rs1, 2;
+; CHECK-NEXT:    and.b16 %rs17, %rs16, 31;
+; CHECK-NEXT:    shl.b16 %rs18, %rs17, 7;
+; CHECK-NEXT:    or.b16 %rs19, %rs18, %rs3;
+; CHECK-NEXT:    shl.b16 %rs20, %rs4, 5;
+; CHECK-NEXT:    or.b16 %rs21, %rs19, %rs20;
+; CHECK-NEXT:    add.s16 %rs22, %rs21, 14336;
+; CHECK-NEXT:    setp.ne.b16 %p1, %rs4, 0;
+; CHECK-NEXT:    selp.b16 %rs23, %rs15, %rs22, %p1;
+; CHECK-NEXT:    setp.eq.b16 %p2, %rs17, 0;
+; CHECK-NEXT:    selp.b16 %rs24, %rs23, %rs22, %p2;
+; CHECK-NEXT:    or.b16 %rs25, %rs17, %rs4;
+; CHECK-NEXT:    setp.eq.b16 %p3, %rs25, 0;
+; CHECK-NEXT:    selp.b16 %rs26, %rs3, %rs24, %p3;
+; CHECK-NEXT:    setp.eq.b16 %p4, %rs4, 0;
+; CHECK-NEXT:    or.b16 %rs27, %rs3, 32640;
+; CHECK-NEXT:    selp.b16 %rs28, %rs27, %rs26, %p4;
+; CHECK-NEXT:    setp.eq.b16 %p5, %rs17, 31;
+; CHECK-NEXT:    selp.b16 %rs29, %rs28, %rs26, %p5;
+; CHECK-NEXT:    selp.b16 %rs30, 32704, %rs29, %p1;
+; CHECK-NEXT:    selp.b16 %rs31, %rs30, %rs29, %p5;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %rs31;
+; CHECK-NEXT:    ret;
+  %r = call bfloat @llvm.convert.from.arbitrary.fp.bf16.i8(i8 %x, metadata !"Float8E5M2")
+  ret bfloat %r
+}
+
+define bfloat @from_f8e4m3fn_bf16(i8 %x) {
+; CHECK-LABEL: from_f8e4m3fn_bf16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<6>;
+; CHECK-NEXT:    .reg .b16 %rs<29>;
+; CHECK-NEXT:    .reg .b32 %r<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b8 %rs1, [from_f8e4m3fn_bf16_param_0];
+; CHECK-NEXT:    shl.b16 %rs2, %rs1, 8;
+; CHECK-NEXT:    and.b16 %rs3, %rs2, -32768;
+; CHECK-NEXT:    and.b16 %rs4, %rs1, 7;
+; CHECK-NEXT:    cvt.u32.u16 %r1, %rs4;
+; CHECK-NEXT:    shl.b32 %r2, %r1, 16;
+; CHECK-NEXT:    clz.b32 %r3, %r2;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r3;
+; CHECK-NEXT:    sub.s16 %rs6, 133, %rs5;
+; CHECK-NEXT:    shl.b16 %rs7, %rs6, 7;
+; CHECK-NEXT:    or.b16 %rs8, %rs3, %rs7;
+; CHECK-NEXT:    sub.s16 %rs9, 15, %rs5;
+; CHECK-NEXT:    cvt.u32.u16 %r4, %rs9;
+; CHECK-NEXT:    mov.b16 %rs10, 1;
+; CHECK-NEXT:    shl.b16 %rs11, %rs10, %r4;
+; CHECK-NEXT:    xor.b16 %rs12, %rs4, %rs11;
+; CHECK-NEXT:    add.s16 %rs13, %rs5, -8;
+; CHECK-NEXT:    cvt.u32.u16 %r5, %rs13;
+; CHECK-NEXT:    shl.b16 %rs14, %rs12, %r5;
+; CHECK-NEXT:    or.b16 %rs15, %rs8, %rs14;
+; CHECK-NEXT:    shr.u16 %rs16, %rs1, 3;
+; CHECK-NEXT:    and.b16 %rs17, %rs16, 15;
+; CHECK-NEXT:    shl.b16 %rs18, %rs17, 7;
+; CHECK-NEXT:    or.b16 %rs19, %rs18, %rs3;
+; CHECK-NEXT:    shl.b16 %rs20, %rs4, 4;
+; CHECK-NEXT:    or.b16 %rs21, %rs19, %rs20;
+; CHECK-NEXT:    add.s16 %rs22, %rs21, 15360;
+; CHECK-NEXT:    setp.ne.b16 %p1, %rs4, 0;
+; CHECK-NEXT:    selp.b16 %rs23, %rs15, %rs22, %p1;
+; CHECK-NEXT:    setp.eq.b16 %p2, %rs17, 0;
+; CHECK-NEXT:    selp.b16 %rs24, %rs23, %rs22, %p2;
+; CHECK-NEXT:    or.b16 %rs25, %rs17, %rs4;
+; CHECK-NEXT:    setp.eq.b16 %p3, %rs25, 0;
+; CHECK-NEXT:    selp.b16 %rs26, %rs3, %rs24, %p3;
+; CHECK-NEXT:    setp.eq.b16 %p4, %rs4, 7;
+; CHECK-NEXT:    selp.b16 %rs27, 32704, %rs26, %p4;
+; CHECK-NEXT:    setp.eq.b16 %p5, %rs17, 15;
+; CHECK-NEXT:    selp.b16 %rs28, %rs27, %rs26, %p5;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %rs28;
+; CHECK-NEXT:    ret;
+  %r = call bfloat @llvm.convert.from.arbitrary.fp.bf16.i8(i8 %x, metadata !"Float8E4M3FN")
+  ret bfloat %r
+}
+
+define <2 x bfloat> @from_f8e5m2_v2bf16(<2 x i8> %x) {
+; CHECK-LABEL: from_f8e5m2_v2bf16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<11>;
+; CHECK-NEXT:    .reg .b16 %rs<58>;
+; CHECK-NEXT:    .reg .b32 %r<27>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [from_f8e5m2_v2bf16_param_0];
+; CHECK-NEXT:    mov.b32 %r1, {%rs1, %rs2};
+; CHECK-NEXT:    and.b32 %r2, %r1, 196611;
+; CHECK-NEXT:    mov.b32 {%rs3, %rs4}, %r2;
+; CHECK-NEXT:    cvt.u32.u16 %r3, %rs4;
+; CHECK-NEXT:    shl.b32 %r4, %r3, 16;
+; CHECK-NEXT:    clz.b32 %r5, %r4;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r5;
+; CHECK-NEXT:    sub.s16 %rs6, 15, %rs5;
+; CHECK-NEXT:    cvt.u32.u16 %r6, %rs6;
+; CHECK-NEXT:    mov.b16 %rs7, 1;
+; CHECK-NEXT:    shl.b16 %rs8, %rs7, %r6;
+; CHECK-NEXT:    cvt.u32.u16 %r7, %rs3;
+; CHECK-NEXT:    shl.b32 %r8, %r7, 16;
+; CHECK-NEXT:    clz.b32 %r9, %r8;
+; CHECK-NEXT:    cvt.u16.u32 %rs9, %r9;
+; CHECK-NEXT:    sub.s16 %rs10, 15, %rs9;
+; CHECK-NEXT:    cvt.u32.u16 %r10, %rs10;
+; CHECK-NEXT:    shl.b16 %rs11, %rs7, %r10;
+; CHECK-NEXT:    mov.b32 %r11, {%rs11, %rs8};
+; CHECK-NEXT:    xor.b32 %r12, %r2, %r11;
+; CHECK-NEXT:    mov.b32 {%rs12, %rs13}, %r12;
+; CHECK-NEXT:    add.s16 %rs14, %rs5, -8;
+; CHECK-NEXT:    cvt.u32.u16 %r13, %rs14;
+; CHECK-NEXT:    shl.b16 %rs15, %rs13, %r13;
+; CHECK-NEXT:    add.s16 %rs16, %rs9, -8;
+; CHECK-NEXT:    cvt.u32.u16 %r14, %rs16;
+; CHECK-NEXT:    shl.b16 %rs17, %rs12, %r14;
+; CHECK-NEXT:    mov.b32 %r15, {%rs17, %rs15};
+; CHECK-NEXT:    shl.b16 %rs18, %rs2, 8;
+; CHECK-NEXT:    and.b16 %rs19, %rs18, -32768;
+; CHECK-NEXT:    shl.b16 %rs20, %rs1, 8;
+; CHECK-NEXT:    and.b16 %rs21, %rs20, -32768;
+; CHECK-NEXT:    mov.b32 %r16, {%rs21, %rs19};
+; CHECK-NEXT:    sub.s16 %rs22, 126, %rs5;
+; CHECK-NEXT:    shl.b16 %rs23, %rs22, 7;
+; CHECK-NEXT:    sub.s16 %rs24, 126, %rs9;
+; CHECK-NEXT:    shl.b16 %rs25, %rs24, 7;
+; CHECK-NEXT:    mov.b32 %r17, {%rs25, %rs23};
+; CHECK-NEXT:    or.b32 %r18, %r16, %r17;
+; CHECK-NEXT:    or.b32 %r19, %r18, %r15;
+; CHECK-NEXT:    mov.b32 {%rs26, %rs27}, %r19;
+; CHECK-NEXT:    shr.u16 %rs28, %rs2, 2;
+; CHECK-NEXT:    shr.u16 %rs29, %rs1, 2;
+; CHECK-NEXT:    mov.b32 %r20, {%rs29, %rs28};
+; CHECK-NEXT:    and.b32 %r21, %r20, 2031647;
+; CHECK-NEXT:    mov.b32 {%rs30, %rs31}, %r21;
+; CHECK-NEXT:    shl.b16 %rs32, %rs31, 7;
+; CHECK-NEXT:    add.s16 %rs33, %rs32, 14336;
+; CHECK-NEXT:    shl.b16 %rs34, %rs30, 7;
+; CHECK-NEXT:    add.s16 %rs35, %rs34, 14336;
+; CHECK-NEXT:    mov.b32 %r22, {%rs35, %rs33};
+; CHECK-NEXT:    or.b32 %r23, %r16, %r22;
+; CHECK-NEXT:    shl.b16 %rs36, %rs4, 5;
+; CHECK-NEXT:    shl.b16 %rs37, %rs3, 5;
+; CHECK-NEXT:    mov.b32 %r24, {%rs37, %rs36};
+; CHECK-NEXT:    or.b32 %r25, %r23, %r24;
+; CHECK-NEXT:    mov.b32 {%rs38, %rs39}, %r25;
+; CHECK-NEXT:    setp.ne.b16 %p1, %rs4, 0;
+; CHECK-NEXT:    selp.b16 %rs40, %rs27, %rs39, %p1;
+; CHECK-NEXT:    setp.eq.b16 %p2, %rs31, 0;
+; CHECK-NEXT:    selp.b16 %rs41, %rs40, %rs39, %p2;
+; CHECK-NEXT:    or.b16 %rs42, %rs31, %rs4;
+; CHECK-NEXT:    setp.eq.b16 %p3, %rs42, 0;
+; CHECK-NEXT:    selp.b16 %rs43, %rs19, %rs41, %p3;
+; CHECK-NEXT:    or.b32 %r26, %r16, 2139127680;
+; CHECK-NEXT:    mov.b32 {%rs44, %rs45}, %r26;
+; CHECK-NEXT:    setp.eq.b16 %p4, %rs4, 0;
+; CHECK-NEXT:    selp.b16 %rs46, %rs45, %rs43, %p4;
+; CHECK-NEXT:    setp.eq.b16 %p5, %rs31, 31;
+; CHECK-NEXT:    selp.b16 %rs47, %rs46, %rs43, %p5;
+; CHECK-NEXT:    selp.b16 %rs48, 32704, %rs47, %p1;
+; CHECK-NEXT:    selp.b16 %rs49, %rs48, %rs47, %p5;
+; CHECK-NEXT:    setp.ne.b16 %p6, %rs3, 0;
+; CHECK-NEXT:    selp.b16 %rs50, %rs26, %rs38, %p6;
+; CHECK-NEXT:    setp.eq.b16 %p7, %rs30, 0;
+; CHECK-NEXT:    selp.b16 %rs51, %rs50, %rs38, %p7;
+; CHECK-NEXT:    or.b16 %rs52, %rs30, %rs3;
+; CHECK-NEXT:    setp.eq.b16 %p8, %rs52, 0;
+; CHECK-NEXT:    selp.b16 %rs53, %rs21, %rs51, %p8;
+; CHECK-NEXT:    setp.eq.b16 %p9, %rs3, 0;
+; CHECK-NEXT:    selp.b16 %rs54, %rs44, %rs53, %p9;
+; CHECK-NEXT:    setp.eq.b16 %p10, %rs30, 31;
+; CHECK-NEXT:    selp.b16 %rs55, %rs54, %rs53, %p10;
+; CHECK-NEXT:    selp.b16 %rs56, 32704, %rs55, %p6;
+; CHECK-NEXT:    selp.b16 %rs57, %rs56, %rs55, %p10;
+; CHECK-NEXT:    st.param.v2.b16 [func_retval0], {%rs57, %rs49};
+; CHECK-NEXT:    ret;
+  %r = call <2 x bfloat> @llvm.convert.from.arbitrary.fp.v2bf16.v2i8(<2 x i8> %x, metadata !"Float8E5M2")
+  ret <2 x bfloat> %r
 }

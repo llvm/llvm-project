@@ -173,6 +173,7 @@ void Serializer::collect(SmallVectorImpl<uint32_t> &binary) {
   binary.append(typesGlobalValues.begin(), typesGlobalValues.end());
   binary.append(functions.begin(), functions.end());
   binary.append(graphs.begin(), graphs.end());
+  binary.append(graphsDebugInfo.begin(), graphsDebugInfo.end());
 }
 
 #ifndef NDEBUG
@@ -417,6 +418,7 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
   case spirv::Decoration::NoContraction:
   case spirv::Decoration::Constant:
   case spirv::Decoration::Block:
+  case spirv::Decoration::BufferBlock:
   case spirv::Decoration::Invariant:
   case spirv::Decoration::Patch:
   case spirv::Decoration::Coherent:
@@ -770,7 +772,8 @@ LogicalResult Serializer::prepareBasicType(
     // Ideally, Block decorations should be inserted when converting to SPIR-V.
     if (isInterfaceStructPtrType(ptrType)) {
       auto structType = cast<spirv::StructType>(ptrType.getPointeeType());
-      if (!structType.hasDecoration(spirv::Decoration::Block))
+      if (!structType.hasDecoration(spirv::Decoration::Block) &&
+          !structType.hasDecoration(spirv::Decoration::BufferBlock))
         if (failed(emitDecoration(getTypeID(pointeeStruct),
                                   spirv::Decoration::Block)))
           return emitError(loc, "cannot decorate ")
@@ -1062,9 +1065,10 @@ uint32_t Serializer::prepareArrayConstant(Location loc, Type constType,
   uint32_t resultID = getNextID();
   SmallVector<uint32_t, 4> operands = {typeID, resultID};
   operands.reserve(attr.size() + 2);
-  auto elementType = cast<spirv::ArrayType>(constType).getElementType();
-  for (Attribute elementAttr : attr) {
-    if (auto elementID = prepareConstant(loc, elementType, elementAttr)) {
+  spirv::CompositeType compositeType = cast<spirv::CompositeType>(constType);
+  for (auto [idx, elementAttr] : llvm::enumerate(attr)) {
+    if (uint32_t elementID = prepareConstant(
+            loc, compositeType.getElementType(idx), elementAttr)) {
       operands.push_back(elementID);
     } else {
       return 0;
@@ -1611,7 +1615,7 @@ LogicalResult Serializer::emitPhiForBlockArguments(Block *block) {
 
 LogicalResult Serializer::encodeExtensionInstruction(
     Operation *op, StringRef extensionSetName, uint32_t extensionOpcode,
-    ArrayRef<uint32_t> operands) {
+    ArrayRef<uint32_t> operands, SmallVectorImpl<uint32_t> &binary) {
   // Check if the extension has been imported.
   auto &setID = extendedInstSetIDMap[extensionSetName];
   if (!setID) {
@@ -1634,8 +1638,20 @@ LogicalResult Serializer::encodeExtensionInstruction(
   extInstOperands.push_back(setID);
   extInstOperands.push_back(extensionOpcode);
   extInstOperands.append(std::next(operands.begin(), 2), operands.end());
-  encodeInstructionInto(functionBody, spirv::Opcode::OpExtInst,
-                        extInstOperands);
+  encodeInstructionInto(binary, spirv::Opcode::OpExtInst, extInstOperands);
+  return success();
+}
+
+LogicalResult Serializer::encodeExtensionInstruction(
+    Operation *op, StringRef extensionSetName, uint32_t extensionOpcode,
+    ArrayRef<uint32_t> operands) {
+  if (failed(encodeExtensionInstruction(op, extensionSetName, extensionOpcode,
+                                        operands, functionBody)))
+    return failure();
+
+  if (extensionSetName == extTosa)
+    updateTosaOpsMap(op);
+
   return success();
 }
 
@@ -1750,8 +1766,10 @@ LogicalResult Serializer::processOpWithoutGrammarAttr(Operation *op,
   for (Value operand : op->getOperands())
     operands.push_back(getValueID(operand));
 
-  if (failed(emitDebugLine(functionBody, loc)))
-    return failure();
+  if (extInstSet != extTosa)
+    // OpLine cannot be present in graphs
+    if (failed(emitDebugLine(functionBody, loc)))
+      return failure();
 
   if (extInstSet.empty()) {
     encodeInstructionInto(functionBody, static_cast<spirv::Opcode>(opcode),
@@ -1769,6 +1787,16 @@ LogicalResult Serializer::processOpWithoutGrammarAttr(Operation *op,
   }
 
   return success();
+}
+
+void Serializer::updateTosaOpsMap(Operation *op) {
+  if (!options.emitDebugInfo)
+    return;
+
+  if (auto graphOp = dyn_cast<spirv::GraphARMOp>(op->getParentOp())) {
+    if (uint32_t graphID = getFunctionID(graphOp.getName()))
+      tosaOpsMap[graphID][op->getLoc()].insert(op);
+  }
 }
 
 LogicalResult Serializer::emitDecoration(uint32_t target,

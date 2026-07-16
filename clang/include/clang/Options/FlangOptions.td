@@ -190,6 +190,13 @@ defm ppc_native_vec_elem_order: BoolOptionWithoutMarshalling<"f", "ppc-native-ve
   PosFlag<SetTrue, [], [ClangOption], "Specifies PowerPC native vector element order (default)">,
   NegFlag<SetFalse, [], [ClangOption], "Specifies PowerPC non-native vector element order">>;
 defm unsigned : OptInFC1FFlag<"unsigned", "Enables UNSIGNED type">;
+defm enumeration_type : OptInFC1FFlag<"enumeration-type", "Enables F2023 ENUMERATION TYPE (experimental; FIR lowering is incomplete)">;
+defm openacc_default_none_scalars_strict : OptOutFC1FFlag<"openacc-default-none-scalars-strict",
+  "Require explicit data clauses for all variables (including scalars) under OpenACC DEFAULT(NONE)",
+  "Allow scalars without explicit data clauses under OpenACC DEFAULT(NONE) (default, pre-OpenACC-3.2 behavior)">;
+defm openacc_multiple_names_in_routine : OptOutFC1FFlag<"openacc-multiple-names-in-routine",
+  "Accept multiple names in OpenACC ROUTINE directive (extension)",
+  "Do not accept multiple names in OpenACC ROUTINE directive">;
 
 def fno_automatic : Flag<["-"], "fno-automatic">, Group<f_Group>,
   HelpText<"Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE">;
@@ -279,16 +286,14 @@ defm unsafe_cray_pointers : BoolOptionWithoutMarshalling<"f", "unsafe-cray-point
   PosFlag<SetTrue, [], [FlangOption, FC1Option], "Optimizations allow for unsafe Cray pointer usages">,
   NegFlag<SetFalse, [], [FlangOption, FC1Option], "Optimizations don't allow for unsafe Cray pointer usages (default)">>;
 
-def relaxed_c_loc : Flag<["-"], "frelaxed-c-loc">, Group<f_Group>,
+def relaxed_c_loc : Flag<["-"], "frelaxed-c-loc-checks">, Group<f_Group>,
   Visibility<[FlangOption, FC1Option]>,
-  HelpText<"Unsafe relaxation of C_LOC() argument restrictions for compatibility">,
+  HelpText<"Allow a data object or function pointer as the C_LOC() argument">,
   DocBrief<[{
-    Unsafe relaxation of C_LOC() argument restrictions for compatibility.
-    All C_LOC values should be passed directly to C calls.
-
-    This is unsafe, because it can be used to create aliases the compiler
-    is unaware of, please fix your applications instead of using this flag.
-    This may be removed in the future.}]>;
+    Allow a data object or function pointer as the C_LOC() argument
+    (not just pointers/targets). The compiler will not reason about aliases
+    created through non-target non-pointer arguments and code generated
+    using such aliases may exhibit unexpected behavior.}]>;
 
 def fhermetic_module_files : Flag<["-"], "fhermetic-module-files">, Group<f_Group>,
   HelpText<"Emit hermetic module files (no nested USE association)">;
@@ -304,6 +309,23 @@ def ffast_real_mod : Flag<["-"], "ffast-real-mod">, Group<f_Group>,
   HelpText<"Enable optimization of MOD for REAL types">;
 def fno_fast_real_mod : Flag<["-"], "fno-fast-real-mod">, Group<f_Group>,
   HelpText<"Disable optimization of MOD for REAL types in presence of -ffast-math">;
+
+defm real_sum_reassociation
+    : BoolOptionWithoutMarshalling<
+          "f", "real-sum-reassociation",
+          PosFlag<SetTrue, [], [],
+                  "Enable Fortran-standard compliant reassociation within "
+                  "individual REAL sum expressions. This may change exact "
+                  "floating-point results">,
+          NegFlag<SetFalse, [], [],
+                  "Disable reassociation within individual REAL sum "
+                  "expressions">>,
+      DocBrief<[{
+        Enable Fortran-standard compliant reassociation within individual
+        ``REAL`` sum expressions. This can improve optimization opportunities
+        and may change exact floating-point results while preserving
+        standard-conforming Fortran semantics.
+      }]>;
 
 defm init_global_zero : BoolOptionWithoutMarshalling<"f", "init-global-zero",
   PosFlag<SetTrue, [], [], "Zero initialize globals without default initialization (default)">,
@@ -392,6 +414,7 @@ def fno_reformat : Flag<["-"], "fno-reformat">, Group<Preprocessor_Group>,
 def fpreprocess_include_lines : Flag<["-"], "fpreprocess-include-lines">, Group<Preprocessor_Group>,
   HelpText<"Treat INCLUDE lines like #include directives in -E mode">;
 defm analyzed_objects_for_unparse : OptOutFC1FFlag<"analyzed-objects-for-unparse", "", "Do not use the analyzed objects when unparsing">;
+def foffload_device : Flag<["-"], "foffload-device">, Group<f_Group>, Flags<[HelpHidden]>;
 
 def emit_fir : Flag<["-"], "emit-fir">, Group<Action_Group>,
   HelpText<"Build the parse tree, then lower it to FIR">;

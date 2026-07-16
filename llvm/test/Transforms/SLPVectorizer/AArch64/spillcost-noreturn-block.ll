@@ -11,20 +11,20 @@ declare void @abort() noreturn
 ; YAML-NEXT: Function:        test_noreturn_in_loop_body
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'Stores SLP vectorized with cost '
-; YAML-NEXT:   - Cost:            '-99'
+; YAML-NEXT:   - Cost:            '-101'
 ; YAML-NEXT:   - String:          ' and with tree size '
 ; YAML-NEXT:   - TreeSize:        '6'
 ; YAML-NEXT: ...
 define void @test_noreturn_in_loop_body(ptr noalias %res, ptr noalias %in, double %x, double %y, i1 %err) {
 ; CHECK-LABEL: define void @test_noreturn_in_loop_body(
 ; CHECK-SAME: ptr noalias [[RES:%.*]], ptr noalias [[IN:%.*]], double [[X:%.*]], double [[Y:%.*]], i1 [[ERR:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[X]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[Y]], i32 1
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[X]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[Y]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = fdiv <2 x double> splat (double 1.000000e+00), [[TMP1]]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY:.*]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IV]], 100
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP_BODY:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_BODY]]:

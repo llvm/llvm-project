@@ -300,8 +300,7 @@ define i32 @freeze_cttz(i32 %a0) nounwind {
 define i32 @freeze_cttz_poison(i32 %a0) nounwind {
 ; X86-LABEL: freeze_cttz_poison:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    bsfl %eax, %ecx
+; X86-NEXT:    bsfl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl $32, %eax
 ; X86-NEXT:    cmovnel %ecx, %eax
 ; X86-NEXT:    retl

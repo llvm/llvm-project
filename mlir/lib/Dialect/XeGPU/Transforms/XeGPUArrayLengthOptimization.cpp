@@ -10,8 +10,8 @@
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
-#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/Dialect/XeGPU/uArch/uArchBase.h"
+#include "mlir/Dialect/XeGPU/uArch/uArchCommon.h"
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -104,6 +104,9 @@ public:
 
   LogicalResult matchAndRewrite(xegpu::CreateNdDescOp op,
                                 PatternRewriter &rewriter) const override {
+    // sub-byte type is not supported for now.
+    if (op.getType().getElementTypeBitWidth() < 8)
+      return failure();
     int64_t subgroupSize = getSubgroupSize(op);
     auto tdescType = op.getType();
     if (!needsOptimization(tdescType, subgroupSize))

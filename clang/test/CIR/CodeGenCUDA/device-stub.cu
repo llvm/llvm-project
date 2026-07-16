@@ -41,6 +41,12 @@ __global__ void kernelfunc(int i, int j, int k) {}
 
 void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 
+// Device-side shadows: exercise the __cudaRegisterVar code path alongside the
+// existing __cudaRegisterFunction kernel registration.
+__device__ int a;
+__constant__ int b;
+__device__ _BitInt(36) c;
+
 // Check module constructor is registered in module attributes.
 // CIR: cir.global_ctors = [#cir.global_ctor<"__cuda_module_ctor", 65535>]
 
@@ -57,6 +63,14 @@ void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 
 // CIR: cir.func private @__cudaRegisterFatBinaryEnd(!cir.ptr<!cir.ptr<!void>>)
 
+// __cudaRegisterVar runtime declaration and per-variable name strings for
+// device shadows. These are emitted between __cudaRegisterFatBinaryEnd and
+// __cudaRegisterFunction; relative order is not significant.
+// CIR-DAG: cir.func private @__cudaRegisterVar(!cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>, !cir.ptr<!void>, !cir.ptr<!void>, !s32i, !u64i, !s32i, !s32i)
+// CIR-DAG: cir.global "private" constant cir_private @".stra" = #cir.const_array<"a" : !cir.array<!u8i x 2>, trailing_zeros>
+// CIR-DAG: cir.global "private" constant cir_private @".strb" = #cir.const_array<"b" : !cir.array<!u8i x 2>, trailing_zeros>
+// CIR-DAG: cir.global "private" constant cir_private @".strc" = #cir.const_array<"c" : !cir.array<!u8i x 2>, trailing_zeros>
+
 // Check the __cudaRegisterFunction runtime declaration:
 //   int __cudaRegisterFunction(void**, void*, void*, void*, int,
 //                              void*, void*, void*, void*, void*)
@@ -65,8 +79,9 @@ void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 // Check the device-side name string for kernelfunc (mangled, null-terminated).
 // CIR: cir.global "private" constant cir_private @".str_Z10kernelfunciii" = #cir.const_array<"_Z10kernelfunciii" : !cir.array<!u8i x 18>, trailing_zeros> : !cir.array<!u8i x 18>
 
-// Check __cuda_register_globals body: one __cudaRegisterFunction call per kernel.
-// CIR: cir.func internal private @__cuda_register_globals(%arg0: !cir.ptr<!cir.ptr<!void>>
+// Check __cuda_register_globals body: __cudaRegisterFunction for each kernel,
+// then __cudaRegisterVar for each device shadow.
+// CIR: cir.func internal private @__cuda_register_globals(%[[FATBIN:.*]]: !cir.ptr<!cir.ptr<!void>>
 // CIR-NEXT: %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
 // CIR-NEXT: %[[STR_ADDR:.*]] = cir.get_global @".str_Z10kernelfunciii"
 // CIR-NEXT: %[[DEVICE_FUNC:.*]] = cir.cast bitcast %[[STR_ADDR]]
@@ -74,6 +89,36 @@ void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 // CIR-NEXT: %[[HOST_FUNC:.*]] = cir.cast bitcast %[[HOST_FUNC_RAW]]
 // CIR-NEXT: %[[THREAD_LIMIT:.*]] = cir.const #cir.int<-1> : !s32i
 // CIR-NEXT: cir.call @__cudaRegisterFunction(%{{.*}}, %[[HOST_FUNC]], %[[DEVICE_FUNC]], %[[DEVICE_FUNC]], %[[THREAD_LIMIT]], %[[NULL]], %[[NULL]], %[[NULL]], %[[NULL]], %[[NULL]])
+// Registration for __device__ int a (constant=0):
+// CIR: %[[#NAMEA_RAW:]] = cir.get_global @".stra"
+// CIR-NEXT: %[[#NAMEA:]] = cir.cast bitcast %[[#NAMEA_RAW]]
+// CIR-NEXT: %[[#HOSTA_RAW:]] = cir.get_global @a
+// CIR-NEXT: %[[#HOSTA:]] = cir.cast bitcast %[[#HOSTA_RAW]]
+// CIR-NEXT: %[[#EXTA:]] = cir.const #cir.int<0> : !s32i
+// CIR-NEXT: %[[#SZA:]] = cir.const #cir.int<4> : !u64i
+// CIR-NEXT: %[[#CONA:]] = cir.const #cir.int<0> : !s32i
+// CIR-NEXT: %[[#NORMA:]] = cir.const #cir.int<0> : !s32i
+// CIR-NEXT: cir.call @__cudaRegisterVar(%[[FATBIN]], %[[#HOSTA]], %[[#NAMEA]], %[[#NAMEA]], %[[#EXTA]], %[[#SZA]], %[[#CONA]], %[[#NORMA]])
+// Registration for __constant__ int b (constant=1):
+// CIR: %[[#NAMEB_RAW:]] = cir.get_global @".strb"
+// CIR-NEXT: %[[#NAMEB:]] = cir.cast bitcast %[[#NAMEB_RAW]]
+// CIR-NEXT: %[[#HOSTB_RAW:]] = cir.get_global @b
+// CIR-NEXT: %[[#HOSTB:]] = cir.cast bitcast %[[#HOSTB_RAW]]
+// CIR-NEXT: %[[#EXTB:]] = cir.const #cir.int<0> : !s32i
+// CIR-NEXT: %[[#SZB:]] = cir.const #cir.int<4> : !u64i
+// CIR-NEXT: %[[#CONB:]] = cir.const #cir.int<1> : !s32i
+// CIR-NEXT: %[[#NORMB:]] = cir.const #cir.int<0> : !s32i
+// CIR-NEXT: cir.call @__cudaRegisterVar(%[[FATBIN]], %[[#HOSTB]], %[[#NAMEB]], %[[#NAMEB]], %[[#EXTB]], %[[#SZB]], %[[#CONB]], %[[#NORMB]])
+// Registration for __device__ _BitInt(36)
+// CIR: %[[#NAMEC_RAW:]] = cir.get_global @".strc"
+// CIR-NEXT: %[[#NAMEC:]] = cir.cast bitcast %[[#NAMEC_RAW]]
+// CIR-NEXT: %[[#HOSTC_RAW:]] = cir.get_global @c
+// CIR-NEXT: %[[#HOSTC:]] = cir.cast bitcast %[[#HOSTC_RAW]]
+// CIR-NEXT: %[[#EXTC:]] = cir.const #cir.int<0> : !s32i
+// CIR-NEXT: %[[#SZC:]] = cir.const #cir.int<8> : !u64i
+// CIR-NEXT: %[[#CONC:]] = cir.const #cir.int<0> : !s32i
+// CIR-NEXT: %[[#NORMC:]] = cir.const #cir.int<0> : !s32i
+// CIR-NEXT: cir.call @__cudaRegisterVar(%[[FATBIN]], %[[#HOSTC]], %[[#NAMEC]], %[[#NAMEC]], %[[#EXTC]], %[[#SZC]], %[[#CONC]], %[[#NORMC]])
 // CIR-NEXT: cir.return
 
 // CIR: cir.global "private" constant cir_private @__cuda_fatbin_str = #cir.const_array<"GPU binary would be here." : !cir.array<!u8i x 25>> : !cir.array<!u8i x 25> {alignment = 8 : i64, section = ".nv_fatbin"}
@@ -111,8 +156,11 @@ void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 // OGCG: @__cuda_gpubin_handle = internal global ptr null
 // OGCG: @llvm.global_ctors = appending global {{.*}}@__cuda_module_ctor
 
-// OGCG: define internal void @__cuda_register_globals
-// OGCG: call{{.*}}__cudaRegisterFunction(ptr %0, {{.*}}kernelfunc{{.*}}, ptr @0
+// OGCG: define internal void @__cuda_register_globals(ptr %[[#OGFATBIN:]])
+// OGCG: call{{.*}}__cudaRegisterFunction(ptr %[[#OGFATBIN]], {{.*}}kernelfunc{{.*}}
+// OGCG: call void @__cudaRegisterVar(ptr %[[#OGFATBIN]], ptr @a, {{.*}}, {{.*}}, i32 0, i64 4, i32 0, i32 0)
+// OGCG: call void @__cudaRegisterVar(ptr %[[#OGFATBIN]], ptr @b, {{.*}}, {{.*}}, i32 0, i64 4, i32 1, i32 0)
+// OGCG: call void @__cudaRegisterVar(ptr %[[#OGFATBIN]], ptr @c, {{.*}}, {{.*}}, i32 0, i64 8, i32 0, i32 0)
 // OGCG: ret void
 
 // OGCG: define internal void @__cuda_module_ctor
@@ -134,8 +182,11 @@ void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 // LLVM: load ptr, ptr @__cuda_gpubin_handle
 // LLVM: call void @__cudaUnregisterFatBinary
 
-// LLVM: define internal void @__cuda_register_globals
-// LLVM: call{{.*}}@__cudaRegisterFunction(ptr %{{.*}}, ptr @{{.*}}kernelfunc{{.*}}, ptr @{{.*}}, ptr @{{.*}}, i32 -1, ptr null, ptr null, ptr null, ptr null, ptr null)
+// LLVM: define internal void @__cuda_register_globals(ptr %[[#FATBIN:]])
+// LLVM: call{{.*}}@__cudaRegisterFunction(ptr %[[#FATBIN]], ptr @{{.*}}kernelfunc{{.*}}, ptr @{{.*}}, ptr @{{.*}}, i32 -1, ptr null, ptr null, ptr null, ptr null, ptr null)
+// LLVM: call void @__cudaRegisterVar(ptr %[[#FATBIN]], ptr @a, ptr @.stra, ptr @.stra, i32 0, i64 4, i32 0, i32 0)
+// LLVM: call void @__cudaRegisterVar(ptr %[[#FATBIN]], ptr @b, ptr @.strb, ptr @.strb, i32 0, i64 4, i32 1, i32 0)
+// LLVM: call void @__cudaRegisterVar(ptr %[[#FATBIN]], ptr @c, ptr @.strc, ptr @.strc, i32 0, i64 8, i32 0, i32 0)
 // LLVM: ret void
 
 // LLVM: define internal void @__cuda_module_ctor

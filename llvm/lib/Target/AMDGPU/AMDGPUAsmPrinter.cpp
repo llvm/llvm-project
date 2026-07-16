@@ -35,6 +35,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/AsmPrinterHandler.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -50,7 +51,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
@@ -94,6 +95,8 @@ LLVMInitializeAMDGPUAsmPrinter() {
                                      llvm::createR600AsmPrinterPass);
   TargetRegistry::RegisterAsmPrinter(getTheGCNTarget(),
                                      createAMDGPUAsmPrinterPass);
+  TargetRegistry::RegisterAsmPrinter(getTheGCNLegacyTarget(),
+                                     createAMDGPUAsmPrinterPass);
 }
 
 namespace {
@@ -116,6 +119,13 @@ AMDGPUAsmPrinter::AMDGPUAsmPrinter(TargetMachine &TM,
                                    std::unique_ptr<MCStreamer> Streamer)
     : AsmPrinter(TM, std::move(Streamer)) {
   assert(OutStreamer && "AsmPrinter constructed without streamer");
+  GetResourceUsage = [this](MachineFunction &MF)
+      -> const AMDGPUResourceUsageAnalysisImpl::SIFunctionResourceInfo * {
+    if (auto *ResourceUsageW =
+            getAnalysisIfAvailable<AMDGPUResourceUsageAnalysisWrapperPass>())
+      return &ResourceUsageW->getResourceInfo();
+    return nullptr;
+  };
 }
 
 StringRef AMDGPUAsmPrinter::getPassName() const {
@@ -144,19 +154,19 @@ void AMDGPUAsmPrinter::initTargetStreamer(Module &M) {
   if (getTargetStreamer() && !getTargetStreamer()->getTargetID())
     initializeTargetID(M);
 
-  if (TM.getTargetTriple().getOS() != Triple::AMDHSA &&
-      TM.getTargetTriple().getOS() != Triple::AMDPAL)
+  const Triple &TT = M.getTargetTriple();
+  if (TT.getOS() != Triple::AMDHSA && TT.getOS() != Triple::AMDPAL)
     return;
 
   getTargetStreamer()->EmitDirectiveAMDGCNTarget();
 
-  if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
+  if (TT.getOS() == Triple::AMDHSA) {
     getTargetStreamer()->EmitDirectiveAMDHSACodeObjectVersion(
         CodeObjectVersion);
     HSAMetadataStream->begin(M, *getTargetStreamer()->getTargetID());
   }
 
-  if (TM.getTargetTriple().getOS() == Triple::AMDPAL)
+  if (TT.getOS() == Triple::AMDPAL)
     getTargetStreamer()->getPALMetadata()->readFromIR(M);
 }
 
@@ -165,12 +175,13 @@ void AMDGPUAsmPrinter::emitEndOfAsmFile(Module &M) {
   if (!IsTargetStreamerInitialized)
     initTargetStreamer(M);
 
-  if (TM.getTargetTriple().getOS() != Triple::AMDHSA)
+  const Triple &TT = M.getTargetTriple();
+  if (TT.getOS() != Triple::AMDHSA)
     getTargetStreamer()->EmitISAVersion();
 
   // Emit HSA Metadata (NT_AMD_AMDGPU_HSA_METADATA).
   // Emit HSA Metadata (NT_AMD_HSA_METADATA).
-  if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
+  if (TT.getOS() == Triple::AMDHSA) {
     HSAMetadataStream->end();
     bool Success = HSAMetadataStream->emitTo(*getTargetStreamer());
     (void)Success;
@@ -198,7 +209,7 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
   // Make sure function's xnack settings are compatible with module's
   // xnack settings.
   if (FunctionTargetID.isXnackSupported() &&
-      FunctionTargetID.getXnackSetting() != IsaInfo::TargetIDSetting::Any &&
+      FunctionTargetID.getXnackSetting() != AMDGPU::TargetIDSetting::Any &&
       FunctionTargetID.getXnackSetting() !=
           getTargetStreamer()->getTargetID()->getXnackSetting()) {
     OutContext.reportError(
@@ -209,7 +220,7 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
   // Make sure function's sramecc settings are compatible with module's
   // sramecc settings.
   if (FunctionTargetID.isSramEccSupported() &&
-      FunctionTargetID.getSramEccSetting() != IsaInfo::TargetIDSetting::Any &&
+      FunctionTargetID.getSramEccSetting() != AMDGPU::TargetIDSetting::Any &&
       FunctionTargetID.getSramEccSetting() !=
           getTargetStreamer()->getTargetID()->getSramEccSetting()) {
     OutContext.reportError(
@@ -234,12 +245,47 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
     HSAMetadataStream->emitKernel(*MF, CurrentProgramInfo);
 }
 
+/// Set bits in a kernel descriptor MCExpr field:
+///   return ((Dst & ~Mask) | (Value << Shift))
+static const MCExpr *setBits(const MCExpr *Dst, const MCExpr *Value,
+                             uint32_t Mask, uint32_t Shift, MCContext &Ctx) {
+  const auto *Shft = MCConstantExpr::create(Shift, Ctx);
+  const auto *Msk = MCConstantExpr::create(Mask, Ctx);
+  Dst = MCBinaryExpr::createAnd(Dst, MCUnaryExpr::createNot(Msk, Ctx), Ctx);
+  Dst = MCBinaryExpr::createOr(Dst, MCBinaryExpr::createShl(Value, Shft, Ctx),
+                               Ctx);
+  return Dst;
+}
+
 void AMDGPUAsmPrinter::endFunction(const MachineFunction *MF) {
   const SIMachineFunctionInfo &MFI = *MF->getInfo<SIMachineFunctionInfo>();
   if (!MFI.isEntryFunction())
     return;
 
   assert(TM.getTargetTriple().getOS() == Triple::AMDHSA);
+
+  const GCNSubtarget &STM = MF->getSubtarget<GCNSubtarget>();
+  MCContext &Ctx = MF->getContext();
+
+  AMDGPU::MCKernelDescriptor KD =
+      getAmdhsaKernelDescriptor(*MF, CurrentProgramInfo);
+
+  // Compute inst_pref_size using MCExpr label subtraction for exact code
+  // size. At this point .Lfunc_end has been emitted (by the base AsmPrinter)
+  // right after the function code, so (Lfunc_end - func_sym) gives the
+  // exact function code size in bytes.
+  if (STM.hasInstPrefSize()) {
+    const MCExpr *CodeSizeExpr = MCBinaryExpr::createSub(
+        MCSymbolRefExpr::create(getFunctionEnd(), OutContext),
+        MCSymbolRefExpr::create(CurrentFnSym, OutContext), OutContext);
+
+    uint32_t Mask, Shift, Width, CacheLineSize;
+    STM.getInstPrefSizeArgs(Mask, Shift, Width, CacheLineSize);
+    const MCExpr *InstPrefSize =
+        AMDGPUMCExpr::createInstPrefSize(CodeSizeExpr, Ctx);
+    KD.compute_pgm_rsrc3 =
+        setBits(KD.compute_pgm_rsrc3, InstPrefSize, Mask, Shift, Ctx);
+  }
 
   auto &Streamer = getTargetStreamer()->getStreamer();
   auto &Context = Streamer.getContext();
@@ -254,13 +300,10 @@ void AMDGPUAsmPrinter::endFunction(const MachineFunction *MF) {
   Streamer.emitValueToAlignment(Align(64), 0, 1, 0);
   ReadOnlySection.ensureMinAlignment(Align(64));
 
-  const GCNSubtarget &STM = MF->getSubtarget<GCNSubtarget>();
-
   SmallString<128> KernelName;
   getNameWithPrefix(KernelName, &MF->getFunction());
   getTargetStreamer()->EmitAmdhsaKernelDescriptor(
-      STM, KernelName, getAmdhsaKernelDescriptor(*MF, CurrentProgramInfo),
-      CurrentProgramInfo.NumVGPRsForWavesPerEU,
+      STM, KernelName, KD, CurrentProgramInfo.NumVGPRsForWavesPerEU,
       MCBinaryExpr::createSub(
           CurrentProgramInfo.NumSGPRsForWavesPerEU,
           AMDGPUMCExpr::createExtraSGPRs(
@@ -367,9 +410,10 @@ void AMDGPUAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 }
 
 bool AMDGPUAsmPrinter::doInitialization(Module &M) {
+  const llvm::Triple &TT = M.getTargetTriple();
   CodeObjectVersion = AMDGPU::getAMDHSACodeObjectVersion(M);
 
-  if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
+  if (TT.getOS() == Triple::AMDHSA) {
     switch (CodeObjectVersion) {
     case AMDGPU::AMDHSA_COV4:
       HSAMetadataStream = std::make_unique<HSAMD::MetadataStreamerMsgPackV4>();
@@ -399,20 +443,32 @@ const AMDGPUMCExpr *createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
                                     const MCExpr *NumVGPRs,
                                     unsigned DynamicVGPRBlockSize,
                                     const GCNSubtarget &STM, MCContext &Ctx) {
-  unsigned MaxWaves = IsaInfo::getMaxWavesPerEU(&STM);
-  unsigned Granule = IsaInfo::getVGPRAllocGranule(&STM, DynamicVGPRBlockSize);
-  unsigned TargetTotalNumVGPRs = IsaInfo::getTotalNumVGPRs(&STM);
-  unsigned Generation = STM.getGeneration();
+  unsigned MaxWaves = IsaInfo::getMaxWavesPerEU(STM);
+  unsigned Granule = IsaInfo::getVGPRAllocGranule(STM, DynamicVGPRBlockSize);
+  unsigned TargetTotalNumVGPRs = IsaInfo::getTotalNumVGPRs(STM);
+
+  // Bake the per-function SGPR budget into the operands so the late-evaluated
+  // MCExpr stays arithmetic. The trap reservation in particular is implicit on
+  // amdhsa and lives on STM, not on the assembler's MCSubtargetInfo.
+  unsigned SGPRTotal = IsaInfo::getTotalNumSGPRs(STM);
+  unsigned SGPRGranule = IsaInfo::getSGPRAllocGranule(STM);
+  unsigned SGPRTrapReserve = STM.hasTrapHandler() ? IsaInfo::TRAP_NUM_SGPRS : 0;
 
   auto CreateExpr = [&Ctx](unsigned Value) {
     return MCConstantExpr::create(Value, Ctx);
   };
 
+  // Zero SGPR count when SGPRs don't limit occupancy, so the MCExpr skips the
+  // SGPR term without having to test the generation itself.
+  const MCExpr *SGPRArg =
+      IsaInfo::isSGPROccupancyLimited(STM) ? NumSGPRs : CreateExpr(0);
+
   return AMDGPUMCExpr::create(AMDGPUMCExpr::AGVK_Occupancy,
                               {CreateExpr(MaxWaves), CreateExpr(Granule),
                                CreateExpr(TargetTotalNumVGPRs),
-                               CreateExpr(Generation), CreateExpr(InitOcc),
-                               NumSGPRs, NumVGPRs},
+                               CreateExpr(InitOcc), CreateExpr(SGPRTotal),
+                               CreateExpr(SGPRGranule),
+                               CreateExpr(SGPRTrapReserve), SGPRArg, NumVGPRs},
                               Ctx);
 }
 
@@ -479,7 +535,7 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
     // Recomputes NumSgprs + implicit SGPRs but all symbols should now be
     // resolvable.
     NumSgpr += IsaInfo::getNumExtraSGPRs(
-        &STM, VCCUsed, FlatUsed,
+        STM, VCCUsed, FlatUsed,
         getTargetStreamer()->getTargetID()->isXnackOnOrAny());
     if (STM.getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS ||
         STM.hasSGPRInitBug()) {
@@ -498,8 +554,7 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
         RI.getSymbol(FnSym->getName(), RIK::RIK_NumAGPR, OutContext);
     uint64_t NumVgpr, NumAgpr;
 
-    MachineModuleInfo &MMI =
-        getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
+    MachineModuleInfo &MMI = *GetMMI();
     MachineFunction *MF = MMI.getMachineFunction(F);
     if (MF && NumVgprSymbol->isVariable() && NumAgprSymbol->isVariable() &&
         TryGetMCExprValue(NumVgprSymbol->getVariableValue(), NumVgpr) &&
@@ -669,14 +724,15 @@ void AMDGPUAsmPrinter::emitAMDGPUInfo(Module &M) {
 }
 
 bool AMDGPUAsmPrinter::doFinalization(Module &M) {
+  const Triple &TT = M.getTargetTriple();
+
   // Pad with s_code_end to help tools and guard against instruction prefetch
   // causing stale data in caches. Arguably this should be done by the linker,
   // which is why this isn't done for Mesa.
   // Don't do it if there is no code.
   const MCSubtargetInfo &STI = *getGlobalSTI();
   if ((AMDGPU::isGFX10Plus(STI) || AMDGPU::isGFX90A(STI)) &&
-      (STI.getTargetTriple().getOS() == Triple::AMDHSA ||
-       STI.getTargetTriple().getOS() == Triple::AMDPAL)) {
+      (TT.getOS() == Triple::AMDHSA || TT.getOS() == Triple::AMDPAL)) {
     MCSection *TextSect = getObjFileLowering().getTextSection();
     if (TextSect->hasInstructions()) {
       OutStreamer->switchSection(TextSect);
@@ -846,8 +902,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   if (!IsTargetStreamerInitialized)
     initTargetStreamer(*MF.getFunction().getParent());
 
-  ResourceUsage =
-      &getAnalysis<AMDGPUResourceUsageAnalysisWrapperPass>().getResourceInfo();
+  ResourceUsage = GetResourceUsage(MF);
   CurrentProgramInfo.reset(MF);
 
   const AMDGPUMachineFunctionInfo *MFI =
@@ -1099,28 +1154,47 @@ void AMDGPUAsmPrinter::emitDVgprSymbol(MachineFunction &MF) {
       MF.getFunction().getCallingConv() == CallingConv::AMDGPU_CS_Chain) {
     MCContext &Ctx = MF.getContext();
     unsigned BlockSize = MFI.getDynamicVGPRBlockSize();
-    MCValue NumVGPRs;
-    if (!CurrentProgramInfo.NumVGPRsForWavesPerEU->evaluateAsRelocatable(
-            NumVGPRs, nullptr) ||
-        !NumVGPRs.isAbsolute()) {
-      llvm_unreachable("unable to resolve NumVGPRs for _dvgpr$ symbol");
-    }
-    // Calculate number of VGPR blocks.
-    // Treat 0 VGPRs as 1 VGPR to avoid underflowing.
-    unsigned NumBlocks =
-        divideCeil(std::max(unsigned(NumVGPRs.getConstant()), 1U), BlockSize);
 
-    if (NumBlocks > 8) {
-      OutContext.reportError({},
-                             "too many DVGPR blocks for _dvgpr$ symbol for '" +
-                                 Twine(CurrentFnSym->getName()) + "'");
-      return;
+    const MCExpr *EncodedBlocks;
+    MCValue NumVGPRs;
+    if (CurrentProgramInfo.NumVGPRsForWavesPerEU->evaluateAsRelocatable(
+            NumVGPRs, nullptr) &&
+        NumVGPRs.isAbsolute()) {
+
+      // Calculate number of VGPR blocks.
+      // Treat 0 VGPRs as 1 VGPR to avoid underflowing.
+      unsigned NumBlocks =
+          divideCeil(std::max(unsigned(NumVGPRs.getConstant()), 1U), BlockSize);
+
+      if (NumBlocks > AMDGPU::IsaInfo::MaxDynamicVGPRBlocks) {
+        OutContext.reportError(
+            {}, "DVGPR block count " + Twine(NumBlocks) +
+                    " exceeds maximum of " +
+                    Twine(AMDGPU::IsaInfo::MaxDynamicVGPRBlocks) +
+                    " for __dvgpr$ symbol for '" +
+                    Twine(CurrentFnSym->getName()) + "'");
+        return;
+      }
+      unsigned EncodedNumBlocks = (NumBlocks - 1) << 3;
+      EncodedBlocks = MCConstantExpr::create(EncodedNumBlocks, Ctx);
+    } else {
+      // Value not yet available so build a symbolic MCExpr:
+      // ((alignTo(max(NumVGPRs, 1), BlockSize) / BlockSize - 1) << 3
+      const MCExpr *One = MCConstantExpr::create(1, Ctx);
+      const MCExpr *BlockSizeConst = MCConstantExpr::create(BlockSize, Ctx);
+      const MCExpr *MaxVGPRs = AMDGPUMCExpr::createMax(
+          {CurrentProgramInfo.NumVGPRsForWavesPerEU, One}, Ctx);
+      const MCExpr *NumBlocks = MCBinaryExpr::createDiv(
+          AMDGPUMCExpr::createAlignTo(MaxVGPRs, BlockSizeConst, Ctx),
+          BlockSizeConst, Ctx);
+      EncodedBlocks =
+          MCBinaryExpr::createShl(MCBinaryExpr::createSub(NumBlocks, One, Ctx),
+                                  MCConstantExpr::create(3, Ctx), Ctx);
     }
-    unsigned EncodedNumBlocks = (NumBlocks - 1) << 3;
+
     // Add to function symbol to create _dvgpr$ symbol.
     const MCExpr *DVgprFuncVal = MCBinaryExpr::createAdd(
-        MCSymbolRefExpr::create(CurrentFnSym, Ctx),
-        MCConstantExpr::create(EncodedNumBlocks, Ctx), Ctx);
+        MCSymbolRefExpr::create(CurrentFnSym, Ctx), EncodedBlocks, Ctx);
     MCSymbol *DVgprFuncSym =
         Ctx.getOrCreateSymbol(Twine("_dvgpr$") + CurrentFnSym->getName());
     OutStreamer->emitAssignment(DVgprFuncSym, DVgprFuncVal);
@@ -1149,12 +1223,12 @@ void AMDGPUAsmPrinter::initializeTargetID(const Module &M) {
       break;
 
     const GCNSubtarget &STM = TM.getSubtarget<GCNSubtarget>(F);
-    const IsaInfo::AMDGPUTargetID &STMTargetID = STM.getTargetID();
+    const AMDGPU::TargetID &STMTargetID = STM.getTargetID();
     if (TSTargetID->isXnackSupported())
-      if (TSTargetID->getXnackSetting() == IsaInfo::TargetIDSetting::Any)
+      if (TSTargetID->getXnackSetting() == AMDGPU::TargetIDSetting::Any)
         TSTargetID->setXnackSetting(STMTargetID.getXnackSetting());
     if (TSTargetID->isSramEccSupported())
-      if (TSTargetID->getSramEccSetting() == IsaInfo::TargetIDSetting::Any)
+      if (TSTargetID->getSramEccSetting() == AMDGPU::TargetIDSetting::Any)
         TSTargetID->setSramEccSetting(STMTargetID.getSramEccSetting());
   }
 }
@@ -1208,7 +1282,8 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       ProgInfo.NumAccVGPR, ProgInfo.NumArchVGPR, Ctx);
 
   ProgInfo.AccumOffset = computeAccumOffset(ProgInfo.NumArchVGPR, Ctx);
-  ProgInfo.TgSplit = STM.isTgSplitEnabled();
+  ProgInfo.TgSplit =
+      STM.hasTgSplitSupport() && AMDGPU::isTgSplitEnabled(MF.getFunction());
   ProgInfo.NumSGPR = GetSymRefExpr(RIK::RIK_NumSGPR);
   ProgInfo.ScratchSize = GetSymRefExpr(RIK::RIK_PrivateSegSize);
   ProgInfo.VCCUsed = GetSymRefExpr(RIK::RIK_UsesVCC);
@@ -1341,11 +1416,11 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   if (STM.getGeneration() >= AMDGPUSubtarget::GFX10) {
     ProgInfo.SGPRBlocks = CreateExpr(0ul);
   } else {
-    ProgInfo.SGPRBlocks = GetNumGPRBlocks(
-        ProgInfo.NumSGPRsForWavesPerEU, IsaInfo::getSGPREncodingGranule(&STM));
+    ProgInfo.SGPRBlocks = GetNumGPRBlocks(ProgInfo.NumSGPRsForWavesPerEU,
+                                          IsaInfo::getSGPREncodingGranule(STM));
   }
   ProgInfo.VGPRBlocks = GetNumGPRBlocks(ProgInfo.NumVGPRsForWavesPerEU,
-                                        IsaInfo::getVGPREncodingGranule(&STM));
+                                        IsaInfo::getVGPREncodingGranule(STM));
 
   const SIModeRegisterDefaults Mode = MFI->getMode();
 
@@ -1438,33 +1513,22 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.LdsSize = STM.isAmdHsaOS() ? 0 : ProgInfo.LDSBlocks;
   ProgInfo.EXCPEnable = 0;
 
-  // return ((Dst & ~Mask) | (Value << Shift))
-  auto SetBits = [&Ctx](const MCExpr *Dst, const MCExpr *Value, uint32_t Mask,
-                        uint32_t Shift) {
-    const auto *Shft = MCConstantExpr::create(Shift, Ctx);
-    const auto *Msk = MCConstantExpr::create(Mask, Ctx);
-    Dst = MCBinaryExpr::createAnd(Dst, MCUnaryExpr::createNot(Msk, Ctx), Ctx);
-    Dst = MCBinaryExpr::createOr(Dst, MCBinaryExpr::createShl(Value, Shft, Ctx),
-                                 Ctx);
-    return Dst;
-  };
-
   if (STM.hasGFX90AInsts()) {
     ProgInfo.ComputePGMRSrc3 =
-        SetBits(ProgInfo.ComputePGMRSrc3, ProgInfo.AccumOffset,
+        setBits(ProgInfo.ComputePGMRSrc3, ProgInfo.AccumOffset,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET,
-                amdhsa::COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET_SHIFT);
+                amdhsa::COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET_SHIFT, Ctx);
     ProgInfo.ComputePGMRSrc3 =
-        SetBits(ProgInfo.ComputePGMRSrc3, CreateExpr(ProgInfo.TgSplit),
+        setBits(ProgInfo.ComputePGMRSrc3, CreateExpr(ProgInfo.TgSplit),
                 amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT,
-                amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT_SHIFT);
+                amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT_SHIFT, Ctx);
   }
 
   if (STM.hasGFX1250Insts())
     ProgInfo.ComputePGMRSrc3 =
-        SetBits(ProgInfo.ComputePGMRSrc3, ProgInfo.NamedBarCnt,
+        setBits(ProgInfo.ComputePGMRSrc3, ProgInfo.NamedBarCnt,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT,
-                amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT_SHIFT);
+                amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT_SHIFT, Ctx);
 
   ProgInfo.Occupancy = createOccupancy(
       STM.computeOccupancy(F, ProgInfo.LDSSize).second,
@@ -1483,38 +1547,26 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
             ", final occupancy is " + Twine(Occupancy));
     F.getContext().diagnose(Diag);
   }
-
-  if (isGFX11Plus(STM)) {
-    uint32_t CodeSizeInBytes = (uint32_t)std::min(
-        ProgInfo.getFunctionCodeSize(MF, true /* IsLowerBound */),
-        (uint64_t)std::numeric_limits<uint32_t>::max());
-    uint32_t CodeSizeInLines = divideCeil(CodeSizeInBytes, 128);
-    uint32_t Field, Shift, Width;
-    if (isGFX11(STM)) {
-      Field = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE;
-      Shift = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_SHIFT;
-      Width = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_WIDTH;
-    } else {
-      Field = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE;
-      Shift = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_SHIFT;
-      Width = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_WIDTH;
-    }
-    uint64_t InstPrefSize = std::min(CodeSizeInLines, (1u << Width) - 1);
-    ProgInfo.ComputePGMRSrc3 = SetBits(ProgInfo.ComputePGMRSrc3,
-                                       CreateExpr(InstPrefSize), Field, Shift);
-  }
 }
 
 static unsigned getRsrcReg(CallingConv::ID CallConv) {
   switch (CallConv) {
-  default: [[fallthrough]];
-  case CallingConv::AMDGPU_CS: return R_00B848_COMPUTE_PGM_RSRC1;
-  case CallingConv::AMDGPU_LS: return R_00B528_SPI_SHADER_PGM_RSRC1_LS;
-  case CallingConv::AMDGPU_HS: return R_00B428_SPI_SHADER_PGM_RSRC1_HS;
-  case CallingConv::AMDGPU_ES: return R_00B328_SPI_SHADER_PGM_RSRC1_ES;
-  case CallingConv::AMDGPU_GS: return R_00B228_SPI_SHADER_PGM_RSRC1_GS;
-  case CallingConv::AMDGPU_VS: return R_00B128_SPI_SHADER_PGM_RSRC1_VS;
-  case CallingConv::AMDGPU_PS: return R_00B028_SPI_SHADER_PGM_RSRC1_PS;
+  default:
+    [[fallthrough]];
+  case CallingConv::AMDGPU_CS:
+    return R_00B848_COMPUTE_PGM_RSRC1;
+  case CallingConv::AMDGPU_LS:
+    return R_00B528_SPI_SHADER_PGM_RSRC1_LS;
+  case CallingConv::AMDGPU_HS:
+    return R_00B428_SPI_SHADER_PGM_RSRC1_HS;
+  case CallingConv::AMDGPU_ES:
+    return R_00B328_SPI_SHADER_PGM_RSRC1_ES;
+  case CallingConv::AMDGPU_GS:
+    return R_00B228_SPI_SHADER_PGM_RSRC1_GS;
+  case CallingConv::AMDGPU_VS:
+    return R_00B128_SPI_SHADER_PGM_RSRC1_VS;
+  case CallingConv::AMDGPU_PS:
+    return R_00B028_SPI_SHADER_PGM_RSRC1_PS;
   }
 }
 
@@ -1795,7 +1847,7 @@ void AMDGPUAsmPrinter::getAmdKernelCode(AMDGPUMCKernelCodeT &Out,
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
   MCContext &Ctx = MF.getContext();
 
-  Out.initDefault(&STM, Ctx, /*InitMCExpr=*/false);
+  Out.initDefault(STM, Ctx, /*InitMCExpr=*/false);
 
   Out.compute_pgm_resource1_registers =
       CurrentProgramInfo.getComputePGMRSrc1(STM, Ctx);
@@ -1963,6 +2015,41 @@ void AMDGPUAsmPrinter::emitResourceUsageRemarks(
   if (isModuleEntryFunction)
     EmitResourceUsageRemark("BytesLDS", "LDS Size [bytes/block]",
                             CurrentProgramInfo.LDSSize);
+}
+
+PreservedAnalyses AMDGPUAsmPrinterBeginPass::run(Module &M,
+                                                 ModuleAnalysisManager &MAM) {
+
+  AMDGPUAsmPrinter &AsmPrinter = static_cast<AMDGPUAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doInitialization(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+AMDGPUAsmPrinterPass::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  AMDGPUAsmPrinter &AsmPrinter = static_cast<AMDGPUAsmPrinter &>(
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter());
+  setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
+  AsmPrinter.GetResourceUsage = [&MFAM](MachineFunction &MF)
+      -> const AMDGPUResourceUsageAnalysisImpl::SIFunctionResourceInfo * {
+    return &MFAM.getResult<AMDGPUResourceUsageAnalysis>(MF);
+  };
+  AsmPrinter.runOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses AMDGPUAsmPrinterEndPass::run(Module &M,
+                                               ModuleAnalysisManager &MAM) {
+  AMDGPUAsmPrinter &AsmPrinter = static_cast<AMDGPUAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doFinalization(M);
+  return PreservedAnalyses::all();
 }
 
 char AMDGPUAsmPrinter::ID = 0;

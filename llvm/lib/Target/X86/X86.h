@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_X86_X86_H
 
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
@@ -33,6 +34,11 @@ class X86TargetMachine;
 
 /// This pass converts a legalized DAG into a X86-specific DAG, ready for
 /// instruction scheduling.
+class X86ISelDAGToDAGPass : public SelectionDAGISelPass {
+public:
+  X86ISelDAGToDAGPass(X86TargetMachine &TM);
+};
+
 FunctionPass *createX86ISelDag(X86TargetMachine &TM, CodeGenOptLevel OptLevel);
 
 /// This pass initializes a global base register for PIC on x86-32.
@@ -399,6 +405,9 @@ public:
 
 FunctionPass *createX86LowerAMXIntrinsicsLegacyPass();
 
+/// Capacity check and sub-fragment splitting for Win x64 Unwind V3.
+FunctionPass *createX86WinEHUnwindV3Pass();
+
 InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
                                                   const X86Subtarget &,
                                                   const X86RegisterBankInfo &);
@@ -507,6 +516,7 @@ void initializeX86TileConfigLegacyPass(PassRegistry &);
 void initializeX86WinEHUnwindV2LegacyPass(PassRegistry &);
 void initializeX86PreLegalizerCombinerLegacyPass(PassRegistry &);
 void initializeX86PostLegalizerCombinerLegacyPass(PassRegistry &);
+void initializeX86WinEHUnwindV3Pass(PassRegistry &);
 
 namespace X86AS {
 enum : unsigned {

@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -stop-after=finalize-isel < %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-apple-darwin -mattr=+sve -stop-after=finalize-isel < %s | FileCheck %s --check-prefix=DARWIN
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -stop-after=prologepilog < %s | FileCheck %s --check-prefix=CHECKCSR
-; RUN: llc -mtriple=aarch64-apple-darwin -mattr=+sve -stop-after=prologepilog < %s | FileCheck %s --check-prefix=CHECKCSR
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -stop-after=prolog-epilog < %s | FileCheck %s --check-prefix=CHECKCSR
+; RUN: llc -mtriple=aarch64-apple-darwin -mattr=+sve -stop-after=prolog-epilog < %s | FileCheck %s --check-prefix=CHECKCSR
 
 ; CHECK-LABEL: name: nosve_signature
 ; DARWIN-LABEL: name: nosve_signature

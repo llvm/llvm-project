@@ -14,7 +14,6 @@ namespace llvm {
 
 class Module;
 class ModulePass;
-class OptimizationLevel;
 
 enum class ExpandVariadicsMode {
   Unspecified, // Use the implementation defaults
@@ -28,12 +27,12 @@ class ExpandVariadicsPass : public OptionalPassInfoMixin<ExpandVariadicsPass> {
 
 public:
   // Operates under passed mode unless overridden on commandline
-  ExpandVariadicsPass(ExpandVariadicsMode Mode);
+  LLVM_ABI ExpandVariadicsPass(ExpandVariadicsMode Mode);
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-ModulePass *createExpandVariadicsPass(ExpandVariadicsMode);
+LLVM_ABI ModulePass *createExpandVariadicsPass(ExpandVariadicsMode);
 
 } // end namespace llvm
 

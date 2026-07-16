@@ -33,10 +33,9 @@ __attribute__((device)) Big make_big() { return Big(7); }
 // CHECK-NEXT:    [[OUT:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_BIG:%.*]], align 4, addrspace(5)
-// CHECK-NEXT:    [[OUT_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT]] to ptr
 // CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
-// CHECK-NEXT:    store ptr addrspace(1) [[OUT_COERCE]], ptr [[OUT_ASCAST]], align 8
-// CHECK-NEXT:    [[OUT1:%.*]] = load ptr, ptr [[OUT_ASCAST]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT_COERCE]], ptr addrspace(5) [[OUT]], align 8
+// CHECK-NEXT:    [[OUT1:%.*]] = load ptr, ptr addrspace(5) [[OUT]], align 8
 // CHECK-NEXT:    store ptr [[OUT1]], ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[OUT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    call void @_Z8make_bigv(ptr addrspace(5) dead_on_unwind writable sret([[STRUCT_BIG]]) align 4 [[TMP]]) #[[ATTR3]]

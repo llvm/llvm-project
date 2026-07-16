@@ -108,6 +108,15 @@ define { <vscale x 2 x float>, <vscale x 2 x float> } @sincos_zero_scalable_vect
   ret { <vscale x 2 x float>, <vscale x 2 x float> } %ret
 }
 
+define { <vscale x 2 x float>, <vscale x 2 x float> } @sincos_one_scalable_vector() {
+; CHECK-LABEL: define { <vscale x 2 x float>, <vscale x 2 x float> } @sincos_one_scalable_vector() {
+; CHECK-NEXT:    [[RET:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float> } @llvm.sincos.nxv2f32(<vscale x 2 x float> splat (float 1.000000e+00))
+; CHECK-NEXT:    ret { <vscale x 2 x float>, <vscale x 2 x float> } [[RET]]
+;
+  %ret = call { <vscale x 2 x float>, <vscale x 2 x float> } @llvm.sincos.nxv2f32(<vscale x 2 x float> splat (float 1.0))
+  ret { <vscale x 2 x float>, <vscale x 2 x float> } %ret
+}
+
 define { float, float } @sincos_inf() {
 ; CHECK-LABEL: define { float, float } @sincos_inf() {
 ; CHECK-NEXT:    [[RET:%.*]] = call { float, float } @llvm.sincos.f32(float +inf)

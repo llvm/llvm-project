@@ -111,6 +111,61 @@ def SignlessLikeVariadic : TEST_Op<"signless_like_variadic"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Test Token Type
+//===----------------------------------------------------------------------===//
+
+// Produce a builtin `!token` value.
+def TestTokenProduceOp : TEST_Op<"token.produce"> {
+  let results = (outs Token:$token);
+  let assemblyFormat = "attr-dict";
+}
+
+// Produce a builtin `!token` value via an opt-in result type without the
+// producer trait. ODS only auto-derives the trait when the declared type is
+// statically `Token`, so this op (whose result type accepts any type
+// including tokens) exercises the runtime trait check.
+def TestTokenProduceWithoutTraitOp
+    : TEST_Op<"token.produce_without_trait"> {
+  let results = (outs Type<CPred<"true">>:$token);
+  let assemblyFormat = "attr-dict `:` type($token)";
+}
+
+// Consume a builtin `!token` value (token-only operand). The consumer trait
+// is auto-derived by ODS from the statically-typed `Token` operand.
+def TestTokenConsumeOp : TEST_Op<"token.consume"> {
+  let arguments = (ins Token:$token);
+  let assemblyFormat = "$token attr-dict";
+}
+
+// Consume a builtin `!token` value via an opt-in operand type without the
+// consumer trait. ODS only auto-derives the trait when the declared type is
+// statically `Token`, so this op (whose operand type accepts any type
+// including tokens) exercises the runtime trait check.
+def TestTokenConsumeWithoutTraitOp
+    : TEST_Op<"token.consume_without_trait"> {
+  let arguments = (ins Type<CPred<"true">>:$token);
+  let assemblyFormat = "$token attr-dict `:` type($token)";
+}
+
+// Op that uses the default `AnyType` predicate. Tokens are excluded by
+// default and should be rejected by the verifier when passed here.
+def TestTokenAnyTypeOp : TEST_Op<"token.any_type", [TokenConsumerTrait]> {
+  let arguments = (ins AnyType:$value);
+  let assemblyFormat = "$value attr-dict `:` type($value)";
+}
+
+// Op whose region entry blocks may produce builtin `!token` values.
+def TestTokenRegionOp : TEST_Op<"token.region", [TokenProducerTrait]> {
+  let regions = (region AnyRegion:$body);
+}
+
+// Op whose regions do not opt in to producing builtin `!token` values.
+def TestTokenRegionWithoutTraitOp
+    : TEST_Op<"token.region_without_trait"> {
+  let regions = (region AnyRegion:$body);
+}
+
+//===----------------------------------------------------------------------===//
 // Test Symbols
 //===----------------------------------------------------------------------===//
 
@@ -954,7 +1009,7 @@ def OpWithResultShapeInterfaceOp : TEST_Op<"op_with_result_shape_interface",
 
 def ReifyShapedTypeUsingReifyResultShapesOp :
     TEST_Op<"reify_shaped_type_using_reify_result_shapes",
-        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, 
+        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
             ["reifyResultShapes"]>]> {
   let description = [{
     Test that when resolving a single dimension of a result for an operation
@@ -969,7 +1024,7 @@ def ReifyShapedTypeUsingReifyResultShapesOp :
 
 def ReifyShapedTypeUsingReifyShapeOfResultOp :
     TEST_Op<"reify_shaped_type_using_reify_shape_of_result",
-        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, 
+        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
             ["reifyResultShapes", "reifyShapeOfResult"]>]> {
   let description = [{
     Test that when resolving a single dimension of a result for an operation
@@ -985,7 +1040,7 @@ def ReifyShapedTypeUsingReifyShapeOfResultOp :
 
 def ReifyShapedTypeUsingReifyDimOfResultOp :
     TEST_Op<"reify_shaped_type_using_reify_dim_of_result",
-        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, 
+        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
             ["reifyResultShapes", "reifyShapeOfResult", "reifyDimOfResult"]>]> {
   let description = [{
     Test that when resolving a single dimension of a result for an operation
@@ -1073,6 +1128,33 @@ def TestInternalBranchOp : TEST_Op<"internal_br",
                        Variadic<AnyType>:$errorOperands);
 
   let successors = (successor AnySuccessor:$successPath, AnySuccessor:$errorPath);
+}
+
+// A successor that must be the block immediately following the op's block.
+def FallthroughSuccessor : Successor<
+    CPred<"$_self == ($_op).getBlock()->getNextNode()">,
+    "the fallthrough block (the block immediately following the op's block)">;
+
+// A successor that must be a block listed after the op's block.
+def ForwardSuccessor : Successor<
+    CPred<[{
+      [&] {
+        for (::mlir::Block *block = ($_op).getBlock()->getNextNode(); block;
+             block = block->getNextNode())
+          if (block == $_self)
+            return true;
+        return false;
+      }()
+    }]>,
+    "a forward block (a block listed after the op's block)">;
+
+def TestFallthroughBranchOp : TEST_Op<"fallthrough_br", [Terminator]> {
+  let summary = "branch whose successors are constrained by predicates";
+  let successors = (successor FallthroughSuccessor:$target,
+                              VariadicSuccessor<ForwardSuccessor>:$forwardTargets);
+  let assemblyFormat = [{
+    $target `forward` `[` $forwardTargets `]` attr-dict
+  }];
 }
 
 def AttrSizedOperandOp : TEST_Op<"attr_sized_operands",
@@ -1303,10 +1385,10 @@ def OpQ : TEST_Op<"op_q"> {
   let results = (outs AnyType);
 }
 
-// Test constant-folding a pattern that maps `(F32) -> SI32`.
+// Test constant-folding a pattern that maps `(F32) -> I32`.
 def SignOp : TEST_Op<"sign", [SameOperandsAndResultShape]> {
   let arguments = (ins RankedTensorOf<[F32]>:$operand);
-  let results = (outs RankedTensorOf<[SI32]>:$result);
+  let results = (outs RankedTensorOf<[I32]>:$result);
 
   let assemblyFormat = [{
     $operand attr-dict `:` functional-type(operands, results)
@@ -3941,6 +4023,93 @@ def TestMultiSlotAlloca : TEST_Op<"multi_slot_alloca",
   let assemblyFormat = "attr-dict `:` functional-type(operands, results)";
 }
 
+// Transparent alias of a memref slot with the same element type. Exercises
+// alias-chain handling in mem2reg with identity projections.
+def TestTransparentAlias : TEST_Op<"transparent_alias",
+    [DeclareOpInterfaceMethods<PromotableOpInterface,
+                               ["canUsesBeRemoved",
+                                "removeBlockingUses"]>,
+     DeclareOpInterfaceMethods<PromotableAliaserInterface,
+                               ["getPromotableSlotAliases"]>]> {
+  let arguments = (ins MemRefOf<[I32]>:$source);
+  let results = (outs MemRefOf<[I32]>:$result);
+  let assemblyFormat = "$source attr-dict `:` functional-type($source, $result)";
+}
+
+// Type-changing transparent alias of a memref slot. The projection methods
+// bridge the element types using `builtin.unrealized_conversion_cast`.
+def TestTransparentCastAlias : TEST_Op<"transparent_cast_alias",
+    [DeclareOpInterfaceMethods<PromotableOpInterface,
+                               ["canUsesBeRemoved",
+                                "removeBlockingUses"]>,
+     DeclareOpInterfaceMethods<PromotableAliaserInterface,
+                               ["getPromotableSlotAliases",
+                                "projectSlotValueToAliasValue",
+                                "projectAliasValueToSlotValue"]>]> {
+  let arguments = (ins MemRefOf<[I32, F32]>:$source);
+  let results = (outs MemRefOf<[I32, F32]>:$result);
+  let assemblyFormat = "$source attr-dict `:` functional-type($source, $result)";
+}
+
+// Records the value last stored to a memref slot to test
+// `PromotableOpInterface::visitReplacedValues`.
+def TestSlotTracker : TEST_Op<"slot_tracker",
+    [DeclareOpInterfaceMethods<PromotableOpInterface,
+                               ["canUsesBeRemoved",
+                                "removeBlockingUses",
+                                "requiresReplacedValues",
+                                "visitReplacedValues"]>]> {
+  let arguments = (ins AnyMemRef:$source, StrAttr:$name);
+  let assemblyFormat =
+      "$source `,` $name attr-dict `:` type($source)";
+}
+
+// Marker emitted by `test.slot_tracker` at each reaching-definition store.
+def TestTrackedValue : TEST_Op<"tracked_value"> {
+  let arguments = (ins AnyType:$value, StrAttr:$name);
+  let assemblyFormat =
+      "$value `,` $name attr-dict `:` type($value)";
+}
+
+// Transparent alias of a memref slot exposing two simultaneously-usable
+// aliases of the same bit-width at different signednesses (signed and
+// unsigned 32-bit integers, both aliasing the signless i32 storage).
+// Exercises mem2reg's handling of an aliaser whose
+// `getPromotableSlotAliases` returns more than one entry for a single
+// aliased operand.
+def TestTransparentDualAlias : TEST_Op<"transparent_dual_alias",
+    [DeclareOpInterfaceMethods<PromotableOpInterface,
+                               ["canUsesBeRemoved",
+                                "removeBlockingUses"]>,
+     DeclareOpInterfaceMethods<PromotableAliaserInterface,
+                               ["getPromotableSlotAliases",
+                                "projectSlotValueToAliasValue",
+                                "projectAliasValueToSlotValue"]>]> {
+  let arguments = (ins MemRefOf<[I32]>:$source);
+  let results = (outs MemRefOf<[SI32]>:$result_signed,
+                      MemRefOf<[UI32]>:$result_unsigned);
+  let assemblyFormat = "$source attr-dict `:` functional-type($source, results)";
+}
+
+// Partial alias of a memref slot: exposes a sub-value of the parent slot.
+// The slot-to-alias projection is a 1-input `unrealized_conversion_cast`
+// (sub-value extraction). The alias-to-slot projection is a 2-input cast
+// taking both the new alias value and the parent slot's reaching definition
+// (sub-value insertion). This exercises mem2reg's `reachingDef` plumbing
+// for partial sub-aliases.
+def TestPartialAlias : TEST_Op<"partial_alias",
+    [DeclareOpInterfaceMethods<PromotableOpInterface,
+                               ["canUsesBeRemoved",
+                                "removeBlockingUses"]>,
+     DeclareOpInterfaceMethods<PromotableAliaserInterface,
+                               ["getPromotableSlotAliases",
+                                "projectSlotValueToAliasValue",
+                                "projectAliasValueToSlotValue"]>]> {
+  let arguments = (ins AnyMemRef:$source);
+  let results = (outs AnyMemRef:$result);
+  let assemblyFormat = "$source attr-dict `:` functional-type($source, $result)";
+}
+
 //===----------------------------------------------------------------------===//
 // Test allocation Ops
 //===----------------------------------------------------------------------===//
@@ -4054,6 +4223,113 @@ def TestCreateTensorOp
 def TestCreateMemrefOp : TEST_Op<"create_memref_op"> {
   let arguments = (ins);
   let results = (outs Arg<Bufferization_BufferLikeTypeInterface>:$output);
+}
+
+def TestTensorWithFutureLayoutOp
+    : TEST_Op<"tensor_with_future_layout",
+              [DeclareOpInterfaceMethods<
+                  BufferizableOpInterface,
+                  ["bufferize", "getBufferType", "bufferizesToMemoryRead",
+                   "bufferizesToMemoryWrite", "getAliasingValues",
+                   "getAliasingOpOperands", "bufferizesToAllocation"]>]> {
+  let description = [{
+    A tensor operation that creates a new value and then forces a specific
+    `TestMemRefLayoutAttr` layout during bufferization into a memref. In tensor
+    world, this op does nothing encoding/layout wise.
+  }];
+
+  let arguments = (ins TestMemRefLayoutAttr:$layout);
+  let results = (outs Bufferization_TensorLikeTypeInterface:$output);
+  let extraClassDefinition = [{
+    bool test::TestTensorWithFutureLayoutOp::bufferizesToMemoryRead(
+        ::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return false;
+    }
+    bool test::TestTensorWithFutureLayoutOp::bufferizesToMemoryWrite(
+        ::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return false;
+    }
+    bool test::TestTensorWithFutureLayoutOp::bufferizesToAllocation(
+        mlir::Value) {
+      return true;
+    }
+    ::mlir::bufferization::AliasingValueList
+    test::TestTensorWithFutureLayoutOp::getAliasingValues(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return {};
+    }
+    ::mlir::bufferization::AliasingOpOperandList
+    test::TestTensorWithFutureLayoutOp::getAliasingOpOperands(::mlir::Value,
+        const ::mlir::bufferization::AnalysisState&) {
+      return {};
+    }
+  }];
+}
+
+def TestForceNewLayoutOp
+    : TEST_Op<"force_new_layout",
+              [DeclareOpInterfaceMethods<
+                  BufferizableOpInterface,
+                  ["bufferize", "getBufferType", "bufferizesToMemoryRead",
+                   "bufferizesToMemoryWrite", "getAliasingValues",
+                   "getAliasingOpOperands"]>]> {
+  let description = [{
+    A tensor operation that modifies a pre-existing value and then forces a
+    specific `TestMemRefLayoutAttr` to be set during bufferization into a
+    memref. In tensor world, this op does nothing encoding/layout wise. It is
+    similar to TestTensorWithFutureLayoutOp, but it keeps the IR values
+    "connected" which can be particularly useful in e.g. SCF loop's body (one
+    can modify an initArg's layout and yield the new-layout value).
+  }];
+
+  let arguments = (ins
+    Bufferization_TensorLikeTypeInterface:$input,
+    TestMemRefLayoutAttr:$layout
+  );
+  let results = (outs Bufferization_TensorLikeTypeInterface:$output);
+  let extraClassDefinition = [{
+    bool test::TestForceNewLayoutOp::bufferizesToMemoryRead(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return true;
+    }
+    bool test::TestForceNewLayoutOp::bufferizesToMemoryWrite(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return true;
+    }
+    ::mlir::bufferization::AliasingValueList
+    test::TestForceNewLayoutOp::getAliasingValues(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      auto relation = getInput().getType() == getOutput().getType()
+                          ? ::mlir::bufferization::BufferRelation::Equivalent
+                          : ::mlir::bufferization::BufferRelation::Unknown;
+      return {{getOutput(), relation, /*isDefinite=*/true}};
+    }
+
+    ::mlir::bufferization::AliasingOpOperandList
+    test::TestForceNewLayoutOp::getAliasingOpOperands(::mlir::Value value,
+        const ::mlir::bufferization::AnalysisState&) {
+      if (value != getOutput())
+        return {};
+
+      auto relation = getInput().getType() == getOutput().getType()
+                          ? ::mlir::bufferization::BufferRelation::Equivalent
+                          : ::mlir::bufferization::BufferRelation::Unknown;
+      return {{&getOperation()->getOpOperand(0), relation,
+               /*isDefinite=*/true}};
+    }
+  }];
+}
+
+def TestDummyCastOp : TEST_Op<"dummy_cast_op", []> {
+  let arguments = (ins
+    Arg<Bufferization_BufferLikeTypeInterface>:$source
+  );
+  let results = (outs
+    Arg<Bufferization_BufferLikeTypeInterface>:$dest
+  );
+  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
 }
 
 //===----------------------------------------------------------------------===//

@@ -14,16 +14,22 @@
 #include "BPF.h"
 #include "BPFCORE.h"
 #include "MCTargetDesc/BPFMCTargetDesc.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/LineIterator.h"
@@ -32,6 +38,11 @@
 #include <optional>
 
 using namespace llvm;
+
+#define DEBUG_TYPE "btf-debug"
+
+#define GET_CC_REGISTER_LISTS
+#include "BPFGenCallingConv.inc"
 
 static const char *BTFKindStr[] = {
 #define HANDLE_BTF_KIND(ID, NAME) "BTF_KIND_" #NAME,
@@ -45,6 +56,199 @@ static const DIType *tryRemoveAtomicType(const DIType *Ty) {
   if (DerivedTy && DerivedTy->getTag() == dwarf::DW_TAG_atomic_type)
     return DerivedTy->getBaseType();
   return Ty;
+}
+
+static const DIType *stripDITypeAttributes(const DIType *Ty) {
+  while (const auto *DTy = dyn_cast_or_null<DIDerivedType>(Ty)) {
+    switch (DTy->getTag()) {
+    case dwarf::DW_TAG_atomic_type:
+    case dwarf::DW_TAG_const_type:
+    case dwarf::DW_TAG_restrict_type:
+    case dwarf::DW_TAG_typedef:
+    case dwarf::DW_TAG_volatile_type:
+      Ty = DTy->getBaseType();
+      break;
+    default:
+      return Ty;
+    }
+  }
+  return Ty;
+}
+
+static bool sourceArgMatchesIRType(const DIType *SourceTy, Type *IRTy) {
+  SourceTy = stripDITypeAttributes(SourceTy);
+
+  // All pointers are opaque in LLVM IR, so any source-level pointer matches any
+  // IR pointer regardless of pointee type.
+  if (const auto *DTy = dyn_cast<DIDerivedType>(SourceTy))
+    return DTy->getTag() == dwarf::DW_TAG_pointer_type && IRTy->isPointerTy();
+
+  if (const auto *BTy = dyn_cast<DIBasicType>(SourceTy)) {
+    uint64_t SizeInBits = BTy->getSizeInBits();
+    if (BTy->getEncoding() == dwarf::DW_ATE_float)
+      return IRTy->isFloatingPointTy() &&
+             IRTy->getPrimitiveSizeInBits() == SizeInBits;
+    // _Bool is 8 bits in DWARF/source but lowered to i1 in LLVM IR.
+    if (BTy->getEncoding() == dwarf::DW_ATE_boolean && IRTy->isIntegerTy(1))
+      return true;
+    return IRTy->isIntegerTy(SizeInBits);
+  }
+
+  const auto *CTy = dyn_cast<DICompositeType>(SourceTy);
+  if (!CTy)
+    return false;
+
+  switch (CTy->getTag()) {
+  case dwarf::DW_TAG_enumeration_type:
+    return IRTy->isIntegerTy(CTy->getSizeInBits());
+  default:
+    return false;
+  }
+}
+
+/// Collect the physical register each source argument lives in by scanning
+/// DBG_VALUE instructions in the entry block.  A DBG_VALUE is only recorded
+/// when its register either (a) has not been redefined by any preceding
+/// non-debug instruction (i.e. it still holds the caller-passed value), or
+/// (b) was most recently loaded from the stack via $r11 (a stack-passed
+/// argument beyond the first five register args).
+///
+/// There is another case where DBG_VALUE is not emitted due to
+/// AssignmentTrackingAnalysis which determines that a variable is
+/// always stack-homed, and describes the variable via MachineFunction's
+/// VariableDbgInfo (setVariableDbgInfo with a frame index). To recover the
+/// register for those arguments, we also track stores of un-redefined physical
+/// registers to stack frame objects during the entry-block walk (using
+/// MachineMemOperands to identify the target frame index), then match them
+/// against VariableDbgInfo entries after the scan.
+static SmallVector<std::pair<uint32_t, Register>, 8>
+collectNocallEntryArgRegs(const MachineFunction &MF) {
+  SmallDenseMap<uint32_t, Register> EntryRegMap;
+  const DISubprogram *SP = MF.getFunction().getSubprogram();
+  SmallDenseSet<Register> DefinedRegs, StackLoadRegs;
+
+  // Build a reverse map from IR alloca to frame index so we can
+  // identify which frame object a store targets via its MachineMemOperand.
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  SmallDenseMap<const Value *, int> AllocaToFI;
+  for (int I = 0, N = MFI.getObjectIndexEnd(); I < N; ++I)
+    if (const AllocaInst *AI = MFI.getObjectAllocation(I))
+      AllocaToFI[AI] = I;
+
+  // Maps frame index → first physical register stored there before
+  // that register is redefined.
+  SmallDenseMap<int, Register> FrameIndexToReg;
+
+  for (const MachineInstr &MI : MF.front()) {
+    if (MI.isDebugValue()) {
+      // Skip indirect DBG_VALUEs — the register is a base address for a
+      // memory location, not the argument value itself.
+      if (MI.isIndirectDebugValue())
+        continue;
+
+      const DILocalVariable *DV = MI.getDebugVariable();
+      if (!DV || !DV->getArg() || DV->getScope()->getSubprogram() != SP)
+        continue;
+
+      uint32_t Arg = DV->getArg();
+      const MachineOperand &MO = MI.getDebugOperand(0);
+      if (!MO.isReg() || !MO.getReg().isPhysical())
+        continue;
+
+      if (!DefinedRegs.contains(MO.getReg()) ||
+          StackLoadRegs.contains(MO.getReg()))
+        EntryRegMap[Arg] = MO.getReg();
+      continue;
+    }
+
+    // Track stores of unredefined physical registers to stack frame
+    // objects.  Use MachineMemOperands to identify the target frame
+    // index rather than assuming a particular addressing mode.
+    if (MI.mayStore() && !MI.isCall() && MI.getOperand(0).isReg()) {
+      Register SrcReg = MI.getOperand(0).getReg();
+      if (SrcReg.isPhysical() && !DefinedRegs.contains(SrcReg)) {
+        for (const MachineMemOperand *MMO : MI.memoperands()) {
+          const Value *V = MMO->getValue();
+          if (!V)
+            continue;
+          auto It = AllocaToFI.find(V);
+          if (It != AllocaToFI.end())
+            FrameIndexToReg.try_emplace(It->second, SrcReg);
+        }
+      }
+    }
+
+    for (const MachineOperand &MO : MI.operands())
+      if (MO.isReg() && MO.isDef() && MO.getReg().isPhysical()) {
+        DefinedRegs.insert(MO.getReg());
+        StackLoadRegs.erase(MO.getReg());
+      }
+
+    // Detect stack argument loads: $rX = LDD $r11, offset.
+    if (MI.getOpcode() == BPF::LDD && MI.getOperand(1).getReg() == BPF::R11)
+      StackLoadRegs.insert(MI.getOperand(0).getReg());
+  }
+
+  // Check VariableDbgInfo for args that AssignmentTrackingAnalysis described
+  // via setVariableDbgInfo (single-loc stack-homed variables) rather than
+  // DBG_VALUE instructions.
+  for (const auto &VI : MF.getVariableDbgInfo()) {
+    if (!VI.Var || !VI.Var->getArg() || !VI.inStackSlot())
+      continue;
+    if (VI.Var->getScope()->getSubprogram() != SP)
+      continue;
+    uint32_t Arg = VI.Var->getArg();
+    if (EntryRegMap.count(Arg))
+      continue;
+    auto It = FrameIndexToReg.find(VI.getStackSlot());
+    if (It != FrameIndexToReg.end())
+      EntryRegMap[Arg] = It->second;
+  }
+
+  SmallVector<std::pair<uint32_t, Register>, 8> AliveArgs(EntryRegMap.begin(),
+                                                          EntryRegMap.end());
+  llvm::sort(AliveArgs, llvm::less_first());
+  return AliveArgs;
+}
+
+/// Check whether the optimized IR signature matches the surviving source
+/// arguments precisely enough to emit a filtered BTF prototype.
+/// Requires exact IR/source arg count match, matching types, and correct
+/// BPF register order (R1..R5) for register args.
+static bool canUseNocallOptimizedSignature(
+    const MachineFunction &MF, DITypeArray Elements,
+    ArrayRef<std::pair<uint32_t, Register>> AliveArgs,
+    const TargetRegisterInfo &TRI) {
+  if (MF.getFunction().arg_size() != AliveArgs.size()) {
+    LLVM_DEBUG(dbgs() << "BTF skip " << MF.getName() << ": IR arg count ("
+                      << MF.getFunction().arg_size() << ") != alive arg count ("
+                      << AliveArgs.size() << ")\n");
+    return false;
+  }
+
+  auto ArgIt = MF.getFunction().arg_begin();
+  for (unsigned I = 0, N = AliveArgs.size(); I < N; ++I, ++ArgIt) {
+    auto [ArgNo, Reg] = AliveArgs[I];
+    if (!sourceArgMatchesIRType(Elements[ArgNo], ArgIt->getType())) {
+      LLVM_DEBUG(dbgs() << "BTF skip " << MF.getName()
+                        << ": type mismatch for source arg " << ArgNo
+                        << " at IR position " << I << "\n");
+      return false;
+    }
+
+    if (I >= std::size(CC_BPF64_ArgRegs))
+      continue;
+
+    int DwarfReg = TRI.getDwarfRegNum(Reg, false);
+    if (DwarfReg != static_cast<int>(I + 1)) {
+      LLVM_DEBUG(dbgs() << "BTF skip " << MF.getName() << ": arg " << ArgNo
+                        << " in DWARF reg " << DwarfReg << ", expected "
+                        << (I + 1) << "\n");
+      return false;
+    }
+  }
+
+  return true;
 }
 
 /// Emit a BTF common type.
@@ -82,11 +286,21 @@ BTFTypeDerived::BTFTypeDerived(const DIDerivedType *DTy, unsigned Tag,
   BTFType.Info = Kind << 24;
 }
 
-/// Used by DW_TAG_pointer_type only.
+/// Used by DW_TAG_pointer_type and DW_TAG_typedef only.
 BTFTypeDerived::BTFTypeDerived(unsigned NextTypeId, unsigned Tag,
                                StringRef Name)
     : DTy(nullptr), NeedsFixup(false), Name(Name) {
-  Kind = BTF::BTF_KIND_PTR;
+  switch (Tag) {
+  case dwarf::DW_TAG_pointer_type:
+    Kind = BTF::BTF_KIND_PTR;
+    break;
+  case dwarf::DW_TAG_typedef:
+    Kind = BTF::BTF_KIND_TYPEDEF;
+    break;
+  default:
+    llvm_unreachable("Tag must be pointer or typedef");
+  }
+
   BTFType.Info = Kind << 24;
   BTFType.Type = NextTypeId;
 }
@@ -307,9 +521,11 @@ void BTFTypeArray::emitType(MCStreamer &OS) {
 }
 
 /// Represent either a struct or a union.
-BTFTypeStruct::BTFTypeStruct(const DICompositeType *STy, bool IsStruct,
+BTFTypeStruct::BTFTypeStruct(const DICompositeType *STy,
+                             ArrayRef<const DINode *> Elements, bool IsStruct,
                              bool HasBitField, uint32_t Vlen)
-    : STy(STy), HasBitField(HasBitField) {
+    : STy(STy), Elements(Elements.begin(), Elements.end()),
+      HasBitField(HasBitField) {
   Kind = IsStruct ? BTF::BTF_KIND_STRUCT : BTF::BTF_KIND_UNION;
   BTFType.Size = roundupToBytes(STy->getSizeInBits());
   BTFType.Info = (HasBitField << 31) | (Kind << 24) | Vlen;
@@ -345,7 +561,6 @@ void BTFTypeStruct::completeType(BTFDebug &BDebug) {
   }
 
   // Add struct/union members.
-  const DINodeArray Elements = STy->getElements();
   for (const auto *Element : Elements) {
     struct BTF::BTFMember BTFMember;
 
@@ -398,8 +613,12 @@ std::string BTFTypeStruct::getName() { return std::string(STy->getName()); }
 /// for subprogram.
 BTFTypeFuncProto::BTFTypeFuncProto(
     const DISubroutineType *STy, uint32_t VLen,
-    const std::unordered_map<uint32_t, StringRef> &FuncArgNames)
-    : STy(STy), FuncArgNames(FuncArgNames) {
+    const SmallDenseMap<uint32_t, StringRef> &FuncArgNames,
+    bool UseFilteredParams, ArrayRef<uint32_t> AliveParamIndices,
+    bool VoidReturn)
+    : STy(STy), FuncArgNames(FuncArgNames),
+      AliveParamIndices(AliveParamIndices),
+      UseFilteredParams(UseFilteredParams), VoidReturn(VoidReturn) {
   Kind = BTF::BTF_KIND_FUNC_PROTO;
   BTFType.Info = (Kind << 24) | VLen;
 }
@@ -410,24 +629,37 @@ void BTFTypeFuncProto::completeType(BTFDebug &BDebug) {
   IsCompleted = true;
 
   DITypeArray Elements = STy->getTypeArray();
-  auto RetType = tryRemoveAtomicType(Elements[0]);
-  BTFType.Type = RetType ? BDebug.getTypeId(RetType) : 0;
+  if (VoidReturn) {
+    BTFType.Type = 0;
+  } else {
+    auto RetType = tryRemoveAtomicType(Elements[0]);
+    BTFType.Type = RetType ? BDebug.getTypeId(RetType) : 0;
+  }
   BTFType.NameOff = 0;
 
-  // For null parameter which is typically the last one
-  // to represent the vararg, encode the NameOff/Type to be 0.
-  for (unsigned I = 1, N = Elements.size(); I < N; ++I) {
+  auto EmitParam = [&](uint32_t I) {
     struct BTF::BTFParam Param;
     auto Element = tryRemoveAtomicType(Elements[I]);
     if (Element) {
-      Param.NameOff = BDebug.addString(FuncArgNames[I]);
+      auto It = FuncArgNames.find(I);
+      Param.NameOff =
+          It != FuncArgNames.end() ? BDebug.addString(It->second) : 0;
       Param.Type = BDebug.getTypeId(Element);
     } else {
       Param.NameOff = 0;
       Param.Type = 0;
     }
     Parameters.push_back(Param);
+  };
+
+  if (UseFilteredParams) {
+    for (uint32_t I : AliveParamIndices)
+      EmitParam(I);
+    return;
   }
+
+  for (unsigned I = 1, N = Elements.size(); I < N; ++I)
+    EmitParam(I);
 }
 
 void BTFTypeFuncProto::emitType(MCStreamer &OS) {
@@ -626,8 +858,8 @@ void BTFDebug::visitBasicType(const DIBasicType *BTy, uint32_t &TypeId) {
 /// Handle subprogram or subroutine types.
 void BTFDebug::visitSubroutineType(
     const DISubroutineType *STy, bool ForSubprog,
-    const std::unordered_map<uint32_t, StringRef> &FuncArgNames,
-    uint32_t &TypeId) {
+    const SmallDenseMap<uint32_t, StringRef> &FuncArgNames, uint32_t &TypeId,
+    bool VoidReturn) {
   DITypeArray Elements = STy->getTypeArray();
   uint32_t VLen = Elements.size() - 1;
   if (VLen > BTF::MAX_VLEN)
@@ -637,15 +869,20 @@ void BTFDebug::visitSubroutineType(
   // a function pointer has an empty name. The subprogram type will
   // not be added to DIToIdMap as it should not be referenced by
   // any other types.
-  auto TypeEntry = std::make_unique<BTFTypeFuncProto>(STy, VLen, FuncArgNames);
+  auto TypeEntry = std::make_unique<BTFTypeFuncProto>(
+      STy, VLen, FuncArgNames, false, ArrayRef<uint32_t>(), VoidReturn);
   if (ForSubprog)
     TypeId = addType(std::move(TypeEntry)); // For subprogram
   else
     TypeId = addType(std::move(TypeEntry), STy); // For func ptr
 
   // Visit return type and func arg types.
-  for (const auto Element : Elements) {
-    visitTypeEntry(Element);
+  if (!VoidReturn) {
+    for (const auto Element : Elements)
+      visitTypeEntry(Element);
+  } else {
+    for (unsigned I = 1, N = Elements.size(); I < N; ++I)
+      visitTypeEntry(Elements[I]);
   }
 }
 
@@ -668,18 +905,26 @@ void BTFDebug::processDeclAnnotations(DINodeArray Annotations,
   }
 }
 
-uint32_t BTFDebug::processDISubprogram(const DISubprogram *SP,
-                                       uint32_t ProtoTypeId, uint8_t Scope) {
+uint32_t BTFDebug::processDISubprogram(
+    const DISubprogram *SP, uint32_t ProtoTypeId, uint8_t Scope,
+    const SmallDenseMap<uint32_t, uint32_t> *ArgIndexMap) {
   auto FuncTypeEntry =
       std::make_unique<BTFTypeFunc>(SP->getName(), ProtoTypeId, Scope);
   uint32_t FuncId = addType(std::move(FuncTypeEntry));
 
   // Process argument annotations.
-  for (const DINode *DN : SP->getRetainedNodes()) {
+  for (const MDNode *DN : SP->getRetainedNodes()) {
     if (const auto *DV = dyn_cast<DILocalVariable>(DN)) {
       uint32_t Arg = DV->getArg();
-      if (Arg)
-        processDeclAnnotations(DV->getAnnotations(), FuncId, Arg - 1);
+      if (Arg) {
+        if (ArgIndexMap) {
+          auto It = ArgIndexMap->find(Arg);
+          if (It != ArgIndexMap->end())
+            processDeclAnnotations(DV->getAnnotations(), FuncId, It->second);
+        } else {
+          processDeclAnnotations(DV->getAnnotations(), FuncId, Arg - 1);
+        }
+      }
     }
   }
   processDeclAnnotations(SP->getAnnotations(), FuncId, -1);
@@ -730,7 +975,14 @@ int BTFDebug::genBTFTypeTags(const DIDerivedType *DTy, int BaseTypeId) {
 /// Handle structure/union types.
 void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
                                uint32_t &TypeId) {
-  const DINodeArray Elements = CTy->getElements();
+  DINodeArray DIElements = CTy->getElements();
+  SmallVector<const DINode *, 8> Elements(DIElements.begin(), DIElements.end());
+  // Structure elements must have nondecreasing offsets in BTF. Preserve DI
+  // order for union and variant-part records.
+  if (CTy->getTag() == dwarf::DW_TAG_structure_type)
+    llvm::stable_sort(Elements, [](const DINode *LHS, const DINode *RHS) {
+      return getBTFRecordElementOffset(LHS) < getBTFRecordElementOffset(RHS);
+    });
   uint32_t VLen = Elements.size();
   // Variant parts might have a discriminator. LLVM DI doesn't consider it as
   // an element and instead keeps it as a separate reference. But we represent
@@ -757,8 +1009,8 @@ void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
     }
   }
 
-  auto TypeEntry =
-      std::make_unique<BTFTypeStruct>(CTy, IsStruct, HasBitField, VLen);
+  auto TypeEntry = std::make_unique<BTFTypeStruct>(CTy, Elements, IsStruct,
+                                                   HasBitField, VLen);
   StructTypes.push_back(TypeEntry.get());
   TypeId = addType(std::move(TypeEntry), CTy);
 
@@ -935,7 +1187,7 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
     }
   }
 
-  if (Tag == dwarf::DW_TAG_pointer_type) {
+  if (Tag == dwarf::DW_TAG_pointer_type || Tag == dwarf::DW_TAG_typedef) {
     int TmpTypeId = genBTFTypeTags(DTy, -1);
     if (TmpTypeId >= 0) {
       auto TypeDEntry =
@@ -945,13 +1197,13 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
       auto TypeEntry = std::make_unique<BTFTypeDerived>(DTy, Tag, false);
       TypeId = addType(std::move(TypeEntry), DTy);
     }
-  } else if (Tag == dwarf::DW_TAG_typedef || Tag == dwarf::DW_TAG_const_type ||
+    if (Tag == dwarf::DW_TAG_typedef)
+      processDeclAnnotations(DTy->getAnnotations(), TypeId, -1);
+  } else if (Tag == dwarf::DW_TAG_const_type ||
              Tag == dwarf::DW_TAG_volatile_type ||
              Tag == dwarf::DW_TAG_restrict_type) {
     auto TypeEntry = std::make_unique<BTFTypeDerived>(DTy, Tag, false);
     TypeId = addType(std::move(TypeEntry), DTy);
-    if (Tag == dwarf::DW_TAG_typedef)
-      processDeclAnnotations(DTy->getAnnotations(), TypeId, -1);
   } else if (Tag != dwarf::DW_TAG_member) {
     return;
   }
@@ -1036,7 +1288,7 @@ void BTFDebug::visitTypeEntry(const DIType *Ty, uint32_t &TypeId,
   if (const auto *BTy = dyn_cast<DIBasicType>(Ty))
     visitBasicType(BTy, TypeId);
   else if (const auto *STy = dyn_cast<DISubroutineType>(Ty))
-    visitSubroutineType(STy, false, std::unordered_map<uint32_t, StringRef>(),
+    visitSubroutineType(STy, false, SmallDenseMap<uint32_t, StringRef>(),
                         TypeId);
   else if (const auto *CTy = dyn_cast<DICompositeType>(Ty))
     visitCompositeType(CTy, TypeId);
@@ -1331,8 +1583,8 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
   // Collect all types locally referenced in this function.
   // Use RetainedNodes so we can collect all argument names
   // even if the argument is not used.
-  std::unordered_map<uint32_t, StringRef> FuncArgNames;
-  for (const DINode *DN : SP->getRetainedNodes()) {
+  SmallDenseMap<uint32_t, StringRef> FuncArgNames;
+  for (const MDNode *DN : SP->getRetainedNodes()) {
     if (const auto *DV = dyn_cast<DILocalVariable>(DN)) {
       // Collect function arguments for subprogram func type.
       uint32_t Arg = DV->getArg();
@@ -1344,12 +1596,53 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
   }
 
   // Construct subprogram func proto type.
-  uint32_t ProtoTypeId;
-  visitSubroutineType(SP->getType(), true, FuncArgNames, ProtoTypeId);
-
-  // Construct subprogram func type
+  uint32_t ProtoTypeId, FuncTypeId;
   uint8_t Scope = SP->isLocalToUnit() ? BTF::FUNC_STATIC : BTF::FUNC_GLOBAL;
-  uint32_t FuncTypeId = processDISubprogram(SP, ProtoTypeId, Scope);
+  bool IsNocall = SP->getType()->getCC() == dwarf::DW_CC_nocall;
+  bool UseFilteredParams = false;
+  bool VoidReturn = MF->getFunction().getReturnType()->isVoidTy();
+
+  if (IsNocall) {
+    // For DW_CC_nocall functions, try to build a FUNC_PROTO reflecting
+    // the true ABI: only parameters that survived optimization and whose
+    // first 5 arguments map to the correct BPF registers (R1-R5).
+    const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+    DITypeArray Elements = SP->getType()->getTypeArray();
+
+    SmallVector<std::pair<uint32_t, Register>, 8> AliveArgs =
+        collectNocallEntryArgRegs(*MF);
+
+    UseFilteredParams =
+        canUseNocallOptimizedSignature(*MF, Elements, AliveArgs, *TRI);
+
+    if (UseFilteredParams) {
+      SmallVector<uint32_t, 8> AliveParamIndices;
+      SmallDenseMap<uint32_t, uint32_t> ArgIndexMap;
+      for (auto [I, ArgReg] : llvm::enumerate(AliveArgs)) {
+        AliveParamIndices.push_back(ArgReg.first);
+        ArgIndexMap[ArgReg.first] = I;
+      }
+
+      if (!VoidReturn)
+        visitTypeEntry(Elements[0]);
+      for (uint32_t ArgNo : AliveParamIndices)
+        visitTypeEntry(Elements[ArgNo]);
+
+      auto TypeEntry = std::make_unique<BTFTypeFuncProto>(
+          SP->getType(), AliveParamIndices.size(), FuncArgNames, true,
+          AliveParamIndices, VoidReturn);
+      ProtoTypeId = addType(std::move(TypeEntry));
+      FuncTypeId = processDISubprogram(SP, ProtoTypeId, Scope, &ArgIndexMap);
+    }
+  }
+
+  if (!UseFilteredParams) {
+    // Fall back to the full source prototype, still voiding the return
+    // type if compiler removed it.
+    visitSubroutineType(SP->getType(), true, FuncArgNames, ProtoTypeId,
+                        VoidReturn);
+    FuncTypeId = processDISubprogram(SP, ProtoTypeId, Scope);
+  }
 
   for (const auto &TypeEntry : TypeEntries)
     TypeEntry->completeType(*this);
@@ -1713,7 +2006,7 @@ void BTFDebug::processFuncPrototypes(const Function *F) {
     return;
 
   uint32_t ProtoTypeId;
-  const std::unordered_map<uint32_t, StringRef> FuncArgNames;
+  const SmallDenseMap<uint32_t, StringRef> FuncArgNames;
   visitSubroutineType(SP->getType(), false, FuncArgNames, ProtoTypeId);
   uint32_t FuncId = processDISubprogram(SP, ProtoTypeId, BTF::FUNC_EXTERN);
 

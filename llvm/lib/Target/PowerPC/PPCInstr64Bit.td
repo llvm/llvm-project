@@ -348,25 +348,16 @@ def LDAT_CSNE : X_RD5_RS5_IM5<31, 614, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA),
            Requires<[IsISA3_0]>;
 }
 
-def LDAT_PSEUDO : PPCCustomInserterPseudo<
-    (outs g8rc:$dst),
-    (ins ptr_rc_nor0:$ptr, g8rc:$val, u5imm:$fc),
-    "#LDAT_PSEUDO",
-    [(set i64:$dst, (int_ppc_amo_ldat ptr_rc_nor0:$ptr, g8rc:$val,
-                                      u5imm_timm:$fc))]>;
+def : Pat<(int_ppc_amo_ldat ptr_rc_nor0:$ptr, g8rc:$val, u5imm_timm:$fc),
+          (EVEN8 (LDAT (PAIR8 (i64 (IMPLICIT_DEF)), $val), $ptr, $fc))>;
 
-def LDAT_COND_PSEUDO : PPCCustomInserterPseudo <
-    (outs g8rc:$dst),
-    (ins ptr_rc_nor0:$ptr, u5imm:$fc),
-    "#LDAT_COND_PSEUDO",
-    [(set i64:$dst, (int_ppc_amo_ldat_cond ptr_rc_nor0:$ptr,
-                                            u5imm_timm:$fc))]>;
+def : Pat<(int_ppc_amo_ldat_cond ptr_rc_nor0:$ptr, u5imm_timm:$fc),
+          (EVEN8 (LDAT (PAIR8 (i64 (IMPLICIT_DEF)), (i64 (IMPLICIT_DEF))), $ptr, $fc))>;
 
 let Defs = [X8, X9, X10], Uses = [X9, X10] in
 def LDAT_CSNE_PSEUDO : PPCPostRAExpPseudo<
     (outs g8rc:$dst),
     (ins ptr_rc_nor0:$ptr),
-    "#LDAT_CSNE_PSEUDO",
     [(set i64:$dst, (int_ppc_amo_ldat_csne ptr_rc_nor0:$ptr, X9, X10))]>;
 
 let Defs = [CR0], mayStore = 1, mayLoad = 1, hasSideEffects = 1 in {
@@ -385,7 +376,7 @@ def SPLIT_QUADWORD : PPCCustomInserterPseudo<(outs g8rc:$lo, g8rc:$hi),
 class AtomicRMW128<string asmstr>
   : PPCPostRAExpPseudo<(outs g8prc:$RTp, g8prc:$scratch),
                        (ins memrr:$ptr, g8rc:$incr_lo, g8rc:$incr_hi),
-                       asmstr, []>;
+                       [], asmstr>;
 // We have to keep values in MI's uses during LL/SC looping as they are,
 // so set both $RTp and $scratch earlyclobber.
 let mayStore = 1, mayLoad = 1,
@@ -403,8 +394,7 @@ def ATOMIC_LOAD_NAND_I128 : AtomicRMW128<"#ATOMIC_LOAD_NAND_I128">;
 def ATOMIC_CMP_SWAP_I128 : PPCPostRAExpPseudo<
                               (outs g8prc:$RTp, g8prc:$scratch),
                               (ins memrr:$ptr, g8rc:$cmp_lo, g8rc:$cmp_hi,
-                                   g8rc:$new_lo, g8rc:$new_hi),
-                              "#ATOMIC_CMP_SWAP_I128", []>;
+                                   g8rc:$new_lo, g8rc:$new_hi)>;
 }
 
 class PatAtomicRMWI128<SDPatternOperator OpNode, AtomicRMW128 Inst> :
@@ -434,11 +424,11 @@ def : Pat<(int_ppc_cmpxchg_i128 ForceXForm:$ptr,
                            g8rc:$new_lo,
                            g8rc:$new_hi))>;
 
-let mayStore = 1, mayLoad = 0, hasSideEffects = 0 in
+let mayStore = 1, mayLoad = 1, hasSideEffects = 0 in
 def STDAT : XForm_base_r3xo_memOp<31, 742, (outs),
                                   (ins g8rc:$RST, ptr_rc_nor0:$RA, u5imm:$RB),
                                   "stdat $RST, $RA, $RB", IIC_LdStStore,
-                                  [(PPCstat i64:$RST, ptr_rc_nor0:$RA,
+                                  [(int_ppc_amo_stdat ptr_rc_nor0:$RA, i64:$RST,
                                             u5imm_timm:$RB)]>, isPPC64,
             Requires<[IsISA3_0]>;
 
@@ -1520,7 +1510,7 @@ def LDgotTprelL: PPCEmitTimePseudo<(outs g8rc_nox0:$rD), (ins s16imm64:$disp, g8
                  isPPC64;
 
 let Defs = [CR7], Itinerary = IIC_LdStSync in
-def CFENCE8 : PPCPostRAExpPseudo<(outs), (ins g8rc:$cr), "#CFENCE8", []>;
+def CFENCE8 : PPCPostRAExpPseudo<(outs), (ins g8rc:$cr)>;
 
 def : Pat<(PPCaddTls i64:$in, tglobaltlsaddr:$g),
           (ADD8TLS $in, tglobaltlsaddr:$g)>;
@@ -1708,8 +1698,7 @@ def SPILL_QUADWORD : PPCEmitTimePseudo<(outs), (ins g8prc:$RSp, memrix:$dst),
 
 def BUILD_QUADWORD : PPCPostRAExpPseudo<
                        (outs g8prc:$RTp),
-                       (ins g8rc:$lo, g8rc:$hi),
-                       "#BUILD_QUADWORD", []>;
+                       (ins g8rc:$lo, g8rc:$hi)>;
 
 def : Pat<(int_ppc_atomic_store_i128 i64:$lo, i64:$hi, DSForm:$dst),
           (STQ (BUILD_QUADWORD g8rc:$lo, g8rc:$hi), memrix:$dst)>;
