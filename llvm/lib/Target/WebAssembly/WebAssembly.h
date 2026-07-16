@@ -132,8 +132,24 @@ public:
 };
 
 FunctionPass *createWebAssemblyArgumentMoveLegacyPass();
-FunctionPass *createWebAssemblySetP2AlignOperands();
-FunctionPass *createWebAssemblyCleanCodeAfterTrap();
+
+class WebAssemblySetP2AlignOperandsPass
+    : public RequiredPassInfoMixin<WebAssemblySetP2AlignOperandsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createWebAssemblySetP2AlignOperandsLegacyPass();
+
+class WebAssemblyCleanCodeAfterTrapPass
+    : public RequiredPassInfoMixin<WebAssemblyCleanCodeAfterTrapPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createWebAssemblyCleanCodeAfterTrapLegacyPass();
 
 // Late passes.
 FunctionPass *createWebAssemblyReplacePhysRegs();
@@ -150,7 +166,15 @@ FunctionPass *createWebAssemblyOptimizeLiveIntervals();
 FunctionPass *createWebAssemblyMemIntrinsicResults();
 FunctionPass *createWebAssemblyRegStackify(CodeGenOptLevel OptLevel);
 FunctionPass *createWebAssemblyRegColoring();
-FunctionPass *createWebAssemblyFixBrTableDefaults();
+
+class WebAssemblyFixBrTableDefaultsPass
+    : public RequiredPassInfoMixin<WebAssemblyFixBrTableDefaultsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createWebAssemblyFixBrTableDefaultsLegacyPass();
 
 class WebAssemblyFixIrreducibleControlFlowPass
     : public RequiredPassInfoMixin<WebAssemblyFixIrreducibleControlFlowPass> {
@@ -160,7 +184,15 @@ public:
 };
 
 FunctionPass *createWebAssemblyFixIrreducibleControlFlowLegacyPass();
-FunctionPass *createWebAssemblyLateEHPrepare();
+
+class WebAssemblyLateEHPreparePass
+    : public RequiredPassInfoMixin<WebAssemblyLateEHPreparePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createWebAssemblyLateEHPrepareLegacyPass();
 FunctionPass *createWebAssemblyCFGSort();
 FunctionPass *createWebAssemblyCFGStackify();
 FunctionPass *createWebAssemblyExplicitLocals();
@@ -177,17 +209,17 @@ void initializeWebAssemblyRefTypeMem2LocalLegacyPass(PassRegistry &);
 void initializeWebAssemblyAddMissingPrototypesLegacyPass(PassRegistry &);
 void initializeWebAssemblyArgumentMoveLegacyPass(PassRegistry &);
 void initializeWebAssemblyAsmPrinterPass(PassRegistry &);
-void initializeWebAssemblyCleanCodeAfterTrapPass(PassRegistry &);
+void initializeWebAssemblyCleanCodeAfterTrapLegacyPass(PassRegistry &);
 void initializeWebAssemblyCFGSortPass(PassRegistry &);
 void initializeWebAssemblyCFGStackifyPass(PassRegistry &);
 void initializeWebAssemblyDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeWebAssemblyDebugFixupPass(PassRegistry &);
 void initializeWebAssemblyExceptionInfoPass(PassRegistry &);
 void initializeWebAssemblyExplicitLocalsPass(PassRegistry &);
-void initializeWebAssemblyFixBrTableDefaultsPass(PassRegistry &);
+void initializeWebAssemblyFixBrTableDefaultsLegacyPass(PassRegistry &);
 void initializeWebAssemblyFixFunctionBitcastsLegacyPass(PassRegistry &);
 void initializeWebAssemblyFixIrreducibleControlFlowLegacyPass(PassRegistry &);
-void initializeWebAssemblyLateEHPreparePass(PassRegistry &);
+void initializeWebAssemblyLateEHPrepareLegacyPass(PassRegistry &);
 void initializeWebAssemblyLowerBrUnlessPass(PassRegistry &);
 void initializeWebAssemblyLowerEmscriptenEHSjLjLegacyPass(PassRegistry &);
 void initializeWebAssemblyMCLowerPrePassPass(PassRegistry &);
@@ -199,7 +231,7 @@ void initializeWebAssemblyRegColoringPass(PassRegistry &);
 void initializeWebAssemblyRegNumberingPass(PassRegistry &);
 void initializeWebAssemblyRegStackifyPass(PassRegistry &);
 void initializeWebAssemblyReplacePhysRegsPass(PassRegistry &);
-void initializeWebAssemblySetP2AlignOperandsPass(PassRegistry &);
+void initializeWebAssemblySetP2AlignOperandsLegacyPass(PassRegistry &);
 void initializeWebAssemblyCoalesceFeaturesAndStripAtomicsLegacyPass(
     PassRegistry &);
 

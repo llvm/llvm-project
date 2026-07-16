@@ -33,9 +33,16 @@ FUNCTION_PASS("wasm-ref-type-mem2local", WebAssemblyRefTypeMem2LocalPass())
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
 MACHINE_FUNCTION_PASS("wasm-argument-move", WebAssemblyArgumentMovePass())
+MACHINE_FUNCTION_PASS("wasm-clean-code-after-trap",
+                      WebAssemblyCleanCodeAfterTrapPass())
 MACHINE_FUNCTION_PASS("wasm-isel", WebAssemblyISelDAGToDAGPass(*this, getOptLevel()))
+MACHINE_FUNCTION_PASS("wasm-fix-br-table-defaults",
+                      WebAssemblyFixBrTableDefaultsPass())
 MACHINE_FUNCTION_PASS("wasm-fix-irreducible-control-flow",
                       WebAssemblyFixIrreducibleControlFlowPass())
+MACHINE_FUNCTION_PASS("wasm-late-eh-prepare", WebAssemblyLateEHPreparePass())
 MACHINE_FUNCTION_PASS("wasm-nullify-dbg-value-lists",
                       WebAssemblyNullifyDebugValueListsPass())
+MACHINE_FUNCTION_PASS("wasm-set-p2align-operands",
+                      WebAssemblySetP2AlignOperandsPass())
 #undef MACHINE_FUNCTION_PASS

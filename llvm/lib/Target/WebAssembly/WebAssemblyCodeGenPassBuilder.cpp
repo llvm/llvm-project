@@ -155,14 +155,14 @@ Error WebAssemblyCodeGenPassBuilder::addInstSelector(
   // Set the p2align operands. This information is present during ISel, however
   // it's inconvenient to collect. Collect it now, and update the immediate
   // operands.
-  // TODO(boomanaiden154): WebAssemblySetP2AlignOperands
+  addMachineFunctionPass(WebAssemblySetP2AlignOperandsPass(), PMW);
 
   // Eliminate range checks and add default targets to br_table instructions.
-  // TODO(boomanaiden154): WebAssemblyFixBrTableDefaults
+  addMachineFunctionPass(WebAssemblyFixBrTableDefaultsPass(), PMW);
 
   // unreachable is terminator, non-terminator instruction after it is not
   // allowed.
-  // TODO(boomanaiden154): WebAssemblyCleanCodeAfterTrap
+  addMachineFunctionPass(WebAssemblyCleanCodeAfterTrapPass(), PMW);
 
   return Error::success();
 }
@@ -183,9 +183,8 @@ void WebAssemblyCodeGenPassBuilder::addPreEmitPass(
 
   // Do various transformations for exception handling.
   // Every CFG-changing optimizations should come before this.
-  if (TM.Options.ExceptionModel == ExceptionHandling::Wasm) {
-    // TODO(boomanaiden154): WebAssemblyLateEHPrepare
-  }
+  if (TM.Options.ExceptionModel == ExceptionHandling::Wasm)
+    addMachineFunctionPass(WebAssemblyLateEHPreparePass(), PMW);
 
   // Now that we have a prologue and epilogue and all frame indices are
   // rewritten, eliminate SP and FP. This allows them to be stackified,
