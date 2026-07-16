@@ -3,11 +3,11 @@
 ; RUN: llc -mtriple=arm-unknown-linux --call-graph-section -filetype=obj -o - < %s | \
 ; RUN: llvm-readelf -x .llvm.callgraph - | FileCheck %s
 
-declare !type !0 void @foo()
+declare !callgraph !0 void @foo()
 
-declare !type !1 i32 @bar(i8)
+declare !callgraph !1 i32 @bar(i8)
 
-declare !type !2 ptr @baz(ptr)
+declare !callgraph !2 ptr @baz(ptr)
 
 define void @main() {
 entry:
@@ -22,12 +22,12 @@ entry:
 
 ;; Check that the numeric type id (md5 hash) for the below type ids are emitted
 ;; to the callgraph section.
-!0 = !{i64 0, !"_ZTSFvE.generalized"}
+!0 = !{!"_ZTSFvE.generalized"}
 !1 = !{!0}
-!2 = !{i64 0, !"_ZTSFicE.generalized"}
+!2 = !{!"_ZTSFicE.generalized"}
 !3 = !{!2}
 !4 = !{!5}
-!5 = !{i64 0, !"_ZTSFPvS_E.generalized"}
+!5 = !{!"_ZTSFPvS_E.generalized"}
 
 ;; Make sure following type IDs are in call graph section
 ;; 0x5eecb3e2444f731f, 0x814b8e305486bc59, 0xf897fd777ade6814

@@ -90,5 +90,5 @@ for.end49:                                        ; preds = %for.end, %entry
 ;; CHECK: outer_product
 ;; CHECK: {{r[0-9]+}} = lsr({{r[0-9]+}},#3)
 ;; CHECK: {{q[0-9]+}} = vand({{v[0-9]+}},{{r[0-9]+}})
-;; CHECK: {{v[0-9]+}} = vmux(q0,{{v[0-9]+}},{{v[0-9]+}})
+;; CHECK: {{v[0-9]+}} = vmux({{q[0-9]+}},{{v[0-9]+}},{{v[0-9]+}})
 ;; CHECK: vmem{{.*}} = {{v[0-9]+}}

@@ -16,10 +16,13 @@
 #define LLVM_CLANG_APINOTES_READER_H
 
 #include "clang/APINotes/Types.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VersionTuple.h"
 #include <memory>
+#include <optional>
+#include <string>
 
 namespace clang {
 namespace api_notes {
@@ -159,6 +162,13 @@ public:
   VersionedInfo<CXXMethodInfo> lookupCXXMethod(ContextID CtxID,
                                                llvm::StringRef Name);
 
+  /// Look for information regarding the given C++ method with an exact
+  /// parameter selector. An empty parameter list uses an exact zero-parameter
+  /// key, and a non-empty list uses an exact ordered parameter key.
+  VersionedInfo<CXXMethodInfo>
+  lookupCXXMethod(ContextID CtxID, llvm::StringRef Name,
+                  llvm::ArrayRef<std::string> Parameters);
+
   /// Look for information regarding the given global variable.
   ///
   /// \param Name The name of the global variable.
@@ -175,6 +185,14 @@ public:
   /// \returns information about the global function, if known.
   VersionedInfo<GlobalFunctionInfo>
   lookupGlobalFunction(llvm::StringRef Name,
+                       std::optional<Context> Ctx = std::nullopt);
+
+  /// Look for information regarding the given global function with an exact
+  /// parameter selector. An empty parameter list uses an exact zero-parameter
+  /// key, and a non-empty list uses an exact ordered parameter key.
+  VersionedInfo<GlobalFunctionInfo>
+  lookupGlobalFunction(llvm::StringRef Name,
+                       llvm::ArrayRef<std::string> Parameters,
                        std::optional<Context> Ctx = std::nullopt);
 
   /// Look for information regarding the given enumerator.
@@ -221,6 +239,22 @@ public:
   std::optional<ContextID>
   lookupNamespaceID(llvm::StringRef Name,
                     std::optional<ContextID> ParentNamespaceID = std::nullopt);
+
+private:
+  VersionedInfo<CXXMethodInfo> lookupCXXMethodImpl(ContextID CtxID,
+                                                   llvm::StringRef Name);
+  template <typename ParameterT>
+  VersionedInfo<CXXMethodInfo>
+  lookupCXXMethodImpl(ContextID CtxID, llvm::StringRef Name,
+                      llvm::ArrayRef<ParameterT> Parameters);
+
+  VersionedInfo<GlobalFunctionInfo>
+  lookupGlobalFunctionImpl(llvm::StringRef Name, std::optional<Context> Ctx);
+  template <typename ParameterT>
+  VersionedInfo<GlobalFunctionInfo>
+  lookupGlobalFunctionImpl(llvm::StringRef Name,
+                           llvm::ArrayRef<ParameterT> Parameters,
+                           std::optional<Context> Ctx);
 };
 
 } // end namespace api_notes

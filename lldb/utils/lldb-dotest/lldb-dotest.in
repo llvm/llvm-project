@@ -13,6 +13,7 @@ dsymutil = '@LLDB_TEST_DSYMUTIL_CONFIGURED@'
 make = '@LLDB_TEST_MAKE_CONFIGURED@'
 lldb_build_dir = '@LLDB_TEST_BUILD_DIRECTORY_CONFIGURED@'
 lldb_build_intel_pt = "@LLDB_BUILD_INTEL_PT@"
+lldb_build_mock_accelerator = "@LLDB_ENABLE_MOCK_ACCELERATOR_PLUGIN@"
 lldb_framework_dir = "@LLDB_FRAMEWORK_DIR_CONFIGURED@"
 lldb_libs_dir = "@LLDB_LIBS_DIR_CONFIGURED@"
 llvm_tools_dir = "@LLVM_TOOLS_DIR_CONFIGURED@"
@@ -54,6 +55,8 @@ if __name__ == '__main__':
         cmd.extend(['--framework', lldb_framework_dir])
     if lldb_build_intel_pt == "1":
         cmd.extend(['--enable-plugin', 'intel-pt'])
+    if lldb_build_mock_accelerator == "1":
+        cmd.extend(['--enable-plugin', 'mock-accelerator'])
     if lldb_enable_arm64e_debugserver:
         cmd.extend(['--arm64e-debugserver'])
     cmd.extend(['--lldb-obj-root', lldb_obj_root])

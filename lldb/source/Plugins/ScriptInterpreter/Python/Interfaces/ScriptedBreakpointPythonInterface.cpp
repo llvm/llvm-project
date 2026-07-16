@@ -6,12 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// clang-format off
-// LLDB Python header must be included first
 #include "../lldb-python.h"
-//clang-format on
 
 #include "lldb/Breakpoint/Breakpoint.h"
+#include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/BreakpointResolverScripted.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -33,10 +31,9 @@ ScriptedBreakpointPythonInterface::ScriptedBreakpointPythonInterface(
 
 llvm::Expected<StructuredData::GenericSP>
 ScriptedBreakpointPythonInterface::CreatePluginObject(
-    llvm::StringRef class_name, lldb::BreakpointSP break_sp,
-    const StructuredDataImpl &args_sp) {
-  return ScriptedPythonInterface::CreatePluginObject(class_name, nullptr,
-                                                     break_sp, args_sp);
+    const ScriptedMetadata &scripted_metadata, lldb::BreakpointSP break_sp) {
+  return ScriptedPythonInterface::CreatePluginObject(
+      scripted_metadata, nullptr, break_sp, scripted_metadata.GetArgsSP());
 }
 
 bool ScriptedBreakpointPythonInterface::OverridesResolver(
@@ -146,7 +143,8 @@ void ScriptedBreakpointPythonInterface::Initialize() {
       GetPluginNameStatic(),
       llvm::StringRef("Create a breakpoint that chooses locations based on "
                       "user-created callbacks"),
-      CreateInstance, eScriptLanguagePython, {ci_usages, api_usages});
+      CreateInstance, eScriptedExtensionScriptedBreakpointResolver,
+      eScriptLanguagePython, {ci_usages, api_usages});
 }
 
 void ScriptedBreakpointPythonInterface::Terminate() {

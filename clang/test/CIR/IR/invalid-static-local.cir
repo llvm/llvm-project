@@ -65,7 +65,7 @@ module {
 cir.global "private" internal static_local_guard<"_ZGVZ1fvE1y"> @_ZZ1fvE1y : !s32i
 
 cir.global "private" internal @_AnotherGlobal = ctor : !s32i {
-  // expected-error @below {{'cir.local_init' op must be inside of a 'cir.func'}}
+  // expected-error @below {{'cir.local_init' op expects ancestor op 'cir.func'}}
   cir.local_init static_local @_ZZ1fvE1y ctor {
     cir.yield
   } dtor {

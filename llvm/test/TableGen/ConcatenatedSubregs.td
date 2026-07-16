@@ -98,11 +98,11 @@ def TestTarget : Target;
 // Check inferred indexes:
 // CHECK-LABEL: SubRegIndex ssub1_ssub2:
 // CHECK:         Offset: 16
-// CHECK:         Size: 65535
+// CHECK:         Size: 4294967295
 // CHECK-LABEL: SubRegIndex ssub3_ssub4:
 // CHECK-LABEL: SubRegIndex ssub0_ssub1_ssub2_ssub3:
-// CHECK:         Offset: 65535
-// CHECK:         Size: 65535
+// CHECK:         Offset: 4294967295
+// CHECK:         Size: 4294967295
 // CHECK-LABEL: SubRegIndex ssub1_ssub2_ssub3_ssub4:
 
 // Check that all subregs are generated on some examples

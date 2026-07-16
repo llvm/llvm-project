@@ -16,7 +16,7 @@
 
 namespace llvm {
 
-extern cl::opt<bool> ForgetSCEVInLoopUnroll;
+extern LLVM_ABI cl::opt<bool> ForgetSCEVInLoopUnroll;
 
 class Function;
 class Loop;
@@ -42,8 +42,9 @@ public:
       : OptLevel(OptLevel), OnlyWhenForced(OnlyWhenForced),
         ForgetSCEV(ForgetSCEV) {}
 
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
-                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+  LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+                                 LoopStandardAnalysisResults &AR,
+                                 LPMUpdater &U);
 };
 
 /// A set of parameters used to control various transforms performed by the
@@ -139,9 +140,10 @@ public:
   explicit LoopUnrollPass(LoopUnrollOptions UnrollOpts = {})
       : UnrollOpts(UnrollOpts) {}
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 
 } // end namespace llvm

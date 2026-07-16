@@ -31,6 +31,7 @@ add_libc_test(
     rewind_test.cpp
   DEPENDS
     libc.include.stdio
+    libc.src.__support.CPP.scope
     libc.src.stdio.fclose
     libc.src.stdio.ferror
     libc.src.stdio.fopen
@@ -172,6 +173,7 @@ add_fp_unittest(
   SRCS
     sprintf_test.cpp
   DEPENDS
+    libc.src.stdio.printf_core.printf_config
     libc.src.stdio.sprintf
     libc.src.__support.FPUtil.fp_bits
     libc.include.inttypes
@@ -437,6 +439,7 @@ add_libc_test(
   SRCS
     fopen_test.cpp
   DEPENDS
+    libc.src.__support.CPP.scope
     libc.src.stdio.fread
     libc.src.stdio.fwrite
     libc.src.stdio.fclose
@@ -500,6 +503,8 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
     SRCS
       fdopen_test.cpp
     DEPENDS
+      libc.hdr.fcntl_macros
+      libc.hdr.sys_stat_macros
       libc.src.fcntl.open
       libc.src.stdio.fclose
       libc.src.stdio.fdopen
@@ -519,6 +524,7 @@ add_libc_test(
     fgetc_test.cpp
   DEPENDS
     libc.include.stdio
+    libc.src.__support.CPP.scope
     libc.src.errno.errno
     libc.src.stdio.fclose
     libc.src.stdio.feof
@@ -539,6 +545,7 @@ add_libc_test(
     fgetc_unlocked_test.cpp
   DEPENDS
     libc.include.stdio
+    libc.src.__support.CPP.scope
     libc.src.errno.errno
     libc.src.stdio.fclose
     libc.src.stdio.ferror
@@ -563,6 +570,7 @@ add_libc_test(
     fgets_test.cpp
   DEPENDS
     libc.include.stdio
+    libc.src.__support.CPP.scope
     libc.src.errno.errno
     libc.src.stdio.fclose
     libc.src.stdio.feof

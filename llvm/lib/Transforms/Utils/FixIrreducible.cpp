@@ -129,11 +129,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/FixIrreducible.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ControlFlowUtils.h"
@@ -218,7 +220,7 @@ static void reconnectChildLoops(LoopInfo &LI, Loop *ParentLoop, Loop *NewLoop,
   }
 }
 
-static void updateLoopInfo(LoopInfo &LI, Cycle &C,
+static void updateLoopInfo(CycleInfo &CI, LoopInfo &LI, Cycle &C,
                            ArrayRef<BasicBlock *> GuardBlocks) {
   // The parent loop is a natural loop L mapped to the cycle header H as long as
   // H is not also the header of L. In the latter case, L is destroyed and we
@@ -246,7 +248,7 @@ static void updateLoopInfo(LoopInfo &LI, Cycle &C,
     NewLoop->addBasicBlockToLoop(G, LI);
   }
 
-  for (auto *BB : C.blocks()) {
+  for (auto *BB : CI.getBlocks(C)) {
     NewLoop->addBlockEntry(BB);
     if (LI.getLoopFor(BB) == ParentLoop) {
       LLVM_DEBUG(dbgs() << "moved block from parent: " << BB->getName()
@@ -285,7 +287,7 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
   // Redirect internal edges incident on the header.
   BasicBlock *Header = C.getHeader();
   for (BasicBlock *P : predecessors(Header)) {
-    if (C.contains(P))
+    if (CI.contains(C, P))
       Predecessors.insert(P);
   }
 
@@ -297,10 +299,8 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
       LLVM_DEBUG(dbgs() << "Added internal branch: " << printBasicBlock(P)
                         << " -> " << printBasicBlock(Header) << '\n');
     } else if (CondBrInst *Branch = dyn_cast<CondBrInst>(P->getTerminator())) {
-      // Exactly one of the two successors is the header.
       BasicBlock *Succ0 = Branch->getSuccessor(0) == Header ? Header : nullptr;
-      BasicBlock *Succ1 = Succ0 ? nullptr : Header;
-      assert(Succ0 || Branch->getSuccessor(1) == Header);
+      BasicBlock *Succ1 = Branch->getSuccessor(1) == Header ? Header : nullptr;
       assert(Succ0 || Succ1);
       CHub.addBranch(P, Succ0, Succ1);
 
@@ -309,18 +309,21 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
                         << (Succ0 && Succ1 ? " " : "") << printBasicBlock(Succ1)
                         << '\n');
     } else if (CallBrInst *CallBr = dyn_cast<CallBrInst>(P->getTerminator())) {
+      BasicBlock *NewSucc = nullptr;
       for (unsigned I = 0; I < CallBr->getNumSuccessors(); ++I) {
         BasicBlock *Succ = CallBr->getSuccessor(I);
         if (Succ != Header)
           continue;
-        BasicBlock *NewSucc = SplitCallBrEdge(P, Succ, I, &DTU, &CI, LI);
-        CHub.addBranch(NewSucc, Succ);
+        NewSucc = SplitCallBrEdge(P, Succ, I, NewSucc, &DTU, &CI, LI);
         LLVM_DEBUG(dbgs() << "Added internal branch: "
                           << printBasicBlock(NewSucc) << " -> "
                           << printBasicBlock(Succ) << '\n');
       }
+      if (NewSucc)
+        CHub.addBranch(NewSucc, Header);
     } else {
-      llvm_unreachable("unsupported block terminator");
+      reportFatalUsageError("unsupported block terminator: fix-irreducible "
+                            "only supports br and callbr instructions");
     }
   }
 
@@ -328,7 +331,7 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
   Predecessors.clear();
   for (BasicBlock *E : C.entries()) {
     for (BasicBlock *P : predecessors(E)) {
-      if (!C.contains(P))
+      if (!CI.contains(C, P))
         Predecessors.insert(P);
     }
   }
@@ -336,16 +339,16 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
   for (BasicBlock *P : Predecessors) {
     if (UncondBrInst *Branch = dyn_cast<UncondBrInst>(P->getTerminator())) {
       BasicBlock *Succ0 = Branch->getSuccessor();
-      Succ0 = C.contains(Succ0) ? Succ0 : nullptr;
+      Succ0 = CI.contains(C, Succ0) ? Succ0 : nullptr;
       CHub.addBranch(P, Succ0);
 
       LLVM_DEBUG(dbgs() << "Added external branch: " << printBasicBlock(P)
                         << " -> " << printBasicBlock(Succ0) << '\n');
     } else if (CondBrInst *Branch = dyn_cast<CondBrInst>(P->getTerminator())) {
       BasicBlock *Succ0 = Branch->getSuccessor(0);
-      Succ0 = C.contains(Succ0) ? Succ0 : nullptr;
+      Succ0 = CI.contains(C, Succ0) ? Succ0 : nullptr;
       BasicBlock *Succ1 = Branch->getSuccessor(1);
-      Succ1 = C.contains(Succ1) ? Succ1 : nullptr;
+      Succ1 = CI.contains(C, Succ1) ? Succ1 : nullptr;
       CHub.addBranch(P, Succ0, Succ1);
 
       LLVM_DEBUG(dbgs() << "Added external branch: " << printBasicBlock(P)
@@ -353,18 +356,30 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
                         << (Succ0 && Succ1 ? " " : "") << printBasicBlock(Succ1)
                         << '\n');
     } else if (CallBrInst *CallBr = dyn_cast<CallBrInst>(P->getTerminator())) {
+      SmallDenseMap<BasicBlock *, BasicBlock *> CallBrTargets;
       for (unsigned I = 0; I < CallBr->getNumSuccessors(); ++I) {
         BasicBlock *Succ = CallBr->getSuccessor(I);
-        if (!C.contains(Succ))
+        if (!CI.contains(C, Succ))
           continue;
-        BasicBlock *NewSucc = SplitCallBrEdge(P, Succ, I, &DTU, &CI, LI);
-        CHub.addBranch(NewSucc, Succ);
+        auto It = CallBrTargets.find(Succ);
+        BasicBlock *ExistingTarget =
+            (It != CallBrTargets.end()) ? It->second : nullptr;
+
+        BasicBlock *NewSucc =
+            SplitCallBrEdge(P, Succ, I, ExistingTarget, &DTU, &CI, LI);
+
+        if (!ExistingTarget) {
+          CHub.addBranch(NewSucc, Succ);
+          CallBrTargets[Succ] = NewSucc;
+        }
+
         LLVM_DEBUG(dbgs() << "Added external branch: "
                           << printBasicBlock(NewSucc) << " -> "
                           << printBasicBlock(Succ) << '\n');
       }
     } else {
-      llvm_unreachable("unsupported block terminator");
+      reportFatalUsageError("unsupported block terminator: fix-irreducible "
+                            "only supports br and callbr instructions");
     }
   }
 
@@ -391,7 +406,7 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
   // If we are updating LoopInfo, do that now before modifying the cycle. This
   // ensures that the first guard block is the header of a new natural loop.
   if (LI)
-    updateLoopInfo(*LI, C, GuardBlocks);
+    updateLoopInfo(CI, *LI, C, GuardBlocks);
 
   for (auto *G : GuardBlocks) {
     LLVM_DEBUG(dbgs() << "added guard block to cycle: " << G->getName()
@@ -400,9 +415,9 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
   }
   C.setSingleEntry(GuardBlocks[0]);
 
-  C.verifyCycle();
+  CI.verifyCycle(C);
   if (Cycle *Parent = C.getParentCycle())
-    Parent->verifyCycle();
+    CI.verifyCycle(*Parent);
 
   LLVM_DEBUG(dbgs() << "Finished one cycle:\n"; CI.print(dbgs()););
   return true;
@@ -414,9 +429,13 @@ static bool FixIrreducibleImpl(Function &F, CycleInfo &CI, DominatorTree &DT,
                     << F.getName() << "\n");
 
   bool Changed = false;
+  SmallVector<Cycle *, 8> Worklist;
   for (Cycle *TopCycle : CI.toplevel_cycles()) {
-    for (Cycle *C : depth_first(TopCycle)) {
+    Worklist.push_back(TopCycle);
+    while (!Worklist.empty()) {
+      Cycle *C = Worklist.pop_back_val();
       Changed |= fixIrreducible(*C, CI, DT, LI);
+      llvm::append_range(Worklist, reverse(C->children()));
     }
   }
 

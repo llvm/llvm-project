@@ -85,4 +85,3 @@ class IOHandlerCompletionTest(PExpectTest):
         self.child.send("regoinvalid\t")
         self.expect_prompt()
 
-        self.quit()

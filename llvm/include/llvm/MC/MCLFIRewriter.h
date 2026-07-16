@@ -25,6 +25,7 @@ class MCInst;
 class MCSubtargetInfo;
 class MCStreamer;
 class MCSymbol;
+class Twine;
 
 class MCLFIRewriter {
 private:
@@ -40,7 +41,8 @@ public:
                 std::unique_ptr<MCInstrInfo> &&II)
       : Ctx(Ctx), InstInfo(std::move(II)), RegInfo(std::move(RI)) {}
 
-  LLVM_ABI void error(const MCInst &Inst, const char Msg[]);
+  LLVM_ABI void error(const MCInst &Inst, const Twine &Msg);
+  LLVM_ABI void warning(const MCInst &Inst, const Twine &Msg);
 
   void disable() { Enabled = false; }
   void enable() { Enabled = true; }
@@ -62,8 +64,13 @@ public:
                            const MCSubtargetInfo &STI) = 0;
 
   // Called when a label is emitted. Used for optimizations that require
-  // information about jump targets, such as guard elimination.
-  virtual void onLabel(const MCSymbol *Symbol) {}
+  // information about jump targets, such as guard elimination, and to flush
+  // any rewriter state that must not cross a potential branch target.
+  virtual void onLabel(const MCSymbol *Symbol, MCStreamer &Out) {}
+
+  // Called when the stream is finalized. Used to flush any pending rewriter
+  // state before the stream ends.
+  virtual void finish(MCStreamer &Out) {}
 };
 
 } // namespace llvm
