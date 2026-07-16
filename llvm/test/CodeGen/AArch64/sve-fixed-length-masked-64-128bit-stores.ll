@@ -35,8 +35,8 @@ define void @masked_store_v8f16(ptr %dst, <8 x i1> %mask) {
   ret void
 }
 
-define void @masked_store_v8bf16_test1(ptr %dst, <8 x i1> %mask) {
-; CHECK-LABEL: masked_store_v8bf16_test1:
+define void @masked_store_v8bf16_without_bf16_attr(ptr %dst, <8 x i1> %mask) {
+; CHECK-LABEL: masked_store_v8bf16_without_bf16_attr:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v0.8b, v0.8b, #7
 ; CHECK-NEXT:    adrp x8, .LCPI2_0
@@ -98,8 +98,8 @@ define void @masked_store_v8bf16_test1(ptr %dst, <8 x i1> %mask) {
   ret void
 }
 
-define void @masked_store_v8bf16_test2(ptr %dst, <8 x i1> %mask) #0 {
-; CHECK-LABEL: masked_store_v8bf16_test2:
+define void @masked_store_v8bf16_with_bf16_attr(ptr %dst, <8 x i1> %mask) #0 {
+; CHECK-LABEL: masked_store_v8bf16_with_bf16_attr:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-NEXT:    ptrue p0.h, vl8
@@ -193,8 +193,8 @@ define void @masked_store_v4f16(ptr %ap, ptr %bp) {
   ret void
 }
 
-define void @masked_store_v4bf16_test1(ptr %ap, ptr %bp) {
-; CHECK-LABEL: masked_store_v4bf16_test1:
+define void @masked_store_v4bf16_without_bf16_attr(ptr %ap, ptr %bp) {
+; CHECK-LABEL: masked_store_v4bf16_without_bf16_attr:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
@@ -238,8 +238,8 @@ define void @masked_store_v4bf16_test1(ptr %ap, ptr %bp) {
   ret void
 }
 
-define void @masked_store_v4bf16_test2(ptr %ap, ptr %bp) #0 {
-; CHECK-LABEL: masked_store_v4bf16_test2:
+define void @masked_store_v4bf16_with_bf16_attr(ptr %ap, ptr %bp) #0 {
+; CHECK-LABEL: masked_store_v4bf16_with_bf16_attr:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
