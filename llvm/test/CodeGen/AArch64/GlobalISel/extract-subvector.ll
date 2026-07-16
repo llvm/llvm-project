@@ -195,3 +195,114 @@ entry:
   ret <4 x i16> %vector
 }
 
+define <16 x i8> @extract_v16i8_v32i8_low(<32 x i8> %a) {
+; CHECK-LABEL: extract_v16i8_v32i8_low:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ret
+entry:
+  %vector = call <16 x i8> @llvm.vector.extract.subvector.v16i8.v32i8(<32 x i8> %a, i64 0)
+  ret <16 x i8> %vector
+}
+
+define <16 x i8> @extract_v16i8_v32i8_high(<32 x i8> %a) {
+; CHECK-LABEL: extract_v16i8_v32i8_high:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    ret
+entry:
+  %vector = call <16 x i8> @llvm.vector.extract.subvector.v16i8.v32i8(<32 x i8> %a, i64 16)
+  ret <16 x i8> %vector
+}
+
+define <16 x i8> @extract_v16i8_v16i8(<16 x i8> %a) {
+; CHECK-SD-LABEL: extract_v16i8_v16i8:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v16i8_v16i8:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov b1, v0.b[0]
+; CHECK-GI-NEXT:    mov v1.b[1], v0.b[1]
+; CHECK-GI-NEXT:    mov v1.b[2], v0.b[2]
+; CHECK-GI-NEXT:    mov v1.b[3], v0.b[3]
+; CHECK-GI-NEXT:    mov v1.b[4], v0.b[4]
+; CHECK-GI-NEXT:    mov v1.b[5], v0.b[5]
+; CHECK-GI-NEXT:    mov v1.b[6], v0.b[6]
+; CHECK-GI-NEXT:    mov v1.b[7], v0.b[7]
+; CHECK-GI-NEXT:    mov v1.b[8], v0.b[8]
+; CHECK-GI-NEXT:    mov v1.b[9], v0.b[9]
+; CHECK-GI-NEXT:    mov v1.b[10], v0.b[10]
+; CHECK-GI-NEXT:    mov v1.b[11], v0.b[11]
+; CHECK-GI-NEXT:    mov v1.b[12], v0.b[12]
+; CHECK-GI-NEXT:    mov v1.b[13], v0.b[13]
+; CHECK-GI-NEXT:    mov v1.b[14], v0.b[14]
+; CHECK-GI-NEXT:    mov v1.b[15], v0.b[15]
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    ret
+entry:
+  %vector = call <16 x i8> @llvm.vector.extract.subvector.v16i8.v16i8(<16 x i8> %a, i64 0)
+  ret <16 x i8> %vector
+}
+
+define <8 x i8> @extract_v8i8_v32i8_low(<32 x i8> %a) {
+; CHECK-LABEL: extract_v8i8_v32i8_low:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
+entry:
+  %vector = call <8 x i8> @llvm.vector.extract.subvector.v8i8.v32i8(<32 x i8> %a, i64 0)
+  ret <8 x i8> %vector
+}
+
+define <8 x i8> @extract_v8i8_v32i8_high(<32 x i8> %a) {
+; CHECK-LABEL: extract_v8i8_v32i8_high:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov d0, v1.d[1]
+; CHECK-NEXT:    ret
+entry:
+  %vector = call <8 x i8> @llvm.vector.extract.subvector.v8i8.v32i8(<32 x i8> %a, i64 24)
+  ret <8 x i8> %vector
+}
+
+define <8 x i8> @extract_v8i8_v16i8_low(<16 x i8> %a) {
+; CHECK-LABEL: extract_v8i8_v16i8_low:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
+entry:
+  %vector = call <8 x i8> @llvm.vector.extract.subvector.v8i8.v16i8(<16 x i8> %a, i64 0)
+  ret <8 x i8> %vector
+}
+
+define <8 x i8> @extract_v8i8_v16i8_high(<16 x i8> %a) {
+; CHECK-LABEL: extract_v8i8_v16i8_high:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov d0, v0.d[1]
+; CHECK-NEXT:    ret
+entry:
+  %vector = call <8 x i8> @llvm.vector.extract.subvector.v8i8.v16i8(<16 x i8> %a, i64 8)
+  ret <8 x i8> %vector
+}
+
+define <8 x i8> @extract_v8i8_v8i8(<8 x i8> %a) {
+; CHECK-SD-LABEL: extract_v8i8_v8i8:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v8i8_v8i8:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    mov v1.b[0], v0.b[0]
+; CHECK-GI-NEXT:    mov v1.b[1], v0.b[1]
+; CHECK-GI-NEXT:    mov v1.b[2], v0.b[2]
+; CHECK-GI-NEXT:    mov v1.b[3], v0.b[3]
+; CHECK-GI-NEXT:    mov v1.b[4], v0.b[4]
+; CHECK-GI-NEXT:    mov v1.b[5], v0.b[5]
+; CHECK-GI-NEXT:    mov v1.b[6], v0.b[6]
+; CHECK-GI-NEXT:    mov v1.b[7], v0.b[7]
+; CHECK-GI-NEXT:    fmov d0, d1
+; CHECK-GI-NEXT:    ret
+entry:
+  %vector = call <8 x i8> @llvm.vector.extract.subvector.v8i8.v8i8(<8 x i8> %a, i64 0)
+  ret <8 x i8> %vector
+}
