@@ -64,4 +64,117 @@ exit:
   ret void
 }
 
+define void @zero_step_constant_start(i32 %n) {
+; CHECK-LABEL: define void @zero_step_constant_start(
+; CHECK-SAME: i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[IV]], [[N]]
+; CHECK-NEXT:    br i1 [[C]], label %[[LATCH]], label %[[EXIT:.*]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 0
+; CHECK-NEXT:    br label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %latch ]
+  %c = icmp ne i32 %iv, %n
+  br i1 %c, label %latch, label %exit
+
+latch:
+  %iv.next = add i32 %iv, 0
+  br label %loop
+
+exit:
+  ret void
+}
+
+define void @zero_step_unknown_start(i32 %n, i32 %start) {
+; CHECK-LABEL: define void @zero_step_unknown_start(
+; CHECK-SAME: i32 [[N:%.*]], i32 [[START:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[IV]], [[N]]
+; CHECK-NEXT:    br i1 [[C]], label %[[LATCH]], label %[[EXIT:.*]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 0
+; CHECK-NEXT:    br label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %start, %entry ], [ %iv.next, %latch ]
+  %c = icmp ne i32 %iv, %n
+  br i1 %c, label %latch, label %exit
+
+latch:
+  %iv.next = add i32 %iv, 0
+  br label %loop
+
+exit:
+  ret void
+}
+
+define void @zero_step_addrec_of_outer_loop(i32 %n) {
+; CHECK-LABEL: define void @zero_step_addrec_of_outer_loop(
+; CHECK-SAME: i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[OUTER:.*]]
+; CHECK:       [[OUTER]]:
+; CHECK-NEXT:    [[O:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[O_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    br label %[[INNER:.*]]
+; CHECK:       [[INNER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[O]], %[[OUTER]] ], [ [[IV_NEXT:%.*]], %[[INNER_LATCH:.*]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[IV]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[INNER_LATCH]], label %[[OUTER_LATCH]]
+; CHECK:       [[INNER_LATCH]]:
+; CHECK-NEXT:    [[T:%.*]] = icmp uge i32 [[IV]], [[O]]
+; CHECK-NEXT:    call void @use(i1 [[T]])
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 0
+; CHECK-NEXT:    br label %[[INNER]]
+; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    [[O_NEXT]] = add i32 [[O]], 1
+; CHECK-NEXT:    [[CMP_O:%.*]] = icmp ne i32 [[O]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP_O]], label %[[OUTER]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %outer
+
+outer:
+  %o = phi i32 [ 0, %entry ], [ %o.next, %outer.latch ]
+  br label %inner
+
+inner:
+  %iv = phi i32 [ %o, %outer ], [ %iv.next, %inner.latch ]
+  %cmp = icmp ne i32 %iv, %n
+  br i1 %cmp, label %inner.latch, label %outer.latch
+
+inner.latch:
+  %t = icmp uge i32 %iv, %o
+  call void @use(i1 %t)
+  %iv.next = add i32 %iv, 0
+  br label %inner
+
+outer.latch:
+  %o.next = add i32 %o, 1
+  %cmp.o = icmp ne i32 %o, %n
+  br i1 %cmp.o, label %outer, label %exit
+
+exit:
+  ret void
+}
+
 declare void @use(i32)

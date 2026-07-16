@@ -467,6 +467,11 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "sys_ioctl_macros",
+    hdrs = ["hdr/sys_ioctl_macros.h"],
+)
+
+libc_support_library(
     name = "hdr_sys_mman_macros",
     hdrs = ["hdr/sys_mman_macros.h"],
 )
@@ -1589,6 +1594,7 @@ libc_support_library(
         ":hdr_fcntl_macros",
         ":hdr_stdint_proxy",
         ":hdr_stdio_macros",
+        ":hdr_sys_stat_macros",
         ":types_off_t",
     ],
 )
@@ -2031,6 +2037,7 @@ libc_support_library(
         "src/__support/fixed_point/fx_rep.h",
     ],
     deps = [
+        ":__support_big_int",
         ":__support_cpp_algorithm",
         ":__support_cpp_bit",
         ":__support_cpp_limits",
@@ -2041,6 +2048,7 @@ libc_support_library(
         ":__support_macros_null_check",
         ":__support_macros_optimization",
         ":__support_math_extras",
+        ":__support_uint128",
         ":hdr_stdint_proxy",
         ":llvm_libc_macros_stdfix_macros",
     ],
@@ -2994,6 +3002,7 @@ libc_support_library(
         ":__support_macros_config",
         ":errno",
         ":hdr_errno_macros",
+        ":hdr_signal_macros",
     ],
 )
 
@@ -14698,6 +14707,7 @@ libc_function(
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_unistd_macros",
+        ":sys_ioctl_macros",
     ],
 )
 
@@ -16076,6 +16086,7 @@ libc_function(
         ":__support_osutil_linux_syscall_wrappers_recvfrom",
         ":__support_osutil_syscall",
         ":errno",
+        ":types_size_t",
         ":types_socklen_t",
         ":types_ssize_t",
         ":types_struct_sockaddr",
@@ -16144,6 +16155,7 @@ libc_function(
         ":__support_osutil_linux_syscall_wrappers_sendto",
         ":__support_osutil_syscall",
         ":errno",
+        ":types_size_t",
         ":types_socklen_t",
         ":types_ssize_t",
         ":types_struct_sockaddr",

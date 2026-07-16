@@ -34,60 +34,41 @@
 namespace llvm {
 
 template <typename ContextT>
-bool GenericCycle<ContextT>::contains(const GenericCycle *C) const {
-  // Containment check using the Euler tour representation.
-  return C && IdxBegin <= C->IdxBegin && C->IdxEnd <= IdxEnd;
-}
-
-template <typename ContextT>
-bool GenericCycle<ContextT>::contains(const BlockT *Block) const {
-  return contains(CI->getCycle(Block));
-}
-
-template <typename ContextT>
-auto GenericCycle<ContextT>::block_begin() const -> const_block_iterator {
-  return CI->BlockLayout.begin() + IdxBegin;
-}
-
-template <typename ContextT>
-auto GenericCycle<ContextT>::block_end() const -> const_block_iterator {
-  return CI->BlockLayout.begin() + IdxEnd;
-}
-
-template <typename ContextT>
-void GenericCycle<ContextT>::getExitBlocks(
-    SmallVectorImpl<BlockT *> &TmpStorage) const {
-  if (!ExitBlocksCache.empty()) {
-    TmpStorage.append(ExitBlocksCache.begin(), ExitBlocksCache.end());
+void GenericCycleInfo<ContextT>::getExitBlocks(
+    const CycleT &C, SmallVectorImpl<BlockT *> &TmpStorage) const {
+  if (ExitBlocksCaches.empty())
+    ExitBlocksCaches.resize(NumCycles);
+  auto &Cache = ExitBlocksCaches[C.ID];
+  if (!Cache.empty()) {
+    TmpStorage.append(Cache.begin(), Cache.end());
     return;
   }
 
   size_t NumExitBlocks = 0;
-  for (BlockT *Block : blocks()) {
-    llvm::append_range(ExitBlocksCache, successors(Block));
+  for (BlockT *Block : getBlocks(C)) {
+    llvm::append_range(Cache, successors(Block));
 
-    for (size_t Idx = NumExitBlocks, End = ExitBlocksCache.size(); Idx < End;
-         ++Idx) {
-      BlockT *Succ = ExitBlocksCache[Idx];
-      if (!contains(Succ)) {
-        auto ExitEndIt = ExitBlocksCache.begin() + NumExitBlocks;
-        if (std::find(ExitBlocksCache.begin(), ExitEndIt, Succ) == ExitEndIt)
-          ExitBlocksCache[NumExitBlocks++] = Succ;
+    for (size_t Idx = NumExitBlocks, End = Cache.size(); Idx < End; ++Idx) {
+      BlockT *Succ = Cache[Idx];
+      if (!contains(C, Succ)) {
+        auto ExitEndIt = Cache.begin() + NumExitBlocks;
+        if (std::find(Cache.begin(), ExitEndIt, Succ) == ExitEndIt)
+          Cache[NumExitBlocks++] = Succ;
       }
     }
 
-    ExitBlocksCache.resize(NumExitBlocks);
+    Cache.resize(NumExitBlocks);
   }
 
-  TmpStorage.append(ExitBlocksCache.begin(), ExitBlocksCache.end());
+  TmpStorage.append(Cache.begin(), Cache.end());
 }
 
 template <typename ContextT>
-void GenericCycle<ContextT>::getExitingBlocks(
-    SmallVectorImpl<BlockT *> &TmpStorage) const {
-  for (BlockT *Block : blocks()) {
+void GenericCycleInfo<ContextT>::getExitingBlocks(
+    const CycleT &C, SmallVectorImpl<BlockT *> &TmpStorage) const {
+  for (BlockT *Block : getBlocks(C)) {
     for (BlockT *Succ : successors(Block)) {
-      if (!contains(Succ)) {
+      if (!contains(C, Succ)) {
         TmpStorage.push_back(Block);
         break;
       }
@@ -96,12 +77,13 @@ void GenericCycle<ContextT>::getExitingBlocks(
 }
 
 template <typename ContextT>
-auto GenericCycle<ContextT>::getCyclePreheader() const -> BlockT * {
-  BlockT *Predecessor = getCyclePredecessor();
+auto GenericCycleInfo<ContextT>::getCyclePreheader(const CycleT &C) const
+    -> BlockT * {
+  BlockT *Predecessor = getCyclePredecessor(C);
   if (!Predecessor)
     return nullptr;
 
-  assert(isReducible() && "Cycle Predecessor must be in a reducible cycle!");
+  assert(C.isReducible() && "Cycle Predecessor must be in a reducible cycle!");
 
   if (succ_size(Predecessor) != 1)
     return nullptr;
@@ -114,16 +96,17 @@ auto GenericCycle<ContextT>::getCyclePreheader() const -> BlockT * {
 }
 
 template <typename ContextT>
-auto GenericCycle<ContextT>::getCyclePredecessor() const -> BlockT * {
-  if (!isReducible())
+auto GenericCycleInfo<ContextT>::getCyclePredecessor(const CycleT &C) const
+    -> BlockT * {
+  if (!C.isReducible())
     return nullptr;
 
   BlockT *Out = nullptr;
 
   // Loop over the predecessors of the header node...
-  BlockT *Header = getHeader();
+  BlockT *Header = C.getHeader();
   for (const auto Pred : predecessors(Header)) {
-    if (!contains(Pred)) {
+    if (!contains(C, Pred)) {
       if (Out && Out != Pred)
         return nullptr;
       Out = Pred;
@@ -133,25 +116,25 @@ auto GenericCycle<ContextT>::getCyclePredecessor() const -> BlockT * {
   return Out;
 }
 
-/// \brief Verify that this is actually a well-formed cycle in the CFG.
-template <typename ContextT> void GenericCycle<ContextT>::verifyCycle() const {
+template <typename ContextT>
+void GenericCycleInfo<ContextT>::verifyCycle(const CycleT &C) const {
 #ifndef NDEBUG
-  assert(getNumBlocks() != 0 && "Cycle cannot be empty.");
+  assert(C.getNumBlocks() != 0 && "Cycle cannot be empty.");
   DenseSet<BlockT *> Blocks;
-  for (BlockT *BB : blocks()) {
+  for (BlockT *BB : getBlocks(C)) {
     assert(Blocks.insert(BB).second); // duplicates in block list?
   }
-  assert(!Entries.empty() && "Cycle must have one or more entries.");
+  assert(!C.Entries.empty() && "Cycle must have one or more entries.");
 
   DenseSet<BlockT *> Entries;
-  for (BlockT *Entry : entries()) {
+  for (BlockT *Entry : C.entries()) {
     assert(Entries.insert(Entry).second); // duplicate entry?
-    assert(contains(Entry));
+    assert(contains(C, Entry));
   }
 
   // Setup for using a depth-first iterator to visit every block in the cycle.
   SmallVector<BlockT *, 8> ExitBBs;
-  getExitBlocks(ExitBBs);
+  getExitBlocks(C, ExitBBs);
   df_iterator_default_set<BlockT *> VisitSet;
   VisitSet.insert(ExitBBs.begin(), ExitBBs.end());
 
@@ -159,18 +142,18 @@ template <typename ContextT> void GenericCycle<ContextT>::verifyCycle() const {
   SmallPtrSet<BlockT *, 8> VisitedBBs;
 
   // Check the individual blocks.
-  for (BlockT *BB : depth_first_ext(getHeader(), VisitSet)) {
+  for (BlockT *BB : depth_first_ext(C.getHeader(), VisitSet)) {
     assert(llvm::any_of(llvm::children<BlockT *>(BB),
-                        [&](BlockT *B) { return contains(B); }) &&
+                        [&](BlockT *B) { return contains(C, B); }) &&
            "Cycle block has no in-cycle successors!");
 
     assert(llvm::any_of(llvm::inverse_children<BlockT *>(BB),
-                        [&](BlockT *B) { return contains(B); }) &&
+                        [&](BlockT *B) { return contains(C, B); }) &&
            "Cycle block has no in-cycle predecessors!");
 
     DenseSet<BlockT *> OutsideCyclePreds;
     for (BlockT *B : llvm::inverse_children<BlockT *>(BB))
-      if (!contains(B))
+      if (!contains(C, B))
         OutsideCyclePreds.insert(B);
 
     if (Entries.contains(BB)) {
@@ -184,13 +167,13 @@ template <typename ContextT> void GenericCycle<ContextT>::verifyCycle() const {
         assert(!OutsideCyclePreds.contains(CB) &&
                "Non-entry block reachable from outside!");
     }
-    assert(BB != &getHeader()->getParent()->front() &&
+    assert(BB != &C.getHeader()->getParent()->front() &&
            "Cycle contains function entry block!");
 
     VisitedBBs.insert(BB);
   }
 
-  if (VisitedBBs.size() != getNumBlocks()) {
+  if (VisitedBBs.size() != C.getNumBlocks()) {
     dbgs() << "The following blocks are unreachable in the cycle:\n  ";
     ListSeparator LS;
     for (auto *BB : Blocks) {
@@ -203,29 +186,26 @@ template <typename ContextT> void GenericCycle<ContextT>::verifyCycle() const {
     llvm_unreachable("Unreachable block in cycle");
   }
 
-  verifyCycleNest();
+  verifyCycleNest(C);
 #endif
 }
 
-/// \brief Verify the parent-child relations of this cycle.
-///
-/// Note that this does \em not check that cycle is really a cycle in the CFG.
 template <typename ContextT>
-void GenericCycle<ContextT>::verifyCycleNest() const {
+void GenericCycleInfo<ContextT>::verifyCycleNest(const CycleT &C) const {
 #ifndef NDEBUG
   // Check the subcycles.
-  for (GenericCycle *Child : children()) {
+  for (CycleT *Child : C.children()) {
     // Each block in each subcycle should be contained within this cycle.
-    for (BlockT *BB : Child->blocks()) {
-      assert(contains(BB) &&
+    for (BlockT *BB : getBlocks(*Child)) {
+      assert(contains(C, BB) &&
              "Cycle does not contain all the blocks of a subcycle!");
     }
-    assert(Child->Depth == Depth + 1);
+    assert(Child->Depth == C.Depth + 1);
   }
 
   // Check the parent cycle pointer.
-  if (ParentCycle) {
-    assert(is_contained(ParentCycle->children(), this) &&
+  if (C.ParentCycle) {
+    assert(is_contained(C.ParentCycle->children(), &C) &&
            "Cycle is not a subcycle of its parent!");
   }
 #endif
@@ -285,15 +265,6 @@ private:
 };
 
 template <typename ContextT>
-auto GenericCycleInfo<ContextT>::getTopLevelParentCycle(
-    const BlockT *Block) const -> CycleT * {
-  CycleT *Cycle = getCycle(Block);
-  while (Cycle && Cycle->ParentCycle)
-    Cycle = Cycle->ParentCycle;
-  return Cycle;
-}
-
-template <typename ContextT>
 void GenericCycleInfo<ContextT>::moveTopLevelCycleToNewParent(CycleT *NewParent,
                                                               CycleT *Child) {
   assert((!Child->ParentCycle && !NewParent->ParentCycle) &&
@@ -312,14 +283,6 @@ void GenericCycleInfo<ContextT>::moveTopLevelCycleToNewParent(CycleT *NewParent,
   // leaves every cycle's [IdxBegin, IdxEnd) range stale, i.e. BlockLayout is
   // left invalid. The caller must call layoutBlocks() before any
   // range-dependent query is used.
-}
-
-template <typename ContextT>
-void GenericCycleInfo<ContextT>::verifyBlockNumberEpoch(
-    const FunctionT *Fn) const {
-  assert(BlockNumberEpoch ==
-             GraphTraits<const FunctionT *>::getNumberEpoch(Fn) &&
-         "CycleInfo used with outdated block number epoch");
 }
 
 template <typename ContextT>
@@ -359,7 +322,8 @@ void GenericCycleInfo<ContextT>::addBlockToCycle(BlockT *Block, CycleT *Cycle) {
   // invalidate its exit-block cache in a single walk up the tree.
   for (CycleT *C = Cycle; C; C = C->getParentCycle()) {
     ++C->IdxEnd;
-    C->clearCache();
+    if (!ExitBlocksCaches.empty())
+      ExitBlocksCaches[C->ID].clear();
   }
 }
 
@@ -379,7 +343,9 @@ void GenericCycleInfo<ContextT>::layoutBlocks(ArrayRef<BlockT *> Order) {
   };
   SmallVector<Frame, 8> Stack;
   unsigned Cursor = 0;
+  NumCycles = 0;
   auto enter = [&](CycleT *C) {
+    C->ID = NumCycles++;
     Cursor += C->IdxEnd; // IdxEnd currently holds C's own-block count.
     C->IdxBegin = Cursor;
     Stack.push_back({C, C->child_begin(), C->child_end()});
@@ -432,7 +398,6 @@ void GenericCycleInfoCompute<ContextT>::run(FunctionT *F) {
     LLVM_DEBUG(errs() << "Found cycle for header: "
                       << Info.Context.print(HeaderCandidate) << "\n");
     std::unique_ptr<CycleT> NewCycle = std::make_unique<CycleT>();
-    NewCycle->CI = &Info;
     NewCycle->appendEntry(HeaderCandidate);
     Info.addToBlockMap(HeaderCandidate, NewCycle.get());
     // The header is this cycle's first own block. Until layoutBlocks runs,
@@ -520,8 +485,13 @@ void GenericCycleInfoCompute<ContextT>::run(FunctionT *F) {
 /// \brief Recompute depth values of \p SubTree and all descendants.
 template <typename ContextT>
 void GenericCycleInfoCompute<ContextT>::updateDepth(CycleT *SubTree) {
-  for (CycleT *Cycle : depth_first(SubTree))
+  SmallVector<CycleT *, 8> Worklist = {SubTree};
+  while (!Worklist.empty()) {
+    CycleT *Cycle = Worklist.pop_back_val();
     Cycle->Depth = Cycle->ParentCycle ? Cycle->ParentCycle->Depth + 1 : 1;
+    for (CycleT *Child : Cycle->children())
+      Worklist.push_back(Child);
+  }
 }
 
 /// \brief Compute a DFS of basic blocks starting at the function entry.
@@ -590,6 +560,8 @@ template <typename ContextT> void GenericCycleInfo<ContextT>::clear() {
   TopLevelCycles.clear();
   BlockMap.clear();
   BlockLayout.clear();
+  NumCycles = 0;
+  ExitBlocksCaches.clear();
 }
 
 /// \brief Compute the cycle info for a function.
@@ -616,18 +588,6 @@ void GenericCycleInfo<ContextT>::splitCriticalEdge(BlockT *Pred, BlockT *Succ,
 
   addBlockToCycle(NewBlock, Cycle);
   verifyCycleNest();
-}
-
-/// \brief Find the innermost cycle containing a given block.
-///
-/// \returns the innermost cycle containing \p Block or nullptr if
-///          it is not contained in any cycle.
-template <typename ContextT>
-auto GenericCycleInfo<ContextT>::getCycle(const BlockT *Block) const
-    -> CycleT * {
-  verifyBlockNumberEpoch(Block->getParent());
-  unsigned Number = GraphTraits<const BlockT *>::getNumber(Block);
-  return Number < BlockMap.size() ? BlockMap[Number] : nullptr;
 }
 
 /// \brief Find the innermost cycle containing both given cycles.
@@ -670,18 +630,6 @@ auto GenericCycleInfo<ContextT>::getSmallestCommonCycle(BlockT *A,
   return getSmallestCommonCycle(getCycle(A), getCycle(B));
 }
 
-/// \brief get the depth for the cycle which containing a given block.
-///
-/// \returns the depth for the innermost cycle containing \p Block or 0 if it is
-///          not contained in any cycle.
-template <typename ContextT>
-unsigned GenericCycleInfo<ContextT>::getCycleDepth(const BlockT *Block) const {
-  CycleT *Cycle = getCycle(Block);
-  if (!Cycle)
-    return 0;
-  return Cycle->getDepth();
-}
-
 /// \brief Verify the internal consistency of the cycle tree.
 ///
 /// Note that this does \em not check that cycles are really cycles in the CFG,
@@ -691,21 +639,23 @@ void GenericCycleInfo<ContextT>::verifyCycleNest(bool VerifyFull) const {
 #ifndef NDEBUG
   DenseSet<BlockT *> CycleHeaders;
 
-  for (CycleT *TopCycle : toplevel_cycles()) {
-    for (CycleT *Cycle : depth_first(TopCycle)) {
-      BlockT *Header = Cycle->getHeader();
-      assert(CycleHeaders.insert(Header).second);
-      if (VerifyFull)
-        Cycle->verifyCycle();
-      else
-        Cycle->verifyCycleNest();
-      // Check the block map entries for blocks contained in this cycle.
-      for (BlockT *BB : Cycle->blocks()) {
-        CycleT *CycleInBlockMap = getCycle(BB);
-        assert(CycleInBlockMap != nullptr);
-        assert(Cycle->contains(CycleInBlockMap));
-      }
+  SmallVector<CycleT *, 8> Worklist(toplevel_begin(), toplevel_end());
+  while (!Worklist.empty()) {
+    CycleT *Cycle = Worklist.pop_back_val();
+    BlockT *Header = Cycle->getHeader();
+    assert(CycleHeaders.insert(Header).second);
+    if (VerifyFull)
+      verifyCycle(*Cycle);
+    else
+      verifyCycleNest(*Cycle);
+    // Check the block map entries for blocks contained in this cycle.
+    for (BlockT *BB : getBlocks(*Cycle)) {
+      CycleT *CycleInBlockMap = getCycle(BB);
+      assert(CycleInBlockMap != nullptr);
+      assert(Cycle->contains(CycleInBlockMap));
     }
+    for (CycleT *Child : Cycle->children())
+      Worklist.push_back(Child);
   }
 #endif
 }
@@ -718,14 +668,35 @@ template <typename ContextT> void GenericCycleInfo<ContextT>::verify() const {
 /// \brief Print the cycle info.
 template <typename ContextT>
 void GenericCycleInfo<ContextT>::print(raw_ostream &Out) const {
-  for (const auto *TLC : toplevel_cycles()) {
-    for (const CycleT *Cycle : depth_first(TLC)) {
+  SmallVector<const CycleT *, 8> Stack;
+  for (const CycleT *TLC : toplevel_cycles()) {
+    Stack.push_back(TLC);
+    while (!Stack.empty()) {
+      const CycleT *Cycle = Stack.pop_back_val();
       for (unsigned I = 0; I < Cycle->Depth; ++I)
         Out << "    ";
 
-      Out << Cycle->print(Context) << '\n';
+      Out << print(Cycle) << '\n';
+      for (const auto &Child : reverse(Cycle->Children))
+        Stack.push_back(Child.get());
     }
   }
+}
+
+/// \brief Print a single cycle: its depth, entries, and remaining blocks.
+template <typename ContextT>
+Printable GenericCycleInfo<ContextT>::print(const CycleT *Cycle) const {
+  return Printable([this, Cycle](raw_ostream &Out) {
+    Out << "depth=" << Cycle->Depth << ": entries("
+        << Cycle->printEntries(Context) << ')';
+
+    for (auto *Block : getBlocks(*Cycle)) {
+      if (Cycle->isEntry(Block))
+        continue;
+
+      Out << ' ' << Context.print(Block);
+    }
+  });
 }
 
 } // namespace llvm
