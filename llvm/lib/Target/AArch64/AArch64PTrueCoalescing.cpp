@@ -63,8 +63,9 @@ private:
     unsigned SmallestUsedElementSize = AArch64::ElementSizeNone;
 
     bool isValid() const {
-      return MI && ElementSize != AArch64::ElementSizeNone &&
-             SmallestUsedElementSize != AArch64::ElementSizeNone;
+      assert(ElementSize != AArch64::ElementSizeNone &&
+             "PTRUE missing element size!");
+      return MI && SmallestUsedElementSize != AArch64::ElementSizeNone;
     }
 
     void invalidate() {
