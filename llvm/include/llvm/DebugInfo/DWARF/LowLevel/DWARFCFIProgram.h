@@ -122,6 +122,12 @@ public:
         // No operands
         addInstruction(Opcode);
         break;
+      case DW_CFA_AARCH64_set_ra_state: {
+        uint64_t RAState = Data.getULEB128(C);
+        uint64_t FactoredOffset = (uint64_t)Data.getSLEB128(C);
+        addInstruction(Opcode, RAState, FactoredOffset);
+        break;
+      }
       case DW_CFA_set_loc:
         // Operands: Address
         addInstruction(Opcode, Data.getRelocatedAddress(C));
@@ -236,11 +242,13 @@ public:
     OT_Address,
     OT_Offset,
     OT_FactoredCodeOffset,
+    OT_SignedFactCodeOffset,
     OT_SignedFactDataOffset,
     OT_UnsignedFactDataOffset,
     OT_Register,
     OT_AddressSpace,
-    OT_Expression
+    OT_Expression,
+    OT_RAState,
   };
 
   /// Get the OperandType as a "const char *".
