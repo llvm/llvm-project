@@ -57,7 +57,7 @@ public:
 
 private:
   /// Validates the output path, input paths, resolves the namespace name,
-  /// and validates Cfg.ExplicitTriple if it is set.
+  /// and validates Cfg.TargetTriple if it is set.
   void validate(llvm::TimerGroup &TG);
 
   /// Reads each validated input file and inserts it into a StaticLibrary
@@ -91,7 +91,7 @@ private:
   std::vector<FormatFile> InputFiles;
   std::string NamespaceName;
 
-  // Set by validate() only when Cfg.ExplicitTriple was passed and valid.
+  // Set by validate() only when Cfg.TargetTriple was passed and valid.
   // bundle() uses it to construct the StaticLibrary up front; when unset,
   // bundle() populates it from the first input, and every subsequent
   // input must match.
