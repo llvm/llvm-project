@@ -134,7 +134,8 @@ void WebAssemblyCodeGenPassBuilder::addISelPrepare(
   // loads and stores are promoted to local.gets/local.sets.
   addFunctionPass(WebAssemblyRefTypeMem2LocalPass(), PMW);
   // Lower atomics and TLS if necessary
-  // TODO(boomanaiden154): CoalesceFeaturesAndStripAtomics
+  flushFPMsToMPM(PMW);
+  addModulePass(WebAssemblyCoalesceFeaturesAndStripAtomicsPass(TM), PMW);
 
   // This is a no-op if atomics are not used in the module
   addFunctionPass(AtomicExpandPass(TM), PMW);
@@ -149,7 +150,7 @@ Error WebAssemblyCodeGenPassBuilder::addInstSelector(
   // Run the argument-move pass immediately after the ScheduleDAG scheduler
   // so that we can fix up the ARGUMENT instructions before anything else
   // sees them in the wrong place.
-  // TODO(boomanaiden154): WebAssemblyArgumentMove
+  addMachineFunctionPass(WebAssemblyArgumentMovePass(), PMW);
 
   // Set the p2align operands. This information is present during ISel, however
   // it's inconvenient to collect. Collect it now, and update the immediate
@@ -171,14 +172,14 @@ void WebAssemblyCodeGenPassBuilder::addPreEmitPass(
   Base::addPreEmitPass(PMW);
 
   // Nullify DBG_VALUE_LISTs that we cannot handle.
-  // TODO(boomanaiden154): WebAssemblyNullifyDebugValueLists
+  addMachineFunctionPass(WebAssemblyNullifyDebugValueListsPass(), PMW);
 
   // Remove any unreachable blocks that may be left floating around.
   // Rare, but possible. Needed for WebAssemblyFixIrreducibleControlFlow.
   addMachineFunctionPass(UnreachableMachineBlockElimPass(), PMW);
 
   // Eliminate multiple-entry loops.
-  // TODO(boomanaiden154): WebAssemblyFixIrreducibleControlFlow
+  addMachineFunctionPass(WebAssemblyFixIrreducibleControlFlowPass(), PMW);
 
   // Do various transformations for exception handling.
   // Every CFG-changing optimizations should come before this.

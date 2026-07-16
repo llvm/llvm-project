@@ -15,6 +15,8 @@
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
 MODULE_PASS("wasm-add-missing-prototypes", WebAssemblyAddMissingPrototypesPass())
+MODULE_PASS("wasm-coalesce-features-and-strip-atomics",
+            WebAssemblyCoalesceFeaturesAndStripAtomicsPass(*this))
 MODULE_PASS("wasm-fix-function-bitcasts", WebAssemblyFixFunctionBitcastsPass())
 MODULE_PASS("wasm-lower-em-ehsjlj", WebAssemblyLowerEmscriptenEHSjLjPass())
 #undef MODULE_PASS
@@ -30,5 +32,10 @@ FUNCTION_PASS("wasm-ref-type-mem2local", WebAssemblyRefTypeMem2LocalPass())
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+MACHINE_FUNCTION_PASS("wasm-argument-move", WebAssemblyArgumentMovePass())
 MACHINE_FUNCTION_PASS("wasm-isel", WebAssemblyISelDAGToDAGPass(*this, getOptLevel()))
+MACHINE_FUNCTION_PASS("wasm-fix-irreducible-control-flow",
+                      WebAssemblyFixIrreducibleControlFlowPass())
+MACHINE_FUNCTION_PASS("wasm-nullify-dbg-value-lists",
+                      WebAssemblyNullifyDebugValueListsPass())
 #undef MACHINE_FUNCTION_PASS

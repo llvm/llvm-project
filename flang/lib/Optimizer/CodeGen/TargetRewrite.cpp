@@ -107,6 +107,17 @@ public:
     if (!forcedTargetABI.empty())
       fir::setTargetABI(mod, forcedTargetABI);
 
+    // If no data layout is set, derive it from the target triple to get
+    // correct target-specific alignments rather than a generic default.
+    if (!mod.getDataLayoutSpec()) {
+      llvm::Triple triple(fir::getTargetTriple(mod));
+      std::string dlStr = triple.computeDataLayout();
+      if (!dlStr.empty()) {
+        llvm::DataLayout llvmDL(dlStr);
+        fir::support::setMLIRDataLayout(mod, llvmDL);
+      }
+    }
+
     // TargetRewrite will require querying the type storage sizes, if it was
     // not set already, create a DataLayoutSpec for the ModuleOp now.
     std::optional<mlir::DataLayout> dl =

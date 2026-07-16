@@ -21,6 +21,10 @@ contains
     real, allocatable :: loc_arr(:)
     real, pointer :: loc_ptr(:)
   end subroutine
+  subroutine common_sub()
+    real, pointer :: com_ptr(:)
+    common /blk/ com_ptr
+  end subroutine
 end module
 
 program p
@@ -33,6 +37,10 @@ end program
 ! UNI: hlfir.declare {{.*}} {data_attr = #cuf.cuda<unified>, fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMmFmod_subEloc_ptr"}
 ! MAN: hlfir.declare {{.*}} {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMmFmod_subEloc_arr"}
 ! MAN: hlfir.declare {{.*}} {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMmFmod_subEloc_ptr"}
+
+! COMMON-block pointer: unattributed, CUDA attributes may not appear in COMMON.
+! UNI: hlfir.declare {{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMmFcommon_subEcom_ptr"}
+! MAN: hlfir.declare {{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMmFcommon_subEcom_ptr"}
 
 ! Main-program local: Unified under -gpu=unified, Managed under
 ! -gpu=managed.
