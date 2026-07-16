@@ -1777,13 +1777,11 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
       BuildMI(MBB, InsertPt, dl, MoveToCRInst, MustSaveCRs[0])
           .addReg(SrcReg, getKillRegState(true));
     } else {
-      // Build CR mask for MTCRF - more efficient than multiple MTOCRF
+      // Build CR mask for MTCRF.
       unsigned CRMask = 0;
       for (unsigned CRField : MustSaveCRs) {
-        unsigned CRNum = CRField - PPC::CR0;
-        CRMask |= (0x80 >> CRNum);
+        CRMask |= (0x80 >> CRField - PPC::CR0);
       }
-      // Use single MTCRF to restore multi CR fields at once
       BuildMI(MBB, InsertPt, dl, TII.get(isPPC64 ? PPC::MTCRF8 : PPC::MTCRF))
           .addImm(CRMask)
           .addReg(SrcReg, getKillRegState(true));
@@ -2567,13 +2565,16 @@ static void restoreCRs(bool is31, bool CR2Spilled, bool CR3Spilled,
   unsigned NumCRs =
       (CR2Spilled ? 1 : 0) + (CR3Spilled ? 1 : 0) + (CR4Spilled ? 1 : 0);
 
+  assert(NumCRs >= 1 &&
+         "Requires at least one non-volatile CR field to be restored.");
+
   if (NumCRs == 1) {
-    // Use MTOCRF for single field
+    // Use MTOCRF for single CR field
     unsigned CRReg = CR2Spilled ? PPC::CR2 : (CR3Spilled ? PPC::CR3 : PPC::CR4);
     MBB.insert(MI, BuildMI(*MF, DL, TII.get(PPC::MTOCRF), CRReg)
                        .addReg(MoveReg, getKillRegState(true)));
-  } else if (NumCRs > 1) {
-    // Use MTCRF for multiple fields (1 instruction vs N)
+  } else {
+    // Use MTCRF for multiple CR fields.
     unsigned CRMask = 0;
     if (CR2Spilled)
       CRMask |= 0x20;
