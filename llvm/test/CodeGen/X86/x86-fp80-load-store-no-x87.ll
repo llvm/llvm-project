@@ -58,7 +58,7 @@ define { x86_fp80, x86_fp80 } @test_struct_ret_f80() #0 {
 entry:
   %r.real = load x86_fp80, ptr null, align 16
   %.fca.0.insert = insertvalue { x86_fp80, x86_fp80 } zeroinitializer, x86_fp80 %r.real, 0
-  %.fca.1.insert = insertvalue { x86_fp80, x86_fp80 } %.fca.0.insert, x86_fp80 undef, 1
+  %.fca.1.insert = insertvalue { x86_fp80, x86_fp80 } %.fca.0.insert, x86_fp80 poison, 1
   ret { x86_fp80, x86_fp80 } %.fca.1.insert
 }
 
