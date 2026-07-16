@@ -94,6 +94,18 @@ enum class UncountableExitStyle {
 class LLVM_ABI_FOR_TEST VPBlockBase {
   friend class VPBlockUtils;
 
+protected:
+  /// An enumeration for keeping track of the concrete subclass of VPBlockBase
+  /// that are actually instantiated. Values of this enumeration are kept in the
+  /// SubclassID field of the VPBlockBase objects. They are used for concrete
+  /// type identification.
+  using VPBlockTy = enum : unsigned char {
+    VPRegionBlockSC,
+    VPBasicBlockSC,
+    VPIRBasicBlockSC
+  };
+
+private:
   /// An optional name for the block.
   std::string Name;
 
@@ -110,6 +122,9 @@ class LLVM_ABI_FOR_TEST VPBlockBase {
   /// VPlan containing the block. Can only be set on the entry block of the
   /// plan.
   VPlan *Plan = nullptr;
+
+  /// Subclass identifier (for isa/dyn_cast).
+  const VPBlockTy SubclassID;
 
   /// Add \p Successor as the last successor to this block.
   void appendSuccessor(VPBlockBase *Successor) {
@@ -158,16 +173,6 @@ class LLVM_ABI_FOR_TEST VPBlockBase {
   }
 
 public:
-  /// An enumeration for keeping track of the concrete subclass of VPBlockBase
-  /// that are actually instantiated. Values of this enumeration are kept in the
-  /// SubclassID field of the VPBlockBase objects. They are used for concrete
-  /// type identification.
-  using VPBlockTy = enum : unsigned char {
-    VPRegionBlockSC,
-    VPBasicBlockSC,
-    VPIRBasicBlockSC
-  };
-
   using VPBlocksTy = SmallVectorImpl<VPBlockBase *>;
 
   virtual ~VPBlockBase() = default;
@@ -381,9 +386,6 @@ public:
   /// the cloned recipes, including all blocks in the single-entry single-exit
   /// region for VPRegionBlocks.
   virtual VPBlockBase *clone() = 0;
-
-private:
-  const VPBlockTy SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
 protected:
   VPBlockBase(VPBlockTy SC, const std::string &N) : Name(N), SubclassID(SC) {}

@@ -19,10 +19,25 @@
 #include "RISCVSelectionDAGInfo.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/MC/MCSchedule.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
+
+static cl::opt<unsigned> SchedMispredictPenalty(
+    "riscv-sched-mispredict-penalty", cl::Hidden,
+    cl::init(MCSchedModel::DefaultMispredictPenalty),
+    cl::cat(MCScheduleOptions),
+    cl::desc("Override the mispredict penalty (in cycles) in the scheduler "
+             "model. A non-negative value overrides the target default."));
+
+static cl::opt<unsigned> SchedLoadLatency(
+    "riscv-sched-load-latency", cl::Hidden,
+    cl::init(MCSchedModel::DefaultLoadLatency), cl::cat(MCScheduleOptions),
+    cl::desc("Override the load latency (in cycles) in the scheduler model. "
+             "A non-negative value overrides the target default."));
 
 #define DEBUG_TYPE "riscv-subtarget"
 
@@ -187,8 +202,20 @@ unsigned RISCVSubtarget::getMaxBuildIntsCost() const {
   // building integers (addi, slli, etc.) can be done in one cycle, so here we
   // set the default cost to (LoadLatency + 1) if no threshold is provided.
   return RISCVMaxBuildIntsCost == 0
-             ? getSchedModel().LoadLatency + 1
+             ? getLoadLatency() + 1
              : std::max<unsigned>(2, RISCVMaxBuildIntsCost);
+}
+
+unsigned RISCVSubtarget::getMispredictionPenalty() const {
+  if (SchedMispredictPenalty.getNumOccurrences() > 0)
+    return SchedMispredictPenalty;
+  return getSchedModel().MispredictPenalty;
+}
+
+unsigned RISCVSubtarget::getLoadLatency() const {
+  if (SchedLoadLatency.getNumOccurrences() > 0)
+    return SchedLoadLatency;
+  return getSchedModel().LoadLatency;
 }
 
 unsigned RISCVSubtarget::getMaxRVVVectorSizeInBits() const {

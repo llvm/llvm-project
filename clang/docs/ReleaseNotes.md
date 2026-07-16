@@ -147,6 +147,10 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 #### Bug Fixes to AST Handling
 
+- Fixed a non-deterministic ordering of unused local typedefs that made
+  serialized PCH/AST files and `-Wunused-local-typedef` diagnostics
+  non-reproducible across runs. (#GH209639)
+
 #### Miscellaneous Bug Fixes
 
 #### Miscellaneous Clang Crashes Fixed
