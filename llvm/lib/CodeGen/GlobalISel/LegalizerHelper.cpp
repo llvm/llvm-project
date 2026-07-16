@@ -5830,7 +5830,6 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
     Register DstReg = MI.getOperand(0).getReg();
     LLT DstTy = MRI.getType(DstReg);
     Register SrcReg = MI.getOperand(1).getReg();
-    LLT SrcTy = MRI.getType(SrcReg);
     uint64_t InsertionPointImm = MI.getOperand(2).getImm();
 
     // If Dst > NarrowTy bits, then cannot legalize
