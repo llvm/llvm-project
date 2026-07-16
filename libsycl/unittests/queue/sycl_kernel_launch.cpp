@@ -76,7 +76,7 @@ static ol_kernel_launch_size_args_t captureKernelLaunchArgs(
     mock::MockWrapper &Mock,
     std::function<void(sycl::detail::MockQueue &)> SetParams) {
   // Keep registration alive across all parameterized runs.
-  static ScopedKernelRegistration Reg{"DimSwapTestKernel"};
+  static sycl::unittests::ScopedKernelRegistration Reg{"DimSwapTestKernel"};
   sycl::detail::MockQueue Q;
   ol_kernel_launch_size_args_t Captured{};
   EXPECT_CALL(Mock.get(), olLaunchKernel(_, _, _, _, _, 1, _, _))
