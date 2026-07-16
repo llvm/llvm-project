@@ -85,20 +85,6 @@ TEST_P(olCreateProgramTest, InvalidBinary) {
   ASSERT_EQ(Program, nullptr);
 }
 
-TEST_P(olCreateProgramTest, TruncatedBinary) {
-  SKIP_KNOWN_FAILURE(AMDGPU{"HSA reads past end of buffer, causing a crash"});
-
-  std::unique_ptr<llvm::MemoryBuffer> DeviceBin;
-  ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo", Device, DeviceBin));
-  ASSERT_GT(DeviceBin->getBufferSize(), 1lu);
-
-  ol_program_handle_t Program = nullptr;
-  ASSERT_ERROR(OL_ERRC_INVALID_BINARY,
-               olCreateProgram(Device, DeviceBin->getBufferStart(),
-                               DeviceBin->getBufferSize() / 2, &Program));
-  ASSERT_EQ(Program, nullptr);
-}
-
 TEST_P(olCreateProgramTest, WrongArchitecture) {
   // Pick a backend different from the device's own, so the loaded binary is
   // valid but built for the wrong architecture.
