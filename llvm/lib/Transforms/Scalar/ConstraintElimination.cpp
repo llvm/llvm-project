@@ -1699,8 +1699,8 @@ static bool checkOrAndOpImpliedByOther(
 
   Value *A, *B;
   CmpPredicate Pred;
-  bool Matched = match(CmpToCheck, m_ICmpLike(Pred, m_Value(A), m_Value(B)));
-  (void)Matched;
+  [[maybe_unused]] bool Matched =
+      match(CmpToCheck, m_ICmpLike(Pred, m_Value(A), m_Value(B)));
   assert(Matched && "expected icmp-like match");
   // Check if the second condition can be simplified now.
   if (auto ImpliedCondition = checkCondition(Pred, A, B, CmpToCheck, Info)) {
@@ -2081,9 +2081,9 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         continue;
       }
     } else {
-      bool Matched = match(CB.Inst, m_Intrinsic<Intrinsic::assume>(m_ICmpLike(
-                                        Pred, m_Value(A), m_Value(B))));
-      (void)Matched;
+      [[maybe_unused]] bool Matched =
+          match(CB.Inst, m_Intrinsic<Intrinsic::assume>(
+                             m_ICmpLike(Pred, m_Value(A), m_Value(B))));
       assert(Matched &&
              "Must have an assume intrinsic with a icmp like operand");
     }
