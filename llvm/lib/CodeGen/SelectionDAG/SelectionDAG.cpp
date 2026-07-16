@@ -13759,6 +13759,18 @@ bool SelectionDAG::isIdentityElement(unsigned Opcode, SDNodeFlags Flags,
 
       return ConstFP->isExactlyValue(NeutralAF);
     }
+    case ISD::FMINIMUM:
+    case ISD::FMAXIMUM: {
+      // Neutral element for fminimum is Inf or FLT_MAX, depending on FMF.
+      EVT VT = V.getValueType();
+      const fltSemantics &Semantics = VT.getFltSemantics();
+      APFloat NeutralAF = !Flags.hasNoInfs() ? APFloat::getInf(Semantics)
+                                             : APFloat::getLargest(Semantics);
+      if (Opcode == ISD::FMAXIMUM)
+        NeutralAF.changeSign();
+
+      return ConstFP->isExactlyValue(NeutralAF);
+    }
     }
   }
   return false;
