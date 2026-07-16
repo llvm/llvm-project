@@ -103,10 +103,11 @@ Error L0QueueTy::memoryFillHostImpl(void *Ptr, const void *Pattern,
                                     size_t PatternSize, size_t Size) {
   auto *Dst = static_cast<unsigned char *>(Ptr);
   const auto *Pat = static_cast<const unsigned char *>(Pattern);
-  for (size_t Offset = 0; Offset < Size;) {
-    const size_t Chunk = std::min(PatternSize, Size - Offset);
-    std::copy_n(Pat, Chunk, Dst + Offset);
-    Offset += Chunk;
+  // Seed the pattern once.
+  std::copy_n(Pat, PatternSize, Dst);
+  // Replicate the pattern until it fills the entire destination.
+  for(size_t Offset = PatternSize; Offset < Size; ++Offset) {
+    Dst[Offset] = Dst[Offset - PatternSize];
   }
   return Plugin::success();
 }
