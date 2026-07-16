@@ -5999,43 +5999,22 @@ define <2 x i32> @test_return_zero() {
 }
 
 define <8 x i8> @test_undef_v8i8() {
-; RV32-LABEL: test_undef_v8i8:
-; RV32:       # %bb.0:
-; RV32-NEXT:    li a1, 0
-; RV32-NEXT:    li a0, 0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: test_undef_v8i8:
-; RV64:       # %bb.0:
-; RV64-NEXT:    li a0, 0
-; RV64-NEXT:    ret
+; CHECK-LABEL: test_undef_v8i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
   ret <8 x i8> undef
 }
 
 define <4 x i16> @test_undef_v4i16() {
-; RV32-LABEL: test_undef_v4i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    li a1, 0
-; RV32-NEXT:    li a0, 0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: test_undef_v4i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    li a0, 0
-; RV64-NEXT:    ret
+; CHECK-LABEL: test_undef_v4i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
   ret <4 x i16> undef
 }
 
 define <2 x i32> @test_undef_v2i32() {
-; RV32-LABEL: test_undef_v2i32:
-; RV32:       # %bb.0:
-; RV32-NEXT:    li a1, 0
-; RV32-NEXT:    li a0, 0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: test_undef_v2i32:
-; RV64:       # %bb.0:
-; RV64-NEXT:    li a0, 0
-; RV64-NEXT:    ret
+; CHECK-LABEL: test_undef_v2i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
   ret <2 x i32> undef
 }

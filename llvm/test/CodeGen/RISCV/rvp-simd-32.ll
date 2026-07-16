@@ -2734,30 +2734,15 @@ define <2 x i16> @test_psabs_v2i16(<2 x i16> %a) {
 }
 
 define <4 x i8> @test_undef_v4i8() {
-; RV32-LABEL: test_undef_v4i8:
-; RV32:       # %bb.0:
-; RV32-NEXT:    li a0, 0
-; RV32-NEXT:    li a1, 0
-; RV32-NEXT:    ppaire.db a0, a0, a0
-; RV32-NEXT:    pack a0, a0, a1
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: test_undef_v4i8:
-; RV64:       # %bb.0:
-; RV64-NEXT:    li a0, 0
-; RV64-NEXT:    ret
+; CHECK-LABEL: test_undef_v4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
   ret <4 x i8> undef
 }
 
 define <2 x i16> @test_undef_v2i16() {
-; RV32-LABEL: test_undef_v2i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    pack a0, zero, zero
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: test_undef_v2i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    li a0, 0
-; RV64-NEXT:    ret
+; CHECK-LABEL: test_undef_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
   ret <2 x i16> undef
 }
