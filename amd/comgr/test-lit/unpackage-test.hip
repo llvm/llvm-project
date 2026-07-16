@@ -1,11 +1,10 @@
 // COM: create a bitcode package
 //
-// XFAIL: *
-// RUN: clang -c -x hip --offload-arch=gfx900 \
+// RUN: %clang -c -x hip --offload-arch=gfx900 \
 // RUN: -nogpulib -nogpuinc -emit-llvm \
 // RUN: --offload-device-only %s -o %t.gfx900.bc
 //
-// RUN: clang -c -x hip --offload-arch=gfx1030 \
+// RUN: %clang -c -x hip --offload-arch=gfx1030 \
 // RUN: -nogpulib -nogpuinc -emit-llvm \
 // RUN: --offload-device-only %s -o %t.gfx1030.bc
 //
