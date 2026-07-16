@@ -108,12 +108,6 @@ skip lldb-api :: functionalities/breakpoint/same_cu_name/TestFileBreakpoinsSameC
 # https://github.com/swiftlang/llvm-project/issues/9101
 skip lldb-api :: tools/lldb-server
 
-### Tests that pass accidentally ###
-
-https://github.com/llvm/llvm-project/issues/116972
-skip lldb-api :: api/command-return-object/TestSBCommandReturnObject.py
-skip lldb-api :: api/multiple-targets/TestMultipleTargets.py
-
 ### Tests that fail during setup and thus show up as UNRESOLVED ***
 
 # https://github.com/swiftlang/llvm-project/issues/9887
