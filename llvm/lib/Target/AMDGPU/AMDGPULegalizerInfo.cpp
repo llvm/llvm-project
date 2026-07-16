@@ -1818,7 +1818,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   ExtLoads.narrowScalarIf(
       [](const LegalityQuery &Query) {
         LLT MemTy = Query.MMODescrs[0].MemoryTy;
-        return MemTy.isAnyScalar() && MemTy.getSizeInBits() > 32 &&
+        return MemTy.isScalar() && MemTy.getSizeInBits() > 32 &&
                Query.Types[0].getSizeInBits() > MemTy.getSizeInBits();
       }, // For large MemSize, narrowscalar to MemSize (load MemSize + ext)
       getScalarTypeFromMemDesc(0));
