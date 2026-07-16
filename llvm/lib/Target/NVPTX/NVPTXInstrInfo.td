@@ -1773,6 +1773,10 @@ def to_texternsym : SDNodeXForm<externalsym, [{
                                          N->getTargetFlags());
 }]>;
 
+def to_tjumptable : SDNodeXForm<jumptable, [{
+  return CurDAG->getTargetJumpTable(N->getIndex(), N->getValueType(0));
+}]>;
+
 def : Pat<(i32 globaladdr:$dst), (MOV_B32_sym (to_tglobaladdr $dst))>;
 def : Pat<(i64 globaladdr:$dst), (MOV_B64_sym (to_tglobaladdr $dst))>;
 
@@ -2489,21 +2493,16 @@ foreach t = [I32RT, I64RT] in {
 //
 // BRX
 //
+def brx_jt : SDNode<"ISD::BR_JT",
+                    SDTypeProfile<0, 2, [SDTCisPtrTy<0>, SDTCisVT<1, i32>]>,
+                    [SDNPHasChain]>;
 
-let isTerminator = 1, isBranch = 1, isIndirectBranch = 1, isNotDuplicable = 1 in {
+let isTerminator = 1, isBarrier = 1, isBranch = 1, isIndirectBranch = 1,
+    isNotDuplicable = 1 in
+  def BRX_IDX : BasicNVPTXInst<(outs), (ins B32:$val, i32imm:$tgt),
+                               "brx.idx">;
 
-  def BRX_START :
-    NVPTXInst<(outs), (ins i32imm:$id), "$$L_brx_$id: .branchtargets">;
-
-  def BRX_ITEM :
-    NVPTXInst<(outs), (ins brtarget:$target), "\t$target,">;
-
-  def BRX_END :
-    NVPTXInst<(outs), (ins brtarget:$target, B32:$val, i32imm:$id),
-              "\t$target;\n\tbrx.idx \t$val, $$L_brx_$id;"> {
-      let isBarrier = 1;
-    }
-}
+def : Pat<(brx_jt jumptable:$jt, i32:$idx), (BRX_IDX $idx, (to_tjumptable $jt))>;
 
 
 foreach a_type = ["s", "u"] in {
