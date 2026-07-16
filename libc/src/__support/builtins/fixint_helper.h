@@ -24,6 +24,11 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace builtins {
 
+// TODO: use fputil::round_to_signed_integer after adding Float128/64/32/16
+// classes currently, we are using these helpers to avoid an infinity loop that
+// happens because fputil::round_to_signed_integer is calling the builtins if
+// the target doesn't have FPU.
+
 // Truncating conversion of F to the signed integer I (round toward zero).
 // Out-of-range magnitudes saturate to I's min/max; mirrors compiler-rt __fix*.
 template <typename I, typename F> LIBC_INLINE constexpr I fixint(F a) {
