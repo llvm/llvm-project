@@ -249,6 +249,10 @@ include:
   appended to all clang driver invocations. This can be used to inject
   additional compiler flags for debugging or experimentation without modifying
   the application code.
+* `AMD_COMGR_HOTSWAP_ENTRY_STUB_SYMBOLS`: If this is set to "1", the HotSwap
+  B0-to-B0 entry-trampoline fast path emits the debug-only `<kernel>.stub`
+  symbols for each entry stub. These symbols are skipped by default on this
+  load-time-critical path, so this variable restores them to aid in debugging.
 
 ### VFS
 Comgr implements support for an in-memory, virtual filesystem (VFS) for storing
