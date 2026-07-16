@@ -810,6 +810,17 @@ define i32 @test_x86_tbm_blsic_u32(i32 %a) nounwind {
   ret i32 %t2
 }
 
+define i32 @test_x86_tbm_blsic_u32_neg(i32 %x) nounwind{
+; CHECK-LABEL: test_x86_tbm_blsic_u32_neg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    blsicl %edi, %eax
+; CHECK-NEXT:    retq
+  %1 = sub i32 0, %x
+  %2 = and i32 %x, %1
+  %3 = xor i32 %2, -1
+  ret i32 %3
+}
+
 define i32 @test_x86_tbm_blsic_u32_z(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blsic_u32_z:
 ; CHECK:       # %bb.0:
@@ -865,6 +876,17 @@ define i64 @test_x86_tbm_blsic_u64(i64 %a) nounwind {
   ret i64 %t2
 }
 
+define i64 @test_x86_tbm_blsic_u64_neg(i64 %x) nounwind{
+; CHECK-LABEL: test_blsic_u64_neg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    blsicq %rdi, %rax
+; CHECK-NEXT:    retq
+  %1 = sub i64 0, %x
+  %2 = and i64 %x, %1
+  %3 = xor i64 %2, -1
+  ret i64 %3
+}
+
 define i64 @test_x86_tbm_blsic_u64_z(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blsic_u64_z:
 ; CHECK:       # %bb.0:
@@ -908,53 +930,6 @@ define i64 @test_x86_tbm_blsic_u64_sle(i64 %a, i64 %b, i64 %c) nounwind {
   %t4 = select i1 %t3, i64 %b, i64 %c
   ret i64 %t4
 }
-
-
-define i32 @test_blsic_original(i32 %x) {
-; CHECK-LABEL: test_blsic_original:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    blsicl %edi, %eax
-; CHECK-NEXT:    retq
-  %_2 = xor i32 %x, -1
-  %_0.i = add i32 %x, -1
-  %_0 = or i32 %_0.i, %_2
-  ret i32 %_0
-}
-
-define i32 @test_blsic_optimized(i32 %x) {
-; CHECK-LABEL: test_blsic_optimized:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    blsicl %edi, %eax
-; CHECK-NEXT:    retq
-  %1 = sub i32 0, %x
-  %2 = and i32 %x, %1
-  %3 = xor i32 %2, -1
-  ret i32 %3
-}
-
-define i64 @test_blsic_64_original(i64 %x) {
-; CHECK-LABEL: test_blsic_64_original:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    blsicq %rdi, %rax
-; CHECK-NEXT:    retq
-  %_2 = xor i64 %x, -1
-  %_0.i = add i64 %x, -1
-  %_0 = or i64 %_0.i, %_2
-  ret i64 %_0
-}
-
-define i64 @test_blsic_64_optimized(i64 %x) {
-; CHECK-LABEL: test_blsic_64_optimized:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    blsicq %rdi, %rax
-; CHECK-NEXT:    retq
-  %1 = sub i64 0, %x
-  %2 = and i64 %x, %1
-  %3 = xor i64 %2, -1
-  ret i64 %3
-}
-
-
 
 define i32 @test_x86_tbm_t1mskc_u32(i32 %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_t1mskc_u32:
@@ -1216,10 +1191,10 @@ define i32 @blcic32_branch(i32 %x) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    blcicl %edi, %ebx
-; CHECK-NEXT:    jne .LBB93_2
+; CHECK-NEXT:    jne .LBB91_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    callq bar@PLT
-; CHECK-NEXT:  .LBB93_2:
+; CHECK-NEXT:  .LBB91_2:
 ; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
@@ -1239,10 +1214,10 @@ define i64 @blcic64_branch(i64 %x) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    blcicq %rdi, %rbx
-; CHECK-NEXT:    jne .LBB94_2
+; CHECK-NEXT:    jne .LBB92_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    callq bar@PLT
-; CHECK-NEXT:  .LBB94_2:
+; CHECK-NEXT:  .LBB92_2:
 ; CHECK-NEXT:    movq %rbx, %rax
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
@@ -1262,10 +1237,10 @@ define i32 @tzmsk32_branch(i32 %x) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    tzmskl %edi, %ebx
-; CHECK-NEXT:    jne .LBB95_2
+; CHECK-NEXT:    jne .LBB93_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    callq bar@PLT
-; CHECK-NEXT:  .LBB95_2:
+; CHECK-NEXT:  .LBB93_2:
 ; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
@@ -1285,10 +1260,10 @@ define i64 @tzmsk64_branch(i64 %x) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    tzmskq %rdi, %rbx
-; CHECK-NEXT:    jne .LBB96_2
+; CHECK-NEXT:    jne .LBB94_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    callq bar@PLT
-; CHECK-NEXT:  .LBB96_2:
+; CHECK-NEXT:  .LBB94_2:
 ; CHECK-NEXT:    movq %rbx, %rax
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
@@ -1308,10 +1283,10 @@ define i32 @blcfill32_branch(i32 %x) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    blcfilll %edi, %ebx
-; CHECK-NEXT:    jne .LBB97_2
+; CHECK-NEXT:    jne .LBB95_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    callq bar@PLT
-; CHECK-NEXT:  .LBB97_2:
+; CHECK-NEXT:  .LBB95_2:
 ; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
@@ -1330,10 +1305,10 @@ define i64 @blcfill64_branch(i64 %x) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    blcfillq %rdi, %rbx
-; CHECK-NEXT:    jne .LBB98_2
+; CHECK-NEXT:    jne .LBB96_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    callq bar@PLT
-; CHECK-NEXT:  .LBB98_2:
+; CHECK-NEXT:  .LBB96_2:
 ; CHECK-NEXT:    movq %rbx, %rax
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
