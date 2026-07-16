@@ -293,12 +293,14 @@ public:
         SemaRef.getASTContext(), NTTP->getDeclContext(),
         NTTP->getInnerLocStart(), NTTP->getLocation(),
         NTTP->getDepth() + TemplateDepth, NTTP->getPosition(),
-        NTTP->getIdentifier(), TSI->getType(), NTTP->isParameterPack(), TSI);
+        NTTP->getIdentifier(), TSI->getType(),
+        RemoveNonPackExpansionPacks ? false : NTTP->isParameterPack(), TSI);
 
     return DeclRefExpr::Create(
         SemaRef.getASTContext(), E->getQualifierLoc(),
         E->getTemplateKeywordLoc(), D, E->refersToEnclosingVariableOrCapture(),
-        E->getNameInfo(), TSI->getType(), E->getValueKind(), D,
+        E->getNameInfo(), TSI->getType(), E->getValueKind(),
+        RemoveNonPackExpansionPacks ? NTTP : D,
         /*TemplateArgs=*/nullptr, E->isNonOdrUse());
   }
 };
@@ -372,7 +374,14 @@ public:
       return true;
 
     TemplateArgument Arg = TemplateArgs(NTTP->getDepth(), NTTP->getPosition());
-    if (NTTP->isParameterPack() && SemaRef.ArgPackSubstIndex) {
+    // In concept parameter mapping for fold expressions, packs that aren't
+    // expanded in place are treated as having non-pack dependency, so that
+    // a PackExpansionType won't prevent expanding the packs outside the
+    // TreeTransform. However we still need to check the pack at this point.
+    if ((NTTP->isParameterPack() ||
+         (E->getFoundDecl() && E->getFoundDecl() != E->getDecl() &&
+          E->getFoundDecl()->isParameterPack())) &&
+        SemaRef.ArgPackSubstIndex) {
       assert(Arg.getKind() == TemplateArgument::Pack &&
              "Missing argument pack");
       Arg = SemaRef.getPackSubstitutedTemplateArgument(Arg);
