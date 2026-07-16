@@ -82,7 +82,8 @@ template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
 #ifdef _LIBCPP_PREFERRED_OVERLOAD
 _LIBCPP_PREFERRED_OVERLOAD
 #endif
-    bool isinf(double __x) _NOEXCEPT {
+    bool
+    isinf(double __x) _NOEXCEPT {
   return __builtin_isinf(__x);
 }
 
@@ -105,7 +106,8 @@ template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
 #ifdef _LIBCPP_PREFERRED_OVERLOAD
 _LIBCPP_PREFERRED_OVERLOAD
 #endif
-    bool isnan(double __x) _NOEXCEPT {
+    bool
+    isnan(double __x) _NOEXCEPT {
   return __builtin_isnan(__x);
 }
 
