@@ -3983,6 +3983,125 @@ template<typename T> constexpr T *addressof(T &value) {
 }
 ```
 
+### `__builtin_pointee_address_space`
+
+`__builtin_pointee_address_space` returns a Clang address-space identifier for
+the storage reached by a pointer or array expression.
+
+This is useful for performance-sensitive code that needs a compile-time value
+to choose an address-space-specific operation, overload, or template
+specialization. For example, CUDA/HIP code may want to select different helper
+code for a pointer to global, shared, or constant memory. The physical target
+address-space number can be target-specific and is not always defined by the
+source language, so this builtin returns Clang-defined values instead of
+backend address-space numbers for language-level address spaces.
+
+**Syntax**:
+
+```c++
+int __builtin_pointee_address_space(pointer-or-array)
+```
+
+The argument must have pointer or array type. Function designators are not
+accepted through function-to-pointer decay. The argument is not evaluated and
+is not converted to `void *` before its address space is queried.
+
+The result is an integer constant expression. It is based on the address space
+that Clang can determine from the expression in the frontend. It does not use
+optimizer or interprocedural analysis to infer a more precise address space.
+
+Clang predefines named macros for the values returned by this builtin. These
+macros are emitted by Clang during preprocessing. For language-level address
+spaces, such as OpenCL address spaces or CUDA/HIP
+`__device__`, `__shared__`, and `__constant__` variables, the result is one of
+the `__CLANG_ADDRESS_SPACE_*` values. For an address space written explicitly
+with `__attribute__((address_space(N)))`, the result is
+`__CLANG_ADDRESS_SPACE_TARGET_OFFSET + N`.
+CUDA and HIP use separate predefined macro names for their declaration address
+spaces. CUDA mode uses the `__CLANG_ADDRESS_SPACE_CUDA_*` values, and HIP mode
+uses the `__CLANG_ADDRESS_SPACE_HIP_*` values.
+
+For languages such as OpenCL, where address spaces are represented in AST
+types, the builtin returns the Clang address-space value of the pointee type of
+the expression as written. For an array expression, the pointee type is the
+array element type.
+
+CUDA/HIP variables are not represented as address-space-qualified pointer types
+in Clang's AST. For CUDA/HIP, the builtin uses variable declaration attributes
+only for two direct forms: an array variable expression, such as `arr`, and an
+address-of expression naming a non-array variable, such as `&var`. In those
+forms, the builtin can report the declaration address space from attributes
+such as `__device__`, `__shared__`, or `__constant__`. An explicit
+`__device__` `const` global or static data member that is promoted to constant
+memory is reported as the CUDA or HIP constant address space. This also works
+in host compilation because it does not depend on the auxiliary target's
+physical address-space map.
+
+Explicit user-written casts are respected. If a cast changes the pointer type
+seen by the builtin, the builtin reports the pointee address space of the cast
+type rather than looking through the cast to recover the original object.
+Other pointer expressions, such as pointer arithmetic or `&array`, are handled
+from the pointee type of the expression as written.
+
+The builtin is a static query. It does not classify an arbitrary runtime pointer
+value. For a parameter such as `int *p`, if the pointee type is generic/default,
+the result is `__CLANG_ADDRESS_SPACE_DEFAULT` even if the runtime value of `p`
+later points into a more specific memory region. Runtime pointer-value
+classification should use target-specific runtime interfaces instead.
+
+The CUDA/HIP declaration query is direct. It does not follow function
+parameters, even through a `consteval` or `constexpr` wrapper. Inside such a
+wrapper, the builtin reports the address space of the parameter type.
+
+**Example use**:
+
+```c++
+int *p;
+int __attribute__((address_space(3))) *p3;
+
+static_assert(__builtin_pointee_address_space(p) ==
+              __CLANG_ADDRESS_SPACE_DEFAULT);
+static_assert(__builtin_pointee_address_space(p3) ==
+              __CLANG_ADDRESS_SPACE_TARGET_OFFSET + 3);
+```
+
+**OpenCL example use**:
+
+```c
+__global int *global_p;
+__local int *local_p;
+
+static_assert(__builtin_pointee_address_space(global_p) ==
+              __CLANG_ADDRESS_SPACE_OPENCL_GLOBAL);
+static_assert(__builtin_pointee_address_space(local_p) ==
+              __CLANG_ADDRESS_SPACE_OPENCL_LOCAL);
+```
+
+**CUDA/HIP example use**:
+
+```c++
+__device__ int dev;
+__device__ int dev_arr[4];
+__constant__ int cst;
+__device__ const int dev_cst = 1;
+```
+
+In CUDA mode, `&dev` and `dev_arr` return
+`__CLANG_ADDRESS_SPACE_CUDA_DEVICE`, while `&cst` and `&dev_cst` return
+`__CLANG_ADDRESS_SPACE_CUDA_CONSTANT`. In HIP mode, they return the matching
+`__CLANG_ADDRESS_SPACE_HIP_*` values.
+
+The direct-query rule is not specific to shared variables. For a CUDA/HIP
+variable with a declaration address-space attribute, `&a` for a non-array
+variable and `b` for an array variable are direct declaration queries. For
+example, `&a` for `__shared__ int a` and `b` for `__shared__ int b[2]` report
+the CUDA or HIP shared address space.
+
+Forms such as `(void *)&a`, `&a + 1`, `&b[0]`, `&dev_arr`, `dev_arr + 1`,
+and calls through a function parameter, including `consteval` wrappers, are
+not direct declaration queries. They use the expression type and report
+`__CLANG_ADDRESS_SPACE_DEFAULT`.
+
 ### `__builtin_function_start`
 
 `__builtin_function_start` returns the address of a function body.

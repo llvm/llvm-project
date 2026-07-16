@@ -182,6 +182,14 @@ features cannot lower the translation-unit ABI level;
 - Clang now allows GNU computed `goto` extension in `constexpr` functions, matching the relaxed
   `constexpr` function body rules introduced in C++23.
 
+- Added `__builtin_pointee_address_space`, which returns a Clang
+  address-space identifier for a pointer or array expression. It reports the
+  AST pointee type address space for OpenCL and explicit address-space-qualified
+  pointer types, and can report CUDA/HIP declaration address spaces for known
+  `__device__`, `__shared__`, and `__constant__` variables. Clang also now
+  emits predefined `__CLANG_ADDRESS_SPACE_*` macros for these values, including
+  separate CUDA and HIP macro names.
+
 ### New Compiler Flags
 
 - New option `-fdefined-pointer-subtraction` added to preserve stable semantics

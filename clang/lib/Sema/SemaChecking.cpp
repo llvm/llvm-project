@@ -3284,6 +3284,20 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (BuiltinComplex(TheCall))
       return ExprError();
     break;
+  case Builtin::BI__builtin_pointee_address_space: {
+    if (checkArgCount(TheCall, 1))
+      return true;
+    Expr *Arg = TheCall->getArg(0);
+    if (!Arg->isTypeDependent() && !Arg->getType()->isPointerType() &&
+        !Arg->getType()->isArrayType()) {
+      Diag(Arg->getBeginLoc(),
+           diag::err_builtin_pointee_address_space_arg_not_pointer)
+          << Arg->getSourceRange();
+      return ExprError();
+    }
+    TheCall->setType(Context.IntTy);
+    break;
+  }
   case Builtin::BI__builtin_classify_type:
   case Builtin::BI__builtin_constant_p: {
     if (checkArgCount(TheCall, 1))

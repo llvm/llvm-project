@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticLex.h"
 #include "clang/Basic/HLSLRuntime.h"
@@ -913,6 +914,73 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   Builder.defineMacro("__OPENCL_MEMORY_SCOPE_DEVICE", "2");
   Builder.defineMacro("__OPENCL_MEMORY_SCOPE_ALL_SVM_DEVICES", "3");
   Builder.defineMacro("__OPENCL_MEMORY_SCOPE_SUB_GROUP", "4");
+
+  auto DefinePointeeASMacro = [&](StringRef Name, PointeeAddressSpace::ID AS) {
+    Builder.defineMacro(Name, Twine(static_cast<unsigned>(AS)));
+  };
+
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_DEFAULT",
+                       PointeeAddressSpace::Default);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_OPENCL_GLOBAL",
+                       PointeeAddressSpace::OpenCLGlobal);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_OPENCL_LOCAL",
+                       PointeeAddressSpace::OpenCLLocal);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_OPENCL_CONSTANT",
+                       PointeeAddressSpace::OpenCLConstant);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_OPENCL_PRIVATE",
+                       PointeeAddressSpace::OpenCLPrivate);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_OPENCL_GENERIC",
+                       PointeeAddressSpace::OpenCLGeneric);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_OPENCL_GLOBAL_DEVICE",
+                       PointeeAddressSpace::OpenCLGlobalDevice);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_OPENCL_GLOBAL_HOST",
+                       PointeeAddressSpace::OpenCLGlobalHost);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_CUDA_DEVICE",
+                       PointeeAddressSpace::CUDADevice);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_CUDA_CONSTANT",
+                       PointeeAddressSpace::CUDAConstant);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_CUDA_SHARED",
+                       PointeeAddressSpace::CUDAShared);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_SYCL_GLOBAL",
+                       PointeeAddressSpace::SYCLGlobal);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_SYCL_GLOBAL_DEVICE",
+                       PointeeAddressSpace::SYCLGlobalDevice);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_SYCL_GLOBAL_HOST",
+                       PointeeAddressSpace::SYCLGlobalHost);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_SYCL_LOCAL",
+                       PointeeAddressSpace::SYCLLocal);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_SYCL_PRIVATE",
+                       PointeeAddressSpace::SYCLPrivate);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_PTR32_SPTR",
+                       PointeeAddressSpace::Ptr32Sptr);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_PTR32_UPTR",
+                       PointeeAddressSpace::Ptr32Uptr);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_PTR64",
+                       PointeeAddressSpace::Ptr64);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_HLSL_GROUPSHARED",
+                       PointeeAddressSpace::HLSLGroupShared);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_HLSL_CONSTANT",
+                       PointeeAddressSpace::HLSLConstant);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_HLSL_PRIVATE",
+                       PointeeAddressSpace::HLSLPrivate);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_HLSL_DEVICE",
+                       PointeeAddressSpace::HLSLDevice);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_HLSL_INPUT",
+                       PointeeAddressSpace::HLSLInput);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_HLSL_OUTPUT",
+                       PointeeAddressSpace::HLSLOutput);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_HLSL_PUSH_CONSTANT",
+                       PointeeAddressSpace::HLSLPushConstant);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_WASM_FUNCREF",
+                       PointeeAddressSpace::WasmFuncRef);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_HIP_DEVICE",
+                       PointeeAddressSpace::HIPDevice);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_HIP_CONSTANT",
+                       PointeeAddressSpace::HIPConstant);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_HIP_SHARED",
+                       PointeeAddressSpace::HIPShared);
+  DefinePointeeASMacro("__CLANG_ADDRESS_SPACE_TARGET_OFFSET",
+                       PointeeAddressSpace::TargetOffset);
 
   // Define macros for floating-point data classes, used in __builtin_isfpclass.
   Builder.defineMacro("__FPCLASS_SNAN", "0x0001");

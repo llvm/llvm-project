@@ -1046,6 +1046,13 @@ def BuiltinClassifyType : Builtin {
   let Prototype = "int(...)";
 }
 
+def BuiltinPointeeAddressSpace : Builtin {
+  let Spellings = ["__builtin_pointee_address_space"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, UnevaluatedArguments,
+                    Constexpr];
+  let Prototype = "int(...)";
+}
+
 def BuiltinCFStringMakeConstantString : Builtin {
   let Spellings = ["__builtin___CFStringMakeConstantString"];
   let Attributes = [NoThrow, Const, Constexpr];
