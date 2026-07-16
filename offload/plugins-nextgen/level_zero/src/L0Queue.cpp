@@ -74,7 +74,7 @@ Error L0QueueTy::memoryFill(void *Ptr, const void *Pattern, size_t PatternSize,
     return memoryFillImpl(Ptr, Pattern, PatternSize, Size);
   }
 
-  llvm::StringRef PatternRef(static_cast<const char*>(Pattern), PatternSize);
+  llvm::StringRef PatternRef(static_cast<const char *>(Pattern), PatternSize);
   if (PatternRef.find_first_not_of(PatternRef[0]) == llvm::StringRef::npos) {
     // All pattern bytes equal, substutition of 1 as PatternSize is equivalent,
     // so native L0 memory fill is still possible.

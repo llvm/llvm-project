@@ -99,9 +99,10 @@ bool L0DeviceTy::isDeviceIPorNewer(uint32_t Version) const {
   return IPVersion.ipVersion >= Version;
 }
 
-/// Find the default compute command queue group. Returns an Error if the
-/// device exposes no compute queue group.
-Expected<ComputeGroupInfoTy> L0DeviceTy::findCommandQueueGroup() {
+/// Scan the device's command queue groups in a single query, selecting the
+/// default compute group and detecting cooperative kernel support. Returns an
+/// Error if the device exposes no compute queue group.
+Expected<QueueGroupInfoTy> L0DeviceTy::scanQueueGroups() {
   uint32_t Count = 0;
   const auto zeDevice = getZeDevice();
   CALL_ZE_RET_ERROR(zeDeviceGetCommandQueueGroupProperties, zeDevice, &Count,
@@ -111,41 +112,30 @@ Expected<ComputeGroupInfoTy> L0DeviceTy::findCommandQueueGroup() {
   std::vector<ze_command_queue_group_properties_t> Properties(Count, Init);
   CALL_ZE_RET_ERROR(zeDeviceGetCommandQueueGroupProperties, zeDevice, &Count,
                     Properties.data());
+
+  QueueGroupInfoTy Info;
+  bool FoundComputeGroup = false;
   for (uint32_t I = 0; I < Count; I++) {
-    // TODO: add a separate set of ordinals for compute queue groups which
-    // support cooperative kernels.
-    if (Properties[I].flags & ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) {
-      return ComputeGroupInfoTy{/*Ordinal=*/I,
-                                /*NumQueues=*/Properties[I].numQueues,
-                                Properties[I].maxMemoryFillPatternSize};
+    if (!FoundComputeGroup &&
+        (Properties[I].flags & ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE)) {
+      Info.DefaultCmdQueueGroup =
+          ComputeGroupInfoTy{/*Ordinal=*/I,
+                             /*NumQueues=*/Properties[I].numQueues,
+                             Properties[I].maxMemoryFillPatternSize};
+      FoundComputeGroup = true;
     }
+    // TODO: track exactly which queue groups support cooperative kernels
+    if (Properties[I].flags &
+        ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COOPERATIVE_KERNELS)
+      Info.SupportsCooperativeKernels = true;
   }
 
-  return Plugin::error(ErrorCode::UNSUPPORTED,
-                       "Device %d (%s) has no compute command queue group",
-                       DeviceId, getNameCStr());
-}
+  if (!FoundComputeGroup)
+    return Plugin::error(ErrorCode::UNSUPPORTED,
+                         "Device %d (%s) has no compute command queue group",
+                         DeviceId, getNameCStr());
 
-/// Check if device supports cooperative kernels by checking if any command
-/// queue group has the cooperative kernels flag set.
-bool L0DeviceTy::checkCooperativeKernelSupport() {
-  uint32_t Count = 0;
-  const auto zeDevice = getZeDevice();
-  CALL_ZE_RET(false, zeDeviceGetCommandQueueGroupProperties, zeDevice, &Count,
-              nullptr);
-
-  std::vector<ze_command_queue_group_properties_t> Properties(
-      Count,
-      {ZE_STRUCTURE_TYPE_COMMAND_QUEUE_GROUP_PROPERTIES, nullptr, 0, 0, 0});
-  CALL_ZE_RET(false, zeDeviceGetCommandQueueGroupProperties, zeDevice, &Count,
-              Properties.data());
-
-  for (auto &Property : Properties)
-    if (Property.flags &
-        ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COOPERATIVE_KERNELS)
-      return true;
-
-  return false;
+  return Info;
 }
 
 void L0DeviceTy::reportDeviceInfo() const {
@@ -203,13 +193,11 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
     uid += std::to_string(DeviceProperties.uuid.id[n]);
   DeviceUuid = std::move(uid);
 
-  auto ComputeGroupInfoOrErr = findCommandQueueGroup();
-  if (!ComputeGroupInfoOrErr)
-    return ComputeGroupInfoOrErr.takeError();
-  ComputeGroupInfo = *ComputeGroupInfoOrErr;
+  auto QueueGroupInfoOrErr = scanQueueGroups();
+  if (!QueueGroupInfoOrErr)
+    return QueueGroupInfoOrErr.takeError();
+  QueueGroupInfo = *QueueGroupInfoOrErr;
   QueueCache.setCommandMode(getPlugin().getOptions().CommandMode);
-
-  SupportsCooperativeKernels = checkCooperativeKernelSupport();
 
   if (auto Err = MemAllocator.initDevicePools(*this, Options))
     return Err;
@@ -562,7 +550,8 @@ Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   Info.add("Single FP Capabilities", SingleFPCapabilities, "",
            DeviceInfo::SINGLE_FP_CONFIG);
 
-  Info.add("Cooperative launch support", SupportsCooperativeKernels, "",
+  Info.add("Cooperative launch support",
+           QueueGroupInfo.SupportsCooperativeKernels, "",
            DeviceInfo::COOPERATIVE_LAUNCH_SUPPORT);
   return Info;
 }
