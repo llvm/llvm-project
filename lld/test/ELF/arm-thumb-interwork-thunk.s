@@ -84,8 +84,8 @@ arm_caller:
 // CHECK-ARM-ABS-ARM-NEXT: 1304: blx     0x1000 <thumb_callee1>
 // CHECK-ARM-ABS-ARM-NEXT: 1308: b       0x1328 <__ARMv7ABSLongThunk_thumb_callee1>
 // CHECK-ARM-ABS-ARM-NEXT: 130c: b       0x1328 <__ARMv7ABSLongThunk_thumb_callee1>
-// CHECK-ARM-ABS-ARM-NEXT: 1310: b       0x1340 <__ARMv7ABSLongThunk_thumb_callee2>
-// CHECK-ARM-ABS-ARM-NEXT: 1314: b       0x1334 <__ARMv7ABSLongThunk_thumb_callee3>
+// CHECK-ARM-ABS-ARM-NEXT: 1310: b       0x1334 <__ARMv7ABSLongThunk_thumb_callee2>
+// CHECK-ARM-ABS-ARM-NEXT: 1314: b       0x1340 <__ARMv7ABSLongThunk_thumb_callee3>
 // CHECK-ARM-ABS-ARM-NEXT: 1318: b       0x1100 <arm_callee1>
 // CHECK-ARM-ABS-ARM-NEXT: 131c: beq     0x1600 <arm_callee2>
 // CHECK-ARM-ABS-ARM-NEXT: 1320: bne     0x1604 <arm_callee3>
@@ -95,14 +95,14 @@ arm_caller:
 // CHECK-ARM-ABS-ARM-NEXT: 1328: movw    r12, #4097
 // CHECK-ARM-ABS-ARM-NEXT: 132c: movt    r12, #0
 // CHECK-ARM-ABS-ARM-NEXT: 1330: bx      r12
-// 0x1503 = thumb_callee3
-// CHECK-ARM-ABS-ARM:      <__ARMv7ABSLongThunk_thumb_callee3>:
-// CHECK-ARM-ABS-ARM-NEXT: 1334: movw    r12, #5379
-// CHECK-ARM-ABS-ARM-NEXT: 1338: movt    r12, #0
-// CHECK-ARM-ABS-ARM-NEXT: 133c: bx      r12
 // 0x1501 = thumb_callee2
 // CHECK-ARM-ABS-ARM:      <__ARMv7ABSLongThunk_thumb_callee2>:
-// CHECK-ARM-ABS-ARM-NEXT: 1340: movw    r12, #5377
+// CHECK-ARM-ABS-ARM-NEXT: 1334: movw    r12, #5377
+// CHECK-ARM-ABS-ARM-NEXT: 1338: movt    r12, #0
+// CHECK-ARM-ABS-ARM-NEXT: 133c: bx      r12
+// 0x1503 = thumb_callee3
+// CHECK-ARM-ABS-ARM:      <__ARMv7ABSLongThunk_thumb_callee3>:
+// CHECK-ARM-ABS-ARM-NEXT: 1340: movw    r12, #5379
 // CHECK-ARM-ABS-ARM-NEXT: 1344: movt    r12, #0
 // CHECK-ARM-ABS-ARM-NEXT: 1348: bx      r12
 
@@ -113,8 +113,8 @@ arm_caller:
 // CHECK-PI-ARM-NEXT: 1304: blx     0x1000 <thumb_callee1>
 // CHECK-PI-ARM-NEXT: 1308: b       0x1328 <__ARMV7PILongThunk_thumb_callee1>
 // CHECK-PI-ARM-NEXT: 130c: b       0x1328 <__ARMV7PILongThunk_thumb_callee1>
-// CHECK-PI-ARM-NEXT: 1310: b       0x1348 <__ARMV7PILongThunk_thumb_callee2>
-// CHECK-PI-ARM-NEXT: 1314: b       0x1338 <__ARMV7PILongThunk_thumb_callee3>
+// CHECK-PI-ARM-NEXT: 1310: b       0x1338 <__ARMV7PILongThunk_thumb_callee2>
+// CHECK-PI-ARM-NEXT: 1314: b       0x1348 <__ARMV7PILongThunk_thumb_callee3>
 // CHECK-PI-ARM-NEXT: 1318: b       0x1100 <arm_callee1>
 // CHECK-PI-ARM-NEXT: 131c: beq     0x1600 <arm_callee2>
 // CHECK-PI-ARM-NEXT: 1320: bne     0x1604 <arm_callee3>
@@ -124,13 +124,13 @@ arm_caller:
 // CHECK-PI-ARM-NEXT: 132c: movt    r12, #65535
 // CHECK-PI-ARM-NEXT: 1330: add     r12, r12, pc
 // CHECK-PI-ARM-NEXT: 1334: bx      r12
-// CHECK-PI-ARM: <__ARMV7PILongThunk_thumb_callee3>:
-// CHECK-PI-ARM-NEXT: 1338: movw    r12, #443
+// CHECK-PI-ARM: <__ARMV7PILongThunk_thumb_callee2>:
+// CHECK-PI-ARM-NEXT: 1338: movw    r12, #441
 // CHECK-PI-ARM-NEXT: 133c: movt    r12, #0
 // CHECK-PI-ARM-NEXT: 1340: add     r12, r12, pc
 // CHECK-PI-ARM-NEXT: 1344: bx      r12
-// CHECK-PI-ARM: <__ARMV7PILongThunk_thumb_callee2>:
-// CHECK-PI-ARM-NEXT: 1348: movw    r12, #425
+// CHECK-PI-ARM: <__ARMV7PILongThunk_thumb_callee3>:
+// CHECK-PI-ARM-NEXT: 1348: movw    r12, #427
 // CHECK-PI-ARM-NEXT: 134c: movt    r12, #0
 // CHECK-PI-ARM-NEXT: 1350: add     r12, r12, pc
 // CHECK-PI-ARM-NEXT: 1354: bx      r12
@@ -178,21 +178,21 @@ thumb_caller:
 // CHECK-ABS-THUMB-NEXT: 1400: blx     0x1100 <arm_callee1>
 // CHECK-ABS-THUMB-NEXT: 1404: blx     0x1100 <arm_callee1>
 // CHECK-ABS-THUMB-NEXT: 1408: b.w     0x1420 <__Thumbv7ABSLongThunk_arm_callee1>
-// CHECK-ABS-THUMB-NEXT: 140c: b.w     0x1434 <__Thumbv7ABSLongThunk_arm_callee2>
-// CHECK-ABS-THUMB-NEXT: 1410: b.w     0x142a <__Thumbv7ABSLongThunk_arm_callee3>
+// CHECK-ABS-THUMB-NEXT: 140c: b.w     0x142a <__Thumbv7ABSLongThunk_arm_callee2>
+// CHECK-ABS-THUMB-NEXT: 1410: b.w     0x1434 <__Thumbv7ABSLongThunk_arm_callee3>
 // CHECK-ABS-THUMB-NEXT: 1414: beq.w   0x1420 <__Thumbv7ABSLongThunk_arm_callee1>
-// CHECK-ABS-THUMB-NEXT: 1418: beq.w   0x1434 <__Thumbv7ABSLongThunk_arm_callee2>
-// CHECK-ABS-THUMB-NEXT: 141c: bne.w   0x142a <__Thumbv7ABSLongThunk_arm_callee3>
+// CHECK-ABS-THUMB-NEXT: 1418: beq.w   0x142a <__Thumbv7ABSLongThunk_arm_callee2>
+// CHECK-ABS-THUMB-NEXT: 141c: bne.w   0x1434 <__Thumbv7ABSLongThunk_arm_callee3>
 // CHECK-ABS-THUMB: <__Thumbv7ABSLongThunk_arm_callee1>:
 // CHECK-ABS-THUMB-NEXT: 1420: movw    r12, #4352
 // CHECK-ABS-THUMB-NEXT: 1424: movt    r12, #0
 // CHECK-ABS-THUMB-NEXT: 1428: bx      r12
-// CHECK-ABS-THUMB: <__Thumbv7ABSLongThunk_arm_callee3>:
-// CHECK-ABS-THUMB-NEXT: 142a: movw    r12, #5636
+// CHECK-ABS-THUMB: <__Thumbv7ABSLongThunk_arm_callee2>:
+// CHECK-ABS-THUMB-NEXT: 142a: movw    r12, #5632
 // CHECK-ABS-THUMB-NEXT: 142e: movt    r12, #0
 // CHECK-ABS-THUMB-NEXT: 1432: bx      r12
-// CHECK-ABS-THUMB: <__Thumbv7ABSLongThunk_arm_callee2>:
-// CHECK-ABS-THUMB-NEXT: 1434: movw    r12, #5632
+// CHECK-ABS-THUMB: <__Thumbv7ABSLongThunk_arm_callee3>:
+// CHECK-ABS-THUMB-NEXT: 1434: movw    r12, #5636
 // CHECK-ABS-THUMB-NEXT: 1438: movt    r12, #0
 // CHECK-ABS-THUMB-NEXT: 143c: bx      r12
 
@@ -202,23 +202,23 @@ thumb_caller:
 // CHECK-PI-THUMB-NEXT: 1400: blx     0x1100 <arm_callee1>
 // CHECK-PI-THUMB-NEXT: 1404: blx     0x1100 <arm_callee1>
 // CHECK-PI-THUMB-NEXT: 1408: b.w     0x1420 <__ThumbV7PILongThunk_arm_callee1>
-// CHECK-PI-THUMB-NEXT: 140c: b.w     0x1438 <__ThumbV7PILongThunk_arm_callee2>
-// CHECK-PI-THUMB-NEXT: 1410: b.w     0x142c <__ThumbV7PILongThunk_arm_callee3>
+// CHECK-PI-THUMB-NEXT: 140c: b.w     0x142c <__ThumbV7PILongThunk_arm_callee2>
+// CHECK-PI-THUMB-NEXT: 1410: b.w     0x1438 <__ThumbV7PILongThunk_arm_callee3>
 // CHECK-PI-THUMB-NEXT: 1414: beq.w   0x1420 <__ThumbV7PILongThunk_arm_callee1>
-// CHECK-PI-THUMB-NEXT: 1418: beq.w   0x1438 <__ThumbV7PILongThunk_arm_callee2>
-// CHECK-PI-THUMB-NEXT: 141c: bne.w   0x142c <__ThumbV7PILongThunk_arm_callee3>
+// CHECK-PI-THUMB-NEXT: 1418: beq.w   0x142c <__ThumbV7PILongThunk_arm_callee2>
+// CHECK-PI-THUMB-NEXT: 141c: bne.w   0x1438 <__ThumbV7PILongThunk_arm_callee3>
 // CHECK-PI-THUMB: <__ThumbV7PILongThunk_arm_callee1>:
 // CHECK-PI-THUMB-NEXT: 1420: movw    r12, #64724
 // CHECK-PI-THUMB-NEXT: 1424: movt    r12, #65535
 // CHECK-PI-THUMB-NEXT: 1428: add     r12, pc
 // CHECK-PI-THUMB-NEXT: 142a: bx      r12
-// CHECK-PI-THUMB: <__ThumbV7PILongThunk_arm_callee3>:
-// CHECK-PI-THUMB-NEXT: 142c: movw    r12, #460
+// CHECK-PI-THUMB: <__ThumbV7PILongThunk_arm_callee2>:
+// CHECK-PI-THUMB-NEXT: 142c: movw    r12, #456
 // CHECK-PI-THUMB-NEXT: 1430: movt    r12, #0
 // CHECK-PI-THUMB-NEXT: 1434: add     r12, pc
 // CHECK-PI-THUMB-NEXT: 1436: bx      r12
-// CHECK-PI-THUMB: <__ThumbV7PILongThunk_arm_callee2>:
-// CHECK-PI-THUMB-NEXT: 1438: movw    r12, #444
+// CHECK-PI-THUMB: <__ThumbV7PILongThunk_arm_callee3>:
+// CHECK-PI-THUMB-NEXT: 1438: movw    r12, #448
 // CHECK-PI-THUMB-NEXT: 143c: movt    r12, #0
 // CHECK-PI-THUMB-NEXT: 1440: add     r12, pc
 // CHECK-PI-THUMB-NEXT: 1442: bx      r12
@@ -231,12 +231,12 @@ thumb_caller:
 // CHECK-ARM-PLT-NEXT: <thumb_caller>:
 // CHECK-ARM-PLT-NEXT: 1400: blx     0x1640
 // CHECK-ARM-PLT-NEXT: 1404: blx     0x1640
-// CHECK-ARM-PLT-NEXT: 1408: b.w     0x1438 <__ThumbV7PILongThunk_arm_callee1>
+// CHECK-ARM-PLT-NEXT: 1408: b.w     0x1420 <__ThumbV7PILongThunk_arm_callee1>
 // CHECK-ARM-PLT-NEXT: 140c: b.w     0x142c <__ThumbV7PILongThunk_arm_callee2>
-// CHECK-ARM-PLT-NEXT: 1410: b.w     0x1420 <__ThumbV7PILongThunk_arm_callee3>
-// CHECK-ARM-PLT-NEXT: 1414: beq.w   0x1438 <__ThumbV7PILongThunk_arm_callee1>
+// CHECK-ARM-PLT-NEXT: 1410: b.w     0x1438 <__ThumbV7PILongThunk_arm_callee3>
+// CHECK-ARM-PLT-NEXT: 1414: beq.w   0x1420 <__ThumbV7PILongThunk_arm_callee1>
 // CHECK-ARM-PLT-NEXT: 1418: beq.w   0x142c <__ThumbV7PILongThunk_arm_callee2>
-// CHECK-ARM-PLT-NEXT: 141c: bne.w   0x1420 <__ThumbV7PILongThunk_arm_callee3>
+// CHECK-ARM-PLT-NEXT: 141c: bne.w   0x1438 <__ThumbV7PILongThunk_arm_callee3>
 
 /// Target Sections for thunks at a higher address than the callers.
 .section .R_ARM_JUMP24_callee_high, "ax", %progbits

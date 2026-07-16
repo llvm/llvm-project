@@ -18,24 +18,25 @@ _start:
  nop
 
 // CHECK-LABEL: <_start>:
-// CHECK-NEXT: 12000: b       0x12030 <__AArch64AbsLongThunk_short>
-// CHECK-NEXT:        b       0x1202c <__AArch64AbsLongThunk_short2>
-// CHECK-NEXT:        b       0x12028 <__AArch64AbsLongThunk_short3>
-// CHECK-NEXT:        b       0x12018 <__AArch64AbsLongThunk_long>
+// CHECK-NEXT: 12000: b       0x12018 <__AArch64AbsLongThunk_short>
+// CHECK-NEXT:        b       0x1201c <__AArch64AbsLongThunk_short2>
+// CHECK-NEXT:        b       0x12020 <__AArch64AbsLongThunk_short3>
+// CHECK-NEXT:        b       0x12028 <__AArch64AbsLongThunk_long>
 // CHECK-NEXT:        nop
 // CHECK-NEXT:        udf     #0x0
 // CHECK-EMPTY:
+// CHECK-LABEL: <__AArch64AbsLongThunk_short>:
+// CHECK-NEXT: 12018: b       0x8012004 <__AArch64AbsLongThunk_long+0x7ffffdc>
+// CHECK-EMPY:
+// CHECK-LABEL: <__AArch64AbsLongThunk_short2>:
+// CHECK-NEXT: 1201c: b       0x8012008 <__AArch64AbsLongThunk_long+0x7ffffe0>
+// CHECK-EMPTY:
+// CHECK-LABEL: <__AArch64AbsLongThunk_short3>:
+// CHECK-NEXT: 12020: b       0x801200c <__AArch64AbsLongThunk_long+0x7ffffe4>
+// CHECK-NEXT:        udf     #0x0
+// CHECK-EMPTY:
 // CHECK-LABEL: <__AArch64AbsLongThunk_long>:
-// CHECK-NEXT: 12018: ldr     x16, 0x12020 <__AArch64AbsLongThunk_long+0x8>
+// CHECK-NEXT: 12028: ldr     x16, 0x12030 <__AArch64AbsLongThunk_long+0x8>
 // CHECK-NEXT:        br      x16
 // CHECK-NEXT: 00 00 00 10   .word   0x10000000
 // CHECK-NEXT: 00 00 00 00   .word   0x00000000
-// CHECK-EMPTY:
-// CHECK-LABEL: <__AArch64AbsLongThunk_short3>:
-// CHECK-NEXT: 12028: b       0x801200c <__AArch64AbsLongThunk_short+0x7ffffdc>
-// CHECK-EMPTY:
-// CHECK-LABEL: <__AArch64AbsLongThunk_short2>:
-// CHECK-NEXT: 1202c: b       0x8012008 <__AArch64AbsLongThunk_short+0x7ffffd8>
-// CHECK-EMPTY:
-// CHECK-LABEL: <__AArch64AbsLongThunk_short>:
-// CHECK-NEXT: 12030: b       0x8012004 <__AArch64AbsLongThunk_short+0x7ffffd4>

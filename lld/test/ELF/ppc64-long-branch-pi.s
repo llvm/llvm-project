@@ -32,15 +32,15 @@
 # RELOC-NEXT: }
 
 # CHECK:      <_start>:
-# CHECK-NEXT:     2000:       bl 0x2050
+# CHECK-NEXT:     2000:       bl 0x2010
 # CHECK-NEXT:                 bl 0x2002000
 # CHECK-NEXT:                 bl 0x2030
-# CHECK-NEXT:                 bl 0x2010
+# CHECK-NEXT:                 bl 0x2050
 
-## &.branch_lt[2] - .TOC. = .branch_lt - (.got+0x8000) = -32728
+## &.branch_lt[0] - .TOC. = .branch_lt - (.got+0x8000) = -32744
 # CHECK:      <__long_branch_>:
 # CHECK-NEXT:     2010:       addis 12, 2, 0
-# CHECK-NEXT:                 ld 12, -32728(12)
+# CHECK-NEXT:                 ld 12, -32744(12)
 # CHECK-NEXT:                 mtctr 12
 # CHECK-NEXT:                 bctr
 
@@ -51,10 +51,10 @@
 # CHECK-NEXT:                 mtctr 12
 # CHECK-NEXT:                 bctr
 
-## &.branch_lt[0] - .TOC. = .branch_lt - (.got+0x8000) = -32744
+## &.branch_lt[2] - .TOC. = .branch_lt - (.got+0x8000) = -32728
 # CHECK:      <__long_branch_>:
 # CHECK-NEXT:     2050:       addis 12, 2, 0
-# CHECK-NEXT:                 ld 12, -32744(12)
+# CHECK-NEXT:                 ld 12, -32728(12)
 # CHECK-NEXT:                 mtctr 12
 # CHECK-NEXT:                 bctr
 

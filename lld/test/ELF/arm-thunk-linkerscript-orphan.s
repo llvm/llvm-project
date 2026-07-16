@@ -29,14 +29,14 @@ low_target:
 // CHECK-NEXT: <_start>:
 // CHECK-NEXT:   100000:        4770    bx      lr
 // CHECK: <low_target>:
-// CHECK-NEXT:   100002:        f000 f808       bl      0x100016 <__Thumbv7ABSLongThunk_high_target>
-// CHECK-NEXT:   100006:        f000 f801       bl      0x10000c <__Thumbv7ABSLongThunk_orphan_target>
-// CHECK: <__Thumbv7ABSLongThunk_orphan_target>:
-// CHECK-NEXT:   10000c:        f240 0c15       movw    r12, #21
+// CHECK-NEXT:   100002:        f000 f803       bl      0x10000c <__Thumbv7ABSLongThunk_high_target>
+// CHECK-NEXT:   100006:        f000 f806       bl      0x100016 <__Thumbv7ABSLongThunk_orphan_target>
+// CHECK: <__Thumbv7ABSLongThunk_high_target>:
+// CHECK-NEXT:   10000c:        f240 0c01       movw    r12, #1
 // CHECK-NEXT:   100010:        f2c0 2c00       movt    r12, #512
 // CHECK-NEXT:   100014:        4760    bx      r12
-// CHECK: <__Thumbv7ABSLongThunk_high_target>:
-// CHECK-NEXT:   100016:        f240 0c01       movw    r12, #1
+// CHECK: <__Thumbv7ABSLongThunk_orphan_target>:
+// CHECK-NEXT:   100016:        f240 0c15       movw    r12, #21
 // CHECK-NEXT:   10001a:        f2c0 2c00       movt    r12, #512
 // CHECK-NEXT:   10001e:        4760    bx      r12
   .section .text_high, "ax", %progbits

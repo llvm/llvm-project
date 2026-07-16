@@ -172,13 +172,13 @@ _start:
  bl tfunch00
 // CHECK6: <tfunch31>:
 // CHECK6-NEXT:  4100000:       4770    bx      lr
-// CHECK6-NEXT:  4100002:       f000 f808       bl      0x4100016 <__Thumbv7ABSLongThunk_tfuncl00>
-// CHECK6-NEXT:  4100006:       f000 f801       bl      0x410000c <__Thumbv7ABSLongThunk_tfunch00>
-// CHECK6: <__Thumbv7ABSLongThunk_tfunch00>:
-// CHECK6-NEXT:  410000c:       f240 0c01       movw    r12, #1
-// CHECK6-NEXT:  4100010:       f2c0 2c20       movt    r12, #544
-// CHECK6-NEXT:  4100014:       4760    bx      r12
+// CHECK6-NEXT:  4100002:       f000 f803       bl      0x410000c <__Thumbv7ABSLongThunk_tfuncl00>
+// CHECK6-NEXT:  4100006:       f000 f806       bl      0x4100016 <__Thumbv7ABSLongThunk_tfunch00>
 // CHECK6: <__Thumbv7ABSLongThunk_tfuncl00>:
+// CHECK6-NEXT:  410000c:       f240 0c01       movw    r12, #1
+// CHECK6-NEXT:  4100010:       f2c0 0c20       movt    r12, #32
+// CHECK6-NEXT:  4100014:       4760    bx      r12
+// CHECK6: <__Thumbv7ABSLongThunk_tfunch00>:
 // CHECK6-NEXT:  4100016:       f240 0c01       movw    r12, #1
-// CHECK6-NEXT:  410001a:       f2c0 0c20       movt    r12, #32
+// CHECK6-NEXT:  410001a:       f2c0 2c20       movt    r12, #544
 // CHECK6-NEXT:  410001e:       4760    bx      r12

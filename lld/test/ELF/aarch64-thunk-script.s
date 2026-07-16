@@ -29,13 +29,13 @@ high_target:
 // CHECK: Disassembly of section .text_low:
 // CHECK-EMPTY:
 // CHECK-NEXT: <_start>:
-// CHECK-NEXT:     2000:       bl      0x2010 <__AArch64AbsLongThunk_high_target>
-// CHECK-NEXT:     2004:       bl      0x200c <__AArch64AbsLongThunk_>
+// CHECK-NEXT:     2000:       bl      0x200c <__AArch64AbsLongThunk_high_target>
+// CHECK-NEXT:     2004:       bl      0x2010 <__AArch64AbsLongThunk_>
 // CHECK-NEXT:                 ret
-// CHECK: <__AArch64AbsLongThunk_>:
-// CHECK-NEXT:     200c:       b       0x8002004 <high_target+0x4>
 // CHECK: <__AArch64AbsLongThunk_high_target>:
-// CHECK-NEXT:     2010:       b       0x8002000 <high_target>
+// CHECK-NEXT:     200c:       b       0x8002000 <high_target>
+// CHECK: <__AArch64AbsLongThunk_>:
+// CHECK-NEXT:     2010:       b       0x8002004 <high_target+0x4>
 // CHECK: Disassembly of section .text_high:
 // CHECK-EMPTY:
 // CHECK-NEXT: <high_target>:

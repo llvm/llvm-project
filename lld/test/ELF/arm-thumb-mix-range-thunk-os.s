@@ -64,8 +64,8 @@ _start:
 // CHECK1:  <afunc00>:
 // CHECK1-NEXT:   100000:       e12fff1e        bx      lr
 // CHECK1-NEXT:   100004:       fa7bfffd        blx     0x2000000 <tfunc31>
-// CHECK1-NEXT:   100008:       ea3c0000        b       0x1000010 <__ARMv7ABSLongThunk_tfunc31>
-// CHECK1-NEXT:   10000c:       0a3bffff        beq     0x1000010 <__ARMv7ABSLongThunk_tfunc31>
+// CHECK1-NEXT:   100008:       ea3bfffd        b       0x1000004 <__ARMv7ABSLongThunk_tfunc31>
+// CHECK1-NEXT:   10000c:       0a3bfffc        beq     0x1000004 <__ARMv7ABSLongThunk_tfunc31>
 // CHECK1-NEXT:   100010:       eb7ffffa        bl      0x2100000 <afunc32>
 // CHECK1-NEXT:   100014:       ea7ffff9        b       0x2100000 <afunc32>
 // CHECK1-NEXT:   100018:       1a7ffff8        bne     0x2100000 <afunc32>
@@ -77,7 +77,7 @@ _start:
 // CHECK2: <tfunc01>:
 // CHECK2-NEXT:   200000:       4770    bx      lr
 // CHECK2-NEXT:   200002:       f0ff c7fe       blx     0xf00000 <afunc14>
-// CHECK2-NEXT:   200006:       f1ff 97fd       b.w     0x1000004 <__Thumbv7ABSLongThunk_afunc14>
+// CHECK2-NEXT:   200006:       f200 9003       b.w     0x1000010 <__Thumbv7ABSLongThunk_afunc14>
 
  ARMFUNCTION 02
  THUMBFUNCTION 03
@@ -92,14 +92,14 @@ _start:
  ARMFUNCTION 12
  THUMBFUNCTION 13
  ARMFUNCTION 14
-// CHECK3: <__Thumbv7ABSLongThunk_afunc14>:
-// CHECK3-NEXT:  1000004:       f240 0c00       movw    r12, #0
-// CHECK3-NEXT:  1000008:       f2c0 0cf0       movt    r12, #240
-// CHECK3-NEXT:  100000c:       4760    bx      r12
-// CHECK4:   <__ARMv7ABSLongThunk_tfunc31>:
-// CHECK4-NEXT:  1000010:       e300c001        movw    r12, #1
-// CHECK4-NEXT:  1000014:       e340c200        movt    r12, #512
-// CHECK4-NEXT:  1000018:       e12fff1c        bx      r12
+// CHECK3:   <__ARMv7ABSLongThunk_tfunc31>:
+// CHECK3-NEXT:  1000004:       e300c001        movw    r12, #1
+// CHECK3-NEXT:  1000008:       e340c200        movt    r12, #512
+// CHECK3-NEXT:  100000c:       e12fff1c        bx      r12
+// CHECK4: <__Thumbv7ABSLongThunk_afunc14>:
+// CHECK4-NEXT:  1000010:       f240 0c00       movw    r12, #0
+// CHECK4-NEXT:  1000014:       f2c0 0cf0       movt    r12, #240
+// CHECK4-NEXT:  1000018:       4760    bx      r12
  THUMBFUNCTION 15
  ARMFUNCTION 16
  THUMBFUNCTION 17
@@ -157,11 +157,12 @@ _start:
  THUMBFUNCTION 49
  ARMFUNCTION 50
 // Expect precreated Thunk Section here
-// CHECK9: <__Thumbv7ABSLongThunk_tfunc35>:
-// CHECK9-NEXT:  3300004:       f4ff 97fc       b.w     0x2400000 <tfunc35>
 // CHECK9: <__Thumbv7ABSLongThunk_afunc34>:
-// CHECK9-NEXT:  3300008:       f240 0c00       movw    r12, #0
-// CHECK9-NEXT:  330000c:       f2c0 2c30       movt    r12, #560
+// CHECK9-NEXT:  3300004:       f240 0c00       movw    r12, #0
+// CHECK9-NEXT:  3300008:       f2c0 2c30       movt    r12, #560
+// CHECK9-NEXT:  330000c:       4760    bx      r12
+// CHECK9: <__Thumbv7ABSLongThunk_tfunc35>:
+// CHECK9-NEXT:  330000e:       f4ff 97f7       b.w     0x2400000 <tfunc35>
  THUMBFUNCTION 51
  ARMFUNCTION 52
  THUMBFUNCTION 53
@@ -189,5 +190,5 @@ _start:
  bl tfunc35
 // CHECK11: <tfunc65>:
 // CHECK11:  4200000:   4770    bx      lr
-// CHECK11-NEXT:  4200002:      f500 d001       bl      0x3300008 <__Thumbv7ABSLongThunk_afunc34>
-// CHECK11-NEXT:  4200006:      f4ff d7fd       bl      0x3300004 <__Thumbv7ABSLongThunk_tfunc35>
+// CHECK11-NEXT:  4200002:      f4ff d7ff       bl      0x3300004 <__Thumbv7ABSLongThunk_afunc34>
+// CHECK11-NEXT:  4200006:      f500 d002       bl      0x330000e <__Thumbv7ABSLongThunk_tfunc35>

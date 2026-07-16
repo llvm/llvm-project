@@ -17,16 +17,16 @@
 # SEC: There are no relocations in this file.
 
 # CHECK-LABEL: <_start>:
-# CHECK-NEXT:  2000: bt 2, 0x2040
-# CHECK-NEXT:        bt+ 2, 0x2040
+# CHECK-NEXT:  2000: bt 2, 0x2020
+# CHECK-NEXT:        bt+ 2, 0x2020
 # CHECK-NEXT:        bf 2, 0xa004
-# CHECK-NEXT:        bt 2, 0x2020
+# CHECK-NEXT:        bt 2, 0x2040
 # CHECK-NEXT:        blr
 # CHECK-NEXT:        trap
 # CHECK-NEXT:        trap
 # CHECK-NEXT:        trap
 # CHECK-EMPTY:
-# CHECK-NEXT: <__long_branch_>:
+# CHECK-NEXT: <__long_branch_high>:
 # CHECK-NEXT:  2020: addis 12, 2, 0
 # CHECK-NEXT:        ld 12, {{.*}}(12)
 # CHECK-NEXT:        mtctr 12
@@ -34,7 +34,7 @@
 # CHECK-NEXT:        ...
 # CHECK-EMPTY:
 
-# CHECK-NEXT: <__long_branch_high>:
+# CHECK-NEXT: <__long_branch_>:
 # CHECK-NEXT:  2040: addis 12, 2, 0
 # CHECK-NEXT:        ld 12, {{.*}}(12)
 # CHECK-NEXT:        mtctr 12

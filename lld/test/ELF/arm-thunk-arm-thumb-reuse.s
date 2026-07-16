@@ -35,16 +35,16 @@ _start:
  bl far2
 
 // CHECK:   00010000 <_start>:
-// CHECK-NEXT: 10000: bl      0x1001c <__ARMv7ABSLongThunk_far>
-// CHECK-NEXT: 10004: blx     0x1001c <__ARMv7ABSLongThunk_far>
-// CHECK-NEXT: 10008: bl      0x10010 <__Thumbv7ABSLongThunk_far2>
-// CHECK-NEXT: 1000c: blx     0x10010 <__Thumbv7ABSLongThunk_far2>
-// CHECK:   00010010 <__Thumbv7ABSLongThunk_far2>:
-// CHECK-NEXT: 10010: movw    r12, #4
+// CHECK-NEXT: 10000: bl      0x10010 <__ARMv7ABSLongThunk_far>
+// CHECK-NEXT: 10004: blx     0x10010 <__ARMv7ABSLongThunk_far>
+// CHECK-NEXT: 10008: bl      0x1001c <__Thumbv7ABSLongThunk_far2>
+// CHECK-NEXT: 1000c: blx     0x1001c <__Thumbv7ABSLongThunk_far2>
+// CHECK:   00010010 <__ARMv7ABSLongThunk_far>:
+// CHECK-NEXT: 10010: movw    r12, #0
 // CHECK-NEXT: 10014: movt    r12, #4096
 // CHECK-NEXT: 10018: bx      r12
-// CHECK:   0001001c <__ARMv7ABSLongThunk_far>:
-// CHECK-NEXT: 1001c: movw    r12, #0
+// CHECK:   0001001c <__Thumbv7ABSLongThunk_far2>:
+// CHECK-NEXT: 1001c: movw    r12, #4
 // CHECK-NEXT: 10020: movt    r12, #4096
 // CHECK-NEXT: 10024: bx      r12
 

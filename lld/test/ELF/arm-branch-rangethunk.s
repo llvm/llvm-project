@@ -19,30 +19,32 @@ _start:
  beq too_far3
 
 // SHORT: 00030000 <_start>:
-// SHORT-NEXT:    30000: bl      0x30014 <__ARMv7ABSLongThunk_too_far1>
+// SHORT-NEXT:    30000: bl      0x3000c <__ARMv7ABSLongThunk_too_far1>
 // SHORT-NEXT:    30004: b       0x30010 <__ARMv7ABSLongThunk_too_far2>
-// SHORT-NEXT:    30008: beq     0x3000c <__ARMv7ABSLongThunk_too_far3>
-// SHORT:      0003000c <__ARMv7ABSLongThunk_too_far3>:
-/// 0x2030010 = too_far3
-// SHORT-NEXT:    3000c: b       0x2030010
+// SHORT-NEXT:    30008: beq     0x30014 <__ARMv7ABSLongThunk_too_far3>
+// SHORT:      0003000c <__ARMv7ABSLongThunk_too_far1>:
+/// 0x2030008 = too_far1
+// SHORT-NEXT:    3000c: b       0x2030008
 // SHORT:      00030010 <__ARMv7ABSLongThunk_too_far2>:
 /// 0x203000c = too_far2
 // SHORT-NEXT:    30010: b       0x203000c
-// SHORT:      00030014 <__ARMv7ABSLongThunk_too_far1>:
-/// 0x2030008 = too_far1
-// SHORT-NEXT:    30014: b       0x2030008
+// SHORT:      00030014 <__ARMv7ABSLongThunk_too_far3>:
+/// 0x2030010 = too_far3
+// SHORT-NEXT:    30014: b       0x2030010
 
 // LONG:      00030000 <_start>:
-// LONG-NEXT:    30000: bl      0x30024 <__ARMv7ABSLongThunk_too_far1>
+// LONG-NEXT:    30000: bl      0x3000c <__ARMv7ABSLongThunk_too_far1>
 // LONG-NEXT:    30004: b       0x30018 <__ARMv7ABSLongThunk_too_far2>
-// LONG-NEXT:    30008: beq     0x3000c <__ARMv7ABSLongThunk_too_far3>
-// LONG:      0003000c <__ARMv7ABSLongThunk_too_far3>:
-// LONG-NEXT:    3000c: movw    r12, #44
+// LONG-NEXT:    30008: beq     0x30024 <__ARMv7ABSLongThunk_too_far3>
+// LONG:      0003000c <__ARMv7ABSLongThunk_too_far1>:
+// LONG-NEXT:    3000c: movw    r12, #20
 // LONG-NEXT:    30010: movt    r12, #515
 // LONG-NEXT:    30014: bx      r12
 // LONG:      00030018 <__ARMv7ABSLongThunk_too_far2>:
 // LONG-NEXT:    30018: movw    r12, #32
 // LONG-NEXT:    3001c: movt    r12, #515
 // LONG-NEXT:    30020: bx      r12
-// LONG:      00030024 <__ARMv7ABSLongThunk_too_far1>:
-// LONG-NEXT:    30024: b       0x2030014
+// LONG:      00030024 <__ARMv7ABSLongThunk_too_far3>:
+// LONG-NEXT:    30024: movw    r12, #44
+// LONG-NEXT:    30028: movt    r12, #515
+// LONG-NEXT:    3002c: bx      r12

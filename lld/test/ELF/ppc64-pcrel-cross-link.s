@@ -24,23 +24,23 @@
 # NOSWAP:         bl 0x1001000
 # NOSWAP:         blr
 # NOSWAP-LABEL: 10030000 <caller_notoc>:
-# NOSWAP-NEXT:    bl 0x10030030
 # NOSWAP-NEXT:    bl 0x10030010
+# NOSWAP-NEXT:    bl 0x10030030
 # NOSWAP-NEXT:    blr
-# NOSWAP-LABEL: 10030010 <__gep_setup_callee_notoc>:
+# NOSWAP-LABEL: 10030010 <__gep_setup_callee_toc>:
 # NOSWAP:         bctr
-# NOSWAP-LABEL: 10030030 <__gep_setup_callee_toc>:
+# NOSWAP-LABEL: 10030030 <__gep_setup_callee_notoc>:
 # NOSWAP:         bctr
 # NOSWAP-LABEL: 10040000 <caller_toc>:
-# NOSWAP:         bl 0x10040040
+# NOSWAP:         bl 0x10040020
 # NOSWAP-NEXT:    nop
-# NOSWAP-NEXT:    bl 0x10040020
+# NOSWAP-NEXT:    bl 0x10040040
 # NOSWAP-NEXT:    ld 2, 24(1)
 # NOSWAP-NEXT:    blr
-# NOSWAP-LABEL: 10040020 <__toc_save_callee_notoc>:
-# NOSWAP-NEXT:    std 2, 24(1)
+# NOSWAP-LABEL: 10040020 <__long_branch_callee_toc>:
 # NOSWAP:         bctr
-# NOSWAP-LABEL: 10040040 <__long_branch_callee_toc>:
+# NOSWAP-LABEL: 10040040 <__toc_save_callee_notoc>:
+# NOSWAP-NEXT:    std 2, 24(1)
 # NOSWAP:         bctr
 
 # SWAP-LABEL: 01001000 <func>:
@@ -52,23 +52,23 @@
 # SWAP:         bl 0x1001000
 # SWAP:         blr
 # SWAP-LABEL: 10030000 <caller_toc>:
-# SWAP:         bl 0x10030040
+# SWAP:         bl 0x10030020
 # SWAP-NEXT:    nop
-# SWAP-NEXT:    bl 0x10030020
+# SWAP-NEXT:    bl 0x10030040
 # SWAP-NEXT:    ld 2, 24(1)
 # SWAP-NEXT:    blr
-# SWAP-LABEL: 10030020 <__toc_save_callee_notoc>:
+# SWAP-LABEL: 10030020 <__long_branch_callee_toc>:
+# SWAP:         bctr
+# SWAP-LABEL: 10030040 <__toc_save_callee_notoc>:
 # SWAP-NEXT:    std 2, 24(1)
 # SWAP:         bctr
-# SWAP-LABEL: 10030040 <__long_branch_callee_toc>:
-# SWAP:         bctr
 # SWAP-LABEL: 10040000 <caller_notoc>:
-# SWAP-NEXT:    bl 0x10040030
 # SWAP-NEXT:    bl 0x10040010
+# SWAP-NEXT:    bl 0x10040030
 # SWAP-NEXT:    blr
-# SWAP-LABEL: 10040010 <__gep_setup_callee_notoc>:
+# SWAP-LABEL: 10040010 <__gep_setup_callee_toc>:
 # SWAP:         bctr
-# SWAP-LABEL: 10040030 <__gep_setup_callee_toc>:
+# SWAP-LABEL: 10040030 <__gep_setup_callee_notoc>:
 # SWAP:         bctr
 
 #--- lds
