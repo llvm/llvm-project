@@ -97,10 +97,10 @@ static decltype(auto) hasTypePointingTo(DeclarationMatcher DeclM) {
 
 // Matches `this` or `*this`, but not member accesses like `this->m_field`.
 static decltype(auto) isThisOrDerefThis() {
-  return ignoringParenImpCasts(
-      anyOf(cxxThisExpr(),
-            unaryOperator(hasOperatorName("*"),
-                          hasUnaryOperand(ignoringParenImpCasts(cxxThisExpr())))));
+  return ignoringParenImpCasts(anyOf(
+     cxxThisExpr(),
+      unaryOperator(hasOperatorName("*"),
+                    hasUnaryOperand(ignoringParenImpCasts(cxxThisExpr())))));
 }
 
 void MemoryUnsafeCastChecker::checkASTCodeBody(const Decl *D,
