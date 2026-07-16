@@ -84,24 +84,24 @@ define i8 @test_bitextract_narrow(b64 %src) {
 define b32 @test_bitinsert_var(b32 %base, i16 %val, i32 %off) {
 ; RV32-LABEL: test_bitinsert_var:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srl a3, a0, a2
-; RV32-NEXT:    neg a4, a2
-; RV32-NEXT:    sll a0, a0, a4
-; RV32-NEXT:    or a0, a3, a0
-; RV32-NEXT:    lui a3, 1048560
+; RV32-NEXT:    neg a3, a2
+; RV32-NEXT:    srl a4, a0, a2
+; RV32-NEXT:    sll a0, a0, a3
+; RV32-NEXT:    or a0, a4, a0
+; RV32-NEXT:    lui a4, 1048560
 ; RV32-NEXT:    slli a1, a1, 16
+; RV32-NEXT:    and a0, a0, a4
 ; RV32-NEXT:    srli a1, a1, 16
-; RV32-NEXT:    and a0, a0, a3
 ; RV32-NEXT:    or a0, a0, a1
-; RV32-NEXT:    srl a1, a0, a4
+; RV32-NEXT:    srl a1, a0, a3
 ; RV32-NEXT:    sll a0, a0, a2
 ; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: test_bitinsert_var:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    ror a0, a0, a2
 ; RV32ZBB-NEXT:    lui a3, 1048560
+; RV32ZBB-NEXT:    ror a0, a0, a2
 ; RV32ZBB-NEXT:    and a0, a0, a3
 ; RV32ZBB-NEXT:    zext.h a1, a1
 ; RV32ZBB-NEXT:    or a0, a0, a1
@@ -110,24 +110,24 @@ define b32 @test_bitinsert_var(b32 %base, i16 %val, i32 %off) {
 ;
 ; RV64-LABEL: test_bitinsert_var:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    srlw a3, a0, a2
-; RV64-NEXT:    neg a4, a2
-; RV64-NEXT:    sllw a0, a0, a4
-; RV64-NEXT:    or a0, a3, a0
-; RV64-NEXT:    lui a3, 1048560
+; RV64-NEXT:    neg a3, a2
+; RV64-NEXT:    srlw a4, a0, a2
+; RV64-NEXT:    sllw a0, a0, a3
+; RV64-NEXT:    or a0, a4, a0
+; RV64-NEXT:    lui a4, 1048560
 ; RV64-NEXT:    slli a1, a1, 48
+; RV64-NEXT:    and a0, a0, a4
 ; RV64-NEXT:    srli a1, a1, 48
-; RV64-NEXT:    and a0, a0, a3
 ; RV64-NEXT:    or a0, a0, a1
-; RV64-NEXT:    srlw a1, a0, a4
+; RV64-NEXT:    srlw a1, a0, a3
 ; RV64-NEXT:    sllw a0, a0, a2
 ; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_bitinsert_var:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    rorw a0, a0, a2
 ; RV64ZBB-NEXT:    lui a3, 1048560
+; RV64ZBB-NEXT:    rorw a0, a0, a2
 ; RV64ZBB-NEXT:    and a0, a0, a3
 ; RV64ZBB-NEXT:    zext.h a1, a1
 ; RV64ZBB-NEXT:    or a0, a0, a1
