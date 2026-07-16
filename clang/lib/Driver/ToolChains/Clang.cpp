@@ -1012,11 +1012,10 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     CmdArgs.append({"-include", "__clang_gpu_device_functions.h"});
 
     SmallString<128> OffloadHIPInclude(D.Dir);
-    llvm::sys::path::append(OffloadHIPInclude, "..", "include", "offload",
-                            "hip");
+    llvm::sys::path::append(OffloadHIPInclude, "..", "include", "offload");
     CmdArgs.append({"-internal-isystem", Args.MakeArgString(OffloadHIPInclude),
                     "-include"});
-    CmdArgs.push_back("hip_runtime.h");
+    CmdArgs.push_back("hip/hip_runtime.h");
   }
 
   // Add -i* options, and automatically translate to
@@ -5218,7 +5217,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   bool IsOpenMPDevice = JA.isDeviceOffloading(Action::OFK_OpenMP);
   bool IsExtractAPI = isa<ExtractAPIJobAction>(JA);
   bool UsesLLVMOffloading =
-      Triple.getEnvironment() == llvm::Triple::LLVM ||
+      Triple.getEnvironment() == llvm::Triple::LLVM &&
       Args.hasFlag(options::OPT_foffload_via_llvm,
                    options::OPT_fno_offload_via_llvm, false);
   bool IsDeviceOffloadAction = !(JA.isDeviceOffloading(Action::OFK_None) ||

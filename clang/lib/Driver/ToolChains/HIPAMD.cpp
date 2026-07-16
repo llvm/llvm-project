@@ -336,10 +336,10 @@ void HIPAMDToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
 
       SmallString<128> HIPIncludePath(getDriver().ResourceDir);
       llvm::sys::path::append(HIPIncludePath, "..", "..", "..");
-      llvm::sys::path::append(HIPIncludePath, "include", "offload", "hip");
+      llvm::sys::path::append(HIPIncludePath, "include", "offload");
       CC1Args.push_back("-internal-isystem");
       CC1Args.push_back(DriverArgs.MakeArgString(HIPIncludePath));
-      CC1Args.append({"-include", "hip_runtime.h"});
+      CC1Args.append({"-include", "hip/hip_runtime.h"});
     }
     return;
   }

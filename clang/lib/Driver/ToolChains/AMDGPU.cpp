@@ -515,7 +515,6 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
                             !DriverArgs.hasArg(options::OPT_nohipwrapperinc);
   bool HasHipStdPar = DriverArgs.hasArg(options::OPT_hipstdpar);
 
-  // if (D.getTargetTriple() == llvm::Triple::LLVM &&
   if (DriverArgs.hasFlag(options::OPT_foffload_via_llvm,
                          options::OPT_fno_offload_via_llvm, false)) {
     if (DriverArgs.hasFlag(options::OPT_offload_inc,
@@ -526,10 +525,10 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
 
       SmallString<128> HIPIncludePath(D.ResourceDir);
       llvm::sys::path::append(HIPIncludePath, "..", "..", "..");
-      llvm::sys::path::append(HIPIncludePath, "include", "offload", "hip");
+      llvm::sys::path::append(HIPIncludePath, "include", "offload");
       CC1Args.push_back("-internal-isystem");
       CC1Args.push_back(DriverArgs.MakeArgString(HIPIncludePath));
-      CC1Args.append({"-include", "hip_runtime.h"});
+      CC1Args.append({"-include", "hip/hip_runtime.h"});
     }
     return;
   }

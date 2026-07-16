@@ -31,10 +31,17 @@ inline hipError_t hipHostMalloc(void **Ptr, size_t Size, unsigned int Flags) {
   return hipHostAlloc(Ptr, Size, Flags);
 }
 
+inline hipError_t hipHostFree(void *Ptr) { return ::hipFreeHost(Ptr); }
+
 template <class T>
 static inline hipError_t hipHostMalloc(T **Ptr, size_t Size,
                                        unsigned int Flags) {
   return ::hipHostMalloc((void **)Ptr, Size, Flags);
+}
+
+template <class T>
+static inline hipError_t hipHostFree(T *Ptr) {
+  return ::hipHostFree((void *)Ptr);
 }
 
 #if defined(__AMDGPU__) || defined(__NVPTX__)
