@@ -1646,7 +1646,11 @@ class DebugCommunication(object):
 
     def terminate(self):
         if self.socket:
-            self.socket.shutdown(socket.SHUT_RDWR)
+            try:
+                self.socket.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                # Ignore "already disconnected" errors.
+                pass
         self.send.close()
         if self._recv_thread.is_alive():
             self._recv_thread.join()
