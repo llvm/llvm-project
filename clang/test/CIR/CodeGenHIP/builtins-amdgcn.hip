@@ -175,3 +175,12 @@ __device__ void test_sqrt_f32(float* out, float a) {
 __device__ void test_sqrt_f64(double* out, double a) {
   *out = __builtin_amdgcn_sqrt(a);
 }
+
+// CIR-LABEL: @_Z13test_sinf_f32Pff
+// CIR: cir.call_llvm_intrinsic "amdgcn.sin" {{.*}} : (!cir.float) -> !cir.float
+// LLVM: define{{.*}} void @_Z13test_sinf_f32Pff
+// LLVM: call{{.*}} float @llvm.amdgcn.sin.f32(float %{{.*}})
+__device__ void test_sinf_f32(float* out, float a) {
+  *out = __builtin_amdgcn_sinf(a);
+}
+

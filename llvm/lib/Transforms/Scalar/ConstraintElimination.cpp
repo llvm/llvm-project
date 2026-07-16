@@ -1996,6 +1996,26 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
                                      DFSInStack);
       }
 
+      // (X | Y) >s -1 implies X >s -1 and Y >s -1, because the sign bit of an
+      // OR is the OR of the operand sign bits. Look through this
+      // canonicalization by InstCombine.
+      if (Pred == CmpInst::ICMP_SGT && match(B, m_AllOnes())) {
+        SmallVector<Value *> OrWorklist = {A};
+        SmallPtrSet<Value *, 4> SeenOr;
+        Value *X, *Y;
+        while (!OrWorklist.empty()) {
+          Value *Cur = OrWorklist.pop_back_val();
+          if (!match(Cur, m_Or(m_Value(X), m_Value(Y))))
+            continue;
+          for (Value *Op : {X, Y}) {
+            if (!SeenOr.insert(Op).second)
+              continue;
+            OrWorklist.push_back(Op);
+            Info.addFact(Pred, Op, B, CB.NumIn, CB.NumOut, DFSInStack);
+          }
+        }
+      }
+
       if (ReproducerModule && DFSInStack.size() > ReproducerCondStack.size()) {
         // Add dummy entries to ReproducerCondStack to keep it in sync with
         // DFSInStack.

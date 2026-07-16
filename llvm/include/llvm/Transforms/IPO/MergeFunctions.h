@@ -28,9 +28,9 @@ class MergeFunctionsPass : public OptionalPassInfoMixin<MergeFunctionsPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
-  LLVM_ABI static bool runOnModule(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI static bool runOnModule(Module &M);
   LLVM_ABI static DenseMap<Function *, Function *>
-  runOnFunctions(ArrayRef<Function *> Funcs, ModuleAnalysisManager &AM);
+  runOnFunctions(ArrayRef<Function *> F);
 };
 
 } // end namespace llvm

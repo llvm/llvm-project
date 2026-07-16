@@ -6701,6 +6701,14 @@ bool AMDGPULegalizerInfo::legalizeBufferStore(MachineInstr &MI,
   const int MemSize = MMO->getSize().getValue();
   LLT MemTy = MMO->getMemoryType();
 
+  if (IsFormat && !IsTyped && !IsD16 && MemTy.getSizeInBits() < 32) {
+    const Function &Fn = B.getMF().getFunction();
+    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+        Fn, "unsupported sub-dword format buffer store", MI.getDebugLoc()));
+    MI.eraseFromParent();
+    return true;
+  }
+
   VData = fixStoreSourceType(B, VData, MemTy, IsFormat);
 
   castBufferRsrcArgToV4I32(MI, B, 2);
@@ -6870,6 +6878,17 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
   LLT EltTy = Ty.getScalarType();
   const bool IsD16 = IsFormat && (EltTy.getSizeInBits() == 16);
   const bool Unpacked = ST.hasUnpackedD16VMem();
+
+  if (IsFormat && !IsTyped && !IsD16 && MemTy.getSizeInBits() < 32) {
+    const Function &Fn = B.getMF().getFunction();
+    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+        Fn, "unsupported sub-dword format buffer load", MI.getDebugLoc()));
+    B.buildUndef(Dst);
+    if (IsTFE)
+      B.buildUndef(StatusDst);
+    MI.eraseFromParent();
+    return true;
+  }
 
   std::tie(VOffset, ImmOffset) = splitBufferOffsets(B, VOffset);
 

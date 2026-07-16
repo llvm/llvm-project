@@ -188,8 +188,10 @@ public:
           << DanglingGlobal->getEndLoc();
   }
 
-  void reportUseAfterInvalidation(const Expr *IssueExpr, const Expr *UseExpr,
-                                  const Expr *InvalidationExpr) override {
+  void
+  reportUseAfterInvalidation(const Expr *IssueExpr, const Expr *UseExpr,
+                             const Expr *InvalidationExpr,
+                             llvm::ArrayRef<const Expr *> ExprChain) override {
     auto WarnDiag = isa<CXXDeleteExpr>(InvalidationExpr)
                         ? diag::warn_lifetime_safety_use_after_free
                         : diag::warn_lifetime_safety_invalidation;
@@ -197,11 +199,14 @@ public:
     S.Diag(IssueExpr->getExprLoc(), WarnDiag)
         << InvalidatedSubject << IssueExpr->getSourceRange();
     reportInvalidationSite(InvalidationExpr, InvalidatedSubject);
+    reportAliasingChain(ExprChain);
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
         << UseExpr->getSourceRange();
   }
-  void reportUseAfterInvalidation(const ParmVarDecl *PVD, const Expr *UseExpr,
-                                  const Expr *InvalidationExpr) override {
+  void
+  reportUseAfterInvalidation(const ParmVarDecl *PVD, const Expr *UseExpr,
+                             const Expr *InvalidationExpr,
+                             llvm::ArrayRef<const Expr *> ExprChain) override {
 
     auto WarnDiag = isa<CXXDeleteExpr>(InvalidationExpr)
                         ? diag::warn_lifetime_safety_use_after_free
@@ -211,6 +216,7 @@ public:
     S.Diag(PVD->getSourceRange().getBegin(), WarnDiag)
         << InvalidatedSubject << PVD->getSourceRange();
     reportInvalidationSite(InvalidationExpr, InvalidatedSubject);
+    reportAliasingChain(ExprChain);
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
         << UseExpr->getSourceRange();
   }

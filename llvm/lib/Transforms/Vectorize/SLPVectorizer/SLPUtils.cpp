@@ -33,20 +33,23 @@ bool isConstant(Value *V) {
 }
 
 bool isVectorLikeInstWithConstOps(Value *V) {
-  if (!isa<InsertElementInst, InsertValueInst, ExtractElementInst>(V) &&
-      !isa<ExtractValueInst, UndefValue>(V))
-    return false;
   auto *I = dyn_cast<Instruction>(V);
-  if (!I || isa<ExtractValueInst>(I))
+  // Non-instructions are vector-like only if they are undef.
+  if (!I)
+    return isa<UndefValue>(V);
+  switch (I->getOpcode()) {
+  case Instruction::ExtractValue:
+  case Instruction::InsertValue:
     return true;
-  if (isa<ExtractElementInst>(I))
+  case Instruction::ExtractElement:
     return isa<FixedVectorType>(I->getOperand(0)->getType()) &&
            isConstant(I->getOperand(1));
-  if (isa<InsertElementInst>(I))
+  case Instruction::InsertElement:
     return isa<FixedVectorType>(I->getOperand(0)->getType()) &&
            isConstant(I->getOperand(2));
-  assert(isa<InsertValueInst>(I) && "Expected InsertValueInst");
-  return true;
+  default:
+    return false;
+  }
 }
 
 unsigned getNumElements(Type *Ty) {
@@ -221,7 +224,7 @@ bool allSameOpcode(ArrayRef<Value *> VL) {
   bool IsCmpOp = isa<CmpInst>(MainOp);
   CmpInst::Predicate BasePred = IsCmpOp ? cast<CmpInst>(MainOp)->getPredicate()
                                         : CmpInst::BAD_ICMP_PREDICATE;
-  return std::all_of(It, VL.end(), [&](Value *V) {
+  return all_of(make_range(It, VL.end()), [&](Value *V) {
     if (auto *CI = dyn_cast<CmpInst>(V))
       return BasePred == CI->getPredicate();
     if (auto *I = dyn_cast<Instruction>(V))
@@ -274,6 +277,7 @@ void reorderScalars(SmallVectorImpl<Value *> &Scalars, ArrayRef<int> Mask) {
 }
 
 bool allSameType(ArrayRef<Value *> VL) {
+  assert(!VL.empty() && "Expected non-empty list of values.");
   Type *Ty = VL.consume_front()->getType();
   return all_of(VL, [&](Value *V) { return V->getType() == Ty; });
 }
