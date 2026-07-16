@@ -624,7 +624,7 @@ public:
 
   /// Name of the literal encoding to convert the internal encoding to.
   std::string LiteralEncoding;
-  
+
   /// Name of the input encoding to convert to the internal encoding.
   std::string InputEncoding;
 
