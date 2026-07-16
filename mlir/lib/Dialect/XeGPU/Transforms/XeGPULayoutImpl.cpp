@@ -1752,31 +1752,39 @@ xegpu::setupLoadMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
                                       maxChunkSize, resShape, subgroupSize);
 }
 
-/// Sets up the anchor layout for store scatter and store matrix operation.
-/// store matrix lowers to store scatter and 1d block store. All of them
-/// share the same layout setup logic. For Subgroup layout, not supported
-/// yet.
-///
-/// Lane layout is derived first via `computeScatterIOLaneLayoutAndData`;
-/// inst_data is then the element-wise product lane_layout * lane_data.
+/// Picks the subgroup layout for a scatter-style store (store_scatter /
+/// store_matrix): the most balanced `numSg` factorization that divides
+/// `wgShape` with sg_data a multiple of `instData`. A store has no consumer.
 static xegpu::DistributeLayoutAttr
-setupGenericStoreAnchorLayout(xegpu::LayoutKind layoutKind,
-                              mlir::MLIRContext *context, int maxChunkSize,
-                              ArrayRef<int64_t> srcShape, int subgroupSize) {
-
-  if (layoutKind == xegpu::LayoutKind::Subgroup) {
-    assert(false &&
-           "subgroup layout assignment not supported for storeScatter.");
+getStoreSubgroupLayouts(mlir::MLIRContext *context, ArrayRef<int64_t> wgShape,
+                        ArrayRef<int64_t> instData, int numSg) {
+  auto candidates = getSgLayoutCandidates(wgShape, instData, numSg);
+  if (candidates.empty())
     return nullptr;
-  }
+  // Candidates are ordered most-balanced first.
+  return buildSgLayout(context, wgShape, candidates.front(), /*dimK=*/-1);
+}
+
+/// Sets up the anchor layout for store scatter and store matrix operation,
+/// which share the same logic. Lane layout comes from
+/// `computeScatterIOLaneLayoutAndData`; inst_data is lane_layout * lane_data.
+static xegpu::DistributeLayoutAttr setupGenericStoreAnchorLayout(
+    xegpu::LayoutKind layoutKind, mlir::MLIRContext *context, int maxChunkSize,
+    ArrayRef<int64_t> srcShape, int subgroupSize, int numSg) {
 
   auto [laneLayout, laneData] =
       computeScatterIOLaneLayoutAndData(srcShape, subgroupSize, maxChunkSize);
 
+  SmallVector<int64_t> instData(srcShape.size());
+  for (size_t i = 0; i < srcShape.size(); ++i)
+    instData[i] = laneLayout[i] * laneData[i];
+
+  if (layoutKind == xegpu::LayoutKind::Subgroup) {
+    assert(numSg > 0 &&
+           "Number of subgroups must be provided for sg layout creation.");
+    return getStoreSubgroupLayouts(context, srcShape, instData, numSg);
+  }
   if (layoutKind == xegpu::LayoutKind::InstData) {
-    SmallVector<int64_t> instData(srcShape.size());
-    for (size_t i = 0; i < srcShape.size(); ++i)
-      instData[i] = laneLayout[i] * laneData[i];
     return buildInstDataLayoutWithLane(context, instData, laneLayout, laneData);
   }
   if (layoutKind == xegpu::LayoutKind::Lane) {
@@ -1789,7 +1797,7 @@ setupGenericStoreAnchorLayout(xegpu::LayoutKind layoutKind,
 xegpu::DistributeLayoutAttr
 xegpu::setupStoreScatterAnchorLayout(xegpu::LayoutKind layoutKind,
                                      VectorType srcVecTy, int contigChunkSize,
-                                     const uArch::uArch *uArch) {
+                                     int numSg, const uArch::uArch *uArch) {
 
   const int subgroupSize = uArch->getSubgroupSize();
   ArrayRef<int64_t> srcShape = srcVecTy.getShape();
@@ -1801,14 +1809,13 @@ xegpu::setupStoreScatterAnchorLayout(xegpu::LayoutKind layoutKind,
   int maxChunkSize =
       std::min(uArchInstruction->getMaxLaneAccessSizeBytes(), contigChunkSize);
   return setupGenericStoreAnchorLayout(layoutKind, context, maxChunkSize,
-                                       srcShape, subgroupSize);
+                                       srcShape, subgroupSize, numSg);
 }
 
 /// Sets up the anchor layout for a store matrix operation.
-xegpu::DistributeLayoutAttr
-xegpu::setupStoreMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
-                                    VectorType srcVecTy, int contigChunkSize,
-                                    const xegpu::uArch::uArch *uArch) {
+xegpu::DistributeLayoutAttr xegpu::setupStoreMatrixAnchorLayout(
+    xegpu::LayoutKind layoutKind, VectorType srcVecTy, int contigChunkSize,
+    int numSg, const xegpu::uArch::uArch *uArch) {
 
   const int subgroupSize = uArch->getSubgroupSize();
   ArrayRef<int64_t> srcShape = srcVecTy.getShape();
@@ -1821,7 +1828,7 @@ xegpu::setupStoreMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
       std::min(uArchInstruction->getMaxLaneAccessSizeBytes(), contigChunkSize);
 
   return setupGenericStoreAnchorLayout(layoutKind, context, maxChunkSize,
-                                       srcShape, subgroupSize);
+                                       srcShape, subgroupSize, numSg);
 }
 
 /// Completes a scatter IO layout by deriving lane_layout and lane_data from

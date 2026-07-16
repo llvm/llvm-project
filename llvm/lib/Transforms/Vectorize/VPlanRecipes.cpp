@@ -670,6 +670,9 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::GetElementPtr:
   case Instruction::PHI:
   case Instruction::Switch:
+  case Instruction::AtomicRMW:
+  case Instruction::AtomicCmpXchg:
+  case Instruction::Fence:
   case VPInstruction::AnyOf:
   case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
@@ -2316,11 +2319,19 @@ InstructionCost VPWidenIntrinsicRecipe::computeCallCost(
         return toVectorTy(Op->getScalarType(), VF);
       });
 
+  VectorInstrContext VIC = VectorInstrContext::None;
+  for (const VPValue *Op : Operands)
+    if (isa<VPWidenRecipe>(Op) &&
+        Instruction::isBinaryOp(cast<VPWidenRecipe>(Op)->getOpcode())) {
+      VIC = VectorInstrContext::BinaryOp;
+      break;
+    }
+
   // TODO: Rework TTI interface to avoid reliance on underlying IntrinsicInst.
   IntrinsicCostAttributes CostAttrs(
       ID, RetTy, Arguments, ParamTys, R.getFastMathFlagsOrNone(),
       dyn_cast_or_null<IntrinsicInst>(R.getUnderlyingValue()),
-      InstructionCost::getInvalid());
+      InstructionCost::getInvalid(), VIC);
   return Ctx.TTI.getIntrinsicInstrCost(CostAttrs, Ctx.CostKind);
 }
 
