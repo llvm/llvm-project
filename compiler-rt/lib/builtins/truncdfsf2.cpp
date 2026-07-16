@@ -12,9 +12,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "shared/builtins/truncdfsf2.h"
 #include "fp_libc_config.h"
 #include "int_lib.h"
-#include "shared/builtins/truncdfsf2.h"
 
 extern "C" COMPILER_RT_ABI float __truncdfsf2(double a) {
   return LIBC_NAMESPACE::shared::truncdfsf2(a);

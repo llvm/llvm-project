@@ -12,9 +12,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "shared/builtins/extendsfdf2.h"
 #include "fp_libc_config.h"
 #include "int_lib.h"
-#include "shared/builtins/extendsfdf2.h"
 
 extern "C" COMPILER_RT_ABI double __extendsfdf2(float a) {
   return LIBC_NAMESPACE::shared::extendsfdf2(a);
