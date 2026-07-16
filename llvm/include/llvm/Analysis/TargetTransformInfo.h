@@ -1132,14 +1132,6 @@ public:
     // requires all loads in LoadSizes to be doable in an unaligned way.
     bool AllowOverlappingLoads = false;
 
-    // Set to true if the expansion may only emit naturally aligned loads.
-    // Strict-alignment targets that cannot perform unaligned scalar loads can
-    // still opt into expansion by setting this flag: MemCmpExpansion then only
-    // uses load sizes covered by the statically-known alignment of both
-    // pointers at the call site, falling back to the libcall when no load size
-    // fits. Should not be combined with AllowOverlappingLoads.
-    bool RequireNaturalAlignment = false;
-
     // Sometimes, the amount of data that needs to be compared is smaller than
     // the standard register size, but it cannot be loaded with just one load
     // instruction. For example, if the size of the memory comparison is 6
