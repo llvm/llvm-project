@@ -71,6 +71,11 @@ define void @f(ptr %x) {
   ; CHECK : store atomic <2 x float> <float 3.0, float 4.0>, ptr %x release, align 4
   store atomic <2 x float> <float 3.0, float 4.0>, ptr %x release, align 4
 
+  ; CHECK: load atomic elementwise <2 x float>, ptr %x syncscope("agent") monotonic, align 4
+  load atomic elementwise <2 x float>, ptr %x syncscope("agent") monotonic, align 4
+  ; CHECK: load atomic volatile elementwise <2 x i32>, ptr %x monotonic, align 4
+  load atomic volatile elementwise <2 x i32>, ptr %x monotonic, align 4
+
   ; CHECK: fence syncscope("singlethread") release
   fence syncscope("singlethread") release
   ; CHECK: fence seq_cst

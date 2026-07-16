@@ -78,22 +78,11 @@ private:
   ///       always have the same depth.
   unsigned Depth = 0;
 
-  /// Cache for the results of GetExitBlocks
-  mutable SmallVector<BlockT *, 4> ExitBlocksCache;
+  /// Preorder number of this cycle in the forest, assigned by layoutBlocks.
+  /// Indexes per-cycle side tables in GenericCycleInfo.
+  unsigned ID = 0;
 
-  void clear() {
-    Entries.clear();
-    Children.clear();
-    IdxBegin = IdxEnd = 0;
-    Depth = 0;
-    ParentCycle = nullptr;
-    clearCache();
-  }
-
-  void appendEntry(BlockT *Block) {
-    Entries.push_back(Block);
-    clearCache();
-  }
+  void appendEntry(BlockT *Block) { Entries.push_back(Block); }
 
   GenericCycle(const GenericCycle &) = delete;
   GenericCycle &operator=(const GenericCycle &) = delete;
@@ -112,11 +101,6 @@ public:
     return Entries;
   }
 
-  /// Clear the cache of the cycle.
-  /// This should be run in all non-const function in GenericCycle
-  /// and GenericCycleInfo.
-  void clearCache() const { ExitBlocksCache.clear(); }
-
   /// \brief Return whether \p Block is an entry block of the cycle.
   bool isEntry(const BlockT *Block) const {
     return is_contained(Entries, Block);
@@ -127,7 +111,6 @@ public:
   void setSingleEntry(BlockT *Block) {
     Entries.clear();
     Entries.push_back(Block);
-    clearCache();
   }
 
   /// \brief Returns true iff this cycle contains \p C. O(1). Non-strict, i.e.
@@ -147,9 +130,13 @@ public:
   using const_child_iterator_base =
       typename std::vector<std::unique_ptr<GenericCycle>>::const_iterator;
   struct const_child_iterator
-      : iterator_adaptor_base<const_child_iterator, const_child_iterator_base> {
+      : iterator_adaptor_base<const_child_iterator, const_child_iterator_base,
+                              std::random_access_iterator_tag, GenericCycle *,
+                              std::ptrdiff_t, GenericCycle *, GenericCycle *> {
     using Base =
-        iterator_adaptor_base<const_child_iterator, const_child_iterator_base>;
+        iterator_adaptor_base<const_child_iterator, const_child_iterator_base,
+                              std::random_access_iterator_tag, GenericCycle *,
+                              std::ptrdiff_t, GenericCycle *, GenericCycle *>;
 
     const_child_iterator() = default;
     explicit const_child_iterator(const_child_iterator_base I) : Base(I) {}
@@ -214,6 +201,12 @@ private:
   /// Euler tour of the cycle forest: every cycle's blocks form a contiguous
   /// slice [IdxBegin, IdxEnd) of this array, nested inside its parent's.
   SmallVector<BlockT *, 8> BlockLayout;
+
+  unsigned NumCycles = 0;
+
+  /// getExitBlocks caches, indexed by CycleT::ID. Empty until the first
+  /// query, then sized to NumCycles.
+  mutable SmallVector<SmallVector<BlockT *, 0>, 0> ExitBlocksCaches;
 
   /// Top-level cycles discovered by any DFS.
   ///
@@ -361,50 +354,6 @@ public:
   }
   //@}
 };
-
-/// \brief GraphTraits for iterating over a sub-tree of the CycleT tree.
-template <typename CycleRefT, typename ChildIteratorT> struct CycleGraphTraits {
-  using NodeRef = CycleRefT;
-
-  using nodes_iterator = ChildIteratorT;
-  using ChildIteratorType = nodes_iterator;
-
-  static NodeRef getEntryNode(NodeRef Graph) { return Graph; }
-
-  static ChildIteratorType child_begin(NodeRef Ref) {
-    return Ref->child_begin();
-  }
-  static ChildIteratorType child_end(NodeRef Ref) { return Ref->child_end(); }
-
-  // Not implemented:
-  // static nodes_iterator nodes_begin(GraphType *G)
-  // static nodes_iterator nodes_end  (GraphType *G)
-  //    nodes_iterator/begin/end - Allow iteration over all nodes in the graph
-
-  // typedef EdgeRef           - Type of Edge token in the graph, which should
-  //                             be cheap to copy.
-  // typedef ChildEdgeIteratorType - Type used to iterate over children edges in
-  //                             graph, dereference to a EdgeRef.
-
-  // static ChildEdgeIteratorType child_edge_begin(NodeRef)
-  // static ChildEdgeIteratorType child_edge_end(NodeRef)
-  //     Return iterators that point to the beginning and ending of the
-  //     edge list for the given callgraph node.
-  //
-  // static NodeRef edge_dest(EdgeRef)
-  //     Return the destination node of an edge.
-  // static unsigned       size       (GraphType *G)
-  //    Return total number of nodes in the graph
-};
-
-template <typename BlockT>
-struct GraphTraits<const GenericCycle<BlockT> *>
-    : CycleGraphTraits<const GenericCycle<BlockT> *,
-                       typename GenericCycle<BlockT>::const_child_iterator> {};
-template <typename BlockT>
-struct GraphTraits<GenericCycle<BlockT> *>
-    : CycleGraphTraits<GenericCycle<BlockT> *,
-                       typename GenericCycle<BlockT>::const_child_iterator> {};
 
 } // namespace llvm
 
