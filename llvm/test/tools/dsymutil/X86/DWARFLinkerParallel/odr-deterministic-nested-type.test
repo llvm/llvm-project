@@ -1,51 +1,55 @@
-# RUN: yaml2obj %s -o %t.o
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/foo.o.yaml -o %t/foo.o
 
-## Build a debug map that links the same two-CU object eight times, so the
-## parallel linker processes many compile units that share the same nested
-## types and cross-CU references concurrently.
-# RUN: echo '---' > %t.map
-# RUN: echo "triple:          'x86_64-apple-darwin'" >> %t.map
-# RUN: echo 'objects:' >> %t.map
-# RUN: echo " -  filename: '%t.o'" >> %t.map
-# RUN: echo '    symbols:' >> %t.map
-# RUN: echo '      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10100, size: 0x10 }' >> %t.map
-# RUN: echo " -  filename: '%t.o'" >> %t.map
-# RUN: echo '    symbols:' >> %t.map
-# RUN: echo '      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10200, size: 0x10 }' >> %t.map
-# RUN: echo " -  filename: '%t.o'" >> %t.map
-# RUN: echo '    symbols:' >> %t.map
-# RUN: echo '      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10300, size: 0x10 }' >> %t.map
-# RUN: echo " -  filename: '%t.o'" >> %t.map
-# RUN: echo '    symbols:' >> %t.map
-# RUN: echo '      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10400, size: 0x10 }' >> %t.map
-# RUN: echo " -  filename: '%t.o'" >> %t.map
-# RUN: echo '    symbols:' >> %t.map
-# RUN: echo '      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10500, size: 0x10 }' >> %t.map
-# RUN: echo " -  filename: '%t.o'" >> %t.map
-# RUN: echo '    symbols:' >> %t.map
-# RUN: echo '      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10600, size: 0x10 }' >> %t.map
-# RUN: echo " -  filename: '%t.o'" >> %t.map
-# RUN: echo '    symbols:' >> %t.map
-# RUN: echo '      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10700, size: 0x10 }' >> %t.map
-# RUN: echo " -  filename: '%t.o'" >> %t.map
-# RUN: echo '    symbols:' >> %t.map
-# RUN: echo '      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10800, size: 0x10 }' >> %t.map
-# RUN: echo '...' >> %t.map
+## The debug map links the same two-CU object eight times, so the parallel
+## linker processes many compile units that share the same nested types and
+## cross-CU references concurrently. -oso-prepend-path resolves the relative
+## object filename against the temporary directory.
 
 ## Link the same input several times with multiple threads and require the
-## output to be byte-identical every run.
-# RUN: dsymutil --linker=parallel -y %t.map -f -o %t1.out --num-threads 4
-# RUN: dsymutil --linker=parallel -y %t.map -f -o %t2.out --num-threads 4
-# RUN: dsymutil --linker=parallel -y %t.map -f -o %t3.out --num-threads 4
-# RUN: diff %t1.out %t2.out
-# RUN: diff %t1.out %t3.out
+## output to be byte-identical every run. The parallel linker computes DIE
+## placement (artificial type unit vs plain DWARF) concurrently across compile
+## units. The input (from odr-nested-types1) has a nested type demoted to plain
+## DWARF while its root stays in the type table, with cross-CU references to it.
+## That placement must not depend on thread interleaving.
+# RUN: dsymutil --linker=parallel -oso-prepend-path=%t -y %t/link.map -f -o %t/1.out --num-threads 4
+# RUN: dsymutil --linker=parallel -oso-prepend-path=%t -y %t/link.map -f -o %t/2.out --num-threads 4
+# RUN: dsymutil --linker=parallel -oso-prepend-path=%t -y %t/link.map -f -o %t/3.out --num-threads 4
+# RUN: diff %t/1.out %t/2.out
+# RUN: diff %t/1.out %t/3.out
 
-## The parallel linker computes DIE placement (artificial type unit vs plain
-## DWARF) concurrently across compile units. The input (from odr-nested-types1)
-## has a nested type demoted to plain DWARF while its root stays in the type
-## table, with cross-CU references to it. That placement must not depend on
-## thread interleaving, so the output has to be byte-identical every run.
+#--- link.map
+---
+triple:          'x86_64-apple-darwin'
+objects:
+  - filename: 'foo.o'
+    symbols:
+      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10100, size: 0x10 }
+  - filename: 'foo.o'
+    symbols:
+      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10200, size: 0x10 }
+  - filename: 'foo.o'
+    symbols:
+      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10300, size: 0x10 }
+  - filename: 'foo.o'
+    symbols:
+      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10400, size: 0x10 }
+  - filename: 'foo.o'
+    symbols:
+      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10500, size: 0x10 }
+  - filename: 'foo.o'
+    symbols:
+      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10600, size: 0x10 }
+  - filename: 'foo.o'
+    symbols:
+      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10700, size: 0x10 }
+  - filename: 'foo.o'
+    symbols:
+      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10800, size: 0x10 }
+...
 
+#--- foo.o.yaml
 --- !mach-o
 FileHeader:
   magic:      0xFEEDFACF
