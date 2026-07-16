@@ -1,8 +1,8 @@
 # Compiler-rt Testing Infrastructure Guide
 
-```{contents}
+:::{contents}
 :local: true
-```
+:::
 
 ## Overview
 

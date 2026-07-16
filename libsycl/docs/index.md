@@ -1,8 +1,8 @@
 # SYCL runtime implementation
 
-```{contents}
+:::{contents}
 :local: true
-```
+:::
 
 (index)=
 
@@ -91,7 +91,7 @@ which doesn't currently support Windows.
 
 - `exception`: methods with context are not implemented, to add once context is ready
 
-- `platform`: deprecated info descriptor is not implemented (<info::platform::extensions>), to implement on RT level with `device::get_info<info::device::aspects>()`
+- `platform`: deprecated info descriptor is not implemented (`info::platform::extensions`), to implement on RT level with `device::get_info<info::device::aspects>()`
 
 - `device`:
 
@@ -139,10 +139,9 @@ which doesn't currently support Windows.
   - get_info, get_profiling_info (no liboffload support) are not implemented
   - get_wait_list should be aligned with the results of this discussion: <https://github.com/KhronosGroup/SYCL-Docs/issues/1017>
 
-- `range`, `id` - \_\_SYCL_DISABLE_ID_TO_INT_CONV\_\_ and \_\_SYCL_ASSUME_ID_RANGE optimizations are not implemented
+- `range`, `id` - `__SYCL_DISABLE_ID_TO_INT_CONV__` and `__SYCL_ASSUME_ID_RANGE` optimizations are not implemented
 
 - general opens:
 
   - define a way to report errors from object dtors
   - unittests: add functions to reset libsycl internal state completely (static variables)
-

@@ -17,11 +17,11 @@ defined by the old HP libunwind project.
 
 ### Getting Started with libunwind
 
-```{toctree}
+:::{toctree}
 :maxdepth: 2
 
 BuildingLibunwind
-```
+:::
 
 ### Current Status
 

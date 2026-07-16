@@ -2,9 +2,9 @@
 
 # Building libunwind
 
-```{contents}
+:::{contents}
 :local: true
-```
+:::
 
 (build-instructions)=
 
@@ -32,7 +32,7 @@ The basic steps needed to build libunwind are:
    - `cd build`
    - `cmake -G <generator> -DLLVM_ENABLE_RUNTIMES=libunwind [options] <llvm-monorepo>/runtimes`
 
-   For more information about configuring libunwind see {ref}`CMake Options`.
+   For more information about configuring libunwind see [CMake Options](#cmake-options).
 
    - `make unwind` --- will build libunwind.
    - `make check-unwind` --- will run the test suite.
@@ -74,76 +74,66 @@ CMake docs or execute `cmake --help-variable VARIABLE_NAME`.
 
 ### libunwind specific options
 
-```{eval-rst}
-.. option:: LIBUNWIND_ENABLE_ASSERTIONS:BOOL
+:::{option} LIBUNWIND_ENABLE_ASSERTIONS:BOOL
 
   **Default**: ``ON``
 
   Toggle assertions independent of the build mode.
-```
+:::
 
-```{eval-rst}
-.. option:: LIBUNWIND_ENABLE_PEDANTIC:BOOL
+:::{option} LIBUNWIND_ENABLE_PEDANTIC:BOOL
 
   **Default**: ``ON``
 
   Compile with -Wpedantic.
-```
+:::
 
-```{eval-rst}
-.. option:: LIBUNWIND_ENABLE_WERROR:BOOL
+:::{option} LIBUNWIND_ENABLE_WERROR:BOOL
 
   **Default**: ``OFF``
 
   Compile with -Werror
-```
+:::
 
-```{eval-rst}
-.. option:: LIBUNWIND_ENABLE_SHARED:BOOL
+:::{option} LIBUNWIND_ENABLE_SHARED:BOOL
 
   **Default**: ``ON``
 
   Build libunwind as a shared library.
-```
+:::
 
-```{eval-rst}
-.. option:: LIBUNWIND_ENABLE_STATIC:BOOL
+:::{option} LIBUNWIND_ENABLE_STATIC:BOOL
 
   **Default**: ``ON``
 
   Build libunwind as a static archive.
-```
+:::
 
-```{eval-rst}
-.. option:: LIBUNWIND_ENABLE_CROSS_UNWINDING:BOOL
+:::{option} LIBUNWIND_ENABLE_CROSS_UNWINDING:BOOL
 
   **Default**: ``OFF``
 
   Enable cross-platform unwinding support.
-```
+:::
 
-```{eval-rst}
-.. option:: LIBUNWIND_ENABLE_ARM_WMMX:BOOL
+:::{option} LIBUNWIND_ENABLE_ARM_WMMX:BOOL
 
   **Default**: ``OFF``
 
   Enable unwinding support for ARM WMMX registers.
-```
+:::
 
-```{eval-rst}
-.. option:: LIBUNWIND_ENABLE_THREADS:BOOL
+:::{option} LIBUNWIND_ENABLE_THREADS:BOOL
 
   **Default**: ``ON``
 
   Build libunwind with threading support.
-```
+:::
 
-```{eval-rst}
-.. option:: LIBUNWIND_INSTALL_LIBRARY_DIR:PATH
+:::{option} LIBUNWIND_INSTALL_LIBRARY_DIR:PATH
 
   **Default**: ``lib${LIBUNWIND_LIBDIR_SUFFIX}``
 
   Path where built libunwind libraries should be installed. If a relative path,
   relative to ``CMAKE_INSTALL_PREFIX``.
-```
-
+:::

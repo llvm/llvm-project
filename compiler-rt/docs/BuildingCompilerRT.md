@@ -2,9 +2,9 @@
 
 # Building Compiler-RT
 
-```{contents}
+:::{contents}
 :local: true
-```
+:::
 
 (build-instructions)=
 
@@ -39,8 +39,7 @@ CMake docs or execute `cmake --help-variable VARIABLE_NAME`.
 
 ### Compiler-RT specific options
 
-`````{eval-rst}
-.. option:: COMPILER_RT_INSTALL_PATH:PATH
+:::{option} COMPILER_RT_INSTALL_PATH:PATH
 
   **Default**: ```` (empty relative path)
 
@@ -51,72 +50,65 @@ CMake docs or execute `cmake --help-variable VARIABLE_NAME`.
   ``-DCOMPILER_RT_INSTALL_PATH:PATH=...`` not
   ``-DCOMPILER_RT_INSTALL_PATH=...``, otherwise CMake will convert the
   path to an absolute path.
-`````
+:::
 
-```{eval-rst}
-.. option:: COMPILER_RT_INSTALL_LIBRARY_DIR:PATH
+:::{option} COMPILER_RT_INSTALL_LIBRARY_DIR:PATH
 
   **Default**: ``lib``
 
   Path where built Compiler-RT libraries should be installed. If a relative
   path, relative to ``COMPILER_RT_INSTALL_PATH``.
-```
+:::
 
-```{eval-rst}
-.. option:: COMPILER_RT_INSTALL_BINARY_DIR:PATH
+:::{option} COMPILER_RT_INSTALL_BINARY_DIR:PATH
 
   **Default**: ``bin``
 
   Path where built Compiler-RT executables should be installed. If a relative
   path, relative to ``COMPILER_RT_INSTALL_PATH``.
-```
+:::
 
-```{eval-rst}
-.. option:: COMPILER_RT_INSTALL_INCLUDE_DIR:PATH
+:::{option} COMPILER_RT_INSTALL_INCLUDE_DIR:PATH
 
   **Default**: ``include``
 
   Path where Compiler-RT headers should be installed. If a relative
   path, relative to ``COMPILER_RT_INSTALL_PATH``.
-```
+:::
 
-```{eval-rst}
-.. option:: COMPILER_RT_INSTALL_DATA_DIR:PATH
+:::{option} COMPILER_RT_INSTALL_DATA_DIR:PATH
 
   **Default**: ``share``
 
   Path where Compiler-RT data should be installed. If a relative
   path, relative to ``COMPILER_RT_INSTALL_PATH``.
-```
+:::
 
-```{eval-rst}
-.. option:: COMPILER_RT_INCLUDE_TESTS:BOOL
+:::{option} COMPILER_RT_INCLUDE_TESTS:BOOL
 
   **Default**: ``LLVM_INCLUDE_TESTS`` in LLVM builds, ``OFF`` in standalone builds.
 
   Generate and build compiler-rt tests. If ``OFF``,
   ``COMPILER_RT_ENABLE_TEST_SUITES`` has no effect.
-```
+:::
 
-```{eval-rst}
-.. option:: COMPILER_RT_ENABLE_TEST_SUITES:STRING
+:::{option} COMPILER_RT_ENABLE_TEST_SUITES:STRING
 
   **Default**: ``all``
 
   Semicolon-separated list of test suites to enable, or ``all`` to enable all
   test suites.
   Example: ``-DCOMPILER_RT_ENABLE_TEST_SUITES="asan;ubsan;lsan"``
-```
+:::
 
 (llvm-specific-variables)=
 
 ### LLVM-specific options
 
-```{eval-rst}
-.. option:: LLVM_LIBDIR_SUFFIX:STRING
+:::{option} LLVM_LIBDIR_SUFFIX:STRING
 
   Extra suffix to append to the directory where libraries are to be
   installed. On a 64-bit architecture, one could use ``-DLLVM_LIBDIR_SUFFIX=64``
   to install libraries to ``/usr/lib64``.
-```
+:::
 

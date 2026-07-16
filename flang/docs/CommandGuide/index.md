@@ -59,9 +59,9 @@ Linker
 
 ## OPTIONS
 
-```{toctree}
+:::{toctree}
 :maxdepth: 1
 
 FlangCommandLineOptions
-```
+:::
 

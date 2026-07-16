@@ -1,8 +1,8 @@
 # Libsycl Coding Standards
 
-```{contents}
+:::{contents}
 :local: true
-```
+:::
 
 ## Introduction
 

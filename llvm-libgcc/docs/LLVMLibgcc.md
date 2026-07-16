@@ -1,10 +1,8 @@
-% llvm-libgcc:
-
 # llvm-libgcc
 
-```{contents}
+:::{contents}
 :local: true
-```
+:::
 
 **Note that these instructions assume a Linux and bash-friendly environment.
 YMMV if you’re on a non Linux-based platform.**
@@ -18,7 +16,7 @@ challenging since libgcc_s.so is a required dependency in the [Linux standard
 base][5]. Some software is transitively dependent on libgcc because glibc makes
 hardcoded calls to functions in libgcc_s. For example, the function
 `__GI___backtrace` eventually makes its way to a [hardcoded dlopen to libgcc_s'
-\_Unwind_Backtrace][1]. Since libgcc\_{eh.a,s.so} and libunwind have the same ABI,
+_Unwind_Backtrace][1]. Since `libgcc_{eh.a,s.so}` and libunwind have the same ABI,
 but different implementations, the two libraries end up [cross-talking, which
 ultimately results in a segfault][2].
 
@@ -35,12 +33,10 @@ libunwind with all the symbols necessary for compiler-rt to emulate the libgcc
 family, and then generate symlinks named for our "libgcc" that point to their
 corresponding libunwind counterparts.
 
-% _alternatives
-
 ## Alternatives
 
 We alternatively considered patching glibc so that the source doesn't directly
-refer to libgcc, but rather \_defaults\_ to libgcc, so that a system preferring
+refer to libgcc, but rather *defaults* to libgcc, so that a system preferring
 compiler-rt/libunwind can point to these libraries at the config stage instead.
 Even if we modified the Linux standard base, this alternative won't work because
 binaries that are built using libgcc will still end up having cross-talk between
@@ -60,24 +56,31 @@ llvm-libgcc.
 
 ## CMake options
 
-```{eval-rst}
-.. option:: `LLVM_LIBGCC_EXPLICIT_OPT_IN`
+:::{option} `LLVM_LIBGCC_EXPLICIT_OPT_IN`
 
-  **Required**
+**Required**
 
-  Since llvm-libgcc is such a fundamental, low-level component, we have made it
-  difficult to accidentally build, by requiring you to set an opt-in flag.
-```
-
-% _Building llvm-libgcc
+Since llvm-libgcc is such a fundamental, low-level component, we have made it
+difficult to accidentally build, by requiring you to set an opt-in flag.
+:::
 
 ### Building llvm-libgcc
 
 The first build tree is a mostly conventional build tree and gets you a Clang
 build with these compiler-rt symbols exposed.
 
-```bash # Assumes $(PWD) is /path/to/llvm-project $ cmake -GNinja -S llvm -B build-primary                    \     -DCMAKE_BUILD_TYPE=Release                              \     -DCMAKE_CROSSCOMPILING=On                               \     -DCMAKE_INSTALL_PREFIX=/tmp/aarch64-unknown-linux-gnu   \     -DLLVM_ENABLE_PROJECTS='clang'                          \     -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;llvm-libgcc"   \     -DLLVM_TARGETS_TO_BUILD=AArch64                         \     -DLLVM_DEFAULT_TARGET_TRIPLE=aarch64-unknown-linux-gnu  \     -DLLVM_LIBGCC_EXPLICIT_OPT_IN=Yes $ ninja -C build-primary install
-
+```bash
+# Assumes $(PWD) is /path/to/llvm-project
+$ cmake -GNinja -S llvm -B build-primary                    \
+    -DCMAKE_BUILD_TYPE=Release                              \
+    -DCMAKE_CROSSCOMPILING=On                               \
+    -DCMAKE_INSTALL_PREFIX=/tmp/aarch64-unknown-linux-gnu   \
+    -DLLVM_ENABLE_PROJECTS='clang'                          \
+    -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;llvm-libgcc"   \
+    -DLLVM_TARGETS_TO_BUILD=AArch64                         \
+    -DLLVM_DEFAULT_TARGET_TRIPLE=aarch64-unknown-linux-gnu  \
+    -DLLVM_LIBGCC_EXPLICIT_OPT_IN=Yes
+$ ninja -C build-primary install
 ```
 
 It's very important to notice that neither `compiler-rt`, nor `libunwind`,
@@ -116,8 +119,6 @@ llvm-libgcc currently supports the following target triples:
 If you would like to support another triple (e.g. `powerpc64-*-*-*`), you'll
 need to generate a new version script, and then edit `lib/gcc_s.ver`.
 
-% _Generating a new version script
-
 ### Generating a new version script
 
 To generate a new version script, we need to generate the list of symbols that
@@ -143,8 +144,6 @@ This will generate a new version script a la
 `/path/to/llvm-project/llvm/tools/llvm-libgcc/gcc_s-${ARCH}.ver`, which we use
 in the next section.
 
-% _Editing ``lib/gcc_s.ver``
-
 ### Editing `lib/gcc_s.ver`
 
 Our freshly generated version script is unique to the specific architecture that
@@ -167,4 +166,3 @@ There are a few macros that aim to improve readability.
   of the triple.
 - `GLOBAL_32BIT`, which is be used to target 32-bit platforms.
 - `GLOBAL_64BIT`, which is be used to target 64-bit platforms.
-

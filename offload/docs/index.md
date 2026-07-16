@@ -5,12 +5,12 @@
 
 # Welcome to Offload's documentation!
 
-```{toctree}
+:::{toctree}
 :caption: 'Contents:'
 :maxdepth: 2
 
 offload-api
-```
+:::
 
 # Indices and tables
 
