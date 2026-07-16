@@ -163,6 +163,13 @@ enum {
   TRAP_NUM_SGPRS = 16
 };
 
+/// Returns true if \p Lhs and \p Rhs are incompatible (both specific but
+/// different).
+inline bool targetIDSettingsConflict(TargetIDSetting Lhs, TargetIDSetting Rhs) {
+  return Lhs != TargetIDSetting::Any && Rhs != TargetIDSetting::Any &&
+         Lhs != Rhs;
+}
+
 /// \returns Instruction cache line size in bytes for given subtarget \p STI.
 unsigned getInstCacheLineSize(const MCSubtargetInfo &STI);
 
@@ -1519,7 +1526,6 @@ bool supportsWGP(const MCSubtargetInfo &STI);
 bool isNotGFX12Plus(const MCSubtargetInfo &STI);
 bool isNotGFX11Plus(const MCSubtargetInfo &STI);
 bool isGCN3Encoding(const MCSubtargetInfo &STI);
-bool isGFX10_AEncoding(const MCSubtargetInfo &STI);
 bool isGFX10_BEncoding(const MCSubtargetInfo &STI);
 bool hasGFX10_3Insts(const MCSubtargetInfo &STI);
 bool isGFX10_3_GFX11(const MCSubtargetInfo &STI);

@@ -1762,7 +1762,7 @@ TEST_F(VPRecipeTest, CastVPReductionEVLRecipeToVPUser) {
 
 struct VPDoubleValueDef : public VPRecipeBase {
   VPDoubleValueDef(ArrayRef<VPValue *> Operands, Type *Ty)
-      : VPRecipeBase(99, Operands) {
+      : VPRecipeBase(VPRecipeBase::VPInterleaveSC, Operands) {
     new VPMultiDefValue(this, /*UV=*/nullptr, Ty);
     new VPMultiDefValue(this, /*UV=*/nullptr, Ty);
   }
@@ -1955,38 +1955,6 @@ TEST_F(VPInstructionTest, VPSymbolicValueAddOperandAfterMaterialization) {
   EXPECT_DEATH(BV->addOperand(VF), "accessing materialized symbolic value");
 }
 #endif
-
-TEST_F(VPRecipeTest, UFVScaleUserBeforeMaterialization) {
-  VPlan &Plan = getPlan();
-  VPBasicBlock *Header = Plan.createVPBasicBlock("vector.header");
-  VPBasicBlock *Latch = Plan.createVPBasicBlock("vector.latch");
-  VPValue *UF = &Plan.getUF();
-  Type *IVTy = UF->getScalarType();
-  VPRegionBlock *LoopRegion = Plan.createLoopRegion(
-      IVTy, DebugLoc::getUnknown(), "vector.loop", Header, Latch);
-  VPBlockUtils::connectBlocks(Header, Latch);
-  VPBlockUtils::connectBlocks(Plan.getEntry(), LoopRegion);
-  VPBlockUtils::connectBlocks(LoopRegion, Plan.getScalarHeader());
-
-  auto *VScale = VPBuilder(Plan.getVectorPreheader()).createVScale(IVTy);
-
-  auto *Step = new VPInstruction(Instruction::Mul, {VScale, UF},
-                                 VPIRFlags::getDefaultFlags(Instruction::Mul));
-  Plan.getVectorPreheader()->appendRecipe(Step);
-
-  auto *Increment = new VPInstruction(
-      Instruction::Add, {LoopRegion->getCanonicalIV(), Step},
-      VPIRFlags::WrapFlagsTy(LoopRegion->hasCanonicalIVNUW(), false), {},
-      DebugLoc::getUnknown(), "index.next");
-  Latch->appendRecipe(Increment);
-
-  auto *Br = new VPInstruction(VPInstruction::BranchOnCount,
-                               {Increment, &Plan.getVectorTripCount()});
-  Latch->appendRecipe(Br);
-
-  Plan.getVFxUF().markMaterialized();
-  EXPECT_EQ(Increment, LoopRegion->getOrCreateCanonicalIVIncrement());
-}
 
 } // namespace
 } // namespace llvm

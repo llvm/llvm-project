@@ -555,7 +555,7 @@ AArch64TTIImpl::getPopcntSupport(unsigned TyWidth) const {
 InstructionCost AArch64TTIImpl::getBranchMispredictPenalty() const {
   // MispredictPenalty is defined per-CPU in AArch64Sched*.td (e.g.,
   // AArch64SchedNeoverseV2.td).
-  return ST->getSchedModel().MispredictPenalty;
+  return ST->getMispredictionPenalty();
 }
 
 static bool isUnpackedVectorVT(EVT VecVT) {
@@ -2179,11 +2179,40 @@ static std::optional<Instruction *> instCombineXorSVECmpCC(InstCombiner &IC,
   return &II;
 }
 
+// zext(cmpne(ptrue, %v, 0))
+// -> umin(%pg, %v, 1)
+static std::optional<Instruction *> instCombineZExtSVECmpNE(InstCombiner &IC,
+                                                            IntrinsicInst &II) {
+  if (!isAllActivePredicate(II.getOperand(0)) ||
+      !match(II.getOperand(2), m_Zero()))
+    return std::nullopt;
+
+  for (auto *U : II.users()) {
+    if (match(U, m_ZExt(m_Specific(&II)))) {
+      auto *User = cast<Instruction>(U);
+      Type *Ty = II.getOperand(1)->getType();
+      if (User->getType() != Ty)
+        continue;
+      IC.Builder.SetInsertPoint(User);
+      Value *UMin = IC.Builder.CreateIntrinsic(
+          Intrinsic::aarch64_sve_umin, Ty,
+          {II.getOperand(0), II.getOperand(1), ConstantInt::get(Ty, 1)});
+      IC.replaceInstUsesWith(*User, UMin);
+      IC.eraseInstFromFunction(*User);
+      return &II;
+    }
+  }
+  return std::nullopt;
+}
+
 static std::optional<Instruction *> instCombineSVECmpNE(InstCombiner &IC,
                                                         IntrinsicInst &II) {
   LLVMContext &Ctx = II.getContext();
 
   if (auto Res = instCombineXorSVECmpCC(IC, II))
+    return Res;
+
+  if (auto Res = instCombineZExtSVECmpNE(IC, II))
     return Res;
 
   if (!isAllActivePredicate(II.getArgOperand(0)))
@@ -4577,23 +4606,27 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
   case ISD::ADD:
   case ISD::SUB:
     return LT.first; // Also works for i128
-  case ISD::MUL:
+  case ISD::MUL: {
     // i128 multiply is umulh + 2*madd + mul and grows ~O(Bitwidth^2). For
     // scalable vectors the cost of LT.first will be invalid, leading to an
     // invalid cost overall.
+    unsigned Mul64CostFactor = (CostKind == TTI::TCK_RecipThroughput &&
+                                ST->hasLimited64bitVectorMulBandwidth())
+                                   ? 4
+                                   : 1;
     if (Ty->getScalarSizeInBits() > 64) {
       unsigned NumLanes = isa<FixedVectorType>(Ty)
                               ? cast<FixedVectorType>(Ty)->getNumElements()
                               : 1;
       InstructionCost CostPerLane = LT.first / NumLanes;
-      return CostPerLane * CostPerLane * NumLanes;
+      return CostPerLane * CostPerLane * NumLanes * Mul64CostFactor;
     }
 
     if (LT.second == MVT::v2i64) {
       // When SVE is available, then we can lower the v2i64 operation using
       // the SVE mul instruction, which has a lower cost.
       if (ST->hasSVE())
-        return LT.first;
+        return LT.first * Mul64CostFactor;
 
       // When SVE is not available, there is no MUL.2d instruction,
       // which means mul <2 x i64> is expensive as elements are extracted
@@ -4613,7 +4646,12 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
               getVectorInstrCost(Instruction::InsertElement, Ty, CostKind, -1,
                                  nullptr, nullptr));
     }
+
+    if (LT.second == MVT::nxv2i64)
+      return LT.first * Mul64CostFactor;
+
     return LT.first;
+  }
   case ISD::SREM:
   case ISD::SDIV:
     /*

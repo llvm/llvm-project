@@ -218,27 +218,6 @@ AllocatorCache *GetAllocatorCache(MemprofThreadLocalMallocStorage *ms) {
   return &ms->allocator_cache;
 }
 
-// Accumulates the access count from the shadow for the given pointer and size.
-u64 GetShadowCount(uptr p, u32 size) {
-  u64 *shadow = (u64 *)MEM_TO_SHADOW(p);
-  u64 *shadow_end = (u64 *)MEM_TO_SHADOW(p + size);
-  u64 count = 0;
-  for (; shadow <= shadow_end; shadow++)
-    count += *shadow;
-  return count;
-}
-
-// Accumulates the access count from the shadow for the given pointer and size.
-// See memprof_mapping.h for an overview on histogram counters.
-u64 GetShadowCountHistogram(uptr p, u32 size) {
-  u8 *shadow = (u8 *)HISTOGRAM_MEM_TO_SHADOW(p);
-  u8 *shadow_end = (u8 *)HISTOGRAM_MEM_TO_SHADOW(p + size);
-  u64 count = 0;
-  for (; shadow <= shadow_end; shadow++)
-    count += *shadow;
-  return count;
-}
-
 // Clears the shadow counters (when memory is allocated).
 void ClearShadow(uptr addr, uptr size) {
   CHECK(AddrIsAlignedByGranularity(addr));
@@ -478,10 +457,7 @@ struct Allocator {
     m->timestamp_ms = GetTimestamp();
     m->alloc_context_id = StackDepotPut(*stack);
 
-    uptr size_rounded_down_to_granularity =
-        RoundDownTo(size, SHADOW_GRANULARITY);
-    if (size_rounded_down_to_granularity)
-      ClearShadow(user_beg, size_rounded_down_to_granularity);
+    ClearShadow(user_beg, RoundUpTo(size, SHADOW_GRANULARITY));
 
     MemprofStats &thread_stats = GetCurrentThreadStats();
     thread_stats.mallocs++;
