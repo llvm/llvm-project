@@ -298,7 +298,7 @@ def ImmArg : EnumAttr<"immarg", IntersectPreserve, [ParamAttr]>;
 def ReturnsTwice : EnumAttr<"returns_twice", IntersectPreserve, [FnAttr]>;
 
 /// Function contains a call to a function that can return twice (e.g. setjmp).
-def ContainsReturnsTwiceCall : EnumAttr<"contains-returns-twice-call", IntersectPreserve, [FnAttr]>;
+def ContainsReturnsTwiceCall : EnumAttr<"contains_returns_twice_call", IntersectPreserve, [FnAttr]>;
 
 /// Safe Stack protection.
 def SafeStack : EnumAttr<"safestack", IntersectPreserve, [FnAttr]>;
