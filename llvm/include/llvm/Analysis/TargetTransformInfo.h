@@ -1193,6 +1193,10 @@ public:
   /// Return true if the hardware has a fast square-root instruction.
   LLVM_ABI bool haveFastSqrt(Type *Ty) const;
 
+  /// Return true if the hardware has a fast carry-less multiplication
+  /// instruction.
+  LLVM_ABI bool haveFastClmul(IntegerType *Ty) const;
+
   /// Return true if the cost of the instruction is too high to speculatively
   /// execute and should be kept behind a branch.
   /// This normally just wraps around a getInstructionCost() call, but some

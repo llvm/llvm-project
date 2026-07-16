@@ -348,6 +348,33 @@ public:
                                        std::forward<Rest>(rest)...);
   }
 
+  template <typename KernelName = detail::AutoName, int Dims, typename... Rest>
+  event parallel_for(nd_range<Dims> executionRange, Rest &&...rest) {
+    return parallel_for<KernelName, Dims, Rest...>(executionRange, {},
+                                                   std::forward<Rest>(rest)...);
+  }
+
+  template <typename KernelName = detail::AutoName, int Dims, typename... Rest>
+  event parallel_for(nd_range<Dims> executionRange, event depEvent,
+                     Rest &&...rest) {
+    return parallel_for<KernelName, Dims, Rest...>(executionRange, {depEvent},
+                                                   std::forward<Rest>(rest)...);
+  }
+
+  template <typename KernelName = detail::AutoName, int Dims, typename... Rest>
+  event parallel_for(nd_range<Dims> executionRange,
+                     const std::vector<event> &depEvents, Rest &&...rest) {
+    if (executionRange.get_global_range() != range<Dims>{} &&
+        (executionRange.get_local_range().size() == 0 ||
+         executionRange.get_global_range() % executionRange.get_local_range() !=
+             range<Dims>{}))
+      throw sycl::exception(sycl::make_error_code(sycl::errc::nd_range),
+                            "Invalid nd_range submission: global size must be "
+                            "evenly divisible by local size.");
+    return parallelForImpl<KernelName>(executionRange, depEvents,
+                                       std::forward<Rest>(rest)...);
+  }
+
   /// Submits a memory copy operation from one USM or host pointer to another.
   /// USM pointers must be accessible on the device associated with the queue.
   ///
@@ -386,8 +413,9 @@ public:
                const std::vector<event> &depEvents);
 
 private:
-  template <typename KernelName, int Dims, typename... Rest>
-  event parallelForImpl(range<Dims> numWorkItems,
+  template <typename KernelName, int Dims, template <int> class Range,
+            typename... Rest>
+  event parallelForImpl(Range<Dims> numWorkItems,
                         const std::vector<event> &depEvents, Rest &&...rest) {
     if constexpr (sizeof...(Rest) != 1)
       throw sycl::exception(errc::feature_not_supported,
@@ -396,21 +424,37 @@ private:
 
     using KernelType =
         std::decay_t<detail::nth_type_t<sizeof...(Rest) - 1, Rest...>>;
-    using LambdaArgType = sycl::detail::lambda_arg_type<KernelType, item<Dims>>;
-    static_assert(
-        std::is_convertible_v<sycl::item<Dims>, LambdaArgType> ||
-            std::is_convertible_v<sycl::item<Dims, false>, LambdaArgType>,
-        "Kernel argument of a sycl::parallel_for with sycl::range "
-        "must be either sycl::item or be convertible from sycl::item");
-    using TranformedLambdaArgType = std::conditional_t<
-        std::is_convertible_v<item<Dims>, LambdaArgType>, item<Dims>,
+    constexpr bool IsNdRangeSubmission =
+        std::is_same_v<Range<Dims>, nd_range<Dims>>;
+    using SuggestedArgType =
+        std::conditional_t<IsNdRangeSubmission, nd_item<Dims>, item<Dims>>;
+    using LambdaArgType =
+        sycl::detail::lambda_arg_type<KernelType, SuggestedArgType>;
+
+    if constexpr (IsNdRangeSubmission) {
+      static_assert(
+          std::is_convertible_v<sycl::nd_item<Dims>, LambdaArgType>,
+          "Kernel argument of a sycl::parallel_for with sycl::nd_range "
+          "must be sycl::nd_item or be convertible from sycl::nd_item");
+    } else {
+      static_assert(
+          std::is_convertible_v<sycl::item<Dims>, LambdaArgType> ||
+              std::is_convertible_v<sycl::item<Dims, false>, LambdaArgType>,
+          "Kernel argument of a sycl::parallel_for with sycl::range "
+          "must be sycl::item or be convertible from sycl::item");
+    }
+
+    using TransformedLambdaArgType = std::conditional_t<
+        IsNdRangeSubmission, nd_item<Dims>,
         std::conditional_t<
-            std::is_convertible_v<item<Dims, false>, LambdaArgType>,
-            item<Dims, false>, LambdaArgType>>;
+            std::is_convertible_v<sycl::item<Dims>, LambdaArgType>, item<Dims>,
+            std::conditional_t<
+                std::is_convertible_v<sycl::item<Dims, false>, LambdaArgType>,
+                item<Dims, false>, LambdaArgType>>>;
 
     using NameT =
         typename detail::get_kernel_name_t<KernelName, KernelType>::name;
-    submitParallelFor<NameT, TranformedLambdaArgType, KernelType>(rest...);
+    submitParallelFor<NameT, TransformedLambdaArgType, KernelType>(rest...);
     return getLastEvent();
   }
 
