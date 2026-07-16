@@ -1,33 +1,31 @@
 ; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' -polly-annotate-metadata-vectorize < %s | FileCheck %s
 
-; Basic verification of vectorize metadata getting added when "-polly-vectorize-metadata" is
-; passed.
+; Verify that vectorize.enable metadata is NOT added for a loop with a dist=1
+; dependence involving floating-point operations. This is a workaround for
+; https://github.com/llvm/llvm-project/issues/198726 where vectorize.enable
+; implicitly allows FP reassociation causing correctness failures.
 
-; void add(int *A, int *B, int *C,int n) {
-;    for(int i=0; i<n; i++)
-;      C[i] += A[i] + B[i];
+; void scale(double *A, double factor, int n) {
+;   for (int i = 1; i < n; i++)
+;     A[i] = factor * A[i - 1];
 ; }
 
-; CHECK: for.body:
-; CHECK: br {{.*}} !llvm.loop [[LOOP:![0-9]+]]
+; The Polly-generated loop should NOT have vectorize.enable metadata.
 ; CHECK: polly.stmt.for.body:
 ; CHECK: br {{.*}} !llvm.loop [[POLLY_LOOP:![0-9]+]]
-; CHECK: [[LOOP]] = distinct !{[[LOOP]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
-; CHECK: [[META3]] = !{!"llvm.loop.vectorize.enable", i32 0}
-; CHECK: [[POLLY_LOOP]] = distinct !{[[POLLY_LOOP]], {{.*}}}
-; CHECK-DAG: !{!"llvm.loop.vectorize.enable", i1 true}
+; CHECK: [[POLLY_LOOP]] = distinct !{[[POLLY_LOOP]],
+; CHECK-NOT: !"llvm.loop.vectorize.enable", i1 true
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
 target triple = "aarch64-unknown-linux-gnu"
 
-; Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite) uwtable
-define dso_local void @add(ptr nocapture noundef readonly %A, ptr nocapture noundef readonly %B, ptr nocapture noundef %C, i32 noundef %n) local_unnamed_addr #0 {
+define dso_local void @scale(ptr nocapture noundef %A, double noundef %factor, i32 noundef %n) local_unnamed_addr #0 {
 entry:
   br label %entry.split
 
 entry.split:                                      ; preds = %entry
-  %cmp10 = icmp sgt i32 %n, 0
-  br i1 %cmp10, label %for.body.preheader, label %for.cond.cleanup
+  %cmp5 = icmp sgt i32 %n, 1
+  br i1 %cmp5, label %for.body.preheader, label %for.cond.cleanup
 
 for.body.preheader:                               ; preds = %entry.split
   %wide.trip.count = zext nneg i32 %n to i64
@@ -40,16 +38,13 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
   ret void
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
-  %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
-  %0 = load i32, ptr %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds i32, ptr %B, i64 %indvars.iv
-  %1 = load i32, ptr %arrayidx2, align 4
-  %add = add nsw i32 %1, %0
-  %arrayidx4 = getelementptr inbounds i32, ptr %C, i64 %indvars.iv
-  %2 = load i32, ptr %arrayidx4, align 4
-  %add5 = add nsw i32 %add, %2
-  store i32 %add5, ptr %arrayidx4, align 4
+  %indvars.iv = phi i64 [ 1, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
+  %0 = add nsw i64 %indvars.iv, -1
+  %arrayidx = getelementptr inbounds double, ptr %A, i64 %0
+  %1 = load double, ptr %arrayidx, align 8
+  %mul = fmul double %factor, %1
+  %arrayidx2 = getelementptr inbounds double, ptr %A, i64 %indvars.iv
+  store double %mul, ptr %arrayidx2, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body, !llvm.loop !0
