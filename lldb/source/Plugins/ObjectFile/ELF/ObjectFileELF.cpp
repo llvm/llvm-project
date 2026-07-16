@@ -2175,9 +2175,9 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
         InfoOr->Range.GetRangeBase(), // VM address.
         InfoOr->Range.GetByteSize(),  // VM size in bytes of this section.
         header.sh_offset,             // Offset of this section in the file.
-        file_size,         // Size of the section as found in the file.
-        log2align,         // Alignment of the section
-        header.sh_flags)); // Flags for this section.
+        file_size,        // Size of the section as found in the file.
+        log2align,        // Alignment of the section
+        header.sh_flags); // Flags for this section.
 
     section_sp->SetPermissions(GetPermissions(header));
     section_sp->SetIsThreadSpecific(header.sh_flags & SHF_TLS);

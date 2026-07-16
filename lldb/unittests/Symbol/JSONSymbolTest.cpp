@@ -49,7 +49,7 @@ TEST(JSONSymbolTest, DeserializeCodeAddress) {
       /*file_offset=*/0,
       /*file_size=*/0,
       /*log2align=*/5,
-      /*flags=*/0x10203040));
+      /*flags=*/0x10203040);
   SectionList sect_list;
   sect_list.AddSection(sect_sp);
 
@@ -182,7 +182,7 @@ TEST(JSONSymbolTest, SymbolInvalidAddressNotInSection) {
       /*file_offset=*/0,
       /*file_size=*/0,
       /*log2align=*/5,
-      /*flags=*/0x10203040));
+      /*flags=*/0x10203040);
   SectionList sect_list;
   sect_list.AddSection(sect_sp);
 

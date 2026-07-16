@@ -1074,7 +1074,7 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
           m_sect_headers[idx]
               .size, // Size in bytes of this section as found in the file
           m_coff_header_opt.sect_alignment, // Section alignment
-          m_sect_headers[idx].flags));      // Flags for this section
+          m_sect_headers[idx].flags);       // Flags for this section
 
       uint32_t permissions = 0;
       if (m_sect_headers[idx].flags & llvm::COFF::IMAGE_SCN_MEM_EXECUTE)
