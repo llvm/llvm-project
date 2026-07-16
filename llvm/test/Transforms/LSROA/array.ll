@@ -21,7 +21,6 @@ entry:
   store i32 0, ptr %ptr
   %res = load i32, ptr %ptr
   ret i32 %res
-
 }
 
 define i32 @test_simple_array_dynamic_index(i32 %i) {
@@ -40,7 +39,6 @@ entry:
   store i32 0, ptr %ptr
   %res = load i32, ptr %ptr
   ret i32 %res
-
 }
 
 define i32 @test_simple_array_dynamic_index_in_child(i32 %i) {
@@ -59,7 +57,6 @@ entry:
   store i32 0, ptr %ptr
   %res = load i32, ptr %ptr
   ret i32 %res
-
 }
 
 define i32 @test_simple_array_dynamic_index_only_child(i32 %i) {
@@ -78,5 +75,4 @@ entry:
   store i32 0, ptr %ptr
   %res = load i32, ptr %ptr
   ret i32 %res
-
 }

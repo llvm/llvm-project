@@ -204,9 +204,8 @@ static bool runOnStructuredAlloca(StructuredAllocaInst &SAI) {
 static bool runLogicalSROA(Function &F) {
   SmallVector<StructuredAllocaInst *> Worklist;
   BasicBlock &EntryBB = F.getEntryBlock();
-  for (BasicBlock::iterator I = EntryBB.begin(), E = std::prev(EntryBB.end());
-       I != E; ++I) {
-    if (StructuredAllocaInst *SAI = dyn_cast<StructuredAllocaInst>(&*I))
+  for (Instruction &I : EntryBB) {
+    if (StructuredAllocaInst *SAI = dyn_cast<StructuredAllocaInst>(&I))
       Worklist.push_back(SAI);
   }
 
@@ -227,40 +226,3 @@ PreservedAnalyses LogicalSROAPass::run(Function &F,
 }
 
 LogicalSROAPass::LogicalSROAPass() {}
-
-namespace {
-
-/// A legacy pass for the legacy pass manager that wraps the LogicalSROA pass.
-class LogicalSROALegacyPass : public FunctionPass {
-public:
-  static char ID;
-
-  LogicalSROALegacyPass() : FunctionPass(ID) {
-    initializeLogicalSROALegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
-      return false;
-    return runLogicalSROA(F);
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addPreserved<DominatorTreeWrapperPass>();
-  }
-
-  StringRef getPassName() const override { return "LogicalSROA"; }
-};
-
-} // end anonymous namespace
-
-char LogicalSROALegacyPass::ID = 0;
-
-FunctionPass *llvm::createLogicalSROAPass() {
-  return new LogicalSROALegacyPass();
-}
-
-INITIALIZE_PASS_BEGIN(LogicalSROALegacyPass, "logical-sroa",
-                      "Logical Scalar Replacement Of Aggregates", false, false)
-INITIALIZE_PASS_END(LogicalSROALegacyPass, "logical-sroa",
-                    "Logical Scalar Replacement Of Aggregates", false, false)

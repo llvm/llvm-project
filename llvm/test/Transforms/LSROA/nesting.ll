@@ -8,6 +8,8 @@ declare ptr @llvm.structured.gep.p0(ptr, ...)
 
 %S = type { i32, { i32, i32 } }
 
+; TODO: It is fine to split the nested struct and discard the second element.
+; simply not implemented yet.
 define i32 @test_nested_struct() {
 ; CHECK-LABEL: define i32 @test_nested_struct() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
