@@ -11527,12 +11527,10 @@ static bool isKnownViaMinMaxDecomposition(ScalarEvolution &SE,
   if (!ICmpInst::isLT(Pred) && !ICmpInst::isLE(Pred))
     return false;
 
-  if (isa<SCEVSMaxExpr, SCEVUMaxExpr>(LHS))
-    if (all_of(cast<SCEVMinMaxExpr>(LHS)->operands(), [&](const SCEV *Op) {
-          return SE.isKnownPredicate(Pred, Op, RHS);
-        }))
-      return true;
-  return false;
+  return isa<SCEVSMaxExpr, SCEVUMaxExpr>(LHS) &&
+         all_of(cast<SCEVMinMaxExpr>(LHS)->operands(), [&](const SCEV *Op) {
+           return SE.isKnownPredicate(Pred, Op, RHS);
+         });
 }
 
 bool ScalarEvolution::isKnownPredicate(CmpPredicate Pred, SCEVUse LHS,
