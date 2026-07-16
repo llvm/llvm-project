@@ -7106,7 +7106,7 @@ void AMDGPUAsmParser::checkKernelPrologues() {
       if (Prologue.take_front(std::size(Required)) != ArrayRef(Required)) {
         Warning(Loc, "kernel '" + Sym->getName() +
                          "' does not begin with the required prologue "
-                         "sequence");
+                         "sequence: GLOBAL_WB followed by V_NOP");
       }
     }
   }

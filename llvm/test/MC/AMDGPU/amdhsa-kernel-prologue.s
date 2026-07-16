@@ -1,6 +1,6 @@
 // RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx1250 %s -filetype=null 2>&1 | FileCheck %s -implicit-check-not=warning: -check-prefix=GFX1250
 
-// GFX1250: :[[@LINE+1]]:1: warning: kernel 'test_wrong_before' does not begin with the required prologue sequence
+// GFX1250: :[[@LINE+1]]:1: warning: kernel 'test_wrong_before' does not begin with the required prologue sequence: GLOBAL_WB followed by V_NOP
 test_wrong_before:
   s_nop 1
 
@@ -14,7 +14,7 @@ test_wrong_before:
   .amdhsa_next_free_vgpr 0
 .end_amdhsa_kernel
 
-// GFX1250: :[[@LINE+1]]:1: warning: kernel 'test_wrong_after' does not begin with the required prologue sequence
+// GFX1250: :[[@LINE+1]]:1: warning: kernel 'test_wrong_after' does not begin with the required prologue sequence: GLOBAL_WB followed by V_NOP
 test_wrong_after:
   s_nop 2
 
