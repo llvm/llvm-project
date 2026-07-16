@@ -97,4 +97,3 @@ void templateArgument() {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant 'struct' keyword in C++ declaration
   // CHECK-FIXES: tf<Struct>();
 }
-
