@@ -1144,9 +1144,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     // Treat MANAGED like DEVICE for nonallocatable nonpointer arguments to
     // device subprograms. An OpenACC routine called from CUDA device code has
     // the same implicit-device dummy-argument behavior.
-    bool isDeviceCallee{
-        procedure.cudaSubprogramAttrs.value_or(
-            common::CUDASubprogramAttrs::Host) !=
+    bool isDeviceCallee{procedure.cudaSubprogramAttrs.value_or(
+                            common::CUDASubprogramAttrs::Host) !=
             common::CUDASubprogramAttrs::Host ||
         (procedure.hasOpenACCRoutine && FindCUDADeviceContext(scope))};
     if (isDeviceCallee &&
