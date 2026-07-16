@@ -12,7 +12,7 @@
 
 // RWTexture2DArray
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=RWTexture2DArray -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,DXIL -DTEXTURE=RWTexture2DArray -DDXIL_TY=7 -DRW=1
-// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=RWTexture2DArray -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,SPIRV -DTEXTURE=RWTexture2DArray -DARRAYED=1 -DSAMPLED=2 -DFORMAT=1
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=RWTexture2DArray -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,SPIRV -DTEXTURE=RWTexture2DArray -DARRAYED=1 -DSAMPLED=2 -DIMG_FMT=1
 
 TEXTURE<float4> Tex;
 
