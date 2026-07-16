@@ -48,7 +48,7 @@ static void EncodeDecode(const Symbol &object, const SectionList *sect_list) {
 
 TEST(SymbolTest, EncodeDecodeSymbol) {
 
-  SectionSP sect_sp(new Section(
+  SectionSP sect_sp = std::make_shared<Section>(
       /*module_sp=*/ModuleSP(),
       /*obj_file=*/nullptr,
       /*sect_id=*/1,

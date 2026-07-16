@@ -38,7 +38,7 @@ TEST(JSONSymbolTest, DeserializeCodeAddress) {
   JSONSymbol json_symbol;
   ASSERT_TRUE(fromJSON(*json, json_symbol, root));
 
-  SectionSP sect_sp(new Section(
+  SectionSP sect_sp = std::make_shared<Section>(
       /*module_sp=*/ModuleSP(),
       /*obj_file=*/nullptr,
       /*sect_id=*/1,
@@ -171,7 +171,7 @@ TEST(JSONSymbolTest, SymbolInvalidAddressNotInSection) {
   JSONSymbol json_symbol;
   json_symbol.address = 0x0fff;
 
-  SectionSP sect_sp(new Section(
+  SectionSP sect_sp = std::make_shared<Section>(
       /*module_sp=*/ModuleSP(),
       /*obj_file=*/nullptr,
       /*sect_id=*/1,
