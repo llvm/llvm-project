@@ -122,7 +122,7 @@ jobs:
           else
             touch llvm.symbols
           fi
-          abi-dumper $EXTRA_ARGS -lver $REF -skip-cxx -public-headers ./install/include/$ABI_HEADERS -o $$REF.abi ./install/lib/libLLVM.so
+          abi-dumper $EXTRA_ARGS -lver $REF -skip-cxx -public-headers ./install/include/$ABI_HEADERS -o $REF.abi ./install/lib/libLLVM.so
           # Remove symbol versioning from dumps, so we can compare across major versions.
           sed -i "s/LLVM_$LLVM_VERSION_MAJOR/LLVM_NOVERSION/" $REF.abi
       - name: Upload ABI file
