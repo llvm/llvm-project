@@ -27,9 +27,11 @@ define i32 @recurrence_1(ptr nocapture readonly %a, ptr nocapture %b, i32 %n) {
 ; CHECK-VF4UF1-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VF4UF1-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 4
 ; CHECK-VF4UF1-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], 4
+; CHECK-VF4UF1-NEXT:    [[TMP13:%.*]] = sub i64 [[TMP7]], 1
 ; CHECK-VF4UF1-NEXT:    [[TMP8:%.*]] = add i64 [[B1]], -4
 ; CHECK-VF4UF1-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], [[A2]]
-; CHECK-VF4UF1-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP9]], [[TMP7]]
+; CHECK-VF4UF1-NEXT:    [[TMP12:%.*]] = sub i64 [[TMP9]], 1
+; CHECK-VF4UF1-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP12]], [[TMP13]]
 ; CHECK-VF4UF1-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4UF1:       [[VECTOR_PH]]:
 ; CHECK-VF4UF1-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP3]], 2
@@ -89,9 +91,11 @@ define i32 @recurrence_1(ptr nocapture readonly %a, ptr nocapture %b, i32 %n) {
 ; CHECK-VF4UF2-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VF4UF2-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 4
 ; CHECK-VF4UF2-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], 8
+; CHECK-VF4UF2-NEXT:    [[TMP19:%.*]] = sub i64 [[TMP7]], 1
 ; CHECK-VF4UF2-NEXT:    [[TMP8:%.*]] = add i64 [[B1]], -4
 ; CHECK-VF4UF2-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], [[A2]]
-; CHECK-VF4UF2-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP9]], [[TMP7]]
+; CHECK-VF4UF2-NEXT:    [[TMP13:%.*]] = sub i64 [[TMP9]], 1
+; CHECK-VF4UF2-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP13]], [[TMP19]]
 ; CHECK-VF4UF2-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4UF2:       [[VECTOR_PH]]:
 ; CHECK-VF4UF2-NEXT:    [[TMP12:%.*]] = shl nuw i64 [[TMP3]], 2

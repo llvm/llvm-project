@@ -147,7 +147,7 @@ class Tool(TestToolBase):
             dexter_version=self.context.version,
         )
 
-        if self.context.options.use_script:
+        if not self.context.options.use_heuristic:
             step_collection.script, new_source_files = get_dexter_script(
                 self.context,
                 self.context.options.test_files[0],
@@ -160,7 +160,7 @@ class Tool(TestToolBase):
 
         self.context.options.source_files.extend(list(new_source_files))
 
-        if self.context.options.use_script:
+        if not self.context.options.use_heuristic:
             debugger_controller = ScriptDebuggerController(
                 self.context, step_collection
             )
@@ -324,7 +324,7 @@ class Tool(TestToolBase):
                     print("\n".join(step.detailed_print()))
                 return
             self._record_steps(test_name, steps)
-            if self.context.options.use_script:
+            if not self.context.options.use_heuristic:
                 # Before evaluating, the script may contain "unknown" expects; if they should be rewritten, then do so
                 # first, and then use the rewritten script to evaluate.
                 script_writer = ScriptExpectRewriter(self.context, steps)

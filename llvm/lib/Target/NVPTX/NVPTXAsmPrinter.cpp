@@ -284,7 +284,9 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
   const auto *TLI = cast<NVPTXTargetLowering>(STI.getTargetLowering());
 
   Type *Ty = F->getReturnType();
-  if (Ty->getTypeID() == Type::VoidTyID)
+  // A void or zero-sized return type (e.g. an empty struct) produces no return
+  // parameter.
+  if (Ty->isVoidTy() || Ty->isEmptyTy())
     return;
   O << " (";
 
@@ -325,7 +327,7 @@ void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
 
   O << "prototype_" << UniqueCallSite << " : .callprototype ";
 
-  if (RetTy->isVoidTy()) {
+  if (RetTy->isVoidTy() || RetTy->isEmptyTy()) {
     O << "()";
   } else {
     O << "(";
@@ -362,19 +364,9 @@ void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
     Type *Ty = CB.getArgOperand(I)->getType();
 
     if (CB.paramHasAttr(I, Attribute::ByVal)) {
-      // Indirect calls need strict ABI alignment so we disable optimizations by
-      // not providing a function to optimize.
       Type *ETy = CB.getParamByValType(I);
-      // Mirror the byval alignment computed by SelectionDAGBuilder: prefer an
-      // explicit stack/param alignment, otherwise fall back to the byval type
-      // alignment.
-      MaybeAlign InitialAlign = CB.getParamStackAlign(I);
-      if (!InitialAlign)
-        InitialAlign = CB.getParamAlign(I);
-      Align ByValAlign =
-          InitialAlign.value_or(TLI->getByValTypeAlignment(ETy, DL));
-      Align ParamByValAlign =
-          getDeviceByValParamAlign(/*F=*/nullptr, ETy, ByValAlign, DL);
+      Align ParamByValAlign = getDeviceByValParamAlign(
+          &CB, ETy, I + AttributeList::FirstArgIndex, DL);
 
       O << ".param .align " << ParamByValAlign.value() << " .b8 _["
         << DL.getTypeAllocSize(ETy) << "]";
@@ -403,10 +395,16 @@ void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
   const FunctionType *FTy = CB.getFunctionType();
   const unsigned NumArgs = FTy->getNumParams();
 
-  interleave(seq(NumArgs), O, MakeArg, ", ");
+  // Zero-sized arguments (e.g. empty structs) are not passed and so do not
+  // appear in the prototype.
+  const auto NonEmptyArgs = make_filter_range(seq(NumArgs), [&](unsigned I) {
+    return !CB.getArgOperand(I)->getType()->isEmptyTy();
+  });
+
+  interleave(NonEmptyArgs, O, MakeArg, ", ");
 
   if (FTy->isVarArg() && CB.arg_size() > NumArgs)
-    O << (NumArgs ? "," : "") << " .param .align "
+    O << (NonEmptyArgs.empty() ? "" : ",") << " .param .align "
       << STI.getMaxRequiredAlignment() << " .b8 _[]";
 
   O << ")";
@@ -1463,16 +1461,25 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
   bool IsFirst = true;
   const bool IsKernelFunc = isKernelFunction(*F);
 
-  if (F->arg_empty() && !F->isVarArg()) {
+  // Zero-sized arguments (e.g. empty structs) do not produce a parameter.
+  // Number the emitted parameters contiguously, skipping the zero-sized ones,
+  // so that the names match those used in LowerFormalArguments and the
+  // contiguous numbering used by callers (see LowerCall).
+  const auto NonEmptyArgs =
+      make_filter_range(F->args(), [](const Argument &Arg) {
+        return !Arg.getType()->isEmptyTy();
+      });
+
+  if (NonEmptyArgs.empty() && !F->isVarArg()) {
     O << "()";
     return;
   }
 
   O << "(\n";
 
-  for (const Argument &Arg : F->args()) {
+  for (const auto &[ParamIndex, Arg] : enumerate(NonEmptyArgs)) {
     Type *Ty = Arg.getType();
-    const std::string ParamSym = TLI->getParamName(F, Arg.getArgNo());
+    const std::string ParamSym = TLI->getParamName(F, ParamIndex);
 
     if (!IsFirst)
       O << ",\n";
@@ -1515,12 +1522,10 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       // <a>  = optimal alignment for the element type; always multiple of
       //        PAL.getParamAlignment
       // size = typeallocsize of element type
+      const unsigned ParamIdx = Arg.getArgNo() + AttributeList::FirstArgIndex;
       const Align OptimalAlign =
-          IsKernelFunc
-              ? getPTXParamAlign(
-                    F, ETy, Arg.getArgNo() + AttributeList::FirstArgIndex, DL)
-              : getDeviceByValParamAlign(F, ETy,
-                                         Arg.getParamAlign().valueOrOne(), DL);
+          IsKernelFunc ? getPTXParamAlign(F, ETy, ParamIdx, DL)
+                       : getDeviceByValParamAlign(F, ETy, ParamIdx, DL);
 
       O << "\t.param .align " << OptimalAlign.value() << " .b8 " << ParamSym
         << "[" << DL.getTypeAllocSize(ETy) << "]";
@@ -1646,13 +1651,13 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
 
   // Emit declaration of the virtual registers or 'physical' registers for
   // each register class
-  for (const TargetRegisterClass *RC : TRI->regclasses()) {
-    const unsigned N = VRegMapping[RC].size();
+  for (const TargetRegisterClass &RC : TRI->regclasses()) {
+    const unsigned N = VRegMapping[&RC].size();
 
     // Only declare those registers that may be used.
     if (N) {
-      const StringRef RCName = getNVPTXRegClassName(RC);
-      const StringRef RCStr = getNVPTXRegClassStr(RC);
+      const StringRef RCName = getNVPTXRegClassName(&RC);
+      const StringRef RCStr = getNVPTXRegClassStr(&RC);
       O << "\t.reg " << RCName << " \t" << RCStr << "<" << (N + 1) << ">;\n";
     }
   }

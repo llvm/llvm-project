@@ -106,6 +106,10 @@ public:
   using OnDetachFn = move_only_function<void()>;
   using OnShutdownFn = move_only_function<void()>;
 
+  /// Return value callback used to return results from callController.
+  using OnControllerCallReturnFn =
+      move_only_function<void(WrapperFunctionBuffer)>;
+
   /// Callback used by the Session to run incoming wrapper-function calls.
   ///
   /// A ManagedCodeTaskGroup token is created for each call to this callback,
@@ -119,8 +123,6 @@ public:
       orc_rt_WrapperFunction Fn, WrapperFunctionBuffer ArgBytes)>;
 
   using HandlerTag = void *;
-  using OnCallHandlerCompleteFn =
-      move_only_function<void(WrapperFunctionBuffer)>;
 
   /// Provides access to the controller.
   class ControllerAccess {
@@ -131,7 +133,7 @@ public:
 
   protected:
     using HandlerTag = Session::HandlerTag;
-    using OnCallHandlerCompleteFn = Session::OnCallHandlerCompleteFn;
+    using OnControllerCallReturnFn = Session::OnControllerCallReturnFn;
 
     ControllerAccess(Session &S) : S(S) {}
 
@@ -179,7 +181,7 @@ public:
     void reportError(Error Err) { S.reportError(std::move(Err)); }
 
     /// Call the handler in the controller associated with the given tag.
-    virtual void callController(OnCallHandlerCompleteFn OnComplete,
+    virtual void callController(OnControllerCallReturnFn OnComplete,
                                 HandlerTag T,
                                 WrapperFunctionBuffer ArgBytes) = 0;
 
@@ -277,26 +279,46 @@ public:
     return addService(std::move(*Srv));
   }
 
-  /// Initiate connection with controller, using the given BootstrapInfo.
-  ///
-  /// Upon first call, assuming that the Session has not already been detached
-  /// or shutdown, this will take (shared) ownership of CA and call its connect
-  /// method.
-  ///
-  /// If detach or shutdown have already been called then this method will not
-  /// take ownership of CA or call its connect method.
-  void attach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI);
-
-  /// Construct a ControllerAccessT with the given args, then immediately
-  /// attach using the given BootstrapInfo.
+  /// Construct a ControllerAccessT and immediately attach using the given
+  /// BootstrapInfo.
   ///
   /// This enables one-line attach operations in the common case where the
-  /// ControllerAccess implementation does not require any further
-  /// configuration after construction.
+  /// ControllerAccess implementation requires no further configuration after
+  /// construction and cannot fail to construct. ControllerAccess
+  /// implementations whose setup can fail (e.g. binding a socket) should
+  /// provide a Create factory and use tryAttach instead.
+  ///
+  /// ControllerAccessT is constructed with a reference to this Session as its
+  /// first argument, followed by the given args, as required by the
+  /// ControllerAccess base constructor.
   template <typename ControllerAccessT, typename... ArgTs>
   void attach(BootstrapInfo BI, ArgTs &&...Args) {
-    attach(std::make_shared<ControllerAccessT>(std::forward<ArgTs>(Args)...),
-           std::move(BI));
+    doAttach(std::make_shared<ControllerAccessT>(*this,
+                                                 std::forward<ArgTs>(Args)...),
+             std::move(BI));
+  }
+
+  /// Try to construct a ControllerAccessT by forwarding a reference to this
+  /// Session and the given args to ControllerAccessT::Create, which must
+  /// return an Expected<std::shared_ptr<ControllerAccessT>>. On success,
+  /// immediately attaches using the given BootstrapInfo.
+  ///
+  /// This is the fallible counterpart to attach<ControllerAccessT>: it allows
+  /// ControllerAccess implementations to surface setup failures (e.g. failure
+  /// to bind a socket) synchronously as an Error, without ever handing the
+  /// caller a usable-but-unconnected ControllerAccess object. Runtime and
+  /// remote failures should still be reported asynchronously via
+  /// notifyDisconnected.
+  ///
+  /// ControllerAccessT::Create is passed a reference to this Session as its
+  /// first argument, followed by the given args.
+  template <typename ControllerAccessT, typename... ArgTs>
+  Error tryAttach(BootstrapInfo BI, ArgTs &&...Args) {
+    auto CA = ControllerAccessT::Create(*this, std::forward<ArgTs>(Args)...);
+    if (!CA)
+      return CA.takeError();
+    doAttach(std::move(*CA), std::move(BI));
+    return Error::success();
   }
 
   /// Initiate detach from the controller.
@@ -398,7 +420,7 @@ public:
   /// This method can be called directly, but is expected to be more commonly
   /// called via WrapperFunction::call using a CallViaSession object (returned
   /// by the callViaSession method).
-  void callController(OnCallHandlerCompleteFn OnComplete, HandlerTag T,
+  void callController(OnControllerCallReturnFn OnComplete, HandlerTag T,
                       WrapperFunctionBuffer ArgBytes) {
     if (auto TmpCA = std::atomic_load(&CA))
       TmpCA->callController(std::move(OnComplete), T, std::move(ArgBytes));
@@ -415,7 +437,7 @@ public:
   public:
     CallViaSession(Session &S, HandlerTag T) : S(S), T(T) {}
 
-    void operator()(OnCallHandlerCompleteFn &&HandleResult,
+    void operator()(OnControllerCallReturnFn &&HandleResult,
                     WrapperFunctionBuffer ArgBytes) {
       S.callController(std::move(HandleResult), T, std::move(ArgBytes));
     }
@@ -452,6 +474,18 @@ private:
   class NotificationService;
 
   void appendService(std::unique_ptr<Service> Srv);
+
+  /// Attach the given ControllerAccess, using the given BootstrapInfo.
+  ///
+  /// Upon first call, assuming that the Session has not already been detached
+  /// or shutdown, this takes (shared) ownership of CA and calls its connect
+  /// method. If detach or shutdown have already been called then this method
+  /// will not take ownership of CA or call its connect method.
+  ///
+  /// This is an implementation detail of the public attach / tryAttach
+  /// templates, which are responsible for constructing the ControllerAccess
+  /// object: clients never hold a ControllerAccess directly.
+  void doAttach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI);
 
   void handleDisconnect();
   void proceedToDetach(std::unique_lock<std::mutex> &Lock,
@@ -493,6 +527,17 @@ private:
   State TargetState = State::None;
   std::vector<std::unique_ptr<Service>> Services;
   NotificationService &Notifiers;
+};
+
+/// Helper function object to report errors via the given Session's
+/// reportError method.
+class ReportErrorsViaSession {
+public:
+  explicit ReportErrorsViaSession(Session &S) : S(S) {}
+  void operator()(Error Err) const { S.reportError(std::move(Err)); }
+
+private:
+  Session &S;
 };
 
 } // namespace orc_rt

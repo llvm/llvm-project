@@ -17,10 +17,12 @@
 #include "llvm/Support/TimeProfiler.h"
 
 namespace cir {
+
 mlir::LogicalResult
 runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
                   clang::ASTContext &astContext, bool enableVerifier,
-                  bool enableIdiomRecognizer, bool enableCIRSimplify) {
+                  bool enableIdiomRecognizer, bool enableCIRSimplify,
+                  bool enableLibOpt, llvm::StringRef libOptOptions) {
 
   llvm::TimeTraceScope scope("CIR To CIR Passes");
 
@@ -31,7 +33,19 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
     pm.addPass(mlir::createCIRSimplifyPass());
 
   if (enableIdiomRecognizer)
-    pm.addPass(mlir::createIdiomRecognizerPass(&astContext));
+    pm.addPass(mlir::createIdiomRecognizerPass());
+
+  if (enableLibOpt) {
+    auto libOptPass = mlir::createLibOptPass();
+    auto errorHandler = [](const llvm::Twine &) -> mlir::LogicalResult {
+      return mlir::LogicalResult::failure();
+    };
+
+    if (libOptPass->initializeOptions(libOptOptions, errorHandler).failed())
+      return mlir::failure();
+
+    pm.addPass(std::move(libOptPass));
+  }
 
   pm.addPass(mlir::createTargetLoweringPass());
   pm.addPass(mlir::createCXXABILoweringPass());

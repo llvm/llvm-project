@@ -57,6 +57,7 @@ export void foo() {
 // CHECK: define linkonce_odr hidden void @hlsl::RWStructuredBuffer<float>::__createFromImplicitBindingWithImplicitCounter(unsigned int, unsigned int, int, unsigned int, char const*, unsigned int)
 // CHECK-SAME: (ptr {{.*}} sret(%"class.hlsl::RWStructuredBuffer") align {{(4|8)}} %[[RetValue2:.*]], i32 noundef %orderId, 
 // CHECK-SAME: i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, ptr noundef %name, i32 noundef %counterOrderId)
+// CHECK-SPV: %[[ConvTok:.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK: %[[Tmp2:.*]] = alloca %"class.hlsl::RWStructuredBuffer"
 // CHECK-DXIL: %[[Handle2:.*]] = call target("dx.RawBuffer", float, 1, 0)
 // CHECK-DXIL-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f32_1_0t(
@@ -73,6 +74,7 @@ export void foo() {
 // CHECK-SPV: %[[HandlePtr:.*]] = getelementptr inbounds nuw %"class.hlsl::RWStructuredBuffer", ptr %[[Tmp2]], i32 0, i32 0
 // CHECK-SPV: %[[LoadedHandle:.*]] = load target("spirv.VulkanBuffer", [0 x float], 12, 1), ptr %[[HandlePtr]], align 8
 // CHECK-SPV: %[[CounterHandle:.*]] = call target("spirv.VulkanBuffer", i32, 12, 1) @llvm.spv.resource.counterhandlefromimplicitbinding
+// CHECK-SPV-SAME: [ "convergencectrl"(token %[[ConvTok]]) ]
 // CHECK-SPV: %[[CounterHandlePtr:.*]] = getelementptr inbounds nuw %"class.hlsl::RWStructuredBuffer", ptr %[[Tmp2]], i32 0, i32 1
 // CHECK-SPV-NEXT: store target("spirv.VulkanBuffer", i32, 12, 1) %[[CounterHandle]], ptr %[[CounterHandlePtr]], align 8
 // CHECK: call void @hlsl::RWStructuredBuffer<float>::RWStructuredBuffer(hlsl::RWStructuredBuffer<float> const&)(ptr {{.*}} %[[RetValue2]], ptr {{.*}} %[[Tmp2]])

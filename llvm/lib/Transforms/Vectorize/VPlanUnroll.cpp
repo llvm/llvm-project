@@ -78,7 +78,7 @@ public:
   void unrollBlock(VPBlockBase *VPB);
 
   VPValue *getValueForPart(VPValue *V, unsigned Part) {
-    if (Part == 0 || isa<VPIRValue, VPSymbolicValue, VPRegionValue>(V))
+    if (Part == 0 || isa<VPIRValue, VPSymbolicValue>(V))
       return V;
     assert((VPV2Parts.contains(V) && VPV2Parts[V].size() >= Part) &&
            "accessed value does not exist");
@@ -179,8 +179,7 @@ void UnrollState::unrollWidenInductionByUF(
   VPIRFlags::WrapFlagsTy WrapFlags(false, false);
   if (auto *IntOrFPInd = dyn_cast<VPWidenIntOrFpInductionRecipe>(IV)) {
     FMF = IntOrFPInd->getFastMathFlagsOrNone();
-    if (IntOrFPInd->hasNoWrapFlags())
-      WrapFlags = IntOrFPInd->getNoWrapFlags();
+    WrapFlags = IntOrFPInd->getNoWrapFlagsOrNone();
   }
 
   VPValue *ScalarStep = IV->getStepValue();

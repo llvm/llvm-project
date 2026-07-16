@@ -6,7 +6,7 @@
 ; REQUIRES: asserts
 ; RUN: llc -O2 -mtriple=hexagon -mattr=+hvxv81,+hvx-length128B \
 ; RUN: -enable-xqf-gen=true -hexagon-qfloat-mode=lossy \
-; RUN: -debug-only=handle-qfp < %s 2>&1 -o - | FileCheck %s
+; RUN: -debug-only=handle-qfp -enable-postra-xqf-check < %s 2>&1 -o - | FileCheck %s
 
 ; CHECK: [HandleConvertToQfCopies]       Processing Copy:  renamable [[V0:\$v[0-9]+]] = COPY
 ; CHECK: Inserting new instruction:   [[V0]] = V6_vconv_qf32_sf killed renamable [[V0]]
