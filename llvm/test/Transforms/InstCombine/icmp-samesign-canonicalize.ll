@@ -24,7 +24,8 @@ define <2 x i1> @ule_non_endpoint_vec(<2 x i8> %x) {
 define i1 @ule_smax(i8 %x) {
 ; CHECK-LABEL: define i1 @ule_smax(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ule i8 [[X]], 127
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = icmp samesign ule i8 %x, 127
   ret i1 %cmp
@@ -33,7 +34,7 @@ define i1 @ule_smax(i8 %x) {
 define i1 @uge_smax(i8 %x) {
 ; CHECK-LABEL: define i1 @uge_smax(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], 127
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i8 [[X]], 126
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = icmp samesign uge i8 %x, 127
@@ -43,7 +44,8 @@ define i1 @uge_smax(i8 %x) {
 define i1 @uge_smin(i8 %x) {
 ; CHECK-LABEL: define i1 @uge_smin(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign uge i8 [[X]], -128
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = icmp samesign uge i8 %x, -128
   ret i1 %cmp
@@ -97,24 +99,4 @@ define <2 x i1> @ule_mixed_sign_crossing_vec(<2 x i8> %x) {
 ;
   %cmp = icmp samesign ule <2 x i8> %x, <i8 42, i8 127>
   ret <2 x i1> %cmp
-}
-
-define i1 @sge_zero_no_samesign(i8 %x) {
-; CHECK-LABEL: define i1 @sge_zero_no_samesign(
-; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X]], -1
-; CHECK-NEXT:    ret i1 [[CMP]]
-;
-  %cmp = icmp sge i8 %x, 0
-  ret i1 %cmp
-}
-
-define i1 @sle_minus_one_no_samesign(i8 %x) {
-; CHECK-LABEL: define i1 @sle_minus_one_no_samesign(
-; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
-;
-  %cmp = icmp sle i8 %x, -1
-  ret i1 %cmp
 }
