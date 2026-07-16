@@ -919,12 +919,14 @@ public:
   /// for each VF.
   VPlan &getPlanFor(ElementCount VF) const;
 
-  /// Examines if it is unprofitable to Vectorize a small loop in a way that leaves a
-  /// Vector iteration, followed by a single iteration scalar tail. For some uses cases,
-  /// it is better to leave the original Scalar loop in place.
-  bool isUnprofitableOneScalarTail (const VectorizationFactor &CurrentFactor, bool HasTail,
-          bool ForceVectorization, const ElementCount &ExactTC,
-          const VectorizationFactor &ScalarFactor, unsigned int UserIC);
+  /// Examines if it is unprofitable to Vectorize a small loop in a way that
+  /// leaves a Vector iteration, followed by a single iteration scalar tail. For
+  /// some uses cases, it is better to leave the original Scalar loop in place.
+  bool isUnprofitableOneScalarTail(const VectorizationFactor &CurrentFactor,
+                                   bool HasTail, bool ForceVectorization,
+                                   const ElementCount &ExactTC,
+                                   const VectorizationFactor &ScalarFactor,
+                                   unsigned int UserIC);
 
   /// Compute and return the most profitable vectorization factor and the
   /// corresponding best VPlan. Also collect all profitable VFs in
