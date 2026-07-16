@@ -235,9 +235,9 @@ bool SIInstrInfo::isSafeToSink(MachineInstr &MI,
       MachineCycle *ToCycle = CI->getCycle(SuccToSinkTo);
       // Check if there is a FromCycle that contains SgprDef's basic block but
       // does not contain SuccToSinkTo and also has divergent exit condition.
-      while (FromCycle && !FromCycle->contains(ToCycle)) {
+      while (FromCycle && !(ToCycle && CI->contains(*FromCycle, *ToCycle))) {
         SmallVector<MachineBasicBlock *, 1> ExitingBlocks;
-        FromCycle->getExitingBlocks(ExitingBlocks);
+        CI->getExitingBlocks(*FromCycle, ExitingBlocks);
 
         // FromCycle has divergent exit condition.
         for (MachineBasicBlock *ExitingBlock : ExitingBlocks) {
@@ -245,7 +245,7 @@ bool SIInstrInfo::isSafeToSink(MachineInstr &MI,
             return false;
         }
 
-        FromCycle = FromCycle->getParentCycle();
+        FromCycle = CI->getParentCycle(*FromCycle);
       }
     }
   }

@@ -1600,7 +1600,9 @@ public:
 
   bool isGFX13Plus() const { return AMDGPU::isGFX13Plus(getSTI()); }
 
-  bool isGFX10_AEncoding() const { return AMDGPU::isGFX10_AEncoding(getSTI()); }
+  bool hasBVHRayTracingInsts() const {
+    return getFeatureBits()[AMDGPU::FeatureBVHRayTracingInsts];
+  }
 
   bool isGFX10_BEncoding() const {
     return AMDGPU::isGFX10_BEncoding(getSTI());
@@ -4225,7 +4227,8 @@ bool AMDGPUAsmParser::validateMIMGDataSize(const MCInst &Inst, SMLoc IDLoc) {
   if (VDataIdx == -1 && isGFX10Plus()) // no return image_sample
     return true;
 
-  if ((DMaskIdx == -1 || TFEIdx == -1) && isGFX10_AEncoding()) // intersect_ray
+  if ((DMaskIdx == -1 || TFEIdx == -1) &&
+      hasBVHRayTracingInsts()) // intersect_ray
     return true;
 
   unsigned VDataSize = getRegOperandSize(Desc, VDataIdx);

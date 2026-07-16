@@ -18,7 +18,7 @@ using namespace orc_rt;
 
 namespace {
 constexpr const char *TestString = "test string";
-} // end anonymous namespace
+} // namespace
 
 TEST(WrapperFunctionUtilsTest, DefaultWrapperFunctionBuffer) {
   WrapperFunctionBuffer B;
@@ -43,6 +43,12 @@ TEST(WrapperFunctionUtilsTest, WrapperFunctionBufferFromRange) {
   EXPECT_TRUE(strcmp(B.data(), TestString) == 0);
   EXPECT_FALSE(B.empty());
   EXPECT_EQ(B.getOutOfBandError(), nullptr);
+}
+
+TEST(WrapperFunctionUtilsTest, WrapperFunctionBufferFromEmptyRangeIsEmpty) {
+  const char *Empty = "";
+  auto B = WrapperFunctionBuffer::copyFrom(Empty, 0);
+  EXPECT_TRUE(B.empty());
 }
 
 TEST(WrapperFunctionUtilsTest, WrapperFunctionBufferFromCString) {

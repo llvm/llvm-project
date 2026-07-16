@@ -811,6 +811,12 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
         },
         Value.getStructNumFields(), "field", "fields");
 
+    dumpAPValueChildren(
+        Value, Ty,
+        [](const APValue &Value, unsigned Index) -> const APValue & {
+          return Value.getStructVirtualBase(Index);
+        },
+        Value.getStructNumVirtualBases(), "vbase", "vbases");
     return;
   }
   case APValue::Matrix: {

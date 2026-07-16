@@ -16,7 +16,7 @@ qc.lrb x5, x2, x4
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.lrb x5, x2, x4, 12
 
-# CHECK-PLUS: :[[@LINE+2]]:12: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:12: error: register must be a GPR
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.lrb x5, 2, x4, 4
 
@@ -36,7 +36,7 @@ qc.lrh x1, x12, x6
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.lrh x1, x12, x6, 22
 
-# CHECK-PLUS: :[[@LINE+2]]:12: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:12: error: register must be a GPR
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.lrh x1, 12, x6, 2
 
@@ -56,7 +56,7 @@ qc.lrw x15, x7, x14
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.lrw x15, x7, x14, 11
 
-# CHECK-PLUS: :[[@LINE+2]]:13: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:13: error: register must be a GPR
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.lrw x15, 7, x14, 1
 
@@ -76,7 +76,7 @@ qc.lrbu x9, x11, x4
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.lrbu x9, x11, x4, 37
 
-# CHECK-PLUS: :[[@LINE+2]]:13: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:13: error: register must be a GPR
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.lrbu x9, 11, x4, 7
 
@@ -96,7 +96,7 @@ qc.lrhu x16, x6, x10
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.lrhu x16, x6, x10, 44
 
-# CHECK-PLUS: :[[@LINE+2]]:14: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:14: error: register must be a GPR
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.lrhu x16, 6, x10, 4
 
@@ -116,7 +116,7 @@ qc.srb x0, x2, x8
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.srb x0, x2, x8, 93
 
-# CHECK-PLUS: :[[@LINE+2]]:12: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:12: error: register must be a GPR
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.srb x0, 2, x8, 3
 
@@ -136,7 +136,7 @@ qc.srh x13, x0, x20
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.srh x13, x0, x20, 76
 
-# CHECK-PLUS: :[[@LINE+2]]:13: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:13: error: register must be a GPR
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.srh x13, 0, x20, 6
 
@@ -156,7 +156,7 @@ qc.srw x17, x18, x19
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.srw x17, x18, x19, 10
 
-# CHECK-PLUS: :[[@LINE+2]]:13: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:13: error: register must be a GPR
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.srw x17, 18, x19, 0
 
