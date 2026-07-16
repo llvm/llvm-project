@@ -61,7 +61,7 @@ define void @shl_bw1_converted_to_mul(ptr %p, i32 %x, i32 %y) {
 ; CHECK-LABEL: @shl_bw1_converted_to_mul(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[Y:%.*]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nsw <2 x i32> [[TMP2]], <i32 3, i32 -2147483648>
+; CHECK-NEXT:    [[TMP3:%.*]] = mul <2 x i32> [[TMP2]], <i32 3, i32 -2147483648>
 ; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
