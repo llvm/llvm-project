@@ -14,17 +14,12 @@ define <4 x i16> @test_pwcvth_v4i8(<4 x i8> %a) {
   ; RV32-NEXT:   liveins: $x10
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x10
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:gpr = IMPLICIT_DEF
-  ; RV32-NEXT:   [[DEF1:%[0-9]+]]:gpr = IMPLICIT_DEF
-  ; RV32-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:gprpairnox0 = REG_SEQUENCE [[COPY]], %subreg.sub_gpr_even, killed [[DEF]], %subreg.sub_gpr_odd
-  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY [[REG_SEQUENCE]].sub_gpr_even
-  ; RV32-NEXT:   [[COPY2:%[0-9]+]]:gprpair = COPY $x0_pair
-  ; RV32-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY [[COPY2]].sub_gpr_even
-  ; RV32-NEXT:   [[WZIP8P:%[0-9]+]]:gprpair = WZIP8P killed [[COPY3]], killed [[COPY1]]
-  ; RV32-NEXT:   [[COPY4:%[0-9]+]]:gpr = COPY [[WZIP8P]].sub_gpr_even
-  ; RV32-NEXT:   [[COPY5:%[0-9]+]]:gpr = COPY [[WZIP8P]].sub_gpr_odd
-  ; RV32-NEXT:   $x10 = COPY [[COPY4]]
-  ; RV32-NEXT:   $x11 = COPY [[COPY5]]
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x0
+  ; RV32-NEXT:   [[WZIP8P:%[0-9]+]]:gprpair = WZIP8P [[COPY1]], [[COPY]]
+  ; RV32-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY [[WZIP8P]].sub_gpr_even
+  ; RV32-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY [[WZIP8P]].sub_gpr_odd
+  ; RV32-NEXT:   $x10 = COPY [[COPY2]]
+  ; RV32-NEXT:   $x11 = COPY [[COPY3]]
   ; RV32-NEXT:   PseudoRET implicit $x10, implicit $x11
   ;
   ; RV64-LABEL: name: test_pwcvth_v4i8
@@ -47,17 +42,12 @@ define <2 x i32> @test_pwcvth_v2i16(<2 x i16> %a) {
   ; RV32-NEXT:   liveins: $x10
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x10
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:gpr = IMPLICIT_DEF
-  ; RV32-NEXT:   [[DEF1:%[0-9]+]]:gpr = IMPLICIT_DEF
-  ; RV32-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:gprpairnox0 = REG_SEQUENCE [[COPY]], %subreg.sub_gpr_even, killed [[DEF]], %subreg.sub_gpr_odd
-  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY [[REG_SEQUENCE]].sub_gpr_even
-  ; RV32-NEXT:   [[COPY2:%[0-9]+]]:gprpair = COPY $x0_pair
-  ; RV32-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY [[COPY2]].sub_gpr_even
-  ; RV32-NEXT:   [[WZIP16P:%[0-9]+]]:gprpair = WZIP16P killed [[COPY3]], killed [[COPY1]]
-  ; RV32-NEXT:   [[COPY4:%[0-9]+]]:gpr = COPY [[WZIP16P]].sub_gpr_even
-  ; RV32-NEXT:   [[COPY5:%[0-9]+]]:gpr = COPY [[WZIP16P]].sub_gpr_odd
-  ; RV32-NEXT:   $x10 = COPY [[COPY4]]
-  ; RV32-NEXT:   $x11 = COPY [[COPY5]]
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x0
+  ; RV32-NEXT:   [[WZIP16P:%[0-9]+]]:gprpair = WZIP16P [[COPY1]], [[COPY]]
+  ; RV32-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY [[WZIP16P]].sub_gpr_even
+  ; RV32-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY [[WZIP16P]].sub_gpr_odd
+  ; RV32-NEXT:   $x10 = COPY [[COPY2]]
+  ; RV32-NEXT:   $x11 = COPY [[COPY3]]
   ; RV32-NEXT:   PseudoRET implicit $x10, implicit $x11
   ;
   ; RV64-LABEL: name: test_pwcvth_v2i16
