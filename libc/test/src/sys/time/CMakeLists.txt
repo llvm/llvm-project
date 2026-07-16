@@ -52,3 +52,15 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
+
+add_libc_unittest(
+  gettimeofday_test
+  SUITE
+    libc_sys_time_unittests
+  SRCS
+    gettimeofday_test.cpp
+  DEPENDS
+    libc.include.sys_time
+    libc.src.sys.time.gettimeofday
+    libc.hdr.types.struct_timeval
+)

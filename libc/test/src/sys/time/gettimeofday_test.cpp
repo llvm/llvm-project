@@ -1,13 +1,18 @@
-//===-- Unittests for gettimeofday ----------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unittests for gettimeofday.
+///
+//===----------------------------------------------------------------------===//
 
 #include "hdr/types/struct_timeval.h"
-#include "src/time/gettimeofday.h"
+#include "src/sys/time/gettimeofday.h"
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcGettimeofday, SmokeTest) {

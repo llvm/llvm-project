@@ -34,3 +34,9 @@ functions:
     arguments:
       - type: int
       - type: struct itimerval *
+
+  - name: gettimeofday
+    return_type: int
+    arguments:
+      - type: struct timeval *
+      - type: void *
