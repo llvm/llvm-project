@@ -36,35 +36,35 @@
 #include <tuple>
 #include <utility>
 
-namespace {
 using namespace clang::ast_matchers;
 using clang::ast_matchers::internal::Matcher;
-using llvm::StringRef;
 
-AST_MATCHER_P2(clang::FloatingLiteral, near, double, Value, double,
-               DiffThreshold) {
+namespace clang::tidy::modernize {
+
+namespace {
+
+AST_MATCHER_P2(FloatingLiteral, near, double, Value, double, DiffThreshold) {
   return std::abs(Node.getValueAsApproximateDouble() - Value) < DiffThreshold;
 }
 
-AST_MATCHER_P(clang::QualType, hasCanonicalTypeUnqualified,
-              Matcher<clang::QualType>, InnerMatcher) {
+AST_MATCHER_P(QualType, hasCanonicalTypeUnqualified, Matcher<QualType>,
+              InnerMatcher) {
   return !Node.isNull() &&
          InnerMatcher.matches(Node->getCanonicalTypeUnqualified(), Finder,
                               Builder);
 }
 
-AST_MATCHER(clang::QualType, isArithmetic) {
+AST_MATCHER(QualType, isArithmetic) {
   return !Node.isNull() && Node->isArithmeticType();
 }
-AST_MATCHER(clang::QualType, isFloating) {
+AST_MATCHER(QualType, isFloating) {
   return !Node.isNull() && Node->isFloatingType();
 }
 
-AST_MATCHER_P(clang::Expr, anyOfExhaustive, std::vector<Matcher<clang::Stmt>>,
-              Exprs) {
+AST_MATCHER_P(Expr, anyOfExhaustive, std::vector<Matcher<Stmt>>, Exprs) {
   bool FoundMatch = false;
   for (const auto &InnerMatcher : Exprs) {
-    clang::ast_matchers::internal::BoundNodesTreeBuilder Result = *Builder;
+    ast_matchers::internal::BoundNodesTreeBuilder Result = *Builder;
     if (InnerMatcher.matches(Node, Finder, &Result)) {
       *Builder = std::move(Result);
       FoundMatch = true;
@@ -79,18 +79,16 @@ AST_MATCHER_P(clang::Expr, anyOfExhaustive, std::vector<Matcher<clang::Stmt>>,
 // the literal of every constant and for formulas' subexpressions that look at
 // literals.
 struct MatchBuilder {
-  auto
-  ignoreParenAndArithmeticCasting(const Matcher<clang::Expr> &Matcher) const {
+  auto ignoreParenAndArithmeticCasting(const Matcher<Expr> &Matcher) const {
     return expr(hasType(qualType(isArithmetic())), ignoringParenCasts(Matcher));
   }
 
-  auto
-  ignoreParenAndFloatingCasting(const Matcher<clang::Expr> &Matcher) const {
+  auto ignoreParenAndFloatingCasting(const Matcher<Expr> &Matcher) const {
     return expr(hasType(qualType(isFloating())), ignoringParenCasts(Matcher));
   }
 
   auto matchMathCall(const StringRef FunctionName,
-                     const Matcher<clang::Expr> &ArgumentMatcher) const {
+                     const Matcher<Expr> &ArgumentMatcher) const {
     auto HasAnyPrecisionName = hasAnyName(
         FunctionName, (FunctionName + "l").str(),
         (FunctionName + "f").str()); // Support long double(l) and float(f).
@@ -100,7 +98,7 @@ struct MatchBuilder {
                  hasArgument(0, ArgumentMatcher))));
   }
 
-  auto matchSqrt(const Matcher<clang::Expr> &ArgumentMatcher) const {
+  auto matchSqrt(const Matcher<Expr> &ArgumentMatcher) const {
     return matchMathCall("sqrt", ArgumentMatcher);
   }
 
@@ -148,7 +146,7 @@ struct MatchBuilder {
     return expr(anyOf(Int, Float, Dref));
   }
 
-  auto match1Div(const Matcher<clang::Expr> &Match) const {
+  auto match1Div(const Matcher<Expr> &Match) const {
     return binaryOperator(hasOperatorName("/"), hasLHS(matchValue(1)),
                           hasRHS(Match));
   }
@@ -266,24 +264,23 @@ static std::string getCode(const StringRef Constant, const bool IsFloat,
   return ("std::numbers::" + Constant).str();
 }
 
-static bool isRangeOfCompleteMacro(const clang::SourceRange &Range,
-                                   const clang::SourceManager &SM,
-                                   const clang::LangOptions &LO) {
+static bool isRangeOfCompleteMacro(const SourceRange &Range,
+                                   const SourceManager &SM,
+                                   const LangOptions &LO) {
   if (!Range.getBegin().isMacroID())
     return false;
-  if (!clang::Lexer::isAtStartOfMacroExpansion(Range.getBegin(), SM, LO))
+  if (!Lexer::isAtStartOfMacroExpansion(Range.getBegin(), SM, LO))
     return false;
 
   if (!Range.getEnd().isMacroID())
     return false;
 
-  if (!clang::Lexer::isAtEndOfMacroExpansion(Range.getEnd(), SM, LO))
+  if (!Lexer::isAtEndOfMacroExpansion(Range.getEnd(), SM, LO))
     return false;
 
   return true;
 }
 
-namespace clang::tidy::modernize {
 UseStdNumbersCheck::UseStdNumbersCheck(const StringRef Name,
                                        ClangTidyContext *const Context)
     : ClangTidyCheck(Name, Context),
@@ -301,7 +298,7 @@ UseStdNumbersCheck::UseStdNumbersCheck(const StringRef Name,
 
 void UseStdNumbersCheck::registerMatchers(MatchFinder *const Finder) {
   const auto Matches = MatchBuilder{DiffThreshold};
-  const std::vector<Matcher<clang::Stmt>> ConstantMatchers = {
+  const std::vector<Matcher<Stmt>> ConstantMatchers = {
       Matches.matchLog2Euler(),     Matches.matchLog10Euler(),
       Matches.matchEulerTopLevel(), Matches.matchEgamma(),
       Matches.matchInvSqrtPi(),     Matches.matchInvPi(),
@@ -360,7 +357,7 @@ void UseStdNumbersCheck::check(const MatchFinder::MatchResult &Result) {
   };
 
   auto MatchedLiterals =
-      llvm::SmallVector<std::tuple<std::string, double, const Expr *>>{};
+      SmallVector<std::tuple<std::string, double, const Expr *>>{};
 
   const auto &SM = *Result.SourceManager;
   const auto &LO = Result.Context->getLangOpts();

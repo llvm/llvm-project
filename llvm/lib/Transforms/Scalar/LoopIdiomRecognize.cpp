@@ -32,6 +32,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -166,6 +167,11 @@ static cl::opt<bool> ForceMemsetPatternIntrinsic(
     cl::desc("Use memset.pattern intrinsic whenever possible"), cl::init(false),
     cl::Hidden);
 
+static cl::opt<bool> ForceCRCClmul(
+    "loop-idiom-force-crc-clmul",
+    cl::desc("Use the clmul-based CRC loop optimization whenever possible"),
+    cl::init(false), cl::Hidden);
+
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 
 } // namespace llvm
@@ -259,6 +265,9 @@ private:
   bool avoidLIRForMultiBlockLoop(bool IsMemset = false,
                                  bool IsLoopMemset = false);
   bool optimizeCRCLoop(const PolynomialInfo &Info);
+  void optimizeCRCLoopUsingClmul(const PolynomialInfo &Info,
+                                 IntegerType *ClmulTy);
+  void optimizeCRCLoopUsingTableLookup(const PolynomialInfo &Info);
 
   /// @}
   /// \name Noncountable Loop Idiom Handling
@@ -397,11 +406,10 @@ bool LoopIdiomRecognize::runOnCountableLoop() {
     MadeChange |= runOnLoopBlock(BB, BECount, ExitBlocks);
   }
 
-  // Optimize a CRC loop if HashRecognize found one, provided we're not
-  // optimizing for size.
-  if (!DisableLIRP::HashRecognize && !ApplyCodeSizeHeuristics)
+  // Attempt to optimize a CRC loop if one is detected by HashRecognize.
+  if (!DisableLIRP::HashRecognize)
     if (auto Res = HashRecognize(*CurLoop, *SE).getResult())
-      optimizeCRCLoop(*Res);
+      MadeChange |= optimizeCRCLoop(*Res);
 
   return MadeChange;
 }
@@ -471,10 +479,18 @@ LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
   Value *StoredVal = SI->getValueOperand();
   Value *StorePtr = SI->getPointerOperand();
 
-  // Don't convert stores of non-integral pointer types to memsets (which stores
-  // integers).
-  if (DL->isNonIntegralPointerType(StoredVal->getType()->getScalarType()))
+  if (DL->hasUnstableRepresentation(StoredVal->getType()))
     return LegalStoreKind::None;
+
+  // Transformations could invalidate the external-state pointers
+  //   memcpy - LangRef specifies that a valid memcpy must preserve external
+  //            state, so no transformations are blocked by it.
+  //   memset - We assume that a memset of 0 has an equivalent external state
+  //            effect as a null pointer store. This is currently not explicitly
+  //            specified, but is true of the one exemplar we have (CHERI
+  //            capabilities). All other memset formations are not safe.
+  bool MustPreserveExternalState = DL->hasExternalState(StoredVal->getType()) &&
+                                   !isa<ConstantPointerNull>(StoredVal);
 
   // Reject stores that are so large that they overflow an unsigned.
   // When storing out scalable vectors we bail out for now, since the code
@@ -506,14 +522,16 @@ LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
 
   // If we're allowed to form a memset, and the stored value would be
   // acceptable for memset, use it.
-  if (!UnorderedAtomic && HasMemset && SplatValue && !DisableLIRP::Memset &&
+  if (!MustPreserveExternalState && !UnorderedAtomic && HasMemset &&
+      SplatValue && !DisableLIRP::Memset &&
       // Verify that the stored value is loop invariant.  If not, we can't
       // promote the memset.
       CurLoop->isLoopInvariant(SplatValue)) {
     // It looks like we can use SplatValue.
     return LegalStoreKind::Memset;
   }
-  if (!UnorderedAtomic && (HasMemsetPattern || ForceMemsetPatternIntrinsic) &&
+  if (!MustPreserveExternalState && !UnorderedAtomic &&
+      (HasMemsetPattern || ForceMemsetPatternIntrinsic) &&
       !DisableLIRP::Memset &&
       // Don't create memset_pattern16s with address spaces.
       StorePtr->getType()->getPointerAddressSpace() == 0 &&
@@ -889,7 +907,7 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
     return false;
   }
 
-  const SCEV *MemsetSizeSCEV = SE->getSCEV(MSI->getLength());
+  SCEVUse MemsetSizeSCEV = SE->getSCEV(MSI->getLength());
 
   bool IsNegStride = false;
   const bool IsConstantSize = isa<ConstantInt>(MSI->getLength());
@@ -928,9 +946,9 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
 
     // Compare positive direction PointerStrideSCEV with MemsetSizeSCEV
     IsNegStride = PointerStrideSCEV->isNonConstantNegative();
-    const SCEV *PositiveStrideSCEV =
-        IsNegStride ? SE->getNegativeSCEV(PointerStrideSCEV)
-                    : PointerStrideSCEV;
+    SCEVUse PositiveStrideSCEV =
+        IsNegStride ? SCEVUse(SE->getNegativeSCEV(PointerStrideSCEV))
+                    : SCEVUse(PointerStrideSCEV);
     LLVM_DEBUG(dbgs() << "  MemsetSizeSCEV: " << *MemsetSizeSCEV << "\n"
                       << "  PositiveStrideSCEV: " << *PositiveStrideSCEV
                       << "\n");
@@ -969,14 +987,29 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
                                  /*IsLoopMemset=*/true);
 }
 
+/// Return true if \p I is a (simple, loop-invariant-valued) store of the same
+/// bytewise value \p SplatByte.
+static bool isSameByteValueStore(Instruction &I, Value *SplatByte, Loop *L,
+                                 const DataLayout &DL) {
+  assert(SplatByte && "expected a bytewise splat value to match against");
+  auto *SI = dyn_cast<StoreInst>(&I);
+  if (!SI || !SI->isSimple() || !L->isLoopInvariant(SI->getValueOperand()))
+    return false;
+  return isBytewiseValue(SI->getValueOperand(), DL) == SplatByte;
+}
+
 /// mayLoopAccessLocation - Return true if the specified loop might access the
 /// specified pointer location, which is a loop-strided access.  The 'Access'
 /// argument specifies what the verboten forms of access are (read or write).
-static bool
-mayLoopAccessLocation(Value *Ptr, ModRefInfo Access, Loop *L,
-                      const SCEV *BECount, const SCEV *StoreSizeSCEV,
-                      AliasAnalysis &AA,
-                      SmallPtrSetImpl<Instruction *> &IgnoredInsts) {
+///
+/// When the access size cannot be bounded, fall back to allow stores writing
+/// the same byte value \p SplatByte.
+static bool mayLoopAccessLocation(Value *Ptr, ModRefInfo Access, Loop *L,
+                                  const SCEV *BECount,
+                                  const SCEV *StoreSizeSCEV, AliasAnalysis &AA,
+                                  SmallPtrSetImpl<Instruction *> &IgnoredInsts,
+                                  Value *SplatByte = nullptr,
+                                  const DataLayout *DL = nullptr) {
   // Get the location that may be stored across the loop.  Since the access is
   // strided positively through memory, we say that the modified location starts
   // at the pointer and has infinite size.
@@ -1000,11 +1033,18 @@ mayLoopAccessLocation(Value *Ptr, ModRefInfo Access, Loop *L,
   // which will then no-alias a store to &A[100].
   MemoryLocation StoreLoc(Ptr, AccessSize);
 
+  // Only consult the same-byte-value fallback when the access size stayed
+  // infinite (non-constant trip count); with a precise size AA is accurate.
+  bool TrySameByteValue = !AccessSize.isPrecise() && SplatByte && DL;
+
   for (BasicBlock *B : L->blocks())
     for (Instruction &I : *B)
       if (!IgnoredInsts.contains(&I) &&
-          isModOrRefSet(AA.getModRefInfo(&I, StoreLoc) & Access))
+          isModOrRefSet(AA.getModRefInfo(&I, StoreLoc) & Access)) {
+        if (TrySameByteValue && isSameByteValueStore(I, SplatByte, L, *DL))
+          continue;
         return true;
+      }
   return false;
 }
 
@@ -1088,15 +1128,15 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   // the return value will read this comment, and leave them alone.
   Changed = true;
 
+  Value *SplatValue = isBytewiseValue(StoredVal, *DL);
   if (mayLoopAccessLocation(BasePtr, ModRefInfo::ModRef, CurLoop, BECount,
-                            StoreSizeSCEV, *AA, Stores))
+                            StoreSizeSCEV, *AA, Stores, SplatValue, DL))
     return Changed;
 
   if (avoidLIRForMultiBlockLoop(/*IsMemset=*/true, IsLoopMemset))
     return Changed;
 
   // Okay, everything looks good, insert the memset.
-  Value *SplatValue = isBytewiseValue(StoredVal, *DL);
   Constant *PatternValue = nullptr;
   if (!SplatValue)
     PatternValue = getMemSetPatternValue(StoredVal, DL);
@@ -1164,7 +1204,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
              isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16)) {
     assert(isa<SCEVConstant>(StoreSizeSCEV) && "Expected constant store size");
 
-    NewCall = Builder.CreateIntrinsic(
+    NewCall = Builder.CreateIntrinsicWithoutFolding(
         Intrinsic::experimental_memset_pattern,
         {DestInt8PtrTy, PatternValue->getType(), IntIdxTy},
         {BasePtr, PatternValue, MemsetArg,
@@ -1550,19 +1590,172 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
   if (TT.getArch() == Triple::hexagon)
     return false;
 
+  // In the clmul optimization, the first clmul uses 2*TC bits, and the second
+  // clmul uses CRCBW+TC bits. For simplicity, have both clmuls operate on the
+  // same bit width.
+  unsigned CRCBW = Info.LHS->getType()->getIntegerBitWidth();
+  unsigned ClmulBW = std::max(2 * Info.TripCount, CRCBW + Info.TripCount);
+  auto *ClmulTy = IntegerType::get(Info.LHS->getContext(), ClmulBW);
+
+  // The force-crc-clmul flag should cause the clmul optimization to run
+  // unconditionally.
+  if (ForceCRCClmul) {
+    optimizeCRCLoopUsingClmul(Info, ClmulTy);
+    return true;
+  }
+
+  // FIXME: Once intrinsic cost modeling is more reliable for clmul, that should
+  // be used to determine which optimization to use. Until then, only apply the
+  // clmul optimization when optimizing for size, since a lookup table is not
+  // viable in that case.
+  if (!ApplyCodeSizeHeuristics) {
+    optimizeCRCLoopUsingTableLookup(Info);
+    return true;
+  }
+
+  // The clmul optimization should only be applied if clmul with the required
+  // bit width is a fast operation on the target.
+  // TODO: If clmul exists on the target but not for the required width, it
+  // might be possible to split into multiple iterations of reduction.
+  if (TTI->haveFastClmul(ClmulTy)) {
+    optimizeCRCLoopUsingClmul(Info, ClmulTy);
+    return true;
+  }
+
+  return false;
+}
+
+// The algorithm used in this optimization is a Polynomial (GF(2)) Barrett
+// Reduction based on Intel's "Fast CRC Computation for Generic Polynomials
+// Using PCLMULQDQ Instruction" white paper (December 2009).
+void LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info,
+                                                   IntegerType *ClmulTy) {
+  Type *CRCTy = Info.LHS->getType();
+  LLVMContext &Ctx = CRCTy->getContext();
+  unsigned CRCBW = CRCTy->getIntegerBitWidth();
+  // The loop's TripCount determines how many bits of the data are processed,
+  // regardless of whether the actual data bit width matches (if auxiliary data
+  // is even used at all).
+  unsigned TC = Info.TripCount;
+  unsigned ClmulBW = ClmulTy->getBitWidth();
+
+  // First, generate the constants required for GF(2) Barrett reduction.
+  auto [Mu, FullGenPoly] = HashRecognize::genBarrettConstants(Info);
+  Value *MuConst = ConstantInt::get(Ctx, Mu.zext(ClmulBW));
+  Value *GenPolyConst = ConstantInt::get(Ctx, FullGenPoly.zext(ClmulBW));
+
+  IRBuilder<> Builder(CurLoop->getLoopPreheader()->getTerminator());
+
+  auto LoTCBits = [TC, &Builder, &Ctx](Value *Op, const Twine &Name) {
+    unsigned OpBW = Op->getType()->getIntegerBitWidth();
+    assert(OpBW >= TC && "Bit width should be at least TripCount");
+    auto *Mask = ConstantInt::get(Ctx, APInt::getLowBitsSet(OpBW, TC));
+    return Builder.CreateAnd(Op, Mask, Name);
+  };
+
+  Value *LHS = Builder.CreateZExt(Info.LHS, ClmulTy, "crc.cast");
+
+  // Based on the Intel white paper, in our case, we have
+  // R(x) = (LHS*x^TC) xor (LHSAux ? getTCBits(LHSAux)*x^CRCBW : 0)
+  // since the CRC loop multiplies LHS by x each iteration, and the x^CRCBW term
+  // of getTCBits(LHSAux) is XORed in for the significant bit check.
+  // Rather than compute the full R(x), we can split it in two: a quotient for
+  // step 1 (floor(R(x)/x^CRCBW)) and a remainder for step 3 (R(x) mod x^CRCBW).
+  //
+  // ClmulMuInput is an evolving variable that will eventually become the part
+  // used in step 1, which can be simplified to
+  // (LHS*x^(TC-CRCBW)) xor (LHSAux ? getTCBits(LHSAux) : 0).
+  // Thanks to restrictions imposed by HashRecognize for big-endian CRC loops,
+  // getTCBits(LHSAux) = LHSAux*x^(TC-CRCBW), so this can be further simplified
+  // to (LHS xor (LHSAux ? LHSAux : 0))*x^(TC-CRCBW).
+  Value *ClmulMuInput = LHS;
+
+  // If auxiliary data is present, XOR it in with the CRC.
+  if (Value *Data = Info.LHSAux) {
+    // This is usually a zext, but DataBW may exceed ClmulBW if both CRCBW and
+    // TC are small enough.
+    Data = Builder.CreateZExtOrTrunc(Data, ClmulTy, "data.cast");
+
+    ClmulMuInput = Builder.CreateXor(ClmulMuInput, Data, "xor.crc.data");
+  }
+
+  // Align the current CRC with TripCount (multiply or divide by x^(TC-CRCBW)).
+  if (Info.IsBigEndian && TC != CRCBW) {
+    ClmulMuInput =
+        TC > CRCBW
+            ? Builder.CreateShl(ClmulMuInput, TC - CRCBW, "crc.align.tc")
+            : Builder.CreateLShr(ClmulMuInput, CRCBW - TC, "crc.align.tc");
+  }
+
+  // Zero out any bits above (TC-1) for calculation since the original loop
+  // doesn't use them in the significant bit checks.
+  ClmulMuInput = LoTCBits(ClmulMuInput, "crc.tcbits");
+
+  // Step 1: T1(x) = floor(R(x)/x^CRCBW) * mu
+  // Input is TC bits and mu is TC+1 bits, so result will be 2*TC bits.
+  Value *ClmulMu = Builder.CreateBinaryIntrinsic(
+      Intrinsic::clmul, ClmulMuInput, MuConst, /*FMFSource=*/{}, "clmul.mu");
+
+  // Calculate floor(T1(x)/x^TC) for step 2.
+  Value *ClmulGPInput = Info.IsBigEndian
+                            ? Builder.CreateLShr(ClmulMu, TC, "quot.lshr")
+                            : LoTCBits(ClmulMu, "quot.mask");
+
+  // Step 2: T2(x) = floor(T1(x)/x^TC) * P(x)
+  // Input is TC bits and P(x) is CRCBW+1 bits, so result will be CRCBW+TC bits.
+  Value *ClmulGP = Builder.CreateBinaryIntrinsic(Intrinsic::clmul, ClmulGPInput,
+                                                 GenPolyConst,
+                                                 /*FMFSource=*/{}, "clmul.gp");
+
+  // Calculate the least significant part of R(x) for step 3 as specified above.
+  // R(x) mod x^CRCBW = LHS*x^TC mod x^CRCBW, though the (mod x^CRCBW) is
+  // handled later on when truncating back to CRCBW for ComputedValue.
+  Value *CRCAlignClmul =
+      Info.IsBigEndian ? Builder.CreateShl(LHS, TC, "crc.shl") : LHS;
+
+  // Step 3: C(x) = (R(x) xor T2(x)) mod x^CRCBW
+  Value *CRCNext = Builder.CreateXor(CRCAlignClmul, ClmulGP, "xor.crc.mult");
+  if (!Info.IsBigEndian)
+    CRCNext = Builder.CreateLShr(CRCNext, TC, "crc.lshr");
+
+  // Bring the result back down the the CRC bit width.
+  CRCNext = Builder.CreateTrunc(CRCNext, CRCTy, "crc.next");
+
+  // Replace the result of the loop with the new computed CRC value.
+  Info.ComputedValue->replaceUsesOutsideBlock(CRCNext, CurLoop->getLoopLatch());
+
+  // Finally, clean up the loop as much as possible so it can be trivially
+  // deleted.
+  {
+    for (PHINode &PN : make_early_inc_range(CurLoop->getHeader()->phis())) {
+      PN.replaceAllUsesWith(PoisonValue::get(PN.getType()));
+      RecursivelyDeleteDeadPHINode(&PN);
+    }
+    // Replace the exit condition with constant true/false to always cause a
+    // branch to the exit block.
+    deleteDeadInstruction(CurLoop->getLatchCmpInst());
+    auto *BrInst = cast<CondBrInst>(CurLoop->getLoopLatch()->getTerminator());
+    BrInst->setCondition(ConstantInt::getBool(
+        Ctx, BrInst->getSuccessor(0) == CurLoop->getExitBlock()));
+    SE->forgetLoop(CurLoop);
+  }
+}
+
+void LoopIdiomRecognize::optimizeCRCLoopUsingTableLookup(
+    const PolynomialInfo &Info) {
   // First, create a new GlobalVariable corresponding to the
   // Sarwate-lookup-table.
   Type *CRCTy = Info.LHS->getType();
   unsigned CRCBW = CRCTy->getIntegerBitWidth();
   std::array<Constant *, 256> CRCConstants;
-  transform(HashRecognize::genSarwateTable(Info.RHS, Info.ByteOrderSwapped),
+  transform(HashRecognize::genSarwateTable(Info.RHS, Info.IsBigEndian),
             CRCConstants.begin(),
             [CRCTy](const APInt &E) { return ConstantInt::get(CRCTy, E); });
   Constant *ConstArray =
       ConstantArray::get(ArrayType::get(CRCTy, 256), CRCConstants);
-  GlobalVariable *GV =
-      new GlobalVariable(M, ConstArray->getType(), true,
-                         GlobalValue::PrivateLinkage, ConstArray, ".crctable");
+  GlobalVariable *GV = new GlobalVariable(
+      *CurLoop->getHeader()->getModule(), ConstArray->getType(), true,
+      GlobalValue::PrivateLinkage, ConstArray, ".crctable");
 
   PHINode *IV = CurLoop->getCanonicalInductionVariable();
   SmallVector<PHINode *, 2> Cleanup;
@@ -1581,7 +1774,7 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
   {
     unsigned NewBTC = (Info.TripCount / 8) - 1;
     BasicBlock *LoopBlk = CurLoop->getLoopLatch();
-    BranchInst *BrInst = cast<BranchInst>(LoopBlk->getTerminator());
+    CondBrInst *BrInst = cast<CondBrInst>(LoopBlk->getTerminator());
     CmpPredicate ExitPred = BrInst->getSuccessor(0) == LoopBlk
                                 ? ICmpInst::Predicate::ICMP_NE
                                 : ICmpInst::Predicate::ICMP_EQ;
@@ -1643,17 +1836,16 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
       Value *IVBits = Builder.CreateZExtOrTrunc(
           Builder.CreateShl(IV, 3, "iv.bits"), DataTy, "iv.indexer");
       Value *DataIndexer =
-          Info.ByteOrderSwapped
-              ? Builder.CreateShl(Data, IVBits, "data.indexer")
-              : Builder.CreateLShr(Data, IVBits, "data.indexer");
+          Info.IsBigEndian ? Builder.CreateShl(Data, IVBits, "data.indexer")
+                           : Builder.CreateLShr(Data, IVBits, "data.indexer");
       Indexer = Builder.CreateXor(
           DataIndexer,
           Builder.CreateZExtOrTrunc(Indexer, DataTy, "crc.indexer.cast"),
           "crc.data.indexer");
     }
 
-    Indexer = Info.ByteOrderSwapped ? HiIdx(Builder, Indexer, "indexer.hi")
-                                    : LoByte(Builder, Indexer, "indexer.lo");
+    Indexer = Info.IsBigEndian ? HiIdx(Builder, Indexer, "indexer.hi")
+                               : LoByte(Builder, Indexer, "indexer.lo");
 
     // Always index into a GEP using the index type.
     Indexer = Builder.CreateZExt(
@@ -1669,7 +1861,7 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
     // CRC-8.
     Value *CRCNext = CRCTableLd;
     if (CRCBW > 8) {
-      Value *CRCShift = Info.ByteOrderSwapped
+      Value *CRCShift = Info.IsBigEndian
                             ? Builder.CreateShl(CRC, 8, "crc.be.shift")
                             : Builder.CreateLShr(CRC, 8, "crc.le.shift");
       CRCNext = Builder.CreateXor(CRCShift, CRCTableLd, "crc.next");
@@ -1687,7 +1879,6 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
       RecursivelyDeleteDeadPHINode(PN);
     SE->forgetLoop(CurLoop);
   }
-  return true;
 }
 
 bool LoopIdiomRecognize::runOnNoncountableLoop() {
@@ -1707,11 +1898,8 @@ bool LoopIdiomRecognize::runOnNoncountableLoop() {
 /// behavior, the variable involved in the comparison is returned. This function
 /// will be called to see if the precondition and postcondition of the loop are
 /// in desirable form.
-static Value *matchCondition(BranchInst *BI, BasicBlock *LoopEntry,
+static Value *matchCondition(CondBrInst *BI, BasicBlock *LoopEntry,
                              bool JmpOnZero = false) {
-  if (!BI || !BI->isConditional())
-    return nullptr;
-
   ICmpInst *Cond = dyn_cast<ICmpInst>(BI->getCondition());
   if (!Cond)
     return nullptr;
@@ -1750,11 +1938,8 @@ public:
 
     // It should have a preheader and a branch instruction.
     BasicBlock *Preheader = CurLoop->getLoopPreheader();
-    if (!Preheader)
-      return false;
-
-    BranchInst *EntryBI = dyn_cast<BranchInst>(Preheader->getTerminator());
-    if (!EntryBI)
+    if (!Preheader ||
+        !isa<UncondBrInst, CondBrInst>(Preheader->getTerminator()))
       return false;
 
     // The loop exit must be conditioned on an icmp with 0 the null terminator.
@@ -1766,7 +1951,9 @@ public:
     if (!LoopBody || LoopBody->size() >= 15)
       return false;
 
-    BranchInst *LoopTerm = dyn_cast<BranchInst>(LoopBody->getTerminator());
+    CondBrInst *LoopTerm = dyn_cast<CondBrInst>(LoopBody->getTerminator());
+    if (!LoopTerm)
+      return false;
     Value *LoopCond = matchCondition(LoopTerm, LoopBody);
     if (!LoopCond)
       return false;
@@ -1923,8 +2110,8 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
   BasicBlock *LoopBody = *CurLoop->block_begin();
   BasicBlock *LoopExitBB = CurLoop->getExitBlock();
-  BranchInst *LoopTerm = dyn_cast<BranchInst>(LoopBody->getTerminator());
-  assert(Preheader && LoopBody && LoopExitBB && LoopTerm &&
+  CondBrInst *LoopTerm = cast<CondBrInst>(LoopBody->getTerminator());
+  assert(Preheader && LoopBody && LoopExitBB &&
          "Should be verified to be valid by StrlenVerifier");
 
   if (Verifier.OpWidth == 8) {
@@ -1987,8 +2174,7 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
 
   // LoopDeletion only delete invariant loops with known trip-count. We can
   // update the condition so it will reliablely delete the invariant loop
-  assert(LoopTerm->getNumSuccessors() == 2 &&
-         (LoopTerm->getSuccessor(0) == LoopBody ||
+  assert((LoopTerm->getSuccessor(0) == LoopBody ||
           LoopTerm->getSuccessor(1) == LoopBody) &&
          "loop body must have a successor that is it self");
   ConstantInt *NewLoopCond = LoopTerm->getSuccessor(0) == LoopBody
@@ -2012,11 +2198,8 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
 /// comparison between a variable and a constant, and if the comparison is false
 /// the control yields to the loop entry. If the branch matches the behaviour,
 /// the variable involved in the comparison is returned.
-static Value *matchShiftULTCondition(BranchInst *BI, BasicBlock *LoopEntry,
+static Value *matchShiftULTCondition(CondBrInst *BI, BasicBlock *LoopEntry,
                                      APInt &Threshold) {
-  if (!BI || !BI->isConditional())
-    return nullptr;
-
   ICmpInst *Cond = dyn_cast<ICmpInst>(BI->getCondition());
   if (!Cond)
     return nullptr;
@@ -2087,9 +2270,10 @@ static bool detectShiftUntilLessThanIdiom(Loop *CurLoop, const DataLayout &DL,
   LoopEntry = *(CurLoop->block_begin());
 
   // step 1: Check if the loop-back branch is in desirable form.
-  if (Value *T = matchShiftULTCondition(
-          dyn_cast<BranchInst>(LoopEntry->getTerminator()), LoopEntry,
-          Threshold))
+  auto *EntryBI = dyn_cast<CondBrInst>(LoopEntry->getTerminator());
+  if (!EntryBI)
+    return false;
+  if (Value *T = matchShiftULTCondition(EntryBI, LoopEntry, Threshold))
     DefX = dyn_cast<Instruction>(T);
   else
     return false;
@@ -2189,11 +2373,10 @@ static bool detectPopcountIdiom(Loop *CurLoop, BasicBlock *PreCondBB,
 
   // step 1: Check if the loop-back branch is in desirable form.
   {
-    if (Value *T = matchCondition(
-            dyn_cast<BranchInst>(LoopEntry->getTerminator()), LoopEntry))
-      DefX2 = dyn_cast<Instruction>(T);
-    else
+    auto *LoopTerm = dyn_cast<CondBrInst>(LoopEntry->getTerminator());
+    if (!LoopTerm)
       return false;
+    DefX2 = dyn_cast_or_null<Instruction>(matchCondition(LoopTerm, LoopEntry));
   }
 
   // step 2: detect instructions corresponding to "x2 = x1 & (x1 - 1)"
@@ -2265,7 +2448,9 @@ static bool detectPopcountIdiom(Loop *CurLoop, BasicBlock *PreCondBB,
   // step 5: check if the precondition is in this form:
   //   "if (x != 0) goto loop-head ; else goto somewhere-we-don't-care;"
   {
-    auto *PreCondBr = dyn_cast<BranchInst>(PreCondBB->getTerminator());
+    auto *PreCondBr = dyn_cast<CondBrInst>(PreCondBB->getTerminator());
+    if (!PreCondBr)
+      return false;
     Value *T = matchCondition(PreCondBr, CurLoop->getLoopPreheader());
     if (T != PhiX->getOperand(0) && T != PhiX->getOperand(1))
       return false;
@@ -2318,11 +2503,10 @@ static bool detectShiftUntilZeroIdiom(Loop *CurLoop, const DataLayout &DL,
   LoopEntry = *(CurLoop->block_begin());
 
   // step 1: Check if the loop-back branch is in desirable form.
-  if (Value *T = matchCondition(
-          dyn_cast<BranchInst>(LoopEntry->getTerminator()), LoopEntry))
-    DefX = dyn_cast<Instruction>(T);
-  else
+  auto *LoopTerm = dyn_cast<CondBrInst>(LoopEntry->getTerminator());
+  if (!LoopTerm)
     return false;
+  DefX = dyn_cast_or_null<Instruction>(matchCondition(LoopTerm, LoopEntry));
 
   // step 2: detect instructions corresponding to "x.next = x >> 1 or x << 1"
   if (!DefX || !DefX->isShift())
@@ -2384,10 +2568,7 @@ bool LoopIdiomRecognize::isProfitableToInsertFFS(Intrinsic::ID IntrinID,
   const Value *Args[] = {InitX,
                          ConstantInt::getBool(InitX->getContext(), ZeroCheck)};
 
-  // @llvm.dbg doesn't count as they have no semantic effect.
-  auto InstWithoutDebugIt = CurLoop->getHeader()->instructionsWithoutDebug();
-  uint32_t HeaderSize =
-      std::distance(InstWithoutDebugIt.begin(), InstWithoutDebugIt.end());
+  uint32_t HeaderSize = CurLoop->getHeader()->size();
 
   IntrinsicCostAttributes Attrs(IntrinID, InitX->getType(), Args);
   InstructionCost Cost = TTI->getIntrinsicInstrCost(
@@ -2438,7 +2619,7 @@ bool LoopIdiomRecognize::insertFFSIfProfitable(Intrinsic::ID IntrinID,
     auto *PreCondBB = PH->getSinglePredecessor();
     if (!PreCondBB)
       return false;
-    auto *PreCondBI = dyn_cast<BranchInst>(PreCondBB->getTerminator());
+    auto *PreCondBI = dyn_cast<CondBrInst>(PreCondBB->getTerminator());
     if (!PreCondBI)
       return false;
     if (matchCondition(PreCondBI, PH) != InitX)
@@ -2520,7 +2701,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilLessThan() {
   auto *PreCondBB = PH->getSinglePredecessor();
   if (!PreCondBB)
     return false;
-  auto *PreCondBI = dyn_cast<BranchInst>(PreCondBB->getTerminator());
+  auto *PreCondBI = dyn_cast<CondBrInst>(PreCondBB->getTerminator());
   if (!PreCondBI)
     return false;
 
@@ -2577,8 +2758,8 @@ bool LoopIdiomRecognize::recognizePopcount() {
   BasicBlock *PH = CurLoop->getLoopPreheader();
   if (!PH || &PH->front() != PH->getTerminator())
     return false;
-  auto *EntryBI = dyn_cast<BranchInst>(PH->getTerminator());
-  if (!EntryBI || EntryBI->isConditional())
+  auto *EntryBI = dyn_cast<UncondBrInst>(PH->getTerminator());
+  if (!EntryBI)
     return false;
 
   // It should have a precondition block where the generated popcount intrinsic
@@ -2586,8 +2767,8 @@ bool LoopIdiomRecognize::recognizePopcount() {
   auto *PreCondBB = PH->getSinglePredecessor();
   if (!PreCondBB)
     return false;
-  auto *PreCondBI = dyn_cast<BranchInst>(PreCondBB->getTerminator());
-  if (!PreCondBI || PreCondBI->isUnconditional())
+  auto *PreCondBI = dyn_cast<CondBrInst>(PreCondBB->getTerminator());
+  if (!PreCondBI)
     return false;
 
   Instruction *CntInst;
@@ -2600,27 +2781,23 @@ bool LoopIdiomRecognize::recognizePopcount() {
   return true;
 }
 
-static CallInst *createPopcntIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
-                                       const DebugLoc &DL) {
+static Value *createPopcntIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
+                                    const DebugLoc &DL) {
   Value *Ops[] = {Val};
   Type *Tys[] = {Val->getType()};
 
-  CallInst *CI = IRBuilder.CreateIntrinsic(Intrinsic::ctpop, Tys, Ops);
-  CI->setDebugLoc(DL);
-
-  return CI;
+  IRBuilder.SetCurrentDebugLocation(DL);
+  return IRBuilder.CreateIntrinsic(Intrinsic::ctpop, Tys, Ops);
 }
 
-static CallInst *createFFSIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
-                                    const DebugLoc &DL, bool ZeroCheck,
-                                    Intrinsic::ID IID) {
+static Value *createFFSIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
+                                 const DebugLoc &DL, bool ZeroCheck,
+                                 Intrinsic::ID IID) {
   Value *Ops[] = {Val, IRBuilder.getInt1(ZeroCheck)};
   Type *Tys[] = {Val->getType()};
 
-  CallInst *CI = IRBuilder.CreateIntrinsic(IID, Tys, Ops);
-  CI->setDebugLoc(DL);
-
-  return CI;
+  IRBuilder.SetCurrentDebugLocation(DL);
+  return IRBuilder.CreateIntrinsic(IID, Tys, Ops);
 }
 
 /// Transform the following loop (Using CTLZ, CTTZ is similar):
@@ -2658,10 +2835,8 @@ void LoopIdiomRecognize::transformLoopToCountable(
     Intrinsic::ID IntrinID, BasicBlock *Preheader, Instruction *CntInst,
     PHINode *CntPhi, Value *InitX, Instruction *DefX, const DebugLoc &DL,
     bool ZeroCheck, bool IsCntPhiUsedOutsideLoop, bool InsertSub) {
-  BranchInst *PreheaderBr = cast<BranchInst>(Preheader->getTerminator());
-
   // Step 1: Insert the CTLZ/CTTZ instruction at the end of the preheader block
-  IRBuilder<> Builder(PreheaderBr);
+  IRBuilder<> Builder(Preheader->getTerminator());
   Builder.SetCurrentDebugLocation(DL);
 
   // If there are no uses of CntPhi crate:
@@ -2717,7 +2892,7 @@ void LoopIdiomRecognize::transformLoopToCountable(
   //   ...
   //   Br: loop if (Dec != 0)
   BasicBlock *Body = *(CurLoop->block_begin());
-  auto *LbBr = cast<BranchInst>(Body->getTerminator());
+  auto *LbBr = cast<CondBrInst>(Body->getTerminator());
   ICmpInst *LbCond = cast<ICmpInst>(LbBr->getCondition());
 
   PHINode *TcPhi = PHINode::Create(CountTy, 2, "tcphi");
@@ -2752,7 +2927,7 @@ void LoopIdiomRecognize::transformLoopToPopcount(BasicBlock *PreCondBB,
                                                  Instruction *CntInst,
                                                  PHINode *CntPhi, Value *Var) {
   BasicBlock *PreHead = CurLoop->getLoopPreheader();
-  auto *PreCondBr = cast<BranchInst>(PreCondBB->getTerminator());
+  auto *PreCondBr = cast<CondBrInst>(PreCondBB->getTerminator());
   const DebugLoc &DL = CntInst->getDebugLoc();
 
   // Assuming before transformation, the loop is following:
@@ -2823,7 +2998,7 @@ void LoopIdiomRecognize::transformLoopToPopcount(BasicBlock *PreCondBB,
   //     do { cnt++; x &= x-1; t--) } while (t > 0);
   BasicBlock *Body = *(CurLoop->block_begin());
   {
-    auto *LbBr = cast<BranchInst>(Body->getTerminator());
+    auto *LbBr = cast<CondBrInst>(Body->getTerminator());
     ICmpInst *LbCond = cast<ICmpInst>(LbBr->getCondition());
     Type *Ty = TripCnt->getType();
 
@@ -3128,7 +3303,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
   Value *Mask =
       Builder.CreateOr(LowBitMask, BitMask, BitPos->getName() + ".mask");
   Value *XMasked = Builder.CreateAnd(X, Mask, X->getName() + ".masked");
-  CallInst *XMaskedNumLeadingZeros = Builder.CreateIntrinsic(
+  Value *XMaskedNumLeadingZeros = Builder.CreateIntrinsic(
       IntrID, Ty, {XMasked, /*is_zero_poison=*/Builder.getTrue()},
       /*FMFSource=*/nullptr, XMasked->getName() + ".numleadingzeros");
   Value *XMaskedNumActiveBits = Builder.CreateSub(
@@ -3488,7 +3663,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilZero() {
 
   // Step 1: Compute the loop's final IV value / trip count.
 
-  CallInst *ValNumLeadingZeros = Builder.CreateIntrinsic(
+  Value *ValNumLeadingZeros = Builder.CreateIntrinsic(
       IntrID, Ty, {Val, /*is_zero_poison=*/Builder.getFalse()},
       /*FMFSource=*/nullptr, Val->getName() + ".numleadingzeros");
   Value *ValNumActiveBits = Builder.CreateSub(

@@ -247,19 +247,22 @@ template <typename T> class JSONTransportTest : public PipePairTest {
 protected:
   SubsystemRAII<FileSystem> subsystems;
 
+  MainLoop loop;
   test_protocol::MessageHandler message_handler;
   std::unique_ptr<T> transport;
-  MainLoop loop;
 
   void SetUp() override {
     PipePairTest::SetUp();
     transport = std::make_unique<T>(
-        std::make_shared<NativeFile>(input.GetReadFileDescriptor(),
+        loop,
+        std::make_shared<NativeFile>(input.ReleaseReadFileDescriptor(),
                                      File::eOpenOptionReadOnly,
-                                     NativeFile::Unowned),
-        std::make_shared<NativeFile>(output.GetWriteFileDescriptor(),
+                                     NativeFile::Owned),
+        std::make_shared<NativeFile>(output.ReleaseWriteFileDescriptor(),
                                      File::eOpenOptionWriteOnly,
-                                     NativeFile::Unowned));
+                                     NativeFile::Owned));
+    EXPECT_THAT_ERROR(transport->RegisterMessageHandler(message_handler),
+                      Succeeded());
   }
 
   /// Run the transport MainLoop and return any messages received.
@@ -272,17 +275,13 @@ protected:
         loop.RequestTermination();
       });
     }
-    bool addition_succeeded = loop.AddCallback(
+    bool registered_timeout = loop.AddCallback(
         [](MainLoopBase &loop) {
           loop.RequestTermination();
           FAIL() << "timeout";
         },
         timeout);
-    EXPECT_TRUE(addition_succeeded);
-    auto handle = transport->RegisterMessageHandler(loop, message_handler);
-    if (!handle)
-      return handle.takeError();
-
+    EXPECT_TRUE(registered_timeout);
     return loop.Run().takeError();
   }
 
@@ -360,14 +359,13 @@ protected:
   MainLoop loop;
 
   void SetUp() override {
-    std::tie(to_remote, from_remote) = test_protocol::Transport::createPair();
+    std::tie(to_remote, from_remote) =
+        test_protocol::Transport::createPair(loop);
     binder = std::make_unique<test_protocol::Binder>(*to_remote);
 
-    auto binder_handle = to_remote->RegisterMessageHandler(loop, remote);
-    EXPECT_THAT_EXPECTED(binder_handle, Succeeded());
-
-    auto remote_handle = from_remote->RegisterMessageHandler(loop, *binder);
-    EXPECT_THAT_EXPECTED(remote_handle, Succeeded());
+    EXPECT_THAT_ERROR(to_remote->RegisterMessageHandler(remote), Succeeded());
+    EXPECT_THAT_ERROR(from_remote->RegisterMessageHandler(*binder),
+                      Succeeded());
   }
 
   void Run() {
@@ -481,6 +479,15 @@ TEST_F(HTTPDelimitedJSONTransportTest, ReadWithEOF) {
   ASSERT_THAT_ERROR(Run(), Succeeded());
 }
 
+TEST_F(HTTPDelimitedJSONTransportTest, ReadWithEOFDestroyTransportOnClose) {
+  input.CloseWriteFileDescriptor();
+  EXPECT_CALL(message_handler, OnClosed()).WillOnce([this]() {
+    transport.reset();
+    loop.RequestTermination();
+  });
+  ASSERT_THAT_ERROR(loop.Run().takeError(), Succeeded());
+}
+
 TEST_F(HTTPDelimitedJSONTransportTest, ReaderWithUnhandledData) {
   std::string json = R"json({"str": "foo"})json";
   std::string message =
@@ -502,8 +509,8 @@ TEST_F(HTTPDelimitedJSONTransportTest, ReaderWithUnhandledData) {
 
 TEST_F(HTTPDelimitedJSONTransportTest, InvalidTransport) {
   transport =
-      std::make_unique<TestHTTPDelimitedJSONTransport>(nullptr, nullptr);
-  ASSERT_THAT_ERROR(Run(/*close_input=*/false),
+      std::make_unique<TestHTTPDelimitedJSONTransport>(loop, nullptr, nullptr);
+  ASSERT_THAT_ERROR(transport->RegisterMessageHandler(message_handler),
                     FailedWithMessage("IO object is not valid."));
 }
 
@@ -590,6 +597,15 @@ TEST_F(JSONRPCTransportTest, ReadWithEOF) {
   ASSERT_THAT_ERROR(Run(), Succeeded());
 }
 
+TEST_F(JSONRPCTransportTest, ReadWithEOFDestroyTransportOnClose) {
+  input.CloseWriteFileDescriptor();
+  EXPECT_CALL(message_handler, OnClosed()).WillOnce([this]() {
+    transport.reset();
+    loop.RequestTermination();
+  });
+  ASSERT_THAT_ERROR(loop.Run().takeError(), Succeeded());
+}
+
 TEST_F(JSONRPCTransportTest, ReaderWithUnhandledData) {
   std::string message = R"json({"req": "foo")json";
   // Write an incomplete message and close the handle.
@@ -624,8 +640,8 @@ TEST_F(JSONRPCTransportTest, Write) {
 }
 
 TEST_F(JSONRPCTransportTest, InvalidTransport) {
-  transport = std::make_unique<TestJSONRPCTransport>(nullptr, nullptr);
-  ASSERT_THAT_ERROR(Run(/*close_input=*/false),
+  transport = std::make_unique<TestJSONRPCTransport>(loop, nullptr, nullptr);
+  ASSERT_THAT_ERROR(transport->RegisterMessageHandler(message_handler),
                     FailedWithMessage("IO object is not valid."));
 }
 
@@ -762,6 +778,77 @@ TEST_F(TransportBinderTest, InBoundRequestsVoidParamsAndResult) {
   EXPECT_CALL(remote, Received(Response{4, 0, std::nullopt}));
   Run();
   EXPECT_TRUE(called);
+}
+
+// In-bound asynchronous request handler that defers its reply.
+TEST_F(TransportBinderTest, InBoundAsyncRequests) {
+  Reply<MyFnResult> saved_reply;
+  MyFnParams saved_params;
+  binder->BindAsync<MyFnResult, MyFnParams>(
+      "add", [&](const MyFnParams &params, Reply<MyFnResult> reply) {
+        saved_params = params;
+        saved_reply = std::move(reply);
+      });
+
+  EXPECT_THAT_ERROR(from_remote->Send(Request{1, "add", MyFnParams{3, 4}}),
+                    Succeeded());
+  // The handler runs but does not reply, so no response is sent yet.
+  Run();
+  ASSERT_TRUE(static_cast<bool>(saved_reply));
+  EXPECT_EQ(saved_params.a, 3);
+  EXPECT_EQ(saved_params.b, 4);
+
+  // Replying later sends the response.
+  saved_reply(MyFnResult{7});
+  EXPECT_CALL(remote, Received(Response{1, 0, MyFnResult{7}}));
+  Run();
+}
+
+TEST_F(TransportBinderTest, InBoundAsyncRequestsVoidParams) {
+  Reply<MyFnResult> saved_reply;
+  binder->BindAsync<MyFnResult, void>(
+      "ping", [&](Reply<MyFnResult> reply) { saved_reply = std::move(reply); });
+
+  EXPECT_THAT_ERROR(from_remote->Send(Request{2, "ping", std::nullopt}),
+                    Succeeded());
+  Run();
+  ASSERT_TRUE(static_cast<bool>(saved_reply));
+
+  saved_reply(MyFnResult{5});
+  EXPECT_CALL(remote, Received(Response{2, 0, MyFnResult{5}}));
+  Run();
+}
+
+TEST_F(TransportBinderTest, InBoundAsyncRequestsError) {
+  binder->BindAsync<MyFnResult, MyFnParams>(
+      "add", [&](const MyFnParams &, Reply<MyFnResult> reply) {
+        reply(llvm::createStringError("nope"));
+      });
+
+  EXPECT_THAT_ERROR(from_remote->Send(Request{3, "add", MyFnParams{1, 2}}),
+                    Succeeded());
+  EXPECT_CALL(remote, Received(Response{3, 1, "nope"}));
+  Run();
+}
+
+TEST_F(TransportBinderTest, FailPendingRequests) {
+  OutgoingRequest<MyFnResult, MyFnParams> addFn =
+      binder->Bind<MyFnResult, MyFnParams>("add");
+  bool replied = false;
+  std::string message;
+  addFn(MyFnParams{1, 2}, [&](Expected<MyFnResult> result) {
+    replied = true;
+    message = toString(result.takeError());
+  });
+
+  // The request is now awaiting a response. FailPendingRequests fires its reply
+  // with an error, synchronously.
+  binder->FailPendingRequests("connection closed");
+  EXPECT_TRUE(replied);
+  EXPECT_THAT(message, HasSubstr("connection closed"));
+
+  // A second call is a no-op: nothing is left pending.
+  binder->FailPendingRequests("again");
 }
 
 // Out-bound binding event handler.

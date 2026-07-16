@@ -8,7 +8,7 @@ buffer_atomic_swap v5, off, s[8:11], s3 slc
 // GFX942: :[[@LINE-1]]:41: error: invalid operand for instruction
 
 buffer_invl2
-// GFX942: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX942: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx942): buffer_invl2
 
 buffer_wbl2 glc
 // GFX942: :[[@LINE-1]]:13: error: invalid operand for instruction
@@ -17,10 +17,10 @@ buffer_wbl2 scc
 // GFX942: :[[@LINE-1]]:13: error: invalid operand for instruction
 
 ds_ordered_count v5, v1 offset:65535 gds
-// GFX942: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX942: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx942): ds_ordered_count
 
 exp pos0 v3, v2, v1, v0
-// GFX942: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX942: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx942): exp
 
 global_load_dword v2, v[2:3], off glc
 // GFX942: :[[@LINE-1]]:35: error: invalid operand for instruction
@@ -86,31 +86,31 @@ v_dot2_u32_u16 v0, 1, v0, s2 op_sel:[0,1,0,1] op_sel_hi:[0,0,1,1]
 // GFX942: :[[@LINE-1]]:30: error: invalid op_sel operand
 
 v_mac_f32 v0, v1, v2
-// GFX942: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX942: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx942): v_mac_f32
 
 v_mac_f32_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX942: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX942: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx942): v_mac_f32
 
 v_mac_f32_dpp v5, v1, v2 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf
-// GFX942: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX942: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx942): v_mac_f32
 
 v_mac_f32_e64 v5, v1, v2
-// GFX942: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX942: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx942): v_mac_f32
 
 v_mac_f32_sdwa v5, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD src1_sel:DWORD
-// GFX942: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX942: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx942): v_mac_f32
 
 v_mad_f32 v0, v1, v2, v3
-// GFX942: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX942: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx942): v_mad_f32
 
 v_mad_legacy_f32 v0, v1, v2, v3
-// GFX942: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX942: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx942): v_mad_legacy_f32
 
 v_madak_f32 v0, v1, v2, 0
-// GFX942: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX942: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx942): v_madak_f32
 
 v_madmk_f32 v0, v1, 0, v2
-// GFX942: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX942: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx942): v_madmk_f32
 
 v_mov_b64 v[2:3], -v[4:5]
 // GFX942: :[[@LINE-1]]:19: error: not a valid operand.

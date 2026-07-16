@@ -34,6 +34,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -528,6 +529,25 @@ Sema::ActOnCaseExpr(SourceLocation CaseLoc, ExprResult Val) {
   return CheckAndFinish(Val.get());
 }
 
+static bool DiagnoseSwitchCaseInExpansionStmt(Sema &S, SourceLocation KwLoc,
+                                              bool IsDefault) {
+  // C++26 [stmt.expand] The compound-statement of an expansion-statement is a
+  // control-flow-limited statement.
+  //
+  // We diagnose this here rather than in JumpDiagnostics because those run
+  // after the expansion statement is instantiated, at which point we will have
+  // have already complained about duplicate case labels, which is not exactly
+  // great QOI.
+  if (S.CurContext->isExpansionStmt() &&
+      S.getCurFunction()->SwitchStack.back().EnclosingDC != S.CurContext) {
+    S.Diag(KwLoc, diag::err_expansion_stmt_case) << IsDefault;
+    S.Diag(S.getCurFunction()->SwitchStack.back().getPointer()->getSwitchLoc(),
+           diag::note_enclosing_switch_statement_here);
+    return true;
+  }
+  return false;
+}
+
 StmtResult
 Sema::ActOnCaseStmt(SourceLocation CaseLoc, ExprResult LHSVal,
                     SourceLocation DotDotDotLoc, ExprResult RHSVal,
@@ -546,6 +566,9 @@ Sema::ActOnCaseStmt(SourceLocation CaseLoc, ExprResult LHSVal,
     getCurFunction()->SwitchStack.back().setInt(true);
     return StmtError();
   }
+
+  if (DiagnoseSwitchCaseInExpansionStmt(*this, CaseLoc, false))
+    return StmtError();
 
   if (LangOpts.OpenACC &&
       getCurScope()->isInOpenACCComputeConstructScope(Scope::SwitchScope)) {
@@ -571,6 +594,9 @@ Sema::ActOnDefaultStmt(SourceLocation DefaultLoc, SourceLocation ColonLoc,
     Diag(DefaultLoc, diag::err_default_not_in_switch);
     return SubStmt;
   }
+
+  if (DiagnoseSwitchCaseInExpansionStmt(*this, DefaultLoc, true))
+    return StmtError();
 
   if (LangOpts.OpenACC &&
       getCurScope()->isInOpenACCComputeConstructScope(Scope::SwitchScope)) {
@@ -1196,8 +1222,9 @@ StmtResult Sema::ActOnStartOfSwitchStmt(SourceLocation SwitchLoc,
 
   auto *SS = SwitchStmt::Create(Context, InitStmt, Cond.get().first, CondExpr,
                                 LParenLoc, RParenLoc);
+  SS->setSwitchLoc(SwitchLoc);
   getCurFunction()->SwitchStack.push_back(
-      FunctionScopeInfo::SwitchInfo(SS, false));
+      FunctionScopeInfo::SwitchInfo(SS, CurContext));
   return SS;
 }
 
@@ -1313,7 +1340,7 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
     BodyStmt = new (Context) NullStmt(BodyStmt->getBeginLoc());
   }
 
-  SS->setBody(BodyStmt, SwitchLoc);
+  SS->setBody(BodyStmt);
 
   Expr *CondExpr = SS->getCond();
   if (!CondExpr) return StmtError();
@@ -1761,30 +1788,30 @@ Sema::DiagnoseAssignmentEnum(QualType DstType, QualType SrcType,
     return;
   }
 
-  typedef SmallVector<std::pair<llvm::APSInt, EnumConstantDecl *>, 64>
-      EnumValsTy;
-  EnumValsTy EnumVals;
+  const EnumDecl *Key = ED->getCanonicalDecl();
+  auto [It, Inserted] = AssignEnumCache.try_emplace(Key);
+  auto &Values = It->second;
 
-  // Gather all enum values, set their type and sort them,
-  // allowing easier comparison with rhs constant.
-  for (auto *EDI : ED->enumerators()) {
-    llvm::APSInt Val = EDI->getInitVal();
-    AdjustAPSInt(Val, DstWidth, DstIsSigned);
-    EnumVals.emplace_back(Val, EDI);
+  if (Inserted) {
+    Values.reserve(std::distance(ED->enumerator_begin(), ED->enumerator_end()));
+
+    for (auto *EC : ED->enumerators()) {
+      Values.push_back(EC->getInitVal());
+      AdjustAPSInt(Values.back(), DstWidth, DstIsSigned);
+    }
+
+    if (Values.empty())
+      return;
+
+    llvm::sort(Values);
+    Values.erase(llvm::unique(Values), Values.end());
   }
-  if (EnumVals.empty())
+
+  if (llvm::binary_search(Values, *RHSVal))
     return;
-  llvm::stable_sort(EnumVals, CmpEnumVals);
-  EnumValsTy::iterator EIend = llvm::unique(EnumVals, EqEnumVals);
 
-  // See which values aren't in the enum.
-  EnumValsTy::const_iterator EI = EnumVals.begin();
-  while (EI != EIend && EI->first < *RHSVal)
-    EI++;
-  if (EI == EIend || EI->first != *RHSVal) {
-    Diag(SrcExpr->getExprLoc(), diag::warn_not_in_enum_assignment)
-        << DstType.getUnqualifiedType();
-  }
+  Diag(SrcExpr->getExprLoc(), diag::warn_not_in_enum_assignment)
+      << DstType.getUnqualifiedType();
 }
 
 StmtResult Sema::ActOnWhileStmt(SourceLocation WhileLoc,
@@ -1794,7 +1821,6 @@ StmtResult Sema::ActOnWhileStmt(SourceLocation WhileLoc,
     return StmtError();
 
   auto CondVal = Cond.get();
-  CheckBreakContinueBinding(CondVal.second);
 
   if (CondVal.second &&
       !Diags.isIgnored(diag::warn_comma_operator, CondVal.second->getExprLoc()))
@@ -1822,7 +1848,6 @@ Sema::ActOnDoStmt(SourceLocation DoLoc, Stmt *Body,
                   Expr *Cond, SourceLocation CondRParen) {
   assert(Cond && "ActOnDoStmt(): missing expression");
 
-  CheckBreakContinueBinding(Cond);
   ExprResult CondResult = CheckBooleanCondition(DoLoc, Cond);
   if (CondResult.isInvalid())
     return StmtError();
@@ -1832,11 +1857,6 @@ Sema::ActOnDoStmt(SourceLocation DoLoc, Stmt *Body,
   if (CondResult.isInvalid())
     return StmtError();
   Cond = CondResult.get();
-
-  // Only call the CommaVisitor for C89 due to differences in scope flags.
-  if (Cond && !getLangOpts().C99 && !getLangOpts().CPlusPlus &&
-      !Diags.isIgnored(diag::warn_comma_operator, Cond->getExprLoc()))
-    CommaVisitor(*this).Visit(Cond);
 
   // OpenACC3.3 2.14.4:
   // The update directive is executable.  It must not appear in place of the
@@ -1996,9 +2016,33 @@ namespace {
     }
 
     void VisitDeclRefExpr(DeclRefExpr *E) {
-      if (VarDecl *VD = dyn_cast<VarDecl>(E->getDecl()))
+      if (const auto *VD = dyn_cast<VarDecl>(E->getDecl())) {
         if (Decls.count(VD))
           FoundDecl = true;
+      } else if (const auto *MD = dyn_cast<CXXMethodDecl>(E->getDecl());
+                 MD && isLambdaCallOperator(MD)) {
+        // FIXME: This has limitations handling updates to the loop control
+        // variable that occur indirectly inside a lambda called from the loop
+        // body. For example:
+        //
+        //   int a = 0;
+        //   int *c = &a;
+        //   auto incr_c = [c]() { ++*c; };
+        //   for (a = 10; a <= 20; incr_c())
+        //     foo(a);
+        for (const auto &Capture : MD->getParent()->captures()) {
+          if (!Capture.capturesVariable())
+            continue;
+
+          LambdaCaptureKind CK = Capture.getCaptureKind();
+          if (CK != LCK_ByRef)
+            continue;
+
+          const auto *VD = dyn_cast<VarDecl>(Capture.getCapturedVar());
+          if (VD && Decls.count(VD))
+            FoundDecl = true;
+        }
+      }
     }
 
     void VisitPseudoObjectExpr(PseudoObjectExpr *POE) {
@@ -2231,25 +2275,6 @@ namespace {
 
 } // end namespace
 
-
-void Sema::CheckBreakContinueBinding(Expr *E) {
-  if (!E || getLangOpts().CPlusPlus)
-    return;
-  BreakContinueFinder BCFinder(*this, E);
-  Scope *BreakParent = CurScope->getBreakParent();
-  if (BCFinder.BreakFound() && BreakParent) {
-    if (BreakParent->getFlags() & Scope::SwitchScope) {
-      Diag(BCFinder.GetBreakLoc(), diag::warn_break_binds_to_switch);
-    } else {
-      Diag(BCFinder.GetBreakLoc(), diag::warn_loop_ctrl_binds_to_inner)
-          << "break";
-    }
-  } else if (BCFinder.ContinueFound() && CurScope->getContinueParent()) {
-    Diag(BCFinder.GetContinueLoc(), diag::warn_loop_ctrl_binds_to_inner)
-        << "continue";
-  }
-}
-
 StmtResult Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
                               Stmt *First, ConditionResult Second,
                               FullExprArg third, SourceLocation RParenLoc,
@@ -2268,10 +2293,8 @@ StmtResult Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
         if (VarDecl *VD = dyn_cast<VarDecl>(DI)) {
           VarDeclSeen = true;
           if (VD->isLocalVarDecl() && !VD->hasLocalStorage())
-            Diag(DI->getLocation(),
-                 getLangOpts().C23
-                     ? diag::warn_c17_non_local_variable_decl_in_for
-                     : diag::ext_c23_non_local_variable_decl_in_for);
+            DiagCompat(DI->getLocation(),
+                       diag_compat::non_local_variable_decl_in_for);
         } else if (!NonVarSeen) {
           // Keep track of the first non-variable declaration we saw so that
           // we can diagnose if we don't see any variable declarations. This
@@ -2287,14 +2310,10 @@ StmtResult Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
       // Diagnose if we saw a non-variable declaration but no variable
       // declarations.
       if (NonVarSeen && !VarDeclSeen)
-        Diag(NonVarSeen->getLocation(),
-             getLangOpts().C23 ? diag::warn_c17_non_variable_decl_in_for
-                               : diag::ext_c23_non_variable_decl_in_for);
+        DiagCompat(NonVarSeen->getLocation(),
+                   diag_compat::non_variable_decl_in_for);
     }
   }
-
-  CheckBreakContinueBinding(Second.get().second);
-  CheckBreakContinueBinding(third.get());
 
   if (!Second.get().first)
     CheckForLoopConditionalStatement(*this, Second.get().second, third.get(),
@@ -2407,25 +2426,51 @@ void NoteForRangeBeginEndFunction(Sema &SemaRef, Expr *E,
   SemaRef.Diag(Loc, diag::note_for_range_begin_end)
     << BEF << IsTemplate << Description << E->getType();
 }
+} // namespace
 
 /// Build a variable declaration for a for-range statement.
-VarDecl *BuildForRangeVarDecl(Sema &SemaRef, SourceLocation Loc,
-                              QualType Type, StringRef Name) {
-  DeclContext *DC = SemaRef.CurContext;
-  IdentifierInfo *II = &SemaRef.PP.getIdentifierTable().get(Name);
-  TypeSourceInfo *TInfo = SemaRef.Context.getTrivialTypeSourceInfo(Type, Loc);
-  VarDecl *Decl = VarDecl::Create(SemaRef.Context, DC, Loc, Loc, II, Type,
-                                  TInfo, SC_None);
+VarDecl *Sema::BuildForRangeVarDecl(SourceLocation Loc, QualType Type,
+                                    IdentifierInfo *II, bool IsConstexpr) {
+  // Making the variable constexpr doesn't automatically add 'const' to the
+  // type, so do that now.
+  if (IsConstexpr && !Type->isReferenceType())
+    Type = Type.withConst();
+
+  DeclContext *DC = CurContext;
+  TypeSourceInfo *TInfo = Context.getTrivialTypeSourceInfo(Type, Loc);
+  VarDecl *Decl =
+      VarDecl::Create(Context, DC, Loc, Loc, II, Type, TInfo, SC_None);
   Decl->setImplicit();
   Decl->setCXXForRangeImplicitVar(true);
+  if (IsConstexpr)
+    // CWG3044 changed this from 'static constexpr' to 'constexpr'.
+    Decl->setConstexpr(true);
   return Decl;
-}
-
 }
 
 static bool ObjCEnumerationCollection(Expr *Collection) {
   return !Collection->isTypeDependent()
           && Collection->getType()->getAs<ObjCObjectPointerType>() != nullptr;
+}
+
+StmtResult Sema::BuildCXXForRangeRangeVar(Scope *S, Expr *Range, QualType Type,
+                                          bool IsConstexpr) {
+
+  // Divide by 2, since the variables are in the inner scope (loop body).
+  const auto DepthStr = std::to_string(S->getDepth() / 2);
+  IdentifierInfo *Name =
+      PP.getIdentifierInfo(std::string("__range") + DepthStr);
+  SourceLocation RangeLoc = Range->getBeginLoc();
+  VarDecl *RangeVar = BuildForRangeVarDecl(RangeLoc, Type, Name, IsConstexpr);
+  if (FinishForRangeVarDecl(*this, RangeVar, Range, RangeLoc,
+                            diag::err_for_range_deduction_failure))
+
+    return StmtError();
+
+  // Claim the type doesn't contain auto: we've already done the checking.
+  DeclGroupPtrTy RangeGroup =
+      BuildDeclaratorGroup(MutableArrayRef<Decl *>((Decl **)&RangeVar, 1));
+  return ActOnDeclStmt(RangeGroup, RangeLoc, RangeLoc);
 }
 
 StmtResult Sema::ActOnCXXForRangeStmt(
@@ -2472,22 +2517,8 @@ StmtResult Sema::ActOnCXXForRangeStmt(
   }
 
   // Build  auto && __range = range-init
-  // Divide by 2, since the variables are in the inner scope (loop body).
-  const auto DepthStr = std::to_string(S->getDepth() / 2);
-  SourceLocation RangeLoc = Range->getBeginLoc();
-  VarDecl *RangeVar = BuildForRangeVarDecl(*this, RangeLoc,
-                                           Context.getAutoRRefDeductType(),
-                                           std::string("__range") + DepthStr);
-  if (FinishForRangeVarDecl(*this, RangeVar, Range, RangeLoc,
-                            diag::err_for_range_deduction_failure)) {
-    ActOnInitializerError(LoopVar);
-    return StmtError();
-  }
-
-  // Claim the type doesn't contain auto: we've already done the checking.
-  DeclGroupPtrTy RangeGroup =
-      BuildDeclaratorGroup(MutableArrayRef<Decl *>((Decl **)&RangeVar, 1));
-  StmtResult RangeDecl = ActOnDeclStmt(RangeGroup, RangeLoc, RangeLoc);
+  auto RangeDecl =
+      BuildCXXForRangeRangeVar(S, Range, Context.getAutoRRefDeductType());
   if (RangeDecl.isInvalid()) {
     ActOnInitializerError(LoopVar);
     return StmtError();
@@ -2686,6 +2717,224 @@ static StmtResult RebuildForRangeWithDereference(Sema &SemaRef, Scope *S,
       AdjustedRange.get(), RParenLoc, Sema::BFRK_Rebuild);
 }
 
+void Sema::ApplyForRangeOrExpansionStatementLifetimeExtension(
+    VarDecl *RangeVar, ArrayRef<MaterializeTemporaryExpr *> Temporaries) {
+  if (Temporaries.empty())
+    return;
+
+  InitializedEntity Entity = InitializedEntity::InitializeVariable(RangeVar);
+  for (auto *MTE : Temporaries)
+    MTE->setExtendingDecl(RangeVar, Entity.allocateManglingNumber());
+}
+
+Sema::ForRangeBeginEndInfo Sema::BuildCXXForRangeBeginEndVars(
+    Scope *S, VarDecl *RangeVar, SourceLocation ColonLoc,
+    SourceLocation CoawaitLoc,
+    ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps,
+    BuildForRangeKind Kind, bool IsConstexpr, StmtResult *RebuildResult,
+    llvm::function_ref<StmtResult()> RebuildWithDereference,
+    IdentifierInfo *BeginName, IdentifierInfo *EndName) {
+  QualType RangeVarType = RangeVar->getType();
+  SourceLocation RangeLoc = RangeVar->getLocation();
+  const QualType RangeVarNonRefType = RangeVarType.getNonReferenceType();
+
+  ExprResult BeginRangeRef =
+      BuildDeclRefExpr(RangeVar, RangeVarNonRefType, VK_LValue, ColonLoc);
+  if (BeginRangeRef.isInvalid())
+    return {};
+
+  ExprResult EndRangeRef =
+      BuildDeclRefExpr(RangeVar, RangeVarNonRefType, VK_LValue, ColonLoc);
+  if (EndRangeRef.isInvalid())
+    return {};
+
+  QualType AutoType = Context.getAutoDeductType();
+  Expr *Range = RangeVar->getInit();
+  if (!Range)
+    return {};
+  QualType RangeType = Range->getType();
+
+  if (RequireCompleteType(RangeLoc, RangeType,
+                          diag::err_for_range_incomplete_type))
+    return {};
+
+  // Build auto __begin = begin-expr, __end = end-expr.
+  // Divide by 2, since the variables are in the inner scope (loop body).
+  const auto DepthStr = std::to_string(S->getDepth() / 2);
+  if (!BeginName)
+    BeginName = PP.getIdentifierInfo(std::string("__begin") + DepthStr);
+  if (!EndName)
+    EndName = PP.getIdentifierInfo(std::string("__end") + DepthStr);
+  VarDecl *BeginVar =
+      BuildForRangeVarDecl(ColonLoc, AutoType, BeginName, IsConstexpr);
+  VarDecl *EndVar =
+      BuildForRangeVarDecl(ColonLoc, AutoType, EndName, IsConstexpr);
+
+  // Build begin-expr and end-expr and attach to __begin and __end variables.
+  ExprResult BeginExpr, EndExpr;
+  if (const ArrayType *UnqAT = RangeType->getAsArrayTypeUnsafe()) {
+    // - if _RangeT is an array type, begin-expr and end-expr are __range and
+    //   __range + __bound, respectively, where __bound is the array bound. If
+    //   _RangeT is an array of unknown size or an array of incomplete type,
+    //   the program is ill-formed;
+
+    // begin-expr is __range.
+    BeginExpr = BeginRangeRef;
+    if (!CoawaitLoc.isInvalid()) {
+      BeginExpr = ActOnCoawaitExpr(S, ColonLoc, BeginExpr.get());
+      if (BeginExpr.isInvalid())
+        return {};
+    }
+    if (FinishForRangeVarDecl(*this, BeginVar, BeginRangeRef.get(), ColonLoc,
+                              diag::err_for_range_iter_deduction_failure)) {
+      NoteForRangeBeginEndFunction(*this, BeginExpr.get(), BEF_begin);
+      return {};
+    }
+
+    // Find the array bound.
+    ExprResult BoundExpr;
+    if (const ConstantArrayType *CAT = dyn_cast<ConstantArrayType>(UnqAT))
+      BoundExpr = IntegerLiteral::Create(
+          Context, CAT->getSize(), Context.getPointerDiffType(), RangeLoc);
+    else if (const VariableArrayType *VAT =
+                 dyn_cast<VariableArrayType>(UnqAT)) {
+      // For a variably modified type we can't just use the expression within
+      // the array bounds, since we don't want that to be re-evaluated here.
+      // Rather, we need to determine what it was when the array was first
+      // created - so we resort to using sizeof(vla)/sizeof(element).
+      // For e.g.
+      //  void f(int b) {
+      //    int vla[b];
+      //    b = -1;   <-- This should not affect the num of iterations below
+      //    for (int &c : vla) { .. }
+      //  }
+
+      // FIXME: This results in codegen generating IR that recalculates the
+      // run-time number of elements (as opposed to just using the IR Value
+      // that corresponds to the run-time value of each bound that was
+      // generated when the array was created.) If this proves too embarrassing
+      // even for unoptimized IR, consider passing a magic-value/cookie to
+      // codegen that then knows to simply use that initial llvm::Value (that
+      // corresponds to the bound at time of array creation) within
+      // getelementptr.  But be prepared to pay the price of increasing a
+      // customized form of coupling between the two components - which  could
+      // be hard to maintain as the codebase evolves.
+
+      ExprResult SizeOfVLAExprR = ActOnUnaryExprOrTypeTraitExpr(
+          EndVar->getLocation(), UETT_SizeOf,
+          /*IsType=*/true,
+          CreateParsedType(VAT->desugar(), Context.getTrivialTypeSourceInfo(
+                                               VAT->desugar(), RangeLoc))
+              .getAsOpaquePtr(),
+          EndVar->getSourceRange());
+      if (SizeOfVLAExprR.isInvalid())
+        return {};
+
+      ExprResult SizeOfEachElementExprR = ActOnUnaryExprOrTypeTraitExpr(
+          EndVar->getLocation(), UETT_SizeOf,
+          /*IsType=*/true,
+          CreateParsedType(VAT->desugar(), Context.getTrivialTypeSourceInfo(
+                                               VAT->getElementType(), RangeLoc))
+              .getAsOpaquePtr(),
+          EndVar->getSourceRange());
+      if (SizeOfEachElementExprR.isInvalid())
+        return {};
+
+      BoundExpr =
+          ActOnBinOp(S, EndVar->getLocation(), tok::slash, SizeOfVLAExprR.get(),
+                     SizeOfEachElementExprR.get());
+      if (BoundExpr.isInvalid())
+        return {};
+
+    } else {
+      // Can't be a DependentSizedArrayType or an IncompleteArrayType since
+      // UnqAT is not incomplete and Range is not type-dependent.
+      llvm_unreachable("Unexpected array type in for-range");
+    }
+
+    // end-expr is __range + __bound.
+    EndExpr =
+        ActOnBinOp(S, ColonLoc, tok::plus, EndRangeRef.get(), BoundExpr.get());
+    if (EndExpr.isInvalid())
+      return {};
+    if (FinishForRangeVarDecl(*this, EndVar, EndExpr.get(), ColonLoc,
+                              diag::err_for_range_iter_deduction_failure)) {
+      NoteForRangeBeginEndFunction(*this, EndExpr.get(), BEF_end);
+      return {};
+    }
+  } else {
+    OverloadCandidateSet CandidateSet(RangeLoc,
+                                      OverloadCandidateSet::CSK_Normal);
+    BeginEndFunction BEFFailure;
+    ForRangeStatus RangeStatus =
+        BuildNonArrayForRange(*this, BeginRangeRef.get(), EndRangeRef.get(),
+                              RangeType, BeginVar, EndVar, ColonLoc, CoawaitLoc,
+                              &CandidateSet, &BeginExpr, &EndExpr, &BEFFailure);
+
+    if (Kind == BFRK_Build && RangeStatus == FRS_NoViableFunction &&
+        BEFFailure == BEF_begin) {
+      // If the range is being built from an array parameter, emit a
+      // a diagnostic that it is being treated as a pointer.
+      if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(Range)) {
+        if (ParmVarDecl *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl())) {
+          QualType ArrayTy = PVD->getOriginalType();
+          QualType PointerTy = PVD->getType();
+          if (PointerTy->isPointerType() && ArrayTy->isArrayType()) {
+            Diag(Range->getBeginLoc(), diag::err_range_on_array_parameter)
+                << RangeLoc << PVD << ArrayTy << PointerTy;
+            Diag(PVD->getLocation(), diag::note_declared_at);
+            return {};
+          }
+        }
+      }
+
+      // If building the range failed, try dereferencing the range expression
+      // unless a diagnostic was issued or the end function is problematic.
+      if (RebuildWithDereference) {
+        assert(RebuildResult);
+        StmtResult SR = RebuildWithDereference();
+        if (SR.isInvalid() || SR.isUsable()) {
+          *RebuildResult = SR;
+          return {};
+        }
+      }
+    }
+
+    // Otherwise, emit diagnostics if we haven't already.
+    if (RangeStatus == FRS_NoViableFunction) {
+      Expr *Range = BEFFailure ? EndRangeRef.get() : BeginRangeRef.get();
+      CandidateSet.NoteCandidates(
+          PartialDiagnosticAt(Range->getBeginLoc(),
+                              PDiag(diag::err_for_range_invalid)
+                                  << RangeLoc << Range->getType()
+                                  << BEFFailure),
+          *this, OCD_AllCandidates, Range);
+    }
+    // Return an error if no fix was discovered.
+    if (RangeStatus != FRS_Success)
+      return {};
+  }
+
+  assert(!BeginExpr.isInvalid() && !EndExpr.isInvalid() &&
+         "invalid range expression in for loop");
+
+  return {BeginVar, EndVar, BeginExpr.get(), EndExpr.get()};
+}
+
+void Sema::ActOnDependentForRangeInitializer(VarDecl *LoopVar,
+                                             BuildForRangeKind BFRK) {
+  // Deduce any 'auto's in the loop variable as 'DependentTy'. We'll fill
+  // them in properly when we instantiate the loop.
+  if (!LoopVar->isInvalidDecl() && BFRK != BFRK_Check) {
+    if (auto *DD = dyn_cast<DecompositionDecl>(LoopVar))
+      for (auto *Binding : DD->bindings()) {
+        if (!Binding->isParameterPack())
+          Binding->setType(Context.DependentTy);
+      }
+    LoopVar->setType(SubstAutoTypeDependent(LoopVar->getType()));
+  }
+}
+
 StmtResult Sema::BuildCXXForRangeStmt(
     SourceLocation ForLoc, SourceLocation CoawaitLoc, Stmt *InitStmt,
     SourceLocation ColonLoc, Stmt *RangeDecl, Stmt *Begin, Stmt *End,
@@ -2717,208 +2966,36 @@ StmtResult Sema::BuildCXXForRangeStmt(
   if (RangeVarType->isDependentType()) {
     // The range is implicitly used as a placeholder when it is dependent.
     RangeVar->markUsed(Context);
-
-    // Deduce any 'auto's in the loop variable as 'DependentTy'. We'll fill
-    // them in properly when we instantiate the loop.
-    if (!LoopVar->isInvalidDecl() && Kind != BFRK_Check) {
-      if (auto *DD = dyn_cast<DecompositionDecl>(LoopVar))
-        for (auto *Binding : DD->bindings()) {
-          if (!Binding->isParameterPack())
-            Binding->setType(Context.DependentTy);
-        }
-      LoopVar->setType(SubstAutoTypeDependent(LoopVar->getType()));
-    }
+    ActOnDependentForRangeInitializer(LoopVar, Kind);
   } else if (!BeginDeclStmt.get()) {
-    SourceLocation RangeLoc = RangeVar->getLocation();
+    StmtResult RebuildResult;
+    auto RebuildWithDereference = [&] {
+      return RebuildForRangeWithDereference(
+          *this, S, ForLoc, CoawaitLoc, InitStmt, LoopVarDecl, ColonLoc,
+          RangeVar->getInit(), RangeVar->getLocation(), RParenLoc);
+    };
 
-    const QualType RangeVarNonRefType = RangeVarType.getNonReferenceType();
+    ForRangeBeginEndInfo ForRangeInfo = BuildCXXForRangeBeginEndVars(
+        S, RangeVar, ColonLoc, CoawaitLoc, LifetimeExtendTemps, Kind,
+        /*Constexpr=*/false, &RebuildResult, RebuildWithDereference);
 
-    ExprResult BeginRangeRef = BuildDeclRefExpr(RangeVar, RangeVarNonRefType,
-                                                VK_LValue, ColonLoc);
-    if (BeginRangeRef.isInvalid())
+    if (!RebuildResult.isUnset())
+      return RebuildResult;
+    if (!ForRangeInfo.isValid())
       return StmtError();
-
-    ExprResult EndRangeRef = BuildDeclRefExpr(RangeVar, RangeVarNonRefType,
-                                              VK_LValue, ColonLoc);
-    if (EndRangeRef.isInvalid())
-      return StmtError();
-
-    QualType AutoType = Context.getAutoDeductType();
-    Expr *Range = RangeVar->getInit();
-    if (!Range)
-      return StmtError();
-    QualType RangeType = Range->getType();
-
-    if (RequireCompleteType(RangeLoc, RangeType,
-                            diag::err_for_range_incomplete_type))
-      return StmtError();
-
-    // Build auto __begin = begin-expr, __end = end-expr.
-    // Divide by 2, since the variables are in the inner scope (loop body).
-    const auto DepthStr = std::to_string(S->getDepth() / 2);
-    VarDecl *BeginVar = BuildForRangeVarDecl(*this, ColonLoc, AutoType,
-                                             std::string("__begin") + DepthStr);
-    VarDecl *EndVar = BuildForRangeVarDecl(*this, ColonLoc, AutoType,
-                                           std::string("__end") + DepthStr);
-
-    // Build begin-expr and end-expr and attach to __begin and __end variables.
-    ExprResult BeginExpr, EndExpr;
-    if (const ArrayType *UnqAT = RangeType->getAsArrayTypeUnsafe()) {
-      // - if _RangeT is an array type, begin-expr and end-expr are __range and
-      //   __range + __bound, respectively, where __bound is the array bound. If
-      //   _RangeT is an array of unknown size or an array of incomplete type,
-      //   the program is ill-formed;
-
-      // begin-expr is __range.
-      BeginExpr = BeginRangeRef;
-      if (!CoawaitLoc.isInvalid()) {
-        BeginExpr = ActOnCoawaitExpr(S, ColonLoc, BeginExpr.get());
-        if (BeginExpr.isInvalid())
-          return StmtError();
-      }
-      if (FinishForRangeVarDecl(*this, BeginVar, BeginRangeRef.get(), ColonLoc,
-                                diag::err_for_range_iter_deduction_failure)) {
-        NoteForRangeBeginEndFunction(*this, BeginExpr.get(), BEF_begin);
-        return StmtError();
-      }
-
-      // Find the array bound.
-      ExprResult BoundExpr;
-      if (const ConstantArrayType *CAT = dyn_cast<ConstantArrayType>(UnqAT))
-        BoundExpr = IntegerLiteral::Create(
-            Context, CAT->getSize(), Context.getPointerDiffType(), RangeLoc);
-      else if (const VariableArrayType *VAT =
-               dyn_cast<VariableArrayType>(UnqAT)) {
-        // For a variably modified type we can't just use the expression within
-        // the array bounds, since we don't want that to be re-evaluated here.
-        // Rather, we need to determine what it was when the array was first
-        // created - so we resort to using sizeof(vla)/sizeof(element).
-        // For e.g.
-        //  void f(int b) {
-        //    int vla[b];
-        //    b = -1;   <-- This should not affect the num of iterations below
-        //    for (int &c : vla) { .. }
-        //  }
-
-        // FIXME: This results in codegen generating IR that recalculates the
-        // run-time number of elements (as opposed to just using the IR Value
-        // that corresponds to the run-time value of each bound that was
-        // generated when the array was created.) If this proves too embarrassing
-        // even for unoptimized IR, consider passing a magic-value/cookie to
-        // codegen that then knows to simply use that initial llvm::Value (that
-        // corresponds to the bound at time of array creation) within
-        // getelementptr.  But be prepared to pay the price of increasing a
-        // customized form of coupling between the two components - which  could
-        // be hard to maintain as the codebase evolves.
-
-        ExprResult SizeOfVLAExprR = ActOnUnaryExprOrTypeTraitExpr(
-            EndVar->getLocation(), UETT_SizeOf,
-            /*IsType=*/true,
-            CreateParsedType(VAT->desugar(), Context.getTrivialTypeSourceInfo(
-                                                 VAT->desugar(), RangeLoc))
-                .getAsOpaquePtr(),
-            EndVar->getSourceRange());
-        if (SizeOfVLAExprR.isInvalid())
-          return StmtError();
-
-        ExprResult SizeOfEachElementExprR = ActOnUnaryExprOrTypeTraitExpr(
-            EndVar->getLocation(), UETT_SizeOf,
-            /*IsType=*/true,
-            CreateParsedType(VAT->desugar(),
-                             Context.getTrivialTypeSourceInfo(
-                                 VAT->getElementType(), RangeLoc))
-                .getAsOpaquePtr(),
-            EndVar->getSourceRange());
-        if (SizeOfEachElementExprR.isInvalid())
-          return StmtError();
-
-        BoundExpr =
-            ActOnBinOp(S, EndVar->getLocation(), tok::slash,
-                       SizeOfVLAExprR.get(), SizeOfEachElementExprR.get());
-        if (BoundExpr.isInvalid())
-          return StmtError();
-
-      } else {
-        // Can't be a DependentSizedArrayType or an IncompleteArrayType since
-        // UnqAT is not incomplete and Range is not type-dependent.
-        llvm_unreachable("Unexpected array type in for-range");
-      }
-
-      // end-expr is __range + __bound.
-      EndExpr = ActOnBinOp(S, ColonLoc, tok::plus, EndRangeRef.get(),
-                           BoundExpr.get());
-      if (EndExpr.isInvalid())
-        return StmtError();
-      if (FinishForRangeVarDecl(*this, EndVar, EndExpr.get(), ColonLoc,
-                                diag::err_for_range_iter_deduction_failure)) {
-        NoteForRangeBeginEndFunction(*this, EndExpr.get(), BEF_end);
-        return StmtError();
-      }
-    } else {
-      OverloadCandidateSet CandidateSet(RangeLoc,
-                                        OverloadCandidateSet::CSK_Normal);
-      BeginEndFunction BEFFailure;
-      ForRangeStatus RangeStatus = BuildNonArrayForRange(
-          *this, BeginRangeRef.get(), EndRangeRef.get(), RangeType, BeginVar,
-          EndVar, ColonLoc, CoawaitLoc, &CandidateSet, &BeginExpr, &EndExpr,
-          &BEFFailure);
-
-      if (Kind == BFRK_Build && RangeStatus == FRS_NoViableFunction &&
-          BEFFailure == BEF_begin) {
-        // If the range is being built from an array parameter, emit a
-        // a diagnostic that it is being treated as a pointer.
-        if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(Range)) {
-          if (ParmVarDecl *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl())) {
-            QualType ArrayTy = PVD->getOriginalType();
-            QualType PointerTy = PVD->getType();
-            if (PointerTy->isPointerType() && ArrayTy->isArrayType()) {
-              Diag(Range->getBeginLoc(), diag::err_range_on_array_parameter)
-                  << RangeLoc << PVD << ArrayTy << PointerTy;
-              Diag(PVD->getLocation(), diag::note_declared_at);
-              return StmtError();
-            }
-          }
-        }
-
-        // If building the range failed, try dereferencing the range expression
-        // unless a diagnostic was issued or the end function is problematic.
-        StmtResult SR = RebuildForRangeWithDereference(*this, S, ForLoc,
-                                                       CoawaitLoc, InitStmt,
-                                                       LoopVarDecl, ColonLoc,
-                                                       Range, RangeLoc,
-                                                       RParenLoc);
-        if (SR.isInvalid() || SR.isUsable())
-          return SR;
-      }
-
-      // Otherwise, emit diagnostics if we haven't already.
-      if (RangeStatus == FRS_NoViableFunction) {
-        Expr *Range = BEFFailure ? EndRangeRef.get() : BeginRangeRef.get();
-        CandidateSet.NoteCandidates(
-            PartialDiagnosticAt(Range->getBeginLoc(),
-                                PDiag(diag::err_for_range_invalid)
-                                    << RangeLoc << Range->getType()
-                                    << BEFFailure),
-            *this, OCD_AllCandidates, Range);
-      }
-      // Return an error if no fix was discovered.
-      if (RangeStatus != FRS_Success)
-        return StmtError();
-    }
-
-    assert(!BeginExpr.isInvalid() && !EndExpr.isInvalid() &&
-           "invalid range expression in for loop");
 
     // C++11 [dcl.spec.auto]p7: BeginType and EndType must be the same.
     // C++1z removes this restriction.
+    auto [BeginVar, EndVar, BeginExpr, EndExpr] = ForRangeInfo;
+    SourceLocation RangeLoc = RangeVar->getLocation();
     QualType BeginType = BeginVar->getType(), EndType = EndVar->getType();
     if (!Context.hasSameType(BeginType, EndType)) {
       Diag(RangeLoc, getLangOpts().CPlusPlus17
                          ? diag::warn_for_range_begin_end_types_differ
                          : diag::ext_for_range_begin_end_types_differ)
           << BeginType << EndType;
-      NoteForRangeBeginEndFunction(*this, BeginExpr.get(), BEF_begin);
-      NoteForRangeBeginEndFunction(*this, EndExpr.get(), BEF_end);
+      NoteForRangeBeginEndFunction(*this, BeginExpr, BEF_begin);
+      NoteForRangeBeginEndFunction(*this, EndExpr, BEF_end);
     }
 
     BeginDeclStmt =
@@ -2947,10 +3024,11 @@ StmtResult Sema::BuildCXXForRangeStmt(
           ActOnFinishFullExpr(NotEqExpr.get(), /*DiscardedValue*/ false);
     if (NotEqExpr.isInvalid()) {
       Diag(RangeLoc, diag::note_for_range_invalid_iterator)
-        << RangeLoc << 0 << BeginRangeRef.get()->getType();
-      NoteForRangeBeginEndFunction(*this, BeginExpr.get(), BEF_begin);
+          << RangeLoc << diag::InvalidRangeForIterator::OpNotEq
+          << BeginRef.get()->getType();
+      NoteForRangeBeginEndFunction(*this, BeginExpr, BEF_begin);
       if (!Context.hasSameType(BeginType, EndType))
-        NoteForRangeBeginEndFunction(*this, EndExpr.get(), BEF_end);
+        NoteForRangeBeginEndFunction(*this, EndExpr, BEF_end);
       return StmtError();
     }
 
@@ -2970,8 +3048,9 @@ StmtResult Sema::BuildCXXForRangeStmt(
       IncrExpr = ActOnFinishFullExpr(IncrExpr.get(), /*DiscardedValue*/ false);
     if (IncrExpr.isInvalid()) {
       Diag(RangeLoc, diag::note_for_range_invalid_iterator)
-        << RangeLoc << 2 << BeginRangeRef.get()->getType() ;
-      NoteForRangeBeginEndFunction(*this, BeginExpr.get(), BEF_begin);
+          << RangeLoc << diag::InvalidRangeForIterator::OpAdvance
+          << BeginRef.get()->getType();
+      NoteForRangeBeginEndFunction(*this, BeginExpr, BEF_begin);
       return StmtError();
     }
 
@@ -2984,8 +3063,9 @@ StmtResult Sema::BuildCXXForRangeStmt(
     ExprResult DerefExpr = ActOnUnaryOp(S, ColonLoc, tok::star, BeginRef.get());
     if (DerefExpr.isInvalid()) {
       Diag(RangeLoc, diag::note_for_range_invalid_iterator)
-        << RangeLoc << 1 << BeginRangeRef.get()->getType();
-      NoteForRangeBeginEndFunction(*this, BeginExpr.get(), BEF_begin);
+          << RangeLoc << diag::InvalidRangeForIterator::OpDeref
+          << BeginRef.get()->getType();
+      NoteForRangeBeginEndFunction(*this, BeginExpr, BEF_begin);
       return StmtError();
     }
 
@@ -2995,7 +3075,7 @@ StmtResult Sema::BuildCXXForRangeStmt(
       AddInitializerToDecl(LoopVar, DerefExpr.get(), /*DirectInit=*/false);
       if (LoopVar->isInvalidDecl() ||
           (LoopVar->getInit() && LoopVar->getInit()->containsErrors()))
-        NoteForRangeBeginEndFunction(*this, BeginExpr.get(), BEF_begin);
+        NoteForRangeBeginEndFunction(*this, BeginExpr, BEF_begin);
     }
   }
 
@@ -3010,11 +3090,9 @@ StmtResult Sema::BuildCXXForRangeStmt(
     OpenMP().ActOnOpenMPLoopInitialization(ForLoc, BeginDeclStmt.get());
 
   // P2718R0 - Lifetime extension in range-based for loops.
-  if (getLangOpts().CPlusPlus23 && !LifetimeExtendTemps.empty()) {
-    InitializedEntity Entity = InitializedEntity::InitializeVariable(RangeVar);
-    for (auto *MTE : LifetimeExtendTemps)
-      MTE->setExtendingDecl(RangeVar, Entity.allocateManglingNumber());
-  }
+  if (getLangOpts().CPlusPlus23)
+    ApplyForRangeOrExpansionStatementLifetimeExtension(RangeVar,
+                                                       LifetimeExtendTemps);
 
   return new (Context) CXXForRangeStmt(
       InitStmt, RangeDS, cast_or_null<DeclStmt>(BeginDeclStmt.get()),
@@ -3341,12 +3419,6 @@ StmtResult Sema::ActOnContinueStmt(SourceLocation ContinueLoc, Scope *CurScope,
     // C99 6.8.6.2p1: A break shall appear only in or as a loop body.
     return StmtError(Diag(ContinueLoc, diag::err_continue_not_in_loop));
   }
-  if (S->isConditionVarScope()) {
-    // We cannot 'continue;' from within a statement expression in the
-    // initializer of a condition variable because we would jump past the
-    // initialization of that variable.
-    return StmtError(Diag(ContinueLoc, diag::err_continue_from_cond_var_init));
-  }
 
   // A 'continue' that would normally have execution continue on a block outside
   // of a compute construct counts as 'branching out of' the compute construct,
@@ -3651,7 +3723,8 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
         // initializer list, because it is not an expression (even
         // though we represent it as one). We still deduce 'void'.
         Diag(ReturnLoc, diag::err_lambda_return_init_list)
-          << RetValExp->getSourceRange();
+            << RetValExp->getSourceRange();
+        RetValExp = nullptr;
       }
 
       FnRetType = Context.VoidTy;
@@ -3691,15 +3764,18 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
     // Delay processing for now.  TODO: there are lots of dependent
     // types we can conclusively prove aren't void.
   } else if (FnRetType->isVoidType()) {
-    if (RetValExp && !isa<InitListExpr>(RetValExp) &&
-        !(getLangOpts().CPlusPlus &&
-          (RetValExp->isTypeDependent() ||
-           RetValExp->getType()->isVoidType()))) {
-      if (!getLangOpts().CPlusPlus &&
-          RetValExp->getType()->isVoidType())
+    if (isa_and_nonnull<InitListExpr>(RetValExp)) {
+      Diag(ReturnLoc, diag::err_return_block_has_expr)
+          << (CurLambda != nullptr);
+      RetValExp = nullptr;
+    } else if (RetValExp && !(getLangOpts().CPlusPlus &&
+                              (RetValExp->isTypeDependent() ||
+                               RetValExp->getType()->isVoidType()))) {
+      if (!getLangOpts().CPlusPlus && RetValExp->getType()->isVoidType())
         Diag(ReturnLoc, diag::ext_return_has_void_expr) << "literal" << 2;
       else {
-        Diag(ReturnLoc, diag::err_return_block_has_expr);
+        Diag(ReturnLoc, diag::err_return_block_has_expr)
+            << (CurLambda != nullptr);
         RetValExp = nullptr;
       }
     }
@@ -4228,6 +4304,11 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
       }
       RetValExp = Res.getAs<Expr>();
 
+      // A returned HLSL matrix may need its layout reconciled with the
+      // function's row_major/column_major return type.
+      if (getLangOpts().HLSL && RetValExp && RetType->isMatrixType())
+        HLSL().propagateContextualMatrixLayout(RetValExp, RetType);
+
       // If we have a related result type, we need to implicitly
       // convert back to the formal result type.  We can't pretend to
       // initialize the result again --- we might end double-retaining
@@ -4282,11 +4363,7 @@ class CatchHandlerType {
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsPointer : 1;
 
-  // This is a special constructor to be used only with DenseMapInfo's
-  // getEmptyKey() and getTombstoneKey() functions.
   friend struct llvm::DenseMapInfo<CatchHandlerType>;
-  enum Unique { ForDenseMap };
-  CatchHandlerType(QualType QT, Unique) : QT(QT), IsPointer(false) {}
 
 public:
   /// Used when creating a CatchHandlerType from a handler type; will determine
@@ -4323,16 +4400,6 @@ public:
 
 namespace llvm {
 template <> struct DenseMapInfo<CatchHandlerType> {
-  static CatchHandlerType getEmptyKey() {
-    return CatchHandlerType(DenseMapInfo<QualType>::getEmptyKey(),
-                       CatchHandlerType::ForDenseMap);
-  }
-
-  static CatchHandlerType getTombstoneKey() {
-    return CatchHandlerType(DenseMapInfo<QualType>::getTombstoneKey(),
-                       CatchHandlerType::ForDenseMap);
-  }
-
   static unsigned getHashValue(const CatchHandlerType &Base) {
     return DenseMapInfo<QualType>::getHashValue(Base.underlying());
   }

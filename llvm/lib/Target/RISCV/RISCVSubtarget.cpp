@@ -12,36 +12,51 @@
 
 #include "RISCVSubtarget.h"
 #include "GISel/RISCVCallLowering.h"
+#include "GISel/RISCVInlineAsmLowering.h"
 #include "GISel/RISCVLegalizerInfo.h"
 #include "RISCV.h"
 #include "RISCVFrameLowering.h"
 #include "RISCVSelectionDAGInfo.h"
 #include "RISCVTargetMachine.h"
+#include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/MC/MCSchedule.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
+static cl::opt<unsigned> SchedMispredictPenalty(
+    "riscv-sched-mispredict-penalty", cl::Hidden,
+    cl::init(MCSchedModel::DefaultMispredictPenalty),
+    cl::cat(MCScheduleOptions),
+    cl::desc("Override the mispredict penalty (in cycles) in the scheduler "
+             "model. A non-negative value overrides the target default."));
+
+static cl::opt<unsigned> SchedLoadLatency(
+    "riscv-sched-load-latency", cl::Hidden,
+    cl::init(MCSchedModel::DefaultLoadLatency), cl::cat(MCScheduleOptions),
+    cl::desc("Override the load latency (in cycles) in the scheduler model. "
+             "A non-negative value overrides the target default."));
+
+#define DEBUG_TYPE "riscv-macro-fusion"
+
+#define GET_RISCV_MACRO_FUSION_PRED_IMPL
+#include "RISCVGenMacroFusion.inc"
+
+#undef DEBUG_TYPE
 #define DEBUG_TYPE "riscv-subtarget"
 
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR
 #include "RISCVGenSubtargetInfo.inc"
 
-#define GET_RISCV_MACRO_FUSION_PRED_IMPL
-#include "RISCVGenMacroFusion.inc"
-
 namespace llvm::RISCVTuneInfoTable {
 
 #define GET_RISCVTuneInfoTable_IMPL
 #include "RISCVGenSearchableTables.inc"
 } // namespace llvm::RISCVTuneInfoTable
-
-static cl::opt<unsigned> RVVVectorLMULMax(
-    "riscv-v-fixed-length-vector-lmul-max",
-    cl::desc("The maximum LMUL value to use for fixed length vectors. "
-             "Fractional LMUL values are not supported."),
-    cl::init(8), cl::Hidden);
 
 static cl::opt<bool> RISCVDisableUsingConstantPoolForLargeInts(
     "riscv-disable-using-constant-pool-for-large-ints",
@@ -69,12 +84,6 @@ static cl::opt<bool> UseMIPSCCMovInsn("use-riscv-mips-ccmov",
                                       cl::desc("Use 'mips.ccmov' instruction"),
                                       cl::init(true), cl::Hidden);
 
-static cl::opt<bool> EnablePExtSIMDCodeGen(
-    "riscv-enable-p-ext-simd-codegen",
-    cl::desc("Turn on P Extension SIMD codegen(This is a temporary switch "
-             "where only partial codegen is currently supported)"),
-    cl::init(false), cl::Hidden);
-
 void RISCVSubtarget::anchor() {}
 
 RISCVSubtarget &
@@ -98,7 +107,16 @@ RISCVSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
   assert(TuneInfo && "TuneInfo shouldn't be nullptr!");
 
   ParseSubtargetFeatures(CPU, TuneCPU, FS);
-  TargetABI = RISCVABI::computeTargetABI(TT, getFeatureBits(), ABIName);
+
+  RISCV::updateCZceFeatureImplications(*this);
+
+  // Re-sync the flags.
+  HasStdExtZcd = hasFeature(RISCV::FeatureStdExtZcd);
+  HasStdExtZcf = hasFeature(RISCV::FeatureStdExtZcf);
+  HasStdExtC = hasFeature(RISCV::FeatureStdExtC);
+  HasStdExtZce = hasFeature(RISCV::FeatureStdExtZce);
+
+  TargetABI = RISCVABI::computeTargetABI(*this, ABIName);
   RISCVFeatures::validate(TT, getFeatureBits());
   return *this;
 }
@@ -121,6 +139,13 @@ RISCVSubtarget::~RISCVSubtarget() = default;
 
 const SelectionDAGTargetInfo *RISCVSubtarget::getSelectionDAGInfo() const {
   return TSInfo.get();
+}
+
+const InlineAsmLowering *RISCVSubtarget::getInlineAsmLowering() const {
+  if (!InlineAsmLoweringInfo)
+    InlineAsmLoweringInfo.reset(
+        new RISCVInlineAsmLowering(getTargetLowering()));
+  return InlineAsmLoweringInfo.get();
 }
 
 const CallLowering *RISCVSubtarget::getCallLowering() const {
@@ -154,18 +179,24 @@ bool RISCVSubtarget::useConstantPoolForLargeInts() const {
   return !RISCVDisableUsingConstantPoolForLargeInts;
 }
 
-bool RISCVSubtarget::enablePExtSIMDCodeGen() const {
-  return HasStdExtP && EnablePExtSIMDCodeGen;
-}
-
-// Returns true if VT is a P extension packed SIMD type that fits in XLen.
+// Returns true if VT is a P extension packed SIMD type.
 bool RISCVSubtarget::isPExtPackedType(MVT VT) const {
-  if (!enablePExtSIMDCodeGen())
+  if (!HasStdExtP)
     return false;
 
-  if (is64Bit())
-    return VT == MVT::v8i8 || VT == MVT::v4i16 || VT == MVT::v2i32;
-  return VT == MVT::v4i8 || VT == MVT::v2i16;
+  // RV32 supports 32-bit and 64-bit vectors. RV64 only support 64-bit vectors.
+  if (!is64Bit() && (VT == MVT::v4i8 || VT == MVT::v2i16))
+    return true;
+
+  return VT == MVT::v8i8 || VT == MVT::v4i16 || VT == MVT::v2i32;
+}
+
+// Returns true if VT is a P extension packed double-wide SIMD type.
+bool RISCVSubtarget::isPExtPackedDoubleType(MVT VT) const {
+  if (!HasStdExtP || is64Bit())
+    return false;
+
+  return VT == MVT::v8i8 || VT == MVT::v4i16 || VT == MVT::v2i32;
 }
 
 unsigned RISCVSubtarget::getMaxBuildIntsCost() const {
@@ -175,8 +206,20 @@ unsigned RISCVSubtarget::getMaxBuildIntsCost() const {
   // building integers (addi, slli, etc.) can be done in one cycle, so here we
   // set the default cost to (LoadLatency + 1) if no threshold is provided.
   return RISCVMaxBuildIntsCost == 0
-             ? getSchedModel().LoadLatency + 1
+             ? getLoadLatency() + 1
              : std::max<unsigned>(2, RISCVMaxBuildIntsCost);
+}
+
+unsigned RISCVSubtarget::getMispredictionPenalty() const {
+  if (SchedMispredictPenalty.getNumOccurrences() > 0)
+    return SchedMispredictPenalty;
+  return getSchedModel().MispredictPenalty;
+}
+
+unsigned RISCVSubtarget::getLoadLatency() const {
+  if (SchedLoadLatency.getNumOccurrences() > 0)
+    return SchedLoadLatency;
+  return getSchedModel().LoadLatency;
 }
 
 unsigned RISCVSubtarget::getMaxRVVVectorSizeInBits() const {
@@ -211,10 +254,7 @@ unsigned RISCVSubtarget::getMinRVVVectorSizeInBits() const {
 unsigned RISCVSubtarget::getMaxLMULForFixedLengthVectors() const {
   assert(hasVInstructions() &&
          "Tried to get vector length without Zve or V extension support!");
-  assert(RVVVectorLMULMax <= 8 &&
-         llvm::has_single_bit<uint32_t>(RVVVectorLMULMax) &&
-         "V extension requires a LMUL to be at most 8 and a power of 2!");
-  return llvm::bit_floor(std::clamp<unsigned>(RVVVectorLMULMax, 1, 8));
+  return 8;
 }
 
 bool RISCVSubtarget::useRVVForFixedLengthVectors() const {
@@ -226,6 +266,16 @@ bool RISCVSubtarget::enableSubRegLiveness() const { return true; }
 
 bool RISCVSubtarget::enableMachinePipeliner() const {
   return getSchedModel().hasInstrSchedModel();
+}
+
+void RISCVSubtarget::mirFileLoaded(MachineFunction &MF) const {
+  // We usually compute max call frame size after ISel. Do the computation now
+  // if the .mir file didn't specify it. Note that this will probably give you
+  // bogus values after PEI has eliminated the callframe setup/destroy pseudo
+  // instructions, specify explicitly if you need it to be correct.
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  if (!MFI.isMaxCallFrameSizeComputed())
+    MFI.computeMaxCallFrameSize(MF);
 }
 
   /// Enable use of alias analysis during code generation (during MI

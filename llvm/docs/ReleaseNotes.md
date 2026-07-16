@@ -4,8 +4,7 @@ MyST (https://myst-parser.readthedocs.io/en/latest/). -->
 <!-- If you want to modify sections/contents permanently, you should modify both
 ReleaseNotes.md and ReleaseNotesTemplate.txt. -->
 
-LLVM {{env.config.release}} Release Notes
-=========================================
+# LLVM {{env.config.release}} Release Notes
 
 ```{contents}
 ```
@@ -17,8 +16,7 @@ LLVM {{env.config.release}} Release Notes
 ```
 ````
 
-Introduction
-============
+## Introduction
 
 This document contains the release notes for the LLVM Compiler Infrastructure,
 release {{env.config.release}}.  Here we describe the status of LLVM, including
@@ -36,8 +34,7 @@ LLVM web page, this document applies to the *next* release, not the current
 one.  To see the release notes for a specific release, please see the
 [releases page](https://llvm.org/releases/).
 
-Non-comprehensive list of changes in this release
-=================================================
+## Non-comprehensive list of changes in this release
 
 <!-- For small 1-3 sentence descriptions, just add an entry at the end of
 this list. If your description won't fit comfortably in one bullet
@@ -50,140 +47,89 @@ for adding a new subsection. -->
 <!-- If you would like to document a larger change, then you can add a
 subsection about it right here. You can copy the following boilerplate:
 
-Special New Feature
--------------------
+### Special New Feature
 
 Makes programs 10x faster by doing Special New Thing.
 -->
 
-Changes to the LLVM IR
-----------------------
+### Changes to the LLVM IR
 
-* Removed `llvm.convert.to.fp16` and `llvm.convert.from.fp16`
-  intrinsics. These are equivalent to `fptrunc` and `fpext` with half
-  with a bitcast.
+### Changes to LLVM infrastructure
 
-Changes to LLVM infrastructure
-------------------------------
+### Changes to building LLVM
 
-* Removed TypePromoteFloat legalization from SelectionDAG
+### Changes to TableGen
 
-Changes to building LLVM
-------------------------
+### Changes to Interprocedural Optimizations
 
-Changes to TableGen
--------------------
+### Changes to Vectorizers
 
-Changes to Interprocedural Optimizations
-----------------------------------------
+### Changes to the AArch64 Backend
 
-Changes to Vectorizers
-----------------------
+### Changes to the AMDGPU Backend
 
-Changes to the AArch64 Backend
-------------------------------
+### Changes to the ARM Backend
 
-Changes to the AMDGPU Backend
------------------------------
+### Changes to the AVR Backend
 
-* Initial support for gfx1310
+### Changes to the DirectX Backend
 
-Changes to the ARM Backend
---------------------------
+### Changes to the Hexagon Backend
 
-Changes to the AVR Backend
---------------------------
+### Changes to the LoongArch Backend
 
-Changes to the DirectX Backend
-------------------------------
+### Changes to the MIPS Backend
 
-Changes to the Hexagon Backend
-------------------------------
+### Changes to the PowerPC Backend
 
-Changes to the LoongArch Backend
---------------------------------
+### Changes to the RISC-V Backend
 
-* DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
-  to be used together when building for the LoongArch platform.
+### Changes to the WebAssembly Backend
 
-Changes to the MIPS Backend
----------------------------
+### Changes to the Windows Target
 
-Changes to the NVPTX Backend
-----------------------------
+### Changes to the X86 Backend
 
-* The default SM version has been changed from `sm_30` to `sm_75`. `sm_75` is
-  the oldest GPU variant compatible with the widest range of recent major CUDA
-  Toolkit versions (11/12/13).
+### Changes to the OCaml bindings
 
-Changes to the PowerPC Backend
-------------------------------
+### Changes to the Python bindings
 
-Changes to the RISC-V Backend
------------------------------
+### Changes to the C API
 
-* `llvm-objdump` now has support for `--symbolize-operands` with RISC-V.
-* `-mcpu=spacemit-x100` was added.
-* Change P extension version to match the 019 draft specification. Encoded in `-march` as `0p19`.
+### Changes to the CodeGen infrastructure
 
-Changes to the WebAssembly Backend
-----------------------------------
+### Changes to the Metadata Info
 
-Changes to the Windows Target
------------------------------
+### Changes to the Debug Info
 
-* The `.seh_startchained` and `.seh_endchained` assembly instructions have been removed and replaced
-  with a new `.seh_splitchained` instruction.
+### Changes to the LLVM tools
 
-Changes to the X86 Backend
---------------------------
+### Changes to LLDB
 
-* `.att_syntax` directive is now emitted for assembly files when AT&T syntax is
-  in use. This matches the behaviour of Intel syntax and aids with
-  compatibility when changing the default Clang syntax to the Intel syntax.
+#### Windows
 
-Changes to the OCaml bindings
------------------------------
+* Python 3.11 or later is now recommended for building LLDB 23 on Windows. From LLDB 24, Python 3.11 or later will be required.
+* Messages from `OutputDebugString[A|W]` are now shown inline when using LLDB
+  from the command-line and in the output window when using lldb-dap.
+* LLDB now uses `lldb-server.exe` to launch and manage the program being debugged,
+  instead of running it within LLDB's own process. To revert to the previous behavior, set the environment variable `LLDB_USE_LLDB_SERVER=0`.
+* Support for PDB symbol servers has been added. By default, no symbol servers are used.
+  You can control this either through the [`_NT_SYMBOL_PATH`](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/symbol-path)
+  environment variable or by setting `plugin.symbol-locator.symstore.urls`
+  (see [`plugin.symbol-locator.symstore`](https://lldb.llvm.org/use/settings.html#symstore) for more info).
+* LLDB no longer depends on the Python private API on Windows. Users are now free to
+  use any Python version they want, as long as it is 3.8 or later and LLDB can find it
+  (i.e. it is on their `PATH`).
 
-Changes to the Python bindings
-------------------------------
+### Changes to BOLT
 
-Changes to the C API
---------------------
+### Changes to Sanitizers
 
-Changes to the CodeGen infrastructure
--------------------------------------
+### Other Changes
 
-Changes to the Metadata Info
-----------------------------
+## External Open Source Projects Using LLVM {{env.config.release}}
 
-Changes to the Debug Info
--------------------------
-
-Changes to the LLVM tools
--------------------------
-
-* `llvm-objcopy` no longer corrupts the symbol table when `--update-section` is called for ELF files.
-* `FileCheck` option `-check-prefix` now accepts a comma-separated list of
-  prefixes, making it an alias of the existing `-check-prefixes` option.
-
-Changes to LLDB
----------------
-
-Changes to BOLT
----------------
-
-Changes to Sanitizers
----------------------
-
-Other Changes
--------------
-
-External Open Source Projects Using LLVM {{env.config.release}}
-===============================================================
-
-Additional Information
-======================
+## Additional Information
 
 A wide variety of additional information is available on the
 [LLVM web page](https://llvm.org/), in particular in the

@@ -89,20 +89,26 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
       numSrcElemsPerDest;
 
   Operation *maskOp = mask.getDefiningOp();
-  SmallVector<vector::ExtractOp, 2> extractOps;
+  // Chain of `vector.extract` ops that lead to the op that created the mask.
   // TODO: add support to `vector.broadcast`.
-  // Finding the mask creation operation.
+  SmallVector<vector::ExtractOp, 2> extractOps;
+
+  // Trace the mask back to its creation op, looking through `vector.extract`
+  // ops. Any other defining op is unsupported.
   while (maskOp &&
          !isa<arith::ConstantOp, vector::CreateMaskOp, vector::ConstantMaskOp>(
              maskOp)) {
-    if (auto extractOp = dyn_cast<vector::ExtractOp>(maskOp)) {
-      maskOp = extractOp.getSource().getDefiningOp();
-      extractOps.push_back(extractOp);
-    }
+    auto extractOp = dyn_cast<vector::ExtractOp>(maskOp);
+    if (!extractOp)
+      return failure();
+    maskOp = extractOp.getSource().getDefiningOp();
+    extractOps.push_back(extractOp);
   }
 
-  if (!isa<arith::ConstantOp, vector::CreateMaskOp, vector::ConstantMaskOp>(
-          maskOp))
+  // `maskOp` is null when the mask is a block argument, which has no defining
+  // op.
+  if (!isa_and_present<arith::ConstantOp, vector::CreateMaskOp,
+                       vector::ConstantMaskOp>(maskOp))
     return failure();
 
   // Computing the "compressed" mask. All the emulation logic (i.e. computing
@@ -511,6 +517,13 @@ namespace {
 
 // Emulate `vector.store` using a multi-byte container type.
 //
+// When `assumeAligned` is true, store offsets are assumed to be aligned to
+// container element boundaries, so a store whose source vector fills whole
+// container elements (isDivisibleInSize) is emitted as a simple bitcast +
+// store without checking the offset. Stores that are not divisible in size
+// are rejected. This is useful for downstream users that have already
+// ensured alignment.
+//
 // The container type is obtained through Op adaptor and would normally be
 // generated via `NarrowTypeEmulationConverter`.
 //
@@ -551,9 +564,10 @@ namespace {
 struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
   using Base::Base;
 
-  ConvertVectorStore(MLIRContext *context, bool disableAtomicRMW)
+  ConvertVectorStore(MLIRContext *context, bool disableAtomicRMW,
+                     bool assumeAligned)
       : OpConversionPattern<vector::StoreOp>(context),
-        disableAtomicRMW(disableAtomicRMW) {}
+        disableAtomicRMW(disableAtomicRMW), assumeAligned(assumeAligned) {}
 
   LogicalResult
   matchAndRewrite(vector::StoreOp op, OpAdaptor adaptor,
@@ -596,19 +610,40 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
     auto origElements = valueToStore.getType().getNumElements();
     // Note, per-element-alignment was already verified above.
     bool isDivisibleInSize = origElements % emulatedPerContainerElem == 0;
-    // Do the trailing dim for source and destination match? If yes, then the
-    // corresponding index must be 0.
-    // FIXME: There's no way to tell for dynamic shapes, so we should bail out.
-    // However, that makes some tests fail, so we need to audit first.
-    auto trailingDim = op.getBase().getType().getShape().back();
-    bool trailingDimsMatch =
-        ShapedType::isDynamic(trailingDim) || trailingDim == origElements;
+
+    // In assume-aligned mode, isDivisibleInSize alone is sufficient — the
+    // caller guarantees that store offsets are aligned to container element
+    // boundaries.
+    if (assumeAligned) {
+      if (!isDivisibleInSize)
+        return rewriter.notifyMatchFailure(
+            op, "the source vector does not fill whole container elements "
+                "(not divisible in size)");
+
+      auto stridedMetadata =
+          memref::ExtractStridedMetadataOp::create(rewriter, loc, op.getBase());
+      OpFoldResult linearizedIndices;
+      std::tie(std::ignore, linearizedIndices) =
+          memref::getLinearizedMemRefOffsetAndSize(
+              rewriter, loc, emulatedBits, containerBits,
+              stridedMetadata.getConstifiedMixedOffset(),
+              stridedMetadata.getConstifiedMixedSizes(),
+              stridedMetadata.getConstifiedMixedStrides(),
+              getAsOpFoldResult(adaptor.getIndices()));
+      auto memrefBase = cast<MemRefValue>(adaptor.getBase());
+      int numElements = origElements / emulatedPerContainerElem;
+      auto bitCast = vector::BitCastOp::create(
+          rewriter, loc, VectorType::get(numElements, containerElemTy),
+          op.getValueToStore());
+      rewriter.replaceOpWithNewOp<vector::StoreOp>(
+          op, bitCast.getResult(), memrefBase,
+          getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices));
+      return success();
+    }
 
     auto stridedMetadata =
         memref::ExtractStridedMetadataOp::create(rewriter, loc, op.getBase());
 
-    // FIXME: ATM, we do not test cases where offsets, sizes, or strides are
-    // non-zero. As such, this is not needed.
     OpFoldResult linearizedIndices;
     memref::LinearizedMemRefInfo linearizedInfo;
     std::tie(linearizedInfo, linearizedIndices) =
@@ -619,10 +654,12 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
             stridedMetadata.getConstifiedMixedStrides(),
             getAsOpFoldResult(adaptor.getIndices()));
 
+    // Use the exact intraDataOffset when it can be folded. Dynamic values are
+    // rejected in this path because a dynamic offset is not necessarily aligned
+    // to a container element boundary. Callers that can guarantee alignment
+    // should use assumeAligned.
     std::optional<int64_t> foldedNumFrontPadElems =
-        (isDivisibleInSize && trailingDimsMatch)
-            ? 0
-            : getConstantIntValue(linearizedInfo.intraDataOffset);
+        getConstantIntValue(linearizedInfo.intraDataOffset);
 
     if (!foldedNumFrontPadElems) {
       return rewriter.notifyMatchFailure(
@@ -813,6 +850,7 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
 
 private:
   const bool disableAtomicRMW;
+  const bool assumeAligned;
 };
 
 //===----------------------------------------------------------------------===//
@@ -2123,9 +2161,14 @@ struct RewriteAlignedSubByteIntExt : OpRewritePattern<ConversionOpType> {
       return failure();
     }
 
-    // Finalize the rewrite.
-    rewriter.replaceOpWithNewOp<ConversionOpType>(
-        conversionOp, conversionOp.getType(), subByteExt);
+    // Finalize the rewrite. If subByteExt already has the destination type
+    // (e.g. extsi i4->i8 where the container is i8), replace directly without
+    // creating a new conversion op that would have identical src and dst types.
+    if (subByteExt.getType() == conversionOp.getType())
+      rewriter.replaceOp(conversionOp, subByteExt);
+    else
+      rewriter.replaceOpWithNewOp<ConversionOpType>(
+          conversionOp, conversionOp.getType(), subByteExt);
     return success();
   }
 };
@@ -2173,11 +2216,13 @@ struct RewriteAlignedSubByteIntTrunc : OpRewritePattern<arith::TruncIOp> {
             /*containerTy=*/rewriter.getI8Type(), truncOp)))
       return failure();
 
-    // Create a new iX -> i8 truncation op.
+    // Create a new iX -> i8 truncation op, unless the source is already i8.
     Location loc = truncOp.getLoc();
     auto i8VecType = srcVecType.cloneWith(std::nullopt, rewriter.getI8Type());
     Value i8TruncVal =
-        arith::TruncIOp::create(rewriter, loc, i8VecType, srcValue);
+        srcVecType == i8VecType
+            ? srcValue
+            : arith::TruncIOp::create(rewriter, loc, i8VecType, srcValue);
 
     // Rewrite the i8 -> i4 truncation part.
     Value subByteTrunc = rewriteI8ToI4Trunc(rewriter, loc, i8TruncVal);
@@ -2245,7 +2290,7 @@ struct RewriteVectorTranspose : OpRewritePattern<vector::TransposeOp> {
 // The emulated type is inferred from the converted memref type.
 void vector::populateVectorNarrowTypeEmulationPatterns(
     const arith::NarrowTypeEmulationConverter &typeConverter,
-    RewritePatternSet &patterns, bool disableAtomicRMW) {
+    RewritePatternSet &patterns, bool disableAtomicRMW, bool assumeAligned) {
   // Populate `vector.*` conversion patterns.
   // TODO: #119553 support atomicity
   patterns.add<ConvertVectorLoad, ConvertVectorMaskedLoad,
@@ -2255,7 +2300,8 @@ void vector::populateVectorNarrowTypeEmulationPatterns(
   // Populate `vector.*` store conversion patterns. The caller can choose
   // to avoid emitting atomic operations and reduce it to read-modify-write
   // sequence for stores if it is known there are no thread contentions.
-  patterns.insert<ConvertVectorStore>(patterns.getContext(), disableAtomicRMW);
+  patterns.insert<ConvertVectorStore>(patterns.getContext(), disableAtomicRMW,
+                                      assumeAligned);
 }
 
 void vector::populateVectorNarrowTypeRewritePatterns(
@@ -2288,6 +2334,6 @@ void vector::populateVectorTransposeNarrowTypeRewritePatterns(
 void vector::populateMemRefFlattenAndVectorNarrowTypeEmulationPatterns(
     arith::NarrowTypeEmulationConverter &typeConverter,
     RewritePatternSet &patterns) {
-  memref::populateFlattenVectorOpsOnMemrefPatterns(patterns);
+  memref::populateFlattenMemrefsPatterns(patterns);
   vector::populateVectorNarrowTypeEmulationPatterns(typeConverter, patterns);
 }

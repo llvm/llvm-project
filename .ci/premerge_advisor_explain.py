@@ -33,7 +33,9 @@ def get_comment(
     pr_number: int,
     body: str,
 ) -> dict[str, str]:
-    repo = github.Github(github_token).get_repo("llvm/llvm-project")
+    repo = github.Github(auth=github.Auth.Token(github_token)).get_repo(
+        "llvm/llvm-project"
+    )
     pr = repo.get_issue(pr_number).as_pull_request()
     body = COMMENT_TAG.format(platform=platform.system()) + "\n" + body
     comment = {"body": body}
@@ -141,7 +143,7 @@ if __name__ == "__main__":
     # Skip looking for results on AArch64 for now because the premerge advisor
     # service is not available on AWS currently.
     if platform.machine() == "arm64" or platform.machine() == "aarch64":
-        sys.exit(0)
+        sys.exit(args.return_code)
 
     failures_explained = main(
         args.commit_sha,

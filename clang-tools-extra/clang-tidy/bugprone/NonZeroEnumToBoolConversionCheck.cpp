@@ -53,8 +53,7 @@ void NonZeroEnumToBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
       "|", "&", "^", "<<", ">>", "~", "|=", "&=", "^=", "<<=", ">>="));
 
   Finder->addMatcher(
-      castExpr(hasCastKind(CK_IntegralToBoolean),
-               unless(isExpansionInSystemHeader()), hasType(booleanType()),
+      castExpr(hasCastKind(CK_IntegralToBoolean), hasType(booleanType()),
                hasSourceExpression(
                    expr(hasType(qualType(hasCanonicalType(hasDeclaration(
                             enumDecl(isCompleteAndHasNoZeroValue(),

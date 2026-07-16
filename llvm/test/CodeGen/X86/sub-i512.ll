@@ -413,36 +413,147 @@ define i512 @test_dec_i512_mem(ptr %p0) nounwind {
 ; AVX2-NEXT:    movq %rcx, 56(%rax)
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: test_dec_i512_mem:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    movq %rdi, %rax
-; AVX512-NEXT:    movq 56(%rsi), %rcx
-; AVX512-NEXT:    movq 48(%rsi), %rdx
-; AVX512-NEXT:    movq 40(%rsi), %rdi
-; AVX512-NEXT:    movq 32(%rsi), %r8
-; AVX512-NEXT:    movq 24(%rsi), %r9
-; AVX512-NEXT:    movq 16(%rsi), %r10
-; AVX512-NEXT:    movq (%rsi), %r11
-; AVX512-NEXT:    movq 8(%rsi), %rsi
-; AVX512-NEXT:    addq $-1, %r11
-; AVX512-NEXT:    adcq $-1, %rsi
-; AVX512-NEXT:    adcq $-1, %r10
-; AVX512-NEXT:    adcq $-1, %r9
-; AVX512-NEXT:    adcq $-1, %r8
-; AVX512-NEXT:    adcq $-1, %rdi
-; AVX512-NEXT:    adcq $-1, %rdx
-; AVX512-NEXT:    adcq $-1, %rcx
-; AVX512-NEXT:    movq %r11, (%rax)
-; AVX512-NEXT:    movq %rsi, 8(%rax)
-; AVX512-NEXT:    movq %r10, 16(%rax)
-; AVX512-NEXT:    movq %r9, 24(%rax)
-; AVX512-NEXT:    movq %r8, 32(%rax)
-; AVX512-NEXT:    movq %rdi, 40(%rax)
-; AVX512-NEXT:    movq %rdx, 48(%rax)
-; AVX512-NEXT:    movq %rcx, 56(%rax)
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: test_dec_i512_mem:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    movq %rdi, %rax
+; AVX512F-NEXT:    vmovdqu64 (%rsi), %zmm0
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
+; AVX512F-NEXT:    vpaddq %zmm1, %zmm0, %zmm1
+; AVX512F-NEXT:    vpcmpltuq %zmm0, %zmm1, %k0
+; AVX512F-NEXT:    kmovw %k0, %ecx
+; AVX512F-NEXT:    vptestnmq %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    kmovw %k0, %edx
+; AVX512F-NEXT:    movzbl %dl, %edx
+; AVX512F-NEXT:    leal (%rdx,%rcx,2), %ecx
+; AVX512F-NEXT:    xorl %edx, %ecx
+; AVX512F-NEXT:    kmovw %ecx, %k1
+; AVX512F-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}
+; AVX512F-NEXT:    vmovdqu64 %zmm1, (%rdi)
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: test_dec_i512_mem:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    movq %rdi, %rax
+; AVX512VL-NEXT:    vmovdqu64 (%rsi), %zmm0
+; AVX512VL-NEXT:    vptestnmq %zmm0, %zmm0, %k0
+; AVX512VL-NEXT:    kmovb %k0, %ecx
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
+; AVX512VL-NEXT:    vpaddq %zmm1, %zmm0, %zmm1
+; AVX512VL-NEXT:    vpcmpltuq %zmm0, %zmm1, %k0
+; AVX512VL-NEXT:    kmovd %k0, %edx
+; AVX512VL-NEXT:    leal (%rcx,%rdx,2), %edx
+; AVX512VL-NEXT:    xorl %ecx, %edx
+; AVX512VL-NEXT:    kmovd %edx, %k1
+; AVX512VL-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}
+; AVX512VL-NEXT:    vmovdqu64 %zmm1, (%rdi)
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
   %a0 = load i512, ptr %p0
   %r = sub i512 %a0, 1
+  ret i512 %r
+}
+
+define i512 @test_sub_i512_mem_mem(ptr %p0, ptr %p1) nounwind {
+; SSE-LABEL: test_sub_i512_mem_mem:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pushq %rbx
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    movq 56(%rsi), %rcx
+; SSE-NEXT:    movq (%rsi), %rdi
+; SSE-NEXT:    subq (%rdx), %rdi
+; SSE-NEXT:    movq 8(%rsi), %r8
+; SSE-NEXT:    sbbq 8(%rdx), %r8
+; SSE-NEXT:    movq 16(%rsi), %r9
+; SSE-NEXT:    sbbq 16(%rdx), %r9
+; SSE-NEXT:    movq 24(%rsi), %r10
+; SSE-NEXT:    sbbq 24(%rdx), %r10
+; SSE-NEXT:    movq 32(%rsi), %r11
+; SSE-NEXT:    sbbq 32(%rdx), %r11
+; SSE-NEXT:    movq 40(%rsi), %rbx
+; SSE-NEXT:    sbbq 40(%rdx), %rbx
+; SSE-NEXT:    movq 48(%rsi), %rsi
+; SSE-NEXT:    sbbq 48(%rdx), %rsi
+; SSE-NEXT:    sbbq 56(%rdx), %rcx
+; SSE-NEXT:    movq %rdi, (%rax)
+; SSE-NEXT:    movq %r8, 8(%rax)
+; SSE-NEXT:    movq %r9, 16(%rax)
+; SSE-NEXT:    movq %r10, 24(%rax)
+; SSE-NEXT:    movq %r11, 32(%rax)
+; SSE-NEXT:    movq %rbx, 40(%rax)
+; SSE-NEXT:    movq %rsi, 48(%rax)
+; SSE-NEXT:    movq %rcx, 56(%rax)
+; SSE-NEXT:    popq %rbx
+; SSE-NEXT:    retq
+;
+; AVX2-LABEL: test_sub_i512_mem_mem:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    pushq %rbx
+; AVX2-NEXT:    movq %rdi, %rax
+; AVX2-NEXT:    movq (%rsi), %rcx
+; AVX2-NEXT:    subq (%rdx), %rcx
+; AVX2-NEXT:    movq 8(%rsi), %rdi
+; AVX2-NEXT:    sbbq 8(%rdx), %rdi
+; AVX2-NEXT:    movq 16(%rsi), %r8
+; AVX2-NEXT:    sbbq 16(%rdx), %r8
+; AVX2-NEXT:    movq 24(%rsi), %r9
+; AVX2-NEXT:    sbbq 24(%rdx), %r9
+; AVX2-NEXT:    movq 32(%rsi), %r10
+; AVX2-NEXT:    sbbq 32(%rdx), %r10
+; AVX2-NEXT:    movq 40(%rsi), %r11
+; AVX2-NEXT:    sbbq 40(%rdx), %r11
+; AVX2-NEXT:    movq 48(%rsi), %rbx
+; AVX2-NEXT:    sbbq 48(%rdx), %rbx
+; AVX2-NEXT:    movq 56(%rsi), %rsi
+; AVX2-NEXT:    sbbq 56(%rdx), %rsi
+; AVX2-NEXT:    movq %rcx, (%rax)
+; AVX2-NEXT:    movq %rdi, 8(%rax)
+; AVX2-NEXT:    movq %r8, 16(%rax)
+; AVX2-NEXT:    movq %r9, 24(%rax)
+; AVX2-NEXT:    movq %r10, 32(%rax)
+; AVX2-NEXT:    movq %r11, 40(%rax)
+; AVX2-NEXT:    movq %rbx, 48(%rax)
+; AVX2-NEXT:    movq %rsi, 56(%rax)
+; AVX2-NEXT:    popq %rbx
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: test_sub_i512_mem_mem:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    movq %rdi, %rax
+; AVX512F-NEXT:    vmovdqu64 (%rsi), %zmm0
+; AVX512F-NEXT:    vpsubq (%rdx), %zmm0, %zmm1
+; AVX512F-NEXT:    vpcmpnleuq %zmm0, %zmm1, %k0
+; AVX512F-NEXT:    kmovw %k0, %ecx
+; AVX512F-NEXT:    vptestnmq %zmm1, %zmm1, %k0
+; AVX512F-NEXT:    kmovw %k0, %edx
+; AVX512F-NEXT:    movzbl %dl, %edx
+; AVX512F-NEXT:    leal (%rdx,%rcx,2), %ecx
+; AVX512F-NEXT:    xorl %edx, %ecx
+; AVX512F-NEXT:    kmovw %ecx, %k1
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 = -1
+; AVX512F-NEXT:    vpaddq %zmm0, %zmm1, %zmm1 {%k1}
+; AVX512F-NEXT:    vmovdqu64 %zmm1, (%rdi)
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: test_sub_i512_mem_mem:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovdqu64 (%rsi), %zmm0
+; AVX512VL-NEXT:    movq %rdi, %rax
+; AVX512VL-NEXT:    vpsubq (%rdx), %zmm0, %zmm1
+; AVX512VL-NEXT:    vpcmpnleuq %zmm0, %zmm1, %k0
+; AVX512VL-NEXT:    kmovd %k0, %ecx
+; AVX512VL-NEXT:    vptestnmq %zmm1, %zmm1, %k0
+; AVX512VL-NEXT:    kmovb %k0, %edx
+; AVX512VL-NEXT:    leal (%rdx,%rcx,2), %ecx
+; AVX512VL-NEXT:    xorl %edx, %ecx
+; AVX512VL-NEXT:    kmovd %ecx, %k1
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm0 = -1
+; AVX512VL-NEXT:    vpaddq %zmm0, %zmm1, %zmm1 {%k1}
+; AVX512VL-NEXT:    vmovdqu64 %zmm1, (%rdi)
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
+  %a0 = load i512, ptr %p0
+  %a1 = load i512, ptr %p1
+  %r = sub i512 %a0, %a1
   ret i512 %r
 }
 
@@ -459,19 +570,97 @@ define void @test_dec_i512_rmw(ptr %p0) nounwind {
 ; CHECK-NEXT:    adcq $-1, 56(%rdi)
 ; CHECK-NEXT:    retq
 ;
-; AVX512-LABEL: test_dec_i512_rmw:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    addq $-1, (%rdi)
-; AVX512-NEXT:    adcq $-1, 8(%rdi)
-; AVX512-NEXT:    adcq $-1, 16(%rdi)
-; AVX512-NEXT:    adcq $-1, 24(%rdi)
-; AVX512-NEXT:    adcq $-1, 32(%rdi)
-; AVX512-NEXT:    adcq $-1, 40(%rdi)
-; AVX512-NEXT:    adcq $-1, 48(%rdi)
-; AVX512-NEXT:    adcq $-1, 56(%rdi)
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: test_dec_i512_rmw:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
+; AVX512F-NEXT:    vpaddq %zmm1, %zmm0, %zmm1
+; AVX512F-NEXT:    vpcmpltuq %zmm0, %zmm1, %k0
+; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    vptestnmq %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    kmovw %k0, %ecx
+; AVX512F-NEXT:    movzbl %cl, %ecx
+; AVX512F-NEXT:    leal (%rcx,%rax,2), %eax
+; AVX512F-NEXT:    xorl %ecx, %eax
+; AVX512F-NEXT:    kmovw %eax, %k0
+; AVX512F-NEXT:    knotw %k0, %k1
+; AVX512F-NEXT:    vmovdqu64 %zmm1, (%rdi) {%k1}
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: test_dec_i512_rmw:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovdqu64 (%rdi), %zmm0
+; AVX512VL-NEXT:    vptestnmq %zmm0, %zmm0, %k0
+; AVX512VL-NEXT:    kmovb %k0, %eax
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
+; AVX512VL-NEXT:    vpaddq %zmm1, %zmm0, %zmm1
+; AVX512VL-NEXT:    vpcmpltuq %zmm0, %zmm1, %k0
+; AVX512VL-NEXT:    kmovd %k0, %ecx
+; AVX512VL-NEXT:    leal (%rax,%rcx,2), %ecx
+; AVX512VL-NEXT:    xorl %eax, %ecx
+; AVX512VL-NEXT:    kmovd %ecx, %k0
+; AVX512VL-NEXT:    knotb %k0, %k1
+; AVX512VL-NEXT:    vmovdqu64 %zmm1, (%rdi) {%k1}
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
   %a0 = load i512, ptr %p0
   %r = sub i512 %a0, 1
   store i512 %r, ptr %p0
   ret void
 }
+
+define void @test_sub_i512_rmw(ptr %p0) nounwind {
+; CHECK-LABEL: test_sub_i512_rmw:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addq $-9, (%rdi)
+; CHECK-NEXT:    adcq $-1, 8(%rdi)
+; CHECK-NEXT:    adcq $-1, 16(%rdi)
+; CHECK-NEXT:    adcq $-1, 24(%rdi)
+; CHECK-NEXT:    adcq $-1, 32(%rdi)
+; CHECK-NEXT:    adcq $-1, 40(%rdi)
+; CHECK-NEXT:    adcq $-1, 48(%rdi)
+; CHECK-NEXT:    adcq $-1, 56(%rdi)
+; CHECK-NEXT:    retq
+;
+; AVX512F-LABEL: test_sub_i512_rmw:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
+; AVX512F-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm1
+; AVX512F-NEXT:    vpcmpltuq %zmm0, %zmm1, %k0
+; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm2 = -1
+; AVX512F-NEXT:    vpcmpeqq %zmm2, %zmm1, %k0
+; AVX512F-NEXT:    kmovw %k0, %ecx
+; AVX512F-NEXT:    movzbl %cl, %ecx
+; AVX512F-NEXT:    leal (%rcx,%rax,2), %eax
+; AVX512F-NEXT:    xorl %ecx, %eax
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vmovq {{.*#+}} xmm2 = [18446744073709551608,0]
+; AVX512F-NEXT:    vpaddq %zmm2, %zmm0, %zmm1 {%k1}
+; AVX512F-NEXT:    vmovdqu64 %zmm1, (%rdi)
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: test_sub_i512_rmw:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovdqu64 (%rdi), %zmm0
+; AVX512VL-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm1
+; AVX512VL-NEXT:    vpcmpltuq %zmm0, %zmm1, %k0
+; AVX512VL-NEXT:    kmovd %k0, %eax
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm2 = -1
+; AVX512VL-NEXT:    vpcmpeqq %zmm2, %zmm1, %k0
+; AVX512VL-NEXT:    kmovb %k0, %ecx
+; AVX512VL-NEXT:    leal (%rcx,%rax,2), %eax
+; AVX512VL-NEXT:    xorl %ecx, %eax
+; AVX512VL-NEXT:    kmovd %eax, %k1
+; AVX512VL-NEXT:    vmovq {{.*#+}} xmm2 = [18446744073709551608,0]
+; AVX512VL-NEXT:    vpaddq %zmm2, %zmm0, %zmm1 {%k1}
+; AVX512VL-NEXT:    vmovdqu64 %zmm1, (%rdi)
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
+  %a0 = load i512, ptr %p0
+  %r = sub i512 %a0, 9
+  store i512 %r, ptr %p0
+  ret void
+}
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; AVX512: {{.*}}

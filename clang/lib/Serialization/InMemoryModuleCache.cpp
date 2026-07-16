@@ -23,28 +23,36 @@ InMemoryModuleCache::getPCMState(llvm::StringRef Filename) const {
 
 llvm::MemoryBuffer &
 InMemoryModuleCache::addPCM(llvm::StringRef Filename,
-                            std::unique_ptr<llvm::MemoryBuffer> Buffer) {
-  auto Insertion = PCMs.insert(std::make_pair(Filename, std::move(Buffer)));
+                            std::unique_ptr<llvm::MemoryBuffer> Buffer,
+                            off_t Size, time_t ModTime) {
+  auto Insertion = PCMs.insert(
+      std::make_pair(Filename, PCM(std::move(Buffer), Size, ModTime)));
   assert(Insertion.second && "Already has a PCM");
   return *Insertion.first->second.Buffer;
 }
 
 llvm::MemoryBuffer &
 InMemoryModuleCache::addBuiltPCM(llvm::StringRef Filename,
-                                 std::unique_ptr<llvm::MemoryBuffer> Buffer) {
+                                 std::unique_ptr<llvm::MemoryBuffer> Buffer,
+                                 off_t Size, time_t ModTime) {
   auto &PCM = PCMs[Filename];
   assert(!PCM.IsFinal && "Trying to override finalized PCM?");
   assert(!PCM.Buffer && "Trying to override tentative PCM?");
   PCM.Buffer = std::move(Buffer);
+  PCM.Size = Size;
+  PCM.ModTime = ModTime;
   PCM.IsFinal = true;
   return *PCM.Buffer;
 }
 
-llvm::MemoryBuffer *
-InMemoryModuleCache::lookupPCM(llvm::StringRef Filename) const {
+llvm::MemoryBuffer *InMemoryModuleCache::lookupPCM(llvm::StringRef Filename,
+                                                   off_t &Size,
+                                                   time_t &ModTime) const {
   auto I = PCMs.find(Filename);
   if (I == PCMs.end())
     return nullptr;
+  Size = I->second.Size;
+  ModTime = I->second.ModTime;
   return I->second.Buffer.get();
 }
 

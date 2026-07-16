@@ -496,7 +496,7 @@ Error OnDiskOutputFile::keep() {
       if (Error Err = Lock.tryLock().moveInto(Owned)) {
         // If we error acquiring a lock, we cannot ensure appends
         // to the trace file are atomic - cannot ensure output correctness.
-        Lock.unsafeMaybeUnlock();
+        Lock.unsafeUnlock();
         return convertToOutputError(
             OutputPath, std::make_error_code(std::errc::no_lock_available));
       }
@@ -508,7 +508,7 @@ Error OnDiskOutputFile::keep() {
           return convertToOutputError(OutputPath, EC);
         Out << (*Content)->getBuffer();
         Out.close();
-        Lock.unsafeMaybeUnlock();
+        Lock.unsafeUnlock();
         if (Out.has_error())
           return convertToOutputError(OutputPath, Out.error());
         // Remove temp file and done.
@@ -528,7 +528,7 @@ Error OnDiskOutputFile::keep() {
         // the lock, causing other waiting processes to time-out. Let's clear
         // the lock and try again right away. If we do start seeing compiler
         // hangs in this location, we will need to re-consider.
-        Lock.unsafeMaybeUnlock();
+        Lock.unsafeUnlock();
         continue;
       }
       }

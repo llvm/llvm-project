@@ -19,10 +19,13 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
+#include "clang/Frontend/SSAFOptions.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/FrontendTool/Utils.h"
 #include "clang/Options/Options.h"
 #include "clang/Rewrite/Frontend/FrontendActions.h"
+#include "clang/ScalableStaticAnalysis/Frontend/TUSummaryExtractorFrontendAction.h"
+#include "clang/ScalableStaticAnalysis/SSAFForceLinker.h" // IWYU pragma: keep
 #include "clang/StaticAnalyzer/Frontend/AnalyzerHelpFlags.h"
 #include "clang/StaticAnalyzer/Frontend/FrontendActions.h"
 #include "llvm/Option/OptTable.h"
@@ -207,6 +210,10 @@ CreateFrontendAction(CompilerInstance &CI) {
     Act = std::make_unique<ASTMergeAction>(std::move(Act),
                                             FEOpts.ASTMergeFiles);
 
+  if (!CI.getSSAFOpts().TUSummaryFile.empty()) {
+    Act = std::make_unique<ssaf::TUSummaryExtractorFrontendAction>(
+        std::move(Act));
+  }
   return Act;
 }
 
@@ -293,7 +300,9 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
     for (unsigned i = 0; i != NumArgs; ++i)
       Args[i + 1] = Clang->getFrontendOpts().MLIRArgs[i].c_str();
     Args[NumArgs + 1] = nullptr;
-    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get());
+    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get(),
+                                      /*Description=*/"", /*Errs=*/nullptr,
+                                      &Clang->getVirtualFileSystem());
   }
 #endif
 

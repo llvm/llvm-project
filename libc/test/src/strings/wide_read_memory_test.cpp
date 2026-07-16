@@ -21,6 +21,7 @@
 // unreadable, the middle usable normally. By placing test data at the edges
 // between the middle page and the others, we can test for bad accesses.
 
+#include "hdr/sys_mman_macros.h"
 #include "src/__support/CPP/array.h"
 #include "src/string/memory_utils/inline_memset.h"
 #include "src/string/string_utils.h"
@@ -95,6 +96,27 @@ TEST_F(LlvmLibcWideAccessMemoryTest, StringLength) {
   this->TestMemoryAccess(buf, [this, buf](const char *test_data) {
     // -1 for the null character.
     ASSERT_EQ(internal::string_length(test_data), size_t(buf.size() - 1));
+  });
+}
+
+TEST_F(LlvmLibcWideAccessMemoryTest, FindFirstChar) {
+  // 1.5 k long vector of a's.
+  TwoKilobyteBuffer buf;
+  inline_memset(buf.data(), 'a', buf.size());
+  buf[buf.size() - 1] = 'b';
+  this->TestMemoryAccess(buf, [this, buf](const char *test_data) {
+    // Found case
+    ASSERT_EQ(
+        reinterpret_cast<const void *>(internal::find_first_character_impl(
+            reinterpret_cast<const unsigned char *>(test_data), 'b',
+            size_t(buf.size()))),
+        reinterpret_cast<const void *>(test_data + size_t(buf.size()) - 1));
+    // Not found case
+    ASSERT_EQ(
+        reinterpret_cast<const void *>(internal::find_first_character_impl(
+            reinterpret_cast<const unsigned char *>(test_data), 'c',
+            size_t(buf.size()))),
+        nullptr);
   });
 }
 

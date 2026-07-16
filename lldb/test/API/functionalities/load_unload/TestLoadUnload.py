@@ -10,6 +10,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class LoadUnloadTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -243,8 +244,7 @@ class LoadUnloadTestCase(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
 
-        ctx = self.platformContext
-        dylibName = ctx.shlib_prefix + "loadunload_a." + ctx.shlib_extension
+        dylibName = self.platformContext.getFullLibName("loadunload_a")
         localDylibPath = self.getBuildArtifact(dylibName)
         if lldb.remote_platform:
             wd = lldb.remote_platform.GetWorkingDirectory()

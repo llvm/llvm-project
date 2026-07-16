@@ -10,6 +10,7 @@ from lldbsuite.test import lldbutil
 
 class StdVariantDataFormatterTestCase(TestBase):
     TEST_WITH_PDB_DEBUG_INFO = True
+    SHARED_BUILD_TESTCASE = False
 
     def do_test(self):
         """Test that that file and class static variables display correctly."""

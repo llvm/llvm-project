@@ -34,7 +34,8 @@ void RedundantTypenameCheck::registerMatchers(MatchFinder *Finder) {
                     cxxMethodDecl(), hasParent(friendDecl()),
                     functionDecl(has(nestedNameSpecifier())),
                     cxxDeductionGuideDecl(hasDeclContext(recordDecl())))))))),
-                // Match return types.
+                // Match return types. FIXME: CWG2413 made conversion operators
+                // an implicit typename context.
                 functionDecl(unless(cxxConversionDecl()))))),
             hasParent(expr(anyOf(cxxNamedCastExpr(), cxxNewExpr()))));
   Finder->addMatcher(
@@ -50,7 +51,7 @@ void RedundantTypenameCheck::registerMatchers(MatchFinder *Finder) {
 void RedundantTypenameCheck::check(const MatchFinder::MatchResult &Result) {
   const TypeLoc TL = [&] {
     if (const auto *TL = Result.Nodes.getNodeAs<TypeLoc>("typeLoc"))
-      return TL->getType()->isDependentType() ? TypeLoc() : *TL;
+      return TL->getType()->isInstantiationDependentType() ? TypeLoc() : *TL;
 
     auto TL = *Result.Nodes.getNodeAs<TypeLoc>("dependentTypeLoc");
     while (const TypeLoc Next = TL.getNextTypeLoc())

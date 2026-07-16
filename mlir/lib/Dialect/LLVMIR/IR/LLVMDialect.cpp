@@ -25,6 +25,8 @@
 #include "mlir/Transforms/InliningUtils.h"
 
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Error.h"
@@ -997,6 +999,13 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
         /*convergent=*/nullptr, /*no_unwind=*/nullptr, /*will_return=*/nullptr,
         /*noreturn=*/nullptr, /*returns_twice=*/nullptr, /*hot=*/nullptr,
         /*cold=*/nullptr, /*noduplicate=*/nullptr,
+        /*no_caller_saved_registers=*/nullptr, /*nocallback=*/nullptr,
+        /*modular_format=*/nullptr, /*nobuiltins=*/nullptr,
+        /*allocsize=*/nullptr, /*optsize=*/nullptr, /*minsize=*/nullptr,
+        /*builtin=*/nullptr, /*nobuiltin=*/nullptr,
+        /*save_reg_params=*/nullptr,
+        /*zero_call_used_regs=*/nullptr, /*trap_func_name=*/nullptr,
+        /*default_func_attrs=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
@@ -1030,6 +1039,13 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*noreturn=*/nullptr,
         /*returns_twice=*/nullptr, /*hot=*/nullptr,
         /*cold=*/nullptr, /*noduplicate=*/nullptr,
+        /*no_caller_saved_registers=*/nullptr, /*nocallback=*/nullptr,
+        /*modular_format=*/nullptr, /*nobuiltins=*/nullptr,
+        /*allocsize=*/nullptr, /*optsize=*/nullptr, /*minsize=*/nullptr,
+        /*builtin=*/nullptr, /*nobuiltin=*/nullptr,
+        /*save_reg_params=*/nullptr,
+        /*zero_call_used_regs=*/nullptr, /*trap_func_name=*/nullptr,
+        /*default_func_attrs=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr,
@@ -1049,6 +1065,13 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*noreturn=*/nullptr,
         /*returns_twice=*/nullptr, /*hot=*/nullptr,
         /*cold=*/nullptr, /*noduplicate=*/nullptr,
+        /*no_caller_saved_registers=*/nullptr, /*nocallback=*/nullptr,
+        /*modular_format=*/nullptr, /*nobuiltins=*/nullptr,
+        /*allocsize=*/nullptr, /*optsize=*/nullptr, /*minsize=*/nullptr,
+        /*builtin=*/nullptr, /*nobuiltin=*/nullptr,
+        /*save_reg_params=*/nullptr,
+        /*zero_call_used_regs=*/nullptr, /*trap_func_name=*/nullptr,
+        /*default_func_attrs=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
@@ -1068,6 +1091,13 @@ void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
         /*noreturn=*/nullptr,
         /*returns_twice=*/nullptr, /*hot=*/nullptr,
         /*cold=*/nullptr, /*noduplicate=*/nullptr,
+        /*no_caller_saved_registers=*/nullptr, /*nocallback=*/nullptr,
+        /*modular_format=*/nullptr, /*nobuiltins=*/nullptr,
+        /*allocsize=*/nullptr, /*optsize=*/nullptr, /*minsize=*/nullptr,
+        /*builtin=*/nullptr, /*nobuiltin=*/nullptr,
+        /*save_reg_params=*/nullptr,
+        /*zero_call_used_regs=*/nullptr, /*trap_func_name=*/nullptr,
+        /*default_func_attrs=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
@@ -1227,10 +1257,15 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
       fnType = fn.getFunctionType();
     } else if (auto ifunc = dyn_cast<IFuncOp>(callee)) {
       fnType = ifunc.getIFuncType();
+    } else if (isa<AliasOp>(callee)) {
+      // Aliases can alias functions, so calling through an alias is valid.
+      // The function type is determined by the call's operands and result
+      // types.
+      fnType = getCalleeFunctionType();
     } else {
       return emitOpError()
              << "'" << calleeName.getValue()
-             << "' does not reference a valid LLVM function or IFunc";
+             << "' does not reference a valid LLVM function, IFunc, or alias";
     }
   }
 
@@ -1910,12 +1945,16 @@ static Type getInsertExtractValueElementType(Type llvmType,
 }
 
 /// Extracts the element at the given index from an attribute. For
-/// `ElementsAttr` and `ArrayAttr`, returns the element at the specified index.
-/// For `ZeroAttr`, `UndefAttr`, and `PoisonAttr`, returns the attribute itself
-/// unchanged. Returns `nullptr` if the attribute is not one of these types or
-/// if the index is out of bounds.
+/// `ElementsAttr`, returns the element at the specified index, or `nullptr` if
+/// the shaped type does not have rank 1. For `ArrayAttr`, returns the element
+/// at the specified index. For `ZeroAttr`, `UndefAttr`, and `PoisonAttr`,
+/// returns the attribute itself unchanged. Returns `nullptr` if the attribute
+/// is not one of these types or if the index is out of bounds.
 static Attribute extractElementAt(Attribute attr, size_t index) {
   if (auto elementsAttr = dyn_cast<ElementsAttr>(attr)) {
+    ShapedType shapedType = elementsAttr.getShapedType();
+    if (!shapedType.hasRank() || shapedType.getRank() != 1)
+      return nullptr;
     if (index < static_cast<size_t>(elementsAttr.getNumElements()))
       return elementsAttr.getValues<Attribute>()[index];
     return nullptr;
@@ -2572,8 +2611,8 @@ static bool isZeroAttribute(Attribute value) {
 
 LogicalResult GlobalOp::verify() {
   bool validType = isCompatibleOuterType(getType())
-                       ? !llvm::isa<LLVMVoidType, LLVMTokenType,
-                                    LLVMMetadataType, LLVMLabelType>(getType())
+                       ? !llvm::isa<LLVMVoidType, TokenType, LLVMMetadataType,
+                                    LLVMLabelType>(getType())
                        : llvm::isa<PointerElementTypeInterface>(getType());
   if (!validType)
     return emitOpError(
@@ -2793,8 +2832,8 @@ ParseResult AliasOp::parse(OpAsmParser &parser, OperationState &result) {
 
 LogicalResult AliasOp::verify() {
   bool validType = isCompatibleOuterType(getType())
-                       ? !llvm::isa<LLVMVoidType, LLVMTokenType,
-                                    LLVMMetadataType, LLVMLabelType>(getType())
+                       ? !llvm::isa<LLVMVoidType, TokenType, LLVMMetadataType,
+                                    LLVMLabelType>(getType())
                        : llvm::isa<PointerElementTypeInterface>(getType());
   if (!validType)
     return emitOpError(
@@ -3006,7 +3045,18 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
     result.addAttribute(getComdatAttrName(result.name), comdat);
   if (functionEntryCount)
     result.addAttribute(getFunctionEntryCountAttrName(result.name),
-                        builder.getI64IntegerAttr(functionEntryCount.value()));
+                        FunctionEntryCountAttr::get(
+                            builder.getContext(), *functionEntryCount,
+                            ProfileCountType::Real, ArrayRef<uint64_t>{}));
+#ifndef NDEBUG
+  std::optional<NamedAttribute> duplicate = result.attributes.findDuplicate();
+  if (duplicate.has_value()) {
+    llvm::report_fatal_error(
+        Twine("LLVMFuncOp propagated an attribute that is meant "
+              "to be constructed by the builder: ") +
+        duplicate->getName().str());
+  }
+#endif
   if (argAttrs.empty())
     return;
 
@@ -3322,6 +3372,15 @@ OpFoldResult LLVM::PoisonOp::fold(FoldAdaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// MetadataAsValueOp.
+//===----------------------------------------------------------------------===//
+
+/// Fold a metadata-as-value operation to its wrapped metadata attribute.
+OpFoldResult LLVM::MetadataAsValueOp::fold(FoldAdaptor) {
+  return getMetadataAttr();
+}
+
+//===----------------------------------------------------------------------===//
 // ZeroOp.
 //===----------------------------------------------------------------------===//
 
@@ -3427,7 +3486,19 @@ static LogicalResult verifyStructArrayConstant(LLVM::ConstantOp op,
   // from a symbol and cannot be represented in a DenseElementsAttr, but no MLIR
   // user needs this so far, and it seems better to avoid people misusing the
   // ArrayAttr for simple types.
-  auto structType = dyn_cast<LLVM::LLVMStructType>(arrayType.getElementType());
+  Type elementType = arrayType.getElementType();
+  if (isa<LLVM::LLVMPointerType>(elementType)) {
+    for (auto [idx, elementAttr] : llvm::enumerate(arrayAttr)) {
+      if (isa<FlatSymbolRefAttr, LLVM::ZeroAttr, LLVM::UndefAttr,
+              LLVM::PoisonAttr>(elementAttr))
+        continue;
+      return op.emitOpError()
+             << "pointer array element at index " << idx
+             << " must be a flat symbol reference, zero, undef, or poison";
+    }
+    return success();
+  }
+  auto structType = dyn_cast<LLVM::LLVMStructType>(elementType);
   if (!structType)
     return op.emitOpError() << "for array with an array attribute must have a "
                                "struct element type";
@@ -3621,7 +3692,9 @@ LogicalResult AtomicRMWOp::verify() {
   if (getBinOp() == AtomicBinOp::fadd || getBinOp() == AtomicBinOp::fsub ||
       getBinOp() == AtomicBinOp::fmin || getBinOp() == AtomicBinOp::fmax ||
       getBinOp() == AtomicBinOp::fminimum ||
-      getBinOp() == AtomicBinOp::fmaximum) {
+      getBinOp() == AtomicBinOp::fmaximum ||
+      getBinOp() == AtomicBinOp::fminimumnum ||
+      getBinOp() == AtomicBinOp::fmaximumnum) {
     if (isCompatibleVectorType(valType)) {
       if (isScalableVectorType(valType))
         return emitOpError("expected LLVM IR fixed vector type");
@@ -3798,10 +3871,16 @@ OpFoldResult LLVM::BitcastOp::fold(FoldAdaptor adaptor) {
 }
 
 LogicalResult LLVM::BitcastOp::verify() {
-  auto resultType = llvm::dyn_cast<LLVMPointerType>(
-      extractVectorElementType(getResult().getType()));
-  auto sourceType = llvm::dyn_cast<LLVMPointerType>(
-      extractVectorElementType(getArg().getType()));
+  Type srcElemType = extractVectorElementType(getArg().getType());
+  Type dstElemType = extractVectorElementType(getResult().getType());
+
+  // TODO: 'bitcast' requires result and operand type to be identical in size.
+  // Byte types may be cast from/to any type pointer constraints.
+  if (isa<LLVMByteType>(srcElemType) || isa<LLVMByteType>(dstElemType))
+    return success();
+
+  auto resultType = llvm::dyn_cast<LLVMPointerType>(dstElemType);
+  auto sourceType = llvm::dyn_cast<LLVMPointerType>(srcElemType);
 
   // If one of the types is a pointer (or vector of pointers), then
   // both source and result type have to be pointers.
@@ -3826,6 +3905,22 @@ LogicalResult LLVM::BitcastOp::verify() {
   if (resultType.getAddressSpace() != sourceType.getAddressSpace())
     return emitOpError("cannot cast pointers of different address spaces, "
                        "use 'llvm.addrspacecast' instead");
+
+  return success();
+}
+
+LogicalResult LLVM::PtrToAddrOp::verify() {
+  auto pointerType =
+      cast<LLVM::LLVMPointerType>(extractVectorElementType(getArg().getType()));
+  auto integerType = cast<IntegerType>(extractVectorElementType(getType()));
+
+  auto dataLayout = DataLayout::closest(*this);
+  std::optional<unsigned> width = dataLayout.getTypeIndexBitwidth(pointerType);
+  assert(width && "pointers always return an index bitwidth");
+  if (width != integerType.getWidth())
+    return emitOpError("bit-width of integer result type ")
+           << integerType << " must match the pointer bitwidth (" << *width
+           << ") specified in the datalayout";
 
   return success();
 }
@@ -4086,9 +4181,23 @@ LogicalResult ModuleFlagsOp::verify() {
   if (Operation *parentOp = (*this)->getParentOp();
       parentOp && !satisfiesLLVMModule(parentOp))
     return emitOpError("must appear at the module level");
-  for (Attribute flag : getFlags())
-    if (!isa<ModuleFlagAttr>(flag))
+
+  llvm::DenseSet<StringAttr> seenNonRequireKeys;
+  for (Attribute flag : getFlags()) {
+    auto moduleFlag = dyn_cast<ModuleFlagAttrInterface>(flag);
+    if (!moduleFlag)
       return emitOpError("expected a module flag attribute");
+    if (failed(LLVM::detail::verifyModuleFlagValue(
+            moduleFlag.getModuleFlagKey(), moduleFlag.getModuleFlagValue(),
+            [&] { return emitOpError(); })))
+      return failure();
+    if (moduleFlag.getModuleFlagBehavior() == ModFlagBehavior::Require)
+      continue;
+    StringAttr key = moduleFlag.getModuleFlagKey();
+    if (!seenNonRequireKeys.insert(key).second)
+      return emitOpError("expected module flag key '")
+             << key.getValue() << "' to be unique for non-require flags";
+  }
   return success();
 }
 
@@ -4127,11 +4236,13 @@ LLVMFuncOp BlockAddressOp::getFunction(SymbolTableCollection &symbolTable) {
 }
 
 BlockTagOp BlockAddressOp::getBlockTagOp() {
-  auto funcOp = dyn_cast<LLVMFuncOp>(mlir::SymbolTable::lookupNearestSymbolFrom(
-      parentLLVMModule(*this), getBlockAddr().getFunction()));
+  Operation *sym = mlir::SymbolTable::lookupNearestSymbolFrom(
+      parentLLVMModule(*this), getBlockAddr().getFunction());
+  if (!sym)
+    return nullptr;
+  auto funcOp = dyn_cast<LLVMFuncOp>(sym);
   if (!funcOp)
     return nullptr;
-
   BlockTagOp blockTagOp = nullptr;
   funcOp.walk([&](LLVM::BlockTagOp labelOp) {
     if (labelOp.getTag() == getBlockAddr().getTag()) {
@@ -4388,7 +4499,6 @@ void LLVMDialect::initialize() {
 
   // clang-format off
   addTypes<LLVMVoidType,
-           LLVMTokenType,
            LLVMLabelType,
            LLVMMetadataType>();
   // clang-format on
@@ -4624,6 +4734,10 @@ Operation *LLVMDialect::materializeConstant(OpBuilder &builder, Attribute value,
     return LLVM::PoisonOp::create(builder, loc, type);
   if (isa<LLVM::ZeroAttr>(value))
     return LLVM::ZeroOp::create(builder, loc, type);
+  if (isa<LLVM::MDStringAttr, LLVM::MDConstantAttr, LLVM::MDFuncAttr,
+          LLVM::MDNodeAttr>(value))
+    if (isa<LLVM::LLVMMetadataType>(type))
+      return LLVM::MetadataAsValueOp::create(builder, loc, type, value);
   // Otherwise try materializing it as a regular llvm.mlir.constant op.
   return LLVM::ConstantOp::materialize(builder, value, type, loc);
 }

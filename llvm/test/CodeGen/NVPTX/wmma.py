@@ -1176,6 +1176,16 @@ def is_mma_block_scale_variant_supported(op, kind, scale_vec_size, stype):
         return False
 
     if (
+        kind == "mxf4nvf4"
+        and scale_vec_size == ".scale_vec::4X"
+        and stype == "ue8m0"
+        and not (
+            ptx_version >= 91 and sm_version == 120 and has_family_specific_features()
+        )
+    ):
+        return False
+
+    if (
         op.a.geom == "m16n8k64"
         and kind == "mxf4"
         and stype == "ue8m0"
@@ -1194,7 +1204,7 @@ def is_mma_block_scale_variant_supported(op, kind, scale_vec_size, stype):
     if (
         op.a.geom == "m16n8k64"
         and kind == "mxf4nvf4"
-        and stype == "ue4m3"
+        and stype in ["ue4m3", "ue8m0"]
         and scale_vec_size == ".scale_vec::4X"
     ):
         return True
@@ -1561,6 +1571,18 @@ def is_mma_sp_block_scale_variant_supported(op, kind, scale_vec_size, stype):
         return False
 
     if (
+        kind == "mxf4nvf4"
+        and scale_vec_size == ".scale_vec::4X"
+        and stype == "ue8m0"
+        and not (
+            ptx_version >= 91
+            and (sm_version == 120 or sm_version == 121)
+            and has_arch_accel_features()
+        )
+    ):
+        return False
+
+    if (
         op.a.geom == "m16n8k128"
         and kind == "mxf4"
         and stype == "ue8m0"
@@ -1579,7 +1601,7 @@ def is_mma_sp_block_scale_variant_supported(op, kind, scale_vec_size, stype):
     if (
         op.a.geom == "m16n8k128"
         and kind == "mxf4nvf4"
-        and stype == "ue4m3"
+        and stype in ["ue4m3", "ue8m0"]
         and scale_vec_size == ".scale_vec::4X"
     ):
         return True

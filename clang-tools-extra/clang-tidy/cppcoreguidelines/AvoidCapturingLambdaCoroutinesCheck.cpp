@@ -21,17 +21,40 @@ AST_MATCHER(LambdaExpr, hasCoroutineBody) {
 }
 
 AST_MATCHER(LambdaExpr, hasCaptures) { return Node.capture_size() != 0U; }
+
+AST_MATCHER(LambdaExpr, hasDeducingThis) {
+  return Node.getCallOperator()->isExplicitObjectMemberFunction();
+}
 } // namespace
+
+AvoidCapturingLambdaCoroutinesCheck::AvoidCapturingLambdaCoroutinesCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      AllowExplicitObjectParameters(
+          Options.get("AllowExplicitObjectParameters", false)) {}
 
 void AvoidCapturingLambdaCoroutinesCheck::registerMatchers(
     MatchFinder *Finder) {
+  using LambdaExprMatcher = ast_matchers::internal::Matcher<LambdaExpr>;
+  const auto ExplicitObjectFilter =
+      AllowExplicitObjectParameters
+          ? LambdaExprMatcher(unless(hasDeducingThis()))
+          : LambdaExprMatcher(anything());
   Finder->addMatcher(
-      lambdaExpr(hasCaptures(), hasCoroutineBody()).bind("lambda"), this);
+      lambdaExpr(hasCaptures(), hasCoroutineBody(), ExplicitObjectFilter)
+          .bind("lambda"),
+      this);
 }
 
 bool AvoidCapturingLambdaCoroutinesCheck::isLanguageVersionSupported(
     const LangOptions &LangOpts) const {
   return LangOpts.CPlusPlus20;
+}
+
+void AvoidCapturingLambdaCoroutinesCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "AllowExplicitObjectParameters",
+                AllowExplicitObjectParameters);
 }
 
 void AvoidCapturingLambdaCoroutinesCheck::check(

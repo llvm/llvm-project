@@ -100,8 +100,9 @@ static inline UnsignedOrNone getStackIndexOfNearestEnclosingCaptureReadyLambda(
     // innermost nested lambda are dependent (otherwise we wouldn't have
     // arrived here) - so we don't yet have a lambda that can capture the
     // variable.
-    if (IsCapturingVariable &&
-        VarToCapture->getDeclContext()->Equals(EnclosingDC))
+    if (IsCapturingVariable && VarToCapture->getDeclContext()
+                                   ->getEnclosingNonExpansionStatementContext()
+                                   ->Equals(EnclosingDC))
       return NoLambdaIsCaptureReady;
 
     // For an enclosing lambda to be capture ready for an entity, all
@@ -126,7 +127,8 @@ static inline UnsignedOrNone getStackIndexOfNearestEnclosingCaptureReadyLambda(
       if (IsCapturingThis && !LSI->isCXXThisCaptured())
         return NoLambdaIsCaptureReady;
     }
-    EnclosingDC = getLambdaAwareParentOfDeclContext(EnclosingDC);
+    EnclosingDC = getLambdaAwareParentOfDeclContext(EnclosingDC)
+                      ->getEnclosingNonExpansionStatementContext();
 
     assert(CurScopeIndex);
     --CurScopeIndex;
@@ -190,11 +192,6 @@ UnsignedOrNone clang::getStackIndexOfNearestEnclosingCaptureCapableLambda(
     return NoLambdaIsCaptureCapable;
 
   const unsigned IndexOfCaptureReadyLambda = *OptionalStackIndex;
-  assert(((IndexOfCaptureReadyLambda != (FunctionScopes.size() - 1)) ||
-          S.getCurGenericLambda()) &&
-         "The capture ready lambda for a potential capture can only be the "
-         "current lambda if it is a generic lambda");
-
   const sema::LambdaScopeInfo *const CaptureReadyLambdaLSI =
       cast<sema::LambdaScopeInfo>(FunctionScopes[IndexOfCaptureReadyLambda]);
 
@@ -248,7 +245,7 @@ CXXRecordDecl *
 Sema::createLambdaClosureType(SourceRange IntroducerRange, TypeSourceInfo *Info,
                               unsigned LambdaDependencyKind,
                               LambdaCaptureDefault CaptureDefault) {
-  DeclContext *DC = CurContext;
+  DeclContext *DC = CurContext->getEnclosingNonExpansionStatementContext();
 
   bool IsGenericLambda =
       Info && getGenericLambdaTemplateParameterList(getCurLambda(), *this);
@@ -259,20 +256,6 @@ Sema::createLambdaClosureType(SourceRange IntroducerRange, TypeSourceInfo *Info,
   DC->addDecl(Class);
 
   return Class;
-}
-
-/// Determine whether the given context is or is enclosed in an inline
-/// function.
-static bool isInInlineFunction(const DeclContext *DC) {
-  while (!DC->isFileContext()) {
-    if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(DC))
-      if (FD->isInlined())
-        return true;
-
-    DC = DC->getLexicalParent();
-  }
-
-  return false;
 }
 
 std::tuple<MangleNumberingContext *, Decl *>
@@ -287,32 +270,33 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     DataMember,
     InlineVariable,
     TemplatedVariable,
+    ExternallyVisibleVariableInModulePurview,
     Concept,
-    NonInlineInModulePurview
   } Kind = Normal;
 
   bool IsInNonspecializedTemplate =
       inTemplateInstantiation() || CurContext->isDependentContext();
 
+  // Checks if a VarDecl or FunctionDecl is from a module purview and externally
+  // visible. These Decls should be treated as "inline" for the purpose of
+  // mangling in the code below.
+  //
+  // See discussion in https://github.com/itanium-cxx-abi/cxx-abi/issues/186
+  //
+  // zygoloid:
+  //    Yeah, I think the only cases left where lambdas don't need a
+  //    mangling are when they have (effectively) internal linkage or
+  //    appear in a non-inline function in a non-module translation unit.
+  static constexpr auto IsExternallyVisibleInModulePurview =
+      [](const NamedDecl *ND) -> bool {
+    return (ND->isInNamedModule() || ND->isFromGlobalModule()) &&
+           ND->isExternallyVisible();
+  };
+
   // Default arguments of member function parameters that appear in a class
   // definition, as well as the initializers of data members, receive special
   // treatment. Identify them.
   Kind = [&]() {
-    // See discussion in https://github.com/itanium-cxx-abi/cxx-abi/issues/186
-    //
-    // zygoloid:
-    //    Yeah, I think the only cases left where lambdas don't need a
-    //    mangling are when they have (effectively) internal linkage or appear
-    //    in a non-inline function in a non-module translation unit.
-    if (auto *ND = dyn_cast<NamedDecl>(ManglingContextDecl ? ManglingContextDecl
-                                                           : cast<Decl>(DC));
-        ND && (ND->isInNamedModule() || ND->isFromGlobalModule()) &&
-        ND->isExternallyVisible()) {
-      if (!ManglingContextDecl)
-        ManglingContextDecl = const_cast<Decl *>(cast<Decl>(DC));
-      return NonInlineInModulePurview;
-    }
-
     if (!ManglingContextDecl)
       return Normal;
 
@@ -324,6 +308,9 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     } else if (VarDecl *Var = dyn_cast<VarDecl>(ManglingContextDecl)) {
       if (Var->getMostRecentDecl()->isInline())
         return InlineVariable;
+
+      if (IsExternallyVisibleInModulePurview(Var))
+        return ExternallyVisibleVariableInModulePurview;
 
       if (Var->getDeclContext()->isRecord() && IsInNonspecializedTemplate)
         return TemplatedVariable;
@@ -337,22 +324,43 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
       }
     } else if (isa<FieldDecl>(ManglingContextDecl)) {
       return DataMember;
-    } else if (isa<ImplicitConceptSpecializationDecl>(ManglingContextDecl)) {
+    } else if (isa<ImplicitConceptSpecializationDecl, ConceptDecl>(
+                   ManglingContextDecl)) {
       return Concept;
     }
 
     return Normal;
   }();
 
-  // Itanium ABI [5.1.7]:
+  // Determine whether the given context is or is enclosed in a function that
+  // requires Decl's inside to be mangled, so either:
+  // - an inline function
+  // - or a function in a module purview that is externally visible
+  static constexpr auto IsInFunctionThatRequiresMangling =
+      [](const DeclContext *DC) -> bool {
+    while (!DC->isFileContext()) {
+      if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(DC))
+        if (FD->isInlined() || IsExternallyVisibleInModulePurview(FD))
+          return true;
+
+      DC = DC->getLexicalParent();
+    }
+
+    return false;
+  };
+
+  // Itanium ABI [5.1.8]:
   //   In the following contexts [...] the one-definition rule requires closure
   //   types in different translation units to "correspond":
   switch (Kind) {
   case Normal: {
     //  -- the bodies of inline or templated functions
+    //  -- the bodies of externally visible functions in a module purview
+    //     (note: this is not yet part of the Itanium ABI, see the linked Github
+    //     discussion above)
     if ((IsInNonspecializedTemplate &&
          !(ManglingContextDecl && isa<ParmVarDecl>(ManglingContextDecl))) ||
-        isInInlineFunction(CurContext)) {
+        IsInFunctionThatRequiresMangling(CurContext)) {
       while (auto *CD = dyn_cast<CapturedDecl>(DC))
         DC = CD->getParent();
       return std::make_tuple(&Context.getManglingNumberContext(DC), nullptr);
@@ -361,7 +369,6 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     return std::make_tuple(nullptr, nullptr);
   }
 
-  case NonInlineInModulePurview:
   case Concept:
     // Concept definitions aren't code generated and thus aren't mangled,
     // however the ManglingContextDecl is important for the purposes of
@@ -372,8 +379,12 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
   case DefaultArgument:
     //  -- default arguments appearing in class definitions
   case InlineVariable:
+  case ExternallyVisibleVariableInModulePurview:
   case TemplatedVariable:
     //  -- the initializers of inline or templated variables
+    //  -- the initializers of externally visible variables in a module purview
+    //     (note: this is not yet part of the Itanium ABI, see the linked Github
+    //     discussion above)
     return std::make_tuple(
         &Context.getManglingNumberContext(ASTContext::NeedExtraManglingDecl,
                                           ManglingContextDecl),
@@ -478,11 +489,6 @@ bool Sema::DiagnoseInvalidExplicitObjectParameterInLambda(
 void Sema::handleLambdaNumbering(
     CXXRecordDecl *Class, CXXMethodDecl *Method,
     std::optional<CXXRecordDecl::LambdaNumbering> NumberingOverride) {
-  if (NumberingOverride) {
-    Class->setLambdaNumbering(*NumberingOverride);
-    return;
-  }
-
   ContextRAII ManglingContext(*this, Class->getDeclContext());
 
   auto getMangleNumberingContext =
@@ -499,10 +505,23 @@ void Sema::handleLambdaNumbering(
     return &Context.getManglingNumberContext(DC);
   };
 
-  CXXRecordDecl::LambdaNumbering Numbering;
   MangleNumberingContext *MCtx;
-  std::tie(MCtx, Numbering.ContextDecl) =
+  Decl *ContextDecl;
+  std::tie(MCtx, ContextDecl) =
       getCurrentMangleNumberContext(Class->getDeclContext());
+  // getManglingNumber(Method) below may trigger mangling of dependent types
+  // that reference init-captures. Publish the lambda context declaration early
+  // so such mangling can resolve the surrounding context without recursing
+  // through the lambda call operator. This avoids publishing provisional
+  // numbering state before final numbering is assigned below.
+  if (ContextDecl)
+    Class->setLambdaContextDecl(ContextDecl);
+  if (NumberingOverride) {
+    Class->setLambdaNumbering(*NumberingOverride);
+    return;
+  }
+
+  CXXRecordDecl::LambdaNumbering Numbering;
   if (!MCtx && (getLangOpts().CUDA || getLangOpts().SYCLIsDevice ||
                 getLangOpts().SYCLIsHost)) {
     // Force lambda numbering in CUDA/HIP as we need to name lambdas following
@@ -512,7 +531,7 @@ void Sema::handleLambdaNumbering(
     // Also force for SYCL, since we need this for the
     // __builtin_sycl_unique_stable_name implementation, which depends on lambda
     // mangling.
-    MCtx = getMangleNumberingContext(Class, Numbering.ContextDecl);
+    MCtx = getMangleNumberingContext(Class, ContextDecl);
     assert(MCtx && "Retrieving mangle numbering context failed!");
     Numbering.HasKnownInternalLinkage = true;
   }
@@ -1382,7 +1401,9 @@ void Sema::ActOnLambdaClosureQualifiers(LambdaIntroducer &Intro,
   // odr-use 'this' (in particular, in a default initializer for a non-static
   // data member).
   if (Intro.Default != LCD_None &&
-      !LSI->Lambda->getParent()->isFunctionOrMethod() &&
+      !LSI->Lambda->getParent()
+           ->getEnclosingNonExpansionStatementContext()
+           ->isFunctionOrMethod() &&
       (getCurrentThisType().isNull() ||
        CheckCXXThisCapture(SourceLocation(), /*Explicit=*/true,
                            /*BuildAndDiagnose=*/false)))
@@ -2530,9 +2551,12 @@ Sema::LambdaScopeForCallOperatorInstantiationRAII::
   while (FDPattern && FD) {
     InstantiationAndPatterns.emplace_back(FDPattern, FD);
 
-    FDPattern =
-        dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(FDPattern));
-    FD = dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(FD));
+    FDPattern = dyn_cast<FunctionDecl>(
+        getLambdaAwareParentOfDeclContext(FDPattern)
+            ->getEnclosingNonExpansionStatementContext());
+    FD = dyn_cast<FunctionDecl>(
+        getLambdaAwareParentOfDeclContext(FD)
+            ->getEnclosingNonExpansionStatementContext());
   }
 
   // Add instantiated parameters and local vars to scopes, starting from the

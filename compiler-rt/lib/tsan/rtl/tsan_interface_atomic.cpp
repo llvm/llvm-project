@@ -21,6 +21,7 @@
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
+#include "tsan_adaptive_delay.h"
 #include "tsan_flags.h"
 #include "tsan_interface.h"
 #include "tsan_rtl.h"
@@ -349,12 +350,13 @@ struct OpFetchAdd {
 
 struct OpFetchSub {
   template <typename T>
-  static T NoTsanAtomic(morder mo, volatile T *a, T v) {
+  [[maybe_unused]] static T NoTsanAtomic(morder mo, volatile T* a, T v) {
     return func_sub(a, v);
   }
 
   template <typename T>
-  static T Atomic(ThreadState *thr, uptr pc, morder mo, volatile T *a, T v) {
+  [[maybe_unused]] static T Atomic(ThreadState* thr, uptr pc, morder mo,
+                                   volatile T* a, T v) {
     return AtomicRMW<T, func_sub>(thr, pc, a, v, mo);
   }
 };
@@ -385,24 +387,26 @@ struct OpFetchOr {
 
 struct OpFetchXor {
   template <typename T>
-  static T NoTsanAtomic(morder mo, volatile T *a, T v) {
+  [[maybe_unused]] static T NoTsanAtomic(morder mo, volatile T* a, T v) {
     return func_xor(a, v);
   }
 
   template <typename T>
-  static T Atomic(ThreadState *thr, uptr pc, morder mo, volatile T *a, T v) {
+  [[maybe_unused]] static T Atomic(ThreadState* thr, uptr pc, morder mo,
+                                   volatile T* a, T v) {
     return AtomicRMW<T, func_xor>(thr, pc, a, v, mo);
   }
 };
 
 struct OpFetchNand {
   template <typename T>
-  static T NoTsanAtomic(morder mo, volatile T *a, T v) {
+  [[maybe_unused]] static T NoTsanAtomic(morder mo, volatile T* a, T v) {
     return func_nand(a, v);
   }
 
   template <typename T>
-  static T Atomic(ThreadState *thr, uptr pc, morder mo, volatile T *a, T v) {
+  [[maybe_unused]] static T Atomic(ThreadState* thr, uptr pc, morder mo,
+                                   volatile T* a, T v) {
     return AtomicRMW<T, func_nand>(thr, pc, a, v, mo);
   }
 };
@@ -520,8 +524,19 @@ static morder to_morder(int mo) {
   return res;
 }
 
+template <class... Types>
+ALWAYS_INLINE auto AtomicDelayImpl(morder mo, Types... args) {
+  AdaptiveDelay::AtomicOpFence(mo);
+}
+
+template <class AddrType, class... Types>
+ALWAYS_INLINE auto AtomicDelayImpl(morder mo, AddrType addr, Types... args) {
+  AdaptiveDelay::AtomicOpAddr((uptr)addr, (int)mo);
+}
+
 template <class Op, class... Types>
 ALWAYS_INLINE auto AtomicImpl(morder mo, Types... args) {
+  AtomicDelayImpl(mo, args...);
   ThreadState *const thr = cur_thread();
   ProcessPendingSignals(thr);
   if (UNLIKELY(thr->ignore_sync || thr->ignore_interceptors))

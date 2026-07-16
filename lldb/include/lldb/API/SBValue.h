@@ -13,10 +13,9 @@
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBType.h"
 
+namespace lldb_private {
 class ValueImpl;
 class ValueLocker;
-
-namespace lldb_private {
 namespace python {
 class SWIGBridge;
 }
@@ -83,6 +82,8 @@ public:
 
   const char *GetObjectDescription();
 
+  lldb::SBValue GetParent();
+
   lldb::SBValue GetDynamicValue(lldb::DynamicValueType use_dynamic);
 
   lldb::SBValue GetStaticValue();
@@ -114,6 +115,14 @@ public:
   bool SetValueFromCString(const char *value_str);
 
   bool SetValueFromCString(const char *value_str, lldb::SBError &error);
+
+  /// Returns false if this value cannot be modified through
+  /// SetValueFromCString() or SetData(), for instance because it
+  /// exists in the target, but has no writable storage (for example a
+  /// constant or variable value that was reconstructed from debug
+  /// info as the result of a computation). A true result does not
+  /// guarantee a write will succeed.
+  bool CanSetValue();
 
   lldb::SBTypeFormat GetTypeFormat();
 
@@ -490,7 +499,7 @@ protected:
   /// \return
   ///     A ValueObjectSP of the best kind (static, dynamic or synthetic) we
   ///     can cons up, in accordance with the SBValue's settings.
-  lldb::ValueObjectSP GetSP(ValueLocker &value_locker) const;
+  lldb::ValueObjectSP GetSP(lldb_private::ValueLocker &value_locker) const;
 
   // these calls do the right thing WRT adjusting their settings according to
   // the target's preferences
@@ -506,8 +515,11 @@ protected:
   void SetSP(const lldb::ValueObjectSP &sp, lldb::DynamicValueType use_dynamic,
              bool use_synthetic, const char *name);
 
+protected:
+  friend class lldb_private::ScriptInterpreter;
+
 private:
-  typedef std::shared_ptr<ValueImpl> ValueImplSP;
+  typedef std::shared_ptr<lldb_private::ValueImpl> ValueImplSP;
   ValueImplSP m_opaque_sp;
 
   void SetSP(ValueImplSP impl_sp);

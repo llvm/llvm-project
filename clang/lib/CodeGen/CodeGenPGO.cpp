@@ -233,10 +233,17 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   /// The stacks are also used to find error cases and notify the user.  A
   /// standard logical operator nest for a boolean expression could be in a form
   /// similar to this: "x = a && b && c && (d || f)"
-  unsigned NumCond = 0;
-  bool SplitNestedLogicalOp = false;
-  SmallVector<const Stmt *, 16> NonLogOpStack;
-  SmallVector<const BinaryOperator *, 16> LogOpStack;
+  struct DecisionState {
+    llvm::DenseSet<const Stmt *> Leaves; // Not BinOp
+    const Expr *DecisionExpr;            // Root
+    bool Split;                          // In splitting with Leaves.
+
+    DecisionState() = delete;
+    DecisionState(const Expr *E, bool Split = false)
+        : DecisionExpr(E), Split(Split) {}
+  };
+
+  SmallVector<DecisionState, 1> DecisionStack;
 
   // Hook: dataTraverseStmtPre() is invoked prior to visiting an AST Stmt node.
   bool dataTraverseStmtPre(Stmt *S) {
@@ -244,35 +251,28 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     if (MCDCMaxCond == 0)
       return true;
 
-    /// At the top of the logical operator nest, reset the number of conditions,
-    /// also forget previously seen split nesting cases.
-    if (LogOpStack.empty()) {
-      NumCond = 0;
-      SplitNestedLogicalOp = false;
-    }
-
-    if (const Expr *E = dyn_cast<Expr>(S)) {
-      if (const auto *BinOp =
-              dyn_cast<BinaryOperator>(CodeGenFunction::stripCond(E));
-          BinOp && BinOp->isLogicalOp()) {
-        /// Check for "split-nested" logical operators. This happens when a new
-        /// boolean expression logical-op nest is encountered within an existing
-        /// boolean expression, separated by a non-logical operator.  For
-        /// example, in "x = (a && b && c && foo(d && f))", the "d && f" case
-        /// starts a new boolean expression that is separated from the other
-        /// conditions by the operator foo(). Split-nested cases are not
-        /// supported by MC/DC.
-        SplitNestedLogicalOp = SplitNestedLogicalOp || !NonLogOpStack.empty();
-
-        LogOpStack.push_back(BinOp);
+    /// Mark "in splitting" when a leaf is met.
+    if (!DecisionStack.empty()) {
+      auto &StackTop = DecisionStack.back();
+      if (!StackTop.Split) {
+        if (StackTop.Leaves.contains(S)) {
+          assert(!StackTop.Split);
+          StackTop.Split = true;
+        }
         return true;
       }
+
+      // Split
+      assert(StackTop.Split);
+      assert(!StackTop.Leaves.contains(S));
     }
 
-    /// Keep track of non-logical operators. These are OK as long as we don't
-    /// encounter a new logical operator after seeing one.
-    if (!LogOpStack.empty())
-      NonLogOpStack.push_back(S);
+    if (const auto *E = dyn_cast<Expr>(S)) {
+      if (const auto *BinOp =
+              dyn_cast<BinaryOperator>(CodeGenFunction::stripCond(E));
+          BinOp && BinOp->isLogicalOp())
+        DecisionStack.emplace_back(E);
+    }
 
     return true;
   }
@@ -281,41 +281,41 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   // an AST Stmt node.  MC/DC will use it to to signal when the top of a
   // logical operation (boolean expression) nest is encountered.
   bool dataTraverseStmtPost(Stmt *S) {
-    /// If MC/DC is not enabled, MCDCMaxCond will be set to 0. Do nothing.
-    if (MCDCMaxCond == 0)
+    if (DecisionStack.empty())
       return true;
 
-    if (const Expr *E = dyn_cast<Expr>(S)) {
-      const BinaryOperator *BinOp =
-          dyn_cast<BinaryOperator>(CodeGenFunction::stripCond(E));
-      if (BinOp && BinOp->isLogicalOp()) {
-        assert(LogOpStack.back() == BinOp);
-        LogOpStack.pop_back();
+    /// If MC/DC is not enabled, MCDCMaxCond will be set to 0. Do nothing.
+    assert(MCDCMaxCond > 0);
 
-        /// At the top of logical operator nest:
-        if (LogOpStack.empty()) {
-          /// Was the "split-nested" logical operator case encountered?
-          if (SplitNestedLogicalOp) {
-            Diag.Report(S->getBeginLoc(), diag::warn_pgo_nested_boolean_expr);
-            return true;
-          }
+    auto &StackTop = DecisionStack.back();
 
-          /// Was the maximum number of conditions encountered?
-          if (NumCond > MCDCMaxCond) {
-            Diag.Report(S->getBeginLoc(), diag::warn_pgo_condition_limit)
-                << NumCond << MCDCMaxCond;
-            return true;
-          }
-
-          // Otherwise, allocate the Decision.
-          MCDCState.DecisionByStmt[BinOp].ID = MCDCState.DecisionByStmt.size();
-        }
-        return true;
+    if (StackTop.DecisionExpr != S) {
+      if (StackTop.Leaves.contains(S)) {
+        assert(StackTop.Split);
+        StackTop.Split = false;
       }
+
+      return true;
     }
 
-    if (!LogOpStack.empty())
-      NonLogOpStack.pop_back();
+    /// Allocate the entry (with Valid=false)
+    auto &DecisionEntry =
+        MCDCState
+            .DecisionByStmt[CodeGenFunction::stripCond(StackTop.DecisionExpr)];
+
+    /// Was the maximum number of conditions encountered?
+    auto NumCond = StackTop.Leaves.size();
+    if (NumCond > MCDCMaxCond) {
+      Diag.Report(S->getBeginLoc(), diag::warn_pgo_condition_limit)
+          << NumCond << MCDCMaxCond;
+      DecisionStack.pop_back();
+      return true;
+    }
+
+    // The Decision is validated.
+    DecisionEntry.ID = MCDCState.DecisionByStmt.size() - 1;
+
+    DecisionStack.pop_back();
 
     return true;
   }
@@ -327,14 +327,17 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   /// order to use MC/DC, count the number of total LHS and RHS conditions.
   bool VisitBinaryOperator(BinaryOperator *S) {
     if (S->isLogicalOp()) {
-      if (CodeGenFunction::isInstrumentedCondition(S->getLHS()))
-        NumCond++;
+      if (CodeGenFunction::isInstrumentedCondition(S->getLHS())) {
+        if (!DecisionStack.empty())
+          DecisionStack.back().Leaves.insert(S->getLHS());
+      }
 
       if (CodeGenFunction::isInstrumentedCondition(S->getRHS())) {
         if (ProfileVersion >= llvm::IndexedInstrProf::Version7)
           CounterMap[S->getRHS()] = NextCounter++;
 
-        NumCond++;
+        if (!DecisionStack.empty())
+          DecisionStack.back().Leaves.insert(S->getRHS());
       }
     }
     return Base::VisitBinaryOperator(S);
@@ -1502,7 +1505,7 @@ void CodeGenFunction::maybeCreateMCDCCondBitmap() {
     // Note: This doesn't initialize Addrs in invalidated Decisions.
     for (auto *MCDCCondBitmapAddr : PGO->getMCDCCondBitmapAddrArray(Builder))
       *MCDCCondBitmapAddr =
-          CreateIRTemp(getContext().UnsignedIntTy, "mcdc.addr");
+          CreateIRTempWithoutCast(getContext().UnsignedIntTy, "mcdc.addr");
   }
 }
 bool CodeGenFunction::isMCDCDecisionExpr(const Expr *E) const {

@@ -2,7 +2,6 @@
 // RUN: %libomptarget-compilexx-generic
 // RUN: env LIBOMPTARGET_INFO=63 %libomptarget-run-generic 2>&1 | %fcheck-generic
 // REQUIRES: gpu
-// XFAIL: intelgpu
 // clang-format on
 
 #include <ompx.h>
@@ -10,7 +9,9 @@
 #include <cassert>
 #include <vector>
 
-// CHECK: "PluginInterface" device 0 info: Launching kernel __omp_offloading_{{.*}} with [2,4,6] blocks and [32,4,2] threads in BARE mode
+// CHECK: PluginInterface device 0 info: Launching kernel
+// CHECK-SAME: __omp_offloading_{{.*}} with [2,4,6] blocks and [32,4,2] threads
+// CHECK-SAME: in BARE mode
 
 int main(int argc, char *argv[]) {
   int bs[3] = {32u, 4u, 2u};

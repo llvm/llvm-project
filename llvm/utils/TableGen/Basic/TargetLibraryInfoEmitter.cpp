@@ -10,6 +10,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/SetTheory.h"
@@ -56,13 +57,11 @@ TargetLibraryInfoEmitter::TargetLibraryInfoEmitter(const RecordKeeper &R)
 // function.
 void TargetLibraryInfoEmitter::emitTargetLibraryInfoEnum(
     raw_ostream &OS) const {
-  OS << "#ifdef GET_TARGET_LIBRARY_INFO_ENUM\n";
-  OS << "#undef GET_TARGET_LIBRARY_INFO_ENUM\n";
+  IfDefEmitter IfDef(OS, "GET_TARGET_LIBRARY_INFO_ENUM");
   OS << "enum LibFunc : unsigned {\n";
   OS.indent(2) << "NotLibFunc = 0,\n";
-  for (const auto *R : AllTargetLibcalls) {
+  for (const auto *R : AllTargetLibcalls)
     OS.indent(2) << "LibFunc_" << R->getName() << ",\n";
-  }
   OS.indent(2) << "NumLibFuncs,\n";
   OS.indent(2) << "End_LibFunc = NumLibFuncs,\n";
   if (AllTargetLibcalls.size()) {
@@ -72,7 +71,6 @@ void TargetLibraryInfoEmitter::emitTargetLibraryInfoEnum(
     OS.indent(2) << "Begin_LibFunc = NotLibFunc,\n";
   }
   OS << "};\n";
-  OS << "#endif\n\n";
 }
 
 // The names of the functions are stored in a long string, along with support
@@ -86,37 +84,37 @@ void TargetLibraryInfoEmitter::emitTargetLibraryInfoStringTable(
   for (const auto *R : AllTargetLibcalls)
     Table.GetOrAddStringOffset(R->getValueAsString("String"));
 
-  OS << "#ifdef GET_TARGET_LIBRARY_INFO_STRING_TABLE\n";
-  OS << "#undef GET_TARGET_LIBRARY_INFO_STRING_TABLE\n";
-  Table.EmitStringTableDef(OS, "StandardNamesStrTable");
-  OS << "\n";
   size_t NumEl = AllTargetLibcalls.size() + 1;
-  OS << "const llvm::StringTable::Offset "
-        "TargetLibraryInfoImpl::StandardNamesOffsets["
-     << NumEl
-     << "] = "
-        "{\n";
-  OS.indent(2) << "0, //\n";
-  for (const auto *R : AllTargetLibcalls) {
-    StringRef Str = R->getValueAsString("String");
-    OS.indent(2) << Table.GetStringOffset(Str) << ", // " << Str << "\n";
+
+  {
+    IfDefEmitter IfDef(OS, "GET_TARGET_LIBRARY_INFO_STRING_TABLE");
+    Table.EmitStringTableDef(OS, "StandardNamesStrTable");
+    OS << "\n";
+    OS << "const llvm::StringTable::Offset "
+          "TargetLibraryInfoImpl::StandardNamesOffsets["
+       << NumEl
+       << "] = "
+          "{\n";
+    OS.indent(2) << "0, //\n";
+    for (const auto *R : AllTargetLibcalls) {
+      StringRef Str = R->getValueAsString("String");
+      OS.indent(2) << Table.GetStringOffset(Str) << ", // " << Str << "\n";
+    }
+    OS << "};\n";
+    OS << "const uint8_t TargetLibraryInfoImpl::StandardNamesSizeTable["
+       << NumEl << "] = {\n";
+    OS << "  0,\n";
+    for (const auto *R : AllTargetLibcalls)
+      OS.indent(2) << R->getValueAsString("String").size() << ",\n";
+    OS << "};\n";
   }
-  OS << "};\n";
-  OS << "const uint8_t TargetLibraryInfoImpl::StandardNamesSizeTable[" << NumEl
-     << "] = {\n";
-  OS << "  0,\n";
-  for (const auto *R : AllTargetLibcalls)
-    OS.indent(2) << R->getValueAsString("String").size() << ",\n";
-  OS << "};\n";
-  OS << "#endif\n\n";
-  OS << "#ifdef GET_TARGET_LIBRARY_INFO_IMPL_DECL\n";
-  OS << "#undef GET_TARGET_LIBRARY_INFO_IMPL_DECL\n";
+
+  IfDefEmitter IfDef(OS, "GET_TARGET_LIBRARY_INFO_IMPL_DECL");
   OS << "LLVM_ABI static const llvm::StringTable StandardNamesStrTable;\n";
   OS << "LLVM_ABI static const llvm::StringTable::Offset StandardNamesOffsets["
      << NumEl << "];\n";
   OS << "LLVM_ABI static const uint8_t StandardNamesSizeTable[" << NumEl
      << "];\n";
-  OS << "#endif\n\n";
 }
 
 // Since there are much less type signatures then library functions, the type
@@ -152,13 +150,11 @@ void TargetLibraryInfoEmitter::emitTargetLibraryInfoSignatureTable(
     SignatureTable.add(GetSignature(R));
   SignatureTable.layout();
 
-  OS << "#ifdef GET_TARGET_LIBRARY_INFO_SIGNATURE_TABLE\n";
-  OS << "#undef GET_TARGET_LIBRARY_INFO_SIGNATURE_TABLE\n";
+  IfDefEmitter IfDef(OS, "GET_TARGET_LIBRARY_INFO_SIGNATURE_TABLE");
   OS << "enum FuncArgTypeID : char {\n";
   OS.indent(2) << "NoFuncArgType = 0,\n";
-  for (const auto *R : FuncTypeArgs) {
+  for (const auto *R : FuncTypeArgs)
     OS.indent(2) << R->getName() << ",\n";
-  }
   OS << "};\n";
   OS << "static const FuncArgTypeID SignatureTable[] = {\n";
   SignatureTable.emit(OS, [](raw_ostream &OS, StringRef E) { OS << E; });
@@ -170,7 +166,6 @@ void TargetLibraryInfoEmitter::emitTargetLibraryInfoSignatureTable(
                  << R->getName() << "\n";
   }
   OS << "};\n";
-  OS << "#endif\n\n";
 }
 
 void TargetLibraryInfoEmitter::run(raw_ostream &OS) {

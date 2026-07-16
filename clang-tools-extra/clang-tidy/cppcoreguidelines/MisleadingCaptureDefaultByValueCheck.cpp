@@ -48,7 +48,7 @@ static std::string createReplacementText(const LambdaExpr *Lambda) {
   std::string Replacement;
   llvm::raw_string_ostream Stream(Replacement);
 
-  auto AppendName = [&](llvm::StringRef Name) {
+  auto AppendName = [&](StringRef Name) {
     if (!Replacement.empty())
       Stream << ", ";
     if (Lambda->getCaptureDefault() == LCD_ByRef && Name != "this")

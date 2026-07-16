@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s -std=c++14 bugprone-default-operator-new-on-overaligned-type %t
+// RUN: %check_clang_tidy %s -std=c++11,c++14 bugprone-default-operator-new-on-overaligned-type %t
 
 namespace std {
 typedef __typeof(sizeof(int)) size_t;

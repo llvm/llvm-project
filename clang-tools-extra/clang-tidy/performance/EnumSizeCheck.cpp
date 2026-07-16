@@ -100,8 +100,7 @@ bool EnumSizeCheck::isLanguageVersionSupported(
 
 void EnumSizeCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      enumDecl(unless(isExpansionInSystemHeader()), isDefinition(),
-               hasEnumerators(), unless(isExternC()),
+      enumDecl(isDefinition(), hasEnumerators(), unless(isExternC()),
                unless(anyOf(
                    matchers::matchesAnyListedRegexName(EnumIgnoreList),
                    hasTypedefNameForAnonDecl(

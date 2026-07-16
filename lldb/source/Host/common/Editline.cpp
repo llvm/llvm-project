@@ -575,8 +575,7 @@ int Editline::GetCharacter(EditLineGetCharType *c) {
     m_current_line_rows = new_line_rows;
   }
 
-  if (m_terminal_size_has_changed)
-    ApplyTerminalSizeChange();
+  ApplyPendingTerminalSizeChange();
 
   // This mutex is locked by our caller (GetLine). Unlock it while we read a
   // character (blocking operation), so we do not hold the mutex
@@ -1054,9 +1053,10 @@ void Editline::DisplayCompletions(
     Editline &editline, llvm::ArrayRef<CompletionResult::Completion> results) {
   assert(!results.empty());
 
-  LockedStreamFile locked_stream = editline.m_output_stream_sp->Lock();
+  std::optional<LockedStreamFile> locked_stream =
+      editline.m_output_stream_sp->Lock();
 
-  fprintf(locked_stream.GetFile().GetStream(),
+  fprintf(locked_stream->GetFile().GetStream(),
           "\n" ANSI_CLEAR_BELOW "Available completions:\n");
 
   /// Account for the current line, the line showing "Available completions"
@@ -1075,14 +1075,20 @@ void Editline::DisplayCompletions(
   size_t cur_pos = 0;
   while (cur_pos < results.size()) {
     cur_pos += PrintCompletion(
-        locked_stream.GetFile().GetStream(), results.slice(cur_pos), max_len,
+        locked_stream->GetFile().GetStream(), results.slice(cur_pos), max_len,
         editline.GetTerminalWidth(),
         all ? std::nullopt : std::optional<size_t>(page_size));
 
     if (cur_pos >= results.size())
       break;
 
-    fprintf(locked_stream.GetFile().GetStream(), "More (Y/n/a): ");
+    fprintf(locked_stream->GetFile().GetStream(), "More (Y/n/a): ");
+
+    // Release the output lock across the blocking el_wgetc() so that
+    // Interrupt(), which may run on another thread, can acquire it to wake
+    // up the read.
+    locked_stream.reset();
+
     // The type for the output and the type for the parameter are different,
     // to allow interoperability with older versions of libedit. The container
     // for the reply must be as wide as what our implementation is using,
@@ -1091,14 +1097,17 @@ void Editline::DisplayCompletions(
     EditLineGetCharType reply = L'n';
     int got_char = el_wgetc(editline.m_editline,
                             reinterpret_cast<EditLineCharType *>(&reply));
+
+    locked_stream.emplace(editline.m_output_stream_sp->Lock());
+
     // Check for a ^C or other interruption.
     if (editline.m_editor_status == EditorStatus::Interrupted) {
       editline.m_editor_status = EditorStatus::Editing;
-      fprintf(locked_stream.GetFile().GetStream(), "^C\n");
+      fprintf(locked_stream->GetFile().GetStream(), "^C\n");
       break;
     }
 
-    fprintf(locked_stream.GetFile().GetStream(), "\n");
+    fprintf(locked_stream->GetFile().GetStream(), "\n");
     if (got_char == -1 || reply == 'n')
       break;
     if (reply == 'a')
@@ -1544,13 +1553,13 @@ void Editline::SetContinuationPrompt(const char *continuation_prompt) {
       continuation_prompt == nullptr ? "" : continuation_prompt;
 }
 
-void Editline::TerminalSizeChanged() { m_terminal_size_has_changed = 1; }
+void Editline::TerminalSizeChanged() { m_terminal_size_has_changed = true; }
 
 void Editline::ApplyTerminalSizeChange() {
   if (!m_editline)
     return;
 
-  m_terminal_size_has_changed = 0;
+  m_terminal_size_has_changed = false;
   el_resize(m_editline);
   int columns;
   // This function is documenting as taking (const char *, void *) for the
@@ -1578,6 +1587,11 @@ void Editline::ApplyTerminalSizeChange() {
   } else {
     m_terminal_height = INT_MAX;
   }
+}
+
+void Editline::ApplyPendingTerminalSizeChange() {
+  if (m_terminal_size_has_changed)
+    ApplyTerminalSizeChange();
 }
 
 const char *Editline::GetPrompt() { return m_set_prompt.c_str(); }
@@ -1696,6 +1710,7 @@ void Editline::PrintAsync(lldb::LockableStreamFileSP stream_sp, const char *s,
                           size_t len) {
   LockedStreamFile locked_stream = m_output_stream_sp->Lock();
   if (m_editor_status == EditorStatus::Editing) {
+    ApplyPendingTerminalSizeChange();
     SaveEditedLine();
     MoveCursor(CursorLocation::EditingCursor, CursorLocation::BlockStart);
     fprintf(locked_stream.GetFile().GetStream(), ANSI_CLEAR_BELOW);
@@ -1711,7 +1726,18 @@ void Editline::Refresh() {
   if (!m_editline || !m_output_stream_sp)
     return;
   LockedStreamFile locked_stream = m_output_stream_sp->Lock();
-  el_set(m_editline, EL_REFRESH);
+  ApplyPendingTerminalSizeChange();
+  if (m_editor_status == EditorStatus::Editing) {
+    // EL_REFRESH redraws from libedit's cursor model, which is stale once the
+    // statusline has moved the cursor, so it reprints the prompt at the wrong
+    // column. Repaint from our own tracked position instead.
+    SaveEditedLine();
+    MoveCursor(CursorLocation::EditingCursor, CursorLocation::BlockStart);
+    DisplayInput();
+    MoveCursor(CursorLocation::BlockEnd, CursorLocation::EditingCursor);
+  } else {
+    el_set(m_editline, EL_REFRESH);
+  }
 }
 
 bool Editline::CompleteCharacter(char ch, EditLineGetCharType &out) {

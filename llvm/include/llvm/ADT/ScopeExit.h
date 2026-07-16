@@ -20,7 +20,7 @@
 
 namespace llvm {
 
-template <typename Callable> class scope_exit {
+template <typename Callable> class [[nodiscard]] scope_exit {
   Callable ExitFunction;
   bool Engaged = true; // False once moved-from or release()d.
 

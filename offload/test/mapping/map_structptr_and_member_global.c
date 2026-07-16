@@ -2,8 +2,7 @@
 
 // REQUIRES: libc
 //
-// FIXME: https://github.com/llvm/llvm-project/issues/161265
-// XFAIL: gpu
+// XFAIL: intelgpu
 
 #include <omp.h>
 #include <stdio.h>

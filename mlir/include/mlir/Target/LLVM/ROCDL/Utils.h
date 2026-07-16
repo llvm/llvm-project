@@ -19,6 +19,7 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVM/ModuleToObject.h"
+#include "llvm/ADT/BitmaskEnum.h"
 
 namespace mlir {
 namespace ROCDL {
@@ -43,13 +44,15 @@ enum class AMDGCNLibraries : uint32_t {
   All = (LastLib << 1) - 1
 };
 
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+
 /// Assembles ISA to an object code.
 FailureOr<SmallVector<char, 0>>
 assembleIsa(StringRef isa, StringRef targetTriple, StringRef chip,
             StringRef features, function_ref<InFlightDiagnostic()> emitError);
 
 FailureOr<SmallVector<char, 0>>
-linkObjectCode(ArrayRef<char> objectCode, StringRef toolkitPath,
+linkObjectCode(ArrayRef<char> objectCode, StringRef lldPath,
                function_ref<InFlightDiagnostic()> emitError);
 
 /// Base class for all ROCDL serializations from GPU modules into binary

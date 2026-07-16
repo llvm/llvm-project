@@ -7,12 +7,12 @@ struct Bird {
 };
 
 struct Parrot : public Bird {
-// X64: @[[ParrotVtable:[0-9]+]] = private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4Parrot@@6B@", ptr @"??_EParrot@@UEAAPEAXI@Z"] }, comdat($"??_7Parrot@@6B@")
-// X86: @[[ParrotVtable:[0-9]+]] = private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4Parrot@@6B@", ptr @"??_EParrot@@UAEPAXI@Z"] }, comdat($"??_7Parrot@@6B@")
-// CLANG21: @[[ParrotVtable:[0-9]+]] = private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4Parrot@@6B@", ptr @"??_GParrot@@UEAAPEAXI@Z"] }, comdat($"??_7Parrot@@6B@")
-// X64: @[[Bird:[0-9]+]] = private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4Bird@@6B@", ptr @"??_EBird@@UEAAPEAXI@Z"] }, comdat($"??_7Bird@@6B@")
-// X86: @[[Bird:[0-9]+]] = private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4Bird@@6B@", ptr @"??_EBird@@UAEPAXI@Z"] }, comdat($"??_7Bird@@6B@")
-// CLANG21: @[[Bird:[0-9]+]] = private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4Bird@@6B@", ptr @"??_GBird@@UEAAPEAXI@Z"] }, comdat($"??_7Bird@@6B@")
+// X64: @[[ParrotVtable:[0-9]+]] = private constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4Parrot@@6B@", ptr @"??_EParrot@@UEAAPEAXI@Z"] }, comdat($"??_7Parrot@@6B@")
+// X86: @[[ParrotVtable:[0-9]+]] = private constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4Parrot@@6B@", ptr @"??_EParrot@@UAEPAXI@Z"] }, comdat($"??_7Parrot@@6B@")
+// CLANG21: @[[ParrotVtable:[0-9]+]] = private constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4Parrot@@6B@", ptr @"??_GParrot@@UEAAPEAXI@Z"] }, comdat($"??_7Parrot@@6B@")
+// X64: @[[Bird:[0-9]+]] = private constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4Bird@@6B@", ptr @"??_EBird@@UEAAPEAXI@Z"] }, comdat($"??_7Bird@@6B@")
+// X86: @[[Bird:[0-9]+]] = private constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4Bird@@6B@", ptr @"??_EBird@@UAEPAXI@Z"] }, comdat($"??_7Bird@@6B@")
+// CLANG21: @[[Bird:[0-9]+]] = private constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4Bird@@6B@", ptr @"??_GBird@@UEAAPEAXI@Z"] }, comdat($"??_7Bird@@6B@")
   virtual ~Parrot() {}
 };
 
@@ -40,6 +40,17 @@ void operator delete[](void *p) { i--; }
 
 struct AllocatedAsArray : public Bird {
 
+};
+
+struct KernelBase {
+  static void* operator new(__SIZE_TYPE__ n, int tag = 0);
+  static void operator delete(void* p);
+  static void operator delete[](void* p);
+  virtual ~KernelBase();
+};
+
+struct KernelDerived : KernelBase {
+  virtual ~KernelDerived();
 };
 
 // Vector deleting dtor for Bird is an alias because no new Bird[] expressions
@@ -81,6 +92,14 @@ void bar() {
   dealloc(p);
 
   sp.foo();
+}
+
+KernelBase::~KernelBase() {}
+KernelDerived::~KernelDerived() {}
+
+void kernelTest() {
+  KernelBase *p = new KernelDerived[2];
+  delete[] p;
 }
 
 // CHECK-LABEL: define dso_local void @{{.*}}dealloc{{.*}}(
@@ -133,7 +152,7 @@ void bar() {
 // CLANG21: arraydestroy.body:
 // CLANG21-NEXT:   %arraydestroy.elementPast = phi ptr [ %delete.end, %delete.notnull ], [ %arraydestroy.element, %arraydestroy.body ]
 // CLANG21-NEXT:   %arraydestroy.element = getelementptr inbounds %struct.Bird, ptr %arraydestroy.elementPast, i64 -1
-// CLANG21-NEXT:   call void @"??1Bird@@UEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(8) %arraydestroy.element)
+// CLANG21-NEXT:   call void @"??1Bird@@UEAA@XZ"(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %arraydestroy.element)
 // CLANG21-NEXT:   %arraydestroy.done = icmp eq ptr %arraydestroy.element, %0
 // CLANG21-NEXT:   br i1 %arraydestroy.done, label %arraydestroy.done1, label %arraydestroy.body
 // CLANG21: arraydestroy.done1:
@@ -206,8 +225,8 @@ void bar() {
 // CHECK-NEXT:   %[[PASTELEM:.*]] = phi ptr [ %delete.end, %dtor.vector ], [ %arraydestroy.element, %arraydestroy.body ]
 // X64-NEXT:   %[[CURELEM:.*]] = getelementptr inbounds %struct.Parrot, ptr %[[PASTELEM]], i64 -1
 // X86-NEXT:   %[[CURELEM:.*]] = getelementptr inbounds %struct.Parrot, ptr %[[PASTELEM]], i32 -1
-// X64-NEXT:   call void @"??1Parrot@@UEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(8) %[[CURELEM]])
-// X86-NEXT:   call x86_thiscallcc void @"??1Parrot@@UAE@XZ"(ptr noundef nonnull align 4 dereferenceable(4) %[[CURELEM]])
+// X64-NEXT:   call void @"??1Parrot@@UEAA@XZ"(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %[[CURELEM]])
+// X86-NEXT:   call x86_thiscallcc void @"??1Parrot@@UAE@XZ"(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %[[CURELEM]])
 // CHECK-NEXT:   %[[DONE:.*]] = icmp eq ptr %[[CURELEM]], %[[LTHIS]]
 // CHECK-NEXT:   br i1 %[[DONE]], label %arraydestroy.done3, label %arraydestroy.body
 // CHECK: arraydestroy.done3:
@@ -225,8 +244,8 @@ void bar() {
 // X86-NEXT:  call void @"??_V@YAXPAXI@Z"(ptr noundef %[[COOKIEGEP]], i32 noundef %[[TOTALSZ]])
 // CHECK-NEXT:  br label %dtor.continue
 // CHECK: dtor.scalar:
-// X64-NEXT:   call void @"??1Parrot@@UEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(8) %[[LTHIS]])
-// X86-NEXT:   call x86_thiscallcc void @"??1Parrot@@UAE@XZ"(ptr noundef nonnull align 4 dereferenceable(4) %[[LTHIS]])
+// X64-NEXT:   call void @"??1Parrot@@UEAA@XZ"(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %[[LTHIS]])
+// X86-NEXT:   call x86_thiscallcc void @"??1Parrot@@UAE@XZ"(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %[[LTHIS]])
 // CHECK-NEXT:   %[[FIRSTBIT:.*]] = and i32 %[[LIP]], 1
 // CHECK-NEXT:   %[[ISFIRSTBITZERO:.*]] = icmp eq i32 %[[FIRSTBIT]], 0
 // CHECK-NEXT:   br i1 %[[ISFIRSTBITZERO]], label %dtor.continue, label %dtor.call_delete
@@ -260,10 +279,38 @@ void bar() {
 // X86-NEXT: %[[ARRSZ:.*]] = mul i32 4, %[[COOKIE:.*]]
 // X64-NEXT: %[[TOTALSZ:.*]] = add i64 %[[ARRSZ]], 8
 // X86-NEXT: %[[TOTALSZ:.*]] = add i32 %[[ARRSZ]], 4
-// X64-NEXT: call void @"??_V@YAXPEAX_K@Z"(ptr noundef %2, i64 noundef %[[TOTALSZ]])
-// X86-NEXT: call void @"??_V@YAXPAXI@Z"(ptr noundef %2, i32 noundef %[[TOTALSZ]])
+// X64-NEXT: call void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr noundef %2, i64 noundef %[[TOTALSZ]])
+// X86-NEXT: call void @"?__global_array_delete@@YAXPAXI@Z"(ptr noundef %2, i32 noundef %[[TOTALSZ]])
 // CHECK-NEXT:   br label %dtor.continue
 
+// Test that when a class provides its own operator delete, the deleting
+// destructor calls __global_delete instead of directly
+// referencing ::operator delete. This is critical for environments like
+// kernel mode where no global ::operator delete exists.
+// Verify __empty_global_delete traps (the code path is unreachable at runtime).
+// X64: define linkonce_odr void @"?__empty_global_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
+// X64-NEXT: call void @llvm.trap()
+// X64-NEXT: unreachable
+
+// Verify that when ::delete is used in the TU, a real __global_array_delete
+// forwarding body is emitted that calls through to the actual ::operator delete[].
+// X64: define linkonce_odr void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
+// X64-NEXT: call void @"??_V@YAXPEAX_K@Z"(ptr %0, i64 %1)
+// X64-NEXT: ret void
+
+// X64-LABEL: define weak dso_local noundef ptr @"??_EKernelDerived@@UEAAPEAXI@Z"
+// Verify the array delete path in the VDD uses __global_array_delete.
+// X64: dtor.call_glob_delete_after_array_destroy:
+// X64: call void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr noundef %{{.*}}, i64 noundef %{{.*}})
+// Verify the scalar deleting dtor uses __global_delete, not ::operator delete.
+// X64: dtor.call_delete:
+// X64-NEXT:  %[[FLAGCHECK:.*]] = and i32 %should_call_delete2, 4
+// X64-NEXT:  %[[ISGLOB:.*]] = icmp eq i32 %[[FLAGCHECK]], 0
+// X64-NEXT:  br i1 %[[ISGLOB]], label %dtor.call_class_delete, label %dtor.call_glob_delete
+// X64: dtor.call_glob_delete:
+// X64-NEXT:  call void @"?__global_delete@@YAXPEAX_K@Z"(ptr noundef %{{.*}}, i64 noundef 8)
+// X64: dtor.call_class_delete:
+// X64-NEXT:  call void @"??3KernelBase@@SAXPEAX@Z"(ptr noundef %{{.*}})
 
 
 struct BaseDelete1 {
@@ -311,8 +358,8 @@ void foobartest() {
 // CHECK-NEXT:  %arraydestroy.elementPast = phi ptr [ %delete.end, %dtor.vector ], [ %arraydestroy.element, %arraydestroy.body ]
 // X64-NEXT:  %arraydestroy.element = getelementptr inbounds %struct.Derived, ptr %arraydestroy.elementPast, i64 -1
 // X86-NEXT:  %arraydestroy.element = getelementptr inbounds %struct.Derived, ptr %arraydestroy.elementPast, i32 -1
-// X64-NEXT:  call void @"??1Derived@@UEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(16) %arraydestroy.element)
-// X86-NEXT:  call x86_thiscallcc void @"??1Derived@@UAE@XZ"(ptr noundef nonnull align 4 dereferenceable(8) %arraydestroy.element)
+// X64-NEXT:  call void @"??1Derived@@UEAA@XZ"(ptr noundef nonnull align 8 dead_on_return(16) dereferenceable(16) %arraydestroy.element)
+// X86-NEXT:  call x86_thiscallcc void @"??1Derived@@UAE@XZ"(ptr noundef nonnull align 4 dead_on_return(8) dereferenceable(8) %arraydestroy.element)
 // CHECK-NEXT:  %arraydestroy.done = icmp eq ptr %arraydestroy.element, %this1
 // CHECK-NEXT:  br i1 %arraydestroy.done, label %arraydestroy.done3, label %arraydestroy.body
 // CHECK: arraydestroy.done3:
@@ -330,8 +377,8 @@ void foobartest() {
 // X86-NEXT:  call void @"??_V@YAXPAXI@Z"(ptr noundef %2, i32 noundef %[[TOTALSZ]])
 // CHECK-NEXT:  br label %dtor.continue
 // CHECK: dtor.scalar:
-// X64-NEXT:  call void @"??1Derived@@UEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(16) %this1)
-// X86-NEXT:  call x86_thiscallcc void @"??1Derived@@UAE@XZ"(ptr noundef nonnull align 4 dereferenceable(8) %this1)
+// X64-NEXT:  call void @"??1Derived@@UEAA@XZ"(ptr noundef nonnull align 8 dead_on_return(16) dereferenceable(16) %this1)
+// X86-NEXT:  call x86_thiscallcc void @"??1Derived@@UAE@XZ"(ptr noundef nonnull align 4 dead_on_return(8) dereferenceable(8) %this1)
 // CHECK-NEXT:  %8 = and i32 %should_call_delete2, 1
 // CHECK-NEXT:  %9 = icmp eq i32 %8, 0
 // CHECK-NEXT:  br i1 %9, label %dtor.continue, label %dtor.call_delete
@@ -346,3 +393,8 @@ void foobartest() {
 // X64: define weak dso_local noundef ptr @"??_EAllocatedAsArray@@UEAAPEAXI@Z"
 // X86: define weak dso_local x86_thiscallcc noundef ptr @"??_EAllocatedAsArray@@UAEPAXI@Z"
 // CLANG21: define linkonce_odr dso_local noundef ptr @"??_GAllocatedAsArray@@UEAAPEAXI@Z"
+
+// Verify the /ALTERNATENAME linker directive.
+// X64: !{!"/alternatename:?__global_delete@@YAXPEAX_K@Z=?__empty_global_delete@@YAXPEAX_K@Z"}
+
+// CLANG21-NOT: __global_delete

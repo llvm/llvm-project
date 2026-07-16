@@ -53,6 +53,10 @@ static std::optional<SmallVector<int64_t>> getTargetShape(VectorType vecType) {
                << "--scalable vectors are not supported -> BAIL\n");
     return std::nullopt;
   }
+  if (vecType.getRank() == 0) {
+    LLVM_DEBUG(llvm::dbgs() << "--0-D vectors are not supported -> BAIL\n");
+    return std::nullopt;
+  }
   SmallVector<int64_t> unrollShape = llvm::to_vector<4>(vecType.getShape());
   std::optional<SmallVector<int64_t>> targetShape = SmallVector<int64_t>(
       1, mlir::spirv::getComputeVectorSize(vecType.getShape().back()));
@@ -1050,6 +1054,15 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
       return failure();
     }
 
+    // Bail out early for dynamically-shaped argument types: getZeroAttr
+    // requires a statically-shaped type. VectorType is always statically
+    // shaped, so this correctly skips it without a special-case guard.
+    if (llvm::any_of(fnType.getInputs(), [](Type argType) {
+          auto shapedType = dyn_cast<ShapedType>(argType);
+          return shapedType && !shapedType.hasStaticShape();
+        }))
+      return failure();
+
     // Create a new func op with the original type and copy the function body.
     auto newFuncOp = func::FuncOp::create(rewriter, funcOp.getLoc(),
                                           funcOp.getName(), fnType);
@@ -1462,6 +1475,8 @@ std::optional<SmallVector<int64_t>>
 mlir::spirv::getNativeVectorShape(Operation *op) {
   if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1) {
     if (auto vecType = dyn_cast<VectorType>(op->getResultTypes()[0])) {
+      if (vecType.getRank() == 0)
+        return std::nullopt;
       SmallVector<int64_t> nativeSize(vecType.getRank(), 1);
       nativeSize.back() =
           mlir::spirv::getComputeVectorSize(vecType.getShape().back());

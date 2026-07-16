@@ -1,6 +1,6 @@
-=====================
+===========================
 SYCL runtime implementation
-=====================
+===========================
 
 .. contents::
    :local:
@@ -8,7 +8,7 @@ SYCL runtime implementation
 .. _index:
 
 Current Status
-========
+==============
 
 The implementation is in the very early stages of upstreaming. The first
 milestone is to get
@@ -59,7 +59,7 @@ libsycl side:
   from the multi-architectural binaries
 
 Build steps
-========
+===========
 
 To build LLVM with libsycl runtime enabled the following script can be used.
 
@@ -87,7 +87,54 @@ To build LLVM with libsycl runtime enabled the following script can be used.
 
 
 Limitations
-========
+===========
 
 Libsycl is not currently supported on Windows because it depends on liboffload
 which doesn't currently support Windows.
+
+TODO for added SYCL classes
+===========================
+
+* ``exception``: methods with context are not implemented, to add once context is ready
+* ``platform``: deprecated info descriptor is not implemented (info::platform::extensions), to implement on RT level with ``device::get_info<info::device::aspects>()``
+* ``device``:
+
+  * ``get_info``: to find an efficient way to map descriptors to liboffload types, add other descriptors, add cache of info data
+  * ``has(aspect)``: same as get_info
+  * ``create_sub_devices``: partitioning is not supported by liboffload now, blocked
+  * ``has_extension``: deprecated API, to implement on RT level with ``device::has``
+
+* device selection: to add compatibility with old SYCL 1.2.1 device selectors, still part of SYCL 2020 specification
+* ``context``: to implement get_info, properties & public constructors once context support is added to liboffload
+* ``queue``:
+
+  * to implement USM methods
+
+    * ``memcpy``: enable the host-to-host case (blocked by liboffload limitations)
+
+  * to implement synchronization methods
+  * to implement submit & copy with accessors (low priority)
+  * get_info & properties
+  * ctors that accepts context (blocked by lack of liboffload support)
+  * nd_range kernel submissions: offset is not supported by liboffload now, SYCL2020 deprecated feature
+  * cross-context events wait (host tasks are needed)
+  * implement check if lambda arguments are device copyable (requires clang support of corresponding builtins) unless FE will fully cover it
+  * kernel instantiating on host (debugging purposes)
+
+* ``property_list``: to fully implement and integrate with existing SYCL runtime classes supporting it
+* usm allocations:
+
+  * add aligned functions (blocked by liboffload support)
+  * forward templated funcs to alignment methods (rewrite current impl)
+  * handle sub devices once they are implemented (blocked by liboffload support)
+
+* ``event``:
+
+  * get_info, get_profiling_info (no liboffload support) are not implemented
+  * get_wait_list should be aligned with the results of this discussion: https://github.com/KhronosGroup/SYCL-Docs/issues/1017
+
+* ``range``, ``id`` - __SYCL_DISABLE_ID_TO_INT_CONV__ and __SYCL_ASSUME_ID_RANGE optimizations are not implemented
+* general opens:
+
+  * define a way to report errors from object dtors
+  * unittests: add functions to reset libsycl internal state completely (static variables)

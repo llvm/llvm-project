@@ -20,7 +20,10 @@ tablegen("AMDGPUGenDAGISel") {
 
 tablegen("AMDGPUGenGlobalISel") {
   visibility = [ ":LLVMAMDGPUCodeGen" ]
-  args = [ "-gen-global-isel" ]
+  args = [
+    "-gen-global-isel",
+    "-gisel-extended-llt",
+  ]
   td_file = "AMDGPUGISel.td"
 }
 
@@ -29,6 +32,7 @@ tablegen("AMDGPUGenPreLegalizeGICombiner") {
   args = [
     "-gen-global-isel-combiner",
     "-combiners=AMDGPUPreLegalizerCombiner",
+    "-gisel-extended-llt",
   ]
   td_file = "AMDGPUGISel.td"
 }
@@ -38,6 +42,7 @@ tablegen("AMDGPUGenPostLegalizeGICombiner") {
   args = [
     "-gen-global-isel-combiner",
     "-combiners=AMDGPUPostLegalizerCombiner",
+    "-gisel-extended-llt",
   ]
   td_file = "AMDGPUGISel.td"
 }
@@ -47,6 +52,7 @@ tablegen("AMDGPUGenRegBankGICombiner") {
   args = [
     "-gen-global-isel-combiner",
     "-combiners=AMDGPURegBankCombiner",
+    "-gisel-extended-llt",
   ]
   td_file = "AMDGPUGISel.td"
 }
@@ -140,6 +146,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUAttributor.cpp",
     "AMDGPUBarrierLatency.cpp",
     "AMDGPUCallLowering.cpp",
+    "AMDGPUCoExecSchedStrategy.cpp",
     "AMDGPUCodeGenPrepare.cpp",
     "AMDGPUCombinerHelper.cpp",
     "AMDGPUCtorDtorLowering.cpp",
@@ -149,6 +156,8 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUGlobalISelDivergenceLowering.cpp",
     "AMDGPUGlobalISelUtils.cpp",
     "AMDGPUHSAMetadataStreamer.cpp",
+    "AMDGPUHWEvents.cpp",
+    "AMDGPUHazardLatency.cpp",
     "AMDGPUIGroupLP.cpp",
     "AMDGPUISelDAGToDAG.cpp",
     "AMDGPUISelLowering.cpp",
@@ -171,11 +180,12 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUMCInstLower.cpp",
     "AMDGPUMCResourceInfo.cpp",
     "AMDGPUMIRFormatter.cpp",
-    "AMDGPUMachineFunction.cpp",
+    "AMDGPUMachineFunctionInfo.cpp",
     "AMDGPUMachineModuleInfo.cpp",
     "AMDGPUMacroFusion.cpp",
     "AMDGPUMarkLastScratchLoad.cpp",
     "AMDGPUMemoryUtils.cpp",
+    "AMDGPUNextUseAnalysis.cpp",
     "AMDGPUPerfHintAnalysis.cpp",
     "AMDGPUPostLegalizerCombiner.cpp",
     "AMDGPUPreLegalizerCombiner.cpp",
@@ -208,6 +218,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUUniformIntrinsicCombine.cpp",
     "AMDGPUUnifyDivergentExitNodes.cpp",
     "AMDGPUWaitSGPRHazards.cpp",
+    "AMDGPUWaitcntUtils.cpp",
     "GCNCreateVOPD.cpp",
     "GCNDPPCombine.cpp",
     "GCNHazardRecognizer.cpp",
@@ -273,6 +284,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "SIProgramInfo.cpp",
     "SIRegisterInfo.cpp",
     "SIShrinkInstructions.cpp",
+    "SISpillUtils.cpp",
     "SIWholeQuadMode.cpp",
   ]
 }

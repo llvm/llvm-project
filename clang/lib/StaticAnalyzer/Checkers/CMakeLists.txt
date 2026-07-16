@@ -44,7 +44,6 @@ add_clang_library(clangStaticAnalyzerCheckers
   ErrnoModeling.cpp
   ErrnoTesterChecker.cpp
   ExprInspectionChecker.cpp
-  FixedAddressChecker.cpp
   FuchsiaHandleChecker.cpp
   GCDAntipatternChecker.cpp
   GenericTaintChecker.cpp
@@ -56,6 +55,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   IteratorModeling.cpp
   IteratorRangeChecker.cpp
   IvarInvalidationChecker.cpp
+  LifetimeModeling.cpp
   LLVMConventionsChecker.cpp
   LocalizationChecker.cpp
   MacOSKeychainAPIChecker.cpp
@@ -86,12 +86,14 @@ add_clang_library(clangStaticAnalyzerCheckers
   ObjCSelfInitChecker.cpp
   ObjCSuperDeallocChecker.cpp
   ObjCUnusedIVarsChecker.cpp
+  OpaqueSTLFunctionsModeling.cpp
   OSObjectCStyleCast.cpp
   PaddingChecker.cpp
   PointerArithChecker.cpp
   PointerSubChecker.cpp
   PthreadLockChecker.cpp
   PutenvStackArrayChecker.cpp
+  ReportDanglingPtrDeref.cpp
   RetainCountChecker/RetainCountChecker.cpp
   RetainCountChecker/RetainCountDiagnostics.cpp
   ReturnPointerRangeChecker.cpp
@@ -115,6 +117,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   TraversalChecker.cpp
   TrustNonnullChecker.cpp
   TrustReturnsNonnullChecker.cpp
+  UnconditionalVAArgChecker.cpp
   UndefBranchChecker.cpp
   UndefCapturedBlockVarChecker.cpp
   UndefResultChecker.cpp
@@ -125,6 +128,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   UninitializedObject/UninitializedPointee.cpp
   UnixAPIChecker.cpp
   UnreachableCodeChecker.cpp
+  UseAfterLifetimeEnd.cpp
   VforkChecker.cpp
   VLASizeChecker.cpp
   VAListChecker.cpp
@@ -145,6 +149,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   clangAST
   clangASTMatchers
   clangAnalysis
+  clangAnalysisLifetimeSafety
   clangBasic
   clangLex
   clangStaticAnalyzerCore

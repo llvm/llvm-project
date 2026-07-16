@@ -22,7 +22,7 @@
 
 namespace llvm {
 
-using MachineCycleInfo = GenericCycleInfo<MachineSSAContext>;
+class MachineCycleInfo : public GenericCycleInfo<MachineSSAContext> {};
 using MachineCycle = MachineCycleInfo::CycleT;
 
 /// Legacy analysis pass which computes a \ref MachineCycleInfo.
@@ -44,9 +44,10 @@ public:
   void print(raw_ostream &OS, const Module *M = nullptr) const override;
 };
 
-// TODO: add this function to GenericCycle template after implementing IR
-//       version.
-LLVM_ABI bool isCycleInvariant(const MachineCycle *Cycle, MachineInstr &I);
+// TODO: add this function to the GenericCycleInfo template after implementing
+//       the IR version.
+LLVM_ABI bool isCycleInvariant(const MachineCycleInfo &CI,
+                               const MachineCycle &Cycle, MachineInstr &I);
 
 class MachineCycleAnalysis : public AnalysisInfoMixin<MachineCycleAnalysis> {
   friend AnalysisInfoMixin<MachineCycleAnalysis>;
@@ -57,17 +58,19 @@ public:
 
   LLVM_ABI Result run(MachineFunction &MF,
                       MachineFunctionAnalysisManager &MFAM);
+
+  LLVM_ABI bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
+                           MachineFunctionAnalysisManager::Invalidator &);
 };
 
 class MachineCycleInfoPrinterPass
-    : public PassInfoMixin<MachineCycleInfoPrinterPass> {
+    : public RequiredPassInfoMixin<MachineCycleInfoPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit MachineCycleInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM);
-  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

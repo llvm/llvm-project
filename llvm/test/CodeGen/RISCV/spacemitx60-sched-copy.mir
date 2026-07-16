@@ -21,18 +21,18 @@ body:             |
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gprnox0 = ADDI $x0, 64
     ; CHECK-NEXT: $v0 = COPY [[COPY2]]
-    ; CHECK-NEXT: [[PseudoVCPOP_M_B2_:%[0-9]+]]:gprnox0 = PseudoVCPOP_M_B2 [[COPY2]], [[ADDI]], 0 /* e8 */
-    ; CHECK-NEXT: early-clobber %5:vrm8 = PseudoVIOTA_M_M8 undef %5, [[COPY2]], [[ADDI]], 4 /* e16 */, 0 /* tu, mu */
-    ; CHECK-NEXT: [[PseudoVLE16_V_M8_:%[0-9]+]]:vrm8 = PseudoVLE16_V_M8 undef [[PseudoVLE16_V_M8_]], [[COPY3]], [[PseudoVCPOP_M_B2_]], 4 /* e16 */, 2 /* tu, ma */
-    ; CHECK-NEXT: early-clobber [[COPY1]]:vrm8nov0 = PseudoVRGATHER_VV_M8_E16_MASK [[COPY1]], [[PseudoVLE16_V_M8_]], %5, $v0, [[ADDI]], 4 /* e16 */, 1 /* ta, mu */
-    ; CHECK-NEXT: [[PseudoVSLIDEDOWN_VI_M1_:%[0-9]+]]:vr = PseudoVSLIDEDOWN_VI_M1 undef [[PseudoVSLIDEDOWN_VI_M1_]], [[COPY2]], 8, 8, 3 /* e8 */, 3 /* ta, ma */
-    ; CHECK-NEXT: [[PseudoVCPOP_M_B2_1:%[0-9]+]]:gprnox0 = PseudoVCPOP_M_B2 [[PseudoVSLIDEDOWN_VI_M1_]], [[ADDI]], 0 /* e8 */
+    ; CHECK-NEXT: [[PseudoVCPOP_M_B2_:%[0-9]+]]:gprnox0 = PseudoVCPOP_M_B2 [[COPY2]], [[ADDI]] /* vl */, 0 /* e8 */
+    ; CHECK-NEXT: early-clobber %5:vrm8 = PseudoVIOTA_M_M8 undef %5, [[COPY2]], [[ADDI]] /* vl */, 4 /* e16 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[PseudoVLE16_V_M8_:%[0-9]+]]:vrm8 = PseudoVLE16_V_M8 undef [[PseudoVLE16_V_M8_]], [[COPY3]], [[PseudoVCPOP_M_B2_]] /* vl */, 4 /* e16 */, 2 /* tu, ma */
+    ; CHECK-NEXT: early-clobber [[COPY1]]:vrm8nov0 = PseudoVRGATHER_VV_M8_E16_MASK [[COPY1]], [[PseudoVLE16_V_M8_]], %5, $v0, [[ADDI]] /* vl */, 4 /* e16 */, 1 /* ta, mu */
+    ; CHECK-NEXT: [[PseudoVSLIDEDOWN_VI_M1_:%[0-9]+]]:vr = PseudoVSLIDEDOWN_VI_M1 undef [[PseudoVSLIDEDOWN_VI_M1_]], [[COPY2]], 8, 8 /* vl */, 3 /* e8 */, 3 /* ta, ma */
+    ; CHECK-NEXT: [[PseudoVCPOP_M_B2_1:%[0-9]+]]:gprnox0 = PseudoVCPOP_M_B2 [[PseudoVSLIDEDOWN_VI_M1_]], [[ADDI]] /* vl */, 0 /* e8 */
     ; CHECK-NEXT: [[SLLI:%[0-9]+]]:gpr = SLLI [[PseudoVCPOP_M_B2_]], 1
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[COPY3]], [[SLLI]]
-    ; CHECK-NEXT: [[PseudoVLE16_V_M8_1:%[0-9]+]]:vrm8 = PseudoVLE16_V_M8 undef [[PseudoVLE16_V_M8_1]], [[ADD]], [[PseudoVCPOP_M_B2_1]], 4 /* e16 */, 2 /* tu, ma */
-    ; CHECK-NEXT: early-clobber %13:vrm8 = PseudoVIOTA_M_M8 undef %13, [[PseudoVSLIDEDOWN_VI_M1_]], [[ADDI]], 4 /* e16 */, 0 /* tu, mu */
+    ; CHECK-NEXT: [[PseudoVLE16_V_M8_1:%[0-9]+]]:vrm8 = PseudoVLE16_V_M8 undef [[PseudoVLE16_V_M8_1]], [[ADD]], [[PseudoVCPOP_M_B2_1]] /* vl */, 4 /* e16 */, 2 /* tu, ma */
+    ; CHECK-NEXT: early-clobber %13:vrm8 = PseudoVIOTA_M_M8 undef %13, [[PseudoVSLIDEDOWN_VI_M1_]], [[ADDI]] /* vl */, 4 /* e16 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v0 = COPY [[PseudoVSLIDEDOWN_VI_M1_]]
-    ; CHECK-NEXT: early-clobber [[COPY]]:vrm8nov0 = PseudoVRGATHER_VV_M8_E16_MASK [[COPY]], [[PseudoVLE16_V_M8_1]], %13, $v0, [[ADDI]], 4 /* e16 */, 1 /* ta, mu */
+    ; CHECK-NEXT: early-clobber [[COPY]]:vrm8nov0 = PseudoVRGATHER_VV_M8_E16_MASK [[COPY]], [[PseudoVLE16_V_M8_1]], %13, $v0, [[ADDI]] /* vl */, 4 /* e16 */, 1 /* ta, mu */
     ; CHECK-NEXT: $v8m8 = COPY [[COPY1]]
     ; CHECK-NEXT: $v16m8 = COPY [[COPY]]
     ; CHECK-NEXT: PseudoRET implicit $v8m8, implicit $v16m8

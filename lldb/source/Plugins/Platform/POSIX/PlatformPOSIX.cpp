@@ -84,7 +84,7 @@ static uint32_t chown_file(Platform *platform, const char *path,
   command.Printf("%s", path);
   int status;
   platform->RunShellCommand(command.GetData(), FileSpec(), &status, nullptr,
-                            nullptr, std::chrono::seconds(10));
+                            nullptr, nullptr, std::chrono::seconds(10));
   return status;
 }
 
@@ -109,7 +109,7 @@ PlatformPOSIX::PutFile(const lldb_private::FileSpec &source,
     command.Printf("cp %s %s", src_path.c_str(), dst_path.c_str());
     int status;
     RunShellCommand(command.GetData(), FileSpec(), &status, nullptr, nullptr,
-                    std::chrono::seconds(10));
+                    nullptr, std::chrono::seconds(10));
     if (status != 0)
       return Status::FromErrorString("unable to perform copy");
     if (uid == UINT32_MAX && gid == UINT32_MAX)
@@ -140,7 +140,7 @@ PlatformPOSIX::PutFile(const lldb_private::FileSpec &source,
       LLDB_LOGF(log, "[PutFile] Running command: %s\n", command.GetData());
       int retcode;
       Host::RunShellCommand(command.GetData(), FileSpec(), &retcode, nullptr,
-                            nullptr, std::chrono::minutes(1));
+                            nullptr, nullptr, std::chrono::minutes(1));
       if (retcode == 0) {
         // Don't chown a local file for a remote system
         //                if (chown_file(this,dst_path.c_str(),uid,gid) != 0)
@@ -178,7 +178,7 @@ lldb_private::Status PlatformPOSIX::GetFile(
     cp_command.Printf("cp %s %s", src_path.c_str(), dst_path.c_str());
     int status;
     RunShellCommand(cp_command.GetData(), FileSpec(), &status, nullptr, nullptr,
-                    std::chrono::seconds(10));
+                    nullptr, std::chrono::seconds(10));
     if (status != 0)
       return Status::FromErrorString("unable to perform copy");
     return Status();
@@ -199,7 +199,7 @@ lldb_private::Status PlatformPOSIX::GetFile(
       LLDB_LOGF(log, "[GetFile] Running command: %s\n", command.GetData());
       int retcode;
       Host::RunShellCommand(command.GetData(), FileSpec(), &retcode, nullptr,
-                            nullptr, std::chrono::minutes(1));
+                            nullptr, nullptr, std::chrono::minutes(1));
       if (retcode == 0)
         return Status();
       // If we are here, rsync has failed - let's try the slow way before
@@ -255,10 +255,12 @@ lldb_private::Status PlatformPOSIX::GetFile(
         offset += n_read;
       }
     }
-    // Ignore the close error of src.
-    if (fd_src != UINT64_MAX)
-      CloseFile(fd_src, error);
-    // And close the dst file descriptot.
+    if (fd_src != UINT64_MAX) {
+      // Ignore the close error of src.
+      Status close_error;
+      CloseFile(fd_src, close_error);
+    }
+    // And close the dst file descriptor.
     if (fd_dst != UINT64_MAX &&
         !FileCache::GetInstance().CloseFile(fd_dst, error)) {
       if (!error.Fail())
@@ -962,7 +964,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
 Status PlatformPOSIX::UnloadImage(lldb_private::Process *process,
                                   uint32_t image_token) {
   const addr_t image_addr = process->GetImagePtrFromToken(image_token);
-  if (image_addr == LLDB_INVALID_IMAGE_TOKEN)
+  if (image_addr == LLDB_INVALID_ADDRESS)
     return Status::FromErrorString("Invalid image token");
 
   StreamString expr;

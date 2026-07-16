@@ -724,7 +724,7 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
 
   case ISD::ConstantFP: {
     auto *CN = cast<ConstantFPSDNode>(Node);
-    if (Node->getValueType(0) == MVT::f64 && CN->isExactlyValue(+0.0)) {
+    if (Node->getValueType(0) == MVT::f64 && CN->isPosZero()) {
       if (Subtarget->isGP64bit()) {
         SDValue Zero = CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL,
                                               Mips::ZERO_64, MVT::i64);
@@ -1159,10 +1159,8 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
                                      Hi ? SDValue(Res, 0) : ZeroVal, LoVal);
 
       Res = CurDAG->getMachineNode(
-              Mips::SUBREG_TO_REG, DL, MVT::i64,
-              CurDAG->getTargetConstant(((Hi >> 15) & 0x1), DL, MVT::i64),
-              SDValue(Res, 0),
-              CurDAG->getTargetConstant(Mips::sub_32, DL, MVT::i64));
+          Mips::SUBREG_TO_REG, DL, MVT::i64, SDValue(Res, 0),
+          CurDAG->getTargetConstant(Mips::sub_32, DL, MVT::i64));
 
       Res =
           CurDAG->getMachineNode(Mips::FILL_D, DL, MVT::v2i64, SDValue(Res, 0));
@@ -1265,16 +1263,12 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
 
         if (HiResNonZero)
           HiRes = CurDAG->getMachineNode(
-              Mips::SUBREG_TO_REG, DL, MVT::i64,
-              CurDAG->getTargetConstant(((Highest >> 15) & 0x1), DL, MVT::i64),
-              SDValue(HiRes, 0),
+              Mips::SUBREG_TO_REG, DL, MVT::i64, SDValue(HiRes, 0),
               CurDAG->getTargetConstant(Mips::sub_32, DL, MVT::i64));
 
         if (ResNonZero)
           Res = CurDAG->getMachineNode(
-              Mips::SUBREG_TO_REG, DL, MVT::i64,
-              CurDAG->getTargetConstant(((Hi >> 15) & 0x1), DL, MVT::i64),
-              SDValue(Res, 0),
+              Mips::SUBREG_TO_REG, DL, MVT::i64, SDValue(Res, 0),
               CurDAG->getTargetConstant(Mips::sub_32, DL, MVT::i64));
 
         // We have 3 cases:

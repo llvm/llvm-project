@@ -10,7 +10,6 @@
 #include "BreakpointBase.h"
 #include "DAP.h"
 #include "JSONUtils.h"
-#include "ProtocolUtils.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBFileSpecList.h"
@@ -398,8 +397,8 @@ bool SourceBreakpoint::BreakpointHitCallback(
       // evaluation
       const std::string &expr_str = messagePart.text;
       const char *expr = expr_str.c_str();
-      lldb::SBValue value =
-          frame.GetValueForVariablePath(expr, lldb::eDynamicDontRunTarget);
+      lldb::SBValue value = frame.GetValueForVariablePath(
+          expr, lldb::eDynamicDontRunTarget, lldb::eDILModeLegacy);
       if (value.GetError().Fail())
         value = frame.EvaluateExpression(expr);
       output += VariableDescription(

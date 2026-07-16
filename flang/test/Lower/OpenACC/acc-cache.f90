@@ -638,6 +638,110 @@ subroutine test_cache_nested_derived_type()
 ! CHECK: acc.yield
 end subroutine
 
+! Test cache with allocatable component in combined construct
+! CHECK-LABEL: func.func @_QPtest_cache_combined_allocatable(
+subroutine test_cache_combined_allocatable(data, C, M)
+  type :: dt
+    real, dimension(:), allocatable :: A
+  end type
+
+  type(dt), intent(inout) :: data
+  real, dimension(:), intent(out) :: C
+  integer, intent(in) :: M
+  integer :: i
+
+  !$acc parallel loop gang vector copyin(data, data%A(-3:M+4)) copyout(C(1:M))
+  do i = 1, M
+    !$acc cache(data%A(i-4:i+4))
+    C(i) = data%A(i)
+  end do
+
+! CHECK: acc.parallel {{.*}} {
+! CHECK: acc.loop
+! CHECK: acc.cache varPtr(%{{.*}}) bounds(%{{.*}}) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {name = "data%a(i-4_4:i+4_4)", structured = false}
+! CHECK: hlfir.declare %{{.*}} {{{.*}}uniq_name = "data%a(i-4_4:i+4_4)"}
+! CHECK: acc.yield
+end subroutine
+
+! Test cache with copy of whole struct (not explicit component copyin)
+! CHECK-LABEL: func.func @_QPtest_cache_parallel_copy_struct(
+subroutine test_cache_parallel_copy_struct(data, M)
+  type :: dt
+    real, dimension(:), allocatable :: A
+  end type
+
+  type(dt), intent(inout) :: data
+  integer, intent(in) :: M
+  real :: r
+  integer :: i
+
+  !$acc parallel loop copy(data)
+  do i = 1, M
+    !$acc cache(data%A(i))
+    r = data%A(i)
+  end do
+
+! CHECK: acc.parallel {{.*}} {
+! CHECK: acc.loop
+! CHECK: acc.cache varPtr(%{{.*}}) bounds(%{{.*}}) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {name = "data%a(i)", structured = false}
+! CHECK: hlfir.declare %{{.*}} {{{.*}}uniq_name = "data%a(i)"}
+! CHECK: acc.yield
+end subroutine
+
+! Test cache with nested derived type in parallel loop with copyin
+! CHECK-LABEL: func.func @_QPtest_cache_nested_parallel(
+subroutine test_cache_nested_parallel(obj, N)
+  type :: inner
+    real, dimension(:), allocatable :: arr
+  end type
+
+  type :: outer
+    type(inner) :: in
+  end type
+
+  type(outer), intent(inout) :: obj
+  integer, intent(in) :: N
+  real :: r
+  integer :: i
+
+  !$acc parallel loop copyin(obj%in%arr(1:N))
+  do i = 1, N
+    !$acc cache(obj%in%arr(i))
+    r = obj%in%arr(i)
+  end do
+
+! CHECK: acc.parallel {{.*}} {
+! CHECK: acc.loop
+! CHECK: acc.cache varPtr(%{{.*}}) bounds(%{{.*}}) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {name = "obj%in%arr(i)", structured = false}
+! CHECK: hlfir.declare %{{.*}} {{{.*}}uniq_name = "obj%in%arr(i)"}
+! CHECK: acc.yield
+end subroutine
+
+! Test cache with explicit shape component in parallel loop with copyin
+! CHECK-LABEL: func.func @_QPtest_cache_explicit_shape_comp(
+subroutine test_cache_explicit_shape_comp(data, C, M)
+  type :: dt
+    real, dimension(10) :: A
+  end type
+
+  type(dt), intent(inout) :: data
+  real, dimension(:), intent(out) :: C
+  integer, intent(in) :: M
+  integer :: i
+
+  !$acc parallel loop gang vector copyin(data, data%A(1:M)) copyout(C(1:M))
+  do i = 1, M
+    !$acc cache(data%A(i:i+4))
+    C(i) = data%A(i)
+  end do
+
+! CHECK: acc.parallel {{.*}} {
+! CHECK: acc.loop
+! CHECK: acc.cache varPtr(%{{.*}}) bounds(%{{.*}}) -> !fir.ref<!fir.array<10xf32>> {name = "data%a(i:i+4_4)", structured = false}
+! CHECK: hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "data%a(i:i+4_4)"}
+! CHECK: acc.yield
+end subroutine
+
 ! Test cache with temporary in designator bounds - verifies local statement context
 ! doesn't cause issues with temporary cleanup
 ! CHECK-LABEL: func.func @_QPtest_cache_temp_in_designator(
@@ -663,3 +767,77 @@ subroutine test_cache_temp_in_designator(data, a)
 ! CHECK: hlfir.designate %[[DECL]]#0
 ! CHECK: acc.yield
 end subroutine
+
+
+subroutine full_array_cache()
+  integer :: k, j , kd, jd,y, x
+  real(8) :: tile(0:8,0:8)
+
+  !$acc parallel loop gang collapse(2)
+  do k = 1, kd
+    do j = 1, jd
+      !$acc cache(tile(:,:))
+    end do
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPfull_array_cache()
+! CHECK: acc.cache var(%{{.*}}) bounds(%{{.*}})
+
+! Caching a section of an array with a non-unit lower bound produces a
+! box-typed acc.cache. The cache descriptor's extents and strides are decided
+! later by cache materialization, so the cached symbol must be re-declared with
+! the ORIGINAL lower bound ONLY -- a fir.shift, never a fir.shape_shift. A
+! fir.shape_shift would re-impose the host array's extents on the descriptor and
+! defeat the materialized (possibly packed) layout.
+subroutine test_cache_nonunit_lb_box()
+  integer :: arr(10:20)
+  integer :: i
+
+  !$acc loop
+  do i = 10, 20
+    !$acc cache(arr(12:18))
+    arr(i) = i
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_cache_nonunit_lb_box()
+! The host array is declared with its full shape: lower bound 10, extent 11.
+! CHECK: %[[LB:.*]] = arith.constant 10 : index
+! CHECK: %[[EXT:.*]] = arith.constant 11 : index
+! CHECK: %[[SHAPE:.*]] = fir.shape_shift %[[LB]], %[[EXT]] : (index, index) -> !fir.shapeshift<1>
+! CHECK: %[[ARR:.*]]:2 = hlfir.declare %{{.*}}(%[[SHAPE]]) {uniq_name = "_QFtest_cache_nonunit_lb_boxEarr"} : (!fir.ref<!fir.array<11xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<11xi32>>, !fir.ref<!fir.array<11xi32>>)
+! CHECK: %[[CACHE:.*]] = acc.cache var(%[[ARR]]#0 : !fir.box<!fir.array<11xi32>>) bounds(%{{.*}}) -> !fir.box<!fir.array<11xi32>> {name = "arr(12:18)"
+! The cached re-declaration reuses the SAME lower bound (10) with NO extent: a
+! fir.shift on %[[LB]], never a fir.shape_shift.
+! CHECK-NOT: fir.shape_shift
+! CHECK: %[[SHIFT:.*]] = fir.shift %[[LB]] : (index) -> !fir.shift<1>
+! CHECK: hlfir.declare %[[CACHE]](%[[SHIFT]]) {uniq_name = "_QFtest_cache_nonunit_lb_boxEarr"} : (!fir.box<!fir.array<11xi32>>, !fir.shift<1>) -> (!fir.box<!fir.array<11xi32>>, !fir.box<!fir.array<11xi32>>)
+
+! Same property for an assumed-shape array (runtime descriptor): the cached
+! re-declaration uses a multi-dimensional fir.shift (lower bounds only), so the
+! rebox preserves the descriptor's extents/strides instead of reshaping them.
+subroutine test_cache_assumed_shape_box(arr)
+  real(8) :: arr(0:, 0:)
+  integer :: i
+
+  !$acc loop
+  do i = 1, 10
+    !$acc cache(arr(3:8, 0:4))
+    arr(i, 0) = arr(i, 1)
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_cache_assumed_shape_box(
+! Both declared lower bounds are 0 (arr(0:,0:)):
+! CHECK: %[[C0A:.*]] = arith.constant 0 : i64
+! CHECK: %[[LB0:.*]] = fir.convert %[[C0A]] : (i64) -> index
+! CHECK: %[[C0B:.*]] = arith.constant 0 : i64
+! CHECK: %[[LB1:.*]] = fir.convert %[[C0B]] : (i64) -> index
+! CHECK: %[[ARR:.*]]:2 = hlfir.declare %arg0(%{{.*}}) dummy_scope %{{.*}} {{.*}}uniq_name = "_QFtest_cache_assumed_shape_boxEarr"}
+! CHECK: %[[CACHE:.*]] = acc.cache var(%[[ARR]]#0 : !fir.box<!fir.array<?x?xf64>>) bounds(%{{.*}}, %{{.*}}) -> !fir.box<!fir.array<?x?xf64>> {name = "arr(3:8,0:4)"
+! The cached re-declaration reuses the SAME two lower bounds (0, 0) with no
+! extents: a fir.shift on %[[LB0]], %[[LB1]], never a fir.shape_shift.
+! CHECK-NOT: fir.shape_shift
+! CHECK: %[[SHIFT:.*]] = fir.shift %[[LB0]], %[[LB1]] : (index, index) -> !fir.shift<2>
+! CHECK: hlfir.declare %[[CACHE]](%[[SHIFT]]) {uniq_name = "_QFtest_cache_assumed_shape_boxEarr"} : (!fir.box<!fir.array<?x?xf64>>, !fir.shift<2>) -> (!fir.box<!fir.array<?x?xf64>>, !fir.box<!fir.array<?x?xf64>>)

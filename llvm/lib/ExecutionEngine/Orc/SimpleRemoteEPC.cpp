@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
+#include "llvm/ExecutionEngine/Orc/EPCGenericDylibManager.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -21,43 +23,6 @@ SimpleRemoteEPC::~SimpleRemoteEPC() {
   std::lock_guard<std::mutex> Lock(SimpleRemoteEPCMutex);
   assert(Disconnected && "Destroyed without disconnection");
 #endif // NDEBUG
-}
-
-Expected<tpctypes::DylibHandle>
-SimpleRemoteEPC::loadDylib(const char *DylibPath) {
-  return EPCDylibMgr->open(DylibPath, 0);
-}
-
-/// Async helper to chain together calls to DylibMgr::lookupAsync to fulfill all
-/// all the requests.
-/// FIXME: The dylib manager should support multiple LookupRequests natively.
-static void
-lookupSymbolsAsyncHelper(EPCGenericDylibManager &DylibMgr,
-                         ArrayRef<DylibManager::LookupRequest> Request,
-                         std::vector<tpctypes::LookupResult> Result,
-                         DylibManager::SymbolLookupCompleteFn Complete) {
-  if (Request.empty())
-    return Complete(std::move(Result));
-
-  auto &Element = Request.front();
-  DylibMgr.lookupAsync(Element.Handle, Element.Symbols,
-                       [&DylibMgr, Request, Complete = std::move(Complete),
-                        Result = std::move(Result)](auto R) mutable {
-                         if (!R)
-                           return Complete(R.takeError());
-                         Result.push_back({});
-                         Result.back().reserve(R->size());
-                         llvm::append_range(Result.back(), *R);
-
-                         lookupSymbolsAsyncHelper(
-                             DylibMgr, Request.drop_front(), std::move(Result),
-                             std::move(Complete));
-                       });
-}
-
-void SimpleRemoteEPC::lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
-                                         SymbolLookupCompleteFn Complete) {
-  lookupSymbolsAsyncHelper(*EPCDylibMgr, Request, {}, std::move(Complete));
 }
 
 Expected<int32_t> SimpleRemoteEPC::runAsMain(ExecutorAddr MainFnAddr,
@@ -120,6 +85,40 @@ void SimpleRemoteEPC::callWrapperAsync(ExecutorAddr WrapperFnAddr,
 
     getExecutionSession().reportError(std::move(Err));
   }
+}
+
+Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+SimpleRemoteEPC::createDefaultMemoryManager() {
+  return EPCGenericJITLinkMemoryManager::Create(getExecutionSession());
+}
+
+Expected<std::unique_ptr<DylibManager>>
+SimpleRemoteEPC::createDefaultDylibMgr() {
+  auto DM = EPCGenericDylibManager::CreateWithDefaultBootstrapSymbols(*this);
+  if (!DM)
+    return DM.takeError();
+  return std::make_unique<EPCGenericDylibManager>(std::move(*DM));
+}
+
+Expected<std::unique_ptr<MemoryAccess>>
+SimpleRemoteEPC::createDefaultMemoryAccess() {
+  EPCGenericMemoryAccess::FuncAddrs FAs;
+  if (auto Err = getBootstrapSymbols(
+          {{FAs.WriteUInt8s, rt::MemoryWriteUInt8sWrapperName},
+           {FAs.WriteUInt16s, rt::MemoryWriteUInt16sWrapperName},
+           {FAs.WriteUInt32s, rt::MemoryWriteUInt32sWrapperName},
+           {FAs.WriteUInt64s, rt::MemoryWriteUInt64sWrapperName},
+           {FAs.WriteBuffers, rt::MemoryWriteBuffersWrapperName},
+           {FAs.WritePointers, rt::MemoryWritePointersWrapperName},
+           {FAs.ReadUInt8s, rt::MemoryReadUInt8sWrapperName},
+           {FAs.ReadUInt16s, rt::MemoryReadUInt16sWrapperName},
+           {FAs.ReadUInt32s, rt::MemoryReadUInt32sWrapperName},
+           {FAs.ReadUInt64s, rt::MemoryReadUInt64sWrapperName},
+           {FAs.ReadBuffers, rt::MemoryReadBuffersWrapperName},
+           {FAs.ReadStrings, rt::MemoryReadStringsWrapperName}}))
+    return std::move(Err);
+
+  return std::make_unique<EPCGenericMemoryAccess>(*this, FAs);
 }
 
 Error SimpleRemoteEPC::disconnect() {
@@ -224,27 +223,6 @@ SimpleRemoteEPC::createDefaultMemoryManager(SimpleRemoteEPC &SREPC) {
   return std::make_unique<EPCGenericJITLinkMemoryManager>(SREPC, SAs);
 }
 
-Expected<std::unique_ptr<MemoryAccess>>
-SimpleRemoteEPC::createDefaultMemoryAccess(SimpleRemoteEPC &SREPC) {
-  EPCGenericMemoryAccess::FuncAddrs FAs;
-  if (auto Err = SREPC.getBootstrapSymbols(
-          {{FAs.WriteUInt8s, rt::MemoryWriteUInt8sWrapperName},
-           {FAs.WriteUInt16s, rt::MemoryWriteUInt16sWrapperName},
-           {FAs.WriteUInt32s, rt::MemoryWriteUInt32sWrapperName},
-           {FAs.WriteUInt64s, rt::MemoryWriteUInt64sWrapperName},
-           {FAs.WriteBuffers, rt::MemoryWriteBuffersWrapperName},
-           {FAs.WritePointers, rt::MemoryWritePointersWrapperName},
-           {FAs.ReadUInt8s, rt::MemoryReadUInt8sWrapperName},
-           {FAs.ReadUInt16s, rt::MemoryReadUInt16sWrapperName},
-           {FAs.ReadUInt32s, rt::MemoryReadUInt32sWrapperName},
-           {FAs.ReadUInt64s, rt::MemoryReadUInt64sWrapperName},
-           {FAs.ReadBuffers, rt::MemoryReadBuffersWrapperName},
-           {FAs.ReadStrings, rt::MemoryReadStringsWrapperName}}))
-    return std::move(Err);
-
-  return std::make_unique<EPCGenericMemoryAccess>(SREPC, FAs);
-}
-
 Error SimpleRemoteEPC::sendMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
                                    ExecutorAddr TagAddr,
                                    ArrayRef<char> ArgBytes) {
@@ -305,7 +283,7 @@ Error SimpleRemoteEPC::handleSetup(uint64_t SeqNo, ExecutorAddr TagAddr,
   return Error::success();
 }
 
-Error SimpleRemoteEPC::setup(Setup S) {
+Error SimpleRemoteEPC::setup() {
   using namespace SimpleRemoteEPCDefaultBootstrapSymbolNames;
 
   std::promise<MSVCPExpected<SimpleRemoteEPCExecutorInfo>> EIP;
@@ -368,32 +346,6 @@ Error SimpleRemoteEPC::setup(Setup S) {
            {RunAsVoidFunctionAddr, rt::RunAsVoidFunctionWrapperName},
            {RunAsIntFunctionAddr, rt::RunAsIntFunctionWrapperName}}))
     return Err;
-
-  if (auto DM =
-          EPCGenericDylibManager::CreateWithDefaultBootstrapSymbols(*this))
-    EPCDylibMgr = std::make_unique<EPCGenericDylibManager>(std::move(*DM));
-  else
-    return DM.takeError();
-
-  // Set a default CreateMemoryManager if none is specified.
-  if (!S.CreateMemoryManager)
-    S.CreateMemoryManager = createDefaultMemoryManager;
-
-  if (auto MemMgr = S.CreateMemoryManager(*this)) {
-    OwnedMemMgr = std::move(*MemMgr);
-    this->MemMgr = OwnedMemMgr.get();
-  } else
-    return MemMgr.takeError();
-
-  // Set a default CreateMemoryAccess if none is specified.
-  if (!S.CreateMemoryAccess)
-    S.CreateMemoryAccess = createDefaultMemoryAccess;
-
-  if (auto MemAccess = S.CreateMemoryAccess(*this)) {
-    OwnedMemAccess = std::move(*MemAccess);
-    this->MemAccess = OwnedMemAccess.get();
-  } else
-    return MemAccess.takeError();
 
   return Error::success();
 }

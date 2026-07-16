@@ -22,6 +22,7 @@ defm module_files_dir : Eq<"module-files-dir",
 
 def optimize_args_EQ : CommaJoined<["-", "--"], "optimize-args=">, HelpText<"Which command-line arguments of modules to optimize">;
 def eager_load_pcm : F<"eager-load-pcm", "Load PCM files eagerly (instead of lazily on import)">;
+def cache_negative_stats : F<"cache-negative-stats", "Cache stat failures">;
 
 def j : Arg<"j", "Number of worker threads to use (default: use all concurrent threads)">;
 
@@ -44,7 +45,11 @@ def emit_visible_modules
 
 def verbose : F<"v", "Use verbose output">;
 
+def async_scan_modules : F<"async-scan-modules", "Scan modules asynchronously">;
+
 def round_trip_args : F<"round-trip-args", "verify that command-line arguments are canonical by parsing and re-serializing">;
+
+def no_flush_module_cache : F<"no-flush-module-cache", "do not flush the module cache from memory to disk at the end of the scan">;
 
 def verbatim_args : F<"verbatim-args", "Pass commands to the scanner verbatim without adjustments">;
 

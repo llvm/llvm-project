@@ -456,6 +456,13 @@ let Predicates = [UseHVX] in {
               (VShuff (V6_vmpyhus_acc (VDeal $Vx, -4),
                                       HVI16:$Vs, HVI16:$Vt), -4)>;
   }
+
+  def : Pat<(VecI32 (partial_reduce_umla VecI32:$Acc, HVI8:$A, HVI8:$B)),
+            (V6_vrmpyubv_acc $Acc, $A, $B)>;
+  def : Pat<(VecI32 (partial_reduce_smla VecI32:$Acc, HVI8:$A, HVI8:$B)),
+            (V6_vrmpybv_acc $Acc, $A, $B)>;
+  def : Pat<(VecI32 (partial_reduce_sumla VecI32:$Acc, HVI8:$A, HVI8:$B)),
+            (V6_vrmpybusv_acc $Acc, $B, $A)>;
 }
 
 let Predicates = [UseHVX] in {
@@ -589,7 +596,7 @@ let Predicates = [UseHVXV68, UseHVXIEEEFP] in {
            (V6_vmpy_sf_sf HVF32:$Rs, HVF32:$Rt)>;
 
   def: Pat<(VecF16 (pf1<fpround> HWF32:$Vuu)),
-           (V6_vdealh (V6_vcvt_hf_sf (HiVec HvxWR:$Vuu), (LoVec HvxWR:$Vuu)))>;
+           (V6_vdealh (V6_vcvt_hf_sf (LoVec HvxWR:$Vuu), (HiVec HvxWR:$Vuu)))>;
   def: Pat<(VecPF32 (pf1<fpextend> HVF16:$Vu)),
            (V6_vcvt_sf_hf (V6_vshuffh HvxVR:$Vu))>;
 
@@ -665,6 +672,10 @@ let Predicates = [UseHVXV68, UseHVX128B, UseHVXQFloat] in {
   def: OpR_RR_pat<V6_vmax_hf, pf2<fmaximumnum>, VecF16, HVF16>;
   def: OpR_RR_pat<V6_vmin_sf, pf2<fminimumnum>, VecF32, HVF32>;
   def: OpR_RR_pat<V6_vmax_sf, pf2<fmaximumnum>, VecF32, HVF32>;
+  def: OpR_RR_pat<V6_vmin_hf, pf2<fminnum>, VecF16, HVF16>;
+  def: OpR_RR_pat<V6_vmax_hf, pf2<fmaxnum>, VecF16, HVF16>;
+  def: OpR_RR_pat<V6_vmin_sf, pf2<fminnum>, VecF32, HVF32>;
+  def: OpR_RR_pat<V6_vmax_sf, pf2<fmaxnum>, VecF32, HVF32>;
 }
 
 let Predicates = [UseHVXV68, UseHVX128B, UseHVXIEEEFP] in {
@@ -678,6 +689,10 @@ let Predicates = [UseHVXV68, UseHVX128B, UseHVXIEEEFP] in {
   def: OpR_RR_pat<V6_vfmax_hf, pf2<fmaximumnum>, VecF16, HVF16>;
   def: OpR_RR_pat<V6_vfmin_sf, pf2<fminimumnum>, VecF32, HVF32>;
   def: OpR_RR_pat<V6_vfmax_sf, pf2<fmaximumnum>, VecF32, HVF32>;
+  def: OpR_RR_pat<V6_vfmin_hf, pf2<fminnum>, VecF16, HVF16>;
+  def: OpR_RR_pat<V6_vfmax_hf, pf2<fmaxnum>, VecF16, HVF16>;
+  def: OpR_RR_pat<V6_vfmin_sf, pf2<fminnum>, VecF32, HVF32>;
+  def: OpR_RR_pat<V6_vfmax_sf, pf2<fmaxnum>, VecF32, HVF32>;
 }
 
 let Predicates = [UseHVX] in {
@@ -735,6 +750,9 @@ let Predicates = [UseHVX] in {
            (V6_vandvrt HvxVR:$Vs, (ToI32 0x01010101))>;
   def: Pat<(VecQ32 (trunc HVI32:$Vs)),
            (V6_vandvrt HvxVR:$Vs, (ToI32 0x01010101))>;
+  def: Pat<(VecQ8 (trunc HWI16:$Vss)),
+           (Combineq(VecQ16(V6_vandvrt (HiVec $Vss), (ToI32 0x01010101))),
+           (VecQ16 (V6_vandvrt (LoVec $Vss), (ToI32 0x01010101))))>;
   def: Pat<(VecQ16 (trunc HWI32:$Vss)),
            (Combineq(VecQ32(V6_vandvrt (HiVec $Vss), (ToI32 0x01010101))),
            (VecQ32 (V6_vandvrt (LoVec $Vss), (ToI32 0x01010101))))>;
@@ -1006,6 +1024,15 @@ let Predicates = [UseHVX] in {
   def: AccRRR_pat<V6_vgtuw_and,   And, setugt,   HQ32, HVI32, HVI32>;
   def: AccRRR_pat<V6_vgtuw_or,     Or, setugt,   HQ32, HVI32, HVI32>;
   def: AccRRR_pat<V6_vgtuw_xor,   Xor, setugt,   HQ32, HVI32, HVI32>;
+}
+
+let Predicates = [UseHVX] in {
+  def: Pat<(vselect VecQ8:$Qu, VecQ8:$Qs, VecQ8:$Qt),
+           (V6_pred_or (V6_pred_and $Qs, $Qu), (V6_pred_and_n $Qt, $Qu))>;
+  def: Pat<(vselect VecQ16:$Qu, VecQ16:$Qs, VecQ16:$Qt),
+           (V6_pred_or (V6_pred_and $Qs, $Qu), (V6_pred_and_n $Qt, $Qu))>;
+  def: Pat<(vselect VecQ32:$Qu, VecQ32:$Qs, VecQ32:$Qt),
+           (V6_pred_or (V6_pred_and $Qs, $Qu), (V6_pred_and_n $Qt, $Qu))>;
 }
 
 let Predicates = [UseHVXV68, UseHVXFloatingPoint] in {

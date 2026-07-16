@@ -84,8 +84,10 @@
 
 using namespace llvm;
 
-static void SignalHandler(int Sig, siginfo_t *Info, void *);
+static void SignalHandler(int Sig, siginfo_t *Info, void *Context);
+static void SignalHandlerTerminate(int Sig, siginfo_t *Info, void *Context);
 static void InfoSignalHandler(int Sig); // defined below.
+static void InfoSignalHandlerTerminate(int Sig); // defined below.
 
 using SignalHandlerFunctionType = void (*)();
 /// The function to call if ctrl-c is pressed.
@@ -96,6 +98,10 @@ static std::atomic<SignalHandlerFunctionType> OneShotPipeSignalFunction =
     nullptr;
 
 namespace {
+/// Sentinel stored in a node after the signal handler has removed the file;
+/// not a valid path, never freed.
+static char InvalidPathSentinel[] = "\01\02\03\04";
+
 /// Signal-safe removal of files.
 /// Inserting and erasing from the list isn't signal-safe, but removal of files
 /// themselves is signal-safe. Memory is freed when the head is freed, deletion
@@ -105,8 +111,8 @@ class FileToRemoveList {
   std::atomic<FileToRemoveList *> Next = nullptr;
 
   FileToRemoveList() = default;
-  // Not signal-safe.
-  FileToRemoveList(const std::string &str) : Filename(strdup(str.c_str())) {}
+  // Takes ownership of \p filename.
+  FileToRemoveList(char *filename) : Filename(filename) {}
 
 public:
   // Not signal-safe.
@@ -114,19 +120,35 @@ public:
     if (FileToRemoveList *N = Next.exchange(nullptr))
       delete N;
     if (char *F = Filename.exchange(nullptr))
-      free(F);
+      if (F != InvalidPathSentinel)
+        free(F);
   }
 
   // Not signal-safe.
   static void insert(std::atomic<FileToRemoveList *> &Head,
                      const std::string &Filename) {
-    // Insert the new file at the end of the list.
-    FileToRemoveList *NewHead = new FileToRemoveList(Filename);
+    // Reuse a node with a null filename (left behind by erase) if one exists.
+    // There are two cases where Filename can be special:
+    // - nullptr: a node left behind by a previous file that we had to remove
+    // - InvalidPathSentinel: a node whose file is actively being removed by a
+    //   signal handler right now, in which case it's OK if this file doesn't
+    //   get removed.
+    char *NewFilename = strdup(Filename.c_str());
     std::atomic<FileToRemoveList *> *InsertionPoint = &Head;
-    FileToRemoveList *OldHead = nullptr;
-    while (!InsertionPoint->compare_exchange_strong(OldHead, NewHead)) {
-      InsertionPoint = &OldHead->Next;
-      OldHead = nullptr;
+    for (FileToRemoveList *Current = Head.load(); Current;
+         Current = Current->Next.load()) {
+      char *NullFilename = nullptr;
+      if (Current->Filename.compare_exchange_strong(NullFilename, NewFilename))
+        return; // Reused a slot.
+      InsertionPoint = &Current->Next;
+    }
+
+    // Append the new node at the end; on CAS failure, advance to the new tail.
+    FileToRemoveList *NewNode = new FileToRemoveList(NewFilename);
+    FileToRemoveList *OldNext = nullptr;
+    while (!InsertionPoint->compare_exchange_strong(OldNext, NewNode)) {
+      InsertionPoint = &OldNext->Next;
+      OldNext = nullptr;
     }
   }
 
@@ -143,11 +165,15 @@ public:
       if (char *OldFilename = Current->Filename.load()) {
         if (OldFilename != Filename)
           continue;
-        // Leave an empty filename.
-        OldFilename = Current->Filename.exchange(nullptr);
-        // The filename might have become null between the time we
-        // compared it and we exchanged it.
-        if (OldFilename)
+        // Leave an empty filename. Use CAS to avoid racing with the signal
+        // handler (which can't take the writer lock); only clear and free
+        // if we still own the pointer.
+        char *Expected = OldFilename;
+        while (!Current->Filename.compare_exchange_strong(Expected, nullptr)) {
+          if (Expected == nullptr || Expected == InvalidPathSentinel)
+            break;
+        }
+        if (Expected == OldFilename)
           free(OldFilename);
       }
     }
@@ -173,21 +199,23 @@ public:
 
   // Signal-safe.
   static void removeAllFiles(std::atomic<FileToRemoveList *> &Head) {
-    // If cleanup were to occur while we're removing files we'd have a bad time.
-    // Make sure we're OK by preventing cleanup from doing anything while we're
-    // removing files. If cleanup races with us and we win we'll have a leak,
-    // but we won't crash.
+    // This signal-safe code cannot acquire the writer lock, and needs to defend
+    // against racing writes from the `erase` method above.
     FileToRemoveList *OldHead = Head.exchange(nullptr);
 
     for (FileToRemoveList *currentFile = OldHead; currentFile;
          currentFile = currentFile->Next.load()) {
-      // If erasing was occuring while we're trying to remove files we'd look
-      // at free'd data. Take away the path and put it back when done.
-      if (char *path = currentFile->Filename.exchange(nullptr)) {
-        removeFile(path);
-
-        // We're done removing the file, erasing can safely proceed.
-        currentFile->Filename.exchange(path);
+      // Take exclusive ownership by swapping in the sentinel (signal-safe: no
+      // allocation or free). Then put the path back so we don't leak.
+      char *Path = currentFile->Filename.exchange(InvalidPathSentinel);
+      if (!Path) {
+        // Restore an empty slot so future insertions can reuse it.
+        currentFile->Filename.exchange(nullptr);
+      } else if (Path != InvalidPathSentinel) {
+        removeFile(Path);
+        // Add the path back to the list to create a global root referencing the
+        // heap allocation, which will pacify leak checkers that run at exit.
+        currentFile->Filename.exchange(Path);
       }
     }
 
@@ -292,7 +320,8 @@ static void CreateSigAltStack() {
 static void CreateSigAltStack() {}
 #endif
 
-static void RegisterHandlers() { // Not signal-safe.
+static void RegisterHandlers(
+    bool NeedsPOSIXUtilitySignalHandling = false) { // Not signal-safe.
   // The mutex prevents other threads from registering handlers while we're
   // doing it. We also have to protect the handlers and their count because
   // a signal handler could fire while we're registering handlers.
@@ -317,18 +346,34 @@ static void RegisterHandlers() { // Not signal-safe.
 
     switch (Kind) {
     case SignalKind::IsKill:
-      NewHandler.sa_sigaction = SignalHandler;
+      if (NeedsPOSIXUtilitySignalHandling)
+        // If POSIX signal-handling semantics are followed, the signal handler
+        // resignal itself to terminate after handling the signal.
+        NewHandler.sa_sigaction = SignalHandlerTerminate;
+      else
+        NewHandler.sa_sigaction = SignalHandler;
       NewHandler.sa_flags = SA_NODEFER | SA_RESETHAND | SA_ONSTACK | SA_SIGINFO;
       break;
     case SignalKind::IsInfo:
-      NewHandler.sa_handler = InfoSignalHandler;
+      if (NeedsPOSIXUtilitySignalHandling)
+        // If POSIX signal-handling semantics are followed, the signal handler
+        // resignal itself to terminate after handling the signal.
+        NewHandler.sa_handler = InfoSignalHandlerTerminate;
+      else
+        NewHandler.sa_handler = InfoSignalHandler;
       NewHandler.sa_flags = SA_ONSTACK;
       break;
     }
     sigemptyset(&NewHandler.sa_mask);
 
-    // Install the new handler, save the old one in RegisteredSignalInfo.
-    sigaction(Signal, &NewHandler, &RegisteredSignalInfo[Index].SA);
+    if (NeedsPOSIXUtilitySignalHandling) {
+      // Don't install the new handler if the signal disposition is SIG_IGN.
+      struct sigaction act;
+      if (sigaction(Signal, NULL, &act) == 0 && act.sa_handler != SIG_IGN)
+        sigaction(Signal, &NewHandler, &RegisteredSignalInfo[Index].SA);
+    } else {
+      sigaction(Signal, &NewHandler, &RegisteredSignalInfo[Index].SA);
+    }
     RegisteredSignalInfo[Index].SigNo = Signal;
     ++NumRegisteredSignals;
   };
@@ -377,7 +422,7 @@ void sys::CleanupOnSignal(uintptr_t Context) {
 }
 
 // The signal handler that runs.
-static void SignalHandler(int Sig, siginfo_t *Info, void *) {
+static void SignalHandler(int Sig, siginfo_t *Info, void *Context) {
   // Restore the signal behavior to default, so that the program actually
   // crashes when we return and the signal reissues.  This also ensures that if
   // we crash in our signal handler that the program will terminate immediately
@@ -437,10 +482,28 @@ static void SignalHandler(int Sig, siginfo_t *Info, void *) {
 #endif
 }
 
+static void SignalHandlerTerminate(int Sig, siginfo_t *Info, void *Context) {
+  SignalHandler(Sig, Info, Context);
+
+  // Resignal if it is a kill signal so that the exit code contains the
+  // terminating signal number.
+  if (llvm::is_contained(KillSigs, Sig))
+    raise(Sig); // Execute the default handler.
+}
+
 static void InfoSignalHandler(int Sig) {
   SaveAndRestore SaveErrnoDuringASignalHandler(errno);
   if (SignalHandlerFunctionType CurrentInfoFunction = InfoSignalFunction)
     CurrentInfoFunction();
+}
+
+static void InfoSignalHandlerTerminate(int Sig) {
+  InfoSignalHandler(Sig);
+
+  if (Sig == SIGUSR1) {
+    sys::unregisterHandlers();
+    raise(Sig);
+  }
 }
 
 void sys::RunInterruptHandlers() {
@@ -488,10 +551,11 @@ void llvm::sys::DontRemoveFileOnSignal(StringRef Filename) {
 /// Add a function to be called when a signal is delivered to the process. The
 /// handler can have a cookie passed to it to identify what instance of the
 /// handler it is.
-void llvm::sys::AddSignalHandler(sys::SignalHandlerCallback FnPtr,
-                                 void *Cookie) { // Signal-safe.
+void llvm::sys::AddSignalHandler(sys::SignalHandlerCallback FnPtr, void *Cookie,
+                                 bool NeedsPOSIXUtilitySignalHandling) {
+  // Signal-safe.
   insertSignalHandler(FnPtr, Cookie);
-  RegisterHandlers();
+  RegisterHandlers(NeedsPOSIXUtilitySignalHandling);
 }
 
 #if ENABLE_BACKTRACES && defined(HAVE_BACKTRACE) &&                            \
@@ -569,11 +633,13 @@ public:
 
   /// Print llvm-symbolizer markup describing the layout of the given DSO.
   void printDSOMarkup(dl_phdr_info *Info) {
+    bool WasFirst = IsFirst;
+    IsFirst = false;
     ArrayRef<uint8_t> BuildID = findBuildID(Info);
     if (BuildID.empty())
       return;
     OS << format("{{{module:%d:%s:elf:", ModuleCount,
-                 IsFirst ? MainExecutableName : Info->dlpi_name);
+                 WasFirst ? MainExecutableName : Info->dlpi_name);
     for (uint8_t X : BuildID)
       OS << format("%02x", X);
     OS << "}}}\n";
@@ -589,7 +655,6 @@ public:
                    Phdr->p_memsz, ModuleCount, &ModeStr[0],
                    ModuleRelativeAddress);
     }
-    IsFirst = false;
     ModuleCount++;
   }
 

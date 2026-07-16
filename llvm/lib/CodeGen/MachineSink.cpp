@@ -504,6 +504,13 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
         if (!RC->contains(DstReg))
           return false;
       } else if (UseInst.mayLoadOrStore()) {
+        // If the destination instruction contains more than one use of the
+        // register, we won't be able to remove the original instruction, so
+        // don't sink.
+        if (llvm::count_if(UseInst.operands(), [Reg](const MachineOperand &MO) {
+              return MO.isReg() && MO.getReg() == Reg;
+            }) > 1)
+          return false;
         ExtAddrMode AM;
         if (!TII->canFoldIntoAddrMode(UseInst, Reg, MI, AM))
           return false;
@@ -726,7 +733,7 @@ void MachineSinking::FindCycleSinkCandidates(
                            "target\n");
       continue;
     }
-    if (!isCycleInvariant(Cycle, MI)) {
+    if (!isCycleInvariant(*CI, *Cycle, MI)) {
       LLVM_DEBUG(dbgs() << "CycleSink: Instruction is not cycle invariant\n");
       continue;
     }
@@ -888,7 +895,7 @@ bool MachineSinking::run(MachineFunction &MF) {
       HasHighPressure = false;
 
       for (auto *Cycle : Cycles) {
-        MachineBasicBlock *Preheader = Cycle->getCyclePreheader();
+        MachineBasicBlock *Preheader = CI->getCyclePreheader(*Cycle);
         if (!Preheader) {
           LLVM_DEBUG(dbgs() << "CycleSink: Can't find preheader\n");
           continue;
@@ -1613,11 +1620,11 @@ static void performSink(MachineInstr &MI, MachineBasicBlock &SuccToSinkTo,
   // If we cannot find a location to use (merge with), then we erase the debug
   // location to prevent debug-info driven tools from potentially reporting
   // wrong location information.
-  if (!SuccToSinkTo.empty() && InsertPos != SuccToSinkTo.end())
-    MI.setDebugLoc(DebugLoc::getMergedLocation(MI.getDebugLoc(),
-                                               InsertPos->getDebugLoc()));
+  if (SuccToSinkTo.empty())
+    MI.setDebugLoc(DebugLoc::getDropped());
   else
-    MI.setDebugLoc(DebugLoc());
+    MI.setDebugLoc(DebugLoc::getMergedLocation(
+        MI.getDebugLoc(), SuccToSinkTo.findDebugLoc(InsertPos)));
 
   // Move the instruction.
   MachineBasicBlock *ParentBlock = MI.getParent();
@@ -1751,7 +1758,7 @@ bool MachineSinking::aggressivelySinkIntoCycle(
     return false;
 
   LLVM_DEBUG(dbgs() << "AggressiveCycleSink: Finding sink block for: " << I);
-  assert(Cycle->getCyclePreheader() && "Cycle sink needs a preheader block");
+  assert(CI->getCyclePreheader(*Cycle) && "Cycle sink needs a preheader block");
   SmallVector<std::pair<RegSubRegPair, MachineInstr *>> Uses;
 
   MachineOperand &DefMO = I.getOperand(0);
@@ -1773,7 +1780,7 @@ bool MachineSinking::aggressivelySinkIntoCycle(
                            "can't sink.\n");
       continue;
     }
-    if (!Cycle->contains(MI->getParent())) {
+    if (!CI->contains(*Cycle, MI->getParent())) {
       LLVM_DEBUG(
           dbgs() << "AggressiveCycleSink:   Use not in cycle, can't sink.\n");
       continue;

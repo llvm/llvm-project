@@ -24,6 +24,15 @@ def ol_memory_register_flags_t : Typedef {
   let value = "uint32_t";
 }
 
+def ol_memory_register_flag_t : Enum {
+  let desc = "Memory registering/locking flags";
+  let is_bit_field = 1;
+  let etors =[
+    Etor<"LOCK_MEMORY", "Page-lock the memory">,
+    Etor<"UNLOCK_MEMORY", "Page-unlock the memory">,
+  ];
+}
+
 def olMemAlloc : Function {
   let desc = "Creates a memory allocation on the specified device.";
   let details = [
@@ -39,6 +48,33 @@ def olMemAlloc : Function {
     Return<"OL_ERRC_INVALID_SIZE", [
       "`Size == 0`"
     ]>
+  ];
+}
+
+def olMemAllocAligned : Function {
+  let desc = "Creates a memory allocation on the specified device with specified properties.";
+  let details = [
+      "All allocations through olMemAllocWithProp regardless of source share a single virtual address range. There is no risk of multiple devices returning equal pointers to different memory."
+  ];
+  let params = [
+    Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
+    Param<"ol_alloc_type_t", "Type", "type of the allocation", PARAM_IN>,
+    Param<"size_t", "Size", "size of the allocation in bytes", PARAM_IN>,
+    Param<"size_t", "Alignment",
+               "alignment of the allocation im bytes. Must be non-zero and a power of two",
+               PARAM_IN>,
+    Param<"void**", "AllocationOut", "output for the allocated pointer", PARAM_OUT>
+  ];
+  let returns = [
+    Return<"OL_ERRC_INVALID_SIZE", [
+      "`Size == 0`"
+    ]>,
+    Return<"OL_ERRC_INVALID_ARGUMENT", [
+      "`Alignment == 0`"
+    ]>, 
+    Return<"OL_ERRC_INVALID_ARGUMENT", [
+      "`(Alignment & (Alignment - 1)) != 0`"
+    ]>,
   ];
 }
 
@@ -138,13 +174,14 @@ def olMemFill : Function {
 }
 
 def olMemRegister : Function {
-  let desc = "Register and page-lock host memory so it can be accessible by the device.";
+  let desc = "Register and optionally page-lock host memory so it can be accessible by the device.";
   let details = [
-        "Pins host memory to optimize transfers and returns the device accessible",
-        "stable pointer that devices should use for memory transfers involving the host",
-        "pinned allocation. If the buffer intersects with other existing buffer,",
-        "a new user will be registered. A partial overlapping is not allowed.",
-        "The pinned pointer can be accessed both on host and device and",
+        "Registers host memory and optionally page-locks it to optimize transfers and returns",
+        "the device accessible stable pointer that devices should use for memory transfers",
+        "involving the host pinned allocation. If the buffer intersects with other existing buffer,",
+        "if the buffer is locked outside of this API, or Flags doesn't contain LOCK_MEMORY",
+        "flag a new user will be registered. Partial overlapping with an already registered range is",
+        "not allowed. The pinned pointer can be accessed both on host and device and",
         "no guarantees are made about consistency.",
         "The pinned pointer should be used to execute memory transfers",
         "as it is a stable pointer for memory access."  
@@ -153,7 +190,7 @@ def olMemRegister : Function {
     Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
     Param<"void *", "Ptr", "host pointer", PARAM_IN>,
     Param<"size_t", "Size", "size of the memory in bytes", PARAM_IN>,
-    Param<"ol_memory_register_flags_t", "Flags", "flags. Reserved for future use", PARAM_IN>,
+    Param<"ol_memory_register_flags_t", "Flags", "flags controlling various aspects of registration", PARAM_IN>,
     Param<"void**", "PinnedPtr", "pointer to the pinned memory", PARAM_OUT>
   ];
   let returns = [
@@ -164,15 +201,57 @@ def olMemRegister : Function {
 }
 
 def olMemUnregister : Function {
-  let desc = "Unregister and page-unlock host memory.";
+  let desc = "Unregister host memory and optionally page-unlock it.";
   let details = [
-        "Unpins host memory that was previously pinned or unregister the buffer",
-        "if other users are still using the buffer. If no users are using the buffer",
-        "the memory is unlocked."
+        "Unregisters host memory and optionally page-unlocks it.",
+        "If other users are still using the buffer or Flags doesn't contain UNLOCK_MEMORY flag"
+        "the memory is unregistered, otherwise the memory is unlocked."
   ];
   let params = [
     Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
-    Param<"void *", "Ptr", "host pointer", PARAM_IN>
+    Param<"void *", "Ptr", "host pointer", PARAM_IN>,
+    Param<"ol_memory_register_flags_t", "Flags", "flags controlling various aspects of unregistration", PARAM_IN>,
   ];
   let returns = [];
+}
+
+def ol_mem_migration_flags_t : Typedef {
+  let desc = "Memory migration flags, indicating the direction data is migrated in.";
+  let value = "uint32_t";
+}
+
+def ol_mem_migration_flag_t : Enum {
+  let desc = "Memory migration flags, indicating the direction data is migrated in.";
+  let is_bit_field = 1;
+  let etors = [
+    Etor<"HOST_TO_DEVICE", "Migrate data from the host to the device">,
+    Etor<"DEVICE_TO_HOST", "Migrate data from the device to the host">,
+  ];
+}
+
+def olMemPrefetch : Function {
+  let desc = "Enqueue a command to migrate USM memory between the host and a device.";
+  let details = [
+      "Prefetch is a hint that migrates a USM allocation between the host and a device "
+      "so subsequent accesses on the target side are faster. The contents of the memory "
+      "are unchanged - only its physical location may change.",
+      "Prefetching may not be supported for all devices or allocation types. If it is not "
+      "supported the prefetch is ignored and the call still returns success.",
+  ];
+  let params = [
+    Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>,
+    Param<"size_t", "Count", "number of entries in `Mems` and `Sizes`. Zero is allowed and is a no-op.", PARAM_IN>,
+    Param<"const void**", "Mems", "array of `Count` pointers, each pointing into a USM allocation to be prefetched. May be NULL if `Count` is 0.", PARAM_IN_OPTIONAL>,
+    Param<"const size_t*", "Sizes", "array of `Count` sizes in bytes. A zero entry is allowed and is a no-op for that element. May be NULL if `Count` is 0.", PARAM_IN_OPTIONAL>,
+    Param<"ol_mem_migration_flags_t", "Flags", "direction of the migration; exactly one of the OL_MEM_MIGRATION_FLAG_* values", PARAM_IN>,
+  ];
+  let returns = [
+    Return<"OL_ERRC_INVALID_NULL_POINTER", [
+      "`Count > 0 && Mems == NULL`",
+      "`Count > 0 && Sizes == NULL`"
+    ]>,
+    Return<"OL_ERRC_INVALID_ENUMERATION", [
+      "`(Flags & ~(OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE | OL_MEM_MIGRATION_FLAG_DEVICE_TO_HOST)) != 0`"
+    ]>,
+  ];
 }

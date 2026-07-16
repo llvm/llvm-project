@@ -18,8 +18,6 @@
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Runtime/allocator-registry-consts.h"
 #include "flang/Semantics/tools.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
 
 namespace mlir {
 class Value;
@@ -64,7 +62,8 @@ translateSymbolCUFDataAttribute(mlir::MLIRContext *mlirContext,
 
 /// Check if the rhs has an implicit conversion. Return the elemental op if
 /// there is a conversion. Return null otherwise.
-hlfir::ElementalOp isTransferWithConversion(mlir::Value rhs);
+std::pair<hlfir::ElementalOp, hlfir::ElementalOp>
+isTransferWithConversion(mlir::Value rhs);
 
 /// Check if the value is an allocatable with double descriptor.
 bool hasDoubleDescriptor(mlir::Value);

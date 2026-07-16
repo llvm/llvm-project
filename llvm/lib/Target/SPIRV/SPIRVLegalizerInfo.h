@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_SPIRV_SPIRVMACHINELEGALIZER_H
-#define LLVM_LIB_TARGET_SPIRV_SPIRVMACHINELEGALIZER_H
+#ifndef LLVM_LIB_TARGET_SPIRV_SPIRVLEGALIZERINFO_H
+#define LLVM_LIB_TARGET_SPIRV_SPIRVLEGALIZERINFO_H
 
 #include "SPIRVGlobalRegistry.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
@@ -40,4 +40,4 @@ private:
   bool legalizeBitcast(LegalizerHelper &Helper, MachineInstr &MI) const;
 };
 } // namespace llvm
-#endif // LLVM_LIB_TARGET_SPIRV_SPIRVMACHINELEGALIZER_H
+#endif // LLVM_LIB_TARGET_SPIRV_SPIRVLEGALIZERINFO_H

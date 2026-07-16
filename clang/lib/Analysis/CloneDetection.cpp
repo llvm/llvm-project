@@ -403,8 +403,8 @@ void RecursiveCloneTypeIIHashConstraint::constrain(
       Result.push_back(NewGroup);
     }
   }
-  // Sequences is the output parameter, so we copy our result into it.
-  Sequences = Result;
+  // Sequences is the output parameter, so we move our result into it.
+  Sequences = std::move(Result);
 }
 
 void RecursiveCloneTypeIIVerifyConstraint::constrain(
@@ -519,7 +519,7 @@ void CloneConstraint::splitCloneGroups(
 
     assert(llvm::all_of(Indexes, [](char c) { return c == 1; }));
   }
-  CloneGroups = Result;
+  CloneGroups = std::move(Result);
 }
 
 void VariablePattern::addVariableOccurence(const VarDecl *VarDecl,

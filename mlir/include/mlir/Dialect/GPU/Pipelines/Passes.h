@@ -28,11 +28,11 @@ struct GPUToNVVMPipelineOptions
       llvm::cl::init("nvptx64-nvidia-cuda")};
   PassOptions::Option<std::string> cubinChip{
       *this, "cubin-chip", llvm::cl::desc("Chip to use to serialize to cubin."),
-      llvm::cl::init("sm_50")};
+      llvm::cl::init("sm_75")};
   PassOptions::Option<std::string> cubinFeatures{
       *this, "cubin-features",
       llvm::cl::desc("Features to use to serialize to cubin."),
-      llvm::cl::init("+ptx60")};
+      llvm::cl::init("")};
   PassOptions::Option<std::string> cubinFormat{
       *this, "cubin-format",
       llvm::cl::desc("Compilation format to use to serialize to cubin."),
@@ -62,6 +62,59 @@ struct GPUToNVVMPipelineOptions
       *this, "allow-pattern-rollback",
       llvm::cl::desc("Allow pattern rollback during dialect conversion"),
       llvm::cl::init(true)};
+};
+
+/// Options for the gpu to rocdl pipeline.
+struct GPUToROCDLPipelineOptions
+    : public PassPipelineOptions<GPUToROCDLPipelineOptions> {
+  PassOptions::Option<int64_t> indexBitWidth{
+      *this, "index-bitwidth",
+      llvm::cl::desc("Bitwidth of the index type for the host (warning this "
+                     "should be 64 until the GPU layering is fixed)"),
+      llvm::cl::init(64)};
+  PassOptions::Option<std::string> triple{
+      *this, "triple",
+      llvm::cl::desc("AMDGPU target triple (e.g. amdgcn-amd-amdhsa)."),
+      llvm::cl::init("amdgcn-amd-amdhsa")};
+  PassOptions::Option<std::string> chip{
+      *this, "chip",
+      llvm::cl::desc(
+          "AMDGPU target chip (e.g. gfx90a, gfx942, gfx1100). Required: "
+          "AMDGCN binaries are not forward-compatible across chip families.")};
+  PassOptions::Option<std::string> features{
+      *this, "features", llvm::cl::desc("AMDGPU target features."),
+      llvm::cl::init("")};
+  PassOptions::Option<std::string> binaryFormat{
+      *this, "binary-format",
+      llvm::cl::desc("Final GPU binary emission format (e.g. fatbin, binary, "
+                     "isa, llvm, offloading)."),
+      llvm::cl::init("fatbin")};
+  PassOptions::Option<std::string> abiVersion{
+      *this, "abi",
+      llvm::cl::desc("AMDHSA ABI version (e.g. \"500\", \"600\")."),
+      llvm::cl::init("600")};
+  PassOptions::Option<bool> wave64{
+      *this, "wave64",
+      llvm::cl::desc("Use Wave64 mode (default true; wave32 if false, "
+                     "appropriate for RDNA / gfx10+ where supported)."),
+      llvm::cl::init(true)};
+  PassOptions::Option<int> optLevel{
+      *this, "opt-level",
+      llvm::cl::desc("Optimization level for ROCDL/AMDGPU compilation."),
+      llvm::cl::init(2)};
+  PassOptions::Option<std::string> cmdOptions{
+      *this, "rocdl-cmd-options",
+      llvm::cl::desc(
+          "Command line options to pass to the downstream AMDGPU compiler."),
+      llvm::cl::init("")};
+  PassOptions::Option<bool> kernelUseBarePtrCallConv{
+      *this, "kernel-bare-ptr-calling-convention",
+      llvm::cl::desc("Use bareptr calling convention for device kernels."),
+      llvm::cl::init(false)};
+  PassOptions::Option<bool> hostUseBarePtrCallConv{
+      *this, "host-bare-ptr-calling-convention",
+      llvm::cl::desc("Use bareptr calling convention for the host."),
+      llvm::cl::init(false)};
 };
 
 // Options for the gpu to xevm pipeline.
@@ -108,6 +161,32 @@ struct GPUToXeVMPipelineOptions
       *this, "igc-cmd-options",
       llvm::cl::desc("Additional downstream compiler command line options"),
       llvm::cl::init("")};
+  // Options for MathExtendToSupportedTypes and ArithEmulateUnsupportedFloats,
+  // run on the host/device module before conversion to LLVM to legalize math
+  // and arith ops operating on floating-point types that the XeVM target
+  // cannot handle natively (e.g. bf16).
+  PassOptions::ListOption<std::string> unsupportedSourceTypes{
+      *this, "unsupported-source-types",
+      llvm::cl::desc("Floating-point source types without arithmetic/math "
+                     "support on the target (e.g. bf16)"),
+      llvm::cl::list_init<std::string>(ArrayRef<std::string>{"bf16"})};
+  PassOptions::Option<std::string> supportedTargetTypes{
+      *this, "supported-target-types",
+      llvm::cl::desc(
+          "Floating-point target type used to emulate the unsupported "
+          "source types via extf/truncf pairs"),
+      llvm::cl::init("f32")};
+  // Additional types (beyond the implicit f32/f64) that math ops are allowed
+  // to run on directly. Maps to the `extra-types` option of
+  // math-extend-to-supported-types. Leave empty to extend every non-f32/f64
+  // math op to `supported-target-types`.
+  PassOptions::ListOption<std::string> mathExtendExtraTypes{
+      *this, "math-extend-extra-types",
+      llvm::cl::desc(
+          "Extra floating-point types with math op support on the target, "
+          "in addition to f32 and f64 (maps to math-extend-to-supported-"
+          "types `extra-types`)"),
+      llvm::cl::list_init<std::string>(ArrayRef<std::string>{"f16"})};
 };
 
 //===----------------------------------------------------------------------===//
@@ -120,6 +199,12 @@ struct GPUToXeVMPipelineOptions
 void buildLowerToNVVMPassPipeline(OpPassManager &pm,
                                   const GPUToNVVMPipelineOptions &options);
 
+/// Adds the GPU to ROCDL pipeline to the given pass manager. Transforms main
+/// dialects (arith, memref, scf, vector, gpu) into ROCDL/AMDGPU. Begins with
+/// GPU code regions, then handles host code.
+void buildLowerToROCDLPassPipeline(OpPassManager &pm,
+                                   const GPUToROCDLPipelineOptions &options);
+
 /// Adds the GPU to XeVM pipeline to the given pass manager. Transforms main
 /// dialects into XeVM targets. Begins with GPU code regions, then handles host
 /// code.
@@ -128,6 +213,7 @@ void buildLowerToXeVMPassPipeline(OpPassManager &pm,
 
 /// Register all pipelines for the `gpu` dialect.
 void registerGPUToNVVMPipeline();
+void registerGPUToROCDLPipeline();
 void registerGPUToXeVMPipeline();
 
 } // namespace gpu

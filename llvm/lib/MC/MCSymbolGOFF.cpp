@@ -24,7 +24,6 @@ bool MCSymbolGOFF::setSymbolAttribute(MCSymbolAttr Attribute) {
   case MCSA_LGlobal:
   case MCSA_Extern:
   case MCSA_Exported:
-  case MCSA_IndirectSymbol:
   case MCSA_Internal:
   case MCSA_LazyReference:
   case MCSA_Local:
@@ -40,6 +39,9 @@ bool MCSymbolGOFF::setSymbolAttribute(MCSymbolAttr Attribute) {
   case MCSA_Memtag:
     return false;
 
+  case MCSA_IndirectSymbol:
+    setIndirect(true);
+    break;
   case MCSA_ELF_TypeFunction:
     setCodeData(GOFF::ESDExecutable::ESD_EXE_CODE);
     break;

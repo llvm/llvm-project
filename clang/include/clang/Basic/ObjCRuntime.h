@@ -110,6 +110,7 @@ public:
       case llvm::Triple::mips64:
         return !(getVersion() >= VersionTuple(1, 9));
       case llvm::Triple::riscv64:
+      case llvm::Triple::riscv64be:
         return !(getVersion() >= VersionTuple(2, 2));
       default:
         return true;
@@ -293,6 +294,24 @@ public:
       default:
         return false;
     }
+  }
+
+  /// Are Foundation backed constant literal classes supported?
+  bool hasConstantLiteralClasses() const {
+    switch (getKind()) {
+    case MacOSX:
+      return getVersion() >= VersionTuple(11);
+    case iOS:
+      return getVersion() >= VersionTuple(14);
+    case WatchOS:
+      return getVersion() >= VersionTuple(7);
+    default:
+      return false;
+    }
+  }
+  bool hasConstantCFBooleans() const { return hasConstantLiteralClasses(); }
+  bool hasConstantEmptyCollections() const {
+    return hasConstantLiteralClasses();
   }
 
   /// Does this runtime allow the use of __weak?

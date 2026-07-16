@@ -322,6 +322,12 @@ void populateVectorUnrollPatterns(RewritePatternSet &patterns,
                                   const UnrollVectorOptions &options,
                                   PatternBenefit benefit = 1);
 
+/// Compute indices for a transfer op slice.
+SmallVector<Value> sliceTransferIndices(ArrayRef<int64_t> elementOffsets,
+                                        ArrayRef<Value> indices,
+                                        AffineMap permutationMap, Location loc,
+                                        OpBuilder &builder);
+
 /// Unrolls 2 or more dimensional `vector.to_elements` ops by unrolling the
 /// outermost dimension of the operand.
 void populateVectorToElementsUnrollPatterns(RewritePatternSet &patterns,
@@ -388,10 +394,15 @@ void populateVectorMaskMaterializationPatterns(RewritePatternSet &patterns,
 /// Appends patterns for emulating vector operations over narrow types with ops
 /// over wider types. The `disableAtomicRMW` indicates whether to use a normal
 /// read-modify-write sequence instead of using `memref.generic_atomic_rmw` to
-/// perform subbyte storing.
+/// perform subbyte storing. When `assumeAligned` is true, store offsets are
+/// assumed to be aligned to container element boundaries, so a store whose
+/// source vector fills whole container elements is emitted as a simple
+/// bitcast + store without checking the offset. Stores that are not divisible
+/// in size are rejected.
 void populateVectorNarrowTypeEmulationPatterns(
     const arith::NarrowTypeEmulationConverter &typeConverter,
-    RewritePatternSet &patterns, bool disableAtomicRMW = false);
+    RewritePatternSet &patterns, bool disableAtomicRMW = false,
+    bool assumeAligned = false);
 
 /// Populates patterns for both MeMref flattening and Vector narrow type
 /// emulation.
