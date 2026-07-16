@@ -20,9 +20,10 @@
 #include "clang/AST/Type.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ConvertUTF.h"
-#include <algorithm>
 #include <numeric>
 
 namespace clang {
@@ -146,16 +147,15 @@ public:
     }
 
     // Now perform the sorts and shift the indicies as needed
-    std::stable_sort(
-        ElementIndicies.begin(), ElementIndicies.end(),
-        [O, &KeysUTF16](size_t LI, size_t RI) {
+    llvm::stable_sort(
+        ElementIndicies, [O, &KeysUTF16](size_t LI, size_t RI) {
           // Sort by UTF-16 code unit to match the runtime's lookup order. This
           // is a deterministic total order, so it still aids link-time de-dupe,
           // and it supports the runtime's `O(log n)` worst-case lookup.
+          // ArrayRef::operator< is a lexicographic code-unit comparison.
           if (O == Options::Sorted)
-            return std::lexicographical_compare(
-                KeysUTF16[LI].begin(), KeysUTF16[LI].end(),
-                KeysUTF16[RI].begin(), KeysUTF16[RI].end());
+            return ArrayRef<llvm::UTF16>(KeysUTF16[LI]) <
+                   ArrayRef<llvm::UTF16>(KeysUTF16[RI]);
           llvm_unreachable("Unexpected `NSDictionaryBuilder::Options given");
         });
 
