@@ -96,8 +96,20 @@ class AMDGPULowerVGPREncoding {
       // Layout: [src0 msb, src1 msb, src2 msb, dst msb].
       unsigned V = 0;
       for (const auto &[I, Op] : enumerate(Ops))
-        V |= Op.MSBits.value_or(0) << (I * 2);
+        V |= Op.MSBits.value_or(0) << (I * BitsPerField);
       return V;
+    }
+
+    /// Creates a \ref ModeTy from \p Mode. Inverse of \ref ModeTy::encode, such
+    /// that: Mode == ModeTy::decode(Mode).encode().
+    static ModeTy decode(unsigned Mode) {
+      ModeTy DecodedMode;
+      const unsigned FieldMask = (1 << BitsPerField) - 1;
+      for (OpMode &Op : DecodedMode.Ops) {
+        Op.MSBits = Mode & FieldMask;
+        Mode >>= BitsPerField;
+      }
+      return DecodedMode;
     }
 
     void print(raw_ostream &OS) const {
@@ -472,12 +484,21 @@ bool AMDGPULowerVGPREncoding::needNopBeforeSetVGPRMSB(
 }
 
 /// Convert mode value from S_SET_VGPR_MSB format to MODE register format.
-/// S_SET_VGPR_MSB uses: (src0[0-1], src1[2-3], src2[4-5], dst[6-7])
-/// MODE register uses:  (dst[0-1], src0[2-3], src1[4-5], src2[6-7])
+/// S_SET_VGPR_MSB uses: (src0[0-1], src1[2-3], src2[4-5], dst[6-7] )
+/// MODE register uses:  (dst[0-1],  src0[2-3], src1[4-5], src2[6-7])
 /// This is a left rotation by 2 bits on an 8-bit value.
 static int64_t convertModeToSetregFormat(int64_t Mode) {
   assert(isUInt<8>(Mode) && "Mode expected to be 8-bit");
   return llvm::rotl<uint8_t>(static_cast<uint8_t>(Mode), /*R=*/2);
+}
+
+/// Convert mode value from MODE format to S_SET_VGPR_MSB register format.
+/// MODE register uses:  (dst[0-1],  src0[2-3], src1[4-5], src2[6-7])
+/// S_SET_VGPR_MSB uses: (src0[0-1], src1[2-3], src2[4-5], dst[6-7] )
+/// This is a right rotation by 2 bits on an 8-bit value.
+static int64_t convertModeToSetVGPRFormat(int64_t Mode) {
+  assert(isUInt<8>(Mode) && "Setreg mode expected to be 8-bit");
+  return llvm::rotr<uint8_t>(static_cast<uint8_t>(Mode), /*R=*/2);
 }
 
 bool AMDGPULowerVGPREncoding::updateSetregModeImm(MachineInstr &MI,
@@ -545,27 +566,24 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
   MachineOperand *ImmOp = TII->getNamedOperand(MI, AMDGPU::OpName::imm);
   assert(ImmOp && "ImmOp must be present");
   int64_t ImmBits12To19 = (ImmOp->getImm() & VGPR_MSB_MASK) >> VGPRMSBShift;
-  int64_t SetregModeValue = convertModeToSetregFormat(ModeValue);
+  int64_t SetRegMode = convertModeToSetVGPRFormat(ImmBits12To19);
   LLVM_DEBUG(dbgs() << "    Case 2: Size(" << Size << ") > VGPRMSBShift, "
                     << "ImmBits12To19=0x" << Twine::utohexstr(ImmBits12To19)
-                    << " SetregModeValue=0x"
-                    << Twine::utohexstr(SetregModeValue) << '\n');
-  if (ImmBits12To19 == SetregModeValue) {
+                    << " Mode=0x" << Twine::utohexstr(SetRegMode) << '\n');
+  if (ModeValue == SetRegMode) {
     LLVM_DEBUG(dbgs() << "    -> bits[12:19] already correct\n");
     return false;
   }
 
-  // imm32[12:19] doesn't match VGPR MSBs - insert s_set_vgpr_msb after
-  // the original instruction to restore the correct value. Insert S_NOP
-  // to avoid the GFX1250 hazard where S_SET_VGPR_MSB immediately after
-  // S_SETREG_IMM32_B32(MODE) is silently dropped.
-  MachineBasicBlock::iterator InsertPt = std::next(MI.getIterator());
-  BuildMI(*MBB, InsertPt, MI.getDebugLoc(), TII->get(AMDGPU::S_NOP)).addImm(0);
-  MostRecentModeSet = BuildMI(*MBB, InsertPt, MI.getDebugLoc(),
-                              TII->get(AMDGPU::S_SET_VGPR_MSB))
-                          .addImm(ModeValue | (ModeValue << ModeWidth));
-  LLVM_DEBUG(dbgs() << "    -> inserted S_SET_VGPR_MSB after setreg: "
-                    << *MostRecentModeSet);
+  // imm32[12:19] doesn't match VGPR MSBs - set the current mode to the MODE
+  // register mode.
+  CurrentMode = ModeTy::decode(SetRegMode);
+  LLVM_DEBUG({
+    dbgs() << "    -> bits[12:19] incorrect, current mode changed to MODE "
+              "register mode: ";
+    CurrentMode.print(dbgs());
+    dbgs() << '\n';
+  });
   return true;
 }
 

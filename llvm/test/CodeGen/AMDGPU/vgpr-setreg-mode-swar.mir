@@ -163,7 +163,7 @@ body:             |
 ---
 # Case 3: Size > 12 (size=16), imm32[12:19] doesn't match VGPR MSBs, offset is non-zero
 # vgpr256/257: S_SET_VGPR_MSB mode = 65, MODE register mode = 5
-# imm32 = 0x23ABC = 146108 (bits 12:19 = 0x23 != 5), must insert s_set_vgpr_msb after
+# imm32 = 0x23ABC = 146108 (bits 12:19 = 0x23 != 5)
 
 # ASM-LABEL: {{^}}setreg_size_gt_12_mismatch_offset_1:
 # ASM: s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 1, 16), 0x23abc ;  msbs: dst=3 src0=0 src1=2 src2=0
@@ -178,8 +178,6 @@ body:             |
     ; CHECK: S_SET_VGPR_MSB 65, implicit-def $mode
     ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
     ; CHECK-NEXT: S_SETREG_IMM32_B32 146108, 30785, implicit-def $mode, implicit $mode
-    ; CHECK-NEXT: S_NOP 0
-    ; CHECK-NEXT: S_SET_VGPR_MSB 16705, implicit-def $mode
     ; CHECK-NEXT: S_ENDPGM 0
     $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
     ; size=16, offset=1, hwreg=MODE: simm16 = 0x7841 = 30785
@@ -369,6 +367,46 @@ body:             |
 ...
 
 ---
+# Case 10: After s_setreg_imm32_b32 (Size > 12, non-matching)
+# V_FMA_F32_e64 matches MODE register mode, no new S_SET_VGPR_MSB needed.
+# Second V_MOV_B32_e32 does not match MODE register mode, a new S_SET_VGPR_MSB
+# is needed because we cannot piggyback on S_SETREG_IMM32_B32.
+#
+# V_MOV_B32_e32 (vgpr256/257): S_SET_VGPR_MSB mode = 65 = 0b01.01.00.01, MODE register mode = 5
+# Setreg has size=16 with imm32[12:19] = 23 !=5 (does not match MODE register mode).
+# V_FMA_F32_e64 (vgpr768/vgpr0/vgpr512/vgpr1): S_SET_VGPR_MSB mode = 197 = 0b11.00.10.00, MODE register mode = 23
+
+# ASM-LABEL: {{^}}setreg_size_gt_12_match_then_identical_vgpr:
+# ASM: s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 1, 16), 0x23abc ;  msbs: dst=3 src0=0 src1=2 src2=0
+
+# DIS-LABEL: <setreg_size_gt_12_match_then_identical_vgpr>:
+
+name:            setreg_size_gt_12_match_then_identical_vgpr
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: setreg_size_gt_12_match_then_identical_vgpr
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_SET_VGPR_MSB 65, implicit-def $mode
+    ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 146108, 30785, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: $vgpr768 = V_FMA_F32_e64 0, $vgpr0, 0, $vgpr512, 0, $vgpr1, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_SET_VGPR_MSB 51265, implicit-def $mode
+    ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    ; size=16, offset=1, hwreg=MODE: simm16 = 0x7841 = 30785
+    ; imm32 = 0x23ABC = 146108 (bits 12:19 = 23 != 5, does not match!)
+    S_SETREG_IMM32_B32 146108, 30785, implicit-def $mode, implicit $mode
+    $vgpr768 = V_FMA_F32_e64 0, $vgpr0, 0, $vgpr512, 0, $vgpr1, 0, 0, implicit $mode, implicit $exec
+    $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    S_ENDPGM 0
+...
+
+---
 # S_SET_VGPR_MSB format: (src0_msb[0-1], src1_msb[2-3], src2_msb[4-5], dst_msb[6-7])
 # MODE register format:  (dst_msb[0-1], src0_msb[2-3], src1_msb[4-5], src2_msb[6-7])
 # vgpr256/257 (both MSB=1): S_SET_VGPR_MSB mode = (1 << 0) | (1 << 6) = 65
@@ -473,8 +511,6 @@ body:             |
 # ASM-NEXT: s_set_vgpr_msb 0x4149                   ;  msbs: dst=1 src0=1 src1=2 src2=0
 # ASM-NEXT: v_add_nc_u32_e32 v0 /*v256*/, v1 /*v257*/, v0 /*v512*/
 # ASM-NEXT: s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 1, 16), 0x5abc ;  msbs: dst=1 src0=1 src1=0 src2=0
-# ASM-NEXT: s_nop 0
-# ASM-NEXT: s_set_vgpr_msb 0x4949                   ;  msbs: dst=1 src0=1 src1=2 src2=0
 
 # DIS-LABEL: <setreg_size_gt_12_offset_1_match_then_mismatch>:
 # DIS-NEXT: s_set_vgpr_msb 0x41
@@ -486,8 +522,6 @@ body:             |
 # DIS-NEXT: s_set_vgpr_msb 0x4149
 # DIS-NEXT: v_add_nc_u32_e32 v0 /*v256*/, v1 /*v257*/, v0 /*v512*/
 # DIS-NEXT: s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 1, 16), 0x5abc
-# DIS-NEXT: s_nop 0
-# DIS-NEXT: s_set_vgpr_msb 0x49
 
 ---
 name:            setreg_size_gt_12_offset_1_match_then_mismatch
@@ -504,8 +538,6 @@ body:             |
     ; CHECK-NEXT: S_SET_VGPR_MSB 16713, implicit-def $mode
     ; CHECK-NEXT: $vgpr256 = V_ADD_U32_e32 $vgpr257, $vgpr512, implicit $exec
     ; CHECK-NEXT: S_SETREG_IMM32_B32 23228, 30785, implicit-def $mode, implicit $mode
-    ; CHECK-NEXT: S_NOP 0
-    ; CHECK-NEXT: S_SET_VGPR_MSB 18761, implicit-def $mode
     ; CHECK-NEXT: S_ENDPGM 0
     $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
     ; size=16, offset=1, hwreg=MODE: simm16 = 0x7841 = 30785
