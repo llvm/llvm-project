@@ -9222,6 +9222,8 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
 
   if (Ordering == AtomicOrdering::Unordered)
     return tokError("atomicrmw cannot be unordered");
+  if (IsElementwise && Ordering == AtomicOrdering::SequentiallyConsistent)
+    return tokError("atomicrmw elementwise cannot be sequentially consistent");
   if (!Ptr->getType()->isPointerTy())
     return error(PtrLoc, "atomicrmw operand must be a pointer");
   if (Val->getType()->isScalableTy())

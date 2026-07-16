@@ -12144,7 +12144,14 @@ An `atomicrmw` instruction can also take an optional
 "{ref}`syncscope <syncscope>`" argument.
 
 If the `elementwise` modifier is present, the instruction has per-element vector
-atomic semantics. It behaves as if it were expanded into one scalar `atomicrmw` per element, that are not ordered with respect to each other.
+atomic semantics. It behaves as if it were expanded into one scalar `atomicrmw`
+per element, that are not ordered with respect to each other. In other words, a
+consistent ordering may not exist between the individual scalar operations of
+the same `elementwise` instruction. Synchronizing with one of the scalar
+operations does not, by itself, establish a happens-before relationship with another scalar operation from the same `elementwise` instruction.
+
+If the `elementwise` modifier is present, the `<ordering>` applies independently to each scalar operation and the `<ordering>` may not be `seq_cst`.
+
 Without `elementwise`, vector `atomicrmw` keeps whole-value atomic semantics.
 
 ##### Semantics:

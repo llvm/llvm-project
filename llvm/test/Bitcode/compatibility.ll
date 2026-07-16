@@ -1033,8 +1033,8 @@ define void @elementwise_atomics(ptr %word, <4 x i32> %ival, <4 x float> %fval) 
 ; CHECK: %atomicrmw.add = atomicrmw elementwise add ptr %word, <4 x i32> %ival monotonic, align 16
   %atomicrmw.add = atomicrmw elementwise add ptr %word, <4 x i32> %ival monotonic, align 16
 
-; CHECK: %atomicrmw.fadd = atomicrmw elementwise fadd ptr %word, <4 x float> %fval seq_cst, align 16
-  %atomicrmw.fadd = atomicrmw elementwise fadd ptr %word, <4 x float> %fval seq_cst, align 16
+; CHECK: %atomicrmw.fadd = atomicrmw elementwise fadd ptr %word, <4 x float> %fval acq_rel, align 16
+  %atomicrmw.fadd = atomicrmw elementwise fadd ptr %word, <4 x float> %fval acq_rel, align 16
 
 ; CHECK: %load.elementwise = load atomic elementwise <4 x i32>, ptr %word monotonic, align 4
   %load.elementwise = load atomic elementwise <4 x i32>, ptr %word monotonic, align 4
