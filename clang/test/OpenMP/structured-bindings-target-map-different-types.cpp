@@ -76,8 +76,8 @@ void test_mixed_map_types_three_way() {
 // CHECK:    [[TMP1:%.*]] = load [[STRUCT_POINT:%.*]], ptr [[TMP0]], align 4
 // CHECK:    store [[STRUCT_POINT]] [[TMP1]], ptr [[DOTCASTED:%.*]], align 4
 // CHECK:    [[TMP2:%.*]] = load i64, ptr [[DOTCASTED]], align 8
-// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[P]], i32 0, i32 0
-// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[P]], i32 0, i32 1
+// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP0]], i32 0, i32 0
+// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP0]], i32 0, i32 1
 // CHECK:    [[TMP3:%.*]] = getelementptr i32, ptr [[Y]], i32 1
 // CHECK:    [[TMP4:%.*]] = ptrtoaddr ptr [[TMP3]] to i64
 // CHECK:    [[TMP5:%.*]] = ptrtoaddr ptr [[X]] to i64
@@ -147,8 +147,8 @@ void test_mixed_map_types_three_way() {
 // CHECK:    [[TMP1:%.*]] = load [[STRUCT_POINT:%.*]], ptr [[TMP0]], align 4
 // CHECK:    store [[STRUCT_POINT]] [[TMP1]], ptr [[DOTCASTED:%.*]], align 4
 // CHECK:    [[TMP2:%.*]] = load i64, ptr [[DOTCASTED]], align 8
-// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[P]], i32 0, i32 0
-// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[P]], i32 0, i32 1
+// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP0]], i32 0, i32 0
+// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP0]], i32 0, i32 1
 // CHECK:    [[TMP3:%.*]] = getelementptr i32, ptr [[Y]], i32 1
 // CHECK:    [[TMP4:%.*]] = ptrtoaddr ptr [[TMP3]] to i64
 // CHECK:    [[TMP5:%.*]] = ptrtoaddr ptr [[X]] to i64
@@ -218,7 +218,7 @@ void test_mixed_map_types_three_way() {
 // CHECK:    [[TMP1:%.*]] = load [[STRUCT_POINT:%.*]], ptr [[TMP0]], align 4
 // CHECK:    store [[STRUCT_POINT]] [[TMP1]], ptr [[DOTCASTED:%.*]], align 4
 // CHECK:    [[TMP2:%.*]] = load i64, ptr [[DOTCASTED]], align 8
-// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[P]], i32 0, i32 0
+// CHECK: [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP0]], i32 0, i32 0
 // CHECK:    [[TMP3:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS:%.*]], i32 0, i32 0
 // CHECK:    store i64 [[TMP2]], ptr [[TMP3]], align 8
 // CHECK:    [[TMP4:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS:%.*]], i32 0, i32 0
@@ -268,9 +268,9 @@ void test_mixed_map_types_three_way() {
 // CHECK:    [[TMP1:%.*]] = load [[STRUCT_TRIPLE:%.*]], ptr [[TMP0]], align 4
 // CHECK:    store [[STRUCT_TRIPLE]] [[TMP1]], ptr [[DOTCASTED:%.*]], align 4
 // CHECK:    [[TMP2:%.*]] = load i64, ptr [[DOTCASTED]], align 8
-// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TRIPLE]], ptr [[T]], i32 0, i32 0
-// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_TRIPLE]], ptr [[T]], i32 0, i32 1
-// CHECK:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_TRIPLE]], ptr [[T]], i32 0, i32 2
+// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TRIPLE]], ptr [[TMP0]], i32 0, i32 0
+// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_TRIPLE]], ptr [[TMP0]], i32 0, i32 1
+// CHECK:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_TRIPLE]], ptr [[TMP0]], i32 0, i32 2
 // CHECK:    [[TMP3:%.*]] = getelementptr i32, ptr [[Z]], i32 1
 // CHECK:    [[TMP4:%.*]] = ptrtoaddr ptr [[TMP3]] to i64
 // CHECK:    [[TMP5:%.*]] = ptrtoaddr ptr [[X]] to i64
