@@ -322,7 +322,12 @@ static void createAtomicBinOp(IntrinsicInst *II, AtomicRMWInst *AI,
   Expected<CallInst *> OpCall = OpBuilder->tryCreateOp(
       dxil::OpCode::AtomicBinOp, Args, AI->getName(), AI->getType());
   if (Error E = OpCall.takeError()) {
-    AI->getContext().emitError(AI, toString(std::move(E)));
+    std::string Message(toString(std::move(E)));
+    AI->getContext().diagnose(DiagnosticInfoUnsupported(
+        *AI->getFunction(), Message, AI->getDebugLoc()));
+    // RAUW with poison so the caller's subsequent eraseFromParent() doesn't
+    // leave dangling uses of the AtomicRMWInst.
+    AI->replaceAllUsesWith(PoisonValue::get(AI->getType()));
     return;
   }
 
