@@ -29,6 +29,11 @@ page](https://llvm.org/releases/).
 
 ## Major New Features
 
+### Advances in experimental multi-image support, using [PRIF](ParallelMultiImageFortranRuntime.md)
+- Added support for declaration of nonallocatable save coarrays
+- Added coarray query intrinsics (`ucobound`, `lcobound`, `coshape`, `image_index`)
+- Fixed `stop` and `error stop` to provide conforming behavior in multi-image execution
+
 ## Bug Fixes
 
 ## Non-comprehensive list of changes in this release
