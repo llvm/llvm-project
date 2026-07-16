@@ -19,6 +19,10 @@ TEST(LlvmLibcSharedBuiltinsTest, SinglePrecisionArithmtic) {
   EXPECT_FP_EQ(6.0f, shared::mulsf3(2.0f, 3.0f));
   EXPECT_FP_EQ(-5.0, shared::negsf2(5.0));
   EXPECT_FP_EQ(2.0f, shared::subsf3(5.0f, 3.0f));
+namespace shared = LIBC_NAMESPACE::shared;
+
+TEST(LlvmLibcSharedBuiltinsTest, AllFloat) {
+  // TODO: assertions for shared::*sf3 builtins.
 }
 
 TEST(LlvmLibcSharedBuiltinsTest, DoublePrecisionArithmtic) {
@@ -46,6 +50,7 @@ TEST(LlvmLibcSharedBuiltinsTest, ExtendConversion) {
   EXPECT_FP_EQ(float128(1.5), shared::extenddftf2(1.5));
   EXPECT_FP_EQ(float128(1.5), shared::extendsftf2(1.5f));
 #ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+#if LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
   EXPECT_FP_EQ(float128(1.5), shared::extendxftf2(1.5L));
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 #endif // LIBC_TYPES_HAS_FLOAT128
@@ -57,6 +62,7 @@ TEST(LlvmLibcSharedBuiltinsTest, TruncateConversion) {
   EXPECT_FP_EQ(1.5, shared::trunctfdf2(float128(1.5)));
   EXPECT_FP_EQ(1.5f, shared::trunctfsf2(float128(1.5)));
 #ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+#if LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
   EXPECT_FP_EQ(1.5L, shared::trunctfxf2(float128(1.5)));
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 #endif // LIBC_TYPES_HAS_FLOAT128
