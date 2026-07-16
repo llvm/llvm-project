@@ -7,9 +7,10 @@
 // COM: forwarding in another wave on the same SIMD, causing wrong results,
 // COM: hangs, or a GPU page fault.
 // COM:
-// COM: Fix: use the pre-Gen5 SGPR-backed set-PC sequence on both edges. Merge
-// COM: adjacent sites and bounded straight-line neighbors when they provide
-// COM: enough source bytes; otherwise short-branch through safe NOP padding.
+// COM: Fix: use the gfx12 SCC-neutral SGPR-backed set-PC sequence on both
+// COM: edges. Merge adjacent sites and bounded straight-line neighbors when
+// COM: they provide enough source bytes; otherwise short-branch through safe
+// COM: NOP padding.
 // COM: No path emits the broken instruction.
 
 // RUN: %clang -target amdgcn-amd-amdhsa -mcpu=gfx1250 -nostdlib %s -o %t.elf
@@ -30,11 +31,8 @@
 
 // COM: Case 2 (adjacent sites coalesced into a set-PC forward gateway).
 // DISASM-LABEL: <test_ds2addr_far_adjacent>:
-// DISASM-NEXT: s_cselect_b32 s4, 1, 0
 // DISASM-NEXT: s_get_pc_i64 s[2:3]
-// DISASM-NEXT: s_add_co_u32 s2, s2,
-// DISASM-NEXT: s_add_co_ci_u32 s3, s3, 0
-// DISASM-NEXT: s_cmp_lg_u32 s4, 0
+// DISASM-NEXT: s_add_nc_u64 s[2:3], s[2:3],
 // DISASM-NEXT: s_set_pc_i64 s[2:3]
 
 // COM: Case 3 (an interior direct-branch target must prevent coalescing).
@@ -63,33 +61,27 @@
 // DISASM-NEXT: ds_load_b64 v[12:13], v16 offset:3584
 // DISASM-NEXT: ds_load_b64 v[14:15], v16 offset:4096
 // DISASM-NEXT: s_wait_dscnt 0x0
-// DISASM-NEXT: s_cselect_b32 s4, 1, 0
 // DISASM-NEXT: s_get_pc_i64 s[2:3]
-// DISASM-NEXT: s_add_co_u32 s2, s2,
-// DISASM-NEXT: s_add_co_ci_u32 s3, s3,
-// DISASM-NEXT: s_cmp_lg_u32 s4, 0
+// DISASM-NEXT: s_add_nc_u64 s[2:3], s[2:3],
 // DISASM-NEXT: s_set_pc_i64 s[2:3]
 // DISASM: ds_store_b32 v2, v0 offset:256
 // DISASM-NEXT: ds_store_b32 v2, v1 offset:768
 // DISASM-NEXT: s_wait_dscnt 0x0
 // DISASM-NEXT: s_wait_dscnt 0x0
-// DISASM-NEXT: s_cselect_b32 s4, 1, 0
 // DISASM-NEXT: s_get_pc_i64 s[2:3]
-// DISASM-NEXT: s_add_co_u32 s2, s2,
-// DISASM-NEXT: s_add_co_ci_u32 s3, s3,
-// DISASM-NEXT: s_cmp_lg_u32 s4, 0
+// DISASM-NEXT: s_add_nc_u64 s[2:3], s[2:3],
 // DISASM-NEXT: s_set_pc_i64 s[2:3]
 
 // METADATA: .name:           test_ds2addr_far_load
-// METADATA: .sgpr_count:     7
+// METADATA: .sgpr_count:     6
 // METADATA: .name:           test_ds2addr_far_store
-// METADATA: .sgpr_count:     7
+// METADATA: .sgpr_count:     6
 // METADATA: .name:           test_ds2addr_far_adjacent
-// METADATA: .sgpr_count:     7
+// METADATA: .sgpr_count:     6
 // METADATA: .name:           test_ds2addr_far_branch_target
-// METADATA: .sgpr_count:     7
+// METADATA: .sgpr_count:     6
 // METADATA: .name:           test_ds2addr_far_call_target
-// METADATA: .sgpr_count:     7
+// METADATA: .sgpr_count:     6
 
 // COM: Idempotency: rewriting the patched output again is a no-op.
 // RUN: hotswap-rewrite %t.out.elf \

@@ -34,7 +34,7 @@ test_absolute_call:
 .Ltest_absolute_call_end:
 .size test_absolute_call, .Ltest_absolute_call_end-test_absolute_call
 
-// Two separate long sites need two 28-byte SCC-preserving gateways. This
+// Two separate long sites need two 20-byte SCC-neutral gateways. This
 // padding follows s_endpgm and lies outside the function, so it is safe.
 .fill 64, 1, 0
 

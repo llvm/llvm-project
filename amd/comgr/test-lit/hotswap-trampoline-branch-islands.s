@@ -37,11 +37,8 @@
 // DISASM-NEXT: s_branch
 // DISASM: s_pack_hh_b32_b16 s4, 0, s4
 // DISASM-NEXT: tensor_load_to_lds s[0:3], s[4:11]
-// DISASM-NEXT: s_cselect_b32 s16, 1, 0
 // DISASM-NEXT: s_get_pc_i64 s[14:15]
-// DISASM-NEXT: s_add_co_u32 s14, s14,
-// DISASM-NEXT: s_add_co_ci_u32 s15, s15,
-// DISASM-NEXT: s_cmp_lg_u32 s16, 0
+// DISASM-NEXT: s_add_nc_u64 s[14:15], s[14:15],
 // DISASM-NEXT: s_set_pc_i64 s[14:15]
 
 // RUN: hotswap-rewrite %t.out.elf \

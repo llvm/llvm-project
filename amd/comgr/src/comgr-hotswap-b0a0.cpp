@@ -402,78 +402,35 @@ std::optional<SmallVector<uint8_t>> encodeSetPCLongBranch(const LLVMState &LS,
                                                           uint64_t FromOffset,
                                                           uint64_t TargetOffset,
                                                           unsigned SgprBase) {
-  if ((SgprBase & 1u) != 0 ||
-      SgprBase > std::numeric_limits<unsigned>::max() - 2) {
-    log() << "hotswap: error: set-PC long branch requires an aligned "
-             "three-SGPR block, got s"
-          << SgprBase << "\n";
-    return std::nullopt;
-  }
-
-  const std::string Lo = "s" + std::to_string(SgprBase);
-  const std::string Hi = "s" + std::to_string(SgprBase + 1);
-  const std::string Pair = "s[" + std::to_string(SgprBase) + ":" +
-                           std::to_string(SgprBase + 1) + "]";
-  const std::string SccSave = "s" + std::to_string(SgprBase + 2);
-
-  // Per the AMDGPU ISA, s_get_pc_i64 captures the address immediately after
-  // itself. EncodeSetPCLongBranch.ForwardLandsOnTarget pins this PC base.
-  std::optional<uint64_t> PcBase = checkedAddUint64(
-      FromOffset, 2 * MinInstSize, "set-PC long branch PC base");
-  if (!PcBase)
-    return std::nullopt;
-  uint64_t Delta = TargetOffset - *PcBase;
-  uint32_t LoDelta = static_cast<uint32_t>(Delta);
-  uint32_t HiDelta = static_cast<uint32_t>(Delta >> 32);
-
-  SmallVector<std::string, 6> AsmLines;
-  AsmLines.push_back("s_cselect_b32 " + SccSave + ", 1, 0");
-  AsmLines.push_back("s_get_pc_i64 " + Pair);
-  AsmLines.push_back("s_add_u32 " + Lo + ", " + Lo + ", 0x" +
-                     utohexstr(LoDelta));
-  AsmLines.push_back("s_addc_u32 " + Hi + ", " + Hi + ", 0x" +
-                     utohexstr(HiDelta));
-  AsmLines.push_back("s_cmp_lg_u32 " + SccSave + ", 0");
-  AsmLines.push_back("s_set_pc_i64 " + Pair);
-  SmallVector<uint8_t> Bytes = assembleSingleInst(joinAsmLines(AsmLines), LS);
-  if (Bytes.empty()) {
-    log() << "hotswap: error: failed to assemble set-PC long branch via "
-          << Pair << "\n";
-    return std::nullopt;
-  }
-  return Bytes;
-}
-
-static std::optional<SmallVector<uint8_t>>
-encodeSetPCLongBranchClobberSCC(const LLVMState &LS, uint64_t FromOffset,
-                                uint64_t TargetOffset, unsigned SgprBase) {
   if ((SgprBase & 1u) != 0) {
-    log() << "hotswap: error: SCC-dead set-PC branch requires an aligned "
+    log() << "hotswap: error: set-PC long branch requires an aligned "
              "SGPR pair, got s"
           << SgprBase << "\n";
     return std::nullopt;
   }
 
-  const std::string Lo = "s" + std::to_string(SgprBase);
-  const std::string Hi = "s" + std::to_string(SgprBase + 1);
   const std::string Pair = "s[" + std::to_string(SgprBase) + ":" +
                            std::to_string(SgprBase + 1) + "]";
-  std::optional<uint64_t> PcBase = checkedAddUint64(
-      FromOffset, MinInstSize, "SCC-dead set-PC branch PC base");
+  SmallVector<uint8_t> GetPc = assembleSingleInst("s_get_pc_i64 " + Pair, LS);
+  if (GetPc.empty())
+    return std::nullopt;
+  std::optional<uint64_t> PcBase =
+      checkedAddUint64(FromOffset, GetPc.size(), "set-PC long branch PC base");
   if (!PcBase)
     return std::nullopt;
   uint64_t Delta = TargetOffset - *PcBase;
-
-  SmallVector<std::string, 4> AsmLines;
+  // AMDGPU/SOPInstructions.td defines S_ADD_U64 as an SOP2_64 outside the
+  // Defs = [SCC] scope and maps its gfx12 encoding to s_add_nc_u64. It can
+  // therefore add the complete PC displacement without saving or clobbering
+  // SCC.
+  SmallVector<std::string, 3> AsmLines;
   AsmLines.push_back("s_get_pc_i64 " + Pair);
-  AsmLines.push_back("s_add_u32 " + Lo + ", " + Lo + ", 0x" +
-                     utohexstr(static_cast<uint32_t>(Delta)));
-  AsmLines.push_back("s_addc_u32 " + Hi + ", " + Hi + ", 0x" +
-                     utohexstr(static_cast<uint32_t>(Delta >> 32)));
+  AsmLines.push_back("s_add_nc_u64 " + Pair + ", " + Pair + ", 0x" +
+                     utohexstr(Delta));
   AsmLines.push_back("s_set_pc_i64 " + Pair);
   SmallVector<uint8_t> Bytes = assembleSingleInst(joinAsmLines(AsmLines), LS);
-  if (Bytes.empty()) {
-    log() << "hotswap: error: failed to assemble SCC-dead set-PC branch via "
+  if (Bytes.empty() || Bytes.size() > SetPcReturnReserveBytes) {
+    log() << "hotswap: error: failed to assemble SCC-neutral set-PC branch via "
           << Pair << "\n";
     return std::nullopt;
   }
@@ -732,7 +689,7 @@ bool commitSafeSgprScratchBlock(PatchContext &Ctx, uint64_t TextOffset,
 static std::optional<SafeSgprScratchBlock>
 reserveSafeFarReturn(PatchContext &Ctx, uint64_t InstOffset) {
   std::optional<SafeSgprScratchBlock> Scratch = findSafeSgprScratchBlock(
-      Ctx, InstOffset, /*Count=*/3, /*Alignment=*/2, "safe far return");
+      Ctx, InstOffset, /*Count=*/2, /*Alignment=*/2, "safe far return");
   if (!Scratch)
     return std::nullopt;
   if (!commitSafeSgprScratchBlock(Ctx, InstOffset, *Scratch, "safe far return"))
@@ -757,11 +714,11 @@ bool isSBranchReachable(uint64_t From, uint64_t To) {
 /// Queue a deferred trampoline for [\p InstOffset, +\p InstSize) with
 /// \p Replacement as its body; fixupTrampolineBranches fills in the edges once
 /// the pool layout is known. A site beyond s_branch reach of the appended pool
-/// uses an SCC-preserving get-PC/add/set-PC sequence on the backward edge.
+/// uses an SCC-neutral get-PC/add/set-PC sequence on the backward edge.
 /// Adjacent far sites are coalesced after patching to reduce gateway pressure.
 /// Every far source edge then uses a short branch to nearby safe NOP padding;
-/// that gateway uses the pre-Gen5 SGPR-backed set-PC sequence. No source or
-/// return edge executes gfx1250's broken s_add_pc_i64 instruction.
+/// that gateway uses the gfx12 SGPR-backed set-PC sequence. No source or return
+/// edge executes gfx1250's broken s_add_pc_i64 instruction.
 [[nodiscard]] bool emitToTrampoline(PatchContext &Ctx, uint64_t InstOffset,
                                     uint32_t InstSize,
                                     ArrayRef<uint8_t> Replacement) {
@@ -1696,7 +1653,7 @@ collectIndirectControlFlowFunctions(ArrayRef<InternalDecodedInst> Decoded,
 /// Grow undersized far-site windows only through proven straight-line code.
 /// Patched neighbors are merged; ordinary instructions are copied verbatim
 /// into the trampoline body and retain their original order. This is bounded
-/// to the 28 bytes required by the accepted pre-Gen5 forward sequence.
+/// to the 20 bytes required by the gfx12 SCC-neutral forward sequence.
 static void
 expandStraightLineTrampolines(PatchContext &Ctx,
                               const DenseSet<uint64_t> &DirectBranchTargets) {
@@ -1862,79 +1819,6 @@ buildExternalGatewaySleds(ArrayRef<InternalDecodedInst> Decoded,
   return Sleds;
 }
 
-enum class SccScanResult {
-  Unresolved,
-  Used,
-  Defined,
-};
-
-static SccScanResult scanSccInstruction(const InternalDecodedInst &DI,
-                                        const LLVMState &LS, MCRegister SCC) {
-  const MCInstrDesc &Desc = LS.MCII->get(DI.Inst.getOpcode());
-  if (Desc.hasImplicitUseOfPhysReg(SCC))
-    return SccScanResult::Used;
-  unsigned DefCount = std::min(Desc.getNumDefs(), DI.Inst.getNumOperands());
-  for (unsigned I = DefCount; I != DI.Inst.getNumOperands(); ++I) {
-    const MCOperand &Op = DI.Inst.getOperand(I);
-    if (Op.isReg() && LS.MRI->regsOverlap(Op.getReg(), SCC))
-      return SccScanResult::Used;
-  }
-
-  if (Desc.hasImplicitDefOfPhysReg(SCC, LS.MRI.get()))
-    return SccScanResult::Defined;
-  for (unsigned I = 0; I != DefCount; ++I) {
-    const MCOperand &Op = DI.Inst.getOperand(I);
-    if (Op.isReg() && LS.MRI->regsOverlap(Op.getReg(), SCC))
-      return SccScanResult::Defined;
-  }
-  return SccScanResult::Unresolved;
-}
-
-/// Prove that clobbering SCC on the forward edge cannot affect the replacement
-/// body or its continuation. Stop conservatively at unresolved control flow.
-static bool isIncomingSccDead(const PatchContext &Ctx, const Trampoline &T) {
-  MCRegister SCC = Ctx.LS.SCCRegister;
-  uint64_t TrailingBytes = SetPcReturnReserveBytes +
-                           (T.HasPoolBranchIsland ? PoolBranchIslandBytes : 0);
-  if (!SCC || T.Bytes.size() < TrailingBytes)
-    return false;
-
-  uint64_t BodySize = T.Bytes.size() - TrailingBytes;
-  std::vector<InternalDecodedInst> Body;
-  if (!decodeTextSection(T.Bytes.data(), BodySize, Ctx.LS, Body))
-    return false;
-  for (const InternalDecodedInst &DI : Body) {
-    SccScanResult Result = scanSccInstruction(DI, Ctx.LS, SCC);
-    if (Result == SccScanResult::Used)
-      return false;
-    if (Result == SccScanResult::Defined)
-      return true;
-    if (Ctx.LS.MIA && Ctx.LS.MIA->mayAffectControlFlow(DI.Inst, *Ctx.LS.MRI))
-      return false;
-  }
-
-  std::optional<uint64_t> End = checkedAddUint64(
-      T.OriginalOffset, T.OriginalSize, "SCC-dead continuation start");
-  if (!End)
-    return false;
-  for (const InternalDecodedInst &DI : Ctx.Decoded) {
-    if (DI.Offset < *End)
-      continue;
-    if (T.HasFunctionRange && DI.Offset >= T.FunctionEnd)
-      break;
-    SccScanResult Result = scanSccInstruction(DI, Ctx.LS, SCC);
-    if (Result == SccScanResult::Used)
-      return false;
-    if (Result == SccScanResult::Defined)
-      return true;
-    if (isEndProgram(DI, Ctx.LS))
-      return true;
-    if (Ctx.LS.MIA && Ctx.LS.MIA->mayAffectControlFlow(DI.Inst, *Ctx.LS.MRI))
-      return false;
-  }
-  return true;
-}
-
 static uint64_t countReachableGatewaySlots(ArrayRef<NopSled> Gateways,
                                            uint64_t Offset, uint64_t Needed) {
   uint64_t Slots = 0;
@@ -2038,7 +1922,6 @@ assignLongBranchGateways(PatchContext &Ctx,
   struct PendingGateway {
     size_t TrampolineIndex = 0;
     uint64_t TargetOffset = 0;
-    bool IncomingSccDead = false;
     uint64_t NeededBytes = 0;
     uint64_t InitialCandidateSlots = 0;
   };
@@ -2059,7 +1942,6 @@ assignLongBranchGateways(PatchContext &Ctx,
       T.UsesShortBranchForward = true;
       continue;
     }
-    bool IncomingSccDead = isIncomingSccDead(Ctx, T);
     std::optional<SmallVector<uint8_t>> Direct = encodeSetPCLongBranch(
         Ctx.LS, T.OriginalOffset, TP, T.LongBranchSgprBase);
     if (Direct && Direct->size() <= T.OriginalSize) {
@@ -2067,20 +1949,9 @@ assignLongBranchGateways(PatchContext &Ctx,
       T.DirectSetPCForwardBytes = std::move(*Direct);
       continue;
     }
-    if (IncomingSccDead) {
-      Direct = encodeSetPCLongBranchClobberSCC(Ctx.LS, T.OriginalOffset, TP,
-                                               T.LongBranchSgprBase);
-      if (Direct && Direct->size() <= T.OriginalSize) {
-        T.UsesDirectSetPCForward = true;
-        T.DirectSetPCForwardBytes = std::move(*Direct);
-        continue;
-      }
-    }
-
-    uint64_t Needed =
-        IncomingSccDead ? SetPcMinGatewayBytes : SetPcForwardSequenceBytes;
+    uint64_t Needed = SetPcForwardSequenceBytes;
     Pending.push_back(
-        {I, TP, IncomingSccDead, Needed,
+        {I, TP, Needed,
          countReachableGatewaySlots(Gateways, T.OriginalOffset, Needed)});
   }
 
@@ -2102,9 +1973,6 @@ assignLongBranchGateways(PatchContext &Ctx,
   }
   Pending = std::move(StillPending);
 
-  // Allocate SCC-preserving gateways first. They need more contiguous bytes
-  // and have fewer placement options; SCC-dead gateways can fill the remaining
-  // 20-byte fragments afterward.
   std::stable_sort(Pending.begin(), Pending.end(),
                    [](const PendingGateway &LHS, const PendingGateway &RHS) {
                      if (LHS.NeededBytes != RHS.NeededBytes)
@@ -2113,8 +1981,7 @@ assignLongBranchGateways(PatchContext &Ctx,
                             RHS.InitialCandidateSlots;
                    });
 
-  uint64_t PreservingGateways = 0;
-  uint64_t SccDeadGateways = 0;
+  uint64_t AssignedGateways = 0;
   for (const PendingGateway &P : Pending) {
     Trampoline &T = Ctx.OutTrampolines[P.TrampolineIndex];
     NopSled *Sled = findNearestSled(Gateways, T.OriginalOffset, P.NeededBytes);
@@ -2125,12 +1992,8 @@ assignLongBranchGateways(PatchContext &Ctx,
             << " initial candidate slot(s))\n";
       return false;
     }
-    std::optional<SmallVector<uint8_t>> Gateway =
-        P.IncomingSccDead
-            ? encodeSetPCLongBranchClobberSCC(
-                  Ctx.LS, Sled->WritePos, P.TargetOffset, T.LongBranchSgprBase)
-            : encodeSetPCLongBranch(Ctx.LS, Sled->WritePos, P.TargetOffset,
-                                    T.LongBranchSgprBase);
+    std::optional<SmallVector<uint8_t>> Gateway = encodeSetPCLongBranch(
+        Ctx.LS, Sled->WritePos, P.TargetOffset, T.LongBranchSgprBase);
     if (!Gateway || Gateway->size() > P.NeededBytes) {
       log() << "hotswap: error: failed to encode far-site gateway at 0x"
             << utohexstr(Sled->WritePos) << "\n";
@@ -2140,15 +2003,11 @@ assignLongBranchGateways(PatchContext &Ctx,
     T.ForwardGatewayOffset = Sled->WritePos;
     T.ForwardGatewayBytes = std::move(*Gateway);
     Sled->WritePos += T.ForwardGatewayBytes.size();
-    if (P.IncomingSccDead)
-      ++SccDeadGateways;
-    else
-      ++PreservingGateways;
+    ++AssignedGateways;
   }
   if (!Pending.empty())
-    log() << "hotswap: assigned " << PreservingGateways
-          << " SCC-preserving and " << SccDeadGateways
-          << " SCC-dead forward gateway(s)\n";
+    log() << "hotswap: assigned " << AssignedGateways
+          << " SCC-neutral forward gateway(s)\n";
   if (BranchIslandChains != 0)
     log() << "hotswap: assigned " << BranchIslandChains
           << " forward s_branch island chain(s)\n";

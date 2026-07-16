@@ -1,8 +1,7 @@
 // COM: A0 cannot execute s_add_pc_i64. Both edges use an SGPR-backed set-PC
-// COM: sequence; the short source slot reaches that sequence through safe
-// COM: external zero-filled gateway space. A large non-NOP .rept filler
-// COM: (~160 KB)
-// COM: pushes the pool past s_branch's reach to force the far case.
+// COM: sequence. The 20-byte source window carries the forward sequence
+// COM: directly. A large non-NOP .rept filler (~160 KB) pushes the pool past
+// COM: s_branch's reach to force the far case.
 
 // RUN: %clang -target amdgcn-amd-amdhsa -mcpu=gfx1250 -nostdlib %s -o %t.elf
 
@@ -17,25 +16,21 @@
 // RUN: %llvm-readelf --notes %t.out.elf | %FileCheck --check-prefix=METADATA %s
 
 // DISASM-LABEL: <test_far>:
-// DISASM-NEXT: s_branch
+// DISASM-NEXT: s_get_pc_i64 s[12:13]
+// DISASM-NEXT: s_add_nc_u64 s[12:13], s[12:13],
+// DISASM-NEXT: s_set_pc_i64 s[12:13]
+// DISASM-NEXT: s_endpgm
 // DISASM-LABEL: <gateway_barrier>:
 // DISASM-NEXT: s_endpgm
-// DISASM-NEXT: s_get_pc_i64 s[12:13]
-// DISASM-NEXT: s_add_co_u32 s12, s12,
-// DISASM-NEXT: s_add_co_ci_u32 s13, s13,
-// DISASM-NEXT: s_set_pc_i64 s[12:13]
 // DISASM: s_mov_b64 vcc, -1
 // DISASM-NEXT: s_pack_hh_b32_b16 s4, 0, s4
 // DISASM-NEXT: tensor_load_to_lds s[0:3], s[4:11]
-// DISASM-NEXT: s_cselect_b32 s14, 1, 0
 // DISASM-NEXT: s_get_pc_i64 s[12:13]
-// DISASM-NEXT: s_add_co_u32 s12, s12,
-// DISASM-NEXT: s_add_co_ci_u32 s13, s13,
-// DISASM-NEXT: s_cmp_lg_u32 s14, 0
+// DISASM-NEXT: s_add_nc_u64 s[12:13], s[12:13],
 // DISASM-NEXT: s_set_pc_i64 s[12:13]
 
 // METADATA: .name:           test_far
-// METADATA: .sgpr_count:     17
+// METADATA: .sgpr_count:     16
 
 // RUN: hotswap-rewrite %t.out.elf \
 // RUN:   amdgcn-amd-amdhsa--gfx1250 amdgcn-amd-amdhsa--gfx1250 \
@@ -43,7 +38,7 @@
 // RUN:   | %FileCheck --check-prefix=IDEM %s
 // IDEM: IDEMPOTENT: YES
 
-// COM: A kernel with no aligned three-SGPR block fails closed instead of
+// COM: A kernel with no aligned two-SGPR block fails closed instead of
 // COM: emitting the unsafe return or clobbering a live register.
 // RUN: sed -e 's/s_mov_b64 vcc, -1/s_mov_b32 s105, 0/' \
 // RUN:   -e 's/\.amdhsa_next_free_sgpr 12/.amdhsa_next_free_sgpr 106/' \

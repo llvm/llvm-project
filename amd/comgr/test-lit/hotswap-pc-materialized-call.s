@@ -74,7 +74,7 @@ test_pc_materialized_call:
 .Ltest_pc_materialized_call_end:
 .size test_pc_materialized_call, .Ltest_pc_materialized_call_end-test_pc_materialized_call
 
-// Each far site needs its own 28-byte SCC-preserving gateway. This padding
+// Each far site needs its own 20-byte SCC-neutral gateway. This padding
 // follows s_endpgm and lies outside the function, so it is safe.
 .fill 64, 1, 0
 

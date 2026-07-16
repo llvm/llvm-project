@@ -195,7 +195,7 @@ TEST(EncodeSBranch, FailsOnInvalidState) {
 
 // -- encodeSetPCLongBranch ---------------------------------------------------
 
-TEST(EncodeSetPCLongBranch, UsesSccPreservingSequenceWithoutAddPc) {
+TEST(EncodeSetPCLongBranch, BackwardLandsOnTarget) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
 
@@ -204,23 +204,29 @@ TEST(EncodeSetPCLongBranch, UsesSccPreservingSequenceWithoutAddPc) {
   std::optional<llvm::SmallVector<uint8_t>> Out =
       encodeSetPCLongBranch(S, From, To, /*SgprBase=*/12);
   ASSERT_TRUE(Out);
+  EXPECT_EQ(Out->size(), SetPcReturnReserveBytes);
 
   std::vector<InternalDecodedInst> Dec;
   ASSERT_TRUE(decodeTextSection(Out->data(), Out->size(), S, Dec));
-  ASSERT_EQ(Dec.size(), 6u);
-  EXPECT_EQ(Dec[0].Mnemonic, "s_cselect_b32");
-  EXPECT_EQ(Dec[1].Mnemonic, "s_get_pc_i64");
-  EXPECT_EQ(Dec[2].Mnemonic, "s_add_co_u32");
-  EXPECT_EQ(Dec[3].Mnemonic, "s_add_co_ci_u32");
-  EXPECT_EQ(Dec[4].Mnemonic, "s_cmp_lg_u32");
-  EXPECT_EQ(Dec[5].Mnemonic, "s_set_pc_i64");
+  ASSERT_EQ(Dec.size(), 3u);
+  EXPECT_EQ(Dec[0].Mnemonic, "s_get_pc_i64");
+  EXPECT_EQ(Dec[1].Mnemonic, "s_add_nc_u64");
+  EXPECT_EQ(Dec[2].Mnemonic, "s_set_pc_i64");
   for (const InternalDecodedInst &DI : Dec)
     EXPECT_NE(DI.Mnemonic, "s_add_pc_i64");
 
-  // s_get_pc_i64 is the second dword and captures From + 8. The two add
-  // immediates materialize this exact two's-complement displacement.
-  uint64_t Delta = To - (From + 2 * MinInstSize);
-  EXPECT_EQ(static_cast<uint32_t>(Delta), 0xFFF7FFFCu);
+  const llvm::MCInstrDesc &AddDesc = S.MCII->get(Dec[1].Inst.getOpcode());
+  EXPECT_FALSE(AddDesc.hasImplicitUseOfPhysReg(S.SCCRegister));
+  EXPECT_FALSE(AddDesc.hasImplicitDefOfPhysReg(S.SCCRegister, S.MRI.get()));
+
+  // s_get_pc_i64 captures the PC immediately after its own dword.
+  uint64_t Delta = To - (From + MinInstSize);
+  ASSERT_TRUE(Dec[1].Inst.getOperand(2).isImm());
+  uint64_t EncodedDelta =
+      static_cast<uint64_t>(Dec[1].Inst.getOperand(2).getImm());
+  EXPECT_EQ(EncodedDelta, Delta);
+  EXPECT_EQ(From + MinInstSize + EncodedDelta, To);
+  EXPECT_EQ(static_cast<uint32_t>(Delta), 0xFFF80000u);
   EXPECT_EQ(static_cast<uint32_t>(Delta >> 32), 0xFFFFFFFFu);
 }
 
@@ -236,20 +242,18 @@ TEST(EncodeSetPCLongBranch, ForwardLandsOnTarget) {
 
   std::vector<InternalDecodedInst> Decoded;
   ASSERT_TRUE(decodeTextSection(Out->data(), Out->size(), S, Decoded));
-  ASSERT_EQ(Decoded.size(), 6u);
-  ASSERT_TRUE(Decoded[2].Inst.getOperand(2).isImm());
-  ASSERT_TRUE(Decoded[3].Inst.getOperand(2).isImm());
-  uint64_t Lo = static_cast<uint32_t>(Decoded[2].Inst.getOperand(2).getImm());
-  uint64_t Hi = static_cast<uint32_t>(Decoded[3].Inst.getOperand(2).getImm());
-  uint64_t Delta = Lo | (Hi << 32);
-  EXPECT_EQ(From + 2 * MinInstSize + Delta, To);
+  ASSERT_EQ(Decoded.size(), 3u);
+  ASSERT_TRUE(Decoded[1].Inst.getOperand(2).isImm());
+  uint64_t Delta =
+      static_cast<uint64_t>(Decoded[1].Inst.getOperand(2).getImm());
+  EXPECT_EQ(From + MinInstSize + Delta, To);
 }
 
 TEST(EncodeSetPCLongBranch, RejectsPcBaseOverflow) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
   EXPECT_FALSE(encodeSetPCLongBranch(
-      S, std::numeric_limits<uint64_t>::max() - MinInstSize, 0,
+      S, std::numeric_limits<uint64_t>::max() - MinInstSize + 1, 0,
       /*SgprBase=*/12));
 }
 

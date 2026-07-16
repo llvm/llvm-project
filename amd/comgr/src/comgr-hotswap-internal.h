@@ -102,7 +102,7 @@ struct Trampoline {
   uint32_t OriginalSize = 0;
   llvm::SmallVector<uint8_t> Bytes;
   // When set, the pool is beyond s_branch reach. The source site branches to a
-  // nearby NOP gateway, which uses the scratch-backed pre-Gen5 set-PC sequence
+  // nearby NOP gateway, which uses the scratch-backed gfx12 set-PC sequence
   // to reach the pool without executing s_add_pc_i64.
   bool Long = false;
   bool UsesSetPCBack = false;
@@ -208,14 +208,10 @@ static constexpr uint64_t MinNopSledSize = 8;
 // Minimum AMDGPU instruction size (one dword).
 static constexpr uint32_t MinInstSize = 4;
 
-// Fixed reservation for the SCC-preserving set-PC return. The assembled
-// sequence is 28 bytes for a same-object forward or backward delta.
-static constexpr uint32_t SetPcReturnReserveBytes = 28;
+// Fixed reservation for the SCC-neutral set-PC sequence.
+static constexpr uint32_t SetPcReturnReserveBytes = 20;
 
-// A gateway needs at least 20 bytes when incoming SCC is proven dead. Live SCC
-// uses the 28-byte preserving sequence.
-static constexpr uint32_t SetPcMinGatewayBytes = 20;
-static constexpr uint32_t SetPcForwardSequenceBytes = 28;
+static constexpr uint32_t SetPcForwardSequenceBytes = SetPcReturnReserveBytes;
 static constexpr uint32_t PoolBranchIslandBytes = MinInstSize;
 
 // s_branch encoding: 16-bit signed dword offset field bounds. Used by
@@ -863,10 +859,9 @@ bool commitSafeSgprScratchBlock(PatchContext &Ctx, uint64_t TextOffset,
                                     uint32_t InstSize,
                                     llvm::ArrayRef<uint8_t> Replacement);
 
-/// Encode an SCC-preserving indirect long branch using three numbered SGPRs:
-/// an aligned PC pair at \p SgprBase and an SCC-save temporary at Base + 2.
-/// The displacement is materialized as two 32-bit literals; no
-/// s_add_pc_i64 or 64-bit literal is emitted.
+/// Encode an SCC-neutral indirect long branch using the aligned SGPR pair at
+/// \p SgprBase. The displacement uses gfx12's s_add_nc_u64; no s_add_pc_i64
+/// is emitted.
 std::optional<llvm::SmallVector<uint8_t>>
 encodeSetPCLongBranch(const LLVMState &LS, uint64_t FromOffset,
                       uint64_t TargetOffset, unsigned SgprBase);

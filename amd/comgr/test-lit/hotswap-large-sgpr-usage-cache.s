@@ -17,16 +17,16 @@
 // RUN: %llvm-readelf --notes %t.out.elf | %FileCheck --check-prefix=META %s
 
 // DISASM-LABEL: <test_large_usage_cache>:
-// DISASM: s_cselect_b32
+// DISASM: s_get_pc_i64
 // DISASM: s_set_pc_i64
 // DISASM: s_call_i64
-// DISASM: s_cselect_b32
+// DISASM: s_get_pc_i64
 // DISASM: s_set_pc_i64
 // DISASM: tensor_load_to_lds
 // DISASM: tensor_load_to_lds
 
 // META: .name:           test_large_usage_cache
-// META: .sgpr_count:     39
+// META: .sgpr_count:     38
 
 // RUN: hotswap-rewrite %t.out.elf \
 // RUN:   amdgcn-amd-amdhsa--gfx1250 amdgcn-amd-amdhsa--gfx1250 \
