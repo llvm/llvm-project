@@ -233,7 +233,8 @@ private:
 };
 
 void mlir::emitc::populateMLGOAddReflectionMapPatterns(
-    RewritePatternSet &patterns, llvm::ArrayRef<std::string> includedFieldAttrs) {
-  patterns.add<MLGOAddReflectionMapClass>(
-      patterns.getContext(), includedFieldAttrs);
+    RewritePatternSet &patterns,
+    llvm::ArrayRef<std::string> includedFieldAttrs) {
+  patterns.add<MLGOAddReflectionMapClass>(patterns.getContext(),
+                                          includedFieldAttrs);
 }
