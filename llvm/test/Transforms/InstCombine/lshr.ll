@@ -702,8 +702,8 @@ define i32 @shl_add_lshr_neg(i32 %x, i32 %y, i32 %z) {
 
 define i32 @mul_splat_fold_wrong_mul_const(i32 %x) {
 ; CHECK-LABEL: @mul_splat_fold_wrong_mul_const(
-; CHECK-NEXT:    [[M:%.*]] = mul nuw i32 [[X:%.*]], 65538
-; CHECK-NEXT:    [[T:%.*]] = lshr i32 [[M]], 16
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[T:%.*]] = add nuw i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[T]]
 ;
   %m = mul nuw i32 %x, 65538
@@ -1631,8 +1631,8 @@ define i32 @lshr_two_i32(i32 %x) {
 ; lshr (mul nuw X, 20), 4 -> add nuw X, lshr X, 2
 define i32 @lshr_mul_nuw_2bits(i32 %x) {
 ; CHECK-LABEL: @lshr_mul_nuw_2bits(
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i32 [[X:%.*]], 20
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[MUL]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[SHR:%.*]] = add nuw i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[SHR]]
 ;
   %mul = mul nuw i32 %x, 20

@@ -652,6 +652,18 @@ define i32 @lshr_mul_times_3_div_2_no_flags(i32 %0) {
   ret i32 %lshr
 }
 
+; Signed-only multiplication must use the logical-shift fold.
+define i32 @lshr_mul_times_3_div_2_nsw(i32 %x) {
+; CHECK-LABEL: @lshr_mul_times_3_div_2_nsw(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[LSHR:%.*]] = add nsw i32 [[X]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %mul = mul nsw i32 %x, 3
+  %lshr = lshr i32 %mul, 1
+  ret i32 %lshr
+}
+
 ; Negative test
 
 define i32 @mul_times_3_div_2_multiuse_lshr(i32 %x) {
@@ -872,6 +884,18 @@ define i32 @ashr_mul_times_5_div_4_exact_2(i32 %x) {
   %mul = mul nsw i32 %x, 5
   %ashr = ashr exact i32 %mul, 2
   ret i32 %ashr
+}
+
+; ashr (mul nsw X, 2^4 + 2^2), 4 -> add nsw X, ashr X, 2
+define i32 @ashr_mul_nsw_2bits(i32 %x) {
+; CHECK-LABEL: @ashr_mul_nsw_2bits(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[SHR:%.*]] = add nsw i32 [[X]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %mul = mul nsw i32 %x, 20
+  %shr = ashr i32 %mul, 4
+  ret i32 %shr
 }
 
 
