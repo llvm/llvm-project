@@ -26,6 +26,15 @@ struct TestFloat {
     assert(!std::isgreater(T(0), std::numeric_limits<T>::max()));
     assert(!std::isgreater(std::numeric_limits<T>::max(), std::numeric_limits<T>::max()));
 
+    assert(std::isgreater(std::numeric_limits<T>::infinity(), std::numeric_limits<T>::max()));
+    assert(!std::isgreater(-std::numeric_limits<T>::infinity(), std::numeric_limits<T>::lowest()));
+    assert(!std::isgreater(std::numeric_limits<T>::infinity(), std::numeric_limits<T>::infinity()));
+
+    assert(!std::isgreater(std::numeric_limits<T>::quiet_NaN(), T(0)));
+    assert(!std::isgreater(T(0), std::numeric_limits<T>::quiet_NaN()));
+    assert(!std::isgreater(std::numeric_limits<T>::quiet_NaN(), std::numeric_limits<T>::quiet_NaN()));
+    assert(!std::isgreater(std::numeric_limits<T>::signaling_NaN(), T(0)));
+
     return true;
   }
 
