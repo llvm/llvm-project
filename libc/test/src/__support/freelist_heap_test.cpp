@@ -377,7 +377,8 @@ TEST(LlvmLibcFreeListHeap, Adopt) {
   void *ptr1 = allocator.allocate(1500);
   EXPECT_NE(ptr1, static_cast<void *>(nullptr));
 
-  // Initial buffer is now almost full; allocating another 1500 bytes should fail.
+  // Initial buffer is now almost full; allocating another 1500 bytes should
+  // fail.
   void *ptr_fail = allocator.allocate(1500);
   EXPECT_EQ(ptr_fail, static_cast<void *>(nullptr));
 

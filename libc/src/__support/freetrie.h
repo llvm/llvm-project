@@ -130,25 +130,26 @@ LIBC_INLINE void FreeTrie::push(BlockRef block) {
 
   if (!range.contains(size)) {
     if (empty()) {
-      range = SizeRange(
-          range.min,
-          cpp::max(range.width, cpp::bit_ceil(size - range.min + 1)));
+      range =
+          SizeRange(range.min,
+                    cpp::max(range.width, cpp::bit_ceil(size - range.min + 1)));
     } else {
-    // Dynamically expand the trie upwards by doubling the range and creating a
-    // new root node using the pushed block. The previous root becomes the
-    // lower child of the new root.
-    Node *node = new (block.usable_space()) Node;
-    node->parent = nullptr;
-    node->lower = root;
-    node->upper = nullptr;
-    FreeList list;
-    list.push(node);
-    root->parent = node;
-    root = node;
-    range = SizeRange(range.min, range.width * 2);
-    LIBC_ASSERT(range.contains(size) &&
-                "pushed block size exceeds dynamic trie expansion limit (at most 2x current range when non-empty)");
-    return;
+      // Dynamically expand the trie upwards by doubling the range and creating
+      // a new root node using the pushed block. The previous root becomes the
+      // lower child of the new root.
+      Node *node = new (block.usable_space()) Node;
+      node->parent = nullptr;
+      node->lower = root;
+      node->upper = nullptr;
+      FreeList list;
+      list.push(node);
+      root->parent = node;
+      root = node;
+      range = SizeRange(range.min, range.width * 2);
+      LIBC_ASSERT(range.contains(size) &&
+                  "pushed block size exceeds dynamic trie expansion limit (at "
+                  "most 2x current range when non-empty)");
+      return;
     }
   }
 

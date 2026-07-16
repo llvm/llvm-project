@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// sbrk_heap.h must be included before Test.h so operator delete attributes
+// in new.h apply before any test framework declarations.
 #include "test/UnitTest/sbrk_heap.h"
+
 #include "test/UnitTest/Test.h"
 
 asm(R"(
@@ -27,11 +30,13 @@ TEST(LlvmLibcSbrkHeapTest, BasicAllocationAndDoubling) {
   EXPECT_NE(ptr1, static_cast<void *>(nullptr));
 
   // Allocate another 400 bytes; this exceeds the initial 512-byte heap,
-  // triggering SYS_brk growth (doubling the heap by adopting another 512 bytes).
+  // triggering SYS_brk growth (doubling the heap by adopting another 512
+  // bytes).
   void *ptr2 = heap.allocate(400);
   EXPECT_NE(ptr2, static_cast<void *>(nullptr));
 
-  // Allocate a larger block (2048 bytes), triggering multiple doublings via SYS_brk.
+  // Allocate a larger block (2048 bytes), triggering multiple doublings via
+  // SYS_brk.
   void *ptr3 = heap.allocate(2048);
   EXPECT_NE(ptr3, static_cast<void *>(nullptr));
 
