@@ -305,14 +305,14 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(
 MachineBasicBlock *SILowerSGPRSpills::getCycleDomBB(MachineCycle *C) {
   // If the insertion point lands on a cycle entry, move it to a block that
   // dominates all entries.
-  if (C->isReducible()) {
-    if (auto *IDom = MDT->getNode(C->getHeader())->getIDom())
+  if (MCI->isReducible(*C)) {
+    if (auto *IDom = MDT->getNode(MCI->getHeader(*C))->getIDom())
       return IDom->getBlock();
     llvm_unreachable("Expected cycle to have an IDom.");
     return nullptr;
   }
 
-  const SmallVectorImpl<MachineBasicBlock *> &Entries = C->getEntries();
+  ArrayRef<MachineBasicBlock *> Entries = MCI->getEntries(*C);
   assert(!Entries.empty() && "Expected cycle to have at least one entry.");
   MachineBasicBlock *EntryBB = Entries[0];
   for (unsigned I = 1; I < Entries.size(); ++I)
