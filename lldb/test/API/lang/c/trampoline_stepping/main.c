@@ -1,29 +1,20 @@
 void foo(void) {}
 
-__attribute__((transparent_stepping))
-void bar(void) {
-  foo();
-}
+__attribute__((transparent_stepping)) void bar(void) { foo(); }
 
-__attribute__((transparent_stepping))
-void baz(void) {
-  bar();
-}
+__attribute__((transparent_stepping)) void baz(void) { bar(); }
 
-__attribute__((nodebug))
-void nodebug(void) {}
+__attribute__((nodebug)) void nodebug(void) {}
 
-__attribute__((transparent_stepping))
-void nodebug_then_trampoline(void) {
+__attribute__((transparent_stepping)) void nodebug_then_trampoline(void) {
   nodebug();
   baz();
 }
 
-__attribute__((transparent_stepping))
-void doesnt_call_trampoline(void) {}
+__attribute__((transparent_stepping)) void doesnt_call_trampoline(void) {}
 
 void direct_trampoline_call(void) {
-  bar(); // Break here for direct 
+  bar(); // Break here for direct
   bar();
 }
 
@@ -41,7 +32,6 @@ void unused_target(void) {
   doesnt_call_trampoline(); // Break here for unused
 }
 
-
 int main(void) {
   direct_trampoline_call();
   chained_trampoline_call();
@@ -49,4 +39,3 @@ int main(void) {
   unused_target();
   return 0;
 }
-
