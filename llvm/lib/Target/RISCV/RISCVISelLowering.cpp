@@ -6484,6 +6484,23 @@ static SDValue lowerVECTOR_SHUFFLEAsPUnzip(ShuffleVectorSDNode *SVN,
   return DAG.getNode(Opc, DL, VT, V1, V2);
 }
 
+// Match the shuffle mask <0, N, 2, N+2, ...>: even result lanes take the even
+// source lanes (operand 0) and odd result lanes come from the second operand.
+// XformToShuffleWithZero forms this from `(and src, low-half-mask)` with a zero
+// second operand, which is a packed zero-extend, i.e. RISCVISD::PPAIRE(src, 0).
+// Undef lanes (e.g. from widening the 32-bit view to a legal 64-bit type on
+// RV64) always match, since PPAIRE refines them.
+static bool isPackedZExtShuffleMask(ArrayRef<int> Mask) {
+  unsigned NumElts = Mask.size();
+  if (NumElts % 2 != 0)
+    return false;
+  for (unsigned I = 0; I != NumElts / 2; ++I)
+    if ((Mask[2 * I] >= 0 && Mask[2 * I] != (int)(2 * I)) ||
+        (Mask[2 * I + 1] >= 0 && Mask[2 * I + 1] < (int)NumElts))
+      return false;
+  return true;
+}
+
 SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
                                                  SelectionDAG &DAG) const {
   SDValue V1 = Op.getOperand(0);
@@ -6541,6 +6558,15 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
                            Src);
       }
     }
+
+    // shuffle(src, zero, <0, N, 2, N+2, ...>) is a packed zero-extend:
+    // PPAIRE(src, 0). XformToShuffleWithZero forms this from an `and` with a
+    // low-half mask (see isVectorClearMaskLegal).
+    if (ISD::isConstantSplatVectorAllZeros(V2.getNode()) &&
+        isPackedZExtShuffleMask(Mask))
+      return DAG.getNode(RISCVISD::PPAIRE, DL, VT, V1,
+                         DAG.getNode(ISD::SPLAT_VECTOR, DL, VT,
+                                     DAG.getConstant(0, DL, XLenVT)));
 
     // Select an element reverse shuffle to VECTOR_REVERSE. The tablegen
     // patterns select rev8/rev16/ppairoe.* from VECTOR_REVERSE.
@@ -7202,6 +7228,20 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
   if (SwapOps)
     return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, V1, V2);
   return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, V2, V1);
+}
+
+bool RISCVTargetLowering::isVectorClearMaskLegal(ArrayRef<int> M,
+                                                 EVT VT) const {
+  // Enable DAGCombiner::XformToShuffleWithZero to rewrite a packed zero-extend
+  // `and` into shuffle(src, zero, ...), which lowerVECTOR_SHUFFLE turns into
+  // RISCVISD::PPAIRE. Accept the packed byte/halfword views that lowering
+  // handles; the 32-bit views are illegal on RV64 but reachable before type
+  // legalization widens them to the legal 64-bit view.
+  if (!Subtarget.hasStdExtP() || !VT.isSimple())
+    return false;
+  MVT SVT = VT.getSimpleVT();
+  return (SVT == MVT::v4i8 || SVT == MVT::v8i8 || SVT == MVT::v4i16) &&
+         isPackedZExtShuffleMask(M);
 }
 
 bool RISCVTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
@@ -17839,29 +17879,6 @@ static SDValue combineNarrowableShiftedLoad(SDNode *N, SelectionDAG &DAG) {
                      DAG.getShiftAmountConstant(ShiftAmt, VT, DL));
 }
 
-static SDValue combinePZExt(SDNode *N, SelectionDAG &DAG,
-                            const RISCVSubtarget &Subtarget) {
-  EVT VT = N->getValueType(0);
-  if (!VT.isSimple())
-    return SDValue();
-
-  MVT SimpleVT = VT.getSimpleVT();
-  if (!Subtarget.isPExtPackedType(SimpleVT))
-    return SDValue();
-
-  APInt SplatVal;
-  if (!ISD::isConstantSplatVector(N->getOperand(1).getNode(), SplatVal))
-    return SDValue();
-
-  MVT EltVT = SimpleVT.getVectorElementType();
-  bool IsByteToHalf = EltVT == MVT::i16 && SplatVal == 0xff;
-  bool IsHalfToWord = EltVT == MVT::i32 && SplatVal == 0xffff;
-  if (!IsByteToHalf && !IsHalfToWord)
-    return SDValue();
-
-  return lowerPZExt(N->getOperand(0), SDLoc(N), DAG, Subtarget);
-}
-
 // Combines two comparison operation and logic operation to one selection
 // operation(min, max) and logic operation. Returns new constructed Node if
 // conditions for optimization are satisfied.
@@ -17870,8 +17887,6 @@ static SDValue performANDCombine(SDNode *N,
                                  const RISCVSubtarget &Subtarget) {
   SelectionDAG &DAG = DCI.DAG;
   SDValue N0 = N->getOperand(0);
-  if (SDValue V = combinePZExt(N, DAG, Subtarget))
-    return V;
 
   // Pre-promote (i32 (and (srl X, Y), 1)) on RV64 with Zbs without zero
   // extending X. This is safe since we only need the LSB after the shift and
