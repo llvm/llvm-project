@@ -24,7 +24,6 @@
 #include "PluginInterface.h"
 #include <cstdint>
 #include <limits>
-#include <optional>
 
 namespace llvm::omp::target::plugin {
 
@@ -145,9 +144,9 @@ class L0DeviceTy final : public GenericDeviceTy {
 
   DeviceArchTy computeArch() const;
 
-  /// Find the default compute command queue group. Returns std::nullopt if
+  /// Find the default compute command queue group. Returns an Error if
   /// the device exposes no compute queue group.
-  std::optional<ComputeGroupInfoTy> findCommandQueueGroup();
+  Expected<ComputeGroupInfoTy> findCommandQueueGroup();
 
   /// Helper function to call global constructors or destructors.
   Error callGlobalCtorDtorCommon(GenericPluginTy &Plugin, DeviceImageTy &Image,
