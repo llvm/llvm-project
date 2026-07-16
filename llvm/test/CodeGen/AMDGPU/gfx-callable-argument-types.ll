@@ -5656,32 +5656,32 @@ define amdgpu_gfx void @test_call_external_void_func_v32i8_ret() #0 {
 ; GFX9-NEXT:    v_mov_b32_e32 v19, v34
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[34:35]
 ; GFX9-NEXT:    s_mov_b32 s34, 0xc0c0004
-; GFX9-NEXT:    v_perm_b32 v0, v0, v1, s34
-; GFX9-NEXT:    v_perm_b32 v1, v2, v3, s34
-; GFX9-NEXT:    v_perm_b32 v4, v4, v5, s34
-; GFX9-NEXT:    v_perm_b32 v5, v6, v7, s34
-; GFX9-NEXT:    v_lshl_or_b32 v6, v1, 16, v0
-; GFX9-NEXT:    v_perm_b32 v0, v28, v29, s34
-; GFX9-NEXT:    v_perm_b32 v1, v30, v31, s34
-; GFX9-NEXT:    v_lshl_or_b32 v7, v5, 16, v4
-; GFX9-NEXT:    v_perm_b32 v2, v24, v25, s34
-; GFX9-NEXT:    v_perm_b32 v4, v26, v27, s34
-; GFX9-NEXT:    v_lshl_or_b32 v3, v1, 16, v0
-; GFX9-NEXT:    v_perm_b32 v0, v20, v21, s34
-; GFX9-NEXT:    v_perm_b32 v1, v22, v23, s34
-; GFX9-NEXT:    v_lshl_or_b32 v2, v4, 16, v2
-; GFX9-NEXT:    v_lshl_or_b32 v1, v1, 16, v0
-; GFX9-NEXT:    v_perm_b32 v0, v16, v17, s34
-; GFX9-NEXT:    v_perm_b32 v4, v18, v19, s34
+; GFX9-NEXT:    v_perm_b32 v28, v28, v29, s34
+; GFX9-NEXT:    v_perm_b32 v29, v30, v31, s34
+; GFX9-NEXT:    v_perm_b32 v24, v24, v25, s34
+; GFX9-NEXT:    v_perm_b32 v25, v26, v27, s34
+; GFX9-NEXT:    v_perm_b32 v20, v20, v21, s34
+; GFX9-NEXT:    v_perm_b32 v21, v22, v23, s34
+; GFX9-NEXT:    v_perm_b32 v16, v16, v17, s34
+; GFX9-NEXT:    v_perm_b32 v17, v18, v19, s34
 ; GFX9-NEXT:    v_perm_b32 v12, v12, v13, s34
 ; GFX9-NEXT:    v_perm_b32 v13, v14, v15, s34
 ; GFX9-NEXT:    v_perm_b32 v8, v8, v9, s34
-; GFX9-NEXT:    v_perm_b32 v10, v10, v11, s34
-; GFX9-NEXT:    v_lshl_or_b32 v0, v4, 16, v0
-; GFX9-NEXT:    v_lshl_or_b32 v9, v13, 16, v12
-; GFX9-NEXT:    v_lshl_or_b32 v8, v10, 16, v8
-; GFX9-NEXT:    global_store_dwordx4 v[42:43], v[0:3], off
-; GFX9-NEXT:    global_store_dwordx4 v[40:41], v[6:9], off
+; GFX9-NEXT:    v_perm_b32 v9, v10, v11, s34
+; GFX9-NEXT:    v_perm_b32 v4, v4, v5, s34
+; GFX9-NEXT:    v_perm_b32 v5, v6, v7, s34
+; GFX9-NEXT:    v_perm_b32 v0, v0, v1, s34
+; GFX9-NEXT:    v_perm_b32 v1, v2, v3, s34
+; GFX9-NEXT:    v_lshl_or_b32 v28, v29, 16, v28
+; GFX9-NEXT:    v_lshl_or_b32 v27, v25, 16, v24
+; GFX9-NEXT:    v_lshl_or_b32 v26, v21, 16, v20
+; GFX9-NEXT:    v_lshl_or_b32 v25, v17, 16, v16
+; GFX9-NEXT:    v_lshl_or_b32 v12, v13, 16, v12
+; GFX9-NEXT:    v_lshl_or_b32 v11, v9, 16, v8
+; GFX9-NEXT:    v_lshl_or_b32 v10, v5, 16, v4
+; GFX9-NEXT:    v_lshl_or_b32 v9, v1, 16, v0
+; GFX9-NEXT:    global_store_dwordx4 v[42:43], v[25:28], off
+; GFX9-NEXT:    global_store_dwordx4 v[40:41], v[9:12], off
 ; GFX9-NEXT:    buffer_load_dword v43, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload

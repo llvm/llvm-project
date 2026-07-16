@@ -1624,497 +1624,499 @@ define void @memcpy_p0_p4_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(4)
 ; ALIGNED-NEXT:    s_mov_b64 s[4:5], 0
 ; ALIGNED-NEXT:  .LBB2_1: ; %static-memcpy-expansion-main-body
 ; ALIGNED-NEXT:    ; =>This Inner Loop Header: Depth=1
-; ALIGNED-NEXT:    v_add_co_u32 v8, vcc_lo, v2, s4
-; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v9, null, s5, v3, vcc_lo
-; ALIGNED-NEXT:    v_add_co_u32 v84, vcc_lo, v0, s4
-; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v85, null, s5, v1, vcc_lo
+; ALIGNED-NEXT:    v_add_co_u32 v4, vcc_lo, v2, s4
+; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v5, null, s5, v3, vcc_lo
+; ALIGNED-NEXT:    v_add_co_u32 v64, vcc_lo, v0, s4
+; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v65, null, s5, v1, vcc_lo
 ; ALIGNED-NEXT:    s_clause 0xf
-; ALIGNED-NEXT:    global_load_dwordx4 v[98:101], v[8:9], off offset:240
-; ALIGNED-NEXT:    global_load_dwordx4 v[112:115], v[8:9], off offset:224
-; ALIGNED-NEXT:    global_load_dwordx4 v[80:83], v[8:9], off offset:208
-; ALIGNED-NEXT:    global_load_dwordx4 v[68:71], v[8:9], off offset:192
-; ALIGNED-NEXT:    global_load_dwordx4 v[64:67], v[8:9], off offset:176
-; ALIGNED-NEXT:    global_load_dwordx4 v[52:55], v[8:9], off offset:160
-; ALIGNED-NEXT:    global_load_dwordx4 v[48:51], v[8:9], off offset:144
-; ALIGNED-NEXT:    global_load_dwordx4 v[36:39], v[8:9], off offset:128
-; ALIGNED-NEXT:    global_load_dwordx4 v[32:35], v[8:9], off offset:112
-; ALIGNED-NEXT:    global_load_dwordx4 v[28:31], v[8:9], off offset:96
-; ALIGNED-NEXT:    global_load_dwordx4 v[24:27], v[8:9], off offset:80
-; ALIGNED-NEXT:    global_load_dwordx4 v[20:23], v[8:9], off offset:64
-; ALIGNED-NEXT:    global_load_dwordx4 v[16:19], v[8:9], off offset:48
-; ALIGNED-NEXT:    global_load_dwordx4 v[12:15], v[8:9], off offset:32
-; ALIGNED-NEXT:    global_load_dwordx4 v[4:7], v[8:9], off
-; ALIGNED-NEXT:    global_load_dwordx4 v[8:11], v[8:9], off offset:16
-; ALIGNED-NEXT:    v_add_co_u32 v96, vcc_lo, v84, 6
-; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v97, null, 0, v85, vcc_lo
-; ALIGNED-NEXT:    v_add_co_u32 v86, vcc_lo, v84, 3
-; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v87, null, 0, v85, vcc_lo
+; ALIGNED-NEXT:    global_load_dwordx4 v[80:83], v[4:5], off offset:240
+; ALIGNED-NEXT:    global_load_dwordx4 v[84:87], v[4:5], off offset:224
+; ALIGNED-NEXT:    global_load_dwordx4 v[96:99], v[4:5], off offset:208
+; ALIGNED-NEXT:    global_load_dwordx4 v[100:103], v[4:5], off offset:192
+; ALIGNED-NEXT:    global_load_dwordx4 v[112:115], v[4:5], off offset:176
+; ALIGNED-NEXT:    global_load_dwordx4 v[52:55], v[4:5], off offset:160
+; ALIGNED-NEXT:    global_load_dwordx4 v[48:51], v[4:5], off offset:144
+; ALIGNED-NEXT:    global_load_dwordx4 v[36:39], v[4:5], off offset:128
+; ALIGNED-NEXT:    global_load_dwordx4 v[32:35], v[4:5], off offset:112
+; ALIGNED-NEXT:    global_load_dwordx4 v[28:31], v[4:5], off offset:96
+; ALIGNED-NEXT:    global_load_dwordx4 v[24:27], v[4:5], off offset:80
+; ALIGNED-NEXT:    global_load_dwordx4 v[20:23], v[4:5], off offset:64
+; ALIGNED-NEXT:    global_load_dwordx4 v[16:19], v[4:5], off offset:48
+; ALIGNED-NEXT:    global_load_dwordx4 v[12:15], v[4:5], off offset:32
+; ALIGNED-NEXT:    global_load_dwordx4 v[8:11], v[4:5], off offset:16
+; ALIGNED-NEXT:    global_load_dwordx4 v[4:7], v[4:5], off
+; ALIGNED-NEXT:    v_add_co_u32 v66, vcc_lo, v64, 3
+; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v67, null, 0, v65, vcc_lo
+; ALIGNED-NEXT:    v_add_co_u32 v68, vcc_lo, v64, 6
+; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v69, null, 0, v65, vcc_lo
 ; ALIGNED-NEXT:    s_add_u32 s4, s4, 0x100
 ; ALIGNED-NEXT:    s_addc_u32 s5, s5, 0
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(15)
-; ALIGNED-NEXT:    buffer_store_dword v100, off, s[0:3], s32 offset:168
-; ALIGNED-NEXT:    buffer_store_dword v101, off, s[0:3], s32 offset:172
-; ALIGNED-NEXT:    buffer_store_dword v99, off, s[0:3], s32 offset:164
-; ALIGNED-NEXT:    buffer_store_dword v98, off, s[0:3], s32 offset:160
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v100 offset:244
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v101 offset:248
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v101 offset:249
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v100 offset:245
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v99 offset:240
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v99 offset:241
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v98 offset:236
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v98 offset:237
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v102, 24, v100
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v103, 24, v101
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v101, 8, v101
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v100, 8, v100
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v116, 24, v99
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v117, 8, v99
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v118, 24, v98
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v119, 8, v98
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v102 offset:248
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v100 offset:246
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v103 offset:252
+; ALIGNED-NEXT:    buffer_store_dword v82, off, s[0:3], s32 offset:168
+; ALIGNED-NEXT:    buffer_store_dword v83, off, s[0:3], s32 offset:172
+; ALIGNED-NEXT:    buffer_store_dword v81, off, s[0:3], s32 offset:164
+; ALIGNED-NEXT:    buffer_store_dword v80, off, s[0:3], s32 offset:160
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v70, 24, v82
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v71, 8, v82
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v82 offset:244
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v82 offset:245
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v82, 24, v83
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v83 offset:248
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v83 offset:249
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v83, 8, v83
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v70 offset:248
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v70, 24, v81
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v81 offset:240
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v81 offset:241
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v81, 8, v81
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v71 offset:246
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v71, 24, v80
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v80 offset:236
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v80 offset:237
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v80, 8, v80
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v82 offset:252
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(14)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v98, 24, v114
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v101 offset:250
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v99, 8, v114
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v100, 24, v115
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v101, 8, v115
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v102, 24, v113
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v103, 8, v113
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v116 offset:244
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v117 offset:242
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v118 offset:240
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v119 offset:238
-; ALIGNED-NEXT:    buffer_store_dword v114, off, s[0:3], s32 offset:184
-; ALIGNED-NEXT:    buffer_store_dword v115, off, s[0:3], s32 offset:188
-; ALIGNED-NEXT:    buffer_store_dword v113, off, s[0:3], s32 offset:180
-; ALIGNED-NEXT:    buffer_store_dword v112, off, s[0:3], s32 offset:176
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v114 offset:228
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v115 offset:232
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v115 offset:233
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v114 offset:229
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v113 offset:224
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v113 offset:225
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v112 offset:220
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v112 offset:221
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v112
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 8, v112
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v82, 24, v86
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v83 offset:250
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v83, 8, v86
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v70 offset:244
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v70, 24, v87
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v81 offset:242
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v81, 8, v87
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v71 offset:240
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v71, 24, v85
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v80 offset:238
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v80, 8, v85
+; ALIGNED-NEXT:    buffer_store_dword v86, off, s[0:3], s32 offset:184
+; ALIGNED-NEXT:    buffer_store_dword v87, off, s[0:3], s32 offset:188
+; ALIGNED-NEXT:    buffer_store_dword v85, off, s[0:3], s32 offset:180
+; ALIGNED-NEXT:    buffer_store_dword v84, off, s[0:3], s32 offset:176
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v82 offset:232
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v82, 24, v84
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v83 offset:230
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v83, 8, v84
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v70 offset:236
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(13)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 24, v82
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 8, v82
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v98 offset:232
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v98, 24, v83
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v99 offset:230
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v99, 8, v83
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v100 offset:236
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v100, 24, v81
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v101 offset:234
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v101, 8, v81
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v102 offset:228
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v102, 24, v80
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v103 offset:226
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v103, 8, v80
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v113 offset:224
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v70, 24, v98
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v87 offset:232
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v87 offset:233
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v87, 8, v98
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v81 offset:234
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v81, 24, v99
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v86 offset:228
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v86 offset:229
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v86, 8, v99
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v71 offset:228
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v71, 24, v97
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v80 offset:226
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v80, 8, v97
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v85 offset:224
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v85 offset:225
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v85, 24, v96
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v82 offset:224
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v82, 8, v96
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v83 offset:222
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(12)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v70
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v112 offset:222
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 8, v70
-; ALIGNED-NEXT:    buffer_store_dword v82, off, s[0:3], s32 offset:136
-; ALIGNED-NEXT:    buffer_store_dword v83, off, s[0:3], s32 offset:140
-; ALIGNED-NEXT:    buffer_store_dword v81, off, s[0:3], s32 offset:132
-; ALIGNED-NEXT:    buffer_store_dword v80, off, s[0:3], s32 offset:128
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v82 offset:212
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v83 offset:216
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v83 offset:217
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v82 offset:213
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v81 offset:208
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v81 offset:209
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v80 offset:204
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v80 offset:205
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v80, 24, v71
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v81, 8, v71
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v82, 24, v69
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v83, 8, v69
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v114 offset:216
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 24, v68
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v115 offset:214
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 8, v68
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v98 offset:220
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v83, 24, v102
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v84 offset:220
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v84 offset:221
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v84, 8, v102
+; ALIGNED-NEXT:    buffer_store_dword v98, off, s[0:3], s32 offset:136
+; ALIGNED-NEXT:    buffer_store_dword v99, off, s[0:3], s32 offset:140
+; ALIGNED-NEXT:    buffer_store_dword v97, off, s[0:3], s32 offset:132
+; ALIGNED-NEXT:    buffer_store_dword v96, off, s[0:3], s32 offset:128
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v70 offset:216
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v70, 24, v103
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v87 offset:214
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v87, 8, v103
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v81 offset:220
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v81, 24, v101
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v99 offset:216
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v99 offset:217
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v99, 8, v101
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v86 offset:218
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v86, 24, v100
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v98 offset:212
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v98 offset:213
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v98, 8, v100
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v71 offset:212
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(11)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v98, 24, v66
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v99 offset:218
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v99, 8, v66
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v100 offset:212
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v100, 24, v67
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v101 offset:210
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v101, 8, v67
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v102 offset:208
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v102, 24, v65
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v103 offset:206
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v103, 8, v65
-; ALIGNED-NEXT:    buffer_store_dword v70, off, s[0:3], s32 offset:152
-; ALIGNED-NEXT:    buffer_store_dword v71, off, s[0:3], s32 offset:156
-; ALIGNED-NEXT:    buffer_store_dword v69, off, s[0:3], s32 offset:148
-; ALIGNED-NEXT:    buffer_store_dword v68, off, s[0:3], s32 offset:144
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v70 offset:196
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v71 offset:200
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v71 offset:201
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v70 offset:197
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v69 offset:192
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v69 offset:193
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v68 offset:188
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v68 offset:189
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v68, 24, v64
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v69, 8, v64
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v71, 24, v114
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v80 offset:210
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v80, 8, v114
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v97 offset:208
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v97 offset:209
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v97, 24, v115
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v85 offset:208
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v85, 8, v115
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v82 offset:206
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v82, 24, v113
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v96 offset:204
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v96 offset:205
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v96, 8, v113
+; ALIGNED-NEXT:    buffer_store_dword v102, off, s[0:3], s32 offset:152
+; ALIGNED-NEXT:    buffer_store_dword v103, off, s[0:3], s32 offset:156
+; ALIGNED-NEXT:    buffer_store_dword v101, off, s[0:3], s32 offset:148
+; ALIGNED-NEXT:    buffer_store_dword v100, off, s[0:3], s32 offset:144
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v83 offset:200
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v83, 24, v112
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v84 offset:198
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v84, 8, v112
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v103 offset:200
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v103 offset:201
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(10)
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v103, 8, v54
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v70 offset:204
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v70, 24, v54
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v71, 8, v54
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v113 offset:200
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v55
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v112 offset:198
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 8, v55
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v80 offset:204
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v80, 24, v52
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v81 offset:202
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v81, 8, v52
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v82 offset:196
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v82, 24, v53
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v83 offset:194
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v83, 8, v53
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v114 offset:192
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v87 offset:202
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v87, 24, v55
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v102 offset:196
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v102 offset:197
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v102, 8, v55
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v81 offset:196
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v81, 24, v52
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v99 offset:194
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v99, 8, v52
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v101 offset:192
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v101 offset:193
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v101, 24, v53
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v86 offset:192
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v86, 8, v53
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v98 offset:190
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(9)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 24, v50
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v115 offset:190
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 8, v50
-; ALIGNED-NEXT:    buffer_store_dword v66, off, s[0:3], s32 offset:232
-; ALIGNED-NEXT:    buffer_store_dword v67, off, s[0:3], s32 offset:236
-; ALIGNED-NEXT:    buffer_store_dword v65, off, s[0:3], s32 offset:228
-; ALIGNED-NEXT:    buffer_store_dword v64, off, s[0:3], s32 offset:224
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v66 offset:180
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v67 offset:184
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v67 offset:185
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v66 offset:181
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v65 offset:176
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v65 offset:177
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v64 offset:172
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v64 offset:173
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v64, 24, v51
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v65, 8, v51
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v66, 24, v49
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v67, 8, v49
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v98 offset:184
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v98, 24, v48
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v99 offset:182
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v99, 8, v48
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v100 offset:188
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v101 offset:186
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v102 offset:180
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v103 offset:178
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v68 offset:176
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v69 offset:174
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v98, 24, v50
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v100 offset:188
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v100 offset:189
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v100, 8, v50
+; ALIGNED-NEXT:    buffer_store_dword v114, off, s[0:3], s32 offset:232
+; ALIGNED-NEXT:    buffer_store_dword v115, off, s[0:3], s32 offset:236
+; ALIGNED-NEXT:    buffer_store_dword v113, off, s[0:3], s32 offset:228
+; ALIGNED-NEXT:    buffer_store_dword v112, off, s[0:3], s32 offset:224
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v71 offset:184
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v71, 24, v51
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v80 offset:182
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v80, 8, v51
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v97 offset:188
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v97, 24, v49
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v115 offset:184
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v115 offset:185
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 8, v49
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v85 offset:186
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v85, 24, v48
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v114 offset:180
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v114 offset:181
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 8, v48
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v82 offset:180
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v96 offset:178
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v113 offset:176
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v113 offset:177
+; ALIGNED-NEXT:    s_waitcnt vmcnt(8)
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v39
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v83 offset:176
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v84 offset:174
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v112 offset:172
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v112 offset:173
 ; ALIGNED-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:252
 ; ALIGNED-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:248
 ; ALIGNED-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:244
 ; ALIGNED-NEXT:    buffer_store_dword v52, off, s[0:3], s32 offset:240
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v54 offset:164
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v54 offset:165
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v55 offset:168
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v55 offset:169
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v52 offset:156
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v52 offset:157
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v53 offset:160
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v53 offset:161
-; ALIGNED-NEXT:    s_waitcnt vmcnt(8)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v52, 24, v36
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v100, 24, v38
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v101, 8, v38
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v102, 24, v39
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v103, 8, v39
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v68, 24, v37
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v69, 8, v37
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v53, 8, v36
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v103 offset:166
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v103, 8, v36
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v82, 24, v38
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v96, 8, v38
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v83, 8, v39
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v84, 24, v37
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 8, v37
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v70 offset:168
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v70, 24, v36
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v54 offset:164
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v54 offset:165
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(7)
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v54, 24, v34
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v55, 8, v34
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v70 offset:168
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v70, 24, v35
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v71 offset:166
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v71, 8, v35
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v113 offset:172
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v33
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v112 offset:170
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 8, v33
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v80 offset:160
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v80, 24, v32
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v81 offset:158
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v81, 8, v32
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v82 offset:164
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v83 offset:162
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v87 offset:172
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v87, 8, v34
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v102 offset:170
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v102, 24, v35
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v55 offset:168
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v55 offset:169
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v55, 8, v35
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v81 offset:160
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v81, 24, v33
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v99 offset:158
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v99, 8, v33
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v52 offset:156
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v52 offset:157
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v52, 24, v32
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v101 offset:164
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v101, 8, v32
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v86 offset:162
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v53 offset:160
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v53 offset:161
 ; ALIGNED-NEXT:    buffer_store_dword v50, off, s[0:3], s32 offset:200
 ; ALIGNED-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:204
 ; ALIGNED-NEXT:    buffer_store_dword v49, off, s[0:3], s32 offset:196
 ; ALIGNED-NEXT:    buffer_store_dword v48, off, s[0:3], s32 offset:192
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v114 offset:152
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v98 offset:152
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(6)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 24, v28
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v98, 24, v31
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v50 offset:148
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v50 offset:149
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v50, 8, v28
 ; ALIGNED-NEXT:    v_cmp_gt_u64_e64 s6, 0x800, s[4:5]
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v115 offset:150
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 8, v28
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v82, 24, v30
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v83, 8, v30
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v50 offset:148
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v51 offset:152
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v51 offset:153
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v50 offset:149
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v49 offset:144
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v49 offset:145
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v48 offset:140
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v48 offset:141
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v48, 24, v31
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v49, 8, v31
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v50, 24, v29
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v86, 24, v30
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v53, 8, v30
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v100 offset:150
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v100, 8, v31
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v71 offset:156
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v71, 24, v29
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v51 offset:152
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v51 offset:153
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v51, 8, v29
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v64 offset:156
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v80 offset:154
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v80, 24, v28
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v97 offset:148
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(5)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v64, 24, v26
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v65 offset:154
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v65, 8, v26
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v66 offset:148
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v66, 24, v27
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v67 offset:146
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v98 offset:144
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v99 offset:142
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v97, 24, v26
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v115 offset:146
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 8, v26
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v49 offset:144
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v49 offset:145
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v49, 24, v27
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v85 offset:144
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v85, 8, v27
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v114 offset:142
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 24, v25
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v48 offset:140
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v48 offset:141
 ; ALIGNED-NEXT:    buffer_store_dword v38, off, s[0:3], s32 offset:216
 ; ALIGNED-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:220
 ; ALIGNED-NEXT:    buffer_store_dword v37, off, s[0:3], s32 offset:212
 ; ALIGNED-NEXT:    buffer_store_dword v36, off, s[0:3], s32 offset:208
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v52 offset:128
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v113 offset:140
+; ALIGNED-NEXT:    s_waitcnt vmcnt(4)
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v22
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v103 offset:126
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(3)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v52, 24, v18
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v67, 8, v27
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v38 offset:132
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v39 offset:136
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v39 offset:137
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v38 offset:133
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v37 offset:128
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v37 offset:129
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v36 offset:124
-; ALIGNED-NEXT:    flat_store_byte v[84:85], v36 offset:128
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v100 offset:136
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v101 offset:134
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v102 offset:140
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v103 offset:138
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v68 offset:132
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v69 offset:130
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v53 offset:126
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v53, 8, v18
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v103, 24, v18
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v48, 8, v25
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v82 offset:136
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v96 offset:134
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v39 offset:136
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v39 offset:137
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v39, 8, v22
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v83 offset:138
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v38 offset:132
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v38 offset:133
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v84 offset:132
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v112 offset:130
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v37 offset:128
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v37 offset:129
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v70 offset:128
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v36 offset:124
+; ALIGNED-NEXT:    flat_store_byte v[64:65], v36 offset:128
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v36, 8, v18
 ; ALIGNED-NEXT:    buffer_store_dword v34, off, s[0:3], s32 offset:40
 ; ALIGNED-NEXT:    buffer_store_dword v35, off, s[0:3], s32 offset:44
 ; ALIGNED-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:36
 ; ALIGNED-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:32
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v34 offset:116
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v35 offset:120
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v35 offset:121
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v34 offset:117
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v33 offset:112
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v33 offset:113
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v32 offset:108
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v32 offset:109
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v54 offset:120
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v55 offset:118
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v70 offset:124
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v54 offset:120
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v87 offset:118
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v102 offset:124
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v35 offset:120
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v35 offset:121
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v55 offset:122
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v34 offset:116
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v34 offset:117
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v81 offset:116
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(2)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v70, 24, v14
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v71 offset:122
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v113 offset:116
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v112 offset:114
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v80 offset:112
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v81 offset:110
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v81, 24, v14
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v99 offset:114
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v33 offset:112
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v33 offset:113
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v52 offset:112
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v101 offset:110
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v32 offset:108
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v32 offset:109
 ; ALIGNED-NEXT:    buffer_store_dword v30, off, s[0:3], s32 offset:56
 ; ALIGNED-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:60
 ; ALIGNED-NEXT:    buffer_store_dword v29, off, s[0:3], s32 offset:52
 ; ALIGNED-NEXT:    buffer_store_dword v28, off, s[0:3], s32 offset:48
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v30 offset:100
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v31 offset:104
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v31 offset:105
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v30 offset:101
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v29 offset:96
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v29 offset:97
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v28 offset:92
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v28 offset:93
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v98 offset:108
+; ALIGNED-NEXT:    s_waitcnt vmcnt(1)
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v98, 24, v10
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v50 offset:94
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(0)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v30, 24, v10
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v114 offset:96
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 24, v6
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v98, 24, v25
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v32, 24, v19
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v71, 8, v14
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v50, 24, v6
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v83, 24, v23
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v54, 24, v19
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v99, 8, v14
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v31 offset:104
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v31 offset:105
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v31, 8, v10
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v115 offset:94
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 8, v6
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v28 offset:92
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v28 offset:93
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v28, 8, v6
 ; ALIGNED-NEXT:    s_and_b32 vcc_lo, exec_lo, s6
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v99, 8, v25
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v33, 8, v19
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v36, 24, v24
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v37, 8, v24
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v34, 24, v17
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v15
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v82 offset:104
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v82, 24, v11
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v83 offset:102
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v48 offset:108
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v49 offset:106
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v50 offset:100
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v51 offset:98
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v82, 24, v24
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v33, 24, v15
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v86 offset:104
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v53 offset:102
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v100 offset:106
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v100, 24, v11
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v30 offset:100
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v30 offset:101
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v71 offset:100
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v51 offset:98
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v29 offset:96
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v29 offset:97
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v80 offset:96
 ; ALIGNED-NEXT:    buffer_store_dword v26, off, s[0:3], s32 offset:8
 ; ALIGNED-NEXT:    buffer_store_dword v27, off, s[0:3], s32 offset:12
 ; ALIGNED-NEXT:    buffer_store_dword v25, off, s[0:3], s32 offset:4
 ; ALIGNED-NEXT:    buffer_store_dword v24, off, s[0:3], s32
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v26 offset:84
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v27 offset:88
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v27 offset:89
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v26 offset:85
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v25 offset:80
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v25 offset:81
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v24 offset:76
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v24 offset:77
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v24, 24, v7
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v38, 24, v22
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v39, 8, v22
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v100, 24, v23
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v101, 8, v23
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v102, 24, v21
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v103, 8, v21
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v68, 24, v20
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v69, 8, v20
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v97 offset:88
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v97, 24, v7
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v96, 8, v24
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v38, 8, v23
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v84, 24, v21
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 8, v21
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v37, 24, v20
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v70, 8, v20
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v87, 8, v19
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v102, 24, v17
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v35, 8, v17
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v54, 24, v16
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v55, 8, v16
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 8, v15
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v80, 24, v13
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v81, 8, v13
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v28, 24, v12
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v29, 8, v12
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v83, 8, v11
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v48, 24, v9
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v49, 8, v9
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v50, 24, v8
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v51, 8, v8
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v25, 8, v7
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v26, 24, v5
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v55, 24, v16
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v34, 8, v16
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v52, 8, v15
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v101, 24, v13
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v32, 8, v13
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v86, 24, v12
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v53, 8, v12
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v30, 8, v11
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v71, 24, v9
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v51, 8, v9
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v29, 24, v8
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v80, 8, v8
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v115 offset:86
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 8, v7
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v49 offset:92
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v49, 24, v5
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v27 offset:88
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v27 offset:89
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v27, 8, v5
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v64 offset:88
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v64, 24, v4
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v65 offset:86
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v65, 8, v4
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v66 offset:92
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v67 offset:90
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v98 offset:84
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v99 offset:82
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v36 offset:80
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v37 offset:78
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v85 offset:90
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v85, 24, v4
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v26 offset:84
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v26 offset:85
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v26, 8, v4
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v114 offset:84
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v48 offset:82
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v25 offset:80
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v25 offset:81
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v82 offset:80
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v96 offset:78
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v24 offset:76
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v24 offset:77
 ; ALIGNED-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:24
 ; ALIGNED-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:28
 ; ALIGNED-NEXT:    buffer_store_dword v21, off, s[0:3], s32 offset:20
 ; ALIGNED-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:16
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v22 offset:68
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v23 offset:72
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v23 offset:73
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v22 offset:69
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v21 offset:64
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v21 offset:65
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v20 offset:60
-; ALIGNED-NEXT:    flat_store_byte v[84:85], v20 offset:64
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v38 offset:72
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v39 offset:70
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v100 offset:76
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v101 offset:74
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v102 offset:68
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v103 offset:66
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v68 offset:64
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v69 offset:62
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v113 offset:72
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v39 offset:70
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v83 offset:76
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v23 offset:72
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v23 offset:73
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v38 offset:74
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v22 offset:68
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v22 offset:69
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v84 offset:68
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v112 offset:66
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v21 offset:64
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v21 offset:65
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v37 offset:64
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v70 offset:62
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v20 offset:60
+; ALIGNED-NEXT:    flat_store_byte v[64:65], v20 offset:64
 ; ALIGNED-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:104
 ; ALIGNED-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:108
 ; ALIGNED-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:100
 ; ALIGNED-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:96
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v52 offset:56
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v53 offset:54
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v32 offset:60
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v33 offset:58
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v34 offset:52
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v18 offset:52
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v19 offset:56
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v19 offset:57
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v18 offset:53
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v17 offset:48
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v35 offset:50
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v17 offset:49
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v54 offset:48
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v16 offset:44
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v55 offset:46
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v16 offset:45
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v103 offset:56
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v36 offset:54
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v54 offset:60
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v19 offset:56
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v19 offset:57
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v87 offset:58
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v18 offset:52
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v18 offset:53
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v102 offset:52
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v17 offset:48
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v35 offset:50
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v17 offset:49
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v55 offset:48
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v16 offset:44
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v34 offset:46
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v16 offset:45
 ; ALIGNED-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:120
 ; ALIGNED-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:124
 ; ALIGNED-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:116
 ; ALIGNED-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:112
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v14 offset:36
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v70 offset:40
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v71 offset:38
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v15 offset:40
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v113 offset:44
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v15 offset:41
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v112 offset:42
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v14 offset:37
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v80 offset:36
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v13 offset:32
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v81 offset:34
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v13 offset:33
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v28 offset:32
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v12 offset:28
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v29 offset:30
-; ALIGNED-NEXT:    flat_store_byte v[84:85], v12 offset:32
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v14 offset:36
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v81 offset:40
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v99 offset:38
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v15 offset:40
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v33 offset:44
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v15 offset:41
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v52 offset:42
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v14 offset:37
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v101 offset:36
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v13 offset:32
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v32 offset:34
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v13 offset:33
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v86 offset:32
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v12 offset:28
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v53 offset:30
+; ALIGNED-NEXT:    flat_store_byte v[64:65], v12 offset:32
 ; ALIGNED-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:72
 ; ALIGNED-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:76
 ; ALIGNED-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:68
 ; ALIGNED-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:64
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v10 offset:20
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v30 offset:24
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v31 offset:22
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v11 offset:24
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v82 offset:28
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v11 offset:25
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v83 offset:26
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v10 offset:21
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v48 offset:20
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v9 offset:16
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v49 offset:18
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v9 offset:17
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v50 offset:16
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v8 offset:12
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v51 offset:14
-; ALIGNED-NEXT:    flat_store_byte v[84:85], v8 offset:16
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v10 offset:20
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v98 offset:24
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v31 offset:22
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v11 offset:24
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v100 offset:28
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v11 offset:25
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v30 offset:26
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v10 offset:21
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v71 offset:20
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v9 offset:16
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v51 offset:18
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v9 offset:17
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v29 offset:16
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v8 offset:12
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v80 offset:14
+; ALIGNED-NEXT:    flat_store_byte v[64:65], v8 offset:16
 ; ALIGNED-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:88
 ; ALIGNED-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:92
 ; ALIGNED-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:84
 ; ALIGNED-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:80
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v6 offset:4
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v114 offset:8
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v115 offset:6
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v7 offset:8
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v24 offset:12
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v7 offset:9
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v25 offset:10
-; ALIGNED-NEXT:    flat_store_byte v[84:85], v6 offset:8
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v26 offset:4
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v5
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v27 offset:2
-; ALIGNED-NEXT:    flat_store_byte v[84:85], v5 offset:4
-; ALIGNED-NEXT:    flat_store_byte v[86:87], v64
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[84:85], v4 offset:2
-; ALIGNED-NEXT:    flat_store_byte v[84:85], v65 offset:1
-; ALIGNED-NEXT:    flat_store_byte v[84:85], v4
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v6 offset:4
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v50 offset:8
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v28 offset:6
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v7 offset:8
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v97 offset:12
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v7 offset:9
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v115 offset:10
+; ALIGNED-NEXT:    flat_store_byte v[64:65], v6 offset:8
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v49 offset:4
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[68:69], v5
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v27 offset:2
+; ALIGNED-NEXT:    flat_store_byte v[64:65], v5 offset:4
+; ALIGNED-NEXT:    flat_store_byte v[66:67], v85
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[64:65], v4 offset:2
+; ALIGNED-NEXT:    flat_store_byte v[64:65], v26 offset:1
+; ALIGNED-NEXT:    flat_store_byte v[64:65], v4
 ; ALIGNED-NEXT:    s_cbranch_vccnz .LBB2_1
 ; ALIGNED-NEXT:  ; %bb.2: ; %static-memcpy-post-expansion
 ; ALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3664,14 +3666,14 @@ define void @memcpy_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5)
 ; CHECK-NEXT:    buffer_load_dword v66, v2, s[0:3], 0 offen offset:168
 ; CHECK-NEXT:    buffer_load_dword v65, v2, s[0:3], 0 offen offset:164
 ; CHECK-NEXT:    buffer_load_dword v64, v2, s[0:3], 0 offen offset:160
-; CHECK-NEXT:    buffer_load_dword v71, v2, s[0:3], 0 offen offset:156
-; CHECK-NEXT:    buffer_load_dword v70, v2, s[0:3], 0 offen offset:152
-; CHECK-NEXT:    buffer_load_dword v69, v2, s[0:3], 0 offen offset:148
-; CHECK-NEXT:    buffer_load_dword v68, v2, s[0:3], 0 offen offset:144
-; CHECK-NEXT:    buffer_load_dword v83, v2, s[0:3], 0 offen offset:140
-; CHECK-NEXT:    buffer_load_dword v82, v2, s[0:3], 0 offen offset:136
-; CHECK-NEXT:    buffer_load_dword v81, v2, s[0:3], 0 offen offset:132
-; CHECK-NEXT:    buffer_load_dword v80, v2, s[0:3], 0 offen offset:128
+; CHECK-NEXT:    buffer_load_dword v71, v2, s[0:3], 0 offen offset:140
+; CHECK-NEXT:    buffer_load_dword v83, v2, s[0:3], 0 offen offset:156
+; CHECK-NEXT:    buffer_load_dword v82, v2, s[0:3], 0 offen offset:152
+; CHECK-NEXT:    buffer_load_dword v81, v2, s[0:3], 0 offen offset:148
+; CHECK-NEXT:    buffer_load_dword v80, v2, s[0:3], 0 offen offset:144
+; CHECK-NEXT:    buffer_load_dword v70, v2, s[0:3], 0 offen offset:136
+; CHECK-NEXT:    buffer_load_dword v69, v2, s[0:3], 0 offen offset:132
+; CHECK-NEXT:    buffer_load_dword v68, v2, s[0:3], 0 offen offset:128
 ; CHECK-NEXT:    buffer_load_dword v84, v2, s[0:3], 0 offen
 ; CHECK-NEXT:    buffer_load_dword v85, v2, s[0:3], 0 offen offset:4
 ; CHECK-NEXT:    buffer_load_dword v86, v2, s[0:3], 0 offen offset:8
@@ -3700,10 +3702,10 @@ define void @memcpy_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5)
 ; CHECK-NEXT:    flat_store_dwordx4 v[102:103], v[52:55] offset:128
 ; CHECK-NEXT:    s_waitcnt vmcnt(16)
 ; CHECK-NEXT:    flat_store_dwordx4 v[102:103], v[64:67] offset:112
-; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    flat_store_dwordx4 v[102:103], v[68:71] offset:96
+; CHECK-NEXT:    s_waitcnt vmcnt(11)
+; CHECK-NEXT:    flat_store_dwordx4 v[102:103], v[80:83] offset:96
 ; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    flat_store_dwordx4 v[100:101], v[80:83] offset:128
+; CHECK-NEXT:    flat_store_dwordx4 v[100:101], v[68:71] offset:128
 ; CHECK-NEXT:    flat_store_dwordx4 v[102:103], v[48:51] offset:64
 ; CHECK-NEXT:    flat_store_dwordx4 v[102:103], v[35:38] offset:48
 ; CHECK-NEXT:    flat_store_dwordx4 v[102:103], v[15:18] offset:32
@@ -8603,7 +8605,7 @@ define void @memmove_p0_p4_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(4
 ; ALIGNED-NEXT:  .LBB7_2: ; %memmove_fwd_loop
 ; ALIGNED-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; ALIGNED-NEXT:    s_clause 0xf
-; ALIGNED-NEXT:    global_load_dwordx4 v[112:115], v[2:3], off offset:240
+; ALIGNED-NEXT:    global_load_dwordx4 v[96:99], v[2:3], off offset:240
 ; ALIGNED-NEXT:    global_load_dwordx4 v[84:87], v[2:3], off offset:224
 ; ALIGNED-NEXT:    global_load_dwordx4 v[80:83], v[2:3], off offset:208
 ; ALIGNED-NEXT:    global_load_dwordx4 v[68:71], v[2:3], off offset:192
@@ -8617,482 +8619,483 @@ define void @memmove_p0_p4_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(4
 ; ALIGNED-NEXT:    global_load_dwordx4 v[20:23], v[2:3], off offset:64
 ; ALIGNED-NEXT:    global_load_dwordx4 v[16:19], v[2:3], off offset:48
 ; ALIGNED-NEXT:    global_load_dwordx4 v[12:15], v[2:3], off offset:32
-; ALIGNED-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off
 ; ALIGNED-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off offset:16
-; ALIGNED-NEXT:    v_add_co_u32 v96, vcc_lo, v0, 6
-; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v97, null, 0, v1, vcc_lo
-; ALIGNED-NEXT:    v_add_co_u32 v98, vcc_lo, v0, 3
-; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v99, null, 0, v1, vcc_lo
+; ALIGNED-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off
+; ALIGNED-NEXT:    v_add_co_u32 v100, vcc_lo, v0, 6
+; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v101, null, 0, v1, vcc_lo
+; ALIGNED-NEXT:    v_add_co_u32 v102, vcc_lo, v0, 3
+; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v103, null, 0, v1, vcc_lo
 ; ALIGNED-NEXT:    v_add_co_u32 v2, vcc_lo, 0x100, v2
 ; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; ALIGNED-NEXT:    s_add_u32 s4, s4, 0xffffff00
 ; ALIGNED-NEXT:    s_addc_u32 s5, s5, -1
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(15)
-; ALIGNED-NEXT:    buffer_store_dword v114, off, s[0:3], s32 offset:168
-; ALIGNED-NEXT:    buffer_store_dword v115, off, s[0:3], s32 offset:172
-; ALIGNED-NEXT:    buffer_store_dword v113, off, s[0:3], s32 offset:164
-; ALIGNED-NEXT:    buffer_store_dword v112, off, s[0:3], s32 offset:160
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v114 offset:244
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v100, 24, v114
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v101, 8, v114
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v115 offset:248
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v102, 24, v115
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v115 offset:249
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v103, 8, v115
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v114 offset:245
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v113 offset:240
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v113 offset:241
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v112 offset:236
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v112 offset:237
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 24, v113
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 8, v113
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v112
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 8, v112
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v100 offset:248
+; ALIGNED-NEXT:    buffer_store_dword v98, off, s[0:3], s32 offset:168
+; ALIGNED-NEXT:    buffer_store_dword v99, off, s[0:3], s32 offset:172
+; ALIGNED-NEXT:    buffer_store_dword v97, off, s[0:3], s32 offset:164
+; ALIGNED-NEXT:    buffer_store_dword v96, off, s[0:3], s32 offset:160
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 24, v98
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 8, v98
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 24, v99
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v98 offset:244
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v99 offset:248
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v99 offset:249
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v99, 8, v99
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v98 offset:245
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v98, 24, v97
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v97 offset:240
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 8, v97
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v97 offset:241
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v97, 24, v96
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v96 offset:236
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v96 offset:237
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v96, 8, v96
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v112 offset:248
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(14)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v100, 24, v86
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v101 offset:246
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v101, 8, v86
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v102 offset:252
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v102, 24, v87
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v103 offset:250
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v103, 8, v87
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v115 offset:244
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 24, v85
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v114 offset:242
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 8, v85
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v113 offset:240
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v84
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v112 offset:238
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 8, v84
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 24, v86
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v113 offset:246
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 8, v86
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v114 offset:252
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 24, v87
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v99 offset:250
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v99, 8, v87
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v98 offset:244
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v98, 24, v85
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v115 offset:242
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 8, v85
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v97 offset:240
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v97, 24, v84
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v96 offset:238
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v96, 8, v84
 ; ALIGNED-NEXT:    buffer_store_dword v86, off, s[0:3], s32 offset:184
 ; ALIGNED-NEXT:    buffer_store_dword v87, off, s[0:3], s32 offset:188
 ; ALIGNED-NEXT:    buffer_store_dword v85, off, s[0:3], s32 offset:180
 ; ALIGNED-NEXT:    buffer_store_dword v84, off, s[0:3], s32 offset:176
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v86 offset:228
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v87 offset:232
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v87 offset:233
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v86 offset:229
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v85 offset:224
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v85 offset:225
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v84 offset:220
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v84 offset:221
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v112 offset:232
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(13)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v84, 24, v82
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v85, 8, v82
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v86, 24, v83
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 24, v82
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v113 offset:230
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 8, v82
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v114 offset:236
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 24, v83
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v87 offset:232
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v87 offset:233
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v87, 8, v83
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v100 offset:232
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v100, 24, v81
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v101 offset:230
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v101, 8, v81
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v102 offset:236
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v102, 24, v80
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v103 offset:234
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v103, 8, v80
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v115 offset:228
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v99 offset:234
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v99, 24, v81
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v86 offset:228
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v86 offset:229
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v86, 8, v81
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v98 offset:228
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v98, 24, v80
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v115 offset:226
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 8, v80
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v85 offset:224
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v85 offset:225
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(12)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 24, v70
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v114 offset:226
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 8, v70
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v113 offset:224
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v71
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v112 offset:222
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 8, v71
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v85, 24, v70
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v97 offset:224
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v97, 8, v70
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v96 offset:222
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v96, 24, v71
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v84 offset:220
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v84 offset:221
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v84, 8, v71
 ; ALIGNED-NEXT:    buffer_store_dword v82, off, s[0:3], s32 offset:136
 ; ALIGNED-NEXT:    buffer_store_dword v83, off, s[0:3], s32 offset:140
 ; ALIGNED-NEXT:    buffer_store_dword v81, off, s[0:3], s32 offset:132
 ; ALIGNED-NEXT:    buffer_store_dword v80, off, s[0:3], s32 offset:128
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v82 offset:212
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v83 offset:216
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v83 offset:217
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v82 offset:213
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v81 offset:208
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v81 offset:209
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v80 offset:204
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v80 offset:205
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v80, 24, v69
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v81, 8, v69
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v82, 24, v68
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v112 offset:216
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 24, v69
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v113 offset:214
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 8, v69
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v83 offset:216
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v83 offset:217
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v83, 8, v68
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v84 offset:216
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v114 offset:220
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 24, v68
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v87 offset:218
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(11)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v84, 24, v66
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v85 offset:214
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v85, 8, v66
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v86 offset:220
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v86, 24, v67
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v87 offset:218
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v87, 8, v67
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v100 offset:212
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v100, 24, v65
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v101 offset:210
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v101, 8, v65
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v102 offset:208
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v102, 24, v64
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v103 offset:206
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v103, 8, v64
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v87, 24, v66
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v82 offset:212
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v82 offset:213
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v82, 8, v66
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v99 offset:212
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v99, 24, v67
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v86 offset:210
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v86, 8, v67
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v81 offset:208
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v81 offset:209
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v81, 24, v65
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v98 offset:208
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v98, 8, v65
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v115 offset:206
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 24, v64
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v80 offset:204
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v80 offset:205
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v80, 8, v64
 ; ALIGNED-NEXT:    buffer_store_dword v70, off, s[0:3], s32 offset:152
 ; ALIGNED-NEXT:    buffer_store_dword v71, off, s[0:3], s32 offset:156
 ; ALIGNED-NEXT:    buffer_store_dword v69, off, s[0:3], s32 offset:148
 ; ALIGNED-NEXT:    buffer_store_dword v68, off, s[0:3], s32 offset:144
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v70 offset:196
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v71 offset:200
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v71 offset:201
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v70 offset:197
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v69 offset:192
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v69 offset:193
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v68 offset:188
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v68 offset:189
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v85 offset:200
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(10)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v68, 24, v54
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v69, 8, v54
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v70, 24, v55
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v85, 24, v54
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v97 offset:198
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v97, 8, v54
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v96 offset:204
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v96, 24, v55
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v71 offset:200
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v71 offset:201
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v71, 8, v55
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v115 offset:200
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 24, v52
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v114 offset:198
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 8, v52
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v113 offset:204
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v53
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v112 offset:202
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 8, v53
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v80 offset:196
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v84 offset:202
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v84, 24, v52
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v70 offset:196
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v70 offset:197
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v70, 8, v52
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v112 offset:196
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 24, v53
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v113 offset:194
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 8, v53
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v83 offset:190
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(9)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v80, 24, v50
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v81 offset:194
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v81, 8, v50
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v82 offset:192
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v82, 24, v51
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v83 offset:190
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v83, 8, v51
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v83, 24, v51
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v69 offset:192
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v69 offset:193
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v69, 24, v50
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v114 offset:192
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 8, v50
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v68 offset:188
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v68 offset:189
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v68, 8, v51
 ; ALIGNED-NEXT:    buffer_store_dword v66, off, s[0:3], s32 offset:232
 ; ALIGNED-NEXT:    buffer_store_dword v67, off, s[0:3], s32 offset:236
 ; ALIGNED-NEXT:    buffer_store_dword v65, off, s[0:3], s32 offset:228
 ; ALIGNED-NEXT:    buffer_store_dword v64, off, s[0:3], s32 offset:224
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v66 offset:180
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v67 offset:184
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v67 offset:185
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v66 offset:181
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v65 offset:176
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v65 offset:177
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v64 offset:172
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v64 offset:173
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v64, 24, v49
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v65, 8, v49
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v66, 24, v48
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v87 offset:184
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v87, 24, v49
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v82 offset:182
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v82, 8, v49
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v99 offset:188
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v99, 24, v48
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v67 offset:184
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v67 offset:185
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v67, 8, v48
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v84 offset:184
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v86 offset:186
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(8)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v84, 24, v38
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v85 offset:182
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v85, 8, v38
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v86 offset:188
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v86, 24, v39
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v87 offset:186
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v87, 8, v39
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v100 offset:180
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v100, 24, v37
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v101 offset:178
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v101, 8, v37
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v102 offset:176
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v102, 24, v36
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v103 offset:174
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v103, 8, v36
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v86, 24, v38
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v66 offset:180
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v66 offset:181
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v66, 8, v38
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v81 offset:180
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v81, 24, v39
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v98 offset:178
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v98, 8, v39
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v65 offset:176
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v65 offset:177
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v65, 24, v37
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v115 offset:176
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 8, v37
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v80 offset:174
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v80, 24, v36
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v64 offset:172
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v64 offset:173
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v64, 8, v36
 ; ALIGNED-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:252
 ; ALIGNED-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:248
 ; ALIGNED-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:244
 ; ALIGNED-NEXT:    buffer_store_dword v52, off, s[0:3], s32 offset:240
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v54 offset:164
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v54 offset:165
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v55 offset:168
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v55 offset:169
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v52 offset:156
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v52 offset:157
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v53 offset:160
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v53 offset:161
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v85 offset:168
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(7)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v52, 24, v34
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v53, 8, v34
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v85, 24, v34
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v97 offset:166
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v97, 8, v34
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v54 offset:164
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v54 offset:165
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v54, 24, v35
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v55, 8, v35
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v68 offset:168
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v68, 24, v33
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v69 offset:166
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v69, 8, v33
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v70 offset:172
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v70, 24, v32
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v71 offset:170
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v71, 8, v32
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v115 offset:160
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v114 offset:158
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v113 offset:164
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v112 offset:162
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v96 offset:172
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v96, 8, v35
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v71 offset:170
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v71, 24, v33
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v55 offset:168
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v55 offset:169
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v55, 8, v33
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v84 offset:160
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v84, 24, v32
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v70 offset:158
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v70, 8, v32
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v52 offset:156
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v52 offset:157
+; ALIGNED-NEXT:    s_waitcnt vmcnt(6)
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v52, 24, v30
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v112 offset:164
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 8, v30
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v113 offset:162
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v53 offset:160
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v53 offset:161
 ; ALIGNED-NEXT:    buffer_store_dword v50, off, s[0:3], s32 offset:200
 ; ALIGNED-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:204
 ; ALIGNED-NEXT:    buffer_store_dword v49, off, s[0:3], s32 offset:196
 ; ALIGNED-NEXT:    buffer_store_dword v48, off, s[0:3], s32 offset:192
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v50 offset:148
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v51 offset:152
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v51 offset:153
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v50 offset:149
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v49 offset:144
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v49 offset:145
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v48 offset:140
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v48 offset:141
-; ALIGNED-NEXT:    s_waitcnt vmcnt(6)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v48, 24, v29
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v49, 8, v29
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v50, 24, v28
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 24, v30
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 8, v30
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v83 offset:156
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v83, 24, v28
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v31
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 8, v31
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v51 offset:152
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v51 offset:153
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v51, 8, v28
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v80 offset:152
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v53, 8, v31
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v69 offset:152
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v69, 24, v29
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v114 offset:150
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 8, v29
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v68 offset:154
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(5)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v80, 24, v26
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v81 offset:150
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v81, 8, v26
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v82 offset:156
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v82, 24, v27
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v83 offset:154
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v83, 8, v27
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v64 offset:148
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v65 offset:146
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v66 offset:144
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v67 offset:142
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v68, 24, v26
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v50 offset:148
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v50 offset:149
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v50, 8, v26
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v87 offset:148
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v87, 24, v27
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v82 offset:146
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v82, 8, v27
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v49 offset:144
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v49 offset:145
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v99 offset:144
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v67 offset:142
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v48 offset:140
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v48 offset:141
 ; ALIGNED-NEXT:    buffer_store_dword v38, off, s[0:3], s32 offset:216
 ; ALIGNED-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:220
 ; ALIGNED-NEXT:    buffer_store_dword v37, off, s[0:3], s32 offset:212
 ; ALIGNED-NEXT:    buffer_store_dword v36, off, s[0:3], s32 offset:208
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v38 offset:132
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v39 offset:136
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v39 offset:137
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v38 offset:133
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v37 offset:128
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v37 offset:129
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v36 offset:124
-; ALIGNED-NEXT:    flat_store_byte v[0:1], v36 offset:128
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v86 offset:136
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(4)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v36, 24, v22
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v84 offset:136
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v85 offset:134
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v86 offset:140
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v87 offset:138
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v100 offset:132
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v86, 24, v22
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v66 offset:134
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v81 offset:140
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v39 offset:136
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v39 offset:137
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v98 offset:138
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v38 offset:132
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v38 offset:133
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v65 offset:132
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v115 offset:130
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v37 offset:128
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v37 offset:129
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(3)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v100, 24, v18
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v101 offset:130
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v102 offset:128
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v103 offset:126
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v37, 24, v18
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v80 offset:128
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v64 offset:126
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v36 offset:124
+; ALIGNED-NEXT:    flat_store_byte v[0:1], v36 offset:128
 ; ALIGNED-NEXT:    buffer_store_dword v34, off, s[0:3], s32 offset:40
 ; ALIGNED-NEXT:    buffer_store_dword v35, off, s[0:3], s32 offset:44
 ; ALIGNED-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:36
 ; ALIGNED-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:32
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v34 offset:116
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v35 offset:120
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v35 offset:121
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v34 offset:117
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v33 offset:112
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v33 offset:113
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v32 offset:108
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v32 offset:109
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v52 offset:120
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v85 offset:120
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v97 offset:118
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v54 offset:124
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v35 offset:120
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v35 offset:121
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v96 offset:122
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(2)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v52, 24, v14
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v53 offset:118
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v54 offset:124
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v55 offset:122
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v68 offset:116
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v69 offset:114
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v70 offset:112
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v71 offset:110
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v96, 24, v14
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v34 offset:116
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v34 offset:117
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v71 offset:116
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v55 offset:114
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v33 offset:112
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v33 offset:113
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v84 offset:112
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v70 offset:110
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v32 offset:108
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v32 offset:109
 ; ALIGNED-NEXT:    buffer_store_dword v30, off, s[0:3], s32 offset:56
 ; ALIGNED-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:60
 ; ALIGNED-NEXT:    buffer_store_dword v29, off, s[0:3], s32 offset:52
 ; ALIGNED-NEXT:    buffer_store_dword v28, off, s[0:3], s32 offset:48
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v30 offset:100
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v31 offset:104
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v31 offset:105
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v30 offset:101
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v29 offset:96
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v29 offset:97
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v28 offset:92
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v28 offset:93
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v52 offset:104
+; ALIGNED-NEXT:    s_waitcnt vmcnt(1)
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v52, 24, v10
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v29 offset:96
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v29 offset:97
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(0)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v28, 24, v10
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v48 offset:100
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v48, 24, v6
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v37, 8, v22
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v101, 8, v18
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v53, 8, v14
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v29, 8, v10
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v49 offset:98
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v49, 8, v6
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v64, 24, v25
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v38, 24, v23
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v102, 24, v19
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v54, 24, v15
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v30, 24, v11
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v50 offset:96
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v50, 24, v7
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v65, 8, v25
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v66, 24, v24
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v67, 8, v24
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v29, 24, v6
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v66, 8, v22
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v80, 8, v18
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v34, 8, v14
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v112 offset:102
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 8, v10
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v83 offset:96
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v83, 8, v6
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v49, 24, v25
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v81, 24, v23
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v64, 24, v19
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v71, 24, v15
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v113 offset:108
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v11
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v51 offset:94
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v51, 24, v7
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v99, 8, v25
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v67, 24, v24
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v48, 8, v24
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v39, 8, v23
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v84, 24, v21
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v85, 8, v21
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v86, 24, v20
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v87, 8, v20
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v103, 8, v19
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v32, 24, v17
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v33, 8, v17
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v34, 24, v16
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v98, 24, v21
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v38, 8, v21
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v65, 24, v20
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 8, v20
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v36, 8, v19
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v85, 24, v17
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v97, 8, v17
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v54, 24, v16
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v35, 8, v16
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v55, 8, v15
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v68, 24, v13
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v69, 8, v13
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v33, 24, v13
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v84, 8, v13
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v70, 24, v12
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v71, 8, v12
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v32, 8, v12
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v31 offset:104
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v31 offset:105
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v31, 8, v11
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v115 offset:104
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 24, v9
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v114 offset:102
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 8, v9
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v113 offset:108
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v8
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v112 offset:106
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 8, v8
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v51 offset:94
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v51, 8, v7
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v53 offset:106
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v53, 24, v9
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v30 offset:100
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v30 offset:101
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v30, 8, v9
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v69 offset:100
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v69, 24, v8
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v114 offset:98
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 8, v8
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v28 offset:92
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v28 offset:93
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v28, 8, v7
 ; ALIGNED-NEXT:    buffer_store_dword v26, off, s[0:3], s32 offset:8
 ; ALIGNED-NEXT:    buffer_store_dword v27, off, s[0:3], s32 offset:12
 ; ALIGNED-NEXT:    buffer_store_dword v25, off, s[0:3], s32 offset:4
 ; ALIGNED-NEXT:    buffer_store_dword v24, off, s[0:3], s32
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v80 offset:88
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v81 offset:86
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v82 offset:92
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v83 offset:90
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v83, 8, v4
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v26 offset:84
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v27 offset:88
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v27 offset:89
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v26 offset:85
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v64 offset:84
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v25 offset:80
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v65 offset:82
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v25 offset:81
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v66 offset:80
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v24 offset:76
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v67 offset:78
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v24 offset:77
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v68 offset:88
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v50 offset:86
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v87 offset:92
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v27 offset:88
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v27 offset:89
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v27, 8, v4
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v26 offset:84
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v82 offset:90
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v26 offset:85
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v49 offset:84
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v25 offset:80
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v99 offset:82
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v25 offset:81
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v67 offset:80
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v24 offset:76
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v48 offset:78
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v24 offset:77
 ; ALIGNED-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:24
 ; ALIGNED-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:28
 ; ALIGNED-NEXT:    buffer_store_dword v21, off, s[0:3], s32 offset:20
 ; ALIGNED-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:16
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v22 offset:68
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v36 offset:72
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v37 offset:70
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v23 offset:72
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v38 offset:76
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v23 offset:73
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v39 offset:74
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v22 offset:69
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v84 offset:68
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v21 offset:64
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v85 offset:66
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v21 offset:65
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v86 offset:64
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v20 offset:60
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v87 offset:62
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v22 offset:68
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v86 offset:72
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v66 offset:70
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v23 offset:72
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v81 offset:76
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v23 offset:73
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v39 offset:74
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v22 offset:69
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v98 offset:68
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v21 offset:64
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v38 offset:66
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v21 offset:65
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v65 offset:64
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v20 offset:60
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v115 offset:62
 ; ALIGNED-NEXT:    flat_store_byte v[0:1], v20 offset:64
 ; ALIGNED-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:104
 ; ALIGNED-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:108
 ; ALIGNED-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:100
 ; ALIGNED-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:96
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v18 offset:52
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v100 offset:56
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v101 offset:54
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v19 offset:56
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v102 offset:60
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v19 offset:57
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v103 offset:58
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v18 offset:53
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v32 offset:52
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v17 offset:48
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v33 offset:50
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v17 offset:49
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v34 offset:48
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v16 offset:44
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v35 offset:46
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v16 offset:45
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v18 offset:52
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v37 offset:56
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v80 offset:54
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v19 offset:56
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v64 offset:60
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v19 offset:57
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v36 offset:58
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v18 offset:53
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v85 offset:52
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v17 offset:48
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v97 offset:50
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v17 offset:49
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v54 offset:48
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v16 offset:44
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v35 offset:46
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v16 offset:45
 ; ALIGNED-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:120
 ; ALIGNED-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:124
 ; ALIGNED-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:116
 ; ALIGNED-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:112
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v14 offset:36
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v52 offset:40
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v53 offset:38
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v15 offset:40
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v54 offset:44
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v15 offset:41
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v55 offset:42
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v14 offset:37
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v68 offset:36
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v13 offset:32
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v69 offset:34
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v13 offset:33
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v70 offset:32
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v12 offset:28
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v71 offset:30
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v14 offset:36
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v96 offset:40
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v34 offset:38
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v15 offset:40
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v71 offset:44
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v15 offset:41
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v55 offset:42
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v14 offset:37
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v33 offset:36
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v13 offset:32
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v84 offset:34
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v13 offset:33
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v70 offset:32
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v12 offset:28
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v32 offset:30
 ; ALIGNED-NEXT:    flat_store_byte v[0:1], v12 offset:32
 ; ALIGNED-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:72
 ; ALIGNED-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:76
 ; ALIGNED-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:68
 ; ALIGNED-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:64
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v10 offset:20
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v28 offset:24
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v29 offset:22
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v11 offset:24
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v30 offset:28
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v11 offset:25
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v31 offset:26
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v10 offset:21
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v115 offset:20
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v9 offset:16
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v114 offset:18
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v9 offset:17
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v113 offset:16
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v8 offset:12
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v112 offset:14
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v10 offset:20
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v52 offset:24
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v112 offset:22
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v11 offset:24
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v113 offset:28
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v11 offset:25
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v31 offset:26
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v10 offset:21
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v53 offset:20
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v9 offset:16
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v30 offset:18
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v9 offset:17
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v69 offset:16
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v8 offset:12
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v114 offset:14
 ; ALIGNED-NEXT:    flat_store_byte v[0:1], v8 offset:16
 ; ALIGNED-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:88
 ; ALIGNED-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:92
 ; ALIGNED-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:84
 ; ALIGNED-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:80
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v6 offset:4
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v48 offset:8
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v49 offset:6
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v7 offset:8
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v50 offset:12
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v7 offset:9
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v51 offset:10
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v6 offset:4
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v29 offset:8
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v83 offset:6
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v7 offset:8
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v51 offset:12
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v7 offset:9
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v28 offset:10
 ; ALIGNED-NEXT:    flat_store_byte v[0:1], v6 offset:8
 ; ALIGNED-NEXT:    flat_store_byte v[0:1], v5 offset:4
 ; ALIGNED-NEXT:    flat_store_byte_d16_hi v[0:1], v4 offset:2
-; ALIGNED-NEXT:    flat_store_byte v[0:1], v83 offset:1
+; ALIGNED-NEXT:    flat_store_byte v[0:1], v27 offset:1
 ; ALIGNED-NEXT:    flat_store_byte v[0:1], v4
 ; ALIGNED-NEXT:    v_add_co_u32 v0, vcc_lo, 0x100, v0
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v80, 24, v5
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v68, 24, v5
 ; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v81, 8, v5
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v50, 8, v5
 ; ALIGNED-NEXT:    s_cmp_lg_u64 s[4:5], 0
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v82, 24, v4
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v80 offset:4
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v5
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v81 offset:2
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v82
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v87, 24, v4
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v68 offset:4
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[100:101], v5
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v50 offset:2
+; ALIGNED-NEXT:    flat_store_byte v[102:103], v87
 ; ALIGNED-NEXT:    s_cbranch_scc1 .LBB7_2
 ; ALIGNED-NEXT:  .LBB7_3: ; %Flow16
 ; ALIGNED-NEXT:    s_andn2_saveexec_b32 s6, s6
@@ -9105,7 +9108,7 @@ define void @memmove_p0_p4_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(4
 ; ALIGNED-NEXT:  .LBB7_5: ; %memmove_bwd_loop
 ; ALIGNED-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; ALIGNED-NEXT:    s_clause 0xf
-; ALIGNED-NEXT:    global_load_dwordx4 v[100:103], v[2:3], off offset:2032
+; ALIGNED-NEXT:    global_load_dwordx4 v[96:99], v[2:3], off offset:2032
 ; ALIGNED-NEXT:    global_load_dwordx4 v[84:87], v[2:3], off offset:2016
 ; ALIGNED-NEXT:    global_load_dwordx4 v[80:83], v[2:3], off offset:2000
 ; ALIGNED-NEXT:    global_load_dwordx4 v[68:71], v[2:3], off offset:1984
@@ -9119,481 +9122,483 @@ define void @memmove_p0_p4_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(4
 ; ALIGNED-NEXT:    global_load_dwordx4 v[20:23], v[2:3], off offset:1856
 ; ALIGNED-NEXT:    global_load_dwordx4 v[16:19], v[2:3], off offset:1840
 ; ALIGNED-NEXT:    global_load_dwordx4 v[12:15], v[2:3], off offset:1824
-; ALIGNED-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off offset:1792
 ; ALIGNED-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off offset:1808
-; ALIGNED-NEXT:    v_add_co_u32 v96, vcc_lo, v0, 6
-; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v97, null, 0, v1, vcc_lo
-; ALIGNED-NEXT:    v_add_co_u32 v98, vcc_lo, v0, 3
-; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v99, null, 0, v1, vcc_lo
+; ALIGNED-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off offset:1792
+; ALIGNED-NEXT:    v_add_co_u32 v100, vcc_lo, v0, 3
+; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v101, null, 0, v1, vcc_lo
+; ALIGNED-NEXT:    v_add_co_u32 v102, vcc_lo, v0, 6
+; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v103, null, 0, v1, vcc_lo
 ; ALIGNED-NEXT:    v_add_co_u32 v2, vcc_lo, 0xffffff00, v2
 ; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v3, null, -1, v3, vcc_lo
 ; ALIGNED-NEXT:    s_add_u32 s4, s4, 0x100
 ; ALIGNED-NEXT:    s_addc_u32 s5, s5, 0
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(15)
-; ALIGNED-NEXT:    buffer_store_dword v102, off, s[0:3], s32 offset:296
-; ALIGNED-NEXT:    buffer_store_dword v103, off, s[0:3], s32 offset:300
-; ALIGNED-NEXT:    buffer_store_dword v101, off, s[0:3], s32 offset:292
-; ALIGNED-NEXT:    buffer_store_dword v100, off, s[0:3], s32 offset:288
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 24, v102
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 8, v102
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v103
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 8, v103
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v102 offset:244
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v103 offset:248
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v103 offset:249
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v102 offset:245
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v101 offset:240
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v101 offset:241
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v100 offset:236
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v100 offset:237
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v103, 24, v101
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v102, 8, v101
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v101, 24, v100
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v100, 8, v100
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v115 offset:248
+; ALIGNED-NEXT:    buffer_store_dword v98, off, s[0:3], s32 offset:296
+; ALIGNED-NEXT:    buffer_store_dword v99, off, s[0:3], s32 offset:300
+; ALIGNED-NEXT:    buffer_store_dword v97, off, s[0:3], s32 offset:292
+; ALIGNED-NEXT:    buffer_store_dword v96, off, s[0:3], s32 offset:288
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 24, v98
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v98 offset:244
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v98 offset:245
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v98, 8, v98
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v99
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v99 offset:248
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v99 offset:249
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v99, 8, v99
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 24, v97
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v97 offset:240
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v97 offset:241
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v97, 8, v97
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 24, v96
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v96 offset:236
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v96 offset:237
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v96, 8, v96
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v112 offset:248
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(14)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 24, v86
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v114 offset:246
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 8, v86
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v113 offset:252
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 24, v86
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v98 offset:246
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v98, 8, v86
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v113 offset:252
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v87
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v112 offset:250
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 8, v87
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v103 offset:244
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v103, 24, v85
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v102 offset:242
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v102, 8, v85
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v101 offset:240
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v101, 24, v84
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v100 offset:238
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v100, 8, v84
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v99 offset:250
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v99, 8, v87
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v114 offset:244
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 24, v85
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v97 offset:242
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v97, 8, v85
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v115 offset:240
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 24, v84
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v96 offset:238
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v96, 8, v84
 ; ALIGNED-NEXT:    buffer_store_dword v86, off, s[0:3], s32 offset:312
 ; ALIGNED-NEXT:    buffer_store_dword v87, off, s[0:3], s32 offset:316
 ; ALIGNED-NEXT:    buffer_store_dword v85, off, s[0:3], s32 offset:308
 ; ALIGNED-NEXT:    buffer_store_dword v84, off, s[0:3], s32 offset:304
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v86 offset:228
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v87 offset:232
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v87 offset:233
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v86 offset:229
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v85 offset:224
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v85 offset:225
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v84 offset:220
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v84 offset:221
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v112 offset:232
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(13)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v84, 24, v82
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v85, 8, v82
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v86, 24, v83
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 24, v82
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v98 offset:230
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v98, 8, v82
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v113 offset:236
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v83
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v87 offset:232
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v87 offset:233
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v87, 8, v83
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v115 offset:232
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 24, v81
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v114 offset:230
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 8, v81
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v113 offset:236
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v80
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v112 offset:234
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 8, v80
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v103 offset:228
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v99 offset:234
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v99, 24, v81
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v86 offset:228
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v86 offset:229
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v86, 8, v81
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v114 offset:228
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 24, v80
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v97 offset:226
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v97, 8, v80
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v85 offset:224
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v85 offset:225
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(12)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v103, 24, v70
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v102 offset:226
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v102, 8, v70
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v101 offset:224
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v101, 24, v71
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v100 offset:222
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v100, 8, v71
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v85, 24, v70
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v115 offset:224
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 8, v70
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v96 offset:222
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v96, 24, v71
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v84 offset:220
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v84 offset:221
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v84, 8, v71
 ; ALIGNED-NEXT:    buffer_store_dword v82, off, s[0:3], s32 offset:264
 ; ALIGNED-NEXT:    buffer_store_dword v83, off, s[0:3], s32 offset:268
 ; ALIGNED-NEXT:    buffer_store_dword v81, off, s[0:3], s32 offset:260
 ; ALIGNED-NEXT:    buffer_store_dword v80, off, s[0:3], s32 offset:256
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v82 offset:212
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v83 offset:216
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v83 offset:217
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v82 offset:213
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v81 offset:208
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v81 offset:209
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v80 offset:204
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v80 offset:205
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v80, 24, v69
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v81, 8, v69
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v82, 24, v68
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v112 offset:216
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 24, v69
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v98 offset:214
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v98, 8, v69
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v83 offset:216
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v83 offset:217
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v83, 8, v68
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v84 offset:216
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v113 offset:220
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v68
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v87 offset:218
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(11)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v84, 24, v66
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v85 offset:214
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v85, 8, v66
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v86 offset:220
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v86, 24, v67
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v87 offset:218
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v87, 8, v67
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v115 offset:212
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 24, v65
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v114 offset:210
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v87, 24, v66
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v82 offset:212
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v82 offset:213
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v82, 8, v66
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v99 offset:212
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v99, 24, v67
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v86 offset:210
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v86, 8, v67
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v81 offset:208
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v81 offset:209
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v81, 24, v65
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v114 offset:208
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 8, v65
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v113 offset:208
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v64
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v112 offset:206
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 8, v64
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v97 offset:206
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v97, 24, v64
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v80 offset:204
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v80 offset:205
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v80, 8, v64
 ; ALIGNED-NEXT:    buffer_store_dword v70, off, s[0:3], s32 offset:280
 ; ALIGNED-NEXT:    buffer_store_dword v71, off, s[0:3], s32 offset:284
 ; ALIGNED-NEXT:    buffer_store_dword v69, off, s[0:3], s32 offset:276
 ; ALIGNED-NEXT:    buffer_store_dword v68, off, s[0:3], s32 offset:272
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v70 offset:196
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v71 offset:200
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v71 offset:201
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v70 offset:197
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v69 offset:192
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v69 offset:193
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v68 offset:188
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v68 offset:189
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v85 offset:200
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(10)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v68, 24, v54
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v69, 8, v54
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v70, 24, v55
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v85, 24, v54
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v115 offset:198
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 8, v54
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v96 offset:204
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v96, 24, v55
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v71 offset:200
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v71 offset:201
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v71, 8, v55
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v103 offset:200
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v103, 24, v53
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v102 offset:198
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v102, 8, v53
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v101 offset:204
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v101, 24, v52
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v100 offset:202
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v100, 8, v52
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v80 offset:196
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v84 offset:202
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v84, 24, v53
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v70 offset:196
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v70 offset:197
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v70, 8, v53
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v112 offset:196
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 24, v52
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v98 offset:194
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v98, 8, v52
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v83 offset:190
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(9)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v80, 24, v50
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v81 offset:194
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v81, 8, v50
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v82 offset:192
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v82, 24, v51
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v83 offset:190
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v83, 8, v51
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v83, 24, v51
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v69 offset:192
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v69 offset:193
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v69, 24, v50
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v113 offset:192
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 8, v50
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v68 offset:188
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v68 offset:189
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v68, 8, v51
 ; ALIGNED-NEXT:    buffer_store_dword v66, off, s[0:3], s32 offset:360
 ; ALIGNED-NEXT:    buffer_store_dword v67, off, s[0:3], s32 offset:364
 ; ALIGNED-NEXT:    buffer_store_dword v65, off, s[0:3], s32 offset:356
 ; ALIGNED-NEXT:    buffer_store_dword v64, off, s[0:3], s32 offset:352
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v66 offset:180
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v67 offset:184
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v67 offset:185
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v66 offset:181
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v65 offset:176
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v65 offset:177
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v64 offset:172
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v64 offset:173
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v64, 24, v49
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v65, 8, v49
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v66, 24, v48
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v87 offset:184
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v87, 24, v49
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v82 offset:182
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v82, 8, v49
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v99 offset:188
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v99, 24, v48
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v67 offset:184
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v67 offset:185
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v67, 8, v48
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v84 offset:184
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v86 offset:186
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(8)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v84, 24, v38
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v85 offset:182
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v85, 8, v38
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v86 offset:188
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v86, 24, v39
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v87 offset:186
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v87, 8, v39
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v115 offset:180
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 24, v37
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v114 offset:178
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 8, v37
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v113 offset:176
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v36
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v112 offset:174
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 8, v36
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v86, 24, v38
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v66 offset:180
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v66 offset:181
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v66, 8, v38
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v81 offset:180
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v81, 24, v39
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v114 offset:178
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 8, v39
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v65 offset:176
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v65 offset:177
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v65, 24, v37
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v97 offset:176
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v97, 8, v37
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v80 offset:174
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v80, 24, v36
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v64 offset:172
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v64 offset:173
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v64, 8, v36
 ; ALIGNED-NEXT:    buffer_store_dword v54, off, s[0:3], s32 offset:376
 ; ALIGNED-NEXT:    buffer_store_dword v55, off, s[0:3], s32 offset:380
 ; ALIGNED-NEXT:    buffer_store_dword v53, off, s[0:3], s32 offset:372
 ; ALIGNED-NEXT:    buffer_store_dword v52, off, s[0:3], s32 offset:368
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v54 offset:164
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v55 offset:168
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v55 offset:169
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v54 offset:165
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v53 offset:160
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v53 offset:161
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v52 offset:156
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v52 offset:157
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v55 offset:168
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v55 offset:169
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(7)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v52, 24, v34
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v53, 8, v34
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v54, 24, v35
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v55, 8, v35
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v68 offset:168
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v68, 24, v33
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v69 offset:166
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v69, 8, v33
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v70 offset:172
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v70, 24, v32
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v71 offset:170
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v71, 8, v32
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v103 offset:164
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v102 offset:162
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v101 offset:160
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v100 offset:158
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v85 offset:168
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v85, 24, v34
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v115 offset:166
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 8, v34
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v96 offset:172
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v96, 24, v35
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v71 offset:170
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v71, 24, v33
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v54 offset:164
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v54 offset:165
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v54, 8, v33
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v84 offset:164
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v84, 24, v32
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v70 offset:162
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v70, 8, v32
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v53 offset:160
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v53 offset:161
+; ALIGNED-NEXT:    s_waitcnt vmcnt(6)
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v53, 24, v30
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v112 offset:160
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 8, v30
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v98 offset:158
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v52 offset:156
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v52 offset:157
 ; ALIGNED-NEXT:    buffer_store_dword v50, off, s[0:3], s32 offset:328
 ; ALIGNED-NEXT:    buffer_store_dword v51, off, s[0:3], s32 offset:332
 ; ALIGNED-NEXT:    buffer_store_dword v49, off, s[0:3], s32 offset:324
 ; ALIGNED-NEXT:    buffer_store_dword v48, off, s[0:3], s32 offset:320
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v50 offset:148
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v51 offset:152
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v51 offset:153
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v50 offset:149
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v49 offset:144
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v49 offset:145
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v48 offset:140
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v48 offset:141
-; ALIGNED-NEXT:    s_waitcnt vmcnt(6)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v48, 24, v29
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v49, 8, v29
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v50, 24, v28
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v103, 24, v30
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v102, 8, v30
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v101, 24, v31
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v100, 8, v31
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v83 offset:156
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v83, 24, v28
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v98, 24, v31
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v51 offset:152
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v51 offset:153
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v51, 8, v28
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v80 offset:152
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v52, 8, v31
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v69 offset:152
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v69, 24, v29
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v113 offset:150
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 8, v29
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v68 offset:154
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(5)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v80, 24, v26
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v81 offset:150
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v82 offset:156
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v83 offset:154
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v64 offset:148
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v65 offset:146
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v66 offset:144
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v67 offset:142
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v68, 24, v26
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v50 offset:148
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v50 offset:149
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v50, 8, v26
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v87 offset:148
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v87, 24, v27
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v82 offset:146
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v82, 8, v27
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v49 offset:144
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v49 offset:145
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v99 offset:144
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v67 offset:142
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v48 offset:140
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v48 offset:141
 ; ALIGNED-NEXT:    buffer_store_dword v38, off, s[0:3], s32 offset:344
 ; ALIGNED-NEXT:    buffer_store_dword v39, off, s[0:3], s32 offset:348
 ; ALIGNED-NEXT:    buffer_store_dword v37, off, s[0:3], s32 offset:340
 ; ALIGNED-NEXT:    buffer_store_dword v36, off, s[0:3], s32 offset:336
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v38 offset:132
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v39 offset:136
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v39 offset:137
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v38 offset:133
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v37 offset:128
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v37 offset:129
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v36 offset:124
-; ALIGNED-NEXT:    flat_store_byte v[0:1], v36 offset:128
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v84 offset:136
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v85 offset:134
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v86 offset:140
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v87 offset:138
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v115 offset:132
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v86 offset:136
+; ALIGNED-NEXT:    s_waitcnt vmcnt(4)
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v86, 24, v22
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v66 offset:134
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v81 offset:140
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v39 offset:136
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v39 offset:137
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v114 offset:138
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v38 offset:132
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v38 offset:133
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v65 offset:132
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v97 offset:130
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v37 offset:128
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v37 offset:129
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(3)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 24, v18
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v114 offset:130
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v113 offset:128
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v112 offset:126
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v37, 24, v18
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v80 offset:128
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v64 offset:126
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v36 offset:124
+; ALIGNED-NEXT:    flat_store_byte v[0:1], v36 offset:128
 ; ALIGNED-NEXT:    buffer_store_dword v34, off, s[0:3], s32 offset:424
 ; ALIGNED-NEXT:    buffer_store_dword v35, off, s[0:3], s32 offset:428
 ; ALIGNED-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:420
 ; ALIGNED-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:416
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v52 offset:120
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v55 offset:122
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(2)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v52, 24, v14
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v81, 8, v26
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 8, v18
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v34 offset:116
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v35 offset:120
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v35 offset:121
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v34 offset:117
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v33 offset:112
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v33 offset:113
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v32 offset:108
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v32 offset:109
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v53 offset:118
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v54 offset:124
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v55 offset:122
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v68 offset:116
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v69 offset:114
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v70 offset:112
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v71 offset:110
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v55, 24, v14
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v66, 8, v22
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v80, 8, v18
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v85 offset:120
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v115 offset:118
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v96 offset:124
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v35 offset:120
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v35 offset:121
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v34 offset:116
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v34 offset:117
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v71 offset:116
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v54 offset:114
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v33 offset:112
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v33 offset:113
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v84 offset:112
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v70 offset:110
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v32 offset:108
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v32 offset:109
 ; ALIGNED-NEXT:    buffer_store_dword v30, off, s[0:3], s32 offset:440
 ; ALIGNED-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:444
 ; ALIGNED-NEXT:    buffer_store_dword v29, off, s[0:3], s32 offset:436
 ; ALIGNED-NEXT:    buffer_store_dword v28, off, s[0:3], s32 offset:432
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v30 offset:100
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v31 offset:104
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v31 offset:105
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v30 offset:101
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v29 offset:96
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v29 offset:97
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v28 offset:92
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v28 offset:93
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v53 offset:104
+; ALIGNED-NEXT:    s_waitcnt vmcnt(1)
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v53, 24, v10
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v29 offset:96
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v29 offset:97
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(0)
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v28, 24, v10
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v48 offset:100
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v48, 24, v6
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v82, 24, v27
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 24, v19
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v53, 8, v14
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v29, 8, v10
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v49 offset:98
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v49, 8, v6
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v83, 8, v27
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v64, 24, v25
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v54, 24, v15
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v30, 24, v11
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v50 offset:96
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v50, 24, v7
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v65, 8, v25
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v66, 24, v24
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v67, 8, v24
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v36, 24, v22
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v37, 8, v22
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v38, 24, v23
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v29, 24, v6
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v81, 24, v23
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v64, 24, v19
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v34, 8, v14
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v112 offset:102
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 8, v10
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v83 offset:96
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v83, 8, v6
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v49, 24, v25
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v99, 8, v25
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v71, 24, v15
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v98 offset:108
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v98, 24, v11
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v51 offset:94
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v51, 24, v7
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v67, 24, v24
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v48, 8, v24
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v39, 8, v23
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v84, 24, v21
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v85, 8, v21
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v86, 24, v20
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v87, 8, v20
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v112, 8, v19
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v32, 24, v17
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v33, 8, v17
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v34, 24, v16
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v114, 24, v21
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v38, 8, v21
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v65, 24, v20
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v97, 8, v20
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v36, 8, v19
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v85, 24, v17
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v115, 8, v17
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v96, 24, v16
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v35, 8, v16
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v55, 8, v15
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v68, 24, v12
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v69, 8, v12
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v54, 8, v15
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v33, 24, v12
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v84, 8, v12
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v70, 24, v13
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v71, 8, v13
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v32, 8, v13
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v31 offset:104
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v31 offset:105
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v31, 8, v11
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v103 offset:104
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v103, 24, v9
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v102 offset:102
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v102, 8, v9
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v101 offset:108
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v101, 24, v8
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v100 offset:106
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v100, 8, v8
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v51 offset:94
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v51, 8, v7
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v52 offset:106
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v52, 24, v9
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v30 offset:100
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v30 offset:101
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v30, 8, v9
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v69 offset:100
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v69, 24, v8
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v113 offset:98
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v113, 8, v8
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v28 offset:92
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v28 offset:93
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v28, 8, v7
 ; ALIGNED-NEXT:    buffer_store_dword v26, off, s[0:3], s32 offset:392
 ; ALIGNED-NEXT:    buffer_store_dword v27, off, s[0:3], s32 offset:396
 ; ALIGNED-NEXT:    buffer_store_dword v25, off, s[0:3], s32 offset:388
 ; ALIGNED-NEXT:    buffer_store_dword v24, off, s[0:3], s32 offset:384
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v26 offset:84
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v27 offset:88
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v27 offset:89
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v26 offset:85
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v25 offset:80
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v25 offset:81
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v24 offset:76
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v24 offset:77
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v68 offset:88
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v50 offset:86
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v87 offset:92
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v27 offset:88
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v27 offset:89
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v27, 8, v4
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v80 offset:88
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v81 offset:86
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v82 offset:92
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v83 offset:90
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v64 offset:84
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v65 offset:82
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v66 offset:80
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v67 offset:78
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v82 offset:90
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v26 offset:84
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v26 offset:85
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v49 offset:84
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v99 offset:82
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v25 offset:80
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v25 offset:81
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v67 offset:80
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v48 offset:78
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v24 offset:76
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v24 offset:77
 ; ALIGNED-NEXT:    buffer_store_dword v22, off, s[0:3], s32 offset:408
 ; ALIGNED-NEXT:    buffer_store_dword v23, off, s[0:3], s32 offset:412
 ; ALIGNED-NEXT:    buffer_store_dword v21, off, s[0:3], s32 offset:404
 ; ALIGNED-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:400
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v22 offset:68
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v23 offset:72
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v23 offset:73
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v22 offset:69
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v21 offset:64
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v21 offset:65
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v20 offset:60
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v86 offset:72
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v66 offset:70
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v81 offset:76
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v23 offset:72
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v23 offset:73
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v39 offset:74
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v22 offset:68
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v22 offset:69
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v114 offset:68
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v38 offset:66
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v21 offset:64
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v21 offset:65
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v65 offset:64
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v97 offset:62
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v20 offset:60
 ; ALIGNED-NEXT:    flat_store_byte v[0:1], v20 offset:64
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v36 offset:72
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v37 offset:70
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v38 offset:76
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v39 offset:74
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v84 offset:68
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v85 offset:66
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v86 offset:64
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v87 offset:62
 ; ALIGNED-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:488
 ; ALIGNED-NEXT:    buffer_store_dword v19, off, s[0:3], s32 offset:492
 ; ALIGNED-NEXT:    buffer_store_dword v17, off, s[0:3], s32 offset:484
 ; ALIGNED-NEXT:    buffer_store_dword v16, off, s[0:3], s32 offset:480
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v115 offset:56
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v114 offset:54
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v113 offset:60
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v18 offset:52
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v19 offset:56
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v19 offset:57
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v112 offset:58
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v18 offset:53
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v32 offset:52
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v17 offset:48
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v33 offset:50
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v17 offset:49
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v34 offset:48
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v16 offset:44
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v35 offset:46
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v16 offset:45
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v37 offset:56
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v80 offset:54
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v64 offset:60
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v18 offset:52
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v19 offset:56
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v19 offset:57
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v36 offset:58
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v18 offset:53
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v85 offset:52
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v17 offset:48
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v115 offset:50
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v17 offset:49
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v96 offset:48
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v16 offset:44
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v35 offset:46
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v16 offset:45
 ; ALIGNED-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:508
 ; ALIGNED-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:504
 ; ALIGNED-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:500
 ; ALIGNED-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:496
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v52 offset:40
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v14 offset:36
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v53 offset:38
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v14 offset:37
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v54 offset:44
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v15 offset:40
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v55 offset:42
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v15 offset:41
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v68 offset:32
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v12 offset:28
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v69 offset:30
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v55 offset:40
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v14 offset:36
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v34 offset:38
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v14 offset:37
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v71 offset:44
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v15 offset:40
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v54 offset:42
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v15 offset:41
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v33 offset:32
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v12 offset:28
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v84 offset:30
 ; ALIGNED-NEXT:    flat_store_byte v[0:1], v12 offset:32
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v70 offset:36
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v13 offset:32
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v71 offset:34
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v13 offset:33
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v70 offset:36
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v13 offset:32
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v32 offset:34
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v13 offset:33
 ; ALIGNED-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:456
 ; ALIGNED-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:460
 ; ALIGNED-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:452
 ; ALIGNED-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:448
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v10 offset:20
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v28 offset:24
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v29 offset:22
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v11 offset:24
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v30 offset:28
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v11 offset:25
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v31 offset:26
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v10 offset:21
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v103 offset:20
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v9 offset:16
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v102 offset:18
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v9 offset:17
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v101 offset:16
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v8 offset:12
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v100 offset:14
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v10 offset:20
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v53 offset:24
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v112 offset:22
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v11 offset:24
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v98 offset:28
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v11 offset:25
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v31 offset:26
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v10 offset:21
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v52 offset:20
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v9 offset:16
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v30 offset:18
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v9 offset:17
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v69 offset:16
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v8 offset:12
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v113 offset:14
 ; ALIGNED-NEXT:    flat_store_byte v[0:1], v8 offset:16
 ; ALIGNED-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:472
 ; ALIGNED-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:476
 ; ALIGNED-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:468
 ; ALIGNED-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:464
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v6 offset:4
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v48 offset:8
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v49 offset:6
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v7 offset:8
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v50 offset:12
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v7 offset:9
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v51 offset:10
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v6 offset:4
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v29 offset:8
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v83 offset:6
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v7 offset:8
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v51 offset:12
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v7 offset:9
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v28 offset:10
 ; ALIGNED-NEXT:    flat_store_byte v[0:1], v6 offset:8
 ; ALIGNED-NEXT:    flat_store_byte v[0:1], v5 offset:4
 ; ALIGNED-NEXT:    flat_store_byte_d16_hi v[0:1], v4 offset:2
 ; ALIGNED-NEXT:    flat_store_byte v[0:1], v27 offset:1
 ; ALIGNED-NEXT:    flat_store_byte v[0:1], v4
 ; ALIGNED-NEXT:    v_add_co_u32 v0, vcc_lo, 0xffffff00, v0
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v24, 24, v5
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v68, 24, v5
 ; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v25, 8, v5
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v50, 8, v5
 ; ALIGNED-NEXT:    s_cmp_eq_u64 s[4:5], 0
-; ALIGNED-NEXT:    v_lshrrev_b32_e32 v26, 24, v4
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v24 offset:4
-; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v5
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v25 offset:2
-; ALIGNED-NEXT:    flat_store_byte v[98:99], v26
+; ALIGNED-NEXT:    v_lshrrev_b32_e32 v87, 24, v4
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v68 offset:4
+; ALIGNED-NEXT:    flat_store_byte_d16_hi v[102:103], v5
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v50 offset:2
+; ALIGNED-NEXT:    flat_store_byte v[100:101], v87
 ; ALIGNED-NEXT:    s_cbranch_scc0 .LBB7_5
 ; ALIGNED-NEXT:  .LBB7_6: ; %Flow17
 ; ALIGNED-NEXT:    s_or_b32 exec_lo, exec_lo, s6
@@ -12656,22 +12661,22 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; CHECK-NEXT:    buffer_load_dword v50, v2, s[0:3], 0 offen offset:1960
 ; CHECK-NEXT:    buffer_load_dword v49, v2, s[0:3], 0 offen offset:1956
 ; CHECK-NEXT:    buffer_load_dword v48, v2, s[0:3], 0 offen offset:1952
-; CHECK-NEXT:    buffer_load_dword v67, v2, s[0:3], 0 offen offset:1948
-; CHECK-NEXT:    buffer_load_dword v66, v2, s[0:3], 0 offen offset:1944
-; CHECK-NEXT:    buffer_load_dword v65, v2, s[0:3], 0 offen offset:1940
-; CHECK-NEXT:    buffer_load_dword v64, v2, s[0:3], 0 offen offset:1936
-; CHECK-NEXT:    buffer_load_dword v71, v2, s[0:3], 0 offen offset:1932
-; CHECK-NEXT:    buffer_load_dword v70, v2, s[0:3], 0 offen offset:1928
-; CHECK-NEXT:    buffer_load_dword v69, v2, s[0:3], 0 offen offset:1924
-; CHECK-NEXT:    buffer_load_dword v68, v2, s[0:3], 0 offen offset:1920
-; CHECK-NEXT:    buffer_load_dword v83, v2, s[0:3], 0 offen offset:1916
-; CHECK-NEXT:    buffer_load_dword v82, v2, s[0:3], 0 offen offset:1912
-; CHECK-NEXT:    buffer_load_dword v81, v2, s[0:3], 0 offen offset:1908
-; CHECK-NEXT:    buffer_load_dword v80, v2, s[0:3], 0 offen offset:1904
-; CHECK-NEXT:    buffer_load_dword v87, v2, s[0:3], 0 offen offset:1900
-; CHECK-NEXT:    buffer_load_dword v86, v2, s[0:3], 0 offen offset:1896
-; CHECK-NEXT:    buffer_load_dword v85, v2, s[0:3], 0 offen offset:1892
-; CHECK-NEXT:    buffer_load_dword v84, v2, s[0:3], 0 offen offset:1888
+; CHECK-NEXT:    buffer_load_dword v67, v2, s[0:3], 0 offen offset:1932
+; CHECK-NEXT:    buffer_load_dword v71, v2, s[0:3], 0 offen offset:1948
+; CHECK-NEXT:    buffer_load_dword v70, v2, s[0:3], 0 offen offset:1944
+; CHECK-NEXT:    buffer_load_dword v69, v2, s[0:3], 0 offen offset:1940
+; CHECK-NEXT:    buffer_load_dword v68, v2, s[0:3], 0 offen offset:1936
+; CHECK-NEXT:    buffer_load_dword v66, v2, s[0:3], 0 offen offset:1928
+; CHECK-NEXT:    buffer_load_dword v65, v2, s[0:3], 0 offen offset:1924
+; CHECK-NEXT:    buffer_load_dword v64, v2, s[0:3], 0 offen offset:1920
+; CHECK-NEXT:    buffer_load_dword v83, v2, s[0:3], 0 offen offset:1900
+; CHECK-NEXT:    buffer_load_dword v87, v2, s[0:3], 0 offen offset:1916
+; CHECK-NEXT:    buffer_load_dword v86, v2, s[0:3], 0 offen offset:1912
+; CHECK-NEXT:    buffer_load_dword v85, v2, s[0:3], 0 offen offset:1908
+; CHECK-NEXT:    buffer_load_dword v84, v2, s[0:3], 0 offen offset:1904
+; CHECK-NEXT:    buffer_load_dword v82, v2, s[0:3], 0 offen offset:1896
+; CHECK-NEXT:    buffer_load_dword v81, v2, s[0:3], 0 offen offset:1892
+; CHECK-NEXT:    buffer_load_dword v80, v2, s[0:3], 0 offen offset:1888
 ; CHECK-NEXT:    buffer_load_dword v96, v2, s[0:3], 0 offen offset:1840
 ; CHECK-NEXT:    buffer_load_dword v97, v2, s[0:3], 0 offen offset:1844
 ; CHECK-NEXT:    buffer_load_dword v98, v2, s[0:3], 0 offen offset:1848
@@ -12693,10 +12698,10 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; CHECK-NEXT:    flat_store_dwordx4 v[100:101], v[52:55] offset:128
 ; CHECK-NEXT:    s_waitcnt vmcnt(20)
 ; CHECK-NEXT:    flat_store_dwordx4 v[100:101], v[48:51] offset:112
-; CHECK-NEXT:    s_waitcnt vmcnt(16)
-; CHECK-NEXT:    flat_store_dwordx4 v[100:101], v[64:67] offset:96
+; CHECK-NEXT:    s_waitcnt vmcnt(15)
+; CHECK-NEXT:    flat_store_dwordx4 v[100:101], v[68:71] offset:96
 ; CHECK-NEXT:    s_waitcnt vmcnt(12)
-; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[68:71] offset:128
+; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[64:67] offset:128
 ; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[15:18] offset:64
 ; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[11:14] offset:32
 ; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[7:10] offset:16
@@ -12704,10 +12709,10 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; CHECK-NEXT:    v_add_co_u32 v0, vcc_lo, 0xffffff00, v0
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
 ; CHECK-NEXT:    s_cmp_eq_u64 s[4:5], 0
-; CHECK-NEXT:    s_waitcnt vmcnt(8)
-; CHECK-NEXT:    flat_store_dwordx4 v[100:101], v[80:83] offset:64
+; CHECK-NEXT:    s_waitcnt vmcnt(7)
+; CHECK-NEXT:    flat_store_dwordx4 v[100:101], v[84:87] offset:64
 ; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    flat_store_dwordx4 v[100:101], v[84:87] offset:48
+; CHECK-NEXT:    flat_store_dwordx4 v[100:101], v[80:83] offset:48
 ; CHECK-NEXT:    flat_store_dwordx4 v[100:101], v[19:22] offset:32
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_dwordx4 v[100:101], v[96:99]

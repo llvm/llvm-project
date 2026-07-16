@@ -2930,14 +2930,14 @@ define <16 x double> @v_minimum_v16f64(<16 x double> %src0, <16 x double> %src1)
 ; GFX1170-LABEL: v_minimum_v16f64:
 ; GFX1170:       ; %bb.0:
 ; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-NEXT:    s_clause 0x1b
+; GFX1170-NEXT:    s_clause 0x1e
 ; GFX1170-NEXT:    scratch_load_b32 v33, off, s32 offset:8
 ; GFX1170-NEXT:    scratch_load_b32 v32, off, s32 offset:4
 ; GFX1170-NEXT:    scratch_load_b32 v35, off, s32 offset:16
 ; GFX1170-NEXT:    scratch_load_b32 v34, off, s32 offset:12
 ; GFX1170-NEXT:    scratch_load_b32 v31, off, s32
 ; GFX1170-NEXT:    scratch_load_b32 v37, off, s32 offset:120
-; GFX1170-NEXT:    scratch_load_b32 v39, off, s32 offset:104
+; GFX1170-NEXT:    scratch_load_b32 v39, off, s32 offset:112
 ; GFX1170-NEXT:    scratch_load_b32 v49, off, s32 offset:24
 ; GFX1170-NEXT:    scratch_load_b32 v48, off, s32 offset:20
 ; GFX1170-NEXT:    scratch_load_b32 v51, off, s32 offset:32
@@ -2958,18 +2958,17 @@ define <16 x double> @v_minimum_v16f64(<16 x double> %src0, <16 x double> %src1)
 ; GFX1170-NEXT:    scratch_load_b32 v80, off, s32 offset:84
 ; GFX1170-NEXT:    scratch_load_b32 v83, off, s32 offset:96
 ; GFX1170-NEXT:    scratch_load_b32 v82, off, s32 offset:92
-; GFX1170-NEXT:    scratch_load_b32 v38, off, s32 offset:100
-; GFX1170-NEXT:    s_waitcnt vmcnt(26)
-; GFX1170-NEXT:    v_minimum_f64 v[0:1], v[0:1], v[32:33]
-; GFX1170-NEXT:    s_clause 0x2
-; GFX1170-NEXT:    scratch_load_b32 v33, off, s32 offset:112
-; GFX1170-NEXT:    scratch_load_b32 v32, off, s32 offset:108
+; GFX1170-NEXT:    scratch_load_b32 v85, off, s32 offset:104
+; GFX1170-NEXT:    scratch_load_b32 v84, off, s32 offset:100
+; GFX1170-NEXT:    scratch_load_b32 v38, off, s32 offset:108
 ; GFX1170-NEXT:    scratch_load_b32 v36, off, s32 offset:116
-; GFX1170-NEXT:    s_waitcnt vmcnt(27)
-; GFX1170-NEXT:    v_minimum_f64 v[2:3], v[2:3], v[34:35]
+; GFX1170-NEXT:    s_waitcnt vmcnt(29)
+; GFX1170-NEXT:    v_minimum_f64 v[0:1], v[0:1], v[32:33]
 ; GFX1170-NEXT:    s_clause 0x1
-; GFX1170-NEXT:    scratch_load_b32 v35, off, s32 offset:128
-; GFX1170-NEXT:    scratch_load_b32 v34, off, s32 offset:124
+; GFX1170-NEXT:    scratch_load_b32 v33, off, s32 offset:128
+; GFX1170-NEXT:    scratch_load_b32 v32, off, s32 offset:124
+; GFX1170-NEXT:    s_waitcnt vmcnt(29)
+; GFX1170-NEXT:    v_minimum_f64 v[2:3], v[2:3], v[34:35]
 ; GFX1170-NEXT:    s_waitcnt vmcnt(24)
 ; GFX1170-NEXT:    v_minimum_f64 v[4:5], v[4:5], v[48:49]
 ; GFX1170-NEXT:    s_waitcnt vmcnt(22)
@@ -2990,14 +2989,13 @@ define <16 x double> @v_minimum_v16f64(<16 x double> %src0, <16 x double> %src1)
 ; GFX1170-NEXT:    v_minimum_f64 v[20:21], v[20:21], v[80:81]
 ; GFX1170-NEXT:    s_waitcnt vmcnt(6)
 ; GFX1170-NEXT:    v_minimum_f64 v[22:23], v[22:23], v[82:83]
-; GFX1170-NEXT:    s_waitcnt vmcnt(5)
-; GFX1170-NEXT:    v_minimum_f64 v[24:25], v[24:25], v[38:39]
 ; GFX1170-NEXT:    s_waitcnt vmcnt(3)
-; GFX1170-NEXT:    v_minimum_f64 v[26:27], v[26:27], v[32:33]
+; GFX1170-NEXT:    v_minimum_f64 v[26:27], v[26:27], v[38:39]
+; GFX1170-NEXT:    v_minimum_f64 v[24:25], v[24:25], v[84:85]
 ; GFX1170-NEXT:    s_waitcnt vmcnt(2)
 ; GFX1170-NEXT:    v_minimum_f64 v[28:29], v[28:29], v[36:37]
 ; GFX1170-NEXT:    s_waitcnt vmcnt(0)
-; GFX1170-NEXT:    v_minimum_f64 v[30:31], v[30:31], v[34:35]
+; GFX1170-NEXT:    v_minimum_f64 v[30:31], v[30:31], v[32:33]
 ; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: v_minimum_v16f64:

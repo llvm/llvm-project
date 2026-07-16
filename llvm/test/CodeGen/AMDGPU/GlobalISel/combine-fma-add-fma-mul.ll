@@ -751,8 +751,8 @@ define <4 x double> @test_f64_add_mul(<4 x double> %a, <4 x double> %b, <4 x dou
 ; GFX9-CONTRACT-NEXT:    v_fma_f64 v[2:3], v[2:3], v[10:11], v[18:19]
 ; GFX9-CONTRACT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-CONTRACT-NEXT:    v_fma_f64 v[20:21], v[20:21], v[28:29], v[24:25]
-; GFX9-CONTRACT-NEXT:    buffer_load_dword v31, off, s[0:3], s32
 ; GFX9-CONTRACT-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:28
+; GFX9-CONTRACT-NEXT:    buffer_load_dword v31, off, s[0:3], s32
 ; GFX9-CONTRACT-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:32
 ; GFX9-CONTRACT-NEXT:    v_fma_f64 v[4:5], v[4:5], v[12:13], v[20:21]
 ; GFX9-CONTRACT-NEXT:    s_waitcnt vmcnt(0)
@@ -777,8 +777,8 @@ define <4 x double> @test_f64_add_mul(<4 x double> %a, <4 x double> %b, <4 x dou
 ; GFX9-DENORM-NEXT:    v_fma_f64 v[2:3], v[2:3], v[10:11], v[18:19]
 ; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-DENORM-NEXT:    v_fma_f64 v[20:21], v[20:21], v[28:29], v[24:25]
-; GFX9-DENORM-NEXT:    buffer_load_dword v31, off, s[0:3], s32
 ; GFX9-DENORM-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:28
+; GFX9-DENORM-NEXT:    buffer_load_dword v31, off, s[0:3], s32
 ; GFX9-DENORM-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:32
 ; GFX9-DENORM-NEXT:    v_fma_f64 v[4:5], v[4:5], v[12:13], v[20:21]
 ; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(0)
@@ -922,8 +922,8 @@ define <4 x double> @test_f64_add_mul_rhs(<4 x double> %a, <4 x double> %b, <4 x
 ; GFX9-CONTRACT-NEXT:    v_fma_f64 v[2:3], v[2:3], v[10:11], v[18:19]
 ; GFX9-CONTRACT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-CONTRACT-NEXT:    v_fma_f64 v[20:21], v[20:21], v[28:29], v[24:25]
-; GFX9-CONTRACT-NEXT:    buffer_load_dword v31, off, s[0:3], s32
 ; GFX9-CONTRACT-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:28
+; GFX9-CONTRACT-NEXT:    buffer_load_dword v31, off, s[0:3], s32
 ; GFX9-CONTRACT-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:32
 ; GFX9-CONTRACT-NEXT:    v_fma_f64 v[4:5], v[4:5], v[12:13], v[20:21]
 ; GFX9-CONTRACT-NEXT:    s_waitcnt vmcnt(0)
@@ -948,8 +948,8 @@ define <4 x double> @test_f64_add_mul_rhs(<4 x double> %a, <4 x double> %b, <4 x
 ; GFX9-DENORM-NEXT:    v_fma_f64 v[2:3], v[2:3], v[10:11], v[18:19]
 ; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-DENORM-NEXT:    v_fma_f64 v[20:21], v[20:21], v[28:29], v[24:25]
-; GFX9-DENORM-NEXT:    buffer_load_dword v31, off, s[0:3], s32
 ; GFX9-DENORM-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:28
+; GFX9-DENORM-NEXT:    buffer_load_dword v31, off, s[0:3], s32
 ; GFX9-DENORM-NEXT:    buffer_load_dword v25, off, s[0:3], s32 offset:32
 ; GFX9-DENORM-NEXT:    v_fma_f64 v[4:5], v[4:5], v[12:13], v[20:21]
 ; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(0)

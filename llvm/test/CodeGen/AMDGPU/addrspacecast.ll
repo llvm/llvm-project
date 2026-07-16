@@ -489,18 +489,18 @@ define <16 x ptr addrspace(5)> @addrspacecast_v16p0_to_v16p5(<16 x ptr> %ptr) {
 ; HSA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; HSA-NEXT:    buffer_load_dword v31, off, s[0:3], s32
 ; HSA-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
+; HSA-NEXT:    v_cmp_ne_u64_e64 s[4:5], 0, v[2:3]
+; HSA-NEXT:    v_cmp_ne_u64_e64 s[6:7], 0, v[4:5]
 ; HSA-NEXT:    v_cndmask_b32_e32 v0, -1, v0, vcc
-; HSA-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[2:3]
-; HSA-NEXT:    v_cndmask_b32_e32 v1, -1, v2, vcc
-; HSA-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[4:5]
-; HSA-NEXT:    v_cndmask_b32_e32 v2, -1, v4, vcc
-; HSA-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[6:7]
-; HSA-NEXT:    v_cndmask_b32_e32 v3, -1, v6, vcc
 ; HSA-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[8:9]
+; HSA-NEXT:    v_cndmask_b32_e64 v1, -1, v2, s[4:5]
+; HSA-NEXT:    v_cndmask_b32_e64 v2, -1, v4, s[6:7]
 ; HSA-NEXT:    v_cndmask_b32_e32 v4, -1, v8, vcc
 ; HSA-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[10:11]
+; HSA-NEXT:    v_cmp_ne_u64_e64 s[8:9], 0, v[6:7]
 ; HSA-NEXT:    v_cndmask_b32_e32 v5, -1, v10, vcc
 ; HSA-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[12:13]
+; HSA-NEXT:    v_cndmask_b32_e64 v3, -1, v6, s[8:9]
 ; HSA-NEXT:    v_cndmask_b32_e32 v6, -1, v12, vcc
 ; HSA-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[14:15]
 ; HSA-NEXT:    v_cndmask_b32_e32 v7, -1, v14, vcc
@@ -941,18 +941,18 @@ define <16 x ptr addrspace(3)> @addrspacecast_v16p0_to_v16p3(<16 x ptr> %ptr) {
 ; HSA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; HSA-NEXT:    buffer_load_dword v31, off, s[0:3], s32
 ; HSA-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
+; HSA-NEXT:    v_cmp_ne_u64_e64 s[4:5], 0, v[2:3]
+; HSA-NEXT:    v_cmp_ne_u64_e64 s[6:7], 0, v[4:5]
 ; HSA-NEXT:    v_cndmask_b32_e32 v0, -1, v0, vcc
-; HSA-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[2:3]
-; HSA-NEXT:    v_cndmask_b32_e32 v1, -1, v2, vcc
-; HSA-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[4:5]
-; HSA-NEXT:    v_cndmask_b32_e32 v2, -1, v4, vcc
-; HSA-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[6:7]
-; HSA-NEXT:    v_cndmask_b32_e32 v3, -1, v6, vcc
 ; HSA-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[8:9]
+; HSA-NEXT:    v_cndmask_b32_e64 v1, -1, v2, s[4:5]
+; HSA-NEXT:    v_cndmask_b32_e64 v2, -1, v4, s[6:7]
 ; HSA-NEXT:    v_cndmask_b32_e32 v4, -1, v8, vcc
 ; HSA-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[10:11]
+; HSA-NEXT:    v_cmp_ne_u64_e64 s[8:9], 0, v[6:7]
 ; HSA-NEXT:    v_cndmask_b32_e32 v5, -1, v10, vcc
 ; HSA-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[12:13]
+; HSA-NEXT:    v_cndmask_b32_e64 v3, -1, v6, s[8:9]
 ; HSA-NEXT:    v_cndmask_b32_e32 v6, -1, v12, vcc
 ; HSA-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[14:15]
 ; HSA-NEXT:    v_cndmask_b32_e32 v7, -1, v14, vcc
