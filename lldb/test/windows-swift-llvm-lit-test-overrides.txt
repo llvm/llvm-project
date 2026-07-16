@@ -108,13 +108,6 @@ skip lldb-api :: functionalities/breakpoint/same_cu_name/TestFileBreakpoinsSameC
 # https://github.com/swiftlang/llvm-project/issues/9101
 skip lldb-api :: tools/lldb-server
 
-### Tests that time out occasionally ###
-
-skip lldb-api :: commands/dwim-print/TestDWIMPrint.py
-skip lldb-api :: commands/thread/backtrace/TestThreadBacktraceRepeat.py
-skip lldb-api :: functionalities/inferior-crashing/TestInferiorCrashing.py
-skip lldb-api :: functionalities/thread/thread_specific_break/TestThreadSpecificBreakpoint.py
-
 ### Tests that pass accidentally ###
 
 https://github.com/llvm/llvm-project/issues/116972
