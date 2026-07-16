@@ -24,12 +24,6 @@ class ARMNoPrefixBuiltin<string prototype> : Builtin {
     let Prototype = prototype;
 }
 
-class ARMLangBuiltin<string prototype, string languages=""> : LangBuiltin<languages>  {
-    let Spellings = [NAME];
-    let Prototype = prototype;
-    let RequiredNamePrefix = ARMPrefix;
-}
-
 class ARMNoPrefixLangBuiltin<string prototype, string languages=""> : LangBuiltin<languages> {
     let Spellings = [NAME];
     let Prototype = prototype;
@@ -39,11 +33,6 @@ class ARMTargetBuiltin<string prototype> : TargetBuiltin {
     let Spellings = [NAME];
     let Prototype = prototype;
     let RequiredNamePrefix = ARMPrefix;
-}
-
-class ARMNoPrefixTargetBuiltin<string prototype> : TargetBuiltin {
-    let Spellings = [NAME];
-    let Prototype = prototype;
 }
 
 class ARMNoPrefixTargetLibBuiltin<string prototype> : TargetLibBuiltin {
