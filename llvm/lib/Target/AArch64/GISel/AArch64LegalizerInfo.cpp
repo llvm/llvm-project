@@ -1526,6 +1526,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                                G_GET_FPMODE, G_SET_FPMODE, G_RESET_FPMODE})
       .libcall();
 
+  getActionDefinitionsBuilder({G_GET_ROUNDING, G_SET_ROUNDING})
+      .customFor({s32});
+
   getActionDefinitionsBuilder(G_IS_FPCLASS).lower();
 
   getActionDefinitionsBuilder(G_PREFETCH).custom();
@@ -1599,6 +1602,10 @@ bool AArch64LegalizerInfo::legalizeCustom(
     // In order to lower f16 to f64 properly, we need to use f32 as an
     // intermediary
     return legalizeFptrunc(MI, MIRBuilder, MRI);
+  case TargetOpcode::G_GET_ROUNDING:
+    return legalizeGetRounding(MI, MIRBuilder, MRI, Helper);
+  case TargetOpcode::G_SET_ROUNDING:
+    return legalizeSetRounding(MI, MIRBuilder, MRI, Helper);
   }
 
   llvm_unreachable("expected switch to return");
@@ -2789,5 +2796,66 @@ bool AArch64LegalizerInfo::legalizeFptrunc(MachineInstr &MI,
   Register Fin = MIRBuilder.buildMergeLikeInstr(DstTy, RegsToMerge).getReg(0);
   MRI.replaceRegWith(Dst, Fin);
   MI.eraseFromParent();
+  return true;
+}
+
+bool AArch64LegalizerInfo::legalizeGetRounding(MachineInstr &MI,
+                                               MachineIRBuilder &MIRBuilder,
+                                               MachineRegisterInfo &MRI,
+                                               LegalizerHelper &Helper) const {
+  const LLT I32 = LLT::integer(32);
+  const LLT I64 = LLT::integer(64);
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register FPCR64 = MRI.createGenericVirtualRegister(I64);
+  MachineInstrBuilder GetFPCR =
+      MIRBuilder.buildIntrinsic(Intrinsic::aarch64_get_fpcr, ArrayRef{FPCR64});
+
+  // `((FPCR >> 22) + 1) & 0b11`, implemented as bitfield extraction of
+  // `(FPCR + (1 << 22))` as this version generates one less instruction.
+  auto FPCR32 = MIRBuilder.buildTrunc(I32, GetFPCR);
+  auto One = MIRBuilder.buildConstant(I32, 1U << 22);
+  auto Added = MIRBuilder.buildAdd(I32, FPCR32, One);
+  auto LSB = MIRBuilder.buildConstant(I32, 22);
+  auto Width = MIRBuilder.buildConstant(I32, 2);
+  MIRBuilder.buildInstr(TargetOpcode::G_UBFX, {Dst}, {Added, LSB, Width});
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AArch64LegalizerInfo::legalizeSetRounding(MachineInstr &MI,
+                                               MachineIRBuilder &MIRBuilder,
+                                               MachineRegisterInfo &MRI,
+                                               LegalizerHelper &Helper) const {
+  const LLT I32 = LLT::integer(32);
+  const LLT I64 = LLT::integer(64);
+
+  // Calculate new value of FPCR[23:22].
+  Register RM = MI.getOperand(0).getReg();
+  auto One = MIRBuilder.buildConstant(I32, 1);
+  auto Subtracted = MIRBuilder.buildSub(I32, RM, One);
+  auto Mask = MIRBuilder.buildConstant(I32, 0b11);
+  auto Masked = MIRBuilder.buildAnd(I32, Subtracted, Mask);
+  auto ShiftAmount = MIRBuilder.buildConstant(I32, 22);
+  auto Shifted = MIRBuilder.buildShl(I32, Masked, ShiftAmount);
+
+  // Get current value of FPCR.
+  Register FPCR64 = MRI.createGenericVirtualRegister(I64);
+  MachineInstrBuilder GetFPCR =
+      MIRBuilder.buildIntrinsic(Intrinsic::aarch64_get_fpcr, ArrayRef{FPCR64});
+
+  // (FPCR & ~Mask) | Shifted
+  auto FPCRMask = MIRBuilder.buildConstant(I64, ~((int64_t)0b11 << 22));
+  auto FPCRMasked = MIRBuilder.buildAnd(I64, GetFPCR, FPCRMask);
+  auto ShiftedS64 = MIRBuilder.buildZExt(I64, Shifted);
+  auto FPCRUpdated = MIRBuilder.buildOr(I64, FPCRMasked, ShiftedS64);
+
+  // Write new FPCR.
+  MIRBuilder.buildIntrinsic(Intrinsic::aarch64_set_fpcr, ArrayRef<Register>())
+      .addUse(FPCRUpdated.getReg(0));
+
+  MI.eraseFromParent();
+
   return true;
 }
