@@ -1445,7 +1445,7 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
       if (llvm::any_of(CmdArgs, isPAuthLR))
         EnablePAuthLR = true;
     }
-    if (!llvm::ARM::parseBranchProtection(A->getValue(), PBP, DiagMsg,
+    if (!llvm::ARM::parseBranchProtection(A->getValue(), PBP, DiagMsg, Triple,
                                           EnablePAuthLR))
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << DiagMsg;

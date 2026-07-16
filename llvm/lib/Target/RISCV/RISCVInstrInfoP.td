@@ -2820,6 +2820,18 @@ let append Predicates = [IsRV64] in {
   def : Pat<(v4i16 (riscv_punzipo (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
             (UNZIP16HP GPR:$rs1, GPR:$rs2)>;
 
+  // Match undef to X0 to avoid false dependency.
+  // FIXME: Match operand 0 too?
+  // FIXME: Enable BreakFalseDep pass?
+  def : Pat<(v8i8 (riscv_punzipe (v8i8 GPR:$rs1), (v8i8 undef))),
+            (UNZIP8P GPR:$rs1, (v8i8 X0))>;
+  def : Pat<(v8i8 (riscv_punzipo (v8i8 GPR:$rs1), (v8i8 undef))),
+            (UNZIP8HP GPR:$rs1, (v8i8 X0))>;
+  def : Pat<(v4i16 (riscv_punzipe (v4i16 GPR:$rs1), (v4i16 undef))),
+            (UNZIP16P GPR:$rs1, (v4i16 X0))>;
+  def : Pat<(v4i16 (riscv_punzipo (v4i16 GPR:$rs1), (v4i16 undef))),
+            (UNZIP16HP GPR:$rs1, (v4i16 X0))>;
+
   // Packed zip.
   def : Pat<(v8i8 (riscv_pzip (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
             (ZIP8P GPR:$rs1, GPR:$rs2)>;

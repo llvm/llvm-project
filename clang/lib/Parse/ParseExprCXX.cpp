@@ -1908,9 +1908,7 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
                                   : diag::ext_init_statement)
           << (CK == Sema::ConditionKind::Switch);
     else
-      Diag(Tok.getLocation(), getLangOpts().C2y
-                                  ? diag::warn_c2y_compat_decl_statement
-                                  : diag::ext_c2y_decl_statement)
+      DiagCompat(Tok.getLocation(), diag_compat::decl_statement)
           << (CK == Sema::ConditionKind::Switch);
   };
 
