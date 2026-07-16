@@ -59,6 +59,9 @@ jobs:
       image: ghcr.io/llvm/ci-ubuntu-24.04:35e958d7f0b7
     needs:
       - permission-check
+    env:
+      # llvm-nm/llvm-ar/llvm-ranlib are needed for the microbenchmarks
+      NINJA_TARGETS: clang lld llvm-size llvm-nm llvm-ar llvm-ranlib
     steps:
       - name: Get pull request
         id: get-pr
@@ -111,34 +114,34 @@ jobs:
           echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ noble main' | sudo tee /etc/apt/sources.list.d/kitware.list >/dev/null
 
           sudo apt-get update
-          sudo apt-get install -y cmake tcl libc6-dev-arm64-cross libc6-dev-riscv64-cross libgcc-14-dev-arm64-cross libgcc-14-dev-riscv64-cross libstdc++-14-dev-arm64-cross libstdc++-14-dev-riscv64-cross
+          sudo apt-get install -y cmake tcl libc6-dev-arm64-cross libc6-dev-riscv64-cross libgcc-14-dev-arm64-cross libgcc-14-dev-riscv64-cross libstdc++-14-dev-arm64-cross libstdc++-14-dev-riscv64-cross python3-pandas python3-tabulate
       - name: Configure Clang
         run: cmake -B build -C $SCRIPTS_DIR/llvm.cmake llvm -GNinja
         working-directory: llvm-project
       - name: Build Clang @ head
-        run: ninja -C build
+        run: ninja -C build $NINJA_TARGETS
         working-directory: llvm-project
       - name: Configure and build test-suite @ head
         run: |
           configure-and-build.sh rva23u64-O3-head $SCRIPTS_DIR/riscv64.cmake
           configure-and-build.sh armv9-a-O3-head $SCRIPTS_DIR/aarch64.cmake
-          configure-and-build.sh x86_64-O3-head $SCRIPTS_DIR/x86_64.cmake
+          configure-and-build.sh x86-64-v3-O3-head $SCRIPTS_DIR/x86_64.cmake
         working-directory: llvm-test-suite
       - name: Build Clang @ base
-        run: git checkout $BASE_SHA && ninja -C build
+        run: git checkout $BASE_SHA && ninja -C build $NINJA_TARGETS
         working-directory: llvm-project
       - name: Configure and build test-suite @ base
         run: |
           configure-and-build.sh rva23u64-O3-base $SCRIPTS_DIR/riscv64.cmake
           configure-and-build.sh armv9-a-O3-base $SCRIPTS_DIR/aarch64.cmake
-          configure-and-build.sh x86_64-O3-base $SCRIPTS_DIR/x86_64.cmake
+          configure-and-build.sh x86-64-v3-O3-base $SCRIPTS_DIR/x86_64.cmake
         working-directory: llvm-test-suite
       - name: Compute diffs
         run: |
           mkdir diffs
           ./utils/tdiff.py -a build.rva23u64-O3-base -b build.rva23u64-O3-head -s all > diffs/rva23u64-O3.diff || true
           ./utils/tdiff.py -a build.armv9-a-O3-base -b build.armv9-a-O3-head -s all > diffs/armv9-a-O3.diff || true
-          ./utils/tdiff.py -a build.x86_64-O3-base -b build.x86_64-O3-head -s all > diffs/x86_64-O3.diff || true
+          ./utils/tdiff.py -a build.x86-64-v3-O3-base -b build.x86-64-v3-O3-head -s all > diffs/x86-64-v3-O3.diff || true
         working-directory: llvm-test-suite
       - name: Upload diffs
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f #v7.0.0
@@ -147,17 +150,37 @@ jobs:
           name: diffs
           path: llvm-test-suite/diffs
       - name: Upload results
+        id: upload-results
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f #v7.0.0
         with:
           name: results
           path: llvm-test-suite/results*.json
+      - name: Compare results
+        run: |
+          for ARCH in rva23u64-O3 armv9-a-O3 x86-64-v3-O3
+          do
+            ./utils/compare.py results.$ARCH-base.json vs results.$ARCH-head.json -m size..text --only-changed --lhs-name base --rhs-name head --format=md > ../compare-$ARCH.md || true
+          done
+        working-directory: llvm-test-suite
       - name: Create comment
         env:
           ARTIFACT_URL: ${{ steps.upload-diffs.outputs.artifact-url }}
+          RESULTS_URL: ${{ steps.upload-results.outputs.artifact-url }}
         run: |
-          cat << EOF > comments
-          [{"body" : "test-suite diff from $BASE_SHA...$HEAD_SHA: $ARTIFACT_URL"}]
+          cat << EOF > comment-body
+          test-suite diff from $BASE_SHA...$HEAD_SHA: $ARTIFACT_URL
+
+          Statistics: $RESULTS_URL
+
+          ## riscv64-linux-gnu \`-march=rva23u64 -O3\`
+          $(cat compare-rva23u64-O3.md)
+          ## aarch64-linux-gnu \`-march=armv9-a -O3\`
+          $(cat compare-armv9-a-O3.md)
+          ## x86_64-linux-gnu \`-march=x86-64-v3 -O3\`
+          $(cat compare-x86-64-v3-O3.md)
           EOF
+          # write escaped markdown to format expected by issue-write.yml
+          python3 -c 'import json; print(json.dumps([{"body": open("comment-body").read()}]))' > comments
       - name: Create comment on failure
         if: failure()
         env:

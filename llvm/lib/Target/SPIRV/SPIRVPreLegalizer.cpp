@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -258,7 +259,9 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       Register Source = MI.getOperand(2).getReg();
       Type *ElemTy = getMDOperandAsType(MI.getOperand(3).getMetadata(), 0);
       auto SC =
-          isa<FunctionType>(ElemTy)
+          isa<FunctionType>(ElemTy) &&
+                  ST->canUseExtension(
+                      SPIRV::Extension::SPV_INTEL_function_pointers)
               ? SPIRV::StorageClass::CodeSectionINTEL
               : addressSpaceToStorageClass(MI.getOperand(4).getImm(), *ST);
       SPIRVTypeInst AssignedPtrType =
@@ -466,6 +469,125 @@ void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
 }
 } // namespace llvm
 
+// Sign-sensitive integer ops: their result depends on the value of the input
+// sign bit at position (width-1). On sub-pow2 widths the general widening
+// loop is a pure LLT relabel, which leaves the sign bit at the *original*
+// position instead of the widened MSB. These ops therefore need an explicit
+// G_SEXT_INREG on each value operand to move the sign bit up.
+//
+// Signed-vs-unsigned G_ICMP is distinguished by its predicate operand.
+//
+// TODO: follow-up PRs will add the remaining sign-sensitive opcodes
+// (e.g. G_SMIN/G_SMAX, G_SADDSAT/G_SSUBSAT, signed overflow ops).
+static bool isSignSensitiveOp(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_ASHR:
+  case TargetOpcode::G_SDIV:
+  case TargetOpcode::G_SREM:
+    return true;
+  case TargetOpcode::G_ICMP:
+    return CmpInst::isSigned(
+        static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate()));
+  default:
+    return false;
+  }
+}
+
+struct SignSensitiveWideningInfo {
+  // Width before widening of each value-operand vreg (one entry per vreg).
+  DenseMap<Register, unsigned> OrigWidth;
+  // Ops whose value operand(s) need replacing, ordered for reproducible vreg
+  // numbering.
+  SmallVector<MachineInstr *> Worklist;
+};
+
+// Collect sign-sensitive ops with narrow scalar value operands and their
+// pre-widening widths, before later passes retype those vregs to pow2 LLTs
+// and the original width is no longer recoverable.
+static SignSensitiveWideningInfo
+recordSignSensitiveOperandWidths(MachineFunction &MF,
+                                 MachineRegisterInfo &MRI) {
+  SignSensitiveWideningInfo Info;
+  auto RecordIfNarrow = [&](Register Reg) {
+    LLT Ty = MRI.getType(Reg);
+    if (!Ty.isScalar())
+      return false;
+    unsigned W = Ty.getScalarSizeInBits();
+    if (widenBitWidthToNextPow2(W) == W)
+      return false;
+    Info.OrigWidth.try_emplace(Reg, W);
+    return true;
+  };
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      if (!isSignSensitiveOp(MI))
+        continue;
+      // Value operands are the trailing two, past any def or predicate.
+      unsigned N = MI.getNumOperands();
+      const MachineOperand &LHS = MI.getOperand(N - 2);
+      const MachineOperand &RHS = MI.getOperand(N - 1);
+      // Sign-sensitive opcodes carry register operands only.
+      assert(LHS.isReg() && RHS.isReg());
+      bool NeedsRewrite = RecordIfNarrow(LHS.getReg());
+      NeedsRewrite = RecordIfNarrow(RHS.getReg()) || NeedsRewrite;
+      if (NeedsRewrite)
+        Info.Worklist.push_back(&MI);
+    }
+  }
+  return Info;
+}
+
+// For every recorded sign-sensitive op, insert G_SEXT_INREG on each value
+// operand whose original width was narrower than the widened pow2 width and
+// retype the operand's vreg LLT in place to the widened width.
+//
+// Info must have been populated by recordSignSensitiveOperandWidths before
+// other passes retyped the vregs; otherwise the narrow widths needed here
+// are lost.
+//
+// TODO: handle vector operands.
+static void widenSignSensitiveOps(MachineFunction &MF, SPIRVGlobalRegistry *GR,
+                                  MachineIRBuilder &MIB,
+                                  MachineRegisterInfo &MRI,
+                                  const SignSensitiveWideningInfo &Info) {
+  // Emit G_SEXT_INREG from Reg's recorded narrow width; retypes Reg to the
+  // widened width and returns the sign-extended vreg.
+  auto SignExtendReg = [&](Register Reg, unsigned OldW,
+                           MachineInstr &MI) -> Register {
+    unsigned NewW = widenBitWidthToNextPow2(OldW);
+    LLT NewLLT = LLT::scalar(NewW);
+    SPIRVTypeInst SpvTy = GR->getOrCreateSPIRVIntegerType(NewW, MIB);
+    Register SExted = MRI.createGenericVirtualRegister(NewLLT);
+    GR->assignSPIRVTypeToVReg(SpvTy, SExted, MF);
+    MRI.setRegClass(SExted, GR->getRegClass(SpvTy));
+    MRI.setType(Reg, NewLLT);
+    MIB.setInsertPt(*MI.getParent(), MI.getIterator());
+    MIB.buildSExtInReg(SExted, Reg, OldW);
+    return SExted;
+  };
+
+  // TODO: when the same narrow vreg feeds multiple sign-sensitive ops (e.g.
+  // sdiv %x, %y and srem %x, %y), emit one shared G_SEXT_INREG instead of one
+  // per use.
+  for (MachineInstr *MI : Info.Worklist) {
+    unsigned N = MI->getNumOperands();
+    MachineOperand &LHS = MI->getOperand(N - 2);
+    MachineOperand &RHS = MI->getOperand(N - 1);
+    Register LHSReg = LHS.getReg();
+    Register RHSReg = RHS.getReg();
+    if (auto It = Info.OrigWidth.find(LHSReg); It != Info.OrigWidth.end())
+      LHS.setReg(SignExtendReg(LHSReg, It->second, *MI));
+    // Same vreg on both sides (e.g. G_ICMP slt %x, %x): reuse the sext just
+    // emitted for LHS instead of emitting a second one.
+    if (RHSReg == LHSReg) {
+      RHS.setReg(LHS.getReg());
+      continue;
+    }
+    if (auto It = Info.OrigWidth.find(RHSReg); It != Info.OrigWidth.end())
+      RHS.setReg(SignExtendReg(RHSReg, It->second, *MI));
+  }
+}
+
 static void
 generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                      MachineIRBuilder MIB,
@@ -489,6 +611,12 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     // integer widths of 8, 16, 32, 64. Non-standard widths (e.g., i24, i40)
     // must be widened to the next power of two.
     //
+    // Record the original widths of sign-sensitive operands before either
+    // the G_TRUNC handling or the general widening loop retypes vregs, then
+    // rewrite those ops after G_TRUNC processing using the recorded widths.
+    SignSensitiveWideningInfo SignSensitiveInfo =
+        recordSignSensitiveOperandWidths(MF, MRI);
+
     // G_TRUNC requires special handling because its semantics depend on the
     // original destination width. For example:
     //   %dst:s24 = G_TRUNC %src:s64
@@ -565,6 +693,8 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     }
     for (MachineInstr *MI : TruncToRemove)
       MI->eraseFromParent();
+
+    widenSignSensitiveOps(MF, GR, MIB, MRI, SignSensitiveInfo);
   }
 
   for (MachineBasicBlock *MBB : post_order(&MF)) {

@@ -432,6 +432,12 @@ SourceManager::GetDefaultFileAndLine() {
         executable_ptr->FindFunctions(main_name, CompilerDeclContext(),
                                       lldb::eFunctionNameTypeFull,
                                       function_options, sc_list);
+        // The linkage name can differ from the source name, so match on the
+        // base name as a fallback.
+        if (sc_list.GetSize() == 0)
+          executable_ptr->FindFunctions(main_name, CompilerDeclContext(),
+                                        lldb::eFunctionNameTypeBase,
+                                        function_options, sc_list);
         for (const SymbolContext &sc : sc_list) {
           if (sc.function) {
             lldb_private::LineEntry line_entry;

@@ -37,7 +37,7 @@ void test_member_in_array(void) {
 // LLVM-LABEL: define{{.*}} @test_member_in_array
 // LLVM:   %[[LINE:.*]] = alloca %struct.Line
 // LLVM:   %[[ARR:.*]] = alloca [1 x %struct.Point]
-// LLVM:   call void @llvm.memcpy{{.*}}(ptr %[[LINE]], ptr @[[LINE_CONST]]
+// LLVM:   call void @llvm.memcpy{{.*}}(ptr align 4 %[[LINE]], ptr align 4 @[[LINE_CONST]]
 // LLVM:   %[[MEMBER:.*]] = getelementptr{{.*}}%struct.Line{{.*}}%[[LINE]]{{.*}}i32 0, i32 0
 // LLVM:   call void @llvm.memcpy
 
@@ -111,7 +111,7 @@ void test_string_array_in_array(void) {
 
 // LLVM-LABEL: define{{.*}} @test_string_array_in_array
 // LLVM:   %[[MATRIX:.*]] = alloca [2 x [6 x i8]]
-// LLVM:   call void @llvm.memcpy{{.*}}(ptr %[[MATRIX]], ptr @[[MATRIX_CONST]]
+// LLVM:   call void @llvm.memcpy{{.*}}(ptr align 1 %[[MATRIX]], ptr align 1 @[[MATRIX_CONST]]
 
 // OGCG-LABEL: define{{.*}} @test_string_array_in_array
 // OGCG:   alloca [2 x [6 x i8]]
