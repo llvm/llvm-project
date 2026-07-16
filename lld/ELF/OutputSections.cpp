@@ -924,8 +924,8 @@ void OutputSection::checkDynRelAddends(Ctx &ctx) {
           (rel.inputSec == ctx.in.ppc64LongBranchTarget.get() ||
            rel.inputSec == ctx.in.igotPlt.get()))
         continue;
-      const uint8_t *relocTarget = ctx.bufferStart + relOsec->offset +
-                                   rel.inputSec->getOffset(rel.offsetInSec);
+      const uint8_t *relocTarget =
+          ctx.bufferStart + relOsec->offset + (rel.r_offset - relOsec->addr);
       // For SHT_NOBITS the written addend is always zero.
       int64_t writtenAddend =
           relOsec->type == SHT_NOBITS
