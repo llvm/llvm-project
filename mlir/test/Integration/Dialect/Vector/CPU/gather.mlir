@@ -1,5 +1,5 @@
-// DEFINE: %{entry_point} = main
-// DEFINE: %{run} = mlir-runner -e entry -entry-point-result=void \
+// DEFINE: %{main_point} = main
+// DEFINE: %{run} = mlir-runner -e main -main-point-result=void \
 // DEFINE:         -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
 
 /// TEST 1. Verify default compilation (direct lowering of `vector.gather` to LLVM)
@@ -16,7 +16,12 @@
 // REDEFINE: %{compile} = mlir-opt %s --test-vector-gather-lowering
 // RUN: %{compile} | FileCheck %s -check-prefix CHECK-IR 
 
-func.func @gather8(%base: memref<?x?xf32>, %indices: vector<8xi32>,
+//===----------------------------------------------------------------------===//
+// @gather_8
+//
+// Gather 8 elements
+//===----------------------------------------------------------------------===//
+func.func @gather_8(%base: memref<?x?xf32>, %indices: vector<8xi32>,
               %mask: vector<8xi1>, %pass_thru: vector<8xf32>) -> vector<8xf32> {
   %c0 = arith.constant 0: index
   /// Verify that the lowering via vector.load does indeed generate vector.load
@@ -26,7 +31,12 @@ func.func @gather8(%base: memref<?x?xf32>, %indices: vector<8xi32>,
   return %g : vector<8xf32>
 }
 
-func.func @entry() {
+//===----------------------------------------------------------------------===//
+// @main
+//
+// The main entry point.
+//===----------------------------------------------------------------------===//
+func.func @main() {
   // Set up memory.
   %c0 = arith.constant 0: index
   %c1 = arith.constant 1: index
@@ -78,25 +88,25 @@ func.func @entry() {
   // Gather tests.
   //
 
-  %g1 = call @gather8(%A, %idx, %all, %pass)
+  %g1 = call @gather_8(%A, %idx, %all, %pass)
     : (memref<?x?xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32>)
     -> (vector<8xf32>)
   vector.print %g1 : vector<8xf32>
   // CHECK: ( 0, 31, 21, 63, 10, 84, 34, 42 )
 
-  %g2 = call @gather8(%A, %idx, %none, %pass)
+  %g2 = call @gather_8(%A, %idx, %none, %pass)
     : (memref<?x?xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32>)
     -> (vector<8xf32>)
   vector.print %g2 : vector<8xf32>
   // CHECK: ( -7, -7, -7, -7, -7, -7, -7, -7 )
 
-  %g3 = call @gather8(%A, %idx, %some, %pass)
+  %g3 = call @gather_8(%A, %idx, %some, %pass)
     : (memref<?x?xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32>)
     -> (vector<8xf32>)
   vector.print %g3 : vector<8xf32>
   // CHECK: ( 0, 31, 21, 63, -7, -7, -7, -7 )
 
-  %g4 = call @gather8(%A, %idx, %more, %pass)
+  %g4 = call @gather_8(%A, %idx, %more, %pass)
     : (memref<?x?xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32>)
     -> (vector<8xf32>)
   vector.print %g4 : vector<8xf32>
