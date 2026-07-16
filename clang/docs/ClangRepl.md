@@ -1,6 +1,4 @@
-===========
-Clang-Repl
-===========
+# Clang-Repl
 
 **Clang-Repl** is an interactive C++ interpreter that allows for incremental
 compilation. It supports interactive programming for C++ in a
@@ -10,72 +8,60 @@ the LLVM just-in-time (JIT) infrastructure.
 
 Clang-Repl is suitable for exploratory programming and in places where time
 to insight is important. Clang-Repl is a project inspired by the work in
-`Cling <https://github.com/root-project/cling>`_, a LLVM-based C/C++ interpreter
+[Cling](https://github.com/root-project/cling), a LLVM-based C/C++ interpreter
 developed by the field of high energy physics and used by the scientific data
-analysis framework `ROOT <https://root.cern/>`_. Clang-Repl allows to move parts
+analysis framework [ROOT](https://root.cern/). Clang-Repl allows to move parts
 of Cling upstream, making them useful and available to a broader audience.
 
+## Clang-Repl Basic Data Flow
 
-Clang-Repl Basic Data Flow
-==========================
-
-.. image:: ClangRepl_design.png
-   :align: center
-   :alt: ClangRepl design
+```{image} ClangRepl_design.png
+:align: center
+:alt: ClangRepl design
+```
 
 Clang-Repl data flow can be divided into roughly 8 phases:
 
 1. Clang-Repl controls the input infrastructure by an interactive prompt or by
    an interface allowing the incremental processing of input.
-
 2. Then it sends the input to the underlying incremental facilities in Clang
    infrastructure.
-
 3. Clang compiles the input into an AST representation.
-
 4. When required the AST can be further transformed in order to attach specific
    behavior.
-
 5. The AST representation is then lowered to LLVM IR.
-
 6. The LLVM IR is the input format for LLVM’s JIT compilation infrastructure.
    The tool will instruct the JIT to run specified functions, translating them
    into machine code targeting the underlying device architecture (eg. Intel
    x86 or NVPTX).
-
 7. The LLVM JIT lowers the LLVM IR to machine code.
-
 8. The machine code is then executed.
 
-Build Instructions:
-===================
+## Build Instructions:
 
-
-.. code-block:: console
-
-   $ cd llvm-project
-   $ mkdir build
-   $ cd build
-   $ cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLLVM_ENABLE_PROJECTS=clang -G "Unix Makefiles" ../llvm
+```console
+$ cd llvm-project
+$ mkdir build
+$ cd build
+$ cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLLVM_ENABLE_PROJECTS=clang -G "Unix Makefiles" ../llvm
+```
 
 **Note here**, above RelWithDebInfo - Debug / Release
 
-.. code-block:: console
-
-   cmake --build . --target clang clang-repl -j n
-      OR
-   cmake --build . --target clang clang-repl
+```console
+cmake --build . --target clang clang-repl -j n
+   OR
+cmake --build . --target clang clang-repl
+```
 
 **Clang-repl** is built under llvm-project/build/bin. Proceed into the directory **llvm-project/build/bin**
 
-.. code-block:: console
+```console
+./clang-repl
+clang-repl>
+```
 
-   ./clang-repl
-   clang-repl>
-
-
-Clang-Repl Usage
-================
+## Clang-Repl Usage
 
 **Clang-Repl** is an interactive C++ interpreter that allows for incremental
 compilation. It supports interactive programming for C++ in a
@@ -83,158 +69,148 @@ read-evaluate-print-loop (REPL) style. It uses Clang as a library to compile the
 high level programming language into LLVM IR. Then the LLVM IR is executed by
 the LLVM just-in-time (JIT) infrastructure.
 
+## Basic:
 
-Basic:
-======
+```text
+clang-repl> #include <iostream>
+clang-repl> int f() { std::cout << "Hello Interpreted World!\n"; return 0; }
+clang-repl> auto r = f();
+ // Prints Hello Interpreted World!
+```
 
-.. code-block:: text
+```text
+clang-repl> #include<iostream>
+clang-repl> using namespace std;
+clang-repl> std::cout << "Welcome to CLANG-REPL" << std::endl;
+Welcome to CLANG-REPL
+// Prints Welcome to CLANG-REPL
+```
 
-  clang-repl> #include <iostream>
-  clang-repl> int f() { std::cout << "Hello Interpreted World!\n"; return 0; }
-  clang-repl> auto r = f();
-   // Prints Hello Interpreted World!
+## Function Definitions and Calls:
 
-.. code-block:: text
+```text
+clang-repl> #include <iostream>
+clang-repl> int sum(int a, int b){ return a+b; };
+clang-repl> int c = sum(9,10);
+clang-repl> std::cout << c << std::endl;
+19
+clang-repl>
+```
 
-   clang-repl> #include<iostream>
-   clang-repl> using namespace std;
-   clang-repl> std::cout << "Welcome to CLANG-REPL" << std::endl;
-   Welcome to CLANG-REPL
-   // Prints Welcome to CLANG-REPL
+## Iterative Structures:
 
+```text
+clang-repl> #include <iostream>
+clang-repl> for (int i = 0;i < 3;i++){ std::cout << i << std::endl;}
+0
+1
+2
+clang-repl> while(i < 7){ i++; std::cout << i << std::endl;}
+4
+5
+6
+7
+```
 
-Function Definitions and Calls:
-===============================
+## Classes and Structures:
 
-.. code-block:: text
+```text
+clang-repl> #include <iostream>
+clang-repl> class Rectangle {int width, height; public: void set_values (int,int);\
+clang-repl... int area() {return width*height;}};
+clang-repl>  void Rectangle::set_values (int x, int y) { width = x;height = y;}
+clang-repl> int main () { Rectangle rect;rect.set_values (3,4);\
+clang-repl... std::cout << "area: " << rect.area() << std::endl;\
+clang-repl... return 0;}
+clang-repl> main();
+area: 12
+clang-repl>
+// Note: This '\' can be used for continuation of the statements in the next line
+```
 
-   clang-repl> #include <iostream>
-   clang-repl> int sum(int a, int b){ return a+b; };
-   clang-repl> int c = sum(9,10);
-   clang-repl> std::cout << c << std::endl;
-   19
-   clang-repl>
+## Lamdas:
 
-Iterative Structures:
-=====================
+```text
+clang-repl> #include <iostream>
+clang-repl> using namespace std;
+clang-repl> auto welcome = []()  { std::cout << "Welcome to REPL" << std::endl;};
+clang-repl> welcome();
+Welcome to REPL
+```
 
-.. code-block:: text
+## Comments:
 
-   clang-repl> #include <iostream>
-   clang-repl> for (int i = 0;i < 3;i++){ std::cout << i << std::endl;}
-   0
-   1
-   2
-   clang-repl> while(i < 7){ i++; std::cout << i << std::endl;}
-   4
-   5
-   6
-   7
+```text
+clang-repl> // Comments in Clang-Repl
+clang-repl> /* Comments in Clang-Repl */
+```
 
-Classes and Structures:
-=======================
+## Built in Commands:
 
-.. code-block:: text
+clang-repl has some special commands that are of the form `%<something>`. To list all these commands, use the `%help` command:
 
-   clang-repl> #include <iostream>
-   clang-repl> class Rectangle {int width, height; public: void set_values (int,int);\
-   clang-repl... int area() {return width*height;}};
-   clang-repl>  void Rectangle::set_values (int x, int y) { width = x;height = y;}
-   clang-repl> int main () { Rectangle rect;rect.set_values (3,4);\
-   clang-repl... std::cout << "area: " << rect.area() << std::endl;\
-   clang-repl... return 0;}
-   clang-repl> main();
-   area: 12
-   clang-repl>
-   // Note: This '\' can be used for continuation of the statements in the next line
+### Help:
 
-Lamdas:
-=======
+The `%help` command lists all built in clang-repl commands.
 
-.. code-block:: text
+```text
+clang-repl> %help
+```
 
-   clang-repl> #include <iostream>
-   clang-repl> using namespace std;
-   clang-repl> auto welcome = []()  { std::cout << "Welcome to REPL" << std::endl;};
-   clang-repl> welcome();
-   Welcome to REPL
+### Using Dynamic Libraries:
 
-Comments:
-=========
+The `%lib` command links a dynamic library.
 
-.. code-block:: text
-
-   clang-repl> // Comments in Clang-Repl
-   clang-repl> /* Comments in Clang-Repl */
-
-Built in Commands:
-==================
-clang-repl has some special commands that are of the form ``%<something>``. To list all these commands, use the ``%help`` command:
-
-Help:
------
-The ``%help`` command lists all built in clang-repl commands.
-
-.. code-block:: text
-
-   clang-repl> %help
-
-Using Dynamic Libraries:
-------------------------
-The ``%lib`` command links a dynamic library.
-
-.. code-block:: text
-
-   clang-repl> %lib print.so
-   clang-repl> #include"print.hpp"
-   clang-repl> print(9);
-   9
+```text
+clang-repl> %lib print.so
+clang-repl> #include"print.hpp"
+clang-repl> print(9);
+9
+```
 
 **Generation of dynamic library**
 
-.. code-block:: text
+```text
+// print.cpp
+#include <iostream>
+#include "print.hpp"
 
-   // print.cpp
-   #include <iostream>
-   #include "print.hpp"
+void print(int a)
+{
+   std::cout << a << std::endl;
+}
 
-   void print(int a)
-   {
-      std::cout << a << std::endl;
-   }
+// print.hpp
+void print (int a);
 
-   // print.hpp
-   void print (int a);
+// Commands
+clang++-17  -c -o print.o print.cpp
+clang-17 -shared print.o -o print.so
+```
 
-   // Commands
-   clang++-17  -c -o print.o print.cpp
-   clang-17 -shared print.o -o print.so
+### Undo:
 
-Undo:
------
-The ``%undo`` command undoes the previous input.
+The `%undo` command undoes the previous input.
 
-.. code-block:: text
+```text
+clang-repl> int a = 1; a
+(int) 1
+clang-repl> %undo
+clang-repl> a
+In file included from <<< inputs >>>:1:
+input_line_2:1:1: error: use of undeclared identifier 'a'
+1 | a
+* | ^
+error: Parsing failed.
+```
 
-   clang-repl> int a = 1; a
-   (int) 1
-   clang-repl> %undo
-   clang-repl> a
-   In file included from <<< inputs >>>:1:
-   input_line_2:1:1: error: use of undeclared identifier 'a'
-   1 | a
-   * | ^
-   error: Parsing failed.
+### Quit:
 
-Quit:
------
-The ``%quit`` command terminates clang-repl.
+The `%quit` command terminates clang-repl.
 
-.. code-block:: text
-
-   clang-repl> %quit
-
-
+```text
+clang-repl> %quit
+```
 
 Just like Clang, Clang-Repl can be integrated in existing applications as a library
 (using the clangInterpreter library). This turns your C++ compiler into a service that
@@ -243,36 +219,33 @@ concept helps support advanced use cases such as template instantiations on dema
 automatic language interoperability. It also helps static languages such as C/C++ become
 apt for data science.
 
-Execution Results Handling in Clang-Repl
-========================================
+## Execution Results Handling in Clang-Repl
 
 Execution Results Handling features discussed below help extend the Clang-Repl
 functionality by creating an interface between the execution results of a
 program and the compiled program.
 
-1. **Capture Execution Results**: This feature helps capture the execution results
+1\. **Capture Execution Results**: This feature helps capture the execution results
 of a program and bring them back to the compiled program.
 
-2. **Dump Captured Execution Results**: This feature helps create a temporary dump
+2\. **Dump Captured Execution Results**: This feature helps create a temporary dump
 for Value Printing/Automatic Printf, that is, to display the value and type of
 the captured data.
 
-
-1. Capture Execution Results
-============================
+## 1. Capture Execution Results
 
 In many cases, it is useful to bring back the program execution result to the
 compiled program. This result can be stored in an object of type **Value**.
 
-How Execution Results are captured (Value Synthesis):
------------------------------------------------------
+### How Execution Results are captured (Value Synthesis):
 
 The synthesizer chooses which expression to synthesize, and then it replaces
 the original expression with the synthesized expression. Depending on the
-expression type, it may choose to save an object (``LastValue``) of type 'value'
-while allocating memory to it (``SetValueWithAlloc()``), or not (
-``SetValueNoAlloc()``).
+expression type, it may choose to save an object (`LastValue`) of type 'value'
+while allocating memory to it (`SetValueWithAlloc()`), or not (
+`SetValueNoAlloc()`).
 
+```{eval-rst}
 .. graphviz::
     :name: valuesynthesis
     :caption: Value Synthesis
@@ -313,31 +286,30 @@ while allocating memory to it (``SetValueWithAlloc()``), or not (
       }
             output -> assign
       }
+```
 
-Where is the captured result stored?
-------------------------------------
+### Where is the captured result stored?
 
-``LastValue`` holds the last result of the value printing. It is a class member
+`LastValue` holds the last result of the value printing. It is a class member
 because it can be accessed even after subsequent inputs.
 
 **Note:** If no value printing happens, then it is in an invalid state.
 
-Improving Efficiency and User Experience
-----------------------------------------
+### Improving Efficiency and User Experience
 
 The Value object is essentially used to create a mapping between an expression
 'type' and the allocated 'memory'. Built-in types (bool, char, int,
 float, double, etc.) are copyable. Their memory allocation size is known
 and the Value object can introduce a small-buffer optimization.
-In case of objects, the ``Value`` class provides reference-counted memory
+In case of objects, the `Value` class provides reference-counted memory
 management.
 
 The implementation maps the type as written and the Clang Type to be able to use
 the preprocessor to synthesize the relevant cast operations. For example,
-``X(char, Char_S)``, where ``char`` is the type from the language's type system
-and ``Char_S`` is the Clang builtin type which represents it. This mapping helps
+`X(char, Char_S)`, where `char` is the type from the language's type system
+and `Char_S` is the Clang builtin type which represents it. This mapping helps
 to import execution results from the interpreter in a compiled program and vice
-versa. The ``Value.h`` header file can be included at runtime and this is why it
+versa. The `Value.h` header file can be included at runtime and this is why it
 has a very low token count and was developed with strict constraints in mind.
 
 This also enables the user to receive the computed 'type' back in their code
@@ -350,8 +322,7 @@ these conversions on request.
 On-request conversions can help improve the user experience, by allowing
 conversion to a desired 'to' type, when the 'from' type is unknown or unclear.
 
-Significance of this Feature
-----------------------------
+### Significance of this Feature
 
 The 'Value' object enables wrapping a memory region that comes from the
 JIT, and bringing it back to the compiled code (and vice versa).
@@ -365,7 +336,7 @@ example is the cppyy project code makes use of this feature to enable running C+
 within Python. It enables transporting values/information between C++
 and Python.
 
-Note: `cppyy <https://github.com/wlav/cppyy/>`_ is an automatic, run-time,
+Note: [cppyy](https://github.com/wlav/cppyy/) is an automatic, run-time,
 Python-to-C++ bindings generator, for calling C++ from Python and Python from C++.
 It uses LLVM along with a C++ interpreter (e.g., Cling) to enable features like
 run-time instantiation of C++ templates, cross-inheritance, callbacks,
@@ -374,54 +345,49 @@ auto-casting, transparent use of smart pointers, etc.
 In a nutshell, this feature enables a new way of developing code, paving the
 way for language interoperability and easier interactive programming.
 
-Implementation Details
-======================
+## Implementation Details
 
-Interpreter as a REPL vs. as a Library
---------------------------------------
+### Interpreter as a REPL vs. as a Library
 
 1 - If we're using the interpreter in interactive (REPL) mode, it will dump
 the value (i.e., value printing).
 
-.. code-block:: console
-
-  if (LastValue.isValid()) {
-    if (!V) {
-      LastValue.dump();
-      LastValue.clear();
-    } else
-      *V = std::move(LastValue);
-  }
-
+```console
+if (LastValue.isValid()) {
+  if (!V) {
+    LastValue.dump();
+    LastValue.clear();
+  } else
+    *V = std::move(LastValue);
+}
+```
 
 2 - If we're using the interpreter as a library, then it will pass the value
 to the user.
 
-Incremental AST Consumer
-------------------------
+### Incremental AST Consumer
 
-The ``IncrementalASTConsumer`` class wraps the original code generator
-``ASTConsumer`` and it performs a hook, to traverse all the top-level decls, to
-look for expressions to synthesize, based on the ``isSemiMissing()`` condition.
+The `IncrementalASTConsumer` class wraps the original code generator
+`ASTConsumer` and it performs a hook, to traverse all the top-level decls, to
+look for expressions to synthesize, based on the `isSemiMissing()` condition.
 
-If this condition is found to be true, then ``Interp.SynthesizeExpr()`` will be
+If this condition is found to be true, then `Interp.SynthesizeExpr()` will be
 invoked.
 
 **Note:** Following is a sample code snippet. Actual code may vary over time.
 
-.. code-block:: console
+```console
+for (Decl *D : DGR)
+  if (auto *TSD = llvm::dyn_cast<TopLevelStmtDecl>(D);
+      TSD && TSD->isSemiMissing())
+    TSD->setStmt(Interp.SynthesizeExpr(cast<Expr>(TSD->getStmt())));
 
-    for (Decl *D : DGR)
-      if (auto *TSD = llvm::dyn_cast<TopLevelStmtDecl>(D);
-          TSD && TSD->isSemiMissing())
-        TSD->setStmt(Interp.SynthesizeExpr(cast<Expr>(TSD->getStmt())));
-
-    return Consumer->HandleTopLevelDecl(DGR);
+return Consumer->HandleTopLevelDecl(DGR);
+```
 
 The synthesizer will then choose the relevant expression, based on its type.
 
-Communication between Compiled Code and Interpreted Code
---------------------------------------------------------
+### Communication between Compiled Code and Interpreted Code
 
 In Clang-Repl there is **interpreted code**, and this feature adds a 'value'
 runtime that can talk to the **compiled code**.
@@ -431,40 +397,37 @@ code. The execution results of an expression are stored in the object 'V' of
 type Value. This value is then printed, effectively helping the interpreter
 use a value from the compiled code.
 
-.. code-block:: console
-
-    int Global = 42;
-    void setGlobal(int val) { Global = val; }
-    int getGlobal() { return Global; }
-    Interp.ParseAndExecute(“void setGlobal(int val);”);
-    Interp.ParseAndExecute(“int getGlobal();”);
-    Value V;
-    Interp.ParseAndExecute(“getGlobal()”, &V);
-    std::cout << V.getAs<int>() << “\n”; // Prints 42
-
+```console
+int Global = 42;
+void setGlobal(int val) { Global = val; }
+int getGlobal() { return Global; }
+Interp.ParseAndExecute(“void setGlobal(int val);”);
+Interp.ParseAndExecute(“int getGlobal();”);
+Value V;
+Interp.ParseAndExecute(“getGlobal()”, &V);
+std::cout << V.getAs<int>() << “\n”; // Prints 42
+```
 
 **Note:** Above is an example of interoperability between the compiled code and
 the interpreted code. Interoperability between languages (e.g., C++ and Python)
 works similarly.
 
-
-2. Dump Captured Execution Results
-==================================
+## 2. Dump Captured Execution Results
 
 This feature helps create a temporary dump to display the value and type
 (pretty print) of the desired data. This is a good way to interact with the
 interpreter during interactive programming.
 
-How value printing is simplified (Automatic Printf)
----------------------------------------------------
+### How value printing is simplified (Automatic Printf)
 
-The ``Automatic Printf`` feature makes it easy to display variable values during
-program execution. Using the ``printf`` function repeatedly is not required.
-This is achieved using an extension in the ``libclangInterpreter`` library.
+The `Automatic Printf` feature makes it easy to display variable values during
+program execution. Using the `printf` function repeatedly is not required.
+This is achieved using an extension in the `libclangInterpreter` library.
 
 To automatically print the value of an expression, simply write the expression
 in the global scope **without a semicolon**.
 
+```{eval-rst}
 .. graphviz::
     :name: automaticprintf
     :caption: Automatic PrintF
@@ -487,11 +450,11 @@ in the global scope **without a semicolon**.
          manual -> int1 [label="int x = 42; \n printf(&quot;(int &) %d \\n&quot;, x);"];
      }
 
+```
 
-Significance of this feature
-----------------------------
+### Significance of this feature
 
-Inspired by a similar implementation in `Cling <https://github.com/root-project/cling>`_,
+Inspired by a similar implementation in [Cling](https://github.com/root-project/cling),
 this feature added to upstream Clang repo has essentially extended the syntax of
 C++, so that it can be more helpful for people that are writing code for data
 science applications.
@@ -502,18 +465,17 @@ This is similar to how Python works (hence its popularity in data science
 research), but the superior performance of C++, along with this flexibility
 makes it a more attractive option.
 
-Implementation Details
-======================
+## Implementation Details
 
-Parsing mechanism:
-------------------
+### Parsing mechanism:
 
-The Interpreter in Clang-Repl (``Interpreter.cpp``) includes the function
-``ParseAndExecute()`` that can accept a 'Value' parameter to capture the result.
+The Interpreter in Clang-Repl (`Interpreter.cpp`) includes the function
+`ParseAndExecute()` that can accept a 'Value' parameter to capture the result.
 But if the value parameter is made optional and it is omitted (i.e., that the
 user does not want to utilize it elsewhere), then the last value can be
-validated and pushed into the ``dump()`` function.
+validated and pushed into the `dump()` function.
 
+```{eval-rst}
 .. graphviz::
     :name: parsing
     :caption: Parsing Mechanism
@@ -546,39 +508,39 @@ validated and pushed into the ``dump()`` function.
          type -> output;
          data -> output;
       }
+```
 
 **Note:** Following is a sample code snippet. Actual code may vary over time.
 
-.. code-block:: console
+```console
+llvm::Error Interpreter::ParseAndExecute(llvm::StringRef Code, Value *V) {
 
-    llvm::Error Interpreter::ParseAndExecute(llvm::StringRef Code, Value *V) {
+auto PTU = Parse(Code);
+if (!PTU)
+    return PTU.takeError();
+if (PTU->TheModule)
+    if (llvm::Error Err = Execute(*PTU))
+    return Err;
 
-    auto PTU = Parse(Code);
-    if (!PTU)
-        return PTU.takeError();
-    if (PTU->TheModule)
-        if (llvm::Error Err = Execute(*PTU))
-        return Err;
+if (LastValue.isValid()) {
+    if (!V) {
+    LastValue.dump();
+    LastValue.clear();
+    } else
+    *V = std::move(LastValue);
+}
+return llvm::Error::success();
+}
+```
 
-    if (LastValue.isValid()) {
-        if (!V) {
-        LastValue.dump();
-        LastValue.clear();
-        } else
-        *V = std::move(LastValue);
-    }
-    return llvm::Error::success();
-    }
-
-The ``dump()`` function (in ``value.cpp``) calls the ``print()`` function.
+The `dump()` function (in `value.cpp`) calls the `print()` function.
 
 Printing the Data and Type are handled in their respective functions:
-``ReplPrintDataImpl()`` and ``ReplPrintTypeImpl()``.
+`ReplPrintDataImpl()` and `ReplPrintTypeImpl()`.
 
-Annotation Token (annot_repl_input_end)
----------------------------------------
+### Annotation Token (annot_repl_input_end)
 
-This feature uses a new token (``annot_repl_input_end``) to consider printing the
+This feature uses a new token (`annot_repl_input_end`) to consider printing the
 value of an expression if it doesn't end with a semicolon. When parsing an
 Expression Statement, if the last semicolon is missing, then the code will
 pretend that there one and set a marker there for later utilization, and
@@ -597,62 +559,59 @@ effectively, so that it can be printed (displayed to the user automatically).
 implementation itself requires C++ features. Future versions may support more
 languages.
 
-.. code-block:: console
+```console
+Token *CurTok = nullptr;
+// If the semicolon is missing at the end of REPL input, consider if
+// we want to do value printing. Note this is only enabled in C++ mode
+// since part of the implementation requires C++ language features.
+// Note we shouldn't eat the token since the callback needs it.
+if (Tok.is(tok::annot_repl_input_end) && Actions.getLangOpts().CPlusPlus)
+  CurTok = &Tok;
+else
+  // Otherwise, eat the semicolon.
+  ExpectAndConsumeSemi(diag::err_expected_semi_after_expr);
 
-  Token *CurTok = nullptr;
-  // If the semicolon is missing at the end of REPL input, consider if
-  // we want to do value printing. Note this is only enabled in C++ mode
-  // since part of the implementation requires C++ language features.
-  // Note we shouldn't eat the token since the callback needs it.
-  if (Tok.is(tok::annot_repl_input_end) && Actions.getLangOpts().CPlusPlus)
-    CurTok = &Tok;
-  else
-    // Otherwise, eat the semicolon.
-    ExpectAndConsumeSemi(diag::err_expected_semi_after_expr);
+StmtResult R = handleExprStmt(Expr, StmtCtx);
+if (CurTok && !R.isInvalid())
+  CurTok->setAnnotationValue(R.get());
 
-  StmtResult R = handleExprStmt(Expr, StmtCtx);
-  if (CurTok && !R.isInvalid())
-    CurTok->setAnnotationValue(R.get());
+return R;
+  }
+```
 
-  return R;
-    }
+### AST Transformation
 
-AST Transformation
--------------------
-
-When Sema encounters the ``annot_repl_input_end`` token, it knows to transform
+When Sema encounters the `annot_repl_input_end` token, it knows to transform
 the AST before the real CodeGen process. It will consume the token and set a
 'semi missing' bit in the respective decl.
 
-.. code-block:: console
-
-    if (Tok.is(tok::annot_repl_input_end) &&
-        Tok.getAnnotationValue() != nullptr) {
-        ConsumeAnnotationToken();
-        cast<TopLevelStmtDecl>(DeclsInGroup.back())->setSemiMissing();
-    }
+```console
+if (Tok.is(tok::annot_repl_input_end) &&
+    Tok.getAnnotationValue() != nullptr) {
+    ConsumeAnnotationToken();
+    cast<TopLevelStmtDecl>(DeclsInGroup.back())->setSemiMissing();
+}
+```
 
 In the AST Consumer, traverse all the Top Level Decls, to look for expressions
 to synthesize. If the current Decl is the Top Level Statement
-Decl(``TopLevelStmtDecl``) and has a semicolon missing, then ask the interpreter
+Decl(`TopLevelStmtDecl`) and has a semicolon missing, then ask the interpreter
 to synthesize another expression (an internal function call) to replace this
 original expression.
 
-
-Detailed RFC and Discussion:
-----------------------------
+### Detailed RFC and Discussion:
 
 For more technical details, community discussion and links to patches related
 to these features,
-Please visit: `RFC on LLVM Discourse <https://discourse.llvm.org/t/rfc-handle-execution-results-in-clang-repl/68493>`_.
+Please visit: [RFC on LLVM Discourse](https://discourse.llvm.org/t/rfc-handle-execution-results-in-clang-repl/68493).
 
 Some logic presented in the RFC (e.g. ValueGetter()) may be outdated,
 compared to the final developed solution.
 
-Related Reading
-===============
-`Cling Transitions to LLVM's Clang-Repl <https://root.cern/blog/cling-in-llvm/>`_
+## Related Reading
 
-`Moving (parts of) the Cling REPL in Clang <https://lists.llvm.org/pipermail/llvm-dev/2020-July/143257.html>`_
+[Cling Transitions to LLVM's Clang-Repl](https://root.cern/blog/cling-in-llvm/)
 
-`GPU Accelerated Automatic Differentiation With Clad <https://arxiv.org/pdf/2203.06139.pdf>`_
+[Moving (parts of) the Cling REPL in Clang](https://lists.llvm.org/pipermail/llvm-dev/2020-July/143257.html)
+
+[GPU Accelerated Automatic Differentiation With Clad](https://arxiv.org/pdf/2203.06139.pdf)
