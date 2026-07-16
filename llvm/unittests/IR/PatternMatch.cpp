@@ -2768,13 +2768,13 @@ TEST_F(PatternMatchTest, SpecificType) {
   EXPECT_FALSE(match(X, m_SpecificType(I64)));
 
   Value *Bound = nullptr;
-  EXPECT_TRUE(match(X, m_Value(Bound, m_SpecificType(I32))));
+  EXPECT_TRUE(match(X, m_SpecificType(I32, Bound)));
   EXPECT_EQ(X, Bound);
   Bound = nullptr;
-  EXPECT_FALSE(match(X, m_Value(Bound, m_SpecificType(I64))));
+  EXPECT_FALSE(match(X, m_SpecificType(I64, Bound)));
 
   Bound = nullptr;
-  EXPECT_TRUE(match(Y, m_ZExt(m_Value(Bound, m_SpecificType(I32)))));
+  EXPECT_TRUE(match(Y, m_ZExt(m_SpecificType(I32, Bound))));
   EXPECT_EQ(X, Bound);
 
   EXPECT_TRUE(match(X, m_SpecificType(I32, m_Add(m_Value(), m_Value()))));

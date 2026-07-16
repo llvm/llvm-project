@@ -1116,6 +1116,14 @@ inline auto m_SpecificType(Type *RefTy) {
   return m_SpecificType(RefTy, m_Value());
 }
 
+/// Match a value of a specific type, capturing it if we match.
+inline auto m_SpecificType(Type *RefTy, Value *&V) {
+  return m_SpecificType(RefTy, m_Value(V));
+}
+inline auto m_SpecificType(Type *RefTy, const Value *&V) {
+  return m_SpecificType(RefTy, m_Value(V));
+}
+
 //===----------------------------------------------------------------------===//
 // Matcher for any binary operator.
 //
