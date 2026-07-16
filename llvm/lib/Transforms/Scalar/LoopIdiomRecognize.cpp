@@ -266,7 +266,8 @@ private:
                                  bool IsLoopMemset = false);
   bool optimizeCRCLoop(const PolynomialInfo &Info);
   void optimizeCRCLoopUsingClmul(const PolynomialInfo &Info,
-                                 IntegerType *ClmulTy);
+                                 IntegerType *ClmulMuTy,
+                                 IntegerType *ClmulGPTy);
   void optimizeCRCLoopUsingTableLookup(const PolynomialInfo &Info);
 
   /// @}
@@ -1590,17 +1591,16 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
   if (TT.getArch() == Triple::hexagon)
     return false;
 
-  // In the clmul optimization, the first clmul uses 2*TC bits, and the second
-  // clmul uses CRCBW+TC bits. For simplicity, have both clmuls operate on the
-  // same bit width.
+  // Calculate the widths for the clmul operations that would be required.
+  LLVMContext &Ctx = Info.LHS->getContext();
   unsigned CRCBW = Info.LHS->getType()->getIntegerBitWidth();
-  unsigned ClmulBW = std::max(2 * Info.TripCount, CRCBW + Info.TripCount);
-  auto *ClmulTy = IntegerType::get(Info.LHS->getContext(), ClmulBW);
+  auto *ClmulMuTy = IntegerType::get(Ctx, 2 * Info.TripCount);
+  auto *ClmulGPTy = IntegerType::get(Ctx, CRCBW + Info.TripCount);
 
   // The force-crc-clmul flag should cause the clmul optimization to run
   // unconditionally.
   if (ForceCRCClmul) {
-    optimizeCRCLoopUsingClmul(Info, ClmulTy);
+    optimizeCRCLoopUsingClmul(Info, ClmulMuTy, ClmulGPTy);
     return true;
   }
 
@@ -1617,8 +1617,8 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
   // bit width is a fast operation on the target.
   // TODO: If clmul exists on the target but not for the required width, it
   // might be possible to split into multiple iterations of reduction.
-  if (TTI->haveFastClmul(ClmulTy)) {
-    optimizeCRCLoopUsingClmul(Info, ClmulTy);
+  if (TTI->haveFastClmul(ClmulMuTy) && TTI->haveFastClmul(ClmulGPTy)) {
+    optimizeCRCLoopUsingClmul(Info, ClmulMuTy, ClmulGPTy);
     return true;
   }
 
@@ -1629,7 +1629,8 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
 // Reduction based on Intel's "Fast CRC Computation for Generic Polynomials
 // Using PCLMULQDQ Instruction" white paper (December 2009).
 void LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info,
-                                                   IntegerType *ClmulTy) {
+                                                   IntegerType *ClmulMuTy,
+                                                   IntegerType *ClmulGPTy) {
   Type *CRCTy = Info.LHS->getType();
   LLVMContext &Ctx = CRCTy->getContext();
   unsigned CRCBW = CRCTy->getIntegerBitWidth();
@@ -1637,23 +1638,28 @@ void LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info,
   // regardless of whether the actual data bit width matches (if auxiliary data
   // is even used at all).
   unsigned TC = Info.TripCount;
-  unsigned ClmulBW = ClmulTy->getBitWidth();
 
   // First, generate the constants required for GF(2) Barrett reduction.
   auto [Mu, FullGenPoly] = HashRecognize::genBarrettConstants(Info);
-  Value *MuConst = ConstantInt::get(Ctx, Mu.zext(ClmulBW));
-  Value *GenPolyConst = ConstantInt::get(Ctx, FullGenPoly.zext(ClmulBW));
+  Value *MuConst = ConstantInt::get(Ctx, Mu.zext(ClmulMuTy->getBitWidth()));
+  Value *GenPolyConst =
+      ConstantInt::get(Ctx, FullGenPoly.zext(ClmulGPTy->getBitWidth()));
 
   IRBuilder<> Builder(CurLoop->getLoopPreheader()->getTerminator());
 
   auto LoTCBits = [TC, &Builder, &Ctx](Value *Op, const Twine &Name) {
     unsigned OpBW = Op->getType()->getIntegerBitWidth();
-    assert(OpBW >= TC && "Bit width should be at least TripCount");
+    if (OpBW <= TC)
+      return Op;
     auto *Mask = ConstantInt::get(Ctx, APInt::getLowBitsSet(OpBW, TC));
     return Builder.CreateAnd(Op, Mask, Name);
   };
 
-  Value *LHS = Builder.CreateZExt(Info.LHS, ClmulTy, "crc.cast");
+  // If a shift needs to occur in the setup for the first clmul with MuConst, it
+  // will be by abs(TC - CRCBW). To ensure that the shift can work without
+  // losing information or creating poison, give it CRCBW + TC bits.
+  bool SetupShiftNeeded = Info.IsBigEndian && TC != CRCBW;
+  auto *SetupTy = IntegerType::get(Ctx, SetupShiftNeeded ? CRCBW + TC : TC);
 
   // Based on the Intel white paper, in our case, we have
   // R(x) = (LHS*x^TC) xor (LHSAux ? getTCBits(LHSAux)*x^CRCBW : 0)
@@ -1668,19 +1674,20 @@ void LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info,
   // Thanks to restrictions imposed by HashRecognize for big-endian CRC loops,
   // getTCBits(LHSAux) = LHSAux*x^(TC-CRCBW), so this can be further simplified
   // to (LHS xor (LHSAux ? LHSAux : 0))*x^(TC-CRCBW).
-  Value *ClmulMuInput = LHS;
+  Value *ClmulMuInput =
+      Builder.CreateZExtOrTrunc(Info.LHS, SetupTy, "crc.cast");
 
   // If auxiliary data is present, XOR it in with the CRC.
   if (Value *Data = Info.LHSAux) {
-    // This is usually a zext, but DataBW may exceed ClmulBW if both CRCBW and
+    // This is usually a zext, but DataBW may exceed CRCBW+TC if both CRCBW and
     // TC are small enough.
-    Data = Builder.CreateZExtOrTrunc(Data, ClmulTy, "data.cast");
+    Data = Builder.CreateZExtOrTrunc(Data, SetupTy, "data.cast");
 
     ClmulMuInput = Builder.CreateXor(ClmulMuInput, Data, "xor.crc.data");
   }
 
   // Align the current CRC with TripCount (multiply or divide by x^(TC-CRCBW)).
-  if (Info.IsBigEndian && TC != CRCBW) {
+  if (SetupShiftNeeded) {
     ClmulMuInput =
         TC > CRCBW
             ? Builder.CreateShl(ClmulMuInput, TC - CRCBW, "crc.align.tc")
@@ -1693,6 +1700,8 @@ void LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info,
 
   // Step 1: T1(x) = floor(R(x)/x^CRCBW) * mu
   // Input is TC bits and mu is TC+1 bits, so result will be 2*TC bits.
+  ClmulMuInput =
+      Builder.CreateZExtOrTrunc(ClmulMuInput, ClmulMuTy, "tcbits.cast");
   Value *ClmulMu = Builder.CreateBinaryIntrinsic(
       Intrinsic::clmul, ClmulMuInput, MuConst, /*FMFSource=*/{}, "clmul.mu");
 
@@ -1703,6 +1712,8 @@ void LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info,
 
   // Step 2: T2(x) = floor(T1(x)/x^TC) * P(x)
   // Input is TC bits and P(x) is CRCBW+1 bits, so result will be CRCBW+TC bits.
+  ClmulGPInput =
+      Builder.CreateZExtOrTrunc(ClmulGPInput, ClmulGPTy, "quot.cast");
   Value *ClmulGP = Builder.CreateBinaryIntrinsic(Intrinsic::clmul, ClmulGPInput,
                                                  GenPolyConst,
                                                  /*FMFSource=*/{}, "clmul.gp");
@@ -1710,11 +1721,12 @@ void LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info,
   // Calculate the least significant part of R(x) for step 3 as specified above.
   // R(x) mod x^CRCBW = LHS*x^TC mod x^CRCBW, though the (mod x^CRCBW) is
   // handled later on when truncating back to CRCBW for ComputedValue.
-  Value *CRCAlignClmul =
-      Info.IsBigEndian ? Builder.CreateShl(LHS, TC, "crc.shl") : LHS;
+  Value *CRCNext = Builder.CreateZExt(Info.LHS, ClmulGPTy, "crc.recast");
+  if (Info.IsBigEndian)
+    CRCNext = Builder.CreateShl(CRCNext, TC, "crc.shl");
 
   // Step 3: C(x) = (R(x) xor T2(x)) mod x^CRCBW
-  Value *CRCNext = Builder.CreateXor(CRCAlignClmul, ClmulGP, "xor.crc.mult");
+  CRCNext = Builder.CreateXor(CRCNext, ClmulGP, "xor.crc.mult");
   if (!Info.IsBigEndian)
     CRCNext = Builder.CreateLShr(CRCNext, TC, "crc.lshr");
 
