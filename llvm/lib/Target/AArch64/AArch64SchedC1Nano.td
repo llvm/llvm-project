@@ -101,6 +101,8 @@ def C1NanoUnitCMEVXFPDOT : ProcResGroup<[C1NanoUnitCMEVX0FPDOT,
                                       C1NanoUnitCMEVX1FPDOT]>;
 def C1NanoUnitCMEVXMUL : ProcResGroup<[C1NanoUnitCMEVX0MUL, C1NanoUnitCMEVX1MUL]>;
 def C1NanoUnitCMEPERM  : ProcResGroup<[C1NanoUnitCMEPERMS, C1NanoUnitCMEPERMF]>;
+def C1NanoUnit2CMEVX0ALU : ProcResGroup<[C1NanoUnitCMEVX0ALU, C1NanoUnitCMEVX0ALU]>;
+
 // These latencies are modeled without taking into account forwarding paths
 // (the software optimisation guide lists latencies taking into account
 // typical forwarding paths).
@@ -371,27 +373,43 @@ def C1NanoWrite_4c_1CMEPERMF_1rc : C1NanoCMEWriteRC<4, [C1NanoUnitCMEPERMF], [1]
 def C1NanoWrite_5c_1CMEPERMF_2rc : C1NanoCMEWriteRC<5, [C1NanoUnitCMEPERMF], [2]>;
 def C1NanoWrite_7c_1CMEPERMF_4rc : C1NanoCMEWriteRC<7, [C1NanoUnitCMEPERMF], [4]>;
 
-def C1NanoWrite_12c_1CMEPERMF_1CMEVX0ALU_2rc
-    : C1NanoCMEWriteRC<12, [C1NanoUnitCMEPERMF, C1NanoUnitCMEVX0ALU], [6, 2]>;
-def C1NanoWrite_12c_1CMEPERMF_1CMEVXALU_2d3rc
-    : C1NanoCMEWriteRC<12, [C1NanoUnitCMEPERMF, C1NanoUnitCMEVXALU], [4, 3]>;
 def C1NanoWrite_4c_1CMEPERMF_1CMEVXALU_1d1rc
     : C1NanoCMEWriteRC<4, [C1NanoUnitCMEPERMF, C1NanoUnitCMEVXALU], [1, 2]>;
-def C1NanoWrite_8c_1CMEPERMF_1CMEVXALU_1rc
-    : C1NanoCMEWriteRC<8, [C1NanoUnitCMEPERMF, C1NanoUnitCMEVXALU], [3, 2]>;
-
-def C1NanoWrite_8c_1CMEPERMF_1CMEVX0ALU_1rc
-    : C1NanoCMEWriteRC<8, [C1NanoUnitCMEPERMF, C1NanoUnitCMEVX0ALU], [1, 1]>;
-def C1NanoWrite_8c_1CMEPERMF_1CMEPERMS_1rc : C1NanoCMEWriteRC<8, [C1NanoUnitCMEPERMF,
-                                                                  C1NanoUnitCMEPERM],
-                                                  [1, 2]>;
-def C1NanoWrite_16c_1CMEPERMS_1CMEVXALU_2d3rc
-    : C1NanoCMEWriteRC<16, [C1NanoUnitCMEPERM, C1NanoUnitCMEVXALU], [3, 3]>;
 def C1NanoWrite_7c_1CMEPERMF_1CMEVXALU_1rc
     : C1NanoCMEWriteRC<7, [C1NanoUnitCMEVXALU, C1NanoUnitCMEPERMF], [1, 2]>;
+def C1NanoWrite_8c_1CMEPERMF_1CMEVXALU_1rc
+    : C1NanoCMEWriteRC<8, [C1NanoUnitCMEPERMF, C1NanoUnitCMEVXALU], [3, 2]>;
 def C1NanoWrite_8c_1CMEPERMS_1CMEVXALU_1rc : C1NanoCMEWriteRC<8, [C1NanoUnitCMEPERM,
                                                                   C1NanoUnitCMEVXALU],
                                                   [2, 1]>;
+def C1NanoWrite_12c_1CMEPERMF_1CMEVXALU_2d3rc
+    : C1NanoCMEWriteRC<12, [C1NanoUnitCMEPERMF, C1NanoUnitCMEVXALU], [4, 3]>;
+def C1NanoWrite_16c_1CMEPERMF_1CMEVXALU__2d3rc
+    : C1NanoCMEWriteRC<16, [C1NanoUnitCMEPERMF, C1NanoUnitCMEVXALU], [1, 3]>;
+
+def C1NanoWrite_4c_1CMEPERMF_1CMEVX0ALU_1rc
+    : C1NanoCMEWriteRC<4, [C1NanoUnitCMEPERMF, C1NanoUnitCMEVX0ALU], [1, 1]>;
+def C1NanoWrite_4c_1CMEPERMF_1CMEVX0ALU_2rc
+    : C1NanoCMEWriteRC<4, [C1NanoUnitCMEPERMF, C1NanoUnitCMEVX0ALU], [2, 2]>;
+def C1NanoWrite_8c_1CMEPERMF_1CMEVX0ALU_1rc
+    : C1NanoCMEWriteRC<8, [C1NanoUnitCMEPERMF, C1NanoUnitCMEVX0ALU], [1, 1]>;
+def C1NanoWrite_12c_1CMEPERMF_1CMEVX0ALU_2rc
+    : C1NanoCMEWriteRC<12, [C1NanoUnitCMEPERMF, C1NanoUnitCMEVX0ALU], [6, 2]>;
+
+def C1NanoWrite_8c_1CMEPERMF_1CMEPERMS_1rc : C1NanoCMEWriteRC<8, [C1NanoUnitCMEPERMF,
+                                                                  C1NanoUnitCMEPERM],
+                                                  [1, 2]>;
+def C1NanoWrite_13c_1CMEPERMF_1CMEMML1_5rc
+    : C1NanoCMEWriteRC<13, [C1NanoUnitCMEPERMF, C1NanoUnitCMEMML1], [5, 3]>;
+
+def C1NanoWrite_16c_1CMEPERMS_1CMEVXALU_2d3rc
+    : C1NanoCMEWriteRC<16, [C1NanoUnitCMEPERM, C1NanoUnitCMEVXALU], [3, 3]>;
+def C1NanoWrite_20c_1CMEPERMS_1CMEVXALU_1d2rc
+    : C1NanoCMEWriteRC<20, [C1NanoUnitCMEPERM, C1NanoUnitCMEVXALU], [4, 4]>;
+def C1NanoWrite_24c_1CMEPERMS_1CMEVXALU_2d5rc
+    : C1NanoCMEWriteRC<24, [C1NanoUnitCMEPERM, C1NanoUnitCMEVXALU], [5, 5]>;
+def C1NanoWrite_12c_1CMEPERMS_1CMEVXALU_1CMEVX0ALU_1d2rc
+    : C1NanoCMEWriteRC<12, [C1NanoUnitCMEPERM, C1NanoUnitCMEVXALU, C1NanoUnitCMEVX0ALU], [1, 1, 1]>;
 
 def C1NanoWrite_4c_1CMEMML0_3rc  : C1NanoCMEWriteRC<4, [C1NanoUnitCMEMML0], [3]>;
 def C1NanoWrite_4c_1CMEMML0_4rc  : C1NanoCMEWriteRC<4, [C1NanoUnitCMEMML0], [4]>;
@@ -400,21 +418,13 @@ def C1NanoWrite_4c_1CMEVXALU     : C1NanoCMEWrite<4, [C1NanoUnitCMEVXALU]>;
 def C1NanoWrite_4c_1CMEVXALU_2rc : C1NanoCMEWriteRC<4, [C1NanoUnitCMEVXALU], [2]>;
 def C1NanoWrite_4c_1CMEVXALU_4rc : C1NanoCMEWriteRC<4, [C1NanoUnitCMEVXALU], [4]>;
 
-def C1NanoWrite_20c_1CMEPERMS_1CMEVXALU_1d2rc
-    : C1NanoCMEWriteRC<20, [C1NanoUnitCMEPERM, C1NanoUnitCMEVXALU], [4, 4]>;
-def C1NanoWrite_24c_1CMEPERMS_1CMEVXALU_2d5rc
-    : C1NanoCMEWriteRC<24, [C1NanoUnitCMEPERM, C1NanoUnitCMEVXALU], [5, 5]>;
-
 def C1NanoWrite_4c_1CMEVX0ALU    : C1NanoCMEWrite<4, [C1NanoUnitCMEVX0ALU]>;
-
-def C1NanoWrite_4c_1CMEPERMF_1CMEVX0ALU_1rc
-    : C1NanoCMEWriteRC<4, [C1NanoUnitCMEPERMF, C1NanoUnitCMEVXALU], [1, 1]>;
-def C1NanoWrite_4c_1CMEPERMF_1CMEVX0ALU_2rc
-    : C1NanoCMEWriteRC<4, [C1NanoUnitCMEPERMF, C1NanoUnitCMEVX0ALU], [2, 2]>;
+def C1NanoWrite_4c_1CMEVX0ALU_2d3rc : C1NanoCMEWriteRC<4, [C1NanoUnit2CMEVX0ALU], [3]>;
 
 def C1NanoWrite_4c_1CMEVXFPDOT   : C1NanoCMEWrite<4, [C1NanoUnitCMEVXFPDOT]>;
 
 def C1NanoWrite_4c_1CMEVXMUL     : C1NanoCMEWrite<4, [C1NanoUnitCMEVXMUL]>;
+def C1NanoWrite_8c_1CMEVXMUL_rc1 : C1NanoCMEWriteRC<8, [C1NanoUnitCMEVXMUL], [2]>;
 
 def C1NanoWrite_2c_1CMEPF_2rc : C1NanoCMEWriteRC<2, [C1NanoUnitCMEPF], [2]>;
 
@@ -439,8 +449,6 @@ def C1NanoWrite_2c_1CMEMML0_2rc : C1NanoCMEWriteRC<2, [C1NanoUnitCMEMML0], [2]>;
 def C1NanoWrite_9c_1CMEMML1 : C1NanoCMEWrite<9, [C1NanoUnitCMEMML1]>;
 def C1NanoWrite_9c_1CMEMML1_2rc : C1NanoCMEWriteRC<9, [C1NanoUnitCMEMML1], [2]>;
 def C1NanoWrite_9c_1CMEMML1_5rc : C1NanoCMEWriteRC<9, [C1NanoUnitCMEMML1], [5]>;
-def C1NanoWrite_13c_1CMEMML1_1CMEPERMF_5rc
-    : C1NanoCMEWriteRC<13, [C1NanoUnitCMEMML1, C1NanoUnitCMEPERMF], [5, 3]>;
 
 def C1NanoWrite_10c_1CMEMC_10rc : C1NanoCMEWriteRC<10, [C1NanoUnitCMEMC], [10]>;
 def C1NanoWrite_11c_1CMEMC_11rc : C1NanoCMEWriteRC<11, [C1NanoUnitCMEMC], [11]>;
@@ -771,7 +779,7 @@ def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_4c_1CMEVXALU,
              (instregex "^XTN")>;
 
 // FP convert, from vec to gen reg
-def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_4c_1CMEVXALU,
+def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_12c_1CMEPERMS_1CMEVXALU_1CMEVX0ALU_1d2rc,
                                         C1NanoWrite_4c_1VALU>],
              (instregex "^FCVT[ALMNPZ][SU](S|U)?(W|X)")>;
 def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_4c_1CMEVXALU,
@@ -781,7 +789,11 @@ def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_4c_1CMEVXALU,
 // FP convert, Javascript from vec to gen reg
 def : InstRW<[C1NanoWrite_4c_2VALU], (instrs FJCVTZS)>;
 
-def : InstRW<[C1NanoWrite_4c_1VALU], (instregex "^(S|U)CVTF(S|U)(W|X)(H|S|D)")>;
+// FP convert, from gen to vec reg
+def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_8c_1CMEPERMF_1CMEVX0ALU_1rc,
+                                        C1NanoWrite_4c_1VALU>],
+             (instregex "^[SU]CVTF[SU][WX][HSD]ri$")>;
+
 def : InstRW<[C1NanoWrite_4c_1VALU], (instregex "^(S|U)CVTF(h|s|d)")>;
 def : InstRW<[C1NanoWrite_4c_1VALU], (instregex "^(S|U)CVTFv")>;
 
@@ -1652,7 +1664,7 @@ def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_4c_1CMEVXALU,
              (instrs DUPM_ZI)>;
 
 // Compare and set flags
-def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_4c_1CMEVX0ALU,
+def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_4c_1CMEVX0ALU_2d3rc,
                                         C1NanoWrite_5c_2VALU_1rc>],
              (instregex "^CMP(EQ|GE|GT|HI|HS|LE|LO|LS|LT|NE)_PPzZ[IZ]_[BHSD]",
                         "^CMP(EQ|GE|GT|HI|HS|LE|LO|LS|LT|NE)_WIDE_PPzZZ_[BHS]")>;
@@ -1754,7 +1766,7 @@ def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_4c_1CMEVXMUL,
              (instrs SUDOT_ZZZI, USDOT_ZZZI, USDOT_ZZZ)>;
 
 // Dot product, 16 bit
-def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_4c_1CMEVXMUL,
+def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_8c_1CMEVXMUL_rc1,
                                         C1NanoWrite_4c_1VMAC>, ReadVMACAccum],
              (instregex "^[SU]DOT_ZZZI?_HtoD")>;
 
@@ -1796,7 +1808,7 @@ def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_4c_1CMEVXALU,
              (instregex "^LAST[AB]_RPZ_[BHSD]")>;
 
 // Insert operation, scalar
-def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_8c_1CMEPERMF_1CMEVXALU_1rc,
+def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_4c_1CMEPERM,
                                         C1NanoWrite_4c_1VALU>],
              (instregex "^INSR_ZR_[BHSD]")>;
 
@@ -2191,8 +2203,8 @@ def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_4c_1CMEVXMUL,
                                         C1NanoWrite_4c_1VMAC>],
                (instregex "^F(RECPS|RSQRTS)_ZZZ_[HSD]")>;
 
-// Floating point reduction
-def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_4c_1CMEVXMUL,
+// Floating point min/max reduction
+def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_16c_1CMEPERMF_1CMEVXALU__2d3rc,
                                         C1NanoWrite_4c_1VALU0>],
                (instregex "^F(MAX|MIN)(NM)?V_VPZ_[HSD]")>;
 
@@ -2759,7 +2771,7 @@ def : InstRW<[C1NanoWrite_9c_1CMEMML1_2rc],
              (instregex "^MOVA_4ZMXI_")>;
 def : InstRW<[C1NanoWrite_9c_1CMEMML1_5rc],
              (instregex "^MOVA_VG2_2ZMXI$")>;
-def : InstRW<[C1NanoWrite_13c_1CMEMML1_1CMEPERMF_5rc],
+def : InstRW<[C1NanoWrite_13c_1CMEPERMF_1CMEMML1_5rc],
              (instregex "^MOVA_VG4_4ZMXI$")>;
 def : InstRW<[C1NanoWrite_4c_1CMEPERMF_1rc],
              (instrs MOVT_TIX)>;

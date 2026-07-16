@@ -65,6 +65,20 @@
 # NONSTREAMING-NEXT:  1      4     0.33                        fmaxnmv	d0, p0, z1.d
 # NONSTREAMING-NEXT:  1      8     1.00                        sqcvtn	z0.h, { z0.s, z1.s }
 # NONSTREAMING-NEXT:  1      8     0.75                        uaddv	d0, p7, z31.b
+# NONSTREAMING-NEXT:  1      3     1.00                        clasta	z0.b, p7, z0.b, z31.b
+# NONSTREAMING-NEXT:  1      3     1.00                        clastb	z0.b, p7, z0.b, z31.b
+# NONSTREAMING-NEXT:  1      3     1.00                        compact	z31.s, p7, z31.s
+# NONSTREAMING-NEXT:  1      3     1.00                        splice	z29.b, p7, { z30.b, z31.b }
+# NONSTREAMING-NEXT:  1      2     1.00                        cmpeq	p0.b, p0/z, z0.b, #-16
+# NONSTREAMING-NEXT:  1      2     1.00                        cmpge	p0.b, p0/z, z0.b, #-16
+# NONSTREAMING-NEXT:  1      2     1.00                        cmpgt	p0.b, p0/z, z0.b, #-16
+# NONSTREAMING-NEXT:  1      2     1.00                        cmphi	p0.d, p0/z, z0.d, #127
+# NONSTREAMING-NEXT:  1      2     1.00                        cmphs	p0.b, p0/z, z0.b, #0
+# NONSTREAMING-NEXT:  1      2     1.00                        cmple	p0.b, p0/z, z0.b, #-16
+# NONSTREAMING-NEXT:  1      2     1.00                        cmplo	p0.b, p0/z, z0.b, #0
+# NONSTREAMING-NEXT:  1      2     1.00                        cmpls	p0.b, p0/z, z0.b, #0
+# NONSTREAMING-NEXT:  1      2     1.00                        cmplt	p0.b, p0/z, z0.b, #-16
+# NONSTREAMING-NEXT:  1      2     1.00                        cmpne	p0.b, p0/z, z0.b, #-16
 
 # STREAMING:         [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # STREAMING-NEXT:     1      4     0.50                        fadd	s0, s1, s2
@@ -111,6 +125,20 @@
 # STREAMING-NEXT:     1      16    1.50                        fmaxnmv	d0, p0, z1.d
 # STREAMING-NEXT:     1      8     1.00                        sqcvtn	z0.h, { z0.s, z1.s }
 # STREAMING-NEXT:     1      12    1.50                        uaddv	d0, p7, z31.b
+# STREAMING-NEXT:     1      4     1.00                        clasta	z0.b, p7, z0.b, z31.b
+# STREAMING-NEXT:     1      4     1.00                        clastb	z0.b, p7, z0.b, z31.b
+# STREAMING-NEXT:     1      4     1.00                        compact	z31.s, p7, z31.s
+# STREAMING-NEXT:     1      4     1.00                        splice	z29.b, p7, { z30.b, z31.b }
+# STREAMING-NEXT:     1      4     1.00                        cmpeq	p0.b, p0/z, z0.b, #-16
+# STREAMING-NEXT:     1      4     1.00                        cmpge	p0.b, p0/z, z0.b, #-16
+# STREAMING-NEXT:     1      4     1.00                        cmpgt	p0.b, p0/z, z0.b, #-16
+# STREAMING-NEXT:     1      4     1.00                        cmphi	p0.d, p0/z, z0.d, #127
+# STREAMING-NEXT:     1      4     1.00                        cmphs	p0.b, p0/z, z0.b, #0
+# STREAMING-NEXT:     1      4     1.00                        cmple	p0.b, p0/z, z0.b, #-16
+# STREAMING-NEXT:     1      4     1.00                        cmplo	p0.b, p0/z, z0.b, #0
+# STREAMING-NEXT:     1      4     1.00                        cmpls	p0.b, p0/z, z0.b, #0
+# STREAMING-NEXT:     1      4     1.00                        cmplt	p0.b, p0/z, z0.b, #-16
+# STREAMING-NEXT:     1      4     1.00                        cmpne	p0.b, p0/z, z0.b, #-16
 
 # NONSTREAMING:      Resources:
 # NONSTREAMING-NEXT: [0.0] - C1UUnitB
@@ -206,11 +234,11 @@
 
 # NONSTREAMING:      Resource pressure per iteration:
 # NONSTREAMING-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8.0]  [8.1]  [8.2]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17.0] [17.1] [17.2] [17.3] [18.0] [18.1] [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]   [32]   [33]   [34]
-# NONSTREAMING-NEXT:  -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -     1.50   1.50   4.00   4.00   9.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13   10.75  12.75  4.50   6.75   6.75   4.50
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -     1.50   1.50   4.00   4.00   9.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13   20.75  16.75  4.50   6.75   6.75   4.50
 
 # STREAMING:         Resource pressure per iteration:
 # STREAMING-NEXT:    [0.0]  [0.1]  [0.2]  [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8.0]  [8.1]  [8.2]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17.0] [17.1] [17.2] [17.3] [18.0] [18.1] [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]   [32]   [33]   [34]
-# STREAMING-NEXT:     -      -      -     4.00    -      -      -     19.50  8.50    -      -      -      -     3.00   21.50  1.00   1.50   17.50  1.00   1.50    -      -      -      -      -      -     1.25   1.25   3.75   3.75   3.63   0.63   0.13   0.13   0.13   0.13   0.13   0.13   3.67   3.67   0.17   0.17   0.17   0.17
+# STREAMING-NEXT:     -      -      -     4.00    -      -      -     23.50  8.50    -      -      -      -     3.00   31.50  1.00   1.50   17.50  1.00   1.50    -      -      -      -      -      -     1.25   1.25   3.75   3.75   3.63   0.63   0.13   0.13   0.13   0.13   0.13   0.13   3.67   3.67   0.17   0.17   0.17   0.17
 
 # NONSTREAMING:      Resource pressure by instruction:
 # NONSTREAMING-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8.0]  [8.1]  [8.2]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17.0] [17.1] [17.2] [17.3] [18.0] [18.1] [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]   [32]   [33]   [34]   Instructions:
@@ -258,6 +286,20 @@
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33   fmaxnmv	d0, p0, z1.d
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqcvtn	z0.h, { z0.s, z1.s }
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.92   0.92   0.17   0.92   0.92   0.17   uaddv	d0, p7, z31.b
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     clasta	z0.b, p7, z0.b, z31.b
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     clastb	z0.b, p7, z0.b, z31.b
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     compact	z31.s, p7, z31.s
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     splice	z29.b, p7, { z30.b, z31.b }
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     cmpeq	p0.b, p0/z, z0.b, #-16
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     cmpge	p0.b, p0/z, z0.b, #-16
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     cmpgt	p0.b, p0/z, z0.b, #-16
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     cmphi	p0.d, p0/z, z0.d, #127
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     cmphs	p0.b, p0/z, z0.b, #0
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     cmple	p0.b, p0/z, z0.b, #-16
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     cmplo	p0.b, p0/z, z0.b, #0
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     cmpls	p0.b, p0/z, z0.b, #0
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     cmplt	p0.b, p0/z, z0.b, #-16
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     cmpne	p0.b, p0/z, z0.b, #-16
 
 # STREAMING:         Resource pressure by instruction:
 # STREAMING-NEXT:    [0.0]  [0.1]  [0.2]  [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8.0]  [8.1]  [8.2]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17.0] [17.1] [17.2] [17.3] [18.0] [18.1] [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]   [32]   [33]   [34]   Instructions:
@@ -305,3 +347,17 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmaxnmv	d0, p0, z1.d
 # STREAMING-NEXT:     -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqcvtn	z0.h, { z0.s, z1.s }
 # STREAMING-NEXT:     -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uaddv	d0, p7, z31.b
+# STREAMING-NEXT:     -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     clasta	z0.b, p7, z0.b, z31.b
+# STREAMING-NEXT:     -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     clastb	z0.b, p7, z0.b, z31.b
+# STREAMING-NEXT:     -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     compact	z31.s, p7, z31.s
+# STREAMING-NEXT:     -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     splice	z29.b, p7, { z30.b, z31.b }
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmpeq	p0.b, p0/z, z0.b, #-16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmpge	p0.b, p0/z, z0.b, #-16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmpgt	p0.b, p0/z, z0.b, #-16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmphi	p0.d, p0/z, z0.d, #127
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmphs	p0.b, p0/z, z0.b, #0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmple	p0.b, p0/z, z0.b, #-16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmplo	p0.b, p0/z, z0.b, #0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmpls	p0.b, p0/z, z0.b, #0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmplt	p0.b, p0/z, z0.b, #-16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     cmpne	p0.b, p0/z, z0.b, #-16
