@@ -66,6 +66,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 #### C++2c Feature Support
 
+- Clang now supports [P3533R2](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3533r2.html) (constexpr virtual inheritance).
+
 #### C++23 Feature Support
 
 #### C++20 Feature Support
@@ -128,14 +130,26 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 ### Bug Fixes in This Version
 
 - Fixed a constraint comparison bug in partial ordering. (#GH182671)
+- Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
 
 #### Bug Fixes to Compiler Builtins
 
 #### Bug Fixes to Attribute Support
 
+- The `counted_by`/`counted_by_or_null` diagnostic that rejects a pointer whose
+  pointee is a struct with a flexible array member (e.g.
+  ``struct with_fam * __sized_by(size) ptr;``) was incorrectly also applied to
+  the `sized_by`/`sized_by_or_null` attributes. Because `sized_by` and
+  `sized_by_or_null` describe the size in bytes rather than a count of elements,
+  they are now correctly accepted on such pointers.
+
 #### Bug Fixes to C++ Support
 
 #### Bug Fixes to AST Handling
+
+- Fixed a non-deterministic ordering of unused local typedefs that made
+  serialized PCH/AST files and `-Wunused-local-typedef` diagnostics
+  non-reproducible across runs. (#GH209639)
 
 #### Miscellaneous Bug Fixes
 
@@ -145,9 +159,23 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### OpenCL Specific Changes
 
+- Extensions ``cl_khr_extended_bit_ops``, ``cl_khr_integer_dot_product``,
+  ``cl_khr_subgroup_extended_types``, ``cl_khr_subgroup_rotate``,
+  ``cl_khr_subgroup_shuffle``, and ``cl_khr_subgroup_shuffle_relative`` are
+  promoted to core features in OpenCL C 3.1. A target claiming OpenCL C 3.1
+  conformance without supporting one of these features is now diagnosed.
+
 ### Target Specific Changes
 
 #### AMDGPU Support
+
+- Deprecated the following builtins in favor of `__builtin_amdgcn_ballot_w32` or
+  `__builtin_amdgcn_ballot_w64`:
+  - `__builtin_amdgcn_uicmp`
+  - `__builtin_amdgcn_uicmpl`
+  - `__builtin_amdgcn_sicmpl`
+  - `__builtin_amdgcn_fcmp`
+  - `__builtin_amdgcn_fcmpf`
 
 #### NVPTX Support
 
@@ -202,6 +230,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 %   - New checkers and features
 %   - Improvements
 %   - Moved checkers
+%   - Diagnostic changes
 
 #### Improvements
 
@@ -209,6 +238,10 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   It can be re-enabled with the ``WarnOnLockOrderReversal`` option.
 
 #### Moved checkers
+
+#### Diagnostic changes
+
+- For self-assignments during initialization (`T v = v;`), `core.uninitialized.Assign` will not report them as uninitialized accesses (except C++ reference types), and the checks will be delayed until the first accesses of these variables; `deadcode.DeadStores` will not report them as dead stores. (#GH187530)
 
 (release-notes-sanitizers)=
 
