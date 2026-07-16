@@ -142,6 +142,7 @@ EXCLUDE_MAC = {
     "polly",
     "libcxx",
     "libcxxabi",
+    "libunwind",
     "offload",
 }
 

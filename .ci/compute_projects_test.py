@@ -68,14 +68,14 @@ class TestComputeProjects(unittest.TestCase):
             env_variables["project_check_targets"],
             "check-clang check-clang-python check-clang-tools check-lld check-llvm",
         )
-        self.assertEqual(env_variables["runtimes_to_build"], "libunwind")
+        self.assertEqual(env_variables["runtimes_to_build"], "")
         self.assertEqual(
             env_variables["runtimes_check_targets"],
             "",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets_needs_reconfig"],
-            "check-unwind",
+            "",
         )
 
     def test_mlir_mac(self):
