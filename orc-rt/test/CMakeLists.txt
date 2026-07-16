@@ -8,8 +8,13 @@ if (ORC_RT_LLVM_TOOLS_AVAILABLE)
     ${CMAKE_CURRENT_SOURCE_DIR}/regression/lit.cfg.py
   )
 
+  # Build the regression test-support tools.
+  add_subdirectory(tools)
+
   list(APPEND ORC_RT_TEST_DEPS
-    orc-executor
+    ogre
+    orc-rt-log-check
+    orc-rt-smoke-check
   )
 
   add_custom_target(orc-rt-test-depends DEPENDS ${ORC_RT_TEST_DEPS})
@@ -22,6 +27,9 @@ if (ORC_RT_LLVM_TOOLS_AVAILABLE)
 else()
   message(WARNING "ORC-RT testing tools missing (see cmake log for details). ORC-RT regression tests disabled.")
 endif()
+
+# Build and register the unit test suite (GoogleTest binaries run via lit).
+add_subdirectory(unit)
 
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/unit/lit.site.cfg.py.in

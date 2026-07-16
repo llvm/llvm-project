@@ -209,7 +209,7 @@ bool BPFAbstractMemberAccess::run(Function &F) {
   if (SP && SP->isDefinition()) {
     for (DIType *Ty: SP->getType()->getTypeArray())
       CheckAnonRecordType(nullptr, Ty);
-    for (const DINode *DN : SP->getRetainedNodes()) {
+    for (const MDNode *DN : SP->getRetainedNodes()) {
       if (const auto *DV = dyn_cast<DILocalVariable>(DN))
         CheckAnonRecordType(nullptr, DV->getType());
     }

@@ -2059,17 +2059,15 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
           TemplateParams = &FakedParamLists;
         }
       }
-      MultiTemplateParamsArg ParamLists(
-          TemplateParams ? &(*TemplateParams)[0] : nullptr,
-          TemplateParams ? TemplateParams->size() : 0);
+
       // Build the class template specialization.
       TagOrTempResult = Actions.ActOnClassTemplateSpecialization(
           getCurScope(), TagType, TUK, StartLoc, DS.getModulePrivateSpecLoc(),
-          SS, *TemplateId, attrs, ParamLists, &SkipBody);
-      // Some template parameter lists may have been dropped because they were
-      // extraneous.
-      if (TemplateParams)
-        TemplateParams->resize(ParamLists.size());
+          SS, *TemplateId, attrs,
+          MultiTemplateParamsArg(TemplateParams ? &(*TemplateParams)[0]
+                                                : nullptr,
+                                 TemplateParams ? TemplateParams->size() : 0),
+          &SkipBody);
     }
   } else if (TemplateInfo.Kind == ParsedTemplateKind::ExplicitInstantiation &&
              TUK == TagUseKind::Declaration) {
@@ -2536,6 +2534,12 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
     if (BitfieldSize.isInvalid())
       SkipUntil(tok::comma, StopAtSemi | StopBeforeMatch);
   } else if (Tok.is(tok::kw_requires)) {
+    TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
+    // With abbreviated function templates - we need to explicitly add depth to
+    // account for the implicit template parameter list induced by the template.
+    if (DeclaratorInfo.getTemplateParameterLists().empty() &&
+        DeclaratorInfo.getInventedTemplateParameterList())
+      ++CurTemplateDepthTracker;
     ParseTrailingRequiresClauseWithScope(DeclaratorInfo);
   } else {
     ParseOptionalCXX11VirtSpecifierSeq(
