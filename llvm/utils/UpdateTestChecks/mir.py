@@ -50,15 +50,12 @@ MIR_FUNC_RE = re.compile(
     flags=(re.M | re.S),
 )
 
-MD_PTR_RE = re.compile(r"\<0x[a-f0-9]+\>", re.IGNORECASE)
-
 # A marker inserted into a filtered MIR function body to record that one or more
 # lines were removed by --filter between two retained lines. When emitting
 # checks, the retained line that follows a marker is printed as CHECK (rather
 # than CHECK-NEXT) because it is not guaranteed to immediately follow the
 # previous match in the tool output.
 MIR_FILTER_GAP_MARKER = "; UTC-MIR-FILTER-GAP"
-
 
 def filter_mir_body(body, filters):
     """Filter a MIR function body while keeping the generated checks correct.
