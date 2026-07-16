@@ -95,6 +95,19 @@ void updateParDimsAttr(Operation *op, GPUParallelDimsAttr attr);
 /// Copy parallel dimensions from \p from to \p to.
 void copyParDimsAttr(Operation *from, Operation *to);
 
+/// Create a gang dim 1 GPUParallelDimsAttr based on the mapping policy.
+inline GPUParallelDimsAttr
+getGangDim1ParDimsAttr(MLIRContext *ctx, ACCToGPUMappingPolicy &policy) {
+  return GPUParallelDimsAttr::get(
+      ctx, {policy.gangDim(ctx, acc::ParLevel::gang_dim1)});
+}
+
+/// Create a sequential GPUParallelDimsAttr based on the mapping policy.
+inline GPUParallelDimsAttr getSeqParDimsAttr(MLIRContext *ctx,
+                                             ACCToGPUMappingPolicy &policy) {
+  return GPUParallelDimsAttr::get(ctx, {policy.seqDim(ctx)});
+}
+
 /// Tracks aligned byte consumption against a configurable shared memory cap.
 class SharedMemoryBudget {
 public:

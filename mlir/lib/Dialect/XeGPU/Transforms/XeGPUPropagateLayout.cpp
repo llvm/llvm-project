@@ -30,6 +30,7 @@
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -38,6 +39,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
+#include <limits>
 
 namespace mlir {
 namespace xegpu {
@@ -71,25 +73,46 @@ namespace {
 /// Given this, LayoutInfo  satisifies the following properties:
 ///  1) A LayoutInfo value can be in one of two states - `assigned` or `not
 ///  assigned`.
-///  2) Two LayoutInfo values are equal if they are both assigned or
-///  both not assigned. The concrete value of assigned state does not matter.
+///  2) Two LayoutInfo values are equal if they are both not assigned, or both
+///  assigned with the same layout.
 ///  3) The meet operator works as follows:
-///     - If current state is assigned, return the current state. (already
-///     a unique layout is assigned. don't change it)
-///     - Otherwise, return the other state.
+///     - If only one side is assigned, return that side.
+///     - If both sides are assigned, prefer the layout demanded by the user
+///       that is nearer to the producer in program order (smaller
+///       `programOrder`); on a tie keep lhs.
+///
+/// The `programOrder` field records the program-order index of the consumer op
+/// that demanded the layout (stamped via
+/// `LayoutInfoPropagation::makeLayoutInfo` from
+/// `LayoutInfoPropagation::currentProgramOrder`). During this backward analysis
+/// a value can be demanded by several users; keeping the nearest one tends to
+/// preserve a consumer's layout as far up the def chain as possible, minimizing
+/// layout conversions. This is a hint, not an optimum. `programOrder` is never
+/// propagated up the chain - each visited op stamps its own index - so it is
+/// excluded from `operator==`.
 
 struct LayoutInfo {
 private:
   xegpu::DistributeLayoutAttr storage = nullptr;
+  // Program-order index of the consumer op that demanded this layout. Smaller
+  // means nearer to the producer. Unassigned/unknown demands sort last.
+  int64_t programOrder = std::numeric_limits<int64_t>::max();
 
 public:
   LayoutInfo() = default;
-  LayoutInfo(const xegpu::DistributeLayoutAttr &layout) : storage(layout) {}
+  LayoutInfo(const xegpu::DistributeLayoutAttr &layout, int64_t programOrder)
+      : storage(layout), programOrder(programOrder) {}
 
-  // Two lattice values are equal if they have `some` layout. The actual
-  // content of the layout does not matter.
+  // Equality by assignment state and, when both assigned, by the layout:
+  //  - one assigned, the other not -> not equal;
+  //  - both unassigned             -> equal;
+  //  - both assigned               -> equal iff the layouts match.
   bool operator==(const LayoutInfo &other) const {
-    return this->isAssigned() == other.isAssigned();
+    if (isAssigned() != other.isAssigned())
+      return false;
+    if (!isAssigned())
+      return true;
+    return storage.isEqualTo(other.storage);
   }
 
   static LayoutInfo meet(const LayoutInfo &lhs, const LayoutInfo &rhs);
@@ -99,8 +122,6 @@ public:
   void print(raw_ostream &os) const;
 
   bool isAssigned() const { return storage != nullptr; }
-
-  LayoutInfo transpose(ArrayRef<int64_t> permutation) const;
 
   SmallVector<int> getLaneLayout() const;
 
@@ -141,6 +162,13 @@ void LayoutInfo::print(raw_ostream &os) const {
 LayoutInfo LayoutInfo::meet(const LayoutInfo &lhs, const LayoutInfo &rhs) {
   if (!lhs.isAssigned())
     return rhs;
+  if (!rhs.isAssigned())
+    return lhs;
+  // Prefer the demand from the user nearer to the producer in program order.
+  // Distinct users always have distinct indices, so this decides every
+  // real conflict; on a tie (same op, or both unknown) keep lhs.
+  if (rhs.programOrder < lhs.programOrder)
+    return rhs;
   return lhs;
 }
 
@@ -176,6 +204,20 @@ public:
 private:
   xegpu::LayoutKind layoutKind;
   unsigned indexBitWidth;
+
+  // Program-order index of every op, built lazily on first use via a pre-order
+  // walk of the top-level module/function (matching printed-IR order). Used to
+  // tell which consumer of a value is nearer to its producer.
+  DenseMap<Operation *, int64_t> programOrder;
+  // Returns the program-order index of `op`, populating `programOrder` from
+  // `op`'s top-level ancestor on first call.
+  int64_t getProgramOrder(Operation *op);
+
+  int64_t currentProgramOrder = std::numeric_limits<int64_t>::max();
+  LayoutInfo makeLayoutInfo(const xegpu::DistributeLayoutAttr &layout) {
+    return LayoutInfo(layout, currentProgramOrder);
+  }
+
   void visitDpasOp(xegpu::DpasOp dpas, ArrayRef<LayoutInfoLattice *> operands,
                    ArrayRef<const LayoutInfoLattice *> results);
 
@@ -291,9 +333,29 @@ public:
 };
 } // namespace
 
+int64_t LayoutInfoPropagation::getProgramOrder(Operation *op) {
+  auto it = programOrder.find(op);
+  if (it != programOrder.end())
+    return it->second;
+  // First time we see this op's tree: number every op under its top-level
+  // ancestor in pre-order (i.e. printed-IR order). Nested ops (e.g. inside an
+  // scf.for body) get an index between their parent and the parent's next
+  // sibling, so a use inside a loop is "nearer" than a use after it.
+  Operation *root = op;
+  while (root->getParentOp())
+    root = root->getParentOp();
+  int64_t counter = 0;
+  root->walk<WalkOrder::PreOrder>(
+      [&](Operation *o) { programOrder[o] = counter++; });
+  return programOrder.lookup(op);
+}
+
 LogicalResult LayoutInfoPropagation::visitOperation(
     Operation *op, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
+  // Stamp demands pushed by this op with its program-order index so `meet` can
+  // prefer the nearest consumer.
+  currentProgramOrder = getProgramOrder(op);
   TypeSwitch<Operation *>(op)
       .Case(
           [&](xegpu::DpasOp dpasOp) { visitDpasOp(dpasOp, operands, results); })
@@ -391,42 +453,6 @@ bool LayoutInfoPropagation::hasParamsOfLayoutKind(
   return false;
 }
 
-// This function returns all layouts for the given sgCount, whose sgData:
-// 1. Evenly divides the wgShape.
-// 2. Is a multiple of instData.
-// Example:
-//   wgShape = [128, 64], instData = [8, 16], sgCount = 32
-// Returns layouts:
-//   [(8,4), (16,2)], which correspond to sgData [16,16] and [8,32].
-SmallVector<std::pair<int, int>>
-getSgLayoutCandidates(ArrayRef<int64_t> wgShape, ArrayRef<int> instData,
-                      int64_t sgCount) {
-  SmallVector<std::pair<int, int>> candidates;
-  for (int sgLayout0 = 1; sgLayout0 <= sgCount; ++sgLayout0) {
-    if (sgCount % sgLayout0)
-      continue;
-    int sgLayout1 = sgCount / sgLayout0;
-    int sgData0 = wgShape[0] / sgLayout0;
-    int sgData1 = wgShape[1] / sgLayout1;
-    if ((wgShape[0] % sgLayout0 || wgShape[1] % sgLayout1) ||
-        (sgData0 % instData[0] || sgData1 % instData[1]))
-      continue;
-    candidates.emplace_back(sgLayout0, sgLayout1);
-  }
-  // Sort primarily by how balanced they are
-  // (i.e., minimize the absolute difference between the two dimensions), and
-  // secondarily by the first dimension in ascending order.
-  llvm::sort(candidates, [](const std::pair<int, int> &lhs,
-                            const std::pair<int, int> &rhs) {
-    int diffLhs = std::abs(lhs.first - lhs.second);
-    int diffRhs = std::abs(rhs.first - rhs.second);
-    if (diffLhs != diffRhs)
-      return diffLhs < diffRhs;
-    return lhs.first < rhs.first;
-  });
-  return candidates;
-}
-
 FailureOr<int64_t>
 getNumSg(Operation *op, const int sgSize,
          xegpu::DistributeLayoutAttr consumerLayout = nullptr) {
@@ -457,7 +483,7 @@ void LayoutInfoPropagation::visitPrefetchNdOp(
     return;
   xegpu::DistributeLayoutAttr anchorLayout = prefetch.getLayoutAttr();
   if (hasParamsOfLayoutKind(anchorLayout)) {
-    prefetchLayout = LayoutInfo(anchorLayout);
+    prefetchLayout = makeLayoutInfo(anchorLayout);
     if (layoutKind == xegpu::LayoutKind::InstData) {
       const auto *uArchInstruction =
           dyn_cast<xegpu::uArch::Subgroup2DBlockPrefetchInstruction>(
@@ -474,7 +500,7 @@ void LayoutInfoPropagation::visitPrefetchNdOp(
         return;
       }
       prefetch.setLayoutAttr(*completed);
-      prefetchLayout = LayoutInfo(*completed);
+      prefetchLayout = makeLayoutInfo(*completed);
     }
   } else {
     auto tdescTy = prefetch.getTensorDescType();
@@ -492,7 +518,7 @@ void LayoutInfoPropagation::visitPrefetchNdOp(
           "Failed to determine required layout for prefetch_nd.");
       return;
     }
-    prefetchLayout = LayoutInfo(layoutAttr);
+    prefetchLayout = makeLayoutInfo(layoutAttr);
     prefetch.setLayoutAttr(layoutAttr);
   }
   // Propagate the layout to the source tensor descriptor.
@@ -546,10 +572,11 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
   auto srcLayoutAttr = xegpu::inferMultiReductionSourceLayout(
       requiredResLayoutAttr, reductionDims);
 
-  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
+  propagateIfChanged(operands[0],
+                     operands[0]->meet(makeLayoutInfo(srcLayoutAttr)));
   // Accumulator should have the same layout as the result.
   propagateIfChanged(operands[1],
-                     operands[1]->meet(LayoutInfo(requiredResLayoutAttr)));
+                     operands[1]->meet(makeLayoutInfo(requiredResLayoutAttr)));
 }
 
 void LayoutInfoPropagation::visitVectorReductionOp(
@@ -567,10 +594,11 @@ void LayoutInfoPropagation::visitVectorReductionOp(
   xegpu::setTemporaryLayout(reduction->getResult(0), requiredResLayoutAttr);
 
   auto srcLayoutAttr = xegpu::inferReductionSourceLayout(requiredResLayoutAttr);
-  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
+  propagateIfChanged(operands[0],
+                     operands[0]->meet(makeLayoutInfo(srcLayoutAttr)));
   if (reduction.getAcc())
-    propagateIfChanged(operands[1],
-                       operands[1]->meet(LayoutInfo(requiredResLayoutAttr)));
+    propagateIfChanged(
+        operands[1], operands[1]->meet(makeLayoutInfo(requiredResLayoutAttr)));
 }
 
 void LayoutInfoPropagation::visitVectorBroadCastOp(
@@ -597,7 +625,8 @@ void LayoutInfoPropagation::visitVectorBroadCastOp(
   xegpu::DistributeLayoutAttr srcLayoutAttr =
       xegpu::inferBroadcastSourceLayout(resultLayoutAttr, resShape, srcShape);
 
-  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
+  propagateIfChanged(operands[0],
+                     operands[0]->meet(makeLayoutInfo(srcLayoutAttr)));
 }
 
 void LayoutInfoPropagation::visitShapeCastOp(
@@ -622,7 +651,8 @@ void LayoutInfoPropagation::visitShapeCastOp(
     return;
   }
 
-  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
+  propagateIfChanged(operands[0],
+                     operands[0]->meet(makeLayoutInfo(srcLayoutAttr)));
 }
 
 /// Set the layouts for DPAS A, B, and C operands.
@@ -648,9 +678,9 @@ void LayoutInfoPropagation::visitDpasOp(
            "Expected anchor layout for DPAS A operand.");
     assert(hasParamsOfLayoutKind(anchorLayoutB) &&
            "Expected anchor layout for DPAS B operand.");
-    dpasALayout = LayoutInfo(anchorLayoutA);
-    dpasBLayout = LayoutInfo(anchorLayoutB);
-    dpasCDLayout = LayoutInfo(anchorLayoutCD);
+    dpasALayout = makeLayoutInfo(anchorLayoutA);
+    dpasBLayout = makeLayoutInfo(anchorLayoutB);
+    dpasCDLayout = makeLayoutInfo(anchorLayoutCD);
     if (layoutKind == xegpu::LayoutKind::InstData) {
       auto completed = xegpu::completeDpasLaneLayoutFromInstData(
           anchorLayoutA, anchorLayoutB, anchorLayoutCD, aTy, bTy, cdTy, uArch);
@@ -663,9 +693,9 @@ void LayoutInfoPropagation::visitDpasOp(
       dpas.setLayoutAAttr(completedA);
       dpas.setLayoutBAttr(completedB);
       dpas.setLayoutCdAttr(completedCD);
-      dpasALayout = LayoutInfo(completedA);
-      dpasBLayout = LayoutInfo(completedB);
-      dpasCDLayout = LayoutInfo(completedCD);
+      dpasALayout = makeLayoutInfo(completedA);
+      dpasBLayout = makeLayoutInfo(completedB);
+      dpasCDLayout = makeLayoutInfo(completedCD);
     }
   } else {
 
@@ -701,9 +731,9 @@ void LayoutInfoPropagation::visitDpasOp(
     dpas.setLayoutAAttr(requiredALayout);
     dpas.setLayoutBAttr(requiredBLayout);
     dpas.setLayoutCdAttr(requiredCDLayoutAttr);
-    dpasALayout = LayoutInfo(requiredALayout);
-    dpasBLayout = LayoutInfo(requiredBLayout);
-    dpasCDLayout = LayoutInfo(requiredCDLayoutAttr);
+    dpasALayout = makeLayoutInfo(requiredALayout);
+    dpasBLayout = makeLayoutInfo(requiredBLayout);
+    dpasCDLayout = makeLayoutInfo(requiredCDLayoutAttr);
   }
   propagateIfChanged(operands[0], operands[0]->meet(dpasALayout));
   propagateIfChanged(operands[1], operands[1]->meet(dpasBLayout));
@@ -750,9 +780,9 @@ void LayoutInfoPropagation::visitDpasMxOp(
       hasParamsOfLayoutKind(anchorLayoutA) &&
       hasParamsOfLayoutKind(anchorLayoutB) &&
       hasParamsOfLayoutKind(anchorLayoutCD)) {
-    dpasMxALayout = LayoutInfo(anchorLayoutA);
-    dpasMxBLayout = LayoutInfo(anchorLayoutB);
-    dpasMxCDLayout = LayoutInfo(anchorLayoutCD);
+    dpasMxALayout = makeLayoutInfo(anchorLayoutA);
+    dpasMxBLayout = makeLayoutInfo(anchorLayoutB);
+    dpasMxCDLayout = makeLayoutInfo(anchorLayoutCD);
 
     // Get scale layouts if available
     xegpu::DistributeLayoutAttr anchorLayoutAScale =
@@ -760,9 +790,9 @@ void LayoutInfoPropagation::visitDpasMxOp(
     xegpu::DistributeLayoutAttr anchorLayoutBScale =
         dpasMx.getLayoutBScaleAttr();
     if (anchorLayoutAScale)
-      dpasMxAScaleLayout = LayoutInfo(anchorLayoutAScale);
+      dpasMxAScaleLayout = makeLayoutInfo(anchorLayoutAScale);
     if (anchorLayoutBScale)
-      dpasMxBScaleLayout = LayoutInfo(anchorLayoutBScale);
+      dpasMxBScaleLayout = makeLayoutInfo(anchorLayoutBScale);
 
     if (layoutKind == xegpu::LayoutKind::InstData) {
       auto completed = xegpu::completeDpasMxLaneLayoutFromInstData(
@@ -778,16 +808,16 @@ void LayoutInfoPropagation::visitDpasMxOp(
       dpasMx.setLayoutAAttr(completedA);
       dpasMx.setLayoutBAttr(completedB);
       dpasMx.setLayoutCdAttr(completedCD);
-      dpasMxALayout = LayoutInfo(completedA);
-      dpasMxBLayout = LayoutInfo(completedB);
-      dpasMxCDLayout = LayoutInfo(completedCD);
+      dpasMxALayout = makeLayoutInfo(completedA);
+      dpasMxBLayout = makeLayoutInfo(completedB);
+      dpasMxCDLayout = makeLayoutInfo(completedCD);
       if (completedAScale) {
         dpasMx.setLayoutAScaleAttr(completedAScale);
-        dpasMxAScaleLayout = LayoutInfo(completedAScale);
+        dpasMxAScaleLayout = makeLayoutInfo(completedAScale);
       }
       if (completedBScale) {
         dpasMx.setLayoutBScaleAttr(completedBScale);
-        dpasMxBScaleLayout = LayoutInfo(completedBScale);
+        dpasMxBScaleLayout = makeLayoutInfo(completedBScale);
       }
     }
   } else {
@@ -829,13 +859,13 @@ void LayoutInfoPropagation::visitDpasMxOp(
     if (requiredBScaleLayout)
       dpasMx.setLayoutBScaleAttr(requiredBScaleLayout);
 
-    dpasMxALayout = LayoutInfo(requiredALayout);
-    dpasMxBLayout = LayoutInfo(requiredBLayout);
-    dpasMxCDLayout = LayoutInfo(requiredCDLayoutAttr);
+    dpasMxALayout = makeLayoutInfo(requiredALayout);
+    dpasMxBLayout = makeLayoutInfo(requiredBLayout);
+    dpasMxCDLayout = makeLayoutInfo(requiredCDLayoutAttr);
     if (requiredAScaleLayout)
-      dpasMxAScaleLayout = LayoutInfo(requiredAScaleLayout);
+      dpasMxAScaleLayout = makeLayoutInfo(requiredAScaleLayout);
     if (requiredBScaleLayout)
-      dpasMxBScaleLayout = LayoutInfo(requiredBScaleLayout);
+      dpasMxBScaleLayout = makeLayoutInfo(requiredBScaleLayout);
   }
 
   // Propagate layouts to operands. Because acc, scale_a, scale_b are all
@@ -873,7 +903,7 @@ void LayoutInfoPropagation::visitStoreNdOp(
     return;
   xegpu::DistributeLayoutAttr anchorLayout = store.getLayoutAttr();
   if (hasParamsOfLayoutKind(anchorLayout)) {
-    storeLayout = LayoutInfo(anchorLayout);
+    storeLayout = makeLayoutInfo(anchorLayout);
     if (layoutKind == xegpu::LayoutKind::InstData) {
 
       const auto *uArchInstruction =
@@ -891,7 +921,7 @@ void LayoutInfoPropagation::visitStoreNdOp(
         return;
       }
       store.setLayoutAttr(*completed);
-      storeLayout = LayoutInfo(*completed);
+      storeLayout = makeLayoutInfo(*completed);
     }
   } else {
     auto numSgOrErr = getNumSg(store, uArch->getSubgroupSize());
@@ -907,7 +937,7 @@ void LayoutInfoPropagation::visitStoreNdOp(
       store.emitWarning("Failed to determine required layout for store_nd.");
       return;
     }
-    storeLayout = LayoutInfo(layoutAttr);
+    storeLayout = makeLayoutInfo(layoutAttr);
     store.setLayoutAttr(layoutAttr);
   }
   // Propagate the layout to the value operand.
@@ -933,7 +963,7 @@ void LayoutInfoPropagation::visitLoadNdOp(
       dyn_cast<xegpu::DistributeLayoutAttr>(valueLayout.get());
   xegpu::DistributeLayoutAttr anchorLayout = load.getLayoutAttr();
   if (hasParamsOfLayoutKind(anchorLayout)) {
-    loadLayout = LayoutInfo(anchorLayout);
+    loadLayout = makeLayoutInfo(anchorLayout);
     if (layoutKind == xegpu::LayoutKind::InstData &&
         !consumerLayoutAttr.getEffectiveLaneLayoutAsInt().empty()) {
       const auto *uArchInstruction =
@@ -951,7 +981,7 @@ void LayoutInfoPropagation::visitLoadNdOp(
         return;
       }
       load.setLayoutAttr(*completed);
-      loadLayout = LayoutInfo(*completed);
+      loadLayout = makeLayoutInfo(*completed);
     }
   } else {
     auto numSgOrErr =
@@ -968,7 +998,7 @@ void LayoutInfoPropagation::visitLoadNdOp(
       load.emitWarning("Failed to determine required layout for load_nd.");
       return;
     }
-    loadLayout = LayoutInfo(layoutAttr);
+    loadLayout = makeLayoutInfo(layoutAttr);
     load.setLayoutAttr(layoutAttr);
   }
   // Propagate the new layout to the tensor descriptor operand.
@@ -1024,7 +1054,7 @@ void LayoutInfoPropagation::visitConvertLayoutOp(
   }
 
   xegpu::DistributeLayoutAttr anchorLayout = convert.getInputLayoutAttr();
-  LayoutInfo convertLayout(anchorLayout);
+  LayoutInfo convertLayout = makeLayoutInfo(anchorLayout);
   // Propagate the new layout to the tensor descriptor operand.
   propagateIfChanged(operands[0], operands[0]->meet(convertLayout));
 }
@@ -1045,7 +1075,8 @@ void LayoutInfoPropagation::visitTransposeOp(
       consumerLayoutAttr, transpose.getPermutation());
 
   // Propagate the new layout to the vector operand.
-  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
+  propagateIfChanged(operands[0],
+                     operands[0]->meet(makeLayoutInfo(srcLayoutAttr)));
 }
 
 /// For vector::BitCastOp, the lane_data of the source layout is changed based
@@ -1079,7 +1110,8 @@ void LayoutInfoPropagation::visitVectorBitcastOp(
   auto srcLayoutAttr = xegpu::inferBitCastSourceLayout(
       requiredResLayoutAttr, outElemTyBitWidth, inElemTyBitWidth);
 
-  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
+  propagateIfChanged(operands[0],
+                     operands[0]->meet(makeLayoutInfo(srcLayoutAttr)));
 }
 
 /// For vector::InterleaveOp, the result has double the innermost dimension
@@ -1114,8 +1146,10 @@ void LayoutInfoPropagation::visitVectorInterleaveOp(
       xegpu::inferInterleaveSourceLayout(requiredResLayoutAttr);
 
   // Both operands (lhs and rhs) get the same source layout
-  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
-  propagateIfChanged(operands[1], operands[1]->meet(LayoutInfo(srcLayoutAttr)));
+  propagateIfChanged(operands[0],
+                     operands[0]->meet(makeLayoutInfo(srcLayoutAttr)));
+  propagateIfChanged(operands[1],
+                     operands[1]->meet(makeLayoutInfo(srcLayoutAttr)));
 }
 
 /// For vector::DeinterleaveOp, the source has double the innermost dimension
@@ -1137,7 +1171,8 @@ void LayoutInfoPropagation::visitVectorDeinterleaveOp(
   // dim) No setup function needed - just infer directly
   auto srcLayoutAttr = xegpu::inferDeinterleaveSourceLayout(consumerLayoutAttr);
 
-  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
+  propagateIfChanged(operands[0],
+                     operands[0]->meet(makeLayoutInfo(srcLayoutAttr)));
 }
 
 void LayoutInfoPropagation::visitInsertStridedSliceOp(
@@ -1166,9 +1201,10 @@ void LayoutInfoPropagation::visitInsertStridedSliceOp(
 
   auto srcLayoutAttr = xegpu::inferInsertStridedSliceSourceLayout(
       requiredResLayoutAttr, resVecType.getShape(), srcVecType.getShape());
-  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
+  propagateIfChanged(operands[0],
+                     operands[0]->meet(makeLayoutInfo(srcLayoutAttr)));
   propagateIfChanged(operands[1],
-                     operands[1]->meet(LayoutInfo(requiredResLayoutAttr)));
+                     operands[1]->meet(makeLayoutInfo(requiredResLayoutAttr)));
 }
 
 /// Propagate the layout of the result to the tensor descriptor, mask and
@@ -1223,8 +1259,8 @@ void LayoutInfoPropagation::visitLoadGatherOp(
   assert((chunkSize <= 1) || (layoutKind != xegpu::LayoutKind::Subgroup));
   auto maskLayoutAttr = xegpu::inferMaskOffsetLayoutForScatterIO(
       requiredAnchorLayoutAttr, chunkSize);
-  LayoutInfo maskLayoutInfo = LayoutInfo(maskLayoutAttr);
-  auto loadLayoutInfo = LayoutInfo(requiredAnchorLayoutAttr);
+  LayoutInfo maskLayoutInfo = makeLayoutInfo(maskLayoutAttr);
+  auto loadLayoutInfo = makeLayoutInfo(requiredAnchorLayoutAttr);
 
   // Propagate the new layout to the tensor descriptor operand.
   if (isa<xegpu::TensorDescType>(load.getSourceType()))
@@ -1289,11 +1325,11 @@ void LayoutInfoPropagation::visitStoreScatterOp(
     storeScatter.setLayoutAttr(requiredAnchorLayoutAttr);
   }
 
-  LayoutInfo srcLayoutInfo = LayoutInfo(requiredAnchorLayoutAttr);
+  LayoutInfo srcLayoutInfo = makeLayoutInfo(requiredAnchorLayoutAttr);
   assert((chunkSize <= 1) || (layoutKind != xegpu::LayoutKind::Subgroup));
   auto maskLayoutAttr = xegpu::inferMaskOffsetLayoutForScatterIO(
       requiredAnchorLayoutAttr, chunkSize);
-  LayoutInfo maskLayoutInfo = LayoutInfo(maskLayoutAttr);
+  LayoutInfo maskLayoutInfo = makeLayoutInfo(maskLayoutAttr);
 
   // Propagate the payload operand layout
   propagateIfChanged(operands[0], operands[0]->meet(srcLayoutInfo));
@@ -1383,7 +1419,7 @@ void LayoutInfoPropagation::visitStoreMatrixOp(
     }
     storeMatrix.setLayoutAttr(requiredAnchorLayoutAttr);
   }
-  layout = LayoutInfo(requiredAnchorLayoutAttr);
+  layout = makeLayoutInfo(requiredAnchorLayoutAttr);
   propagateIfChanged(operands[0], operands[0]->meet(layout));
 }
 

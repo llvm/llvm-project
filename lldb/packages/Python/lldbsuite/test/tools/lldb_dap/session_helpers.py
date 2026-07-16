@@ -19,7 +19,7 @@ from typing import (
     cast,
 )
 
-from .dap_types import (
+from .types import (
     AttachArgs,
     Breakpoint,
     BreakpointEvent,

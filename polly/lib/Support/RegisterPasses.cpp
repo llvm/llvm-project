@@ -483,7 +483,7 @@ static void buildEarlyPollyPipeline(llvm::ModulePassManager &MPM,
                                     llvm::OptimizationLevel Level,
                                     IntrusiveRefCntPtr<vfs::FileSystem> FS) {
   bool EnableForOpt =
-      shouldEnablePollyForOptimization() && Level.isOptimizingForSpeed();
+      shouldEnablePollyForOptimization() && Level != OptimizationLevel::O0;
   if (!shouldEnablePollyForDiagnostic() && !EnableForOpt)
     return;
 
@@ -513,7 +513,7 @@ static void buildLatePollyPipeline(FunctionPassManager &PM,
                                    llvm::OptimizationLevel Level,
                                    IntrusiveRefCntPtr<vfs::FileSystem> FS) {
   bool EnableForOpt =
-      shouldEnablePollyForOptimization() && Level.isOptimizingForSpeed();
+      shouldEnablePollyForOptimization() && Level != OptimizationLevel::O0;
   if (!shouldEnablePollyForDiagnostic() && !EnableForOpt)
     return;
 
