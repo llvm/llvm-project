@@ -148,7 +148,7 @@ add_entrypoint_object(
   SRCS
     wctype.cpp
   HDRS
-    wctype.h
+    wctype_impl.h
   DEPENDS
     libc.src.__support.wctype_impl
     libc.hdr.types.wctype_t

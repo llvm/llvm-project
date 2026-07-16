@@ -25,6 +25,7 @@
 #include "llvm/Support/Compiler.h"
 
 #include <cstdint>
+#include <vector>
 
 namespace llvm {
 
@@ -48,7 +49,8 @@ class TargetInstrInfo;
 class TargetLowering;
 class TargetPassConfig;
 class TargetRegisterInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class ConstantFP;
 class APFloat;
 
@@ -202,6 +204,18 @@ getIConstantVRegValWithLookThrough(Register VReg,
 LLVM_ABI std::optional<ValueAndVReg> getAnyConstantVRegValWithLookThrough(
     Register VReg, const MachineRegisterInfo &MRI,
     bool LookThroughInstrs = true, bool LookThroughAnyExt = false);
+
+using MemCpyFamilyLoweringInfo =
+    std::tuple<Register, Register, uint64_t, Align, bool, std::vector<LLT>>;
+
+/// Matcher for memcpy-like instructions. For non-zero lengths, \p MemOps
+/// contains the load/store types to emit.
+LLVM_ABI bool canLowerMemCpyFamily(const MachineInstr &MI,
+                                   const MachineRegisterInfo &MRI,
+                                   unsigned MaxLen, Register &Dst,
+                                   Register &Src, uint64_t &KnownLen,
+                                   Align &Alignment, bool &DstAlignCanChange,
+                                   std::vector<LLT> &MemOps);
 
 struct FPValueAndVReg {
   APFloat Value;
@@ -531,19 +545,17 @@ getVectorSplat(const MachineInstr &MI, const MachineRegisterInfo &MRI);
 LLVM_ABI bool isConstantOrConstantVector(MachineInstr &MI,
                                          const MachineRegisterInfo &MRI);
 
-/// Determines if \p MI defines a constant integer or a splat vector of
+/// Determines if \p Def defines a constant integer or a splat vector of
 /// constant integers.
 /// \returns the scalar constant or std::nullopt.
 LLVM_ABI std::optional<APInt>
-isConstantOrConstantSplatVector(MachineInstr &MI,
-                                const MachineRegisterInfo &MRI);
+isConstantOrConstantSplatVector(Register Def, const MachineRegisterInfo &MRI);
 
-/// Determines if \p MI defines a float constant integer or a splat vector of
+/// Determines if \p Def defines a float constant integer or a splat vector of
 /// float constant integers.
 /// \returns the float constant or std::nullopt.
 LLVM_ABI std::optional<APFloat>
-isConstantOrConstantSplatVectorFP(MachineInstr &MI,
-                                  const MachineRegisterInfo &MRI);
+isConstantOrConstantSplatVectorFP(Register Def, const MachineRegisterInfo &MRI);
 
 /// Attempt to match a unary predicate against a scalar/splat constant or every
 /// element of a constant G_BUILD_VECTOR. If \p ConstVal is null, the source

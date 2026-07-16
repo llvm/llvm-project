@@ -65,6 +65,29 @@ class EmitC_BinaryOp<string mnemonic, list<Trait> traits = []> :
   }];
 }
 
+// Base class for increment and decrement operations.
+class EmitC_IncDecOp<string mnemonic, string summaryStr>
+    : EmitC_Op<mnemonic, [
+        CExpressionInterface,
+        TypesMatchWith<"input and result reference the same type",
+                       "operand", "result",
+                       "::llvm::cast<emitc::LValueType>($_self).getValueType()">
+      ]> {
+  let summary = summaryStr;
+  let arguments = (ins
+    Res<EmitC_LValueType, "",
+        [MemRead<DefaultResource, 0, FullEffect>,
+         MemWrite<DefaultResource, 0, FullEffect>]>:$operand);
+  let results = (outs EmitCType:$result);
+  let assemblyFormat = "$operand attr-dict `:` type($operand)";
+
+  let extraClassDeclaration = [{
+    bool hasSideEffects() {
+      return true;
+    }
+  }];
+}
+
 // Types only used in binary arithmetic operations.
 def IntegerIndexOrOpaqueType : Type<CPred<"emitc::isIntegerIndexOrOpaqueType($_self)">,
 "integer, index or opaque type supported by EmitC">;
@@ -165,42 +188,6 @@ def EmitC_AddOp : EmitC_BinaryOp<"add", []> {
     int32_t v5 = v1 + v2;
     float* v6 = v3 + v4;
     ```
-  }];
-
-  let hasVerifier = 1;
-}
-
-def EmitC_ApplyOp : EmitC_Op<"apply", [CExpressionInterface]> {
-  let summary = "Deprecated (use address_of/dereference)";
-  let description = [{
-    With the `emitc.apply` operation the operators & (address of) and * (contents of)
-    can be applied to a single operand.
-
-    Example:
-
-    ```mlir
-    // Custom form of applying the & operator.
-    %0 = emitc.apply "&"(%arg0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
-
-    // Generic form of the same operation.
-    %0 = "emitc.apply"(%arg0) {applicableOperator = "&"}
-        : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
-
-    ```
-  }];
-  let arguments = (ins
-    Arg<StrAttr, "the operator to apply">:$applicableOperator,
-    AnyTypeOf<[EmitCType, EmitC_LValueType]>:$operand
-  );
-  let results = (outs EmitCType:$result);
-  let assemblyFormat = [{
-    $applicableOperator `(` $operand `)` attr-dict `:` functional-type($operand, results)
-  }];
-
-  let extraClassDeclaration = [{
-    bool hasSideEffects() {
-      return getApplicableOperator() == "*";
-    }
   }];
 
   let hasVerifier = 1;
@@ -338,31 +325,67 @@ def EmitC_CallOpaqueOp : EmitC_Op<"call_opaque", [CExpressionInterface]> {
     Arg<StrAttr, "the C++ function to call">:$callee,
     Arg<OptionalAttr<ArrayAttr>, "the order of operands and further attributes">:$args,
     Arg<OptionalAttr<ArrayAttr>, "template arguments">:$template_args,
-    Variadic<EmitCType>:$operands
+    Variadic<AnyTypeOf<[EmitCType, EmitC_LValueType]>>:$arg_operands
   );
   let results = (outs Variadic<EmitCType>);
   let builders = [
     OpBuilder<(ins
       "::mlir::TypeRange":$resultTypes,
       "::llvm::StringRef":$callee,
-      "::mlir::ValueRange":$operands,
+      "::mlir::ValueRange":$arg_operands,
       CArg<"::mlir::ArrayAttr", "{}">:$args,
       CArg<"::mlir::ArrayAttr", "{}">:$template_args), [{
         build($_builder, $_state, resultTypes, callee, args, template_args,
-            operands);
+            arg_operands);
       }]
     >
   ];
 
   let assemblyFormat = [{
-    $callee `(` $operands `)` attr-dict `:` functional-type($operands, results)
+    $callee `(` $arg_operands `)` prop-dict attr-dict `:` functional-type($arg_operands, results)
+  }];
+  let hasVerifier = 1;
+}
+
+def EmitC_MemberCallOpaqueOp : EmitC_Op<"member_call_opaque", [CExpressionInterface]> {
+  let summary = "Opaque member call operation";
+  let description = [{
+    The `emitc.member_call_opaque` operation represents a C++ member function
+    call. It takes a receiver operand, a callee string attribute (the method
+    name), and variadic operands for arguments.
+
+    The call allows specifying order of operands and attributes in the call as
+    follows:
+    - integer value of index type refers to an argument operand;
+    - attribute which will get lowered to constant value in call;
+
+    Example:
+
+    ```mlir
+    %0 = emitc.member_call_opaque %receiver "method" (%arg0, %arg1) : !emitc.opaque<"MyClass">, (i32, i32) -> i32
+    ```
+  }];
+  let arguments = (ins
+    EmitCType:$receiver,
+    StrAttr:$callee,
+    OptionalAttr<ArrayAttr>:$args,
+    OptionalAttr<ArrayAttr>:$template_args,
+    Variadic<AnyTypeOf<[EmitCType, EmitC_LValueType]>>:$arg_operands
+  );
+  let results = (outs Variadic<EmitCType>);
+
+  let assemblyFormat = [{
+    $receiver $callee `(` $arg_operands `)` prop-dict attr-dict `:` type($receiver) `,` functional-type($arg_operands, results)
   }];
   let hasVerifier = 1;
 }
 
 def EmitC_CastOp : EmitC_Op<"cast",
     [CExpressionInterface,
-     DeclareOpInterfaceMethods<CastOpInterface>]> {
+     DeclareOpInterfaceMethods<CastOpInterface>,
+     DeclareOpInterfaceMethods<ConditionallySpeculatable>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
+    ]> {
   let summary = "Cast operation";
   let description = [{
     The `emitc.cast` operation performs an explicit type conversion and is emitted
@@ -379,15 +402,32 @@ def EmitC_CastOp : EmitC_Op<"cast",
     %1 = emitc.cast %arg1 :
         !emitc.ptr<!emitc.opaque<"void">> to !emitc.ptr<i32>
     ```
+
+    In general, C++ cast expressions cannot always be assumed to be pure:
+    they may invoke user-defined conversions or be affected by floating-point
+    environment settings. However, in many practical cases, such as integer
+    casts without operator overloading, the cast is pure and can be treated as
+    speculatable and side-effect-free. For such cases, the `pure` attribute
+    may be used.
+
+    When `pure` attribute is set, `getSpeculatability()` returns `Speculatable`
+    and `getEffects()` reports no effects. It is UB if the `pure` attribute is
+    set and the actual conversion is not pure, e.g. when the user-defined
+    conversion has memory effects.
   }];
 
-  let arguments = (ins EmitCType:$source);
+  let arguments = (ins EmitCType:$source,
+    UnitAttr:$pure
+  );
+
   let results = (outs EmitCType:$dest);
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
 
   let extraClassDeclaration = [{
     bool hasSideEffects() {
-      return false;
+      // Use the "pure" attribute to see whether this CastOp has side effects.
+      // Note that by default, `pure` is not set.
+      return !getPure();
     }
   }];
 }
@@ -395,7 +435,7 @@ def EmitC_CastOp : EmitC_Op<"cast",
 def EmitC_CmpOp : EmitC_BinaryOp<"cmp", []> {
   let summary = "Comparison operation";
   let description = [{
-    With the `emitc.cmp` operation the comparison operators ==, !=, <, <=, >, >=, <=> 
+    With the `emitc.cmp` operation the comparison operators ==, !=, <, <=, >, >=, <=>
     can be applied.
 
     Its first argument is an attribute that defines the comparison operator:
@@ -412,7 +452,7 @@ def EmitC_CmpOp : EmitC_BinaryOp<"cmp", []> {
     ```mlir
     // Custom form of the cmp operation.
     %0 = emitc.cmp eq, %arg0, %arg1 : (i32, i32) -> i1
-    %1 = emitc.cmp lt, %arg2, %arg3 : 
+    %1 = emitc.cmp lt, %arg2, %arg3 :
         (
           !emitc.opaque<"std::valarray<float>">,
           !emitc.opaque<"std::valarray<float>">
@@ -537,7 +577,7 @@ def EmitC_ExpressionOp
   let summary = "Expression operation";
   let description = [{
     The `emitc.expression` operation returns a single SSA value which is yielded by
-    its single-basic-block region. The operation takes zero or more input operands 
+    its single-basic-block region. The operation takes zero or more input operands
     that are passed as block arguments to the region.
 
     As the operation is to be emitted as a C expression, the operations within
@@ -692,7 +732,7 @@ def EmitC_CallOp : EmitC_Op<"call",
     %2 = emitc.call @my_add(%0, %1) : (f32, f32) -> f32
     ```
   }];
-  let arguments = (ins 
+  let arguments = (ins
     FlatSymbolRefAttr:$callee,
     Variadic<EmitCType>:$operands,
     OptionalAttr<DictArrayAttr>:$arg_attrs,
@@ -1042,8 +1082,8 @@ def EmitC_LoadOp : EmitC_Op<"load", [CExpressionInterface,
 ]> {
   let summary = "Load an lvalue into an SSA value.";
   let description = [{
-    This operation loads the content of a modifiable lvalue into an SSA value. 
-    Modifications of the lvalue executed after the load are not observable on 
+    This operation loads the content of a modifiable lvalue into an SSA value.
+    Modifications of the lvalue executed after the load are not observable on
     the produced value.
 
     Example:
@@ -1057,11 +1097,11 @@ def EmitC_LoadOp : EmitC_Op<"load", [CExpressionInterface,
     ```
   }];
 
-  let arguments = (ins 
+  let arguments = (ins
       Res<EmitC_LValueType, "", [MemRead<DefaultResource, 0, FullEffect>]>:$operand);
   let results = (outs AnyType:$result);
 
-  let assemblyFormat = "$operand attr-dict `:` type($operand)"; 
+  let assemblyFormat = "$operand attr-dict `:` type($operand)";
 }
 
 def EmitC_MulOp : EmitC_BinaryOp<"mul", []> {
@@ -1146,6 +1186,8 @@ def EmitC_MemberOp : EmitC_Op<"member", [CExpressionInterface]> {
 
     ```mlir
     %0 = "emitc.member" (%arg0) {member = "a"}
+        : (!emitc.opaque<"mystruct">) -> i32
+    %0 = "emitc.member" (%arg0) {member = "a"}
         : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.lvalue<i32>
     %1 = "emitc.member" (%arg0) {member = "b"}
         : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.array<2xi32>
@@ -1154,16 +1196,18 @@ def EmitC_MemberOp : EmitC_Op<"member", [CExpressionInterface]> {
 
   let arguments = (ins
     Arg<StrAttr, "the member to access">:$member,
-    EmitC_LValueOf<[EmitC_OpaqueType]>:$operand
+    AnyTypeOf<[EmitC_OpaqueType, EmitC_LValueOf<[EmitC_OpaqueType]>]>:$operand
   );
-  let results = (outs AnyTypeOf<[EmitC_ArrayType, EmitC_LValueType]>);
+  let results = (outs AnyTypeOf<[EmitCType, EmitC_LValueType]>);
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     bool hasSideEffects() {
       return false;
     }
     bool alwaysInline() {
-      return true; // C doesn't support references.
+      // C doesn't support references.
+      return isa<emitc::LValueType, emitc::ArrayType>(getResult().getType());
     }
   }];
 }
@@ -1238,6 +1282,58 @@ def EmitC_ConditionalOp : EmitC_Op<"conditional",
   }];
 }
 
+def EmitC_PreIncrementOp
+    : EmitC_IncDecOp<"pre_increment", "Pre-increment operation"> {
+  let description = [{
+    This operation models the C/C++ pre-increment operator on an lvalue.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.pre_increment %arg0 : !emitc.lvalue<i32>
+    ```
+  }];
+}
+
+def EmitC_PostIncrementOp
+    : EmitC_IncDecOp<"post_increment", "Post-increment operation"> {
+  let description = [{
+    This operation models the C/C++ post-increment operator on an lvalue.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.post_increment %arg0 : !emitc.lvalue<i32>
+    ```
+  }];
+}
+
+def EmitC_PreDecrementOp
+    : EmitC_IncDecOp<"pre_decrement", "Pre-decrement operation"> {
+  let description = [{
+    This operation models the C/C++ pre-decrement operator on an lvalue.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.pre_decrement %arg0 : !emitc.lvalue<i32>
+    ```
+  }];
+}
+
+def EmitC_PostDecrementOp
+    : EmitC_IncDecOp<"post_decrement", "Post-decrement operation"> {
+  let description = [{
+    This operation models the C/C++ post-decrement operator on an lvalue.
+
+    Example:
+
+    ```mlir
+    %0 = emitc.post_decrement %arg0 : !emitc.lvalue<i32>
+    ```
+  }];
+}
+
 def EmitC_UnaryMinusOp : EmitC_UnaryOp<"unary_minus", []> {
   let summary = "Unary minus operation";
   let description = [{
@@ -1292,18 +1388,18 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
     %0 = "emitc.variable"(){value = 42 : i32} : () -> !emitc.lvalue<i32>
 
     // Variable emitted as `int32_t* = NULL;`
-    %1 = "emitc.variable"() {value = #emitc.opaque<"NULL">} 
+    %1 = "emitc.variable"() {value = #emitc.opaque<"NULL">}
       : () -> !emitc.lvalue<!emitc.ptr<!emitc.opaque<"int32_t">>>
     ```
 
     Since folding is not supported, it can be used with pointers.
     As an example, it is valid to create pointers to `variable` operations
-    by using `apply` operations and pass these to a `call` operation.
+    by using `address_of` operations and pass these to a `call` operation.
     ```mlir
     %0 = "emitc.variable"() {value = 0 : i32} : () -> !emitc.lvalue<i32>
     %1 = "emitc.variable"() {value = 0 : i32} : () -> !emitc.lvalue<i32>
-    %2 = emitc.apply "&"(%0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
-    %3 = emitc.apply "&"(%1) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
+    %2 = emitc.address_of %0 : !emitc.lvalue<i32>
+    %3 = emitc.address_of %1 : !emitc.lvalue<i32>
     emitc.call_opaque "write"(%2, %3)
       : (!emitc.ptr<i32>, !emitc.ptr<i32>) -> ()
     ```
@@ -1424,7 +1520,7 @@ def EmitC_VerbatimOp : EmitC_Op<"verbatim"> {
     #endif
 
     ...
-    
+
     #ifdef __cplusplus
     }
     #endif
@@ -1486,7 +1582,7 @@ def EmitC_AssignOp : EmitC_Op<"assign", []> {
     ```
   }];
 
-  let arguments = (ins 
+  let arguments = (ins
       Res<EmitC_LValueType, "", [MemWrite<DefaultResource, 1, FullEffect>]>:$var,
       EmitCType:$value);
   let results = (outs);
@@ -1791,7 +1887,7 @@ def EmitC_FieldOp : EmitC_Op<"field", [Symbol]> {
   let summary = "A field within a class";
   let description = [{
     The `emitc.field` operation declares a named field within an `emitc.class`
-    operation. The field's type must be an EmitC type. 
+    operation. The field's type must be an EmitC type.
 
     Example:
 
@@ -1821,7 +1917,7 @@ def EmitC_FieldOp : EmitC_Op<"field", [Symbol]> {
 }
 
 def EmitC_GetFieldOp
-    : EmitC_Op<"get_field", [Pure,
+    : EmitC_Op<"get_field", [Pure, HasAncestor<"ClassOp">,
                              DeclareOpInterfaceMethods<SymbolUserOpInterface>,
                              CExpressionInterface]> {
   let summary = "Obtain access to a field within a class instance";
@@ -1839,7 +1935,6 @@ def EmitC_GetFieldOp
   let arguments = (ins FlatSymbolRefAttr:$field_name);
   let results = (outs EmitCType:$result);
   let assemblyFormat = "$field_name `:` type($result) attr-dict";
-  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     bool hasSideEffects() {
@@ -1868,8 +1963,8 @@ def EmitC_DoOp : EmitC_Op<"do",
       2. An `emitc.yield` passing through the expression result
     - The expression's body contains the actual condition logic
 
-    The body region is executed before the first evaluation of the 
-    condition. Thus, there is a guarantee that the loop will be executed 
+    The body region is executed before the first evaluation of the
+    condition. Thus, there is a guarantee that the loop will be executed
     at least once. The loop terminates when the condition yields false.
 
     The canonical structure of `emitc.do` is:
@@ -1886,7 +1981,7 @@ def EmitC_DoOp : EmitC_Op<"do",
         emitc.yield %result : i1
       }
       // Forward expression result
-      emitc.yield %condition : i1  
+      emitc.yield %condition : i1
     }
     ```
 
@@ -1933,7 +2028,7 @@ def EmitC_DoOp : EmitC_Op<"do",
   }];
 
   let arguments = (ins);
-  let results = (outs); 
+  let results = (outs);
   let regions = (region SizedRegion<1>:$bodyRegion,
                         SizedRegion<1>:$conditionRegion);
 

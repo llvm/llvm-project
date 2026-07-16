@@ -208,8 +208,8 @@ emitEncodeKey(mlir::MLIRContext *context, CIRGenBuilderTy &builder,
   llvm::SmallVector<mlir::Type> members{builder.getUInt32Ty()};
   llvm::append_range(members,
                      llvm::SmallVector<mlir::Type>(vecOutputCount, resVector));
-  cir::RecordType resRecord = cir::RecordType::get(
-      context, members, false, false, cir::RecordType::RecordKind::Struct);
+  cir::StructType resRecord = cir::StructType::get(
+      context, members, /*packed=*/false, /*padded=*/false, /*is_class=*/false);
 
   mlir::Value outputPtr =
       builder.createBitcast(outputOperand, cir::PointerType::get(resVector));
@@ -1859,6 +1859,24 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     mlir::Value sv = builder.createVecShuffle(loc, in, zero, indices);
     return builder.createBitcast(sv, ops[0].getType());
   }
+  case X86::BI__builtin_ia32_movnti:
+  case X86::BI__builtin_ia32_movnti64:
+  case X86::BI__builtin_ia32_movntsd:
+  case X86::BI__builtin_ia32_movntss: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+
+    Address dest = Address{ops[0], CharUnits::One()};
+    mlir::Value src = ops[1];
+
+    if (builtinID == X86::BI__builtin_ia32_movntsd ||
+        builtinID == X86::BI__builtin_ia32_movntss)
+      src = builder.createExtractElement(loc, ops[1], 0);
+
+    cir::StoreOp so =
+        builder.createStore(loc, src, dest,
+                            /*isVolatile=*/false, /*isNontemporal=*/true);
+    return so.getValue();
+  }
   case X86::BI__builtin_ia32_vprotbi:
   case X86::BI__builtin_ia32_vprotwi:
   case X86::BI__builtin_ia32_vprotdi:
@@ -2217,9 +2235,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     mlir::Type randTy = cast<cir::PointerType>(ops[0].getType()).getPointee();
     llvm::SmallVector<mlir::Type, 2> resultTypes = {randTy,
                                                     builder.getUInt32Ty()};
-    cir::RecordType resRecord =
-        cir::RecordType::get(&getMLIRContext(), resultTypes, false, false,
-                             cir::RecordType::RecordKind::Struct);
+    cir::StructType resRecord =
+        cir::StructType::get(&getMLIRContext(), resultTypes, /*packed=*/false,
+                             /*padded=*/false, /*is_class=*/false);
 
     mlir::Value call =
         builder.emitIntrinsicCallOp(loc, intrinsicName, resRecord);
@@ -2286,9 +2304,10 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
 
     auto resVector = cir::VectorType::get(builder.getBoolTy(), numElts);
 
-    cir::RecordType resRecord =
-        cir::RecordType::get(&getMLIRContext(), {resVector, resVector}, false,
-                             false, cir::RecordType::RecordKind::Struct);
+    cir::StructType resRecord =
+        cir::StructType::get(&getMLIRContext(), {resVector, resVector},
+                             /*packed=*/false, /*padded=*/false,
+                             /*is_class=*/false);
 
     mlir::Value call = builder.emitIntrinsicCallOp(
         getLoc(expr->getExprLoc()), intrinsicName, resRecord,

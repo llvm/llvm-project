@@ -2043,6 +2043,76 @@ let TargetPrefix = "riscv" in {
 let TargetPrefix = "riscv" in
 def int_riscv_pause : DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
 
+// Packed SIMD extensions
+//===----------------------------------------------------------------------===//
+let TargetPrefix = "riscv" in {
+class RVPBinaryIntrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, LLVMMatchType<0>],
+                            [IntrNoMem, IntrSpeculatable]>;
+
+  // Packed Averaging Addition and Subtraction.
+  def int_riscv_paadd : RVPBinaryIntrinsic;
+  def int_riscv_paaddu : RVPBinaryIntrinsic;
+  def int_riscv_pasub : RVPBinaryIntrinsic;
+  def int_riscv_pasubu : RVPBinaryIntrinsic;
+
+  // Packed Absolute Value and Absolute Difference
+  def int_riscv_pabd  : RVPBinaryIntrinsic;
+  def int_riscv_pabdu : RVPBinaryIntrinsic;
+
+  // Packed Saturating and Rounding Shifts.
+  class RVPShiftIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMMatchType<0>, llvm_i32_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pssha  : RVPShiftIntrinsic;
+  def int_riscv_psshar : RVPShiftIntrinsic;
+  def int_riscv_psshl  : RVPShiftIntrinsic;
+  def int_riscv_psshlr : RVPShiftIntrinsic;
+
+  // Packed Exchanged Addition and Subtraction.
+  def int_riscv_pas  : RVPBinaryIntrinsic;
+  def int_riscv_psa  : RVPBinaryIntrinsic;
+  def int_riscv_psas : RVPBinaryIntrinsic;
+  def int_riscv_pssa : RVPBinaryIntrinsic;
+  def int_riscv_paas : RVPBinaryIntrinsic;
+  def int_riscv_pasa : RVPBinaryIntrinsic;
+
+  // Packed Reduction Sum.
+  class RVPReductionIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [llvm_anyvector_ty, LLVMMatchType<0>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_predsum  : RVPReductionIntrinsic;
+  def int_riscv_predsumu : RVPReductionIntrinsic;
+
+  // Packed Merge
+  class RVPTernaryIntrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, LLVMMatchType<0>,
+                             LLVMMatchType<0>],
+                            [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pmerge : RVPTernaryIntrinsic;
+
+  // Packed Absolute Difference Sum.
+  def int_riscv_pabdsumu
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [llvm_anyvector_ty, LLVMMatchType<1>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pabdsumau
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, llvm_anyvector_ty,
+                               LLVMMatchType<1>],
+                              [IntrNoMem, IntrSpeculatable]>;
+
+  // Packed Saturating Absolute Value
+  class RVPUnaryIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMMatchType<0>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_psabs : RVPUnaryIntrinsic;
+} // TargetPrefix = "riscv"
 
 //===----------------------------------------------------------------------===//
 // Zvfofp8min - OFP8 conversion extension

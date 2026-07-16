@@ -203,6 +203,11 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::CXXForRangeStmtClass:
     EmitCXXForRangeStmt(cast<CXXForRangeStmt>(*S), Attrs);
     break;
+  case Stmt::CXXExpansionStmtPatternClass:
+    llvm_unreachable("unexpanded expansion statements should not be emitted");
+  case Stmt::CXXExpansionStmtInstantiationClass:
+    EmitCXXExpansionStmtInstantiation(cast<CXXExpansionStmtInstantiation>(*S));
+    break;
   case Stmt::SEHTryStmtClass:
     EmitSEHTryStmt(cast<SEHTryStmt>(*S));
     break;
@@ -609,7 +614,7 @@ CodeGenFunction::EmitCompoundStmtWithoutScope(const CompoundStmt &S,
       // We can't return an RValue here because there might be cleanups at
       // the end of the StmtExpr.  Because of that, we have to emit the result
       // here into a temporary alloca.
-      RetAlloca = CreateMemTemp(ExprTy);
+      RetAlloca = CreateMemTempWithoutCast(ExprTy);
       EmitAnyExprToMem(E, RetAlloca, Qualifiers(),
                        /*IsInit*/ false);
     }
@@ -885,8 +890,13 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
   LexicalScope ConditionScope(*this, S.getCond()->getSourceRange());
   ApplyDebugLocation DL(*this, S.getCond());
 
-  if (S.getInit())
+  if (S.getInit()) {
     EmitStmt(S.getInit());
+
+    // The init statement may have cleared the insertion point (e.g. it ended in
+    // a 'noreturn' call); the condition emitted below needs a valid one.
+    EnsureInsertPoint();
+  }
 
   if (S.getConditionVariable())
     EmitDecl(*S.getConditionVariable());
@@ -1507,6 +1517,32 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
     // We want the for closing brace to be step-able on to match existing
     // behaviour.
     addInstToNewSourceAtom(FinalBodyBB->getTerminator(), nullptr);
+  }
+}
+
+void CodeGenFunction::EmitCXXExpansionStmtInstantiation(
+    const CXXExpansionStmtInstantiation &S) {
+  LexicalScope Scope(*this, S.getSourceRange());
+
+  for (const Stmt *DS : S.getPreambleStmts())
+    EmitStmt(DS);
+
+  if (S.getInstantiations().empty())
+    return;
+
+  JumpDest ExpandExit = getJumpDestInCurrentScope("expand.end");
+  JumpDest ContinueDest;
+  for (auto [N, Inst] : enumerate(S.getInstantiations())) {
+    if (N == S.getInstantiations().size() - 1)
+      ContinueDest = ExpandExit;
+    else
+      ContinueDest = getJumpDestInCurrentScope("expand.next");
+
+    LexicalScope ExpansionScope(*this, Inst->getSourceRange());
+    BreakContinueStack.push_back(BreakContinue(S, ExpandExit, ContinueDest));
+    EmitStmt(Inst);
+    BreakContinueStack.pop_back();
+    EmitBlock(ContinueDest.getBlock(), true);
   }
 }
 
@@ -2374,8 +2410,13 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
 
   RunCleanupsScope ConditionScope(*this);
 
-  if (S.getInit())
+  if (S.getInit()) {
     EmitStmt(S.getInit());
+
+    // The init statement may have cleared the insertion point (e.g. it ended in
+    // a 'noreturn' call); the condition emitted below needs a valid one.
+    EnsureInsertPoint();
+  }
 
   if (S.getConditionVariable())
     EmitDecl(*S.getConditionVariable());

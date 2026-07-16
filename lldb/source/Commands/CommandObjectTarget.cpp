@@ -1338,9 +1338,10 @@ static void DumpDirectory(Stream &strm, const FileSpec *file_spec_ptr,
                           uint32_t width) {
   if (file_spec_ptr) {
     if (width > 0)
-      strm.Printf("%-*s", width, file_spec_ptr->GetDirectory().AsCString(""));
+      strm.Format("{0}", fmt_align(file_spec_ptr->GetDirectory(),
+                                   llvm::AlignStyle::Left, width));
     else
-      file_spec_ptr->GetDirectory().Dump(&strm);
+      strm.PutCString(file_spec_ptr->GetDirectory());
     return;
   }
   // Keep the width spacing correct if things go wrong...
@@ -1352,9 +1353,10 @@ static void DumpBasename(Stream &strm, const FileSpec *file_spec_ptr,
                          uint32_t width) {
   if (file_spec_ptr) {
     if (width > 0)
-      strm.Printf("%-*s", width, file_spec_ptr->GetFilename().AsCString(""));
+      strm.Format("{0}", fmt_align(file_spec_ptr->GetFilename(),
+                                   llvm::AlignStyle::Left, width));
     else
-      file_spec_ptr->GetFilename().Dump(&strm);
+      strm.PutCString(file_spec_ptr->GetFilename());
     return;
   }
   // Keep the width spacing correct if things go wrong...
@@ -2989,11 +2991,10 @@ protected:
                   const char *sect_name = args.GetArgumentAtIndex(i);
                   const char *load_addr_cstr = args.GetArgumentAtIndex(i + 1);
                   if (sect_name && load_addr_cstr) {
-                    ConstString const_sect_name(sect_name);
                     addr_t load_addr;
                     if (llvm::to_integer(load_addr_cstr, load_addr)) {
                       SectionSP section_sp(
-                          section_list->FindSectionByName(const_sect_name));
+                          section_list->FindSectionByName(sect_name));
                       if (section_sp) {
                         if (section_sp->IsThreadSpecific()) {
                           result.AppendErrorWithFormat(
@@ -3786,6 +3787,11 @@ protected:
       ABISP abi_sp = process->GetABI();
       if (abi_sp) {
         if (UnwindPlanSP plan_sp = abi_sp->CreateDefaultUnwindPlan()) {
+          assert(((!plan_sp || plan_sp->GetRowCount() == 0 ||
+                   plan_sp->GetRowAtIndex(0)
+                       ->GetUnspecifiedRegistersAreUndefined())) &&
+                 "Default UnwindPlan must set "
+                 "UnspecifiedRegistersAreUndefined to true");
           result.GetOutputStream().Printf("Arch default UnwindPlan:\n");
           plan_sp->Dump(result.GetOutputStream(), thread.get(),
                         LLDB_INVALID_ADDRESS);
@@ -6169,6 +6175,7 @@ protected:
     result.AppendMessageWithFormatv(
         "successfully registered scripted frame provider '{0}' for target",
         m_class_options.GetName().c_str());
+    result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
   OptionGroupPythonClassWithDict m_class_options;

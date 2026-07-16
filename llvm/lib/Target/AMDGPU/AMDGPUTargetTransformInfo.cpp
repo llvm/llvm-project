@@ -92,9 +92,9 @@ static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
   if (!I)
     return false;
 
+  if (!L->contains(I))
+    return false;
   for (const Value *V : I->operand_values()) {
-    if (!L->contains(I))
-      continue;
     if (const PHINode *PHI = dyn_cast<PHINode>(V)) {
       if (llvm::none_of(L->getSubLoops(), [PHI](const Loop* SubLoop) {
                   return SubLoop->contains(PHI); }))
@@ -283,25 +283,6 @@ uint64_t AMDGPUTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
   return 1024;
 }
 
-const FeatureBitset GCNTTIImpl::InlineFeatureIgnoreList = {
-    // Codegen control options which don't matter.
-    AMDGPU::FeatureEnableLoadStoreOpt, AMDGPU::FeatureEnableSIScheduler,
-    AMDGPU::FeatureEnableUnsafeDSOffsetFolding, AMDGPU::FeatureUseFlatForGlobal,
-    AMDGPU::FeatureUnalignedScratchAccess, AMDGPU::FeatureUnalignedAccessMode,
-
-    AMDGPU::FeatureAutoWaitcntBeforeBarrier,
-
-    // Property of the kernel/environment which can't actually differ.
-    AMDGPU::FeatureSGPRInitBug, AMDGPU::FeatureXNACK,
-    AMDGPU::FeatureTrapHandler,
-
-    // The default assumption needs to be ecc is enabled, but no directly
-    // exposed operations depend on it, so it can be safely inlined.
-    AMDGPU::FeatureSRAMECC,
-
-    // Perf-tuning features
-    AMDGPU::FeatureFastFMAF32, AMDGPU::FeatureHalfRate64Ops};
-
 GCNTTIImpl::GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
     : BaseT(TM, F.getDataLayout()),
       ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
@@ -334,7 +315,10 @@ GCNTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   case TargetTransformInfo::RGK_Scalar:
     return TypeSize::getFixed(32);
   case TargetTransformInfo::RGK_FixedWidthVector:
-    return TypeSize::getFixed(ST->hasPackedFP32Ops() ? 64 : 32);
+    return TypeSize::getFixed((ST->hasPackedFP64Ops() || ST->hasPackedU64Ops())
+                                  ? 128
+                              : ST->hasPackedFP32Ops() ? 64
+                                                       : 32);
   case TargetTransformInfo::RGK_ScalableVector:
     return TypeSize::getScalable(0);
   }
@@ -353,7 +337,10 @@ unsigned GCNTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
   return (ElemWidth == 8 && ST->has16BitInsts())       ? 4
          : (ElemWidth == 16 && ST->has16BitInsts())    ? 2
          : (ElemWidth == 32 && ST->hasPackedFP32Ops()) ? 2
-                                                       : 1;
+         : (ElemWidth == 64 &&
+            (ST->hasPackedFP64Ops() || ST->hasPackedU64Ops()))
+             ? 2
+             : 1;
 }
 
 bool GCNTTIImpl::preferSLPInstCountCheck() const {
@@ -501,7 +488,8 @@ void GCNTTIImpl::getMemcpyLoopResidualLoweringType(
   }
 }
 
-unsigned GCNTTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
+unsigned GCNTTIImpl::getMaxInterleaveFactor(ElementCount VF,
+                                            bool HasUnorderedReductions) const {
   // Disable unrolling if the loop is not vectorized.
   // TODO: Enable this again.
   if (VF.isScalar())
@@ -566,6 +554,9 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     return getFullRateInstrCost() * LT.first * NElts;
   case ISD::ADD:
   case ISD::SUB:
+    if (SLT == MVT::i64 && ST->hasPackedU64Ops())
+      NElts = (NElts + 1) / 2;
+    [[fallthrough]];
   case ISD::AND:
   case ISD::OR:
   case ISD::XOR:
@@ -618,8 +609,11 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
       NElts = (NElts + 1) / 2;
     if (ST->hasBF16PackedInsts() && SLT == MVT::bf16)
       NElts = (NElts + 1) / 2;
-    if (SLT == MVT::f64)
+    if (SLT == MVT::f64) {
+      if (ST->hasPackedFP64Ops())
+        NElts = (NElts + 1) / 2;
       return LT.first * NElts * get64BitInstrCost(CostKind);
+    }
 
     if (ST->has16BitInsts() && SLT == MVT::f16)
       NElts = (NElts + 1) / 2;
@@ -882,8 +876,15 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   if ((ST->hasVOP3PInsts() &&
        (SLT == MVT::f16 || SLT == MVT::i16 ||
         (SLT == MVT::bf16 && ST->hasBF16PackedInsts()))) ||
-      (ST->hasPackedFP32Ops() && SLT == MVT::f32))
+      (ST->hasPackedFP64Ops() && SLT == MVT::f64) ||
+      (ST->hasPackedU64Ops() && SLT == MVT::i64)) {
     NElts = (NElts + 1) / 2;
+  } else if (SLT == MVT::f32) {
+    bool HasPk2FP32Op = ST->hasPackedFP32Ops() &&
+                        IID != Intrinsic::minimumnum &&
+                        IID != Intrinsic::maximumnum;
+    NElts = HasPk2FP32Op ? (NElts + 1) / 2 : NElts;
+  }
 
   // TODO: Get more refined intrinsic costs?
   unsigned InstRate = getQuarterRateInstrCost(CostKind);
@@ -1026,16 +1027,15 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
     if (EltSize < 32) {
       if (EltSize == 16 && Index == 0 && ST->has16BitInsts())
         return 0;
-      // Some i8 inserts and extracts are free so we want to reduce the
-      // cost to avoid scalarization. We limit the zero cost cases to avoid
-      // adversely impacting all i8 vectorizing.
-      if (EltSize == 8) {
-        unsigned NumElts = cast<FixedVectorType>(ValTy)->getNumElements();
-        if (NumElts >= 4 && isPowerOf2_32(NumElts)) {
-          // Extracts at indices aligned to 32-bit boundaries (0, 4, 8, 12 for
-          // v16i8) are free as they access the low byte of each VGPR. Other
-          // indices require bit manipulation (shifts/byte selects) and cost 1.
-          return Index % 4 == 0 ? 0 : 1;
+      // Extract element sequences of consecutive i8 values that match a
+      // register size are free most likely. It is not possible to know
+      // if this extract is part of a consecutive sequence so this may
+      // apply more generally.
+      if (Opcode == Instruction::ExtractElement && EltSize == 8) {
+        if (auto *FVTy = dyn_cast<FixedVectorType>(ValTy)) {
+          unsigned NumElts = FVTy->getNumElements();
+          if (NumElts >= 4 && isPowerOf2_32(NumElts))
+            return 0;
         }
       }
       return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1,
@@ -1550,12 +1550,7 @@ bool GCNTTIImpl::areInlineCompatible(const Function *Caller,
   const GCNSubtarget *CalleeST
     = static_cast<const GCNSubtarget *>(TM.getSubtargetImpl(*Callee));
 
-  const FeatureBitset &CallerBits = CallerST->getFeatureBits();
-  const FeatureBitset &CalleeBits = CalleeST->getFeatureBits();
-
-  FeatureBitset RealCallerBits = CallerBits & ~InlineFeatureIgnoreList;
-  FeatureBitset RealCalleeBits = CalleeBits & ~InlineFeatureIgnoreList;
-  if ((RealCallerBits & RealCalleeBits) != RealCalleeBits)
+  if (!BaseT::areInlineCompatible(Caller, Callee))
     return false;
 
   // FIXME: dx10_clamp can just take the caller setting, but there seems to be
@@ -1762,7 +1757,7 @@ bool GCNTTIImpl::shouldPrefetchAddressSpace(unsigned AS) const {
 void GCNTTIImpl::collectKernelLaunchBounds(
     const Function &F,
     SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {
-  SmallVector<unsigned> MaxNumWorkgroups = ST->getMaxNumWorkGroups(F);
+  SmallVector<unsigned> MaxNumWorkgroups = AMDGPU::getMaxNumWorkGroups(F);
   LB.push_back({"amdgpu-max-num-workgroups[0]", MaxNumWorkgroups[0]});
   LB.push_back({"amdgpu-max-num-workgroups[1]", MaxNumWorkgroups[1]});
   LB.push_back({"amdgpu-max-num-workgroups[2]", MaxNumWorkgroups[2]});

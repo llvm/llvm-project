@@ -22,6 +22,17 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::modernize {
 
 namespace {
+AST_MATCHER(Expr, isStringLiteralOrTernary) {
+  const auto Matches = [](const auto &Self, const Expr &Expression) -> bool {
+    const Expr *Unwrapped = Expression.IgnoreParenImpCasts();
+    if (const auto *Ternary = dyn_cast<ConditionalOperator>(Unwrapped))
+      return Self(Self, *Ternary->getTrueExpr()) &&
+             Self(Self, *Ternary->getFalseExpr());
+    return isa<StringLiteral>(Unwrapped);
+  };
+  return Matches(Matches, Node);
+}
+
 AST_MATCHER(FunctionDecl, isOverloaded) {
   const DeclarationName Name = Node.getDeclName();
   // Sanity check
@@ -63,8 +74,8 @@ static auto getStringTypeMatcher(StringRef CharType) {
   return hasCanonicalType(hasDeclaration(cxxRecordDecl(hasName(CharType))));
 }
 
-static void fixReturns(const FunctionDecl *FuncDecl, DiagnosticBuilder &Diag,
-                       ASTContext &Context) {
+static void fixReturns(const FunctionDecl *FuncDecl,
+                       const DiagnosticBuilder &Diag, ASTContext &Context) {
   auto Matches = match(
       findAll(returnStmt(hasReturnValue(ignoringParenImpCasts(
           cxxTemporaryObjectExpr(argumentCountIs(0)).bind("temp_obj_expr"))))),
@@ -106,9 +117,6 @@ void UseStringViewCheck::registerMatchers(MatchFinder *Finder) {
   const auto IsStdStringView = getStringTypeMatcher("::std::basic_string_view");
   const auto IgnoredFunctionsMatcher =
       matchers::matchesAnyListedRegexName(IgnoredFunctions);
-  const auto TernaryOperator = conditionalOperator(
-      hasTrueExpression(ignoringParenImpCasts(stringLiteral())),
-      hasFalseExpression(ignoringParenImpCasts(stringLiteral())));
   const auto VirtualOrOperator =
       cxxMethodDecl(anyOf(cxxConversionDecl(), isVirtual()));
   const auto CheckOverloaded =
@@ -121,7 +129,8 @@ void UseStringViewCheck::registerMatchers(MatchFinder *Finder) {
                        ast_matchers::isExplicitTemplateSpecialization())),
           returns(IsStdString), hasDescendant(returnStmt()),
           unless(hasDescendant(returnStmt(hasReturnValue(unless(
-              anyOf(stringLiteral(), hasType(IsStdStringView), TernaryOperator,
+              anyOf(stringLiteral(), hasType(IsStdStringView),
+                    isStringLiteralOrTernary(),
                     cxxConstructExpr(anyOf(
                         allOf(hasType(IsStdString), argumentCountIs(0)),
                         allOf(isListInitialization(),

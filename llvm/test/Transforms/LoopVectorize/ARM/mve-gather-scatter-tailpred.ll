@@ -62,8 +62,8 @@ define void @test_stride-1_4i32(ptr readonly %data, ptr noalias nocapture %dst, 
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[DATA:%.*]], i32 [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i32 -3
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP5]], align 4
-; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> splat (i32 5), [[REVERSE]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> splat (i32 5), [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4

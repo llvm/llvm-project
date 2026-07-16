@@ -7,6 +7,7 @@ static_library("Utility") {
     "//llvm/lib/TargetParser",
   ]
   sources = [
+    "AcceleratorGDBRemotePackets.cpp",
     "AddressableBits.cpp",
     "ArchSpec.cpp",
     "Args.cpp",
@@ -20,7 +21,6 @@ static_library("Utility") {
     "DataBufferLLVM.cpp",
     "DataEncoder.cpp",
     "DataExtractor.cpp",
-    "Diagnostics.cpp",
     "Environment.cpp",
     "ErrorMessages.cpp",
     "Event.cpp",
@@ -37,6 +37,7 @@ static_library("Utility") {
     "Policy.cpp",
     "ProcessInfo.cpp",
     "RealpathPrefixes.cpp",
+    "RegisterFlags.cpp",
     "RegisterValue.cpp",
     "RegularExpression.cpp",
     "Scalar.cpp",

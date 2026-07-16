@@ -40,6 +40,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
@@ -175,6 +176,27 @@ findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
                                                  V.Value));
   }
   return HasBlockAddress;
+}
+
+/// Collect globals referenced via !implicit.ref metadata on a function
+/// and add them as reference edges in the module summary. This ensures
+/// ThinLTO liveness analysis treats them as live when the function is
+/// live, and imports them alongside the function during cross-module
+/// importing.
+static void findImplicitRefEdges(
+    ModuleSummaryIndex &Index, const Function &F,
+    SetVector<ValueInfo, SmallVector<ValueInfo, 0>> &RefEdges) {
+  if (!F.hasMetadata(LLVMContext::MD_implicit_ref))
+    return;
+  SmallVector<MDNode *, 4> MDs;
+  F.getMetadata(LLVMContext::MD_implicit_ref, MDs);
+  for (MDNode *MD : MDs) {
+    for (const MDOperand &Op : MD->operands()) {
+      if (auto *VAM = dyn_cast_or_null<ValueAsMetadata>(Op.get()))
+        if (auto *GV = dyn_cast<GlobalValue>(VAM->getValue()))
+          RefEdges.insert(Index.getOrInsertValueInfo(GV));
+    }
+  }
 }
 
 static CalleeInfo::HotnessType getHotness(uint64_t ProfileCount,
@@ -346,6 +368,8 @@ static void computeFunctionSummary(
   // list.
   bool HasLocalIFuncCallOrRef = false;
   findRefEdges(Index, &F, RefEdges, Visited, HasLocalIFuncCallOrRef);
+  findImplicitRefEdges(Index, F, RefEdges);
+
   std::vector<const Instruction *> NonVolatileLoads;
   std::vector<const Instruction *> NonVolatileStores;
 
@@ -1151,6 +1175,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
 }
 
 AnalysisKey ModuleSummaryIndexAnalysis::Key;
+AnalysisKey ImmutableModuleSummaryIndexAnalysis::Key;
 
 ModuleSummaryIndex
 ModuleSummaryIndexAnalysis::run(Module &M, ModuleAnalysisManager &AM) {

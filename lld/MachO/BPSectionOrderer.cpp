@@ -38,9 +38,8 @@ struct BPOrdererMachO : lld::BPOrderer<BPOrdererMachO> {
   static std::string getSectionName(const Section &sec) {
     return (sec.getSegName() + sec.getName()).str();
   }
-  // TODO: Use N_COLD_FUNC to separate cold code into a different subgroup.
   static std::string getCompressionSubgroupKey(const Section &sec) {
-    return "";
+    return sec.isCold ? ":cold" : "";
   }
   static ArrayRef<Defined *> getSymbols(const Section &sec) {
     return sec.symbols;
@@ -152,8 +151,17 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
     }
   }
 
-  return BPOrdererMachO().computeOrder(
+  auto result = BPOrdererMachO().computeOrder(
       profilePath, compressionSortSpecs, forFunctionCompression,
       forDataCompression, compressionSortStartupFunctions, verbose, sections,
       rootSymbolToSectionIdxs);
+  // BP already orders cold sections after non-cold via separate buckets.
+  // Unset isCold on sections that received a BP priority so Writer.cpp's
+  // stable_partition doesn't re-partition them. Sections without a BP priority
+  // (e.g. non-startup cold sections when only --bp-startup-sort is used) keep
+  // their isCold flag for Writer.cpp to handle.
+  for (auto *isec : sections)
+    if (result.contains(isec))
+      isec->isCold = false;
+  return result;
 }

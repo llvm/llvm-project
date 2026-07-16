@@ -274,8 +274,12 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
       const int64_t NumOfVReg = Offset.getScalable() / 8;
       const int64_t FixedOffset = NumOfVReg * VLENB;
       if (!isInt<32>(FixedOffset)) {
-        reportFatalUsageError(
-            "Frame size outside of the signed 32-bit range not supported");
+        // This check might also need to be updated to 64bit.
+        // However mulImm() still assumes 32bit. For now only support fixed
+        // 64bit frame offsets, since scalable offsets would require the number
+        // of spilled registers to exceed 2^31, which is unlikely.
+        reportFatalUsageError("Scalable frame size outside of the signed "
+                              "32-bit range not supported");
       }
       Offset = StackOffset::getFixed(FixedOffset + Offset.getFixed());
     }
@@ -565,6 +569,7 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  bool Is64Bit = MF.getSubtarget<RISCVSubtarget>().is64Bit();
   DebugLoc DL = MI.getDebugLoc();
 
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
@@ -575,14 +580,15 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   if (!IsRVVSpill)
     Offset += StackOffset::getFixed(MI.getOperand(FIOperandNum + 1).getImm());
 
-  if (!isInt<32>(Offset.getFixed())) {
-    reportFatalUsageError(
-        "Frame offsets outside of the signed 32-bit range not supported");
+  if (!Is64Bit && !isInt<32>(Offset.getFixed())) {
+    reportFatalUsageError("Frame offsets outside of the signed 32-bit range "
+                          "not supported on RV32");
   }
 
   if (!IsRVVSpill) {
     int64_t Val = Offset.getFixed();
     int64_t Lo12 = SignExtend64<12>(Val);
+    int64_t Lo26 = SignExtend64<26>(Val);
     unsigned Opc = MI.getOpcode();
 
     if (Opc == RISCV::ADDI && !isInt<12>(Val)) {
@@ -609,6 +615,11 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       // instruction will add 4 to the immediate. If that would overflow 12
       // bits, we can't fold the offset.
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
+    } else if (Opc == RISCV::QC_E_ADDI || RISCVInstrInfo::isBaseQCLoad(MI) ||
+               RISCVInstrInfo::isBaseQCStore(MI)) {
+      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Lo26);
+      Offset = StackOffset::get((uint64_t)Val - (uint64_t)Lo26,
+                                Offset.getScalable());
     } else {
       // We can encode an add with 12 bit signed immediate in the immediate
       // operand of our user instruction.  As a result, the remaining
@@ -819,6 +830,20 @@ Register RISCVRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return TFI->hasFP(MF) ? RISCV::X8 : RISCV::X2;
 }
 
+bool RISCVRegisterInfo::isArgumentRegister(const MachineFunction &MF,
+                                           MCRegister Reg) const {
+  auto const &STI = MF.getSubtarget<RISCVSubtarget>();
+  const RISCVRegisterInfo *TRI = STI.getRegisterInfo();
+
+  if (TRI->isGeneralPurposeRegister(MF, Reg))
+    return llvm::is_contained(RISCV::getArgGPRs(STI), Reg);
+
+  if (TRI->isFPRegister(Reg))
+    return llvm::is_contained(RISCV::getArgFPRs(STI), Reg);
+
+  return false;
+}
+
 StringRef RISCVRegisterInfo::getRegAsmName(MCRegister Reg) const {
   if (Reg == RISCV::SF_VCIX_STATE)
     return "sf.vcix_state";
@@ -907,7 +932,10 @@ void RISCVRegisterInfo::getOffsetOpcodes(const StackOffset &Offset,
 
 unsigned
 RISCVRegisterInfo::getRegisterCostTableIndex(const MachineFunction &MF) const {
-  return MF.getSubtarget<RISCVSubtarget>().hasStdExtZca() && !DisableCostPerUse
+  // Set CostPerUse to 1 only when optimizing for size and RVC exists.
+  return MF.getFunction().hasOptSize() &&
+                 MF.getSubtarget<RISCVSubtarget>().hasStdExtZca() &&
+                 !DisableCostPerUse
              ? 1
              : 0;
 }

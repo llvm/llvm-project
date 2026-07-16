@@ -88,9 +88,16 @@ void GlobalValue::assignGUID() {
   const GUID G =
       GlobalValue::getGUIDAssumingExternalLinkage(getGlobalIdentifier());
   setMetadata(
-      LLVMContext::MD_unique_id,
+      LLVMContext::MD_guid,
       MDNode::get(getContext(), {ConstantAsMetadata::get(ConstantInt::get(
                                     Type::getInt64Ty(getContext()), G))}));
+}
+
+void GlobalValue::reassignGUID() {
+  if (!getGUIDMetadata())
+    return;
+  eraseMetadata(LLVMContext::MD_guid);
+  assignGUID();
 }
 
 GlobalValue::GUID GlobalValue::getGUID() const {
@@ -132,7 +139,7 @@ std::optional<GlobalValue::GUID> GlobalValue::getGUIDIfAssigned() const {
 
 MDNode *GlobalValue::getGUIDMetadata() const {
   if (auto *GO = dyn_cast<GlobalObject>(this))
-    return GO->getMetadata(LLVMContext::MD_unique_id);
+    return GO->getMetadata(LLVMContext::MD_guid);
   return nullptr;
 }
 
@@ -168,11 +175,13 @@ GlobalObject::~GlobalObject() {
   setComdat(nullptr);
 }
 
-bool GlobalValue::isInterposable() const {
+bool GlobalValue::isInterposable(bool CheckNoIPA) const {
+  if (CheckNoIPA && isNoipaFnDef())
+    return true;
   if (isInterposableLinkage(getLinkage()))
     return true;
-  return getParent() && getParent()->getSemanticInterposition() &&
-         !isDSOLocal();
+  return !isDSOLocal() && getParent() &&
+         getParent()->getSemanticInterposition();
 }
 
 bool GlobalValue::canBenefitFromLocalAlias() const {
@@ -389,6 +398,13 @@ bool GlobalValue::isNobuiltinFnDef() const {
   return F->hasFnAttribute(Attribute::NoBuiltin);
 }
 
+bool GlobalValue::isNoipaFnDef() const {
+  const Function *F = dyn_cast<Function>(this);
+  if (!F || F->isDeclaration())
+    return false;
+  return F->hasFnAttribute(Attribute::NoIPA);
+}
+
 bool GlobalValue::isDeclaration() const {
   // Globals are definitions if they have an initializer.
   if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(this))
@@ -452,11 +468,11 @@ bool GlobalObject::canIncreaseAlignment() const {
   return true;
 }
 
-bool GlobalObject::hasMetadataOtherThanDebugLoc() const {
+bool GlobalObject::hasMetadataOtherThanDebugLocAndGuid() const {
   SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
   getAllMetadata(MDs);
   for (const auto &V : MDs)
-    if (V.first != LLVMContext::MD_dbg)
+    if (V.first != LLVMContext::MD_dbg && V.first != LLVMContext::MD_guid)
       return true;
   return false;
 }

@@ -1561,15 +1561,17 @@ let SubtargetPredicate = isGFX10Plus in {
   } // End isCommutable = 1, isReMaterializable = 1
   def : ThreeOp_i32_Pats<xor, xor, V_XOR3_B32_e64>;
 
-  let Constraints = "$vdst = $vdst_in", isConvergent = 1 in {
-    defm V_PERMLANE16_B32 : VOP3Inst<"v_permlane16_b32", VOP3_PERMLANE_Profile>;
-    defm V_PERMLANEX16_B32 : VOP3Inst<"v_permlanex16_b32", VOP3_PERMLANE_Profile>;
-  } // End $vdst = $vdst_in, isConvergent = 1
+  let SubtargetPredicate = HasPermlane16Insts in {
+    let Constraints = "$vdst = $vdst_in", isConvergent = 1 in {
+      defm V_PERMLANE16_B32 : VOP3Inst<"v_permlane16_b32", VOP3_PERMLANE_Profile>;
+      defm V_PERMLANEX16_B32 : VOP3Inst<"v_permlanex16_b32", VOP3_PERMLANE_Profile>;
+    } // End $vdst = $vdst_in, isConvergent = 1
 
-  foreach vt = Reg32Types.types in {
-    def : PermlanePat<int_amdgcn_permlane16, V_PERMLANE16_B32_e64, vt>;
-    def : PermlanePat<int_amdgcn_permlanex16, V_PERMLANEX16_B32_e64, vt>;
-  }
+    foreach vt = Reg32Types.types in {
+      def : PermlanePat<int_amdgcn_permlane16, V_PERMLANE16_B32_e64, vt>;
+      def : PermlanePat<int_amdgcn_permlanex16, V_PERMLANEX16_B32_e64, vt>;
+    }
+  } // End SubtargetPredicate = HasPermlane16Insts
   let isCommutable = 1 in {
     defm V_ADD_NC_U16 : VOP3Inst_t16 <"v_add_nc_u16", VOP_I16_I16_I16, add>;
   } // End isCommutable = 1
@@ -1792,7 +1794,7 @@ class VOP3_CVT_SR_FP16_TiedInput_Profile<VOPProfile P> : VOP3_CVT_SCALE_F1632_FP
 
 // FIXME: GlobalISel cannot distinguish f16 and bf16 and may start using bf16 patterns
 //        instead of less complex f16. Disable GlobalISel for these for now.
-def bf16_fpround : PatFrag <(ops node:$src0),  (fpround $src0), [{ return true; }]> {
+def bf16_fpround : PatFrag <(ops node:$src0),  (any_fpround $src0), [{ return true; }]> {
   let GISelPredicateCode = [{return false;}];
 }
 

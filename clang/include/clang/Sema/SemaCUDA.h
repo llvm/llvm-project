@@ -304,14 +304,6 @@ template <> struct DenseMapInfo<clang::SemaCUDA::FunctionDeclAndLoc> {
   using FDBaseInfo =
       DenseMapInfo<clang::CanonicalDeclPtr<const clang::FunctionDecl>>;
 
-  static FunctionDeclAndLoc getEmptyKey() {
-    return {FDBaseInfo::getEmptyKey(), clang::SourceLocation()};
-  }
-
-  static FunctionDeclAndLoc getTombstoneKey() {
-    return {FDBaseInfo::getTombstoneKey(), clang::SourceLocation()};
-  }
-
   static unsigned getHashValue(const FunctionDeclAndLoc &FDL) {
     return hash_combine(FDBaseInfo::getHashValue(FDL.FD),
                         FDL.Loc.getHashValue());

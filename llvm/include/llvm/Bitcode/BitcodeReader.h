@@ -17,7 +17,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitCodeEnums.h"
 #include "llvm/IR/GlobalValue.h"
-#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -38,6 +37,7 @@ class Metadata;
 class ModuleSummaryIndex;
 class Type;
 class Value;
+struct ValueInfo;
 
 // Callback to override the data layout string of an imported bitcode module.
 // The first argument is the target triple, the second argument the data layout
@@ -84,6 +84,14 @@ struct ParserCallbacks {
   std::optional<ValueTypeCallbackTy> ValueType;
   /// The MDType callback is called for every value in metadata.
   std::optional<MDTypeCallbackTy> MDType;
+
+  /// If true, do not auto-upgrade debug intrinsic calls (llvm.dbg.*) to
+  /// non-instruction debug records during bitcode read. This flag allows
+  /// direct manipulation of the old intrinsic-form debug info; beware that
+  /// LLVM does not support using these intrinsics any more. The caller is
+  /// responsible for performing the upgrade manually (e.g. via
+  /// Module::convertToNewDbgValues()).
+  bool SkipDebugIntrinsicUpgrade = false;
 
   ParserCallbacks() = default;
   explicit ParserCallbacks(DataLayoutCallbackFuncTy DataLayout)

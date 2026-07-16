@@ -5360,7 +5360,7 @@ bool MachOObjectFile::is64Bit() const {
 
 void MachOObjectFile::ReadULEB128s(uint64_t Index,
                                    SmallVectorImpl<uint64_t> &Out) const {
-  DataExtractor extractor(ObjectFile::getData(), true, 0);
+  DataExtractor extractor(ObjectFile::getData(), true);
 
   uint64_t offset = Index;
   uint64_t data = 0;

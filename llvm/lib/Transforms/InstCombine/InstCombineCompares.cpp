@@ -2188,12 +2188,48 @@ Instruction *InstCombinerImpl::foldICmpMulConstant(ICmpInst &Cmp,
   Type *MulTy = Mul->getType();
   Value *X = Mul->getOperand(0);
 
-  // If there's no overflow:
-  // X * X == 0 --> X == 0
-  // X * X != 0 --> X != 0
-  if (Cmp.isEquality() && C.isZero() && X == Mul->getOperand(1) &&
-      (Mul->hasNoUnsignedWrap() || Mul->hasNoSignedWrap()))
-    return new ICmpInst(Pred, X, ConstantInt::getNullValue(MulTy));
+  // If comparing a square with a constant, try simplifying to comparing square
+  // roots.
+  if (X == Mul->getOperand(1) && !Cmp.isSigned()) {
+    APInt R = C.sqrtFloor();
+    bool IsSqr = C == R * R;
+
+    // X * X eq/ne C
+    if (Cmp.isEquality() &&
+        (Mul->hasNoUnsignedWrap() || (Mul->hasNoSignedWrap() && C.isZero()))) {
+
+      // If constant is not a square, eq/ne is false/true respectively
+      if (!IsSqr)
+        return replaceInstUsesWith(
+            Cmp,
+            ConstantInt::getBool(Cmp.getType(), Pred == ICmpInst::ICMP_NE));
+
+      return new ICmpInst(Pred, X, ConstantInt::get(MulTy, R));
+    }
+
+    // If the multiply does not wrap
+    // X * X pred C --> X pred R
+    if (Mul->hasNoUnsignedWrap()) {
+
+      if (IsSqr)
+        return new ICmpInst(Pred, X, ConstantInt::get(MulTy, R));
+
+      // If C is not a square, we use floor/ceil of sqrt(C).
+      //
+      // If LT or LE, we need R to be an overestimate of sqrt(C),
+      // then use the strict predicate (LT->LT, LE->LT).
+      //
+      // If GT or GE, we need R to be an underestimate of sqrt(C),
+      // then use the strict predicate (GT->GT, GE->GT).
+      //
+      // R is already an underestimate of sqrt(C) due to sqrtFloor.
+      if (ICmpInst::isLT(Pred) || ICmpInst::isLE(Pred))
+        ++R;
+
+      return new ICmpInst(Cmp.getStrictPredicate(), X,
+                          ConstantInt::get(MulTy, R));
+    }
+  }
 
   const APInt *MulC;
   if (!match(Mul->getOperand(1), m_APInt(MulC)))
@@ -3533,10 +3569,9 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
         // Fold the icmp based on the value of C
         // If C is M copies of an iK sized bit pattern,
         // then:
-        //   =>  %E = extractelement <N x iK> %vec, i32 Elem
+        //   =>  %E = extractelement <N x iK> %vec, i64 Elem
         //       icmp <pred> iK %SplatVal, <pattern>
-        Value *Elem = Builder.getInt32(Mask[0]);
-        Value *Extract = Builder.CreateExtractElement(Vec, Elem);
+        Value *Extract = Builder.CreateExtractElement(Vec, Mask[0]);
         Value *NewC = ConstantInt::get(EltTy, C->trunc(EltTy->getBitWidth()));
         return new ICmpInst(Pred, Extract, NewC);
       }
@@ -4945,7 +4980,7 @@ Value *InstCombinerImpl::foldMultiplicationOverflowCheck(ICmpInst &I) {
   if (MulHadOtherUses)
     Builder.SetInsertPoint(Mul);
 
-  CallInst *Call = Builder.CreateIntrinsic(
+  Value *Call = Builder.CreateIntrinsic(
       Div->getOpcode() == Instruction::UDiv ? Intrinsic::umul_with_overflow
                                             : Intrinsic::smul_with_overflow,
       X->getType(), {X, Y}, /*FMFSource=*/nullptr, "mul");
@@ -5896,7 +5931,7 @@ static Instruction *foldICmpPow2Test(ICmpInst &I,
 
   if (A) {
     Type *Ty = A->getType();
-    CallInst *CtPop = Builder.CreateUnaryIntrinsic(Intrinsic::ctpop, A);
+    Value *CtPop = Builder.CreateUnaryIntrinsic(Intrinsic::ctpop, A);
     return CheckIs ? new ICmpInst(ICmpInst::ICMP_ULT, CtPop,
                                   ConstantInt::get(Ty, 2))
                    : new ICmpInst(ICmpInst::ICMP_UGT, CtPop,
@@ -6739,7 +6774,7 @@ static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
     MulA = Builder.CreateZExt(A, MulType);
   if (WidthB < MulWidth)
     MulB = Builder.CreateZExt(B, MulType);
-  CallInst *Call =
+  Value *Call =
       Builder.CreateIntrinsic(Intrinsic::umul_with_overflow, MulType,
                               {MulA, MulB}, /*FMFSource=*/nullptr, "umul");
   IC.addToWorklist(MulInstr);

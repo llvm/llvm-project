@@ -175,6 +175,11 @@ public:
   /// Remove register from copy maps.
   void invalidateRegister(MCRegister Reg, const TargetRegisterInfo &TRI,
                           const TargetInstrInfo &TII, bool UseCopyInstr) {
+    // Early exit if there are no copies, as the function wouldn't do anything
+    // in that case.
+    if (Copies.empty())
+      return;
+
     // Since Reg might be a subreg of some registers, only invalidate Reg is not
     // enough. We have to find the COPY defines Reg or registers defined by Reg
     // and invalidate all of them. Similarly, we must invalidate all of the
@@ -262,6 +267,11 @@ public:
   /// Clobber a single register, removing it from the tracker's copy maps.
   void clobberRegister(MCRegister Reg, const TargetRegisterInfo &TRI,
                        const TargetInstrInfo &TII, bool UseCopyInstr) {
+    // Early exit if there are no copies, as the function wouldn't do anything
+    // in that case.
+    if (Copies.empty())
+      return;
+
     for (MCRegUnit Unit : TRI.regunits(Reg)) {
       clobberRegUnit(Unit, TRI, TII, UseCopyInstr);
     }
@@ -733,10 +743,10 @@ bool MachineCopyPropagation::isForwardableRegClassCopy(const MachineInstr &Copy,
   MCRegister UseDst = getDstMCReg(*UseICopyOperands);
   bool Found = false;
   bool IsCrossClass = false;
-  for (const TargetRegisterClass *RC : TRI->regclasses()) {
-    if (RC->contains(CopySrc) && RC->contains(UseDst)) {
+  for (const TargetRegisterClass &RC : TRI->regclasses()) {
+    if (RC.contains(CopySrc) && RC.contains(UseDst)) {
       Found = true;
-      if (TRI->getCrossCopyRegClass(RC) != RC) {
+      if (TRI->getCrossCopyRegClass(&RC) != &RC) {
         IsCrossClass = true;
         break;
       }
@@ -749,9 +759,9 @@ bool MachineCopyPropagation::isForwardableRegClassCopy(const MachineInstr &Copy,
   // The forwarded copy would be cross-class. Only do this if the original copy
   // was also cross-class.
   MCRegister CopyDst = getDstMCReg(CopyOperands);
-  for (const TargetRegisterClass *RC : TRI->regclasses()) {
-    if (RC->contains(CopySrc) && RC->contains(CopyDst) &&
-        TRI->getCrossCopyRegClass(RC) != RC)
+  for (const TargetRegisterClass &RC : TRI->regclasses()) {
+    if (RC.contains(CopySrc) && RC.contains(CopyDst) &&
+        TRI->getCrossCopyRegClass(&RC) != &RC)
       return true;
   }
   return false;
@@ -1489,7 +1499,7 @@ void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
     LLVM_DEBUG(dbgs() << "MCP: Searching paired spill for reload: ");
     LLVM_DEBUG(MI.dump());
     MachineInstr *MaybeSpill =
-        Tracker.findLastSeenDefInCopy(MI, Src, *TRI, *TII, UseCopyInstr);
+        Tracker.findAvailCopy(MI, Src, *TRI, *TII, UseCopyInstr);
     bool MaybeSpillIsChained = ChainLeader.count(MaybeSpill);
     if (!MaybeSpillIsChained && MaybeSpill &&
         IsSpillReloadPair(*MaybeSpill, MI)) {
@@ -1609,14 +1619,14 @@ MachineCopyPropagationPass::run(MachineFunction &MF,
 bool MachineCopyPropagation::run(MachineFunction &MF) {
   bool IsSpillageCopyElimEnabled = false;
   switch (EnableSpillageCopyElimination) {
-  case cl::BOU_UNSET:
+  case cl::boolOrDefault::BOU_UNSET:
     IsSpillageCopyElimEnabled =
         MF.getSubtarget().enableSpillageCopyElimination();
     break;
-  case cl::BOU_TRUE:
+  case cl::boolOrDefault::BOU_TRUE:
     IsSpillageCopyElimEnabled = true;
     break;
-  case cl::BOU_FALSE:
+  case cl::boolOrDefault::BOU_FALSE:
     IsSpillageCopyElimEnabled = false;
     break;
   }

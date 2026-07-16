@@ -75,10 +75,12 @@ void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
     ExportGV.setName(NewName);
     ExportGV.setLinkage(GlobalValue::ExternalLinkage);
     ExportGV.setVisibility(GlobalValue::HiddenVisibility);
-
+    // TODO: remove this reassign and instead create an alias.
+    ExportGV.reassignGUID();
     if (ImportGV) {
       ImportGV->setName(NewName);
       ImportGV->setVisibility(GlobalValue::HiddenVisibility);
+      ImportGV->reassignGUID();
     }
 
     if (isa<Function>(&ExportGV) && allowPromotionAlias(OldName)) {
@@ -169,6 +171,22 @@ void promoteTypeIds(Module &M, StringRef ModuleId) {
           LLVMContext::MD_type,
           *MDNode::get(M.getContext(), {MD->getOperand(0), I->second}));
     }
+
+    SmallVector<MDNode *, 1> CGMDs;
+    GO.getMetadata(LLVMContext::MD_callgraph, CGMDs);
+
+    GO.eraseMetadata(LLVMContext::MD_callgraph);
+    for (auto *MD : CGMDs) {
+      if (MD->getNumOperands() == 1) {
+        auto I = LocalToGlobal.find(MD->getOperand(0));
+        if (I == LocalToGlobal.end()) {
+          GO.addMetadata(LLVMContext::MD_callgraph, *MD);
+          continue;
+        }
+        GO.addMetadata(LLVMContext::MD_callgraph,
+                       *MDNode::get(M.getContext(), {I->second}));
+      }
+    }
   }
 }
 
@@ -198,8 +216,8 @@ void simplifyExternals(Module &M) {
                                            AttributeList::FunctionIndex,
                                            F.getAttributes().getFnAttrs()));
     NewF->takeName(&F);
-    NewF->setMetadata(LLVMContext::MD_unique_id,
-                      F.getMetadata(LLVMContext::MD_unique_id));
+    NewF->setMetadata(LLVMContext::MD_guid,
+                      F.getMetadata(LLVMContext::MD_guid));
     F.replaceAllUsesWith(NewF);
     F.eraseFromParent();
   }
@@ -374,7 +392,7 @@ void splitAndWriteThinLTOBitcode(
         return false;
       }));
   StripDebugInfo(*MergedM);
-  MergedM->setModuleInlineAsm("");
+  MergedM->removeModuleInlineAsm();
 
   // Clone any llvm.*used globals to ensure the included values are
   // not deleted.
@@ -438,6 +456,9 @@ void splitAndWriteThinLTOBitcode(
       Linkage = CFL_Declaration;
     Elts.push_back(ConstantAsMetadata::get(
         llvm::ConstantInt::get(Type::getInt8Ty(Ctx), Linkage)));
+    GlobalValue::GUID GUID = V->getGUID();
+    Elts.push_back(ConstantAsMetadata::get(
+        llvm::ConstantInt::get(Type::getInt64Ty(Ctx), GUID)));
     append_range(Elts, Types);
     CfiFunctionMDs.push_back(MDTuple::get(Ctx, Elts));
   }

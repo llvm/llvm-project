@@ -231,8 +231,8 @@ void arith::ConstantOp::getAsmResultNames(
 LogicalResult arith::ConstantOp::verify() {
   auto type = getType();
   // Integer values must be signless.
-  if (llvm::isa<IntegerType>(type) &&
-      !llvm::cast<IntegerType>(type).isSignless())
+  if (auto intType = dyn_cast<IntegerType>(getElementTypeOrSelf(type));
+      intType && !intType.isSignless())
     return emitOpError("integer return type must be signless");
   // Any float or elements attribute are acceptable.
   if (!llvm::isa<IntegerAttr, FloatAttr, ElementsAttr>(getValue())) {
@@ -1233,6 +1233,11 @@ OpFoldResult arith::AddFOp::fold(FoldAdaptor adaptor) {
         result.add(b, convertArithRoundingModeToLLVMIR(rm));
         return result;
       });
+}
+
+void arith::AddFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                MLIRContext *context) {
+  patterns.add<AddFOfNegFLhs, AddFOfNegFRhs>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2724,7 +2729,13 @@ struct SelectToExtUI : public OpRewritePattern<arith::SelectOp> {
 void arith::SelectOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
   results.add<RedundantSelectFalse, RedundantSelectTrue, SelectNotCond,
-              SelectI1ToNot, SelectToExtUI>(context);
+              SelectI1ToNot, SelectCmpISgeToMaxSI, SelectCmpISgeToMinSI,
+              SelectCmpISgtToMaxSI, SelectCmpISgtToMinSI, SelectCmpISleToMaxSI,
+              SelectCmpISleToMinSI, SelectCmpISltToMaxSI, SelectCmpISltToMinSI,
+              SelectCmpIUgeToMaxUI, SelectCmpIUgeToMinUI, SelectCmpIUgtToMaxUI,
+              SelectCmpIUgtToMinUI, SelectCmpIUleToMaxUI, SelectCmpIUleToMinUI,
+              SelectCmpIUltToMaxUI, SelectCmpIUltToMinUI, SelectToExtUI>(
+      context);
 }
 
 OpFoldResult arith::SelectOp::fold(FoldAdaptor adaptor) {

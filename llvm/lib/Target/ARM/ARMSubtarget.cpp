@@ -397,11 +397,8 @@ bool ARMSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
 }
 
 bool ARMSubtarget::isGVInGOT(const GlobalValue *GV) const {
-  return isTargetELF() && TM.isPositionIndependent() && !GV->isDSOLocal();
-}
-
-unsigned ARMSubtarget::getMispredictionPenalty() const {
-  return SchedModel.MispredictPenalty;
+  return isTargetELF() && TM.isPositionIndependent() &&
+         (!GV->isDSOLocal() || GV->isWeakForLinker());
 }
 
 bool ARMSubtarget::enableMachineScheduler() const {

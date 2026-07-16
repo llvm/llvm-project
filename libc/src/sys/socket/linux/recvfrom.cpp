@@ -42,13 +42,13 @@ LLVM_LIBC_FUNCTION(ssize_t, recvfrom,
   }
 
   ssize_t ret = result.value();
-  MSAN_UNPOISON(buf, ret);
+  LIBC_MSAN_UNPOISON(buf, ret);
 
   if (src_addr) {
     size_t min_src_addr_size = (*addrlen < srcaddr_sz) ? *addrlen : srcaddr_sz;
     (void)min_src_addr_size; // prevent "set but not used" warning
 
-    MSAN_UNPOISON(src_addr, min_src_addr_size);
+    LIBC_MSAN_UNPOISON(src_addr, min_src_addr_size);
   }
   return ret;
 }

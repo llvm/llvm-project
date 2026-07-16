@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PS4CPU.h"
+#include "Arch/X86.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
@@ -167,8 +168,8 @@ void tools::PS4cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // LTO indeed occurs.
   if (Args.hasFlag(options::OPT_funified_lto, options::OPT_fno_unified_lto,
                    true))
-    CmdArgs.push_back(D.getLTOMode() == LTOK_Thin ? "--lto=thin"
-                                                  : "--lto=full");
+    CmdArgs.push_back(TC.getLTOMode(Args) == LTOK_Thin ? "--lto=thin"
+                                                       : "--lto=full");
   if (UseJMC)
     AddLTOFlag("-enable-jmc-instrument");
 
@@ -348,8 +349,8 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasFlag(options::OPT_funified_lto, options::OPT_fno_unified_lto,
                    true))
-    CmdArgs.push_back(D.getLTOMode() == LTOK_Thin ? "--lto=thin"
-                                                  : "--lto=full");
+    CmdArgs.push_back(TC.getLTOMode(Args) == LTOK_Thin ? "--lto=thin"
+                                                       : "--lto=full");
 
   if (Args.hasFlag(options::OPT_ffat_lto_objects,
                    options::OPT_fno_fat_lto_objects, false))
@@ -369,6 +370,9 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (StringRef Jobs = getLTOParallelism(Args, D); !Jobs.empty())
     AddLTOFlag(Twine("jobs=") + Jobs);
+
+  std::string CPU = tools::x86::getX86TargetCPU(D, Args, TC.getTriple());
+  AddLTOFlag(Twine("mcpu=" + CPU));
 
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   TC.AddFilePathLibArgs(Args, CmdArgs);
@@ -561,9 +565,8 @@ Tool *toolchains::PS5CPU::buildLinker() const {
 }
 
 SanitizerMask toolchains::PS4PS5Base::getSupportedSanitizers(
-    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
-  SanitizerMask Res =
-      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
+    BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
@@ -572,15 +575,14 @@ SanitizerMask toolchains::PS4PS5Base::getSupportedSanitizers(
 }
 
 SanitizerMask toolchains::PS5CPU::getSupportedSanitizers(
-    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
-  SanitizerMask Res =
-      PS4PS5Base::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
+    BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res = PS4PS5Base::getSupportedSanitizers(BA, DeviceOffloadKind);
   Res |= SanitizerKind::Thread;
   return Res;
 }
 
 void toolchains::PS4PS5Base::addClangTargetOptions(
-    const ArgList &DriverArgs, ArgStringList &CC1Args,
+    const ArgList &DriverArgs, ArgStringList &CC1Args, BoundArch BA,
     Action::OffloadKind DeviceOffloadingKind) const {
   // PS4/PS5 do not use init arrays.
   if (DriverArgs.hasArg(options::OPT_fuse_init_array)) {
@@ -648,6 +650,12 @@ void toolchains::PS4PS5Base::addClangTargetOptions(
     CC1Args.push_back("-mllvm");
     CC1Args.push_back("-emit-jump-table-sizes-section");
   }
+}
+
+void toolchains::PS4PS5Base::addClangWarningOptions(
+    ArgStringList &CC1Args) const {
+  CC1Args.push_back("-Wnonportable-include-path-separator");
+  CC1Args.push_back("-Wnonportable-system-include-path");
 }
 
 // PS4 toolchain.

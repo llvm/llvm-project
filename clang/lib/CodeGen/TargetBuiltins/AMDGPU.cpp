@@ -31,6 +31,22 @@ using namespace llvm;
 
 namespace {
 
+static Value *emitAMDGPUSBufferLoadBuiltin(CodeGenFunction &CGF,
+                                           const CallExpr *E) {
+  llvm::Type *RetTy = CGF.ConvertType(E->getType());
+  Function *F = CGF.CGM.getIntrinsic(Intrinsic::amdgcn_s_buffer_load, RetTy);
+
+  Value *RsrcPtr = CGF.EmitScalarExpr(E->getArg(0));
+  llvm::Type *I128Ty = llvm::IntegerType::get(CGF.getLLVMContext(), 128);
+  llvm::Type *RsrcVecTy =
+      llvm::FixedVectorType::get(CGF.Builder.getInt32Ty(), 4);
+  Value *RsrcInt = CGF.Builder.CreatePtrToInt(RsrcPtr, I128Ty);
+  Value *Rsrc = CGF.Builder.CreateBitCast(RsrcInt, RsrcVecTy);
+
+  return CGF.Builder.CreateCall(F, {Rsrc, CGF.EmitScalarExpr(E->getArg(1)),
+                                    CGF.EmitScalarExpr(E->getArg(2))});
+}
+
 // Has second type mangled argument.
 static Value *
 emitBinaryExpMaybeConstrainedFPBuiltin(CodeGenFunction &CGF, const CallExpr *E,
@@ -341,7 +357,8 @@ emitAMDGCNImageOverloadedReturnType(clang::CodeGen::CodeGenFunction &CGF,
   }
 
   llvm::Type *RetTy = IsImageStore ? CGF.VoidTy : CGF.ConvertType(E->getType());
-  llvm::CallInst *Call = CGF.Builder.CreateIntrinsic(RetTy, IntrinsicID, Args);
+  llvm::CallInst *Call =
+      CGF.Builder.CreateIntrinsicWithoutFolding(RetTy, IntrinsicID, Args);
   return Call;
 }
 
@@ -463,7 +480,7 @@ static Value *GetAMDGPUPredicate(CodeGenFunction &CGF, Twine Name) {
   MDNode *Predicate = MDNode::get(Ctx, MDString::get(Ctx, Name.str()));
   std::vector<Value *> Args = {SpecId, ConstantInt::getFalse(Ctx),
                                MetadataAsValue::get(Ctx, Predicate)};
-  CallInst *Call = CGF.Builder.CreateIntrinsic(
+  Value *Call = CGF.Builder.CreateIntrinsic(
       Intrinsic::spv_named_boolean_spec_constant, Args);
 
   return Call;
@@ -774,26 +791,18 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_uicmp:
   case AMDGPU::BI__builtin_amdgcn_uicmpl:
   case AMDGPU::BI__builtin_amdgcn_sicmp:
-  case AMDGPU::BI__builtin_amdgcn_sicmpl: {
-    llvm::Value *Src0 = EmitScalarExpr(E->getArg(0));
-    llvm::Value *Src1 = EmitScalarExpr(E->getArg(1));
-    llvm::Value *Src2 = EmitScalarExpr(E->getArg(2));
-
-    // FIXME-GFX10: How should 32 bit mask be handled?
-    Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_icmp,
-      { Builder.getInt64Ty(), Src0->getType() });
-    return Builder.CreateCall(F, { Src0, Src1, Src2 });
-  }
+  case AMDGPU::BI__builtin_amdgcn_sicmpl:
   case AMDGPU::BI__builtin_amdgcn_fcmp:
   case AMDGPU::BI__builtin_amdgcn_fcmpf: {
-    llvm::Value *Src0 = EmitScalarExpr(E->getArg(0));
-    llvm::Value *Src1 = EmitScalarExpr(E->getArg(1));
-    llvm::Value *Src2 = EmitScalarExpr(E->getArg(2));
+    Value *LHS = EmitScalarExpr(E->getArg(0));
+    Value *RHS = EmitScalarExpr(E->getArg(1));
+    CmpInst::Predicate Pred = static_cast<CmpInst::Predicate>(
+        cast<ConstantInt>(EmitScalarExpr(E->getArg(2)))->getZExtValue());
 
     // FIXME-GFX10: How should 32 bit mask be handled?
-    Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_fcmp,
-      { Builder.getInt64Ty(), Src0->getType() });
-    return Builder.CreateCall(F, { Src0, Src1, Src2 });
+    return Builder.CreateIntrinsic(Builder.getInt64Ty(),
+                                   Intrinsic::amdgcn_ballot,
+                                   Builder.CreateCmp(Pred, LHS, RHS));
   }
   case AMDGPU::BI__builtin_amdgcn_class:
   case AMDGPU::BI__builtin_amdgcn_classf:
@@ -1008,6 +1017,22 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     // argument.
     llvm::Function *F = CGM.getIntrinsic(IID, {Args[0]->getType()});
     return Builder.CreateCall(F, {Args});
+  }
+  case AMDGPU::BI__builtin_amdgcn_av_load_b128:
+  case AMDGPU::BI__builtin_amdgcn_av_store_b128: {
+    const bool IsStore = BuiltinID == AMDGPU::BI__builtin_amdgcn_av_store_b128;
+    SmallVector<Value *, 5> Args = {EmitScalarExpr(E->getArg(0))}; // addr
+    if (IsStore)
+      Args.push_back(EmitScalarExpr(E->getArg(1))); // data
+    const unsigned ScopeIdx = E->getNumArgs() - 1;
+    auto *ScopeExpr =
+        cast<llvm::ConstantInt>(EmitScalarExpr(E->getArg(ScopeIdx)));
+    Args.push_back(emitScopeMD(*this, ScopeExpr->getZExtValue()));
+    llvm::Function *F =
+        CGM.getIntrinsic(IsStore ? Intrinsic::amdgcn_av_store_b128
+                                 : Intrinsic::amdgcn_av_load_b128,
+                         {Args[0]->getType()});
+    return Builder.CreateCall(F, Args);
   }
   case AMDGPU::BI__builtin_amdgcn_get_fpenv: {
     Function *F = CGM.getIntrinsic(Intrinsic::get_fpenv,
@@ -1427,6 +1452,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_swmmac_f32_16x16x32_bf8_bf8_w32:
   case AMDGPU::BI__builtin_amdgcn_swmmac_f32_16x16x32_bf8_bf8_w64:
   // GFX1250 WMMA builtins
+  case AMDGPU::BI__builtin_amdgcn_wmma_f64_16x16x4_f64:
   case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x4_f32:
   case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x32_bf16:
   case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x32_f16:
@@ -1627,6 +1653,10 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       BuiltinWMMAOp = Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_bf8;
       break;
     // GFX1250 WMMA builtins
+    case AMDGPU::BI__builtin_amdgcn_wmma_f64_16x16x4_f64:
+      ArgsForMatchingMatrixTypes = {5, 1};
+      BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f64_16x16x4_f64;
+      break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x4_f32:
       ArgsForMatchingMatrixTypes = {3, 0};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f32_16x16x4_f32;
@@ -2140,6 +2170,30 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f64:
     return emitBuiltinWithOneOverloadedType<5>(
         *this, E, Intrinsic::amdgcn_raw_ptr_buffer_atomic_fmax);
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_i32:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v2i32:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v3i32:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v4i32:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v8i32:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v16i32:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_f32:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v2f32:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v3f32:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v4f32:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v8f32:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v16f32:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_i8:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_u8:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_i16:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_u16:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v2i8:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v3i8:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v4i8:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_f16:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v2f16:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v3f16:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v4f16:
+    return emitAMDGPUSBufferLoadBuiltin(*this, E);
   case AMDGPU::BI__builtin_amdgcn_s_prefetch_data:
     return emitBuiltinWithOneOverloadedType<2>(
         *this, E, Intrinsic::amdgcn_s_prefetch_data);

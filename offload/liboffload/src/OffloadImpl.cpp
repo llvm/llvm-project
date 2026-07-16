@@ -259,7 +259,7 @@ template <typename HandleT> Error olDestroy(HandleT Handle) {
   return Error::success();
 }
 
-constexpr ol_platform_backend_t pluginNameToBackend(StringRef Name) {
+ol_platform_backend_t pluginNameToBackend(StringRef Name) {
   if (Name == "amdgpu") {
     return OL_PLATFORM_BACKEND_AMDGPU;
   } else if (Name == "cuda") {
@@ -597,16 +597,17 @@ TargetAllocTy convertOlToPluginAllocTy(ol_alloc_type_t Type) {
 }
 
 constexpr size_t MAX_ALLOC_TRIES = 50;
-Error olMemAlloc_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
-                      size_t Size, void **AllocationOut) {
+Error olMemAllocImplHelper(ol_device_handle_t Device, ol_alloc_type_t Type,
+                           size_t Size, size_t Alignment,
+                           void **AllocationOut) {
   SmallVector<void *> Rejects;
 
   // Repeat the allocation up to a certain amount of times. If it happens to
   // already be allocated (e.g. by a device from another vendor) throw it away
   // and try again.
   for (size_t Count = 0; Count < MAX_ALLOC_TRIES; Count++) {
-    auto NewAlloc = Device->Device->dataAlloc(Size, nullptr,
-                                              convertOlToPluginAllocTy(Type));
+    auto NewAlloc = Device->Device->dataAlloc(
+        Size, nullptr, convertOlToPluginAllocTy(Type), Alignment);
     if (!NewAlloc)
       return NewAlloc.takeError();
 
@@ -651,6 +652,18 @@ Error olMemAlloc_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
   // We've tried multiple times, and can't allocate a non-overlapping region.
   return createOffloadError(ErrorCode::BACKEND_FAILURE,
                             "failed to allocate non-overlapping memory");
+}
+
+Error olMemAlloc_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
+                      size_t Size, void **AllocationOut) {
+  return olMemAllocImplHelper(Device, Type, Size, /*Alignment=*/0,
+                              AllocationOut);
+}
+
+Error olMemAllocAligned_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
+                             size_t Size, size_t Alignment,
+                             void **AllocationOut) {
+  return olMemAllocImplHelper(Device, Type, Size, Alignment, AllocationOut);
 }
 
 Error olMemFree_impl(void *Address) {
@@ -968,7 +981,7 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
     } else {
       return createOffloadError(
           ErrorCode::INVALID_ARGUMENT,
-          "ane of DstDevice and SrcDevice must be a non-host device if "
+          "one of DstDevice and SrcDevice must be a non-host device if "
           "queue is specified");
     }
   }
@@ -1015,6 +1028,17 @@ Error olMemFill_impl(ol_queue_handle_t Queue, void *Ptr, size_t PatternSize,
                      const void *PatternPtr, size_t FillSize) {
   return Queue->Device->Device->dataFill(Ptr, PatternPtr, PatternSize, FillSize,
                                          Queue->AsyncInfo);
+}
+
+Error olMemPrefetch_impl(ol_queue_handle_t Queue, size_t Count,
+                         const void **Mems, const size_t *Sizes,
+                         ol_mem_migration_flags_t Flags) {
+  if (Count == 0)
+    return Error::success();
+
+  bool ToHost = (Flags & OL_MEM_MIGRATION_FLAG_DEVICE_TO_HOST) != 0;
+  return Queue->Device->Device->dataPrefetch(Count, Mems, Sizes, ToHost,
+                                             Queue->AsyncInfo);
 }
 
 Error olCreateProgram_impl(ol_device_handle_t Device, const void *ProgData,
@@ -1098,10 +1122,11 @@ Error olGetKernelMaxCooperativeGroupCount_impl(
 }
 
 Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
-                          ol_symbol_handle_t Kernel, const void *ArgumentsData,
-                          size_t ArgumentsSize,
+                          ol_symbol_handle_t Kernel,
                           const ol_kernel_launch_size_args_t *LaunchSizeArgs,
-                          const ol_kernel_launch_prop_t *Properties) {
+                          const ol_kernel_launch_prop_t *Properties,
+                          size_t NumArgs, void **ArgPtrs,
+                          const size_t *ArgSizes) {
   auto *DeviceImpl = Device->Device;
   if (Queue && Device != Queue->Device) {
     return createOffloadError(
@@ -1115,6 +1140,7 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
 
   auto *QueueImpl = Queue ? Queue->AsyncInfo : nullptr;
   KernelArgsTy LaunchArgs{};
+  LaunchArgs.NumArgs = static_cast<uint32_t>(NumArgs);
   LaunchArgs.UserNumBlocks[0] = LaunchSizeArgs->NumGroups.x;
   LaunchArgs.UserNumBlocks[1] = LaunchSizeArgs->NumGroups.y;
   LaunchArgs.UserNumBlocks[2] = LaunchSizeArgs->NumGroups.z;
@@ -1122,6 +1148,7 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   LaunchArgs.UserThreadLimit[1] = LaunchSizeArgs->GroupSize.y;
   LaunchArgs.UserThreadLimit[2] = LaunchSizeArgs->GroupSize.z;
   LaunchArgs.DynCGroupMem = LaunchSizeArgs->DynSharedMemory;
+  LaunchArgs.Flags.StrictBlocksAndThreads = true;
 
   while (Properties && Properties->type != OL_KERNEL_LAUNCH_PROP_TYPE_NONE) {
     switch (Properties->type) {
@@ -1138,12 +1165,10 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   }
 
   AsyncInfoWrapperTy AsyncInfoWrapper(*DeviceImpl, QueueImpl);
-  KernelLaunchParamsTy Params;
-  Params.Data = const_cast<void *>(ArgumentsData);
-  Params.Size = ArgumentsSize;
-  LaunchArgs.ArgPtrs = reinterpret_cast<void **>(&Params);
-  // Don't do anything with pointer indirection; use arg data as-is
-  LaunchArgs.Flags.IsCUDA = true;
+  LaunchArgs.ArgPtrs = ArgPtrs;
+  LaunchArgs.ArgSizes =
+      reinterpret_cast<int64_t *>(const_cast<size_t *>(ArgSizes));
+  LaunchArgs.Flags.IsPtrArgs = true;
 
   auto *KernelImpl = std::get<GenericKernelTy *>(Kernel->PluginImpl);
   auto Err = KernelImpl->launch(*DeviceImpl, LaunchArgs.ArgPtrs, nullptr,
