@@ -25,13 +25,6 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "riscv-subtarget"
-
-#define GET_SUBTARGETINFO_TARGET_DESC
-#define GET_SUBTARGETINFO_CTOR
-#include "RISCVGenSubtargetInfo.inc"
-
-#undef DEBUG_TYPE
 #define DEBUG_TYPE "riscv-macro-fusion"
 
 #define GET_RISCV_MACRO_FUSION_PRED_IMPL
@@ -39,6 +32,10 @@ using namespace llvm;
 
 #undef DEBUG_TYPE
 #define DEBUG_TYPE "riscv-subtarget"
+
+#define GET_SUBTARGETINFO_TARGET_DESC
+#define GET_SUBTARGETINFO_CTOR
+#include "RISCVGenSubtargetInfo.inc"
 
 namespace llvm::RISCVTuneInfoTable {
 
