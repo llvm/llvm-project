@@ -116,6 +116,16 @@ public:
     // (U+10000..U+10FFFF), because UTF-16 encodes the latter with lead
     // surrogates (0xD800..0xDBFF) that sort *below* 0xE000 -- causing the
     // runtime's lookup to miss keys that are actually present.
+    //
+    // A key need not be well-formed UTF-8: string literals with invalid or
+    // partial sequences are legal in the AST (Sema warns about them separately;
+    // see warn_objc_dictionary_ill_formed_utf8_key). We deliberately mirror the
+    // constant CFString emitter (CodeGenModule::GetConstantCFStringEntry), which
+    // runs ConvertUTF8toUTF16 with strictConversion and keeps whatever prefix
+    // converts successfully, so we sort by exactly the code units the string is
+    // stored and looked up as. Any trailing bytes that fail to convert are
+    // dropped from the sort key; this cannot crash and yields a valid
+    // strict-weak ordering regardless of well-formedness.
     SmallVector<SmallVector<llvm::UTF16, 16>, 16> KeysUTF16(NumElements);
     for (size_t I = 0; I < NumElements; ++I) {
       Expr *const K = E->getKeyValueElement(I).Key->IgnoreImpCasts();
@@ -125,9 +135,14 @@ public:
       // NOTE: Using the `StringLiteral->getString()` since it checks that
       //       `chars` are 1 byte
       StringRef KS = SL->getString()->getString();
-      bool OK = llvm::convertUTF8ToUTF16String(KS, KeysUTF16[I]);
-      (void)OK;
-      assert(OK && "constant dictionary key is not well-formed UTF-8");
+      SmallVectorImpl<llvm::UTF16> &Dst = KeysUTF16[I];
+      Dst.resize(KS.size()); // UTF-16 needs <= as many code units as UTF-8.
+      const llvm::UTF8 *SrcPtr = reinterpret_cast<const llvm::UTF8 *>(KS.data());
+      llvm::UTF16 *DstPtr = Dst.data();
+      llvm::ConvertUTF8toUTF16(&SrcPtr, SrcPtr + KS.size(), &DstPtr,
+                               DstPtr + Dst.size(), llvm::strictConversion);
+      // ConvertUTF8toUTF16 advances DstPtr to the end of the converted prefix.
+      Dst.truncate(DstPtr - Dst.data());
     }
 
     // Now perform the sorts and shift the indicies as needed
