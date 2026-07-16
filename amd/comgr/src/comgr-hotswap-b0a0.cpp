@@ -265,10 +265,16 @@ LLVM_ATTRIBUTE_WEAK void patchDebugFrame(uint8_t *, size_t, uint64_t, uint64_t,
 // -- NOP sled scanning --------------------------------------------------------
 
 static void appendNopSledIfLarge(std::vector<NopSled> &Sleds, uint64_t Start,
+                                 uint64_t End, uint64_t FunctionStart,
+                                 uint64_t FunctionEnd) {
+  if (End - Start >= MinNopSledSize)
+    Sleds.push_back({Start, End, Start, FunctionStart, FunctionEnd});
+}
+
+static void appendNopSledIfLarge(std::vector<NopSled> &Sleds, uint64_t Start,
                                  uint64_t End,
                                  const ElfView::FunctionTextRange &Range) {
-  if (End - Start >= MinNopSledSize)
-    Sleds.push_back({Start, End, Start, Range.Begin, Range.End});
+  appendNopSledIfLarge(Sleds, Start, End, Range.Begin, Range.End);
 }
 
 /// Scan \p Decoded for runs of consecutive `s_nop` instructions at least
@@ -316,6 +322,34 @@ buildNopSledMap(ArrayRef<InternalDecodedInst> Decoded, const LLVMState &LS,
   if (HasActiveRange)
     appendNopSledIfLarge(Sleds, Start, End, ActiveRange);
   return Sleds;
+}
+
+/// A direct branch/call target into a NOP run makes that offset and every
+/// following byte in the run reachable by fallthrough, so only the prefix
+/// before the first target remains available as scratch padding.
+static void
+truncateNopSledsAtDirectTargets(std::vector<NopSled> &Sleds,
+                                const DenseSet<uint64_t> &DirectBranchTargets) {
+  if (DirectBranchTargets.empty() || Sleds.empty())
+    return;
+
+  std::vector<NopSled> Filtered;
+  Filtered.reserve(Sleds.size());
+  uint64_t Truncated = 0;
+  for (const NopSled &Sled : Sleds) {
+    uint64_t End = Sled.End;
+    for (uint64_t Target : DirectBranchTargets)
+      if (Target >= Sled.Start && Target < End)
+        End = Target;
+    if (End != Sled.End)
+      ++Truncated;
+    appendNopSledIfLarge(Filtered, Sled.Start, End, Sled.FunctionStart,
+                         Sled.FunctionEnd);
+  }
+  if (Truncated != 0)
+    log() << "hotswap: protected " << Truncated
+          << " NOP sled(s) containing direct branch/call target(s)\n";
+  Sleds = std::move(Filtered);
 }
 
 // -- Sled-or-trampoline code emission -----------------------------------------
@@ -843,25 +877,56 @@ evaluateDirectControlFlowTarget(const InternalDecodedInst &DI,
 
 /// Collect statically known direct branch and call destinations so an interior
 /// entry point is never swallowed by coalescing.
-static std::optional<DenseSet<uint64_t>>
+std::optional<DirectControlFlowInfo>
 collectDirectBranchTargets(ArrayRef<InternalDecodedInst> Decoded,
-                           const LLVMState &LS) {
+                           const LLVMState &LS, uint64_t TextAddr,
+                           uint64_t TextSize) {
   if (!LS.MIA) {
     log() << "hotswap: MC branch analysis is unavailable; adjacent far "
              "trampolines will not be coalesced\n";
     return std::nullopt;
   }
 
-  DenseSet<uint64_t> Targets;
+  DirectControlFlowInfo Info;
   for (const InternalDecodedInst &DI : Decoded) {
     if ((!LS.MIA->isBranch(DI.Inst) && !LS.MIA->isCall(DI.Inst)) ||
-        LS.MIA->isIndirectBranch(DI.Inst) || LS.MIA->isReturn(DI.Inst))
+        LS.MIA->isReturn(DI.Inst))
       continue;
-    bool HasImmediate = false;
-    for (const MCOperand &Op : DI.Inst)
-      HasImmediate |= Op.isImm();
-    if (!LS.MIA->isCall(DI.Inst) && !HasImmediate)
+    // Existing indirect branches are handled by
+    // collectIndirectControlFlowFunctions(), which protects their containing
+    // function from source relocation. Calls without a statically resolvable
+    // target are handled below.
+    if (LS.MIA->isIndirectBranch(DI.Inst))
       continue;
+
+    bool HasPcRelativeOperand = false;
+    for (const MCOperandInfo &Op : LS.MCII->get(DI.Inst.getOpcode()).operands())
+      HasPcRelativeOperand |= Op.OperandType == MCOI::OPERAND_PCREL;
+    if (!HasPcRelativeOperand) {
+      // Preserve the established handling for non-call indirect transfers
+      // such as s_set_pc_i64. collectIndirectControlFlowFunctions() prevents
+      // source relocation in their containing function.
+      if (!LS.MIA->isCall(DI.Inst))
+        continue;
+      if (DI.Inst.getOpcode() != LS.SSwapPcI64Opcode ||
+          !DI.Inst.getOperand(DI.Inst.getNumOperands() - 1).isImm()) {
+        log() << "hotswap: unresolved call target at 0x" << utohexstr(DI.Offset)
+              << " (" << DI.Mnemonic << ")\n";
+        Info.HasUnresolvedTargets = true;
+        continue;
+      }
+
+      std::optional<uint64_t> TextEnd =
+          checkedAddUint64(TextAddr, TextSize, "direct target text end");
+      if (!TextEnd)
+        return std::nullopt;
+      uint64_t Target = static_cast<uint64_t>(
+          DI.Inst.getOperand(DI.Inst.getNumOperands() - 1).getImm());
+      if (Target >= TextAddr && Target < *TextEnd)
+        Info.Targets.insert(Target - TextAddr);
+      continue;
+    }
+
     std::optional<uint64_t> Target = evaluateDirectControlFlowTarget(DI, LS);
     if (!Target) {
       log() << "hotswap: MC analysis could not evaluate direct control-flow "
@@ -870,9 +935,9 @@ collectDirectBranchTargets(ArrayRef<InternalDecodedInst> Decoded,
             << "; adjacent far trampolines will not be coalesced\n";
       return std::nullopt;
     }
-    Targets.insert(*Target);
+    Info.Targets.insert(*Target);
   }
-  return Targets;
+  return Info;
 }
 
 /// Coalesce runs of adjacent far patch sites when the same SGPR scratch block
@@ -1348,12 +1413,16 @@ allocateForwardBranchIslands(std::vector<NopSled> &Gateways,
 
 static bool
 assignLongBranchGateways(PatchContext &Ctx,
-                         const DenseSet<uint64_t> &DirectBranchTargets) {
-  std::vector<NopSled> Gateways = buildExternalGatewaySleds(
-      Ctx.Decoded, Ctx.LS, Ctx.Elf, ArrayRef<uint8_t>(Ctx.Text, Ctx.TextSize),
-      DirectBranchTargets);
-  for (const NopSled &Sled : Ctx.NopSleds)
-    Gateways.push_back(Sled);
+                         const DenseSet<uint64_t> &DirectBranchTargets,
+                         bool AllowTextGateways) {
+  std::vector<NopSled> Gateways;
+  if (AllowTextGateways) {
+    Gateways = buildExternalGatewaySleds(
+        Ctx.Decoded, Ctx.LS, Ctx.Elf, ArrayRef<uint8_t>(Ctx.Text, Ctx.TextSize),
+        DirectBranchTargets);
+    for (const NopSled &Sled : Ctx.NopSleds)
+      Gateways.push_back(Sled);
+  }
 
   DenseMap<uint64_t, size_t> PoolIslandOwners;
   uint64_t IslandLayoutOffset = Ctx.PoolBaseOffset;
@@ -1557,7 +1626,7 @@ assignLongBranchGateways(PatchContext &Ctx,
   // a later small or clause/delay-constrained source window.
   bool PoolBaseFar = !isSBranchReachable(InstOffset, Ctx.PoolBaseOffset) ||
                      !isSBranchReachable(*PoolReturnFrom, *ReturnTo);
-  if (!PoolBaseFar) {
+  if (!PoolBaseFar && !Ctx.DirectControlFlow.HasUnresolvedTargets) {
     // findNearestSled enforces sled headroom. emitToNopSled still validates
     // exact branch reachability because branch-back distance includes the
     // replacement size, not just the original instruction offset.
@@ -1607,6 +1676,18 @@ static std::optional<uint32_t> applyGfx1250B0toA0Rules(
     const RewriteConfig &Config, bool &OutRequiredPatchApplied) {
   uint32_t Patched = 0;
   std::vector<NopSled> Sleds = buildNopSledMap(Decoded, LS, Elf);
+  std::optional<DirectControlFlowInfo> ControlFlow =
+      collectDirectBranchTargets(Decoded, LS, Elf.textAddr(), Elf.textSize());
+  if (!ControlFlow)
+    return std::nullopt;
+  if (ControlFlow->HasUnresolvedTargets) {
+    log() << "hotswap: unresolved control-flow target disables NOP-sled "
+             "emission, trampoline coalescing, source relocation, and .text "
+             "gateways\n";
+    Sleds.clear();
+  } else {
+    truncateNopSledsAtDirectTargets(Sleds, ControlFlow->Targets);
+  }
 
   CFG Cfg = buildCfg(Decoded, *LS.MCII);
   LivenessInfo Liveness =
@@ -1633,10 +1714,10 @@ static std::optional<uint32_t> applyGfx1250B0toA0Rules(
       *PoolVAddr, Elf.textAddr(), "trampoline pool base offset");
   if (!PoolBaseOffset)
     return std::nullopt;
-  PatchContext Ctx{Config,         Decoded,         Text,
-                   TextSize,       *PoolBaseOffset, LS,
-                   OutTrampolines, Sleds,           Elf,
-                   Liveness,       KernelStats,     OutScratchPatches};
+  PatchContext Ctx{
+      Config,      Decoded,           Text,        TextSize, *PoolBaseOffset,
+      LS,          OutTrampolines,    Sleds,       Elf,      Liveness,
+      KernelStats, OutScratchPatches, *ControlFlow};
 
   const HotswapPatchVTable &VT = getHotswapPatchVTable();
 
@@ -1689,15 +1770,14 @@ static std::optional<uint32_t> applyGfx1250B0toA0Rules(
     Patched += VT.applyVop3px2Src2Fix(Ctx);
 
   if (!OutTrampolines.empty()) {
-    std::optional<DenseSet<uint64_t>> DirectBranchTargets =
-        collectDirectBranchTargets(Decoded, LS);
-    if (!DirectBranchTargets)
-      return std::nullopt;
-    mergeAdjacentLongTrampolines(OutTrampolines, *DirectBranchTargets);
-    expandStraightLineTrampolines(Ctx, *DirectBranchTargets);
-    mergeAdjacentLongTrampolines(OutTrampolines, *DirectBranchTargets);
+    if (!ControlFlow->HasUnresolvedTargets) {
+      mergeAdjacentLongTrampolines(OutTrampolines, ControlFlow->Targets);
+      expandStraightLineTrampolines(Ctx, ControlFlow->Targets);
+      mergeAdjacentLongTrampolines(OutTrampolines, ControlFlow->Targets);
+    }
     appendPoolBranchIslands(OutTrampolines);
-    if (!assignLongBranchGateways(Ctx, *DirectBranchTargets))
+    if (!assignLongBranchGateways(Ctx, ControlFlow->Targets,
+                                  !ControlFlow->HasUnresolvedTargets))
       return std::nullopt;
   }
 

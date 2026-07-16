@@ -538,6 +538,110 @@ TEST(EvaluateDirectControlFlowTarget, EvaluatesGfx1250CallOperandFallback) {
             0x200u + Decoded[0].Size + 2 * MinInstSize);
 }
 
+TEST(CollectDirectBranchTargets, MarksRegisterTargetCallUnresolved) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  llvm::SmallVector<uint8_t> Bytes =
+      assembleSingleInst("s_swap_pc_i64 s[30:31], s[0:1]", S);
+  ASSERT_FALSE(Bytes.empty());
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
+  ASSERT_EQ(Decoded.size(), 1u);
+  ASSERT_TRUE(S.MIA->isCall(Decoded[0].Inst));
+  ASSERT_FALSE(S.MIA->isIndirectBranch(Decoded[0].Inst));
+  for (const llvm::MCOperand &Op : Decoded[0].Inst)
+    ASSERT_FALSE(Op.isImm());
+
+  std::optional<DirectControlFlowInfo> Info =
+      collectDirectBranchTargets(Decoded, S, /*TextAddr=*/0,
+                                 /*TextSize=*/0x1000);
+  ASSERT_TRUE(Info);
+  EXPECT_TRUE(Info->Targets.empty());
+  EXPECT_TRUE(Info->HasUnresolvedTargets);
+}
+
+TEST(CollectDirectBranchTargets, IgnoresSetPcWithoutTreatingItAsCall) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  llvm::SmallVector<uint8_t> Bytes =
+      assembleSingleInst("s_set_pc_i64 s[8:9]", S);
+  ASSERT_FALSE(Bytes.empty());
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
+  ASSERT_EQ(Decoded.size(), 1u);
+  EXPECT_TRUE(S.MIA->isBranch(Decoded[0].Inst));
+  EXPECT_FALSE(S.MIA->isIndirectBranch(Decoded[0].Inst));
+  EXPECT_FALSE(S.MIA->isCall(Decoded[0].Inst));
+  EXPECT_TRUE(S.MIA->mayAffectControlFlow(Decoded[0].Inst, *S.MRI));
+
+  std::optional<DirectControlFlowInfo> Info =
+      collectDirectBranchTargets(Decoded, S, /*TextAddr=*/0,
+                                 /*TextSize=*/0x1000);
+  ASSERT_TRUE(Info);
+  EXPECT_TRUE(Info->Targets.empty());
+  EXPECT_FALSE(Info->HasUnresolvedTargets);
+}
+
+TEST(CollectDirectBranchTargets, HandlesImmediateAbsoluteTargetCall) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  llvm::SmallVector<uint8_t> Bytes =
+      assembleSingleInst("s_swap_pc_i64 s[30:31], 0x210", S);
+  ASSERT_FALSE(Bytes.empty());
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
+  ASSERT_EQ(Decoded.size(), 1u);
+  ASSERT_TRUE(S.MIA->isCall(Decoded[0].Inst));
+  ASSERT_TRUE(Decoded[0].Inst.getOperand(1).isImm());
+
+  std::optional<DirectControlFlowInfo> Info =
+      collectDirectBranchTargets(Decoded, S, /*TextAddr=*/0x200,
+                                 /*TextSize=*/0x40);
+  ASSERT_TRUE(Info);
+  ASSERT_EQ(Info->Targets.size(), 1u);
+  EXPECT_TRUE(Info->Targets.contains(0x10));
+  EXPECT_FALSE(Info->HasUnresolvedTargets);
+
+  std::optional<DirectControlFlowInfo> OutsideInfo =
+      collectDirectBranchTargets(Decoded, S, /*TextAddr=*/0x220,
+                                 /*TextSize=*/0x40);
+  ASSERT_TRUE(OutsideInfo);
+  EXPECT_TRUE(OutsideInfo->Targets.empty());
+  EXPECT_FALSE(OutsideInfo->HasUnresolvedTargets);
+
+  std::optional<DirectControlFlowInfo> OverflowInfo =
+      collectDirectBranchTargets(
+          Decoded, S,
+          /*TextAddr=*/std::numeric_limits<uint64_t>::max() - 0x10,
+          /*TextSize=*/0x20);
+  EXPECT_FALSE(OverflowInfo);
+}
+
+TEST(CollectDirectBranchTargets, CollectsPcRelativeCall) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  llvm::SmallVector<uint8_t> Bytes =
+      assembleSingleInst("s_call_i64 s[30:31], 2", S);
+  ASSERT_FALSE(Bytes.empty());
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
+  ASSERT_EQ(Decoded.size(), 1u);
+  Decoded[0].Offset = 0x200;
+
+  std::optional<DirectControlFlowInfo> Info =
+      collectDirectBranchTargets(Decoded, S, /*TextAddr=*/0,
+                                 /*TextSize=*/0x1000);
+  ASSERT_TRUE(Info);
+  ASSERT_EQ(Info->Targets.size(), 1u);
+  EXPECT_TRUE(
+      Info->Targets.contains(0x200u + Decoded[0].Size + 2 * MinInstSize));
+  EXPECT_FALSE(Info->HasUnresolvedTargets);
+}
+
 TEST(SafeSgprScratchBlock, RejectsRegisterBeyondAddressableLimit) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
@@ -560,6 +664,7 @@ TEST(SafeSgprScratchBlock, RejectsRegisterBeyondAddressableLimit) {
   LivenessInfo Liveness;
   llvm::StringMap<KernelPatchStats> KernelStats;
   std::vector<ScratchPatchInfo> ScratchPatches;
+  DirectControlFlowInfo ControlFlow;
   PatchContext Ctx{Config,
                    Decoded,
                    View.textData(),
@@ -571,7 +676,8 @@ TEST(SafeSgprScratchBlock, RejectsRegisterBeyondAddressableLimit) {
                    View,
                    Liveness,
                    KernelStats,
-                   ScratchPatches};
+                   ScratchPatches,
+                   ControlFlow};
 
   EXPECT_FALSE(findSafeSgprScratchBlock(Ctx, /*TextOffset=*/0, /*Count=*/1,
                                         /*Alignment=*/1, "unit test"));
@@ -600,6 +706,7 @@ TEST(SafeSgprScratchBlock, CommitRejectsObjectWithoutKernelDescriptor) {
   LivenessInfo Liveness;
   llvm::StringMap<KernelPatchStats> KernelStats;
   std::vector<ScratchPatchInfo> ScratchPatches;
+  DirectControlFlowInfo ControlFlow;
   PatchContext Ctx{Config,
                    Decoded,
                    View.textData(),
@@ -611,7 +718,8 @@ TEST(SafeSgprScratchBlock, CommitRejectsObjectWithoutKernelDescriptor) {
                    View,
                    Liveness,
                    KernelStats,
-                   ScratchPatches};
+                   ScratchPatches,
+                   ControlFlow};
 
   const SafeSgprScratchBlock Block{/*Base=*/4, /*Count=*/1};
   EXPECT_FALSE(
