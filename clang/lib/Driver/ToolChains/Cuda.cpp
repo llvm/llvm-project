@@ -301,8 +301,8 @@ CudaInstallationDetector::CudaInstallationDetector(
 
 void CudaInstallationDetector::AddCudaIncludeArgs(
     const ArgList &DriverArgs, ArgStringList &CC1Args) const {
-  if (HostTriple.getEnvironment() == llvm::Triple::LLVM ||
-      DriverArgs.hasFlag(options::OPT_foffload_via_llvm,
+  // if (HostTriple.getEnvironment() == llvm::Triple::LLVM &&
+  if (DriverArgs.hasFlag(options::OPT_foffload_via_llvm,
                          options::OPT_fno_offload_via_llvm, false)) {
     if (DriverArgs.hasFlag(options::OPT_offload_inc,
                            options::OPT_no_offload_inc, true) &&
@@ -318,9 +318,6 @@ void CudaInstallationDetector::AddCudaIncludeArgs(
     }
     return;
   }
-  // if (DriverArgs.hasFlag(options::OPT_foffload_via_llvm,
-  //                        options::OPT_fno_offload_via_llvm, false))
-  //   return;
 
   if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
     // Add cuda_wrappers/* to our system include path.  This lets us wrap
@@ -915,14 +912,14 @@ void CudaToolChain::addClangTargetOptions(
     BoundArch BA, Action::OffloadKind DeviceOffloadingKind) const {
   HostTC.addClangTargetOptions(DriverArgs, CC1Args, BA, DeviceOffloadingKind);
 
-  bool UseLLVMOffload =
-      getTriple().getEnvironment() == llvm::Triple::LLVM &&
-      DriverArgs.hasFlag(options::OPT_foffload_via_llvm,
-                         options::OPT_fno_offload_via_llvm, false);
+  // bool UsesLLVMOffloading =
+  //     getTriple().getEnvironment() == llvm::Triple::LLVM &&
+  bool UsesLLVMOffloading = DriverArgs.hasFlag(
+      options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
 
   StringRef GpuArch = DriverArgs.getLastArgValue(options::OPT_march_EQ);
   assert((DeviceOffloadingKind == Action::OFK_OpenMP ||
-          DeviceOffloadingKind == Action::OFK_Cuda || UseLLVMOffload) &&
+          DeviceOffloadingKind == Action::OFK_Cuda || UsesLLVMOffloading) &&
          "Only OpenMP or CUDA offloading kinds are supported for NVIDIA GPUs.");
 
   CC1Args.append({"-fcuda-is-device", "-mllvm",
@@ -941,7 +938,7 @@ void CudaToolChain::addClangTargetOptions(
       DriverArgs.hasArg(options::OPT_S))
     return;
 
-  if (UseLLVMOffload)
+  if (UsesLLVMOffloading)
     return;
 
   std::string LibDeviceFile = CudaInstallation.getLibDeviceFile(GpuArch);
@@ -993,13 +990,12 @@ llvm::DenormalMode CudaToolChain::getDefaultDenormalModeForType(
 
 void CudaToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
                                        ArgStringList &CC1Args) const {
-  if (getTriple().getEnvironment() == llvm::Triple::LLVM ||
-      DriverArgs.hasFlag(options::OPT_foffload_via_llvm,
+  // if (getTriple().getEnvironment() == llvm::Triple::LLVM &&
+  if (DriverArgs.hasFlag(options::OPT_foffload_via_llvm,
                          options::OPT_fno_offload_via_llvm, false)) {
     if (DriverArgs.hasFlag(options::OPT_offload_inc,
                            options::OPT_no_offload_inc, true) &&
-        !DriverArgs.hasArg(options::OPT_nohipwrapperinc) &&
-        !DriverArgs.hasArg(options::OPT_nobuiltininc)){
+        !DriverArgs.hasArg(options::OPT_nobuiltininc)) {
       CC1Args.append({"-include", "__clang_gpu_device_functions.h"});
 
       SmallString<128> CudaIncludePath(getDriver().ResourceDir);
@@ -1011,9 +1007,6 @@ void CudaToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
     }
     return;
   }
-  // if (DriverArgs.hasFlag(options::OPT_foffload_via_llvm,
-  //                        options::OPT_fno_offload_via_llvm, false))
-  //   return;
 
   // Check our CUDA version if we're going to include the CUDA headers.
   if (DriverArgs.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,

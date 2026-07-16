@@ -235,7 +235,10 @@ HIPAMDToolChain::HIPAMDToolChain(const Driver &D, const llvm::Triple &Triple,
 void HIPAMDToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
     BoundArch BA, Action::OffloadKind DeviceOffloadingKind) const {
-  bool UsesLLVMOffloading = DriverArgs.hasFlag(options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false) || getTriple().getEnvironment() == llvm::Triple::LLVM;
+  // bool UsesLLVMOffloading = getTriple().getEnvironment() ==
+  // llvm::Triple::LLVM &&
+  bool UsesLLVMOffloading = DriverArgs.hasFlag(
+      options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
   assert((DeviceOffloadingKind == Action::OFK_HIP || UsesLLVMOffloading) &&
          "Only HIP offloading kinds are supported for GPUs.");
 
@@ -325,8 +328,8 @@ void HIPAMDToolChain::AddIAMCUIncludeArgs(const ArgList &Args,
 
 void HIPAMDToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
                                         ArgStringList &CC1Args) const {
-  if (getTriple().getEnvironment() == llvm::Triple::LLVM &&
-      DriverArgs.hasFlag(options::OPT_foffload_via_llvm,
+  // if (getTriple().getEnvironment() == llvm::Triple::LLVM &&
+  if (DriverArgs.hasFlag(options::OPT_foffload_via_llvm,
                          options::OPT_fno_offload_via_llvm, false)) {
     if (DriverArgs.hasFlag(options::OPT_offload_inc,
                            options::OPT_no_offload_inc, true) &&

@@ -953,11 +953,10 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
   // before we -I or -include anything else, because we must pick up the
   // CUDA/HIP/SYCL headers from the particular CUDA/ROCm/SYCL installation,
   // rather than from e.g. /usr/local/include.
-  bool UsesLLVMOffloading = Args.hasFlag(options::OPT_foffload_via_llvm,
-                                     options::OPT_fno_offload_via_llvm, false) && getToolChain().getTriple().getEnvironment() == llvm::Triple::LLVM;
-  llvm::errs() << "Is Cuda: " << JA.isOffloading(Action::OFK_Cuda) << "\n";
-  llvm::errs() << "Offloading? " << JA.getOffloadingDeviceKind() << "\n";
-  llvm::errs() << "Triple Env: " << getToolChain().getTriple().getEnvironmentName() << "\n";
+  // bool UsesLLVMOffloading = getToolChain().getTriple().getEnvironment() ==
+  // llvm::Triple::LLVM &&
+  bool UsesLLVMOffloading = Args.hasFlag(
+      options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
   if (JA.isOffloading(Action::OFK_Cuda) && !UsesLLVMOffloading) {
     getToolChain().printVerboseInfo(llvm::errs());
     getToolChain().AddCudaIncludeArgs(Args, CmdArgs);
@@ -5216,10 +5215,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   bool IsSYCLDevice = JA.isDeviceOffloading(Action::OFK_SYCL);
   bool IsOpenMPDevice = JA.isDeviceOffloading(Action::OFK_OpenMP);
   bool IsExtractAPI = isa<ExtractAPIJobAction>(JA);
-  bool UsesLLVMOffloading =
-      Triple.getEnvironment() == llvm::Triple::LLVM &&
-      Args.hasFlag(options::OPT_foffload_via_llvm,
-                   options::OPT_fno_offload_via_llvm, false);
+  // bool UsesLLVMOffloading = Triple.getEnvironment() == llvm::Triple::LLVM &&
+  bool UsesLLVMOffloading = Args.hasFlag(
+      options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
   bool IsDeviceOffloadAction = !(JA.isDeviceOffloading(Action::OFK_None) ||
                                  JA.isDeviceOffloading(Action::OFK_Host));
   bool IsHostOffloadingAction =

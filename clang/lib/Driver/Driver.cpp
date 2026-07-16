@@ -885,10 +885,15 @@ getSystemOffloadArchs(Compilation &C, Action::OffloadKind Kind) {
   if (llvm::ErrorOr<std::string> Executable =
           llvm::sys::findProgramByName(Program, {C.getDriver().Dir})) {
     llvm::SmallVector<StringRef> Args{*Executable};
-    if (Kind == Action::OFK_HIP)
-      Args.push_back("--only=amdgpu");
-    else if (Kind == Action::OFK_Cuda)
-      Args.push_back("--only=nvptx");
+    bool UsesLLVMOffloading =
+        C.getArgs().hasFlag(options::OPT_foffload_via_llvm,
+                            options::OPT_fno_offload_via_llvm, false);
+    if (!UsesLLVMOffloading) {
+      if (Kind == Action::OFK_HIP)
+        Args.push_back("--only=amdgpu");
+      else if (Kind == Action::OFK_Cuda)
+        Args.push_back("--only=nvptx");
+    }
     auto StdoutOrErr = C.getDriver().executeProgram(Args);
 
     if (!StdoutOrErr) {
@@ -924,10 +929,8 @@ static TripleSet inferOffloadToolchains(Compilation &C,
     for (StringRef Arch : A->getValues()) {
       if (A->getOption().matches(options::OPT_offload_arch_EQ)) {
         if (Arch == "native") {
-          for (StringRef Str : getSystemOffloadArchs(C, Kind)) {
-            llvm::errs() << "Inserting into Archs: " << Str.str() << '\n';
+          for (StringRef Str : getSystemOffloadArchs(C, Kind))
             Archs.insert(Str.str());
-          }
         } else {
           Archs.insert(Arch.str());
         }
@@ -947,15 +950,20 @@ static TripleSet inferOffloadToolchains(Compilation &C,
       ID = StringToOffloadArch(
           getProcessorFromTargetID(llvm::Triple("amdgcn-amd-amdhsa"), Arch));
 
-    if (Kind == Action::OFK_HIP && !IsAMDOffloadArch(ID)) {
-      C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
-          << "HIP" << Arch;
-      return {};
-    }
-    if (Kind == Action::OFK_Cuda && !IsNVIDIAOffloadArch(ID)) {
-      C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
-          << "CUDA" << Arch;
-      return {};
+    bool UsesLLVMOffloading =
+        C.getArgs().hasFlag(options::OPT_foffload_via_llvm,
+                            options::OPT_fno_offload_via_llvm, false);
+    if (!UsesLLVMOffloading) {
+      if (Kind == Action::OFK_HIP && !IsAMDOffloadArch(ID)) {
+        C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
+            << "HIP" << Arch;
+        return {};
+      }
+      if (Kind == Action::OFK_Cuda && !IsNVIDIAOffloadArch(ID)) {
+        C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
+            << "CUDA" << Arch;
+        return {};
+      }
     }
     if (Kind == Action::OFK_OpenMP &&
         (ID == OffloadArch::Unknown || ID == OffloadArch::Unused)) {
@@ -971,7 +979,8 @@ static TripleSet inferOffloadToolchains(Compilation &C,
 
     llvm::Triple Triple =
         OffloadArchToTriple(C.getDefaultToolChain().getTriple(), ID);
-    llvm::errs() << "Detected triple: " << Triple.str() << "\n";
+    if (UsesLLVMOffloading)
+      Triple.setEnvironment(llvm::Triple::LLVM);
 
     // Make a new argument that dispatches this argument to the appropriate
     // toolchain. This is required when we infer it and create potentially
@@ -1035,12 +1044,13 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
         (C.getInputArgs().hasArg(options::OPT_offload_arch_EQ) &&
          !(IsCuda || IsHIP))));
 
-  bool UseLLVMOffload = C.getInputArgs().hasArg(
+  bool UsesLLVMOffloading = C.getInputArgs().hasArg(
       options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
 
   // Switch back to the actual toolchains
   // IsOpenMPOffloading =
-  //     (IsCuda || IsHIP || IsSYCL || IsOpenMPOffloading) && UseLLVMOffload;
+  //     (IsCuda || IsHIP || IsSYCL || IsOpenMPOffloading) &&
+  //     UsesLLVMOffloading;
 
   // We currently don't support any kind of mixed offloading.
   if (IsOpenMPOffloading)
@@ -1129,7 +1139,6 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
 
       auto &TC = getOffloadToolChain(C.getInputArgs(), Kind, Target,
                                      C.getDefaultToolChain().getTriple());
-      llvm::errs() << "Determined TC: " << TC.getArchName() << '\n';
 
       // Emit a warning if the detected CUDA version is too new.
       if (Kind == Action::OFK_Cuda && Target.getOS() == llvm::Triple::CUDA) {
@@ -5042,8 +5051,6 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
       Action::OFK_OpenMP, Action::OFK_Cuda, Action::OFK_HIP, Action::OFK_SYCL};
 
   for (Action::OffloadKind Kind : OffloadKinds) {
-    llvm::errs() << "Offload Kind: " << Action::GetOffloadKindName(Kind) \
-                 << '\n';
     SmallVector<const ToolChain *, 2> ToolChains;
     ActionList DeviceActions;
 
@@ -5056,8 +5063,6 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
 
     types::ID InputType = Input.first;
     const Arg *InputArg = Input.second;
-    llvm::errs() << "Input Type: " << types::getTypeName(InputType)
-                 << ", Input Arg: " << InputArg->getAsString(Args) << '\n';
 
     // Allow the toolchain to be active for unsupported file types if we are "offload-cross-compiling" via llvm-offload.
     if ((Kind == Action::OFK_Cuda && !types::isCuda(InputType)) ||
@@ -7048,9 +7053,6 @@ std::string Driver::GetClPchPath(Compilation &C, StringRef BaseName) const {
 const ToolChain &Driver::getOffloadToolChain(
     const llvm::opt::ArgList &Args, const Action::OffloadKind Kind,
     const llvm::Triple &Target, const llvm::Triple &AuxTarget) const {
-
-  llvm::errs() << "gettting offload TC for Offloading Kind: " << Kind
-               << "and target triple: " << Target.str() << '\n';
   std::unique_ptr<ToolChain> &TC =
       ToolChains[Target.str() + "/" + AuxTarget.str()];
   std::unique_ptr<ToolChain> &HostTC = ToolChains[AuxTarget.str()];
@@ -7058,7 +7060,6 @@ const ToolChain &Driver::getOffloadToolChain(
   assert(HostTC && "Host toolchain for offloading doesn't exit?");
   if (!TC) {
     // Detect the toolchain based off of the target operating system.
-    llvm::errs() << Target.getOS() << "\n";
     switch (Target.getOS()) {
     case llvm::Triple::CUDA:
       TC = std::make_unique<toolchains::CudaToolChain>(*this, Target, *HostTC,
@@ -7072,7 +7073,7 @@ const ToolChain &Driver::getOffloadToolChain(
         TC = std::make_unique<toolchains::AMDGPUToolChain>(*this, Target, Args,
                                                            HostTC.get(), Kind);
       else if (Kind == Action::OFK_Cuda)
-        //TODO: [h15] figure out if this should be a new TC
+        // TODO: [h15] figure out if this should be a new TC
         TC = std::make_unique<toolchains::HIPAMDToolChain>(*this, Target,
                                                            *HostTC, Args);
       break;
@@ -7080,7 +7081,6 @@ const ToolChain &Driver::getOffloadToolChain(
       break;
     }
   }
-  llvm::errs() << "Determined Toolchain: " << TC->getArchName() << '\n';
   if (!TC) {
     // Detect the toolchain based off of the target architecture if that failed.
     switch (Target.getArch()) {
