@@ -44,8 +44,8 @@ public:
                  uint64_t pltEntryAddr) const override;
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
   template <class ELFT, class RelTy>
-  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>);
-  void scanSection(InputSectionBase &) override;
+  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>, unsigned shard);
+  void scanSection(InputSectionBase &, unsigned shard) override;
   bool needsThunk(RelExpr expr, RelType relocType, const InputFile *file,
                   uint64_t branchAddr, const Symbol &s,
                   int64_t a) const override;
@@ -285,8 +285,9 @@ int64_t PPC::getImplicitAddend(const uint8_t *buf, RelType type) const {
 }
 
 template <class ELFT, class RelTy>
-void PPC::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
-  RelocScan rs(ctx, &sec);
+void PPC::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                          unsigned shard) {
+  RelocScan rs(ctx, &sec, shard);
   sec.relocations.reserve(rels.size());
   for (auto it = rels.begin(); it != rels.end(); ++it) {
     const RelTy &rel = *it;
@@ -405,11 +406,11 @@ void PPC::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
   }
 }
 
-void PPC::scanSection(InputSectionBase &sec) {
+void PPC::scanSection(InputSectionBase &sec, unsigned shard) {
   if (ctx.arg.isLE)
-    elf::scanSection1<PPC, ELF32LE>(*this, sec);
+    elf::scanSection1<PPC, ELF32LE>(*this, sec, shard);
   else
-    elf::scanSection1<PPC, ELF32BE>(*this, sec);
+    elf::scanSection1<PPC, ELF32BE>(*this, sec, shard);
 }
 
 static std::pair<RelType, uint64_t> fromDTPREL(RelType type, uint64_t val) {

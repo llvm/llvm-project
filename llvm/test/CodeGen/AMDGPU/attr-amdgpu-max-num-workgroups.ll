@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa < %s | FileCheck %s
 
 ; Attribute not specified.
 ; CHECK-LABEL: {{^}}empty_no_attribute:

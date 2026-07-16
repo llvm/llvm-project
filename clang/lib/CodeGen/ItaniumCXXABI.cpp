@@ -231,8 +231,7 @@ public:
     // A vague-linkage (weak) vtable on a target whose ABI may duplicate it can
     // be emitted with a distinct address in more than one image, so its address
     // cannot be assumed unique.
-    return CGM.getTarget().getVTableUniqueness() !=
-           VTableUniquenessKind::UniqueIfStrongLinkage;
+    return !CGM.mayVTableBeDuplicated(CGM.getVTableLinkage(RD));
   }
 
   bool shouldEmitExactDynamicCast(QualType DestRecordTy) override {
@@ -2103,6 +2102,12 @@ void ItaniumCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
 
   // Set the correct linkage.
   VTable->setLinkage(Linkage);
+
+  // On a target that may duplicate vtables, a weak vtable does not have a
+  // unique address, so its address is insignificant and it can be marked
+  // unnamed_addr.
+  if (CGM.mayVTableBeDuplicated(VTable->getLinkage()))
+    VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   if (CGM.supportsCOMDAT() && VTable->isWeakForLinker())
     VTable->setComdat(CGM.getModule().getOrInsertComdat(VTable->getName()));

@@ -143,6 +143,26 @@ bool OutlineRematerializationModel<
          fir::ConvertOp::isIntegerCompatible(outTy);
 }
 
+template <>
+void OutlineIdentityOperandDeclareModel<
+    fir::DeclareOp>::dropOutlinedIdentityOperands(mlir::Operation *op) const {
+  auto declareOp = mlir::cast<fir::DeclareOp>(op);
+  if (declareOp.getDummyScope()) {
+    declareOp.getDummyScopeMutable().clear();
+    declareOp->removeAttr(declareOp.getDummyArgNoAttrName());
+  }
+}
+
+template <>
+void OutlineIdentityOperandDeclareModel<
+    hlfir::DeclareOp>::dropOutlinedIdentityOperands(mlir::Operation *op) const {
+  auto declareOp = mlir::cast<hlfir::DeclareOp>(op);
+  if (declareOp.getDummyScope()) {
+    declareOp.getDummyScopeMutable().clear();
+    declareOp->removeAttr(declareOp.getDummyArgNoAttrName());
+  }
+}
+
 // Helper to recursively process address-of operations in derived type
 // descriptors and collect all needed fir.globals.
 static void processAddrOfOpInDerivedTypeDescriptor(
