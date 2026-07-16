@@ -2916,24 +2916,24 @@ define void @store_64i1(ptr %a, <64 x i1> %v) {
 ; KNL-NEXT:    vptestmd %zmm1, %zmm0, %k0
 ; KNL-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm0
 ; KNL-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
-; KNL-NEXT:    vpmovqb %zmm2, %xmm2
-; KNL-NEXT:    vpmovqb %zmm0, %xmm0
-; KNL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; KNL-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
+; KNL-NEXT:    vpmovqw %zmm0, %xmm0
+; KNL-NEXT:    vpmovqw %zmm2, %xmm2
+; KNL-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; KNL-NEXT:    vptestmd %zmm1, %zmm0, %k1
 ; KNL-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm0
 ; KNL-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
-; KNL-NEXT:    vpmovqb %zmm2, %xmm2
-; KNL-NEXT:    vpmovqb %zmm0, %xmm0
-; KNL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; KNL-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
+; KNL-NEXT:    vpmovqw %zmm0, %xmm0
+; KNL-NEXT:    vpmovqw %zmm2, %xmm2
+; KNL-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; KNL-NEXT:    vptestmd %zmm1, %zmm0, %k2
 ; KNL-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm0
 ; KNL-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
-; KNL-NEXT:    vpmovqb %zmm2, %xmm2
-; KNL-NEXT:    vpmovqb %zmm0, %xmm0
-; KNL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; KNL-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
+; KNL-NEXT:    vpmovqw %zmm0, %xmm0
+; KNL-NEXT:    vpmovqw %zmm2, %xmm2
+; KNL-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; KNL-NEXT:    vptestmd %zmm1, %zmm0, %k3
 ; KNL-NEXT:    kmovw %k3, 6(%rdi)
 ; KNL-NEXT:    kmovw %k2, 4(%rdi)
@@ -2981,24 +2981,24 @@ define void @store_64i1(ptr %a, <64 x i1> %v) {
 ; AVX512DQ-NEXT:    vptestmd %zmm1, %zmm0, %k0
 ; AVX512DQ-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm0
 ; AVX512DQ-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
-; AVX512DQ-NEXT:    vpmovqb %zmm2, %xmm2
-; AVX512DQ-NEXT:    vpmovqb %zmm0, %xmm0
-; AVX512DQ-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; AVX512DQ-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
+; AVX512DQ-NEXT:    vpmovqw %zmm0, %xmm0
+; AVX512DQ-NEXT:    vpmovqw %zmm2, %xmm2
+; AVX512DQ-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; AVX512DQ-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; AVX512DQ-NEXT:    vptestmd %zmm1, %zmm0, %k1
 ; AVX512DQ-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm0
 ; AVX512DQ-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
-; AVX512DQ-NEXT:    vpmovqb %zmm2, %xmm2
-; AVX512DQ-NEXT:    vpmovqb %zmm0, %xmm0
-; AVX512DQ-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; AVX512DQ-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
+; AVX512DQ-NEXT:    vpmovqw %zmm0, %xmm0
+; AVX512DQ-NEXT:    vpmovqw %zmm2, %xmm2
+; AVX512DQ-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; AVX512DQ-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; AVX512DQ-NEXT:    vptestmd %zmm1, %zmm0, %k2
 ; AVX512DQ-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm0
 ; AVX512DQ-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
-; AVX512DQ-NEXT:    vpmovqb %zmm2, %xmm2
-; AVX512DQ-NEXT:    vpmovqb %zmm0, %xmm0
-; AVX512DQ-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; AVX512DQ-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
+; AVX512DQ-NEXT:    vpmovqw %zmm0, %xmm0
+; AVX512DQ-NEXT:    vpmovqw %zmm2, %xmm2
+; AVX512DQ-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; AVX512DQ-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; AVX512DQ-NEXT:    vptestmd %zmm1, %zmm0, %k3
 ; AVX512DQ-NEXT:    kmovw %k3, 6(%rdi)
 ; AVX512DQ-NEXT:    kmovw %k2, 4(%rdi)

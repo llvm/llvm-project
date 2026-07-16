@@ -25,15 +25,28 @@ define <16 x i8> @buildvec_v16i8_stride8(ptr %p) {
 ; AVX2-NEXT:    vpinsrb $15, 120(%rdi), %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: buildvec_v16i8_stride8:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsrlq $56, 57(%rdi), %zmm0
-; AVX512-NEXT:    vpmovqb %zmm0, %xmm0
-; AVX512-NEXT:    vmovdqu64 (%rdi), %zmm1
-; AVX512-NEXT:    vpmovqb %zmm1, %xmm1
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: buildvec_v16i8_stride8:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
+; AVX512F-NEXT:    vpmovqw %zmm0, %xmm0
+; AVX512F-NEXT:    vpsrlq $56, 57(%rdi), %zmm1
+; AVX512F-NEXT:    vpmovqw %zmm1, %xmm1
+; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: buildvec_v16i8_stride8:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovdqu64 (%rdi), %zmm0
+; AVX512VL-NEXT:    vpmovqw %zmm0, %xmm0
+; AVX512VL-NEXT:    vpsrlq $56, 57(%rdi), %zmm1
+; AVX512VL-NEXT:    vpmovqw %zmm1, %xmm1
+; AVX512VL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpmovwb %ymm0, %xmm0
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
   %p0  = getelementptr inbounds i8, ptr %p, i64 0
   %p1  = getelementptr inbounds i8, ptr %p, i64 8
   %p2  = getelementptr inbounds i8, ptr %p, i64 16
@@ -88,53 +101,36 @@ define <16 x i8> @buildvec_v16i8_stride8(ptr %p) {
 define <16 x i8> @buildvec_v16i8_stride4(ptr %p) {
 ; AVX2-LABEL: buildvec_v16i8_stride4:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    movzbl (%rdi), %eax
-; AVX2-NEXT:    vmovd %eax, %xmm0
-; AVX2-NEXT:    vpinsrb $1, 4(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $2, 8(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $3, 12(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $4, 16(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $5, 20(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $6, 24(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $7, 28(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $8, 32(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $9, 36(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $10, 40(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $11, 44(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $12, 48(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $13, 52(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $14, 56(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $15, 60(%rdi), %xmm0, %xmm0
+; AVX2-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX2-NEXT:    vmovdqu 29(%rdi), %ymm1
+; AVX2-NEXT:    vpsrld $24, %ymm1, %ymm1
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX2-NEXT:    vpackusdw %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
+; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: buildvec_v16i8_stride4:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    movzbl (%rdi), %eax
-; AVX512F-NEXT:    vmovd %eax, %xmm0
-; AVX512F-NEXT:    vpinsrb $1, 4(%rdi), %xmm0, %xmm0
-; AVX512F-NEXT:    vpinsrb $2, 8(%rdi), %xmm0, %xmm0
-; AVX512F-NEXT:    vpinsrb $3, 12(%rdi), %xmm0, %xmm0
-; AVX512F-NEXT:    vpinsrb $4, 16(%rdi), %xmm0, %xmm0
-; AVX512F-NEXT:    vpinsrb $5, 20(%rdi), %xmm0, %xmm0
-; AVX512F-NEXT:    vpinsrb $6, 24(%rdi), %xmm0, %xmm0
-; AVX512F-NEXT:    vpinsrb $7, 28(%rdi), %xmm0, %xmm0
-; AVX512F-NEXT:    vpinsrb $8, 32(%rdi), %xmm0, %xmm0
-; AVX512F-NEXT:    vpinsrb $9, 36(%rdi), %xmm0, %xmm0
-; AVX512F-NEXT:    vpinsrb $10, 40(%rdi), %xmm0, %xmm0
-; AVX512F-NEXT:    vpinsrb $11, 44(%rdi), %xmm0, %xmm0
-; AVX512F-NEXT:    vpinsrb $12, 48(%rdi), %xmm0, %xmm0
-; AVX512F-NEXT:    vpinsrb $13, 52(%rdi), %xmm0, %xmm0
-; AVX512F-NEXT:    vpinsrb $14, 56(%rdi), %xmm0, %xmm0
-; AVX512F-NEXT:    vpinsrb $15, 60(%rdi), %xmm0, %xmm0
+; AVX512F-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX512F-NEXT:    vmovdqu 29(%rdi), %ymm1
+; AVX512F-NEXT:    vpsrld $24, %ymm1, %ymm1
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: buildvec_v16i8_stride4:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpsrld $24, 29(%rdi), %ymm0
-; AVX512VL-NEXT:    vpmovdb %ymm0, %xmm0
-; AVX512VL-NEXT:    vmovdqu (%rdi), %ymm1
-; AVX512VL-NEXT:    vpmovdb %ymm1, %xmm1
-; AVX512VL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512VL-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX512VL-NEXT:    vpsrld $24, 29(%rdi), %ymm1
+; AVX512VL-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512VL-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
   %p0  = getelementptr inbounds i8, ptr %p, i64 0
@@ -191,28 +187,25 @@ define <16 x i8> @buildvec_v16i8_stride4(ptr %p) {
 define <8 x i16> @buildvec_v8i16_stride4(ptr %p) {
 ; AVX2-LABEL: buildvec_v8i16_stride4:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    movzwl (%rdi), %eax
-; AVX2-NEXT:    vmovd %eax, %xmm0
-; AVX2-NEXT:    vpinsrw $1, 4(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $2, 8(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $3, 12(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $4, 16(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $5, 20(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $6, 24(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $7, 28(%rdi), %xmm0, %xmm0
+; AVX2-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX2-NEXT:    vmovdqu 14(%rdi), %xmm1
+; AVX2-NEXT:    vpsrld $16, %xmm1, %xmm1
+; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
+; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: buildvec_v8i16_stride4:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    movzwl (%rdi), %eax
-; AVX512F-NEXT:    vmovd %eax, %xmm0
-; AVX512F-NEXT:    vpinsrw $1, 4(%rdi), %xmm0, %xmm0
-; AVX512F-NEXT:    vpinsrw $2, 8(%rdi), %xmm0, %xmm0
-; AVX512F-NEXT:    vpinsrw $3, 12(%rdi), %xmm0, %xmm0
-; AVX512F-NEXT:    vpinsrw $4, 16(%rdi), %xmm0, %xmm0
-; AVX512F-NEXT:    vpinsrw $5, 20(%rdi), %xmm0, %xmm0
-; AVX512F-NEXT:    vpinsrw $6, 24(%rdi), %xmm0, %xmm0
-; AVX512F-NEXT:    vpinsrw $7, 28(%rdi), %xmm0, %xmm0
+; AVX512F-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX512F-NEXT:    vmovdqu 14(%rdi), %xmm1
+; AVX512F-NEXT:    vpsrld $16, %xmm1, %xmm1
+; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: buildvec_v8i16_stride4:
@@ -253,24 +246,25 @@ define <8 x i16> @buildvec_v8i16_stride4(ptr %p) {
 define <16 x i16> @buildvec_v16i16_stride8(ptr %p) {
 ; AVX2-LABEL: buildvec_v16i16_stride8:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    movzwl 64(%rdi), %eax
-; AVX2-NEXT:    vmovd %eax, %xmm0
-; AVX2-NEXT:    vpinsrw $1, 72(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $2, 80(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $3, 88(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $4, 96(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $5, 104(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $6, 112(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $7, 120(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    movzwl (%rdi), %eax
-; AVX2-NEXT:    vmovd %eax, %xmm1
-; AVX2-NEXT:    vpinsrw $1, 8(%rdi), %xmm1, %xmm1
-; AVX2-NEXT:    vpinsrw $2, 16(%rdi), %xmm1, %xmm1
-; AVX2-NEXT:    vpinsrw $3, 24(%rdi), %xmm1, %xmm1
-; AVX2-NEXT:    vpinsrw $4, 32(%rdi), %xmm1, %xmm1
-; AVX2-NEXT:    vpinsrw $5, 40(%rdi), %xmm1, %xmm1
-; AVX2-NEXT:    vpinsrw $6, 48(%rdi), %xmm1, %xmm1
-; AVX2-NEXT:    vpinsrw $7, 56(%rdi), %xmm1, %xmm1
+; AVX2-NEXT:    vmovups 64(%rdi), %xmm0
+; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],mem[0,2]
+; AVX2-NEXT:    vmovdqu 90(%rdi), %ymm1
+; AVX2-NEXT:    vpsrlq $48, %ymm1, %ymm1
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX2-NEXT:    vpackusdw %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm1 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-NEXT:    vpshufb %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    vmovups (%rdi), %xmm2
+; AVX2-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[0,2],mem[0,2]
+; AVX2-NEXT:    vmovdqu 26(%rdi), %ymm3
+; AVX2-NEXT:    vpsrlq $48, %ymm3, %ymm3
+; AVX2-NEXT:    vextracti128 $1, %ymm3, %xmm4
+; AVX2-NEXT:    vpackusdw %xmm4, %xmm3, %xmm3
+; AVX2-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
+; AVX2-NEXT:    vpshufb %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,2,3]
 ; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
@@ -336,41 +330,28 @@ define <16 x i16> @buildvec_v16i16_stride8(ptr %p) {
 define <32 x i8> @buildvec_v32i8_stride4(ptr %p) {
 ; AVX2-LABEL: buildvec_v32i8_stride4:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    movzbl 64(%rdi), %eax
-; AVX2-NEXT:    vmovd %eax, %xmm0
-; AVX2-NEXT:    vpinsrb $1, 68(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $2, 72(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $3, 76(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $4, 80(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $5, 84(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $6, 88(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $7, 92(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $8, 96(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $9, 100(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $10, 104(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $11, 108(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $12, 112(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $13, 116(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $14, 120(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $15, 124(%rdi), %xmm0, %xmm0
-; AVX2-NEXT:    movzbl (%rdi), %eax
-; AVX2-NEXT:    vmovd %eax, %xmm1
-; AVX2-NEXT:    vpinsrb $1, 4(%rdi), %xmm1, %xmm1
-; AVX2-NEXT:    vpinsrb $2, 8(%rdi), %xmm1, %xmm1
-; AVX2-NEXT:    vpinsrb $3, 12(%rdi), %xmm1, %xmm1
-; AVX2-NEXT:    vpinsrb $4, 16(%rdi), %xmm1, %xmm1
-; AVX2-NEXT:    vpinsrb $5, 20(%rdi), %xmm1, %xmm1
-; AVX2-NEXT:    vpinsrb $6, 24(%rdi), %xmm1, %xmm1
-; AVX2-NEXT:    vpinsrb $7, 28(%rdi), %xmm1, %xmm1
-; AVX2-NEXT:    vpinsrb $8, 32(%rdi), %xmm1, %xmm1
-; AVX2-NEXT:    vpinsrb $9, 36(%rdi), %xmm1, %xmm1
-; AVX2-NEXT:    vpinsrb $10, 40(%rdi), %xmm1, %xmm1
-; AVX2-NEXT:    vpinsrb $11, 44(%rdi), %xmm1, %xmm1
-; AVX2-NEXT:    vpinsrb $12, 48(%rdi), %xmm1, %xmm1
-; AVX2-NEXT:    vpinsrb $13, 52(%rdi), %xmm1, %xmm1
-; AVX2-NEXT:    vpinsrb $14, 56(%rdi), %xmm1, %xmm1
-; AVX2-NEXT:    vpinsrb $15, 60(%rdi), %xmm1, %xmm1
-; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX2-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX2-NEXT:    vmovdqu 29(%rdi), %ymm1
+; AVX2-NEXT:    vmovdqu 64(%rdi), %ymm2
+; AVX2-NEXT:    vmovdqu 93(%rdi), %ymm3
+; AVX2-NEXT:    vpsrld $24, %ymm3, %ymm3
+; AVX2-NEXT:    vextracti128 $1, %ymm3, %xmm4
+; AVX2-NEXT:    vpackusdw %xmm4, %xmm3, %xmm3
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm4 = [0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
+; AVX2-NEXT:    vpshufb %ymm4, %ymm2, %ymm2
+; AVX2-NEXT:    vpermq {{.*#+}} ymm2 = ymm2[0,2,2,3]
+; AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
+; AVX2-NEXT:    vpbroadcastw {{.*#+}} ymm3 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; AVX2-NEXT:    vpand %ymm3, %ymm2, %ymm2
+; AVX2-NEXT:    vpsrld $24, %ymm1, %ymm1
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm5
+; AVX2-NEXT:    vpackusdw %xmm5, %xmm1, %xmm1
+; AVX2-NEXT:    vpshufb %ymm4, %ymm0, %ymm0
+; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vpackuswb %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: buildvec_v32i8_stride4:
@@ -706,20 +687,40 @@ define <32 x i8> @buildvec_v32i8_stride8(ptr %p) {
 ; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: buildvec_v32i8_stride8:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovdqu64 (%rdi), %zmm0
-; AVX512-NEXT:    vmovdqu64 64(%rdi), %zmm1
-; AVX512-NEXT:    vmovdqu64 128(%rdi), %zmm2
-; AVX512-NEXT:    vpmovqb %zmm1, %xmm1
-; AVX512-NEXT:    vpsrlq $56, 185(%rdi), %zmm3
-; AVX512-NEXT:    vpmovqb %zmm3, %xmm3
-; AVX512-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm1
-; AVX512-NEXT:    vpmovqb %zmm0, %xmm0
-; AVX512-NEXT:    vpmovqb %zmm2, %xmm2
-; AVX512-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: buildvec_v32i8_stride8:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
+; AVX512F-NEXT:    vmovdqu64 64(%rdi), %zmm1
+; AVX512F-NEXT:    vmovdqu64 128(%rdi), %zmm2
+; AVX512F-NEXT:    vpmovqw %zmm0, %xmm0
+; AVX512F-NEXT:    vpmovqw %zmm1, %xmm1
+; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512F-NEXT:    vpmovqw %zmm2, %xmm1
+; AVX512F-NEXT:    vpsrlq $56, 185(%rdi), %zmm2
+; AVX512F-NEXT:    vpmovqw %zmm2, %xmm2
+; AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero,ymm1[8],zero,ymm1[9],zero,ymm1[10],zero,ymm1[11],zero,ymm1[12],zero,ymm1[13],zero,ymm1[14],zero,ymm1[15],zero
+; AVX512F-NEXT:    vpmovdb %zmm1, %xmm1
+; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: buildvec_v32i8_stride8:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovdqu64 (%rdi), %zmm0
+; AVX512VL-NEXT:    vmovdqu64 64(%rdi), %zmm1
+; AVX512VL-NEXT:    vmovdqu64 128(%rdi), %zmm2
+; AVX512VL-NEXT:    vpmovqw %zmm2, %xmm2
+; AVX512VL-NEXT:    vpsrlq $56, 185(%rdi), %zmm3
+; AVX512VL-NEXT:    vpmovqw %zmm3, %xmm3
+; AVX512VL-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
+; AVX512VL-NEXT:    vpmovqw %zmm0, %xmm0
+; AVX512VL-NEXT:    vpmovqw %zmm1, %xmm1
+; AVX512VL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512VL-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512VL-NEXT:    retq
   %p0  = getelementptr inbounds i8, ptr %p, i64 0
   %p1  = getelementptr inbounds i8, ptr %p, i64 8
   %p2  = getelementptr inbounds i8, ptr %p, i64 16
@@ -1055,16 +1056,30 @@ define <16 x i8> @buildvec_v16i8_stride8_reverse(ptr %p) {
 ; AVX2-NEXT:    vpinsrb $15, (%rdi), %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: buildvec_v16i8_stride8_reverse:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsrlq $56, 57(%rdi), %zmm0
-; AVX512-NEXT:    vpmovqb %zmm0, %xmm0
-; AVX512-NEXT:    vmovdqu64 (%rdi), %zmm1
-; AVX512-NEXT:    vpmovqb %zmm1, %xmm1
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: buildvec_v16i8_stride8_reverse:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
+; AVX512F-NEXT:    vpmovqw %zmm0, %xmm0
+; AVX512F-NEXT:    vpsrlq $56, 57(%rdi), %zmm1
+; AVX512F-NEXT:    vpmovqw %zmm1, %xmm1
+; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: buildvec_v16i8_stride8_reverse:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovdqu64 (%rdi), %zmm0
+; AVX512VL-NEXT:    vpmovqw %zmm0, %xmm0
+; AVX512VL-NEXT:    vpsrlq $56, 57(%rdi), %zmm1
+; AVX512VL-NEXT:    vpmovqw %zmm1, %xmm1
+; AVX512VL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpmovwb %ymm0, %xmm0
+; AVX512VL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
   %p0  = getelementptr inbounds i8, ptr %p, i64 120
   %p1  = getelementptr inbounds i8, ptr %p, i64 112
   %p2  = getelementptr inbounds i8, ptr %p, i64 104

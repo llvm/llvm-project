@@ -8091,66 +8091,53 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
     if (WideEltBits != 0) {
       MVT WideEltVT = MVT::getIntegerVT(WideEltBits);
       MVT SrcEltVT = MVT::getIntegerVT(BaseSizeInBits);
-      // VTRUNC writes the truncated values to the low lanes of an xmm with
-      // zero padding above.
-      MVT TruncDstVT = MVT::getVectorVT(SrcEltVT, 128 / BaseSizeInBits);
-      unsigned TruncDstLanes = TruncDstVT.getVectorNumElements();
-      MVT ConcatVT = MVT::getVectorVT(SrcEltVT, NumElems);
-      if (NumElems > TruncDstLanes && !TLI.isTypeLegal(ConcatVT))
-        return SDValue();
       // The wide loads read (stride - element) bytes past the last element.
-      // That is safe if the whole span is dereferenceable or the base is a
-      // fixed stack slot which always has the caller's frame mapped above it.
-      bool RangeSafe = isa_and_nonnull<FixedStackPseudoSourceValue>(
-                           LDBase->getMemOperand()->getPseudoValue()) ||
-                       LDBase->getPointerInfo().isDereferenceable(
-                           NumElems * (WideEltBits / 8), *DAG.getContext(),
-                           DAG.getDataLayout());
-      // Try wider register sizes first.
+      // A stride-aligned base keeps every stride block inside a page that an
+      // accessed element touches.
+      unsigned StrideBytes = WideEltBits / 8;
+      bool RangeSafe =
+          LDBase->getBaseAlign() >= Align(StrideBytes) ||
+          LDBase->getPointerInfo().isDereferenceable(
+              NumElems * StrideBytes, *DAG.getContext(), DAG.getDataLayout());
       for (unsigned WideRegBits : {512u, 256u, 128u}) {
         unsigned LanesPerWideLoad = WideRegBits / WideEltBits;
         if (LanesPerWideLoad < 2 || NumElems % LanesPerWideLoad != 0)
           continue;
-        if (LanesPerWideLoad > TruncDstLanes)
-          continue; // VTRUNC dest must hold all good lanes of one piece.
+        // Truncate to a legal piece at least 128-bit and no narrower
+        // than the source element.
+        unsigned PieceEltBits =
+            std::max(BaseSizeInBits, 128 / LanesPerWideLoad);
+        MVT PieceEltVT = MVT::getIntegerVT(PieceEltBits);
         MVT WideVT = MVT::getVectorVT(WideEltVT, LanesPerWideLoad);
-        if (!TLI.isTypeLegal(WideVT) || !TLI.isTypeLegal(TruncDstVT))
+        MVT PieceVT = MVT::getVectorVT(PieceEltVT, LanesPerWideLoad);
+        MVT TruncVT = MVT::getVectorVT(SrcEltVT, NumElems);
+        MVT ConcatVT = MVT::getVectorVT(PieceEltVT, NumElems);
+        if (!TLI.isTypeLegal(WideVT) || !TLI.isTypeLegal(PieceVT) ||
+            !TLI.isTypeLegal(ConcatVT) || !TLI.isTypeLegal(TruncVT))
           continue;
         unsigned NumWideLoads = NumElems / LanesPerWideLoad;
-        // VTRUNC has no non-AVX-512 lowering so the i16 to i8 form needs BWI.
-        bool Partial = LanesPerWideLoad != TruncDstLanes;
-        if (Partial && (!Subtarget.hasAVX512() ||
-                        (WideEltBits == 16 && !Subtarget.hasBWI())))
-          continue;
         unsigned BytesPerWideLoad = WideRegBits / 8;
-        // VTRUNC below 512 bits needs VLX.
-        bool NarrowSafe = WideVT.is512BitVector() || !Subtarget.hasAVX512() ||
-                          Subtarget.hasVLX();
-        // A load aligned to its own size stays inside one page.
-        bool NaturalSafe =
-            RangeSafe ||
-            (NarrowSafe && LDBase->getBaseAlign() >= Align(BytesPerWideLoad));
-        // Otherwise the last load is shifted back to end at the last element.
-        // The shifted load overlaps the previous one, so two loads are needed.
-        bool CanShift = NumWideLoads >= 2 && NarrowSafe;
-        if (!NaturalSafe && !CanShift)
+        // Without a provable range the last load is shifted back to end at
+        // the last element. It overlaps the previous load so two are needed.
+        bool CanShift = NumWideLoads >= 2;
+        if (!RangeSafe && !CanShift)
           continue;
         unsigned TailBits = WideEltBits - BaseSizeInBits;
         auto MMOFlags = LDBase->getMemOperand()->getFlags();
         SDValue BasePtr = LDBase->getBasePtr();
         SmallVector<SDValue, 8> Pieces;
         for (unsigned K = 0; K != NumWideLoads; ++K) {
-          bool ShiftLast = !NaturalSafe && K == NumWideLoads - 1;
+          bool ShiftLast = !RangeSafe && K == NumWideLoads - 1;
           unsigned Offset = K * BytesPerWideLoad;
           if (ShiftLast)
             Offset -= TailBits / 8;
-          SDValue Ptr = K == 0 ? BasePtr
-                               : DAG.getMemBasePlusOffset(
-                                     BasePtr, TypeSize::getFixed(Offset), DL);
+          SDValue Ptr =
+              DAG.getMemBasePlusOffset(BasePtr, TypeSize::getFixed(Offset), DL);
+          Align LdAlign = commonAlignment(LDBase->getBaseAlign(), Offset);
           SDValue Ld =
               DAG.getLoad(WideVT, DL, LDBase->getChain(), Ptr,
                           LDBase->getPointerInfo().getWithOffset(Offset),
-                          K == 0 ? LDBase->getBaseAlign() : Align(1), MMOFlags);
+                          LdAlign, MMOFlags);
           for (auto *LD : Loads)
             if (LD)
               DAG.makeEquivalentMemoryOrdering(LD, Ld);
@@ -8158,32 +8145,10 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
           if (ShiftLast)
             Ld = DAG.getNode(ISD::SRL, DL, WideVT, Ld,
                              DAG.getConstant(TailBits, DL, WideVT));
-          unsigned TruncOp = Partial ? X86ISD::VTRUNC : ISD::TRUNCATE;
-          Pieces.push_back(DAG.getNode(TruncOp, DL, TruncDstVT, Ld));
+          Pieces.push_back(DAG.getNode(ISD::TRUNCATE, DL, PieceVT, Ld));
         }
-        // Pairwise shuffle the low halves until each piece is full.
-        if (Partial) {
-          unsigned GoodLanes = LanesPerWideLoad;
-          while (Pieces.size() > 1 && GoodLanes < TruncDstLanes) {
-            assert((TruncDstLanes % GoodLanes) == 0 &&
-                   "Illegal VTRUNC packing");
-            SmallVector<SDValue, 8> Next;
-            SmallVector<int, 16> Mask(TruncDstLanes, -1);
-            for (unsigned I = 0; I != GoodLanes; ++I) {
-              Mask[I] = I;
-              Mask[GoodLanes + I] = TruncDstLanes + I;
-            }
-            for (unsigned J = 0, E = Pieces.size() - 1; J < E; J += 2)
-              Next.push_back(DAG.getVectorShuffle(TruncDstVT, DL, Pieces[J],
-                                                  Pieces[J + 1], Mask));
-            Pieces = std::move(Next);
-            GoodLanes *= 2;
-          }
-        }
-        if (Pieces.size() == 1)
-          return DAG.getBitcast(VT, Pieces[0]);
-
         SDValue Result = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, Pieces);
+        Result = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Result);
         return DAG.getBitcast(VT, Result);
       }
     }
