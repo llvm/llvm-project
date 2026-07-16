@@ -1,9 +1,8 @@
 option(LLVM_USE_EMITC_INLINER_MODEL
-  "Use the in-tree EmitC inliner model instead of TensorFlow AOT"
+  "Use the fully in-tree inliner model integration instead of TensorFlow AOT"
   OFF)
 
-# The EmitC wrapper is only built when the in-tree EmitC model is enabled.
-# Mark it optional so LLVM's source audit does not require it in default builds.
+# Marked optional so LLVM's source audit does not require it in default builds.
 list(APPEND LLVM_OPTIONAL_SOURCES
   EmitCInlinerSizeModel.cpp)
 
@@ -12,10 +11,9 @@ if (LLVM_HAVE_TFLITE)
     tensorflow-lite::tensorflow-lite)
 endif()
 
-# Only compile the EmitC inliner wrapper when the EmitC-backed release model
-# is selected. Otherwise the generated .inc file may not exist.
+# The inlining model wrapper is only built when the fully in-tree model integration is enabled.
 if (LLVM_USE_EMITC_INLINER_MODEL)
-  list(APPEND LLVMAnalysisOptionalSources
+  list(APPEND AnalysisInTreeModelSources
     EmitCInlinerSizeModel.cpp)
 elseif (DEFINED LLVM_HAVE_TF_AOT)
   include(TensorFlowCompile)
@@ -176,7 +174,7 @@ add_llvm_component_library(LLVMAnalysis
   ValueLatticeUtils.cpp
   ValueTracking.cpp
   VectorUtils.cpp
-  ${LLVMAnalysisOptionalSources}
+  ${AnalysisInTreeModelSources}
   ${GeneratedMLSources}
 
   ADDITIONAL_HEADER_DIRS
