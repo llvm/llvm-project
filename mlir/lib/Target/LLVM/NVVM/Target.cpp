@@ -760,6 +760,20 @@ NVVMTargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
     module->emitError("Module must be a GPU module.");
     return std::nullopt;
   }
+
+  // Reject operations from other GPU target dialects.
+  WalkResult foreignOp = module->walk([&](Operation *op) {
+    StringRef dialect = op->getDialect()->getNamespace();
+    if (dialect == "rocdl" || dialect == "xevm") {
+      op->emitError() << "'" << op->getName() << "' from '" << dialect
+                      << "' dialect is not compatible with the NVVM target";
+      return WalkResult::interrupt();
+    }
+    return WalkResult::advance();
+  });
+  if (foreignOp.wasInterrupted())
+    return std::nullopt;
+
   NVPTXSerializer serializer(*module, cast<NVVMTargetAttr>(attribute), options);
   serializer.init();
   std::optional<SmallVector<char, 0>> result = serializer.run();
