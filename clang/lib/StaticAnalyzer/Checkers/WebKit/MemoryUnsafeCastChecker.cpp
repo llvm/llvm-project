@@ -98,7 +98,7 @@ static decltype(auto) hasTypePointingTo(DeclarationMatcher DeclM) {
 // Matches `this` or `*this`, but not member accesses like `this->m_field`.
 static decltype(auto) isThisOrDerefThis() {
   return ignoringParenImpCasts(anyOf(
-     cxxThisExpr(),
+      cxxThisExpr(),
       unaryOperator(hasOperatorName("*"),
                     hasUnaryOperand(ignoringParenImpCasts(cxxThisExpr())))));
 }
