@@ -7456,7 +7456,7 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
             getConstantStride(Ptr, ScalarTy, CostCtx.PSE, CostCtx.L);
         if (Stride != 1 && Stride != -1)
           return false;
-        bool Reverse = *Stride == -1;
+        bool Reverse = Stride == -1;
 
         VPBuilder Builder(VPI);
         VPSingleDefRecipe *VectorPtr = Builder.createConsecutiveVectorPointer(
@@ -7471,15 +7471,15 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
             return ReplaceWith(VPI, LoadR);
           // Reverse the loaded values back into program order.
           Builder.insert(LoadR);
-          auto *ReverseR = new VPInstruction(VPInstruction::Reverse, {LoadR},
-                                             {}, {}, VPI->getDebugLoc());
+          auto *ReverseR = new VPInstruction(VPInstruction::Reverse, LoadR, {},
+                                             {}, VPI->getDebugLoc());
           return ReplaceWith(VPI, ReverseR);
         }
 
         VPValue *StoredVal = VPI->getOperand(0);
         if (Reverse)
           // Reverse the stored values so they are written in descending order.
-          StoredVal = Builder.createNaryOp(VPInstruction::Reverse, {StoredVal},
+          StoredVal = Builder.createNaryOp(VPInstruction::Reverse, StoredVal,
                                            VPI->getDebugLoc());
         auto *StoreR = new VPWidenStoreRecipe(
             *cast<StoreInst>(I), VectorPtr, StoredVal,
