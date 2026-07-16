@@ -876,9 +876,12 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
     llvm::erase_if(Options.LoadSizes, [&](unsigned LoadSize) {
       return LoadSize > MinAlign || !isPowerOf2_64(LoadSize);
     });
-    // If only single-byte loads survive, inlining a byte-wise comparison offers
-    // no benefit over the library call, so leave it as a libcall.
-    if (Options.LoadSizes.empty() || Options.LoadSizes.front() == 1)
+    // Bail out only if no load size fits the known alignment at all. Byte
+    // loads are naturally aligned for any pointer, so they normally survive and
+    // remain useful for small compares: the number of loads is bounded by
+    // MaxNumLoads, and larger compares that would need too many byte loads fall
+    // back to the libcall in MemCmpExpansion.
+    if (Options.LoadSizes.empty())
       return false;
   }
 
