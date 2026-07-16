@@ -4875,14 +4875,14 @@ Decl *SemaObjC::ActOnMethodDeclaration(
       if (auto *Setter = PropertyImpl->getSetterMethodDecl())
         if (Setter->getSelector() == Sel &&
             Setter->isInstanceMethod() == ObjCMethod->isInstanceMethod()) {
-          assert(Setter->isSynthesizedAccessorStub() && "autosynth stub expected");
-          PropertyImpl->setSetterMethodDecl(ObjCMethod);
+          if (Setter->isSynthesizedAccessorStub())
+            PropertyImpl->setSetterMethodDecl(ObjCMethod);
         }
       if (auto *Getter = PropertyImpl->getGetterMethodDecl())
         if (Getter->getSelector() == Sel &&
             Getter->isInstanceMethod() == ObjCMethod->isInstanceMethod()) {
-          assert(Getter->isSynthesizedAccessorStub() && "autosynth stub expected");
-          PropertyImpl->setGetterMethodDecl(ObjCMethod);
+          if (Getter->isSynthesizedAccessorStub())
+            PropertyImpl->setGetterMethodDecl(ObjCMethod);
           break;
         }
     }
