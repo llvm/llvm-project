@@ -674,13 +674,19 @@ class KernelParamsChecker : public ConstSubobjectVisitor<KernelParamsChecker> {
                          const FieldDecl *>;
   SmallVector<ObjectAccess, 4> ObjectAccessPath;
 
-  std::pair<QualType, SourceLocation> getObjectAccessDebugInfo(ObjectAccess o) {
+  struct DiagDetails {
+    QualType Type;
+    SourceLocation Loc;
+  };
+
+  // Return diagnostics info for an 'ObjectAccess' stored on ObjectAccessPath
+  DiagDetails getObjectAccessDiagDetails(ObjectAccess o) {
     if (auto *PVD = dyn_cast<const ParmVarDecl *>(o))
-      return std::pair{PVD->getType(), PVD->getLocation()};
-    else if (auto *FD = dyn_cast<const FieldDecl *>(o))
-      return std::pair{FD->getType(), FD->getLocation()};
-    else if (auto *BS = dyn_cast<const CXXBaseSpecifier *>(o))
-      return std::pair{BS->getType(), BS->getBaseTypeLoc()};
+      return {PVD->getType(), PVD->getLocation()};
+    if (auto *FD = dyn_cast<const FieldDecl *>(o))
+      return {FD->getType(), FD->getLocation()};
+    if (auto *BS = dyn_cast<const CXXBaseSpecifier *>(o))
+      return {BS->getType(), BS->getBaseTypeLoc()};
     llvm_unreachable("Unexpected type in ObjectAccess");
   }
 
@@ -738,12 +744,14 @@ public:
 
   // Returns true if subobjects should be visited and false otherwise.
   bool checkType(QualType Ty) {
-    auto emitDiagnostic = [this](clang::diag::kind mesg) {
-      const auto &[Type, Loc] =
-          getObjectAccessDebugInfo(ObjectAccessPath.back());
-      SemaSYCLRef.Diag(Loc, mesg) << Type;
+    auto emitDiagnostic = [this](clang::diag::kind DiagId, auto &&...Args) {
+      const auto &DiagDetail =
+          getObjectAccessDiagDetails(ObjectAccessPath.back());
+      (SemaSYCLRef.Diag(DiagDetail.Loc, DiagId)
+       << DiagDetail.Type << ... << Args);
       emitObjectAccessPathNotes();
     };
+
     if (Ty->isReferenceType()) {
       auto DirectParent = ObjectAccessPath.back();
       // Reference cannot be a base, so just assume we came via a FieldDecl.
@@ -754,34 +762,34 @@ public:
         return true;
       }
 
-      auto *DirectFieldParent = cast<const FieldDecl *>(DirectParent);
-      SemaSYCLRef.Diag(DirectFieldParent->getLocation(),
-                       diag::err_bad_kernel_param_type)
-          << DirectFieldParent->getType();
-      emitObjectAccessPathNotes();
-
       // Don't visit the type of the reference since any further invalid
       // kernel parameter types contained within the referenced type
       // might not be relevant once the programmer addresses the
       // invalid use of a reference.
-      IsValid = false;
-      return false;
-    } else if (Ty->isAtomicType()) {
       emitDiagnostic(diag::err_bad_kernel_param_type);
       IsValid = false;
       return false;
-    } else if (Ty->isStructureTypeWithFlexibleArrayMember()) {
-      emitDiagnostic(diag::err_sycl_kernel_param_has_fam);
+    }
+    if (Ty->isAtomicType()) {
+      emitDiagnostic(diag::err_bad_kernel_param_type);
       IsValid = false;
       return false;
-    } else if (CXXRecordDecl *RD = Ty->getAsCXXRecordDecl()) {
+    }
+    if (Ty->isStructureTypeWithFlexibleArrayMember()) {
+      emitDiagnostic(diag::err_sycl_kernel_bad_param_type,
+                     diag::InvalidSYCLKernelParamReason::FAM);
+      IsValid = false;
+      return false;
+    }
+    // Disallow classes that inherit virtual base classes.
+    if (CXXRecordDecl *RD = Ty->getAsCXXRecordDecl()) {
       if (RD->getNumVBases() > 0) {
-        emitDiagnostic(diag::err_sycl_kernel_param_has_vbase);
+        emitDiagnostic(diag::err_sycl_kernel_bad_param_type,
+                       diag::InvalidSYCLKernelParamReason::VirtualBases);
         IsValid = false;
         return false;
       }
     }
-
     // Warn about pointer parameters in SYCL kernels if non-portable SYCL
     // warnings are enabled.
     if (Ty->isPointerType()) {

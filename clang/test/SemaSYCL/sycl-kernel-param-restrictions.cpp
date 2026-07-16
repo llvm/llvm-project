@@ -122,7 +122,7 @@ template <typename T> class Callable { // expected-note 2{{within field of type 
   T data; // expected-error 2{{'int &' cannot be used as the type of a kernel parameter}}
 public:
   Callable(T d) : data(d) {}
-  void operator()() {
+  void operator()() const {
   }
 };
 
@@ -190,32 +190,34 @@ void test() {
 } // namespace badref7
 
 
-#include <stdatomic.h>
 // Check for atomic parameters and subobjects.
 namespace atomic1 {
 // Kernel entry point template definition.
 template<typename KNT, typename T>
 [[clang::sycl_kernel_entry_point(KNT)]]
-void kernel_single_task(T t) {} // expected-note-re {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
-                                // expected-note-re@-1 {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
-                                // expected-note-re@-2 {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
-                                // expected-note-re@-3 {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
-                                // expected-note@-4 {{within parameter 't' of type 'atomic1::Kernel' declared here}}
+void kernel_single_task(T t) {}
+// expected-note-re@-1 {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
+// expected-note-re@-2 {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
+// expected-note-re@-3 {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
+// expected-note-re@-4 {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
+// expected-note@-5 {{within parameter 't' of type 'atomic1::Kernel' declared here}}
 
 struct Sa { 
   int a;
-  _Atomic int b; // expected-error {{'_Atomic(int)' cannot be used as the type of a kernel parameter}}
-                 // expected-note@-3 {{within field of type 'Sa' declared here}}
-                 // expected-error@-2 {{'_Atomic(int)' cannot be used as the type of a kernel parameter}}
-                 // expected-note@-5 {{within field of type 'Sa' declared here}}
-                 // expected-error@-4 {{'_Atomic(int)' cannot be used as the type of a kernel parameter}}
-                 // expected-note@-7 {{within field of type 'Sa' declared here}}
+  _Atomic int b; 
+  // expected-error@-1 {{'_Atomic(int)' cannot be used as the type of a kernel parameter}}
+  // expected-note@-4 {{within field of type 'Sa' declared here}}
+  // expected-error@-3 {{'_Atomic(int)' cannot be used as the type of a kernel parameter}}
+  // expected-note@-6 {{within field of type 'Sa' declared here}}
+  // expected-error@-5 {{'_Atomic(int)' cannot be used as the type of a kernel parameter}}
+  // expected-note@-8 {{within field of type 'Sa' declared here}}
 };
 
 class Kernel {
-  Sa data{1, 2}; // expected-note@-1 {{within field of type 'Kernel' declared here}}
+  // expected-note@-1 {{within field of type 'Kernel' declared here}}
+  Sa data{1, 2};
 public:
-  void operator()() { }
+  void operator()() const { }
 };
 
 void test() {
@@ -248,17 +250,20 @@ namespace fam1 {
 // Kernel entry point template definition.
 template<typename KNT, typename T>
 [[clang::sycl_kernel_entry_point(KNT)]]
-void kernel_single_task(T t) {} // expected-note {{within parameter 't' of type 'fam1::Kernel' declared here}}
+void kernel_single_task(T t) {}
+// expected-note@-1 {{within parameter 't' of type 'fam1::Kernel' declared here}}
 
 struct FAM { 
   int a;
   int b[];
 };
 
-class Kernel { // expected-note {{within field of type 'Kernel' declared here}}
-  FAM fam; // expected-error {{'FAM' contains a flexible array member and cannot be used as a SYCL kernel parameter}}
+class Kernel {
+// expected-note@-1 {{within field of type 'Kernel' declared here}}
+  FAM fam;
+  // expected-error@-1 {{'FAM' contains a flexible array member and cannot be used as the type of a SYCL kernel parameter}}
 public:
-  void operator()() { (void)fam; }
+  void operator()() const { (void)fam; }
 };
 
 void test() {
@@ -275,22 +280,25 @@ namespace nonportable1 {
 // Kernel entry point template definition.
 template<typename KNT, typename T>
 [[clang::sycl_kernel_entry_point(KNT)]]
-void kernel_single_task(T t) {} // nonportable-note-re {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
-                                // nonportable-note-re@-1 {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
-                                // nonportable-note-re@-2 {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
-                                // nonportable-note-re@-3 {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
+void kernel_single_task(T t) {} 
+// nonportable-note-re@-1 {{within parameter 't' of type '(lambda at {{.*}})' declared here}}                                  
+// nonportable-note-re@-2 {{within parameter 't' of type '(lambda at {{.*}})' declared here}}                               
+// nonportable-note-re@-3 {{within parameter 't' of type '(lambda at {{.*}})' declared here}}                               
+// nonportable-note-re@-4 {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
 
-struct S { // nonportable-note {{within field of type 'S' declared here}}
-           // nonportable-note@-1 {{within field of type 'S' declared here}}
+struct S {
+// nonportable-note@-1 {{within field of type 'S' declared here}}
+// nonportable-note@-2 {{within field of type 'S' declared here}}          
   int *ptr;
-  // nonportable-warning@-1 {{pointers used in SYCL kernels must point to device-accessible memory, i.e. the USM}}
-  // nonportable-warning@-2 {{pointers used in SYCL kernels must point to device-accessible memory, i.e. the USM}}
+  // nonportable-warning@-1 {{pointers used in parameters to a SYCL kernel require a device that supports Unified Shared Memory (USM)}}
+  // nonportable-warning@-2 {{pointers used in parameters to a SYCL kernel require a device that supports Unified Shared Memory (USM)}}
 };
 
-class C { // nonportable-note {{within field of type 'C' declared here}}
+class C {
+// nonportable-note@-1 {{within field of type 'C' declared here}}
 private:
   int *ptr;
-  // nonportable-warning@-1 {{pointers used in SYCL kernels must point to device-accessible memory, i.e. the USM}}
+  // nonportable-warning@-1 {{pointers used in parameters to a SYCL kernel require a device that supports Unified Shared Memory (USM)}}
 public:
   C(int *p) : ptr(p) {}
 };
@@ -298,7 +306,7 @@ public:
 void test() {
   int *ptr;
   kernel_single_task<class KN<25>>([=]{ (void)ptr; });
-  // nonportable-warning@-1 {{pointers used in SYCL kernels must point to device-accessible memory, i.e. the USM}}
+  // nonportable-warning@-1 {{pointers used in parameters to a SYCL kernel require a device that supports Unified Shared Memory (USM)}}
   // nonportable-note-re@-2 {{in instantiation of function template specialization 'nonportable1::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
   // nonportable-note@-3 {{within capture 'ptr' of lambda expression here}}
 
@@ -325,7 +333,9 @@ namespace vbase1 {
 // Kernel entry point template definition.
 template<typename KNT, typename T>
 [[clang::sycl_kernel_entry_point(KNT)]]
-void kernel_single_task(T t) {} // expected-note-re {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
+void kernel_single_task(T t) {}
+// expected-note-re@-1 {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
+// expected-note-re@-2 {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
 
 class Base { 
   // No diagnostic is issued for data because recursive subobject visitation
@@ -338,15 +348,34 @@ public:
 class Derived : virtual Base { 
 public:
   Derived(int &a) : Base(a) {}
+};
 
+class A : public virtual Base { 
+public:
+  A(int &a) : Base(a) {}
+};
+
+class B : public virtual Base { 
+public:
+  B(int &a) : Base(a) {}
+};
+
+class Diamond : public A, public B {
+public:
+  Diamond(int &a) : Base(a), A(a), B(a) {}
 };
 
 void test() {
   int p = 0;
   Derived d{p};
   kernel_single_task<class KN<29>>([=]{ (void)d; });
-  // expected-error@-1 {{'Derived' inherits virtual base classes and cannot be used as a SYCL kernel parameter}}
+  // expected-error@-1 {{'Derived' inherits virtual base classes and cannot be used as the type of a SYCL kernel parameter}}
   // expected-note-re@-2 {{in instantiation of function template specialization 'vbase1::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
   // expected-note@-3 {{within capture 'd' of lambda expression here}}
+  Diamond ab{p};
+  kernel_single_task<class KN<30>>([=]{ (void)ab; });
+  // expected-error@-1 {{'Diamond' inherits virtual base classes and cannot be used as the type of a SYCL kernel parameter}}
+  // expected-note-re@-2 {{in instantiation of function template specialization 'vbase1::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
+  // expected-note@-3 {{within capture 'ab' of lambda expression here}}
 }
 } // namespace vbase1
