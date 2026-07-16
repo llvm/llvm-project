@@ -792,9 +792,9 @@ public:
   }
 
   void VisitFriendTemplateDecl(const FriendTemplateDecl *D) {
-    for (TemplateParameterList *TPL : D->getFriendTypeTemplateParameterLists())
+    for (TemplateParameterList *TPL : D->getTemplateParameterLists())
       dumpTemplateParameters(TPL);
-    if (D->getFriendTemplateName().isNull())
+    if (D->getFriendType() || D->getFriendTemplateName().isNull())
       VisitFriendDecl(D);
   }
 

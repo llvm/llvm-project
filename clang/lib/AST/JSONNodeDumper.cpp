@@ -1153,7 +1153,7 @@ void JSONNodeDumper::VisitFriendDecl(const FriendDecl *FD) {
 
 void JSONNodeDumper::VisitFriendTemplateDecl(const FriendTemplateDecl *FD) {
   TemplateName TN = FD->getFriendTemplateName();
-  if (TN.isNull()) {
+  if (FD->getFriendType() || TN.isNull()) {
     VisitFriendDecl(FD);
     return;
   }

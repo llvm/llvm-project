@@ -4729,30 +4729,30 @@ ExpectedDecl ASTNodeImporter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
   FriendTemplateDecl::FriendUnion ToFU;
   TemplateName ToTemplate;
   TemplateName FromTemplate = D->getFriendTemplateName();
-  if (FromTemplate.isNull()) {
-    if (NamedDecl *FriendD = D->getFriendDecl()) {
-      NamedDecl *ToFriendD;
-      if (Error Err = importInto(ToFriendD, FriendD))
-        return std::move(Err);
+  if (TypeSourceInfo *FriendType = D->getFriendType()) {
+    if (auto TSIOrErr = import(FriendType))
+      ToFU = *TSIOrErr;
+    else
+      return TSIOrErr.takeError();
+  } else if (FromTemplate.isNull()) {
+    NamedDecl *FriendD = D->getFriendDecl();
+    NamedDecl *ToFriendD;
+    if (Error Err = importInto(ToFriendD, FriendD))
+      return std::move(Err);
 
-      if (FriendD->getFriendObjectKind() != Decl::FOK_None &&
-          !FriendD->isInIdentifierNamespace(Decl::IDNS_NonMemberOperator))
-        ToFriendD->setObjectOfFriendDecl(false);
+    if (FriendD->getFriendObjectKind() != Decl::FOK_None &&
+        !FriendD->isInIdentifierNamespace(Decl::IDNS_NonMemberOperator))
+      ToFriendD->setObjectOfFriendDecl(false);
 
-      ToFU = ToFriendD;
-    } else {
-      if (auto TSIOrErr = import(D->getFriendType()))
-        ToFU = *TSIOrErr;
-      else
-        return TSIOrErr.takeError();
-    }
-  } else {
+    ToFU = ToFriendD;
+  }
+
+  if (!FromTemplate.isNull()) {
     if (Error Err = importInto(ToTemplate, FromTemplate))
       return std::move(Err);
   }
 
-  ArrayRef<TemplateParameterList *> FromTPLs =
-      D->getFriendTypeTemplateParameterLists();
+  ArrayRef<TemplateParameterList *> FromTPLs = D->getTemplateParameterLists();
   SmallVector<TemplateParameterList *, 1> ToTPLs(FromTPLs.size());
   if (Error Err = ImportContainerChecked(FromTPLs, ToTPLs))
     return std::move(Err);
@@ -4770,10 +4770,10 @@ ExpectedDecl ASTNodeImporter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
     return EllipsisLocOrErr.takeError();
 
   FriendTemplateDecl *FTD;
-  if (ToTemplate.isNull()) {
+  if (!ToFU.isNull()) {
     if (GetImportedOrCreateDecl(FTD, D, Importer.getToContext(), DC,
                                 *LocationOrErr, ToFU, *FriendLocOrErr, ToTPLs,
-                                *EllipsisLocOrErr))
+                                *EllipsisLocOrErr, ToTemplate))
       return FTD;
   } else {
     if (GetImportedOrCreateDecl(FTD, D, Importer.getToContext(), DC,

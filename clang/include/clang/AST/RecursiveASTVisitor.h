@@ -1734,15 +1734,13 @@ DEF_TRAVERSE_DECL(FriendDecl, {
 
 DEF_TRAVERSE_DECL(FriendTemplateDecl, {
   TemplateName Template = D->getFriendTemplateName();
-  if (Template.isNull()) {
-    if (D->getFriendType())
-      TRY_TO(TraverseTypeLoc(D->getFriendType()->getTypeLoc()));
-    else
-      TRY_TO(TraverseDecl(D->getFriendDecl()));
-  } else {
+  if (D->getFriendType())
+    TRY_TO(TraverseTypeLoc(D->getFriendType()->getTypeLoc()));
+  else if (!Template.isNull())
     TRY_TO(TraverseTemplateName(Template));
-  }
-  for (TemplateParameterList *TPL : D->getFriendTypeTemplateParameterLists())
+  else
+    TRY_TO(TraverseDecl(D->getFriendDecl()));
+  for (TemplateParameterList *TPL : D->getTemplateParameterLists())
     TRY_TO(TraverseTemplateParameterListHelper(TPL));
 })
 

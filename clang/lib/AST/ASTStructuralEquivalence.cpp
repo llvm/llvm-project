@@ -2447,10 +2447,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   if (FTD1->isPackExpansion() != FTD2->isPackExpansion())
     return false;
 
-  ArrayRef<TemplateParameterList *> TPL1 =
-      FTD1->getFriendTypeTemplateParameterLists();
-  ArrayRef<TemplateParameterList *> TPL2 =
-      FTD2->getFriendTypeTemplateParameterLists();
+  ArrayRef<TemplateParameterList *> TPL1 = FTD1->getTemplateParameterLists();
+  ArrayRef<TemplateParameterList *> TPL2 = FTD2->getTemplateParameterLists();
   if (!llvm::equal(
           TPL1, TPL2,
           [&Context](TemplateParameterList *LHS, TemplateParameterList *RHS) {
@@ -2463,11 +2461,18 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   if (TN1.isNull() != TN2.isNull())
     return false;
 
-  if (TN1.isNull())
+  TypeSourceInfo *TSI1 = FTD1->getFriendType();
+  TypeSourceInfo *TSI2 = FTD2->getFriendType();
+  if (TSI1 || TSI2) {
+    if (!TSI1 || !TSI2 ||
+        !IsStructurallyEquivalent(Context, TSI1->getType(), TSI2->getType()))
+      return false;
+  } else if (TN1.isNull()) {
     return IsStructurallyEquivalent(Context, static_cast<FriendDecl *>(FTD1),
                                     static_cast<FriendDecl *>(FTD2));
+  }
 
-  return IsStructurallyEquivalent(Context, TN1, TN2);
+  return TN1.isNull() || IsStructurallyEquivalent(Context, TN1, TN2);
 }
 
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,

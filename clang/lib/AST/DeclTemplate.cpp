@@ -1238,13 +1238,13 @@ FriendTemplateDecl *
 FriendTemplateDecl::Create(ASTContext &Context, DeclContext *DC,
                            SourceLocation Loc, FriendUnion Friend,
                            SourceLocation FriendLoc,
-                           ArrayRef<TemplateParameterList *> FriendTypeTPLists,
-                           SourceLocation EllipsisLoc) {
+                           ArrayRef<TemplateParameterList *> FriendTPLists,
+                           SourceLocation EllipsisLoc, TemplateName Template) {
   std::size_t Extra =
       FriendTemplateDecl::additionalSizeToAlloc<TemplateParameterList *>(
-          FriendTypeTPLists.size());
+          FriendTPLists.size());
   auto *FTD = new (Context, DC, Extra) FriendTemplateDecl(
-      DC, Loc, Friend, FriendLoc, EllipsisLoc, FriendTypeTPLists);
+      DC, Loc, Friend, FriendLoc, EllipsisLoc, FriendTPLists, Template);
   cast<CXXRecordDecl>(DC)->pushFriendDecl(FTD);
   return FTD;
 }
@@ -1253,32 +1253,34 @@ FriendTemplateDecl *
 FriendTemplateDecl::Create(ASTContext &Context, DeclContext *DC,
                            SourceLocation Loc, TemplateName Template,
                            SourceLocation FriendLoc,
-                           ArrayRef<TemplateParameterList *> FriendTypeTPLists,
+                           ArrayRef<TemplateParameterList *> FriendTPLists,
                            SourceLocation EllipsisLoc) {
+  auto *Friend = Template.getAsTemplateDecl();
+  assert(Friend && "friend template name must be resolved");
   std::size_t Extra =
       FriendTemplateDecl::additionalSizeToAlloc<TemplateParameterList *>(
-          FriendTypeTPLists.size());
-  auto *FTD = new (Context, DC, Extra)
-      FriendTemplateDecl(DC, Loc, FriendUnion(), FriendLoc, EllipsisLoc,
-                         FriendTypeTPLists, Template);
+          FriendTPLists.size());
+  auto *FTD = new (Context, DC, Extra) FriendTemplateDecl(
+      DC, Loc, Friend, FriendLoc, EllipsisLoc, FriendTPLists, Template);
   cast<CXXRecordDecl>(DC)->pushFriendDecl(FTD);
   return FTD;
 }
 
 FriendTemplateDecl *
 FriendTemplateDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
-                                       unsigned NumFriendTypeTPLists) {
+                                       unsigned NumFriendTPLists) {
   std::size_t Extra =
       FriendTemplateDecl::additionalSizeToAlloc<TemplateParameterList *>(
-          NumFriendTypeTPLists);
-  return new (C, ID, Extra)
-      FriendTemplateDecl(EmptyShell(), NumFriendTypeTPLists);
+          NumFriendTPLists);
+  return new (C, ID, Extra) FriendTemplateDecl(EmptyShell(), NumFriendTPLists);
 }
 
 SourceRange FriendTemplateDecl::getSourceRange() const {
-  SourceLocation Begin =
-      getFriendTypeTemplateParameterLists().front()->getTemplateLoc();
-  SourceLocation End = FriendDecl::getSourceRange().getEnd();
+  SourceLocation Begin = getTemplateParameterLists().front()->getTemplateLoc();
+  SourceLocation End =
+      !Template.isNull() && !getFriendType()
+          ? (isPackExpansion() ? getEllipsisLoc() : getLocation())
+          : FriendDecl::getSourceRange().getEnd();
   return SourceRange(Begin, End);
 }
 

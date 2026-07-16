@@ -2474,19 +2474,18 @@ private:
 
   FriendTemplateDecl(DeclContext *DC, SourceLocation Loc, FriendUnion Friend,
                      SourceLocation FriendLoc, SourceLocation EllipsisLoc,
-                     ArrayRef<TemplateParameterList *> FriendTypeTPLists,
+                     ArrayRef<TemplateParameterList *> FriendTPLists,
                      TemplateName Template = {})
       : FriendDecl(Decl::FriendTemplate, DC, Loc, Friend, FriendLoc,
                    EllipsisLoc),
-        NumTPLists(FriendTypeTPLists.size()), Template(Template) {
-    assert(!FriendTypeTPLists.empty());
-    llvm::copy(FriendTypeTPLists, getTrailingObjects());
+        NumTPLists(FriendTPLists.size()), Template(Template) {
+    assert(!FriendTPLists.empty());
+    llvm::copy(FriendTPLists, getTrailingObjects());
   }
 
-  FriendTemplateDecl(EmptyShell Empty, unsigned NumFriendTypeTPLists)
-      : FriendDecl(Decl::FriendTemplate, Empty),
-        NumTPLists(NumFriendTypeTPLists) {
-    assert(NumFriendTypeTPLists != 0);
+  FriendTemplateDecl(EmptyShell Empty, unsigned NumFriendTPLists)
+      : FriendDecl(Decl::FriendTemplate, Empty), NumTPLists(NumFriendTPLists) {
+    assert(NumFriendTPLists != 0);
   }
 
 public:
@@ -2497,17 +2496,17 @@ public:
   static FriendTemplateDecl *
   Create(ASTContext &Context, DeclContext *DC, SourceLocation Loc,
          FriendUnion Friend, SourceLocation FriendLoc,
-         ArrayRef<TemplateParameterList *> FriendTypeTPLists,
-         SourceLocation EllipsisLoc = {});
+         ArrayRef<TemplateParameterList *> FriendTPLists,
+         SourceLocation EllipsisLoc = {}, TemplateName Template = {});
 
   static FriendTemplateDecl *
   Create(ASTContext &Context, DeclContext *DC, SourceLocation Loc,
          TemplateName Template, SourceLocation FriendLoc,
-         ArrayRef<TemplateParameterList *> FriendTypeTPLists,
+         ArrayRef<TemplateParameterList *> FriendTPLists,
          SourceLocation EllipsisLoc = {});
 
   static FriendTemplateDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID,
-                                                unsigned FriendTypeNumTPLists);
+                                                unsigned NumFriendTPLists);
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 
@@ -2518,19 +2517,9 @@ public:
     return Friend.dyn_cast<TypeSourceInfo*>();
   }
 
-  /// If this friend declaration names a templated function (or
-  /// a member function of a templated type), return that type;
-  /// otherwise return null.
-  NamedDecl *getFriendDecl() const {
-    if (TemplateDecl *TD = Template.getAsTemplateDecl())
-      return TD;
-    return Friend.dyn_cast<NamedDecl *>();
-  }
-
   TemplateName getFriendTemplateName() const { return Template; }
 
-  ArrayRef<TemplateParameterList *>
-  getFriendTypeTemplateParameterLists() const {
+  ArrayRef<TemplateParameterList *> getTemplateParameterLists() const {
     return ArrayRef(getTrailingObjects(), NumTPLists);
   }
 

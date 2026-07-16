@@ -766,8 +766,7 @@ public:
   bool VisitFriendTemplateDecl(const FriendTemplateDecl *D) {
     if (D->getFriendType() || !D->getFriendTemplateName().isNull()) {
       const auto *DC = cast<NamedDecl>(D->getDeclContext());
-      for (TemplateParameterList *TPL :
-           D->getFriendTypeTemplateParameterLists())
+      for (TemplateParameterList *TPL : D->getTemplateParameterLists())
         indexTemplateParameters(TPL, DC);
     }
     return VisitFriendDecl(D);

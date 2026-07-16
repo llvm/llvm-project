@@ -18383,8 +18383,13 @@ DeclResult Sema::ActOnTemplatedFriendTag(
     if (CheckTemplateDeclScope(S, TempParamLists.back()))
       return true;
 
-    Friend = FriendTemplateDecl::Create(Context, CurContext, NameLoc, TSI,
-                                        FriendLoc, TempParamLists, EllipsisLoc);
+    TemplateName FriendTemplate;
+    if (TemplateParams)
+      FriendTemplate = Context.getDependentTemplateName(
+          {SS.getScopeRep(), Name, /*HasTemplateKeyword=*/false});
+    Friend =
+        FriendTemplateDecl::Create(Context, CurContext, NameLoc, TSI, FriendLoc,
+                                   TempParamLists, EllipsisLoc, FriendTemplate);
   }
 
   Friend->setAccess(AS_public);
@@ -18685,11 +18690,8 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
              diag::warn_cxx98_compat_friend_is_member :
              diag::err_friend_is_member);
 
-  //   - There's a scope specifier that does not match any template
-  //     parameter lists, in which case we use some arbitrary context,
-  //     create a method or method template, and wait for instantiation.
-  //   - There's a scope specifier that does match some template
-  //     parameter lists, which we don't handle right now.
+    //   - There's a dependent scope specifier, in which case we use an
+    //     arbitrary context and wait for instantiation.
   } else {
     DC = CurContext;
     assert(isa<CXXRecordDecl>(DC) && "friend declaration not in class?");
@@ -18765,21 +18767,42 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
 
   warnOnReservedIdentifier(ND);
 
-  if (ND->isInvalidDecl())
+  if (ND->isInvalidDecl()) {
+    FriendDecl *Friend = FriendDecl::Create(
+        Context, CurContext, D.getIdentifierLoc(), ND, DS.getFriendSpecLoc());
+    Friend->setAccess(AS_public);
+    if (!isa<FunctionTemplateDecl>(ND))
+      Friend->setInvalidDecl();
+    CurContext->addDecl(Friend);
     return ND;
-
-  if (DC->isRecord())
-    CheckFriendAccess(ND);
+  }
 
   FunctionDecl *FD = ND->getAsFunction();
   assert(FD && "Expected a function declaration!");
 
+  ArrayRef<TemplateParameterList *> TPLs = FD->getTemplateParameterLists();
+  if (!TPLs.empty() && SS.isValid() && CheckTemplateDeclScope(S, TPLs.back()))
+    return nullptr;
+
+  FriendDecl *Friend;
+  if (!TPLs.empty() && SS.isValid())
+    Friend =
+        FriendTemplateDecl::Create(Context, CurContext, D.getIdentifierLoc(),
+                                   ND, DS.getFriendSpecLoc(), TPLs);
+  else
+    Friend = FriendDecl::Create(Context, CurContext, D.getIdentifierLoc(), ND,
+                                DS.getFriendSpecLoc());
+
+  Friend->setAccess(AS_public);
+  CurContext->addDecl(Friend);
+
+  if (DC->isRecord())
+    CheckFriendAccess(ND);
+
   if (!TemplateParams.empty() && SS.isValid() &&
       CheckDependentFriend(NameInfo.getLoc(), SS.getWithLocInContext(Context),
-                           FD->getTemplateParameterLists())) {
-    ND->setInvalidDecl();
+                           FD->getTemplateParameterLists()))
     return ND;
-  }
 
   // C++ [class.friend]p6:
   //   A function may be defined in a friend declaration of a class if and
@@ -18823,23 +18846,6 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
     } else if (!D.isFunctionDefinition())
       Diag(FD->getLocation(), diag::err_friend_decl_with_def_arg_must_be_def);
   }
-
-  ArrayRef<TemplateParameterList *> TPLs = FD->getTemplateParameterLists();
-  FriendDecl *Friend;
-  if (!TPLs.empty() && SS.isValid()) {
-    if (CheckTemplateDeclScope(S, TPLs.back()))
-      return nullptr;
-
-    Friend =
-        FriendTemplateDecl::Create(Context, CurContext, D.getIdentifierLoc(),
-                                   ND, DS.getFriendSpecLoc(), TPLs);
-  } else {
-    Friend = FriendDecl::Create(Context, CurContext, D.getIdentifierLoc(), ND,
-                                DS.getFriendSpecLoc());
-  }
-
-  Friend->setAccess(AS_public);
-  CurContext->addDecl(Friend);
 
   return ND;
 }

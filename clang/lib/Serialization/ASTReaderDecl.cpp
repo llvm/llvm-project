@@ -2426,6 +2426,11 @@ void ASTDeclReader::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
     break;
   case FTDK_Template:
     D->Template = Record.readTemplateName();
+    D->Friend = D->Template.getAsTemplateDecl();
+    break;
+  case FTDK_DependentTemplate:
+    D->Friend = readTypeSourceInfo();
+    D->Template = Record.readTemplateName();
     break;
   }
   D->NextFriend = readDeclID().getRawValue();

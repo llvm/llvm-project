@@ -3043,7 +3043,7 @@ void TextNodeDumper::VisitFriendDecl(const FriendDecl *D) {
 
 void TextNodeDumper::VisitFriendTemplateDecl(const FriendTemplateDecl *D) {
   TemplateName TN = D->getFriendTemplateName();
-  if (TN.isNull()) {
+  if (D->getFriendType() || TN.isNull()) {
     VisitFriendDecl(D);
     return;
   }

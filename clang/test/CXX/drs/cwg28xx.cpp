@@ -178,7 +178,8 @@ namespace cwg2858 { // cwg2858: 19
 
 template<typename... Ts>
 struct A {
-  // FIXME: The nested-name-specifier in the non-template friend declarations below are declarative, but we don't treat them as such yet.
+  // FIXME: The nested-name-specifiers in the non-template friend declarations
+  // below are declarative, but we don't treat them as such yet.
   friend void Ts...[0]::f();
   template<typename U>
   friend void Ts...[0]::g();

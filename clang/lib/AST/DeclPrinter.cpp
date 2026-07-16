@@ -910,11 +910,11 @@ void DeclPrinter::VisitFriendDecl(FriendDecl *D) {
 }
 
 void DeclPrinter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
-  for (TemplateParameterList *TPL : D->getFriendTypeTemplateParameterLists())
+  for (TemplateParameterList *TPL : D->getTemplateParameterLists())
     printTemplateParameters(TPL);
 
   TemplateName TN = D->getFriendTemplateName();
-  if (TN.isNull()) {
+  if (D->getFriendType() || TN.isNull()) {
     VisitFriendDecl(D);
   } else {
     Out << "friend ";

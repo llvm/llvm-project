@@ -481,12 +481,16 @@ public:
   }
 
   void VisitFriendTemplateDecl(const FriendTemplateDecl *D) {
-    for (TemplateParameterList *TPL : D->getFriendTypeTemplateParameterLists())
+    for (TemplateParameterList *TPL : D->getTemplateParameterLists())
       Hash.AddTemplateParameterList(TPL);
 
     TemplateName TN = D->getFriendTemplateName();
     Hash.AddBoolean(TN.isNull());
-    if (TN.isNull()) {
+    if (D->getFriendType()) {
+      VisitFriendDecl(D);
+      if (!TN.isNull())
+        Hash.AddTemplateName(TN);
+    } else if (TN.isNull()) {
       VisitFriendDecl(D);
     } else {
       Hash.AddTemplateName(TN);

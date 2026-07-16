@@ -88,16 +88,16 @@ namespace test3 {
 }
 
 namespace test4 {
-  template <class T> struct X {
+  template <class T> struct A {
     template <class U> void operator+=(U);
 
     template <class V>
     template <class U>
-    friend void X<V>::operator+=(U);
+    friend void A<V>::operator+=(U);
   };
 
   void test() {
-    X<int>() += 1.0;
+    A<int>() += 1.0;
   }
 }
 
@@ -289,7 +289,7 @@ namespace test12 {
 
 namespace test13 {
   template <typename T> struct S {
-    template <typename> friend class T::template X<int>::Y;
+    template <typename> friend class T::template A<int>::B;
   };
 }
 
@@ -400,7 +400,7 @@ namespace test19 {
     static void f();
   };
 
-  struct X {
+  struct C {
     template <class T, class U> // #test19-U-type
     friend struct A<T>::B;
     // expected-error@-1 {{template parameter of friend declaration cannot be deduced from 'A<T>'}}
@@ -419,18 +419,18 @@ namespace test19 {
 }
 
 namespace test20 {
-  class X;
+  class D;
 
   template <class T> struct A {
     template <class, class U> struct B {
       struct C {
-        static void f(X &);
+        static void f(D &);
       };
-      static void g(X &);
+      static void g(D &);
     };
   };
 
-  class X {
+  class D {
     int n;
 
     template <class T>
@@ -439,18 +439,18 @@ namespace test20 {
 
     template <class T>
     template <class U>
-    friend void A<T>::B<T, U>::g(X &);
+    friend void A<T>::B<T, U>::g(D &);
   };
 
   template <class T>
   template <class V, class U>
-  void A<T>::B<V, U>::C::f(X &x) {
+  void A<T>::B<V, U>::C::f(D &x) {
     x.n = 0;
   }
 
   template <class T>
   template <class V, class U>
-  void A<T>::B<V, U>::g(X &x) {
+  void A<T>::B<V, U>::g(D &x) {
     x.n = 0;
   }
 
@@ -458,14 +458,14 @@ namespace test20 {
 }
 
 namespace test21 {
-  class X;
+  class C;
 
   template <class T> struct A {
     template <class U> struct B;
   };
 
-  class X {
-    int n; // #test21-X-n
+  class C {
+    int n; // #test21-C-n
     template <class T>
     template <class U>
     friend struct A<T>::B;
@@ -473,10 +473,10 @@ namespace test21 {
 
   template <> struct A<int> {
     template <int U> struct B {
-      static void f(X &x) {
+      static void f(C &x) {
         x.n = 0;
-        // expected-error@-1 {{'n' is a private member of 'test21::X'}}
-        //   expected-note@#test21-X-n {{implicitly declared private here}}
+        // expected-error@-1 {{'n' is a private member of 'test21::C'}}
+        //   expected-note@#test21-C-n {{implicitly declared private here}}
       }
     };
   };
@@ -485,97 +485,97 @@ namespace test21 {
 }
 
 namespace test22 {
-  class X;
+  class C;
 
   template <class T> struct A {
     struct B;
   };
 
-  class X {
-    int n; // #test22-X-n
+  class C {
+    int n; // #test22-C-n
     template <class T> friend struct A<T>::B;
   };
 
   template <> struct A<int> {
     union B {
-      static void f(X &x) {
+      static void f(C &x) {
         x.n = 0;
-        // expected-error@-1 {{'n' is a private member of 'test22::X'}}
-        //   expected-note@#test22-X-n {{implicitly declared private here}}
+        // expected-error@-1 {{'n' is a private member of 'test22::C'}}
+        //   expected-note@#test22-C-n {{implicitly declared private here}}
       }
     };
   };
 }
 
 namespace test23 {
-  class X;
+  class B;
 
   template <class T> struct A {
-    template <class U> static void f(X &);
+    template <class U> static void f(B &);
   };
 
-  class X {
-    int n; // #test23-X-n
+  class B {
+    int n; // #test23-B-n
     template <class T>
     template <class U>
-    friend void A<T>::f(X &);
+    friend void A<T>::f(B &);
   };
 
   template <> struct A<int> {
-    template <int U> static void f(X &x) {
+    template <int U> static void f(B &x) {
       x.n = 0;
-      // expected-error@-1 {{'n' is a private member of 'test23::X'}}
-      //   expected-note@#test23-X-n {{implicitly declared private here}}
+      // expected-error@-1 {{'n' is a private member of 'test23::B'}}
+      //   expected-note@#test23-B-n {{implicitly declared private here}}
     }
   };
 
-  template void A<int>::f<0>(X &);
+  template void A<int>::f<0>(B &);
 }
 
 namespace test24 {
-  class X;
+  class B;
 
   template <class T> struct A {
-    static void f(X &);
+    static void f(B &);
   };
 
-  class X {
-    int n; // #test24-X-n
-    template <class T> friend void A<T>::f(X &);
+  class B {
+    int n; // #test24-B-n
+    template <class T> friend void A<T>::f(B &);
   };
 
   template <> struct A<int> {
-    static void f(X &x, ...) {
+    static void f(B &x, ...) {
       x.n = 0;
-      // expected-error@-1 {{'n' is a private member of 'test24::X'}}
-      //   expected-note@#test24-X-n {{implicitly declared private here}}
+      // expected-error@-1 {{'n' is a private member of 'test24::B'}}
+      //   expected-note@#test24-B-n {{implicitly declared private here}}
     }
   };
 }
 
 namespace test25 {
-  class X;
+  class C;
 
   template <class... Ts> struct A {
     struct B {
-      static void f(X &);
+      static void f(C &);
     };
   };
 
-  class X {
+  class C {
     int n;
     template <class... Ts> friend struct A<Ts...>::B;
   };
 
-  template <class... Ts> void A<Ts...>::B::f(X &x) {
+  template <class... Ts> void A<Ts...>::B::f(C &x) {
     x.n = 0;
   }
 
-  template void A<int, double>::B::f(X &);
+  template void A<int, double>::B::f(C &);
 }
 
 namespace test26 {
-  class X;
+  class B;
 
   template <class T> struct A {
     template <class U> static void f(U);
@@ -585,7 +585,7 @@ namespace test26 {
     template <class U> static void f(U);
   };
 
-  class X {
+  class B {
     int n;
     template <class T>
     template <class U>
@@ -595,14 +595,14 @@ namespace test26 {
   template <class T>
   template <class U>
   void A<T>::f(U) {
-    X x;
-    x.n = 0;
+    B b;
+    b.n = 0;
   }
 
   template <class U>
   void A<int>::f(U) {
-    X x;
-    x.n = 0;
+    B b;
+    b.n = 0;
   }
 
   template void A<long>::f<double>(double);
@@ -611,23 +611,23 @@ namespace test26 {
 
 namespace test27 {
   template <class T> struct A {
-    struct D {
+    struct B {
       template <class U> static void g(U);
-      template <class U> struct Y;
+      template <class U> struct C;
     };
   };
 
-  template <class V> struct X {
-    template <class U> friend void A<V>::D::g(U);
-    // expected-error@-1 {{nested name specifier 'A<V>::D' in friend declaration must end with a simple-template-id naming a class template, but 'D' is a non-template member}}
+  template <class V> struct D {
+    template <class U> friend void A<V>::B::g(U);
+    // expected-error@-1 {{nested name specifier 'A<V>::B' in friend declaration must end with a simple-template-id naming a class template, but 'B' is a non-template member}}
 
-    template <class U> friend class A<V>::D::Y;
-    // expected-error@-1 {{nested name specifier 'A<V>::D' in friend declaration must end with a simple-template-id naming a class template, but 'D' is a non-template member}}
+    template <class U> friend class A<V>::B::C;
+    // expected-error@-1 {{nested name specifier 'A<V>::B' in friend declaration must end with a simple-template-id naming a class template, but 'B' is a non-template member}}
   };
 }
 
 namespace test28 {
-  class X;
+  class B;
 
   template <class T> struct A {
     ~A();
@@ -637,54 +637,54 @@ namespace test28 {
     ~A();
   };
 
-  class X {
+  class B {
     int n;
     template <class T> friend A<T>::~A();
   };
 
   template <class T> A<T>::~A() {
-    X x;
-    x.n = 0;
+    B b;
+    b.n = 0;
   }
 
   A<int>::~A() {
-    X x;
-    x.n = 0;
+    B b;
+    b.n = 0;
   }
 
   template struct A<long>;
 }
 
 namespace test29 {
-  template <class T> class X;
+  template <class T> class D;
 
   template <class T> struct A {
-    template <class I> struct D {
-      template <class U> struct Y {
-        static void h(X<T> &);
+    template <class I> struct B {
+      template <class U> struct C {
+        static void h(D<T> &);
       };
     };
   };
 
-  template <class V> class X {
+  template <class V> class D {
     int n;
 
     template <class U>
-    friend class A<V>::D<int>::Y;
+    friend class A<V>::B<int>::C;
   };
 
   template <class T>
   template <class I>
   template <class U>
-  void A<T>::D<I>::Y<U>::h(X<T> &x) {
+  void A<T>::B<I>::C<U>::h(D<T> &x) {
     x.n = 0;
   }
 
-  template struct A<int>::D<int>::Y<double>;
+  template struct A<int>::B<int>::C<double>;
 }
 
 namespace test30 {
-  class X;
+  class B;
 
   template <class T> struct A {
     template <class U> static void f(U);
@@ -694,8 +694,8 @@ namespace test30 {
     template <class U> static void f(U *);
   };
 
-  class X {
-    int n; // #test30-X-n
+  class B {
+    int n; // #test30-B-n
     template <class T>
     template <class U>
     friend void A<T>::f(U);
@@ -703,46 +703,46 @@ namespace test30 {
 
   template <class U>
   void A<int>::f(U *) {
-    X x;
-    x.n = 0;
-    // expected-error@-1 {{'n' is a private member of 'test30::X'}}
-    //   expected-note@#test30-X-n {{implicitly declared private here}}
+    B b;
+    b.n = 0;
+    // expected-error@-1 {{'n' is a private member of 'test30::B'}}
+    //   expected-note@#test30-B-n {{implicitly declared private here}}
   }
 
   template void A<int>::f<double>(double *);
 }
 
 namespace test31 {
-  class X;
+  class B;
 
   template <class T> struct A {
-    static void f(X &) noexcept;
+    static void f(B &) noexcept;
   };
 
   template <> struct A<int> {
-    static void f(X &);
+    static void f(B &);
   };
 
-  class X {
-    int n; // #test31-X-n
-    template <class T> friend void A<T>::f(X &) noexcept;
+  class B {
+    int n; // #test31-B-n
+    template <class T> friend void A<T>::f(B &) noexcept;
   };
 
-  template <class T> void A<T>::f(X &x) noexcept {
+  template <class T> void A<T>::f(B &x) noexcept {
     x.n = 0;
   }
 
-  void A<int>::f(X &x) {
+  void A<int>::f(B &x) {
     x.n = 0;
-    // expected-error@-1 {{'n' is a private member of 'test31::X'}}
-    //   expected-note@#test31-X-n {{implicitly declared private here}}
+    // expected-error@-1 {{'n' is a private member of 'test31::B'}}
+    //   expected-note@#test31-B-n {{implicitly declared private here}}
   }
 
-  template void A<long>::f(X &) noexcept;
+  template void A<long>::f(B &) noexcept;
 }
 
 namespace test32 {
-  class X;
+  class B;
 
   template <class T> struct A {
     A();
@@ -754,31 +754,31 @@ namespace test32 {
     operator int();
   };
 
-  class X {
+  class B {
     int n;
     template <class T> friend A<T>::A();
     template <class T> friend A<T>::operator int();
   };
 
   template <class T> A<T>::A() {
-    X x;
-    x.n = 0;
+    B b;
+    b.n = 0;
   }
 
   template <class T> A<T>::operator int() {
-    X x;
-    x.n = 0;
+    B b;
+    b.n = 0;
     return 0;
   }
 
   A<char>::A() {
-    X x;
-    x.n = 0;
+    B b;
+    b.n = 0;
   }
 
   A<char>::operator int() {
-    X x;
-    x.n = 0;
+    B b;
+    b.n = 0;
     return 0;
   }
 
@@ -804,58 +804,58 @@ namespace test33 {
     template <class> using D = B;
   };
 
-  template <class P> struct X {
+  template <class P> struct D {
     template <class U> friend struct P::template D<U>::M;
     // expected-error@-1 {{nested name specifier 'test33::C::template D<U>' in friend declaration must end with a simple-template-id naming a class template, but 'D' is an alias template}}
   };
 
-  template struct X<A>;
-  template struct X<C>;
-  // expected-note@-1 {{in instantiation of template class 'test33::X<test33::C>' requested here}}
+  template struct D<A>;
+  template struct D<C>;
+  // expected-note@-1 {{in instantiation of template class 'test33::D<test33::C>' requested here}}
 
-  template <class P> struct Y {
+  template <class P> struct E {
     template <class U> friend struct P::template D<int>::N;
     // expected-error@-1 {{nested name specifier 'test33::C::template D<int>' in friend declaration must end with a simple-template-id naming a class template, but 'D' is an alias template}}
   };
 
-  template struct Y<A>;
-  template struct Y<C>;
-  // expected-note@-1 {{in instantiation of template class 'test33::Y<test33::C>' requested here}}
+  template struct E<A>;
+  template struct E<C>;
+  // expected-note@-1 {{in instantiation of template class 'test33::E<test33::C>' requested here}}
 
-  template <class P> struct Z {
+  template <class P> struct F {
     template <class U> friend void P::template D<U>::f();
     // expected-error@-1 {{nested name specifier 'test33::C::template D<U>' in friend declaration must end with a simple-template-id naming a class template, but 'D' is an alias template}}
   };
 
-  template struct Z<A>;
-  template struct Z<C>;
-  // expected-note@-1 {{in instantiation of template class 'test33::Z<test33::C>' requested here}}
+  template struct F<A>;
+  template struct F<C>;
+  // expected-note@-1 {{in instantiation of template class 'test33::F<test33::C>' requested here}}
 }
 
 namespace test34 {
-  template <class V> class X;
+  template <class V> class C;
 
   template <class T> struct A {
     template <class U> struct B {
-      static void f(X<long> &);
+      static void f(C<long> &);
     };
   };
 
-  template <class V> class X {
-    int n; // #test34-X-n
+  template <class V> class C {
+    int n; // #test34-C-n
 
     template <class T>
     friend struct A<T>::template B<V>;
   };
 
-  template class X<long>;
+  template class C<long>;
 
   template <class T>
   template <class U>
-  void A<T>::B<U>::f(X<long> &x) {
+  void A<T>::B<U>::f(C<long> &x) {
     x.n = 0;
-    // expected-error@-1 {{'n' is a private member of 'test34::X<long>'}}
-    //   expected-note@#test34-X-n {{implicitly declared private here}}
+    // expected-error@-1 {{'n' is a private member of 'test34::C<long>'}}
+    //   expected-note@#test34-C-n {{implicitly declared private here}}
   }
 
   template struct A<char>::B<long>;
@@ -864,63 +864,63 @@ namespace test34 {
 }
 
 namespace test35 {
-  template <class V> class X;
+  template <class V> class B;
 
   template <class T> struct A {
-    template <class U, class V> static void f(X<V> &);
+    template <class U, class V> static void f(B<V> &);
   };
 
-  template <class V> class X {
-    int n; // #test35-X-n
+  template <class V> class B {
+    int n; // #test35-B-n
 
     template <class T>
-    friend void A<T>::template f<int, V>(X &);
+    friend void A<T>::template f<int, V>(B &);
   };
 
   template <class T>
   template <class U, class V>
-  void A<T>::f(X<V> &x) {
+  void A<T>::f(B<V> &x) {
     x.n = 0;
-    // expected-error@-1 {{'n' is a private member of 'test35::X<long>'}}
-    //   expected-note@#test35-X-n {{implicitly declared private here}}
+    // expected-error@-1 {{'n' is a private member of 'test35::B<long>'}}
+    //   expected-note@#test35-B-n {{implicitly declared private here}}
   }
 
-  template class X<long>;
-  template void A<char>::f<int, long>(X<long> &);
-  template void A<char>::f<double, long>(X<long> &);
+  template class B<long>;
+  template void A<char>::f<int, long>(B<long> &);
+  template void A<char>::f<double, long>(B<long> &);
   // expected-note@-1 {{in instantiation of function template specialization 'test35::A<char>::f<double, long>' requested here}}
 }
 
 namespace test36 {
-  template <class V> class X;
+  template <class V> class B;
 
   template <class T> struct A {
-    template <class U, class V> static void f(X<V> &, U);
+    template <class U, class V> static void f(B<V> &, U);
   };
 
-  template <class V> class X {
-    int n; // #test36-X-n
+  template <class V> class B {
+    int n; // #test36-B-n
 
     template <class T>
-    friend void A<T>::f(X &, int);
+    friend void A<T>::f(B &, int);
   };
 
   template <class T>
   template <class U, class V>
-  void A<T>::f(X<V> &x, U) {
+  void A<T>::f(B<V> &x, U) {
     x.n = 0;
-    // expected-error@-1 {{'n' is a private member of 'test36::X<long>'}}
-    //   expected-note@#test36-X-n {{implicitly declared private here}}
+    // expected-error@-1 {{'n' is a private member of 'test36::B<long>'}}
+    //   expected-note@#test36-B-n {{implicitly declared private here}}
   }
 
-  template class X<long>;
-  template void A<char>::f<int, long>(X<long> &, int);
-  template void A<char>::f<double, long>(X<long> &, double);
+  template class B<long>;
+  template void A<char>::f<int, long>(B<long> &, int);
+  template void A<char>::f<double, long>(B<long> &, double);
   // expected-note@-1 {{in instantiation of function template specialization 'test36::A<char>::f<double, long>' requested here}}
 }
 
 namespace test37 {
-  class X;
+  class C;
 
   template <class T> struct A {
     template <class U> struct B;
@@ -928,22 +928,22 @@ namespace test37 {
 
   template <> struct A<int> {
     template <class U> struct B {
-      static void f(X &);
+      static void f(C &);
     };
   };
 
-  class X {
-    int n; // #test37-X-n
+  class C {
+    int n; // #test37-C-n
 
     template <class T>
     friend struct A<T>::B<long>;
   };
 
   template <class U>
-  void A<int>::B<U>::f(X &x) {
+  void A<int>::B<U>::f(C &x) {
     x.n = 0;
-    // expected-error@-1 {{'n' is a private member of 'test37::X'}}
-    //   expected-note@#test37-X-n {{implicitly declared private here}}
+    // expected-error@-1 {{'n' is a private member of 'test37::C'}}
+    //   expected-note@#test37-C-n {{implicitly declared private here}}
   }
 
   template struct A<int>::B<long>;
@@ -952,37 +952,37 @@ namespace test37 {
 }
 
 namespace test38 {
-  class X;
+  class B;
 
   template <class T> struct A {
-    template <class U> static void f(X &);
+    template <class U> static void f(B &);
   };
 
   template <> struct A<int> {
-    template <class U> static void f(X &);
+    template <class U> static void f(B &);
   };
 
-  class X {
-    int n; // #test38-X-n
+  class B {
+    int n; // #test38-B-n
 
     template <class T>
-    friend void A<T>::f<long>(X &);
+    friend void A<T>::f<long>(B &);
   };
 
   template <class U>
-  void A<int>::f(X &x) {
+  void A<int>::f(B &x) {
     x.n = 0;
-    // expected-error@-1 {{'n' is a private member of 'test38::X'}}
-    //   expected-note@#test38-X-n {{implicitly declared private here}}
+    // expected-error@-1 {{'n' is a private member of 'test38::B'}}
+    //   expected-note@#test38-B-n {{implicitly declared private here}}
   }
 
-  template void A<int>::f<long>(X &);
-  template void A<int>::f<double>(X &);
+  template void A<int>::f<long>(B &);
+  template void A<int>::f<double>(B &);
   // expected-note@-1 {{in instantiation of function template specialization 'test38::A<int>::f<double>' requested here}}
 }
 
 namespace test39 {
-  class X;
+  class D;
 
   template <class T> struct A {
     template <class U> struct B;
@@ -990,46 +990,156 @@ namespace test39 {
 
   template <> struct A<int> {
     struct B {
-      static void f(X &);
+      static void f(D &);
     };
   };
 
   template <> struct A<long> {
     template <class U> union B {
-      static void f(X &);
+      static void f(D &);
     };
   };
 
   template <> struct A<char> {
     template <class U> struct C {
-      static void f(X &);
+      static void f(D &);
     };
   };
 
-  class X {
-    int n; // #test39-X-n
+  class D {
+    int n; // #test39-D-n
 
     template <class T>
     friend struct A<T>::B<double>;
   };
 
-  void A<int>::B::f(X &x) {
+  void A<int>::B::f(D &x) {
     x.n = 0;
-    // expected-error@-1 {{'n' is a private member of 'test39::X'}}
-    //   expected-note@#test39-X-n {{implicitly declared private here}}
+    // expected-error@-1 {{'n' is a private member of 'test39::D'}}
+    //   expected-note@#test39-D-n {{implicitly declared private here}}
   }
 
   template <class U>
-  void A<long>::B<U>::f(X &x) {
+  void A<long>::B<U>::f(D &x) {
     x.n = 0;
-    // expected-error@-1 {{'n' is a private member of 'test39::X'}}
-    //   expected-note@#test39-X-n {{implicitly declared private here}}
+    // expected-error@-1 {{'n' is a private member of 'test39::D'}}
+    //   expected-note@#test39-D-n {{implicitly declared private here}}
   }
 
   template <class U>
-  void A<char>::C<U>::f(X &x) {
+  void A<char>::C<U>::f(D &x) {
     x.n = 0;
-    // expected-error@-1 {{'n' is a private member of 'test39::X'}}
-    //   expected-note@#test39-X-n {{implicitly declared private here}}
+    // expected-error@-1 {{'n' is a private member of 'test39::D'}}
+    //   expected-note@#test39-D-n {{implicitly declared private here}}
   }
+}
+
+namespace test40 {
+  template <class> class C;
+
+  template <class T> struct A {
+    template <class U> struct B;
+  };
+
+  template <> struct A<int> {
+    struct B { // expected-note {{previous definition is here}}
+      static void f(C<int> &);
+    };
+  };
+
+  template <> struct A<long> {
+    template <class U> struct B {
+      static void f(C<long> &);
+    };
+  };
+
+  template <class V> class C {
+    int n; // #test40-C-n
+
+    template <class U>
+    friend struct A<V>::B; // expected-error {{redefinition of 'B' as different kind of symbol}}
+  };
+
+  template class C<int>;
+  // expected-note@-1 {{in instantiation of template class 'test40::C<int>' requested here}}
+
+  void A<int>::B::f(C<int> &x) {
+    x.n = 0;
+    // expected-error@-1 {{'n' is a private member of 'test40::C<int>'}}
+    //   expected-note@#test40-C-n {{implicitly declared private here}}
+  }
+
+  template class C<long>;
+
+  template <class U>
+  void A<long>::B<U>::f(C<long> &x) {
+    x.n = 0;
+  }
+
+  template struct A<long>::B<double>;
+}
+
+namespace test41 {
+  class C;
+
+  template <class T> struct A {
+    struct B;
+  };
+
+  template <> struct A<int> {
+    template <class U> struct B {
+      static void f(C &);
+    };
+  };
+
+  class C {
+    int n; // #test41-C-n
+
+    template <class T>
+    friend struct A<T>::B;
+  };
+
+  template <class U>
+  void A<int>::B<U>::f(C &x) {
+    x.n = 0;
+    // expected-error@-1 {{'n' is a private member of 'test41::C'}}
+    //   expected-note@#test41-C-n {{implicitly declared private here}}
+  }
+
+  template struct A<int>::B<double>;
+}
+
+namespace test42 {
+  template <class> class D;
+
+  struct A {
+    template <class U> struct B {
+      struct C {
+        static void f(D<A> &);
+      };
+      static void g(D<A> &);
+    };
+  };
+
+  template <class T> class D {
+    int n;
+
+    template <class U>
+    friend struct T::template B<U>::C;
+
+    template <class U>
+    friend void T::template B<U>::g(D &);
+  };
+
+  template <class U>
+  void A::B<U>::C::f(D<A> &x) {
+    x.n = 0;
+  }
+
+  template <class U>
+  void A::B<U>::g(D<A> &x) {
+    x.n = 0;
+  }
+
+  template struct A::B<int>;
 }

@@ -1845,20 +1845,26 @@ void ASTDeclWriter::VisitFriendDecl(FriendDecl *D) {
 }
 
 void ASTDeclWriter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
-  // Record the number of friend type template parameter lists here
-  // so as to simplify memory allocation during deserialization.
+  // Record the number of template parameter lists here to simplify memory
+  // allocation during deserialization.
   Record.push_back(D->NumTPLists);
   VisitDecl(D);
-  for (TemplateParameterList *TPL : D->getFriendTypeTemplateParameterLists())
+  for (TemplateParameterList *TPL : D->getTemplateParameterLists())
     Record.AddTemplateParameterList(TPL);
-  if (D->Template.isNull()) {
-    if (D->getFriendDecl()) {
-      Record.push_back(FTDK_Decl);
-      Record.AddDeclRef(D->getFriendDecl());
-    } else {
+  if (D->getFriendType()) {
+    if (D->Template.isNull())
       Record.push_back(FTDK_Type);
-      Record.AddTypeSourceInfo(D->getFriendType());
+    else {
+      assert(D->Template.isDependent());
+      Record.push_back(FTDK_DependentTemplate);
     }
+    Record.AddTypeSourceInfo(D->getFriendType());
+    if (!D->Template.isNull())
+      Record.AddTemplateName(D->Template);
+  } else if (D->Template.isNull()) {
+    assert(D->getFriendDecl());
+    Record.push_back(FTDK_Decl);
+    Record.AddDeclRef(D->getFriendDecl());
   } else {
     Record.push_back(FTDK_Template);
     Record.AddTemplateName(D->Template);

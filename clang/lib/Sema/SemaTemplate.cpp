@@ -3045,6 +3045,8 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
       if (TemplateDecl *Template = Name.getAsTemplateDecl()) {
         ExpectedTemplateParams = Template->getTemplateParameters();
         NeedNonemptyTemplateHeader = true;
+      } else if (Name.getAsDependentTemplateName()) {
+        NeedNonemptyTemplateHeader = true;
       } else if (Name.getAsDeducedTemplateName()) {
         // FIXME:  We actually could/should check the template arguments here
         // against the corresponding template parameter list.

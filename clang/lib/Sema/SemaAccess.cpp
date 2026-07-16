@@ -745,8 +745,8 @@ static AccessResult MatchesFriend(Sema &S, FriendTemplateDecl *FTD,
   if (!InstTPL || Trap.hasErrorOccurred())
     return OnFailure;
 
-  Sema::TemplateCompareNewDeclInfo FriendInfo(ContextDC, ContextDC,
-                                              FTD->getLocation());
+  Sema::TemplateCompareNewDeclInfo FriendInfo(
+      ContextDC, FTD->getLexicalDeclContext(), FTD->getLocation());
   if (S.TemplateParameterListsAreEqual(
           FriendInfo, InstTPL, ContextCTD, ContextCTD->getTemplateParameters(),
           /*Complain=*/false, Sema::TPL_TemplateMatch))
@@ -764,8 +764,7 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
   if (!FriendTST)
     return MatchesFriend(S, EC, FriendCTD);
 
-  ArrayRef<TemplateParameterList *> TPLs =
-      FTD->getFriendTypeTemplateParameterLists();
+  ArrayRef<TemplateParameterList *> TPLs = FTD->getTemplateParameterLists();
   if (TPLs.empty())
     return AR_inaccessible;
 
@@ -842,8 +841,8 @@ static AccessResult MatchesFriend(Sema &S, FriendTemplateDecl *FTD,
   TemplateDeductionInfo Info(FTD->getLocation());
   Sema::SFINAETrap Trap(S, Info);
   LocalInstantiationScope InstantiationScope(S);
-  Sema::TemplateCompareNewDeclInfo FriendInfo(ContextDC, ContextDC,
-                                              FTD->getLocation());
+  Sema::TemplateCompareNewDeclInfo FriendInfo(
+      ContextDC, FTD->getLexicalDeclContext(), FTD->getLocation());
   if (FriendTemplate) {
     TemplateParameterList *InstTPL = SubstTemplateParameterList(
         S, FriendTemplate->getTemplateParameters(), ContextDC, DeducedArgs);
@@ -897,32 +896,27 @@ static AccessResult MatchesFriend(Sema &S, FriendTemplateDecl *FTD,
   if (!FriendTemplate)
     return AR_accessible;
 
-  AssociatedConstraint FriendRC = FriendFD->getTrailingRequiresClause();
-  AssociatedConstraint ContextRC = ContextFD->getTrailingRequiresClause();
-  if (FriendRC.isNull() != ContextRC.isNull())
+  AssociatedConstraint FriendRequiresClause =
+      FriendFD->getTrailingRequiresClause();
+  AssociatedConstraint ContextRequiresClause =
+      ContextFD->getTrailingRequiresClause();
+  if (FriendRequiresClause.isNull() != ContextRequiresClause.isNull())
     return AR_inaccessible;
 
-  if (!FriendRC)
+  if (!FriendRequiresClause)
     return AR_accessible;
 
-  ExprResult InstFriendRC = S.SubstConstraintExprWithoutSatisfaction(
-      const_cast<Expr *>(FriendRC.ConstraintExpr), DeducedArgs);
+  ExprResult InstFriendRequiresClause =
+      S.SubstConstraintExprWithoutSatisfaction(
+          const_cast<Expr *>(FriendRequiresClause.ConstraintExpr), DeducedArgs);
 
-  if (!InstFriendRC.isUsable())
+  if (!InstFriendRequiresClause.isUsable())
     return OnFailure;
 
-  if (!S.AreConstraintExpressionsEqual(ContextFD, ContextRC.ConstraintExpr,
-                                       FriendInfo, InstFriendRC.get())) {
-    ExprResult InstContextRC = S.SubstConstraintExprWithoutSatisfaction(
-        const_cast<Expr *>(ContextRC.ConstraintExpr), DeducedArgs);
-
-    if (!InstContextRC.isUsable())
-      return OnFailure;
-
-    if (!S.AreConstraintExpressionsEqual(/*Old=*/nullptr, InstContextRC.get(),
-                                         FriendInfo, InstFriendRC.get()))
-      return OnFailure;
-  }
+  if (!S.AreConstraintExpressionsEqual(
+          ContextFD, ContextRequiresClause.ConstraintExpr, FriendInfo,
+          InstFriendRequiresClause.get()))
+    return OnFailure;
   return Trap.hasErrorOccurred() ? AR_inaccessible : AR_accessible;
 }
 
@@ -935,8 +929,7 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
   if (!FriendTST)
     return AR_inaccessible;
 
-  ArrayRef<TemplateParameterList *> TPLs =
-      FTD->getFriendTypeTemplateParameterLists();
+  ArrayRef<TemplateParameterList *> TPLs = FTD->getTemplateParameterLists();
   if (TPLs.empty())
     return AR_inaccessible;
 
@@ -984,8 +977,7 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
     if (!FriendQTST)
       return OnFailure;
 
-    ArrayRef<TemplateParameterList *> TPLs =
-        FTD->getFriendTypeTemplateParameterLists();
+    ArrayRef<TemplateParameterList *> TPLs = FTD->getTemplateParameterLists();
     if (TPLs.empty())
       return OnFailure;
 
@@ -1052,8 +1044,7 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
   if (!FriendTST)
     return OnFailure;
 
-  ArrayRef<TemplateParameterList *> TPLs =
-      FTD->getFriendTypeTemplateParameterLists();
+  ArrayRef<TemplateParameterList *> TPLs = FTD->getTemplateParameterLists();
   if (TPLs.empty())
     return OnFailure;
 
@@ -1064,6 +1055,15 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
       continue;
 
     if (ClassTemplateDecl *ContextCTD = GetClassTemplateDecl(ContextRD)) {
+      if (FTD->getFriendTemplateName().isNull()) {
+        if (FailedTSC) {
+          MultiLevelTemplateArgumentList DeducedArgs;
+          DeduceTemplateArguments(S, FTD, ContextCTD->getDeclContext(),
+                                  FriendTST, TPLs, FailedTSC, DeducedArgs);
+        }
+        continue;
+      }
+
       AccessResult Result = MatchesFriend(
           S, FTD, FriendDNT->getIdentifier(), FriendTagKind, ContextCTD,
           FriendTST, TPLs.drop_back(), TPLs.back(), FailedTSC);
@@ -1073,6 +1073,9 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
         OnFailure = AR_dependent;
       continue;
     }
+
+    if (!FTD->getFriendTemplateName().isNull())
+      continue;
 
     if ((FriendTagKind == TagTypeKind::Union) != ContextRD->isUnion())
       continue;

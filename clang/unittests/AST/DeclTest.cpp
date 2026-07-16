@@ -660,6 +660,126 @@ TEST(Decl, TemplateArgumentDefaulted) {
   EXPECT_TRUE(ArgList.get(3).getIsDefaulted());
 }
 
+TEST(Decl, InstantiatedDependentFriendTemplate) {
+  StringRef Code = R"cpp(
+    template <class T> struct A {
+      template <class U> struct B;
+    };
+
+    template <class T> struct C {
+      template <class U> friend struct A<T>::B;
+    };
+
+    template struct C<int>;
+  )cpp";
+
+  auto AST = tooling::buildASTFromCodeWithArgs(Code, {"-std=c++20"});
+  ASTContext &Ctx = AST->getASTContext();
+  const auto *CTemplate = selectFirst<ClassTemplateDecl>(
+      "c", match(classTemplateDecl(hasName("C")).bind("c"), Ctx));
+  ASSERT_NE(CTemplate, nullptr);
+
+  const FriendTemplateDecl *DependentFriend = nullptr;
+  for (const Decl *D : CTemplate->getTemplatedDecl()->decls()) {
+    if (const auto *FTD = dyn_cast<FriendTemplateDecl>(D)) {
+      DependentFriend = FTD;
+      break;
+    }
+  }
+  ASSERT_NE(DependentFriend, nullptr);
+  ASSERT_NE(DependentFriend->getFriendType(), nullptr);
+  EXPECT_TRUE(DependentFriend->getFriendTemplateName().isDependent());
+
+  const auto *CSpecialization = selectFirst<ClassTemplateSpecializationDecl>(
+      "c", match(classTemplateSpecializationDecl(hasName("C")).bind("c"), Ctx));
+  ASSERT_NE(CSpecialization, nullptr);
+
+  const FriendTemplateDecl *InstFriend = nullptr;
+  for (const Decl *D : CSpecialization->decls()) {
+    if (const auto *FTD = dyn_cast<FriendTemplateDecl>(D)) {
+      InstFriend = FTD;
+      break;
+    }
+  }
+  ASSERT_NE(InstFriend, nullptr);
+  ASSERT_EQ(InstFriend->getFriendType(), nullptr);
+  ASSERT_FALSE(InstFriend->getFriendTemplateName().isNull());
+
+  const FriendDecl *Friend = InstFriend;
+  EXPECT_EQ(Friend->getFriendDecl(),
+            InstFriend->getFriendTemplateName().getAsTemplateDecl());
+  EXPECT_EQ(InstFriend->getSourceRange().getEnd(), InstFriend->getLocation());
+}
+
+TEST(Decl, InstantiatedDependentFriendTemplateParameters) {
+  StringRef Code = R"cpp(
+    template <class T> struct A {
+      template <class U> struct B;
+    };
+
+    template <class V> struct C {
+      template <class U>
+      friend struct A<U>::template B<V>;
+    };
+
+    template struct C<int>;
+  )cpp";
+
+  auto AST = tooling::buildASTFromCodeWithArgs(Code, {"-std=c++20"});
+  ASTContext &Ctx = AST->getASTContext();
+  const auto *CSpecialization = selectFirst<ClassTemplateSpecializationDecl>(
+      "c", match(classTemplateSpecializationDecl(hasName("C")).bind("c"), Ctx));
+  ASSERT_NE(CSpecialization, nullptr);
+  ASSERT_NE(CSpecialization->friend_begin(), CSpecialization->friend_end());
+
+  const auto *Friend =
+      dyn_cast<FriendTemplateDecl>(*CSpecialization->friend_begin());
+  ASSERT_NE(Friend, nullptr);
+  ASSERT_EQ(Friend->getTemplateParameterLists().size(), 1u);
+  ASSERT_NE(Friend->getFriendType(), nullptr);
+
+  TemplateSpecializationTypeLoc FriendTL =
+      Friend->getFriendType()
+          ->getTypeLoc()
+          .castAs<TemplateSpecializationTypeLoc>();
+  const Type *QualifierType =
+      FriendTL.getQualifierLoc().getNestedNameSpecifier().getAsType();
+  ASSERT_NE(QualifierType, nullptr);
+  const auto *TST = QualifierType->getAs<TemplateSpecializationType>();
+  ASSERT_NE(TST, nullptr);
+  const auto *TTP =
+      TST->template_arguments()[0].getAsType()->getAs<TemplateTypeParmType>();
+  ASSERT_NE(TTP, nullptr);
+  EXPECT_EQ(TTP->getDecl(),
+            Friend->getTemplateParameterLists().front()->getParam(0));
+}
+
+TEST(Decl, InvalidFunctionFriendIsRetained) {
+  StringRef Code = R"cpp(
+    int f();
+    struct A {
+      friend void f();
+    };
+  )cpp";
+
+  IgnoringDiagConsumer Diags;
+  auto AST = tooling::buildASTFromCodeWithArgs(
+      Code, {"-std=c++20"}, "input.cc", "clang-tool",
+      std::make_shared<PCHContainerOperations>(),
+      tooling::getClangStripDependencyFileAdjuster(),
+      tooling::FileContentMappings(), &Diags);
+  ASTContext &Ctx = AST->getASTContext();
+  const auto *Record = selectFirst<CXXRecordDecl>(
+      "a", match(cxxRecordDecl(hasName("A"), isDefinition()).bind("a"), Ctx));
+  ASSERT_NE(Record, nullptr);
+  ASSERT_NE(Record->friend_begin(), Record->friend_end());
+
+  const FriendDecl *Friend = *Record->friend_begin();
+  EXPECT_TRUE(Friend->isInvalidDecl());
+  ASSERT_NE(Friend->getFriendDecl(), nullptr);
+  EXPECT_TRUE(Friend->getFriendDecl()->isInvalidDecl());
+}
+
 TEST(Decl, CXXDestructorDeclsShouldHaveWellFormedNameInfoRanges) {
   // GH71161
   llvm::Annotations Code(R"cpp(
