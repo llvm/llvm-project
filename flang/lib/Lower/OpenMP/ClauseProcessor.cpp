@@ -19,7 +19,6 @@
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/ReductionProcessor.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Utils/OpenMP.h"
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
@@ -538,7 +537,8 @@ bool ClauseProcessor::processInclusive(
 
 bool ClauseProcessor::processInitializer(
     lower::SymMap &symMap, ReductionProcessor::GenInitValueCBTy &genInitValueCB,
-    const parser::OmpStylizedInstance *parserInitInstance) const {
+    const parser::OmpStylizedInstance *parserInitInstance,
+    unsigned instanceIdx) const {
   if (auto *clause = findUniqueClause<omp::clause::Initializer>()) {
     // Extract the typed assignment from the parser-level instance, if
     // the initializer is an assignment statement (as opposed to a call).
@@ -553,13 +553,21 @@ bool ClauseProcessor::processInitializer(
             assign = &*wrapper->v;
       }
     }
-    genInitValueCB = [&, clause, assign](fir::FirOpBuilder &builder,
-                                         mlir::Location loc, mlir::Type type,
-                                         mlir::Value moldArg,
-                                         mlir::Value privArg) {
+    // A multi-type declare reduction carries one initializer instance per
+    // listed type (parallel to the combiner instances and typeNameList); select
+    // the one for the type being lowered (index instanceIdx). Single-type is
+    // index 0 of one. Capture instanceIdx by value: the callback runs later
+    // (during createDeclareReductionHelper), after this parameter's lifetime
+    // ends.
+    assert(instanceIdx < clause->v.size() &&
+           "initializer instance index out of range");
+    genInitValueCB = [&, clause, assign,
+                      instanceIdx](fir::FirOpBuilder &builder,
+                                   mlir::Location loc, mlir::Type type,
+                                   mlir::Value moldArg, mlir::Value privArg) {
       lower::SymMapScope scope(symMap);
       mlir::Value ompPrivVar;
-      const StylizedInstance &inst = clause->v.front();
+      const StylizedInstance &inst = clause->v[instanceIdx];
 
       for (const Object &object :
            std::get<StylizedInstance::Variables>(inst.t)) {
@@ -814,6 +822,15 @@ bool ClauseProcessor::processOrdered(
     if (clause->v.has_value())
       orderedClauseValue = *evaluate::ToInt64(*clause->v);
     result.ordered = firOpBuilder.getI64IntegerAttr(orderedClauseValue);
+    return true;
+  }
+  return false;
+}
+
+bool ClauseProcessor::processPartial(std::optional<int64_t> &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Partial>()) {
+    if (clause->v.has_value())
+      result = evaluate::ToInt64(*clause->v);
     return true;
   }
   return false;
@@ -1672,7 +1689,8 @@ bool ClauseProcessor::processInReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 inReductionVars, inReduceVarByRef, inReductionDeclSymbols,
-                inReductionSyms))
+                inReductionSyms, inReductionObjects, converter.getSymbolMap(),
+                &semaCtx))
           TODO(currentLocation, "Lowering unrecognised reduction type");
 
         // Copy local lists into the output.
@@ -2090,7 +2108,8 @@ bool ClauseProcessor::processReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 reductionVars, reduceVarByRef, reductionDeclSymbols,
-                reductionSyms, reductionVarCache))
+                reductionSyms, reductionObjects, converter.getSymbolMap(),
+                &semaCtx, reductionVarCache))
           TODO(currentLocation, "Lowering unrecognised reduction type");
         // Copy local lists into the output.
         llvm::copy(reductionVars, std::back_inserter(result.reductionVars));
@@ -2119,7 +2138,8 @@ bool ClauseProcessor::processTaskReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 taskReductionVars, taskReduceVarByRef, taskReductionDeclSymbols,
-                taskReductionSyms))
+                taskReductionSyms, taskReductionObjects,
+                converter.getSymbolMap(), &semaCtx))
           TODO(currentLocation, "Lowering unrecognised reduction type");
         // Copy local lists into the output.
         llvm::copy(taskReductionVars,

@@ -2,7 +2,7 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,DXCHECK
 // RUN: %clang_cc1 -finclude-default-header -triple \
-// RUN:   spirv-unknown-vulkan-compute %s -fnative-half-type -fnative-int16-type \
+// RUN:   spirv-unknown-vulkan-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,SPVCHECK
 
 // CHECK-LABEL: test_faceforward_half

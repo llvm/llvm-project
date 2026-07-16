@@ -61,10 +61,9 @@ static void encodeDwarfRegisterLocation(int DwarfReg, raw_ostream &OS) {
   }
 }
 
-static MCCFIInstruction
-createScaledCFAInPrivateWave(const GCNSubtarget &ST,
-                             MCRegister DwarfStackPtrReg) {
-  assert(ST.enableFlatScratch());
+static MCCFIInstruction createScaledCFAInPrivateWave(const GCNSubtarget &ST,
+                                                     int64_t DwarfStackPtrReg) {
+  assert(ST.hasFlatScratchEnabled());
 
   // When flat scratch is enabled, the stack pointer is an address in the
   // private_lane DWARF address space (i.e. swizzled), but in order to
@@ -104,9 +103,9 @@ void SIFrameLowering::emitDefCFA(MachineBasicBlock &MBB,
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
-  MCRegister DwarfStackPtrReg = TRI->getDwarfRegNum(StackPtrReg, false);
+  int64_t DwarfStackPtrReg = TRI->getDwarfRegNum(StackPtrReg, false);
   MCCFIInstruction CFIInst =
-      ST.enableFlatScratch()
+      ST.hasFlatScratchEnabled()
           ? createScaledCFAInPrivateWave(ST, DwarfStackPtrReg)
           : (AspaceAlreadyDefined
                  ? MCCFIInstruction::createLLVMDefAspaceCfa(
@@ -1268,8 +1267,12 @@ void SIFrameLowering::emitCSRSpillStores(
   StoreWWMRegisters(WWMCalleeSavedRegs);
   if (FuncInfo->isWholeWaveFunction()) {
     // If we have already saved some WWM CSR registers, then the EXEC is already
-    // -1 and we don't need to do anything else. Otherwise, set EXEC to -1 here.
-    if (!ScratchExecCopy || WWMCalleeSavedRegs.empty())
+    // -1 and we don't need to do anything else. Otherwise, save the original
+    // EXEC into the setup register and set EXEC to -1 here.
+    if (!ScratchExecCopy)
+      buildScratchExecCopy(LiveUnits, MF, MBB, MBBI, DL, /*IsProlog*/ true,
+                           /*EnableInactiveLanes*/ false);
+    else if (WWMCalleeSavedRegs.empty())
       EnableAllLanes();
   } else if (ScratchExecCopy) {
     // FIXME: Split block and make terminator.

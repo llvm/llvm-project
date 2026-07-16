@@ -3,6 +3,7 @@
 
 ; BC: <SOURCE_FILENAME
 ; "h"
+; BC-NEXT: <GUIDLIST
 ; BC-NEXT: <GLOBALVAR {{.*}} op0=0 op1=1
 ; "foo"
 ; BC-NEXT: <FUNCTION op0=1 op1=3

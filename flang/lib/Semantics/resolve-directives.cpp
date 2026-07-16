@@ -982,10 +982,7 @@ public:
   }
 
 private:
-  Symbol::Flags dataSharingAttributeFlags{Symbol::Flag::OmpShared,
-      Symbol::Flag::OmpPrivate, Symbol::Flag::OmpFirstPrivate,
-      Symbol::Flag::OmpLastPrivate, Symbol::Flag::OmpReduction,
-      Symbol::Flag::OmpLinear};
+  Symbol::Flags dataSharingAttributeFlags{GetDataSharingAttributeFlags()};
 
   Symbol::Flags dataMappingAttributeFlags{Symbol::Flag::OmpMapTo,
       Symbol::Flag::OmpMapFrom, Symbol::Flag::OmpMapToFrom,
@@ -1054,16 +1051,6 @@ private:
     if (dataSharingAttributeFlags.test(flag)) {
       symbol.set(Symbol::Flag::OmpExplicit);
     }
-  }
-
-  // Clear any previous data-sharing attribute flags and set the new ones.
-  // Needed when setting PreDetermined DSAs, that take precedence over
-  // Implicit ones.
-  void SetSymbolDSA(Symbol &symbol, Symbol::Flags flags) {
-    symbol.flags() &= ~(dataSharingAttributeFlags |
-        Symbol::Flags{Symbol::Flag::OmpExplicit, Symbol::Flag::OmpImplicit,
-            Symbol::Flag::OmpPreDetermined});
-    symbol.flags() |= flags;
   }
 };
 

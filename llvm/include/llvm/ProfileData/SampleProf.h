@@ -33,7 +33,6 @@
 #include <cstdint>
 #include <list>
 #include <map>
-#include <set>
 #include <sstream>
 #include <string>
 #include <system_error>
@@ -116,6 +115,23 @@ static inline uint64_t SPMagic(SampleProfileFormat Format = SPF_Binary) {
          uint64_t('2') << (64 - 56) | uint64_t(Format);
 }
 
+// The oldest version of the extensible binary format we support.
+static constexpr uint64_t MinSupportedVersion = 103;
+
+// The default version of the extensible binary profile format written by the
+// compiler.  We default to v103 as v104 is work in progress.
+static constexpr uint64_t DefaultVersion = 103;
+
+// The latest supported version of the extensible binary profile format.
+static constexpr uint64_t LatestVersion = 104;
+
+// Query if a given format version is supported by this compiler.
+static inline bool formatVersionIsSupported(uint64_t Version) {
+  return Version >= MinSupportedVersion && Version <= LatestVersion;
+}
+
+// Unused.  Retained for downstream uses only.
+LLVM_DEPRECATED("Use DefaultVersion or LatestVersion instead", "DefaultVersion")
 static inline uint64_t SPVersion() { return 103; }
 
 // Section Type used by SampleProfileExtBinaryBaseReader and
@@ -369,7 +385,7 @@ public:
     }
   };
 
-  using SortedCallTargetSet = std::set<CallTarget, CallTargetComparator>;
+  using SortedCallTargetSet = SmallVector<CallTarget>;
   using CallTargetMap = DenseMap<FunctionId, uint64_t>;
   SampleRecord() = default;
 
@@ -426,7 +442,7 @@ public:
 
   uint64_t getSamples() const { return NumSamples; }
   const CallTargetMap &getCallTargets() const { return CallTargets; }
-  const SortedCallTargetSet getSortedCallTargets() const {
+  SortedCallTargetSet getSortedCallTargets() const {
     return sortCallTargets(CallTargets);
   }
 
@@ -438,12 +454,9 @@ public:
   }
 
   /// Sort call targets in descending order of call frequency.
-  static const SortedCallTargetSet
-  sortCallTargets(const CallTargetMap &Targets) {
-    SortedCallTargetSet SortedTargets;
-    for (const auto &[Target, Frequency] : Targets) {
-      SortedTargets.emplace(Target, Frequency);
-    }
+  static SortedCallTargetSet sortCallTargets(const CallTargetMap &Targets) {
+    auto SortedTargets = llvm::to_vector_of<CallTarget>(Targets);
+    llvm::sort(SortedTargets, CallTargetComparator());
     return SortedTargets;
   }
 

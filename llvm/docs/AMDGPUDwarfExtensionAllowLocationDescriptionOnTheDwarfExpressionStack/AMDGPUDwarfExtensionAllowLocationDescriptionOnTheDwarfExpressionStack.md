@@ -6,7 +6,7 @@ local:
 ---
 ```
 
-# 1. Extension
+## 1. Extension
 
 In DWARF 5, expressions are evaluated using a typed value stack, a separate
 location area, and an independent loclist mechanism. This extension unifies all
@@ -46,7 +46,7 @@ Appendix [A. Changes to DWARF Debugging Information Format Version 5](#changes-t
 relative to the DWARF Version 5 standard. Finally, appendix
 [B. Further Information](#further-information) has references to further information.
 
-# 2. Heterogeneous Computing Devices
+## 2. Heterogeneous Computing Devices
 
 GPUs and other heterogeneous computing devices have features not common to CPU
 computing devices.
@@ -85,13 +85,13 @@ of runtime defined pieces of vector registers. With the more complex locations,
 there is a benefit to be able to factorize their calculation which requires all
 location kinds to be supported uniformly, otherwise duplication is necessary.
 
-# 3. DWARF 5
+## 3. DWARF 5
 
 Before presenting the proposed solution to supporting heterogeneous devices, a
 brief overview of the DWARF 5 expression evaluation model will be given to
 highlight the aspects being addressed by the extension.
 
-## 3.1 How DWARF Maps Source Language To Hardware
+### 3.1 How DWARF Maps Source Language To Hardware
 
 DWARF is a standardized way to specify debug information. It describes source
 language entities such as compilation units, functions, types, variables, etc.
@@ -142,13 +142,13 @@ may include:
   value or with the location of a base object that is available using the
   DW_OP_push_object_address operation.
 
-## 3.2 Examples
+### 3.2 Examples
 
 The following examples illustrate how DWARF expressions involving operations are
 evaluated in DWARF 5. DWARF also has expressions involving location lists that
 are not covered in these examples.
 
-### 3.2.1 Dynamic Array Size
+#### 3.2.1 Dynamic Array Size
 
 The first example is for an operation expression associated with a DIE attribute
 that provides the number of elements in a dynamic array type. Such an attribute
@@ -195,7 +195,7 @@ The evaluation stops when it reaches the end of the expression. The result of an
 expression that is evaluated with a value result kind context is the top element
 of the stack, which provides the value and its type.
 
-### 3.2.2 Variable Location in Register
+#### 3.2.2 Variable Location in Register
 
 This example is for an operation expression associated with a DIE attribute that
 provides the location of a source language variable. Such an attribute dictates
@@ -228,7 +228,7 @@ Again, evaluation stops when it reaches the end of the expression. The result of
 an expression that is evaluated with a location result kind context is the
 location description in the location area.
 
-### 3.2.3 Variable Location in Memory
+#### 3.2.3 Variable Location in Memory
 
 The next example is for an operation expression associated with a DIE attribute
 that provides the location of a source language variable that is allocated in a
@@ -269,7 +269,7 @@ location area.
 
 ![Variable Location in Memory Example: Step 4](images/03-memory.example.frame.4.png)
 
-### 3.2.4 Variable Spread Across Different Locations
+#### 3.2.4 Variable Spread Across Different Locations
 
 This example is for a source variable that is partly in a register, partly undefined, and partly in memory.
 
@@ -333,7 +333,7 @@ of the expression is the location description in the location area.
 
 ![Variable Spread Across Different Locations Example: Step 7](images/04-composite.example.frame.7.png)
 
-### 3.2.5 Offsetting a Composite Location
+#### 3.2.5 Offsetting a Composite Location
 
 This example attempts to extend the previous example to offset the composite
 location description it created. The [3.2.3 Variable Location in
@@ -365,7 +365,7 @@ the offset. For example:
 This illustrates that operations on stack values are not composable with
 operations on location descriptions.
 
-### 3.2.6 Pointer to Member
+#### 3.2.6 Pointer to Member
 
 > NOTE: Without loss of generality, DWARF 4 is used in this example as full
 > support for DWARF 5 is not present in the versions of the tools used. No
@@ -551,7 +551,7 @@ To implement the fully generalized version of this attribute, GCC would only
 need to change the expression from `DW_OP_plus` to `DW_OP_swap,
 DW_OP_LLVM_offset`.
 
-### 3.2.7 Virtual Base Class
+#### 3.2.7 Virtual Base Class
 
 > NOTE: Without loss of generality, DWARF 4 is used in this example as full
 > support for DWARF 5 is not present in the versions of the tools used. No
@@ -737,7 +737,7 @@ To implement the fully generalized version of this attribute, GCC would only
 need to change the last operation in the expression from `DW_OP_plus` to
 `DW_OP_LLVM_offset`.
 
-## 3.3 Limitations
+### 3.3 Limitations
 
 DWARF 5 is unable to describe variables in runtime indexed parts of registers.
 This is required to describe a source variable that is located in a lane of a
@@ -763,7 +763,7 @@ Bit field offsets are only supported in a limited way for register locations.
 Supporting them in a uniform manner for all location kinds is required to
 support languages with bit sized entities.
 
-# 4. Extension Solution
+## 4. Extension Solution
 
 This section outlines the extension to generalize the DWARF expression evaluation
 model to allow location descriptions to be manipulated on the stack. It presents
@@ -771,7 +771,7 @@ a number of simplified examples to demonstrate the benefits and how the extensio
 solves the issues of heterogeneous devices. It presents how this is done in
 a manner that is backwards compatible with DWARF 5.
 
-## 4.1 Location Description
+### 4.1 Location Description
 
 In order to have consistent, composable operations that act on location
 descriptions, the extension defines a uniform way to handle all location kinds.
@@ -794,7 +794,7 @@ storage).
   undefined.
 - For composite, it is a linear stream of bytes defined by the composite's parts.
 
-## 4.2 Stack Location Description Operations
+### 4.2 Stack Location Description Operations
 
 The DWARF expression stack is extended to allow each stack entry to either be a
 value or a location description.
@@ -832,12 +832,12 @@ A DW_OP_undefined operation can be defined that explicitly creates the undefined
 location description. Currently this is only possible as a piece of a composite
 when the stack is empty.
 
-## 4.3 Examples
+### 4.3 Examples
 
 This section provides some motivating examples to illustrate the benefits that
 result from allowing location descriptions on the stack.
 
-### 4.3.1 Source Language Variable Spilled to Part of a Vector Register
+#### 4.3.1 Source Language Variable Spilled to Part of a Vector Register
 
 A compiler generating code for a GPU may allocate a source language variable
 that it proves has the same value for every lane of a SIMT thread in a scalar
@@ -879,7 +879,7 @@ GPUs due to the sheer number of registers that would have to be defined. It
 would also not permit a runtime index into part of the whole register to be used
 as shown in the next example.
 
-### 4.3.2 Source Language Variable Spread Across Multiple Vector Registers
+#### 4.3.2 Source Language Variable Spread Across Multiple Vector Registers
 
 A compiler may generate SIMT code for a GPU. Each source language thread of
 execution is mapped to a single lane of the GPU thread. Source language
@@ -980,7 +980,7 @@ description and returned as the result.
 
 ![Source Language Variable Spread Across Multiple Vector Registers Example: Step 14](images/07-extension-multi-lane-vgpr.example.frame.14.png)
 
-### 4.3.3 Source Language Variable Spread Across Multiple Kinds of Locations
+#### 4.3.3 Source Language Variable Spread Across Multiple Kinds of Locations
 
 This example is the same as the previous one, except the first 2 bytes of the
 second vector register have been spilled to memory, and the last 2 bytes have
@@ -1040,7 +1040,7 @@ beneficial to factor the incrementally creation of location descriptions.
 
 ![Source Language Variable Spread Across Multiple Kinds of Locations Example: Step 12](images/08-extension-mixed-composite.example.frame.7.png)
 
-### 4.3.4 Address Spaces
+#### 4.3.4 Address Spaces
 
 Heterogeneous devices can have multiple hardware supported address spaces which
 use specific hardware instructions to access them.
@@ -1109,7 +1109,7 @@ address spaces. For example, this can happen when parts of a source variable
 allocated in a register are spilled to a stack frame that resides in the
 non-global address space.
 
-### 4.3.5 Bit Offsets
+#### 4.3.5 Bit Offsets
 
 With the generalization of location descriptions on the stack, it is possible to
 define a DW_OP_bit_offset operation that adjusts the offset of any kind of
@@ -1149,7 +1149,7 @@ The ordering of bits within a byte, like byte ordering, is defined by the target
 architecture. A base type could be extended to specify bit ordering in addition
 to byte ordering.
 
-## 4.4 Call Frame Information (CFI)
+### 4.4 Call Frame Information (CFI)
 
 DWARF defines call frame information (CFI) that can be used to virtually unwind
 the subprogram call stack. This involves determining the location where register
@@ -1161,7 +1161,7 @@ spaces, or even a composite of different location kinds.
 Therefore, the extension extends the CFI rules to support any kind of location
 description, and operations to create locations in address spaces.
 
-## 4.5 Objects Not In Byte Aligned Global Memory
+### 4.5 Objects Not In Byte Aligned Global Memory
 
 DWARF 5 only effectively supports byte aligned memory locations on the stack by
 using a global memory address as a proxy for a memory location description. This
@@ -1199,7 +1199,7 @@ expressions that support all of these.
 Full general support for bit fields and implicit locations benefits
 optimizations on any target.
 
-## 4.6 Higher Order Operations
+### 4.6 Higher Order Operations
 
 The generalization allows an elegant way to add higher order operations that
 create location descriptions out of other location descriptions in a general
@@ -1233,7 +1233,7 @@ to efficiently express a source language array that has had a set of elements
 promoted into a vector register when executing a set of iterations of a loop in
 a SIMD manner.
 
-## 4.7 Objects In Multiple Places
+### 4.7 Objects In Multiple Places
 
 A compiler may allocate a source variable in stack frame memory, but for some
 range of code may promote it to a register. If the generated code does not
@@ -1279,7 +1279,7 @@ evaluation of a DWARF expression results in multiple single location
 descriptions, the consumer can ensure any updates are done to all of them, and
 any reads can use any one of them.
 
-# 5. Conclusion
+## 5. Conclusion
 
 A strength of DWARF is that it has generally sought to provide generalized
 composable solutions that address many problems, rather than solutions that only
@@ -1289,7 +1289,7 @@ significant family of issues. It addresses the specific issues present for
 heterogeneous computing devices, provides benefits for non-heterogeneous
 devices, and can help address a number of other previously reported issues.
 
-# A. Changes to DWARF Debugging Information Format Version 5
+## A. Changes to DWARF Debugging Information Format Version 5
 
 > NOTE: This appendix provides changes relative to DWARF Version 5. It has been
 > defined such that it is backwards compatible with DWARF Version 5.
@@ -1303,9 +1303,9 @@ devices, and can help address a number of other previously reported issues.
 > > the DWARF Version 5 standard. They also describe rational and issues that
 > > may need further consideration.
 
-## A.2 General Description
+### A.2 General Description
 
-### A.2.5 DWARF Expressions
+#### A.2.5 DWARF Expressions
 
 > NOTE: This section, and its nested sections, replaces DWARF Version 5 section
 > 2.5 and section 2.6. It is based on the text of the existing DWARF Version 5
@@ -1355,7 +1355,7 @@ DWARF Operation Expressions](#dwarf-operation-expressions)), or as a
 location list expression (see [2.5.5 DWARF Location List
 Expressions](#dwarf-location-list-expressions)).
 
-#### A.2.5.1 DWARF Expression Evaluation Context
+##### A.2.5.1 DWARF Expression Evaluation Context
 
 A DWARF expression is evaluated in a context that can include a number of
 context elements. If multiple context elements are specified then they must be
@@ -1526,7 +1526,7 @@ the entries in the `.debug_info`, `.debug_addr`, `.debug_line`,
 `.debug_loclists.dwo` sections corresponding to any given program location do
 not match.
 
-#### A.2.5.2 DWARF Expression Value
+##### A.2.5.2 DWARF Expression Value
 
 A value has a type and a literal value. It can represent a literal value of any
 supported base type of the target architecture. The base type specifies the
@@ -1554,7 +1554,7 @@ inclusive range `DW_ATE_lo_user` to `DW_ATE_hi_user`.
 > NOTE: It is unclear if `DW_ATE_address` is an integral type. GDB does not seem
 > to consider it as integral.
 
-#### A.2.5.3 DWARF Location Description
+##### A.2.5.3 DWARF Location Description
 
 <i>Debugging information must provide consumers a way to find the location of
 program variables, determine the bounds of dynamic arrays and strings, and
@@ -1702,7 +1702,7 @@ holds the intended program object after a program location change. One way to
 avoid such problems is to recompute location descriptions associated with
 threads when their program locations change.</i>
 
-#### A.2.5.4 DWARF Operation Expressions
+##### A.2.5.4 DWARF Operation Expressions
 
 An operation expression is comprised of a stream of operations, each consisting
 of an opcode followed by zero or more operands. The number of operands is
@@ -1774,7 +1774,7 @@ specifies the byte count. It can be used:
 - and in location list entries (see [2.5.5 DWARF Location List
   Expressions](#dwarf-location-list-expressions)).
 
-##### A.2.5.4.1 Stack Operations
+###### A.2.5.4.1 Stack Operations
 
 > NOTE: This section replaces DWARF Version 5 section 2.5.1.3.
 
@@ -1830,7 +1830,7 @@ location description (see [2.5.4.4.6 Composite Location Description Operations]
 <i>Examples illustrating many of these stack operations are found in Appendix
 D.1.2 on page 289.</i>
 
-##### A.2.5.4.2 Control Flow Operations
+###### A.2.5.4.2 Control Flow Operations
 
 > NOTE: This section replaces DWARF Version 5 section 2.5.1.5.
 
@@ -2046,7 +2046,7 @@ expression.
     <i>The `DW_TAG_dwarf_procedure` debugging information entry can be used to
     define DWARF procedures that can be called.</i>
 
-##### A.2.5.4.3 Value Operations
+###### A.2.5.4.3 Value Operations
 
 This section describes the operations that push values on the stack.
 
@@ -2056,7 +2056,7 @@ type specifies the size, encoding, and endianity of the literal value.
 
 The base type of value stack entries can be the distinguished generic type.
 
-###### A.2.5.4.3.1 Literal Operations
+####### A.2.5.4.3.1 Literal Operations
 
 > NOTE: This section replaces DWARF Version 5 section 2.5.1.1.
 
@@ -2126,15 +2126,15 @@ size and the low-order bits used.
     operation can be parsed easily without reference to the `.debug_info`
     section.</i>
 
-###### A.2.5.4.3.2 Arithmetic and Logical Operations
+####### A.2.5.4.3.2 Arithmetic and Logical Operations
 
 > NOTE: This section is the same as DWARF Version 5 section 2.5.1.4.
 
-###### A.2.5.4.3.3 Type Conversion Operations
+####### A.2.5.4.3.3 Type Conversion Operations
 
 > NOTE: This section is the same as DWARF Version 5 section 2.5.1.6.
 
-###### A.2.5.4.3.4 Special Value Operations
+####### A.2.5.4.3.4 Special Value Operations
 
 > NOTE: This section replaces parts of DWARF Version 5 sections 2.5.1.2,
   2.5.1.3, and 2.5.1.7.
@@ -2383,12 +2383,12 @@ There are these special value operations currently defined:
     > NOTE: GDB only implements `DW_OP_entry_value` when E is exactly
     > `DW_OP_reg*` or `DW_OP_breg*; DW_OP_deref*`.
 
-##### A.2.5.4.4 Location Description Operations
+###### A.2.5.4.4 Location Description Operations
 
 This section describes the operations that push location descriptions on the
 stack.
 
-###### A.2.5.4.4.1 General Location Description Operations
+####### A.2.5.4.4.1 General Location Description Operations
 
 > NOTE: This section replaces part of DWARF Version 5 section 2.5.1.3.
 
@@ -2435,7 +2435,9 @@ stack.
     > this is being used. Or are there other attributes that need to state they
     > pass an object?
 
-###### A.2.5.4.4.2 Undefined Location Description Operations
+
+(undefined-location-description-operations)=
+####### A.2.5.4.4.2 Undefined Location Description Operations
 
 > NOTE: This section replaces DWARF Version 5 section 2.6.1.1.1.
 
@@ -2449,7 +2451,8 @@ offset for an undefined location description. The `DW_OP_*piece` operations can
 implicitly specify an undefined location description, allowing any size and
 offset to be specified, and results in a part with all undefined bits.
 
-###### A.2.5.4.4.3 Memory Location Description Operations
+(memory-location-description-operations)=
+####### A.2.5.4.4.3 Memory Location Description Operations
 
 > NOTE: This section replaces parts of DWARF Version 5 section 2.5.1.1, 2.5.1.2,
 > 2.5.1.3, and 2.6.1.1.2.
@@ -2657,7 +2660,9 @@ type.
     The action is the same as for `DW_OP_breg<N>`, except that R is used as the
     register number and B is used as the byte displacement.
 
-###### A.2.5.4.4.4 Register Location Description Operations
+
+(register-location-description-operations)=
+####### A.2.5.4.4.4 Register Location Description Operations
 
 > NOTE: This section replaces DWARF Version 5 section 2.6.1.1.3.
 
@@ -2708,7 +2713,9 @@ register, it is necessary to use `DW_OP_regval_type`, use one of the
 `DW_OP_breg*` register-based addressing operations, or use `DW_OP_deref*` on a
 register location description.</i>
 
-###### A.2.5.4.4.5 Implicit Location Description Operations
+
+(implicit-location-description-operations)=
+####### A.2.5.4.4.5 Implicit Location Description Operations
 
 > NOTE: This section replaces DWARF Version 5 section 2.6.1.1.4.
 
@@ -2876,7 +2883,7 @@ object pointed to by that pointer object.</i>
 the value of the object when asked to dereference the pointer described by
 E<sub>1</sub> which contains the `DW_OP_implicit_pointer` operation.</i>
 
-###### A.2.5.4.4.6 Composite Location Description Operations
+####### A.2.5.4.4.6 Composite Location Description Operations
 
 > NOTE: This section replaces DWARF Version 5 section 2.6.1.2.
 
@@ -3016,7 +3023,7 @@ compatible with the definitions in DWARF Version 5.</i>
     assembled is not byte-sized or is not at the start of the part location
     description.</i>
 
-#### A.2.5.5 DWARF Location List Expressions
+##### A.2.5.5 DWARF Location List Expressions
 
 > NOTE: This section replaces DWARF Version 5 section 2.6.2.
 
@@ -3126,15 +3133,15 @@ location list expressions.</i>
 
 > NOTE: The rest of this section is the same as DWARF Version 5 section 2.6.2.
 
-## A.3 Program Scope Entries
+### A.3 Program Scope Entries
 
 > NOTE: This section provides changes to existing debugger information entry
 > attributes. These would be incorporated into the corresponding DWARF Version 5
 > chapter 3 sections.
 
-### A.3.3 Subroutine and Entry Point Entries
+#### A.3.3 Subroutine and Entry Point Entries
 
-#### A.3.3.5 Low-Level Information
+##### A.3.3.5 Low-Level Information
 
 1.  A `DW_TAG_subprogram`, `DW_TAG_inlined_subroutine`, or `DW_TAG_entry_point`
     debugger information entry may have a `DW_AT_return_addr` attribute, whose
@@ -3208,9 +3215,9 @@ location list expressions.</i>
     The DWARF is ill-formed if L is not comprised of one memory location
     description for one of the target architecture specific address spaces.
 
-### A.3.4 Call Site Entries and Parameters
+#### A.3.4 Call Site Entries and Parameters
 
-#### A.3.4.2 Call Site Parameters
+##### A.3.4.2 Call Site Parameters
 
 1.  A `DW_TAG_call_site_parameter` debugger information entry may have a
     `DW_AT_call_value` attribute, whose value is a DWARF operation expression
@@ -3277,17 +3284,17 @@ location list expressions.</i>
     that have been clobbered, and clobbered memory will no longer have the value at
     the time of the call.</i>
 
-### A.3.5 Lexical Block Entries
+#### A.3.5 Lexical Block Entries
 
 > NOTE: This section is the same as DWARF Version 5 section 3.5.
 
-## A.4 Data Object and Object List Entries
+### A.4 Data Object and Object List Entries
 
 > NOTE: This section provides changes to existing debugger information entry
 > attributes. These would be incorporated into the corresponding DWARF Version 5
 > chapter 4 sections.
 
-### A.4.1 Data Object Entries
+#### A.4.1 Data Object Entries
 
 Program variables, formal parameters and constants are represented by debugging
 information entries with the tags `DW_TAG_variable`, `DW_TAG_formal_parameter`
@@ -3337,7 +3344,7 @@ constant may have the following attributes:
     > the location description of any variable regardless of how it is
     > optimized.
 
-### A.4.2 Common Block Entries
+#### A.4.2 Common Block Entries
 
 A common block entry also has a DW_AT_location attribute whose value is a DWARF
 expression E that describes the location of the common block at run-time. The
@@ -3349,15 +3356,15 @@ focused, if any. The result of the evaluation is the location description of the
 base of the common block. See 2.5.4.2 Control Flow Operations for special
 evaluation rules used by the DW_OP_call* operations.
 
-## A.5 Type Entries
+### A.5 Type Entries
 
 > NOTE: This section provides changes to existing debugger information entry
 > attributes. These would be incorporated into the corresponding DWARF Version 5
 > chapter 5 sections.
 
-### A.5.7 Structure, Union, Class and Interface Type Entries
+#### A.5.7 Structure, Union, Class and Interface Type Entries
 
-#### A.5.7.3 Derived or Extended Structures, Classes and Interfaces
+##### A.5.7.3 Derived or Extended Structures, Classes and Interfaces
 
 1.  For a `DW_AT_data_member_location` attribute there are two cases:
 
@@ -3387,7 +3394,7 @@ evaluation rules used by the DW_OP_call* operations.
     > description, and those with single location descriptions that are of any
     > kind and have any bit offset.
 
-#### A.5.7.8 Member Function Entries
+##### A.5.7.8 Member Function Entries
 
 1.  An entry for a virtual function also has a `DW_AT_vtable_elem_location`
     attribute whose value is a DWARF expression E.
@@ -3401,7 +3408,7 @@ evaluation rules used by the DW_OP_call* operations.
     of the slot for the function within the virtual function table for the
     enclosing class.
 
-### A.5.14 Pointer to Member Type Entries
+#### A.5.14 Pointer to Member Type Entries
 
 1.  The `DW_TAG_ptr_to_member_type` debugging information entry has a
     `DW_AT_use_location` attribute whose value is a DWARF expression E. It is used
@@ -3429,9 +3436,9 @@ evaluation rules used by the DW_OP_call* operations.
     description of the member of the class to which the pointer to member entry
     points.
 
-### A.5.18 Dynamic Properties of Types
+#### A.5.18 Dynamic Properties of Types
 
-#### A.5.18.1 Data Location
+##### A.5.18.1 Data Location
 
 1.  The `DW_AT_data_location` attribute may be used with any type that provides one
     or more levels of hidden indirection and/or run-time parameters in its
@@ -3463,23 +3470,23 @@ evaluation rules used by the DW_OP_call* operations.
     > having an initial stack with the location description of the object since the
     > expression has to need it.
 
-## A.6 Other Debugging Information
+### A.6 Other Debugging Information
 
 > NOTE: This section provides changes to existing debugger information entry
 > attributes. These would be incorporated into the corresponding DWARF Version 5
 > chapter 6 sections.
 
-### A.6.2 Line Number Information
+#### A.6.2 Line Number Information
 
 > NOTE: This section is the same as DWARF Version 5 section 6.2.
 
-### A.6.4 Call Frame Information
+#### A.6.4 Call Frame Information
 
 > NOTE: This section provides changes to DWARF Version 5 section 6.4. Register
 > unwind DWARF expressions are generalized to allow any location description,
 > including those with composite and implicit location descriptions.
 
-#### A.6.4.1 Structure of Call Frame Information
+##### A.6.4.1 Structure of Call Frame Information
 
 The register rules are:
 
@@ -3734,7 +3741,7 @@ An FDE contains the following fields, in order:
     Enough `DW_CFA_nop` instructions to make the size of this entry match the
     length value above.
 
-#### A.6.4.2 Call Frame Instructions
+##### A.6.4.2 Call Frame Instructions
 
 Some call frame instructions have operands that are encoded as DWARF operation
 expressions E (see [2.5.4 DWARF Operation
@@ -3755,11 +3762,11 @@ used in E have the following restrictions:
 `DW_CFA_def_cfa_expression`, `DW_CFA_expression`, and
 `DW_CFA_val_expression`.</i>
 
-##### A.6.4.2.1 Row Creation Instructions
+###### A.6.4.2.1 Row Creation Instructions
 
 > NOTE: These instructions are the same as in DWARF Version 5 section 6.4.2.1.
 
-##### A.6.4.2.2 CFA Definition Instructions
+###### A.6.4.2.2 CFA Definition Instructions
 
 1.  `DW_CFA_def_cfa`
 
@@ -3831,7 +3838,7 @@ used in E have the following restrictions:
     The DWARF is ill-formed if the result of evaluating E is not a memory byte
     address location description.
 
-##### A.6.4.2.3 Register Rule Instructions
+###### A.6.4.2.3 Register Rule Instructions
 
 1.  `DW_CFA_undefined`
 
@@ -3941,29 +3948,29 @@ used in E have the following restrictions:
     to `DW_CFA_restore`, except for the encoding and size of the register
     operand.
 
-##### A.6.4.2.4 Row State Instructions
+###### A.6.4.2.4 Row State Instructions
 
 > NOTE: These instructions are the same as in DWARF Version 5 section 6.4.2.4.
 
-##### A.6.4.2.5 Padding Instruction
+###### A.6.4.2.5 Padding Instruction
 
 > NOTE: These instructions are the same as in DWARF Version 5 section 6.4.2.5.
 
-#### A.6.4.3 Call Frame Instruction Usage
+##### A.6.4.3 Call Frame Instruction Usage
 
 > NOTE: The same as in DWARF Version 5 section 6.4.3.
 
-#### A.6.4.4 Call Frame Calling Address
+##### A.6.4.4 Call Frame Calling Address
 
 > NOTE: The same as in DWARF Version 5 section 6.4.4.
 
-## A.7 Data Representation
+### A.7 Data Representation
 
 > NOTE: This section provides changes to existing debugger information entry
 > attributes. These would be incorporated into the corresponding DWARF Version 5
 > chapter 7 sections.
 
-### A.7.4 32-Bit and 64-Bit DWARF Formats
+#### A.7.4 32-Bit and 64-Bit DWARF Formats
 
 > NOTE: This augments DWARF Version 5 section 7.4 list item 3's table.
 
@@ -3971,28 +3978,28 @@ used in E have the following restrictions:
     ------------------------ --------------------------------------
     DW_OP_implicit_pointer   offset in `.debug_info`
 
-### A.7.5 Format of Debugging Information
+#### A.7.5 Format of Debugging Information
 
-#### A.7.5.5 Classes and Forms
+##### A.7.5.5 Classes and Forms
 
 > NOTE: The same as in DWARF Version 5 section 7.5.5.
 
-### A.7.7 DWARF Expressions
+#### A.7.7 DWARF Expressions
 
 > NOTE: Rename DWARF Version 5 section 7.7 to reflect the unification of
 > location descriptions into DWARF expressions.
 
-#### A.7.7.1 Operation Expressions
+##### A.7.7.1 Operation Expressions
 
 > NOTE: Rename DWARF Version 5 section 7.7.1 and delete section 7.7.2 to reflect
 > the unification of location descriptions into DWARF expressions.
 
-#### A.7.7.3 Location List Expressions
+##### A.7.7.3 Location List Expressions
 
 > NOTE: Rename DWARF Version 5 section 7.7.3 to reflect that location lists are
 > a kind of DWARF expression.
 
-# B. Further Information
+## B. Further Information
 
 The following references provide additional information on the extension.
 

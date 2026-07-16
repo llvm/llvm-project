@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
+#include "SLPVectorizer/SLPUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PriorityQueue.h"
@@ -37,6 +38,7 @@
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/DemandedBits.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/Loads.h"
@@ -51,6 +53,7 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -66,6 +69,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -253,6 +257,11 @@ static cl::opt<bool> NonVectReductions(
     cl::desc(
         "Use  non-vectorizable instructions as potential reduction roots."));
 
+static cl::opt<bool> VectorizePoorThroughput(
+    "slp-vectorize-poor-throughput", cl::init(true), cl::Hidden,
+    cl::desc("Use poor-throughput instructions (e.g. fdiv, frem, fsqrt) as "
+             "standalone vectorization seeds."));
+
 /// True when \p slp-vectorize-non-power-of-2 is enabled and \p NumElts is a
 /// supported non-power-of-2 width: \p NumElts + 1 must be a power of two
 /// (e.g. 3 or 7 lanes, i.e. almost a full power-of-2 register).
@@ -282,6 +291,28 @@ static cl::opt<bool> PerLaneGatherScale(
     "slp-per-lane-gather-scale", cl::init(true), cl::Hidden,
     cl::desc("Use per-lane execution scale for gather/buildvector tree "
              "entries to model LICM-hoistable buildvector sequences."));
+
+/// Enable versioning of a basic block with runtime alias checks.
+static cl::opt<bool> SLPEnableRuntimeAliasChecks(
+    "slp-vectorize-with-runtime-alias-checks", cl::init(true), cl::Hidden,
+    cl::desc("Allow SLP to version a block with runtime alias checks to "
+             "vectorize trees blocked by may-alias memory dependencies."));
+
+/// Maximum number of runtime alias checks (one per pair of base objects) that
+/// may guard a single versioned region.
+static cl::opt<unsigned> SLPMaxRuntimeAliasChecks(
+    "slp-max-runtime-alias-checks", cl::init(8), cl::Hidden,
+    cl::desc("The maximum number of runtime alias checks generated to guard a "
+             "single SLP-vectorized region."));
+
+/// The runtime checks and the guard branch execute on both the vector and the
+/// scalar fallback path, so they add overhead to the scalar code.
+static cl::opt<unsigned> SLPRuntimeAliasChecksMaxScalarCostPercent(
+    "slp-runtime-alias-checks-max-scalar-cost-percent", cl::init(25),
+    cl::Hidden,
+    cl::desc("Maximum SLP runtime alias check cost, as a percentage of the "
+             "guarded scalar region cost, before versioning is rejected to "
+             "avoid pessimizing the scalar fallback path."));
 
 // Limit the number of alias checks. The limit is chosen so that
 // it has no negative effect on the llvm benchmarks.
@@ -336,15 +367,6 @@ static Type *getValueType(Value *V, bool LookThroughCmp = false) {
   if (auto *IV = dyn_cast<InsertValueInst>(V))
     return IV->getOperand(1)->getType();
   return V->getType();
-}
-
-/// \returns the number of elements for Ty.
-static unsigned getNumElements(Type *Ty) {
-  assert(!isa<ScalableVectorType>(Ty) &&
-         "ScalableVectorType is not supported.");
-  if (isVectorizedTy(Ty))
-    return getVectorizedTypeVF(Ty).getFixedValue();
-  return 1;
 }
 
 /// \returns the vector type of ScalarTy based on vectorization factor.
@@ -511,47 +533,6 @@ static SmallVector<int> calculateShufflevectorMask(ArrayRef<Value *> VL) {
   return Mask;
 }
 
-/// \returns True if the value is a constant (but not globals/constant
-/// expressions).
-static bool isConstant(Value *V) {
-  return isa<Constant>(V) && !isa<ConstantExpr, GlobalValue>(V);
-}
-
-/// Checks if \p V is one of vector-like instructions, i.e. undef,
-/// insertelement/extractelement with constant indices for fixed vector type or
-/// extractvalue instruction.
-static bool isVectorLikeInstWithConstOps(Value *V) {
-  if (!isa<InsertElementInst, InsertValueInst, ExtractElementInst>(V) &&
-      !isa<ExtractValueInst, UndefValue>(V))
-    return false;
-  auto *I = dyn_cast<Instruction>(V);
-  if (!I || isa<ExtractValueInst>(I))
-    return true;
-  if (isa<ExtractElementInst>(I))
-    return isa<FixedVectorType>(I->getOperand(0)->getType()) &&
-           isConstant(I->getOperand(1));
-  if (isa<InsertElementInst>(I))
-    return isa<FixedVectorType>(I->getOperand(0)->getType()) &&
-           isConstant(I->getOperand(2));
-  assert(isa<InsertValueInst>(I) && "Expected InsertValueInst");
-  return true;
-}
-
-/// Returns power-of-2 number of elements in a single register (part), given the
-/// total number of elements \p Size and number of registers (parts) \p
-/// NumParts.
-static unsigned getPartNumElems(unsigned Size, unsigned NumParts) {
-  return std::min<unsigned>(Size, bit_ceil(divideCeil(Size, NumParts)));
-}
-
-/// Returns correct remaining number of elements, considering total amount \p
-/// Size, (power-of-2 number) of elements in a single register \p PartNumElems
-/// and current register (part) \p Part.
-static unsigned getNumElems(unsigned Size, unsigned PartNumElems,
-                            unsigned Part) {
-  return std::min<unsigned>(PartNumElems, Size - Part * PartNumElems);
-}
-
 #if !defined(NDEBUG)
 /// Print a short descriptor of the instruction bundle suitable for debug output.
 static std::string shortBundleName(ArrayRef<Value *> VL, int Idx = -1) {
@@ -564,55 +545,6 @@ static std::string shortBundleName(ArrayRef<Value *> VL, int Idx = -1) {
 }
 #endif
 
-/// \returns true if all of the instructions in \p VL are in the same block or
-/// false otherwise.
-static bool allSameBlock(ArrayRef<Value *> VL) {
-  auto *It = find_if(VL, IsaPred<Instruction>);
-  if (It == VL.end())
-    return false;
-  Instruction *I0 = cast<Instruction>(*It);
-  if (all_of(VL, isVectorLikeInstWithConstOps))
-    return true;
-
-  BasicBlock *BB = I0->getParent();
-  for (Value *V : iterator_range(It, VL.end())) {
-    if (isa<PoisonValue>(V))
-      continue;
-    auto *II = dyn_cast<Instruction>(V);
-    if (!II)
-      return false;
-
-    if (BB != II->getParent())
-      return false;
-  }
-  return true;
-}
-
-/// \returns True if all of the values in \p VL are constants (but not
-/// globals/constant expressions).
-static bool allConstant(ArrayRef<Value *> VL) {
-  // Constant expressions and globals can't be vectorized like normal integer/FP
-  // constants.
-  return all_of(VL, isConstant);
-}
-
-/// \returns True if all of the values in \p VL are identical or some of them
-/// are UndefValue.
-static bool isSplat(ArrayRef<Value *> VL) {
-  Value *FirstNonUndef = nullptr;
-  for (Value *V : VL) {
-    if (isa<UndefValue>(V))
-      continue;
-    if (!FirstNonUndef) {
-      FirstNonUndef = V;
-      continue;
-    }
-    if (V != FirstNonUndef)
-      return false;
-  }
-  return FirstNonUndef != nullptr;
-}
-
 /// \returns True if \p I is commutative, handles CmpInst and BinaryOperator.
 /// For BinaryOperator, it also checks if \p InstWithUses is used in specific
 /// patterns that make it effectively commutative (like equality comparisons
@@ -624,7 +556,7 @@ static bool isSplat(ArrayRef<Value *> VL) {
 /// \param I The instruction to check for commutativity
 /// \param ValWithUses The value whose uses are analyzed for special
 /// patterns
-static bool isCommutative(Instruction *I, Value *ValWithUses,
+static bool isCommutative(const Instruction *I, const Value *ValWithUses,
                           bool IsCopyable = false) {
   if (auto *Cmp = dyn_cast<CmpInst>(I))
     return Cmp->isCommutative();
@@ -664,8 +596,8 @@ static bool isCommutative(Instruction *I, Value *ValWithUses,
 /// Checks if the operand is commutative. In commutative operations, not all
 /// operands might commutable, e.g. for fmuladd only 2 first operands are
 /// commutable.
-static bool isCommutableOperand(Instruction *I, Value *ValWithUses, unsigned Op,
-                                bool IsCopyable = false) {
+static bool isCommutableOperand(const Instruction *I, Value *ValWithUses,
+                                unsigned Op, bool IsCopyable = false) {
   assert(::isCommutative(I, ValWithUses, IsCopyable) &&
          "The instruction is not commutative.");
   if (isa<CmpInst>(I))
@@ -690,7 +622,7 @@ static bool isCommutableOperand(Instruction *I, Value *ValWithUses, unsigned Op,
 /// patterns (see the two-parameter version above for details).
 /// \param I The instruction to check for commutativity
 /// \returns true if the instruction is commutative, false otherwise
-static bool isCommutative(Instruction *I) { return isCommutative(I, I); }
+static bool isCommutative(const Instruction *I) { return isCommutative(I, I); }
 
 /// \returns number of operands of \p I, considering commutativity. Returns 2
 /// for commutative intrinsics.
@@ -705,29 +637,6 @@ static unsigned getNumberOfPotentiallyCommutativeOps(Instruction *I) {
   return I->getNumOperands();
 }
 
-template <typename T>
-static std::optional<unsigned> getInsertExtractIndex(const Value *Inst,
-                                                     unsigned Offset) {
-  static_assert(std::is_same_v<T, InsertElementInst> ||
-                    std::is_same_v<T, ExtractElementInst>,
-                "unsupported T");
-  int Index = Offset;
-  if (const auto *IE = dyn_cast<T>(Inst)) {
-    const auto *VT = dyn_cast<FixedVectorType>(IE->getType());
-    if (!VT)
-      return std::nullopt;
-    const auto *CI = dyn_cast<ConstantInt>(IE->getOperand(2));
-    if (!CI)
-      return std::nullopt;
-    if (CI->getValue().uge(VT->getNumElements()))
-      return std::nullopt;
-    Index *= VT->getNumElements();
-    Index += CI->getZExtValue();
-    return Index;
-  }
-  return std::nullopt;
-}
-
 /// \returns inserting or extracting index of InsertElement, ExtractElement or
 /// InsertValue instruction, using Offset as base offset for index.
 /// \returns std::nullopt if the index is not an immediate.
@@ -738,7 +647,7 @@ static std::optional<unsigned> getElementIndex(const Value *Inst,
   if (auto Index = getInsertExtractIndex<ExtractElementInst>(Inst, Offset))
     return Index;
 
-  int Index = Offset;
+  unsigned Index = Offset;
 
   const auto *IV = dyn_cast<InsertValueInst>(Inst);
   if (!IV)
@@ -758,28 +667,6 @@ static std::optional<unsigned> getElementIndex(const Value *Inst,
     Index += I;
   }
   return Index;
-}
-
-/// \returns true if all of the values in \p VL use the same opcode.
-/// For comparison instructions, also checks if predicates match.
-/// PoisonValues are considered matching.
-/// Interchangeable instructions are not considered.
-static bool allSameOpcode(ArrayRef<Value *> VL) {
-  auto *It = find_if(VL, IsaPred<Instruction>);
-  if (It == VL.end())
-    return true;
-  Instruction *MainOp = cast<Instruction>(*It);
-  unsigned Opcode = MainOp->getOpcode();
-  bool IsCmpOp = isa<CmpInst>(MainOp);
-  CmpInst::Predicate BasePred = IsCmpOp ? cast<CmpInst>(MainOp)->getPredicate()
-                                        : CmpInst::BAD_ICMP_PREDICATE;
-  return std::all_of(It, VL.end(), [&](Value *V) {
-    if (auto *CI = dyn_cast<CmpInst>(V))
-      return BasePred == CI->getPredicate();
-    if (auto *I = dyn_cast<Instruction>(V))
-      return I->getOpcode() == Opcode;
-    return isa<PoisonValue>(V);
-  });
 }
 
 namespace {
@@ -977,31 +864,6 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
               : TargetTransformInfo::SK_PermuteSingleSrc;
 }
 
-/// \returns True if Extract{Value,Element} instruction extracts element Idx.
-static std::optional<unsigned> getExtractIndex(const Instruction *E) {
-  unsigned Opcode = E->getOpcode();
-  assert((Opcode == Instruction::ExtractElement ||
-          Opcode == Instruction::ExtractValue) &&
-         "Expected extractelement or extractvalue instruction.");
-  if (Opcode == Instruction::ExtractElement) {
-    auto *CI = dyn_cast<ConstantInt>(E->getOperand(1));
-    if (!CI)
-      return std::nullopt;
-    // Check if the index is out of bound  - we can get the source vector from
-    // operand 0
-    unsigned Idx = CI->getZExtValue();
-    auto *EE = cast<ExtractElementInst>(E);
-    const unsigned VF = ::getNumElements(EE->getVectorOperandType());
-    if (Idx >= VF)
-      return std::nullopt;
-    return Idx;
-  }
-  auto *EI = cast<ExtractValueInst>(E);
-  if (EI->getNumIndices() != 1)
-    return std::nullopt;
-  return *EI->idx_begin();
-}
-
 /// Checks if the provided value does not require scheduling. It does not
 /// require scheduling if this is not an instruction or it is an instruction
 /// that does not read/write memory and all operands are either not instructions
@@ -1037,8 +899,9 @@ class BinOpSameOpcodeHelper {
   using MaskType = std::uint_fast32_t;
   /// Sort SupportedOp because it is used by binary_search.
   constexpr static unsigned SupportedOp[] = {
-      Instruction::Add,  Instruction::Sub, Instruction::Mul, Instruction::Shl,
-      Instruction::AShr, Instruction::And, Instruction::Or,  Instruction::Xor};
+      Instruction::Add, Instruction::FAdd, Instruction::Sub,  Instruction::FSub,
+      Instruction::Mul, Instruction::Shl,  Instruction::AShr, Instruction::And,
+      Instruction::Or,  Instruction::Xor};
   static_assert(llvm::is_sorted_constexpr(SupportedOp) &&
                 "SupportedOp is not sorted.");
   enum : MaskType {
@@ -1050,34 +913,41 @@ class BinOpSameOpcodeHelper {
     AndBIT = 1 << 5,
     OrBIT = 1 << 6,
     XorBIT = 1 << 7,
-    MainOpBIT = 1 << 8,
+    FAddBIT = 1 << 8,
+    FSubBIT = 1 << 9,
+    MainOpBIT = 1 << 10,
     LLVM_MARK_AS_BITMASK_ENUM(MainOpBIT)
   };
-  /// Return a non-nullptr if either operand of I is a ConstantInt.
+  /// Return a non-nullptr if either operand of I is a ConstantInt (for the
+  /// integer opcodes) or a ConstantFP (for FAdd/FSub).
   /// The second return value represents the operand position. We check the
-  /// right-hand side first (1). If the right hand side is not a ConstantInt and
-  /// the instruction is neither Sub, Shl, nor AShr, we then check the left hand
-  /// side (0).
-  static std::pair<ConstantInt *, unsigned>
-  isBinOpWithConstantInt(const Instruction *I) {
-    unsigned Opcode = I->getOpcode();
+  /// right-hand side first (1). If the right hand side is not a constant and
+  /// the instruction is neither Sub, FSub, Shl, nor AShr, we then check the
+  /// left hand side (0).
+  static std::pair<Constant *, unsigned>
+  isBinOpWithConstant(const Instruction *I) {
+    [[maybe_unused]] unsigned Opcode = I->getOpcode();
     assert(binary_search(SupportedOp, Opcode) && "Unsupported opcode.");
     (void)SupportedOp;
     auto *BinOp = cast<BinaryOperator>(I);
-    if (auto *CI = dyn_cast<ConstantInt>(BinOp->getOperand(1)))
-      return {CI, 1};
-    if (Opcode == Instruction::Sub || Opcode == Instruction::Shl ||
-        Opcode == Instruction::AShr)
+    auto GetConstant = [](Value *V) -> Constant * {
+      if (auto *CI = dyn_cast<ConstantInt>(V))
+        return CI;
+      return dyn_cast<ConstantFP>(V);
+    };
+    if (Constant *C = GetConstant(BinOp->getOperand(1)))
+      return {C, 1};
+    if (!isCommutative(I))
       return {nullptr, 0};
-    if (auto *CI = dyn_cast<ConstantInt>(BinOp->getOperand(0)))
-      return {CI, 0};
+    if (Constant *C = GetConstant(BinOp->getOperand(0)))
+      return {C, 0};
     return {nullptr, 0};
   }
   struct InterchangeableInfo {
     const Instruction *I = nullptr;
     /// The bit it sets represents whether MainOp can be converted to.
     MaskType Mask = MainOpBIT | XorBIT | OrBIT | AndBIT | SubBIT | AddBIT |
-                    MulBIT | AShrBIT | ShlBIT;
+                    MulBIT | AShrBIT | ShlBIT | FSubBIT | FAddBIT;
     /// We cannot create an interchangeable instruction that does not exist in
     /// VL. For example, VL [x + 0, y * 1] can be converted to [x << 0, y << 0],
     /// but << does not exist in VL. In the end, we convert VL to [x * 1, y *
@@ -1112,6 +982,10 @@ class BinOpSameOpcodeHelper {
         return Instruction::Add;
       if (Candidate & SubBIT)
         return Instruction::Sub;
+      if (Candidate & FAddBIT)
+        return Instruction::FAdd;
+      if (Candidate & FSubBIT)
+        return Instruction::FSub;
       if (Candidate & AndBIT)
         return Instruction::And;
       if (Candidate & OrBIT)
@@ -1143,9 +1017,11 @@ class BinOpSameOpcodeHelper {
         return Candidate & OrBIT;
       case Instruction::Xor:
         return Candidate & XorBIT;
-      case Instruction::LShr:
       case Instruction::FAdd:
+        return Candidate & FAddBIT;
       case Instruction::FSub:
+        return Candidate & FSubBIT;
+      case Instruction::LShr:
       case Instruction::FMul:
       case Instruction::SDiv:
       case Instruction::UDiv:
@@ -1166,59 +1042,69 @@ class BinOpSameOpcodeHelper {
       if (FromOpcode == ToOpcode)
         return SmallVector<Value *>(I->operands());
       assert(binary_search(SupportedOp, ToOpcode) && "Unsupported opcode.");
-      auto [CI, Pos] = isBinOpWithConstantInt(I);
-      const APInt &FromCIValue = CI->getValue();
-      unsigned FromCIValueBitWidth = FromCIValue.getBitWidth();
+      auto [C, Pos] = isBinOpWithConstant(I);
       Type *RHSType = I->getOperand(Pos)->getType();
       Constant *RHS;
-      switch (FromOpcode) {
-      case Instruction::Shl:
-        if (ToOpcode == Instruction::Add && FromCIValue.isOne())
-          return {I->getOperand(0), I->getOperand(0)};
-        if (ToOpcode == Instruction::Mul) {
-          RHS = ConstantInt::get(
-              RHSType, APInt::getOneBitSet(FromCIValueBitWidth,
-                                           FromCIValue.getZExtValue()));
-        } else {
+      if (auto *CFP = dyn_cast<ConstantFP>(C)) {
+        // fsub(x, c) == fadd(x, -c) for every FP constant c, since IEEE 754
+        // defines subtraction as addition of the negated operand.
+        assert(is_contained({Instruction::FAdd, Instruction::FSub}, ToOpcode) &&
+               "Cannot convert the instruction.");
+        RHS = ConstantFP::get(RHSType, -CFP->getValueAPF());
+      } else {
+        auto *CI = cast<ConstantInt>(C);
+        const APInt &FromCIValue = CI->getValue();
+        unsigned FromCIValueBitWidth = FromCIValue.getBitWidth();
+        switch (FromOpcode) {
+        case Instruction::Shl:
+          if (ToOpcode == Instruction::Add && FromCIValue.isOne())
+            return {I->getOperand(0), I->getOperand(0)};
+          if (ToOpcode == Instruction::Mul) {
+            RHS = ConstantInt::get(
+                RHSType, APInt::getOneBitSet(FromCIValueBitWidth,
+                                             FromCIValue.getZExtValue()));
+          } else {
+            assert(FromCIValue.isZero() && "Cannot convert the instruction.");
+            RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
+                                                 /*AllowRHSConstant=*/true);
+          }
+          break;
+        case Instruction::Mul:
+          assert(FromCIValue.isPowerOf2() && "Cannot convert the instruction.");
+          if (ToOpcode == Instruction::Shl) {
+            RHS = ConstantInt::get(
+                RHSType, APInt(FromCIValueBitWidth, FromCIValue.logBase2()));
+          } else {
+            assert(FromCIValue.isOne() && "Cannot convert the instruction.");
+            RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
+                                                 /*AllowRHSConstant=*/true);
+          }
+          break;
+        case Instruction::Add:
+        case Instruction::Sub:
+          if (FromCIValue.isZero()) {
+            RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
+                                                 /*AllowRHSConstant=*/true);
+          } else {
+            assert(
+                is_contained({Instruction::Add, Instruction::Sub}, ToOpcode) &&
+                "Cannot convert the instruction.");
+            APInt NegatedVal = APInt(FromCIValue);
+            NegatedVal.negate();
+            RHS = ConstantInt::get(RHSType, NegatedVal);
+          }
+          break;
+        case Instruction::And:
+          assert(FromCIValue.isAllOnes() && "Cannot convert the instruction.");
+          RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
+                                               /*AllowRHSConstant=*/true);
+          break;
+        default:
           assert(FromCIValue.isZero() && "Cannot convert the instruction.");
           RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
                                                /*AllowRHSConstant=*/true);
+          break;
         }
-        break;
-      case Instruction::Mul:
-        assert(FromCIValue.isPowerOf2() && "Cannot convert the instruction.");
-        if (ToOpcode == Instruction::Shl) {
-          RHS = ConstantInt::get(
-              RHSType, APInt(FromCIValueBitWidth, FromCIValue.logBase2()));
-        } else {
-          assert(FromCIValue.isOne() && "Cannot convert the instruction.");
-          RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
-                                               /*AllowRHSConstant=*/true);
-        }
-        break;
-      case Instruction::Add:
-      case Instruction::Sub:
-        if (FromCIValue.isZero()) {
-          RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
-                                               /*AllowRHSConstant=*/true);
-        } else {
-          assert(is_contained({Instruction::Add, Instruction::Sub}, ToOpcode) &&
-                 "Cannot convert the instruction.");
-          APInt NegatedVal = APInt(FromCIValue);
-          NegatedVal.negate();
-          RHS = ConstantInt::get(RHSType, NegatedVal);
-        }
-        break;
-      case Instruction::And:
-        assert(FromCIValue.isAllOnes() && "Cannot convert the instruction.");
-        RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
-                                             /*AllowRHSConstant=*/true);
-        break;
-      default:
-        assert(FromCIValue.isZero() && "Cannot convert the instruction.");
-        RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
-                                             /*AllowRHSConstant=*/true);
-        break;
       }
       Value *LHS = I->getOperand(1 - Pos);
       // If the target opcode is non-commutative (e.g., shl, sub),
@@ -1253,7 +1139,8 @@ public:
            "BinOpSameOpcodeHelper only accepts BinaryOperator.");
     unsigned Opcode = I->getOpcode();
     MaskType OpcodeInMaskForm;
-    // Prefer Shl, AShr, Mul, Add, Sub, And, Or and Xor over MainOp.
+    // Prefer Shl, AShr, Mul, Add, Sub, And, Or, Xor, FAdd and FSub over
+    // MainOp.
     switch (Opcode) {
     case Instruction::Shl:
       OpcodeInMaskForm = ShlBIT;
@@ -1279,13 +1166,19 @@ public:
     case Instruction::Xor:
       OpcodeInMaskForm = XorBIT;
       break;
+    case Instruction::FAdd:
+      OpcodeInMaskForm = FAddBIT;
+      break;
+    case Instruction::FSub:
+      OpcodeInMaskForm = FSubBIT;
+      break;
     default:
       return MainOp.equal(Opcode) ||
              (initializeAltOp(I) && AltOp.equal(Opcode));
     }
     MaskType InterchangeableMask = OpcodeInMaskForm;
-    ConstantInt *CI = isBinOpWithConstantInt(I).first;
-    if (CI) {
+    auto [C, Pos] = isBinOpWithConstant(I);
+    if (auto *CI = dyn_cast_or_null<ConstantInt>(C)) {
       constexpr MaskType CanBeAll =
           XorBIT | OrBIT | AndBIT | SubBIT | AddBIT | MulBIT | AShrBIT | ShlBIT;
       const APInt &CIValue = CI->getValue();
@@ -1321,6 +1214,15 @@ public:
           InterchangeableMask = CanBeAll;
         break;
       }
+    } else if (C && Pos == 1) {
+      // FAdd/FSub with a constant RHS: negating the constant always
+      // converts one into the other, so no value check is needed. A
+      // constant LHS (Pos == 0, e.g. "0.0 - x") is excluded: unlike a
+      // constant RHS, it cannot be moved to the other opcode without also
+      // swapping the variable operand, which would misalign it against
+      // lanes that keep their native opcode (their variable operand stays
+      // on the other side).
+      InterchangeableMask = FSubBIT | FAddBIT;
     }
     return MainOp.trySet(OpcodeInMaskForm, InterchangeableMask) ||
            (initializeAltOp(I) &&
@@ -1844,13 +1746,6 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   return S;
 }
 
-/// \returns true if all of the values in \p VL have the same type or false
-/// otherwise.
-static bool allSameType(ArrayRef<Value *> VL) {
-  Type *Ty = VL.consume_front()->getType();
-  return all_of(VL, [&](Value *V) { return V->getType() == Ty; });
-}
-
 /// \returns True if in-tree use also needs extract. This refers to
 /// possible scalar operand in vectorized instruction.
 static bool doesInTreeUserNeedToExtract(Value *Scalar, Instruction *UserInst,
@@ -2209,7 +2104,93 @@ public:
   /// Construct a vectorizable tree that starts at \p Roots.
   void buildTree(ArrayRef<Value *> Roots);
 
-  /// Return the scalars of the root node.
+  /// Returns true if the last buildTree() observed a may-alias memory
+  /// dependency between two distinct, range-checkable base objects, i.e. a
+  /// dependency that could be turned into a runtime alias check.
+  bool hasRuntimeCheckableBlockers() const {
+    return HasRuntimeCheckableBlockers;
+  }
+
+  /// Records whether a may-alias dependency between distinct, range-checkable
+  /// base objects has been observed, so the caller can decide to retry with
+  /// runtime alias checks enabled.
+  void setHasRuntimeCheckableBlockers(bool V) {
+    HasRuntimeCheckableBlockers = V;
+  }
+
+  /// Returns true if the last buildTree() kept a may-alias memory dependency
+  /// that is not runtime-checkable (call or a non-simple mem access). Such a
+  /// dependency cannot be dropped, so a runtime-checks retry cannot unblock the
+  /// region and would be pure overhead.
+  bool hasNonCheckableMemBlocker() const { return HasNonCheckableMemBlocker; }
+
+  /// Records that a non-runtime-checkable may-alias dependency was kept.
+  void setHasNonCheckableMemBlocker(bool V) { HasNonCheckableMemBlocker = V; }
+
+  /// Returns true if the current vectorization attempt may drop
+  /// runtime-checkable may-alias dependencies and guard the region with
+  /// runtime alias checks.
+  bool isTryingRuntimeAliasChecks() const { return TryRuntimeAliasChecks; }
+
+  /// Enables or disables dropping runtime-checkable may-alias dependencies in
+  /// favor of runtime alias checks for the current vectorization attempt.
+  void setTryRuntimeAliasChecks(bool V) { TryRuntimeAliasChecks = V; }
+
+  /// Resets the runtime alias check data.
+  void resetRuntimeAliasCheckState() {
+    HasRuntimeCheckableBlockers = false;
+    HasNonCheckableMemBlocker = false;
+    RTChecksFinalized = false;
+    RTChecks.clear();
+    RTOrigBodyOrder.clear();
+  }
+
+  /// Snapshots RTChecks.BB's body (non-PHI, non-terminator) into
+  /// RTOrigBodyOrder in program order, for the scalar fallback.
+  void captureRuntimeCheckBodySnapshot();
+
+  /// Returns true if \p BB satisfies the block-level preconditions for runtime
+  /// alias check versioning (straight-line, outside any loop, duplicable, not a
+  /// scalar fallback, function not optimized for size). These checks do not
+  /// depend on the collected checks, so they can gate the (expensive)
+  /// optimistic retry before any tree is rebuilt.
+  bool canVersionBlockForRuntimeChecks(BasicBlock *BB) const;
+
+  /// Returns true if the runtime alias checks can be safely emitted to guard
+  /// the vectorized region.
+  bool canVersionForRuntimeChecks();
+
+  /// Returns true if \p BB is a scalar fallback block created by runtime alias
+  /// check versioning.
+  bool isScalarFallbackBlock(BasicBlock *BB) const {
+    return ScalarFallbackBlocks.contains(BB);
+  }
+
+  /// Returns true if an optimistic runtime-checks versioning attempt already
+  /// failed for \p BB, so further retries in the same block can be skipped.
+  bool runtimeChecksFailedForBlock(BasicBlock *BB) const {
+    return FailedRuntimeChecksBlocks.contains(BB);
+  }
+
+  /// Records that an optimistic runtime-checks versioning attempt failed for
+  /// \p BB.
+  void markRuntimeChecksFailedForBlock(BasicBlock *BB) {
+    FailedRuntimeChecksBlocks.insert(BB);
+  }
+
+  /// Returns the modeled cost of the runtime alias checks collected during the
+  /// last (optimistic) buildTree().
+  InstructionCost getRuntimeChecksCost() const;
+
+  /// Returns true if the last (optimistic) buildTree() collected any runtime
+  /// alias checks that must guard the vectorized region.
+  bool hasRuntimeAliasChecks() const { return !RTChecks.BasePairs.empty(); }
+
+  /// Returns true if vectorization changed the CFG (i.e. a block was versioned
+  /// with runtime alias checks). When true, CFG analyses must not be preserved.
+  bool isCFGChanged() const { return CFGChanged; }
+
+  /// Returns the scalars of the root node.
   ArrayRef<Value *> getRootNodeScalars() const {
     assert(!VectorizableTree.empty() && "No graph to get the first node from");
     return VectorizableTree.front()->Scalars;
@@ -2316,6 +2297,10 @@ public:
     ExternalUses.clear();
     ExternalUsesAsOriginalScalar.clear();
     ExternalUsesWithNonUsers.clear();
+    RTChecks.clear();
+    HasRuntimeCheckableBlockers = false;
+    HasNonCheckableMemBlocker = false;
+    RTChecksFinalized = false;
     for (auto &Iter : BlocksSchedules) {
       BlockScheduling *BS = Iter.second.get();
       BS->clear();
@@ -2649,34 +2634,36 @@ public:
     // tree entry node in the different lane.
 
     /// Loads from consecutive memory addresses, e.g. load(A[i]), load(A[i+1]).
-    static const int ScoreConsecutiveLoads = 4;
+    static constexpr int ScoreConsecutiveLoads = 40;
     /// The same load multiple times. This should have a better score than
     /// `ScoreSplat` because it in x86 for a 2-lane vector we can represent it
     /// with `movddup (%reg), xmm0` which has a throughput of 0.5 versus 0.5 for
     /// a vector load and 1.0 for a broadcast.
-    static const int ScoreSplatLoads = 3;
+    static constexpr int ScoreSplatLoads = 30;
     /// Loads from reversed memory addresses, e.g. load(A[i+1]), load(A[i]).
-    static const int ScoreReversedLoads = 3;
+    static constexpr int ScoreReversedLoads = 30;
     /// A load candidate for masked gather.
-    static const int ScoreMaskedGatherCandidate = 1;
+    static constexpr int ScoreMaskedGatherCandidate = 10;
     /// ExtractElementInst from same vector and consecutive indexes.
-    static const int ScoreConsecutiveExtracts = 4;
+    static constexpr int ScoreConsecutiveExtracts = 40;
     /// ExtractElementInst from same vector and reversed indices.
-    static const int ScoreReversedExtracts = 3;
+    static constexpr int ScoreReversedExtracts = 30;
     /// Constants.
-    static const int ScoreConstants = 2;
+    static constexpr int ScoreConstants = 15;
+    /// Same constants.
+    static constexpr int ScoreSameConstants = 17;
     /// Instructions with the same opcode.
-    static const int ScoreSameOpcode = 2;
+    static constexpr int ScoreSameOpcode = 20;
     /// Instructions with alt opcodes (e.g, add + sub).
-    static const int ScoreAltOpcodes = 1;
+    static constexpr int ScoreAltOpcodes = 10;
     /// Identical instructions (a.k.a. splat or broadcast).
-    static const int ScoreSplat = 1;
+    static constexpr int ScoreSplat = 10;
     /// Matching with an undef is preferable to failing.
-    static const int ScoreUndef = 1;
+    static constexpr int ScoreUndef = 10;
     /// Score for failing to find a decent match.
-    static const int ScoreFail = 0;
+    static constexpr int ScoreFail = 0;
     /// Score if all users are vectorized.
-    static const int ScoreAllUserVectorized = 1;
+    static constexpr int ScoreAllUserVectorized = 10;
 
     /// \returns the score of placing \p V1 and \p V2 in consecutive lanes.
     /// \p U1 and \p U2 are the users of \p V1 and \p V2.
@@ -2710,6 +2697,10 @@ public:
                AllUsersAreInternal(V1, V2)))
             return LookAheadHeuristics::ScoreSplatLoads;
         }
+        if (isa<UndefValue>(V1))
+          return LookAheadHeuristics::ScoreUndef;
+        if (isConstant(V1))
+          return LookAheadHeuristics::ScoreSameConstants;
         return LookAheadHeuristics::ScoreSplat;
       }
 
@@ -2761,7 +2752,7 @@ public:
       // Consider constants and buildvector compatible.
       if ((C1 && isa<InsertElementInst>(V2)) ||
           (C2 && isa<InsertElementInst>(V1)))
-        return LookAheadHeuristics::ScoreConstants;
+        return LookAheadHeuristics::ScoreSameOpcode;
 
       // Extracts from consecutive indexes of the same vector better score as
       // the extracts could be optimized away.
@@ -3112,7 +3103,9 @@ public:
     /// Score scaling factor for fully compatible instructions but with
     /// different number of external uses. Allows better selection of the
     /// instructions with less external uses.
-    static const int ScoreScaleFactor = 10;
+    static constexpr int ScoreScaleFactor = 10;
+    /// Scale factor for constants only.
+    static constexpr int ScoreConstantScaleFactor = 6;
 
     /// \Returns the look-ahead score, which tells us how much the sub-trees
     /// rooted at \p LHS and \p RHS match, the more they match the higher the
@@ -3130,7 +3123,8 @@ public:
           LookAhead.getScoreAtLevelRec(LHS, RHS, /*U1=*/nullptr, /*U2=*/nullptr,
                                        /*CurrLevel=*/1, MainAltOps);
       if (Score) {
-        int SplatScore = getSplatScore(Lane, OpIdx, Idx, UsedLanes);
+        int SplatScore =
+            getSplatScore(Lane, OpIdx, Idx, UsedLanes) * ScoreScaleFactor;
         if (Score <= -SplatScore) {
           // Failed score.
           Score = 0;
@@ -3141,7 +3135,10 @@ public:
           // uses. It does not affect actual selection of the best
           // compatible operand in general, just allows to select the
           // operand with all vectorized uses.
-          Score *= ScoreScaleFactor;
+          const int SF = (LHS == RHS && isConstant(LHS))
+                             ? ScoreConstantScaleFactor
+                             : ScoreScaleFactor;
+          Score *= SF;
           Score += getExternalUseScore(Lane, OpIdx, Idx);
           IsUsed = true;
         }
@@ -5052,6 +5049,89 @@ private:
     return Aliased;
   }
 
+  /// Returns true if the may-alias dependency between simple load/store
+  /// instructions \p Inst1 and \p Inst2 could be disambiguated by a runtime
+  /// alias check.
+  bool isRuntimeCheckableAliasPair(Instruction *Inst1, Instruction *Inst2);
+
+  /// Records the (distinct base object) pair behind the may-alias dependency
+  /// of \p Inst1 and \p Inst2 as a runtime alias check guarding the region in
+  /// block \p BB. Returns true if the pair was recorded.
+  bool recordRuntimeAliasCheck(BasicBlock *BB, Instruction *Inst1,
+                               Instruction *Inst2);
+
+  /// Emits the collected runtime alias checks and versions the affected block,
+  /// duplicating its body into a scalar fallback guarded by the checks.
+  void versionBlocksForRuntimeChecks();
+
+  /// Builds the i1 value that is true when any pair of checked base objects
+  /// overlaps at runtime. The base address bounds are materialized from their
+  /// SCEVs with \p Exp.
+  Value *emitRuntimeAliasCheck(IRBuilderBase &Builder, SCEVExpander &Exp);
+
+  /// Data to model and emit the runtime alias checks.
+  struct RuntimeAliasCheckInfo {
+    /// The block whose body is guarded by the checks. Exactly one block is
+    /// supported per attempt.
+    BasicBlock *BB = nullptr;
+    /// Pairs of base objects that must be proven disjoint.
+    SmallSetVector<std::pair<const Value *, const Value *>, 4> BasePairs;
+    /// Accessed address range [Low, High) for each involved base object.
+    SmallMapVector<const Value *, std::pair<const SCEV *, const SCEV *>, 4>
+        Bounds;
+
+    void clear() {
+      BB = nullptr;
+      BasePairs.clear();
+      Bounds.clear();
+    }
+  };
+
+  /// When true, scheduling drops may-alias memory dependencies between
+  /// distinct, range-checkable base objects and records them as runtime alias
+  /// checks instead.
+  bool TryRuntimeAliasChecks = false;
+
+  /// Runtime alias checks collected during the last optimistic buildTree().
+  RuntimeAliasCheckInfo RTChecks;
+
+  /// Base-object pairs already proven disjoint by the block's runtime alias
+  /// check.
+  SmallDenseMap<BasicBlock *,
+                SmallDenseSet<std::pair<const Value *, const Value *>, 4>, 2>
+      VersionedBlockCheckedPairs;
+
+  /// Scalar fallback blocks.
+  SmallPtrSet<BasicBlock *, 4> ScalarFallbackBlocks;
+
+  /// Blocks for which a runtime-checks versioning attempt was made
+  /// and did not produce a profitable versioning.
+  SmallPtrSet<BasicBlock *, 8> FailedRuntimeChecksBlocks;
+
+  /// Returns true if a may-alias dependency between the simple load/store
+  /// instructions \p Inst1 and \p Inst2 in block \p BB is already covered by a
+  /// runtime alias check emitted for \p BB by a previous versioning.
+  bool isCoveredByExistingVersionCheck(BasicBlock *BB, Instruction *Inst1,
+                                       Instruction *Inst2) const;
+
+  /// True, if a may-alias dependency between distinct, range-checkable base
+  /// objects is observed (whether or not it was dropped).
+  bool HasRuntimeCheckableBlockers = false;
+
+  /// True, if a kept may-alias dependency is not runtime-checkable (call or a
+  /// non-simple memaccess).
+  bool HasNonCheckableMemBlocker = false;
+
+  /// Runtime checks are validated and bounded the collected checks.
+  bool RTChecksFinalized = false;
+
+  /// Set when a block was versioned with runtime alias checks, which changes
+  /// the CFG. Used to drop CFG-analysis preservation for the run.
+  bool CFGChanged = false;
+
+  /// Guarded block body (non-PHI, non-terminator) in original source order.
+  SmallVector<Instruction *> RTOrigBodyOrder;
+
   using AliasCacheKey = std::pair<Instruction *, Instruction *>;
 
   /// Cache for alias results.
@@ -5635,6 +5715,7 @@ private:
       ScheduleCopyableDataMapByUsers.clear();
       ReadyInsts.clear();
       RecalcCopyableOperandDeps.clear();
+      IgnoredMemDeps.clear();
       ScheduleStart = nullptr;
       ScheduleEnd = nullptr;
       FirstLoadStoreInRegion = nullptr;
@@ -5789,6 +5870,9 @@ private:
               continue;
             return false;
           }
+          // Only count the occurrence matching this call's NumOps.
+          if (CurNumOps != NumOps)
+            continue;
           PotentiallyReorderedEntriesCount.try_emplace(TE, 0)
               .first->getSecond() += Inc;
         }
@@ -6505,6 +6589,10 @@ private:
     /// against the full tree in scheduleBlock instead. A set is used to avoid
     /// recomputing the same operand more than once.
     SmallSetVector<ScheduleData *, 8> RecalcCopyableOperandDeps;
+
+    /// Ordered pairs (Src, Dst) of memory instructions whose may-alias
+    /// dependency has been dropped in favor of a runtime alias check.
+    SmallDenseSet<std::pair<Instruction *, Instruction *>, 8> IgnoredMemDeps;
 
     /// The ID of the scheduling region. For a new vectorization iteration this
     /// is incremented which "removes" all ScheduleData from the region.
@@ -9687,6 +9775,17 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
           reorderReuses(Gather->ReuseShuffleIndices, Mask);
           continue;
         }
+        // A ScatterVectorize (masked gather) node is scheduled, and the
+        // scheduler reads its operand list at the same lane where the scalar
+        // load sits, so Scalars and the operand list must stay aligned.
+        // Record the reorder in ReorderIndices (applied by the final shuffle)
+        // instead of physically permuting the scalars, matching how a scatter
+        // node with a non-empty order is reordered above.
+        if (Gather->State == TreeEntry::ScatterVectorize) {
+          reorderOrder(Gather->ReorderIndices, Mask);
+          Visited.insert(Gather);
+          continue;
+        }
         reorderScalars(Gather->Scalars, Mask);
         Visited.insert(Gather);
       }
@@ -10750,8 +10849,8 @@ buildIntrinsicArgTypes(const CallInst *CI, const Intrinsic::ID ID,
 /// function (if possible) calls. Returns invalid cost for the corresponding
 /// calls, if they cannot be vectorized/will be scalarized.
 static std::pair<InstructionCost, InstructionCost>
-getVectorCallCosts(CallInst *CI, Type *VecTy, TargetTransformInfo *TTI,
-                   TargetLibraryInfo *TLI, ArrayRef<Type *> ArgTys) {
+getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo *TTI,
+                   const TargetLibraryInfo *TLI, ArrayRef<Type *> ArgTys) {
   auto Shape = VFShape::get(CI->getFunctionType(),
                             ElementCount::getFixed(getNumElements(VecTy)),
                             false /*HasGlobalPred*/);
@@ -10792,6 +10891,124 @@ getVectorCallCosts(CallInst *CI, Type *VecTy, TargetTransformInfo *TTI,
   }
 
   return {IntrinsicCost, LibCost};
+}
+
+/// \returns the reciprocal-throughput cost of \p I widened to \p VF lanes (an
+/// arithmetic op or a vectorizable call).
+static InstructionCost getVectorOpCost(Instruction *I, unsigned VF,
+                                       const TargetTransformInfo &TTI,
+                                       const TargetLibraryInfo &TLI) {
+  assert((isa<BinaryOperator, CallInst>(I)) &&
+         "getVectorOpCost expects an arithmetic op or a vectorizable call.");
+  constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  Type *VecTy = getWidenedType(I->getType(), VF);
+  if (auto *CI = dyn_cast<CallInst>(I)) {
+    Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &TLI);
+    SmallVector<Type *> ArgTys = buildIntrinsicArgTypes(CI, ID, VF, 0, &TTI);
+    auto [IntrCost, LibCost] =
+        getVectorCallCosts(CI, VecTy, &TTI, &TLI, ArgTys);
+    return std::min(IntrCost, LibCost);
+  }
+  return TTI.getArithmeticInstrCost(I->getOpcode(), VecTy, CostKind);
+}
+
+/// Packs a type's kind and scalar width into one key, so an opcode/intrinsic
+/// id reused across scalar widths (e.g. fdiv float vs. fdiv double) is cached
+/// per width instead of sharing one verdict.
+static unsigned getPoorThroughputTypeKey(Type *Ty) {
+  return (static_cast<unsigned>(Ty->getTypeID()) << 16) |
+         Ty->getScalarSizeInBits();
+}
+
+namespace {
+/// Memoizes opcode / intrinsic / callee kinds already ruled out as seeds.
+struct PoorThroughputOpCache {
+  SmallDenseSet<std::pair<unsigned, unsigned>> CheapOpcodes;
+  SmallDenseSet<std::pair<Intrinsic::ID, unsigned>> CheapIntrinsics;
+  // Keyed on the callee alone: a Function's signature is fixed, so its type
+  // never varies between calls.
+  SmallDenseSet<const Function *> CheapCallees;
+};
+
+/// Groups poor-throughput seeds for tryToVectorizeSequence.
+struct SeedGroupKey {
+  unsigned Opcode = 0;
+  Intrinsic::ID IntrID = Intrinsic::not_intrinsic;
+  StringRef CalleeName;
+
+  bool operator==(const SeedGroupKey &O) const {
+    return Opcode == O.Opcode && IntrID == O.IntrID &&
+           CalleeName == O.CalleeName;
+  }
+  bool operator!=(const SeedGroupKey &O) const { return !(*this == O); }
+  bool less(const SeedGroupKey &O) const {
+    if (Opcode != O.Opcode)
+      return Opcode < O.Opcode;
+    if (IntrID != O.IntrID)
+      return IntrID < O.IntrID;
+    return CalleeName < O.CalleeName;
+  }
+};
+
+static SeedGroupKey getSeedGroupKey(const Instruction *I,
+                                    const TargetLibraryInfo &TLI) {
+  SeedGroupKey K;
+  K.Opcode = I->getOpcode();
+  if (auto *CI = dyn_cast<CallInst>(I)) {
+    K.IntrID = getVectorIntrinsicIDForCall(CI, &TLI);
+    if (const Function *F = CI->getCalledFunction())
+      K.CalleeName = F->getName();
+  }
+  return K;
+}
+} // namespace
+
+/// Returns true if \p I is an expensive scalar op whose vector form is cheaper
+/// per lane (e.g. fdiv, frem, fsqrt).
+static bool isPoorThroughputOp(Instruction *I, const TargetTransformInfo &TTI,
+                               const TargetLibraryInfo &TLI,
+                               PoorThroughputOpCache &Cache) {
+  if (!isa<BinaryOperator, CallInst>(I))
+    return false;
+  Type *Ty = I->getType();
+  if ((Ty->isVectorTy() && !SLPReVec) || Ty->isAggregateType() ||
+      !isValidElementType(Ty))
+    return false;
+  auto Analyze = [&]() {
+    constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+    InstructionCost ScalarCost = TTI.getInstructionCost(I, CostKind);
+    if (ScalarCost < TTI::TCC_Expensive)
+      return false;
+    constexpr unsigned MinVF = 2;
+    return getVectorOpCost(I, MinVF, TTI, TLI) < ScalarCost * MinVF;
+  };
+  auto CheckCached = [&](bool IsCheap, llvm::function_ref<void()> MarkCheap) {
+    if (IsCheap)
+      return false;
+    if (Analyze())
+      return true;
+    MarkCheap();
+    return false;
+  };
+  if (auto *CI = dyn_cast<CallInst>(I)) {
+    if (any_of(CI->args(), [](const Value *Arg) {
+          return !isValidElementType(Arg->getType());
+        }))
+      return false;
+    if (Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &TLI)) {
+      auto Key = std::make_pair(ID, getPoorThroughputTypeKey(Ty));
+      return CheckCached(Cache.CheapIntrinsics.contains(Key),
+                         [&] { Cache.CheapIntrinsics.insert(Key); });
+    }
+    const Function *Callee = CI->getCalledFunction();
+    if (!Callee)
+      return Analyze();
+    return CheckCached(Cache.CheapCallees.contains(Callee),
+                       [&] { Cache.CheapCallees.insert(Callee); });
+  }
+  auto Key = std::make_pair(I->getOpcode(), getPoorThroughputTypeKey(Ty));
+  return CheckCached(Cache.CheapOpcodes.contains(Key),
+                     [&] { Cache.CheapOpcodes.insert(Key); });
 }
 
 /// Find the innermost loop starting from \p L, for which at least a single
@@ -11893,12 +12110,13 @@ class InstructionsCompatibilityAnalysis {
   /// elements.
   static bool isSupportedOpcode(const unsigned Opcode) {
     return Opcode == Instruction::Add || Opcode == Instruction::Sub ||
-           Opcode == Instruction::Mul || Opcode == Instruction::LShr ||
-           Opcode == Instruction::Shl || Opcode == Instruction::SDiv ||
-           Opcode == Instruction::UDiv || Opcode == Instruction::And ||
-           Opcode == Instruction::Or || Opcode == Instruction::Xor ||
-           Opcode == Instruction::FAdd || Opcode == Instruction::FSub ||
-           Opcode == Instruction::FMul || Opcode == Instruction::FDiv;
+           Opcode == Instruction::Mul || Opcode == Instruction::AShr ||
+           Opcode == Instruction::LShr || Opcode == Instruction::Shl ||
+           Opcode == Instruction::SDiv || Opcode == Instruction::UDiv ||
+           Opcode == Instruction::And || Opcode == Instruction::Or ||
+           Opcode == Instruction::Xor || Opcode == Instruction::FAdd ||
+           Opcode == Instruction::FSub || Opcode == Instruction::FMul ||
+           Opcode == Instruction::FDiv;
   }
 
   /// Identifies the best candidate value, which represents main opcode
@@ -12521,6 +12739,7 @@ public:
       case Instruction::Add:
       case Instruction::Sub:
       case Instruction::Mul:
+      case Instruction::AShr:
       case Instruction::LShr:
       case Instruction::Shl:
       case Instruction::SDiv:
@@ -12650,6 +12869,13 @@ public:
       // commutative (e.g. 0 - X is not X - 0, so `sub` must be
       // excluded).
       if (IsCommutative) {
+        // IsCommutative can hold for MainOp (e.g. a Sub/FSub feeding only
+        // fabs/icmp-eq-0) without every lane sharing that property, so
+        // re-check the specific lane before swapping it.
+        auto CanSwap = [&](Value *V) {
+          return isCommutative(S.getMatchingMainOpOrAltOp(cast<Instruction>(V)),
+                               V);
+        };
         // Count (ID0, ID1) pair frequencies for operand normalization.
         // Pairs and their inverses are tracked under a canonical key
         // so that (Load, Add) and (Add, Load) contribute to the same
@@ -12710,7 +12936,7 @@ public:
           if (BestCount > 0) {
             unsigned ID0 = Operands[0][Idx]->getValueID();
             unsigned ID1 = Operands[1][Idx]->getValueID();
-            if (ID0 == MajID1 && ID1 == MajID0)
+            if (ID0 == MajID1 && ID1 == MajID0 && CanSwap(V))
               std::swap(Operands[0][Idx], Operands[1][Idx]);
           }
           ++TotalNC;
@@ -12724,7 +12950,7 @@ public:
             if (S.isCopyableElement(V) || isa<PoisonValue>(V))
               continue;
             if (!isa<LoadInst>(Operands[0][Idx]) &&
-                isa<LoadInst>(Operands[1][Idx]))
+                isa<LoadInst>(Operands[1][Idx]) && CanSwap(V))
               std::swap(Operands[0][Idx], Operands[1][Idx]);
           }
         }
@@ -13189,6 +13415,13 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
     // Last chance to try to vectorize alternate node.
     if (S.isAltShuffle() && ReuseShuffleIndices.empty() && TrySplitNode(S))
       return;
+    // Last chance to try to vectorize copyable node.
+    if (S.areInstructionsWithCopyableElements() &&
+        ReuseShuffleIndices.empty()) {
+      InstructionsState AltS = getSameOpcode(VL, *TLI);
+      if (AltS && AltS.isAltShuffle() && TrySplitNode(AltS))
+        return;
+    }
     newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
     NonScheduledFirst.insert(VL.front());
     if (S.getOpcode() == Instruction::Load &&
@@ -19823,6 +20056,24 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
                                      ArrayRef<Value *> VectorizedVals,
                                      InstructionCost ReductionCost,
                                      Instruction *RdxRoot) {
+  // A poor-throughput entry's real vector-vs-scalar savings (fdiv/frem/fsqrt)
+  // are already folded into TreeCost like any other entry, including all
+  // shuffle/insert/extract overhead elsewhere in the tree. So bypassing the
+  // instruction-count veto below just has to trust that already-complete
+  // TreeCost instead of guessing at extra savings: heavy gather/shuffle
+  // overhead raises TreeCost too, and will still block the bypass.
+  auto BypassesInstCountCheck = [&]() {
+    if (!VectorizePoorThroughput || TreeCost >= -SLPCostThreshold)
+      return false;
+    PoorThroughputOpCache Cache;
+    return any_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &Ptr) {
+      const TreeEntry &TE = *Ptr;
+      return TE.hasState() && !DeletedNodes.contains(&TE) && !TE.isGather() &&
+             !TransformedToGatherNodes.contains(&TE) &&
+             TE.State != TreeEntry::CombinedVectorize &&
+             isPoorThroughputOp(TE.getMainOp(), *TTI, *TLI, Cache);
+    });
+  };
   // Reject vectorization if the vector code would produce more instructions
   // than the scalar code. The cost model may underestimate overhead from
   // shuffles, inserts, and extracts.
@@ -19838,7 +20089,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
     unsigned NumVector = getNumVectorInsts();
     LLVM_DEBUG(dbgs() << "SLP: Inst count check: vector=" << NumVector
                       << " scalar=" << NumScalar << "\n");
-    if (NumVector > NumScalar) {
+    if (NumVector > NumScalar && !BypassesInstCountCheck()) {
       LLVM_DEBUG(dbgs() << "SLP: Rejecting tree: vector inst count "
                         << NumVector << " > scalar inst count " << NumScalar
                         << ".\n");
@@ -21939,7 +22190,7 @@ Value *BoUpSLP::gather(
         return Vec;
       InsElt = II;
     } else {
-      Vec = Builder.CreateInsertElement(Vec, Scalar, Builder.getInt32(Pos));
+      Vec = Builder.CreateInsertElement(Vec, Scalar, Pos);
       InsElt = dyn_cast<InsertElementInst>(Vec);
       if (!InsElt)
         return Vec;
@@ -23460,17 +23711,35 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
            return !SI || isCommutative(SI);
          })))
       I->setHasNoUnsignedWrap(/*b=*/false);
-    // add nsw X, INT_MIN is not equivalent to sub nsw X, INT_MIN, because
-    // negating INT_MIN overflows. When an add/sub lane is converted to the
-    // opposite opcode its constant is negated, so nsw no longer holds and must
-    // be dropped.
+    // Interchanging add/sub negates the constant: nsw only survives if the
+    // constant isn't INT_MIN (negating it would overflow); nuw never
+    // survives a nonzero constant, since that flips the valid range from
+    // X >= C to X < C.
     if (!MinBWs.contains(E) &&
-        (Opcode == Instruction::Add || Opcode == Instruction::Sub) &&
+        (Opcode == Instruction::Add || Opcode == Instruction::Sub)) {
+      for (Value *V : UniqueInsts) {
+        auto *SI = cast<Instruction>(V);
+        if (SI->getOpcode() == Opcode ||
+            !is_contained({Instruction::Add, Instruction::Sub},
+                          SI->getOpcode()))
+          continue;
+        for (Value *Op : SI->operands()) {
+          const auto *CI = dyn_cast<ConstantInt>(Op);
+          if (!CI || CI->isZero())
+            continue;
+          I->setHasNoUnsignedWrap(/*b=*/false);
+          if (CI->getValue().isMinSignedValue())
+            I->setHasNoSignedWrap(/*b=*/false);
+        }
+      }
+    }
+    // mul nsw X, INT_MIN is not equivalent to shl nsw X, BW-1, because shl nsw
+    // poisons when the sign bit is shifted out of a positive value. When a mul
+    // lane is converted to shl with shift amount BW-1, nsw must be dropped.
+    if (!MinBWs.contains(E) && Opcode == Instruction::Shl &&
         any_of(UniqueInsts, [&](Value *V) {
           auto *SI = cast<Instruction>(V);
-          if (SI->getOpcode() == Opcode ||
-              !is_contained({Instruction::Add, Instruction::Sub},
-                            SI->getOpcode()))
+          if (SI->getOpcode() != Instruction::Mul)
             return false;
           return any_of(SI->operands(), [](Value *Op) {
             const auto *CI = dyn_cast<ConstantInt>(Op);
@@ -23840,18 +24109,23 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         const unsigned RBW = cast<VectorType>(R->getType())
                                  ->getElementType()
                                  ->getIntegerBitWidth();
+        // A signed comparison needs the sign bit getActiveBits() ignores.
+        const bool Signed = cast<CmpInst>(VL0)->isSigned();
+        auto GetRequiredBits = [Signed](const APInt &V) {
+          return Signed ? V.getSignificantBits() : V.getActiveBits();
+        };
         if ((LBW < RBW && (!allConstant(E->getOperand(1)) ||
                            any_of(
                                E->getOperand(1),
                                [&](Value *V) {
                                  auto *CI = dyn_cast<ConstantInt>(V);
                                  return !CI ||
-                                        CI->getValue().getActiveBits() > LBW;
+                                        GetRequiredBits(CI->getValue()) > LBW;
                                }))) ||
             (LBW > RBW && allConstant(E->getOperand(0)) &&
              all_of(E->getOperand(1), [&](Value *V) {
                auto *CI = dyn_cast<ConstantInt>(V);
-               return CI && CI->getValue().getActiveBits() <= RBW;
+               return CI && GetRequiredBits(CI->getValue()) <= RBW;
              }))) {
           Type *CastTy = R->getType();
           L = Builder.CreateIntCast(L, CastTy, GetOperandSignedness(0));
@@ -24547,6 +24821,462 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
   return nullptr;
 }
 
+bool BoUpSLP::isRuntimeCheckableAliasPair(Instruction *Inst1,
+                                          Instruction *Inst2) {
+  // Only simple (non-volatile, non-atomic) accesses may be reordered once
+  // aliasing is ruled out at runtime; volatile/atomic ordering must be kept.
+  if (!isSimple(Inst1) || !isSimple(Inst2))
+    return false;
+  Value *Ptr1 = getLoadStorePointerOperand(Inst1);
+  Value *Ptr2 = getLoadStorePointerOperand(Inst2);
+  // Only simple load/store accesses have a single pointer operand whose
+  // accessed range can be bounded and compared at runtime.
+  if (!Ptr1 || !Ptr2)
+    return false;
+  if (Ptr1->getType()->getPointerAddressSpace() !=
+      Ptr2->getType()->getPointerAddressSpace())
+    return false;
+  const Value *Base1 = getUnderlyingObject(Ptr1);
+  const Value *Base2 = getUnderlyingObject(Ptr2);
+  // A runtime range check is only meaningful between two distinct, identifiable
+  // objects: two accesses to the same base differ by a compile-time offset, so
+  // they are resolved statically and a base-range check would fold to a
+  // constant predicate rather than a useful runtime guard.
+  if (Base1 == Base2 || isa<UndefValue>(Base1) || isa<UndefValue>(Base2))
+    return false;
+  return true;
+}
+
+bool BoUpSLP::isCoveredByExistingVersionCheck(BasicBlock *BB,
+                                              Instruction *Inst1,
+                                              Instruction *Inst2) const {
+  const auto It = VersionedBlockCheckedPairs.find(BB);
+  if (It == VersionedBlockCheckedPairs.end())
+    return false;
+  Value *Ptr1 = getLoadStorePointerOperand(Inst1);
+  Value *Ptr2 = getLoadStorePointerOperand(Inst2);
+  if (!Ptr1 || !Ptr2)
+    return false;
+  const Value *Base1 = getUnderlyingObject(Ptr1);
+  const Value *Base2 = getUnderlyingObject(Ptr2);
+  if (Base1 == Base2)
+    return false;
+  if (Base2 < Base1)
+    std::swap(Base1, Base2);
+  return It->second.contains({Base1, Base2});
+}
+
+/// Returns true if \p BB's body already contains vector instructions, e.g.
+/// from an earlier SLP vectorization in the same pass.
+static bool blockBodyHasVectorInstructions(BasicBlock *BB) {
+  for (Instruction &I : *BB) {
+    if (isa<PHINode>(&I) || I.isTerminator())
+      continue;
+    // A vector-producing instruction (vector load, binop, shuffle, etc.) has a
+    // vector result type.
+    if (getValueType(&I)->isVectorTy())
+      return true;
+  }
+  return false;
+}
+
+void BoUpSLP::captureRuntimeCheckBodySnapshot() {
+  RTOrigBodyOrder.clear();
+  if (!TryRuntimeAliasChecks || !RTChecks.BB)
+    return;
+  BasicBlock *BB = RTChecks.BB;
+  for (Instruction &I : *BB)
+    if (!isa<PHINode>(&I) && !I.isTerminator())
+      RTOrigBodyOrder.push_back(&I);
+}
+
+bool BoUpSLP::recordRuntimeAliasCheck(BasicBlock *BB, Instruction *Inst1,
+                                      Instruction *Inst2) {
+  Value *Ptr1 = getLoadStorePointerOperand(Inst1);
+  Value *Ptr2 = getLoadStorePointerOperand(Inst2);
+  if (!Ptr1 || !Ptr2)
+    return false;
+  const Value *Base1 = getUnderlyingObject(Ptr1);
+  const Value *Base2 = getUnderlyingObject(Ptr2);
+  if (Base1 == Base2)
+    return false;
+  // Only a single block can be versioned per attempt.
+  if (RTChecks.BB && RTChecks.BB != BB)
+    return false;
+  // Normalize the pair order so duplicate checks collapse.
+  if (Base2 < Base1)
+    std::swap(Base1, Base2);
+  auto Pair = std::make_pair(Base1, Base2);
+  // After the checks have been validated and bounded, do not introduce new
+  // pairs.
+  if (RTChecksFinalized)
+    return RTChecks.BasePairs.contains(Pair);
+  RTChecks.BB = BB;
+  RTChecks.BasePairs.insert(Pair);
+  return true;
+}
+
+bool BoUpSLP::canVersionBlockForRuntimeChecks(BasicBlock *BB) const {
+  assert(BB && "Expected a block to version for runtime checks.");
+  if (!BB->getTerminator())
+    return false;
+  // Versioning duplicates the block body, increasing code size on the guarded
+  // path; do not version when the function is optimized for size (-Os/-Oz).
+  if (F->hasOptSize())
+    return false;
+  if (!DT || !LI)
+    return false;
+  if (!DT->isReachableFromEntry(BB))
+    return false;
+  // Versioning duplicates the block body; only straight-line code outside any
+  // loop is handled for now, to avoid LoopInfo and region updates.
+  if (LI->getLoopFor(BB))
+    return false;
+  // Never version a scalar fallback block: it is the safe, original-order copy
+  // taken when aliasing is detected and must stay scalar.
+  if (ScalarFallbackBlocks.contains(BB))
+    return false;
+  // The scalar fallback must be a faithful copy of the original scalar body.
+  // Reject blocks that were already partially vectorized earlier in this pass.
+  if (blockBodyHasVectorInstructions(BB))
+    return false;
+  // Versioning duplicates the original block body into a scalar fallback.
+  // Calls that cannot be duplicated or whose semantics depend on the call being
+  // immediately followed by a return cannot be cloned into the diamond.
+  if (BB->getTerminatingMustTailCall())
+    return false;
+  if (any_of(*BB, [](Instruction &I) {
+        auto *CB = dyn_cast<CallBase>(&I);
+        return CB && (CB->cannotDuplicate() || CB->isConvergent());
+      }))
+    return false;
+  return true;
+}
+
+bool BoUpSLP::canVersionForRuntimeChecks() {
+  if (RTChecks.BasePairs.empty() || !RTChecks.BB)
+    return false;
+  if (RTChecks.BasePairs.size() > SLPMaxRuntimeAliasChecks)
+    return false;
+  BasicBlock *BB = RTChecks.BB;
+  // Block-level preconditions (loop/optsize/duplicability/...) are the same
+  // ones used to gate the optimistic retry, so reuse them here.
+  if (!canVersionBlockForRuntimeChecks(BB))
+    return false;
+
+  // The scalar fallback is a clone of the body. Operands defined inside the
+  // body are remapped to their clones, but operands defined outside the body
+  // (header PHIs, dominating definitions) are reused as-is by the clone. If
+  // such an outside operand is itself vectorized by this tree, vectorizeTree()
+  // will delete its scalar, leaving the clone with a dangling, out-of-tree use.
+  // Versioning cannot model that, so bail out.
+  for (Instruction &I : *BB) {
+    if (isa<PHINode>(&I) || I.isTerminator())
+      continue;
+    for (Value *Op : I.operands()) {
+      auto *OpI = dyn_cast<Instruction>(Op);
+      if (!OpI)
+        continue;
+      bool DefinedInBody =
+          OpI->getParent() == BB && !isa<PHINode>(OpI) && !OpI->isTerminator();
+      if (!DefinedInBody && isVectorized(OpI))
+        return false;
+    }
+  }
+
+  SmallPtrSet<const Value *, 8> Bases;
+  for (const auto &P : RTChecks.BasePairs) {
+    Bases.insert(P.first);
+    Bases.insert(P.second);
+  }
+  // Every base object must be available in the (PHI-only) header where the
+  // guard branch is emitted.
+  if (any_of(Bases, [&](const Value *Base) {
+        const auto *I = dyn_cast<Instruction>(Base);
+        return I && (I->getParent() == BB || !DT->dominates(I, BB));
+      }))
+    return false;
+
+  // Compute the accessed address range [Low, High) for every involved base.
+  RTChecks.Bounds.clear();
+  SmallMapVector<Value *, std::pair<const SCEV *, const SCEV *>, 4> OffBounds;
+  unsigned NumMemInsts = 0;
+  for (Instruction &I : *BB) {
+    if (!I.mayReadOrWriteMemory())
+      continue;
+    // The dependency scan truncates beyond MaxMemDepDistance. Only version
+    // blocks small enough that the scan is never truncated, so every
+    // conflicting base pair is guaranteed to be recorded.
+    if (++NumMemInsts > MaxMemDepDistance)
+      return false;
+    Value *Ptr = getLoadStorePointerOperand(&I);
+    // A non-simple memory access (e.g. a call) keeps its dependencies, so its
+    // relative order with kept-dependency partners is preserved inside the
+    // duplicated body and it does not need a bound.
+    if (!Ptr)
+      continue;
+    Value *Base = const_cast<Value *>(getUnderlyingObject(Ptr));
+    if (!Bases.contains(Base))
+      continue;
+    TypeSize TS = DL->getTypeStoreSize(getLoadStoreType(&I));
+    if (TS.isScalable())
+      return false;
+    Type *IntTy = DL->getAddressType(Base->getType());
+    const SCEV *PtrSC = SE->getPtrToAddrExpr(SE->getSCEV(Ptr));
+    const SCEV *BaseSC = SE->getPtrToAddrExpr(SE->getSCEV(Base));
+    if (isa<SCEVCouldNotCompute>(PtrSC) || isa<SCEVCouldNotCompute>(BaseSC))
+      return false;
+    // Byte offset of this access from its base. Require a constant so the bound
+    // stays base-plus-constant, and non-negative so the unsigned [Low, High)
+    // range below actually covers the access.
+    // TODO: Support variable offsets (e.g. base + %idx) which would need
+    // runtime umin/umax bounds and a proof that the offset range cannot wrap,
+    // plus a richer cost model.
+    const auto *Off = dyn_cast<SCEVConstant>(SE->getMinusSCEV(PtrSC, BaseSC));
+    if (!Off || Off->getAPInt().isNegative())
+      return false;
+    const SCEV *EndOff =
+        SE->getAddExpr(Off, SE->getConstant(IntTy, TS.getFixedValue()));
+    auto [It, Inserted] = OffBounds.try_emplace(Base, Off, EndOff);
+    if (!Inserted) {
+      // Constant operands, so these fold to a constant min/max offset rather
+      // than emitting a runtime umin/umax.
+      It->second.first = SE->getUMinExpr(It->second.first, Off);
+      It->second.second = SE->getUMaxExpr(It->second.second, EndOff);
+    }
+  }
+  // Materialize the absolute [Low, High) = base + [minOff, maxEndOff). The
+  // offsets are constants, so each bound is a base-plus-constant expression
+  // that expands to a single add off the base address (no runtime umin/umax).
+  for (const auto &[Base, Off] : OffBounds) {
+    const SCEV *BaseSC = SE->getPtrToAddrExpr(SE->getSCEV(Base));
+    RTChecks.Bounds.try_emplace(Base, SE->getAddExpr(BaseSC, Off.first),
+                                SE->getAddExpr(BaseSC, Off.second));
+  }
+  // Every involved base must contribute at least one bounded access, and its
+  // bounds must be expandable at the guard (so the checks only reference values
+  // available in the header).
+  SCEVExpander Exp(*SE, "slp.rtcheck");
+  // The guard is emitted after the header PHIs, so validate expandability at
+  // the first non-PHI: only values available in the header (PHIs, arguments,
+  // values defined before the block) dominate that point.
+  Instruction *GuardPt = &*BB->getFirstNonPHIIt();
+  if (any_of(Bases, [&](const Value *Base) {
+        auto *It = RTChecks.Bounds.find(Base);
+        return It == RTChecks.Bounds.end() ||
+               !Exp.isSafeToExpandAt(It->second.first, GuardPt) ||
+               !Exp.isSafeToExpandAt(It->second.second, GuardPt);
+      }))
+    return false;
+
+  // No SSA value defined in the body may escape the versioned region: that
+  // would require a merge PHI in the continuation block, which is not yet
+  // supported. A use by the terminator counts as an escape because the
+  // terminator is moved into the continuation block.
+  for (Instruction &I : *BB) {
+    if (isa<PHINode>(&I) || I.isTerminator())
+      continue;
+    if (any_of(I.users(), [&](User *U) {
+          auto *UI = dyn_cast<Instruction>(U);
+          return !UI || UI->getParent() != BB || UI->isTerminator();
+        }))
+      return false;
+  }
+
+  // The runtime checks and the guard branch run on both the vector and the
+  // scalar fallback path. When aliasing is detected at runtime the scalar code
+  // executes unchanged plus the check overhead, so bound the check cost
+  // relative to the guarded scalar region to avoid pessimizing that path too
+  // much. The scalar region cost is the cost of the (current, still scalar)
+  // block body; no IR is emitted here.
+  constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  InstructionCost ScalarCost = 0;
+  for (Instruction &I : *BB) {
+    if (isa<PHINode>(&I) || I.isTerminator())
+      continue;
+    ScalarCost += TTI->getInstructionCost(&I, CostKind);
+  }
+  InstructionCost CheckCost = getRuntimeChecksCost();
+  if (!ScalarCost.isValid() || !CheckCost.isValid())
+    return false;
+  if (CheckCost * 100 >
+      ScalarCost * SLPRuntimeAliasChecksMaxScalarCostPercent.getValue())
+    return false;
+
+  // Freeze the check set so the final scheduleBlock() keeps the same dropped
+  // dependencies the bounds were just computed for.
+  RTChecksFinalized = true;
+  return true;
+}
+
+InstructionCost BoUpSLP::getRuntimeChecksCost() const {
+  if (RTChecks.BasePairs.empty())
+    return 0;
+  LLVMContext &Ctx = F->getContext();
+  Type *IntTy = DL->getIntPtrType(Ctx);
+  Type *I1Ty = Type::getInt1Ty(Ctx);
+  constexpr TTI::TargetCostKind Kind = TTI::TCK_RecipThroughput;
+  unsigned NumBases = RTChecks.Bounds.size();
+  unsigned NumPairs = RTChecks.BasePairs.size();
+  InstructionCost Cost = 0;
+  // Per base: a [Low, High) address pair. canVersionForRuntimeChecks() folds
+  // each bound to a base-plus-constant offset, so it expands to two integer
+  // adds (one per bound) with no runtime umin/umax reduction.
+  Cost += TTI->getArithmeticInstrCost(Instruction::Add, IntTy, Kind) *
+          (2 * NumBases);
+  // Two integer compares and one logical and per checked pair.
+  InstructionCost CmpCost = TTI->getCmpSelInstrCost(
+      Instruction::ICmp, IntTy, I1Ty, CmpInst::ICMP_ULT, Kind);
+  InstructionCost AndCost =
+      TTI->getArithmeticInstrCost(Instruction::And, I1Ty, Kind);
+  Cost += (CmpCost * 2 + AndCost) * NumPairs;
+  // Or-reduction of the per-pair conflicts.
+  if (NumPairs > 1)
+    Cost += TTI->getArithmeticInstrCost(Instruction::Or, I1Ty, Kind) *
+            (NumPairs - 1);
+  // The guard branch.
+  Cost += TTI->getCFInstrCost(Instruction::CondBr, Kind);
+  return Cost;
+}
+
+Value *BoUpSLP::emitRuntimeAliasCheck(IRBuilderBase &Builder,
+                                      SCEVExpander &Exp) {
+  // Materialize the [Low, High) address bounds for every involved base from
+  // their SCEVs at the builder's insertion point.
+  SmallDenseMap<const Value *, std::pair<Value *, Value *>, 4> Range;
+  for (const auto &[Base, Bound] : RTChecks.Bounds) {
+    Type *IntTy = DL->getAddressType(Base->getType());
+    Value *Low =
+        Exp.expandCodeFor(Bound.first, IntTy, Builder.GetInsertPoint());
+    Value *High =
+        Exp.expandCodeFor(Bound.second, IntTy, Builder.GetInsertPoint());
+    Range[Base] = {Low, High};
+  }
+  Value *Cond = nullptr;
+  for (const auto &P : RTChecks.BasePairs) {
+    std::pair<Value *, Value *> A = Range.lookup(P.first);
+    std::pair<Value *, Value *> B = Range.lookup(P.second);
+    assert(A.first && A.second && B.first && B.second &&
+           "Missing bounds for a checked base object");
+    // The objects overlap iff (A.Low < B.High) && (B.Low < A.High).
+    Value *C0 = Builder.CreateICmpULT(A.first, B.second, "rt.bound0");
+    Value *C1 = Builder.CreateICmpULT(B.first, A.second, "rt.bound1");
+    Value *Conflict = Builder.CreateAnd(C0, C1, "rt.conflict");
+    Cond =
+        Cond ? Builder.CreateOr(Cond, Conflict, "rt.conflict.all") : Conflict;
+  }
+  return Builder.CreateFreeze(Cond, "rt.guard");
+}
+
+void BoUpSLP::versionBlocksForRuntimeChecks() {
+  // Only version when this is the optimistic attempt that collected the checks.
+  if (!TryRuntimeAliasChecks || RTChecks.BasePairs.empty() || !RTChecks.BB ||
+      RTOrigBodyOrder.empty())
+    return;
+  BasicBlock *BB = RTChecks.BB;
+  Function *Fn = BB->getParent();
+  LLVMContext &Ctx = BB->getContext();
+  Instruction *Term = BB->getTerminator();
+  assert(Term && "Versioned block must have a terminator");
+
+  // Build the diamond:
+  //   BB (header: PHIs + guard) -> {VecBB, ScalarBB} -> Tail (terminator).
+  BasicBlock *VecBB = BasicBlock::Create(Ctx, BB->getName() + ".rtvec", Fn);
+  BasicBlock *ScalarBB =
+      BasicBlock::Create(Ctx, BB->getName() + ".rtscalar", Fn);
+  BasicBlock *Tail = BasicBlock::Create(Ctx, BB->getName() + ".rtcont", Fn);
+
+  // Clone the body into the scalar fallback block, in the original program
+  // order (RTOrigBodyOrder).
+  SmallDenseMap<Value *, Value *, 16> VMap;
+  for (Instruction *I : RTOrigBodyOrder) {
+    assert(I->getParent() == BB &&
+           "RTOrigBodyOrder entry no longer in the versioned block");
+    Instruction *C = I->clone();
+    if (I->hasName())
+      C->setName(I->getName() + ".scalar");
+    C->insertInto(ScalarBB, ScalarBB->end());
+    VMap[I] = C;
+  }
+  // Remap the clones to use the cloned definitions; references to values
+  // defined outside the body (header or function arguments) are unchanged.
+  for (Instruction &I : *ScalarBB)
+    for (Use &U : I.operands())
+      if (Value *V = VMap.lookup(U.get()))
+        U.set(V);
+
+  // Move the body (everything but PHIs and the terminator) into the vector
+  // block in the scheduled order.
+  for (Instruction &I : make_early_inc_range(*BB)) {
+    if (isa<PHINode>(&I) || I.isTerminator())
+      continue;
+    I.removeFromParent();
+    I.insertInto(VecBB, VecBB->end());
+  }
+
+  // Emit the runtime alias check before the still-present terminator, so the
+  // SCEV bounds are expanded at a valid insertion point.
+  IRBuilder<> ChkBuilder(Term);
+  ChkBuilder.SetCurrentDebugLocation(Term->getDebugLoc());
+  SCEVExpander Exp(*SE, "slp.rtcheck");
+  Value *Cond = emitRuntimeAliasCheck(ChkBuilder, Exp);
+
+  // Move the original terminator into the continuation block and replace it
+  // with the guard branch.
+  Term->removeFromParent();
+  Term->insertInto(Tail, Tail->end());
+  UncondBrInst::Create(Tail, VecBB);
+  UncondBrInst::Create(Tail, ScalarBB);
+  ChkBuilder.SetInsertPoint(BB);
+  CondBrInst *Guard = ChkBuilder.CreateCondBr(Cond, ScalarBB, VecBB);
+  // The scalar fallback is taken only when the runtime alias check detects a
+  // conflict, which is expected to be rare, so bias the guard towards the
+  // vector path. Only annotate profiled functions, to avoid injecting profile
+  // data into functions that have none.
+  if (!ProfcheckDisableMetadataFixes && Fn->getEntryCount())
+    setBranchWeights(*Guard, {1, 127}, /*IsExpected=*/false);
+
+  // The continuation block is the new predecessor of the original successors.
+  for (BasicBlock *Succ : successors(Term))
+    Succ->replacePhiUsesWith(BB, Tail);
+
+  // Keep the dominator tree valid for the remainder of the run.
+  if (DT) {
+    DomTreeUpdater DTU(*DT, DomTreeUpdater::UpdateStrategy::Eager);
+    SmallVector<DominatorTree::UpdateType> Updates = {
+        {DominatorTree::Insert, BB, VecBB},
+        {DominatorTree::Insert, BB, ScalarBB},
+        {DominatorTree::Insert, VecBB, Tail},
+        {DominatorTree::Insert, ScalarBB, Tail}};
+    for (BasicBlock *Succ : successors(Term)) {
+      Updates.push_back({DominatorTree::Insert, Tail, Succ});
+      Updates.push_back({DominatorTree::Delete, BB, Succ});
+    }
+    DTU.applyUpdates(Updates);
+    // Refresh DFS numbers: getLastInstructionInBundle() may use them to order
+    // instructions across blocks for nodes emitted after versioning.
+    DT->updateDFSNumbers();
+  }
+
+  // Record the checked base pairs for the fast-path block so that subsequent
+  // vectorization there can reuse this guard instead of versioning again.
+  SmallDenseSet<std::pair<const Value *, const Value *>, 4> &Covered =
+      VersionedBlockCheckedPairs[VecBB];
+  Covered.insert_range(RTChecks.BasePairs);
+  // The scalar fallback must never be vectorized or versioned again.
+  // TODO: check that scalar fallback does not miss vectorization opportunity
+  // without runtime checks.
+  ScalarFallbackBlocks.insert(ScalarBB);
+
+  // The checks have been emitted; clear so any later vectorizeTree() in the
+  // same attempt does not version again.
+  RTChecks.clear();
+  RTChecksFinalized = false;
+  RTOrigBodyOrder.clear();
+  // The CFG was modified; CFG analyses can no longer be preserved.
+  CFGChanged = true;
+}
+
 Value *BoUpSLP::vectorizeTree() {
   ExtraValueToDebugLocsMap ExternallyUsedValues;
   return vectorizeTree(ExternallyUsedValues);
@@ -24579,6 +25309,13 @@ Value *BoUpSLP::vectorizeTree(
       continue;
     (void)getLastInstructionInBundle(TE.get());
   }
+
+  // If this tree was scheduled by dropping may-alias memory dependencies in
+  // favor of runtime alias checks, materialize the checks and version the
+  // affected block before emitting the vector code. Scheduling has already
+  // run, so moving the body into the fast-path block is safe, and the
+  // dominator tree is updated for the rest of the run.
+  versionBlocksForRuntimeChecks();
 
   if (ReductionRoot)
     Builder.SetInsertPoint(ReductionRoot->getParent(),
@@ -24782,7 +25519,6 @@ Value *BoUpSLP::vectorizeTree(
     Value *Vec = E->VectorizedValue;
     assert(Vec && "Can't find vectorizable value");
 
-    Value *Lane = Builder.getInt32(ExternalUse.Lane);
     auto ExtractAndExtendIfNeeded = [&](Value *Vec) {
       if (isa<InsertValueInst>(Scalar))
         return Vec;
@@ -24867,7 +25603,7 @@ Value *BoUpSLP::vectorizeTree(
                 IV->comesBefore(IVec))
               Ex = Builder.CreateExtractElement(V, ES->getIndexOperand());
             else
-              Ex = Builder.CreateExtractElement(Vec, Lane);
+              Ex = Builder.CreateExtractElement(Vec, ExternalUse.Lane);
           } else if (auto *VecTy =
                          dyn_cast<FixedVectorType>(Scalar->getType())) {
             assert(SLPReVec && "FixedVectorType is not expected.");
@@ -24911,7 +25647,7 @@ Value *BoUpSLP::vectorizeTree(
               Ex = createExtractVector(Builder, Vec, VecTyNumElements,
                                        ExternalUse.Lane * VecTyNumElements);
             } else {
-              Ex = Builder.CreateExtractElement(Vec, Lane);
+              Ex = Builder.CreateExtractElement(Vec, ExternalUse.Lane);
             }
           }
           // If necessary, sign-extend or zero-extend ScalarRoot
@@ -26483,23 +27219,69 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
       //    the whole loop (even if the loop is fast, it's quadratic).
       //    It's important for the loop break condition (see below) to
       //    check this limit even between two read-only instructions.
+      Instruction *DepInst = DepDest->getInst();
+      bool MayConflict = SrcMayWrite || DepInst->mayWriteToMemory();
       if (DistToSrc >= MaxMemDepDistance ||
-          ((SrcMayWrite || DepDest->getInst()->mayWriteToMemory()) &&
-           (IsNonSimpleSrc || NumAliased >= AliasedCheckLimit ||
-            SLP->isAliased(SrcLoc, SrcInst, DepDest->getInst())))) {
+          (MayConflict && (IsNonSimpleSrc || NumAliased >= AliasedCheckLimit ||
+                           SLP->isAliased(SrcLoc, SrcInst, DepInst)))) {
+        // Try to turn a may-alias dependency between distinct, range-checkable
+        // base objects into a runtime alias check. This covers both concrete
+        // aliases and the conservative dependencies added once the
+        // per-instruction alias-check limit is reached, so that a high alias
+        // count cannot block a region that is otherwise versionable. The
+        // dropped dependency is recorded so the final scheduleBlock()
+        // recomputation keeps it dropped consistently.
+        bool Dropped = false;
+        if (MayConflict && SLPEnableRuntimeAliasChecks) {
+          auto Key = std::make_pair(SrcInst, DepInst);
+          // A dependency dropped during buildTree() must stay dropped on every
+          // later recomputation (e.g. the final scheduleBlock()), independent
+          // of the current mode, so the schedule remains consistent.
+          if (IgnoredMemDeps.contains(Key)) {
+            Dropped = true;
+          } else if (SLP->isCoveredByExistingVersionCheck(BB, SrcInst,
+                                                          DepInst)) {
+            // This block is the fast path of an earlier versioning whose
+            // runtime check already proved these bases disjoint, so the
+            // dependency can be dropped without emitting a new check.
+            Dropped = true;
+          } else if (SLP->isTryingRuntimeAliasChecks()) {
+            if (SLP->isRuntimeCheckableAliasPair(SrcInst, DepInst) &&
+                SLP->recordRuntimeAliasCheck(BB, SrcInst, DepInst)) {
+              IgnoredMemDeps.insert(Key);
+              Dropped = true;
+            }
+          } else if (!SLP->hasNonCheckableMemBlocker()) {
+            // A dependency on a non-simple access (call, a volatile/atomic, or
+            // anything without a single load/store pointer) cannot be
+            // range-checked, so it is a hard blocker a retry cannot drop. A
+            // simple runtime-checkable may-alias pair could instead be dropped
+            // by a runtime check. Other simple pairs (e.g. same base) are
+            // resolved statically and are not blockers.
+            if (IsNonSimpleSrc || !getLoadStorePointerOperand(DepInst) ||
+                !isSimple(DepInst))
+              SLP->setHasNonCheckableMemBlocker(true);
+            else if (!SLP->hasRuntimeCheckableBlockers() &&
+                     SLP->isRuntimeCheckableAliasPair(SrcInst, DepInst))
+              SLP->setHasRuntimeCheckableBlockers(true);
+          }
+        }
 
-        // We increment the counter only if the locations are aliased
-        // (instead of counting all alias checks). This gives a better
-        // balance between reduced runtime and accurate dependencies.
-        NumAliased++;
-
-        DepDest->addMemoryDependency(BundleMember);
-        BundleMember->incDependencies();
-        if (!DepDest->isScheduled())
-          BundleMember->incrementUnscheduledDeps(1);
-        if (!DepDest->hasValidDependencies() ||
-            (InsertInReadyList && DepDest->isReady()))
-          WorkList.push_back(DepDest);
+        if (!Dropped) {
+          // Count only kept dependencies toward the alias-check limit. Counting
+          // dropped ones could prematurely trigger the conservative
+          // (limit-based) dependencies above and add spurious dependencies
+          // (e.g. between non-overlapping stores to the same base) that would
+          // block scheduling of an otherwise versionable region.
+          NumAliased++;
+          DepDest->addMemoryDependency(BundleMember);
+          BundleMember->incDependencies();
+          if (!DepDest->isScheduled())
+            BundleMember->incrementUnscheduledDeps(1);
+          if (!DepDest->hasValidDependencies() ||
+              (InsertInReadyList && DepDest->isReady()))
+            WorkList.push_back(DepDest);
+        }
       }
 
       // Example, explaining the loop break condition: Let's assume our
@@ -27197,9 +27979,11 @@ bool BoUpSLP::collectValuesToDemote(
       return all_of(E.Scalars, [&](Value *V) {
         if (isa<PoisonValue>(V))
           return true;
+        unsigned ShiftedBits = OrigBitWidth - BitWidth;
+        if (E.isCopyableElement(V))
+          return ShiftedBits < ComputeNumSignBits(V, *DL, AC, nullptr, DT);
         auto *I = cast<Instruction>(V);
         KnownBits AmtKnownBits = computeKnownBits(I->getOperand(1), *DL);
-        unsigned ShiftedBits = OrigBitWidth - BitWidth;
         return AmtKnownBits.getMaxValue().ult(BitWidth) &&
                ShiftedBits <
                    ComputeNumSignBits(I->getOperand(0), *DL, AC, nullptr, DT);
@@ -27720,7 +28504,13 @@ PreservedAnalyses SLPVectorizerPass::run(Function &F, FunctionAnalysisManager &A
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
-  PA.preserveSet<CFGAnalyses>();
+  // Runtime alias check versioning changes the CFG. In that case only the
+  // dominator tree is kept up to date (via DomTreeUpdater); other CFG analyses
+  // must be recomputed. Otherwise SLP leaves the CFG intact.
+  if (CFGChanged)
+    PA.preserve<DominatorTreeAnalysis>();
+  else
+    PA.preserveSet<CFGAnalyses>();
   return PA;
 }
 
@@ -27775,6 +28565,11 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
     if (BB->isEHPad() || isa_and_nonnull<UnreachableInst>(BB->getTerminator()))
       continue;
 
+    // Skip scalar fallback blocks created by runtime alias check versioning:
+    // they duplicate the original scalar code and must not be vectorized again.
+    if (R.isScalarFallbackBlock(BB))
+      continue;
+
     // Start new block - clear the list of reduction roots.
     R.clearReductionData();
     collectSeedInstructions(BB);
@@ -27803,6 +28598,9 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
     R.optimizeGatherSequence();
     LLVM_DEBUG(dbgs() << "SLP: vectorized \"" << F.getName() << "\"\n");
   }
+  // Propagate whether runtime alias check versioning changed the CFG, so the
+  // caller can drop CFG-analysis preservation only when necessary.
+  CFGChanged = R.isCFGChanged();
   return Changed;
 }
 
@@ -27810,7 +28608,67 @@ std::optional<bool>
 SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
                                        unsigned Idx, unsigned MinVF,
                                        unsigned &Size) {
+  std::optional<bool> Res = vectorizeStoreChainImpl(Chain, R, Idx, MinVF, Size);
+  assert(!R.isTryingRuntimeAliasChecks() &&
+         "Unexpected nested runtime alias check attempt");
+  // Retry once with runtime alias checks, but only when the normal attempt
+  // could not even schedule the bundle, i.e. it was blocked by
+  // a memory dependency, and that dependency is runtime-checkable. If the
+  // region also kept a non-checkable blocker, dropping the checkable deps
+  // cannot unblock it.
+  if (Res.has_value() || !SLPEnableRuntimeAliasChecks ||
+      !R.hasRuntimeCheckableBlockers() || R.hasNonCheckableMemBlocker())
+    return Res;
+  // getTreeCost() unconditionally rejects a VF=2 tree whose vector
+  // instruction count exceeds its scalar instruction count (the
+  // SLPInstCountCheck heuristic), because the cost model is known to
+  // underestimate shuffle/insert/extract overhead at that width. That check
+  // returns an invalid cost that no threshold, including the runtime-checks
+  // one, can outweigh. Retrying such a chain would pay the full tree rebuild
+  // cost for the one width the cost model is least trusted for, on top of
+  // the extra guard overhead, so skip it instead of wasting the attempt.
+  if (Chain.size() == 2)
+    return Res;
+  // Only retry when scheduling blocked the chain (a store or its value bundle
+  // could not be scheduled), which dropping may-alias deps can fix. A chain
+  // gathered for structural reasons (e.g. non-consecutive addresses) would
+  // gather again, so the second buildTree() would be pure overhead with no
+  // vectorization benefit.
+  Value *FirstStore = Chain.front();
+  if (!R.isNotScheduled(FirstStore) &&
+      !R.isNotScheduled(cast<StoreInst>(FirstStore)->getValueOperand()))
+    return Res;
+  BasicBlock *BB = cast<Instruction>(FirstStore)->getParent();
+  // If an earlier optimistic attempt already failed for this block, do not
+  // retry for other chains or smaller VFs in the same block.
+  if (R.runtimeChecksFailedForBlock(BB))
+    return Res;
+  // The retry rebuilds the whole tree; also skip it when the chain's block can
+  // never be versioned (e.g. it is inside a loop).
+  if (!R.canVersionBlockForRuntimeChecks(BB)) {
+    R.markRuntimeChecksFailedForBlock(BB);
+    return Res;
+  }
+  R.setTryRuntimeAliasChecks(true);
+  unsigned RTSize = Size;
+  std::optional<bool> RTRes =
+      vectorizeStoreChainImpl(Chain, R, Idx, MinVF, RTSize);
+  R.setTryRuntimeAliasChecks(false);
+  if (RTRes && *RTRes) {
+    Size = RTSize;
+    return RTRes;
+  }
+  // The versioning attempt failed for this block, skip the (expensive) retry.
+  R.markRuntimeChecksFailedForBlock(BB);
+  return Res;
+}
+
+std::optional<bool>
+SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
+                                           unsigned Idx, unsigned MinVF,
+                                           unsigned &Size) {
   Size = 0;
+  R.resetRuntimeAliasCheckState();
   LLVM_DEBUG(dbgs() << "SLP: Analyzing a store chain of length " << Chain.size()
                     << "\n");
   const unsigned Sz = R.getVectorElementSize(Chain[0]);
@@ -27870,6 +28728,8 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
     R.reorderTopToBottom();
     R.reorderBottomToTop();
   }
+  if (R.isTryingRuntimeAliasChecks())
+    R.captureRuntimeCheckBodySnapshot();
   R.transformNodes();
   R.computeMinimumValueSizes();
 
@@ -27880,6 +28740,32 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
   if (S && S.getOpcode() == Instruction::Load)
     Size = 2; // cut off masked gather small trees
   InstructionCost Cost = R.getTreeCost(TreeCost);
+
+  // When the tree was scheduled by dropping may-alias dependencies, account
+  // for the runtime alias checks in the cost and make sure the region can
+  // actually be versioned. If it cannot, abandon this attempt: the dropped
+  // dependencies are unused because the tree is not vectorized.
+  // The full check cost is charged against the vector-path benefit here; the
+  // scalar-path overhead is bounded separately in canVersionForRuntimeChecks()
+  // (a fraction of the scalar body cost).
+  if (R.isTryingRuntimeAliasChecks() && R.hasRuntimeAliasChecks()) {
+    // getRuntimeChecksCost() only ever sums non-negative per-instruction
+    // throughput costs (address adds, compares, and/or, the guard branch), so
+    // adding it can only push Cost up, never down, and an already-invalid
+    // Cost (e.g. rejected by one of getTreeCost()'s own heuristics) stays
+    // invalid either way. So if Cost already fails the threshold below, no
+    // checks cost can rescue it: skip the (expensive) SCEV/dominance/escape
+    // analysis in canVersionForRuntimeChecks() instead of running it on a
+    // tree that is already rejected.
+    if (Cost >= -SLPCostThreshold)
+      return false;
+    if (!R.canVersionForRuntimeChecks())
+      return false;
+    // TODO: Add probability-weighted model (benefit scaled by the expected
+    // non-alias odds) would be more precise but needs
+    // branch-probability/profile data.
+    Cost += R.getRuntimeChecksCost();
+  }
 
   LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost << " for VF=" << VF << "\n");
   if (Cost < -SLPCostThreshold) {
@@ -28750,7 +29636,8 @@ void SLPVectorizerPass::collectSeedInstructions(BasicBlock *BB) {
 }
 
 bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
-                                           bool MaxVFOnly) {
+                                           bool MaxVFOnly,
+                                           bool LimitToRegisterVF) {
   if (VL.size() < 2)
     return false;
 
@@ -28790,6 +29677,9 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   unsigned MaxVF = std::max<unsigned>(
       getFloorFullVectorNumberOfElements(*TTI, ScalarTy, VL.size()), MinVF);
   MaxVF = std::min(R.getMaximumVF(Sz, S.getOpcode()), MaxVF);
+  // Standalone poor-throughput seeds only need one register worth of lanes.
+  if (LimitToRegisterVF && Sz != 0)
+    MaxVF = std::min(MaxVF, std::max(MinVF, R.getMaxVecRegSize() / Sz));
   if (MaxVF < 2) {
     R.getORE()->emit([&]() {
       return OptimizationRemarkMissed(SV_NAME, "SmallVF", I0)
@@ -29670,9 +30560,17 @@ public:
             [](ArrayRef<Value *> RedV) {
               return RedV.size() < 2 || !allConstant(RedV) || !isSplat(RedV);
             })) {
-      for (ReductionOpsType &RdxOps : ReductionOps)
-        for (Value *RdxOp : RdxOps)
-          V.analyzedReductionRoot(cast<Instruction>(RdxOp));
+      // For ordered reductions the leaves are pulled in via the fallback in
+      // matchAssociativeReduction and may still be valid reduction roots on
+      // their own; only the root is a dead end. For unordered reductions keep
+      // marking every reduction op as analyzed.
+      if (RK == ReductionOrdering::Ordered) {
+        V.analyzedReductionRoot(cast<Instruction>(ReductionRoot));
+      } else {
+        for (ReductionOpsType &RdxOps : ReductionOps)
+          for (Value *RdxOp : RdxOps)
+            V.analyzedReductionRoot(cast<Instruction>(RdxOp));
+      }
       return nullptr;
     }
 
@@ -32692,6 +33590,8 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
   // Stores are processed after all other instructions/roots.
   SmallSetVector<StoreInst *, 8> PostProcessStores;
   SmallSetVector<Instruction *, 8> FMACandidates;
+  SmallSetVector<Instruction *, 8> PoorThroughputSeeds;
+  PoorThroughputOpCache PoorThroughputCache;
   auto VectorizeInsertsAndCmps = [&](bool AtTerminator) {
     bool Changed = vectorizeInserts(PostProcessInserts, BB, R, FMACandidates);
     if (AtTerminator) {
@@ -32839,6 +33739,9 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       PostProcessStores.insert(SI);
     else if (isNonVectorizableInst(&*It, TLI))
       PostProcessInsts.insert(&*It);
+    else if (VectorizePoorThroughput &&
+             isPoorThroughputOp(&*It, *TTI, *TLI, PoorThroughputCache))
+      PoorThroughputSeeds.insert(&*It);
   }
 
   // Late post-process: run operand-chain vectorization for stores.
@@ -32890,6 +33793,57 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
   }
   assert(Empty.empty() &&
          "No new FMA candidates expected during AllowFMACandidates retry.");
+
+  if (PoorThroughputSeeds.size() >= 2) {
+    SmallVector<Value *> Seeds;
+    SmallDenseMap<Value *, SeedGroupKey> SeedKeys;
+    for (Instruction *I : PoorThroughputSeeds) {
+      if (R.isDeleted(I) || !isValidElementType(getValueType(I)))
+        continue;
+      // Skip seeds a user already resolved: a deleted user was folded into
+      // some other vector by an earlier pass, and I's role there is already
+      // decided, so retrying I here is almost always a wasted attempt.
+      if (any_of(I->users(), [&](User *U) {
+            auto *UI = dyn_cast<Instruction>(U);
+            return UI && (R.isDeleted(UI) || R.isVectorized(UI));
+          }))
+        continue;
+      SeedKeys.try_emplace(I, getSeedGroupKey(I, *TLI));
+      Seeds.push_back(I);
+    }
+    auto SeedSorter = [&](Value *V1, Value *V2) {
+      if (V1 == V2)
+        return false;
+      auto *I1 = cast<Instruction>(V1);
+      auto *I2 = cast<Instruction>(V2);
+      Type *T1 = I1->getType();
+      Type *T2 = I2->getType();
+      if (T1->getTypeID() != T2->getTypeID())
+        return T1->getTypeID() < T2->getTypeID();
+      if (T1->getScalarSizeInBits() != T2->getScalarSizeInBits())
+        return T1->getScalarSizeInBits() < T2->getScalarSizeInBits();
+      const SeedGroupKey &K1 = SeedKeys.at(V1);
+      const SeedGroupKey &K2 = SeedKeys.at(V2);
+      if (K1 != K2)
+        return K1.less(K2);
+      return I1->comesBefore(I2);
+    };
+    auto AreCompatibleSeeds = [&](ArrayRef<Value *> VL, Value *V) {
+      if (VL.empty() || VL.back() == V)
+        return true;
+      return cast<Instruction>(VL.back())->getType() ==
+                 cast<Instruction>(V)->getType() &&
+             SeedKeys.at(VL.back()) == SeedKeys.at(V);
+    };
+    if (Seeds.size() >= 2)
+      Changed |= tryToVectorizeSequence<Value>(
+          Seeds, SeedSorter, AreCompatibleSeeds,
+          [this, &R](ArrayRef<Value *> Candidates, bool MaxVFOnly) {
+            return tryToVectorizeList(Candidates, R, MaxVFOnly,
+                                      /*LimitToRegisterVF=*/true);
+          },
+          /*MaxVFOnly=*/false, R);
+  }
 
   return Changed;
 }

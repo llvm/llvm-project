@@ -733,7 +733,7 @@ void MachineSinking::FindCycleSinkCandidates(
                            "target\n");
       continue;
     }
-    if (!isCycleInvariant(Cycle, MI)) {
+    if (!isCycleInvariant(*CI, *Cycle, MI)) {
       LLVM_DEBUG(dbgs() << "CycleSink: Instruction is not cycle invariant\n");
       continue;
     }
@@ -895,7 +895,7 @@ bool MachineSinking::run(MachineFunction &MF) {
       HasHighPressure = false;
 
       for (auto *Cycle : Cycles) {
-        MachineBasicBlock *Preheader = Cycle->getCyclePreheader();
+        MachineBasicBlock *Preheader = CI->getCyclePreheader(*Cycle);
         if (!Preheader) {
           LLVM_DEBUG(dbgs() << "CycleSink: Can't find preheader\n");
           continue;
@@ -1758,7 +1758,7 @@ bool MachineSinking::aggressivelySinkIntoCycle(
     return false;
 
   LLVM_DEBUG(dbgs() << "AggressiveCycleSink: Finding sink block for: " << I);
-  assert(Cycle->getCyclePreheader() && "Cycle sink needs a preheader block");
+  assert(CI->getCyclePreheader(*Cycle) && "Cycle sink needs a preheader block");
   SmallVector<std::pair<RegSubRegPair, MachineInstr *>> Uses;
 
   MachineOperand &DefMO = I.getOperand(0);
@@ -1780,7 +1780,7 @@ bool MachineSinking::aggressivelySinkIntoCycle(
                            "can't sink.\n");
       continue;
     }
-    if (!Cycle->contains(MI->getParent())) {
+    if (!CI->contains(*Cycle, MI->getParent())) {
       LLVM_DEBUG(
           dbgs() << "AggressiveCycleSink:   Use not in cycle, can't sink.\n");
       continue;

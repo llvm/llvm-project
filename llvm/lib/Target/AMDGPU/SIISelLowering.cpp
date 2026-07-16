@@ -1023,7 +1023,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::MUL, MVT::i1, Promote);
 
   if (Subtarget->hasBF16ConversionInsts()) {
-    setOperationAction(ISD::FP_ROUND, {MVT::bf16, MVT::v2bf16}, Custom);
+    setOperationAction({ISD::FP_ROUND, ISD::STRICT_FP_ROUND},
+                       {MVT::bf16, MVT::v2bf16}, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Legal);
   }
 
@@ -2682,7 +2683,7 @@ SDValue SITargetLowering::getPreloadedValue(
     SelectionDAG &DAG, const SIMachineFunctionInfo &MFI, EVT VT,
     AMDGPUFunctionArgInfo::PreloadedValue PVID) const {
   const ArgDescriptor *Reg = nullptr;
-  const TargetRegisterClass *RC;
+  const TargetRegisterClass *RC = nullptr;
   LLT Ty;
 
   CallingConv::ID CC = DAG.getMachineFunction().getFunction().getCallingConv();
@@ -3730,15 +3731,8 @@ SDValue SITargetLowering::LowerFormalArguments(
 
     if (Arg.Flags.isSRet()) {
       // The return object should be reasonably addressable.
-
-      // FIXME: This helps when the return is a real sret. If it is a
-      // automatically inserted sret (i.e. CanLowerReturn returns false), an
-      // extra copy is inserted in SelectionDAGBuilder which obscures this.
-      unsigned NumBits =
-          32 - getSubtarget()->getKnownHighZeroBitsForFrameIndex();
-      Val = DAG.getNode(
-          ISD::AssertZext, DL, VT, Val,
-          DAG.getValueType(EVT::getIntegerVT(*DAG.getContext(), NumBits)));
+      Val = annotateStackObjectPointer(Val, DAG, DL,
+                                       Arg.Flags.getNonZeroMemAlign());
     }
 
     Val = convertABITypeToValueType(DAG, Val, VA, DL);
@@ -6021,7 +6015,8 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
             MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
         Register Op1L_Op0H_Reg =
             MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-        Register CarryReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+        Register CarryReg =
+            MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
         Register AddReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
         Register NegatedValLo =
             MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
@@ -6048,9 +6043,23 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
         BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), DestSub0)
             .addReg(Op1L)
             .addReg(LowOpcode);
-        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_HI_U32), CarryReg)
-            .addReg(Op1L)
-            .addReg(LowOpcode);
+        if (ST.hasScalarMulHiInsts()) {
+          BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_HI_U32), CarryReg)
+              .addReg(Op1L)
+              .addReg(LowOpcode);
+        } else {
+          Register VCarryReg =
+              MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+          Register LowOpVGPR =
+              MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+          BuildMI(BB, MI, DL, TII->get(AMDGPU::COPY), LowOpVGPR)
+              .addReg(LowOpcode);
+          BuildMI(BB, MI, DL, TII->get(AMDGPU::V_MUL_HI_U32_e64), VCarryReg)
+              .addReg(Op1L)
+              .addReg(LowOpVGPR);
+          BuildMI(BB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), CarryReg)
+              .addReg(VCarryReg);
+        }
         BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MUL_I32), Op1H_Op0L_Reg)
             .addReg(Op1H)
             .addReg(LowOpcode);
@@ -6371,10 +6380,23 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
       ActiveBits.addReg(NewActiveBitsReg).addMBB(ComputeLoop);
 
       // Creating branching
-      unsigned CMPOpc = IsWave32 ? AMDGPU::S_CMP_LG_U32 : AMDGPU::S_CMP_LG_U64;
-      BuildMI(*ComputeLoop, I, DL, TII->get(CMPOpc))
-          .addReg(NewActiveBitsReg)
-          .addImm(0);
+      MachineInstrBuilder SetSCCInstr;
+      if (!ST.hasScalarCompareEq64()) {
+        // For targets <= gfx7, use an S_OR_B32/B64 instruction to set SCC.
+        Register LaneMaskReg = MRI.createVirtualRegister(WaveMaskRegClass);
+        unsigned CMPOpc = IsWave32 ? AMDGPU::S_OR_B32 : AMDGPU::S_OR_B64;
+        SetSCCInstr =
+            BuildMI(*ComputeLoop, I, DL, TII->get(CMPOpc), LaneMaskReg);
+      } else {
+        unsigned CMPOpc =
+            IsWave32 ? AMDGPU::S_CMP_LG_U32 : AMDGPU::S_CMP_LG_U64;
+        SetSCCInstr = BuildMI(*ComputeLoop, I, DL, TII->get(CMPOpc));
+      }
+      SetSCCInstr.addReg(NewActiveBitsReg);
+      if (ST.hasScalarCompareEq64())
+        SetSCCInstr.addImm(0);
+      else
+        SetSCCInstr.addReg(NewActiveBitsReg);
       BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::S_CBRANCH_SCC1))
           .addMBB(ComputeLoop);
 
@@ -8242,6 +8264,30 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IID = N->getConstantOperandVal(0);
     switch (IID) {
+    case Intrinsic::amdgcn_wave_reduce_min:
+    case Intrinsic::amdgcn_wave_reduce_umin:
+    case Intrinsic::amdgcn_wave_reduce_max:
+    case Intrinsic::amdgcn_wave_reduce_umax:
+    case Intrinsic::amdgcn_wave_reduce_add:
+    case Intrinsic::amdgcn_wave_reduce_sub:
+    case Intrinsic::amdgcn_wave_reduce_and:
+    case Intrinsic::amdgcn_wave_reduce_or:
+    case Intrinsic::amdgcn_wave_reduce_xor: {
+      EVT VT = N->getValueType(0);
+      if (isTypeLegal(VT))
+        return;
+      SDLoc SL(N);
+      bool NeedsSignExt = IID == Intrinsic::amdgcn_wave_reduce_min ||
+                          IID == Intrinsic::amdgcn_wave_reduce_max ||
+                          IID == Intrinsic::amdgcn_wave_reduce_add ||
+                          IID == Intrinsic::amdgcn_wave_reduce_sub;
+      unsigned ExtOpc = NeedsSignExt ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+      SDValue ExtSrc = DAG.getNode(ExtOpc, SL, MVT::i32, N->getOperand(1));
+      SDValue Result = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::i32,
+                                   N->getOperand(0), ExtSrc, N->getOperand(2));
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, SL, VT, Result));
+      return;
+    }
     case Intrinsic::amdgcn_make_buffer_rsrc:
       Results.push_back(lowerPointerAsRsrcIntrin(N, DAG));
       return;
@@ -8651,7 +8697,8 @@ SDValue SITargetLowering::splitFP_ROUNDVectorOp(SDValue Op,
 }
 
 SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
-  SDValue Src = Op.getOperand(0);
+  bool IsStrict = Op->isStrictFPOpcode();
+  SDValue Src = Op.getOperand(IsStrict ? 1 : 0);
   EVT SrcVT = Src.getValueType();
   EVT DstVT = Op.getValueType();
 
@@ -8694,6 +8741,11 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   // hardware f32 -> bf16 instruction.
   EVT F32VT = SrcVT.changeElementType(*DAG.getContext(), MVT::f32);
   SDValue Rod = expandRoundInexactToOdd(F32VT, Src, DL, DAG);
+  if (IsStrict) {
+    return DAG.getNode(
+        ISD::STRICT_FP_ROUND, DL, {DstVT, MVT::Other},
+        {Op.getOperand(0), Rod, DAG.getTargetConstant(0, DL, MVT::i32)});
+  }
   return DAG.getNode(ISD::FP_ROUND, DL, DstVT, Rod,
                      DAG.getTargetConstant(0, DL, MVT::i32));
 }
@@ -18499,7 +18551,7 @@ SDValue SITargetLowering::performClampCombine(SDNode *N,
     return DCI.DAG.getConstantFP(Zero, SDLoc(N), N->getValueType(0));
   }
 
-  APFloat One(F.getSemantics(), "1.0");
+  APFloat One = APFloat::getOne(F.getSemantics());
   if (F > One)
     return DCI.DAG.getConstantFP(One, SDLoc(N), N->getValueType(0));
 
@@ -19727,9 +19779,9 @@ void SITargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       Op, Known, DemandedElts, DAG, Depth);
 }
 
-void SITargetLowering::computeKnownBitsForFrameIndex(
-    const int FI, KnownBits &Known, const MachineFunction &MF) const {
-  TargetLowering::computeKnownBitsForFrameIndex(FI, Known, MF);
+void SITargetLowering::computeKnownBitsForStackObjectPointer(
+    KnownBits &Known, const MachineFunction &MF, Align Alignment) const {
+  TargetLowering::computeKnownBitsForStackObjectPointer(Known, MF, Alignment);
 
   // Set the high bits to zero based on the maximum allowed scratch size per
   // wave. We can't use vaddr in MUBUF instructions if we don't know the address
