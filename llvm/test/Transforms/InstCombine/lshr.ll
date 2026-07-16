@@ -1627,3 +1627,27 @@ define i32 @lshr_two_i32(i32 %x) {
   %shr = lshr i32 2, %x
   ret i32 %shr
 }
+
+; lshr (mul nuw X, 20), 4 -> add nuw X, lshr X, 2
+define i32 @lshr_mul_nuw_2bits(i32 %x) {
+; CHECK-LABEL: @lshr_mul_nuw_2bits(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i32 [[X:%.*]], 20
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[MUL]], 4
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %mul = mul nuw i32 %x, 20
+  %shr = lshr i32 %mul, 4
+  ret i32 %shr
+}
+
+; lshr (mul nsw X, 20), 4 -> add nsw X, lshr X, 2
+define i32 @lshr_mul_nsw_2bits(i32 %x) {
+; CHECK-LABEL: @lshr_mul_nsw_2bits(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[X:%.*]], 20
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[MUL]], 4
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %mul = mul nsw i32 %x, 20
+  %shr = lshr i32 %mul, 4
+  ret i32 %shr
+}
