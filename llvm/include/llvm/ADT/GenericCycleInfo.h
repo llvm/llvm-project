@@ -92,39 +92,6 @@ private:
 public:
   GenericCycle() = default;
 
-  /// \brief Whether the cycle is a natural loop.
-  bool isReducible() const { return Entries.size() == 1; }
-
-  BlockT *getHeader() const { return Entries[0]; }
-
-  const SmallVectorImpl<BlockT *> & getEntries() const {
-    return Entries;
-  }
-
-  /// \brief Return whether \p Block is an entry block of the cycle.
-  bool isEntry(const BlockT *Block) const {
-    return is_contained(Entries, Block);
-  }
-
-  /// \brief Replace all entries with \p Block as single entry.
-  /// \p Block must be contained in the cycle.
-  void setSingleEntry(BlockT *Block) {
-    Entries.clear();
-    Entries.push_back(Block);
-  }
-
-  /// \brief Returns true iff this cycle contains \p C. O(1). Non-strict, i.e.
-  /// returns true if C is the same cycle.
-  bool contains(const GenericCycle *C) const {
-    return C && IdxBegin <= C->IdxBegin && C->IdxEnd <= IdxEnd;
-  }
-
-  const GenericCycle *getParentCycle() const { return ParentCycle; }
-  GenericCycle *getParentCycle() { return ParentCycle; }
-  unsigned getDepth() const { return Depth; }
-
-  size_t getNumBlocks() const { return IdxEnd - IdxBegin; }
-
   /// Iteration over child cycles: the first child (if any) immediately
   /// follows this cycle in the preorder array, and each next sibling follows
   /// the previous child's subtree.
@@ -147,41 +114,7 @@ public:
       return C == Other.C;
     }
   };
-
-  const_child_iterator child_begin() const {
-    return const_child_iterator{this + 1};
-  }
-  const_child_iterator child_end() const {
-    return const_child_iterator{this + 1 + NumDescendants};
-  }
-  iterator_range<const_child_iterator> children() const {
-    return llvm::make_range(child_begin(), child_end());
-  }
   //@}
-
-  /// Iteration over entry blocks.
-  //@{
-  using const_entry_iterator =
-      typename SmallVectorImpl<BlockT *>::const_iterator;
-  const_entry_iterator entry_begin() const { return Entries.begin(); }
-  const_entry_iterator entry_end() const { return Entries.end(); }
-  size_t getNumEntries() const { return Entries.size(); }
-  iterator_range<const_entry_iterator> entries() const {
-    return llvm::make_range(entry_begin(), entry_end());
-  }
-  using const_reverse_entry_iterator =
-      typename SmallVectorImpl<BlockT *>::const_reverse_iterator;
-  const_reverse_entry_iterator entry_rbegin() const { return Entries.rbegin(); }
-  const_reverse_entry_iterator entry_rend() const { return Entries.rend(); }
-  //@}
-
-  Printable printEntries(const ContextT &Ctx) const {
-    return Printable([this, &Ctx](raw_ostream &Out) {
-      ListSeparator LS(" ");
-      for (auto *Entry : Entries)
-        Out << LS << Ctx.print(Entry);
-    });
-  }
 };
 
 /// \brief Cycle information for a function.
@@ -249,9 +182,42 @@ public:
     return Number < BlockMap.size() ? BlockMap[Number] : nullptr;
   }
 
+  BlockT *getHeader(const CycleT &C) const { return C.Entries[0]; }
+  bool isReducible(const CycleT &C) const { return C.Entries.size() == 1; }
+  CycleT *getParentCycle(const CycleT &C) const { return C.ParentCycle; }
+  unsigned getDepth(const CycleT &C) const { return C.Depth; }
+  size_t getNumBlocks(const CycleT &C) const { return C.IdxEnd - C.IdxBegin; }
+
+  ArrayRef<BlockT *> getEntries(const CycleT &C) const { return C.Entries; }
+  bool isEntry(const CycleT &C, const BlockT *Block) const {
+    return is_contained(C.Entries, Block);
+  }
+  void setSingleEntry(CycleT &C, BlockT *Block) {
+    C.Entries.clear();
+    C.Entries.push_back(Block);
+  }
+  /// Returns true iff \p Outer contains \p Inner. O(1). Non-strict.
+  bool contains(const CycleT &Outer, const CycleT &Inner) const {
+    return Outer.IdxBegin <= Inner.IdxBegin && Inner.IdxEnd <= Outer.IdxEnd;
+  }
+  iterator_range<typename CycleT::const_child_iterator>
+  children(const CycleT &C) const {
+    return llvm::make_range(
+        typename CycleT::const_child_iterator{&C + 1},
+        typename CycleT::const_child_iterator{&C + 1 + C.NumDescendants});
+  }
+  Printable printEntries(const CycleT &C, const ContextT &Ctx) const {
+    return Printable([&C, &Ctx](raw_ostream &Out) {
+      ListSeparator LS(" ");
+      for (auto *Entry : C.Entries)
+        Out << LS << Ctx.print(Entry);
+    });
+  }
+
   /// \brief Return whether \p Block is contained in \p C. O(1).
   bool contains(const CycleT &C, const BlockT *Block) const {
-    return C.contains(getCycle(Block));
+    const CycleT *Inner = getCycle(Block);
+    return Inner && contains(C, *Inner);
   }
 
   /// \brief Return the blocks of \p C, including those of nested cycles.
@@ -267,7 +233,7 @@ public:
   /// if it is not contained in any cycle.
   unsigned getCycleDepth(const BlockT *Block) const {
     CycleT *Cycle = getCycle(Block);
-    return Cycle ? Cycle->getDepth() : 0;
+    return Cycle ? getDepth(*Cycle) : 0;
   }
 
   CycleT *getTopLevelParentCycle(const BlockT *Block) const {

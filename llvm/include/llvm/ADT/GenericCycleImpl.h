@@ -84,7 +84,7 @@ auto GenericCycleInfo<ContextT>::getCyclePreheader(const CycleT &C) const
   if (!Predecessor)
     return nullptr;
 
-  assert(C.isReducible() && "Cycle Predecessor must be in a reducible cycle!");
+  assert(isReducible(C) && "Cycle Predecessor must be in a reducible cycle!");
 
   if (succ_size(Predecessor) != 1)
     return nullptr;
@@ -99,13 +99,13 @@ auto GenericCycleInfo<ContextT>::getCyclePreheader(const CycleT &C) const
 template <typename ContextT>
 auto GenericCycleInfo<ContextT>::getCyclePredecessor(const CycleT &C) const
     -> BlockT * {
-  if (!C.isReducible())
+  if (!isReducible(C))
     return nullptr;
 
   BlockT *Out = nullptr;
 
   // Loop over the predecessors of the header node...
-  BlockT *Header = C.getHeader();
+  BlockT *Header = getHeader(C);
   for (const auto Pred : predecessors(Header)) {
     if (!contains(C, Pred)) {
       if (Out && Out != Pred)
@@ -120,7 +120,7 @@ auto GenericCycleInfo<ContextT>::getCyclePredecessor(const CycleT &C) const
 template <typename ContextT>
 void GenericCycleInfo<ContextT>::verifyCycle(const CycleT &C) const {
 #ifndef NDEBUG
-  assert(C.getNumBlocks() != 0 && "Cycle cannot be empty.");
+  assert(getNumBlocks(C) != 0 && "Cycle cannot be empty.");
   DenseSet<BlockT *> Blocks;
   for (BlockT *BB : getBlocks(C)) {
     assert(Blocks.insert(BB).second); // duplicates in block list?
@@ -128,7 +128,7 @@ void GenericCycleInfo<ContextT>::verifyCycle(const CycleT &C) const {
   assert(!C.Entries.empty() && "Cycle must have one or more entries.");
 
   DenseSet<BlockT *> Entries;
-  for (BlockT *Entry : C.entries()) {
+  for (BlockT *Entry : getEntries(C)) {
     assert(Entries.insert(Entry).second); // duplicate entry?
     assert(contains(C, Entry));
   }
@@ -143,7 +143,7 @@ void GenericCycleInfo<ContextT>::verifyCycle(const CycleT &C) const {
   SmallPtrSet<BlockT *, 8> VisitedBBs;
 
   // Check the individual blocks.
-  for (BlockT *BB : depth_first_ext(C.getHeader(), VisitSet)) {
+  for (BlockT *BB : depth_first_ext(getHeader(C), VisitSet)) {
     assert(llvm::any_of(llvm::children<BlockT *>(BB),
                         [&](BlockT *B) { return contains(C, B); }) &&
            "Cycle block has no in-cycle successors!");
@@ -168,13 +168,13 @@ void GenericCycleInfo<ContextT>::verifyCycle(const CycleT &C) const {
         assert(!OutsideCyclePreds.contains(CB) &&
                "Non-entry block reachable from outside!");
     }
-    assert(BB != &C.getHeader()->getParent()->front() &&
+    assert(BB != &getHeader(C)->getParent()->front() &&
            "Cycle contains function entry block!");
 
     VisitedBBs.insert(BB);
   }
 
-  if (VisitedBBs.size() != C.getNumBlocks()) {
+  if (VisitedBBs.size() != getNumBlocks(C)) {
     dbgs() << "The following blocks are unreachable in the cycle:\n  ";
     ListSeparator LS;
     for (auto *BB : Blocks) {
@@ -195,7 +195,7 @@ template <typename ContextT>
 void GenericCycleInfo<ContextT>::verifyCycleNest(const CycleT &C) const {
 #ifndef NDEBUG
   // Check the subcycles.
-  for (CycleT *Child : C.children()) {
+  for (CycleT *Child : children(C)) {
     // Each block in each subcycle should be contained within this cycle.
     for (BlockT *BB : getBlocks(*Child)) {
       assert(contains(C, BB) &&
@@ -206,7 +206,7 @@ void GenericCycleInfo<ContextT>::verifyCycleNest(const CycleT &C) const {
 
   // Check the parent cycle pointer.
   if (C.ParentCycle) {
-    assert(is_contained(C.ParentCycle->children(), &C) &&
+    assert(is_contained(children(*C.ParentCycle), &C) &&
            "Cycle is not a subcycle of its parent!");
   }
 #endif
@@ -316,7 +316,7 @@ void GenericCycleInfo<ContextT>::addBlockToCycle(BlockT *Block, CycleT *Cycle) {
   addToBlockMap(Block, Cycle);
   // Cycle and its ancestors gain the new block: extend each one's slice and
   // invalidate its exit-block cache in a single walk up the tree.
-  for (CycleT *C = Cycle; C; C = C->getParentCycle()) {
+  for (CycleT *C = Cycle; C; C = getParentCycle(*C)) {
     ++C->IdxEnd;
     if (!ExitBlocksCaches.empty())
       ExitBlocksCaches[getCycleIndex(*C)].clear();
@@ -442,7 +442,7 @@ void GenericCycleInfoCompute<ContextT>::run(FunctionT *F) {
         }
       }
       if (IsEntry) {
-        assert(!NewCycle->isEntry(Block));
+        assert(!Info.isEntry(*NewCycle, Block));
         LLVM_DEBUG(errs() << "append as entry\n");
         NewCycle->appendEntry(Block);
       } else {
@@ -462,18 +462,18 @@ void GenericCycleInfoCompute<ContextT>::run(FunctionT *F) {
         LLVM_DEBUG(errs() << "  block " << Info.Context.print(Block) << ": ");
 
         if (BlockParent != NewCycle) {
-          LLVM_DEBUG(errs()
-                     << "discovered child cycle "
-                     << Info.Context.print(BlockParent->getHeader()) << "\n");
+          LLVM_DEBUG(errs() << "discovered child cycle "
+                            << Info.Context.print(Info.getHeader(*BlockParent))
+                            << "\n");
           // Make BlockParent the child of NewCycle.
           moveTopLevelCycleToNewParent(NewCycle, BlockParent);
 
-          for (auto *ChildEntry : BlockParent->entries())
+          for (auto *ChildEntry : Info.getEntries(*BlockParent))
             ProcessPredecessors(ChildEntry);
         } else {
-          LLVM_DEBUG(errs()
-                     << "known child cycle "
-                     << Info.Context.print(BlockParent->getHeader()) << "\n");
+          LLVM_DEBUG(errs() << "known child cycle "
+                            << Info.Context.print(Info.getHeader(*BlockParent))
+                            << "\n");
         }
       } else {
         Info.addToBlockMap(Block, NewCycle);
@@ -601,17 +601,17 @@ auto GenericCycleInfo<ContextT>::getSmallestCommonCycle(CycleT *A,
 
   // If cycles A and B have different depth replace them with parent cycle
   // until they have the same depth.
-  while (A->getDepth() > B->getDepth())
-    A = A->getParentCycle();
-  while (B->getDepth() > A->getDepth())
-    B = B->getParentCycle();
+  while (getDepth(*A) > getDepth(*B))
+    A = getParentCycle(*A);
+  while (getDepth(*B) > getDepth(*A))
+    B = getParentCycle(*B);
 
   // Cycles A and B are at same depth but may be disjoint, replace them with
   // parent cycles until we find cycle that contains both or we run out of
   // parent cycles.
   while (A != B) {
-    A = A->getParentCycle();
-    B = B->getParentCycle();
+    A = getParentCycle(*A);
+    B = getParentCycle(*B);
   }
 
   return A;
@@ -638,7 +638,7 @@ void GenericCycleInfo<ContextT>::verifyCycleNest(bool VerifyFull) const {
   DenseSet<BlockT *> CycleHeaders;
 
   for (const CycleT &Cycle : cycles()) {
-    BlockT *Header = Cycle.getHeader();
+    BlockT *Header = getHeader(Cycle);
     assert(CycleHeaders.insert(Header).second);
     if (VerifyFull)
       verifyCycle(Cycle);
@@ -648,7 +648,7 @@ void GenericCycleInfo<ContextT>::verifyCycleNest(bool VerifyFull) const {
     for (BlockT *BB : getBlocks(Cycle)) {
       CycleT *CycleInBlockMap = getCycle(BB);
       assert(CycleInBlockMap != nullptr);
-      assert(Cycle.contains(CycleInBlockMap));
+      assert(contains(Cycle, *CycleInBlockMap));
     }
   }
 #endif
@@ -675,10 +675,10 @@ template <typename ContextT>
 Printable GenericCycleInfo<ContextT>::print(const CycleT *Cycle) const {
   return Printable([this, Cycle](raw_ostream &Out) {
     Out << "depth=" << Cycle->Depth << ": entries("
-        << Cycle->printEntries(Context) << ')';
+        << printEntries(*Cycle, Context) << ')';
 
     for (auto *Block : getBlocks(*Cycle)) {
-      if (Cycle->isEntry(Block))
+      if (isEntry(*Cycle, Block))
         continue;
 
       Out << ' ' << Context.print(Block);
