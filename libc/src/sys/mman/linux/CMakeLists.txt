@@ -19,15 +19,27 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  memfd_create
+  SRCS
+    memfd_create.cpp
+  HDRS
+    ../memfd_create.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.memfd_create
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   mmap
   SRCS
     mmap.cpp
   HDRS
     ../mmap.h
   DEPENDS
-    libc.include.sys_mman
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.sys_mman_macros
+    libc.hdr.types.size_t
+    libc.hdr.types.off_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mmap
     libc.src.errno.errno
 )
 
@@ -38,7 +50,8 @@ add_entrypoint_object(
   HDRS
     ../mremap.h
   DEPENDS
-    libc.include.sys_mman
+    libc.hdr.sys_mman_macros
+    libc.hdr.types.size_t
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
@@ -51,21 +64,9 @@ add_entrypoint_object(
   HDRS
     ../munmap.h
   DEPENDS
-    libc.include.sys_mman
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.size_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.munmap
     libc.src.errno.errno
-)
-
-add_header_library(
-  mprotect_common
-  HDRS
-    mprotect_common.h
-  DEPENDS
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
-    libc.src.errno.errno
-    libc.src.__support.error_or
 )
 
 add_entrypoint_object(
@@ -75,11 +76,9 @@ add_entrypoint_object(
   HDRS
     ../mprotect.h
   DEPENDS
-    libc.include.sys_mman
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.size_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mprotect
     libc.src.errno.errno
-    .mprotect_common
 )
 
 add_entrypoint_object(
@@ -89,7 +88,8 @@ add_entrypoint_object(
   HDRS
     ../posix_madvise.h
   DEPENDS
-    libc.include.sys_mman
+    libc.hdr.sys_mman_macros
+    libc.hdr.types.size_t
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
 )
@@ -240,11 +240,10 @@ add_entrypoint_object(
   HDRS
     ../pkey_mprotect.h
   DEPENDS
-    libc.include.sys_mman
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.size_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mprotect
+    libc.src.__support.OSUtil.linux.syscall_wrappers.pkey_mprotect
     libc.src.errno.errno
-    .mprotect_common
 )
 
 add_entrypoint_object(

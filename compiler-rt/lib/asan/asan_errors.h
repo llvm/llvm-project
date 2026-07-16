@@ -298,16 +298,16 @@ struct ErrorStringFunctionMemoryRangesOverlap : ErrorBase {
   const char *function;
 
   ErrorStringFunctionMemoryRangesOverlap() = default;  // (*)
-  ErrorStringFunctionMemoryRangesOverlap(u32 tid, BufferedStackTrace *stack_,
-                                         uptr addr1, uptr length1_, uptr addr2,
-                                         uptr length2_, const char *function_)
+  ErrorStringFunctionMemoryRangesOverlap(u32 tid, BufferedStackTrace* stack,
+                                         uptr addr1, uptr length1, uptr addr2,
+                                         uptr length2, const char* function)
       : ErrorBase(tid),
-        stack(stack_),
-        length1(length1_),
-        length2(length2_),
+        stack(stack),
+        length1(length1),
+        length2(length2),
         addr1_description(addr1, length1, /*shouldLockThreadRegistry=*/false),
         addr2_description(addr2, length2, /*shouldLockThreadRegistry=*/false),
-        function(function_) {
+        function(function) {
     char bug_type[100];
     internal_snprintf(bug_type, sizeof(bug_type), "%s-param-overlap", function);
     scariness.Clear();
@@ -320,14 +320,16 @@ struct ErrorStringFunctionSizeOverflow : ErrorBase {
   const BufferedStackTrace *stack;
   AddressDescription addr_description;
   uptr size;
+  bool is_write;
 
   ErrorStringFunctionSizeOverflow() = default;  // (*)
-  ErrorStringFunctionSizeOverflow(u32 tid, BufferedStackTrace *stack_,
-                                  uptr addr, uptr size_)
+  ErrorStringFunctionSizeOverflow(u32 tid, BufferedStackTrace* stack, uptr addr,
+                                  uptr size, bool is_write)
       : ErrorBase(tid, 10, "negative-size-param"),
-        stack(stack_),
+        stack(stack),
         addr_description(addr, /*shouldLockThreadRegistry=*/false),
-        size(size_) {}
+        size(size),
+        is_write(is_write) {}
   void Print();
 };
 
@@ -372,24 +374,6 @@ struct ErrorBadParamsToAnnotateDoubleEndedContiguousContainer : ErrorBase {
   void Print();
 };
 
-struct ErrorBadParamsToCopyContiguousContainerAnnotations : ErrorBase {
-  const BufferedStackTrace *stack;
-  uptr old_storage_beg, old_storage_end, new_storage_beg, new_storage_end;
-
-  ErrorBadParamsToCopyContiguousContainerAnnotations() = default;  // (*)
-  ErrorBadParamsToCopyContiguousContainerAnnotations(
-      u32 tid, BufferedStackTrace *stack_, uptr old_storage_beg_,
-      uptr old_storage_end_, uptr new_storage_beg_, uptr new_storage_end_)
-      : ErrorBase(tid, 10,
-                  "bad-__sanitizer_copy_contiguous_container_annotations"),
-        stack(stack_),
-        old_storage_beg(old_storage_beg_),
-        old_storage_end(old_storage_end_),
-        new_storage_beg(new_storage_beg_),
-        new_storage_end(new_storage_end_) {}
-  void Print();
-};
-
 struct ErrorODRViolation : ErrorBase {
   __asan_global global1, global2;
   u32 stack_id1, stack_id2;
@@ -423,22 +407,16 @@ struct ErrorInvalidPointerPair : ErrorBase {
 };
 
 struct ErrorGeneric : ErrorBase {
-  enum class AccessType : u8 {
-    Read = 0,
-    Write = 1,
-    Assumption = 2,
-  };
-
   AddressDescription addr_description;
   uptr pc, bp, sp;
   uptr access_size;
   const char *bug_descr;
-  AccessType access_type;
+  bool is_write;
   u8 shadow_val;
 
   ErrorGeneric() = default;  // (*)
-  ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr,
-               AccessType access_type_, uptr access_size_);
+  ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr, bool is_write_,
+               uptr access_size_);
   void Print();
 };
 
@@ -465,7 +443,6 @@ struct ErrorGeneric : ErrorBase {
   macro(StringFunctionSizeOverflow)                        \
   macro(BadParamsToAnnotateContiguousContainer)            \
   macro(BadParamsToAnnotateDoubleEndedContiguousContainer) \
-  macro(BadParamsToCopyContiguousContainerAnnotations)     \
   macro(ODRViolation)                                      \
   macro(InvalidPointerPair)                                \
   macro(Generic)

@@ -119,23 +119,21 @@ define i64 @signed_absolute_difference_i64_to_i64(ptr noalias %x, ptr noalias %y
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i32, ptr [[X]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = sext <4 x i32> [[WIDE_LOAD]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i32, ptr [[Y]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP1]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = freeze <4 x i32> [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP3:%.*]] = freeze <4 x i32> [[WIDE_LOAD1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[TMP2]], <4 x i32> [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[TMP2]], <4 x i32> [[TMP3]])
-; CHECK-NEXT:    [[TMP6:%.*]] = sub <4 x i32> [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = zext <4 x i32> [[TMP6]] to <4 x i64>
-; CHECK-NEXT:    [[PARTIAL_REDUCE]] = call <2 x i64> @llvm.vector.partial.reduce.add.v2i64.v4i64(<2 x i64> [[VEC_PHI]], <4 x i64> [[TMP7]])
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i32> [[WIDE_LOAD1]] to <4 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = sub nsw <4 x i64> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i64> @llvm.abs.v4i64(<4 x i64> [[TMP4]], i1 true)
+; CHECK-NEXT:    [[TMP6]] = add <4 x i64> [[TMP5]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 8000
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> [[PARTIAL_REDUCE]])
+; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP6]])
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i64 [[TMP9]]
@@ -381,4 +379,64 @@ for.body:
 
 exit:
   ret i32 %sum.1
+}
+
+; Tests an abs diff extended operand in a AddChainWithSubs reduction, where the
+; abs diff is negated (the operand of the sub). Previously, we'd crash handling
+; this as we would fail to match the negated abs diff.
+define i32 @sub_add_chain_unsigned_absolute_difference(ptr noalias %x, ptr noalias %y) {
+; CHECK-LABEL: define i32 @sub_add_chain_unsigned_absolute_difference(
+; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[Y:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE2:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[X]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP0]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[Y]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <16 x i8>, ptr [[TMP1]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze <16 x i8> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze <16 x i8> [[WIDE_LOAD1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.umax.v16i8(<16 x i8> [[TMP2]], <16 x i8> [[TMP3]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call <16 x i8> @llvm.umin.v16i8(<16 x i8> [[TMP2]], <16 x i8> [[TMP3]])
+; CHECK-NEXT:    [[TMP6:%.*]] = sub <16 x i8> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = zext <16 x i8> [[TMP6]] to <16 x i32>
+; CHECK-NEXT:    [[TMP8:%.*]] = sub <16 x i32> zeroinitializer, [[TMP7]]
+; CHECK-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI]], <16 x i32> [[TMP8]])
+; CHECK-NEXT:    [[TMP9:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
+; CHECK-NEXT:    [[PARTIAL_REDUCE2]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[PARTIAL_REDUCE]], <16 x i32> [[TMP9]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 8000
+; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[PARTIAL_REDUCE2]])
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 [[TMP11]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %res.0 = phi i32 [ 0, %entry ], [ %res.2, %for.body ]
+  %x.ptr = getelementptr inbounds nuw i8, ptr %x, i64 %iv
+  %x.val = load i8, ptr %x.ptr, align 1
+  %ext.x = zext i8 %x.val to i32
+  %y.ptr = getelementptr inbounds nuw i8, ptr %y, i64 %iv
+  %y.val = load i8, ptr %y.ptr, align 1
+  %ext.y = zext i8 %y.val to i32
+  %sub = sub nsw i32 %ext.x, %ext.y
+  %abs.diff = tail call i32 @llvm.abs.i32(i32 %sub, i1 true)
+  %res.1 = sub nuw nsw i32 %res.0, %abs.diff
+  %res.2 = add i32 %res.1, %ext.x
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 8000
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret i32 %res.2
 }

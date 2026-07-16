@@ -1,4 +1,4 @@
-; RUN: llc %s --filetype=obj -o - | obj2yaml | FileCheck %s
+; RUN: llc %s -disable-dxil-remove-unused-resources --filetype=obj -o - | obj2yaml | FileCheck %s
 
 ; Make sure resource table is created correctly.
 ; CHECK: Resources:

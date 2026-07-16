@@ -30,7 +30,6 @@ import lit.formats
 import lit.Test
 import lit.util
 
-
 kIsWindows = sys.platform in ["win32", "cygwin"]
 
 
@@ -129,6 +128,9 @@ class LibcTest(lit.formats.ExecutableTest):
 
         If a sidecar <executable>.params file exists, it supplies the
         command-line arguments and environment variables for the test.
+
+        Honors test.config.maxIndividualTestTime (set via --timeout) to
+        kill tests that exceed the per-test time limit.
         """
 
         test_path = test.getSourcePath()
@@ -166,6 +168,8 @@ class LibcTest(lit.formats.ExecutableTest):
         env["PWD"] = exec_dir
         env.update(extra_env)
 
+        timeout = test.config.maxIndividualTestTime
+
         test_cmd_template = getattr(test.config, "libc_test_cmd", "")
         if test_cmd_template:
             if "@BINARY@" in test_cmd_template:
@@ -188,13 +192,17 @@ class LibcTest(lit.formats.ExecutableTest):
                 )
             if not cmd_args:
                 cmd_args = [test_path]
-
-            out, err, exit_code = lit.util.executeCommand(
-                cmd_args, cwd=exec_dir, env=env
-            )
         else:
+            cmd_args = [test_path] + test_args
+
+        try:
             out, err, exit_code = lit.util.executeCommand(
-                [test_path] + extra_args, cwd=exec_dir, env=env
+                cmd_args, cwd=exec_dir, env=env, timeout=timeout
+            )
+        except lit.util.ExecuteCommandTimeoutException as e:
+            return (
+                lit.Test.TIMEOUT,
+                f"{e.out}\n--\n" f"Reached timeout of {timeout} seconds",
             )
 
         if not exit_code:

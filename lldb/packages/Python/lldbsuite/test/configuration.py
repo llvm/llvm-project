@@ -157,6 +157,14 @@ mte_enabled = False
 # Whether debugserver is built with arm64e support.
 arm64e_debugserver = False
 
+# Whether to print the lldb version banner during test setup.
+print_lldb_version = False
+
+# Path to the directory containing the 'lldb' Python module (i.e. the directory
+# that contains 'lldb/__init__.py'). When set, dotest skips the `lldb -P`
+# subprocess used to discover this path.
+lldb_python_dir = None
+
 # the build type of lldb
 # Typical values include Debug, Release, RelWithDebInfo and MinSizeRel
 cmake_build_type = None

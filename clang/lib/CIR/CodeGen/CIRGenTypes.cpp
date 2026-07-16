@@ -10,6 +10,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/MissingFeatures.h"
 
 #include <cassert>
 
@@ -226,6 +227,15 @@ static bool isSafeToConvert(const RecordDecl *rd, CIRGenTypes &cgt) {
   return isSafeToConvert(rd, cgt, alreadyChecked);
 }
 
+bool CIRGenModule::isPaddedAtomicType(QualType type) {
+  return isPaddedAtomicType(type->castAs<AtomicType>());
+}
+
+bool CIRGenModule::isPaddedAtomicType(const AtomicType *type) {
+  return astContext.getTypeSize(type) !=
+         astContext.getTypeSize(type->getValueType());
+}
+
 /// Lay out a tagged decl type like struct or union.
 mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
   // TagDecl's are not necessarily unique, instead use the (clang) type
@@ -295,6 +305,16 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   type = astContext.getCanonicalType(type);
   const Type *ty = type.getTypePtr();
 
+  if (astContext.getLangOpts().CUDAIsDevice) {
+    if (type->isCUDADeviceBuiltinSurfaceType()) {
+      if (mlir::Type ty =
+              cgm.getTargetCIRGenInfo().getCUDADeviceBuiltinSurfaceDeviceType())
+        return ty;
+    } else if (type->isCUDADeviceBuiltinTextureType()) {
+      assert(!cir::MissingFeatures::cudaTextureType());
+    }
+  }
+
   // Process record types before the type cache lookup.
   if (const auto *recordType = dyn_cast<RecordType>(type))
     return convertRecordDeclType(recordType->getDecl()->getDefinitionOrSelf());
@@ -333,6 +353,19 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     case BuiltinType::SChar:
     case BuiltinType::Short:
     case BuiltinType::WChar_S:
+    case BuiltinType::Accum:
+    case BuiltinType::Fract:
+    case BuiltinType::LongAccum:
+    case BuiltinType::LongFract:
+    case BuiltinType::ShortAccum:
+    case BuiltinType::ShortFract:
+    // Saturated signed types.
+    case BuiltinType::SatAccum:
+    case BuiltinType::SatFract:
+    case BuiltinType::SatLongAccum:
+    case BuiltinType::SatLongFract:
+    case BuiltinType::SatShortAccum:
+    case BuiltinType::SatShortFract:
       resultType =
           cir::IntType::get(&getMLIRContext(), astContext.getTypeSize(ty),
                             /*isSigned=*/true);
@@ -404,6 +437,19 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     case BuiltinType::ULongLong:
     case BuiltinType::UShort:
     case BuiltinType::WChar_U:
+    case BuiltinType::UAccum:
+    case BuiltinType::UFract:
+    case BuiltinType::ULongAccum:
+    case BuiltinType::ULongFract:
+    case BuiltinType::UShortAccum:
+    case BuiltinType::UShortFract:
+    // Saturated unsigned types.
+    case BuiltinType::SatUAccum:
+    case BuiltinType::SatUFract:
+    case BuiltinType::SatULongAccum:
+    case BuiltinType::SatULongFract:
+    case BuiltinType::SatUShortAccum:
+    case BuiltinType::SatUShortFract:
       resultType =
           cir::IntType::get(&getMLIRContext(), astContext.getTypeSize(ty),
                             /*isSigned=*/false);
@@ -414,13 +460,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       resultType = cgm.fP16Ty;
       break;
     case BuiltinType::Half:
-      if (astContext.getLangOpts().NativeHalfType ||
-          !astContext.getTargetInfo().useFP16ConversionIntrinsics()) {
-        resultType = cgm.fP16Ty;
-      } else {
-        cgm.errorNYI(SourceLocation(), "processing of built-in type", type);
-        resultType = cgm.sInt32Ty;
-      }
+      resultType = cgm.fP16Ty;
       break;
     case BuiltinType::BFloat16:
       resultType = cgm.bFloat16Ty;
@@ -459,6 +499,23 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       // std::nullptr_t as !cir.ptr<!void>
       resultType = builder.getVoidPtrTy();
       break;
+
+#define AMDGPU_OPAQUE_PTR_TYPE(Name, Id, SingletonId, Width, Align, AS)        \
+  case BuiltinType::Id: {                                                      \
+    if (BuiltinType::Id == BuiltinType::AMDGPUTexture) {                       \
+      resultType = cir::VectorType::get(builder.getSInt32Ty(), 8);             \
+    } else {                                                                   \
+      resultType = builder.getPointerTo(cgm.voidTy);                           \
+    }                                                                          \
+    break;                                                                     \
+  }
+#define AMDGPU_NAMED_BARRIER_TYPE(Name, Id, SingletonId, Width, Align, Scope)  \
+  case BuiltinType::Id:                                                        \
+    llvm_unreachable("NYI");
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
+  case BuiltinType::Id:                                                        \
+    llvm_unreachable("NYI");
+#include "clang/Basic/AMDGPUTypes.def"
 
     default:
       cgm.errorNYI(SourceLocation(), "processing of built-in type", type);
@@ -596,7 +653,13 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     uint64_t valueSize = astContext.getTypeSize(valueType);
     uint64_t atomicSize = astContext.getTypeSize(ty);
     if (valueSize != atomicSize) {
-      cgm.errorNYI("convertType: atomic type value size != atomic size");
+      assert(valueSize < atomicSize);
+      auto paddingArray =
+          cir::ArrayType::get(cgm.sInt8Ty, (atomicSize - valueSize) / 8);
+      mlir::Type elements[] = {resultType, paddingArray};
+      resultType = cir::StructType::get(&getMLIRContext(), /*members=*/elements,
+                                        /*packed=*/false, /*padded=*/false,
+                                        /*is_class=*/false);
     }
 
     break;

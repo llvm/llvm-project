@@ -137,16 +137,15 @@ transform.payload attributes {
 
 // -----
 
-// We have surprisingly many invocations of the verifier here:
-//  1. after the initial parsing (reasonable)
-//  2. also in transform::detail::mergeSymbolsInto (has a TODO to be removed)
-//  3. after the transform interpreter pass (reasonable)
+// We have two invocations of the verifier:
+//  1. after the initial parsing, and
+//  2. after the transform interpreter pass
 // Notably this doesn't include an extra run from checkPayload, which is
 // what we intend to test here.
 
 // CHECK-LABEL: @verification_count
 // CHECK: transform.payload
-// CHECK-SAME: test.counting_normal_form_count = 3
+// CHECK-SAME: test.counting_normal_form_count = 2
 
 module @verification_count attributes {transform.with_named_sequence} {
   transform.payload attributes {

@@ -15,9 +15,10 @@
 #include "clang/Driver/ToolChain.h"
 #include "clang/Options/Options.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 #include <map>
+#include <string>
 
 namespace clang {
 namespace driver {
@@ -49,7 +50,17 @@ namespace toolchains {
 
 class LLVM_LIBRARY_VISIBILITY AMDGPUToolChain : public Generic_ELF {
 protected:
-  const std::map<options::ID, const StringRef> OptionsDefault;
+  const std::map<options::ID, StringRef> OptionsDefault;
+
+  // Optional host toolchain for offloading modes.
+  const ToolChain *HostTC = nullptr;
+
+  /// FIXME: Should merge 2 linkers.
+  const bool UseHIPLinker = false;
+
+  // Whether to link device libraries (for standalone OpenCL/LLVM IR
+  // compilation)
+  bool ShouldLinkDeviceLibs = false;
 
   Tool *buildLinker() const override;
   StringRef getOptionDefault(options::ID OptID) const {
@@ -60,7 +71,10 @@ protected:
 
 public:
   AMDGPUToolChain(const Driver &D, const llvm::Triple &Triple,
-                  const llvm::opt::ArgList &Args);
+                  const llvm::opt::ArgList &Args,
+                  const ToolChain *HostTC = nullptr,
+                  Action::OffloadKind Kind = Action::OFK_None,
+                  bool ShouldLinkDeviceLibs = false);
   unsigned GetDefaultDwarfVersion() const override { return 5; }
 
   bool IsMathErrnoDefault() const override { return false; }
@@ -73,12 +87,13 @@ public:
   bool SupportsProfiling() const override { return false; }
 
   llvm::opt::DerivedArgList *
-  TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
+  TranslateArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
                 Action::OffloadKind DeviceOffloadKind) const override;
 
-  void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                             llvm::opt::ArgStringList &CC1Args,
-                             Action::OffloadKind DeviceOffloadKind) const override;
+  void
+  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
+                        Action::OffloadKind DeviceOffloadKind) const override;
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
@@ -94,34 +109,68 @@ public:
   static bool isWave64(const llvm::opt::ArgList &DriverArgs,
                        llvm::AMDGPU::GPUKind Kind);
   /// Needed for using lto.
-  bool HasNativeLLVMSupport() const override {
-    return true;
-  }
+  bool HasNativeLLVMSupport() const override { return true; }
 
   /// Needed for translating LTO options.
   const char *getDefaultLinker() const override { return "ld.lld"; }
 
-  /// Should skip sanitize option.
-  bool shouldSkipSanitizeOption(const ToolChain &TC,
-                                const llvm::opt::ArgList &DriverArgs,
-                                StringRef TargetID,
-                                const llvm::opt::Arg *A) const;
+  StringRef getSanitizerRequirement(SanitizerMask Kinds,
+                                    BoundArch BA) const override;
 
   /// Uses amdgpu-arch tool to get arch of the system GPU. Will return error
   /// if unable to find one.
   virtual Expected<SmallVector<std::string>>
   getSystemGPUArchs(const llvm::opt::ArgList &Args) const override;
 
-protected:
-  /// Check and diagnose invalid target ID specified by -mcpu.
-  virtual void checkTargetID(const llvm::opt::ArgList &DriverArgs) const;
+  const llvm::Triple *getAuxTriple() const override {
+    return HostTC ? &HostTC->getTriple() : nullptr;
+  }
 
+  llvm::SmallVector<BitCodeLibraryInfo, 12>
+  getDeviceLibs(const llvm::opt::ArgList &Args, BoundArch BA,
+                Action::OffloadKind DeviceOffloadKind) const override;
+
+  CXXStdlibType GetCXXStdlibType(const llvm::opt::ArgList &Args) const override;
+
+  void AddClangCXXStdlibIncludeArgs(
+      const llvm::opt::ArgList &Args,
+      llvm::opt::ArgStringList &CC1Args) const override;
+
+  void AddIAMCUIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                           llvm::opt::ArgStringList &CC1Args) const override;
+
+  void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                         llvm::opt::ArgStringList &CC1Args) const override;
+
+  VersionTuple
+  computeMSVCVersion(const Driver *D,
+                     const llvm::opt::ArgList &Args) const override;
+
+  LTOKind getDefaultLTOMode() const override;
+
+  /// We need to adjust the LTO mode based on user arguments.
+  LTOKind
+  getLTOMode(const llvm::opt::ArgList &Args,
+             Action::OffloadKind Kind = Action::OFK_None) const override;
+
+  // Returns a list of device library names shared by different languages
+  llvm::SmallVector<BitCodeLibraryInfo, 12>
+  getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
+                          llvm::StringRef TargetID, llvm::StringRef GPUArch,
+                          Action::OffloadKind DeviceOffloadingKind) const;
+
+protected:
   /// The struct type returned by getParsedTargetID.
   struct ParsedTargetIDType {
     std::optional<std::string> OptionalTargetID;
     std::optional<std::string> OptionalGPUArch;
-    std::optional<llvm::StringMap<bool>> OptionalFeatures;
+    std::optional<llvm::StringMap<bool>> OptionalFeatureMap;
   };
+
+  /// Check and diagnose invalid target ID specified by -mcpu.
+  /// Returns the parsed target ID.
+  virtual ParsedTargetIDType
+  checkTargetID(const llvm::opt::ArgList &DriverArgs) const;
 
   /// Get target ID, GPU arch, and target ID features if the target ID is
   /// specified and valid.
@@ -134,107 +183,10 @@ protected:
   /// Common warning options shared by AMDGPU HIP, OpenCL and OpenMP toolchains.
   /// Language specific warning options should go to derived classes.
   void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const override;
-};
 
-class LLVM_LIBRARY_VISIBILITY ROCMToolChain : public AMDGPUToolChain {
-public:
-  ROCMToolChain(const Driver &D, const llvm::Triple &Triple,
-                const llvm::opt::ArgList &Args);
-  void
-  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                        llvm::opt::ArgStringList &CC1Args,
-                        Action::OffloadKind DeviceOffloadKind) const override;
-
-  // Returns a list of device library names shared by different languages
-  llvm::SmallVector<BitCodeLibraryInfo, 12>
-  getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
-                          const std::string &GPUArch,
-                          Action::OffloadKind DeviceOffloadingKind) const;
-
-  SanitizerMask getSupportedSanitizers() const override {
-    return SanitizerKind::Address | SanitizerKind::Undefined |
-           SanitizerKind::UndefinedGroup;
-  }
-
-  bool diagnoseUnsupportedOption(const llvm::opt::Arg *A,
-                                 const llvm::opt::DerivedArgList &DAL,
-                                 const llvm::opt::ArgList &DriverArgs,
-                                 const char *Value = nullptr) const {
-    auto &Diags = getDriver().getDiags();
-    bool IsExplicitDevice =
-        A->getBaseArg().getOption().matches(options::OPT_Xarch_device);
-
-    if (Value) {
-      unsigned DiagID =
-          IsExplicitDevice
-              ? clang::diag::err_drv_unsupported_option_part_for_target
-              : clang::diag::warn_drv_unsupported_option_part_for_target;
-      Diags.Report(DiagID) << Value << A->getAsString(DriverArgs)
-                           << getTriple().str();
-    } else {
-      unsigned DiagID =
-          IsExplicitDevice
-              ? clang::diag::err_drv_unsupported_option_for_target
-              : clang::diag::warn_drv_unsupported_option_for_target;
-      Diags.Report(DiagID) << A->getAsString(DAL) << getTriple().str();
-    }
-    return true;
-  }
-
-  bool handleSanitizeOption(const ToolChain &TC, llvm::opt::DerivedArgList &DAL,
-                            const llvm::opt::ArgList &DriverArgs,
-                            StringRef TargetID, const llvm::opt::Arg *A) const {
-    if (TargetID.empty())
-      return false;
-    // If we shouldn't do sanitizing, skip it.
-    if (!DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
-                            options::OPT_fno_gpu_sanitize, true))
-      return true;
-    const llvm::opt::Option &Opt = A->getOption();
-    // Sanitizer coverage is currently not supported for AMDGPU, so warn/error
-    // on every related option.
-    if (Opt.matches(options::OPT_fsan_cov_Group)) {
-      diagnoseUnsupportedOption(A, DAL, DriverArgs);
-    }
-    // If this isn't a sanitizer option, don't handle it.
-    if (!Opt.matches(options::OPT_fsanitize_EQ))
-      return false;
-
-    SmallVector<const char *, 4> SupportedSanitizers;
-    SmallVector<const char *, 4> UnSupportedSanitizers;
-
-    SanitizerMask Supported = ROCMToolChain::getSupportedSanitizers();
-    SanitizerMask SupportedMask;
-    for (const char *Value : A->getValues()) {
-      SanitizerMask K = parseSanitizerValue(Value, /*Allow Groups*/ true);
-      if (K & Supported) {
-        SupportedSanitizers.push_back(Value);
-        SupportedMask |= K;
-      } else {
-        UnSupportedSanitizers.push_back(Value);
-      }
-    }
-
-    // If there are no supported sanitizers, drop the whole argument.
-    if (SupportedSanitizers.empty()) {
-      diagnoseUnsupportedOption(A, DAL, DriverArgs);
-      return true;
-    }
-    // If only some sanitizers are unsupported, report each one individually.
-    if (!UnSupportedSanitizers.empty()) {
-      for (const char *Value : UnSupportedSanitizers) {
-        diagnoseUnsupportedOption(A, DAL, DriverArgs, Value);
-      }
-    }
-    // The xnack+ feature is only required for ASan on AMDGPU.
-    if ((SupportedMask & SanitizerKind::Address) &&
-        shouldSkipSanitizeOption(TC, DriverArgs, TargetID, A))
-      return true;
-
-    // Add a new argument with only the supported sanitizers.
-    DAL.AddJoinedArg(A, A->getOption(), llvm::join(SupportedSanitizers, ","));
-    return true;
-  }
+  SanitizerMask
+  getSupportedSanitizers(BoundArch BA,
+                         Action::OffloadKind DeviceOffloadKind) const override;
 };
 
 } // end namespace toolchains

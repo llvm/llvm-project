@@ -261,7 +261,8 @@ CommandObjectExpression::CommandObjectExpression(
                        "thread.  Displays any returned value "
                        "with LLDB's default formatting.",
                        "",
-                       eCommandProcessMustBePaused | eCommandTryTargetAPILock),
+                       eCommandProcessMustBePaused | eCommandTryTargetAPILock |
+                           eCommandAllowsDummyTarget),
       IOHandlerDelegate(IOHandlerDelegate::Completion::Expression),
       m_format_options(eFormatDefault),
       m_repl_option(LLDB_OPT_SET_1, false, "repl", 'r', "Drop into REPL", false,
@@ -420,7 +421,7 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
 
   if (m_command_options.top_level && !m_command_options.allow_jit) {
     result.AppendErrorWithFormat(
-        "Can't disable JIT compilation for top-level expressions.");
+        "Can't disable JIT compilation for top-level expressions");
     return false;
   }
 
@@ -593,6 +594,8 @@ void CommandObjectExpression::DoExecute(llvm::StringRef command,
 
   if (command.empty()) {
     GetMultilineExpression();
+    // Still gathering input; the IOHandler will set the final status.
+    result.SetStatus(eReturnStatusStarted);
     return;
   }
 
@@ -604,12 +607,13 @@ void CommandObjectExpression::DoExecute(llvm::StringRef command,
       return;
 
     if (m_repl_option.GetOptionValue().GetCurrentValue()) {
-      Target &target = GetTarget();
+      Target *target = GetTarget();
+      assert(target && "target guaranteed by eCommandAllowsDummyTarget");
       // Drop into REPL
       m_expr_lines.clear();
       m_expr_line_count = 0;
 
-      Debugger &debugger = target.GetDebugger();
+      Debugger &debugger = target->GetDebugger();
 
       // Check if the LLDB command interpreter is sitting on top of a REPL
       // that launched it...
@@ -624,12 +628,12 @@ void CommandObjectExpression::DoExecute(llvm::StringRef command,
         // interpreter, so just push one
         bool initialize = false;
         Status repl_error;
-        REPLSP repl_sp(target.GetREPL(repl_error, m_command_options.language,
+        REPLSP repl_sp(target->GetREPL(repl_error, m_command_options.language,
                                        nullptr, false));
 
         if (!repl_sp) {
           initialize = true;
-          repl_sp = target.GetREPL(repl_error, m_command_options.language,
+          repl_sp = target->GetREPL(repl_error, m_command_options.language,
                                     nullptr, true);
           if (repl_error.Fail()) {
             result.SetError(std::move(repl_error));
@@ -660,6 +664,8 @@ void CommandObjectExpression::DoExecute(llvm::StringRef command,
     // No expression following options
     else if (expr.empty()) {
       GetMultilineExpression();
+      // Still gathering input; the IOHandler will set the final status.
+      result.SetStatus(eReturnStatusStarted);
       return;
     }
   }
@@ -672,11 +678,12 @@ void CommandObjectExpression::DoExecute(llvm::StringRef command,
     indent = pos;
   result.SetDiagnosticIndent(indent);
 
-  Target &target = GetTarget();
+  Target *target = GetTarget();
+  assert(target && "target guaranteed by eCommandAllowsDummyTarget");
   if (EvaluateExpression(expr, result.GetOutputStream(),
                          result.GetErrorStream(), result)) {
 
-    if (!m_fixed_expression.empty() && target.GetEnableNotifyAboutFixIts()) {
+    if (!m_fixed_expression.empty() && target->GetEnableNotifyAboutFixIts()) {
       CommandHistory &history = m_interpreter.GetCommandHistory();
       // FIXME: Can we figure out what the user actually typed (e.g. some alias
       // for expr???)

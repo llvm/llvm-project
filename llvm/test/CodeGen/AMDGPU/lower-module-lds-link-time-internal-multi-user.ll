@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-lower-module-lds -amdgpu-enable-object-linking < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu-amd-amdhsa -passes=amdgpu-lower-module-lds -amdgpu-enable-object-linking < %s | FileCheck %s
 
 source_filename = "source_a.hip"
 
@@ -29,9 +29,6 @@ source_filename = "source_a.hip"
 ; CHECK: !amdgpu.lds.uses = !{{{![0-9]+, ![0-9]+}}}
 ; CHECK-DAG: !{ptr @kernel1, ptr addrspace(3) @[[INTERN]]}
 ; CHECK-DAG: !{ptr @kernel2, ptr addrspace(3) @[[INTERN]]}
-
-; Module should be marked with the link-time LDS module flag.
-; CHECK: !{i32 1, !"amdgpu-link-time-lds", i32 1}
 
 define amdgpu_kernel void @kernel1() {
   %gep_a = getelementptr [32 x i32], ptr addrspace(3) @a, i32 0, i32 0

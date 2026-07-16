@@ -759,6 +759,7 @@ bool DeclSpec::SetTypeSpecType(TST T, SourceLocation TagKwLoc,
   if (TypeSpecType == TST_error)
     return false;
   if (TypeSpecType != TST_unspecified) {
+    setConflictingTypeSpecifier(T, TagKwLoc, TagNameLoc, Rep);
     PrevSpec = DeclSpec::getSpecifierName((TST) TypeSpecType, Policy);
     DiagID = diag::err_invalid_decl_spec_combination;
     return true;
@@ -790,6 +791,7 @@ bool DeclSpec::SetTypeSpecType(TST T, SourceLocation Loc,
   if (TypeSpecType == TST_error)
     return false;
   if (TypeSpecType != TST_unspecified) {
+    setConflictingTypeSpecifier(T, Loc, Rep);
     PrevSpec = DeclSpec::getSpecifierName((TST) TypeSpecType, Policy);
     DiagID = diag::err_invalid_decl_spec_combination;
     return true;
@@ -822,6 +824,7 @@ bool DeclSpec::SetTypeSpecType(TST T, SourceLocation TagKwLoc,
   if (TypeSpecType == TST_error)
     return false;
   if (TypeSpecType != TST_unspecified) {
+    setConflictingTypeSpecifier(T, TagKwLoc, TagNameLoc, Rep, Owned);
     PrevSpec = DeclSpec::getSpecifierName((TST) TypeSpecType, Policy);
     DiagID = diag::err_invalid_decl_spec_combination;
     return true;
@@ -852,6 +855,7 @@ bool DeclSpec::SetTypeSpecType(TST T, SourceLocation Loc,
   if (TypeSpecType == TST_error)
     return false;
   if (TypeSpecType != TST_unspecified) {
+    setConflictingTypeSpecifier(T, Loc);
     PrevSpec = DeclSpec::getSpecifierName((TST) TypeSpecType, Policy);
     DiagID = diag::err_invalid_decl_spec_combination;
     return true;
@@ -1162,6 +1166,20 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
 
   // Check the type specifier components first. No checking for an invalid
   // type.
+  CheckTypeSpec(S, Policy);
+
+  CheckFriendSpec(S, Policy);
+
+  assert(!TypeSpecOwned || isDeclRep((TST)TypeSpecType));
+
+  // Okay, now we can infer the real type.
+
+  // TODO: return "auto function" and other bad things based on the real type.
+
+  // 'data definition has no type or storage class'?
+}
+
+void DeclSpec::CheckTypeSpec(Sema &S, const PrintingPolicy &Policy) {
   if (TypeSpecType == TST_error)
     return;
 
@@ -1196,6 +1214,165 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
     S.Diag(TSTLoc, diag::err_decltype_auto_cannot_be_combined)
       << Hints[0] << Hints[1] << Hints[2] << Hints[3]
       << Hints[4] << Hints[5] << Hints[6] << Hints[7];
+  }
+
+  // If 'auto' type specifier is combined with another type specifier, we need
+  // to handle it based on the language:
+  // - In C++11+: Emit error (cannot combine type specifiers)
+  // - In C23: Convert 'auto' to storage class (valid)
+  // - In OpenCL: Convert 'auto' to storage class, then OpenCL will reject it
+  // Handle both cases:
+  // - "auto int" (TypeSpecType == TST_auto, ConflictingTypeSpecifier ==
+  // TST_int)
+  // - "int auto" (TypeSpecType == TST_int, ConflictingTypeSpecifier ==
+  // TST_auto)
+  if (ConflictingTypeSpecifier != TST_unspecified) {
+    // Special case: "auto auto" - duplicate 'auto', emit error
+    if (TypeSpecType == TST_auto && ConflictingTypeSpecifier == TST_auto) {
+      // Both are 'auto', emit "cannot combine with previous 'auto' declaration
+      // specifier" error This matches GCC's "duplicate 'auto'" behavior Note:
+      // We keep TypeSpecType = TST_auto (don't set to TST_error) so that later
+      // checks in SemaType.cpp can emit "not allowed in function prototype" and
+      // "not allowed in function return type" errors as needed.
+      const char *PrevSpec = "auto";
+      unsigned DiagID = diag::err_invalid_decl_spec_combination;
+      S.Diag(ConflictingTypeSpecifierLoc, DiagID) << PrevSpec << PrevSpec;
+      // Clear the conflict tracking but keep TypeSpecType = TST_auto
+      ConflictingTypeSpecifier = TST_unspecified;
+      ConflictingTypeSpecifierLoc = SourceLocation();
+    } else if ((S.getLangOpts().C23 && !S.getLangOpts().CPlusPlus) ||
+               (S.getLangOpts().CPlusPlus && !S.getLangOpts().CPlusPlus11)) {
+      // In C23 or C++98, convert 'auto' to storage class specifier
+      if (TypeSpecType == TST_auto) {
+        // "auto int" case: Convert 'auto' to storage class specifier
+        StorageClassSpec = SCS_auto;
+        StorageClassSpecLoc = TSTLoc;
+        TypeSpecType = ConflictingTypeSpecifier;
+        TSTLoc = ConflictingTypeSpecifierLoc;
+        // Clear the conflict tracking
+        ConflictingTypeSpecifier = TST_unspecified;
+        ConflictingTypeSpecifierLoc = SourceLocation();
+      } else if (ConflictingTypeSpecifier == TST_auto) {
+        // "int auto" case: Convert 'auto' to storage class specifier
+        // In C23, if 'constexpr' is present, treat 'auto' as a type specifier
+        // conflict with 'int' rather than converting it to storage class, so we
+        // emit the "cannot combine with previous 'int' declaration specifier"
+        // error and mark the type as error to prevent further processing.
+        // Otherwise, convert 'auto' to storage class specifier (no type
+        // conflict error).
+        if (S.getLangOpts().C23 && !S.getLangOpts().CPlusPlus &&
+            getConstexprSpecifier() != ConstexprSpecKind::Unspecified) {
+          // constexpr int auto: treat as type specifier conflict
+          const char *PrevSpec =
+              getSpecifierName((TST)TypeSpecType, S.getPrintingPolicy());
+          unsigned DiagID = diag::err_invalid_decl_spec_combination;
+          S.Diag(ConflictingTypeSpecifierLoc, DiagID) << PrevSpec << "auto";
+          TypeSpecType = TST_error;
+          ConflictingTypeSpecifier = TST_unspecified;
+          ConflictingTypeSpecifierLoc = SourceLocation();
+          return;
+        }
+        // int auto (without constexpr): Convert 'auto' to storage class
+        // specifier. No type conflict error - auto is treated as storage class,
+        // not type specifier.
+        StorageClassSpec = SCS_auto;
+        StorageClassSpecLoc = ConflictingTypeSpecifierLoc;
+        // TypeSpecType already has the correct type (e.g., TST_int)
+        // Clear the conflict tracking
+        ConflictingTypeSpecifier = TST_unspecified;
+        ConflictingTypeSpecifierLoc = SourceLocation();
+      }
+    } else if (S.getLangOpts().OpenCL) {
+      // For OpenCL (C or C++), convert 'auto' to storage class specifier first
+      // (OpenCL will then reject it via SetStorageClassSpec checks)
+      // This must come before the C++11+ check to handle OpenCL C++
+      if (TypeSpecType == TST_auto) {
+        // "auto int" case: Convert 'auto' to storage class specifier
+        // Use SetStorageClassSpec to trigger OpenCL-specific error checking
+        const char *PrevSpec = nullptr;
+        unsigned DiagID = 0;
+        if (SetStorageClassSpec(
+                S, SCS_auto, TSTLoc, PrevSpec, DiagID,
+                S.getPrintingPolicy())) { // OpenCL rejected it, emit the error
+                                          // with version string
+          if (S.getLangOpts().OpenCL && S.getLangOpts().CPlusPlus) {
+            S.Diag(TSTLoc, DiagID)
+                << S.getLangOpts().getOpenCLVersionString() << PrevSpec << 1;
+          } else {
+            S.Diag(TSTLoc, DiagID) << PrevSpec;
+          }
+          TypeSpecType = TST_error;
+        } else {
+          StorageClassSpec = SCS_auto;
+          StorageClassSpecLoc = TSTLoc;
+          TypeSpecType = ConflictingTypeSpecifier;
+          TSTLoc = ConflictingTypeSpecifierLoc;
+        }
+        // Clear the conflict tracking
+        ConflictingTypeSpecifier = TST_unspecified;
+        ConflictingTypeSpecifierLoc = SourceLocation();
+      } else if (ConflictingTypeSpecifier == TST_auto) {
+        // "int auto" case: Convert 'auto' to storage class specifier
+        // Use SetStorageClassSpec to trigger OpenCL-specific error checking
+        const char *PrevSpec = nullptr;
+        unsigned DiagID = 0;
+        if (SetStorageClassSpec(S, SCS_auto, ConflictingTypeSpecifierLoc,
+                                PrevSpec, DiagID, S.getPrintingPolicy())) {
+          // OpenCL rejected it, emit the error with version string
+          if (S.getLangOpts().OpenCL && S.getLangOpts().CPlusPlus) {
+            S.Diag(ConflictingTypeSpecifierLoc, DiagID)
+                << S.getLangOpts().getOpenCLVersionString() << PrevSpec << 1;
+          } else {
+            S.Diag(ConflictingTypeSpecifierLoc, DiagID) << PrevSpec;
+          }
+          TypeSpecType = TST_error;
+        } else {
+          StorageClassSpec = SCS_auto;
+          StorageClassSpecLoc = ConflictingTypeSpecifierLoc;
+        }
+        // Clear the conflict tracking
+        ConflictingTypeSpecifier = TST_unspecified;
+        ConflictingTypeSpecifierLoc = SourceLocation();
+      }
+    } else if (S.getLangOpts().CPlusPlus && S.getLangOpts().CPlusPlus11 &&
+               !S.getLangOpts().C23) {
+      // In C++11+ (but not C23 or OpenCL), emit error (cannot combine type
+      // specifiers)
+      if (TypeSpecType == TST_auto) {
+        // "auto int" case
+        S.Diag(ConflictingTypeSpecifierLoc, diag::err_auto_type_specifier)
+            << FixItHint::CreateRemoval(ConflictingTypeSpecifierLoc);
+      } else if (ConflictingTypeSpecifier == TST_auto) {
+        // "int auto" case
+        S.Diag(ConflictingTypeSpecifierLoc, diag::err_auto_type_specifier)
+            << FixItHint::CreateRemoval(ConflictingTypeSpecifierLoc);
+      }
+      // Mark as error to prevent further processing
+      TypeSpecType = TST_error;
+      TypeSpecOwned = false;
+    } else if (!S.getLangOpts().CPlusPlus) {
+      // For C, C23, etc., convert 'auto' to storage class specifier
+      // (This is already handled above for C23, but keep for other C dialects)
+      // In C, C23, OpenCL, etc., convert 'auto' to storage class specifier
+      if (TypeSpecType == TST_auto) {
+        // "auto int" case: Convert 'auto' to storage class specifier
+        StorageClassSpec = SCS_auto;
+        StorageClassSpecLoc = TSTLoc;
+        TypeSpecType = ConflictingTypeSpecifier;
+        TSTLoc = ConflictingTypeSpecifierLoc;
+        // Clear the conflict tracking
+        ConflictingTypeSpecifier = TST_unspecified;
+        ConflictingTypeSpecifierLoc = SourceLocation();
+      } else if (ConflictingTypeSpecifier == TST_auto) {
+        // "int auto" case: Convert 'auto' to storage class specifier
+        StorageClassSpec = SCS_auto;
+        StorageClassSpecLoc = ConflictingTypeSpecifierLoc;
+        // TypeSpecType already has the correct type (e.g., TST_int)
+        // Clear the conflict tracking
+        ConflictingTypeSpecifier = TST_unspecified;
+        ConflictingTypeSpecifierLoc = SourceLocation();
+      }
+    }
   }
 
   // Validate and finalize AltiVec vector declspec.
@@ -1426,6 +1603,7 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
       S.getLangOpts().getHLSLVersion() < LangOptions::HLSL_202y &&
       TypeSpecType == TST_auto)
     S.Diag(TSTLoc, diag::ext_hlsl_auto_type_specifier) << /*HLSL*/ 1;
+  // Emit warning for 'auto' storage class in pre-C++11 dialects
   if (S.getLangOpts().CPlusPlus && !S.getLangOpts().CPlusPlus11 &&
       StorageClassSpec == SCS_auto)
     S.Diag(StorageClassSpecLoc, diag::warn_auto_storage_class)
@@ -1441,6 +1619,9 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
     S.Diag(ConstexprLoc, diag::warn_cxx20_compat_consteval);
   else if (getConstexprSpecifier() == ConstexprSpecKind::Constinit)
     S.Diag(ConstexprLoc, diag::warn_cxx20_compat_constinit);
+}
+
+void DeclSpec::CheckFriendSpec(Sema &S, const PrintingPolicy &Policy) {
   // C++ [class.friend]p6:
   //   No storage-class-specifier shall appear in the decl-specifier-seq
   //   of a friend declaration.
@@ -1498,14 +1679,6 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
     FS_explicit_specifier = ExplicitSpecifier();
     FS_virtualLoc = FS_explicitLoc = SourceLocation();
   }
-
-  assert(!TypeSpecOwned || isDeclRep((TST) TypeSpecType));
-
-  // Okay, now we can infer the real type.
-
-  // TODO: return "auto function" and other bad things based on the real type.
-
-  // 'data definition has no type or storage class'?
 }
 
 bool DeclSpec::isMissingDeclaratorOk() {

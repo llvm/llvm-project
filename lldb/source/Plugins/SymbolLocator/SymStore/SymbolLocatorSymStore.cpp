@@ -68,6 +68,12 @@ public:
     return SymbolLocatorSymStore::GetSystemDefaultCachePath();
   }
 
+  uint64_t GetTimeout() const {
+    const uint32_t idx = ePropertyTimeout;
+    return GetPropertyAtIndexAs<uint64_t>(
+        idx, g_symbollocatorsymstore_properties[idx].default_uint_value);
+  }
+
   std::optional<std::string> GetTLSCertFingerprint() const {
     OptionValueString *s =
         m_collection_sp->GetPropertyAtIndexAsOptionValueString(
@@ -272,9 +278,8 @@ RequestFileFromSymStoreServerHTTP(llvm::StringRef base_url, llvm::StringRef key,
   }
 
   llvm::HTTPClient client;
-  // TODO: Since PDBs can be huge, we should distinguish between resolve,
-  // connect, send and receive.
-  client.setTimeout(std::chrono::seconds(60));
+  client.setTimeout(
+      std::chrono::seconds(GetGlobalPluginProperties().GetTimeout()));
 
   llvm::StreamedHTTPResponseHandler Handler(
       [dest = tmp_file.str().str()]()
@@ -427,7 +432,7 @@ LocateSymStoreEntry(const SymbolLocatorSymStore::LookupEntry &entry,
   if (file.starts_with("file://"))
     file = file.drop_front(7);
   if (auto spec = FindFileInLocalSymStore(file, key, pdb_name)) {
-    LLDB_LOG_VERBOSE(log, "Found {0} in local SymStore {1}", pdb_name, file);
+    LLDB_LOG(log, "Found {0} in local SymStore {1}", pdb_name, file);
     return *spec;
   }
 
@@ -444,18 +449,16 @@ std::optional<FileSpec> SymbolLocatorSymStore::LocateExecutableSymbolFile(
     return {};
 
   Log *log = GetLog(LLDBLog::Symbols);
-  std::string pdb_name =
-      module_spec.GetSymbolFileSpec().GetFilename().GetStringRef().str();
+  std::string pdb_name = module_spec.GetSymbolFileSpec().GetFilename().str();
   if (pdb_name.empty()) {
-    LLDB_LOG_VERBOSE(log,
-                     "Failed to resolve symbol PDB module: PDB name empty");
+    LLDB_LOG(log, "Failed to resolve symbol PDB module: PDB name empty");
     return {};
   }
 
-  LLDB_LOG_VERBOSE(log, "LocateExecutableSymbolFile {0} with UUID {1}",
-                   pdb_name, uuid.GetAsString());
+  LLDB_LOG(log, "LocateExecutableSymbolFile {0} with UUID {1}", pdb_name,
+           uuid.GetAsString());
   if (uuid.GetBytes().size() != 20) {
-    LLDB_LOG_VERBOSE(log, "Failed to resolve symbol PDB module: UUID invalid");
+    LLDB_LOG(log, "Failed to resolve symbol PDB module: UUID invalid");
     return {};
   }
 

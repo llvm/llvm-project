@@ -1,7 +1,5 @@
 #! .
 __asan_report_load_n
-__asan_report_assume_dereferenceable
-__asan_report_assume_dereferenceable_noabort
 __asan_loadN
 __asan_report_load1
 __asan_load1
@@ -115,3 +113,9 @@ __asan_poison_stack_memory
 __asan_unpoison_stack_memory
 __asan_option_detect_stack_use_after_return
 __asan_shadow_memory_dynamic_address
+__interceptor___linux_vec_malloc
+__linux_vec_malloc
+__interceptor___linux_vec_calloc
+__linux_vec_calloc
+__interceptor___linux_realloc
+__linux_realloc

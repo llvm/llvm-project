@@ -30,6 +30,22 @@ using namespace plugin;
 using namespace error;
 using namespace llvm::offload::debug;
 
+// Windows (MSVC/clang, but not MinGW) does not support __attribute__((weak)),
+// so provide a fallback stub via /alternatename. The linker picks compiler-rt's
+// strong definition when clang_rt.profile is linked; otherwise the stub is
+// used.
+#if defined(_WIN32) && !defined(__MINGW32__)
+extern "C" int __llvm_write_custom_profile_default(
+    const char *, const __llvm_profile_data *, const __llvm_profile_data *,
+    const char *, const char *, const char *, const char *, const char *,
+    const char *, const uint64_t *) {
+  return -1;
+}
+#pragma comment(                                                               \
+    linker,                                                                    \
+    "/alternatename:__llvm_write_custom_profile=__llvm_write_custom_profile_default")
+#endif
+
 Expected<std::unique_ptr<ObjectFile>>
 GenericGlobalHandlerTy::getELFObjectFile(DeviceImageTy &Image) {
   assert(utils::elf::isELF(Image.getMemoryBuffer().getBuffer()) &&
@@ -262,11 +278,14 @@ void GPUProfGlobals::dump() const {
 }
 
 Error GPUProfGlobals::write() const {
+#if !defined(_WIN32) || defined(__MINGW32__)
+  // On Windows (non-MinGW) the /alternatename stub above is never null.
   if (!__llvm_write_custom_profile)
     return Plugin::error(ErrorCode::INVALID_BINARY,
                          "could not find symbol __llvm_write_custom_profile. "
                          "The compiler-rt profiling library must be linked for "
                          "GPU PGO to work.");
+#endif
 
   // Lay out as [Data][Counters][Names] to match the raw profile format order.
   // TODO: Move this interface to compiler-rt.
@@ -295,7 +314,9 @@ Error GPUProfGlobals::write() const {
       reinterpret_cast<const __llvm_profile_data *>(DataBegin),
       reinterpret_cast<const __llvm_profile_data *>(DataBegin +
                                                     DataSection.size()),
-      CountersBegin, CountersBegin + CountersSection.size(), NamesBegin,
+      CountersBegin, CountersBegin + CountersSection.size(),
+      /*UniformCountersBegin=*/nullptr,
+      /*UniformCountersEnd=*/nullptr, NamesBegin,
       NamesBegin + NamesSection.size(), &Version);
   if (Result != 0)
     return Plugin::error(ErrorCode::HOST_IO,

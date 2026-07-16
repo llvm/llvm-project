@@ -1301,7 +1301,8 @@ static fir::ExtendedValue placeTrivialInMemory(mlir::Location loc,
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 hlfir::convertToBox(mlir::Location loc, fir::FirOpBuilder &builder,
-                    hlfir::Entity entity, mlir::Type targetType) {
+                    hlfir::Entity entity, mlir::Type targetType,
+                    unsigned corank) {
   // fir::factory::createBoxValue is not meant to deal with procedures.
   // Dereference procedure pointers here.
   if (entity.isProcedurePointer())
@@ -1317,7 +1318,7 @@ hlfir::convertToBox(mlir::Location loc, fir::FirOpBuilder &builder,
   mlir::Value base = fir::getBase(exv);
   if (fir::isa_trivial(base.getType()))
     exv = placeTrivialInMemory(loc, builder, base, targetType);
-  fir::BoxValue box = fir::factory::createBoxValue(builder, loc, exv);
+  fir::BoxValue box = fir::factory::createBoxValue(builder, loc, exv, corank);
   return {box, cleanup};
 }
 
@@ -1810,4 +1811,17 @@ bool hlfir::isSimplyContiguous(mlir::Value base, bool checkWhole) {
       .Case(
           [&](fir::ConvertOp op) { return isSimplyContiguous(op.getValue()); })
       .Default([](auto &&) { return false; });
+}
+
+bool hlfir::isInsideHlfirWhereMaskedExpression(mlir::Region &region) {
+  hlfir::WhereOp whereOp = region.getParentOfType<hlfir::WhereOp>();
+  if (!whereOp)
+    return false;
+  // If the where is nested inside another where, even its mask region must
+  // be evaluated masked.
+  if (whereOp->getParentOfType<hlfir::WhereOp>())
+    return true;
+  // The top-level where mask is not itself controlled by any other where mask,
+  // all other expressions nested under the where must be evaluated masked.
+  return !whereOp.getMaskRegion().isAncestor(&region);
 }

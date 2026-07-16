@@ -643,42 +643,10 @@ define void @test15(ptr %callee) nounwind "aarch64_za_state_agnostic" {
 define void @test16(ptr %callee) nounwind "aarch64_pstate_sm_body" "aarch64_new_za" {
 ; CHECK-LABEL: test16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
-; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    add x29, sp, #64
-; CHECK-NEXT:    str x19, [sp, #80] // 8-byte Spill
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    rdsvl x8, #1
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    msub x9, x8, x8, x9
-; CHECK-NEXT:    mov sp, x9
-; CHECK-NEXT:    stp x9, x8, [x29, #-80]
-; CHECK-NEXT:    mrs x8, TPIDR2_EL0
-; CHECK-NEXT:    cbz x8, .LBB17_2
-; CHECK-NEXT:  // %bb.1:
-; CHECK-NEXT:    bl __arm_tpidr2_save
-; CHECK-NEXT:    msr TPIDR2_EL0, xzr
-; CHECK-NEXT:    zero {za}
-; CHECK-NEXT:  .LBB17_2:
-; CHECK-NEXT:    smstart za
-; CHECK-NEXT:    smstart sm
-; CHECK-NEXT:    sub x8, x29, #80
-; CHECK-NEXT:    msr TPIDR2_EL0, x8
-; CHECK-NEXT:    smstop sm
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    bl callee
 ; CHECK-NEXT:    bl callee
-; CHECK-NEXT:    msr TPIDR2_EL0, xzr
-; CHECK-NEXT:    smstop za
-; CHECK-NEXT:    sub sp, x29, #64
-; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #80] // 8-byte Reload
-; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   call void @callee()
   call void @callee()

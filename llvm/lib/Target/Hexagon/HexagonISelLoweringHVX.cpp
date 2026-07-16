@@ -149,6 +149,8 @@ HexagonTargetLowering::initializeHVXLowering() {
       setOperationAction(ISD::FMUL,              T, Legal);
       setOperationAction(ISD::FMINIMUMNUM, T, Legal);
       setOperationAction(ISD::FMAXIMUMNUM, T, Legal);
+      setOperationAction(ISD::FMINNUM, T, Legal);
+      setOperationAction(ISD::FMAXNUM, T, Legal);
 
       setOperationAction(ISD::INSERT_SUBVECTOR,  T, Custom);
       setOperationAction(ISD::EXTRACT_SUBVECTOR, T, Custom);
@@ -218,6 +220,8 @@ HexagonTargetLowering::initializeHVXLowering() {
       setOperationAction(ISD::FMUL,           P, Custom);
       setOperationAction(ISD::FMINIMUMNUM, P, Custom);
       setOperationAction(ISD::FMAXIMUMNUM, P, Custom);
+      setOperationAction(ISD::FMINNUM, P, Custom);
+      setOperationAction(ISD::FMAXNUM, P, Custom);
       setOperationAction(ISD::SETCC,          P, Custom);
       setOperationAction(ISD::VSELECT,        P, Custom);
 
@@ -1077,7 +1081,13 @@ HexagonTargetLowering::buildHvxVectorReg(ArrayRef<SDValue> Values,
 
   SDValue HalfV = getZero(dl, VecTy, DAG);
   if (VecHist[n] > 1) {
-    SDValue SplatV = DAG.getNode(ISD::SPLAT_VECTOR, dl, VecTy, Words[n]);
+    // Always splat at word (i32) granularity so that the SPLAT_VECTOR node
+    // is selected as PS_vsplatrw (word broadcast) rather than PS_vsplatrb
+    // (byte broadcast of the low byte only), which would corrupt multi-byte
+    // element types.
+    MVT WordVecTy = MVT::getVectorVT(MVT::i32, HwLen / 4);
+    SDValue WordSplat = DAG.getNode(ISD::SPLAT_VECTOR, dl, WordVecTy, Words[n]);
+    SDValue SplatV = DAG.getBitcast(VecTy, WordSplat);
     HalfV = DAG.getNode(HexagonISD::VALIGN, dl, VecTy,
                        {HalfV, SplatV, DAG.getConstant(HwLen/2, dl, MVT::i32)});
   }
@@ -2111,6 +2121,27 @@ HexagonTargetLowering::LowerHvxBitcast(SDValue Op, SelectionDAG &DAG) const {
   if (isHvxBoolTy(ValTy) && ResTy.isScalarInteger()) {
     unsigned HwLen = Subtarget.getVectorLength();
     MVT WordTy = MVT::getVectorVT(MVT::i32, HwLen/4);
+
+    // When the predicate is shorter than the predicate register, each boolean
+    // is represented by multiple consecutive bits in the input register.
+    // Condense the bits so each boolean is represented by one bit. This only
+    // handles 2x and 4x compaction ratios.
+    unsigned PredLen = ValTy.getVectorNumElements();
+    if (PredLen < HwLen) {
+      MVT ByteTy = MVT::getVectorVT(MVT::i8, HwLen);
+      Val = DAG.getNode(HexagonISD::Q2V, dl, ByteTy, Val);
+      if (HwLen > PredLen * 2) {
+        assert(HwLen == PredLen * 4);
+        PredLen *= 2;
+        Val = getInstr(Hexagon::V6_vdealh, dl, ByteTy, Val, DAG);
+      }
+      if (HwLen > PredLen) {
+        assert(HwLen == PredLen * 2);
+        Val = getInstr(Hexagon::V6_vdealb, dl, ByteTy, Val, DAG);
+      }
+      Val = DAG.getNode(HexagonISD::V2Q, dl, ValTy, Val);
+    }
+
     SDValue VQ = compressHvxPred(Val, dl, WordTy, DAG);
     unsigned BitWidth = ResTy.getSizeInBits();
 
@@ -3443,41 +3474,63 @@ HexagonTargetLowering::SplitVectorOp(SDValue Op, SelectionDAG &DAG) const {
 SDValue
 HexagonTargetLowering::SplitHvxMemOp(SDValue Op, SelectionDAG &DAG) const {
   auto *MemN = cast<MemSDNode>(Op.getNode());
+  unsigned MemOpc = MemN->getOpcode();
+  EVT MemTy = MemN->getMemoryVT();
 
-  if (!MemN->getMemoryVT().isSimple())
+  if ((MemOpc == ISD::STORE || MemOpc == ISD::LOAD) &&
+      (!MemTy.isSimple() || !isHvxPairTy(MemTy.getSimpleVT())))
     return Op;
 
-  MVT MemTy = MemN->getMemoryVT().getSimpleVT();
-  if (!isHvxPairTy(MemTy))
-    return Op;
+  EVT ValueType;
+  if (MemOpc == ISD::STORE)
+    ValueType = ty(cast<StoreSDNode>(Op)->getValue());
+  else if (MemOpc == ISD::MSTORE)
+    ValueType = ty(cast<MaskedStoreSDNode>(Op)->getValue());
+  else // ISD::LOAD, ISD::MLOAD.
+    ValueType = MemN->getValueType(0);
+
+  EVT LoVT, HiVT;
+  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(ValueType);
+
+  EVT LoMemVT, HiMemVT;
+  bool HiIsEmpty = false;
+  std::tie(LoMemVT, HiMemVT) =
+      DAG.GetDependentSplitDestVTs(MemTy, LoVT, &HiIsEmpty);
+
+  uint64_t LoSize = LoMemVT.getSizeInBits().getFixedValue() / 8;
+  uint64_t HiSize = HiMemVT.getSizeInBits().getFixedValue() / 8;
 
   const SDLoc &dl(Op);
-  unsigned HwLen = Subtarget.getVectorLength();
-  MVT SingleTy = typeSplit(MemTy).first;
   SDValue Chain = MemN->getChain();
   SDValue Base0 = MemN->getBasePtr();
   SDValue Base1 =
-      DAG.getMemBasePlusOffset(Base0, TypeSize::getFixed(HwLen), dl);
-  unsigned MemOpc = MemN->getOpcode();
+      DAG.getMemBasePlusOffset(Base0, TypeSize::getFixed(LoSize), dl);
 
   MachineMemOperand *MOp0 = nullptr, *MOp1 = nullptr;
   if (MachineMemOperand *MMO = MemN->getMemOperand()) {
     MachineFunction &MF = DAG.getMachineFunction();
-    uint64_t MemSize = (MemOpc == ISD::MLOAD || MemOpc == ISD::MSTORE)
-                           ? (uint64_t)MemoryLocation::UnknownSize
-                           : HwLen;
-    MOp0 = MF.getMachineMemOperand(MMO, 0, MemSize);
-    MOp1 = MF.getMachineMemOperand(MMO, HwLen, MemSize);
+    auto MemSize = [=](uint64_t Size) {
+      return (MemOpc == ISD::MLOAD || MemOpc == ISD::MSTORE)
+                 ? (uint64_t)MemoryLocation::UnknownSize
+                 : Size;
+    };
+    // MOp1 will not be used if HiIsEmpty for masked loads and stores (MLOAD and
+    // MSTORE). Non-masked loads and store are always of double-vector size (see
+    // isHvxPairTy() check above).
+    MOp0 = MF.getMachineMemOperand(MMO, 0, MemSize(LoSize));
+    MOp1 = MF.getMachineMemOperand(MMO, LoSize, MemSize(HiSize));
   }
 
   if (MemOpc == ISD::LOAD) {
     assert(cast<LoadSDNode>(Op)->isUnindexed());
-    SDValue Load0 = DAG.getLoad(SingleTy, dl, Chain, Base0, MOp0);
-    SDValue Load1 = DAG.getLoad(SingleTy, dl, Chain, Base1, MOp1);
+    SDValue Load0 = DAG.getLoad(LoVT, dl, Chain, Base0, MOp0);
+    SDValue Load1 = DAG.getLoad(HiVT, dl, Chain, Base1, MOp1);
     return DAG.getMergeValues(
-        { DAG.getNode(ISD::CONCAT_VECTORS, dl, MemTy, Load0, Load1),
-          DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
-                      Load0.getValue(1), Load1.getValue(1)) }, dl);
+        {DAG.getNode(ISD::CONCAT_VECTORS, dl, MemN->getValueType(0), Load0,
+                     Load1),
+         DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Load0.getValue(1),
+                     Load1.getValue(1))},
+        dl);
   }
   if (MemOpc == ISD::STORE) {
     assert(cast<StoreSDNode>(Op)->isUnindexed());
@@ -3497,27 +3550,35 @@ HexagonTargetLowering::SplitHvxMemOp(SDValue Op, SelectionDAG &DAG) const {
   if (MemOpc == ISD::MLOAD) {
     VectorPair Thru =
         opSplit(cast<MaskedLoadSDNode>(Op)->getPassThru(), dl, DAG);
-    SDValue MLoad0 =
-        DAG.getMaskedLoad(SingleTy, dl, Chain, Base0, Offset, Masks.first,
-                          Thru.first, SingleTy, MOp0, ISD::UNINDEXED,
-                          ISD::NON_EXTLOAD, false);
+    SDValue MLoad0 = DAG.getMaskedLoad(LoVT, dl, Chain, Base0, Offset,
+                                       Masks.first, Thru.first, LoMemVT, MOp0,
+                                       ISD::UNINDEXED, ISD::NON_EXTLOAD, false);
+
+    // The hi masked load has zero storage size. We therefore simply set it to
+    // the low masked load and rely on subsequent removal from the chain as it
+    // is unused. See DAGTypeLegalizer::SplitVecRes_MLOAD() for the same logic.
     SDValue MLoad1 =
-        DAG.getMaskedLoad(SingleTy, dl, Chain, Base1, Offset, Masks.second,
-                          Thru.second, SingleTy, MOp1, ISD::UNINDEXED,
-                          ISD::NON_EXTLOAD, false);
+        HiIsEmpty ? MLoad0
+                  : DAG.getMaskedLoad(HiVT, dl, Chain, Base1, Offset,
+                                      Masks.second, Thru.second, HiMemVT, MOp1,
+                                      ISD::UNINDEXED, ISD::NON_EXTLOAD, false);
     return DAG.getMergeValues(
-        { DAG.getNode(ISD::CONCAT_VECTORS, dl, MemTy, MLoad0, MLoad1),
-          DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
-                      MLoad0.getValue(1), MLoad1.getValue(1)) }, dl);
+        {DAG.getNode(ISD::CONCAT_VECTORS, dl, MemN->getValueType(0), MLoad0,
+                     MLoad1),
+         DAG.getNode(ISD::TokenFactor, dl, MVT::Other, MLoad0.getValue(1),
+                     MLoad1.getValue(1))},
+        dl);
   }
   if (MemOpc == ISD::MSTORE) {
     VectorPair Vals = opSplit(cast<MaskedStoreSDNode>(Op)->getValue(), dl, DAG);
-    SDValue MStore0 = DAG.getMaskedStore(Chain, dl, Vals.first, Base0, Offset,
-                                         Masks.first, SingleTy, MOp0,
-                                         ISD::UNINDEXED, false, false);
-    SDValue MStore1 = DAG.getMaskedStore(Chain, dl, Vals.second, Base1, Offset,
-                                         Masks.second, SingleTy, MOp1,
-                                         ISD::UNINDEXED, false, false);
+    SDValue MStore0 =
+        DAG.getMaskedStore(Chain, dl, Vals.first, Base0, Offset, Masks.first,
+                           LoMemVT, MOp0, ISD::UNINDEXED, false, false);
+    if (HiIsEmpty)
+      return MStore0;
+    SDValue MStore1 =
+        DAG.getMaskedStore(Chain, dl, Vals.second, Base1, Offset, Masks.second,
+                           HiMemVT, MOp1, ISD::UNINDEXED, false, false);
     return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, MStore0, MStore1);
   }
 
@@ -3687,6 +3748,8 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
       case ISD::FMUL:
       case ISD::FMINIMUMNUM:
       case ISD::FMAXIMUMNUM:
+      case ISD::FMINNUM:
+      case ISD::FMAXNUM:
       case ISD::MULHS:
       case ISD::MULHU:
       case ISD::AND:

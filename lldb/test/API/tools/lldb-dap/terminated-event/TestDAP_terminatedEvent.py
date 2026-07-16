@@ -11,6 +11,7 @@ import re
 import json
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class TestDAP_terminatedEvent(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     def test_terminated_event(self):

@@ -68,14 +68,14 @@ class LLDBTest(TestFormat):
             out, err, exitCode = lit.util.executeCommand(
                 cmd,
                 env=test.config.environment,
-                timeout=litConfig.maxIndividualTestTime,
+                timeout=test.config.maxIndividualTestTime,
             )
         except lit.util.ExecuteCommandTimeoutException as e:
             out = e.out
             err = e.err
             exitCode = e.exitCode
             timeoutInfo = "Reached timeout of {} seconds".format(
-                litConfig.maxIndividualTestTime
+                test.config.maxIndividualTestTime
             )
 
         output = """Script:\n--\n%s\n--\nExit Code: %d\n""" % (" ".join(cmd), exitCode)

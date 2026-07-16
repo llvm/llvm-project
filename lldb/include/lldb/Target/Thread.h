@@ -24,6 +24,7 @@
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/Event.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UserID.h"
@@ -1009,8 +1010,8 @@ public:
       bool stop_others, uint32_t frame_idx, Status &status);
 
   virtual lldb::ThreadPlanSP
-  QueueThreadPlanForStepScripted(bool abort_other_plans, const char *class_name,
-                                 StructuredData::ObjectSP extra_args_sp,
+  QueueThreadPlanForStepScripted(bool abort_other_plans,
+                                 const ScriptedMetadata &scripted_metadata,
                                  bool stop_other_threads, Status &status);
 
   // Thread Plan accessors:
@@ -1026,6 +1027,10 @@ public:
   /// \return
   ///     A pointer to the next executed plan.
   ThreadPlan *GetCurrentPlan() const;
+
+  /// Returns true if this thread has a ThreadPlanCallFunction on its
+  /// plan stack, indicating it is running a debugger-injected expression.
+  bool IsRunningCallFunctionPlan() const;
 
   /// Unwinds the thread stack for the innermost expression plan currently
   /// on the thread plan stack.
@@ -1184,6 +1189,21 @@ public:
   size_t GetStackFrameStatus(Stream &strm, uint32_t first_frame,
                              uint32_t num_frames, bool show_frame_info,
                              uint32_t num_frames_with_source, bool show_hidden);
+
+  /// If this thread stopped on a binary-loaded breakpoint, the
+  /// addresses of the newly added binaries may have already been
+  /// provided by the gdb stub in the stop-packet.
+  virtual std::vector<lldb::addr_t> FetchNewlyAddedBinaries() { return {}; }
+
+  /// If this thread stopped on a binary-loaded breakpoint, the
+  /// detailed information about the new binaries may be provided.
+  /// If any detailed information about binaries is provided, it must
+  /// be provided for all binaries that have been loaded at this stop.
+  /// Detailed information is likely to only be provided when the number
+  /// of new binaries is small.
+  virtual lldb_private::StructuredData::ObjectSP FetchDetailedBinariesInfo() {
+    return {};
+  }
 
   // We need a way to verify that even though we have a thread in a shared
   // pointer that the object itself is still valid. Currently this won't be the

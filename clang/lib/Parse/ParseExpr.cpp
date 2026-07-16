@@ -15,8 +15,8 @@
 /// In the C99 grammar, these unary operators bind tightest and are represented
 /// as the 'cast-expression' production.  Everything else is either a binary
 /// operator (e.g. '/') or a ternary operator ("?:").  The unary leaves are
-/// handled by ParseCastExpression, the higher level pieces are handled by
-/// ParseBinaryExpression.
+/// handled by ParseCastExpression, the higher level pieces are handled
+/// elsewhere.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -863,8 +863,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
   case tok::annot_non_type_dependent:
   case tok::annot_non_type_undeclared: {
     CXXScopeSpec SS;
-    Token Replacement;
-    Res = tryParseCXXIdExpression(SS, isAddressOfOperand, Replacement);
+    Res = tryParseCXXIdExpression(SS, isAddressOfOperand);
     assert(!Res.isUnset() &&
            "should not perform typo correction on annotation token");
     break;
@@ -1029,7 +1028,6 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
     UnqualifiedId Name;
     CXXScopeSpec ScopeSpec;
     SourceLocation TemplateKWLoc;
-    Token Replacement;
     CastExpressionIdValidator Validator(Tok, CorrectionBehavior);
     Validator.IsAddressOfOperand = isAddressOfOperand;
     if (Tok.isOneOf(tok::periodstar, tok::arrowstar)) {
@@ -1039,17 +1037,10 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
       Validator.WantRemainingKeywords = Tok.isNot(tok::r_paren);
     }
     Name.setIdentifier(&II, ILoc);
-    Res = Actions.ActOnIdExpression(
-        getCurScope(), ScopeSpec, TemplateKWLoc, Name, Tok.is(tok::l_paren),
-        isAddressOfOperand, &Validator,
-        /*IsInlineAsmIdentifier=*/false,
-        Tok.is(tok::r_paren) ? nullptr : &Replacement);
-    if (!Res.isInvalid() && Res.isUnset()) {
-      UnconsumeToken(Replacement);
-      return ParseCastExpression(
-          ParseKind, isAddressOfOperand, NotCastExpr, CorrectionBehavior,
-          /*isVectorLiteral=*/false, NotPrimaryExpression);
-    }
+    Res = Actions.ActOnIdExpression(getCurScope(), ScopeSpec, TemplateKWLoc,
+                                    Name, Tok.is(tok::l_paren),
+                                    isAddressOfOperand, &Validator,
+                                    /*IsInlineAsmIdentifier=*/false);
     Res = tryParseCXXPackIndexingExpression(Res);
     if (!Res.isInvalid() && Tok.is(tok::less))
       checkPotentialAngleBracket(Res);
@@ -1352,6 +1343,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
   case tok::kw_auto:
   case tok::kw_typename:
   case tok::kw_typeof:
+  case tok::kw_typeof_unqual:
   case tok::kw___vector:
   case tok::kw__Accum:
   case tok::kw__Fract:
@@ -2416,56 +2408,73 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
       return ExprError();
     }
 
+    auto TriggerCompletion = [&](const Designation &D) {
+      cutOffParsing();
+      Actions.CodeCompletion().CodeCompleteOffsetOfDesignator(
+          Actions.GetTypeFromParser(Ty.get()), D);
+    };
+
     // We must have at least one identifier here.
+    Designation D;
+    if (Tok.is(tok::code_completion)) {
+      TriggerCompletion(D);
+      return ExprError();
+    }
     if (Tok.isNot(tok::identifier)) {
       Diag(Tok, diag::err_expected) << tok::identifier;
       SkipUntil(tok::r_paren, StopAtSemi);
       return ExprError();
     }
 
-    // Keep track of the various subcomponents we see.
-    SmallVector<Sema::OffsetOfComponent, 4> Comps;
-
-    Comps.push_back(Sema::OffsetOfComponent());
-    Comps.back().isBrackets = false;
-    Comps.back().U.IdentInfo = Tok.getIdentifierInfo();
-    Comps.back().LocStart = Comps.back().LocEnd = ConsumeToken();
+    D.AddDesignator(Designator::CreateFieldDesignator(
+        Tok.getIdentifierInfo(), SourceLocation(), Tok.getLocation()));
+    ConsumeToken();
 
     // FIXME: This loop leaks the index expressions on error.
     while (true) {
       if (Tok.is(tok::period)) {
         // offsetof-member-designator: offsetof-member-designator '.' identifier
-        Comps.push_back(Sema::OffsetOfComponent());
-        Comps.back().isBrackets = false;
-        Comps.back().LocStart = ConsumeToken();
+        SourceLocation DotLoc = ConsumeToken();
 
+        if (Tok.is(tok::code_completion)) {
+          TriggerCompletion(D);
+          return ExprError();
+        }
         if (Tok.isNot(tok::identifier)) {
           Diag(Tok, diag::err_expected) << tok::identifier;
           SkipUntil(tok::r_paren, StopAtSemi);
           return ExprError();
         }
-        Comps.back().U.IdentInfo = Tok.getIdentifierInfo();
-        Comps.back().LocEnd = ConsumeToken();
+        D.AddDesignator(Designator::CreateFieldDesignator(
+            Tok.getIdentifierInfo(), DotLoc, Tok.getLocation()));
+        ConsumeToken();
       } else if (Tok.is(tok::l_square)) {
         if (CheckProhibitedCXX11Attribute())
           return ExprError();
 
         // offsetof-member-designator: offsetof-member-design '[' expression ']'
-        Comps.push_back(Sema::OffsetOfComponent());
-        Comps.back().isBrackets = true;
         BalancedDelimiterTracker ST(*this, tok::l_square);
         ST.consumeOpen();
-        Comps.back().LocStart = ST.getOpenLocation();
         Res = ParseExpression();
         if (Res.isInvalid()) {
           SkipUntil(tok::r_paren, StopAtSemi);
           return Res;
         }
-        Comps.back().U.E = Res.get();
 
         ST.consumeClose();
-        Comps.back().LocEnd = ST.getCloseLocation();
+        Designator ArrayD =
+            Designator::CreateArrayDesignator(Res.get(), ST.getOpenLocation());
+        ArrayD.setRBracketLoc(ST.getCloseLocation());
+        D.AddDesignator(ArrayD);
       } else {
+        // A code-completion token here (e.g. cursor right after `]`) is past
+        // the point where a field can be applied without a leading `.`. Drop
+        // it on the floor rather than leak into outer-scope completion or
+        // emit field suggestions that wouldn't compose.
+        if (Tok.is(tok::code_completion)) {
+          cutOffParsing();
+          return ExprError();
+        }
         if (Tok.isNot(tok::r_paren)) {
           PT.consumeClose();
           Res = ExprError();
@@ -2473,9 +2482,9 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
           Res = ExprError();
         } else {
           PT.consumeClose();
-          Res = Actions.ActOnBuiltinOffsetOf(getCurScope(), StartLoc, TypeLoc,
-                                             Ty.get(), Comps,
-                                             PT.getCloseLocation());
+          Res =
+              Actions.ActOnBuiltinOffsetOf(getCurScope(), StartLoc, TypeLoc,
+                                           Ty.get(), D, PT.getCloseLocation());
         }
         break;
       }
@@ -3206,7 +3215,8 @@ void Parser::injectEmbedTokens() {
 
 bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
                                  llvm::function_ref<void()> ExpressionStarts,
-                                 bool FailImmediatelyOnInvalidExpr) {
+                                 bool FailImmediatelyOnInvalidExpr,
+                                 bool ParsingExpansionStmtInitList) {
   bool SawError = false;
   while (true) {
     if (ExpressionStarts)
@@ -3235,7 +3245,11 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
       SawError = true;
       if (FailImmediatelyOnInvalidExpr)
         break;
-      SkipUntil(tok::comma, tok::r_paren, StopAtSemi | StopBeforeMatch);
+
+      // We expect '}' rather than ')' at the end of an expansion-init-list.
+      SkipUntil(tok::comma,
+                ParsingExpansionStmtInitList ? tok::r_brace : tok::r_paren,
+                StopAtSemi | StopBeforeMatch);
     } else {
       Exprs.push_back(Expr.get());
     }
@@ -3245,6 +3259,11 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
     // Move to the next argument, remember where the comma was.
     Token Comma = Tok;
     ConsumeToken();
+
+    // CWG 3061: Trailing commas are allowed in expansion-init-lists.
+    if (ParsingExpansionStmtInitList && Tok.is(tok::r_brace))
+      break;
+
     checkPotentialAngleBracketDelimiter(Comma);
   }
   return SawError;

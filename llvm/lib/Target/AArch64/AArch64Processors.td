@@ -387,227 +387,71 @@ def TuneOlympus : SubtargetFeature<"olympus", "ARMProcFamily", "Olympus",
                                    FeatureUseFixedOverScalableIfEqualCost,
                                    FeatureMaxInterleaveFactor4]>;
 
-// Note that cyclone does not fuse AES instructions, but newer apple chips do
-// perform the fusion and cyclone is used by default when targeting apple OSes.
 def TuneAppleA7  : SubtargetFeature<"apple-a7", "ARMProcFamily", "AppleA7",
-                                    "Apple A7 (the CPU formerly known as Cyclone)", [
-                                    FeatureAlternateSExtLoadCVTF32Pattern,
+                                    "Apple A7 (the CPU formerly known as Cyclone)",
+                                    [FeatureAlternateSExtLoadCVTF32Pattern,
                                     FeatureArithmeticBccFusion,
                                     FeatureArithmeticCbzFusion,
                                     FeatureDisableLatencySchedHeuristic,
-                                    FeatureFuseAES, FeatureFuseCryptoEOR,
+                                    FeatureFuseAES,
+                                    FeatureFuseCryptoEOR,
                                     FeatureStorePairSuppress,
                                     FeatureZCRegMoveGPR64,
                                     FeatureZCRegMoveFPR128,
+                                    FeatureZCZeroingFPWorkaround,
                                     FeatureZCZeroingGPR32,
                                     FeatureZCZeroingGPR64,
                                     FeatureNoZCZeroingFPR64,
-                                    FeatureZCZeroingFPR128,
-                                    FeatureZCZeroingFPWorkaround]>;
+                                    FeatureZCZeroingFPR128]>;
 
 def TuneAppleA10 : SubtargetFeature<"apple-a10", "ARMProcFamily", "AppleA10",
-                                    "Apple A10", [
-                                    FeatureAlternateSExtLoadCVTF32Pattern,
-                                    FeatureArithmeticBccFusion,
-                                    FeatureArithmeticCbzFusion,
-                                    FeatureDisableLatencySchedHeuristic,
-                                    FeatureFuseAES,
-                                    FeatureFuseCryptoEOR,
-                                    FeatureStorePairSuppress,
-                                    FeatureZCRegMoveGPR64,
-                                    FeatureZCRegMoveFPR128,
-                                    FeatureZCZeroingGPR32,
-                                    FeatureZCZeroingGPR64,
-                                    FeatureNoZCZeroingFPR64,
-                                    FeatureZCZeroingFPR128]>;
+                                    "Apple A10",
+                                    !listremove(TuneAppleA7.Implies,
+                                    [FeatureZCZeroingFPWorkaround])>;
 
 def TuneAppleA11 : SubtargetFeature<"apple-a11", "ARMProcFamily", "AppleA11",
-                                    "Apple A11", [
-                                    FeatureAlternateSExtLoadCVTF32Pattern,
-                                    FeatureArithmeticBccFusion,
-                                    FeatureArithmeticCbzFusion,
-                                    FeatureDisableLatencySchedHeuristic,
-                                    FeatureFuseAES,
-                                    FeatureFuseCryptoEOR,
-                                    FeatureStorePairSuppress,
-                                    FeatureZCRegMoveGPR64,
-                                    FeatureZCRegMoveFPR128,
-                                    FeatureZCZeroingGPR32,
-                                    FeatureZCZeroingGPR64,
-                                    FeatureNoZCZeroingFPR64,
-                                    FeatureZCZeroingFPR128]>;
+                                    "Apple A11", TuneAppleA10.Implies>;
 
 def TuneAppleA12 : SubtargetFeature<"apple-a12", "ARMProcFamily", "AppleA12",
-                                    "Apple A12", [
-                                    FeatureAlternateSExtLoadCVTF32Pattern,
-                                    FeatureArithmeticBccFusion,
-                                    FeatureArithmeticCbzFusion,
-                                    FeatureDisableLatencySchedHeuristic,
-                                    FeatureFuseAES,
-                                    FeatureFuseCryptoEOR,
-                                    FeatureStorePairSuppress,
-                                    FeatureZCRegMoveGPR64,
-                                    FeatureZCRegMoveFPR128,
-                                    FeatureZCZeroingGPR32,
-                                    FeatureZCZeroingGPR64,
-                                    FeatureNoZCZeroingFPR64,
-                                    FeatureZCZeroingFPR128]>;
+                                    "Apple A12", TuneAppleA11.Implies>;
 
 def TuneAppleA13 : SubtargetFeature<"apple-a13", "ARMProcFamily", "AppleA13",
-                                    "Apple A13", [
-                                    FeatureAlternateSExtLoadCVTF32Pattern,
-                                    FeatureArithmeticBccFusion,
-                                    FeatureArithmeticCbzFusion,
-                                    FeatureDisableLatencySchedHeuristic,
-                                    FeatureFuseAES,
-                                    FeatureFuseCryptoEOR,
-                                    FeatureStorePairSuppress,
-                                    FeatureZCRegMoveGPR64,
-                                    FeatureZCRegMoveFPR128,
-                                    FeatureZCZeroingGPR32,
-                                    FeatureZCZeroingGPR64,
-                                    FeatureNoZCZeroingFPR64,
-                                    FeatureZCZeroingFPR128]>;
+                                    "Apple A13", TuneAppleA12.Implies>;
 
 def TuneAppleA14 : SubtargetFeature<"apple-a14", "ARMProcFamily", "AppleA14",
-                                    "Apple A14", [
+                                    "Apple A14",
+                                    !listconcat(TuneAppleA13.Implies, [
                                     FeatureAggressiveFMA,
-                                    FeatureAlternateSExtLoadCVTF32Pattern,
-                                    FeatureArithmeticBccFusion,
-                                    FeatureArithmeticCbzFusion,
-                                    FeatureDisableLatencySchedHeuristic,
+                                    FeatureAlignCmpCSelPairs,
                                     FeatureFastLD1Single,
                                     FeatureFuseAddress,
-                                    FeatureFuseAES,
                                     FeatureFuseArithmeticLogic,
                                     FeatureFuseCmpCSel,
-                                    FeatureFuseCryptoEOR,
                                     FeatureFuseLiterals,
-                                    FeatureStorePairSuppress,
-                                    FeatureZCRegMoveGPR64,
-                                    FeatureZCRegMoveFPR128,
-                                    FeatureZCZeroingGPR32,
-                                    FeatureZCZeroingGPR64,
-                                    FeatureNoZCZeroingFPR64,
-                                    FeatureZCZeroingFPR128,
-                                    FeatureMaxInterleaveFactor4]>;
+                                    FeatureMaxInterleaveFactor4])>;
 
 def TuneAppleA15 : SubtargetFeature<"apple-a15", "ARMProcFamily", "AppleA15",
-                                    "Apple A15", [
-                                    FeatureAlternateSExtLoadCVTF32Pattern,
-                                    FeatureArithmeticBccFusion,
-                                    FeatureArithmeticCbzFusion,
-                                    FeatureDisableLatencySchedHeuristic,
-                                    FeatureFastLD1Single,
-                                    FeatureFuseAddress,
-                                    FeatureFuseAdrpAdd,
-                                    FeatureFuseAES,
-                                    FeatureFuseArithmeticLogic,
-                                    FeatureFuseCmpCSel,
-                                    FeatureFuseCryptoEOR,
-                                    FeatureFuseLiterals,
-                                    FeatureStorePairSuppress,
-                                    FeatureZCRegMoveGPR64,
-                                    FeatureZCRegMoveFPR128,
-                                    FeatureZCZeroingGPR32,
-                                    FeatureZCZeroingGPR64,
-                                    FeatureNoZCZeroingFPR64,
-                                    FeatureZCZeroingFPR128,
-                                    FeatureMaxInterleaveFactor4]>;
+                                    "Apple A15",
+                                    !listconcat(
+                                    !listremove(TuneAppleA14.Implies,
+                                    [FeatureAggressiveFMA]),
+                                    [FeatureFuseAdrpAdd])>;
 
 def TuneAppleA16 : SubtargetFeature<"apple-a16", "ARMProcFamily", "AppleA16",
-                                    "Apple A16", [
-                                    FeatureAlternateSExtLoadCVTF32Pattern,
-                                    FeatureArithmeticBccFusion,
-                                    FeatureArithmeticCbzFusion,
-                                    FeatureDisableLatencySchedHeuristic,
-                                    FeatureFastLD1Single,
-                                    FeatureFuseAddress,
-                                    FeatureFuseAdrpAdd,
-                                    FeatureFuseAES,
-                                    FeatureFuseArithmeticLogic,
-                                    FeatureFuseCmpCSel,
-                                    FeatureFuseFCmpFCSel,
-                                    FeatureFuseCryptoEOR,
-                                    FeatureFuseLiterals,
-                                    FeatureStorePairSuppress,
-                                    FeatureZCRegMoveGPR64,
-                                    FeatureZCRegMoveFPR128,
-                                    FeatureZCZeroingGPR32,
-                                    FeatureZCZeroingGPR64,
-                                    FeatureNoZCZeroingFPR64,
-                                    FeatureZCZeroingFPR128,
-                                    FeatureMaxInterleaveFactor4]>;
+                                    "Apple A16",
+                                    !listconcat(TuneAppleA15.Implies,
+                                    [FeatureFuseFCmpFCSel])>;
 
 def TuneAppleA17 : SubtargetFeature<"apple-a17", "ARMProcFamily", "AppleA17",
-                                    "Apple A17", [
-                                    FeatureAlternateSExtLoadCVTF32Pattern,
-                                    FeatureArithmeticBccFusion,
-                                    FeatureArithmeticCbzFusion,
-                                    FeatureDisableLatencySchedHeuristic,
-                                    FeatureFastLD1Single,
-                                    FeatureFuseAddress,
-                                    FeatureFuseAdrpAdd,
-                                    FeatureFuseAES,
-                                    FeatureFuseArithmeticLogic,
-                                    FeatureFuseCmpCSel,
-                                    FeatureFuseFCmpFCSel,
-                                    FeatureFuseCryptoEOR,
-                                    FeatureFuseLiterals,
-                                    FeatureStorePairSuppress,
-                                    FeatureZCRegMoveGPR64,
-                                    FeatureZCRegMoveFPR128,
-                                    FeatureZCZeroingGPR32,
-                                    FeatureZCZeroingGPR64,
-                                    FeatureNoZCZeroingFPR64,
-                                    FeatureZCZeroingFPR128,
-                                    FeatureMaxInterleaveFactor4]>;
+                                    "Apple A17", TuneAppleA16.Implies>;
 
 def TuneAppleM4 : SubtargetFeature<"apple-m4", "ARMProcFamily", "AppleM4",
-                                     "Apple M4", [
-                                     FeatureAlternateSExtLoadCVTF32Pattern,
-                                     FeatureArithmeticBccFusion,
-                                     FeatureArithmeticCbzFusion,
-                                     FeatureDisableLatencySchedHeuristic,
-                                     FeatureFastLD1Single,
-                                     FeatureFuseAddress,
-                                     FeatureFuseAdrpAdd,
-                                     FeatureFuseAES,
-                                     FeatureFuseArithmeticLogic,
-                                     FeatureFuseCmpCSel,
-                                     FeatureFuseFCmpFCSel,
-                                     FeatureFuseCryptoEOR,
-                                     FeatureFuseLiterals,
-                                     FeatureZCRegMoveGPR64,
-                                     FeatureZCRegMoveFPR128,
-                                     FeatureZCZeroingGPR32,
-                                     FeatureZCZeroingGPR64,
-                                     FeatureNoZCZeroingFPR64,
-                                     FeatureZCZeroingFPR128,
-                                     FeatureMaxInterleaveFactor4]>;
+                                    "Apple M4",
+                                    !listremove(TuneAppleA17.Implies,
+                                    [FeatureStorePairSuppress])>;
 
 def TuneAppleM5 : SubtargetFeature<"apple-m5", "ARMProcFamily", "AppleM5",
-                                    "Apple M5", [
-                                    FeatureAlternateSExtLoadCVTF32Pattern,
-                                    FeatureArithmeticBccFusion,
-                                    FeatureArithmeticCbzFusion,
-                                    FeatureDisableLatencySchedHeuristic,
-                                    FeatureFastLD1Single,
-                                    FeatureFuseAddress,
-                                    FeatureFuseAdrpAdd,
-                                    FeatureFuseAES,
-                                    FeatureFuseArithmeticLogic,
-                                    FeatureFuseCmpCSel,
-                                    FeatureFuseFCmpFCSel,
-                                    FeatureFuseCryptoEOR,
-                                    FeatureFuseLiterals,
-                                    FeatureZCRegMoveGPR64,
-                                    FeatureZCRegMoveFPR128,
-                                    FeatureZCZeroingGPR32,
-                                    FeatureZCZeroingGPR64,
-                                    FeatureNoZCZeroingFPR64,
-                                    FeatureZCZeroingFPR128,
-                                    FeatureMaxInterleaveFactor4]>;
+                                    "Apple M5", TuneAppleM4.Implies>;
 
 def TuneExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                     "Samsung Exynos-M3 processors",
@@ -690,8 +534,9 @@ def TuneNeoverseN2 : SubtargetFeature<"neoversen2", "ARMProcFamily", "NeoverseN2
                                       FeatureALULSLFast,
                                       FeaturePostRAScheduler,
                                       FeatureEnableSelectOptimize,
-                                      FeatureDisableMaximizeScalableBandwidth,
-                                      FeaturePredictableSelectIsExpensive]>;
+                                      FeatureUseFixedOverScalableIfEqualCost,
+                                      FeaturePredictableSelectIsExpensive,
+                                      FeatureLimited64bitVectorMulBandwidth]>;
 
 def TuneNeoverseN3 : SubtargetFeature<"neoversen3", "ARMProcFamily", "NeoverseN3",
                                       "Neoverse N3 ARM processors", [
@@ -758,7 +603,7 @@ def TuneNeoverseV3 : SubtargetFeature<"neoversev3", "ARMProcFamily", "NeoverseV3
                                       FeaturePredictableSelectIsExpensive,
                                       FeatureMaxInterleaveFactor4]>;
 
-def TuneNeoverseV3AE : SubtargetFeature<"neoversev3AE", "ARMProcFamily", "NeoverseV3",
+def TuneNeoverseV3AE : SubtargetFeature<"neoversev3AE", "ARMProcFamily", "NeoverseV3AE",
                                       "Neoverse V3AE ARM processors", [
                                       FeatureFuseAES,
                                       FeatureALULSLFast,
@@ -770,7 +615,7 @@ def TuneNeoverseV3AE : SubtargetFeature<"neoversev3AE", "ARMProcFamily", "Neover
                                       FeatureUseFixedOverScalableIfEqualCost,
                                       FeatureAvoidLDAPUR,
                                       FeaturePredictableSelectIsExpensive,
-                                      FeatureMaxInterleaveFactor4]>;
+                                      FeatureLimited64bitVectorMulBandwidth]>;
 
 def TuneSaphira  : SubtargetFeature<"saphira", "ARMProcFamily", "Saphira",
                                    "Qualcomm Saphira processors", [
@@ -835,6 +680,15 @@ def TuneTSV110 : SubtargetFeature<"tsv110", "ARMProcFamily", "TSV110",
                                   FeatureFuseAES,
                                   FeatureStorePairSuppress,
                                   FeaturePostRAScheduler]>;
+
+def TuneHIP12 : SubtargetFeature<"hip12", "ARMProcFamily", "HIP12",
+                                 "HiSilicon HIP12 processors", [
+                                 FeatureCmpBccFusion,
+                                 FeatureFuseAES,
+                                 FeatureAddrLSLSlow14,
+                                 FeatureALULSLFast,
+                                 FeatureStorePairSuppress,
+                                 FeaturePostRAScheduler]>;
 
 def TuneAmpere1 : SubtargetFeature<"ampere1", "ARMProcFamily", "Ampere1",
                                    "Ampere Computing Ampere-1 processors", [
@@ -981,7 +835,7 @@ def ProcessorFeatures {
                                    FeatureRAS, FeatureSEL2, FeatureTRACEV8_4,
                                    FeatureAltFPCmp, FeatureFRInt3264,
                                    FeatureMTE, FeatureFineGrainedTraps,
-                                   FeatureHCX, FeatureRCPC3, FeatureETE,
+                                   FeatureRCPC3, FeatureETE,
                                    FeatureSVEBitPerm, FeatureSVE2, FeatureTRBE,
                                    FeatureSME, FeatureSME2];
   list<SubtargetFeature> A65  = [HasV8_2aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
@@ -1063,7 +917,7 @@ def ProcessorFeatures {
                                   FeatureAM, FeatureRAS, FeatureSEL2,
                                   FeatureTRACEV8_4, FeatureAltFPCmp,
                                   FeatureFRInt3264, FeatureMTE,
-                                  FeatureFineGrainedTraps, FeatureHCX,
+                                  FeatureFineGrainedTraps,
                                   FeatureSPE_EEF, FeatureRCPC3, FeatureETE,
                                   FeatureSVEBitPerm, FeatureSVE2, FeatureTRBE,
                                   FeatureSME, FeatureSME2];
@@ -1138,7 +992,7 @@ def ProcessorFeatures {
                                       FeatureRAS, FeatureSEL2, FeatureTRACEV8_4,
                                       FeatureAltFPCmp, FeatureFRInt3264,
                                       FeatureMTE, FeatureFineGrainedTraps,
-                                      FeatureHCX, FeatureSPE_EEF, FeatureRCPC3,
+                                      FeatureSPE_EEF, FeatureRCPC3,
                                       FeatureETE, FeatureSVEBitPerm,
                                       FeatureSVE2, FeatureTRBE, FeatureSME,
                                       FeatureSME2];
@@ -1153,7 +1007,7 @@ def ProcessorFeatures {
                                     FeatureSEL2, FeatureTRACEV8_4,
                                     FeatureAltFPCmp, FeatureFRInt3264,
                                     FeatureMTE, FeatureFineGrainedTraps,
-                                    FeatureHCX, FeatureSPE_EEF, FeatureRCPC3,
+                                    FeatureSPE_EEF, FeatureRCPC3,
                                     FeatureETE, FeatureSVEBitPerm, FeatureSVE2,
                                     FeatureTRBE, FeatureSME, FeatureSME2];
   list<SubtargetFeature> A64FX    = [HasV8_2aOps, FeatureFPARMv8, FeatureNEON,
@@ -1215,7 +1069,6 @@ def ProcessorFeatures {
   list<SubtargetFeature> AppleA16 = [HasV8_6aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureSHA3,
                                      FeatureFullFP16, FeatureFP16FML,
-                                     FeatureHCX,
                                      FeatureComplxNum, FeatureCRC, FeatureJS,
                                      FeatureLSE, FeaturePAuth, FeatureFPAC,
                                      FeatureRAS, FeatureRCPC, FeatureRDM,
@@ -1223,7 +1076,6 @@ def ProcessorFeatures {
   list<SubtargetFeature> AppleA17 = [HasV8_6aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureSHA3,
                                      FeatureFullFP16, FeatureFP16FML,
-                                     FeatureHCX,
                                      FeatureComplxNum, FeatureCRC, FeatureJS,
                                      FeatureLSE, FeaturePAuth, FeatureFPAC,
                                      FeatureRAS, FeatureRCPC, FeatureRDM,
@@ -1357,6 +1209,22 @@ def ProcessorFeatures {
                                    FeatureFullFP16, FeatureFP16FML, FeatureDotProd,
                                    FeatureJS, FeatureComplxNum, FeatureCRC, FeatureLSE,
                                    FeatureRAS, FeatureRDM];
+  list<SubtargetFeature> HIP12 = [HasV8_7aOps, FeatureSVE, FeatureSVE2,
+                                  FeatureSVEBitPerm, FeatureSVEAES,
+                                  FeatureSVESM4, FeatureSVESHA3,
+                                  FeatureFullFP16, FeatureFP16FML, FeaturePerfMon,
+                                  FeatureFlagM, FeaturePredRes, FeatureSB, FeatureSSBS,
+                                  FeatureCCIDX, FeatureRandGen,
+                                  FeatureETE, FeatureTRBE, FeatureSPE,
+                                  FeatureSPE_EEF, FeatureNMI,
+                                  FeatureHBC, FeatureRCPC3, FeatureBF16,
+                                  FeatureComplxNum, FeatureCRC,
+                                  FeatureDotProd, FeatureFPARMv8,
+                                  FeatureMatMulInt8, FeatureJS,
+                                  FeatureLSE, FeatureNEON, FeaturePAuth,
+                                  FeatureRAS, FeatureRCPC, FeatureRDM,
+                                  FeatureFPAC, FeatureLS64, FeatureRME,
+                                  FeatureBRBE];
   list<SubtargetFeature> Ampere1 = [HasV8_6aOps, FeatureNEON, FeaturePerfMon,
                                     FeatureSSBS, FeatureRandGen, FeatureSB,
                                     FeatureSHA2, FeatureSHA3, FeatureAES,
@@ -1413,10 +1281,12 @@ class ProcessorAlias<string n, string alias> {
 }
 
 // FeatureFuseAdrpAdd is enabled under Generic to allow linker merging
-// optimizations.
+// optimizations. We use a fixed load latency of 4 as the a510 scheduling model
+// has a latency of 2 for most loads which is disproportionately low for many
+// cpus.
 def : ProcessorModel<"generic", CortexA510Model, ProcessorFeatures.Generic,
                      [FeatureFuseAES, FeatureFuseAdrpAdd, FeaturePostRAScheduler,
-                      FeatureEnableSelectOptimize]>;
+                      FeatureEnableSelectOptimize, FeatureFixedLoadLatency4]>;
 def : ProcessorModel<"cortex-a34", CortexA53Model, ProcessorFeatures.A53,
                      [TuneA35]>;
 def : ProcessorModel<"cortex-a35", CortexA53Model, ProcessorFeatures.A53,
@@ -1433,7 +1303,7 @@ def : ProcessorModel<"cortex-a520", CortexA510Model, ProcessorFeatures.A520,
                      [TuneA520]>;
 def : ProcessorModel<"cortex-a520ae", CortexA510Model, ProcessorFeatures.A520AE,
                      [TuneA520AE]>;
-def : ProcessorModel<"c1-nano", CortexA510Model,
+def : ProcessorModel<"c1-nano", C1NanoModel,
                      ProcessorFeatures.C1Nano, [TuneC1Nano]>;
 def : ProcessorModel<"cortex-a57", CortexA57Model, ProcessorFeatures.A53,
                      [TuneA57]>;
@@ -1487,7 +1357,7 @@ def : ProcessorModel<"cortex-x4", NeoverseV3Model, ProcessorFeatures.X4,
                      [TuneX4]>;
 def : ProcessorModel<"cortex-x925", NeoverseV3Model, ProcessorFeatures.X925,
                      [TuneX925]>;
-def : ProcessorModel<"c1-premium", NeoverseV3Model,
+def : ProcessorModel<"c1-premium", C1PremiumModel,
                      ProcessorFeatures.C1Premium, [TuneC1Premium]>;
 def : ProcessorModel<"c1-ultra", C1UltraModel,
                      ProcessorFeatures.C1Ultra, [TuneC1Ultra]>;
@@ -1514,6 +1384,7 @@ def : ProcessorModel<"neoverse-v3", NeoverseV3Model,
                      ProcessorFeatures.NeoverseV3, [TuneNeoverseV3]>;
 def : ProcessorModel<"neoverse-v3ae", NeoverseV3AEModel,
                      ProcessorFeatures.NeoverseV3AE, [TuneNeoverseV3AE]>;
+def : ProcessorAlias<"armagicpu", "neoverse-v3ae">;
 def : ProcessorModel<"exynos-m3", ExynosM3Model, ProcessorFeatures.ExynosM3,
                      [TuneExynosM3]>;
 def : ProcessorModel<"exynos-m4", ExynosM4Model, ProcessorFeatures.ExynosM4,
@@ -1541,9 +1412,13 @@ def : ProcessorModel<"thunderx2t99", ThunderX2T99Model,
 // Marvell ThunderX3T110 Processors.
 def : ProcessorModel<"thunderx3t110", ThunderX3T110Model,
                      ProcessorFeatures.ThunderX3T110, [TuneThunderX3T110]>;
+
+// HiSilicon Processors.
 def : ProcessorModel<"tsv110", TSV110Model, ProcessorFeatures.TSV110,
                      [TuneTSV110]>;
-
+// TODO: Support hip12 model.
+def : ProcessorModel<"hip12", NeoverseV2Model, ProcessorFeatures.HIP12,
+                     [TuneHIP12]>;
 
 // Apple CPUs
 
@@ -1614,6 +1489,10 @@ def : ProcessorModel<"carmel", NoSchedModel, ProcessorFeatures.Carmel,
 
 // NVIDIA Olympus
 def : ProcessorModel<"olympus", OlympusModel, ProcessorFeatures.Olympus,
+                     [TuneOlympus]>;
+
+// NVIDIA Rigel
+def : ProcessorModel<"rigel", OlympusModel, ProcessorFeatures.Olympus,
                      [TuneOlympus]>;
 
 // Ampere Computing

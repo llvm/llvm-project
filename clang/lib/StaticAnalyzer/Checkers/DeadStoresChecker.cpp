@@ -431,6 +431,12 @@ public:
                   //  bug.
                   if (isa<ParmVarDecl>(VD) && VD->getType()->isScalarType())
                     return;
+                  // Special case: check for self-initializations.
+                  //
+                  //  e.g. int x = x;
+                  //
+                  if (VD == V)
+                    return;
                 }
 
               PathDiagnosticLocation Loc =

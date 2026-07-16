@@ -763,15 +763,16 @@ public:
   /// this class.
   ///
   /// This value is used for lazy creation of default constructors.
-  bool needsImplicitDefaultConstructor() const {
-    return (!data().UserDeclaredConstructor &&
+    bool needsImplicitDefaultConstructor() const {
+    return (!getLangOpts().HLSL || isHLSLBuiltinRecord()) &&
+           ((!data().UserDeclaredConstructor &&
             !(data().DeclaredSpecialMembers & SMF_DefaultConstructor) &&
             (!isLambda() || lambdaIsDefaultConstructibleAndAssignable())) ||
            // FIXME: Proposed fix to core wording issue: if a class inherits
            // a default constructor and doesn't explicitly declare one, one
            // is declared implicitly.
            (data().HasInheritedDefaultConstructor &&
-            !(data().DeclaredSpecialMembers & SMF_DefaultConstructor));
+            !(data().DeclaredSpecialMembers & SMF_DefaultConstructor)));
   }
 
   /// Determine whether this class has any user-declared constructors.
@@ -797,7 +798,8 @@ public:
   /// Determine whether this class needs an implicit copy
   /// constructor to be lazily declared.
   bool needsImplicitCopyConstructor() const {
-    return !(data().DeclaredSpecialMembers & SMF_CopyConstructor);
+    return !(data().DeclaredSpecialMembers & SMF_CopyConstructor) &&
+           (!getLangOpts().HLSL || isHLSLBuiltinRecord());
   }
 
   /// Determine whether we need to eagerly declare a defaulted copy
@@ -891,6 +893,7 @@ public:
   /// constructor or if any existing special member function inhibits this.
   bool needsImplicitMoveConstructor() const {
     return !(data().DeclaredSpecialMembers & SMF_MoveConstructor) &&
+           (!getLangOpts().HLSL || isHLSLBuiltinRecord()) &&
            !hasUserDeclaredCopyConstructor() &&
            !hasUserDeclaredCopyAssignment() &&
            !hasUserDeclaredMoveAssignment() &&
@@ -923,7 +926,8 @@ public:
   /// Determine whether this class needs an implicit copy
   /// assignment operator to be lazily declared.
   bool needsImplicitCopyAssignment() const {
-    return !(data().DeclaredSpecialMembers & SMF_CopyAssignment);
+    return !(data().DeclaredSpecialMembers & SMF_CopyAssignment) &&
+           (!getLangOpts().HLSL || isHLSLBuiltinRecord());
   }
 
   /// Determine whether we need to eagerly declare a defaulted copy
@@ -982,6 +986,7 @@ public:
   /// this.
   bool needsImplicitMoveAssignment() const {
     return !(data().DeclaredSpecialMembers & SMF_MoveAssignment) &&
+           (!getLangOpts().HLSL || isHLSLBuiltinRecord()) &&
            !hasUserDeclaredCopyConstructor() &&
            !hasUserDeclaredCopyAssignment() &&
            !hasUserDeclaredMoveConstructor() &&
@@ -1555,6 +1560,14 @@ public:
   /// a field or in base class.
   bool isHLSLIntangible() const { return data().IsHLSLIntangible; }
 
+  /// Returns true if the class is a built-in HLSL record.
+  bool isHLSLBuiltinRecord() const { return data().IsHLSLBuiltinRecord; }
+
+  /// Sets the flag that the class is a built-in HLSL record.
+  void setIsHLSLBuiltinRecord(bool Value) {
+    data().IsHLSLBuiltinRecord = Value;
+  }
+
   /// If the class is a local class [class.local], returns
   /// the enclosing function declaration.
   const FunctionDecl *isLocalClass() const {
@@ -1948,7 +1961,7 @@ public:
 
   /// Check for equivalence of explicit specifiers.
   /// \return true if the explicit specifier are equivalent, false otherwise.
-  bool isEquivalent(const ExplicitSpecifier Other) const;
+  bool isEquivalent(ExplicitSpecifier Other) const;
   /// Determine whether this specifier is known to correspond to an explicit
   /// declaration. Returns false if the specifier is absent or has an
   /// expression that is value-dependent or evaluates to false.
@@ -1964,10 +1977,7 @@ public:
   void setKind(ExplicitSpecKind Kind) { ExplicitSpec.setInt(Kind); }
   void setExpr(Expr *E) { ExplicitSpec.setPointer(E); }
   // Retrieve the explicit specifier in the given declaration, if any.
-  static ExplicitSpecifier getFromDecl(FunctionDecl *Function);
-  static const ExplicitSpecifier getFromDecl(const FunctionDecl *Function) {
-    return getFromDecl(const_cast<FunctionDecl *>(Function));
-  }
+  static ExplicitSpecifier getFromDecl(const FunctionDecl *Function);
   static ExplicitSpecifier Invalid() {
     return ExplicitSpecifier(nullptr, ExplicitSpecKind::Unresolved);
   }
@@ -2041,8 +2051,7 @@ public:
   static CXXDeductionGuideDecl *CreateDeserialized(ASTContext &C,
                                                    GlobalDeclID ID);
 
-  ExplicitSpecifier getExplicitSpecifier() { return ExplicitSpec; }
-  const ExplicitSpecifier getExplicitSpecifier() const { return ExplicitSpec; }
+  ExplicitSpecifier getExplicitSpecifier() const { return ExplicitSpec; }
 
   /// Return true if the declaration is already resolved to be explicit.
   bool isExplicit() const { return ExplicitSpec.isExplicit(); }
@@ -2693,10 +2702,7 @@ public:
       CXXConstructorDeclBits.IsSimpleExplicit = ES.isExplicit();
   }
 
-  ExplicitSpecifier getExplicitSpecifier() {
-    return getCanonicalDecl()->getExplicitSpecifierInternal();
-  }
-  const ExplicitSpecifier getExplicitSpecifier() const {
+  ExplicitSpecifier getExplicitSpecifier() const {
     return getCanonicalDecl()->getExplicitSpecifierInternal();
   }
 
@@ -2871,6 +2877,9 @@ public:
     return const_cast<CXXConstructorDecl*>(this)->getCanonicalDecl();
   }
 
+  ArrayRef<CXXDefaultArgExpr *> getCtorClosureDefaultArgs() const;
+  void setCtorClosureDefaultArgs(ArrayRef<CXXDefaultArgExpr *> Args);
+
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == CXXConstructor; }
@@ -2983,11 +2992,7 @@ public:
          const AssociatedConstraint &TrailingRequiresClause = {});
   static CXXConversionDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
-  ExplicitSpecifier getExplicitSpecifier() {
-    return getCanonicalDecl()->ExplicitSpec;
-  }
-
-  const ExplicitSpecifier getExplicitSpecifier() const {
+  ExplicitSpecifier getExplicitSpecifier() const {
     return getCanonicalDecl()->ExplicitSpec;
   }
 
@@ -4263,16 +4268,18 @@ public:
 class DecompositionDecl final
     : public VarDecl,
       private llvm::TrailingObjects<DecompositionDecl, BindingDecl *> {
+  /// The closing bracket (before the initializer is expected).
+  SourceLocation RSquareLoc;
   /// The number of BindingDecl*s following this object.
   unsigned NumBindings;
 
   DecompositionDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
-                    SourceLocation LSquareLoc, QualType T,
-                    TypeSourceInfo *TInfo, StorageClass SC,
+                    SourceLocation LSquareLoc, SourceLocation RSquareLoc,
+                    QualType T, TypeSourceInfo *TInfo, StorageClass SC,
                     ArrayRef<BindingDecl *> Bindings)
       : VarDecl(Decomposition, C, DC, StartLoc, LSquareLoc, nullptr, T, TInfo,
                 SC),
-        NumBindings(Bindings.size()) {
+        RSquareLoc(RSquareLoc), NumBindings(Bindings.size()) {
     llvm::uninitialized_copy(Bindings, getTrailingObjects());
     for (auto *B : Bindings) {
       B->setDecomposedDecl(this);
@@ -4293,8 +4300,8 @@ public:
   static DecompositionDecl *Create(ASTContext &C, DeclContext *DC,
                                    SourceLocation StartLoc,
                                    SourceLocation LSquareLoc,
-                                   QualType T, TypeSourceInfo *TInfo,
-                                   StorageClass S,
+                                   SourceLocation RSquareLoc, QualType T,
+                                   TypeSourceInfo *TInfo, StorageClass S,
                                    ArrayRef<BindingDecl *> Bindings);
   static DecompositionDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID,
                                                unsigned NumBindings);
@@ -4323,6 +4330,9 @@ public:
                                             std::move(PackBindings),
                                             std::move(Bindings));
   }
+
+  /// The closing bracket (before the initializer is expected).
+  SourceLocation getRSquareLoc() const { return RSquareLoc; }
 
   void printName(raw_ostream &OS, const PrintingPolicy &Policy) const override;
 

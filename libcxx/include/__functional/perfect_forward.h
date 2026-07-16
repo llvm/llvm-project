@@ -28,9 +28,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 17
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Op, class _Indices, class... _BoundArgs>
 struct __perfect_forward_impl;
@@ -96,9 +96,9 @@ public:
 template <class _Op, class... _Args>
 using __perfect_forward _LIBCPP_NODEBUG = __perfect_forward_impl<_Op, index_sequence_for<_Args...>, _Args...>;
 
-#endif // _LIBCPP_STD_VER >= 17
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_POP_MACROS
 

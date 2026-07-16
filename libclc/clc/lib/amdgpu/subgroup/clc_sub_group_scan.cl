@@ -15,6 +15,12 @@
 #include "clc/subgroup/clc_sub_group_scan.h"
 #include "clc/subgroup/clc_subgroup.h"
 
+#define DPP_ROW_SHR 0x110
+#define DPP_ROW_BCAST15 0x142
+#define DPP_ROW_BCAST31 0x143
+#define DPP_ID_PERM 0xE4
+
+// ds_swizzle constants and helpers for the fallback path.
 #define QUAD_PERM (1 << 15)
 
 // The first basic swizzle mode (when offset[15] == 1) allows full data sharing
@@ -36,6 +42,15 @@
 
 #define __CLC_BODY "clc_amdgpu_ds_swizzle.inc"
 #include "clc/math/gentype.inc"
+
+// permlanex16 typed wrappers (GFX10+ only).
+#if __has_builtin(__builtin_amdgcn_permlanex16)
+#define __CLC_BODY "clc_amdgpu_permlanex16.inc"
+#include "clc/integer/gentype.inc"
+
+#define __CLC_BODY "clc_amdgpu_permlanex16.inc"
+#include "clc/math/gentype.inc"
+#endif
 
 //------------------------------------------------------------------------------
 //  Integer and fp add

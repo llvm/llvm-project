@@ -88,19 +88,18 @@ public:
 
 protected:
   lldb::ValueObjectSP
-  CreateValueObjectFromExpression(llvm::StringRef name,
-                                  llvm::StringRef expression,
-                                  const ExecutionContext &exe_ctx);
+  CreateChildValueObjectFromExpression(llvm::StringRef name,
+                                       llvm::StringRef expression,
+                                       const ExecutionContext &exe_ctx);
 
   lldb::ValueObjectSP
-  CreateValueObjectFromAddress(llvm::StringRef name, uint64_t address,
-                               const ExecutionContext &exe_ctx,
-                               CompilerType type, bool do_deref = true);
+  CreateChildValueObjectFromAddress(llvm::StringRef name, uint64_t address,
+                                    const ExecutionContext &exe_ctx,
+                                    CompilerType type, bool do_deref = true);
 
-  lldb::ValueObjectSP CreateValueObjectFromData(llvm::StringRef name,
-                                                const DataExtractor &data,
-                                                const ExecutionContext &exe_ctx,
-                                                CompilerType type);
+  lldb::ValueObjectSP CreateChildValueObjectFromData(
+      llvm::StringRef name, const DataExtractor &data,
+      const ExecutionContext &exe_ctx, CompilerType type);
 
 private:
   SyntheticChildrenFrontEnd(const SyntheticChildrenFrontEnd &) = delete;

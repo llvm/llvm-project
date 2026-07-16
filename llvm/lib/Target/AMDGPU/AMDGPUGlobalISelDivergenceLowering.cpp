@@ -111,7 +111,7 @@ void DivergenceLoweringHelper::getCandidatesForLowering(
       if (MI.getOpcode() != TargetOpcode::G_PHI)
         continue;
       Register Dst = MI.getOperand(0).getReg();
-      if (MRI->getType(Dst) == S1 && MUI->isDivergent(Dst))
+      if (MRI->getType(Dst) == S1 && MUI->isDivergentAtDef(Dst))
         Vreg1Phis.push_back(&MI);
     }
   }
@@ -207,7 +207,7 @@ bool DivergenceLoweringHelper::lowerTemporalDivergence() {
   DenseMap<Register, Register> TDCache;
 
   for (auto [Reg, UseInst, _] : MUI->getTemporalDivergenceList()) {
-    if (MRI->getType(Reg) == LLT::scalar(1) || MUI->isDivergent(Reg) ||
+    if (MRI->getType(Reg) == LLT::scalar(1) || MUI->isDivergentAtDef(Reg) ||
         ILMA.isS32S64LaneMask(Reg))
       continue;
 
@@ -251,6 +251,7 @@ bool DivergenceLoweringHelper::lowerTemporalDivergenceI1() {
     }
   }
 
+  const auto &CInfo = MUI->getCycleInfo();
   for (auto &LRCCacheEntry : LRCCache) {
     Register Reg = LRCCacheEntry.first;
     auto &CycleMergedMask = LRCCacheEntry.getSecond();
@@ -264,7 +265,7 @@ bool DivergenceLoweringHelper::lowerTemporalDivergenceI1() {
 
     for (auto Entry : Cycle->getEntries()) {
       for (MachineBasicBlock *Pred : Entry->predecessors()) {
-        if (!Cycle->contains(Pred)) {
+        if (!CInfo.contains(*Cycle, Pred)) {
           B.setInsertPt(*Pred, Pred->getFirstTerminator());
           auto ImplDef = B.buildInstr(AMDGPU::IMPLICIT_DEF, {BoolS1}, {});
           SSAUpdater.AddAvailableValue(Pred, ImplDef.getReg(0));

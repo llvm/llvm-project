@@ -236,6 +236,7 @@ SDValue ARCTargetLowering::LowerJumpTable(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(ARCISD::GAWRAPPER, SDLoc(N), MVT::i32, GA);
 }
 
+#define GET_CALLING_CONV_IMPL
 #include "ARCGenCallingConv.inc"
 
 //===----------------------------------------------------------------------===//
@@ -591,8 +592,8 @@ SDValue ARCTargetLowering::LowerCallArguments(
       InVals.push_back(FIN);
       MemOps.push_back(DAG.getMemcpy(
           Chain, dl, FIN, ArgDI.SDV, DAG.getConstant(Size, dl, MVT::i32),
-          Alignment, false, false, /*CI=*/nullptr, false, MachinePointerInfo(),
-          MachinePointerInfo()));
+          Alignment, Alignment, false, false, /*CI=*/nullptr, false,
+          MachinePointerInfo(), MachinePointerInfo()));
     } else {
       InVals.push_back(ArgDI.SDV);
     }
