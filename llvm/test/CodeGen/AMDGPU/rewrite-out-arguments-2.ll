@@ -13,8 +13,8 @@ define i32 @load_out_ptr_after_store(ptr addrspace(5) %out) {
   ret i32 %load
 }
 
-define i32 @callee(ptr addrspace(5) %val, ptr addrspace(5) %other) {
-; CHECK-LABEL: define i32 @callee(
+define i32 @callee_with_aliasing_args(ptr addrspace(5) %val, ptr addrspace(5) %other) {
+; CHECK-LABEL: define i32 @callee_with_aliasing_args(
 ; CHECK-SAME: ptr addrspace(5) [[VAL:%.*]], ptr addrspace(5) [[OTHER:%.*]]) {
 ; CHECK-NEXT:    store i32 0, ptr addrspace(5) [[VAL]], align 4
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(5) [[OTHER]], align 4
@@ -25,18 +25,18 @@ define i32 @callee(ptr addrspace(5) %val, ptr addrspace(5) %other) {
   ret i32 %load
 }
 
-define amdgpu_kernel void @caller(ptr addrspace(1) %out) {
-; CHECK-LABEL: define amdgpu_kernel void @caller(
+define amdgpu_kernel void @caller_with_aliasing_args(ptr addrspace(1) %out) {
+; CHECK-LABEL: define amdgpu_kernel void @caller_with_aliasing_args(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) {
 ; CHECK-NEXT:    [[SLOT:%.*]] = alloca i32, align 4, addrspace(5)
 ; CHECK-NEXT:    store i32 1, ptr addrspace(5) [[SLOT]], align 4
-; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @callee(ptr addrspace(5) [[SLOT]], ptr addrspace(5) [[SLOT]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @callee_with_aliasing_args(ptr addrspace(5) [[SLOT]], ptr addrspace(5) [[SLOT]])
 ; CHECK-NEXT:    store i32 [[RESULT]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %slot = alloca i32, addrspace(5)
   store i32 1, ptr addrspace(5) %slot
-  %result = call i32 @callee(ptr addrspace(5) %slot,
+  %result = call i32 @callee_with_aliasing_args(ptr addrspace(5) %slot,
   ptr addrspace(5) %slot)
   store i32 %result, ptr addrspace(1) %out
   ret void
