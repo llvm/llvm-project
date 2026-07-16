@@ -1,4 +1,5 @@
-=========================
+.. title:: clang-tidy - readability-redundant-tag
+
 readability-redundant-tag
 =========================
 
