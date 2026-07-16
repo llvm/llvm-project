@@ -81,7 +81,7 @@ class TestDAP_step(DAPTestCaseBase):
         """
         program = self.getBuildArtifact("a.out")
         session = self.build_and_create_session()
-        source = self.getSourcePath("main.cpp")
+        source = "main.cpp"
 
         breakpoint_lines = [line_number(source, "// breakpoint 2")]
         step_over_pos = line_number(source, "// position_after_step_over")
