@@ -6397,6 +6397,7 @@ static SDValue tryWidenMaskForShuffle(SDValue Op, SelectionDAG &DAG) {
 // Match an interleave shuffle that forms a P-extension packed zip:
 //   <a0, b0, a1, b1, ...> -> zip*p/wzip*p
 static SDValue lowerVECTOR_SHUFFLEAsPZip(ShuffleVectorSDNode *SVN,
+                                         const RISCVSubtarget &Subtarget,
                                          SelectionDAG &DAG) {
   SDValue V1 = SVN->getOperand(0);
   SDValue V2 = SVN->getOperand(1);
@@ -6413,10 +6414,22 @@ static SDValue lowerVECTOR_SHUFFLEAsPZip(ShuffleVectorSDNode *SVN,
       ShuffleVectorInst::isInterleaveMask(Mask, 2, NumElts * 2, StartIndexes)) {
     unsigned EvenSrc = StartIndexes[0];
     unsigned OddSrc = StartIndexes[1];
-    if (EvenSrc == 0 && OddSrc == NumElts)
-      return DAG.getNode(RISCVISD::PZIP, DL, VT, V1, V2);
-    if (EvenSrc == NumElts && OddSrc == 0)
-      return DAG.getNode(RISCVISD::PZIP, DL, VT, V2, V1);
+    if (EvenSrc == 0 && OddSrc == NumElts) {
+      if (Subtarget.is64Bit())
+        return DAG.getNode(RISCVISD::PZIP, DL, VT, V1, V2);
+      EVT HalfVT = VT.getHalfNumVectorElementsVT();
+      V1 = DAG.getExtractSubvector(DL, HalfVT, V1, 0);
+      V2 = DAG.getExtractSubvector(DL, HalfVT, V2, 0);
+      return DAG.getNode(RISCVISD::PWZIP, DL, VT, V1, V2);
+    }
+    if (EvenSrc == NumElts && OddSrc == 0) {
+      if (Subtarget.is64Bit())
+        return DAG.getNode(RISCVISD::PZIP, DL, VT, V2, V1);
+      EVT HalfVT = VT.getHalfNumVectorElementsVT();
+      V1 = DAG.getExtractSubvector(DL, HalfVT, V1, 0);
+      V2 = DAG.getExtractSubvector(DL, HalfVT, V2, 0);
+      return DAG.getNode(RISCVISD::PWZIP, DL, VT, V2, V1);
+    }
   }
 
   return SDValue();
@@ -6542,7 +6555,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
 
     if (SDValue V = lowerVECTOR_SHUFFLEAsPUnzip(SVN, DAG, Subtarget.is64Bit()))
       return V;
-    if (SDValue V = lowerVECTOR_SHUFFLEAsPZip(SVN, DAG))
+    if (SDValue V = lowerVECTOR_SHUFFLEAsPZip(SVN, Subtarget, DAG))
       return V;
     if (SDValue V =
             lowerVECTOR_SHUFFLEAsRV32PNarrowingShift(SVN, Subtarget, DAG))
