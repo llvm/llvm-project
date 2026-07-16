@@ -129,7 +129,7 @@ module m
     do i = 1, 10
       if (i == 1) then
         !ERROR: Statement may not appear in cuf kernel code
-        exit ! ok
+        exit
       end if
 
       !ERROR: Statement may not appear in cuf kernel code

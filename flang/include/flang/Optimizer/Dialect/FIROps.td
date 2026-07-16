@@ -237,7 +237,8 @@ def fir_AllocMemOp : fir_Op<"allocmem", [AttrSizedOperandSegments]> {
     OptionalAttr<StrAttr>:$uniq_name,
     OptionalAttr<StrAttr>:$bindc_name,
     Variadic<AnyIntegerType>:$typeparams,
-    Variadic<AnyIntegerType>:$shape
+    Variadic<AnyIntegerType>:$shape,
+    OptionalAttr<I64Attr>:$alignment
   );
   let results = (outs Res<fir_HeapType, "", [MemAlloc<DefaultResource>]>:$res);
 
@@ -310,10 +311,15 @@ def fir_LoadOp : fir_OneResultOp<"load", [
 
     The ssa-value has an undefined value if the memory reference is undefined
     or null.
+
+    A set `invariant` attribute indicates that the referenced memory location
+    contains the same value at all points in the program where it is
+    dereferenceable, so the load may be treated as invariant.
   }];
 
   let arguments = (ins AnyReferenceLike:$memref,
       OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa, UnitAttr:$nontemporal,
+      UnitAttr:$invariant,
       OptionalAttr<LLVM_AccessGroupArrayAttr>:$accessGroups);
 
   let builders = [OpBuilder<(ins "mlir::Value":$refVal)>,

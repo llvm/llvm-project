@@ -567,6 +567,36 @@ bool DWARFExpression::ContainsThreadLocalStorage(
   }
   return false;
 }
+
+bool DWARFExpression::IsImplicit(
+    const DWARFExpression::Delegate *dwarf_cu) const {
+  lldb::offset_t offset = 0;
+  while (m_data.ValidOffset(offset)) {
+    const LocationAtom op = static_cast<LocationAtom>(m_data.GetU8(&offset));
+
+    switch (op) {
+    // Implicit locations have no storage in the inferior. Composite locations
+    // might, but we conservatively treat them as non-writable because LLDB
+    // does not write their pieces back.
+    case DW_OP_stack_value:
+    case DW_OP_implicit_value:
+    case DW_OP_implicit_pointer:
+    case DW_OP_piece:
+    case DW_OP_bit_piece:
+      return true;
+    default:
+      break;
+    }
+
+    const lldb::offset_t op_arg_size =
+        GetOpcodeDataSize(m_data, offset, op, dwarf_cu);
+    if (op_arg_size == LLDB_INVALID_OFFSET)
+      return false;
+    offset += op_arg_size;
+  }
+  return false;
+}
+
 bool DWARFExpression::LinkThreadLocalStorage(
     const DWARFExpression::Delegate *dwarf_cu,
     std::function<lldb::addr_t(lldb::addr_t file_addr)> const
@@ -1214,6 +1244,9 @@ static llvm::Error Evaluate_DW_OP_convert(EvalContext &eval_ctx,
     if (!bit_size)
       return llvm::createStringError("unspecified architecture");
   } else {
+    if (!eval_ctx.dwarf_cu)
+      return llvm::createStringError(
+          "DW_OP_convert with a DIE offset requires a DWARF unit");
     auto bit_size_sign_or_err =
         eval_ctx.dwarf_cu->GetDIEBitSizeAndSign(relative_die_offset);
     if (!bit_size_sign_or_err)
@@ -1291,6 +1324,55 @@ static llvm::Error Evaluate_DW_OP_call_frame_cfa(EvalContext &eval_ctx) {
   return llvm::Error::success();
 }
 
+static llvm::Error CheckScalarOperandsHaveSameType(const Scalar &lhs,
+                                                   const Scalar &rhs,
+                                                   LocationAtom opcode,
+                                                   size_t address_size) {
+  auto mismatch = [&](const char *what) {
+    return llvm::createStringError("%s requires operands to have the same %s",
+                                   DW_OP_value_to_name(opcode), what);
+  };
+
+  // Scalar does not preserve the original DWARF DIE, but it does carry the
+  // pieces of base-type information used by the evaluator: kind, size, and
+  // integer signedness.
+  if (lhs.GetType() != rhs.GetType())
+    return mismatch("type");
+
+  // Only integer scalars have signedness. Non-integer operands (e.g. floats)
+  // have no further scalar type information to compare once kind and size
+  // match.
+  if (lhs.GetType() != Scalar::e_int) {
+    if (lhs.GetByteSize() != rhs.GetByteSize())
+      return mismatch("size");
+    return llvm::Error::success();
+  }
+
+  // DWARF generic values are address-sized integers with unspecified
+  // signedness. LLDB does not explicitly preserve genericness on the
+  // expression stack, so treat integers at least as wide as the generic type
+  // as potentially generic and compatible with one another, regardless of
+  // exact width or signedness. This keeps common expressions working: e.g.
+  // DW_OP_breg produces a register-sized value while DW_OP_const* produces an
+  // address-sized one, yet both are meant to be generic. DW_OP_constu and
+  // DW_OP_consts also do not always use to_generic due to
+  // https://github.com/llvm/llvm-project/issues/47431. A precise fix would
+  // require tracking genericness directly, which is a larger type-system
+  // change.
+  if (address_size != 0 && lhs.GetByteSize() >= address_size &&
+      rhs.GetByteSize() >= address_size)
+    return llvm::Error::success();
+
+  // For non-generic integer operands, size and signedness are part of the
+  // base-type information preserved by Scalar, so require them to match.
+  if (lhs.GetByteSize() != rhs.GetByteSize())
+    return mismatch("size");
+  if (lhs.IsSigned() != rhs.IsSigned())
+    return mismatch("signedness");
+
+  return llvm::Error::success();
+}
+
 llvm::Expected<Value> DWARFExpression::Evaluate(
     ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
     lldb::ModuleSP module_sp, const DataExtractor &opcodes,
@@ -1359,14 +1441,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     switch (opcode) {
     case DW_OP_addr:
       stack.push_back(Scalar(op->getRawOperand(0)));
-      if (eval_ctx.target && eval_ctx.target->GetArchitecture().GetCore() ==
-                                 ArchSpec::eCore_wasm32) {
-        // wasm file sections aren't mapped into memory, therefore addresses can
-        // never point into a file section and are always LoadAddresses.
-        stack.back().SetValueType(Value::ValueType::LoadAddress);
-      } else {
-        stack.back().SetValueType(Value::ValueType::FileAddress);
-      }
+      stack.back().SetValueType(Value::ValueType::FileAddress);
       break;
 
     case DW_OP_deref: {
@@ -1468,12 +1543,20 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       break;
 
     case DW_OP_and:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode, address_size))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() = stack.back().GetScalar() & tmp.GetScalar();
       break;
 
     case DW_OP_div: {
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode, address_size))
+        return err;
       tmp = stack.back();
       if (tmp.GetScalar().IsZero())
         return llvm::createStringError("divide by zero");
@@ -1491,18 +1574,30 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     } break;
 
     case DW_OP_minus:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode, address_size))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() = stack.back().GetScalar() - tmp.GetScalar();
       break;
 
     case DW_OP_mod:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode, address_size))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() = stack.back().GetScalar() % tmp.GetScalar();
       break;
 
     case DW_OP_mul:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode, address_size))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() = stack.back().GetScalar() * tmp.GetScalar();
@@ -1519,12 +1614,20 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       break;
 
     case DW_OP_or:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode, address_size))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() = stack.back().GetScalar() | tmp.GetScalar();
       break;
 
     case DW_OP_plus:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode, address_size))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() += tmp.GetScalar();
@@ -1539,12 +1642,20 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     } break;
 
     case DW_OP_shl:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode, address_size))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() <<= tmp.GetScalar();
       break;
 
     case DW_OP_shr:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode, address_size))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       if (!stack.back().GetScalar().ShiftRightLogical(tmp.GetScalar()))
@@ -1552,12 +1663,20 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       break;
 
     case DW_OP_shra:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode, address_size))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() >>= tmp.GetScalar();
       break;
 
     case DW_OP_xor:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode, address_size))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() = stack.back().GetScalar() ^ tmp.GetScalar();
@@ -1599,36 +1718,60 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     } break;
 
     case DW_OP_eq:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode, address_size))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() = stack.back().GetScalar() == tmp.GetScalar();
       break;
 
     case DW_OP_ge:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode, address_size))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() = stack.back().GetScalar() >= tmp.GetScalar();
       break;
 
     case DW_OP_gt:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode, address_size))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() = stack.back().GetScalar() > tmp.GetScalar();
       break;
 
     case DW_OP_le:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode, address_size))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() = stack.back().GetScalar() <= tmp.GetScalar();
       break;
 
     case DW_OP_lt:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode, address_size))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() = stack.back().GetScalar() < tmp.GetScalar();
       break;
 
     case DW_OP_ne:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode, address_size))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() = stack.back().GetScalar() != tmp.GetScalar();
@@ -1902,14 +2045,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       lldb::addr_t value =
           eval_ctx.dwarf_cu->ReadAddressFromDebugAddrSection(index);
       stack.push_back(Scalar(value));
-      if (eval_ctx.target && eval_ctx.target->GetArchitecture().GetCore() ==
-                                 ArchSpec::eCore_wasm32) {
-        // wasm file sections aren't mapped into memory, therefore addresses can
-        // never point into a file section and are always LoadAddresses.
-        stack.back().SetValueType(Value::ValueType::LoadAddress);
-      } else {
-        stack.back().SetValueType(Value::ValueType::FileAddress);
-      }
+      stack.back().SetValueType(Value::ValueType::FileAddress);
     } break;
 
     case DW_OP_GNU_const_index: {

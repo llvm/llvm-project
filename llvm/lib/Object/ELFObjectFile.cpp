@@ -37,24 +37,28 @@
 using namespace llvm;
 using namespace object;
 
-const EnumEntry<unsigned> llvm::object::ElfSymbolTypes[NumElfSymbolTypes] = {
-    {"None", "NOTYPE", ELF::STT_NOTYPE},
-    {"Object", "OBJECT", ELF::STT_OBJECT},
-    {"Function", "FUNC", ELF::STT_FUNC},
-    {"Section", "SECTION", ELF::STT_SECTION},
-    {"File", "FILE", ELF::STT_FILE},
-    {"Common", "COMMON", ELF::STT_COMMON},
-    {"TLS", "TLS", ELF::STT_TLS},
-    {"Unknown", "<unknown>: 7", 7},
-    {"Unknown", "<unknown>: 8", 8},
-    {"Unknown", "<unknown>: 9", 9},
-    {"GNU_IFunc", "IFUNC", ELF::STT_GNU_IFUNC},
-    {"OS Specific", "<OS specific>: 11", 11},
-    {"OS Specific", "<OS specific>: 12", 12},
-    {"Proc Specific", "<processor specific>: 13", 13},
-    {"Proc Specific", "<processor specific>: 14", 14},
-    {"Proc Specific", "<processor specific>: 15", 15}
-};
+EnumStrings<uint8_t, 2> llvm::object::getElfSymbolTypes() {
+  constexpr EnumStringDef<uint8_t, 2> ElfSymbolTypeDefs[] = {
+      {{"None", "NOTYPE"}, ELF::STT_NOTYPE},
+      {{"Object", "OBJECT"}, ELF::STT_OBJECT},
+      {{"Function", "FUNC"}, ELF::STT_FUNC},
+      {{"Section", "SECTION"}, ELF::STT_SECTION},
+      {{"File", "FILE"}, ELF::STT_FILE},
+      {{"Common", "COMMON"}, ELF::STT_COMMON},
+      {{"TLS", "TLS"}, ELF::STT_TLS},
+      {{"Unknown", "<unknown>: 7"}, 7},
+      {{"Unknown", "<unknown>: 8"}, 8},
+      {{"Unknown", "<unknown>: 9"}, 9},
+      {{"GNU_IFunc", "IFUNC"}, ELF::STT_GNU_IFUNC},
+      {{"OS Specific", "<OS specific>: 11"}, 11},
+      {{"OS Specific", "<OS specific>: 12"}, 12},
+      {{"Proc Specific", "<processor specific>: 13"}, 13},
+      {{"Proc Specific", "<processor specific>: 14"}, 14},
+      {{"Proc Specific", "<processor specific>: 15"}, 15},
+  };
+  static constexpr auto ElfSymbolTypes = BUILD_ENUM_STRINGS(ElfSymbolTypeDefs);
+  return ElfSymbolTypes;
+}
 
 ELFObjectFileBase::ELFObjectFileBase(unsigned int Type, MemoryBufferRef Source)
     : ObjectFile(Type, Source) {}
