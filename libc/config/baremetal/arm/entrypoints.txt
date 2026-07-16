@@ -254,6 +254,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
     libc.src.stdlib.malloc
+    libc.src.stdlib.malloc_usable_size
     libc.src.stdlib.memalignment
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
@@ -973,6 +974,14 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.idivulr
     libc.src.stdfix.idivuk
     libc.src.stdfix.idivulk
+    libc.src.stdfix.divir
+    libc.src.stdfix.divilr
+    libc.src.stdfix.divik
+    libc.src.stdfix.divilk
+    libc.src.stdfix.diviur
+    libc.src.stdfix.diviulr
+    libc.src.stdfix.diviuk
+    libc.src.stdfix.diviulk
   )
 endif()
 

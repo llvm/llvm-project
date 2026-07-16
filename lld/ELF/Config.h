@@ -299,6 +299,7 @@ struct Config {
   llvm::StringRef thinLTOPrefixReplaceNativeObject;
   std::string rpath;
   llvm::SmallVector<VersionDefinition, 0> versionDefinitions;
+  std::optional<llvm::DenseSet<llvm::StringRef>> retainSymbols;
   llvm::SmallVector<llvm::StringRef, 0> auxiliaryList;
   llvm::SmallVector<llvm::StringRef, 0> filterList;
   llvm::SmallVector<llvm::StringRef, 0> passPlugins;

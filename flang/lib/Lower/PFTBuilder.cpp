@@ -853,6 +853,11 @@ private:
     sourceEvaluation.isUnstructured = true;
     if (!sourceEvaluation.controlSuccessor)
       sourceEvaluation.controlSuccessor = &targetEvaluation;
+    else if (sourceEvaluation.controlSuccessor != &targetEvaluation &&
+             llvm::find(sourceEvaluation.extraControlSuccessors,
+                        &targetEvaluation) ==
+                 sourceEvaluation.extraControlSuccessors.end())
+      sourceEvaluation.extraControlSuccessors.push_back(&targetEvaluation);
     targetEvaluation.isNewBlock = true;
     // If this is a branch into the body of a construct (usually illegal,
     // but allowed in some legacy cases), then the targetEvaluation and its
@@ -1376,12 +1381,19 @@ public:
       outputStream << newBlock << name << bang;
     if (eval.negateCondition)
       outputStream << " [negate]";
-    if (eval.constructExit)
+    if (eval.constructExit) {
       outputStream << " -> " << eval.constructExit->printIndex;
-    else if (eval.controlSuccessor)
+    } else if (eval.controlSuccessor) {
       outputStream << " -> " << eval.controlSuccessor->printIndex;
-    else if (eval.isA<parser::EntryStmt>() && eval.lexicalSuccessor)
+      // Multiway branches (computed GO TO, arithmetic IF) put additional
+      // targets in extraControlSuccessors; print them so PFT dumps expose
+      // every target rather than only the first.
+      for (const Fortran::lower::pft::Evaluation *extra :
+           eval.extraControlSuccessors)
+        outputStream << ", " << extra->printIndex;
+    } else if (eval.isA<parser::EntryStmt>() && eval.lexicalSuccessor) {
       outputStream << " -> " << eval.lexicalSuccessor->printIndex;
+    }
     bool extraNewline = false;
     if (!eval.position.empty())
       outputStream << ": " << eval.position.ToString();

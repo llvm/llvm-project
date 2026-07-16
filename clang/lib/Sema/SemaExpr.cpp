@@ -433,6 +433,8 @@ void Sema::DiagnoseSentinelCalls(const NamedDecl *D, SourceLocation Loc,
   } else if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     NumFormalParams = FD->param_size();
     CalleeKind = CK_Function;
+    if (FD->hasCXXExplicitFunctionObjectParameter())
+      NumFormalParams++;
   } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
     QualType Ty = VD->getType();
     const FunctionType *Fn = nullptr;
@@ -1922,8 +1924,8 @@ ExprResult Sema::CreateGenericSelectionExpr(
         // earlier because GCC does so.
         unsigned D = 0;
         if (ControllingExpr && Types[i]->getType()->isIncompleteType())
-          D = LangOpts.C2y ? diag::warn_c2y_compat_assoc_type_incomplete
-                           : diag::ext_assoc_type_incomplete;
+          D = LangOpts.C2y ? diag::compat_c2y_assoc_type_incomplete
+                           : diag::compat_pre_c2y_assoc_type_incomplete;
         else if (ControllingExpr && !Types[i]->getType()->isObjectType())
           D = diag::err_assoc_type_nonobject;
         else if (Types[i]->getType()->isVariablyModifiedType())
@@ -4258,14 +4260,10 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
                                         Context.getComplexType(Res->getType()));
 
     // In C++, this is a GNU extension. In C, it's a C2y extension.
-    unsigned DiagId;
     if (getLangOpts().CPlusPlus)
-      DiagId = diag::ext_gnu_imaginary_constant;
-    else if (getLangOpts().C2y)
-      DiagId = diag::warn_c23_compat_imaginary_constant;
+      Diag(Tok.getLocation(), diag::ext_gnu_imaginary_constant);
     else
-      DiagId = diag::ext_c2y_imaginary_constant;
-    Diag(Tok.getLocation(), DiagId);
+      DiagCompat(Tok.getLocation(), diag_compat::imaginary_constant);
   }
   return Res;
 }
@@ -4732,9 +4730,7 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,
     // trait to an incomplete array is an extension.
     if (ExprKind == UETT_AlignOf && !getLangOpts().CPlusPlus &&
         ExprType->isIncompleteArrayType())
-      Diag(OpLoc, getLangOpts().C2y
-                      ? diag::warn_c2y_compat_alignof_incomplete_array
-                      : diag::ext_c2y_alignof_incomplete_array);
+      DiagCompat(OpLoc, diag_compat::alignof_incomplete_array);
     ExprType = Context.getBaseElementType(ExprType);
   }
 
@@ -14822,8 +14818,7 @@ static QualType CheckIncrementDecrementOperand(Sema &S, Expr *Op,
       return QualType();
   } else if (ResType->isAnyComplexType()) {
     // C99 does not support ++/-- on complex types, we allow as an extension.
-    S.Diag(OpLoc, S.getLangOpts().C2y ? diag::warn_c2y_compat_increment_complex
-                                      : diag::ext_c2y_increment_complex)
+    S.DiagCompat(OpLoc, diag_compat::increment_complex)
         << IsInc << Op->getSourceRange();
   } else if (ResType->isPlaceholderType()) {
     ExprResult PR = S.CheckPlaceholderExpr(Op);
@@ -17285,7 +17280,7 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
                                 Expr *E, TypeSourceInfo *TInfo,
                                 SourceLocation RPLoc) {
   Expr *OrigExpr = E;
-  bool IsMS = false;
+  VAArgExpr::VarArgKind VAKind = VAArgExpr::VA_Std;
 
   // CUDA device global function does not support varargs.
   if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice) {
@@ -17310,13 +17305,31 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
     if (Context.hasSameType(MSVaListType, E->getType())) {
       if (CheckForModifiableLvalue(E, BuiltinLoc, *this))
         return ExprError();
-      IsMS = true;
+      VAKind = VAArgExpr::VA_MS;
     }
   }
 
   // Get the va_list type
   QualType VaListType = Context.getBuiltinVaListType();
-  if (!IsMS) {
+
+  // It might be a __builtin_zos_va_list!
+  if (!E->isTypeDependent() && Context.getTargetInfo().hasBuiltinZOSVaList()) {
+    // E->getType() can be:
+    //  - va_list: equal to array (char*)[2] (inside function)
+    //  - char **: decayed array (va_list passed as parameter)
+    // We need to check for both cases.
+    QualType ZOSVaListType = Context.getBuiltinZOSVaListType();
+    assert(ZOSVaListType->isArrayType() &&
+           "__builtin_zos_va_list must be an array type");
+    QualType DecayedType = Context.getArrayDecayedType(ZOSVaListType);
+    if (Context.hasSameType(ZOSVaListType, E->getType()) ||
+        Context.hasSameType(DecayedType, E->getType())) {
+      VAKind = VAArgExpr::VA_ZOS;
+      VaListType = ZOSVaListType;
+    }
+  }
+
+  if (VAKind != VAArgExpr::VA_MS) {
     if (VaListType->isArrayType()) {
       // Deal with implicit array decay; for example, on x86-64,
       // va_list is an array, but it's supposed to decay to
@@ -17345,7 +17358,7 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
     }
   }
 
-  if (!IsMS && !E->isTypeDependent() &&
+  if ((VAKind != VAArgExpr::VA_MS) && !E->isTypeDependent() &&
       !Context.hasSameType(VaListType, E->getType()))
     return ExprError(
         Diag(E->getBeginLoc(),
@@ -17440,7 +17453,7 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
   }
 
   QualType T = TInfo->getType().getNonLValueExprType(Context);
-  return new (Context) VAArgExpr(BuiltinLoc, E, TInfo, RPLoc, T, IsMS);
+  return new (Context) VAArgExpr(BuiltinLoc, E, TInfo, RPLoc, T, VAKind);
 }
 
 ExprResult Sema::ActOnGNUNullExpr(SourceLocation TokenLoc) {
@@ -19829,11 +19842,12 @@ bool Sema::tryCaptureVariable(
     QualType &DeclRefType, const unsigned *const FunctionScopeIndexToStopAt) {
   // An init-capture is notionally from the context surrounding its
   // declaration, but its parent DC is the lambda class.
-  DeclContext *VarDC = Var->getDeclContext();
+  DeclContext *VarDC =
+      Var->getDeclContext()->getEnclosingNonExpansionStatementContext();
   DeclContext *DC = CurContext;
 
   // Skip past RequiresExprBodys because they don't constitute function scopes.
-  while (DC->isRequiresExprBody())
+  while (DC->isRequiresExprBody() || DC->isExpansionStmt())
     DC = DC->getParent();
 
   // tryCaptureVariable is called every time a DeclRef is formed,

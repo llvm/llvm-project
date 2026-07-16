@@ -15,6 +15,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
+#include "clang/Frontend/SSAFOptions.h"
 #include "clang/ScalableStaticAnalysis/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysis/Core/TUSummary/TUSummaryBuilder.h"
 #include "clang/ScalableStaticAnalysis/Core/TUSummary/TUSummaryExtractor.h"
@@ -27,6 +28,8 @@
 #include <memory>
 
 namespace clang::ssaf {
+class SSAFOptions;
+
 ///\return a short descriptions of a json::Value
 std::string describeJSONValue(const llvm::json::Value &V);
 ///\return a short descriptions of a json::Array
@@ -75,10 +78,18 @@ inline void logWarningFromError(llvm::Error Err) {
 /// Find all contributors in an AST. The found contributors are organized as a
 /// map from the canonical declaration of each entity to all of its
 /// declarations.
+///
+/// \p Options controls which declarations qualify as contributors. By default
+/// the visitor preserves the original SSAF behavior of skipping block-scope
+/// (function-local) variable declarations; setting
+/// \c Options.IncludeLocalEntities to \c true also collects local variables
+/// (excluding function parameters, which are addressed via their parent
+/// function's USR).
 void findContributors(
-    ASTContext &Ctx,
+    ASTContext &Ctx, const SSAFOptions &Options,
     llvm::DenseMap<const NamedDecl *, std::vector<const NamedDecl *>>
-        &Contributors);
+        &Contributors,
+    bool ExtractFromSystemHeaders = true);
 
 /// Perform "MatchAction" on each Stmt and Decl belonging to the `Contributor`.
 /// \param Contributor
@@ -107,12 +118,13 @@ void extractAndAddSummaries(TUSummaryExtractor &Extractor,
                             llvm::StringRef ExtractorName = "") {
   llvm::DenseMap<const NamedDecl *, std::vector<const NamedDecl *>>
       Contributors;
-  findContributors(Ctx, Contributors);
+  findContributors(Ctx, Extractor.getOptions(), Contributors,
+                   Extractor.getOptions().ExtractFromSystemHeaders);
   for (const auto &[Cano, Decls] : Contributors) {
     assert(!Decls.empty() &&
-           "'findContributors' guarantess that 'Decls' are non-empty");
+           "'findContributors' guarantees that 'Decls' are non-empty");
     assert(!Decls[0]->isImplicit() &&
-           "'findContributors' guarantess that 'Decls' are non-implicit");
+           "'findContributors' guarantees that 'Decls' are non-implicit");
 
     // Templates are skipped, but their instantiations are handled. The idea
     // is that we can conclude facts about a template through all of its

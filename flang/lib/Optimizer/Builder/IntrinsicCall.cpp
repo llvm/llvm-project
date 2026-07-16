@@ -21,6 +21,7 @@
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/MIFCommon.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/OpenACCIntrinsicCall.h"
 #include "flang/Optimizer/Builder/PPCIntrinsicCall.h"
@@ -3602,13 +3603,19 @@ mlir::Value IntrinsicLibrary::genCospi(mlir::Type resultType,
 
 // COSHAPE
 fir::ExtendedValue
-IntrinsicLibrary::genCoshape(mlir::Type,
+IntrinsicLibrary::genCoshape(mlir::Type resultType,
                              llvm::ArrayRef<fir::ExtendedValue> args) {
   checkCoarrayEnabled(loc, options);
   assert(args.size() == 2);
 
-  return mif::CoshapeOp::create(builder, loc,
-                                /*coarray*/ fir::getBase(args[0]));
+  // Use the declared Fortran element type (e.g. i32 for default integer kind)
+  // rather than hardcoding i64. MIFCoshapeOpConversion converts the i64 values
+  // written by the prif_coshape runtime to the declared type.
+  mlir::Type eleTy = hlfir::getFortranElementType(resultType);
+  mlir::Type coshapeResultTy = fir::BoxType::get(
+      fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, eleTy));
+  return mif::CoshapeOp::create(builder, loc, coshapeResultTy,
+                                fir::getBase(args[0]));
 }
 
 // COUNT
@@ -6326,9 +6333,8 @@ IntrinsicLibrary::genImageIndex(mlir::Type resultType,
     if (fir::isa_integer(fir::unwrapRefType(team.getType())))
       team = fir::LoadOp::create(builder, loc, team);
   }
-  return mif::ImageIndexOp::create(builder, loc,
-                                   /*coarray*/ fir::getBase(args[0]),
-                                   /*sub*/ fir::getBase(args[1]), team);
+  return mif::genImageIndex(builder, loc, fir::getBase(args[0]),
+                            fir::getBase(args[1]), team);
 }
 
 // INDEX
@@ -8349,9 +8355,12 @@ IntrinsicLibrary::genThisImage(mlir::Type resultType,
   mlir::Value team = fir::getBase(args[args.size() - 1]);
 
   if (!coarrayIsAbsent && dimIsAbsent) {
-    mlir::Value res =
-        mif::ThisImageOp::create(builder, loc, fir::getBase(args[0]), team);
-    return res;
+    mlir::Type eleTy = hlfir::getFortranElementType(resultType);
+    mlir::Type thisImageResultTy = fir::BoxType::get(
+        fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, eleTy));
+    return mif::ThisImageOp::create(builder, loc, thisImageResultTy,
+                                    fir::getBase(args[0]),
+                                    /*dim=*/mlir::Value{}, team);
   }
   mlir::Value res;
   if (!dimIsAbsent) {

@@ -1024,18 +1024,12 @@ CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
          "Biggest class wasn't first");
 
   // Find all the subreg classes and order them by size too.
-  std::vector<std::pair<CodeGenRegisterClass *, BitVector>> SuperRegClasses;
+  std::vector<CodeGenRegisterClass *> SuperRegClasses;
   for (auto &RC : RegClasses) {
-    BitVector SuperRegClassesBV(RegClasses.size());
-    RC.getSuperRegClasses(SubIdx, SuperRegClassesBV);
-    if (SuperRegClassesBV.any())
-      SuperRegClasses.emplace_back(&RC, SuperRegClassesBV);
+    if (RC.hasAnySuperRegClasses(SubIdx))
+      SuperRegClasses.push_back(&RC);
   }
-  llvm::stable_sort(SuperRegClasses,
-                    [&](const std::pair<CodeGenRegisterClass *, BitVector> &A,
-                        const std::pair<CodeGenRegisterClass *, BitVector> &B) {
-                      return WeakSizeOrder(A.first, B.first);
-                    });
+  llvm::stable_sort(SuperRegClasses, WeakSizeOrder);
 
   // Find the biggest subclass and subreg class such that R:subidx is in the
   // subreg class for all R in subclass.
@@ -1049,8 +1043,8 @@ CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
   CodeGenRegisterClass *ChosenSuperRegClass = nullptr;
   CodeGenRegisterClass *SubRegRC = nullptr;
   for (CodeGenRegisterClass *SuperRegRC : SuperRegRCs) {
-    for (const auto &[SuperRegClass, SuperRegClassBV] : SuperRegClasses) {
-      if (SuperRegClassBV[SuperRegRC->EnumValue]) {
+    for (CodeGenRegisterClass *SuperRegClass : SuperRegClasses) {
+      if (SuperRegClass->hasSuperRegClass(SubIdx, SuperRegRC)) {
         SubRegRC = SuperRegClass;
         ChosenSuperRegClass = SuperRegRC;
 
@@ -1075,6 +1069,18 @@ CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
   }
 
   return std::nullopt;
+}
+
+bool CodeGenRegisterClass::hasAnySuperRegClasses(
+    const CodeGenSubRegIndex *SubIdx) const {
+  return SuperRegClasses.contains(SubIdx);
+}
+
+bool CodeGenRegisterClass::hasSuperRegClass(
+    const CodeGenSubRegIndex *SubIdx, const CodeGenRegisterClass *RC) const {
+  auto FindI = SuperRegClasses.find(SubIdx);
+
+  return FindI != SuperRegClasses.end() && FindI->second.contains(RC);
 }
 
 void CodeGenRegisterClass::getSuperRegClasses(const CodeGenSubRegIndex *SubIdx,
@@ -2568,6 +2574,9 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
       // When SubRC is already an inferred class, prefer a name of the form
       // "<RC>_with_<CompositeSubIdx>_in_<SubSubRC>" over a chain of the form
       // "<RC>_with_<SubIdx>_in_<OtherRc>_with_<SubSubIdx>_in_<SubSubRC>".
+      // If that preferred name is already used, fall back to the uncomposed
+      // form so that different inferred classes do not alias through the same
+      // composed name.
       CodeGenSubRegIndex *CompositeSubIdx = SubIdx;
       CodeGenRegisterClass *CompositeSubRC = &SubRC;
       if (CodeGenSubRegIndex *SubSubIdx = SubRC.getInferredFromSubRegIdx()) {
@@ -2578,10 +2587,19 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
         }
       }
 
-      auto [SubSetRC, Inserted] = getOrCreateSubClass(
-          RC, &SubSetVec,
-          RC->getName() + "_with_" + CompositeSubIdx->getName() + "_in_" +
-              CompositeSubRC->getName());
+      std::string Name = RC->getName() + "_with_" + CompositeSubIdx->getName() +
+                         "_in_" + CompositeSubRC->getName();
+
+      const bool HasRegClassNamed =
+          llvm::any_of(RegClasses, [&](const CodeGenRegisterClass &RC) {
+            return RC.getName() == Name;
+          });
+
+      if (HasRegClassNamed)
+        Name = RC->getName() + "_with_" + SubIdx->getName() + "_in_" +
+               SubRC.getName();
+
+      auto [SubSetRC, Inserted] = getOrCreateSubClass(RC, &SubSetVec, Name);
 
       if (Inserted)
         SubSetRC->setInferredFrom(CompositeSubIdx, CompositeSubRC);

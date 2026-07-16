@@ -335,8 +335,10 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
       //   In the definition of a constexpr function [...]
       //    -- if the function is a constructor or destructor,
       //       its class shall not have any virtual base classes
-      data().DefaultedDefaultConstructorIsConstexpr = false;
-      data().DefaultedDestructorIsConstexpr = false;
+      if (!C.getLangOpts().CPlusPlus26) {
+        data().DefaultedDefaultConstructorIsConstexpr = false;
+        data().DefaultedDestructorIsConstexpr = false;
+      }
 
       // C++1z [class.copy]p8:
       //   The implicitly-declared copy constructor for a class X will have
@@ -3737,24 +3739,22 @@ ArrayRef<BindingDecl *> BindingDecl::getBindingPackDecls() const {
 
 void DecompositionDecl::anchor() {}
 
-DecompositionDecl *DecompositionDecl::Create(ASTContext &C, DeclContext *DC,
-                                             SourceLocation StartLoc,
-                                             SourceLocation LSquareLoc,
-                                             QualType T, TypeSourceInfo *TInfo,
-                                             StorageClass SC,
-                                             ArrayRef<BindingDecl *> Bindings) {
+DecompositionDecl *DecompositionDecl::Create(
+    ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
+    SourceLocation LSquareLoc, SourceLocation RSquareLoc, QualType T,
+    TypeSourceInfo *TInfo, StorageClass SC, ArrayRef<BindingDecl *> Bindings) {
   size_t Extra = additionalSizeToAlloc<BindingDecl *>(Bindings.size());
-  return new (C, DC, Extra)
-      DecompositionDecl(C, DC, StartLoc, LSquareLoc, T, TInfo, SC, Bindings);
+  return new (C, DC, Extra) DecompositionDecl(
+      C, DC, StartLoc, LSquareLoc, RSquareLoc, T, TInfo, SC, Bindings);
 }
 
 DecompositionDecl *DecompositionDecl::CreateDeserialized(ASTContext &C,
                                                          GlobalDeclID ID,
                                                          unsigned NumBindings) {
   size_t Extra = additionalSizeToAlloc<BindingDecl *>(NumBindings);
-  auto *Result = new (C, ID, Extra)
-      DecompositionDecl(C, nullptr, SourceLocation(), SourceLocation(),
-                        QualType(), nullptr, StorageClass(), {});
+  auto *Result = new (C, ID, Extra) DecompositionDecl(
+      C, nullptr, SourceLocation(), SourceLocation(), SourceLocation(),
+      QualType(), nullptr, StorageClass(), {});
   // Set up and clean out the bindings array.
   Result->NumBindings = NumBindings;
   auto *Trail = Result->getTrailingObjects();
