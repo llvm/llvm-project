@@ -1105,8 +1105,18 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
       }
 
       case Intrinsic::pext: {
-        APInt DemandedMaskRHS(APInt::getAllOnes(BitWidth));
-        if (SimplifyDemandedBits(I, 1, DemandedMaskRHS, RHSKnown, Q, Depth + 1))
+        RHSKnown = computeKnownBits(I->getOperand(1), I, Depth + 1);
+        unsigned N = DemandedMask.getActiveBits();
+        APInt DemandedMaskRHS(BitWidth, 0);
+        // pext result bits depend on the mask prefix through their rank.
+        for (unsigned Bit = 0; Bit != BitWidth && N != 0; ++Bit) {
+          DemandedMaskRHS.setBit(Bit);
+          if (RHSKnown.One[Bit])
+            --N;
+        }
+        if (ShrinkDemandedConstant(I, 1, DemandedMaskRHS) ||
+            SimplifyDemandedBits(I, 1, DemandedMaskRHS, RHSKnown, Q,
+                                 Depth + 1))
           return I;
 
         Value *X;

@@ -192,12 +192,85 @@ define i32 @test_pext_and_unknown_mask_32(i32 %x, i32 %m) nounwind readnone {
 
 define i32 @test_pext_and_partial_demand_32(i32 %x) nounwind readnone {
 ; CHECK-LABEL: @test_pext_and_partial_demand_32(
-; CHECK-NEXT:    [[PEXT:%.*]] = tail call i32 @llvm.pext.i32(i32 [[X:%.*]], i32 42)
-; CHECK-NEXT:    [[USE:%.*]] = and i32 [[PEXT]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[USE:%.*]] = and i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i32 [[USE]]
 ;
   %and = and i32 %x, 2
   %pext = tail call i32 @llvm.pext.i32(i32 %and, i32 42)
   %use = and i32 %pext, 1
   ret i32 %use
+}
+
+define i32 @test_pext_rhs_lowest_known_one_32(i32 %x, i32 %y) nounwind readnone {
+; CHECK-LABEL: @test_pext_rhs_lowest_known_one_32(
+; CHECK-NEXT:    [[USE:%.*]] = and i32 [[X:%.*]], 1
+; CHECK-NEXT:    ret i32 [[USE]]
+;
+  %mask = or i32 %y, 1
+  %pext = tail call i32 @llvm.pext.i32(i32 %x, i32 %mask)
+  %use = and i32 %pext, 1
+  ret i32 %use
+}
+
+define i32 @test_pext_rhs_sparse_demand_32(i32 %x, i32 %y) nounwind readnone {
+; CHECK-LABEL: @test_pext_rhs_sparse_demand_32(
+; CHECK-NEXT:    [[MASK:%.*]] = or i32 [[Y:%.*]], 170
+; CHECK-NEXT:    [[PEXT:%.*]] = tail call i32 @llvm.pext.i32(i32 [[X:%.*]], i32 [[MASK]])
+; CHECK-NEXT:    [[USE:%.*]] = and i32 [[PEXT]], 8
+; CHECK-NEXT:    ret i32 [[USE]]
+;
+  %masked = and i32 %y, 341
+  %mask = or i32 %masked, 170
+  %pext = tail call i32 @llvm.pext.i32(i32 %x, i32 %mask)
+  %use = and i32 %pext, 8
+  ret i32 %use
+}
+
+define i32 @test_pext_rhs_insufficient_known_ones_32(i32 %x, i32 %y) nounwind readnone {
+; CHECK-LABEL: @test_pext_rhs_insufficient_known_ones_32(
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[Y:%.*]], 21
+; CHECK-NEXT:    [[MASK:%.*]] = or disjoint i32 [[MASKED]], 2
+; CHECK-NEXT:    [[PEXT:%.*]] = tail call i32 @llvm.pext.i32(i32 [[X:%.*]], i32 [[MASK]])
+; CHECK-NEXT:    [[USE:%.*]] = and i32 [[PEXT]], 3
+; CHECK-NEXT:    ret i32 [[USE]]
+;
+  %masked = and i32 %y, 21
+  %mask = or i32 %masked, 2
+  %pext = tail call i32 @llvm.pext.i32(i32 %x, i32 %mask)
+  %use = and i32 %pext, 3
+  ret i32 %use
+}
+
+define i32 @test_pext_rhs_low_four_known_ones_32(i32 %x, i32 %y) nounwind readnone {
+; CHECK-LABEL: @test_pext_rhs_low_four_known_ones_32(
+; CHECK-NEXT:    [[USE:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    ret i32 [[USE]]
+;
+  %mask = or i32 %y, 15
+  %pext = tail call i32 @llvm.pext.i32(i32 %x, i32 %mask)
+  %use = and i32 %pext, 15
+  ret i32 %use
+}
+
+define i64 @test_pext_rhs_lowest_known_one_64(i64 %x, i64 %y) nounwind readnone {
+; CHECK-LABEL: @test_pext_rhs_lowest_known_one_64(
+; CHECK-NEXT:    [[USE:%.*]] = and i64 [[X:%.*]], 1
+; CHECK-NEXT:    ret i64 [[USE]]
+;
+  %mask = or i64 %y, 1
+  %pext = tail call i64 @llvm.pext.i64(i64 %x, i64 %mask)
+  %use = and i64 %pext, 1
+  ret i64 %use
+}
+
+define <2 x i32> @test_pext_rhs_lowest_known_one_v2i32(<2 x i32> %x, <2 x i32> %y) nounwind readnone {
+; CHECK-LABEL: @test_pext_rhs_lowest_known_one_v2i32(
+; CHECK-NEXT:    [[USE:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 1)
+; CHECK-NEXT:    ret <2 x i32> [[USE]]
+;
+  %mask = or <2 x i32> %y, <i32 1, i32 1>
+  %pext = tail call <2 x i32> @llvm.pext.v2i32(<2 x i32> %x, <2 x i32> %mask)
+  %use = and <2 x i32> %pext, <i32 1, i32 1>
+  ret <2 x i32> %use
 }
