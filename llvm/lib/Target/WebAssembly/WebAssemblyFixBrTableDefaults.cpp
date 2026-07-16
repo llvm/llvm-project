@@ -212,5 +212,5 @@ PreservedAnalyses
 WebAssemblyFixBrTableDefaultsPass::run(MachineFunction &MF,
                                        MachineFunctionAnalysisManager &MFAM) {
   return fixBrTableDefaults(MF) ? getMachineFunctionPassPreservedAnalyses()
-                                : PreservedAnalyses::none();
+                                : PreservedAnalyses::all();
 }
