@@ -429,15 +429,55 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
                                  StringMap<bool> &Features) {
   AMDGPU::GPUKind Kind = parseArchAMDGCN(GPU);
   switch (Kind) {
+  case GK_GFX1310:
+  case GK_GFX13_GENERIC:
+    Features["ci-insts"] = true;
+    Features["dot7-insts"] = true;
+    Features["dot8-insts"] = true;
+    Features["dl-insts"] = true;
+    Features["16-bit-insts"] = true;
+    Features["dpp"] = true;
+    Features["gfx8-insts"] = true;
+    Features["gfx9-insts"] = true;
+    Features["gfx10-insts"] = true;
+    Features["gfx10-3-insts"] = true;
+    Features["gfx11-insts"] = true;
+    Features["gfx12-insts"] = true;
+    Features["gfx1250-insts"] = true;
+    Features["gfx13-insts"] = true;
+    Features["bitop3-insts"] = true;
+    Features["prng-inst"] = true;
+    Features["tanh-insts"] = true;
+    Features["tensor-cvt-lut-insts"] = true;
+    Features["bf16-trans-insts"] = true;
+    Features["bf16-cvt-insts"] = true;
+    Features["bf16-pk-insts"] = true;
+    Features["fp8-conversion-insts"] = true;
+    Features["permlane16-swap"] = true;
+    Features["ashr-pk-insts"] = true;
+    Features["atomic-buffer-pk-add-bf16-inst"] = true;
+    Features["atomic-fadd-rtn-insts"] = true;
+    Features["atomic-buffer-global-pk-add-f16-insts"] = true;
+    Features["atomic-flat-pk-add-16-insts"] = true;
+    Features["atomic-global-pk-add-bf16-inst"] = true;
+    Features["atomic-ds-pk-add-16-insts"] = true;
+    Features["s-wakeup-barrier-inst"] = true;
+    Features["f16bf16-to-fp6bf6-cvt-scale-insts"] = true;
+    Features["clusters"] = true;
+    Features["cube-insts"] = true;
+    Features["lerp-inst"] = true;
+    Features["sad-insts"] = true;
+    Features["qsad-insts"] = true;
+    Features["cvt-pknorm-vop2-insts"] = true;
+    Features["cvt-pknorm-vop3-insts"] = true;
+    Features["image-insts"] = true;
+    break;
   case GK_GFX1251:
     Features["gfx1251-gemm-insts"] = true;
     [[fallthrough]];
   case GK_GFX1250:
     Features["swmmac-gfx1200-insts"] = true;
     Features["swmmac-gfx1250-insts"] = true;
-    [[fallthrough]];
-  case GK_GFX1310:
-  case GK_GFX13_GENERIC:
     Features["cube-insts"] = true;
     Features["cvt-pknorm-vop2-insts"] = true;
     Features["lerp-inst"] = true;

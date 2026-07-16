@@ -9,8 +9,9 @@
 #ifndef LLVM_LIBC_SRC_SYS_SELECT_SELECT_H
 #define LLVM_LIBC_SRC_SYS_SELECT_SELECT_H
 
+#include "hdr/types/fd_set.h"
+#include "hdr/types/struct_timeval.h"
 #include "src/__support/macros/config.h"
-#include <sys/select.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

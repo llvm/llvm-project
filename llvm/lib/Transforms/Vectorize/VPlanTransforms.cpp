@@ -7717,10 +7717,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       if (!LoadR || LoadR->isConsecutive())
         continue;
 
-      auto *Ptr = dyn_cast<VPWidenGEPRecipe>(LoadR->getAddr());
-      if (!Ptr)
-        continue;
-
+      VPValue *Ptr = LoadR->getAddr();
       // Check if this is a strided access by analyzing the address SCEV for an
       // affine addRec.
       const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, &L);
@@ -7792,7 +7789,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       // Create a new vector pointer for strided access.
       VPValue *NewPtr = Builder.createVectorPointer(
           BasePtr, Type::getInt8Ty(Plan.getContext()), StrideInBytes, NWFlags,
-          Ptr->getDebugLoc());
+          LoadR->getDebugLoc());
 
       VPValue *Mask = LoadR->getMask();
       if (!Mask)
