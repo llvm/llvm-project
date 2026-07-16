@@ -154,8 +154,8 @@ define void @store_i96(ptr addrspace(1) %ptr, i96 %arg) #0 {
   ; UNPACKED-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $vgpr3
   ; UNPACKED-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $vgpr4
   ; UNPACKED-NEXT:   [[MV1:%[0-9]+]]:_(i96) = G_MERGE_VALUES [[COPY2]](i32), [[COPY3]](i32), [[COPY4]](i32)
-  ; UNPACKED-NEXT:   [[BITCAST:%[0-9]+]]:_(<3 x s32>) = G_BITCAST [[MV1]](i96)
-  ; UNPACKED-NEXT:   G_STORE [[BITCAST]](<3 x s32>), [[MV]](p1) :: (store (<3 x s32>) into %ir.ptr, align 4, addrspace 1)
+  ; UNPACKED-NEXT:   [[BITCAST:%[0-9]+]]:_(<3 x i32>) = G_BITCAST [[MV1]](i96)
+  ; UNPACKED-NEXT:   G_STORE [[BITCAST]](<3 x i32>), [[MV]](p1) :: (store (<3 x i32>) into %ir.ptr, align 4, addrspace 1)
   ; UNPACKED-NEXT:   SI_RETURN
   store i96 %arg, ptr addrspace(1) %ptr, align 4
   ret void
@@ -214,8 +214,8 @@ define void @store_i127(ptr addrspace(1) %ptr, i127 %arg) #0 {
   ; UNPACKED-NEXT:   [[AND:%[0-9]+]]:_(i64) = G_AND [[MV1]], [[C]]
   ; UNPACKED-NEXT:   [[AND1:%[0-9]+]]:_(i64) = G_AND [[MV2]], [[C1]]
   ; UNPACKED-NEXT:   [[MV3:%[0-9]+]]:_(i128) = G_MERGE_VALUES [[AND]](i64), [[AND1]](i64)
-  ; UNPACKED-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[MV3]](i128)
-  ; UNPACKED-NEXT:   G_STORE [[BITCAST]](<4 x s32>), [[MV]](p1) :: (store (<4 x s32>) into %ir.ptr, align 4, addrspace 1)
+  ; UNPACKED-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x i32>) = G_BITCAST [[MV3]](i128)
+  ; UNPACKED-NEXT:   G_STORE [[BITCAST]](<4 x i32>), [[MV]](p1) :: (store (<4 x i32>) into %ir.ptr, align 4, addrspace 1)
   ; UNPACKED-NEXT:   SI_RETURN
   store i127 %arg, ptr addrspace(1) %ptr, align 4
   ret void

@@ -1102,9 +1102,9 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_v16i16(<16 x i
   ; GISEL-GFX11-NEXT:   [[COPY24:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE]].sub0_sub1_sub2_sub3
   ; GISEL-GFX11-NEXT:   [[COPY25:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE]].sub4_sub5_sub6_sub7
   ; GISEL-GFX11-NEXT:   [[COPY26:%[0-9]+]]:vreg_64 = COPY [[DEF]]
-  ; GISEL-GFX11-NEXT:   FLAT_STORE_DWORDX4 [[COPY26]], [[COPY24]], 0, 0, implicit $exec, implicit $flat_scr :: (store (<4 x s32>) into `ptr poison`, align 32)
+  ; GISEL-GFX11-NEXT:   FLAT_STORE_DWORDX4 [[COPY26]], [[COPY24]], 0, 0, implicit $exec, implicit $flat_scr :: (store (<4 x i32>) into `ptr poison`, align 32)
   ; GISEL-GFX11-NEXT:   [[COPY27:%[0-9]+]]:vreg_64 = COPY [[DEF]]
-  ; GISEL-GFX11-NEXT:   FLAT_STORE_DWORDX4 [[COPY27]], [[COPY25]], 16, 0, implicit $exec, implicit $flat_scr :: (store (<4 x s32>) into `ptr poison` + 16, basealign 32)
+  ; GISEL-GFX11-NEXT:   FLAT_STORE_DWORDX4 [[COPY27]], [[COPY25]], 16, 0, implicit $exec, implicit $flat_scr :: (store (<4 x i32>) into `ptr poison` + 16, basealign 32)
   ; GISEL-GFX11-NEXT:   S_ENDPGM 0
   ;
   ; GISEL-GFX10-LABEL: name: amdgpu_cs_chain_preserve_cc_v16i16
@@ -1148,9 +1148,9 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_v16i16(<16 x i
   ; GISEL-GFX10-NEXT:   [[COPY24:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE]].sub0_sub1_sub2_sub3
   ; GISEL-GFX10-NEXT:   [[COPY25:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE]].sub4_sub5_sub6_sub7
   ; GISEL-GFX10-NEXT:   [[COPY26:%[0-9]+]]:vreg_64 = COPY [[DEF]]
-  ; GISEL-GFX10-NEXT:   FLAT_STORE_DWORDX4 [[COPY26]], [[COPY24]], 0, 0, implicit $exec, implicit $flat_scr :: (store (<4 x s32>) into `ptr poison`, align 32)
+  ; GISEL-GFX10-NEXT:   FLAT_STORE_DWORDX4 [[COPY26]], [[COPY24]], 0, 0, implicit $exec, implicit $flat_scr :: (store (<4 x i32>) into `ptr poison`, align 32)
   ; GISEL-GFX10-NEXT:   [[COPY27:%[0-9]+]]:vreg_64 = COPY [[DEF]]
-  ; GISEL-GFX10-NEXT:   FLAT_STORE_DWORDX4 [[COPY27]], [[COPY25]], 16, 0, implicit $exec, implicit $flat_scr :: (store (<4 x s32>) into `ptr poison` + 16, basealign 32)
+  ; GISEL-GFX10-NEXT:   FLAT_STORE_DWORDX4 [[COPY27]], [[COPY25]], 16, 0, implicit $exec, implicit $flat_scr :: (store (<4 x i32>) into `ptr poison` + 16, basealign 32)
   ; GISEL-GFX10-NEXT:   S_ENDPGM 0
   ;
   ; DAGISEL-GFX11-WF32-LABEL: name: amdgpu_cs_chain_preserve_cc_v16i16

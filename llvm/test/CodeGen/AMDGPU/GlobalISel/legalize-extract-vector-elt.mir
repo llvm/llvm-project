@@ -1111,8 +1111,8 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 128
     ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p1) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](i64)
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[PTR_ADD]](p1) :: (load (<16 x s32>) from unknown-address + 128, align 4, addrspace 4)
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<16 x p3>) = G_BITCAST [[LOAD]](<16 x s32>)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(<16 x i32>) = G_LOAD [[PTR_ADD]](p1) :: (load (<16 x i32>) from unknown-address + 128, align 4, addrspace 4)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<16 x p3>) = G_BITCAST [[LOAD]](<16 x i32>)
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(p3), [[UV1:%[0-9]+]]:_(p3), [[UV2:%[0-9]+]]:_(p3), [[UV3:%[0-9]+]]:_(p3), [[UV4:%[0-9]+]]:_(p3), [[UV5:%[0-9]+]]:_(p3), [[UV6:%[0-9]+]]:_(p3), [[UV7:%[0-9]+]]:_(p3), [[UV8:%[0-9]+]]:_(p3), [[UV9:%[0-9]+]]:_(p3), [[UV10:%[0-9]+]]:_(p3), [[UV11:%[0-9]+]]:_(p3), [[UV12:%[0-9]+]]:_(p3), [[UV13:%[0-9]+]]:_(p3), [[UV14:%[0-9]+]]:_(p3), [[UV15:%[0-9]+]]:_(p3) = G_UNMERGE_VALUES [[BITCAST]](<16 x p3>)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p3) = COPY [[UV1]](p3)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]](p3)

@@ -179,21 +179,21 @@ static LLT getBufferRsrcScalarType(const LLT Ty) {
 
 static LLT getBufferRsrcRegisterType(const LLT Ty) {
   if (!Ty.isVector())
-    return LLT::fixed_vector(4, LLT::scalar(32));
+    return LLT::fixed_vector(4, LLT::integer(32));
   const unsigned NumElems = Ty.getElementCount().getFixedValue();
-  return LLT::fixed_vector(NumElems * 4, LLT::scalar(32));
+  return LLT::fixed_vector(NumElems * 4, LLT::integer(32));
 }
 
 static LLT getBitcastRegisterType(const LLT Ty) {
   const unsigned Size = Ty.getSizeInBits();
 
   if (Size <= 32) {
-    // <2 x s8> -> s16
-    // <4 x s8> -> s32
-    return LLT::scalar(Size);
+    // <2 x i8> -> i16
+    // <4 x i8> -> i32
+    return LLT::integer(Size);
   }
 
-  return LLT::scalarOrVector(ElementCount::getFixed(Size / 32), 32);
+  return LLT::fixed_vector(Size / 32, LLT::integer(32));
 }
 
 static LegalizeMutation bitcastToRegisterType(unsigned TypeIdx) {
@@ -635,14 +635,14 @@ static LLT castBufferRsrcFromV4I32(MachineInstr &MI, MachineIRBuilder &B,
   if (!PointerTy.isVector()) {
     // Happy path: (4 x s32) -> (s32, s32, s32, s32) -> (p8)
     const unsigned NumParts = PointerTy.getSizeInBits() / 32;
-    const LLT S32 = LLT::scalar(32);
+    const LLT I32 = LLT::integer(32);
 
     Register VectorReg = MRI.createGenericVirtualRegister(VectorTy);
     std::array<Register, 4> VectorElems;
     B.setInsertPt(B.getMBB(), ++B.getInsertPt());
     for (unsigned I = 0; I < NumParts; ++I)
       VectorElems[I] =
-          B.buildExtractVectorElementConstant(S32, VectorReg, I).getReg(0);
+          B.buildExtractVectorElementConstant(I32, VectorReg, I).getReg(0);
     B.buildMergeValues(MO, VectorElems);
     MO.setReg(VectorReg);
     return VectorTy;
@@ -671,7 +671,7 @@ static Register castBufferRsrcToV4I32(Register Pointer, MachineIRBuilder &B) {
     // Special case: p8 -> (s32, s32, s32, s32) -> (4xs32)
     SmallVector<Register, 4> PointerParts;
     const unsigned NumParts = PointerTy.getSizeInBits() / 32;
-    auto Unmerged = B.buildUnmerge(LLT::scalar(32), Pointer);
+    auto Unmerged = B.buildUnmerge(LLT::integer(32), Pointer);
     for (unsigned I = 0; I < NumParts; ++I)
       PointerParts.push_back(Unmerged.getReg(I));
     return B.buildBuildVector(VectorTy, PointerParts).getReg(0);
@@ -6972,7 +6972,7 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
     B.setInsertPt(B.getMBB(), ++B.getInsertPt());
     B.buildTrunc(Dst, LoadDstReg);
   } else if (Unpacked && IsD16 && Ty.isVector()) {
-    LLT UnpackedTy = Ty.changeElementSize(32);
+    LLT UnpackedTy = LLT::fixed_vector(Ty.getNumElements(), LLT::integer(32));
     Register LoadDstReg = B.getMRI()->createGenericVirtualRegister(UnpackedTy);
     buildBufferLoad(Opc, LoadDstReg, RSrc, VIndex, VOffset, SOffset, ImmOffset,
                     Format, AuxiliaryData, MMO, IsTyped, HasVIndex, B);

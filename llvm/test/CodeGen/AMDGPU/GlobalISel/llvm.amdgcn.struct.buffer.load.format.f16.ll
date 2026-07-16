@@ -71,8 +71,8 @@ define amdgpu_ps <2 x half> @struct_buffer_load_format_v2f16__sgpr_rsrc__vgpr_vi
   ; UNPACKED-NEXT:   [[COPY4:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
   ; UNPACKED-NEXT:   [[COPY5:%[0-9]+]]:vgpr(i32) = COPY $vgpr1
   ; UNPACKED-NEXT:   [[COPY6:%[0-9]+]]:sgpr(i32) = COPY $sgpr6
-  ; UNPACKED-NEXT:   [[AMDGPU_BUFFER_LOAD_FORMAT_D16_:%[0-9]+]]:vgpr(<2 x f32>) = G_AMDGPU_BUFFER_LOAD_FORMAT_D16 [[BUILD_VECTOR]](<4 x i32>), [[COPY4]](i32), [[COPY5]], [[COPY6]], 0, 0, -1 :: (dereferenceable load (<2 x f16>), align 1, addrspace 8)
-  ; UNPACKED-NEXT:   [[UV:%[0-9]+]]:vgpr(i32), [[UV1:%[0-9]+]]:vgpr(i32) = G_UNMERGE_VALUES [[AMDGPU_BUFFER_LOAD_FORMAT_D16_]](<2 x f32>)
+  ; UNPACKED-NEXT:   [[AMDGPU_BUFFER_LOAD_FORMAT_D16_:%[0-9]+]]:vgpr(<2 x i32>) = G_AMDGPU_BUFFER_LOAD_FORMAT_D16 [[BUILD_VECTOR]](<4 x i32>), [[COPY4]](i32), [[COPY5]], [[COPY6]], 0, 0, -1 :: (dereferenceable load (<2 x f16>), align 1, addrspace 8)
+  ; UNPACKED-NEXT:   [[UV:%[0-9]+]]:vgpr(i32), [[UV1:%[0-9]+]]:vgpr(i32) = G_UNMERGE_VALUES [[AMDGPU_BUFFER_LOAD_FORMAT_D16_]](<2 x i32>)
   ; UNPACKED-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 65535
   ; UNPACKED-NEXT:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
   ; UNPACKED-NEXT:   [[AND:%[0-9]+]]:vgpr_32(s32) = G_AND [[UV]], [[COPY7]]
@@ -142,8 +142,8 @@ define amdgpu_ps <4 x half> @struct_buffer_load_format_v4f16__sgpr_rsrc__vgpr_vi
   ; UNPACKED-NEXT:   [[COPY4:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
   ; UNPACKED-NEXT:   [[COPY5:%[0-9]+]]:vgpr(i32) = COPY $vgpr1
   ; UNPACKED-NEXT:   [[COPY6:%[0-9]+]]:sgpr(i32) = COPY $sgpr6
-  ; UNPACKED-NEXT:   [[AMDGPU_BUFFER_LOAD_FORMAT_D16_:%[0-9]+]]:vgpr(<4 x f32>) = G_AMDGPU_BUFFER_LOAD_FORMAT_D16 [[BUILD_VECTOR]](<4 x i32>), [[COPY4]](i32), [[COPY5]], [[COPY6]], 0, 0, -1 :: (dereferenceable load (<4 x f16>), align 1, addrspace 8)
-  ; UNPACKED-NEXT:   [[UV:%[0-9]+]]:vgpr(i32), [[UV1:%[0-9]+]]:vgpr(i32), [[UV2:%[0-9]+]]:vgpr(i32), [[UV3:%[0-9]+]]:vgpr(i32) = G_UNMERGE_VALUES [[AMDGPU_BUFFER_LOAD_FORMAT_D16_]](<4 x f32>)
+  ; UNPACKED-NEXT:   [[AMDGPU_BUFFER_LOAD_FORMAT_D16_:%[0-9]+]]:vgpr(<4 x i32>) = G_AMDGPU_BUFFER_LOAD_FORMAT_D16 [[BUILD_VECTOR]](<4 x i32>), [[COPY4]](i32), [[COPY5]], [[COPY6]], 0, 0, -1 :: (dereferenceable load (<4 x f16>), align 1, addrspace 8)
+  ; UNPACKED-NEXT:   [[UV:%[0-9]+]]:vgpr(i32), [[UV1:%[0-9]+]]:vgpr(i32), [[UV2:%[0-9]+]]:vgpr(i32), [[UV3:%[0-9]+]]:vgpr(i32) = G_UNMERGE_VALUES [[AMDGPU_BUFFER_LOAD_FORMAT_D16_]](<4 x i32>)
   ; UNPACKED-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 65535
   ; UNPACKED-NEXT:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
   ; UNPACKED-NEXT:   [[AND:%[0-9]+]]:vgpr(s32) = G_AND [[UV]], [[COPY7]]
@@ -251,7 +251,7 @@ define amdgpu_ps <4 x half> @struct_buffer_load_format_v4f16__vpr_rsrc__sgpr_vin
   ; UNPACKED-NEXT: bb.3:
   ; UNPACKED-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; UNPACKED-NEXT: {{  $}}
-  ; UNPACKED-NEXT:   [[AMDGPU_BUFFER_LOAD_FORMAT_D16_:%[0-9]+]]:vgpr(<4 x f32>) = G_AMDGPU_BUFFER_LOAD_FORMAT_D16 [[BUILD_VECTOR1]](<4 x i32>), [[COPY7]](i32), [[COPY8]], [[INTRINSIC_CONVERGENT4]], 0, 0, -1 :: (dereferenceable load (<4 x f16>), align 1, addrspace 8)
+  ; UNPACKED-NEXT:   [[AMDGPU_BUFFER_LOAD_FORMAT_D16_:%[0-9]+]]:vgpr(<4 x i32>) = G_AMDGPU_BUFFER_LOAD_FORMAT_D16 [[BUILD_VECTOR1]](<4 x i32>), [[COPY7]](i32), [[COPY8]], [[INTRINSIC_CONVERGENT4]], 0, 0, -1 :: (dereferenceable load (<4 x f16>), align 1, addrspace 8)
   ; UNPACKED-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; UNPACKED-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; UNPACKED-NEXT: {{  $}}
@@ -261,7 +261,7 @@ define amdgpu_ps <4 x half> @struct_buffer_load_format_v4f16__vpr_rsrc__sgpr_vin
   ; UNPACKED-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; UNPACKED-NEXT: {{  $}}
   ; UNPACKED-NEXT: bb.5:
-  ; UNPACKED-NEXT:   [[UV4:%[0-9]+]]:vgpr(i32), [[UV5:%[0-9]+]]:vgpr(i32), [[UV6:%[0-9]+]]:vgpr(i32), [[UV7:%[0-9]+]]:vgpr(i32) = G_UNMERGE_VALUES [[AMDGPU_BUFFER_LOAD_FORMAT_D16_]](<4 x f32>)
+  ; UNPACKED-NEXT:   [[UV4:%[0-9]+]]:vgpr(i32), [[UV5:%[0-9]+]]:vgpr(i32), [[UV6:%[0-9]+]]:vgpr(i32), [[UV7:%[0-9]+]]:vgpr(i32) = G_UNMERGE_VALUES [[AMDGPU_BUFFER_LOAD_FORMAT_D16_]](<4 x i32>)
   ; UNPACKED-NEXT:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 65535
   ; UNPACKED-NEXT:   [[COPY9:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
   ; UNPACKED-NEXT:   [[AND2:%[0-9]+]]:vgpr(s32) = G_AND [[UV4]], [[COPY9]]
