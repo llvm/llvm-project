@@ -570,84 +570,11 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
   return result;
 }
 
-// Figure out if we want mark the new struct 'packed' if it isn't already. IF
-// it is already, we have to keep that behavior. We pack it with logic similar
-// to classic codegen, though will end up missing cases, since we don't want to
-// change the type other than the FAM.
-// We can do so if:
-// 1- Packing it won't change any of the field offsets.
-// 2- the non-padded struct would add padding beyond the
-// flexible array member.  We don't pack if the flexible array member manages
-// to not cause trailing padding.
-static bool shouldPackFAMStruct(const mlir::DataLayout &dataLayout,
-                                llvm::ArrayRef<mlir::Type> members) {
-  uint64_t maxAlign = 1;
-  uint64_t totalSize = 0;
-  for (mlir::Type member : members) {
-    uint64_t align = dataLayout.getTypeABIAlignment(member);
-    maxAlign = std::max(maxAlign, align);
-    uint64_t size = dataLayout.getTypeSize(member).getFixedValue();
-
-    if (llvm::alignTo(totalSize, align) != totalSize)
-      return false;
-
-    totalSize += size;
-  }
-  return llvm::alignTo(totalSize, maxAlign) != totalSize;
-}
-
-// CIR supports flexible-array-members in its struct types. That is, a
-// zero-length array as the last element, which can be initialized with an
-// arbitrary number of elements. A ConstRecordAttr can be created with one of
-// these, and our verifier allows it.  However, the LLVM implementation does NOT
-// permit this. So we have to replace this type in LLVM with special struct for
-// this value.
-// This function is used to adjust  any place we could run into a
-// ConstRecordAttr (that is, a global?) that is initialized. It'll return the
-// type value unchanged if this isn't a flexible array member case.
-static mlir::Type
-adjustGlobalTypeForFlexibleArrayInit(mlir::Type llvmType, mlir::Attribute init,
-                                     const mlir::TypeConverter &converter,
-                                     const mlir::DataLayout &dataLayout) {
-  // This only applies to ConstRecordAttr initialization.
-  auto constRecord = mlir::dyn_cast_if_present<cir::ConstRecordAttr>(init);
-  if (!constRecord)
-    return llvmType;
-
-  // If this isn't of struct-type, or doesn't have any members, there is nothing
-  // to do.
-  auto structTy = mlir::dyn_cast<mlir::LLVM::LLVMStructType>(llvmType);
-  if (!structTy || structTy.getBody().empty())
-    return llvmType;
-
-  // If this isn't a zero-sized array, it isn't a flexible array member.
-  auto fam = dyn_cast<mlir::LLVM::LLVMArrayType>(structTy.getBody().back());
-  if (!fam || fam.getNumElements() != 0)
-    return llvmType;
-
-  llvm::ArrayRef<mlir::Attribute> initMembers =
-      constRecord.getMembers().getValue();
-  mlir::Type lastInitType = cast<mlir::TypedAttr>(initMembers.back()).getType();
-
-  // Don't touch it if we don't need to do non-zero elements.
-  if (cast<cir::ArrayType>(lastInitType).getSize() == 0)
-    return llvmType;
-
-  llvm::SmallVector<mlir::Type> newBody{structTy.getBody()};
-  newBody[newBody.size() - 1] = converter.convertType(lastInitType);
-
-  bool packed = structTy.isPacked() || shouldPackFAMStruct(dataLayout, newBody);
-
-  return mlir::LLVM::LLVMStructType::getLiteral(structTy.getContext(), newBody,
-                                                packed);
-}
-
 /// ConstRecord visitor.
 mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstRecordAttr constRecord) {
   mlir::Type llvmTy = converter->convertType(constRecord.getType());
   mlir::DataLayout dataLayout(parentOp->getParentOfType<mlir::ModuleOp>());
-  llvmTy = adjustGlobalTypeForFlexibleArrayInit(llvmTy, constRecord, *converter,
-                                                dataLayout);
+  llvmTy = adjustGlobalTypeForInit(llvmTy, constRecord, *converter, dataLayout);
   const mlir::Location loc = parentOp->getLoc();
   mlir::Value result = mlir::LLVM::UndefOp::create(rewriter, loc, llvmTy);
 
@@ -2538,8 +2465,8 @@ void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
   // Keep the global's type in sync with the value built by CIRAttrToValue: a
   // flexible array member initializer requires an oversized anonymous struct.
   if (std::optional<mlir::Attribute> init = op.getInitialValue())
-    llvmType = adjustGlobalTypeForFlexibleArrayInit(
-        llvmType, *init, *getTypeConverter(), dataLayout);
+    llvmType = adjustGlobalTypeForInit(llvmType, *init, *getTypeConverter(),
+                                       dataLayout);
 
   // FIXME: These default values are placeholders until the the equivalent
   //        attributes are available on cir.global ops. This duplicates code
@@ -2615,8 +2542,8 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   // record's declared type, so the global must use an oversized anonymous
   // struct instead.
   if (init.has_value())
-    llvmType = adjustGlobalTypeForFlexibleArrayInit(
-        llvmType, *init, *getTypeConverter(), dataLayout);
+    llvmType = adjustGlobalTypeForInit(llvmType, *init, *getTypeConverter(),
+                                       dataLayout);
 
   // FIXME: These default values are placeholders until the the equivalent
   //        attributes are available on cir.global ops.
