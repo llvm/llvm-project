@@ -144,7 +144,7 @@ static LegalizeMutation moreEltsToNext32Bit(unsigned TypeIdx) {
 static LegalizeMutation getScalarTypeFromMemDesc(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
     unsigned MemSize = Query.MMODescrs[0].MemoryTy.getSizeInBits();
-    return std::make_pair(TypeIdx, LLT::scalar(MemSize));
+    return std::make_pair(TypeIdx, LLT::integer(MemSize));
   };
 }
 
