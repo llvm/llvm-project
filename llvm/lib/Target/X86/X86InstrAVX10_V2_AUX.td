@@ -301,24 +301,33 @@ multiclass avx10_v2aux_cvt_widen_masked<bits<8> opc, string OpcodeStr,
 }
 
 // Group H multiclass: Byte unpack with immediate
-multiclass avx10_v2aux_unpackb<bits<8> opc, string OpcodeStr,
-                                X86VectorVTInfo _,
-                                SDPatternOperator OpNode> {
+multiclass avx10_v2aux_shuffle_base<bits<8> opc, string OpcodeStr,
+                                    X86VectorVTInfo _,
+                                    X86FoldableSchedWrite sched> {
   let ImmT = Imm8 in {
-    defm rri : AVX512_maskable<opc, MRMSrcReg, _,
-                    (outs _.RC:$dst),
+    defm rri : AVX512_maskable<opc, MRMSrcReg, _, (outs _.RC:$dst),
                     (ins _.RC:$src1, u8imm:$src2),
                     OpcodeStr, "$src2, $src1", "$src1, $src2",
-                    (_.VT (OpNode (_.VT _.RC:$src1), (i8 timm:$src2)))>,
-                    Sched<[WriteShuffle]>;
+                    (_.VT (!cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"_"#_.Size)
+                            (_.VT _.RC:$src1), (i8 timm:$src2)))>,
+                    Sched<[sched]>, EVEX, EVEX_CD8<8, CD8VF>;
     let mayLoad = 1 in
-    defm rmi : AVX512_maskable<opc, MRMSrcMem, _,
-                    (outs _.RC:$dst),
-                    (ins _.MemOp:$src1, u8imm:$src2),
-                    OpcodeStr, "$src2, $src1", "$src1, $src2",
-                    (_.VT (OpNode (_.VT (load addr:$src1)), (i8 timm:$src2)))>,
-                    Sched<[WriteShuffle.Folded]>;
+      defm rmi : AVX512_maskable<opc, MRMSrcMem, _, (outs _.RC:$dst),
+                      (ins _.MemOp:$src1, u8imm:$src2),
+                      OpcodeStr, "$src2, $src1", "$src1, $src2",
+                      (_.VT (!cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"_"#_.Size)
+                              (_.VT (load addr:$src1)), (i8 timm:$src2)))>,
+                      Sched<[sched.Folded]>, EVEX, EVEX_CD8<8, CD8VF>;
   }
+}
+
+multiclass avx10_v2aux_shuffle_b<bits<8> opc, string OpcodeStr> {
+  defm Z    : avx10_v2aux_shuffle_base<opc, OpcodeStr, v64i8_info,
+                                       WriteShuffleZ>, EVEX_V512;
+  defm Z256 : avx10_v2aux_shuffle_base<opc, OpcodeStr, v32i8x_info,
+                                       WriteShuffle256>, EVEX_V256;
+  defm Z128 : avx10_v2aux_shuffle_base<opc, OpcodeStr, v16i8x_info,
+                                       WriteShuffle>, EVEX_V128;
 }
 
 //===----------------------------------------------------------------------===//
@@ -552,13 +561,5 @@ let Predicates = [HasAVX10_V2_AUX] in {
 //-------------------------------------------------
 
 let Predicates = [HasAVX10_V2_AUX] in {
-  defm VUNPACKBZ    : avx10_v2aux_unpackb<0x3D, "vunpackb", v64i8_info,
-                                          int_x86_avx10_vunpackb_512>,
-                      EVEX_V512, TA, PS, EVEX, EVEX_CD8<8, CD8VF>;
-  defm VUNPACKBZ256 : avx10_v2aux_unpackb<0x3D, "vunpackb", v32i8x_info,
-                                          int_x86_avx10_vunpackb_256>,
-                      EVEX_V256, TA, PS, EVEX, EVEX_CD8<8, CD8VF>;
-  defm VUNPACKBZ128 : avx10_v2aux_unpackb<0x3D, "vunpackb", v16i8x_info,
-                                          int_x86_avx10_vunpackb_128>,
-                      EVEX_V128, TA, PS, EVEX, EVEX_CD8<8, CD8VF>;
+  defm VUNPACKB : avx10_v2aux_shuffle_b<0x3D, "vunpackb">, TA, PS;
 }
