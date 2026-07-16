@@ -220,7 +220,11 @@ void MemCmpExpansion::optimiseLoadSequence(
   // subsequences into single loads of allowed sizes from
   // `MemCmpExpansionOptions::AllowedTailExpansions`. If it is for zero
   // comparison or if no allowed tail expansions are specified, we exit early.
-  if (IsUsedForZeroCmp || Options.AllowedTailExpansions.empty())
+  // Merged tail loads have non-power-of-two sizes that are not naturally
+  // aligned, so they are also skipped when the target requires natural
+  // alignment.
+  if (IsUsedForZeroCmp || Options.AllowedTailExpansions.empty() ||
+      Options.RequireNaturalAlignment)
     return;
 
   while (LoadSequence.size() >= 2) {
@@ -274,8 +278,9 @@ MemCmpExpansion::MemCmpExpansion(
   NumLoadsNonOneByte = GreedyNumLoadsNonOneByte;
   assert(LoadSequence.size() <= Options.MaxNumLoads && "broken invariant");
   // If we allow overlapping loads and the load sequence is not already optimal,
-  // use overlapping loads.
-  if (Options.AllowOverlappingLoads &&
+  // use overlapping loads. Overlapping loads are inherently unaligned, so they
+  // are not used when the target requires naturally aligned loads.
+  if (Options.AllowOverlappingLoads && !Options.RequireNaturalAlignment &&
       (LoadSequence.empty() || LoadSequence.size() > 2)) {
     unsigned OverlappingNumLoadsNonOneByte = 0;
     auto OverlappingLoads = computeOverlappingLoadSequence(
@@ -866,10 +871,8 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
     // of both pointers. Because the greedy load sequence only places a load of
     // size S at an offset that is a multiple of S, a power-of-two load that
     // does not exceed the base alignment is guaranteed to be naturally aligned.
-    // Overlapping loads and merged tail expansions can produce unaligned or
-    // non-power-of-two accesses, so they are not used in this mode.
-    Options.AllowOverlappingLoads = false;
-    Options.AllowedTailExpansions.clear();
+    // MemCmpExpansion additionally skips overlapping loads and merged tail
+    // expansions in this mode, as those are not naturally aligned.
     const Align LhsAlign = CI->getArgOperand(0)->getPointerAlignment(*DL);
     const Align RhsAlign = CI->getArgOperand(1)->getPointerAlignment(*DL);
     const uint64_t MinAlign = std::min(LhsAlign.value(), RhsAlign.value());
