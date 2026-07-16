@@ -616,14 +616,16 @@ public:
     // Generate the `main` entry point if necessary
     if (hasMainProgram)
       createBuilderOutsideOfFuncOpAndDo([&]() {
-        fir::runtime::genMain(
-            *builder, toLocation(), bridge.getEnvironmentDefaults(),
-            getFoldingContext().languageFeatures().IsEnabled(
-                Fortran::common::LanguageFeature::CUDA),
-            getFoldingContext().languageFeatures().IsEnabled(
-                Fortran::common::LanguageFeature::OpenMPDefaultAllocator),
-            getFoldingContext().languageFeatures().IsEnabled(
-                Fortran::common::LanguageFeature::Coarray));
+        fir::runtime::genMain(*builder, toLocation(),
+                              bridge.getEnvironmentDefaults(),
+                              (getFoldingContext().languageFeatures().IsEnabled(
+                                   Fortran::common::LanguageFeature::CUDA) &&
+                               getFoldingContext().languageFeatures().IsEnabled(
+                                   Fortran::common::LanguageFeature::CUDAInit)),
+                               getFoldingContext().languageFeatures().IsEnabled(
+                                   Fortran::common::LanguageFeature::OpenMPDefaultAllocator),
+                              getFoldingContext().languageFeatures().IsEnabled(
+                                  Fortran::common::LanguageFeature::Coarray));
       });
 
     finalizeOpenMPLowering(globalOmpRequiresSymbols);
