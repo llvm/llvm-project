@@ -23378,36 +23378,29 @@ public:
       // decomposition).
       if (auto *ME = dyn_cast_or_null<MemberExpr>(BindingExpr)) {
 
-        // Get the original variable that the decomposition was initialized
-        // from.
-        if (const VarDecl *OrigVar =
-                getOriginalVarOrDiagnose(SemaRef, DD, DRE->getExprLoc())) {
+        // Use the DecompositionDecl as the base for the member expression.
+        // The structured binding creates a copy (if initialized from a
+        // variable) or holds the only storage (if initialized from a prvalue).
+        // Using DD ensures map clauses reference the correct storage.
+        DeclarationNameInfo BaseNameInfo(DD->getDeclName(), DRE->getLocation());
+        Expr *BaseExpr = DeclRefExpr::Create(
+            SemaRef.Context, DRE->getQualifierLoc(),
+            DRE->getTemplateKeywordLoc(), DD,
+            /*RefersToEnclosingVariableOrCapture=*/false, BaseNameInfo,
+            DD->getType(), DRE->getValueKind(), nullptr,
+            /*TemplateArgs=*/nullptr, DRE->isNonOdrUse());
 
-          // Create a new member expression: OrigVar.field.
-          // This transforms map(a) -> map(p.x)
-          DeclarationNameInfo BaseNameInfo(OrigVar->getDeclName(),
-                                           DRE->getLocation());
-          Expr *BaseExpr = DeclRefExpr::Create(
-              SemaRef.Context, DRE->getQualifierLoc(),
-              DRE->getTemplateKeywordLoc(), const_cast<VarDecl *>(OrigVar),
-              /*RefersToEnclosingVariableOrCapture=*/false, BaseNameInfo,
-              OrigVar->getType(), DRE->getValueKind(), nullptr,
-              /*TemplateArgs=*/nullptr, DRE->isNonOdrUse());
+        // Create member expression: base.member.
+        E = MemberExpr::Create(
+            SemaRef.Context, BaseExpr, /*IsArrow=*/false, ME->getOperatorLoc(),
+            ME->getQualifierLoc(), ME->getTemplateKeywordLoc(),
+            ME->getMemberDecl(), ME->getFoundDecl(), ME->getMemberNameInfo(),
+            /*TemplateArgs=*/nullptr, ME->getType(), ME->getValueKind(),
+            ME->getObjectKind(), ME->isNonOdrUse());
 
-          // Create member expression: base.member.
-          E = MemberExpr::Create(
-              SemaRef.Context, BaseExpr, /*IsArrow=*/false,
-              ME->getOperatorLoc(), ME->getQualifierLoc(),
-              ME->getTemplateKeywordLoc(), ME->getMemberDecl(),
-              ME->getFoundDecl(), ME->getMemberNameInfo(),
-              /*TemplateArgs=*/nullptr, ME->getType(), ME->getValueKind(),
-              ME->getObjectKind(), ME->isNonOdrUse());
-
-          // Now process this as a member expression, which will properly
-          // handle the field-level mapping.
-          return Visit(E);
-        }
-        return false;
+        // Now process this as a member expression, which will properly
+        // handle the field-level mapping.
+        return Visit(E);
       }
       if (isa_and_present<ArraySubscriptExpr>(BindingExpr)) {
         if (getOriginalVarOrDiagnose(SemaRef, DD, DRE->getExprLoc())) {
