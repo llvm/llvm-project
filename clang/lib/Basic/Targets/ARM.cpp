@@ -1132,7 +1132,7 @@ static constexpr Builtin::Info PrefixedBuiltinInfos[] = {
 };
 
 static_assert((std::size(BuiltinInfos) + std::size(PrefixedBuiltinInfos)) == 
-             NumARMBuiltins);
+              NumARMBuiltins);
 
 } // namespace ARM
 } // namespace clang
