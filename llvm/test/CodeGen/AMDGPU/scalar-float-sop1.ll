@@ -184,12 +184,22 @@ define amdgpu_vs half @ftrunc_f16(half inreg %val) {
 }
 
 define amdgpu_vs half @frint_f16(half inreg %val) {
-; CHECK-LABEL: frint_f16:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_rndne_f16 s0, s0
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; CHECK-NEXT:    v_mov_b32_e32 v0, s0
-; CHECK-NEXT:    ; return to shader part epilog
+; SDAG-LABEL: frint_f16:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_rndne_f16 s0, s0
+; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; SDAG-NEXT:    ; return to shader part epilog
+;
+; GISEL-GFX11-LABEL: frint_f16:
+; GISEL-GFX11:       ; %bb.0:
+; GISEL-GFX11-NEXT:    v_rndne_f16_e32 v0.l, s0
+; GISEL-GFX11-NEXT:    ; return to shader part epilog
+;
+; GISEL-GFX12-LABEL: frint_f16:
+; GISEL-GFX12:       ; %bb.0:
+; GISEL-GFX12-NEXT:    v_rndne_f16_e32 v0.l, s0
+; GISEL-GFX12-NEXT:    ; return to shader part epilog
   %res = call half @llvm.rint.f16(half %val)
   ret half %res
 }

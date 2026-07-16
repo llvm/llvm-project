@@ -293,6 +293,10 @@ static LegalityPredicate elementTypeIsLegal(unsigned TypeIdx) {
   };
 }
 
+const LLT I16 = LLT::integer(16);
+constexpr LLT F16 = LLT::float16();
+constexpr LLT BF16 = LLT::bfloat16();
+
 constexpr LLT S1 = LLT::scalar(1);
 constexpr LLT S8 = LLT::scalar(8);
 constexpr LLT S16 = LLT::scalar(16);
@@ -926,6 +930,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   getActionDefinitionsBuilder(G_BITCAST)
       // Don't worry about the size constraint.
       .legalIf(all(isRegisterClassType(ST, 0), isRegisterClassType(ST, 1)))
+      .widenScalarIf(all(typeInSet(0, {I16, F16, BF16}), isScalar(1)),
+                     changeTo(0, LLT::integer(32)))
+      .widenScalarIf(all(isScalar(0), typeInSet(1, {I16, F16, BF16})),
+                     changeTo(1, LLT::integer(32)))
       .lower();
 
   getActionDefinitionsBuilder(G_CONSTANT)

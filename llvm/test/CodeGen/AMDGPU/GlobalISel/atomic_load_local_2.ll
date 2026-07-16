@@ -297,7 +297,6 @@ define i32 @atomic_load_local_monotonic_f16_zext_to_i32(ptr addrspace(3) %ptr) {
 ; GFX8-NEXT:    s_mov_b32 m0, -1
 ; GFX8-NEXT:    ds_read_u16 v0, v0
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: atomic_load_local_monotonic_f16_zext_to_i32:
@@ -305,7 +304,6 @@ define i32 @atomic_load_local_monotonic_f16_zext_to_i32(ptr addrspace(3) %ptr) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    ds_read_u16 v0, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %load = load atomic half, ptr addrspace(3) %ptr monotonic, align 2
   %cast = bitcast half %load to i16
@@ -328,7 +326,6 @@ define i32 @atomic_load_local_monotonic_bf16_zext_to_i32(ptr addrspace(3) %ptr) 
 ; GFX8-NEXT:    s_mov_b32 m0, -1
 ; GFX8-NEXT:    ds_read_u16 v0, v0
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: atomic_load_local_monotonic_bf16_zext_to_i32:
@@ -336,7 +333,6 @@ define i32 @atomic_load_local_monotonic_bf16_zext_to_i32(ptr addrspace(3) %ptr) 
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    ds_read_u16 v0, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %load = load atomic bfloat, ptr addrspace(3) %ptr monotonic, align 2
   %cast = bitcast bfloat %load to i16
@@ -458,7 +454,7 @@ define <2 x i16> @atomic_load_local_monotonic_i16_d16_lo_vector_insert(ptr addrs
 ; GFX7-NEXT:    ds_read_u16 v0, v0
 ; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff0000, v1
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX7-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: atomic_load_local_monotonic_i16_d16_lo_vector_insert:
@@ -468,7 +464,7 @@ define <2 x i16> @atomic_load_local_monotonic_i16_d16_lo_vector_insert(ptr addrs
 ; GFX8-NEXT:    ds_read_u16 v0, v0
 ; GFX8-NEXT:    v_and_b32_e32 v1, 0xffff0000, v1
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX8-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: atomic_load_local_monotonic_i16_d16_lo_vector_insert:
