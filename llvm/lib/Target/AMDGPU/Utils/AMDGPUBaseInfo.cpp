@@ -1287,27 +1287,29 @@ unsigned getMinNumSGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU) {
   if (WavesPerEU >= getMaxWavesPerEU(STI))
     return 0;
 
+  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
   unsigned MinNumSGPRs =
-      getSGPRBudgetPerWave(getTotalNumSGPRs(STI.getCPU()), WavesPerEU + 1,
+      getSGPRBudgetPerWave(getTotalNumSGPRs(Kind), WavesPerEU + 1,
                            getSGPRTrapHandlerReserve(STI),
-                           getSGPRAllocGranule(STI.getCPU())) +
+                           getSGPRAllocGranule(Kind)) +
       1;
-  return std::min(MinNumSGPRs, getAddressableNumSGPRs(STI.getCPU()));
+  return std::min(MinNumSGPRs, getAddressableNumSGPRs(Kind));
 }
 
 unsigned getMaxNumSGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
                         bool Addressable) {
   assert(WavesPerEU != 0);
 
-  unsigned AddressableNumSGPRs = getAddressableNumSGPRs(STI.getCPU());
+  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
+  unsigned AddressableNumSGPRs = getAddressableNumSGPRs(Kind);
   IsaVersion Version = getIsaVersion(STI.getCPU());
   if (Version.Major >= 10)
     return Addressable ? AddressableNumSGPRs : 108;
   if (Version.Major >= 8 && !Addressable)
     AddressableNumSGPRs = 112;
   unsigned MaxNumSGPRs = getSGPRBudgetPerWave(
-      getTotalNumSGPRs(STI.getCPU()), WavesPerEU,
-      getSGPRTrapHandlerReserve(STI), getSGPRAllocGranule(STI.getCPU()));
+      getTotalNumSGPRs(Kind), WavesPerEU, getSGPRTrapHandlerReserve(STI),
+      getSGPRAllocGranule(Kind));
   return std::min(MaxNumSGPRs, AddressableNumSGPRs);
 }
 
@@ -1463,9 +1465,10 @@ unsigned getOccupancyWithNumSGPRs(const MCSubtargetInfo &STI, unsigned SGPRs) {
   if (!isSGPROccupancyLimited(STI))
     return MaxWaves;
 
-  return getOccupancyWithNumSGPRs(
-      SGPRs, MaxWaves, getTotalNumSGPRs(STI.getCPU()),
-      getSGPRAllocGranule(STI.getCPU()), getSGPRTrapHandlerReserve(STI));
+  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
+  return getOccupancyWithNumSGPRs(SGPRs, MaxWaves, getTotalNumSGPRs(Kind),
+                                  getSGPRAllocGranule(Kind),
+                                  getSGPRTrapHandlerReserve(STI));
 }
 
 unsigned getMinNumVGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,

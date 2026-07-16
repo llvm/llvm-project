@@ -757,7 +757,7 @@ public:
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
-    return AMDGPU::getSGPRAllocGranule(getCPU());
+    return AMDGPU::getSGPRAllocGranule(AMDGPU::parseArchAMDGCN(getCPU()));
   }
 
   /// \returns SGPR encoding granularity supported by the subtarget.
@@ -767,12 +767,12 @@ public:
 
   /// \returns Total number of SGPRs supported by the subtarget.
   unsigned getTotalNumSGPRs() const {
-    return AMDGPU::getTotalNumSGPRs(getCPU());
+    return AMDGPU::getTotalNumSGPRs(AMDGPU::parseArchAMDGCN(getCPU()));
   }
 
   /// \returns Addressable number of SGPRs supported by the subtarget.
   unsigned getAddressableNumSGPRs() const {
-    return AMDGPU::getAddressableNumSGPRs(getCPU());
+    return AMDGPU::getAddressableNumSGPRs(AMDGPU::parseArchAMDGCN(getCPU()));
   }
 
   /// \returns Minimum number of SGPRs that meets the given number of waves per

@@ -2846,6 +2846,14 @@ TEST(TargetParserTest, testAMDGPUgetNumSGPRs) {
             AMDGPU::FIXED_NUM_SGPRS_FOR_INIT_BUG);
   EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(Triple::AMDGPUSubArch805),
             AMDGPU::FIXED_NUM_SGPRS_FOR_INIT_BUG);
+
+  // The GPUKind overloads resolve to the same values.
+  EXPECT_EQ(AMDGPU::getTotalNumSGPRs(AMDGPU::GK_GFX600), 512u);
+  EXPECT_EQ(AMDGPU::getTotalNumSGPRs(AMDGPU::GK_GFX900), 800u);
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(AMDGPU::GK_GFX900), 102u);
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(AMDGPU::GK_GFX1030), 106u);
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(AMDGPU::GK_GFX802),
+            AMDGPU::FIXED_NUM_SGPRS_FOR_INIT_BUG);
 }
 
 TEST(TargetParserTest, testAMDGPUgetSGPRAllocGranule) {
@@ -2854,6 +2862,11 @@ TEST(TargetParserTest, testAMDGPUgetSGPRAllocGranule) {
   EXPECT_EQ(AMDGPU::getSGPRAllocGranule(Triple::AMDGPUSubArch802), 16u);
   EXPECT_EQ(AMDGPU::getSGPRAllocGranule(Triple::AMDGPUSubArch900), 16u);
   EXPECT_EQ(AMDGPU::getSGPRAllocGranule(Triple::AMDGPUSubArch1030), 106u);
+
+  // The GPUKind overload resolves to the same values.
+  EXPECT_EQ(AMDGPU::getSGPRAllocGranule(AMDGPU::GK_GFX600), 8u);
+  EXPECT_EQ(AMDGPU::getSGPRAllocGranule(AMDGPU::GK_GFX802), 16u);
+  EXPECT_EQ(AMDGPU::getSGPRAllocGranule(AMDGPU::GK_GFX1030), 106u);
 }
 
 TEST(TargetParserTest, testAMDGPUTargetIDProvidesFor) {

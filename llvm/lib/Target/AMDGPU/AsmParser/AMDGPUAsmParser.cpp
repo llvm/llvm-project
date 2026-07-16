@@ -6083,8 +6083,8 @@ bool AMDGPUAsmParser::calculateGPRBlocks(
   if (Version.Major >= 10)
     NumSGPRs = MCConstantExpr::create(0, Ctx);
   else {
-    unsigned MaxAddressableNumSGPRs =
-        AMDGPU::getAddressableNumSGPRs(getSTI().getCPU());
+    AMDGPU::GPUKind Kind = AMDGPU::parseArchAMDGCN(getSTI().getCPU());
+    unsigned MaxAddressableNumSGPRs = AMDGPU::getAddressableNumSGPRs(Kind);
 
     if (NumSGPRs->evaluateAsAbsolute(EvaluatedSGPRs) && Version.Major >= 8 &&
         !Features.test(FeatureSGPRInitBug) &&

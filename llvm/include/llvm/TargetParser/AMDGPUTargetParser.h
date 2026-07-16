@@ -152,13 +152,13 @@ LLVM_ABI IsaVersion getIsaVersion(Triple::SubArchType SubArch);
 
 enum { FIXED_NUM_SGPRS_FOR_INIT_BUG = 96 };
 
-LLVM_ABI unsigned getTotalNumSGPRs(StringRef GPU);
+LLVM_ABI unsigned getTotalNumSGPRs(GPUKind AK);
 LLVM_ABI unsigned getTotalNumSGPRs(Triple::SubArchType SubArch);
 
-LLVM_ABI unsigned getAddressableNumSGPRs(StringRef GPU);
+LLVM_ABI unsigned getAddressableNumSGPRs(GPUKind AK);
 LLVM_ABI unsigned getAddressableNumSGPRs(Triple::SubArchType SubArch);
 
-LLVM_ABI unsigned getSGPRAllocGranule(StringRef GPU);
+LLVM_ABI unsigned getSGPRAllocGranule(GPUKind AK);
 LLVM_ABI unsigned getSGPRAllocGranule(Triple::SubArchType SubArch);
 
 /// Fills Features map with default values for given target GPU.
