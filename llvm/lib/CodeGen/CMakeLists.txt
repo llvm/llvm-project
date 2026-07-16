@@ -2,9 +2,17 @@ option(LLVM_USE_EMITC_REGALLOC_EVICT_MODEL
   "Use the in-tree EmitC regalloc eviction model instead of TensorFlow AOT"
   OFF)
 
+# The EmitC wrapper is only built when the in-tree EmitC regalloc model is
+# enabled. Mark it optional so LLVM's source audit accepts its absence from the
+# default target source list.
+list(APPEND LLVM_OPTIONAL_SOURCES
+  EmitCRegAllocEvictModel.cpp)
+
+# Only compile the EmitC regalloc wrapper when the EmitC-backed release model
+# is selected. Otherwise the generated .inc file may not exist.
 if (LLVM_USE_EMITC_REGALLOC_EVICT_MODEL)
-  list(APPEND LLVM_COMPILE_DEFINITIONS
-    LLVM_HAVE_EMITC_REGALLOCEVICTMODEL)
+  list(APPEND LLVMCodeGenOptionalSources
+    EmitCRegAllocEvictModel.cpp)
 endif()
 
 if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
@@ -62,7 +70,6 @@ add_llvm_component_library(LLVMCodeGen
   DroppedVariableStatsMIR.cpp
   DwarfEHPrepare.cpp
   EarlyIfConversion.cpp
-  EmitCRegAllocEvictModel.cpp
   EdgeBundles.cpp
   EHContGuardTargets.cpp
   ExecutionDomainFix.cpp
@@ -268,6 +275,7 @@ add_llvm_component_library(LLVMCodeGen
   WindowsSecureHotPatching.cpp
   WinEHPrepare.cpp
   XRayInstrumentation.cpp
+  ${LLVMCodeGenOptionalSources}
   ${GeneratedMLSources}
 
   LiveDebugValues/LiveDebugValues.cpp
