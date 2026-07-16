@@ -5733,8 +5733,6 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
       const fltSemantics *SrcSemanticsPtr =
           APFloat::getArbitraryFPSemantics(FormatStr);
-      // TODO: the unsupported formats should be handle way before this
-      // remove once the verifier is updated.
       if (!SrcSemanticsPtr)
         break;
 
@@ -5760,7 +5758,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           Known.knownNot(fcPosZero);
       }
 
-      // If src lands normaly in dest, result can never be sub-normal.
+      // If src lands normaly in dest, result can never be subnormal.
       if (APFloat::isRepresentableAsNormalIn(SrcSemantics, DstSemantics))
         Known.knownNot(fcSubnormal);
       break;
