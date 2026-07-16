@@ -493,15 +493,15 @@ bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
     return false;
 
   Register SelectCondReg = Sel.getOperand(1).getReg();
-  MachineInstr *SelectTrue = MRI.getVRegDef(Sel.getOperand(2).getReg());
-  MachineInstr *SelectFalse = MRI.getVRegDef(Sel.getOperand(3).getReg());
+  Register SelectTrueReg = Sel.getOperand(2).getReg();
+  Register SelectFalseReg = Sel.getOperand(3).getReg();
 
   const auto SelectTrueVal =
-      isConstantOrConstantSplatVectorFP(*SelectTrue, MRI);
+      isConstantOrConstantSplatVectorFP(SelectTrueReg, MRI);
   if (!SelectTrueVal)
     return false;
   const auto SelectFalseVal =
-      isConstantOrConstantSplatVectorFP(*SelectFalse, MRI);
+      isConstantOrConstantSplatVectorFP(SelectFalseReg, MRI);
   if (!SelectFalseVal)
     return false;
 

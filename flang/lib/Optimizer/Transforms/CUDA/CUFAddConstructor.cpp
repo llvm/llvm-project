@@ -255,16 +255,29 @@ struct CUFAddConstructor
     }
 
     bool needAllocatorRegistration = false;
-    mod.walk([&](fir::DeclareOp declOp) {
-      if (declOp.getFortranAttrs() &&
-          fir::bitEnumContainsAny(*declOp.getFortranAttrs(),
-                                  fir::FortranVariableFlagsEnum::allocatable |
-                                      fir::FortranVariableFlagsEnum::pointer)) {
+    mod.walk([&](cuf::AllocateOp) {
+      needAllocatorRegistration = true;
+      return mlir::WalkResult::interrupt();
+    });
+    if (!needAllocatorRegistration) {
+      mod.walk([&](cuf::DeallocateOp) {
         needAllocatorRegistration = true;
         return mlir::WalkResult::interrupt();
-      }
-      return mlir::WalkResult::advance();
-    });
+      });
+    }
+    if (!needAllocatorRegistration) {
+      mod.walk([&](fir::DeclareOp declOp) {
+        if (declOp.getFortranAttrs() &&
+            fir::bitEnumContainsAny(
+                *declOp.getFortranAttrs(),
+                fir::FortranVariableFlagsEnum::allocatable |
+                    fir::FortranVariableFlagsEnum::pointer)) {
+          needAllocatorRegistration = true;
+          return mlir::WalkResult::interrupt();
+        }
+        return mlir::WalkResult::advance();
+      });
+    }
     if (!needAllocatorRegistration) {
       mod.walk([&](fir::GlobalOp globalOp) {
         if (globalOp.getDataAttrAttr()) {

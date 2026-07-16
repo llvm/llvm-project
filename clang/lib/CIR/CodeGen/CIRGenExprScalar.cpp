@@ -2906,8 +2906,6 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
 
   mlir::Value condV = cgf.emitOpOnBoolExpr(loc, condExpr);
   CIRGenFunction::ConditionalEvaluation eval(cgf);
-  SmallVector<mlir::OpBuilder::InsertPoint, 2> insertPoints{};
-  mlir::Type yieldTy{};
 
   auto emitBranch = [&](mlir::OpBuilder &b, mlir::Location loc, Expr *expr) {
     CIRGenFunction::LexicalScope lexScope{cgf, loc, b.getInsertionBlock()};
@@ -2925,49 +2923,35 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
       branchCleanups.forceCleanup({&branch});
     }
 
-    if (branch) {
-      yieldTy = branch.getType();
+    if (branch)
       cir::YieldOp::create(b, loc, branch);
-    } else {
-      // If LHS or RHS is a throw or void expression we need to patch
-      // arms as to properly match yield types.
-      insertPoints.push_back(b.saveInsertionPoint());
-    }
   };
 
-  mlir::Value result = cir::TernaryOp::create(
-                           builder, loc, condV,
-                           /*trueBuilder=*/
-                           [&](mlir::OpBuilder &b, mlir::Location loc) {
-                             emitBranch(b, loc, lhsExpr);
-                           },
-                           /*falseBuilder=*/
-                           [&](mlir::OpBuilder &b, mlir::Location loc) {
-                             emitBranch(b, loc, rhsExpr);
-                           })
-                           .getResult();
+  cir::TernaryOp ternary = cir::TernaryOp::create(
+      builder, loc, condV,
+      /*trueBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        emitBranch(b, loc, lhsExpr);
+      },
+      /*falseBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        emitBranch(b, loc, rhsExpr);
+      });
 
-  if (!insertPoints.empty()) {
-    // If both arms are void, so be it.
-    if (!yieldTy)
-      yieldTy = cgf.voidTy;
-
-    // Insert required yields.
-    for (mlir::OpBuilder::InsertPoint &toInsert : insertPoints) {
+  // Only a void arm can be left unterminated (a noreturn arm already ends
+  // in cir.unreachable); close it with an empty cir.yield.
+  for (mlir::Region *region :
+       {&ternary.getTrueRegion(), &ternary.getFalseRegion()}) {
+    mlir::Block &lastBlock = region->back();
+    if (lastBlock.empty() ||
+        !lastBlock.back().hasTrait<mlir::OpTrait::IsTerminator>()) {
       mlir::OpBuilder::InsertionGuard guard(builder);
-      builder.restoreInsertionPoint(toInsert);
-
-      // Block does not return: build empty yield.
-      if (mlir::isa<cir::VoidType>(yieldTy)) {
-        cir::YieldOp::create(builder, loc);
-      } else { // Block returns: set null yield value.
-        mlir::Value op0 = builder.getNullValue(yieldTy, loc);
-        cir::YieldOp::create(builder, loc, op0);
-      }
+      builder.setInsertionPointToEnd(&lastBlock);
+      cir::YieldOp::create(builder, loc);
     }
   }
 
-  return result;
+  return ternary.getResult();
 }
 
 mlir::Value CIRGenFunction::emitScalarPrePostIncDec(const UnaryOperator *e,

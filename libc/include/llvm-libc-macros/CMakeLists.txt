@@ -459,3 +459,9 @@ else()
       _LIBC_MODULAR_FORMAT_PRINTF.h
   )
 endif()
+
+add_macro_header(
+  alloca_macros
+  HDR
+    alloca-macros.h
+)
