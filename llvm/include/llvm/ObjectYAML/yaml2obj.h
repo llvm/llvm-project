@@ -76,7 +76,7 @@ LLVM_ABI bool yaml2goff(GOFFYAML::Object &Doc, raw_ostream &Out,
 LLVM_ABI bool yaml2elf(ELFYAML::Object &Doc, raw_ostream &Out, ErrorHandler EH,
                        uint64_t MaxSize);
 LLVM_ABI bool yaml2macho(YamlObjectFile &Doc, raw_ostream &Out,
-                         ErrorHandler EH);
+                         ErrorHandler EH, uint64_t MaxSize);
 LLVM_ABI bool yaml2minidump(MinidumpYAML::Object &Doc, raw_ostream &Out,
                             ErrorHandler EH);
 LLVM_ABI bool yaml2offload(OffloadYAML::Binary &Doc, raw_ostream &Out,

@@ -1,0 +1,25 @@
+## Check the default Mach-O output limit and --max-size. This also verifies
+## that a large ZeroPadBytes value is rejected without allocating that amount.
+# RUN: yaml2obj %s -DPAD=0x9FFFD8 -DCMDSIZE=0x9FFFE0 -o /dev/null
+# RUN: not yaml2obj %s -DPAD=0xA00001 -DCMDSIZE=0xA00009 -o /dev/null 2>&1 | FileCheck %s
+# RUN: yaml2obj %s -DPAD=0xA00001 -DCMDSIZE=0xA00009 --max-size=0 -o /dev/null
+# RUN: not yaml2obj %s -DPAD=0xA00001 -DCMDSIZE=0xA00009 --max-size=0x100 -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s
+
+# CHECK: error: the desired output size is greater than permitted. Use the --max-size option to change the limit
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x80000003
+  filetype:        0x00000002
+  ncmds:           1
+  sizeofcmds:      [[CMDSIZE]]
+  flags:           0x00000000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             0xDEADBEEF
+    cmdsize:         [[CMDSIZE]]
+    ZeroPadBytes:    [[PAD]]
+...

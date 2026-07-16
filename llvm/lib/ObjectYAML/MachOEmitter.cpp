@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ObjectYAML/DWARFEmitter.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
@@ -22,10 +23,82 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <array>
+#include <limits>
 
 using namespace llvm;
 
 namespace {
+
+class MachOOutputBuffer : public raw_ostream {
+  raw_ostream &Out;
+  SmallVector<char, 128> Buffer;
+  uint64_t Position = 0;
+  uint64_t MaxSize;
+  bool LimitExceeded = false;
+
+  void advance(uint64_t Size) {
+    Position = Size > std::numeric_limits<uint64_t>::max() - Position
+                   ? std::numeric_limits<uint64_t>::max()
+                   : Position + Size;
+  }
+
+  bool canWrite(uint64_t Size) {
+    if (LimitExceeded)
+      return false;
+    if (MaxSize && (Position > MaxSize || Size > MaxSize - Position)) {
+      LimitExceeded = true;
+      advance(Size);
+      return false;
+    }
+    return true;
+  }
+
+  void write_impl(const char *Ptr, size_t Size) override {
+    if (!canWrite(Size))
+      return;
+    if (MaxSize)
+      Buffer.append(Ptr, Ptr + Size);
+    else
+      Out.write(Ptr, Size);
+    advance(Size);
+  }
+
+  uint64_t current_pos() const override { return Position; }
+
+public:
+  MachOOutputBuffer(raw_ostream &Out, uint64_t MaxSize)
+      : Out(Out), MaxSize(MaxSize) {
+    SetUnbuffered();
+  }
+
+  void writeZeros(uint64_t Size) {
+    if (!canWrite(Size))
+      return;
+    raw_ostream::write_zeros(Size);
+  }
+
+  void writePattern(uint64_t Size, uint32_t Data) {
+    if (!canWrite(Size))
+      return;
+    std::array<uint32_t, 1024> FillData;
+    FillData.fill(Data);
+    const char *Bytes = reinterpret_cast<const char *>(FillData.data());
+    while (Size) {
+      size_t Chunk = std::min<uint64_t>(Size, sizeof(FillData));
+      write(Bytes, Chunk);
+      Size -= Chunk;
+    }
+  }
+
+  bool exceededLimit() const { return LimitExceeded; }
+
+  void writeToOutput() {
+    if (MaxSize && !Buffer.empty())
+      Out.write(Buffer.data(), Buffer.size());
+  }
+};
 
 static const char *getLoadCommandName(uint32_t cmd) {
   switch (cmd) {
@@ -239,13 +312,11 @@ size_t writeLoadCommandData<MachO::build_version_command>(
 }
 
 void ZeroFillBytes(raw_ostream &OS, size_t Size) {
-  std::vector<uint8_t> FillData(Size, 0);
-  OS.write(reinterpret_cast<char *>(FillData.data()), Size);
+  static_cast<MachOOutputBuffer &>(OS).writeZeros(Size);
 }
 
 void Fill(raw_ostream &OS, size_t Size, uint32_t Data) {
-  std::vector<uint32_t> FillData((Size / 4) + 1, Data);
-  OS.write(reinterpret_cast<char *>(FillData.data()), Size);
+  static_cast<MachOOutputBuffer &>(OS).writePattern(Size, Data);
 }
 
 void MachOWriter::ZeroToOffset(raw_ostream &OS, size_t Offset) {
@@ -775,13 +846,21 @@ void UniversalWriter::ZeroToOffset(raw_ostream &OS, size_t Offset) {
 namespace llvm {
 namespace yaml {
 
-bool yaml2macho(YamlObjectFile &Doc, raw_ostream &Out, ErrorHandler EH) {
+bool yaml2macho(YamlObjectFile &Doc, raw_ostream &Out, ErrorHandler EH,
+                uint64_t MaxSize) {
+  MachOOutputBuffer Buffer(Out, MaxSize);
   UniversalWriter Writer(Doc);
-  if (Error Err = Writer.writeMachO(Out)) {
+  if (Error Err = Writer.writeMachO(Buffer)) {
     handleAllErrors(std::move(Err),
                     [&](const ErrorInfoBase &Err) { EH(Err.message()); });
     return false;
   }
+  if (Buffer.exceededLimit()) {
+    EH("the desired output size is greater than permitted. Use the "
+       "--max-size option to change the limit");
+    return false;
+  }
+  Buffer.writeToOutput();
   return true;
 }
 
