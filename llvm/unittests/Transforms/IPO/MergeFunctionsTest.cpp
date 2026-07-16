@@ -29,8 +29,8 @@ namespace {
 class MergeFunctionsTest : public testing::Test {
 protected:
   LLVMContext Ctx;
-  ModuleAnalysisManager MAM;
   FunctionAnalysisManager FAM;
+  ModuleAnalysisManager MAM;
 
   MergeFunctionsTest() {
     FAM.registerPass([&] { return TargetLibraryAnalysis(); });
