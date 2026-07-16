@@ -830,7 +830,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       // set.
       Status kernel_search_error;
       if (IsKernel() &&
-          (!m_module_sp || !m_module_sp->GetSymbolFile(/*can_create=*/false))) {
+          (!m_module_sp || !m_module_sp->GetSymbolFile(/*can_create=*/true))) {
         if (PluginManager::DownloadObjectAndSymbolFile(
                 module_spec, kernel_search_error, true)) {
           if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
