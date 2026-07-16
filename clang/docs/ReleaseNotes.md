@@ -66,6 +66,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 #### C++2c Feature Support
 
+- Clang now supports [P3533R2](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3533r2.html) (constexpr virtual inheritance).
+
 #### C++23 Feature Support
 
 #### C++20 Feature Support
@@ -144,6 +146,10 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 #### Bug Fixes to C++ Support
 
 #### Bug Fixes to AST Handling
+
+- Fixed a non-deterministic ordering of unused local typedefs that made
+  serialized PCH/AST files and `-Wunused-local-typedef` diagnostics
+  non-reproducible across runs. (#GH209639)
 
 #### Miscellaneous Bug Fixes
 

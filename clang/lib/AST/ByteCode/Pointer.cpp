@@ -949,7 +949,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
         unsigned NB = Record->getNumBases();
         unsigned NV = Ptr.isBaseClass() ? 0 : Record->getNumVirtualBases();
 
-        R = APValue(APValue::UninitStruct(), NB, NF);
+        R = APValue(APValue::UninitStruct(), NB, NF, NV);
 
         for (unsigned I = 0; I != NF; ++I) {
           const Record::Field *FD = Record->getField(I);
@@ -978,7 +978,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
           QualType VirtBaseTy =
               Ctx.getASTContext().getCanonicalTagType(VD->Decl);
           PtrView VP = Ptr.atField(VD->Offset);
-          Ok &= Composite(VirtBaseTy, VP, R.getStructBase(NB + I));
+          Ok &= Composite(VirtBaseTy, VP, R.getStructVirtualBase(I));
         }
       }
       return Ok;

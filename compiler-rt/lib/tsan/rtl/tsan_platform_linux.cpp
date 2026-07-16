@@ -329,20 +329,20 @@ void InitializePlatformEarly() {
     (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1);
 #if defined(__aarch64__)
 # if !SANITIZER_GO
-  if (vmaSize != 39 && vmaSize != 42 && vmaSize != 48) {
+  if (vmaSize != 39 && vmaSize != 42 && vmaSize != 47 && vmaSize != 48) {
     Printf("FATAL: ThreadSanitizer: unsupported VMA range\n");
-    Printf("FATAL: Found %zd - Supported 39, 42 and 48\n", vmaSize);
+    Printf("FATAL: Found %zd - Supported 39, 42, 47 and 48\n", vmaSize);
     Die();
   }
-#else
+#    else
   if (vmaSize != 48) {
     Printf("FATAL: ThreadSanitizer: unsupported VMA range\n");
     Printf("FATAL: Found %zd - Supported 48\n", vmaSize);
     Die();
   }
-#endif
-#elif SANITIZER_LOONGARCH64
-# if !SANITIZER_GO
+#    endif
+#  elif SANITIZER_LOONGARCH64
+#    if !SANITIZER_GO
   if (vmaSize != 47) {
     Printf("FATAL: ThreadSanitizer: unsupported VMA range\n");
     Printf("FATAL: Found %zd - Supported 47\n", vmaSize);
@@ -355,34 +355,34 @@ void InitializePlatformEarly() {
     Die();
   }
 #    endif
-#elif defined(__powerpc64__)
-# if !SANITIZER_GO
+#  elif defined(__powerpc64__)
+#    if !SANITIZER_GO
   if (vmaSize != 44 && vmaSize != 46 && vmaSize != 47) {
     Printf("FATAL: ThreadSanitizer: unsupported VMA range\n");
     Printf("FATAL: Found %zd - Supported 44, 46, and 47\n", vmaSize);
     Die();
   }
-# else
+#    else
   if (vmaSize != 46 && vmaSize != 47) {
     Printf("FATAL: ThreadSanitizer: unsupported VMA range\n");
     Printf("FATAL: Found %zd - Supported 46, and 47\n", vmaSize);
     Die();
   }
-# endif
-#elif defined(__mips64)
-# if !SANITIZER_GO
+#    endif
+#  elif defined(__mips64)
+#    if !SANITIZER_GO
   if (vmaSize != 40) {
     Printf("FATAL: ThreadSanitizer: unsupported VMA range\n");
     Printf("FATAL: Found %zd - Supported 40\n", vmaSize);
     Die();
   }
-# else
+#    else
   if (vmaSize != 47) {
     Printf("FATAL: ThreadSanitizer: unsupported VMA range\n");
     Printf("FATAL: Found %zd - Supported 47\n", vmaSize);
     Die();
   }
-# endif
+#    endif
 #  elif SANITIZER_RISCV64
   // the bottom half of vma is allocated for userspace
   vmaSize = vmaSize + 1;
