@@ -1110,14 +1110,10 @@ optimizeLatchExitInductionUser(VPlan &Plan, VPValue *Op,
                                DenseMap<VPValue *, VPValue *> &EndValues,
                                PredicatedScalarEvolution &PSE) {
   VPValue *Incoming;
-  if (!match(Op,
-             m_CombineOr(m_ExtractLastLaneOfLastPart(m_VPValue(Incoming))))) {
-    VPValue *Mask;
-    if (!match(Op, m_ExtractLane(m_LastActiveLane(m_VPValue(Mask)),
-                                 m_VPValue(Incoming))) ||
-        !match(Mask, m_HeaderMask()))
-      return nullptr;
-  }
+  if (!match(Op, m_CombineOr(m_ExtractLastLaneOfLastPart(m_VPValue(Incoming)),
+                             m_ExtractLane(m_LastActiveLane(m_HeaderMask()),
+                                           m_VPValue(Incoming)))))
+    return nullptr;
 
   VPWidenInductionRecipe *WideIV = getOptimizableIVOf(Incoming, PSE);
   if (!WideIV)
