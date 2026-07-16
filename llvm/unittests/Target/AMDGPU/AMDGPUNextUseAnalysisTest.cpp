@@ -70,6 +70,8 @@ body:             |
                               .addImm(2)
                               .getInstr();
 
+  NUA.updateInstrIds(NewMul1);
+
   // Add the destination register of the first multiplication as an input
   // operand of the fist ADD.
   Add1.getOperand(1).setReg(NewReg1);
@@ -83,6 +85,8 @@ body:             |
                               .addImm(3)
                               .addImm(4)
                               .getInstr();
+
+  NUA.updateInstrIds(NewMul2);
 
   // Add the destination register of the second multiplication as an input
   // operand of the second ADD.
@@ -100,10 +104,15 @@ body:             |
                               .addImm(6)
                               .getInstr();
 
-  BuildMI(MBB, MBB.back().getIterator(), DebugLoc(), TII.get(AMDGPU::S_NOP))
-      .addImm(0)
-      .addReg(Add1DefReg, RegState::Implicit)
-      .addReg(Add2DefReg, RegState::Implicit);
+  NUA.updateInstrIds(NewMul3);
+
+  MachineInstr *Nop2 =
+      BuildMI(MBB, MBB.back().getIterator(), DebugLoc(), TII.get(AMDGPU::S_NOP))
+          .addImm(0)
+          .addReg(Add1DefReg, RegState::Implicit)
+          .addReg(Add2DefReg, RegState::Implicit)
+          .getInstr();
+  NUA.updateInstrIds(Nop2);
 
   // Add the destination register of the third multiplication as an input
   // operand of the first NOP.
@@ -158,7 +167,7 @@ body:             |
 
   NextUseDistance DistNewMul1 =
       NUA.getShortestDistance(NewReg1, *NewMul1, Mul1Uses);
-  EXPECT_EQ(DistNewMul1.getRawValue(), 0);
+  EXPECT_EQ(DistNewMul1.getRawValue(), 2);
 
   NextUseDistance DistNewMul2 =
       NUA.getShortestDistance(NewReg2, *NewMul2, Mul2Uses);
@@ -186,11 +195,14 @@ body:             |
                               .addImm(8)
                               .getInstr();
 
-  [[maybe_unused]] MachineInstr *Nop3 =
+  NUA.updateInstrIds(NewMul4);
+
+  MachineInstr *Nop3 =
       BuildMI(MBB, MBB.back().getIterator(), DebugLoc(), TII.get(AMDGPU::S_NOP))
           .addImm(0)
           .addReg(NewReg4, RegState::Implicit)
           .getInstr();
+  NUA.updateInstrIds(Nop3);
 
   // Instructions after emitting more instructions.
   // %0:vgpr_32 = COPY $vgpr0
@@ -215,11 +227,11 @@ body:             |
 
   NextUseDistance DistAdd1b =
       NUA.getShortestDistance(Add1DefReg, Add1, Add1Uses);
-  EXPECT_EQ(DistAdd1b.getRawValue(), 4);
+  EXPECT_EQ(DistAdd1b.getRawValue(), 5);
 
   NextUseDistance DistAdd2b =
       NUA.getShortestDistance(Add2DefReg, Add2, Add2Uses);
-  EXPECT_EQ(DistAdd2b.getRawValue(), 2);
+  EXPECT_EQ(DistAdd2b.getRawValue(), 3);
 
   NextUseDistance DistNewMul4 =
       NUA.getShortestDistance(NewReg4, *NewMul4, Mul4Uses);
