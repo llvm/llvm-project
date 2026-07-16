@@ -1887,7 +1887,7 @@ amd_comgr_status_t AMDGPUCompiler::unpackage() {
         // compatible with it. areTargetsCompatible() reports false for an exact
         // match, so the equality check handles the common case.
         if (EntryTarget == FileTarget ||
-            llvm::object::areTargetsCompatible(EntryTarget, FileTarget)) {
+            llvm::object::areTargetsCompatible(FileTarget, EntryTarget)) {
           const char *FileExtension;
           amd_comgr_data_kind_t DataKind;
           if (auto Status = getUnpackagedImageInfo(Binary->getImage(),

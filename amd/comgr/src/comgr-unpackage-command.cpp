@@ -43,7 +43,7 @@ amd_comgr_status_t UnpackageCommand::execute(raw_ostream &LogS) {
     auto Match = Worklist.find(Target);
     if (Match == Worklist.end())
       Match = find_if(Worklist, [Target](const auto &KV) {
-        return object::areTargetsCompatible(KV.first, Target);
+        return object::areTargetsCompatible(Target, KV.first);
       });
 
     if (Match == Worklist.end())
