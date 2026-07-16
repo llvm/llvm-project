@@ -130,9 +130,13 @@ public:
   using const_child_iterator_base =
       typename std::vector<std::unique_ptr<GenericCycle>>::const_iterator;
   struct const_child_iterator
-      : iterator_adaptor_base<const_child_iterator, const_child_iterator_base> {
+      : iterator_adaptor_base<const_child_iterator, const_child_iterator_base,
+                              std::random_access_iterator_tag, GenericCycle *,
+                              std::ptrdiff_t, GenericCycle *, GenericCycle *> {
     using Base =
-        iterator_adaptor_base<const_child_iterator, const_child_iterator_base>;
+        iterator_adaptor_base<const_child_iterator, const_child_iterator_base,
+                              std::random_access_iterator_tag, GenericCycle *,
+                              std::ptrdiff_t, GenericCycle *, GenericCycle *>;
 
     const_child_iterator() = default;
     explicit const_child_iterator(const_child_iterator_base I) : Base(I) {}

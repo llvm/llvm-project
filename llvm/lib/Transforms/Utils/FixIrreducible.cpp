@@ -435,8 +435,7 @@ static bool FixIrreducibleImpl(Function &F, CycleInfo &CI, DominatorTree &DT,
     while (!Worklist.empty()) {
       Cycle *C = Worklist.pop_back_val();
       Changed |= fixIrreducible(*C, CI, DT, LI);
-      SmallVector<Cycle *, 4> Children(C->child_begin(), C->child_end());
-      Worklist.append(Children.rbegin(), Children.rend());
+      llvm::append_range(Worklist, reverse(C->children()));
     }
   }
 
