@@ -1,0 +1,64 @@
+name: 'LLVM Libc Code Coverage Pipeline'
+
+on:
+  push:
+    branches:
+      - main
+      - test-libc-coverage-bot
+    paths:
+      - 'libc/**'
+      - '.github/workflows/libc-coverage.yml'
+  pull_request:
+    branches:
+      - main
+      - test-libc-coverage-bot
+    paths:
+      - 'libc/**'
+      - '.github/workflows/libc-coverage.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUILD_DIR: 'build-cov'
+  LLVM_VERSION: '19'
+  CLANG_CC: 'clang-19'
+  CLANG_CXX: 'clang++-19'
+
+jobs:
+  run-coverage:
+    name: 'Generate and Display Code Coverage'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 'Checkout Repository'
+        uses: actions/checkout@v4
+
+      - name: 'Install System Dependencies'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang-${{ env.LLVM_VERSION }} \
+            llvm-${{ env.LLVM_VERSION }} \
+            lld-${{ env.LLVM_VERSION }} \
+            ninja-build
+
+      - name: 'Configure CMake Build System'
+        run: |
+          cmake -S llvm -B ${{ env.BUILD_DIR }} -G Ninja \
+            -DLLVM_ENABLE_PROJECTS="libc" \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DLLVM_USE_LINKER=lld \
+            -DCMAKE_C_COMPILER=${{ env.CLANG_CC }} \
+            -DCMAKE_CXX_COMPILER=${{ env.CLANG_CXX }} \
+            -DLLVM_LIBC_ENABLE_LINTING=OFF \
+            -DLLVM_LIBC_ENABLE_COVERAGE=ON
+
+      - name: 'Execute Instrumented Test Suite'
+        run: |
+          ninja -C ${{ env.BUILD_DIR }} check-libc || true
+
+      - name: 'Aggregate Profiles and Display Coverage Report'
+        run: |
+          ninja -C ${{ env.BUILD_DIR }} libc-coverage

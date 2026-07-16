@@ -1,0 +1,849 @@
+diff --git a/.ci/check_line_coverage.py b/.ci/check_line_coverage.py
+deleted file mode 100644
+index f59024074..000000000
+--- a/.ci/check_line_coverage.py
++++ /dev/null
+@@ -1,207 +0,0 @@
+-#!/usr/bin/env python3
+-import os
+-import json
+-import sys
+-
+-def main():
+-    # 1. Check if we are running in a GitHub Actions environment
+-    event_path = os.environ.get('GITHUB_EVENT_PATH')
+-    event_name = os.environ.get('GITHUB_EVENT_NAME', 'push')
+-    
+-    if not event_path or not os.path.exists(event_path):
+-        print("Error: GITHUB_EVENT_PATH not set or file does not exist.")
+-        sys.exit(1)
+-
+-    print(f"[*] Detected GitHub Event: {event_name}")
+-
+-    with open(event_path, 'r') as f:
+-        event_payload = json.load(f)
+-
+-    # 2. Determine Diff Boundaries and API Endpoints
+-    base_sha = None
+-    head_sha = None
+-    api_endpoint = None
+-
+-    repo_name = event_payload.get('repository', {}).get('full_name', 'unknown/repo')
+-
+-    if event_name == 'push':
+-        base_sha = event_payload.get('before')
+-        head_sha = event_payload.get('after')
+-        
+-        # Handle new branch creation where base_sha is 000000...
+-        if base_sha == '0000000000000000000000000000000000000000':
+-            base_sha = f"{head_sha}^1"
+-            
+-        api_endpoint = f"/repos/{repo_name}/commits/{head_sha}/comments"
+-        print(f"[*] Post-Commit Context Detected.")
+-        print(f"[*] Diff Boundaries: {base_sha} ... {head_sha}")
+-        print(f"[*] Target API Endpoint: {api_endpoint}")
+-
+-    elif event_name == 'pull_request':
+-        pr_number = event_payload.get('number')
+-        base_sha = event_payload.get('pull_request', {}).get('base', {}).get('sha')
+-        head_sha = event_payload.get('pull_request', {}).get('head', {}).get('sha')
+-        api_endpoint = f"/repos/{repo_name}/issues/{pr_number}/comments"
+-        print(f"[*] Pre-Commit (PR) Context Detected.")
+-        print(f"[*] Diff Boundaries: {base_sha} ... {head_sha}")
+-        print(f"[*] Target API Endpoint: {api_endpoint}")
+-
+-    else:
+-        print(f"Unsupported event type: {event_name}")
+-        sys.exit(1)
+-
+-    if not base_sha or not head_sha:
+-        print("Error: Could not resolve base and head SHAs from the event payload.")
+-        sys.exit(1)
+-
+-    import subprocess
+-    import argparse
+-
+-    parser = argparse.ArgumentParser()
+-    parser.add_argument('--coverage-json', required=True)
+-    args = parser.parse_args()
+-
+-    # 3. Formulate the Git Command
+-    import re
+-    git_diff_cmd = ['git', 'diff', f'{base_sha}...{head_sha}', '--unified=0']
+-    
+-    modified_lines = {}
+-    try:
+-        diff_output = subprocess.check_output(git_diff_cmd, text=True)
+-        current_file = None
+-        for line in diff_output.splitlines():
+-            if line.startswith('+++ b/'):
+-                current_file = line[6:]
+-                modified_lines[current_file] = set()
+-            elif line.startswith('@@') and current_file:
+-                m = re.search(r'\+([0-9]+)(?:,([0-9]+))?', line)
+-                if m:
+-                    start = int(m.group(1))
+-                    length = int(m.group(2)) if m.group(2) else 1
+-                    for i in range(start, start + length):
+-                        modified_lines[current_file].add(i)
+-    except subprocess.CalledProcessError as e:
+-        print(f"Error running git diff: {e}")
+-        sys.exit(1)
+-
+-    print(f"[*] Modified files in this commit: {list(modified_lines.keys())}")
+-
+-    # 4. Parse Coverage JSON
+-    print(f"[*] Loading coverage data from {args.coverage_json}...")
+-    try:
+-        with open(args.coverage_json, 'r') as f:
+-            cov_data = json.load(f)
+-    except Exception as e:
+-        print(f"Error loading coverage JSON: {e}")
+-        sys.exit(1)
+-
+-    # 5. Evaluate Functions
+-    print("\n" + "="*50)
+-    print("[POST-COMMIT BOT] COVERAGE EVALUATION")
+-    print("="*50)
+-    
+-    issues_dict = {}
+-    functions = cov_data.get('data', [{}])[0].get('functions', [])
+-
+-    for func in functions:
+-        func_filenames = func.get('filenames', [])
+-        if not func_filenames:
+-            continue
+-            
+-        is_modified = False
+-        modified_file_match = None
+-        absolute_file_path = None
+-        
+-        for file_path in func_filenames:
+-            for mf in modified_lines.keys():
+-                if file_path.endswith(mf):
+-                    is_modified = True
+-                    modified_file_match = mf
+-                    absolute_file_path = file_path
+-                    break
+-            if is_modified:
+-                break
+-        
+-        if is_modified:
+-            regions = func.get('regions', [])
+-            if not regions:
+-                continue
+-                
+-            func_start = regions[0][0]
+-            func_end = regions[-1][2]
+-            
+-            # Scope Bleed Fix: Bounding box intersection check
+-            intersect = any(line >= func_start and line <= func_end for line in modified_lines[modified_file_match])
+-            if not intersect:
+-                continue
+-
+-            func_name = func.get('name', 'Unknown')
+-            branches = func.get('branches', [])
+-            mcdc_records = func.get('mcdc_records', [])
+-            
+-            uncovered_regions = [r for r in regions if r[4] == 0 and r[7] == 0]
+-            uncovered_branches = [b for b in branches if b[4] == 0 or b[5] == 0]
+-            
+-            if uncovered_regions or uncovered_branches or mcdc_records:
+-                # Template Deduplication Fix
+-                issue_key = (modified_file_match, func_start, func_end)
+-                if issue_key not in issues_dict:
+-                    issues_dict[issue_key] = {
+-                        'file': absolute_file_path,
+-                        'func_names': set([func_name]),
+-                        'uncovered_blocks': len(uncovered_regions),
+-                        'uncovered_branches': len(uncovered_branches)
+-                    }
+-                else:
+-                    issues_dict[issue_key]['func_names'].add(func_name)
+-
+-    # API Limit Fix: Output generation and truncation
+-    output_lines = []
+-    for (mf, start, end), data in issues_dict.items():
+-        output_lines.append(f"\n[WARNING] Coverage Issue Detected in Modified File:")
+-        output_lines.append(f"   File:     {data['file']}")
+-        output_lines.append(f"   Function(s):")
+-        for fn in sorted(data['func_names']):
+-            output_lines.append(f"      - {fn}")
+-        output_lines.append(f"   Details:  {data['uncovered_blocks']} uncovered blocks, {data['uncovered_branches']} uncovered branches.")
+-
+-    final_output = "\n".join(output_lines)
+-    if len(final_output) > 60000:
+-        final_output = final_output[:60000] + "\n\n[WARNING: Output truncated due to GitHub API limits]"
+-        
+-    if not issues_dict:
+-        print("\n[SUCCESS] All modified functions have 100% coverage. No action needed.")
+-        sys.exit(0)
+-    else:
+-        print(final_output)
+-        print(f"\n[*] Coverage evaluation complete. Detected {len(issues_dict)} function blocks with regressions.")
+-        
+-        # Post the comment directly using GitHub API
+-        import urllib.request
+-        github_token = os.environ.get('GITHUB_TOKEN')
+-        if github_token and api_endpoint:
+-            print("[*] Posting review comment to GitHub...")
+-            url = f"https://api.github.com{api_endpoint}"
+-            headers = {
+-                "Authorization": f"Bearer {github_token}",
+-                "Accept": "application/vnd.github.v3+json",
+-                "Content-Type": "application/json"
+-            }
+-            # Wrap final_output in standard markdown formatting
+-            markdown_body = f"### ⚠️ Code Coverage Regression Detected\n\n```text\n{final_output}\n```"
+-            data = json.dumps({"body": markdown_body}).encode('utf-8')
+-            
+-            try:
+-                req = urllib.request.Request(url, data=data, headers=headers, method='POST')
+-                with urllib.request.urlopen(req) as response:
+-                    print(f"[*] Successfully posted comment. HTTP Status: {response.status}")
+-            except Exception as e:
+-                print(f"[ERROR] Failed to post comment to GitHub API: {e}")
+-        else:
+-            print("[*] GITHUB_TOKEN not found or api_endpoint missing. Skipping API POST.")
+-
+-        print(f"\n[FAIL] Failing CI pipeline due to {len(issues_dict)} coverage regressions.")
+-        sys.exit(1)
+-
+-if __name__ == '__main__':
+-    main()
+diff --git a/.ci/coverage_post_process.sh b/.ci/coverage_post_process.sh
+deleted file mode 100755
+index 748148e7e..000000000
+--- a/.ci/coverage_post_process.sh
++++ /dev/null
+@@ -1,63 +0,0 @@
+-#!/usr/bin/env bash
+-#===-- coverage_post_process.sh -------------------------------------------===#
+-#
+-# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+-# See https://llvm.org/LICENSE.txt for license information.
+-# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+-#
+-#===----------------------------------------------------------------------===#
+-
+-set -euo pipefail
+-
+-# Find profile data tools
+-BUILD_DIR="${BUILD_DIR:-build}"
+-PROFDATA=$(command -v ./${BUILD_DIR}/bin/llvm-profdata || command -v llvm-profdata-19 || command -v llvm-profdata)
+-COV=$(command -v ./${BUILD_DIR}/bin/llvm-cov || command -v llvm-cov-19 || command -v llvm-cov)
+-
+-COVERAGE_BINARY_PATH="${COVERAGE_BINARY_PATH:-${BUILD_DIR}/projects/libc/libllvm-libc.a}"
+-
+-mkdir -p ${BUILD_DIR}/coverage-results
+-shopt -s globstar nullglob
+-profraw_files=(${BUILD_DIR}/**/*.profraw)
+-
+-if [ ${#profraw_files[@]} -eq 0 ]; then
+-  echo "WARNING: No .profraw files generated across build subdirectories! Skipping profile merge."
+-  exit 0
+-fi
+-
+-# Merge the raw profiles
+-$PROFDATA merge -sparse "${profraw_files[@]}" -o ${BUILD_DIR}/coverage-results/merged.profdata
+-
+-# Clean up raw profiles to conserve disk space
+-rm -f "${profraw_files[@]}"
+-
+-if [ ! -f ${BUILD_DIR}/coverage-results/merged.profdata ]; then
+-  exit 0
+-fi
+-
+-test_binaries=($(find ${BUILD_DIR}/libc/test -type f -executable -name "*.__build__" 2>/dev/null || true))
+-
+-if [ ${#test_binaries[@]} -eq 0 ]; then
+-  test_binaries=(${COVERAGE_BINARY_PATH})
+-fi
+-
+-primary_binary=${test_binaries[0]}
+-object_args=""
+-for ((i=1; i<${#test_binaries[@]}; i++)); do
+-  object_args+=" -object=${test_binaries[$i]}"
+-done
+-
+-# Write textual summary to GitHub Actions UI
+-if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+-  echo "### Coverage & MC/DC Summary" >> $GITHUB_STEP_SUMMARY
+-  echo '```text' >> $GITHUB_STEP_SUMMARY
+-  $COV report ${primary_binary} ${object_args} \
+-    -instr-profile=${BUILD_DIR}/coverage-results/merged.profdata \
+-    --show-mcdc >> $GITHUB_STEP_SUMMARY
+-  echo '```' >> $GITHUB_STEP_SUMMARY
+-fi
+-
+-# Export JSON for the line coverage verification script
+-$COV export ${primary_binary} ${object_args} \
+-  -instr-profile=${BUILD_DIR}/coverage-results/merged.profdata \
+-  > ${BUILD_DIR}/coverage-results/coverage.json
+diff --git a/.ci/run_coverage_pipeline.sh b/.ci/run_coverage_pipeline.sh
+deleted file mode 100755
+index b667a895b..000000000
+--- a/.ci/run_coverage_pipeline.sh
++++ /dev/null
+@@ -1,54 +0,0 @@
+-#!/usr/bin/env bash
+-#===-- run_coverage_pipeline.sh -------------------------------------------===#
+-#
+-# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+-# See https://llvm.org/LICENSE.txt for license information.
+-# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+-#
+-#===----------------------------------------------------------------------===#
+-
+-set -uo pipefail
+-
+-BUILD_DIR="${BUILD_DIR:-build-cov}"
+-echo "================================================================="
+-echo "Step 1: Executing Test Suite"
+-echo "================================================================="
+-
+-# Temporarily disable 'Exit on Error' so we can capture test failures
+-# but still continue to run the coverage extraction.
+-set +e
+-ninja -C "${BUILD_DIR}" check-libc
+-TEST_EXIT_CODE=$?
+-set -e
+-
+-echo ""
+-echo "================================================================="
+-echo "Step 2: Aggregating Profile Data"
+-echo "================================================================="
+-BUILD_DIR="${BUILD_DIR}" bash .ci/coverage_post_process.sh
+-
+-echo ""
+-echo "================================================================="
+-echo "Step 3: Verifying Deterministic Line Coverage"
+-echo "================================================================="
+-GITHUB_EVENT_PATH="${GITHUB_EVENT_PATH:-push_event.json}" \
+-GITHUB_EVENT_NAME="${GITHUB_EVENT_NAME:-push}" \
+-python3 .ci/check_line_coverage.py --coverage-json "${BUILD_DIR}/coverage-results/coverage.json"
+-REVIEW_EXIT_CODE=$?
+-
+-echo ""
+-echo "================================================================="
+-echo "Pipeline Final Status"
+-echo "================================================================="
+-if [ $TEST_EXIT_CODE -ne 0 ]; then
+-  echo "FATAL: Pipeline failed. C++ Unit Tests exited with code ${TEST_EXIT_CODE}."
+-  exit $TEST_EXIT_CODE
+-fi
+-
+-if [ $REVIEW_EXIT_CODE -ne 0 ]; then
+-  echo "FATAL: Pipeline failed. Coverage regressions were detected."
+-  exit $REVIEW_EXIT_CODE
+-fi
+-
+-echo "SUCCESS: All tests passed and no coverage regressions found."
+-exit 0
+diff --git a/.ci/show_coverage_report.sh b/.ci/show_coverage_report.sh
+deleted file mode 100755
+index 79fbbe10b..000000000
+--- a/.ci/show_coverage_report.sh
++++ /dev/null
+@@ -1,62 +0,0 @@
+-#!/usr/bin/env bash
+-#===-- show_coverage_report.sh --------------------------------------------===#
+-#
+-# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+-# See https://llvm.org/LICENSE.txt for license information.
+-# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+-#
+-#===----------------------------------------------------------------------===#
+-
+-set -euo pipefail
+-
+-BUILD_DIR="${BUILD_DIR:-build-cov}"
+-COV=$(command -v ./${BUILD_DIR}/bin/llvm-cov || command -v llvm-cov-19 || command -v llvm-cov)
+-
+-if [ ! -f "${BUILD_DIR}/coverage-results/merged.profdata" ]; then
+-  echo "Error: Profile data not found at ${BUILD_DIR}/coverage-results/merged.profdata"
+-  echo "Please run the coverage pipeline first."
+-  exit 1
+-fi
+-
+-test_binaries=($(find "${BUILD_DIR}/libc/test" -type f -executable -name "*.__build__" 2>/dev/null || true))
+-if [ ${#test_binaries[@]} -eq 0 ]; then
+-  echo "Error: No test binaries found in ${BUILD_DIR}/libc/test"
+-  exit 1
+-fi
+-
+-primary_binary=${test_binaries[0]}
+-object_args=""
+-for ((i=1; i<${#test_binaries[@]}; i++)); do
+-  object_args+=" -object=${test_binaries[$i]}"
+-done
+-
+-# We support multiple modular view formats
+-FORMAT="${1:-text}"
+-
+-if [ "$FORMAT" == "html" ]; then
+-  echo "[*] Generating HTML report across ${#test_binaries[@]} test binaries..."
+-  mkdir -p "${BUILD_DIR}/coverage-html"
+-  $COV show ${primary_binary} ${object_args} \
+-    -instr-profile="${BUILD_DIR}/coverage-results/merged.profdata" \
+-    -format=html \
+-    -output-dir="${BUILD_DIR}/coverage-html"
+-  echo "[*] HTML report generated at: ${BUILD_DIR}/coverage-html/index.html"
+-
+-elif [ "$FORMAT" == "summary" ]; then
+-  echo "[*] Compiling Summary report..."
+-  # By ignoring all filenames, we force the table to only print the headers and the TOTAL row
+-  $COV report ${primary_binary} ${object_args} \
+-    -instr-profile="${BUILD_DIR}/coverage-results/merged.profdata" \
+-    --ignore-filename-regex=".*"
+-
+-elif [ "$FORMAT" == "less" ]; then
+-  echo "[*] Opening full table in interactive pager. Use arrow keys to scroll, press 'q' to quit."
+-  $COV report ${primary_binary} ${object_args} \
+-    -instr-profile="${BUILD_DIR}/coverage-results/merged.profdata" | less -S
+-
+-else
+-  # Textual Terminal Output
+-  echo "[*] Dumping full raw table to stdout..."
+-  $COV report ${primary_binary} ${object_args} \
+-    -instr-profile="${BUILD_DIR}/coverage-results/merged.profdata"
+-fi
+diff --git a/.github/workflows/libc-coverage.yml b/.github/workflows/libc-coverage.yml
+index dbd42ea4d..2ba9e953a 100644
+--- a/.github/workflows/libc-coverage.yml
++++ b/.github/workflows/libc-coverage.yml
+@@ -5,10 +5,20 @@ on:
+     branches:
+       - main
+       - test-libc-coverage-bot
++    paths:
++      - 'libc/**'
++      - '.github/workflows/libc-coverage.yml'
+   pull_request:
+     branches:
+       - main
+       - test-libc-coverage-bot
++    paths:
++      - 'libc/**'
++      - '.github/workflows/libc-coverage.yml'
++
++concurrency:
++  group: ${{ github.workflow }}-${{ github.ref }}
++  cancel-in-progress: true
+ 
+ env:
+   BUILD_DIR: 'build-cov'
+@@ -31,13 +41,15 @@ jobs:
+           sudo apt-get install -y \
+             clang-${{ env.LLVM_VERSION }} \
+             llvm-${{ env.LLVM_VERSION }} \
++            lld-${{ env.LLVM_VERSION }} \
+             ninja-build
+ 
+       - name: 'Configure CMake Build System'
+         run: |
+           cmake -S llvm -B ${{ env.BUILD_DIR }} -G Ninja \
+             -DLLVM_ENABLE_PROJECTS="libc" \
+-            -DCMAKE_BUILD_TYPE=Debug \
++            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
++            -DLLVM_USE_LINKER=lld \
+             -DCMAKE_C_COMPILER=${{ env.CLANG_CC }} \
+             -DCMAKE_CXX_COMPILER=${{ env.CLANG_CXX }} \
+             -DLLVM_LIBC_ENABLE_LINTING=OFF \
+diff --git a/libc/cmake/modules/LLVMLibCTestRules.cmake b/libc/cmake/modules/LLVMLibCTestRules.cmake
+index 53481a4b3..2153bdedd 100644
+--- a/libc/cmake/modules/LLVMLibCTestRules.cmake
++++ b/libc/cmake/modules/LLVMLibCTestRules.cmake
+@@ -364,13 +364,7 @@ function(create_libc_unittest fq_target_name)
+   target_link_libraries(${fq_build_target_name} PRIVATE ${link_libraries})
+ 
+   if(NOT LIBC_UNITTEST_NO_RUN_POSTBUILD)
+-    if(LLVM_LIBC_ENABLE_COVERAGE)
+-      set(test_cmd ${Python3_EXECUTABLE} ${LIBC_SOURCE_DIR}/utils/extract_coverage.py
+-                   --out ${CMAKE_CURRENT_BINARY_DIR}/${fq_target_name}.profraw
+-                   ${LIBC_UNITTEST_ENV} ${CMAKE_CROSSCOMPILING_EMULATOR} ${CMAKE_CURRENT_BINARY_DIR}/${fq_build_target_name})
+-    else()
+-      set(test_cmd ${LIBC_UNITTEST_ENV} ${CMAKE_CROSSCOMPILING_EMULATOR} ${CMAKE_CURRENT_BINARY_DIR}/${fq_build_target_name})
+-    endif()
++    set(test_cmd ${LIBC_UNITTEST_ENV} ${CMAKE_CROSSCOMPILING_EMULATOR} ${CMAKE_CURRENT_BINARY_DIR}/${fq_build_target_name})
+     add_custom_target(
+       ${fq_target_name}
+       COMMAND ${test_cmd}
+@@ -675,23 +669,12 @@ function(add_integration_test test_name)
+   # command also will not run. So, we use this list and tell `add_custom_target`
+   # to expand the list (by including the option COMMAND_EXPAND_LISTS). This
+   # makes `add_custom_target` construct the correct command and execute it.
+-  if(LLVM_LIBC_ENABLE_COVERAGE)
+-    set(test_cmd
+-        ${Python3_EXECUTABLE} ${LIBC_SOURCE_DIR}/utils/extract_coverage.py
+-        --out ${CMAKE_CURRENT_BINARY_DIR}/${fq_target_name}.profraw
+-        ${INTEGRATION_TEST_ENV}
+-        $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_NVPTX}>:LIBOMPTARGET_STACK_SIZE=3072>
+-        ${CMAKE_CROSSCOMPILING_EMULATOR}
+-        ${INTEGRATION_TEST_LOADER_ARGS}
+-        $<TARGET_FILE:${fq_build_target_name}> ${INTEGRATION_TEST_ARGS})
+-  else()
+-    set(test_cmd
++  set(test_cmd
+         ${INTEGRATION_TEST_ENV}
+         $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_NVPTX}>:LIBOMPTARGET_STACK_SIZE=3072>
+         ${CMAKE_CROSSCOMPILING_EMULATOR}
+         ${INTEGRATION_TEST_LOADER_ARGS}
+         $<TARGET_FILE:${fq_build_target_name}> ${INTEGRATION_TEST_ARGS})
+-  endif()
+   # Generate a sidecar .params file alongside the executable for any test that
+   # requires specific command-line arguments or environment variables.  The
+   # LibcTest lit format reads this file at test time.  Format: one arg per line,
+@@ -936,22 +919,12 @@ function(add_libc_hermetic test_name)
+       # In the form of "<command> binary=@BINARY@", e.g. "qemu-system-arm -loader$<COMMA>file=@BINARY@"
+       string(REPLACE "@BINARY@" "$<TARGET_FILE:${fq_build_target_name}>" test_cmd_parsed ${LIBC_TEST_CMD})
+       string(REPLACE " " ";" test_cmd "${test_cmd_parsed}")
+-      if(LLVM_LIBC_ENABLE_COVERAGE)
+-        set(test_cmd ${Python3_EXECUTABLE} ${LIBC_SOURCE_DIR}/utils/extract_coverage.py --out ${CMAKE_CURRENT_BINARY_DIR}/${fq_target_name}.profraw ${test_cmd})
+-      endif()
++
+     else()
+-      if(LLVM_LIBC_ENABLE_COVERAGE)
+-        set(test_cmd ${Python3_EXECUTABLE} ${LIBC_SOURCE_DIR}/utils/extract_coverage.py --out ${CMAKE_CURRENT_BINARY_DIR}/${fq_target_name}.profraw
+-          ${HERMETIC_TEST_ENV}
+-          $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_NVPTX}>:LIBOMPTARGET_STACK_SIZE=3072>
+-          ${CMAKE_CROSSCOMPILING_EMULATOR} ${HERMETIC_TEST_LOADER_ARGS}
+-          $<TARGET_FILE:${fq_build_target_name}> ${HERMETIC_TEST_ARGS})
+-      else()
+         set(test_cmd ${HERMETIC_TEST_ENV}
+           $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_NVPTX}>:LIBOMPTARGET_STACK_SIZE=3072>
+           ${CMAKE_CROSSCOMPILING_EMULATOR} ${HERMETIC_TEST_LOADER_ARGS}
+           $<TARGET_FILE:${fq_build_target_name}> ${HERMETIC_TEST_ARGS})
+-      endif()
+     endif()
+ 
+   set(_params_content "")
+diff --git a/libc/test/UnitTest/LibcTestMain.cpp b/libc/test/UnitTest/LibcTestMain.cpp
+index 1c9e69e73..00f747d1f 100644
+--- a/libc/test/UnitTest/LibcTestMain.cpp
++++ b/libc/test/UnitTest/LibcTestMain.cpp
+@@ -45,6 +45,7 @@ TestOptions parseOptions(int argc, char **argv) {
+ 
+ #if defined(__linux__)
+ #include "src/__support/OSUtil/syscall.h"
++#include <errno.h>
+ #include <fcntl.h>
+ #include <sys/mman.h>
+ #include <sys/syscall.h>
+@@ -69,131 +70,50 @@ void write_raw_profile() {
+   if (required_size == 0)
+     return;
+ 
+-  // Allocate buffer via mmap to avoid depending on libc malloc.
+-#ifdef SYS_mmap
+-  long mmap_syscall = SYS_mmap;
+-#elif defined(SYS_mmap2)
+-  long mmap_syscall = SYS_mmap2;
+-#else
+-#error "System does not support SYS_mmap or SYS_mmap2."
+-#endif
+   long mmap_ret = LIBC_NAMESPACE::syscall_impl<long>(
+-      mmap_syscall, nullptr, required_size, PROT_READ | PROT_WRITE,
++      SYS_mmap, nullptr, required_size, PROT_READ | PROT_WRITE,
+       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+-
+   if (mmap_ret < 0 && mmap_ret > -4096)
+     return;
+   char *profile_buffer = reinterpret_cast<char *>(mmap_ret);
+ 
+   if (__llvm_profile_write_buffer(profile_buffer) != 0) {
+-    LIBC_NAMESPACE::syscall_impl<long>(SYS_munmap, profile_buffer,
+-                                       required_size);
++    LIBC_NAMESPACE::syscall_impl<long>(SYS_munmap, profile_buffer, required_size);
+     return;
+   }
+ 
+-  char filename[256];
+-  int idx = 0;
+-  bool has_env_file = false;
+-
+-    long pid = LIBC_NAMESPACE::syscall_impl<long>(SYS_getpid);
+-    if (pid <= 0)
+-      pid = 1;
+-
+-    char pid_str[32];
+-    int pid_len = 0;
+-    long temp_pid = pid;
+-    while (temp_pid > 0) {
+-      pid_str[pid_len++] = (char)('0' + (temp_pid % 10));
+-      temp_pid /= 10;
+-    }
+-    if (pid_len == 0)
+-      pid_str[pid_len++] = '0';
+-
+-    // Parse LLVM_PROFILE_FILE environment variable manually.
+-    if (LIBC_NAMESPACE::testing::envp) {
+-      for (char **env = LIBC_NAMESPACE::testing::envp; *env != nullptr; ++env) {
+-        const char *str = *env;
+-        const char *prefix = "LLVM_PROFILE_FILE=";
+-        int i = 0;
+-        while (prefix[i] != '\0' && str[i] == prefix[i])
+-          i++;
+-        if (prefix[i] == '\0') {
+-          const char *val = &str[i];
+-          int val_idx = 0;
+-          while (val[val_idx] != '\0' && idx < 200) {
+-            if (val[val_idx] == '%' && val[val_idx + 1] == 'm') {
+-              for (int j = pid_len - 1; j >= 0; --j)
+-                filename[idx++] = pid_str[j];
+-              val_idx += 2;
+-            } else {
+-              filename[idx++] = val[val_idx++];
+-            }
+-          }
+-          filename[idx] = '\0';
+-          has_env_file = true;
+-          break;
+-        }
+-      }
+-    }
+-
+-    // Fallback to a unique filename if no environment variable is set.
+-    if (!has_env_file) {
+-      const char *default_prefix = "default_";
+-      for (int i = 0; default_prefix[i] != '\0'; ++i)
+-        filename[idx++] = default_prefix[i];
+-
+-      for (int i = pid_len - 1; i >= 0; --i)
+-        filename[idx++] = pid_str[i];
++  // Create a minimal filename: libc_cov_<pid>.profraw
++  long pid = LIBC_NAMESPACE::syscall_impl<long>(SYS_getpid);
++  if (pid <= 0) pid = 1;
++
++  char filename[64] = "libc_cov_";
++  int idx = 9;
++  
++  long temp = pid;
++  char digits[32];
++  int d_len = 0;
++  while (temp > 0) { digits[d_len++] = static_cast<char>('0' + (temp % 10)); temp /= 10; }
++  if (d_len == 0) digits[d_len++] = '0';
++  for (int i = d_len - 1; i >= 0; --i) filename[idx++] = digits[i];
++  
++  const char *suffix = ".profraw";
++  for (int i = 0; suffix[i] != '\0'; ++i) filename[idx++] = suffix[i];
++  filename[idx] = '\0';
+ 
+-      filename[idx++] = '_';
+-
+-    struct timespec ts;
+-    LIBC_NAMESPACE::syscall_impl<long>(SYS_clock_gettime, CLOCK_MONOTONIC, &ts);
+-    long temp_nsec = ts.tv_nsec;
+-    if (temp_nsec < 0)
+-      temp_nsec = -temp_nsec;
+-
+-    char nsec_str[32];
+-    int nsec_len = 0;
+-    while (temp_nsec > 0) {
+-      nsec_str[nsec_len++] = (char)('0' + (temp_nsec % 10));
+-      temp_nsec /= 10;
+-    }
+-    if (nsec_len == 0)
+-      nsec_str[nsec_len++] = '0';
+-    for (int i = nsec_len - 1; i >= 0; --i)
+-      filename[idx++] = nsec_str[i];
+-
+-    const char *suffix = ".profraw";
+-    for (int i = 0; suffix[i] != '\0'; ++i)
+-      filename[idx++] = suffix[i];
+-    filename[idx] = '\0';
+-  }
+-
+-  // Write profile data using raw OS syscalls to bypass libc I/O functions.
+   long fd = LIBC_NAMESPACE::syscall_impl<long>(
+       SYS_openat, AT_FDCWD, filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+-  if (fd < 0) {
+-    LIBC_NAMESPACE::syscall_impl<long>(SYS_munmap, profile_buffer, required_size);
+-    return;
+-  }
+-
+-  uint64_t bytes_written = 0;
+-  while (bytes_written < required_size) {
+-    long ret = LIBC_NAMESPACE::syscall_impl<long>(
+-        SYS_write, fd, profile_buffer + bytes_written,
+-        required_size - bytes_written);
+-    if (ret < 0) {
+-      if (ret == -4) // EINTR retry
+-        continue;
+-      break;
++      
++  if (fd >= 0) {
++    uint64_t bytes_written = 0;
++    while (bytes_written < required_size) {
++      long ret = LIBC_NAMESPACE::syscall_impl<long>(
++          SYS_write, fd, profile_buffer + bytes_written, required_size - bytes_written);
++      if (ret <= 0 && ret != -EINTR) break;
++      if (ret > 0) bytes_written += ret;
+     }
+-    if (ret == 0)
+-      break;
+-    bytes_written += ret;
++    LIBC_NAMESPACE::syscall_impl<long>(SYS_close, fd);
+   }
+ 
+-  LIBC_NAMESPACE::syscall_impl<long>(SYS_close, fd);
+   LIBC_NAMESPACE::syscall_impl<long>(SYS_munmap, profile_buffer, required_size);
+ 
+   // Clear the filename pattern to prevent compiler-rt from writing at exit.
+@@ -223,4 +143,3 @@ TEST_MAIN(int argc, char **argv, char **envp) {
+   write_raw_profile();
+   return result;
+ }
+-
+diff --git a/libc/utils/coverage_report.py b/libc/utils/coverage_report.py
+old mode 100755
+new mode 100644
+index 741f761ca..6f79f1e9a
+--- a/libc/utils/coverage_report.py
++++ b/libc/utils/coverage_report.py
+@@ -6,75 +6,98 @@
+ # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+ #
+ #===----------------------------------------------------------------------===#
+-#
+-# Aggregates LLVM libc code coverage profiles and generates reports.
+-#
+-#===----------------------------------------------------------------------===#
+ 
+ import argparse
+ import glob
+ import os
++import shutil
+ import subprocess
+ import sys
+ 
+ def main():
+-    parser = argparse.ArgumentParser(description="Generate libc coverage report")
+-    parser.add_argument("--build-dir", required=True, help="Path to the build directory")
+-    parser.add_argument("--llvm-tools-dir", default="", help="Path to LLVM tools")
++    parser = argparse.ArgumentParser(description="Generate libc code coverage report")
++    parser.add_argument("--build-dir", required=True, help="Path to the libc build directory")
++    parser.add_argument("--llvm-tools-dir", required=True, help="Path to the LLVM tools directory (llvm-profdata, llvm-cov)")
+     args = parser.parse_args()
+ 
+     build_dir = args.build_dir
+     tools_dir = args.llvm_tools_dir
+-    profiles_dir = os.path.join(build_dir, "profiles")
++
++    profdata_tool = os.path.join(tools_dir, "llvm-profdata")
++    cov_tool = os.path.join(tools_dir, "llvm-cov")
++
++    if not os.path.isfile(profdata_tool):
++        profdata_tool = shutil.which("llvm-profdata-19") or shutil.which("llvm-profdata")
+     
+-    # 1. Find all profraw files
+-    profraw_files = glob.glob(os.path.join(profiles_dir, "*.profraw"))
++    if not os.path.isfile(cov_tool):
++        cov_tool = shutil.which("llvm-cov-19") or shutil.which("llvm-cov")
++
++    if not profdata_tool or not cov_tool:
++        print(f"Error: Could not find llvm-profdata or llvm-cov in {tools_dir} or in PATH")
++        sys.exit(1)
++
++    # Find all .profraw files recursively throughout the build tree
++    # This ensures we catch profiles dumped in subdirectories if LLVM_PROFILE_FILE isn't strictly adhered to.
++    profraw_files = glob.glob(os.path.join(build_dir, "**", "*.profraw"), recursive=True)
++
+     if not profraw_files:
+-        print(f"Error: No .profraw files found in {profiles_dir}. Did tests run with coverage enabled?", file=sys.stderr)
++        print(f"Error: No .profraw files found in {build_dir}. Did tests run with coverage enabled?")
+         sys.exit(1)
+-    
+-    # 2. Merge profraw files
+-    # Find llvm-profdata
+-    llvm_profdata = "llvm-profdata-19"
+-    if tools_dir:
+-        local_profdata = os.path.join(tools_dir, "llvm-profdata")
+-        if os.path.exists(local_profdata):
+-            llvm_profdata = local_profdata
+-        
+-    merged_profdata = os.path.join(build_dir, "merged.profdata")
+-    
+-    # Write paths to a list file to avoid ARG_MAX limits
++
++    # Prevent command line too long error by writing paths to a file
+     list_file = os.path.join(build_dir, "profraw_list.txt")
+     with open(list_file, "w") as f:
+-        for pf in profraw_files:
+-            f.write(f"{pf}\n")
+-            
+-    print(f"Merging {len(profraw_files)} profile files...")
+-    subprocess.check_call([llvm_profdata, "merge", "-sparse", "-input-files=" + list_file, "-o", merged_profdata])
++        for p in profraw_files:
++            f.write(p + "\n")
++
++    merged_profdata = os.path.join(build_dir, "merged.profdata")
++
++    print(f"Merging {len(profraw_files)} profiles into {merged_profdata}...")
++    subprocess.check_call(
++        [profdata_tool, "merge", "-sparse", f"-input-files={list_file}", "-o", merged_profdata]
++    )
+     
+-    # 3. Find all test binaries
+-    # We look for *.__build__ in the test directory
++    # Remove raw profiles after merge to save space and prevent inflation on next run
++    for p in profraw_files:
++        try:
++            os.remove(p)
++        except OSError:
++            pass
++    if os.path.exists(list_file):
++        os.remove(list_file)
++
+     test_dir = os.path.join(build_dir, "test")
+-    # Python 3.5+ recursive glob
+-    test_binaries = glob.glob(os.path.join(test_dir, "**", "*.__build__"), recursive=True)
++    test_binaries = []
++    for root, dirs, files in os.walk(test_dir):
++        for f in files:
++            if f.endswith(".__build__"):
++                test_binaries.append(os.path.join(root, f))
++
+     if not test_binaries:
+-        print(f"Error: No test binaries found in {test_dir}.", file=sys.stderr)
++        print(f"Error: No test binaries found in {test_dir}")
+         sys.exit(1)
+-        
+-    # 4. Generate report
+-    llvm_cov = "llvm-cov-19"
+-    if tools_dir:
+-        local_cov = os.path.join(tools_dir, "llvm-cov")
+-        if os.path.exists(local_cov):
+-            llvm_cov = local_cov
+-        
+-    cov_cmd = [llvm_cov, "report", test_binaries[0]]
++
++    # Use the first binary as the main object, the rest as -object arguments
++    cov_cmd = [
++        cov_tool, "report", test_binaries[0],
++        f"-instr-profile={merged_profdata}",
++        "--show-mcdc-summary"
++    ]
++
+     for tb in test_binaries[1:]:
+-        cov_cmd.extend(["-object", tb])
+-    cov_cmd.extend(["-instr-profile", merged_profdata])
+-    
++        cov_cmd.append(f"-object={tb}")
++
++    # Add source path filtering so we only get coverage for core library implementation,
++    # rather than inflating coverage with test suite files.
++    workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
++    cov_cmd.extend([
++        os.path.join(workspace_root, "src"),
++        os.path.join(workspace_root, "include"),
++        os.path.join(workspace_root, "hdr")
++    ])
++
+     print("Generating coverage report...")
+     subprocess.check_call(cov_cmd)
+-    
++
+ if __name__ == "__main__":
+-    sys.exit(main())
++    main()

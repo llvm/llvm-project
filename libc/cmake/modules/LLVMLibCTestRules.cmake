@@ -28,10 +28,6 @@ function(_get_common_test_compile_options output_var c_test flags)
     list(APPEND compile_options "-DLIBC_TEST_SKIP_DEATH_TESTS")
   endif()
 
-  if(CMAKE_CROSSCOMPILING_EMULATOR)
-    list(APPEND compile_options "-DLIBC_TEST_UNDER_EMULATOR")
-  endif()
-
   if(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")
 
@@ -368,9 +364,11 @@ function(create_libc_unittest fq_target_name)
   target_link_libraries(${fq_build_target_name} PRIVATE ${link_libraries})
 
   if(NOT LIBC_UNITTEST_NO_RUN_POSTBUILD)
+    set(test_cmd ${LIBC_UNITTEST_ENV} ${CMAKE_CROSSCOMPILING_EMULATOR} ${CMAKE_CURRENT_BINARY_DIR}/${fq_build_target_name})
     add_custom_target(
       ${fq_target_name}
-      COMMAND ${LIBC_UNITTEST_ENV} ${CMAKE_CROSSCOMPILING_EMULATOR} ${CMAKE_CURRENT_BINARY_DIR}/${fq_build_target_name}
+      COMMAND ${test_cmd}
+      COMMAND_EXPAND_LISTS
       COMMENT "Running unit test ${fq_target_name}"
       DEPENDS ${fq_build_target_name}
     )
@@ -672,11 +670,11 @@ function(add_integration_test test_name)
   # to expand the list (by including the option COMMAND_EXPAND_LISTS). This
   # makes `add_custom_target` construct the correct command and execute it.
   set(test_cmd
-      ${INTEGRATION_TEST_ENV}
-      $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_NVPTX}>:LIBOMPTARGET_STACK_SIZE=3072>
-      ${CMAKE_CROSSCOMPILING_EMULATOR}
-      ${INTEGRATION_TEST_LOADER_ARGS}
-      $<TARGET_FILE:${fq_build_target_name}> ${INTEGRATION_TEST_ARGS})
+        ${INTEGRATION_TEST_ENV}
+        $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_NVPTX}>:LIBOMPTARGET_STACK_SIZE=3072>
+        ${CMAKE_CROSSCOMPILING_EMULATOR}
+        ${INTEGRATION_TEST_LOADER_ARGS}
+        $<TARGET_FILE:${fq_build_target_name}> ${INTEGRATION_TEST_ARGS})
   # Generate a sidecar .params file alongside the executable for any test that
   # requires specific command-line arguments or environment variables.  The
   # LibcTest lit format reads this file at test time.  Format: one arg per line,
@@ -921,11 +919,12 @@ function(add_libc_hermetic test_name)
       # In the form of "<command> binary=@BINARY@", e.g. "qemu-system-arm -loader$<COMMA>file=@BINARY@"
       string(REPLACE "@BINARY@" "$<TARGET_FILE:${fq_build_target_name}>" test_cmd_parsed ${LIBC_TEST_CMD})
       string(REPLACE " " ";" test_cmd "${test_cmd_parsed}")
+
     else()
-      set(test_cmd ${HERMETIC_TEST_ENV}
-        $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_NVPTX}>:LIBOMPTARGET_STACK_SIZE=3072>
-        ${CMAKE_CROSSCOMPILING_EMULATOR} ${HERMETIC_TEST_LOADER_ARGS}
-        $<TARGET_FILE:${fq_build_target_name}> ${HERMETIC_TEST_ARGS})
+        set(test_cmd ${HERMETIC_TEST_ENV}
+          $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_NVPTX}>:LIBOMPTARGET_STACK_SIZE=3072>
+          ${CMAKE_CROSSCOMPILING_EMULATOR} ${HERMETIC_TEST_LOADER_ARGS}
+          $<TARGET_FILE:${fq_build_target_name}> ${HERMETIC_TEST_ARGS})
     endif()
 
   set(_params_content "")
