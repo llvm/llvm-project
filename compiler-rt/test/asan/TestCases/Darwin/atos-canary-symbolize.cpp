@@ -1,5 +1,3 @@
-// compiler-rt/test/asan/TestCases/Darwin/atos-canary-symbolize.cpp
-
 // REQUIRES: system-darwin
 // UNSUPPORTED: darwin-remote, i386-darwin
 
@@ -22,12 +20,18 @@
 // --- (B) OFFLINE cross-check: run atos by hand against the same binary. Lets us
 //         tell "atos itself is dead" (offline also fails) from "attach/task_for_pid
 //         is blocked" (offline works). Never gates. ---
-// RUN: echo '==== OFFLINE atos probe (no attach / no task_for_pid) ====' ; atos -o %t -arch %arch -l 0 0x1 </dev/null 2>&1 ; true
+// RUN: echo '==== OFFLINE atos probe (no attach / no task_for_pid) ====' ; atos -o %t -arch %arch -l 0 0x1 </dev/null 2>&1 && echo 'offline-atos: exit 0 (alive)' || echo 'offline-atos: NONZERO exit (atos failed/crashed)' ; true
 
-// --- best-effort syslog tail: task_for_pid / atos / CoreSymbolication denials.
-//     `log show` can be slow on locked-down nodes; it is `|| true` so it can't
-//     fail the test, but if it ever stalls the lit timeout, drop this line. ---
-// RUN: echo '==== syslog (last 2m: atos / taskgated / task_for_pid) ====' ; log show --last 2m --style compact --predicate 'process == "atos" OR process == "taskgated" OR eventMessage CONTAINS "task_for_pid" OR eventMessage CONTAINS "Sanitizer"' 2>&1 ; true
+// --- best-effort syslog tail (task_for_pid / atos / CoreSymbolication denials).
+//     `log show` is slow, so it runs ONLY on symbolizer failure (grep the attach
+//     log first) -- keeps the passing case fast, still captures denials on failure. ---
+// RUN: echo '==== syslog (only on symbolizer failure; log show is slow) ====' ; grep -qE "Can't read from symbolizer at fd|atos failed to symbolize" %t.attach.log && log show --last 2m --style compact --predicate 'process == "atos" OR process == "taskgated" OR eventMessage CONTAINS "task_for_pid" OR eventMessage CONTAINS "Sanitizer"' 2>&1 ; true
+
+// --- On symbolizer failure, dump any atos crash report(s). CrashReporter writes
+//     the .ips asynchronously so we wait briefly -- but ONLY on the failure path
+//     (same grep gate), so a passing run pays nothing. `sh -c` because lit's
+//     internal shell has no loops / command substitution. ---
+// RUN: grep -qE "Can't read from symbolizer at fd|atos failed to symbolize" %t.attach.log && sh -c 'echo "==== atos crash report(s) (symbolizer failed) ===="; sleep 3; for d in "$HOME/Library/Logs/DiagnosticReports" /Library/Logs/DiagnosticReports; do for f in $(ls -t "$d"/atos*.ips "$d"/atos*.crash 2>/dev/null | head -3); do echo "--- $f ---"; cat "$f" 2>/dev/null; done; done' 2>&1 ; true
 
 // --- PASS/FAIL GATE: the attach-mode report MUST be fully symbolized. FileCheck
 //     runs on the SAME captured log so the failing output sits right next to the
