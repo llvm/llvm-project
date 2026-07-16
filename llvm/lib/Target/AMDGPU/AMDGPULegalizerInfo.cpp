@@ -1772,7 +1772,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
               // May need relegalization for the scalars.
               return std::pair(0, EltTy);
             })
-        .minScalar(0, S32)
+        .widenScalarIf(scalarNarrowerThan(0, 32), changeTo(0, LLT::integer(32)))
         .narrowScalarIf(isTruncStoreToSizePowerOf2(0),
                         getScalarTypeFromMemDesc(0))
         .widenScalarToNextPow2(0)
