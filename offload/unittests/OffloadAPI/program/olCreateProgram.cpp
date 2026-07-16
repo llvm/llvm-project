@@ -86,6 +86,8 @@ TEST_P(olCreateProgramTest, InvalidBinary) {
 }
 
 TEST_P(olCreateProgramTest, TruncatedBinary) {
+  SKIP_KNOWN_FAILURE(AMDGPU{"HSA reads past end of buffer, causing a crash"});
+
   std::unique_ptr<llvm::MemoryBuffer> DeviceBin;
   ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo", Device, DeviceBin));
   ASSERT_GT(DeviceBin->getBufferSize(), 1lu);
