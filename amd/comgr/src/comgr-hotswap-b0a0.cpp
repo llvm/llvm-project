@@ -1256,6 +1256,16 @@ collectBoundedSetPcReturns(ArrayRef<InternalDecodedInst> Decoded,
       for (const InternalDecodedInst &DI : Decoded) {
         if (DI.Offset < FunctionBegin || DI.Offset >= FunctionEnd)
           continue;
+        // MC call instructions carry no transitive callee-clobber information.
+        // Without interprocedural proof, a nested callee may overwrite the
+        // outer link pair even when the call defines a different return pair.
+        if (DI.DecodeSucceeded && LS.MIA->isCall(DI.Inst)) {
+          log() << "hotswap: s_set_pc_i64 at 0x" << utohexstr(Return.Offset)
+                << " is not a bounded return: nested call at 0x"
+                << utohexstr(DI.Offset) << " may clobber the link register\n";
+          Safe = false;
+          break;
+        }
         if (!DI.DecodeSucceeded ||
             definesOverlappingRegister(DI, LS, ReturnRegister)) {
           log() << "hotswap: s_set_pc_i64 at 0x" << utohexstr(Return.Offset)

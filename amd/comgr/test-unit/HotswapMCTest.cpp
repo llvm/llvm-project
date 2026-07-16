@@ -807,6 +807,72 @@ TEST(CollectDirectBranchTargets, RejectsClobberedSetPcReturn) {
   EXPECT_TRUE(Info->HasUnresolvedTargets);
 }
 
+TEST(CollectDirectBranchTargets, RejectsNestedCallSetPcReturn) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  llvm::SmallVector<uint8_t> Bytes =
+      assembleSingleInst("s_call_i64 s[4:5], 1\n"
+                         "s_set_pc_i64 s[30:31]\n"
+                         "s_mov_b32 s30, 0\n"
+                         "s_set_pc_i64 s[4:5]\n"
+                         "s_get_pc_i64 s[0:1]\n"
+                         "s_add_nc_u64 s[0:1], s[0:1], -20\n"
+                         "s_swap_pc_i64 s[30:31], s[0:1]",
+                         S);
+  ASSERT_FALSE(Bytes.empty());
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
+  ASSERT_EQ(Decoded.size(), 7u);
+  llvm::SmallVector<uint64_t, 3> DeclaredEntries{0, Decoded[2].Offset,
+                                                 Decoded[4].Offset};
+  llvm::SmallVector<ElfView::FunctionTextRange, 2> FunctionRanges{
+      {0, Decoded[2].Offset}, {Decoded[2].Offset, Decoded[4].Offset}};
+
+  // The nested call uses a different link pair, so its instruction does not
+  // directly define s[30:31]. Its callee can still clobber that outer return
+  // pair, making a function-local definition scan insufficient.
+  std::optional<DirectControlFlowInfo> Info = collectDirectBranchTargets(
+      Decoded, S, /*TextAddr=*/0, /*TextSize=*/0x1000, DeclaredEntries,
+      FunctionRanges);
+  ASSERT_TRUE(Info);
+  EXPECT_TRUE(Info->Targets.contains(Decoded[2].Offset));
+  EXPECT_TRUE(Info->HasUnresolvedTargets);
+}
+
+TEST(CollectDirectBranchTargets, RejectsIndirectFallthroughChainEntry) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+  llvm::SmallVector<uint8_t> Bytes =
+      assembleSingleInst("s_branch -1\n"
+                         "s_nop 0\n"
+                         "s_nop 0\n"
+                         "s_set_pc_i64 s[30:31]\n"
+                         "s_set_pc_i64 s[2:3]\n"
+                         "s_get_pc_i64 s[0:1]\n"
+                         "s_add_nc_u64 s[0:1], s[0:1], -12\n"
+                         "s_swap_pc_i64 s[30:31], s[0:1]",
+                         S);
+  ASSERT_FALSE(Bytes.empty());
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
+  ASSERT_EQ(Decoded.size(), 8u);
+  llvm::SmallVector<uint64_t, 1> DeclaredEntries{Decoded[3].Offset};
+  llvm::SmallVector<ElfView::FunctionTextRange, 1> FunctionRanges{
+      {Decoded[3].Offset, Decoded[4].Offset}};
+
+  // The unknown s_set_pc_i64 target may enter the unreachable padding before
+  // the helper. Global indirect-entry detection must keep the materialized
+  // call unresolved even though direct and fallthrough checks accept it.
+  std::optional<DirectControlFlowInfo> Info = collectDirectBranchTargets(
+      Decoded, S, /*TextAddr=*/0, /*TextSize=*/0x1000, DeclaredEntries,
+      FunctionRanges);
+  ASSERT_TRUE(Info);
+  EXPECT_TRUE(Info->Targets.contains(Decoded[0].Offset));
+  EXPECT_TRUE(Info->HasUnresolvedTargets);
+}
+
 TEST(CollectDirectBranchTargets, RejectsAlternateEntryIntoReturnFunction) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
