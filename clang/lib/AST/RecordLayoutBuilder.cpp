@@ -2590,6 +2590,13 @@ public:
   /// __declspec(align) into account.  It also updates RequiredAlignment as a
   /// side effect because it is most convenient to do so here.
   ElementInfo getAdjustedElementInfo(const FieldDecl *FD);
+  /// Returns true if this target reuses the tail padding of an over-aligned
+  /// base class for a subsequent base.  MSVC does this on Arm64, but not on
+  /// Arm64EC (which follows the x64 layout rules) or x64.
+  bool reuseOveralignedBaseTailPadding() const {
+    const llvm::Triple &Triple = Context.getTargetInfo().getTriple();
+    return Triple.isAArch64() && !Triple.isWindowsArm64EC();
+  }
   /// Places a field at an offset in CharUnits.
   void placeFieldAtOffset(CharUnits FieldOffset) {
     FieldOffsets.push_back(Context.toBits(FieldOffset));
@@ -2618,6 +2625,9 @@ public:
   /// The alignment that this record must obey.  This is imposed by
   /// __declspec(align()) on the record itself or one of its fields or bases.
   CharUnits RequiredAlignment;
+  /// The alignment of the record ignoring any over-alignment imposed via
+  /// __declspec(align()) / alignas on the record or its bases.
+  CharUnits NonRequiredAlignment;
   /// The size of the allocation of the currently active bitfield.
   /// This value isn't meaningful unless LastFieldIsNonZeroWidthBitfield
   /// is true.
@@ -2678,7 +2688,16 @@ MicrosoftRecordLayoutBuilder::getAdjustedElementInfo(
   // Respect required alignment, this is necessary because we may have adjusted
   // the alignment in the case of pragma pack.  Note that the required alignment
   // doesn't actually apply to the struct alignment at this point.
-  Alignment = std::max(Alignment, Info.Alignment);
+  // When reusing a base's tail padding, fold in the base's alignment ignoring
+  // any over-alignment it imposes, so that over-alignment contributes to the
+  // record's size but not to the alignment its tail padding is rounded to.
+  CharUnits BaseAlignment = Info.Alignment;
+  if (reuseOveralignedBaseTailPadding()) {
+    BaseAlignment = Layout.getNonRequiredNVAlignment();
+    if (!MaxFieldAlignment.isZero())
+      BaseAlignment = std::min(BaseAlignment, MaxFieldAlignment);
+  }
+  Alignment = std::max(Alignment, BaseAlignment);
   RequiredAlignment = std::max(RequiredAlignment, Layout.getRequiredAlignment());
   Info.Alignment = std::max(Info.Alignment, Layout.getRequiredAlignment());
   Info.Size = Layout.getNonVirtualSize();
@@ -2764,6 +2783,7 @@ void MicrosoftRecordLayoutBuilder::initializeLayout(const RecordDecl *RD) {
   IsUnion = RD->isUnion();
   Size = CharUnits::Zero();
   Alignment = CharUnits::One();
+  NonRequiredAlignment = CharUnits::One();
   // In 64-bit mode we always perform an alignment step after laying out vbases.
   // In 32-bit mode we do not.  The check to see if we need to perform alignment
   // checks the RequiredAlignment field and performs alignment if it isn't 0.
@@ -3235,6 +3255,10 @@ void MicrosoftRecordLayoutBuilder::finalizeLayout(const RecordDecl *RD) {
   // Respect required alignment.  Note that in 32-bit mode Required alignment
   // may be 0 and cause size not to be updated.
   DataSize = Size;
+  // Capture the alignment before folding in the required alignment; this is the
+  // record's alignment ignoring any over-alignment imposed via alignas /
+  // __declspec(align).
+  NonRequiredAlignment = Alignment;
   if (!RequiredAlignment.isZero()) {
     Alignment = std::max(Alignment, RequiredAlignment);
     auto RoundingAlignment = Alignment;
@@ -3406,10 +3430,10 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
           Builder.Alignment, Builder.RequiredAlignment, Builder.HasOwnVFPtr,
           Builder.HasOwnVFPtr || Builder.PrimaryBase, Builder.VBPtrOffset,
           Builder.DataSize, Builder.FieldOffsets, Builder.NonVirtualSize,
-          Builder.Alignment, Builder.Alignment, CharUnits::Zero(),
-          Builder.PrimaryBase, false, Builder.SharedVBPtrBase,
-          Builder.EndsWithZeroSizedObject, Builder.LeadsWithZeroSizedBase,
-          Builder.Bases, Builder.VBases);
+          Builder.Alignment, Builder.Alignment, Builder.NonRequiredAlignment,
+          CharUnits::Zero(), Builder.PrimaryBase, false,
+          Builder.SharedVBPtrBase, Builder.EndsWithZeroSizedObject,
+          Builder.LeadsWithZeroSizedBase, Builder.Bases, Builder.VBases);
     } else {
       MicrosoftRecordLayoutBuilder Builder(*this, /*EmptySubobjects=*/nullptr);
       Builder.layout(D);
@@ -3442,7 +3466,7 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
           Builder.Alignment, Builder.HasOwnVFPtr, RD->isDynamicClass(),
           CharUnits::fromQuantity(-1), DataSize, Builder.FieldOffsets,
           NonVirtualSize, Builder.NonVirtualAlignment,
-          Builder.PreferredNVAlignment,
+          Builder.PreferredNVAlignment, Builder.NonVirtualAlignment,
           EmptySubobjects.SizeOfLargestEmptySubobject, Builder.PrimaryBase,
           Builder.PrimaryBaseIsVirtual, nullptr, false, false, Builder.Bases,
           Builder.VBases);
