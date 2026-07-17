@@ -1608,7 +1608,7 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
   // be used to determine which optimization to use. Until then, only apply the
   // clmul optimization when optimizing for size, since a lookup table is not
   // viable in that case.
-  if (!ApplyCodeSizeHeuristics) {
+  if (!ApplyCodeSizeHeuristics && Info.TripCount % 8 == 0) {
     optimizeCRCLoopUsingTableLookup(Info);
     return true;
   }
@@ -1743,6 +1743,8 @@ void LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info,
 
 void LoopIdiomRecognize::optimizeCRCLoopUsingTableLookup(
     const PolynomialInfo &Info) {
+  assert(Info.TripCount % 8 == 0 && "A byte-multiple trip count is required");
+
   // First, create a new GlobalVariable corresponding to the
   // Sarwate-lookup-table.
   Type *CRCTy = Info.LHS->getType();
