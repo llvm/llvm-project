@@ -4921,13 +4921,20 @@ SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
 
   if (VT.isScalableVector()) {
     // Let common code split the operation.
-    if (SrcVT == MVT::nxv8f32)
-      return Op;
+    SDLoc DL(Op);
+    if (!isTypeLegal(SrcVT)) {
+      auto [OpLo, OpHi] = DAG.SplitVector(SrcVal, DL);
+      auto [LoVT, HiVT] = DAG.GetSplitDestVTs(Op.getValueType());
+      OpLo = DAG.getNode(Op.getOpcode(), DL, LoVT, OpLo, Op.getOperand(1),
+                         Op->getFlags());
+      OpHi = DAG.getNode(Op.getOpcode(), DL, HiVT, OpHi, Op.getOperand(1),
+                         Op->getFlags());
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, OpLo, OpHi);
+    }
 
     if (VT.getScalarType() != MVT::bf16)
       return LowerToPredicatedOp(Op, DAG, AArch64ISD::FP_ROUND_MERGE_PASSTHRU);
 
-    SDLoc DL(Op);
     constexpr EVT I32 = MVT::nxv4i32;
     auto ImmV = [&](int I) -> SDValue { return DAG.getConstant(I, DL, I32); };
 
@@ -5003,7 +5010,7 @@ SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
         NaN = DAG.getNode(ISD::OR, DL, I32, Narrow,
                           DAG.getConstant(0x400000, DL, I32));
       }
-    } else if (SrcVT.getScalarType() == MVT::f64) {
+    } else if (isTypeLegal(SrcVT) && SrcVT.getScalarType() == MVT::f64) {
       Narrow = DAG.getNode(AArch64ISD::FCVTXN, DL, F32, Narrow);
       Narrow = DAG.getNode(ISD::BITCAST, DL, I32, Narrow);
     } else {
@@ -5025,7 +5032,13 @@ SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
       SDValue IsNaN = DAG.getSetCC(
           DL, getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT),
           SrcVal, SrcVal, ISD::SETUO);
-      Narrow = DAG.getSelect(DL, I32, IsNaN, NaN, Narrow);
+      Narrow =
+          SrcVT.isFixedLengthVector()
+              ? DAG.getNode(ISD::OR, DL, I32,
+                            DAG.getNode(ISD::AND, DL, I32, IsNaN, NaN),
+                            DAG.getNode(ISD::AND, DL, I32,
+                                        DAG.getNOT(DL, IsNaN, I32), Narrow))
+              : DAG.getSelect(DL, I32, IsNaN, NaN, Narrow);
     }
 
     // Now that we have rounded, shift the bits into position.
@@ -5416,26 +5429,15 @@ SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
     return DAG.getNode(ISD::VSELECT, DL, VT, In, TrueVal, FalseVal);
   }
 
-  // Promote bf16 conversions to f32.
-  if (VT.getVectorElementType() == MVT::bf16) {
-    EVT F32 = VT.changeElementType(*DAG.getContext(), MVT::f32);
-    if (IsStrict) {
-      SDValue Val = DAG.getNode(Op.getOpcode(), DL, {F32, MVT::Other},
-                                {Op.getOperand(0), In});
-      return DAG.getNode(ISD::STRICT_FP_ROUND, DL,
-                         {Op.getValueType(), MVT::Other},
-                         {Val.getValue(1), Val.getValue(0),
-                          DAG.getIntPtrConstant(0, DL, /*isTarget=*/true)});
-    }
-    return DAG.getNode(ISD::FP_ROUND, DL, Op.getValueType(),
-                       DAG.getNode(Op.getOpcode(), DL, F32, In),
-                       DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
-  }
-
   if (VT.isScalableVector()) {
-    // Let common code split the operation.
-    if (VT == MVT::nxv8f32)
-      return Op;
+    // Split illegal operations in half
+    if (!isTypeLegal(VT)) {
+      auto [OpLo, OpHi] = DAG.SplitVector(In, DL);
+      auto [LoVT, HiVT] = DAG.GetSplitDestVTs(Op.getValueType());
+      OpLo = DAG.getNode(Op.getOpcode(), DL, LoVT, OpLo, Op->getFlags());
+      OpHi = DAG.getNode(Op.getOpcode(), DL, HiVT, OpHi, Op->getFlags());
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, OpLo, OpHi);
+    }
 
     unsigned Opcode = IsSigned ? AArch64ISD::SINT_TO_FP_MERGE_PASSTHRU
                                : AArch64ISD::UINT_TO_FP_MERGE_PASSTHRU;
@@ -5511,138 +5513,157 @@ SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
   return Op;
 }
 
+static SDValue LowerIntToFpViaPromotion(SDValue Op, EVT PromoteVT,
+                                        SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  bool IsStrict = Op->isStrictFPOpcode();
+  SDValue SrcVal = Op.getOperand(IsStrict ? 1 : 0);
+  PromoteVT = Op.getValueType().changeElementType(*DAG.getContext(), PromoteVT);
+  if (IsStrict) {
+    SDValue Val = DAG.getNode(Op.getOpcode(), DL, {PromoteVT, MVT::Other},
+                              {Op.getOperand(0), SrcVal});
+    return DAG.getNode(ISD::STRICT_FP_ROUND, DL,
+                       {Op.getValueType(), MVT::Other},
+                       {Val.getValue(1), Val.getValue(0),
+                        DAG.getIntPtrConstant(0, DL, /*isTarget=*/true)});
+  }
+  return DAG.getNode(ISD::FP_ROUND, DL, Op.getValueType(),
+                     DAG.getNode(Op.getOpcode(), DL, PromoteVT, SrcVal),
+                     DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
+}
+
+SDValue AArch64TargetLowering::LowerBF16INT_TO_FP(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  bool IsStrict = Op->isStrictFPOpcode();
+  bool IsSigned = Op.getOpcode() == ISD::STRICT_SINT_TO_FP ||
+                  Op.getOpcode() == ISD::SINT_TO_FP;
+  SDValue SrcVal = Op.getOperand(IsStrict ? 1 : 0);
+  EVT DstVT = Op.getValueType();
+
+  unsigned MaxWidth = IsSigned
+                          ? DAG.ComputeMaxSignificantBits(SrcVal)
+                          : DAG.computeKnownBits(SrcVal).countMaxActiveBits();
+  // bf16 conversions are promoted to f32 when converting from i16.
+  if (MaxWidth <= 24)
+    return LowerIntToFpViaPromotion(Op, MVT::f32, DAG);
+
+  // bf16 conversions are promoted to f64 when converting from i32.
+  if (MaxWidth <= 53)
+    return LowerIntToFpViaPromotion(Op, MVT::f64, DAG);
+
+  // We need to be careful about i64 -> bf16.
+  // Consider an i32 22216703.
+  // This number cannot be represented exactly as an f32 and so a itofp will
+  // turn it into 22216704.0 fptrunc to bf16 will turn this into 22282240.0
+  // However, the correct bf16 was supposed to be 22151168.0
+  // We need to use sticky rounding to get this correct.
+  if (SrcVal.getValueType().getScalarType() == MVT::i64) {
+    SDLoc DL(Op);
+    // This algorithm is equivalent to the following:
+    // uint64_t SrcHi = SrcVal & ~0xfffull;
+    // uint64_t SrcLo = SrcVal &  0xfffull;
+    // uint64_t Highest = SrcVal >> 53;
+    // bool HasHighest = Highest != 0;
+    // uint64_t ToRound = HasHighest ? SrcHi : SrcVal;
+    // double  Rounded = static_cast<double>(ToRound);
+    // uint64_t RoundedBits = std::bit_cast<uint64_t>(Rounded);
+    // uint64_t HasLo = SrcLo != 0;
+    // bool NeedsAdjustment = HasHighest & HasLo;
+    // uint64_t AdjustedBits = RoundedBits | uint64_t{NeedsAdjustment};
+    // double Adjusted = std::bit_cast<double>(AdjustedBits);
+    // return static_cast<__bf16>(Adjusted);
+    //
+    // Essentially, what happens is that SrcVal either fits perfectly in a
+    // double-precision value or it is too big. If it is sufficiently small,
+    // we should just go u64 -> double -> bf16 in a naive way. Otherwise, we
+    // ensure that u64 -> double has no rounding error by only using the 52
+    // MSB of the input. The low order bits will get merged into a sticky bit
+    // which will avoid issues incurred by double rounding.
+
+    // Signed conversion is more or less like so:
+    // copysign((__bf16)abs(SrcVal), SrcVal)
+    EVT i64Ty = DstVT.changeElementType(*DAG.getContext(), MVT::i64);
+    EVT f64Ty = DstVT.changeElementType(*DAG.getContext(), MVT::f64);
+    SDValue SignBit;
+    if (IsSigned) {
+      SignBit = DAG.getNode(ISD::AND, DL, i64Ty, SrcVal,
+                            DAG.getConstant(1ull << 63, DL, i64Ty));
+      SrcVal = DAG.getNode(ISD::ABS, DL, i64Ty, SrcVal);
+    }
+    SDValue SrcHi = DAG.getNode(ISD::AND, DL, i64Ty, SrcVal,
+                                DAG.getConstant(~0xfffull, DL, i64Ty));
+    SDValue SrcLo = DAG.getNode(ISD::AND, DL, i64Ty, SrcVal,
+                                DAG.getConstant(0xfffull, DL, i64Ty));
+    SDValue Highest = DAG.getNode(ISD::SRL, DL, i64Ty, SrcVal,
+                                  DAG.getShiftAmountConstant(53, i64Ty, DL));
+    SDValue Zero64 = DAG.getConstant(0, DL, i64Ty);
+    SDValue ToRound =
+        DAG.getSelectCC(DL, Highest, Zero64, SrcHi, SrcVal, ISD::SETNE);
+    SDValue Rounded = IsStrict
+                          ? DAG.getNode(Op.getOpcode(), DL, {f64Ty, MVT::Other},
+                                        {Op.getOperand(0), ToRound})
+                          : DAG.getNode(Op.getOpcode(), DL, f64Ty, ToRound);
+
+    SDValue RoundedBits = DAG.getNode(ISD::BITCAST, DL, i64Ty, Rounded);
+    if (SignBit) {
+      RoundedBits = DAG.getNode(ISD::OR, DL, i64Ty, RoundedBits, SignBit);
+    }
+
+    SDValue HasHighest = DAG.getSetCC(
+        DL, getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), i64Ty),
+        Highest, Zero64, ISD::SETNE);
+
+    SDValue HasLo = DAG.getSetCC(
+        DL, getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), i64Ty),
+        SrcLo, Zero64, ISD::SETNE);
+
+    SDValue NeedsAdjustment =
+        DAG.getNode(ISD::AND, DL, HasLo.getValueType(), HasHighest, HasLo);
+    NeedsAdjustment = DAG.getZExtOrTrunc(NeedsAdjustment, DL, i64Ty);
+
+    SDValue AdjustedBits =
+        DAG.getNode(ISD::OR, DL, i64Ty, RoundedBits, NeedsAdjustment);
+    SDValue Adjusted = DAG.getNode(ISD::BITCAST, DL, f64Ty, AdjustedBits);
+    return IsStrict
+               ? DAG.getNode(ISD::STRICT_FP_ROUND, DL,
+                             {Op.getValueType(), MVT::Other},
+                             {Rounded.getValue(1), Adjusted,
+                              DAG.getIntPtrConstant(0, DL, /*isTarget=*/true)})
+               : DAG.getNode(ISD::FP_ROUND, DL, Op.getValueType(), Adjusted,
+                             DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
+  }
+
+  return SDValue();
+}
+
 SDValue AArch64TargetLowering::LowerINT_TO_FP(SDValue Op,
-                                            SelectionDAG &DAG) const {
+                                              SelectionDAG &DAG) const {
+  // NOTE: i1->bf16 does not require promotion to f32.
+  EVT VT = Op.getValueType();
+  SDValue Src = Op.getOperand(Op->isStrictFPOpcode() ? 1 : 0);
+  EVT SrcVT = Src.getValueType();
+  bool IsSigned = Op.getOpcode() == ISD::STRICT_SINT_TO_FP ||
+                  Op.getOpcode() == ISD::SINT_TO_FP;
+
+  if (VT.isScalableVector() && SrcVT.getVectorElementType() == MVT::i1) {
+    SDLoc DL(Op);
+    SDValue FalseVal = DAG.getConstantFP(0.0, DL, VT);
+    SDValue TrueVal = IsSigned ? DAG.getConstantFP(-1.0, DL, VT)
+                               : DAG.getConstantFP(1.0, DL, VT);
+    return DAG.getNode(ISD::VSELECT, DL, VT, Src, TrueVal, FalseVal);
+  }
+
+  if (Op.getValueType().getScalarType() == MVT::bf16)
+    return LowerBF16INT_TO_FP(Op, DAG);
   if (Op.getValueType().isVector())
     return LowerVectorINT_TO_FP(Op, DAG);
 
-  bool IsStrict = Op->isStrictFPOpcode();
-  SDValue SrcVal = Op.getOperand(IsStrict ? 1 : 0);
-
-  bool IsSigned = Op->getOpcode() == ISD::STRICT_SINT_TO_FP ||
-                  Op->getOpcode() == ISD::SINT_TO_FP;
-
-  auto IntToFpViaPromotion = [&](EVT PromoteVT) {
-    SDLoc DL(Op);
-    if (IsStrict) {
-      SDValue Val = DAG.getNode(Op.getOpcode(), DL, {PromoteVT, MVT::Other},
-                                {Op.getOperand(0), SrcVal});
-      return DAG.getNode(ISD::STRICT_FP_ROUND, DL,
-                         {Op.getValueType(), MVT::Other},
-                         {Val.getValue(1), Val.getValue(0),
-                          DAG.getIntPtrConstant(0, DL, /*isTarget=*/true)});
-    }
-    return DAG.getNode(ISD::FP_ROUND, DL, Op.getValueType(),
-                       DAG.getNode(Op.getOpcode(), DL, PromoteVT, SrcVal),
-                       DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
-  };
-
-  if (Op.getValueType() == MVT::bf16) {
-    unsigned MaxWidth = IsSigned
-                            ? DAG.ComputeMaxSignificantBits(SrcVal)
-                            : DAG.computeKnownBits(SrcVal).countMaxActiveBits();
-    // bf16 conversions are promoted to f32 when converting from i16.
-    if (MaxWidth <= 24) {
-      return IntToFpViaPromotion(MVT::f32);
-    }
-
-    // bf16 conversions are promoted to f64 when converting from i32.
-    if (MaxWidth <= 53) {
-      return IntToFpViaPromotion(MVT::f64);
-    }
-
-    // We need to be careful about i64 -> bf16.
-    // Consider an i32 22216703.
-    // This number cannot be represented exactly as an f32 and so a itofp will
-    // turn it into 22216704.0 fptrunc to bf16 will turn this into 22282240.0
-    // However, the correct bf16 was supposed to be 22151168.0
-    // We need to use sticky rounding to get this correct.
-    if (SrcVal.getValueType() == MVT::i64) {
-      SDLoc DL(Op);
-      // This algorithm is equivalent to the following:
-      // uint64_t SrcHi = SrcVal & ~0xfffull;
-      // uint64_t SrcLo = SrcVal &  0xfffull;
-      // uint64_t Highest = SrcVal >> 53;
-      // bool HasHighest = Highest != 0;
-      // uint64_t ToRound = HasHighest ? SrcHi : SrcVal;
-      // double  Rounded = static_cast<double>(ToRound);
-      // uint64_t RoundedBits = std::bit_cast<uint64_t>(Rounded);
-      // uint64_t HasLo = SrcLo != 0;
-      // bool NeedsAdjustment = HasHighest & HasLo;
-      // uint64_t AdjustedBits = RoundedBits | uint64_t{NeedsAdjustment};
-      // double Adjusted = std::bit_cast<double>(AdjustedBits);
-      // return static_cast<__bf16>(Adjusted);
-      //
-      // Essentially, what happens is that SrcVal either fits perfectly in a
-      // double-precision value or it is too big. If it is sufficiently small,
-      // we should just go u64 -> double -> bf16 in a naive way. Otherwise, we
-      // ensure that u64 -> double has no rounding error by only using the 52
-      // MSB of the input. The low order bits will get merged into a sticky bit
-      // which will avoid issues incurred by double rounding.
-
-      // Signed conversion is more or less like so:
-      // copysign((__bf16)abs(SrcVal), SrcVal)
-      SDValue SignBit;
-      if (IsSigned) {
-        SignBit = DAG.getNode(ISD::AND, DL, MVT::i64, SrcVal,
-                              DAG.getConstant(1ull << 63, DL, MVT::i64));
-        SrcVal = DAG.getNode(ISD::ABS, DL, MVT::i64, SrcVal);
-      }
-      SDValue SrcHi = DAG.getNode(ISD::AND, DL, MVT::i64, SrcVal,
-                                  DAG.getConstant(~0xfffull, DL, MVT::i64));
-      SDValue SrcLo = DAG.getNode(ISD::AND, DL, MVT::i64, SrcVal,
-                                  DAG.getConstant(0xfffull, DL, MVT::i64));
-      SDValue Highest =
-          DAG.getNode(ISD::SRL, DL, MVT::i64, SrcVal,
-                      DAG.getShiftAmountConstant(53, MVT::i64, DL));
-      SDValue Zero64 = DAG.getConstant(0, DL, MVT::i64);
-      SDValue ToRound =
-          DAG.getSelectCC(DL, Highest, Zero64, SrcHi, SrcVal, ISD::SETNE);
-      SDValue Rounded =
-          IsStrict ? DAG.getNode(Op.getOpcode(), DL, {MVT::f64, MVT::Other},
-                                 {Op.getOperand(0), ToRound})
-                   : DAG.getNode(Op.getOpcode(), DL, MVT::f64, ToRound);
-
-      SDValue RoundedBits = DAG.getNode(ISD::BITCAST, DL, MVT::i64, Rounded);
-      if (SignBit) {
-        RoundedBits = DAG.getNode(ISD::OR, DL, MVT::i64, RoundedBits, SignBit);
-      }
-
-      SDValue HasHighest = DAG.getSetCC(
-          DL,
-          getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), MVT::i64),
-          Highest, Zero64, ISD::SETNE);
-
-      SDValue HasLo = DAG.getSetCC(
-          DL,
-          getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), MVT::i64),
-          SrcLo, Zero64, ISD::SETNE);
-
-      SDValue NeedsAdjustment =
-          DAG.getNode(ISD::AND, DL, HasLo.getValueType(), HasHighest, HasLo);
-      NeedsAdjustment = DAG.getZExtOrTrunc(NeedsAdjustment, DL, MVT::i64);
-
-      SDValue AdjustedBits =
-          DAG.getNode(ISD::OR, DL, MVT::i64, RoundedBits, NeedsAdjustment);
-      SDValue Adjusted = DAG.getNode(ISD::BITCAST, DL, MVT::f64, AdjustedBits);
-      return IsStrict
-                 ? DAG.getNode(
-                       ISD::STRICT_FP_ROUND, DL,
-                       {Op.getValueType(), MVT::Other},
-                       {Rounded.getValue(1), Adjusted,
-                        DAG.getIntPtrConstant(0, DL, /*isTarget=*/true)})
-                 : DAG.getNode(ISD::FP_ROUND, DL, Op.getValueType(), Adjusted,
-                               DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
-    }
-  }
-
   // f16 conversions are promoted to f32 when full fp16 is not supported.
-  if (Op.getValueType() == MVT::f16 && !Subtarget->hasFullFP16()) {
-    return IntToFpViaPromotion(MVT::f32);
-  }
+  if (Op.getValueType() == MVT::f16 && !Subtarget->hasFullFP16())
+    return LowerIntToFpViaPromotion(Op, MVT::f32, DAG);
 
   // i128 conversions are libcalls.
-  if (SrcVal.getValueType() == MVT::i128)
+  if (SrcVT == MVT::i128)
     return SDValue();
 
   // Other conversions are legal, unless it's to the completely software-based
