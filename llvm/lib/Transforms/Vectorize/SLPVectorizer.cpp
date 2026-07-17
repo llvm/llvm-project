@@ -30220,25 +30220,25 @@ public:
             V.isReducedCmpBitcastRoot()) {
           ReductionCost = 0;
           // Check for potential fma fusion as vectorization would break it.
-          if (RdxKind == RecurKind::FAdd && RdxFMF.allowContract()) {
+          if (RK == ReductionOrdering::Ordered && RdxKind == RecurKind::FAdd &&
+              RdxFMF.allowContract()) {
             constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-            Type *Ty = VL.front()->getType();
-            IntrinsicCostAttributes ICA(Intrinsic::fmuladd, Ty, {Ty, Ty, Ty},
-                                        RdxFMF);
-            InstructionCost FusionSaving =
-                TTI->getArithmeticInstrCost(Instruction::FMul, Ty, CostKind) +
-                TTI->getArithmeticInstrCost(Instruction::FAdd, Ty, CostKind) -
-                TTI->getIntrinsicInstrCost(ICA, CostKind);
-            if (FusionSaving.isValid() && FusionSaving > 0)
-              for (Value *RdxVal : VL) {
-                auto *FMul = dyn_cast<Instruction>(RdxVal);
-                if (FMul && FMul->getOpcode() == Instruction::FMul &&
-                    FMul->hasOneUse() &&
-                    cast<FPMathOperator>(FMul)
-                        ->getFastMathFlags()
-                        .allowContract())
-                  ReductionCost += FusionSaving;
-              }
+            for (Value *RdxVal : VL) {
+              auto *FMul = dyn_cast<Instruction>(RdxVal);
+              if (!FMul || FMul->getOpcode() != Instruction::FMul ||
+                  !FMul->hasOneUse())
+                continue;
+              auto *FAdd = cast<Instruction>(FMul->user_back());
+              InstructionCost FMACost = canConvertToFMA(
+                  FAdd, InstructionsState(FAdd, FAdd), DT, DL, *TTI, TLI);
+              if (!FMACost.isValid())
+                continue;
+              InstructionCost FusionSaving =
+                  TTI->getInstructionCost(FMul, CostKind) +
+                  TTI->getInstructionCost(FAdd, CostKind) - FMACost;
+              if (FusionSaving.isValid() && FusionSaving > 0)
+                ReductionCost += FusionSaving;
+            }
           }
         } else
           ReductionCost =
