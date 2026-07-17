@@ -177,16 +177,25 @@ int test_trusted_base_member() {
   return d.tm; // OK: trusted
 }
 
-// Any written initialization gives every member a value; only the bare
-// `Agg a;` form (the implicit no-op default-construction) is tracked.
-Agg make_agg();
-int test_initialized_forms(Agg other) {
+// A value-initializing written form gives every member a value; only the
+// bare `Agg a;` form (the implicit no-op default-construction) is tracked.
+int test_value_initialized_forms() {
   Agg a{};
   Agg b = {};
   Agg c = Agg();
+  return a.m + b.m + c.m; // OK
+}
+
+// A copy does NOT give the [[uninit]] member a value -- it copies
+// indeterminate bits (a copy does not inherit initialization, paper §5.2)
+// -- but the source's per-member state is unknowable for an untracked
+// source, so such copies stay untracked: a known gap, never a false
+// positive.
+Agg make_agg();
+int test_copy_from_untracked_source(Agg other) {
   Agg d = other;
   Agg e = make_agg();
-  return a.m + b.m + c.m + d.m + e.m; // OK
+  return d.m + e.m; // OK: known gap (untracked sources)
 }
 
 // Parameters and references arrive constructed by the caller and are never

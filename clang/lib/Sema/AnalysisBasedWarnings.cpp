@@ -2186,10 +2186,14 @@ static const CXXRecordDecl *getTrackedLocalAggregate(const VarDecl *V) {
   if (RD->isUnion() || RD->isDependentType() || hasUserProvidedCtor(RD))
     return nullptr;
   // Declared without a real initializer: for a record local that is the
-  // synthesized call to the implicit default constructor (`Agg a;`). Any
-  // written form -- `Agg a{}` / `= {}` (an InitListExpr), `Agg a = Agg()`
-  // (a CXXTemporaryObjectExpr), a copy (a non-default constructor) -- gives
-  // every member a value and leaves nothing to track.
+  // synthesized call to the implicit default constructor (`Agg a;`). A
+  // value-initializing form -- `Agg a{}` / `= {}` (an InitListExpr),
+  // `Agg a = Agg()` (a CXXTemporaryObjectExpr) -- gives every member a
+  // value and leaves nothing to track. A *copy* does not: it copies
+  // indeterminate bits, and a copy does not inherit initialization (paper
+  // §5.2). But the source's per-member state is unknowable here for an
+  // arbitrary source, so copies stay untracked -- a missed diagnostic,
+  // never a false positive.
   if (const Expr *Init = V->getInit()) {
     const auto *CCE = dyn_cast<CXXConstructExpr>(Init->IgnoreImplicit());
     if (!CCE || isa<CXXTemporaryObjectExpr>(CCE) ||

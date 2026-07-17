@@ -647,6 +647,11 @@ false positive.
   the object-argument check.
 - Members of anonymous structs and unions, and arrays of aggregates, are not
   flow-tracked.
+- ``[[uninit]]`` members of by-value parameters, and of locals copied from
+  untracked sources, are not flow-tracked: a copy does not inherit
+  initialization (§5.2) -- it copies indeterminate bits -- but the source's
+  per-member state is unknown, so reads of such members are trusted (a
+  missed diagnostic, never a false positive).
 - Virtual base subobjects are not checked by ``ctor_uninit_member`` (they are
   initialized by the most-derived class).
 - A read of a tracked member inside another member's default initializer is
