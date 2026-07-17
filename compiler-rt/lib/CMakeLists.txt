@@ -36,6 +36,11 @@ if(COMPILER_RT_BUILD_SANITIZERS OR COMPILER_RT_BUILD_MEMPROF)
 endif()
 
 if(COMPILER_RT_BUILD_SANITIZERS)
+  # The sanitizer ignorelists are consumed by the compiler driver, not linked
+  # into the runtimes. Build them as their own target so they can be built
+  # independently of the runtime libraries.
+  add_subdirectory(sanitizer_ignorelists)
+
   if(COMPILER_RT_HAS_SANITIZER_COMMON)
     add_subdirectory(stats)
     # Contains RTLSanCommon used even without COMPILER_RT_HAS_LSAN.
@@ -47,11 +52,6 @@ if(COMPILER_RT_BUILD_SANITIZERS)
   foreach(sanitizer ${COMPILER_RT_SANITIZERS_TO_BUILD})
     compiler_rt_build_runtime(${sanitizer})
   endforeach()
-
-  # The sanitizer ignorelists are consumed by the compiler driver, not linked
-  # into the runtimes. Build them as their own target so they can be built
-  # independently of the runtime libraries.
-  add_subdirectory(sanitizer_ignorelists)
 endif()
 
 if(COMPILER_RT_BUILD_PROFILE)
