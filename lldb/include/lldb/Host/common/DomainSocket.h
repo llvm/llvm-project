@@ -49,8 +49,10 @@ public:
   /// domain-socket URI.
   /// On Windows a drive-letter path (e.g. "C:\\dir\\sock") is not a valid URI
   /// authority, so it is carried in the RFC 8089 file-URI form "/C:/dir/sock"
-  /// (leading slash, forward slashes). On other platforms the path is already a
-  /// valid URI path and is returned unchanged.
+  /// (leading slash, forward slashes). A UNC path (e.g. "\\\\server\\share")
+  /// only needs its backslashes replaced to become the URI path
+  /// "//server/share". On other platforms the path is already a valid URI path
+  /// and is returned unchanged.
   /// @{
   static std::string NativePathToURIPath(llvm::StringRef path);
   static std::string URIPathToNativePath(llvm::StringRef path);

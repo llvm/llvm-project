@@ -416,6 +416,15 @@ TEST_F(SocketTest, DomainSocketPathURIConversion) {
   EXPECT_EQ(DomainSocket::URIPathToNativePath(
                 DomainSocket::NativePathToURIPath("C:\\dir\\sock")),
             "C:\\dir\\sock");
+
+  // A Windows UNC path round-trips by swapping backslashes for forward slashes.
+  EXPECT_EQ(DomainSocket::NativePathToURIPath("\\\\server\\share\\sock"),
+            "//server/share/sock");
+  EXPECT_EQ(DomainSocket::URIPathToNativePath("//server/share/sock"),
+            "\\\\server\\share\\sock");
+  EXPECT_EQ(DomainSocket::URIPathToNativePath(DomainSocket::NativePathToURIPath(
+                "\\\\server\\share\\sock")),
+            "\\\\server\\share\\sock");
 #endif
 }
 
