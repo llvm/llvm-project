@@ -356,7 +356,21 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
     break;
   case file_magic::pecoff_executable:
     if (ctx.config.mingw) {
-      addFile(make<DLLFile>(ctx.symtab, mbref));
+      std::unique_ptr<COFFObjectFile> obj =
+          ObjFile::createCOFFObject(ctx, mbref);
+      if (ctx.symtab.isEC()) {
+        // When importing an ARM64X image, add both the native and EC views.
+        if (std::unique_ptr<MemoryBuffer> hybridView =
+                obj->getHybridObjectView()) {
+          std::unique_ptr<COFFObjectFile> hybridObj = ObjFile::createCOFFObject(
+              ctx, hybridView.release()->getMemBufferRef());
+          addFile(make<DLLFile>(ctx.symtab, hybridObj));
+          addFile(make<DLLFile>(*ctx.hybridSymtab, obj));
+          break;
+        }
+      }
+      auto machine = static_cast<MachineTypes>(obj->getMachine());
+      addFile(make<DLLFile>(ctx.getSymtab(machine), obj));
       break;
     }
     if (filename.ends_with_insensitive(".dll")) {
