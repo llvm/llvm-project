@@ -179,8 +179,6 @@ bool X86TargetInfo::initFeatureMap(
       for (const char *Sub :
            {"egpr", "push2pop2", "ppx", "ndd", "ccmp", "nf", "zu", "jmpabs"})
         UpdatedFeaturesVec.push_back(Sign + std::string(Sub));
-      if (Sign == '-')
-        UpdatedFeaturesVec.push_back("-cf");
       continue;
     }
 
