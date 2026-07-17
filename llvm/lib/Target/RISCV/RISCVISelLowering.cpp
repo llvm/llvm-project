@@ -1726,6 +1726,20 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                 Custom);
         }
 
+        if (VT.getVectorElementType() == MVT::i64) {
+          if (Subtarget.hasStdExtZvbc())
+            setOperationAction({ISD::CLMUL, ISD::CLMULH}, VT, Custom);
+        } else {
+          if (Subtarget.hasStdExtZvbc32e()) {
+            setOperationAction({ISD::CLMUL, ISD::CLMULH}, VT, Custom);
+          } else if (Subtarget.hasStdExtZvbc()) {
+            // Promote to i64 like in the case of scalable vectors.
+            if (useRVVForFixedLengthVectorVT(
+                    VT.changeVectorElementType(MVT::i64)))
+              setOperationAction(ISD::CLMUL, VT, Custom);
+          }
+        }
+
         setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
         setOperationAction({ISD::MASKED_UDIV, ISD::MASKED_SDIV,
                             ISD::MASKED_UREM, ISD::MASKED_SREM},
@@ -7948,6 +7962,8 @@ static unsigned getRISCVVLOp(SDValue Op) {
   OP_CASE(CTLZ)
   OP_CASE(CTPOP)
   OP_CASE(BITREVERSE)
+  OP_CASE(CLMUL)
+  OP_CASE(CLMULH)
   OP_CASE(SADDSAT)
   OP_CASE(UADDSAT)
   OP_CASE(SSUBSAT)
@@ -9513,10 +9529,16 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       return lowerToScalableOp(Op, DAG);
     assert(Op.getOpcode() != ISD::CTTZ);
     return lowerCTLZ_CTTZ_ZERO_POISON(Op, DAG);
-  case ISD::CLMUL: {
+  case ISD::CLMUL:
+  case ISD::CLMULH: {
     MVT VT = Op.getSimpleValueType();
-    assert(VT.isScalableVector() && Subtarget.hasStdExtZvbc() &&
-           "Unexpected custom legalisation");
+    // If the scalable vector version of this op is Legal, convert to scalable.
+    if (VT.isFixedLengthVector() &&
+        (VT.getVectorElementType() == MVT::i64 || Subtarget.hasStdExtZvbc32e()))
+      return lowerToScalableOp(Op, DAG);
+
+    assert(Op.getOpcode() == ISD::CLMUL && VT.isVector() &&
+           Subtarget.hasStdExtZvbc() && "Unexpected custom legalisation");
     // Promote to i64 vector.
     MVT I64VecVT = VT.changeVectorElementType(MVT::i64);
     SDLoc DL(Op);
