@@ -26,7 +26,8 @@ bool llvm::canTrackReturnsInterprocedurally(Function *F) {
   // just strong definitions) is authoritative for its return value, so return
   // attributes inferred from the body hold for whichever copy the linker keeps.
   // nobuiltin definitions are excluded: call sites may assume builtin semantics
-  // rather than the visible body, so facts from the body must not be propagated.
+  // rather than the visible body, so facts from the body must not be
+  // propagated.
   return !F->isDeclaration() && !F->isInterposable() &&
          !F->hasFnAttribute(Attribute::NoBuiltin) &&
          !F->hasFnAttribute(Attribute::Naked);
