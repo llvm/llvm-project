@@ -26,6 +26,7 @@ add_entrypoint_object(
     libc.src.__support.error_or
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getcwd
     libc.src.__support.OSUtil.path
     libc.src.string.memory_utils.inline_memcpy
 )
