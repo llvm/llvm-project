@@ -162,9 +162,9 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
       virtual ~MoveFileToCache() = default;
 
       virtual Error commit(std::unique_ptr<MemoryBuffer> MemBuf) override {
-        if (Committed)
-          return createStringError(make_error_code(std::errc::invalid_argument),
-                                   Twine("MoveFileToCache already committed."));
+        Error E = CachedFileStream::commit();
+        if (E)
+          return E;
 
         FilePath = MemBuf->getBufferIdentifier();
         assert(!FilePath.empty() && "File path is empty.");
@@ -186,10 +186,8 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
 
         AddBuffer(Task, ModuleName, std::move(MemBuf));
 
-        Committed = true;
         return Error::success();
       }
-      virtual AddBufferFn GetAddBuffer() override { return AddBuffer; }
     };
 
     return [=](size_t Task, const Twine &ModuleName)
