@@ -597,7 +597,7 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::mapDISignatureTypeToReg(
 MCRegister SPIRVNonSemanticDebugHandler::resolveGlobalVariableParent(
     const DIGlobalVariable *) const {
   // TODO: When this backend emits debug instructions for namespace, subprogram,
-  // and module scopes, return GV->getScope()'s debug id.
+  // compilation units, and module scopes return GV->getScope()'s debug id.
 
   // !CompileUnits.empty() was already checked before staring the emission of
   // NSDI instructions.
