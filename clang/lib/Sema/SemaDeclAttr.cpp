@@ -7854,16 +7854,15 @@ void Sema::applyPtrCountedByEndedByAttr(Decl *D, unsigned Level,
     return;
   }
 
+  // This cannot be const because `diagnoseCountAttributedTypeShape` may modify
+  // Flags.CountInBytes.
   auto Flags = getBoundsAttrFlags(Kind);
-  bool CountInBytes = Flags.CountInBytes;
-  bool IsEndedBy = Flags.IsEndedBy;
-  bool OrNull = Flags.OrNull;
 
-  if (!IsEndedBy) {
+  if (!Flags.IsEndedBy) {
     // Nullability as indicated by _Nonnull or _Nullable. Does not impact
     // semantics, only warnings.
     NullabilityKindOrNone AttrNullability = Info.Ty->getNullability();
-    if (OrNull) {
+    if (Flags.OrNull) {
       // Function parameter/return value attribute that *does* impact semantics,
       // letting the compiler elide null checks. This could remove bounds safety
       // checks, so using it together with __counted_by_or_null is not safe.
@@ -7873,39 +7872,33 @@ void Sema::applyPtrCountedByEndedByAttr(Decl *D, unsigned Level,
       if (auto NNAttr = D->getAttr<NonNullAttr>();
           NNAttr && isa<ParmVarDecl>(D)) {
         Diag(Loc, diag::err_bounds_safety_nullable_dynamic_count_nonnullable)
-            << CountInBytes << NNAttr << Range << NNAttr->getRange();
+            << Flags.CountInBytes << NNAttr << Range << NNAttr->getRange();
         return;
       }
       if (auto RNNAttr = D->getAttr<ReturnsNonNullAttr>()) {
         Diag(Loc, diag::err_bounds_safety_nullable_dynamic_count_nonnullable)
-            << CountInBytes << RNNAttr << Range << RNNAttr->getRange();
+            << Flags.CountInBytes << RNNAttr << Range << RNNAttr->getRange();
         return;
       }
 
       if (AttrNullability == NullabilityKind::NonNull) {
         Diag(Loc, diag::warn_bounds_safety_nullable_dynamic_count_nonnullable)
-            << CountInBytes << DiagName;
+            << Flags.CountInBytes << DiagName;
       }
     }
 
     if (auto CountArg = AttrArg->getIntegerConstantExpr(Context)) {
-      if (CountArg > 0 && !OrNull &&
+      if (CountArg > 0 && !Flags.OrNull &&
           AttrNullability == NullabilityKind::Nullable)
         Diag(AttrArg->getExprLoc(),
              diag::warn_bounds_safety_nonnullable_dynamic_count_nullable)
-            << CountInBytes << Range;
+            << Flags.CountInBytes << Range;
     }
   }
 
   const auto *FD = dyn_cast<FieldDecl>(D);
   if (FD && FD->getParent()->isUnion()) {
-    unsigned DiagKind =
-        IsEndedBy
-            ? BoundsAttributedType::EndedBy
-            : (CountInBytes ? (OrNull ? BoundsAttributedType::SizedByOrNull
-                                      : BoundsAttributedType::SizedBy)
-                            : (OrNull ? BoundsAttributedType::CountedByOrNull
-                                      : BoundsAttributedType::CountedBy));
+    BoundsAttributedType::BoundsAttrKind DiagKind = getBoundsAttrKind(Flags);
     Diag(Loc, diag::err_count_attr_in_union) << DiagKind;
     return;
   }
@@ -7924,7 +7917,7 @@ void Sema::applyPtrCountedByEndedByAttr(Decl *D, unsigned Level,
   // instead.
   if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
     QualType TSITy = PVD->getTypeSourceInfo()->getType();
-    if (IsEndedBy) {
+    if (Flags.IsEndedBy) {
       if (Level == 0 && TSITy->isArrayType()) {
         Diag(Loc, diag::err_count_attr_not_on_ptr_or_flexible_array_member)
             << BoundsAttributedType::EndedBy << 0;
@@ -7940,21 +7933,21 @@ void Sema::applyPtrCountedByEndedByAttr(Decl *D, unsigned Level,
     }
   }
 
-  if (Info.Ty->isArrayType() && OrNull &&
+  if (Info.Ty->isArrayType() && Flags.OrNull &&
       (FD || Info.EffectiveLevel > 0 ||
        (Info.Var && Info.Var->hasExternalStorage()))) {
     auto ErrDiag = Diag(Loc, diag::err_bounds_safety_nullable_fam);
     // Pointers to dynamic count types are only allowed for parameters, so any
     // FieldDecl containing a dynamic count type is a FAM. I.e. a struct field
     // with type 'int(*)[__counted_by(...)]' is not valid.
-    ErrDiag << CountInBytes << /*is FAM?*/ !!FD << DiagName;
+    ErrDiag << Flags.CountInBytes << /*is FAM?*/ !!FD << DiagName;
     assert(!FD || Info.EffectiveLevel == 0);
 
     SourceLocation FixItLoc = getSourceManager().getExpansionLoc(Loc);
     SourceLocation EndLoc =
         Lexer::getLocForEndOfToken(FixItLoc, /* Don't include '(' */ -1,
                                    getSourceManager(), getLangOpts());
-    std::string Attribute = CountInBytes ? "__sized_by" : "__counted_by";
+    std::string Attribute = Flags.CountInBytes ? "__sized_by" : "__counted_by";
     ErrDiag << FixItHint::CreateReplacement({FixItLoc, EndLoc}, Attribute);
 
     return;
@@ -7973,7 +7966,7 @@ void Sema::applyPtrCountedByEndedByAttr(Decl *D, unsigned Level,
   const BoundsAttributedType *ConstructedType = nullptr;
 
   bool HadAtomicError = false;
-  if (IsEndedBy) {
+  if (Flags.IsEndedBy) {
     if (AttrArg && AttrArg->getType()->isAtomicType()) {
       Diag(Loc, diag::err_bounds_safety_atomic_unsupported_attribute)
           << /*started_by*/ 8;
@@ -8023,12 +8016,12 @@ void Sema::applyPtrCountedByEndedByAttr(Decl *D, unsigned Level,
     }
 
     if (!DiagCtx.diagnoseCountAttributedTypeShape(
-            Info.DeclTy, CountInBytes, OrNull,
+            Info.DeclTy, Flags.CountInBytes, Flags.OrNull,
             /*AllowRedecl=*/OriginatesInAPINotes))
       return;
 
     auto TypeConstructor = ConstructCountAttributedType(
-        *this, Level, DiagName, AttrArg, Loc, CountInBytes, OrNull,
+        *this, Level, DiagName, AttrArg, Loc, Flags.CountInBytes, Flags.OrNull,
         OriginatesInAPINotes, Info.ScopeCheck);
     NewDeclTy = TypeConstructor.Visit(Info.DeclTy);
     HadAtomicError = TypeConstructor.hadAtomicError();

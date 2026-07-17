@@ -30,6 +30,13 @@ getCountAttrKind(bool CountInBytes, bool OrNull) {
                 : CountAttributedType::CountedBy;
 }
 
+BoundsAttributedType::BoundsAttrKind
+Sema::getBoundsAttrKind(const BoundsAttrFlags &Flags) {
+  if (Flags.IsEndedBy)
+    return BoundsAttributedType::EndedBy;
+  return getCountAttrKind(Flags.CountInBytes, Flags.OrNull);
+}
+
 Sema::BoundsAttrFlags Sema::getBoundsAttrFlags(AttributeCommonInfo::Kind K) {
   BoundsAttrFlags Flags;
   switch (K) {
@@ -65,9 +72,7 @@ enum class CountedByInvalidPointeeTypeKind {
 bool Sema::ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
                                        SourceRange AttrRange,
                                        BoundsAttrFlags &Flags) {
-  unsigned Kind = Flags.IsEndedBy
-                      ? BoundsAttributedType::EndedBy
-                      : getCountAttrKind(Flags.CountInBytes, Flags.OrNull);
+  BoundsAttributedType::BoundsAttrKind Kind = getBoundsAttrKind(Flags);
 
   // ended_by only applies to pointers, not arrays.
   if (Flags.IsEndedBy) {
