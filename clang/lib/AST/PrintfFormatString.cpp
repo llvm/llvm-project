@@ -61,8 +61,8 @@ ParseObjCFlags(FormatStringHandler &H, PrintfSpecifier &FS, const char *FlagBeg,
   StringRef Flag(FlagBeg, E - FlagBeg);
   // Currently there is only one flag.
   if (Flag.size() == 2 &&
-      FormatStrConverter.convert(FlagBeg[0]) == 't' &&
-      FormatStrConverter.convert(FlagBeg[1]) == 't') {
+      FormatStrConverter.convertBasicChar(FlagBeg[0]) == 't' &&
+      FormatStrConverter.convertBasicChar(FlagBeg[1]) == 't') {
     FS.setHasObjCTechnicalTerm(FlagBeg);
     return false;
   }
@@ -98,7 +98,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
       H.HandleNullChar(I);
       return true;
     }
-    if (FormatStrConverter.convert(c) == '%') {
+    if (FormatStrConverter.convertBasicChar(c) == '%') {
       Start = I++; // Record the start of the format specifier.
       break;
     }
@@ -126,7 +126,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
     return true;
   }
 
-  if (FormatStrConverter.convert(*I) == '{') {
+  if (FormatStrConverter.convertBasicChar(*I) == '{') {
     ++I;
     unsigned char PrivacyFlags = 0;
     StringRef MatchedStr;
@@ -135,7 +135,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
       const char *II;
       std::string S(I, E - I);
       for (unsigned long i = 0; i < S.length(); ++i)
-        S[i] = FormatStrConverter.convert(S[i]);
+        S[i] = FormatStrConverter.convertBasicChar(S[i]);
       StringRef Str(S);
       std::string Match = "^[[:space:]]*"
                           "(private|public|sensitive|mask\\.[^[:space:],}]*)"
@@ -148,7 +148,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
         II = I;
         I += Matches[0].size();
 
-        while (FormatStrConverter.convert(*II) == ' ')
+        while (FormatStrConverter.convertBasicChar(*II) == ' ')
           ++II;
 
         // Set the privacy flag if the privacy annotation in the
@@ -191,7 +191,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
         I += CommaOrBracePos + 1;
       }
       // Continue until the closing brace is found.
-    } while (FormatStrConverter.convert(*(I - 1)) == ',');
+    } while (FormatStrConverter.convertBasicChar(*(I - 1)) == ',');
 
     // Set the privacy flag.
     switch (PrivacyFlags) {
@@ -214,7 +214,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
   // Look for flags (if any).
   bool hasMore = true;
   for (; I != E; ++I) {
-    switch (FormatStrConverter.convert(*I)) {
+    switch (FormatStrConverter.convertBasicChar(*I)) {
     default:
       hasMore = false;
       break;
@@ -263,7 +263,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
   }
 
   // Look for the precision (if any).
-  if (FormatStrConverter.convert(*I) == '.') {
+  if (FormatStrConverter.convertBasicChar(*I) == '.') {
     ++I;
     if (I == E) {
       if (Warn)
@@ -303,7 +303,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
   // enables better recovery, and we don't know if
   // these flags are applicable until later.
   const char *ObjCModifierFlagsStart = nullptr, *ObjCModifierFlagsEnd = nullptr;
-  if (FormatStrConverter.convert(*I) == '[') {
+  if (FormatStrConverter.convertBasicChar(*I) == '[') {
     ObjCModifierFlagsStart = I;
     ++I;
     auto flagStart = I;
@@ -315,7 +315,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
         return true;
       }
       // Did we find the closing ']'?
-      if (FormatStrConverter.convert(*I) == ']') {
+      if (FormatStrConverter.convertBasicChar(*I) == ']') {
         if (ParseObjCFlags(H, FS, flagStart, I, Warn,
                            FormatStrConverter))
           return true;
@@ -337,7 +337,7 @@ ParsePrintfSpecifier(FormatStringHandler &H, const char *&Beg, const char *E,
   // Finally, look for the conversion specifier.
   const char *conversionPosition = I++;
   ConversionSpecifier::Kind k = ConversionSpecifier::InvalidSpecifier;
-  switch (FormatStrConverter.convert(*conversionPosition)) {
+  switch (FormatStrConverter.convertBasicChar(*conversionPosition)) {
   default:
     break;
   // C99: 7.19.6.1 (section 8).
