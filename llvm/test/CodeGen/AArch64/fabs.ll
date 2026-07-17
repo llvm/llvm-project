@@ -58,7 +58,7 @@ define bfloat @fabs_bf16(bfloat %a) {
 ; CHECK-FP16-NEXT:    fabs h0, h0
 ; CHECK-FP16-NEXT:    ret
 entry:
-  %c = call bfloat @llvm.fabs.f16(bfloat %a)
+  %c = call bfloat @llvm.fabs.bf16(bfloat %a)
   ret bfloat %c
 }
 

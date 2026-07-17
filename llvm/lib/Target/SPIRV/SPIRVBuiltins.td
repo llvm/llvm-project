@@ -27,6 +27,7 @@ def OpenCL_std : InstructionSet<0>;
 def GLSL_std_450 : InstructionSet<1>;
 def SPV_AMD_shader_trinary_minmax : InstructionSet<2>;
 def NonSemantic_Shader_DebugInfo_100 : InstructionSet<3>;
+def NonSemantic_AuxData : InstructionSet<4>;
 
 // Define various builtin groups
 def BuiltinGroup : GenericEnum {
@@ -1255,6 +1256,8 @@ defm : DemangledNativeBuiltin<"clock_read_hilo_sub_group", OpenCL_std, KernelClo
 //SPV_ALTERA_blocking_pipes
 defm : DemangledNativeBuiltin<"__spirv_WritePipeBlockingINTEL", OpenCL_std, BlockingPipes, 0, 0, OpWritePipeBlockingALTERA>;
 defm : DemangledNativeBuiltin<"__spirv_ReadPipeBlockingINTEL", OpenCL_std, BlockingPipes, 0, 0, OpReadPipeBlockingALTERA>;
+defm : DemangledNativeBuiltin<"__read_pipe_2_bl", OpenCL_std, BlockingPipes, 4, 4, OpReadPipeBlockingALTERA>;
+defm : DemangledNativeBuiltin<"__write_pipe_2_bl", OpenCL_std, BlockingPipes, 4, 4, OpWritePipeBlockingALTERA>;
 defm : DemangledNativeBuiltin<"__spirv_ReadClockKHR", OpenCL_std, KernelClock, 1, 1, OpReadClockKHR>;
 
 //SPV_ALTERA_arbitrary_precision_fixed_point

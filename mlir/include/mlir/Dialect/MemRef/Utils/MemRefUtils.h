@@ -194,6 +194,10 @@ LogicalResult resolveSourceIndicesRankReducingSubview(
     Location loc, OpBuilder &b, memref::SubViewOp subViewOp, ValueRange indices,
     SmallVectorImpl<Value> &sourceIndices);
 
+/// Returns true if any stride of `memRefTy` is statically known to be
+/// negative.
+bool hasNegativeStaticStride(MemRefType memRefTy);
+
 } // namespace memref
 } // namespace mlir
 

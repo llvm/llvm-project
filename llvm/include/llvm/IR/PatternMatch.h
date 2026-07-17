@@ -44,6 +44,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/PatternMatchHelpers.h"
 #include <cstdint>
+#include <utility>
 
 using namespace llvm::PatternMatchHelpers;
 
@@ -148,7 +149,7 @@ inline auto m_AnyIntrinsic() { return m_Isa<IntrinsicInst>(); }
 
 struct undef_match {
 private:
-  static bool checkAggregate(const ConstantAggregate *CA);
+  LLVM_ABI static bool checkAggregate(const ConstantAggregate *CA);
 
 public:
   static bool check(const Value *V) {
@@ -181,16 +182,32 @@ inline auto m_ConstantInt() { return m_Isa<ConstantInt>(); }
 /// Match an arbitrary ConstantFP and ignore it.
 inline auto m_ConstantFP() { return m_Isa<ConstantFP>(); }
 
-struct constantexpr_match {
+template <typename SPTy> struct ContainsMatchingVectorElement_match {
+  SPTy SubPattern;
+  ContainsMatchingVectorElement_match(const SPTy &SP) : SubPattern(SP) {}
+
   template <typename ITy> bool match(ITy *V) const {
     auto *C = dyn_cast<Constant>(V);
-    return C && (isa<ConstantExpr>(C) || C->containsConstantExpression());
+    return C && C->containsMatchingVectorElement(
+                    [&](Constant *E) { return SubPattern.match(E); });
   }
 };
 
+/// Match a vector constant where at least one of its elements matches the
+/// subpattern. Scalable vector constants are not matched. Any bindings in the
+/// subpattern will be bound to the first match.
+template <typename SPTy>
+inline ContainsMatchingVectorElement_match<SPTy>
+m_ContainsMatchingVectorElement(const SPTy &SubPattern) {
+  return SubPattern;
+}
+
 /// Match a constant expression or a constant that contains a constant
 /// expression.
-inline constantexpr_match m_ConstantExpr() { return constantexpr_match(); }
+inline auto m_ConstantExpr() {
+  return m_CombineOr(m_Isa<ConstantExpr>(),
+                     m_ContainsMatchingVectorElement(m_Isa<ConstantExpr>()));
+}
 
 template <typename SubPattern_t> struct Splat_match {
   SubPattern_t SubPattern;
@@ -497,6 +514,8 @@ inline cst_pred_ty<is_all_ones, false> m_AllOnesForbidPoison() {
   return cst_pred_ty<is_all_ones, false>();
 }
 
+inline auto m_AllOnesOrPoison() { return m_CombineOr(m_AllOnes(), m_Poison()); }
+
 struct is_maxsignedvalue {
   bool isValue(const APInt &C) const { return C.isMaxSignedValue(); }
 };
@@ -587,6 +606,8 @@ struct is_zero {
 /// Match any null constant or a vector with all elements equal to 0.
 /// For vectors, this includes constants with undefined elements.
 inline is_zero m_Zero() { return is_zero(); }
+
+inline auto m_ZeroOrPoison() { return m_CombineOr(m_Zero(), m_Poison()); }
 
 struct is_power2 {
   bool isValue(const APInt &C) const { return C.isPowerOf2(); }
@@ -858,6 +879,9 @@ m_WithOverflowInst(const WithOverflowInst *&I) {
   return I;
 }
 
+/// Match a PHI node, capturing it if we match.
+inline match_bind<PHINode> m_Phi(PHINode *&PN) { return PN; }
+
 /// Match an UndefValue, capturing the value if we match.
 inline match_bind<UndefValue> m_UndefValue(UndefValue *&U) { return U; }
 
@@ -884,13 +908,12 @@ inline match_bind<const BasicBlock> m_BasicBlock(const BasicBlock *&V) {
 struct immconstant_ty {
   template <typename ITy> static bool isImmConstant(ITy *V) {
     if (auto *CV = dyn_cast<Constant>(V)) {
-      if (!isa<ConstantExpr>(CV) && !CV->containsConstantExpression())
+      if (!match(CV, m_ConstantExpr()))
         return true;
 
       if (CV->getType()->isVectorTy()) {
         if (auto *Splat = CV->getSplatValue(/*AllowPoison=*/true)) {
-          if (!isa<ConstantExpr>(Splat) &&
-              !Splat->containsConstantExpression()) {
+          if (!match(Splat, m_ConstantExpr())) {
             return true;
           }
         }
@@ -1069,6 +1092,39 @@ inline match_deferred<BasicBlock> m_Deferred(BasicBlock *const &BB) {
 inline match_deferred<const BasicBlock>
 m_Deferred(const BasicBlock *const &BB) {
   return BB;
+}
+
+template <typename Pattern> struct SpecificType_match {
+  Type *RefTy;
+  Pattern P;
+
+  SpecificType_match(Type *RefTy, const Pattern &P) : RefTy(RefTy), P(P) {}
+
+  template <typename ITy> bool match(ITy *V) const {
+    return V->getType() == RefTy && P.match(V);
+  }
+};
+
+// Explicit deduction guide.
+template <typename Pattern>
+SpecificType_match(const Type *, const Pattern &)
+    -> SpecificType_match<Pattern>;
+
+/// Match a value of a specific type.
+template <typename Pattern>
+inline auto m_SpecificType(Type *RefTy, const Pattern &P) {
+  return SpecificType_match<Pattern>(RefTy, P);
+}
+inline auto m_SpecificType(Type *RefTy) {
+  return m_SpecificType(RefTy, m_Value());
+}
+
+/// Match a value of a specific type, capturing it if we match.
+inline auto m_SpecificType(Type *RefTy, Value *&V) {
+  return m_SpecificType(RefTy, m_Value(V));
+}
+inline auto m_SpecificType(Type *RefTy, const Value *&V) {
+  return m_SpecificType(RefTy, m_Value(V));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1974,6 +2030,10 @@ struct m_SpecificMask {
   bool match(ArrayRef<int> Mask) const { return Val == Mask; }
 };
 
+struct m_SplatMask {
+  bool match(ArrayRef<int> Mask) const { return all_equal(Mask); }
+};
+
 struct m_SplatOrPoisonMask {
   int &SplatIndex;
   m_SplatOrPoisonMask(int &SplatIndex) : SplatIndex(SplatIndex) {}
@@ -2019,6 +2079,22 @@ m_Shuffle(const V1_t &v1, const V2_t &v2, const Mask_t &mask) {
 template <typename OpTy>
 inline OneOps_match<OpTy, Instruction::Load> m_Load(const OpTy &Op) {
   return OneOps_match<OpTy, Instruction::Load>(Op);
+}
+
+/// Matches a simple (non-volatile, non-atomic) LoadInst.
+template <typename OpTy> struct LoadSimple_match {
+  OneOps_match<OpTy, Instruction::Load> Base;
+
+  LoadSimple_match(const OpTy &Op) : Base(Op) {}
+
+  template <typename ITy> bool match(ITy *V) const {
+    return Base.match(V) && cast<LoadInst>(V)->isSimple();
+  }
+};
+
+template <typename OpTy>
+inline LoadSimple_match<OpTy> m_LoadSimple(const OpTy &Op) {
+  return LoadSimple_match<OpTy>(Op);
 }
 
 /// Matches StoreInst.
@@ -2439,37 +2515,25 @@ m_Br(const Cond_t &C, const TrueBlock_t &T, const FalseBlock_t &F) {
 }
 
 //===----------------------------------------------------------------------===//
-// Matchers for max/min idioms, eg: "select (sgt x, y), x, y" -> smax(x,y).
+// Matchers for fmax/fmin idioms, eg: "select (sgt x, y), x, y" -> smax(x,y).
 //
 
-template <typename CmpInst_t, typename LHS_t, typename RHS_t, typename Pred_t,
-          bool Commutable = false>
-struct MaxMin_match {
+template <typename LHS_t, typename RHS_t, typename Pred_t>
+struct FMaxMin_match {
   using PredType = Pred_t;
   LHS_t L;
   RHS_t R;
 
   // The evaluation order is always stable, regardless of Commutability.
   // The LHS is always matched first.
-  MaxMin_match(const LHS_t &LHS, const RHS_t &RHS) : L(LHS), R(RHS) {}
+  FMaxMin_match(const LHS_t &LHS, const RHS_t &RHS) : L(LHS), R(RHS) {}
 
   template <typename OpTy> bool match(OpTy *V) const {
-    if (auto *II = dyn_cast<IntrinsicInst>(V)) {
-      Intrinsic::ID IID = II->getIntrinsicID();
-      if ((IID == Intrinsic::smax && Pred_t::match(ICmpInst::ICMP_SGT)) ||
-          (IID == Intrinsic::smin && Pred_t::match(ICmpInst::ICMP_SLT)) ||
-          (IID == Intrinsic::umax && Pred_t::match(ICmpInst::ICMP_UGT)) ||
-          (IID == Intrinsic::umin && Pred_t::match(ICmpInst::ICMP_ULT))) {
-        Value *LHS = II->getOperand(0), *RHS = II->getOperand(1);
-        return (L.match(LHS) && R.match(RHS)) ||
-               (Commutable && L.match(RHS) && R.match(LHS));
-      }
-    }
     // Look for "(x pred y) ? x : y" or "(x pred y) ? y : x".
     auto *SI = dyn_cast<SelectInst>(V);
     if (!SI)
       return false;
-    auto *Cmp = dyn_cast<CmpInst_t>(SI->getCondition());
+    auto *Cmp = dyn_cast<FCmpInst>(SI->getCondition());
     if (!Cmp)
       return false;
     // At this point we have a select conditioned on a comparison.  Check that
@@ -2481,42 +2545,13 @@ struct MaxMin_match {
     if ((TrueVal != LHS || FalseVal != RHS) &&
         (TrueVal != RHS || FalseVal != LHS))
       return false;
-    typename CmpInst_t::Predicate Pred =
+    FCmpInst::Predicate Pred =
         LHS == TrueVal ? Cmp->getPredicate() : Cmp->getInversePredicate();
     // Does "(x pred y) ? x : y" represent the desired max/min operation?
     if (!Pred_t::match(Pred))
       return false;
     // It does!  Bind the operands.
-    return (L.match(LHS) && R.match(RHS)) ||
-           (Commutable && L.match(RHS) && R.match(LHS));
-  }
-};
-
-/// Helper class for identifying signed max predicates.
-struct smax_pred_ty {
-  static bool match(ICmpInst::Predicate Pred) {
-    return Pred == CmpInst::ICMP_SGT || Pred == CmpInst::ICMP_SGE;
-  }
-};
-
-/// Helper class for identifying signed min predicates.
-struct smin_pred_ty {
-  static bool match(ICmpInst::Predicate Pred) {
-    return Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_SLE;
-  }
-};
-
-/// Helper class for identifying unsigned max predicates.
-struct umax_pred_ty {
-  static bool match(ICmpInst::Predicate Pred) {
-    return Pred == CmpInst::ICMP_UGT || Pred == CmpInst::ICMP_UGE;
-  }
-};
-
-/// Helper class for identifying unsigned min predicates.
-struct umin_pred_ty {
-  static bool match(ICmpInst::Predicate Pred) {
-    return Pred == CmpInst::ICMP_ULT || Pred == CmpInst::ICMP_ULE;
+    return L.match(LHS) && R.match(RHS);
   }
 };
 
@@ -2548,35 +2583,6 @@ struct ufmin_pred_ty {
   }
 };
 
-template <typename LHS, typename RHS>
-inline MaxMin_match<ICmpInst, LHS, RHS, smax_pred_ty> m_SMax(const LHS &L,
-                                                             const RHS &R) {
-  return MaxMin_match<ICmpInst, LHS, RHS, smax_pred_ty>(L, R);
-}
-
-template <typename LHS, typename RHS>
-inline MaxMin_match<ICmpInst, LHS, RHS, smin_pred_ty> m_SMin(const LHS &L,
-                                                             const RHS &R) {
-  return MaxMin_match<ICmpInst, LHS, RHS, smin_pred_ty>(L, R);
-}
-
-template <typename LHS, typename RHS>
-inline MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty> m_UMax(const LHS &L,
-                                                             const RHS &R) {
-  return MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty>(L, R);
-}
-
-template <typename LHS, typename RHS>
-inline MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty> m_UMin(const LHS &L,
-                                                             const RHS &R) {
-  return MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty>(L, R);
-}
-
-template <typename LHS, typename RHS>
-inline auto m_MaxOrMin(const LHS &L, const RHS &R) {
-  return m_CombineOr(m_SMax(L, R), m_SMin(L, R), m_UMax(L, R), m_UMin(L, R));
-}
-
 /// Match an 'ordered' floating point maximum function.
 /// Floating point has one special value 'NaN'. Therefore, there is no total
 /// order. However, if we can ignore the 'NaN' value (for example, because of a
@@ -2587,9 +2593,9 @@ inline auto m_MaxOrMin(const LHS &L, const RHS &R) {
 ///                         max(L, R)  iff L and R are not NaN
 ///  m_OrdFMax(L, R) =      R          iff L or R are NaN
 template <typename LHS, typename RHS>
-inline MaxMin_match<FCmpInst, LHS, RHS, ofmax_pred_ty> m_OrdFMax(const LHS &L,
-                                                                 const RHS &R) {
-  return MaxMin_match<FCmpInst, LHS, RHS, ofmax_pred_ty>(L, R);
+inline FMaxMin_match<LHS, RHS, ofmax_pred_ty> m_OrdFMax(const LHS &L,
+                                                        const RHS &R) {
+  return FMaxMin_match<LHS, RHS, ofmax_pred_ty>(L, R);
 }
 
 /// Match an 'ordered' floating point minimum function.
@@ -2602,9 +2608,9 @@ inline MaxMin_match<FCmpInst, LHS, RHS, ofmax_pred_ty> m_OrdFMax(const LHS &L,
 ///                         min(L, R)  iff L and R are not NaN
 ///  m_OrdFMin(L, R) =      R          iff L or R are NaN
 template <typename LHS, typename RHS>
-inline MaxMin_match<FCmpInst, LHS, RHS, ofmin_pred_ty> m_OrdFMin(const LHS &L,
-                                                                 const RHS &R) {
-  return MaxMin_match<FCmpInst, LHS, RHS, ofmin_pred_ty>(L, R);
+inline FMaxMin_match<LHS, RHS, ofmin_pred_ty> m_OrdFMin(const LHS &L,
+                                                        const RHS &R) {
+  return FMaxMin_match<LHS, RHS, ofmin_pred_ty>(L, R);
 }
 
 /// Match an 'unordered' floating point maximum function.
@@ -2617,9 +2623,9 @@ inline MaxMin_match<FCmpInst, LHS, RHS, ofmin_pred_ty> m_OrdFMin(const LHS &L,
 ///                         max(L, R)  iff L and R are not NaN
 ///  m_UnordFMax(L, R) =    L          iff L or R are NaN
 template <typename LHS, typename RHS>
-inline MaxMin_match<FCmpInst, LHS, RHS, ufmax_pred_ty>
-m_UnordFMax(const LHS &L, const RHS &R) {
-  return MaxMin_match<FCmpInst, LHS, RHS, ufmax_pred_ty>(L, R);
+inline FMaxMin_match<LHS, RHS, ufmax_pred_ty> m_UnordFMax(const LHS &L,
+                                                          const RHS &R) {
+  return FMaxMin_match<LHS, RHS, ufmax_pred_ty>(L, R);
 }
 
 /// Match an 'unordered' floating point minimum function.
@@ -2632,9 +2638,9 @@ m_UnordFMax(const LHS &L, const RHS &R) {
 ///                          min(L, R)  iff L and R are not NaN
 ///  m_UnordFMin(L, R) =     L          iff L or R are NaN
 template <typename LHS, typename RHS>
-inline MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>
-m_UnordFMin(const LHS &L, const RHS &R) {
-  return MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>(L, R);
+inline FMaxMin_match<LHS, RHS, ufmin_pred_ty> m_UnordFMin(const LHS &L,
+                                                          const RHS &R) {
+  return FMaxMin_match<LHS, RHS, ufmin_pred_ty>(L, R);
 }
 
 /// Match an 'ordered' or 'unordered' floating point maximum function.
@@ -2643,11 +2649,11 @@ m_UnordFMin(const LHS &L, const RHS &R) {
 /// 'no-nans-float-math' flag) a combination of a fcmp and select has 'maximum'
 /// semantics.
 template <typename LHS, typename RHS>
-inline match_combine_or<MaxMin_match<FCmpInst, LHS, RHS, ofmax_pred_ty>,
-                        MaxMin_match<FCmpInst, LHS, RHS, ufmax_pred_ty>>
+inline match_combine_or<FMaxMin_match<LHS, RHS, ofmax_pred_ty>,
+                        FMaxMin_match<LHS, RHS, ufmax_pred_ty>>
 m_OrdOrUnordFMax(const LHS &L, const RHS &R) {
-  return m_CombineOr(MaxMin_match<FCmpInst, LHS, RHS, ofmax_pred_ty>(L, R),
-                     MaxMin_match<FCmpInst, LHS, RHS, ufmax_pred_ty>(L, R));
+  return m_CombineOr(FMaxMin_match<LHS, RHS, ofmax_pred_ty>(L, R),
+                     FMaxMin_match<LHS, RHS, ufmax_pred_ty>(L, R));
 }
 
 /// Match an 'ordered' or 'unordered' floating point minimum function.
@@ -2656,11 +2662,11 @@ m_OrdOrUnordFMax(const LHS &L, const RHS &R) {
 /// 'no-nans-float-math' flag) a combination of a fcmp and select has 'minimum'
 /// semantics.
 template <typename LHS, typename RHS>
-inline match_combine_or<MaxMin_match<FCmpInst, LHS, RHS, ofmin_pred_ty>,
-                        MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>>
+inline match_combine_or<FMaxMin_match<LHS, RHS, ofmin_pred_ty>,
+                        FMaxMin_match<LHS, RHS, ufmin_pred_ty>>
 m_OrdOrUnordFMin(const LHS &L, const RHS &R) {
-  return m_CombineOr(MaxMin_match<FCmpInst, LHS, RHS, ofmin_pred_ty>(L, R),
-                     MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>(L, R));
+  return m_CombineOr(FMaxMin_match<LHS, RHS, ofmin_pred_ty>(L, R),
+                     FMaxMin_match<LHS, RHS, ufmin_pred_ty>(L, R));
 }
 
 /// Matches a 'Not' as 'xor V, -1' or 'xor -1, V'.
@@ -2799,50 +2805,19 @@ template <Intrinsic::ID... IntrIDs> struct IntrinsicIDs_match {
   }
 };
 
-/// Intrinsic matches are combinations of ID matchers, and argument
-/// matchers. Higher arity matcher are defined recursively in terms of and-ing
-/// them with lower arity matchers. Here's some convenient typedefs for up to
-/// several arguments, and more can be added as needed
-template <typename T0 = void, typename T1 = void, typename T2 = void,
-          typename T3 = void, typename T4 = void, typename T5 = void,
-          typename T6 = void, typename T7 = void, typename T8 = void,
-          typename T9 = void, typename T10 = void>
-struct m_Intrinsic_Ty;
-template <typename T0> struct m_Intrinsic_Ty<T0> {
-  using Ty = match_combine_and<IntrinsicID_match, Argument_match<T0>>;
-};
-template <typename T0, typename T1> struct m_Intrinsic_Ty<T0, T1> {
-  using Ty =
-      match_combine_and<typename m_Intrinsic_Ty<T0>::Ty, Argument_match<T1>>;
-};
-template <typename T0, typename T1, typename T2>
-struct m_Intrinsic_Ty<T0, T1, T2> {
-  using Ty = match_combine_and<typename m_Intrinsic_Ty<T0, T1>::Ty,
-                               Argument_match<T2>>;
-};
-template <typename T0, typename T1, typename T2, typename T3>
-struct m_Intrinsic_Ty<T0, T1, T2, T3> {
-  using Ty = match_combine_and<typename m_Intrinsic_Ty<T0, T1, T2>::Ty,
-                               Argument_match<T3>>;
-};
-
-template <typename T0, typename T1, typename T2, typename T3, typename T4>
-struct m_Intrinsic_Ty<T0, T1, T2, T3, T4> {
-  using Ty = match_combine_and<typename m_Intrinsic_Ty<T0, T1, T2, T3>::Ty,
-                               Argument_match<T4>>;
-};
-
-template <typename T0, typename T1, typename T2, typename T3, typename T4,
-          typename T5>
-struct m_Intrinsic_Ty<T0, T1, T2, T3, T4, T5> {
-  using Ty = match_combine_and<typename m_Intrinsic_Ty<T0, T1, T2, T3, T4>::Ty,
-                               Argument_match<T5>>;
+struct IntrinsicMatchImpl {
+  template <Intrinsic::ID IntrID, typename... Ts, size_t... Is>
+  static auto impl(std::index_sequence<Is...>, const Ts &...Ops) {
+    return m_CombineAnd(IntrinsicID_match(IntrID), m_Argument<Is>(Ops)...);
+  }
 };
 
 /// Match intrinsic calls like this:
 /// m_Intrinsic<Intrinsic::fabs>(m_Value(X))
-template <Intrinsic::ID IntrID> inline IntrinsicID_match m_Intrinsic() {
-  return IntrinsicID_match(IntrID);
+template <Intrinsic::ID IntrID, typename... Ts>
+inline auto m_Intrinsic(const Ts &...Ops) {
+  return IntrinsicMatchImpl::impl<IntrID>(
+      std::make_index_sequence<sizeof...(Ts)>{}, Ops...);
 }
 
 /// Match intrinsic calls with any of the given IDs like this:
@@ -2856,185 +2831,146 @@ inline IntrinsicIDs_match<IntrIDs...> m_AnyIntrinsic() {
 
 /// Matches MaskedLoad Intrinsic.
 template <typename Opnd0, typename Opnd1, typename Opnd2>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1, Opnd2>::Ty
-m_MaskedLoad(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2) {
+inline auto m_MaskedLoad(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2) {
   return m_Intrinsic<Intrinsic::masked_load>(Op0, Op1, Op2);
 }
 
 /// Matches MaskedStore Intrinsic.
 template <typename Opnd0, typename Opnd1, typename Opnd2>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1, Opnd2>::Ty
-m_MaskedStore(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2) {
+inline auto m_MaskedStore(const Opnd0 &Op0, const Opnd1 &Op1,
+                          const Opnd2 &Op2) {
   return m_Intrinsic<Intrinsic::masked_store>(Op0, Op1, Op2);
 }
 
 /// Matches MaskedGather Intrinsic.
 template <typename Opnd0, typename Opnd1, typename Opnd2>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1, Opnd2>::Ty
-m_MaskedGather(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2) {
+inline auto m_MaskedGather(const Opnd0 &Op0, const Opnd1 &Op1,
+                           const Opnd2 &Op2) {
   return m_Intrinsic<Intrinsic::masked_gather>(Op0, Op1, Op2);
 }
 
-template <Intrinsic::ID IntrID, typename T0>
-inline typename m_Intrinsic_Ty<T0>::Ty m_Intrinsic(const T0 &Op0) {
-  return m_CombineAnd(m_Intrinsic<IntrID>(), m_Argument<0>(Op0));
-}
-
-template <Intrinsic::ID IntrID, typename T0, typename T1>
-inline typename m_Intrinsic_Ty<T0, T1>::Ty m_Intrinsic(const T0 &Op0,
-                                                       const T1 &Op1) {
-  return m_CombineAnd(m_Intrinsic<IntrID>(Op0), m_Argument<1>(Op1));
-}
-
-template <Intrinsic::ID IntrID, typename T0, typename T1, typename T2>
-inline typename m_Intrinsic_Ty<T0, T1, T2>::Ty
-m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2) {
-  return m_CombineAnd(m_Intrinsic<IntrID>(Op0, Op1), m_Argument<2>(Op2));
-}
-
-template <Intrinsic::ID IntrID, typename T0, typename T1, typename T2,
-          typename T3>
-inline typename m_Intrinsic_Ty<T0, T1, T2, T3>::Ty
-m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2, const T3 &Op3) {
-  return m_CombineAnd(m_Intrinsic<IntrID>(Op0, Op1, Op2), m_Argument<3>(Op3));
-}
-
-template <Intrinsic::ID IntrID, typename T0, typename T1, typename T2,
-          typename T3, typename T4>
-inline typename m_Intrinsic_Ty<T0, T1, T2, T3, T4>::Ty
-m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2, const T3 &Op3,
-            const T4 &Op4) {
-  return m_CombineAnd(m_Intrinsic<IntrID>(Op0, Op1, Op2, Op3),
-                      m_Argument<4>(Op4));
-}
-
-template <Intrinsic::ID IntrID, typename T0, typename T1, typename T2,
-          typename T3, typename T4, typename T5>
-inline typename m_Intrinsic_Ty<T0, T1, T2, T3, T4, T5>::Ty
-m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2, const T3 &Op3,
-            const T4 &Op4, const T5 &Op5) {
-  return m_CombineAnd(m_Intrinsic<IntrID>(Op0, Op1, Op2, Op3, Op4),
-                      m_Argument<5>(Op5));
-}
-
 // Helper intrinsic matching specializations.
-template <typename Opnd0>
-inline typename m_Intrinsic_Ty<Opnd0>::Ty m_BitReverse(const Opnd0 &Op0) {
+template <typename Opnd0> inline auto m_BitReverse(const Opnd0 &Op0) {
   return m_Intrinsic<Intrinsic::bitreverse>(Op0);
 }
 
-template <typename Opnd0>
-inline typename m_Intrinsic_Ty<Opnd0>::Ty m_BSwap(const Opnd0 &Op0) {
+template <typename Opnd0> inline auto m_BSwap(const Opnd0 &Op0) {
   return m_Intrinsic<Intrinsic::bswap>(Op0);
 }
-template <typename Opnd0>
-inline typename m_Intrinsic_Ty<Opnd0>::Ty m_Ctpop(const Opnd0 &Op0) {
+template <typename Opnd0> inline auto m_Ctpop(const Opnd0 &Op0) {
   return m_Intrinsic<Intrinsic::ctpop>(Op0);
 }
 
-template <typename Opnd0>
-inline typename m_Intrinsic_Ty<Opnd0>::Ty m_FAbs(const Opnd0 &Op0) {
+template <typename Opnd0> inline auto m_FAbs(const Opnd0 &Op0) {
   return m_Intrinsic<Intrinsic::fabs>(Op0);
 }
 
-template <typename Opnd0>
-inline typename m_Intrinsic_Ty<Opnd0>::Ty m_FCanonicalize(const Opnd0 &Op0) {
+template <typename Opnd0> inline auto m_FCanonicalize(const Opnd0 &Op0) {
   return m_Intrinsic<Intrinsic::canonicalize>(Op0);
 }
 
 template <typename Opnd0, typename Opnd1>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_Ctlz(const Opnd0 &Op0,
-                                                        const Opnd1 &Op1) {
+inline auto m_Ctlz(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::ctlz>(Op0, Op1);
 }
 
 template <typename Opnd0, typename Opnd1>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_Cttz(const Opnd0 &Op0,
-                                                        const Opnd1 &Op1) {
+inline auto m_Cttz(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::cttz>(Op0, Op1);
 }
 
 template <typename Opnd0, typename Opnd1>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_FMinNum(const Opnd0 &Op0,
-                                                           const Opnd1 &Op1) {
+inline auto m_SMax(const Opnd0 &Op0, const Opnd1 &Op1) {
+  return m_Intrinsic<Intrinsic::smax>(Op0, Op1);
+}
+
+template <typename Opnd0, typename Opnd1>
+inline auto m_SMin(const Opnd0 &Op0, const Opnd1 &Op1) {
+  return m_Intrinsic<Intrinsic::smin>(Op0, Op1);
+}
+
+template <typename Opnd0, typename Opnd1>
+inline auto m_UMax(const Opnd0 &Op0, const Opnd1 &Op1) {
+  return m_Intrinsic<Intrinsic::umax>(Op0, Op1);
+}
+
+template <typename Opnd0, typename Opnd1>
+inline auto m_UMin(const Opnd0 &Op0, const Opnd1 &Op1) {
+  return m_Intrinsic<Intrinsic::umin>(Op0, Op1);
+}
+
+template <typename Opnd0, typename Opnd1>
+inline auto m_MaxOrMin(const Opnd0 &Op0, const Opnd1 &Op1) {
+  return m_CombineOr(m_SMax(Op0, Op1), m_SMin(Op0, Op1), m_UMax(Op0, Op1),
+                     m_UMin(Op0, Op1));
+}
+
+template <typename Opnd0, typename Opnd1>
+inline auto m_FMinNum(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::minnum>(Op0, Op1);
 }
 
 template <typename Opnd0, typename Opnd1>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_FMinimum(const Opnd0 &Op0,
-                                                            const Opnd1 &Op1) {
+inline auto m_FMinimum(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::minimum>(Op0, Op1);
 }
 
 template <typename Opnd0, typename Opnd1>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty
-m_FMinimumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
+inline auto m_FMinimumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::minimumnum>(Op0, Op1);
 }
 
 template <typename Opnd0, typename Opnd1>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_FMaxNum(const Opnd0 &Op0,
-                                                           const Opnd1 &Op1) {
+inline auto m_FMaxNum(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::maxnum>(Op0, Op1);
 }
 
 template <typename Opnd0, typename Opnd1>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_FMaximum(const Opnd0 &Op0,
-                                                            const Opnd1 &Op1) {
+inline auto m_FMaximum(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::maximum>(Op0, Op1);
 }
 
 template <typename Opnd0, typename Opnd1>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty
-m_FMaximumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
+inline auto m_FMaximumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::maximumnum>(Op0, Op1);
 }
 
 template <typename Opnd0, typename Opnd1>
-inline match_combine_or<typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty,
-                        typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty>
-m_FMaxNum_or_FMaximumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
+inline auto m_FMaxNum_or_FMaximumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_CombineOr(m_FMaxNum(Op0, Op1), m_FMaximumNum(Op0, Op1));
 }
 
 template <typename Opnd0, typename Opnd1>
-inline match_combine_or<typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty,
-                        typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty>
-m_FMinNum_or_FMinimumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
+inline auto m_FMinNum_or_FMinimumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_CombineOr(m_FMinNum(Op0, Op1), m_FMinimumNum(Op0, Op1));
 }
 
 template <typename Opnd0, typename Opnd1, typename Opnd2>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1, Opnd2>::Ty
-m_FShl(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2) {
+inline auto m_FShl(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2) {
   return m_Intrinsic<Intrinsic::fshl>(Op0, Op1, Op2);
 }
 
 template <typename Opnd0, typename Opnd1, typename Opnd2>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1, Opnd2>::Ty
-m_FShr(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2) {
+inline auto m_FShr(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2) {
   return m_Intrinsic<Intrinsic::fshr>(Op0, Op1, Op2);
 }
 
-template <typename Opnd0>
-inline typename m_Intrinsic_Ty<Opnd0>::Ty m_Sqrt(const Opnd0 &Op0) {
+template <typename Opnd0> inline auto m_Sqrt(const Opnd0 &Op0) {
   return m_Intrinsic<Intrinsic::sqrt>(Op0);
 }
 
 template <typename Opnd0, typename Opnd1>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_CopySign(const Opnd0 &Op0,
-                                                            const Opnd1 &Op1) {
+inline auto m_CopySign(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::copysign>(Op0, Op1);
 }
 
-template <typename Opnd0>
-inline typename m_Intrinsic_Ty<Opnd0>::Ty m_VecReverse(const Opnd0 &Op0) {
+template <typename Opnd0> inline auto m_VecReverse(const Opnd0 &Op0) {
   return m_Intrinsic<Intrinsic::vector_reverse>(Op0);
 }
 
 template <typename Opnd0, typename Opnd1, typename Opnd2>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1, Opnd2>::Ty
-m_VectorInsert(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2) {
+inline auto m_VectorInsert(const Opnd0 &Op0, const Opnd1 &Op1,
+                           const Opnd2 &Op2) {
   return m_Intrinsic<Intrinsic::vector_insert>(Op0, Op1, Op2);
 }
 
@@ -3120,37 +3056,6 @@ m_NSWNeg(const ValTy &V) {
   return m_NSWSub(m_ZeroInt(), V);
 }
 
-/// Matches an SMin with LHS and RHS in either order.
-template <typename LHS, typename RHS>
-inline MaxMin_match<ICmpInst, LHS, RHS, smin_pred_ty, true>
-m_c_SMin(const LHS &L, const RHS &R) {
-  return MaxMin_match<ICmpInst, LHS, RHS, smin_pred_ty, true>(L, R);
-}
-/// Matches an SMax with LHS and RHS in either order.
-template <typename LHS, typename RHS>
-inline MaxMin_match<ICmpInst, LHS, RHS, smax_pred_ty, true>
-m_c_SMax(const LHS &L, const RHS &R) {
-  return MaxMin_match<ICmpInst, LHS, RHS, smax_pred_ty, true>(L, R);
-}
-/// Matches a UMin with LHS and RHS in either order.
-template <typename LHS, typename RHS>
-inline MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty, true>
-m_c_UMin(const LHS &L, const RHS &R) {
-  return MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty, true>(L, R);
-}
-/// Matches a UMax with LHS and RHS in either order.
-template <typename LHS, typename RHS>
-inline MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty, true>
-m_c_UMax(const LHS &L, const RHS &R) {
-  return MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty, true>(L, R);
-}
-
-template <typename LHS, typename RHS>
-inline auto m_c_MaxOrMin(const LHS &L, const RHS &R) {
-  return m_CombineOr(m_c_SMax(L, R), m_c_SMin(L, R), m_c_UMax(L, R),
-                     m_c_UMin(L, R));
-}
-
 template <Intrinsic::ID IntrID, typename LHS, typename RHS>
 struct CommutativeBinaryIntrinsic_match {
   LHS L;
@@ -3171,6 +3076,33 @@ template <Intrinsic::ID IntrID, typename T0, typename T1>
 inline CommutativeBinaryIntrinsic_match<IntrID, T0, T1>
 m_c_Intrinsic(const T0 &Op0, const T1 &Op1) {
   return CommutativeBinaryIntrinsic_match<IntrID, T0, T1>(Op0, Op1);
+}
+
+/// Matches an SMin with LHS and RHS in either order.
+template <typename LHS, typename RHS>
+inline auto m_c_SMin(const LHS &L, const RHS &R) {
+  return m_c_Intrinsic<Intrinsic::smin>(L, R);
+}
+/// Matches an SMax with LHS and RHS in either order.
+template <typename LHS, typename RHS>
+inline auto m_c_SMax(const LHS &L, const RHS &R) {
+  return m_c_Intrinsic<Intrinsic::smax>(L, R);
+}
+/// Matches a UMin with LHS and RHS in either order.
+template <typename LHS, typename RHS>
+inline auto m_c_UMin(const LHS &L, const RHS &R) {
+  return m_c_Intrinsic<Intrinsic::umin>(L, R);
+}
+/// Matches a UMax with LHS and RHS in either order.
+template <typename LHS, typename RHS>
+inline auto m_c_UMax(const LHS &L, const RHS &R) {
+  return m_c_Intrinsic<Intrinsic::umax>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline auto m_c_MaxOrMin(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_c_SMax(L, R), m_c_SMin(L, R), m_c_UMax(L, R),
+                     m_c_UMin(L, R));
 }
 
 /// Matches FAdd with LHS and RHS in either order.
@@ -3281,16 +3213,14 @@ inline InsertValue_match<Ind, Val_t, Elt_t> m_InsertValue(const Val_t &Val,
 }
 
 /// Matches a call to `llvm.vscale()`.
-inline IntrinsicID_match m_VScale() { return m_Intrinsic<Intrinsic::vscale>(); }
+inline auto m_VScale() { return m_Intrinsic<Intrinsic::vscale>(); }
 
 template <typename Opnd0, typename Opnd1>
-inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty
-m_Interleave2(const Opnd0 &Op0, const Opnd1 &Op1) {
+inline auto m_Interleave2(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::vector_interleave2>(Op0, Op1);
 }
 
-template <typename Opnd>
-inline typename m_Intrinsic_Ty<Opnd>::Ty m_Deinterleave2(const Opnd &Op) {
+template <typename Opnd> inline auto m_Deinterleave2(const Opnd &Op) {
   return m_Intrinsic<Intrinsic::vector_deinterleave2>(Op);
 }
 

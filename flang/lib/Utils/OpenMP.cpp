@@ -216,7 +216,6 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
         firOpBuilder, loc, firOpBuilder.getRefType(fieldTy), rec, field);
   };
 
-  llvm::SmallVector<mlir::Value> clauseMapVars;
   llvm::SmallVector<llvm::SmallVector<int64_t>> memberPlacementIndices;
   llvm::SmallVector<mlir::Value> memberMapOps;
 
@@ -292,8 +291,9 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
       captureKind, declareOp.getType(0),
       /*partialMap=*/true);
 
-  clauseMapVars.emplace_back(mapOp);
-  mlir::omp::DeclareMapperInfoOp::create(firOpBuilder, loc, clauseMapVars);
+  mlir::omp::DeclareMapperInfoOperands clauseOps;
+  clauseOps.mapVars.emplace_back(mapOp);
+  mlir::omp::DeclareMapperInfoOp::create(firOpBuilder, loc, clauseOps);
   return mlir::FlatSymbolRefAttr::get(firOpBuilder.getContext(), mapperNameStr);
 }
 } // namespace Fortran::utils::openmp

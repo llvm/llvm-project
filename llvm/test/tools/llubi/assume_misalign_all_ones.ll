@@ -10,5 +10,5 @@ define void @main() {
 ; CHECK: Entering function: main
 ; CHECK-NEXT: Stacktrace:
 ; CHECK-NEXT: #0   call void @llvm.assume(i1 true) [ "align"(ptr addrspace(1) null, i32 2048) ] at @main <stdin>:7
-; CHECK-NEXT: Immediate UB detected: The pointer ptr 0xFFFFFFFFFFFFFFFF [dangling] violates align(2048) assumption.
+; CHECK-NEXT: Immediate UB detected: The pointer ptr 0xFFFFFFFFFFFFFFFF [nullary] violates align(2048) assumption.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

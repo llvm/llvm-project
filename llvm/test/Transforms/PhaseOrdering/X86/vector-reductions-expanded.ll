@@ -49,14 +49,8 @@ for.end:
 define signext i16 @mul_v8i16(ptr %p) {
 ; CHECK-LABEL: @mul_v8i16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[P:%.*]], align 2, !tbaa [[TBAA4:![0-9]+]]
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = mul <8 x i16> [[TMP1]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x i16> [[BIN_RDX]], <8 x i16> poison, <8 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[BIN_RDX4:%.*]] = mul <8 x i16> [[BIN_RDX]], [[RDX_SHUF3]]
-; CHECK-NEXT:    [[RDX_SHUF5:%.*]] = shufflevector <8 x i16> [[BIN_RDX4]], <8 x i16> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[BIN_RDX6:%.*]] = mul <8 x i16> [[BIN_RDX4]], [[RDX_SHUF5]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x i16> [[BIN_RDX6]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[P:%.*]], align 2, !tbaa [[TBAA4:![0-9]+]]
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i16 @llvm.vector.reduce.mul.v8i16(<8 x i16> [[TMP0]])
 ; CHECK-NEXT:    ret i16 [[TMP2]]
 ;
 entry:
@@ -358,6 +352,36 @@ for.inc:
 
 for.end:
   ret float %r.0
+}
+
+define float @fmaximum_v4f32(<4 x float> %arg) {
+; CHECK-LABEL: @fmaximum_v4f32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> %arg, <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call <4 x float> @llvm.maximum.v4f32(<4 x float> %arg, <4 x float> [[RDX_SHUF]])
+; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <4 x float> [[RDX_MINMAX]], <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[RDX_MINMAX2:%.*]] = call <4 x float> @llvm.maximum.v4f32(<4 x float> [[RDX_MINMAX]], <4 x float> [[RDX_SHUF3]])
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[RDX_MINMAX2]], i32 0
+; CHECK-NEXT:    ret float [[TMP2]]
+;
+entry:
+  %res = call float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> %arg)
+  ret float %res
+}
+
+define float @fminimum_v4f32(<4 x float> %arg) {
+; CHECK-LABEL: @fminimum_v4f32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> %arg, <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call <4 x float> @llvm.minimum.v4f32(<4 x float> %arg, <4 x float> [[RDX_SHUF]])
+; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <4 x float> [[RDX_MINMAX]], <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[RDX_MINMAX2:%.*]] = call <4 x float> @llvm.minimum.v4f32(<4 x float> [[RDX_MINMAX]], <4 x float> [[RDX_SHUF3]])
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[RDX_MINMAX2]], i32 0
+; CHECK-NEXT:    ret float [[TMP2]]
+;
+entry:
+  %res = call float @llvm.vector.reduce.fminimum.v4f32(<4 x float> %arg)
+  ret float %res
 }
 
 define available_externally float @max(float %a, float %b) {

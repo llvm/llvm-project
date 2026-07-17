@@ -11608,20 +11608,18 @@ define dso_local void @icaller() nounwind {
 ;
 ; LINUX-32-PIC-LABEL: icaller:
 ; LINUX-32-PIC:       # %bb.0: # %entry
-; LINUX-32-PIC-NEXT:    pushl %ebx
 ; LINUX-32-PIC-NEXT:    pushl %esi
-; LINUX-32-PIC-NEXT:    pushl %eax
+; LINUX-32-PIC-NEXT:    subl $8, %esp
 ; LINUX-32-PIC-NEXT:    calll .L142$pb
 ; LINUX-32-PIC-NEXT:  .L142$pb:
-; LINUX-32-PIC-NEXT:    popl %ebx
+; LINUX-32-PIC-NEXT:    popl %eax
 ; LINUX-32-PIC-NEXT:  .Ltmp142:
-; LINUX-32-PIC-NEXT:    addl $_GLOBAL_OFFSET_TABLE_+(.Ltmp142-.L142$pb), %ebx
-; LINUX-32-PIC-NEXT:    movl ifunc@GOT(%ebx), %esi
+; LINUX-32-PIC-NEXT:    addl $_GLOBAL_OFFSET_TABLE_+(.Ltmp142-.L142$pb), %eax
+; LINUX-32-PIC-NEXT:    movl ifunc@GOT(%eax), %esi
 ; LINUX-32-PIC-NEXT:    calll *(%esi)
 ; LINUX-32-PIC-NEXT:    calll *(%esi)
-; LINUX-32-PIC-NEXT:    addl $4, %esp
+; LINUX-32-PIC-NEXT:    addl $8, %esp
 ; LINUX-32-PIC-NEXT:    popl %esi
-; LINUX-32-PIC-NEXT:    popl %ebx
 ; LINUX-32-PIC-NEXT:    retl
 ;
 ; LINUX-64-PIC-LABEL: icaller:
@@ -11720,17 +11718,17 @@ define dso_local void @dicaller() nounwind {
 ;
 ; LINUX-32-PIC-LABEL: dicaller:
 ; LINUX-32-PIC:       # %bb.0: # %entry
-; LINUX-32-PIC-NEXT:    pushl %ebx
+; LINUX-32-PIC-NEXT:    pushl %esi
 ; LINUX-32-PIC-NEXT:    subl $8, %esp
 ; LINUX-32-PIC-NEXT:    calll .L143$pb
 ; LINUX-32-PIC-NEXT:  .L143$pb:
-; LINUX-32-PIC-NEXT:    popl %ebx
+; LINUX-32-PIC-NEXT:    popl %esi
 ; LINUX-32-PIC-NEXT:  .Ltmp143:
-; LINUX-32-PIC-NEXT:    addl $_GLOBAL_OFFSET_TABLE_+(.Ltmp143-.L143$pb), %ebx
-; LINUX-32-PIC-NEXT:    calll *.Ldifunc$local@GOTOFF(%ebx)
-; LINUX-32-PIC-NEXT:    calll *.Ldifunc$local@GOTOFF(%ebx)
+; LINUX-32-PIC-NEXT:    addl $_GLOBAL_OFFSET_TABLE_+(.Ltmp143-.L143$pb), %esi
+; LINUX-32-PIC-NEXT:    calll *.Ldifunc$local@GOTOFF(%esi)
+; LINUX-32-PIC-NEXT:    calll *.Ldifunc$local@GOTOFF(%esi)
 ; LINUX-32-PIC-NEXT:    addl $8, %esp
-; LINUX-32-PIC-NEXT:    popl %ebx
+; LINUX-32-PIC-NEXT:    popl %esi
 ; LINUX-32-PIC-NEXT:    retl
 ;
 ; LINUX-64-PIC-LABEL: dicaller:
@@ -11821,17 +11819,17 @@ define dso_local void @licaller() nounwind {
 ;
 ; LINUX-32-PIC-LABEL: licaller:
 ; LINUX-32-PIC:       # %bb.0: # %entry
-; LINUX-32-PIC-NEXT:    pushl %ebx
+; LINUX-32-PIC-NEXT:    pushl %esi
 ; LINUX-32-PIC-NEXT:    subl $8, %esp
 ; LINUX-32-PIC-NEXT:    calll .L144$pb
 ; LINUX-32-PIC-NEXT:  .L144$pb:
-; LINUX-32-PIC-NEXT:    popl %ebx
+; LINUX-32-PIC-NEXT:    popl %esi
 ; LINUX-32-PIC-NEXT:  .Ltmp144:
-; LINUX-32-PIC-NEXT:    addl $_GLOBAL_OFFSET_TABLE_+(.Ltmp144-.L144$pb), %ebx
-; LINUX-32-PIC-NEXT:    calll *lifunc@GOTOFF(%ebx)
-; LINUX-32-PIC-NEXT:    calll *lifunc@GOTOFF(%ebx)
+; LINUX-32-PIC-NEXT:    addl $_GLOBAL_OFFSET_TABLE_+(.Ltmp144-.L144$pb), %esi
+; LINUX-32-PIC-NEXT:    calll *lifunc@GOTOFF(%esi)
+; LINUX-32-PIC-NEXT:    calll *lifunc@GOTOFF(%esi)
 ; LINUX-32-PIC-NEXT:    addl $8, %esp
-; LINUX-32-PIC-NEXT:    popl %ebx
+; LINUX-32-PIC-NEXT:    popl %esi
 ; LINUX-32-PIC-NEXT:    retl
 ;
 ; LINUX-64-PIC-LABEL: licaller:
@@ -11923,20 +11921,18 @@ define dso_local void @itailcaller() nounwind {
 ;
 ; LINUX-32-PIC-LABEL: itailcaller:
 ; LINUX-32-PIC:       # %bb.0: # %entry
-; LINUX-32-PIC-NEXT:    pushl %ebx
 ; LINUX-32-PIC-NEXT:    pushl %esi
-; LINUX-32-PIC-NEXT:    pushl %eax
+; LINUX-32-PIC-NEXT:    subl $8, %esp
 ; LINUX-32-PIC-NEXT:    calll .L145$pb
 ; LINUX-32-PIC-NEXT:  .L145$pb:
-; LINUX-32-PIC-NEXT:    popl %ebx
+; LINUX-32-PIC-NEXT:    popl %eax
 ; LINUX-32-PIC-NEXT:  .Ltmp145:
-; LINUX-32-PIC-NEXT:    addl $_GLOBAL_OFFSET_TABLE_+(.Ltmp145-.L145$pb), %ebx
-; LINUX-32-PIC-NEXT:    movl ifunc@GOT(%ebx), %esi
+; LINUX-32-PIC-NEXT:    addl $_GLOBAL_OFFSET_TABLE_+(.Ltmp145-.L145$pb), %eax
+; LINUX-32-PIC-NEXT:    movl ifunc@GOT(%eax), %esi
 ; LINUX-32-PIC-NEXT:    calll *(%esi)
 ; LINUX-32-PIC-NEXT:    calll *(%esi)
-; LINUX-32-PIC-NEXT:    addl $4, %esp
+; LINUX-32-PIC-NEXT:    addl $8, %esp
 ; LINUX-32-PIC-NEXT:    popl %esi
-; LINUX-32-PIC-NEXT:    popl %ebx
 ; LINUX-32-PIC-NEXT:    retl
 ;
 ; LINUX-64-PIC-LABEL: itailcaller:
@@ -12033,16 +12029,14 @@ define dso_local void @ditailcaller() nounwind {
 ;
 ; LINUX-32-PIC-LABEL: ditailcaller:
 ; LINUX-32-PIC:       # %bb.0: # %entry
-; LINUX-32-PIC-NEXT:    pushl %ebx
-; LINUX-32-PIC-NEXT:    subl $8, %esp
+; LINUX-32-PIC-NEXT:    subl $12, %esp
 ; LINUX-32-PIC-NEXT:    calll .L146$pb
 ; LINUX-32-PIC-NEXT:  .L146$pb:
-; LINUX-32-PIC-NEXT:    popl %ebx
+; LINUX-32-PIC-NEXT:    popl %eax
 ; LINUX-32-PIC-NEXT:  .Ltmp146:
-; LINUX-32-PIC-NEXT:    addl $_GLOBAL_OFFSET_TABLE_+(.Ltmp146-.L146$pb), %ebx
-; LINUX-32-PIC-NEXT:    calll *.Ldifunc$local@GOTOFF(%ebx)
-; LINUX-32-PIC-NEXT:    addl $8, %esp
-; LINUX-32-PIC-NEXT:    popl %ebx
+; LINUX-32-PIC-NEXT:    addl $_GLOBAL_OFFSET_TABLE_+(.Ltmp146-.L146$pb), %eax
+; LINUX-32-PIC-NEXT:    calll *.Ldifunc$local@GOTOFF(%eax)
+; LINUX-32-PIC-NEXT:    addl $12, %esp
 ; LINUX-32-PIC-NEXT:    retl
 ;
 ; LINUX-64-PIC-LABEL: ditailcaller:
@@ -12120,16 +12114,14 @@ define dso_local void @litailcaller() nounwind {
 ;
 ; LINUX-32-PIC-LABEL: litailcaller:
 ; LINUX-32-PIC:       # %bb.0: # %entry
-; LINUX-32-PIC-NEXT:    pushl %ebx
-; LINUX-32-PIC-NEXT:    subl $8, %esp
+; LINUX-32-PIC-NEXT:    subl $12, %esp
 ; LINUX-32-PIC-NEXT:    calll .L147$pb
 ; LINUX-32-PIC-NEXT:  .L147$pb:
-; LINUX-32-PIC-NEXT:    popl %ebx
+; LINUX-32-PIC-NEXT:    popl %eax
 ; LINUX-32-PIC-NEXT:  .Ltmp147:
-; LINUX-32-PIC-NEXT:    addl $_GLOBAL_OFFSET_TABLE_+(.Ltmp147-.L147$pb), %ebx
-; LINUX-32-PIC-NEXT:    calll *lifunc@GOTOFF(%ebx)
-; LINUX-32-PIC-NEXT:    addl $8, %esp
-; LINUX-32-PIC-NEXT:    popl %ebx
+; LINUX-32-PIC-NEXT:    addl $_GLOBAL_OFFSET_TABLE_+(.Ltmp147-.L147$pb), %eax
+; LINUX-32-PIC-NEXT:    calll *lifunc@GOTOFF(%eax)
+; LINUX-32-PIC-NEXT:    addl $12, %esp
 ; LINUX-32-PIC-NEXT:    retl
 ;
 ; LINUX-64-PIC-LABEL: litailcaller:

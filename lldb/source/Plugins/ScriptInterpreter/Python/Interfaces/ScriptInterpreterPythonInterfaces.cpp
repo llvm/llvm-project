@@ -23,20 +23,24 @@ void ScriptInterpreterPythonInterfaces::Initialize() {
   OperatingSystemPythonInterface::Initialize();
   ScriptedPlatformPythonInterface::Initialize();
   ScriptedProcessPythonInterface::Initialize();
-  ScriptedStopHookPythonInterface::Initialize();
   ScriptedHookPythonInterface::Initialize();
   ScriptedBreakpointPythonInterface::Initialize();
   ScriptedThreadPlanPythonInterface::Initialize();
   ScriptedFrameProviderPythonInterface::Initialize();
+  ScriptedThreadPythonInterface::Initialize();
+  ScriptedFramePythonInterface::Initialize();
+  ScriptedStackFrameRecognizerPythonInterface::Initialize();
 }
 
 void ScriptInterpreterPythonInterfaces::Terminate() {
   OperatingSystemPythonInterface::Terminate();
   ScriptedPlatformPythonInterface::Terminate();
   ScriptedProcessPythonInterface::Terminate();
-  ScriptedStopHookPythonInterface::Terminate();
   ScriptedHookPythonInterface::Terminate();
   ScriptedBreakpointPythonInterface::Terminate();
   ScriptedThreadPlanPythonInterface::Terminate();
   ScriptedFrameProviderPythonInterface::Terminate();
+  ScriptedThreadPythonInterface::Terminate();
+  ScriptedFramePythonInterface::Terminate();
+  ScriptedStackFrameRecognizerPythonInterface::Terminate();
 }

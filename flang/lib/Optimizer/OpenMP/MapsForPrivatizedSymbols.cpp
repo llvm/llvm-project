@@ -36,7 +36,6 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/Support/Debug.h"
-#include <type_traits>
 
 #define DEBUG_TYPE "omp-maps-for-privatized-symbols"
 #define PDBGS() (llvm::dbgs() << "[" << DEBUG_TYPE << "]: ")

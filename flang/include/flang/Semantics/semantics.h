@@ -19,7 +19,6 @@
 #include "flang/Parser/message.h"
 #include "flang/Support/Fortran-features.h"
 #include "flang/Support/LangOptions.h"
-#include <iosfwd>
 #include <set>
 #include <string>
 #include <vector>
@@ -80,6 +79,9 @@ public:
     return languageFeatures_;
   }
   const common::LangOptions &langOptions() const { return langOpts_; }
+  const std::string &openAccDefaultNoneScalarsStrictDisableOption() const {
+    return openAccDefaultNoneScalarsStrictDisableOption_;
+  }
   int GetDefaultKind(TypeCategory) const;
   int doublePrecisionKind() const {
     return defaultKinds_.doublePrecisionKind();
@@ -98,6 +100,9 @@ public:
   const std::vector<std::string> &intrinsicModuleDirectories() const {
     return intrinsicModuleDirectories_;
   }
+  const std::vector<std::string> &implicitUseModules() const {
+    return implicitUseModules_;
+  }
   const std::string &moduleDirectory() const { return moduleDirectory_; }
   const std::string &moduleFileSuffix() const { return moduleFileSuffix_; }
   bool underscoring() const { return underscoring_; }
@@ -110,6 +115,8 @@ public:
   evaluate::TargetCharacteristics &targetCharacteristics() {
     return targetCharacteristics_;
   }
+  const std::string &targetTriple() const { return targetTriple_; }
+  const std::string &targetFeatures() const { return targetFeatures_; }
   Scope &globalScope() { return globalScope_; }
   Scope &intrinsicModulesScope() { return intrinsicModulesScope_; }
   Scope *currentHermeticModuleFileScope() {
@@ -140,6 +147,10 @@ public:
     intrinsicModuleDirectories_ = x;
     return *this;
   }
+  SemanticsContext &set_implicitUseModules(const std::vector<std::string> &x) {
+    implicitUseModules_ = x;
+    return *this;
+  }
   SemanticsContext &set_moduleDirectory(const std::string &x) {
     moduleDirectory_ = x;
     return *this;
@@ -166,6 +177,19 @@ public:
   }
   SemanticsContext &set_debugModuleWriter(bool x) {
     debugModuleWriter_ = x;
+    return *this;
+  }
+  SemanticsContext &set_openAccDefaultNoneScalarsStrictDisableOption(
+      std::string x) {
+    openAccDefaultNoneScalarsStrictDisableOption_ = std::move(x);
+    return *this;
+  }
+  SemanticsContext &set_targetTriple(const std::string &x) {
+    targetTriple_ = x;
+    return *this;
+  }
+  SemanticsContext &set_targetFeatures(const std::string &x) {
+    targetFeatures_ = x;
     return *this;
   }
 
@@ -295,8 +319,10 @@ public:
   void UseFortranBuiltinsModule();
   const Scope *GetBuiltinsScope() const { return builtinsScope_; }
 
-  const Scope &GetCUDABuiltinsScope();
-  const Scope &GetCUDADeviceScope();
+  // Locate CUDA intrinsic modules on demand. These return null after emitting a
+  // diagnostic when the required module file cannot be read.
+  const Scope *GetCUDABuiltinsScope();
+  const Scope *GetCUDADeviceScope();
 
   void UsePPCBuiltinTypesModule();
   void UsePPCBuiltinsModule();
@@ -367,11 +393,15 @@ private:
   const common::LanguageFeatureControl &languageFeatures_;
   const common::LangOptions &langOpts_;
   parser::AllCookedSources &allCookedSources_;
+  std::string openAccDefaultNoneScalarsStrictDisableOption_;
   std::optional<parser::CharBlock> location_;
   std::vector<std::string> searchDirectories_;
   std::vector<std::string> intrinsicModuleDirectories_;
+  std::vector<std::string> implicitUseModules_;
   std::string moduleDirectory_{"."s};
   std::string moduleFileSuffix_{".mod"};
+  std::string targetTriple_;
+  std::string targetFeatures_;
   bool underscoring_{true};
   bool warnOnNonstandardUsage_{false};
   bool warningsAreErrors_{false};

@@ -29,14 +29,14 @@ struct Outer {
 // [[no_unique_address]] field, allowing 'extra' to overlap with
 // Middle's tail padding.
 
-// CIR: !rec_Middle2Ebase = !cir.record<struct "Middle.base" packed {!rec_Base, !s8i}>
-// CIR: !rec_Outer = !cir.record<struct "Outer" padded {!rec_Middle2Ebase, !s8i,
+// CIR: !rec_Middle2Ebase = !cir.struct<"Middle.base" packed {!rec_Base, !s8i}>
+// CIR: !rec_Outer = !cir.struct<"Outer" padded {!rec_Middle2Ebase, !s8i,
 
 // CIR-LABEL: cir.func {{.*}} @_ZN5OuterC2ERK6Middlec(
 // CIR:         %[[THIS:.*]] = cir.load %{{.+}} : !cir.ptr<!cir.ptr<!rec_Outer>>, !cir.ptr<!rec_Outer>
 // CIR:         %[[M_BASE:.*]] = cir.get_member %[[THIS]][0] {name = "m"} : !cir.ptr<!rec_Outer> -> !cir.ptr<!rec_Middle2Ebase>
 // CIR-NEXT:    %[[M_COMPLETE:.*]] = cir.cast bitcast %[[M_BASE]] : !cir.ptr<!rec_Middle2Ebase> -> !cir.ptr<!rec_Middle>
-// CIR:         cir.copy %{{.+}} to %[[M_COMPLETE]] skip_tail_padding : !cir.ptr<!rec_Middle>
+// CIR:         cir.copy %{{.+}} align(4) to %[[M_COMPLETE]] align(4) skip_tail_padding : !cir.ptr<!rec_Middle>
 // CIR:         %[[EXTRA:.*]] = cir.get_member %[[THIS]][1] {name = "extra"} : !cir.ptr<!rec_Outer> -> !cir.ptr<!s8i>
 
 // Globals for the union/final NUA cases below (placed before LLVM-LABEL so
@@ -46,18 +46,40 @@ struct Outer {
 // LLVM-DAG: %union.UnionForNUA = type { i64 }
 // LLVM-DAG: %struct.OuterFinal = type { %struct.FinalForNUA, i8 }
 // LLVM-DAG: %struct.FinalForNUA = type { i32, i8 }
+// LLVM-DAG: %struct.OuterUnionPad = type { %struct.UnionWithPadding.base, i8 }
+// LLVM-DAG: %struct.UnionWithPadding.base = type { i8 }
+// LLVM-DAG: %struct.OuterFinalUnionPad = type { %struct.FinalUnionWithPadding.base, i8 }
+// LLVM-DAG: %struct.FinalUnionWithPadding.base = type { i8 }
 // LLVM-DAG: @ou = {{(dso_local )?}}global %struct.OuterUnion zeroinitializer, align 8
 // LLVM-DAG: @of = {{(dso_local )?}}global %struct.OuterFinal zeroinitializer, align 4
+// LLVM-DAG: @oup = {{(dso_local )?}}global %struct.OuterUnionPad zeroinitializer, align 2
+// LLVM-DAG: @ofup = {{(dso_local )?}}global %struct.OuterFinalUnionPad zeroinitializer, align 2
+// LLVM-DAG: %struct.OuterZeroData = type { %union.UnionZeroDataSize, i8 }
+// LLVM-DAG: %union.UnionZeroDataSize = type { i32 }
+// LLVM-DAG: @ozd = {{(dso_local )?}}global %struct.OuterZeroData zeroinitializer, align 4
+// LLVM-DAG: %struct.OuterAllEmpty = type { i8 }
+// LLVM-DAG: @oae = {{(dso_local )?}}global %struct.OuterAllEmpty zeroinitializer, align 1
 // OGCG-DAG: %struct.OuterUnion = type { %union.UnionForNUA, i32 }
 // OGCG-DAG: %union.UnionForNUA = type { i64 }
 // OGCG-DAG: %struct.OuterFinal = type { %struct.FinalForNUA, i8 }
 // OGCG-DAG: %struct.FinalForNUA = type { i32, i8 }
+// OGCG-DAG: %struct.OuterUnionPad = type { %union.UnionWithPadding.base, i8 }
+// OGCG-DAG: %union.UnionWithPadding.base = type { i8 }
+// OGCG-DAG: %struct.OuterFinalUnionPad = type { %union.FinalUnionWithPadding.base, i8 }
+// OGCG-DAG: %union.FinalUnionWithPadding.base = type { i8 }
 // OGCG-DAG: @ou = {{(dso_local )?}}global %struct.OuterUnion zeroinitializer, align 8
 // OGCG-DAG: @of = {{(dso_local )?}}global %struct.OuterFinal zeroinitializer, align 4
+// OGCG-DAG: @oup = {{(dso_local )?}}global %struct.OuterUnionPad zeroinitializer, align 2
+// OGCG-DAG: @ofup = {{(dso_local )?}}global %struct.OuterFinalUnionPad zeroinitializer, align 2
+// OGCG-DAG: %struct.OuterZeroData = type { %union.UnionZeroDataSize, i8 }
+// OGCG-DAG: %union.UnionZeroDataSize = type { i32 }
+// OGCG-DAG: @ozd = {{(dso_local )?}}global %struct.OuterZeroData zeroinitializer, align 4
+// OGCG-DAG: %struct.OuterAllEmpty = type { i8 }
+// OGCG-DAG: @oae = {{(dso_local )?}}global %struct.OuterAllEmpty zeroinitializer, align 1
 
 // LLVM-LABEL: define {{.*}} void @_ZN5OuterC2ERK6Middlec(
 // LLVM:         %[[GEP:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %{{.+}}, i32 0, i32 0
-// LLVM:         call void @llvm.memcpy.p0.p0.i64(ptr %[[GEP]], ptr %{{.+}}, i64 5, i1 false)
+// LLVM:         call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[GEP]], ptr align 4 %{{.+}}, i64 5, i1 false)
 
 // OGCG-LABEL: define {{.*}} void @_ZN5OuterC2ERK6Middlec(
 // OGCG:         %[[GEP:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %{{.+}}, i32 0, i32 0
@@ -98,10 +120,89 @@ struct OuterFinal {
 
 OuterFinal of;
 
-// CIR-NUA-DAG: !rec_FinalForNUA = !cir.record<struct "FinalForNUA" {!s32i, !s8i}>
-// CIR-NUA-DAG: !rec_UnionForNUA = !cir.record<union "UnionForNUA" {!s32i, !s64i}>
-// CIR-NUA-DAG: !rec_OuterFinal = !cir.record<struct "OuterFinal" {!rec_FinalForNUA, !s8i}>
-// CIR-NUA-DAG: !rec_OuterUnion = !cir.record<struct "OuterUnion" {!rec_UnionForNUA, !s32i}>
+// A [[no_unique_address]] union field whose union has reusable tail padding.
+struct Padded {
+  Padded();
+
+private:
+  alignas(2) bool b;
+};
+
+union UnionWithPadding {
+  UnionWithPadding();
+  [[no_unique_address]] Padded p;
+  bool flag;
+};
+
+struct OuterUnionPad {
+  [[no_unique_address]] UnionWithPadding u;
+  bool tail;
+};
+
+OuterUnionPad oup;
+
+// A final union also gets a base-subobject type for tail-padding reuse.
+union FinalUnionWithPadding final {
+  FinalUnionWithPadding();
+  [[no_unique_address]] Padded p;
+  bool flag;
+};
+
+struct OuterFinalUnionPad {
+  [[no_unique_address]] FinalUnionWithPadding u;
+  bool tail;
+};
+
+OuterFinalUnionPad ofup;
+
+// CIR-NUA-DAG: !rec_FinalForNUA = !cir.struct<"FinalForNUA" {!s32i, !s8i}>
+// CIR-NUA-DAG: !rec_UnionForNUA = !cir.union<"UnionForNUA" {!s32i, !s64i}>
+// CIR-NUA-DAG: !rec_OuterFinal = !cir.struct<"OuterFinal" {!rec_FinalForNUA, !s8i}>
+// CIR-NUA-DAG: !rec_OuterUnion = !cir.struct<"OuterUnion" {!rec_UnionForNUA, !s32i}>
+// CIR-NUA-DAG: !rec_UnionWithPadding2Ebase = !cir.struct<"UnionWithPadding.base" {!u8i}>
+// CIR-NUA-DAG: !rec_OuterUnionPad = !cir.struct<"OuterUnionPad" {!rec_UnionWithPadding2Ebase, !cir.bool}>
+// CIR-NUA-DAG: !rec_FinalUnionWithPadding2Ebase = !cir.struct<"FinalUnionWithPadding.base" {!u8i}>
+// CIR-NUA-DAG: !rec_OuterFinalUnionPad = !cir.struct<"OuterFinalUnionPad" {!rec_FinalUnionWithPadding2Ebase, !cir.bool}>
 // CIR-NUA-DAG: cir.global external @ou = #cir.zero : !rec_OuterUnion
 // CIR-NUA-DAG: cir.global external @of = #cir.zero : !rec_OuterFinal
+// CIR-NUA-DAG: cir.global external @oup = #cir.zero : !rec_OuterUnionPad
+// CIR-NUA-DAG: cir.global external @ofup = #cir.zero : !rec_OuterFinalUnionPad
 
+struct EmptyForNUA {};
+
+union UnionZeroDataSize {
+  [[no_unique_address]] EmptyForNUA e;
+  [[no_unique_address]] int i;
+};
+
+struct OuterZeroData {
+  [[no_unique_address]] UnionZeroDataSize u;
+  bool flag;
+};
+
+OuterZeroData ozd;
+
+// A union whose members are all [[no_unique_address]] empty types has data
+// size 0, but its non-virtual size stays at the 1-byte minimum, so the gate
+// does not fire and it needs no distinct base-subobject type.
+struct EmptyA {};
+struct EmptyB {};
+
+union UnionAllEmpty {
+  [[no_unique_address]] EmptyA a;
+  [[no_unique_address]] EmptyB b;
+};
+
+struct OuterAllEmpty {
+  [[no_unique_address]] UnionAllEmpty u;
+  bool flag;
+};
+
+OuterAllEmpty oae;
+
+// CIR-NUA-DAG: !rec_OuterAllEmpty = !cir.struct<"OuterAllEmpty" {!cir.bool}>
+// CIR-NUA-DAG: cir.global external @oae = #cir.zero : !rec_OuterAllEmpty
+
+// CIR-NUA-DAG: !rec_UnionZeroDataSize = !cir.union<"UnionZeroDataSize" {!rec_EmptyForNUA, !s32i}>
+// CIR-NUA-DAG: !rec_OuterZeroData = !cir.struct<"OuterZeroData" {!rec_UnionZeroDataSize, !cir.bool}>
+// CIR-NUA-DAG: cir.global external @ozd = #cir.zero : !rec_OuterZeroData

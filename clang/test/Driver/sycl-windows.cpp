@@ -106,3 +106,8 @@
 // RUN:   | FileCheck -check-prefix=CHECK-SEP-LINK %s
 // CHECK-SEP-LINK: "-libpath:{{.*}}{{[/\\]+}}lib"
 // CHECK-SEP-LINK: "-defaultlib:LLVMSYCL"
+
+/// Test 17: clang (non-clang-cl) with -nolibsycl suppresses -defaultlib:LLVMSYCL
+// RUN: %clang -### -fsycl -nolibsycl -fms-runtime-lib=dll --target=x86_64-pc-windows-msvc -- %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-CLANG-NOLIBSYCL %s
+// CHECK-CLANG-NOLIBSYCL-NOT: "-defaultlib:LLVMSYCL"

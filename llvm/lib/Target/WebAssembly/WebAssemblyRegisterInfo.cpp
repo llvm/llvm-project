@@ -184,8 +184,23 @@ WebAssemblyRegisterInfo::getConstrainedRegClassForOperand(
     const MachineOperand &MO, const MachineRegisterInfo &MRI) const {
   assert(MO.isReg());
 
-  const RegClassOrRegBank &RegClassOrBank =
-      MRI.getRegClassOrRegBank(MO.getReg());
+  Register Reg = MO.getReg();
+
+  if (Reg.isPhysical()) {
+    switch (Reg.id()) {
+    case WebAssembly::SP32:
+    case WebAssembly::FP32:
+      return &WebAssembly::I32RegClass;
+    case WebAssembly::SP64:
+    case WebAssembly::FP64:
+      return &WebAssembly::I64RegClass;
+      break;
+    default:
+      return nullptr;
+    }
+  }
+
+  const RegClassOrRegBank &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
 
   if (RegClassOrBank.isNull())
     return nullptr;

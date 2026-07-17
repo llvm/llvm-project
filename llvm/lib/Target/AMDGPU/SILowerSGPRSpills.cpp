@@ -67,7 +67,7 @@ private:
   MBBVector SaveBlocks;
   MBBVector RestoreBlocks;
 
-  MachineBasicBlock *getCycleDomBB(MachineCycle *C);
+  MachineBasicBlock *getCycleDomBB(CycleRef C);
 
 public:
   SILowerSGPRSpills(LiveIntervals *LIS, SlotIndexes *Indexes,
@@ -265,7 +265,8 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(
 
         const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
         int JunkFI = MFI.CreateStackObject(TRI->getSpillSize(*RC),
-                                           TRI->getSpillAlign(*RC), true);
+                                           TRI->getSpillAlign(*RC), true,
+                                           nullptr, TRI->getSpillStackID(*RC));
 
         CSI.emplace_back(Reg, JunkFI);
         CalleeSavedFIs.push_back(JunkFI);
@@ -276,10 +277,10 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(
     // CSI list so that it's easier to identify the entire spill and CFI
     // can be emitted appropriately.
     if (SpillRetAddrReg) {
-      const TargetRegisterClass *RC =
-          TRI->getMinimalPhysRegClass(RetAddrReg, MVT::i64);
-      int JunkFI = MFI.CreateStackObject(TRI->getSpillSize(*RC),
-                                         TRI->getSpillAlign(*RC), true);
+      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(RetAddrReg);
+      int JunkFI =
+          MFI.CreateStackObject(TRI->getSpillSize(*RC), TRI->getSpillAlign(*RC),
+                                true, nullptr, TRI->getSpillStackID(*RC));
       CSI.push_back(CalleeSavedInfo(RetAddrReg, JunkFI));
       CalleeSavedFIs.push_back(JunkFI);
     }
@@ -301,17 +302,17 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(
   return false;
 }
 
-MachineBasicBlock *SILowerSGPRSpills::getCycleDomBB(MachineCycle *C) {
+MachineBasicBlock *SILowerSGPRSpills::getCycleDomBB(CycleRef C) {
   // If the insertion point lands on a cycle entry, move it to a block that
   // dominates all entries.
-  if (C->isReducible()) {
-    if (auto *IDom = MDT->getNode(C->getHeader())->getIDom())
+  if (MCI->isReducible(C)) {
+    if (auto *IDom = MDT->getNode(MCI->getHeader(C))->getIDom())
       return IDom->getBlock();
     llvm_unreachable("Expected cycle to have an IDom.");
     return nullptr;
   }
 
-  const SmallVectorImpl<MachineBasicBlock *> &Entries = C->getEntries();
+  ArrayRef<MachineBasicBlock *> Entries = MCI->getEntries(C);
   assert(!Entries.empty() && "Expected cycle to have at least one entry.");
   MachineBasicBlock *EntryBB = Entries[0];
   for (unsigned I = 1; I < Entries.size(); ++I)
@@ -517,7 +518,7 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
 
     for (auto Reg : FuncInfo->getSGPRSpillVGPRs()) {
       LaneVGPRInsertPt IP = LaneVGPRDomInstr[Reg];
-      if (MachineCycle *C = MCI->getTopLevelParentCycle(IP.MBB)) {
+      if (CycleRef C = MCI->getTopLevelParentCycle(IP.MBB)) {
         MachineBasicBlock *AdjMBB = getCycleDomBB(C);
         IP = insertPt(AdjMBB, AdjMBB->getFirstTerminator());
       }

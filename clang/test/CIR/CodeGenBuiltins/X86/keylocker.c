@@ -5,7 +5,7 @@
 
 // RUN: %clang_cc1 -x c -ffreestanding -triple x86_64-unknown-linux -target-feature +kl -target-feature +widekl -Wno-implicit-function-declaration -fclangir -emit-llvm -o %t.ll %s
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
-// RUN: %clang_cc1 -x c++ -ffreestanding -triple x86_64-unknown-linux -Wno-implicit-function-declaration -fclangir -emit-llvm -o %t.ll %s
+// RUN: %clang_cc1 -x c++ -ffreestanding -triple x86_64-unknown-linux -target-feature +kl -target-feature +widekl -Wno-implicit-function-declaration -fclangir -emit-llvm -o %t.ll %s
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 // RUN: %clang_cc1 -x c -ffreestanding -triple=x86_64-unknown-linux -target-feature +kl -target-feature +widekl -emit-llvm -Wall -Werror %s -o - | FileCheck %s -check-prefix=OGCG
@@ -16,10 +16,10 @@
 
 #include <x86intrin.h>
 
-// CIR: !rec_anon_struct = !cir.record<struct  {!u8i, !cir.vector<2 x !s64i>}>
-// CIR: !rec_anon_struct1 = !cir.record<struct  {!u8i, !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>}>
-// CIR: !rec_anon_struct2 = !cir.record<struct  {!u32i, !cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>}>
-// CIR: !rec_anon_struct3 = !cir.record<struct  {!u32i, !cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>}>
+// CIR: !rec_anon_struct = !cir.struct<{!u8i, !cir.vector<2 x !s64i>}>
+// CIR: !rec_anon_struct1 = !cir.struct<{!u8i, !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>}>
+// CIR: !rec_anon_struct2 = !cir.struct<{!u32i, !cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>}>
+// CIR: !rec_anon_struct3 = !cir.struct<{!u32i, !cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>}>
 
 unsigned char test_mm_aesenc256kl_u8(__m128i *odata, __m128i idata, const void *h) {
   // CIR-LABEL: _mm_aesenc256kl_u8

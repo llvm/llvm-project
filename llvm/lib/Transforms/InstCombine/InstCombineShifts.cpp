@@ -1402,6 +1402,10 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
   const APInt *C;
   unsigned BitWidth = Ty->getScalarSizeInBits();
 
+  // lshr 1, X --> zext (X == 0)
+  if (match(Op0, m_One()))
+    return new ZExtInst(Builder.CreateIsNull(Op1), Ty);
+
   // (iN (~X) u>> (N - 1)) --> zext (X > -1)
   if (match(Op0, m_OneUse(m_Not(m_Value(X)))) &&
       match(Op1, m_SpecificIntAllowPoison(BitWidth - 1)))
@@ -1756,10 +1760,8 @@ InstCombinerImpl::foldVariableSignZeroExtensionOfVariableHighBitExtract(
 
   // Check that constant C is a splat of the element-wise bitwidth of V.
   auto BitWidthSplat = [](Constant *C, Value *V) {
-    return match(
-        C, m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_EQ,
-                              APInt(C->getType()->getScalarSizeInBits(),
-                                    V->getType()->getScalarSizeInBits())));
+    return match(C,
+                 m_SpecificIntAllowPoison(V->getType()->getScalarSizeInBits()));
   };
 
   // It should look like variable-length sign-extension on the outside:

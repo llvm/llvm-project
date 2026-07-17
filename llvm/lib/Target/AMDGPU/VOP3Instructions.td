@@ -176,7 +176,7 @@ defm V_MAD_LEGACY_F32 : VOP3Inst <"v_mad_legacy_f32", VOP3_Profile<VOP_F32_F32_F
 defm V_MAD_F32 : VOP3Inst <"v_mad_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, any_fmad>;
 } // End SubtargetPredicate = HasMadMacInsts
 
-let SubtargetPredicate = HasFmaLegacy32 in
+let SubtargetPredicate = HasFmaLegacy32Insts in
 defm V_FMA_LEGACY_F32 : VOP3Inst <"v_fma_legacy_f32",
                                  VOP3_Profile<VOP_F32_F32_F32_F32>,
                                  int_amdgcn_fma_legacy>;
@@ -184,7 +184,7 @@ defm V_FMA_LEGACY_F32 : VOP3Inst <"v_fma_legacy_f32",
 
 defm V_MAD_I32_I24 : VOP3Inst <"v_mad_i32_i24", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>>;
 defm V_MAD_U32_U24 : VOP3Inst <"v_mad_u32_u24", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>>;
-defm V_FMA_F32 : VOP3Inst <"v_fma_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, any_fma>, VOPD_Component<0x13, "v_fma_f32">;
+defm V_FMA_F32 : VOP3Inst_VOPD <"v_fma_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, 0x13, "v_fma_f32", any_fma>;
 let SubtargetPredicate = HasLerpInst in
   defm V_LERP_U8 : VOP3Inst <"v_lerp_u8", VOP3_Profile<VOP_I32_I32_I32_I32>, int_amdgcn_lerp>;
 
@@ -200,7 +200,7 @@ let SchedRW = [WriteIntMul] in {
 let SchedRW = [WriteDoubleAdd] in {
 let FPDPRounding = 1 in {
 let IsDPMACCInstruction = 1 in
-defm V_FMA_F64 : VOP3Inst <"v_fma_f64", VOP_F64_F64_F64_F64_DPP_PROF, any_fma>, VOPD_Component<0x20, "v_fma_f64">;
+defm V_FMA_F64 : VOP3Inst_VOPD <"v_fma_f64", VOP_F64_F64_F64_F64_DPP_PROF, 0x20, "v_fma_f64", any_fma>;
 let SubtargetPredicate = isNotGFX12Plus in {
 defm V_ADD_F64 : VOP3Inst <"v_add_f64", VOP3_Profile<VOP_F64_F64_F64>, any_fadd>;
 let IsDPMACCInstruction = 1 in
@@ -1561,15 +1561,17 @@ let SubtargetPredicate = isGFX10Plus in {
   } // End isCommutable = 1, isReMaterializable = 1
   def : ThreeOp_i32_Pats<xor, xor, V_XOR3_B32_e64>;
 
-  let Constraints = "$vdst = $vdst_in", isConvergent = 1 in {
-    defm V_PERMLANE16_B32 : VOP3Inst<"v_permlane16_b32", VOP3_PERMLANE_Profile>;
-    defm V_PERMLANEX16_B32 : VOP3Inst<"v_permlanex16_b32", VOP3_PERMLANE_Profile>;
-  } // End $vdst = $vdst_in, isConvergent = 1
+  let SubtargetPredicate = HasPermlane16Insts in {
+    let Constraints = "$vdst = $vdst_in", isConvergent = 1 in {
+      defm V_PERMLANE16_B32 : VOP3Inst<"v_permlane16_b32", VOP3_PERMLANE_Profile>;
+      defm V_PERMLANEX16_B32 : VOP3Inst<"v_permlanex16_b32", VOP3_PERMLANE_Profile>;
+    } // End $vdst = $vdst_in, isConvergent = 1
 
-  foreach vt = Reg32Types.types in {
-    def : PermlanePat<int_amdgcn_permlane16, V_PERMLANE16_B32_e64, vt>;
-    def : PermlanePat<int_amdgcn_permlanex16, V_PERMLANEX16_B32_e64, vt>;
-  }
+    foreach vt = Reg32Types.types in {
+      def : PermlanePat<int_amdgcn_permlane16, V_PERMLANE16_B32_e64, vt>;
+      def : PermlanePat<int_amdgcn_permlanex16, V_PERMLANEX16_B32_e64, vt>;
+    }
+  } // End SubtargetPredicate = HasPermlane16Insts
   let isCommutable = 1 in {
     defm V_ADD_NC_U16 : VOP3Inst_t16 <"v_add_nc_u16", VOP_I16_I16_I16, add>;
   } // End isCommutable = 1
@@ -1648,9 +1650,9 @@ let OtherPredicates = [HasBitOp3Insts] in {
     let SubtargetPredicate = isGFX1250Plus in
       defm V_BITOP3_B16_gfx1250 : VOP3Inst_t16_with_profiles <"v_bitop3_b16_gfx1250", BitOp3_B16_Profile,
                                     BitOp3_B16_t16_Profile, BitOp3_B16_fake16_Profile>;
-    defm V_BITOP3_B32 : VOP3Inst <"v_bitop3_b32",
-                                  VOP3_BITOP3_Profile<VOPProfile <[i32, i32, i32, i32, i32]>, VOP3_REGULAR>>,
-                        VOPD_Component<0x12, "v_bitop2_b32">;
+    defm V_BITOP3_B32 : VOP3Inst_VOPD <"v_bitop3_b32",
+                                       VOP3_BITOP3_Profile<VOPProfile <[i32, i32, i32, i32, i32]>, VOP3_REGULAR>,
+                                       0x12, "v_bitop2_b32">;
   }
 
   def : GCNPat<
@@ -1792,7 +1794,7 @@ class VOP3_CVT_SR_FP16_TiedInput_Profile<VOPProfile P> : VOP3_CVT_SCALE_F1632_FP
 
 // FIXME: GlobalISel cannot distinguish f16 and bf16 and may start using bf16 patterns
 //        instead of less complex f16. Disable GlobalISel for these for now.
-def bf16_fpround : PatFrag <(ops node:$src0),  (fpround $src0), [{ return true; }]> {
+def bf16_fpround : PatFrag <(ops node:$src0),  (any_fpround $src0), [{ return true; }]> {
   let GISelPredicateCode = [{return false;}];
 }
 

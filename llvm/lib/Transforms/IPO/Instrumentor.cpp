@@ -13,6 +13,7 @@
 
 #include "llvm/Transforms/IPO/Instrumentor.h"
 #include "llvm/Transforms/IPO/InstrumentorConfigFile.h"
+#include "llvm/Transforms/IPO/InstrumentorRuntimeHelper.h"
 #include "llvm/Transforms/IPO/InstrumentorStubPrinter.h"
 
 #include "llvm/ADT/PostOrderIterator.h"
@@ -22,6 +23,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -96,7 +98,9 @@ template <typename IRBuilderTy> void ensureDbgLoc(IRBuilderTy &IRB) {
     IRB.SetCurrentDebugLocation(DILocation::get(BB->getContext(), 0, 0, SP));
 }
 
-/// Attempt to cast \p V to type \p Ty.
+/// Attempt to cast \p V to type \p Ty using only bit-preserving casts.
+/// This ensures that floating-point values are converted via bitcast (not
+/// fptosi/fptoui) to preserve their exact bit representation.
 template <typename IRBTy>
 Value *tryToCast(IRBTy &IRB, Value *V, Type *Ty, const DataLayout &DL,
                  bool AllowTruncate = false) {
@@ -105,25 +109,42 @@ Value *tryToCast(IRBTy &IRB, Value *V, Type *Ty, const DataLayout &DL,
   Type *VTy = V->getType();
   if (VTy == Ty)
     return V;
-  if (VTy->isAggregateType())
+  if (VTy->isAggregateType() || VTy->isVectorTy())
     return V;
+  if (VTy->isPointerTy() && Ty->isPointerTy())
+    return IRB.CreatePointerBitCastOrAddrSpaceCast(V, Ty);
   TypeSize RequestedSize = DL.getTypeSizeInBits(Ty);
   TypeSize ValueSize = DL.getTypeSizeInBits(VTy);
   bool ShouldTruncate = RequestedSize < ValueSize;
   if (ShouldTruncate && !AllowTruncate)
     return V;
-  if (ShouldTruncate && AllowTruncate)
+  if (ShouldTruncate && AllowTruncate) {
+    // First convert to integer of the same size if needed.
+    Value *IntV = V;
+    if (VTy->isFloatingPointTy())
+      IntV = IRB.CreateBitCast(V, IRB.getIntNTy(ValueSize));
     return tryToCast(IRB,
-                     IRB.CreateIntCast(V, IRB.getIntNTy(RequestedSize),
+                     IRB.CreateIntCast(IntV, IRB.getIntNTy(RequestedSize),
                                        /*IsSigned=*/false),
                      Ty, DL, AllowTruncate);
-  if (VTy->isPointerTy() && Ty->isPointerTy())
-    return IRB.CreatePointerBitCastOrAddrSpaceCast(V, Ty);
+  }
   if (VTy->isIntegerTy() && Ty->isIntegerTy())
     return IRB.CreateIntCast(V, Ty, /*IsSigned=*/false);
+  // Use bit-preserving casts for floating-point values: convert float to int
+  // of the same size via bitcast, then extend/truncate the integer if needed.
   if (VTy->isFloatingPointTy() && Ty->isIntOrPtrTy()) {
     return tryToCast(IRB, IRB.CreateBitCast(V, IRB.getIntNTy(ValueSize)), Ty,
                      DL, AllowTruncate);
+  }
+  // When converting int to float, never use sitofp/uitofp as they perform value
+  // conversion, not bit-preserving cast.
+  if (VTy->isIntegerTy() && Ty->isFloatingPointTy()) {
+    if (ValueSize == RequestedSize)
+      return IRB.CreateBitCast(V, Ty);
+    return tryToCast(
+        IRB,
+        IRB.CreateIntCast(V, IRB.getIntNTy(RequestedSize), /*IsSigned=*/false),
+        Ty, DL, AllowTruncate);
   }
   return IRB.CreateBitOrPointerCast(V, Ty);
 }
@@ -132,6 +153,19 @@ Value *tryToCast(IRBTy &IRB, Value *V, Type *Ty, const DataLayout &DL,
 template <typename Ty>
 Constant *getCI(Type *IT, Ty Val, bool IsSigned = false) {
   return ConstantInt::get(IT, Val, IsSigned);
+}
+
+Constant *getSubTypeID(Type &OpTy, Type &ReqTy) {
+  switch (OpTy.getTypeID()) {
+  case Type::TypeID::ArrayTyID:
+  case Type::TypeID::FixedVectorTyID:
+  case Type::TypeID::ScalableVectorTyID:
+    return getCI(&ReqTy, OpTy.getContainedType(0)->getTypeID());
+  default:
+    break;
+  }
+
+  return getCI(&ReqTy, -1, /*IsSigned=*/true);
 }
 
 /// The core of the instrumentor pass, which instruments the module as the
@@ -289,7 +323,7 @@ bool InstrumentorImpl::instrumentFunction(Function &Fn) {
     ++IIRB.Epoch;
 
     IIRB.IRB.SetInsertPoint(
-        cast<Function>(FPtr)->getEntryBlock().getFirstInsertionPt());
+        cast<Function>(FPtr)->getEntryBlock().getFirstNonPHIOrDbgOrAlloca());
     ensureDbgLoc(IIRB.IRB);
     IO->instrument(FPtr, Changed, IConf, IIRB, ICaches);
     IIRB.returnAllocas();
@@ -411,15 +445,23 @@ bool InstrumentorImpl::instrument() {
   StringRef FunctionRegexStr = IConf.FunctionRegex->getString();
   ParsedFunctionRegex = createRegex(FunctionRegexStr, "function", IIRB.Ctx);
 
+  // Helper to register an IO for all its opcodes.
+  auto RegisterForAllOpcodes = [](auto &InstChoices,
+                                  InstrumentationOpportunity *IO) {
+    ArrayRef<unsigned> Opcodes = IO->getAllOpcodes();
+    // Register for all opcodes.
+    for (unsigned Opcode : Opcodes)
+      InstChoices[Opcode] = IO;
+  };
+
   for (auto &[Name, IO] :
        IConf.IChoices[InstrumentationLocation::INSTRUCTION_PRE])
     if (IO->Enabled)
-      InstChoicesPRE[IO->getOpcode()] = IO;
+      RegisterForAllOpcodes(InstChoicesPRE, IO);
   for (auto &[Name, IO] :
        IConf.IChoices[InstrumentationLocation::INSTRUCTION_POST])
     if (IO->Enabled)
-      InstChoicesPOST[IO->getOpcode()] = IO;
-
+      RegisterForAllOpcodes(InstChoicesPOST, IO);
   Changed |= instrumentModule();
 
   for (Function &Fn : M)
@@ -518,6 +560,7 @@ BaseConfigurationOption::createStringOption(InstrumentationConfig &IConf,
 
 void InstrumentationConfig::populate(InstrumentorIRBuilderTy &IIRB) {
   /// List of all instrumentation opportunities.
+  BasePointerIO::populate(*this, IIRB);
   ModuleIO::populate(*this, IIRB);
   GlobalVarIO::populate(*this, IIRB);
   FunctionIO::populate(*this, IIRB);
@@ -525,6 +568,9 @@ void InstrumentationConfig::populate(InstrumentorIRBuilderTy &IIRB) {
   UnreachableIO::populate(*this, IIRB);
   LoadIO::populate(*this, IIRB);
   StoreIO::populate(*this, IIRB);
+  CastIO::populate(*this, IIRB);
+  NumericIO::populate(*this, IIRB);
+  CompareIO::populate(*this, IIRB);
 }
 
 void InstrumentationConfig::addChoice(InstrumentationOpportunity &IO,
@@ -538,6 +584,63 @@ void InstrumentationConfig::addChoice(InstrumentationOpportunity &IO,
         DS_Warning));
   }
   ICPtr = &IO;
+}
+
+Value *
+InstrumentationConfig::getBasePointerInfo(Value &V,
+                                          InstrumentorIRBuilderTy &IIRB) {
+  Function *Fn = IIRB.IRB.GetInsertBlock()->getParent();
+
+  Value *Obj;
+  {
+    Value *&UnderlyingObj = UnderlyingObjsMap[&V];
+    if (!UnderlyingObj)
+      UnderlyingObj = const_cast<Value *>(getUnderlyingObjectAggressive(&V));
+    Obj = UnderlyingObj;
+  }
+
+  Value *&BPI = BasePointerInfoMap[{Obj, Fn}];
+  if (BPI)
+    return BPI;
+
+  auto *BPIO =
+      IChoices[InstrumentationLocation::SPECIAL_VALUE]["base_pointer_info"];
+  if (!BPIO || !BPIO->Enabled) {
+    IIRB.Ctx.diagnose(DiagnosticInfoInstrumentation(
+        "Base pointer info disabled but required, passing nullptr.",
+        DS_Warning));
+    return BPI = Constant::getNullValue(BPIO->getRetTy(IIRB.Ctx));
+  }
+
+  IRBuilderBase::InsertPointGuard IP(IIRB.IRB);
+  if (auto *BasePtrI = dyn_cast<Instruction>(Obj)) {
+    std::optional<BasicBlock::iterator> IP =
+        BasePtrI->getInsertionPointAfterDef();
+    if (IP) {
+      IIRB.IRB.SetInsertPoint(*IP);
+    } else {
+      IIRB.Ctx.diagnose(DiagnosticInfoInstrumentation(
+          "Base pointer info could not be placed, passing nullptr.",
+          DS_Warning));
+      return BPI = Constant::getNullValue(BPIO->getRetTy(IIRB.Ctx));
+    }
+  } else if (isa<Constant>(Obj) || isa<Argument>(Obj)) {
+    IIRB.IRB.SetInsertPointPastAllocas(IIRB.IRB.GetInsertBlock()->getParent());
+  } else {
+    LLVM_DEBUG(Obj->dump());
+    llvm_unreachable("Unexpected base pointer!");
+  }
+  ensureDbgLoc(IIRB.IRB);
+
+  // Use fresh caches for safety, as this function may be called from
+  // another instrumentation opportunity.
+  bool Changed;
+  InstrumentationCaches ICaches;
+  BPI = BPIO->instrument(Obj, Changed, *this, IIRB, ICaches);
+  IIRB.returnAllocas();
+  if (!BPI)
+    BPI = Constant::getNullValue(BPIO->getRetTy(IIRB.Ctx));
+  return BPI;
 }
 
 Value *InstrumentationOpportunity::getIdPre(Value &V, Type &Ty,
@@ -648,6 +751,7 @@ CallInst *IRTCallDescription::createLLVMCall(Value *&V,
     if (Param->getType()->isVoidTy()) {
       Param = Constant::getNullValue(It.Ty);
     } else if (Param->getType()->isAggregateType() ||
+               Param->getType()->isVectorTy() ||
                DL.getTypeSizeInBits(Param->getType()) >
                    DL.getTypeSizeInBits(It.Ty)) {
       if (!isPotentiallyIndirect(It)) {
@@ -693,7 +797,7 @@ CallInst *IRTCallDescription::createLLVMCall(Value *&V,
 
       auto *AI = IIRB.getAlloca(Fn, CallParam->getType());
       IIRB.IRB.CreateStore(CallParam, AI);
-      CallParam = CachedParam = AI;
+      CallParam = CachedParam = tryToCast(IIRB.IRB, AI, IIRB.PtrTy, DL);
     }
   }
 
@@ -814,6 +918,49 @@ static void readValuePack(const Range &R, Value &Pack,
   }
 }
 
+Value *BaseInstructionIO::getOpcode(Value &V, Type &Ty,
+                                    InstrumentationConfig &IConf,
+                                    InstrumentorIRBuilderTy &IIRB) {
+  auto &I = cast<Instruction>(V);
+  return getCI(&Ty, I.getOpcode());
+}
+
+Value *BaseInstructionIO::getTypeSize(Value &V, Type &Ty,
+                                      InstrumentationConfig &IConf,
+                                      InstrumentorIRBuilderTy &IIRB) {
+  auto &I = cast<Instruction>(V);
+  auto &DL = I.getDataLayout();
+  return getCI(&Ty, DL.getTypeStoreSize(V.getType()));
+}
+
+Value *BaseInstructionIO::getLeftOperand(Value &V, Type &Ty,
+                                         InstrumentationConfig &IConf,
+                                         InstrumentorIRBuilderTy &IIRB) {
+  auto &I = cast<Instruction>(V);
+  return I.getOperand(0);
+}
+
+Value *BaseInstructionIO::getRightOperand(Value &V, Type &Ty,
+                                          InstrumentationConfig &IConf,
+                                          InstrumentorIRBuilderTy &IIRB) {
+  auto &I = cast<Instruction>(V);
+  if (I.getNumOperands() > 1)
+    return I.getOperand(1);
+  return PoisonValue::get(&Ty);
+}
+
+Value *BaseInstructionIO::getTypeId(Value &V, Type &Ty,
+                                    InstrumentationConfig &IConf,
+                                    InstrumentorIRBuilderTy &IIRB) {
+  return getCI(&Ty, V.getType()->getTypeID());
+}
+
+Value *BaseInstructionIO::getSubTypeId(Value &V, Type &Ty,
+                                       InstrumentationConfig &IConf,
+                                       InstrumentorIRBuilderTy &IIRB) {
+  return getSubTypeID(*V.getType(), Ty);
+}
+
 /// FunctionIO
 /// {
 void FunctionIO::init(InstrumentationConfig &IConf,
@@ -835,12 +982,13 @@ void FunctionIO::init(InstrumentationConfig &IConf,
                "Number of function arguments (without varargs).", IRTArg::NONE,
                std::bind(&FunctionIO::getNumArguments, this, _1, _2, _3, _4)));
   if (Config.has(PassArguments))
-    IRTArgs.push_back(
-        IRTArg(IIRB.PtrTy, "arguments", "Description of the arguments.",
-               IsPRE && Config.has(ReplaceArguments) ? IRTArg::REPLACABLE_CUSTOM
-                                                     : IRTArg::NONE,
-               std::bind(&FunctionIO::getArguments, this, _1, _2, _3, _4),
-               std::bind(&FunctionIO::setArguments, this, _1, _2, _3, _4)));
+    IRTArgs.push_back(IRTArg(
+        IIRB.PtrTy, "arguments", "Description of the arguments.",
+        (IsPRE && Config.has(ReplaceArguments) ? IRTArg::REPLACABLE_CUSTOM
+                                               : IRTArg::NONE) |
+            IRTArg::VALUE_PACK,
+        std::bind(&FunctionIO::getArguments, this, _1, _2, _3, _4),
+        std::bind(&FunctionIO::setArguments, this, _1, _2, _3, _4)));
   if (Config.has(PassIsMain))
     IRTArgs.push_back(IRTArg(IIRB.Int8Ty, "is_main",
                              "Flag to indicate it is the main function.",
@@ -910,8 +1058,6 @@ Value *FunctionIO::isMainFunction(Value &V, Type &Ty,
   auto &Fn = cast<Function>(V);
   return getCI(&Ty, Fn.getName() == "main");
 }
-
-///}
 
 /// UnreachableIO
 ///{
@@ -1009,6 +1155,11 @@ void StoreIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
                              "The address space of the accessed pointer.",
                              IRTArg::NONE, getPointerAS));
   }
+  if (Config.has(PassBasePointerInfo)) {
+    IRTArgs.push_back(IRTArg(IIRB.PtrTy, "base_pointer_info",
+                             "The runtime provided base pointer info.",
+                             IRTArg::NONE, getBasePointerInfo));
+  }
   if (Config.has(PassStoredValue)) {
     IRTArgs.push_back(
         IRTArg(getValueType(IIRB), "value", "The stored value.",
@@ -1029,8 +1180,14 @@ void StoreIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
   }
   if (Config.has(PassValueTypeId)) {
     IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "value_type_id",
-                             "The type id of the stored value.", IRTArg::NONE,
+                             "The type id of the stored value.", IRTArg::TYPEID,
                              getValueTypeId));
+  }
+  if (Config.has(PassValueSubTypeId)) {
+    IRTArgs.push_back(IRTArg(
+        IIRB.Int32Ty, "value_sub_type_id",
+        "The type id of the stored value (for arrays and vectors, or -1).",
+        IRTArg::TYPEID, getValueSubTypeId));
   }
   if (Config.has(PassAtomicityOrdering)) {
     IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "atomicity_ordering",
@@ -1071,6 +1228,13 @@ Value *StoreIO::getPointerAS(Value &V, Type &Ty, InstrumentationConfig &IConf,
   return getCI(&Ty, SI.getPointerAddressSpace());
 }
 
+Value *StoreIO::getBasePointerInfo(Value &V, Type &Ty,
+                                   InstrumentationConfig &IConf,
+                                   InstrumentorIRBuilderTy &IIRB) {
+  auto &SI = cast<StoreInst>(V);
+  return IConf.getBasePointerInfo(*SI.getPointerOperand(), IIRB);
+}
+
 Value *StoreIO::getValue(Value &V, Type &Ty, InstrumentationConfig &IConf,
                          InstrumentorIRBuilderTy &IIRB) {
   auto &SI = cast<StoreInst>(V);
@@ -1094,6 +1258,13 @@ Value *StoreIO::getValueTypeId(Value &V, Type &Ty, InstrumentationConfig &IConf,
                                InstrumentorIRBuilderTy &IIRB) {
   auto &SI = cast<StoreInst>(V);
   return getCI(&Ty, SI.getValueOperand()->getType()->getTypeID());
+}
+
+Value *StoreIO::getValueSubTypeId(Value &V, Type &Ty,
+                                  InstrumentationConfig &IConf,
+                                  InstrumentorIRBuilderTy &IIRB) {
+  auto &SI = cast<StoreInst>(V);
+  return getSubTypeID(*SI.getValueOperand()->getType(), Ty);
 }
 
 Value *StoreIO::getAtomicityOrdering(Value &V, Type &Ty,
@@ -1132,6 +1303,11 @@ void LoadIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
                              "The address space of the accessed pointer.",
                              IRTArg::NONE, getPointerAS));
   }
+  if (Config.has(PassBasePointerInfo)) {
+    IRTArgs.push_back(IRTArg(IIRB.PtrTy, "base_pointer_info",
+                             "The runtime provided base pointer info.",
+                             IRTArg::NONE, getBasePointerInfo));
+  }
   if (!IsPRE && Config.has(PassValue)) {
     IRTArgs.push_back(
         IRTArg(getValueType(IIRB), "value", "The loaded value.",
@@ -1154,8 +1330,14 @@ void LoadIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
   }
   if (Config.has(PassValueTypeId)) {
     IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "value_type_id",
-                             "The type id of the loaded value.", IRTArg::NONE,
+                             "The type id of the loaded value.", IRTArg::TYPEID,
                              getValueTypeId));
+  }
+  if (Config.has(PassValueSubTypeId)) {
+    IRTArgs.push_back(IRTArg(
+        IIRB.Int32Ty, "value_sub_type_id",
+        "The sub type id of the loaded value (for arrays and vectors, or -1).",
+        IRTArg::TYPEID, getValueSubTypeId));
   }
   if (Config.has(PassAtomicityOrdering)) {
     IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "atomicity_ordering",
@@ -1196,6 +1378,13 @@ Value *LoadIO::getPointerAS(Value &V, Type &Ty, InstrumentationConfig &IConf,
   return getCI(&Ty, LI.getPointerAddressSpace());
 }
 
+Value *LoadIO::getBasePointerInfo(Value &V, Type &Ty,
+                                  InstrumentationConfig &IConf,
+                                  InstrumentorIRBuilderTy &IIRB) {
+  auto &LI = cast<LoadInst>(V);
+  return IConf.getBasePointerInfo(*LI.getPointerOperand(), IIRB);
+}
+
 Value *LoadIO::getValue(Value &V, Type &Ty, InstrumentationConfig &IConf,
                         InstrumentorIRBuilderTy &IIRB) {
   return &V;
@@ -1220,6 +1409,13 @@ Value *LoadIO::getValueTypeId(Value &V, Type &Ty, InstrumentationConfig &IConf,
   return getCI(&Ty, LI.getType()->getTypeID());
 }
 
+Value *LoadIO::getValueSubTypeId(Value &V, Type &Ty,
+                                 InstrumentationConfig &IConf,
+                                 InstrumentorIRBuilderTy &IIRB) {
+  auto &LI = cast<LoadInst>(V);
+  return getSubTypeID(*LI.getType(), Ty);
+}
+
 Value *LoadIO::getAtomicityOrdering(Value &V, Type &Ty,
                                     InstrumentationConfig &IConf,
                                     InstrumentorIRBuilderTy &IIRB) {
@@ -1237,6 +1433,35 @@ Value *LoadIO::isVolatile(Value &V, Type &Ty, InstrumentationConfig &IConf,
                           InstrumentorIRBuilderTy &IIRB) {
   auto &LI = cast<LoadInst>(V);
   return getCI(&Ty, LI.isVolatile());
+}
+
+void BasePointerIO::init(InstrumentationConfig &IConf,
+                         InstrumentorIRBuilderTy &IIRB, ConfigTy *UserConfig) {
+  if (UserConfig)
+    Config = *UserConfig;
+  if (Config.has(PassPointer))
+    IRTArgs.push_back(IRTArg(IIRB.PtrTy, "base_pointer",
+                             "The base pointer in question.",
+                             IRTArg::REPLACABLE, getValue, setValueNoop));
+  if (Config.has(PassPointerKind))
+    IRTArgs.push_back(IRTArg(
+        IIRB.Int32Ty, "base_pointer_kind",
+        "The base pointer kind (argument, global, instruction, unknown).",
+        IRTArg::NONE, getPointerKind));
+  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
+  IConf.addChoice(*this, IIRB.Ctx);
+}
+
+Value *BasePointerIO::getPointerKind(Value &V, Type &Ty,
+                                     InstrumentationConfig &IConf,
+                                     InstrumentorIRBuilderTy &IIRB) {
+  if (isa<Argument>(V))
+    return getCI(&Ty, 0);
+  if (isa<GlobalValue>(V))
+    return getCI(&Ty, 1);
+  if (isa<Instruction>(V))
+    return getCI(&Ty, 2);
+  return getCI(&Ty, 3);
 }
 
 void ModuleIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
@@ -1457,4 +1682,295 @@ Value *GlobalVarIO::isDefinition(Value &V, Type &Ty,
                                  InstrumentorIRBuilderTy &IIRB) {
   GlobalVariable &GV = cast<GlobalVariable>(V);
   return getCI(&Ty, !GV.isDeclaration());
+}
+
+/// CastIO
+/// {
+void CastIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
+                  ConfigTy *UserConfig) {
+  if (UserConfig)
+    Config = *UserConfig;
+  bool IsPRE = getLocationKind() == InstrumentationLocation::INSTRUCTION_PRE;
+  if (Config.has(PassInput))
+    IRTArgs.push_back(
+        IRTArg(IIRB.Int64Ty, "input", "Input value of the cast.",
+               IRTArg::POTENTIALLY_INDIRECT |
+                   (Config.has(PassResultSize) ? IRTArg::INDIRECT_HAS_SIZE
+                                               : IRTArg::NONE),
+               getInput));
+  if (Config.has(PassInputTypeId))
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "input_type_id",
+                             "The type id of the input value.", IRTArg::TYPEID,
+                             getInputTypeId));
+  if (Config.has(PassInputSubTypeId))
+    IRTArgs.push_back(IRTArg(
+        IIRB.Int32Ty, "input_sub_type_id",
+        "The sub type id of the input value (for arrays and vectors, or -1).",
+        IRTArg::TYPEID, getInputSubTypeId));
+  if (Config.has(PassInputSize))
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "input_size",
+                             "The size of the input value.", IRTArg::NONE,
+                             getInputSize));
+  if (!IsPRE && Config.has(PassResult))
+    IRTArgs.push_back(
+        IRTArg(IIRB.Int64Ty, "result", "Result of the cast.",
+               (IRTArg::REPLACABLE | IRTArg::POTENTIALLY_INDIRECT) |
+                   (Config.has(PassResultSize) ? IRTArg::INDIRECT_HAS_SIZE
+                                               : IRTArg::NONE),
+               getValue, Config.has(ReplaceResult) ? replaceValue : nullptr));
+  if (Config.has(PassResultTypeId))
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "result_type_id",
+                             "The type id of the result value.", IRTArg::TYPEID,
+                             getResultTypeId));
+  if (Config.has(PassResultSubTypeId))
+    IRTArgs.push_back(IRTArg(
+        IIRB.Int32Ty, "result_sub_type_id",
+        "The sub type id of the result value (for arrays and vectors, or -1).",
+        IRTArg::TYPEID, getResultSubTypeId));
+  if (Config.has(PassResultSize))
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "result_size",
+                             "The size of the result value.", IRTArg::NONE,
+                             getResultSize));
+  if (Config.has(PassOpcode))
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "opcode",
+                             "The opcode of the cast instruction.",
+                             IRTArg::NONE, getOpcode));
+
+  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
+  IConf.addChoice(*this, IIRB.Ctx);
+}
+
+Value *CastIO::getInput(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                        InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CastInst>(V);
+  return CI.getOperand(0);
+}
+
+Value *CastIO::getInputTypeId(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                              InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CastInst>(V);
+  return getCI(&Ty, CI.getSrcTy()->getTypeID());
+}
+
+Value *CastIO::getInputSubTypeId(Value &V, Type &Ty,
+                                 InstrumentationConfig &IConf,
+                                 InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CastInst>(V);
+  return getSubTypeID(*CI.getSrcTy(), Ty);
+}
+
+Value *CastIO::getInputSize(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                            InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CastInst>(V);
+  auto &DL = CI.getDataLayout();
+  return getCI(&Ty, DL.getTypeStoreSize(CI.getSrcTy()));
+}
+
+Value *CastIO::getResultTypeId(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                               InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CastInst>(V);
+  return getCI(&Ty, CI.getDestTy()->getTypeID());
+}
+
+Value *CastIO::getResultSubTypeId(Value &V, Type &Ty,
+                                  InstrumentationConfig &IConf,
+                                  InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CastInst>(V);
+  return getSubTypeID(*CI.getDestTy(), Ty);
+}
+
+Value *CastIO::getResultSize(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                             InstrumentorIRBuilderTy &IIRB) {
+  auto &CI = cast<CastInst>(V);
+  auto &DL = CI.getDataLayout();
+  return getCI(&Ty, DL.getTypeStoreSize(CI.getDestTy()));
+}
+///}
+
+Value *NumericIO::getFlags(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                           InstrumentorIRBuilderTy &IIRB) {
+  auto &I = cast<Instruction>(V);
+  uint64_t Flag = NUMERIC_FLAG_NONE;
+
+  switch (I.getOpcode()) {
+  case Instruction::Add:
+  case Instruction::Sub:
+  case Instruction::Mul:
+  case Instruction::Shl:
+    if (I.hasNoSignedWrap())
+      Flag |= NUMERIC_FLAG_NO_SIGNED_WRAP;
+    if (I.hasNoUnsignedWrap())
+      Flag |= NUMERIC_FLAG_NO_UNSIGNED_WRAP;
+    break;
+  case Instruction::FAdd:
+  case Instruction::FSub:
+  case Instruction::FMul:
+  case Instruction::FDiv:
+  case Instruction::FNeg:
+    if (I.hasNoNaNs())
+      Flag |= NUMERIC_FLAG_HAS_NO_NANS;
+    if (I.hasNoInfs())
+      Flag |= NUMERIC_FLAG_HAS_NO_INFS;
+    if (I.hasNoSignedZeros())
+      Flag |= NUMERIC_FLAG_HAS_NO_SIGNED_ZEROS;
+    break;
+  case Instruction::AShr:
+  case Instruction::LShr:
+  case Instruction::SDiv:
+  case Instruction::UDiv:
+    if (I.isExact())
+      Flag |= NUMERIC_FLAG_IS_EXACT;
+    break;
+  }
+
+  if (auto *DI = dyn_cast<PossiblyDisjointInst>(&V))
+    if (DI->isDisjoint())
+      Flag |= NUMERIC_FLAG_IS_DISJOINT;
+
+  return getCI(&Ty, Flag);
+}
+
+void NumericIO::init(InstrumentationConfig &IConf,
+                     InstrumentorIRBuilderTy &IIRB, ConfigTy *UserConfig) {
+  if (UserConfig)
+    Config = UserConfig;
+  bool IsPRE = getLocationKind() == InstrumentationLocation::INSTRUCTION_PRE;
+  const auto ValArgOpts =
+      IRTArg::POTENTIALLY_INDIRECT |
+      (Config.has(PassSize) ? IRTArg::INDIRECT_HAS_SIZE : IRTArg::NONE);
+  if (Config.has(PassTypeId))
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "type_id",
+                             "The operation's type id.", IRTArg::TYPEID,
+                             getTypeId));
+  if (Config.has(PassSubTypeId))
+    IRTArgs.push_back(
+        IRTArg(IIRB.Int32Ty, "sub_type_id",
+               "The operation's sub type id (for arrays and vectors, or -1).",
+               IRTArg::TYPEID, getSubTypeId));
+  if (Config.has(PassSize))
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "size", "The operation's type size.",
+                             IRTArg::NONE, getTypeSize));
+  if (Config.has(PassOpcode))
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "opcode", "The instruction opcode.",
+                             IRTArg::NONE, getOpcode));
+  if (Config.has(PassLeft))
+    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "left",
+                             "The operation's left operand.", ValArgOpts,
+                             getLeftOperand));
+  if (Config.has(PassRight))
+    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "right",
+                             "The operation's right operand. This value is "
+                             "poison for unary operations.",
+                             ValArgOpts, getRightOperand));
+  if (!IsPRE && Config.has(PassResult))
+    IRTArgs.push_back(
+        IRTArg(IIRB.Int64Ty, "result", "Result of the operation.",
+               IRTArg::REPLACABLE | ValArgOpts, getValue,
+               Config.has(ReplaceResult) ? replaceValue : nullptr));
+  if (Config.has(PassFlags))
+    IRTArgs.push_back(
+        IRTArg(IIRB.Int64Ty, "flags",
+               "A bitmask value signaling which instruction flags are present.",
+               IRTArg::NONE, getFlags));
+  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
+  IConf.addChoice(*this, IIRB.Ctx);
+}
+
+Value *CompareIO::getOperandTypeId(Value &V, Type &Ty,
+                                   InstrumentationConfig &IConf,
+                                   InstrumentorIRBuilderTy &IIRB) {
+  auto &I = cast<Instruction>(V);
+  return getCI(&Ty, I.getOperand(0)->getType()->getTypeID());
+}
+
+Value *CompareIO::getOperandSize(Value &V, Type &Ty,
+                                 InstrumentationConfig &IConf,
+                                 InstrumentorIRBuilderTy &IIRB) {
+  auto &I = cast<Instruction>(V);
+  auto &DL = I.getDataLayout();
+  return getCI(&Ty, DL.getTypeStoreSize(I.getOperand(0)->getType()));
+}
+
+Value *CompareIO::getPredicate(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                               InstrumentorIRBuilderTy &IIRB) {
+  auto *CI = dyn_cast<CmpInst>(&V);
+  return getCI(&Ty, CI->getPredicate());
+}
+
+Value *CompareIO::getFlags(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                           InstrumentorIRBuilderTy &IIRB) {
+  auto &I = cast<Instruction>(V);
+  uint64_t Flag = NUMERIC_FLAG_NONE;
+
+  switch (I.getOpcode()) {
+  case Instruction::ICmp:
+    if (dyn_cast<ICmpInst>(&V)->hasSameSign())
+      Flag |= COMPARE_FLAG_SAMESIGN;
+    break;
+  case Instruction::FCmp:
+    if (I.hasNoNaNs())
+      Flag |= COMPARE_FLAG_HAS_NO_NANS;
+    if (I.hasNoInfs())
+      Flag |= COMPARE_FLAG_HAS_NO_INFS;
+    if (I.hasNoSignedZeros())
+      Flag |= COMPARE_FLAG_HAS_NO_SIGNED_ZEROS;
+    break;
+  }
+
+  return getCI(&Ty, Flag);
+}
+
+void CompareIO::init(InstrumentationConfig &IConf,
+                     InstrumentorIRBuilderTy &IIRB, ConfigTy *UserConfig) {
+  if (UserConfig)
+    Config = UserConfig;
+  bool IsPRE = getLocationKind() == InstrumentationLocation::INSTRUCTION_PRE;
+  const auto OperandArgOpts =
+      IRTArg::POTENTIALLY_INDIRECT |
+      (Config.has(PassOpSize) ? IRTArg::INDIRECT_HAS_SIZE : IRTArg::NONE);
+  if (Config.has(PassOpTypeId))
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "operand_type_id",
+                             "The operand type id.", IRTArg::NONE,
+                             getOperandTypeId));
+  if (Config.has(PassOpSize))
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "operand_size",
+                             "The operand type size.", IRTArg::NONE,
+                             getOperandSize));
+  if (Config.has(PassOpcode))
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "opcode", "The instruction opcode.",
+                             IRTArg::NONE, getOpcode));
+  if (Config.has(PassPredicate))
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "predicate",
+                             "The comparison predicate ID.", IRTArg::NONE,
+                             getPredicate));
+  if (Config.has(PassLeft))
+    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "left",
+                             "The comparison's left operand.", OperandArgOpts,
+                             getLeftOperand));
+  if (Config.has(PassRight))
+    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "right",
+                             "The comparison's right operand.", OperandArgOpts,
+                             getRightOperand));
+  if (!IsPRE && Config.has(PassResultSize))
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "result_type_id",
+                             "The result value's type ID.", IRTArg::NONE,
+                             getTypeId));
+  if (!IsPRE && Config.has(PassResultSize))
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "result_size",
+                             "Size of the result value.", IRTArg::NONE,
+                             getTypeSize));
+  if (!IsPRE && Config.has(PassResult))
+    IRTArgs.push_back(
+        IRTArg(IIRB.Int64Ty, "result", "Result of the operation.",
+               IRTArg::REPLACABLE | IRTArg::POTENTIALLY_INDIRECT |
+                   (Config.has(PassResultSize) ? IRTArg::INDIRECT_HAS_SIZE
+                                               : IRTArg::NONE),
+               getValue, Config.has(ReplaceResult) ? replaceValue : nullptr));
+  if (Config.has(PassFlags))
+    IRTArgs.push_back(
+        IRTArg(IIRB.Int64Ty, "flags",
+               "A bitmask value signaling which instruction flags are present.",
+               IRTArg::NONE, getFlags));
+  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
+  IConf.addChoice(*this, IIRB.Ctx);
 }

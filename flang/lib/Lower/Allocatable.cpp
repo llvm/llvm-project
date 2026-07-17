@@ -29,16 +29,14 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/MIF/MIFOps.h"
-#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/FatalError.h"
-#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Runtime/allocatable.h"
 #include "flang/Runtime/pointer.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
+#include "flang/Support/Fortran-features.h"
 #include "llvm/Support/CommandLine.h"
 
 /// By default fir memory operation fir::AllocMemOp/fir::FreeMemOp are used.
@@ -459,17 +457,84 @@ private:
     fir::StoreOp::create(builder, loc, falseConv, pinned);
   }
 
+  /// Search a DataRef for a symbol with CUDA attributes. Returns true and
+  /// sets \p sym if found.
+  static bool findCUDAAttrInDataRef(const Fortran::parser::DataRef &ref,
+                                    const Fortran::semantics::Symbol *&sym) {
+    return Fortran::common::visit(
+        Fortran::common::visitors{
+            [&](const Fortran::parser::Name &name) {
+              if (name.symbol &&
+                  Fortran::semantics::HasCUDAAttr(*name.symbol)) {
+                sym = name.symbol;
+                return true;
+              }
+              return false;
+            },
+            [&](const Fortran::common::Indirection<
+                Fortran::parser::StructureComponent> &sc) {
+              if (sc.value().Component().symbol &&
+                  Fortran::semantics::HasCUDAAttr(
+                      *sc.value().Component().symbol)) {
+                sym = sc.value().Component().symbol;
+                return true;
+              }
+              return findCUDAAttrInDataRef(sc.value().Base(), sym);
+            },
+            [&](const Fortran::common::Indirection<
+                Fortran::parser::ArrayElement> &ae) {
+              return findCUDAAttrInDataRef(ae.value().Base(), sym);
+            },
+            [&](const Fortran::common::Indirection<
+                Fortran::parser::CoindexedNamedObject> &) { return false; },
+        },
+        ref.u);
+  }
+
+  /// When the allocate object is a structure component (e.g.,
+  /// managed_var(1)%component or a%b%c), walk the DataRef chain and check
+  /// whether any parent has CUDA attributes. If so, update \p sym to that
+  /// symbol and return true so allocations use its memory space.
+  bool propagateCUDAAttrsFromParent(const Allocation &alloc,
+                                    const Fortran::semantics::Symbol *&sym) {
+    if (const auto *sc = std::get_if<Fortran::parser::StructureComponent>(
+            &alloc.getAllocObj().u))
+      return findCUDAAttrInDataRef(sc->Base(), sym);
+    return false;
+  }
+
   void genSimpleAllocation(const Allocation &alloc,
                            const fir::MutableBoxValue &box) {
     bool isCudaAllocate =
         Fortran::semantics::HasCUDAAttr(alloc.getSymbol()) ||
         Fortran::semantics::HasCUDAComponent(alloc.getSymbol());
+    const Fortran::semantics::Symbol *cudaSymForAlloc = &alloc.getSymbol();
+    if (!isCudaAllocate)
+      isCudaAllocate = propagateCUDAAttrsFromParent(alloc, cudaSymForAlloc);
+
     bool isCudaDeviceContext = cuf::isCUDADeviceContext(builder.getRegion());
+    unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(*cudaSymForAlloc);
+
+    // Under -gpu=mem:unified, back plain (unattributed) allocatables/pointers
+    // with managed memory by selecting the unified allocator index at the
+    // ALLOCATE site. The symbol stays unattributed, so argument passing,
+    // interfaces, and COMMON legality are unaffected.
+    bool implicitManagedBacking = false;
+    if (allocatorIdx == kDefaultAllocator && !isCudaAllocate &&
+        !isCudaDeviceContext && (box.isAllocatable() || box.isPointer()) &&
+        converter.getFoldingContext().languageFeatures().IsEnabled(
+            Fortran::common::LanguageFeature::CudaUnified)) {
+      allocatorIdx = kUnifiedAllocatorPos;
+      implicitManagedBacking = true;
+    }
+
+    // The inlined allocation path emits a plain heap allocmem that ignores the
+    // allocator index; use the runtime path when we redirected an otherwise
+    // plain allocatable to a managed allocator so the index is honored.
     bool inlineAllocation = !box.isDerived() && !errorManager.hasStatSpec() &&
                             !alloc.type.IsPolymorphic() &&
                             !alloc.hasCoarraySpec() && !useAllocateRuntime &&
-                            !box.isPointer();
-    unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(alloc.getSymbol());
+                            !box.isPointer() && !implicitManagedBacking;
 
     if (inlineAllocation && !alloc.hasCoarraySpec() &&
         ((isCudaAllocate && isCudaDeviceContext) || !isCudaAllocate)) {
@@ -502,13 +567,13 @@ private:
     if (alloc.hasCoarraySpec()) {
       stat = Fortran::lower::genAllocateCoarray(
           converter, loc, alloc.getSymbol(), box.getAddr(),
-          alloc.getCoarraySpec(), errorManager.errMsgAddr);
+          alloc.getCoarraySpec(), errorManager.errMsgAddr,
+          errorManager.hasStatSpec());
     } else if (!isCudaAllocate) {
       stat = genRuntimeAllocate(builder, loc, box, errorManager);
       setPinnedToFalse();
     } else {
-      stat =
-          genCudaAllocate(builder, loc, box, errorManager, alloc.getSymbol());
+      stat = genCudaAllocate(builder, loc, box, errorManager, *cudaSymForAlloc);
     }
     fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
     postAllocationAction(alloc, box);
@@ -569,8 +634,16 @@ private:
       fir::StoreOp::create(builder, loc, nullPointer, box.getAddr());
     } else {
       assert(box.isAllocatable() && "must be an allocatable");
-      // For allocatables, sync the MutableBoxValue and descriptor before the
-      // calls in case it is tracked locally by a set of variables.
+      // For allocatables, re-establish the descriptor with the correct
+      // allocator index so that AllocatableAllocate uses the right memory
+      // space.
+      if (allocatorIdx != kDefaultAllocator) {
+        fir::factory::disassociateMutableBox(builder, loc, box,
+                                             /*polymorphicSetType=*/false,
+                                             allocatorIdx);
+      }
+      // Sync the MutableBoxValue and descriptor before the calls in case
+      // it is tracked locally by a set of variables.
       fir::factory::getMutableIRBox(builder, loc, box);
     }
   }
@@ -622,7 +695,11 @@ private:
 
   void genSourceMoldAllocation(const Allocation &alloc,
                                const fir::MutableBoxValue &box, bool isSource) {
-    unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(alloc.getSymbol());
+    bool isCudaAllocate = Fortran::semantics::HasCUDAAttr(alloc.getSymbol());
+    const Fortran::semantics::Symbol *cudaSymForAlloc = &alloc.getSymbol();
+    if (!isCudaAllocate)
+      isCudaAllocate = propagateCUDAAttrsFromParent(alloc, cudaSymForAlloc);
+    unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(*cudaSymForAlloc);
     fir::ExtendedValue exv = isSource ? sourceExv : moldExv;
 
     bool sourceIsDevice = false;
@@ -649,11 +726,10 @@ private:
     if (alloc.hasCoarraySpec()) {
       stat = Fortran::lower::genAllocateCoarray(
           converter, loc, alloc.getSymbol(), box.getAddr(),
-          alloc.getCoarraySpec(), errorManager.errMsgAddr);
-    } else if (Fortran::semantics::HasCUDAAttr(alloc.getSymbol()) ||
-               sourceIsDevice) {
-      stat =
-          genCudaAllocate(builder, loc, box, errorManager, alloc.getSymbol());
+          alloc.getCoarraySpec(), errorManager.errMsgAddr,
+          errorManager.hasStatSpec());
+    } else if (isCudaAllocate || sourceIsDevice) {
+      stat = genCudaAllocate(builder, loc, box, errorManager, *cudaSymForAlloc);
     } else {
       if (isSource)
         stat = genRuntimeAllocateSource(builder, loc, box, exv, errorManager);
@@ -885,10 +961,19 @@ genDeallocate(fir::FirOpBuilder &builder,
               const Fortran::semantics::Symbol *symbol = nullptr) {
   bool isCudaSymbol = symbol && Fortran::semantics::HasCUDAAttr(*symbol);
   bool isCudaDeviceContext = cuf::isCUDADeviceContext(builder.getRegion());
+  // A plain allocatable/pointer under -gpu=mem:unified was given the unified
+  // allocator index at ALLOCATE, so its deallocation must go through the
+  // runtime (which honors that index) rather than an inlined freemem that would
+  // call libc free() on managed memory.
+  bool implicitManagedBacking =
+      !isCudaSymbol && !isCudaDeviceContext &&
+      (box.isAllocatable() || box.isPointer()) &&
+      converter.getFoldingContext().languageFeatures().IsEnabled(
+          Fortran::common::LanguageFeature::CudaUnified);
   bool inlineDeallocation =
       !box.isDerived() && !box.isPolymorphic() && !box.hasAssumedRank() &&
       !box.isUnlimitedPolymorphic() && !errorManager.hasStatSpec() &&
-      !useAllocateRuntime && !box.isPointer();
+      !useAllocateRuntime && !box.isPointer() && !implicitManagedBacking;
   bool isCoarraySymbol = symbol && Fortran::evaluate::IsCoarray(*symbol);
 
   // Deallocate intrinsic types inline.

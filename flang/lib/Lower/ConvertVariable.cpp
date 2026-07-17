@@ -22,6 +22,7 @@
 #include "flang/Lower/ConvertProcedureDesignator.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/MultiImageFortran.h"
+#include "flang/Lower/OpenACC.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Support/Utils.h"
@@ -35,18 +36,18 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "flang/Optimizer/Dialect/MIF/MIFOps.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Runtime/allocator-registry-consts.h"
-#include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Semantics/type.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
@@ -221,6 +222,8 @@ static fir::GlobalOp declareGlobal(Fortran::lower::AbstractConverter &converter,
       isConstant(ultimate), var.isTarget(), dataAttr,
       /*setDefaultAlignment=*/!isBindC);
   attachAccDeclareAttribute(builder, global, sym);
+  Fortran::lower::declareExternalAccModuleDeclareActionRecipes(converter,
+                                                               builder, sym);
   return global;
 }
 
@@ -492,20 +495,6 @@ createGlobalInitialization(fir::FirOpBuilder &builder, fir::GlobalOp global,
   builder.restoreInsertionPoint(insertPt);
 }
 
-static unsigned getAllocatorIdxFromDataAttr(cuf::DataAttributeAttr dataAttr) {
-  if (dataAttr) {
-    if (dataAttr.getValue() == cuf::DataAttribute::Pinned)
-      return kPinnedAllocatorPos;
-    if (dataAttr.getValue() == cuf::DataAttribute::Device)
-      return kDeviceAllocatorPos;
-    if (dataAttr.getValue() == cuf::DataAttribute::Managed)
-      return kManagedAllocatorPos;
-    if (dataAttr.getValue() == cuf::DataAttribute::Unified)
-      return kUnifiedAllocatorPos;
-  }
-  return kDefaultAllocator;
-}
-
 /// Create the global op and its init if it has one
 fir::GlobalOp Fortran::lower::defineGlobal(
     Fortran::lower::AbstractConverter &converter,
@@ -561,12 +550,19 @@ fir::GlobalOp Fortran::lower::defineGlobal(
         fir::HasValueOp::create(b, loc, box);
       });
     } else {
-      // Create unallocated/disassociated descriptor if no explicit init
+      // Create unallocated/disassociated descriptor if no explicit init. Under
+      // -gpu=unified, back a plain module allocatable/pointer with managed
+      // memory by baking the unified allocator index into the descriptor.
+      const bool cudaUnifiedBacking =
+          converter.getFoldingContext().languageFeatures().IsEnabled(
+              Fortran::common::LanguageFeature::CudaUnified);
+      unsigned allocatorIdx =
+          Fortran::lower::getAllocatorIdxForUnified(sym, cudaUnifiedBacking);
       createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
         mlir::Value box = fir::factory::createUnallocatedBox(
             b, loc, symTy,
             /*nonDeferredParams=*/{},
-            /*typeSourceBox=*/{}, getAllocatorIdxFromDataAttr(dataAttr));
+            /*typeSourceBox=*/{}, allocatorIdx);
         fir::HasValueOp::create(b, loc, box);
       });
     }
@@ -695,10 +691,15 @@ static void instantiateGlobal(Fortran::lower::AbstractConverter &converter,
   mlir::StringAttr linkage = getLinkageAttribute(converter, var);
   fir::GlobalOp global;
 
-  if (Fortran::evaluate::IsCoarray(sym))
+  if (Fortran::evaluate::IsCoarray(sym)) {
     if (hasFinalization(sym) || hasAllocatableDirectComponent(sym))
-      TODO(loc, "Coarray with an allocatable direct component and/or requiring "
-                "finalization.");
+      TODO(loc, "coarray: coarray with an allocatable direct component and/or "
+                "requiring finalization");
+    const auto *details =
+        sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
+    if (details && details->init())
+      TODO(loc, "coarray: initialization");
+  }
 
   if (var.isModuleOrSubmoduleVariable()) {
     // A non-intrinsic module global is defined when lowering the module.
@@ -830,6 +831,164 @@ mustBeDefaultInitializedAtRuntime(const Fortran::lower::pft::Variable &var) {
   return Fortran::lower::hasDefaultInitialization(sym);
 }
 
+/// Performs component-wise initialization for \p derivedSpec,
+/// selectively generating IR only for components that require it.
+static void genDerivedTypeComponentInit(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const Fortran::semantics::DerivedTypeSpec &derivedSpec,
+    mlir::Value baseAddr, fir::RecordType recTy) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  // Flattened DFS traversal to visit only the leaf components.
+  Fortran::semantics::UltimateComponentIterator ultimateIter{derivedSpec};
+  for (auto it = ultimateIter.begin(); it != ultimateIter.end(); ++it) {
+    const Fortran::semantics::Symbol &comp = *it;
+    const auto *objDetails =
+        comp.detailsIf<Fortran::semantics::ObjectEntityDetails>();
+    const auto *procDetails =
+        comp.detailsIf<Fortran::semantics::ProcEntityDetails>();
+    if ((!objDetails && !procDetails) ||
+        !Fortran::semantics::IsAllocatableOrPointer(comp))
+      continue;
+    // Retrieve the nested symbol path from the root type to this ultimate
+    // component.
+    auto path = it.GetComponentPath();
+    mlir::Value currentAddr = baseAddr;
+    fir::RecordType currentRecTy = recTy;
+    // Traverse the path and calculate memory coordinates.
+    for (const Fortran::semantics::Symbol &pathSym : path) {
+      const Fortran::semantics::Symbol *symPtr = &pathSym;
+      // Generate coordinate for this nesting level.
+      std::string name = converter.getRecordTypeFieldName(*symPtr);
+      mlir::Type compFirTy = currentRecTy.getType(name);
+      assert(compFirTy && "Component field type not found in RecordType");
+      auto fieldIdx = fir::FieldIndexOp::create(
+          builder, loc, fir::FieldType::get(currentRecTy.getContext()), name,
+          currentRecTy, mlir::ValueRange{});
+      currentAddr =
+          fir::CoordinateOp::create(builder, loc, builder.getRefType(compFirTy),
+                                    currentAddr, mlir::ValueRange{fieldIdx});
+      currentRecTy = mlir::dyn_cast<fir::RecordType>(compFirTy);
+    }
+    mlir::Type finalCompFirTy = fir::unwrapPassByRefType(currentAddr.getType());
+    mlir::Value initVal;
+    if (objDetails) {
+      initVal = fir::factory::createUnallocatedBox(builder, loc, finalCompFirTy,
+                                                   mlir::ValueRange{});
+    } else {
+      initVal = fir::factory::createNullBoxProc(builder, loc, finalCompFirTy);
+    }
+    fir::StoreOp::create(builder, loc, initVal, currentAddr);
+  }
+}
+
+/// Initializes a derived type via a bulk memory copy (memcpy).
+/// This method generates a global constant containing the default
+/// initialized state of the type, and copies it directly into the
+/// target memory location.
+static void
+genInlinedInitWithMemcpy(Fortran::lower::AbstractConverter &converter,
+                         const Fortran::semantics::Symbol &sym,
+                         mlir::Type symTy, const fir::ExtendedValue &exv,
+                         const Fortran::semantics::ObjectEntityDetails *details,
+                         const Fortran::semantics::DeclTypeSpec *declTy) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::Location symLoc = genLocation(converter, sym);
+  std::string globalName = fir::NameUniquer::doGenerated(
+      (converter.mangleName(*declTy->AsDerived()) + fir::kNameSeparator +
+       fir::kDerivedTypeInitSuffix)
+          .str());
+  mlir::StringAttr linkage = builder.createInternalLinkage();
+  fir::GlobalOp global = builder.getNamedGlobal(globalName);
+  if (!global && details->init()) {
+    global = builder.createGlobal(symLoc, symTy, globalName, linkage,
+                                  mlir::Attribute{},
+                                  /*isConst=*/true,
+                                  /*isTarget=*/false,
+                                  /*dataAttr=*/{});
+    createGlobalInitialization(
+        builder, global, [&](fir::FirOpBuilder &builder) {
+          Fortran::lower::StatementContext stmtCtx(
+              /*cleanupProhibited=*/true);
+          fir::ExtendedValue initVal = genInitializerExprValue(
+              converter, symLoc, details->init().value(), stmtCtx);
+          mlir::Value castTo =
+              builder.createConvert(symLoc, symTy, fir::getBase(initVal));
+          fir::HasValueOp::create(builder, symLoc, castTo);
+        });
+  } else if (!global) {
+    global = builder.createGlobal(symLoc, symTy, globalName, linkage,
+                                  mlir::Attribute{},
+                                  /*isConst=*/true,
+                                  /*isTarget=*/false,
+                                  /*dataAttr=*/{});
+    createGlobalInitialization(
+        builder, global, [&](fir::FirOpBuilder &builder) {
+          Fortran::lower::StatementContext stmtCtx(
+              /*cleanupProhibited=*/true);
+          mlir::Value initVal = genDefaultInitializerValue(converter, symLoc,
+                                                           sym, symTy, stmtCtx);
+          mlir::Value castTo = builder.createConvert(symLoc, symTy, initVal);
+          fir::HasValueOp::create(builder, symLoc, castTo);
+        });
+  }
+  auto addrOf = fir::AddrOfOp::create(builder, symLoc, global.resultType(),
+                                      global.getSymbol());
+  fir::CopyOp::create(builder, symLoc, addrOf, fir::getBase(exv),
+                      /*noOverlap=*/true);
+}
+
+/// Checks if a derived type is eligible for component-wise initialization.
+/// This is preferred over a bulk memcpy when the type contains at least
+/// one pointer/allocatable component, but no components with default
+/// initializers.
+static bool isEligibleForComponentWiseInit(
+    const Fortran::semantics::DerivedTypeSpec &derivedSpec) {
+  bool hasPtrOrAlloc = false;
+  // Worklist for iterative traversal of the derived type tree.
+  llvm::SmallVector<const Fortran::semantics::DerivedTypeSpec *> worklist;
+  worklist.push_back(&derivedSpec);
+  while (!worklist.empty()) {
+    const Fortran::semantics::DerivedTypeSpec *currentSpec =
+        worklist.pop_back_val();
+    const Fortran::semantics::Scope *scope = currentSpec->scope();
+    assert(scope && "derived type has no scope");
+    const auto &typeDetails =
+        currentSpec->typeSymbol().get<Fortran::semantics::DerivedTypeDetails>();
+    for (const auto &compName : typeDetails.componentNames()) {
+      auto scopeIter = scope->find(compName);
+      assert(scopeIter != scope->cend() &&
+             "component name must exist in its scope");
+      const Fortran::semantics::Symbol &comp = scopeIter->second.get();
+      // Return false if any component has a default initializer.
+      const auto *objDetails =
+          comp.detailsIf<Fortran::semantics::ObjectEntityDetails>();
+      const auto *procDetails =
+          comp.detailsIf<Fortran::semantics::ProcEntityDetails>();
+      if ((objDetails && objDetails->init()) ||
+          (procDetails && procDetails->init()))
+        return false;
+      if (Fortran::semantics::IsAllocatableOrPointer(comp)) {
+        hasPtrOrAlloc = true;
+        continue;
+      }
+      // Traverse nested derived types.
+      if (const Fortran::semantics::DeclTypeSpec *declTy = comp.GetType()) {
+        if (const Fortran::semantics::DerivedTypeSpec *nestedSpec =
+                declTy->AsDerived()) {
+          if (Fortran::lower::hasDefaultInitialization(comp)) {
+            // Return false for arrays of derived types requiring
+            // initialization.
+            if (comp.Rank() > 0)
+              return false;
+            worklist.push_back(nestedSpec);
+          }
+        }
+      }
+    }
+  }
+  return hasPtrOrAlloc;
+}
+
 /// Call default initialization runtime routine to initialize \p var.
 void Fortran::lower::defaultInitializeAtRuntime(
     Fortran::lower::AbstractConverter &converter,
@@ -857,56 +1016,27 @@ void Fortran::lower::defaultInitializeAtRuntime(
     mlir::Type symTy = converter.genType(sym);
     const auto *details =
         sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
-    if (details && !Fortran::semantics::IsPolymorphic(sym) &&
+    bool isDerivedTypeScalar =
+        details && !Fortran::semantics::IsPolymorphic(sym) &&
         declTy->category() ==
             Fortran::semantics::DeclTypeSpec::Category::TypeDerived &&
         !mlir::isa<fir::SequenceType>(symTy) &&
         !sym.test(Fortran::semantics::Symbol::Flag::OmpPrivate) &&
         !sym.test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate) &&
-        !Fortran::semantics::HasCUDAComponent(sym)) {
-      std::string globalName = fir::NameUniquer::doGenerated(
-          (converter.mangleName(*declTy->AsDerived()) + fir::kNameSeparator +
-           fir::kDerivedTypeInitSuffix)
-              .str());
-      mlir::Location loc = genLocation(converter, sym);
-      mlir::StringAttr linkage = builder.createInternalLinkage();
-      fir::GlobalOp global = builder.getNamedGlobal(globalName);
-      if (!global && details->init()) {
-        global = builder.createGlobal(loc, symTy, globalName, linkage,
-                                      mlir::Attribute{},
-                                      /*isConst=*/true,
-                                      /*isTarget=*/false,
-                                      /*dataAttr=*/{});
-        createGlobalInitialization(
-            builder, global, [&](fir::FirOpBuilder &builder) {
-              Fortran::lower::StatementContext stmtCtx(
-                  /*cleanupProhibited=*/true);
-              fir::ExtendedValue initVal = genInitializerExprValue(
-                  converter, loc, details->init().value(), stmtCtx);
-              mlir::Value castTo =
-                  builder.createConvert(loc, symTy, fir::getBase(initVal));
-              fir::HasValueOp::create(builder, loc, castTo);
-            });
-      } else if (!global) {
-        global = builder.createGlobal(loc, symTy, globalName, linkage,
-                                      mlir::Attribute{},
-                                      /*isConst=*/true,
-                                      /*isTarget=*/false,
-                                      /*dataAttr=*/{});
-        createGlobalInitialization(
-            builder, global, [&](fir::FirOpBuilder &builder) {
-              Fortran::lower::StatementContext stmtCtx(
-                  /*cleanupProhibited=*/true);
-              mlir::Value initVal = genDefaultInitializerValue(
-                  converter, loc, sym, symTy, stmtCtx);
-              mlir::Value castTo = builder.createConvert(loc, symTy, initVal);
-              fir::HasValueOp::create(builder, loc, castTo);
-            });
+        !Fortran::semantics::HasCUDAComponent(sym);
+    if (isDerivedTypeScalar) {
+      const auto &derivedSpec = *declTy->AsDerived();
+      if (isEligibleForComponentWiseInit(derivedSpec)) {
+        // Component-wise initialization.
+        mlir::Value baseAddr = fir::getBase(exv);
+        auto recTy = mlir::cast<fir::RecordType>(
+            fir::unwrapPassByRefType(baseAddr.getType()));
+        genDerivedTypeComponentInit(converter, loc, derivedSpec, baseAddr,
+                                    recTy);
+      } else {
+        // Initialize via bulk memory copy from a global constant.
+        genInlinedInitWithMemcpy(converter, sym, symTy, exv, details, declTy);
       }
-      auto addrOf = fir::AddrOfOp::create(builder, loc, global.resultType(),
-                                          global.getSymbol());
-      fir::CopyOp::create(builder, loc, addrOf, fir::getBase(exv),
-                          /*noOverlap=*/true);
     } else {
       mlir::Value box = builder.createBox(loc, exv);
       fir::runtime::genDerivedTypeInitialize(builder, loc, box);
@@ -2190,9 +2320,17 @@ void Fortran::lower::mapSymbolAttributes(
           TODO(loc,
                "derived type allocatable or pointer with length parameters");
     }
+    // Under -gpu=unified, bake the unified allocator index into the descriptor
+    // at creation so runtime-driven allocations (allocate-on-assignment,
+    // SOURCE=, ...) get managed backing, not just explicit ALLOCATE.
+    const bool cudaUnifiedBacking =
+        converter.getFoldingContext().languageFeatures().IsEnabled(
+            Fortran::common::LanguageFeature::CudaUnified) &&
+        !cuf::isCUDADeviceContext(builder.getRegion());
     fir::MutableBoxValue box = Fortran::lower::createMutableBox(
         converter, loc, var, boxAlloc, nonDeferredLenParams,
-        Fortran::lower::getAllocatorIdx(var.getSymbol()));
+        Fortran::lower::getAllocatorIdxForUnified(var.getSymbol(),
+                                                  cudaUnifiedBacking));
     genAllocatableOrPointerDeclare(converter, symMap, var.getSymbol(), box,
                                    replace);
     return;
@@ -2202,7 +2340,7 @@ void Fortran::lower::mapSymbolAttributes(
     if (Fortran::evaluate::IsCoarray(sym))
       // Operation in MIF dialect to create an alias of the coarray not
       // yet supported (by using the procedure provided by PRIF).
-      TODO(loc, "coarray dummy argument not yet supported.");
+      TODO(loc, "coarray: dummy argument not yet supported");
 
     mlir::Value dummyArg = symMap.lookupSymbol(sym).getAddr();
     if (lowerToBoxValue(sym, dummyArg, converter)) {
@@ -2502,10 +2640,12 @@ void Fortran::lower::mapSymbolAttributes(
     assert(!Fortran::semantics::IsAllocatable(sym) &&
            "must be a non-ALLOCATABLE coarray");
     if (Fortran::semantics::IsSaved(sym) &&
-        sym.owner().kind() != Fortran::semantics::Scope::Kind::MainProgram)
-      TODO(loc, "non-ALLOCATABLE SAVE Coarray outside the main program.");
-    ;
-    Fortran::lower::genAllocateCoarray(converter, loc, sym, addr);
+        (sym.owner().kind() != Fortran::semantics::Scope::Kind::MainProgram ||
+         var.isModuleOrSubmoduleVariable()))
+      Fortran::lower::genAllocateNonAllocatableSaveCoarray(converter, loc, sym,
+                                                           addr);
+    else
+      Fortran::lower::genAllocateCoarray(converter, loc, sym, addr);
     ::genDeclareSymbol(converter, symMap, sym, addr, len, extents, lbounds,
                        replace);
     return;

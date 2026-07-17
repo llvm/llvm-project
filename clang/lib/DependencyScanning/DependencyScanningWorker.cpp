@@ -13,6 +13,7 @@
 #include "clang/DependencyScanning/DependencyScannerImpl.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
 using namespace clang;
@@ -37,7 +38,7 @@ DependencyScanningWorker::DependencyScanningWorker(
   }
 
   DepFS = llvm::makeIntrusiveRefCnt<DependencyScanningWorkerFilesystem>(
-      Service.getSharedCache(), std::move(BaseFS));
+      Service, std::move(BaseFS));
 }
 
 DependencyScanningWorker::~DependencyScanningWorker() = default;
@@ -88,6 +89,12 @@ bool DependencyScanningWorker::computeDependencies(
           {Cmd.front(), {Cmd.begin() + 1, Cmd.end()}});
       return true;
     }
+
+    Service.getLogger().log().logArray("starting scanning command:", " ", Cmd);
+    llvm::scope_exit ExitLogging([&] {
+      Service.getLogger().log().logArray("finished scanning command:", " ",
+                                         Cmd);
+    });
 
     auto DiagEngineWithDiagOpts =
         DiagnosticsEngineWithDiagOpts(Cmd, FS, DiagConsumer);
