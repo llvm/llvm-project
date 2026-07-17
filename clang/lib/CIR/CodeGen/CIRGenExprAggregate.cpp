@@ -468,6 +468,8 @@ public:
         e->getType().isDestructedType() == QualType::DK_nontrivial_c_struct;
     isExternallyDestructed |= destructNonTrivialCStruct;
 
+    // emitIfOnBoolExpr terminates each region; an unconditional yield here
+    // would keep alive the dead block a noreturn arm leaves behind.
     cgf.emitIfOnBoolExpr(
         e->getCond(),
         /*thenBuilder=*/
@@ -479,10 +481,6 @@ public:
             cgf.curLexScope->setAsTernary();
             dest.setExternallyDestructed(isExternallyDestructed);
             assert(!cir::MissingFeatures::incrementProfileCounter());
-            // emitIfOnBoolExpr terminates the region with a yield if needed;
-            // creating one here unconditionally would land in the dead block
-            // left behind by a noreturn arm (e.g. a throw-expression) and
-            // keep that block alive.
             Visit(e->getTrueExpr());
           }
           eval.endEvaluation();

@@ -3130,9 +3130,8 @@ CIRGenFunction::emitConditionalBlocks(const AbstractConditionalOperator *e,
         emitBranch(b, loc, e->getFalseExpr(), info.rhs);
       });
 
-  // Close any region left unterminated (which can only happen on error
-  // paths, since a glvalue arm either yields its pointer or throws) with an
-  // empty cir.yield.
+  // Arms end with a yield or cir.unreachable (throw); this is a backstop
+  // for error (NYI) paths that leave a region open.
   terminateStructuredRegionBody(ternary.getTrueRegion(), loc);
   terminateStructuredRegionBody(ternary.getFalseRegion(), loc);
 
@@ -3180,7 +3179,15 @@ LValue CIRGenFunction::emitConditionalOperatorLValue(
 
   assert((info.lhs || info.rhs) &&
          "both operands of glvalue conditional are throw-expressions?");
-  return info.lhs ? *info.lhs : *info.rhs;
+
+  // One arm threw; the surviving arm's pointer is local to the ternary's
+  // region, so address the result through the ternary's result value.
+  const LValue &survivingLV = info.lhs ? *info.lhs : *info.rhs;
+  Address survivingAddr = survivingLV.getAddress();
+  Address result(info.result, survivingAddr.getElementType(),
+                 survivingAddr.getAlignment());
+  assert(!cir::MissingFeatures::opTBAA());
+  return makeAddrLValue(result, expr->getType(), survivingLV.getBaseInfo());
 }
 
 /// An LValue is a candidate for having its loads and stores be made atomic if
