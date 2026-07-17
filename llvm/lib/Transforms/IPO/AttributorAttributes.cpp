@@ -214,16 +214,16 @@ ChangeStatus clampStateAndIndicateChange<DerefState>(DerefState &S,
 } // namespace llvm
 
 static bool mayBeInCycle(const CycleInfo *CI, const Instruction *I,
-                         bool HeaderOnly, Cycle **CPtr = nullptr) {
+                         bool HeaderOnly, CycleRef *CPtr = nullptr) {
   if (!CI)
     return true;
   auto *BB = I->getParent();
-  auto *C = CI->getCycle(BB);
+  CycleRef C = CI->getCycle(BB);
   if (!C)
     return false;
   if (CPtr)
     *CPtr = C;
-  return !HeaderOnly || BB == CI->getHeader(*C);
+  return !HeaderOnly || BB == CI->getHeader(C);
 }
 
 /// Checks if a type could have padding bytes.
@@ -11421,7 +11421,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
           A.getInfoCache().getAnalysisResultForFunction<CycleAnalysis>(
               *PHI.getFunction());
 
-      Cycle *C = nullptr;
+      CycleRef C;
       bool CyclePHI = mayBeInCycle(CI, &PHI, /* HeaderOnly */ true, &C);
       for (unsigned u = 0, e = PHI.getNumIncomingValues(); u < e; u++) {
         BasicBlock *IncomingBB = PHI.getIncomingBlock(u);
@@ -11437,7 +11437,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
         // If the incoming value is not the PHI but an instruction in the same
         // cycle we might have multiple versions of it flying around.
         if (CyclePHI && isa<Instruction>(V) &&
-            (!C || CI->contains(*C, cast<Instruction>(V)->getParent())))
+            (!C || CI->contains(C, cast<Instruction>(V)->getParent())))
           return false;
 
         Worklist.push_back({{*V, IncomingBB->getTerminator()}, II.S});

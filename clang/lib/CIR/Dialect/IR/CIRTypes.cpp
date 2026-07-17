@@ -809,7 +809,13 @@ uint64_t IntType::getABIAlignment(const mlir::DataLayout &dataLayout,
         std::min(llvm::PowerOf2Ceil(width), static_cast<uint64_t>(64));
     return std::max(alignBits / 8, static_cast<uint64_t>(1));
   }
-  return (uint64_t)(width / 8);
+  // Round up to a power-of-two byte alignment.  DataLayout consumers such as
+  // llvm::Align require power-of-two alignments, and width / 8 is not a power
+  // of two for non-fundamental widths (e.g. i24 -> 3).  This leaves the
+  // fundamental widths unchanged (i8 -> 1, i16 -> 2, i32 -> 4, i64 -> 8) and
+  // keeps __int128 at 16.
+  uint64_t alignBits = llvm::PowerOf2Ceil(width);
+  return std::max(alignBits / 8, static_cast<uint64_t>(1));
 }
 
 mlir::LogicalResult

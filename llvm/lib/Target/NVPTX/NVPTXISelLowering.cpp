@@ -110,14 +110,15 @@ static cl::opt<bool> UsePrecSqrtF32(
     cl::init(true));
 
 // PTX atom.add.f32 has fixed FTZ behavior that may not match the function's
-// (see shouldExpandAtomicRMWInIR), so by default we fall back to a CAS loop
-// when they disagree. This flag is an escape hatch to use atom.add anyway,
-// trading correct denormal handling for the speed of the native instruction.
+// (see shouldExpandAtomicRMWInIR), so we'd normally fall back to a CAS loop
+// when they disagree. This option (enabled by default) allows using atom.add
+// anyway, trading correct denormal handling for the speed of the native
+// instruction.
 static cl::opt<bool> AllowFTZAtomics(
     "nvptx-allow-ftz-atomics", cl::Hidden,
     cl::desc("NVPTX Specific: Lower atomicrmw fadd to atom.add even when its "
              "FTZ behavior does not match the function's denormal mode."),
-    cl::init(false));
+    cl::init(true));
 
 /// Whereas CUDA's implementation (see libdevice) uses ex2.approx for exp2(), it
 /// does NOT use lg2.approx for log2, so this is disabled by default.

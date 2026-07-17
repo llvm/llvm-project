@@ -22,7 +22,7 @@ foreach(target, symlinks) {
   symlink_or_copy(target[0]) {
     deps = [ ":clang" ]
     source = "clang"
-    output = "$root_out_dir/bin/${target[1]}"
+    output = "$llvm_current_bindir/${target[1]}"
   }
 }
 

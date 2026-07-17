@@ -2074,9 +2074,8 @@ size_t Target::ReadMemoryFromFileCache(const Address &addr, void *dst,
         if (bytes_read > 0)
           return bytes_read;
         else
-          error = Status::FromErrorStringWithFormat(
-              "error reading data from section %s",
-              section_sp->GetName().GetCString());
+          error = Status::FromErrorStringWithFormatv(
+              "error reading data from section {0}", section_sp->GetName());
       } else
         error = Status::FromErrorString("address isn't from a object file");
     } else

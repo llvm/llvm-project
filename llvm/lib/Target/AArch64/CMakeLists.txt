@@ -77,6 +77,7 @@ add_llvm_target(AArch64CodeGen
   AArch64PointerAuth.cpp
   AArch64PostCoalescerPass.cpp
   AArch64PromoteConstant.cpp
+  AArch64PTrueCoalescing.cpp
   AArch64PBQPRegAlloc.cpp
   AArch64RegisterInfo.cpp
   AArch64SMEAttributes.cpp

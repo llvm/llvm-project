@@ -175,6 +175,8 @@ void AArch64PointerAuthImpl::signLR(MachineFunction &MF,
   }
 
   if (!EmitCFI && NeedsWinCFI) {
+    assert(UseBKey &&
+           "Windows SEH PAC unwind info only supports B-key signing");
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_PACSignLR))
         .setMIFlag(MachineInstr::FrameSetup);
   }
@@ -336,6 +338,8 @@ void AArch64PointerAuthImpl::authenticateLR(
   }
 
   if (NeedsWinCFI) {
+    assert(UseBKey &&
+           "Windows SEH PAC unwind info only supports B-key signing");
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_PACSignLR))
         .setMIFlag(MachineInstr::FrameDestroy);
   }
