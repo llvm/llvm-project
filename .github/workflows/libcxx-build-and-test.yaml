@@ -213,7 +213,7 @@ jobs:
         #       coverage.
         - config: apple-system
         - config: apple-system-hardened
-    runs-on: ["self-hosted", "macOS", "ARM64", "26", "26.5"]
+    runs-on: ["self-hosted", "macOS", "apple-runners"]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
