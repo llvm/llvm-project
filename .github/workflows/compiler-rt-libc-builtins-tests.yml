@@ -34,7 +34,8 @@ jobs:
         run: |
           cmake \
             -B build \
-            -S compiler-rt \
+            -S runtimes \
+            -DLLVM_ENABLE_RUNTIMES=compiler-rt \
             -G Ninja \
             -DCMAKE_C_COMPILER=clang-23 \
             -DCMAKE_CXX_COMPILER=clang++-23 \
