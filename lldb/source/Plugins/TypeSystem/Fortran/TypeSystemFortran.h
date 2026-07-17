@@ -1,9 +1,14 @@
-//===-- TypeSystemFortran.h -------------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the definition of the Fortran Type System.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLDB_SOURCE_PLUGINS_TYPESYSTEM_FORTRAN_TYPESYSTEMFORTRAN_H
@@ -472,7 +477,7 @@ public:
   CompilerType GetNonReferenceType(lldb::opaque_compiler_type_t type) override {
     return CompilerType();
   }
-  // TODO
+
   bool IsReferenceType(lldb::opaque_compiler_type_t type,
                        CompilerType *pointee_type, bool *is_rvalue) override {
     return false;

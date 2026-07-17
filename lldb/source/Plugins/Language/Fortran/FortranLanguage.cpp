@@ -1,9 +1,14 @@
-//===-- FortranLanguage.cpp -----------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements the Fortran language Plugin.
+///
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringRef.h"
@@ -43,7 +48,6 @@ StringRef FortranLanguage::GetPluginName() { return GetPluginNameStatic(); }
 uint32_t FortranLanguage::GetPluginVersion() { return 1; }
 
 Language *FortranLanguage::CreateInstance(LanguageType language) {
-  // FIXME: Should Fortran 77 be supported???
   if (Language::LanguageIsFortran(language)) {
     return new FortranLanguage();
   }
@@ -51,7 +55,7 @@ Language *FortranLanguage::CreateInstance(LanguageType language) {
 }
 
 bool FortranLanguage::IsSourceFile(StringRef file_path) const {
-  const auto suffixes = {".f90", ".f"};
+  const auto suffixes = {".f90", ".f", ".f95", ".f03", ".f08", ".f18"};
   for (auto suffix : suffixes) {
     if (file_path.ends_with_insensitive(suffix))
       return true;
