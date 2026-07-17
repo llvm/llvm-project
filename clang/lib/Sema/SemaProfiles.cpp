@@ -546,15 +546,22 @@ static bool defaultInitLeavesScalarIndeterminateImpl(
     return false;
   // A union's members are mutually exclusive, so the per-member walk below does
   // not apply. Default-initialization leaves it without an initialized member
-  // (paper §6.5) unless it has no members, has a user-provided default
-  // constructor (trusted), or a default member initializer initializes one.
+  // (paper §6.5) unless it has a user-provided default constructor (trusted),
+  // a default member initializer initializes one, or it has no members --
+  // unnamed bit-fields are not members ([class.bit]) and cannot be named or
+  // initialized, so a union of only unnamed bit-fields counts as empty.
   if (RD->isUnion()) {
-    if (RD->field_empty() || RD->hasUserProvidedDefaultConstructor())
+    if (RD->hasUserProvidedDefaultConstructor())
       return false;
-    for (const FieldDecl *F : RD->fields())
+    bool AnyMember = false;
+    for (const FieldDecl *F : RD->fields()) {
+      if (F->isUnnamedBitField())
+        continue;
+      AnyMember = true;
       if (F->hasInClassInitializer())
         return false;
-    return true;
+    }
+    return AnyMember;
   }
   // Break cycles from ill-formed self-containing types (e.g. struct S {S x;}).
   if (!Visited.insert(RD->getCanonicalDecl()).second)

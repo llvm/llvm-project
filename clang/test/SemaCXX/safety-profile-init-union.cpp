@@ -70,6 +70,18 @@ void test_uninit_union_suppressed() {
   (void)a;
 }
 
+// A union whose only members are unnamed bit-fields has nothing that
+// default-initialization could leave indeterminate -- unnamed bit-fields are
+// not members and no in-language initializer exists for them -- but an
+// unnamed bit-field alongside a real member changes nothing.
+union BitFieldOnly { int : 4; };
+union BitFieldPlusMember { int : 4; int i; };
+void test_bitfield_only_union() {
+  BitFieldOnly a;       // OK: nothing to initialize
+  BitFieldPlusMember b; // expected-error {{variable 'b' of union type must be initialized under profile 'std::init'}}
+  (void)a; (void)b;
+}
+
 // A union data member that a constructor leaves uninitialized is diagnosed; one
 // initialized via its member-initializer is accepted.
 struct HasUnionMember {

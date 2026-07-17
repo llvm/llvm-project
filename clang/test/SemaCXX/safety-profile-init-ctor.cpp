@@ -284,3 +284,13 @@ struct AnonUnionSuppressed {
   // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
   [[profiles::suppress(std::init, rule: "ctor_uninit_member")]] AnonUnionSuppressed() {}
 };
+
+// An anonymous union whose only members are unnamed bit-fields has nothing
+// for the constructor to initialize: unnamed bit-fields are not members and
+// no in-language initializer exists for them.
+struct AnonUnionUnnamedBitFieldOnly {
+  union {
+    int : 4;
+  };
+  AnonUnionUnnamedBitFieldOnly() {} // OK: nothing to initialize
+};
