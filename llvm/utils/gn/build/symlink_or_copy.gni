@@ -1,3 +1,9 @@
+if (current_toolchain == host_debug_toolchain && host_debug_toolchain != host_toolchain) {
+  llvm_current_bindir = "$root_build_dir/bin.dbg"
+} else {
+  llvm_current_bindir = "$root_out_dir/bin"
+}
+
 # Creates a symlink (or, on Windows, copies).
 # Args:
 #   source: Path to link to.
