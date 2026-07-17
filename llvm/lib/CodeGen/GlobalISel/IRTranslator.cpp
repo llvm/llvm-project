@@ -4367,9 +4367,8 @@ bool IRTranslatorImpl::translateBitExtract(const User &U,
   LLT SrcTy = MRI.getType(Src);
   LLT ResTy = MRI.getType(Res);
 
-  if (ResTy.getSizeInBits() > SrcTy.getSizeInBits())
-    llvm_unreachable(
-        "bitextract result wider than source should be rejected by verifier");
+  assert(ResTy.getSizeInBits() <= SrcTy.getSizeInBits() &&
+         "bitextract result wider than source should be rejected by verifier");
 
   // Convert Offset to SrcTy.
   Register LegalOffset = MIRBuilder.buildZExtOrTrunc(SrcTy, Offset).getReg(0);

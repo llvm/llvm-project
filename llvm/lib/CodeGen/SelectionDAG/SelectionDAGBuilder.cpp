@@ -4237,9 +4237,8 @@ void SelectionDAGBuilder::visitBitExtract(const User &I) {
   // The verifier guarantees the result type is not wider than the source
   // type, so reject any widening case here. getZExtOrTrunc handles the
   // equal-width and narrower cases.
-  if (ResultVT.getSizeInBits() > SrcVT.getSizeInBits())
-    llvm_unreachable(
-        "bitextract result wider than source should be rejected by verifier");
+  assert(ResultVT.getSizeInBits() <= SrcVT.getSizeInBits() &&
+         "bitextract result wider than source should be rejected by verifier");
 
   // Convert offset to SrcVT
   SDValue LegalOffset = DAG.getZExtOrTrunc(Offset, dl, SrcVT);
