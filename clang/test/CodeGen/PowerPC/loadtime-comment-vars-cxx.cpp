@@ -3,6 +3,7 @@
 //   storage.cpp - storage-duration and scope diagnostics
 //   diag.c      - volatile / non-string-literal diagnostics (C)
 //   init.cpp    - constant-initialization / string-literal diagnostics (C++)
+//   list.c      - list parsing: whitespace after a comma, repeated names
 
 // RUN: rm -rf %t && split-file %s %t
 //
@@ -21,6 +22,14 @@
 // RUN: %clang_cc1 -std=c++17 -triple powerpc64-ibm-aix \
 // RUN:   -mloadtime-comment-vars=p_ok,arr_ok,p_dyn,p_ind \
 // RUN:   -emit-llvm -verify -o - %t/init.cpp | FileCheck %t/init.cpp
+//
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix \
+// RUN:   "-mloadtime-comment-vars=foo, bar" \
+// RUN:   -emit-llvm -o - %t/list.c | FileCheck %t/list.c --check-prefix=SPACE
+//
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix \
+// RUN:   -mloadtime-comment-vars=foo,foo \
+// RUN:   -emit-llvm -o - %t/list.c | FileCheck %t/list.c --check-prefix=DUP
 
 //--- codegen.cpp
 // Names are matched against mangled IR symbol names.
@@ -226,3 +235,27 @@ const char *p_ind = src; // expected-warning {{pointer 'p_ind' named in '-mloadt
 // CHECK-SAME: @p_ok
 // CHECK-SAME: @arr_ok
 // CHECK-SAME: section "llvm.metadata"
+
+//--- list.c
+// List-parsing edge cases.
+//
+// "foo, bar": the list is split at commas without trimming whitespace, so the
+// second entry is " bar", which matches no mangled name. Like any other
+// unrecognised name it is silently ignored: bar is emitted normally but is
+// not preserved.
+//
+// "foo,foo": a name repeated in the list preserves the variable once; the
+// duplicate entry has no additional effect.
+
+char foo[] = "@(#) foo";
+char bar[] = "@(#) bar";
+
+void f() {}
+
+// SPACE-DAG: @foo = global [9 x i8] c"@(#) foo\00", align {{[0-9]+}}, !loadtime_comment !{{[0-9]+}}
+// SPACE-DAG: @bar = global [9 x i8] c"@(#) bar\00", align {{[0-9]+}}{{$}}
+// SPACE-DAG: @llvm.compiler.used = appending global [1 x ptr] [ptr @foo], section "llvm.metadata"
+
+// DUP-DAG: @foo = global [9 x i8] c"@(#) foo\00", align {{[0-9]+}}, !loadtime_comment !{{[0-9]+}}
+// DUP-DAG: @bar = global [9 x i8] c"@(#) bar\00", align {{[0-9]+}}{{$}}
+// DUP-DAG: @llvm.compiler.used = appending global [1 x ptr] [ptr @foo], section "llvm.metadata"
