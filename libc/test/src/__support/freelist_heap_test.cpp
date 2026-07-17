@@ -366,3 +366,19 @@ TEST_FOR_EACH_ALLOCATOR(AllocationSize, 2048) {
   allocator.free(ptr);
   EXPECT_EQ(allocator.allocation_size(ptr), size_t(0));
 }
+
+TEST_FOR_EACH_ALLOCATOR(CanSanitize, 2048) {
+  allocator.sanitize();
+
+  void *ptr1 = allocator.allocate(512);
+  allocator.sanitize();
+
+  void *ptr2 = allocator.allocate(512);
+  allocator.sanitize();
+
+  allocator.free(ptr1);
+  allocator.sanitize();
+
+  allocator.free(ptr2);
+  allocator.sanitize();
+}
