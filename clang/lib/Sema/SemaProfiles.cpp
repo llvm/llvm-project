@@ -1890,6 +1890,24 @@ void runTestCtorFinalCallback(Sema &S, CXXConstructorDecl *Ctor) {
       << "test::ctor_final" << Ctor->getParent();
 }
 
+// True if any leaf field of \p RD -- recursing through nested anonymous
+// records -- has a written member-initializer in \p Written. One written
+// leaf gives an anonymous union its active member.
+static bool anyLeafFieldWritten(
+    const CXXRecordDecl *RD,
+    const llvm::SmallPtrSetImpl<const FieldDecl *> &Written) {
+  for (const FieldDecl *F : RD->fields()) {
+    if (Written.count(F))
+      return true;
+    if (F->isAnonymousStructOrUnion())
+      if (const CXXRecordDecl *AnonRD = F->getType()->getAsCXXRecordDecl();
+          AnonRD && AnonRD->hasDefinition() &&
+          anyLeafFieldWritten(AnonRD->getDefinition(), Written))
+        return true;
+  }
+  return false;
+}
+
 // The per-field walk of the ctor_uninit_member callback: check every
 // checkable field of \p RD against \p Written, recursing into anonymous
 // struct members -- their leaves initialize exactly like direct members of
@@ -1907,10 +1925,26 @@ static void diagnoseCtorUninitFields(
       const CXXRecordDecl *AnonRD = F->getType()->getAsCXXRecordDecl();
       if (!AnonRD || !AnonRD->hasDefinition() || AnonRD->isInvalidDecl())
         continue;
-      // An anonymous union's members are mutually exclusive -- one active
-      // member satisfies it -- so the every-member walk does not apply.
-      if (AnonRD->isUnion())
+      // An anonymous union's members are mutually exclusive: one written
+      // leaf gives it its active member -- deliberately lenient for a
+      // struct variant only partially covered by its written leaves (a
+      // missed diagnostic, never a false positive) -- and a vacuous
+      // default-initialization (an empty union, or a leaf NSDMI, which is
+      // the active member) needs nothing. A leaf [[uninit]] marker is not
+      // consulted: union_marker already rejects markers on union members.
+      if (AnonRD->isUnion()) {
+        if (anyLeafFieldWritten(AnonRD->getDefinition(), Written) ||
+            !S.Profiles().defaultInitLeavesScalarIndeterminate(
+                F->getType(), /*HonorUninitMarkers=*/true))
+          continue;
+        if (!S.Profiles().shouldEmitProfileViolation(
+                "std::init", "ctor_uninit_member", Ctor->getLocation(), Ctor))
+          continue;
+        S.Diag(Ctor->getLocation(), diag::err_init_ctor_uninit_anon_union)
+            << "std::init";
+        S.Diag(F->getLocation(), diag::note_init_uninit_anon_union_here);
         continue;
+      }
       diagnoseCtorUninitFields(S, Ctor, AnonRD->getDefinition(), Written);
       continue;
     }

@@ -556,7 +556,9 @@ initializer or by the base's own user-provided default constructor:
 A member whose type's default-initialization leaves unacknowledged scalars
 indeterminate (a nested aggregate) is flagged the same way, and the members
 of an anonymous struct are checked exactly like direct members (a written
-initializer for one is an indirect member-initializer).  A delegating
+initializer for one is an indirect member-initializer).  An anonymous
+*union* member instead needs one active member: a written leaf initializer
+or a leaf default member initializer satisfies it.  A delegating
 constructor is exempt -- its target initializes the members -- and so is a
 union's own constructor, whose members are mutually exclusive (§5.6).
 

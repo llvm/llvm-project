@@ -14191,8 +14191,13 @@ def err_init_uninit_static_marker : ProfileRuleError<
   "storage duration under profile '%0'; it is zero-initialized">;
 def err_init_ctor_uninit_member : ProfileRuleError<
   "constructor does not initialize member %1 under profile '%0'">;
+def err_init_ctor_uninit_anon_union : ProfileRuleError<
+  "constructor does not initialize any member of the anonymous union under "
+  "profile '%0'">;
 def note_init_uninit_member_here : Note<
   "member %0 declared here">;
+def note_init_uninit_anon_union_here : Note<
+  "anonymous union declared here">;
 def err_init_ctor_uninit_base : ProfileRuleError<
   "constructor does not initialize base class %1 under profile '%0'">;
 def note_init_uninit_base_here : Note<

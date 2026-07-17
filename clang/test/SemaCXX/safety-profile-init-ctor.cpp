@@ -235,3 +235,52 @@ struct AnonStructSuppressed {
   // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
   [[profiles::suppress(std::init, rule: "ctor_uninit_member")]] AnonStructSuppressed() {}
 };
+
+// An anonymous union needs one active member, not every member: a written
+// leaf initializer or a leaf default member initializer satisfies it.
+struct AnonUnionMissing {
+  union { // expected-note {{anonymous union declared here}}
+    int i;
+    float f;
+  };
+  AnonUnionMissing() {} // expected-error {{constructor does not initialize any member of the anonymous union under profile 'std::init'}}
+};
+
+struct AnonUnionMemInit {
+  union {
+    int i;
+    float f;
+  };
+  AnonUnionMemInit() : i(1) {} // OK: the written leaf is the active member
+};
+
+struct AnonUnionNSDMI {
+  union {
+    int i = 0;
+    float f;
+  };
+  AnonUnionNSDMI() {} // OK: the leaf's default member initializer is the active member
+};
+
+// One written leaf of a struct variant activates the union; whether that
+// variant is fully initialized is deliberately lenient (a missed diagnostic,
+// never a false positive).
+struct AnonUnionStructVariant {
+  union {
+    struct {
+      int a;
+      int b;
+    };
+    float f;
+  };
+  AnonUnionStructVariant() : a(1) {} // OK: lenient
+};
+
+struct AnonUnionSuppressed {
+  union {
+    int i;
+    float f;
+  };
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init, rule: "ctor_uninit_member")]] AnonUnionSuppressed() {}
+};
