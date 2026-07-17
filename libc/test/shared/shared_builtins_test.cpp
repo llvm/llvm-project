@@ -46,7 +46,7 @@ TEST(LlvmLibcSharedBuiltinsTest, ExtendConversion) {
 #ifdef LIBC_TYPES_HAS_FLOAT128
   EXPECT_FP_EQ(float128(1.5), shared::extenddftf2(1.5));
   EXPECT_FP_EQ(float128(1.5), shared::extendsftf2(1.5f));
-#if LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
   EXPECT_FP_EQ(float128(1.5), shared::extendxftf2(1.5L));
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 #endif // LIBC_TYPES_HAS_FLOAT128
@@ -57,7 +57,7 @@ TEST(LlvmLibcSharedBuiltinsTest, TruncateConversion) {
 #ifdef LIBC_TYPES_HAS_FLOAT128
   EXPECT_FP_EQ(1.5, shared::trunctfdf2(float128(1.5)));
   EXPECT_FP_EQ(1.5f, shared::trunctfsf2(float128(1.5)));
-#if LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
   EXPECT_FP_EQ(1.5L, shared::trunctfxf2(float128(1.5)));
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 #endif // LIBC_TYPES_HAS_FLOAT128
