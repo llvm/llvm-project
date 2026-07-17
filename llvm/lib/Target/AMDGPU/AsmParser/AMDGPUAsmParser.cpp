@@ -1387,6 +1387,8 @@ class AMDGPUAsmParser : public MCTargetAsmParser {
   bool ForcedSDWA = false;
   KernelScopeInfo KernelScope;
   const unsigned HwMode;
+  const AMDGPU::GPUKind Gfx;
+  const AMDGPU::IsaVersion ISA;
 
   /// @name Auto-generated Match Functions
   /// {
@@ -1502,12 +1504,13 @@ public:
   AMDGPUAsmParser(const MCSubtargetInfo &STI, MCAsmParser &_Parser,
                   const MCInstrInfo &MII)
       : MCTargetAsmParser(STI, MII), Parser(_Parser),
-        HwMode(STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo)) {
+        HwMode(STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo)),
+        Gfx(AMDGPU::parseArchAMDGCN(STI.getCPU())),
+        ISA(AMDGPU::getIsaVersion(STI.getCPU())) {
     MCAsmParserExtension::Initialize(Parser);
 
     setAvailableFeatures(ComputeAvailableFeatures(getFeatureBits()));
 
-    AMDGPU::IsaVersion ISA = AMDGPU::getIsaVersion(getSTI().getCPU());
     if (ISA.Major >= 6 && isHsaAbi(getSTI())) {
       createConstantSymbol(".amdgcn.gfx_generation_number", ISA.Major);
       createConstantSymbol(".amdgcn.gfx_generation_minor", ISA.Minor);
@@ -3284,7 +3287,7 @@ bool AMDGPUAsmParser::updateGprCountSymbols(RegisterKind RegKind,
                                             unsigned DwordRegIndex,
                                             unsigned RegWidth) {
   // Symbols are only defined for GCN targets
-  if (AMDGPU::getIsaVersion(getSTI().getCPU()).Major < 6)
+  if (ISA.Major < 6)
     return true;
 
   auto SymbolName = getGprCountSymbolName(RegKind);
@@ -6028,8 +6031,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGCNTarget() {
   StringRef DirectiveProcessor =
       AMDGPU::getArchNameAMDGCN(ParsedTargetID.getGPUKind());
   AMDGPU::IsaVersion DirectiveISA = AMDGPU::getIsaVersion(DirectiveProcessor);
-  AMDGPU::IsaVersion CurrentISA = AMDGPU::getIsaVersion(getSTI().getCPU());
-  if (DirectiveISA != CurrentISA) {
+  if (DirectiveISA != ISA) {
     return getParser().Error(TargetStart,
                              ".amdgcn_target directive processor " +
                                  Twine(DirectiveProcessor) +
@@ -6074,19 +6076,17 @@ bool AMDGPUAsmParser::calculateGPRBlocks(
     const MCExpr *&VGPRBlocks, const MCExpr *&SGPRBlocks) {
   // TODO(scott.linder): These calculations are duplicated from
   // AMDGPUAsmPrinter::getSIProgramInfo and could be unified.
-  IsaVersion Version = getIsaVersion(getSTI().getCPU());
   MCContext &Ctx = getContext();
 
   const MCExpr *NumSGPRs = NextFreeSGPR;
   int64_t EvaluatedSGPRs;
 
-  if (Version.Major >= 10)
+  if (ISA.Major >= 10)
     NumSGPRs = MCConstantExpr::create(0, Ctx);
   else {
-    AMDGPU::GPUKind Kind = AMDGPU::parseArchAMDGCN(getSTI().getCPU());
-    unsigned MaxAddressableNumSGPRs = AMDGPU::getAddressableNumSGPRs(Kind);
+    unsigned MaxAddressableNumSGPRs = AMDGPU::getAddressableNumSGPRs(Gfx);
 
-    if (NumSGPRs->evaluateAsAbsolute(EvaluatedSGPRs) && Version.Major >= 8 &&
+    if (NumSGPRs->evaluateAsAbsolute(EvaluatedSGPRs) && ISA.Major >= 8 &&
         !Features.test(FeatureSGPRInitBug) &&
         static_cast<uint64_t>(EvaluatedSGPRs) > MaxAddressableNumSGPRs)
       return OutOfRangeError(SGPRRange);
@@ -6096,7 +6096,7 @@ bool AMDGPUAsmParser::calculateGPRBlocks(
     NumSGPRs = MCBinaryExpr::createAdd(NumSGPRs, ExtraSGPRs, Ctx);
 
     if (NumSGPRs->evaluateAsAbsolute(EvaluatedSGPRs) &&
-        (Version.Major <= 7 || Features.test(FeatureSGPRInitBug)) &&
+        (ISA.Major <= 7 || Features.test(FeatureSGPRInitBug)) &&
         static_cast<uint64_t>(EvaluatedSGPRs) > MaxAddressableNumSGPRs)
       return OutOfRangeError(SGPRRange);
 
@@ -6145,8 +6145,6 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
           &getSTI(), getContext());
 
   StringSet<> Seen;
-
-  IsaVersion IVersion = getIsaVersion(getSTI().getCPU());
 
   const MCExpr *ZeroExpr = MCConstantExpr::create(0, getContext());
   const MCExpr *OneExpr = MCConstantExpr::create(1, getContext());
@@ -6314,7 +6312,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
         ImpliedUserSGPRCount += 1;
     } else if (ID == ".amdhsa_wavefront_size32") {
       EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
-      if (IVersion.Major < 10)
+      if (ISA.Major < 10)
         return Error(IDRange.Start, "directive requires gfx10+", IDRange);
       EnableWavefrontSize32 = Val;
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
@@ -6380,7 +6378,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
         return OutOfRangeError(ValRange);
       ReserveVCC = ExprVal;
     } else if (ID == ".amdhsa_reserve_flat_scratch") {
-      if (IVersion.Major < 7)
+      if (ISA.Major < 7)
         return Error(IDRange.Start, "directive requires gfx7+", IDRange);
       if (hasArchitectedFlatScratch())
         return Error(IDRange.Start,
@@ -6390,7 +6388,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
         return OutOfRangeError(ValRange);
       ReserveFlatScr = ExprVal;
     } else if (ID == ".amdhsa_reserve_xnack_mask") {
-      if (IVersion.Major < 8)
+      if (ISA.Major < 8)
         return Error(IDRange.Start, "directive requires gfx8+", IDRange);
       if (!isUInt<1>(Val))
         return OutOfRangeError(ValRange);
@@ -6428,7 +6426,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                        COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_IEEE_MODE, ExprVal,
                        ValRange);
     } else if (ID == ".amdhsa_fp16_overflow") {
-      if (IVersion.Major < 9)
+      if (ISA.Major < 9)
         return Error(IDRange.Start, "directive requires gfx9+", IDRange);
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
                        COMPUTE_PGM_RSRC1_GFX9_PLUS_FP16_OVFL, ExprVal,
@@ -6446,20 +6444,20 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                        COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE, ExprVal,
                        ValRange);
     } else if (ID == ".amdhsa_memory_ordered") {
-      if (IVersion.Major < 10)
+      if (ISA.Major < 10)
         return Error(IDRange.Start, "directive requires gfx10+", IDRange);
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
                        COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED, ExprVal,
                        ValRange);
     } else if (ID == ".amdhsa_forward_progress") {
-      if (IVersion.Major < 10)
+      if (ISA.Major < 10)
         return Error(IDRange.Start, "directive requires gfx10+", IDRange);
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
                        COMPUTE_PGM_RSRC1_GFX10_PLUS_FWD_PROGRESS, ExprVal,
                        ValRange);
     } else if (ID == ".amdhsa_shared_vgpr_count") {
       EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
-      if (IVersion.Major < 10 || IVersion.Major >= 12)
+      if (ISA.Major < 10 || ISA.Major >= 12)
         return Error(IDRange.Start, "directive requires gfx10 or gfx11",
                      IDRange);
       SharedVGPRCount = Val;
@@ -6467,9 +6465,9 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                        COMPUTE_PGM_RSRC3_GFX10_GFX11_SHARED_VGPR_COUNT, ExprVal,
                        ValRange);
     } else if (ID == ".amdhsa_inst_pref_size") {
-      if (IVersion.Major < 11)
+      if (ISA.Major < 11)
         return Error(IDRange.Start, "directive requires gfx11+", IDRange);
-      if (IVersion.Major == 11) {
+      if (ISA.Major == 11) {
         PARSE_BITS_ENTRY(KD.compute_pgm_rsrc3,
                          COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE, ExprVal,
                          ValRange);
@@ -6509,7 +6507,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                        COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_INT_DIVIDE_BY_ZERO,
                        ExprVal, ValRange);
     } else if (ID == ".amdhsa_round_robin_scheduling") {
-      if (IVersion.Major < 12)
+      if (ISA.Major < 12)
         return Error(IDRange.Start, "directive requires gfx12+", IDRange);
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
                        COMPUTE_PGM_RSRC1_GFX12_PLUS_ENABLE_WG_RR_EN, ExprVal,
@@ -6634,7 +6632,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                                  COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT,
                                  getContext());
 
-  if (IVersion.Major >= 10 && IVersion.Major < 12) {
+  if (ISA.Major >= 10 && ISA.Major < 12) {
     // SharedVGPRCount < 16 checked by PARSE_ENTRY_BITS
     if (SharedVGPRCount && EnableWavefrontSize32 && *EnableWavefrontSize32) {
       return TokError("shared_vgpr_count directive not valid on "
@@ -6792,8 +6790,7 @@ bool AMDGPUAsmParser::ParseDirectiveISAVersion() {
   StringRef DirectiveProcessor =
       AMDGPU::getArchNameAMDGCN(ParsedTargetID.getGPUKind());
   AMDGPU::IsaVersion DirectiveISA = AMDGPU::getIsaVersion(DirectiveProcessor);
-  AMDGPU::IsaVersion CurrentISA = AMDGPU::getIsaVersion(getSTI().getCPU());
-  if (DirectiveISA != CurrentISA) {
+  if (DirectiveISA != ISA) {
     return Error(getParser().getTok().getLoc(),
                  ".amd_amdgpu_isa directive processor " +
                      Twine(DirectiveProcessor) +
@@ -8165,8 +8162,6 @@ bool AMDGPUAsmParser::parseCnt(int64_t &IntVal) {
   if (!parseExpr(CntVal))
     return false;
 
-  AMDGPU::IsaVersion ISA = AMDGPU::getIsaVersion(getSTI().getCPU());
-
   bool Failed = true;
   bool Sat = CntName.ends_with("_sat");
 
@@ -8200,7 +8195,6 @@ bool AMDGPUAsmParser::parseCnt(int64_t &IntVal) {
 }
 
 ParseStatus AMDGPUAsmParser::parseSWaitCnt(OperandVector &Operands) {
-  AMDGPU::IsaVersion ISA = AMDGPU::getIsaVersion(getSTI().getCPU());
   int64_t Waitcnt = getWaitcntBitMask(ISA);
   SMLoc S = getLoc();
 
