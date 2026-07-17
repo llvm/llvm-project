@@ -20,8 +20,8 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Listener.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
@@ -73,9 +73,12 @@ TEST_F(ProcessGDBRemoteDiagnosticsTest, PacketHistoryContributesToBundle) {
       /*can_connect=*/true);
   ASSERT_TRUE(process_sp);
 
-  // Named after the process's unique id to avoid collisions.
-  std::string artifact = llvm::formatv("gdb-remote-packet-history-{0}.txt",
-                                       process_sp->GetUniqueID());
+  // The provider's file is named with a timestamp, so match it by prefix.
+  auto has_packet_history = [](const std::vector<std::string> &files) {
+    return llvm::any_of(files, [](llvm::StringRef f) {
+      return f.starts_with("gdb-remote-packet-history-");
+    });
+  };
   ExecutionContext exe_ctx;
 
   // Alive: the provider contributes the history file.
@@ -85,7 +88,7 @@ TEST_F(ProcessGDBRemoteDiagnosticsTest, PacketHistoryContributesToBundle) {
     llvm::Expected<Diagnostics::Report> report =
         Diagnostics::Instance().Collect(*debugger_sp, exe_ctx, *dir);
     ASSERT_THAT_EXPECTED(report, llvm::Succeeded());
-    EXPECT_TRUE(llvm::is_contained(report->attachments.files, artifact));
+    EXPECT_TRUE(has_packet_history(report->attachments.files));
     llvm::sys::fs::remove_directories(dir->GetPath());
   }
 
@@ -97,7 +100,7 @@ TEST_F(ProcessGDBRemoteDiagnosticsTest, PacketHistoryContributesToBundle) {
     llvm::Expected<Diagnostics::Report> report =
         Diagnostics::Instance().Collect(*debugger_sp, exe_ctx, *dir);
     ASSERT_THAT_EXPECTED(report, llvm::Succeeded());
-    EXPECT_FALSE(llvm::is_contained(report->attachments.files, artifact));
+    EXPECT_FALSE(has_packet_history(report->attachments.files));
     llvm::sys::fs::remove_directories(dir->GetPath());
   }
 }
