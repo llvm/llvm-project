@@ -31,6 +31,8 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/GenericSSAContext.h"
 #include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/iterator.h"
@@ -204,25 +206,6 @@ public:
     }
   };
 
-  /// Sequential iteration over all cycles in forest preorder, yielding handles.
-  struct const_cycle_iterator
-      : iterator_facade_base<const_cycle_iterator, std::forward_iterator_tag,
-                             CycleRef, std::ptrdiff_t, CycleRef, CycleRef> {
-    unsigned Index = 0;
-
-    const_cycle_iterator() = default;
-    explicit const_cycle_iterator(unsigned Index) : Index(Index) {}
-
-    CycleRef operator*() const { return CycleRef(Index); }
-    const_cycle_iterator &operator++() {
-      ++Index;
-      return *this;
-    }
-    bool operator==(const const_cycle_iterator &Other) const {
-      return Index == Other.Index;
-    }
-  };
-
   GenericCycleInfo() = default;
   GenericCycleInfo(GenericCycleInfo &&) = default;
   GenericCycleInfo &operator=(GenericCycleInfo &&) = default;
@@ -235,9 +218,9 @@ public:
   const ContextT &getSSAContext() const { return Context; }
 
   /// All cycles in forest preorder.
-  iterator_range<const_cycle_iterator> cycles() const {
-    return llvm::make_range(const_cycle_iterator(0),
-                            const_cycle_iterator(NumCycles));
+  auto cycles() const {
+    return map_range(seq(0u, NumCycles),
+                     [](unsigned I) { return CycleRef(I); });
   }
 
   /// \brief Find the innermost cycle containing \p Block.
