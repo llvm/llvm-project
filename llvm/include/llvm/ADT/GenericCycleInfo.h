@@ -80,12 +80,17 @@ public:
   template <typename> friend class GenericCycleInfoCompute;
 
 private:
+  /// Sentinel for a cycle-index slot that refers to no cycle.
+  static constexpr unsigned NoCycle = ~0u;
+
   /// Internal, data-only storage for a cycle. Consumers name a cycle by a
   /// CycleRef handle and query it through GenericCycleInfo.
   class Cycle {
   public:
-    /// The parent cycle. Is null for top-level cycles.
-    Cycle *ParentCycle = nullptr;
+    /// Preorder index of the parent cycle, or NoCycle for a top-level
+    /// cycle. Before flatten() this holds a creation-order index into
+    /// GenericCycleInfoCompute::AllCycles.
+    unsigned ParentIndex = NoCycle;
 
     /// The entry block(s) of the cycle. The header is the only entry if this
     /// is a loop.
@@ -112,6 +117,9 @@ private:
 
     void appendEntry(BlockT *Block) { Entries.push_back(Block); }
 
+    /// Whether this cycle has a parent, i.e. is not top-level.
+    bool hasParent() const { return ParentIndex != NoCycle; }
+
     Cycle() = default;
     Cycle(const Cycle &) = delete;
     Cycle &operator=(const Cycle &) = delete;
@@ -123,8 +131,12 @@ private:
   ContextT Context;
   unsigned BlockNumberEpoch;
 
-  /// Map basic block numbers to their inner-most containing cycle.
-  SmallVector<CycleT *> BlockMap;
+  /// Map each basic block number to the preorder index of its inner-most
+  /// containing cycle, or NoCycle if none. During construction this
+  /// transiently holds creation-order indices into
+  /// GenericCycleInfoCompute::AllCycles, which flatten() remaps to preorder
+  /// indices.
+  SmallVector<unsigned> BlockMap;
 
   /// Euler tour of the cycle forest: every cycle's blocks form a contiguous
   /// slice [IdxBegin, IdxEnd) of this array, nested inside its parent's.
@@ -155,15 +167,6 @@ private:
   }
   /// The handle for a stored cycle.
   CycleRef ref(const CycleT &C) const { return CycleRef(getCycleIndex(C)); }
-
-  /// The innermost cycle containing \p Block as a raw pointer, or null. Used
-  /// internally and during construction, where handles are not yet meaningful
-  /// because the flat array does not exist.
-  CycleT *getCyclePtr(const BlockT *Block) const {
-    verifyBlockNumberEpoch(Block->getParent());
-    unsigned Number = GraphTraits<const BlockT *>::getNumber(Block);
-    return Number < BlockMap.size() ? BlockMap[Number] : nullptr;
-  }
 
   void verifyBlockNumberEpoch(const FunctionT *Fn) const {
     assert(BlockNumberEpoch ==
@@ -218,15 +221,20 @@ public:
   /// \returns the innermost cycle containing \p Block or an invalid handle if
   ///          it is not contained in any cycle.
   CycleRef getCycle(const BlockT *Block) const {
-    CycleT *C = getCyclePtr(Block);
-    return C ? ref(*C) : CycleRef();
+    verifyBlockNumberEpoch(Block->getParent());
+    unsigned Number = GraphTraits<const BlockT *>::getNumber(Block);
+    // A block added after compute() that no cycle contains (e.g. a critical
+    // edge MachineSink split outside every cycle) has a number beyond BlockMap.
+    if (Number >= BlockMap.size() || BlockMap[Number] == NoCycle)
+      return CycleRef();
+    return CycleRef(BlockMap[Number]);
   }
 
   BlockT *getHeader(CycleRef C) const { return deref(C).Entries[0]; }
   bool isReducible(CycleRef C) const { return deref(C).Entries.size() == 1; }
   CycleRef getParentCycle(CycleRef C) const {
-    CycleT *P = deref(C).ParentCycle;
-    return P ? ref(*P) : CycleRef();
+    auto P = deref(C).ParentIndex;
+    return P == NoCycle ? CycleRef() : CycleRef(P);
   }
   unsigned getDepth(CycleRef C) const { return deref(C).Depth; }
   size_t getNumBlocks(CycleRef C) const {
@@ -287,12 +295,12 @@ public:
   }
 
   CycleRef getTopLevelParentCycle(const BlockT *Block) const {
-    CycleT *C = getCyclePtr(Block);
+    CycleRef C = getCycle(Block);
     if (!C)
-      return CycleRef();
-    while (C->ParentCycle)
-      C = C->ParentCycle;
-    return ref(*C);
+      return C;
+    while (CycleRef P = getParentCycle(C))
+      C = P;
+    return C;
   }
 
   /// Return all of the successor blocks of \p C: the blocks outside of \p C
