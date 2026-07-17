@@ -76,23 +76,15 @@ entry:
   ret <vscale x 8 x i32> %partial.reduce
 }
 
-; FIXME: Fold constant partial reductions.
 define <4 x i32> @partial_reduce_add_constants() {
 ; CHECK-LABEL: partial_reduce_add_constants:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    li a0, 100
 ; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vadd.vi v10, v8, 1
-; CHECK-NEXT:    vadd.vi v11, v8, 13
-; CHECK-NEXT:    vmacc.vx v9, a0, v8
-; CHECK-NEXT:    vadd.vv v10, v11, v10
-; CHECK-NEXT:    vadd.vi v11, v8, 9
-; CHECK-NEXT:    vadd.vi v8, v8, 5
-; CHECK-NEXT:    vadd.vv v9, v10, v9
-; CHECK-NEXT:    vadd.vv v8, v8, v11
-; CHECK-NEXT:    vadd.vv v8, v8, v9
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    li a0, 104
+; CHECK-NEXT:    vmadd.vx v8, a0, v9
 ; CHECK-NEXT:    ret
   %partial.reduce = call <4 x i32> @llvm.vector.partial.reduce.add(
       <4 x i32> <i32 100, i32 200, i32 300, i32 400>,
