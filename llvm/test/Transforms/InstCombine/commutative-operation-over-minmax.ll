@@ -227,9 +227,9 @@ define i32 @sadd_inner_metadata_outer_annotations(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %min = call i32 @llvm.smin.i32(i32 %y, i32 %x)
-  %lhs = add i32 %z, %min, !noundef !0
+  %lhs = add i32 %z, %min, !unknown !0
   %max = call i32 @llvm.smax.i32(i32 %x, i32 %y)
-  %ret = add nuw nsw i32 %lhs, %max, !noundef !0
+  %ret = add nuw nsw i32 %lhs, %max, !annotation !1, !unknown !2
   ret i32 %ret
 }
 
@@ -274,9 +274,12 @@ define float @fp_outer_fmf_metadata(i1 %c, float %a, float %x, float %y) {
 ;
   %s0 = select i1 %c, float %x, float %y
   %s1 = select i1 %c, float %y, float %x
-  %inner = fadd reassoc nnan ninf nsz float %a, %s0, !noundef !0
-  %retf = fadd reassoc nnan ninf nsz float %inner, %s1, !noundef !0
+  %inner = fadd reassoc nnan ninf nsz float %a, %s0, !unknown !0
+  %retf = fadd reassoc nnan ninf nsz float %inner, %s1, !fpmath !3, !annotation !1, !unknown !2
   ret float %retf
 }
 
-!0 = !{}
+!0 = !{!"inner unknown"}
+!1 = !{!"outer annotation"}
+!2 = !{!"outer unknown"}
+!3 = !{float 2.500000e+00}
