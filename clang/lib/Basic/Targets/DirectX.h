@@ -21,14 +21,10 @@ namespace clang {
 namespace targets {
 
 static const LangASMap DirectXAddrSpaceMap = {
-    {LangAS::opencl_global, 1},
-    {LangAS::opencl_local, 3},
-    {LangAS::opencl_constant, 2},
-    {LangAS::opencl_generic, 4},
-    {LangAS::opencl_global_device, 5},
-    {LangAS::opencl_global_host, 6},
-    {LangAS::hlsl_groupshared, 3},
-    {LangAS::hlsl_constant, 2},
+    {LangAS::opencl_global, 1},        {LangAS::opencl_local, 3},
+    {LangAS::opencl_constant, 2},      {LangAS::opencl_generic, 4},
+    {LangAS::opencl_global_device, 5}, {LangAS::opencl_global_host, 6},
+    {LangAS::hlsl_groupshared, 3},     {LangAS::hlsl_constant, 2},
 };
 
 class LLVM_LIBRARY_VISIBILITY DirectXTargetInfo : public TargetInfo {

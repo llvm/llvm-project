@@ -29,18 +29,12 @@ namespace targets {
 
 // Used by both the SPIR and SPIR-V targets.
 static const LangASMap SPIRDefIsPrivMap = {
-    {LangAS::opencl_global, 1},
-    {LangAS::opencl_local, 3},
-    {LangAS::opencl_constant, 2},
-    {LangAS::opencl_generic, 4},
-    {LangAS::opencl_global_device, 5},
-    {LangAS::opencl_global_host, 6},
-    {LangAS::hlsl_groupshared, 3},
-    {LangAS::hlsl_constant, 12},
-    {LangAS::hlsl_private, 10},
-    {LangAS::hlsl_device, 11},
-    {LangAS::hlsl_input, 7},
-    {LangAS::hlsl_output, 8},
+    {LangAS::opencl_global, 1},        {LangAS::opencl_local, 3},
+    {LangAS::opencl_constant, 2},      {LangAS::opencl_generic, 4},
+    {LangAS::opencl_global_device, 5}, {LangAS::opencl_global_host, 6},
+    {LangAS::hlsl_groupshared, 3},     {LangAS::hlsl_constant, 12},
+    {LangAS::hlsl_private, 10},        {LangAS::hlsl_device, 11},
+    {LangAS::hlsl_input, 7},           {LangAS::hlsl_output, 8},
     {LangAS::hlsl_push_constant, 13},
 };
 
