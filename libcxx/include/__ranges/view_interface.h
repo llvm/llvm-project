@@ -162,7 +162,7 @@ public:
     return ranges::begin(__derived())[__index];
   }
 
-  #if _LIBCPP_STD_VER >= 29
+#  if _LIBCPP_STD_VER >= 29
 
   template <random_access_range _RARange = _Derived>
     requires sized_range<_RARange> // freestanding-deleted
@@ -183,9 +183,9 @@ public:
     }
     return (*this)[__index];
   }
-};
 
-#endif // _LIBCPP_STD_VER >= 29
+#  endif // _LIBCPP_STD_VER >= 29
+};
 
 } // namespace ranges
 

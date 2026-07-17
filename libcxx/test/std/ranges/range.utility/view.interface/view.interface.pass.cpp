@@ -304,10 +304,11 @@ constexpr bool testSubscript() {
   return true;
 }
 
+#if TEST_STD_VER >= 29
+
 template <class T>
 concept AtInvocable = requires(T const& obj, std::size_t n) { obj.at(n); };
 
-#if TEST_STD_VER >= 29
 constexpr bool testAt() {
   static_assert(!AtInvocable<ForwardRange>);
   static_assert(AtInvocable<RARange>);
@@ -318,7 +319,7 @@ constexpr bool testAt() {
   randomAccess.at(2) = 3;
   assert(randomAccess.at(2) == 3);
 
-#ifndef TEST_HAS_NO_EXCEPTIONS
+#  ifndef TEST_HAS_NO_EXCEPTIONS
   if (!std::is_constant_evaluated()) {
     try {
       TEST_IGNORE_NODISCARD randomAccess.at(0);
@@ -340,10 +341,11 @@ constexpr bool testAt() {
       assert(false);
     }
   }
-#endif
+#  endif
 
   return true;
 }
+
 #endif // TEST_STD_VER >= 29
 
 template <class T>
