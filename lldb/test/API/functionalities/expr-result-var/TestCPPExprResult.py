@@ -96,9 +96,11 @@ class TestCPPResultVariables(TestBase):
         )
         self.assertEqual(method_result.signed, 500, "Got the right result value")
 
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24663")
     def test_virtual_dynamic_results(self):
         self.do_test_dynamic_results(True)
 
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24663")
     def test_non_virtual_dynamic_results(self):
         self.do_test_dynamic_results(False)
 
