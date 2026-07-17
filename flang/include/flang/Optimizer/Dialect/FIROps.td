@@ -1019,6 +1019,65 @@ def fir_ReboxOp : fir_Op<"rebox", [NoMemoryEffect, AttrSizedOperandSegments,
   }];
 }
 
+def fir_CreateBoxOp : fir_Op<"create_box", [Pure,
+                                            AttrSizedOperandSegments,
+                                            fir_FortranObjectViewOpInterface]> {
+  let summary = "create a box from a base pointer and explicit byte strides";
+
+  let description = [{
+    Create an array descriptor from a base data pointer plus fully explicit
+    per-dimension lower bound, extent, and **byte** stride. Unlike `fir.embox`,
+    which derives the per-dimension stride from the element size (so it can only
+    describe strides that are integer multiples of the element size), the
+    strides given here are written into the descriptor verbatim. This makes it
+    possible to describe non-contiguous data whose byte stride is not a multiple
+    of the element size (for example a derived-type component array).
+
+    The element length and CFI type code are taken from the result box element
+    type, so the base pointer only supplies the address; it does not constrain
+    the stride.
+
+    ```
+      %box = fir.create_box %base lbs(%lb0) extents(%ext0) strides(%sm0)
+          : (!fir.heap<!fir.array<?xcomplex<f32>>>, index, index, index)
+              -> !fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>
+    ```
+
+    The `lbounds`, `extents`, and `strides` groups must each have exactly one
+    value per array dimension. The strides are expressed in bytes. The result
+    must be a non-polymorphic `!fir.box` of a statically-sized element type.
+
+    The result box element type must preserve the memref's storage kind, so
+    that the descriptor CFI attribute field is set correctly and the result
+    matches a box loaded from the corresponding `!fir.ref<!fir.box<...>>`:
+    `!fir.heap<...>` produces `!fir.box<!fir.heap<...>>` (allocatable),
+    `!fir.ptr<...>` produces `!fir.box<!fir.ptr<...>>` (pointer), and a plain
+    `!fir.ref<...>` produces `!fir.box<...>`.
+  }];
+
+  let arguments = (ins AnyReferenceLike:$memref,
+      Variadic<AnyIntegerType>:$lbounds,
+      Variadic<AnyIntegerType>:$extents,
+      Variadic<AnyIntegerType>:$strides);
+
+  let results = (outs fir_BoxType);
+
+  let assemblyFormat = [{
+    $memref `lbs` `(` $lbounds `)` `extents` `(` $extents `)`
+      `strides` `(` $strides `)` attr-dict `:`
+      functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    unsigned getRank();
+    // FortranObjectViewOpInterface methods:
+    mlir::Value getViewSource(mlir::OpResult) { return getMemref(); }
+    std::optional<std::int64_t> getViewOffset(mlir::OpResult);
+  }];
+}
+
 def fir_ReboxAssumedRankOp : fir_Op<"rebox_assumed_rank",
   [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "create an assumed-rank box given another assumed-rank box";

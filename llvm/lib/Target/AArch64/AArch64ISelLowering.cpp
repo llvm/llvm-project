@@ -2200,10 +2200,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     for (auto VT : {MVT::nxv16i8,  MVT::nxv8i16, MVT::nxv4i32,  MVT::nxv2i64,
                     MVT::nxv2f16,  MVT::nxv4f16, MVT::nxv8f16,  MVT::nxv2f32,
                     MVT::nxv4f32,  MVT::nxv2f64, MVT::nxv2bf16, MVT::nxv4bf16,
-                    MVT::nxv8bf16, MVT::v4f16,   MVT::v8f16,    MVT::v2f32,
-                    MVT::v4f32,    MVT::v1f64,   MVT::v2f64,    MVT::v8i8,
-                    MVT::v16i8,    MVT::v4i16,   MVT::v8i16,    MVT::v2i32,
-                    MVT::v4i32,    MVT::v1i64,   MVT::v2i64}) {
+                    MVT::nxv8bf16, MVT::v4f16,   MVT::v8f16,    MVT::v4bf16,
+                    MVT::v8bf16,   MVT::v2f32,   MVT::v4f32,    MVT::v1f64,
+                    MVT::v2f64,    MVT::v8i8,    MVT::v16i8,    MVT::v4i16,
+                    MVT::v8i16,    MVT::v2i32,   MVT::v4i32,    MVT::v1i64,
+                    MVT::v2i64}) {
       setOperationAction(ISD::MGATHER, VT, Custom);
       setOperationAction(ISD::MSCATTER, VT, Custom);
     }
