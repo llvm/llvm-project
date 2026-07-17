@@ -345,9 +345,9 @@ LogicalResult ACCRecipeMaterialization::materialize(
       llvm_unreachable("unexpected acc op with reduction recipe");
 
     SmallVector<Value> reductionBounds(acc::getBounds(op));
-    auto reductionOp = acc::ReductionInitOp::create(
-        b, op.getLoc(), origPtr, reductionBounds,
-        recipe.getReductionOperatorAttr());
+    auto reductionOp =
+        acc::ReductionInitOp::create(b, op.getLoc(), origPtr, reductionBounds,
+                                     recipe.getReductionOperatorAttr());
     saveVarName(op.getAccVar(), reductionOp.getResult());
     cloneRegionIntoAccRegion(&initRegion, &reductionOp.getRegion(),
                              /*hasResult=*/true);
