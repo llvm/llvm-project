@@ -50,13 +50,6 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### ABI Changes in This Version
 
-- Except on PlayStation, Clang now derives the x86-64 System V AVX ABI level
-for 256- and 512-bit vector arguments and returns from effective per-function
-target features. Features and `arch=` CPUs that imply AVX or AVX512F are
-honored, and calls use the caller's features, matching GCC. Per-function
-features cannot lower the translation-unit ABI level;
-`-fclang-abi-compat=23` restores the previous behavior. (#GH193298)
-
 ### AST Dumping Potentially Breaking Changes
 
 ### Clang Frontend Potentially Breaking Changes
