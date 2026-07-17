@@ -335,9 +335,42 @@ uint64_t PPCMCPlusBuilder::analyzePLTEntry(MCInst &Instruction,
 void PPCMCPlusBuilder::createLongTailCall(std::vector<MCInst> &Seq,
                                           const MCSymbol *Target,
                                           MCContext *Ctx) {
-  (void)Seq;
-  (void)Target;
-  (void)Ctx;
+  Seq.clear();
+
+  const unsigned R2 = PPC::X2;   // TOC base
+  const unsigned R12 = PPC::X12; // scratch / ELFv2 entry register
+
+  // sym@ha and sym@lo specifiers (same as buildCallStubAbsolute)
+  const MCExpr *HA = MCSymbolRefExpr::create(Target, PPC::S_HA, *Ctx);
+  const MCExpr *LO = MCSymbolRefExpr::create(Target, PPC::S_LO, *Ctx);
+
+  MCInst I;
+
+  // addis r12, r2, sym@ha        ; high-adjusted part of address
+  I.setOpcode(PPC::ADDIS);
+  I.addOperand(MCOperand::createReg(R12));
+  I.addOperand(MCOperand::createReg(R2));
+  I.addOperand(MCOperand::createExpr(HA));
+  Seq.push_back(I);
+
+  // ld r12, sym@lo(r12)          ; load full target address
+  I = MCInst();
+  I.setOpcode(PPC::LD);
+  I.addOperand(MCOperand::createReg(R12));
+  I.addOperand(MCOperand::createExpr(LO));
+  I.addOperand(MCOperand::createReg(R12));
+  Seq.push_back(I);
+
+  // mtctr r12                    ; move target into CTR
+  I = MCInst();
+  I.setOpcode(PPC::MTCTR8);
+  I.addOperand(MCOperand::createReg(R12));
+  Seq.push_back(I);
+
+  // bctr                         ; tail-call: branch to CTR, NO link
+  I = MCInst();
+  I.setOpcode(PPC::BCTR); // NOT BCTRL — tail call does not link
+  Seq.push_back(I);
 }
 
 using namespace llvm::ELF;
