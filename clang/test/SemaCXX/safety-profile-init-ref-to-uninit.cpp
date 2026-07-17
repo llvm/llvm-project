@@ -1854,6 +1854,134 @@ void test_construct_at_bridge() {
   (void)v; (void)w;
 }
 
+// The §4.5 lifecycle *end*, via [[now_uninit]] -- the recording §4.4 wishes
+// for ("the object subjected to destroy_at() should be considered
+// uninitialized, but there is no way of recording that in the code"): a
+// call to a [[now_uninit]] function withdraws the parse-order credit of the
+// storage bound to each pointer/reference parameter, so the storage is
+// uninitialized again. Re-construction becomes legal, and a second
+// destruction, or binding the storage to an unmarked target, is the
+// ordinary unmarked-direction violation.
+template <class T>
+[[now_uninit]] void destroy_at(T *p);
+[[now_uninit]] void nu_wipe(int *p);
+[[now_uninit]] void nu_wipe_ref(int &r);
+[[now_uninit]] void nu_wipe2(int *p, int *q);
+
+void test_destroy_at_lifecycle() {
+  CtorAtPayload s [[uninit]];
+  construct_at(&s, 1, 2);
+  destroy_at(&s);         // OK: destroys initialized storage
+  construct_at(&s, 3, 4); // OK: uninitialized again (the bridge's error above)
+  int v = s.x;            // OK: re-credited
+  destroy_at(&s);         // OK: re-destroy after re-construction
+  (void)v;
+}
+
+void test_double_destroy() {
+  int u [[uninit]];
+  now_init_fill(&u);
+  nu_wipe(&u); // OK
+  nu_wipe(&u); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+
+void test_use_after_destroy_binding() {
+  int u [[uninit]];
+  now_init_fill(&u);
+  nu_wipe(&u);
+  int *q = &u; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int *r [[ref_to_uninit]] = &u; // OK: uninitialized again
+  (void)q; (void)r;
+}
+
+// The pointee shapes withdraw like the store-credit forms: destroying
+// through the marked pointer clears its pointee credit, so a later read
+// through it is the read-through violation again.
+void test_destroy_pointee(int *p [[ref_to_uninit]]) {
+  *p = 5;
+  int x = *p; // OK: credited
+  nu_wipe(p);
+  int y = *p; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  (void)x; (void)y;
+}
+
+// A by-reference [[now_uninit]] parameter destroys its referent; a marked
+// reference's referent credit -- which no store can clear -- is withdrawn
+// the same way.
+void test_destroy_by_reference() {
+  int u [[uninit]];
+  u = 5;
+  nu_wipe_ref(u);
+  int *q = &u; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)q;
+}
+void test_destroy_marked_reference(int &r [[ref_to_uninit]]) {
+  r = 5;
+  nu_wipe(&r);
+  int x = r; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  (void)x;
+}
+
+// Whole-member credit is withdrawn per base object: destroying a1's member
+// leaves a2's credit intact.
+struct NuMember { int m [[uninit]]; };
+void test_destroy_member_per_object() {
+  NuMember a1, a2;
+  a1.m = 5;
+  a2.m = 5;
+  nu_wipe(&a1.m);
+  int *q1 = &a1.m; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int *q2 = &a2.m; // OK: a2's credit is untouched
+  (void)q1; (void)q2;
+}
+
+// A multi-parameter [[now_uninit]] function withdraws every pointer
+// argument's credit (the attribute's contract covers all of them).
+void test_destroy_multi_param() {
+  int u [[uninit]], v [[uninit]];
+  u = 1;
+  v = 2;
+  nu_wipe2(&u, &v);
+  int *q = &u; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int *r = &v; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)q; (void)r;
+}
+
+// A destroy in a never-executed context destroys nothing (mirroring the
+// no-credit contexts of the store recorder).
+void test_destroy_never_executed() {
+  int u [[uninit]];
+  u = 5;
+  using X = decltype(nu_wipe(&u));
+  int *q = &u; // OK: the unevaluated destroy withdrew nothing
+  (void)q;
+}
+
+// A suppressed destroy still destroys, exactly as a suppressed store still
+// credits: failing to withdraw would turn suppression into later missed
+// double-destroy diagnostics.
+void test_suppressed_destroy_withdraws() {
+  int u [[uninit]];
+  u = 5;
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init)]]
+  nu_wipe(&u);
+  int *q = &u; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)q;
+}
+
+// A destroy through a function pointer presents no ParmVarDecl, so it
+// withdraws nothing -- stale credit, a known missed diagnostic (the same
+// boundary as [[now_init]] call credit).
+void test_destroy_through_function_pointer() {
+  int u [[uninit]];
+  u = 5;
+  void (*fp)(int *) = nu_wipe;
+  fp(&u);
+  int *q = &u; // OK: known gap -- the marker is invisible through the pointer
+  (void)q;
+}
+
 // The reverse direction applies through the assignment funnel too: a
 // credited marked pointer refers to initialized memory, so assigning it to
 // another marked pointer is the requires-uninit error -- while an unmarked

@@ -1406,10 +1406,12 @@ void SemaProfiles::checkInitProfileRefToUninitBinding(SourceLocation Loc,
   checkInitProfileRefToUninit(Loc,
                               Target && Target->hasAttr<RefToUninitAttr>(),
                               T->isReferenceType(), Src, D);
-  // Runs after the check: the binding itself is judged against the
+  // Run after the check: the binding itself is judged against the
   // *pre-call* state, and only then does a [[now_init]] callee's promised
-  // initialization take effect for what follows in parse order.
+  // initialization -- or a [[now_uninit]] callee's promised destruction --
+  // take effect for what follows in parse order.
   recordNowInitArgument(Target, T, Src);
+  recordNowUninitArgument(Target, T, Src);
 }
 
 void SemaProfiles::recordNowInitArgument(const ValueDecl *Target, QualType T,
@@ -1431,6 +1433,46 @@ void SemaProfiles::recordNowInitArgument(const ValueDecl *Target, QualType T,
   // never-executed context earns no credit.
   if (inNeverExecutedContext())
     return;
+  recordLifetimeAnnotatedArgument(T, Src, /*Withdraw=*/false);
+}
+
+void SemaProfiles::recordNowUninitArgument(const ValueDecl *Target, QualType T,
+                                           const Expr *Src) {
+  // The mirror of recordNowInitArgument: a [[now_uninit]] callee ends the
+  // lifetime of the storage bound to each of its pointer/reference
+  // parameters (P4222R2 §4.4's missing destroy_at recording). The
+  // parameters are *unmarked* -- destruction takes initialized memory -- so
+  // the gate keys on the parameter's type, not a marker; the shape walk is
+  // marker-keyed on the source side, so an ordinary initialized argument
+  // withdraws nothing. A variadic argument or a call through a function
+  // pointer presents no ParmVarDecl and withdraws nothing (stale credit is
+  // a missed diagnostic, never a false positive -- the same boundary as
+  // [[now_init]]).
+  const auto *Parm = dyn_cast_or_null<ParmVarDecl>(Target);
+  if (!Parm || !Src)
+    return;
+  const auto *FD = dyn_cast_or_null<FunctionDecl>(Parm->getDeclContext());
+  if (!FD || !FD->hasAttr<NowUninitAttr>())
+    return;
+  // Not enforcement- or suppression-gated (a suppressed destroy still
+  // destroys), but a call in a never-executed context destroys nothing.
+  if (inNeverExecutedContext())
+    return;
+  recordLifetimeAnnotatedArgument(T, Src, /*Withdraw=*/true);
+}
+
+// Add or remove a credit bit: a [[now_init]] callee's initialization adds
+// it, a [[now_uninit]] callee's destruction withdraws it (removal of an
+// absent entry leaves a harmless zero entry behind).
+static void applyCreditBit(unsigned &Entry, unsigned Bit, bool Withdraw) {
+  if (Withdraw)
+    Entry &= ~Bit;
+  else
+    Entry |= Bit;
+}
+
+void SemaProfiles::recordLifetimeAnnotatedArgument(QualType T, const Expr *Src,
+                                                   bool Withdraw) {
   const Expr *E = Src->IgnoreParenImpCasts();
   // Mirror the recognizers' explicit-cast pass-through (paper §4.3: a cast
   // of a marked pointer is itself marked; a reference cast denotes the same
@@ -1458,37 +1500,39 @@ void SemaProfiles::recordNowInitArgument(const ValueDecl *Target, QualType T,
       if (const auto *F = dyn_cast<FieldDecl>(ME->getMemberDecl());
           F && F->hasAttr<UninitAttr>())
         if (const Decl *Base = resolveMemberStoreBase(ME))
-          MemberStoreCredit[{Base, F}] |= WholeStored;
+          applyCreditBit(MemberStoreCredit[{Base, F}], WholeStored, Withdraw);
       return;
     }
-    // &*p / *p: the callee initializes the pointee of a marked pointer.
+    // &*p / *p: the callee initializes (or destroys) the pointee of a
+    // marked pointer.
     if (const auto *UO = dyn_cast<UnaryOperator>(Glvalue);
         UO && UO->getOpcode() == UO_Deref) {
       if (const VarDecl *VD = getCreditableMarkedPointer(UO->getSubExpr()))
-        InitStoreCredit[VD] |= PointeeStored;
+        applyCreditBit(InitStoreCredit[VD], PointeeStored, Withdraw);
       return;
     }
     if (const auto *VD =
             dyn_cast_or_null<VarDecl>(getDirectlyNamedDecl(Glvalue));
         VD && VD->hasLocalStorage()) {
-      // &u / u: the whole [[uninit]] entity is initialized by the callee,
-      // exactly as `u = e` would credit it.
+      // &u / u: the whole [[uninit]] entity is initialized (or destroyed)
+      // by the callee, exactly as `u = e` would credit it.
       if (VD->hasAttr<UninitAttr>())
-        InitStoreCredit[VD] |= WholeStored;
+        applyCreditBit(InitStoreCredit[VD], WholeStored, Withdraw);
       // r (a marked reference bound onward): its referent is initialized; a
-      // reference cannot be reseated, so the credit never lapses.
+      // reference cannot be reseated, so no store ever clears the credit --
+      // only a [[now_uninit]] callee's withdrawal does.
       else if (VD->getType()->isReferenceType() &&
                VD->hasAttr<RefToUninitAttr>())
-        InitStoreCredit[VD] |= PointeeStored;
+        applyCreditBit(InitStoreCredit[VD], PointeeStored, Withdraw);
     }
     return;
   }
-  // p as a pointer value: the callee initializes p's pointee -- §6.2's
-  // initialize2(p) example verbatim. Only a directly named marked
-  // local/parameter pointer is trackable; reseating p afterwards clears this
-  // credit like any other pointee credit.
+  // p as a pointer value: the callee initializes (or destroys) p's pointee
+  // -- §6.2's initialize2(p) example verbatim. Only a directly named marked
+  // local/parameter pointer is trackable; reseating p afterwards clears
+  // pointee credit like any other.
   if (const VarDecl *VD = getCreditableMarkedPointer(E))
-    InitStoreCredit[VD] |= PointeeStored;
+    applyCreditBit(InitStoreCredit[VD], PointeeStored, Withdraw);
 }
 
 void SemaProfiles::checkInitProfileVariadicArgument(const Expr *Arg) {

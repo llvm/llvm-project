@@ -286,7 +286,12 @@ patterns.  Its rules map to mechanisms as follows:
 
 Two helpers are shared across the rules.  ``refersToUninitializedMemory``
 classifies an expression as referring to initialized, uninitialized, or
-unknown storage purely from its syntactic form; its ``UninitAccessOpts``
+unknown storage purely from its syntactic form (parse-order store credit
+refines it, recorded by ``recordInitProfileStore`` and by the
+``recordNowInitArgument`` / ``recordNowUninitArgument`` pair, which share
+one argument-shape walk to add or withdraw the credit of storage a
+``[[now_init]]`` callee initializes or a ``[[now_uninit]]`` callee
+destroys); its ``UninitAccessOpts``
 presets distinguish a *binding* source (markers count everywhere), a value
 *read*, and a scalar *store* (which differ in whether the top-level
 ``[[uninit]]`` marker counts and whether ``[[ref_to_uninit]]`` storage is

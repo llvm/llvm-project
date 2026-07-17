@@ -403,6 +403,34 @@ public:
   void recordNowInitArgument(const ValueDecl *Target, QualType T,
                              const Expr *Src);
 
+  /// std::init / [[now_uninit]]: a [[now_uninit]] callee ends the lifetime
+  /// of the storage bound to each of its pointer/reference parameters
+  /// (P4222R2 §4.4's missing destroy_at recording), so the binding
+  /// *withdraws* the parse-order credit the equivalent [[now_init]] call
+  /// would have recorded: the storage classifies as uninitialized again,
+  /// re-construction becomes legal, and a second destruction or an
+  /// unmarked-target binding of the storage is the ordinary
+  /// unmarked-direction violation. Called from the tail of
+  /// checkInitProfileRefToUninitBinding when \p Target is a
+  /// pointer/reference parameter of a [[now_uninit]] function -- the
+  /// parameters are unmarked (they receive initialized memory), so unlike
+  /// recordNowInitArgument no parameter marker is required. Recognizes the
+  /// same source shapes, which are marker-keyed on the source side, so an
+  /// ordinary initialized argument withdraws nothing. Same gates as its
+  /// sibling: not enforcement- or suppression-gated (a suppressed destroy
+  /// still destroys), but never-executed contexts withdraw nothing.
+  void recordNowUninitArgument(const ValueDecl *Target, QualType T,
+                               const Expr *Src);
+
+  /// The shared shape walk of recordNowInitArgument and
+  /// recordNowUninitArgument: resolve \p Src (bound as \p T) to the storage
+  /// the annotated callee initializes or destroys -- &u / u (whole-entity),
+  /// p / *p / &*p (marked-pointer pointee), r (marked-reference referent),
+  /// &base.m / base.m (per-object member) -- and add (\p Withdraw false) or
+  /// remove (true) the corresponding credit bit.
+  void recordLifetimeAnnotatedArgument(QualType T, const Expr *Src,
+                                       bool Withdraw);
+
   /// True if the current expression-evaluation context never executes at
   /// runtime (unevaluated or discarded-statement), mirroring
   /// shouldEmitProfileViolation's context checks: a store or a callee
@@ -419,7 +447,8 @@ public:
   /// True if \p VD is a [[ref_to_uninit]] local/parameter pointer or
   /// reference credited by a recorded store through it; the storage behind
   /// it then classifies as initialized (until a pointer is reseated --
-  /// references cannot be reseated, so their credit is never cleared).
+  /// references cannot be reseated, so no *store* ever clears their credit;
+  /// a [[now_uninit]] callee withdraws either kind).
   bool hasPointeeStoreCredit(const ValueDecl *VD) const;
 
   /// True if the [[uninit]] member \p F of the base object identified by

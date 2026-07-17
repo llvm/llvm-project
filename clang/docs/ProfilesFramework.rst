@@ -524,6 +524,21 @@ now_init(T* p [[ref_to_uninit]]);``, its unmarked return is already trusted
 as initialized -- but only the attribute legalizes the original *name* after
 the call.
 
+The lifecycle *end* is the mirror attribute ``[[now_uninit]]`` -- the
+recording §4.4 notes is missing for ``destroy_at`` ("the object subjected to
+``destroy_at()`` should be considered uninitialized, but there is no way of
+recording that in the code").  It declares that a function ends the lifetime
+of the storage passed to each of its pointer or reference parameters (which
+are unmarked -- destruction takes initialized memory; apply the attribute
+only to functions that destroy *every* such argument's storage), and a call
+to one *withdraws* exactly the credit the equivalent ``[[now_init]]`` call
+would have recorded.  Declare ``destroy_at`` as ``template<class T> void
+destroy_at(T* p) [[now_uninit]];`` and the construct/destroy/construct cycle
+is legal, a second destruction is rejected (the storage no longer refers to
+initialized memory, so binding it to the unmarked parameter is the
+unmarked-direction violation), and binding the destroyed storage to an
+ordinary pointer or reference is rejected the same way.
+
 
 Constructors
 ------------
@@ -616,12 +631,15 @@ false positive.
   missed diagnostic, never a false positive.  That escape-crediting is an
   interim leniency relative to the paper (which credits only ``now_init``);
   tightening it to ``[[now_init]]`` callees alone is future work.
-- ``construct_at``/``destroy_at`` flow is only partially modeled: a
-  ``[[now_init]]``-annotated ``construct_at`` declaration checks the
+- ``construct_at``/``destroy_at`` flow is modeled through the annotations:
+  a ``[[now_init]]``-annotated ``construct_at`` declaration checks the
   lifecycle start (including double construction, via the reverse-direction
-  binding rule), but destruction -- ``destroy_at``, double destruction,
-  use-after-destroy -- is not checked, and writes through
-  ``[[ref_to_uninit]]`` are not verified.
+  binding rule) and a ``[[now_uninit]]``-annotated ``destroy_at`` the end
+  (double destruction, and use-after-destroy where the destroyed storage is
+  *bound* -- a direct named read after a destroy stays with the flow passes,
+  which treat the call as an escape, so it is a missed diagnostic; a destroy
+  inside a constructor body earns no kill bit in the ctor-body dataflow
+  either).  Writes through ``[[ref_to_uninit]]`` are still not verified.
 - A ``new`` expression whose result is not bound to anything (``new int;``)
   is not checked.
 - A call through a function pointer cannot see parameter markers on the
