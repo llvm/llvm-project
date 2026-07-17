@@ -970,7 +970,7 @@ def target_page_size():
         return 4096
     try:
         proc = subprocess.Popen(
-            f"{emulator or ''} python3",
+            f"{emulator or ''} {shlex.quote(config.python_executable)}",
             shell=True,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,

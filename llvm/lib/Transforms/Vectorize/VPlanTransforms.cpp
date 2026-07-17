@@ -1110,14 +1110,10 @@ optimizeLatchExitInductionUser(VPlan &Plan, VPValue *Op,
                                DenseMap<VPValue *, VPValue *> &EndValues,
                                PredicatedScalarEvolution &PSE) {
   VPValue *Incoming;
-  if (!match(Op,
-             m_CombineOr(m_ExtractLastLaneOfLastPart(m_VPValue(Incoming))))) {
-    VPValue *Mask;
-    if (!match(Op, m_ExtractLane(m_LastActiveLane(m_VPValue(Mask)),
-                                 m_VPValue(Incoming))) ||
-        !match(Mask, m_HeaderMask()))
-      return nullptr;
-  }
+  if (!match(Op, m_CombineOr(m_ExtractLastLaneOfLastPart(m_VPValue(Incoming)),
+                             m_ExtractLane(m_LastActiveLane(m_HeaderMask()),
+                                           m_VPValue(Incoming)))))
+    return nullptr;
 
   VPWidenInductionRecipe *WideIV = getOptimizableIVOf(Incoming, PSE);
   if (!WideIV)
@@ -7721,10 +7717,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       if (!LoadR || LoadR->isConsecutive())
         continue;
 
-      auto *Ptr = dyn_cast<VPWidenGEPRecipe>(LoadR->getAddr());
-      if (!Ptr)
-        continue;
-
+      VPValue *Ptr = LoadR->getAddr();
       // Check if this is a strided access by analyzing the address SCEV for an
       // affine addRec.
       const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, &L);
@@ -7787,16 +7780,16 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       auto *AddRecPtr = cast<SCEVAddRecExpr>(PtrSCEV);
       auto *Offset = Builder.createOverflowingOp(
           Instruction::Mul, {CanIV, StrideInBytes},
-          {AddRecPtr->hasNoUnsignedWrap(), AddRecPtr->hasNoSignedWrap()});
-      auto *BasePtr = Builder.createNoWrapPtrAdd(
-          StartVPV, Offset,
-          AddRecPtr->hasNoUnsignedWrap() ? GEPNoWrapFlags::noUnsignedWrap()
-                                         : GEPNoWrapFlags::none());
+          {AddRecPtr->hasNoUnsignedWrap(), /*HasNSW=*/false});
+      GEPNoWrapFlags NWFlags = AddRecPtr->hasNoUnsignedWrap()
+                                   ? GEPNoWrapFlags::noUnsignedWrap()
+                                   : GEPNoWrapFlags::none();
+      VPValue *BasePtr = Builder.createNoWrapPtrAdd(StartVPV, Offset, NWFlags);
 
       // Create a new vector pointer for strided access.
       VPValue *NewPtr = Builder.createVectorPointer(
-          BasePtr, Type::getInt8Ty(Plan.getContext()), StrideInBytes,
-          Ptr->getGEPNoWrapFlags(), Ptr->getDebugLoc());
+          BasePtr, Type::getInt8Ty(Plan.getContext()), StrideInBytes, NWFlags,
+          LoadR->getDebugLoc());
 
       VPValue *Mask = LoadR->getMask();
       if (!Mask)
