@@ -173,7 +173,8 @@ private:
   /// Helper class to keep basic block along with its loop data information.
   class LoopBlock {
   public:
-    explicit LoopBlock(const BasicBlock *BB, const CycleInfo &CI) : BB(BB), C(CI.getCycle(BB)) {}
+    explicit LoopBlock(const BasicBlock *BB, const CycleInfo &CI)
+        : BB(BB), C(CI.getCycle(BB)) {}
 
     const BasicBlock *getBlock() const { return BB; }
     BasicBlock *getBlock() { return const_cast<BasicBlock *>(BB); }
