@@ -8,7 +8,7 @@
 ; CHECK: %[[#X17I32:]] = OpFunctionParameter %[[#V17I32]]
 ; CHECK: %[[#]] = OpBitCount %[[#V17I32]] %[[#X17I32]]
 
-@g5 = addrspace(1) global <17 x i32> undef, align 4
+@g5 = addrspace(1) global <17 x i32> poison, align 4
 
 define dso_local spir_kernel void @test(<17 x i32> %x17i32) {
 entry:
