@@ -2162,16 +2162,14 @@ static const DeclRefExpr *getLocalMemberAccess(const Expr *E,
   return DRE;
 }
 
-// If V is a local whose [[uninit]] members this pass may soundly flow-track,
-// return its class definition; null otherwise. Sound means nothing can have
-// assigned the members before V's declaration: the class (and any base
-// subtree contributing tracked members) has no user-provided constructor
-// (paper §5.1 trusts one -- its body may assign, which local analysis cannot
-// see), and the declaration ran nothing but the implicit no-op
-// default-construction. A local that is itself [[uninit]]-marked is excluded:
-// its subobject accesses are the parse-time read-through / uninit_write
-// rules' territory, and tracking it here would double-diagnose.
-static const CXXRecordDecl *getTrackedLocalAggregate(const VarDecl *V) {
+// The class-shape half of the tracked-local guards: V is a non-parameter
+// local, not itself [[uninit]]-marked (its subobject accesses are the
+// parse-time read-through / uninit_write rules' territory, and tracking it
+// here would double-diagnose), of a non-union class -- with no
+// user-provided constructor anywhere in the contributing subtree (paper
+// §5.1 trusts one: its body may assign, which local analysis cannot see).
+// How V's declaration *initializes* the members is the callers' half.
+static const CXXRecordDecl *getTrackableLocalClass(const VarDecl *V) {
   if (!V->hasLocalStorage() || isa<ParmVarDecl>(V) || isa<DecompositionDecl>(V))
     return nullptr;
   if (V->isInvalidDecl() || V->hasAttr<UninitAttr>())
@@ -2185,15 +2183,28 @@ static const CXXRecordDecl *getTrackedLocalAggregate(const VarDecl *V) {
   RD = RD->getDefinition();
   if (RD->isUnion() || RD->isDependentType() || hasUserProvidedCtor(RD))
     return nullptr;
+  return RD;
+}
+
+// If V is a local whose [[uninit]] members this pass may soundly flow-track
+// from an all-unassigned start, return its class definition; null otherwise.
+// Sound means nothing can have assigned the members before V's declaration:
+// the class shape qualifies (above) and the declaration ran nothing but the
+// implicit no-op default-construction.
+static const CXXRecordDecl *getTrackedLocalAggregate(const VarDecl *V) {
+  const CXXRecordDecl *RD = getTrackableLocalClass(V);
+  if (!RD)
+    return nullptr;
   // Declared without a real initializer: for a record local that is the
   // synthesized call to the implicit default constructor (`Agg a;`). A
   // value-initializing form -- `Agg a{}` / `= {}` (an InitListExpr),
   // `Agg a = Agg()` (a CXXTemporaryObjectExpr) -- gives every member a
   // value and leaves nothing to track. A *copy* does not: it copies
   // indeterminate bits, and a copy does not inherit initialization (paper
-  // §5.2). But the source's per-member state is unknowable here for an
-  // arbitrary source, so copies stay untracked -- a missed diagnostic,
-  // never a false positive.
+  // §5.2). A copy from a *tracked* local inherits the source's per-member
+  // state through the copy harvest in checkInitProfileLocalMembers; for an
+  // arbitrary untracked source that state is unknowable, so those copies
+  // stay untracked -- a missed diagnostic, never a false positive.
   if (const Expr *Init = V->getInit()) {
     const auto *CCE = dyn_cast<CXXConstructExpr>(Init->IgnoreImplicit());
     if (!CCE || isa<CXXTemporaryObjectExpr>(CCE) ||
@@ -2202,6 +2213,27 @@ static const CXXRecordDecl *getTrackedLocalAggregate(const VarDecl *V) {
       return nullptr;
   }
   return RD;
+}
+
+// If V is copy- or move-constructed from a directly named variable, return
+// that source's DeclRefExpr; null otherwise. The explicit-cast peel resolves
+// the move form (`Agg b = static_cast<Agg&&>(a);`) to its named operand,
+// mirroring the parse-time recognizers' pass-through.
+static const DeclRefExpr *getLocalCopySourceRef(const VarDecl *V) {
+  const Expr *Init = V->getInit();
+  if (!Init)
+    return nullptr;
+  const auto *CCE = dyn_cast<CXXConstructExpr>(Init->IgnoreImplicit());
+  if (!CCE || CCE->getNumArgs() < 1 ||
+      !CCE->getConstructor()->isCopyOrMoveConstructor())
+    return nullptr;
+  const Expr *Arg = CCE->getArg(0)->IgnoreParenImpCasts();
+  while (const auto *CE = dyn_cast<ExplicitCastExpr>(Arg)) {
+    if (!CE->getSubExpr()->isGLValue())
+      break;
+    Arg = CE->getSubExpr()->IgnoreParenImpCasts();
+  }
+  return dyn_cast<DeclRefExpr>(Arg);
 }
 
 // std::init local-aggregate member check (paper §7.1 "initialized ... before
@@ -2271,6 +2303,56 @@ static void checkInitProfileLocalMembers(Sema &S, AnalysisDeclContext &AC) {
       }
     }
   }
+
+  // Second harvest: locals copy- or move-constructed from a *tracked* local.
+  // The copy's members inherit the source's per-member state at the copy
+  // point -- a copy does not inherit initialization (paper §5.2), it
+  // inherits whatever state the source has -- modeled by a per-member Copy
+  // transfer event at the DeclStmt. Keyed per source *field* (not position:
+  // a copy sliced from a tracked derived object shares its base's
+  // FieldDecls). Iterated to a fixpoint so a copy of a copy resolves
+  // regardless of CFG block order.
+  llvm::DenseMap<const VarDecl *, const VarDecl *> CopySource;
+  for (bool Added = true; Added;) {
+    Added = false;
+    for (const CFGBlock *B : *cfg) {
+      for (const CFGElement &Elem : *B) {
+        auto CS = Elem.getAs<CFGStmt>();
+        if (!CS)
+          continue;
+        const auto *DS = dyn_cast<DeclStmt>(CS->getStmt());
+        if (!DS)
+          continue;
+        for (const Decl *Dcl : DS->decls()) {
+          const auto *V = dyn_cast<VarDecl>(Dcl);
+          if (!V || VarRange.count(V))
+            continue;
+          const CXXRecordDecl *RD = getTrackableLocalClass(V);
+          if (!RD)
+            continue;
+          const DeclRefExpr *SrcRef = getLocalCopySourceRef(V);
+          const auto *Src =
+              SrcRef ? dyn_cast<VarDecl>(SrcRef->getDecl()) : nullptr;
+          if (!Src || !VarRange.count(Src))
+            continue;
+          SmallVector<const FieldDecl *, 4> Members;
+          FieldIdxScratch.clear();
+          collectTrackedUninitMembers(S, RD, Members, FieldIdxScratch);
+          if (Members.empty())
+            continue;
+          unsigned Begin = PairField.size();
+          for (const FieldDecl *F : Members) {
+            PairIdx[{V, F}] = PairField.size();
+            PairField.push_back(F);
+          }
+          VarRange[V] = {Begin, PairField.size()};
+          CopySource[V] = Src;
+          Added = true;
+        }
+      }
+    }
+  }
+
   if (PairField.empty())
     return;
   const unsigned N = PairField.size();
@@ -2316,6 +2398,15 @@ static void checkInitProfileLocalMembers(Sema &S, AnalysisDeclContext &AC) {
       } else if (const auto *UO = dyn_cast<UnaryOperator>(St)) {
         if (UO->isIncrementDecrementOp())
           Base = LookupPair(UO->getSubExpr()).Base;
+      } else if (const auto *DS = dyn_cast<DeclStmt>(St)) {
+        // The source ref of a tracked copy is consumed by the copy's
+        // implicit (retention-free) constructor and modeled by the Copy
+        // event, so it is not an escape -- an escape here would wrongly
+        // mark the *source* fully assigned.
+        for (const Decl *Dcl : DS->decls())
+          if (const auto *V = dyn_cast<VarDecl>(Dcl))
+            if (CopySource.count(V))
+              Base = getLocalCopySourceRef(V);
       }
       if (Base)
         Benign.insert(Base);
@@ -2324,13 +2415,16 @@ static void checkInitProfileLocalMembers(Sema &S, AnalysisDeclContext &AC) {
 
   // Second pass: per-block ordered events. A load of `V.m` is a Read; a
   // member store is a Write (a compound assignment or ++/-- reads the old
-  // value first); any non-benign DeclRefExpr naming a tracked local is an
-  // escape, modeled as a Write of every one of its tracked members.
-  enum EventKind { Read, Write, ReadWrite };
+  // value first); a tracked copy's DeclStmt is a per-member Copy, whose
+  // dest-member state becomes the source member's at that point; any
+  // non-benign DeclRefExpr naming a tracked local is an escape, modeled as
+  // a Write of every one of its tracked members.
+  enum EventKind { Read, Write, ReadWrite, Copy };
   struct Event {
     EventKind Kind;
     unsigned Idx;
     const Expr *E;
+    unsigned SrcIdx = 0; // Copy only: the source (V, F) pair.
   };
   const unsigned NumBlocks = cfg->getNumBlockIDs();
   std::vector<SmallVector<Event, 4>> Events(NumBlocks);
@@ -2373,6 +2467,31 @@ static void checkInitProfileLocalMembers(Sema &S, AnalysisDeclContext &AC) {
           continue;
         for (unsigned Idx = It->second.first; Idx != It->second.second; ++Idx)
           BlockEvents.push_back({Write, Idx, DRE});
+      } else if (const auto *DS = dyn_cast<DeclStmt>(St)) {
+        // A tracked copy: each dest member's state becomes its source
+        // member's, keyed per FieldDecl (a sliced copy shares the base's
+        // FieldDecls with a differently laid out source range). The
+        // DeclStmt element follows its initializer's subexpression
+        // elements, so the transfer sees the source's state at the copy
+        // point. A source field the source range does not track cannot
+        // occur (the dest's fields are a subset of the source's); fall
+        // back to Write (assume assigned) if it somehow does.
+        for (const Decl *Dcl : DS->decls()) {
+          const auto *V = dyn_cast<VarDecl>(Dcl);
+          if (!V)
+            continue;
+          auto CopyIt = CopySource.find(V);
+          if (CopyIt == CopySource.end())
+            continue;
+          auto Range = VarRange.find(V)->second;
+          for (unsigned Idx = Range.first; Idx != Range.second; ++Idx) {
+            auto SrcIt = PairIdx.find({CopyIt->second, PairField[Idx]});
+            if (SrcIt != PairIdx.end())
+              BlockEvents.push_back({Copy, Idx, V->getInit(), SrcIt->second});
+            else
+              BlockEvents.push_back({Write, Idx, V->getInit()});
+          }
+        }
       }
     }
   }
@@ -2380,7 +2499,9 @@ static void checkInitProfileLocalMembers(Sema &S, AnalysisDeclContext &AC) {
   // Replay a block's events over State: the block-level transfer function,
   // shared by the fixpoint below and the reporting replay after it so the
   // two always agree. When Offending is non-null, a read of a member not
-  // definitely assigned at its program point is collected.
+  // definitely assigned at its program point is collected. Copy projects
+  // the source bit onto the dest bit -- monotone like the set-only kinds,
+  // so the fixpoint below still terminates.
   auto ApplyEvents =
       [](ArrayRef<Event> BlockEvents, llvm::BitVector &State,
          std::vector<SmallVector<const Expr *, 2>> *Offending) {
@@ -2397,6 +2518,12 @@ static void checkInitProfileLocalMembers(Sema &S, AnalysisDeclContext &AC) {
             if (Offending && !State.test(Ev.Idx))
               (*Offending)[Ev.Idx].push_back(Ev.E);
             State.set(Ev.Idx);
+            break;
+          case Copy:
+            if (State.test(Ev.SrcIdx))
+              State.set(Ev.Idx);
+            else
+              State.reset(Ev.Idx);
             break;
           }
         }

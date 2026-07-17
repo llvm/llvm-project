@@ -20,7 +20,7 @@ int leading_unrelated_error = undeclared_identifier;
 // common-error@-1 {{use of undeclared identifier 'undeclared_identifier'}}
 
 struct Agg {
-  int m [[uninit]]; // expected-note 10 {{member 'm' declared here}}
+  int m [[uninit]]; // expected-note 16 {{member 'm' declared here}}
 };
 void take_ref(Agg &);
 // The pointee is uninitialized memory, so the parameter carries the marker
@@ -294,3 +294,100 @@ int template_local_member_read() {
   return a.m; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
 }
 template int template_local_member_read<int>(); // expected-note {{in instantiation of function template specialization 'template_local_member_read<int>' requested here}}
+
+// ============================================================
+// Copies of tracked locals
+// ============================================================
+
+// A copy of a tracked local inherits the source's per-member state at the
+// copy point -- a copy does not inherit initialization (paper §5.2), it
+// inherits whatever state the source has -- so reading the copy's member is
+// exactly as (in)valid as reading the source's was there.
+int test_copy_read_before_source_assigned() {
+  Agg a;
+  Agg b = a;
+  return b.m; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+}
+
+int test_copy_after_source_assigned() {
+  Agg a;
+  a.m = 5;
+  Agg b = a;
+  return b.m; // OK: the source was assigned at the copy point
+}
+
+int test_copy_then_dest_assigned() {
+  Agg a;
+  Agg b = a;
+  b.m = 1;
+  return b.m; // OK
+}
+
+// The copy consumes the source ref without escaping it: the source keeps
+// its own (unassigned) state.
+int test_copy_keeps_source_tracked() {
+  Agg a;
+  Agg b = a;
+  b.m = 1;
+  return a.m; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+}
+
+// State transfers at the copy point, not later: a source assignment after
+// the copy does not reach the copy.
+int test_copy_point_state() {
+  Agg a;
+  Agg b = a;
+  a.m = 5;
+  return b.m; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+}
+
+// The all-branches rule (§1.2) applies through the copy.
+int test_copy_after_branch(bool c) {
+  Agg a;
+  if (c)
+    a.m = 5;
+  Agg b = a;
+  return b.m; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+}
+
+// State flows through a chain of copies (harvested to a fixpoint, so the
+// chain resolves regardless of declaration order in the CFG's block list).
+int test_copy_of_copy() {
+  Agg a;
+  a.m = 5;
+  Agg b = a;
+  Agg c = b;
+  return c.m; // OK
+}
+
+int test_copy_of_copy_unassigned() {
+  Agg a;
+  Agg b = a;
+  Agg c = b;
+  return c.m; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+}
+
+// Move construction transfers state the same way (for these classes a move
+// is a copy; the explicit-cast peel resolves the directly named source).
+int test_move_construction() {
+  Agg a;
+  Agg b = static_cast<Agg &&>(a);
+  return b.m; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+}
+
+// Paren and brace copy forms behave identically to the `=` form.
+int test_copy_forms() {
+  Agg a;
+  a.m = 5;
+  Agg b(a);
+  Agg c{a};
+  return b.m + c.m; // OK
+}
+
+// An escape of the copy credits the copy, like any tracked local.
+int test_copy_escape() {
+  Agg a;
+  Agg b = a;
+  take_ref(b);
+  return b.m; // OK: escaped
+}

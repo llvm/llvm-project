@@ -372,9 +372,12 @@ such a flow is intended.  A ``this``-capturing lambda might run immediately,
 so member reads in its body count at the point the lambda is created (and
 writes there earn no credit -- the same strict policy).  For a *local*
 variable the analyses instead treat any escape as an assignment (see
-`Limitations`_).  Members of an object initialized by a *user-provided*
-constructor are trusted (§5.1) and not flow-tracked; only the defining
-constructor itself is checked.
+`Limitations`_).  A local copied or moved from a tracked local is tracked
+too: the copy's members inherit the source's per-member state at the copy
+point -- a copy does not inherit initialization (§5.2), it inherits
+whatever state the source has.  Members of an object initialized by a
+*user-provided* constructor are trusted (§5.1) and not flow-tracked; only
+the defining constructor itself is checked.
 
 
 Writes to Subobjects of Uninitialized Objects
