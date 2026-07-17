@@ -505,9 +505,7 @@ mlirConversionPatternRewriterConvertRegionTypes(
 /// result of `op` -- and erase it. `nRanges` must equal the number of results
 /// of `op`. `rangeSizes[i]` is the number of values in the i-th range, and
 /// `values` is the flat concatenation of all ranges (its length is the sum of
-/// `rangeSizes[0..nRanges)`). This is the 1:N replacement form; surviving type
-/// mismatches between a result and its range are reconciled by the driver with
-/// source/target materializations.
+/// `rangeSizes[0..nRanges)`).
 MLIR_CAPI_EXPORTED void mlirConversionPatternRewriterReplaceOpWithMultiple(
     MlirConversionPatternRewriter rewriter, MlirOperation op, intptr_t nRanges,
     intptr_t *rangeSizes, MlirValue *values);
@@ -673,13 +671,6 @@ mlirTypeConverterConvertType(MlirTypeConverter typeConverter, MlirType type);
 /// callback must build a cast-like operation that produces a single value of
 /// `outputType` and return it. Returning a null MlirValue indicates failure, in
 /// which case another registered materialization may be attempted.
-///
-/// Note: Source materializations are single-output -- the callback returns one
-/// value of `outputType`. (The 1:N, multiple-output form exists only for target
-/// materializations; see MlirTypeConverter1ToNTargetMaterializationCallback.)
-/// `nInputs` may be greater than one when several values are mapped back to a
-/// single value, e.g. after a 1:N replacement via
-/// mlirConversionPatternRewriterReplaceOpWithMultiple.
 typedef MlirValue (*MlirTypeConverterSourceMaterializationCallback)(
     MlirRewriterBase rewriter, MlirType outputType, intptr_t nInputs,
     MlirValue *inputs, MlirLocation loc, void *userData);
@@ -687,12 +678,6 @@ typedef MlirValue (*MlirTypeConverterSourceMaterializationCallback)(
 /// Callback type for 1:1 target materializations. Behaves like
 /// MlirTypeConverterSourceMaterializationCallback, but additionally receives
 /// `originalType`: the original type of the SSA value being materialized.
-///
-/// `originalType` may differ from `outputType` and cannot, in general, be
-/// recovered from `outputType` and `inputs`, which is why it is passed
-/// explicitly (see TypeConverter::addTargetMaterialization in
-/// DialectConversion.h for the full rationale). It may be a null MlirType when
-/// no original type is available.
 ///
 /// Note: This callback is single-output. For the 1:N (multiple-output) form,
 /// use MlirTypeConverter1ToNTargetMaterializationCallback.
@@ -760,8 +745,7 @@ typedef struct {
   /// of all operand ranges; there are `nRanges` ranges (one per original
   /// operand) and `rangeSizes[i]` is the number of values in the i-th range.
   /// When this is non-null it takes precedence; when null, the driver falls
-  /// back to the 1:1 `matchAndRewrite` above, which fails to match if any
-  /// operand was remapped 1:N.
+  /// back to the 1:1 `matchAndRewrite` above.
   MlirLogicalResult (*matchAndRewrite1ToN)(
       MlirConversionPattern pattern, MlirOperation op, intptr_t nRanges,
       intptr_t *rangeSizes, intptr_t nOperands, MlirValue *operands,

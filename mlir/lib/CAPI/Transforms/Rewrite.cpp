@@ -732,8 +732,6 @@ MlirType mlirTypeConverterConvertType(MlirTypeConverter typeConverter,
 }
 
 namespace {
-/// Marshals the `inputs` ValueRange into wrapped MlirValues. Shared by the
-/// materialization wrappers below.
 SmallVector<MlirValue> wrapInputs(ValueRange inputs) {
   SmallVector<MlirValue> wrappedInputs;
   wrappedInputs.reserve(inputs.size());
@@ -742,10 +740,6 @@ SmallVector<MlirValue> wrapInputs(ValueRange inputs) {
   return wrappedInputs;
 }
 
-/// Wraps a C source materialization callback as the C++ form
-/// `Value(OpBuilder &, Type, ValueRange, Location)`. The builder is always a
-/// RewriterBase in the conversion driver, so it is safe to expose it as an
-/// MlirRewriterBase.
 std::function<Value(OpBuilder &, Type, ValueRange, Location)>
 wrapSourceMaterializationCallback(
     MlirTypeConverterSourceMaterializationCallback callback, void *userData) {
@@ -760,10 +754,6 @@ wrapSourceMaterializationCallback(
   };
 }
 
-/// Wraps a C 1:1 target materialization callback as the C++ form
-/// `Value(OpBuilder &, Type, ValueRange, Location, Type)`. Selecting the
-/// 5-argument C++ overload (the one carrying `originalType`) is what makes the
-/// original type observable from C.
 std::function<Value(OpBuilder &, Type, ValueRange, Location, Type)>
 wrapTargetMaterializationCallback(
     MlirTypeConverterTargetMaterializationCallback callback, void *userData) {
@@ -778,8 +768,6 @@ wrapTargetMaterializationCallback(
   };
 }
 
-/// Wraps a C 1:N target materialization callback as the C++ form
-/// `SmallVector<Value>(OpBuilder &, TypeRange, ValueRange, Location, Type)`.
 std::function<SmallVector<Value>(OpBuilder &, TypeRange, ValueRange, Location,
                                  Type)>
 wrap1ToNTargetMaterializationCallback(
