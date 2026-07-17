@@ -53,8 +53,7 @@ static llvm::Value *emitGetParamBuf(CodeGenFunction &CGF,
   Args.add(RValue::get(CGF.CGM.getSize(Offset)),
            CGF.getContext().getSizeType());
   const CGFunctionInfo &CallInfo = CGF.CGM.getTypes().arrangeFreeFunctionCall(
-      Args, GetParamBufProto, /*ChainCall=*/false,
-      CGF.getCurrentFunctionDecl());
+      Args, GetParamBufProto, /*ChainCall=*/false);
   auto Ret = CGF.EmitCall(CallInfo, Callee, /*ReturnValue=*/{}, Args);
 
   return Ret.getScalarVal();
@@ -117,7 +116,7 @@ RValue CGCUDARuntime::EmitCUDADeviceKernelCallExpr(
   LaunchCallArgs[1] = CallArg(RValue::get(Config), CGM.getContext().VoidPtrTy);
   const CGFunctionInfo &LaunchCallInfo = CGM.getTypes().arrangeFreeFunctionCall(
       LaunchCallArgs, LaunchCalleeFuncTy->getAs<FunctionProtoType>(),
-      /*ChainCall=*/false, CGF.getCurrentFunctionDecl());
+      /*ChainCall=*/false);
   CGF.EmitCall(LaunchCallInfo, LaunchCallee, ReturnValue, LaunchCallArgs,
                CallOrInvoke,
                /*IsMustTail=*/false, E->getExprLoc());

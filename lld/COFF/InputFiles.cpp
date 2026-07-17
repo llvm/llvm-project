@@ -1506,6 +1506,11 @@ static bool isRVACode(COFFObjectFile *coffObj, uint64_t rva, InputFile *file) {
 }
 
 void DLLFile::parse() {
+  if (!coffObj->getPE32Header() && !coffObj->getPE32PlusHeader()) {
+    Err(symtab.ctx) << toString(this) << " is not a PE-COFF executable";
+    return;
+  }
+
   for (const auto &exp : coffObj->export_directories()) {
     StringRef dllName, symbolName;
     uint32_t exportRVA;
