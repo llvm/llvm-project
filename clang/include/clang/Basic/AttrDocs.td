@@ -1039,7 +1039,10 @@ Because the attribute covers *every* pointer or reference parameter, apply
 it only to functions that end the lifetime of every such argument's
 storage. It requires at least one parameter of pointer or reference type
 (it would be vacuous otherwise); this is diagnosed regardless of
-``-fprofiles``.
+``-fprofiles``. A function may carry both ``[[now_uninit]]`` and
+``[[now_init]]``: such a reinitializer models destroy-then-construct, so
+the storage bound to its ``[[ref_to_uninit]]`` parameters is initialized
+after the call.
 
 Outside the initialization profile the attribute is otherwise silently
 accepted and has no effect, so code that uses it remains valid when compiled

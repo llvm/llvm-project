@@ -1429,9 +1429,11 @@ void SemaProfiles::checkInitProfileRefToUninitBinding(SourceLocation Loc,
   // Run after the check: the binding itself is judged against the
   // *pre-call* state, and only then does a [[now_init]] callee's promised
   // initialization -- or a [[now_uninit]] callee's promised destruction --
-  // take effect for what follows in parse order.
-  recordNowInitArgument(Target, T, Src);
+  // take effect for what follows in parse order. The withdrawal runs before
+  // the credit so a callee carrying both attributes (a reinitializer) nets
+  // to destroy-then-construct: the storage is initialized after the call.
   recordNowUninitArgument(Target, T, Src);
+  recordNowInitArgument(Target, T, Src);
 }
 
 void SemaProfiles::recordNowInitArgument(const ValueDecl *Target, QualType T,

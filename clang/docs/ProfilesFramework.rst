@@ -548,7 +548,11 @@ destroy_at(T* p) [[now_uninit]];`` and the construct/destroy/construct cycle
 is legal, a second destruction is rejected (the storage no longer refers to
 initialized memory, so binding it to the unmarked parameter is the
 unmarked-direction violation), and binding the destroyed storage to an
-ordinary pointer or reference is rejected the same way.
+ordinary pointer or reference is rejected the same way.  A function may
+carry both attributes -- a reinitializer that destroys and then
+reconstructs its argument's storage -- and models destroy-then-construct:
+the storage bound to its ``[[ref_to_uninit]]`` parameters is initialized
+after the call.
 
 
 Constructors

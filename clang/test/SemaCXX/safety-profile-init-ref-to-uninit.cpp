@@ -1982,6 +1982,24 @@ void test_destroy_through_function_pointer() {
   (void)q;
 }
 
+// A callee carrying both markers is a reinitializer: it destroys and then
+// constructs its argument's storage, so the net post-call state is
+// initialized (withdrawal is recorded before credit).
+[[now_init]] [[now_uninit]] void nu_reinit(int *p [[ref_to_uninit]]);
+void test_reinit_nets_initialized() {
+  int u [[uninit]];
+  nu_reinit(&u);
+  int *q = &u; // OK: net state is initialized
+  nu_wipe(&u); // OK: destroying initialized storage
+  (void)q;
+}
+void test_reinit_reverse_direction() {
+  int u [[uninit]];
+  nu_reinit(&u);
+  int *r [[ref_to_uninit]] = &u; // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  (void)r;
+}
+
 // The reverse direction applies through the assignment funnel too: a
 // credited marked pointer refers to initialized memory, so assigning it to
 // another marked pointer is the requires-uninit error -- while an unmarked
