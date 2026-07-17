@@ -62,7 +62,6 @@ concurrency:
 jobs:
   setup-variables:
     if: >-
-      (github.event_name != 'pull_request' || github.event.action != 'closed')
     runs-on: ubuntu-24.04
     outputs:
       release-version: ${{ steps.vars.outputs.release-version }}
