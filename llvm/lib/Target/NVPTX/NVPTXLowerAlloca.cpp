@@ -63,14 +63,14 @@ INITIALIZE_PASS(NVPTXLowerAlloca, "nvptx-lower-alloca", "Lower Alloca", false,
 bool NVPTXLowerAlloca::runOnFunction(Function &F) {
   // Mandatory lowering: later stack lowering relies on local allocas, so run
   // even for optnone functions (skipFunction is intentionally not called).
-  SmallVector<AllocaInst *, 8> Allocas;
+  SmallVector<AllocaInst *, 8> GenericAllocas;
   for (auto &BB : F)
     for (auto &I : BB)
       if (auto *AI = dyn_cast<AllocaInst>(&I);
           AI && AI->getAddressSpace() == ADDRESS_SPACE_GENERIC)
-        Allocas.push_back(AI);
+        GenericAllocas.push_back(AI);
 
-  for (AllocaInst *AI : Allocas) {
+  for (AllocaInst *AI : GenericAllocas) {
     // Create an equivalent alloca in the local address space.
     auto *LocalAlloca = new AllocaInst(AI->getAllocatedType(),
                                        ADDRESS_SPACE_LOCAL, AI->getArraySize(),
@@ -113,7 +113,7 @@ bool NVPTXLowerAlloca::runOnFunction(Function &F) {
     AI->eraseFromParent();
   }
 
-  return !Allocas.empty();
+  return !GenericAllocas.empty();
 }
 
 FunctionPass *llvm::createNVPTXLowerAllocaPass() {
