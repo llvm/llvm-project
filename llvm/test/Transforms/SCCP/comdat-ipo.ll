@@ -10,15 +10,17 @@ define i32 @baz() {
   ret i32 10
 }
 
-; We can const-prop @baz's return value *into* @foo, but cannot
-; constprop @foo's return value into bar.
+; We can const-prop @baz's return value *into* @foo. @foo is linkonce_odr,
+; which is not interposable: ODR guarantees every copy is semantically
+; equivalent, so a return-value fact derived from this body is valid for
+; whichever copy the linker keeps. Therefore we may also const-prop @foo's
+; return value into its caller @bar.
 
 define linkonce_odr i32 @foo() {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @baz()
 ; CHECK-NEXT:    ret i32 10
 ;
-
   %val = call i32 @baz()
   ret i32 %val
 }
@@ -26,9 +28,30 @@ define linkonce_odr i32 @foo() {
 define i32 @bar() {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @foo()
+; CHECK-NEXT:    ret i32 10
+;
+  %val = call i32 @foo()
+  ret i32 %val
+}
+
+; @foo_any is linkonce_any, which *is* interposable: the linker may replace it
+; with an unrelated definition. We must not const-prop its return value into
+; @bar_any.
+
+define linkonce i32 @foo_any() {
+; CHECK-LABEL: @foo_any(
+; CHECK-NEXT:    [[VAL:%.*]] = call i32 @baz()
+; CHECK-NEXT:    ret i32 10
+;
+  %val = call i32 @baz()
+  ret i32 %val
+}
+
+define i32 @bar_any() {
+; CHECK-LABEL: @bar_any(
+; CHECK-NEXT:    [[VAL:%.*]] = call i32 @foo_any()
 ; CHECK-NEXT:    ret i32 [[VAL]]
 ;
-
-  %val = call i32 @foo()
+  %val = call i32 @foo_any()
   ret i32 %val
 }
