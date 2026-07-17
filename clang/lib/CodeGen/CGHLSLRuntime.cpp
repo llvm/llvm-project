@@ -1111,12 +1111,13 @@ static llvm::Value *createSPIRVLocationLoad(IRBuilder<> &B, llvm::Module &M,
   LLVMContext &Ctx = GV->getContext();
   SmallVector<Metadata *, 2> Decorations;
   Decorations.push_back(
-      MDNode::get(Ctx, {ConstantAsMetadata::get(B.getInt32(/* Location */ 30)),
+      MDNode::get(Ctx, {ConstantAsMetadata::get(
+                            B.getInt32(/* SPIRV::Decoration::Location */ 30)),
                         ConstantAsMetadata::get(B.getInt32(Location))}));
   if (NeedsFlat)
     Decorations.push_back(
         MDNode::get(Ctx, {ConstantAsMetadata::get(
-                             B.getInt32(/* Spirv::Decoration::Flat */ 14))}));
+                             B.getInt32(/* SPIRV::Decoration::Flat */ 14))}));
   GV->addMetadata("spirv.Decorations", *MDNode::get(Ctx, Decorations));
 
   return B.CreateLoad(Ty, GV);
