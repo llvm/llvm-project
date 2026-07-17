@@ -69,7 +69,7 @@ static bool CharStringSummaryProvider(ValueObject &valobj, Stream &stream) {
   }
 
   if (!StringPrinter::ReadStringAndDumpToStream<ElemType>(options))
-    stream.Printf("Summary Unavailable");
+    stream.PutCString("Summary Unavailable");
 
   return true;
 }
@@ -155,7 +155,7 @@ bool lldb_private::formatters::WCharStringSummaryProvider(
     return StringPrinter::ReadStringAndDumpToStream<StringElementType::UTF32>(
         options);
   default:
-    stream.Printf("size for wchar_t is not valid");
+    stream.PutCString("size for wchar_t is not valid");
     return true;
   }
   return true;
@@ -210,7 +210,7 @@ bool lldb_private::formatters::WCharSummaryProvider(
     return StringPrinter::ReadBufferAndDumpToStream<StringElementType::UTF32>(
         options);
   default:
-    stream.Printf("size for wchar_t is not valid");
+    stream.PutCString("size for wchar_t is not valid");
     return true;
   }
   return true;

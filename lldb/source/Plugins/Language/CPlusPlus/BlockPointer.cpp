@@ -195,7 +195,7 @@ bool lldb_private::formatters::BlockPointerSummaryProvider(
   const char *child_value =
       qualified_child_representation_sp->GetValueAsCString();
 
-  s.Printf("%s", child_value);
+  s.PutCString(child_value);
 
   return true;
 }

@@ -107,7 +107,7 @@ size_t ProcessWasm::ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
 llvm::Expected<std::vector<lldb::addr_t>>
 ProcessWasm::GetWasmCallStack(lldb::tid_t tid) {
   StreamString packet;
-  packet.Printf("qWasmCallStack:");
+  packet.PutCString("qWasmCallStack:");
   packet.Printf("%" PRIx64, tid);
 
   StringExtractorGDBRemote response;
@@ -142,10 +142,10 @@ ProcessWasm::GetWasmVariable(WasmVirtualRegisterKinds kind, int frame_index,
   StreamString packet;
   switch (kind) {
   case eWasmTagLocal:
-    packet.Printf("qWasmLocal:");
+    packet.PutCString("qWasmLocal:");
     break;
   case eWasmTagGlobal:
-    packet.Printf("qWasmGlobal:");
+    packet.PutCString("qWasmGlobal:");
     break;
   case eWasmTagOperandStack:
     packet.PutCString("qWasmStackValue:");

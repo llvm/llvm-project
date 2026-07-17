@@ -45,7 +45,7 @@ AppleObjCTypeEncodingParser::AppleObjCTypeEncodingParser(
 std::string AppleObjCTypeEncodingParser::ReadStructName(llvm::StringRef &type) {
   StreamString buffer;
   while (!type.empty() && type.front() != '=')
-    buffer.Printf("%c", popChar(type));
+    buffer.PutChar(popChar(type));
 
   return std::string(buffer.GetString());
 }
@@ -57,7 +57,7 @@ AppleObjCTypeEncodingParser::ReadQuotedString(llvm::StringRef &type) {
 
   StreamString buffer;
   while (type.front() != '"') {
-    buffer.Printf("%c", popChar(type));
+    buffer.PutChar(popChar(type));
 
     if (type.empty())
       return std::nullopt;

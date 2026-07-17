@@ -602,7 +602,7 @@ void ScriptInterpreterPythonImpl::IOHandlerInputComplete(IOHandler &io_handler,
       } else if (!batch_mode) {
         if (LockableStreamFileSP error_sp = io_handler.GetErrorStreamFileSP()) {
           LockedStreamFile locked_stream = error_sp->Lock();
-          locked_stream.Printf("Warning: No command attached to breakpoint.\n");
+          locked_stream.PutCString("Warning: No command attached to breakpoint.\n");
         }
       }
     }
@@ -624,7 +624,7 @@ void ScriptInterpreterPythonImpl::IOHandlerInputComplete(IOHandler &io_handler,
     } else if (!batch_mode) {
       if (LockableStreamFileSP error_sp = io_handler.GetErrorStreamFileSP()) {
         LockedStreamFile locked_stream = error_sp->Lock();
-        locked_stream.Printf("Warning: No command attached to breakpoint.\n");
+        locked_stream.PutCString("Warning: No command attached to breakpoint.\n");
       }
     }
     m_active_io_handler = eIOHandlerNone;
@@ -2524,7 +2524,7 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
   if (module_sp) {
     // everything went just great, now set the module object
     command_stream.Clear();
-    command_stream.Printf("%s", module_name.c_str());
+    command_stream.PutCString(module_name.c_str());
     void *module_pyobj = nullptr;
     if (ExecuteOneLineWithReturn(
             command_stream.GetData(),

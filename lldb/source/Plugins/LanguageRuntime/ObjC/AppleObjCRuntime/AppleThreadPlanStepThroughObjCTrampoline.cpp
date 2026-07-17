@@ -88,7 +88,7 @@ bool AppleThreadPlanStepThroughObjCTrampoline::
 void AppleThreadPlanStepThroughObjCTrampoline::GetDescription(
     Stream *s, lldb::DescriptionLevel level) {
   if (level == lldb::eDescriptionLevelBrief)
-    s->Printf("Step through ObjC trampoline");
+    s->PutCString("Step through ObjC trampoline");
   else {
     s->Printf("Stepping to implementation of ObjC method - obj: 0x%llx, isa: "
               "0x%" PRIx64 ", sel: 0x%" PRIx64,
@@ -286,7 +286,7 @@ void AppleThreadPlanStepThroughDirectDispatch::GetDescription(
     s->PutCString("Step through ObjC direct dispatch function.");
     break;
   default:
-    s->Printf("Step through ObjC direct dispatch using breakpoints: ");
+    s->PutCString("Step through ObjC direct dispatch using breakpoints: ");
     bool first = true;
     for (auto bkpt_sp : m_msgSend_bkpts) {
         if (!first) {

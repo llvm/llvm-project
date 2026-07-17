@@ -537,21 +537,21 @@ void ManualDWARFIndex::Dump(Stream &s) {
   s.Format("Manual DWARF index for ({0}) '{1:F}':",
            m_module.GetArchitecture().GetArchitectureName(),
            m_module.GetObjectFile()->GetFileSpec());
-  s.Printf("\nFunction basenames:\n");
+  s.PutCString("\nFunction basenames:\n");
   m_set.function_basenames.Dump(&s);
-  s.Printf("\nFunction fullnames:\n");
+  s.PutCString("\nFunction fullnames:\n");
   m_set.function_fullnames.Dump(&s);
-  s.Printf("\nFunction methods:\n");
+  s.PutCString("\nFunction methods:\n");
   m_set.function_methods.Dump(&s);
-  s.Printf("\nFunction selectors:\n");
+  s.PutCString("\nFunction selectors:\n");
   m_set.function_selectors.Dump(&s);
-  s.Printf("\nObjective-C class selectors:\n");
+  s.PutCString("\nObjective-C class selectors:\n");
   m_set.objc_class_selectors.Dump(&s);
-  s.Printf("\nGlobals and statics:\n");
+  s.PutCString("\nGlobals and statics:\n");
   m_set.globals.Dump(&s);
-  s.Printf("\nTypes:\n");
+  s.PutCString("\nTypes:\n");
   m_set.types.Dump(&s);
-  s.Printf("\nNamespaces:\n");
+  s.PutCString("\nNamespaces:\n");
   m_set.namespaces.Dump(&s);
 }
 

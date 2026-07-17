@@ -186,35 +186,35 @@ bool lldb_private::formatters::CFBitVectorSummaryProvider(
     bool bit6 = (byte & 64) == 64;
     bool bit7 = (byte & 128) == 128;
     if (count) {
-      stream.Printf("%c", bit7 ? '1' : '0');
+      stream.PutChar(bit7 ? '1' : '0');
       count -= 1;
     }
     if (count) {
-      stream.Printf("%c", bit6 ? '1' : '0');
+      stream.PutChar(bit6 ? '1' : '0');
       count -= 1;
     }
     if (count) {
-      stream.Printf("%c", bit5 ? '1' : '0');
+      stream.PutChar(bit5 ? '1' : '0');
       count -= 1;
     }
     if (count) {
-      stream.Printf("%c", bit4 ? '1' : '0');
+      stream.PutChar(bit4 ? '1' : '0');
       count -= 1;
     }
     if (count) {
-      stream.Printf("%c", bit3 ? '1' : '0');
+      stream.PutChar(bit3 ? '1' : '0');
       count -= 1;
     }
     if (count) {
-      stream.Printf("%c", bit2 ? '1' : '0');
+      stream.PutChar(bit2 ? '1' : '0');
       count -= 1;
     }
     if (count) {
-      stream.Printf("%c", bit1 ? '1' : '0');
+      stream.PutChar(bit1 ? '1' : '0');
       count -= 1;
     }
     if (count)
-      stream.Printf("%c", bit0 ? '1' : '0');
+      stream.PutChar(bit0 ? '1' : '0');
   }
   return true;
 }

@@ -78,7 +78,7 @@ bool lldb_private::formatters::NSBundleSummaryProvider(
     bool was_nsstring_ok =
         NSStringSummaryProvider(*text, summary_stream, options);
     if (was_nsstring_ok && summary_stream.GetSize() > 0) {
-      stream.Printf("%s", summary_stream.GetData());
+      stream.PutCString(summary_stream.GetData());
       return true;
     }
   }
@@ -127,7 +127,7 @@ bool lldb_private::formatters::NSTimeZoneSummaryProvider(
     bool was_nsstring_ok =
         NSStringSummaryProvider(*text, summary_stream, options);
     if (was_nsstring_ok && summary_stream.GetSize() > 0) {
-      stream.Printf("%s", summary_stream.GetData());
+      stream.PutCString(summary_stream.GetData());
       return true;
     }
   }
@@ -176,7 +176,7 @@ bool lldb_private::formatters::NSNotificationSummaryProvider(
     bool was_nsstring_ok =
         NSStringSummaryProvider(*text, summary_stream, options);
     if (was_nsstring_ok && summary_stream.GetSize() > 0) {
-      stream.Printf("%s", summary_stream.GetData());
+      stream.PutCString(summary_stream.GetData());
       return true;
     }
   }
@@ -754,12 +754,12 @@ bool lldb_private::formatters::NSDecimalNumberSummaryProvider(
   const bool is_nan = is_negative && (length == 0);
 
   if (is_nan) {
-    stream.Printf("NaN");
+    stream.PutCString("NaN");
     return true;
   }
 
   if (length == 0) {
-    stream.Printf("0");
+    stream.PutCString("0");
     return true;
   }
 
@@ -769,7 +769,7 @@ bool lldb_private::formatters::NSDecimalNumberSummaryProvider(
     return false;
 
   if (is_negative)
-    stream.Printf("-");
+    stream.PutCString("-");
 
   stream.Printf("%" PRIu64 " x 10^%" PRIi8, mantissa, exponent);
   return true;
@@ -972,7 +972,7 @@ bool lldb_private::formatters::NSDateSummaryProvider(
   // The relative time in seconds from Cocoa Epoch to [NSDate distantPast].
   const double RelSecondsFromCocoaEpochToNSDateDistantPast = -63114076800;
   if (date_value == RelSecondsFromCocoaEpochToNSDateDistantPast) {
-    stream.Printf("0001-01-01 00:00:00 UTC");
+    stream.PutCString("0001-01-01 00:00:00 UTC");
     return true;
   }
 
@@ -1026,7 +1026,7 @@ bool lldb_private::formatters::ObjCClassSummaryProvider(
   if (ConstString cs = Mangled(class_name).GetDemangledName())
     class_name = cs;
 
-  stream.Printf("%s", class_name.AsCString("<unknown class>"));
+  stream.PutCString(class_name.AsCString("<unknown class>"));
   return true;
 }
 
@@ -1143,10 +1143,10 @@ bool lldb_private::formatters::ObjCBOOLSummaryProvider(
   int8_t value = (real_guy_sp->GetValueAsSigned(0) & 0xFF);
   switch (value) {
   case 0:
-    stream.Printf("NO");
+    stream.PutCString("NO");
     break;
   case 1:
-    stream.Printf("YES");
+    stream.PutCString("YES");
     break;
   default:
     stream.Printf("%d", value);
@@ -1217,7 +1217,7 @@ bool lldb_private::formatters::ObjCSELSummaryProvider(
   if (!valobj_sp)
     return false;
 
-  stream.Printf("%s", valobj_sp->GetSummaryAsCString());
+  stream.PutCString(valobj_sp->GetSummaryAsCString());
   return true;
 }
 

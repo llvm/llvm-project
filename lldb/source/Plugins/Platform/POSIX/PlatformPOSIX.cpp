@@ -81,7 +81,7 @@ static uint32_t chown_file(Platform *platform, const char *path,
     command.Printf("%d", uid);
   if (gid != UINT32_MAX)
     command.Printf(":%d", gid);
-  command.Printf("%s", path);
+  command.PutCString(path);
   int status;
   platform->RunShellCommand(command.GetData(), FileSpec(), &status, nullptr,
                             nullptr, nullptr, std::chrono::seconds(10));
@@ -277,14 +277,14 @@ std::string PlatformPOSIX::GetPlatformSpecificConnectionInformation() {
     stream.PutCString("rsync");
     if ((GetRSyncOpts() && *GetRSyncOpts()) ||
         (GetRSyncPrefix() && *GetRSyncPrefix()) || GetIgnoresRemoteHostname()) {
-      stream.Printf(", options: ");
+      stream.PutCString(", options: ");
       if (GetRSyncOpts() && *GetRSyncOpts())
         stream.Printf("'%s' ", GetRSyncOpts());
-      stream.Printf(", prefix: ");
+      stream.PutCString(", prefix: ");
       if (GetRSyncPrefix() && *GetRSyncPrefix())
         stream.Printf("'%s' ", GetRSyncPrefix());
       if (GetIgnoresRemoteHostname())
-        stream.Printf("ignore remote-hostname ");
+        stream.PutCString("ignore remote-hostname ");
     }
   }
   if (GetSupportsSSH()) {

@@ -74,7 +74,7 @@ static void DescribeAddressBriefly(Stream &strm, const Address &addr,
   StreamString s;
   if (addr.GetDescription(s, target, eDescriptionLevelBrief))
     strm.Printf(" %s", s.GetString().data());
-  strm.Printf(".\n");
+  strm.PutCString(".\n");
 }
 
 std::optional<addr_t> StopInfoMachException::GetTagFaultAddress() const {
@@ -146,7 +146,7 @@ bool StopInfoMachException::DeterminePtrauthFailure(ExecutionContext &exe_ctx) {
   auto emit_ptrauth_prologue = [&](uint64_t at_address) {
     strm.Printf("EXC_BAD_ACCESS (code=%" PRIu64 ", address=0x%" PRIx64 ")\n",
                 m_exc_code, at_address);
-    strm.Printf("Note: Possible pointer authentication failure detected.\n");
+    strm.PutCString("Note: Possible pointer authentication failure detected.\n");
   };
 
   ABISP abi_sp = process.GetABI();
@@ -175,7 +175,7 @@ bool StopInfoMachException::DeterminePtrauthFailure(ExecutionContext &exe_ctx) {
         GetPtrauthInstructionInfo(target, arch, current_address);
     if (brk_ptrauth_info && brk_ptrauth_info->IsAuthenticated) {
       emit_ptrauth_prologue(bad_address);
-      strm.Printf("Found value that failed to authenticate ");
+      strm.PutCString("Found value that failed to authenticate ");
       DescribeAddressBriefly(strm, brk_address, target);
       m_description = std::string(strm.GetString());
       return true;
@@ -206,7 +206,7 @@ bool StopInfoMachException::DeterminePtrauthFailure(ExecutionContext &exe_ctx) {
         GetPtrauthInstructionInfo(target, arch, current_address);
     if (ptrauth_info && ptrauth_info->IsAuthenticated && ptrauth_info->IsLoad) {
       emit_ptrauth_prologue(bad_address);
-      strm.Printf("Found authenticated load instruction ");
+      strm.PutCString("Found authenticated load instruction ");
       DescribeAddressBriefly(strm, current_address, target);
       m_description = std::string(strm.GetString());
       return true;
@@ -236,7 +236,7 @@ bool StopInfoMachException::DeterminePtrauthFailure(ExecutionContext &exe_ctx) {
       if (blr_ptrauth_info && blr_ptrauth_info->IsAuthenticated &&
           blr_ptrauth_info->DoesBranch) {
         emit_ptrauth_prologue(bad_address);
-        strm.Printf("Found authenticated indirect branch ");
+        strm.PutCString("Found authenticated indirect branch ");
         DescribeAddressBriefly(strm, blr_address, target);
         m_description = std::string(strm.GetString());
         return true;

@@ -228,7 +228,7 @@ GDBRemoteCommunicationServerCommon::Handle_qHostInfo(
     response.PutCString("watchpoint_exceptions_received:before;");
   } else {
     response.PutCString("ostype:macosx;");
-    response.Printf("watchpoint_exceptions_received:after;");
+    response.PutCString("watchpoint_exceptions_received:after;");
   }
 
 #else
@@ -238,9 +238,9 @@ GDBRemoteCommunicationServerCommon::Handle_qHostInfo(
       host_arch.GetMachine() == llvm::Triple::arm ||
       host_arch.GetMachine() == llvm::Triple::armeb || host_arch.IsMIPS() ||
       host_arch.GetTriple().isPPC64() || host_arch.GetTriple().isLoongArch())
-    response.Printf("watchpoint_exceptions_received:before;");
+    response.PutCString("watchpoint_exceptions_received:before;");
   else
-    response.Printf("watchpoint_exceptions_received:after;");
+    response.PutCString("watchpoint_exceptions_received:after;");
 #endif
 
   switch (endian::InlHostByteOrder()) {

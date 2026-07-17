@@ -5327,7 +5327,7 @@ bool ObjectFileMachO::GetCorefileThreadExtraInfos(
 
       if (log) {
         StreamString logmsg;
-        logmsg.Printf("LC_NOTE 'process metadata' found: ");
+        logmsg.PutCString("LC_NOTE 'process metadata' found: ");
         dict->Dump(logmsg, /* pretty_print */ false);
         LLDB_LOGF(log, "%s", logmsg.GetData());
       }

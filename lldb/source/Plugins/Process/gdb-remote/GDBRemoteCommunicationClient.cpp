@@ -2721,7 +2721,7 @@ void GDBRemoteCommunicationClient::TestPacketSpeed(const uint32_t num_packets,
       }
     }
     if (json)
-      strm.Printf("\n    ]\n  }\n}\n");
+      strm.PutCString("\n    ]\n  }\n}\n");
     else
       strm.EOL();
   }
@@ -2757,7 +2757,7 @@ bool GDBRemoteCommunicationClient::LaunchGDBServer(
     } else {
       // Make the GDB server we launch accept connections from any host since
       // we can't figure out the hostname
-      stream.Printf("host:*;");
+      stream.PutCString("host:*;");
     }
   }
   // give the process a few seconds to startup

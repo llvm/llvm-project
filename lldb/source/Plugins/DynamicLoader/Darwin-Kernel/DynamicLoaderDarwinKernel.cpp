@@ -1415,7 +1415,7 @@ bool DynamicLoaderDarwinKernel::ParseKextSummaries(
           if (image_info.GetModule()) {
             unloaded_module_list.AppendIfNeeded(image_info.GetModule());
           }
-          s->Printf(".");
+          s->PutCString(".");
           image_info.Clear();
           // should pull it out of the KextImageInfos vector but that would
           // mutate the list and invalidate the to_be_removed bool vector;
@@ -1427,7 +1427,7 @@ bool DynamicLoaderDarwinKernel::ParseKextSummaries(
   }
 
   if (load_kexts) {
-    s->Printf(" done.\n");
+    s->PutCString(" done.\n");
     if (kexts_failed_to_load.size() > 0 && number_of_new_kexts_being_added > 0) {
       s->Printf("Failed to load %d of %d kexts:\n",
                 (int)kexts_failed_to_load.size(),
