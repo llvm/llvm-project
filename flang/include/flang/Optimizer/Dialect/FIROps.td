@@ -1314,6 +1314,8 @@ def fir_BoxDimsOp
     $val `,` $dim attr-dict `:` functional-type(operands, results)
   }];
 
+  let hasCanonicalizer = 1;
+
   let extraClassDeclaration = [{
     mlir::Type getTupleType();
     mlir::Value getLowerBound() {return getResult(0);};
