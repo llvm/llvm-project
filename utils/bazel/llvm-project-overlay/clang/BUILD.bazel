@@ -2777,11 +2777,10 @@ cc_binary(
 
 cc_binary(
     name = "clang-ssaf-linker",
-    srcs = [
-        "tools/clang-ssaf-linker/SSAFLinker.cpp",
-        "tools/clang-ssaf-linker/StaticLibraryCreateCLI.cpp",
-        "tools/clang-ssaf-linker/StaticLibraryCreateCLI.h",
-    ],
+    srcs = glob([
+        "tools/clang-ssaf-linker/*.cpp",
+        "tools/clang-ssaf-linker/*.h",
+    ]),
     deps = [
         ":basic",
         ":scalable_static_analysis_analyses",
