@@ -718,18 +718,17 @@ static bool updateCycleLoopInfo(TI *LCI, BasicBlock *CallBrBlock,
   if (!LCI)
     return false;
 
-  T *LC;
-  if constexpr (std::is_same_v<TI, CycleInfo>)
-    LC = LCI->getSmallestCommonCycle(CallBrBlock, Succ);
-  else
-    LC = LCI->getSmallestCommonLoop(CallBrBlock, Succ);
-  if (!LC)
-    return false;
-
-  if constexpr (std::is_same_v<TI, CycleInfo>)
+  if constexpr (std::is_same_v<TI, CycleInfo>) {
+    T LC = LCI->getSmallestCommonCycle(CallBrBlock, Succ);
+    if (!LC)
+      return false;
     LCI->addBlockToCycle(CallBrTarget, LC);
-  else
+  } else {
+    T *LC = LCI->getSmallestCommonLoop(CallBrBlock, Succ);
+    if (!LC)
+      return false;
     LC->addBasicBlockToLoop(CallBrTarget, *LCI);
+  }
 
   return true;
 }
@@ -773,7 +772,8 @@ BasicBlock *llvm::SplitCallBrEdge(BasicBlock *CallBrBlock, BasicBlock *Succ,
                                                        CallBrTarget, Succ);
     if (UpdatedLI)
       *UpdatedLI = Updated;
-    updateCycleLoopInfo<CycleInfo, Cycle>(CI, CallBrBlock, CallBrTarget, Succ);
+    updateCycleLoopInfo<CycleInfo, CycleRef>(CI, CallBrBlock, CallBrTarget,
+                                             Succ);
   } else {
     for (PHINode &PN : Succ->phis())
       PN.removeIncomingValue(CallBrBlock, false);

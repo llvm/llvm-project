@@ -1113,6 +1113,7 @@ def Arith_AddFOp : Arith_FloatBinaryOpWithRoundingMode<"addf", [Commutative]> {
     %a = arith.addf %b, %c to_nearest_even : f64
     ```
   }];
+  let hasCanonicalizer = 1;
   let hasFolder = 1;
 }
 

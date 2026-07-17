@@ -12,15 +12,20 @@
 
 #include "orc-rt-c/Logging.h"
 
+#include <array>
 #include <cassert>
 #include <cctype>
 #include <cstring>
 
-static const char *CategoryNames[orc_rt_log_Category_Count] = {"General"};
+static const char *CategoryNames[] = {"General", "ControllerAccess"};
+static_assert(std::size(CategoryNames) == orc_rt_log_Category_Count,
+              "CategoryNames array is the wrong size");
 
-static const char *LevelNames[ORC_RT_LOG_LEVEL_COUNT] = {
+static const char *LevelNames[] = {
     "DEBUG", "INFO", "WARNING", "ERROR", "OFF",
 };
+static_assert(std::size(LevelNames) == ORC_RT_LOG_LEVEL_COUNT,
+              "LevelNames array is the wrong size");
 
 const char *orc_rt_log_Category_getName(orc_rt_log_Category Cat) noexcept {
   if (Cat < 0 || Cat >= orc_rt_log_Category_Count)

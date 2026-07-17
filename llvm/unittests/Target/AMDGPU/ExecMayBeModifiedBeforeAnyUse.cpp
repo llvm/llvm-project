@@ -14,7 +14,7 @@
 using namespace llvm;
 
 TEST_F(AMDGPUTestBase, ExecMayBeModifiedBeforeAnyUse) {
-  auto TM = createAMDGPUTargetMachine("amdgpu9.06-amd-", "", "");
+  auto TM = createAMDGPUTargetMachine(Triple("amdgpu9.06-amd-"), "", "");
   if (!TM)
     GTEST_SKIP();
 
