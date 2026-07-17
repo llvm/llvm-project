@@ -14,6 +14,8 @@
 #include "lldb/Utility/Log.h"
 #include "llvm/Support/Error.h"
 
+#include <functional>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <vector>
@@ -90,6 +92,19 @@ public:
   /// Record a diagnostic message into the always-on, in-memory log.
   void Record(llvm::StringRef message);
 
+  /// Supplies an artifact's contents on demand. Subsystems register a provider
+  /// so Core need not depend on them. Each runs when a bundle is collected.
+  using ArtifactProvider = std::function<std::string()>;
+  using ArtifactProviderID = uint64_t;
+
+  /// Register \p provider to contribute file \p name. Returns an id for
+  /// RemoveArtifactProvider. Thread-safe.
+  ArtifactProviderID AddArtifactProvider(std::string name,
+                                         ArtifactProvider provider);
+
+  /// Unregister a provider. Thread-safe.
+  void RemoveArtifactProvider(ArtifactProviderID id);
+
   static Diagnostics &Instance();
 
   static DiagnosticsProperties &GetGlobalProperties();
@@ -122,6 +137,8 @@ private:
   static void CollectBinaries(const ExecutionContext &exe_ctx,
                               const FileSpec &dir,
                               std::vector<std::string> &files);
+  void CollectArtifactProviders(const FileSpec &dir,
+                                std::vector<std::string> &files);
   /// @}
 
   /// Scalars carried in the report rather than written as files.
@@ -131,6 +148,19 @@ private:
   /// @}
 
   RotatingLogHandler m_log_handler;
+
+  struct ArtifactProviderEntry {
+    ArtifactProviderID id;
+    std::string name;
+    ArtifactProvider provider;
+  };
+
+  /// Registered artifact providers, guarded by the mutex.
+  /// @{
+  ArtifactProviderID m_next_artifact_provider_id = 0;
+  std::vector<ArtifactProviderEntry> m_artifact_providers;
+  std::mutex m_artifact_providers_mutex;
+  /// @}
 };
 
 /// Render a diagnostics report as JSON, for `diagnostics dump`'s terminal
