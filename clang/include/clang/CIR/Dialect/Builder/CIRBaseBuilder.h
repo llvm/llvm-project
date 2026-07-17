@@ -272,7 +272,8 @@ public:
       mlir::Location loc,
       llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> condBuilder,
       llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> bodyBuilder,
-      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> cleanupBuilder,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>
+          cleanupBuilder,
       cir::CleanupKind cleanupKind) {
     return cir::WhileOp::create(*this, loc, condBuilder, bodyBuilder,
                                 cleanupBuilder, cleanupKind);
@@ -294,7 +295,8 @@ public:
       llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> condBuilder,
       llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> bodyBuilder,
       llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> stepBuilder,
-      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> cleanupBuilder,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>
+          cleanupBuilder,
       cir::CleanupKind cleanupKind) {
     return cir::ForOp::create(*this, loc, condBuilder, bodyBuilder, stepBuilder,
                               cleanupBuilder, cleanupKind);

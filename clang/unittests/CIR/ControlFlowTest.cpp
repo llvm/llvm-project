@@ -439,8 +439,7 @@ TEST_F(CIRControlFlowTest, WhileOpWithCleanup) {
   expectSuccessors(whileOp, RegionBranchPoint::parent(), {&whileOp.getCond()});
 
   // Condition branches to the body or, on the false edge, the cleanup region.
-  expectTerminatorSuccessors(whileOp.getCond(),
-                             {&whileOp.getBody(), cleanup});
+  expectTerminatorSuccessors(whileOp.getCond(), {&whileOp.getBody(), cleanup});
 
   // Body routes through the cleanup region (there is no step region).
   expectTerminatorSuccessors(whileOp.getBody(), {cleanup});
