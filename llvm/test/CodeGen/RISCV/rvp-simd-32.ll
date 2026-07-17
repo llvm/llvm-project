@@ -2732,3 +2732,17 @@ define <2 x i16> @test_psabs_v2i16(<2 x i16> %a) {
   %res = call <2 x i16> @llvm.riscv.psabs.v2i16(<2 x i16> %a)
   ret <2 x i16> %res
 }
+
+define <4 x i8> @test_undef_v4i8() {
+; CHECK-LABEL: test_undef_v4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  ret <4 x i8> undef
+}
+
+define <2 x i16> @test_undef_v2i16() {
+; CHECK-LABEL: test_undef_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  ret <2 x i16> undef
+}
