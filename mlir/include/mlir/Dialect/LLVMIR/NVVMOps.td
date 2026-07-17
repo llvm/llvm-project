@@ -5122,6 +5122,25 @@ def NVVM_BulkStoreOp: NVVM_Op<"st.bulk"> {
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// NVVM Asynchronous Store Op
+//===----------------------------------------------------------------------===//
+
+def NVVM_AsyncStoreOp: NVVM_VoidIntrinsicOp<"store.async", [NVVMRequiresSM<90>]> {
+  let summary = "Asynchronous Store Op";
+  let arguments = (ins AnyTypeOf<[LLVM_PointerGlobal, 
+                                  LLVM_PointerSharedCluster]>:$addr,
+                       AnyTypeOf<[I8, I16, I32, I64, I128]>:$value, 
+                       Optional<LLVM_PointerSharedCluster>:$mbarrier,
+                       DefaultValuedAttr<AsyncStoreScopeAttr, 
+                                         "AsyncStoreScope::NONE">:$scope,
+                       DefaultValuedAttr<BoolAttr, "false">:$is_multimem,
+                       DefaultValuedAttr<BoolAttr, "false">:$is_mmio);
+  let results = (outs );
+  let assemblyFormat = "$addr `,` $value (`,` `mbarrier` `=` $mbarrier^)? attr-dict `:` type($addr) `,` type($value) (`,` type($mbarrier)^)?";
+  let hasVerifier = 1;
+}
+
 def NVVM_Exit : NVVM_Op<"exit"> {
   let summary = "Exit Op";
   let description = [{

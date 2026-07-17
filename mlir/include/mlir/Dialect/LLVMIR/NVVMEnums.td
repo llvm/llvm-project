@@ -69,4 +69,18 @@ def SaturationModeAttr : EnumAttr<NVVM_Dialect, SaturationMode, "sat_mode"> {
  let assemblyFormat = "`<` $value `>`";
 }
 
+def AsyncStoreScopeNone : I32EnumCase<"NONE", 0, "none">;
+def AsyncStoreScopeSys : I32EnumCase<"SYS", 1, "sys">;
+def AsyncStoreScopeGpu : I32EnumCase<"GPU", 2, "gpu">;
+
+def AsyncStoreScope :
+  I32Enum<"AsyncStoreScope", "NVVM Asynchronous Store Scope",
+    [AsyncStoreScopeNone, AsyncStoreScopeSys, AsyncStoreScopeGpu]> {
+  let cppNamespace = "::mlir::NVVM";
+}
+
+def AsyncStoreScopeAttr : EnumAttr<NVVM_Dialect, AsyncStoreScope, 
+                                   "async_store_scope"> {
+  let assemblyFormat = "`<` $value `>`";
+}
 #endif // NVVMIR_ENUMS
