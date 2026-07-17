@@ -363,8 +363,8 @@ TEST(SequenceTest, IterableEnums) {
       enum_seq_inclusive(TypedEnum::B, TypedEnum::B)));
 
   EXPECT_THAT(enum_seq(X::ScopedEnum::C, X::ScopedEnum::C), IsEmpty());
-  static_assert(
-      elem::ElementsAre<X::ScopedEnum>(enum_seq(X::ScopedEnum::C, X::ScopedEnum::C)));
+  static_assert(elem::ElementsAre<X::ScopedEnum>(
+      enum_seq(X::ScopedEnum::C, X::ScopedEnum::C)));
   EXPECT_THAT(enum_seq_inclusive(X::ScopedEnum::C, X::ScopedEnum::C),
               ElementsAre(X::ScopedEnum::C));
   static_assert(elem::ElementsAre<X::ScopedEnum, X::ScopedEnum::C>(
