@@ -444,6 +444,7 @@ namespace {
     SDValue visitSSUBO_CARRY(SDNode *N);
     SDValue visitMUL(SDNode *N);
     SDValue visitMULFIX(SDNode *N);
+    SDValue performREMCombine(SDNode *N);
     SDValue useDivRem(SDNode *N);
     SDValue visitSDIV(SDNode *N);
     SDValue visitSDIVLike(SDValue N0, SDValue N1, SDNode *N);
@@ -5093,6 +5094,38 @@ static bool isDivRemLibcallAvailable(SDNode *Node, bool isSigned,
   return DAG.getLibcalls().getLibcallImpl(LC) != RTLIB::Unsupported;
 }
 
+// Fold Num % Den -> Num - (Num / Den) * Den, if (Num / Den) is already
+// computed
+SDValue DAGCombiner::performREMCombine(SDNode *N) {
+  assert(N->getOpcode() == ISD::SREM || N->getOpcode() == ISD::UREM);
+
+  // Don't do anything at less than -O2.
+  if (OptLevel < CodeGenOptLevel::Default)
+    return SDValue();
+
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  bool IsSigned = N->getOpcode() == ISD::SREM;
+  unsigned DivOpc = IsSigned ? ISD::SDIV : ISD::UDIV;
+  unsigned DivRemOpc = IsSigned ? ISD::SDIVREM : ISD::UDIVREM;
+
+  // If DIVREM is available, do not fold
+  if (TLI.isOperationLegalOrCustom(DivRemOpc, VT.getScalarType()))
+    return SDValue();
+
+  const SDValue &Num = N->getOperand(0);
+  const SDValue &Den = N->getOperand(1);
+  for (const SDNode *U : Num->users()) {
+    if (U->getOpcode() == DivOpc && U->getOperand(0) == Num &&
+        U->getOperand(1) == Den) {
+      SDValue Div = DAG.getNode(DivOpc, DL, VT, Num, Den);
+      SDValue Mul = DAG.getNode(ISD::MUL, DL, VT, Div, Den);
+      return DAG.getNode(ISD::SUB, DL, VT, Num, Mul);
+    }
+  }
+  return SDValue();
+}
+
 /// Issue divrem if both quotient and remainder are needed.
 SDValue DAGCombiner::useDivRem(SDNode *Node) {
   if (Node->use_empty())
@@ -5562,6 +5595,9 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
       return Sub;
     }
   }
+
+  if (SDValue V = performREMCombine(N))
+    return V;
 
   // sdiv, srem -> sdivrem
   if (SDValue DivRem = useDivRem(N))

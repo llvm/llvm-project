@@ -687,6 +687,9 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction(ISD::BR_CC, VT, Expand);
   }
 
+  setOperationAction(ISD::SDIVREM, {MVT::i32, MVT::i64}, Expand);
+  setOperationAction(ISD::UDIVREM, {MVT::i32, MVT::i64}, Expand);
+
   // We don't want ops like FMINIMUM or UMAX to be lowered to SETCC+VSELECT.
   setOperationAction(ISD::VSELECT, {MVT::v2f32, MVT::v2i32}, Expand);
 
@@ -6281,37 +6284,6 @@ static SDValue PerformFMinMaxCombine(SDNode *N,
   return SDValue();
 }
 
-static SDValue PerformREMCombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI,
-                                 CodeGenOptLevel OptLevel) {
-  assert(N->getOpcode() == ISD::SREM || N->getOpcode() == ISD::UREM);
-
-  // Don't do anything at less than -O2.
-  if (OptLevel < CodeGenOptLevel::Default)
-    return SDValue();
-
-  SelectionDAG &DAG = DCI.DAG;
-  SDLoc DL(N);
-  EVT VT = N->getValueType(0);
-  bool IsSigned = N->getOpcode() == ISD::SREM;
-  unsigned DivOpc = IsSigned ? ISD::SDIV : ISD::UDIV;
-
-  const SDValue &Num = N->getOperand(0);
-  const SDValue &Den = N->getOperand(1);
-
-  for (const SDNode *U : Num->users()) {
-    if (U->getOpcode() == DivOpc && U->getOperand(0) == Num &&
-        U->getOperand(1) == Den) {
-      // Num % Den -> Num - (Num / Den) * Den
-      return DAG.getNode(ISD::SUB, DL, VT, Num,
-                         DAG.getNode(ISD::MUL, DL, VT,
-                                     DAG.getNode(DivOpc, DL, VT, Num, Den),
-                                     Den));
-    }
-  }
-  return SDValue();
-}
-
 // sext (mul.iN nsw x, y)     => mul.wide.sN x, y
 // zext (mul.iN nuw x, y)     => mul.wide.uN x, y
 // sext (shl.iN nsw x, const) => mul.wide.sN x, (1 << const)
@@ -7121,9 +7093,6 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     return PerformSETCCCombine(N, DCI, STI.getSmVersion());
   case ISD::SHL:
     return PerformSHLCombine(N, DCI, OptLevel);
-  case ISD::SREM:
-  case ISD::UREM:
-    return PerformREMCombine(N, DCI, OptLevel);
   case ISD::STORE:
   case NVPTXISD::StoreV2:
   case NVPTXISD::StoreV4:
