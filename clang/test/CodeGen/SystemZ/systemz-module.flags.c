@@ -2,4 +2,4 @@
 // CHECK: {{.*}}"zos_cu_language", !"C"}
 // CHECK: {{.*}}"zos_translation_time", i64 253402300799}
 
-// REQUIRES: system-zos
+// UNSUPPORTED: arm
