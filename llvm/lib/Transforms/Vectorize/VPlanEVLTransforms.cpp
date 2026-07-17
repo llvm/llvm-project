@@ -12,12 +12,12 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "VPlanTransforms.h"
 #include "LoopVectorizationPlanner.h"
 #include "VPlan.h"
 #include "VPlanCFG.h"
 #include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
+#include "VPlanTransforms.h"
 #include "VPlanUtils.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/Intrinsics.h"
