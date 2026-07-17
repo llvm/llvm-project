@@ -281,6 +281,22 @@ static BuiltinTypeDeclBuilder setupTextureType(CXXRecordDecl *Decl, Sema &S,
       .addGatherCmpMethods(Dim, IsArray);
 }
 
+/// Set up RWTexture type: UAV texture with only operator[] (uint2, read/write),
+/// Load and GetDimensions (no sample/gather/mips/LOD).
+static BuiltinTypeDeclBuilder setupRWTextureType(CXXRecordDecl *Decl, Sema &S,
+                                                 bool IsArray,
+                                                 ResourceDimension Dim) {
+  return BuiltinTypeDeclBuilder(S, Decl)
+      .addTextureHandle(ResourceClass::UAV, /*IsROV=*/false, IsArray, Dim)
+      .addTextureLoadMethods(Dim, IsArray)
+      .addArraySubscriptOperators(Dim, IsArray)
+      .addGetDimensionsMethods(Dim)
+      .addDefaultHandleConstructor()
+      .addCopyConstructor()
+      .addCopyAssignmentOperator()
+      .addStaticInitializationFunctions(false);
+}
+
 // Add a partial specialization for a template. The `TextureTemplate` is
 // `Texture<element_type>`, and it will be specialized for vectors:
 // `Texture<vector<element_type, element_count>>`.
@@ -691,6 +707,25 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
         .completeDefinition();
   });
 
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWTexture2D")
+             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
+                                      TypedBufferConcept)
+             .finalizeForwardDeclaration();
+
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupRWTextureType(Decl, *SemaPtr, /*IsArray=*/false,
+                       ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
+
+  auto *PartialSpecRW = addVectorTexturePartialSpecialization(
+      *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
+  onCompletion(PartialSpecRW, [this](CXXRecordDecl *Decl) {
+    setupRWTextureType(Decl, *SemaPtr, /*IsArray=*/false,
+                       ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
+
   // Texture2DArray — same as Texture2D but IsArray=true
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "Texture2DArray")
              .addSimpleTemplateParams({"element_type"}, {Float4Ty},
@@ -708,6 +743,26 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   onCompletion(PartialSpec2DA, [this](CXXRecordDecl *Decl) {
     setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
                      /*IsArray=*/true, ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
+
+  // RWTexture2DArray — same as RWTexture2D but IsArray=true
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWTexture2DArray")
+             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
+                                      TypedBufferConcept)
+             .finalizeForwardDeclaration();
+
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupRWTextureType(Decl, *SemaPtr, /*IsArray=*/true,
+                       ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
+
+  auto *PartialSpecRW2DA = addVectorTexturePartialSpecialization(
+      *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
+  onCompletion(PartialSpecRW2DA, [this](CXXRecordDecl *Decl) {
+    setupRWTextureType(Decl, *SemaPtr, /*IsArray=*/true,
+                       ResourceDimension::Dim2D)
         .completeDefinition();
   });
 }
@@ -764,9 +819,11 @@ static void buildAtomicOverload(Sema &S, NamespaceDecl *NS, StringRef FuncName,
   NS->addDecl(FD);
 }
 
-// Synthesize the InterlockedAdd overload set: {int, uint, int64_t, uint64_t}
+// Synthesize the InterlockedFunc overload set: {int, uint, int64_t, uint64_t}
 // x {groupshared, device} x {2-arg, 3-arg}.
-static void defineHLSLInterlockedAdd(Sema &S, NamespaceDecl *NS) {
+static void defineHLSLInterlockedFunc(Sema &S, NamespaceDecl *NS,
+                                      StringRef FuncName,
+                                      StringRef BuiltinName) {
   ASTContext &AST = S.getASTContext();
   // HLSL: int64_t == long, uint64_t == unsigned long (see hlsl_basic_types.h).
   QualType Elems[] = {AST.IntTy, AST.UnsignedIntTy, AST.LongTy,
@@ -776,13 +833,14 @@ static void defineHLSLInterlockedAdd(Sema &S, NamespaceDecl *NS) {
   for (QualType ElemTy : Elems)
     for (LangAS AS : AddrSpaces)
       for (bool ThreeArg : {false, true})
-        buildAtomicOverload(S, NS, "InterlockedAdd",
-                            "__builtin_hlsl_interlocked_add", ElemTy, AS,
-                            ThreeArg);
+        buildAtomicOverload(S, NS, FuncName, BuiltinName, ElemTy, AS, ThreeArg);
 }
 
 void HLSLExternalSemaSource::defineHLSLAtomicIntrinsics() {
-  defineHLSLInterlockedAdd(*SemaPtr, HLSLNamespace);
+  defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedAdd",
+                            "__builtin_hlsl_interlocked_add");
+  defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedOr",
+                            "__builtin_hlsl_interlocked_or");
 }
 
 void HLSLExternalSemaSource::onCompletion(CXXRecordDecl *Record,

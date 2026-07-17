@@ -866,8 +866,8 @@ define void @get_lane_mask() #0 {
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 16 for: %mask_v8i1_i32 = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32 poison, i32 poison)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 8 for: %mask_v4i1_i32 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 poison, i32 poison)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 4 for: %mask_v2i1_i32 = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i32(i32 poison, i32 poison)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 48 for: %mask_v32i1_i64 = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64 poison, i64 poison)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 6 for: %mask_v16i1_i16 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i16(i16 poison, i16 poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 64 for: %mask_v32i1_i64 = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64 poison, i64 poison)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of 32 for: %mask_v16i1_i16 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i16(i16 poison, i16 poison)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-SVE-LABEL: 'get_lane_mask'
@@ -890,8 +890,8 @@ define void @get_lane_mask() #0 {
 ; CHECK-SVE-NEXT:  Cost Model: Found costs of 16 for: %mask_v8i1_i32 = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32 poison, i32 poison)
 ; CHECK-SVE-NEXT:  Cost Model: Found costs of 8 for: %mask_v4i1_i32 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 poison, i32 poison)
 ; CHECK-SVE-NEXT:  Cost Model: Found costs of 4 for: %mask_v2i1_i32 = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i32(i32 poison, i32 poison)
-; CHECK-SVE-NEXT:  Cost Model: Found costs of 48 for: %mask_v32i1_i64 = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64 poison, i64 poison)
-; CHECK-SVE-NEXT:  Cost Model: Found costs of 6 for: %mask_v16i1_i16 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i16(i16 poison, i16 poison)
+; CHECK-SVE-NEXT:  Cost Model: Found costs of 64 for: %mask_v32i1_i64 = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64 poison, i64 poison)
+; CHECK-SVE-NEXT:  Cost Model: Found costs of 32 for: %mask_v16i1_i16 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i16(i16 poison, i16 poison)
 ; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-SVE2p1-OR-SME2-LABEL: 'get_lane_mask'
@@ -914,8 +914,8 @@ define void @get_lane_mask() #0 {
 ; CHECK-SVE2p1-OR-SME2-NEXT:  Cost Model: Found costs of 16 for: %mask_v8i1_i32 = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32 poison, i32 poison)
 ; CHECK-SVE2p1-OR-SME2-NEXT:  Cost Model: Found costs of 8 for: %mask_v4i1_i32 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 poison, i32 poison)
 ; CHECK-SVE2p1-OR-SME2-NEXT:  Cost Model: Found costs of 4 for: %mask_v2i1_i32 = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i32(i32 poison, i32 poison)
-; CHECK-SVE2p1-OR-SME2-NEXT:  Cost Model: Found costs of 48 for: %mask_v32i1_i64 = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64 poison, i64 poison)
-; CHECK-SVE2p1-OR-SME2-NEXT:  Cost Model: Found costs of 6 for: %mask_v16i1_i16 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i16(i16 poison, i16 poison)
+; CHECK-SVE2p1-OR-SME2-NEXT:  Cost Model: Found costs of 64 for: %mask_v32i1_i64 = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64 poison, i64 poison)
+; CHECK-SVE2p1-OR-SME2-NEXT:  Cost Model: Found costs of 32 for: %mask_v16i1_i16 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i16(i16 poison, i16 poison)
 ; CHECK-SVE2p1-OR-SME2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'get_lane_mask'
@@ -938,8 +938,8 @@ define void @get_lane_mask() #0 {
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 16 for: %mask_v8i1_i32 = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32 poison, i32 poison)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 8 for: %mask_v4i1_i32 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 poison, i32 poison)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 4 for: %mask_v2i1_i32 = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i32(i32 poison, i32 poison)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 48 for: %mask_v32i1_i64 = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64 poison, i64 poison)
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 6 for: %mask_v16i1_i16 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i16(i16 poison, i16 poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 64 for: %mask_v32i1_i64 = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64 poison, i64 poison)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of 32 for: %mask_v16i1_i16 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i16(i16 poison, i16 poison)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %mask_nxv16i1_i64 = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 poison, i64 poison)
@@ -1083,7 +1083,7 @@ define <4 x i32> @masked_gather_v4i32(<4 x ptr> %ld, <4 x i1> %masks, <4 x i32> 
 
 define <1 x i128> @masked_gather_v1i128(<1 x ptr> %ld, <1 x i1> %masks, <1 x i128> %passthru) {
 ; CHECK-VSCALE-1-LABEL: 'masked_gather_v1i128'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:6 Lat:11 SizeLat:9 for: %res = call <1 x i128> @llvm.masked.gather.v1i128.v1p0(<1 x ptr> align 16 %ld, <1 x i1> %masks, <1 x i128> %passthru)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:6 Lat:12 SizeLat:9 for: %res = call <1 x i128> @llvm.masked.gather.v1i128.v1p0(<1 x ptr> align 16 %ld, <1 x i1> %masks, <1 x i128> %passthru)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <1 x i128> %res
 ;
 ; CHECK-VSCALE-2-LABEL: 'masked_gather_v1i128'

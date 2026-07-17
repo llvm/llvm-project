@@ -610,7 +610,7 @@ void Host::Kill(lldb::pid_t pid, int signo) { ::kill(pid, signo); }
 #if !defined(__APPLE__)
 llvm::Error Host::OpenFileInExternalEditor(llvm::StringRef editor,
                                            const FileSpec &file_spec,
-                                           uint32_t line_no) {
+                                           uint32_t line_no, bool foreground) {
   return llvm::errorCodeToError(
       std::error_code(ENOTSUP, std::system_category()));
 }
@@ -660,13 +660,7 @@ llvm::Error Host::OpenURL(llvm::StringRef url) {
 std::string Host::URLEncode(llvm::StringRef str) {
   std::string out;
   llvm::raw_string_ostream os(out);
-  for (unsigned char c : str) {
-    if (std::isalnum(c) || llvm::StringRef("-_.~").contains(c))
-      os << c;
-    else
-      os << '%' << llvm::hexdigit((c >> 4) & 0xF, /*LowerCase=*/false)
-         << llvm::hexdigit(c & 0xF, /*LowerCase=*/false);
-  }
+  llvm::printPercentEncoded(str, os);
   return out;
 }
 

@@ -1292,16 +1292,27 @@ KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS,
     return Known;
   }
 
-  // We can figure out the minimum number of upper zero bits by doing
-  // MaxNumerator / MinDenominator. If the Numerator gets smaller or Denominator
-  // gets larger, the number of upper zero bits increases.
+  // A zero denominator is UB, so the minimum attainable denominator is the
+  // smallest non-zero value consistent with the known bits.
   APInt MinDenom = RHS.getMinValue();
-  APInt MaxNum = LHS.getMaxValue();
-  APInt MaxRes = MinDenom.isZero() ? MaxNum : MaxNum.udiv(MinDenom);
+  if (MinDenom.isZero())
+    MinDenom.setBit(RHS.countMinTrailingZeros());
 
-  unsigned LeadZ = MaxRes.countLeadingZeros();
+  // The quotient grows when the numerator grows and shrinks when the
+  // denominator grows, and all four operand bounds are attainable, so the
+  // result is in [MinNum / MaxDenom, MaxNum / MinDenom]. Keep the common
+  // leading bits of the two bounds (as ConstantRange::toKnownBits does),
+  // which can include leading ones, not just leading zeros.
+  APInt MaxRes = LHS.getMaxValue().udiv(MinDenom);
+  APInt MinRes = LHS.getMinValue().udiv(RHS.getMaxValue());
 
-  Known.Zero.setHighBits(LeadZ);
+  Known = KnownBits::makeConstant(MinRes);
+  if (std::optional<unsigned> DifferentBit =
+          APIntOps::GetMostSignificantDifferentBit(MinRes, MaxRes)) {
+    Known.Zero.clearLowBits(*DifferentBit + 1);
+    Known.One.clearLowBits(*DifferentBit + 1);
+  }
+
   Known = divComputeLowBit(Known, LHS, RHS, Exact);
 
   return Known;

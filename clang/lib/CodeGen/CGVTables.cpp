@@ -383,10 +383,12 @@ void CodeGenFunction::EmitCallAndReturnForThunk(llvm::FunctionCallee Callee,
 
 #ifndef NDEBUG
   const CGFunctionInfo &CallFnInfo = CGM.getTypes().arrangeCXXMethodCall(
-      CallArgs, FPT, RequiredArgs::forPrototypePlus(FPT, 1), PrefixArgs);
+      CallArgs, FPT, RequiredArgs::forPrototypePlus(FPT, 1), PrefixArgs, MD);
   assert(CallFnInfo.getRegParm() == CurFnInfo->getRegParm() &&
          CallFnInfo.isNoReturn() == CurFnInfo->isNoReturn() &&
-         CallFnInfo.getCallingConvention() == CurFnInfo->getCallingConvention());
+         CallFnInfo.getCallingConvention() ==
+             CurFnInfo->getCallingConvention() &&
+         CallFnInfo.getX86ABIAVXLevel() == CurFnInfo->getX86ABIAVXLevel());
   assert(isa<CXXDestructorDecl>(MD) || // ignore dtor return types
          similar(CallFnInfo.getReturnInfo(), CallFnInfo.getReturnType(),
                  CurFnInfo->getReturnInfo(), CurFnInfo->getReturnType()));
@@ -988,8 +990,11 @@ llvm::GlobalVariable *CodeGenVTables::GenerateConstructionVTable(
       CGM.CreateOrReplaceCXXRuntimeVariable(Name, VTType, Linkage, Align);
 
   // dynamic_cast assumes the vtable address is unique; see
-  // https://github.com/llvm/llvm-project/pull/200108
-  if (!CGM.shouldEmitRTTI())
+  // https://github.com/llvm/llvm-project/pull/200108. The address is
+  // insignificant either when no RTTI is emitted or for a weak vtable on a
+  // target that may duplicate vtables. In those cases the vtable can be marked
+  // unnamed_addr.
+  if (!CGM.shouldEmitRTTI() || CGM.mayVTableBeDuplicated(VTable->getLinkage()))
     VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   llvm::Constant *RTTI = CGM.GetAddrOfRTTIDescriptor(
@@ -1204,6 +1209,13 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
   }
 
   llvm_unreachable("Invalid TemplateSpecializationKind!");
+}
+
+bool CodeGenModule::mayVTableBeDuplicated(
+    llvm::GlobalValue::LinkageTypes Linkage) const {
+  return getTarget().getVTableUniqueness() ==
+             VTableUniquenessKind::UniqueIfStrongLinkage &&
+         llvm::GlobalValue::isWeakForLinker(Linkage);
 }
 
 /// This is a callback from Sema to tell us that a particular vtable is

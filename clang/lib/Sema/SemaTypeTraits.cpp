@@ -1292,8 +1292,6 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
         Kind == clang::BTT_ReferenceBindsToTemporary ||
         Kind == clang::BTT_ReferenceConstructsFromTemporary ||
         Kind == clang::BTT_ReferenceConvertsFromTemporary;
-    if (UseRawObjectType && !Args[0]->getType()->isReferenceType())
-      return false;
 
     // Precondition: T and all types in the parameter pack Args shall be
     // complete types, (possibly cv-qualified) void, or arrays of
@@ -1310,7 +1308,8 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
 
     // Make sure the first argument is not incomplete nor a function type.
     QualType T = Args[0]->getType();
-    if (T->isIncompleteType() || T->isFunctionType())
+    if (T->isIncompleteType() || T->isFunctionType() ||
+        (UseRawObjectType && !T->isReferenceType()))
       return false;
 
     // Make sure the first argument is not an abstract type.

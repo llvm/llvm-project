@@ -87,13 +87,6 @@ functions:
     arguments:
       - type: time_t
       - type: time_t
-  - name: gettimeofday
-    standards:
-      - posix
-    return_type: int
-    arguments:
-      - type: struct timeval *
-      - type: void *
   - name: gmtime
     standards:
       - stdc

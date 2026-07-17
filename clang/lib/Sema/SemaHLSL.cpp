@@ -2993,6 +2993,11 @@ void DiagnoseHLSLAvailability::HandleFunctionOrMethodRef(FunctionDecl *FD,
 
 void DiagnoseHLSLAvailability::RunOnTranslationUnit(
     const TranslationUnitDecl *TU) {
+  const TargetInfo &TargetInfo = SemaRef.getASTContext().getTargetInfo();
+  std::string &EntryName = TargetInfo.getTargetOpts().HLSLEntry;
+  bool IsLibraryShader = TargetInfo.getTriple().getEnvironment() ==
+                         llvm::Triple::EnvironmentType::Library;
+  SourceLocation EntryLoc{};
 
   // Iterate over all shader entry functions and library exports, and for those
   // that have a body (definiton), run diag scan on each, setting appropriate
@@ -3023,6 +3028,17 @@ void DiagnoseHLSLAvailability::RunOnTranslationUnit(
 
       // shader entry point
       if (HLSLShaderAttr *ShaderAttr = FD->getAttr<HLSLShaderAttr>()) {
+        if (!IsLibraryShader && FD->getName() == EntryName) {
+          if (EntryLoc.isValid()) {
+            SemaRef.Diag(FD->getLocation(),
+                         diag::err_hlsl_ambiguous_entry_point)
+                << EntryName;
+            SemaRef.Diag(EntryLoc, diag::note_previous_declaration_as)
+                << EntryName;
+            return;
+          }
+          EntryLoc = FD->getLocation();
+        }
         SetShaderStageContext(ShaderAttr->getType());
         RunOnFunction(FD);
         continue;
@@ -3045,6 +3061,12 @@ void DiagnoseHLSLAvailability::RunOnTranslationUnit(
         continue;
       }
     }
+  }
+
+  if (!IsLibraryShader && EntryLoc.isInvalid()) {
+    SemaRef.Diag(TU->getLocation(), diag::err_hlsl_missing_entry_point)
+        << EntryName;
+    return;
   }
 }
 
@@ -3279,8 +3301,8 @@ NamedDecl *SemaHLSL::getConstantBufferConversionFunction(QualType Type,
 }
 
 std::optional<ExprResult>
-SemaHLSL::tryPerformConstantBufferConversion(ExprResult &BaseExpr) {
-  QualType BaseType = BaseExpr.get()->getType();
+SemaHLSL::tryPerformConstantBufferConversion(Expr *BaseExpr) {
+  QualType BaseType = BaseExpr->getType();
   const HLSLAttributedResourceType *ResTy =
       HLSLAttributedResourceType::findHandleTypeOnResource(
           BaseType.getTypePtr());
@@ -3297,7 +3319,7 @@ SemaHLSL::tryPerformConstantBufferConversion(ExprResult &BaseExpr) {
   auto *ConversionDecl =
       cast<CXXConversionDecl>(NamedConversionDecl->getUnderlyingDecl());
 
-  return SemaRef.BuildCXXMemberCallExpr(BaseExpr.get(), NamedConversionDecl,
+  return SemaRef.BuildCXXMemberCallExpr(BaseExpr, NamedConversionDecl,
                                         ConversionDecl,
                                         /*HadMultipleCandidates=*/false);
 }
@@ -4540,7 +4562,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyExpr);
     break;
   }
-  case Builtin::BI__builtin_hlsl_interlocked_add: {
+  case Builtin::BI__builtin_hlsl_interlocked_add:
+  case Builtin::BI__builtin_hlsl_interlocked_or: {
     // The builtin's prototype in Builtins.td is `void (...)`, so direct calls
     // to `__builtin_hlsl_interlocked_add` bypass argument checking entirely.
     // When reached via the synthesized `InterlockedAdd` overload set in
@@ -5152,7 +5175,7 @@ ExprResult SemaHLSL::ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg) {
 
   // Writebacks are performed with `=` binary operator, which allows for
   // overload resolution on writeback result expressions.
-  Res = SemaRef.ActOnBinOp(SemaRef.getCurScope(), Param->getBeginLoc(),
+  Res = SemaRef.ActOnBinOp(SemaRef.getCurScope(), Arg->getBeginLoc(),
                            tok::equal, ArgOpV, OpV);
 
   if (Res.isInvalid())

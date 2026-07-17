@@ -55,6 +55,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   IteratorModeling.cpp
   IteratorRangeChecker.cpp
   IvarInvalidationChecker.cpp
+  LifetimeModeling.cpp
   LLVMConventionsChecker.cpp
   LocalizationChecker.cpp
   MacOSKeychainAPIChecker.cpp
@@ -92,6 +93,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   PointerSubChecker.cpp
   PthreadLockChecker.cpp
   PutenvStackArrayChecker.cpp
+  ReportDanglingPtrDeref.cpp
   RetainCountChecker/RetainCountChecker.cpp
   RetainCountChecker/RetainCountDiagnostics.cpp
   ReturnPointerRangeChecker.cpp

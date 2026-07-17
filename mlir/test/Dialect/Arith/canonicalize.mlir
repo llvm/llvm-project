@@ -3005,6 +3005,65 @@ func.func @test_addf_rounding_mode(%arg0 : f32) -> (f32, f32, f32) {
 
 // -----
 
+// CHECK-LABEL: @test_addf_negf(
+//  CHECK-SAME: %[[ARG0:.+]]: f32, %[[ARG1:.+]]: f32
+func.func @test_addf_negf(%arg0 : f32, %arg1 : f32) -> (f32, f32) {
+  // CHECK-DAG:  %[[X:.+]] = arith.subf %[[ARG1]], %[[ARG0]] : f32
+  // CHECK-DAG:  %[[Y:.+]] = arith.subf %[[ARG0]], %[[ARG1]] : f32
+  // CHECK:      return %[[X]], %[[Y]]
+  %0 = arith.negf %arg0 : f32
+  %1 = arith.addf %0, %arg1 : f32
+  %2 = arith.negf %arg1 : f32
+  %3 = arith.addf %arg0, %2 : f32
+  return %1, %3 : f32, f32
+}
+
+// -----
+
+// CHECK-LABEL: @test_addf_negf_vec(
+//  CHECK-SAME: %[[ARG0:.+]]: vector<2xf64>, %[[ARG1:.+]]: vector<2xf64>
+func.func @test_addf_negf_vec(%arg0 : vector<2xf64>, %arg1 : vector<2xf64>)
+    -> (vector<2xf64>, vector<2xf64>) {
+  // CHECK-DAG:  %[[X:.+]] = arith.subf %[[ARG1]], %[[ARG0]] : vector<2xf64>
+  // CHECK-DAG:  %[[Y:.+]] = arith.subf %[[ARG0]], %[[ARG1]] : vector<2xf64>
+  // CHECK:      return %[[X]], %[[Y]]
+  %0 = arith.negf %arg0 : vector<2xf64>
+  %1 = arith.addf %0, %arg1 : vector<2xf64>
+  %2 = arith.negf %arg1 : vector<2xf64>
+  %3 = arith.addf %arg0, %2 : vector<2xf64>
+  return %1, %3 : vector<2xf64>, vector<2xf64>
+}
+
+// -----
+
+// CHECK-LABEL: @test_addf_negf_fastmath(
+//  CHECK-SAME: %[[X:.+]]: f32, %[[Y:.+]]: f32
+func.func @test_addf_negf_fastmath(%x : f32, %y : f32) -> (f32, f32) {
+  // CHECK-DAG:  %[[A:.+]] = arith.subf %[[Y]], %[[X]] fastmath<nnan,nsz> : f32
+  // CHECK-DAG:  %[[B:.+]] = arith.subf %[[Y]], %[[X]] fastmath<reassoc> : f32
+  // CHECK:      return %[[A]], %[[B]]
+  %n = arith.negf %x : f32
+  %0 = arith.addf %n, %y fastmath<nnan,nsz> : f32
+  %1 = arith.addf %y, %n fastmath<reassoc> : f32
+  return %0, %1 : f32, f32
+}
+
+// -----
+
+// CHECK-LABEL: @test_addf_negf_rounding_mode(
+//  CHECK-SAME: %[[X:.+]]: f32, %[[Y:.+]]: f32
+func.func @test_addf_negf_rounding_mode(%x : f32, %y : f32) -> (f32, f32) {
+  // CHECK-DAG:  %[[A:.+]] = arith.subf %[[Y]], %[[X]] downward : f32
+  // CHECK-DAG:  %[[B:.+]] = arith.subf %[[Y]], %[[X]] upward : f32
+  // CHECK:      return %[[A]], %[[B]]
+  %n = arith.negf %x : f32
+  %0 = arith.addf %n, %y downward : f32
+  %1 = arith.addf %y, %n upward : f32
+  return %0, %1 : f32, f32
+}
+
+// -----
+
 // CHECK-LABEL: @test_subf_rounding_mode(
 // CHECK-SAME: %[[ARG0:.+]]: f32
 func.func @test_subf_rounding_mode(%arg0 : f32) -> (f32, f32, f32, f32) {

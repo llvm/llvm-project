@@ -22,8 +22,14 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
+
+static cl::opt<bool>
+    LFIGuardElim("aarch64-lfi-guard-elim", cl::Hidden,
+                 cl::desc("Enable the LFI guard elimination optimization"),
+                 cl::init(true));
 
 namespace llvm::AArch64 {
 struct LFIVariantEntry {
@@ -150,6 +156,52 @@ static bool mayPrefetch(const MCInst &Inst) {
   }
 }
 
+static bool isAuthenticatedBranch(unsigned Opcode) {
+  switch (Opcode) {
+  case AArch64::BRAA:
+  case AArch64::BRAAZ:
+  case AArch64::BRAB:
+  case AArch64::BRABZ:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool isAuthenticatedCall(unsigned Opcode) {
+  switch (Opcode) {
+  case AArch64::BLRAA:
+  case AArch64::BLRAAZ:
+  case AArch64::BLRAB:
+  case AArch64::BLRABZ:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool isAuthenticatedReturn(unsigned Opcode) {
+  return Opcode == AArch64::RETAA || Opcode == AArch64::RETAB;
+}
+
+static bool isExceptionReturn(unsigned Opcode) {
+  return Opcode == AArch64::ERET || Opcode == AArch64::ERETAA ||
+         Opcode == AArch64::ERETAB;
+}
+
+static bool pacWritesLR(const MCInst &Inst) {
+  switch (Inst.getOpcode()) {
+  case AArch64::AUTIASP:
+  case AArch64::AUTIBSP:
+  case AArch64::AUTIAZ:
+  case AArch64::AUTIBZ:
+  case AArch64::XPACLRI:
+    return true;
+  default:
+    return false;
+  }
+}
+
 // User-mode DC/IC instructions that take a virtual address operand. Encoded as
 // SYSxt with op1=3, Cn=7, op2=1 where the Cm field selects the operation.
 static bool isVASysOp(const MCInst &Inst) {
@@ -245,14 +297,50 @@ MCRegister AArch64MCLFIRewriter::mayModifyReserved(const MCInst &Inst) const {
   return {};
 }
 
+void AArch64MCLFIRewriter::onLabel(const MCSymbol *, MCStreamer &Out) {
+  // Flush a deferred LR guard before the label, since the label is a potential
+  // branch target and code reached through it may use LR for control flow.
+  if (DeferredLRGuard && LastSTI) {
+    emitAddMask(AArch64::LR, AArch64::LR, Out, *LastSTI);
+    DeferredLRGuard = false;
+  }
+
+  // Invalidate guard state since the label is a potential branch target.
+  ActiveGuardReg = std::nullopt;
+}
+
+void AArch64MCLFIRewriter::finish(MCStreamer &Out) {
+  // Flush a deferred LR guard at the end of the stream.
+  if (DeferredLRGuard && LastSTI) {
+    emitAddMask(AArch64::LR, AArch64::LR, Out, *LastSTI);
+    DeferredLRGuard = false;
+  }
+}
+
 void AArch64MCLFIRewriter::emitInst(const MCInst &Inst, MCStreamer &Out,
                                     const MCSubtargetInfo &STI) {
+  // Invalidate the active guard if this instruction modifies the guarded
+  // register, modifies x28 itself, or may affect control flow.
+  if (ActiveGuardReg) {
+    const MCInstrDesc &Desc = InstInfo->get(Inst.getOpcode());
+    if (Desc.mayAffectControlFlow(Inst, *RegInfo) ||
+        mayModifyRegister(Inst, *ActiveGuardReg) ||
+        mayModifyRegister(Inst, getWRegFromXReg(*ActiveGuardReg)) ||
+        mayModifyRegister(Inst, LFIAddrReg))
+      ActiveGuardReg = std::nullopt;
+  }
+
   Out.emitInstruction(Inst, STI);
 }
 
 void AArch64MCLFIRewriter::emitAddMask(MCRegister Dest, MCRegister Src,
                                        MCStreamer &Out,
                                        const MCSubtargetInfo &STI) {
+  // If x28 already holds the guarded value of Src, this guard is redundant and
+  // can be skipped.
+  if (LFIGuardElim && Dest == LFIAddrReg && ActiveGuardReg == Src)
+    return;
+
   // add Dest, LFIBaseReg, W(Src), uxtw
   MCInst Inst;
   Inst.setOpcode(AArch64::ADDXrx);
@@ -262,6 +350,10 @@ void AArch64MCLFIRewriter::emitAddMask(MCRegister Dest, MCRegister Src,
   Inst.addOperand(
       MCOperand::createImm(AArch64_AM::getArithExtendImm(AArch64_AM::UXTW, 0)));
   emitInst(Inst, Out, STI);
+
+  // Record Src as the new active guard.
+  if (Dest == LFIAddrReg)
+    ActiveGuardReg = Src;
 }
 
 void AArch64MCLFIRewriter::emitBranch(unsigned Opcode, MCRegister Target,
@@ -407,7 +499,7 @@ void AArch64MCLFIRewriter::rewriteReturn(const MCInst &Inst, MCStreamer &Out,
 // modify x30
 // ->
 // modify x30
-// add x30, x27, w30, uxtw
+// add x30, x27, w30, uxtw (deferred)
 void AArch64MCLFIRewriter::rewriteLRModification(const MCInst &Inst,
                                                  MCStreamer &Out,
                                                  const MCSubtargetInfo &STI) {
@@ -416,7 +508,71 @@ void AArch64MCLFIRewriter::rewriteLRModification(const MCInst &Inst,
     rewriteLoadStore(Inst, Out, STI);
   else
     emitInst(Inst, Out, STI);
+
+  // Defer the LR guard until the next control-flow instruction or label. This
+  // keeps a signed return address intact so that an authentication instruction
+  // can run before the mask destroys the PAC bits.
+  DeferredLRGuard = true;
+}
+
+// retaa / retab
+// ->
+// autiasp / autibsp
+// add x30, x27, w30, uxtw
+// ret
+void AArch64MCLFIRewriter::rewriteAuthenticatedReturn(
+    const MCInst &Inst, MCStreamer &Out, const MCSubtargetInfo &STI) {
+  MCInst Auth;
+  Auth.setOpcode(Inst.getOpcode() == AArch64::RETAA ? AArch64::AUTIASP
+                                                    : AArch64::AUTIBSP);
+  emitInst(Auth, Out, STI);
+
   emitAddMask(AArch64::LR, AArch64::LR, Out, STI);
+  emitBranch(AArch64::RET, AArch64::LR, Out, STI);
+}
+
+// {braa,brab,braaz,brabz} xN[, xM]  (blra* for calls)
+// ->
+// {autia,autib,autiza,autizb} xN[, xM]
+// add x28, x27, wN, uxtw
+// {br,blr} x28
+void AArch64MCLFIRewriter::rewriteAuthenticatedBranchOrCall(
+    const MCInst &Inst, unsigned BranchOpcode, MCStreamer &Out,
+    const MCSubtargetInfo &STI) {
+  MCRegister TargetReg = Inst.getOperand(0).getReg();
+
+  // Select the authentication opcode for the target register.
+  MCInst Auth;
+  switch (Inst.getOpcode()) {
+  case AArch64::BRAA:
+  case AArch64::BLRAA:
+    Auth.setOpcode(AArch64::AUTIA);
+    break;
+  case AArch64::BRAB:
+  case AArch64::BLRAB:
+    Auth.setOpcode(AArch64::AUTIB);
+    break;
+  case AArch64::BRAAZ:
+  case AArch64::BLRAAZ:
+    Auth.setOpcode(AArch64::AUTIZA);
+    break;
+  case AArch64::BRABZ:
+  case AArch64::BLRABZ:
+    Auth.setOpcode(AArch64::AUTIZB);
+    break;
+  default:
+    llvm_unreachable("unexpected authenticated branch/call opcode");
+  }
+
+  Auth.addOperand(MCOperand::createReg(TargetReg)); // dst
+  Auth.addOperand(MCOperand::createReg(TargetReg)); // src (tied to dst)
+  if (Auth.getOpcode() == AArch64::AUTIA || Auth.getOpcode() == AArch64::AUTIB)
+    Auth.addOperand(Inst.getOperand(1)); // modifier
+  emitInst(Auth, Out, STI);
+
+  // Guard the authenticated target and branch/call through x28.
+  emitAddMask(LFIAddrReg, TargetReg, Out, STI);
+  emitBranch(BranchOpcode, LFIAddrReg, Out, STI);
 }
 
 // svc #0
@@ -775,6 +931,33 @@ void AArch64MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
   if (isVASysOp(Inst))
     return rewriteVASysOp(Inst, Out, STI);
 
+  if (isExceptionReturn(Inst.getOpcode())) {
+    error(Inst, "exception returns are not supported by LFI");
+    return;
+  }
+
+  // PAC authenticated returns expand to authenticate + guarded RET. The
+  // expansion emits its own LR guard, so discard any deferred guard: masking
+  // before the authentication would corrupt the signed return address.
+  if (isAuthenticatedReturn(Inst.getOpcode())) {
+    DeferredLRGuard = false;
+    return rewriteAuthenticatedReturn(Inst, Out, STI);
+  }
+
+  // Flush a deferred LR guard before any control-flow instruction, so that a
+  // modified LR is sandboxed before it can be used to transfer control.
+  if (DeferredLRGuard && (isReturn(Inst) || isIndirectBranch(Inst) ||
+                          isCall(Inst) || isBranch(Inst))) {
+    emitAddMask(AArch64::LR, AArch64::LR, Out, STI);
+    DeferredLRGuard = false;
+  }
+
+  // PAC authenticated branches/calls expand to authenticate + guarded branch.
+  if (isAuthenticatedBranch(Inst.getOpcode()))
+    return rewriteAuthenticatedBranchOrCall(Inst, AArch64::BR, Out, STI);
+  if (isAuthenticatedCall(Inst.getOpcode()))
+    return rewriteAuthenticatedBranchOrCall(Inst, AArch64::BLR, Out, STI);
+
   // Control flow.
   switch (Inst.getOpcode()) {
   case AArch64::RET:
@@ -788,8 +971,9 @@ void AArch64MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
   if (mayModifySP(Inst))
     return rewriteSPModification(Inst, Out, STI);
 
-  // Link register modification.
-  if (explicitlyModifiesRegister(Inst, AArch64::LR))
+  // Link register modification. This covers explicit writes to x30 as well as
+  // PAC instructions that write LR in place, which define LR implicitly.
+  if (explicitlyModifiesRegister(Inst, AArch64::LR) || pacWritesLR(Inst))
     return rewriteLRModification(Inst, Out, STI);
 
   // Memory access.
@@ -818,11 +1002,19 @@ bool llvm::isLFIPrePostMemAccess(unsigned Opcode) {
 
 bool AArch64MCLFIRewriter::rewriteInst(const MCInst &Inst, MCStreamer &Out,
                                        const MCSubtargetInfo &STI) {
-  // The guard prevents rewrite-recursion when we emit instructions from inside
-  // the rewriter (such instructions should not be rewritten).
+  // Invalidate guard state if the rewriter was manually disabled.
+  if (!Enabled)
+    ActiveGuardReg = std::nullopt;
+
+  // This recursion guard prevents rewrite-recursion when we emit instructions
+  // from inside the rewriter (such instructions should not be rewritten).
   if (!Enabled || Guard)
     return false;
   Guard = true;
+
+  // Record the subtarget so a deferred LR guard can be emitted from
+  // onLabel/finish, which are not given an MCSubtargetInfo.
+  LastSTI = &STI;
 
   doRewriteInst(Inst, Out, STI);
 

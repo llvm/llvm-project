@@ -22,7 +22,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <memory>
-#include <set>
 #include <system_error>
 
 namespace llvm {
@@ -132,6 +131,13 @@ public:
   virtual void setPartialProfile() {}
   virtual void setUseCtxSplitLayout() {}
 
+  void setFormatVersion(uint64_t V) {
+    assert(sampleprof::formatVersionIsSupported(V) &&
+           "Unsupported format version");
+    FormatVersion = V;
+  }
+  uint64_t getFormatVersion() const { return FormatVersion; }
+
 protected:
   SampleProfileWriter(std::unique_ptr<raw_ostream> &OS)
       : OutputStream(std::move(OS)) {}
@@ -162,6 +168,9 @@ protected:
 
   /// Profile format.
   SampleProfileFormat Format = SPF_None;
+
+  /// Format version to write.
+  uint64_t FormatVersion = sampleprof::DefaultVersion;
 };
 
 /// Sample-based profile writer (text format).
@@ -178,9 +187,7 @@ protected:
     return sampleprof_error::success;
   }
 
-  void setUseCtxSplitLayout() override {
-    MarkFlatProfiles = true;
-  }
+  void setUseCtxSplitLayout() override { MarkFlatProfiles = true; }
 
 private:
   /// Indent level to use when writing.
@@ -216,8 +223,6 @@ protected:
   virtual std::error_code writeContextIdx(const SampleContext &Context);
   std::error_code writeNameIdx(FunctionId FName);
   std::error_code writeBody(const FunctionSamples &S);
-  inline void stablizeNameTable(MapVector<FunctionId, uint32_t> &NameTable,
-                                std::set<FunctionId> &V);
 
   MapVector<FunctionId, uint32_t> NameTable;
 
@@ -322,6 +327,7 @@ public:
 class LLVM_ABI SampleProfileWriterExtBinaryBase
     : public SampleProfileWriterBinary {
   using SampleProfileWriterBinary::SampleProfileWriterBinary;
+
 public:
   std::error_code write(const SampleProfileMap &ProfileMap) override;
 
