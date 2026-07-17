@@ -4,7 +4,7 @@
 # Test that only one copy generated for all users of mfma in the same block.
 
 --- |
-  define void @mfma_no_multiple_copies() #0 { ret void }
+  define amdgpu_kernel void @mfma_no_multiple_copies() #0 { ret void }
   attributes #0 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64" }
 ...
 
@@ -41,8 +41,8 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   KILL %p0, %p1, %p2, %p3, %p4, %p5, %p6, %p7
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:areg_128_align2 = V_MFMA_F32_16X16X32_F16_e64 undef %s0:vreg_128_align2, undef %s1:vreg_128_align2, %m2, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_128_align2 = COPY [[COPY]]
+  ; CHECK-NEXT:   %m4:areg_128_align2 = V_MFMA_F32_16X16X32_F16_e64 undef %s0:vreg_128_align2, undef %s1:vreg_128_align2, %m2, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_128_align2 = COPY %m4
   ; CHECK-NEXT:   %out1:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 undef %s0:vreg_128_align2, undef %s1:vreg_128_align2, [[COPY1]], 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   %out2:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 undef %s1:vreg_128_align2, undef %s0:vreg_128_align2, [[COPY1]], 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   S_ENDPGM 0, implicit %out1, implicit %out2
@@ -73,10 +73,10 @@ body: |
 
   bb.2:
 
-    %m3:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 undef %s0:vreg_128_align2, undef %s1:vreg_128_align2, %m2, 0, 0, 0, implicit $mode, implicit $exec
+    %m4:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 undef %s0:vreg_128_align2, undef %s1:vreg_128_align2, %m2, 0, 0, 0, implicit $mode, implicit $exec
 
-    %out1:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 undef %s0:vreg_128_align2, undef %s1:vreg_128_align2, %m3, 0, 0, 0, implicit $mode, implicit $exec
-    %out2:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 undef %s1:vreg_128_align2, undef %s0:vreg_128_align2, %m3, 0, 0, 0, implicit $mode, implicit $exec
+    %out1:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 undef %s0:vreg_128_align2, undef %s1:vreg_128_align2, %m4, 0, 0, 0, implicit $mode, implicit $exec
+    %out2:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 undef %s1:vreg_128_align2, undef %s0:vreg_128_align2, %m4, 0, 0, 0, implicit $mode, implicit $exec
 
     KILL %p0, %p1, %p2, %p3, %p4, %p5, %p6, %p7
 
