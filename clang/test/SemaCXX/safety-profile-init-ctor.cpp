@@ -294,3 +294,29 @@ struct AnonUnionUnnamedBitFieldOnly {
   };
   AnonUnionUnnamedBitFieldOnly() {} // OK: nothing to initialize
 };
+
+// A std::byte-only anonymous union mirrors the scalar std::byte exemption
+// (paper §4.5): whichever member is active may be left uninitialized, so
+// there is nothing to acknowledge -- matching the anonymous-struct control,
+// which the per-member walk already exempts. A non-byte member alongside
+// keeps the union flagged.
+namespace std { enum class byte : unsigned char {}; }
+struct AnonUnionAllByte {
+  union {
+    std::byte b;
+  };
+  AnonUnionAllByte() {} // OK: std::byte may be left uninitialized
+};
+struct AnonStructByteControl {
+  struct {
+    std::byte b;
+  };
+  AnonStructByteControl() {} // OK: already exempt via the member walk
+};
+struct AnonUnionMixedByte {
+  union { // expected-note {{anonymous union declared here}}
+    std::byte b;
+    int i;
+  };
+  AnonUnionMixedByte() {} // expected-error {{constructor does not initialize any member of the anonymous union under profile 'std::init'}}
+};

@@ -554,14 +554,26 @@ static bool defaultInitLeavesScalarIndeterminateImpl(
     if (RD->hasUserProvidedDefaultConstructor())
       return false;
     bool AnyMember = false;
+    bool AllStdByte = true;
     for (const FieldDecl *F : RD->fields()) {
       if (F->isUnnamedBitField())
         continue;
       AnyMember = true;
       if (F->hasInClassInitializer())
         return false;
+      if (!Ctx.getBaseElementType(F->getType())->isStdByteType())
+        AllStdByte = false;
     }
-    return AnyMember;
+    // A union of only std::byte members (arrays included) mirrors the scalar
+    // exemption above: the profile permits std::byte to be uninitialized
+    // (paper §4.5), so whichever member is active needs no acknowledgement.
+    if (!AnyMember || AllStdByte)
+      return false;
+    // Deliberately not exempted: a member whose type avoids indeterminacy
+    // only through a trusted user-provided default constructor (union {
+    // Trusted t; }) -- the union's default-initialization activates no
+    // member, so that constructor never runs.
+    return true;
   }
   // Break cycles from ill-formed self-containing types (e.g. struct S {S x;}).
   if (!Visited.insert(RD->getCanonicalDecl()).second)

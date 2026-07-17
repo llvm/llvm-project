@@ -82,6 +82,19 @@ void test_bitfield_only_union() {
   (void)a; (void)b;
 }
 
+// A union of only std::byte members (arrays included) mirrors the scalar
+// std::byte exemption (paper §4.5): whichever member is active may be left
+// uninitialized, so a plain declaration is accepted. A non-byte member
+// alongside keeps the union flagged.
+namespace std { enum class byte : unsigned char {}; }
+union AllByte { std::byte b; std::byte arr[4]; };
+union MixedByte { std::byte b; int i; };
+void test_byte_union() {
+  AllByte a;   // OK: std::byte may be left uninitialized
+  MixedByte b; // expected-error {{variable 'b' of union type must be initialized under profile 'std::init'}}
+  (void)a; (void)b;
+}
+
 // A union data member that a constructor leaves uninitialized is diagnosed; one
 // initialized via its member-initializer is accepted.
 struct HasUnionMember {
