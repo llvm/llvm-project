@@ -17,6 +17,9 @@
 // CHECK-SAME: "-exception-model=dwarf"
 // CHECK:      "{{.*}}ld{{(\.exe)?}}"
 // CHECK-SAME: "-m" "i386pe"
+// CHECK-SAME: "{{.*}}{{/|\\\\}}crt0.o"
+// CHECK-SAME: "{{.*}}i686-pc-cygwin{{/|\\\\}}{{[0-9.]*}}{{/|\\\\}}crtbegin.o"
+// CHECK-SAME: "{{.*}}i686-pc-cygwin{{/|\\\\}}{{[0-9.]*}}{{/|\\\\}}crtend.o"
 
 // RUN: %clang -### %s --target=i686-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
 // RUN:   --stdlib=platform -static 2>&1 | FileCheck --check-prefix=CHECK-STATIC %s
@@ -37,6 +40,10 @@
 // RUN:   | FileCheck --check-prefix=CHECK-CROSS %s
 // CHECK-CROSS: "-cc1" "-triple" "i686-pc-windows-cygnus"
 // CHECK-CROSS: "{{.*}}/Inputs/basic_cross_cygwin_tree/usr/lib/gcc/i686-pc-msys/10/../../../../i686-pc-msys/bin{{(/|\\\\)}}as" "--32"
+// CHECK-CROSS:      "{{.*}}ld{{(\.exe)?}}"
+// CHECK-CROSS-SAME: "{{.*}}{{/|\\\\}}crt0.o"
+// CHECK-CROSS-SAME: "{{.*}}i686-pc-msys{{/|\\\\}}{{[0-9.]*}}{{/|\\\\}}crtbegin.o"
+// CHECK-CROSS-SAME: "{{.*}}i686-pc-msys{{/|\\\\}}{{[0-9.]*}}{{/|\\\\}}crtend.o"
 
 // RUN: %clang -### %s --target=x86_64-pc-windows-cygnus --sysroot=%S/Inputs/basic_cygwin_tree \
 // RUN:   -resource-dir=%S/Inputs/resource_dir \
@@ -57,7 +64,10 @@
 // CHECK-64-SAME: "-exception-model=seh"
 // CHECK-64:      "{{.*}}ld{{(\.exe)?}}"
 // CHECK-64-SAME: "-m" "i386pep"
+// CHECK-64-SAME: "{{.*}}{{/|\\\\}}crt0.o"
+// CHECK-64-SAME: "{{.*}}x86_64-pc-msys{{/|\\\\}}{{[0-9.]*}}{{/|\\\\}}crtbegin.o"
 // CHECK-64-SAME: "--disable-high-entropy-va"
+// CHECK-64-SAME: "{{.*}}x86_64-pc-msys{{/|\\\\}}{{[0-9.]*}}{{/|\\\\}}crtend.o"
 
 // RUN: %clang -### %s --target=x86_64-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
 // RUN:   --stdlib=platform -static 2>&1 | FileCheck --check-prefix=CHECK-64-STATIC %s
@@ -78,6 +88,10 @@
 // RUN:   | FileCheck --check-prefix=CHECK-64-CROSS %s
 // CHECK-64-CROSS: "-cc1" "-triple" "x86_64-pc-windows-cygnus"
 // CHECK-64-CROSS: "{{.*}}/Inputs/basic_cross_cygwin_tree/usr/lib/gcc/x86_64-pc-cygwin/10/../../../../x86_64-pc-cygwin/bin{{(/|\\\\)}}as" "--64"
+// CHECK-64-CROSS:      "{{.*}}ld{{(\.exe)?}}"
+// CHECK-64-CROSS-SAME: "{{.*}}{{/|\\\\}}crt0.o"
+// CHECK-64-CROSS-SAME: "{{.*}}x86_64-pc-cygwin{{/|\\\\}}{{[0-9.]*}}{{/|\\\\}}crtbegin.o"
+// CHECK-64-CROSS-SAME: "{{.*}}x86_64-pc-cygwin{{/|\\\\}}{{[0-9.]*}}{{/|\\\\}}crtend.o"
 
 // RUN: %clang -### %s --target=x86_64-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
 // RUN:   -mdll 2>&1 | FileCheck --check-prefix=CHECK-64-DLL %s
@@ -116,17 +130,14 @@
 // CHECK-ASLR-DEFAULT:      "{{.*}}ld{{(\.exe)?}}"
 // CHECK-ASLR-DEFAULT-NOT:  "--disable-high-entropy-va"
 
+// RUN: %clang -### %s --target=i686-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
+// RUN:   2>&1 | FileCheck --check-prefix=CHECK-NXCOMPAT-DEFAULT %s
+// CHECK-NXCOMPAT-DEFAULT:      "{{.*}}ld{{(\.exe)?}}"
+// CHECK-NXCOMPAT-DEFAULT-SAME: "--disable-nxcompat"
+
 // RUN: %clang -### %s --target=x86_64-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
 // RUN:   2>&1 | FileCheck --check-prefix=CHECK-64-ASLR-DEFAULT %s
 // CHECK-64-ASLR-DEFAULT:      "{{.*}}ld{{(\.exe)?}}"
-// CHECK-64-ASLR-DEFAULT-SAME: "--wrap=_Znwm"
-// CHECK-64-ASLR-DEFAULT-SAME: "--wrap=_Znam"
-// CHECK-64-ASLR-DEFAULT-SAME: "--wrap=_ZdlPv"
-// CHECK-64-ASLR-DEFAULT-SAME: "--wrap=_ZdaPv"
-// CHECK-64-ASLR-DEFAULT-SAME: "--wrap=_ZnwmRKSt9nothrow_t"
-// CHECK-64-ASLR-DEFAULT-SAME: "--wrap=_ZnamRKSt9nothrow_t"
-// CHECK-64-ASLR-DEFAULT-SAME: "--wrap=_ZdlPvRKSt9nothrow_t"
-// CHECK-64-ASLR-DEFAULT-SAME: "--wrap=_ZdaPvRKSt9nothrow_t"
 // CHECK-64-ASLR-DEFAULT-SAME: "--disable-high-entropy-va"
 // CHECK-64-ASLR-DEFAULT-SAME: "--disable-nxcompat"
 
@@ -141,3 +152,15 @@
 // CHECK-WRAP-SAME: "--wrap=_ZnajRKSt9nothrow_t"
 // CHECK-WRAP-SAME: "--wrap=_ZdlPvRKSt9nothrow_t"
 // CHECK-WRAP-SAME: "--wrap=_ZdaPvRKSt9nothrow_t"
+
+// RUN: %clang -### %s --target=x86_64-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
+// RUN:   2>&1 | FileCheck --check-prefix=CHECK-64-WRAP %s
+// CHECK-64-WRAP:      "{{.*}}ld{{(\.exe)?}}"
+// CHECK-64-WRAP-SAME: "--wrap=_Znwm"
+// CHECK-64-WRAP-SAME: "--wrap=_Znam"
+// CHECK-64-WRAP-SAME: "--wrap=_ZdlPv"
+// CHECK-64-WRAP-SAME: "--wrap=_ZdaPv"
+// CHECK-64-WRAP-SAME: "--wrap=_ZnwmRKSt9nothrow_t"
+// CHECK-64-WRAP-SAME: "--wrap=_ZnamRKSt9nothrow_t"
+// CHECK-64-WRAP-SAME: "--wrap=_ZdlPvRKSt9nothrow_t"
+// CHECK-64-WRAP-SAME: "--wrap=_ZdaPvRKSt9nothrow_t"
