@@ -121,6 +121,20 @@ void MipsInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     printSaveRestore(MI, STI, O);
     O << "\n";
     return;
+  case Mips::SAVE16_NM:
+  case Mips::SAVE_NM:
+    O << "\tsave\t";
+    printSaveRestore(MI, STI, O);
+    return;
+  case Mips::RESTORE_NM:
+    O << "\trestore\t";
+    printSaveRestore(MI, STI, O);
+    return;
+  case Mips::RESTOREJRC16_NM:
+  case Mips::RESTOREJRC_NM:
+    O << "\trestore.jrc\t";
+    printSaveRestore(MI, STI, O);
+    return;
   }
 
   // Try to print any aliases first.
@@ -195,16 +209,26 @@ void MipsInstPrinter::printBranchOperand(const MCInst *MI, uint64_t Address,
   }
 }
 
-template <unsigned Bits, unsigned Offset>
+template <unsigned Bits, unsigned Offset, unsigned Base>
 void MipsInstPrinter::printUImm(const MCInst *MI, int opNum,
                                 const MCSubtargetInfo &STI, raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(opNum);
   if (MO.isImm()) {
     uint64_t Imm = MO.getImm();
     Imm -= Offset;
-    Imm &= (1 << Bits) - 1;
+    Imm &= (1ull << Bits) - 1;
     Imm += Offset;
-    markup(O, Markup::Immediate) << formatImm(Imm);
+
+    switch (Base) {
+    case 10:
+      markup(O, Markup::Immediate) << formatImm(Imm);
+      break;
+    case 16:
+      markup(O, Markup::Immediate) << formatHex(Imm);
+      break;
+    default:
+      llvm_unreachable("Unhandled base for output format!");
+    }
     return;
   }
 
@@ -355,4 +379,22 @@ void MipsInstPrinter::printRegisterList(const MCInst *MI, int opNum,
       O << ", ";
     printRegName(O, MI->getOperand(i).getReg());
   }
+}
+
+void MipsInstPrinter::printNanoMipsRegisterList(const MCInst *MI, int OpNum,
+                                                const MCSubtargetInfo &STI,
+                                                raw_ostream &O) {
+  for (unsigned I = OpNum; I < MI->getNumOperands(); I++) {
+    O << ", ";
+    printRegName(O, MI->getOperand(I).getReg());
+  }
+}
+
+void MipsInstPrinter::printHi20(const MCInst *MI, int OpNum,
+                                const MCSubtargetInfo &STI, raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+  if (MO.isImm())
+    O << "%hi(" << formatHex(MO.getImm() << 12) << ")";
+  else
+    printOperand(MI, OpNum, STI, O);
 }

@@ -327,7 +327,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: andi:
-# CHECK: andi $a0, $a1, 15 # encoding: [0x85,0x80,0x0f,0x20]
+# CHECK: andi $a0, $a1, 0xf # encoding: [0x85,0x80,0x0f,0x20]
 name: andi
 tracksRegLiveness: false
 body: |
@@ -336,7 +336,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: lui:
-# CHECK: lui $a0, 15 # encoding: [0x80,0xe0,0x00,0xf0]
+# CHECK: lui $a0, %hi(0xf000) # encoding: [0x80,0xe0,0x00,0xf0]
 name: lui
 tracksRegLiveness: false
 body: |
@@ -345,7 +345,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: ori:
-# CHECK: ori $a0, $a1, 15 # encoding: [0x85,0x80,0x0f,0x00]
+# CHECK: ori $a0, $a1, 0xf # encoding: [0x85,0x80,0x0f,0x00]
 name: ori
 tracksRegLiveness: false
 body: |
@@ -417,7 +417,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: xori:
-# CHECK: xori $a0, $a1, 15 # encoding: [0x85,0x80,0x0f,0x10]
+# CHECK: xori $a0, $a1, 0xf # encoding: [0x85,0x80,0x0f,0x10]
 name: xori
 tracksRegLiveness: false
 body: |
@@ -502,7 +502,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: addiupc:
-# CHECK: addiupc $a0, 4 # encoding: [0x80,0x04,0x00,0x00]
+# CHECK: addiupc $a0, 0x4 # encoding: [0x80,0x04,0x00,0x00]
 name: addiupc
 tracksRegLiveness: false
 body: |

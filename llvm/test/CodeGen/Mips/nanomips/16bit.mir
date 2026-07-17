@@ -40,7 +40,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: andi16:
-# CHECK: andi $a0, $a1, 3 # encoding: [0x53,0xf2]
+# CHECK: andi $a0, $a1, 0x3 # encoding: [0x53,0xf2]
 name: andi16
 tracksRegLiveness: false
 body: |
@@ -49,7 +49,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: break16:
-# CHECK: break 3 # encoding: [0x13,0x10]
+# CHECK: break 0x3 # encoding: [0x13,0x10]
 name: break16
 tracksRegLiveness: false
 body: |
@@ -94,7 +94,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: sdbbp16:
-# CHECK: sdbbp 3 # encoding: [0x1b,0x10]
+# CHECK: sdbbp 0x3 # encoding: [0x1b,0x10]
 name: sdbbp16
 tracksRegLiveness: false
 body: |
@@ -121,7 +121,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: syscall16:
-# CHECK: syscall 3 # encoding: [0x0b,0x10]
+# CHECK: syscall 0x3 # encoding: [0x0b,0x10]
 name: syscall16
 tracksRegLiveness: false
 body: |
@@ -392,7 +392,7 @@ body: |
 # --- save / restore ---
 ---
 # CHECK-LABEL: restorejrc16:
-# CHECK: restore.jrc 00 # encoding: [0x00,0x1d]
+# CHECK: restore.jrc 0, 0 # encoding: [0x00,0x1d]
 name: restorejrc16
 tracksRegLiveness: false
 body: |
@@ -401,7 +401,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: save16:
-# CHECK: save 00 # encoding: [0x00,0x1c]
+# CHECK: save 0, 0 # encoding: [0x00,0x1c]
 name: save16
 tracksRegLiveness: false
 body: |

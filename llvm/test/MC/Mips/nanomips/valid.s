@@ -16,6 +16,14 @@
                             # CHECK-NEXT: # <MCInst #{{.*}} SUBu16_NM
                             # DISAS: {{.*}}: e9 b3  subu $a0, $a2, $a3
 
+    # reg4-reg4 arithmetic, 16-bit
+    addu    $a1, $a1, $a7   # CHECK: addu $a1, $a1, $a7 # encoding: [0xa3,0x3c]
+                            # CHECK-NEXT: # <MCInst #{{.*}} ADDu4x4_NM
+                            # DISAS: {{.*}}: a3 3c  addu $a1, $a1, $a7
+    mul $s2, $s2, $a3       # CHECK: mul $s2, $s2, $a3  # encoding: [0x4f,0x3e]
+                            # CHECK-NEXT: # <MCInst #{{.*}} MUL4x4_NM
+                            # DISAS: {{.*}}: 4f 3e  mul $s2, $s2, $a3
+
     # reg-reg arithmetic, 32-bit
     add $a1, $a2, $a3       # CHECK: add $a1, $a2, $a3  # encoding: [0xe6,0x20,0x10,0x29]
                             # CHECK-NEXT: # <MCInst #{{.*}} ADD_NM
@@ -57,6 +65,15 @@
                             # DISAS: {{.*}} 72 20 d8 29     modu    $a1, $s2, $t5
 
     # reg-reg logic, 16-bit
+    and $a1, $a3, $a1       # CHECK: and $a1, $a3, $a1  # encoding: [0xf8,0x52]
+                            # CHECK-NEXT: # <MCInst #{{.*}} AND16_NM
+                            # DISAS: {{.*}}  f8 52          and $a1, $a3, $a1
+    or  $s2, $a3, $s2       # CHECK: or $s2, $a3, $s2   # encoding: [0x7c,0x51]
+                            # CHECK-NEXT: # <MCInst #{{.*}} OR16_NM
+                            # DISAS: {{.*}}  7c 51          or  $s2, $a3, $s2
+    xor $a3, $s3, $a3       # CHECK: xor $a3, $s3, $a3  # encoding: [0xb4,0x53]
+                            # CHECK-NEXT: # <MCInst #{{.*}} XOR16_NM
+                            # DISAS: {{.*}}  b4 53          xor $a3, $s3, $a3
     not $a3, $s3            # CHECK: not $a3, $s3       # encoding: [0xb0,0x53]
                             # CHECK-NEXT: # <MCInst #{{.*}} NOT16_NM
                             # DISAS: {{.*}}  b0 53          not $a3, $s3
@@ -105,6 +122,55 @@
     srl $s1, $a3, 8         # CHECK: srl $s1, $a3, 8    # encoding: [0xf8,0x30]
                             # CHECK-NEXT: # <MCInst #{{.*}} SRL16_NM
                             # DISAS: {{.*}}  f8 30          srl $s1, $a3, 8{{$}}
+    andi    $a0, $a1, 0     # CHECK: andi $a0, $a1, 0x0 # encoding: [0x50,0xf2]
+                            # CHECK-NEXT: # <MCInst #{{.*}} ANDI16_NM
+                            # DISAS: {{.*}}  50 f2          andi    $a0, $a1, 0x0{{$}}
+    andi    $a1, $a2, 1     # CHECK: andi $a1, $a2, 0x1 # encoding: [0xe1,0xf2]
+                            # CHECK-NEXT: # <MCInst #{{.*}} ANDI16_NM
+                            # DISAS: {{.*}}  e1 f2          andi    $a1, $a2, 0x1{{$}}
+    andi    $a2, $a3, 6     # CHECK: andi $a2, $a3, 0x6 # encoding: [0x76,0xf3]
+                            # CHECK-NEXT: # <MCInst #{{.*}} ANDI16_NM
+                            # DISAS: {{.*}}  76 f3          andi    $a2, $a3, 0x6{{$}}
+    andi    $s3, $a3, 0xe   # CHECK: andi $s3, $a3, 0xe # encoding: [0xfe,0xf1]
+                            # CHECK-NEXT: # <MCInst #{{.*}} ANDI16_NM
+                            # DISAS: {{.*}}  fe f1          andi    $s3, $a3, 0xe{{$}}
+
+    # reg-imm logic, 32-bit
+    andi    $a4, $a1, 0     # CHECK: andi $a4, $a1, 0x0 # encoding: [0x05,0x81,0x00,0x20]
+                            # CHECK-NEXT: # <MCInst #{{.*}} ANDI_NM
+                            # DISAS: {{.*}}  05 81 00 20    andi    $a4, $a1, 0x0{{$}}
+    andi    $a1, $t2, 1     # CHECK: andi $a1, $t2, 0x1 # encoding: [0xae,0x80,0x01,0x20]
+                            # CHECK-NEXT: # <MCInst #{{.*}} ANDI_NM
+                            # DISAS: {{.*}}  ae 80 01 20    andi    $a1, $t2, 0x1{{$}}
+    andi    $a2, $t3, 6     # CHECK: andi $a2, $t3, 0x6 # encoding: [0xcf,0x80,0x06,0x20]
+                            # CHECK-NEXT: # <MCInst #{{.*}} ANDI_NM
+                            # DISAS: {{.*}}  cf 80 06 20    andi    $a2, $t3, 0x6{{$}}
+    andi    $a6, $s0, 0xff  # CHECK: andi $a6, $s0, 0xff    # encoding: [0x50,0x81,0xff,0x20]
+                            # CHECK-NEXT: # <MCInst #{{.*}} ANDI_NM
+                            # DISAS: {{.*}}  50 81 ff 20    andi    $a6, $s0, 0xff{{$}}
+    andi    $s3, $a4, 0xe   # CHECK: andi $s3, $a4, 0xe # encoding: [0x68,0x82,0x0e,0x20]
+                            # CHECK-NEXT: # <MCInst #{{.*}} ANDI_NM
+                            # DISAS: {{.*}}  68 82 0e 20    andi    $s3, $a4, 0xe{{$}}
+    andi    $s2, $t0, 0xf   # CHECK: andi $s2, $t0, 0xf # encoding: [0x4c,0x82,0x0f,0x20]
+                            # CHECK-NEXT: # <MCInst #{{.*}} ANDI_NM
+                            # DISAS: {{.*}}  4c 82 0f 20    andi    $s2, $t0, 0xf{{$}}
+    andi    $a3, $s3, 12    # CHECK: andi $a3, $s3, 0xc # encoding: [0xf3,0x80,0x0c,0x20]
+                            # CHECK-NEXT: # <MCInst #{{.*}} ANDI_NM
+                            # DISAS: {{.*}}  f3 80 0c 20    andi    $a3, $s3, 0xc{{$}}
+    andi    $a1, $s2, 13    # CHECK: andi $a1, $s2, 0xd # encoding: [0xb2,0x80,0x0d,0x20]
+                            # CHECK-NEXT: # <MCInst #{{.*}} ANDI_NM
+                            # DISAS: {{.*}}  b2 80 0d 20    andi    $a1, $s2, 0xd{{$}}
+    andi    $a2, $s1, 16    # CHECK: andi $a2, $s1, 0x10    # encoding: [0xd1,0x80,0x10,0x20]
+                            # CHECK-NEXT: # <MCInst #{{.*}} ANDI_NM
+                            # DISAS: {{.*}}  d1 80 10 20    andi    $a2, $s1, 0x10{{$}}
+    ori $a1, $s5, 0x1       # CHECK: ori $a1, $s5, 0x1  # encoding: [0xb5,0x80,0x01,0x00]
+                            # CHECK-NEXT: # <MCInst #{{.*}} ORI_NM
+                            # DISAS: {{.*}}  b5 80 01 00    ori $a1, $s5, 0x1{{$}}
+    xori    $t1, $s2, 0xfff # CHECK: xori $t1, $s2, 0xfff   # encoding: [0xb2,0x81,0xff,0x1f]
+                            # CHECK-NEXT: # <MCInst #{{.*}} XORI_NM
+                            # DISAS: {{.*}}  b2 81 ff 1f    xori    $t1, $s2, 0xfff{{$}}
+
+    # reg-imm bit-wise, 32-bit
     slti    $a1, $s2, 0xff  # CHECK: slti $a1, $s2, 255 # encoding: [0xb2,0x80,0xff,0x40]
                             # CHECK-NEXT: # <MCInst #{{.*}} SLTI_NM
                             # DISAS: {{.*}}  b2 80 ff 40    slti    $a1, $s2, 255{{$}}
@@ -329,6 +395,51 @@
                 # CHECK-NEXT: # <MCInst #{{.*}} EHB_NM
                 # DISAS: {{.*}}  00 80 03 c0    ehb
 
+    sigrie 0        # CHECK: sigrie 0x0 # encoding: [0x00,0x00,0x00,0x00]
+                    # CHECK-NEXT: # <MCInst #{{.*}} SIGRIE_NM
+                    # DISAS: {{.*}}  00 00 00 00    sigrie  0x0{{$}}
+    sigrie 0xffff   # CHECK: sigrie 0xffff # encoding: [0x00,0x00,0xff,0xff]
+                    # CHECK-NEXT: # <MCInst #{{.*}} SIGRIE_NM
+                    # DISAS: {{.*}}  00 00 ff ff    sigrie  0xffff{{$}}
+    sigrie 0x7ffff  # CHECK: sigrie 0x7ffff # encoding: [0x07,0x00,0xff,0xff]
+                    # CHECK-NEXT: # <MCInst #{{.*}} SIGRIE_NM
+                    # DISAS: {{.*}}  07 00 ff ff    sigrie  0x7ffff{{$}}
+    sdbbp 0         # CHECK: sdbbp  0x0 # encoding: [0x18,0x10]
+                    # CHECK-NEXT: # <MCInst #{{.*}} SDBBP16_NM
+                    # DISAS: {{.*}}  18 10          sdbbp 0x0{{$}}
+    sdbbp 7         # CHECK: sdbbp  0x7 # encoding: [0x1f,0x10]
+                    # CHECK-NEXT: # <MCInst #{{.*}} SDBBP16_NM
+                    # DISAS: {{.*}}  1f 10          sdbbp   0x7{{$}}
+    sdbbp 8         # CHECK: sdbbp  0x8 # encoding: [0x18,0x00,0x08,0x00]
+                    # CHECK-NEXT: # <MCInst #{{.*}} SDBBP_NM
+                    # DISAS: {{.*}}  18 00 08 00    sdbbp   0x8{{$}}
+    sdbbp 0x7ffff   # CHECK: sdbbp  0x7ffff # encoding: [0x1f,0x00,0xff,0xff]
+                    # CHECK-NEXT: # <MCInst #{{.*}} SDBBP_NM
+                    # DISAS: {{.*}}  1f 00 ff ff    sdbbp   0x7ffff{{$}}
+    break 0         # CHECK: break  0x0 # encoding: [0x10,0x10]
+                    # CHECK-NEXT: # <MCInst #{{.*}} BREAK16_NM
+                    # DISAS: {{.*}}  10 10          break   0x0{{$}}
+    break 7         # CHECK: break  0x7 # encoding: [0x17,0x10]
+                    # CHECK-NEXT: # <MCInst #{{.*}} BREAK16_NM
+                    # DISAS: {{.*}}  17 10          break   0x7{{$}}
+    break 8         # CHECK: break  0x8 # encoding: [0x10,0x00,0x08,0x00]
+                    # CHECK-NEXT: # <MCInst #{{.*}} BREAK_NM
+                    # DISAS: {{.*}}  10 00 08 00    break   0x8{{$}}
+    break 0x7ffff   # CHECK: break  0x7ffff # encoding: [0x17,0x00,0xff,0xff]
+                    # CHECK-NEXT: # <MCInst #{{.*}} BREAK_NM
+                    # DISAS: {{.*}}  17 00 ff ff    break   0x7ffff{{$}}
+    syscall 0       # CHECK: syscall 0x0 # encoding: [0x08,0x10]
+                    # CHECK-NEXT: # <MCInst #{{.*}} SYSCALL16_NM
+                    # DISAS: {{.*}}  08 10          syscall 0x0{{$}}
+    syscall 3       # CHECK: syscall 0x3 # encoding: [0x0b,0x10]
+                    # CHECK-NEXT: # <MCInst #{{.*}} SYSCALL16_NM
+                    # DISAS: {{.*}}  0b 10          syscall 0x3{{$}}
+    syscall 4       # CHECK: syscall 0x4 # encoding: [0x08,0x00,0x04,0x00]
+                    # CHECK-NEXT: # <MCInst #{{.*}} SYSCALL_NM
+                    # DISAS: {{.*}}  08 00 04 00    syscall 0x4{{$}}
+    syscall 0x3ffff # CHECK: syscall 0x3ffff # encoding: [0x0b,0x00,0xff,0xff]
+                    # CHECK-NEXT: # <MCInst #{{.*}} SYSCALL_NM
+                    # DISAS: {{.*}}  0b 00 ff ff    syscall 0x3ffff{{$}}
     rdpgpr $a3, $s7 # CHECK: rdpgpr $a3, $s7 # encoding: [0xf7,0x20,0x7f,0xe1]
                     # CHECK-NEXT: # <MCInst #{{.*}} RDPGPR_NM
                     # DISAS: {{.*}}  f7 20 7f e1    rdpgpr  $a3, $s7
@@ -345,6 +456,132 @@
     rdhwr   $a0, $29, 0     # CHECK: rdhwr $a0, $29, 0  # encoding: [0x9d,0x20,0xc0,0x01]
                             # CHECK-NEXT: # <MCInst #{{.*}} RDHWR_NM
                             # DISAS: {{.*}}  9d 20 c0 01    rdhwr   $a0, $29, 0{{$}}
+
+    # 16-bit SAVE/RESTORE[.JRC]
+    save    32, $ra                     # CHECK: save 32, $ra # encoding: [0x21,0x1e]
+                                        # CHECK-NEXT: # <MCInst #{{.*}} SAVE16_NM
+                                        # DISAS: {{.*}}  21 1e          save    32, $ra
+    save    32, $fp, $ra                # CHECK: save 32, $fp, $ra # encoding: [0x22,0x1c]
+                                        # CHECK-NEXT: # <MCInst #{{.*}} SAVE16_NM
+                                        # DISAS: {{.*}}  22 1c          save    32, $fp, $ra
+    save    32, $ra, $s0                # CHECK: save 32, $ra, $s0  # encoding: [0x22,0x1e]
+                                        # CHECK-NEXT: # <MCInst #{{.*}} SAVE16_NM
+                                        # DISAS: {{.*}}  22 1e          save    32, $ra, $s0
+    save    192, $ra, $s0-$gp           # CHECK: save 192, $ra, $s0, $s1, $s2, $s3, $s4, $s5, $s6, $s7, $t8, $t9, $k0, $k1, $gp # encoding: [0xce,0x1e]
+                                        # CHECK-NEXT: # <MCInst #{{.*}} SAVE16_NM
+                                        # DISAS: {{.*}}  ce 1e          save    192, $ra, $s0, $s1, $s2, $s3, $s4, $s5, $s6, $s7, $t8, $t9, $k0, $k1, $gp
+    save    192, $fp, $ra, $s0-$gp      # CHECK: save 192, $fp, $ra, $s0, $s1, $s2, $s3, $s4, $s5, $s6, $s7, $t8, $t9, $k0, $k1, $gp # encoding: [0xcf,0x1c]
+                                        # CHECK-NEXT: # <MCInst #{{.*}} SAVE16_NM
+                                        # DISAS: {{.*}}  cf 1c          save    192, $fp, $ra, $s0, $s1, $s2, $s3, $s4, $s5, $s6, $s7, $t8, $t9, $k0, $k1, $gp
+    save    128, $fp, $ra, $s0-$k1, $gp # CHECK: save 128, $fp, $ra, $s0, $s1, $s2, $s3, $s4, $s5, $s6, $s7, $t8, $t9, $k0, $k1, $gp # encoding: [0x8f,0x1c]
+                                        # CHECK-NEXT: # <MCInst #{{.*}} SAVE16_NM
+                                        # DISAS: {{.*}}  8f 1c          save    128, $fp, $ra, $s0, $s1, $s2, $s3, $s4, $s5, $s6, $s7, $t8, $t9, $k0, $k1, $gp
+
+    restore.jrc 32, $ra                     # CHECK: restore.jrc 32, $ra    # encoding: [0x21,0x1f]
+                                            # CHECK-NEXT: # <MCInst #{{.*}} RESTOREJRC16_NM
+                                            # DISAS: {{.*}}  21 1f          restore.jrc 32, $ra
+    restore.jrc 32, $fp, $ra                # CHECK: restore.jrc 32, $fp, $ra   # encoding: [0x22,0x1d]
+                                            # CHECK-NEXT: # <MCInst #{{.*}} RESTOREJRC16_NM
+                                            # DISAS: {{.*}}  22 1d          restore.jrc 32, $fp, $ra
+    restore.jrc 32, $ra, $s0                # CHECK: restore.jrc 32, $ra, $s0   # encoding: [0x22,0x1f]
+                                            # CHECK-NEXT: # <MCInst #{{.*}} RESTOREJRC16_NM
+                                            # DISAS: {{.*}}  22 1f          restore.jrc 32, $ra, $s0
+    restore.jrc 32, $ra, $s0-$s3            # CHECK: restore.jrc 32, $ra, $s0, $s1, $s2, $s3 # encoding: [0x25,0x1f]
+                                            # CHECK-NEXT: # <MCInst #{{.*}} RESTOREJRC16_NM
+                                            # DISAS: {{.*}}  25 1f          restore.jrc 32, $ra, $s0, $s1, $s2, $s3
+    restore.jrc 64, $fp, $ra, $s0-$s7       # CHECK: restore.jrc 64, $fp, $ra, $s0, $s1, $s2, $s3, $s4, $s5, $s6, $s7 # encoding: [0x4a,0x1d]
+                                            # CHECK-NEXT: # <MCInst #{{.*}} RESTOREJRC16_NM
+                                            # DISAS: {{.*}}  4a 1d          restore.jrc 64, $fp, $ra, $s0, $s1, $s2, $s3, $s4, $s5, $s6, $s7
+    restore.jrc 192, $ra, $s0-$gp           # CHECK: restore.jrc 192, $ra, $s0, $s1, $s2, $s3, $s4, $s5, $s6, $s7, $t8, $t9, $k0, $k1, $gp # encoding: [0xce,0x1f]
+                                            # CHECK-NEXT: # <MCInst #{{.*}} RESTOREJRC16_NM
+                                            # DISAS: {{.*}}  ce 1f          restore.jrc 192, $ra, $s0, $s1, $s2, $s3, $s4, $s5, $s6, $s7, $t8, $t9, $k0, $k1, $gp
+    restore.jrc 192, $fp, $ra, $s0-$gp      # CHECK: restore.jrc 192, $fp, $ra, $s0, $s1, $s2, $s3, $s4, $s5, $s6, $s7, $t8, $t9, $k0, $k1, $gp # encoding: [0xcf,0x1d]
+                                            # CHECK-NEXT: # <MCInst #{{.*}} RESTOREJRC16_NM
+                                            # DISAS: {{.*}}  cf 1d          restore.jrc 192, $fp, $ra, $s0, $s1, $s2, $s3, $s4, $s5, $s6, $s7, $t8, $t9, $k0, $k1, $gp
+    restore.jrc 128, $fp, $ra, $s0-$k1, $gp # CHECK: restore.jrc 128, $fp, $ra, $s0, $s1, $s2, $s3, $s4, $s5, $s6, $s7, $t8, $t9, $k0, $k1, $gp # encoding: [0x8f,0x1d]
+                                            # CHECK-NEXT: # <MCInst #{{.*}} RESTOREJRC16_NM
+                                            # DISAS: {{.*}}  8f 1d          restore.jrc 128, $fp, $ra, $s0, $s1, $s2, $s3, $s4, $s5, $s6, $s7, $t8, $t9, $k0, $k1, $gp
+
+    # 32-bit SAVE/RESTORE[.JRC]
+    save    40, $ra                         # CHECK: save 40, $ra   # encoding: [0xe1,0x83,0x28,0x30]
+                                            # CHECK-NEXT: # <MCInst #{{.*}} SAVE_NM
+                                            # DISAS: {{.*}}  e1 83 28 30    save    40, $ra
+    save    48, $ra, $gp                    # CHECK: save 48, $ra, $gp  # encoding: [0xe2,0x83,0x34,0x30]
+                                            # CHECK-NEXT: # <MCInst #{{.*}} SAVE_NM
+                                            # DISAS: {{.*}}  e2 83 34 30    save    48, $ra, $gp
+    save    256, $fp, $ra                   # CHECK: save 256, $fp, $ra # encoding: [0xc2,0x83,0x00,0x31]
+                                            # CHECK-NEXT: # <MCInst #{{.*}} SAVE_NM
+                                            # DISAS: {{.*}}  c2 83 00 31    save    256, $fp, $ra
+    save    1024, $ra, $s0                  # CHECK: save 1024, $ra, $s0 # encoding: [0xe2,0x83,0x00,0x34]
+                                            # CHECK-NEXT: # <MCInst #{{.*}} SAVE_NM
+                                            # DISAS: {{.*}}  e2 83 00 34    save    1024, $ra, $s0
+    save    160, $zero, $gp                 # CHECK: save 160, $zero, $gp # encoding: [0x02,0x80,0xa4,0x30]
+                                            # CHECK-NEXT: # <MCInst #{{.*}} SAVE_NM
+                                            # DISAS: {{.*}}  02 80 a4 30    save    160, $zero, $gp
+    save    64, $s0-$s3, $gp                # CHECK: save 64, $s0, $s1, $s2, $s3, $gp # encoding: [0x05,0x82,0x44,0x30]
+                                            # CHECK-NEXT: # <MCInst #{{.*}} SAVE_NM
+                                            # DISAS: {{.*}}  05 82 44 30    save    64, $s0, $s1, $s2, $s3, $gp
+    save    64, $a0-$s0, $gp                # CHECK: save 64, $a0, $a1, $a2, $a3, $a4, $a5, $a6, $a7, $t0, $t1, $t2, $t3, $s0, $gp # encoding: [0x8e,0x80,0x44,0x30]
+                                            # CHECK-NEXT: # <MCInst #{{.*}} SAVE_NM
+                                            # DISAS: {{.*}}  8e 80 44 30    save    64, $a0, $a1, $a2, $a3, $a4, $a5, $a6, $a7, $t0, $t1, $t2, $t3, $s0, $gp
+    save    128, $t3, $s0, $s1, $gp         # CHECK: save 128, $t3, $s0, $s1, $gp # encoding: [0xe4,0x81,0x84,0x30]
+                                            # CHECK-NEXT: # <MCInst #{{.*}} SAVE_NM
+                                            # DISAS: {{.*}}  e4 81 84 30    save    128, $t3, $s0, $s1, $gp
+    save    128, $a4-$t3, $s0-$s3           # CHECK: save 128, $a4, $a5, $a6, $a7, $t0, $t1, $t2, $t3, $s0, $s1, $s2, $s3 # encoding: [0x0c,0x81,0x80,0x30]
+                                            # CHECK-NEXT: # <MCInst #{{.*}} SAVE_NM
+                                            # DISAS: {{.*}}  0c 81 80 30    save    128, $a4, $a5, $a6, $a7, $t0, $t1, $t2, $t3, $s0, $s1, $s2, $s3
+    restore 48, $ra                         # CHECK: restore 48, $ra    # encoding: [0xe1,0x83,0x32,0x30]
+                                            # CHECK-NEXT: # <MCInst #{{.*}} RESTORE_NM
+                                            # DISAS: {{.*}}  e1 83 32 30    restore 48, $ra
+    restore 56, $ra, $gp                    # CHECK: restore 56, $ra, $gp   # encoding: [0xe2,0x83,0x3e,0x30]
+                                            # CHECK-NEXT: # <MCInst #{{.*}} RESTORE_NM
+                                            # DISAS: {{.*}}  e2 83 3e 30    restore 56, $ra, $gp
+    restore 256, $fp, $ra                   # CHECK: restore 256, $fp, $ra  # encoding: [0xc2,0x83,0x02,0x31]
+                                            # CHECK-NEXT: # <MCInst #{{.*}} RESTORE_NM
+                                            # DISAS: {{.*}}  c2 83 02 31    restore 256, $fp, $ra
+    restore 1024, $ra, $s0                  # CHECK: restore 1024, $ra, $s0 # encoding: [0xe2,0x83,0x02,0x34]
+                                            # CHECK-NEXT: # <MCInst #{{.*}} RESTORE_NM
+                                            # DISAS: {{.*}}  e2 83 02 34    restore 1024, $ra, $s0
+    restore 160, $zero, $gp                 # CHECK: restore 160, $zero, $gp # encoding: [0x02,0x80,0xa6,0x30]
+                                            # CHECK-NEXT: # <MCInst #{{.*}} RESTORE_NM
+                                            # DISAS: {{.*}}  02 80 a6 30    restore 160, $zero, $gp
+    restore 64, $s0, $s1, $s2, $s3, $gp     # CHECK: restore 64,  $s0, $s1, $s2, $s3, $gp # encoding: [0x05,0x82,0x46,0x30]
+                                            # CHECK-NEXT: # <MCInst #{{.*}} RESTORE_NM
+                                            # DISAS: {{.*}}  05 82 46 30    restore 64, $s0, $s1, $s2, $s3, $gp
+    restore 64, $t4, $t5, $gp               # CHECK: restore 64, $t4, $t5, $gp # encoding: [0x43,0x80,0x46,0x30]
+                                            # CHECK-NEXT: # <MCInst #{{.*}} RESTORE_NM
+                                            # DISAS: {{.*}}  43 80 46 30    restore 64, $t4, $t5, $gp
+    restore 128, $fp, $ra, $s0, $s1, $gp    # CHECK: restore 128, $fp, $ra, $s0, $s1, $gp # encoding: [0xc5,0x83,0x86,0x30]
+                                            # CHECK-NEXT: # <MCInst #{{.*}} RESTORE_NM
+                                            # DISAS: {{.*}}  c5 83 86 30    restore 128, $fp, $ra, $s0, $s1, $gp
+    restore 120, $fp, $ra, $s0-$k1, $gp     # CHECK: restore 120, $fp, $ra, $s0, $s1, $s2, $s3, $s4, $s5, $s6, $s7, $t8, $t9, $k0, $k1, $gp # encoding: [0xcf,0x83,0x7e,0x30]
+                                            # CHECK-NEXT: # <MCInst #{{.*}} RESTORE_NM
+                                            # DISAS: {{.*}}  cf 83 7e 30    restore 120, $fp, $ra, $s0, $s1, $s2, $s3, $s4, $s5, $s6, $s7, $t8, $t9, $k0, $k1, $gp
+
+    restore.jrc 56, $ra                         # CHECK: restore.jrc 56, $ra    # encoding: [0xe1,0x83,0x3b,0x30]
+                                                # CHECK-NEXT: # <MCInst #{{.*}} RESTOREJRC_NM
+                                                # DISAS: {{.*}}  e1 83 3b 30    restore.jrc 56, $ra
+    restore.jrc 256, $fp, $ra                   # CHECK: restore.jrc 256, $fp, $ra  # encoding: [0xc2,0x83,0x03,0x31]
+                                                # CHECK-NEXT: # <MCInst #{{.*}} RESTOREJRC_NM
+                                                # DISAS: {{.*}}  c2 83 03 31    restore.jrc 256, $fp, $ra
+    restore.jrc 1024, $ra, $s0                  # CHECK: restore.jrc 1024, $ra, $s0 # encoding: [0xe2,0x83,0x03,0x34]
+                                                # CHECK-NEXT: # <MCInst #{{.*}} RESTOREJRC_NM
+                                                # DISAS: {{.*}}  e2 83 03 34    restore.jrc 1024, $ra, $s0
+    restore.jrc 160, $zero, $gp                 # CHECK: restore.jrc 160, $zero, $gp    # encoding: [0x02,0x80,0xa7,0x30]
+                                                # CHECK-NEXT: # <MCInst #{{.*}} RESTOREJRC_NM
+                                                # DISAS: {{.*}}  02 80 a7 30    restore.jrc 160, $zero, $gp
+    restore.jrc 64, $s0, $s1, $s2, $s3, $gp     # CHECK: restore.jrc 64, $s0, $s1, $s2, $s3, $gp # encoding: [0x05,0x82,0x47,0x30]
+                                                # CHECK-NEXT: # <MCInst #{{.*}} RESTOREJRC_NM
+                                                # DISAS: {{.*}}  05 82 47 30    restore.jrc 64, $s0, $s1, $s2, $s3, $gp
+    restore.jrc 64, $t4, $t5, $gp               # CHECK: restore.jrc 64, $t4, $t5, $gp # encoding: [0x43,0x80,0x47,0x30]
+                                                # CHECK-NEXT: # <MCInst #{{.*}} RESTOREJRC_NM
+                                                # DISAS: {{.*}}  43 80 47 30    restore.jrc 64, $t4, $t5, $gp
+    restore.jrc 128, $fp, $ra, $s0, $s1, $gp    # CHECK: restore.jrc 128, $fp, $ra, $s0, $s1, $gp # encoding: [0xc5,0x83,0x87,0x30]
+                                                # CHECK-NEXT: # <MCInst #{{.*}} RESTOREJRC_NM
+                                                # DISAS: {{.*}}  c5 83 87 30    restore.jrc 128, $fp, $ra, $s0, $s1, $gp
+    restore.jrc 120, $fp, $ra, $s0-$k1, $gp     # CHECK: restore.jrc 120, $fp, $ra, $s0, $s1, $s2, $s3, $s4, $s5, $s6, $s7, $t8, $t9, $k0, $k1, $gp # encoding: [0xcf,0x83,0x7f,0x30]
+                                                # CHECK-NEXT: # <MCInst #{{.*}} RESTOREJRC_NM
+                                                # DISAS: {{.*}}  cf 83 7f 30    restore.jrc 120, $fp, $ra, $s0, $s1, $s2, $s3, $s4, $s5, $s6, $s7, $t8, $t9, $k0, $k1, $gp
 
     addiu   $a1,$a1,8           # CHECK: addiu  $a1, $a1, 8 # encoding: [0xd2,0x92]
                                 # CHECK-NEXT: <MCInst  #{{.*}} ADDIUR2_NM
@@ -388,6 +625,17 @@
     addiu   $s3,$s3,-4096       # CHECK: addiu  $s3, $s3, -4096 # encoding: [0x61,0x62,0x00,0xf0,0xff,0xff]
                                 # CHECK-NEXT: <MCInst  #{{.*}} ADDIU48_NM
                                 # DISAS: {{.*}}  61 62 00 f0 ff ff      addiu   $s3, $s3, 4294963200{{$}}
+
+    lui $s1, %hi(0x12345678)    # CHECK: lui $s1, %hi(0x12345000) # encoding: [0x34,0xe2,0x44,0x52]
+                                # CHECK-NEXT: <MCInst #{{.*}} LUI_NM
+                                # DISAS: {{.*}}  34 e2 44 52    lui $s1, %hi(0x12345000)
+    lui $s2, %hi(0x80001000)    # CHECK: lui $s2, %hi(0x80001000) # encoding: [0x40,0xe2,0x01,0x10]
+                                # CHECK-NEXT: <MCInst #{{.*}} LUI_NM
+                                # DISAS: {{.*}}  40 e2 01 10    lui $s2, %hi(0x80001000)
+    lui $s3, %hi(0xfffff000)    # CHECK: lui $s3, %hi(0xfffff000) # encoding: [0x7f,0xe2,0xfd,0xff]
+                                # CHECK-NEXT: <MCInst #{{.*}} LUI_NM
+                                # DISAS: {{.*}}  7f e2 fd ff    lui $s3, %hi(0xfffff000)
+
     brsc    $a1                 # CHECK: brsc $a1   # encoding: [0x05,0x48,0x00,0x80]
                                 # CHECK-NEXT: # <MCInst #{{.*}} BRSC_NM
                                 # DISAS: {{.*}}  05 48 00 80    brsc    $a1
@@ -419,6 +667,13 @@
     jrc $ra             # CHECK: jrc $ra    # encoding: [0xe0,0xdb]
                         # CHECK-NEXT: # <MCInst #{{.*}} JRC_NM
                         # DISAS: {{.*}}  e0 db          jrc $ra
+
+    wait 1          # CHECK: wait 1 # encoding: [0x01,0x20,0x7f,0xc3]
+                    # CHECK-NEXT: # <MCInst #{{.*}} WAIT_NM
+                    # DISAS: {{.*}}  01 20 7f c3    wait    1{{$}}
+    wait 1023       # CHECK: wait 1023  # encoding: [0xff,0x23,0x7f,0xc3]
+                    # CHECK-NEXT: # <MCInst #{{.*}} WAIT_NM
+                    # DISAS: {{.*}}  ff 23 7f c3    wait    1023{{$}}
 
     evp $a1         # CHECK: evp $a1    # encoding: [0xa0,0x20,0x90,0x07]
                     # CHECK-NEXT: <MCInst #{{.*}} EVP_NM

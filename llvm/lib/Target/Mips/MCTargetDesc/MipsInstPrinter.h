@@ -112,7 +112,7 @@ private:
                         const MCSubtargetInfo &STI, raw_ostream &O);
   void printBranchOperand(const MCInst *MI, uint64_t Address, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);
-  template <unsigned Bits, unsigned Offset = 0>
+  template <unsigned Bits, unsigned Offset = 0, unsigned Base = 10>
   void printUImm(const MCInst *MI, int opNum, const MCSubtargetInfo &STI,
                  raw_ostream &O);
   void printMemOperand(const MCInst *MI, int opNum, const MCSubtargetInfo &STI,
@@ -133,6 +133,10 @@ private:
                         raw_ostream &O);
   void printRegisterList(const MCInst *MI, int opNum,
                          const MCSubtargetInfo &STI, raw_ostream &O);
+  void printNanoMipsRegisterList(const MCInst *MI, int OpNum,
+                                 const MCSubtargetInfo &STI, raw_ostream &O);
+  void printHi20(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
+                 raw_ostream &O);
 };
 } // end namespace llvm
 

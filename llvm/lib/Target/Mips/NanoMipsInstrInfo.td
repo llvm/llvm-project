@@ -109,10 +109,12 @@ def uimm2_nm : Operand<i32> {
 
 def uimm2code_nm : Operand<i32> {
   let ParserMatchClass = UImm2AsmOperand;
+  let PrintMethod = "printUImm<2, 0, 16>";
 }
 
 def uimm3_nm : Operand<i32> {
   let ParserMatchClass = UImm3AsmOperand;
+  let PrintMethod = "printUImm<3, 0, 16>";
 }
 
 def uimm3plus1_nm : Operand<i32> {
@@ -124,40 +126,48 @@ def uimm3shift_nm : Operand<i32> {
   let ParserMatchClass = UImm3ShiftAsmOperand;
   let EncoderMethod = "getUImm3ShiftEncoding";
   let DecoderMethod = "DecodeUImm3Shift";
+  let PrintMethod = "printUImm<4>";
 }
 
 def uimm4mask_nm : Operand<i32> {
   let ParserMatchClass = UImm4AsmOperand;
   let EncoderMethod = "getUImm4MaskEncoding";
   let DecoderMethod = "DecodeUImm4Mask";
+  let PrintMethod = "printUImm<16, 0, 16>";
 }
 
 def uimm5s1_nm : Operand<i32> {
   let ParserMatchClass = NMUImmScaledAsmOperandClass<4, 1>;
+  let PrintMethod = "printUImm<5>";
 }
 
 def uimm16_nm : Operand<i32> {
   let ParserMatchClass = NMUImm16AsmOperandClass<>;
+  let PrintMethod = "printUImm<16>";
 }
 
 def uimm5s2_nm : Operand<i32> {
   let ParserMatchClass =
       NMUImmScaledAsmOperandClass<3, 2, [uimm16_nm.ParserMatchClass]>;
+  let PrintMethod = "printUImm<5>";
 }
 
 def uimm6_nm : Operand<i32> {
   let ParserMatchClass = NMUImmAsmOperandClass<6>;
+  let PrintMethod = "printUImm<6>";
 }
 
 def uimm8s2_nm : Operand<i32>;
 
 def uimm12s3_nm : Operand<i32> {
   let ParserMatchClass = NMUImmScaledAsmOperandClass<9, 3, []>;
+  let PrintMethod = "printUImm<12>";
 }
 
 def uimm8s4_nm : Operand<i32> {
   let ParserMatchClass =
       NMUImmScaledAsmOperandClass<4, 4, [uimm12s3_nm.ParserMatchClass]>;
+  let PrintMethod = "printUImm<8>";
 }
 
 def uimm12_nm : Operand<i32> {
@@ -166,14 +176,17 @@ def uimm12_nm : Operand<i32> {
 
 def uimm12mask_nm : Operand<i32> {
   let ParserMatchClass = NMUImmAsmOperandClass<12>;
+  let PrintMethod = "printUImm<12, 0, 16>";
 }
 
 def uimm18_nm : Operand<i32> {
   let ParserMatchClass = UImm18AsmOperand;
+  let PrintMethod = "printUImm<18, 0, 16>";
 }
 
 def uimm19_nm : Operand<i32> {
   let ParserMatchClass = UImm19AsmOperand;
+  let PrintMethod = "printUImm<19, 0, 16>";
 }
 
 // ADDIUPC's immediate is relative to the start of the instruction, while the
@@ -182,15 +195,18 @@ def uimm19_nm : Operand<i32> {
 def simm22s1_nm : Operand<i32> {
   let ParserMatchClass = NMSImmScaledAsmOperandClass<21, 1, 4>;
   let EncoderMethod = "getSImmWithOffsetEncoding<22, 4>";
+  let PrintMethod = "printUImm<32, 0, 16>";
 }
 
 def simm32_nm : Operand<i32> {
   let ParserMatchClass = NMSImmScaledAsmOperandClass<32, 0, 6>;
   let EncoderMethod = "getSImmWithOffsetEncoding<32, 6>";
+  let PrintMethod = "printUImm<32, 0, 16>";
 }
 
 def simm32s12_nm : Operand<i32> {
   let ParserMatchClass = Hi20AsmOperand;
+  let PrintMethod = "printHi20";
 }
 
 def simm32s12_pcrel_nm : Operand<i32>;
@@ -236,12 +252,14 @@ def reglist16_nm : Operand<OtherVT> {
   let ParserMatchClass = NMRegList16AsmOperandClass<>;
   let EncoderMethod = "getNMRegList16Encoding";
   let DecoderMethod = "DecodeNMRegList16Operand";
+  let PrintMethod = "printNanoMipsRegisterList";
 }
 
 def reglist_nm : Operand<OtherVT> {
   let ParserMatchClass = NMRegListAsmOperandClass<>;
   let EncoderMethod = "getNMRegListEncoding";
   let DecoderMethod = "DecodeNMRegListOperand";
+  let PrintMethod = "printNanoMipsRegisterList";
 }
 
 foreach I = {7, 10, 11, 14, 25} in

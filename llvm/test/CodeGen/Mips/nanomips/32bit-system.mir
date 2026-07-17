@@ -10,7 +10,7 @@
 # --- system control ---
 ---
 # CHECK-LABEL: break:
-# CHECK: break 7 # encoding: [0x10,0x00,0x07,0x00]
+# CHECK: break 0x7 # encoding: [0x10,0x00,0x07,0x00]
 name: break
 tracksRegLiveness: false
 body: |
@@ -136,7 +136,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: sdbbp:
-# CHECK: sdbbp 7 # encoding: [0x18,0x00,0x07,0x00]
+# CHECK: sdbbp 0x7 # encoding: [0x18,0x00,0x07,0x00]
 name: sdbbp
 tracksRegLiveness: false
 body: |
@@ -145,7 +145,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: sigrie:
-# CHECK: sigrie 7 # encoding: [0x00,0x00,0x07,0x00]
+# CHECK: sigrie 0x7 # encoding: [0x00,0x00,0x07,0x00]
 name: sigrie
 tracksRegLiveness: false
 body: |
@@ -154,7 +154,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: syscall:
-# CHECK: syscall 7 # encoding: [0x08,0x00,0x07,0x00]
+# CHECK: syscall 0x7 # encoding: [0x08,0x00,0x07,0x00]
 name: syscall
 tracksRegLiveness: false
 body: |
@@ -313,7 +313,7 @@ body: |
 # --- save / restore ---
 ---
 # CHECK-LABEL: restore:
-# CHECK: restore 00 # encoding: [0x00,0x80,0x02,0x30]
+# CHECK: restore 0, 0 # encoding: [0x00,0x80,0x02,0x30]
 name: restore
 tracksRegLiveness: false
 body: |
@@ -322,7 +322,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: restorejrc:
-# CHECK: restore.jrc 00 # encoding: [0x00,0x80,0x03,0x30]
+# CHECK: restore.jrc 0, 0 # encoding: [0x00,0x80,0x03,0x30]
 name: restorejrc
 tracksRegLiveness: false
 body: |
@@ -331,7 +331,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: save:
-# CHECK: save 00 # encoding: [0x00,0x80,0x00,0x30]
+# CHECK: save 0, 0 # encoding: [0x00,0x80,0x00,0x30]
 name: save
 tracksRegLiveness: false
 body: |
