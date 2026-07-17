@@ -474,6 +474,13 @@ public:
     m_remote_install_file = file;
   }
 
+  /// Return the FileSpec for the SymbolFile, if this Module has one.
+  /// A Module may have debug information from the ObjectFile; do not
+  /// use the presence of a SymbolFile FileSpec as a way to detect if
+  /// debug information is present.  Module::GetSymbolFile will return
+  /// the binary that contains debug information, which may be the
+  /// same result that Module::GetObjectFile returns when they are in
+  /// the same binary.
   const FileSpec &GetSymbolFileFileSpec() const { return m_symfile_spec; }
 
   ModuleSpecList GetSeparateDebugInfoFiles();
