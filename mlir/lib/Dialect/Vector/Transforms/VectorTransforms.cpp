@@ -244,7 +244,7 @@ struct CombineContractResultTranspose final
   }
 };
 
-/// Merge BroadcastOp into ContractionOp user.
+/// Merge BroadcastOp (and broadcast-like ShapeCastOp) into ContractionOp user.
 /// Ex:
 /// ```
 ///   %0 = vector.broadcast %arg0 : vector<32x16xf32> to vector<8x32x16xf32>
