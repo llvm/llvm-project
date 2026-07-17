@@ -465,6 +465,15 @@ m_ActiveLaneMask(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
   return m_VPInstruction<VPInstruction::ActiveLaneMask>(Op0, Op1, Op2);
 }
 
+template <typename Op0_t, typename Op1_t, typename Op2_t>
+inline VPInstruction_match<VPInstruction::ActiveLaneMaskForControlFlow, Op0_t,
+                           Op1_t, Op2_t>
+m_ActiveLaneMaskForControlFlow(const Op0_t &Op0, const Op1_t &Op1,
+                               const Op2_t &Op2) {
+  return m_VPInstruction<VPInstruction::ActiveLaneMaskForControlFlow>(Op0, Op1,
+                                                                      Op2);
+}
+
 inline VPInstruction_match<VPInstruction::AnyOf> m_AnyOf() {
   return m_VPInstruction<VPInstruction::AnyOf>();
 }

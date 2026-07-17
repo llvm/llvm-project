@@ -1244,6 +1244,7 @@ public:
     //    mask[i] = icmpt ult (op0 + i), op1
     // The size of the mask returned is VF * Multiplier (UF, third op).
     ActiveLaneMask,
+    ActiveLaneMaskForControlFlow,
     // Extracts each unrolled part of a widened active lane mask when used
     // for control flow.
     ExtractSubvectorForPart,

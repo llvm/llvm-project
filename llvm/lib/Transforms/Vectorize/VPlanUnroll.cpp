@@ -477,17 +477,12 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
       continue;
     }
 
-    if (match(&R,
-              m_ActiveLaneMask(m_VPValue(), m_VPValue(Op1), m_VPValue(Op2)))) {
+    if (match(&R, m_ActiveLaneMaskForControlFlow(m_VPValue(), m_VPValue(),
+                                                 m_VPValue()))) {
       auto *ALM = cast<VPInstruction>(&R);
-      auto *User = ALM->getSingleUser();
-      // Widen ActiveLaneMask when used for control flow.
-      if (User && match(User, m_ExtractSubvectorForPart(m_Specific(ALM),
-                                                        m_ZeroInt()))) {
-        addUniformForAllParts(ALM);
-        ALM->setOperand(2, Plan.getConstantInt(64, UF));
-        continue;
-      }
+      addUniformForAllParts(ALM);
+      ALM->setOperand(2, Plan.getConstantInt(64, UF));
+      continue;
     }
 
     auto *SingleDef = dyn_cast<VPSingleDefRecipe>(&R);
