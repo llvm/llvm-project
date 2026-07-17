@@ -2846,8 +2846,7 @@ bool RewriteMFMAFormStage::rewrite(
           BuildMI(*EarliestSameBlockUse->getParent(),
                   EarliestSameBlockUse->getIterator(),
                   EarliestSameBlockUse->getDebugLoc(),
-                  TII->get(TargetOpcode::COPY))
-              .addDef(SameBlockCopyReg, {}, 0)
+                  TII->get(TargetOpcode::COPY), SameBlockCopyReg)
               .addUse(DstReg, {}, 0);
       DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);
       DstRegSet.insert(&VGPRCopy->getOperand(1));
