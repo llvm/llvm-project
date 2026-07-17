@@ -855,14 +855,6 @@ bool AMDGPUHotBlockRematerialize::hotBlockRemat(
   RematStatus Status = getRematStatus(MF, MLI, LIS, MRI, ST);
 
   const unsigned MaxOcc = ST->getWavesPerEU(MF.getFunction()).second;
-  LLVM_DEBUG(dbgs() << "remat: TargetOcc=" << Status.TargetOcc
-                    << " MaxOcc=" << MaxOcc
-                    << " TargetSLimit=" << Status.TargetSLimit
-                    << " TargetVLimit=" << Status.TargetVLimit
-                    << " MaxSPressure=" << Status.MaxSPressure
-                    << " InputPhysS=" << Status.InputPhysicalSPressure
-                    << " SGPRBound=" << Status.SGPRBound
-                    << " MemBound=" << Status.MemBound << "\n");
   if (Status.TargetOcc >= MaxOcc)
     return false;
 
@@ -931,9 +923,6 @@ bool AMDGPUHotBlockRematerialize::hotBlockRemat(
       }
     }
     MaxSPressure += RegForVCC + Status.InputPhysicalSPressure;
-    LLVM_DEBUG(dbgs() << "remat: bb." << MBB->getNumber()
-                      << " MaxSPressure=" << MaxSPressure
-                      << " MaxVPressure=" << MaxVPressure << "\n");
     if (MaxVPressure <= Status.TargetVLimit &&
         MaxSPressure <= Status.TargetSLimit)
       continue;
@@ -949,9 +938,6 @@ bool AMDGPUHotBlockRematerialize::hotBlockRemat(
         getReducedSize(SRematMap, CandidateRegs, MRI, LiveInfo, RPOTIndexMap);
 
     const int RematSCnt = MaxSPressure - SReduced - Status.TargetSLimit;
-    LLVM_DEBUG(dbgs() << "remat: bb." << MBB->getNumber()
-                      << " HOT, SReduced=" << SReduced
-                      << " RematSCnt=" << RematSCnt << "\n");
 
     bool IsSGPRSpill = false;
     if (RematSCnt > 0)
@@ -969,31 +955,20 @@ bool AMDGPUHotBlockRematerialize::hotBlockRemat(
       for (RematNode &Node : Candidates) {
         Register Reg = Node.Reg;
         if (!isSafeToMoveOrClone(Node.DefMI, MRI)) {
-          LLVM_DEBUG(dbgs() << "remat:   reject " << printReg(Reg, SIRI)
-                            << " unsafe\n");
           PinnedRegSet.insert(Reg);
           continue;
         }
         if (MRI.hasOneNonDBGUse(Reg)) {
           MachineInstr &UseMI = *MRI.use_instr_nodbg_begin(Reg);
-          if (isImplicitDefUse(Node.DefMI, &UseMI)) {
-            LLVM_DEBUG(dbgs() << "remat:   reject " << printReg(Reg, SIRI)
-                              << " implicit-def-use\n");
+          if (isImplicitDefUse(Node.DefMI, &UseMI))
             continue;
-          }
           MachineBasicBlock *InsertBB = findSinkTarget(
               Node.DefMI, Reg, DT, PDT, MLI, MRI, Status.MemBound);
-          if (!InsertBB) {
-            LLVM_DEBUG(dbgs() << "remat:   reject " << printReg(Reg, SIRI)
-                              << " no sink target\n");
+          if (!InsertBB)
             continue;
-          }
           if (hasInterleavedMemoryWrite(Node.DefMI, Node.DefMI->getParent(),
-                                        InsertBB, Status, DT)) {
-            LLVM_DEBUG(dbgs() << "remat:   reject " << printReg(Reg, SIRI)
-                              << " interleaved mem write\n");
+                                        InsertBB, Status, DT))
             continue;
-          }
           RematNode SinkNode = Node;
           SinkNode.Kind = RematKind::Sink;
           SinkNode.InsertBlock = InsertBB;
@@ -1020,10 +995,6 @@ bool AMDGPUHotBlockRematerialize::hotBlockRemat(
         AccumulatedGain += E.GainInDwords;
       }
       NewRematSCnt = RematSCnt - AccumulatedGain;
-      LLVM_DEBUG(dbgs() << "remat: bb." << MBB->getNumber() << " candidates="
-                        << Candidates.size() << " entries=" << AllEntries.size()
-                        << " selected(gain)=" << AccumulatedGain
-                        << " NewRematSCnt=" << NewRematSCnt << "\n");
     }
 
     if (RematSCnt > 0)
