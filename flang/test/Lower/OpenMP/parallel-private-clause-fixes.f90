@@ -53,27 +53,27 @@
 ! CHECK-DAG:           %[[PRIV_J_DECL:.*]]:2 = hlfir.declare %[[PRIV_J]] {uniq_name = "_QFmultiple_private_fixEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK-DAG:           %[[PRIV_X_DECL:.*]]:2 = hlfir.declare %[[PRIV_X]] {uniq_name = "_QFmultiple_private_fixEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:               hlfir.assign %[[VAL_6]] to %[[PRIV_I_DECL]]#0 : i32, !fir.ref<i32>
-! CHECK:               %[[VAL_7:.*]] = arith.constant 1 : i32
-! CHECK:               %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (i32) -> index
-! CHECK:               %[[VAL_9:.*]] = fir.load %[[GAMA_DECL]]#0 : !fir.ref<i32>
-! CHECK:               %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (i32) -> index
-! CHECK:               %[[VAL_11:.*]] = arith.constant 1 : index
-! CHECK:               fir.do_loop %[[VAL_13:[^ ]*]] = %[[VAL_8]] to %[[VAL_10]] step %[[VAL_11]] {
-! CHECK:                 %[[IV:.*]] = fir.convert %[[VAL_13]] : (index) -> i32
-! CHECK:                 fir.store %[[IV]] to %[[PRIV_J_DECL]]#0 : !fir.ref<i32>
+! CHECK:               %[[VAL_8:.*]] = arith.constant 1 : i32
+! CHECK:               %[[VAL_10:.*]] = fir.load %[[GAMA_DECL]]#0 : !fir.ref<i32>
+! CHECK:               %[[VAL_11:.*]] = arith.constant 1 : i32
+! CHECK:               fir.do_loop %[[VAL_13:[^ ]*]] = %[[VAL_8]] to %[[VAL_10]] step %[[VAL_11]] : i32 {
+! CHECK:                 fir.store %[[VAL_13]] to %[[PRIV_J_DECL]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[LOAD:.*]] = fir.load %[[PRIV_I_DECL]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_15:.*]] = fir.load %[[PRIV_J_DECL]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_16:.*]] = arith.addi %[[LOAD]], %[[VAL_15]] : i32
 ! CHECK:                 hlfir.assign %[[VAL_16]] to %[[PRIV_X_DECL]]#0 : i32, !fir.ref<i32>
 ! CHECK:               }
+! CHECK:               %[[VAL_8_IDX:.*]] = fir.convert %[[VAL_8]] : (i32) -> index
+! CHECK:               %[[VAL_10_IDX:.*]] = fir.convert %[[VAL_10]] : (i32) -> index
+! CHECK:               %[[VAL_11_IDX:.*]] = fir.convert %[[VAL_11]] : (i32) -> index
 ! CHECK:               %[[C0:.*]] = arith.constant 0 : index
-! CHECK:               %[[DIFF:.*]] = arith.subi %[[VAL_10]], %[[VAL_8]] : index
-! CHECK:               %[[ADD:.*]] = arith.addi %[[DIFF]], %[[VAL_11]] : index
-! CHECK:               %[[TRIP:.*]] = arith.divsi %[[ADD]], %[[VAL_11]] : index
+! CHECK:               %[[DIFF:.*]] = arith.subi %[[VAL_10_IDX]], %[[VAL_8_IDX]] : index
+! CHECK:               %[[ADD:.*]] = arith.addi %[[DIFF]], %[[VAL_11_IDX]] : index
+! CHECK:               %[[TRIP:.*]] = arith.divsi %[[ADD]], %[[VAL_11_IDX]] : index
 ! CHECK:               %[[CMP:.*]] = arith.cmpi slt, %[[TRIP]], %[[C0]] : index
 ! CHECK:               %[[SEL:.*]] = arith.select %[[CMP]], %[[C0]], %[[TRIP]] : index
-! CHECK:               %[[MUL:.*]] = arith.muli %[[SEL]], %[[VAL_11]] : index
-! CHECK:               %[[IDX:.*]] = arith.addi %[[VAL_8]], %[[MUL]] : index
+! CHECK:               %[[MUL:.*]] = arith.muli %[[SEL]], %[[VAL_11_IDX]] : index
+! CHECK:               %[[IDX:.*]] = arith.addi %[[VAL_8_IDX]], %[[MUL]] : index
 ! CHECK:               %[[VAL_12:.*]] = fir.convert %[[IDX]] : (index) -> i32
 ! CHECK:               fir.store %[[VAL_12]] to %[[PRIV_J_DECL]]#0 : !fir.ref<i32>
 ! CHECK:               omp.yield

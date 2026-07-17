@@ -2815,8 +2815,9 @@ private:
                               const IncrementLoopInfo &info,
                               bool *isConst = nullptr) {
     mlir::Location loc = toLocation();
-    mlir::Type controlType = info.isStructured() ? builder->getIndexType()
-                                                 : info.getLoopVariableType();
+    mlir::Type controlType = info.isStructured() && info.isConcurrent
+                                 ? builder->getIndexType()
+                                 : info.getLoopVariableType();
     Fortran::lower::StatementContext stmtCtx;
     if (expr) {
       if (isConst)
@@ -3047,9 +3048,6 @@ private:
         if (genDoConcurrent)
           continue;
 
-        // The loop variable is a doLoop op argument.
-        mlir::Type loopVarType = info.getLoopVariableType();
-
         // Lower the loop without the secondary-induction iter_arg so memory
         // recurrences (e.g. reductions) stay visible to later analyses. The DO
         // variable is recomputed from the induction variable in the body; its
@@ -3060,9 +3058,8 @@ private:
             /*iterArgs=*/mlir::ValueRange{});
         info.loopOp = loopOp;
         builder->setInsertionPointToStart(loopOp.getBody());
-        mlir::Value loopValue =
-            builder->createConvert(loc, loopVarType, loopOp.getInductionVar());
-        fir::StoreOp::create(*builder, loc, loopValue, info.loopVariable);
+        fir::StoreOp::create(*builder, loc, loopOp.getInductionVar(),
+                             info.loopVariable);
         addLoopAnnotationAttr(info, dirs);
         continue;
       }
@@ -3211,10 +3208,12 @@ private:
         // range-extreme loops.
         auto doLoopOp = mlir::cast<fir::DoLoopOp>(info.loopOp);
         builder->setInsertionPointAfter(doLoopOp);
-        mlir::Value lb = doLoopOp.getLowerBound();
-        mlir::Value ub = doLoopOp.getUpperBound();
-        mlir::Value st = doLoopOp.getStep();
-        mlir::Type idxTy = lb.getType();
+        mlir::Type idxTy = builder->getIndexType();
+        mlir::Value lb =
+            builder->createConvert(loc, idxTy, doLoopOp.getLowerBound());
+        mlir::Value ub =
+            builder->createConvert(loc, idxTy, doLoopOp.getUpperBound());
+        mlir::Value st = builder->createConvert(loc, idxTy, doLoopOp.getStep());
         mlir::Value zero = builder->createIntegerConstant(loc, idxTy, 0);
         mlir::Value trip = mlir::arith::SubIOp::create(*builder, loc, ub, lb);
         trip = mlir::arith::AddIOp::create(*builder, loc, trip, st);

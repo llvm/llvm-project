@@ -2468,6 +2468,7 @@ class region_Op<string mnemonic, list<Trait> traits = []> :
 }
 
 def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
+    AllTypesMatch<["lowerBound", "upperBound", "step"]>,
     DeclareOpInterfaceMethods<LoopLikeOpInterface,
         ["getYieldedValuesMutable"]>,
     DeclareOpInterfaceMethods<RegionBranchOpInterface,
@@ -2475,7 +2476,8 @@ def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
   let summary = "generalized loop operation";
   let description = [{
     Generalized high-level looping construct. This operation is similar to
-    MLIR's `scf.for`.
+    MLIR's `scf.for`. The bounds, step, and induction variable have the same
+    signless integer or index type.
 
     ```
       %l = arith.constant 0 : index
@@ -2497,9 +2499,9 @@ def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
   let hasCustomAssemblyFormat = 1;
 
   let arguments = (ins
-    Index:$lowerBound,
-    Index:$upperBound,
-    Index:$step,
+    AnySignlessIntegerOrIndex:$lowerBound,
+    AnySignlessIntegerOrIndex:$upperBound,
+    AnySignlessIntegerOrIndex:$step,
     Variadic<AnyType>:$reduceOperands,
     Variadic<AnyType>:$initArgs,
     OptionalAttr<UnitAttr>:$unordered,

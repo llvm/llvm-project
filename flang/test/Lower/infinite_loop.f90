@@ -82,7 +82,7 @@ end subroutine
 ! CHECK-DAG:  %[[C100:.*]] = arith.constant 100 : i32
 ! CHECK-DAG:  %[[C1:.*]] = arith.constant 1 : i32
 ! CHECK-DAG:  %[[C10:.*]] = arith.constant 10 : i32
-! CHECK-DAG:  %[[C1_1:.*]] = arith.constant 1 : index
+! CHECK-DAG:  %[[C0:.*]] = arith.constant 0 : index
 ! CHECK-DAG:  %[[I_DECL:.*]] = fir.declare %[[I_REF]] {{.*}}
 ! CHECK-DAG:  %[[J_REF:.*]] = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFstructured_loop_in_infiniteEj"}
 ! CHECK-DAG:  %[[J_DECL:.*]] = fir.declare %[[J_REF]] {{.*}}
@@ -94,18 +94,20 @@ end subroutine
 ! CHECK: ^[[EXIT]]:
 ! CHECK:  cf.br ^[[RETURN:.*]]
 ! CHECK: ^[[BODY2:.*]]:
+! CHECK:  fir.do_loop %[[J:[^ ]*]] =
+! CHECK-SAME: %[[C1]] to %[[C10]] step %[[C1]] : i32 {
+! CHECK:    fir.store %[[J]] to %[[J_DECL]] : !fir.ref<i32>
+! CHECK:  }
 ! CHECK:  %[[C1_INDEX:.*]] = fir.convert %[[C1]] : (i32) -> index
 ! CHECK:  %[[C10_INDEX:.*]] = fir.convert %[[C10]] : (i32) -> index
-! CHECK:  fir.do_loop %[[J:[^ ]*]] =
-! CHECK-SAME: %[[C1_INDEX]] to %[[C10_INDEX]] step %[[C1_1]] {
-! CHECK:    %[[J_IV:.*]] = fir.convert %[[J]] : (index) -> i32
-! CHECK:    fir.store %[[J_IV]] to %[[J_DECL]] : !fir.ref<i32>
-! CHECK:  }
+! CHECK:  %[[C1_STEP_INDEX:.*]] = fir.convert %[[C1]] : (i32) -> index
 ! CHECK:  %[[J_DIFF:.*]] = arith.subi %[[C10_INDEX]], %[[C1_INDEX]] : index
-! CHECK:  %[[J_ADD:.*]] = arith.addi %[[J_DIFF]], %[[C1_1]] : index
-! CHECK:  %[[J_CMP:.*]] = arith.cmpi slt, %[[J_ADD]], %{{.*}} : index
-! CHECK:  %[[J_SEL:.*]] = arith.select %[[J_CMP]], %{{.*}}, %[[J_ADD]] : index
-! CHECK:  %[[J_LASTIDX:.*]] = arith.addi %[[C1_INDEX]], %[[J_SEL]] : index
+! CHECK:  %[[J_ADD:.*]] = arith.addi %[[J_DIFF]], %[[C1_STEP_INDEX]] : index
+! CHECK:  %[[J_TRIP:.*]] = arith.divsi %[[J_ADD]], %[[C1_STEP_INDEX]] : index
+! CHECK:  %[[J_CMP:.*]] = arith.cmpi slt, %[[J_TRIP]], %[[C0]] : index
+! CHECK:  %[[J_SEL:.*]] = arith.select %[[J_CMP]], %[[C0]], %[[J_TRIP]] : index
+! CHECK:  %[[J_MUL:.*]] = arith.muli %[[J_SEL]], %[[C1_STEP_INDEX]] : index
+! CHECK:  %[[J_LASTIDX:.*]] = arith.addi %[[C1_INDEX]], %[[J_MUL]] : index
 ! CHECK:  %[[J_LAST:.*]] = fir.convert %[[J_LASTIDX]] : (index) -> i32
 ! CHECK:  fir.store %[[J_LAST]] to %[[J_DECL]] : !fir.ref<i32>
 ! CHECK:  cf.br ^[[BODY1]]

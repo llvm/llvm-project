@@ -169,18 +169,20 @@ end subroutine
 ! CHECK:   %[[COND:.*]] = arith.cmpi sgt, %[[TRIP_VAR]], %[[ZERO]] : i32
 ! CHECK:   cf.cond_br %[[COND]], ^[[BODY:.*]], ^[[EXIT:.*]]
 ! CHECK: ^[[BODY]]:
-! CHECK:   fir.do_loop %[[J_INDEX:[^ ]*]] =
-! CHECK-SAME: %[[J_LBIDX:[^ ]*]] to %[[J_UBIDX:[^ ]*]] step %[[ST:[^ ]*]] {
-! CHECK:     %[[J_IV:.*]] = fir.convert %[[J_INDEX]] : (index) -> i32
+! CHECK:   fir.do_loop %[[J_IV:[^ ]*]] =
+! CHECK-SAME: %[[J_LB:[^ ]*]] to %[[J_UB:[^ ]*]] step %[[J_ST:[^ ]*]] : i32 {
 ! CHECK:     fir.store %[[J_IV]] to %[[LOOP_VAR_J_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   }
+! CHECK:   %[[J_LBIDX:.*]] = fir.convert %[[J_LB]] : (i32) -> index
+! CHECK:   %[[J_UBIDX:.*]] = fir.convert %[[J_UB]] : (i32) -> index
+! CHECK:   %[[J_STIDX:.*]] = fir.convert %[[J_ST]] : (i32) -> index
 ! CHECK:   %[[J_C0:.*]] = arith.constant 0 : index
 ! CHECK:   %[[J_DIFF:.*]] = arith.subi %[[J_UBIDX]], %[[J_LBIDX]] : index
-! CHECK:   %[[J_ADD:.*]] = arith.addi %[[J_DIFF]], %[[ST]] : index
-! CHECK:   %[[J_TRIP:.*]] = arith.divsi %[[J_ADD]], %[[ST]] : index
+! CHECK:   %[[J_ADD:.*]] = arith.addi %[[J_DIFF]], %[[J_STIDX]] : index
+! CHECK:   %[[J_TRIP:.*]] = arith.divsi %[[J_ADD]], %[[J_STIDX]] : index
 ! CHECK:   %[[J_CMP:.*]] = arith.cmpi slt, %[[J_TRIP]], %[[J_C0]] : index
 ! CHECK:   %[[J_SEL:.*]] = arith.select %[[J_CMP]], %[[J_C0]], %[[J_TRIP]] : index
-! CHECK:   %[[J_MUL:.*]] = arith.muli %[[J_SEL]], %[[ST]] : index
+! CHECK:   %[[J_MUL:.*]] = arith.muli %[[J_SEL]], %[[J_STIDX]] : index
 ! CHECK:   %[[J_LASTIDX:.*]] = arith.addi %[[J_LBIDX]], %[[J_MUL]] : index
 ! CHECK:   %[[J_LAST:.*]] = fir.convert %[[J_LASTIDX]] : (index) -> i32
 ! CHECK:   fir.store %[[J_LAST]] to %[[LOOP_VAR_J_DECL]]#0 : !fir.ref<i32>

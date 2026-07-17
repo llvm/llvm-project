@@ -76,10 +76,9 @@ subroutine do_inside_while_loop
 
       ! CHECK-DAG: %[[C8:.*]] = arith.constant 8 : i32
       ! CHECK-DAG: %[[C13:.*]] = arith.constant 13 : i32
-      ! CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
-      ! CHECK: fir.do_loop %[[LI:.*]] = %[[LB:.*]] to %[[UB:.*]] step %[[STEP:.*]] {
-        ! CHECK: %[[IV:.*]] = fir.convert %[[LI]] : (index) -> i32
-        ! CHECK: fir.store %[[IV]] to %[[I]]#0 : !fir.ref<i32>
+      ! CHECK-DAG: %[[C1:.*]] = arith.constant 1 : i32
+      ! CHECK: fir.do_loop %[[LI:.*]] = %[[LB:.*]] to %[[UB:.*]] step %[[STEP:.*]] : i32 {
+        ! CHECK: fir.store %[[LI]] to %[[I]]#0 : !fir.ref<i32>
         ! CHECK: %[[C2:.*]] = arith.constant 2 : i32
         ! CHECK: %[[J2VAL:.*]] = fir.load %[[J]]#0 : !fir.ref<i32>
         ! CHECK: %[[JINC:.*]] = arith.muli %[[C2]], %[[J2VAL]] : i32
@@ -87,14 +86,17 @@ subroutine do_inside_while_loop
       do i=8,13
         j=j*2
 
+      ! CHECK: %[[LBIDX:.*]] = fir.convert %[[LB]] : (i32) -> index
+      ! CHECK: %[[UBIDX:.*]] = fir.convert %[[UB]] : (i32) -> index
+      ! CHECK: %[[STEPIDX:.*]] = fir.convert %[[STEP]] : (i32) -> index
       ! CHECK: %[[C0:.*]] = arith.constant 0 : index
-      ! CHECK: %[[DIFF:.*]] = arith.subi %[[UB]], %[[LB]] : index
-      ! CHECK: %[[ADD:.*]] = arith.addi %[[DIFF]], %[[STEP]] : index
-      ! CHECK: %[[TRIP:.*]] = arith.divsi %[[ADD]], %[[STEP]] : index
+      ! CHECK: %[[DIFF:.*]] = arith.subi %[[UBIDX]], %[[LBIDX]] : index
+      ! CHECK: %[[ADD:.*]] = arith.addi %[[DIFF]], %[[STEPIDX]] : index
+      ! CHECK: %[[TRIP:.*]] = arith.divsi %[[ADD]], %[[STEPIDX]] : index
       ! CHECK: %[[CMP:.*]] = arith.cmpi slt, %[[TRIP]], %[[C0]] : index
       ! CHECK: %[[SEL:.*]] = arith.select %[[CMP]], %[[C0]], %[[TRIP]] : index
-      ! CHECK: %[[MUL:.*]] = arith.muli %[[SEL]], %[[STEP]] : index
-      ! CHECK: %[[LASTIDX:.*]] = arith.addi %[[LB]], %[[MUL]] : index
+      ! CHECK: %[[MUL:.*]] = arith.muli %[[SEL]], %[[STEPIDX]] : index
+      ! CHECK: %[[LASTIDX:.*]] = arith.addi %[[LBIDX]], %[[MUL]] : index
       ! CHECK: %[[LAST:.*]] = fir.convert %[[LASTIDX]] : (index) -> i32
       ! CHECK: fir.store %[[LAST]] to %[[I]]#0 : !fir.ref<i32>
       end do
