@@ -34,7 +34,6 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Threading.h"
 
 namespace lld::elf {
@@ -494,8 +493,12 @@ public:
   /// Add a dynamic relocation without writing an addend to the output section.
   /// This overload can be used if the addends are written directly instead of
   /// using relocations on the input section (e.g. MipsGotSection::writeTo()).
-  template <bool shard = false> void addReloc(const DynamicReloc &reloc) {
-    if (reloc.type == relativeRel)
+  /// Concurrent callers must pass distinct shards.
+  template <bool concurrent = false>
+  void addReloc(const DynamicReloc &reloc, unsigned shard = 0) {
+    if constexpr (concurrent)
+      relocsVec[shard].push_back(reloc);
+    else if (reloc.type == relativeRel)
       relativeRelocs.push_back(reloc);
     else
       relocs.push_back(reloc);
@@ -509,13 +512,14 @@ public:
   /// This function should only be called for non-preemptible symbols or
   /// RelExpr values that refer to an address inside the output file (e.g. the
   /// address of the GOT entry for a potentially preemptible symbol).
-  template <bool shard = false>
+  template <bool concurrent = false>
   void addRelativeReloc(RelType dynType, InputSectionBase &isec,
                         uint64_t offsetInSec, Symbol &sym, int64_t addend,
-                        RelType addendRelType, RelExpr expr) {
+                        RelType addendRelType, RelExpr expr,
+                        unsigned shard = 0) {
     assert(expr != R_ADDEND && "expected non-addend relocation expression");
-    addReloc<shard>(false, dynType, isec, offsetInSec, sym, addend, expr,
-                    addendRelType);
+    addReloc<concurrent>(false, dynType, isec, offsetInSec, sym, addend, expr,
+                         addendRelType, shard);
   }
   /// Add a dynamic relocation using the target address of \p sym as the addend
   /// if \p sym is non-preemptible. Otherwise add a relocation against \p sym.
@@ -523,16 +527,17 @@ public:
                                           InputSectionBase &isec,
                                           uint64_t offsetInSec, Symbol &sym,
                                           RelType addendRelType);
-  template <bool shard = false>
+  template <bool concurrent = false>
   void addReloc(bool isAgainstSymbol, RelType dynType, InputSectionBase &sec,
                 uint64_t offsetInSec, Symbol &sym, int64_t addend, RelExpr expr,
-                RelType addendRelType) {
+                RelType addendRelType, unsigned shard = 0) {
     // Write the addends to the relocated address if required. We skip
     // it if the written value would be zero.
     if (ctx.arg.writeAddends && (expr != R_ADDEND || addend != 0))
       sec.addReloc({expr, addendRelType, offsetInSec, addend, &sym});
-    addReloc<shard>(
-        {dynType, &sec, offsetInSec, isAgainstSymbol, sym, addend, expr});
+    addReloc<concurrent>(
+        {dynType, &sec, offsetInSec, isAgainstSymbol, sym, addend, expr},
+        shard);
   }
   bool isNeeded() const override {
     return !relocs.empty() || !relativeRelocs.empty() ||
@@ -560,11 +565,6 @@ protected:
   RelType relativeRel;
   bool combreloc;
 };
-
-template <>
-inline void RelocationBaseSection::addReloc<true>(const DynamicReloc &reloc) {
-  relocsVec[llvm::parallel::getThreadIndex()].push_back(reloc);
-}
 
 template <class ELFT>
 class RelocationSection final : public RelocationBaseSection {
@@ -607,21 +607,14 @@ struct RelativeReloc {
 class RelrBaseSection : public SyntheticSection {
 public:
   RelrBaseSection(Ctx &, unsigned concurrency, bool isAArch64Auth = false);
-  /// Add a dynamic relocation without writing an addend to the output section.
-  /// This overload can be used if the addends are written directly instead of
-  /// using relocations on the input section.
-  template <bool shard = false> void addReloc(const RelativeReloc &reloc) {
-    relocs.push_back(reloc);
-  }
   /// Add a relative dynamic relocation that uses the target address of \p sym
   /// (i.e. InputSection::getRelocTargetVA()) + \p addend as the addend.
-  template <bool shard = false>
   void addRelativeReloc(InputSectionBase &isec, uint64_t offsetInSec,
                         Symbol &sym, int64_t addend, RelType addendRelType,
-                        RelExpr expr) {
+                        RelExpr expr, unsigned shard) {
     assert(expr != R_ADDEND && "expected non-addend relocation expression");
     isec.addReloc({expr, addendRelType, offsetInSec, addend, &sym});
-    addReloc<shard>({&isec, isec.relocs().size() - 1});
+    relocsVec[shard].push_back({&isec, isec.relocs().size() - 1});
   }
   bool isNeeded() const override {
     return !relocs.empty() ||
@@ -634,11 +627,6 @@ protected:
   void mergeRels();
   SmallVector<SmallVector<RelativeReloc, 0>, 0> relocsVec;
 };
-
-template <>
-inline void RelrBaseSection::addReloc<true>(const RelativeReloc &reloc) {
-  relocsVec[llvm::parallel::getThreadIndex()].push_back(reloc);
-}
 
 // RelrSection is used to encode offsets for relative relocations.
 // Proposal for adding SHT_RELR sections to generic-abi is here:
@@ -671,6 +659,8 @@ public:
   void finalizeContents() override;
   size_t getSize() const override { return getNumSymbols() * entsize; }
   void addSymbol(Symbol *sym);
+  void maybeAddSttFile();
+  void markGlobalPart() { firstGlobalIdx = symbols.size(); }
   unsigned getNumSymbols() const { return symbols.size() + 1; }
   size_t getSymbolIndex(const Symbol &sym);
   ArrayRef<SymbolTableEntry> getSymbols() const { return symbols; }
@@ -680,6 +670,14 @@ protected:
 
   // A vector of symbols and their string table offsets.
   SmallVector<SymbolTableEntry, 0> symbols;
+
+  // Synthetic STT_FILE with an empty name, added by maybeAddSttFile and placed
+  // by sortSymTabSymbols before all locals that cannot be attributed to a file.
+  Defined *synthSttFileSym = nullptr;
+
+  // symbols.size() before the global loop. Locals from here on are not
+  // file-attributable and move behind synthSttFileSym.
+  size_t firstGlobalIdx = 0;
 
   StringTableSection &strTabSec;
 

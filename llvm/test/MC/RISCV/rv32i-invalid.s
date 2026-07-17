@@ -72,12 +72,12 @@ andi ra, sp, %pcrel_hi(123) # CHECK: :[[@LINE]]:14: error: operand must be a sym
 xori a2, a3, %hi(345) # CHECK: :[[@LINE]]:14: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 add a1, a2, (a3)
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:13: note: invalid operand for instruction
+# CHECK: :[[@LINE-2]]:13: note: register must be a GPR
 # CHECK: :[[@LINE-3]]:13: note: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 
 add a1, a2, foo
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:13: note: invalid operand for instruction
+# CHECK: :[[@LINE-2]]:13: note: register must be a GPR
 # CHECK: :[[@LINE-3]]:13: note: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 
 ## uimm12
@@ -164,24 +164,24 @@ addi t0, sp, %modifer(255) # CHECK: :[[@LINE]]:15: error: invalid relocation spe
 addi t0, sp, %pltpcrel(255) # CHECK: :[[@LINE]]:14: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 
 # Use of operand modifier on register name
-addi t1, %lo(t2), 1 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
+addi t1, %lo(t2), 1 # CHECK: :[[@LINE]]:10: error: register must be a GPR
 
 # Invalid mnemonics
 subs t0, t2, t1 # CHECK: :[[@LINE]]:1: error: unrecognized instruction mnemonic
 nandi t0, zero, 0 # CHECK: :[[@LINE]]:1: error: unrecognized instruction mnemonic
 
 # Invalid register names
-addi foo, sp, 10 # CHECK: :[[@LINE]]:6: error: invalid operand for instruction
-slti a10, a2, 0x20 # CHECK: :[[@LINE]]:6: error: invalid operand for instruction
-slt x32, s0, s0 # CHECK: :[[@LINE]]:5: error: invalid operand for instruction
+addi foo, sp, 10 # CHECK: :[[@LINE]]:6: error: register must be a GPR
+slti a10, a2, 0x20 # CHECK: :[[@LINE]]:6: error: register must be a GPR
+slt x32, s0, s0 # CHECK: :[[@LINE]]:5: error: register must be a GPR
 
 # RV64I mnemonics
 addiw a0, sp, 100 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set{{$}}
 sraw t0, s2, zero # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set{{$}}
 
 # Invalid operand types
-xori sp, 22, 220 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
-sub t0, t2, 1 # CHECK: :[[@LINE]]:13: error: invalid operand for instruction
+xori sp, 22, 220 # CHECK: :[[@LINE]]:10: error: register must be a GPR
+sub t0, t2, 1 # CHECK: :[[@LINE]]:13: error: register must be a GPR
 
 # Too many operands
 sltiu s2, s3, 0x50, 0x60 # CHECK: :[[@LINE]]:21: error: unexpected extra operand for instruction
@@ -209,7 +209,7 @@ clmul a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the followin
 bset a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zbs' (Single-Bit Instructions){{$}}
 
 # Using floating point registers when integer registers are expected
-addi a2, ft0, 24 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
+addi a2, ft0, 24 # CHECK: :[[@LINE]]:10: error: register must be a GPR
 
 # fence.tso accepts no operands
 fence.tso rw, rw # CHECK: :[[@LINE]]:11: error: unexpected extra operand for instruction

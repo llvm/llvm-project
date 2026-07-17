@@ -515,7 +515,25 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
     // to correct any typos.
     DeclarationName Name = Found.getLookupName();
     Found.clear();
-    QualifiedLookupValidatorCCC FilterCCC(!SS.isEmpty());
+
+    class TemplateNameLookupValidatorCCC final
+        : public QualifiedLookupValidatorCCC {
+    public:
+      using QualifiedLookupValidatorCCC::QualifiedLookupValidatorCCC;
+
+      bool ValidateCandidate(const TypoCorrection &Candidate) final {
+        if (const NamedDecl *ND = Candidate.getCorrectionDecl();
+            !ND || !isa<TemplateDecl>(ND))
+          return false;
+        return QualifiedLookupValidatorCCC::ValidateCandidate(Candidate);
+      }
+
+      std::unique_ptr<CorrectionCandidateCallback> clone() final {
+        return std::make_unique<TemplateNameLookupValidatorCCC>(*this);
+      }
+    };
+
+    TemplateNameLookupValidatorCCC FilterCCC(!SS.isEmpty());
     FilterCCC.WantTypeSpecifiers = false;
     FilterCCC.WantExpressionKeywords = false;
     FilterCCC.WantRemainingKeywords = false;
@@ -1298,6 +1316,7 @@ bool Sema::AttachTypeConstraint(AutoTypeLoc TL,
         << NewConstrainedParm->getTypeSourceInfo()
                ->getTypeLoc()
                .getSourceRange();
+    NewConstrainedParm->setType(TL.getType());
     return true;
   }
   // FIXME: Concepts: This should be the type of the placeholder, but this is
@@ -1958,9 +1977,14 @@ DeclResult Sema::CheckClassTemplate(
   if (SS.isNotEmpty() && !SS.isInvalid()) {
     SemanticContext = computeDeclContext(SS, true);
     if (!SemanticContext) {
-      Diag(NameLoc, diag::err_template_qualified_declarator_no_match)
+      // FIXME: Horrible, horrible hack! We can't currently represent this
+      // in the AST, and historically we have just ignored such friend
+      // class templates, so don't complain here.
+      Diag(NameLoc, TUK == TagUseKind::Friend
+                        ? diag::warn_template_qualified_friend_ignored
+                        : diag::err_template_qualified_declarator_no_match)
           << SS.getScopeRep() << SS.getRange();
-      return true;
+      return TUK != TagUseKind::Friend;
     }
 
     if (RequireCompleteDeclContext(SS, SemanticContext))
@@ -4916,7 +4940,7 @@ ExprResult Sema::CheckConceptTemplateId(
     LocalInstantiationScope Scope(*this);
 
     EnterExpressionEvaluationContext EECtx{
-        *this, ExpressionEvaluationContext::Unevaluated, CSD};
+        *this, ExpressionEvaluationContext::Unevaluated};
 
     Error = CheckConstraintSatisfaction(
         NamedConcept, AssociatedConstraint(Concept->getConstraintExpr()), MLTAL,
@@ -9298,6 +9322,7 @@ bool Sema::CheckConceptUseInDefinition(NamedDecl *Concept, SourceLocation Loc) {
       CE && !CE->isInvalidDecl() && !CE->hasDefinition()) {
     Diag(Loc, diag::err_recursive_concept) << CE;
     Diag(CE->getLocation(), diag::note_declared_at);
+    CE->setInvalidDecl();
     return true;
   }
   // Concept template parameters don't have a definition and can't
@@ -11402,7 +11427,6 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
     LookupQualifiedName(Result, Ctx, SS);
   else
     LookupName(Result, CurScope);
-
   unsigned DiagID = 0;
   Decl *Referenced = nullptr;
   switch (Result.getResultKind()) {

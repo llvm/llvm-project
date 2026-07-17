@@ -95,10 +95,7 @@ struct Policy {
 /// thread's stack when the task starts.
 class PolicyStack {
 public:
-  static PolicyStack &Get() {
-    static thread_local PolicyStack s_stack;
-    return s_stack;
-  }
+  static PolicyStack &Get();
 
   Policy Current() const;
 

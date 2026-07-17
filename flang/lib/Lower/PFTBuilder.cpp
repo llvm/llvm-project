@@ -853,6 +853,11 @@ private:
     sourceEvaluation.isUnstructured = true;
     if (!sourceEvaluation.controlSuccessor)
       sourceEvaluation.controlSuccessor = &targetEvaluation;
+    else if (sourceEvaluation.controlSuccessor != &targetEvaluation &&
+             llvm::find(sourceEvaluation.extraControlSuccessors,
+                        &targetEvaluation) ==
+                 sourceEvaluation.extraControlSuccessors.end())
+      sourceEvaluation.extraControlSuccessors.push_back(&targetEvaluation);
     targetEvaluation.isNewBlock = true;
     // If this is a branch into the body of a construct (usually illegal,
     // but allowed in some legacy cases), then the targetEvaluation and its
@@ -1034,10 +1039,29 @@ private:
               iter->second.insert(label);
             }
           },
-          [&](const parser::AssignedGotoStmt &) {
-            // Although this statement is a branch, it doesn't have any
-            // explicit control successors. So the code at the end of the
-            // loop won't mark the successor. Do that here.
+          [&](const parser::AssignedGotoStmt &s) {
+            // Mark every possible target of the assigned GO TO so that
+            // wrappability analyses (branchesAreInternal, hasIncomingBranch)
+            // can see any escape from an enclosing construct.
+            const auto &labelList = std::get<std::list<parser::Label>>(s.t);
+            if (!labelList.empty()) {
+              // Explicit target list: `go to v, (l1, l2, ...)`.
+              for (const auto &label : labelList)
+                markBranchTarget(eval, label);
+            } else {
+              // No explicit list (`go to v`): fall back to the set of labels
+              // that have been previously ASSIGN'd to v.
+              // TODO: This may miss assignments that appear later in program
+              // order, but it matches the information available at this point
+              // in the walk.
+              const auto *sym = std::get<parser::Name>(s.t).symbol;
+              if (sym) {
+                auto iter = assignSymbolLabelMap->find(*sym);
+                if (iter != assignSymbolLabelMap->end())
+                  for (auto label : iter->second)
+                    markBranchTarget(eval, label);
+              }
+            }
             eval.isUnstructured = true;
             markSuccessorAsNewBlock(eval);
           },
@@ -1376,12 +1400,19 @@ public:
       outputStream << newBlock << name << bang;
     if (eval.negateCondition)
       outputStream << " [negate]";
-    if (eval.constructExit)
+    if (eval.constructExit) {
       outputStream << " -> " << eval.constructExit->printIndex;
-    else if (eval.controlSuccessor)
+    } else if (eval.controlSuccessor) {
       outputStream << " -> " << eval.controlSuccessor->printIndex;
-    else if (eval.isA<parser::EntryStmt>() && eval.lexicalSuccessor)
+      // Multiway branches (computed GO TO, arithmetic IF) put additional
+      // targets in extraControlSuccessors; print them so PFT dumps expose
+      // every target rather than only the first.
+      for (const Fortran::lower::pft::Evaluation *extra :
+           eval.extraControlSuccessors)
+        outputStream << ", " << extra->printIndex;
+    } else if (eval.isA<parser::EntryStmt>() && eval.lexicalSuccessor) {
       outputStream << " -> " << eval.lexicalSuccessor->printIndex;
+    }
     bool extraNewline = false;
     if (!eval.position.empty())
       outputStream << ": " << eval.position.ToString();

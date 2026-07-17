@@ -2640,10 +2640,6 @@ bool isGCN3Encoding(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureGCN3Encoding);
 }
 
-bool isGFX10_AEncoding(const MCSubtargetInfo &STI) {
-  return STI.hasFeature(AMDGPU::FeatureGFX10_AEncoding);
-}
-
 bool isGFX10_BEncoding(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureGFX10_BEncoding);
 }
@@ -3674,10 +3670,11 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
 }
 
 bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode) {
-  uint64_t TSFlags = MII.get(Opcode).TSFlags;
+  const MCInstrDesc &Desc = MII.get(Opcode);
+  uint64_t TSFlags = Desc.TSFlags;
 
   if (TSFlags & SIInstrFlags::SMRD)
-    return !getSMEMIsBuffer(Opcode);
+    return Desc.mayLoad() && !Desc.mayStore() && !getSMEMIsBuffer(Opcode);
   if (!(TSFlags & SIInstrFlags::FLAT))
     return false;
 
