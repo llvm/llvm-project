@@ -43,8 +43,7 @@ void CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
       Debugger &dbg = GetDebugger();
       if (dbg.GetUseColor()) {
         escaped_search_word = llvm::Regex::escape(search_word);
-        highlight.emplace(escaped_search_word, dbg.GetRegexMatchAnsiPrefix(),
-                          dbg.GetRegexMatchAnsiSuffix(), true);
+        highlight.emplace(escaped_search_word, dbg.GetRegexMatchColor(), true);
       }
 
       // Find all commands matching the search word.
