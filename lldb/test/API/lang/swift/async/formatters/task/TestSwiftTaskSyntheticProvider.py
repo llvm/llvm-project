@@ -36,7 +36,6 @@ class TestCase(TestBase):
 
     @skipEmbeddedSwift
     @swiftTest
-    @skipIfLinux
     def test_current_task(self):
         """Test Task synthetic child for UnsafeCurrentTask (from an async let)."""
         self.build()

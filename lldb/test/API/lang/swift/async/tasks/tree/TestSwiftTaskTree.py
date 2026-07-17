@@ -6,7 +6,7 @@ import lldbsuite.test.lldbutil as lldbutil
 class TestCase(TestBase):
 
     @skipEmbeddedSwift
-    @skipUnlessPlatform(["macosx"])
+    @skipUnlessPlatform(["macosx", "linux"])
     @swiftTest
     def test_task_tree(self):
         self.build()

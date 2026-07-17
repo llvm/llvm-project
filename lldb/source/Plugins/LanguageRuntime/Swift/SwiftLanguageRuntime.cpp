@@ -3875,6 +3875,64 @@ PthreadReservedKeyTaskFinder::ComputeTaskAddrLocation(Thread &real_thread) {
   return tsd_addr + task_ptr_offset_in_tls;
 }
 
+/// Finds tasks when the current-task pointer lives in a C++ thread_local
+/// (non-Darwin). The runtime variable has internal linkage, so it is located by
+/// mangled symbol name -- a debug contract; see ActiveTask::Value in Actor.cpp.
+/// See CurrentTaskStorageKind::cxx_thread_local.
+struct CxxThreadLocalTaskFinder : CachingTaskFinder {
+  CxxThreadLocalTaskFinder(lldb::ModuleSP concurrency_module);
+  llvm::Expected<lldb::addr_t>
+  ComputeTaskAddrLocation(Thread &real_thread) override;
+
+private:
+  lldb::ModuleSP m_concurrency_module;
+  std::optional<lldb::addr_t> m_tls_file_addr;
+};
+
+// (anonymous namespace)::ActiveTask::Value in the Swift concurrency runtime.
+static constexpr llvm::StringLiteral g_cxx_thread_local_task_symbol =
+    "_ZN12_GLOBAL__N_110ActiveTask5ValueE";
+
+CxxThreadLocalTaskFinder::CxxThreadLocalTaskFinder(ModuleSP concurrency_module)
+    : m_concurrency_module(std::move(concurrency_module)) {
+  if (!m_concurrency_module)
+    return;
+
+  const Symbol *symbol = m_concurrency_module->FindFirstSymbolWithNameAndType(
+      ConstString(g_cxx_thread_local_task_symbol));
+  if (!symbol) {
+    LLDB_LOG(GetLog(LLDBLog::OS),
+             "CxxThreadLocalTaskFinder: could not find current-task symbol {0}",
+             g_cxx_thread_local_task_symbol);
+    return;
+  }
+
+  // Guard against a same-named symbol that is not in thread-local storage.
+  SectionSP section = symbol->GetAddress().GetSection();
+  if (!section || !section->IsThreadSpecific()) {
+    LLDB_LOG(GetLog(LLDBLog::OS),
+             "CxxThreadLocalTaskFinder: symbol {0} is not thread-local",
+             g_cxx_thread_local_task_symbol);
+    return;
+  }
+
+  m_tls_file_addr = symbol->GetFileAddress();
+}
+
+llvm::Expected<addr_t>
+CxxThreadLocalTaskFinder::ComputeTaskAddrLocation(Thread &real_thread) {
+  if (!m_concurrency_module || !m_tls_file_addr)
+    return llvm::createStringError(
+        "could not locate the current-task thread-local variable");
+
+  addr_t location =
+      real_thread.GetThreadLocalData(m_concurrency_module, *m_tls_file_addr);
+  if (location == LLDB_INVALID_ADDRESS)
+    return llvm::createStringError(
+        "could not resolve thread-local storage for the current task");
+  return location;
+}
+
 /// Lightweight wrapper around TaskStatusRecord pointers, providing:
 ///   * traversal over the embedded linnked list of status records
 ///   * information contained within records
@@ -4120,6 +4178,7 @@ GetTaskFinder(const SwiftLanguageRuntime::ConcurrencyInfo &info) {
   case CurrentTaskStorageKind::pthread_reserved_key:
     return std::make_unique<PthreadReservedKeyTaskFinder>();
   case CurrentTaskStorageKind::cxx_thread_local:
+    return std::make_unique<CxxThreadLocalTaskFinder>(info.concurrency_module);
   case CurrentTaskStorageKind::pthread_allocated_key:
   case CurrentTaskStorageKind::global:
   case CurrentTaskStorageKind::last:
