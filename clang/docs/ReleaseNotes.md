@@ -1041,6 +1041,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   - Hisilicon hip12 core (hip12).
   - NVIDIA Rigel core (rigel).
 
+- On AArch64 Windows targets, `-mbranch-protection=standard` and `-mbranch-protection=pac-ret`
+  now uses the B-key by default.
+
 #### Android Support
 
 #### Windows Support
