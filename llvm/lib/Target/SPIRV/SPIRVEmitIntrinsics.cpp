@@ -2738,7 +2738,11 @@ void SPIRVEmitIntrinsics::reconstructAggregateReturns(Function &Func,
     if (!RI)
       continue;
     Value *RetVal = RI->getReturnValue();
-    if (!RetVal || RetVal->getType() != OrigRetTy || !isa<CallBase>(RetVal))
+    // Accept any instruction (call, extractvalue, etc.) that produces the
+    // original aggregate type.  The placeholder inserted by
+    // SPIRVPrepareFunctions (ret i32 poison) has no return value matching
+    // OrigRetTy, so we skip those.
+    if (!RetVal || RetVal->getType() != OrigRetTy)
       continue;
     Type *AggrTy = RetVal->getType();
     uint64_t NumElts = isa<StructType>(AggrTy)
@@ -2753,6 +2757,7 @@ void SPIRVEmitIntrinsics::reconstructAggregateReturns(Function &Func,
     RI->setOperand(0, Rebuilt);
   }
 }
+
 
 void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
                                              IRBuilder<> &B) {
