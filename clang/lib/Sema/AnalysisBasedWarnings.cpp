@@ -2162,19 +2162,12 @@ static const DeclRefExpr *getLocalMemberAccess(const Expr *E,
   return DRE;
 }
 
-// The class-shape half of the tracked-local guards: V is a non-parameter
-// local, not itself [[uninit]]-marked (its subobject accesses are the
-// parse-time read-through / uninit_write rules' territory, and tracking it
-// here would double-diagnose), of a non-union class -- with no
-// user-provided constructor anywhere in the contributing subtree (paper
-// §5.1 trusts one: its body may assign, which local analysis cannot see).
-// How V's declaration *initializes* the members is the callers' half.
-static const CXXRecordDecl *getTrackableLocalClass(const VarDecl *V) {
-  if (!V->hasLocalStorage() || isa<ParmVarDecl>(V) || isa<DecompositionDecl>(V))
-    return nullptr;
-  if (V->isInvalidDecl() || V->hasAttr<UninitAttr>())
-    return nullptr;
-  QualType T = V->getType();
+// The type-shape half of the tracked guards: a non-union, non-dependent
+// class with no user-provided constructor anywhere in the contributing
+// subtree (paper §5.1 trusts one: its body may assign, which local analysis
+// cannot see). A reference type aliases an object also reachable other ways
+// and never qualifies.
+static const CXXRecordDecl *getTrackableSlotClass(QualType T) {
   if (T->isReferenceType() || T->isDependentType())
     return nullptr;
   const CXXRecordDecl *RD = T->getAsCXXRecordDecl();
@@ -2184,6 +2177,19 @@ static const CXXRecordDecl *getTrackableLocalClass(const VarDecl *V) {
   if (RD->isUnion() || RD->isDependentType() || hasUserProvidedCtor(RD))
     return nullptr;
   return RD;
+}
+
+// The declaration-shape half for a local: V is a non-parameter local, not
+// itself [[uninit]]-marked (its subobject accesses are the parse-time
+// read-through / uninit_write rules' territory, and tracking it here would
+// double-diagnose), of a trackable class. How V's declaration *initializes*
+// the members is the callers' half.
+static const CXXRecordDecl *getTrackableLocalClass(const VarDecl *V) {
+  if (!V->hasLocalStorage() || isa<ParmVarDecl>(V) || isa<DecompositionDecl>(V))
+    return nullptr;
+  if (V->isInvalidDecl() || V->hasAttr<UninitAttr>())
+    return nullptr;
+  return getTrackableSlotClass(V->getType());
 }
 
 // If V is a local whose [[uninit]] members this pass may soundly flow-track
@@ -2274,6 +2280,42 @@ static void checkInitProfileLocalMembers(Sema &S, AnalysisDeclContext &AC) {
   llvm::DenseMap<const VarDecl *, std::pair<unsigned, unsigned>> VarRange;
   llvm::DenseMap<std::pair<const VarDecl *, const FieldDecl *>, unsigned>
       PairIdx;
+  auto HarvestVar = [&](const VarDecl *V, const CXXRecordDecl *RD) {
+    SmallVector<const FieldDecl *, 4> Members;
+    FieldIdxScratch.clear();
+    collectTrackedUninitMembers(S, RD, Members, FieldIdxScratch);
+    if (Members.empty())
+      return false;
+    unsigned Begin = PairField.size();
+    for (const FieldDecl *F : Members) {
+      PairIdx[{V, F}] = PairField.size();
+      PairField.push_back(F);
+    }
+    VarRange[V] = {Begin, PairField.size()};
+    return true;
+  };
+
+  // A by-value slot parameter is tracked from an all-unassigned start
+  // (which is exactly the dataflow's entry state): the parameter is a
+  // *copy* of the caller's argument, and a copy does not inherit
+  // initialization (paper §5.2) -- §4.4's Slot contract makes a marked
+  // member uninitialized until locally proven otherwise ("you can't ask a
+  // slot if it is initialized"), and the paper's way to hand
+  // uninitialized-capable storage across a call is a marked pointer or
+  // reference (§4.3), not a by-value slot. This is the call-boundary twin
+  // of the ctor-body pass's deliberate strictness: a caller that assigned
+  // the member before the call is rejected here all the same, with escape
+  // crediting (any bare use of the parameter) and [[profiles::suppress]]
+  // as the remedies. Reference parameters alias the caller's own object
+  // and stay untracked.
+  if (const auto *EnclosingFD = dyn_cast_or_null<FunctionDecl>(AC.getDecl()))
+    for (const ParmVarDecl *P : EnclosingFD->parameters()) {
+      if (P->isInvalidDecl() || P->hasAttr<UninitAttr>())
+        continue;
+      if (const CXXRecordDecl *RD = getTrackableSlotClass(P->getType()))
+        HarvestVar(P, RD);
+    }
+
   for (const CFGBlock *B : *cfg) {
     for (const CFGElement &Elem : *B) {
       auto CS = Elem.getAs<CFGStmt>();
@@ -2289,17 +2331,7 @@ static void checkInitProfileLocalMembers(Sema &S, AnalysisDeclContext &AC) {
         const CXXRecordDecl *RD = getTrackedLocalAggregate(V);
         if (!RD)
           continue;
-        SmallVector<const FieldDecl *, 4> Members;
-        FieldIdxScratch.clear();
-        collectTrackedUninitMembers(S, RD, Members, FieldIdxScratch);
-        if (Members.empty())
-          continue;
-        unsigned Begin = PairField.size();
-        for (const FieldDecl *F : Members) {
-          PairIdx[{V, F}] = PairField.size();
-          PairField.push_back(F);
-        }
-        VarRange[V] = {Begin, PairField.size()};
+        HarvestVar(V, RD);
       }
     }
   }
@@ -2335,17 +2367,8 @@ static void checkInitProfileLocalMembers(Sema &S, AnalysisDeclContext &AC) {
               SrcRef ? dyn_cast<VarDecl>(SrcRef->getDecl()) : nullptr;
           if (!Src || !VarRange.count(Src))
             continue;
-          SmallVector<const FieldDecl *, 4> Members;
-          FieldIdxScratch.clear();
-          collectTrackedUninitMembers(S, RD, Members, FieldIdxScratch);
-          if (Members.empty())
+          if (!HarvestVar(V, RD))
             continue;
-          unsigned Begin = PairField.size();
-          for (const FieldDecl *F : Members) {
-            PairIdx[{V, F}] = PairField.size();
-            PairField.push_back(F);
-          }
-          VarRange[V] = {Begin, PairField.size()};
           CopySource[V] = Src;
           Added = true;
         }

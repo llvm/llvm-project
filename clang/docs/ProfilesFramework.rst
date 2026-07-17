@@ -375,9 +375,17 @@ variable the analyses instead treat any escape as an assignment (see
 `Limitations`_).  A local copied or moved from a tracked local is tracked
 too: the copy's members inherit the source's per-member state at the copy
 point -- a copy does not inherit initialization (§5.2), it inherits
-whatever state the source has.  Members of an object initialized by a
-*user-provided* constructor are trusted (§5.1) and not flow-tracked; only
-the defining constructor itself is checked.
+whatever state the source has.  A by-value *parameter* of such a class is
+likewise a copy, of the caller's argument, so its marked members are
+tracked from an unassigned start: a read before a local assignment (or an
+escape of the parameter) is rejected even if the caller assigned the member
+first.  That is the call-boundary twin of the constructor-body strictness
+-- the paper hands uninitialized-capable storage across calls through
+marked pointers and references (§4.3), not by-value slots -- and
+``[[profiles::suppress]]`` is the remedy where the by-value flow is
+intended.  Members of an object initialized by a *user-provided*
+constructor are trusted (§5.1) and not flow-tracked; only the defining
+constructor itself is checked.
 
 
 Writes to Subobjects of Uninitialized Objects
@@ -650,11 +658,13 @@ false positive.
   the object-argument check.
 - Members of anonymous structs and unions, and arrays of aggregates, are not
   flow-tracked.
-- ``[[uninit]]`` members of by-value parameters, and of locals copied from
-  untracked sources, are not flow-tracked: a copy does not inherit
-  initialization (§5.2) -- it copies indeterminate bits -- but the source's
-  per-member state is unknown, so reads of such members are trusted (a
-  missed diagnostic, never a false positive).
+- ``[[uninit]]`` members of locals copied from untracked sources (a call
+  result, a member, an element) are not flow-tracked: a copy does not
+  inherit initialization (§5.2) -- it copies indeterminate bits -- but the
+  source's per-member state is unknown, so reads of such members are
+  trusted (a missed diagnostic, never a false positive).  Copies of tracked
+  locals and by-value parameters *are* tracked (see `Reads of Uninitialized
+  Objects`_).
 - Virtual base subobjects are not checked by ``ctor_uninit_member`` (they are
   initialized by the most-derived class).
 - A read of a tracked member inside another member's default initializer is

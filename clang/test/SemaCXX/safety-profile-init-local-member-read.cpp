@@ -20,7 +20,7 @@ int leading_unrelated_error = undeclared_identifier;
 // common-error@-1 {{use of undeclared identifier 'undeclared_identifier'}}
 
 struct Agg {
-  int m [[uninit]]; // expected-note 16 {{member 'm' declared here}}
+  int m [[uninit]]; // expected-note 18 {{member 'm' declared here}}
 };
 void take_ref(Agg &);
 // The pointee is uninitialized memory, so the parameter carries the marker
@@ -192,16 +192,51 @@ int test_value_initialized_forms() {
 // source, so such copies stay untracked: a known gap, never a false
 // positive.
 Agg make_agg();
-int test_copy_from_untracked_source(Agg other) {
-  Agg d = other;
+int test_copy_from_untracked_source() {
   Agg e = make_agg();
-  return d.m + e.m; // OK: known gap (untracked sources)
+  return e.m; // OK: known gap (untracked source)
 }
 
-// Parameters and references arrive constructed by the caller and are never
-// tracked.
-int test_parameter_untracked(Agg p, Agg &r) {
-  return p.m + r.m; // OK
+// A by-value parameter is a copy of the caller's argument, and a copy does
+// not inherit initialization (§5.2): its marked members are tracked from an
+// unassigned start. This is the call-boundary twin of the ctor-body pass's
+// deliberate strictness -- the paper hands uninitialized-capable storage
+// across calls via marked pointers/references (§4.3), not by-value slots --
+// so a caller-initialized member is rejected all the same; escapes and
+// [[profiles::suppress]] are the remedies.
+int test_byvalue_parameter_tracked(Agg p) {
+  return p.m; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+}
+
+int test_byvalue_parameter_assigned(Agg p) {
+  p.m = 5;
+  return p.m; // OK
+}
+
+int test_byvalue_parameter_escape(Agg p) {
+  take_ref(p);
+  return p.m; // OK: escaped
+}
+
+// Re-passing the parameter by value is an escape like any other bare use
+// (the copy-constructor argument reference is not a tracked-copy DeclStmt).
+void use_agg(Agg);
+int test_byvalue_parameter_repassed(Agg p) {
+  use_agg(p);
+  return p.m; // OK: escaped
+}
+
+// A copy from a by-value parameter chains the tracking: the parameter
+// starts unassigned, so the copy does too.
+int test_copy_from_parameter(Agg other) {
+  Agg d = other;
+  return d.m; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+}
+
+// A reference parameter aliases the caller's own object -- not a copy --
+// and stays untracked.
+int test_reference_parameter_untracked(Agg &r) {
+  return r.m; // OK
 }
 
 // A local that is itself [[uninit]]-marked is the parse-time rules'
