@@ -2,6 +2,12 @@
 // RUN: %clang_cc1 -triple arm64-apple-macos -target-feature +sve -fsyntax-only -fbounds-safety -verify %s
 // RUN: %clang_cc1 -triple arm64-apple-macos -target-feature +sve -fsyntax-only -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -verify %s
 
+// NOTE: This test previously checked `__sized_by` / `__sized_by_or_null` FixIt
+// suggestions. Those checks were removed when the diagnostic was migrated to
+// `err_counted_by_attr_pointee_unknown_size`, which does not emit the FixIt.
+// They should be restored once the FixIt is re-added; tracked by
+// swiftlang/llvm-project#13417.
+
 #include <ptrcheck.h>
 
 int len;

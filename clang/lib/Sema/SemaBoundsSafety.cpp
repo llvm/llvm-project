@@ -176,6 +176,7 @@ bool Sema::ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
   if (InvalidTypeKind != CountedByInvalidPointeeTypeKind::VALID) {
     // FIXME: We should suggest `__sized_by(_or_null)` and in the error
     // diagnostic case emit a FixIt.
+    // Tracked by swiftlang/llvm-project#13417.
     unsigned DiagID = ShouldWarn
                           ? diag::warn_counted_by_attr_elt_type_unknown_size
                           : diag::err_counted_by_attr_pointee_unknown_size;
