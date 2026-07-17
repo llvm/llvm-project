@@ -23,6 +23,9 @@ module mod1
 
   real(kind=8), device, allocatable, dimension(:) :: p
 
+  real, constant :: c1 = 1.0
+  real, device :: d1 = 1.0
+
   interface
     function __sum(a_d) result(res_h)
       integer(4), managed, intent(in) :: a_d(:,:,:,:)
@@ -495,7 +498,7 @@ subroutine sub25()
 end
 
 ! CHECK-LABEL: func.func @_QPsub25()
-! CHECK: fir.allocmem !fir.array<?xf64>, %15#1 {bindc_name = ".tmp", uniq_name = ""}
+! CHECK: fir.allocmem !fir.array<?xf64>, %{{.*}} {bindc_name = ".tmp", uniq_name = ""}
 ! CHECK: cuf.data_transfer %{{.*}} to %{{.*}} {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.box<!fir.array<?xf64>>
 ! CHECK: hlfir.assign %{{.*}} to %{{.*}} : f64, !fir.ref<f64>
 ! CHECK: fir.freemem %{{.*}} : !fir.heap<!fir.array<?xf64>>
@@ -573,7 +576,7 @@ subroutine sub29()
 end subroutine
 
 ! CHECK-LABEL:  func.func @_QPsub29()
-! CHECK: %[[TMP:.*]] = fir.allocmem !fir.array<?xf16>, %24#1 {bindc_name = ".tmp", uniq_name = ""}
+! CHECK: %[[TMP:.*]] = fir.allocmem !fir.array<?xf16>, %{{.*}}#1 {bindc_name = ".tmp", uniq_name = ""}
 ! CHECK: %[[TMP_BUFFER:.*]]:2 = hlfir.declare %[[TMP]](%{{.*}}) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xf16>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf16>>, !fir.heap<!fir.array<?xf16>>)
 ! CHECK: cuf.data_transfer %{{.*}} to %[[TMP_BUFFER]]#0 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.box<!fir.heap<!fir.array<?xf16>>>, !fir.box<!fir.array<?xf16>>
 ! CHECK: hlfir.elemental 
@@ -724,3 +727,52 @@ subroutine sub41()
   
   lm(1:5) = a%m(1:5)
 end subroutine
+
+subroutine sub42()
+  use mod1
+  real :: a
+  a = c1 * c1
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub42()
+! CHECK: %[[RES:.*]] = arith.mulf
+! CHECK: fir.store %[[RES]] to %{{.*}} : !fir.ref<f32>
+! CHECK-NOT: cuf.data_transfer
+
+subroutine sub43()
+  use mod1
+  real :: a
+  a = d1 * d1
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub43()
+! CHECK: %[[RES:.*]] = arith.mulf
+! CHECK: fir.store %[[RES]] to %{{.*}} : !fir.ref<f32>
+! CHECK-NOT: cuf.data_transfer
+
+subroutine sub44()
+  use mod1
+  real :: a
+  a = -d1
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub44()
+! CHECK: arith.negf
+! CHECK-NOT: cuf.data_transfer
+
+subroutine sub45(c0_d, n)
+  implicit none
+  integer :: n
+  complex(8), device :: c0_d(:,:)
+  complex(8), allocatable :: cx(:,:)
+  call compute(cx)
+contains
+  subroutine compute(cx)
+    complex(8), intent(inout) :: cx(:,:)
+    c0_d = cx
+  end subroutine
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub45
+! CHECK-LABEL: @_QFsub45Pcompute
+! CHECK: cuf.data_transfer %{{.*}} to %{{.*}} {transfer_kind = #cuf.cuda_transfer<host_device>} : !fir.box<!fir.array<?x?xcomplex<f64>>>, !fir.box<!fir.array<?x?xcomplex<f64>>>

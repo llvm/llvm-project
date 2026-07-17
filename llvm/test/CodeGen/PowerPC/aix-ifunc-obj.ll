@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff %s --filetype=obj -o %t.o
+; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff --code-model=small %s --filetype=obj -o %t.o
 ; RUN: llvm-objdump -D -r --symbol-description %t.o | FileCheck %s --check-prefixes=CHECK,CHECK-NO-FS
 
-; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff %s --function-sections --filetype=obj -o %t.o
+; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff --code-model=small %s --function-sections --filetype=obj -o %t.o
 ; RUN: llvm-objdump -D -r --symbol-description %t.o | FileCheck %s --check-prefixes=CHECK,CHECK-FS
 
 ; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff --function-sections --code-model=large --filetype=obj %s -o %t.o

@@ -115,6 +115,7 @@ namespace {
     void VisitNonTypeTemplateParmDecl(const NonTypeTemplateParmDecl *NTTP);
     void VisitTemplateTemplateParmDecl(const TemplateTemplateParmDecl *);
     void VisitHLSLBufferDecl(HLSLBufferDecl *D);
+    void VisitCXXExpansionStmtDecl(const CXXExpansionStmtDecl *D);
 
     void VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D);
     void VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D);
@@ -1346,9 +1347,9 @@ void DeclPrinter::VisitExplicitInstantiationDecl(ExplicitInstantiationDecl *D) {
   if (D->getQualifierLoc())
     D->getQualifierLoc().getNestedNameSpecifier().print(NameOS, Policy);
   Spec->printName(NameOS, Policy);
-  if (unsigned NumArgs = D->getNumTemplateArgs()) {
+  if (auto NumArgs = D->getNumTemplateArgs(); NumArgs && *NumArgs > 0) {
     SmallVector<TemplateArgumentLoc, 4> Args;
-    for (unsigned I = 0; I < NumArgs; ++I)
+    for (unsigned I = 0; I < *NumArgs; ++I)
       Args.push_back(D->getTemplateArg(I));
     printTemplateArgumentList(NameOS, Args, Policy);
   }
@@ -1385,6 +1386,11 @@ void DeclPrinter::VisitClassTemplatePartialSpecializationDecl(
                                     ClassTemplatePartialSpecializationDecl *D) {
   printTemplateParameters(D->getTemplateParameters());
   VisitCXXRecordDecl(D);
+}
+
+void DeclPrinter::VisitCXXExpansionStmtDecl(const CXXExpansionStmtDecl *D) {
+  D->getExpansionPattern()->printPretty(Out, /*PrinterHelper=*/nullptr, Policy,
+                                        Indentation, "\n", &Context);
 }
 
 //----------------------------------------------------------------------------

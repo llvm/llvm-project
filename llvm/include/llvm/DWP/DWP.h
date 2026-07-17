@@ -1,7 +1,6 @@
 #ifndef LLVM_DWP_DWP_H
 #define LLVM_DWP_DWP_H
 
-#include "DWPStringPool.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -103,6 +102,7 @@ class LLVM_ABI DWPWriter {
   uint16_t ELFMachine = 0;
   uint8_t ELFOSABI = 0;
   bool IsWASM = false;
+  bool IsLittleEndian = true;
 
 public:
   DWPWriter() = default;
@@ -110,6 +110,7 @@ public:
   void setMachine(uint16_t Machine) { ELFMachine = Machine; }
   void setOSABI(uint8_t OSABI) { ELFOSABI = OSABI; }
   void setIsWASM(bool V) { IsWASM = V; }
+  void setIsLittleEndian(bool V) { IsLittleEndian = V; }
 
   SmallVectorImpl<char> &getSectionBuffer(DWPSectionId Id) {
     return Sections[Id].Buffer;
@@ -129,9 +130,16 @@ public:
 
   void emitIntValue(uint64_t Value, unsigned Size) {
     auto &Buf = Sections[CurrentSection].Buffer;
-    for (unsigned I = 0; I < Size; ++I) {
-      Buf.push_back(static_cast<char>(Value & 0xff));
-      Value >>= 8;
+    if (IsLittleEndian) {
+      for (unsigned I = 0; I < Size; ++I) {
+        Buf.push_back(static_cast<char>(Value & 0xff));
+        Value >>= 8;
+      }
+    } else {
+      for (unsigned I = 0; I < Size; ++I) {
+        Buf.push_back(
+            static_cast<char>((Value >> (8 * (Size - 1 - I))) & 0xff));
+      }
     }
   }
 
@@ -139,6 +147,28 @@ public:
   Error writeWASM(raw_pwrite_stream &OS);
   Error write(raw_pwrite_stream &OS) {
     return IsWASM ? writeWASM(OS) : writeELF(OS);
+  }
+};
+
+class DWPStringPool {
+  DWPWriter &Out;
+  DenseMap<StringRef, uint64_t> Pool;
+  uint64_t Offset = 0;
+
+public:
+  DWPStringPool(DWPWriter &Out) : Out(Out) {}
+
+  uint64_t getOffset(const char *Str, unsigned Length) {
+    assert(strlen(Str) + 1 == Length && "Ensure length hint is correct");
+
+    StringRef Key(Str, Length);
+    auto Pair = Pool.insert(std::make_pair(Key, Offset));
+    if (Pair.second) {
+      Out.emitBytes(Key);
+      Offset += Length;
+    }
+
+    return Pair.first->second;
   }
 };
 
@@ -195,7 +225,7 @@ LLVM_ABI Error write(DWPWriter &Out, ArrayRef<std::string> Inputs,
 typedef std::vector<std::pair<DWARFSectionKind, uint32_t>> SectionLengths;
 
 LLVM_ABI Expected<InfoSectionUnitHeader>
-parseInfoSectionUnitHeader(StringRef Info);
+parseInfoSectionUnitHeader(StringRef Info, bool IsLittleEndian);
 
 } // namespace llvm
 #endif // LLVM_DWP_DWP_H

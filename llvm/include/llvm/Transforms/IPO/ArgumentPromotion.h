@@ -27,8 +27,9 @@ class ArgumentPromotionPass
 public:
   ArgumentPromotionPass(unsigned MaxElements = 2u) : MaxElements(MaxElements) {}
 
-  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
-                        LazyCallGraph &CG, CGSCCUpdateResult &UR);
+  LLVM_ABI PreservedAnalyses run(LazyCallGraph::SCC &C,
+                                 CGSCCAnalysisManager &AM, LazyCallGraph &CG,
+                                 CGSCCUpdateResult &UR);
 };
 
 } // end namespace llvm

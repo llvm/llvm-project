@@ -236,6 +236,28 @@ void DwarfExpression::addUnsignedConstant(const APInt &Value) {
   }
 }
 
+void DwarfExpression::addImplicitValue(const APInt &Value,
+                                       const AsmPrinter &AP) {
+  assert(isImplicitLocation() || isUnknownLocation());
+  assert(DwarfVersion >= 4);
+
+  APInt API = Value;
+  unsigned NumBytes = API.getBitWidth() / 8;
+  assert(API.getBitWidth() == NumBytes * 8 &&
+         "implicit value must be byte-sized");
+
+  emitOp(dwarf::DW_OP_implicit_value);
+  emitUnsigned(NumBytes);
+
+  // The loop below is emitting the value starting at the least significant
+  // byte, so byte-swap first for big-endian targets.
+  if (AP.getDataLayout().isBigEndian())
+    API = API.byteSwap();
+
+  for (unsigned I = 0; I < NumBytes; ++I)
+    emitData1(API.extractBits(8, I * 8).getZExtValue());
+}
+
 void DwarfExpression::addConstantFP(const APFloat &APF, const AsmPrinter &AP) {
   assert(isImplicitLocation() || isUnknownLocation());
   APInt API = APF.bitcastToAPInt();
@@ -356,7 +378,6 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
   }
 
   auto Reg = DwarfRegs[0];
-  bool FBReg = isFrameRegister(TRI, MachineReg);
   int SignedOffset = 0;
   assert(!Reg.isSubRegister() && "full register expected");
 
@@ -388,7 +409,7 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
     }
   }
 
-  if (FBReg)
+  if (isFrameRegister(TRI, MachineReg))
     addFBReg(SignedOffset);
   else
     addBReg(Reg.DwarfRegNo, SignedOffset);

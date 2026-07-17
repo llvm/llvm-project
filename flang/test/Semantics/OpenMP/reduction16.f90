@@ -5,7 +5,7 @@
 
 subroutine f00
   integer :: x
-!ERROR: Type parameter inquiry is not permitted in REDUCTION clause
+!ERROR: Type parameter inquiry is not allowed as a list item on REDUCTION clause
 !$omp do reduction (+ : x%kind)
   do i = 1, 10
   end do

@@ -106,6 +106,7 @@
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=spacemit-a100 | FileCheck -check-prefix=MCPU-SPACEMIT-A100 %s
 // MCPU-SPACEMIT-A100: "-target-cpu" "spacemit-a100"
 // COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-spacemit-a100.c`
+// MCPU-SPACEMIT-A100-SAME: "-target-feature" "+xsmtvdotii"
 // MCPU-SPACEMIT-A100-SAME: "-target-abi" "lp64d"
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=spacemit-a100 | FileCheck -check-prefix=MTUNE-SPACEMIT-A100 %s
@@ -570,10 +571,10 @@
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zvkt"
 // MCPU-SIFIVE-P670-SAME: "-target-abi" "lp64d"
 
-// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-p870 | FileCheck -check-prefix=MCPU-SIFIVE-P870 %s
-// MCPU-SIFIVE-P870: "-target-cpu" "sifive-p870"
-// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-sifive-p870.c`
-// MCPU-SIFIVE-P870-SAME: "-target-abi" "lp64d"
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-p870-d | FileCheck -check-prefix=MCPU-SIFIVE-P870-D %s
+// MCPU-SIFIVE-P870-D: "-target-cpu" "sifive-p870-d"
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-sifive-p870-d.c`
+// MCPU-SIFIVE-P870-D-SAME: "-target-abi" "lp64d"
 
 // RUN: %clang -target riscv32 -### -c %s 2>&1 -mcpu=rp2350-hazard3 | FileCheck -check-prefix=MCPU-HAZARD3 %s
 // MCPU-HAZARD3: "-target-cpu" "rp2350-hazard3"

@@ -1175,8 +1175,7 @@ bool Vectorizer::vectorizeChain(Chain &C) {
             llvm::seq<int>(VecIdx, VecIdx + VT->getNumElements()));
         V = Builder.CreateShuffleVector(VecInst, Mask, I->getName());
       } else {
-        V = Builder.CreateExtractElement(VecInst, Builder.getInt32(VecIdx),
-                                         I->getName());
+        V = Builder.CreateExtractElement(VecInst, VecIdx, I->getName());
       }
       if (V->getType() != I->getType())
         V = Builder.CreateBitOrPointerCast(V, I->getType());
@@ -1214,7 +1213,7 @@ bool Vectorizer::vectorizeChain(Chain &C) {
     auto InsertElem = [&](Value *V, unsigned VecIdx) {
       if (V->getType() != VecElemTy)
         V = Builder.CreateBitOrPointerCast(V, VecElemTy);
-      Vec = Builder.CreateInsertElement(Vec, V, Builder.getInt32(VecIdx));
+      Vec = Builder.CreateInsertElement(Vec, V, VecIdx);
     };
     for (const ChainElem &E : C) {
       auto *I = cast<StoreInst>(E.Inst);
@@ -1224,8 +1223,7 @@ bool Vectorizer::vectorizeChain(Chain &C) {
       if (FixedVectorType *VT =
               dyn_cast<FixedVectorType>(getLoadStoreType(I))) {
         for (int J = 0, JE = VT->getNumElements(); J < JE; ++J) {
-          InsertElem(Builder.CreateExtractElement(I->getValueOperand(),
-                                                  Builder.getInt32(J)),
+          InsertElem(Builder.CreateExtractElement(I->getValueOperand(), J),
                      VecIdx++);
         }
       } else {
@@ -1559,6 +1557,18 @@ std::optional<APInt> Vectorizer::getConstantOffsetComplexAddrs(
     Safe = BitsAllowedToBeSet.uge(IdxDiff.abs());
   }
 
+  // Fourth attempt: use SCEV unsigned range to prove that adding IdxDiff
+  // to ValA won't cause unsigned overflow (which would make zext produce
+  // a different difference). This handles cases where KnownBits analysis
+  // can't determine safety but SCEV has tighter range information.
+  if (!Safe && !Signed) {
+    Value *CheckVal = IdxDiff.sge(0) ? ValA : OpB;
+    ConstantRange CR = SE.getUnsignedRange(SE.getSCEV(CheckVal));
+    APInt AbsDiff = IdxDiff.abs().zextOrTrunc(BitWidth);
+    APInt Limit = APInt::getMaxValue(BitWidth) - AbsDiff;
+    Safe = CR.getUnsignedMax().ule(Limit);
+  }
+
   if (Safe)
     return IdxDiff * Stride;
   return std::nullopt;
@@ -1805,20 +1815,11 @@ std::vector<Chain> Vectorizer::gatherChains(ArrayRef<Instruction *> Instrs) {
         : std::pair<Instruction *, Chain>(I, {}) {}
   };
   struct InstrListElemDenseMapInfo {
-    using PtrInfo = DenseMapInfo<InstrListElem *>;
     using IInfo = DenseMapInfo<Instruction *>;
-    static InstrListElem *getEmptyKey() { return PtrInfo::getEmptyKey(); }
-    static InstrListElem *getTombstoneKey() {
-      return PtrInfo::getTombstoneKey();
-    }
     static unsigned getHashValue(const InstrListElem *E) {
       return IInfo::getHashValue(E->first);
     }
     static bool isEqual(const InstrListElem *A, const InstrListElem *B) {
-      if (A == getEmptyKey() || B == getEmptyKey())
-        return A == getEmptyKey() && B == getEmptyKey();
-      if (A == getTombstoneKey() || B == getTombstoneKey())
-        return A == getTombstoneKey() && B == getTombstoneKey();
       return IInfo::isEqual(A->first, B->first);
     }
   };

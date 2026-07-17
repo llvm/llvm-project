@@ -122,11 +122,6 @@ public:
     return {Result, true};
   }
 
-  template<typename T, typename... Args>
-  Node *makeNode(Args &&...As) {
-    return getOrCreateNode<T>(true, std::forward<Args>(As)...).first;
-  }
-
   void *allocateNodeArray(size_t sz) {
     return RawAlloc.Allocate(sizeof(Node *) * sz, alignof(Node *));
   }

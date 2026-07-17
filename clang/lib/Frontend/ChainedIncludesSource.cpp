@@ -22,6 +22,8 @@
 #include "clang/Sema/MultiplexExternalSemaSource.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTWriter.h"
+#include "clang/Serialization/InMemoryModuleCache.h"
+#include "clang/Serialization/ModuleCache.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 using namespace clang;
@@ -65,11 +67,12 @@ createASTReader(CompilerInstance &CI, StringRef pchFile,
       /*Extensions=*/ArrayRef<std::shared_ptr<ModuleFileExtension>>(),
       /*isysroot=*/"", DisableValidationForModuleKind::PCH);
   for (unsigned ti = 0; ti < bufNames.size(); ++ti) {
-    StringRef sr(bufNames[ti]);
-    Reader->addInMemoryBuffer(sr, std::move(MemBufs[ti]));
+    off_t MemBufSize = MemBufs[ti]->getBufferSize();
+    CI.getModuleCache().getInMemoryModuleCache().addBuiltPCM(
+        bufNames[ti], std::move(MemBufs[ti]), MemBufSize, /*ModTime=*/0);
   }
   Reader->setDeserializationListener(deserialListener);
-  switch (Reader->ReadAST(ModuleFileName::makeExplicit(pchFile),
+  switch (Reader->ReadAST(ModuleFileName::makeInMemory(pchFile),
                           serialization::MK_PCH, SourceLocation(),
                           ASTReader::ARR_None)) {
   case ASTReader::Success:

@@ -29,8 +29,6 @@ public:
   static char ID;
 
 private:
-  MCSymbol *PPA2Sym;
-
   SystemZTargetStreamer *getTargetStreamer() {
     MCTargetStreamer *TS = OutStreamer->getTargetStreamer();
     assert(TS && "do not have a target streamer");
@@ -98,38 +96,14 @@ private:
   DenseMap<const GlobalObject *, SmallVector<const GlobalAlias *, 1>>
       GOAliasMap;
 
-  struct PPA1Info {
-    StringRef Name;
-    MCSymbol *FnEnd = nullptr;    // Symbol marking function end.
-    MCSymbol *PPA1 = nullptr;     // Symbol marking PPA1 begin.
-    MCSymbol *EPMarker = nullptr; // Symbol marking entry point.
-    MCSymbol *PersonalityRoutine = nullptr;
-    MCSymbol *GCCEH = nullptr;
-    int64_t OffsetFPR = 0;
-    int64_t OffsetVR = 0;
-    uint64_t CallFrameSize = 0;
-    unsigned SizeOfFnParams = 0;
-    uint32_t FrameAndFPROffset;
-    uint32_t FrameAndVROffset;
-    uint16_t SavedGPRMask = 0;
-    uint16_t SavedFPRMask = 0;
-    uint8_t SavedVRMask = 0;
-    uint8_t FrameReg = 0;
-    uint8_t AllocaReg = 0;
-    bool IsVarArg = false;
-    bool HasStackProtector = false;
-  };
-  SmallVector<PPA1Info, 0> DeferredPPA1;
-
   void calculatePPA1();
-  void emitPPA1(PPA1Info &Info);
   void emitPPA2(Module &M);
   void emitADASection();
   void emitIDRLSection(Module &M);
 
 public:
   SystemZAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer), ID), PPA2Sym(nullptr),
+      : AsmPrinter(TM, std::move(Streamer), ID),
         ADATable(TM.getPointerSize(0)) {}
 
   // Override AsmPrinter.
@@ -170,6 +144,10 @@ private:
   void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
                                      SystemZMCInstLower &Lower);
   void LowerPATCHABLE_RET(const MachineInstr &MI, SystemZMCInstLower &Lower);
+  void lowerLOAD_TLS_BLOCK_ADDR(const MachineInstr &MI,
+                                SystemZMCInstLower &Lower);
+  void lowerLOAD_GLOBAL_STACKGUARD_ADDR(const MachineInstr &MI,
+                                        SystemZMCInstLower &Lower);
   void emitAttributes(Module &M);
 };
 } // end namespace llvm

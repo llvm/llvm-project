@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestInterruptThreadNames(TestBase):
+    NO_DEBUG_INFO_TESTCASE = True
+
     @skipUnlessDarwin
     @add_test_categories(["pyapi"])
     def test_with_python_api(self):

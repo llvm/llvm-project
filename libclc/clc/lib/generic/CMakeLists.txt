@@ -231,4 +231,5 @@ libclc_set_source_options(-fapprox-func
 libclc_set_source_options(-cl-fp32-correctly-rounded-divide-sqrt
   math/clc_div_cr.cl
   math/clc_sqrt_cr.cl
+  math/clc_tanpi.cl
 )

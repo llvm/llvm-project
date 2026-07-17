@@ -50,7 +50,7 @@ namespace async {
 
 /// Returns true if the type is reference counted at runtime.
 inline bool isRefCounted(Type type) {
-  return isa<TokenType, ValueType, GroupType>(type);
+  return isa<async::TokenType, ValueType, GroupType>(type);
 }
 
 } // namespace async

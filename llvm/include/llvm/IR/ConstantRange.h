@@ -442,18 +442,11 @@ public:
                 PreferredRangeType RangeType = Smallest) const;
 
   /// Return a new range representing the possible values resulting
-  /// from a multiplication of a value in this range and a value in \p Other,
-  /// treating both this and \p Other as unsigned ranges.
-  LLVM_ABI ConstantRange multiply(const ConstantRange &Other) const;
-
-  /// Return a new range representing the possible values resulting
-  /// from a multiplication with wrap type \p NoWrapKind of a value in this
-  /// range and a value in \p Other.
-  /// If the result range is disjoint, the preferred range is determined by the
-  /// \p PreferredRangeType.
-  LLVM_ABI ConstantRange
-  multiplyWithNoWrap(const ConstantRange &Other, unsigned NoWrapKind,
-                     PreferredRangeType RangeType = Smallest) const;
+  /// from a multiplication of a value in this range and a value in \p Other.
+  /// If \p NoWrapKind is set, assume that corresponding wrapping can not
+  /// occur.
+  LLVM_ABI ConstantRange multiply(const ConstantRange &Other,
+                                  unsigned NoWrapKind = 0) const;
 
   /// Return range of possible values for a signed multiplication of this and
   /// \p Other. However, if overflow is possible always return a full range

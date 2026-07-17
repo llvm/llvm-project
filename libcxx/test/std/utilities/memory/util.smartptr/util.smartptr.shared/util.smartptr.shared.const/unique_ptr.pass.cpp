@@ -12,8 +12,6 @@
 
 // template <class Y, class D> shared_ptr(unique_ptr<Y, D>&&r);
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <memory>
 #include <new>
 #include <cstdlib>

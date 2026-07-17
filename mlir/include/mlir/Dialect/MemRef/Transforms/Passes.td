@@ -19,6 +19,9 @@ def ElideReinterpretCastPass : Pass<"memref-elide-reinterpret-cast"> {
     operations to obtain compatible shapes with equivalent ops that operate on
     compatible shapes directly. This simplifies conversion to EmitC.
 }];
+  let dependentDialects = [
+      "arith::ArithDialect", "scf::SCFDialect"
+  ];
 }
 
 def ExpandOpsPass : Pass<"memref-expand"> {
@@ -333,9 +336,8 @@ def FlattenMemrefsPass : Pass<"flatten-memref"> {
 
   }];
   let dependentDialects = [
-      "affine::AffineDialect", "memref::MemRefDialect", "vector::VectorDialect"
+      "affine::AffineDialect", "arith::ArithDialect", "memref::MemRefDialect"
   ];
 }
 
 #endif // MLIR_DIALECT_MEMREF_TRANSFORMS_PASSES
-

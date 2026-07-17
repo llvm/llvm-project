@@ -15,7 +15,7 @@ define void @foo(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = udiv <2 x i32> [[TMP1]], <i32 3, i32 8>
 ; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[A1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP4]], i64 0
 ; CHECK-NEXT:    store i32 [[TMP3]], ptr [[ARRAYIDX2_2]], align 4
 ; CHECK-NEXT:    store i32 [[ADD_3]], ptr [[ARRAYIDX2_3]], align 4
 ; CHECK-NEXT:    ret void

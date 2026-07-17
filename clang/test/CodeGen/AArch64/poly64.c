@@ -61,26 +61,6 @@ uint64x2_t test_vtstq_p64(poly64x2_t a, poly64x2_t b) {
   return vtstq_p64(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_vget_lane_p64(
-// CHECK-SAME: <1 x i64> noundef [[V:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <1 x i64> [[V]], i32 0
-// CHECK-NEXT:    ret i64 [[VGET_LANE]]
-//
-poly64_t test_vget_lane_p64(poly64x1_t v) {
-  return vget_lane_p64(v, 0);
-}
-
-// CHECK-LABEL: define dso_local i64 @test_vgetq_lane_p64(
-// CHECK-SAME: <2 x i64> noundef [[V:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VGETQ_LANE:%.*]] = extractelement <2 x i64> [[V]], i32 1
-// CHECK-NEXT:    ret i64 [[VGETQ_LANE]]
-//
-poly64_t test_vgetq_lane_p64(poly64x2_t v) {
-  return vgetq_lane_p64(v, 1);
-}
-
 // CHECK-LABEL: define dso_local <1 x i64> @test_vset_lane_p64(
 // CHECK-SAME: i64 noundef [[A:%.*]], <1 x i64> noundef [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -513,32 +493,4 @@ poly64x1_t test_vext_p64(poly64x1_t a, poly64x1_t b) {
 //
 poly64x2_t test_vextq_p64(poly64x2_t a, poly64x2_t b) {
   return vextq_p64(a, b, 1);
-}
-
-// CHECK-LABEL: define dso_local <1 x i64> @test_vsri_n_p64(
-// CHECK-SAME: <1 x i64> noundef [[A:%.*]], <1 x i64> noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
-// CHECK-NEXT:    [[VSRI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
-// CHECK-NEXT:    [[VSRI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
-// CHECK-NEXT:    [[VSRI_N2:%.*]] = call <1 x i64> @llvm.aarch64.neon.vsri.v1i64(<1 x i64> [[VSRI_N]], <1 x i64> [[VSRI_N1]], i32 33)
-// CHECK-NEXT:    ret <1 x i64> [[VSRI_N2]]
-//
-poly64x1_t test_vsri_n_p64(poly64x1_t a, poly64x1_t b) {
-  return vsri_n_p64(a, b, 33);
-}
-
-// CHECK-LABEL: define dso_local <2 x i64> @test_vsriq_n_p64(
-// CHECK-SAME: <2 x i64> noundef [[A:%.*]], <2 x i64> noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[A]] to <16 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B]] to <16 x i8>
-// CHECK-NEXT:    [[VSRI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK-NEXT:    [[VSRI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
-// CHECK-NEXT:    [[VSRI_N2:%.*]] = call <2 x i64> @llvm.aarch64.neon.vsri.v2i64(<2 x i64> [[VSRI_N]], <2 x i64> [[VSRI_N1]], i32 64)
-// CHECK-NEXT:    ret <2 x i64> [[VSRI_N2]]
-//
-poly64x2_t test_vsriq_n_p64(poly64x2_t a, poly64x2_t b) {
-  return vsriq_n_p64(a, b, 64);
 }

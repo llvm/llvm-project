@@ -120,7 +120,6 @@ void detail::RecordKeeperImpl::dumpAllocationStats(raw_ostream &OS) const {
   OS << "TheVarBitInitPool size = " << TheVarBitInitPool.size() << '\n';
   OS << "TheVarDefInitPool size = " << TheVarDefInitPool.size() << '\n';
   OS << "TheFieldInitPool size = " << TheFieldInitPool.size() << '\n';
-  OS << "Bytes allocated = " << Allocator.getBytesAllocated() << '\n';
   OS << "Total allocator memory = " << Allocator.getTotalMemory() << "\n\n";
 
   OS << "Number of records instantiated = " << LastRecordID << '\n';
@@ -2166,6 +2165,8 @@ const Init *FoldOpInit::resolveReferences(Resolver &R) const {
 }
 
 const Init *FoldOpInit::getBit(unsigned Bit) const {
+  if (isa<BitRecTy>(getType()))
+    return this;
   return VarBitInit::get(this, Bit);
 }
 
@@ -2368,10 +2369,6 @@ const Init *InstancesOpInit::resolveReferences(Resolver &R) const {
   if (Regex != NewRegex || R.isFinal())
     return get(Type, NewRegex)->Fold(R.getCurrentRecord(), R.isFinal());
   return this;
-}
-
-const Init *InstancesOpInit::getBit(unsigned Bit) const {
-  return VarBitInit::get(this, Bit);
 }
 
 std::string InstancesOpInit::getAsString() const {
@@ -2741,6 +2738,16 @@ const Init *CondOpInit::resolveReferences(Resolver &R) const {
     const Init *NewVal = Val->resolveReferences(R);
     NewVals.push_back(NewVal);
     Changed |= NewVal != Val;
+
+    // Short-circuit if this cond is true.
+    if (auto *NewCondVal = dyn_cast_or_null<IntInit>(
+            NewCond->convertInitializerTo(IntRecTy::get(getRecordKeeper())))) {
+      if (NewCondVal->getValue()) {
+        Changed = true;
+        // Don't push the rest of the conds and values.
+        break;
+      }
+    }
   }
 
   if (Changed)
@@ -2793,6 +2800,8 @@ std::string CondOpInit::getAsString() const {
 }
 
 const Init *CondOpInit::getBit(unsigned Bit) const {
+  if (isa<BitRecTy>(getType()))
+    return this;
   return VarBitInit::get(this, Bit);
 }
 
