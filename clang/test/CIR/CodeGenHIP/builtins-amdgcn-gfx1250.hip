@@ -56,3 +56,11 @@ __device__ void test_sin_bf16(__bf16* out, __bf16 a) {
 __device__ void test_cos_bf16(__bf16* out, __bf16 a) {
   *out = __builtin_amdgcn_cos_bf16(a);
 }
+
+// CIR-LABEL: @_Z14test_exp2_bf16PDF16bDF16b
+// CIR: cir.call_llvm_intrinsic "amdgcn.exp2" {{.*}} : (!cir.bf16) -> !cir.bf16
+// LLVM: define{{.*}} void @_Z14test_exp2_bf16PDF16bDF16b
+// LLVM: call{{.*}} bfloat @llvm.amdgcn.exp2.bf16(bfloat %{{.*}})
+__device__ void test_exp2_bf16(__bf16* out, __bf16 a) {
+  *out = __builtin_amdgcn_exp2_bf16(a);
+}
