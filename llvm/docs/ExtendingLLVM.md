@@ -64,10 +64,10 @@ support for it. Generally you must do the following steps:
 Add support to the .td file for the target(s) of your choice in
 `lib/Target/*/*.td`.
 
-> This is usually a matter of adding a pattern to the .td file that matches the
-> intrinsic, though it may obviously require adding the instructions you want to
-> generate as well. There are lots of examples in the PowerPC and X86 backends
-> to follow.
+This is usually a matter of adding a pattern to the .td file that matches the
+intrinsic, though it may obviously require adding the instructions you want to
+generate as well. There are lots of examples in the PowerPC and X86 backends
+to follow.
 
 ## Adding a new SelectionDAG node
 
@@ -79,11 +79,11 @@ cases, new nodes have been added to allow many targets to perform a common task
 (converting between floating point and integer representation) or capture more
 complicated behavior in a single node (rotate).
 
-01. `include/llvm/CodeGen/ISDOpcodes.h`:
+1.  `include/llvm/CodeGen/ISDOpcodes.h`:
 
     Add an enum value for the new SelectionDAG node.
 
-02. `lib/CodeGen/SelectionDAG/SelectionDAGDumper.cpp`:
+2.  `lib/CodeGen/SelectionDAG/SelectionDAGDumper.cpp`:
 
     Add code to print the node to `getOperationName`. If your new node can be
     evaluated at compile time when given constant arguments (such as an add of a
@@ -92,7 +92,7 @@ complicated behavior in a single node (rotate).
     statement that performs constant folding for nodes that take the same number
     of arguments as your new node.
 
-03. `lib/CodeGen/SelectionDAG/LegalizeDAG.cpp`:
+3.  `lib/CodeGen/SelectionDAG/LegalizeDAG.cpp`:
 
     Add code to [legalize, promote, and
     expand](project:CodeGenerator.md#selectiondag-legalize-phase) the node as
@@ -105,7 +105,7 @@ complicated behavior in a single node (rotate).
     legal operations. The case for `ISD::UREM` for expanding a remainder into
     a divide, multiply, and a subtract is a good example.
 
-04. `lib/CodeGen/SelectionDAG/LegalizeDAG.cpp`:
+4.  `lib/CodeGen/SelectionDAG/LegalizeDAG.cpp`:
 
     If targets may support the new node being added only at certain sizes, you
     will also need to add code to your node's case statement in `LegalizeOp`
@@ -115,21 +115,21 @@ complicated behavior in a single node (rotate).
     a wider size, performs the byteswap, and then shifts the correct bytes right
     to emulate the narrower byteswap in the wider type.
 
-05. `lib/CodeGen/SelectionDAG/LegalizeDAG.cpp`:
+5.  `lib/CodeGen/SelectionDAG/LegalizeDAG.cpp`:
 
     Add a case for your node in `ExpandOp` to teach the legalizer how to
     perform the action represented by the new node on a value that has been split
     into high and low halves. This case will be used to support your node with a
     64-bit operand on a 32-bit target.
 
-06. `lib/CodeGen/SelectionDAG/DAGCombiner.cpp`:
+6.  `lib/CodeGen/SelectionDAG/DAGCombiner.cpp`:
 
     If your node can be combined with itself, or other existing nodes in a
     peephole-like fashion, add a visit function for it, and call that function
     from. There are several good examples for simple combines you can do;
     `visitFABS` and `visitSRL` are good starting places.
 
-07. `lib/Target/PowerPC/PPCISelLowering.cpp`:
+7.  `lib/Target/PowerPC/PPCISelLowering.cpp`:
 
     Each target has an implementation of the `TargetLowering` class, usually in
     its own file (although some targets include it in the same file as the
@@ -140,7 +140,7 @@ complicated behavior in a single node (rotate).
     code you wrote in `LegalizeOp` above to decompose your new node into other
     legal nodes for this target.
 
-08. `include/llvm/Target/TargetSelectionDAG.td`:
+8.  `include/llvm/Target/TargetSelectionDAG.td`:
 
     Most current targets supported by LLVM generate code using the DAGToDAG
     method, where SelectionDAG nodes are pattern matched to target-specific
@@ -149,7 +149,7 @@ complicated behavior in a single node (rotate).
     the list in this file, with the appropriate type constraints. Look at
     `add`, `bswap`, and `fadd` for examples.
 
-09. `lib/Target/PowerPC/PPCInstrInfo.td`:
+9.  `lib/Target/PowerPC/PPCInstrInfo.td`:
 
     Each target has a tablegen file that describes the target's instruction set.
     For targets that use the DAGToDAG instruction selection framework, add a
@@ -172,40 +172,40 @@ to maintain compatibility with the previous version. Only add an instruction
 if it is absolutely necessary.
 :::
 
-01. `llvm/include/llvm/IR/Instruction.def`:
+1.  `llvm/include/llvm/IR/Instruction.def`:
 
     add a number for your instruction and an enum name
 
-02. `llvm/include/llvm/IR/Instructions.h`:
+2.  `llvm/include/llvm/IR/Instructions.h`:
 
     add a definition for the class that will represent your instruction
 
-03. `llvm/include/llvm/IR/InstVisitor.h`:
+3.  `llvm/include/llvm/IR/InstVisitor.h`:
 
     add a prototype for a visitor to your new instruction type
 
-04. `llvm/lib/AsmParser/LLLexer.cpp`:
+4.  `llvm/lib/AsmParser/LLLexer.cpp`:
 
     add a new token to parse your instruction from an assembly text file
 
-05. `llvm/lib/AsmParser/LLParser.cpp`:
+5.  `llvm/lib/AsmParser/LLParser.cpp`:
 
     add the grammar on how your instruction can be read and what it will
     construct as a result
 
-06. `llvm/lib/Bitcode/Reader/BitcodeReader.cpp`:
+6.  `llvm/lib/Bitcode/Reader/BitcodeReader.cpp`:
 
     add a case for your instruction and how it will be parsed from bitcode
 
-07. `llvm/lib/Bitcode/Writer/BitcodeWriter.cpp`:
+7.  `llvm/lib/Bitcode/Writer/BitcodeWriter.cpp`:
 
     add a case for your instruction and how it will be written to bitcode
 
-08. `llvm/lib/IR/Instruction.cpp`:
+8.  `llvm/lib/IR/Instruction.cpp`:
 
     add a case for how your instruction will be printed out to assembly
 
-09. `llvm/lib/IR/Instructions.cpp`:
+9.  `llvm/lib/IR/Instructions.cpp`:
 
     implement the class you defined in `llvm/include/llvm/Instructions.h`
 

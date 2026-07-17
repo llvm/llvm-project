@@ -159,9 +159,9 @@ Neither approach is perfect, and choosing one boils down to choosing the lesser 
 
 There are 3 parts to the implementation:
 
-> 1. Predicate `LDR` and `STR` instructions so that they are never allowed to be selected to generate vector loads and stores. The exception is one-lane vectors [^1]; by definition, these cannot have lane ordering problems so are fine to use `LDR`/`STR`.
-> 2. Create code generation patterns for bitconverts that create `REV` instructions.
-> 3. Make sure appropriate bitconverts are created so that vector values get passed over call boundaries as 1-element vectors (which is the same as if they were loaded with `LDR`).
+1. Predicate `LDR` and `STR` instructions so that they are never allowed to be selected to generate vector loads and stores. The exception is one-lane vectors [^1]; by definition, these cannot have lane ordering problems so are fine to use `LDR`/`STR`.
+2. Create code generation patterns for bitconverts that create `REV` instructions.
+3. Make sure appropriate bitconverts are created so that vector values get passed over call boundaries as 1-element vectors (which is the same as if they were loaded with `LDR`).
 
 ### Bitconverts
 

@@ -451,7 +451,7 @@ target("aarch64.svcount")
 
 ## 5. References
 
-(aarch64_sme_acle)=
+   (aarch64_sme_acle)=
 
 1. [SME ACLE Pull-request](https://github.com/ARM-software/acle/pull/188)
 

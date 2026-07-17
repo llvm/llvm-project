@@ -546,7 +546,7 @@ The team at Google published a paper in CGO 2016 detailing the optimizations
 they'd made to clang/LLVM. Note that "gpucc" is no longer a meaningful name:
 The relevant tools are now just vanilla clang/LLVM.
 
-[`gpucc: An Open-Source GPGPU Compiler`](http://dl.acm.org/citation.cfm?id=2854041)
+[gpucc: An Open-Source GPGPU Compiler](http://dl.acm.org/citation.cfm?id=2854041)
 
 Jingyue Wu, Artem Belevich, Eli Bendersky, Mark Heffernan, Chris Leary,
 Jacques Pienaar, Bjarke Roune, Rob Springer, Xuetian Weng, Robert Hundt

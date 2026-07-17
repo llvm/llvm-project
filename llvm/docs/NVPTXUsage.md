@@ -114,15 +114,15 @@ When compiled, the PTX kernel functions are callable by host-side code.
 
 The NVPTX back-end uses the following address space mapping:
 
-> | Address Space | Memory Space   |
-> | ------------- | -------------- |
-> | 0             | Generic        |
-> | 1             | Global         |
-> | 2             | Internal Use   |
-> | 3             | Shared         |
-> | 4             | Constant       |
-> | 5             | Local          |
-> | 7             | Shared Cluster |
+| Address Space | Memory Space   |
+| ------------- | -------------- |
+| 0             | Generic        |
+| 1             | Global         |
+| 2             | Internal Use   |
+| 3             | Shared         |
+| 4             | Constant       |
+| 5             | Local          |
+| 7             | Shared Cluster |
 
 Every global variable and pointer type is assigned to one of these address
 spaces, with 0 being the default address space. Intrinsics are provided which
@@ -247,12 +247,12 @@ The '`@llvm.nvvm.read.ptx.sreg.*`' intrinsics provide access to the PTX
 special registers, in particular the kernel launch bounds. These registers
 map in the following way to CUDA builtins:
 
-> | CUDA Builtin | PTX Special Register Intrinsic      |
-> | ------------ | ----------------------------------- |
-> | `threadId`   | `@llvm.nvvm.read.ptx.sreg.tid.*`    |
-> | `blockIdx`   | `@llvm.nvvm.read.ptx.sreg.ctaid.*`  |
-> | `blockDim`   | `@llvm.nvvm.read.ptx.sreg.ntid.*`   |
-> | `gridDim`    | `@llvm.nvvm.read.ptx.sreg.nctaid.*` |
+| CUDA Builtin | PTX Special Register Intrinsic      |
+| ------------ | ----------------------------------- |
+| `threadId`   | `@llvm.nvvm.read.ptx.sreg.tid.*`    |
+| `blockIdx`   | `@llvm.nvvm.read.ptx.sreg.ctaid.*`  |
+| `blockDim`   | `@llvm.nvvm.read.ptx.sreg.ntid.*`   |
+| `gridDim`    | `@llvm.nvvm.read.ptx.sreg.nctaid.*` |
 
 #### '`llvm.nvvm.read.ptx.sreg.*_smem_size`'
 
@@ -937,10 +937,10 @@ synchronizes with an acquire sequence that contains the
 `nvvm.fence.proxy.tensormap_generic.acquire` proxy fence. The following table
 describes the mapping between LLVM Intrinsic and the PTX instruction:
 
-> | NVVM Intrinsic                                       | PTX Instruction                                         |
-> | ---------------------------------------------------- | ------------------------------------------------------- |
-> | `@llvm.nvvm.fence.proxy.tensormap_generic.release.*` | `fence.proxy.tensormap::generic.release.*`              |
-> | `@llvm.nvvm.fence.proxy.tensormap_generic.acquire.*` | `fence.proxy.tensormap::generic.acquire.* [addr], size` |
+| NVVM Intrinsic                                       | PTX Instruction                                         |
+| ---------------------------------------------------- | ------------------------------------------------------- |
+| `@llvm.nvvm.fence.proxy.tensormap_generic.release.*` | `fence.proxy.tensormap::generic.release.*`              |
+| `@llvm.nvvm.fence.proxy.tensormap_generic.acquire.*` | `fence.proxy.tensormap::generic.acquire.* [addr], size` |
 
 The address operand `addr` and the operand `size` together specify the
 memory range `[addr, addr+size)` on which the ordering guarantees on the
@@ -2422,24 +2422,24 @@ The '`@llvm.nvvm.tensormap.replace.elemtype.*`' intrinsics replace the
 The following table shows the mapping of `%new_value` to the actual element
 type:
 
-> | Element Type             | Value |
-> | ------------------------ | ----- |
-> | `u8`                     | 0     |
-> | `u16`                    | 1     |
-> | `u32`                    | 2     |
-> | `s32`                    | 3     |
-> | `u64`                    | 4     |
-> | `s64`                    | 5     |
-> | `f16`                    | 6     |
-> | `f32`                    | 7     |
-> | `f32.ftz`                | 8     |
-> | `f64`                    | 9     |
-> | `bf16`                   | 10    |
-> | `tf32`                   | 11    |
-> | `tf32.ftz`               | 12    |
-> | `b4x16`                  | 13    |
-> | `b4x16_p64`              | 14    |
-> | `b6x16_p32` or `b6p2x16` | 15    |
+| Element Type             | Value |
+| ------------------------ | ----- |
+| `u8`                     | 0     |
+| `u16`                    | 1     |
+| `u32`                    | 2     |
+| `s32`                    | 3     |
+| `u64`                    | 4     |
+| `s64`                    | 5     |
+| `f16`                    | 6     |
+| `f32`                    | 7     |
+| `f32.ftz`                | 8     |
+| `f64`                    | 9     |
+| `bf16`                   | 10    |
+| `tf32`                   | 11    |
+| `tf32.ftz`               | 12    |
+| `b4x16`                  | 13    |
+| `b4x16_p64`              | 14    |
+| `b6x16_p32` or `b6p2x16` | 15    |
 
 #### '`llvm.nvvm.tensormap.replace.interleave.layout`'
 
@@ -2460,11 +2460,11 @@ specified by `%new_value`.
 
 The following table shows the mapping of `%new_value` to the actual layout:
 
-> | Interleave Layout | Value |
-> | ----------------- | ----- |
-> | `No interleave`   | 0     |
-> | `16B interleave`  | 1     |
-> | `32B interleave`  | 2     |
+| Interleave Layout | Value |
+| ----------------- | ----- |
+| `No interleave`   | 0     |
+| `16B interleave`  | 1     |
+| `32B interleave`  | 2     |
 
 #### '`llvm.nvvm.tensormap.replace.swizzle_mode`'
 
@@ -2486,13 +2486,13 @@ by `%new_value`.
 The following table shows the mapping of `%new_value` to the actual swizzle
 mode:
 
-> | Swizzle Mode   | Value |
-> | -------------- | ----- |
-> | `No swizzle`   | 0     |
-> | `32B swizzle`  | 1     |
-> | `64B swizzle`  | 2     |
-> | `128B swizzle` | 3     |
-> | `96B swizzle`  | 4     |
+| Swizzle Mode   | Value |
+| -------------- | ----- |
+| `No swizzle`   | 0     |
+| `32B swizzle`  | 1     |
+| `64B swizzle`  | 2     |
+| `128B swizzle` | 3     |
+| `96B swizzle`  | 4     |
 
 #### '`llvm.nvvm.tensormap.replace.swizzle_atomicity`'
 
@@ -2514,12 +2514,12 @@ atomicity specified by `%new_value`.
 The following table shows the mapping of `%new_value` to the actual swizzle
 atomicity:
 
-> | Swizzle Atomicity | Value |
-> | ----------------- | ----- |
-> | `16B`             | 0     |
-> | `32B`             | 1     |
-> | `32B + 8B flip`   | 2     |
-> | `64B`             | 3     |
+| Swizzle Atomicity | Value |
+| ----------------- | ----- |
+| `16B`             | 0     |
+| `32B`             | 1     |
+| `32B + 8B flip`   | 2     |
+| `64B`             | 3     |
 
 #### '`llvm.nvvm.tensormap.replace.fill_mode`'
 
@@ -2540,10 +2540,10 @@ The '`@llvm.nvvm.tensormap.replace.fill.mode.*`' intrinsics replace the
 
 The following table shows the mapping of `%new_value` to the actual fill mode:
 
-> | Fill Mode      | Value |
-> | -------------- | ----- |
-> | `Zero fill`    | 0     |
-> | `OOB-NaN fill` | 1     |
+| Fill Mode      | Value |
+| -------------- | ----- |
+| `Zero fill`    | 0     |
+| `OOB-NaN fill` | 1     |
 
 ### TCGEN05 family of Intrinsics
 

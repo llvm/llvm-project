@@ -21,11 +21,11 @@ using as many of the LLVM tools as we can, but it is possible to use GNU
 equivalents.
 
 You will need:
-: - A build of LLVM for the llvm-tools and LLVM CMake files.
-  - A clang executable with support for the `ARM` target.
-  - `compiler-rt` sources.
-  - The `qemu-arm` user mode emulator.
-  - An `arm-linux-gnueabihf` sysroot.
+- A build of LLVM for the llvm-tools and LLVM CMake files.
+- A clang executable with support for the `ARM` target.
+- `compiler-rt` sources.
+- The `qemu-arm` user mode emulator.
+- An `arm-linux-gnueabihf` sysroot.
 
 :::{note}
 An existing sysroot is required because some of the builtins include C library
