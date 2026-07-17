@@ -1,12 +1,17 @@
-//===-- Implementation of gettimeofday function ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Implementation of gettimeofday function.
+///
+//===----------------------------------------------------------------------===//
 
-#include "src/time/gettimeofday.h"
+#include "src/sys/time/gettimeofday.h"
 #include "hdr/time_macros.h"
 #include "hdr/types/suseconds_t.h"
 #include "src/__support/common.h"
@@ -17,7 +22,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-// TODO(michaelrj): Move this into time/linux with the other syscalls.
 LLVM_LIBC_FUNCTION(int, gettimeofday,
                    (struct timeval * tv, [[maybe_unused]] void *unused)) {
   using namespace time_units;
