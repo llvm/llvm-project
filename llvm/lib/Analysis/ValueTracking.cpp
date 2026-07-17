@@ -5742,21 +5742,21 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
       if (!APFloat::semanticsHasNaN(SrcSemantics))
         Known.knownNot(fcNan);
+
+      // fcInf can only be cleared if the source format has no Inf encoding
+      // (IEEE754) AND every finite src value fits correctly in the dest
+      // finite range, so inf is not possible
       if (!APFloat::semanticsHasInf(SrcSemantics) &&
           APFloat::isRepresentableBy(SrcSemantics, DstSemantics))
         Known.knownNot(fcInf);
 
+      // Check and clear for FNUZ formats which lacks negative zero
       if (SrcSemantics.nanEncoding == fltNanEncoding::NegativeZero)
         Known.knownNot(fcNegZero);
 
-      if (!APFloat::semanticsHasZero(SrcSemantics)) {
+      // Check if format has no zero at all, Float8E8M0FNU
+      if (!APFloat::semanticsHasZero(SrcSemantics))
         Known.knownNot(fcZero);
-      } else {
-        KnownBits IntKnown =
-            computeKnownBits(Op->getOperand(0), DemandedElts, Q, Depth + 1);
-        if (IntKnown.isNonZero())
-          Known.knownNot(fcPosZero);
-      }
 
       // If src lands normaly in dest, result can never be subnormal.
       if (APFloat::isRepresentableAsNormalIn(SrcSemantics, DstSemantics))
