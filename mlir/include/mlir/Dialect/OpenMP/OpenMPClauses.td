@@ -20,6 +20,7 @@
 #define OPENMP_CLAUSES
 
 include "mlir/Dialect/OpenMP/OpenMPOpBase.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/IR/BuiltinAttributes.td"
 
@@ -160,32 +161,6 @@ class OpenMP_AllocatorClauseSkip<
 }
 
 def OpenMP_AllocatorClause : OpenMP_AllocatorClauseSkip<>;
-
-//===----------------------------------------------------------------------===//
-// LLVM OpenMP extension `ompx_bare` clause
-//===----------------------------------------------------------------------===//
-
-class OpenMP_BareClauseSkip<
-    bit traits = false, bit arguments = false, bit assemblyFormat = false,
-    bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
-                    extraClassDeclaration> {
-  let arguments = (ins
-    UnitAttr:$bare
-  );
-
-  let optAssemblyFormat = [{
-    `ompx_bare` $bare
-  }];
-
-  let description = [{
-    `ompx_bare` allows `omp target teams` to be executed on a GPU with an
-    explicit number of teams and threads. This clause also allows the teams and
-    threads sizes to have up to 3 dimensions.
-  }];
-}
-
-def OpenMP_BareClause : OpenMP_BareClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // V5.2: [16.1, 16.2] `cancel-directive-name` clause set
@@ -580,6 +555,58 @@ class OpenMP_HasDeviceAddrClauseSkip<
 def OpenMP_HasDeviceAddrClause : OpenMP_HasDeviceAddrClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
+// Not in the spec: Clause-like structure to hold heap allocation information.
+//===----------------------------------------------------------------------===//
+
+class OpenMP_HeapAllocClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let traits = [
+    MemoryEffects<[MemAlloc<DefaultResource>]>
+  ];
+
+  let arguments = (ins
+    TypeAttr:$in_type,
+    OptionalAttr<StrAttr>:$uniq_name,
+    OptionalAttr<StrAttr>:$bindc_name,
+    Variadic<IntLikeType>:$typeparams,
+    Variadic<IntLikeType>:$shape
+  );
+
+  // The custom parser doesn't parse `uniq_name` and `bindc_name`. This is
+  // handled by the attr-dict, which must be present in the operation's
+  // `assemblyFormat`.
+  let reqAssemblyFormat = [{
+    custom<HeapAllocClause>($in_type, $typeparams, type($typeparams), $shape,
+                            type($shape))
+  }];
+
+  let extraClassDeclaration = [{
+    mlir::Type getAllocatedType() { return getInTypeAttr().getValue(); }
+  }];
+
+  let description = [{
+    The `in_type` is the type of the object for which memory is being allocated.
+    For arrays, this can be a static or dynamic array type.
+
+    The optional `uniq_name` is a unique name for the allocated memory.
+
+    The optional `bindc_name` is a name used for C interoperability.
+
+    The `typeparams` are runtime type parameters for polymorphic or
+    parameterized types. These are typically integer values that define aspects
+    of a type not fixed at compile time.
+
+    The `shape` holds runtime shape operands for dynamic arrays. Each operand is
+    an integer value representing the extent of a specific dimension.
+  }];
+}
+
+def OpenMP_HeapAllocClause : OpenMP_HeapAllocClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
 // V5.2: [5.4.7] `inclusive` clause
 //===----------------------------------------------------------------------===//
 
@@ -737,9 +764,17 @@ class OpenMP_InReductionClauseSkip<
     OptionalAttr<SymbolRefArrayAttr>:$in_reduction_syms
   );
 
-  // Description varies depending on the operation. Assembly format not defined
-  // because this clause must be processed together with the first region of the
-  // operation, as it defines entry block arguments.
+  // This assembly format should only be used by operations where `in_reduction`
+  // does not define entry block arguments (e.g. `omp.target`). Otherwise, it
+  // must be printed and parsed together with the corresponding region, because
+  // it defines entry block arguments.
+  let optAssemblyFormat = [{
+    `in_reduction` `(`
+      custom<InReductionClause>($in_reduction_vars, type($in_reduction_vars),
+                                $in_reduction_byref, $in_reduction_syms) `)`
+  }];
+
+  // Description varies depending on the operation.
 }
 
 def OpenMP_InReductionClause : OpenMP_InReductionClauseSkip<>;
@@ -850,24 +885,65 @@ class OpenMP_MapClauseSkip<
     MapClauseOwningOpInterface
   ];
 
-  let arguments = (ins
-    Variadic<OpenMP_PointerLikeType>:$map_vars
-  );
+  let arguments = (ins Variadic<OpenMP_PointerLikeType>:$map_vars,
+      Variadic<OpenMP_IteratedType>:$map_iterated);
 
   // This assembly format should only be used by operations where `map` does not
   // define entry block arguments. Otherwise, it must be printed and parsed
   // together with the corresponding region.
   let optAssemblyFormat = [{
-    `map_entries` `(` $map_vars `:` type($map_vars) `)`
+    `map_entries` `(` $map_vars `:` type($map_vars) `)` |
+    `map_iterated` `(` $map_iterated `:` type($map_iterated) `)`
   }];
 
   let description = [{
     The optional `map_vars` maps data from the current task's data environment
     to the device data environment.
+
+    The optional `map_iterated` holds iterator-produced handles (from
+    `omp.iterator`) whose bodies create `omp.map.info` ops, specifying
+    map entries expanded at runtime via an iterator modifier.
   }];
 }
 
 def OpenMP_MapClause : OpenMP_MapClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// Not in the spec: Clause-like structure to memory allocation information.
+//===----------------------------------------------------------------------===//
+
+class OpenMP_MemAllocationSizeClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+
+  let arguments = (ins
+    TypeAttr:$mem_elem_type,
+    AnySignlessInteger:$mem_array_size,
+    ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$mem_alignment
+  );
+
+  let reqAssemblyFormat = [{
+    $mem_array_size `x` $mem_elem_type `:` `(` type($mem_array_size) `)`
+  }];
+
+  let optAssemblyFormat = [{
+    `align` `(` $mem_alignment `)`
+  }];
+
+  let description = [{
+    The `mem_elem_type` is the type of the object the memory allocation refers
+    to. It is used to calculate the size of the allocation.
+
+    The `mem_array_size` is the number of objects.
+
+    The optional `mem_alignment` is used to specify the alignment for each
+    element. If not set, the `DataLayout` defaults will be used instead.
+  }];
+}
+
+def OpenMP_MemAllocationSizeClause : OpenMP_MemAllocationSizeClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // V5.2: [15.8.1] `memory-order` clause set
@@ -1754,5 +1830,40 @@ class OpenMP_UniformClauseSkip<
 }
 
 def OpenMP_UniformClause : OpenMP_UniformClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// V6.1 `dyn_groupprivate` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_DynGroupprivateClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+
+  let arguments = (ins
+    OptionalAttr<AccessGroupModifierAttr>:$dyn_groupprivate_access_group,
+    OptionalAttr<FallbackModifierAttr>:$dyn_groupprivate_fallback,
+    Optional<AnyInteger>:$dyn_groupprivate_size
+  );
+
+  let description = [{
+    The `dyn_groupprivate_access_group` attribute specifies the access group
+    modifier for the dynamically allocated group-private memory. The
+    `dyn_groupprivate_fallback` attribute specifies the fallback behavior when
+    allocation fails. The `dyn_groupprivate_size` operand specifies the size in
+    bytes to allocate.
+  }];
+
+  let optAssemblyFormat = [{
+    `dyn_groupprivate` `(`
+      custom<DynGroupprivateClause>($dyn_groupprivate_access_group,
+      $dyn_groupprivate_fallback,
+      $dyn_groupprivate_size, type($dyn_groupprivate_size))
+    `)`
+  }];
+}
+
+def OpenMP_DynGroupprivateClause : OpenMP_DynGroupprivateClauseSkip<>;
 
 #endif // OPENMP_CLAUSES

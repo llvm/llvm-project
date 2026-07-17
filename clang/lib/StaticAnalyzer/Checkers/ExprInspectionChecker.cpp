@@ -136,11 +136,11 @@ static const char *getArgumentValueString(const CallExpr *CE,
     return "Missing assertion argument";
 
   ExplodedNode *N = C.getPredecessor();
-  const LocationContext *LC = N->getLocationContext();
+  const StackFrame *SF = N->getStackFrame();
   ProgramStateRef State = N->getState();
 
   const Expr *Assertion = CE->getArg(0);
-  SVal AssertionVal = State->getSVal(Assertion, LC);
+  SVal AssertionVal = State->getSVal(Assertion, SF);
 
   if (AssertionVal.isUndef())
     return "UNDEFINED";
@@ -210,11 +210,11 @@ const MemRegion *ExprInspectionChecker::getArgRegion(const CallExpr *CE,
 
 void ExprInspectionChecker::analyzerEval(const CallExpr *CE,
                                          CheckerContext &C) const {
-  const LocationContext *LC = C.getPredecessor()->getLocationContext();
+  const StackFrame *SF = C.getPredecessor()->getStackFrame();
 
   // A specific instantiation of an inlined function may have more constrained
   // values than can generally be assumed. Skip the check.
-  if (LC->getStackFrame()->getParent() != nullptr)
+  if (SF->getParent() != nullptr)
     return;
 
   reportBug(getArgumentValueString(CE, C), C);
@@ -237,14 +237,14 @@ void ExprInspectionChecker::analyzerNumTimesReached(const CallExpr *CE,
 
 void ExprInspectionChecker::analyzerCheckInlined(const CallExpr *CE,
                                                  CheckerContext &C) const {
-  const LocationContext *LC = C.getPredecessor()->getLocationContext();
+  const StackFrame *SF = C.getPredecessor()->getStackFrame();
 
   // An inlined function could conceivably also be analyzed as a top-level
   // function. We ignore this case and only emit a message (TRUE or FALSE)
   // when we are analyzing it as an inlined function. This means that
   // clang_analyzer_checkInlined(true) should always print TRUE, but
   // clang_analyzer_checkInlined(false) should never actually print anything.
-  if (LC->getStackFrame()->getParent() == nullptr)
+  if (SF->getParent() == nullptr)
     return;
 
   reportBug(getArgumentValueString(CE, C), C);
@@ -329,7 +329,7 @@ void ExprInspectionChecker::analyzerGetExtent(const CallExpr *CE,
   ProgramStateRef State = C.getState();
   SVal Size = getDynamicExtentWithOffset(State, C.getSVal(Arg));
 
-  State = State->BindExpr(CE, C.getLocationContext(), Size);
+  State = State->BindExpr(CE, C.getStackFrame(), Size);
   C.addTransition(State);
 }
 
@@ -430,8 +430,8 @@ void ExprInspectionChecker::analyzerHashDump(const CallExpr *CE,
   const LangOptions &Opts = C.getLangOpts();
   const SourceManager &SM = C.getSourceManager();
   FullSourceLoc FL(CE->getArg(0)->getBeginLoc(), SM);
-  std::string HashContent = getIssueString(
-      FL, getName(), "Category", C.getLocationContext()->getDecl(), Opts);
+  std::string HashContent = getIssueString(FL, getName(), "Category",
+                                           C.getStackFrame()->getDecl(), Opts);
 
   reportBug(HashContent, C);
 }
@@ -551,7 +551,7 @@ void ExprInspectionChecker::analyzerIsTainted(const CallExpr *CE,
     return;
   }
   const bool IsTainted =
-      taint::isTainted(C.getState(), CE->getArg(0), C.getLocationContext());
+      taint::isTainted(C.getState(), CE->getArg(0), C.getStackFrame());
   reportBug(IsTainted ? "YES" : "NO", C);
 }
 

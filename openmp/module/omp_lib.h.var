@@ -79,6 +79,11 @@
       integer(kind=omp_sched_kind)omp_sched_monotonic
       parameter(omp_sched_monotonic=Z'80000000')
 
+      integer(kind=omp_integer_kind)omp_initial_device
+      parameter(omp_initial_device=-1)
+      integer(kind=omp_integer_kind)omp_invalid_device
+      parameter(omp_invalid_device=-2)
+
       integer(kind=omp_proc_bind_kind)omp_proc_bind_false
       parameter(omp_proc_bind_false=0)
       integer(kind=omp_proc_bind_kind)omp_proc_bind_true

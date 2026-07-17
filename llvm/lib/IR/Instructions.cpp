@@ -71,9 +71,12 @@ AllocaInst::getAllocationSize(const DataLayout &DL) const {
     auto *C = dyn_cast<ConstantInt>(getArraySize());
     if (!C)
       return std::nullopt;
+    std::optional<uint64_t> NumElements = C->getValue().tryZExtValue();
+    if (!NumElements)
+      return std::nullopt;
     assert(!Size.isScalable() && "Array elements cannot have a scalable size");
     auto CheckedProd =
-        checkedMulUnsigned(Size.getKnownMinValue(), C->getZExtValue());
+        checkedMulUnsigned(Size.getKnownMinValue(), *NumElements);
     if (!CheckedProd)
       return std::nullopt;
     return TypeSize::getFixed(*CheckedProd);
@@ -133,7 +136,7 @@ PHINode::PHINode(const PHINode &PN)
   allocHungoffUses(PN.getNumOperands());
   std::copy(PN.op_begin(), PN.op_end(), op_begin());
   copyIncomingBlocks(make_range(PN.block_begin(), PN.block_end()));
-  SubclassOptionalData = PN.SubclassOptionalData;
+  FMF = PN.FMF;
 }
 
 // removeIncomingValue - Remove an incoming value.  This is useful if a
@@ -609,6 +612,22 @@ CallBase *CallBase::removeOperandBundle(CallBase *CB, uint32_t ID,
   return CreateNew ? Create(CB, Bundles, InsertPt) : CB;
 }
 
+CallBase *CallBase::removeOperandBundleAt(CallBase *CB, size_t Offset,
+                                          InsertPosition InsertPt) {
+  auto OpBundleCount = CB->getNumOperandBundles();
+  assert(Offset < OpBundleCount &&
+         "Trying to remove non-existant operand bundle");
+  SmallVector<OperandBundleDef> Bundles;
+  Bundles.reserve(OpBundleCount - 1);
+  size_t I = 0;
+  for (; I != Offset; ++I)
+    Bundles.emplace_back(CB->getOperandBundleAt(I));
+  ++I;
+  for (; I != OpBundleCount; ++I)
+    Bundles.emplace_back(CB->getOperandBundleAt(I));
+  return Create(CB, Bundles, InsertPt);
+}
+
 bool CallBase::hasReadingOperandBundles() const {
   // Implementation note: this is a conservative implementation of operand
   // bundle semantics, where *any* non-assume operand bundle (other than
@@ -801,7 +820,7 @@ CallInst::CallInst(const CallInst &CI, AllocInfo AllocInfo)
   std::copy(CI.op_begin(), CI.op_end(), op_begin());
   std::copy(CI.bundle_op_info_begin(), CI.bundle_op_info_end(),
             bundle_op_info_begin());
-  SubclassOptionalData = CI.SubclassOptionalData;
+  FMF = CI.FMF;
 }
 
 CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
@@ -812,7 +831,7 @@ CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
                                  Args, OpB, CI->getName(), InsertPt);
   NewCI->setTailCallKind(CI->getTailCallKind());
   NewCI->setCallingConv(CI->getCallingConv());
-  NewCI->SubclassOptionalData = CI->SubclassOptionalData;
+  NewCI->FMF = CI->FMF;
   NewCI->setAttributes(CI->getAttributes());
   NewCI->setDebugLoc(CI->getDebugLoc());
   return NewCI;
@@ -1346,6 +1365,14 @@ LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
     : LoadInst(Ty, Ptr, Name, isVolatile, Align, AtomicOrdering::NotAtomic,
                SyncScope::System, InsertBef) {}
 
+LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name,
+                   const LoadStoreInstProperties &Props,
+                   InsertPosition InsertBef)
+    : LoadInst(Ty, Ptr, Name, Props.IsVolatile, Props.Alignment, Props.Ordering,
+               Props.SSID, InsertBef) {
+  setElementwise(Props.IsElementwise);
+}
+
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
                    Align Align, AtomicOrdering Order, SyncScope::ID SSID,
                    InsertPosition InsertBef)
@@ -1380,6 +1407,12 @@ StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, Align Align,
                      InsertPosition InsertBefore)
     : StoreInst(val, addr, isVolatile, Align, AtomicOrdering::NotAtomic,
                 SyncScope::System, InsertBefore) {}
+
+StoreInst::StoreInst(Value *Val, Value *Ptr,
+                     const LoadStoreInstProperties &Props,
+                     InsertPosition InsertBefore)
+    : StoreInst(Val, Ptr, Props.IsVolatile, Props.Alignment, Props.Ordering,
+                Props.SSID, InsertBefore) {}
 
 StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, Align Align,
                      AtomicOrdering Order, SyncScope::ID SSID,
@@ -1436,7 +1469,7 @@ AtomicCmpXchgInst::AtomicCmpXchgInst(Value *Ptr, Value *Cmp, Value *NewVal,
 
 void AtomicRMWInst::Init(BinOp Operation, Value *Ptr, Value *Val,
                          Align Alignment, AtomicOrdering Ordering,
-                         SyncScope::ID SSID) {
+                         SyncScope::ID SSID, bool Elementwise) {
   assert(Ordering != AtomicOrdering::NotAtomic &&
          "atomicrmw instructions can only be atomic.");
   assert(Ordering != AtomicOrdering::Unordered &&
@@ -1446,6 +1479,7 @@ void AtomicRMWInst::Init(BinOp Operation, Value *Ptr, Value *Val,
   setOperation(Operation);
   setOrdering(Ordering);
   setSyncScopeID(SSID);
+  setElementwise(Elementwise);
   setAlignment(Alignment);
 
   assert(getOperand(0) && getOperand(1) && "All operands must be non-null!");
@@ -1457,9 +1491,10 @@ void AtomicRMWInst::Init(BinOp Operation, Value *Ptr, Value *Val,
 
 AtomicRMWInst::AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val,
                              Align Alignment, AtomicOrdering Ordering,
-                             SyncScope::ID SSID, InsertPosition InsertBefore)
+                             SyncScope::ID SSID, bool Elementwise,
+                             InsertPosition InsertBefore)
     : Instruction(Val->getType(), AtomicRMW, AllocMarker, InsertBefore) {
-  Init(Operation, Ptr, Val, Alignment, Ordering, SSID);
+  Init(Operation, Ptr, Val, Alignment, Ordering, SSID, Elementwise);
 }
 
 StringRef AtomicRMWInst::getOperationName(BinOp Op) {
@@ -1721,7 +1756,7 @@ bool InsertElementInst::isValidOperands(const Value *Vec, const Value *Elt,
     return false;// Second operand of insertelement must be vector element type.
 
   if (!Index->getType()->isIntegerTy())
-    return false;  // Third operand of insertelement must be i32.
+    return false; // Third operand of insertelement must be an integer.
   return true;
 }
 
@@ -2611,7 +2646,12 @@ UnaryOperator::UnaryOperator(UnaryOps iType, Value *S, Type *Ty,
 
 UnaryOperator *UnaryOperator::Create(UnaryOps Op, Value *S, const Twine &Name,
                                      InsertPosition InsertBefore) {
-  return new UnaryOperator(Op, S, S->getType(), Name, InsertBefore);
+  switch (Op) {
+  case UnaryOps::FNeg:
+    return new FPUnaryOperator(Op, S, S->getType(), Name, InsertBefore);
+  default:
+    return new UnaryOperator(Op, S, S->getType(), Name, InsertBefore);
+  }
 }
 
 void UnaryOperator::AssertOK() {
@@ -2717,7 +2757,16 @@ BinaryOperator *BinaryOperator::Create(BinaryOps Op, Value *S1, Value *S2,
                                        InsertPosition InsertBefore) {
   assert(S1->getType() == S2->getType() &&
          "Cannot create binary operator with two operands of differing type!");
-  return new BinaryOperator(Op, S1, S2, S1->getType(), Name, InsertBefore);
+  switch (Op) {
+  case BinaryOps::FAdd:
+  case BinaryOps::FSub:
+  case BinaryOps::FMul:
+  case BinaryOps::FDiv:
+  case BinaryOps::FRem:
+    return new FPBinaryOperator(Op, S1, S2, S1->getType(), Name, InsertBefore);
+  default:
+    return new BinaryOperator(Op, S1, S2, S1->getType(), Name, InsertBefore);
+  }
 }
 
 BinaryOperator *BinaryOperator::CreateNeg(Value *Op, const Twine &Name,
@@ -3001,6 +3050,10 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
       // FIXME: this state can be merged with (1), but the following assert
       // is useful to check the correcteness of the sequence due to semantic
       // change of bitcast.
+      // addrspacecast can only fold through a bitcast if the result remains a
+      // pointer. A pointer-to-byte bitcast must stay as a separate bitcast.
+      if (!DstTy->isPtrOrPtrVectorTy())
+        return 0;
       assert(
         SrcTy->isPtrOrPtrVectorTy() &&
         MidTy->isPtrOrPtrVectorTy() &&
@@ -3012,6 +3065,10 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
       return firstOp;
     case 14:
       // bitcast, addrspacecast -> addrspacecast
+      // addrspacecast can only fold through a bitcast if the source was already
+      // a pointer. A byte-to-pointer bitcast must stay as a separate bitcast.
+      if (!SrcTy->isPtrOrPtrVectorTy())
+        return 0;
       return Instruction::AddrSpaceCast;
     case 15:
       // FIXME: this state can be merged with (1), but the following assert
@@ -3524,15 +3581,12 @@ AddrSpaceCastInst::AddrSpaceCastInst(Value *S, Type *Ty, const Twine &Name,
 //===----------------------------------------------------------------------===//
 
 CmpInst::CmpInst(Type *ty, OtherOps op, Predicate predicate, Value *LHS,
-                 Value *RHS, const Twine &Name, InsertPosition InsertBefore,
-                 Instruction *FlagsSource)
+                 Value *RHS, const Twine &Name, InsertPosition InsertBefore)
     : Instruction(ty, op, AllocMarker, InsertBefore) {
   Op<0>() = LHS;
   Op<1>() = RHS;
   setPredicate(predicate);
   setName(Name);
-  if (FlagsSource)
-    copyIRFlags(FlagsSource);
 }
 
 CmpInst *CmpInst::Create(OtherOps Op, Predicate predicate, Value *S1, Value *S2,
@@ -4048,6 +4102,10 @@ CmpPredicate CmpPredicate::get(const CmpInst *Cmp) {
   return Cmp->getPredicate();
 }
 
+CmpPredicate CmpPredicate::getInverse(CmpPredicate P) {
+  return {CmpInst::getInversePredicate(P), P.hasSameSign()};
+}
+
 CmpPredicate CmpPredicate::getSwapped(CmpPredicate P) {
   return {CmpInst::getSwappedPredicate(P), P.hasSameSign()};
 }
@@ -4242,11 +4300,11 @@ void SwitchInstProfUpdateWrapper::setSuccessorWeight(
 SwitchInstProfUpdateWrapper::CaseWeightOpt
 SwitchInstProfUpdateWrapper::getSuccessorWeight(const SwitchInst &SI,
                                                 unsigned idx) {
-  if (MDNode *ProfileData = getBranchWeightMDNode(SI))
-    if (ProfileData->getNumOperands() == SI.getNumSuccessors() + 1)
-      return mdconst::extract<ConstantInt>(ProfileData->getOperand(idx + 1))
-          ->getValue()
-          .getZExtValue();
+  if (MDNode *ProfileData = getValidBranchWeightMDNode(SI)) {
+    SmallVector<uint32_t> Weights;
+    extractFromBranchWeightMD32(ProfileData, Weights);
+    return Weights[idx];
+  }
 
   return std::nullopt;
 }
@@ -4349,16 +4407,35 @@ UnaryOperator *UnaryOperator::cloneImpl() const {
   return Create(getOpcode(), Op<0>());
 }
 
+FPUnaryOperator *FPUnaryOperator::cloneImpl() const {
+  auto *I = static_cast<FPUnaryOperator *>(Create(getOpcode(), Op<0>()));
+  I->FMF = FMF;
+  return I;
+}
+
 BinaryOperator *BinaryOperator::cloneImpl() const {
+  assert(!isa<FPBinaryOperator>(this) &&
+         "Should call FPBinaryOperator::cloneImpl!");
   return Create(getOpcode(), Op<0>(), Op<1>());
 }
 
+FPBinaryOperator *FPBinaryOperator::cloneImpl() const {
+  auto *I =
+      static_cast<FPBinaryOperator *>(Create(getOpcode(), Op<0>(), Op<1>()));
+  I->FMF = FMF;
+  return I;
+}
+
 FCmpInst *FCmpInst::cloneImpl() const {
-  return new FCmpInst(getPredicate(), Op<0>(), Op<1>());
+  auto *I = new FCmpInst(getPredicate(), Op<0>(), Op<1>());
+  I->FMF = FMF;
+  return I;
 }
 
 ICmpInst *ICmpInst::cloneImpl() const {
-  return new ICmpInst(getPredicate(), Op<0>(), Op<1>());
+  auto *Result = new ICmpInst(getPredicate(), Op<0>(), Op<1>());
+  Result->setSameSign(hasSameSign());
+  return Result;
 }
 
 ExtractValueInst *ExtractValueInst::cloneImpl() const {
@@ -4378,8 +4455,8 @@ AllocaInst *AllocaInst::cloneImpl() const {
 }
 
 LoadInst *LoadInst::cloneImpl() const {
-  return new LoadInst(getType(), getOperand(0), Twine(), isVolatile(),
-                      getAlign(), getOrdering(), getSyncScopeID());
+  return new LoadInst(getType(), getOperand(0), Twine(), getProperties(),
+                      /*InsertBefore=*/nullptr);
 }
 
 StoreInst *StoreInst::cloneImpl() const {
@@ -4397,9 +4474,9 @@ AtomicCmpXchgInst *AtomicCmpXchgInst::cloneImpl() const {
 }
 
 AtomicRMWInst *AtomicRMWInst::cloneImpl() const {
-  AtomicRMWInst *Result =
-      new AtomicRMWInst(getOperation(), getOperand(0), getOperand(1),
-                        getAlign(), getOrdering(), getSyncScopeID());
+  AtomicRMWInst *Result = new AtomicRMWInst(
+      getOperation(), getOperand(0), getOperand(1), getAlign(), getOrdering(),
+      getSyncScopeID(), isElementwise());
   Result->setVolatile(isVolatile());
   return Result;
 }
@@ -4421,19 +4498,27 @@ SExtInst *SExtInst::cloneImpl() const {
 }
 
 FPTruncInst *FPTruncInst::cloneImpl() const {
-  return new FPTruncInst(getOperand(0), getType());
+  auto *I = new FPTruncInst(getOperand(0), getType());
+  I->FMF = FMF;
+  return I;
 }
 
 FPExtInst *FPExtInst::cloneImpl() const {
-  return new FPExtInst(getOperand(0), getType());
+  auto *I = new FPExtInst(getOperand(0), getType());
+  I->FMF = FMF;
+  return I;
 }
 
 UIToFPInst *UIToFPInst::cloneImpl() const {
-  return new UIToFPInst(getOperand(0), getType());
+  auto *Result = new UIToFPInst(getOperand(0), getType());
+  Result->FMF = FMF;
+  return Result;
 }
 
 SIToFPInst *SIToFPInst::cloneImpl() const {
-  return new SIToFPInst(getOperand(0), getType());
+  auto *Result = new SIToFPInst(getOperand(0), getType());
+  Result->FMF = FMF;
+  return Result;
 }
 
 FPToUIInst *FPToUIInst::cloneImpl() const {
@@ -4476,7 +4561,9 @@ CallInst *CallInst::cloneImpl() const {
 }
 
 SelectInst *SelectInst::cloneImpl() const {
-  return SelectInst::Create(getOperand(0), getOperand(1), getOperand(2));
+  auto *I = SelectInst::Create(getOperand(0), getOperand(1), getOperand(2));
+  I->FMF = FMF;
+  return I;
 }
 
 VAArgInst *VAArgInst::cloneImpl() const {

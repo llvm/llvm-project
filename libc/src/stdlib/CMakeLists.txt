@@ -62,7 +62,49 @@ add_entrypoint_object(
   HDRS
     getenv.h
   DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    .environ_internal
+)
+
+# GCC-12 crashed when building environ_internal during GIMPLE pass: waccess.
+set(environ_internal_gcc12_workaround "")
+if((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND
+   (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "12") AND
+   (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "13"))
+  set(environ_internal_gcc12_workaround "-Wno-stringop-overflow"
+      "-fdisable-tree-waccess1" "-fdisable-tree-waccess2"
+      "-fdisable-tree-waccess3")
+endif()
+
+set(environ_internal_deps
   libc.config.app_h
+  libc.hdr.types.size_t
+  libc.src.__support.alloc_checker
+  libc.src.__support.CPP.new
+  libc.src.__support.CPP.optional
+  libc.src.__support.CPP.string_view
+  libc.src.__support.macros.attributes
+  libc.src.__support.macros.config
+  libc.src.string.memory_utils.inline_memcpy
+)
+set(environ_internal_compile_options ${environ_internal_gcc12_workaround})
+
+if("libc.src.unistd.environ" IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
+  list(APPEND environ_internal_deps libc.src.unistd.environ)
+  list(APPEND environ_internal_compile_options "-DLIBC_COPT_SUPPORT_ENVIRON")
+endif()
+
+add_object_library(
+  environ_internal
+  SRCS
+    environ_internal.cpp
+  HDRS
+    environ_internal.h
+  COMPILE_OPTIONS
+    ${environ_internal_compile_options}
+  DEPENDS
+    ${environ_internal_deps}
 )
 
 add_entrypoint_object(
@@ -369,6 +411,23 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  mkstemp
+  SRCS
+    mkstemp.cpp
+  HDRS
+    mkstemp.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getrandom
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
   mbtowc
   SRCS
     mbtowc.cpp
@@ -377,6 +436,21 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.size_t
     libc.hdr.types.wchar_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.libc_errno
+    libc.src.__support.wchar.mbrtowc
+    libc.src.__support.wchar.mbstate
+)
+
+add_entrypoint_object(
+  mblen
+  SRCS
+    mblen.cpp
+  HDRS
+    mblen.h
+  DEPENDS
+    libc.hdr.types.size_t
     libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.libc_errno
@@ -522,6 +596,17 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
   endif()
 endif()
 
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+endif()
+
+add_entrypoint_object(
+  realpath
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.realpath
+)
+
 if(NOT LLVM_LIBC_FULL_BUILD)
   return()
 endif()
@@ -603,9 +688,19 @@ add_entrypoint_object(
     libc.src.__support.str_to_integer
 )
 
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
-endif()
+add_entrypoint_object(
+  setenv
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.setenv
+)
+
+add_entrypoint_object(
+  unsetenv
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.unsetenv
+)
 
 if(LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU)
   add_entrypoint_object(
@@ -613,6 +708,12 @@ if(LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU)
     ALIAS
     DEPENDS
       .${LIBC_TARGET_OS}.malloc
+  )
+  add_entrypoint_object(
+    malloc_usable_size
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.malloc_usable_size
   )
   add_entrypoint_object(
     free

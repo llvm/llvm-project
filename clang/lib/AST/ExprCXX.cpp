@@ -149,6 +149,11 @@ bool CXXTypeidExpr::isPotentiallyEvaluated() const {
 bool CXXTypeidExpr::isMostDerived(const ASTContext &Context) const {
   assert(!isTypeOperand() && "Cannot call isMostDerived for typeid(type)");
   const Expr *E = getExprOperand()->IgnoreParenNoopCasts(Context);
+
+  if (const CXXRecordDecl *RD = E->getType()->getAsCXXRecordDecl())
+    if (RD->isEffectivelyFinal())
+      return true;
+
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
     QualType Ty = DRE->getDecl()->getType();
     if (!Ty->isPointerOrReferenceType())
@@ -1597,14 +1602,13 @@ CXXThisExpr *CXXThisExpr::CreateEmpty(const ASTContext &Ctx) {
 static bool hasOnlyNonStaticMemberFunctions(UnresolvedSetIterator begin,
                                             UnresolvedSetIterator end) {
   do {
-    NamedDecl *decl = *begin;
+    NamedDecl *decl = (*begin)->getUnderlyingDecl();
     if (isa<UnresolvedUsingValueDecl>(decl))
       return false;
 
     // Unresolved member expressions should only contain methods and
     // method templates.
-    if (cast<CXXMethodDecl>(decl->getUnderlyingDecl()->getAsFunction())
-            ->isStatic())
+    if (cast<CXXMethodDecl>(decl->getAsFunction())->isStatic())
       return false;
   } while (++begin != end);
 
@@ -1763,18 +1767,6 @@ PackIndexingExpr::CreateDeserialized(ASTContext &Context,
   void *Storage =
       Context.Allocate(totalSizeToAlloc<Expr *>(NumTransformedExprs));
   return new (Storage) PackIndexingExpr(EmptyShell{});
-}
-
-QualType SubstNonTypeTemplateParmExpr::getParameterType(
-    const ASTContext &Context) const {
-  // Note that, for a class type NTTP, we will have an lvalue of type 'const
-  // T', so we can't just compute this from the type and value category.
-
-  QualType Type = getType();
-
-  if (isReferenceParameter())
-    return Context.getLValueReferenceType(Type);
-  return Type.getUnqualifiedType();
 }
 
 SubstNonTypeTemplateParmPackExpr::SubstNonTypeTemplateParmPackExpr(
@@ -2037,4 +2029,16 @@ CXXFoldExpr::CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
   SubExprs[SubExpr::LHS] = LHS;
   SubExprs[SubExpr::RHS] = RHS;
   setDependence(computeDependence(this));
+}
+
+CXXExpansionSelectExpr::CXXExpansionSelectExpr(EmptyShell Empty)
+    : Expr(CXXExpansionSelectExprClass, Empty) {}
+
+CXXExpansionSelectExpr::CXXExpansionSelectExpr(const ASTContext &C,
+                                               InitListExpr *Range, Expr *Idx)
+    : Expr(CXXExpansionSelectExprClass, C.DependentTy, VK_PRValue,
+           OK_Ordinary) {
+  setDependence(ExprDependence::TypeValueInstantiation);
+  SubExprs[RANGE] = Range;
+  SubExprs[INDEX] = Idx;
 }

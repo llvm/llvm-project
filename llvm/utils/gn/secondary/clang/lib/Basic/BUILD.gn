@@ -39,6 +39,7 @@ static_library("Basic") {
     "//clang/include/clang/Basic:BuiltinsSystemZ",
     "//clang/include/clang/Basic:BuiltinsX86",
     "//clang/include/clang/Basic:BuiltinsX86_64",
+    "//clang/include/clang/Basic:BuiltinsZOS",
     "//clang/include/clang/Basic:DiagnosticGroups",
     "//clang/include/clang/Basic:DiagnosticStableIDs",
     "//clang/include/clang/Basic:RegularKeywordAttrInfo",
@@ -77,6 +78,7 @@ static_library("Basic") {
   include_dirs = [ "." ]
   sources = [
     "ASTSourceDescriptor.cpp",
+    "AtomicLineLogger.cpp",
     "Attributes.cpp",
     "Builtins.cpp",
     "CLWarnings.cpp",
@@ -90,7 +92,6 @@ static_library("Basic") {
     "ExpressionTraits.cpp",
     "FileEntry.cpp",
     "FileManager.cpp",
-    "FileSystemStatCache.cpp",
     "IdentifierTable.cpp",
     "LangOptions.cpp",
     "LangStandards.cpp",

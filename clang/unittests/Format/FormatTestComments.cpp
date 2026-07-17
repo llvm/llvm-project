@@ -187,11 +187,10 @@ TEST_F(FormatTestComments, UnderstandsSingleLineComments) {
 
   verifyGoogleFormat("#endif  // HEADER_GUARD");
 
-  verifyFormat("const char *test[] = {\n"
-               "    // A\n"
-               "    \"aaaa\",\n"
-               "    // B\n"
-               "    \"aaaaa\"};");
+  verifyFormat("const char *test[] = {// A\n"
+               "                      \"aaaa\",\n"
+               "                      // B\n"
+               "                      \"aaaaa\"};");
   verifyGoogleFormat(
       "aaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
       "    aaaaaaaaaaaaaaaaaaaaaa);  // 81_cols_with_this_comment");
@@ -1421,12 +1420,11 @@ TEST_F(FormatTestComments, CommentsInStaticInitializers) {
                "       {// Group #3\n"
                "        g, h, i}};");
 
-  verifyFormat("S s = {\n"
-               "    // Some comment\n"
-               "    a,\n"
+  verifyFormat("S s = {// Some comment\n"
+               "       a,\n"
                "\n"
-               "    // Comment after empty line\n"
-               "    b}",
+               "       // Comment after empty line\n"
+               "       b}",
                "S s =    {\n"
                "      // Some comment\n"
                "  a,\n"
@@ -1434,12 +1432,11 @@ TEST_F(FormatTestComments, CommentsInStaticInitializers) {
                "     // Comment after empty line\n"
                "      b\n"
                "}");
-  verifyFormat("S s = {\n"
-               "    /* Some comment */\n"
-               "    a,\n"
+  verifyFormat("S s = {/* Some comment */\n"
+               "       a,\n"
                "\n"
-               "    /* Comment after empty line */\n"
-               "    b}",
+               "       /* Comment after empty line */\n"
+               "       b}",
                "S s =    {\n"
                "      /* Some comment */\n"
                "  a,\n"
@@ -3060,6 +3057,42 @@ TEST_F(FormatTestComments, AlignTrailingCommentsLeave) {
                "namespace ns {\n"
                "int i;\n"
                "int j;\n"
+               "}",
+               Style);
+
+  // Move comments along, when it appears, that the indentation changed when a
+  // scope has been added or removed.
+  verifyFormat("void func() {\n"
+               "  int i;\n"
+               "  // comment\n"
+               "  // comment 2\n"
+               "}",
+               "void func() {\n"
+               "    int i;\n"
+               "    // comment\n"
+               "    // comment 2\n"
+               "}",
+               Style);
+
+  verifyFormat("void func() {\n"
+               "  // comment\n"
+               "  // comment 2\n"
+               "  int i;\n"
+               "}",
+               "void func() {\n"
+               "    // comment\n"
+               "    // comment 2\n"
+               "    int i;\n"
+               "}",
+               Style);
+
+  verifyFormat("void func() {\n"
+               "  // non-trailing comment\n"
+               "  int i;\n"
+               "}",
+               "void func() {\n"
+               "     // non-trailing comment\n"
+               "    int i;\n"
                "}",
                Style);
 

@@ -51,7 +51,7 @@ public:
     HasStrictFP = true;
   }
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     if (!isValidCPUName(Name))
       return false;
     CPU = Name;
@@ -117,10 +117,6 @@ public:
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
 
-  bool useFP16ConversionIntrinsics() const override {
-    return false;
-  }
-
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
   bool isValidTuneCPUName(StringRef Name) const override;
@@ -162,15 +158,7 @@ public:
 
   bool
   checkCFBranchLabelSchemeSupported(const CFBranchLabelSchemeKind Scheme,
-                                    DiagnosticsEngine &Diags) const override {
-    switch (Scheme) {
-    case CFBranchLabelSchemeKind::Default:
-    case CFBranchLabelSchemeKind::Unlabeled:
-    case CFBranchLabelSchemeKind::FuncSig:
-      return true;
-    }
-    return TargetInfo::checkCFBranchLabelSchemeSupported(Scheme, Diags);
-  }
+                                    DiagnosticsEngine &Diags) const override;
 };
 class LLVM_LIBRARY_VISIBILITY RISCV32TargetInfo : public RISCVTargetInfo {
 public:

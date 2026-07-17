@@ -171,7 +171,6 @@ headers_not_available = list(map(Header, [
     "spanstream",
     "stacktrace",
     "stdfloat",
-    "text_encoding",
 ]))
 
 header_restrictions = {

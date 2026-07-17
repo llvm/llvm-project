@@ -9,6 +9,7 @@ from lldbsuite.test import lldbutil
 
 
 @skipIfTargetDoesNotSupportThreads()
+@skipIfTargetDoesNotSupportSharedLibraries()
 class TlsGlobalTestCase(TestBase):
     def setUp(self):
         TestBase.setUp(self)

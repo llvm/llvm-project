@@ -608,6 +608,7 @@ cc_test(
     ),
     deps = [
         "//llvm:BinaryFormat",
+        "//llvm:MC",
         "//llvm:Object",
         "//llvm:ObjectYAML",
         "//llvm:Support",
@@ -631,6 +632,7 @@ cc_test(
         "//llvm:ObjectYAML",
         "//llvm:Support",
         "//llvm:TestingSupport",
+        "//llvm:config",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],

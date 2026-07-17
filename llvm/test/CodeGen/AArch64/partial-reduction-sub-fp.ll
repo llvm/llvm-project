@@ -11,9 +11,9 @@ define <vscale x 4 x float> @fmlslbt_bf16_f32(<vscale x 4 x float> %acc, <vscale
 ; CHECK-NEXT:    ret
   %a.fpext = fpext <vscale x 8 x bfloat> %a to <vscale x 8 x float>
   %b.fpext = fpext <vscale x 8 x bfloat> %b to <vscale x 8 x float>
-  %mul = fmul fast <vscale x 8 x float> %a.fpext, %b.fpext
-  %mul.neg = fneg <vscale x 8 x float> %mul
-  %res = call fast <vscale x 4 x float> @llvm.vector.partial.reduce.fadd(<vscale x 4 x float> %acc, <vscale x 8 x float> %mul.neg)
+  %b.fpext.neg = fneg <vscale x 8 x float> %b.fpext
+  %mul = fmul fast <vscale x 8 x float> %a.fpext, %b.fpext.neg
+  %res = call fast <vscale x 4 x float> @llvm.vector.partial.reduce.fadd(<vscale x 4 x float> %acc, <vscale x 8 x float> %mul)
   ret <vscale x 4 x float> %res
 }
 
@@ -25,9 +25,9 @@ define <vscale x 4 x float> @fmlslbt_f16_f32(<vscale x 4 x float> %acc, <vscale 
 ; CHECK-NEXT:    ret
   %a.fpext = fpext <vscale x 8 x half> %a to <vscale x 8 x float>
   %b.fpext = fpext <vscale x 8 x half> %b to <vscale x 8 x float>
-  %mul = fmul fast <vscale x 8 x float> %a.fpext, %b.fpext
-  %mul.neg = fneg <vscale x 8 x float> %mul
-  %res = call fast <vscale x 4 x float> @llvm.vector.partial.reduce.fadd(<vscale x 4 x float> %acc, <vscale x 8 x float> %mul.neg)
+  %b.fpext.neg = fneg <vscale x 8 x float> %b.fpext
+  %mul = fmul fast <vscale x 8 x float> %a.fpext, %b.fpext.neg
+  %res = call fast <vscale x 4 x float> @llvm.vector.partial.reduce.fadd(<vscale x 4 x float> %acc, <vscale x 8 x float> %mul)
   ret <vscale x 4 x float> %res
 }
 
@@ -52,16 +52,15 @@ define <vscale x 4 x float> @fmlslbt_f16_f32_extended_fadd(<vscale x 4 x float> 
 define <4 x float> @fixed_fmlslbt_bf16_f32(<4 x float> %acc, <8 x bfloat> %a, <8 x bfloat> %b) "target-features"="+sve2p1,+bf16" {
 ; CHECK-LABEL: fixed_fmlslbt_bf16_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v3.8h, #128, lsl #8
-; CHECK-NEXT:    eor v2.16b, v2.16b, v3.16b
+; CHECK-NEXT:    fneg v2.8h, v2.8h
 ; CHECK-NEXT:    bfmlalb v0.4s, v1.8h, v2.8h
 ; CHECK-NEXT:    bfmlalt v0.4s, v1.8h, v2.8h
 ; CHECK-NEXT:    ret
   %a.fpext = fpext <8 x bfloat> %a to <8 x float>
   %b.fpext = fpext <8 x bfloat> %b to <8 x float>
-  %mul = fmul fast <8 x float> %a.fpext, %b.fpext
-  %mul.neg = fneg <8 x float> %mul
-  %res = call fast <4 x float> @llvm.vector.partial.reduce.fadd(<4 x float> %acc, <8 x float> %mul.neg)
+  %b.fpext.neg = fneg <8 x float> %b.fpext
+  %mul = fmul fast <8 x float> %a.fpext, %b.fpext.neg
+  %res = call fast <4 x float> @llvm.vector.partial.reduce.fadd(<4 x float> %acc, <8 x float> %mul)
   ret <4 x float> %res
 }
 
@@ -77,9 +76,9 @@ define <4 x float> @fixed_fmlslbt_f16_f32(<4 x float> %acc, <8 x half> %a, <8 x 
 ; CHECK-NEXT:    ret
   %a.fpext = fpext <8 x half> %a to <8 x float>
   %b.fpext = fpext <8 x half> %b to <8 x float>
-  %mul = fmul fast <8 x float> %a.fpext, %b.fpext
-  %mul.neg = fneg <8 x float> %mul
-  %res = call fast <4 x float> @llvm.vector.partial.reduce.fadd(<4 x float> %acc, <8 x float> %mul.neg)
+  %b.fpext.neg = fneg <8 x float> %b.fpext
+  %mul = fmul fast <8 x float> %a.fpext, %b.fpext.neg
+  %res = call fast <4 x float> @llvm.vector.partial.reduce.fadd(<4 x float> %acc, <8 x float> %mul)
   ret <4 x float> %res
 }
 

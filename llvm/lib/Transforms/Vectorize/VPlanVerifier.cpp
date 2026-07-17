@@ -20,7 +20,6 @@
 #include "VPlanPatternMatch.h"
 #include "VPlanUtils.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 #define DEBUG_TYPE "loop-vectorize"
 
@@ -30,7 +29,6 @@ using namespace VPlanPatternMatch;
 namespace {
 class VPlanVerifier {
   const VPDominatorTree &VPDT;
-  VPTypeAnalysis &TypeInfo;
 
   SmallPtrSet<BasicBlock *, 8> WrappedIRBBs;
 
@@ -61,8 +59,7 @@ class VPlanVerifier {
   bool verifyRegionRec(const VPRegionBlock *Region);
 
 public:
-  VPlanVerifier(VPDominatorTree &VPDT, VPTypeAnalysis &TypeInfo)
-      : VPDT(VPDT), TypeInfo(TypeInfo) {}
+  VPlanVerifier(VPDominatorTree &VPDT) : VPDT(VPDT) {}
 
   bool verify(const VPlan &Plan);
 };
@@ -96,9 +93,14 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
       return false;
     }
 
+    // In region form, VPCurrentIterationPHIRecipe must be the first header phi
+    // recipe. In a plain CFG VPlan, it must either be the first or second.
     if (isa<VPCurrentIterationPHIRecipe>(RecipeI) &&
-        RecipeI->getIterator() != VPBB->begin()) {
-      errs() << "CurrentIteration PHI is not the first recipe\n";
+        (VPBB->getPlan()->getVectorLoopRegion()
+             ? RecipeI->getIterator() != VPBB->begin()
+             : RecipeI->getIterator() != VPBB->begin() &&
+                   RecipeI->getIterator() != std::next(VPBB->begin()))) {
+      errs() << "CurrentIteration PHI is not the first/second recipe\n";
       return false;
     }
 
@@ -148,7 +150,7 @@ static bool isKnownMonotonic(VPValue *V) {
     return true;
   // Only handle a subset of IVs until we can guarantee there's no overflow.
   if (auto *WidenIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(V))
-    return WidenIV->isCanonical();
+    return WidenIV->isCanonical() || WidenIV->hasNoUnsignedWrap();
   if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(V))
     return match(Steps->getOperand(0),
                  m_CombineOr(
@@ -170,16 +172,39 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
     return false;
   }
 
-  const VPlan &Plan = *LastActiveLane.getParent()->getPlan();
   // All operands must be prefix-mask. This means an icmp ult/ule LHS, RHS where
   // the LHS is monotonically increasing and RHS is uniform across VFs and UF.
   for (VPValue *Op : LastActiveLane.operands()) {
-    if (vputils::isHeaderMask(Op, Plan))
+    VPValue *Mask = Op;
+    VPValue *HeaderMask;
+
+    // Look through any `and`s with the incoming alias mask or a
+    // loop_dependence_war_mask, which are always prefix masks.
+    // TODO: Verify the full loop.dependence.mask chain.
+    if (match(Op,
+              m_c_BinaryAnd(
+                  m_VPValue(HeaderMask),
+                  m_CombineOr(
+                      m_c_BinaryAnd(
+                          m_Intrinsic<Intrinsic::loop_dependence_war_mask>(),
+                          m_VPValue()),
+                      m_Intrinsic<Intrinsic::loop_dependence_war_mask>(),
+                      m_VPInstruction<VPInstruction::IncomingAliasMask>()))))
+      Mask = HeaderMask;
+
+    // The header mask is a prefix mask. Before being materialized it is the
+    // loop region's abstract header mask; afterwards it is an active lane mask
+    // (an intrinsic or a phi), or the icmp checked below.
+    if (match(Mask, m_HeaderMask()) || isa<VPActiveLaneMaskPHIRecipe>(Mask) ||
+        match(Mask, m_VPInstruction<VPInstruction::ActiveLaneMask>()))
+      continue;
+
+    if (match(Mask, m_ActiveLaneMask(m_VPValue(), m_VPValue(), m_VPValue())))
       continue;
 
     CmpPredicate Pred;
     VPValue *LHS, *RHS;
-    if (match(Op, m_ICmp(Pred, m_VPValue(LHS), m_VPValue(RHS))) &&
+    if (match(Mask, m_ICmp(Pred, m_VPValue(LHS), m_VPValue(RHS))) &&
         (Pred == CmpInst::ICMP_ULE || Pred == CmpInst::ICMP_ULT) &&
         isKnownMonotonic(LHS) &&
         (vputils::isUniformAcrossVFsAndUFs(RHS) ||
@@ -188,7 +213,7 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
 
     errs() << "LastActiveLane operand ";
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-    VPSlotTracker Tracker(&Plan);
+    VPSlotTracker Tracker(LastActiveLane.getParent()->getPlan());
     Op->printAsOperand(errs(), Tracker);
 #endif
     errs() << " must be prefix mask (a header mask or an "
@@ -220,11 +245,9 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
       return false;
     }
     for (const VPValue *V : R.definedValues()) {
-      // Verify that we can infer a scalar type for each defined value. With
-      // assertions enabled, inferScalarType will perform some consistency
-      // checks during type inference.
-      if (!TypeInfo.inferScalarType(V)) {
-        errs() << "Failed to infer scalar type!\n";
+      // Verify that each defined value has a scalar type.
+      if (!V->getScalarType()) {
+        errs() << "VPValue without scalar type!\n";
         return false;
       }
 
@@ -311,6 +334,13 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
         break;
       }
     }
+    if (const auto *DIV = dyn_cast<VPDerivedIVRecipe>(&R)) {
+      if (!DIV->getStartValue()->isDefinedOutsideLoopRegions()) {
+        errs() << "VPDerivedIVRecipe must have start value defined outside "
+                  "loop regions\n";
+        return false;
+      }
+    }
     if (const auto *ScalarIVSteps = dyn_cast<VPScalarIVStepsRecipe>(&R)) {
       unsigned NumOps = ScalarIVSteps->getNumOperands();
       if (NumOps != 3 && NumOps != 4) {
@@ -352,10 +382,7 @@ bool VPlanVerifier::verifyBlock(const VPBlockBase *VPB) {
       }
 
       if (VPBlockUtils::isLatch(VPBB, VPDT)) {
-        auto BranchTerminator =
-            m_CombineOr(m_BranchOnCond(),
-                        m_CombineOr(m_BranchOnCount(), m_BranchOnTwoConds()));
-        if (!match(VPBB->getTerminator(), BranchTerminator)) {
+        if (!match(VPBB->getTerminator(), m_Branch())) {
           errs() << "Latch block must have a branch terminator!\n";
           return false;
         }
@@ -488,9 +515,7 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
   }
 
   auto *LastInst = dyn_cast<VPInstruction>(std::prev(Exiting->end()));
-  if (!match(LastInst, m_CombineOr(m_BranchOnCond(),
-                                   m_CombineOr(m_BranchOnCount(),
-                                               m_BranchOnTwoConds())))) {
+  if (!match(LastInst, m_Branch())) {
     errs() << "VPlan vector loop exit must end with BranchOnCount, "
               "BranchOnCond, or BranchOnTwoConds VPInstruction\n";
     return false;
@@ -501,7 +526,6 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
 
 bool llvm::verifyVPlanIsValid(const VPlan &Plan) {
   VPDominatorTree VPDT(const_cast<VPlan &>(Plan));
-  VPTypeAnalysis TypeInfo(Plan);
-  VPlanVerifier Verifier(VPDT, TypeInfo);
+  VPlanVerifier Verifier(VPDT);
   return Verifier.verify(Plan);
 }

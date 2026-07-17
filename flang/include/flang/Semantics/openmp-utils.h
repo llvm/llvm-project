@@ -13,7 +13,6 @@
 #ifndef FORTRAN_SEMANTICS_OPENMP_UTILS_H
 #define FORTRAN_SEMANTICS_OPENMP_UTILS_H
 
-#include "flang/Common/indirection.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/message.h"
@@ -22,17 +21,20 @@
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Frontend/OpenMP/OMPContext.h"
 
 #include <memory>
 #include <optional>
 #include <string>
-#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
 namespace Fortran::semantics {
+class DeclTypeSpec;
 class Scope;
 class SemanticsContext;
 class Symbol;
@@ -86,28 +88,74 @@ SourcedActionStmt GetActionStmt(const parser::Block &block);
 std::string ThisVersion(unsigned version);
 std::string TryVersion(unsigned version);
 
-const parser::Designator *GetDesignatorFromObj(const parser::OmpObject &object);
-const parser::DataRef *GetDataRefFromObj(const parser::OmpObject &object);
-const parser::ArrayElement *GetArrayElementFromObj(
-    const parser::OmpObject &object);
-const Symbol *GetObjectSymbol(const parser::OmpObject &object);
-std::optional<parser::CharBlock> GetObjectSource(
-    const parser::OmpObject &object);
-const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument);
-const parser::OmpObject *GetArgumentObject(const parser::OmpArgument &argument);
+const Symbol *GetObjectSymbol(
+    const parser::OmpObject &object, bool ultimate = false);
+const Symbol *GetArgumentSymbol(
+    const parser::OmpArgument &argument, bool ultimate = false);
 
 bool IsCommonBlock(const Symbol &sym);
 bool IsExtendedListItem(const Symbol &sym);
 bool IsVariableListItem(const Symbol &sym);
 bool IsTypeParamInquiry(const Symbol &sym);
+bool IsComplexPart(const Symbol &sym);
 bool IsStructureComponent(const Symbol &sym);
 bool IsPrivatizable(const Symbol &sym);
 bool IsVarOrFunctionRef(const MaybeExpr &expr);
 
 bool IsWholeAssumedSizeArray(const parser::OmpObject &object);
 
+bool IsExtendedListItem(
+    const parser::OmpObject &object, SemanticsContext *semaCtx);
+bool IsLocatorListItem(
+    const parser::OmpObject &object, SemanticsContext *semaCtx);
+bool IsVariableListItem(
+    const parser::OmpObject &object, SemanticsContext *semaCtx);
+
+bool IsSubstring(const parser::OmpObject &object, SemanticsContext *semaCtx);
+bool IsArrayElement(const parser::OmpObject &object, SemanticsContext *semaCtx);
+
+const Symbol *GetHostSymbol(const Symbol &sym);
+
+// Resolve a user-defined reduction visible in scope under the mangled name
+// mangledName (e.g. "op.myop." for operator(.myop.), or a named reduction).
+// Follows USE associations, operator renames, private visibility, and merged
+// generics exactly as the OpenMP semantic checks do, returning the found
+// (non-ultimate) reduction symbol, or null if none is visible. When type is
+// non-null, only a reduction that supports that type is accepted (used to
+// disambiguate an operator that carries reductions for several types). When
+// ambiguous is non-null, it is set true if more than one distinct reduction
+// supports the type (an operator merged from several modules that each declare
+// a reduction for it, or a mangled reduction name that collides across
+// modules).
+const Symbol *FindUserReductionSymbol(const Scope &scope,
+    const parser::CharBlock &mangledName, const DeclTypeSpec *type = nullptr,
+    bool *ambiguous = nullptr);
+
+// Resolve the user-defined reduction associated with the defined-operator
+// symbol operatorSym. Delegates to FindUserReductionSymbol from scope (the
+// scope where the reduction clause appears) with the operator's mangled
+// ("op...") name. Searching from the clause scope, not the operator's owning
+// scope, finds a reduction that is local, host-, or use-associated there (a
+// reduction may be declared in a contained procedure that host-associates the
+// operator from an enclosing module). type filters by supported type as above.
+const Symbol *FindOperatorUserReductionSymbol(const Scope &scope,
+    const Symbol &operatorSym, const DeclTypeSpec *type = nullptr);
+
+// Mangled reduction name ("op.+", "op.*", "op.AND", ...) that semantics stores
+// an intrinsic-operator user reduction under, produced by the same
+// MakeNameFromOperator the reduction-declaration semantics use so a clause-side
+// lookup matches byte-for-byte.
+parser::CharBlock MangledIntrinsicOperatorReductionName(
+    parser::DefinedOperator::IntrinsicOperator op, SemanticsContext &context);
+
 bool IsMapEnteringType(parser::OmpMapType::Value type);
 bool IsMapExitingType(parser::OmpMapType::Value type);
+
+// Returns true if the symbol has a temporary stack-allocated descriptor.
+// This includes assumed-shape and assumed-rank dummy arguments that are
+// not allocatable or pointer. These descriptors are created on the caller's
+// stack and become invalid after the function returns.
+bool HasTemporaryStackDescriptor(const Symbol &symbol);
 
 MaybeExpr GetEvaluateExpr(const parser::Expr &parserExpr);
 template <typename T> MaybeExpr GetEvaluateExpr(const T &inp) {
@@ -130,8 +178,94 @@ std::optional<int64_t> GetIntValueFromExpr(
   return std::nullopt;
 }
 
+// There are several clauses that take an optional, compile-time
+// constant bool argument. Those clauses are stored as std::optional, e.g.
+// OmpClause::ReverseOffload -> std::optional<OmpReverseOffloadClause>.
+// Retrieve the logical value if present.
+template <typename ClauseTy>
+std::optional<bool> GetLogicalArgument(
+    const std::optional<ClauseTy> &maybeClause, SemanticsContext &semaCtx) {
+  if (maybeClause) {
+    // Scalar<Logical<Constant<common::Indirection<Expr>>>>
+    auto &parserExpr{parser::UnwrapRef<parser::Expr>(*maybeClause)};
+    evaluate::ExpressionAnalyzer ea{semaCtx};
+    if (auto &&maybeExpr{ea.Analyze(parserExpr)}) {
+      if (auto v{GetLogicalValue(*maybeExpr)}) {
+        return *v;
+      }
+    }
+  }
+  return std::nullopt;
+}
+
 std::optional<bool> IsContiguous(
     SemanticsContext &semaCtx, const parser::OmpObject &object);
+
+/// Non-constant user condition expression and source for runtime lowering.
+struct DynamicUserCondition {
+  const parser::ScalarExpr *expr;
+  parser::CharBlock source;
+};
+
+/// A context-selector feature that variant matching accepts syntactically but
+/// cannot yet honour during selection. Callers are expected to diagnose these
+/// (a lowering \c TODO or a semantic error) before calling
+/// \c MakeVariantMatchInfo, which asserts none are present.
+enum class UnsupportedSelectorFeature {
+  None,
+  /// A `target_device={...}` selector set.
+  TargetDevice,
+  /// A clause property (e.g. \c simdlen(8) in \c construct={simd(simdlen(8))})
+  /// or an extension property (e.g. \c foo(bar) in
+  /// \c implementation={my_trait(foo(bar))}).
+  ClauseOrExtensionProperty,
+};
+
+/// Scan a parsed context selector for the first feature that variant matching
+/// cannot yet honour (see \c UnsupportedSelectorFeature). Pure detection: emits
+/// no diagnostics and has no side effects on any match info.
+UnsupportedSelectorFeature FindUnsupportedSelectorFeature(
+    const parser::traits::OmpContextSelectorSpecification &ctxSel,
+    SemanticsContext &semaCtx);
+
+/// Populate \p vmi from a parsed context selector. Score modifiers are
+/// honoured (including on `condition(...)` selectors). Constant user
+/// conditions are folded into user_condition_true/false traits; a non-constant
+/// user condition is recorded as user_condition_unknown and the first such
+/// expression is returned for the caller to lower as a runtime condition.
+///
+/// The caller must first reject unsupported selector features (see
+/// \c FindUnsupportedSelectorFeature); this function asserts none are present.
+std::optional<DynamicUserCondition> MakeVariantMatchInfo(
+    llvm::omp::VariantMatchInfo &vmi,
+    const parser::traits::OmpContextSelectorSpecification &ctxSel,
+    SemanticsContext &semaCtx);
+
+/// An `llvm::omp::OMPContext` describing the current compilation, used for
+/// OpenMP variant matching. It overrides ISA-trait matching to test against
+/// the target features.
+class OmpVariantMatchContext : public llvm::omp::OMPContext {
+public:
+  OmpVariantMatchContext(bool isDeviceCompilation, llvm::Triple targetTriple,
+      llvm::Triple targetOffloadTriple, std::string targetFeatures,
+      llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits = {});
+  OmpVariantMatchContext(const SemanticsContext &context,
+      llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits = {});
+  bool matchesISATrait(llvm::StringRef rawString) const override;
+
+private:
+  std::string features_;
+};
+
+/// True if a variant guarded by \p selector may be selected in the current
+/// compilation context.
+///
+/// False only if the complete selector is provably inapplicable. A null
+/// \p selector, or one using an unsupported feature (see
+/// \c FindUnsupportedSelectorFeature), is treated as possibly selectable.
+bool MayVariantBeSelected(
+    const parser::traits::OmpContextSelectorSpecification *selector,
+    SemanticsContext &context, OmpVariantMatchContext &matchContext);
 
 std::vector<SomeExpr> GetTopLevelDesignators(const SomeExpr &expr);
 const SomeExpr *HasStorageOverlap(
@@ -142,7 +276,26 @@ bool IsPointerAssignment(const evaluate::Assignment &x);
 
 MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp);
 
+enum struct ListItemKind : uint32_t {
+  Depend,
+  DirectiveName,
+  DirectiveSpecification,
+  Extended,
+  IntegerExpression,
+  Interop,
+  Locator,
+  Operation,
+  Parameter,
+  ProcedureArgument,
+  Variable,
+};
+
+std::optional<ListItemKind> GetArgumentListItemKind(
+    llvm::omp::Clause clause, unsigned version);
+
 bool IsLoopTransforming(llvm::omp::Directive dir);
+bool HasDataEnvironment(llvm::omp::Directive dir);
+
 bool IsFullUnroll(const parser::OmpDirectiveSpecification &spec);
 
 inline bool IsDoConcurrentLegal(unsigned version) {
@@ -157,7 +310,7 @@ struct LoopControl {
   LoopControl(const parser::LoopControl::Bounds &x);
   LoopControl(const parser::ConcurrentControl &x);
 
-  const Symbol *iv{nullptr};
+  const parser::Name &iv;
   WithSource<MaybeExpr> lbound, ubound, step;
 
 private:
@@ -351,6 +504,37 @@ private:
   std::vector<LoopSequence> children_;
   SemanticsContext *semaCtx_{nullptr};
 };
+
+// ---------------------------------------------------------------------------
+// Trait-matching helpers shared between metadirective lowering and
+// declare-variant semantic recording.
+// ---------------------------------------------------------------------------
+
+/// Map a parsed trait-set name to the corresponding LLVM OMP TraitSet enum.
+llvm::omp::TraitSet MapTraitSet(parser::OmpTraitSetSelectorName::Value name);
+
+/// Map a parsed trait-selector name (plus its containing set) to the
+/// corresponding LLVM OMP TraitSelector enum.
+llvm::omp::TraitSelector MapTraitSelector(
+    const parser::OmpTraitSelectorName &name, llvm::omp::TraitSet set);
+
+/// Try to constant-fold a user condition expression to a boolean.
+std::optional<bool> EvaluateUserCondition(
+    SemanticsContext &semaCtx, const parser::ScalarExpr &scalarExpr);
+
+/// Extract the optional score value from trait properties.
+llvm::APInt *GetTraitScore(
+    const std::optional<parser::OmpTraitSelector::Properties> &props,
+    SemanticsContext &semaCtx, std::optional<llvm::APInt> &scoreStorage);
+
+/// Collect trait property names (vendor, kind, arch, isa, etc.) into a VMI.
+/// Non-name properties (clause, extension) are silently skipped; the caller is
+/// responsible for diagnosing them before invoking this function.
+void ProcessTraitProperties(llvm::omp::VariantMatchInfo &vmi,
+    llvm::omp::TraitSet set, llvm::omp::TraitSelector selector,
+    const std::optional<parser::OmpTraitSelector::Properties> &props,
+    llvm::APInt *scorePtr);
+
 } // namespace omp
 } // namespace Fortran::semantics
 

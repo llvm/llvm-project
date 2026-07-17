@@ -133,23 +133,29 @@ Instruction input.
 
 *Operands:* :ref:`v<amdgpu_synid_v>`, :ref:`a<amdgpu_synid_a>`
 
-.. _amdgpu_synid_gfx950_literal_81e671:
+.. _amdgpu_synid_gfx950_literal_ad4155:
 
 literal
 -------
 
 *Size:* 1 dword.
 
-*Operands:* 
+*Operands:* :ref:`simm16<amdgpu_synid_simm16>`
 
-.. _amdgpu_synid_gfx950_literal_39b593:
+.. _amdgpu_synid_gfx950_literal_6f0844:
 
 literal
 -------
 
-*Size:* 1 dword.
+A :ref:`floating-point_number<amdgpu_synid_floating-point_number>`, an :ref:`integer_number<amdgpu_synid_integer_number>`, or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`.
+The value is converted to *f32* as described :ref:`here<amdgpu_synid_conv>`.
 
-*Operands:* :ref:`imm16<amdgpu_synid_imm16>`
+.. _amdgpu_synid_gfx950_literal_a3e80c:
+
+literal
+-------
+
+An :ref:`integer_number<amdgpu_synid_integer_number>` or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`. The value is truncated to 32 bits.
 
 .. _amdgpu_synid_gfx950_saddr_13d69a:
 
@@ -410,61 +416,267 @@ Instruction output.
 
 *Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`flat_scratch<amdgpu_synid_flat_scratch>`, :ref:`xnack_mask<amdgpu_synid_xnack_mask>`, :ref:`vcc<amdgpu_synid_vcc>`, :ref:`ttmp<amdgpu_synid_ttmp>`, :ref:`exec<amdgpu_synid_exec>`
 
-.. _amdgpu_synid_gfx950_simm16_7ed651:
+.. _amdgpu_synid_gfx950_simm16_ad4155:
 
 simm16
 ------
 
 *Size:* 1 dword.
 
-*Operands:* :ref:`hwreg<amdgpu_synid_hwreg>`
+*Operands:* :ref:`simm16<amdgpu_synid_simm16>`
 
-.. _amdgpu_synid_gfx950_simm16_39b593:
-
-simm16
-------
-
-*Size:* 1 dword.
-
-*Operands:* :ref:`imm16<amdgpu_synid_imm16>`
-
-.. _amdgpu_synid_gfx950_simm16_3d2a4f:
+.. _amdgpu_synid_gfx950_simm16_2f6714:
 
 simm16
 ------
 
-*Size:* 1 dword.
+A 16-bit message code. The bits of this operand have the following meaning:
 
-*Operands:* :ref:`label<amdgpu_synid_label>`
+    ============ =============================== ===============
+    Bits         Description                     Value Range
+    ============ =============================== ===============
+    3:0          Message *type*.                 0..15
+    6:4          Optional *operation*.           0..7
+    7:7          Unused.                         \-
+    9:8          Optional *stream*.              0..3
+    15:10        Unused.                         \-
+    ============ =============================== ===============
 
-.. _amdgpu_synid_gfx950_simm16_ee8b30:
+This operand may be specified as one of the following:
+
+* An :ref:`integer_number<amdgpu_synid_integer_number>` or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`. The value must be in the range 0..0xFFFF.
+* A *sendmsg* value described below.
+
+    ==================================== ====================================================
+    Sendmsg Value Syntax                 Description
+    ==================================== ====================================================
+    sendmsg(<*type*>)                    A message identified by its *type*.
+    sendmsg(<*type*>,<*op*>)             A message identified by its *type* and *operation*.
+    sendmsg(<*type*>,<*op*>,<*stream*>)  A message identified by its *type* and *operation*
+                                         with a stream *id*.
+    ==================================== ====================================================
+
+*Type* may be specified using message *name* or message *id*.
+
+*Op* may be specified using operation *name* or operation *id*.
+
+Stream *id* is an integer in the range 0..3.
+
+Numeric values may be specified as positive :ref:`integer numbers<amdgpu_synid_integer_number>`
+or :ref:`absolute expressions<amdgpu_synid_absolute_expression>`.
+
+Each message type supports specific operations:
+
+    ====================== ========== ============================== ============ ==========
+    Message name           Message Id Supported Operations           Operation Id Stream Id
+    ====================== ========== ============================== ============ ==========
+    MSG_INTERRUPT          1          \-                             \-           \-
+    MSG_GS                 2          GS_OP_CUT                      1            Optional
+    \                                 GS_OP_EMIT                     2            Optional
+    \                                 GS_OP_EMIT_CUT                 3            Optional
+    MSG_GS_DONE            3          GS_OP_NOP                      0            \-
+    \                                 GS_OP_CUT                      1            Optional
+    \                                 GS_OP_EMIT                     2            Optional
+    \                                 GS_OP_EMIT_CUT                 3            Optional
+    MSG_SAVEWAVE           4          \-                             \-           \-
+    MSG_STALL_WAVE_GEN     5          \-                             \-           \-
+    MSG_HALT_WAVES         6          \-                             \-           \-
+    MSG_ORDERED_PS_DONE    7          \-                             \-           \-
+    MSG_EARLY_PRIM_DEALLOC 8          \-                             \-           \-
+    MSG_GS_ALLOC_REQ       9          \-                             \-           \-
+    MSG_GET_DOORBELL       10         \-                             \-           \-
+    MSG_SYSMSG             15         SYSMSG_OP_ECC_ERR_INTERRUPT    1            \-
+    \                                 SYSMSG_OP_REG_RD               2            \-
+    \                                 SYSMSG_OP_TTRACE_PC            4            \-
+    ====================== ========== ============================== ============ ==========
+
+*Sendmsg* arguments are validated depending on how *type* value is specified:
+
+* If message *type* is specified by name, arguments values must satisfy limitations detailed in the table above.
+* If message *type* is specified as a number, each argument must not exceed corresponding value range (see the first table).
+
+Examples:
+
+.. parsed-literal::
+
+    // numeric message code
+    msg = 0x10
+    s_sendmsg 0x12
+    s_sendmsg msg + 2
+
+    // sendmsg with strict arguments validation
+    s_sendmsg sendmsg(MSG_INTERRUPT)
+    s_sendmsg sendmsg(MSG_GS, GS_OP_EMIT)
+    s_sendmsg sendmsg(MSG_GS, 2)
+    s_sendmsg sendmsg(MSG_GS_DONE, GS_OP_EMIT_CUT, 1)
+    s_sendmsg sendmsg(MSG_SYSMSG, SYSMSG_OP_TTRACE_PC)
+    s_sendmsg sendmsg(MSG_GET_DOORBELL)
+
+    // sendmsg with validation of value range only
+    msg = 2
+    op = 3
+    stream = 1
+    s_sendmsg sendmsg(msg, op, stream)
+    s_sendmsg sendmsg(2, GS_OP_CUT)
+
+.. _amdgpu_synid_gfx950_simm16_dff4f4:
 
 simm16
 ------
 
-*Size:* 1 dword.
+A branch target which is a 16-bit signed integer treated as a PC-relative dword offset.
 
-*Operands:* :ref:`sendmsg<amdgpu_synid_sendmsg>`
+This operand may be specified as one of the following:
 
-.. _amdgpu_synid_gfx950_simm16_218bea:
+* An :ref:`integer_number<amdgpu_synid_integer_number>` or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`. The value must be in the range -32768..32767.
+* A :ref:`symbol<amdgpu_synid_symbol>` (for example, a label) representing a relocatable address in the same compilation unit where it is referred from. The value is handled as a 16-bit PC-relative dword offset to be resolved by a linker.
+
+Examples:
+
+.. parsed-literal::
+
+  offset = 30
+  label_1:
+  label_2 = . + 4
+
+  s_branch 32
+  s_branch offset + 2
+  s_branch label_1
+  s_branch label_2
+  s_branch label_3
+  s_branch label_4
+
+  label_3 = label_2 + 4
+  label_4:
+
+.. _amdgpu_synid_gfx950_simm16_de962b:
 
 simm16
 ------
 
-*Size:* 1 dword.
+Bits of a hardware register being accessed.
 
-*Operands:* :ref:`waitcnt<amdgpu_synid_waitcnt>`
+The bits of this operand have the following meaning:
 
-.. _amdgpu_synid_gfx950_simm16_cc1716:
+    ======= ===================== ============
+    Bits    Description           Value Range
+    ======= ===================== ============
+    5:0     Register *id*.        0..63
+    10:6    First bit *offset*.   0..31
+    15:11   *Size* in bits.       1..32
+    ======= ===================== ============
+
+This operand may be specified as one of the following:
+
+* An :ref:`integer_number<amdgpu_synid_integer_number>` or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`. The value must be in the range 0..0xFFFF.
+* An *hwreg* value described below.
+
+    ==================================== ============================================================================
+    Hwreg Value Syntax                   Description
+    ==================================== ============================================================================
+    hwreg({0..63})                       All bits of a register indicated by its *id*.
+    hwreg(<*name*>)                      All bits of a register indicated by its *name*.
+    hwreg({0..63}, {0..31}, {1..32})     Register bits indicated by register *id*, first bit *offset* and *size*.
+    hwreg(<*name*>, {0..31}, {1..32})    Register bits indicated by register *name*, first bit *offset* and *size*.
+    ==================================== ============================================================================
+
+Numeric values may be specified as positive :ref:`integer numbers<amdgpu_synid_integer_number>`
+or :ref:`absolute expressions<amdgpu_synid_absolute_expression>`.
+
+Defined register *names* include:
+
+    =================== ==========================================
+    Name                Description
+    =================== ==========================================
+    HW_REG_MODE         Shader writeable mode bits.
+    HW_REG_STATUS       Shader read-only status.
+    HW_REG_TRAPSTS      Trap status.
+    HW_REG_HW_ID        Id of wave, simd, compute unit, etc.
+    HW_REG_GPR_ALLOC    Per-wave SGPR and VGPR allocation.
+    HW_REG_LDS_ALLOC    Per-wave LDS allocation.
+    HW_REG_IB_STS       Counters of outstanding instructions.
+    HW_REG_SH_MEM_BASES Memory aperture.
+    HW_REG_TBA_LO       tba_lo register.
+    HW_REG_TBA_HI       tba_hi register.
+    HW_REG_TMA_LO       tma_lo register.
+    HW_REG_TMA_HI       tma_hi register.
+    =================== ==========================================
+
+Examples:
+
+.. parsed-literal::
+
+    reg = 1
+    offset = 2
+    size = 4
+    hwreg_enc = reg | (offset << 6) | ((size - 1) << 11)
+
+    s_getreg_b32 s2, 0x1881
+    s_getreg_b32 s2, hwreg_enc                     // the same as above
+    s_getreg_b32 s2, hwreg(1, 2, 4)                // the same as above
+    s_getreg_b32 s2, hwreg(reg, offset, size)      // the same as above
+
+    s_getreg_b32 s2, hwreg(15)
+    s_getreg_b32 s2, hwreg(51, 1, 31)
+    s_getreg_b32 s2, hwreg(HW_REG_LDS_ALLOC, 0, 1)
+
+.. _amdgpu_synid_gfx950_simm16_6d9906:
 
 simm16
 ------
 
-Instruction output.
+Counts of outstanding instructions to wait for.
 
-*Size:* 1 dword.
+The bits of this operand have the following meaning:
 
-*Operands:* :ref:`hwreg<amdgpu_synid_hwreg>`
+    ========== ========= ================================================ ============
+    High Bits  Low Bits  Description                                      Value Range
+    ========== ========= ================================================ ============
+    15:14      3:0       VM_CNT: vector memory operations count.          0..63
+    \-         6:4       EXP_CNT: export count.                           0..7
+    \-         11:8      LGKM_CNT: LDS, GDS, Constant and Message count.  0..15
+    ========== ========= ================================================ ============
+
+This operand may be specified as one of the following:
+
+* An :ref:`integer_number<amdgpu_synid_integer_number>` or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`. The value must be in the range 0..0xFFFF.
+* A combination of *vmcnt*, *expcnt*, *lgkmcnt* and other values described below.
+
+    ====================== ======================================================================
+    Syntax                 Description
+    ====================== ======================================================================
+    vmcnt(<*N*>)           A VM_CNT value. *N* must not exceed the largest VM_CNT value.
+    expcnt(<*N*>)          An EXP_CNT value. *N* must not exceed the largest EXP_CNT value.
+    lgkmcnt(<*N*>)         An LGKM_CNT value. *N* must not exceed the largest LGKM_CNT value.
+    vmcnt_sat(<*N*>)       A VM_CNT value computed as min(*N*, the largest VM_CNT value).
+    expcnt_sat(<*N*>)      An EXP_CNT value computed as min(*N*, the largest EXP_CNT value).
+    lgkmcnt_sat(<*N*>)     An LGKM_CNT value computed as min(*N*, the largest LGKM_CNT value).
+    ====================== ======================================================================
+
+These values may be specified in any order. Spaces, ampersands and commas may be used as optional separators.
+
+*N* is either an
+:ref:`integer number<amdgpu_synid_integer_number>` or an
+:ref:`absolute expression<amdgpu_synid_absolute_expression>`.
+
+Examples:
+
+.. parsed-literal::
+
+    vm_cnt = 1
+    exp_cnt = 2
+    lgkm_cnt = 3
+    cnt = vm_cnt | (exp_cnt << 4) | (lgkm_cnt << 8)
+
+    s_waitcnt cnt
+    s_waitcnt 1 | (2 << 4) | (3 << 8)                          // the same as above
+    s_waitcnt vmcnt(1) expcnt(2) lgkmcnt(3)                    // the same as above
+    s_waitcnt vmcnt(vm_cnt) expcnt(exp_cnt) lgkmcnt(lgkm_cnt)  // the same as above
+
+    s_waitcnt vmcnt(1)
+    s_waitcnt expcnt(2) lgkmcnt(3)
+    s_waitcnt vmcnt(1), expcnt(2), lgkmcnt(3)
+    s_waitcnt vmcnt(1) & lgkmcnt_sat(100) & expcnt(2)
 
 .. _amdgpu_synid_gfx950_soffset_1189ef:
 
@@ -739,17 +951,6 @@ Instruction input.
 *Size:* 8 dwords.
 
 *Operands:* :ref:`v<amdgpu_synid_v>`, :ref:`a<amdgpu_synid_a>`
-
-.. _amdgpu_synid_gfx950_src2_595c25:
-
-src2
-----
-
-Instruction input.
-
-*Size:* 1 dword.
-
-*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`flat_scratch<amdgpu_synid_flat_scratch>`, :ref:`xnack_mask<amdgpu_synid_xnack_mask>`, :ref:`vcc<amdgpu_synid_vcc>`, :ref:`ttmp<amdgpu_synid_ttmp>`
 
 .. _amdgpu_synid_gfx950_src2_6802ce:
 
@@ -1167,28 +1368,6 @@ Instruction output.
 *Size:* 16 dwords.
 
 *Operands:* :ref:`v<amdgpu_synid_v>`, :ref:`a<amdgpu_synid_a>`
-
-.. _amdgpu_synid_gfx950_vdst_718cc4:
-
-vdst
-----
-
-Instruction output.
-
-*Size:* 2 dwords.
-
-*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`flat_scratch<amdgpu_synid_flat_scratch>`, :ref:`xnack_mask<amdgpu_synid_xnack_mask>`, :ref:`vcc<amdgpu_synid_vcc>`, :ref:`ttmp<amdgpu_synid_ttmp>`
-
-.. _amdgpu_synid_gfx950_vdst_a319e6:
-
-vdst
-----
-
-Instruction output.
-
-*Size:* 2 dwords.
-
-*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`flat_scratch<amdgpu_synid_flat_scratch>`, :ref:`xnack_mask<amdgpu_synid_xnack_mask>`, :ref:`vcc<amdgpu_synid_vcc>`, :ref:`ttmp<amdgpu_synid_ttmp>`, :ref:`exec<amdgpu_synid_exec>`
 
 .. _amdgpu_synid_gfx950_vdst_bdb32f:
 

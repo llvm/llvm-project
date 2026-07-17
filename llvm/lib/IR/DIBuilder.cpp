@@ -33,7 +33,7 @@ DIBuilder::DIBuilder(Module &m, bool AllowUnresolvedNodes, DICompileUnit *CU)
     if (const auto &RTs = CUNode->getRetainedTypes())
       AllRetainTypes.assign(RTs.begin(), RTs.end());
     if (const auto &GVs = CUNode->getGlobalVariables())
-      AllGVs.assign(GVs.begin(), GVs.end());
+      Globals.assign(GVs.begin(), GVs.end());
     if (const auto &IMs = CUNode->getImportedEntities())
       ImportedModules.assign(IMs.begin(), IMs.end());
     if (const auto &MNs = CUNode->getMacros())
@@ -56,20 +56,19 @@ void DIBuilder::finalizeSubprogram(DISubprogram *SP) {
   if (PN == SubprogramTrackedNodes.end())
     return;
 
-  SmallVector<Metadata *, 16> RetainedNodes;
-  for (MDNode *N : PN->second) {
+  SetVector<Metadata *> RetainedNodes;
+  for (MDNode *N : llvm::concat<MDNode *>(SP->getRetainedNodes(), PN->second)) {
     // If the tracked node N was temporary, and the DIBuilder user replaced it
     // with a node that does not belong to SP or is non-local, do not add N to
     // SP's retainedNodes list.
     DILocalScope *Scope = dyn_cast_or_null<DILocalScope>(
         DISubprogram::getRawRetainedNodeScope(N));
-    if (!Scope || Scope->getSubprogram() != SP)
-      continue;
-
-    RetainedNodes.push_back(N);
+    if (Scope && Scope->getSubprogram() == SP)
+      RetainedNodes.insert(N);
   }
 
-  SP->replaceRetainedNodes(MDTuple::get(VMContext, RetainedNodes));
+  SP->replaceRetainedNodes(
+      MDTuple::get(VMContext, RetainedNodes.getArrayRef()));
 }
 
 void DIBuilder::finalize() {
@@ -103,8 +102,8 @@ void DIBuilder::finalize() {
     if (auto *SP = dyn_cast<DISubprogram>(N))
       finalizeSubprogram(SP);
 
-  if (!AllGVs.empty())
-    CUNode->replaceGlobalVariables(MDTuple::get(VMContext, AllGVs));
+  if (!Globals.empty())
+    CUNode->replaceGlobalVariables(MDTuple::get(VMContext, Globals));
 
   if (!ImportedModules.empty())
     CUNode->replaceImportedEntities(MDTuple::get(
@@ -276,40 +275,66 @@ DIBasicType *DIBuilder::createBasicType(StringRef Name, uint64_t SizeInBits,
                                         DINode::DIFlags Flags,
                                         uint32_t NumExtraInhabitants,
                                         uint32_t DataSizeInBits) {
-  return DIBasicType::get(VMContext, dwarf::DW_TAG_base_type, Name, SizeInBits,
-                          0, Encoding, NumExtraInhabitants, DataSizeInBits,
-                          Flags);
+  return DIBasicType::get(VMContext, dwarf::DW_TAG_base_type, Name, nullptr, 0,
+                          nullptr, SizeInBits, 0, Encoding, NumExtraInhabitants,
+                          DataSizeInBits, Flags);
 }
 
-DIFixedPointType *
-DIBuilder::createBinaryFixedPointType(StringRef Name, uint64_t SizeInBits,
-                                      uint32_t AlignInBits, unsigned Encoding,
-                                      DINode::DIFlags Flags, int Factor) {
-  return DIFixedPointType::get(VMContext, dwarf::DW_TAG_base_type, Name,
-                               SizeInBits, AlignInBits, Encoding, Flags,
-                               DIFixedPointType::FixedPointBinary, Factor,
-                               APInt(), APInt());
+DIBasicType *DIBuilder::createBasicType(StringRef Name, DIFile *File,
+                                        unsigned LineNo, DIScope *Context,
+                                        uint64_t SizeInBits, unsigned Encoding,
+                                        DINode::DIFlags Flags,
+                                        uint32_t NumExtraInhabitants,
+                                        uint32_t DataSizeInBits) {
+  auto *R = DIBasicType::get(VMContext, dwarf::DW_TAG_base_type, Name, File,
+                             LineNo, Context, SizeInBits, 0, Encoding,
+                             NumExtraInhabitants, DataSizeInBits, Flags);
+  if (isa_and_nonnull<DILocalScope>(Context))
+    getSubprogramNodesTrackingVector(Context).emplace_back(R);
+  trackIfUnresolved(R);
+  return R;
 }
 
-DIFixedPointType *
-DIBuilder::createDecimalFixedPointType(StringRef Name, uint64_t SizeInBits,
-                                       uint32_t AlignInBits, unsigned Encoding,
-                                       DINode::DIFlags Flags, int Factor) {
-  return DIFixedPointType::get(VMContext, dwarf::DW_TAG_base_type, Name,
-                               SizeInBits, AlignInBits, Encoding, Flags,
-                               DIFixedPointType::FixedPointDecimal, Factor,
-                               APInt(), APInt());
+DIFixedPointType *DIBuilder::createBinaryFixedPointType(
+    StringRef Name, DIFile *File, unsigned LineNo, DIScope *Context,
+    uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
+    DINode::DIFlags Flags, int Factor) {
+  auto *R = DIFixedPointType::get(
+      VMContext, dwarf::DW_TAG_base_type, Name, File, LineNo, Context,
+      SizeInBits, AlignInBits, Encoding, Flags,
+      DIFixedPointType::FixedPointBinary, Factor, APInt(), APInt());
+  if (isa_and_nonnull<DILocalScope>(Context))
+    getSubprogramNodesTrackingVector(Context).emplace_back(R);
+  trackIfUnresolved(R);
+  return R;
 }
 
-DIFixedPointType *
-DIBuilder::createRationalFixedPointType(StringRef Name, uint64_t SizeInBits,
-                                        uint32_t AlignInBits, unsigned Encoding,
-                                        DINode::DIFlags Flags, APInt Numerator,
-                                        APInt Denominator) {
-  return DIFixedPointType::get(VMContext, dwarf::DW_TAG_base_type, Name,
-                               SizeInBits, AlignInBits, Encoding, Flags,
-                               DIFixedPointType::FixedPointRational, 0,
-                               Numerator, Denominator);
+DIFixedPointType *DIBuilder::createDecimalFixedPointType(
+    StringRef Name, DIFile *File, unsigned LineNo, DIScope *Context,
+    uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
+    DINode::DIFlags Flags, int Factor) {
+  auto *R = DIFixedPointType::get(
+      VMContext, dwarf::DW_TAG_base_type, Name, File, LineNo, Context,
+      SizeInBits, AlignInBits, Encoding, Flags,
+      DIFixedPointType::FixedPointDecimal, Factor, APInt(), APInt());
+  if (isa_and_nonnull<DILocalScope>(Context))
+    getSubprogramNodesTrackingVector(Context).emplace_back(R);
+  trackIfUnresolved(R);
+  return R;
+}
+
+DIFixedPointType *DIBuilder::createRationalFixedPointType(
+    StringRef Name, DIFile *File, unsigned LineNo, DIScope *Context,
+    uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
+    DINode::DIFlags Flags, APInt Numerator, APInt Denominator) {
+  auto *R = DIFixedPointType::get(
+      VMContext, dwarf::DW_TAG_base_type, Name, File, LineNo, Context,
+      SizeInBits, AlignInBits, Encoding, Flags,
+      DIFixedPointType::FixedPointRational, 0, Numerator, Denominator);
+  if (isa_and_nonnull<DILocalScope>(Context))
+    getSubprogramNodesTrackingVector(Context).emplace_back(R);
+  trackIfUnresolved(R);
+  return R;
 }
 
 DIStringType *DIBuilder::createStringType(StringRef Name, uint64_t SizeInBits) {
@@ -593,7 +618,7 @@ DICompositeType *DIBuilder::createClassType(
     uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
     DINode::DIFlags Flags, DIType *DerivedFrom, DINodeArray Elements,
     unsigned RunTimeLang, DIType *VTableHolder, MDNode *TemplateParams,
-    StringRef UniqueIdentifier) {
+    StringRef UniqueIdentifier, DINodeArray Annotations) {
   assert((!Context || isa<DIScope>(Context)) &&
          "createClassType should be called with a valid Context");
 
@@ -601,7 +626,8 @@ DICompositeType *DIBuilder::createClassType(
       VMContext, dwarf::DW_TAG_class_type, Name, File, LineNumber,
       getNonCompileUnitScope(Context), DerivedFrom, SizeInBits, AlignInBits,
       OffsetInBits, Flags, Elements, RunTimeLang, /*EnumKind=*/std::nullopt,
-      VTableHolder, cast_or_null<MDTuple>(TemplateParams), UniqueIdentifier);
+      VTableHolder, cast_or_null<MDTuple>(TemplateParams), UniqueIdentifier,
+      nullptr, nullptr, nullptr, nullptr, nullptr, Annotations);
   trackIfUnresolved(R);
   if (isa_and_nonnull<DILocalScope>(Context))
     getSubprogramNodesTrackingVector(Context).emplace_back(R);
@@ -613,13 +639,13 @@ DICompositeType *DIBuilder::createStructType(
     Metadata *SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,
     DIType *DerivedFrom, DINodeArray Elements, unsigned RunTimeLang,
     DIType *VTableHolder, StringRef UniqueIdentifier, DIType *Specification,
-    uint32_t NumExtraInhabitants) {
+    uint32_t NumExtraInhabitants, DINodeArray Annotations) {
   auto *R = DICompositeType::get(
       VMContext, dwarf::DW_TAG_structure_type, Name, File, LineNumber,
       getNonCompileUnitScope(Context), DerivedFrom, SizeInBits, AlignInBits, 0,
       Flags, Elements, RunTimeLang, /*EnumKind=*/std::nullopt, VTableHolder,
       nullptr, UniqueIdentifier, nullptr, nullptr, nullptr, nullptr, nullptr,
-      nullptr, Specification, NumExtraInhabitants);
+      Annotations, Specification, NumExtraInhabitants);
   trackIfUnresolved(R);
   if (isa_and_nonnull<DILocalScope>(Context))
     getSubprogramNodesTrackingVector(Context).emplace_back(R);
@@ -631,13 +657,13 @@ DICompositeType *DIBuilder::createStructType(
     uint64_t SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,
     DIType *DerivedFrom, DINodeArray Elements, unsigned RunTimeLang,
     DIType *VTableHolder, StringRef UniqueIdentifier, DIType *Specification,
-    uint32_t NumExtraInhabitants) {
+    uint32_t NumExtraInhabitants, DINodeArray Annotations) {
   auto *R = DICompositeType::get(
       VMContext, dwarf::DW_TAG_structure_type, Name, File, LineNumber,
       getNonCompileUnitScope(Context), DerivedFrom, SizeInBits, AlignInBits, 0,
       Flags, Elements, RunTimeLang, /*EnumKind=*/std::nullopt, VTableHolder,
       nullptr, UniqueIdentifier, nullptr, nullptr, nullptr, nullptr, nullptr,
-      nullptr, Specification, NumExtraInhabitants);
+      Annotations, Specification, NumExtraInhabitants);
   trackIfUnresolved(R);
   if (isa_and_nonnull<DILocalScope>(Context))
     getSubprogramNodesTrackingVector(Context).emplace_back(R);
@@ -647,12 +673,14 @@ DICompositeType *DIBuilder::createStructType(
 DICompositeType *DIBuilder::createUnionType(
     DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
     uint64_t SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,
-    DINodeArray Elements, unsigned RunTimeLang, StringRef UniqueIdentifier) {
+    DINodeArray Elements, unsigned RunTimeLang, StringRef UniqueIdentifier,
+    DINodeArray Annotations) {
   auto *R = DICompositeType::get(
       VMContext, dwarf::DW_TAG_union_type, Name, File, LineNumber,
       getNonCompileUnitScope(Scope), nullptr, SizeInBits, AlignInBits, 0, Flags,
       Elements, RunTimeLang, /*EnumKind=*/std::nullopt, nullptr, nullptr,
-      UniqueIdentifier);
+      UniqueIdentifier, nullptr, nullptr, nullptr, nullptr, nullptr,
+      Annotations);
   trackIfUnresolved(R);
   if (isa_and_nonnull<DILocalScope>(Scope))
     getSubprogramNodesTrackingVector(Scope).emplace_back(R);
@@ -932,7 +960,10 @@ DIGlobalVariableExpression *DIBuilder::createGlobalVariableExpression(
   if (!Expr)
     Expr = createExpression();
   auto *N = DIGlobalVariableExpression::get(VMContext, GV, Expr);
-  AllGVs.push_back(N);
+  if (isa_and_nonnull<DILocalScope>(Context))
+    getSubprogramNodesTrackingVector(Context).emplace_back(N);
+  else
+    Globals.push_back(N);
   return N;
 }
 

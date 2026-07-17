@@ -35,19 +35,18 @@ struct Foo {
 // AMDGCN-NEXT:    ret void
 //
 // SPIRV-LABEL: define spir_func void @_Z3barPK3Foo(
-// SPIRV-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_FOO:%.*]]) align 8 [[AGG_RESULT:%.*]], ptr addrspace(4) noundef [[SRC_PTR:%.*]]) addrspace(4) #[[ATTR0:[0-9]+]] {
+// SPIRV-SAME: ptr addrspace(4) dead_on_unwind noalias writable sret([[STRUCT_FOO:%.*]]) align 8 [[AGG_RESULT:%.*]], ptr addrspace(4) noundef [[SRC_PTR:%.*]]) addrspace(4) #[[ATTR0:[0-9]+]] {
 // SPIRV-NEXT:  [[ENTRY:.*:]]
-// SPIRV-NEXT:    [[RESULT_PTR:%.*]] = alloca ptr, align 8
+// SPIRV-NEXT:    [[RESULT_PTR:%.*]] = alloca ptr addrspace(4), align 8
 // SPIRV-NEXT:    [[SRC_PTR_ADDR:%.*]] = alloca ptr addrspace(4), align 8
 // SPIRV-NEXT:    [[DST:%.*]] = alloca [[UNION_ANON:%.*]], align 8
 // SPIRV-NEXT:    [[RESULT_PTR_ASCAST:%.*]] = addrspacecast ptr [[RESULT_PTR]] to ptr addrspace(4)
 // SPIRV-NEXT:    [[SRC_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr [[SRC_PTR_ADDR]] to ptr addrspace(4)
-// SPIRV-NEXT:    [[AGG_RESULT_ASCAST:%.*]] = addrspacecast ptr [[AGG_RESULT]] to ptr addrspace(4)
 // SPIRV-NEXT:    [[DST_ASCAST:%.*]] = addrspacecast ptr [[DST]] to ptr addrspace(4)
-// SPIRV-NEXT:    store ptr [[AGG_RESULT]], ptr addrspace(4) [[RESULT_PTR_ASCAST]], align 8
+// SPIRV-NEXT:    store ptr addrspace(4) [[AGG_RESULT]], ptr addrspace(4) [[RESULT_PTR_ASCAST]], align 8
 // SPIRV-NEXT:    store ptr addrspace(4) [[SRC_PTR]], ptr addrspace(4) [[SRC_PTR_ADDR_ASCAST]], align 8
-// SPIRV-NEXT:    call spir_func addrspace(4) void @_ZN3FooC1Ev(ptr addrspace(4) noundef align 8 dereferenceable_or_null(8) [[AGG_RESULT_ASCAST]]) #[[ATTR1:[0-9]+]]
-// SPIRV-NEXT:    store ptr addrspace(4) [[AGG_RESULT_ASCAST]], ptr addrspace(4) [[DST_ASCAST]], align 8
+// SPIRV-NEXT:    call spir_func addrspace(4) void @_ZN3FooC1Ev(ptr addrspace(4) noundef align 8 dereferenceable_or_null(8) [[AGG_RESULT]]) #[[ATTR1:[0-9]+]]
+// SPIRV-NEXT:    store ptr addrspace(4) [[AGG_RESULT]], ptr addrspace(4) [[DST_ASCAST]], align 8
 // SPIRV-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SRC_PTR_ADDR_ASCAST]], align 8
 // SPIRV-NEXT:    [[VAL:%.*]] = getelementptr inbounds nuw [[STRUCT_FOO]], ptr addrspace(4) [[TMP0]], i32 0, i32 0
 // SPIRV-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(4) [[VAL]], align 8

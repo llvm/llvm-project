@@ -9,6 +9,8 @@
 #include "clang/DependencyScanning/DependencyScannerImpl.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticSerialization.h"
+#include "clang/DependencyScanning/DependencyActionController.h"
+#include "clang/DependencyScanning/DependencyConsumer.h"
 #include "clang/DependencyScanning/DependencyScanningFilesystem.h"
 #include "clang/DependencyScanning/DependencyScanningService.h"
 #include "clang/DependencyScanning/DependencyScanningWorker.h"
@@ -26,32 +28,6 @@
 
 using namespace clang;
 using namespace dependencies;
-
-namespace {
-/// Forwards the gatherered dependencies to the consumer.
-class DependencyConsumerForwarder : public DependencyFileGenerator {
-public:
-  DependencyConsumerForwarder(std::unique_ptr<DependencyOutputOptions> Opts,
-                              StringRef WorkingDirectory, DependencyConsumer &C)
-      : DependencyFileGenerator(*Opts), WorkingDirectory(WorkingDirectory),
-        Opts(std::move(Opts)), C(C) {}
-
-  void finishedMainFile(DiagnosticsEngine &Diags) override {
-    C.handleDependencyOutputOpts(*Opts);
-    llvm::SmallString<256> CanonPath;
-    for (const auto &File : getDependencies()) {
-      CanonPath = File;
-      llvm::sys::path::remove_dots(CanonPath, /*remove_dot_dot=*/true);
-      llvm::sys::path::make_absolute(WorkingDirectory, CanonPath);
-      C.handleFileDependency(CanonPath);
-    }
-  }
-
-private:
-  StringRef WorkingDirectory;
-  std::unique_ptr<DependencyOutputOptions> Opts;
-  DependencyConsumer &C;
-};
 
 static bool checkHeaderSearchPaths(const HeaderSearchOptions &HSOpts,
                                    const HeaderSearchOptions &ExistingHSOpts,
@@ -76,6 +52,8 @@ static bool checkHeaderSearchPaths(const HeaderSearchOptions &HSOpts,
   }
   return false;
 }
+
+namespace {
 
 using PrebuiltModuleFilesT = decltype(HeaderSearchOptions::PrebuiltModuleFiles);
 
@@ -420,7 +398,7 @@ void dependencies::initializeScanCompilerInstance(
   ScanInstance.setBuildingModule(false);
   ScanInstance.createVirtualFileSystem(FS, DiagConsumer);
   ScanInstance.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
-  if (Service.getOpts().Format == ScanningOutputFormat::P1689)
+  if (!Service.getOpts().EmitWarnings)
     ScanInstance.getDiagnostics().setIgnoreAllWarnings(true);
   ScanInstance.createFileManager();
   ScanInstance.createSourceManager();
@@ -471,6 +449,15 @@ std::shared_ptr<CompilerInvocation> dependencies::createScanCompilerInvocation(
   ScanInvocation->getHeaderSearchOpts().ModulesSkipPragmaDiagnosticMappings =
       true;
   ScanInvocation->getHeaderSearchOpts().ModulesForceValidateUserHeaders = false;
+
+  // FIXME: Do this even with PCHs by marking the option as something like
+  // "preprocessor benign" in LangOptions.def so that it passes the
+  // compatibility checks in ASTReader.
+  if (ScanInvocation->getPreprocessorOpts().ImplicitPCHInclude.empty()) {
+    // Application extension only affects the handling of availability
+    // attributes, which cannot change the dependencies.
+    ScanInvocation->getLangOpts().AppExt = false;
+  }
 
   // Ensure that the scanner does not create new dependency collectors,
   // and thus won't write out the extra '.d' files to disk.
@@ -531,27 +518,14 @@ std::shared_ptr<ModuleDepCollector>
 dependencies::initializeScanInstanceDependencyCollector(
     CompilerInstance &ScanInstance,
     std::unique_ptr<DependencyOutputOptions> DepOutputOpts,
-    StringRef WorkingDirectory, DependencyConsumer &Consumer,
     DependencyScanningService &Service, CompilerInvocation &Inv,
     DependencyActionController &Controller,
     PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
-    llvm::SmallVector<StringRef> &StableDirs) {
-  std::shared_ptr<ModuleDepCollector> MDC;
-  switch (Service.getOpts().Format) {
-  case ScanningOutputFormat::Make:
-    ScanInstance.addDependencyCollector(
-        std::make_shared<DependencyConsumerForwarder>(
-            std::move(DepOutputOpts), WorkingDirectory, Consumer));
-    break;
-  case ScanningOutputFormat::P1689:
-  case ScanningOutputFormat::Full:
-    MDC = std::make_shared<ModuleDepCollector>(
-        Service, std::move(DepOutputOpts), ScanInstance, Consumer, Controller,
-        Inv, std::move(PrebuiltModulesASTMap), StableDirs);
-    ScanInstance.addDependencyCollector(MDC);
-    break;
-  }
-
+    SmallVector<StringRef> &StableDirs) {
+  auto MDC = std::make_shared<ModuleDepCollector>(
+      Service, std::move(DepOutputOpts), ScanInstance, Controller, Inv,
+      std::move(PrebuiltModulesASTMap), StableDirs);
+  ScanInstance.addDependencyCollector(MDC);
   return MDC;
 }
 
@@ -659,11 +633,12 @@ struct AsyncModuleCompile : PPCallbacks {
     // We should build the PCM.
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
         llvm::makeIntrusiveRefCnt<DependencyScanningWorkerFilesystem>(
-            Service.getSharedCache(), Service.getOpts().MakeVFS());
+            Service, Service.getOpts().MakeVFS());
     VFS = createVFSFromCompilerInvocation(CI.getInvocation(),
                                           CI.getDiagnostics(), std::move(VFS));
     auto DC = std::make_unique<DiagnosticConsumer>();
-    auto MC = makeInProcessModuleCache(Service.getModuleCacheEntries());
+    auto MC = makeInProcessModuleCache(Service.getModuleCacheEntries(),
+                                       Service.getLogger());
     CompilerInstance::ThreadSafeCloneConfig CloneConfig(std::move(VFS), *DC,
                                                         std::move(MC));
     auto ModCI1 = CI.cloneForModuleCompile(SourceLocation(), M, ModuleFileName,
@@ -744,7 +719,11 @@ bool DependencyScanningAction::runInvocation(
     if (MDC)
       MDC->applyDiscoveredDependencies(*OriginalInvocation);
 
-    if (!Controller.finalize(ScanInstance, *OriginalInvocation))
+    bool Success = OriginalInvocation->withCowRef<bool>(
+        [&](CowCompilerInvocation &CowOriginalInvocation) {
+          return Controller.finalize(ScanInstance, CowOriginalInvocation);
+        });
+    if (!Success)
       return false;
 
     Consumer.handleBuildCommand(
@@ -761,7 +740,8 @@ bool DependencyScanningAction::runInvocation(
   // Quickly discovers and compiles modules for the real scan below.
   std::optional<AsyncModuleCompiles> AsyncCompiles;
   if (Service.getOpts().AsyncScanModules) {
-    auto ModCache = makeInProcessModuleCache(Service.getModuleCacheEntries());
+    auto ModCache = makeInProcessModuleCache(Service.getModuleCacheEntries(),
+                                             Service.getLogger());
     auto ScanInstanceStorage = std::make_unique<CompilerInstance>(
         std::make_shared<CompilerInvocation>(*ScanInvocation), PCHContainerOps,
         std::move(ModCache));
@@ -787,7 +767,8 @@ bool DependencyScanningAction::runInvocation(
     (void)ScanInstance.ExecuteAction(Action);
   }
 
-  auto ModCache = makeInProcessModuleCache(Service.getModuleCacheEntries());
+  auto ModCache = makeInProcessModuleCache(Service.getModuleCacheEntries(),
+                                           Service.getLogger());
   ScanInstanceStorage.emplace(std::move(ScanInvocation),
                               std::move(PCHContainerOps), std::move(ModCache));
   CompilerInstance &ScanInstance = *ScanInstanceStorage;
@@ -804,9 +785,8 @@ bool DependencyScanningAction::runInvocation(
   auto DepOutputOpts = createDependencyOutputOptions(*OriginalInvocation);
 
   MDC = initializeScanInstanceDependencyCollector(
-      ScanInstance, std::move(DepOutputOpts), WorkingDirectory, Consumer,
-      Service, *OriginalInvocation, Controller, *MaybePrebuiltModulesASTMap,
-      StableDirs);
+      ScanInstance, std::move(DepOutputOpts), Service, *OriginalInvocation,
+      Controller, *MaybePrebuiltModulesASTMap, StableDirs);
 
   if (ScanInstance.getDiagnostics().hasErrorOccurred())
     return false;
@@ -818,10 +798,16 @@ bool DependencyScanningAction::runInvocation(
   const bool Result = ScanInstance.ExecuteAction(Action);
 
   if (Result) {
-    if (MDC)
+    if (MDC) {
+      MDC->run(Consumer);
       MDC->applyDiscoveredDependencies(*OriginalInvocation);
+    }
 
-    if (!Controller.finalize(ScanInstance, *OriginalInvocation))
+    bool Success = OriginalInvocation->withCowRef<bool>(
+        [&](CowCompilerInvocation &CowOriginalInvocation) {
+          return Controller.finalize(ScanInstance, CowOriginalInvocation);
+        });
+    if (!Success)
       return false;
 
     Consumer.handleBuildCommand(

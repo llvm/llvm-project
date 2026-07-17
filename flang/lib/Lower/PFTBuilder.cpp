@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/PFTBuilder.h"
-#include "flang/Lower/IntervalSet.h"
 #include "flang/Lower/LoweringOptions.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Parser/dump-parse-tree.h"
@@ -253,6 +252,7 @@ public:
                             std::string localName{
                                 std::get<0>(names.t).source.ToString()};
                             stmt.renames.push_back(localName);
+                            stmt.hasOnlyWithRenames = true;
                           },
                           [&](const parser::Rename::Operators &) {
                             // Operator renames - not commonly needed for debug
@@ -333,6 +333,20 @@ public:
     return true;
   }
   void Post(const parser::SpecificationPart &) { --specificationPartLevel; }
+
+  bool Pre(const parser::InterfaceBody &) {
+    ++interfaceBodyLevel;
+    return true;
+  }
+  void Post(const parser::InterfaceBody &) { --interfaceBodyLevel; }
+
+  // An acc declare in an interface body describes the interface's procedure,
+  // not the enclosing unit; skip it so it is not hoisted and lowered there.
+  bool Pre(const parser::OpenACCDeclarativeConstruct &accDecl) {
+    if (interfaceBodyLevel > 0)
+      return false;
+    return enterConstructOrDirective(accDecl);
+  }
 
   bool Pre(const parser::ContainsStmt &) {
     if (!specificationPartLevel) {
@@ -839,6 +853,11 @@ private:
     sourceEvaluation.isUnstructured = true;
     if (!sourceEvaluation.controlSuccessor)
       sourceEvaluation.controlSuccessor = &targetEvaluation;
+    else if (sourceEvaluation.controlSuccessor != &targetEvaluation &&
+             llvm::find(sourceEvaluation.extraControlSuccessors,
+                        &targetEvaluation) ==
+                 sourceEvaluation.extraControlSuccessors.end())
+      sourceEvaluation.extraControlSuccessors.push_back(&targetEvaluation);
     targetEvaluation.isNewBlock = true;
     // If this is a branch into the body of a construct (usually illegal,
     // but allowed in some legacy cases), then the targetEvaluation and its
@@ -1020,10 +1039,29 @@ private:
               iter->second.insert(label);
             }
           },
-          [&](const parser::AssignedGotoStmt &) {
-            // Although this statement is a branch, it doesn't have any
-            // explicit control successors. So the code at the end of the
-            // loop won't mark the successor. Do that here.
+          [&](const parser::AssignedGotoStmt &s) {
+            // Mark every possible target of the assigned GO TO so that
+            // wrappability analyses (branchesAreInternal, hasIncomingBranch)
+            // can see any escape from an enclosing construct.
+            const auto &labelList = std::get<std::list<parser::Label>>(s.t);
+            if (!labelList.empty()) {
+              // Explicit target list: `go to v, (l1, l2, ...)`.
+              for (const auto &label : labelList)
+                markBranchTarget(eval, label);
+            } else {
+              // No explicit list (`go to v`): fall back to the set of labels
+              // that have been previously ASSIGN'd to v.
+              // TODO: This may miss assignments that appear later in program
+              // order, but it matches the information available at this point
+              // in the walk.
+              const auto *sym = std::get<parser::Name>(s.t).symbol;
+              if (sym) {
+                auto iter = assignSymbolLabelMap->find(*sym);
+                if (iter != assignSymbolLabelMap->end())
+                  for (auto label : iter->second)
+                    markBranchTarget(eval, label);
+              }
+            }
             eval.isUnstructured = true;
             markSuccessorAsNewBlock(eval);
           },
@@ -1260,6 +1298,7 @@ private:
   lower::pft::SymbolLabelMap *assignSymbolLabelMap{};
   std::map<std::string, lower::pft::Evaluation *> constructNameMap{};
   int specificationPartLevel{};
+  int interfaceBodyLevel{};
   lower::pft::Evaluation *lastLexicalEvaluation{};
   /// Current function-like unit being processed (for USE statement tracking)
   lower::pft::FunctionLikeUnit *currentFunctionUnit{nullptr};
@@ -1361,12 +1400,19 @@ public:
       outputStream << newBlock << name << bang;
     if (eval.negateCondition)
       outputStream << " [negate]";
-    if (eval.constructExit)
+    if (eval.constructExit) {
       outputStream << " -> " << eval.constructExit->printIndex;
-    else if (eval.controlSuccessor)
+    } else if (eval.controlSuccessor) {
       outputStream << " -> " << eval.controlSuccessor->printIndex;
-    else if (eval.isA<parser::EntryStmt>() && eval.lexicalSuccessor)
+      // Multiway branches (computed GO TO, arithmetic IF) put additional
+      // targets in extraControlSuccessors; print them so PFT dumps expose
+      // every target rather than only the first.
+      for (const Fortran::lower::pft::Evaluation *extra :
+           eval.extraControlSuccessors)
+        outputStream << ", " << extra->printIndex;
+    } else if (eval.isA<parser::EntryStmt>() && eval.lexicalSuccessor) {
       outputStream << " -> " << eval.lexicalSuccessor->printIndex;
+    }
     bool extraNewline = false;
     if (!eval.position.empty())
       outputStream << ": " << eval.position.ToString();
@@ -1620,6 +1666,20 @@ struct SymbolDependenceAnalysis {
   explicit SymbolDependenceAnalysis(const semantics::Symbol &symbol) {
     analyzeEquivalenceSets(symbol.owner());
     analyze(symbol);
+    finalize();
+  }
+  /// Analyze the dependencies of a set of module variables that are host
+  /// associated (or use associated in host module scopes).
+  explicit SymbolDependenceAnalysis(
+      const llvm::SetVector<const semantics::Symbol *> &moduleVariables) {
+    for (const semantics::Symbol *sym : moduleVariables)
+      analyzeLocalEquivalenceSets(sym->owner());
+    // Add all aggregate stores to the front of the variable list.
+    adjustSize(1);
+    for (auto st : stores)
+      layeredVarList[0].emplace_back(std::move(st));
+    for (const semantics::Symbol *sym : moduleVariables)
+      analyze(*sym);
     finalize();
   }
   Fortran::lower::pft::VariableList getVariableList() {
@@ -2131,6 +2191,61 @@ lower::pft::getDependentVariableList(const semantics::Symbol &symbol) {
   return sda.getVariableList();
 }
 
+static bool
+isGenericHidingProcedurePointer(const Fortran::semantics::Symbol &sym) {
+  if (const auto *generic = sym.detailsIf<Fortran::semantics::GenericDetails>())
+    if (const Fortran::semantics::Symbol *specific = generic->specific())
+      return Fortran::semantics::IsProcedurePointer(*specific);
+  return false;
+}
+
+/// Collect the canonical list of host [sub]module variables referenced in \p
+/// funit. A symbol is considered a host module variable if it is an
+/// ObjectEntityDetails, a ProcedurePointer, or a NamelistDetails symbol whose
+/// ultimate owning scope is a [sub]module scope containing \p funit's scope.
+/// Namelist groups are expanded to the set of their objects.
+static void collectHostAssociatedModuleVariables(
+    const Fortran::lower::pft::FunctionLikeUnit &funit,
+    llvm::SetVector<const Fortran::semantics::Symbol *> &moduleVariables) {
+  auto addIfHostModuleVariable = [&](const Fortran::semantics::Symbol &sym) {
+    const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
+    const auto *namelistDetails =
+        ultimate.detailsIf<Fortran::semantics::NamelistDetails>();
+    if (!ultimate.has<Fortran::semantics::ObjectEntityDetails>() &&
+        !Fortran::semantics::IsProcedurePointer(ultimate) &&
+        !isGenericHidingProcedurePointer(ultimate) && !namelistDetails)
+      return;
+    const Fortran::semantics::Scope &symbolScope =
+        Fortran::semantics::FollowHostAssoc(sym).owner();
+    if (symbolScope.kind() != Fortran::semantics::Scope::Kind::Module)
+      return;
+    if (namelistDetails) {
+      // Namelist symbols are processed on the fly in IO lowering, which
+      // needs to be able to access each of their objects. Capture the
+      // objects rather than the namelist symbol itself.
+      for (const auto &namelistObject : namelistDetails->objects())
+        moduleVariables.insert(&namelistObject->GetUltimate());
+    } else {
+      moduleVariables.insert(&ultimate);
+    }
+  };
+  Fortran::lower::pft::visitAllSymbols(funit, addIfHostModuleVariable);
+}
+
+/// Create an ordered list of equivalences and variables from host
+/// [sub]modules of \p funit that are referenced in \p funit. The result is
+/// not cached.
+lower::pft::VariableList
+lower::pft::getHostModuleVariableList(const FunctionLikeUnit &funit) {
+  LLVM_DEBUG(llvm::dbgs() << "\ngetHostModuleVariableList of funit scope <"
+                          << &funit.getScope() << "> "
+                          << funit.getScope().GetName() << "\n");
+  llvm::SetVector<const semantics::Symbol *> moduleVariables;
+  collectHostAssociatedModuleVariables(funit, moduleVariables);
+  SymbolDependenceAnalysis sda(moduleVariables);
+  return sda.getVariableList();
+}
+
 namespace {
 /// Helper class to find all the symbols referenced in a FunctionLikeUnit.
 /// It defines a parse tree visitor doing a deep visit in all nodes with
@@ -2150,6 +2265,25 @@ struct SymbolVisitor {
     if (const semantics::Symbol *symbol = name.symbol)
       visitSymbol(*symbol);
     return false;
+  }
+
+  bool Pre(const Fortran::parser::AccClause::UseDevice &useDevice) {
+    // For use_device, each symbol's parser Name has been given a local copy
+    // of the symbol with the DEVICE attribute. The original symbol will be
+    // needed in lowering and may not appear in the parse tree of the function
+    // anymore. Visit it now: it is not directly accessible from the construct
+    // symbol, so the parent scope must be searched to find it.
+    for (const auto &accObject : useDevice.v.v) {
+      if (const semantics::Symbol *deviceSym =
+              Fortran::parser::GetFirstName(accObject).symbol) {
+        if (const semantics::Symbol *hostSym =
+                deviceSym->owner().parent().FindSymbol(deviceSym->name()))
+          visitSymbol(*hostSym);
+      }
+    }
+    // Continue visiting the ACC construct symbol and any symbols used in
+    // designator index expressions.
+    return true;
   }
 
   template <typename T>

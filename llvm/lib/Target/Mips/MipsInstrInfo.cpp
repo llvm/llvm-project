@@ -713,8 +713,10 @@ unsigned MipsInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case  TargetOpcode::INLINEASM_BR: {       // Inline Asm: Variable size.
     const MachineFunction *MF = MI.getParent()->getParent();
     const char *AsmStr = MI.getOperand(0).getSymbolName();
-    return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
+    return getInlineAsmLength(AsmStr, MF->getTarget().getMCAsmInfo());
   }
+  case TargetOpcode::BUNDLE:
+    return getInstBundleSize(MI);
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER:
   case TargetOpcode::PATCHABLE_FUNCTION_EXIT:
   case TargetOpcode::PATCHABLE_TAIL_CALL:

@@ -323,6 +323,16 @@ public:
 
   // Visit concept reference.
   bool VisitConceptReference(ConceptReference *CR) { return true; }
+
+  /// Recursively visit a single component of an __builtin_offsetof
+  /// designator (a field, identifier, base-class, or array-index node).
+  ///
+  /// \returns false if the visitation was terminated early, true otherwise.
+  bool TraverseOffsetOfNode(const OffsetOfNode *Node);
+
+  /// Visit a single component of an __builtin_offsetof designator.
+  bool VisitOffsetOfNode(const OffsetOfNode *Node) { return true; }
+
   // ---- Methods on Attrs ----
 
   // Visit an attribute.
@@ -1755,8 +1765,9 @@ DEF_TRAVERSE_DECL(ExplicitInstantiationDecl, {
     TRY_TO(TraverseNestedNameSpecifierLoc(D->getQualifierLoc()));
   if (TypeSourceInfo *TSI = D->getTypeAsWritten())
     TRY_TO(TraverseTypeLoc(TSI->getTypeLoc()));
-  for (unsigned I = 0, E = D->getNumTemplateArgs(); I != E; ++I)
-    TRY_TO(TraverseTemplateArgumentLoc(D->getTemplateArg(I)));
+  if (auto NumArgs = D->getNumTemplateArgs())
+    for (unsigned I = 0; I != *NumArgs; ++I)
+      TRY_TO(TraverseTemplateArgumentLoc(D->getTemplateArg(I)));
 })
 
 DEF_TRAVERSE_DECL(TranslationUnitDecl, {
@@ -1898,6 +1909,14 @@ DEF_TRAVERSE_DECL(UsingShadowDecl, {})
 
 DEF_TRAVERSE_DECL(ConstructorUsingShadowDecl, {})
 
+DEF_TRAVERSE_DECL(CXXExpansionStmtDecl, {
+  if (D->getInstantiations() &&
+      getDerived().shouldVisitTemplateInstantiations())
+    TRY_TO(TraverseStmt(D->getInstantiations()));
+
+  TRY_TO(TraverseStmt(D->getExpansionPattern()));
+})
+
 DEF_TRAVERSE_DECL(OMPThreadPrivateDecl, {
   for (auto *I : D->varlist()) {
     TRY_TO(TraverseStmt(I));
@@ -1966,10 +1985,8 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateParameterListHelper(
 template <typename Derived>
 template <typename T>
 bool RecursiveASTVisitor<Derived>::TraverseDeclTemplateParameterLists(T *D) {
-  for (unsigned i = 0; i < D->getNumTemplateParameterLists(); i++) {
-    TemplateParameterList *TPL = D->getTemplateParameterList(i);
+  for (TemplateParameterList *TPL : D->getTemplateParameterLists())
     TraverseTemplateParameterListHelper(TPL);
-  }
   return true;
 }
 
@@ -2213,25 +2230,20 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateArgumentLocsHelper(
        handles traversal of template args and qualifier.                       \
        For explicit specializations ("template<> set<int> {...};"),            \
        we traverse template args here since there is no EID. */                \
-    if (const auto *ArgsWritten = D->getTemplateArgsAsWritten()) {             \
-      assert(D->getTemplateSpecializationKind() != TSK_ImplicitInstantiation); \
-      if (D->getTemplateSpecializationKind() == TSK_ExplicitSpecialization) {  \
-        TRY_TO(TraverseTemplateArgumentLocsHelper(                             \
-            ArgsWritten->getTemplateArgs(), ArgsWritten->NumTemplateArgs));    \
-      }                                                                        \
-    }                                                                          \
-                                                                               \
-    if (getDerived().shouldVisitTemplateInstantiations() ||                    \
-        D->getTemplateSpecializationKind() == TSK_ExplicitSpecialization) {    \
-      /* Traverse base definition for explicit specializations */              \
-      TRY_TO(Traverse##DECLKIND##Helper(D));                                   \
-    } else {                                                                   \
+    if (D->getTemplateSpecializationKind() == TSK_ExplicitSpecialization) {    \
+      const auto *ArgsWritten = D->getTemplateArgsAsWritten();                 \
+      TRY_TO(TraverseTemplateArgumentLocsHelper(                               \
+          ArgsWritten->getTemplateArgs(), ArgsWritten->NumTemplateArgs));      \
+    } else if (!getDerived().shouldVisitTemplateInstantiations()) {            \
       /* Returning from here skips traversing the                              \
          declaration context of the *TemplateSpecializationDecl                \
          (embedded in the DEF_TRAVERSE_DECL() macro)                           \
          which contains the instantiated members of the template. */           \
       return true;                                                             \
     }                                                                          \
+                                                                               \
+    /* Traverse base definition for explicit specializations */                \
+    TRY_TO(Traverse##DECLKIND##Helper(D));                                     \
   })
 
 DEF_TRAVERSE_TMPL_SPEC_DECL(Class, CXXRecord)
@@ -2729,6 +2741,13 @@ bool RecursiveASTVisitor<Derived>::TraverseConceptReference(
   return true;
 }
 
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::TraverseOffsetOfNode(
+    const OffsetOfNode *Node) {
+  TRY_TO(VisitOffsetOfNode(Node));
+  return true;
+}
+
 // If shouldVisitImplicitCode() returns false, this method traverses only the
 // syntactic form of InitListExpr.
 // If shouldVisitImplicitCode() return true, this method is called once for
@@ -2800,11 +2819,12 @@ DEF_TRAVERSE_STMT(CXXNewExpr, {
 })
 
 DEF_TRAVERSE_STMT(OffsetOfExpr, {
-  // The child-iterator will pick up the expression representing
-  // the field.
-  // FIXME: for code like offsetof(Foo, a.b.c), should we get
-  // making a MemberExpr callbacks for Foo.a, Foo.a.b, and Foo.a.b.c?
   TRY_TO(TraverseTypeLoc(S->getTypeSourceInfo()->getTypeLoc()));
+  // Visit each designator component (e.g. the `a`, `b`, `c` in
+  // offsetof(Foo, a.b.c)). Array index expressions are reached through the
+  // child-iterator, which DEF_TRAVERSE_STMT walks automatically.
+  for (unsigned I = 0, E = S->getNumComponents(); I != E; ++I)
+    TRY_TO(TraverseOffsetOfNode(&S->getComponent(I)));
 })
 
 DEF_TRAVERSE_STMT(UnaryExprOrTypeTraitExpr, {
@@ -3148,6 +3168,10 @@ DEF_TRAVERSE_STMT(RequiresExpr, {
   for (concepts::Requirement *Req : S->getRequirements())
     TRY_TO(TraverseConceptRequirement(Req));
 })
+
+DEF_TRAVERSE_STMT(CXXExpansionStmtPattern, {})
+DEF_TRAVERSE_STMT(CXXExpansionStmtInstantiation, {})
+DEF_TRAVERSE_STMT(CXXExpansionSelectExpr, {})
 
 // These literals (all of them) do not need any action.
 DEF_TRAVERSE_STMT(IntegerLiteral, {})
@@ -3781,6 +3805,10 @@ bool RecursiveASTVisitor<Derived>::VisitOMPNogroupClause(OMPNogroupClause *) {
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPInitClause(OMPInitClause *C) {
   TRY_TO(VisitOMPClauseList(C));
+  // VisitOMPClauseList covers the interop var and the per-pref-spec fr exprs
+  // (the varlist); the prefer_type attr() exprs live outside it.
+  for (Expr *A : C->attrs())
+    TRY_TO(TraverseStmt(A));
   return true;
 }
 
@@ -4056,6 +4084,8 @@ bool RecursiveASTVisitor<Derived>::VisitOMPMapClause(OMPMapClause *C) {
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPNumTeamsClause(
     OMPNumTeamsClause *C) {
+  if (auto *E = C->getModifierExpr())
+    TRY_TO(VisitStmt(E));
   TRY_TO(VisitOMPClauseList(C));
   TRY_TO(VisitOMPClauseWithPreInit(C));
   return true;

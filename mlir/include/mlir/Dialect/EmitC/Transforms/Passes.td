@@ -20,7 +20,7 @@ def FormExpressionsPass : Pass<"form-expressions"> {
   let dependentDialects = ["emitc::EmitCDialect"];
 }
 
-def WrapFuncInClassPass : Pass<"wrap-emitc-func-in-class"> {
+def WrapFuncInClassPass : Pass<"wrap-emitc-func-in-class", "ModuleOp"> {
   let summary = "Wrap functions in classes, using arguments as fields.";
   let description = [{
     This pass transforms `emitc.func` operations into `emitc.class` operations.

@@ -1,0 +1,7 @@
+; CHECK requires a pattern, so the no-newline EOF case must fail here.
+; RUN: printf "CHECK:" > %t.no-pattern.chk
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck --allow-empty --input-file=/dev/null %t.no-pattern.chk 2>&1 \
+; RUN: | FileCheck %s --check-prefix=ERR-EMPTY-CHECK
+
+ERR-EMPTY-CHECK: error: found empty check string

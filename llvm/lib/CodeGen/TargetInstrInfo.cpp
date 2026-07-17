@@ -148,6 +148,18 @@ unsigned TargetInstrInfo::getInlineAsmLength(
   return Length;
 }
 
+unsigned TargetInstrInfo::getInstBundleSize(const MachineInstr &MI) const {
+  unsigned Size = 0;
+  MachineBasicBlock::const_instr_iterator I = MI.getIterator();
+  MachineBasicBlock::const_instr_iterator E = MI.getParent()->instr_end();
+  while (++I != E && I->isInsideBundle()) {
+    assert(!I->isBundle() && "No nested bundle!");
+    Size += getInstSizeInBytes(*I);
+  }
+
+  return Size;
+}
+
 /// ReplaceTailWithBranchTo - Delete the instruction OldInst and everything
 /// after it, replacing it with an unconditional branch to NewDest.
 void
@@ -804,11 +816,10 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
   return &*--Pos;
 }
 
-MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
-                                                 ArrayRef<unsigned> Ops,
-                                                 MachineInstr &LoadMI,
-                                                 MachineInstr *&CopyMI,
-                                                 LiveIntervals *LIS) const {
+MachineInstr *
+TargetInstrInfo::foldMemoryOperand(MachineInstr &MI, ArrayRef<unsigned> Ops,
+                                   MachineInstr &LoadMI, MachineInstr *&CopyMI,
+                                   LiveIntervals *LIS, VirtRegMap *VRM) const {
   assert(LoadMI.canFoldAsLoad() && "LoadMI isn't foldable!");
 #ifndef NDEBUG
   for (unsigned OpIdx : Ops)
@@ -834,7 +845,7 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
     return foldInlineAsmMemOperand(MI, Ops, FrameIndex, *this);
   } else {
     // Ask the target to do the actual folding.
-    NewMI = foldMemoryOperandImpl(MF, MI, Ops, LoadMI, CopyMI, LIS);
+    NewMI = foldMemoryOperandImpl(MF, MI, Ops, LoadMI, CopyMI, LIS, VRM);
   }
 
   if (!NewMI)
@@ -1802,12 +1813,13 @@ unsigned TargetInstrInfo::getNumMicroOps(const InstrItineraryData *ItinData,
 }
 
 /// Return the default expected latency for a def based on it's opcode.
-unsigned TargetInstrInfo::defaultDefLatency(const MCSchedModel &SchedModel,
+unsigned TargetInstrInfo::defaultDefLatency(const TargetSubtargetInfo &STI,
+                                            const MCSchedModel &SchedModel,
                                             const MachineInstr &DefMI) const {
   if (DefMI.isTransient())
     return 0;
   if (DefMI.mayLoad())
-    return SchedModel.LoadLatency;
+    return STI.getLoadLatency();
   if (isHighLatencyDef(DefMI.getOpcode()))
     return SchedModel.HighLatency;
   return 1;

@@ -345,7 +345,7 @@ define void @sdiv_const() {
 
 define void @udiv_const() {
 ; CHECK-LABEL: 'udiv_const'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:4 SizeLat:4 for: %I128 = udiv i128 undef, 7
+; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:4 Lat:4 SizeLat:4 for: %I128 = udiv i128 undef, 7
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %I64 = udiv i64 undef, 7
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = udiv <2 x i64> undef, <i64 6, i64 7>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
@@ -462,7 +462,7 @@ define void @sdiv_uniformconst() {
 
 define void @udiv_uniformconst() {
 ; CHECK-LABEL: 'udiv_uniformconst'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:4 SizeLat:4 for: %I128 = udiv i128 undef, 7
+; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:4 Lat:4 SizeLat:4 for: %I128 = udiv i128 undef, 7
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %I64 = udiv i64 undef, 7
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = udiv <2 x i64> undef, splat (i64 7)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, splat (i64 7)
@@ -810,7 +810,7 @@ define void @sdiv_constnegpow2() {
 
 define void @udiv_constnegpow2() {
 ; CHECK-LABEL: 'udiv_constnegpow2'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:4 SizeLat:4 for: %I128 = udiv i128 undef, -16
+; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:4 Lat:4 SizeLat:4 for: %I128 = udiv i128 undef, -16
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %I64 = udiv i64 undef, -16
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = udiv <2 x i64> undef, <i64 -8, i64 -16>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
@@ -926,7 +926,7 @@ define void @sdiv_uniformconstnegpow2() {
 
 define void @udiv_uniformconstnegpow2() {
 ; CHECK-LABEL: 'udiv_uniformconstnegpow2'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:4 SizeLat:4 for: %I128 = udiv i128 undef, -16
+; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:4 Lat:4 SizeLat:4 for: %I128 = udiv i128 undef, -16
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %I64 = udiv i64 undef, -16
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %V2i64 = udiv <2 x i64> undef, splat (i64 -16)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:4 Lat:4 SizeLat:4 for: %V4i64 = udiv <4 x i64> undef, splat (i64 -16)

@@ -1202,7 +1202,8 @@ int SlotTracker::processIndex() {
   // Start numbering the GUIDs after the module ids.
   GUIDNext = ModulePathNext;
 
-  for (auto &GlobalList : *TheIndex)
+  // Sort by GUID for deterministic slot assignment.
+  for (const auto &GlobalList : TheIndex->sortedGlobalValueSummariesRange())
     CreateGUIDSlot(GlobalList.first);
 
   // Start numbering the TypeIdCompatibleVtables after the GUIDs.
@@ -1536,97 +1537,68 @@ static void writeOptimizationInfo(raw_ostream &Out, const User *U) {
   }
 }
 
+static void WriteFullHexAPInt(raw_ostream &Out, const APInt &Val) {
+  SmallVector<char, 32> Bits;
+  Val.toStringUnsigned(Bits, 16);
+  unsigned NumDigits = std::max((Val.getBitWidth() + 3) / 4, 1U);
+  Out << "0x";
+  for (unsigned i = 0; i < NumDigits - Bits.size(); i++)
+    Out << '0';
+  Out << Bits;
+}
+
 static void writeAPFloatInternal(raw_ostream &Out, const APFloat &APF) {
-  if (&APF.getSemantics() == &APFloat::IEEEsingle() ||
-      &APF.getSemantics() == &APFloat::IEEEdouble()) {
-    // We would like to output the FP constant value in exponential notation,
-    // but we cannot do this if doing so will lose precision.  Check here to
-    // make sure that we only output it in exponential format if we can parse
-    // the value back and get the same value.
-    //
-    bool ignored;
-    bool isDouble = &APF.getSemantics() == &APFloat::IEEEdouble();
-    bool isInf = APF.isInfinity();
-    bool isNaN = APF.isNaN();
+  bool ForceBitwiseOutput = false;
+  if (&APF.getSemantics() == &APFloat::PPCDoubleDouble()) {
+    // ppc_fp128 types are double-double. The special cases set the second
+    // (high) double to +0.0, so if the high word is nonzero, force the use of
+    // bitwise output.
+    APInt HiWord = APF.bitcastToAPInt().lshr(64);
+    ForceBitwiseOutput = !HiWord.isZero();
+  }
 
-    if (!isInf && !isNaN) {
-      double Val = APF.convertToDouble();
-      SmallString<128> StrVal;
-      APF.toString(StrVal, 6, 0, false);
-      // Check to make sure that the stringized number is not some string like
-      // "Inf" or NaN, that atof will accept, but the lexer will not.  Check
-      // that the string matches the "[-+]?[0-9]" regex.
-      //
-      assert((isDigit(StrVal[0]) ||
-              ((StrVal[0] == '-' || StrVal[0] == '+') && isDigit(StrVal[1]))) &&
-             "[-+]?[0-9] regex does not match!");
-      // Reparse stringized version!
-      if (APFloat(APFloat::IEEEdouble(), StrVal).convertToDouble() == Val) {
-        Out << StrVal;
-        return;
-      }
+  if (!ForceBitwiseOutput) {
+    // Check for special values in APFloat.
+    if (APF.isInfinity()) {
+      Out << (APF.isNegative() ? '-' : '+') << "inf";
+      return;
     }
 
-    // Otherwise we could not reparse it to exactly the same value, so we must
-    // output the string in hexadecimal format!  Note that loading and storing
-    // floating point types changes the bits of NaNs on some hosts, notably
-    // x86, so we must not use these types.
-    static_assert(sizeof(double) == sizeof(uint64_t),
-                  "assuming that double is 64 bits!");
-    APFloat apf = APF;
-
-    // Floats are represented in ASCII IR as double, convert.
-    // FIXME: We should allow 32-bit hex float and remove this.
-    if (!isDouble) {
-      // A signaling NaN is quieted on conversion, so we need to recreate the
-      // expected value after convert (quiet bit of the payload is clear).
-      bool IsSNAN = apf.isSignaling();
-      apf.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
-                  &ignored);
-      if (IsSNAN) {
-        APInt Payload = apf.bitcastToAPInt();
-        apf =
-            APFloat::getSNaN(APFloat::IEEEdouble(), apf.isNegative(), &Payload);
+    if (APF.isNaN()) {
+      Out << (APF.isNegative() ? '-' : '+');
+      APInt Payload = APF.getNaNPayload();
+      // The quiet bit of a NaN is the highest bit of the payload, so the
+      // preferred QNaN value happens to be the sign mask value.
+      if (Payload.isSignMask()) {
+        Out << "qnan";
+      } else {
+        if (APF.isSignaling())
+          Out << 's';
+        Out << "nan(";
+        // Clear out the signaling/quiet bit of the payload for output.
+        Payload.clearBit(Payload.getBitWidth() - 1);
+        // Trim the string to exclude leading 0's.
+        WriteFullHexAPInt(Out, Payload.trunc(Payload.getActiveBits()));
+        Out << ')';
       }
+      return;
     }
+  }
 
-    Out << format_hex(apf.bitcastToAPInt().getZExtValue(), 0, /*Upper=*/true);
+  // Try for a decimal string output. If the value is convertible back to the
+  // same APFloat value, then we know that it is safe to use it. Otherwise, fall
+  // back onto the hexadecimal format.
+  SmallString<128> StrVal;
+  APF.toString(StrVal, 6, 0, false);
+  if (APFloat(APF.getSemantics(), StrVal) == APF) {
+    Out << StrVal;
     return;
   }
 
-  // Either half, bfloat or some form of long double.
-  // These appear as a magic letter identifying the type, then a
-  // fixed number of hex digits.
-  Out << "0x";
+  // Fallback to the hexadecimal format representing the bit string exactly.
+  Out << 'f';
   APInt API = APF.bitcastToAPInt();
-  if (&APF.getSemantics() == &APFloat::x87DoubleExtended()) {
-    Out << 'K';
-    Out << format_hex_no_prefix(API.getHiBits(16).getZExtValue(), 4,
-                                /*Upper=*/true);
-    Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
-                                /*Upper=*/true);
-  } else if (&APF.getSemantics() == &APFloat::IEEEquad()) {
-    Out << 'L';
-    Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
-                                /*Upper=*/true);
-    Out << format_hex_no_prefix(API.getHiBits(64).getZExtValue(), 16,
-                                /*Upper=*/true);
-  } else if (&APF.getSemantics() == &APFloat::PPCDoubleDouble()) {
-    Out << 'M';
-    Out << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
-                                /*Upper=*/true);
-    Out << format_hex_no_prefix(API.getHiBits(64).getZExtValue(), 16,
-                                /*Upper=*/true);
-  } else if (&APF.getSemantics() == &APFloat::IEEEhalf()) {
-    Out << 'H';
-    Out << format_hex_no_prefix(API.getZExtValue(), 4,
-                                /*Upper=*/true);
-  } else if (&APF.getSemantics() == &APFloat::BFloat()) {
-    Out << 'R';
-    Out << format_hex_no_prefix(API.getZExtValue(), 4,
-                                /*Upper=*/true);
-  } else
-    llvm_unreachable("Unsupported floating point type");
+  WriteFullHexAPInt(Out, API);
 }
 
 static void writeConstantInternal(raw_ostream &Out, const Constant *CV,
@@ -1672,6 +1644,11 @@ static void writeConstantInternal(raw_ostream &Out, const Constant *CV,
     Type *Ty = CFP->getType();
 
     if (Ty->isVectorTy()) {
+      if (CFP->getValue().bitcastToAPInt().isZero()) {
+        Out << "zeroinitializer";
+        return;
+      }
+
       Out << "splat (";
       WriterCtx.TypePrinter->print(Ty->getScalarType(), Out);
       Out << " ";
@@ -1718,9 +1695,9 @@ static void writeConstantInternal(raw_ostream &Out, const Constant *CV,
     unsigned NumOpsToWrite = 2;
     if (!CPA->getOperand(2)->isNullValue())
       NumOpsToWrite = 3;
-    if (!CPA->getOperand(3)->isNullValue())
+    if (!isa<ConstantPointerNull>(CPA->getOperand(3)))
       NumOpsToWrite = 4;
-    if (!CPA->getOperand(4)->isNullValue())
+    if (!isa<ConstantPointerNull>(CPA->getOperand(4)))
       NumOpsToWrite = 5;
 
     ListSeparator LS;
@@ -1813,7 +1790,16 @@ static void writeConstantInternal(raw_ostream &Out, const Constant *CV,
     return;
   }
 
-  if (isa<ConstantPointerNull>(CV)) {
+  if (const auto *CPN = dyn_cast<ConstantPointerNull>(CV)) {
+    if (auto *VT = dyn_cast<VectorType>(CPN->getType())) {
+      Out << "splat (";
+      writeAsOperandInternal(Out,
+                             ConstantPointerNull::get(VT->getElementType()),
+                             WriterCtx, /*PrintType=*/true);
+      Out << ')';
+      return;
+    }
+
     Out << "null";
     return;
   }
@@ -2238,6 +2224,9 @@ static void writeDIBasicType(raw_ostream &Out, const DIBasicType *N,
   if (N->getTag() != dwarf::DW_TAG_base_type)
     Printer.printTag(N);
   Printer.printString("name", N->getName());
+  Printer.printMetadata("scope", N->getRawScope());
+  Printer.printMetadata("file", N->getRawFile());
+  Printer.printInt("line", N->getLine());
   Printer.printMetadataOrInt("size", N->getRawSizeInBits(), true);
   Printer.printInt("align", N->getAlignInBits());
   Printer.printInt("dataSize", N->getDataSizeInBits());
@@ -2255,6 +2244,9 @@ static void writeDIFixedPointType(raw_ostream &Out, const DIFixedPointType *N,
   if (N->getTag() != dwarf::DW_TAG_base_type)
     Printer.printTag(N);
   Printer.printString("name", N->getName());
+  Printer.printMetadata("scope", N->getRawScope());
+  Printer.printMetadata("file", N->getRawFile());
+  Printer.printInt("line", N->getLine());
   Printer.printMetadataOrInt("size", N->getRawSizeInBits(), true);
   Printer.printInt("align", N->getAlignInBits());
   Printer.printDwarfEnum("encoding", N->getEncoding(),
@@ -2453,6 +2445,8 @@ static void writeDICompileUnit(raw_ostream &Out, const DICompileUnit *N,
   Printer.printBool("rangesBaseAddress", N->getRangesBaseAddress(), false);
   Printer.printString("sysroot", N->getSysRoot());
   Printer.printString("sdk", N->getSDK());
+  Printer.printDwarfEnum("dialect", Lang.getDialect(),
+                         dwarf::LanguageDialectString);
   Out << ")";
 }
 
@@ -2633,7 +2627,7 @@ static void writeDILabel(raw_ostream &Out, const DILabel *N,
   Printer.printMetadata("scope", N->getRawScope(), /* ShouldSkipNull */ false);
   Printer.printString("name", N->getName());
   Printer.printMetadata("file", N->getRawFile());
-  Printer.printInt("line", N->getLine());
+  Printer.printInt("line", N->getLine(), /* ShouldSkipZero */ false);
   Printer.printInt("column", N->getColumn());
   Printer.printBool("isArtificial", N->isArtificial(), false);
   if (N->getCoroSuspendIdx())
@@ -3132,21 +3126,38 @@ void AssemblyWriter::printModule(const Module *M) {
   if (!M->getTargetTriple().empty())
     Out << "target triple = \"" << M->getTargetTriple().str() << "\"\n";
 
-  if (!M->getModuleInlineAsm().empty()) {
+  if (M->hasModuleInlineAsm()) {
     Out << '\n';
 
-    // Split the string into lines, to make it easier to read the .ll file.
-    StringRef Asm = M->getModuleInlineAsm();
-    do {
-      StringRef Front;
-      std::tie(Front, Asm) = Asm.split('\n');
+    for (const Module::GlobalAsmFragment &Frag : M->getModuleInlineAsm()) {
+      Out << "module asm";
+      SmallVector<std::pair<StringRef, StringRef>> Props =
+          Frag.Props.getAsStrings();
+      if (!Props.empty()) {
+        ListSeparator LS;
+        Out << "(";
+        for (auto [Key, Value] : Props) {
+          Out << LS;
+          Out << Key << ": \"";
+          printEscapedString(Value, Out);
+          Out << "\"";
+        }
+        Out << ")";
+      }
+      Out << "\n";
+      // Split the string into lines, to make it easier to read the .ll file.
+      StringRef Asm = Frag.Asm;
+      do {
+        StringRef Front;
+        std::tie(Front, Asm) = Asm.split('\n');
 
-      // We found a newline, print the portion of the asm string from the
-      // last newline up to this newline.
-      Out << "module asm \"";
-      printEscapedString(Front, Out);
-      Out << "\"\n";
-    } while (!Asm.empty());
+        // We found a newline, print the portion of the asm string from the
+        // last newline up to this newline.
+        Out << "    \"";
+        printEscapedString(Front, Out);
+        Out << "\"\n";
+      } while (!Asm.empty());
+    }
   }
 
   printTypeIdentities();
@@ -3236,14 +3247,17 @@ void AssemblyWriter::printModuleSummaryIndex() {
 
   // FIXME: Change AliasSummary to hold a ValueInfo instead of summary pointer
   // for aliasee (then update BitcodeWriter.cpp and remove get/setAliaseeGUID).
-  for (auto &GlobalList : *TheIndex) {
+  // Sort by GUID for deterministic output matching slot assignment order.
+  auto SortedGVS = TheIndex->sortedGlobalValueSummariesRange();
+
+  for (const auto &GlobalList : SortedGVS) {
     auto GUID = GlobalList.first;
     for (auto &Summary : GlobalList.second.getSummaryList())
       SummaryToGUIDMap[Summary.get()] = GUID;
   }
 
   // Print the global value summary entries.
-  for (auto &GlobalList : *TheIndex) {
+  for (const auto &GlobalList : SortedGVS) {
     auto GUID = GlobalList.first;
     auto VI = TheIndex->getValueInfo(GlobalList);
     printSummaryInfo(Machine.getGUIDSlot(GUID), VI);
@@ -4358,9 +4372,15 @@ void AssemblyWriter::printInstructionLine(const Instruction &I) {
 /// intrinsic indicating base and derived pointer names.
 void AssemblyWriter::printGCRelocateComment(const GCRelocateInst &Relocate) {
   Out << " ; (";
-  writeOperand(Relocate.getBasePtr(), false);
+  if (Value *BasePtr = Relocate.getBasePtr())
+    writeOperand(BasePtr, false);
+  else
+    Out << "invalid";
   Out << ", ";
-  writeOperand(Relocate.getDerivedPtr(), false);
+  if (Value *DerivedPtr = Relocate.getDerivedPtr())
+    writeOperand(DerivedPtr, false);
+  else
+    Out << "invalid";
   Out << ")";
 }
 
@@ -4460,6 +4480,9 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
       (isa<AtomicRMWInst>(I) && cast<AtomicRMWInst>(I).isVolatile()))
     Out << " volatile";
 
+  if (isa<LoadInst>(I) && cast<LoadInst>(I).isElementwise())
+    Out << " elementwise";
+
   // Print out optimization information.
   writeOptimizationInfo(Out, &I);
 
@@ -4468,8 +4491,11 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     Out << ' ' << CI->getPredicate();
 
   // Print out the atomicrmw operation
-  if (const auto *RMWI = dyn_cast<AtomicRMWInst>(&I))
+  if (const auto *RMWI = dyn_cast<AtomicRMWInst>(&I)) {
+    if (RMWI->isElementwise())
+      Out << " elementwise";
     Out << ' ' << AtomicRMWInst::getOperationName(RMWI->getOperation());
+  }
 
   // Print out the type of the operands...
   const Value *Operand = I.getNumOperands() ? I.getOperand(0) : nullptr;
@@ -4627,7 +4653,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     Function *CalledFunc = CI->getCalledFunction();
     auto PrintArgComment = [&](unsigned ArgNo) {
       const auto *ConstArg = dyn_cast<Constant>(CI->getArgOperand(ArgNo));
-      if (!ConstArg)
+      if (!ConstArg || !CalledFunc)
         return;
       std::string ArgComment;
       raw_string_ostream ArgCommentStream(ArgComment);
@@ -4984,6 +5010,9 @@ void AssemblyWriter::printMetadataAttachments(
 }
 
 void AssemblyWriter::writeMDNode(unsigned Slot, const MDNode *Node) {
+  if (AnnotationWriter)
+    AnnotationWriter->emitMDNodeAnnot(Node, Out);
+
   Out << '!' << Slot << " = ";
   printMDNodeBody(Node);
   Out << "\n";
@@ -5042,20 +5071,11 @@ void AssemblyWriter::writeAllAttributeGroups() {
 
 void AssemblyWriter::printUseListOrder(const Value *V,
                                        ArrayRef<unsigned> Shuffle) {
-  bool IsInFunction = Machine.getFunction();
-  if (IsInFunction)
+  if (Machine.getFunction())
     Out << "  ";
 
-  Out << "uselistorder";
-  if (const BasicBlock *BB = IsInFunction ? nullptr : dyn_cast<BasicBlock>(V)) {
-    Out << "_bb ";
-    writeOperand(BB->getParent(), false);
-    Out << ", ";
-    writeOperand(BB, false);
-  } else {
-    Out << " ";
-    writeOperand(V, true);
-  }
+  Out << "uselistorder ";
+  writeOperand(V, true);
 
   assert(Shuffle.size() >= 2 && "Shuffle too small");
   Out << ", { " << llvm::interleaved(Shuffle) << " }\n";

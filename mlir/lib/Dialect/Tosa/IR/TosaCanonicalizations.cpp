@@ -13,14 +13,17 @@
 
 #include "mlir/Dialect/Quant/IR/Quant.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tosa/IR/TargetEnv.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
 #include "mlir/Dialect/Traits.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/APFloat.h"
@@ -245,6 +248,78 @@ void DepthwiseConv2DOp::getCanonicalizationPatterns(RewritePatternSet &results,
       context);
 }
 
+struct AvgPool2dAdaptiveToAvgPool2d
+    : public OpRewritePattern<tosa::AvgPool2dAdaptiveOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::AvgPool2dAdaptiveOp op,
+                                PatternRewriter &rewriter) const override {
+    llvm::SmallVector<int64_t> kernel;
+    llvm::SmallVector<int64_t> stride;
+    llvm::SmallVector<int64_t> pad;
+    if (!tosa::getConstShapeValues(op.getKernel().getDefiningOp(), kernel) ||
+        !tosa::getConstShapeValues(op.getStride().getDefiningOp(), stride) ||
+        !tosa::getConstShapeValues(op.getPad().getDefiningOp(), pad))
+      return rewriter.notifyMatchFailure(
+          op, "expected constant kernel, stride, and pad operands");
+
+    auto replacement = tosa::AvgPool2dOp::create(
+        rewriter, op.getLoc(), op.getType(), op.getInput(), op.getInputZp(),
+        op.getOutputZp(), rewriter.getDenseI64ArrayAttr(kernel),
+        rewriter.getDenseI64ArrayAttr(stride),
+        rewriter.getDenseI64ArrayAttr(pad), op.getAccTypeAttr());
+    rewriter.replaceOp(op, replacement.getOutput());
+    return success();
+  }
+};
+
+struct AvgPool2dIsNoOp : public OpRewritePattern<tosa::AvgPool2dOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::AvgPool2dOp op,
+                                PatternRewriter &rewriter) const override {
+    // Prevent canonicalization if input/output shapes don't align
+    if (op.getInput().getType() != op.getOutput().getType())
+      return rewriter.notifyMatchFailure(
+          op, "expected input and output types to match");
+
+    const auto inputType = llvm::cast<ShapedType>(op.getInput().getType());
+    if (!llvm::isa<FloatType>(inputType.getElementType()))
+      return rewriter.notifyMatchFailure(op,
+                                         "expected floating-point input type");
+
+    // For statically known zero points, the verifier ensures zero points are
+    // zero for floating-point types
+    if (!matchPattern(op.getInputZp(), m_Constant()) ||
+        !matchPattern(op.getOutputZp(), m_Constant()))
+      return rewriter.notifyMatchFailure(
+          op,
+          "expected input and output zero points to be statically verifiable");
+
+    if (!llvm::all_of(op.getKernel(), [](int64_t val) { return val == 1; }))
+      return rewriter.notifyMatchFailure(op, "expected unit kernel");
+
+    if (!llvm::all_of(op.getStride(), [](int64_t val) { return val == 1; }))
+      return rewriter.notifyMatchFailure(op, "expected unit stride");
+
+    if (!llvm::all_of(op.getPad(), [](int64_t val) { return val == 0; }))
+      return rewriter.notifyMatchFailure(op, "expected zero padding");
+
+    rewriter.replaceOp(op, op.getInput());
+    return success();
+  }
+};
+
+void AvgPool2dOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                              MLIRContext *context) {
+  results.add<AvgPool2dIsNoOp>(context);
+}
+
+void AvgPool2dAdaptiveOp::getCanonicalizationPatterns(
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add<AvgPool2dAdaptiveToAvgPool2d>(context);
+}
+
 struct MaxPool2dIsNoOp : public OpRewritePattern<tosa::MaxPool2dOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -254,6 +329,15 @@ struct MaxPool2dIsNoOp : public OpRewritePattern<tosa::MaxPool2dOp> {
     Value output = op.getOutput();
     ShapedType inputType = llvm::cast<ShapedType>(input.getType());
     ShapedType outputType = llvm::cast<ShapedType>(output.getType());
+
+    if (input.getType() == output.getType() &&
+        llvm::all_of(op.getKernel(), [](int64_t val) { return val == 1; }) &&
+        llvm::all_of(op.getStride(), [](int64_t val) { return val == 1; }) &&
+        llvm::all_of(op.getPad(), [](int64_t val) { return val == 0; }) &&
+        op.getNanMode() == tosa::NanPropagationMode::PROPAGATE) {
+      rewriter.replaceOp(op, input);
+      return success();
+    }
 
     if (!inputType.hasStaticShape() || !outputType.hasStaticShape()) {
       return failure();
@@ -283,6 +367,36 @@ void MaxPool2dOp::getCanonicalizationPatterns(RewritePatternSet &results,
       context);
 }
 
+struct MaxPool2dAdaptiveToMaxPool2d
+    : public OpRewritePattern<tosa::MaxPool2dAdaptiveOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::MaxPool2dAdaptiveOp op,
+                                PatternRewriter &rewriter) const override {
+    llvm::SmallVector<int64_t> kernel;
+    llvm::SmallVector<int64_t> stride;
+    llvm::SmallVector<int64_t> pad;
+    if (!tosa::getConstShapeValues(op.getKernel().getDefiningOp(), kernel) ||
+        !tosa::getConstShapeValues(op.getStride().getDefiningOp(), stride) ||
+        !tosa::getConstShapeValues(op.getPad().getDefiningOp(), pad))
+      return rewriter.notifyMatchFailure(
+          op, "expected constant kernel, stride, and pad operands");
+
+    auto replacement = tosa::MaxPool2dOp::create(
+        rewriter, op.getLoc(), op.getType(), op.getInput(),
+        rewriter.getDenseI64ArrayAttr(kernel),
+        rewriter.getDenseI64ArrayAttr(stride),
+        rewriter.getDenseI64ArrayAttr(pad), op.getNanModeAttr());
+    rewriter.replaceOp(op, replacement.getOutput());
+    return success();
+  }
+};
+
+void MaxPool2dAdaptiveOp::getCanonicalizationPatterns(
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add<MaxPool2dAdaptiveToMaxPool2d>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // Data Layout / Memory Reinterpretation.
 //===----------------------------------------------------------------------===//
@@ -307,9 +421,61 @@ struct ConcatOptimization : public OpRewritePattern<tosa::ConcatOp> {
   }
 };
 
+struct ConsecutiveConcatOptimization : public OpRewritePattern<tosa::ConcatOp> {
+  using OpRewritePattern<tosa::ConcatOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::ConcatOp op,
+                                PatternRewriter &rewriter) const override {
+    // Rewrite consecutive concats on the same axis into a single op.
+    // Keep track of the operands so we are able to construct a new concat
+    // later. Conservatively assume that we double the number of operands when
+    // canonicalizing
+    SmallVector<Value, 8> concatOperands;
+    concatOperands.reserve(2 * op.getNumOperands());
+
+    int32_t maxNumOperands = 0;
+    if (auto targetEnvAttr = tosa::lookupTargetEnv(op))
+      maxNumOperands =
+          getTosaLevelFromEnum(targetEnvAttr.getLevel()).MAX_TENSOR_LIST_SIZE;
+
+    // Find all operands that are foldable concats
+    bool foundRewritableConcat = false;
+    for (Value operand : op.getOperands()) {
+      concatOperands.emplace_back(operand);
+
+      auto producer = operand.getDefiningOp<tosa::ConcatOp>();
+      if (!producer)
+        continue;
+
+      // Not rewritable if axes are not the same
+      if (op.getAxis() != producer.getAxis())
+        continue;
+
+      // Replace the original operand with all incoming operands
+      foundRewritableConcat = true;
+      concatOperands.pop_back();
+      llvm::append_range(concatOperands, producer->getOperands());
+    }
+
+    if (!foundRewritableConcat)
+      return rewriter.notifyMatchFailure(op,
+                                         "No rewritable concat operand found.");
+
+    if (maxNumOperands > 0 &&
+        concatOperands.size() > static_cast<size_t>(maxNumOperands))
+      return rewriter.notifyMatchFailure(
+          op, "Rewriting would exceed the maximum number of operands for the "
+              "target environment level.");
+
+    rewriter.replaceOpWithNewOp<tosa::ConcatOp>(
+        op, op.getType(), concatOperands, op.getAxisAttr());
+    return success();
+  }
+};
+
 void ConcatOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  results.add<ConcatOptimization>(context);
+  results.add<ConcatOptimization, ConsecutiveConcatOptimization>(context);
 }
 
 LogicalResult SelectOp::canonicalize(SelectOp op, PatternRewriter &rewriter) {
@@ -907,38 +1073,96 @@ struct NonNarrowingCastsOptimization : public OpRewritePattern<tosa::CastOp> {
 
     const Value innerCastInput = innerCastOp.getInput();
 
-    const auto innerInputType =
+    const ShapedType innerInputType =
         llvm::cast<ShapedType>(innerCastInput.getType());
-    const auto innerOutputType = llvm::cast<ShapedType>(innerCastOp.getType());
-    const auto outerOutputType = llvm::cast<ShapedType>(castOp.getType());
+    const ShapedType innerOutputType =
+        llvm::cast<ShapedType>(innerCastOp.getType());
+    const ShapedType outerOutputType = llvm::cast<ShapedType>(castOp.getType());
 
-    const SmallVector<ShapedType, 3> types = {innerInputType, innerOutputType,
-                                              outerOutputType};
+    const Type innerInputElemType = innerInputType.getElementType();
+    const Type innerOutputElemType = innerOutputType.getElementType();
+    const Type outerOutputElemType = outerOutputType.getElementType();
 
-    if (llvm::any_of(types, [](const ShapedType type) {
-          const auto elemTy = type.getElementType();
+    const SmallVector<Type, 3> types = {innerInputElemType, innerOutputElemType,
+                                        outerOutputElemType};
+
+    if (llvm::any_of(types, [](const Type type) {
           // Support a specific set of floating point types since we need to be
           // careful in not introducing unsupported type combinations
-          return !(elemTy.isInteger() ||
+          return !(type.isInteger() ||
                    llvm::isa<Float8E4M3FNType, Float8E5M2Type, BFloat16Type,
-                             Float16Type, Float32Type>(elemTy));
+                             Float16Type, Float32Type>(type));
         }))
       return rewriter.notifyMatchFailure(
           castOp, "only integer and f32, f16, bf16, f8E4M3FN, f8E5M2 types are "
                   "supported");
 
-    if (llvm::isa<Float8E5M2Type>(innerInputType.getElementType()) &&
-        llvm::isa<Float8E4M3FNType>(outerOutputType.getElementType())) {
+    if (llvm::isa<Float8E5M2Type>(innerInputElemType) &&
+        llvm::isa<Float8E4M3FNType>(outerOutputElemType)) {
       return rewriter.notifyMatchFailure(
           castOp, "avoid introducing f8E5M2 -> f8E4M3FN casts which are not "
                   "legal in TOSA");
     }
 
-    if (llvm::isa<Float8E4M3FNType>(innerInputType.getElementType()) &&
-        llvm::isa<Float8E5M2Type>(outerOutputType.getElementType())) {
+    if (llvm::isa<Float8E4M3FNType>(innerInputElemType) &&
+        llvm::isa<Float8E5M2Type>(outerOutputElemType)) {
       return rewriter.notifyMatchFailure(
           castOp, "avoid introducing f8E4M3FN -> f8E5M2 casts which are not "
                   "legal in TOSA");
+    }
+
+    if (llvm::isa<Float8E5M2Type, Float8E4M3FNType>(innerInputElemType) &&
+        outerOutputElemType.isInteger()) {
+      return rewriter.notifyMatchFailure(
+          castOp, "avoid introducing fp8 -> integer casts which are not "
+                  "legal in TOSA");
+    }
+
+    if (innerInputElemType.isInteger() &&
+        llvm::isa<Float8E5M2Type, Float8E4M3FNType>(outerOutputElemType)) {
+      return rewriter.notifyMatchFailure(
+          castOp, "avoid introducing integer -> fp8 casts which are not "
+                  "legal in TOSA");
+    }
+
+    if (llvm::isa<Float16Type>(innerInputElemType) &&
+        llvm::isa<BFloat16Type>(outerOutputElemType)) {
+      return rewriter.notifyMatchFailure(
+          castOp, "avoid introducing fp16 -> bf16 casts which are not "
+                  "legal in TOSA");
+    }
+
+    if (llvm::isa<BFloat16Type>(innerInputElemType) &&
+        llvm::isa<Float16Type>(outerOutputElemType)) {
+      return rewriter.notifyMatchFailure(
+          castOp, "avoid introducing bf16 -> fp16 casts which are not "
+                  "legal in TOSA");
+    }
+
+    const auto isIntegerOneOfWidth = [](Type type, size_t bitwidth1,
+                                        size_t bitwidth2) {
+      return type.isInteger(bitwidth1) || type.isInteger(bitwidth2);
+    };
+
+    if (isIntegerOneOfWidth(innerInputElemType, 8, 16) &&
+        outerOutputElemType.isInteger(64)) {
+      return rewriter.notifyMatchFailure(
+          castOp, "avoid introducing i8/i16 -> i64 casts which are not "
+                  "legal in TOSA");
+    }
+
+    if (isIntegerOneOfWidth(innerInputElemType, 1, 64) &&
+        !outerOutputElemType.isInteger()) {
+      return rewriter.notifyMatchFailure(
+          castOp, "avoid introducing bool/i64 to float casts which are not "
+                  "supported in all versions of TOSA");
+    }
+
+    if (!innerInputElemType.isInteger() &&
+        isIntegerOneOfWidth(outerOutputElemType, 1, 64)) {
+      return rewriter.notifyMatchFailure(
+          castOp, "avoid introducing float to bool/i64 casts which are not "
+                  "supported in all versions of TOSA");
     }
 
     // Check that the cast we're considering for removal is non-narrowing
@@ -1013,12 +1237,50 @@ struct NonNarrowingCastsOptimization : public OpRewritePattern<tosa::CastOp> {
   }
 };
 
+struct CancellingBlockScaledCastsOptimization
+    : public OpRewritePattern<tosa::CastOp> {
+  using OpRewritePattern<tosa::CastOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::CastOp castOp,
+                                PatternRewriter &rewriter) const override {
+    const Value outerInput = castOp.getInput();
+    auto innerCastOp = outerInput.getDefiningOp<tosa::CastOp>();
+    if (!innerCastOp)
+      return rewriter.notifyMatchFailure(castOp,
+                                         "input must be a cast operation");
+
+    const Value innerInput = innerCastOp.getInput();
+    const auto innerInputTy = llvm::cast<ShapedType>(innerInput.getType());
+    const auto innerOutputTy = llvm::cast<ShapedType>(innerCastOp.getType());
+    const auto outerOutputTy = llvm::cast<ShapedType>(castOp.getType());
+
+    if (!llvm::isa<tosa::BlockScaledType>(innerInputTy.getElementType()))
+      return rewriter.notifyMatchFailure(
+          castOp, "inner cast input must have block scaled element type");
+
+    if (innerInputTy != outerOutputTy)
+      return rewriter.notifyMatchFailure(
+          castOp, "inner input type must match outer output type");
+
+    const Type innerOutputElemType = innerOutputTy.getElementType();
+    const bool isLosslessCast = isa<Float32Type>(innerOutputElemType);
+    if (!isLosslessCast)
+      return rewriter.notifyMatchFailure(
+          castOp, "avoid cancelling casts that should be lossy");
+
+    rewriter.replaceOp(castOp, innerInput);
+
+    return success();
+  }
+};
+
 void CastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results.add<NonNarrowingCastsOptimization>(context);
+  results.add<NonNarrowingCastsOptimization,
+              CancellingBlockScaledCastsOptimization>(context);
 }
 
-struct CancellingBlockScaledCastsOptimization
+struct CancellingCastToFromBlockScaledOptimization
     : public OpRewritePattern<tosa::CastToBlockScaledOp> {
   using OpRewritePattern<tosa::CastToBlockScaledOp>::OpRewritePattern;
 
@@ -1064,7 +1326,28 @@ struct CancellingBlockScaledCastsOptimization
 
 void CastToBlockScaledOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
-  results.add<CancellingBlockScaledCastsOptimization>(context);
+  results.add<CancellingCastToFromBlockScaledOptimization>(context);
+}
+
+struct RowGatherToGather : public OpRewritePattern<tosa::RowGatherOp> {
+  using OpRewritePattern<tosa::RowGatherOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::RowGatherOp op,
+                                PatternRewriter &rewriter) const override {
+    const FailureOr<int32_t> rowCount =
+        mlir::tosa::getConstantScalarIntValue<int32_t>(op.getRowCount());
+    if (failed(rowCount) || rowCount.value() != 1)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<tosa::GatherOp>(
+        op, op.getOutput().getType(), op.getValues(), op.getIndices());
+    return success();
+  }
+};
+
+void RowGatherOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                              MLIRContext *context) {
+  results.add<RowGatherToGather>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1344,6 +1627,24 @@ struct Exp2FoldAdaptor {
   }
 };
 
+// The specification requires shape div operations to have non-negative lhs and
+// strictly positive rhs so we can only fold when these conditions are met.
+template <bool Ceil>
+struct ShapeDivFoldAdaptor {
+  static FailureOr<APInt> fold(const APInt &lhs, const APInt &rhs,
+                               bool isUnsigned) {
+    assert(!isUnsigned &&
+           "unsigned values are not supported for shape div folders");
+    if (lhs.isNegative() || !rhs.isStrictlyPositive())
+      return failure();
+    return DivFoldAdaptor<Ceil>::fold(lhs, rhs, isUnsigned);
+  }
+
+  static FailureOr<APFloat> fold(const APFloat &lhs, const APFloat &rhs) {
+    return failure();
+  }
+};
+
 struct Log2CeilFoldAdaptor {
   static FailureOr<APInt> fold(const APInt &value, bool isUnsigned) {
     if (!value.isStrictlyPositive())
@@ -1477,10 +1778,12 @@ OpFoldResult IntDivOp::fold(FoldAdaptor adaptor) {
       llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getInput1());
   auto rhsAttr =
       llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getInput2());
-  if (lhsAttr && lhsAttr.isSplat()) {
+  if (lhsAttr && lhsAttr.isSplat() && rhsAttr && rhsAttr.isSplat()) {
     if (llvm::isa<IntegerType>(resultETy) && resultTy.hasStaticShape() &&
-        lhsAttr.getSplatValue<APInt>().isZero())
+        lhsAttr.getSplatValue<APInt>().isZero() &&
+        !rhsAttr.getSplatValue<APInt>().isZero()) {
       return lhsAttr.resizeSplat(resultTy);
+    }
   }
 
   if (rhsAttr && rhsAttr.isSplat()) {
@@ -2025,6 +2328,82 @@ OpFoldResult tosa::SelectOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
+static LogicalResult verifyTileIsBroadcast(tosa::TileOp tileOp) {
+  const auto inputType =
+      dyn_cast<RankedTensorType>(tileOp.getInput1().getType());
+  const auto outputType = dyn_cast<RankedTensorType>(tileOp.getType());
+  if (!inputType || !outputType)
+    return failure();
+
+  SmallVector<int64_t> multiples;
+  if (failed(tileOp.getConstantMultiples(multiples)))
+    return failure();
+
+  for (const auto [index, multiple] : llvm::enumerate(multiples)) {
+    if (multiple == 1)
+      continue;
+    if (outputType.isDynamicDim(index))
+      return failure();
+    if (inputType.getDimSize(index) != 1)
+      return failure();
+  }
+
+  return success();
+}
+
+struct RemoveBroadcastTileFromBinaryElementwise
+    : public OpRewritePattern<tosa::TileOp> {
+  using OpRewritePattern<tosa::TileOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::TileOp tileOp,
+                                PatternRewriter &rewriter) const override {
+    Value tileOutput = tileOp.getOutput();
+    if (!tileOutput.hasOneUse())
+      return rewriter.notifyMatchFailure(tileOp,
+                                         "tile output must have one use");
+
+    Operation *user = *tileOutput.user_begin();
+    const bool isBinaryElementwise =
+        user->getNumOperands() == 2 &&
+        user->hasTrait<OpTrait::tosa::TosaElementwiseOperator>();
+    if (!isBinaryElementwise && !isa<tosa::MulOp>(user))
+      return rewriter.notifyMatchFailure(
+          tileOp, "consumer must be binary broadcastable");
+
+    if (failed(verifyTileIsBroadcast(tileOp)))
+      return rewriter.notifyMatchFailure(
+          tileOp, "tile must only expand statically-known singleton dims");
+
+    Value lhsOperand = user->getOperand(0);
+    Value rhsOperand = user->getOperand(1);
+    Value otherOperand = lhsOperand == tileOutput ? rhsOperand : lhsOperand;
+    Value tileInput = tileOp.getInput1();
+
+    const ShapedType newOtherType = cast<ShapedType>(otherOperand.getType());
+    const ShapedType newTileType = cast<ShapedType>(tileInput.getType());
+    SmallVector<int64_t> broadcastedShape;
+    OpTrait::util::getBroadcastedShape(
+        newOtherType.getShape(), newTileType.getShape(), broadcastedShape);
+
+    const ShapedType outputType = cast<ShapedType>(user->getResultTypes()[0]);
+    if (!llvm::equal(broadcastedShape, outputType.getShape()))
+      return rewriter.notifyMatchFailure(
+          tileOp, "tile output must be broadcastable to consumer operands");
+
+    rewriter.setInsertionPoint(user);
+    IRMapping mapper;
+    mapper.map(tileOutput, tileOp.getInput1());
+    Operation *newUser = rewriter.clone(*user, mapper);
+    rewriter.replaceOp(user, newUser->getResults());
+    return success();
+  }
+};
+
+void TileOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                         MLIRContext *context) {
+  results.add<RemoveBroadcastTileFromBinaryElementwise>(context);
+}
+
 OpFoldResult TileOp::fold(FoldAdaptor adaptor) {
   if (getInput1().getType() == getType()) {
     if (auto multiples = llvm::dyn_cast_if_present<DenseElementsAttr>(
@@ -2103,40 +2482,6 @@ OpFoldResult tosa::AbsOp::fold(FoldAdaptor adaptor) {
     return foldToInputIfTypeMatches(getType(), input);
 
   return {};
-}
-
-OpFoldResult ConcatOp::fold(FoldAdaptor adaptor) {
-  // Fold consecutive concats on the same axis into a single op.
-  // Keep track of the operands so we are able to construct a new concat
-  // later. Conservatively assume that we double the number of operands when
-  // folding
-  SmallVector<Value, 8> concatOperands;
-  concatOperands.reserve(2 * getNumOperands());
-
-  // Find all operands that are foldable concats
-  bool foundFoldableConcat = false;
-  for (Value operand : getOperands()) {
-    concatOperands.emplace_back(operand);
-
-    auto producer = operand.getDefiningOp<ConcatOp>();
-    if (!producer)
-      continue;
-
-    // Not foldable if axes are not the same
-    if (getAxis() != producer.getAxis())
-      continue;
-
-    // Replace the original operand with all incoming operands
-    foundFoldableConcat = true;
-    concatOperands.pop_back();
-    llvm::append_range(concatOperands, producer->getOperands());
-  }
-
-  if (!foundFoldableConcat)
-    return {};
-
-  getOperation()->setOperands(concatOperands);
-  return getResult();
 }
 
 OpFoldResult tosa::ReciprocalOp::fold(FoldAdaptor adaptor) {
@@ -2293,11 +2638,11 @@ OpFoldResult tosa::MulShapeOp::fold(FoldAdaptor adaptor) {
 }
 
 OpFoldResult tosa::DivCeilShapeOp::fold(FoldAdaptor adaptor) {
-  return binaryFold<DivCeilShapeOp, DivFoldAdaptor</*Ceil*/ true>>(this);
+  return binaryFold<DivCeilShapeOp, ShapeDivFoldAdaptor</*Ceil*/ true>>(this);
 }
 
 OpFoldResult tosa::DivFloorShapeOp::fold(FoldAdaptor adaptor) {
-  return binaryFold<DivFloorShapeOp, DivFoldAdaptor</*Ceil*/ false>>(this);
+  return binaryFold<DivFloorShapeOp, ShapeDivFoldAdaptor</*Ceil*/ false>>(this);
 }
 
 OpFoldResult tosa::ModShapeOp::fold(FoldAdaptor adaptor) {

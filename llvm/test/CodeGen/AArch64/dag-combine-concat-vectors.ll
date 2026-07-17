@@ -10,54 +10,63 @@ define fastcc i8 @allocno_reload_assign(ptr %p) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    cntd x10
+; CHECK-NEXT:    cntw x11
+; CHECK-NEXT:    cnth x12
 ; CHECK-NEXT:    cmpeq p1.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    uzp1 p0.s, p1.s, p0.s
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p0.h
-; CHECK-NEXT:    uzp1 p8.b, p0.b, p0.b
-; CHECK-NEXT:    mov z0.b, p8/z, #1 // =0x1
-; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    uzp1 p0.b, p0.b, p0.b
+; CHECK-NEXT:    mov z0.b, p0/z, #1 // =0x1
+; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mvn w8, w8
-; CHECK-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-NEXT:    whilelo p0.b, xzr, x8
-; CHECK-NEXT:    punpklo p1.h, p0.b
-; CHECK-NEXT:    punpkhi p0.h, p0.b
-; CHECK-NEXT:    punpklo p2.h, p1.b
-; CHECK-NEXT:    punpkhi p4.h, p1.b
-; CHECK-NEXT:    punpklo p6.h, p0.b
-; CHECK-NEXT:    punpkhi p0.h, p0.b
-; CHECK-NEXT:    punpklo p1.h, p2.b
-; CHECK-NEXT:    punpkhi p2.h, p2.b
-; CHECK-NEXT:    punpklo p3.h, p4.b
-; CHECK-NEXT:    punpkhi p4.h, p4.b
-; CHECK-NEXT:    punpklo p5.h, p6.b
-; CHECK-NEXT:    punpkhi p6.h, p6.b
-; CHECK-NEXT:    punpklo p7.h, p0.b
-; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    mvn w9, w9
+; CHECK-NEXT:    sbfx x9, x9, #0, #1
+; CHECK-NEXT:    whilelo p1.d, xzr, x9
 ; CHECK-NEXT:  .LBB0_1: // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    uunpklo z1.h, z0.b
+; CHECK-NEXT:    csinv x14, x12, xzr, eq
+; CHECK-NEXT:    csinv x13, x10, xzr, eq
+; CHECK-NEXT:    csinv x15, x11, xzr, eq
+; CHECK-NEXT:    adds x16, x14, x11
+; CHECK-NEXT:    csinv x16, x16, xzr, lo
+; CHECK-NEXT:    adds x17, x16, x10
 ; CHECK-NEXT:    uunpklo z2.s, z1.h
 ; CHECK-NEXT:    uunpkhi z1.s, z1.h
+; CHECK-NEXT:    csinv x17, x17, xzr, lo
+; CHECK-NEXT:    whilelo p3.d, x16, x9
+; CHECK-NEXT:    whilelo p2.d, x17, x9
+; CHECK-NEXT:    adds x16, x14, x10
+; CHECK-NEXT:    csinv x16, x16, xzr, lo
 ; CHECK-NEXT:    uunpklo z3.d, z2.s
+; CHECK-NEXT:    whilelo p5.d, x14, x9
 ; CHECK-NEXT:    uunpkhi z2.d, z2.s
+; CHECK-NEXT:    whilelo p4.d, x16, x9
+; CHECK-NEXT:    adds x14, x15, x10
+; CHECK-NEXT:    csinv x14, x14, xzr, lo
+; CHECK-NEXT:    whilelo p6.d, x13, x9
 ; CHECK-NEXT:    st1b { z3.d }, p1, [z0.d]
-; CHECK-NEXT:    st1b { z2.d }, p2, [z0.d]
+; CHECK-NEXT:    st1b { z2.d }, p6, [z0.d]
 ; CHECK-NEXT:    uunpklo z2.d, z1.s
+; CHECK-NEXT:    whilelo p6.d, x15, x9
 ; CHECK-NEXT:    uunpkhi z1.d, z1.s
-; CHECK-NEXT:    st1b { z2.d }, p3, [z0.d]
+; CHECK-NEXT:    st1b { z2.d }, p6, [z0.d]
 ; CHECK-NEXT:    uunpkhi z2.h, z0.b
+; CHECK-NEXT:    whilelo p6.d, x14, x9
 ; CHECK-NEXT:    uunpklo z3.s, z2.h
 ; CHECK-NEXT:    uunpkhi z2.s, z2.h
-; CHECK-NEXT:    st1b { z1.d }, p4, [z0.d]
+; CHECK-NEXT:    st1b { z1.d }, p6, [z0.d]
 ; CHECK-NEXT:    uunpklo z1.d, z3.s
 ; CHECK-NEXT:    st1b { z1.d }, p5, [z0.d]
 ; CHECK-NEXT:    uunpkhi z1.d, z3.s
-; CHECK-NEXT:    st1b { z1.d }, p6, [z0.d]
+; CHECK-NEXT:    st1b { z1.d }, p4, [z0.d]
 ; CHECK-NEXT:    uunpklo z1.d, z2.s
-; CHECK-NEXT:    st1b { z1.d }, p7, [z0.d]
+; CHECK-NEXT:    st1b { z1.d }, p3, [z0.d]
 ; CHECK-NEXT:    uunpkhi z1.d, z2.s
-; CHECK-NEXT:    st1b { z1.d }, p0, [z0.d]
-; CHECK-NEXT:    str p8, [x0]
+; CHECK-NEXT:    st1b { z1.d }, p2, [z0.d]
+; CHECK-NEXT:    str p0, [x0]
 ; CHECK-NEXT:    b .LBB0_1
   br label %1
 

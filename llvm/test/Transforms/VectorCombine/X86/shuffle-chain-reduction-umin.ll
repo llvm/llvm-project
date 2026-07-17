@@ -198,3 +198,23 @@ define i16 @test_reduce_v32i16(<32 x i16> %a0) {
   %11 = extractelement <32 x i16> %10, i64 0
   ret i16 %11
 }
+
+define i16 @test_umin_different_sources_v8i16(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: define i16 @test_umin_different_sources_v8i16(
+; CHECK-SAME: <8 x i16> [[A0:%.*]], <8 x i16> [[A1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A0]], <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[A1]], <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call <4 x i16> @llvm.umin.v4i16(<4 x i16> [[TMP1]], <4 x i16> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call i16 @llvm.vector.reduce.umin.v4i16(<4 x i16> [[TMP3]])
+; CHECK-NEXT:    ret i16 [[TMP4]]
+;
+  %1 = shufflevector <8 x i16> %a0, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = shufflevector <8 x i16> %a1, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %3 = tail call <4 x i16> @llvm.umin.v4i16(<4 x i16> %1, <4 x i16> %2)
+  %4 = shufflevector <4 x i16> %3, <4 x i16> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+  %5 = tail call <4 x i16> @llvm.umin.v4i16(<4 x i16> %3, <4 x i16> %4)
+  %6 = shufflevector <4 x i16> %5, <4 x i16> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+  %7 = tail call <4 x i16> @llvm.umin.v4i16(<4 x i16> %5, <4 x i16> %6)
+  %8 = extractelement <4 x i16> %7, i64 0
+  ret i16 %8
+}

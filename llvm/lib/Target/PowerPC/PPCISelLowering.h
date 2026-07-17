@@ -373,13 +373,11 @@ namespace llvm {
                                 MachineBasicBlock *MBB) const override;
     MachineBasicBlock *EmitAtomicBinary(MachineInstr &MI,
                                         MachineBasicBlock *MBB,
-                                        unsigned AtomicSize,
                                         unsigned BinOpcode,
                                         unsigned CmpOpcode = 0,
                                         unsigned CmpPred = 0) const;
     MachineBasicBlock *EmitPartwordAtomicBinary(MachineInstr &MI,
                                                 MachineBasicBlock *MBB,
-                                                bool is8bit,
                                                 unsigned Opcode,
                                                 unsigned CmpOpcode = 0,
                                                 unsigned CmpPred = 0) const;
@@ -705,6 +703,7 @@ namespace llvm {
     SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSSUBO(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSADDO(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
@@ -742,6 +741,7 @@ namespace llvm {
     SDValue LowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerADDSUBO(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerABDU(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerUCMP(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerToLibCall(const char *LibCallName, SDValue Op,
                            SelectionDAG &DAG) const;
@@ -771,6 +771,8 @@ namespace llvm {
 
     SDValue LowerVP_LOAD(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerVP_STORE(SDValue Op, SelectionDAG &DAG) const;
+
+    SDValue LowerPartialReduce(SDValue Op, SelectionDAG &DAG) const;
 
     SDValue LowerVectorLoad(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerVectorStore(SDValue Op, SelectionDAG &DAG) const;
@@ -859,6 +861,9 @@ namespace llvm {
     SDValue lowerEH_SJLJ_SETJMP(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerEH_SJLJ_LONGJMP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerVecSplatSmallFP(SDValue Op, SelectionDAG &DAG,
+                                 bool BVNIsConstantSplat,
+                                 unsigned SplatBitSize) const;
 
     SDValue DAGCombineExtBoolTrunc(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue DAGCombineBuildVector(SDNode *N, DAGCombinerInfo &DCI) const;

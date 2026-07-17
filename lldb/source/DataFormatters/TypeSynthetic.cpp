@@ -314,7 +314,7 @@ lldb::ChildCacheState BytecodeSyntheticChildren::FrontEnd::Update() {
   } else {
     LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "Bytecode formatter did not return a valid reuse response from "
-             "@update (type: `{1}`, name: `{2}`)",
+             "@update (type: `{}`, name: `{}`)",
              m_backend.GetDisplayTypeName(), m_backend.GetName());
   }
 

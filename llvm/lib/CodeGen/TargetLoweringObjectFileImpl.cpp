@@ -122,7 +122,7 @@ void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
                                              const TargetMachine &TgtM) {
   TargetLoweringObjectFile::Initialize(Ctx, TgtM);
 
-  CodeModel::Model CM = TgtM.getCodeModel();
+  const CodeModel::Model CM = TgtM.getCodeModel();
   InitializeELF(TgtM.Options.UseInitArray);
 
   switch (TgtM.getTargetTriple().getArch()) {
@@ -130,7 +130,7 @@ void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
   case Triple::armeb:
   case Triple::thumb:
   case Triple::thumbeb:
-    if (Ctx.getAsmInfo()->getExceptionHandlingType() == ExceptionHandling::ARM)
+    if (Ctx.getAsmInfo().getExceptionHandlingType() == ExceptionHandling::ARM)
       break;
     // Fallthrough if not using EHABI
     [[fallthrough]];
@@ -150,27 +150,37 @@ void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
                               dwarf::DW_EH_PE_sdata4
                         : dwarf::DW_EH_PE_absptr;
     break;
-  case Triple::x86_64:
+  case Triple::x86_64: {
+    // The large EH encoding forces 64-bit-wide EH pointers regardless of the
+    // code model, so treat it like the Large code model when selecting
+    // encodings below.
+    const CodeModel::Model EHCM =
+        TgtM.Options.MCOptions.LargeEHEncoding ? CodeModel::Large : CM;
     if (isPositionIndependent()) {
-      PersonalityEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
-        ((CM == CodeModel::Small || CM == CodeModel::Medium)
-         ? dwarf::DW_EH_PE_sdata4 : dwarf::DW_EH_PE_sdata8);
+      PersonalityEncoding =
+          dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+          ((EHCM == CodeModel::Small || EHCM == CodeModel::Medium)
+               ? dwarf::DW_EH_PE_sdata4
+               : dwarf::DW_EH_PE_sdata8);
       LSDAEncoding = dwarf::DW_EH_PE_pcrel |
-        (CM == CodeModel::Small
-         ? dwarf::DW_EH_PE_sdata4 : dwarf::DW_EH_PE_sdata8);
+                     (EHCM == CodeModel::Small ? dwarf::DW_EH_PE_sdata4
+                                               : dwarf::DW_EH_PE_sdata8);
       TTypeEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
-        ((CM == CodeModel::Small || CM == CodeModel::Medium)
-         ? dwarf::DW_EH_PE_sdata4 : dwarf::DW_EH_PE_sdata8);
+                      ((EHCM == CodeModel::Small || EHCM == CodeModel::Medium)
+                           ? dwarf::DW_EH_PE_sdata4
+                           : dwarf::DW_EH_PE_sdata8);
     } else {
       PersonalityEncoding =
-        (CM == CodeModel::Small || CM == CodeModel::Medium)
-        ? dwarf::DW_EH_PE_udata4 : dwarf::DW_EH_PE_absptr;
-      LSDAEncoding = (CM == CodeModel::Small)
-        ? dwarf::DW_EH_PE_udata4 : dwarf::DW_EH_PE_absptr;
-      TTypeEncoding = (CM == CodeModel::Small)
-        ? dwarf::DW_EH_PE_udata4 : dwarf::DW_EH_PE_absptr;
+          (EHCM == CodeModel::Small || EHCM == CodeModel::Medium)
+              ? dwarf::DW_EH_PE_udata4
+              : dwarf::DW_EH_PE_absptr;
+      LSDAEncoding = (EHCM == CodeModel::Small) ? dwarf::DW_EH_PE_udata4
+                                                : dwarf::DW_EH_PE_absptr;
+      TTypeEncoding = (EHCM == CodeModel::Small) ? dwarf::DW_EH_PE_udata4
+                                                 : dwarf::DW_EH_PE_absptr;
     }
     break;
+  }
   case Triple::hexagon:
     PersonalityEncoding = dwarf::DW_EH_PE_absptr;
     LSDAEncoding = dwarf::DW_EH_PE_absptr;
@@ -634,10 +644,11 @@ static StringRef getSectionPrefixForGlobal(SectionKind Kind, bool IsLarge) {
 static SmallString<128>
 getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
                            Mangler &Mang, const TargetMachine &TM,
-                           unsigned EntrySize, bool UniqueSectionName,
+                           bool UniqueSectionName,
                            const MachineJumpTableEntry *JTE) {
   SmallString<128> Name =
       getSectionPrefixForGlobal(Kind, TM.isLargeGlobalValue(GO));
+  unsigned EntrySize = getEntrySizeForKind(Kind);
   if (Kind.isMergeableCString()) {
     // We also need alignment here.
     // FIXME: this is getting the alignment of the character, not the
@@ -726,8 +737,8 @@ calcUniqueIDUpdateFlagsAndSize(const GlobalObject *GO, StringRef SectionName,
   if (Retain) {
     if (TM.getTargetTriple().isOSSolaris())
       Flags |= ELF::SHF_SUNW_NODISCARD;
-    else if (Ctx.getAsmInfo()->useIntegratedAssembler() ||
-             Ctx.getAsmInfo()->binutilsIsAtLeast(2, 36))
+    else if (Ctx.getAsmInfo().useIntegratedAssembler() ||
+             Ctx.getAsmInfo().binutilsIsAtLeast(2, 36))
       Flags |= ELF::SHF_GNU_RETAIN;
     return NextUniqueID++;
   }
@@ -738,8 +749,8 @@ calcUniqueIDUpdateFlagsAndSize(const GlobalObject *GO, StringRef SectionName,
   // the same name. Doing so relies on the ",unique ," assembly feature. This
   // feature is not available until binutils version 2.35
   // (https://sourceware.org/bugzilla/show_bug.cgi?id=25380).
-  const bool SupportsUnique = Ctx.getAsmInfo()->useIntegratedAssembler() ||
-                              Ctx.getAsmInfo()->binutilsIsAtLeast(2, 35);
+  const bool SupportsUnique = Ctx.getAsmInfo().useIntegratedAssembler() ||
+                              Ctx.getAsmInfo().binutilsIsAtLeast(2, 35);
   if (!SupportsUnique) {
     Flags &= ~ELF::SHF_MERGE;
     EntrySize = 0;
@@ -771,8 +782,8 @@ calcUniqueIDUpdateFlagsAndSize(const GlobalObject *GO, StringRef SectionName,
   // implicitly for this symbol e.g. .rodata.str1.1, then we don't need
   // to unique the section as the entry size for this symbol will be
   // compatible with implicitly created sections.
-  SmallString<128> ImplicitSectionNameStem = getELFSectionNameForGlobal(
-      GO, Kind, Mang, TM, EntrySize, false, /*MJTE=*/nullptr);
+  SmallString<128> ImplicitSectionNameStem =
+      getELFSectionNameForGlobal(GO, Kind, Mang, TM, false, /*MJTE=*/nullptr);
   if (SymbolMergeable &&
       Ctx.isELFImplicitMergeableSectionNamePrefix(SectionName) &&
       SectionName.starts_with(ImplicitSectionNameStem))
@@ -783,8 +794,9 @@ calcUniqueIDUpdateFlagsAndSize(const GlobalObject *GO, StringRef SectionName,
   return NextUniqueID++;
 }
 
-static std::tuple<StringRef, bool, unsigned>
-getGlobalObjectInfo(const GlobalObject *GO, const TargetMachine &TM) {
+static std::tuple<StringRef, bool, unsigned, unsigned, unsigned>
+getGlobalObjectInfo(const GlobalObject *GO, const TargetMachine &TM,
+                    StringRef SectionName, SectionKind Kind) {
   StringRef Group = "";
   bool IsComdat = false;
   unsigned Flags = 0;
@@ -795,7 +807,23 @@ getGlobalObjectInfo(const GlobalObject *GO, const TargetMachine &TM) {
   }
   if (TM.isLargeGlobalValue(GO))
     Flags |= ELF::SHF_X86_64_LARGE;
-  return {Group, IsComdat, Flags};
+
+  unsigned Type, EntrySize;
+  if (MDNode *MD = GO->getMetadata(LLVMContext::MD_elf_section_properties)) {
+    Type = cast<ConstantAsMetadata>(MD->getOperand(0))
+               ->getValue()
+               ->getUniqueInteger()
+               .getZExtValue();
+    EntrySize = cast<ConstantAsMetadata>(MD->getOperand(1))
+                    ->getValue()
+                    ->getUniqueInteger()
+                    .getZExtValue();
+  } else {
+    Type = getELFSectionType(SectionName, Kind);
+    EntrySize = getEntrySizeForKind(Kind);
+  }
+
+  return {Group, IsComdat, Flags, Type, EntrySize};
 }
 
 static StringRef handlePragmaClangSection(const GlobalObject *GO,
@@ -831,25 +859,25 @@ static MCSection *selectExplicitSectionGlobal(const GlobalObject *GO,
   Kind = getELFKindForNamedSection(SectionName, Kind);
 
   unsigned Flags = getELFSectionFlags(Kind, TM.getTargetTriple());
-  auto [Group, IsComdat, ExtraFlags] = getGlobalObjectInfo(GO, TM);
+  auto [Group, IsComdat, ExtraFlags, Type, EntrySize] =
+      getGlobalObjectInfo(GO, TM, SectionName, Kind);
   Flags |= ExtraFlags;
 
-  unsigned EntrySize = getEntrySizeForKind(Kind);
   const unsigned UniqueID = calcUniqueIDUpdateFlagsAndSize(
       GO, SectionName, Kind, TM, Ctx, Mang, Flags, EntrySize, NextUniqueID,
       Retain, ForceUnique);
 
   const MCSymbolELF *LinkedToSym = getLinkedToSymbol(GO, TM);
-  MCSectionELF *Section = Ctx.getELFSection(
-      SectionName, getELFSectionType(SectionName, Kind), Flags, EntrySize,
-      Group, IsComdat, UniqueID, LinkedToSym);
+  MCSectionELF *Section =
+      Ctx.getELFSection(SectionName, Type, Flags, EntrySize, Group, IsComdat,
+                        UniqueID, LinkedToSym);
   // Make sure that we did not get some other section with incompatible sh_link.
   // This should not be possible due to UniqueID code above.
   assert(Section->getLinkedToSymbol() == LinkedToSym &&
          "Associated symbol mismatch between sections");
 
-  if (!(Ctx.getAsmInfo()->useIntegratedAssembler() ||
-        Ctx.getAsmInfo()->binutilsIsAtLeast(2, 35))) {
+  if (!(Ctx.getAsmInfo().useIntegratedAssembler() ||
+        Ctx.getAsmInfo().binutilsIsAtLeast(2, 35))) {
     // If we are using GNU as before 2.35, then this symbol might have
     // been placed in an incompatible mergeable section. Emit an error if this
     // is the case to avoid creating broken output.
@@ -880,13 +908,6 @@ static MCSectionELF *selectELFSectionForGlobal(
     const TargetMachine &TM, bool EmitUniqueSection, unsigned Flags,
     unsigned *NextUniqueID, const MCSymbolELF *AssociatedSymbol,
     const MachineJumpTableEntry *MJTE = nullptr) {
-
-  auto [Group, IsComdat, ExtraFlags] = getGlobalObjectInfo(GO, TM);
-  Flags |= ExtraFlags;
-
-  // Get the section entry size based on the kind.
-  unsigned EntrySize = getEntrySizeForKind(Kind);
-
   bool UniqueSectionName = false;
   unsigned UniqueID = MCSection::NonUniqueID;
   if (EmitUniqueSection) {
@@ -897,15 +918,18 @@ static MCSectionELF *selectELFSectionForGlobal(
       (*NextUniqueID)++;
     }
   }
-  SmallString<128> Name = getELFSectionNameForGlobal(
-      GO, Kind, Mang, TM, EntrySize, UniqueSectionName, MJTE);
+  SmallString<128> Name =
+      getELFSectionNameForGlobal(GO, Kind, Mang, TM, UniqueSectionName, MJTE);
+
+  auto [Group, IsComdat, ExtraFlags, Type, EntrySize] =
+      getGlobalObjectInfo(GO, TM, Name, Kind);
+  Flags |= ExtraFlags;
 
   // Use 0 as the unique ID for execute-only text.
   if (Kind.isExecuteOnly())
     UniqueID = 0;
-  return Ctx.getELFSection(Name, getELFSectionType(Name, Kind), Flags,
-                           EntrySize, Group, IsComdat, UniqueID,
-                           AssociatedSymbol);
+  return Ctx.getELFSection(Name, Type, Flags, EntrySize, Group, IsComdat,
+                           UniqueID, AssociatedSymbol);
 }
 
 static MCSection *selectELFSectionForGlobal(
@@ -921,12 +945,14 @@ static MCSection *selectELFSectionForGlobal(
     if (TM.getTargetTriple().isOSSolaris()) {
       EmitUniqueSection = true;
       Flags |= ELF::SHF_SUNW_NODISCARD;
-    } else if (Ctx.getAsmInfo()->useIntegratedAssembler() ||
-               Ctx.getAsmInfo()->binutilsIsAtLeast(2, 36)) {
+    } else if (Ctx.getAsmInfo().useIntegratedAssembler() ||
+               Ctx.getAsmInfo().binutilsIsAtLeast(2, 36)) {
       EmitUniqueSection = true;
       Flags |= ELF::SHF_GNU_RETAIN;
     }
   }
+  if (GO->hasMetadata(LLVMContext::MD_elf_section_properties))
+    EmitUniqueSection = true;
 
   MCSectionELF *Section = selectELFSectionForGlobal(
       Ctx, GO, Kind, Mang, TM, EmitUniqueSection, Flags,
@@ -1011,8 +1037,8 @@ MCSection *TargetLoweringObjectFileELF::getSectionForLSDA(
   // Use SHF_LINK_ORDER to facilitate --gc-sections if we can use GNU ld>=2.36
   // or LLD, which support mixed SHF_LINK_ORDER & non-SHF_LINK_ORDER.
   if (TM.getFunctionSections() &&
-      (getContext().getAsmInfo()->useIntegratedAssembler() &&
-       getContext().getAsmInfo()->binutilsIsAtLeast(2, 36))) {
+      (getContext().getAsmInfo().useIntegratedAssembler() &&
+       getContext().getAsmInfo().binutilsIsAtLeast(2, 36))) {
     Flags |= ELF::SHF_LINK_ORDER;
     LinkedToSym = static_cast<const MCSymbolELF *>(&FnSym);
   }
@@ -1062,22 +1088,26 @@ MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
     return getSectionForConstant(DL, Kind, C, Alignment, F);
 
   auto &Context = getContext();
+  StringRef CstPrefix = ".rodata";
+  unsigned MergeableCstFlags = ELF::SHF_ALLOC | ELF::SHF_MERGE;
+  if (TM->getCodeModel() == CodeModel::Large &&
+      TM->getTargetTriple().getArch() == Triple::x86_64) {
+    MergeableCstFlags |= ELF::SHF_X86_64_LARGE;
+    CstPrefix = ".lrodata";
+  }
+
   if (Kind.isMergeableConst4() && MergeableConst4Section)
-    return Context.getELFSection(".rodata.cst4." + SectionSuffix + ".",
-                                 ELF::SHT_PROGBITS,
-                                 ELF::SHF_ALLOC | ELF::SHF_MERGE, 4);
+    return Context.getELFSection(CstPrefix + ".cst4." + SectionSuffix + ".",
+                                 ELF::SHT_PROGBITS, MergeableCstFlags, 4);
   if (Kind.isMergeableConst8() && MergeableConst8Section)
-    return Context.getELFSection(".rodata.cst8." + SectionSuffix + ".",
-                                 ELF::SHT_PROGBITS,
-                                 ELF::SHF_ALLOC | ELF::SHF_MERGE, 8);
+    return Context.getELFSection(CstPrefix + ".cst8." + SectionSuffix + ".",
+                                 ELF::SHT_PROGBITS, MergeableCstFlags, 8);
   if (Kind.isMergeableConst16() && MergeableConst16Section)
-    return Context.getELFSection(".rodata.cst16." + SectionSuffix + ".",
-                                 ELF::SHT_PROGBITS,
-                                 ELF::SHF_ALLOC | ELF::SHF_MERGE, 16);
+    return Context.getELFSection(CstPrefix + ".cst16." + SectionSuffix + ".",
+                                 ELF::SHT_PROGBITS, MergeableCstFlags, 16);
   if (Kind.isMergeableConst32() && MergeableConst32Section)
-    return Context.getELFSection(".rodata.cst32." + SectionSuffix + ".",
-                                 ELF::SHT_PROGBITS,
-                                 ELF::SHF_ALLOC | ELF::SHF_MERGE, 32);
+    return Context.getELFSection(CstPrefix + ".cst32." + SectionSuffix + ".",
+                                 ELF::SHT_PROGBITS, MergeableCstFlags, 32);
   if (Kind.isReadOnly())
     return Context.getELFSection(".rodata." + SectionSuffix + ".",
                                  ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
@@ -1637,8 +1667,7 @@ void TargetLoweringObjectFileMachO::getNameWithPrefix(
   if (auto *GO = GV->getAliaseeObject()) {
     SectionKind GOKind = TargetLoweringObjectFile::getKindForGlobal(GO, TM);
     const MCSection *TheSection = SectionForGlobal(GO, GOKind, TM);
-    CannotUsePrivateLabel =
-        !canUsePrivateLabel(*TM.getMCAsmInfo(), *TheSection);
+    CannotUsePrivateLabel = !canUsePrivateLabel(TM.getMCAsmInfo(), *TheSection);
   }
   getMangler().getNameWithPrefix(OutName, GV, CannotUsePrivateLabel);
 }
@@ -2164,7 +2193,7 @@ MCSection *TargetLoweringObjectFileCOFF::getSectionForConstant(
     const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
     const Function *F) const {
   if (Kind.isMergeableConst() && C &&
-      getContext().getAsmInfo()->hasCOFFComdatConstants()) {
+      getContext().getAsmInfo().hasCOFFComdatConstants()) {
     // This creates comdat sections with the given symbol name, but unless
     // AsmPrinter::GetCPISymbol actually makes the symbol global, the symbol
     // will be created with a null storage class, which makes GNU binutils
@@ -2846,9 +2875,9 @@ MCSection *TargetLoweringObjectFileGOFF::getSectionForLSDA(
       SectionKind::getMetadata(), GOFF::CLASS_WSA,
       GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
                    GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
-                   GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0,
-                   GOFF::ESD_ALIGN_Fullword, 0},
+                   GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0, 0},
       static_cast<MCSectionGOFF *>(TextSection)->getParent());
+  WSA->setAlignment(Align(4)); // Fullword
   return getContext().getGOFFSection(SectionKind::getData(), Name,
                                      GOFF::PRAttr{true, GOFF::ESD_EXE_DATA,
                                                   GOFF::ESD_LT_XPLink,
@@ -2874,9 +2903,6 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
       Alignment = F->getAlign();
     else if (auto *V = dyn_cast<GlobalVariable>(GO))
       Alignment = V->getAlign();
-    GOFF::ESDAlignment Align =
-        Alignment ? static_cast<GOFF::ESDAlignment>(Log2(*Alignment))
-                  : GOFF::ESD_ALIGN_Doubleword;
     MCSectionGOFF *SD = getContext().getGOFFSection(
         SectionKind::getMetadata(), Symbol->getName(),
         GOFF::SDAttr{GOFF::ESD_TA_Unspecified, SDBindingScope});
@@ -2884,8 +2910,9 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
         SectionKind::getMetadata(), GOFF::CLASS_WSA,
         GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
                      GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
-                     GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_0, Align, 0},
+                     GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_0, 0},
         SD);
+    ED->setAlignment(Alignment.value_or(llvm::Align(8)));
     return getContext().getGOFFSection(Kind, Symbol->getName(),
                                        GOFF::PRAttr{false, GOFF::ESD_EXE_DATA,
                                                     GOFF::ESD_LT_XPLink,

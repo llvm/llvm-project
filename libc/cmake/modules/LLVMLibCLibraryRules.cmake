@@ -83,7 +83,7 @@ endfunction()
 # A rule to build a library from a collection of entrypoint objects and bundle
 # it in a single LLVM-IR bitcode file.
 # Usage:
-#     add_gpu_entrypoint_library(
+#     add_bitcode_entrypoint_library(
 #       DEPENDS <list of add_entrypoint_object targets>
 #     )
 function(add_bitcode_entrypoint_library target_name base_target_name)
@@ -116,6 +116,7 @@ function(add_bitcode_entrypoint_library target_name base_target_name)
       target_link_options(${target_name} PRIVATE "${LIBC_COMPILE_OPTIONS_DEFAULT}"
                       "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm")
   endif()
+  add_dependencies(${base_target_name} ${target_name})
 endfunction(add_bitcode_entrypoint_library)
 
 # A rule to build a library from a collection of entrypoint objects.

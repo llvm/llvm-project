@@ -51,14 +51,12 @@ Wrapper::Wrapper() noexcept : field(make()) {}
 // SPIRV-SAME: ptr addrspace(4) noundef align 8 dereferenceable_or_null(16) [[THIS:%.*]]) unnamed_addr addrspace(4) #[[ATTR0:[0-9]+]] align 2 {
 // SPIRV-NEXT:  [[ENTRY:.*:]]
 // SPIRV-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr addrspace(4), align 8
-// SPIRV-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_NONTRIVIALPTR:%.*]], align 8
 // SPIRV-NEXT:    [[THIS_ADDR_ASCAST:%.*]] = addrspacecast ptr [[THIS_ADDR]] to ptr addrspace(4)
 // SPIRV-NEXT:    store ptr addrspace(4) [[THIS]], ptr addrspace(4) [[THIS_ADDR_ASCAST]], align 8
 // SPIRV-NEXT:    [[THIS1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[THIS_ADDR_ASCAST]], align 8
 // SPIRV-NEXT:    store ptr addrspace(1) getelementptr inbounds inrange(-16, 16) ({ [4 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTV7Wrapper, i32 0, i32 0, i32 2), ptr addrspace(4) [[THIS1]], align 8
 // SPIRV-NEXT:    [[FIELD:%.*]] = getelementptr inbounds nuw [[STRUCT_WRAPPER:%.*]], ptr addrspace(4) [[THIS1]], i32 0, i32 1
-// SPIRV-NEXT:    call spir_func addrspace(4) void @_Z4makev(ptr dead_on_unwind writable sret([[STRUCT_NONTRIVIALPTR]]) align 8 [[TMP]]) #[[ATTR3:[0-9]+]]
-// SPIRV-NEXT:    call addrspace(4) void @llvm.memcpy.p4.p0.i64(ptr addrspace(4) align 8 [[FIELD]], ptr align 8 [[TMP]], i64 8, i1 false)
+// SPIRV-NEXT:    call spir_func addrspace(4) void @_Z4makev(ptr addrspace(4) dead_on_unwind writable sret([[STRUCT_NONTRIVIALPTR:%.*]]) align 8 [[FIELD]]) #[[ATTR2:[0-9]+]]
 // SPIRV-NEXT:    ret void
 //
 //
@@ -69,6 +67,6 @@ Wrapper::Wrapper() noexcept : field(make()) {}
 // SPIRV-NEXT:    [[THIS_ADDR_ASCAST:%.*]] = addrspacecast ptr [[THIS_ADDR]] to ptr addrspace(4)
 // SPIRV-NEXT:    store ptr addrspace(4) [[THIS]], ptr addrspace(4) [[THIS_ADDR_ASCAST]], align 8
 // SPIRV-NEXT:    [[THIS1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[THIS_ADDR_ASCAST]], align 8
-// SPIRV-NEXT:    call spir_func addrspace(4) void @_ZN7WrapperC2Ev(ptr addrspace(4) noundef align 8 dereferenceable_or_null(16) [[THIS1]]) #[[ATTR3]]
+// SPIRV-NEXT:    call spir_func addrspace(4) void @_ZN7WrapperC2Ev(ptr addrspace(4) noundef align 8 dereferenceable_or_null(16) [[THIS1]]) #[[ATTR2]]
 // SPIRV-NEXT:    ret void
 //

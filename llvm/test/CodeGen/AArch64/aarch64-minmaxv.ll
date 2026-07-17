@@ -604,7 +604,7 @@ entry:
 define i64 @sminv_v2i64(<2 x i64> %a) {
 ; CHECK-SD-NOSVE-LABEL: sminv_v2i64:
 ; CHECK-SD-NOSVE:       // %bb.0: // %entry
-; CHECK-SD-NOSVE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NOSVE-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NOSVE-NEXT:    cmgt d2, d1, d0
 ; CHECK-SD-NOSVE-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-SD-NOSVE-NEXT:    fmov x0, d0
@@ -643,7 +643,7 @@ define i64 @sminv_v3i64(<3 x i64> %a) {
 ; CHECK-SD-NOSVE-NEXT:    mov v2.d[1], x8
 ; CHECK-SD-NOSVE-NEXT:    cmgt v1.2d, v2.2d, v0.2d
 ; CHECK-SD-NOSVE-NEXT:    bif v0.16b, v2.16b, v1.16b
-; CHECK-SD-NOSVE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NOSVE-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NOSVE-NEXT:    cmgt d2, d1, d0
 ; CHECK-SD-NOSVE-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-SD-NOSVE-NEXT:    fmov x0, d0
@@ -690,7 +690,7 @@ define i64 @sminv_v4i64(<4 x i64> %a) {
 ; CHECK-SD-NOSVE:       // %bb.0: // %entry
 ; CHECK-SD-NOSVE-NEXT:    cmgt v2.2d, v1.2d, v0.2d
 ; CHECK-SD-NOSVE-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-SD-NOSVE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NOSVE-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NOSVE-NEXT:    cmgt d2, d1, d0
 ; CHECK-SD-NOSVE-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-SD-NOSVE-NEXT:    fmov x0, d0
@@ -996,7 +996,7 @@ entry:
 define i64 @smaxv_v2i64(<2 x i64> %a) {
 ; CHECK-SD-NOSVE-LABEL: smaxv_v2i64:
 ; CHECK-SD-NOSVE:       // %bb.0: // %entry
-; CHECK-SD-NOSVE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NOSVE-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NOSVE-NEXT:    cmgt d2, d0, d1
 ; CHECK-SD-NOSVE-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-SD-NOSVE-NEXT:    fmov x0, d0
@@ -1035,7 +1035,7 @@ define i64 @smaxv_v3i64(<3 x i64> %a) {
 ; CHECK-SD-NOSVE-NEXT:    mov v2.d[1], x8
 ; CHECK-SD-NOSVE-NEXT:    cmgt v1.2d, v0.2d, v2.2d
 ; CHECK-SD-NOSVE-NEXT:    bif v0.16b, v2.16b, v1.16b
-; CHECK-SD-NOSVE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NOSVE-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NOSVE-NEXT:    cmgt d2, d0, d1
 ; CHECK-SD-NOSVE-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-SD-NOSVE-NEXT:    fmov x0, d0
@@ -1082,7 +1082,7 @@ define i64 @smaxv_v4i64(<4 x i64> %a) {
 ; CHECK-SD-NOSVE:       // %bb.0: // %entry
 ; CHECK-SD-NOSVE-NEXT:    cmgt v2.2d, v0.2d, v1.2d
 ; CHECK-SD-NOSVE-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-SD-NOSVE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NOSVE-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NOSVE-NEXT:    cmgt d2, d0, d1
 ; CHECK-SD-NOSVE-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-SD-NOSVE-NEXT:    fmov x0, d0
@@ -1386,7 +1386,7 @@ entry:
 define i64 @uminv_v2i64(<2 x i64> %a) {
 ; CHECK-SD-NOSVE-LABEL: uminv_v2i64:
 ; CHECK-SD-NOSVE:       // %bb.0: // %entry
-; CHECK-SD-NOSVE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NOSVE-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NOSVE-NEXT:    cmhi d2, d1, d0
 ; CHECK-SD-NOSVE-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-SD-NOSVE-NEXT:    fmov x0, d0
@@ -1425,7 +1425,7 @@ define i64 @uminv_v3i64(<3 x i64> %a) {
 ; CHECK-SD-NOSVE-NEXT:    mov v2.d[1], x8
 ; CHECK-SD-NOSVE-NEXT:    cmhi v1.2d, v2.2d, v0.2d
 ; CHECK-SD-NOSVE-NEXT:    bif v0.16b, v2.16b, v1.16b
-; CHECK-SD-NOSVE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NOSVE-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NOSVE-NEXT:    cmhi d2, d1, d0
 ; CHECK-SD-NOSVE-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-SD-NOSVE-NEXT:    fmov x0, d0
@@ -1472,7 +1472,7 @@ define i64 @uminv_v4i64(<4 x i64> %a) {
 ; CHECK-SD-NOSVE:       // %bb.0: // %entry
 ; CHECK-SD-NOSVE-NEXT:    cmhi v2.2d, v1.2d, v0.2d
 ; CHECK-SD-NOSVE-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-SD-NOSVE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NOSVE-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NOSVE-NEXT:    cmhi d2, d1, d0
 ; CHECK-SD-NOSVE-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-SD-NOSVE-NEXT:    fmov x0, d0
@@ -1765,7 +1765,7 @@ entry:
 define i64 @umaxv_v2i64(<2 x i64> %a) {
 ; CHECK-SD-NOSVE-LABEL: umaxv_v2i64:
 ; CHECK-SD-NOSVE:       // %bb.0: // %entry
-; CHECK-SD-NOSVE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NOSVE-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NOSVE-NEXT:    cmhi d2, d0, d1
 ; CHECK-SD-NOSVE-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-SD-NOSVE-NEXT:    fmov x0, d0
@@ -1803,7 +1803,7 @@ define i64 @umaxv_v3i64(<3 x i64> %a) {
 ; CHECK-SD-NOSVE-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NOSVE-NEXT:    mov v3.d[1], xzr
 ; CHECK-SD-NOSVE-NEXT:    cmhi v3.2d, v0.2d, v3.2d
-; CHECK-SD-NOSVE-NEXT:    ext v4.16b, v3.16b, v3.16b, #8
+; CHECK-SD-NOSVE-NEXT:    mov d4, v3.d[1]
 ; CHECK-SD-NOSVE-NEXT:    bif v0.16b, v2.16b, v3.16b
 ; CHECK-SD-NOSVE-NEXT:    and v1.8b, v1.8b, v4.8b
 ; CHECK-SD-NOSVE-NEXT:    cmhi d2, d0, d1
@@ -1850,7 +1850,7 @@ define i64 @umaxv_v4i64(<4 x i64> %a) {
 ; CHECK-SD-NOSVE:       // %bb.0: // %entry
 ; CHECK-SD-NOSVE-NEXT:    cmhi v2.2d, v0.2d, v1.2d
 ; CHECK-SD-NOSVE-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-SD-NOSVE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NOSVE-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NOSVE-NEXT:    cmhi d2, d0, d1
 ; CHECK-SD-NOSVE-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-SD-NOSVE-NEXT:    fmov x0, d0

@@ -25,6 +25,7 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
@@ -45,6 +46,7 @@
 #include "llvm/Plugins/PassPlugin.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/Support/BuryPointer.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/IOSandbox.h"
@@ -188,6 +190,15 @@ class EmitAssemblyHelper {
   void RunCodegenPipeline(BackendAction Action,
                           std::unique_ptr<raw_pwrite_stream> &OS,
                           std::unique_ptr<llvm::ToolOutputFile> &DwoOS);
+  void RunCodegenPipelineLegacy(BackendAction Action,
+                                std::unique_ptr<raw_pwrite_stream> &OS,
+                                std::unique_ptr<llvm::ToolOutputFile> &DwoOS,
+                                CodeGenFileType CGFT);
+  void RunCodegenPipelineNewPM(BackendAction Action,
+                               std::unique_ptr<raw_pwrite_stream> &OS,
+                               std::unique_ptr<llvm::ToolOutputFile> &DwoOS,
+                               CodeGenFileType CGFT);
+  void TimeCodegenPasses(llvm::function_ref<void()> RunPasses);
 
   /// Check whether we should emit a module summary for regular LTO.
   /// The module summary should be emitted by default for regular LTO
@@ -323,7 +334,8 @@ static bool actionRequiresCodeGen(BackendAction Action) {
 }
 
 static std::string flattenClangCommandLine(ArrayRef<std::string> Args,
-                                           StringRef MainFilename) {
+                                           StringRef MainFilename,
+                                           ArrayRef<StringRef> InputFiles) {
   if (Args.empty())
     return std::string{};
 
@@ -342,7 +354,15 @@ static std::string flattenClangCommandLine(ArrayRef<std::string> Args,
       i++; // Skip this argument and next one.
       continue;
     }
-    if (Arg.starts_with("-object-file-name") || Arg == MainFilename)
+    if (Arg.starts_with("-object-file-name"))
+      continue;
+    // Strip the source positional, matching either MainFilename (the
+    // -main-file-name basename) or one of the resolved frontend input paths
+    // (which is what the cc1 positional looks like for an absolute driver
+    // input). Avoid a generic basename match: it would also strip values of
+    // args like `-include <path>` whose trailing component happens to equal
+    // the source basename.
+    if (Arg == MainFilename || llvm::is_contained(InputFiles, Arg))
       continue;
     // Skip fmessage-length for reproducibility.
     if (Arg.starts_with("-fmessage-length"))
@@ -519,8 +539,15 @@ static bool initTargetOptions(const CompilerInstance &CI,
       Options.MCOptions.IASSearchPaths.push_back(
           Entry.IgnoreSysRoot ? Entry.Path : HSOpts.Sysroot + Entry.Path);
   Options.MCOptions.Argv0 = CodeGenOpts.Argv0 ? CodeGenOpts.Argv0 : "";
+  // Pass the resolved frontend inputs so flattenClangCommandLine can strip
+  // the cc1 source positional even when the driver received an absolute path
+  // (which won't match CodeGenOpts.MainFileName, that's just the basename).
+  SmallVector<StringRef, 1> InputFiles;
+  for (const auto &Input : CI.getFrontendOpts().Inputs)
+    if (Input.isFile())
+      InputFiles.push_back(Input.getFile());
   Options.MCOptions.CommandlineArgs = flattenClangCommandLine(
-      CodeGenOpts.CommandLineArgs, CodeGenOpts.MainFileName);
+      CodeGenOpts.CommandLineArgs, CodeGenOpts.MainFileName, InputFiles);
   Options.MCOptions.AsSecureLogFile = CodeGenOpts.AsSecureLogFile;
   Options.MCOptions.PPCUseFullRegisterNames =
       CodeGenOpts.PPCUseFullRegisterNames;
@@ -1100,7 +1127,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     if (CodeGenOpts.FatLTO) {
       MPM.addPass(PB.buildFatLTODefaultPipeline(
           Level, PrepareForThinLTO,
-          PrepareForThinLTO || shouldEmitRegularLTOSummary()));
+          PrepareForThinLTO || shouldEmitRegularLTOSummary(),
+          CodeGenOpts.VerifyModule));
     } else if (PrepareForThinLTO) {
       MPM.addPass(PB.buildThinLTOPreLinkDefaultPipeline(Level));
     } else if (PrepareForLTO) {
@@ -1214,6 +1242,22 @@ void EmitAssemblyHelper::RunCodegenPipeline(
       return;
   }
 
+  if (!CodeGenOpts.SplitDwarfOutput.empty()) {
+    DwoOS = openOutputFile(CodeGenOpts.SplitDwarfOutput);
+    if (!DwoOS)
+      return;
+  }
+
+  if (CodeGenOpts.EnableNewPMCodeGen) {
+    RunCodegenPipelineNewPM(Action, OS, DwoOS, CGFT);
+  } else {
+    RunCodegenPipelineLegacy(Action, OS, DwoOS, CGFT);
+  }
+}
+
+void EmitAssemblyHelper::RunCodegenPipelineLegacy(
+    BackendAction Action, std::unique_ptr<raw_pwrite_stream> &OS,
+    std::unique_ptr<llvm::ToolOutputFile> &DwoOS, CodeGenFileType CGFT) {
   // We still use the legacy PM to run the codegen pipeline since the new PM
   // does not work with the codegen pipeline.
   // FIXME: make the new PM work with the codegen pipeline.
@@ -1231,12 +1275,6 @@ void EmitAssemblyHelper::RunCodegenPipeline(
       TargetTriple, Options.ExceptionModel, Options.FloatABIType,
       Options.EABIVersion, Options.MCOptions.ABIName, Options.VecLib));
 
-  if (!CodeGenOpts.SplitDwarfOutput.empty()) {
-    DwoOS = openOutputFile(CodeGenOpts.SplitDwarfOutput);
-    if (!DwoOS)
-      return;
-  }
-
   if (TM->addPassesToEmitFile(CodeGenPasses, *OS,
                               DwoOS ? &DwoOS->os() : nullptr, CGFT,
                               /*DisableVerify=*/!CodeGenOpts.VerifyModule)) {
@@ -1251,18 +1289,58 @@ void EmitAssemblyHelper::RunCodegenPipeline(
     return;
   }
 
-  {
-    PrettyStackTraceString CrashInfo("Code generation");
-    llvm::TimeTraceScope TimeScope("CodeGenPasses");
-    Timer timer;
-    if (CI.getCodeGenOpts().TimePasses) {
-      timer.init("codegen", "Machine code generation", CI.getTimerGroup());
-      CI.getFrontendTimer().yieldTo(timer);
-    }
-    CodeGenPasses.run(*TheModule);
-    if (CI.getCodeGenOpts().TimePasses)
-      timer.yieldTo(CI.getFrontendTimer());
+  TimeCodegenPasses([&] { CodeGenPasses.run(*TheModule); });
+}
+
+void EmitAssemblyHelper::RunCodegenPipelineNewPM(
+    BackendAction Action, std::unique_ptr<raw_pwrite_stream> &OS,
+    std::unique_ptr<llvm::ToolOutputFile> &DwoOS, CodeGenFileType CGFT) {
+  ModulePassManager MPM;
+  MachineFunctionAnalysisManager MFAM;
+  LoopAnalysisManager LAM;
+  FunctionAnalysisManager FAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+  CGPassBuilderOption Opt = getCGPassBuilderOption();
+  Opt.DisableVerify = !CodeGenOpts.VerifyModule;
+  MachineModuleInfo MMI(TM.get());
+  PassInstrumentationCallbacks PIC;
+  PipelineTuningOptions PTOptions;
+  TargetMachine *TMPointer = TM.get();
+  PassBuilder PB(TMPointer, PTOptions, std::nullopt, &PIC,
+                 CI.getVirtualFileSystemPtr());
+  PB.registerModuleAnalyses(MAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
+  PB.registerMachineFunctionAnalyses(MFAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
+
+  MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
+
+  Error BuildPipelineError =
+      TM->buildCodeGenPipeline(MPM, MAM, *OS, DwoOS ? &DwoOS->os() : nullptr,
+                               CGFT, Opt, MMI.getContext(), &PIC);
+  if (BuildPipelineError) {
+    Diags.Report(diag::err_fe_unable_to_interface_with_target);
+    return;
   }
+
+  TimeCodegenPasses([&] { MPM.run(*TheModule, MAM); });
+}
+
+void EmitAssemblyHelper::TimeCodegenPasses(
+    llvm::function_ref<void()> RunPasses) {
+  PrettyStackTraceString CrashInfo("Code generation");
+  llvm::TimeTraceScope TimeScope("CodeGenPasses");
+  Timer timer;
+  if (CI.getCodeGenOpts().TimePasses) {
+    timer.init("codegen", "Machine code generation", CI.getTimerGroup());
+    CI.getFrontendTimer().yieldTo(timer);
+  }
+  RunPasses();
+  if (CI.getCodeGenOpts().TimePasses)
+    timer.yieldTo(CI.getFrontendTimer());
 }
 
 void EmitAssemblyHelper::emitAssembly(BackendAction Action,
@@ -1395,12 +1473,14 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
 
   // FIXME: Both ExecuteAction and thinBackend set up optimization remarks for
   // the same context.
+  // FIXME: This does not yet set the list of bitcode libfuncs that it isn't
+  // safe to call. This precludes bitcode libc in distributed ThinLTO.
   finalizeLLVMOptimizationRemarks(M->getContext());
-  if (Error E =
-          thinBackend(Conf, -1, AddStream, *M, *CombinedIndex, ImportList,
-                      ModuleToDefinedGVSummaries[M->getModuleIdentifier()],
-                      /*ModuleMap=*/nullptr, Conf.CodeGenOnly,
-                      /*IRAddStream=*/nullptr, CGOpts.CmdArgs)) {
+  if (Error E = thinBackend(
+          Conf, -1, AddStream, *M, *CombinedIndex, ImportList,
+          ModuleToDefinedGVSummaries[M->getModuleIdentifier()],
+          /*ModuleMap=*/nullptr, Conf.CodeGenOnly, /*BitcodeLibFuncs=*/{},
+          /*IRAddStream=*/nullptr, CGOpts.CmdArgs)) {
     handleAllErrors(std::move(E), [&](ErrorInfoBase &EIB) {
       errs() << "Error running ThinLTO backend: " << EIB.message() << '\n';
     });

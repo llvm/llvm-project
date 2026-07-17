@@ -622,9 +622,10 @@ Alias  b(42);
 namespace GH190517 {
 template <typename T> struct S1 {};
 template <typename T> using S2 = S1<char>;
-template <typename T> using S3 = S2<T>; // expected-note {{candidate function template not viable}} \
+template <typename T> using S3 = S2<T>; // expected-note {{candidate function not viable}} \
                                         // expected-note {{implicit deduction guide declared}} \
-                                        // expected-note {{candidate function template not viable}} \
-                                        // expected-note {{implicit deduction guide declared}}
+                                        // expected-note {{candidate function not viable}} \
+                                        // expected-note {{implicit deduction guide declared}} \
+                                        // expected-note {{cannot deduce template arguments for 'GH190517::S3' from 'GH190517::S1<char>'}}
 S3 foo(42); // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'S3'}}
 }

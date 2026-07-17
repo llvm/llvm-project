@@ -100,15 +100,15 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr explicit join_view(_View __base) : __base_(std::move(__base)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
     requires copy_constructible<_View>
   {
     return __base_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() {
     if constexpr (forward_range<_View>) {
       constexpr bool __use_const = __simple_view<_View> && is_reference_v<range_reference_t<_View>>;
       return __iterator<__use_const>{*this, ranges::begin(__base_)};
@@ -119,14 +119,14 @@ public:
   }
 
   template <class _V2 = _View>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
     requires forward_range<const _V2> && is_reference_v<range_reference_t<const _V2>> &&
              input_range<range_reference_t<const _V2>>
   {
     return __iterator<true>{*this, ranges::begin(__base_)};
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() {
     if constexpr (forward_range<_View> && is_reference_v<_InnerRange> && forward_range<_InnerRange> &&
                   common_range<_View> && common_range<_InnerRange>)
       return __iterator<__simple_view<_View>>{*this, ranges::end(__base_)};
@@ -135,7 +135,7 @@ public:
   }
 
   template <class _V2 = _View>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
     requires forward_range<const _V2> && is_reference_v<range_reference_t<const _V2>> &&
              input_range<range_reference_t<const _V2>>
   {
@@ -276,7 +276,7 @@ public:
     requires _Const && convertible_to<iterator_t<_View>, _Outer> && convertible_to<iterator_t<_InnerRange>, _Inner>
       : __outer_(std::move(__i.__outer_)), __inner_(std::move(__i.__inner_)), __parent_(__i.__parent_) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const { return **__inner_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const { return **__inner_; }
 
   _LIBCPP_HIDE_FROM_ABI constexpr _Inner operator->() const
     requires __has_arrow<_Inner> && copyable<_Inner>
@@ -339,7 +339,7 @@ public:
     return __x.__outer_ == __y.__outer_ && __x.__inner_ == __y.__inner_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr decltype(auto)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr decltype(auto)
   iter_move(const __iterator& __i) noexcept(noexcept(ranges::iter_move(*__i.__inner_))) {
     return ranges::iter_move(*__i.__inner_);
   }

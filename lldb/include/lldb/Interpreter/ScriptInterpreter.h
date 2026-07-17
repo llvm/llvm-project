@@ -248,22 +248,6 @@ public:
     return StructuredData::GenericSP();
   }
 
-  virtual StructuredData::GenericSP
-  CreateFrameRecognizer(const char *class_name) {
-    return StructuredData::GenericSP();
-  }
-
-  virtual lldb::ValueObjectListSP GetRecognizedArguments(
-      const StructuredData::ObjectSP &implementor,
-      lldb::StackFrameSP frame_sp) {
-    return lldb::ValueObjectListSP();
-  }
-
-  virtual bool ShouldHide(const StructuredData::ObjectSP &implementor,
-                          lldb::StackFrameSP frame_sp) {
-    return false;
-  }
-
   virtual StructuredData::ObjectSP
   LoadPluginModule(const FileSpec &file_spec, lldb_private::Status &error) {
     return StructuredData::ObjectSP();
@@ -526,6 +510,11 @@ public:
 
   static lldb::ScriptLanguage StringToLanguage(const llvm::StringRef &string);
 
+  static llvm::StringLiteral
+  ExtensionToString(lldb::ScriptedExtension extension);
+
+  static lldb::ScriptedExtension StringToExtension(llvm::StringRef string);
+
   lldb::ScriptLanguage GetLanguage() { return m_script_lang; }
 
   virtual lldb::ScriptedProcessInterfaceUP CreateScriptedProcessInterface() {
@@ -558,12 +547,17 @@ public:
     return {};
   }
 
-  virtual lldb::ScriptedStopHookInterfaceSP CreateScriptedStopHookInterface() {
+  virtual lldb::ScriptedHookInterfaceSP CreateScriptedHookInterface() {
     return {};
   }
 
   virtual lldb::ScriptedBreakpointInterfaceSP
   CreateScriptedBreakpointInterface() {
+    return {};
+  }
+
+  virtual lldb::ScriptedStackFrameRecognizerInterfaceSP
+  CreateScriptedStackFrameRecognizerInterface() {
     return {};
   }
 
@@ -656,6 +650,8 @@ public:
 
   lldb::ValueObjectSP
   GetOpaqueTypeFromSBValue(const lldb::SBValue &value) const;
+
+  lldb::TargetSP GetOpaqueTypeFromSBTarget(const lldb::SBTarget &target) const;
 
 protected:
   Debugger &m_debugger;

@@ -57,6 +57,19 @@
 
 namespace llvm {
 
+namespace detail {
+template <typename DerivedT> struct InfoMixin {
+  /// Gets the name of the pass we are mixed into.
+  static StringRef name() {
+    static_assert(std::is_base_of<InfoMixin, DerivedT>::value,
+                  "Must pass the derived type as the template argument!");
+    StringRef Name = getTypeName<DerivedT>();
+    Name.consume_front("llvm::");
+    return Name;
+  }
+};
+} // namespace detail
+
 class Function;
 class Module;
 
@@ -67,22 +80,34 @@ template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
 /// passes.
 ///
 /// This provides some boilerplate for types that are passes.
-template <typename DerivedT> struct PassInfoMixin {
-  /// Gets the name of the pass we are mixed into.
-  static StringRef name() {
-    static_assert(std::is_base_of<PassInfoMixin, DerivedT>::value,
-                  "Must pass the derived type as the template argument!");
-    StringRef Name = getTypeName<DerivedT>();
-    Name.consume_front("llvm::");
-    return Name;
-  }
-
+///
+/// Actual passes should inherit from RequiredPassInfoMixin or
+/// OptionalPassInfoMixin.
+///
+/// TODO: move to a detail namespace once we've branched for LLVM 23.
+template <typename DerivedT>
+struct PassInfoMixin : detail::InfoMixin<DerivedT> {
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {
     StringRef ClassName = DerivedT::name();
     auto PassName = MapClassName2PassName(ClassName);
     OS << PassName;
   }
+
+  // TODO: remove once out of tree users are updated.
+  static bool isRequired() { return false; }
+};
+
+/// A CRTP mix-in for passes that should not be skipped.
+template <typename DerivedT>
+struct RequiredPassInfoMixin : PassInfoMixin<DerivedT> {
+  static bool isRequired() { return true; }
+};
+
+/// A CRTP mix-in for passes that can be skipped.
+template <typename DerivedT>
+struct OptionalPassInfoMixin : PassInfoMixin<DerivedT> {
+  static bool isRequired() { return false; }
 };
 
 /// A CRTP mix-in that provides informational APIs needed for analysis passes.
@@ -90,7 +115,7 @@ template <typename DerivedT> struct PassInfoMixin {
 /// This provides some boilerplate for types that are analysis passes. It
 /// automatically mixes in \c PassInfoMixin.
 template <typename DerivedT>
-struct AnalysisInfoMixin : PassInfoMixin<DerivedT> {
+struct AnalysisInfoMixin : detail::InfoMixin<DerivedT> {
   /// Returns an opaque, unique ID for this analysis type.
   ///
   /// This ID is a pointer type that is guaranteed to be 8-byte aligned and thus
@@ -159,7 +184,7 @@ getAnalysisResult(AnalysisManager<IRUnitT, AnalysisArgTs...> &AM, IRUnitT &IR,
 template <typename IRUnitT,
           typename AnalysisManagerT = AnalysisManager<IRUnitT>,
           typename... ExtraArgTs>
-class PassManager : public PassInfoMixin<
+class PassManager : public RequiredPassInfoMixin<
                         PassManager<IRUnitT, AnalysisManagerT, ExtraArgTs...>> {
 public:
   /// Construct a pass manager.
@@ -195,10 +220,7 @@ public:
   addPass(PassT &&Pass) {
     using PassModelT =
         detail::PassModel<IRUnitT, PassT, AnalysisManagerT, ExtraArgTs...>;
-    // Do not use make_unique or emplace_back, they cause too many template
-    // instantiations, causing terrible compile times.
-    Passes.push_back(std::unique_ptr<PassConceptT>(
-        new PassModelT(std::forward<PassT>(Pass))));
+    Passes.push_back(PassModelT::create(std::move(Pass)));
   }
 
   /// When adding a pass manager pass that has the same type as this pass
@@ -216,13 +238,11 @@ public:
   /// Returns if the pass manager contains any passes.
   bool isEmpty() const { return Passes.empty(); }
 
-  static bool isRequired() { return true; }
-
 protected:
   using PassConceptT =
       detail::PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...>;
 
-  std::vector<std::unique_ptr<PassConceptT>> Passes;
+  std::vector<typename PassConceptT::unique_ptr> Passes;
 };
 
 template <typename IRUnitT>
@@ -848,11 +868,11 @@ using ModuleAnalysisManagerFunctionProxy =
 /// analyses are not invalidated while the function passes are running, so they
 /// may be stale.  Function analyses will not be stale.
 class ModuleToFunctionPassAdaptor
-    : public PassInfoMixin<ModuleToFunctionPassAdaptor> {
+    : public RequiredPassInfoMixin<ModuleToFunctionPassAdaptor> {
 public:
   using PassConceptT = detail::PassConcept<Function, FunctionAnalysisManager>;
 
-  explicit ModuleToFunctionPassAdaptor(std::unique_ptr<PassConceptT> Pass,
+  explicit ModuleToFunctionPassAdaptor(PassConceptT::unique_ptr Pass,
                                        bool EagerlyInvalidate)
       : Pass(std::move(Pass)), EagerlyInvalidate(EagerlyInvalidate) {}
 
@@ -862,10 +882,8 @@ public:
   printPipeline(raw_ostream &OS,
                 function_ref<StringRef(StringRef)> MapClassName2PassName);
 
-  static bool isRequired() { return true; }
-
 private:
-  std::unique_ptr<PassConceptT> Pass;
+  PassConceptT::unique_ptr Pass;
   bool EagerlyInvalidate;
 };
 
@@ -877,12 +895,8 @@ createModuleToFunctionPassAdaptor(FunctionPassT &&Pass,
                                   bool EagerlyInvalidate = false) {
   using PassModelT =
       detail::PassModel<Function, FunctionPassT, FunctionAnalysisManager>;
-  // Do not use make_unique, it causes too many template instantiations,
-  // causing terrible compile times.
-  return ModuleToFunctionPassAdaptor(
-      std::unique_ptr<ModuleToFunctionPassAdaptor::PassConceptT>(
-          new PassModelT(std::forward<FunctionPassT>(Pass))),
-      EagerlyInvalidate);
+  return ModuleToFunctionPassAdaptor(PassModelT::create(std::move(Pass)),
+                                     EagerlyInvalidate);
 }
 
 /// A utility pass template to force an analysis result to be available.
@@ -898,8 +912,8 @@ template <typename AnalysisT, typename IRUnitT,
           typename AnalysisManagerT = AnalysisManager<IRUnitT>,
           typename... ExtraArgTs>
 struct RequireAnalysisPass
-    : PassInfoMixin<RequireAnalysisPass<AnalysisT, IRUnitT, AnalysisManagerT,
-                                        ExtraArgTs...>> {
+    : RequiredPassInfoMixin<RequireAnalysisPass<
+          AnalysisT, IRUnitT, AnalysisManagerT, ExtraArgTs...>> {
   /// Run this pass over some unit of IR.
   ///
   /// This pass can be run over any unit of IR and use any analysis manager
@@ -919,14 +933,13 @@ struct RequireAnalysisPass
     auto PassName = MapClassName2PassName(ClassName);
     OS << "require<" << PassName << '>';
   }
-  static bool isRequired() { return true; }
 };
 
 /// A no-op pass template which simply forces a specific analysis result
 /// to be invalidated.
 template <typename AnalysisT>
 struct InvalidateAnalysisPass
-    : PassInfoMixin<InvalidateAnalysisPass<AnalysisT>> {
+    : RequiredPassInfoMixin<InvalidateAnalysisPass<AnalysisT>> {
   /// Run this pass over some unit of IR.
   ///
   /// This pass can be run over any unit of IR and use any analysis manager,
@@ -951,7 +964,8 @@ struct InvalidateAnalysisPass
 ///
 /// Because this preserves no analyses, any analysis passes queried after this
 /// pass runs will recompute fresh results.
-struct InvalidateAllAnalysesPass : PassInfoMixin<InvalidateAllAnalysesPass> {
+struct InvalidateAllAnalysesPass
+    : OptionalPassInfoMixin<InvalidateAllAnalysesPass> {
   /// Run this pass over some unit of IR.
   template <typename IRUnitT, typename AnalysisManagerT, typename... ExtraArgTs>
   PreservedAnalyses run(IRUnitT &, AnalysisManagerT &, ExtraArgTs &&...) {

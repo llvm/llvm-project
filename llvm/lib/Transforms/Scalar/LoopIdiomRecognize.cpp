@@ -32,6 +32,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -166,6 +167,11 @@ static cl::opt<bool> ForceMemsetPatternIntrinsic(
     cl::desc("Use memset.pattern intrinsic whenever possible"), cl::init(false),
     cl::Hidden);
 
+static cl::opt<bool> ForceCRCClmul(
+    "loop-idiom-force-crc-clmul",
+    cl::desc("Use the clmul-based CRC loop optimization whenever possible"),
+    cl::init(false), cl::Hidden);
+
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 
 } // namespace llvm
@@ -259,6 +265,9 @@ private:
   bool avoidLIRForMultiBlockLoop(bool IsMemset = false,
                                  bool IsLoopMemset = false);
   bool optimizeCRCLoop(const PolynomialInfo &Info);
+  void optimizeCRCLoopUsingClmul(const PolynomialInfo &Info,
+                                 IntegerType *ClmulTy);
+  void optimizeCRCLoopUsingTableLookup(const PolynomialInfo &Info);
 
   /// @}
   /// \name Noncountable Loop Idiom Handling
@@ -397,11 +406,10 @@ bool LoopIdiomRecognize::runOnCountableLoop() {
     MadeChange |= runOnLoopBlock(BB, BECount, ExitBlocks);
   }
 
-  // Optimize a CRC loop if HashRecognize found one, provided we're not
-  // optimizing for size.
-  if (!DisableLIRP::HashRecognize && !ApplyCodeSizeHeuristics)
+  // Attempt to optimize a CRC loop if one is detected by HashRecognize.
+  if (!DisableLIRP::HashRecognize)
     if (auto Res = HashRecognize(*CurLoop, *SE).getResult())
-      optimizeCRCLoop(*Res);
+      MadeChange |= optimizeCRCLoop(*Res);
 
   return MadeChange;
 }
@@ -979,14 +987,29 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
                                  /*IsLoopMemset=*/true);
 }
 
+/// Return true if \p I is a (simple, loop-invariant-valued) store of the same
+/// bytewise value \p SplatByte.
+static bool isSameByteValueStore(Instruction &I, Value *SplatByte, Loop *L,
+                                 const DataLayout &DL) {
+  assert(SplatByte && "expected a bytewise splat value to match against");
+  auto *SI = dyn_cast<StoreInst>(&I);
+  if (!SI || !SI->isSimple() || !L->isLoopInvariant(SI->getValueOperand()))
+    return false;
+  return isBytewiseValue(SI->getValueOperand(), DL) == SplatByte;
+}
+
 /// mayLoopAccessLocation - Return true if the specified loop might access the
 /// specified pointer location, which is a loop-strided access.  The 'Access'
 /// argument specifies what the verboten forms of access are (read or write).
-static bool
-mayLoopAccessLocation(Value *Ptr, ModRefInfo Access, Loop *L,
-                      const SCEV *BECount, const SCEV *StoreSizeSCEV,
-                      AliasAnalysis &AA,
-                      SmallPtrSetImpl<Instruction *> &IgnoredInsts) {
+///
+/// When the access size cannot be bounded, fall back to allow stores writing
+/// the same byte value \p SplatByte.
+static bool mayLoopAccessLocation(Value *Ptr, ModRefInfo Access, Loop *L,
+                                  const SCEV *BECount,
+                                  const SCEV *StoreSizeSCEV, AliasAnalysis &AA,
+                                  SmallPtrSetImpl<Instruction *> &IgnoredInsts,
+                                  Value *SplatByte = nullptr,
+                                  const DataLayout *DL = nullptr) {
   // Get the location that may be stored across the loop.  Since the access is
   // strided positively through memory, we say that the modified location starts
   // at the pointer and has infinite size.
@@ -1010,11 +1033,18 @@ mayLoopAccessLocation(Value *Ptr, ModRefInfo Access, Loop *L,
   // which will then no-alias a store to &A[100].
   MemoryLocation StoreLoc(Ptr, AccessSize);
 
+  // Only consult the same-byte-value fallback when the access size stayed
+  // infinite (non-constant trip count); with a precise size AA is accurate.
+  bool TrySameByteValue = !AccessSize.isPrecise() && SplatByte && DL;
+
   for (BasicBlock *B : L->blocks())
     for (Instruction &I : *B)
       if (!IgnoredInsts.contains(&I) &&
-          isModOrRefSet(AA.getModRefInfo(&I, StoreLoc) & Access))
+          isModOrRefSet(AA.getModRefInfo(&I, StoreLoc) & Access)) {
+        if (TrySameByteValue && isSameByteValueStore(I, SplatByte, L, *DL))
+          continue;
         return true;
+      }
   return false;
 }
 
@@ -1098,15 +1128,15 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   // the return value will read this comment, and leave them alone.
   Changed = true;
 
+  Value *SplatValue = isBytewiseValue(StoredVal, *DL);
   if (mayLoopAccessLocation(BasePtr, ModRefInfo::ModRef, CurLoop, BECount,
-                            StoreSizeSCEV, *AA, Stores))
+                            StoreSizeSCEV, *AA, Stores, SplatValue, DL))
     return Changed;
 
   if (avoidLIRForMultiBlockLoop(/*IsMemset=*/true, IsLoopMemset))
     return Changed;
 
   // Okay, everything looks good, insert the memset.
-  Value *SplatValue = isBytewiseValue(StoredVal, *DL);
   Constant *PatternValue = nullptr;
   if (!SplatValue)
     PatternValue = getMemSetPatternValue(StoredVal, DL);
@@ -1174,7 +1204,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
              isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16)) {
     assert(isa<SCEVConstant>(StoreSizeSCEV) && "Expected constant store size");
 
-    NewCall = Builder.CreateIntrinsic(
+    NewCall = Builder.CreateIntrinsicWithoutFolding(
         Intrinsic::experimental_memset_pattern,
         {DestInt8PtrTy, PatternValue->getType(), IntIdxTy},
         {BasePtr, PatternValue, MemsetArg,
@@ -1560,19 +1590,174 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
   if (TT.getArch() == Triple::hexagon)
     return false;
 
+  // In the clmul optimization, the first clmul uses 2*TC bits, and the second
+  // clmul uses CRCBW+TC bits. For simplicity, have both clmuls operate on the
+  // same bit width.
+  unsigned CRCBW = Info.LHS->getType()->getIntegerBitWidth();
+  unsigned ClmulBW = std::max(2 * Info.TripCount, CRCBW + Info.TripCount);
+  auto *ClmulTy = IntegerType::get(Info.LHS->getContext(), ClmulBW);
+
+  // The force-crc-clmul flag should cause the clmul optimization to run
+  // unconditionally.
+  if (ForceCRCClmul) {
+    optimizeCRCLoopUsingClmul(Info, ClmulTy);
+    return true;
+  }
+
+  // FIXME: Once intrinsic cost modeling is more reliable for clmul, that should
+  // be used to determine which optimization to use. Until then, only apply the
+  // clmul optimization when optimizing for size, since a lookup table is not
+  // viable in that case.
+  if (!ApplyCodeSizeHeuristics && Info.TripCount % 8 == 0) {
+    optimizeCRCLoopUsingTableLookup(Info);
+    return true;
+  }
+
+  // The clmul optimization should only be applied if clmul with the required
+  // bit width is a fast operation on the target.
+  // TODO: If clmul exists on the target but not for the required width, it
+  // might be possible to split into multiple iterations of reduction.
+  if (TTI->haveFastClmul(ClmulTy)) {
+    optimizeCRCLoopUsingClmul(Info, ClmulTy);
+    return true;
+  }
+
+  return false;
+}
+
+// The algorithm used in this optimization is a Polynomial (GF(2)) Barrett
+// Reduction based on Intel's "Fast CRC Computation for Generic Polynomials
+// Using PCLMULQDQ Instruction" white paper (December 2009).
+void LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info,
+                                                   IntegerType *ClmulTy) {
+  Type *CRCTy = Info.LHS->getType();
+  LLVMContext &Ctx = CRCTy->getContext();
+  unsigned CRCBW = CRCTy->getIntegerBitWidth();
+  // The loop's TripCount determines how many bits of the data are processed,
+  // regardless of whether the actual data bit width matches (if auxiliary data
+  // is even used at all).
+  unsigned TC = Info.TripCount;
+  unsigned ClmulBW = ClmulTy->getBitWidth();
+
+  // First, generate the constants required for GF(2) Barrett reduction.
+  auto [Mu, FullGenPoly] = HashRecognize::genBarrettConstants(Info);
+  Value *MuConst = ConstantInt::get(Ctx, Mu.zext(ClmulBW));
+  Value *GenPolyConst = ConstantInt::get(Ctx, FullGenPoly.zext(ClmulBW));
+
+  IRBuilder<> Builder(CurLoop->getLoopPreheader()->getTerminator());
+
+  auto LoTCBits = [TC, &Builder, &Ctx](Value *Op, const Twine &Name) {
+    unsigned OpBW = Op->getType()->getIntegerBitWidth();
+    assert(OpBW >= TC && "Bit width should be at least TripCount");
+    auto *Mask = ConstantInt::get(Ctx, APInt::getLowBitsSet(OpBW, TC));
+    return Builder.CreateAnd(Op, Mask, Name);
+  };
+
+  Value *LHS = Builder.CreateZExt(Info.LHS, ClmulTy, "crc.cast");
+
+  // Based on the Intel white paper, in our case, we have
+  // R(x) = (LHS*x^TC) xor (LHSAux ? getTCBits(LHSAux)*x^CRCBW : 0)
+  // since the CRC loop multiplies LHS by x each iteration, and the x^CRCBW term
+  // of getTCBits(LHSAux) is XORed in for the significant bit check.
+  // Rather than compute the full R(x), we can split it in two: a quotient for
+  // step 1 (floor(R(x)/x^CRCBW)) and a remainder for step 3 (R(x) mod x^CRCBW).
+  //
+  // ClmulMuInput is an evolving variable that will eventually become the part
+  // used in step 1, which can be simplified to
+  // (LHS*x^(TC-CRCBW)) xor (LHSAux ? getTCBits(LHSAux) : 0).
+  // Thanks to restrictions imposed by HashRecognize for big-endian CRC loops,
+  // getTCBits(LHSAux) = LHSAux*x^(TC-CRCBW), so this can be further simplified
+  // to (LHS xor (LHSAux ? LHSAux : 0))*x^(TC-CRCBW).
+  Value *ClmulMuInput = LHS;
+
+  // If auxiliary data is present, XOR it in with the CRC.
+  if (Value *Data = Info.LHSAux) {
+    // This is usually a zext, but DataBW may exceed ClmulBW if both CRCBW and
+    // TC are small enough.
+    Data = Builder.CreateZExtOrTrunc(Data, ClmulTy, "data.cast");
+
+    ClmulMuInput = Builder.CreateXor(ClmulMuInput, Data, "xor.crc.data");
+  }
+
+  // Align the current CRC with TripCount (multiply or divide by x^(TC-CRCBW)).
+  if (Info.IsBigEndian && TC != CRCBW) {
+    ClmulMuInput =
+        TC > CRCBW
+            ? Builder.CreateShl(ClmulMuInput, TC - CRCBW, "crc.align.tc")
+            : Builder.CreateLShr(ClmulMuInput, CRCBW - TC, "crc.align.tc");
+  }
+
+  // Zero out any bits above (TC-1) for calculation since the original loop
+  // doesn't use them in the significant bit checks.
+  ClmulMuInput = LoTCBits(ClmulMuInput, "crc.tcbits");
+
+  // Step 1: T1(x) = floor(R(x)/x^CRCBW) * mu
+  // Input is TC bits and mu is TC+1 bits, so result will be 2*TC bits.
+  Value *ClmulMu = Builder.CreateBinaryIntrinsic(
+      Intrinsic::clmul, ClmulMuInput, MuConst, /*FMFSource=*/{}, "clmul.mu");
+
+  // Calculate floor(T1(x)/x^TC) for step 2.
+  Value *ClmulGPInput = Info.IsBigEndian
+                            ? Builder.CreateLShr(ClmulMu, TC, "quot.lshr")
+                            : LoTCBits(ClmulMu, "quot.mask");
+
+  // Step 2: T2(x) = floor(T1(x)/x^TC) * P(x)
+  // Input is TC bits and P(x) is CRCBW+1 bits, so result will be CRCBW+TC bits.
+  Value *ClmulGP = Builder.CreateBinaryIntrinsic(Intrinsic::clmul, ClmulGPInput,
+                                                 GenPolyConst,
+                                                 /*FMFSource=*/{}, "clmul.gp");
+
+  // Calculate the least significant part of R(x) for step 3 as specified above.
+  // R(x) mod x^CRCBW = LHS*x^TC mod x^CRCBW, though the (mod x^CRCBW) is
+  // handled later on when truncating back to CRCBW for ComputedValue.
+  Value *CRCAlignClmul =
+      Info.IsBigEndian ? Builder.CreateShl(LHS, TC, "crc.shl") : LHS;
+
+  // Step 3: C(x) = (R(x) xor T2(x)) mod x^CRCBW
+  Value *CRCNext = Builder.CreateXor(CRCAlignClmul, ClmulGP, "xor.crc.mult");
+  if (!Info.IsBigEndian)
+    CRCNext = Builder.CreateLShr(CRCNext, TC, "crc.lshr");
+
+  // Bring the result back down the the CRC bit width.
+  CRCNext = Builder.CreateTrunc(CRCNext, CRCTy, "crc.next");
+
+  // Replace the result of the loop with the new computed CRC value.
+  Info.ComputedValue->replaceUsesOutsideBlock(CRCNext, CurLoop->getLoopLatch());
+
+  // Finally, clean up the loop as much as possible so it can be trivially
+  // deleted.
+  {
+    for (PHINode &PN : make_early_inc_range(CurLoop->getHeader()->phis())) {
+      PN.replaceAllUsesWith(PoisonValue::get(PN.getType()));
+      RecursivelyDeleteDeadPHINode(&PN);
+    }
+    // Replace the exit condition with constant true/false to always cause a
+    // branch to the exit block.
+    deleteDeadInstruction(CurLoop->getLatchCmpInst());
+    auto *BrInst = cast<CondBrInst>(CurLoop->getLoopLatch()->getTerminator());
+    BrInst->setCondition(ConstantInt::getBool(
+        Ctx, BrInst->getSuccessor(0) == CurLoop->getExitBlock()));
+    SE->forgetLoop(CurLoop);
+  }
+}
+
+void LoopIdiomRecognize::optimizeCRCLoopUsingTableLookup(
+    const PolynomialInfo &Info) {
+  assert(Info.TripCount % 8 == 0 && "A byte-multiple trip count is required");
+
   // First, create a new GlobalVariable corresponding to the
   // Sarwate-lookup-table.
   Type *CRCTy = Info.LHS->getType();
   unsigned CRCBW = CRCTy->getIntegerBitWidth();
   std::array<Constant *, 256> CRCConstants;
-  transform(HashRecognize::genSarwateTable(Info.RHS, Info.ByteOrderSwapped),
+  transform(HashRecognize::genSarwateTable(Info.RHS, Info.IsBigEndian),
             CRCConstants.begin(),
             [CRCTy](const APInt &E) { return ConstantInt::get(CRCTy, E); });
   Constant *ConstArray =
       ConstantArray::get(ArrayType::get(CRCTy, 256), CRCConstants);
-  GlobalVariable *GV =
-      new GlobalVariable(M, ConstArray->getType(), true,
-                         GlobalValue::PrivateLinkage, ConstArray, ".crctable");
+  GlobalVariable *GV = new GlobalVariable(
+      *CurLoop->getHeader()->getModule(), ConstArray->getType(), true,
+      GlobalValue::PrivateLinkage, ConstArray, ".crctable");
 
   PHINode *IV = CurLoop->getCanonicalInductionVariable();
   SmallVector<PHINode *, 2> Cleanup;
@@ -1653,17 +1838,16 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
       Value *IVBits = Builder.CreateZExtOrTrunc(
           Builder.CreateShl(IV, 3, "iv.bits"), DataTy, "iv.indexer");
       Value *DataIndexer =
-          Info.ByteOrderSwapped
-              ? Builder.CreateShl(Data, IVBits, "data.indexer")
-              : Builder.CreateLShr(Data, IVBits, "data.indexer");
+          Info.IsBigEndian ? Builder.CreateShl(Data, IVBits, "data.indexer")
+                           : Builder.CreateLShr(Data, IVBits, "data.indexer");
       Indexer = Builder.CreateXor(
           DataIndexer,
           Builder.CreateZExtOrTrunc(Indexer, DataTy, "crc.indexer.cast"),
           "crc.data.indexer");
     }
 
-    Indexer = Info.ByteOrderSwapped ? HiIdx(Builder, Indexer, "indexer.hi")
-                                    : LoByte(Builder, Indexer, "indexer.lo");
+    Indexer = Info.IsBigEndian ? HiIdx(Builder, Indexer, "indexer.hi")
+                               : LoByte(Builder, Indexer, "indexer.lo");
 
     // Always index into a GEP using the index type.
     Indexer = Builder.CreateZExt(
@@ -1679,7 +1863,7 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
     // CRC-8.
     Value *CRCNext = CRCTableLd;
     if (CRCBW > 8) {
-      Value *CRCShift = Info.ByteOrderSwapped
+      Value *CRCShift = Info.IsBigEndian
                             ? Builder.CreateShl(CRC, 8, "crc.be.shift")
                             : Builder.CreateLShr(CRC, 8, "crc.le.shift");
       CRCNext = Builder.CreateXor(CRCShift, CRCTableLd, "crc.next");
@@ -1697,7 +1881,6 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
       RecursivelyDeleteDeadPHINode(PN);
     SE->forgetLoop(CurLoop);
   }
-  return true;
 }
 
 bool LoopIdiomRecognize::runOnNoncountableLoop() {
@@ -2600,27 +2783,23 @@ bool LoopIdiomRecognize::recognizePopcount() {
   return true;
 }
 
-static CallInst *createPopcntIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
-                                       const DebugLoc &DL) {
+static Value *createPopcntIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
+                                    const DebugLoc &DL) {
   Value *Ops[] = {Val};
   Type *Tys[] = {Val->getType()};
 
-  CallInst *CI = IRBuilder.CreateIntrinsic(Intrinsic::ctpop, Tys, Ops);
-  CI->setDebugLoc(DL);
-
-  return CI;
+  IRBuilder.SetCurrentDebugLocation(DL);
+  return IRBuilder.CreateIntrinsic(Intrinsic::ctpop, Tys, Ops);
 }
 
-static CallInst *createFFSIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
-                                    const DebugLoc &DL, bool ZeroCheck,
-                                    Intrinsic::ID IID) {
+static Value *createFFSIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
+                                 const DebugLoc &DL, bool ZeroCheck,
+                                 Intrinsic::ID IID) {
   Value *Ops[] = {Val, IRBuilder.getInt1(ZeroCheck)};
   Type *Tys[] = {Val->getType()};
 
-  CallInst *CI = IRBuilder.CreateIntrinsic(IID, Tys, Ops);
-  CI->setDebugLoc(DL);
-
-  return CI;
+  IRBuilder.SetCurrentDebugLocation(DL);
+  return IRBuilder.CreateIntrinsic(IID, Tys, Ops);
 }
 
 /// Transform the following loop (Using CTLZ, CTTZ is similar):
@@ -3126,7 +3305,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
   Value *Mask =
       Builder.CreateOr(LowBitMask, BitMask, BitPos->getName() + ".mask");
   Value *XMasked = Builder.CreateAnd(X, Mask, X->getName() + ".masked");
-  CallInst *XMaskedNumLeadingZeros = Builder.CreateIntrinsic(
+  Value *XMaskedNumLeadingZeros = Builder.CreateIntrinsic(
       IntrID, Ty, {XMasked, /*is_zero_poison=*/Builder.getTrue()},
       /*FMFSource=*/nullptr, XMasked->getName() + ".numleadingzeros");
   Value *XMaskedNumActiveBits = Builder.CreateSub(
@@ -3486,7 +3665,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilZero() {
 
   // Step 1: Compute the loop's final IV value / trip count.
 
-  CallInst *ValNumLeadingZeros = Builder.CreateIntrinsic(
+  Value *ValNumLeadingZeros = Builder.CreateIntrinsic(
       IntrID, Ty, {Val, /*is_zero_poison=*/Builder.getFalse()},
       /*FMFSource=*/nullptr, Val->getName() + ".numleadingzeros");
   Value *ValNumActiveBits = Builder.CreateSub(

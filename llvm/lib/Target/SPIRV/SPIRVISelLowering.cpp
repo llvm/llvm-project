@@ -109,27 +109,48 @@ void SPIRVTargetLowering::getTgtMemIntrinsic(
     SmallVectorImpl<IntrinsicInfo> &Infos, const CallBase &I,
     MachineFunction &MF, unsigned Intrinsic) const {
   IntrinsicInfo Info;
-  unsigned AlignIdx = 3;
+
+  unsigned AlignIdx = 0;
+  unsigned OrderingIdx = 0;
+  unsigned FlagsIdx;
+
   switch (Intrinsic) {
   case Intrinsic::spv_load:
+    FlagsIdx = 1;
     AlignIdx = 2;
-    [[fallthrough]];
-  case Intrinsic::spv_store: {
-    if (I.getNumOperands() >= AlignIdx + 1) {
-      auto *AlignOp = cast<ConstantInt>(I.getOperand(AlignIdx));
-      Info.align = Align(AlignOp->getZExtValue());
-    }
-    Info.flags = static_cast<MachineMemOperand::Flags>(
-        cast<ConstantInt>(I.getOperand(AlignIdx - 1))->getZExtValue());
-    Info.memVT = MVT::i64;
-    // TODO: take into account opaque pointers (don't use getElementType).
-    // MVT::getVT(PtrTy->getElementType());
-    Infos.push_back(Info);
+    break;
+  case Intrinsic::spv_store:
+    FlagsIdx = 2;
+    AlignIdx = 3;
+    break;
+  case Intrinsic::spv_atomic_load:
+    FlagsIdx = 1;
+    OrderingIdx = 2;
+    break;
+  case Intrinsic::spv_atomic_store:
+    FlagsIdx = 2;
+    OrderingIdx = 3;
+    break;
+  default:
     return;
   }
-  default:
-    break;
+
+  Info.flags = static_cast<MachineMemOperand::Flags>(
+      cast<ConstantInt>(I.getOperand(FlagsIdx))->getZExtValue());
+  Info.memVT = MVT::i64;
+  // TODO: take into account opaque pointers (don't use getElementType).
+  // MVT::getVT(PtrTy->getElementType());
+
+  if (AlignIdx) {
+    auto *AlignOp = cast<ConstantInt>(I.getOperand(AlignIdx));
+    Info.align = Align(AlignOp->getZExtValue());
   }
+
+  if (OrderingIdx) {
+    Info.order = static_cast<AtomicOrdering>(
+        cast<ConstantInt>(I.getOperand(OrderingIdx))->getZExtValue());
+  }
+  Infos.push_back(Info);
 }
 
 TargetLowering::ConstraintType
@@ -156,7 +177,7 @@ SPIRVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   if (VT.isFloatingPoint())
     RC = VT.isVector() ? &SPIRV::vfIDRegClass : &SPIRV::fIDRegClass;
   else if (VT.isInteger())
-    RC = VT.isVector() ? &SPIRV::vIDRegClass : &SPIRV::iIDRegClass;
+    RC = VT.isVector() ? &SPIRV::viIDRegClass : &SPIRV::iIDRegClass;
   else
     RC = &SPIRV::iIDRegClass;
 
@@ -408,7 +429,7 @@ void validateAccessChain(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
 void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
   // finalizeLowering() is called twice (see GlobalISel/InstructionSelect.cpp)
   // We'd like to avoid the needless second processing pass.
-  if (ProcessedMF.find(&MF) != ProcessedMF.end())
+  if (MF.getRegInfo().reservedRegsFrozen())
     return;
 
   MachineRegisterInfo *MRI = &MF.getRegInfo();
@@ -490,6 +511,13 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
         if (GR.isScalarOrVectorOfType(MI.getOperand(1).getReg(),
                                       SPIRV::OpTypeBool))
           MI.setDesc(STI.getInstrInfo()->get(SPIRV::OpLogicalNotEqual));
+        break;
+      // multiplication of bool operands is equivalent to a logical AND
+      case SPIRV::OpIMulS:
+      case SPIRV::OpIMulV:
+        if (GR.isScalarOrVectorOfType(MI.getOperand(1).getReg(),
+                                      SPIRV::OpTypeBool))
+          MI.setDesc(STI.getInstrInfo()->get(SPIRV::OpLogicalAnd));
         break;
 
       // ensure that LLVM IR bitwise instructions result in logical SPIR-V
@@ -583,7 +611,6 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
       }
     }
   }
-  ProcessedMF.insert(&MF);
   TargetLowering::finalizeLowering(MF);
 }
 
@@ -662,5 +689,20 @@ TargetLowering::AtomicExpansionKind
 SPIRVTargetLowering::shouldCastAtomicRMWIInIR(AtomicRMWInst *RMWI) const {
   // TODO: Pointer operand should be cast to integer in atomicrmw xchg, since
   // SPIR-V only supports atomic exchange for integer and floating-point types.
+  return AtomicExpansionKind::None;
+}
+
+TargetLowering::AtomicExpansionKind
+SPIRVTargetLowering::shouldCastAtomicLoadInIR(LoadInst *LI) const {
+  // TODO: pointer load should return CastToInteger, but
+  // convertAtomicLoadToIntegerType uses BitCast which asserts on pointer types.
+  return AtomicExpansionKind::None;
+}
+
+TargetLowering::AtomicExpansionKind
+SPIRVTargetLowering::shouldCastAtomicStoreInIR(StoreInst *SI) const {
+  // TODO: pointer store should return CastToInteger, but
+  // convertAtomicStoreToIntegerType uses BitCast which asserts on pointer
+  // types.
   return AtomicExpansionKind::None;
 }
