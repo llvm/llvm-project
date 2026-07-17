@@ -16282,8 +16282,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
                           DAG.getValueType(MVT::v4i8));
       else
         Res = lowerPZExt(Src, DL, DAG, Subtarget);
-      Results.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
-                                    DAG.getVectorIdxConstant(0, DL)));
+      Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
       return;
     }
     case Intrinsic::riscv_paadd:
