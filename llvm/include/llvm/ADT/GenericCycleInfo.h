@@ -33,8 +33,10 @@
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <memory>
 
 namespace llvm {
 
@@ -42,6 +44,10 @@ template <typename ContextT> class GenericCycleInfo;
 template <typename ContextT> class GenericCycleInfoCompute;
 
 /// A possibly irreducible generalization of a \ref Loop.
+///
+/// Cycles are stored by value in GenericCycleInfo::Cycles in preorder of the
+/// cycle forest: a cycle is immediately followed by its descendants. Child
+/// iteration is therefore pointer arithmetic over that array.
 template <typename ContextT> class GenericCycle {
 public:
   using BlockT = typename ContextT::BlockT;
@@ -50,37 +56,31 @@ public:
   template <typename> friend class GenericCycleInfoCompute;
 
 private:
-  /// The parent cycle. Is null for the root "cycle". Top-level cycles point
-  /// at the root.
+  /// The parent cycle. Is null for top-level cycles.
   GenericCycle *ParentCycle = nullptr;
 
   /// The entry block(s) of the cycle. The header is the only entry if
-  /// this is a loop. Is empty for the root "cycle", to avoid
-  /// unnecessary memory use.
+  /// this is a loop.
   SmallVector<BlockT *, 1> Entries;
-
-  /// Child cycles, if any.
-  std::vector<std::unique_ptr<GenericCycle>> Children;
 
   /// This cycle's blocks (its own and its nested cycles') occupy the half-open
   /// range [IdxBegin, IdxEnd) of GenericCycleInfo::BlockLayout. The
   /// ranges are nested like an Euler tour of the cycle tree, so containment is
   /// an interval test (see contains()).
   ///
-  /// During construction (before layoutBlocks), IdxEnd accumulates the number
-  /// of this cycle's own blocks (those whose innermost cycle is this one).
+  /// During construction (before the forest is flattened), IdxEnd accumulates
+  /// the number of this cycle's own blocks (those whose innermost cycle is
+  /// this one).
   unsigned IdxBegin = 0, IdxEnd = 0;
 
-  /// Depth of the cycle in the tree. The root "cycle" is at depth 0.
-  ///
-  /// \note Depths are not necessarily contiguous. However, child loops always
-  ///       have strictly greater depth than their parents, and sibling loops
-  ///       always have the same depth.
+  /// Depth of the cycle in the tree: top-level cycles are at depth 1 and each
+  /// nested cycle is one deeper (getCycleDepth() returns 0 for blocks outside
+  /// any cycle). Sibling cycles share a depth.
   unsigned Depth = 0;
 
-  /// Preorder number of this cycle in the forest, assigned by layoutBlocks.
-  /// Indexes per-cycle side tables in GenericCycleInfo.
-  unsigned ID = 0;
+  /// Number of cycles nested inside this one: the subtree occupies
+  /// [this, this + 1 + NumDescendants) of GenericCycleInfo::Cycles.
+  unsigned NumDescendants = 0;
 
   void appendEntry(BlockT *Block) { Entries.push_back(Block); }
 
@@ -92,91 +92,29 @@ private:
 public:
   GenericCycle() = default;
 
-  /// \brief Whether the cycle is a natural loop.
-  bool isReducible() const { return Entries.size() == 1; }
-
-  BlockT *getHeader() const { return Entries[0]; }
-
-  const SmallVectorImpl<BlockT *> & getEntries() const {
-    return Entries;
-  }
-
-  /// \brief Return whether \p Block is an entry block of the cycle.
-  bool isEntry(const BlockT *Block) const {
-    return is_contained(Entries, Block);
-  }
-
-  /// \brief Replace all entries with \p Block as single entry.
-  /// \p Block must be contained in the cycle.
-  void setSingleEntry(BlockT *Block) {
-    Entries.clear();
-    Entries.push_back(Block);
-  }
-
-  /// \brief Returns true iff this cycle contains \p C. O(1). Non-strict, i.e.
-  /// returns true if C is the same cycle.
-  bool contains(const GenericCycle *C) const {
-    return C && IdxBegin <= C->IdxBegin && C->IdxEnd <= IdxEnd;
-  }
-
-  const GenericCycle *getParentCycle() const { return ParentCycle; }
-  GenericCycle *getParentCycle() { return ParentCycle; }
-  unsigned getDepth() const { return Depth; }
-
-  size_t getNumBlocks() const { return IdxEnd - IdxBegin; }
-
-  /// Iteration over child cycles.
+  /// Iteration over child cycles: the first child (if any) immediately
+  /// follows this cycle in the preorder array, and each next sibling follows
+  /// the previous child's subtree.
   //@{
-  using const_child_iterator_base =
-      typename std::vector<std::unique_ptr<GenericCycle>>::const_iterator;
   struct const_child_iterator
-      : iterator_adaptor_base<const_child_iterator, const_child_iterator_base> {
-    using Base =
-        iterator_adaptor_base<const_child_iterator, const_child_iterator_base>;
+      : iterator_facade_base<const_child_iterator, std::forward_iterator_tag,
+                             GenericCycle *, std::ptrdiff_t, GenericCycle *,
+                             GenericCycle *> {
+    const GenericCycle *C = nullptr;
 
     const_child_iterator() = default;
-    explicit const_child_iterator(const_child_iterator_base I) : Base(I) {}
+    explicit const_child_iterator(const GenericCycle *C) : C(C) {}
 
-    const const_child_iterator_base &wrapped() { return Base::wrapped(); }
-    GenericCycle *operator*() const { return Base::I->get(); }
+    GenericCycle *operator*() const { return const_cast<GenericCycle *>(C); }
+    const_child_iterator &operator++() {
+      C += 1 + C->NumDescendants;
+      return *this;
+    }
+    bool operator==(const const_child_iterator &Other) const {
+      return C == Other.C;
+    }
   };
-
-  const_child_iterator child_begin() const {
-    return const_child_iterator{Children.begin()};
-  }
-  const_child_iterator child_end() const {
-    return const_child_iterator{Children.end()};
-  }
-  size_t getNumChildren() const { return Children.size(); }
-  iterator_range<const_child_iterator> children() const {
-    return llvm::make_range(const_child_iterator{Children.begin()},
-                            const_child_iterator{Children.end()});
-  }
   //@}
-
-  /// Iteration over entry blocks.
-  //@{
-  using const_entry_iterator =
-      typename SmallVectorImpl<BlockT *>::const_iterator;
-  const_entry_iterator entry_begin() const { return Entries.begin(); }
-  const_entry_iterator entry_end() const { return Entries.end(); }
-  size_t getNumEntries() const { return Entries.size(); }
-  iterator_range<const_entry_iterator> entries() const {
-    return llvm::make_range(entry_begin(), entry_end());
-  }
-  using const_reverse_entry_iterator =
-      typename SmallVectorImpl<BlockT *>::const_reverse_iterator;
-  const_reverse_entry_iterator entry_rbegin() const { return Entries.rbegin(); }
-  const_reverse_entry_iterator entry_rend() const { return Entries.rend(); }
-  //@}
-
-  Printable printEntries(const ContextT &Ctx) const {
-    return Printable([this, &Ctx](raw_ostream &Out) {
-      ListSeparator LS(" ");
-      for (auto *Entry : Entries)
-        Out << LS << Ctx.print(Entry);
-    });
-  }
 };
 
 /// \brief Cycle information for a function.
@@ -198,23 +136,18 @@ private:
   /// slice [IdxBegin, IdxEnd) of this array, nested inside its parent's.
   SmallVector<BlockT *, 8> BlockLayout;
 
+  /// All cycles in forest preorder: every cycle is immediately followed by
+  /// its descendants, and skipping a top-level cycle's subtree lands on the
+  /// next top-level cycle.
+  std::unique_ptr<CycleT[]> Cycles;
   unsigned NumCycles = 0;
 
-  /// getExitBlocks caches, indexed by CycleT::ID. Empty until the first
-  /// query, then sized to NumCycles.
+  /// getExitBlocks caches, indexed by the cycle's preorder index. Empty until
+  /// the first query, then sized to NumCycles.
   mutable SmallVector<SmallVector<BlockT *, 0>, 0> ExitBlocksCaches;
 
-  /// Top-level cycles discovered by any DFS.
-  ///
-  /// Note: The implementation treats the nullptr as the parent of
-  /// every top-level cycle. See \ref contains for an example.
-  std::vector<std::unique_ptr<CycleT>> TopLevelCycles;
-
-  /// Move \p Child to \p NewParent by manipulating Children vectors.
-  ///
-  /// Note: This is an incomplete operation that does not update the depth of
-  /// the subtree.
-  void moveTopLevelCycleToNewParent(CycleT *NewParent, CycleT *Child);
+  /// The preorder index of \p C, i.e. its offset in the Cycles array.
+  unsigned getCycleIndex(const CycleT &C) const { return &C - Cycles.get(); }
 
   void verifyBlockNumberEpoch(const FunctionT *Fn) const {
     assert(BlockNumberEpoch ==
@@ -222,10 +155,6 @@ private:
            "CycleInfo used with outdated block number epoch");
   }
   void addToBlockMap(BlockT *Block, CycleT *Cycle);
-
-  /// Build BlockLayout and every cycle's [IdxBegin, IdxEnd) slice
-  /// from the innermost-cycle map and the current cycle tree.
-  void layoutBlocks(ArrayRef<BlockT *> Order);
 
 public:
   GenericCycleInfo() = default;
@@ -239,6 +168,10 @@ public:
   const FunctionT *getFunction() const { return Context.getFunction(); }
   const ContextT &getSSAContext() const { return Context; }
 
+  /// All cycles in forest preorder.
+  MutableArrayRef<CycleT> cycles() { return {Cycles.get(), NumCycles}; }
+  ArrayRef<CycleT> cycles() const { return {Cycles.get(), NumCycles}; }
+
   /// \brief Find the innermost cycle containing \p Block.
   ///
   /// \returns the innermost cycle containing \p Block or nullptr if
@@ -249,9 +182,42 @@ public:
     return Number < BlockMap.size() ? BlockMap[Number] : nullptr;
   }
 
+  BlockT *getHeader(const CycleT &C) const { return C.Entries[0]; }
+  bool isReducible(const CycleT &C) const { return C.Entries.size() == 1; }
+  CycleT *getParentCycle(const CycleT &C) const { return C.ParentCycle; }
+  unsigned getDepth(const CycleT &C) const { return C.Depth; }
+  size_t getNumBlocks(const CycleT &C) const { return C.IdxEnd - C.IdxBegin; }
+
+  ArrayRef<BlockT *> getEntries(const CycleT &C) const { return C.Entries; }
+  bool isEntry(const CycleT &C, const BlockT *Block) const {
+    return is_contained(C.Entries, Block);
+  }
+  void setSingleEntry(CycleT &C, BlockT *Block) {
+    C.Entries.clear();
+    C.Entries.push_back(Block);
+  }
+  /// Returns true iff \p Outer contains \p Inner. O(1). Non-strict.
+  bool contains(const CycleT &Outer, const CycleT &Inner) const {
+    return Outer.IdxBegin <= Inner.IdxBegin && Inner.IdxEnd <= Outer.IdxEnd;
+  }
+  iterator_range<typename CycleT::const_child_iterator>
+  children(const CycleT &C) const {
+    return llvm::make_range(
+        typename CycleT::const_child_iterator{&C + 1},
+        typename CycleT::const_child_iterator{&C + 1 + C.NumDescendants});
+  }
+  Printable printEntries(const CycleT &C, const ContextT &Ctx) const {
+    return Printable([&C, &Ctx](raw_ostream &Out) {
+      ListSeparator LS(" ");
+      for (auto *Entry : C.Entries)
+        Out << LS << Ctx.print(Entry);
+    });
+  }
+
   /// \brief Return whether \p Block is contained in \p C. O(1).
   bool contains(const CycleT &C, const BlockT *Block) const {
-    return C.contains(getCycle(Block));
+    const CycleT *Inner = getCycle(Block);
+    return Inner && contains(C, *Inner);
   }
 
   /// \brief Return the blocks of \p C, including those of nested cycles.
@@ -267,7 +233,7 @@ public:
   /// if it is not contained in any cycle.
   unsigned getCycleDepth(const BlockT *Block) const {
     CycleT *Cycle = getCycle(Block);
-    return Cycle ? Cycle->getDepth() : 0;
+    return Cycle ? getDepth(*Cycle) : 0;
   }
 
   CycleT *getTopLevelParentCycle(const BlockT *Block) const {
@@ -321,79 +287,20 @@ public:
 
   /// Iteration over top-level cycles.
   //@{
-  using const_toplevel_iterator_base =
-      typename std::vector<std::unique_ptr<CycleT>>::const_iterator;
-  struct const_toplevel_iterator
-      : iterator_adaptor_base<const_toplevel_iterator,
-                              const_toplevel_iterator_base> {
-    using Base = iterator_adaptor_base<const_toplevel_iterator,
-                                       const_toplevel_iterator_base>;
-
-    const_toplevel_iterator() = default;
-    explicit const_toplevel_iterator(const_toplevel_iterator_base I)
-        : Base(I) {}
-
-    const const_toplevel_iterator_base &wrapped() { return Base::wrapped(); }
-    CycleT *operator*() const { return Base::I->get(); }
-  };
+  using const_toplevel_iterator = typename CycleT::const_child_iterator;
 
   const_toplevel_iterator toplevel_begin() const {
-    return const_toplevel_iterator{TopLevelCycles.begin()};
+    return const_toplevel_iterator{Cycles.get()};
   }
   const_toplevel_iterator toplevel_end() const {
-    return const_toplevel_iterator{TopLevelCycles.end()};
+    return const_toplevel_iterator{Cycles.get() + NumCycles};
   }
 
   iterator_range<const_toplevel_iterator> toplevel_cycles() const {
-    return llvm::make_range(const_toplevel_iterator{TopLevelCycles.begin()},
-                            const_toplevel_iterator{TopLevelCycles.end()});
+    return llvm::make_range(toplevel_begin(), toplevel_end());
   }
   //@}
 };
-
-/// \brief GraphTraits for iterating over a sub-tree of the CycleT tree.
-template <typename CycleRefT, typename ChildIteratorT> struct CycleGraphTraits {
-  using NodeRef = CycleRefT;
-
-  using nodes_iterator = ChildIteratorT;
-  using ChildIteratorType = nodes_iterator;
-
-  static NodeRef getEntryNode(NodeRef Graph) { return Graph; }
-
-  static ChildIteratorType child_begin(NodeRef Ref) {
-    return Ref->child_begin();
-  }
-  static ChildIteratorType child_end(NodeRef Ref) { return Ref->child_end(); }
-
-  // Not implemented:
-  // static nodes_iterator nodes_begin(GraphType *G)
-  // static nodes_iterator nodes_end  (GraphType *G)
-  //    nodes_iterator/begin/end - Allow iteration over all nodes in the graph
-
-  // typedef EdgeRef           - Type of Edge token in the graph, which should
-  //                             be cheap to copy.
-  // typedef ChildEdgeIteratorType - Type used to iterate over children edges in
-  //                             graph, dereference to a EdgeRef.
-
-  // static ChildEdgeIteratorType child_edge_begin(NodeRef)
-  // static ChildEdgeIteratorType child_edge_end(NodeRef)
-  //     Return iterators that point to the beginning and ending of the
-  //     edge list for the given callgraph node.
-  //
-  // static NodeRef edge_dest(EdgeRef)
-  //     Return the destination node of an edge.
-  // static unsigned       size       (GraphType *G)
-  //    Return total number of nodes in the graph
-};
-
-template <typename BlockT>
-struct GraphTraits<const GenericCycle<BlockT> *>
-    : CycleGraphTraits<const GenericCycle<BlockT> *,
-                       typename GenericCycle<BlockT>::const_child_iterator> {};
-template <typename BlockT>
-struct GraphTraits<GenericCycle<BlockT> *>
-    : CycleGraphTraits<GenericCycle<BlockT> *,
-                       typename GenericCycle<BlockT>::const_child_iterator> {};
 
 } // namespace llvm
 

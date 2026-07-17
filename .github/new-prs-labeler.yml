@@ -501,7 +501,7 @@ mlir:vectorops:
 coroutines:
   - changed-files:
     - any-glob-to-any-file:
-      - clang/docs/DebuggingCoroutines.rst
+      - clang/docs/DebuggingCoroutines.md
       - clang/lib/Sema/SemaCoroutine.cpp
       - clang/lib/CodeGen/CGCoroutine.cpp
       - clang/test/CodeGenCoroutines/**

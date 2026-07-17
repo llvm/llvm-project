@@ -11,7 +11,7 @@
 ; RUN: not llc -global-isel=0 -mtriple=amdgpu9.00 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
 ; RUN: not llc -global-isel=1 -global-isel-abort=0 -mtriple=amdgpu9.00 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
 
-; ERR: error: <unknown>:0:0: in function v_permlane16_b32_vss_i32 void (ptr addrspace(1), i32, i32, i32): intrinsic not supported on subtarget
+; ERR: error: <unknown>:0:0: in function @v_permlane16_b32_vss_i32 void (ptr addrspace(1), i32, i32, i32): llvm.amdgcn.permlane16 requires target feature 'permlane16-insts'
 
 declare i32 @llvm.amdgcn.permlane16(i32, i32, i32, i32, i1, i1)
 declare i32 @llvm.amdgcn.permlanex16(i32, i32, i32, i32, i1, i1)
