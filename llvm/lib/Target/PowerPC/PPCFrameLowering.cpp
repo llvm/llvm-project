@@ -1780,7 +1780,7 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
       // Build CR mask for MTCRF.
       unsigned CRMask = 0;
       for (unsigned CRField : MustSaveCRs) {
-        CRMask |= (0x80 >> CRField - PPC::CR0);
+        CRMask |= 0x80 >> (CRField - PPC::CR0);
       }
       BuildMI(MBB, InsertPt, dl, TII.get(isPPC64 ? PPC::MTCRF8 : PPC::MTCRF))
           .addImm(CRMask)
