@@ -573,9 +573,10 @@ void native(SmallVectorImpl<char> &Path, Style style) {
         Ch = preferred_separator(style);
     if (Path[0] == '~' && (Path.size() == 1 || is_separator(Path[1], style))) {
       SmallString<128> PathHome;
-      home_directory(PathHome);
-      PathHome.append(Path.begin() + 1, Path.end());
-      Path = std::move(PathHome);
+      if (home_directory(PathHome)) {
+        PathHome.append(Path.begin() + 1, Path.end());
+        Path = std::move(PathHome);
+      }
     }
   } else {
     llvm::replace(Path, '\\', '/');

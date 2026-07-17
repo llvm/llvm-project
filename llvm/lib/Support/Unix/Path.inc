@@ -1493,7 +1493,7 @@ namespace path {
 bool home_directory(SmallVectorImpl<char> &result) {
   std::unique_ptr<char[]> Buf;
   char *RequestedDir = getenv("HOME");
-  if (!RequestedDir) {
+  if (!RequestedDir || !*RequestedDir) {
     long BufSize = sysconf(_SC_GETPW_R_SIZE_MAX);
     if (BufSize <= 0)
       BufSize = 16384;
