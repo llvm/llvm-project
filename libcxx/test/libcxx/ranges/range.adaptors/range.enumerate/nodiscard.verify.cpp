@@ -64,10 +64,10 @@ void test() {
   std::as_const(it)[2];
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-// expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-it + 1;
-// expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-1 + it;
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  it + 1;
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  1 + it;
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   it - 1;
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
