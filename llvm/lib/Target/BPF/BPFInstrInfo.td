@@ -955,6 +955,8 @@ let Predicates = [BPFNoALU32] in {
             (XADDW ADDRri:$addr, GPR:$val)>;
   def : Pat<(atomic_load_add_i64 ADDRri:$addr, GPR:$val),
             (XADDD ADDRri:$addr, GPR:$val)>;
+  def : Pat<(atomic_load_sub_i64_monotonic ADDRri:$addr, GPR:$val),
+            (XADDD ADDRri:$addr, (NEG_64 GPR:$val))>;
 }
 
 // Atomic Fetch-and-<add, and, or, xor> operations
@@ -1077,9 +1079,14 @@ let Predicates = [BPFHasALU32] in {
     }
 }
 
-foreach P = [[atomic_load_sub_i64_monotonic_nu, XADDD],
-             [atomic_load_sub_i64_monotonic_hu, XFADDD],
-             [atomic_load_sub_i64_acquire,   XFADDD],
+let Predicates = [BPFHasALU32] in {
+  foreach P = [[atomic_load_sub_i64_monotonic_nu, XADDD],
+               [atomic_load_sub_i64_monotonic_hu, XFADDD]] in {
+    def : Pat<(P[0] ADDRri:$addr, GPR:$val), (P[1] ADDRri:$addr, (NEG_64 GPR:$val))>;
+  }
+}
+
+foreach P = [[atomic_load_sub_i64_acquire,   XFADDD],
              [atomic_load_sub_i64_release,   XFADDD],
              [atomic_load_sub_i64_acq_rel,   XFADDD],
              [atomic_load_sub_i64_seq_cst,   XFADDD],
