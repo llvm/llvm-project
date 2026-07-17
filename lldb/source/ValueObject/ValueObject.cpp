@@ -2054,18 +2054,20 @@ void ValueObject::CalculateSyntheticValue() {
     return;
   }
 
-  lldb::SyntheticChildrenSP current_synth_sp(m_synthetic_children_sp);
+  lldb::SyntheticChildrenSP prev_synth_sp(GetSyntheticChildren());
 
   if (!UpdateFormatsIfNeeded() && m_synthetic_value)
     return;
 
-  if (m_synthetic_children_sp.get() == nullptr)
+  lldb::SyntheticChildrenSP curr_synth_sp(GetSyntheticChildren());
+
+  if (curr_synth_sp.get() == nullptr)
     return;
 
-  if (current_synth_sp == m_synthetic_children_sp && m_synthetic_value)
+  if (curr_synth_sp == prev_synth_sp && m_synthetic_value)
     return;
 
-  m_synthetic_value = new ValueObjectSynthetic(*this, m_synthetic_children_sp);
+  m_synthetic_value = new ValueObjectSynthetic(*this, curr_synth_sp);
 }
 
 void ValueObject::CalculateDynamicValue(DynamicValueType use_dynamic) {

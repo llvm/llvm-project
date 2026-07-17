@@ -200,6 +200,14 @@ __device__ void test_exp2_f32(float* out, float a) {
   *out = __builtin_amdgcn_exp2f(a);
 }
 
+// CIR-LABEL: @_Z12test_log_f32Pff
+// CIR: cir.call_llvm_intrinsic "amdgcn.log" {{.*}} : (!cir.float) -> !cir.float
+// LLVM: define{{.*}} void @_Z12test_log_f32Pff
+// LLVM: call{{.*}} float @llvm.amdgcn.log.f32(float %{{.*}})
+__device__ void test_log_f32(float* out, float a) {
+  *out = __builtin_amdgcn_logf(a);
+}
+
 // CIR-LABEL: @_Z19test_frexp_mant_f32Pff
 // CIR: cir.call_llvm_intrinsic "amdgcn.frexp.mant" {{.*}} : (!cir.float) -> !cir.float
 // LLVM: define{{.*}} void @_Z19test_frexp_mant_f32Pff

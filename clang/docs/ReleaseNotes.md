@@ -54,6 +54,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### Clang Frontend Potentially Breaking Changes
 
+- Templight support has been removed.
+
 ### Clang Python Bindings Potentially Breaking Changes
 
 ### OpenCL Potentially Breaking Changes
