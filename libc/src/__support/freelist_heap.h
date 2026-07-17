@@ -105,13 +105,12 @@ LIBC_INLINE bool FreeListHeap::adopt(span<cpp::byte> mem) {
 
   old_last.clear_last();
 
-  BlockRef new_block = *result;
-  LIBC_ASSERT(old_last.next() == new_block &&
+  LIBC_ASSERT(old_last.next() == *result &&
               "Old last block must point to the new block");
 
   old_last.mark_free();
 
-  bool merged = old_last.merge_next();
+  [[maybe_unused]] bool merged = old_last.merge_next();
   LIBC_ASSERT(merged && "Failed to merge old last block with new block");
 
   BlockRef to_insert = old_last;
