@@ -20,6 +20,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Sema/Attr.h"
@@ -1054,18 +1055,48 @@ classifyUninitPassThrough(const Expr *E, UninitStorage EmptyListState,
 
 // A call to a [[ref_to_uninit]]-returning function yields uninitialized
 // storage (the pointed-to memory, or the returned referent) -- deferred to
-// Unknown when the marker is trusted (a store). An unmarked direct callee is
-// trusted Initialized (paper §4.3); a call with no direct callee (through a
-// function pointer) is Unknown. Shared by both recognizers.
+// Unknown when the marker is trusted (a store). Known allocator callees are
+// classified the same way without a marker (paper §4.3: functions like
+// malloc "must be known to an analyzer enforcing the initialization
+// profile"): the malloc and alloca families return uninitialized memory,
+// calloc returns zero-initialized memory, and realloc returns a preserved
+// prefix plus an indeterminate tail -- affirmatively neither, so Unknown.
+// The builtin ID is absent under -fno-builtin / -ffreestanding (or a
+// non-matching declaration), where an allocator falls back to the trusted
+// default below -- a missed diagnostic, never a false positive. Any other
+// unmarked direct callee is trusted Initialized (paper §4.3); a call with
+// no direct callee (through a function pointer) is Unknown. Shared by both
+// recognizers.
 static UninitStorage classifyRefToUninitCallee(const CallExpr *CE,
                                                UninitAccessOpts Opts) {
-  if (const FunctionDecl *FD = CE->getDirectCallee()) {
-    if (!FD->hasAttr<RefToUninitAttr>())
-      return UninitStorage::Initialized;
-    return Opts.TrustRefToUninit ? UninitStorage::Unknown
-                                 : UninitStorage::Uninitialized;
+  const FunctionDecl *FD = CE->getDirectCallee();
+  if (!FD)
+    return UninitStorage::Unknown;
+  bool RefersToUninit = FD->hasAttr<RefToUninitAttr>();
+  switch (FD->getBuiltinID()) {
+  case Builtin::BImalloc:
+  case Builtin::BI__builtin_malloc:
+  case Builtin::BIaligned_alloc:
+  case Builtin::BIalloca:
+  case Builtin::BI__builtin_alloca:
+  case Builtin::BI__builtin_alloca_uninitialized:
+  case Builtin::BI__builtin_alloca_with_align:
+  case Builtin::BI__builtin_alloca_with_align_uninitialized:
+    RefersToUninit = true;
+    break;
+  case Builtin::BIcalloc:
+  case Builtin::BI__builtin_calloc:
+    return UninitStorage::Initialized;
+  case Builtin::BIrealloc:
+  case Builtin::BI__builtin_realloc:
+    return UninitStorage::Unknown;
+  default:
+    break;
   }
-  return UninitStorage::Unknown;
+  if (!RefersToUninit)
+    return UninitStorage::Initialized;
+  return Opts.TrustRefToUninit ? UninitStorage::Unknown
+                               : UninitStorage::Uninitialized;
 }
 
 // \p E is a pointer prvalue. Classifies whether it points to uninitialized

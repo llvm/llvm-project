@@ -422,9 +422,13 @@ memory, and an unmarked one only to initialized memory.  Whether a source
 refers to uninitialized memory is recognized from its form -- the address or
 a subobject of an ``[[uninit]]`` entity, the value or dereference of a
 marked pointer or reference, pointer and reference casts of those, a call to
-a marked function, and a ``new`` expression that default-initializes a type
-with indeterminate scalars (``new int``, ``new int[n]``; §1.2) -- refined by
-one parse-order fact, whole-entity stores (below):
+a marked function, a call to a known allocator (``malloc``,
+``aligned_alloc``, and ``alloca`` return uninitialized memory, ``calloc``
+zero-initialized memory, and ``realloc`` is unclassified; §4.3 -- keyed on
+Clang's builtin recognition, which ``-fno-builtin`` disables), and a ``new``
+expression that default-initializes a type with indeterminate scalars
+(``new int``, ``new int[n]``; §1.2) -- refined by one parse-order fact,
+whole-entity stores (below):
 
 .. code-block:: c++
 
