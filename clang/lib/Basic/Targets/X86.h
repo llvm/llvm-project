@@ -25,7 +25,7 @@
 namespace clang {
 namespace targets {
 
-static const LangASMap X86AddrSpaceMap = {
+static constexpr LangASMap X86AddrSpaceMap = {
     {LangAS::ptr32_sptr, 270},
     {LangAS::ptr32_uptr, 271},
     {LangAS::ptr64, 272},

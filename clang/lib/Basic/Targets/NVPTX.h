@@ -24,7 +24,7 @@
 namespace clang {
 namespace targets {
 
-static const LangASMap NVPTXAddrSpaceMap = {
+static constexpr LangASMap NVPTXAddrSpaceMap = {
     {LangAS::opencl_global, 1},
     {LangAS::opencl_local, 3},
     {LangAS::opencl_constant, 4},

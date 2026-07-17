@@ -24,7 +24,7 @@ namespace targets {
 
 enum AArch64AddrSpace { ptr32_sptr = 270, ptr32_uptr = 271, ptr64 = 272 };
 
-static const LangASMap ARM64AddrSpaceMap = {
+static constexpr LangASMap ARM64AddrSpaceMap = {
     {LangAS::ptr32_sptr, static_cast<unsigned>(AArch64AddrSpace::ptr32_sptr)},
     {LangAS::ptr32_uptr, static_cast<unsigned>(AArch64AddrSpace::ptr32_uptr)},
     {LangAS::ptr64, static_cast<unsigned>(AArch64AddrSpace::ptr64)},

@@ -21,7 +21,7 @@
 namespace clang {
 namespace targets {
 
-static const LangASMap WebAssemblyAddrSpaceMap = {
+static constexpr LangASMap WebAssemblyAddrSpaceMap = {
     {LangAS::wasm_funcref, 20},
 };
 

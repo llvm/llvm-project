@@ -24,10 +24,10 @@
 #include <cstdlib>
 using namespace clang;
 
-static const LangASMap DefaultAddrSpaceMap;
+static constexpr LangASMap DefaultAddrSpaceMap;
 // The fake address space map must have a distinct entry for each
 // language-specific address space.
-static const LangASMap FakeAddrSpaceMap = {
+static constexpr LangASMap FakeAddrSpaceMap = {
     {LangAS::Default, 0},
     {LangAS::opencl_global, 1},
     {LangAS::opencl_local, 3},

@@ -28,7 +28,7 @@ namespace clang {
 namespace targets {
 
 // Used by both the SPIR and SPIR-V targets.
-static const LangASMap SPIRDefIsPrivMap = {
+static constexpr LangASMap SPIRDefIsPrivMap = {
     {LangAS::opencl_global, 1},        {LangAS::opencl_local, 3},
     {LangAS::opencl_constant, 2},      {LangAS::opencl_generic, 4},
     {LangAS::opencl_global_device, 5}, {LangAS::opencl_global_host, 6},
@@ -39,7 +39,7 @@ static const LangASMap SPIRDefIsPrivMap = {
 };
 
 // Used by both the SPIR and SPIR-V targets.
-static const LangASMap SPIRDefIsGenMap = {
+static constexpr LangASMap SPIRDefIsGenMap = {
     {LangAS::Default, 4},
     {LangAS::opencl_global, 1},
     {LangAS::opencl_local, 3},

@@ -21,7 +21,7 @@
 namespace clang {
 namespace targets {
 
-static const LangASMap ZOSAddressMap = {
+static constexpr LangASMap ZOSAddressMap = {
     {LangAS::ptr32_uptr, 1},
 };
 
