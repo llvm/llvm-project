@@ -877,7 +877,7 @@ define i64 @test_x86_tbm_blsic_u64(i64 %a) nounwind {
 }
 
 define i64 @test_x86_tbm_blsic_u64_neg(i64 %x) nounwind{
-; CHECK-LABEL: test_blsic_u64_neg:
+; CHECK-LABEL: test_x86_tbm_blsic_u64_neg:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    blsicq %rdi, %rax
 ; CHECK-NEXT:    retq
