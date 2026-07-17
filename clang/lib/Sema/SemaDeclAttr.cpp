@@ -7029,6 +7029,38 @@ static void handleNowInitAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) NowInitAttr(S.Context, AL));
 }
 
+static void handleNowUninitAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  // The SubjectList restricts D to a function. [[now_uninit]] asserts that
+  // the callee ends the lifetime of the storage bound to each of its
+  // pointer/reference parameters -- the recording P4222R2 §4.4 wishes for
+  // ("the object subjected to destroy_at() should be considered
+  // uninitialized, but there is no way of recording that in the code") --
+  // so a declaration with no such parameter would make it vacuous; reject
+  // it. Unlike [[now_init]], the parameters are unmarked (they receive
+  // initialized memory), so the vacuity check keys on their types: a
+  // pointer to an object or a reference. A function pointer or reference
+  // denotes a function, never destroyable storage (mirroring
+  // [[ref_to_uninit]]'s subject rule), and a dependent type may
+  // instantiate to anything, so it passes -- if it does not become a
+  // pointer or reference, the inherited attribute goes inert (the
+  // withdrawal arms only ever key on pointer/reference bindings). Like the
+  // other marker subject checks, this fires regardless of -fprofiles.
+  if (llvm::none_of(cast<FunctionDecl>(D)->parameters(),
+                    [](const ParmVarDecl *P) {
+                      QualType T = P->getType();
+                      return T->isDependentType() ||
+                             ((T->isPointerType() || T->isReferenceType()) &&
+                              !T->isFunctionPointerType() &&
+                              !T->isFunctionReferenceType());
+                    })) {
+    S.Diag(AL.getLoc(), diag::err_now_uninit_attr_no_pointer_parameter);
+    AL.setInvalid();
+    return;
+  }
+
+  D->addAttr(::new (S.Context) NowUninitAttr(S.Context, AL));
+}
+
 static void handleMIGServerRoutineAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Check that the return type is a `typedef int kern_return_t` or a typedef
   // around it, because otherwise MIG convention checks make no sense.
@@ -8305,6 +8337,10 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   case ParsedAttr::AT_NowInit:
     handleNowInitAttr(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_NowUninit:
+    handleNowUninitAttr(S, D, AL);
     break;
 
   case ParsedAttr::AT_ObjCExternallyRetained:
