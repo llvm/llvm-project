@@ -38,7 +38,6 @@ public:
   using ThisT = GenericUniformityInfo<ContextT>;
 
   using CycleInfoT = GenericCycleInfo<ContextT>;
-  using CycleRef = typename CycleInfoT::CycleRef;
 
   using TemporalDivergenceTuple =
       std::tuple<ConstValueRefT, InstructionT *, CycleRef>;

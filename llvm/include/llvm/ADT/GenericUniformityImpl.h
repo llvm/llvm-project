@@ -94,7 +94,6 @@ public:
   using DominatorTreeT = typename ContextT::DominatorTreeT;
 
   using CycleInfoT = GenericCycleInfo<ContextT>;
-  using CycleRef = typename CycleInfoT::CycleRef;
   using const_iterator = typename std::vector<BlockT *>::const_iterator;
 
   ModifiedPostOrder(const ContextT &C) : Context(C) {}
@@ -269,7 +268,6 @@ public:
   using InstructionT = typename ContextT::InstructionT;
 
   using CycleInfoT = GenericCycleInfo<ContextT>;
-  using CycleRef = typename CycleInfoT::CycleRef;
 
   using ConstBlockSet = SmallPtrSet<const BlockT *, 4>;
   using ModifiedPO = ModifiedPostOrder<ContextT>;
@@ -339,7 +337,6 @@ public:
   using DominatorTreeT = typename ContextT::DominatorTreeT;
 
   using CycleInfoT = GenericCycleInfo<ContextT>;
-  using CycleRef = typename CycleInfoT::CycleRef;
 
   using SyncDependenceAnalysisT = GenericSyncDependenceAnalysis<ContextT>;
   using DivergenceDescriptorT =
@@ -520,7 +517,6 @@ public:
   using ValueRefT = typename ContextT::ValueRefT;
 
   using CycleInfoT = GenericCycleInfo<ContextT>;
-  using CycleRef = typename CycleInfoT::CycleRef;
 
   using ModifiedPO = ModifiedPostOrder<ContextT>;
   using SyncDependenceAnalysisT = GenericSyncDependenceAnalysis<ContextT>;

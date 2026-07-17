@@ -28,7 +28,7 @@
 #ifndef LLVM_ADT_GENERICCYCLEINFO_H
 #define LLVM_ADT_GENERICCYCLEINFO_H
 
-#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/GenericSSAContext.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SetVector.h"
@@ -93,14 +93,10 @@ public:
   GenericCycle() = default;
 };
 
-/// Opaque handle to a cycle within a GenericCycleInfo. Wraps the cycle's
-/// preorder index; a default-constructed handle is invalid ("no cycle"). All
-/// queries live on GenericCycleInfo, which resolves the handle to storage.
-///
-/// The handle is context-free: IR and machine cycles share one type, which
-/// keeps forward declarations simple. Handles remain valid as long as the
-/// cycle forest is not recomputed; addBlockToCycle() adds a block but never
-/// adds, removes, or reorders cycles, so it leaves every handle valid.
+/// Opaque handle to a cycle within a GenericCycleInfo that wraps the cycle's
+/// preorder index. Handles remain valid as long as the cycle forest is not
+/// recomputed; addBlockToCycle() adds a block but never adds, removes, or
+/// reorders cycles, so it leaves every handle valid.
 class CycleRef {
   static constexpr unsigned InvalidIndex = ~0u;
   unsigned Index = InvalidIndex;
@@ -117,9 +113,6 @@ public:
   bool operator!=(CycleRef O) const { return Index != O.Index; }
 };
 
-/// DenseMap tracks bucket occupancy with a separate bitmap rather than sentinel
-/// key values, so only hashing and equality are needed and the invalid handle
-/// is itself a legal key.
 template <> struct DenseMapInfo<CycleRef> {
   static unsigned getHashValue(CycleRef C) { return C.Index; }
   static bool isEqual(CycleRef A, CycleRef B) { return A.Index == B.Index; }
@@ -131,8 +124,6 @@ public:
   using BlockT = typename ContextT::BlockT;
   /// The internal, by-value storage type for a cycle.
   using CycleT = GenericCycle<ContextT>;
-  /// The opaque handle by which consumers refer to a cycle.
-  using CycleRef = ::llvm::CycleRef;
   using FunctionT = typename ContextT::FunctionT;
   template <typename> friend class GenericCycleInfoCompute;
 

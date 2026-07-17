@@ -28,7 +28,6 @@ public:
   using InstructionT = typename ContextT::InstructionT;
   using DominatorTreeT = typename ContextT::DominatorTreeT;
   using CycleInfoT = GenericCycleInfo<ContextT>;
-  using CycleRef = typename CycleInfoT::CycleRef;
 
   void initialize(raw_ostream *OS,
                   function_ref<void(const Twine &Message)> FailureCB,
