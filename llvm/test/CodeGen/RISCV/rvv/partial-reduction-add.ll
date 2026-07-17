@@ -76,3 +76,42 @@ entry:
   ret <vscale x 8 x i32> %partial.reduce
 }
 
+; FIXME: Fold constant partial reductions.
+define <4 x i32> @partial_reduce_add_constants() {
+; CHECK-LABEL: partial_reduce_add_constants:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    li a0, 100
+; CHECK-NEXT:    vmv.v.x v9, a0
+; CHECK-NEXT:    vadd.vi v10, v8, 1
+; CHECK-NEXT:    vadd.vi v11, v8, 13
+; CHECK-NEXT:    vmacc.vx v9, a0, v8
+; CHECK-NEXT:    vadd.vv v10, v11, v10
+; CHECK-NEXT:    vadd.vi v11, v8, 9
+; CHECK-NEXT:    vadd.vi v8, v8, 5
+; CHECK-NEXT:    vadd.vv v9, v10, v9
+; CHECK-NEXT:    vadd.vv v8, v8, v11
+; CHECK-NEXT:    vadd.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %partial.reduce = call <4 x i32> @llvm.vector.partial.reduce.add(
+      <4 x i32> <i32 100, i32 200, i32 300, i32 400>,
+      <16 x i32> <i32 1, i32 2, i32 3, i32 4,
+                    i32 5, i32 6, i32 7, i32 8,
+                    i32 9, i32 10, i32 11, i32 12,
+                    i32 13, i32 14, i32 15, i32 16>)
+  ret <4 x i32> %partial.reduce
+}
+
+; Ensure scalable splats do not fall through to generic scalar folding.
+define <vscale x 4 x i32> @partial_reduce_add_nxv4i32_splat_constants() {
+; CHECK-LABEL: partial_reduce_add_nxv4i32_splat_constants:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 3
+; CHECK-NEXT:    ret
+  %partial.reduce = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add(
+      <vscale x 4 x i32> splat (i32 1),
+      <vscale x 4 x i32> splat (i32 2))
+  ret <vscale x 4 x i32> %partial.reduce
+}
