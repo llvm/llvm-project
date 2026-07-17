@@ -50454,11 +50454,6 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
   if (!VT.isVector() || !Subtarget.hasSSE2() || !DCI.isBeforeLegalizeOps())
     return SDValue();
 
-  // Don't introduce a trapping FP divide under strict FP.
-  if (DAG.getMachineFunction().getFunction().hasFnAttribute(
-          Attribute::StrictFP))
-    return SDValue();
-
   SDValue Dividend = N->getOperand(0);
   SDValue Divisor = N->getOperand(1);
   unsigned Opc = N->getOpcode();
@@ -50484,6 +50479,11 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
   // i8/i16/i32: operands fit the float mantissa exactly (f32 for <=16-bit, f64
   // for 32-bit) so one float divide recovers the exact quotient.
   if (VT.getScalarSizeInBits() <= 32) {
+    // Don't introduce a trapping FP divide under strict FP.
+    if (DAG.getMachineFunction().getFunction().hasFnAttribute(
+            Attribute::StrictFP))
+      return SDValue();
+
     // Unsigned i32 needs FP_TO_UINT(f64->u32) which is emulated and a loss
     // for latency and code size before AVX2.
     if (!IsSigned && VT.getScalarSizeInBits() == 32 && !Subtarget.hasAVX2())
