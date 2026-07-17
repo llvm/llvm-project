@@ -19,6 +19,7 @@
 #include "ScriptedHookPythonInterface.h"
 #include "ScriptedPlatformPythonInterface.h"
 #include "ScriptedProcessPythonInterface.h"
+#include "ScriptedStackFrameRecognizerPythonInterface.h"
 #include "ScriptedThreadPlanPythonInterface.h"
 #include "ScriptedThreadPythonInterface.h"
 

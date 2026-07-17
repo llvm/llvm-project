@@ -2238,16 +2238,26 @@ template <typename T>
 static LogicalResult verifyMatMulZeroPointType(T op, Value input, Value zp,
                                                StringRef inputName,
                                                StringRef zpName) {
+  const Type inputElementType = getElementTypeOrSelf(input.getType());
   const Type inputStorageElementType = getStorageElementTypeOrSelf(input);
   const Type zpElementType = getStorageElementTypeOrSelf(zp);
+  Type expectedElementType = inputStorageElementType;
 
-  if (inputStorageElementType != zpElementType)
-    return op.emitOpError("expect input ")
-           << inputName << " and " << zpName
-           << " have the same element type, got " << inputStorageElementType
-           << " and " << zpElementType;
+  if (isa<BlockScaledType>(inputElementType))
+    expectedElementType = Float32Type::get(op.getContext());
 
-  return success();
+  if (expectedElementType == zpElementType)
+    return success();
+
+  InFlightDiagnostic diag = op.emitOpError("expect input ");
+  diag << inputName << " and " << zpName;
+  if (isa<BlockScaledType>(inputElementType))
+    diag << " have compatible element types, got " << inputElementType
+         << " and " << zpElementType;
+  else
+    diag << " have the same element type, got " << inputStorageElementType
+         << " and " << zpElementType;
+  return diag;
 }
 
 LogicalResult MatMulOp::verify() {

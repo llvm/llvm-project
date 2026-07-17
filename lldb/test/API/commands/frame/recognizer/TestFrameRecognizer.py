@@ -222,6 +222,46 @@ class FrameRecognizerTestCase(TestBase):
         frame = thread.GetSelectedFrame()
         self.assertIn("main", frame.name)
 
+    def test_frame_recognizer_optional_hooks(self):
+        """Exercise select_most_relevant_frame, get_exception, and
+        get_stop_description via a recognizer that implements all three.
+        Each hook records the frame name it saw in a class-level list so
+        the test can assert the hook actually fired."""
+        self.build()
+
+        target, process, thread, _ = lldbutil.run_to_name_breakpoint(self, "nested")
+
+        self.expect("frame recognizer clear")
+        self.expect(
+            "command script import "
+            + os.path.join(self.getSourceDir(), "recognizer.py")
+        )
+
+        # Reset the call trackers to isolate this test's activity from
+        # anything the recognizer might have observed earlier.
+        import recognizer
+
+        recognizer.NestedFrameRecognizer.select_most_relevant_frame_calls.clear()
+        recognizer.NestedFrameRecognizer.get_exception_calls.clear()
+        recognizer.NestedFrameRecognizer.get_stop_description_calls.clear()
+
+        self.expect(
+            "frame recognizer add -l recognizer.NestedFrameRecognizer "
+            "-f false -s a.out -n nested"
+        )
+
+        # Backtracing triggers recognition on each frame lldb walks.
+        self.runCmd("thread backtrace")
+
+        self.assertIn(
+            "nested", recognizer.NestedFrameRecognizer.select_most_relevant_frame_calls
+        )
+        self.assertIn("nested", recognizer.NestedFrameRecognizer.get_exception_calls)
+        self.assertIn(
+            "nested",
+            recognizer.NestedFrameRecognizer.get_stop_description_calls,
+        )
+
     def test_frame_recognizer_multi_symbol(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

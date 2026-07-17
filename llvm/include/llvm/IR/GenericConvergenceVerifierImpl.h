@@ -158,7 +158,7 @@ void GenericConvergenceVerifier<ContextT>::verify(const DominatorTreeT &DT) {
       return;
 
     auto *DefBB = Token->getParent();
-    if (DefBB == BB || BBCycle->contains(DefBB)) {
+    if (DefBB == BB || CI.contains(*BBCycle, DefBB)) {
       // degenerate occurrence of a loop intrinsic
       return;
     }
@@ -170,13 +170,13 @@ void GenericConvergenceVerifier<ContextT>::verify(const DominatorTreeT &DT) {
           {Context.print(User), CI.print(BBCycle)});
 
     while (true) {
-      auto *Parent = BBCycle->getParentCycle();
-      if (!Parent || Parent->contains(DefBB))
+      auto *Parent = CI.getParentCycle(*BBCycle);
+      if (!Parent || CI.contains(*Parent, DefBB))
         break;
       BBCycle = Parent;
     };
 
-    Check(BBCycle->isReducible() && BB == BBCycle->getHeader(),
+    Check(CI.isReducible(*BBCycle) && BB == CI.getHeader(*BBCycle),
           "Cycle heart must dominate all blocks in the cycle.",
           {Context.print(User), Context.printAsOperand(BB), CI.print(BBCycle)});
     Check(!CycleHearts.count(BBCycle),
