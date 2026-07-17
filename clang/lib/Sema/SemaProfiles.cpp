@@ -1890,6 +1890,52 @@ void runTestCtorFinalCallback(Sema &S, CXXConstructorDecl *Ctor) {
       << "test::ctor_final" << Ctor->getParent();
 }
 
+// The per-field walk of the ctor_uninit_member callback: check every
+// checkable field of \p RD against \p Written, recursing into anonymous
+// struct members -- their leaves initialize exactly like direct members of
+// the constructor's class (a written initializer for one is an *indirect*
+// member-initializer, which the Written collection already resolved to the
+// leaf FieldDecl via getAnyMember, and NSDMIs and [[uninit]] markers sit on
+// the leaves), so the same per-field logic and diagnostic apply to them.
+static void diagnoseCtorUninitFields(
+    Sema &S, const CXXConstructorDecl *Ctor, const CXXRecordDecl *RD,
+    const llvm::SmallPtrSetImpl<const FieldDecl *> &Written) {
+  for (const FieldDecl *F : RD->fields()) {
+    if (F->isUnnamedBitField())
+      continue;
+    if (F->isAnonymousStructOrUnion()) {
+      const CXXRecordDecl *AnonRD = F->getType()->getAsCXXRecordDecl();
+      if (!AnonRD || !AnonRD->hasDefinition() || AnonRD->isInvalidDecl())
+        continue;
+      // An anonymous union's members are mutually exclusive -- one active
+      // member satisfies it -- so the every-member walk does not apply.
+      if (AnonRD->isUnion())
+        continue;
+      diagnoseCtorUninitFields(S, Ctor, AnonRD->getDefinition(), Written);
+      continue;
+    }
+    // Other unnamed fields are skipped; a named bit-field is checked like
+    // any other member. Reference and const members already have dedicated
+    // diagnostics when left uninitialized.
+    if (!F->getDeclName() || F->getType()->isReferenceType() ||
+        F->getType().isConstQualified())
+      continue;
+    if (F->hasAttr<UninitAttr>() || F->hasInClassInitializer() ||
+        Written.count(F))
+      continue;
+    if (!S.Profiles().defaultInitLeavesScalarIndeterminate(
+            F->getType(), /*HonorUninitMarkers=*/true))
+      continue;
+    if (!S.Profiles().shouldEmitProfileViolation(
+            "std::init", "ctor_uninit_member", Ctor->getLocation(), Ctor))
+      continue;
+    S.Diag(Ctor->getLocation(), diag::err_init_ctor_uninit_member)
+        << "std::init" << F->getDeclName();
+    S.Diag(F->getLocation(), diag::note_init_uninit_member_here)
+        << F->getDeclName();
+  }
+}
+
 void runStdInitCtorUninitMemberCallback(Sema &S, CXXConstructorDecl *Ctor) {
   // Paper §6.1: a user-provided constructor must initialize every member via
   // its member-initializer list or an NSDMI, unless the member is marked
@@ -1920,27 +1966,7 @@ void runStdInitCtorUninitMemberCallback(Sema &S, CXXConstructorDecl *Ctor) {
     }
   }
 
-  for (const FieldDecl *F : Ctor->getParent()->fields()) {
-    // Anonymous aggregate members and unnamed bit-fields are skipped; a named
-    // bit-field is checked like any other member. Reference and const members
-    // already have dedicated diagnostics when left uninitialized.
-    if (F->isUnnamedBitField() || !F->getDeclName() ||
-        F->getType()->isReferenceType() || F->getType().isConstQualified())
-      continue;
-    if (F->hasAttr<UninitAttr>() || F->hasInClassInitializer() ||
-        Written.count(F))
-      continue;
-    if (!S.Profiles().defaultInitLeavesScalarIndeterminate(F->getType(),
-                                                /*HonorUninitMarkers=*/true))
-      continue;
-    if (!S.Profiles().shouldEmitProfileViolation(
-            "std::init", "ctor_uninit_member", Ctor->getLocation(), Ctor))
-      continue;
-    S.Diag(Ctor->getLocation(), diag::err_init_ctor_uninit_member)
-        << "std::init" << F->getDeclName();
-    S.Diag(F->getLocation(), diag::note_init_uninit_member_here)
-        << F->getDeclName();
-  }
+  diagnoseCtorUninitFields(S, Ctor, Ctor->getParent(), Written);
 
   // The guarantee is over the complete object (paper §5.1, §7.1), so a
   // direct base-class subobject left indeterminate is as much a violation as a
