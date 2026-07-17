@@ -1409,7 +1409,7 @@ bool InstCombinerImpl::tryReassociateAndFoldSymmetricPair(
   replaceOperand(OuterOp, OuterValIdx, InnerVal0);
   if (!isa<FPMathOperator>(OuterOp))
     OuterOp.dropPoisonGeneratingFlags();
-  OuterOp.dropUBImplyingAttrsAndMetadata();
+  OuterOp.dropUnknownNonDebugMetadata();
   return true;
 }
 
