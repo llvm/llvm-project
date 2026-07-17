@@ -99,8 +99,30 @@ LIBC_INLINE bool FreeListHeap::adopt(span<cpp::byte> mem) {
   auto result = BlockRef::init(mem);
   if (!result.has_value())
     return false;
+
+  BlockRef old_last(mem.begin() - BlockRef::HEADER_SIZE);
+  LIBC_ASSERT(old_last.is_last() && "Old last block must be a sentinel");
+
+  old_last.clear_last();
+
+  BlockRef new_block = *result;
+  LIBC_ASSERT(old_last.next() == new_block &&
+              "Old last block must point to the new block");
+
+  old_last.mark_free();
+
+  bool merged = old_last.merge_next();
+  LIBC_ASSERT(merged && "Failed to merge old last block with new block");
+
+  BlockRef to_insert = old_last;
+  if (BlockRef prev = old_last.prev_free()) {
+    free_store.remove(prev);
+    prev.merge_next();
+    to_insert = prev;
+  }
+
   end = mem.end();
-  free_store.insert(*result);
+  free_store.insert(to_insert);
   return true;
 }
 

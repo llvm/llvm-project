@@ -255,6 +255,10 @@ public:
     next_block.store_prev(outer_size());
   }
 
+  LIBC_INLINE void clear_last() const { store_next(load_next() & ~LAST_MASK); }
+
+  LIBC_INLINE bool is_last() const { return load_next() & LAST_MASK; }
+
   LIBC_INLINE bool is_usable_space_aligned(size_t alignment) const {
     return reinterpret_cast<uintptr_t>(usable_space()) % alignment == 0;
   }

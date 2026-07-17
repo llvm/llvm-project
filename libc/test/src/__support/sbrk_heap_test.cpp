@@ -59,3 +59,27 @@ TEST(LlvmLibcSbrkHeapTest, ReallocAndCalloc) {
 
   heap.free(new_ptr);
 }
+
+TEST(LlvmLibcSbrkHeapTest, MergeAcrossAdoptedRegion) {
+  LIBC_NAMESPACE::SbrkHeap heap(512);
+
+  void *ptr1 = heap.allocate(300);
+  EXPECT_NE(ptr1, static_cast<void *>(nullptr));
+
+  void *ptr2 = heap.allocate(400);
+  EXPECT_NE(ptr2, static_cast<void *>(nullptr));
+
+  heap.free(ptr1);
+  heap.free(ptr2);
+
+  size_t size_before = heap.region().size();
+
+  void *ptr3 = heap.allocate(1100);
+  EXPECT_NE(ptr3, static_cast<void *>(nullptr));
+
+  size_t size_after = heap.region().size();
+
+  EXPECT_EQ(size_after, size_before);
+
+  heap.free(ptr3);
+}
