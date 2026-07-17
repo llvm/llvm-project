@@ -748,11 +748,6 @@ public:
   using __base::reset;
 };
 
-template <class _Tp>
-class optional<_Tp&&> {
-  static_assert(false, "instantiation of optional with an rvalue reference type is ill-formed");
-};
-
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17

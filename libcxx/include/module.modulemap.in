@@ -1810,6 +1810,7 @@ module std [system] {
     }
 
     module comparison { header "__optional/comparison.h" }
+    module make_optional { header "__optional/make_optional.h" }
     module nullopt_t { header "__optional/nullopt_t.h" }
     module optional { header "__optional/optional.h" }
     module optional_ref { header "__optional/optional_ref.h" }
