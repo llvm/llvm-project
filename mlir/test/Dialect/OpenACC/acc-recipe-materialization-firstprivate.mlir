@@ -24,14 +24,18 @@ acc.private.recipe @privatization_memref_i32 : memref<i32> init {
 // and an alloca (as per the recipe) inside the region.
 // Then ensure that all uses are of the private alloca.
 // CHECK-LABEL: func.func @firstpriv
-// CHECK: acc.parallel {
-// CHECK: %[[ALLOCA:.*]] = memref.alloca() {acc.var_name = #acc.var_name<"t">} : memref<i32>
-// CHECK: %[[FIRSTPRIVLOAD:.*]] = memref.load %{{.*}}[] : memref<i32>
-// CHECK: memref.store %[[FIRSTPRIVLOAD]], %[[ALLOCA]][] : memref<i32>
-// CHECK: %[[ALLOCALOAD:.*]] = memref.load %[[ALLOCA]][] : memref<i32>
-// CHECK: %[[ADDI:.*]] = arith.addi %[[ALLOCALOAD]], %c1{{.*}} : i32
-// CHECK: memref.store %[[ADDI]], %[[ALLOCA]][] : memref<i32>
-// CHECK: memref.dealloc %[[ALLOCA]] : memref<i32>
+// CHECK:       [[ALLOCA:%.*]] = memref.alloca() : memref<i32>
+// CHECK:       [[MAP:%.*]] = acc.firstprivate_map varPtr([[ALLOCA]] : memref<i32>) -> memref<i32> {implicit = true, name = "t"}
+// CHECK:       acc.parallel {
+// CHECK:       [[FIRSTPRIV:%.*]] = memref.alloca() {acc.var_name = #acc.var_name<"t">} : memref<i32>
+// CHECK:       [[FIRSTPRIVLOAD:%.*]] = memref.load [[MAP]][] : memref<i32>
+// CHECK:       memref.store [[FIRSTPRIVLOAD]], [[FIRSTPRIV]][] : memref<i32>
+// CHECK:       [[FIRSTPRIVLOAD:%.*]] = memref.load [[FIRSTPRIV]][] : memref<i32>
+// CHECK:       [[ADDI:%.*]] = arith.addi [[FIRSTPRIVLOAD]], %c1{{.*}} : i32
+// CHECK:       memref.store [[ADDI]], [[FIRSTPRIV]][] : memref<i32>
+// CHECK-NEXT:  [[VALUELOAD:%.*]] = memref.load
+// CHECK-NEXT:  acc.firstprivate_save [[VALUELOAD]] to [[MAP]] : i32 -> memref<i32>
+// CHECK-NEXT:  memref.dealloc [[FIRSTPRIV]] : memref<i32>
 
 func.func @firstpriv() {
   %c1336 = arith.constant 1336 : i32

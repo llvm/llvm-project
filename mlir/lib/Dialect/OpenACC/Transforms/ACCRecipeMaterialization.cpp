@@ -305,6 +305,7 @@ LogicalResult ACCRecipeMaterialization::materialize(
     auto [results, ip] = acc::cloneACCRegionInto(
         &initRegion, block, block->begin(), mapping, {accPtr});
     assert(results.size() == 1 && "expected single result from init region");
+    Value alloca = results[0];
     saveVarName(op.getAccVar(), results[0]);
     resolveVarNamePlaceholders(block, ip, acc::getVariableName(op.getAccVar()));
     // We want the copy to store the origPtr to private
@@ -318,6 +319,17 @@ LogicalResult ACCRecipeMaterialization::materialize(
     Region &copyRegion = recipe.getCopyRegion();
     setLocation(copyRegion, loc);
     acc::cloneACCRegionInto(&copyRegion, block, std::next(ip), mapping, {});
+
+    // Create a temporary acc.firstprivate_save op to keep the value live-out
+    // until after other passes have determined it is truly firstprivate.
+    b.setInsertionPoint(accOp.getBody().getTerminator());
+    auto ptrLikeType = dyn_cast<acc::PointerLikeType>(alloca.getType());
+    assert(ptrLikeType && "alloca must be a pointer-like type");
+    auto xTyped = cast<TypedValue<acc::PointerLikeType>>(alloca);
+    assert(xTyped && "alloca must be a typed value");
+    auto loadOp = ptrLikeType.genLoad(b, op.getLoc(), xTyped, {});
+    acc::FirstprivateSaveOp::create(b, op.getLoc(), loadOp, origPtr);
+
     if (!recipe.getDestroyRegion().empty()) {
       // origPtr was already pushed.
       cloneDestroy(loc, recipe, block, std::prev(block->end()), results);
