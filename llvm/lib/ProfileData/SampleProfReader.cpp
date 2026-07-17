@@ -909,7 +909,8 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
     break;
   }
   case SecProfileSymbolList:
-    if (std::error_code EC = readProfileSymbolList())
+    if (std::error_code EC = readProfileSymbolList(
+            hasSecFlag(Entry, SecProfileSymbolListFlags::SecFlagMD5)))
       return EC;
     break;
   default:
@@ -1135,7 +1136,29 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
   return sampleprof_error::success;
 }
 
-std::error_code SampleProfileReaderExtBinaryBase::readProfileSymbolList() {
+std::error_code
+SampleProfileReaderExtBinaryBase::readProfileSymbolList(bool IsMD5) {
+  if (IsMD5)
+    return readMD5ProfileSymbolList();
+  return readStringBasedProfileSymbolList();
+}
+
+std::error_code SampleProfileReaderExtBinaryBase::readMD5ProfileSymbolList() {
+  size_t Size = End - Data;
+  if (Size % sizeof(uint64_t) != 0)
+    return sampleprof_error::truncated;
+  const auto *Table = reinterpret_cast<const support::ulittle64_t *>(Data);
+  size_t NumEntries = Size / sizeof(uint64_t);
+  if (!ProfSymList)
+    ProfSymList = std::make_unique<ProfileSymbolList>();
+  ProfSymList->setColdGUIDTable(
+      EytzingerTableSpan<support::ulittle64_t>(Table, NumEntries));
+  Data = End;
+  return sampleprof_error::success;
+}
+
+std::error_code
+SampleProfileReaderExtBinaryBase::readStringBasedProfileSymbolList() {
   if (!ProfSymList)
     ProfSymList = std::make_unique<ProfileSymbolList>();
 
@@ -1588,6 +1611,10 @@ static std::string getSecFlagsStr(const SecHdrTableEntry &Entry) {
       Flags.append("probe,");
     if (hasSecFlag(Entry, SecFuncMetadataFlags::SecFlagHasAttribute))
       Flags.append("attr,");
+    break;
+  case SecProfileSymbolList:
+    if (hasSecFlag(Entry, SecProfileSymbolListFlags::SecFlagMD5))
+      Flags.append("md5,");
     break;
   default:
     break;
