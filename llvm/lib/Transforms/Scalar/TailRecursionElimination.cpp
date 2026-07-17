@@ -118,10 +118,6 @@ static bool shouldDisableTailCallsForCold(const CallBase *CB,
              CB->getCallingConv() == CallingConv::Cold))
     return true;
 
-  if (Caller && (Caller->hasFnAttribute(Attribute::Cold) ||
-                 Caller->getCallingConv() == CallingConv::Cold))
-    return true;
-
   if (!PSI || !PSI->hasProfileSummary())
     return false;
 
@@ -540,8 +536,7 @@ CallInst *TailRecursionEliminator::findTRECandidate(BasicBlock *BB) {
 
   assert((!CI->isTailCall() || !CI->isNoTailCall()) &&
          "Incompatible call site attributes(Tail,NoTail)");
-  if (!CI->isTailCall() ||
-      shouldDisableTailCallsForCold(CI, &F, PSI, BFI))
+  if (!CI->isTailCall() || shouldDisableTailCallsForCold(CI, &F, PSI, BFI))
     return nullptr;
 
   // As a special case, detect code like this:
@@ -945,13 +940,10 @@ bool TailRecursionEliminator::processBlock(BasicBlock &BB) {
   return false;
 }
 
-bool TailRecursionEliminator::eliminate(Function &F,
-                                        const TargetTransformInfo *TTI,
-                                        AliasAnalysis *AA,
-                                        OptimizationRemarkEmitter *ORE,
-                                        DomTreeUpdater &DTU,
-                                        BlockFrequencyInfo *BFI,
-                                        ProfileSummaryInfo *PSI) {
+bool TailRecursionEliminator::eliminate(
+    Function &F, const TargetTransformInfo *TTI, AliasAnalysis *AA,
+    OptimizationRemarkEmitter *ORE, DomTreeUpdater &DTU,
+    BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI) {
   if (F.getFnAttribute("disable-tail-calls").getValueAsBool())
     return false;
 

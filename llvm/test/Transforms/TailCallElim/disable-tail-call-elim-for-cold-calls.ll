@@ -23,11 +23,10 @@ define void @test_coldcc_callee() {
   ret void
 }
 
-; Check that a call inside a cold enclosing function is not marked as tail when the flag is enabled.
+; Check that a call inside a cold enclosing function is marked as tail because we only suppress for cold callsites/callees (not cold callers).
 define void @test_cold_caller() cold {
 ; CHECK-LABEL: @test_cold_caller(
-; DISABLED: call void @normal_callee()
-; ENABLED: tail call void @normal_callee()
+; CHECK: tail call void @normal_callee()
   call void @normal_callee()
   ret void
 }
