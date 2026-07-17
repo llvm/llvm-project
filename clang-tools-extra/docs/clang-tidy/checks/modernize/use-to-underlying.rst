@@ -57,15 +57,15 @@ Options
    underlying type) are handled. Precise casts are always diagnosed and fixed
    regardless of this option. Possible values:
 
-   ``Ignore``
+   `Ignore`
      Do not diagnose imprecise casts.
 
-   ``Warn`` *(default)*
+   `Warn` *(default)*
      Diagnose imprecise casts but do not offer a fix-it. Neither automatic
      rewrite is applied because both change the meaning of the code in ways
      that may not be intended.
 
-   ``PreserveType``
+   `PreserveType`
      Wrap the operand in a call to the replacement function, keeping the
      original destination type:
 
@@ -73,7 +73,7 @@ Options
 
        long l = static_cast<long>(E{});  // becomes: static_cast<long>(std::to_underlying(E{}))
 
-   ``UseUnderlyingType``
+   `UseUnderlyingType`
      Replace the whole cast with a call to the replacement function. This
      **changes the type** of the expression from the destination type to the
      underlying type, so use it only when the wider or differently-signed
@@ -94,12 +94,12 @@ Options
 .. option:: ReplacementFunctionHeader
 
    The header to include when the replacement function is used. Defaults to
-   ``<utility>`` when :option:`ReplacementFunction` is ``std::to_underlying``,
+   ``<utility>`` when :option:`ReplacementFunction` is set to `std::to_underlying`,
    and is otherwise empty (no include is added). When the value is enclosed in
    angle brackets the include directive uses angle brackets, otherwise it uses
    quotes.
 
 .. option:: IncludeStyle
 
-   A string specifying which include-style is used, ``llvm`` or ``google``.
-   Default is ``llvm``.
+   A string specifying which include-style is used, `llvm` or `google`.
+   Default is `llvm`.
