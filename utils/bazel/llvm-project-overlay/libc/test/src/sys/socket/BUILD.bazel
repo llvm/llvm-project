@@ -27,6 +27,7 @@ libc_test_library(
         "//libc:types_size_t",
         "//libc:types_socklen_t",
         "//libc:types_struct_sockaddr_un",
+        "//libc/test/UnitTest:LibcUnitTest",
     ],
 )
 

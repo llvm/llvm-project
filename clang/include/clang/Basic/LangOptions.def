@@ -426,7 +426,7 @@ LANGOPT(ForceEmitVTables, 1, 0, NotCompatible, "whether to emit all vtables")
 LANGOPT(AllowEditorPlaceholders, 1, 0, Benign,
         "allow editor placeholders in source")
 
-ENUM_LANGOPT(ClangABICompat, ClangABI, 5, ClangABI::Latest, NotCompatible,
+ENUM_LANGOPT(ClangABICompat, ClangABI, 4, ClangABI::Latest, NotCompatible,
              "version of Clang that we should attempt to be ABI-compatible "
              "with")
 
