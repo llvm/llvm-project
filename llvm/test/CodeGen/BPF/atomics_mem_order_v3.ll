@@ -261,7 +261,7 @@ define dso_local i64 @test_fetch_add_64_ret(ptr nocapture noundef %i) local_unna
 ; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    r2 = 10
 ; CHECK-NEXT:    r3 = 10
-; CHECK-NEXT:    lock *(u64 *)(r1 + 0) += r3
+; CHECK-NEXT:    r3 = atomic_fetch_add((u64 *)(r1 + 0), r3)
 ; CHECK-NEXT:    r0 = 10
 ; CHECK-NEXT:    r0 = atomic_fetch_add((u64 *)(r1 + 0), r0)
 ; CHECK-NEXT:    r0 += r3

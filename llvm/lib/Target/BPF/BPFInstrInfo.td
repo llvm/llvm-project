@@ -1047,16 +1047,6 @@ let Predicates = [BPFHasALU32] in {
                 ] in {
       def : Pat<(P[0] ADDRri:$addr, GPR32:$val), (P[1]  ADDRri:$addr, (NEG_32 GPR32:$val))>;
     }
-
-    foreach P = [// add
-                 [atomic_load_add_i64_monotonic,  XADDD],
-                 [atomic_load_add_i64_acquire,   XFADDD],
-                 [atomic_load_add_i64_release,   XFADDD],
-                 [atomic_load_add_i64_acq_rel,   XFADDD],
-                 [atomic_load_add_i64_seq_cst,   XFADDD],
-                ] in {
-      def : Pat<(P[0] ADDRri:$addr, GPR:$val), (P[1]  ADDRri:$addr, GPR:$val)>;
-    }
 }
 
 foreach P = [[atomic_load_sub_i64_monotonic,  XADDD],
@@ -1084,6 +1074,19 @@ def atomic_load_ # op # _i64_monotonic_nu:
     binop_no_use <!cast<SDPatternOperator>("atomic_load_"#op# _i64_monotonic)>;
 def atomic_load_ # op # _i64_monotonic_hu:
     binop_has_use<!cast<SDPatternOperator>("atomic_load_"#op# _i64_monotonic)>;
+}
+
+let Predicates = [BPFHasALU32] in {
+  foreach P = [// add
+              [atomic_load_add_i64_monotonic_nu, XADDD],
+              [atomic_load_add_i64_monotonic_hu, XFADDD],
+              [atomic_load_add_i64_acquire,   XFADDD],
+              [atomic_load_add_i64_release,   XFADDD],
+              [atomic_load_add_i64_acq_rel,   XFADDD],
+              [atomic_load_add_i64_seq_cst,   XFADDD],
+            ] in {
+    def : Pat<(P[0] ADDRri:$addr, GPR:$val), (P[1]  ADDRri:$addr, GPR:$val)>;
+  }
 }
 
 foreach P = [// and
