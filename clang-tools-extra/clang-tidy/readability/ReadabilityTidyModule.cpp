@@ -158,6 +158,8 @@ public:
         "readability-redundant-preprocessor");
     CheckFactories.registerCheck<RedundantQualifiedAliasCheck>(
         "readability-redundant-qualified-alias");
+    CheckFactories.registerCheck<RedundantTagCheck>(
+        "readability-redundant-tag");
     CheckFactories.registerCheck<RedundantTypenameCheck>(
         "readability-redundant-typename");
     CheckFactories.registerCheck<ReferenceToConstructedTemporaryCheck>(
