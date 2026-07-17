@@ -46,9 +46,9 @@ bool isValidFundamentalIntWidth(unsigned width);
 /// void, or abstract types.
 bool isSized(mlir::Type ty);
 
-/// Returns the CIR floating-point type for a given semantics.  Mirrors
-/// llvm::Type::getFloatingPointTy; currently only covers the semantics
-/// CIR's scalar ABI classifier can reach (f32/f64).
+/// Returns the CIR floating-point type for the given semantics, or a null
+/// type if CIR has no type for it (e.g. PPCDoubleDouble or a Float8 format).
+/// Mirrors llvm::Type::getFloatingPointTy.
 cir::FPTypeInterface getFloatingPointType(const llvm::fltSemantics &sem,
                                           mlir::MLIRContext *ctx);
 

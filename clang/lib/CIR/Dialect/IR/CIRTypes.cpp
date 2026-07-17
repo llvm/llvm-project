@@ -41,13 +41,24 @@ bool cir::isSized(mlir::Type ty) {
 
 cir::FPTypeInterface cir::getFloatingPointType(const llvm::fltSemantics &sem,
                                                mlir::MLIRContext *ctx) {
-  if (&sem == &llvm::APFloat::IEEEsingle())
+  switch (llvm::APFloat::SemanticsToEnum(sem)) {
+  case llvm::APFloat::S_IEEEhalf:
+    return cir::FP16Type::get(ctx);
+  case llvm::APFloat::S_BFloat:
+    return cir::BF16Type::get(ctx);
+  case llvm::APFloat::S_IEEEsingle:
     return cir::SingleType::get(ctx);
-  if (&sem == &llvm::APFloat::IEEEdouble())
+  case llvm::APFloat::S_IEEEdouble:
     return cir::DoubleType::get(ctx);
-  llvm_unreachable("getFloatingPointType: floating-point semantics not yet "
-                   "handled; add a case here as new float kinds become "
-                   "supported");
+  case llvm::APFloat::S_x87DoubleExtended:
+    return cir::FP80Type::get(ctx);
+  case llvm::APFloat::S_IEEEquad:
+    return cir::FP128Type::get(ctx);
+  default:
+    // CIR has no type for the remaining semantics (PPCDoubleDouble, the
+    // Float8 formats).  Return null and let the caller report it.
+    return {};
+  }
 }
 
 //===----------------------------------------------------------------------===//
