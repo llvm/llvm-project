@@ -1856,7 +1856,7 @@ void ASTDeclWriter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
       Record.push_back(FTDK_Type);
     else {
       assert(D->Template.isDependent());
-      Record.push_back(FTDK_DependentTemplate);
+      Record.push_back(FTDK_Dependent);
     }
     Record.AddTypeSourceInfo(D->getFriendType());
     if (!D->Template.isNull())

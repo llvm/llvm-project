@@ -2458,7 +2458,7 @@ public:
 /// \code
 /// template \<typename T> class A {
 ///   friend class MyVector<T>; // not a friend template
-///   template \<typename U> friend class B; // not a friend template
+///   template \<typename U> friend class B; // friend class template
 ///   template \<typename U> friend class Foo<T>::Nested; // friend template
 /// };
 /// \endcode
@@ -2509,13 +2509,6 @@ public:
                                                 unsigned NumFriendTPLists);
 
   SourceRange getSourceRange() const override LLVM_READONLY;
-
-  /// If this friend declaration names a templated type (or
-  /// a dependent member type of a templated type), return that
-  /// type;  otherwise return null.
-  TypeSourceInfo *getFriendType() const {
-    return Friend.dyn_cast<TypeSourceInfo*>();
-  }
 
   TemplateName getFriendTemplateName() const { return Template; }
 

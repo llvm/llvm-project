@@ -2124,7 +2124,7 @@ enum FriendTemplateDeclKind {
   FTDK_Type = 0,
   FTDK_Decl = 1,
   FTDK_Template = 2,
-  FTDK_DependentTemplate = 3,
+  FTDK_Dependent = 3,
 };
 
 /// Kinds of cleanup objects owned by ExprWithCleanups.

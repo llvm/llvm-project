@@ -6423,7 +6423,7 @@ public:
 
   bool CheckDependentFriend(SourceLocation Loc, NestedNameSpecifierLoc NNSLoc,
                             ArrayRef<TemplateParameterList *> TPLs,
-                            bool IsInstantiation = false);
+                            bool IsInstantiation);
 
   MSPropertyDecl *HandleMSProperty(Scope *S, RecordDecl *TagD,
                                    SourceLocation DeclStart, Declarator &D,

@@ -17,7 +17,6 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExternalASTSource.h"
 #include <cassert>
-#include <cstddef>
 
 using namespace clang;
 

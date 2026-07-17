@@ -375,7 +375,7 @@ namespace cwg1837 { // cwg1837: 3.3
 #endif
 } // namespace cwg1837
 
-namespace cwg1862 { // cwg1862: no
+namespace cwg1862 { // cwg1862: yes
 template<class T>
 struct A {
   struct B {

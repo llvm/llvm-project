@@ -1740,8 +1740,9 @@ DEF_TRAVERSE_DECL(FriendTemplateDecl, {
     TRY_TO(TraverseTemplateName(Template));
   else
     TRY_TO(TraverseDecl(D->getFriendDecl()));
-  for (TemplateParameterList *TPL : D->getTemplateParameterLists())
-    TRY_TO(TraverseTemplateParameterListHelper(TPL));
+  if (D->getFriendType() || !Template.isNull())
+    for (TemplateParameterList *TPL : D->getTemplateParameterLists())
+      TRY_TO(TraverseTemplateParameterListHelper(TPL));
 })
 
 DEF_TRAVERSE_DECL(LinkageSpecDecl, {})

@@ -744,9 +744,7 @@ enum class TemplateSubstitutionKind : char {
         ArrayRef<TemplateArgument> Converted,
         VarTemplateSpecializationDecl *PrevDecl = nullptr);
 
-    bool
-    InstantiateFriendPackExpansion(FriendDecl *D, TypeSourceInfo *TSI,
-                                   ArrayRef<TemplateParameterList *> TPLs = {});
+    bool InstantiateFriendPackExpansion(FriendDecl *D);
 
     Decl *InstantiateTypedefNameDecl(TypedefNameDecl *D, bool IsTypeAlias);
     Decl *InstantiateTypeAliasTemplateDecl(TypeAliasTemplateDecl *D);

@@ -1991,9 +1991,9 @@ Decl *TemplateDeclInstantiator::VisitIndirectFieldDecl(IndirectFieldDecl *D) {
 }
 
 static std::optional<TemplateName>
-LookupFriendClassTemplate(Sema &SemaRef, NestedNameSpecifierLoc QualifierLoc,
-                          DeclarationName Name, SourceLocation NameLoc,
-                          bool HasTemplateKeyword, bool RequireClassTemplate) {
+LookupFriendTemplateName(Sema &SemaRef, NestedNameSpecifierLoc QualifierLoc,
+                         DeclarationName Name, SourceLocation NameLoc,
+                         bool HasTemplateKeyword, bool RequireClassTemplate) {
   if (!QualifierLoc)
     return TemplateName();
 
@@ -2067,7 +2067,7 @@ Sema::SubstFriendType(TypeSourceInfo *TSI,
   if (!QualifierLoc)
     return nullptr;
 
-  std::optional<TemplateName> InstTemplate = LookupFriendClassTemplate(
+  std::optional<TemplateName> InstTemplate = LookupFriendTemplateName(
       *this, QualifierLoc, FriendCTD->getDeclName(), TSTL.getTemplateNameLoc(),
       TSTL.getTemplateKeywordLoc().isValid(),
       /*RequireClassTemplate=*/false);
@@ -2124,7 +2124,7 @@ SubstFriendTemplateType(Sema &SemaRef, TypeSourceInfo *TSI,
     auto DNTL = TSI->getTypeLoc().getAs<DependentNameTypeLoc>();
     assert(DNTL && "friend class template must have a dependent name type");
 
-    std::optional<TemplateName> InstTemplate = LookupFriendClassTemplate(
+    std::optional<TemplateName> InstTemplate = LookupFriendTemplateName(
         SemaRef, InstQualifierLoc, DNTL.getTypePtr()->getIdentifier(),
         DNTL.getNameLoc(), /*HasTemplateKeyword=*/false,
         /*RequireClassTemplate=*/true);
@@ -2147,9 +2147,15 @@ SubstFriendTemplateType(Sema &SemaRef, TypeSourceInfo *TSI,
   return SubstitutedFriend{InstType, InstFriendTemplate};
 }
 
-bool TemplateDeclInstantiator::InstantiateFriendPackExpansion(
-    FriendDecl *D, TypeSourceInfo *TSI,
-    ArrayRef<TemplateParameterList *> TPLs) {
+bool TemplateDeclInstantiator::InstantiateFriendPackExpansion(FriendDecl *D) {
+  TypeSourceInfo *TSI = D->getFriendType();
+  assert(TSI && "friend pack expansion must name a type");
+
+  const auto *FTD = dyn_cast<FriendTemplateDecl>(D);
+  ArrayRef<TemplateParameterList *> TPLs;
+  if (FTD)
+    TPLs = FTD->getTemplateParameterLists();
+
   SmallVector<UnexpandedParameterPack, 2> Unexpanded;
   SemaRef.collectUnexpandedParameterPacks(TSI->getTypeLoc(), Unexpanded);
   assert(!Unexpanded.empty() && "Pack expansion without packs");
@@ -2176,7 +2182,6 @@ bool TemplateDeclInstantiator::InstantiateFriendPackExpansion(
     if (SubstTemplateParameterLists(TPLs, InstTPLs))
       return true;
 
-    const auto *FTD = dyn_cast<FriendTemplateDecl>(D);
     std::optional<SubstitutedFriend> InstFriend;
     if (FTD)
       InstFriend = SubstFriendTemplateType(
@@ -2216,7 +2221,7 @@ bool TemplateDeclInstantiator::InstantiateFriendPackExpansion(
 
 Decl *TemplateDeclInstantiator::VisitFriendDecl(FriendDecl *D) {
   if (TypeSourceInfo *Ty = D->getFriendType()) {
-    if (D->isPackExpansion() && InstantiateFriendPackExpansion(D, Ty))
+    if (D->isPackExpansion() && InstantiateFriendPackExpansion(D))
       return nullptr;
 
     TypeSourceInfo *InstTy = SemaRef.SubstFriendType(
@@ -3007,7 +3012,8 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
     if (!QualifierLoc)
       return nullptr;
   }
-  if (isFriend && !D->getTemplateParameterLists().empty() &&
+  if (isFriend &&
+      (FunctionTemplate || !D->getTemplateParameterLists().empty()) &&
       D->getQualifier().isDependent() &&
       SemaRef.CheckDependentFriend(D->getLocation(), QualifierLoc,
                                    /*TPLs=*/{}, /*IsInstantiation=*/true))
@@ -3426,7 +3432,8 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
     if (!QualifierLoc)
       return nullptr;
   }
-  if (isFriend && !D->getTemplateParameterLists().empty() &&
+  if (isFriend &&
+      (FunctionTemplate || !D->getTemplateParameterLists().empty()) &&
       D->getQualifier().isDependent() &&
       SemaRef.CheckDependentFriend(D->getLocation(), QualifierLoc,
                                    /*TPLs=*/{}, /*IsInstantiation=*/true))
@@ -4946,8 +4953,7 @@ Decl *TemplateDeclInstantiator::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
   ArrayRef<TemplateParameterList *> FriendTPLs = D->getTemplateParameterLists();
 
   TypeSourceInfo *FriendTSI = D->getFriendType();
-  if (FriendTSI && D->isPackExpansion() &&
-      InstantiateFriendPackExpansion(D, FriendTSI, FriendTPLs))
+  if (FriendTSI && D->isPackExpansion() && InstantiateFriendPackExpansion(D))
     return nullptr;
 
   LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true);
@@ -5408,9 +5414,8 @@ TemplateDeclInstantiator::InstantiateVarTemplatePartialSpecialization(
   return InstPartialSpec;
 }
 
-TypeSourceInfo*
-TemplateDeclInstantiator::SubstFunctionType(FunctionDecl *D,
-                              SmallVectorImpl<ParmVarDecl *> &Params) {
+TypeSourceInfo *TemplateDeclInstantiator::SubstFunctionType(
+    FunctionDecl *D, SmallVectorImpl<ParmVarDecl *> &Params) {
   TypeSourceInfo *OldTInfo = D->getTypeSourceInfo();
   assert(OldTInfo && "substituting function without type source info");
   assert(Params.empty() && "parameter vector is non-empty at start");

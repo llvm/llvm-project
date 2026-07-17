@@ -2428,6 +2428,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      FriendDecl *D1, FriendDecl *D2) {
+  if (D1->isPackExpansion() != D2->isPackExpansion())
+    return false;
+
   if ((D1->getFriendType() && D2->getFriendDecl()) ||
       (D1->getFriendDecl() && D2->getFriendType()))
     return false;

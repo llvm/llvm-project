@@ -791,6 +791,7 @@ namespace test33 {
       struct M;
       template <class> struct N;
       static void f();
+      template <class> static void g();
     };
   };
 
@@ -798,6 +799,7 @@ namespace test33 {
     struct M;
     template <class> struct N;
     static void f();
+    template <class> static void g();
   };
 
   struct C {
@@ -830,6 +832,15 @@ namespace test33 {
   template struct F<A>;
   template struct F<C>;
   // expected-note@-1 {{in instantiation of template class 'test33::F<test33::C>' requested here}}
+
+  template <class P> struct G {
+    template <class U> friend void P::template D<int>::g();
+    // expected-error@-1 {{nested name specifier 'test33::C::template D<int>' in friend declaration must end with a simple-template-id naming a class template, but 'D' is an alias template}}
+  };
+
+  template struct G<A>;
+  template struct G<C>;
+  // expected-note@-1 {{in instantiation of template class 'test33::G<test33::C>' requested here}}
 }
 
 namespace test34 {
@@ -1142,4 +1153,26 @@ namespace test42 {
   }
 
   template struct A::B<int>;
+}
+
+namespace test43 {
+  template <class T> struct A {
+    static void f(typename T::type);
+  };
+
+  class B {
+    using type = int;
+    int n;
+
+    template <class T> friend void A<T>::f(typename T::type);
+  };
+
+  template <> struct A<B> {
+    static void f(int);
+  };
+
+  void A<B>::f(int) {
+    B b;
+    b.n = 0;
+  }
 }

@@ -764,11 +764,11 @@ public:
   }
 
   bool VisitFriendTemplateDecl(const FriendTemplateDecl *D) {
-    if (D->getFriendType() || !D->getFriendTemplateName().isNull()) {
-      const auto *DC = cast<NamedDecl>(D->getDeclContext());
-      for (TemplateParameterList *TPL : D->getTemplateParameterLists())
-        indexTemplateParameters(TPL, DC);
-    }
+    const NamedDecl *ND = cast<NamedDecl>(D->getDeclContext());
+    if (!D->getFriendType() && D->getFriendTemplateName().isNull())
+      ND = D->getFriendDecl();
+    for (TemplateParameterList *TPL : D->getTemplateParameterLists())
+      indexTemplateParameters(TPL, ND);
     return VisitFriendDecl(D);
   }
 

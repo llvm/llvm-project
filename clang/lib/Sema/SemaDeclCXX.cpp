@@ -18319,7 +18319,8 @@ DeclResult Sema::ActOnTemplatedFriendTag(
   ArrayRef<TemplateParameterList *> TPLs = TempParamLists;
   if (TemplateParams)
     TPLs = TPLs.drop_back();
-  if (CheckDependentFriend(TagLoc, QualifierLoc, TPLs))
+  if (CheckDependentFriend(TagLoc, QualifierLoc, TPLs,
+                           /*IsInstantiation=*/false))
     return true;
 
   TypeSourceInfo *TSI = nullptr;
@@ -18801,7 +18802,8 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
 
   if (!TemplateParams.empty() && SS.isValid() &&
       CheckDependentFriend(NameInfo.getLoc(), SS.getWithLocInContext(Context),
-                           FD->getTemplateParameterLists()))
+                           FD->getTemplateParameterLists(),
+                           /*IsInstantiation=*/false))
     return ND;
 
   // C++ [class.friend]p6:

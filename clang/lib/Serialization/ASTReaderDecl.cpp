@@ -2415,8 +2415,8 @@ void ASTDeclReader::VisitFriendDecl(FriendDecl *D) {
 
 void ASTDeclReader::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
   VisitDecl(D);
-  for (unsigned i = 0; i != D->NumTPLists; ++i)
-    D->getTrailingObjects()[i] = Record.readTemplateParameterList();
+  for (unsigned I = 0; I != D->NumTPLists; ++I)
+    D->getTrailingObjects()[I] = Record.readTemplateParameterList();
   switch (Record.readInt()) {
   case FTDK_Type:
     D->Friend = readTypeSourceInfo();
@@ -2428,7 +2428,7 @@ void ASTDeclReader::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
     D->Template = Record.readTemplateName();
     D->Friend = D->Template.getAsTemplateDecl();
     break;
-  case FTDK_DependentTemplate:
+  case FTDK_Dependent:
     D->Friend = readTypeSourceInfo();
     D->Template = Record.readTemplateName();
     break;

@@ -765,8 +765,6 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
     return MatchesFriend(S, EC, FriendCTD);
 
   ArrayRef<TemplateParameterList *> TPLs = FTD->getTemplateParameterLists();
-  if (TPLs.empty())
-    return AR_inaccessible;
 
   AccessResult OnFailure = AR_inaccessible;
   for (CXXRecordDecl *ContextRD : EC.Records) {
@@ -855,9 +853,11 @@ static AccessResult MatchesFriend(Sema &S, FriendTemplateDecl *FTD,
     ContextFD = ContextTemplate->getTemplatedDecl();
   }
 
+  Sema::ContextRAII SavedContext(S, FTD->getDeclContext());
   QualType InstFriendType =
       S.SubstType(FriendFD->getType(), DeducedArgs, FriendFD->getLocation(),
                   FriendFD->getDeclName());
+  SavedContext.pop();
   if (InstFriendType.isNull() || Trap.hasErrorOccurred())
     return OnFailure;
 
@@ -930,8 +930,6 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
     return AR_inaccessible;
 
   ArrayRef<TemplateParameterList *> TPLs = FTD->getTemplateParameterLists();
-  if (TPLs.empty())
-    return AR_inaccessible;
 
   AccessResult OnFailure = AR_inaccessible;
   for (FunctionDecl *ContextFD : EC.Functions) {
@@ -978,8 +976,6 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
       return OnFailure;
 
     ArrayRef<TemplateParameterList *> TPLs = FTD->getTemplateParameterLists();
-    if (TPLs.empty())
-      return OnFailure;
 
     TemplateName FriendTemplate = FriendTST->getTemplateName();
     DeclarationName FriendName;
@@ -1045,8 +1041,6 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
     return OnFailure;
 
   ArrayRef<TemplateParameterList *> TPLs = FTD->getTemplateParameterLists();
-  if (TPLs.empty())
-    return OnFailure;
 
   TagTypeKind FriendTagKind =
       TypeWithKeyword::getTagTypeKindForKeyword(FriendDNT->getKeyword());

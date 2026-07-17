@@ -84,7 +84,7 @@ public:
   friend class ASTNodeImporter;
 
   static FriendDecl *Create(ASTContext &C, DeclContext *DC, SourceLocation L,
-                            FriendUnion Friend_, SourceLocation FriendL,
+                            FriendUnion Friend, SourceLocation FriendL,
                             SourceLocation EllipsisLoc = {});
   static FriendDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
