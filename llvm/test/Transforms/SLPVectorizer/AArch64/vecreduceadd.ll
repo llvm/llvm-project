@@ -930,7 +930,7 @@ entry:
 
 
 ; COST-LABEL: Function:  mla_v8i8_i32
-; COST: Cost:            '-24'
+; COST: Cost:            '-32'
 define i32 @mla_v8i8_i32(ptr %x, ptr %y) "target-features"="+dotprod" {
 ; CHECK-LABEL: @mla_v8i8_i32(
 ; CHECK-NEXT:  entry:
@@ -1009,7 +1009,7 @@ entry:
 
 
 ; COST-LABEL: Function:  mla_v16i8_i32
-; COST: Cost:            '-52'
+; COST: Cost:            '-70'
 define i32 @mla_v16i8_i32(ptr %x, ptr %y) "target-features"="+dotprod" {
 ; CHECK-LABEL: @mla_v16i8_i32(
 ; CHECK-NEXT:  entry:
