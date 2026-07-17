@@ -6902,6 +6902,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::ct_select: {
+    // Fast-math flags on the call are intentionally dropped: CT_SELECT
+    // carries no SDNodeFlags, so no FMF-driven combine can apply to it.
     SDValue Cond = getValue(I.getArgOperand(0));
     SDValue A = getValue(I.getArgOperand(1));
     SDValue B = getValue(I.getArgOperand(2));

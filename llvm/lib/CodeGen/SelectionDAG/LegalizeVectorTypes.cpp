@@ -90,9 +90,9 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::SIGN_EXTEND_INREG: R = ScalarizeVecRes_InregOp(N); break;
   case ISD::VSELECT:           R = ScalarizeVecRes_VSELECT(N); break;
-  case ISD::SELECT:            R = ScalarizeVecRes_SELECT(N); break;
+  case ISD::SELECT:
   case ISD::CT_SELECT:
-    R = ScalarizeVecRes_CT_SELECT(N);
+    R = ScalarizeVecRes_SELECT(N);
     break;
   case ISD::SELECT_CC:         R = ScalarizeVecRes_SELECT_CC(N); break;
   case ISD::SETCC:             R = ScalarizeVecRes_SETCC(N); break;
@@ -759,15 +759,9 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_VSELECT(SDNode *N) {
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_SELECT(SDNode *N) {
   SDValue LHS = GetScalarizedVector(N->getOperand(1));
-  return DAG.getSelect(SDLoc(N),
-                       LHS.getValueType(), N->getOperand(0), LHS,
-                       GetScalarizedVector(N->getOperand(2)));
-}
-
-SDValue DAGTypeLegalizer::ScalarizeVecRes_CT_SELECT(SDNode *N) {
-  SDValue LHS = GetScalarizedVector(N->getOperand(1));
-  return DAG.getCTSelect(SDLoc(N), LHS.getValueType(), N->getOperand(0), LHS,
-                         GetScalarizedVector(N->getOperand(2)));
+  return DAG.getNode(N->getOpcode(), SDLoc(N), LHS.getValueType(),
+                     N->getOperand(0), LHS,
+                     GetScalarizedVector(N->getOperand(2)));
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_SELECT_CC(SDNode *N) {
@@ -1407,10 +1401,10 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::AssertSext:   SplitVecRes_AssertSext(N, Lo, Hi); break;
   case ISD::VSELECT:
   case ISD::SELECT:
-  case ISD::VP_MERGE:
   case ISD::CT_SELECT:
     SplitRes_CT_SELECT(N, Lo, Hi);
     break;
+  case ISD::VP_MERGE:
   case ISD::SELECT_CC:    SplitRes_SELECT_CC(N, Lo, Hi); break;
   case ISD::POISON:
   case ISD::UNDEF:        SplitRes_UNDEF(N, Lo, Hi); break;

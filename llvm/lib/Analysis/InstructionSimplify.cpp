@@ -7580,8 +7580,9 @@ static Value *simplifyIntrinsic(CallBase *Call, ArrayRef<Value *> Args,
     return nullptr;
   }
   case Intrinsic::ct_select: {
-    // Only fold on a literal IR-constant condition or identical arms. Folding
-    // through ValueTracking-derived known bits would defeat the constant-time
+    // Only fold on a literal IR-constant condition or identical arms; these
+    // are the only two folds LangRef permits for ct.select. Folding through
+    // ValueTracking-derived known bits would defeat the constant-time
     // contract on conditions the user wants kept opaque.
     Value *Cond = Args[0], *TrueVal = Args[1], *FalseVal = Args[2];
     if (auto *CI = dyn_cast<ConstantInt>(Cond)) {

@@ -1395,7 +1395,7 @@ public:
   SDValue getCTSelect(const SDLoc &DL, EVT VT, SDValue Cond, SDValue LHS,
                       SDValue RHS) {
     assert(LHS.getValueType() == VT && RHS.getValueType() == VT &&
-           "Cannot use select on differing types");
+           "Cannot use ct.select on differing types");
     assert(!Cond.getValueType().isVector() &&
            "ct.select condition must be a scalar");
     return getNode(ISD::CT_SELECT, DL, VT, Cond, LHS, RHS);

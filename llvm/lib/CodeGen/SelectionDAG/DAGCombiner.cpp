@@ -13699,17 +13699,10 @@ SDValue DAGCombiner::visitCT_SELECT(SDNode *N) {
     return DAG.getCTSelect(DL, VT, F, N2, N1);
 
   if (VT0 == MVT::i1) {
-    // Nested CT_SELECT merging optimizations for i1 conditions.
-    // These are CT-safe because:
-    //   1. AND/OR are bitwise operations that execute in constant time
-    //   2. The optimization combines two sequential CT_SELECTs into one,
-    //   reducing the total number of constant-time operations without
-    //   changing semantics
-    //   3. No data-dependent branches or memory accesses are introduced
-    //
+    // Merge nested i1 ct_selects. The AND/OR of the two conditions is itself
+    // constant-time and the result remains a CT_SELECT.
+
     // ct_select C0, (ct_select C1, X, Y), Y -> ct_select (C0 & C1), X, Y
-    // Semantic equivalence: If C0 is true, evaluate inner select (C1 ? X :
-    // Y). If C0 is false, choose Y. This is equivalent to (C0 && C1) ? X : Y.
     if (N1.getOpcode() == ISD::CT_SELECT && N1.hasOneUse()) {
       SDValue N10 = N1.getOperand(0);
       SDValue N11 = N1.getOperand(1);
@@ -13721,8 +13714,6 @@ SDValue DAGCombiner::visitCT_SELECT(SDNode *N) {
     }
 
     // ct_select C0, X, (ct_select C1, X, Y) -> ct_select (C0 | C1), X, Y
-    // Semantic equivalence: If C0 is true, choose X. If C0 is false, evaluate
-    // inner select (C1 ? X : Y). This is equivalent to (C0 || C1) ? X : Y.
     if (N2.getOpcode() == ISD::CT_SELECT && N2.hasOneUse()) {
       SDValue N20 = N2.getOperand(0);
       SDValue N21 = N2.getOperand(1);
