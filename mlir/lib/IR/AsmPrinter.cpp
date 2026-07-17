@@ -201,6 +201,11 @@ struct AsmPrinterOptions {
   llvm::cl::opt<bool> useNameLocAsPrefix{
       "mlir-use-nameloc-as-prefix", llvm::cl::init(false),
       llvm::cl::desc("Print SSA IDs using NameLocs as prefixes")};
+
+  llvm::cl::opt<bool> printFloatSpecialLiteralsAsHexOpt{
+      "mlir-print-float-special-literals-as-hex", llvm::cl::init(false),
+      llvm::cl::desc("Print special float literals (inf, NaN) as a hexadecimal "
+                     "bit pattern instead of the human-readable form")};
 };
 } // namespace
 
@@ -219,7 +224,7 @@ OpPrintingFlags::OpPrintingFlags()
       printGenericOpFormFlag(false), skipRegionsFlag(false),
       assumeVerifiedFlag(false), printLocalScope(false),
       printValueUsersFlag(false), printUniqueSSAIDsFlag(false),
-      useNameLocAsPrefix(false) {
+      useNameLocAsPrefix(false), printFloatSpecialLiteralsAsHexFlag(false) {
   // Initialize based upon command line options, if they are available.
   if (!clOptions.isConstructed())
     return;
@@ -239,6 +244,8 @@ OpPrintingFlags::OpPrintingFlags()
   printValueUsersFlag = clOptions->printValueUsers;
   printUniqueSSAIDsFlag = clOptions->printUniqueSSAIDs;
   useNameLocAsPrefix = clOptions->useNameLocAsPrefix;
+  printFloatSpecialLiteralsAsHexFlag =
+      clOptions->printFloatSpecialLiteralsAsHexOpt;
 }
 
 /// Enable the elision of large elements attributes, by printing a '...'
@@ -331,6 +338,11 @@ OpPrintingFlags &OpPrintingFlags::printNameLocAsPrefix(bool enable) {
   return *this;
 }
 
+OpPrintingFlags &OpPrintingFlags::printFloatSpecialLiteralsAsHex(bool enable) {
+  printFloatSpecialLiteralsAsHexFlag = enable;
+  return *this;
+}
+
 /// Return the size limit for printing large ElementsAttr.
 std::optional<int64_t> OpPrintingFlags::getLargeElementsAttrLimit() const {
   return elementsAttrElementLimit;
@@ -387,6 +399,11 @@ bool OpPrintingFlags::shouldUseNameLocAsPrefix() const {
   return useNameLocAsPrefix;
 }
 
+/// Return if special float literals should print as a hexadecimal bit pattern.
+bool OpPrintingFlags::shouldPrintFloatSpecialLiteralsAsHex() const {
+  return printFloatSpecialLiteralsAsHexFlag;
+}
+
 //===----------------------------------------------------------------------===//
 // NewLineCounter
 //===----------------------------------------------------------------------===//
@@ -417,6 +434,9 @@ public:
 
   /// Returns the output stream of the printer.
   raw_ostream &getStream() { return os; }
+
+  /// Returns the printing flags of the printer.
+  const OpPrintingFlags &getPrinterFlags() const { return printerFlags; }
 
   /// Print a newline and indent the printer to the start of the current
   /// operation/attribute/type.
@@ -2256,14 +2276,11 @@ void AsmPrinter::Impl::printLocationInternal(LocationAttr loc, bool pretty,
 /// Print a floating point value in a way that the parser will be able to
 /// round-trip losslessly.
 static void printFloatValue(const APFloat &apValue, raw_ostream &os,
-                            bool *printedHex = nullptr) {
-  // We would like to output the FP constant value in exponential notation,
-  // but we cannot do this if doing so will lose precision.  Check here to
-  // make sure that we only output it in exponential format if we can parse
-  // the value back and get the same value.
-  bool isInf = apValue.isInfinity();
-  bool isNaN = apValue.isNaN();
-  if (!isInf && !isNaN) {
+                            bool *printedHex = nullptr,
+                            bool printFloatSpecialLiteralsAsHex = false) {
+  // Finite values print as decimal; this is the only form whose type may be
+  // elided.
+  if (!apValue.isInfinity() && !apValue.isNaN()) {
     SmallString<128> strValue;
     apValue.toString(strValue, /*FormatPrecision=*/6, /*FormatMaxPadding=*/0,
                      /*TruncateZero=*/false);
@@ -2295,14 +2312,51 @@ static void printFloatValue(const APFloat &apValue, raw_ostream &os,
     }
   }
 
-  // Print special values in hexadecimal format. The sign bit should be included
-  // in the literal.
+  // The rest (inf, NaN, hex bit-pattern) are typeless; keep the type.
   if (printedHex)
     *printedHex = true;
+
+  // The legacy form prints inf/NaN as a hexadecimal bit pattern too.
+  if (!printFloatSpecialLiteralsAsHex && apValue.isInfinity()) {
+    os << (apValue.isNegative() ? "-inf" : "+inf");
+    return;
+  }
+
+  if (!printFloatSpecialLiteralsAsHex && apValue.isNaN()) {
+    os << (apValue.isNegative() ? '-' : '+');
+    // NanOnly types have a single NaN per representable sign, with no payload
+    // and no quiet/signaling bit; their text form is just `nan`. Only the IEEE
+    // model carries a payload and a quiet/signaling distinction.
+    if (apValue.getSemantics().nonFiniteBehavior ==
+        llvm::fltNonfiniteBehavior::NanOnly) {
+      os << "nan";
+      return;
+    }
+    // Only IEEE-encoded types reach here (NanOnly types returned above), so the
+    // precision is >= 3 and the payload below is at least one bit wide.
+    APInt payload = apValue.getNaNPayload();
+    // Preferred quiet NaN = only the quiet (sign-mask) bit set.
+    if (payload.isSignMask()) {
+      os << "qnan";
+      return;
+    }
+    if (apValue.isSignaling())
+      os << 's';
+    os << "nan(";
+    // Drop the quiet/signaling bit; trim leading zeros.
+    payload.clearBit(payload.getBitWidth() - 1);
+    SmallVector<char, 16> str;
+    payload.trunc(std::max(payload.getActiveBits(), 1u))
+        .toString(str, /*Radix=*/16, /*Signed=*/false,
+                  /*formatAsCLiteral=*/true);
+    os << str << ')';
+    return;
+  }
+
+  // Hexadecimal bit pattern.
   SmallVector<char, 16> str;
-  APInt apInt = apValue.bitcastToAPInt();
-  apInt.toString(str, /*Radix=*/16, /*Signed=*/false,
-                 /*formatAsCLiteral=*/true);
+  apValue.bitcastToAPInt().toString(str, /*Radix=*/16, /*Signed=*/false,
+                                    /*formatAsCLiteral=*/true);
   os << str;
 }
 
@@ -2472,7 +2526,8 @@ void AsmPrinter::Impl::printAttributeImpl(Attribute attr,
 
   } else if (auto floatAttr = llvm::dyn_cast<FloatAttr>(attr)) {
     bool printedHex = false;
-    printFloatValue(floatAttr.getValue(), os, &printedHex);
+    printFloatValue(floatAttr.getValue(), os, &printedHex,
+                    printerFlags.shouldPrintFloatSpecialLiteralsAsHex());
 
     // FloatAttr elides the type if F64.
     if (typeElision == AttrTypeElision::May && floatAttr.getType().isF64() &&
@@ -2702,9 +2757,11 @@ void AsmPrinter::Impl::printDenseTypedElementsAttr(DenseTypedElementsAttr attr,
       printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
         auto complexValue = *(valueIt + index);
         os << "(";
-        printFloatValue(complexValue.real(), os);
+        printFloatValue(complexValue.real(), os, /*printedHex=*/nullptr,
+                        printerFlags.shouldPrintFloatSpecialLiteralsAsHex());
         os << ",";
-        printFloatValue(complexValue.imag(), os);
+        printFloatValue(complexValue.imag(), os, /*printedHex=*/nullptr,
+                        printerFlags.shouldPrintFloatSpecialLiteralsAsHex());
         os << ")";
       });
     }
@@ -2717,7 +2774,8 @@ void AsmPrinter::Impl::printDenseTypedElementsAttr(DenseTypedElementsAttr attr,
     assert(llvm::isa<FloatType>(elementType) && "unexpected element type");
     auto valueIt = attr.value_begin<APFloat>();
     printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
-      printFloatValue(*(valueIt + index), os);
+      printFloatValue(*(valueIt + index), os, /*printedHex=*/nullptr,
+                      printerFlags.shouldPrintFloatSpecialLiteralsAsHex());
     });
   }
 }
@@ -2768,7 +2826,8 @@ void AsmPrinter::Impl::printDenseArrayAttr(DenseArrayAttr attr) {
       printDenseIntElement(value, getStream(), type);
     } else {
       APFloat fltVal(llvm::cast<FloatType>(type).getFloatSemantics(), value);
-      printFloatValue(fltVal, getStream());
+      printFloatValue(fltVal, getStream(), /*printedHex=*/nullptr,
+                      printerFlags.shouldPrintFloatSpecialLiteralsAsHex());
     }
   };
   llvm::interleaveComma(llvm::seq<unsigned>(0, attr.size()), getStream(),
@@ -3063,7 +3122,9 @@ void AsmPrinter::decreaseIndent() {
 /// Print the given floating point value in a stablized form.
 void AsmPrinter::printFloat(const APFloat &value) {
   assert(impl && "expected AsmPrinter::printFloat to be overriden");
-  printFloatValue(value, impl->getStream());
+  printFloatValue(
+      value, impl->getStream(), /*printedHex=*/nullptr,
+      impl->getPrinterFlags().shouldPrintFloatSpecialLiteralsAsHex());
 }
 
 void AsmPrinter::printType(Type type) {

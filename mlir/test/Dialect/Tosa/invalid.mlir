@@ -2019,7 +2019,7 @@ func.func @test_mul_out_i16(%arg0: tensor<13x21x3xi8>, %arg1: tensor<13x1x3xi8>,
 
 // CHECK-LABEL: test_clamp_nan_min_val
 func.func @test_clamp_nan_min_val(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf32> {
-  // expected-error@+1 {{'tosa.clamp' op min/max attributes should not be 'NaN', got min_val=0xFFFFFFFF : f32, max_val=1.000000e+00 : f32}}
+  // expected-error@+1 {{'tosa.clamp' op min/max attributes should not be 'NaN', got min_val=-nan(0x3FFFFF) : f32, max_val=1.000000e+00 : f32}}
   %0 = tosa.clamp %arg0 {min_val = 0xFFFFFFFF : f32, max_val = 1.0: f32} : (tensor<13x21x3xf32>) -> tensor<13x21x3xf32>
   return %0 : tensor<13x21x3xf32>
 }
@@ -2028,7 +2028,7 @@ func.func @test_clamp_nan_min_val(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3x
 
 // CHECK-LABEL: test_clamp_nan_max_val
 func.func @test_clamp_nan_max_val(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf32> {
-  // expected-error@+1 {{'tosa.clamp' op min/max attributes should not be 'NaN', got min_val=2.300000e+00 : f32, max_val=0x7FFFFFFF : f32}}
+  // expected-error@+1 {{'tosa.clamp' op min/max attributes should not be 'NaN', got min_val=2.300000e+00 : f32, max_val=+nan(0x3FFFFF) : f32}}
   %0 = tosa.clamp %arg0 {min_val = 2.3 : f32, max_val = 0x7FFFFFFF: f32} : (tensor<13x21x3xf32>) -> tensor<13x21x3xf32>
   return %0 : tensor<13x21x3xf32>
 }

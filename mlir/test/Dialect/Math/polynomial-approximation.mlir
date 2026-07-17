@@ -114,7 +114,7 @@ func.func @erf_scalar(%arg0: f32) -> f32 {
 // CHECK-DAG:     %[[cst_24:.*]] = arith.constant -4.000000e+00 : f32
 // CHECK-DAG:     %[[cst_25:.*]] = arith.constant -2.000000e+00 : f32
 // CHECK-DAG:     %[[cst_26:.*]] = arith.constant 2.000000e+00 : f32
-// CHECK-DAG:     %[[cst_27:.*]] = arith.constant 0x7F800000 : f32
+// CHECK-DAG:     %[[cst_27:.*]] = arith.constant +inf : f32
 // CHECK-DAG:     %[[cst_28:.*]] = arith.constant 10.0546875 : f32
 // CHECK:         %[[val_2:.*]] = math.absf %[[val_arg0]] : f32
 // CHECK-NEXT:    %[[val_3:.*]] = arith.addf %[[val_2]], %[[cst_26]] : f32
@@ -308,9 +308,9 @@ func.func @exp_scalable_vector(%arg0: vector<[8]xf32>) -> vector<[8]xf32> {
 // CHECK-DAG:       %[[VAL_18:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK-DAG:       %[[VAL_19:.*]] = arith.constant -5.000000e-01 : f32
 // CHECK-DAG:       %[[VAL_20:.*]] = arith.constant 1.17549435E-38 : f32
-// CHECK-DAG:       %[[VAL_21:.*]] = arith.constant 0xFF800000 : f32
-// CHECK-DAG:       %[[VAL_22:.*]] = arith.constant 0x7F800000 : f32
-// CHECK-DAG:       %[[VAL_23:.*]] = arith.constant 0x7FC00000 : f32
+// CHECK-DAG:       %[[VAL_21:.*]] = arith.constant -inf : f32
+// CHECK-DAG:       %[[VAL_22:.*]] = arith.constant +inf : f32
+// CHECK-DAG:       %[[VAL_23:.*]] = arith.constant +qnan : f32
 // CHECK-DAG:       %[[VAL_24:.*]] = arith.constant 0.707106769 : f32
 // CHECK-DAG:       %[[VAL_25:.*]] = arith.constant 0.0703768358 : f32
 // CHECK-DAG:       %[[VAL_26:.*]] = arith.constant -0.115146101 : f32
@@ -434,9 +434,9 @@ func.func @expm1_scalable_vector(%arg0: vector<8x[8]xf32>) -> vector<8x[8]xf32> 
 // CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 1.000000e+00 : f32
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant -5.000000e-01 : f32
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 1.17549435E-38 : f32
-// CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 0xFF800000 : f32
-// CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 0x7F800000 : f32
-// CHECK-DAG:       %[[VAL_7:.*]] = arith.constant 0x7FC00000 : f32
+// CHECK-DAG:       %[[VAL_5:.*]] = arith.constant -inf : f32
+// CHECK-DAG:       %[[VAL_6:.*]] = arith.constant +inf : f32
+// CHECK-DAG:       %[[VAL_7:.*]] = arith.constant +qnan : f32
 // CHECK-DAG:       %[[VAL_8:.*]] = arith.constant 0.707106769 : f32
 // CHECK-DAG:       %[[VAL_9:.*]] = arith.constant 0.0703768358 : f32
 // CHECK-DAG:       %[[VAL_10:.*]] = arith.constant -0.115146101 : f32
@@ -683,7 +683,7 @@ func.func @rsqrt_scalar(%arg0: f32) -> f32 {
 // CHECK:           math.rsqrt
 // AVX2-LABEL:    func @rsqrt_vector_8xf32(
 // AVX2-SAME:       %[[VAL_0:.*]]: vector<8xf32>) -> vector<8xf32> {
-// AVX2:   %[[VAL_1:.*]] = arith.constant dense<0x7F800000> : vector<8xf32>
+// AVX2:   %[[VAL_1:.*]] = arith.constant dense<+inf> : vector<8xf32>
 // AVX2:   %[[VAL_2:.*]] = arith.constant dense<1.500000e+00> : vector<8xf32>
 // AVX2:   %[[VAL_3:.*]] = arith.constant dense<-5.000000e-01> : vector<8xf32>
 // AVX2:   %[[VAL_4:.*]] = arith.constant dense<1.17549435E-38> : vector<8xf32>
@@ -857,7 +857,7 @@ func.func @atan_scalar(%arg0: f32) -> f32 {
 // CHECK-DAG:       %[[VAL_17:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK-DAG:       %[[VAL_18:.*]] = arith.constant 3.14159274 : f32
 // CHECK-DAG:       %[[VAL_19:.*]] = arith.constant -1.57079637 : f32
-// CHECK-DAG:       %[[VAL_20:.*]] = arith.constant 0x7FC00000 : f32
+// CHECK-DAG:       %[[VAL_20:.*]] = arith.constant +qnan : f32
 // CHECK-DAG:       %[[VAL_21:.*]] = arith.extf %[[VAL_0]] : f16 to f32
 // CHECK-DAG:       %[[VAL_22:.*]] = arith.extf %[[VAL_1]] : f16 to f32
 // CHECK-DAG:       %[[VAL_23:.*]] = arith.divf %[[VAL_21]], %[[VAL_22]] : f32

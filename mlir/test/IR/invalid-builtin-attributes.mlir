@@ -52,6 +52,16 @@ func.func @elementsattr_floattype2() -> () {
 
 // -----
 
+// The diagnostic must point at the float literal, not the following token
+// (the `}` is on the next line, exposing a stale location).
+func.func @float_attr_non_float_type() -> () {
+  // expected-error@below {{floating point value not valid for specified type}}
+  "foo"(){bar = 1.0 : i32
+  } : () -> ()
+}
+
+// -----
+
 func.func @elementsattr_toolarge1() -> () {
   "foo"(){bar = dense<[777]> : tensor<1xi8>} : () -> () // expected-error {{integer constant out of range}}
 }
@@ -673,5 +683,171 @@ func.func @print_error_on_correct_line() {
 func.func @expect_to_parse_literal() {
   // expected-error@below {{expected string token, got 23}}
   %0 = arith.constant dense<[23]> : tensor<1x!unknown<>>
+  return
+}
+
+// -----
+
+func.func @hex_float_without_exponent() {
+  // expected-error@below {{expected binary exponent in hexadecimal floating point literal}}
+  %0 = arith.constant 0x1.8 : f64
+  return
+}
+
+// -----
+
+func.func @hex_float_missing_exponent_digits() {
+  // expected-error@below {{expected binary exponent in hexadecimal floating point literal}}
+  %0 = arith.constant 0x1.0p : f64
+  return
+}
+
+// -----
+
+func.func @unclosed_nan_literal() {
+  // expected-error@below {{expected ')' in NaN literal}}
+  %0 = arith.constant +nan(0x1 : f32
+  return
+}
+
+// -----
+
+func.func @invalid_nan_payload() {
+  // expected-error@below {{invalid floating point literal}}
+  %0 = arith.constant +nan(0xZZ) : f32
+  return
+}
+
+// -----
+
+func.func @inf_on_integer_type() {
+  // expected-error@below {{floating point value not valid for specified type}}
+  %0 = arith.constant +inf : i32
+  return
+}
+
+// -----
+
+func.func @doubly_signed_inf() {
+  // Doubly-signed literal: a '-' token before an already-signed inf/NaN.
+  // expected-error@below {{floating point literal has more than one sign}}
+  %0 = arith.constant -+inf : f64
+  return
+}
+
+// -----
+
+func.func @inf_on_type_without_inf() {
+  // f4E2M1FN has no Inf encoding: reject, do not crash APFloat.
+  // expected-error@below {{floating point type does not support infinity}}
+  %0 = arith.constant +inf : f4E2M1FN
+  return
+}
+
+// -----
+
+func.func @nan_on_type_without_nan() {
+  // f6E2M3FN has no NaN encoding.
+  // expected-error@below {{floating point type does not support NaN}}
+  %0 = arith.constant +qnan : f6E2M3FN
+  return
+}
+
+// -----
+
+func.func @inf_on_nan_only_type() {
+  // f8E4M3FN has NaN but no Inf.
+  // expected-error@below {{floating point type does not support infinity}}
+  %0 = arith.constant +inf : f8E4M3FN
+  return
+}
+
+// -----
+
+func.func @negative_on_unsigned_type() {
+  // f8E8M0FNU is unsigned: reject negatives, do not crash the printer.
+  // expected-error@below {{floating point type does not support negative values}}
+  %0 = arith.constant -1.0 : f8E8M0FNU
+  return
+}
+
+// -----
+
+func.func @signaling_nan_on_all_ones_type() {
+  // f8E4M3FN (AllOnes) has a single NaN with no signaling bit.
+  // expected-error@below {{floating point type does not support signaling NaN}}
+  %0 = arith.constant +snan(0x1) : f8E4M3FN
+  return
+}
+
+// -----
+
+func.func @payload_nan_on_all_ones_type() {
+  // f8E4M3FN (AllOnes) has a single NaN with no payload.
+  // expected-error@below {{floating point type does not support NaN payload}}
+  %0 = arith.constant +nan(0x1) : f8E4M3FN
+  return
+}
+
+// -----
+
+func.func @signaling_nan_on_negative_zero_type() {
+  // f8E4M3FNUZ (NegativeZero) has a single NaN with no signaling bit.
+  // expected-error@below {{floating point type does not support signaling NaN}}
+  %0 = arith.constant +snan(0x1) : f8E4M3FNUZ
+  return
+}
+
+// -----
+
+func.func @payload_nan_on_negative_zero_type() {
+  // f8E4M3FNUZ (NegativeZero) has a single NaN with no payload.
+  // expected-error@below {{floating point type does not support NaN payload}}
+  %0 = arith.constant -nan(0x1) : f8E4M3FNUZ
+  return
+}
+
+// -----
+
+func.func @positive_qnan_on_negative_zero_type() {
+  // f8E4M3FNUZ (NegativeZero) has only a negative NaN.
+  // expected-error@below {{floating point type only supports negative NaN}}
+  %0 = arith.constant +qnan : f8E4M3FNUZ
+  return
+}
+
+// -----
+
+func.func @positive_nan_on_negative_zero_type() {
+  // f8E4M3FNUZ (NegativeZero) has only a negative NaN.
+  // expected-error@below {{floating point type only supports negative NaN}}
+  %0 = arith.constant +nan : f8E4M3FNUZ
+  return
+}
+
+// -----
+
+func.func @negative_nan_on_unsigned_type() {
+  // f8E8M0FNU is unsigned: a negative NaN is rejected like any negative value.
+  // expected-error@below {{floating point type does not support negative values}}
+  %0 = arith.constant -nan : f8E8M0FNU
+  return
+}
+
+// -----
+
+func.func @signaling_nan_on_unsigned_type() {
+  // f8E8M0FNU (AllOnes) has a single NaN with no signaling bit.
+  // expected-error@below {{floating point type does not support signaling NaN}}
+  %0 = arith.constant +snan : f8E8M0FNU
+  return
+}
+
+// -----
+
+func.func @payload_nan_on_unsigned_type() {
+  // f8E8M0FNU (AllOnes) has a single NaN with no payload.
+  // expected-error@below {{floating point type does not support NaN payload}}
+  %0 = arith.constant +nan(0x1) : f8E8M0FNU
   return
 }

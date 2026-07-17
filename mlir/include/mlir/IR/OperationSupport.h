@@ -1239,6 +1239,10 @@ public:
   /// Print SSA IDs using their NameLoc, if provided, as prefix.
   OpPrintingFlags &printNameLocAsPrefix(bool enable = true);
 
+  /// Print special float literals (inf, NaN) as a hexadecimal bit pattern
+  /// instead of the human-readable form. Restores the legacy output.
+  OpPrintingFlags &printFloatSpecialLiteralsAsHex(bool enable = true);
+
   /// Return if the given ElementsAttr should be elided.
   bool shouldElideElementsAttr(ElementsAttr attr) const;
 
@@ -1282,6 +1286,10 @@ public:
   /// IDs
   bool shouldUseNameLocAsPrefix() const;
 
+  /// Return if special float literals (inf, NaN) should print as a hexadecimal
+  /// bit pattern.
+  bool shouldPrintFloatSpecialLiteralsAsHex() const;
+
 private:
   /// Elide large elements attributes if the number of elements is larger than
   /// the upper limit.
@@ -1318,6 +1326,9 @@ private:
 
   /// Print SSA IDs using NameLocs as prefixes
   bool useNameLocAsPrefix : 1;
+
+  /// Print special float literals (inf, NaN) as a hexadecimal bit pattern.
+  bool printFloatSpecialLiteralsAsHexFlag : 1;
 };
 
 //===----------------------------------------------------------------------===//

@@ -97,12 +97,12 @@ module @TestDenseStringElementsAttr attributes {
 // CHECK-LABEL: @TestFloat
 module @TestFloat attributes {
   // CHECK: bytecode.float = 1.000000e+01 : f64
-  // CHECK: bytecode.float1 = 0.10000{{.*}} : f80
-  // CHECK: bytecode.float2 = 0.10000{{.*}} : f128
+  // CHECK: bytecode.float1 = 1.000000e-01 : f80
+  // CHECK: bytecode.float2 = 1.000000e-01 : f128
   // CHECK: bytecode.float3 = -5.000000e-01 : bf16
-  // CHECK: bytecode.inf = 0x7FF0000000000000 : f64
-  // CHECK: bytecode.nan = 0x7FF8000000000000 : f64
-  // CHECK: bytecode.ninf = 0xFFF0000000000000 : f64
+  // CHECK: bytecode.inf = +inf : f64
+  // CHECK: bytecode.nan = +qnan : f64
+  // CHECK: bytecode.ninf = -inf : f64
   bytecode.float = 10.0 : f64,
   bytecode.float1 = 0.1 : f80,
   bytecode.float2 = 0.1 : f128,

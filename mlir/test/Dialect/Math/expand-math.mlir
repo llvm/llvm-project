@@ -634,8 +634,8 @@ func.func @math_fpowi_neg_odd_power(%0 : tensor<8xf32>) -> tensor<8xf32> {
 //  CHECK-DAG:    %[[CST1:.*]] = arith.constant dense<1.000000e+00> : tensor<8xf32>
 //  CHECK-DAG:    %[[CST0:.*]] = arith.constant dense<0.000000e+00> : tensor<8xf32>
 //  CHECK-DAG:    %[[CSTNEG0:.*]] = arith.constant dense<-0.000000e+00> : tensor<8xf32>
-//  CHECK-DAG:    %[[CSTINF:.*]] = arith.constant dense<0x7F800000> : tensor<8xf32>
-//  CHECK-DAG:    %[[CSTNEGINF:.*]] = arith.constant dense<0xFF800000> : tensor<8xf32>
+//  CHECK-DAG:    %[[CSTINF:.*]] = arith.constant dense<+inf> : tensor<8xf32>
+//  CHECK-DAG:    %[[CSTNEGINF:.*]] = arith.constant dense<-inf> : tensor<8xf32>
 //  CHECK:        %[[SQ:.*]] = arith.mulf %[[ARG0]], %[[ARG0]] : tensor<8xf32>
 //  CHECK:        %[[CUBE:.*]] = arith.mulf %[[SQ]], %[[ARG0]] : tensor<8xf32>
 //  CHECK:        %[[CMP0:.*]] = arith.cmpf oeq, %[[CUBE]], %[[CST0]] : tensor<8xf32>
@@ -657,8 +657,8 @@ func.func @math_fpowi_neg_even_power(%0 : tensor<8xf32>) -> tensor<8xf32> {
 //  CHECK-DAG:    %[[CST1:.*]] = arith.constant dense<1.000000e+00> : tensor<8xf32>
 //  CHECK-DAG:    %[[CST0:.*]] = arith.constant dense<0.000000e+00> : tensor<8xf32>
 //  CHECK-DAG:    %[[CSTNEG0:.*]] = arith.constant dense<-0.000000e+00> : tensor<8xf32>
-//  CHECK-DAG:    %[[CSTINF:.*]] = arith.constant dense<0x7F800000> : tensor<8xf32>
-//  CHECK-DAG:    %[[CSTNEGINF:.*]] = arith.constant dense<0xFF800000> : tensor<8xf32>
+//  CHECK-DAG:    %[[CSTINF:.*]] = arith.constant dense<+inf> : tensor<8xf32>
+//  CHECK-DAG:    %[[CSTNEGINF:.*]] = arith.constant dense<-inf> : tensor<8xf32>
 //  CHECK:        %[[SQ:.*]] = arith.mulf %[[ARG0]], %[[ARG0]] : tensor<8xf32>
 //  CHECK:        %[[PW4:.*]] = arith.mulf %[[SQ]], %[[SQ]] : tensor<8xf32>
 //  CHECK:        %[[CMP0:.*]] = arith.cmpf oeq, %[[PW4]], %[[CST0]] : tensor<8xf32>

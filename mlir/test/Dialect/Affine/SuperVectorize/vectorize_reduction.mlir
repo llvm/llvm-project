@@ -44,7 +44,7 @@ func.func @vecdim_reduction_minf(%in: memref<256x512xf32>, %out: memref<256xf32>
 
 // CHECK-LABEL: @vecdim_reduction_minf
 // CHECK:       affine.for %{{.*}} = 0 to 256 {
-// CHECK:         %[[vmax:.*]] = arith.constant dense<0x7F800000> : vector<128xf32>
+// CHECK:         %[[vmax:.*]] = arith.constant dense<+inf> : vector<128xf32>
 // CHECK:         %[[vred:.*]] = affine.for %{{.*}} = 0 to 512 step 128 iter_args(%[[red_iter:.*]] = %[[vmax]]) -> (vector<128xf32>) {
 // CHECK:           %[[ld:.*]] = vector.transfer_read %{{.*}} : memref<256x512xf32>, vector<128xf32>
 // CHECK:           %[[min:.*]] = arith.minimumf %[[red_iter]], %[[ld]] : vector<128xf32>
@@ -71,7 +71,7 @@ func.func @vecdim_reduction_maxf(%in: memref<256x512xf32>, %out: memref<256xf32>
 
 // CHECK-LABEL: @vecdim_reduction_maxf
 // CHECK:       affine.for %{{.*}} = 0 to 256 {
-// CHECK:         %[[vmin:.*]] = arith.constant dense<0xFF800000> : vector<128xf32>
+// CHECK:         %[[vmin:.*]] = arith.constant dense<-inf> : vector<128xf32>
 // CHECK:         %[[vred:.*]] = affine.for %{{.*}} = 0 to 512 step 128 iter_args(%[[red_iter:.*]] = %[[vmin]]) -> (vector<128xf32>) {
 // CHECK:           %[[ld:.*]] = vector.transfer_read %{{.*}} : memref<256x512xf32>, vector<128xf32>
 // CHECK:           %[[max:.*]] = arith.maximumf %[[red_iter]], %[[ld]] : vector<128xf32>
@@ -294,9 +294,9 @@ func.func @vecdim_reduction_minnumf(%in: memref<256x512xf32>, %out: memref<256xf
 // CHECK-LABEL:   func.func @vecdim_reduction_minnumf(
 // CHECK-SAME:      %[[input:.*]]: memref<256x512xf32>,
 // CHECK-SAME:      %[[output:.*]]: memref<256xf32>) {
-// CHECK:           %[[cst:.*]] = arith.constant 0xFF800000 : f32
+// CHECK:           %[[cst:.*]] = arith.constant -inf : f32
 // CHECK:           affine.for %{{.*}} = 0 to 256 {
-// CHECK:             %[[vzero:.*]] = arith.constant dense<0x7FC00000> : vector<128xf32>
+// CHECK:             %[[vzero:.*]] = arith.constant dense<+qnan> : vector<128xf32>
 // CHECK:             %[[vred:.*]] = affine.for %{{.*}} = 0 to 512 step 128 iter_args(%[[red_iter:.*]] = %[[vzero]]) -> (vector<128xf32>) {
 // CHECK:               %[[poison:.*]] = ub.poison : f32
 // CHECK:               %[[ld:.*]] = vector.transfer_read %[[input]]{{\[}}%{{.*}}, %{{.*}}], %[[poison]] {in_bounds = [true]} : memref<256x512xf32>, vector<128xf32>
@@ -328,9 +328,9 @@ func.func @vecdim_reduction_maxnumf(%in: memref<256x512xf32>, %out: memref<256xf
 // CHECK-LABEL:   func.func @vecdim_reduction_maxnumf(
 // CHECK-SAME:      %[[input:.*]]: memref<256x512xf32>,
 // CHECK-SAME:      %[[output:.*]]: memref<256xf32>) {
-// CHECK:           %[[cst:.*]] = arith.constant 0xFF800000 : f32
+// CHECK:           %[[cst:.*]] = arith.constant -inf : f32
 // CHECK:           affine.for %{{.*}} = 0 to 256 {
-// CHECK:             %[[vzero:.*]] = arith.constant dense<0xFFC00000> : vector<128xf32>
+// CHECK:             %[[vzero:.*]] = arith.constant dense<-qnan> : vector<128xf32>
 // CHECK:             %[[vred:.*]] = affine.for %{{.*}} = 0 to 512 step 128 iter_args(%[[red_iter:.*]] = %[[vzero]]) -> (vector<128xf32>) {
 // CHECK:               %[[poison:.*]] = ub.poison : f32
 // CHECK:               %[[ld:.*]] = vector.transfer_read %[[input]]{{\[}}%{{.*}}, %{{.*}}], %[[poison]] {in_bounds = [true]} : memref<256x512xf32>, vector<128xf32>

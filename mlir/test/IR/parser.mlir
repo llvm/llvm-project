@@ -1022,18 +1022,18 @@ func.func @dialect_attribute_with_type() {
 // CHECK-LABEL: @f16_special_values
 func.func @f16_special_values() {
   // F16 NaNs.
-  // CHECK: arith.constant 0x7C01 : f16
+  // CHECK: arith.constant +snan(0x1) : f16
   %0 = arith.constant 0x7C01 : f16
-  // CHECK: arith.constant 0x7FFF : f16
+  // CHECK: arith.constant +nan(0x1FF) : f16
   %1 = arith.constant 0x7FFF : f16
-  // CHECK: arith.constant 0xFFFF : f16
+  // CHECK: arith.constant -nan(0x1FF) : f16
   %2 = arith.constant 0xFFFF : f16
 
   // F16 positive infinity.
-  // CHECK: arith.constant 0x7C00 : f16
+  // CHECK: arith.constant +inf : f16
   %3 = arith.constant 0x7C00 : f16
   // F16 negative infinity.
-  // CHECK: arith.constant 0xFC00 : f16
+  // CHECK: arith.constant -inf : f16
   %4 = arith.constant 0xFC00 : f16
 
   return
@@ -1042,22 +1042,22 @@ func.func @f16_special_values() {
 // CHECK-LABEL: @f32_special_values
 func.func @f32_special_values() {
   // F32 signaling NaNs.
-  // CHECK: arith.constant 0x7F800001 : f32
+  // CHECK: arith.constant +snan(0x1) : f32
   %0 = arith.constant 0x7F800001 : f32
-  // CHECK: arith.constant 0x7FBFFFFF : f32
+  // CHECK: arith.constant +snan(0x3FFFFF) : f32
   %1 = arith.constant 0x7FBFFFFF : f32
 
   // F32 quiet NaNs.
-  // CHECK: arith.constant 0x7FC00000 : f32
+  // CHECK: arith.constant +qnan : f32
   %2 = arith.constant 0x7FC00000 : f32
-  // CHECK: arith.constant 0xFFFFFFFF : f32
+  // CHECK: arith.constant -nan(0x3FFFFF) : f32
   %3 = arith.constant 0xFFFFFFFF : f32
 
   // F32 positive infinity.
-  // CHECK: arith.constant 0x7F800000 : f32
+  // CHECK: arith.constant +inf : f32
   %4 = arith.constant 0x7F800000 : f32
   // F32 negative infinity.
-  // CHECK: arith.constant 0xFF800000 : f32
+  // CHECK: arith.constant -inf : f32
   %5 = arith.constant 0xFF800000 : f32
 
   return
@@ -1066,22 +1066,22 @@ func.func @f32_special_values() {
 // CHECK-LABEL: @f64_special_values
 func.func @f64_special_values() {
   // F64 signaling NaNs.
-  // CHECK: arith.constant 0x7FF0000000000001 : f64
+  // CHECK: arith.constant +snan(0x1) : f64
   %0 = arith.constant 0x7FF0000000000001 : f64
-  // CHECK: arith.constant 0x7FF8000000000000 : f64
+  // CHECK: arith.constant +qnan : f64
   %1 = arith.constant 0x7FF8000000000000 : f64
 
   // F64 quiet NaNs.
-  // CHECK: arith.constant 0x7FF0000001000000 : f64
+  // CHECK: arith.constant +snan(0x1000000) : f64
   %2 = arith.constant 0x7FF0000001000000 : f64
-  // CHECK: arith.constant 0xFFF0000001000000 : f64
+  // CHECK: arith.constant -snan(0x1000000) : f64
   %3 = arith.constant 0xFFF0000001000000 : f64
 
   // F64 positive infinity.
-  // CHECK: arith.constant 0x7FF0000000000000 : f64
+  // CHECK: arith.constant +inf : f64
   %4 = arith.constant 0x7FF0000000000000 : f64
   // F64 negative infinity.
-  // CHECK: arith.constant 0xFFF0000000000000 : f64
+  // CHECK: arith.constant -inf : f64
   %5 = arith.constant 0xFFF0000000000000 : f64
 
   // Check that values that can't be represented with the default format, use
@@ -1095,22 +1095,22 @@ func.func @f64_special_values() {
 // CHECK-LABEL: @bfloat16_special_values
 func.func @bfloat16_special_values() {
   // bfloat16 signaling NaNs.
-  // CHECK: arith.constant 0x7F81 : bf16
+  // CHECK: arith.constant +snan(0x1) : bf16
   %0 = arith.constant 0x7F81 : bf16
-  // CHECK: arith.constant 0xFF81 : bf16
+  // CHECK: arith.constant -snan(0x1) : bf16
   %1 = arith.constant 0xFF81 : bf16
 
   // bfloat16 quiet NaNs.
-  // CHECK: arith.constant 0x7FC0 : bf16
+  // CHECK: arith.constant +qnan : bf16
   %2 = arith.constant 0x7FC0 : bf16
-  // CHECK: arith.constant 0xFFC0 : bf16
+  // CHECK: arith.constant -qnan : bf16
   %3 = arith.constant 0xFFC0 : bf16
 
   // bfloat16 positive infinity.
-  // CHECK: arith.constant 0x7F80 : bf16
+  // CHECK: arith.constant +inf : bf16
   %4 = arith.constant 0x7F80 : bf16
   // bfloat16 negative infinity.
-  // CHECK: arith.constant 0xFF80 : bf16
+  // CHECK: arith.constant -inf : bf16
   %5 = arith.constant 0xFF80 : bf16
 
   return
@@ -1119,22 +1119,22 @@ func.func @bfloat16_special_values() {
 // CHECK-LABEL: @f80_special_values
 func.func @f80_special_values() {
   // F80 signaling NaNs.
-  // CHECK: arith.constant 0x7FFFE000000000000001 : f80
+  // CHECK: arith.constant +nan(0x2000000000000001) : f80
   %0 = arith.constant 0x7FFFE000000000000001 : f80
-  // CHECK: arith.constant 0x7FFFB000000000000011 : f80
+  // CHECK: arith.constant +snan(0x3000000000000011) : f80
   %1 = arith.constant 0x7FFFB000000000000011 : f80
 
   // F80 quiet NaNs.
-  // CHECK: arith.constant 0x7FFFC000000000100000 : f80
+  // CHECK: arith.constant +nan(0x100000) : f80
   %2 = arith.constant 0x7FFFC000000000100000 : f80
-  // CHECK: arith.constant 0x7FFFE000000001000000 : f80
+  // CHECK: arith.constant +nan(0x2000000001000000) : f80
   %3 = arith.constant 0x7FFFE000000001000000 : f80
 
   // F80 positive infinity.
-  // CHECK: arith.constant 0x7FFF8000000000000000 : f80
+  // CHECK: arith.constant +inf : f80
   %4 = arith.constant 0x7FFF8000000000000000 : f80
   // F80 negative infinity.
-  // CHECK: arith.constant 0xFFFF8000000000000000 : f80
+  // CHECK: arith.constant -inf : f80
   %5 = arith.constant 0xFFFF8000000000000000 : f80
 
   return
@@ -1152,14 +1152,14 @@ func.func @f32_potential_precision_loss() {
 
 // CHECK-LABEL: @special_float_values_in_tensors
 func.func @special_float_values_in_tensors() {
-  // CHECK: dense<0xFFFFFFFF> : tensor<4x4xf32>
+  // CHECK: dense<-nan(0x3FFFFF)> : tensor<4x4xf32>
   "foo"(){bar = dense<0xFFFFFFFF> : tensor<4x4xf32>} : () -> ()
-  // CHECK: dense<[{{\[}}0xFFFFFFFF, 0x7F800000], [0x7FBFFFFF, 0x7F800001]]> : tensor<2x2xf32>
+  // CHECK: dense<[{{\[}}-nan(0x3FFFFF), +inf], [+snan(0x3FFFFF), +snan(0x1)]]> : tensor<2x2xf32>
   "foo"(){bar = dense<[[0xFFFFFFFF, 0x7F800000], [0x7FBFFFFF, 0x7F800001]]> : tensor<2x2xf32>} : () -> ()
-  // CHECK: dense<[0xFFFFFFFF, 0.000000e+00]> : tensor<2xf32>
+  // CHECK: dense<[-nan(0x3FFFFF), 0.000000e+00]> : tensor<2xf32>
   "foo"(){bar = dense<[0xFFFFFFFF, 0.0]> : tensor<2xf32>} : () -> ()
 
-  // CHECK: sparse<[{{\[}}1, 1, 0], [0, 1, 1]], [0xFFFFFFFF, 0x7F800001]>
+  // CHECK: sparse<[{{\[}}1, 1, 0], [0, 1, 1]], [-nan(0x3FFFFF), +snan(0x1)]>
   "foo"(){bar = sparse<[[1,1,0],[0,1,1]], [0xFFFFFFFF, 0x7F800001]> : tensor<2x2x2xf32>} : () -> ()
 }
 

@@ -123,7 +123,7 @@ func.func @masked_reduce_minf_f32(%arg0: vector<16xf32>, %mask : vector<16xi1>) 
 // CHECK-LABEL:   func.func @masked_reduce_minf_f32(
 // CHECK-SAME:                                      %[[INPUT:.*]]: vector<16xf32>,
 // CHECK-SAME:                                      %[[MASK:.*]]: vector<16xi1>) -> f32 {
-// CHECK:           %[[NEUTRAL:.*]] = llvm.mlir.constant(0xFFC00000 : f32) : f32
+// CHECK:           %[[NEUTRAL:.*]] = llvm.mlir.constant(-qnan : f32) : f32
 // CHECK:           %[[VL:.*]] = llvm.mlir.constant(16 : i32) : i32
 // CHECK:           "llvm.intr.vp.reduce.fmin"(%[[NEUTRAL]], %[[INPUT]], %[[MASK]], %[[VL]]) : (f32, vector<16xf32>, vector<16xi1>, i32) -> f32
 
@@ -137,7 +137,7 @@ func.func @masked_reduce_minf_f32_scalable(%arg0: vector<[16]xf32>, %mask : vect
 // CHECK-LABEL:   func.func @masked_reduce_minf_f32_scalable(
 // CHECK-SAME:                                      %[[INPUT:.*]]: vector<[16]xf32>,
 // CHECK-SAME:                                      %[[MASK:.*]]: vector<[16]xi1>) -> f32 {
-// CHECK:           %[[NEUTRAL:.*]] = llvm.mlir.constant(0xFFC00000 : f32) : f32
+// CHECK:           %[[NEUTRAL:.*]] = llvm.mlir.constant(-qnan : f32) : f32
 // CHECK:           %[[VL_BASE:.*]] = llvm.mlir.constant(16 : i32) : i32
 // CHECK:           %[[VSCALE:.*]] = "llvm.intr.vscale"() : () -> i64
 // CHECK:           %[[CAST_IDX:.*]] = builtin.unrealized_conversion_cast %[[VSCALE]] : i64 to index
@@ -155,7 +155,7 @@ func.func @masked_reduce_maxf_f32(%arg0: vector<16xf32>, %mask : vector<16xi1>) 
 // CHECK-LABEL:   func.func @masked_reduce_maxf_f32(
 // CHECK-SAME:                                      %[[INPUT:.*]]: vector<16xf32>,
 // CHECK-SAME:                                      %[[MASK:.*]]: vector<16xi1>) -> f32 {
-// CHECK:           %[[NEUTRAL:.*]] = llvm.mlir.constant(0x7FC00000 : f32) : f32
+// CHECK:           %[[NEUTRAL:.*]] = llvm.mlir.constant(+qnan : f32) : f32
 // CHECK:           %[[VL:.*]] = llvm.mlir.constant(16 : i32) : i32
 // CHECK:           "llvm.intr.vp.reduce.fmax"(%[[NEUTRAL]], %[[INPUT]], %[[MASK]], %[[VL]]) : (f32, vector<16xf32>, vector<16xi1>, i32) -> f32
 

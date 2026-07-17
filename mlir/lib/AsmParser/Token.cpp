@@ -11,8 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "Token.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
@@ -51,12 +53,77 @@ std::optional<uint64_t> Token::getUInt64IntegerValue(StringRef spelling) {
   return result;
 }
 
-/// For a floatliteral, return its value as a double. Return std::nullopt if the
-/// value underflows or overflows.
-std::optional<double> Token::getFloatingPointValue() const {
-  double result = 0;
-  if (spelling.getAsDouble(result))
+/// For a floatliteral token, build its value in `semantics`, combining any sign
+/// folded into the spelling with `isNegative`. On failure, emits a diagnostic
+/// through `emitError` and returns std::nullopt.
+std::optional<APFloat> Token::getFloatingPointValue(
+    bool isNegative, const llvm::fltSemantics &semantics,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  // The sign is either a preceding '-' token (isNegative) or folded into an
+  // inf/NaN spelling; both at once (e.g. `-+inf`) is invalid. Drop a leading
+  // '+' since convertFromString rejects it on NaN forms.
+  StringRef str = spelling;
+  if (isNegative && (str.starts_with("+") || str.starts_with("-"))) {
+    emitError() << "floating point literal has more than one sign";
     return std::nullopt;
+  }
+  bool isNeg = isNegative || str.consume_front("-");
+  str.consume_front("+");
+
+  // Reject values the type cannot represent; APFloat would otherwise abort.
+  if (isNeg && !APFloat::semanticsHasSignedRepr(semantics)) {
+    emitError() << "floating point type does not support negative values";
+    return std::nullopt;
+  }
+  if (str == "inf" && !APFloat::semanticsHasInf(semantics)) {
+    emitError() << "floating point type does not support infinity";
+    return std::nullopt;
+  }
+  bool wantsNaN =
+      str == "qnan" || str.starts_with("nan") || str.starts_with("snan");
+  if (wantsNaN && !APFloat::semanticsHasNaN(semantics)) {
+    emitError() << "floating point type does not support NaN";
+    return std::nullopt;
+  }
+
+  // NanOnly types have a single NaN per representable sign, with no payload and
+  // no quiet/signaling distinction, and the negative-zero encoding has only a
+  // negative NaN. Reject spellings the type cannot represent instead of
+  // silently re-encoding them.
+  if (wantsNaN &&
+      semantics.nonFiniteBehavior == llvm::fltNonfiniteBehavior::NanOnly) {
+    if (str.starts_with("snan")) {
+      emitError() << "floating point type does not support signaling NaN";
+      return std::nullopt;
+    }
+    if (str.contains('(')) {
+      emitError() << "floating point type does not support NaN payload";
+      return std::nullopt;
+    }
+    // The negative-zero encoding has only a negative NaN; a positive one is not
+    // representable and would silently yield the negative bit pattern.
+    if (!isNeg && semantics.nanEncoding == llvm::fltNanEncoding::NegativeZero) {
+      emitError() << "floating point type only supports negative NaN";
+      return std::nullopt;
+    }
+  }
+
+  // convertFromString does not accept "qnan".
+  if (str == "qnan")
+    return APFloat::getQNaN(semantics, isNeg);
+
+  // Build in the target semantics to preserve NaN payloads; overflow/underflow
+  // are tolerated (inf/zero).
+  APFloat result(semantics);
+  llvm::Expected<APFloat::opStatus> status =
+      result.convertFromString(str, APFloat::rmNearestTiesToEven);
+  if (!status) {
+    llvm::consumeError(status.takeError());
+    emitError() << "invalid floating point literal";
+    return std::nullopt;
+  }
+  if (isNeg)
+    result.changeSign();
   return result;
 }
 

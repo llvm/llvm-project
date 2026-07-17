@@ -46,7 +46,7 @@ func.func @complex_const() -> complex<f32> {
 }
 
 // CHECK-LABEL: func.func @complex_const()
-//       CHECK:   spirv.Constant dense<[0x7FC00000, 0.000000e+00]> : vector<2xf32>
+//       CHECK:   spirv.Constant dense<[+qnan, 0.000000e+00]> : vector<2xf32>
 
 // -----
 

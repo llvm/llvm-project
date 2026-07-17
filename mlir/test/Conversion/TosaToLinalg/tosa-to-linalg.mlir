@@ -601,8 +601,8 @@ func.func @test_simple_f16(%arg0: tensor<1xf16>) -> () {
   // CHECK: linalg.generic
   // CHECK: [[ROUND:%.+]] = math.roundeven {{%[a-z0-9_]+}} : f16
   // CHECK: [[CONV:%.+]] = arith.fptosi [[ROUND]] : f16 to i32
-  // CHECK: [[POSINF:%.+]] = arith.constant 0x7C00 : f16
-  // CHECK: [[NEGINF:%.+]] = arith.constant 0xFC00 : f16
+  // CHECK: [[POSINF:%.+]] = arith.constant +inf : f16
+  // CHECK: [[NEGINF:%.+]] = arith.constant -inf : f16
   // CHECK: [[OVERFLOW:%.+]] = arith.cmpf ueq, [[ROUND]], [[POSINF]] : f16
   // CHECK: [[UNDERFLOW:%.+]] = arith.cmpf ueq, [[ROUND]], [[NEGINF]] : f16
   // CHECK: [[MININT:%.+]] = arith.constant -2147483648 : i32
@@ -2334,7 +2334,7 @@ func.func @reduce_min_nan_propagate(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf3
   // CHECK-NOT: arith.cmpf uno
   // CHECK-NOT: arith.select
   // CHECK: linalg.yield
-  // CHECK-NOT: arith.constant 0x7FC00000
+  // CHECK-NOT: arith.constant +qnan
   // CHECK-NOT: tensor.empty()
   // CHECK-NOT: linalg.fill
   // CHECK-NOT: tensor.empty()
@@ -2353,7 +2353,7 @@ func.func @reduce_max_nan_propagate(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf3
   // CHECK-NOT: arith.cmpf uno
   // CHECK-NOT: arith.select
   // CHECK: linalg.yield
-  // CHECK-NOT: arith.constant 0x7FC00000
+  // CHECK-NOT: arith.constant +qnan
   // CHECK-NOT: tensor.empty()
   // CHECK-NOT: linalg.fill
   // CHECK-NOT: tensor.empty()
@@ -2372,7 +2372,7 @@ func.func @reduce_min_nan_ignore_int(%arg0: tensor<5x4xi8>, %arg1: tensor<5x4xi8
   // CHECK-NOT: arith.cmpf uno
   // CHECK-NOT: arith.select
   // CHECK: linalg.yield
-  // CHECK-NOT: arith.constant 0x7FC00000
+  // CHECK-NOT: arith.constant +qnan
   // CHECK-NOT: tensor.empty()
   // CHECK-NOT: linalg.fill
   // CHECK-NOT: tensor.empty()
@@ -2391,7 +2391,7 @@ func.func @reduce_max_nan_ignore_int(%arg0: tensor<5x4xi8>, %arg1: tensor<5x4xi8
   // CHECK-NOT: arith.cmpf uno
   // CHECK-NOT: arith.select
   // CHECK: linalg.yield
-  // CHECK-NOT: arith.constant 0x7FC00000
+  // CHECK-NOT: arith.constant +qnan
   // CHECK-NOT: tensor.empty()
   // CHECK-NOT: linalg.fill
   // CHECK-NOT: tensor.empty()
@@ -2410,7 +2410,7 @@ func.func @reduce_min_nan_ignore(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>)
   // CHECK: arith.cmpf uno
   // CHECK: arith.select
   // CHECK: linalg.yield
-  // CHECK: arith.constant 0x7FC00000
+  // CHECK: arith.constant +qnan
   // CHECK: tensor.empty()
   // CHECK: linalg.fill
   // CHECK: tensor.empty()
@@ -2428,7 +2428,7 @@ func.func @reduce_max_nan_ignore(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>)
   // CHECK: arith.cmpf uno
   // CHECK: arith.select
   // CHECK: linalg.yield
-  // CHECK: arith.constant 0x7FC00000
+  // CHECK: arith.constant +qnan
   // CHECK: tensor.empty()
   // CHECK: linalg.fill
   // CHECK: tensor.empty()

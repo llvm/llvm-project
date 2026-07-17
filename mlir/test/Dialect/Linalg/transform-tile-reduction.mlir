@@ -317,7 +317,7 @@ module attributes {transform.with_named_sequence} {
 
 // CHECK: func @reduction_tile_multiple_results
 // CHECK-DAG:   %[[SUM_ID:.+]] = arith.constant 0.000000e+00 : f32
-// CHECK-DAG:   %[[MAX_ID:.+]] = arith.constant 0xFF800000 : f32
+// CHECK-DAG:   %[[MAX_ID:.+]] = arith.constant -inf : f32
 // CHECK-DAG:   %[[SUM_INIT:.+]] = linalg.fill ins(%[[SUM_ID]] : f32) outs(%{{.*}} : tensor<?x5xf32>) -> tensor<?x5xf32>
 // CHECK-DAG:   %[[MAX_INIT:.+]] = linalg.fill ins(%[[MAX_ID]] : f32) outs(%{{.*}} : tensor<?x5xf32>) -> tensor<?x5xf32>
 // CHECK:       %[[OUT:.+]]:2 = scf.for

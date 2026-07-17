@@ -10,11 +10,13 @@
 #define MLIR_LIB_PARSER_TOKEN_H
 
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SMLoc.h"
 #include <optional>
 
 namespace mlir {
+class InFlightDiagnostic;
 
 /// This represents a token in the MLIR syntax.
 class Token {
@@ -84,9 +86,12 @@ public:
     return getUInt64IntegerValue(getSpelling());
   }
 
-  /// For a floatliteral token, return its value as a double. Returns
-  /// std::nullopt in the case of underflow or overflow.
-  std::optional<double> getFloatingPointValue() const;
+  /// For a floatliteral token, build its value in `semantics`, combining any
+  /// sign folded into the spelling with `isNegative`. On failure, emits a
+  /// diagnostic through `emitError` and returns std::nullopt.
+  std::optional<APFloat>
+  getFloatingPointValue(bool isNegative, const llvm::fltSemantics &semantics,
+                        function_ref<InFlightDiagnostic()> emitError) const;
 
   /// For an inttype token, return its bitwidth.
   std::optional<unsigned> getIntTypeBitwidth() const;

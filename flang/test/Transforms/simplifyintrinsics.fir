@@ -2005,7 +2005,7 @@ func.func @_QPtestminloc_works1d_scalarmask_f64(%arg0: !fir.ref<!fir.array<10xf6
 // CHECK:             %[[FLAG_SET:.*]] = arith.constant 1 : i32
 // CHECK:             %[[FLAG_EMPTY:.*]] = arith.constant 0 : i32
 // CHECK:             fir.store %[[FLAG_EMPTY]] to %[[FLAG_ALLOC]] : !fir.ref<i32>
-// CHECK:             %[[MAX:.*]] = arith.constant 0x7FF0000000000000 : f64
+// CHECK:             %[[MAX:.*]] = arith.constant +inf : f64
 // CHECK:             %[[C_INDEX1:.*]] = arith.constant 1 : index
 // CHECK:             %[[DIM_INDEX:.*]] = arith.constant 0 : index
 // CHECK:             %[[DIMS:.*]]:3 = fir.box_dims %[[BOX_INARR]], %[[DIM_INDEX]] : (!fir.box<!fir.array<?xf64>>, index) -> (index, index, index)
@@ -2581,7 +2581,7 @@ func.func @_QPtestmaxloc_works1d_scalarmask_f64(%arg0: !fir.ref<!fir.array<10xf6
 // CHECK:             %[[FLAG_SET:.*]] = arith.constant 1 : i32
 // CHECK:             %[[FLAG_EMPTY:.*]] = arith.constant 0 : i32
 // CHECK:             fir.store %[[FLAG_EMPTY]] to %[[FLAG_ALLOC]] : !fir.ref<i32>
-// CHECK:             %[[MAX:.*]] = arith.constant 0xFFF0000000000000 : f64
+// CHECK:             %[[MAX:.*]] = arith.constant -inf : f64
 // CHECK:             %[[C_INDEX1:.*]] = arith.constant 1 : index
 // CHECK:             %[[DIM_INDEX:.*]] = arith.constant 0 : index
 // CHECK:             %[[DIMS:.*]]:3 = fir.box_dims %[[BOX_INARR]], %[[DIM_INDEX]] : (!fir.box<!fir.array<?xf64>>, index) -> (index, index, index)

@@ -147,6 +147,9 @@ Token Lexer::lexToken() {
       return formToken(Token::equal, tokStart);
 
     case '+':
+      if (std::optional<Token> tok = lexSpecialFloatLiteral(
+              StringRef(tokStart, curBuffer.end() - tokStart)))
+        return *tok;
       return formToken(Token::plus, tokStart);
     case '*':
       return formToken(Token::star, tokStart);
@@ -155,6 +158,9 @@ Token Lexer::lexToken() {
         ++curPtr;
         return formToken(Token::arrow, tokStart);
       }
+      if (std::optional<Token> tok = lexSpecialFloatLiteral(
+              StringRef(tokStart, curBuffer.end() - tokStart)))
+        return *tok;
       return formToken(Token::minus, tokStart);
 
     case '?':
@@ -308,10 +314,59 @@ Token Lexer::lexEllipsis(const char *tokStart) {
   return formToken(Token::ellipsis, tokStart);
 }
 
+/// Try to lex a signed special float literal (inf/NaN) from `fromSign`, which
+/// starts at the already-consumed sign. On success returns a `floatliteral`
+/// (or `error`) token and advances `curPtr`, else std::nullopt (curPtr intact).
+///
+///   float-special ::= [-+] (`inf` | `qnan` | `s`? `nan` (`(0x` hex_digit+
+///   `)`)?)
+///
+std::optional<Token> Lexer::lexSpecialFloatLiteral(StringRef fromSign) {
+  const char *tokStart = fromSign.data();
+  StringRef afterSign = fromSign.drop_front();
+  StringRef keyword = afterSign.take_while(llvm::isAlpha);
+  StringRef rest = afterSign.drop_front(keyword.size());
+
+  // True when `rest` continues the keyword into a longer identifier, so the
+  // keyword is only a prefix (e.g. `infinity`, `nano`) and not a special float.
+  auto isIdentifierContinuation = [](StringRef rest) {
+    return !rest.empty() &&
+           (llvm::isAlnum(rest.front()) || rest.front() == '_' ||
+            rest.front() == '$' || rest.front() == '.');
+  };
+
+  if (keyword == "inf" || keyword == "qnan") {
+    if (isIdentifierContinuation(rest))
+      return std::nullopt;
+    curPtr = rest.data();
+    return formToken(Token::floatliteral, tokStart);
+  }
+
+  // `nan` / `snan`, with an optional `(0x..)` payload; APFloat validates later.
+  if (keyword == "nan" || keyword == "snan") {
+    if (rest.consume_front("(")) {
+      StringRef payload = rest.take_until([](char c) { return c == ')'; });
+      if (payload.end() == rest.end()) {
+        curPtr = afterSign.end();
+        return emitError(tokStart, "expected ')' in NaN literal");
+      }
+      curPtr = payload.end() + 1;
+      return formToken(Token::floatliteral, tokStart);
+    }
+    if (isIdentifierContinuation(rest))
+      return std::nullopt;
+    curPtr = rest.data();
+    return formToken(Token::floatliteral, tokStart);
+  }
+
+  return std::nullopt;
+}
+
 /// Lex a number literal.
 ///
 ///   integer-literal ::= digit+ | `0x` hex_digit+
 ///   float-literal ::= [-+]?[0-9]+[.][0-9]*([eE][-+]?[0-9]+)?
+///                    | `0x` hex_digit+ (`.` hex_digit*)? [pP] [-+]? digit+
 ///
 Token Lexer::lexNumber(const char *tokStart) {
   assert(isdigit(curPtr[-1]));
@@ -326,6 +381,28 @@ Token Lexer::lexNumber(const char *tokStart) {
     curPtr += 2;
     while (isxdigit(*curPtr))
       ++curPtr;
+
+    // C-style hex float (`0x1.fp13`): a '.'/'p' distinguishes it from the
+    // bit-pattern form; the binary exponent is mandatory.
+    if (*curPtr == '.' || *curPtr == 'p' || *curPtr == 'P') {
+      if (*curPtr == '.') {
+        ++curPtr;
+        while (isxdigit(*curPtr))
+          ++curPtr;
+      }
+      if (*curPtr != 'p' && *curPtr != 'P')
+        return emitError(tokStart, "expected binary exponent in hexadecimal "
+                                   "floating point literal");
+      ++curPtr;
+      if (*curPtr == '-' || *curPtr == '+')
+        ++curPtr;
+      if (!isdigit(static_cast<unsigned char>(*curPtr)))
+        return emitError(tokStart, "expected binary exponent in hexadecimal "
+                                   "floating point literal");
+      while (isdigit(*curPtr))
+        ++curPtr;
+      return formToken(Token::floatliteral, tokStart);
+    }
 
     return formToken(Token::integer, tokStart);
   }

@@ -118,7 +118,7 @@ func.func @generic_split_3d(%input: tensor<32x2xf32>, %input_2: tensor<5x32xf32>
 //  CHECK-DAG: #[[$MAP3:.*]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 //  CHECK-DAG: #[[$MAP4:.*]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 // CHECK-LABEL:  func @generic_split_3d
-//  CHECK-DAG: %[[ID:.*]] = arith.constant 0xFF800000 : f32
+//  CHECK-DAG: %[[ID:.*]] = arith.constant -inf : f32
 //  CHECK-DAG: %[[I1:.*]] = tensor.expand_shape %{{.*}}[0, 1], [2]] output_shape [4, 8, 2] : tensor<32x2xf32> into tensor<4x8x2xf32>
 //  CHECK-DAG: %[[I2:.*]] = tensor.expand_shape %{{.*}}[0], [1, 2]] output_shape [5, 4, 8] : tensor<5x32xf32> into tensor<5x4x8xf32>
 //  CHECK-DAG: %[[INI:.*]] = tensor.empty() : tensor<5x2x4xf32>
@@ -323,7 +323,7 @@ func.func @generic_split_3d(%input: tensor<32x2xf32>, %input_2: tensor<5x32xf32>
 //  CHECK-DAG: #[[$MAP3:.*]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 //  CHECK-DAG: #[[$MAP4:.*]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 // CHECK-LABEL:  func @generic_split_3d
-//  CHECK-DAG: %[[ID:.*]] = arith.constant 0x7F800000 : f32
+//  CHECK-DAG: %[[ID:.*]] = arith.constant +inf : f32
 //  CHECK-DAG: %[[I1:.*]] = tensor.expand_shape %{{.*}}[0, 1], [2]] output_shape [8, 4, 2] : tensor<32x2xf32> into tensor<8x4x2xf32>
 //  CHECK-DAG: %[[I2:.*]] = tensor.expand_shape %{{.*}}[0], [1, 2]] output_shape [5, 8, 4] : tensor<5x32xf32> into tensor<5x8x4xf32>
 //  CHECK-DAG: %[[INI:.*]] = tensor.empty() : tensor<5x2x4xf32>
@@ -429,7 +429,7 @@ func.func @generic_split_maxnumf(%in: tensor<32xf32>, %out: tensor<f32>) -> tens
 //  CHECK-DAG: #[[$MAP3:.*]] = affine_map<(d0) -> ()>
 // CHECK-LABEL:  func @generic_split_maxnumf
 //  The float value 0xFFC00000 that is filled into the init tensor represents negative NaN.
-//  CHECK-DAG: %[[ID:.*]] = arith.constant 0xFFC00000 : f32
+//  CHECK-DAG: %[[ID:.*]] = arith.constant -qnan : f32
 //  CHECK-DAG: %[[I1:.*]] = tensor.expand_shape %{{.*}}[0, 1]] output_shape [8, 4] : tensor<32xf32> into tensor<8x4xf32>
 //  CHECK-DAG: %[[INI:.*]] = tensor.empty() : tensor<4xf32>
 //      CHECK: %[[F:.*]] = linalg.fill ins(%[[ID]] : f32) outs(%[[INI]] : tensor<4xf32>) -> tensor<4xf32>
@@ -475,7 +475,7 @@ func.func @generic_split_minnumf(%in: tensor<32xf32>, %out: tensor<f32>) -> tens
 //  CHECK-DAG: #[[$MAP3:.*]] = affine_map<(d0) -> ()>
 // CHECK-LABEL:  func @generic_split_minnumf
 //  The float value 0x7FC00000 that is filled into the init tensor represents positive NaN.
-//  CHECK-DAG: %[[ID:.*]] = arith.constant 0x7FC00000 : f32
+//  CHECK-DAG: %[[ID:.*]] = arith.constant +qnan : f32
 //  CHECK-DAG: %[[I1:.*]] = tensor.expand_shape %{{.*}}[0, 1]] output_shape [8, 4] : tensor<32xf32> into tensor<8x4xf32>
 //  CHECK-DAG: %[[INI:.*]] = tensor.empty() : tensor<4xf32>
 //      CHECK: %[[F:.*]] = linalg.fill ins(%[[ID]] : f32) outs(%[[INI]] : tensor<4xf32>) -> tensor<4xf32>

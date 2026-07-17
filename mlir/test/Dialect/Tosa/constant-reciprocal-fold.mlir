@@ -22,8 +22,8 @@ func.func @reciprocal_fold_splat() -> tensor<12x7xf32> {
 
 // CHECK-LABEL: @reciprocal_div_zero
 func.func @reciprocal_div_zero() -> tensor<f32> {
-  // 0x7F800000 is the value for +infinity
-  // CHECK: [[RES:]] ={{.*}}tosa.const{{.*}}0x7F800000
+  // +inf is the value for +infinity
+  // CHECK: [[RES:]] ={{.*}}tosa.const{{.*}}+inf
   // CHECK-NOT: tosa.reciprocal
   // CHECK: return [[RES]]
   %0 = "tosa.const"() {values = dense<0.0> : tensor<f32>} : () -> tensor<f32>
@@ -33,8 +33,8 @@ func.func @reciprocal_div_zero() -> tensor<f32> {
 
 // CHECK-LABEL: @reciprocal_div_neg_zero
 func.func @reciprocal_div_neg_zero() -> tensor<f32> {
-  // 0xFF800000 is the value for -infinity
-  // CHECK: [[RES:]] ={{.*}}tosa.const{{.*}}0xFF800000
+  // -inf is the value for -infinity
+  // CHECK: [[RES:]] ={{.*}}tosa.const{{.*}}-inf
   // CHECK-NOT: tosa.reciprocal
   // CHECK: return [[RES]]
   %0 = "tosa.const"() {values = dense<-0.0> : tensor<f32>} : () -> tensor<f32>
@@ -44,8 +44,8 @@ func.func @reciprocal_div_neg_zero() -> tensor<f32> {
 
 // CHECK-LABEL: @reciprocal_div_nan
 func.func @reciprocal_div_nan() -> tensor<f32> {
-  // 0x7FC00000 is the value for NAN
-  // CHECK: [[RES:]] ={{.*}}tosa.const{{.*}}0x7FC00000
+  // +qnan is the value for NAN
+  // CHECK: [[RES:]] ={{.*}}tosa.const{{.*}}+qnan
   // CHECK-NOT: tosa.reciprocal
   // CHECK: return [[RES]]
   %0 = "tosa.const"() {values = dense<0x7FC00000> : tensor<f32>} : () -> tensor<f32>
@@ -85,7 +85,7 @@ func.func @reciprocal_div_underflow() -> tensor<2xf16> {
 
 // CHECK-LABEL: @reciprocal_div_overflow
 func.func @reciprocal_div_overflow() -> tensor<2xf16> {
-  // CHECK: [[RES:]] ={{.*}}tosa.const{{.*}}0x7C00, 0xFC00
+  // CHECK: [[RES:]] ={{.*}}tosa.const{{.*}}+inf, -inf
   // CHECK-NOT: tosa.reciprocal
   // CHECK: return [[RES]]
   %0 = "tosa.const"() {values = dense<[0.0000001, -0.0000001]> : tensor<2xf16>} : () -> tensor<2xf16>
