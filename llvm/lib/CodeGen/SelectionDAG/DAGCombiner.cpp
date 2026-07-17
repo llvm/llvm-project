@@ -6289,9 +6289,13 @@ static SDValue performNanGuardFpToSatCombine(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
 
-  // Match an isnan-guarded select, requiring the compare to be single-use:
-  //   select (setcc X, 0.0, uno), 0, guarded
-  //   select (setcc X, 0.0, ord), guarded, 0
+  // Match an isnan-guarded select, requiring the compare to be single-use.
+  // The guarded value is fp_to_sint/fp_to_uint of X, optionally masked by an
+  // AND:
+  //   select (setcc X, 0.0, uno), 0, (fp_to_sint/uint X)
+  //   select (setcc X, 0.0, ord), (fp_to_sint/uint X), 0
+  //   select (setcc X, 0.0, uno), 0, (and (fp_to_sint/uint X), M)
+  //   select (setcc X, 0.0, ord), (and (fp_to_sint/uint X), M), 0
   SDValue X, GuardedVal;
   if (!sd_match(N,
                 m_SelectLike(m_OneUse(m_SetCC(m_Value(X), m_AnyZeroFP(),
@@ -6303,19 +6307,15 @@ static SDValue performNanGuardFpToSatCombine(SDNode *N, SelectionDAG &DAG) {
                              m_Value(GuardedVal), m_Zero())))
     return SDValue();
 
-  // Peel an optional AND mask, then require fp_to_sint/fp_to_uint of the same
-  // X.
+  // The guarded value must be fp_to_sint/fp_to_uint of the same X, optionally
+  // masked by a (commutative) AND.
   SDValue Mask;
-  SDValue Conv = GuardedVal;
-  if (Conv.getOpcode() == ISD::AND) {
-    Mask = Conv.getOperand(1);
-    Conv = Conv.getOperand(0);
-  }
-
   unsigned NewOpc;
-  if (sd_match(Conv, m_FPToSI(m_Specific(X))))
+  if (sd_match(GuardedVal, m_FPToSI(m_Specific(X))) ||
+      sd_match(GuardedVal, m_And(m_FPToSI(m_Specific(X)), m_Value(Mask))))
     NewOpc = ISD::FP_TO_SINT_SAT;
-  else if (sd_match(Conv, m_FPToUI(m_Specific(X))))
+  else if (sd_match(GuardedVal, m_FPToUI(m_Specific(X))) ||
+           sd_match(GuardedVal, m_And(m_FPToUI(m_Specific(X)), m_Value(Mask))))
     NewOpc = ISD::FP_TO_UINT_SAT;
   else
     return SDValue();
@@ -6326,8 +6326,12 @@ static SDValue performNanGuardFpToSatCombine(SDNode *N, SelectionDAG &DAG) {
 
   SDValue Sat =
       DAG.getNode(NewOpc, DL, VT, X, DAG.getValueType(VT.getScalarType()));
-  if (Mask)
-    Sat = DAG.getNode(ISD::AND, DL, VT, Sat, Mask);
+  if (Mask) {
+    // For NaN inputs the saturating conversion yields 0, so (and 0, Mask) must
+    // stay 0 to match the original select. A poison Mask would make it poison,
+    // so freeze Mask to guarantee a defined value.
+    Sat = DAG.getNode(ISD::AND, DL, VT, Sat, DAG.getFreeze(Mask));
+  }
   return Sat;
 }
 

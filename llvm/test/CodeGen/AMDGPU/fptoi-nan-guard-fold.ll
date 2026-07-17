@@ -70,6 +70,36 @@ define i32 @nan_guard_fptosi_and_mask(float %x) {
   ret i32 %sel
 }
 
+; AND mask with a non-constant operand.
+define i32 @nan_guard_fptosi_and_mask_var(float %x, i32 %m) {
+; CHECK-LABEL: nan_guard_fptosi_and_mask_var:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_cvt_i32_f32_e32 v0, v0
+; CHECK-NEXT:    v_and_b32_e32 v0, v0, v1
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp = fcmp uno float %x, 0.000000e+00
+  %conv = fptosi float %x to i32
+  %and = and i32 %conv, %m
+  %sel = select i1 %cmp, i32 0, i32 %and
+  ret i32 %sel
+}
+
+; AND mask with a non-constant operand, commuted.
+define i32 @nan_guard_fptosi_and_mask_commuted(float %x, i32 %m) {
+; CHECK-LABEL: nan_guard_fptosi_and_mask_commuted:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_cvt_i32_f32_e32 v0, v0
+; CHECK-NEXT:    v_and_b32_e32 v0, v0, v1
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp = fcmp uno float %x, 0.000000e+00
+  %conv = fptosi float %x to i32
+  %and = and i32 %m, %conv
+  %sel = select i1 %cmp, i32 0, i32 %and
+  ret i32 %sel
+}
+
 define i32 @nan_guard_fptosi_f64(double %x) {
 ; CHECK-LABEL: nan_guard_fptosi_f64:
 ; CHECK:       ; %bb.0:
@@ -131,6 +161,21 @@ define i32 @nan_guard_mismatched_operands(float %x, float %y) {
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp = fcmp uno float %x, 0.000000e+00
   %conv = fptosi float %y to i32
+  %sel = select i1 %cmp, i32 0, i32 %conv
+  ret i32 %sel
+}
+
+; Compare is a different predicate (not uno/ord) -- should not fold.
+define i32 @nan_guard_wrong_predicate(float %x) {
+; CHECK-LABEL: nan_guard_wrong_predicate:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_cvt_i32_f32_e32 v1, v0
+; CHECK-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v0
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp = fcmp olt float %x, 0.000000e+00
+  %conv = fptosi float %x to i32
   %sel = select i1 %cmp, i32 0, i32 %conv
   ret i32 %sel
 }
