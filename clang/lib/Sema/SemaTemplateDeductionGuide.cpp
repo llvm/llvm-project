@@ -1557,8 +1557,6 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
 CXXDeductionGuideDecl *DeclareAggregateDeductionGuideForTypeAlias(
     Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate,
     MutableArrayRef<QualType> ParamTypes, SourceLocation Loc) {
-  if (AliasTemplate->isInvalidDecl())
-    return nullptr;
   TemplateDecl *RHSTemplate =
       getRHSTemplateDeclAndArgs(SemaRef, AliasTemplate).first;
   if (!RHSTemplate)

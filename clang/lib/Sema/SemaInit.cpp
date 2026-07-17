@@ -10390,7 +10390,8 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
                     LookupTemplateDecl, ElementTypes,
                     TSInfo->getTypeLoc().getEndLoc())) {
           auto *TD = GD->getDescribedFunctionTemplate();
-          addDeductionCandidate(TD, GD, DeclAccessPair::make(TD, AS_public),
+          NamedDecl *Found = TD ? static_cast<NamedDecl *>(TD) : GD;
+          addDeductionCandidate(TD, GD, DeclAccessPair::make(Found, AS_public),
                                 OnlyListConstructors,
                                 /*AllowAggregateDeductionCandidate=*/true);
           HasAnyDeductionGuide = true;
