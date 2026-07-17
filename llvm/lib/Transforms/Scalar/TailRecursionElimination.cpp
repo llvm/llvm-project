@@ -118,10 +118,15 @@ static bool shouldDisableTailCallsForCold(const CallBase *CB,
              CB->getCallingConv() == CallingConv::Cold))
     return true;
 
+  if (Caller && (Caller->hasFnAttribute(Attribute::Cold) ||
+                 Caller->getCallingConv() == CallingConv::Cold))
+    return true;
+
   if (!PSI || !PSI->hasProfileSummary())
     return false;
 
-  if (CB && BFI && PSI->isColdCallSite(*CB, BFI))
+  if (CB && BFI &&
+      (PSI->isColdCallSite(*CB, BFI) || PSI->isColdBlock(CB->getParent(), BFI)))
     return true;
 
   return false;
@@ -483,10 +488,9 @@ class TailRecursionEliminator {
         OrigEntryCount(F.getEntryCount() ? *F.getEntryCount() : 0) {
     if (BFI) {
       // The assert is meant as API documentation for the caller.
-      assert((OrigEntryCount != 0 && OrigEntryBBFreq != 0) &&
-             "If a BFI was provided, the function should have both an entry "
-             "count that is non-zero and an entry basic block with a non-zero "
-             "frequency.");
+      assert(OrigEntryBBFreq != 0 &&
+             "If a BFI was provided, the function should have an entry "
+             "basic block with a non-zero frequency.");
     }
   }
 
@@ -1030,8 +1034,7 @@ PreservedAnalyses TailCallElimPass::run(Function &F,
   // This must come first. It needs the 2 analyses, meaning, if it came after
   // the lines asking for the cached result, should they be nullptr (which, in
   // the case of the PDT, is likely), updates to the trees would be missed.
-  auto *BFI = (!ForceDisableBFI && UpdateFunctionEntryCount &&
-               F.getEntryCount().has_value() && *F.getEntryCount())
+  auto *BFI = (!ForceDisableBFI && F.getEntryCount().has_value())
                   ? &AM.getResult<BlockFrequencyAnalysis>(F)
                   : nullptr;
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
