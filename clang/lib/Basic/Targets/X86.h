@@ -25,34 +25,34 @@
 namespace clang {
 namespace targets {
 
-static const unsigned X86AddrSpaceMap[] = {
-    0,   // Default
-    0,   // opencl_global
-    0,   // opencl_local
-    0,   // opencl_constant
-    0,   // opencl_private
-    0,   // opencl_generic
-    0,   // opencl_global_device
-    0,   // opencl_global_host
-    0,   // cuda_device
-    0,   // cuda_constant
-    0,   // cuda_shared
-    0,   // sycl_global
-    0,   // sycl_global_device
-    0,   // sycl_global_host
-    0,   // sycl_local
-    0,   // sycl_private
-    270, // ptr32_sptr
-    271, // ptr32_uptr
-    272, // ptr64
-    0,   // hlsl_groupshared
-    0,   // hlsl_constant
-    0,   // hlsl_private
-    0,   // hlsl_device
-    0,   // hlsl_input
-    0,   // hlsl_output
-    0,   // hlsl_push_constant
-    0,   // wasm_funcref
+static const LangASMap X86AddrSpaceMap = {
+    {LangAS::Default, 0},
+    {LangAS::opencl_global, 0},
+    {LangAS::opencl_local, 0},
+    {LangAS::opencl_constant, 0},
+    {LangAS::opencl_private, 0},
+    {LangAS::opencl_generic, 0},
+    {LangAS::opencl_global_device, 0},
+    {LangAS::opencl_global_host, 0},
+    {LangAS::cuda_device, 0},
+    {LangAS::cuda_constant, 0},
+    {LangAS::cuda_shared, 0},
+    {LangAS::sycl_global, 0},
+    {LangAS::sycl_global_device, 0},
+    {LangAS::sycl_global_host, 0},
+    {LangAS::sycl_local, 0},
+    {LangAS::sycl_private, 0},
+    {LangAS::ptr32_sptr, 270},
+    {LangAS::ptr32_uptr, 271},
+    {LangAS::ptr64, 272},
+    {LangAS::hlsl_groupshared, 0},
+    {LangAS::hlsl_constant, 0},
+    {LangAS::hlsl_private, 0},
+    {LangAS::hlsl_device, 0},
+    {LangAS::hlsl_input, 0},
+    {LangAS::hlsl_output, 0},
+    {LangAS::hlsl_push_constant, 0},
+    {LangAS::wasm_funcref, 0},
 };
 
 // X86 target abstract base class; x86-32 and x86-64 are very close, so
