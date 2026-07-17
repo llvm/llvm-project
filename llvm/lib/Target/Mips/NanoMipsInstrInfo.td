@@ -117,16 +117,19 @@ def uimm3_nm : Operand<i32> {
 
 def uimm3plus1_nm : Operand<i32> {
   let ParserMatchClass = NMUImmAsmOperandClass<3, [], 1>;
+  let DecoderMethod = "DecodeUImm3Shift";
 }
 
 def uimm3shift_nm : Operand<i32> {
   let ParserMatchClass = UImm3ShiftAsmOperand;
   let EncoderMethod = "getUImm3ShiftEncoding";
+  let DecoderMethod = "DecodeUImm3Shift";
 }
 
 def uimm4mask_nm : Operand<i32> {
   let ParserMatchClass = UImm4AsmOperand;
   let EncoderMethod = "getUImm4MaskEncoding";
+  let DecoderMethod = "DecodeUImm4Mask";
 }
 
 def uimm5s1_nm : Operand<i32> {
@@ -195,6 +198,7 @@ def simm32s12_pcrel_nm : Operand<i32>;
 def nimm12_nm : Operand<i32> {
   let ParserMatchClass = NImm12AsmOperandClass;
   let EncoderMethod = "getNegImm12Encoding";
+  let DecoderMethod = "DecodeNegImm12";
 }
 
 def mem_nm_sp5s2 : Operand<iPTR>;
@@ -231,11 +235,13 @@ class NMRegList16AsmOperandClass<list<AsmOperandClass> Supers = []>
 def reglist16_nm : Operand<OtherVT> {
   let ParserMatchClass = NMRegList16AsmOperandClass<>;
   let EncoderMethod = "getNMRegList16Encoding";
+  let DecoderMethod = "DecodeNMRegList16Operand";
 }
 
 def reglist_nm : Operand<OtherVT> {
   let ParserMatchClass = NMRegListAsmOperandClass<>;
   let EncoderMethod = "getNMRegListEncoding";
+  let DecoderMethod = "DecodeNMRegListOperand";
 }
 
 foreach I = {7, 10, 11, 14, 25} in

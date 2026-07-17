@@ -319,7 +319,8 @@ public:
                       uint64_t &Target) const override {
     unsigned NumOps = Inst.getNumOperands();
     // Register-list transfers have more MC operands than descriptor entries.
-    if (NumOps == 0 || NumOps > Info->get(Inst.getOpcode()).getNumOperands())
+    if (NumOps == 0 || NumOps > Info->get(Inst.getOpcode()).getNumOperands() ||
+        !Inst.getOperand(NumOps - 1).isImm())
       return false;
     switch (Info->get(Inst.getOpcode()).operands()[NumOps - 1].OperandType) {
     case MipsII::OPERAND_JUMP_TARGET: {
