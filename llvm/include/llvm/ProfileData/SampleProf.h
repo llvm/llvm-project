@@ -1697,28 +1697,25 @@ public:
   }
 
   bool contains(StringRef Name) const {
-    return Syms.count(Name) || ColdGUIDTable.contains(llvm::MD5Hash(Name));
+    return IsMD5 ? ColdGUIDTable.contains(llvm::MD5Hash(Name))
+                 : Syms.count(Name);
   }
 
   void merge(const ProfileSymbolList &List) {
-    assert(List.ColdGUIDTable.empty() &&
+    assert(!List.IsMD5 &&
            "Merging pre-hashed MD5 ProfileSymbolList not yet implemented");
     for (auto Sym : List.Syms)
       add(Sym, true);
   }
 
-  unsigned size() const {
-    assert((ColdGUIDTable.empty() || Syms.empty()) &&
-           "Mixed string/GUID ProfileSymbolList size not yet implemented");
-    return Syms.size() + ColdGUIDTable.size();
-  }
+  unsigned size() const { return IsMD5 ? ColdGUIDTable.size() : Syms.size(); }
   void reserve(size_t Size) { Syms.reserve(Size); }
 
   void setToCompress(bool TC) { ToCompress = TC; }
   bool toCompress() { return ToCompress; }
 
   std::vector<uint64_t> collectGUIDs() const {
-    assert(ColdGUIDTable.empty() &&
+    assert(!IsMD5 &&
            "Collecting GUIDs from existing MD5 table not yet implemented");
     std::vector<uint64_t> Keys;
     Keys.reserve(Syms.size());
@@ -1729,17 +1726,23 @@ public:
   }
 
   void setColdGUIDTable(EytzingerTableSpan<support::ulittle64_t> Table) {
+    assert(Syms.empty() &&
+           "Setting ColdGUIDTable shadows existing strings in Syms");
     ColdGUIDTable = Table;
+    IsMD5 = true;
   }
   EytzingerTableSpan<support::ulittle64_t> getColdGUIDTable() const {
+    assert(IsMD5 && "Retrieving ColdGUIDTable from non-MD5 ProfileSymbolList");
     return ColdGUIDTable;
   }
+  bool isMD5() const { return IsMD5; }
 
   LLVM_ABI std::error_code read(const uint8_t *Data, uint64_t ListSize);
   LLVM_ABI std::error_code write(raw_ostream &OS);
   LLVM_ABI void dump(raw_ostream &OS = dbgs()) const;
 
 private:
+  bool IsMD5 = false;
   // Determine whether or not to compress the symbol list when
   // writing it into profile. The variable is unused when the symbol
   // list is read from an existing profile.

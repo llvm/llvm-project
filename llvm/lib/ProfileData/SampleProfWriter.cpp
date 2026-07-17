@@ -434,7 +434,7 @@ SampleProfileWriterExtBinaryBase::writeProfileSymbolListSection() {
 
 std::error_code
 SampleProfileWriterExtBinaryBase::writeStringBasedProfileSymbolListSection() {
-  assert((!ProfSymList || ProfSymList->getColdGUIDTable().empty()) &&
+  assert((!ProfSymList || !ProfSymList->isMD5()) &&
          "Writing string-based ProfileSymbolListSection from MD5 table "
          "not yet implemented");
   if (ProfSymList && ProfSymList->size() > 0)
@@ -448,7 +448,7 @@ std::error_code
 SampleProfileWriterExtBinaryBase::writeMD5ProfileSymbolListSection() {
   if (!ProfSymList || ProfSymList->size() == 0)
     return sampleprof_error::success;
-  assert(ProfSymList->getColdGUIDTable().empty() &&
+  assert(!ProfSymList->isMD5() &&
          "Writing MD5 ProfileSymbolListSection from existing MD5 "
          "table not yet implemented");
 
