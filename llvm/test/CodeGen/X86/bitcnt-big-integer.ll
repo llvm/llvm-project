@@ -149,59 +149,18 @@ define <2 x i32> @load_ctpop_v2i128(ptr %p0) nounwind {
 ; AVX2-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; AVX2-NEXT:    retq
 ;
-; AVX512F-LABEL: load_ctpop_v2i128:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    popcntq 8(%rdi), %rax
-; AVX512F-NEXT:    popcntq (%rdi), %rcx
-; AVX512F-NEXT:    addl %eax, %ecx
-; AVX512F-NEXT:    popcntq 24(%rdi), %rax
-; AVX512F-NEXT:    popcntq 16(%rdi), %rdx
-; AVX512F-NEXT:    addl %eax, %edx
-; AVX512F-NEXT:    vmovd %edx, %xmm0
-; AVX512F-NEXT:    vmovd %ecx, %xmm1
-; AVX512F-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; AVX512F-NEXT:    retq
-;
-; AVX512POPCNT-LABEL: load_ctpop_v2i128:
-; AVX512POPCNT:       # %bb.0:
-; AVX512POPCNT-NEXT:    popcntq 8(%rdi), %rax
-; AVX512POPCNT-NEXT:    popcntq (%rdi), %rcx
-; AVX512POPCNT-NEXT:    addl %eax, %ecx
-; AVX512POPCNT-NEXT:    popcntq 24(%rdi), %rax
-; AVX512POPCNT-NEXT:    popcntq 16(%rdi), %rdx
-; AVX512POPCNT-NEXT:    addl %eax, %edx
-; AVX512POPCNT-NEXT:    vmovd %edx, %xmm0
-; AVX512POPCNT-NEXT:    vmovd %ecx, %xmm1
-; AVX512POPCNT-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; AVX512POPCNT-NEXT:    retq
-;
-; AVX512VL-LABEL: load_ctpop_v2i128:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    popcntq 8(%rdi), %rax
-; AVX512VL-NEXT:    popcntq (%rdi), %rcx
-; AVX512VL-NEXT:    addl %eax, %ecx
-; AVX512VL-NEXT:    xorl %eax, %eax
-; AVX512VL-NEXT:    popcntq 24(%rdi), %rax
-; AVX512VL-NEXT:    popcntq 16(%rdi), %rdx
-; AVX512VL-NEXT:    addl %eax, %edx
-; AVX512VL-NEXT:    vmovd %edx, %xmm0
-; AVX512VL-NEXT:    vmovd %ecx, %xmm1
-; AVX512VL-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; AVX512VL-NEXT:    retq
-;
-; AVX512VLPOPCNT-LABEL: load_ctpop_v2i128:
-; AVX512VLPOPCNT:       # %bb.0:
-; AVX512VLPOPCNT-NEXT:    popcntq 8(%rdi), %rax
-; AVX512VLPOPCNT-NEXT:    popcntq (%rdi), %rcx
-; AVX512VLPOPCNT-NEXT:    addl %eax, %ecx
-; AVX512VLPOPCNT-NEXT:    xorl %eax, %eax
-; AVX512VLPOPCNT-NEXT:    popcntq 24(%rdi), %rax
-; AVX512VLPOPCNT-NEXT:    popcntq 16(%rdi), %rdx
-; AVX512VLPOPCNT-NEXT:    addl %eax, %edx
-; AVX512VLPOPCNT-NEXT:    vmovd %edx, %xmm0
-; AVX512VLPOPCNT-NEXT:    vmovd %ecx, %xmm1
-; AVX512VLPOPCNT-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; AVX512VLPOPCNT-NEXT:    retq
+; AVX512-LABEL: load_ctpop_v2i128:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    popcntq 8(%rdi), %rax
+; AVX512-NEXT:    popcntq (%rdi), %rcx
+; AVX512-NEXT:    addl %eax, %ecx
+; AVX512-NEXT:    popcntq 24(%rdi), %rax
+; AVX512-NEXT:    popcntq 16(%rdi), %rdx
+; AVX512-NEXT:    addl %eax, %edx
+; AVX512-NEXT:    vmovd %edx, %xmm0
+; AVX512-NEXT:    vmovd %ecx, %xmm1
+; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; AVX512-NEXT:    retq
   %a0 = load <2 x i128>, ptr %p0
   %cnt = call <2 x i128> @llvm.ctpop.v2i128(<2 x i128> %a0)
   %res = trunc <2 x i128> %cnt to <2 x i32>
@@ -321,16 +280,13 @@ define <4 x i32> @load_ctpop_v4i128(ptr %p0) nounwind {
 ; AVX512VL-NEXT:    popcntq 24(%rdi), %rcx
 ; AVX512VL-NEXT:    popcntq 16(%rdi), %rax
 ; AVX512VL-NEXT:    addl %ecx, %eax
-; AVX512VL-NEXT:    xorl %ecx, %ecx
 ; AVX512VL-NEXT:    popcntq 8(%rdi), %rcx
 ; AVX512VL-NEXT:    popcntq (%rdi), %rdx
 ; AVX512VL-NEXT:    popcntq 40(%rdi), %rsi
 ; AVX512VL-NEXT:    popcntq 32(%rdi), %r8
 ; AVX512VL-NEXT:    addl %ecx, %edx
 ; AVX512VL-NEXT:    addl %esi, %r8d
-; AVX512VL-NEXT:    xorl %ecx, %ecx
 ; AVX512VL-NEXT:    popcntq 56(%rdi), %rcx
-; AVX512VL-NEXT:    xorl %esi, %esi
 ; AVX512VL-NEXT:    popcntq 48(%rdi), %rsi
 ; AVX512VL-NEXT:    addl %ecx, %esi
 ; AVX512VL-NEXT:    vmovd %esi, %xmm0
@@ -351,16 +307,13 @@ define <4 x i32> @load_ctpop_v4i128(ptr %p0) nounwind {
 ; AVX512VLPOPCNT-NEXT:    popcntq 24(%rdi), %rcx
 ; AVX512VLPOPCNT-NEXT:    popcntq 16(%rdi), %rax
 ; AVX512VLPOPCNT-NEXT:    addl %ecx, %eax
-; AVX512VLPOPCNT-NEXT:    xorl %ecx, %ecx
 ; AVX512VLPOPCNT-NEXT:    popcntq 8(%rdi), %rcx
 ; AVX512VLPOPCNT-NEXT:    popcntq (%rdi), %rdx
 ; AVX512VLPOPCNT-NEXT:    popcntq 40(%rdi), %rsi
 ; AVX512VLPOPCNT-NEXT:    popcntq 32(%rdi), %r8
 ; AVX512VLPOPCNT-NEXT:    addl %ecx, %edx
 ; AVX512VLPOPCNT-NEXT:    addl %esi, %r8d
-; AVX512VLPOPCNT-NEXT:    xorl %ecx, %ecx
 ; AVX512VLPOPCNT-NEXT:    popcntq 56(%rdi), %rcx
-; AVX512VLPOPCNT-NEXT:    xorl %esi, %esi
 ; AVX512VLPOPCNT-NEXT:    popcntq 48(%rdi), %rsi
 ; AVX512VLPOPCNT-NEXT:    addl %ecx, %esi
 ; AVX512VLPOPCNT-NEXT:    vmovd %esi, %xmm0
@@ -397,59 +350,17 @@ define i32 @test_ctpop_i256(i256 %a0) nounwind {
 ; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
 ;
-; AVX512F-LABEL: test_ctpop_i256:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    popcntq %rcx, %rax
-; AVX512F-NEXT:    popcntq %rdx, %rcx
-; AVX512F-NEXT:    addl %eax, %ecx
-; AVX512F-NEXT:    popcntq %rsi, %rdx
-; AVX512F-NEXT:    popcntq %rdi, %rax
-; AVX512F-NEXT:    addl %edx, %eax
-; AVX512F-NEXT:    addl %ecx, %eax
-; AVX512F-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX512F-NEXT:    retq
-;
-; AVX512POPCNT-LABEL: test_ctpop_i256:
-; AVX512POPCNT:       # %bb.0:
-; AVX512POPCNT-NEXT:    popcntq %rcx, %rax
-; AVX512POPCNT-NEXT:    popcntq %rdx, %rcx
-; AVX512POPCNT-NEXT:    addl %eax, %ecx
-; AVX512POPCNT-NEXT:    popcntq %rsi, %rdx
-; AVX512POPCNT-NEXT:    popcntq %rdi, %rax
-; AVX512POPCNT-NEXT:    addl %edx, %eax
-; AVX512POPCNT-NEXT:    addl %ecx, %eax
-; AVX512POPCNT-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX512POPCNT-NEXT:    retq
-;
-; AVX512VL-LABEL: test_ctpop_i256:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    popcntq %rcx, %rax
-; AVX512VL-NEXT:    xorl %ecx, %ecx
-; AVX512VL-NEXT:    popcntq %rdx, %rcx
-; AVX512VL-NEXT:    addl %eax, %ecx
-; AVX512VL-NEXT:    xorl %edx, %edx
-; AVX512VL-NEXT:    popcntq %rsi, %rdx
-; AVX512VL-NEXT:    xorl %eax, %eax
-; AVX512VL-NEXT:    popcntq %rdi, %rax
-; AVX512VL-NEXT:    addl %edx, %eax
-; AVX512VL-NEXT:    addl %ecx, %eax
-; AVX512VL-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX512VL-NEXT:    retq
-;
-; AVX512VLPOPCNT-LABEL: test_ctpop_i256:
-; AVX512VLPOPCNT:       # %bb.0:
-; AVX512VLPOPCNT-NEXT:    popcntq %rcx, %rax
-; AVX512VLPOPCNT-NEXT:    xorl %ecx, %ecx
-; AVX512VLPOPCNT-NEXT:    popcntq %rdx, %rcx
-; AVX512VLPOPCNT-NEXT:    addl %eax, %ecx
-; AVX512VLPOPCNT-NEXT:    xorl %edx, %edx
-; AVX512VLPOPCNT-NEXT:    popcntq %rsi, %rdx
-; AVX512VLPOPCNT-NEXT:    xorl %eax, %eax
-; AVX512VLPOPCNT-NEXT:    popcntq %rdi, %rax
-; AVX512VLPOPCNT-NEXT:    addl %edx, %eax
-; AVX512VLPOPCNT-NEXT:    addl %ecx, %eax
-; AVX512VLPOPCNT-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX512VLPOPCNT-NEXT:    retq
+; AVX512-LABEL: test_ctpop_i256:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    popcntq %rcx, %rax
+; AVX512-NEXT:    popcntq %rdx, %rcx
+; AVX512-NEXT:    addl %eax, %ecx
+; AVX512-NEXT:    popcntq %rsi, %rdx
+; AVX512-NEXT:    popcntq %rdi, %rax
+; AVX512-NEXT:    addl %edx, %eax
+; AVX512-NEXT:    addl %ecx, %eax
+; AVX512-NEXT:    # kill: def $eax killed $eax killed $rax
+; AVX512-NEXT:    retq
   %cnt = call i256 @llvm.ctpop.i256(i256 %a0)
   %res = trunc i256 %cnt to i32
   ret i32 %res
@@ -509,7 +420,6 @@ define i32 @load_ctpop_i256(ptr %p0) nounwind {
 ; AVX512VL-NEXT:    popcntq 16(%rdi), %rcx
 ; AVX512VL-NEXT:    addl %eax, %ecx
 ; AVX512VL-NEXT:    popcntq 8(%rdi), %rdx
-; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    popcntq (%rdi), %rax
 ; AVX512VL-NEXT:    addl %edx, %eax
 ; AVX512VL-NEXT:    addl %ecx, %eax
@@ -607,9 +517,7 @@ define i32 @vector_ctpop_i256(<8 x i32> %v0) nounwind {
 ; AVX512VL-NEXT:    popcntq %rsi, %rsi
 ; AVX512VL-NEXT:    popcntq %rdx, %rdx
 ; AVX512VL-NEXT:    addl %esi, %edx
-; AVX512VL-NEXT:    xorl %esi, %esi
 ; AVX512VL-NEXT:    popcntq %rax, %rsi
-; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    popcntq %rcx, %rax
 ; AVX512VL-NEXT:    addl %esi, %eax
 ; AVX512VL-NEXT:    addl %edx, %eax
@@ -722,14 +630,11 @@ define <2 x i32> @load_ctpop_v2i256_v2i32(ptr %p0) nounwind {
 ; AVX512VL-NEXT:    popcntq 56(%rdi), %rax
 ; AVX512VL-NEXT:    popcntq 48(%rdi), %rcx
 ; AVX512VL-NEXT:    addl %eax, %ecx
-; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    popcntq 40(%rdi), %rax
 ; AVX512VL-NEXT:    popcntq 32(%rdi), %rdx
 ; AVX512VL-NEXT:    addl %eax, %edx
 ; AVX512VL-NEXT:    addl %ecx, %edx
-; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    popcntq 24(%rdi), %rax
-; AVX512VL-NEXT:    xorl %ecx, %ecx
 ; AVX512VL-NEXT:    popcntq 16(%rdi), %rcx
 ; AVX512VL-NEXT:    popcntq 8(%rdi), %rsi
 ; AVX512VL-NEXT:    popcntq (%rdi), %rdi
@@ -848,14 +753,11 @@ define <2 x i64> @load_ctpop_v2i256_v2i64(ptr %p0) nounwind {
 ; AVX512VL-NEXT:    popcntq 24(%rdi), %rax
 ; AVX512VL-NEXT:    popcntq 16(%rdi), %rcx
 ; AVX512VL-NEXT:    addl %eax, %ecx
-; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    popcntq 8(%rdi), %rax
 ; AVX512VL-NEXT:    popcntq (%rdi), %rdx
 ; AVX512VL-NEXT:    addl %eax, %edx
 ; AVX512VL-NEXT:    addl %ecx, %edx
-; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    popcntq 56(%rdi), %rax
-; AVX512VL-NEXT:    xorl %ecx, %ecx
 ; AVX512VL-NEXT:    popcntq 48(%rdi), %rcx
 ; AVX512VL-NEXT:    popcntq 40(%rdi), %rsi
 ; AVX512VL-NEXT:    popcntq 32(%rdi), %rdi
@@ -910,95 +812,25 @@ define i32 @test_ctpop_i512(i512 %a0) nounwind {
 ; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
 ;
-; AVX512F-LABEL: test_ctpop_i512:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    popcntq {{[0-9]+}}(%rsp), %rax
-; AVX512F-NEXT:    popcntq {{[0-9]+}}(%rsp), %r10
-; AVX512F-NEXT:    addl %eax, %r10d
-; AVX512F-NEXT:    popcntq %r9, %rax
-; AVX512F-NEXT:    popcntq %r8, %r8
-; AVX512F-NEXT:    addl %eax, %r8d
-; AVX512F-NEXT:    addl %r10d, %r8d
-; AVX512F-NEXT:    popcntq %rcx, %rax
-; AVX512F-NEXT:    popcntq %rdx, %rcx
-; AVX512F-NEXT:    addl %eax, %ecx
-; AVX512F-NEXT:    popcntq %rsi, %rdx
-; AVX512F-NEXT:    popcntq %rdi, %rax
-; AVX512F-NEXT:    addl %edx, %eax
-; AVX512F-NEXT:    addl %ecx, %eax
-; AVX512F-NEXT:    addl %r8d, %eax
-; AVX512F-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX512F-NEXT:    retq
-;
-; AVX512POPCNT-LABEL: test_ctpop_i512:
-; AVX512POPCNT:       # %bb.0:
-; AVX512POPCNT-NEXT:    popcntq {{[0-9]+}}(%rsp), %rax
-; AVX512POPCNT-NEXT:    popcntq {{[0-9]+}}(%rsp), %r10
-; AVX512POPCNT-NEXT:    addl %eax, %r10d
-; AVX512POPCNT-NEXT:    popcntq %r9, %rax
-; AVX512POPCNT-NEXT:    popcntq %r8, %r8
-; AVX512POPCNT-NEXT:    addl %eax, %r8d
-; AVX512POPCNT-NEXT:    addl %r10d, %r8d
-; AVX512POPCNT-NEXT:    popcntq %rcx, %rax
-; AVX512POPCNT-NEXT:    popcntq %rdx, %rcx
-; AVX512POPCNT-NEXT:    addl %eax, %ecx
-; AVX512POPCNT-NEXT:    popcntq %rsi, %rdx
-; AVX512POPCNT-NEXT:    popcntq %rdi, %rax
-; AVX512POPCNT-NEXT:    addl %edx, %eax
-; AVX512POPCNT-NEXT:    addl %ecx, %eax
-; AVX512POPCNT-NEXT:    addl %r8d, %eax
-; AVX512POPCNT-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX512POPCNT-NEXT:    retq
-;
-; AVX512VL-LABEL: test_ctpop_i512:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    popcntq {{[0-9]+}}(%rsp), %rax
-; AVX512VL-NEXT:    popcntq {{[0-9]+}}(%rsp), %r10
-; AVX512VL-NEXT:    addl %eax, %r10d
-; AVX512VL-NEXT:    xorl %eax, %eax
-; AVX512VL-NEXT:    popcntq %r9, %rax
-; AVX512VL-NEXT:    popcntq %r8, %r8
-; AVX512VL-NEXT:    addl %eax, %r8d
-; AVX512VL-NEXT:    addl %r10d, %r8d
-; AVX512VL-NEXT:    xorl %eax, %eax
-; AVX512VL-NEXT:    popcntq %rcx, %rax
-; AVX512VL-NEXT:    xorl %ecx, %ecx
-; AVX512VL-NEXT:    popcntq %rdx, %rcx
-; AVX512VL-NEXT:    addl %eax, %ecx
-; AVX512VL-NEXT:    xorl %edx, %edx
-; AVX512VL-NEXT:    popcntq %rsi, %rdx
-; AVX512VL-NEXT:    xorl %eax, %eax
-; AVX512VL-NEXT:    popcntq %rdi, %rax
-; AVX512VL-NEXT:    addl %edx, %eax
-; AVX512VL-NEXT:    addl %ecx, %eax
-; AVX512VL-NEXT:    addl %r8d, %eax
-; AVX512VL-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX512VL-NEXT:    retq
-;
-; AVX512VLPOPCNT-LABEL: test_ctpop_i512:
-; AVX512VLPOPCNT:       # %bb.0:
-; AVX512VLPOPCNT-NEXT:    popcntq {{[0-9]+}}(%rsp), %rax
-; AVX512VLPOPCNT-NEXT:    popcntq {{[0-9]+}}(%rsp), %r10
-; AVX512VLPOPCNT-NEXT:    addl %eax, %r10d
-; AVX512VLPOPCNT-NEXT:    xorl %eax, %eax
-; AVX512VLPOPCNT-NEXT:    popcntq %r9, %rax
-; AVX512VLPOPCNT-NEXT:    popcntq %r8, %r8
-; AVX512VLPOPCNT-NEXT:    addl %eax, %r8d
-; AVX512VLPOPCNT-NEXT:    addl %r10d, %r8d
-; AVX512VLPOPCNT-NEXT:    xorl %eax, %eax
-; AVX512VLPOPCNT-NEXT:    popcntq %rcx, %rax
-; AVX512VLPOPCNT-NEXT:    xorl %ecx, %ecx
-; AVX512VLPOPCNT-NEXT:    popcntq %rdx, %rcx
-; AVX512VLPOPCNT-NEXT:    addl %eax, %ecx
-; AVX512VLPOPCNT-NEXT:    xorl %edx, %edx
-; AVX512VLPOPCNT-NEXT:    popcntq %rsi, %rdx
-; AVX512VLPOPCNT-NEXT:    xorl %eax, %eax
-; AVX512VLPOPCNT-NEXT:    popcntq %rdi, %rax
-; AVX512VLPOPCNT-NEXT:    addl %edx, %eax
-; AVX512VLPOPCNT-NEXT:    addl %ecx, %eax
-; AVX512VLPOPCNT-NEXT:    addl %r8d, %eax
-; AVX512VLPOPCNT-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX512VLPOPCNT-NEXT:    retq
+; AVX512-LABEL: test_ctpop_i512:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    popcntq {{[0-9]+}}(%rsp), %rax
+; AVX512-NEXT:    popcntq {{[0-9]+}}(%rsp), %r10
+; AVX512-NEXT:    addl %eax, %r10d
+; AVX512-NEXT:    popcntq %r9, %rax
+; AVX512-NEXT:    popcntq %r8, %r8
+; AVX512-NEXT:    addl %eax, %r8d
+; AVX512-NEXT:    addl %r10d, %r8d
+; AVX512-NEXT:    popcntq %rcx, %rax
+; AVX512-NEXT:    popcntq %rdx, %rcx
+; AVX512-NEXT:    addl %eax, %ecx
+; AVX512-NEXT:    popcntq %rsi, %rdx
+; AVX512-NEXT:    popcntq %rdi, %rax
+; AVX512-NEXT:    addl %edx, %eax
+; AVX512-NEXT:    addl %ecx, %eax
+; AVX512-NEXT:    addl %r8d, %eax
+; AVX512-NEXT:    # kill: def $eax killed $eax killed $rax
+; AVX512-NEXT:    retq
   %cnt = call i512 @llvm.ctpop.i512(i512 %a0)
   %res = trunc i512 %cnt to i32
   ret i32 %res
@@ -1086,18 +918,14 @@ define i32 @load_ctpop_i512(ptr %p0) nounwind {
 ; AVX512VL-NEXT:    popcntq 56(%rdi), %rax
 ; AVX512VL-NEXT:    popcntq 48(%rdi), %rcx
 ; AVX512VL-NEXT:    addl %eax, %ecx
-; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    popcntq 40(%rdi), %rax
 ; AVX512VL-NEXT:    popcntq 32(%rdi), %rdx
 ; AVX512VL-NEXT:    addl %eax, %edx
 ; AVX512VL-NEXT:    addl %ecx, %edx
-; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    popcntq 24(%rdi), %rax
-; AVX512VL-NEXT:    xorl %ecx, %ecx
 ; AVX512VL-NEXT:    popcntq 16(%rdi), %rcx
 ; AVX512VL-NEXT:    popcntq 8(%rdi), %rsi
 ; AVX512VL-NEXT:    addl %eax, %ecx
-; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    popcntq (%rdi), %rax
 ; AVX512VL-NEXT:    addl %esi, %eax
 ; AVX512VL-NEXT:    addl %ecx, %eax
@@ -1442,41 +1270,29 @@ define i32 @test_ctpop_i1024(i1024 %a0) nounwind {
 ; AVX512VL-NEXT:    popcntq {{[0-9]+}}(%rsp), %rax
 ; AVX512VL-NEXT:    popcntq {{[0-9]+}}(%rsp), %r10
 ; AVX512VL-NEXT:    addl %eax, %r10d
-; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    popcntq {{[0-9]+}}(%rsp), %rax
 ; AVX512VL-NEXT:    popcntq {{[0-9]+}}(%rsp), %r11
 ; AVX512VL-NEXT:    addl %eax, %r11d
 ; AVX512VL-NEXT:    addl %r10d, %r11d
-; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    popcntq {{[0-9]+}}(%rsp), %rax
-; AVX512VL-NEXT:    xorl %ebx, %ebx
 ; AVX512VL-NEXT:    popcntq {{[0-9]+}}(%rsp), %rbx
-; AVX512VL-NEXT:    xorl %r14d, %r14d
 ; AVX512VL-NEXT:    popcntq {{[0-9]+}}(%rsp), %r14
 ; AVX512VL-NEXT:    addl %eax, %ebx
-; AVX512VL-NEXT:    xorl %r10d, %r10d
 ; AVX512VL-NEXT:    popcntq {{[0-9]+}}(%rsp), %r10
 ; AVX512VL-NEXT:    addl %r14d, %r10d
 ; AVX512VL-NEXT:    addl %ebx, %r10d
 ; AVX512VL-NEXT:    addl %r11d, %r10d
-; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    popcntq {{[0-9]+}}(%rsp), %rax
-; AVX512VL-NEXT:    xorl %r11d, %r11d
 ; AVX512VL-NEXT:    popcntq {{[0-9]+}}(%rsp), %r11
 ; AVX512VL-NEXT:    addl %eax, %r11d
-; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    popcntq %r9, %rax
 ; AVX512VL-NEXT:    popcntq %r8, %r8
 ; AVX512VL-NEXT:    addl %eax, %r8d
 ; AVX512VL-NEXT:    addl %r11d, %r8d
-; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    popcntq %rcx, %rax
-; AVX512VL-NEXT:    xorl %ecx, %ecx
 ; AVX512VL-NEXT:    popcntq %rdx, %rcx
 ; AVX512VL-NEXT:    addl %eax, %ecx
-; AVX512VL-NEXT:    xorl %edx, %edx
 ; AVX512VL-NEXT:    popcntq %rsi, %rdx
-; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    popcntq %rdi, %rax
 ; AVX512VL-NEXT:    addl %edx, %eax
 ; AVX512VL-NEXT:    addl %ecx, %eax
@@ -1492,19 +1308,14 @@ define i32 @test_ctpop_i1024(i1024 %a0) nounwind {
 ; AVX512VLPOPCNT-NEXT:    popcntq {{[0-9]+}}(%rsp), %rax
 ; AVX512VLPOPCNT-NEXT:    popcntq {{[0-9]+}}(%rsp), %r10
 ; AVX512VLPOPCNT-NEXT:    addl %eax, %r10d
-; AVX512VLPOPCNT-NEXT:    xorl %eax, %eax
 ; AVX512VLPOPCNT-NEXT:    popcntq %r9, %rax
 ; AVX512VLPOPCNT-NEXT:    popcntq %r8, %r8
 ; AVX512VLPOPCNT-NEXT:    addl %eax, %r8d
 ; AVX512VLPOPCNT-NEXT:    addl %r10d, %r8d
-; AVX512VLPOPCNT-NEXT:    xorl %eax, %eax
 ; AVX512VLPOPCNT-NEXT:    popcntq %rcx, %rax
-; AVX512VLPOPCNT-NEXT:    xorl %ecx, %ecx
 ; AVX512VLPOPCNT-NEXT:    popcntq %rdx, %rcx
 ; AVX512VLPOPCNT-NEXT:    addl %eax, %ecx
-; AVX512VLPOPCNT-NEXT:    xorl %eax, %eax
 ; AVX512VLPOPCNT-NEXT:    popcntq %rsi, %rax
-; AVX512VLPOPCNT-NEXT:    xorl %edx, %edx
 ; AVX512VLPOPCNT-NEXT:    popcntq %rdi, %rdx
 ; AVX512VLPOPCNT-NEXT:    addl %eax, %edx
 ; AVX512VLPOPCNT-NEXT:    addl %ecx, %edx
@@ -1672,40 +1483,29 @@ define i32 @load_ctpop_i1024(ptr %p0) nounwind {
 ; AVX512VL-NEXT:    popcntq 120(%rdi), %rax
 ; AVX512VL-NEXT:    popcntq 112(%rdi), %rcx
 ; AVX512VL-NEXT:    addl %eax, %ecx
-; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    popcntq 104(%rdi), %rax
 ; AVX512VL-NEXT:    popcntq 96(%rdi), %rdx
 ; AVX512VL-NEXT:    addl %eax, %edx
 ; AVX512VL-NEXT:    addl %ecx, %edx
-; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    popcntq 88(%rdi), %rax
 ; AVX512VL-NEXT:    popcntq 80(%rdi), %rsi
 ; AVX512VL-NEXT:    popcntq 72(%rdi), %r8
 ; AVX512VL-NEXT:    addl %eax, %esi
-; AVX512VL-NEXT:    xorl %ecx, %ecx
 ; AVX512VL-NEXT:    popcntq 64(%rdi), %rcx
 ; AVX512VL-NEXT:    addl %r8d, %ecx
 ; AVX512VL-NEXT:    addl %esi, %ecx
 ; AVX512VL-NEXT:    addl %edx, %ecx
-; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    popcntq 56(%rdi), %rax
-; AVX512VL-NEXT:    xorl %edx, %edx
 ; AVX512VL-NEXT:    popcntq 48(%rdi), %rdx
-; AVX512VL-NEXT:    xorl %esi, %esi
 ; AVX512VL-NEXT:    popcntq 40(%rdi), %rsi
 ; AVX512VL-NEXT:    addl %eax, %edx
-; AVX512VL-NEXT:    xorl %r8d, %r8d
 ; AVX512VL-NEXT:    popcntq 32(%rdi), %r8
 ; AVX512VL-NEXT:    addl %esi, %r8d
-; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    popcntq 24(%rdi), %rax
 ; AVX512VL-NEXT:    addl %edx, %r8d
-; AVX512VL-NEXT:    xorl %edx, %edx
 ; AVX512VL-NEXT:    popcntq 16(%rdi), %rdx
 ; AVX512VL-NEXT:    addl %eax, %edx
-; AVX512VL-NEXT:    xorl %esi, %esi
 ; AVX512VL-NEXT:    popcntq 8(%rdi), %rsi
-; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    popcntq (%rdi), %rax
 ; AVX512VL-NEXT:    addl %esi, %eax
 ; AVX512VL-NEXT:    addl %edx, %eax

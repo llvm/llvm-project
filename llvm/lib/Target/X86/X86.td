@@ -1012,7 +1012,6 @@ def ProcessorFeatures {
     TuningFastVariablePerLaneShuffle,
     TuningPrefer256Bit,
     TuningFastGather,
-    TuningPOPCNTFalseDeps,
     TuningInsertVZEROUPPER,
     TuningAllowLight256Bit
   ];
