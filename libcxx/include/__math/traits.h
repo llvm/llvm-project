@@ -157,7 +157,8 @@ isgreaterequal(_A1 __x, _A2 __y) _NOEXCEPT {
 template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
 [[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isless(_A1 __x, _A2 __y) _NOEXCEPT {
   using type = __promote_t<_A1, _A2>;
-  return __builtin_isless((type)__x, (type)__y); }
+  return __builtin_isless((type)__x, (type)__y);
+}
 
 // islessequal
 
