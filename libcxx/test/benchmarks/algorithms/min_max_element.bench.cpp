@@ -13,21 +13,7 @@
 
 #include <benchmark/benchmark.h>
 
-void run_sizes(benchmark::Benchmark* benchmark) {
-  benchmark->Arg(1)
-      ->Arg(2)
-      ->Arg(3)
-      ->Arg(4)
-      ->Arg(64)
-      ->Arg(512)
-      ->Arg(1024)
-      ->Arg(4000)
-      ->Arg(4096)
-      ->Arg(5500)
-      ->Arg(64000)
-      ->Arg(65536)
-      ->Arg(70000);
-}
+void run_sizes(benchmark::Benchmark* benchmark) { benchmark->Arg(2)->Arg(5500)->Arg(70000); }
 
 template <class T>
 void BM_std_minmax_element(benchmark::State& state) {
