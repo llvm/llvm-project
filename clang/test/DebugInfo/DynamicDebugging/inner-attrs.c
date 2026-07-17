@@ -21,5 +21,7 @@ __attribute__((minsize)) void b() { }
 // INNER: declare dso_local void @b() #2
 // INNER: attributes #0 = { noinline nounwind optnone "
 /// Inner's references to outer's functions keep their original attributes.
-// INNER: attributes #1 = { alwaysinline nounwind optsize "
-// INNER: attributes #2 = { minsize nounwind optsize "
+/// Note that noipa and nooutline are added to the outer definition before
+/// copying the decl to Inner.
+// INNER: attributes #1 = { alwaysinline noipa nooutline nounwind optsize "
+// INNER: attributes #2 = { minsize noipa nooutline nounwind optsize "

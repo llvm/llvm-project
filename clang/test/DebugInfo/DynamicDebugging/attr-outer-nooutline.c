@@ -3,5 +3,5 @@
 // RUN: | FileCheck %s
 
 // CHECK: define dso_local i32 @f() #0
-// CHECK: attributes #0 = {{{.*}}"no-func-spec"{{.*}}}
+// CHECK: attributes #0 = {{{.*}}nooutline{{.*}}}
 int f() { return 0; }

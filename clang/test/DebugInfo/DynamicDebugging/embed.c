@@ -1,7 +1,7 @@
 // REQUIRES: x86-registered-target
 // Requires X86 as this test runs the codegen pipeline for the debug module.
-// RUN: %clang -cc1 -triple %itanium_abi_triple %s -debug-info-kind=limited -fdynamic-debugging -o %t --save-dynamic-debugging-temps
-// RUN: FileCheck %s < %t.dyndbg.2.outer.ll
+// RUN: %clang -cc1 -emit-llvm -triple %itanium_abi_triple %s -debug-info-kind=limited -fdynamic-debugging -o - \
+// RUN: | FileCheck %s
 
 // Test that a dynamic debugging section is embedded in the outer module. Note
 // that !exclude is ignored by LLVM as this section's flags are chosen based
