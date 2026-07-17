@@ -20,6 +20,22 @@
 #define LIBC_ASSERT(COND) assert(COND)
 #endif // LIBC_ASSERT
 
+#ifndef LIBC_COPT_ENABLE_SANITIZATION
+#define LIBC_COPT_ENABLE_SANITIZATION false
+#endif
+
+#if LIBC_COPT_ENABLE_SANITIZATION
+#define LIBC_SANITIZATION_CHECK(COND)                                          \
+  do {                                                                         \
+    LIBC_ASSERT((COND) && "Runtime sanitization failed.");                     \
+    __builtin_trap();                                                          \
+  } while (false)
+#else
+#define LIBC_SANITIZATION_CHECK(COND)                                          \
+  do {                                                                         \
+  } while (false)
+#endif
+
 #else // Not LIBC_COPT_USE_C_ASSERT
 
 #include "src/__support/OSUtil/exit.h"
@@ -77,6 +93,28 @@ LIBC_INLINE void report_assertion_failure(const char *assertion,
     }                                                                          \
   } while (false)
 #endif // NDEBUG
+
+#ifndef LIBC_COPT_ENABLE_SANITIZATION
+#define LIBC_COPT_ENABLE_SANITIZATION false
+#endif
+
+#if LIBC_COPT_ENABLE_SANITIZATION
+#define LIBC_SANITIZATION_CHECK(COND)                                          \
+  do {                                                                         \
+    if (LIBC_UNLIKELY(!(COND))) {                                              \
+      LIBC_NAMESPACE::write_to_stderr(__FILE__ ":" LLVM_LIBC_STRINGIFY(        \
+          __LINE__) ": Runtime sanitization failed: '" #COND                   \
+                    "' in function: '");                                       \
+      LIBC_NAMESPACE::write_to_stderr(__PRETTY_FUNCTION__);                    \
+      LIBC_NAMESPACE::write_to_stderr("'\n");                                  \
+      __builtin_trap();                                                        \
+    }                                                                          \
+  } while (false)
+#else
+#define LIBC_SANITIZATION_CHECK(COND)                                          \
+  do {                                                                         \
+  } while (false)
+#endif
 
 #endif // LIBC_COPT_USE_C_ASSERT
 

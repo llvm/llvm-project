@@ -189,6 +189,10 @@
     "LIBC_COPT_USE_C_ASSERT": {
       "value": false,
       "doc": "Use the system assert macro for LIBC_ASSERT."
+    },
+    "LIBC_COPT_ENABLE_SANITIZATION": {
+      "value": false,
+      "doc": "Enable sanitization checks in the library."
     }
   }
 }
