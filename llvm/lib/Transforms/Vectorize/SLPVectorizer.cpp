@@ -30544,10 +30544,11 @@ public:
                 ReductionCost += FusionSaving;
             }
           }
-        } else
+        } else {
           ReductionCost =
               getReductionCost(TTI, VL, SameValuesCounter, IsCmpSelMinMax,
                                RdxFMF, V, DT, DL, TLI);
+        }
         // If the root is a select (min/max idiom), the insert point is the
         // compare condition of that select.
         Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);
