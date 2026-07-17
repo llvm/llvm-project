@@ -55773,6 +55773,71 @@ static SDValue detectPMADDUBSW(SDValue In, EVT VT, SelectionDAG &DAG,
                           PMADDBuilder);
 }
 
+// Fold trunc(concat(trunc(x0), trunc(x1), ...)) -> shuffle(vtrunc(x0), ...).
+// A truncate of the concat narrows twice. VTRUNC narrows each source straight
+// to its final sub-128-bit width leaving only the shuffles.
+static SDValue combineTruncateOfConcat(SDValue Src, EVT VT, const SDLoc &DL,
+                                       SelectionDAG &DAG,
+                                       const X86Subtarget &Subtarget) {
+  if (!Subtarget.hasAVX512() || !VT.isVector() || !Src.hasOneUse())
+    return SDValue();
+
+  SmallVector<SDValue, 4> Ops;
+  if (!collectConcatOps(Src.getNode(), Ops, DAG) || Ops.size() < 2 ||
+      !isPowerOf2_32(Ops.size()))
+    return SDValue();
+
+  // Every piece must be a truncate from one common source type.
+  using namespace SDPatternMatch;
+  EVT InVT = Ops[0].getOperand(0).getValueType();
+  if (!all_of(Ops, [InVT](SDValue Op) {
+        return sd_match(Op, m_OneUse(m_Trunc(m_SpecificVT(InVT))));
+      }))
+    return SDValue();
+
+  // VTRUNC writes to the low lanes of an xmm, so it only helps when a piece is
+  // narrower than that. It needs a 512-bit source (or 256 with VLX), and BWI
+  // for the i16 to i8 form.
+  unsigned InBits = InVT.getSizeInBits();
+  unsigned NumPieceElts = InVT.getVectorNumElements();
+  MVT DstEltVT = MVT::getIntegerVT(VT.getScalarSizeInBits());
+  unsigned NumDstElts = 128 / DstEltVT.getSizeInBits();
+  if (NumPieceElts >= NumDstElts ||
+      (InBits != 512 && !(InBits == 256 && Subtarget.hasVLX())) ||
+      (InVT.getScalarSizeInBits() == 16 && !Subtarget.hasBWI()))
+    return SDValue();
+
+  // The pairwise packing runs out of pieces if they don't fill whole results.
+  if ((Ops.size() * NumPieceElts) % NumDstElts != 0)
+    return SDValue();
+
+  MVT TruncDstVT = MVT::getVectorVT(DstEltVT, NumDstElts);
+  SmallVector<SDValue, 8> Pieces;
+  for (SDValue Op : Ops)
+    Pieces.push_back(
+        DAG.getNode(X86ISD::VTRUNC, DL, TruncDstVT, Op.getOperand(0)));
+
+  // Pairwise shuffle the low halves until each piece is full.
+  unsigned NumGoodElts = NumPieceElts;
+  while (Pieces.size() > 1 && NumGoodElts < NumDstElts) {
+    assert((NumDstElts % NumGoodElts) == 0 && "Illegal VTRUNC packing");
+    SmallVector<SDValue, 8> Next;
+    SmallVector<int, 16> Mask(NumDstElts, -1);
+    for (unsigned I = 0; I != NumGoodElts; ++I) {
+      Mask[I] = I;
+      Mask[NumGoodElts + I] = NumDstElts + I;
+    }
+    for (unsigned J = 0, E = Pieces.size() - 1; J < E; J += 2)
+      Next.push_back(
+          DAG.getVectorShuffle(TruncDstVT, DL, Pieces[J], Pieces[J + 1], Mask));
+    Pieces = std::move(Next);
+    NumGoodElts *= 2;
+  }
+  MVT ConcatVT = MVT::getVectorVT(DstEltVT, Pieces.size() * NumDstElts);
+  return DAG.getBitcast(VT,
+                        DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, Pieces));
+}
+
 static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,
                                const X86Subtarget &Subtarget) {
   EVT VT = N->getValueType(0);
@@ -55794,6 +55859,10 @@ static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,
 
   // Try to combine PMULHUW/PMULHW for vXi16.
   if (SDValue V = combinePMULH(Src, VT, DL, DAG, Subtarget))
+    return V;
+
+  // Try to combine a truncate of concatenated truncates.
+  if (SDValue V = combineTruncateOfConcat(Src, VT, DL, DAG, Subtarget))
     return V;
 
   // Fold trunc(srl(load(p),amt)) -> load(p+amt/8)
