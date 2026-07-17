@@ -18,8 +18,7 @@
 // Documentation: https://docs.xiangshan.cc/projects/design/en/latest/
 // User Guide: https://docs.xiangshan.cc/projects/user-guide/en/latest/
 // Typical Configurations & Instruction Latency:
-// https://docs.xiangshan.cc/projects/user-guide/en/
-//         kunminghu-v2/typical-configuration/
+// https://docs.xiangshan.cc/projects/user-guide/en/kunminghu-v2/typical-configuration/
 
 def XiangShanKunMingHuModel : SchedMachineModel {
   let IssueWidth = 6;   // 6-way decode and dispatch
