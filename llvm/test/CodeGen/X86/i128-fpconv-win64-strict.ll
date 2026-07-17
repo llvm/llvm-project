@@ -5,10 +5,13 @@
 define i64 @double_to_i128(double %d) nounwind strictfp {
 ; WIN64-LABEL: double_to_i128:
 ; WIN64:       # %bb.0:
-; WIN64-NEXT:    subq $40, %rsp
+; WIN64-NEXT:    subq $72, %rsp
+; WIN64-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN64-NEXT:    callq __fixdfti
-; WIN64-NEXT:    movq %xmm0, %rax
-; WIN64-NEXT:    addq $40, %rsp
+; WIN64-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; WIN64-NEXT:    addq $72, %rsp
 ; WIN64-NEXT:    retq
   %1 = tail call i128 @llvm.experimental.constrained.fptosi.i128.f64(double %d, metadata !"fpexcept.strict")
   %2 = trunc i128 %1 to i64
@@ -18,10 +21,13 @@ define i64 @double_to_i128(double %d) nounwind strictfp {
 define i64 @double_to_ui128(double %d) nounwind strictfp {
 ; WIN64-LABEL: double_to_ui128:
 ; WIN64:       # %bb.0:
-; WIN64-NEXT:    subq $40, %rsp
+; WIN64-NEXT:    subq $72, %rsp
+; WIN64-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN64-NEXT:    callq __fixunsdfti
-; WIN64-NEXT:    movq %xmm0, %rax
-; WIN64-NEXT:    addq $40, %rsp
+; WIN64-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; WIN64-NEXT:    addq $72, %rsp
 ; WIN64-NEXT:    retq
   %1 = tail call i128 @llvm.experimental.constrained.fptoui.i128.f64(double %d, metadata !"fpexcept.strict")
   %2 = trunc i128 %1 to i64
@@ -31,10 +37,13 @@ define i64 @double_to_ui128(double %d) nounwind strictfp {
 define i64 @float_to_i128(float %d) nounwind strictfp {
 ; WIN64-LABEL: float_to_i128:
 ; WIN64:       # %bb.0:
-; WIN64-NEXT:    subq $40, %rsp
+; WIN64-NEXT:    subq $72, %rsp
+; WIN64-NEXT:    movss %xmm0, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN64-NEXT:    callq __fixsfti
-; WIN64-NEXT:    movq %xmm0, %rax
-; WIN64-NEXT:    addq $40, %rsp
+; WIN64-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; WIN64-NEXT:    addq $72, %rsp
 ; WIN64-NEXT:    retq
   %1 = tail call i128 @llvm.experimental.constrained.fptosi.i128.f32(float %d, metadata !"fpexcept.strict")
   %2 = trunc i128 %1 to i64
@@ -44,10 +53,13 @@ define i64 @float_to_i128(float %d) nounwind strictfp {
 define i64 @float_to_ui128(float %d) nounwind strictfp {
 ; WIN64-LABEL: float_to_ui128:
 ; WIN64:       # %bb.0:
-; WIN64-NEXT:    subq $40, %rsp
+; WIN64-NEXT:    subq $72, %rsp
+; WIN64-NEXT:    movss %xmm0, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN64-NEXT:    callq __fixunssfti
-; WIN64-NEXT:    movq %xmm0, %rax
-; WIN64-NEXT:    addq $40, %rsp
+; WIN64-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; WIN64-NEXT:    addq $72, %rsp
 ; WIN64-NEXT:    retq
   %1 = tail call i128 @llvm.experimental.constrained.fptoui.i128.f32(float %d, metadata !"fpexcept.strict")
   %2 = trunc i128 %1 to i64
@@ -57,14 +69,15 @@ define i64 @float_to_ui128(float %d) nounwind strictfp {
 define i64 @longdouble_to_i128(ptr nocapture readonly %0) nounwind strictfp {
 ; WIN64-LABEL: longdouble_to_i128:
 ; WIN64:       # %bb.0:
-; WIN64-NEXT:    subq $56, %rsp
+; WIN64-NEXT:    subq $72, %rsp
 ; WIN64-NEXT:    fldt (%rcx)
 ; WIN64-NEXT:    fstpt {{[0-9]+}}(%rsp)
 ; WIN64-NEXT:    wait
 ; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN64-NEXT:    callq __fixxfti
-; WIN64-NEXT:    movq %xmm0, %rax
-; WIN64-NEXT:    addq $56, %rsp
+; WIN64-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; WIN64-NEXT:    addq $72, %rsp
 ; WIN64-NEXT:    retq
   %2 = load x86_fp80, ptr %0, align 16
   %3 = tail call i128 @llvm.experimental.constrained.fptosi.i128.f80(x86_fp80 %2, metadata !"fpexcept.strict")
@@ -75,14 +88,15 @@ define i64 @longdouble_to_i128(ptr nocapture readonly %0) nounwind strictfp {
 define i64 @longdouble_to_ui128(ptr nocapture readonly %0) nounwind strictfp {
 ; WIN64-LABEL: longdouble_to_ui128:
 ; WIN64:       # %bb.0:
-; WIN64-NEXT:    subq $56, %rsp
+; WIN64-NEXT:    subq $72, %rsp
 ; WIN64-NEXT:    fldt (%rcx)
 ; WIN64-NEXT:    fstpt {{[0-9]+}}(%rsp)
 ; WIN64-NEXT:    wait
 ; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN64-NEXT:    callq __fixunsxfti
-; WIN64-NEXT:    movq %xmm0, %rax
-; WIN64-NEXT:    addq $56, %rsp
+; WIN64-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; WIN64-NEXT:    addq $72, %rsp
 ; WIN64-NEXT:    retq
   %2 = load x86_fp80, ptr %0, align 16
   %3 = tail call i128 @llvm.experimental.constrained.fptoui.i128.f80(x86_fp80 %2, metadata !"fpexcept.strict")
