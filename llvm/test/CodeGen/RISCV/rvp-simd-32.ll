@@ -924,9 +924,11 @@ define <2 x i16> @test_psll_hs(<2 x i16> %a, i16 %shamt) {
   ret <2 x i16> %res
 }
 
+; We can't remove the andi, the hardware instruction always reads 5 bits.
 define <2 x i16> @test_psll_hs_mask(<2 x i16> %a, i16 %shamt) {
 ; CHECK-LABEL: test_psll_hs_mask:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a1, a1, 15
 ; CHECK-NEXT:    psll.hs a0, a0, a1
 ; CHECK-NEXT:    ret
   %masked = and i16 %shamt, 15
@@ -947,9 +949,11 @@ define <4 x i8> @test_psll_bs(<4 x i8> %a, i8 %shamt) {
   ret <4 x i8> %res
 }
 
+; We can't remove the andi, the hardware instruction always reads 5 bits.
 define <4 x i8> @test_psll_bs_mask(<4 x i8> %a, i8 %shamt) {
 ; CHECK-LABEL: test_psll_bs_mask:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a1, a1, 7
 ; CHECK-NEXT:    psll.bs a0, a0, a1
 ; CHECK-NEXT:    ret
   %masked = and i8 %shamt, 7
@@ -1031,9 +1035,11 @@ define <2 x i16> @test_psrl_hs(<2 x i16> %a, i16 %shamt) {
   ret <2 x i16> %res
 }
 
+; We can't remove the andi, the hardware instruction always reads 5 bits.
 define <2 x i16> @test_psrl_hs_mask(<2 x i16> %a, i16 %shamt) {
 ; CHECK-LABEL: test_psrl_hs_mask:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a1, a1, 15
 ; CHECK-NEXT:    psrl.hs a0, a0, a1
 ; CHECK-NEXT:    ret
   %masked = and i16 %shamt, 15
@@ -1054,9 +1060,11 @@ define <4 x i8> @test_psrl_bs(<4 x i8> %a, i8 %shamt) {
   ret <4 x i8> %res
 }
 
+; We can't remove the andi, the hardware instruction always reads 5 bits.
 define <4 x i8> @test_psrl_bs_mask(<4 x i8> %a, i8 %shamt) {
 ; CHECK-LABEL: test_psrl_bs_mask:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a1, a1, 7
 ; CHECK-NEXT:    psrl.bs a0, a0, a1
 ; CHECK-NEXT:    ret
   %masked = and i8 %shamt, 7
@@ -1078,9 +1086,11 @@ define <2 x i16> @test_psra_hs(<2 x i16> %a, i16 %shamt) {
   ret <2 x i16> %res
 }
 
+; We can't remove the andi, the hardware instruction always reads 5 bits.
 define <2 x i16> @test_psra_hs_mask(<2 x i16> %a, i16 %shamt) {
 ; CHECK-LABEL: test_psra_hs_mask:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a1, a1, 15
 ; CHECK-NEXT:    psra.hs a0, a0, a1
 ; CHECK-NEXT:    ret
   %masked = and i16 %shamt, 15
@@ -1101,9 +1111,11 @@ define <4 x i8> @test_psra_bs(<4 x i8> %a, i8 %shamt) {
   ret <4 x i8> %res
 }
 
+; We can't remove the andi, the hardware instruction always reads 5 bits.
 define <4 x i8> @test_psra_bs_mask(<4 x i8> %a, i8 %shamt) {
 ; CHECK-LABEL: test_psra_bs_mask:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a1, a1, 7
 ; CHECK-NEXT:    psra.bs a0, a0, a1
 ; CHECK-NEXT:    ret
   %masked = and i8 %shamt, 7
@@ -1249,6 +1261,43 @@ define <4 x i8> @test_psra_bs_vec_shamt(<4 x i8> %a, <4 x i8> %b) {
 ; RV64-NEXT:    ret
   %res = ashr <4 x i8> %a, %b
   ret <4 x i8> %res
+}
+
+; Packed saturating and rounding shifts
+define <2 x i16> @test_pssha_s_i16x2(<2 x i16> %a, i32 %shamt) {
+; CHECK-LABEL: test_pssha_s_i16x2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pssha.hs a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pssha.v2i16.i32(<2 x i16> %a, i32 %shamt)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_psshar_s_i16x2(<2 x i16> %a, i32 %shamt) {
+; CHECK-LABEL: test_psshar_s_i16x2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psshar.hs a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.psshar.v2i16.i32(<2 x i16> %a, i32 %shamt)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_psshl_s_u16x2(<2 x i16> %a, i32 %shamt) {
+; CHECK-LABEL: test_psshl_s_u16x2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psshl.hs a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.psshl.v2i16.i32(<2 x i16> %a, i32 %shamt)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_psshlr_s_u16x2(<2 x i16> %a, i32 %shamt) {
+; CHECK-LABEL: test_psshlr_s_u16x2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psshlr.hs a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.psshlr.v2i16.i32(<2 x i16> %a, i32 %shamt)
+  ret <2 x i16> %res
 }
 
 ; Test packed multiply high signed for v4i8
@@ -2219,10 +2268,10 @@ define <2 x i16> @test_select_v2i16(i1 %cond, <2 x i16> %a, <2 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB154_2
+; CHECK-NEXT:    bnez a3, .LBB158_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB154_2:
+; CHECK-NEXT:  .LBB158_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <2 x i16> %a, <2 x i16> %b
   ret <2 x i16> %res
@@ -2233,10 +2282,10 @@ define <4 x i8> @test_select_v4i8(i1 %cond, <4 x i8> %a, <4 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB155_2
+; CHECK-NEXT:    bnez a3, .LBB159_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB155_2:
+; CHECK-NEXT:  .LBB159_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <4 x i8> %a, <4 x i8> %b
   ret <4 x i8> %res
@@ -2682,4 +2731,18 @@ define <2 x i16> @test_psabs_v2i16(<2 x i16> %a) {
 ; CHECK-NEXT:    ret
   %res = call <2 x i16> @llvm.riscv.psabs.v2i16(<2 x i16> %a)
   ret <2 x i16> %res
+}
+
+define <4 x i8> @test_undef_v4i8() {
+; CHECK-LABEL: test_undef_v4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  ret <4 x i8> undef
+}
+
+define <2 x i16> @test_undef_v2i16() {
+; CHECK-LABEL: test_undef_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  ret <2 x i16> undef
 }

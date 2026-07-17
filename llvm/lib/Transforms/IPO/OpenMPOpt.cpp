@@ -292,7 +292,7 @@ struct OMPInformationCache : public InformationCache {
     switch (T.getArch()) {
     case llvm::Triple::nvptx:
     case llvm::Triple::nvptx64:
-    case llvm::Triple::amdgcn:
+    case llvm::Triple::amdgpu:
       assert(OMPBuilder.Config.IsTargetDevice &&
              "OpenMP AMDGPU/NVPTX is only prepared to deal with device code.");
       OMPBuilder.Config.IsGPU = true;
