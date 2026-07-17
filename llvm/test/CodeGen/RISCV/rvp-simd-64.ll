@@ -5997,3 +5997,24 @@ define <2 x i32> @test_return_zero() {
 ; RV64-NEXT:    ret
   ret <2 x i32> splat (i32 0)
 }
+
+define <8 x i8> @test_undef_v8i8() {
+; CHECK-LABEL: test_undef_v8i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  ret <8 x i8> undef
+}
+
+define <4 x i16> @test_undef_v4i16() {
+; CHECK-LABEL: test_undef_v4i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  ret <4 x i16> undef
+}
+
+define <2 x i32> @test_undef_v2i32() {
+; CHECK-LABEL: test_undef_v2i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  ret <2 x i32> undef
+}

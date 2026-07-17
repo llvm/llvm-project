@@ -2133,18 +2133,6 @@ SDValue AMDGPUTargetLowering::LowerDIVREMToFloat(SDValue Op, SelectionDAG &DAG,
   SDValue Rem = DAG.getNode(ISD::MUL, DL, VT, Div, RHS);
   Rem = DAG.getNode(ISD::SUB, DL, VT, LHS, Rem);
 
-  // Truncate to number of bits this divide really is.
-  if (Sign) {
-    SDValue InRegSize
-      = DAG.getValueType(EVT::getIntegerVT(*DAG.getContext(), DivBits));
-    Div = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, Div, InRegSize);
-    Rem = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, Rem, InRegSize);
-  } else {
-    SDValue TruncMask = DAG.getConstant((UINT64_C(1) << DivBits) - 1, DL, VT);
-    Div = DAG.getNode(ISD::AND, DL, VT, Div, TruncMask);
-    Rem = DAG.getNode(ISD::AND, DL, VT, Rem, TruncMask);
-  }
-
   return DAG.getMergeValues({ Div, Rem }, DL);
 }
 

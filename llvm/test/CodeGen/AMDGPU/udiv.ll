@@ -1488,7 +1488,7 @@ define amdgpu_kernel void @v_udiv_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @10, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 1 @6
-; EG-NEXT:    ALU 14, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 13, @11, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -1509,10 +1509,9 @@ define amdgpu_kernel void @v_udiv_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; EG-NEXT:     CNDE T1.W, PV.W, 0.0, literal.x,
 ; EG-NEXT:     FLT_TO_UINT * T0.X, T0.W,
 ; EG-NEXT:    1(1.401298e-45), 0(0.000000e+00)
-; EG-NEXT:     ADD_INT * T0.W, PS, PV.W,
-; EG-NEXT:     AND_INT T0.X, PV.W, literal.x,
-; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.y,
-; EG-NEXT:    255(3.573311e-43), 2(2.802597e-45)
+; EG-NEXT:     ADD_INT T0.X, PS, PV.W,
+; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
+; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %den_ptr = getelementptr i8, ptr addrspace(1) %in, i8 1
   %num = load i8, ptr addrspace(1) %in
   %den = load i8, ptr addrspace(1) %den_ptr
@@ -1623,7 +1622,7 @@ define amdgpu_kernel void @v_udiv_i16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @10, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 1 @6
-; EG-NEXT:    ALU 14, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 13, @11, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -1644,10 +1643,9 @@ define amdgpu_kernel void @v_udiv_i16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; EG-NEXT:     CNDE T1.W, PV.W, 0.0, literal.x,
 ; EG-NEXT:     FLT_TO_UINT * T0.X, T0.W,
 ; EG-NEXT:    1(1.401298e-45), 0(0.000000e+00)
-; EG-NEXT:     ADD_INT * T0.W, PS, PV.W,
-; EG-NEXT:     AND_INT T0.X, PV.W, literal.x,
-; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.y,
-; EG-NEXT:    65535(9.183409e-41), 2(2.802597e-45)
+; EG-NEXT:     ADD_INT T0.X, PS, PV.W,
+; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
+; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %den_ptr = getelementptr i16, ptr addrspace(1) %in, i16 1
   %num = load i16, ptr addrspace(1) %in
   %den = load i16, ptr addrspace(1) %den_ptr

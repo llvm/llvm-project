@@ -13778,14 +13778,6 @@ public:
   // FIXME: Does this belong in Sema? It's tough to implement it anywhere else.
   unsigned LastEmittedCodeSynthesisContextDepth = 0;
 
-  /// The template instantiation callbacks to trace or track
-  /// instantiations (objects can be chained).
-  ///
-  /// This callbacks is used to print, trace or track template
-  /// instantiations as they are being constructed.
-  std::vector<std::unique_ptr<TemplateInstantiationCallback>>
-      TemplateInstCallbacks;
-
   /// The current index into pack expansion arguments that will be
   /// used for substitution of parameter packs.
   ///

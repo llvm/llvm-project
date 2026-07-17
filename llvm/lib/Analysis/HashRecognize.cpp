@@ -511,8 +511,8 @@ std::variant<PolynomialInfo, StringRef> HashRecognize::recognizeCRC() const {
   if (!Latch || !Exit || !IndVar || L.getNumBlocks() != 1)
     return "Loop not in canonical form";
   unsigned TC = SE.getSmallConstantTripCount(&L);
-  if (!TC || TC % 8)
-    return "Unable to find a small constant byte-multiple trip count";
+  if (!TC)
+    return "Unable to find a small constant trip count";
 
   auto R = getRecurrences(Latch, IndVar, L);
   if (!R)
