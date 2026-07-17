@@ -81,6 +81,15 @@
 //    The Offset into the base "SW LDS" is obtained from
 //    corresponding element in offset table. With this information, replacement
 //    value is obtained.
+//
+// Replacement of LDS accessed via flat pointer arguments:
+//    An LDS pointer can reach a non-kernel as a flat (generic) pointer
+//    argument, e.g. after an addrspacecast of an LDS global to flat. A
+//    fixed-point call-graph walk identifies the functions and argument
+//    indices that carry such LDS-derived flat pointers. Memory operations
+//    that reach LDS through these arguments are redirected to the relocated
+//    global memory by reconstructing an equivalent flat pointer, instead of
+//    accessing the now-dead hardware LDS.
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
@@ -94,7 +103,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
@@ -104,10 +112,13 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/ReplaceConstant.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerCommon.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 #include <algorithm>
@@ -170,6 +181,7 @@ struct FunctionsAndLDSAccess {
   SetVector<Function *> NonKernelsWithLDSArgument;
   SetVector<GlobalVariable *> AllNonKernelLDSAccess;
   FunctionVariableMap NonKernelToLDSAccessMap;
+  DenseMap<Function *, SmallPtrSet<Argument *, 4>> NonKernelsWithLDSFlatArg;
 };
 
 class AMDGPUSwLowerLDS {
@@ -179,6 +191,7 @@ public:
   bool run();
   void getUsesOfLDSByNonKernels();
   void getNonKernelsWithLDSArguments(const CallGraph &CG);
+  void getNonKernelsWithLDSFlatArguments();
   SetVector<Function *>
   getOrderedIndirectLDSAccessingKernels(SetVector<Function *> &Kernels);
   SetVector<GlobalVariable *>
@@ -205,7 +218,8 @@ public:
   void lowerNonKernelLDSAccesses(Function *Func,
                                  SetVector<GlobalVariable *> &LDSGlobals,
                                  NonKernelLDSParameters &NKLDSParams);
-  void lowerFlatToLocalRoundTrips(Function *Func);
+  void lowerNonKernelLDSFlatArgAccesses(Function *Func);
+  Value *getFlatPtrForRoundTripLDSAccess(Function *Func, Value *LDSPtr);
   void
   updateMallocSizeForDynamicLDS(Function *Func, Value **CurrMallocSize,
                                 Value *HiddenDynLDSSize,
@@ -284,6 +298,99 @@ void AMDGPUSwLowerLDS::getNonKernelsWithLDSArguments(const CallGraph &CG) {
         // Also add the Calling function to KernelsWithIndirectLDSAccess list
         // so that base table of LDS is generated.
         FuncLDSAccessInfo.KernelsWithIndirectLDSAccess.insert(Func);
+      }
+    }
+  }
+}
+
+// True if flat pointer V is derived from an LDS-carrying argument in LDSArgs,
+// looking through GEP/bitcast/phi/select; Visited breaks phi cycles. When
+// AcceptLocalCast is set, a flat<-local addrspacecast also counts as an origin.
+// Detection (getNonKernelsWithLDSFlatArguments) sets it, since that cast is how
+// LDS first enters a flat pointer; the rewrite
+// (getFlatPtrForRoundTripLDSAccess) leaves it clear so only argument origins
+// qualify.
+static bool flatPtrDerivesFromLDS(Value *V,
+                                  const SmallPtrSetImpl<Argument *> &LDSArgs,
+                                  SmallPtrSetImpl<Value *> &Visited,
+                                  bool AcceptLocalCast) {
+  if (!V->getType()->isPointerTy() || !Visited.insert(V).second)
+    return false;
+  if (auto *A = dyn_cast<Argument>(V))
+    return LDSArgs.contains(A);
+  auto *Op = dyn_cast<Operator>(V);
+  if (!Op)
+    return false;
+  switch (Op->getOpcode()) {
+  case Instruction::AddrSpaceCast: {
+    if (!AcceptLocalCast)
+      return false;
+    Value *Src = Op->getOperand(0);
+    if (Src->getType()->getPointerAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
+      return true;
+    return flatPtrDerivesFromLDS(Src, LDSArgs, Visited, AcceptLocalCast);
+  }
+  case Instruction::GetElementPtr:
+  case Instruction::BitCast:
+    return flatPtrDerivesFromLDS(Op->getOperand(0), LDSArgs, Visited,
+                                 AcceptLocalCast);
+  case Instruction::PHI:
+    for (Value *In : cast<PHINode>(Op)->incoming_values())
+      if (flatPtrDerivesFromLDS(In, LDSArgs, Visited, AcceptLocalCast))
+        return true;
+    return false;
+  case Instruction::Select: {
+    auto *SI = cast<SelectInst>(Op);
+    return flatPtrDerivesFromLDS(SI->getTrueValue(), LDSArgs, Visited,
+                                 AcceptLocalCast) ||
+           flatPtrDerivesFromLDS(SI->getFalseValue(), LDSArgs, Visited,
+                                 AcceptLocalCast);
+  }
+  default:
+    return false;
+  }
+}
+
+void AMDGPUSwLowerLDS::getNonKernelsWithLDSFlatArguments() {
+  // A kernel or non-kernel may pass lowered LDS storage to a non-kernel as a
+  // flat pointer instead of addrspace(3). Record, per callee, which flat
+  // parameters carry LDS. Must run before lowering rewrites the call-site
+  // casts.
+  auto &FlatArgMap = FuncLDSAccessInfo.NonKernelsWithLDSFlatArg;
+  bool Changed = true;
+  while (Changed) {
+    Changed = false;
+    for (Function &F : M) {
+      if (F.isDeclaration())
+        continue;
+      SmallPtrSet<Argument *, 4> CallerLDSArgs;
+      if (auto It = FlatArgMap.find(&F); It != FlatArgMap.end())
+        CallerLDSArgs = It->second;
+      for (BasicBlock &BB : F) {
+        for (Instruction &I : BB) {
+          auto *CB = dyn_cast<CallBase>(&I);
+          if (!CB)
+            continue;
+          Function *Callee = CB->getCalledFunction();
+          if (!Callee || Callee->isDeclaration() || AMDGPU::isKernel(*Callee))
+            continue;
+          unsigned NumArgs =
+              std::min(CB->arg_size(), (unsigned)Callee->arg_size());
+          for (unsigned ArgNo = 0; ArgNo < NumArgs; ++ArgNo) {
+            Argument *CalleeArg = Callee->getArg(ArgNo);
+            Type *ArgTy = CalleeArg->getType();
+            if (!ArgTy->isPointerTy() ||
+                ArgTy->getPointerAddressSpace() != AMDGPUAS::FLAT_ADDRESS)
+              continue;
+            Value *Actual = CB->getArgOperand(ArgNo);
+            SmallPtrSet<Value *, 8> Visited;
+            if (!flatPtrDerivesFromLDS(Actual, CallerLDSArgs, Visited,
+                                       /*AcceptLocalCast=*/true))
+              continue;
+            if (FlatArgMap[Callee].insert(CalleeArg).second)
+              Changed = true;
+          }
+        }
       }
     }
   }
@@ -690,31 +797,51 @@ void AMDGPUSwLowerLDS::translateLDSMemoryOperationsToGlobalMemory(
     SetVector<Instruction *> &LDSInstructions) {
   LLVM_DEBUG(dbgs() << "Translating LDS memory operations to global memory : "
                     << Func->getName());
+  // Map an LDS pointer to its global-memory equivalent: a flat-argument access
+  // uses the flat source pointer, otherwise the base/offset table. nullptr
+  // means neither applies, so the operation is left unchanged.
+  auto TranslatePtr = [&](Value *LDSPtr) -> Value * {
+    if (Value *Flat = getFlatPtrForRoundTripLDSAccess(Func, LDSPtr))
+      return Flat;
+    if (!LoadMallocPtr)
+      return nullptr;
+    return getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, LDSPtr);
+  };
+  // Old LDS pointer operands to clean up. Flat-arg round-trips leave the cast
+  // and local GEPs dead; the base/offset path keeps them live via ptrtoint, so
+  // cleanup is a no-op there. WeakTrackingVH tolerates chains freed
+  // recursively.
+  SmallVector<WeakTrackingVH, 8> MaybeDeadPtrs;
   for (Instruction *Inst : LDSInstructions) {
     IRB.SetInsertPoint(Inst);
     if (LoadInst *LI = dyn_cast<LoadInst>(Inst)) {
       Value *LIOperand = LI->getPointerOperand();
-      Value *Replacement =
-          getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, LIOperand);
+      Value *Replacement = TranslatePtr(LIOperand);
+      if (!Replacement)
+        continue;
       LoadInst *NewLI =
           IRB.CreateLoad(LI->getType(), Replacement, LI->getProperties());
       AsanInfo.Instructions.insert(NewLI);
       LI->replaceAllUsesWith(NewLI);
       LI->eraseFromParent();
+      MaybeDeadPtrs.push_back(LIOperand);
     } else if (StoreInst *SI = dyn_cast<StoreInst>(Inst)) {
       Value *SIOperand = SI->getPointerOperand();
-      Value *Replacement =
-          getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, SIOperand);
+      Value *Replacement = TranslatePtr(SIOperand);
+      if (!Replacement)
+        continue;
       StoreInst *NewSI = IRB.CreateStore(SI->getValueOperand(), Replacement,
                                          SI->getProperties());
       AsanInfo.Instructions.insert(NewSI);
       SI->replaceAllUsesWith(NewSI);
       SI->eraseFromParent();
+      MaybeDeadPtrs.push_back(SIOperand);
     } else if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(Inst)) {
       Value *RMWPtrOperand = RMW->getPointerOperand();
       Value *RMWValOperand = RMW->getValOperand();
-      Value *Replacement =
-          getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, RMWPtrOperand);
+      Value *Replacement = TranslatePtr(RMWPtrOperand);
+      if (!Replacement)
+        continue;
       AtomicRMWInst *NewRMW = IRB.CreateAtomicRMW(
           RMW->getOperation(), Replacement, RMWValOperand, RMW->getAlign(),
           RMW->getOrdering(), RMW->getSyncScopeID());
@@ -722,10 +849,12 @@ void AMDGPUSwLowerLDS::translateLDSMemoryOperationsToGlobalMemory(
       AsanInfo.Instructions.insert(NewRMW);
       RMW->replaceAllUsesWith(NewRMW);
       RMW->eraseFromParent();
+      MaybeDeadPtrs.push_back(RMWPtrOperand);
     } else if (AtomicCmpXchgInst *XCHG = dyn_cast<AtomicCmpXchgInst>(Inst)) {
       Value *XCHGPtrOperand = XCHG->getPointerOperand();
-      Value *Replacement =
-          getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, XCHGPtrOperand);
+      Value *Replacement = TranslatePtr(XCHGPtrOperand);
+      if (!Replacement)
+        continue;
       AtomicCmpXchgInst *NewXCHG = IRB.CreateAtomicCmpXchg(
           Replacement, XCHG->getCompareOperand(), XCHG->getNewValOperand(),
           XCHG->getAlign(), XCHG->getSuccessOrdering(),
@@ -734,10 +863,16 @@ void AMDGPUSwLowerLDS::translateLDSMemoryOperationsToGlobalMemory(
       AsanInfo.Instructions.insert(NewXCHG);
       XCHG->replaceAllUsesWith(NewXCHG);
       XCHG->eraseFromParent();
+      MaybeDeadPtrs.push_back(XCHGPtrOperand);
     } else if (AnyMemIntrinsic *MI = dyn_cast<AnyMemIntrinsic>(Inst)) {
-      Value *NewDest = MI->getRawDest();
-      if (MI->getDestAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
-        NewDest = getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, NewDest);
+      Value *OldRawDest = MI->getRawDest();
+      Value *NewDest = OldRawDest;
+      if (MI->getDestAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+        NewDest = TranslatePtr(NewDest);
+        if (!NewDest)
+          continue;
+        MaybeDeadPtrs.push_back(OldRawDest);
+      }
       CallInst *NewMI = nullptr;
       if (AnyMemSetInst *MSI = dyn_cast<AnyMemSetInst>(MI)) {
         if (MI->isAtomic()) {
@@ -750,9 +885,14 @@ void AMDGPUSwLowerLDS::translateLDSMemoryOperationsToGlobalMemory(
                                    cast<MemSetInst>(MI)->isVolatile());
         }
       } else if (AnyMemTransferInst *MTI = dyn_cast<AnyMemTransferInst>(MI)) {
-        Value *NewSrc = MTI->getRawSource();
-        if (MTI->getSourceAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
-          NewSrc = getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, NewSrc);
+        Value *OldRawSrc = MTI->getRawSource();
+        Value *NewSrc = OldRawSrc;
+        if (MTI->getSourceAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+          NewSrc = TranslatePtr(NewSrc);
+          if (!NewSrc)
+            continue;
+          MaybeDeadPtrs.push_back(OldRawSrc);
+        }
         if (MI->isAtomic()) {
           if (MI->getIntrinsicID() ==
               Intrinsic::memmove_element_unordered_atomic) {
@@ -779,91 +919,78 @@ void AMDGPUSwLowerLDS::translateLDSMemoryOperationsToGlobalMemory(
       MI->eraseFromParent();
     } else if (AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(Inst)) {
       Value *AIOperand = ASC->getPointerOperand();
-      Value *Replacement =
-          getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, AIOperand);
+      Value *Replacement = TranslatePtr(AIOperand);
+      if (!Replacement)
+        continue;
       Value *NewAI = IRB.CreateAddrSpaceCast(Replacement, ASC->getType());
       // Note: No need to add the instruction to AsanInfo instructions to be
       // instrumented list. FLAT_ADDRESS ptr would have been already
       // instrumented by asan pass prior to this pass.
       ASC->replaceAllUsesWith(NewAI);
       ASC->eraseFromParent();
+      MaybeDeadPtrs.push_back(AIOperand);
     } else
       report_fatal_error("Unimplemented LDS lowering instruction");
   }
+
+  // Drop the now-dead flat->local casts and local GEPs.
+  RecursivelyDeleteTriviallyDeadInstructionsPermissive(MaybeDeadPtrs);
 }
 
-void AMDGPUSwLowerLDS::lowerFlatToLocalRoundTrips(Function *Func) {
-  // After SW LDS lowering, storage that used to live in LDS now lives in global
-  // memory, but it may still be handed to a callee as a flat (generic) pointer.
-  // Such a callee can re-derive an LDS pointer with a round-trip pattern:
-  //   %p = getelementptr ..., ptr %flat_arg        ; flat, backed by global mem
-  //   %c = addrspacecast ptr %p to ptr addrspace(3)
-  //   load/store ... ptr addrspace(3) %c
-  // The addrspace(3) access would then hit dead LDS. Redo the access through
-  // the flat source pointer, which still points at the global backing buffer.
-  SmallVector<Instruction *> ToErase;
-  SmallPtrSet<AddrSpaceCastInst *, 8> Casts;
-  for (BasicBlock &BB : *Func) {
-    for (Instruction &Inst : BB) {
-      Value *Ptr = nullptr;
-      if (auto *LI = dyn_cast<LoadInst>(&Inst))
-        Ptr = LI->getPointerOperand();
-      else if (auto *SI = dyn_cast<StoreInst>(&Inst))
-        Ptr = SI->getPointerOperand();
-      else if (auto *RMW = dyn_cast<AtomicRMWInst>(&Inst))
-        Ptr = RMW->getPointerOperand();
-      else if (auto *XCHG = dyn_cast<AtomicCmpXchgInst>(&Inst))
-        Ptr = XCHG->getPointerOperand();
-      else
-        continue;
+Value *AMDGPUSwLowerLDS::getFlatPtrForRoundTripLDSAccess(Function *Func,
+                                                         Value *LDSPtr) {
+  // If LDSPtr is lowered storage reached via a flat argument, i.e.
+  // addrspacecast(flat->local) optionally followed by local GEPs, return the
+  // equivalent flat pointer into the global backing buffer. Otherwise nullptr,
+  // so the caller falls back to the base/offset-table translation.
+  auto It = FuncLDSAccessInfo.NonKernelsWithLDSFlatArg.find(Func);
+  if (It == FuncLDSAccessInfo.NonKernelsWithLDSFlatArg.end())
+    return nullptr;
+  const SmallPtrSet<Argument *, 4> &LDSArgs = It->second;
 
-      auto *ASC = dyn_cast<AddrSpaceCastInst>(Ptr);
-      if (!ASC || ASC->getSrcAddressSpace() != AMDGPUAS::FLAT_ADDRESS ||
-          ASC->getDestAddressSpace() != AMDGPUAS::LOCAL_ADDRESS)
-        continue;
-
-      // Only collapse pointers that originate from a flat function argument,
-      // i.e. storage passed in from a caller. Genuine in-function LDS pointers
-      // are lowered through the base/offset table machinery instead.
-      Value *FlatPtr = ASC->getPointerOperand();
-      if (!isa<Argument>(getUnderlyingObject(FlatPtr)))
-        continue;
-
-      IRB.SetInsertPoint(&Inst);
-      Instruction *NewInst = nullptr;
-      if (auto *LI = dyn_cast<LoadInst>(&Inst)) {
-        NewInst = IRB.CreateLoad(LI->getType(), FlatPtr, LI->getProperties());
-      } else if (auto *SI = dyn_cast<StoreInst>(&Inst)) {
-        NewInst = IRB.CreateStore(SI->getValueOperand(), FlatPtr,
-                                  SI->getProperties());
-      } else if (auto *RMW = dyn_cast<AtomicRMWInst>(&Inst)) {
-        auto *NewRMW = IRB.CreateAtomicRMW(
-            RMW->getOperation(), FlatPtr, RMW->getValOperand(), RMW->getAlign(),
-            RMW->getOrdering(), RMW->getSyncScopeID());
-        NewRMW->setVolatile(RMW->isVolatile());
-        NewInst = NewRMW;
-      } else {
-        auto *XCHG = cast<AtomicCmpXchgInst>(&Inst);
-        auto *NewXCHG = IRB.CreateAtomicCmpXchg(
-            FlatPtr, XCHG->getCompareOperand(), XCHG->getNewValOperand(),
-            XCHG->getAlign(), XCHG->getSuccessOrdering(),
-            XCHG->getFailureOrdering(), XCHG->getSyncScopeID());
-        NewXCHG->setVolatile(XCHG->isVolatile());
-        NewInst = NewXCHG;
-      }
-      // Flat access into the global backing buffer must be sanitized.
-      AsanInfo.Instructions.insert(NewInst);
-      Inst.replaceAllUsesWith(NewInst);
-      ToErase.push_back(&Inst);
-      Casts.insert(ASC);
-    }
+  // Peel off local GEPs sitting between the cast and the access.
+  SmallVector<GEPOperator *, 4> GEPs;
+  Value *Cur = LDSPtr;
+  while (auto *GEP = dyn_cast<GEPOperator>(Cur)) {
+    if (GEP->getPointerAddressSpace() != AMDGPUAS::LOCAL_ADDRESS)
+      return nullptr;
+    GEPs.push_back(GEP);
+    Cur = GEP->getPointerOperand();
   }
-  for (Instruction *I : ToErase)
-    I->eraseFromParent();
-  // Drop the now-dead round-trip casts.
-  for (AddrSpaceCastInst *ASC : Casts)
-    if (ASC->use_empty())
-      ASC->eraseFromParent();
+
+  auto *ASC = dyn_cast<Operator>(Cur);
+  if (!ASC || ASC->getOpcode() != Instruction::AddrSpaceCast)
+    return nullptr;
+  Value *FlatSrc = ASC->getOperand(0);
+  if (FlatSrc->getType()->getPointerAddressSpace() != AMDGPUAS::FLAT_ADDRESS)
+    return nullptr;
+
+  // The flat source must trace back to an LDS-carrying arg.
+  SmallPtrSet<Value *, 8> Visited;
+  if (!flatPtrDerivesFromLDS(FlatSrc, LDSArgs, Visited,
+                             /*AcceptLocalCast=*/false))
+    return nullptr;
+
+  // Re-apply the peeled GEPs in the flat address space.
+  Value *Flat = FlatSrc;
+  for (GEPOperator *GEP : reverse(GEPs)) {
+    SmallVector<Value *, 4> Indices(GEP->idx_begin(), GEP->idx_end());
+    Flat = IRB.CreateGEP(GEP->getSourceElementType(), Flat, Indices, "",
+                         GEP->getNoWrapFlags());
+  }
+  return Flat;
+}
+
+void AMDGPUSwLowerLDS::lowerNonKernelLDSFlatArgAccesses(Function *Func) {
+  // Lower a non-kernel that only reaches lowered LDS through a flat argument.
+  // No base/offset table is needed: the flat pointer already points at the
+  // global backing buffer, so the shared translation reuses the flat source.
+  SetVector<Instruction *> LDSInstructions;
+  getLDSMemoryInstructions(Func, LDSInstructions);
+  if (LDSInstructions.empty())
+    return;
+  translateLDSMemoryOperationsToGlobalMemory(Func, /*LoadMallocPtr=*/nullptr,
+                                             LDSInstructions);
 }
 
 void AMDGPUSwLowerLDS::poisonRedzones(Function *Func, Value *MallocPtr) {
@@ -1334,6 +1461,11 @@ bool AMDGPUSwLowerLDS::run() {
   // Get address sanitizer scale.
   initAsanInfo();
 
+  // Discover non-kernels that receive lowered LDS via a flat pointer argument.
+  // This must happen before lowering rewrites the call-site address-space
+  // casts.
+  getNonKernelsWithLDSFlatArguments();
+
   for (auto &K : FuncLDSAccessInfo.KernelToLDSParametersMap) {
     Function *Func = K.first;
     auto &LDSParams = FuncLDSAccessInfo.KernelToLDSParametersMap[Func];
@@ -1396,14 +1528,19 @@ bool AMDGPUSwLowerLDS::run() {
     Changed = true;
   }
 
+  // Lower non-kernels that reach lowered LDS only through a flat argument.
+  // Functions also handled above already had these accesses translated there.
+  for (auto &K : FuncLDSAccessInfo.NonKernelsWithLDSFlatArg) {
+    Function *Func = K.first;
+    if (FuncLDSAccessInfo.NonKernelToLDSAccessMap.contains(Func) ||
+        FuncLDSAccessInfo.NonKernelsWithLDSArgument.contains(Func))
+      continue;
+    lowerNonKernelLDSFlatArgAccesses(Func);
+    Changed = true;
+  }
+
   if (!Changed)
     return Changed;
-
-  // Fix up callees that still access lowered storage through the
-  // flat-arg -> addrspace(3) round-trip pattern.
-  for (Function &F : M)
-    if (!F.isDeclaration())
-      lowerFlatToLocalRoundTrips(&F);
 
   for (auto &GV : make_early_inc_range(M.globals())) {
     if (AMDGPU::isLDSVariableToLower(GV)) {
