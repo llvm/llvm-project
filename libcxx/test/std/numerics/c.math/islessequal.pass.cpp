@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// bool islessequalequal(floating-point-type x, floating-point-type y); // constexpr since C++23
+// bool islessequal(floating-point-type x, floating-point-type y); // constexpr since C++23
 
 // We don't control the implementation on windows
 // UNSUPPORTED: windows
