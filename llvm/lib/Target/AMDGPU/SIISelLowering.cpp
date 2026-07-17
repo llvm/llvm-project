@@ -10373,6 +10373,24 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
          IntrOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_BF16 ||
          IntrOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_BF16_NORTN);
 
+    if (!IsAtomicPacked16Bit && VData.getValueSizeInBits() != 32 &&
+        VData.getValueSizeInBits() != 64) {
+      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+          DAG.getMachineFunction().getFunction(),
+          "unsupported image atomic data type", DL.getDebugLoc()));
+
+      unsigned Idx = 0;
+      SmallVector<SDValue, 3> RetValues(OrigResultTypes.size());
+      for (EVT VT : OrigResultTypes) {
+        if (VT == MVT::Other)
+          RetValues[Idx++] = Op.getOperand(0); // Chain
+        else
+          RetValues[Idx++] = DAG.getPOISON(VT);
+      }
+
+      return DAG.getMergeValues(RetValues, DL);
+    }
+
     bool Is64Bit = VData.getValueSizeInBits() == 64;
     if (BaseOpcode->AtomicX2) {
       SDValue VData2 = Op.getOperand(3);
