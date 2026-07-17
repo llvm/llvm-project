@@ -286,8 +286,7 @@ llvm::Function *CodeGenFunction::createTLSAtExitStub(
 
   const CGFunctionInfo &FI = CGM.getTypes().arrangeLLVMFunctionInfo(
       getContext().IntTy, FnInfoOpts::None, {getContext().IntTy},
-      FunctionType::ExtInfo(), {}, RequiredArgs::All,
-      /*ABIInfoFD=*/nullptr);
+      FunctionType::ExtInfo(), {}, RequiredArgs::All);
 
   // Get the stub function type, int(*)(int,...).
   llvm::FunctionType *StubTy =

@@ -239,6 +239,15 @@ void IndirectGlobalAccessModel<fir::EmboxOp>::getReferencedSymbols(
 }
 
 template <>
+void IndirectGlobalAccessModel<fir::CreateBoxOp>::getReferencedSymbols(
+    mlir::Operation *op, llvm::SmallVectorImpl<mlir::SymbolRefAttr> &symbols,
+    mlir::SymbolTable *symbolTable) const {
+  auto createBoxOp = mlir::cast<fir::CreateBoxOp>(op);
+  collectReferencedSymbolsForType(createBoxOp.getMemref().getType(), op,
+                                  symbols, symbolTable);
+}
+
+template <>
 void IndirectGlobalAccessModel<fir::ReboxOp>::getReferencedSymbols(
     mlir::Operation *op, llvm::SmallVectorImpl<mlir::SymbolRefAttr> &symbols,
     mlir::SymbolTable *symbolTable) const {

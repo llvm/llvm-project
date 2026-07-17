@@ -329,7 +329,6 @@ define amdgpu_kernel void @sdiv_i32_i16_fast_path(ptr addrspace(1) %out, i32 %in
 ; GFX950-NEXT:    s_cselect_b32 s2, s2, s3
 ; GFX950-NEXT:    v_cvt_i32_f32_e64 v1, v1
 ; GFX950-NEXT:    v_add_u32_e64 v1, v1, s2
-; GFX950-NEXT:    v_bfe_i32 v1, v1, 0, 16
 ; GFX950-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX950-NEXT:    s_endpgm
 ;
@@ -362,13 +361,93 @@ define amdgpu_kernel void @sdiv_i32_i16_fast_path(ptr addrspace(1) %out, i32 %in
 ; GFX90A-NEXT:    s_cselect_b32 s2, s2, s3
 ; GFX90A-NEXT:    v_cvt_i32_f32_e64 v1, v1
 ; GFX90A-NEXT:    v_add_u32_e64 v1, v1, s2
-; GFX90A-NEXT:    v_bfe_i32 v1, v1, 0, 16
 ; GFX90A-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX90A-NEXT:    s_endpgm
   %trunc_i16 = trunc i32 %input to i16
   %dividend = sext i16 %trunc_i16 to i32
   %divisor = or i32 %dividend, 1
   %result = sdiv i32 %dividend, %divisor
+  store i32 %result, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+define amdgpu_kernel void @sdiv_i32_i16_i16_fast_path(ptr addrspace(1) %out, i16 %dividend16, i16 %divisor16) {
+; GFX950-LABEL: sdiv_i32_i16_i16_fast_path:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    v_mov_b32_e32 v0, 0
+; GFX950-NEXT:    global_load_ushort v1, v0, s[4:5] offset:44
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dword s0, s[4:5], 0x2c
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX950-NEXT:    s_load_dword s3, s[4:5], 0x2c
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX950-NEXT:    s_mov_b32 s2, s3
+; GFX950-NEXT:    s_mov_b32 s4, 16
+; GFX950-NEXT:    s_lshr_b32 s3, s3, s4
+; GFX950-NEXT:    s_sext_i32_i16 s2, s2
+; GFX950-NEXT:    s_sext_i32_i16 s3, s3
+; GFX950-NEXT:    v_cvt_f32_i32_e64 v3, s3
+; GFX950-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-NEXT:    v_rcp_f32_e64 v1, v3
+; GFX950-NEXT:    v_cvt_f32_i32_e64 v2, s2
+; GFX950-NEXT:    v_mul_f32_e64 v1, v2, v1
+; GFX950-NEXT:    v_trunc_f32_e64 v1, v1
+; GFX950-NEXT:    v_fma_f32 v2, -v1, v3, v2
+; GFX950-NEXT:    v_cmp_ge_f32_e64 s[4:5], |v2|, |v3|
+; GFX950-NEXT:    s_xor_b32 s2, s2, s3
+; GFX950-NEXT:    s_mov_b32 s3, 30
+; GFX950-NEXT:    s_ashr_i32 s2, s2, s3
+; GFX950-NEXT:    s_mov_b32 s3, 1
+; GFX950-NEXT:    s_or_b32 s2, s2, s3
+; GFX950-NEXT:    s_mov_b32 s3, 0
+; GFX950-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; GFX950-NEXT:    s_cselect_b32 s2, s2, s3
+; GFX950-NEXT:    v_cvt_i32_f32_e64 v1, v1
+; GFX950-NEXT:    v_add_u32_e64 v1, v1, s2
+; GFX950-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX950-NEXT:    s_endpgm
+;
+; GFX90A-LABEL: sdiv_i32_i16_i16_fast_path:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    v_mov_b32_e32 v0, 0
+; GFX90A-NEXT:    global_load_ushort v1, v0, s[4:5] offset:44
+; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX90A-NEXT:    s_load_dword s0, s[4:5], 0x2c
+; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX90A-NEXT:    s_load_dword s3, s[4:5], 0x2c
+; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX90A-NEXT:    s_mov_b32 s2, s3
+; GFX90A-NEXT:    s_mov_b32 s4, 16
+; GFX90A-NEXT:    s_lshr_b32 s3, s3, s4
+; GFX90A-NEXT:    s_sext_i32_i16 s2, s2
+; GFX90A-NEXT:    s_sext_i32_i16 s3, s3
+; GFX90A-NEXT:    v_cvt_f32_i32_e64 v3, s3
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    v_rcp_f32_e64 v1, v3
+; GFX90A-NEXT:    v_cvt_f32_i32_e64 v2, s2
+; GFX90A-NEXT:    v_mul_f32_e64 v1, v2, v1
+; GFX90A-NEXT:    v_trunc_f32_e64 v1, v1
+; GFX90A-NEXT:    v_mad_f32 v2, -v1, v3, v2
+; GFX90A-NEXT:    v_cmp_ge_f32_e64 s[4:5], |v2|, |v3|
+; GFX90A-NEXT:    s_xor_b32 s2, s2, s3
+; GFX90A-NEXT:    s_mov_b32 s3, 30
+; GFX90A-NEXT:    s_ashr_i32 s2, s2, s3
+; GFX90A-NEXT:    s_mov_b32 s3, 1
+; GFX90A-NEXT:    s_or_b32 s2, s2, s3
+; GFX90A-NEXT:    s_mov_b32 s3, 0
+; GFX90A-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; GFX90A-NEXT:    s_cselect_b32 s2, s2, s3
+; GFX90A-NEXT:    v_cvt_i32_f32_e64 v1, v1
+; GFX90A-NEXT:    v_add_u32_e64 v1, v1, s2
+; GFX90A-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX90A-NEXT:    s_endpgm
+  %dividend32 = sext i16 %dividend16 to i32
+  %divisor32 = sext i16 %divisor16 to i32
+  %result = sdiv i32 %dividend32, %divisor32
   store i32 %result, ptr addrspace(1) %out, align 4
   ret void
 }
@@ -578,7 +657,6 @@ define amdgpu_kernel void @srem_i32_i16_fast_path(ptr addrspace(1) %out, i32 %in
 ; GFX950-NEXT:    v_add_u32_e64 v1, v1, s4
 ; GFX950-NEXT:    v_mul_lo_u32 v1, v1, s3
 ; GFX950-NEXT:    v_sub_u32_e64 v1, s2, v1
-; GFX950-NEXT:    v_bfe_i32 v1, v1, 0, 16
 ; GFX950-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX950-NEXT:    s_endpgm
 ;
@@ -613,7 +691,6 @@ define amdgpu_kernel void @srem_i32_i16_fast_path(ptr addrspace(1) %out, i32 %in
 ; GFX90A-NEXT:    v_add_u32_e64 v1, v1, s4
 ; GFX90A-NEXT:    v_mul_lo_u32 v1, v1, s3
 ; GFX90A-NEXT:    v_sub_u32_e64 v1, s2, v1
-; GFX90A-NEXT:    v_bfe_i32 v1, v1, 0, 16
 ; GFX90A-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX90A-NEXT:    s_endpgm
   %trunc_i16 = trunc i32 %input to i16
