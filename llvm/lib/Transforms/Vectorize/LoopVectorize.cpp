@@ -1643,8 +1643,7 @@ public:
           SCEVPredsVec.push_back(P);
         }
       }
-    }
-    else if (!isa<SCEVTripCountInvariantPredicate>(&UnionPred)) {
+    } else if (!isa<SCEVTripCountInvariantPredicate>(&UnionPred)) {
       SCEVPredsVec.push_back(&UnionPred);
     }
     SCEVUnionPredicate FilteredPred(SCEVPredsVec, *PSE.getSE());
@@ -7882,7 +7881,7 @@ bool EnableLoadBoundVectorization(Loop *L, PredicatedScalarEvolution &PSE,
                                   ScalarEvolution *SE, DominatorTree *DT,
                                   AssumptionCache *AC) {
   if (!L->isInnermost() || !L->isLoopSimplifyForm() ||
-    L->getNumBackEdges() != 1 || !L->getUniqueExitBlock()) {
+      L->getNumBackEdges() != 1 || !L->getUniqueExitBlock()) {
     return false;
   }
 
@@ -7892,7 +7891,8 @@ bool EnableLoadBoundVectorization(Loop *L, PredicatedScalarEvolution &PSE,
 
   SmallVector<Instruction *, 16> HoistedDeps;
   SmallVector<LoadInst *, 4> BoundLoads;
-  if (!collectInvariantLoadsBoundChain(L, SE, DT, AC, HoistedDeps, BoundLoads)) {
+  if (!collectInvariantLoadsBoundChain(L, SE, DT, AC, HoistedDeps,
+                                       BoundLoads)) {
     return false;
   }
 

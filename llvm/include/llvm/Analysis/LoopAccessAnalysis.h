@@ -697,7 +697,8 @@ public:
                           const TargetLibraryInfo *TLI, AAResults *AA,
                           DominatorTree *DT, LoopInfo *LI, AssumptionCache *AC,
                           bool AllowPartial = false,
-                          ArrayRef<const SCEVTripCountInvariantPredicate *> TripCountInvariantPreds = {});
+                          ArrayRef<const SCEVTripCountInvariantPredicate *>
+                              TripCountInvariantPreds = {});
 
   /// Return true we can analyze the memory accesses in the loop and there are
   /// no memory dependence cycles. Note that for dependences between loads &
@@ -717,7 +718,8 @@ public:
   /// could be analyzed.
   bool hasAllowPartial() const { return AllowPartial; }
 
-  ArrayRef<const SCEVTripCountInvariantPredicate *> getTripCountInvariantPreds() const {
+  ArrayRef<const SCEVTripCountInvariantPredicate *>
+  getTripCountInvariantPreds() const {
     return TripCountInvariantPreds;
   }
 
@@ -845,9 +847,10 @@ private:
   /// memory accesses could be analyzed.
   bool AllowPartial;
 
-  /// Predicates for the loops inside the loop which are used to compute the tripcount and
-  /// which this analysis assumes to be invariant.
-  SmallVector<const SCEVTripCountInvariantPredicate *, 2> TripCountInvariantPreds;
+  /// Predicates for the loops inside the loop which are used to compute the
+  /// tripcount and which this analysis assumes to be invariant.
+  SmallVector<const SCEVTripCountInvariantPredicate *, 2>
+      TripCountInvariantPreds;
 
   unsigned NumLoads = 0;
   unsigned NumStores = 0;
@@ -990,14 +993,15 @@ LLVM_ABI std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
     DominatorTree *DT, AssumptionCache *AC,
     std::optional<ScalarEvolution::LoopGuards> &LoopGuards);
 
-/// This function will detect whether the loop is uncountabel because the tripcount
-/// is based on a load.
-/// If yes, then it will build a dependency chain of instructions, and a list of loads
-/// which are used to compute the tripcount.
-LLVM_ABI bool collectInvariantLoadsBoundChain(
-    Loop *L, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
-    SmallVectorImpl<Instruction *> &HoistedDeps,
-    SmallVectorImpl<LoadInst *> &BoundLoads);
+/// This function will detect whether the loop is uncountabel because the
+/// tripcount is based on a load. If yes, then it will build a dependency chain
+/// of instructions, and a list of loads which are used to compute the
+/// tripcount.
+LLVM_ABI bool
+collectInvariantLoadsBoundChain(Loop *L, ScalarEvolution *SE, DominatorTree *DT,
+                                AssumptionCache *AC,
+                                SmallVectorImpl<Instruction *> &HoistedDeps,
+                                SmallVectorImpl<LoadInst *> &BoundLoads);
 
 class LoopAccessInfoManager {
   /// The cache.
@@ -1020,8 +1024,10 @@ public:
 
   LLVM_ABI const LoopAccessInfo &getInfo(Loop &L, bool AllowPartial = false);
 
-  LLVM_ABI const LoopAccessInfo &getInfo(Loop &L, bool AllowPartial,
-        ArrayRef<const SCEVTripCountInvariantPredicate *> TripCountInvariantPreds);
+  LLVM_ABI const LoopAccessInfo &
+  getInfo(Loop &L, bool AllowPartial,
+          ArrayRef<const SCEVTripCountInvariantPredicate *>
+              TripCountInvariantPreds);
 
   LLVM_ABI void clear();
 

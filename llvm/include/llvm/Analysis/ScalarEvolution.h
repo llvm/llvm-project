@@ -464,18 +464,19 @@ public:
   }
 };
 
-/// This class extends the SCEVPredicate class to represent the assumption that the trip count of a loop is invariant.
-/// This predicate doesn't lower any numeric run-time check but solely depends on the memory alias checks generated
-/// for the loop by LoopVectorizer.
-/// NOTE: Users of this predicate make sure to verify that the memory alias checks are generated for the loop.
+/// This class extends the SCEVPredicate class to represent the assumption that
+/// the trip count of a loop is invariant. This predicate doesn't lower any
+/// numeric run-time check but solely depends on the memory alias checks
+/// generated for the loop by LoopVectorizer. NOTE: Users of this predicate make
+/// sure to verify that the memory alias checks are generated for the loop.
 class LLVM_ABI SCEVTripCountInvariantPredicate final : public SCEVPredicate {
   const SCEV *TripCountLoad;
   const SCEV *TripCountInvariantLoad;
 
 public:
   SCEVTripCountInvariantPredicate(const FoldingSetNodeIDRef ID,
-                                 const SCEV *TripCountLoad,
-                                 const SCEV *TripCountInvariantLoad);
+                                  const SCEV *TripCountLoad,
+                                  const SCEV *TripCountInvariantLoad);
 
   /// Implementation of the SCEVPredicate interface
   bool implies(const SCEVPredicate *N, ScalarEvolution &SE) const override;
@@ -483,12 +484,14 @@ public:
   bool isAlwaysTrue() const override;
 
   /// This predicate doesn't generate any runtime checks, and solely depends
-  /// upon the memory alias checks for the runtime check generation, so contributes
-  /// nothing to the check complexity
+  /// upon the memory alias checks for the runtime check generation, so
+  /// contributes nothing to the check complexity
   unsigned getComplexity() const override { return 0; }
 
   const SCEV *getTripCountLoad() const { return TripCountLoad; }
-  const SCEV *getTripCountInvariantLoad() const { return TripCountInvariantLoad; }
+  const SCEV *getTripCountInvariantLoad() const {
+    return TripCountInvariantLoad;
+  }
 
   static bool classof(const SCEVPredicate *P) {
     return P->getKind() == P_TripCountInvariant;
@@ -1153,7 +1156,8 @@ public:
   LLVM_ABI const SCEV *getPredicatedSymbolicMaxBackedgeTakenCount(
       const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Predicates);
 
-  /// To compute the backedge-taken count under the assumption of TripCountInvariant predicate.
+  /// To compute the backedge-taken count under the assumption of
+  /// TripCountInvariant predicate.
   LLVM_ABI const SCEV *computeBackedgeTakenCountWithTripCountInvariants(
       const Loop *L, ArrayRef<const SCEVTripCountInvariantPredicate *> Preds,
       bool SymbolicMax = false);
@@ -1558,8 +1562,8 @@ public:
   getWrapPredicate(const SCEVAddRecExpr *AR,
                    SCEVWrapPredicate::IncrementWrapFlags AddedFlags);
 
-  LLVM_ABI const SCEVPredicate *getTripCountInvariantPredicate(const SCEV *Load,
-                                                               const SCEV *InvariantLoad);
+  LLVM_ABI const SCEVPredicate *
+  getTripCountInvariantPredicate(const SCEV *Load, const SCEV *InvariantLoad);
 
   /// Re-writes the SCEV according to the Predicates in \p A.
   LLVM_ABI const SCEV *rewriteUsingPredicate(const SCEV *S, const Loop *L,
@@ -1929,7 +1933,8 @@ private:
   /// function as they are computed.
   DenseMap<const Loop *, BackedgeTakenInfo> PredicatedBackedgeTakenCounts;
 
-  DenseMap<const Value *, const SCEV *> *ActiveTripCountInvariantSubst = nullptr;
+  DenseMap<const Value *, const SCEV *> *ActiveTripCountInvariantSubst =
+      nullptr;
 
   /// Loops whose backedge taken counts directly use this non-constant SCEV.
   DenseMap<const SCEV *, SmallPtrSet<PointerIntPair<const Loop *, 1, bool>, 4>>
@@ -2703,7 +2708,8 @@ public:
     return !TripCountInvariantPreds.empty();
   }
 
-  LLVM_ABI ArrayRef<const SCEVTripCountInvariantPredicate *> getTripCountInvariantPredicates() const {
+  LLVM_ABI ArrayRef<const SCEVTripCountInvariantPredicate *>
+  getTripCountInvariantPredicates() const {
     return TripCountInvariantPreds;
   }
 
@@ -2778,7 +2784,8 @@ private:
   /// The symbolic backedge taken count.
   const SCEV *SymbolicMaxBackedgeCount = nullptr;
 
-  SmallVector<const SCEVTripCountInvariantPredicate *, 2> TripCountInvariantPreds;
+  SmallVector<const SCEVTripCountInvariantPredicate *, 2>
+      TripCountInvariantPreds;
 
   DenseMap<const Value *, const SCEV *> TripCountInvariantMap;
 
