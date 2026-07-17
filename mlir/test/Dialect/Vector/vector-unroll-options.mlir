@@ -703,6 +703,76 @@ func.func @shape_cast_with_all_unit_target_shape(%v: vector<2xf32>) -> vector<2x
 // CHECK:   %[[I1:.*]] = vector.insert_strided_slice %[[SC1]], %[[I0]] {offsets = [1, 0], strides = [1, 1]} : vector<1x1xf32> into vector<2x1xf32>
 // CHECK:   return %[[I1]] : vector<2x1xf32>
 
+
+// Target tile [8, 1, 4] is strided in result <8x1x32> but contiguous per
+// reassociation group (8|32 -> 8x1|32). TargetShape is [8, 1, 4].
+func.func @shape_cast_multi_group_rank_increasing(%v: vector<8x32xf32>) -> vector<8x1x32xf32> {
+  %0 = vector.shape_cast %v : vector<8x32xf32> to vector<8x1x32xf32>
+  return %0 : vector<8x1x32xf32>
+}
+
+// CHECK-LABEL: func @shape_cast_multi_group_rank_increasing
+// CHECK-SAME: (%[[V:.*]]: vector<8x32xf32>) -> vector<8x1x32xf32> {
+// CHECK:   %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<8x1x32xf32>
+// CHECK:   %[[S0:.*]] = vector.extract_strided_slice %[[V]] {offsets = [0, 0], sizes = [8, 4], strides = [1, 1]} : vector<8x32xf32> to vector<8x4xf32>
+// CHECK:   %[[SC0:.*]] = vector.shape_cast %[[S0]] : vector<8x4xf32> to vector<8x1x4xf32>
+// CHECK:   %[[I0:.*]] = vector.insert_strided_slice %[[SC0]], %[[CST]] {offsets = [0, 0, 0], strides = [1, 1, 1]} : vector<8x1x4xf32> into vector<8x1x32xf32>
+// CHECK:   %[[S1:.*]] = vector.extract_strided_slice %[[V]] {offsets = [0, 4], sizes = [8, 4], strides = [1, 1]} : vector<8x32xf32> to vector<8x4xf32>
+// CHECK:   %[[SC1:.*]] = vector.shape_cast %[[S1]] : vector<8x4xf32> to vector<8x1x4xf32>
+// CHECK:   %[[I1:.*]] = vector.insert_strided_slice %[[SC1]], %[[I0]] {offsets = [0, 0, 4], strides = [1, 1, 1]} : vector<8x1x4xf32> into vector<8x1x32xf32>
+// CHECK:   return
+
+
+// Target tile [2, 2] is strided in result <4x4> but contiguous per
+// reassociation group (2x2|4 -> 4|4). TargetShape is [2, 2].
+func.func @shape_cast_multi_group_rank_decreasing(%v: vector<2x2x4xf32>) -> vector<4x4xf32> {
+  %0 = vector.shape_cast %v : vector<2x2x4xf32> to vector<4x4xf32>
+  return %0 : vector<4x4xf32>
+}
+
+// CHECK-LABEL: func @shape_cast_multi_group_rank_decreasing
+// CHECK-SAME: (%[[V:.*]]: vector<2x2x4xf32>) -> vector<4x4xf32> {
+// CHECK:   %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<4x4xf32>
+// CHECK:   %[[S0:.*]] = vector.extract_strided_slice %[[V]] {offsets = [0, 0, 0], sizes = [1, 2, 2], strides = [1, 1, 1]} : vector<2x2x4xf32> to vector<1x2x2xf32>
+// CHECK:   %[[SC0:.*]] = vector.shape_cast %[[S0]] : vector<1x2x2xf32> to vector<2x2xf32>
+// CHECK:   %[[I0:.*]] = vector.insert_strided_slice %[[SC0]], %[[CST]] {offsets = [0, 0], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
+// CHECK:   %[[S1:.*]] = vector.extract_strided_slice %[[V]] {offsets = [0, 0, 2], sizes = [1, 2, 2], strides = [1, 1, 1]} : vector<2x2x4xf32> to vector<1x2x2xf32>
+// CHECK:   %[[SC1:.*]] = vector.shape_cast %[[S1]] : vector<1x2x2xf32> to vector<2x2xf32>
+// CHECK:   %[[I1:.*]] = vector.insert_strided_slice %[[SC1]], %[[I0]] {offsets = [0, 2], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
+// CHECK:   %[[S2:.*]] = vector.extract_strided_slice %[[V]] {offsets = [1, 0, 0], sizes = [1, 2, 2], strides = [1, 1, 1]} : vector<2x2x4xf32> to vector<1x2x2xf32>
+// CHECK:   %[[SC2:.*]] = vector.shape_cast %[[S2]] : vector<1x2x2xf32> to vector<2x2xf32>
+// CHECK:   %[[I2:.*]] = vector.insert_strided_slice %[[SC2]], %[[I1]] {offsets = [2, 0], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
+// CHECK:   %[[S3:.*]] = vector.extract_strided_slice %[[V]] {offsets = [1, 0, 2], sizes = [1, 2, 2], strides = [1, 1, 1]} : vector<2x2x4xf32> to vector<1x2x2xf32>
+// CHECK:   %[[SC3:.*]] = vector.shape_cast %[[S3]] : vector<1x2x2xf32> to vector<2x2xf32>
+// CHECK:   %[[I3:.*]] = vector.insert_strided_slice %[[SC3]], %[[I2]] {offsets = [2, 2], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
+// CHECK:   return %[[I3]] : vector<4x4xf32>
+
+// Negative multi-group case: target tile [2, 2, 2] is not contiguous within
+// the result reassociation group [8, 4], so the cast is left un-unrolled.
+func.func @negative_shape_cast_multi_group_target_not_contiguous(%v: vector<2x32xf32>) -> vector<2x8x4xf32> {
+  %0 = vector.shape_cast %v : vector<2x32xf32> to vector<2x8x4xf32>
+  return %0 : vector<2x8x4xf32>
+}
+
+// CHECK-LABEL: func @negative_shape_cast_multi_group_target_not_contiguous
+// CHECK-SAME: (%[[V:.*]]: vector<2x32xf32>) -> vector<2x8x4xf32> {
+// CHECK:   %[[SC:.*]] = vector.shape_cast %[[V]] : vector<2x32xf32> to vector<2x8x4xf32>
+// CHECK:   return %[[SC]] : vector<2x8x4xf32>
+
+
+// Negative multi-group case: the target tile [2, 4] is contiguous within the result
+// group [24], but its elements cannot be extracted contiguously from the
+// source group [8, 3], so the cast is left un-unrolled.
+func.func @negative_shape_cast_multi_group_source_not_determinable(%v: vector<2x8x3xf32>) -> vector<2x24xf32> {
+  %0 = vector.shape_cast %v : vector<2x8x3xf32> to vector<2x24xf32>
+  return %0 : vector<2x24xf32>
+}
+
+// CHECK-LABEL: func @negative_shape_cast_multi_group_source_not_determinable
+// CHECK-SAME: (%[[V:.*]]: vector<2x8x3xf32>) -> vector<2x24xf32> {
+// CHECK:   %[[SC:.*]] = vector.shape_cast %[[V]] : vector<2x8x3xf32> to vector<2x24xf32>
+// CHECK:   return %[[SC]] : vector<2x24xf32>
+
 // -----
 
 // Test BitCastOp unrolling - target shape [4, 4]
