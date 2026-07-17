@@ -2467,3 +2467,27 @@ define i1 @udiv_high_known_ones_ugt_63(i8 %x, i8 %y) {
   %r = icmp ugt i8 %q, 63
   ret i1 %r
 }
+
+define i1 @urem_smaller_lhs_bit_identity(i8 %x, i8 %y) {
+; CHECK-LABEL: @urem_smaller_lhs_bit_identity(
+; CHECK-NEXT:    ret i1 true
+;
+  %l = and i8 %x, 5
+  %d = or i8 %y, 8
+  %r = urem i8 %l, %d
+  %t = and i8 %r, 2
+  %c = icmp eq i8 %t, 0
+  ret i1 %c
+}
+
+define i1 @urem_smaller_lhs_known_ones_ugt_3(i8 %x, i8 %y) {
+; CHECK-LABEL: @urem_smaller_lhs_known_ones_ugt_3(
+; CHECK-NEXT:    ret i1 true
+;
+  %l0 = and i8 %x, 1
+  %l = or i8 %l0, 4
+  %d = or i8 %y, 8
+  %r = urem i8 %l, %d
+  %c = icmp ugt i8 %r, 3
+  ret i1 %c
+}

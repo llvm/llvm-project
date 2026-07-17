@@ -112,6 +112,10 @@ static FailureOr<int> getOperatorPrecedence(Operation *operation) {
       .Case([&](emitc::MemberOfPtrOp op) { return 17; })
       .Case([&](emitc::MemberOp op) { return 17; })
       .Case([&](emitc::MulOp op) { return 13; })
+      .Case([&](emitc::PostDecrementOp op) { return 16; })
+      .Case([&](emitc::PostIncrementOp op) { return 16; })
+      .Case([&](emitc::PreDecrementOp op) { return 15; })
+      .Case([&](emitc::PreIncrementOp op) { return 15; })
       .Case([&](emitc::RemOp op) { return 13; })
       .Case([&](emitc::SubOp op) { return 12; })
       .Case([&](emitc::SubscriptOp op) { return 17; })
@@ -646,6 +650,22 @@ static LogicalResult printUnaryOperation(CppEmitter &emitter,
   return success();
 }
 
+static LogicalResult printPostfixUnaryOperation(CppEmitter &emitter,
+                                                Operation *operation,
+                                                StringRef unaryOperator) {
+  raw_ostream &os = emitter.ostream();
+
+  if (failed(emitter.emitAssignPrefix(*operation)))
+    return failure();
+
+  if (failed(emitter.emitOperand(operation->getOperand(0))))
+    return failure();
+
+  os << unaryOperator;
+
+  return success();
+}
+
 static LogicalResult printOperation(CppEmitter &emitter, emitc::AddOp addOp) {
   Operation *operation = addOp.getOperation();
 
@@ -1036,6 +1056,30 @@ static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::BitwiseXorOp bitwiseXorOp) {
   Operation *operation = bitwiseXorOp.getOperation();
   return printBinaryOperation(emitter, operation, "^");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::PreIncrementOp preIncrementOp) {
+  Operation *operation = preIncrementOp.getOperation();
+  return printUnaryOperation(emitter, operation, "++");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::PostIncrementOp postIncrementOp) {
+  Operation *operation = postIncrementOp.getOperation();
+  return printPostfixUnaryOperation(emitter, operation, "++");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::PreDecrementOp preDecrementOp) {
+  Operation *operation = preDecrementOp.getOperation();
+  return printUnaryOperation(emitter, operation, "--");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::PostDecrementOp postDecrementOp) {
+  Operation *operation = postDecrementOp.getOperation();
+  return printPostfixUnaryOperation(emitter, operation, "--");
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
@@ -1896,7 +1940,9 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
                 emitc::IncludeOp, emitc::LiteralOp, emitc::LoadOp,
                 emitc::LogicalAndOp, emitc::LogicalNotOp, emitc::LogicalOrOp,
                 emitc::MemberCallOpaqueOp, emitc::MemberOfPtrOp,
-                emitc::MemberOp, emitc::MulOp, emitc::RemOp, emitc::ReturnOp,
+                emitc::MemberOp, emitc::MulOp, emitc::PostDecrementOp,
+                emitc::PostIncrementOp, emitc::PreDecrementOp,
+                emitc::PreIncrementOp, emitc::RemOp, emitc::ReturnOp,
                 emitc::SubscriptOp, emitc::SubOp, emitc::SwitchOp,
                 emitc::UnaryMinusOp, emitc::UnaryPlusOp, emitc::VariableOp,
                 emitc::VerbatimOp>(
