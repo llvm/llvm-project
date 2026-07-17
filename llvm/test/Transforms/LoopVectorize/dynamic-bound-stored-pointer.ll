@@ -11,7 +11,7 @@
 ;     }
 ;   }
 
-define dso_local void @foo(ptr noundef %A, ptr noundef readonly %B, ptr noundef readonly %C, ptr noundef %Len) #0 {
+define void @foo(ptr %A, ptr %B, ptr %C, ptr %Len) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NOT:   vector.body
 ; CHECK-NOT:   .bound.pre
@@ -37,11 +37,5 @@ for.body:
   %len = load i32, ptr %Len, align 4
   %ext = sext i32 %len to i64
   %cmp = icmp slt i64 %indvars.iv.next, %ext
-  br i1 %cmp, label %for.body, label %for.cond.cleanup, !llvm.loop !0
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
 }
-
-attributes #0 = { mustprogress nofree norecurse nosync nounwind memory(argmem: readwrite) uwtable }
-
-!0 = distinct !{!0, !1, !2}
-!1 = !{!"llvm.loop.mustprogress"}
-!2 = !{!"llvm.loop.unroll.disable"}

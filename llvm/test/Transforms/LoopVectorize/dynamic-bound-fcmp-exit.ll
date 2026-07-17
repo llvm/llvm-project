@@ -10,7 +10,7 @@
 ;       A[(int)x] = B[(int)x];
 ;   }
 
-define dso_local void @foo(ptr noundef %A, ptr noundef readonly %B, ptr noundef readonly %Limit) #0 {
+define void @foo(ptr %A, ptr %B, ptr %Limit) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NOT:   vector.body
 ; CHECK-NOT:   .bound.pre
@@ -28,14 +28,8 @@ for.body:
   %fiv.next = fadd float %fiv, 1.0
   %lim = load float, ptr %Limit, align 4
   %cmp = fcmp olt float %fiv.next, %lim
-  br i1 %cmp, label %for.body, label %for.exit, !llvm.loop !0
+  br i1 %cmp, label %for.body, label %for.exit
 
 for.exit:
   ret void
 }
-
-attributes #0 = { mustprogress nofree norecurse nosync nounwind memory(argmem: readwrite) uwtable }
-
-!0 = distinct !{!0, !1, !2}
-!1 = !{!"llvm.loop.mustprogress"}
-!2 = !{!"llvm.loop.unroll.disable"}
