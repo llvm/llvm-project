@@ -45,6 +45,17 @@ public:
   static llvm::Expected<std::unique_ptr<DomainSocket>>
   FromBoundNativeSocket(NativeSocket sockfd, bool should_close);
 
+  /// Convert between a native filesystem path and the path component of a
+  /// domain-socket URI.
+  /// On Windows a drive-letter path (e.g. "C:\\dir\\sock") is not a valid URI
+  /// authority, so it is carried in the RFC 8089 file-URI form "/C:/dir/sock"
+  /// (leading slash, forward slashes). On other platforms the path is already a
+  /// valid URI path and is returned unchanged.
+  /// @{
+  static std::string NativePathToURIPath(llvm::StringRef path);
+  static std::string URIPathToNativePath(llvm::StringRef path);
+  /// @}
+
 protected:
   DomainSocket(SocketProtocol protocol);
   DomainSocket(SocketProtocol protocol, NativeSocket socket, bool should_close);

@@ -12,10 +12,12 @@
 #include <lldb/Host/linux/AbstractSocket.h>
 #endif
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <memory>
 
@@ -31,6 +33,29 @@ using namespace lldb_private;
 
 static const int kDomain = AF_UNIX;
 static const int kType = SOCK_STREAM;
+
+std::string DomainSocket::NativePathToURIPath(llvm::StringRef path) {
+#ifdef _WIN32
+  if (path.size() >= 2 && llvm::isAlpha(path[0]) && path[1] == ':') {
+    std::string uri_path = "/" + path.str();
+    std::replace(uri_path.begin(), uri_path.end(), '\\', '/');
+    return uri_path;
+  }
+#endif
+  return path.str();
+}
+
+std::string DomainSocket::URIPathToNativePath(llvm::StringRef path) {
+#ifdef _WIN32
+  if (path.size() >= 3 && path[0] == '/' && llvm::isAlpha(path[1]) &&
+      path[2] == ':') {
+    std::string native = path.drop_front().str();
+    std::replace(native.begin(), native.end(), '/', '\\');
+    return native;
+  }
+#endif
+  return path.str();
+}
 
 static bool SetSockAddr(llvm::StringRef name, const size_t name_offset,
                         sockaddr_un *saddr_un, socklen_t &saddr_un_len) {
@@ -79,9 +104,10 @@ DomainSocket::DomainSocket(SocketProtocol protocol, NativeSocket socket,
 }
 
 Status DomainSocket::Connect(llvm::StringRef name) {
+  std::string native_name = URIPathToNativePath(name);
   sockaddr_un saddr_un;
   socklen_t saddr_un_len;
-  if (!SetSockAddr(name, GetNameOffset(), &saddr_un, saddr_un_len))
+  if (!SetSockAddr(native_name, GetNameOffset(), &saddr_un, saddr_un_len))
     return Status::FromErrorString("Failed to set socket address");
 
   Status error;
@@ -97,12 +123,13 @@ Status DomainSocket::Connect(llvm::StringRef name) {
 }
 
 Status DomainSocket::Listen(llvm::StringRef name, int backlog) {
+  std::string native_name = URIPathToNativePath(name);
   sockaddr_un saddr_un;
   socklen_t saddr_un_len;
-  if (!SetSockAddr(name, GetNameOffset(), &saddr_un, saddr_un_len))
+  if (!SetSockAddr(native_name, GetNameOffset(), &saddr_un, saddr_un_len))
     return Status::FromErrorString("Failed to set socket address");
 
-  DeleteSocketFile(name);
+  DeleteSocketFile(native_name);
 
   Status error;
   m_socket = CreateSocket(kDomain, kType, 0, error);
@@ -175,9 +202,9 @@ std::string DomainSocket::GetRemoteConnectionURI() const {
   if (name.empty())
     return name;
 
-  return llvm::formatv(
-      "{0}://{1}",
-      GetNameOffset() == 0 ? "unix-connect" : "unix-abstract-connect", name);
+  if (GetNameOffset() == 0)
+    return llvm::formatv("unix-connect://{0}", NativePathToURIPath(name));
+  return llvm::formatv("unix-abstract-connect://{0}", name);
 }
 
 std::vector<std::string> DomainSocket::GetListeningConnectionURI() const {
@@ -191,7 +218,8 @@ std::vector<std::string> DomainSocket::GetListeningConnectionURI() const {
   if (::getsockname(m_socket, (struct sockaddr *)&addr, &addr_len) != 0)
     return {};
 
-  return {llvm::formatv("unix-connect://{0}", addr.sun_path)};
+  return {
+      llvm::formatv("unix-connect://{0}", NativePathToURIPath(addr.sun_path))};
 }
 
 llvm::Expected<std::unique_ptr<DomainSocket>>

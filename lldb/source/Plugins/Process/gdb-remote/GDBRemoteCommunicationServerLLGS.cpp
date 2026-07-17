@@ -4560,21 +4560,20 @@ void GDBRemoteCommunicationServerLLGS::AppendThreadIDToResponse(
 std::string
 lldb_private::process_gdb_remote::LLGSArgToURL(llvm::StringRef url_arg,
                                                bool reverse_connect) {
-  // Parse the scheme manually because URI::parse does not handle Windows paths.
-  if (size_t pos = url_arg.find("://"); pos != llvm::StringRef::npos) {
+  // Try parsing the argument as URL.
+  if (std::optional<URI> url = URI::Parse(url_arg)) {
     if (reverse_connect)
       return url_arg.str();
 
     // Translate the scheme from LLGS notation to ConnectionFileDescriptor.
     // If the scheme doesn't match any, pass it through to support using CFD
     // schemes directly.
-    llvm::StringRef scheme = url_arg.substr(0, pos);
-    std::string new_url = llvm::StringSwitch<std::string>(scheme)
+    std::string new_url = llvm::StringSwitch<std::string>(url->scheme)
                               .Case("tcp", "listen")
                               .Case("unix", "unix-accept")
                               .Case("unix-abstract", "unix-abstract-accept")
-                              .Default(scheme.str());
-    llvm::append_range(new_url, url_arg.substr(scheme.size()));
+                              .Default(url->scheme.str());
+    llvm::append_range(new_url, url_arg.substr(url->scheme.size()));
     return new_url;
   }
 
