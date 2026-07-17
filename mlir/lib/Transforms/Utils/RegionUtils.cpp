@@ -15,6 +15,7 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -1095,6 +1096,9 @@ static LogicalResult dropRedundantArguments(RewriterBase &rewriter,
 
   // Go through the arguments of the block.
   for (auto [argIdx, blockOperand] : llvm::enumerate(block.getArguments())) {
+    // Block arguments with SSIType are excluded from redundant arg elimination.
+    if (blockOperand.getType().hasTrait<TypeTrait::SSIType>())
+      continue;
     bool sameArg = true;
     Value commonValue;
 

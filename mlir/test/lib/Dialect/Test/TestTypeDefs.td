@@ -189,6 +189,14 @@ def TestTypeWithTrait : Test_Type<"TestTypeWithTrait", [TestTypeTrait]> {
   let mnemonic = "test_type_with_trait";
 }
 
+def SSITypeTrait : NativeTypeTrait<"SSIType">;
+
+// A type that carries SSIType trait, opting block arguments of this type out
+// of block argument simplification during region simplification.
+def TestSSIType : Test_Type<"TestSSI", [SSITypeTrait]> {
+  let mnemonic = "ssi_type";
+}
+
 // Type with assembly format.
 def TestTypeWithFormat : Test_Type<"TestTypeWithFormat"> {
   let parameters = (
