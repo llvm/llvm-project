@@ -87,4 +87,7 @@ make_optional(initializer_list<_Up> __il, _Args&&... __args) {
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17
+
+_LIBCPP_POP_MACROS
+
 #endif // _LIBCPP_OPTIONAL_MAKE_OPTIONAL_H
