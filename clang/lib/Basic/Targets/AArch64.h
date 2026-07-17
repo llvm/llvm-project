@@ -25,33 +25,9 @@ namespace targets {
 enum AArch64AddrSpace { ptr32_sptr = 270, ptr32_uptr = 271, ptr64 = 272 };
 
 static const LangASMap ARM64AddrSpaceMap = {
-    {LangAS::Default, 0},
-    {LangAS::opencl_global, 0},
-    {LangAS::opencl_local, 0},
-    {LangAS::opencl_constant, 0},
-    {LangAS::opencl_private, 0},
-    {LangAS::opencl_generic, 0},
-    {LangAS::opencl_global_device, 0},
-    {LangAS::opencl_global_host, 0},
-    {LangAS::cuda_device, 0},
-    {LangAS::cuda_constant, 0},
-    {LangAS::cuda_shared, 0},
-    {LangAS::sycl_global, 0},
-    {LangAS::sycl_global_device, 0},
-    {LangAS::sycl_global_host, 0},
-    {LangAS::sycl_local, 0},
-    {LangAS::sycl_private, 0},
     {LangAS::ptr32_sptr, static_cast<unsigned>(AArch64AddrSpace::ptr32_sptr)},
     {LangAS::ptr32_uptr, static_cast<unsigned>(AArch64AddrSpace::ptr32_uptr)},
     {LangAS::ptr64, static_cast<unsigned>(AArch64AddrSpace::ptr64)},
-    {LangAS::hlsl_groupshared, 0},
-    {LangAS::hlsl_constant, 0},
-    {LangAS::hlsl_private, 0},
-    {LangAS::hlsl_device, 0},
-    {LangAS::hlsl_input, 0},
-    {LangAS::hlsl_output, 0},
-    {LangAS::hlsl_push_constant, 0},
-    {LangAS::wasm_funcref, 0},
 };
 
 using AArch64FeatureSet = llvm::SmallDenseSet<StringRef, 32>;

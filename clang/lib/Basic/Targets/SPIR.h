@@ -29,26 +29,12 @@ namespace targets {
 
 // Used by both the SPIR and SPIR-V targets.
 static const LangASMap SPIRDefIsPrivMap = {
-    {LangAS::Default, 0},
     {LangAS::opencl_global, 1},
     {LangAS::opencl_local, 3},
     {LangAS::opencl_constant, 2},
-    {LangAS::opencl_private, 0},
     {LangAS::opencl_generic, 4},
     {LangAS::opencl_global_device, 5},
     {LangAS::opencl_global_host, 6},
-    {LangAS::cuda_device, 0},
-    {LangAS::cuda_constant, 0},
-    {LangAS::cuda_shared, 0},
-    // SYCL address space values for this map are dummy
-    {LangAS::sycl_global, 0},
-    {LangAS::sycl_global_device, 0},
-    {LangAS::sycl_global_host, 0},
-    {LangAS::sycl_local, 0},
-    {LangAS::sycl_private, 0},
-    {LangAS::ptr32_sptr, 0},
-    {LangAS::ptr32_uptr, 0},
-    {LangAS::ptr64, 0},
     {LangAS::hlsl_groupshared, 3},
     {LangAS::hlsl_constant, 12},
     {LangAS::hlsl_private, 10},
@@ -56,7 +42,6 @@ static const LangASMap SPIRDefIsPrivMap = {
     {LangAS::hlsl_input, 7},
     {LangAS::hlsl_output, 8},
     {LangAS::hlsl_push_constant, 13},
-    {LangAS::wasm_funcref, 0},
 };
 
 // Used by both the SPIR and SPIR-V targets.
@@ -65,7 +50,6 @@ static const LangASMap SPIRDefIsGenMap = {
     {LangAS::opencl_global, 1},
     {LangAS::opencl_local, 3},
     {LangAS::opencl_constant, 2},
-    {LangAS::opencl_private, 0},
     {LangAS::opencl_generic, 4},
     {LangAS::opencl_global_device, 5},
     {LangAS::opencl_global_host, 6},
@@ -81,18 +65,12 @@ static const LangASMap SPIRDefIsGenMap = {
     {LangAS::sycl_global_device, 5},
     {LangAS::sycl_global_host, 6},
     {LangAS::sycl_local, 3},
-    {LangAS::sycl_private, 0},
-    {LangAS::ptr32_sptr, 0},
-    {LangAS::ptr32_uptr, 0},
-    {LangAS::ptr64, 0},
     {LangAS::hlsl_groupshared, 3},
-    {LangAS::hlsl_constant, 0},
     {LangAS::hlsl_private, 10},
     {LangAS::hlsl_device, 11},
     {LangAS::hlsl_input, 7},
     {LangAS::hlsl_output, 8},
     {LangAS::hlsl_push_constant, 13},
-    {LangAS::wasm_funcref, 0},
 };
 
 // Base class for SPIR and SPIR-V target info.

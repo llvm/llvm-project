@@ -22,33 +22,7 @@ namespace clang {
 namespace targets {
 
 static const LangASMap ZOSAddressMap = {
-    {LangAS::Default, 0},
-    {LangAS::opencl_global, 0},
-    {LangAS::opencl_local, 0},
-    {LangAS::opencl_constant, 0},
-    {LangAS::opencl_private, 0},
-    {LangAS::opencl_generic, 0},
-    {LangAS::opencl_global_device, 0},
-    {LangAS::opencl_global_host, 0},
-    {LangAS::cuda_device, 0},
-    {LangAS::cuda_constant, 0},
-    {LangAS::cuda_shared, 0},
-    {LangAS::sycl_global, 0},
-    {LangAS::sycl_global_device, 0},
-    {LangAS::sycl_global_host, 0},
-    {LangAS::sycl_local, 0},
-    {LangAS::sycl_private, 0},
-    {LangAS::ptr32_sptr, 0},
     {LangAS::ptr32_uptr, 1},
-    {LangAS::ptr64, 0},
-    {LangAS::hlsl_groupshared, 0},
-    {LangAS::hlsl_constant, 0},
-    {LangAS::hlsl_private, 0},
-    {LangAS::hlsl_device, 0},
-    {LangAS::hlsl_input, 0},
-    {LangAS::hlsl_output, 0},
-    {LangAS::hlsl_push_constant, 0},
-    {LangAS::wasm_funcref, 0},
 };
 
 class LLVM_LIBRARY_VISIBILITY SystemZTargetInfo : public TargetInfo {

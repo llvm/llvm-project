@@ -25,11 +25,9 @@ namespace clang {
 namespace targets {
 
 static const LangASMap NVPTXAddrSpaceMap = {
-    {LangAS::Default, 0},
     {LangAS::opencl_global, 1},
     {LangAS::opencl_local, 3},
     {LangAS::opencl_constant, 4},
-    {LangAS::opencl_private, 0},
     // FIXME: generic has to be added to the target
     {LangAS::opencl_generic, 0},
     {LangAS::opencl_global_device, 1},
@@ -41,18 +39,6 @@ static const LangASMap NVPTXAddrSpaceMap = {
     {LangAS::sycl_global_device, 1},
     {LangAS::sycl_global_host, 1},
     {LangAS::sycl_local, 3},
-    {LangAS::sycl_private, 0},
-    {LangAS::ptr32_sptr, 0},
-    {LangAS::ptr32_uptr, 0},
-    {LangAS::ptr64, 0},
-    {LangAS::hlsl_groupshared, 0},
-    {LangAS::hlsl_constant, 0},
-    {LangAS::hlsl_private, 0},
-    {LangAS::hlsl_device, 0},
-    {LangAS::hlsl_input, 0},
-    {LangAS::hlsl_output, 0},
-    {LangAS::hlsl_push_constant, 0},
-    {LangAS::wasm_funcref, 0},
 };
 
 /// The DWARF address class. Taken from
