@@ -1724,7 +1724,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
-      stack.back().GetScalar() = stack.back().GetScalar() == tmp.GetScalar();
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar() == tmp.GetScalar());
       break;
 
     case DW_OP_ge:
@@ -1734,7 +1735,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
-      stack.back().GetScalar() = stack.back().GetScalar() >= tmp.GetScalar();
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar() >= tmp.GetScalar());
       break;
 
     case DW_OP_gt:
@@ -1744,7 +1746,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
-      stack.back().GetScalar() = stack.back().GetScalar() > tmp.GetScalar();
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar() > tmp.GetScalar());
       break;
 
     case DW_OP_le:
@@ -1754,7 +1757,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
-      stack.back().GetScalar() = stack.back().GetScalar() <= tmp.GetScalar();
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar() <= tmp.GetScalar());
       break;
 
     case DW_OP_lt:
@@ -1764,7 +1768,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
-      stack.back().GetScalar() = stack.back().GetScalar() < tmp.GetScalar();
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar() < tmp.GetScalar());
       break;
 
     case DW_OP_ne:
@@ -1774,7 +1779,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
-      stack.back().GetScalar() = stack.back().GetScalar() != tmp.GetScalar();
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar() != tmp.GetScalar());
       break;
 
     case DW_OP_lit0:

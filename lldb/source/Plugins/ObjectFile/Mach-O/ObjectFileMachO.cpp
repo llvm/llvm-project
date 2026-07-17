@@ -2000,7 +2000,7 @@ static SymbolType GetSymbolType(const char *&symbol_name,
                                 const SectionSP &symbol_section) {
   SymbolType type = eSymbolTypeInvalid;
 
-  const char *symbol_sect_name = symbol_section->GetName().AsCString(nullptr);
+  llvm::StringRef symbol_sect_name = symbol_section->GetName();
   if (symbol_section->IsDescendant(text_section_sp.get())) {
     if (symbol_section->IsClear(S_ATTR_PURE_INSTRUCTIONS |
                                 S_ATTR_SELF_MODIFYING_CODE |
@@ -2011,8 +2011,7 @@ static SymbolType GetSymbolType(const char *&symbol_name,
   } else if (symbol_section->IsDescendant(data_section_sp.get()) ||
              symbol_section->IsDescendant(data_dirty_section_sp.get()) ||
              symbol_section->IsDescendant(data_const_section_sp.get())) {
-    if (symbol_sect_name &&
-        ::strstr(symbol_sect_name, "__objc") == symbol_sect_name) {
+    if (symbol_sect_name.starts_with("__objc")) {
       type = eSymbolTypeRuntime;
 
       if (symbol_name) {
@@ -2037,15 +2036,12 @@ static SymbolType GetSymbolType(const char *&symbol_name,
           }
         }
       }
-    } else if (symbol_sect_name &&
-               ::strstr(symbol_sect_name, "__gcc_except_tab") ==
-                   symbol_sect_name) {
+    } else if (symbol_sect_name.starts_with("__gcc_except_tab")) {
       type = eSymbolTypeException;
     } else {
       type = eSymbolTypeData;
     }
-  } else if (symbol_sect_name &&
-             ::strstr(symbol_sect_name, "__IMPORT") == symbol_sect_name) {
+  } else if (symbol_sect_name.starts_with("__IMPORT")) {
     type = eSymbolTypeTrampoline;
   }
   return type;
@@ -3200,8 +3196,8 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                           }
 
                           if (type == eSymbolTypeInvalid) {
-                            const char *symbol_sect_name =
-                                symbol_section->GetName().AsCString(nullptr);
+                            llvm::StringRef symbol_sect_name =
+                                symbol_section->GetName();
                             if (symbol_section->IsDescendant(
                                     text_section_sp.get())) {
                               if (symbol_section->IsClear(
@@ -3217,26 +3213,19 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                                            data_dirty_section_sp.get()) ||
                                        symbol_section->IsDescendant(
                                            data_const_section_sp.get())) {
-                              if (symbol_sect_name &&
-                                  ::strstr(symbol_sect_name, "__objc") ==
-                                      symbol_sect_name) {
+                              if (symbol_sect_name.starts_with("__objc")) {
                                 type = eSymbolTypeRuntime;
 
                                 if (TryParseV2ObjCMetadataSymbol(
                                         symbol_name,
                                         symbol_name_non_abi_mangled, type))
                                   demangled_is_synthesized = true;
-                              } else if (symbol_sect_name &&
-                                         ::strstr(symbol_sect_name,
-                                                  "__gcc_except_tab") ==
-                                             symbol_sect_name) {
+                              } else if (symbol_sect_name.starts_with("__gcc_except_tab")) {
                                 type = eSymbolTypeException;
                               } else {
                                 type = eSymbolTypeData;
                               }
-                            } else if (symbol_sect_name &&
-                                       ::strstr(symbol_sect_name, "__IMPORT") ==
-                                           symbol_sect_name) {
+                            } else if (symbol_sect_name.starts_with("__IMPORT")) 
                               type = eSymbolTypeTrampoline;
                             } else if (symbol_section->IsDescendant(
                                            objc_section_sp.get())) {
@@ -3960,8 +3949,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
             }
 
             if (type == eSymbolTypeInvalid) {
-              const char *symbol_sect_name =
-                  symbol_section->GetName().AsCString(nullptr);
+              llvm::StringRef symbol_sect_name = symbol_section->GetName();
               if (symbol_section->IsDescendant(text_section_sp.get())) {
                 if (symbol_section->IsClear(S_ATTR_PURE_INSTRUCTIONS |
                                             S_ATTR_SELF_MODIFYING_CODE |
@@ -3974,23 +3962,18 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                              data_dirty_section_sp.get()) ||
                          symbol_section->IsDescendant(
                              data_const_section_sp.get())) {
-                if (symbol_sect_name &&
-                    ::strstr(symbol_sect_name, "__objc") == symbol_sect_name) {
+                if (symbol_sect_name.starts_with("__objc")) {
                   type = eSymbolTypeRuntime;
 
                   if (TryParseV2ObjCMetadataSymbol(
                           symbol_name, symbol_name_non_abi_mangled, type))
                     demangled_is_synthesized = true;
-                } else if (symbol_sect_name &&
-                           ::strstr(symbol_sect_name, "__gcc_except_tab") ==
-                               symbol_sect_name) {
+                } else if (symbol_sect_name.starts_with("__gcc_except_tab")) {
                   type = eSymbolTypeException;
                 } else {
                   type = eSymbolTypeData;
                 }
-              } else if (symbol_sect_name &&
-                         ::strstr(symbol_sect_name, "__IMPORT") ==
-                             symbol_sect_name) {
+              } else if (symbol_sect_name.starts_with("__IMPORT")) {
                 type = eSymbolTypeTrampoline;
               } else if (symbol_section->IsDescendant(objc_section_sp.get())) {
                 type = eSymbolTypeRuntime;
@@ -6078,7 +6061,7 @@ CreateAllImageInfosPayload(const lldb::ProcessSP &process_sp,
         addr_t vmaddr = section->GetLoadBaseAddress(&target);
         if (vmaddr == LLDB_INVALID_ADDRESS)
           continue;
-        ConstString name = section->GetName();
+        llvm::StringRef name = section->GetName();
         segment_vmaddr seg_vmaddr;
         // This is the uncommon case where strncpy is exactly
         // the right one, doesn't need to be nul terminated.
@@ -6086,8 +6069,8 @@ CreateAllImageInfosPayload(const lldb::ProcessSP &process_sp,
         // is not guaranteed to be nul-terminated if all 16 characters are
         // used.
         // coverity[buffer_size_warning]
-        strncpy(seg_vmaddr.segname, name.AsCString(nullptr),
-                sizeof(seg_vmaddr.segname));
+        strncpy(seg_vmaddr.segname, name.data(),
+                std::min(name.size(), sizeof(seg_vmaddr.segname)));
         seg_vmaddr.vmaddr = vmaddr;
         seg_vmaddr.unused = 0;
         segment_vmaddrs.push_back(seg_vmaddr);
