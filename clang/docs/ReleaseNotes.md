@@ -54,6 +54,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### Clang Frontend Potentially Breaking Changes
 
+- Templight support has been removed.
+
 ### Clang Python Bindings Potentially Breaking Changes
 
 ### OpenCL Potentially Breaking Changes
@@ -311,7 +313,10 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 #### Bug Fixes to C++ Support
 
--Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)
+- Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)
+
+- Fixed a crash when a using-declaration naming an unresolvable member of a
+  dependent base was shadowed by an invalid using-declaration. (#GH209427)
 
 #### Bug Fixes to AST Handling
 

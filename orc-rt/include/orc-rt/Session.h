@@ -356,18 +356,18 @@ public:
   /// Session has already shut down, the callback will be called immediately.
   void addOnShutdown(OnShutdownFn OnShutdown);
 
-  /// Returns a reference to this Session's ManagedCodeTaskGroup.
+  /// Return a TokenSource for this Session's ManagedCodeTaskGroup.
   ///
   /// When calling code managed by a Session (e.g. JIT'd code, or library code
   /// loaded on behalf of JIT'd code), clients should hold a token for this
-  /// group. That token will prevent the Session from shutting down any Services
-  /// (and the Session itself) until tasks accessing managed code have
-  /// completed.
+  /// group, which can be constructed from the returned TokenSource. That token
+  /// will prevent the Session from shutting down any Services (and the Session
+  /// itself) until tasks accessing managed code have completed.
   ///
   /// Clients should prefer using the callManagedCodeSync and
   /// callManagedCodeAsync helpers to automatically acquire and hold a token
   /// for the duration of a call.
-  const std::shared_ptr<TaskGroup> &managedCodeTaskGroup() const {
+  TaskGroup::TokenSource managedCodeTokenSource() const {
     return ManagedCodeTaskGroup;
   }
 

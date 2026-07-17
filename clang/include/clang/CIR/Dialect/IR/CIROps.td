@@ -7262,6 +7262,43 @@ def CIR_ModfOp : CIR_Op<"modf", [Pure]> {
   }];
 }
 
+class CIR_TernaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
+    : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]>
+{
+  let arguments = (ins 
+    CIR_AnyFloatOrVecOfFloatType:$a,
+    CIR_AnyFloatOrVecOfFloatType:$b,
+    CIR_AnyFloatOrVecOfFloatType:$c
+  );
+  
+  let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
+
+  let assemblyFormat = "$a `,` $b `,` $c `:` type($a) attr-dict";
+
+  let llvmOp = llvmOpName;
+}
+
+def CIR_FMAOp : CIR_TernaryFPToFPBuiltinOp<"fma", "FMAOp"> {
+  let summary = "Fused Multiply-Add operation";
+  
+  let description = [{
+    Computes the fused multiply-add of three floating-point values or vector.
+
+    The inputs must be either:
+      • floating-point scalar types, or
+      • vectors whose element type is floating-point.
+
+    The result type must match the input type exactly.
+
+    Examples:
+      // scalar
+      %r = cir.fma %a, %b, %c : !cir.float
+
+      // vector
+      %v = cir.fma %a, %b, %c : !cir.vector<4 x !cir.float>
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // Variadic Operations
 //===----------------------------------------------------------------------===//

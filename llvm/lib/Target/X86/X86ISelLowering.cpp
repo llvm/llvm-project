@@ -8184,6 +8184,13 @@ static bool isFoldableUseOfShuffle(SDNode *N) {
   return false;
 }
 
+static bool isFoldableAsShuffle(SDValue V) {
+  while (V.getOpcode() == ISD::BITCAST ||
+         V.getOpcode() == ISD::EXTRACT_SUBVECTOR)
+    V = V.getOperand(0);
+  return isTargetShuffle(V.getOpcode());
+}
+
 // If the node has a single use by a VSELECT then AVX512 targets may be able to
 // fold as a predicated instruction.
 static bool isMaskableNode(SDValue V, const X86Subtarget &Subtarget) {
@@ -61510,13 +61517,6 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
       }
     }
   }
-
-  auto isFoldableAsShuffle = [](SDValue V) {
-    while (V.getOpcode() == ISD::BITCAST ||
-           V.getOpcode() == ISD::EXTRACT_SUBVECTOR)
-      V = V.getOperand(0);
-    return isTargetShuffle(V.getOpcode());
-  };
 
   // Match concat_vector style patterns.
   SmallVector<SDValue, 2> SubVectorOps;
