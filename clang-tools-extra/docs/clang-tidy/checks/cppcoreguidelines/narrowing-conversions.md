@@ -1,12 +1,12 @@
-.. title:: clang-tidy - cppcoreguidelines-narrowing-conversions
+```{title} clang-tidy - cppcoreguidelines-narrowing-conversions
+```
 
-cppcoreguidelines-narrowing-conversions
-=======================================
+# cppcoreguidelines-narrowing-conversions
 
-This check implements part of  `ES.46
-<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#es46-avoid-lossy-narrowing-truncating-arithmetic-conversions>`_
+This check implements part of [ES.46](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#es46-avoid-lossy-narrowing-truncating-arithmetic-conversions)
 from the C++ Core Guidelines.
 
 The `cppcoreguidelines-narrowing-conversions` check is an alias, please see
-:doc:`bugprone-narrowing-conversions <../bugprone/narrowing-conversions>`
+{doc}`bugprone-narrowing-conversions <../bugprone/narrowing-conversions>`
 for more information.
+

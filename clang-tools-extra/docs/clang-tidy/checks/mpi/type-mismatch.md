@@ -1,7 +1,7 @@
-.. title:: clang-tidy - mpi-type-mismatch
+```{title} clang-tidy - mpi-type-mismatch
+```
 
-mpi-type-mismatch
-=================
+# mpi-type-mismatch
 
 This check verifies if buffer type and MPI (Message Passing Interface)
 datatype pairs match for used MPI functions. All MPI datatypes defined
@@ -11,12 +11,13 @@ of verification.
 
 Example:
 
-.. code-block:: c++
+```c++
+// In this case, the buffer type matches MPI datatype.
+char buf;
+MPI_Send(&buf, 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
 
-  // In this case, the buffer type matches MPI datatype.
-  char buf;
-  MPI_Send(&buf, 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+// In the following case, the buffer type does not match MPI datatype.
+int buf;
+MPI_Send(&buf, 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+```
 
-  // In the following case, the buffer type does not match MPI datatype.
-  int buf;
-  MPI_Send(&buf, 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD);

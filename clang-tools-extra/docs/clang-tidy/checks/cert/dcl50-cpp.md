@@ -1,13 +1,13 @@
-.. title:: clang-tidy - cert-dcl50-cpp
+```{title} clang-tidy - cert-dcl50-cpp
+```
 
-cert-dcl50-cpp
-==============
+# cert-dcl50-cpp
 
 The `cert-dcl50-cpp` check is an alias, please see
-:doc:`modernize-avoid-variadic-functions
+{doc}`modernize-avoid-variadic-functions
 <../modernize/avoid-variadic-functions>`
 for more information.
 
 This check corresponds to the CERT C++ Coding Standard rule
-`DCL50-CPP. Do not define a C-style variadic function
-<https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/declarations-and-initialization-dcl/dcl50-cpp/>`_.
+[DCL50-CPP. Do not define a C-style variadic function](https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/declarations-and-initialization-dcl/dcl50-cpp/).
+

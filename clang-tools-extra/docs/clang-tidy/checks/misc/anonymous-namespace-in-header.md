@@ -1,7 +1,7 @@
-.. title:: clang-tidy - misc-anonymous-namespace-in-header
+```{title} clang-tidy - misc-anonymous-namespace-in-header
+```
 
-misc-anonymous-namespace-in-header
-==================================
+# misc-anonymous-namespace-in-header
 
 Finds anonymous namespaces in headers.
 
@@ -10,11 +10,10 @@ violations because each translation unit including the header will get its
 own unique version of the symbols. This increases binary size and can cause
 confusing link-time errors.
 
-References
-----------
+## References
 
 This check corresponds to the CERT C++ Coding Standard rule
-`DCL59-CPP. Do not define an unnamed namespace in a header file
-<https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/declarations-and-initialization-dcl/dcl59-cpp/>`_.
+[DCL59-CPP. Do not define an unnamed namespace in a header file](https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/declarations-and-initialization-dcl/dcl59-cpp/).
 
 Corresponding cpplint.py check name: `build/namespaces`.
+

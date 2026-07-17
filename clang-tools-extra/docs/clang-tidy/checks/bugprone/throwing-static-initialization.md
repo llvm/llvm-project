@@ -1,14 +1,14 @@
-.. title:: clang-tidy - bugprone-throwing-static-initialization
+```{title} clang-tidy - bugprone-throwing-static-initialization
+```
 
-bugprone-throwing-static-initialization
-=======================================
+# bugprone-throwing-static-initialization
 
-Finds all ``static`` or ``thread_local`` variable declarations where the
+Finds all `static` or `thread_local` variable declarations where the
 initializer for the object may throw an exception.
 
-Options
--------
+## Options
 
+```{eval-rst}
 .. option:: AllowedTypes
 
   A semicolon-separated list of names of types that will be excluded from
@@ -18,10 +18,10 @@ Options
   list contains the sequence `::`, it is matched against the qualified type
   name (i.e. ``namespace::Type``), otherwise it is matched against only the
   type name (i.e. ``Type``). Default is an empty string.
+```
 
-References
-----------
+## References
 
 This check corresponds to the CERT C++ Coding Standard rule
-`ERR58-CPP. Handle all exceptions thrown before main() begins executing
-<https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/exceptions-and-error-handling-err/err58-cpp/>`_.
+[ERR58-CPP. Handle all exceptions thrown before main() begins executing](https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/exceptions-and-error-handling-err/err58-cpp/).
+

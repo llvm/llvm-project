@@ -1,23 +1,24 @@
-.. title:: clang-tidy - abseil-time-comparison
+```{title} clang-tidy - abseil-time-comparison
+```
 
-abseil-time-comparison
-======================
+# abseil-time-comparison
 
-Prefer comparisons in the ``absl::Time`` domain instead of the integer domain.
+Prefer comparisons in the `absl::Time` domain instead of the integer domain.
 
-N.B.: In cases where an ``absl::Time`` is being converted to an integer,
+N.B.: In cases where an `absl::Time` is being converted to an integer,
 alignment may occur. If the comparison depends on this alignment, doing the
-comparison in the ``absl::Time`` domain may yield a different result. In
+comparison in the `absl::Time` domain may yield a different result. In
 practice this is very rare, and still indicates a bug which should be fixed.
 
 Examples:
 
-.. code-block:: c++
+```c++
+// Original - Comparison in the integer domain
+int x;
+absl::Time t;
+if (x < absl::ToUnixSeconds(t)) ...
 
-  // Original - Comparison in the integer domain
-  int x;
-  absl::Time t;
-  if (x < absl::ToUnixSeconds(t)) ...
+// Suggested - Compare in the absl::Time domain instead
+if (absl::FromUnixSeconds(x) < t) ...
+```
 
-  // Suggested - Compare in the absl::Time domain instead
-  if (absl::FromUnixSeconds(x) < t) ...

@@ -1,15 +1,14 @@
-.. title:: clang-tidy - readability-redundant-string-cstr
+```{title} clang-tidy - readability-redundant-string-cstr
+```
 
-readability-redundant-string-cstr
-=================================
+# readability-redundant-string-cstr
 
+Finds unnecessary calls to `std::string::c_str()` and
+`std::string::data()`.
 
-Finds unnecessary calls to ``std::string::c_str()`` and
-``std::string::data()``.
+## Options
 
-Options
--------
-
+```{eval-rst}
 .. option:: StringParameterFunctions
 
    A semicolon-separated list of regular expressions matching the
@@ -19,3 +18,5 @@ Options
    can do so should exist. This can be used to configure functions such as
    ``fmt::format``, ``spdlog::logger::info``, or wrappers around these and
    similar functions. The default value is the empty string.
+```
+

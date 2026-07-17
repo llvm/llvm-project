@@ -1,17 +1,18 @@
-.. title:: clang-tidy - android-cloexec-epoll-create
+```{title} clang-tidy - android-cloexec-epoll-create
+```
 
-android-cloexec-epoll-create
-============================
+# android-cloexec-epoll-create
 
-The usage of ``epoll_create()`` is not recommended, it's better to use
-``epoll_create1()``, which allows close-on-exec.
+The usage of `epoll_create()` is not recommended, it's better to use
+`epoll_create1()`, which allows close-on-exec.
 
 Examples:
 
-.. code-block:: c++
+```c++
+epoll_create(size);
 
-  epoll_create(size);
+// becomes
 
-  // becomes
+epoll_create1(EPOLL_CLOEXEC);
+```
 
-  epoll_create1(EPOLL_CLOEXEC);

@@ -1,7 +1,7 @@
-.. title:: clang-tidy - cppcoreguidelines-pro-type-union-access
+```{title} clang-tidy - cppcoreguidelines-pro-type-union-access
+```
 
-cppcoreguidelines-pro-type-union-access
-=======================================
+# cppcoreguidelines-pro-type-union-access
 
 This check flags all access to members of unions. Passing unions as a whole is
 not flagged.
@@ -12,6 +12,6 @@ had its destructor called. This is fragile because it cannot generally be
 enforced to be safe in the language and so relies on programmer discipline to
 get it right.
 
-This rule is part of the `Type safety (Type.7)
-<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#pro-type-unions>`_
+This rule is part of the [Type safety (Type.7)](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#pro-type-unions)
 profile from the C++ Core Guidelines.
+

@@ -1,7 +1,7 @@
-.. title:: clang-tidy - readability-math-missing-parentheses
+```{title} clang-tidy - readability-math-missing-parentheses
+```
 
-readability-math-missing-parentheses
-====================================
+# readability-math-missing-parentheses
 
 Check for missing parentheses in mathematical expressions that involve
 operators of different priorities.
@@ -16,13 +16,13 @@ more maintainable code.
 
 Before:
 
-.. code-block:: c++
-
-  int x = 1 + 2 * 3 - 4 / 5;
-
+```c++
+int x = 1 + 2 * 3 - 4 / 5;
+```
 
 After:
 
-.. code-block:: c++
+```c++
+int x = 1 + (2 * 3) - (4 / 5);
+```
 
-  int x = 1 + (2 * 3) - (4 / 5);

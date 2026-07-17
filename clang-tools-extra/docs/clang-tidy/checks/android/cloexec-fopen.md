@@ -1,18 +1,18 @@
-.. title:: clang-tidy - android-cloexec-fopen
+```{title} clang-tidy - android-cloexec-fopen
+```
 
-android-cloexec-fopen
-=====================
+# android-cloexec-fopen
 
-``fopen()`` should include ``e`` in their mode string; so ``re`` would be
-valid. This is equivalent to having set ``FD_CLOEXEC on`` that descriptor.
+`fopen()` should include `e` in their mode string; so `re` would be
+valid. This is equivalent to having set `FD_CLOEXEC on` that descriptor.
 
 Examples:
 
-.. code-block:: c++
+```c++
+fopen("fn", "r");
 
-  fopen("fn", "r");
+// becomes
 
-  // becomes
-
-  fopen("fn", "re");
+fopen("fn", "re");
+```
 

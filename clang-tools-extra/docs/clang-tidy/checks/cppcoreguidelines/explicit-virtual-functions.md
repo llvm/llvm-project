@@ -1,8 +1,9 @@
-.. title:: clang-tidy - cppcoreguidelines-explicit-virtual-functions
+```{title} clang-tidy - cppcoreguidelines-explicit-virtual-functions
+```
 
-cppcoreguidelines-explicit-virtual-functions
-============================================
+# cppcoreguidelines-explicit-virtual-functions
 
 The `cppcoreguidelines-explicit-virtual-functions` check is an alias,
-please see :doc:`modernize-use-override <../modernize/use-override>`
+please see {doc}`modernize-use-override <../modernize/use-override>`
 for more information.
+
