@@ -627,9 +627,6 @@ bool AMDGPUCallLowering::lowerParameter(MachineIRBuilder &B, ArgInfo &Arg,
   MachineFunction &MF = B.getMF();
   const Function &F = MF.getFunction();
   const DataLayout &DL = F.getDataLayout();
-  const Argument *IRArg = dyn_cast_if_present<Argument>(Arg.OrigValue);
-  const bool IsHiddenArg =
-      IRArg && IRArg->hasAttribute("amdgpu-hidden-argument");
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   const SITargetLowering &TLI = *getTLI<SITargetLowering>();
   MachinePointerInfo PtrInfo = TLI.getKernargSegmentPtrInfo(MF);
@@ -653,7 +650,8 @@ bool AMDGPUCallLowering::lowerParameter(MachineIRBuilder &B, ArgInfo &Arg,
     return true;
   }
 
-  if (IsHiddenArg) {
+  const Argument *IRArg = dyn_cast_if_present<Argument>(Arg.OrigValue);
+  if (IRArg && IRArg->hasAttribute("amdgpu-hidden-argument")) {
     F.getContext().diagnose(DiagnosticInfoUnsupported(
         F, "hidden argument in kernel signature was not preloaded"));
     return false;
