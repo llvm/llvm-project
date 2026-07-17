@@ -34,7 +34,9 @@ the enumeration. In that case the whole cast is replaced:
 
   enum class E : int {};
 
-  int i = static_cast<int>(E{});      // becomes: std::to_underlying(E{})
+  int i = static_cast<int>(E{});
+  // becomes:
+  int i = std::to_underlying(E{});
 
 A cast is *imprecise* when the destination type is an integer type other than
 the underlying type (a different width or signedness), for example
@@ -71,7 +73,9 @@ Options
 
      .. code-block:: c++
 
-       long l = static_cast<long>(E{});  // becomes: static_cast<long>(std::to_underlying(E{}))
+       long l = static_cast<long>(E{});
+       // becomes:
+       long l = static_cast<long>(std::to_underlying(E{}));
 
    `UseUnderlyingType`
      Replace the whole cast with a call to the replacement function. This
@@ -81,7 +85,9 @@ Options
 
      .. code-block:: c++
 
-       long l = static_cast<long>(E{});  // becomes: std::to_underlying(E{})
+       long l = static_cast<long>(E{});
+       // becomes:
+       long l = std::to_underlying(E{});
 
 .. option:: ReplacementFunction
 
