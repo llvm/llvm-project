@@ -275,7 +275,8 @@ static cir::VectorType getNeonPairwiseWidenInputType(cir::VectorType resType,
 static std::pair<mlir::Type, llvm::SmallVector<mlir::Type>>
 deriveNeonSISDIntrinsicOperandTypes(CIRGenFunction &cgf, unsigned modifier,
                                     mlir::Type arg0Ty, mlir::Type resultTy,
-                                    llvm::ArrayRef<mlir::Value> ops) {
+                                    llvm::ArrayRef<mlir::Value> ops,
+                                    unsigned iceArguments) {
   int vectorSize = 0;
   if (modifier & Use64BitVectors)
     vectorSize = 64;
@@ -302,17 +303,26 @@ deriveNeonSISDIntrinsicOperandTypes(CIRGenFunction &cgf, unsigned modifier,
   else if (vecArgTy && !(modifier & AddRetType))
     funcResTy = wrapAsVector(resultTy);
 
-  // When VectorizeArgTypes is set, wrap every operand that has the same
-  // scalar type as arg0 into a vector. This covers intrinsics with multiple
-  // data operands of the same type (e.g. vsri takes two data operands,
-  // both of which must be wrapped into the same vector type).
+  // LLVMExtendedType<0> preserves the result vector's lane count while
+  // widening its element type. Reconstruct that source type from the Clang
+  // builtin's scalar data type.
+  if (modifier & WidenArgs) {
+    auto resVecTy = mlir::dyn_cast<cir::VectorType>(funcResTy);
+    assert(resVecTy && "widened SISD arguments require a vector result");
+    vecArgTy = cir::VectorType::get(arg0Ty, resVecTy.getSize());
+  }
+
+  // Wrap every non-immediate data operand that has the same scalar type as
+  // arg0. Checking the ICE bitmap is required when a data operand and an
+  // immediate both have i32 type (e.g. vqshrns_n_s32).
   llvm::SmallVector<mlir::Type> argTypes;
   argTypes.reserve(ops.size());
-  for (mlir::Value op : ops) {
-    if ((modifier & VectorizeArgTypes) && vecArgTy && op.getType() == arg0Ty)
+  for (unsigned i = 0, e = ops.size(); i != e; ++i) {
+    bool isImmediate = iceArguments & (1U << i);
+    if (vecArgTy && !isImmediate && ops[i].getType() == arg0Ty)
       argTypes.push_back(vecArgTy);
     else
-      argTypes.push_back(op.getType());
+      argTypes.push_back(ops[i].getType());
   }
 
   return {funcResTy, std::move(argTypes)};
@@ -344,19 +354,11 @@ static void vecExtendIntValue(CIRGenFunction &cgf, cir::VectorType argVTy,
   arg = cir::VecInsertOp::create(builder, loc, poison, arg, zero);
 }
 
-/// Reduce vector type value to scalar, usually for result of a
-/// neon SISD intrinsic call
-static mlir::Value vecReduceIntValue(CIRGenFunction &cgf, mlir::Value val,
-                                     mlir::Location loc) {
-  CIRGenBuilderTy &builder = cgf.getBuilder();
-  assert(mlir::isa<cir::VectorType>(val.getType()));
-  return cir::VecExtractOp::create(builder, loc, val,
-                                   builder.getConstInt(loc, cgf.sizeTy, 0));
-}
-
-static mlir::Value emitCommonNeonSISDBuiltinExpr(
-    CIRGenFunction &cgf, const ARMNeonVectorIntrinsicInfo &info,
-    llvm::SmallVectorImpl<mlir::Value> &ops, const CallExpr *expr) {
+static mlir::Value
+emitCommonNeonSISDBuiltinExpr(CIRGenFunction &cgf,
+                              const ARMNeonVectorIntrinsicInfo &info,
+                              llvm::SmallVectorImpl<mlir::Value> &ops,
+                              const CallExpr *expr, unsigned iceArguments) {
   assert(info.LLVMIntrinsic && "Generic code assumes a valid intrinsic");
 
   switch (info.BuiltinID) {
@@ -514,18 +516,20 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
   // TypeModifier flags. `emitNeonCall` takes care of per-operand
   // bitcasts to `argTypes`.
   auto [funcResTy, argTypes] = deriveNeonSISDIntrinsicOperandTypes(
-      cgf, info.TypeModifier, arg0Ty, resultTy, ops);
+      cgf, info.TypeModifier, arg0Ty, resultTy, ops, iceArguments);
 
-  auto resVecTy = mlir::dyn_cast<cir::VectorType>(funcResTy);
-  auto argIntTy = mlir::dyn_cast<cir::IntType>(arg0Ty);
-  auto resultIntTy = mlir::dyn_cast<cir::IntType>(resultTy);
+  assert(argTypes.size() == ops.size());
+  for (unsigned i = 0, e = ops.size(); i != e; ++i) {
+    if (cgf.cgm.getDataLayout().getTypeSizeInBits(ops[i].getType()) ==
+        cgf.cgm.getDataLayout().getTypeSizeInBits(argTypes[i]))
+      continue;
 
-  if (resVecTy && argIntTy && resultIntTy &&
-      argIntTy.getWidth() == resultIntTy.getWidth() * 2) {
-    cir::VectorType argVecTy = cir::VectorType::get(arg0Ty, resVecTy.getSize());
-    assert(!argTypes.empty());
-    argTypes[0] = argVecTy;
-    vecExtendIntValue(cgf, argVecTy, ops[0], loc);
+    auto argVecTy = mlir::dyn_cast<cir::VectorType>(argTypes[i]);
+    assert(argVecTy && !mlir::isa<cir::VectorType>(ops[i].getType()) &&
+           "expecting vector LLVM intrinsic type and scalar Clang builtin "
+           "type");
+
+    vecExtendIntValue(cgf, argVecTy, ops[i], loc);
   }
 
   mlir::Value result = emitNeonCall(cgf.cgm, builder, std::move(argTypes), ops,
@@ -533,13 +537,13 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
 
   if (cgf.cgm.getDataLayout().getTypeSizeInBits(resultTy) <
       cgf.cgm.getDataLayout().getTypeSizeInBits(funcResTy)) {
-    return vecReduceIntValue(cgf, result, loc);
+
+    assert(mlir::isa<cir::VectorType>(result.getType()));
+    return cir::VecExtractOp::create(builder, loc, result,
+                                     builder.getConstInt(loc, cgf.sizeTy, 0));
   }
 
-  if (result.getType() != resultTy)
-    return builder.createBitcast(loc, result, resultTy);
-
-  return result;
+  return builder.createBitcast(loc, result, resultTy);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2451,7 +2455,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
       findARMVectorIntrinsicInMap(ArrayRef(AArch64SISDIntrinsicMap), builtinID,
                                   aarch64SISDIntrinsicsProvenSorted);
   if (builtin)
-    return emitCommonNeonSISDBuiltinExpr(*this, *builtin, ops, expr);
+    return emitCommonNeonSISDBuiltinExpr(*this, *builtin, ops, expr,
+                                         iceArguments);
 
   // Not all intrinsics handled by the common case work for AArch64 yet, so only
   // defer to common code if it's been added to our special map.
