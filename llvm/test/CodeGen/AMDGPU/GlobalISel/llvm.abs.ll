@@ -2,8 +2,8 @@
 ; RUN: llc -global-isel -mtriple=amdgpu6.00 -o - < %s | FileCheck %s --check-prefixes=GFX,GFX6
 ; RUN: llc -global-isel -mtriple=amdgpu8.03 -o - < %s | FileCheck %s --check-prefixes=GFX,GFX8
 ; RUN: llc -global-isel -mtriple=amdgpu10.10 -o - < %s | FileCheck %s --check-prefixes=GFX,GFX10
-; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu12.50 -mattr=-real-true16 -o - < %s | FileCheck %s --check-prefixes=GFX1250,GFX1250-FAKE16
-; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu12.50 -mattr=+real-true16 -o - < %s | FileCheck %s --check-prefixes=GFX1250,GFX1250-REAL16
+; RUN: llc -global-isel -mtriple=amdgpu12.50 -mattr=-real-true16 -o - < %s | FileCheck %s --check-prefixes=GFX1250,GFX1250-FAKE16
+; RUN: llc -global-isel -mtriple=amdgpu12.50 -mattr=+real-true16 -o - < %s | FileCheck %s --check-prefixes=GFX1250,GFX1250-REAL16
 
 declare i16 @llvm.abs.i16(i16, i1)
 declare i32 @llvm.abs.i32(i32, i1)
@@ -66,12 +66,12 @@ define amdgpu_cs i64 @abs_sgpr_i64(i64 inreg %arg) {
 ; GFX1250-NEXT:    global_wb
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_sub_nc_u64 s[2:3], 0, s[0:1]
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_max_i64 v[0:1], s[0:1], s[2:3]
-; GFX1250-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1250-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1250-NEXT:    s_ashr_i32 s2, s1, 31
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX1250-NEXT:    s_mov_b32 s3, s2
+; GFX1250-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
 ; GFX1250-NEXT:    ; return to shader part epilog
   %res = call i64 @llvm.abs.i64(i64 %arg, i1 false)
   ret i64 %res
