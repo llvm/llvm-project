@@ -13,6 +13,10 @@
 
 namespace clang::tidy::readability {
 
+/// Finds redundant class, struct, union, and enum tags in C++ declarations.
+///
+/// For the user-facing documentation see:
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-tag.html
 class RedundantTagCheck : public ClangTidyCheck {
 public:
   RedundantTagCheck(StringRef Name, ClangTidyContext *Context)
