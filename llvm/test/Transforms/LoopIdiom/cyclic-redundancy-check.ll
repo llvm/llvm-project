@@ -1081,14 +1081,16 @@ define i32 @crc32.le.tc4.data32(i32 %checksum, i32 %msg) optsize {
 ; CLMUL-LABEL: define i32 @crc32.le.tc4.data32(
 ; CLMUL-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CLMUL-NEXT:  [[ENTRY:.*:]]
-; CLMUL-NEXT:    [[CRC_CAST:%.*]] = zext i32 [[CHECKSUM]] to i36
-; CLMUL-NEXT:    [[DATA_CAST:%.*]] = zext i32 [[MSG]] to i36
-; CLMUL-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i36 [[CRC_CAST]], [[DATA_CAST]]
-; CLMUL-NEXT:    [[CRC_TCBITS:%.*]] = and i36 [[XOR_CRC_DATA1]], 15
-; CLMUL-NEXT:    [[CLMUL_MU:%.*]] = call i36 @llvm.clmul.i36(i36 [[CRC_TCBITS]], i36 17)
-; CLMUL-NEXT:    [[QUOT_MASK:%.*]] = and i36 [[CLMUL_MU]], 15
-; CLMUL-NEXT:    [[CLMUL_GP:%.*]] = call i36 @llvm.clmul.i36(i36 [[QUOT_MASK]], i36 67601)
-; CLMUL-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i36 [[CRC_CAST]], [[CLMUL_GP]]
+; CLMUL-NEXT:    [[CRC_CAST:%.*]] = trunc i32 [[CHECKSUM]] to i4
+; CLMUL-NEXT:    [[DATA_CAST:%.*]] = trunc i32 [[MSG]] to i4
+; CLMUL-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i4 [[CRC_CAST]], [[DATA_CAST]]
+; CLMUL-NEXT:    [[TCBITS_CAST:%.*]] = zext i4 [[XOR_CRC_DATA1]] to i8
+; CLMUL-NEXT:    [[CLMUL_MU:%.*]] = call i8 @llvm.clmul.i8(i8 [[TCBITS_CAST]], i8 17)
+; CLMUL-NEXT:    [[QUOT_MASK:%.*]] = and i8 [[CLMUL_MU]], 15
+; CLMUL-NEXT:    [[QUOT_CAST:%.*]] = zext i8 [[QUOT_MASK]] to i36
+; CLMUL-NEXT:    [[CLMUL_GP:%.*]] = call i36 @llvm.clmul.i36(i36 [[QUOT_CAST]], i36 67601)
+; CLMUL-NEXT:    [[CRC_RECAST:%.*]] = zext i32 [[CHECKSUM]] to i36
+; CLMUL-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i36 [[CRC_RECAST]], [[CLMUL_GP]]
 ; CLMUL-NEXT:    [[CRC_LSHR2:%.*]] = lshr i36 [[XOR_CRC_MULT]], 4
 ; CLMUL-NEXT:    [[CRC_NEXT3:%.*]] = trunc i36 [[CRC_LSHR2]] to i32
 ; CLMUL-NEXT:    br label %[[LOOP:.*]]
@@ -1146,14 +1148,16 @@ define i32 @crc32.le.tc30.data32(i32 %checksum, i32 %msg) optsize {
 ; CLMUL-LABEL: define i32 @crc32.le.tc30.data32(
 ; CLMUL-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR0]] {
 ; CLMUL-NEXT:  [[ENTRY:.*:]]
-; CLMUL-NEXT:    [[CRC_CAST:%.*]] = zext i32 [[CHECKSUM]] to i62
-; CLMUL-NEXT:    [[DATA_CAST:%.*]] = zext i32 [[MSG]] to i62
-; CLMUL-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i62 [[CRC_CAST]], [[DATA_CAST]]
-; CLMUL-NEXT:    [[CRC_TCBITS:%.*]] = and i62 [[XOR_CRC_DATA1]], 1073741823
-; CLMUL-NEXT:    [[CLMUL_MU:%.*]] = call i62 @llvm.clmul.i62(i62 [[CRC_TCBITS]], i62 475535633)
-; CLMUL-NEXT:    [[QUOT_MASK:%.*]] = and i62 [[CLMUL_MU]], 1073741823
-; CLMUL-NEXT:    [[CLMUL_GP:%.*]] = call i62 @llvm.clmul.i62(i62 [[QUOT_MASK]], i62 67601)
-; CLMUL-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i62 [[CRC_CAST]], [[CLMUL_GP]]
+; CLMUL-NEXT:    [[CRC_CAST:%.*]] = trunc i32 [[CHECKSUM]] to i30
+; CLMUL-NEXT:    [[DATA_CAST:%.*]] = trunc i32 [[MSG]] to i30
+; CLMUL-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i30 [[CRC_CAST]], [[DATA_CAST]]
+; CLMUL-NEXT:    [[TCBITS_CAST:%.*]] = zext i30 [[XOR_CRC_DATA1]] to i60
+; CLMUL-NEXT:    [[CLMUL_MU:%.*]] = call i60 @llvm.clmul.i60(i60 [[TCBITS_CAST]], i60 475535633)
+; CLMUL-NEXT:    [[QUOT_MASK:%.*]] = and i60 [[CLMUL_MU]], 1073741823
+; CLMUL-NEXT:    [[QUOT_CAST:%.*]] = zext i60 [[QUOT_MASK]] to i62
+; CLMUL-NEXT:    [[CLMUL_GP:%.*]] = call i62 @llvm.clmul.i62(i62 [[QUOT_CAST]], i62 67601)
+; CLMUL-NEXT:    [[CRC_RECAST:%.*]] = zext i32 [[CHECKSUM]] to i62
+; CLMUL-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i62 [[CRC_RECAST]], [[CLMUL_GP]]
 ; CLMUL-NEXT:    [[CRC_LSHR2:%.*]] = lshr i62 [[XOR_CRC_MULT]], 30
 ; CLMUL-NEXT:    [[CRC_NEXT3:%.*]] = trunc i62 [[CRC_LSHR2]] to i32
 ; CLMUL-NEXT:    br label %[[LOOP:.*]]
