@@ -81,6 +81,11 @@ struct KernelDescriptorElfOptions {
   std::vector<MetadataKernel> MetadataKernels;
   bool MetadataOmitVgprCount = false;
   bool MetadataVgprCountAsString = false;
+  // When set, emit an extra zero-sized SHF_ALLOC section (".pad") at this
+  // virtual address. Used to reproduce a zero-sized allocatable section sharing
+  // the trampoline pool's base address, exercising the pool-section lookup in
+  // addKernelEntryTrampolineSymbols.
+  std::optional<uint64_t> ExtraAllocSectionAddr;
 };
 
 struct KernelDescriptorElf {
@@ -186,7 +191,9 @@ makeKernelDescriptorElf(llvm::ArrayRef<uint8_t> Text,
   static constexpr uint64_t TextOffset = 0x240;
   static constexpr uint64_t KdBytes = sizeof(hsa::kernel_descriptor_t);
   static constexpr char ShStrTab[] =
-      "\0.text\0.rodata\0.strtab\0.symtab\0.shstrtab\0";
+      "\0.text\0.rodata\0.strtab\0.symtab\0.shstrtab\0.pad\0";
+  static constexpr uint32_t PadNameOff = 41; // offset of ".pad" in ShStrTab
+  const bool HasPad = Options.ExtraAllocSectionAddr.has_value();
 
   std::string StrTab;
   StrTab.push_back('\0');
@@ -253,7 +260,7 @@ makeKernelDescriptorElf(llvm::ArrayRef<uint8_t> Text,
   }
   Ehdr.e_ehsize = sizeof(Elf64_Ehdr);
   Ehdr.e_shentsize = sizeof(Elf64_Shdr);
-  Ehdr.e_shnum = 6;
+  Ehdr.e_shnum = HasPad ? 7 : 6;
   Ehdr.e_shstrndx = 5;
   std::memcpy(Buf, &Ehdr, sizeof(Ehdr));
 
@@ -302,6 +309,19 @@ makeKernelDescriptorElf(llvm::ArrayRef<uint8_t> Text,
   ShstrSh.sh_offset = ShStrTabOff;
   ShstrSh.sh_size = sizeof(ShStrTab);
   std::memcpy(Buf + ShOff + 5 * sizeof(Elf64_Shdr), &ShstrSh, sizeof(ShstrSh));
+
+  if (HasPad) {
+    // A zero-sized allocatable section sharing a base address with (what will
+    // become) the appended trampoline pool. NOBITS so it needs no file content.
+    Elf64_Shdr PadSh{};
+    PadSh.sh_name = PadNameOff;
+    PadSh.sh_type = SHT_NOBITS;
+    PadSh.sh_flags = SHF_ALLOC;
+    PadSh.sh_addr = *Options.ExtraAllocSectionAddr;
+    PadSh.sh_size = 0;
+    PadSh.sh_addralign = 1;
+    std::memcpy(Buf + ShOff + 6 * sizeof(Elf64_Shdr), &PadSh, sizeof(PadSh));
+  }
 
   if (HasMetadataNote) {
     Elf64_Phdr NotePhdr{};

@@ -1456,9 +1456,12 @@ std::optional<uint32_t> appendKernelEntryTrampolinesFast(
 /// Only the trailing non-alloc `.symtab` / `.strtab` sections grow, so no
 /// virtual addresses, program headers, or relocations change; `.dynsym` (used
 /// by the loader) is left untouched.
+/// \p PoolVAddr is the virtual address of the appended trampoline pool (the
+/// same base rewriteKernelEntryDescriptorOffsets() redirects each descriptor
+/// to); each stub symbol is placed at PoolVAddr + StubTextOffset in the pool's
+/// section, so it matches the address the dispatch entry now targets.
 std::unique_ptr<llvm::WritableMemoryBuffer> addKernelEntryTrampolineSymbols(
-    llvm::WritableMemoryBuffer &In, unsigned TextSectionIndex,
-    uint64_t TextAddr, uint64_t OldTextSize,
+    llvm::WritableMemoryBuffer &In, uint64_t PoolVAddr,
     llvm::ArrayRef<KernelEntryTrampolineFixup> Fixups);
 
 /// Apply direct .text displacement to a newly allocated output buffer.

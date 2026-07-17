@@ -1904,7 +1904,7 @@ amd_comgr_status_t AMDGPUCompiler::unpackage() {
 
           if (env::shouldEmitVerboseLogs()) {
             LogS << "\tPackage Entry Target: " << Target << "\n"
-                << "\tOutput Filename: " << OutputFilePath << "\n";
+                 << "\tOutput Filename: " << OutputFilePath << "\n";
             LogS.flush();
           }
         }

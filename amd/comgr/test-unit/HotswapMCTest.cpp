@@ -2644,6 +2644,84 @@ static unsigned countSymtabSymbolsNamed(llvm::WritableMemoryBuffer &Buf,
   return Count;
 }
 
+// Cross-check that the <kernel>.stub symbol in Buf resolves to exactly what the
+// debugger relies on, tying it to independently-produced artifacts rather than
+// to the address formula the symbol writer itself uses:
+//   (1) it names the address the rewritten kernel descriptor's entry now points
+//       at (what amd-dbgapi / rocgdb resolve for the dispatch),
+//   (2) real entry-stub bytes live at that address, and
+//   (3) its [st_value, st_value + st_size) range lies inside its own section.
+static void
+expectStubSymbolMatchesDispatchEntry(llvm::WritableMemoryBuffer &Buf,
+                                     llvm::StringRef KernelName,
+                                     const LLVMState &S) {
+  using ELFT = llvm::object::ELF64LE;
+  llvm::Expected<llvm::object::ELFFile<ELFT>> FileOrErr =
+      llvm::object::ELFFile<ELFT>::create(
+          llvm::StringRef(reinterpret_cast<const char *>(Buf.getBufferStart()),
+                          Buf.getBufferSize()));
+  ASSERT_TRUE((bool)FileOrErr) << llvm::toString(FileOrErr.takeError());
+  llvm::object::ELFFile<ELFT> &File = *FileOrErr;
+  llvm::Expected<ELFT::ShdrRange> Secs = File.sections();
+  ASSERT_TRUE((bool)Secs) << llvm::toString(Secs.takeError());
+  const ELFT::Shdr *Symtab = nullptr;
+  for (const ELFT::Shdr &Sh : *Secs)
+    if (Sh.sh_type == llvm::ELF::SHT_SYMTAB) {
+      Symtab = &Sh;
+      break;
+    }
+  ASSERT_NE(Symtab, nullptr);
+  llvm::Expected<ELFT::SymRange> Syms = File.symbols(Symtab);
+  ASSERT_TRUE((bool)Syms) << llvm::toString(Syms.takeError());
+  llvm::Expected<llvm::StringRef> StrTab =
+      File.getStringTableForSymtab(*Symtab);
+  ASSERT_TRUE((bool)StrTab) << llvm::toString(StrTab.takeError());
+
+  const std::string StubName = (KernelName + ".stub").str();
+  const ELFT::Sym *Stub = nullptr;
+  for (const ELFT::Sym &Sym : *Syms) {
+    llvm::Expected<llvm::StringRef> N = Sym.getName(*StrTab);
+    ASSERT_TRUE((bool)N) << llvm::toString(N.takeError());
+    if (*N == StubName) {
+      Stub = &Sym;
+      break;
+    }
+  }
+  ASSERT_NE(Stub, nullptr) << "missing symbol " << StubName;
+
+  // (3) The symbol range lies fully inside its own section.
+  ASSERT_LT(Stub->st_shndx, Secs->size());
+  const ELFT::Shdr &Sec = (*Secs)[Stub->st_shndx];
+  EXPECT_GE(Stub->st_value, Sec.sh_addr);
+  EXPECT_LE(Stub->st_value + Stub->st_size, Sec.sh_addr + Sec.sh_size);
+
+  llvm::Expected<ElfView> ViewOrErr = ElfView::create(
+      reinterpret_cast<uint8_t *>(Buf.getBufferStart()), Buf.getBufferSize());
+  ASSERT_TRUE((bool)ViewOrErr) << llvm::toString(ViewOrErr.takeError());
+  ElfView &View = *ViewOrErr;
+
+  // (1) The symbol names exactly the address the descriptor entry now targets.
+  const KernelDescriptorInfo *KD = nullptr;
+  for (const KernelDescriptorInfo &Info : View.kernelDescriptors())
+    if (Info.KernelName == KernelName) {
+      KD = &Info;
+      break;
+    }
+  ASSERT_NE(KD, nullptr);
+  ASSERT_GE(KD->EntryOffset, 0);
+  const uint64_t EntryVAddr =
+      KD->VAddr + static_cast<uint64_t>(KD->EntryOffset);
+  EXPECT_EQ(Stub->st_value, EntryVAddr)
+      << "stub symbol must name the descriptor's entry address";
+
+  // (2) Real entry-stub bytes live at the symbol's address.
+  const uint8_t *StubBytes =
+      View.dataAtVAddr(Stub->st_value, KernelEntryStubStride);
+  ASSERT_NE(StubBytes, nullptr);
+  EXPECT_TRUE(isKernelEntryTrampoline(
+      llvm::ArrayRef<uint8_t>(StubBytes, KernelEntryStubStride), S));
+}
+
 // Covers: the entry-trampoline rewrite is idempotent -- a second pass over an
 // already-rewritten code object installs no new stub, and therefore defines no
 // duplicate `<kernel>.stub` symbol. This backs the idempotency claim made by
@@ -2675,9 +2753,6 @@ TEST(KernelEntryTrampoline, SecondPassAddsNoDuplicateStubSymbol) {
   llvm::Expected<ElfView> View1 =
       ElfView::create(Obj.Bytes.data(), Obj.Bytes.size());
   ASSERT_TRUE((bool)View1) << llvm::toString(View1.takeError());
-  const unsigned TextIdx = View1->textSectionIndex();
-  const uint64_t TextAddr = View1->textAddr();
-  const uint64_t OldTextSize = View1->textSize();
 
   std::vector<Trampoline> Growth1;
   std::vector<KernelEntryTrampolineFixup> Fixups1;
@@ -2694,10 +2769,12 @@ TEST(KernelEntryTrampoline, SecondPassAddsNoDuplicateStubSymbol) {
   ASSERT_TRUE(
       rewriteKernelEntryDescriptorOffsets(*Grown, *PoolVAddr, S.Cpu, Fixups1));
   std::unique_ptr<llvm::WritableMemoryBuffer> Pass1 =
-      addKernelEntryTrampolineSymbols(*Grown, TextIdx, TextAddr, OldTextSize,
-                                      Fixups1);
+      addKernelEntryTrampolineSymbols(*Grown, *PoolVAddr, Fixups1);
   ASSERT_NE(Pass1, nullptr);
   ASSERT_EQ(countSymtabSymbolsNamed(*Pass1, "kernel.stub"), 1u);
+  // The stub symbol must resolve to the dispatch entry, cover real stub bytes,
+  // and stay within its section -- not merely match the writer's own formula.
+  expectStubSymbolMatchesDispatchEntry(*Pass1, "kernel", S);
 
   // -- Second pass over the already-rewritten object. --
   uint8_t *Pass1Data = reinterpret_cast<uint8_t *>(Pass1->getBufferStart());
@@ -2717,8 +2794,7 @@ TEST(KernelEntryTrampoline, SecondPassAddsNoDuplicateStubSymbol) {
   // With no fixups the symbol pass is a no-op (returns nullptr, keeping the
   // existing buffer), so no second "kernel.stub" can be defined.
   std::unique_ptr<llvm::WritableMemoryBuffer> Pass2 =
-      addKernelEntryTrampolineSymbols(*Pass1, TextIdx, TextAddr,
-                                      View2->textSize(), Fixups2);
+      addKernelEntryTrampolineSymbols(*Pass1, *PoolVAddr, Fixups2);
   EXPECT_EQ(Pass2, nullptr);
   EXPECT_EQ(countSymtabSymbolsNamed(*Pass1, "kernel.stub"), 1u);
 }
