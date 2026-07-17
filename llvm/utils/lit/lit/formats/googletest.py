@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import math
 import os
@@ -14,9 +16,17 @@ kIsWindows = sys.platform in ["win32", "cygwin"]
 
 
 class GoogleTest(TestFormat):
-    def __init__(self, test_sub_dirs, test_suffix, run_under=[], test_prefix=None):
+    def __init__(
+        self,
+        test_sub_dirs: str | None,
+        test_suffix: str,
+        run_under=[],
+        test_prefix=None,
+    ):
         self.seen_executables = set()
-        self.test_sub_dirs = str(test_sub_dirs).split(";")
+        # Split on ";" can create [''] when test_sub_dirs is empty string,
+        # which causes leading slashes in test paths. Filter empty strings.
+        self.test_sub_dirs = [d for d in str(test_sub_dirs).split(";") if d] or ["."]
 
         # On Windows, assume tests will also end in '.exe'.
         exe_suffix = str(test_suffix)
@@ -27,6 +37,17 @@ class GoogleTest(TestFormat):
         self.test_suffixes = {exe_suffix, test_suffix + ".py"}
         self.test_prefixes = {test_prefix} if test_prefix else None
         self.run_under = run_under
+
+    def _make_test_path(
+        self, path_in_suite: tuple, subdir: str, fn: str, *extra: str, litConfig=None
+    ) -> tuple:
+        """Construct test path, omitting '.' subdirectory."""
+        components = () if subdir == "." else (subdir,)
+        test_path = path_in_suite + components + (fn,) + extra
+        if litConfig and litConfig.debug:
+            subdir_display = "." if subdir == "." else repr(subdir)
+            litConfig.note(f"GoogleTest path: {test_path} (subdir={subdir_display})")
+        return test_path
 
     def get_num_tests(self, path, litConfig, localConfig):
         list_test_cmd = self.prepareCmd(
@@ -80,11 +101,13 @@ class GoogleTest(TestFormat):
 
                         # Create one lit test for each shard.
                         for idx in range(nshard):
-                            testPath = path_in_suite + (
+                            testPath = self._make_test_path(
+                                path_in_suite,
                                 subdir,
                                 fn,
                                 str(idx),
                                 str(nshard),
+                                litConfig=litConfig,
                             )
                             json_file = (
                                 "-".join(
@@ -106,7 +129,9 @@ class GoogleTest(TestFormat):
                                 gtest_json_file=json_file,
                             )
                     else:
-                        testPath = path_in_suite + (subdir, fn)
+                        testPath = self._make_test_path(
+                            path_in_suite, subdir, fn, litConfig=litConfig
+                        )
                         json_file = (
                             "-".join(
                                 [
