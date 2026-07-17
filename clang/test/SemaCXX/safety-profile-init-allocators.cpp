@@ -78,6 +78,26 @@ void test_read_through() {
   int x = *p; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
 }
 
+// A direct call to a replaceable global allocation function returns
+// uninitialized memory exactly like malloc (a new-*expression* is recognized
+// separately, from its initialization style).
+void test_operator_new() {
+  int *p [[ref_to_uninit]] = (int *)::operator new(4); // OK
+  int *q = (int *)::operator new(4); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int *r = (int *)::operator new[](8); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int *s [[ref_to_uninit]] = (int *)__builtin_operator_new(4); // OK
+}
+
+// A class-specific operator new is not replaceable; its semantics belong to
+// its class, so it stays a trusted unmarked callee.
+struct PoolAllocated {
+  static void *operator new(size_t);
+};
+void test_class_specific_operator_new() {
+  int *p [[ref_to_uninit]] = (int *)PoolAllocated::operator new(4); // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  int *q = (int *)PoolAllocated::operator new(4); // OK: trusted
+}
+
 // Suppression covers the binding like any other ref_to_uninit site.
 void test_suppress() {
   // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}

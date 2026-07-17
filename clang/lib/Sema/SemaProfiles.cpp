@@ -1073,6 +1073,14 @@ static UninitStorage classifyRefToUninitCallee(const CallExpr *CE,
   if (!FD)
     return UninitStorage::Unknown;
   bool RefersToUninit = FD->hasAttr<RefToUninitAttr>();
+  // A direct call to a replaceable global allocation function -- raw
+  // ::operator new / ::operator new[] -- returns uninitialized memory like
+  // malloc (a new-*expression* is the recognizers' CXXNewExpr arm instead).
+  // The operator check excludes operator delete, and replaceability excludes
+  // class-specific overloads, whose semantics belong to their class.
+  if (FD->getDeclName().getCXXOverloadedOperator() == OO_New ||
+      FD->getDeclName().getCXXOverloadedOperator() == OO_Array_New)
+    RefersToUninit |= FD->isReplaceableGlobalAllocationFunction();
   switch (FD->getBuiltinID()) {
   case Builtin::BImalloc:
   case Builtin::BI__builtin_malloc:
@@ -1082,6 +1090,7 @@ static UninitStorage classifyRefToUninitCallee(const CallExpr *CE,
   case Builtin::BI__builtin_alloca_uninitialized:
   case Builtin::BI__builtin_alloca_with_align:
   case Builtin::BI__builtin_alloca_with_align_uninitialized:
+  case Builtin::BI__builtin_operator_new:
     RefersToUninit = true;
     break;
   case Builtin::BIcalloc:

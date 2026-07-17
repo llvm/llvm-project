@@ -230,7 +230,8 @@ public:
   /// pointer; a cast of such a pointer to another pointer type, or of such a
   /// glvalue to another reference; a call to a [[ref_to_uninit]]-returning
   /// function or to a known uninitialized-returning allocator (the malloc
-  /// and alloca builtin families; calloc's result is initialized, realloc's
+  /// and alloca builtin families and raw replaceable ::operator new calls;
+  /// calloc's result is initialized, realloc's
   /// unknown); or a new-expression whose default-initialization leaves the
   /// allocated object indeterminate (e.g. new int). A trusted-initialized
   /// source and an unrecognized (unknown) source both return false (no flow
