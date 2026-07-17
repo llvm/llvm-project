@@ -10765,11 +10765,21 @@ void llvm::findValuesAffectedByCondition(
 }
 
 const Value *llvm::stripNullTest(const Value *V) {
-  // (X >> C) or/add (X & mask(C) != 0)
   if (const auto *BO = dyn_cast<BinaryOperator>(V)) {
+    const Value *X;
+
+    // X or (icmp ne X, 0)
+    // Note: this is only sound for 'or', since 'add' can overflow to zero
+    // when X is all-ones.
+    if (BO->getOpcode() == Instruction::Or &&
+        match(BO, m_c_Or(m_Value(X),
+                         m_ZExt(m_SpecificICmp(ICmpInst::ICMP_NE, m_Deferred(X),
+                                               m_Zero())))))
+      return X;
+
+    // (X >> C) or/add (X & mask(C) != 0)
     if (BO->getOpcode() == Instruction::Add ||
         BO->getOpcode() == Instruction::Or) {
-      const Value *X;
       const APInt *C1, *C2;
       if (match(BO, m_c_BinOp(m_LShr(m_Value(X), m_APInt(C1)),
                               m_ZExt(m_SpecificICmp(
