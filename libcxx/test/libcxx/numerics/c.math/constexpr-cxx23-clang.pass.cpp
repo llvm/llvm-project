@@ -231,25 +231,25 @@ int main(int, char**) {
   ASSERT_CONSTEXPR_CXX23(std::isgreater(-1.0, 0.0) == 0);
   ASSERT_CONSTEXPR_CXX23(std::isgreater(-1.0L, 0.0L) == 0);
 
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isgreaterequal(-1.0f, 0.0f) == 0);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isgreaterequal(-1.0, 0.0) == 0);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isgreaterequal(-1.0L, 0.0L) == 0);
+  ASSERT_CONSTEXPR_CXX23(std::isgreaterequal(-1.0f, 0.0f) == 0);
+  ASSERT_CONSTEXPR_CXX23(std::isgreaterequal(-1.0, 0.0) == 0);
+  ASSERT_CONSTEXPR_CXX23(std::isgreaterequal(-1.0L, 0.0L) == 0);
 
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isless(-1.0f, 0.0f) == 1);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isless(-1.0, 0.0) == 1);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isless(-1.0L, 0.0L) == 1);
+  ASSERT_CONSTEXPR_CXX23(std::isless(-1.0f, 0.0f) == 1);
+  ASSERT_CONSTEXPR_CXX23(std::isless(-1.0, 0.0) == 1);
+  ASSERT_CONSTEXPR_CXX23(std::isless(-1.0L, 0.0L) == 1);
 
-  ASSERT_NOT_CONSTEXPR_CXX23(std::islessequal(-1.0f, 0.0f) == 1);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::islessequal(-1.0, 0.0) == 1);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::islessequal(-1.0L, 0.0L) == 1);
+  ASSERT_CONSTEXPR_CXX23(std::islessequal(-1.0f, 0.0f) == 1);
+  ASSERT_CONSTEXPR_CXX23(std::islessequal(-1.0, 0.0) == 1);
+  ASSERT_CONSTEXPR_CXX23(std::islessequal(-1.0L, 0.0L) == 1);
 
-  ASSERT_NOT_CONSTEXPR_CXX23(std::islessgreater(-1.0f, 0.0f) == 1);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::islessgreater(-1.0, 0.0) == 1);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::islessgreater(-1.0L, 0.0L) == 1);
+  ASSERT_CONSTEXPR_CXX23(std::islessgreater(-1.0f, 0.0f) == 1);
+  ASSERT_CONSTEXPR_CXX23(std::islessgreater(-1.0, 0.0) == 1);
+  ASSERT_CONSTEXPR_CXX23(std::islessgreater(-1.0L, 0.0L) == 1);
 
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isunordered(-1.0f, 0.0f) == 0);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isunordered(-1.0, 0.0) == 0);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::isunordered(-1.0L, 0.0L) == 0);
+  ASSERT_CONSTEXPR_CXX23(std::isunordered(-1.0f, 0.0f) == 0);
+  ASSERT_CONSTEXPR_CXX23(std::isunordered(-1.0, 0.0) == 0);
+  ASSERT_CONSTEXPR_CXX23(std::isunordered(-1.0L, 0.0L) == 0);
 
   assert(!ImplementedP0533R9 && R"(
 Congratulations! You just have implemented P0533R9 (https://wg21.link/p0533r9).
