@@ -5467,9 +5467,9 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
       auto ResultCost = getTypeLegalizationCost(VecTy);
       llvm::InstructionCost LegalizationCost = SubVecCost.first;
 
-      // A temporary fix to increase the cost in cases where the input element
-      // type is 4x the output type. Otherwise it produces an SVE tail loop
-      // which is significantly larger than the NEON equivalent.
+      // FIXME: A temporary increase to the cost in cases where the input
+      // element type is 4x the output type. Otherwise it produces an SVE tail
+      // loop which is significantly larger than the NEON equivalent.
       if (Opcode == Instruction::Store && Factor == 4 &&
           SubVecCost.second.getScalarSizeInBits() ==
               (4 * ResultCost.second.getScalarSizeInBits()))
