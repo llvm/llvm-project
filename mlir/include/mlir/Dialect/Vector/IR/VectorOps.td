@@ -2289,7 +2289,7 @@ def Vector_ExpandLoadOp :
     ]>,
     Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
-               FixedVectorOfNonZeroRankOf<[I1]>:$mask,
+               VectorOfNonZeroRankOf<[I1]>:$mask,
                AnyVectorOfNonZeroRank:$pass_thru,
                OptionalAttr<IntValidAlignment<I64Attr>>: $alignment)>,
     Results<(outs AnyVectorOfNonZeroRank:$result)> {
@@ -2381,7 +2381,7 @@ def Vector_CompressStoreOp :
     ]>,
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                Variadic<Index>:$indices,
-               FixedVectorOfNonZeroRankOf<[I1]>:$mask,
+               VectorOfNonZeroRankOf<[I1]>:$mask,
                AnyVectorOfNonZeroRank:$valueToStore,
                OptionalAttr<IntValidAlignment<I64Attr>>: $alignment)> {
 
