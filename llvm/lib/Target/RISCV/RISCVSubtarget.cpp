@@ -18,6 +18,7 @@
 #include "RISCVFrameLowering.h"
 #include "RISCVSelectionDAGInfo.h"
 #include "RISCVTargetMachine.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -39,14 +40,17 @@ static cl::opt<unsigned> SchedLoadLatency(
     cl::desc("Override the load latency (in cycles) in the scheduler model. "
              "A non-negative value overrides the target default."));
 
+#define DEBUG_TYPE "riscv-macro-fusion"
+
+#define GET_RISCV_MACRO_FUSION_PRED_IMPL
+#include "RISCVGenMacroFusion.inc"
+
+#undef DEBUG_TYPE
 #define DEBUG_TYPE "riscv-subtarget"
 
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR
 #include "RISCVGenSubtargetInfo.inc"
-
-#define GET_RISCV_MACRO_FUSION_PRED_IMPL
-#include "RISCVGenMacroFusion.inc"
 
 namespace llvm::RISCVTuneInfoTable {
 

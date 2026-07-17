@@ -187,6 +187,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  sys_select_macros
+  HDRS
+    sys_select_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.sys_select
+    libc.include.llvm-libc-macros.sys_select_macros
+)
+
+add_proxy_header_library(
   sys_sem_macros
   HDRS
     sys_sem_macros.h
@@ -238,6 +247,15 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.sys_time
     libc.include.llvm-libc-macros.sys_time_macros
+)
+
+add_proxy_header_library(
+  sys_wait_macros
+  HDRS
+    sys_wait_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.sys_wait
+    libc.include.llvm-libc-macros.sys_wait_macros
 )
 
 add_header_library(unistd_overlay HDRS unistd_overlay.h)

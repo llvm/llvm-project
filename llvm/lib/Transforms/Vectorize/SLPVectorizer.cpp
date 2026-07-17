@@ -23150,6 +23150,21 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
            return !SI || isCommutative(SI);
          })))
       I->setHasNoUnsignedWrap(/*b=*/false);
+    // A sub feeding icmp eq/ne 0 may have its operands swapped; nsw does not
+    // survive a - b -> b - a (a - b can be INT_MIN while b - a overflows).
+    if (!MinBWs.contains(E) && Opcode == Instruction::Sub &&
+        any_of(Scalars, [](Value *Scalar) {
+          auto *SI = dyn_cast<Instruction>(Scalar);
+          if (!SI || SI->getOpcode() != Instruction::Sub || !isCommutative(SI))
+            return false;
+          return any_of(SI->uses(), [](const Use &U) {
+            CmpPredicate Pred;
+            return match(U.getUser(),
+                         m_ICmp(Pred, m_Specific(U.get()), m_Zero())) &&
+                   ICmpInst::isEquality(Pred);
+          });
+        }))
+      I->setHasNoSignedWrap(/*b=*/false);
     // Interchanging add/sub negates the constant: nsw only survives if the
     // constant isn't INT_MIN (negating it would overflow); nuw never
     // survives a nonzero constant, since that flips the valid range from
@@ -23184,6 +23199,18 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             const auto *CI = dyn_cast<ConstantInt>(Op);
             return CI && CI->getValue().isMinSignedValue();
           });
+        }))
+      I->setHasNoSignedWrap(/*b=*/false);
+    // shl nsw X, BW-1 is not equivalent to mul nsw X, INT_MIN: shl nsw never
+    // poisons at X = -1 (shifted-out bits match the sign bit), but mul nsw
+    // does. A shl lane converted to mul this way must drop nsw.
+    if (!MinBWs.contains(E) && Opcode == Instruction::Mul &&
+        any_of(UniqueInsts, [&](Value *V) {
+          auto *SI = cast<Instruction>(V);
+          if (SI->getOpcode() != Instruction::Shl)
+            return false;
+          const auto *CI = dyn_cast<ConstantInt>(SI->getOperand(1));
+          return CI && CI->getValue() == CI->getBitWidth() - 1;
         }))
       I->setHasNoSignedWrap(/*b=*/false);
     if (auto *ICmp = dyn_cast<ICmpInst>(I); ICmp && It == MinBWs.end())
@@ -24300,9 +24327,10 @@ bool BoUpSLP::isCoveredByExistingVersionCheck(BasicBlock *BB,
   const Value *Base2 = getUnderlyingObject(Ptr2);
   if (Base1 == Base2)
     return false;
-  if (Base2 < Base1)
-    std::swap(Base1, Base2);
-  return It->second.contains({Base1, Base2});
+  // The recorded pairs keep their discovery order (see
+  // recordRuntimeAliasCheck), so accept either orientation.
+  return It->second.contains({Base1, Base2}) ||
+         It->second.contains({Base2, Base1});
 }
 
 /// Returns true if \p BB's body already contains vector instructions, e.g.
@@ -24342,16 +24370,20 @@ bool BoUpSLP::recordRuntimeAliasCheck(BasicBlock *BB, Instruction *Inst1,
   // Only a single block can be versioned per attempt.
   if (RTChecks.BB && RTChecks.BB != BB)
     return false;
-  // Normalize the pair order so duplicate checks collapse.
-  if (Base2 < Base1)
-    std::swap(Base1, Base2);
+  // A base-object pair is unordered: (Base1, Base2) and (Base2, Base1) are the
+  // same check. Keep it in discovery (program) order and drop the reverse as a
+  // duplicate, rather than ordering by pointer value, which would make the
+  // emitted checks depend on allocation addresses.
   auto Pair = std::make_pair(Base1, Base2);
+  bool Present = RTChecks.BasePairs.contains(Pair) ||
+                 RTChecks.BasePairs.contains({Base2, Base1});
   // After the checks have been validated and bounded, do not introduce new
   // pairs.
   if (RTChecksFinalized)
-    return RTChecks.BasePairs.contains(Pair);
+    return Present;
   RTChecks.BB = BB;
-  RTChecks.BasePairs.insert(Pair);
+  if (!Present)
+    RTChecks.BasePairs.insert(Pair);
   return true;
 }
 
