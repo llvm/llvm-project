@@ -276,6 +276,9 @@ module @transforms attributes { transform.with_named_sequence } {
       transform.apply_patterns.canonicalization
     } : !transform.any_op
     transform.apply_patterns to %func_pre {
+      // TODO: `create_named_contraction` above lowers directly to a named contraction. If we want to remove
+      // `transform.apply_patterns.vector.reduction_to_contract` below, `CombineContractBroadcastMask`
+      // will have to be moved to a dedicated TD Op.
       transform.apply_patterns.vector.reduction_to_contract
       transform.apply_patterns.vector.cast_away_vector_leading_one_dim
       transform.apply_patterns.vector.lower_contraction
