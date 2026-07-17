@@ -1021,6 +1021,26 @@ struct VgprAllocator {
     return V;
   }
 
+  /// Allocate \p N contiguous VGPRs above the kernel's VGPR count, base rounded
+  /// up to \p Align. Scattered dead slots below KD can't guarantee contiguity
+  /// or alignment, so this always extends the allocation. Returns the base
+  /// VGPR, or std::nullopt if the block would reach MaxVgprs. Since MaxVgprs is
+  /// 256 on GFX1250, a block that fits stays in VGPR bank 0, so no
+  /// s_set_vgpr_msb switch is needed.
+  std::optional<unsigned> allocContiguousAboveKd(unsigned N,
+                                                 unsigned Align = 2) {
+    unsigned Base = NextAboveKd;
+    if (Align > 1 && (Base % Align) != 0)
+      Base += Align - (Base % Align);
+    if (Base + N > MaxVgprs)
+      return std::nullopt;
+    ExtraAllocated += (Base + N) - NextAboveKd;
+    for (unsigned V = Base; V < Base + N; ++V)
+      LiveAtPoint.set(V);
+    NextAboveKd = Base + N;
+    return Base;
+  }
+
   unsigned extraVgprsNeeded() const { return ExtraAllocated; }
 };
 
