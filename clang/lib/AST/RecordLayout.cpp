@@ -57,7 +57,7 @@ ASTRecordLayout::ASTRecordLayout(
       PreferredAlignment(preferredAlignment),
       UnadjustedAlignment(unadjustedAlignment),
       RequiredAlignment(requiredAlignment),
-      CXXInfo(new(Ctx) CXXRecordLayoutInfo) {
+      CXXInfo(new (Ctx) CXXRecordLayoutInfo) {
   FieldOffsets.append(Ctx, fieldoffsets.begin(), fieldoffsets.end());
 
   CXXInfo->PrimaryBase.setPointer(PrimaryBase);
