@@ -13,6 +13,7 @@ from lldbsuite.test import lldbutil
 class TestCPPResultVariables(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         TestBase.setUp(self)
         self.main_source_file = lldb.SBFileSpec("two-bases.cpp")
