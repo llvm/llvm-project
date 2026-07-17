@@ -248,13 +248,12 @@ void ReportDeadlySignal(const SignalContext &sig) {
   in_report.ReportError(error);
 }
 
-void ReportDoubleFree(uptr addr, BufferedStackTrace* free_stack) {
+void ReportDoubleFree(uptr addr, BufferedStackTrace *free_stack) {
   ScopedInErrorReport in_report;
   ErrorDoubleFree error(GetCurrentTidOrInvalid(), free_stack, addr);
   in_report.ReportError(error);
 }
 
-#if SANITIZER_AMDHSA
 void ReportVmemDoubleFree(uptr addr, uptr size, u32 reserve_stack_id,
                           u32 reserve_tid, u32 first_free_stack_id,
                           u32 first_free_tid, BufferedStackTrace* free_stack) {
@@ -285,7 +284,6 @@ void ReportVmemDoubleFree(uptr addr, uptr size, u32 reserve_stack_id,
   }
   ReportErrorSummary("double-free", free_stack);
 }
-#endif  // SANITIZER_AMDHSA
 
 void ReportNewDeleteTypeMismatch(uptr addr, uptr delete_size,
                                  uptr delete_alignment,

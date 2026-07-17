@@ -5,7 +5,7 @@
 // Regression test for the AddressSanitizer hsa_memory_copy interceptor: invalid
 // overlapping ranges are diagnosed (same family of checks as memcpy).
 //
-// REQUIRES: sanitizer-amdgpu, linux, stable-runtime, rocm
+// REQUIRES: linux, stable-runtime, rocm
 // UNSUPPORTED: android
 
 #include "hsa_amd_test_helpers.h"

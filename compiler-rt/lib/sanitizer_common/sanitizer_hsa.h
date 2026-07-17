@@ -13,7 +13,7 @@
 #ifndef SANITIZER_HSA_H_
 #define SANITIZER_HSA_H_
 
-#include "sanitizer_common/hsa/hsa.h"
-#include "sanitizer_common/hsa/hsa_ext_amd.h"
+#include "hsa/hsa.h"
+#include "hsa/hsa_ext_amd.h"
 
 #endif  // SANITIZER_HSA_H_

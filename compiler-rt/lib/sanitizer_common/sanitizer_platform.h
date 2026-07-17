@@ -321,8 +321,15 @@
 #  define SANITIZER_AMDGPU 0
 #endif
 
+// Host support for the AMD ROCm/HSA runtime (HSA interceptors + AMDGPU device
+// allocator tier). Enabled by default on Linux hosts; inert at runtime unless
+// the HSA runtime is dlopen'd.
 #ifndef SANITIZER_AMDHSA
-#  define SANITIZER_AMDHSA 0
+#  if SANITIZER_LINUX && !SANITIZER_ANDROID
+#    define SANITIZER_AMDHSA 1
+#  else
+#    define SANITIZER_AMDHSA 0
+#  endif
 #endif
 
 #if defined(__NVPTX__)

@@ -12,7 +12,7 @@
 // enabled (best-effort hsa_amd_agents_allow_access) or the fault can be SIGSEGV
 // instead of AddressSanitizer.
 //
-// REQUIRES: sanitizer-amdgpu, linux, stable-runtime, rocm
+// REQUIRES: linux, stable-runtime, rocm
 // UNSUPPORTED: android
 
 #include "hsa_amd_test_helpers.h"
