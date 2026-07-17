@@ -33,9 +33,9 @@ nontemporal (via metadata) as if they were loads from the global address space.
 void @llvm.amdgcn.load[.async].to.lds.pN(
     ptr addrspace(N) %src,      ; base pointer to load from (per-lane)
     ptr addrspace(3) %lds_base, ; LDS base pointer (wave-uniform)
-    i32 immarg %size,           ; data byte size: 1/2/4 (12/16 for gfx950)
-    i32 immarg %offset,         ; offset applied to both src and LDS address
-    i32 immarg %cpol)           ; cache policy
+    i32 immarg %size,           ; data byte size (immediate): 1/2/4 (12/16 for gfx950)
+    i32 immarg %offset,         ; offset (immediate) applied to both src and LDS address
+    i32 immarg %cpol)           ; cache policy (immediate)
 ```
 
 Loads data from global memory to LDS. The data size can be 1, 2, or 4 bytes
@@ -55,9 +55,9 @@ flat (0), global (1), and buffer fat pointer (7).
 void @llvm.amdgcn.global.load[.async].lds(
     ptr addrspace(1) %src,      ; global base pointer to load from (per-lane)
     ptr addrspace(3) %lds_base, ; LDS base pointer (wave-uniform)
-    i32 immarg %size,           ; data byte size: 1/2/4 (12/16 for gfx950)
-    i32 immarg %offset,         ; offset applied to both global and LDS address
-    i32 immarg %cpol)           ; cache policy
+    i32 immarg %size,           ; data byte size (immediate): 1/2/4 (12/16 for gfx950)
+    i32 immarg %offset,         ; offset (immediate) applied to both global and LDS address
+    i32 immarg %cpol)           ; cache policy (immediate)
 ```
 
 This is identical to ``@llvm.amdgcn.load[.async].to.lds.p1``.
@@ -66,15 +66,15 @@ This is identical to ``@llvm.amdgcn.load[.async].to.lds.p1``.
 
 ```llvm
 void @llvm.amdgcn.{raw|struct}[.ptr].buffer.load[.async].lds(
-    %rsrc,                      ; buffer resource descriptor (SGPR):
+    %rsrc,                      ; buffer resource descriptor (wave-uniform):
                                 ;   <4 x i32> or ptr addrspace(8)
     ptr addrspace(3) %lds_base, ; LDS base pointer (wave-uniform)
-    i32 immarg %size,           ; data byte size: 1/2/4 (12/16 for gfx950)
-    [i32 %vindex,]              ; VGPR buffer index (struct variants only)
-    i32 %voffset,               ; VGPR offset (included in bounds checking)
-    i32 %soffset,               ; SGPR/imm offset (excluded from bounds checking)
-    i32 immarg %offset,         ; imm offset (included in bounds checking)
-    i32 immarg %cpol)           ; cache policy
+    i32 immarg %size,           ; data byte size (immediate): 1/2/4 (12/16 for gfx950)
+    [i32 %vindex,]              ; buffer index (per-lane, struct variants only)
+    i32 %voffset,               ; offset (per-lane, included in bounds checking)
+    i32 %soffset,               ; offset (wave-uniform, excluded from bounds checking)
+    i32 immarg %offset,         ; offset (immediate, included in bounds checking)
+    i32 immarg %cpol)           ; cache policy (immediate)
 ```
 
 Loads data from a buffer resource to LDS.
@@ -100,8 +100,8 @@ volatile or nontemporal.
 void @llvm.amdgcn.{global|cluster}.load.async.to.lds.b<N>(
     ptr addrspace(1) %src,      ; global base pointer to load from (per-lane)
     ptr addrspace(3) %lds_base, ; LDS base pointer (per-lane)
-    i32 immarg %offset,         ; offset applied to both global and LDS address
-    i32 immarg %cpol,           ; cache policy
+    i32 immarg %offset,         ; offset (immediate) applied to both global and LDS address
+    i32 immarg %cpol,           ; cache policy (immediate)
     [i32 %m0])                  ; workgroup broadcast mask, cluster variants only (in M0)
 ```
 
@@ -117,8 +117,8 @@ broadcast mask selects which workgroups within a cluster participate in the load
 void @llvm.amdgcn.global.store.async.from.lds.b<N>(
     ptr addrspace(1) %dst,      ; global base pointer to store to (per-lane)
     ptr addrspace(3) %lds_base, ; LDS base pointer to load from (per-lane)
-    i32 immarg %offset,         ; offset applied to both global and LDS address
-    i32 immarg %cpol)           ; cache policy
+    i32 immarg %offset,         ; offset (immediate) applied to both global and LDS address
+    i32 immarg %cpol)           ; cache policy (immediate)
 ```
 
 Stores data from LDS to global memory.
@@ -132,7 +132,7 @@ void @llvm.amdgcn.tensor.{load.to|store.from}.lds(
     <4 x i32> %desc2,          ; D# group 2 (zero-init for D# up to 2D)
     <4 x i32> %desc3,          ; D# group 3 (zero-init for D# up to 2D)
     <8 x i32> %desc4,          ; D# group 4 (reserved, use zeroinitializer)
-    i32 immarg %cpol)          ; cache policy
+    i32 immarg %cpol)          ; cache policy (immediate)
 ```
 
 Loads or stores data between global memory and LDS using a tensor descriptor

@@ -1,5 +1,5 @@
-; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-exec-sync,amdgpu-sw-lower-lds -amdgpu-asan-instrument-lds=false < %s 2>&1 | FileCheck %s
-; RUN: llc < %s -enable-new-pm -stop-after=amdgpu-sw-lower-lds -amdgpu-asan-instrument-lds=false -mtriple=amdgcn-amd-amdhsa | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu12.00-- -passes=amdgpu-lower-exec-sync,amdgpu-sw-lower-lds -amdgpu-asan-instrument-lds=false < %s 2>&1 | FileCheck %s
+; RUN: llc < %s -enable-new-pm -stop-after=amdgpu-sw-lower-lds -amdgpu-asan-instrument-lds=false -mtriple=amdgpu12.00-amd-amdhsa | FileCheck %s
 
 ; Test to ensure that LDS variables like named barriers are lowered correctly in asan scenario,
 ; where amdgpu-sw-lower-lds pass runs in pipeline after amdgpu-lower-exec-sync pass.

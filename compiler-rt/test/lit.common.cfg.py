@@ -107,19 +107,11 @@ def push_dynamic_library_lookup_path(config, new_path):
         config.environment[dynamic_library_lookup_var] = new_ld_library_path_64
 
 
-# TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
-# See https://github.com/llvm/llvm-project/issues/106636 for more details.
-#
-# Choose between lit's internal shell pipeline runner and a real shell.  If
-# LIT_USE_INTERNAL_SHELL is in the environment, we use that as an override.
-use_lit_shell = os.environ.get("LIT_USE_INTERNAL_SHELL")
-execute_external = use_lit_shell == "0"
-
 # Allow expanding substitutions that are based on other substitutions
 config.recursiveExpansionLimit = 10
 
 # Setup test format.
-config.test_format = lit.formats.ShTest(execute_external)
+config.test_format = lit.formats.ShTest()
 
 target_is_msvc = bool(re.match(r".*-windows-msvc$", config.target_triple))
 target_is_windows = bool(re.match(r".*-windows.*$", config.target_triple))
@@ -594,6 +586,8 @@ if config.target_os == "Darwin":
         config.available_features.add("osx-ld64-live_support")
     if darwin_os_version >= (13, 1):
         config.available_features.add("jit-compatible-osx-swift-runtime")
+    if darwin_os_version >= (26, 4) and darwin_os_version < (27, 0):
+        config.available_features.add("osx-broken-scalbn-rounding")
 
     config.darwin_os_version = darwin_os_version
 
@@ -976,7 +970,7 @@ def target_page_size():
         return 4096
     try:
         proc = subprocess.Popen(
-            f"{emulator or ''} python3",
+            f"{emulator or ''} {shlex.quote(config.python_executable)}",
             shell=True,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,

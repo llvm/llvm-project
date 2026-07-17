@@ -91,10 +91,6 @@ static llvm::cl::opt<bool> forceLoopToExecuteOnce(
     "always-execute-loop-body", llvm::cl::init(false),
     llvm::cl::desc("force the body of a loop to execute at least once"));
 
-static llvm::cl::opt<bool> enableSplitSumExpressionTreeLowering(
-    "enable-split-sum-expression-tree-lowering", llvm::cl::Hidden,
-    llvm::cl::desc("Enable experimental split sum expression tree lowering"));
-
 namespace {
 /// Information for generating a structured or unstructured increment loop.
 struct IncrementLoopInfo {
@@ -622,8 +618,10 @@ public:
       createBuilderOutsideOfFuncOpAndDo([&]() {
         fir::runtime::genMain(*builder, toLocation(),
                               bridge.getEnvironmentDefaults(),
-                              getFoldingContext().languageFeatures().IsEnabled(
-                                  Fortran::common::LanguageFeature::CUDA),
+                              (getFoldingContext().languageFeatures().IsEnabled(
+                                   Fortran::common::LanguageFeature::CUDA) &&
+                               getFoldingContext().languageFeatures().IsEnabled(
+                                   Fortran::common::LanguageFeature::CUDAInit)),
                               getFoldingContext().languageFeatures().IsEnabled(
                                   Fortran::common::LanguageFeature::Coarray));
       });
@@ -5576,7 +5574,7 @@ private:
     auto evaluateRhs = [&](Fortran::lower::StatementContext &stmtCtx) {
       const Fortran::lower::SomeExpr *rhsExpr = &assign.rhs;
       std::optional<Fortran::lower::SomeExpr> rewritten;
-      if (enableSplitSumExpressionTreeLowering &&
+      if (bridge.getLoweringOptions().getSplitSumExpressionTree() &&
           Fortran::evaluate::CanBuildSplitSumExpressionTree(assign.lhs,
                                                             assign.rhs)) {
         rewritten =
@@ -6638,15 +6636,6 @@ private:
         if (sym.name() == "numeric_storage_size" && owner.IsModule() &&
             DEREF(owner.symbol()).name() == "iso_fortran_env")
           continue;
-
-        if (Fortran::evaluate::IsCoarray(sym) &&
-            !Fortran::semantics::IsAllocatable(sym) &&
-            Fortran::semantics::IsSaved(sym)) {
-          mlir::Location loc = toLocation();
-          TODO(
-              loc,
-              "coarray: non-ALLOCATABLE SAVE coarray outside the main program");
-        }
       }
       Fortran::lower::defineModuleVariable(*this, var);
     }
