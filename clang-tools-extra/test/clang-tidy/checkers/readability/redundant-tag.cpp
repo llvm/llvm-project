@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-redundant-tag %t -- -- -std=c++20
+// RUN: %check_clang_tidy -std=c++20-or-later %s readability-redundant-tag %t
 
 struct Struct {};
 class Class {};
