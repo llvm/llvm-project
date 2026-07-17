@@ -660,9 +660,8 @@ void ProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
         GetTarget().GetOrCreateModule(module_spec, /*notify=*/true, &error);
     if (!module)
       return;
+    GetTarget().SetExecutableModule(module, eLoadDependentsNo);
   }
-
-  GetTarget().SetExecutableModule(module, eLoadDependentsNo);
 
   if (auto dyld = GetDynamicLoader())
     dyld->OnLoadModule(module, ModuleSpec(), image_base);
