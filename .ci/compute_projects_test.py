@@ -102,9 +102,7 @@ class TestComputeProjects(unittest.TestCase):
             "check-clang check-clang-python check-clang-tools",
         )
         self.assertEqual(env_variables["runtimes_to_build"], "compiler-rt")
-        self.assertEqual(
-            env_variables["runtimes_check_targets"], "check-compiler-rt"
-        )
+        self.assertEqual(env_variables["runtimes_check_targets"], "check-compiler-rt")
         self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
         self.assertEqual(env_variables["enable_cir"], "OFF")
 
