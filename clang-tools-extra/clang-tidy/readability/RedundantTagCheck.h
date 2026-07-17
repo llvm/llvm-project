@@ -32,4 +32,4 @@ public:
 
 } // namespace clang::tidy::readability
 
-#endif
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANTTAGCHECK_H
