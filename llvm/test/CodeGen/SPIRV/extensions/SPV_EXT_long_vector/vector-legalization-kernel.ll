@@ -5,7 +5,7 @@
 ; CHECK-DAG: OpName %[[#test_int32_double_conversion:]] "test_int32_double_conversion"
 ; CHECK-DAG: %[[#int:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#v18i32:]] = OpTypeVectorIdEXT %[[#int]] 18
-; CHECK-DAG: %[[#v9i32:]] = OpTypeVector %[[#int]] 9
+; CHECK-DAG: %[[#v9i32:]] = OpTypeVectorIdEXT %[[#int]] 9
 ; CHECK-DAG: %[[#ptr_func_v18i32:]] = OpTypePointer Function %[[#v18i32]]
 
 define spir_kernel void @test_int32_double_conversion(ptr %G_vec) {
