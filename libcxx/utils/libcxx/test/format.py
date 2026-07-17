@@ -384,7 +384,10 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
             )
         else:
             _, tmpBase = _getTempPaths(test)
-            return lit.TestRunner._runShTest(test, litConfig, script, tmpBase)
+            useExternalSh = False
+            return lit.TestRunner._runShTest(
+                test, litConfig, useExternalSh, script, tmpBase
+            )
 
     def _generateGenTest(self, testSuite, pathInSuite, litConfig, localConfig):
         generator = lit.Test.Test(testSuite, pathInSuite, localConfig)
