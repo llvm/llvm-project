@@ -110,7 +110,7 @@ ehcleanup:                                        ; preds = %bb3, %catch.start, 
 }
 
 declare i32 @setjmp(ptr)
-declare void @__gxx_wasm_personality_v0(ptr)
+declare i32 @__gxx_wasm_personality_v0(ptr)
 declare void @foo()
 declare void @longjmpable()
 declare void @use_i32(i32)

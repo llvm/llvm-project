@@ -648,7 +648,7 @@ try.cont:                                         ; preds = %entry
 declare void @foo()
 declare void @bar(ptr)
 declare void @take_i32(i32)
-declare void @__gxx_wasm_personality_v0(ptr)
+declare i32 @__gxx_wasm_personality_v0(ptr)
 ; Function Attrs: noreturn
 declare void @llvm.wasm.throw(i32, ptr) #1
 ; Function Attrs: nounwind

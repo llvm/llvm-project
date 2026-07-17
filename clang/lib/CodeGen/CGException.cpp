@@ -268,7 +268,7 @@ static llvm::FunctionCallee getPersonalityFn(CodeGenModule &CGM,
   llvm::FunctionType *FTy;
 
   if (Personality.isWasmPersonality()) {
-    FTy = llvm::FunctionType::get(CGM.VoidTy, {CGM.VoidPtrTy}, false);
+    FTy = llvm::FunctionType::get(CGM.Int32Ty, {CGM.VoidPtrTy}, false);
   } else {
     FTy = llvm::FunctionType::get(CGM.Int32Ty, true);
   }

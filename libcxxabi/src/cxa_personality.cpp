@@ -1112,8 +1112,8 @@ __gxx_personality_seh0(PEXCEPTION_RECORD ms_exc, void *this_frame,
 }
 #endif
 
-#  ifdef __WASM_EXCEPTIONS__
-extern "C" _LIBCXXABI_FUNC_VIS void __gxx_wasm_personality_v0(void* exception_ptr) {
+#ifdef __WASM_EXCEPTIONS__
+extern "C" _LIBCXXABI_FUNC_VIS _Unwind_Reason_Code __gxx_wasm_personality_v0(void* exception_ptr) {
   struct _Unwind_Exception* exception_object = (struct _Unwind_Exception*)exception_ptr;
 
   // Reset the selector.
@@ -1121,10 +1121,10 @@ extern "C" _LIBCXXABI_FUNC_VIS void __gxx_wasm_personality_v0(void* exception_pt
 
   // Call personality function. Wasm does not have two-phase unwinding, so we
   // only do the search phase.
-  __gxx_personality_imp(1, _UA_SEARCH_PHASE, exception_object->exception_class, exception_object,
+  return __gxx_personality_imp(1, _UA_SEARCH_PHASE, exception_object->exception_class, exception_object,
                         (struct _Unwind_Context*)&__wasm_lpad_context);
 }
-#  endif
+#endif
 
 #else
 

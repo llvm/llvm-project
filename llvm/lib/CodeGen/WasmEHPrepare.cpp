@@ -38,6 +38,11 @@
 // exception is thrown. After the stack is unwound, the control flow is
 // transfered to WebAssembly 'catch' instruction.
 //
+// Unwinding the stack is not done by libunwind but the VM, so the personality
+// function (e.g. in libcxxabi) cannot be called from libunwind during the
+// unwinding process. So after a catch instruction, we insert a direct call to
+// the personality instead.
+//
 // In Itanium EH, if the personality function decides there is no matching catch
 // clause in a call frame and no cleanup action to perform, the unwinder doesn't
 // stop there and continues unwinding. But in Wasm EH, the unwinder stops at
@@ -349,11 +354,11 @@ void WasmEHPrepareImpl::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
   // Pseudocode: __wasm_lpad_context.lsda = wasm.lsda();
   IRB.CreateStore(IRB.CreateCall(LSDAF), LSDAField);
 
-  // Pseudocode: personality_fn(exn);
   CallInst *PersCI;
 
-  // Grab direct function when possible to use `call` instead of `call_indirect`
+  // Pseudocode: personality_fn(exn);
   if (Function *F = dyn_cast<Function>(PersonalityF.getCallee()))
+    // Grab direct function when possible to use `call` instead of `call_indirect`
     PersCI = IRB.CreateCall(F, CatchCI, OperandBundleDef("funclet", CPI));
   else
     PersCI =

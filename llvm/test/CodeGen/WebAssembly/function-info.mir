@@ -3,7 +3,7 @@
 --- |
   target triple = "wasm32-unknown-unknown"
 
-  declare void @__gxx_wasm_personality_v0(ptr)
+  declare i32 @__gxx_wasm_personality_v0(ptr)
   declare void @foo()
   define void @function_property_test() {
     ret void
