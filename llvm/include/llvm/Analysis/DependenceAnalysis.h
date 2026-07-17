@@ -606,8 +606,9 @@ private:
                        const SmallBitVector &Loops,
                        FullDependence &Result) const;
 
-  /// Walks through the subscript, collecting each coefficient and the
-  /// associated maximum iteration index in the widened analysis type.
+  /// collectCoeffInfo - Walks through the subscript, collecting each
+  /// coefficient and the associated maximum iteration index in the
+  /// widened analysis type.
   const SCEV *collectCoeffInfo(const SCEV *Subscript, bool SrcFlag,
                                Type *WideType,
                                MutableArrayRef<CoefficientInfo> CI) const;
@@ -631,28 +632,46 @@ private:
                                         const SCEV *&CurLoopCoeff,
                                         APInt &RunningGCD) const;
 
-  /// Looks through all the bounds info and computes the selected lower bound.
+  /// getLowerBound - Looks through all the bounds info and
+  /// computes the lower bound given the current direction settings
+  /// at each level.
   const SCEV *getLowerBound(ArrayRef<BoundInfo> Bound) const;
 
-  /// Looks through all the bounds info and computes the selected upper bound.
+  /// getUpperBound - Looks through all the bounds info and
+  /// computes the upper bound given the current direction settings
+  /// at each level.
   const SCEV *getUpperBound(ArrayRef<BoundInfo> Bound) const;
 
-  /// Hierarchically expands the direction-vector search space.
+  /// exploreDirections - Hierarchically expands the direction vector
+  /// search space, combining the directions of discovered dependences
+  /// in the DirSet field of Bound. Returns the number of distinct
+  /// dependences discovered. If the dependence is disproved,
+  /// it will return 0.
   unsigned exploreDirections(unsigned Level, MutableArrayRef<BoundInfo> Bound,
                              const SmallBitVector &Loops, const SCEV *Delta,
                              const FullDependence &Result) const;
 
-  /// Returns true iff the current bounds are plausible.
+  /// testBounds - Returns true iff the current bounds are plausible.
   bool testBounds(unsigned char DirKind, unsigned Level,
                   MutableArrayRef<BoundInfo> Bound, const SCEV *Delta) const;
 
-  /// Computes bounds for level K using the indicated direction.
+  /// findBoundsALL - Computes the upper and lower bounds for level K
+  /// using the * direction. Records them in Bound.
   void findBoundsALL(ArrayRef<CoefficientInfo> A, ArrayRef<CoefficientInfo> B,
                      MutableArrayRef<BoundInfo> Bound, unsigned K) const;
+
+  /// findBoundsLT - Computes the upper and lower bounds for level K
+  /// using the < direction. Records them in Bound.
   void findBoundsLT(ArrayRef<CoefficientInfo> A, ArrayRef<CoefficientInfo> B,
                     MutableArrayRef<BoundInfo> Bound, unsigned K) const;
+
+  /// findBoundsGT - Computes the upper and lower bounds for level K
+  /// using the > direction. Records them in Bound.
   void findBoundsGT(ArrayRef<CoefficientInfo> A, ArrayRef<CoefficientInfo> B,
                     MutableArrayRef<BoundInfo> Bound, unsigned K) const;
+
+  /// findBoundsEQ - Computes the upper and lower bounds for level K
+  /// using the = direction. Records them in Bound.
   void findBoundsEQ(ArrayRef<CoefficientInfo> A, ArrayRef<CoefficientInfo> B,
                     MutableArrayRef<BoundInfo> Bound, unsigned K) const;
 
