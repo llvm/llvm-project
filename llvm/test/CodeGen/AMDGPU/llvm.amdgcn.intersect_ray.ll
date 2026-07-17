@@ -3,7 +3,7 @@
 ; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu10.13 < %s | FileCheck -check-prefixes=PRE-GFX12,GFX10,GFX10-GISEL,GFX1013-GISEL %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu10.30 < %s | FileCheck -check-prefixes=PRE-GFX12,GFX10,GFX10-SDAG,GFX1030-SDAG %s
 ; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu10.30 < %s | FileCheck -check-prefixes=PRE-GFX12,GFX10,GFX10-GISEL,GFX1030-GISEL %s
-; RUN: not --crash llc -mtriple=amdgpu10.12 < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -mtriple=amdgpu10.12 < %s 2>&1 | FileCheck -check-prefix=ERR %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu11.00 -mattr=+real-true16 < %s | FileCheck -check-prefixes=PRE-GFX12,GFX11-SDAG %s
 ; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu11.00 -mattr=+real-true16 < %s | FileCheck -check-prefixes=PRE-GFX12,GFX11-GISEL %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu11.00 -mattr=-real-true16 < %s | FileCheck -check-prefixes=PRE-GFX12,GFX11-SDAG %s
@@ -12,6 +12,9 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.00 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-SDAG %s
 ; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu12.00 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL %s
 ; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu12.00 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL %s
+
+; RUN: not llc -global-isel=0 -mtriple=amdgpu10.12 < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -global-isel=1 -mtriple=amdgpu10.12 < %s 2>&1 | FileCheck -check-prefix=ERR %s
 
 ; uint4 llvm.amdgcn.image.bvh.intersect.ray.i32.v4f32(uint node_ptr, float ray_extent, float3 ray_origin, float3 ray_dir, float3 ray_inv_dir, uint4 texture_descr)
 ; uint4 llvm.amdgcn.image.bvh.intersect.ray.i32.v4f16(uint node_ptr, float ray_extent, float3 ray_origin, half3 ray_dir, half3 ray_inv_dir, uint4 texture_descr)
@@ -23,7 +26,7 @@ declare <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f16(i32, float, <3 
 declare <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f32(i64, float, <3 x float>, <3 x float>, <3 x float>, <4 x i32>)
 declare <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f16(i64, float, <3 x float>, <3 x half>, <3 x half>, <4 x i32>)
 
-; ERR: in function image_bvh_intersect_ray{{.*}}intrinsic not supported on subtarget
+; ERR: in function @image_bvh_intersect_ray{{.*}}requires target feature 'bvh-ray-tracing-insts'
 ; Arguments are flattened to represent the actual VGPR_A layout, so we have no
 ; extra moves in the generated kernel.
 define amdgpu_ps <4 x float> @image_bvh_intersect_ray(i32 %node_ptr, float %ray_extent, float %ray_origin_x, float %ray_origin_y, float %ray_origin_z, float %ray_dir_x, float %ray_dir_y, float %ray_dir_z, float %ray_inv_dir_x, float %ray_inv_dir_y, float %ray_inv_dir_z, <4 x i32> inreg %tdescr) {

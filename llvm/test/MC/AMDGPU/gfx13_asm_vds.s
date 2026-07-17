@@ -1962,26 +1962,10 @@ ds_load_tr8_b64 v[1:2], v0 offset:64
 // GFX13-W32: ds_load_tr8_b64 v[1:2], v0 offset:64    ; encoding: [0x40,0x00,0xf4,0xdb,0x00,0x00,0x00,0x01]
 // GFX13-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
 
-ds_load_tr4_b64 v[1:2], v0
-// GFX13-W32: ds_load_tr4_b64 v[1:2], v0              ; encoding: [0x00,0x00,0xe8,0xdb,0x00,0x00,0x00,0x01]
-// GFX13-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
-
-ds_load_tr4_b64 v[1:2], v0 offset:64
-// GFX13-W32: ds_load_tr4_b64 v[1:2], v0 offset:64    ; encoding: [0x40,0x00,0xe8,0xdb,0x00,0x00,0x00,0x01]
-// GFX13-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
-
 ds_load_tr16_b128 v[1:4], v0
 // GFX13-W32: ds_load_tr16_b128 v[1:4], v0            ; encoding: [0x00,0x00,0xf0,0xdb,0x00,0x00,0x00,0x01]
 // GFX13-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
 
 ds_load_tr16_b128 v[1:4], v0 offset:64
 // GFX13-W32: ds_load_tr16_b128 v[1:4], v0 offset:64  ; encoding: [0x40,0x00,0xf0,0xdb,0x00,0x00,0x00,0x01]
-// GFX13-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
-
-ds_load_tr6_b96 v[1:3], v0
-// GFX13-W32: ds_load_tr6_b96 v[1:3], v0              ; encoding: [0x00,0x00,0xec,0xdb,0x00,0x00,0x00,0x01]
-// GFX13-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
-
-ds_load_tr6_b96 v[1:3], v0 offset:64
-// GFX13-W32: ds_load_tr6_b96 v[1:3], v0 offset:64    ; encoding: [0x40,0x00,0xec,0xdb,0x00,0x00,0x00,0x01]
 // GFX13-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32

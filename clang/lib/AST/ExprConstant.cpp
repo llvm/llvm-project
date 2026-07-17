@@ -3264,8 +3264,17 @@ static bool HandleLValueMember(EvalInfo &Info, const Expr *E, LValue &LVal,
                                const FieldDecl *FD,
                                const ASTRecordLayout *RL = nullptr) {
   if (!RL) {
-    if (FD->getParent()->isInvalidDecl()) return false;
-    RL = &Info.Ctx.getASTRecordLayout(FD->getParent());
+    const RecordDecl *RD = FD->getParent();
+    if (RD->isInvalidDecl())
+      return false;
+    // There are some cases where the base is not yet complete but we haven't
+    // disagnosed (such as in a template instantation of an attribute that
+    // references the expression, ala enable_if).  These aren't necessarily
+    // constant expressions so we return 'false', but they might be, so we don't
+    // diagnose.
+    if (!RD->isCompleteDefinition())
+      return false;
+    RL = &Info.Ctx.getASTRecordLayout(RD);
   }
 
   unsigned I = FD->getFieldIndex();

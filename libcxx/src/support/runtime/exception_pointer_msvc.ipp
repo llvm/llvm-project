@@ -14,8 +14,8 @@ _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wmultichar")
 #include <cstdlib>
 #include <cstring>
 
-#include <Unknwn.h>
-#include <Windows.h>
+#include <unknwn.h>
+#include <windows.h>
 struct _ThrowInfo;
 #include <eh.h>
 #include <ehdata.h>

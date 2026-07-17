@@ -1340,9 +1340,7 @@ bool Parser::ParseParenExprOrCondition(StmtResult *InitStmt,
             << Cond.get().first->getSourceRange();
     } else if (Cond.get().first != nullptr)
       // Handle: if (int decl = 0) {}.
-      Diag(Cond.get().first->getBeginLoc(),
-           getLangOpts().C2y ? diag::warn_c2y_compat_decl_statement
-                             : diag::ext_c2y_decl_statement)
+      DiagCompat(Cond.get().first->getBeginLoc(), diag_compat::decl_statement)
           << (CK == Sema::ConditionKind::Switch);
   }
 

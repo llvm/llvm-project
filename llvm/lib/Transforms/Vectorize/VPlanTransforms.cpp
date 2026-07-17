@@ -1110,14 +1110,10 @@ optimizeLatchExitInductionUser(VPlan &Plan, VPValue *Op,
                                DenseMap<VPValue *, VPValue *> &EndValues,
                                PredicatedScalarEvolution &PSE) {
   VPValue *Incoming;
-  if (!match(Op,
-             m_CombineOr(m_ExtractLastLaneOfLastPart(m_VPValue(Incoming))))) {
-    VPValue *Mask;
-    if (!match(Op, m_ExtractLane(m_LastActiveLane(m_VPValue(Mask)),
-                                 m_VPValue(Incoming))) ||
-        !match(Mask, m_HeaderMask()))
-      return nullptr;
-  }
+  if (!match(Op, m_CombineOr(m_ExtractLastLaneOfLastPart(m_VPValue(Incoming)),
+                             m_ExtractLane(m_LastActiveLane(m_HeaderMask()),
+                                           m_VPValue(Incoming)))))
+    return nullptr;
 
   VPWidenInductionRecipe *WideIV = getOptimizableIVOf(Incoming, PSE);
   if (!WideIV)
@@ -5502,19 +5498,14 @@ void VPlanTransforms::materializePacksAndUnpacks(VPlan &Plan) {
   for (VPBasicBlock *VPBB :
        concat<VPBasicBlock *>(VPBBsOutsideLoopRegion, VPBBsInsideLoopRegion)) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      if (!isa<VPScalarIVStepsRecipe, VPReplicateRecipe, VPInstruction>(&R))
+      if (!vputils::doesGeneratePerAllLanes(&R))
         continue;
       auto *DefR = cast<VPSingleDefRecipe>(&R);
       auto UsesVectorOrInsideReplicateRegion = [DefR, LoopRegion](VPUser *U) {
         VPRegionBlock *ParentRegion = cast<VPRecipeBase>(U)->getRegion();
         return !U->usesScalars(DefR) || ParentRegion != LoopRegion;
       };
-      if ((isa<VPReplicateRecipe>(DefR) &&
-           cast<VPReplicateRecipe>(DefR)->isSingleScalar()) ||
-          (isa<VPInstruction>(DefR) &&
-           (vputils::onlyFirstLaneUsed(DefR) ||
-            !cast<VPInstruction>(DefR)->doesGeneratePerAllLanes())) ||
-          none_of(DefR->users(), UsesVectorOrInsideReplicateRegion))
+      if (none_of(DefR->users(), UsesVectorOrInsideReplicateRegion))
         continue;
 
       Type *ScalarTy = DefR->getScalarType();
@@ -7721,10 +7712,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       if (!LoadR || LoadR->isConsecutive())
         continue;
 
-      auto *Ptr = dyn_cast<VPWidenGEPRecipe>(LoadR->getAddr());
-      if (!Ptr)
-        continue;
-
+      VPValue *Ptr = LoadR->getAddr();
       // Check if this is a strided access by analyzing the address SCEV for an
       // affine addRec.
       const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, &L);
@@ -7796,7 +7784,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       // Create a new vector pointer for strided access.
       VPValue *NewPtr = Builder.createVectorPointer(
           BasePtr, Type::getInt8Ty(Plan.getContext()), StrideInBytes, NWFlags,
-          Ptr->getDebugLoc());
+          LoadR->getDebugLoc());
 
       VPValue *Mask = LoadR->getMask();
       if (!Mask)

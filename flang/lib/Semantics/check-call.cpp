@@ -41,6 +41,11 @@ void CheckImplicitInterfaceArgKeywords(
 void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
     parser::ContextualMessages &messages, SemanticsContext &context) {
   CheckImplicitInterfaceArgKeywords(arg, messages);
+  if (arg.isConditionalArg()) {
+    messages.Say(
+        "Conditional argument requires an explicit interface"_err_en_US);
+    return;
+  }
   auto type{arg.GetType()};
   if (type) {
     if (type->IsAssumedType()) {
@@ -1408,6 +1413,98 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
   }
 }
 
+// F2023 C1540-C1543, C1545: Check conditional argument against dummy data
+// object
+static void CheckConditionalArg(
+    const evaluate::ActualArgument::ConditionalArg &condArg,
+    const characteristics::DummyDataObject &object,
+    const std::string &dummyName, parser::ContextualMessages &messages) {
+  // C1540: .NIL. shall not appear if dummy is not optional
+  if (condArg.HasNilConsequent() &&
+      !object.attrs.test(characteristics::DummyDataObject::Attr::Optional)) {
+    messages.Say(
+        ".NIL. in conditional argument associated with non-optional %s"_err_en_US,
+        dummyName);
+  }
+  // Check a single consequent for C1541, C1543, C1542
+  auto checkOneConsequent{[&](const evaluate::ActualArgument::ConditionalArg::
+                                  Consequent &cons) {
+    if (!cons) {
+      return;
+    }
+    const auto &consExpr{cons->value()};
+    // C1541: INTENT(OUT/INOUT) requires variable
+    if ((object.intent == common::Intent::Out ||
+            object.intent == common::Intent::InOut) &&
+        !evaluate::IsVariable(consExpr)) {
+      messages.Say(
+          "Each consequent-arg in conditional argument associated with INTENT(%s) %s must be a variable"_err_en_US,
+          object.intent == common::Intent::Out ? "OUT" : "IN OUT", dummyName);
+    }
+    // C1543: assumed-rank consequent-arg requires assumed-rank dummy
+    if (semantics::IsAssumedRank(consExpr) &&
+        !object.type.attrs().test(
+            characteristics::TypeAndShape::Attr::AssumedRank)) {
+      messages.Say(
+          "Assumed-rank consequent-arg in conditional argument may only be associated with assumed-rank %s"_err_en_US,
+          dummyName);
+    }
+    // C1542: coarray attribute
+    if (object.type.corank() > 0 && !evaluate::IsCoarray(consExpr)) {
+      messages.Say(
+          "Each consequent-arg in conditional argument associated with a coarray %s must be a coarray"_err_en_US,
+          dummyName);
+    }
+    // C1544: the requirement that each consequent-arg match the dummy's
+    // ALLOCATABLE/POINTER attribute is enforced by the standard
+    // explicit-interface check (checkOneExpr) run on each non-.NIL.
+    // consequent below.
+  }};
+  condArg.ForEachConsequent(checkOneConsequent);
+  // C1545: in a reference to a generic procedure, each consequent-arg shall
+  // have the same corank, and if any has the ALLOCATABLE or POINTER attribute,
+  // each shall have it.  Strictly, this requirement applies only to references
+  // to generic procedures, where it avoids ambiguity when resolving the generic
+  // to a specific procedure; for a specific procedure reference these
+  // combinations are otherwise allowed.  For now it is enforced unconditionally
+  // here.
+  // TODO: move this check into generic resolution (ResolveGeneric) and enforce
+  // it precisely, i.e. only for references to generic procedures, where the
+  // ambiguity it guards against can actually arise.
+  std::optional<int> firstCorank;
+  std::optional<bool> firstIsAllocatable;
+  std::optional<bool> firstIsPointer;
+  auto checkConsistency{[&](const evaluate::ActualArgument::ConditionalArg::
+                                Consequent &cons) {
+    if (!cons) {
+      return;
+    }
+    auto &consExpr{cons->value()};
+    int corank{evaluate::GetCorank(consExpr)};
+    bool isAlloc{evaluate::IsAllocatableDesignator(consExpr)};
+    bool isPtr{evaluate::IsObjectPointer(consExpr)};
+    if (!firstCorank) {
+      firstCorank = corank;
+      firstIsAllocatable = isAlloc;
+      firstIsPointer = isPtr;
+    } else {
+      if (corank != *firstCorank) {
+        messages.Say(
+            "All consequent-args in a conditional argument must have the same corank"_err_en_US);
+      }
+      if (isAlloc != *firstIsAllocatable) {
+        messages.Say(
+            "If any consequent-arg in a conditional argument has the ALLOCATABLE attribute, each must have it"_err_en_US);
+      }
+      if (isPtr != *firstIsPointer) {
+        messages.Say(
+            "If any consequent-arg in a conditional argument has the POINTER attribute, each must have it"_err_en_US);
+      }
+    }
+  }};
+  condArg.ForEachConsequent(checkConsistency);
+}
+
 // Allow BOZ literal actual arguments when they can be converted to a known
 // dummy argument type
 static void ConvertBOZLiteralArg(
@@ -1441,34 +1538,34 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
           "Alternate return label '%d' cannot be associated with %s"_err_en_US,
           arg.GetLabel(), dummyName);
       return false;
-    } else {
-      return true;
     }
+    return true;
   };
   common::visit(
       common::visitors{
           [&](const characteristics::DummyDataObject &object) {
             if (CheckActualArgForLabel(arg)) {
               ConvertBOZLiteralArg(arg, object.type.type());
-              if (auto *expr{arg.UnwrapExpr()}) {
+              // Check a single actual expression against the dummy object.
+              auto checkOneExpr{[&](evaluate::Expr<evaluate::SomeType> &expr) {
                 if (auto type{characteristics::TypeAndShape::Characterize(
-                        *expr, foldingContext)}) {
+                        expr, foldingContext)}) {
                   arg.set_dummyIntent(object.intent);
                   bool isElemental{
                       object.type.Rank() == 0 && proc.IsElemental()};
-                  CheckExplicitDataArg(object, dummyName, *expr, *type,
+                  CheckExplicitDataArg(object, dummyName, expr, *type,
                       isElemental, context, foldingContext, scope, intrinsic,
                       allowActualArgumentConversions, extentErrors, proc, arg,
                       dummy);
                 } else if (object.type.type().IsTypelessIntrinsicArgument() &&
-                    IsBOZLiteral(*expr)) {
+                    IsBOZLiteral(expr)) {
                   // ok
                 } else if (object.type.type().IsTypelessIntrinsicArgument() &&
-                    evaluate::IsNullObjectPointer(expr)) {
+                    evaluate::IsNullObjectPointer(&expr)) {
                   // ok, ASSOCIATED(NULL(without MOLD=))
                 } else if (object.type.attrs().test(characteristics::
                                    TypeAndShape::Attr::AssumedRank) &&
-                    evaluate::IsNullObjectPointer(expr) &&
+                    evaluate::IsNullObjectPointer(&expr) &&
                     (object.attrs.test(
                          characteristics::DummyDataObject::Attr::Allocatable) ||
                         object.attrs.test(
@@ -1481,7 +1578,7 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                                     Attr::Pointer) ||
                                object.attrs.test(characteristics::
                                        DummyDataObject::Attr::Optional)) &&
-                    evaluate::IsNullObjectPointer(expr)) {
+                    evaluate::IsNullObjectPointer(&expr)) {
                   // FOO(NULL(without MOLD=))
                   if (object.type.type().IsAssumedLengthCharacter()) {
                     messages.Say(
@@ -1500,30 +1597,44 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                   }
                 } else if (object.attrs.test(characteristics::DummyDataObject::
                                    Attr::Allocatable) &&
-                    (evaluate::IsNullAllocatable(expr) ||
-                        evaluate::IsBareNullPointer(expr))) {
+                    (evaluate::IsNullAllocatable(&expr) ||
+                        evaluate::IsBareNullPointer(&expr))) {
                   if (object.intent == common::Intent::Out ||
                       object.intent == common::Intent::InOut) {
                     messages.Say(
                         "NULL() actual argument '%s' may not be associated with allocatable dummy argument %s that is INTENT(OUT) or INTENT(IN OUT)"_err_en_US,
-                        expr->AsFortran(), dummyName);
+                        expr.AsFortran(), dummyName);
                   } else if (object.intent == common::Intent::Default) {
                     foldingContext.Warn(
                         common::UsageWarning::
                             NullActualForDefaultIntentAllocatable,
                         "NULL() actual argument '%s' should not be associated with allocatable dummy argument %s without INTENT(IN)"_warn_en_US,
-                        expr->AsFortran(), dummyName);
+                        expr.AsFortran(), dummyName);
                   } else {
                     foldingContext.Warn(
                         common::LanguageFeature::NullActualForAllocatable,
                         "Allocatable %s is associated with %s"_port_en_US,
-                        dummyName, expr->AsFortran());
+                        dummyName, expr.AsFortran());
                   }
                 } else {
                   messages.Say(
                       "Actual argument '%s' associated with %s is not a variable or typed expression"_err_en_US,
-                      expr->AsFortran(), dummyName);
+                      expr.AsFortran(), dummyName);
                 }
+              }};
+              if (auto *condArg{arg.GetConditionalArg()}) {
+                CheckConditionalArg(*condArg, object, dummyName, messages);
+                // Also run standard explicit-interface checks on each
+                // non-.NIL. consequent expression (recursive).
+                condArg->ForEachConsequent(
+                    [&](evaluate::ActualArgument::ConditionalArg::Consequent
+                            &cons) {
+                      if (cons) {
+                        checkOneExpr(cons->value());
+                      }
+                    });
+              } else if (auto *expr{arg.UnwrapExpr()}) {
+                checkOneExpr(*expr);
               } else {
                 const Symbol &assumed{DEREF(arg.GetAssumedTypeDummy())};
                 if (!object.type.type().IsAssumedType()) {
