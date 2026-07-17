@@ -2,7 +2,7 @@ enum class U8Enum : unsigned char {
   Min = 0,
   Max = 255,
 };
-enum class I8Enum : char {
+enum class I8Enum : signed char {
   Min = -128,
   Max = 127,
 };
