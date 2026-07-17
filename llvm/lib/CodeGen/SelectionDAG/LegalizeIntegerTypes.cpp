@@ -1995,9 +1995,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
     Res = PromoteIntOp_ScalarOp(N);
     break;
   case ISD::VSELECT:
-  case ISD::SELECT:       Res = PromoteIntOp_SELECT(N, OpNo); break;
+  case ISD::SELECT:
   case ISD::CT_SELECT:
-    Res = PromoteIntOp_CT_SELECT(N, OpNo);
+    Res = PromoteIntOp_SELECT(N, OpNo);
     break;
   case ISD::SELECT_CC:    Res = PromoteIntOp_SELECT_CC(N, OpNo); break;
   case ISD::SETCC:        Res = PromoteIntOp_SETCC(N, OpNo); break;
@@ -2401,25 +2401,13 @@ SDValue DAGTypeLegalizer::PromoteIntOp_SELECT(SDNode *N, unsigned OpNo) {
       return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0),
                          Res, N->getOperand(1), N->getOperand(2));
 
-  // Promote all the way up to the canonical SetCC type.
-  EVT OpVT = N->getOpcode() == ISD::SELECT ? OpTy.getScalarType() : OpTy;
+  // Promote all the way up to the canonical SetCC type. SELECT and CT_SELECT
+  // have a scalar condition; VSELECT's mask type matches the vector operands.
+  EVT OpVT = N->getOpcode() == ISD::VSELECT ? OpTy : OpTy.getScalarType();
   Cond = PromoteTargetBoolean(Cond, OpVT);
 
   return SDValue(DAG.UpdateNodeOperands(N, Cond, N->getOperand(1),
                                         N->getOperand(2)), 0);
-}
-
-SDValue DAGTypeLegalizer::PromoteIntOp_CT_SELECT(SDNode *N, unsigned OpNo) {
-  assert(OpNo == 0 && "Only know how to promote the condition!");
-  SDValue Cond = N->getOperand(0);
-  EVT OpTy = N->getOperand(1).getValueType();
-
-  // Promote all the way up to the canonical SetCC type. The condition is
-  // always scalar, so derive the boolean type from the operands' scalar type.
-  Cond = PromoteTargetBoolean(Cond, OpTy.getScalarType());
-
-  return SDValue(
-      DAG.UpdateNodeOperands(N, Cond, N->getOperand(1), N->getOperand(2)), 0);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_SELECT_CC(SDNode *N, unsigned OpNo) {
@@ -3029,9 +3017,9 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
 
   case ISD::ARITH_FENCE:  SplitRes_ARITH_FENCE(N, Lo, Hi); break;
   case ISD::MERGE_VALUES: SplitRes_MERGE_VALUES(N, ResNo, Lo, Hi); break;
-  case ISD::SELECT:       SplitRes_Select(N, Lo, Hi); break;
+  case ISD::SELECT:
   case ISD::CT_SELECT:
-    SplitRes_CT_SELECT(N, Lo, Hi);
+    SplitRes_Select(N, Lo, Hi);
     break;
   case ISD::SELECT_CC:    SplitRes_SELECT_CC(N, Lo, Hi); break;
   case ISD::POISON:
