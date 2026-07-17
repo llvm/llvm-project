@@ -176,8 +176,8 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
     llvm::opt::ArgStringList CmdArgs;
 
     CmdArgs.append({"-cc1", "-triple=spirv64-amd-amdhsa", "-emit-obj",
-                    "-disable-llvm-optzns", LinkedBCFile.getFilename(), "-o",
-                    Output.getFilename()});
+                    "-disable-llvm-optzns", "-mllvm", "-spirv-preserve-auxdata",
+                    LinkedBCFile.getFilename(), "-o", Output.getFilename()});
 
     const Driver &Driver = getToolChain().getDriver();
     const char *Exec = Driver.getDriverProgramPath();

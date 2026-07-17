@@ -40,6 +40,7 @@ def main(builtin_params={}):
         order=opts.order,
         params=params,
         config_prefix=opts.configPrefix,
+        pass_env=opts.pass_env,
         per_test_coverage=opts.per_test_coverage,
         test_output_root=opts.test_output_root,
         gtest_sharding=opts.gtest_sharding,

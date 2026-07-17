@@ -896,7 +896,7 @@ void CIRGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &args) {
          "Body of an implicit assignment operator should be compound stmt.");
   const auto *rootCS = cast<CompoundStmt>(rootS);
 
-  cgm.setCXXSpecialMemberAttr(cast<cir::FuncOp>(curFn), assignOp);
+  cgm.setFuncInfoAttr(cast<cir::FuncOp>(curFn), assignOp);
 
   assert(!cir::MissingFeatures::incrementProfileCounter());
   assert(!cir::MissingFeatures::runCleanupsScope());
