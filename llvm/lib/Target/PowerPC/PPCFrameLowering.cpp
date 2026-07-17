@@ -1772,11 +1772,11 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
   // Lambda to build MTCRF/MTOCRF instruction for restoring CR fields
   auto BuildMoveToCR = [&](MachineBasicBlock::iterator InsertPt,
                            Register SrcReg) {
-    if (MustSaveCRs.size() == 1) {
+    if (MustSaveCRs.size() == 1)
       // Use MTOCRF for single CR field
       BuildMI(MBB, InsertPt, dl, MoveToCRInst, MustSaveCRs[0])
           .addReg(SrcReg, getKillRegState(true));
-    } else {
+    else {
       // Build CR mask for MTCRF.
       unsigned CRMask = 0;
       for (unsigned CRField : MustSaveCRs) {
