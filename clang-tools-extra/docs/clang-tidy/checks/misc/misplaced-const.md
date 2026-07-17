@@ -11,7 +11,7 @@ rather than the pointee.
 For instance, in the following code, the resulting type is `int * const`
 rather than `const int *`:
 
-```c++
+```cpp
 typedef int *int_ptr;
 void f(const int_ptr ptr) {
   *ptr = 0; // potentially quite unexpectedly the int can be modified here
@@ -23,4 +23,3 @@ The check does not diagnose when the underlying `typedef`/`using` type is a
 pointer to a `const` type or a function pointer type. This is because the
 `const` qualifier is less likely to be mistaken because it would be redundant
 (or disallowed) on the underlying pointee type.
-

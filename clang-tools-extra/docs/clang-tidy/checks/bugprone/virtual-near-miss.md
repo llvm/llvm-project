@@ -9,7 +9,7 @@ class.
 
 Example:
 
-```c++
+```cpp
 struct Base {
   virtual void func();
 };
@@ -19,4 +19,3 @@ struct Derived : Base {
   // warning: 'Derived::funk' has a similar name and the same signature as virtual method 'Base::func'; did you mean to override it?
 };
 ```
-

@@ -9,11 +9,10 @@ remain open across a fork+exec to a lower-privileged SELinux domain.
 
 Examples:
 
-```c++
+```cpp
 int fd = dup(oldfd);
 
 // becomes
 
 int fd = fcntl(oldfd, F_DUPFD_CLOEXEC);
 ```
-

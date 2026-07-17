@@ -7,7 +7,7 @@ Find and replace `unique_ptr::reset(release())` with `std::move()`.
 
 Example:
 
-```c++
+```cpp
 std::unique_ptr<Foo> x, y;
 x.reset(y.release()); -> x = std::move(y);
 ```
@@ -17,10 +17,8 @@ also be `std::unique_ptr<Foo>*`.
 
 ## Options
 
-```{eval-rst}
-.. option:: IncludeStyle
+```{option} IncludeStyle
 
-   A string specifying which include-style is used, `llvm` or `google`. Default
-   is `llvm`.
+A string specifying which include-style is used, `llvm` or `google`. Default
+is `llvm`.
 ```
-

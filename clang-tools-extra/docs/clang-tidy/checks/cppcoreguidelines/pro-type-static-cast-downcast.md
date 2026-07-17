@@ -16,10 +16,8 @@ profile from the C++ Core Guidelines.
 
 ## Options
 
-```{eval-rst}
-.. option:: StrictMode
+```{option} StrictMode
 
-  When set to `false`, no warnings are emitted for casts on non-polymorphic
-  types. Default is `true`.
+When set to `false`, no warnings are emitted for casts on non-polymorphic
+types. Default is `true`.
 ```
-

@@ -11,5 +11,6 @@ but does not actually attempt to execute a command.
 ## References
 
 This check corresponds to the CERT C Coding Standard rule
-[ENV33-C. Do not call system()](https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/environment-env/env33-c/).
+[ENV33-C. Do not call system()][ENV33-C].
 
+[ENV33-C]: https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/environment-env/env33-c/

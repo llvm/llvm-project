@@ -8,11 +8,10 @@ The usage of `inotify_init()` is not recommended, it's better to use
 
 Examples:
 
-```c++
+```cpp
 inotify_init();
 
 // becomes
 
 inotify_init1(IN_CLOEXEC);
 ```
-

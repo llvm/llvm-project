@@ -11,13 +11,13 @@ child process, potentially into a lower-privileged SELinux domain.
 
 Examples:
 
-```c++
+```cpp
 pipe(pipefd);
 ```
 
 Suggested replacement:
 
-```c++
+```cpp
 pipe2(pipefd, O_CLOEXEC);
 ```
 

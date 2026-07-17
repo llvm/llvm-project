@@ -8,7 +8,7 @@ as described in the [Trojan Source](https://www.trojansource.codes) attack.
 
 Example:
 
-```c++
+```cpp
 #include <iostream>
 
 int main() {
@@ -19,4 +19,3 @@ int main() {
     return 0;
 }
 ```
-

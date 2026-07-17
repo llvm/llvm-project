@@ -7,7 +7,7 @@ Detects `do while` loops with a condition always evaluating to false that
 have a `continue` statement, as this `continue` terminates the loop
 effectively.
 
-```c++
+```cpp
 void f() {
 do {
   // some code
@@ -15,4 +15,3 @@ do {
   // some other code
 } while(false);
 ```
-

@@ -13,21 +13,14 @@ Corresponding cpplint.py check: `runtime/int`.
 
 ## Options
 
-```{eval-rst}
-.. option:: UnsignedTypePrefix
-
-   A string specifying the unsigned type prefix. Default is `uint`.
+```{option} UnsignedTypePrefix
+A string specifying the unsigned type prefix. Default is `uint`.
 ```
 
-```{eval-rst}
-.. option:: SignedTypePrefix
-
-   A string specifying the signed type prefix. Default is `int`.
+```{option} SignedTypePrefix
+A string specifying the signed type prefix. Default is `int`.
 ```
 
-```{eval-rst}
-.. option:: TypeSuffix
-
-   A string specifying the type suffix. Default is an empty string.
+```{option} TypeSuffix
+A string specifying the type suffix. Default is an empty string.
 ```
-

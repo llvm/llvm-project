@@ -6,7 +6,7 @@
 Detects and fixes calls to grand-...parent virtual methods instead of calls
 to overridden parent's virtual methods.
 
-```c++
+```cpp
 struct A {
   int virtual foo() {...}
 };
@@ -21,4 +21,3 @@ struct C: public B {
 // warning: qualified name A::foo refers to a member overridden in subclass; did you mean 'B'?  [bugprone-parent-virtual-call]
 };
 ```
-

@@ -8,11 +8,10 @@ The usage of `epoll_create()` is not recommended, it's better to use
 
 Examples:
 
-```c++
+```cpp
 epoll_create(size);
 
 // becomes
 
 epoll_create1(EPOLL_CLOEXEC);
 ```
-

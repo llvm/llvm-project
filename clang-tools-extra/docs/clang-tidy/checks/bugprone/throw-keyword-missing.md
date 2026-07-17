@@ -10,7 +10,7 @@ that the programmer's intention was to throw that object.
 
 Example:
 
-```c++
+```cpp
 void f(int i) {
   if (i < 0) {
     // Exception is created but is not thrown.
@@ -18,4 +18,3 @@ void f(int i) {
   }
 }
 ```
-

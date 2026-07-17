@@ -9,9 +9,8 @@ ones will be executed unconditionally.
 
 Example:
 
-```c++
+```cpp
 #define INCREMENT_TWO(x, y) (x)++; (y)++
 if (do_increment)
   INCREMENT_TWO(a, b);  // (b)++ will be executed unconditionally.
 ```
-

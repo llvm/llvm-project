@@ -17,7 +17,7 @@ variable initialization will not cause problems.
 
 Consider the following code:
 
-```c
+```cpp
 int foo() {
   static int k = bar();
   return k;
@@ -27,4 +27,3 @@ int foo() {
 When synchronization of static initialization is disabled, if two threads both
 call `foo` for the first time, there is the possibility that `k` will be double
 initialized, creating a race condition.
-

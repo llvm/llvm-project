@@ -8,7 +8,7 @@ Finds `cnd_wait`, `cnd_timedwait`, `wait`, `wait_for`, or
 that checks whether a condition predicate holds or the function has a
 condition parameter.
 
-```c++
+```cpp
 if (condition_predicate) {
     condition.wait(lk);
 }
@@ -25,4 +25,3 @@ This check corresponds to the CERT C++ Coding Standard rule
 [CON54-CPP. Wrap functions that can spuriously wake up in a loop](https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/concurrency-con/con54-cpp/).
 and CERT C Coding Standard rule
 [CON36-C. Wrap functions that can spuriously wake up in a loop](https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/concurrency-con/con36-c/).
-

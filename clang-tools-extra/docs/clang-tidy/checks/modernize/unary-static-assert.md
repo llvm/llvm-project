@@ -11,7 +11,7 @@ The check is only applicable for C++17 and later code.
 
 The following code:
 
-```c++
+```cpp
 void f_textless(int a) {
   static_assert(sizeof(a) <= 10, "");
 }
@@ -19,9 +19,8 @@ void f_textless(int a) {
 
 is replaced by:
 
-```c++
+```cpp
 void f_textless(int a) {
   static_assert(sizeof(a) <= 10);
 }
 ```
-

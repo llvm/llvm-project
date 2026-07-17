@@ -13,7 +13,7 @@ including assignments that call an overloaded `operator=()`. The identified
 assignments violate
 [BARR group "Rule 8.2.c"](https://barrgroup.com/embedded-systems/books/embedded-c-coding-standard/statement-rules/if-else-statements).
 
-```c++
+```cpp
 int f = 3;
 if(f = 4) { // This is identified by both `Wparentheses` and this check - should it have been: `if (f == 4)` ?
   f = f + 1;
@@ -23,4 +23,3 @@ if((f == 5) || (f = 6)) { // the assignment here `(f = 6)` is identified by this
   f = f + 2;
 }
 ```
-

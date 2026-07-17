@@ -14,18 +14,15 @@ classes or class consumers.
 
 ## Options
 
-```{eval-rst}
-.. option:: IgnoreClassesWithAllMemberVariablesBeingPublic
+```{option} IgnoreClassesWithAllMemberVariablesBeingPublic
 
-   When `true`, allows to completely ignore classes if **all** the member
-   variables in that class declared with a ``public`` access specifier.
-   Default is `false`.
+When `true`, allows to completely ignore classes if **all** the member
+variables in that class declared with a `public` access specifier.
+Default is `false`.
 ```
 
-```{eval-rst}
-.. option:: IgnorePublicMemberVariables
+```{option} IgnorePublicMemberVariables
 
-   When `true`, allows to ignore (not diagnose) **all** the member variables
-   declared with a ``public`` access specifier. Default is `false`.
+When `true`, allows to ignore (not diagnose) **all** the member variables
+declared with a `public` access specifier. Default is `false`.
 ```
-

@@ -9,11 +9,10 @@ remain open across a fork+exec to a lower-privileged SELinux domain.
 
 Examples:
 
-```c++
+```cpp
 memfd_create(name, MFD_ALLOW_SEALING);
 
 // becomes
 
 memfd_create(name, MFD_ALLOW_SEALING | MFD_CLOEXEC);
 ```
-

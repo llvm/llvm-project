@@ -5,10 +5,9 @@
 
 Finds unused namespace alias declarations.
 
-```c++
+```cpp
 namespace my_namespace {
 class C {};
 }
 namespace unused_alias = ::my_namespace;
 ```
-

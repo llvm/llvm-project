@@ -11,17 +11,15 @@ they should not be put there.
 
 Examples:
 
-```c++
+```cpp
 void f(const string);   // Bad: const is top level.
 void f(const string&);  // Good: const is not top level.
 ```
 
 ## Options
 
-```{eval-rst}
-.. option:: IgnoreMacros
+```{option} IgnoreMacros
 
-   If set to `true`, the check will not give warnings inside macros. Default
-   is `true`.
+If set to `true`, the check will not give warnings inside macros. Default
+is `true`.
 ```
-

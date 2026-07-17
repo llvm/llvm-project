@@ -12,7 +12,7 @@ compatibility guidelines and may result in breakage. See
 
 The following cases will result in warnings:
 
-```c++
+```cpp
 absl::strings_internal::foo();
 // warning triggered on this line
 class foo {
@@ -22,4 +22,3 @@ class foo {
 absl::memory_internal::MakeUniqueResult();
 // warning triggered on this line
 ```
-

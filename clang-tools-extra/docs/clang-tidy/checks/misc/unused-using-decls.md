@@ -12,9 +12,8 @@ option `HeaderFileExtensions`.
 
 Example:
 
-```c++
+```cpp
 // main.cpp
 namespace n { class C; }
 using n::C;  // Never actually used.
 ```
-

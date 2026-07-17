@@ -11,10 +11,9 @@ The check implements the following rule of the
 > You may not use a using-directive to make all names from a namespace
 > available.
 
-```c++
+```cpp
 // Forbidden -- This pollutes the namespace.
 using namespace foo;
 ```
 
 Corresponding cpplint.py check name: `build/namespaces`.
-

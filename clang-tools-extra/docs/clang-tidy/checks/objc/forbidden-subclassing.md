@@ -19,12 +19,10 @@ See <https://clang.llvm.org/docs/AttributeReference.html#objc-subclassing-restri
 
 ## Options
 
-```{eval-rst}
-.. option:: ForbiddenSuperClassNames
+```{option} ForbiddenSuperClassNames
 
-   Semicolon-separated list of names of Objective-C classes which
-   do not support subclassing.
+Semicolon-separated list of names of Objective-C classes which
+do not support subclassing.
 
-   Defaults to `ABNewPersonViewController;ABPeoplePickerNavigationController;ABPersonViewController;ABUnknownPersonViewController;NSHashTable;NSMapTable;NSPointerArray;NSPointerFunctions;NSTimer;UIActionSheet;UIAlertView;UIImagePickerController;UITextInputMode;UIWebView`.
+Defaults to `ABNewPersonViewController;ABPeoplePickerNavigationController;ABPersonViewController;ABUnknownPersonViewController;NSHashTable;NSMapTable;NSPointerArray;NSPointerFunctions;NSTimer;UIActionSheet;UIAlertView;UIImagePickerController;UITextInputMode;UIWebView`.
 ```
-

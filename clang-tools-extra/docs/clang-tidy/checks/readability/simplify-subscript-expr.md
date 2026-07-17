@@ -9,17 +9,15 @@ single element, in which case simply calling `operator[]` suffice.
 
 Examples:
 
-```c++
+```cpp
 std::string s = ...;
 char c = s.data()[i];  // char c = s[i];
 ```
 
 ## Options
 
-```{eval-rst}
-.. option:: Types
+```{option} Types
 
-   The list of type(s) that triggers this check. Default is
-   `::std::basic_string;::std::basic_string_view;::std::vector;::std::array;::std::span`
+The list of type(s) that triggers this check. Default is
+`::std::basic_string;::std::basic_string_view;::std::vector;::std::array;::std::span`
 ```
-

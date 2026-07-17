@@ -5,7 +5,7 @@
 
 Checks all calls resolve to functions within correct namespace.
 
-```c++
+```cpp
 // Implementation inside the LIBC_NAMESPACE namespace.
 // Correct if:
 // - LIBC_NAMESPACE is a macro
@@ -26,4 +26,3 @@ strlen("world");
 
 } // namespace LIBC_NAMESPACE
 ```
-

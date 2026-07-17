@@ -15,10 +15,8 @@ profile from the C++ Core Guidelines.
 
 ## Options
 
-```{eval-rst}
-.. option:: AllowIncrementDecrementOperators
+```{option} AllowIncrementDecrementOperators
 
-   When enabled, the check will allow using the prefix/postfix increment or
-   decrement operators on pointers. Default is ``false``.
+When enabled, the check will allow using the prefix/postfix increment or
+decrement operators on pointers. Default is `false`.
 ```
-

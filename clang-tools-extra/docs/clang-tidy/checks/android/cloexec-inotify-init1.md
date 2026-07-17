@@ -10,7 +10,7 @@ lower-privileged SELinux domain.
 
 Examples:
 
-```c++
+```cpp
 inotify_init1(IN_NONBLOCK);
 
 // becomes

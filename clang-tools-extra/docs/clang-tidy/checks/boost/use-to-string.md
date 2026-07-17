@@ -10,7 +10,7 @@ and replace it with calls to `std::to_string` and `std::to_wstring`.
 It doesn't replace conversion from floating points despite the `to_string`
 overloads, because it would change the behavior.
 
-```c++
+```cpp
 auto str = boost::lexical_cast<std::string>(42);
 auto wstr = boost::lexical_cast<std::wstring>(2137LL);
 
@@ -18,4 +18,3 @@ auto wstr = boost::lexical_cast<std::wstring>(2137LL);
 auto str = std::to_string(42);
 auto wstr = std::to_wstring(2137LL);
 ```
-

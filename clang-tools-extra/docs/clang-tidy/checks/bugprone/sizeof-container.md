@@ -12,7 +12,7 @@ All class/struct types declared in namespace `std::` having a const
 
 Examples:
 
-```c++
+```cpp
 std::string s;
 int a = 47 + sizeof(s); // warning: sizeof() doesn't return the size of the container. Did you mean .size()?
 
@@ -24,4 +24,3 @@ int c = sizeof(array_of_strings) / sizeof(array_of_strings[0]); // no warning, d
 std::array<int, 3> std_array;
 int d = sizeof(std_array); // no warning, probably intended.
 ```
-

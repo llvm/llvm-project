@@ -9,20 +9,15 @@ this will work with `std::string` and `std::string_view`.
 
 Covered scenarios:
 
-```{eval-rst}
-==================================================== =====================
-Expression                                           Replacement
----------------------------------------------------- ---------------------
-``u.find(v) == 0``                                   ``u.starts_with(v)``
-``u.find(v, 0) == 0``                                ``u.starts_with(v)``
-``u.find(v, 0, v.size()) == 0``                      ``u.starts_with(v)``
-``u.rfind(v, 0) != 0``                               ``!u.starts_with(v)``
-``u.rfind(v, 0, v.size()) != 0``                     ``!u.starts_with(v)``
-``u.compare(0, v.size(), v) == 0``                   ``u.starts_with(v)``
-``u.substr(0, v.size()) == v``                       ``u.starts_with(v)``
-``v != u.substr(0, v.size())``                       ``!u.starts_with(v)``
-``u.compare(u.size() - v.size(), v.size(), v) == 0`` ``u.ends_with(v)``
-``u.rfind(v) == u.size() - v.size()``                ``u.ends_with(v)``
-==================================================== =====================
-```
-
+| Expression | Replacement |
+| ---------- | ----------- |
+| `u.find(v) == 0` | `u.starts_with(v)` |
+| `u.find(v, 0) == 0` | `u.starts_with(v)` |
+| `u.find(v, 0, v.size()) == 0` | `u.starts_with(v)` |
+| `u.rfind(v, 0) != 0` | `!u.starts_with(v)` |
+| `u.rfind(v, 0, v.size()) != 0` | `!u.starts_with(v)` |
+| `u.compare(0, v.size(), v) == 0` | `u.starts_with(v)` |
+| `u.substr(0, v.size()) == v` | `u.starts_with(v)` |
+| `v != u.substr(0, v.size())` | `!u.starts_with(v)` |
+| `u.compare(u.size() - v.size(), v.size(), v) == 0` | `u.ends_with(v)` |
+| `u.rfind(v) == u.size() - v.size()` | `u.ends_with(v)` |

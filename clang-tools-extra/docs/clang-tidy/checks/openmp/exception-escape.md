@@ -18,10 +18,8 @@ WARNING! This check may be expensive on large source files.
 
 ## Options
 
-```{eval-rst}
-.. option:: IgnoredExceptions
+```{option} IgnoredExceptions
 
-   Comma-separated list containing type names which are not counted as thrown
-   exceptions in the check. Default value is an empty string.
+Comma-separated list containing type names which are not counted as thrown
+exceptions in the check. Default value is an empty string.
 ```
-

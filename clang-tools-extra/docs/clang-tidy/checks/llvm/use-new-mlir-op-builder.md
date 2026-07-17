@@ -8,13 +8,12 @@ and suggests using `T::create` instead.
 
 ## Example
 
-```c++
+```cpp
 builder.create<FooOp>(builder.getUnknownLoc(), "baz");
 ```
 
 Transforms to:
 
-```c++
+```cpp
 FooOp::create(builder, builder.getUnknownLoc(), "baz");
 ```
-

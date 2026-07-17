@@ -10,7 +10,7 @@ For example, warns on `::sin(0.f)`, because this function's parameter is a
 double. You probably meant to call `std::sin(0.f)` (in C++), or `sinf(0.f)`
 (in C).
 
-```c++
+```cpp
 float a;
 asin(a);
 
@@ -19,4 +19,3 @@ asin(a);
 float a;
 std::asin(a);
 ```
-

@@ -8,7 +8,7 @@ implementation file, which often leads to hard-to-track-down ODR violations.
 
 Examples:
 
-```c++
+```cpp
 #include "Dinosaur.hpp"     // OK, .hpp files tend not to have definitions.
 #include "Pterodactyl.h"    // OK, .h files tend not to have definitions.
 #include "Velociraptor.cpp" // Warning, filename is suspicious.
@@ -17,10 +17,7 @@ Examples:
 
 ## Options
 
-```{eval-rst}
-.. option::  IgnoredRegex
-
-   A regular expression for the file name to be ignored by the check. Default
-   is empty string.
+```{option} IgnoredRegex
+A regular expression for the file name to be ignored by the check. Default
+is empty string.
 ```
-

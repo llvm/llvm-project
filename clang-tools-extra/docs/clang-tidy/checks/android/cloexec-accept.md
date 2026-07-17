@@ -9,11 +9,10 @@ a fork+exec to a lower-privileged SELinux domain.
 
 Examples:
 
-```c++
+```cpp
 accept(sockfd, addr, addrlen);
 
 // becomes
 
 accept4(sockfd, addr, addrlen, SOCK_CLOEXEC);
 ```
-

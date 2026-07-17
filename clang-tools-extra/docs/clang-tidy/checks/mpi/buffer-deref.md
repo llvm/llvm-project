@@ -12,7 +12,7 @@ warning emitted.
 
 Examples:
 
-```c++
+```cpp
 // A double pointer is passed to the MPI function.
 char *buf;
 MPI_Send(&buf, 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
@@ -25,4 +25,3 @@ MPI_Send(buf, 1, MPI_SHORT, 0, 0, MPI_COMM_WORLD);
 short *buf[1];
 MPI_Send(buf, 1, MPI_SHORT, 0, 0, MPI_COMM_WORLD);
 ```
-

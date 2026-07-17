@@ -7,7 +7,7 @@ Finds redundant dereferences of a function pointer.
 
 Before:
 
-```c++
+```cpp
 int f(int,int);
 int (*p)(int, int) = &f;
 
@@ -16,10 +16,9 @@ int i = (**p)(10, 50);
 
 After:
 
-```c++
+```cpp
 int f(int,int);
 int (*p)(int, int) = &f;
 
 int i = (*p)(10, 50);
 ```
-

@@ -9,11 +9,10 @@ would remain open across a fork+exec to a lower-privileged SELinux domain.
 
 Examples:
 
-```c++
+```cpp
 epoll_create1(0);
 
 // becomes
 
 epoll_create1(EPOLL_CLOEXEC);
 ```
-

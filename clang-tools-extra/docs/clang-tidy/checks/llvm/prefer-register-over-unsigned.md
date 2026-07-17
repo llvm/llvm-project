@@ -9,7 +9,7 @@ them to use `Register`.
 Currently this works by finding all variables of unsigned integer type whose
 initializer begins with an implicit cast from `Register` to `unsigned`.
 
-```c++
+```cpp
 void example(MachineOperand &MO) {
   unsigned Reg = MO.getReg();
   ...
@@ -18,10 +18,9 @@ void example(MachineOperand &MO) {
 
 becomes:
 
-```c++
+```cpp
 void example(MachineOperand &MO) {
   Register Reg = MO.getReg();
   ...
 }
 ```
-

@@ -12,7 +12,7 @@ practice this is very rare, and still indicates a bug which should be fixed.
 
 Examples:
 
-```c++
+```cpp
 // Original - Comparison in the integer domain
 int x;
 absl::Time t;
@@ -21,4 +21,3 @@ if (x < absl::ToUnixSeconds(t)) ...
 // Suggested - Compare in the absl::Time domain instead
 if (absl::FromUnixSeconds(x) < t) ...
 ```
-

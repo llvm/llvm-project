@@ -9,7 +9,7 @@ parameters as values.
 
 Examples:
 
-```c++
+```cpp
 std::future<int> someCoroutine(int& val) {
   co_await ...;
   // When the coroutine is resumed, 'val' might no longer be valid.
@@ -19,4 +19,3 @@ std::future<int> someCoroutine(int& val) {
 
 This check implements [CP.53](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#rcoro-reference-parameters)
 from the C++ Core Guidelines.
-

@@ -11,7 +11,7 @@ of verification.
 
 Example:
 
-```c++
+```cpp
 // In this case, the buffer type matches MPI datatype.
 char buf;
 MPI_Send(&buf, 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
@@ -20,4 +20,3 @@ MPI_Send(&buf, 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
 int buf;
 MPI_Send(&buf, 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
 ```
-

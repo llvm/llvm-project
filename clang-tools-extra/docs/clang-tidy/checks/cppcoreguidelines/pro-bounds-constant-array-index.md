@@ -15,18 +15,15 @@ Optionally, this check can generate fixes using `gsl::at` for indexing.
 
 ## Options
 
-```{eval-rst}
-.. option:: GslHeader
+```{option} GslHeader
 
-   The check can generate fixes after this option has been set to the name of
-   the include file that contains ``gsl::at()``, e.g. `"gsl/gsl.h"`.
-   Default is an empty string.
+The check can generate fixes after this option has been set to the name of
+the include file that contains `gsl::at()`, e.g. `"gsl/gsl.h"`.
+Default is an empty string.
 ```
 
-```{eval-rst}
-.. option:: IncludeStyle
+```{option} IncludeStyle
 
-   A string specifying which include-style is used, `llvm` or `google`. Default
-   is `llvm`.
+A string specifying which include-style is used, `llvm` or `google`. Default
+is `llvm`.
 ```
-

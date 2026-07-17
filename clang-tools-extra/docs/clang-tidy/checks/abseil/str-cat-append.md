@@ -9,10 +9,9 @@ Flags uses of `absl::StrCat()` to append to a `std::string`. Suggests
 The extra calls cause unnecessary temporary strings to be constructed. Removing
 them makes the code smaller and faster.
 
-```c++
+```cpp
 a = absl::StrCat(a, b); // Use absl::StrAppend(&a, b) instead.
 ```
 
 Does not diagnose cases where `absl::StrCat()` is used as a template
 argument for a functor.
-

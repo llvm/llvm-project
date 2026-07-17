@@ -4,6 +4,5 @@
 # cert-ctr56-cpp
 
 The `cert-ctr56-cpp` check is an alias, please see
-{doc}`bugprone-pointer-arithmetic-on-polymorphic-object
-<../bugprone/pointer-arithmetic-on-polymorphic-object>` for more information.
-
+{doc}`bugprone-pointer-arithmetic-on-polymorphic-object <../bugprone/pointer-arithmetic-on-polymorphic-object>`
+for more information.

@@ -12,13 +12,11 @@ Corresponding cpplint.py check: `readability/todo`
 
 ## Options
 
-```{eval-rst}
-.. option:: Style
+```{option} Style
 
-   A string specifying the TODO style for fix-it hints. Accepted values are
-   `Hyphen` and `Parentheses`. Default is `Hyphen`.
+A string specifying the TODO style for fix-it hints. Accepted values are
+`Hyphen` and `Parentheses`. Default is `Hyphen`.
 
-   * `Hyphen` will format the fix-it as: ``// TODO: username - details``.
-   * `Parentheses` will format the fix-it as: ``// TODO(username): details``.
+* `Hyphen` will format the fix-it as: `// TODO: username - details`.
+* `Parentheses` will format the fix-it as: `// TODO(username): details`.
 ```
-

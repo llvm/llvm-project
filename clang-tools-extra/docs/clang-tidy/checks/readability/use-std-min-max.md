@@ -10,7 +10,7 @@ additional stores compared to the original if statement.
 
 Before:
 
-```c++
+```cpp
 void foo() {
   int a = 2, b = 3;
   if (a < b)
@@ -20,10 +20,9 @@ void foo() {
 
 After:
 
-```c++
+```cpp
 void foo() {
   int a = 2, b = 3;
   a = std::max(a, b);
 }
 ```
-

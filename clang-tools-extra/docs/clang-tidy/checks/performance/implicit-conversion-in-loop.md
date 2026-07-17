@@ -10,7 +10,7 @@ result in expensive deep copies.
 
 Example:
 
-```c++
+```cpp
 map<int, vector<string>> my_map;
 for (const pair<int, vector<string>>& p : my_map) {}
 // The iterator type is in fact pair<const int, vector<string>>, which means
@@ -19,4 +19,3 @@ for (const pair<int, vector<string>>& p : my_map) {}
 
 The easiest solution is usually to use `const auto&` instead of writing the
 type manually.
-

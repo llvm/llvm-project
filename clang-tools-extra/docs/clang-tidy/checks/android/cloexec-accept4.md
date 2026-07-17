@@ -9,11 +9,10 @@ remain open across a fork+exec to a lower-privileged SELinux domain.
 
 Examples:
 
-```c++
+```cpp
 accept4(sockfd, addr, addrlen, SOCK_NONBLOCK);
 
 // becomes
 
 accept4(sockfd, addr, addrlen, SOCK_NONBLOCK | SOCK_CLOEXEC);
 ```
-

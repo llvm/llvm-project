@@ -8,7 +8,7 @@ Finds static function and variable definitions in anonymous namespace.
 In this case, `static` is redundant, because anonymous namespace limits the
 visibility of definitions to a single translation unit.
 
-```c++
+```cpp
 namespace {
   static int a = 1; // Warning.
   static const int b = 1; // Warning.
@@ -19,4 +19,3 @@ namespace {
 ```
 
 The check will apply a fix by removing the redundant `static` qualifier.
-

@@ -11,7 +11,7 @@ sensitive data. Open-like functions including `open()`, `openat()`, and
 
 Examples:
 
-```c++
+```cpp
 open("filename", O_RDWR);
 open64("filename", O_RDWR);
 openat(0, "filename", O_RDWR);
@@ -22,4 +22,3 @@ open("filename", O_RDWR | O_CLOEXEC);
 open64("filename", O_RDWR | O_CLOEXEC);
 openat(0, "filename", O_RDWR | O_CLOEXEC);
 ```
-

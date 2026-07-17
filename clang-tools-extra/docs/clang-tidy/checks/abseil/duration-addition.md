@@ -10,7 +10,7 @@ of a similar scale, and make that inference explicit.
 
 Examples:
 
-```c++
+```cpp
 // Original - Addition in the integer domain
 int x;
 absl::Time t;
@@ -19,4 +19,3 @@ int result = absl::ToUnixSeconds(t) + x;
 // Suggestion - Addition in the absl::Time domain
 int result = absl::ToUnixSeconds(t + absl::Seconds(x));
 ```
-

@@ -16,13 +16,12 @@ more maintainable code.
 
 Before:
 
-```c++
+```cpp
 int x = 1 + 2 * 3 - 4 / 5;
 ```
 
 After:
 
-```c++
+```cpp
 int x = 1 + (2 * 3) - (4 / 5);
 ```
-

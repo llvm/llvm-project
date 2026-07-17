@@ -6,7 +6,7 @@
 Finds ID-dependent variables and fields that are used within loops. This causes
 branches to occur inside the loops, and thus leads to performance degradation.
 
-```c++
+```cpp
 // The following code will produce a warning because this ID-dependent
 // variable is used in a loop condition statement.
 int ThreadID = get_local_id(0);
@@ -24,5 +24,6 @@ for (int i = 0; i < 100; ++i) {
 }
 ```
 
-Based on the [Altera SDK for OpenCL: Best Practices Guide](https://www.altera.com/en_US/pdfs/literature/hb/opencl-sdk/aocl_optimization_guide.pdf).
+Based on the [Altera SDK for OpenCL: Best Practices Guide][altera-guide].
 
+[altera-guide]: https://www.altera.com/en_US/pdfs/literature/hb/opencl-sdk/aocl_optimization_guide.pdf

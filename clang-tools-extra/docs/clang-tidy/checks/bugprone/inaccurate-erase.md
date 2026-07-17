@@ -13,7 +13,7 @@ removed due to using an inappropriate overload.
 
 For example, the following code erases only one element:
 
-```c++
+```cpp
 std::vector<int> xs;
 ...
 xs.erase(std::remove(xs.begin(), xs.end(), 10));
@@ -21,9 +21,8 @@ xs.erase(std::remove(xs.begin(), xs.end(), 10));
 
 Call the two-argument overload of `erase()` to remove the subrange:
 
-```c++
+```cpp
 std::vector<int> xs;
 ...
 xs.erase(std::remove(xs.begin(), xs.end(), 10), xs.end());
 ```
-

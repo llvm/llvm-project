@@ -9,11 +9,10 @@ remain open across a fork+exec to a lower-privileged SELinux domain.
 
 Examples:
 
-```c++
+```cpp
 socket(domain, type, SOCK_STREAM);
 
 // becomes
 
 socket(domain, type, SOCK_STREAM | SOCK_CLOEXEC);
 ```
-

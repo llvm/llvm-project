@@ -5,7 +5,7 @@
 
 Finds integer literals which are cast to `bool`.
 
-```c++
+```cpp
 bool p = 1;
 bool f = static_cast<bool>(1);
 std::ios_base::sync_with_stdio(0);
@@ -21,10 +21,8 @@ bool x = p ? true : false;
 
 ## Options
 
-```{eval-rst}
-.. option:: IgnoreMacros
+```{option} IgnoreMacros
 
-   If set to `true`, the check will not give warnings inside macros. Default
-   is `true`.
+If set to `true`, the check will not give warnings inside macros. Default
+is `true`.
 ```
-

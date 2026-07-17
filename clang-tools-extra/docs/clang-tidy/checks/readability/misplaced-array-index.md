@@ -7,7 +7,7 @@ This check warns for unusual array index syntax.
 
 The following code has unusual array index syntax:
 
-```c++
+```cpp
 void f(int *X, int Y) {
   Y[X] = 0;
 }
@@ -15,13 +15,12 @@ void f(int *X, int Y) {
 
 becomes
 
-```c++
+```cpp
 void f(int *X, int Y) {
   X[Y] = 0;
 }
 ```
 
 The check warns about such unusual syntax for readability reasons:
-: - There are programmers that are not familiar with this unusual syntax.
-  - It is possible that variables are mixed up.
-
+:   - There are programmers that are not familiar with this unusual syntax.
+    - It is possible that variables are mixed up.

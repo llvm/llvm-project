@@ -11,7 +11,7 @@ them makes the code smaller and faster.
 
 Examples:
 
-```c++
+```cpp
 std::string s = absl::StrCat("A", absl::StrCat("B", absl::StrCat("C", "D")));
 //before
 
@@ -24,4 +24,3 @@ absl::StrAppend(&s, absl::StrCat("E", "F", "G"));
 absl::StrAppend(&s, "E", "F", "G");
 //after
 ```
-

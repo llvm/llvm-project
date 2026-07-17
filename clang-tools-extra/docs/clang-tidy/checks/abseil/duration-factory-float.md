@@ -13,7 +13,7 @@ superfluous casts.
 
 Examples:
 
-```c++
+```cpp
 // Original - Providing a floating-point literal.
 absl::Duration d = absl::Seconds(10.0);
 
@@ -27,4 +27,3 @@ absl::Duration d = absl::Seconds(static_cast<double>(10));
 // Suggested - Remove the explicit cast
 absl::Duration d = absl::Seconds(10);
 ```
-

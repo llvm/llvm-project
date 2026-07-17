@@ -10,11 +10,10 @@ with the `noescape` attribute is captured by one of these blocks.
 
 The following is an example of an invalid use of the `noescape` attribute.
 
-> ```objc
-> void foo(__attribute__((noescape)) int *p) {
->   dispatch_async(queue, ^{
->     *p = 123;
->   });
-> });
-> ```
-
+```objc
+void foo(__attribute__((noescape)) int *p) {
+  dispatch_async(queue, ^{
+    *p = 123;
+  });
+});
+```

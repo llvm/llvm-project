@@ -11,13 +11,12 @@ potentially into a lower-privileged SELinux domain.
 
 Examples:
 
-```c++
+```cpp
 pipe2(pipefd, O_NONBLOCK);
 ```
 
 Suggested replacement:
 
-```c++
+```cpp
 pipe2(pipefd, O_NONBLOCK | O_CLOEXEC);
 ```
-

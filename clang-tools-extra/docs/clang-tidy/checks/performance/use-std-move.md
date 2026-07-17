@@ -6,7 +6,7 @@
 Suggests insertion of `std::move(...)` to turn copy assignment operator calls
 into move assignment ones, when deemed valid and profitable.
 
-```c++
+```cpp
 void assign(std::vector<int>& out) {
   std::vector<int> some = make_vector();
   use_vector(some);
@@ -21,4 +21,3 @@ void assign(std::vector<int>& out) {
   out = std::move(some);
 }
 ```
-

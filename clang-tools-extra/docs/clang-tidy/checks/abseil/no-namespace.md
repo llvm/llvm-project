@@ -9,7 +9,7 @@ conflicts with Abseil's compatibility guidelines and may result in breakage.
 
 Any code that uses:
 
-```c++
+```cpp
 namespace absl {
  ...
 }
@@ -18,4 +18,3 @@ namespace absl {
 will be prompted with a warning.
 
 See [the full Abseil compatibility guidelines](https://abseil.io/about/compatibility) for more information.
-

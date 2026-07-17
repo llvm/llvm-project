@@ -14,10 +14,8 @@ pointer access does not perform an errant memory access.
 
 ## Options
 
-```{eval-rst}
-.. option:: IgnoredContainers
+```{option} IgnoredContainers
 
-   Semicolon-separated list of containers regexp for which this check won't be
-   enforced. Default is an empty string.
+Semicolon-separated list of containers regexp for which this check won't be
+enforced. Default is an empty string.
 ```
-
