@@ -424,10 +424,8 @@ private:
 // .dll file. MinGW only.
 class DLLFile : public InputFile {
 public:
-  explicit DLLFile(SymbolTable &symtab, std::unique_ptr<COFFObjectFile> &obj)
-      : InputFile(symtab, DLLKind, obj->getMemoryBufferRef()) {
-    coffObj.swap(obj);
-  }
+  explicit DLLFile(SymbolTable &symtab, MemoryBufferRef m)
+      : InputFile(symtab, DLLKind, m) {}
   static bool classof(const InputFile *f) { return f->kind() == DLLKind; }
   void parse() override;
   MachineTypes getMachineType() const override;
