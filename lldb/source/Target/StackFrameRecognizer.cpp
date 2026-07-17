@@ -8,39 +8,62 @@
 
 #include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Interpreter/Interfaces/ScriptedStackFrameRecognizerInterface.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/RegularExpression.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
 class ScriptedRecognizedStackFrame : public RecognizedStackFrame {
   bool m_hidden;
+  lldb::StackFrameSP m_most_relevant_frame;
+  lldb::ValueObjectSP m_exception;
 
 public:
-  ScriptedRecognizedStackFrame(ValueObjectListSP args, bool hidden)
-      : m_hidden(hidden) {
+  ScriptedRecognizedStackFrame(ValueObjectListSP args, bool hidden,
+                               lldb::StackFrameSP most_relevant_frame,
+                               lldb::ValueObjectSP exception,
+                               std::string stop_desc)
+      : m_hidden(hidden), m_most_relevant_frame(std::move(most_relevant_frame)),
+        m_exception(std::move(exception)) {
     m_arguments = std::move(args);
+    m_stop_desc = std::move(stop_desc);
   }
   bool ShouldHide() override { return m_hidden; }
+  lldb::StackFrameSP GetMostRelevantFrame() override {
+    return m_most_relevant_frame;
+  }
+  lldb::ValueObjectSP GetExceptionObject() override { return m_exception; }
 };
 
 ScriptedStackFrameRecognizer::ScriptedStackFrameRecognizer(
     ScriptInterpreter *interpreter, const char *pclass)
-    : m_interpreter(interpreter), m_python_class(pclass) {
-  m_python_object_sp =
-      m_interpreter->CreateFrameRecognizer(m_python_class.c_str());
+    : m_python_class(pclass) {
+  if (!interpreter)
+    return;
+
+  m_interface_sp = interpreter->CreateScriptedStackFrameRecognizerInterface();
+  if (!m_interface_sp)
+    return;
+
+  ScriptedMetadata scripted_metadata(m_python_class, nullptr);
+  auto obj_or_err = m_interface_sp->CreatePluginObject(scripted_metadata);
+  if (!obj_or_err) {
+    llvm::consumeError(obj_or_err.takeError());
+    m_interface_sp.reset();
+  }
 }
 
 RecognizedStackFrameSP
 ScriptedStackFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame) {
-  if (!m_python_object_sp || !m_interpreter)
+  if (!m_interface_sp)
     return RecognizedStackFrameSP();
 
-  ValueObjectListSP args =
-      m_interpreter->GetRecognizedArguments(m_python_object_sp, frame);
+  ValueObjectListSP args = m_interface_sp->GetRecognizedArguments(frame);
   auto args_synthesized = std::make_shared<ValueObjectList>();
   if (args) {
     for (const auto &o : args->GetObjects())
@@ -48,10 +71,15 @@ ScriptedStackFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame) {
           *o, eValueTypeVariableArgument));
   }
 
-  bool hidden = m_interpreter->ShouldHide(m_python_object_sp, frame);
+  bool hidden = m_interface_sp->ShouldHide(frame);
+  lldb::StackFrameSP most_relevant =
+      m_interface_sp->SelectMostRelevantFrame(frame);
+  lldb::ValueObjectSP exception = m_interface_sp->GetException(frame);
+  std::string stop_desc = m_interface_sp->GetStopDescription(frame);
 
-  return RecognizedStackFrameSP(
-      new ScriptedRecognizedStackFrame(args_synthesized, hidden));
+  return RecognizedStackFrameSP(new ScriptedRecognizedStackFrame(
+      args_synthesized, hidden, std::move(most_relevant), std::move(exception),
+      std::move(stop_desc)));
 }
 
 void StackFrameRecognizerManager::BumpGeneration() {

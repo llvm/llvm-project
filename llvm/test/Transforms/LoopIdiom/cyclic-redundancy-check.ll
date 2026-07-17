@@ -1033,9 +1033,139 @@ exit:                                              ; preds = %loop
   ret i16 %crc.next
 }
 
+define i32 @crc32.le.tc4.data32(i32 %checksum, i32 %msg) optsize {
+; TABLE-LABEL: define i32 @crc32.le.tc4.data32(
+; TABLE-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR0:[0-9]+]] {
+; TABLE-NEXT:  [[ENTRY:.*]]:
+; TABLE-NEXT:    br label %[[LOOP:.*]]
+; TABLE:       [[LOOP]]:
+; TABLE-NEXT:    [[CRC:%.*]] = phi i32 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
+; TABLE-NEXT:    [[DATA:%.*]] = phi i32 [ [[MSG]], %[[ENTRY]] ], [ [[DATA_NEXT:%.*]], %[[LOOP]] ]
+; TABLE-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; TABLE-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i32 [[CRC]], [[DATA]]
+; TABLE-NEXT:    [[SB_CRC_DATA:%.*]] = and i32 [[XOR_CRC_DATA]], 1
+; TABLE-NEXT:    [[CHECK_SB:%.*]] = icmp eq i32 [[SB_CRC_DATA]], 0
+; TABLE-NEXT:    [[CRC_LSHR:%.*]] = lshr i32 [[CRC]], 1
+; TABLE-NEXT:    [[CRC_XOR:%.*]] = xor i32 [[CRC_LSHR]], 33800
+; TABLE-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i32 [[CRC_LSHR]], i32 [[CRC_XOR]]
+; TABLE-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
+; TABLE-NEXT:    [[DATA_NEXT]] = lshr i32 [[DATA]], 1
+; TABLE-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 [[IV]], 3
+; TABLE-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; TABLE:       [[EXIT]]:
+; TABLE-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT]], %[[LOOP]] ]
+; TABLE-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
+;
+; CLMUL-LABEL: define i32 @crc32.le.tc4.data32(
+; CLMUL-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR0:[0-9]+]] {
+; CLMUL-NEXT:  [[ENTRY:.*:]]
+; CLMUL-NEXT:    [[CRC_CAST:%.*]] = zext i32 [[CHECKSUM]] to i36
+; CLMUL-NEXT:    [[DATA_CAST:%.*]] = zext i32 [[MSG]] to i36
+; CLMUL-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i36 [[CRC_CAST]], [[DATA_CAST]]
+; CLMUL-NEXT:    [[CRC_TCBITS:%.*]] = and i36 [[XOR_CRC_DATA1]], 15
+; CLMUL-NEXT:    [[CLMUL_MU:%.*]] = call i36 @llvm.clmul.i36(i36 [[CRC_TCBITS]], i36 17)
+; CLMUL-NEXT:    [[QUOT_MASK:%.*]] = and i36 [[CLMUL_MU]], 15
+; CLMUL-NEXT:    [[CLMUL_GP:%.*]] = call i36 @llvm.clmul.i36(i36 [[QUOT_MASK]], i36 67601)
+; CLMUL-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i36 [[CRC_CAST]], [[CLMUL_GP]]
+; CLMUL-NEXT:    [[CRC_LSHR2:%.*]] = lshr i36 [[XOR_CRC_MULT]], 4
+; CLMUL-NEXT:    [[CRC_NEXT3:%.*]] = trunc i36 [[CRC_LSHR2]] to i32
+; CLMUL-NEXT:    br label %[[LOOP:.*]]
+; CLMUL:       [[LOOP]]:
+; CLMUL-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
+; CLMUL:       [[EXIT]]:
+; CLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT3]], %[[LOOP]] ]
+; CLMUL-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %crc = phi i32 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data = phi i32 [ %msg, %entry ], [ %data.next, %loop ]
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %xor.crc.data = xor i32 %crc, %data
+  %sb.crc.data = and i32 %xor.crc.data, 1
+  %check.sb = icmp eq i32 %sb.crc.data, 0
+  %crc.lshr = lshr i32 %crc, 1
+  %crc.xor = xor i32 %crc.lshr, 33800
+  %crc.next = select i1 %check.sb, i32 %crc.lshr, i32 %crc.xor
+  %iv.next = add nuw nsw i8 %iv, 1
+  %data.next = lshr i32 %data, 1
+  %exit.cond = icmp samesign ult i8 %iv, 3
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i32 %crc.next
+}
+
+define i32 @crc32.le.tc30.data32(i32 %checksum, i32 %msg) optsize {
+; TABLE-LABEL: define i32 @crc32.le.tc30.data32(
+; TABLE-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR0]] {
+; TABLE-NEXT:  [[ENTRY:.*]]:
+; TABLE-NEXT:    br label %[[LOOP:.*]]
+; TABLE:       [[LOOP]]:
+; TABLE-NEXT:    [[CRC:%.*]] = phi i32 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
+; TABLE-NEXT:    [[DATA:%.*]] = phi i32 [ [[MSG]], %[[ENTRY]] ], [ [[DATA_NEXT:%.*]], %[[LOOP]] ]
+; TABLE-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; TABLE-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i32 [[CRC]], [[DATA]]
+; TABLE-NEXT:    [[SB_CRC_DATA:%.*]] = and i32 [[XOR_CRC_DATA]], 1
+; TABLE-NEXT:    [[CHECK_SB:%.*]] = icmp eq i32 [[SB_CRC_DATA]], 0
+; TABLE-NEXT:    [[CRC_LSHR:%.*]] = lshr i32 [[CRC]], 1
+; TABLE-NEXT:    [[CRC_XOR:%.*]] = xor i32 [[CRC_LSHR]], 33800
+; TABLE-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i32 [[CRC_LSHR]], i32 [[CRC_XOR]]
+; TABLE-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
+; TABLE-NEXT:    [[DATA_NEXT]] = lshr i32 [[DATA]], 1
+; TABLE-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 [[IV]], 29
+; TABLE-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; TABLE:       [[EXIT]]:
+; TABLE-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT]], %[[LOOP]] ]
+; TABLE-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
+;
+; CLMUL-LABEL: define i32 @crc32.le.tc30.data32(
+; CLMUL-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR0]] {
+; CLMUL-NEXT:  [[ENTRY:.*:]]
+; CLMUL-NEXT:    [[CRC_CAST:%.*]] = zext i32 [[CHECKSUM]] to i62
+; CLMUL-NEXT:    [[DATA_CAST:%.*]] = zext i32 [[MSG]] to i62
+; CLMUL-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i62 [[CRC_CAST]], [[DATA_CAST]]
+; CLMUL-NEXT:    [[CRC_TCBITS:%.*]] = and i62 [[XOR_CRC_DATA1]], 1073741823
+; CLMUL-NEXT:    [[CLMUL_MU:%.*]] = call i62 @llvm.clmul.i62(i62 [[CRC_TCBITS]], i62 475535633)
+; CLMUL-NEXT:    [[QUOT_MASK:%.*]] = and i62 [[CLMUL_MU]], 1073741823
+; CLMUL-NEXT:    [[CLMUL_GP:%.*]] = call i62 @llvm.clmul.i62(i62 [[QUOT_MASK]], i62 67601)
+; CLMUL-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i62 [[CRC_CAST]], [[CLMUL_GP]]
+; CLMUL-NEXT:    [[CRC_LSHR2:%.*]] = lshr i62 [[XOR_CRC_MULT]], 30
+; CLMUL-NEXT:    [[CRC_NEXT3:%.*]] = trunc i62 [[CRC_LSHR2]] to i32
+; CLMUL-NEXT:    br label %[[LOOP:.*]]
+; CLMUL:       [[LOOP]]:
+; CLMUL-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
+; CLMUL:       [[EXIT]]:
+; CLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT3]], %[[LOOP]] ]
+; CLMUL-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %crc = phi i32 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data = phi i32 [ %msg, %entry ], [ %data.next, %loop ]
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %xor.crc.data = xor i32 %crc, %data
+  %sb.crc.data = and i32 %xor.crc.data, 1
+  %check.sb = icmp eq i32 %sb.crc.data, 0
+  %crc.lshr = lshr i32 %crc, 1
+  %crc.xor = xor i32 %crc.lshr, 33800
+  %crc.next = select i1 %check.sb, i32 %crc.lshr, i32 %crc.xor
+  %iv.next = add nuw nsw i8 %iv, 1
+  %data.next = lshr i32 %data, 1
+  %exit.cond = icmp samesign ult i8 %iv, 29
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i32 %crc.next
+}
+
 define i32 @crc.disabled.optsize(i32 %checksum, i32 %msg) optsize {
 ; TABLE-LABEL: define i32 @crc.disabled.optsize(
-; TABLE-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR0:[0-9]+]] {
+; TABLE-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR0]] {
 ; TABLE-NEXT:  [[ENTRY:.*]]:
 ; TABLE-NEXT:    br label %[[LOOP:.*]]
 ; TABLE:       [[LOOP]]:
@@ -1057,7 +1187,7 @@ define i32 @crc.disabled.optsize(i32 %checksum, i32 %msg) optsize {
 ; TABLE-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
 ;
 ; CLMUL-LABEL: define i32 @crc.disabled.optsize(
-; CLMUL-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR0:[0-9]+]] {
+; CLMUL-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR0]] {
 ; CLMUL-NEXT:  [[ENTRY:.*:]]
 ; CLMUL-NEXT:    [[CRC_CAST:%.*]] = zext i32 [[CHECKSUM]] to i40
 ; CLMUL-NEXT:    [[DATA_CAST:%.*]] = zext i32 [[MSG]] to i40
