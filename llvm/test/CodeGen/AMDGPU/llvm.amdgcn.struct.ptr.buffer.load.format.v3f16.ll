@@ -58,7 +58,7 @@ define amdgpu_gs void @main(ptr addrspace(8) %arg, i32 %arg1) {
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    v_lshrrev_b32_e32 v0, 16, v6
 ; GFX950-NEXT:    v_and_b32_e32 v1, 0xffff, v7
-; GFX950-NEXT:    v_mov_b32_e32 v2, 0
+; GFX950-NEXT:    v_mov_b32_e32 v2, esgs_ring@abs32@lo
 ; GFX950-NEXT:    ds_write2_b32 v2, v0, v1 offset0:7 offset1:8
 ;
 ; GFX9-LABEL: main:

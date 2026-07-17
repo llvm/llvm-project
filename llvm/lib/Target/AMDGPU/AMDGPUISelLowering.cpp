@@ -6169,7 +6169,8 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
     auto *GA = cast<GlobalAddressSDNode>(Op.getOperand(0).getNode());
     Align Alignment = GA->getGlobal()->getPointerAlignment(DAG.getDataLayout());
 
-    Known.Zero.setHighBits(16);
+    Known.Zero.setBitsFrom(
+        Log2_32_Ceil(Subtarget->getAddressableLocalMemorySize()));
     Known.Zero.setLowBits(Log2(Alignment));
     break;
   }
