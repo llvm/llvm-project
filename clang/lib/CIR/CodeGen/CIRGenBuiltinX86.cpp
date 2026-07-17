@@ -834,7 +834,7 @@ static mlir::Value emitX86PackedByteShift(CIRGenBuilderTy &builder,
 
   llvm::SmallVector<int64_t, 64> shuffleMask;
 
-  const unsigned laneSize = 16;
+  constexpr unsigned laneSize = 16;
   const int switchOperand = numElts - laneSize;
 
   // 256/512-bit pslldq/psrldq operates on 128-bit lanes so we need to
