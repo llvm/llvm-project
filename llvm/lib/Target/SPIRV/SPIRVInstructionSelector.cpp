@@ -4662,7 +4662,7 @@ bool SPIRVInstructionSelector::selectIToF(Register ResVReg,
       TmpType = GR.getOrCreateSPIRVVectorType(TmpType, NumElts, I, TII);
     }
     SrcReg = createVirtualRegister(TmpType, &GR, MRI, MRI->getMF());
-    selectBoolToInt(SrcReg, TmpType, I.getOperand(1).getReg(), I, false);
+    selectBoolToInt(SrcReg, TmpType, I.getOperand(1).getReg(), I, IsSigned);
   }
   return selectOpWithSrcs(ResVReg, ResType, I, {SrcReg}, Opcode);
 }

@@ -320,6 +320,9 @@ features cannot lower the translation-unit ABI level;
 
 -Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)
 
+- Fixed a crash when a using-declaration naming an unresolvable member of a
+  dependent base was shadowed by an invalid using-declaration. (#GH209427)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made

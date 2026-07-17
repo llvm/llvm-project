@@ -9764,6 +9764,9 @@ def dxc_Zsb : DXCFlag<"Zsb">,
 def dxc_source_in_debug_module
     : DXCFlag<"Qsource_in_debug_module">,
       HelpText<"Embed source code into PDB debug module">;
+def dxc_Qstrip_debug
+    : DXCFlag<"Qstrip_debug">,
+      HelpText<"Strip debug information from shader container (specified with /Fo <file>)">;
 def dxil_validator_version : Option<["/", "-"], "validator-version", KIND_SEPARATE>,
   Group<dxc_Group>, Flags<[HelpHidden]>,
   Visibility<[DXCOption, ClangOption, CC1Option]>,
