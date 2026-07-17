@@ -6268,7 +6268,9 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
     unsigned RegBits =
         TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector);
     unsigned ElemsPerReg = RegBits / ElemBits;
-    if (ElemsPerReg == 0)
+    // If the load already fits in a register, keep the exact size.
+    // Otherwise round up to the next full register boundary.
+    if (ElemsPerReg == 0 || RawNumElements <= ElemsPerReg)
       return RawNumElements;
 
     // Round up to the next full register boundary.

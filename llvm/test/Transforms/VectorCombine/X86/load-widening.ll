@@ -252,6 +252,25 @@ define <2 x i4> @vec_with_2elts_128bits_i4(ptr align 16 dereferenceable(16) %p) 
   ret <2 x i4> %r
 }
 
+; Shrinking this to <9 x double> would change the legalized type.
+
+define <8 x double> @load_v16f64(ptr %p) {
+; SSE-LABEL: @load_v16f64(
+; SSE-NEXT:    [[TMP1:%.*]] = load <10 x double>, ptr [[P:%.*]], align 512
+; SSE-NEXT:    [[S:%.*]] = shufflevector <10 x double> [[TMP1]], <10 x double> poison, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
+; SSE-NEXT:    ret <8 x double> [[S]]
+;
+; AVX-LABEL: @load_v16f64(
+; AVX-NEXT:    [[TMP1:%.*]] = load <12 x double>, ptr [[P:%.*]], align 512
+; AVX-NEXT:    [[S:%.*]] = shufflevector <12 x double> [[TMP1]], <12 x double> poison, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
+; AVX-NEXT:    ret <8 x double> [[S]]
+;
+  %l = load <16 x double>, ptr %p, align 512
+  %s = shufflevector <16 x double> %l, <16 x double> poison, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
+  ret <8 x double> %s
+}
+
+
 ; Load the 128-bit vector because there is no additional cost.
 
 define <4 x float> @load_v1f32_v4f32(ptr dereferenceable(16) %p) {
@@ -443,8 +462,8 @@ define <8 x float> @load_v2f32_v8f32_hwasan(ptr dereferenceable(32) %p) sanitize
 
 define <4 x i32> @load_v2i32_v4i32_asan(ptr dereferenceable(16) %p) sanitize_address {
 ; CHECK-LABEL: @load_v2i32_v4i32_asan(
-; CHECK-NEXT:    [[L:%.*]] = load <2 x i32>, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <2 x i32> [[L]], <2 x i32> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = load <1 x i32>, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <1 x i32> [[TMP1]], <1 x i32> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <4 x i32> [[S]]
 ;
   %l = load <2 x i32>, ptr %p, align 1
