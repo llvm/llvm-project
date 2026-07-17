@@ -111,12 +111,7 @@ add_unittest_framework_library(
     libc.hdr.stdint_proxy
 )
 
-add_unittest_framework_library(
-  LibcHermeticTestSupport
-  SRCS
-    HermeticHeap.cpp
-    HermeticTestUtils.cpp
-  DEPENDS
+  set(hermetic_test_support_depends
     libc.hdr.stdint_proxy
     libc.src.__support.block
     libc.src.__support.freelist_heap
@@ -125,9 +120,26 @@ add_unittest_framework_library(
     libc.src.__support.CPP.span
     libc.src.__support.OSUtil.osutil
     libc.src.__support.math_extras
-    libc.src.__support.threads.raw_mutex
     libc.src.string.memory_utils.inline_memset
-)
+  )
+  if(${LIBC_TARGET_OS} STREQUAL "linux")
+    list(APPEND hermetic_test_support_depends
+      libc.src.__support.threads.raw_mutex
+    )
+  else()
+    list(APPEND hermetic_test_support_depends
+      libc.src.__support.threads.spin_lock
+    )
+  endif()
+
+  add_unittest_framework_library(
+    LibcHermeticTestSupport
+    SRCS
+      HermeticHeap.cpp
+      HermeticTestUtils.cpp
+    DEPENDS
+      ${hermetic_test_support_depends}
+  )
 
 add_header_library(
   string_utils

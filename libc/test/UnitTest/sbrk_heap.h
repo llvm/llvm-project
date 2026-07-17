@@ -25,7 +25,11 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/os.h"
 #include "src/__support/math_extras.h"
+#if defined(LIBC_TARGET_OS_IS_LINUX)
 #include "src/__support/threads/raw_mutex.h"
+#else
+#include "src/__support/threads/spin_lock.h"
+#endif
 #include "src/string/memory_utils/inline_memset.h"
 
 #if defined(LIBC_TARGET_OS_IS_LINUX)
@@ -34,6 +38,12 @@
 #endif
 
 namespace LIBC_NAMESPACE_DECL {
+
+#if defined(LIBC_TARGET_OS_IS_LINUX)
+using HeapLock = RawMutex;
+#else
+using HeapLock = SpinLock;
+#endif
 
 class SbrkHeap {
 public:
@@ -165,7 +175,7 @@ private:
   cpp::byte *break_ptr;
   size_t current_heap_size;
   alignas(FreeListHeap) cpp::byte heap_storage[sizeof(FreeListHeap)];
-  RawMutex mtx;
+  HeapLock mtx;
 };
 
 } // namespace LIBC_NAMESPACE_DECL

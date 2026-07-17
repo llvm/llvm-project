@@ -71,6 +71,23 @@ if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
       libc.src.string.memcpy
       libc.src.string.memory_utils.inline_memset
   )
+  set(sbrk_heap_test_depends
+    libc.src.__support.CPP.span
+    libc.src.__support.freelist_heap
+    libc.src.__support.block
+    libc.src.__support.CPP.mutex
+    libc.src.string.memory_utils.inline_memset
+  )
+  if(${LIBC_TARGET_OS} STREQUAL "linux")
+    list(APPEND sbrk_heap_test_depends
+      libc.src.__support.threads.raw_mutex
+    )
+  else()
+    list(APPEND sbrk_heap_test_depends
+      libc.src.__support.threads.spin_lock
+    )
+  endif()
+
   add_libc_test(
     sbrk_heap_test
     HERMETIC_TEST_ONLY
@@ -79,12 +96,7 @@ if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
     SRCS
       sbrk_heap_test.cpp
     DEPENDS
-      libc.src.__support.CPP.span
-      libc.src.__support.freelist_heap
-      libc.src.__support.block
-      libc.src.__support.CPP.mutex
-      libc.src.__support.threads.raw_mutex
-      libc.src.string.memory_utils.inline_memset
+      ${sbrk_heap_test_depends}
   )
 endif()
 
