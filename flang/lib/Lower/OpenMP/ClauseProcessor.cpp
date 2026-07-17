@@ -18,7 +18,9 @@
 #include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/ReductionProcessor.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Utils/OpenMP.h"
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
@@ -304,11 +306,24 @@ static mlir::Value buildIteratorOp(Fortran::lower::AbstractConverter &converter,
   Fortran::lower::SymMap &symMap = converter.getSymbolMap();
   Fortran::lower::SymMapScope scope(symMap);
   for (size_t i = 0; i < ranges.size(); ++i) {
+    const Fortran::semantics::Symbol &ivSym = *ranges[i].ivSym;
     mlir::Value ivVal = ivs[i];
-    mlir::Type ivTy = converter.genType(*ranges[i].ivSym);
+    mlir::Type ivTy = converter.genType(ivSym);
     if (ivVal.getType() != ivTy)
       ivVal = fir::ConvertOp::create(builder, loc, ivTy, ivVal);
-    symMap.addSymbol(*ranges[i].ivSym, ivVal, /*force=*/true);
+    // Materialize the iterator induction value in memory and declare it as an
+    // HLFIR variable so that expressions referencing the iterator identifier
+    // (e.g. array subscripts) can be lowered through the HLFIR expression path.
+    // Give the temporary a name in the compiler-generated namespace
+    // (NameUniquer::doGenerated).
+    std::string ivName = fir::NameUniquer::doGenerated(
+        converter.mangleName(ivSym) + ".omp.iter");
+    mlir::Value addr = builder.createTemporary(loc, ivTy, ivName);
+    fir::StoreOp::create(builder, loc, ivVal, addr);
+    fir::FortranVariableOpInterface declareOp =
+        hlfir::genDeclare(loc, builder, fir::ExtendedValue{addr}, ivName,
+                          fir::FortranVariableFlagsAttr{});
+    symMap.addVariableDefinition(ivSym, declareOp, /*force=*/true);
   }
 
   mlir::omp::YieldOp::create(builder, loc, bodyGen(builder, loc, ivs));
@@ -1483,12 +1498,11 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
                                                 loc)) {
                 const Fortran::semantics::Symbol *sym = object.sym();
                 assert(sym && "expected symbol for iterator object");
-                // We currently cannot reuse genDependVar here because
-                // buildIteratorOp maps iterator IV symbols to bare scalar
-                // values (e.g. i32), but genDependVar uses convertExprToHLFIR
-                // which expects memory-backed references. Instead, manually get
-                // the base address and compute the element coordinate from the
-                // FIR-level lowered indices.
+                // genDependVar is not reused here: getIteratorElementIndices
+                // has already lowered each subscript to a FIR-level index
+                // value, so the element coordinate is computed directly from
+                // the base address and those indices rather than re-lowering
+                // the whole designator.
                 fir::factory::AddrAndBoundsInfo info =
                     Fortran::lower::getDataOperandBaseAddr(
                         converter, builder, *sym, loc,
