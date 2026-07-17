@@ -745,6 +745,26 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
                      /*IsArray=*/true, ResourceDimension::Dim2D)
         .completeDefinition();
   });
+
+  // RWTexture2DArray — same as RWTexture2D but IsArray=true
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWTexture2DArray")
+             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
+                                      TypedBufferConcept)
+             .finalizeForwardDeclaration();
+
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupRWTextureType(Decl, *SemaPtr, /*IsArray=*/true,
+                       ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
+
+  auto *PartialSpecRW2DA = addVectorTexturePartialSpecialization(
+      *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
+  onCompletion(PartialSpecRW2DA, [this](CXXRecordDecl *Decl) {
+    setupRWTextureType(Decl, *SemaPtr, /*IsArray=*/true,
+                       ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
 }
 
 // Build a single overload of an HLSL atomic intrinsic in the hlsl namespace.

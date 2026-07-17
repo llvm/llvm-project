@@ -522,6 +522,24 @@ def UIToFPOfExtUI :
         (Arith_UIToFPOp $x, $nneg1)>;
 
 //===----------------------------------------------------------------------===//
+// AddFOp
+//===----------------------------------------------------------------------===//
+
+// addf(negf(x), y) -> subf(y, x)
+// addf(x, negf(y)) -> subf(x, y)
+//
+// Valid for any rounding mode, which is propagated to the subf: negf is an
+// exact sign flip, IEEE addition is commutative, and y - x is the correctly
+// rounded y + (-x), so subf(y, x) and addf(negf(x), y) are bit-identical.
+def AddFOfNegFLhs :
+    Pat<(Arith_AddFOp (Arith_NegFOp $x, $_), $y, $fmf, $rm),
+        (Arith_SubFOp $y, $x, $fmf, $rm)>;
+
+def AddFOfNegFRhs :
+    Pat<(Arith_AddFOp $x, (Arith_NegFOp $y, $_), $fmf, $rm),
+        (Arith_SubFOp $x, $y, $fmf, $rm)>;
+
+//===----------------------------------------------------------------------===//
 // SubFOp
 //===----------------------------------------------------------------------===//
 
