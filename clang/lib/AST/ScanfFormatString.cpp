@@ -89,9 +89,7 @@ static ScanfSpecifierResult ParseScanfSpecifier(
       H.HandleNullChar(I);
       return true;
     }
-    SmallString<1> ConvertedChar;
-    FormatStrConverter.convert(StringRef(&c, 1), ConvertedChar);
-    if (ConvertedChar[0] == '%') {
+    if (FormatStrConverter.convertBasicChar(c) == '%') {
       Start = I++; // Record the start of the format specifier.
       break;
     }
@@ -118,7 +116,7 @@ static ScanfSpecifierResult ParseScanfSpecifier(
   }
 
   // Look for '*' flag if it is present.
-  if (FormatStrConverter.convert(*I) == '*') {
+  if (FormatStrConverter.convertBasicChar(*I) == '*') {
     FS.setSuppressAssignment(I);
     if (++I == E) {
       H.HandleIncompleteSpecifier(Start, E - Start);
@@ -159,7 +157,7 @@ static ScanfSpecifierResult ParseScanfSpecifier(
   // Finally, look for the conversion specifier.
   const char *conversionPosition = I++;
   ScanfConversionSpecifier::Kind k = ScanfConversionSpecifier::InvalidSpecifier;
-  switch (FormatStrConverter.convert(*conversionPosition)) {
+  switch (FormatStrConverter.convertBasicChar(*conversionPosition)) {
   default:
     break;
   case '%':
