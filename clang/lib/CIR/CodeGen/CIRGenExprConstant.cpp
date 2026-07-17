@@ -1044,7 +1044,7 @@ static mlir::TypedAttr emitNullConstant(CIRGenModule &cgm, const RecordDecl *rd,
                                     : layout.getBaseSubobjectCIRType());
   auto recordTy = mlir::cast<cir::RecordType>(ty);
 
-  unsigned numElements = recordTy.getNumElements();
+  unsigned numElements = rd->isUnion() ? 1 : recordTy.getNumElements();
   SmallVector<mlir::Attribute> elements(numElements);
 
   auto *cxxrd = dyn_cast<CXXRecordDecl>(rd);
