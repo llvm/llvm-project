@@ -2334,10 +2334,8 @@ static void checkInitProfileLocalMembers(Sema &S, AnalysisDeclContext &AC) {
   };
   const unsigned NumBlocks = cfg->getNumBlockIDs();
   std::vector<SmallVector<Event, 4>> Events(NumBlocks);
-  std::vector<llvm::BitVector> Gen(NumBlocks, llvm::BitVector(N, false));
   for (const CFGBlock *B : *cfg) {
     auto &BlockEvents = Events[B->getBlockID()];
-    auto &BlockGen = Gen[B->getBlockID()];
     for (const CFGElement &Elem : *B) {
       auto CS = Elem.getAs<CFGStmt>();
       if (!CS)
@@ -2357,7 +2355,6 @@ static void checkInitProfileLocalMembers(Sema &S, AnalysisDeclContext &AC) {
           continue;
         BlockEvents.push_back(
             {BO->isCompoundAssignmentOp() ? ReadWrite : Write, Idx, BO});
-        BlockGen.set(Idx);
       } else if (const auto *UO = dyn_cast<UnaryOperator>(St)) {
         if (!UO->isIncrementDecrementOp())
           continue;
@@ -2365,7 +2362,6 @@ static void checkInitProfileLocalMembers(Sema &S, AnalysisDeclContext &AC) {
         if (Idx == ~0u)
           continue;
         BlockEvents.push_back({ReadWrite, Idx, UO});
-        BlockGen.set(Idx);
       } else if (const auto *DRE = dyn_cast<DeclRefExpr>(St)) {
         if (Benign.count(DRE))
           continue;
@@ -2375,20 +2371,44 @@ static void checkInitProfileLocalMembers(Sema &S, AnalysisDeclContext &AC) {
         auto It = VarRange.find(V);
         if (It == VarRange.end())
           continue;
-        for (unsigned Idx = It->second.first; Idx != It->second.second; ++Idx) {
+        for (unsigned Idx = It->second.first; Idx != It->second.second; ++Idx)
           BlockEvents.push_back({Write, Idx, DRE});
-          BlockGen.set(Idx);
-        }
       }
     }
   }
+
+  // Replay a block's events over State: the block-level transfer function,
+  // shared by the fixpoint below and the reporting replay after it so the
+  // two always agree. When Offending is non-null, a read of a member not
+  // definitely assigned at its program point is collected.
+  auto ApplyEvents =
+      [](ArrayRef<Event> BlockEvents, llvm::BitVector &State,
+         std::vector<SmallVector<const Expr *, 2>> *Offending) {
+        for (const Event &Ev : BlockEvents) {
+          switch (Ev.Kind) {
+          case Read:
+            if (Offending && !State.test(Ev.Idx))
+              (*Offending)[Ev.Idx].push_back(Ev.E);
+            break;
+          case Write:
+            State.set(Ev.Idx);
+            break;
+          case ReadWrite:
+            if (Offending && !State.test(Ev.Idx))
+              (*Offending)[Ev.Idx].push_back(Ev.E);
+            State.set(Ev.Idx);
+            break;
+          }
+        }
+      };
 
   // Forward "definitely assigned" dataflow, identical in shape to the
   // ctor-body pass's: nothing is assigned at function entry (a tracked local
   // cannot be referenced before its DeclStmt anyway); a block's entry is the
   // intersection over its predecessors' exits; unprocessed (unreachable)
   // predecessors keep the all-assigned top, so unreachable code is never
-  // flagged.
+  // flagged. The transfer function is the event replay above (monotone:
+  // events only set bits), so the worklist still reaches a fixpoint.
   std::vector<llvm::BitVector> EntryState(NumBlocks, llvm::BitVector(N, true));
   std::vector<llvm::BitVector> ExitState(NumBlocks, llvm::BitVector(N, true));
   const CFGBlock &CFGEntry = cfg->getEntry();
@@ -2412,7 +2432,7 @@ static void checkInitProfileLocalMembers(Sema &S, AnalysisDeclContext &AC) {
       }
     }
     EntryState[B->getBlockID()] = In;
-    In |= Gen[B->getBlockID()];
+    ApplyEvents(Events[B->getBlockID()], In, /*Offending=*/nullptr);
     if (In != ExitState[B->getBlockID()]) {
       ExitState[B->getBlockID()] = In;
       Worklist.enqueueSuccessors(B);
@@ -2424,22 +2444,7 @@ static void checkInitProfileLocalMembers(Sema &S, AnalysisDeclContext &AC) {
   std::vector<SmallVector<const Expr *, 2>> Offending(N);
   for (const CFGBlock *B : *cfg) {
     llvm::BitVector Assigned = EntryState[B->getBlockID()];
-    for (const Event &Ev : Events[B->getBlockID()]) {
-      switch (Ev.Kind) {
-      case Read:
-        if (!Assigned.test(Ev.Idx))
-          Offending[Ev.Idx].push_back(Ev.E);
-        break;
-      case Write:
-        Assigned.set(Ev.Idx);
-        break;
-      case ReadWrite:
-        if (!Assigned.test(Ev.Idx))
-          Offending[Ev.Idx].push_back(Ev.E);
-        Assigned.set(Ev.Idx);
-        break;
-      }
-    }
+    ApplyEvents(Events[B->getBlockID()], Assigned, &Offending);
   }
 
   // Report at the first offending read (in source order) that is not
