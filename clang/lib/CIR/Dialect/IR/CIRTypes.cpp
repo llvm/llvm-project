@@ -39,8 +39,8 @@ bool cir::isSized(mlir::Type ty) {
   return false;
 }
 
-mlir::Type cir::getFloatingPointType(const llvm::fltSemantics &sem,
-                                     mlir::MLIRContext *ctx) {
+cir::FPTypeInterface cir::getFloatingPointType(const llvm::fltSemantics &sem,
+                                               mlir::MLIRContext *ctx) {
   if (&sem == &llvm::APFloat::IEEEsingle())
     return cir::SingleType::get(ctx);
   if (&sem == &llvm::APFloat::IEEEdouble())

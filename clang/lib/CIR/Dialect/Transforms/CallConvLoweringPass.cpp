@@ -72,19 +72,18 @@ namespace {
 // so an unsupported signature fails the pass instead of being misclassified.
 //===----------------------------------------------------------------------===//
 
-/// llvm::Align requires a power of two; DataLayout can report non-power-of-two
-/// alignments for unusual types.
-static llvm::Align safeAlign(uint64_t a) {
-  return llvm::Align(llvm::PowerOf2Ceil(std::max<uint64_t>(a, 1)));
-}
-
 /// The scalar CIR types the x86_64 bridge handles.  A regular integer up to
 /// 64 bits, pointer, bool, void, f32, or f64 is a single-register Direct or
 /// Extend argument.  `_BitInt`, `__int128`, and wider/other types need coercion
 /// or indirect passing, which this scalar bridge does not do.
 static bool isSupportedScalarType(mlir::Type ty) {
-  if (isa<cir::VoidType, cir::BoolType, cir::PointerType, cir::SingleType,
-          cir::DoubleType>(ty))
+  // A pointer is only handled in the default address space (null) or an
+  // already-lowered target address space.  A LangAddressSpaceAttr must be
+  // lowered before this pass, so reject it rather than silently dropping it.
+  if (auto ptrTy = dyn_cast<cir::PointerType>(ty))
+    return !ptrTy.getAddrSpace() ||
+           mlir::isa<cir::TargetAddressSpaceAttr>(ptrTy.getAddrSpace());
+  if (isa<cir::VoidType, cir::BoolType, cir::SingleType, cir::DoubleType>(ty))
     return true;
   if (auto intTy = dyn_cast<cir::IntType>(ty))
     return !intTy.getIsBitInt() && intTy.getWidth() <= 64;
@@ -121,7 +120,7 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
   return llvm::TypeSwitch<mlir::Type, const llvm::abi::Type *>(type)
       .Case([&](cir::IntType intTy) {
         return tb.getIntegerType(intTy.getWidth(),
-                                 safeAlign(dl.getTypeABIAlignment(type)),
+                                 llvm::Align(dl.getTypeABIAlignment(type)),
                                  intTy.isSigned());
       })
       .Case([&](cir::PointerType ptrTy) {
@@ -131,22 +130,22 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
                     ptrTy.getAddrSpace()))
           addrSpace = targetAsAttr.getValue();
         return tb.getPointerType(dl.getTypeSizeInBits(type),
-                                 safeAlign(dl.getTypeABIAlignment(type)),
+                                 llvm::Align(dl.getTypeABIAlignment(type)),
                                  addrSpace);
       })
       .Case([&](cir::BoolType) {
         return tb.getIntegerType(dl.getTypeSizeInBits(type),
-                                 safeAlign(dl.getTypeABIAlignment(type)),
+                                 llvm::Align(dl.getTypeABIAlignment(type)),
                                  /*Signed=*/false);
       })
       .Case([&](cir::VoidType) { return tb.getVoidType(); })
       .Case([&](cir::SingleType) {
         return tb.getFloatType(llvm::APFloat::IEEEsingle(),
-                               safeAlign(dl.getTypeABIAlignment(type)));
+                               llvm::Align(dl.getTypeABIAlignment(type)));
       })
       .Case([&](cir::DoubleType) {
         return tb.getFloatType(llvm::APFloat::IEEEdouble(),
-                               safeAlign(dl.getTypeABIAlignment(type)));
+                               llvm::Align(dl.getTypeABIAlignment(type)));
       })
       .Default([](mlir::Type) -> const llvm::abi::Type * {
         llvm_unreachable(
@@ -188,9 +187,7 @@ static ArgClassification convertABIArgInfo(const llvm::abi::ArgInfo &info,
     mlir::Type extendedTy = abiTypeToCIR(info.getCoerceToType(), ctx);
     return ArgClassification::getExtend(extendedTy, info.isSignExt());
   }
-  if (info.isIndirect())
-    llvm_unreachable("Indirect classification is impossible for the "
-                     "scalar-only type set this bridge accepts");
+  assert(info.isIgnore() && "Unexpected classification");
   return ArgClassification::getIgnore();
 }
 
@@ -244,36 +241,6 @@ classifyX86_64Function(cir::FuncOp func, const DataLayout &dl,
   return fc;
 }
 
-/// The classifier targets this pass drives internally via a shared
-/// ABITypeMapper/TargetInfo.  (The classification-attr injection mode is
-/// orthogonal -- it names an arbitrary attribute, not a fixed target -- and
-/// stays string-keyed.)  kCallConvTargetNames is the single source of truth
-/// for both parsing the `target` pass option and the unknown-target
-/// diagnostic in classifyFunction; it is indexed by the enum value below.
-enum class CallConvTarget { Test, X86_64, Last = X86_64 };
-
-constexpr llvm::StringRef kCallConvTargetNames[] = {"test", "x86_64"};
-static_assert(std::size(kCallConvTargetNames) ==
-                  static_cast<size_t>(CallConvTarget::Last) + 1,
-              "kCallConvTargetNames must have one entry per CallConvTarget");
-
-std::optional<CallConvTarget> parseCallConvTarget(StringRef target) {
-  for (size_t i = 0; i < std::size(kCallConvTargetNames); ++i)
-    if (target == kCallConvTargetNames[i])
-      return static_cast<CallConvTarget>(i);
-  return std::nullopt;
-}
-
-std::string supportedCallConvTargets() {
-  std::string result;
-  for (llvm::StringRef name : kCallConvTargetNames) {
-    if (!result.empty())
-      result += ", ";
-    result += name.str();
-  }
-  return result;
-}
-
 bool needsRewrite(const FunctionClassification &fc) {
   if ((fc.returnInfo.kind != ArgKind::Direct) || fc.returnInfo.coercedType)
     return true;
@@ -294,8 +261,8 @@ struct CallConvLoweringPass
 /// (e.g. injection-driver mode but the function is missing the attribute,
 /// or the attribute is malformed).
 std::optional<FunctionClassification>
-classifyFunction(cir::FuncOp func, const DataLayout &dl, StringRef target,
-                 StringRef classificationAttrName) {
+classifyFunction(cir::FuncOp func, const DataLayout &dl,
+                 cir::CallConvTarget target, StringRef classificationAttrName) {
   ArrayRef<Type> argTypes = func.getFunctionType().getInputs();
   Type returnType = func.getFunctionType().getReturnType();
 
@@ -311,14 +278,11 @@ classifyFunction(cir::FuncOp func, const DataLayout &dl, StringRef target,
         attr, [&]() { return func.emitOpError(); });
   }
 
-  if (parseCallConvTarget(target) == CallConvTarget::Test)
-    return mlir::abi::test::classify(argTypes, returnType, dl);
-
-  // Note: the "x86_64" target is handled directly in runOnOperation (it needs
-  // a shared ABITypeMapper and TargetInfo), so it never reaches here.
-  func.emitOpError() << "unknown target '" << target
-                     << "' (supported: " << supportedCallConvTargets() << ")";
-  return std::nullopt;
+  // The x86_64 target is handled directly in runOnOperation (it needs a shared
+  // ABITypeMapper and TargetInfo), so only the test target reaches here.
+  assert(target == cir::CallConvTarget::Test &&
+         "classifyFunction only handles the test target");
+  return mlir::abi::test::classify(argTypes, returnType, dl);
 }
 
 /// Find the cir.func declaration matching a direct cir.call / cir.try_call
@@ -343,7 +307,9 @@ void CallConvLoweringPass::runOnOperation() {
   ModuleOp moduleOp = getOperation();
   MLIRContext *ctx = &getContext();
 
-  if (target.empty() == classificationAttr.empty()) {
+  bool haveTarget = target != cir::CallConvTarget::None;
+  bool haveAttr = !classificationAttr.empty();
+  if (haveTarget == haveAttr) {
     moduleOp.emitOpError() << "CallConvLowering requires exactly one of "
                               "'target' or 'classification-attr' pass options";
     signalPassFailure();
@@ -366,7 +332,7 @@ void CallConvLoweringPass::runOnOperation() {
   // reuse it (and its type mapper) across every function.
   std::optional<mlir::abi::ABITypeMapper> x86TypeMapper;
   std::unique_ptr<llvm::abi::TargetInfo> x86Target;
-  if (parseCallConvTarget(target) == CallConvTarget::X86_64) {
+  if (target == cir::CallConvTarget::X86_64) {
     x86TypeMapper.emplace(dl);
     x86Target = llvm::abi::createX86_64TargetInfo(
         x86TypeMapper->getTypeBuilder(), x86AvxAbiLevel.getValue(),
@@ -465,10 +431,10 @@ std::unique_ptr<Pass> mlir::createCallConvLoweringPass() {
 }
 
 std::unique_ptr<Pass>
-mlir::createCallConvLoweringPass(llvm::StringRef target,
+mlir::createCallConvLoweringPass(cir::CallConvTarget target,
                                  llvm::abi::X86AVXABILevel x86AvxAbiLevel) {
   CallConvLoweringOptions options;
-  options.target = target.str();
+  options.target = target;
   options.x86AvxAbiLevel = x86AvxAbiLevel;
   return std::make_unique<CallConvLoweringPass>(options);
 }

@@ -49,8 +49,8 @@ bool isSized(mlir::Type ty);
 /// Returns the CIR floating-point type for a given semantics.  Mirrors
 /// llvm::Type::getFloatingPointTy; currently only covers the semantics
 /// CIR's scalar ABI classifier can reach (f32/f64).
-mlir::Type getFloatingPointType(const llvm::fltSemantics &sem,
-                                mlir::MLIRContext *ctx);
+cir::FPTypeInterface getFloatingPointType(const llvm::fltSemantics &sem,
+                                          mlir::MLIRContext *ctx);
 
 //===----------------------------------------------------------------------===//
 // AddressSpace helpers

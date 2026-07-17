@@ -239,8 +239,15 @@ def CallConvLowering : Pass<"cir-call-conv-lowering", "mlir::ModuleOp"> {
   let constructor = "mlir::createCallConvLoweringPass()";
   let dependentDialects = ["cir::CIRDialect"];
   let options = [
-    Option<"target", "target", "std::string", /*default=*/"\"\"",
-           "Target whose ABI rules drive classification (test, x86_64)">,
+    Option<"target", "target", "cir::CallConvTarget",
+           /*default=*/"cir::CallConvTarget::None",
+           "Target whose ABI rules drive classification",
+           [{::llvm::cl::values(
+             clEnumValN(cir::CallConvTarget::Test, "test",
+                        "MLIR test ABI target"),
+             clEnumValN(cir::CallConvTarget::X86_64, "x86_64",
+                        "x86_64 System V")
+           )}]>,
     Option<"classificationAttr", "classification-attr", "std::string",
            /*default=*/"\"\"",
            "Function attribute name carrying a pre-built FunctionClassification "
