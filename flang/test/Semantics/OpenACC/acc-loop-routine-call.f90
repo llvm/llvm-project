@@ -66,11 +66,20 @@ contains
 
 end module acc_loop_routine_call_m
 
+subroutine case4_routine_dim_arg()
+  use acc_loop_routine_call_m
+  !ERROR: Calling GANG routine inside GANG loop is not allowed
+  !$acc routine gang(dim: f_gang(1))
+end subroutine case4_routine_dim_arg
+
 program acc_loop_routine_call
   use acc_loop_routine_call_m
   implicit none
   integer, parameter :: n = 8
   integer :: i, j
+  real :: a(8)
+
+  a = 0.0
 
   !$acc parallel
   !$acc loop vector
@@ -306,5 +315,28 @@ program acc_loop_routine_call
     call r_gang_dim3()
   end do
   !$acc end parallel
+
+  ! Check firing outside loop-body execution:
+  !$acc kernels
+  !ERROR: Calling GANG routine inside VECTOR loop is not allowed
+  !$acc loop vector(f_gang(n))
+  do i = 1, n
+    j = i
+  end do
+  !$acc end kernels
+
+  !$acc parallel
+  !ERROR: Calling GANG routine inside VECTOR loop is not allowed
+  !$acc loop vector
+  do i = 1, f_gang(n)
+    j = i
+  end do
+  !$acc end parallel
+
+  !ERROR: Calling GANG routine inside VECTOR loop is not allowed
+  !$acc parallel loop vector if(f_gang(n) > 0)
+  do i = 1, n
+    a(i) = a(i) + 1.0
+  end do
 
 end program acc_loop_routine_call
