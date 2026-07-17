@@ -436,13 +436,15 @@ struct RemoveRecurringExpressionOperands
         uniqueOperands.getArrayRef(), expressionOp.getDoNotInline());
     Block &uniqueExpressionBody = uniqueExpression.createBody();
 
+    // Map operands directly because removing duplicates changes block argument
+    // indices, so indices from the original expression cannot be reused.
     DenseMap<Value, BlockArgument> uniqueArgFor;
     for (auto [operand, arg] : llvm::zip(uniqueExpression.getOperands(),
                                          uniqueExpressionBody.getArguments()))
       uniqueArgFor[operand] = arg;
 
-    // Map each original block arguments to the unique block argument taking
-    // the same operand.
+    // Map each original block argument to the unique block argument taking the
+    // same operand.
     IRMapping mapper;
     Block *expressionBody = expressionOp.getBody();
     for (auto [operand, arg] :
