@@ -402,10 +402,8 @@ static void callResourceInitMethod(CodeGenFunction &CGF,
   llvm::Constant *CalleeFn = CGF.CGM.GetAddrOfFunction(CreateMethod);
   const FunctionProtoType *Proto =
       CreateMethod->getType()->getAs<FunctionProtoType>();
-  // HLSL code generation is restricted to DXIL and SPIR-V targets, so no
-  // caller declaration is needed for x86 SysV ABI selection.
-  const CGFunctionInfo &FnInfo = CGF.CGM.getTypes().arrangeFreeFunctionCall(
-      Args, Proto, false, /*ABIInfoFD=*/nullptr);
+  const CGFunctionInfo &FnInfo =
+      CGF.CGM.getTypes().arrangeFreeFunctionCall(Args, Proto, false);
   ReturnValueSlot ReturnValue(ReturnAddress, false);
   CGCallee Callee(CGCalleeInfo(Proto), CalleeFn);
   CGF.EmitCall(FnInfo, Callee, ReturnValue, Args, nullptr);
