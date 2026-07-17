@@ -399,6 +399,15 @@ public:
     printString(Label, to_string(Value));
   }
 
+  virtual void printObject(StringRef Label, const llvm::json::Value &Value) {
+    std::string prettyValue;
+    raw_string_ostream stream(prettyValue);
+    llvm::json::OStream(stream, 2, getIndentLevel()).value(Value);
+    startLine() << Label << ": "
+                << prettyValue.substr(prettyValue.find_first_not_of(" "))
+                << "\n";
+  }
+
   virtual void objectBegin() { scopedBegin('{'); }
 
   virtual void objectBegin(StringRef Label) { scopedBegin(Label, '{'); }
@@ -669,6 +678,10 @@ public:
   void printString(StringRef Value) override { JOS.value(Value); }
 
   void printString(StringRef Label, StringRef Value) override {
+    JOS.attribute(Label, Value);
+  }
+
+  void printObject(StringRef Label, const llvm::json::Value &Value) override {
     JOS.attribute(Label, Value);
   }
 
