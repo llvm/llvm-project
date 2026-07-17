@@ -450,10 +450,10 @@ protected:
       const SFrameParser<ELFT::Endianness> &Parser,
       const typename SFrameParser<ELFT::Endianness>::FDERange::iterator FDE,
       ArrayRef<Relocation<ELFT>> Relocations, const Elf_Shdr *RelocSymTab);
-  // Read the SHT_LLVM_CALL_GRAPH type section and process its contents to
+  // Read the SHT_LLVM_CALL_GRAPH type sections and process their contents to
   // populate call graph related data structures which will be used to dump call
-  // graph info. Returns an empty vector if there is no SHT_LLVM_CALL_GRAPH
-  // type section or if parsing fails.
+  // graph info. Returns an empty vector if there are no such sections or if
+  // parsing fails.
   SmallVector<FunctionCallgraphInfo, 16>
   processCallGraphSection(const Elf_Shdr *CGSection);
 
