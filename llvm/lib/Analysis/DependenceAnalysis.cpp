@@ -1945,6 +1945,20 @@ static BanerjeeInterval addIntervals(const BanerjeeInterval &A,
   return BanerjeeInterval(Lower, Upper);
 }
 
+// Both intervals conservatively contain the feasible values, so their
+// intersection does too and may provide tighter one-sided bounds.
+static BanerjeeInterval intersectIntervals(const BanerjeeInterval &A,
+                                           const BanerjeeInterval &B,
+                                           ScalarEvolution &SE) {
+  const SCEV *Lower = A.Lower;
+  const SCEV *Upper = A.Upper;
+  if (B.Lower)
+    Lower = Lower ? SE.getSMaxExpr(Lower, B.Lower) : B.Lower;
+  if (B.Upper)
+    Upper = Upper ? SE.getSMinExpr(Upper, B.Upper) : B.Upper;
+  return BanerjeeInterval(Lower, Upper);
+}
+
 static BanerjeeInterval constantInterval(const SCEV *C) {
   return BanerjeeInterval(C, C);
 }
@@ -2326,13 +2340,11 @@ void DependenceInfo::findBoundsLT(ArrayRef<CoefficientInfo> A,
     MaxIterIndex = A[K].MaxIterIndex ? A[K].MaxIterIndex : B[K].MaxIterIndex;
   }
 
-  BanerjeeInterval Interval(nullptr, nullptr);
-  if (!MaxIterIndex) {
-    Interval = unboundedStrictDirectionInterval(ACoeff, BCoeff,
-                                                Dependence::DVEntry::LT, *SE);
-  } else if (MaxIterIndex->isZero()) {
+  BanerjeeInterval Interval = unboundedStrictDirectionInterval(
+      ACoeff, BCoeff, Dependence::DVEntry::LT, *SE);
+  if (MaxIterIndex && MaxIterIndex->isZero()) {
     Interval = emptyInterval(ACoeff->getType(), *SE);
-  } else {
+  } else if (MaxIterIndex) {
     const SCEV *Zero = SE->getZero(ACoeff->getType());
     const SCEV *One = SE->getOne(ACoeff->getType());
     const SCEV *MaxMinusOne = SE->getMinusSCEV(MaxIterIndex, One);
@@ -2342,7 +2354,8 @@ void DependenceInfo::findBoundsLT(ArrayRef<CoefficientInfo> A,
         evaluateBanerjeeTerm(ACoeff, Zero, BCoeff, MaxIterIndex, *SE));
     Values.push_back(
         evaluateBanerjeeTerm(ACoeff, MaxMinusOne, BCoeff, MaxIterIndex, *SE));
-    Interval = intervalFromValues(Values, *SE);
+    Interval =
+        intersectIntervals(Interval, intervalFromValues(Values, *SE), *SE);
   }
   Bound[K].Lower[Dependence::DVEntry::LT] = Interval.Lower;
   Bound[K].Upper[Dependence::DVEntry::LT] = Interval.Upper;
@@ -2376,13 +2389,11 @@ void DependenceInfo::findBoundsGT(ArrayRef<CoefficientInfo> A,
     MaxIterIndex = A[K].MaxIterIndex ? A[K].MaxIterIndex : B[K].MaxIterIndex;
   }
 
-  BanerjeeInterval Interval(nullptr, nullptr);
-  if (!MaxIterIndex) {
-    Interval = unboundedStrictDirectionInterval(ACoeff, BCoeff,
-                                                Dependence::DVEntry::GT, *SE);
-  } else if (MaxIterIndex->isZero()) {
+  BanerjeeInterval Interval = unboundedStrictDirectionInterval(
+      ACoeff, BCoeff, Dependence::DVEntry::GT, *SE);
+  if (MaxIterIndex && MaxIterIndex->isZero()) {
     Interval = emptyInterval(ACoeff->getType(), *SE);
-  } else {
+  } else if (MaxIterIndex) {
     const SCEV *Zero = SE->getZero(ACoeff->getType());
     const SCEV *One = SE->getOne(ACoeff->getType());
     const SCEV *MaxMinusOne = SE->getMinusSCEV(MaxIterIndex, One);
@@ -2392,7 +2403,8 @@ void DependenceInfo::findBoundsGT(ArrayRef<CoefficientInfo> A,
         evaluateBanerjeeTerm(ACoeff, MaxIterIndex, BCoeff, Zero, *SE));
     Values.push_back(
         evaluateBanerjeeTerm(ACoeff, MaxIterIndex, BCoeff, MaxMinusOne, *SE));
-    Interval = intervalFromValues(Values, *SE);
+    Interval =
+        intersectIntervals(Interval, intervalFromValues(Values, *SE), *SE);
   }
   Bound[K].Lower[Dependence::DVEntry::GT] = Interval.Lower;
   Bound[K].Upper[Dependence::DVEntry::GT] = Interval.Upper;
