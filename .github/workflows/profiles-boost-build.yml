@@ -91,27 +91,25 @@ jobs:
             libs/*/test \
             2>&1 | tee "$GITHUB_WORKSPACE/boost-profiles.log" || true
 
-      - name: Log overview
+      - name: Summarize & visualize profile violations
         if: always()
         run: |
-          log="$GITHUB_WORKSPACE/boost-profiles.log"
-          {
-            echo "## Boost profiles build"
-            echo "- Boost ref: \`${{ inputs.boost_ref || 'master' }}\`"
-            if [ -f "$log" ]; then
-              echo "- \`error:\` lines: $(grep -c 'error:' "$log" || true)"
-              echo "- clang crash markers: $(grep -c 'PLEASE submit a bug report' "$log" || true)"
-            else
-              echo "- no log produced"
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
+          echo "_Boost ref: \`${{ inputs.boost_ref || 'master' }}\`_" >> "$GITHUB_STEP_SUMMARY"
+          python3 clang/utils/profiles-boost/summarize.py \
+            --log "$GITHUB_WORKSPACE/boost-profiles.log" \
+            --boost-root "$GITHUB_WORKSPACE/boost" \
+            --json "$GITHUB_WORKSPACE/summary.json" \
+            --html "$GITHUB_WORKSPACE/report.html" \
+            >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload log and crash reproducers
+      - name: Upload log, report and crash reproducers
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: boost-profiles-log
           path: |
             boost-profiles.log
+            summary.json
+            report.html
             crash/
           if-no-files-found: warn
