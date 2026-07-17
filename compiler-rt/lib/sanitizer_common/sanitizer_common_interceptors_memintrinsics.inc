@@ -22,6 +22,14 @@
 //   COMMON_INTERCEPTOR_MEMMOVE_IMPL
 //   COMMON_INTERCEPTOR_MEMCPY_IMPL
 //   COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED
+//
+// A tool may additionally define any of the following macros to intercept the
+// fortified _chk variants; the corresponding interceptor is only emitted when
+// the matching macro is defined:
+//   COMMON_INTERCEPTOR_MEMSET_CHK_IMPL
+//   COMMON_INTERCEPTOR_MEMMOVE_CHK_IMPL
+//   COMMON_INTERCEPTOR_MEMCPY_CHK_IMPL
+//   COMMON_INTERCEPTOR_MEMPCPY_CHK_IMPL
 //===----------------------------------------------------------------------===//
 
 #ifdef SANITIZER_REDEFINE_BUILTINS_H
@@ -233,6 +241,54 @@ INTERCEPTOR(void *, bzero, void *block, usize size) {
 #define INIT_BZERO
 #endif  // SANITIZER_INTERCEPT_BZERO
 
+#if SANITIZER_INTERCEPT___MEMSET_CHK && \
+    defined(COMMON_INTERCEPTOR_MEMSET_CHK_IMPL)
+INTERCEPTOR(void *, __memset_chk, void *dst, int v, usize size,
+            usize dst_size) {
+  void *ctx;
+  COMMON_INTERCEPTOR_MEMSET_CHK_IMPL(ctx, dst, v, size, dst_size);
+}
+#define INIT___MEMSET_CHK COMMON_INTERCEPT_FUNCTION(__memset_chk);
+#else
+#define INIT___MEMSET_CHK
+#endif  // SANITIZER_INTERCEPT___MEMSET_CHK
+
+#if SANITIZER_INTERCEPT___MEMMOVE_CHK && \
+    defined(COMMON_INTERCEPTOR_MEMMOVE_CHK_IMPL)
+INTERCEPTOR(void *, __memmove_chk, void *dst, const void *src, usize size,
+            usize dst_size) {
+  void *ctx;
+  COMMON_INTERCEPTOR_MEMMOVE_CHK_IMPL(ctx, dst, src, size, dst_size);
+}
+#define INIT___MEMMOVE_CHK COMMON_INTERCEPT_FUNCTION(__memmove_chk);
+#else
+#define INIT___MEMMOVE_CHK
+#endif  // SANITIZER_INTERCEPT___MEMMOVE_CHK
+
+#if SANITIZER_INTERCEPT___MEMCPY_CHK && \
+    defined(COMMON_INTERCEPTOR_MEMCPY_CHK_IMPL)
+INTERCEPTOR(void *, __memcpy_chk, void *dst, const void *src, usize size,
+            usize dst_size) {
+  void *ctx;
+  COMMON_INTERCEPTOR_MEMCPY_CHK_IMPL(ctx, dst, src, size, dst_size);
+}
+#define INIT___MEMCPY_CHK COMMON_INTERCEPT_FUNCTION(__memcpy_chk);
+#else
+#define INIT___MEMCPY_CHK
+#endif  // SANITIZER_INTERCEPT___MEMCPY_CHK
+
+#if SANITIZER_INTERCEPT___MEMPCPY_CHK && \
+    defined(COMMON_INTERCEPTOR_MEMPCPY_CHK_IMPL)
+INTERCEPTOR(void *, __mempcpy_chk, void *dst, const void *src, usize size,
+            usize dst_size) {
+  void *ctx;
+  COMMON_INTERCEPTOR_MEMPCPY_CHK_IMPL(ctx, dst, src, size, dst_size);
+}
+#define INIT___MEMPCPY_CHK COMMON_INTERCEPT_FUNCTION(__mempcpy_chk);
+#else
+#define INIT___MEMPCPY_CHK
+#endif  // SANITIZER_INTERCEPT___MEMPCPY_CHK
+
 namespace __sanitizer {
 // This does not need to be called if InitializeCommonInterceptors() is called.
 void InitializeMemintrinsicInterceptors() {
@@ -242,5 +298,9 @@ void InitializeMemintrinsicInterceptors() {
   INIT_AEABI_MEM;
   INIT___BZERO;
   INIT_BZERO;
+  INIT___MEMSET_CHK;
+  INIT___MEMMOVE_CHK;
+  INIT___MEMCPY_CHK;
+  INIT___MEMPCPY_CHK;
 }
 }  // namespace __sanitizer

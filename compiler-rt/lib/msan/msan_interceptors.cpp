@@ -63,16 +63,6 @@ DECLARE_REAL(SIZE_T, strnlen, const char *s, SIZE_T maxlen)
 DECLARE_REAL(void *, memcpy, void *dest, const void *src, SIZE_T n)
 DECLARE_REAL(void *, memset, void *dest, int c, SIZE_T n)
 
-#if SANITIZER_GLIBC
-DECLARE_REAL(void*, __memcpy_chk, void* dest, const void* src, SIZE_T n,
-             SIZE_T dest_size)
-DECLARE_REAL(void*, __memmove_chk, void* dest, const void* src, SIZE_T n,
-             SIZE_T dest_size)
-DECLARE_REAL(void*, __memset_chk, void* dest, int c, SIZE_T n, SIZE_T dest_size)
-DECLARE_REAL(void*, __mempcpy_chk, void* dest, const void* src, SIZE_T n,
-             SIZE_T dest_size)
-#endif
-
 // True if this is a nested interceptor.
 static THREADLOCAL int in_interceptor_scope;
 
@@ -167,79 +157,6 @@ INTERCEPTOR(void *, memccpy, void *dest, const void *src, int c, SIZE_T n) {
 INTERCEPTOR(void *, bcopy, const void *src, void *dest, SIZE_T n) {
   return __msan_memmove(dest, src, n);
 }
-
-#if SANITIZER_GLIBC
-INTERCEPTOR(void*, __memcpy_chk, void* dest, const void* src, SIZE_T n,
-            SIZE_T dest_size) {
-  if (!msan_inited)
-    return internal_memcpy(dest, src, n);
-  if (msan_init_is_running || __msan::IsInSymbolizerOrUnwider())
-    return REAL(__memcpy_chk)(dest, src, n, dest_size);
-  ENSURE_MSAN_INITED();
-  GET_STORE_STACK_TRACE;
-  void* res = REAL(__memcpy_chk)(dest, src, n, dest_size);
-  CopyShadowAndOrigin(dest, src, n, &stack);
-  return res;
-}
-#  define MSAN_MAYBE_INTERCEPT___MEMCPY_CHK INTERCEPT_FUNCTION(__memcpy_chk)
-#else
-#  define MSAN_MAYBE_INTERCEPT___MEMCPY_CHK
-#endif
-
-#if SANITIZER_GLIBC
-INTERCEPTOR(void*, __memmove_chk, void* dest, const void* src, SIZE_T n,
-            SIZE_T dest_size) {
-  if (!msan_inited)
-    return internal_memmove(dest, src, n);
-  if (msan_init_is_running || __msan::IsInSymbolizerOrUnwider())
-    return REAL(__memmove_chk)(dest, src, n, dest_size);
-  ENSURE_MSAN_INITED();
-  GET_STORE_STACK_TRACE;
-  void* res = REAL(__memmove_chk)(dest, src, n, dest_size);
-  MoveShadowAndOrigin(dest, src, n, &stack);
-  return res;
-}
-#  define MSAN_MAYBE_INTERCEPT___MEMMOVE_CHK INTERCEPT_FUNCTION(__memmove_chk)
-#else
-#  define MSAN_MAYBE_INTERCEPT___MEMMOVE_CHK
-#endif
-
-#if SANITIZER_GLIBC
-INTERCEPTOR(void*, __memset_chk, void* dest, int c, SIZE_T n,
-            SIZE_T dest_size) {
-  if (!msan_inited)
-    return internal_memset(dest, c, n);
-  if (msan_init_is_running || __msan::IsInSymbolizerOrUnwider())
-    return REAL(__memset_chk)(dest, c, n, dest_size);
-  ENSURE_MSAN_INITED();
-  void* res = REAL(__memset_chk)(dest, c, n, dest_size);
-  __msan_unpoison(dest, n);
-  return res;
-}
-#  define MSAN_MAYBE_INTERCEPT___MEMSET_CHK INTERCEPT_FUNCTION(__memset_chk)
-#else
-#  define MSAN_MAYBE_INTERCEPT___MEMSET_CHK
-#endif
-
-#if SANITIZER_GLIBC
-INTERCEPTOR(void*, __mempcpy_chk, void* dest, const void* src, SIZE_T n,
-            SIZE_T dest_size) {
-  if (!msan_inited) {
-    internal_memcpy(dest, src, n);
-    return (char*)dest + n;
-  }
-  if (msan_init_is_running || __msan::IsInSymbolizerOrUnwider())
-    return REAL(__mempcpy_chk)(dest, src, n, dest_size);
-  ENSURE_MSAN_INITED();
-  GET_STORE_STACK_TRACE;
-  void* res = REAL(__mempcpy_chk)(dest, src, n, dest_size);
-  CopyShadowAndOrigin(dest, src, n, &stack);
-  return res;
-}
-#  define MSAN_MAYBE_INTERCEPT___MEMPCPY_CHK INTERCEPT_FUNCTION(__mempcpy_chk)
-#else
-#  define MSAN_MAYBE_INTERCEPT___MEMPCPY_CHK
-#endif
 
 INTERCEPTOR(int, posix_memalign, void **memptr, SIZE_T alignment, SIZE_T size) {
   GET_MALLOC_STACK_TRACE;
@@ -1586,6 +1503,64 @@ int OnExit() {
     return __msan_memcpy(to, from, size);                   \
   }
 
+// The "_chk" variants delegate to the corresponding REAL(__*_chk) function so
+// that glibc's _FORTIFY_SOURCE overflow checks are preserved, while still
+// propagating shadow like the plain memory intrinsics above. These are only
+// expanded by the glibc-gated interceptors in the memintrinsics .inc file.
+#define COMMON_INTERCEPTOR_MEMSET_CHK_IMPL(ctx, dest, c, n, dest_size) \
+  {                                                                    \
+    (void)ctx;                                                         \
+    if (!msan_inited)                                                  \
+      return internal_memset(dest, c, n);                              \
+    if (msan_init_is_running || __msan::IsInSymbolizerOrUnwider())     \
+      return REAL(__memset_chk)(dest, c, n, dest_size);                \
+    ENSURE_MSAN_INITED();                                              \
+    void *res = REAL(__memset_chk)(dest, c, n, dest_size);             \
+    __msan_unpoison(dest, n);                                          \
+    return res;                                                        \
+  }
+#define COMMON_INTERCEPTOR_MEMMOVE_CHK_IMPL(ctx, dest, src, n, dest_size) \
+  {                                                                       \
+    (void)ctx;                                                            \
+    if (!msan_inited)                                                     \
+      return internal_memmove(dest, src, n);                              \
+    if (msan_init_is_running || __msan::IsInSymbolizerOrUnwider())        \
+      return REAL(__memmove_chk)(dest, src, n, dest_size);                \
+    ENSURE_MSAN_INITED();                                                 \
+    GET_STORE_STACK_TRACE;                                                \
+    void *res = REAL(__memmove_chk)(dest, src, n, dest_size);             \
+    MoveShadowAndOrigin(dest, src, n, &stack);                            \
+    return res;                                                           \
+  }
+#define COMMON_INTERCEPTOR_MEMCPY_CHK_IMPL(ctx, dest, src, n, dest_size) \
+  {                                                                      \
+    (void)ctx;                                                           \
+    if (!msan_inited)                                                    \
+      return internal_memcpy(dest, src, n);                              \
+    if (msan_init_is_running || __msan::IsInSymbolizerOrUnwider())       \
+      return REAL(__memcpy_chk)(dest, src, n, dest_size);                \
+    ENSURE_MSAN_INITED();                                                \
+    GET_STORE_STACK_TRACE;                                               \
+    void *res = REAL(__memcpy_chk)(dest, src, n, dest_size);             \
+    CopyShadowAndOrigin(dest, src, n, &stack);                           \
+    return res;                                                          \
+  }
+#define COMMON_INTERCEPTOR_MEMPCPY_CHK_IMPL(ctx, dest, src, n, dest_size) \
+  {                                                                       \
+    (void)ctx;                                                            \
+    if (!msan_inited) {                                                   \
+      internal_memcpy(dest, src, n);                                      \
+      return (char *)dest + n;                                            \
+    }                                                                     \
+    if (msan_init_is_running || __msan::IsInSymbolizerOrUnwider())        \
+      return REAL(__mempcpy_chk)(dest, src, n, dest_size);                \
+    ENSURE_MSAN_INITED();                                                 \
+    GET_STORE_STACK_TRACE;                                                \
+    void *res = REAL(__mempcpy_chk)(dest, src, n, dest_size);             \
+    CopyShadowAndOrigin(dest, src, n, &stack);                            \
+    return res;                                                           \
+  }
+
 #define COMMON_INTERCEPTOR_COPY_STRING(ctx, to, from, size) \
   do {                                                      \
     GET_STORE_STACK_TRACE;                                  \
@@ -1905,10 +1880,6 @@ void InitializeInterceptors() {
   MSAN_MAYBE_INTERCEPT_FREAD_UNLOCKED;
   INTERCEPT_FUNCTION(memccpy);
   MSAN_MAYBE_INTERCEPT_MEMPCPY;
-  MSAN_MAYBE_INTERCEPT___MEMCPY_CHK;
-  MSAN_MAYBE_INTERCEPT___MEMMOVE_CHK;
-  MSAN_MAYBE_INTERCEPT___MEMSET_CHK;
-  MSAN_MAYBE_INTERCEPT___MEMPCPY_CHK;
   INTERCEPT_FUNCTION(bcopy);
   INTERCEPT_FUNCTION(wmemset);
   INTERCEPT_FUNCTION(wmemcpy);
