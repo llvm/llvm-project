@@ -90,6 +90,7 @@ TEST(HotswapOccupancy, RejectsPatchOutsideKnownKernelWithZeroReportedGrowth) {
   llvm::StringMap<KernelPatchStats> KernelStats;
   std::vector<ScratchPatchInfo> ScratchPatches;
   DirectControlFlowInfo ControlFlow;
+  HotswapProfile Prof(/*Enabled=*/false);
   PatchContext Ctx{Config,
                    Decoded,
                    ViewOrErr->textData(),
@@ -102,7 +103,8 @@ TEST(HotswapOccupancy, RejectsPatchOutsideKnownKernelWithZeroReportedGrowth) {
                    Liveness,
                    KernelStats,
                    ScratchPatches,
-                   ControlFlow};
+                   ControlFlow,
+                   Prof};
 
   EXPECT_EQ(checkKernelVgprBump(Ctx, /*KernelName=*/{}, /*ExtraVgprs=*/0,
                                 PatchRequirement::Optional),

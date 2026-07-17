@@ -15,6 +15,7 @@
 #include <functional>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <stdlib.h>
 #include <system_error>
 
@@ -62,23 +63,25 @@ void getLogFile(std::string &PerfLog) {
 }
 
 bool InitTimeStatistics(std::string LogFile) {
-  if (!PS) {
-    if (!env::needTimeStatistics()) {
-      return false;
-    }
+  // Thread-safe lazy init: call_once creates PS and registers the atexit dump
+  // exactly once, even if concurrent Comgr calls reach here simultaneously.
+  static std::once_flag InitFlag;
+  std::call_once(InitFlag, [&LogFile]() {
+    if (!env::needTimeStatistics())
+      return;
 
-    if (LogFile == "") {
+    if (LogFile == "")
       getLogFile(LogFile);
-    }
 
-    PS = std::make_unique<PerfStats>();
-    if (!PS || !PS->Init(LogFile)) {
+    std::unique_ptr<PerfStats> Stats = std::make_unique<PerfStats>();
+    if (!Stats->Init(LogFile)) {
       std::cerr << "TimeStatistics failed to initialize\n";
-      return false;
+      return;
     }
+    PS = std::move(Stats);
     std::atexit(&dump);
-  }
-  return true;
+  });
+  return PS != nullptr;
 }
 
 void ProfilePoint::finish() {
@@ -101,6 +104,15 @@ ProfilePoint::~ProfilePoint() {
   if (!isFinished) {
     finish();
   }
+}
+
+void mergeStats(llvm::ArrayRef<PerfStatRecord> Records) {
+  // Lazily stand up the sink (and the atexit dump) exactly as ProfilePoint
+  // does; a no-op when AMD_COMGR_TIME_STATISTICS is unset.
+  if (!InitTimeStatistics(""))
+    return;
+  if (PS)
+    PS->mergeStats(Records);
 }
 
 // Timer implementation

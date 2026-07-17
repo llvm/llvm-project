@@ -119,6 +119,8 @@ static uint32_t applyInPlacePatchesImpl(PatchContext &Ctx, size_t Idx) {
 
   StringRef ReplacementAsm = getClusterLoadReplacementAsm(Mnemonic);
   if (!ReplacementAsm.empty()) {
+    HotswapProfile::Scope S =
+        Ctx.Profile.time(HotswapMetric::InPlaceClusterLoad);
     // The replacement templates above are all the saddr=off encoding form
     // (global address in a 64-bit VGPR pair). The SGPR-relative (_SADDR)
     // cluster_load shares the mnemonic but has a different operand layout, so
@@ -136,6 +138,7 @@ static uint32_t applyInPlacePatchesImpl(PatchContext &Ctx, size_t Idx) {
       if (NewOpcode && swapOpcode(DI, Ctx.Text, Ctx.LS, *NewOpcode)) {
         log() << "hotswap: inplace: " << Mnemonic << " -> opcode " << *NewOpcode
               << " at 0x" << utohexstr(DI.Offset) << "\n";
+        S.addPatches(1);
         return 1;
       }
     }
@@ -167,11 +170,14 @@ static uint32_t applyInPlacePatchesImpl(PatchContext &Ctx, size_t Idx) {
   // and falls through to the dispatcher's "no match" return below.
   // The AMDGPU backend never emits the _M0 form for compute kernels.
   if (Mnemonic == "s_barrier_signal_isfirst") {
+    HotswapProfile::Scope S =
+        Ctx.Profile.time(HotswapMetric::InPlaceBarrierSignal);
     std::optional<unsigned> NewOpcode =
         resolveOpcode("s_barrier_signal -1", Ctx.LS);
     if (NewOpcode && swapOpcode(DI, Ctx.Text, Ctx.LS, *NewOpcode)) {
       log() << "hotswap: inplace: s_barrier_signal_isfirst -> opcode "
             << *NewOpcode << " at 0x" << utohexstr(DI.Offset) << "\n";
+      S.addPatches(1);
       return 1;
     }
   }

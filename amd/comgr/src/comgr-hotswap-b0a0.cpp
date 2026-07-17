@@ -38,12 +38,18 @@
 
 #include <algorithm>
 #include <cassert>
+#include <chrono>
+#include <cstdio>
 #include <limits>
+#include <mutex>
 
 using namespace llvm;
 
 namespace COMGR {
 namespace hotswap {
+
+// HotSwap rewrite profiling lives in comgr-hotswap-internal.h so the sibling
+// comgr-hotswap-patch-*.cpp TUs can record into the same per-rewrite session.
 
 // -- GFX1250 B0-to-A0 constants -----------------------------------------------
 //
@@ -397,6 +403,8 @@ truncateNopSledsAtDirectTargets(std::vector<NopSled> &Sleds,
     std::memcpy(Ctx.Text + InstOffset + I, LS.SNopBytes.data(), MinInstSize);
 
   Sled.WritePos += Replacement.size() + MinInstSize;
+  // Count-only row: patch placed in-line via a nearby NOP sled, no trampoline.
+  Ctx.Profile.count(HotswapMetric::JumpNopSled);
   return true;
 }
 
@@ -807,25 +815,33 @@ bool isSBranchReachable(uint64_t From, uint64_t To) {
   }
 
   if (Far) {
-    if (InstSize < MinInstSize) {
+    // Every decline of a valid far site increments jump:declined_far (a
+    // count-only row) so the metric reflects all placement failures, including
+    // resource pressure, not just the size guard.
+    auto declineFar = [&](const Twine &Reason) {
+      Ctx.Profile.count(HotswapMetric::JumpDeclined);
       log() << "hotswap: far trampoline site 0x" << utohexstr(InstOffset)
-            << " declined: " << InstSize << " B, smaller than " << MinInstSize
-            << " B forward branch\n";
+            << " declined: " << Reason << "\n";
       return false;
-    }
+    };
+    if (InstSize < MinInstSize)
+      return declineFar(Twine(InstSize) + " B, smaller than " +
+                        Twine(MinInstSize) + " B forward branch");
     std::optional<SafeSgprScratchBlock> Scratch =
         reserveSafeFarReturn(Ctx, InstOffset);
     if (!Scratch)
-      return false;
+      return declineFar("no safe SGPR triple for set-PC return");
     T.Bytes.insert(T.Bytes.end(), SetPcReturnReserveBytes, uint8_t{0});
     T.Long = true;
     T.UsesSetPCBack = true;
     T.LongBranchSgprBase = Scratch->Base;
+    Ctx.Profile.count(HotswapMetric::JumpLong);
     Ctx.OutTrampolines.emplace_back(std::move(T));
     Ctx.QueuedTrampolineBytes = *QueuedBytes;
     return true;
   }
   {
+    Ctx.Profile.count(HotswapMetric::JumpShort);
     // Reserve the short branch-back slot; fixupTrampolineBranches fills it in.
     T.Bytes.insert(T.Bytes.end(), MinInstSize, uint8_t{0});
   }
@@ -2197,9 +2213,14 @@ static std::optional<uint32_t> applyGfx1250B0toA0Rules(
     std::vector<InternalDecodedInst> &Decoded, uint8_t *Text, uint64_t TextSize,
     const LLVMState &LS, std::vector<Trampoline> &OutTrampolines, ElfView &Elf,
     std::vector<ScratchPatchInfo> &OutScratchPatches,
-    const RewriteConfig &Config, bool &OutRequiredPatchApplied) {
+    const RewriteConfig &Config, bool &OutRequiredPatchApplied,
+    HotswapProfile &Profile) {
   uint32_t Patched = 0;
+
+  HotswapProfile::Scope SledScope = Profile.time(HotswapMetric::NopSledScan);
   std::vector<NopSled> Sleds = buildNopSledMap(Decoded, LS, Elf);
+  SledScope.finish();
+
   std::optional<DeclaredTextEntryInfo> DeclaredEntries =
       collectDeclaredTextEntries(Elf);
   if (!DeclaredEntries)
@@ -2220,9 +2241,14 @@ static std::optional<uint32_t> applyGfx1250B0toA0Rules(
     truncateNopSledsAtDirectTargets(Sleds, ControlFlow->Targets);
   }
 
+  HotswapProfile::Scope CfgScope = Profile.time(HotswapMetric::CfgBuild);
   CFG Cfg = buildCfg(Decoded, *LS.MCII);
+  CfgScope.finish();
+
+  HotswapProfile::Scope LiveScope = Profile.time(HotswapMetric::Liveness);
   LivenessInfo Liveness =
       computeLiveness(Decoded, Cfg, *LS.MCII, *LS.MRI, Config.MaxVgprs);
+  LiveScope.finish();
 
   if (!Liveness.Converged) {
     log() << "hotswap: error: liveness analysis did not converge, using "
@@ -2246,9 +2272,9 @@ static std::optional<uint32_t> applyGfx1250B0toA0Rules(
   if (!PoolBaseOffset)
     return std::nullopt;
   PatchContext Ctx{
-      Config,      Decoded,           Text,        TextSize, *PoolBaseOffset,
-      LS,          OutTrampolines,    Sleds,       Elf,      Liveness,
-      KernelStats, OutScratchPatches, *ControlFlow};
+      Config,      Decoded,           Text,         TextSize, *PoolBaseOffset,
+      LS,          OutTrampolines,    Sleds,        Elf,      Liveness,
+      KernelStats, OutScratchPatches, *ControlFlow, Profile};
 
   const HotswapPatchVTable &VT = getHotswapPatchVTable();
 
@@ -2257,24 +2283,39 @@ static std::optional<uint32_t> applyGfx1250B0toA0Rules(
   // against on these and we must not invoke the patch passes for them.
   constexpr StringLiteral UnknownMnemonic = "<unknown>";
   using PerInstPatchFn = uint32_t (*)(PatchContext &, size_t);
-  SmallVector<PerInstPatchFn, 5> PerInstPasses;
+  // A pass plus its metric; time/patches are summed locally and flushed once
+  // after the loop (see HotswapProfile::add).
+  struct TimedPass {
+    PerInstPatchFn Fn;
+    HotswapMetric Metric;
+    uint64_t Nanos = 0;
+    uint64_t Patches = 0;
+  };
+  SmallVector<TimedPass, 5> Passes;
   if (Config.RunB0A0Patches) {
-    PerInstPasses.push_back(VT.applyInPlacePatches);
-    PerInstPasses.push_back(VT.applyTrampolinePatches);
-    PerInstPasses.push_back(VT.applyWmmaSplitPatches);
-    PerInstPasses.push_back(VT.applyScratchPatches);
-    PerInstPasses.push_back(VT.applyWmmaScale16Patches);
+    Passes.push_back({VT.applyInPlacePatches, HotswapMetric::InPlace});
+    Passes.push_back({VT.applyTrampolinePatches, HotswapMetric::Trampoline});
+    Passes.push_back({VT.applyWmmaSplitPatches, HotswapMetric::WmmaSplit});
+    Passes.push_back({VT.applyScratchPatches, HotswapMetric::ScratchFp8});
+    Passes.push_back({VT.applyWmmaScale16Patches, HotswapMetric::WmmaScale16});
   } else {
-    PerInstPasses.push_back(VT.applyTrampolinePatches);
+    Passes.push_back({VT.applyTrampolinePatches, HotswapMetric::Trampoline});
   }
+
+  const bool Prof = Ctx.Profile.enabled();
 
   for (size_t Idx = 0, E = Decoded.size(); Idx < E; ++Idx) {
     const InternalDecodedInst &DI = Decoded[Idx];
     if (DI.Mnemonic == UnknownMnemonic)
       continue;
 
-    for (PerInstPatchFn Fn : PerInstPasses) {
-      std::optional<uint32_t> P = runPerInstPass(Fn, Ctx, Idx);
+    for (TimedPass &Pass : Passes) {
+      const uint64_t T0 = Prof ? profNowNs() : 0;
+      std::optional<uint32_t> P = runPerInstPass(Pass.Fn, Ctx, Idx);
+      if (Prof) {
+        Pass.Nanos += profNowNs() - T0;
+        Pass.Patches += P.value_or(0);
+      }
       if (!P)
         return std::nullopt;
       if (*P == 0)
@@ -2283,6 +2324,10 @@ static std::optional<uint32_t> applyGfx1250B0toA0Rules(
       break;
     }
   }
+
+  if (Prof)
+    for (const TimedPass &Pass : Passes)
+      Ctx.Profile.add(Pass.Metric, Pass.Nanos, Pass.Patches);
 
   // Whole-kernel passes below run after per-instruction patches. Earlier
   // passes may have modified Text bytes, but the Decoded stream still holds
@@ -2295,10 +2340,22 @@ static std::optional<uint32_t> applyGfx1250B0toA0Rules(
   //    treat a branch as WMMA/VALU/VOP3PX2.
   // If a future patch family changes instruction boundaries, the Decoded
   // stream must be rebuilt before these passes run.
-  if (Config.RunB0A0Patches && VT.applyWmmaHazardPatch)
-    Patched += VT.applyWmmaHazardPatch(Ctx);
-  if (Config.RunB0A0Patches && VT.applyVop3px2Src2Fix)
-    Patched += VT.applyVop3px2Src2Fix(Ctx);
+  if (Config.RunB0A0Patches && VT.applyWmmaHazardPatch) {
+    HotswapProfile::Scope HazardScope =
+        Ctx.Profile.time(HotswapMetric::WmmaHazard);
+    const uint32_t P = VT.applyWmmaHazardPatch(Ctx);
+    HazardScope.addPatches(P);
+    HazardScope.finish();
+    Patched += P;
+  }
+  if (Config.RunB0A0Patches && VT.applyVop3px2Src2Fix) {
+    HotswapProfile::Scope Vop3Scope =
+        Ctx.Profile.time(HotswapMetric::Vop3px2Src2);
+    const uint32_t P = VT.applyVop3px2Src2Fix(Ctx);
+    Vop3Scope.addPatches(P);
+    Vop3Scope.finish();
+    Patched += P;
+  }
 
   if (!OutTrampolines.empty()) {
     if (!ControlFlow->HasUnresolvedTargets) {
@@ -2617,11 +2674,23 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
     return AMD_COMGR_STATUS_SUCCESS;
   }
 
+  // One profiling session per code object, merged into TimeStatistics when it
+  // goes out of scope. Prof gates the manual per-phase clock reads.
+  HotswapProfile Profile(hotswapProfilingEnabled());
+  const bool Prof = Profile.enabled();
+  // RAII guard: records phase:rewrite_total on every return path.
+  [[maybe_unused]] HotswapProfile::Scope TotalScope =
+      Profile.time(HotswapMetric::RewriteTotal);
+
   // Take a working copy so the input is preserved and we have a mutable
   // buffer to parse / patch.
+  uint64_t InputCopyT0 = Prof ? profNowNs() : 0;
   std::vector<uint8_t> Buf(static_cast<const uint8_t *>(ElfData),
                            static_cast<const uint8_t *>(ElfData) + ElfSize);
+  if (Prof)
+    Profile.add(HotswapMetric::InputCopy, profNowNs() - InputCopyT0, 0);
 
+  uint64_t ParseT0 = Prof ? profNowNs() : 0;
   Expected<ElfView> ViewOrErr = ElfView::create(Buf.data(), Buf.size());
   if (!ViewOrErr) {
     log() << "hotswap: error: retargetCodeObject: input is not a "
@@ -2634,6 +2703,8 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   }
   ElfView &Elf = *ViewOrErr;
+  if (Prof)
+    Profile.add(HotswapMetric::ElfParse, profNowNs() - ParseT0, 0);
 
   // The CPU name and s_nop padding bytes are the only rewrite state the fast
   // path needs; both are also carried by LLVMState on the MC path. Holding them
@@ -2661,7 +2732,10 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
     log() << "hotswap: entry trampolines: B0->B0 fast path (no MC/.text "
              "disassembly)\n";
   } else {
+    uint64_t InitT0 = Prof ? profNowNs() : 0;
     LS = initLLVM(TargetIdent);
+    if (Prof)
+      Profile.add(HotswapMetric::InitLLVM, profNowNs() - InitT0, 0);
     if (!LS.Valid) {
       log() << "hotswap: error: retargetCodeObject: initLLVM failed "
             << "for CPU '" << TargetIdent.Processor << "'; aborting rewrite.\n";
@@ -2680,15 +2754,22 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
   bool RequiredPatchApplied = false;
   if (RunInstructionPatches) {
     std::vector<InternalDecodedInst> Decoded;
-    if (!decodeTextSection(Text, Elf.textSize(), LS, Decoded)) {
+    uint64_t DecodeT0 = Prof ? profNowNs() : 0;
+    bool DecodedOk = decodeTextSection(Text, Elf.textSize(), LS, Decoded);
+    if (Prof)
+      Profile.add(HotswapMetric::Decode, profNowNs() - DecodeT0, 0);
+    if (!DecodedOk) {
       log() << "hotswap: error: retargetCodeObject: decodeTextSection "
             << "failed on .text (" << Elf.textSize() << " bytes).\n";
       return AMD_COMGR_STATUS_ERROR;
     }
 
+    uint64_t DispatchT0 = Prof ? profNowNs() : 0;
     std::optional<uint32_t> Patched = applyGfx1250B0toA0Rules(
         Decoded, Text, Elf.textSize(), LS, Deferred, Elf, ScratchPatches,
-        Config, RequiredPatchApplied);
+        Config, RequiredPatchApplied, Profile);
+    if (Prof)
+      Profile.add(HotswapMetric::B0A0Dispatch, profNowNs() - DispatchT0, 0);
     if (!Patched)
       return AMD_COMGR_STATUS_ERROR;
     Count = *Patched;
@@ -2705,6 +2786,7 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
     return AMD_COMGR_STATUS_ERROR;
 
   std::unique_ptr<WritableMemoryBuffer> Result;
+  uint64_t PoolT0 = Prof ? profNowNs() : 0;
   std::vector<Trampoline> Growth = Deferred;
   // The appended pool's fresh virtual address is the single reference point for
   // all trampoline branch/stub targets (growWithTrampolines places it there).
@@ -2721,8 +2803,14 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
   if (!PoolBaseOffsetOr)
     return AMD_COMGR_STATUS_ERROR;
   const uint64_t PoolBaseOffset = *PoolBaseOffsetOr;
+  if (Prof)
+    Profile.add(HotswapMetric::PoolSetup, profNowNs() - PoolT0, 0);
   if (!Deferred.empty()) {
-    if (!fixupTrampolineBranches(Deferred, Text, PoolBaseOffset, LS)) {
+    uint64_t FixupT0 = Prof ? profNowNs() : 0;
+    bool FixupOk = fixupTrampolineBranches(Deferred, Text, PoolBaseOffset, LS);
+    if (Prof)
+      Profile.add(HotswapMetric::FixupTrampolines, profNowNs() - FixupT0, 0);
+    if (!FixupOk) {
       if (RequiredPatchApplied) {
         log() << "hotswap: error: required patch trampoline branch fixup "
                  "failed; refusing to return the original unsafe code "
@@ -2756,12 +2844,16 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
 
   std::vector<KernelEntryTrampolineFixup> EntryFixups;
   if (Options.RunEntryTrampolines) {
+    uint64_t EntryT0 = Prof ? profNowNs() : 0;
     std::optional<uint32_t> EntryCount =
         UseFastAppend
             ? appendKernelEntryTrampolinesFast(Elf, TargetCpu, Config.MaxSgprs,
                                                Growth, EntryFixups)
             : appendKernelEntryTrampolines(Elf, LS, Config.MaxSgprs, Growth,
                                            EntryFixups);
+    if (Prof)
+      Profile.add(HotswapMetric::EntryTrampolines, profNowNs() - EntryT0,
+                  EntryCount.value_or(0));
     if (!EntryCount)
       return AMD_COMGR_STATUS_ERROR;
     Count += *EntryCount;
@@ -2769,12 +2861,20 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
     log() << "hotswap: kernel-entry trampolines disabled for this rewrite\n";
   }
 
-  if (!Deferred.empty() &&
-      !appendDeferredTrampolinePrefetchGuard(Elf, LS, Growth))
-    return AMD_COMGR_STATUS_ERROR;
+  if (!Deferred.empty()) {
+    uint64_t GuardT0 = Prof ? profNowNs() : 0;
+    bool GuardOk = appendDeferredTrampolinePrefetchGuard(Elf, LS, Growth);
+    if (Prof)
+      Profile.add(HotswapMetric::PrefetchGuard, profNowNs() - GuardT0, 0);
+    if (!GuardOk)
+      return AMD_COMGR_STATUS_ERROR;
+  }
 
   if (!Growth.empty()) {
+    uint64_t GrowT0 = Prof ? profNowNs() : 0;
     Result = Elf.growWithTrampolines(Growth, SNopBytes);
+    if (Prof)
+      Profile.add(HotswapMetric::GrowElf, profNowNs() - GrowT0, 0);
     if (!Result) {
       log() << "hotswap: error: retargetCodeObject: "
             << "ElfView::growWithTrampolines returned null with "
@@ -2791,9 +2891,17 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
       }
       GrowthTotal += T.Bytes.size();
     }
+    uint64_t DbgT0 = Prof ? profNowNs() : 0;
     patchDebugSections(*Result, Deferred, Elf, GrowthTotal);
-    if (!rewriteKernelEntryDescriptorOffsets(*Result, PoolVAddr, TargetCpu,
-                                             EntryFixups))
+    if (Prof)
+      Profile.add(HotswapMetric::DebugSections, profNowNs() - DbgT0, 0);
+
+    uint64_t KdT0 = Prof ? profNowNs() : 0;
+    bool KdOk = rewriteKernelEntryDescriptorOffsets(*Result, PoolVAddr,
+                                                    TargetCpu, EntryFixups);
+    if (Prof)
+      Profile.add(HotswapMetric::KdRewrite, profNowNs() - KdT0, 0);
+    if (!KdOk)
       return AMD_COMGR_STATUS_ERROR;
 
     // Give each appended entry stub a `<kernel>.stub` symbol so a dispatch
@@ -2810,21 +2918,31 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
     const bool AddStubSymbols =
         !UseFastAppend || env::shouldAddEntryTrampolineSymbols();
     if (!EntryFixups.empty() && AddStubSymbols) {
+      uint64_t SymT0 = Prof ? profNowNs() : 0;
       std::unique_ptr<WritableMemoryBuffer> WithSyms =
           addKernelEntryTrampolineSymbols(*Result, Elf.textSectionIndex(),
                                           Elf.textAddr(), Elf.textSize(),
                                           EntryFixups);
+      if (Prof)
+        Profile.add(HotswapMetric::SymbolInsert, profNowNs() - SymT0, 0);
       if (WithSyms)
         Result = std::move(WithSyms);
     }
   } else {
+    uint64_t OutCopyT0 = Prof ? profNowNs() : 0;
     Result = copyOutputBuffer(Buf.data(), ElfSize, "patched");
+    if (Prof)
+      Profile.add(HotswapMetric::OutputCopy, profNowNs() - OutCopyT0, 0);
     if (!Result)
       return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
   }
 
-  if (!ScratchPatches.empty())
+  if (!ScratchPatches.empty()) {
+    uint64_t VerifyT0 = Prof ? profNowNs() : 0;
     runScratchVerification(*Result, LS, ScratchPatches, Config.MaxVgprs);
+    if (Prof)
+      Profile.add(HotswapMetric::ScratchVerify, profNowNs() - VerifyT0, 0);
+  }
 
   Out = std::move(Result);
   return AMD_COMGR_STATUS_SUCCESS;

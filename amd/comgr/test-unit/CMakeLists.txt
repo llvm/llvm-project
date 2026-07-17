@@ -116,7 +116,11 @@ add_executable(HotswapMCTests
   ../src/comgr-hotswap-patch-wmma-hazard.cpp
   ../src/comgr-hotswap-patch-wmma-scale16.cpp
   ../src/comgr-hotswap-patch-wmma-split.cpp
-  ../src/comgr-env.cpp)
+  ../src/comgr-env.cpp
+  # HotswapProfile bodies are out-of-line in comgr-hotswap-profile.cpp; its
+  # flush() merges into Comgr TimeStatistics (time-stat.cpp / mergeStats()).
+  ../src/comgr-hotswap-profile.cpp
+  ../src/time-stat/time-stat.cpp)
 
 llvm_map_components_to_libnames(COMGR_TEST_UNIT_MC_LIBS
   BinaryFormat
@@ -144,6 +148,40 @@ target_include_directories(HotswapMCTests PRIVATE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/../include>)
 
 comgr_configure_test_target(HotswapMCTests)
+
+# -- HotswapProfileTests ------------------------------------------------------
+#
+# The profiler is declared in comgr-hotswap-internal.h with out-of-line bodies
+# in comgr-hotswap-profile.cpp; it is gated only at run time by
+# AMD_COMGR_TIME_STATISTICS. This dedicated target exercises the HotswapProfile
+# session logic directly (accumulation and flush) for both disabled and enabled
+# sessions.
+
+add_executable(HotswapProfileTests
+  HotswapProfileTest.cpp
+  # COMGR::env::* is referenced by the inline COMGR::hotswap::log() helper and by
+  # the profiler gating, both pulled in via comgr-hotswap-internal.h.
+  ../src/comgr-env.cpp
+  # HotswapProfile bodies are out-of-line in comgr-hotswap-profile.cpp; its
+  # flush() merges into Comgr TimeStatistics (time-stat.cpp / mergeStats()).
+  ../src/comgr-hotswap-profile.cpp
+  ../src/time-stat/time-stat.cpp)
+
+llvm_map_components_to_libnames(COMGR_TEST_UNIT_PROFILE_LIBS
+  BinaryFormat Object Support TargetParser)
+
+target_link_libraries(HotswapProfileTests PRIVATE
+  ${COMGR_GTEST_LIBS}
+  ${COMGR_TEST_UNIT_PROFILE_LIBS}
+  ${LLVM_PTHREAD_LIB})
+
+target_include_directories(HotswapProfileTests PRIVATE
+  ${LLVM_INCLUDE_DIRS}
+  ${CMAKE_CURRENT_SOURCE_DIR}/../src
+  ${COMGR_GTEST_INCLUDE_DIRS}
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/../include>)
+
+comgr_configure_test_target(HotswapProfileTests)
 
 # -- RaiserScaffoldingTests ---------------------------------------------------
 #
@@ -230,9 +268,10 @@ comgr_configure_test_target(LoggerTests)
 add_custom_target(test-unit
   COMMAND $<TARGET_FILE:HotswapElfTests>
   COMMAND $<TARGET_FILE:HotswapMCTests>
+  COMMAND $<TARGET_FILE:HotswapProfileTests>
   COMMAND $<TARGET_FILE:RaiserScaffoldingTests>
   COMMAND $<TARGET_FILE:DemangleSymbolNameTest>
   COMMAND $<TARGET_FILE:LoggerTests>)
-add_dependencies(test-unit HotswapElfTests HotswapMCTests
+add_dependencies(test-unit HotswapElfTests HotswapMCTests HotswapProfileTests
   RaiserScaffoldingTests DemangleSymbolNameTest LoggerTests)
 add_dependencies(check-comgr test-unit)

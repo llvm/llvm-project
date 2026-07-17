@@ -14,6 +14,7 @@
 ///   comgr-hotswap-llvm.cpp      LLVM MC infrastructure (disasm/asm/encode)
 ///   comgr-hotswap-b0a0.cpp      GFX1250 B0-to-A0 policy + public API
 ///   comgr-hotswap-occupancy.cpp VGPR/workgroup capacity policy
+///   comgr-hotswap-profile.cpp   HotSwap rewrite profiler (out-of-line bodies)
 ///
 //===----------------------------------------------------------------------===//
 
@@ -23,10 +24,18 @@
 #include "amd_comgr.h"
 #include "comgr-env.h"
 #include "comgr.h"
+#include "time-stat/ts-interface.h"
 
+#include <algorithm>
+#include <array>
+#include <chrono>
 #include <cstdint>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <limits>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <utility>
@@ -95,6 +104,206 @@ inline std::optional<uint64_t> checkedSubUint64(uint64_t LHS, uint64_t RHS,
   }
   return LHS - RHS;
 }
+
+// -- HotSwap rewrite profiling -----------------------------------------------
+//
+// Opt-in via AMD_COMGR_TIME_STATISTICS. When disabled each hook is a single
+// branch -- no clock read, no lock -- so no compile-time gate is needed.
+//
+// retargetCodeObject is single-threaded per call but runs concurrently across
+// threads, so each call owns a stack-local HotswapProfile that records into a
+// fixed array indexed by HotswapMetric (no lock, no string lookup on the hot
+// path) and merges once into Comgr's TimeStatistics when the rewrite finishes.
+//
+// Row names encode one parent/child level via '/': phase:* pipeline stages
+// (timed stages + phase:unaccounted partition phase:rewrite_total), strat:*
+// patch strategies with per-rule children, and jump:* placement outcomes.
+
+/// Identity of a profiled bucket. Used as an array index so the hot path
+/// records without hashing a string. The enumerator order MUST match the
+/// hotswapMetricInfo table below.
+enum class HotswapMetric : uint8_t {
+  // phase:* rows. The entries flagged PartitionsTotal in hotswapMetricInfo sum,
+  // together with Unaccounted, to RewriteTotal. Declared in pipeline order.
+  RewriteTotal,
+  InputCopy,
+  ElfParse,
+  InitLLVM,
+  Decode,
+  B0A0Dispatch,
+  PoolSetup,
+  FixupTrampolines,
+  EntryTrampolines,
+  PrefetchGuard,
+  GrowElf,
+  DebugSections,
+  KdRewrite,
+  SymbolInsert,
+  ScratchVerify,
+  OutputCopy,
+  Unaccounted,
+  // dispatch-internal sub-phases (shown indented under B0A0Dispatch)
+  NopSledScan,
+  CfgBuild,
+  Liveness,
+  // strat:* parents
+  InPlace,
+  Trampoline,
+  WmmaSplit,
+  ScratchFp8,
+  WmmaScale16,
+  WmmaHazard,
+  Vop3px2Src2,
+  // strat:inplace children (s_clause is handled identically on A0/B0 upstream,
+  // so it is no longer an in-place rewrite and has no bucket)
+  InPlaceClusterLoad,
+  InPlaceBarrierSignal,
+  // strat:trampoline children
+  TrampolineDs2Addr,
+  TrampolineTensorTdm,
+  TrampolineAddtid,
+  TrampolineClusterLoad,
+  // jump:* outcomes (count-only rows)
+  JumpNopSled,
+  JumpShort,
+  JumpLong,
+  JumpDeclined,
+  Count
+};
+
+inline constexpr size_t HotswapMetricCount =
+    static_cast<size_t>(HotswapMetric::Count);
+
+inline uint64_t profNowNs() {
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(
+             std::chrono::steady_clock::now().time_since_epoch())
+      .count();
+}
+
+struct HotswapSample {
+  uint64_t Nanos = 0;
+  uint64_t Calls = 0;
+  uint64_t Patches = 0;
+  uint64_t MinNanos = std::numeric_limits<uint64_t>::max();
+  uint64_t MaxNanos = 0;
+};
+
+/// Static per-metric display info: label, parent (Count == top-level row), and
+/// whether the row partitions phase:rewrite_total. Indexed by HotswapMetric;
+/// the array order MUST match the enumerator order.
+struct HotswapMetricInfo {
+  const char *Label;
+  HotswapMetric Parent;
+  bool PartitionsTotal;
+};
+
+inline constexpr HotswapMetricInfo hotswapMetricInfo[HotswapMetricCount] = {
+    {"phase:rewrite_total", HotswapMetric::Count, false},
+    {"phase:input_copy", HotswapMetric::Count, true},
+    {"phase:elf_parse", HotswapMetric::Count, true},
+    {"phase:initLLVM", HotswapMetric::Count, true},
+    {"phase:decode", HotswapMetric::Count, true},
+    {"phase:b0a0_dispatch", HotswapMetric::Count, true},
+    {"phase:pool_setup", HotswapMetric::Count, true},
+    {"phase:fixup_trampolines", HotswapMetric::Count, true},
+    {"phase:entry_trampolines", HotswapMetric::Count, true},
+    {"phase:prefetch_guard", HotswapMetric::Count, true},
+    {"phase:grow_elf", HotswapMetric::Count, true},
+    {"phase:debug_sections", HotswapMetric::Count, true},
+    {"phase:kd_rewrite", HotswapMetric::Count, true},
+    {"phase:symbol_insert", HotswapMetric::Count, true},
+    {"phase:scratch_verify", HotswapMetric::Count, true},
+    {"phase:output_copy", HotswapMetric::Count, true},
+    {"phase:unaccounted", HotswapMetric::Count, false},
+    {"nop_sled_scan", HotswapMetric::B0A0Dispatch, false},
+    {"cfg_build", HotswapMetric::B0A0Dispatch, false},
+    {"liveness", HotswapMetric::B0A0Dispatch, false},
+    {"strat:inplace", HotswapMetric::Count, false},
+    {"strat:trampoline", HotswapMetric::Count, false},
+    {"strat:wmma_split", HotswapMetric::Count, false},
+    {"strat:scratch_fp8", HotswapMetric::Count, false},
+    {"strat:wmma_scale16", HotswapMetric::Count, false},
+    {"strat:wmma_hazard", HotswapMetric::Count, false},
+    {"strat:vop3px2_src2", HotswapMetric::Count, false},
+    {"cluster_load_swap", HotswapMetric::InPlace, false},
+    {"s_barrier_signal_isfirst", HotswapMetric::InPlace, false},
+    {"ds_2addr", HotswapMetric::Trampoline, false},
+    {"tensor_tdm", HotswapMetric::Trampoline, false},
+    {"addtid", HotswapMetric::Trampoline, false},
+    {"cluster_load_mask", HotswapMetric::Trampoline, false},
+    {"jump:nop_sled", HotswapMetric::Count, false},
+    {"jump:short_s_branch", HotswapMetric::Count, false},
+    {"jump:far_set_pc_back", HotswapMetric::Count, false},
+    {"jump:declined_far", HotswapMetric::Count, false},
+};
+
+/// True when hotswap timings should be recorded (AMD_COMGR_TIME_STATISTICS).
+inline bool hotswapProfilingEnabled() { return env::needTimeStatistics(); }
+
+/// Per-rewrite profiling session. Lives on the retargetCodeObject stack and is
+/// referenced from PatchContext so deep patch sites record into its lock-free
+/// local array. Merges once into Comgr TimeStatistics on destruction.
+class HotswapProfile {
+public:
+  explicit HotswapProfile(bool Enabled) : Enabled(Enabled) {}
+  HotswapProfile(const HotswapProfile &) = delete;
+  HotswapProfile &operator=(const HotswapProfile &) = delete;
+  ~HotswapProfile() {
+    if (Enabled)
+      flush();
+  }
+
+  bool enabled() const { return Enabled; }
+
+  /// RAII timer. Records the elapsed ns (plus any patches) under Metric on
+  /// finish() or destruction. A disabled session hands out an inert scope with
+  /// a null back-pointer, so the clock is never read on the disabled path.
+  class Scope {
+  public:
+    Scope(HotswapProfile *Profile, HotswapMetric Metric);
+    Scope(const Scope &) = delete;
+    Scope &operator=(const Scope &) = delete;
+    ~Scope() { finish(); }
+    void addPatches(uint64_t P) { Patches += P; }
+    void finish();
+
+  private:
+    HotswapProfile *Profile;
+    HotswapMetric Metric;
+    uint64_t StartNs;
+    uint64_t Patches = 0;
+  };
+
+  [[nodiscard]] Scope time(HotswapMetric Metric);
+
+  /// Count-only record (e.g. jump outcomes): one call, no wall time.
+  void count(HotswapMetric Metric, uint64_t N = 1);
+
+  /// Accumulate a pre-measured interval as one call. The pass loop sums locally
+  /// and calls this once per rewrite, so a strat:* parent's "calls" stays one.
+  void add(HotswapMetric Metric, uint64_t Nanos, uint64_t Patches);
+
+  /// Read-only view of the per-metric samples. Exposed for unit testing the
+  /// session accumulation; production code reports through TimeStatistics.
+  const HotswapSample &sample(HotswapMetric Metric) const;
+
+  /// Derive phase:unaccounted and convert each recorded sample into a
+  /// TimeStatistics::PerfStatRecord (ns -> configured unit, one-level
+  /// parent/child row name, e.g. "strat:trampoline/ds_2addr"). Row-name storage
+  /// is appended to \p Names, which must outlive the returned records (each
+  /// Name is a StringRef into it). flush() merges the result; unit tests
+  /// inspect it. Defined in comgr-hotswap-profile.cpp.
+  llvm::SmallVector<COMGR::TimeStatistics::PerfStatRecord, HotswapMetricCount>
+  buildRecords(llvm::SmallVectorImpl<std::string> &Names);
+
+private:
+  /// Merge this rewrite's samples into Comgr TimeStatistics in one batch under
+  /// a single lock (see buildRecords). Defined in comgr-hotswap-profile.cpp.
+  void flush();
+
+  bool Enabled;
+  std::array<HotswapSample, HotswapMetricCount> Samples{};
+};
 
 // -- Trampoline and NOP sled --------------------------------------------------
 
@@ -879,6 +1088,9 @@ struct PatchContext {
   llvm::StringMap<KernelPatchStats> &KernelStats;
   std::vector<ScratchPatchInfo> &OutScratchPatches;
   const DirectControlFlowInfo &DirectControlFlow;
+  // Per-rewrite profiling session (inert unless AMD_COMGR_TIME_STATISTICS is
+  // set). Deep patch sites record into its lock-free local array.
+  HotswapProfile &Profile;
   // Required patches are transformations whose unpatched original code is
   // unsafe to return when the selected rewrite policy needs the patch.
   bool RequiredPatchFailed = false;

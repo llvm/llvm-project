@@ -1223,6 +1223,7 @@ TEST(SafeSgprScratchBlock, RejectsRegisterBeyondAddressableLimit) {
   llvm::StringMap<KernelPatchStats> KernelStats;
   std::vector<ScratchPatchInfo> ScratchPatches;
   DirectControlFlowInfo ControlFlow;
+  HotswapProfile Prof(/*Enabled=*/false);
   PatchContext Ctx{Config,
                    Decoded,
                    View.textData(),
@@ -1235,7 +1236,8 @@ TEST(SafeSgprScratchBlock, RejectsRegisterBeyondAddressableLimit) {
                    Liveness,
                    KernelStats,
                    ScratchPatches,
-                   ControlFlow};
+                   ControlFlow,
+                   Prof};
 
   EXPECT_FALSE(findSafeSgprScratchBlock(Ctx, /*TextOffset=*/0, /*Count=*/1,
                                         /*Alignment=*/1, "unit test"));
@@ -1266,6 +1268,7 @@ TEST(SafeSgprScratchBlock, RejectsAlignmentOverflow) {
   llvm::StringMap<KernelPatchStats> KernelStats;
   std::vector<ScratchPatchInfo> ScratchPatches;
   DirectControlFlowInfo ControlFlow;
+  HotswapProfile Prof(/*Enabled=*/false);
   PatchContext Ctx{Config,
                    Decoded,
                    View.textData(),
@@ -1278,7 +1281,8 @@ TEST(SafeSgprScratchBlock, RejectsAlignmentOverflow) {
                    Liveness,
                    KernelStats,
                    ScratchPatches,
-                   ControlFlow};
+                   ControlFlow,
+                   Prof};
 
   EXPECT_FALSE(findSafeSgprScratchBlock(Ctx, /*TextOffset=*/0, /*Count=*/1,
                                         /*Alignment=*/2, "unit test"));
@@ -1308,6 +1312,7 @@ TEST(SafeSgprScratchBlock, CommitRejectsObjectWithoutKernelDescriptor) {
   llvm::StringMap<KernelPatchStats> KernelStats;
   std::vector<ScratchPatchInfo> ScratchPatches;
   DirectControlFlowInfo ControlFlow;
+  HotswapProfile Prof(/*Enabled=*/false);
   PatchContext Ctx{Config,
                    Decoded,
                    View.textData(),
@@ -1320,7 +1325,8 @@ TEST(SafeSgprScratchBlock, CommitRejectsObjectWithoutKernelDescriptor) {
                    Liveness,
                    KernelStats,
                    ScratchPatches,
-                   ControlFlow};
+                   ControlFlow,
+                   Prof};
 
   const SafeSgprScratchBlock Block{/*Base=*/4, /*Count=*/1};
   EXPECT_FALSE(
