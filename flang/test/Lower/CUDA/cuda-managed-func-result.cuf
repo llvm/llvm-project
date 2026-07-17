@@ -1,0 +1,28 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! An allocatable function result with a CUDA data attribute is allocated with
+! the CUDA allocator. It must be kept as a variable and released with the
+! CUDA-aware deallocation, not moved into an hlfir.expr that would free it with
+! the host deallocator.
+
+module m
+contains
+  function fsum() result(res)
+    integer(4), allocatable, managed :: res(:)
+    allocate(res(4))
+    res = 0
+  end function
+end module
+
+subroutine test()
+  use m
+  integer(4), managed :: b(4)
+  b = fsum()
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest()
+! CHECK: %[[RES:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = ".result"}
+! CHECK: hlfir.declare %[[RES]] {uniq_name = ".tmp.func_result"}
+! CHECK: fir.call @_QMmPfsum()
+! CHECK: fir.if
+! CHECK: cuf.deallocate %[[RES]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>{{.*}}<managed>
