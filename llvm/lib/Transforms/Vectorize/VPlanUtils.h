@@ -190,6 +190,18 @@ SmallVector<VPUser *> collectUsersRecursively(VPValue *V);
 VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R, ArrayRef<VPValue *> Operands,
                             const DataLayout &DL);
 
+/// Removes the permutation pattern matched by \p MatchPerm from any elementwise
+/// operations in \p Plan, by constructing a new permutation via \p BuildPerm.
+/// e.g. binop(perm(x), perm(y)) -> perm(binop(x,y)).
+/// \p MatchPerm should match a permutation of some value and, if \p OneUseOnly
+/// is set, only when that permutation has a single use; on a match it returns
+/// the permuted value, and nullptr otherwise. \p BuildPerm creates a new
+/// permutation recipe wrapping the given value.
+void pullOutPermutations(
+    VPlan &Plan,
+    function_ref<VPValue *(VPValue *Op, bool OneUseOnly)> MatchPerm,
+    function_ref<VPSingleDefRecipe *(VPSingleDefRecipe *X)> BuildPerm);
+
 } // namespace vputils
 
 /// Lightweight SCEV-to-VPlan expander. Converts SCEV expressions into

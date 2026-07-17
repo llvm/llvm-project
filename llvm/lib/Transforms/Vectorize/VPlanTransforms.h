@@ -14,8 +14,8 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANTRANSFORMS_H
 
 #include "VPlan.h"
-#include "VPlanCFG.h"
 #include "VPlanPatternMatch.h"
+#include "VPlanUtils.h"
 #include "VPlanVerifier.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -602,38 +602,22 @@ struct VPlanTransforms {
 /// Removes the permutation pattern \p Perm from any elementwise operations
 /// in the plan, by constructing a new permutation via \p Build.
 /// e.g. binop(perm(x), perm(y)) -> perm(binop(x,y)).
+/// \p Perm is a matcher factory: given a sub-pattern it returns a matcher for
+/// the permutation of that sub-pattern. \p Build creates a new permutation
+/// recipe wrapping the given value.
 template <typename Match_t, typename Builder>
 void pullOutPermutations(VPlan &Plan, Match_t Perm, Builder Build) {
   using namespace VPlanPatternMatch;
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_deep(Plan.getEntry()))) {
-    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      auto *Def = dyn_cast<VPSingleDefRecipe>(&R);
-      if (!Def || !vputils::isElementwise(Def))
-        continue;
-
-      // At least one of the ops must be a permutation.
-      if (!any_of(Def->operands(), match_fn(Perm(m_VPValue()))))
-        continue;
-
-      // All operands must be permuted or a live in (splat).
-      if (!all_of(
-              Def->operands(),
-              match_fn(m_CombineOr(m_OneUse(Perm(m_VPValue())), m_LiveIn()))))
-        continue;
-
-      VPValue *X;
-      // Remove the inner permutations.
-      for (unsigned I = 0; I < Def->getNumOperands(); I++)
-        if (match(Def->getOperand(I), Perm(m_VPValue(X))))
-          Def->setOperand(I, X);
-
-      VPSingleDefRecipe *Res = Build(Def);
-      Res->insertAfter(Def);
-      Def->replaceUsesWithIf(
-          Res, [&Res](VPUser &U, unsigned _) { return &U != Res; });
-    }
-  }
+  // Match \p Op against the permutation, binding the permuted value on success.
+  // If \p OneUseOnly is set, only match single-use permutations.
+  auto MatchPerm = [&Perm](VPValue *Op, bool OneUseOnly) -> VPValue * {
+    VPValue *X;
+    if (OneUseOnly ? match(Op, m_OneUse(Perm(m_VPValue(X))))
+                   : match(Op, Perm(m_VPValue(X))))
+      return X;
+    return nullptr;
+  };
+  vputils::pullOutPermutations(Plan, MatchPerm, Build);
 }
 
 } // namespace llvm

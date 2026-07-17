@@ -1036,3 +1036,39 @@ VPIRValue *vputils::tryToFoldLiveIns(VPSingleDefRecipe &R,
     return Plan.getOrAddLiveIn(V);
   return nullptr;
 }
+
+void vputils::pullOutPermutations(
+    VPlan &Plan,
+    function_ref<VPValue *(VPValue *Op, bool OneUseOnly)> MatchPerm,
+    function_ref<VPSingleDefRecipe *(VPSingleDefRecipe *X)> BuildPerm) {
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *Def = dyn_cast<VPSingleDefRecipe>(&R);
+      if (!Def || !isElementwise(Def))
+        continue;
+
+      // At least one of the ops must be a permutation.
+      if (none_of(Def->operands(), [&MatchPerm](VPValue *Op) {
+            return MatchPerm(Op, /*OneUseOnly=*/false);
+          }))
+        continue;
+
+      // All operands must be a single-use permutation or a live in (splat).
+      if (!all_of(Def->operands(), [&MatchPerm](VPValue *Op) {
+            return MatchPerm(Op, /*OneUseOnly=*/true) || match(Op, m_LiveIn());
+          }))
+        continue;
+
+      // Remove the inner permutations.
+      for (unsigned I = 0, E = Def->getNumOperands(); I != E; ++I)
+        if (VPValue *X = MatchPerm(Def->getOperand(I), /*OneUseOnly=*/false))
+          Def->setOperand(I, X);
+
+      VPSingleDefRecipe *Res = BuildPerm(Def);
+      Res->insertAfter(Def);
+      Def->replaceUsesWithIf(
+          Res, [&Res](VPUser &U, unsigned _) { return &U != Res; });
+    }
+  }
+}
