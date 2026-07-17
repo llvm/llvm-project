@@ -1925,123 +1925,112 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
 
 namespace {
 struct BanerjeeInterval {
-  std::optional<APInt> Lower;
-  std::optional<APInt> Upper;
+  const SCEV *Lower;
+  const SCEV *Upper;
 
-  BanerjeeInterval(std::optional<APInt> Lower, std::optional<APInt> Upper)
-      : Lower(std::move(Lower)), Upper(std::move(Upper)) {}
+  BanerjeeInterval(const SCEV *Lower, const SCEV *Upper)
+      : Lower(Lower), Upper(Upper) {}
 };
 } // namespace
 
-static APInt signedMin(const APInt &A, const APInt &B) {
-  return A.slt(B) ? A : B;
-}
-
-static APInt signedMax(const APInt &A, const APInt &B) {
-  return A.sgt(B) ? A : B;
-}
-
 static BanerjeeInterval addIntervals(const BanerjeeInterval &A,
-                                     const BanerjeeInterval &B) {
-  std::optional<APInt> Lower;
-  std::optional<APInt> Upper;
+                                     const BanerjeeInterval &B,
+                                     ScalarEvolution &SE) {
+  const SCEV *Lower = nullptr;
+  const SCEV *Upper = nullptr;
   if (A.Lower && B.Lower)
-    Lower = *A.Lower + *B.Lower;
+    Lower = SE.getAddExpr(A.Lower, B.Lower);
   if (A.Upper && B.Upper)
-    Upper = *A.Upper + *B.Upper;
-  return BanerjeeInterval(std::move(Lower), std::move(Upper));
+    Upper = SE.getAddExpr(A.Upper, B.Upper);
+  return BanerjeeInterval(Lower, Upper);
 }
 
-static BanerjeeInterval constantInterval(const APInt &C) {
+static BanerjeeInterval constantInterval(const SCEV *C) {
   return BanerjeeInterval(C, C);
 }
 
-static BanerjeeInterval emptyInterval(unsigned Bits) {
-  return BanerjeeInterval(APInt(Bits, 1, true), APInt(Bits, 0, true));
+static BanerjeeInterval emptyInterval(Type *Ty, ScalarEvolution &SE) {
+  return BanerjeeInterval(SE.getOne(Ty), SE.getZero(Ty));
 }
 
-static bool isEmptyInterval(const BanerjeeInterval &Interval) {
+static bool isEmptyInterval(const BanerjeeInterval &Interval,
+                            ScalarEvolution &SE) {
   return Interval.Lower && Interval.Upper &&
-         Interval.Lower->sgt(*Interval.Upper);
+         SE.isKnownPredicate(CmpInst::ICMP_SGT, Interval.Lower, Interval.Upper);
 }
 
-static BanerjeeInterval signedRangeInterval(const APInt &Coeff,
-                                            const APInt &Lower,
-                                            const APInt &Upper) {
-  APInt LowerValue = Coeff * Lower;
-  APInt UpperValue = Coeff * Upper;
-  return BanerjeeInterval(signedMin(LowerValue, UpperValue),
-                          signedMax(LowerValue, UpperValue));
+static BanerjeeInterval signedRangeInterval(const SCEV *Coeff,
+                                            const SCEV *Lower,
+                                            const SCEV *Upper,
+                                            ScalarEvolution &SE) {
+  const SCEV *LowerValue = SE.getMulExpr(Coeff, Lower);
+  const SCEV *UpperValue = SE.getMulExpr(Coeff, Upper);
+  return BanerjeeInterval(SE.getSMinExpr(LowerValue, UpperValue),
+                          SE.getSMaxExpr(LowerValue, UpperValue));
 }
 
-static BanerjeeInterval variableInterval(const APInt &Coeff,
-                                         const std::optional<APInt> &Upper) {
-  APInt Zero(Coeff.getBitWidth(), 0, true);
-  if (Coeff.isZero())
+static BanerjeeInterval variableInterval(const SCEV *Coeff, const SCEV *Upper,
+                                         ScalarEvolution &SE) {
+  const SCEV *Zero = SE.getZero(Coeff->getType());
+  if (Coeff->isZero())
     return constantInterval(Zero);
   if (!Upper) {
-    if (Coeff.isNegative())
-      return BanerjeeInterval(std::nullopt, Zero);
-    return BanerjeeInterval(Zero, std::nullopt);
+    if (SE.isKnownNegative(Coeff))
+      return BanerjeeInterval(nullptr, Zero);
+    if (SE.isKnownNonNegative(Coeff))
+      return BanerjeeInterval(Zero, nullptr);
+    return BanerjeeInterval(nullptr, nullptr);
   }
-  return signedRangeInterval(Coeff, Zero, *Upper);
+  return signedRangeInterval(Coeff, Zero, Upper, SE);
 }
 
 static BanerjeeInterval
-unboundedStrictDirectionInterval(const APInt &ACoeff, const APInt &BCoeff,
-                                 unsigned char Direction) {
-  APInt DeltaCoeff = ACoeff - BCoeff;
+unboundedStrictDirectionInterval(const SCEV *ACoeff, const SCEV *BCoeff,
+                                 unsigned char Direction, ScalarEvolution &SE) {
+  const SCEV *DeltaCoeff = SE.getMinusSCEV(ACoeff, BCoeff);
 
   switch (Direction) {
   case Dependence::DVEntry::LT: {
-    APInt Boundary = -BCoeff;
-    std::optional<APInt> Lower;
-    std::optional<APInt> Upper;
-    if (DeltaCoeff.isNonNegative() && BCoeff.isNonPositive())
+    const SCEV *Boundary = SE.getNegativeSCEV(BCoeff);
+    const SCEV *Lower = nullptr;
+    const SCEV *Upper = nullptr;
+    if (SE.isKnownNonNegative(DeltaCoeff) && SE.isKnownNonPositive(BCoeff))
       Lower = Boundary;
-    if (DeltaCoeff.isNonPositive() && BCoeff.isNonNegative())
+    if (SE.isKnownNonPositive(DeltaCoeff) && SE.isKnownNonNegative(BCoeff))
       Upper = Boundary;
-    return BanerjeeInterval(std::move(Lower), std::move(Upper));
+    return BanerjeeInterval(Lower, Upper);
   }
   case Dependence::DVEntry::GT: {
-    std::optional<APInt> Lower;
-    std::optional<APInt> Upper;
-    if (ACoeff.isNonNegative() && DeltaCoeff.isNonNegative())
+    const SCEV *Lower = nullptr;
+    const SCEV *Upper = nullptr;
+    if (SE.isKnownNonNegative(ACoeff) && SE.isKnownNonNegative(DeltaCoeff))
       Lower = ACoeff;
-    if (ACoeff.isNonPositive() && DeltaCoeff.isNonPositive())
+    if (SE.isKnownNonPositive(ACoeff) && SE.isKnownNonPositive(DeltaCoeff))
       Upper = ACoeff;
-    return BanerjeeInterval(std::move(Lower), std::move(Upper));
+    return BanerjeeInterval(Lower, Upper);
   }
   default:
     llvm_unreachable("unexpected direction");
   }
 }
 
-static BanerjeeInterval intervalFromValues(ArrayRef<APInt> Values) {
+static BanerjeeInterval intervalFromValues(ArrayRef<const SCEV *> Values,
+                                           ScalarEvolution &SE) {
   assert(!Values.empty() && "expected at least one value");
-  APInt Lower = Values.front();
-  APInt Upper = Values.front();
-  for (const APInt &Value : Values.drop_front()) {
-    Lower = signedMin(Lower, Value);
-    Upper = signedMax(Upper, Value);
+  const SCEV *Lower = Values.front();
+  const SCEV *Upper = Values.front();
+  for (const SCEV *Value : Values.drop_front()) {
+    Lower = SE.getSMinExpr(Lower, Value);
+    Upper = SE.getSMaxExpr(Upper, Value);
   }
-  return BanerjeeInterval(std::move(Lower), std::move(Upper));
+  return BanerjeeInterval(Lower, Upper);
 }
 
-static APInt evaluateBanerjeeTerm(const APInt &A, const APInt &SrcIndex,
-                                  const APInt &B, const APInt &DstIndex) {
-  return A * SrcIndex - B * DstIndex;
-}
-
-static std::optional<APInt>
-getBanerjeeConstant(const SCEV *Expr, unsigned BaseBits, unsigned WideBits) {
-  const SCEVConstant *C = dyn_cast<SCEVConstant>(Expr);
-  if (!C)
-    return std::nullopt;
-  APInt Value = C->getAPInt();
-  if (!Value.isSignedIntN(BaseBits))
-    return std::nullopt;
-  return Value.sextOrTrunc(WideBits);
+static const SCEV *evaluateBanerjeeTerm(const SCEV *A, const SCEV *SrcIndex,
+                                        const SCEV *B, const SCEV *DstIndex,
+                                        ScalarEvolution &SE) {
+  return SE.getMinusSCEV(SE.getMulExpr(A, SrcIndex),
+                         SE.getMulExpr(B, DstIndex));
 }
 
 // banerjeeMIVtest -
@@ -2049,17 +2038,17 @@ getBanerjeeConstant(const SCEV *Expr, unsigned BaseBits, unsigned WideBits) {
 // (Wolfe calls this the Extreme Value Test; see Section 2.5.2 of
 // Optimizing Supercompilers for Supercomputers, Michael Wolfe.)
 //
-// This implementation handles only constant affine expressions and constant
-// loop bounds. The original Wolfe formulae are algebraically simplified for
-// normalized loops (L_k=0, N_k=1); we instead evaluate the subscript
-// difference directly at the vertices of the constraint polytope for each
-// direction (e.g., (0,1), (0,U), (U-1,U) for <). This eliminates the
-// intermediate SCEV arithmetic whose overflow behaviour makes the legacy
-// symbolic bound formulae unsound for LLVM IR.
+// The original Wolfe formulae are algebraically simplified for normalized
+// loops (L_k=0, N_k=1); we now evaluate the subscript difference directly
+// at the vertices of the constraint polytope for each direction (e.g., (0,1),
+// (0,U), (U-1,U) for <). All operands are extended to a sufficiently wide
+// SCEV integer type before the arithmetic, so symbolic expressions remain
+// available to ScalarEvolution without wrapping intermediate
+// results.
 //
 // Loop bounds are backedge-taken counts (maximum normalized iteration
 // index). A single-iteration loop has bound 0, making < and > impossible.
-// Symbolic cases bail out conservatively.
+// Unknown interval endpoints are treated conservatively as infinities.
 //
 // Return true if dependence disproved.
 bool DependenceInfo::banerjeeMIVtest(const SCEV *Src, const SCEV *Dst,
@@ -2077,44 +2066,30 @@ bool DependenceInfo::banerjeeMIVtest(const SCEV *Src, const SCEV *Dst,
   // Let B = BaseBits and L = MaxLevels. Coefficients are signed B-bit values,
   // so |C| <= 2^(B-1), while normalized iteration indices satisfy I < 2^B.
   // Thus |C*I| < 2^(2B-1), and each term |A*I-B*J| < 2^(2B). The total is
-  // bounded by L*2^(2B) <= 2^(2B+L); one additional bit holds the sign.
+  // bounded by L*2^(2B) <= 2^(2B+L); one additional bit holds the sign, so the
+  // WideBits that can hold arthimetic should be 2B+L+1.
   unsigned WideBits = 2 * BaseBits + MaxLevels + 1;
-  APInt Zero(WideBits, 0, true);
+  Type *WideType = IntegerType::get(F->getContext(), WideBits);
+  const SCEV *Zero = SE->getZero(WideType);
 
-  CoefficientInfo EmptyCoeff{Zero, std::nullopt};
+  CoefficientInfo EmptyCoeff{Zero, nullptr};
   SmallVector<CoefficientInfo, 4> A(MaxLevels + 1, EmptyCoeff);
   SmallVector<CoefficientInfo, 4> B(MaxLevels + 1, EmptyCoeff);
   assert(Loops.size() > MaxLevels && "loop bit vector is too small");
   assert(Result.Levels >= CommonLevels &&
          "direction vector is too small for common levels");
 
-  const SCEV *A0 = collectCoeffInfo(Src, true, BaseBits, WideBits, A);
+  const SCEV *A0 = collectCoeffInfo(Src, true, WideType, A);
   if (!A0)
     return false;
-  const SCEV *B0 = collectCoeffInfo(Dst, false, BaseBits, WideBits, B);
+  const SCEV *B0 = collectCoeffInfo(Dst, false, WideType, B);
   if (!B0)
     return false;
 
-  std::optional<APInt> DeltaValue;
-  if (A0 == B0) {
-    DeltaValue = Zero;
-  } else {
-    std::optional<APInt> A0Constant =
-        getBanerjeeConstant(A0, BaseBits, WideBits);
-    std::optional<APInt> B0Constant =
-        getBanerjeeConstant(B0, BaseBits, WideBits);
-    if (A0Constant && B0Constant)
-      DeltaValue = *B0Constant - *A0Constant;
-    if (!DeltaValue && A0->getType() == B0->getType()) {
-      if (const SCEV *DeltaSCEV = minusSCEVNoSignedOverflow(B0, A0, *SE))
-        DeltaValue = getBanerjeeConstant(DeltaSCEV, BaseBits, WideBits);
-    }
-  }
-  if (!DeltaValue)
-    return false;
-
-  APInt Delta = *DeltaValue;
-  LLVM_DEBUG(dbgs() << "\tDelta = " << Delta << '\n');
+  A0 = SE->getTruncateOrSignExtend(A0, WideType);
+  B0 = SE->getTruncateOrSignExtend(B0, WideType);
+  const SCEV *Delta = SE->getMinusSCEV(B0, A0);
+  LLVM_DEBUG(dbgs() << "\tDelta = " << *Delta << '\n');
 
   SmallVector<BoundInfo, 4> Bound(MaxLevels + 1);
   for (unsigned K = 0; K <= MaxLevels; ++K) {
@@ -2157,11 +2132,12 @@ bool DependenceInfo::banerjeeMIVtest(const SCEV *Src, const SCEV *Dst,
   return false;
 }
 
-// Walks through the subscript and collects the constant coefficient and
-// maximum iteration index associated with each loop level.
+// Walks through the subscript and collects the coefficient and maximum
+// iteration index associated with each loop level. Both are extended to the
+// widened analysis type before Banerjee arithmetic.
 const SCEV *
 DependenceInfo::collectCoeffInfo(const SCEV *Subscript, bool SrcFlag,
-                                 unsigned BaseBits, unsigned WideBits,
+                                 Type *WideType,
                                  MutableArrayRef<CoefficientInfo> CI) const {
   SmallBitVector SeenLevels(MaxLevels + 1);
   while (const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(Subscript)) {
@@ -2171,15 +2147,18 @@ DependenceInfo::collectCoeffInfo(const SCEV *Subscript, bool SrcFlag,
       return nullptr;
     SeenLevels.set(K);
 
-    std::optional<APInt> Step =
-        getBanerjeeConstant(AddRec->getStepRecurrence(*SE), BaseBits, WideBits);
-    if (!Step)
-      return nullptr;
-    CI[K].Coeff = *Step;
-
-    if (std::optional<APInt> MaxIndex = collectNonNegativeConstantUpperBound(
-            AddRec->getLoop(), Subscript->getType()))
-      CI[K].MaxIterIndex = MaxIndex->zextOrTrunc(WideBits);
+    const SCEV *Step = AddRec->getStepRecurrence(*SE);
+    CI[K].Coeff = SE->getTruncateOrSignExtend(Step, WideType);
+    if (const SCEV *MaxIterIndex =
+            collectUpperBound(AddRec->getLoop(), AddRec->getType())) {
+      // Backedge counts are nonnegative. Prefer a sign extension when SCEV can
+      // prove that fact because it preserves more symbolic relationships than
+      // a zero extension; otherwise zero extension is always conservative.
+      CI[K].MaxIterIndex =
+          SE->isKnownNonNegative(MaxIterIndex)
+              ? SE->getTruncateOrSignExtend(MaxIterIndex, WideType)
+              : SE->getTruncateOrZeroExtend(MaxIterIndex, WideType);
+    }
 
     Subscript = AddRec->getStart();
   }
@@ -2187,25 +2166,23 @@ DependenceInfo::collectCoeffInfo(const SCEV *Subscript, bool SrcFlag,
 }
 
 // Looks through all the bounds info and computes the selected lower bound.
-std::optional<APInt>
-DependenceInfo::getLowerBound(ArrayRef<BoundInfo> Bound) const {
-  std::optional<APInt> Sum = Bound[1].Lower[Bound[1].Direction];
+const SCEV *DependenceInfo::getLowerBound(ArrayRef<BoundInfo> Bound) const {
+  const SCEV *Sum = Bound[1].Lower[Bound[1].Direction];
   for (unsigned K = 2; Sum && K <= MaxLevels; ++K) {
     if (!Bound[K].Lower[Bound[K].Direction])
-      return std::nullopt;
-    *Sum += *Bound[K].Lower[Bound[K].Direction];
+      return nullptr;
+    Sum = SE->getAddExpr(Sum, Bound[K].Lower[Bound[K].Direction]);
   }
   return Sum;
 }
 
 // Looks through all the bounds info and computes the selected upper bound.
-std::optional<APInt>
-DependenceInfo::getUpperBound(ArrayRef<BoundInfo> Bound) const {
-  std::optional<APInt> Sum = Bound[1].Upper[Bound[1].Direction];
+const SCEV *DependenceInfo::getUpperBound(ArrayRef<BoundInfo> Bound) const {
+  const SCEV *Sum = Bound[1].Upper[Bound[1].Direction];
   for (unsigned K = 2; Sum && K <= MaxLevels; ++K) {
     if (!Bound[K].Upper[Bound[K].Direction])
-      return std::nullopt;
-    *Sum += *Bound[K].Upper[Bound[K].Direction];
+      return nullptr;
+    Sum = SE->getAddExpr(Sum, Bound[K].Upper[Bound[K].Direction]);
   }
   return Sum;
 }
@@ -2213,20 +2190,20 @@ DependenceInfo::getUpperBound(ArrayRef<BoundInfo> Bound) const {
 // Returns true iff the current bounds are plausible.
 bool DependenceInfo::testBounds(unsigned char DirKind, unsigned Level,
                                 MutableArrayRef<BoundInfo> Bound,
-                                const APInt &Delta) const {
+                                const SCEV *Delta) const {
   Bound[Level].Direction = DirKind;
   for (unsigned K = 1; K <= MaxLevels; ++K) {
     unsigned char Direction = Bound[K].Direction;
     BanerjeeInterval Interval(Bound[K].Lower[Direction],
                               Bound[K].Upper[Direction]);
-    if (isEmptyInterval(Interval))
+    if (isEmptyInterval(Interval, *SE))
       return false;
   }
-  if (std::optional<APInt> Lower = getLowerBound(Bound))
-    if (Lower->sgt(Delta))
+  if (const SCEV *Lower = getLowerBound(Bound))
+    if (SE->isKnownPredicate(CmpInst::ICMP_SGT, Lower, Delta))
       return false;
-  if (std::optional<APInt> Upper = getUpperBound(Bound))
-    if (Delta.sgt(*Upper))
+  if (const SCEV *Upper = getUpperBound(Bound))
+    if (SE->isKnownPredicate(CmpInst::ICMP_SGT, Delta, Upper))
       return false;
   return true;
 }
@@ -2235,7 +2212,7 @@ bool DependenceInfo::testBounds(unsigned char DirKind, unsigned Level,
 unsigned DependenceInfo::exploreDirections(unsigned Level,
                                            MutableArrayRef<BoundInfo> Bound,
                                            const SmallBitVector &Loops,
-                                           const APInt &Delta,
+                                           const SCEV *Delta,
                                            const FullDependence &Result) const {
   if (CommonLevels > MIVMaxLevelThreshold) {
     LLVM_DEBUG(dbgs() << "Number of common levels exceeded the threshold. MIV "
@@ -2289,12 +2266,12 @@ void DependenceInfo::findBoundsALL(ArrayRef<CoefficientInfo> A,
                                    MutableArrayRef<BoundInfo> Bound,
                                    unsigned K) const {
   BanerjeeInterval SrcInterval =
-      variableInterval(A[K].Coeff, A[K].MaxIterIndex);
+      variableInterval(A[K].Coeff, A[K].MaxIterIndex, *SE);
   BanerjeeInterval DstInterval =
-      variableInterval(-B[K].Coeff, B[K].MaxIterIndex);
-  BanerjeeInterval Interval = addIntervals(SrcInterval, DstInterval);
-  Bound[K].Lower[Dependence::DVEntry::ALL] = std::move(Interval.Lower);
-  Bound[K].Upper[Dependence::DVEntry::ALL] = std::move(Interval.Upper);
+      variableInterval(SE->getNegativeSCEV(B[K].Coeff), B[K].MaxIterIndex, *SE);
+  BanerjeeInterval Interval = addIntervals(SrcInterval, DstInterval, *SE);
+  Bound[K].Lower[Dependence::DVEntry::ALL] = Interval.Lower;
+  Bound[K].Upper[Dependence::DVEntry::ALL] = Interval.Upper;
 }
 
 // Computes the lower and upper bounds for level K using the = direction.
@@ -2309,16 +2286,16 @@ void DependenceInfo::findBoundsEQ(ArrayRef<CoefficientInfo> A,
                                   ArrayRef<CoefficientInfo> B,
                                   MutableArrayRef<BoundInfo> Bound,
                                   unsigned K) const {
-  std::optional<APInt> MaxIterIndex;
+  const SCEV *MaxIterIndex = nullptr;
   if (A[K].MaxIterIndex && B[K].MaxIterIndex)
-    MaxIterIndex = signedMin(*A[K].MaxIterIndex, *B[K].MaxIterIndex);
+    MaxIterIndex = SE->getUMinExpr(A[K].MaxIterIndex, B[K].MaxIterIndex);
   else
     MaxIterIndex = A[K].MaxIterIndex ? A[K].MaxIterIndex : B[K].MaxIterIndex;
 
-  BanerjeeInterval Interval =
-      variableInterval(A[K].Coeff - B[K].Coeff, MaxIterIndex);
-  Bound[K].Lower[Dependence::DVEntry::EQ] = std::move(Interval.Lower);
-  Bound[K].Upper[Dependence::DVEntry::EQ] = std::move(Interval.Upper);
+  BanerjeeInterval Interval = variableInterval(
+      SE->getMinusSCEV(A[K].Coeff, B[K].Coeff), MaxIterIndex, *SE);
+  Bound[K].Lower[Dependence::DVEntry::EQ] = Interval.Lower;
+  Bound[K].Upper[Dependence::DVEntry::EQ] = Interval.Upper;
 }
 
 // Computes the lower and upper bounds for level K using the < direction.
@@ -2338,35 +2315,37 @@ void DependenceInfo::findBoundsLT(ArrayRef<CoefficientInfo> A,
                                   ArrayRef<CoefficientInfo> B,
                                   MutableArrayRef<BoundInfo> Bound,
                                   unsigned K) const {
-  const APInt &ACoeff = A[K].Coeff;
-  const APInt &BCoeff = B[K].Coeff;
-  std::optional<APInt> MaxIterIndex;
+  const SCEV *ACoeff = A[K].Coeff;
+  const SCEV *BCoeff = B[K].Coeff;
+  const SCEV *MaxIterIndex = nullptr;
   if (A[K].MaxIterIndex && B[K].MaxIterIndex) {
-    if (*A[K].MaxIterIndex == *B[K].MaxIterIndex)
+    if (SE->isKnownPredicate(CmpInst::ICMP_EQ, A[K].MaxIterIndex,
+                             B[K].MaxIterIndex))
       MaxIterIndex = A[K].MaxIterIndex;
   } else {
     MaxIterIndex = A[K].MaxIterIndex ? A[K].MaxIterIndex : B[K].MaxIterIndex;
   }
 
-  BanerjeeInterval Interval(std::nullopt, std::nullopt);
+  BanerjeeInterval Interval(nullptr, nullptr);
   if (!MaxIterIndex) {
     Interval = unboundedStrictDirectionInterval(ACoeff, BCoeff,
-                                                Dependence::DVEntry::LT);
+                                                Dependence::DVEntry::LT, *SE);
   } else if (MaxIterIndex->isZero()) {
-    Interval = emptyInterval(ACoeff.getBitWidth());
+    Interval = emptyInterval(ACoeff->getType(), *SE);
   } else {
-    APInt Zero(ACoeff.getBitWidth(), 0, true);
-    APInt One(ACoeff.getBitWidth(), 1, true);
-    APInt MaxMinusOne = *MaxIterIndex - One;
-    SmallVector<APInt, 3> Values;
-    Values.push_back(evaluateBanerjeeTerm(ACoeff, Zero, BCoeff, One));
-    Values.push_back(evaluateBanerjeeTerm(ACoeff, Zero, BCoeff, *MaxIterIndex));
+    const SCEV *Zero = SE->getZero(ACoeff->getType());
+    const SCEV *One = SE->getOne(ACoeff->getType());
+    const SCEV *MaxMinusOne = SE->getMinusSCEV(MaxIterIndex, One);
+    SmallVector<const SCEV *, 3> Values;
+    Values.push_back(evaluateBanerjeeTerm(ACoeff, Zero, BCoeff, One, *SE));
     Values.push_back(
-        evaluateBanerjeeTerm(ACoeff, MaxMinusOne, BCoeff, *MaxIterIndex));
-    Interval = intervalFromValues(Values);
+        evaluateBanerjeeTerm(ACoeff, Zero, BCoeff, MaxIterIndex, *SE));
+    Values.push_back(
+        evaluateBanerjeeTerm(ACoeff, MaxMinusOne, BCoeff, MaxIterIndex, *SE));
+    Interval = intervalFromValues(Values, *SE);
   }
-  Bound[K].Lower[Dependence::DVEntry::LT] = std::move(Interval.Lower);
-  Bound[K].Upper[Dependence::DVEntry::LT] = std::move(Interval.Upper);
+  Bound[K].Lower[Dependence::DVEntry::LT] = Interval.Lower;
+  Bound[K].Upper[Dependence::DVEntry::LT] = Interval.Upper;
 }
 
 // Computes the lower and upper bounds for level K using the > direction.
@@ -2386,35 +2365,37 @@ void DependenceInfo::findBoundsGT(ArrayRef<CoefficientInfo> A,
                                   ArrayRef<CoefficientInfo> B,
                                   MutableArrayRef<BoundInfo> Bound,
                                   unsigned K) const {
-  const APInt &ACoeff = A[K].Coeff;
-  const APInt &BCoeff = B[K].Coeff;
-  std::optional<APInt> MaxIterIndex;
+  const SCEV *ACoeff = A[K].Coeff;
+  const SCEV *BCoeff = B[K].Coeff;
+  const SCEV *MaxIterIndex = nullptr;
   if (A[K].MaxIterIndex && B[K].MaxIterIndex) {
-    if (*A[K].MaxIterIndex == *B[K].MaxIterIndex)
+    if (SE->isKnownPredicate(CmpInst::ICMP_EQ, A[K].MaxIterIndex,
+                             B[K].MaxIterIndex))
       MaxIterIndex = A[K].MaxIterIndex;
   } else {
     MaxIterIndex = A[K].MaxIterIndex ? A[K].MaxIterIndex : B[K].MaxIterIndex;
   }
 
-  BanerjeeInterval Interval(std::nullopt, std::nullopt);
+  BanerjeeInterval Interval(nullptr, nullptr);
   if (!MaxIterIndex) {
     Interval = unboundedStrictDirectionInterval(ACoeff, BCoeff,
-                                                Dependence::DVEntry::GT);
+                                                Dependence::DVEntry::GT, *SE);
   } else if (MaxIterIndex->isZero()) {
-    Interval = emptyInterval(ACoeff.getBitWidth());
+    Interval = emptyInterval(ACoeff->getType(), *SE);
   } else {
-    APInt Zero(ACoeff.getBitWidth(), 0, true);
-    APInt One(ACoeff.getBitWidth(), 1, true);
-    APInt MaxMinusOne = *MaxIterIndex - One;
-    SmallVector<APInt, 3> Values;
-    Values.push_back(evaluateBanerjeeTerm(ACoeff, One, BCoeff, Zero));
-    Values.push_back(evaluateBanerjeeTerm(ACoeff, *MaxIterIndex, BCoeff, Zero));
+    const SCEV *Zero = SE->getZero(ACoeff->getType());
+    const SCEV *One = SE->getOne(ACoeff->getType());
+    const SCEV *MaxMinusOne = SE->getMinusSCEV(MaxIterIndex, One);
+    SmallVector<const SCEV *, 3> Values;
+    Values.push_back(evaluateBanerjeeTerm(ACoeff, One, BCoeff, Zero, *SE));
     Values.push_back(
-        evaluateBanerjeeTerm(ACoeff, *MaxIterIndex, BCoeff, MaxMinusOne));
-    Interval = intervalFromValues(Values);
+        evaluateBanerjeeTerm(ACoeff, MaxIterIndex, BCoeff, Zero, *SE));
+    Values.push_back(
+        evaluateBanerjeeTerm(ACoeff, MaxIterIndex, BCoeff, MaxMinusOne, *SE));
+    Interval = intervalFromValues(Values, *SE);
   }
-  Bound[K].Lower[Dependence::DVEntry::GT] = std::move(Interval.Lower);
-  Bound[K].Upper[Dependence::DVEntry::GT] = std::move(Interval.Upper);
+  Bound[K].Lower[Dependence::DVEntry::GT] = Interval.Lower;
+  Bound[K].Upper[Dependence::DVEntry::GT] = Interval.Upper;
 }
 
 /// Check if we can delinearize the subscripts. If the SCEVs representing the

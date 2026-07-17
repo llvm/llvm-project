@@ -348,13 +348,13 @@ private:
   };
 
   struct CoefficientInfo {
-    APInt Coeff;
-    std::optional<APInt> MaxIterIndex;
+    const SCEV *Coeff;
+    const SCEV *MaxIterIndex;
   };
 
   struct BoundInfo {
-    std::optional<APInt> Upper[8];
-    std::optional<APInt> Lower[8];
+    const SCEV *Upper[8];
+    const SCEV *Lower[8];
     unsigned char Direction;
     unsigned char DirSet;
   };
@@ -606,10 +606,10 @@ private:
                        const SmallBitVector &Loops,
                        FullDependence &Result) const;
 
-  /// Walks through the subscript, collecting each constant coefficient and
-  /// the associated maximum iteration index.
+  /// Walks through the subscript, collecting each coefficient and the
+  /// associated maximum iteration index in the widened analysis type.
   const SCEV *collectCoeffInfo(const SCEV *Subscript, bool SrcFlag,
-                               unsigned BaseBits, unsigned WideBits,
+                               Type *WideType,
                                MutableArrayRef<CoefficientInfo> CI) const;
 
   /// Given \p Expr of the form
@@ -632,19 +632,19 @@ private:
                                         APInt &RunningGCD) const;
 
   /// Looks through all the bounds info and computes the selected lower bound.
-  std::optional<APInt> getLowerBound(ArrayRef<BoundInfo> Bound) const;
+  const SCEV *getLowerBound(ArrayRef<BoundInfo> Bound) const;
 
   /// Looks through all the bounds info and computes the selected upper bound.
-  std::optional<APInt> getUpperBound(ArrayRef<BoundInfo> Bound) const;
+  const SCEV *getUpperBound(ArrayRef<BoundInfo> Bound) const;
 
   /// Hierarchically expands the direction-vector search space.
   unsigned exploreDirections(unsigned Level, MutableArrayRef<BoundInfo> Bound,
-                             const SmallBitVector &Loops, const APInt &Delta,
+                             const SmallBitVector &Loops, const SCEV *Delta,
                              const FullDependence &Result) const;
 
   /// Returns true iff the current bounds are plausible.
   bool testBounds(unsigned char DirKind, unsigned Level,
-                  MutableArrayRef<BoundInfo> Bound, const APInt &Delta) const;
+                  MutableArrayRef<BoundInfo> Bound, const SCEV *Delta) const;
 
   /// Computes bounds for level K using the indicated direction.
   void findBoundsALL(ArrayRef<CoefficientInfo> A, ArrayRef<CoefficientInfo> B,
