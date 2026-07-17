@@ -205,6 +205,9 @@ public:
   ///     mov  %100, 0
   /// The mov instructions doesn't clobber $eflags, so it is safe to insert the
   /// mov instruction at the use site.
+  ///
+  /// It is more useful for ISAs that can optionally set flag register, such as
+  /// AArch64 and PowerPC.
   virtual bool
   canRematerializeIgnorePhysRegDef(const MachineInstr &MI,
                                    const MachineOperand &MO) const {
