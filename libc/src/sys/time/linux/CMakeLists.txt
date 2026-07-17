@@ -45,3 +45,17 @@ add_entrypoint_object(
     libc.src.__support.macros.config
     libc.src.errno.errno
 )
+
+add_entrypoint_object(
+  gettimeofday
+  SRCS
+    gettimeofday.cpp
+  HDRS
+    ../gettimeofday.h
+  DEPENDS
+    libc.hdr.time_macros
+    libc.hdr.types.suseconds_t
+    libc.src.__support.time.clock_gettime
+    libc.src.__support.time.units
+    libc.src.errno.errno
+)

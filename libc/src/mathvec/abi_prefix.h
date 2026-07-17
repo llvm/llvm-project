@@ -31,7 +31,7 @@
 #elif defined(LIBC_TARGET_CPU_HAS_ARM_NEON)
 #define LIBC_MATHVEC_FLOAT_VFABI_PREFIX "_ZGVnN4v_"
 #else
-#error "Unsupported target for mathvec VFABI symbols"
+#define LIBC_MATHVEC_FLOAT_VFABI_PREFIX "_ZGV_"
 #endif
 #endif // LIBC_MATHVEC_FLOAT_VFABI_PREFIX
 
