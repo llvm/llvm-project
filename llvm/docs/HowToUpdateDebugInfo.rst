@@ -428,6 +428,8 @@ tests. Changes to this pass are not allowed to break existing tests.
    check lines. In cases where this can't be avoided (say, if a test wouldn't
    be precise enough), moving the test to its own file is preferred.
 
+.. _DebugifyCoverageTracking:
+
 Using Coverage Tracking to remove false positives
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
