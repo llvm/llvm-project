@@ -55,6 +55,7 @@ class CycleRef {
 
   explicit CycleRef(unsigned Index) : Index(Index) {}
   template <typename ContextT> friend class GenericCycleInfo;
+  template <typename ContextT> friend class GenericCycleInfoCompute;
   friend struct DenseMapInfo<CycleRef>;
 
 public:
@@ -80,17 +81,12 @@ public:
   template <typename> friend class GenericCycleInfoCompute;
 
 private:
-  /// Sentinel for a cycle-index slot that refers to no cycle.
-  static constexpr unsigned NoCycle = ~0u;
-
   /// Internal, data-only storage for a cycle. Consumers name a cycle by a
   /// CycleRef handle and query it through GenericCycleInfo.
   class Cycle {
   public:
-    /// Preorder index of the parent cycle, or NoCycle for a top-level
-    /// cycle. Before flatten() this holds a creation-order index into
-    /// GenericCycleInfoCompute::AllCycles.
-    unsigned ParentIndex = NoCycle;
+    /// The parent cycle; invalid for a top-level cycle.
+    CycleRef Parent;
 
     /// The entry block(s) of the cycle. The header is the only entry if this
     /// is a loop.
@@ -100,10 +96,6 @@ private:
     /// half-open range [IdxBegin, IdxEnd) of BlockLayout, nested like an Euler
     /// tour of the cycle tree, so containment is an interval test (see
     /// contains()).
-    ///
-    /// During construction (before the forest is flattened), IdxEnd accumulates
-    /// the number of this cycle's own blocks (those whose innermost cycle is
-    /// this one).
     unsigned IdxBegin = 0, IdxEnd = 0;
 
     /// Depth of the cycle in the tree: top-level cycles are at depth 1 and each
@@ -118,7 +110,7 @@ private:
     void appendEntry(BlockT *Block) { Entries.push_back(Block); }
 
     /// Whether this cycle has a parent, i.e. is not top-level.
-    bool hasParent() const { return ParentIndex != NoCycle; }
+    bool hasParent() const { return Parent.isValid(); }
 
     Cycle() = default;
     Cycle(const Cycle &) = delete;
@@ -131,12 +123,9 @@ private:
   ContextT Context;
   unsigned BlockNumberEpoch;
 
-  /// Map each basic block number to the preorder index of its inner-most
-  /// containing cycle, or NoCycle if none. During construction this
-  /// transiently holds creation-order indices into
-  /// GenericCycleInfoCompute::AllCycles, which flatten() remaps to preorder
-  /// indices.
-  SmallVector<unsigned> BlockMap;
+  /// Map each basic block number to its inner-most containing cycle, or an
+  /// invalid handle if none.
+  SmallVector<CycleRef> BlockMap;
 
   /// Euler tour of the cycle forest: every cycle's blocks form a contiguous
   /// slice [IdxBegin, IdxEnd) of this array, nested inside its parent's.
@@ -173,7 +162,7 @@ private:
                GraphTraits<const FunctionT *>::getNumberEpoch(Fn) &&
            "CycleInfo used with outdated block number epoch");
   }
-  void addToBlockMap(BlockT *Block, CycleT *Cycle);
+  void addToBlockMap(BlockT *Block, CycleRef C);
 
 public:
   /// Iteration over child cycles, yielding handles. The first child (if any)
@@ -225,17 +214,14 @@ public:
     unsigned Number = GraphTraits<const BlockT *>::getNumber(Block);
     // A block added after compute() that no cycle contains (e.g. a critical
     // edge MachineSink split outside every cycle) has a number beyond BlockMap.
-    if (Number >= BlockMap.size() || BlockMap[Number] == NoCycle)
+    if (Number >= BlockMap.size())
       return CycleRef();
-    return CycleRef(BlockMap[Number]);
+    return BlockMap[Number];
   }
 
   BlockT *getHeader(CycleRef C) const { return deref(C).Entries[0]; }
   bool isReducible(CycleRef C) const { return deref(C).Entries.size() == 1; }
-  CycleRef getParentCycle(CycleRef C) const {
-    auto P = deref(C).ParentIndex;
-    return P == NoCycle ? CycleRef() : CycleRef(P);
-  }
+  CycleRef getParentCycle(CycleRef C) const { return deref(C).Parent; }
   unsigned getDepth(CycleRef C) const { return deref(C).Depth; }
   size_t getNumBlocks(CycleRef C) const {
     const CycleT &Cyc = deref(C);
