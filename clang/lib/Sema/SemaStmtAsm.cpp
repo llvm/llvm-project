@@ -245,7 +245,7 @@ ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel) {
       Diag(Expr->getBeginLoc(), diag::err_asm_operand_empty_string)
           << SL->getSourceRange();
     }
-    if (Context.getTargetInfo().FromSystemEncodingConverter) {
+    if (Context.getTargetInfo().FromSystemEncodingConverter != nullptr) {
       SmallString<16> ConvertedAsm;
       Context.getTargetInfo().FromSystemEncodingConverter->convert(
           SL->getString(), ConvertedAsm);
