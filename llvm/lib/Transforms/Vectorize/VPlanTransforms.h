@@ -14,8 +14,6 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANTRANSFORMS_H
 
 #include "VPlan.h"
-#include "VPlanPatternMatch.h"
-#include "VPlanUtils.h"
 #include "VPlanVerifier.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -598,27 +596,6 @@ struct VPlanTransforms {
                                         VPRecipeBuilder &RecipeBuilder,
                                         VPCostContext &CostCtx);
 };
-
-/// Removes the permutation pattern \p Perm from any elementwise operations
-/// in the plan, by constructing a new permutation via \p Build.
-/// e.g. binop(perm(x), perm(y)) -> perm(binop(x,y)).
-/// \p Perm is a matcher factory: given a sub-pattern it returns a matcher for
-/// the permutation of that sub-pattern. \p Build creates a new permutation
-/// recipe wrapping the given value.
-template <typename Match_t, typename Builder>
-void pullOutPermutations(VPlan &Plan, Match_t Perm, Builder Build) {
-  using namespace VPlanPatternMatch;
-  // Match \p Op against the permutation, binding the permuted value on success.
-  // If \p OneUseOnly is set, only match single-use permutations.
-  auto MatchPerm = [&Perm](VPValue *Op, bool OneUseOnly) -> VPValue * {
-    VPValue *X;
-    if (OneUseOnly ? match(Op, m_OneUse(Perm(m_VPValue(X))))
-                   : match(Op, Perm(m_VPValue(X))))
-      return X;
-    return nullptr;
-  };
-  vputils::pullOutPermutations(Plan, MatchPerm, Build);
-}
 
 } // namespace llvm
 

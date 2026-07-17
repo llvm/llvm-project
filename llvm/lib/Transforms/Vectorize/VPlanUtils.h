@@ -106,6 +106,12 @@ template <typename Ty> Intrinsic::ID getIntrinsicID(const Ty *R) {
   return Intrinsic::not_intrinsic;
 }
 
+/// Get any instruction opcode or intrinsic ID data embedded in recipe \p R.
+/// Returns an optional pair, where the first element indicates whether it is
+/// an intrinsic ID.
+std::optional<std::pair<bool, unsigned>>
+getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R);
+
 /// Return a MemoryLocation for \p R with noalias metadata populated from
 /// \p R, if the recipe is supported and std::nullopt otherwise. The pointer of
 /// the location is conservatively set to nullptr.
@@ -167,12 +173,6 @@ VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
 /// Finds the incoming alias-mask within the vector preheader.
 VPValue *findIncomingAliasMask(const VPlan &Plan);
 
-/// Get any instruction opcode or intrinsic ID data embedded in recipe \p R.
-/// Returns an optional pair, where the first element indicates whether it is
-/// an intrinsic ID.
-std::optional<std::pair<bool, unsigned>>
-getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R);
-
 /// Returns true if \p R is dead, i.e. none of its defined values are used and
 /// it has no side effects (with the exception of conditional assumes, which are
 /// considered dead as their conditions may be flattened).
@@ -190,17 +190,26 @@ SmallVector<VPUser *> collectUsersRecursively(VPValue *V);
 VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R, ArrayRef<VPValue *> Operands,
                             const DataLayout &DL);
 
-/// Removes the permutation pattern matched by \p MatchPerm from any elementwise
-/// operations in \p Plan, by constructing a new permutation via \p BuildPerm.
+namespace detail {
+
+/// Template-independent implementation for pullOutPermutations.
+void pullOutPermutationsImpl(
+    VPlan &Plan, function_ref<VPValue *(VPValue *Op)> Perm,
+    function_ref<VPSingleDefRecipe *(VPSingleDefRecipe *X)> Build);
+} // namespace detail
+
+/// Removes the permutation pattern \p Perm from any elementwise operations
+/// in the plan, by constructing a new permutation via \p Build.
 /// e.g. binop(perm(x), perm(y)) -> perm(binop(x,y)).
-/// \p MatchPerm should match a permutation of some value and, if \p OneUseOnly
-/// is set, only when that permutation has a single use; on a match it returns
-/// the permuted value, and nullptr otherwise. \p BuildPerm creates a new
-/// permutation recipe wrapping the given value.
-void pullOutPermutations(
-    VPlan &Plan,
-    function_ref<VPValue *(VPValue *Op, bool OneUseOnly)> MatchPerm,
-    function_ref<VPSingleDefRecipe *(VPSingleDefRecipe *X)> BuildPerm);
+template <typename Match_t, typename Builder>
+void pullOutPermutations(VPlan &Plan, Match_t Perm, Builder Build) {
+  // Convert matcher to function returing the matched VPValue.
+  auto MatchPerm = [&Perm](VPValue *Op) -> VPValue * {
+    VPValue *X;
+    return match(Op, Perm(X)) ? X : nullptr;
+  };
+  detail::pullOutPermutationsImpl(Plan, MatchPerm, Build);
+}
 
 } // namespace vputils
 

@@ -8,7 +8,7 @@
 ///
 /// \file
 /// This file implements the VPlan-to-VPlan transforms related to explicit
-/// vector length (EVL) support.
+/// vector length (EVL) tail folding support.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -282,11 +282,11 @@ void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
   // Pull out left splices from any elementwise op.
   // binop(splice.left(poison, x, evl), live-in)
   // -> splice.left(poison, binop(x,live-in), evl)
-  pullOutPermutations(
+  vputils::pullOutPermutations(
       Plan,
-      [&EVL](const auto &X) {
-        return m_Intrinsic<Intrinsic::vector_splice_left>(m_Poison(), X,
-                                                          m_Specific(EVL));
+      [&EVL](VPValue *&X) {
+        return m_Intrinsic<Intrinsic::vector_splice_left>(
+            m_Poison(), m_VPValue(X), m_Specific(EVL));
       },
       [&Plan, &EVL](auto *X) {
         return new VPWidenIntrinsicRecipe(

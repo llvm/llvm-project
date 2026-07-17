@@ -1037,9 +1037,8 @@ VPIRValue *vputils::tryToFoldLiveIns(VPSingleDefRecipe &R,
   return nullptr;
 }
 
-void vputils::pullOutPermutations(
-    VPlan &Plan,
-    function_ref<VPValue *(VPValue *Op, bool OneUseOnly)> MatchPerm,
+void vputils::detail::pullOutPermutationsImpl(
+    VPlan &Plan, function_ref<VPValue *(VPValue *Op)> MatchPerm,
     function_ref<VPSingleDefRecipe *(VPSingleDefRecipe *X)> BuildPerm) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
@@ -1049,20 +1048,19 @@ void vputils::pullOutPermutations(
         continue;
 
       // At least one of the ops must be a permutation.
-      if (none_of(Def->operands(), [&MatchPerm](VPValue *Op) {
-            return MatchPerm(Op, /*OneUseOnly=*/false);
-          }))
+      if (none_of(Def->operands(),
+                  [&MatchPerm](VPValue *Op) { return MatchPerm(Op); }))
         continue;
 
       // All operands must be a single-use permutation or a live in (splat).
       if (!all_of(Def->operands(), [&MatchPerm](VPValue *Op) {
-            return MatchPerm(Op, /*OneUseOnly=*/true) || match(Op, m_LiveIn());
+            return (Op->hasOneUse() && MatchPerm(Op)) || match(Op, m_LiveIn());
           }))
         continue;
 
       // Remove the inner permutations.
       for (unsigned I = 0, E = Def->getNumOperands(); I != E; ++I)
-        if (VPValue *X = MatchPerm(Def->getOperand(I), /*OneUseOnly=*/false))
+        if (VPValue *X = MatchPerm(Def->getOperand(I)))
           Def->setOperand(I, X);
 
       VPSingleDefRecipe *Res = BuildPerm(Def);

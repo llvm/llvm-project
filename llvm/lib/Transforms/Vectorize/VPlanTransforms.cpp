@@ -1736,8 +1736,8 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan) {
 void VPlanTransforms::simplifyReverses(VPlan &Plan) {
   // Pull out reverses from any elementwise op.
   // binop(reverse(x), reverse(y)) -> reverse(binop(x,y))
-  pullOutPermutations(
-      Plan, [](const auto &X) { return m_Reverse(X); },
+  vputils::pullOutPermutations(
+      Plan, [](VPValue *&X) { return m_Reverse(m_VPValue(X)); },
       [](auto *X) { return new VPInstruction(VPInstruction::Reverse, X); });
 
   // reverse(reverse(x)) -> x
