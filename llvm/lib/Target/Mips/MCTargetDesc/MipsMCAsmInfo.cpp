@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsMCAsmInfo.h"
+#include "MCTargetDesc/MipsBaseInfo.h"
 #include "MipsABIInfo.h"
 #include "MipsMCTargetDesc.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -47,6 +48,12 @@ MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
   UseAssignmentForEHBegin = true;
   SupportsDebugInformation = true;
   DwarfRegNumForCFI = true;
+
+  if (TheTriple.isNanoMips()) {
+    IsNanoMips = true;
+    AssemblerDialect = MipsAsmVariants::NanoMips;
+    UseLogicalShr = false;
+  }
 }
 
 void MipsCOFFMCAsmInfo::anchor() {}
@@ -68,7 +75,7 @@ const MCSpecifierExpr *Mips::createGpOff(const MCExpr *Expr, Mips::Specifier S,
 }
 
 static void printImpl(const MCAsmInfo &MAI, raw_ostream &OS,
-                      const MCSpecifierExpr &Expr) {
+                      const MCSpecifierExpr &Expr, bool IsNanoMips) {
   int64_t AbsVal;
 
   switch (Expr.getSpecifier()) {
@@ -156,10 +163,14 @@ static void printImpl(const MCAsmInfo &MAI, raw_ostream &OS,
   }
 
   OS << '(';
-  if (Expr.evaluateAsAbsolute(AbsVal))
-    OS << AbsVal;
-  else
+  if (Expr.getSubExpr()->evaluateAsAbsolute(AbsVal)) {
+    if (IsNanoMips)
+      OS << format("0x%" PRIx64, AbsVal);
+    else
+      OS << AbsVal;
+  } else {
     MAI.printExpr(OS, *Expr.getSubExpr());
+  }
   OS << ')';
 }
 
@@ -202,7 +213,7 @@ static bool evaluate(const MCSpecifierExpr &Expr, MCValue &Res,
 
 void MipsELFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
                                           const MCSpecifierExpr &Expr) const {
-  printImpl(*this, OS, Expr);
+  printImpl(*this, OS, Expr, IsNanoMips);
 }
 
 bool MipsELFMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
@@ -212,13 +223,14 @@ bool MipsELFMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
 }
 
 bool MipsELFMCAsmInfo::usesCompInstByteOrder(const MCSubtargetInfo &STI) const {
-  // microMIPS encoding uses compressed intruction byte-order
-  return STI.hasFeature(Mips::FeatureMicroMips);
+  // microMIPS/nanoMIPS encoding uses compressed intruction byte-order
+  return STI.hasFeature(Mips::FeatureMicroMips) ||
+         STI.hasFeature(Mips::FeatureNanoMips);
 }
 
 void MipsCOFFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
                                            const MCSpecifierExpr &Expr) const {
-  printImpl(*this, OS, Expr);
+  printImpl(*this, OS, Expr, /*IsNanoMips=*/false);
 }
 
 bool MipsCOFFMCAsmInfo::evaluateAsRelocatableImpl(

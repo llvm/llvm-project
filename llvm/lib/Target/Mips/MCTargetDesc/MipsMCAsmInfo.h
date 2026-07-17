@@ -22,6 +22,7 @@ class Triple;
 
 class MipsELFMCAsmInfo : public MCAsmInfoELF {
   void anchor() override;
+  bool IsNanoMips = false;
 
 public:
   explicit MipsELFMCAsmInfo(const Triple &TheTriple,

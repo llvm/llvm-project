@@ -695,6 +695,7 @@ class GPRNMAsmOperandClass<string Cname, string RegClass,
   : MipsAsmRegOperand {
   let Name = "GPRNM" # Cname;
   let PredicateMethod = "isGPRNMAsmReg<Mips::" # RegClass # ">";
+  let RenderMethod = "addGPR32AsmRegOperands";
   let SuperClasses = Supers;
 }
 

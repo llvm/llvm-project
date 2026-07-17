@@ -203,7 +203,8 @@ void MipsMCCodeEmitter::encodeInstruction(const MCInst &MI,
   // so we have to special check for them.
   const unsigned Opcode = TmpInst.getOpcode();
   if ((Opcode != Mips::NOP) && (Opcode != Mips::SLL) &&
-      (Opcode != Mips::SLL_MM) && (Opcode != Mips::SLL_MMR6) && !Binary)
+      (Opcode != Mips::SLL_MM) && (Opcode != Mips::SLL_MMR6) &&
+      (Opcode != Mips::SIGRIE_NM) && !Binary)
     llvm_unreachable("unimplemented opcode in encodeInstruction()");
 
   int NewOpcode = -1;
