@@ -15,6 +15,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_FREELIST_H
 
 #include "block.h"
+#include "src/__support/libc_assert.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -40,6 +41,12 @@ public:
 
     /// @returns The inner size of blocks in the list containing this node.
     LIBC_INLINE size_t size() const { return block().inner_size(); }
+
+  protected:
+    LIBC_INLINE void sanitize() const {
+      LIBC_SANITIZATION_CHECK(next->prev == this);
+      LIBC_SANITIZATION_CHECK(prev->next == this);
+    }
 
   private:
     // Circularly linked pointers to adjacent nodes.
@@ -84,6 +91,9 @@ public:
 
   /// Remove an arbitrary node from the list.
   void remove(Node *node);
+
+  /// Verify integrity of all nodes in the list.
+  void sanitize() const;
 
 private:
   Node *begin_;

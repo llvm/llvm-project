@@ -15,6 +15,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_FREETRIE_H
 
 #include "freelist.h"
+#include "src/__support/libc_assert.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -60,6 +61,16 @@ public:
     Node *parent;
 
     friend class FreeTrie;
+
+    LIBC_INLINE void sanitize() const {
+      FreeList::Node::sanitize();
+      if (lower)
+        LIBC_SANITIZATION_CHECK(lower->parent == this);
+      if (upper)
+        LIBC_SANITIZATION_CHECK(upper->parent == this);
+      if (parent)
+        LIBC_SANITIZATION_CHECK(parent->lower == this || parent->upper == this);
+    }
   };
 
   /// Power-of-two range of sizes covered by a subtrie.
@@ -110,6 +121,9 @@ public:
   /// nullptr.
   Node *find_best_fit(size_t size);
 
+  /// Verify integrity of all nodes in the trie.
+  void sanitize() const;
+
 private:
   /// @returns Whether a node is the head of its containing freelist.
   bool is_head(Node *node) const { return node->parent || node == root; }
@@ -135,6 +149,7 @@ LIBC_INLINE void FreeTrie::push(BlockRef block) {
   while (*cur && (*cur)->size() != size) {
     LIBC_ASSERT(cur_range.contains(size) && "requested size out of trie range");
     parent = *cur;
+    (*cur)->sanitize();
     if (size <= cur_range.lower().max()) {
       cur = &(*cur)->lower;
       cur_range = cur_range.lower();
@@ -167,6 +182,7 @@ LIBC_INLINE FreeTrie::Node *FreeTrie::find_best_fit(size_t size) {
   FreeTrie::SizeRange deferred_upper_range{0, 0};
 
   while (true) {
+    cur->sanitize();
     LIBC_ASSERT(cur_range.contains(cur->size()) &&
                 "trie node size out of range");
     LIBC_ASSERT(cur_range.max() >= size &&

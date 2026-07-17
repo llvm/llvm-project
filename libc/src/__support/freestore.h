@@ -46,6 +46,13 @@ public:
   /// allocated. Returns nullptr if there is no such block.
   BlockRef remove_best_fit(size_t size);
 
+  /// Sanitization check for the entire store.
+  LIBC_INLINE void sanitize() const {
+    large_trie.sanitize();
+    for (const FreeList &list : small_lists)
+      list.sanitize();
+  }
+
 private:
   static constexpr size_t MIN_OUTER_SIZE = align_up(
       BlockRef::HEADER_SIZE + sizeof(FreeList::Node), BlockRef::MIN_ALIGN);

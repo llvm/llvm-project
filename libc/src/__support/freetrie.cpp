@@ -7,11 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "freetrie.h"
+#include "src/__support/libc_assert.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 void FreeTrie::remove(Node *node) {
   LIBC_ASSERT(!empty() && "cannot remove from empty trie");
+  node->sanitize();
   FreeList list = node;
   list.pop();
   Node *new_node = static_cast<Node *>(list.begin());
@@ -20,8 +22,11 @@ void FreeTrie::remove(Node *node) {
     // This is legal because there is no relationship between the size of the
     // root and its children.
     Node *leaf = node;
-    while (leaf->lower || leaf->upper)
+    while (leaf->lower || leaf->upper) {
+      leaf->sanitize();
       leaf = leaf->lower ? leaf->lower : leaf->upper;
+    }
+    leaf->sanitize();
     if (leaf == node) {
       // If the root is a leaf, then removing it empties the subtrie.
       replace_node(node, nullptr);
@@ -44,6 +49,7 @@ void FreeTrie::remove(Node *node) {
 
 void FreeTrie::replace_node(Node *node, Node *new_node) {
   LIBC_ASSERT(is_head(node) && "only head nodes contain trie links");
+  node->sanitize();
 
   if (node->parent) {
     Node *&parent_child =
@@ -59,6 +65,19 @@ void FreeTrie::replace_node(Node *node, Node *new_node) {
     node->lower->parent = new_node;
   if (node->upper)
     node->upper->parent = new_node;
+}
+
+void FreeTrie::sanitize() const {
+  auto sanitize_trie_node = [&](auto &self, const Node *node) -> void {
+    if (!node)
+      return;
+    node->sanitize();
+    FreeList list = const_cast<Node *>(node);
+    list.sanitize();
+    self(self, node->lower);
+    self(self, node->upper);
+  };
+  sanitize_trie_node(sanitize_trie_node, root);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
