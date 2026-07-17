@@ -5889,8 +5889,8 @@ static SDValue lowerZvzipVZIP(SDValue Op0, SDValue Op1, const SDLoc &DL,
     Op1 = convertToScalableVector(ContainerVT, Op1, DAG, Subtarget);
   }
   MVT ResVT = ContainerVT.getDoubleNumVectorElementsVT();
-  auto [Mask, VL] = getDefaultVLOps(IntVT.getDoubleNumVectorElementsVT(), ResVT,
-                                    DL, DAG, Subtarget);
+  MVT ResIntVT = IntVT.getDoubleNumVectorElementsVT();
+  auto [Mask, VL] = getDefaultVLOps(ResIntVT, ResVT, DL, DAG, Subtarget);
   SDValue Passthru = DAG.getUNDEF(ResVT);
   SDValue Res =
       DAG.getNode(RISCVISD::VZIP_VL, DL, ResVT, Op0, Op1, Passthru, Mask, VL);
@@ -5926,15 +5926,9 @@ static SDValue lowerZvzipVUNZIP(unsigned Opc, SDValue Op, const SDLoc &DL,
   MVT ResVT = ContainerVT.getHalfNumVectorElementsVT();
   MVT HalfVT = VT.getHalfNumVectorElementsVT();
   MVT HalfIntVT = IntVT.getHalfNumVectorElementsVT();
-  SDValue VL;
-  if (IntVT.isFixedLengthVector())
-    VL = DAG.getConstant(IntVT.getVectorNumElements(), DL,
-                         Subtarget.getXLenVT());
-  else
-    VL = DAG.getRegister(RISCV::X0, Subtarget.getXLenVT());
-  SDValue Mask = getAllOnesMask(ResVT, VL, DL, DAG);
+  auto [_, VL] = getDefaultVLOps(IntVT, ContainerVT, DL, DAG, Subtarget);
   SDValue Passthru = DAG.getUNDEF(ResVT);
-  SDValue Res = DAG.getNode(Opc, DL, ResVT, Op, Passthru, Mask, VL);
+  SDValue Res = DAG.getNode(Opc, DL, ResVT, Op, Passthru, VL);
   if (HalfIntVT.isFixedLengthVector())
     Res = convertFromScalableVector(HalfIntVT, Res, DAG, Subtarget);
   Res = DAG.getBitcast(HalfVT, Res);
@@ -6898,8 +6892,9 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
       }
 
       if (UsesBothSources &&
-          isLegalVTForZvzipInterleavedOperand(V1.getSimpleValueType(),
-                                              Subtarget) &&
+          isLegalVTForZvzipInterleavedOperand(
+              V1.getSimpleValueType().getDoubleNumVectorElementsVT(),
+              Subtarget) &&
           V1.getSimpleValueType().getVectorMinNumElements() >= 2 &&
           V2.getSimpleValueType().getVectorMinNumElements() >= 2) {
         SDValue Lo = lowerZvzipVUNZIP(Opc, V1, DL, DAG, Subtarget);
@@ -6950,8 +6945,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
     // Prefer vzip if available.
     // TODO: Extend to matching vzip if EvenSrc and OddSrc allow.
     if (Subtarget.hasStdExtZvzip() &&
-        isLegalVTForZvzipInterleavedOperand(VT, Subtarget) &&
-        isLegalVTForZvzipDeinterleavedOperand(HalfVT, Subtarget))
+        isLegalVTForZvzipInterleavedOperand(VT, Subtarget))
       return lowerZvzipVZIP(EvenV, OddV, DL, DAG, Subtarget);
     return getWideningInterleave(EvenV, OddV, DL, DAG, Subtarget);
   }
@@ -14392,8 +14386,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
     MVT VT = Op->getSimpleValueType(0);
     MVT NewVT = VT.getDoubleNumVectorElementsVT();
     if (isTypeLegal(NewVT) &&
-        isLegalVTForZvzipDeinterleavedOperand(VT, Subtarget) &&
-        isLegalVTForZvzipInterleavedOperand(NewVT, Subtarget)) {
+        isLegalVTForZvzipDeinterleavedOperand(VT, Subtarget)) {
       SDValue V1 = Op->getOperand(0);
       SDValue V2 = Op->getOperand(1);
       SDValue V = DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, V1, V2);

@@ -1843,11 +1843,11 @@
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
 // RUN:   -march=rv32i_zve32x_zvzip0p2 -E -dM %s \
-// RUN:   -o - | FileCheck --check-prefix=CHECK-ZVZVIP-EXT %s
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZVZIP-EXT %s
 // RUN: %clang --target=riscv64 -menable-experimental-extensions \
 // RUN:   -march=rv64i_zve32x_zvzip0p2 -E -dM %s \
-// RUN:   -o - | FileCheck --check-prefix=CHECK-ZVZVIP-EXT %s
-// CHECK-ZVZVIP-EXT: __riscv_zvzip 2000{{$}}
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZVZIP-EXT %s
+// CHECK-ZVZIP-EXT: __riscv_zvzip 2000{{$}}
 
 // RUN: %clang -target riscv32 -menable-experimental-extensions \
 // RUN:   -march=rv32izicfiss1p0 -E -dM %s \

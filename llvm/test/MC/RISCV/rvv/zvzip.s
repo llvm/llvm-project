@@ -40,3 +40,19 @@ vunzipe.v   v1, v2
 # CHECK-ASM-AND-OBJ: vunzipo.v v1, v2
 # CHECK-ASM: encoding: [0xd7,0xa0,0x27,0x4a]
 vunzipo.v v1, v2
+
+# CHECK-ASM-AND-OBJ: vunzipe.v   v4, v4
+# CHECK-ASM: encoding: [0x57,0xa2,0x45,0x4a]
+vunzipe.v   v4, v4
+
+# CHECK-ASM-AND-OBJ: vunzipo.v   v4, v4
+# CHECK-ASM: encoding: [0x57,0xa2,0x47,0x4a]
+vunzipo.v   v4, v4
+
+# CHECK-ASM-AND-OBJ: vunzipe.v   v0, v0
+# CHECK-ASM: encoding: [0x57,0xa0,0x05,0x4a]
+vunzipe.v   v0, v0
+
+# CHECK-ASM-AND-OBJ: vunzipo.v   v0, v0
+# CHECK-ASM: encoding: [0x57,0xa0,0x07,0x4a]
+vunzipo.v   v0, v0

@@ -59,9 +59,9 @@ struct SemaRecord {
   // Number of field, large than 1 if it's segment load/store.
   unsigned NF;
 
-  bool HasMasked :1;
-  bool HasVL :1;
-  bool HasMaskedOffOperand :1;
+  bool HasMasked : 1;
+  bool HasVL : 1;
+  bool HasMaskedOffOperand : 1;
   bool HasTailPolicy : 1;
   bool HasMaskPolicy : 1;
   bool HasFRMRoundModeOp : 1;
@@ -705,16 +705,15 @@ void RVVEmitter::createRVVIntrinsics(
     // Compute Builtin types
     auto Prototype = RVVIntrinsic::computeBuiltinTypes(
         BasicPrototype, /*IsMasked=*/false,
-        /*HasMaskedOffOperand=*/false, HasVL, NF, UnMaskedPolicyScheme,
+        /*HasMaskedOffOperand=*/false,
+        /*MaskedPrototypeHasResultMask=*/false, HasVL, NF, UnMaskedPolicyScheme,
         DefaultPolicy, IsTuple);
     SmallVector<PrototypeDescriptor> MaskedPrototype;
     if (HasMasked)
       MaskedPrototype = RVVIntrinsic::computeBuiltinTypes(
-          BasicPrototype, /*IsMasked=*/true, HasMaskedOffOperand, HasVL, NF,
-          MaskedPolicyScheme, DefaultPolicy, IsTuple);
-    if (HasMasked && MaskedPrototypeHasResultMask)
-      MaskedPrototype[1] = PrototypeDescriptor(
-          BaseTypeModifier::Vector, VectorTypeModifier::DoubleLMULMaskVector);
+          BasicPrototype, /*IsMasked=*/true, HasMaskedOffOperand,
+          MaskedPrototypeHasResultMask, HasVL, NF, MaskedPolicyScheme,
+          DefaultPolicy, IsTuple);
 
     // Create Intrinsics for each type and LMUL.
     for (char I : TypeRange) {
@@ -742,7 +741,8 @@ void RVVEmitter::createRVVIntrinsics(
             SmallVector<PrototypeDescriptor> PolicyPrototype =
                 RVVIntrinsic::computeBuiltinTypes(
                     BasicPrototype, /*IsMasked=*/false,
-                    /*HasMaskedOffOperand=*/false, HasVL, NF,
+                    /*HasMaskedOffOperand=*/false,
+                    /*MaskedPrototypeHasResultMask=*/false, HasVL, NF,
                     UnMaskedPolicyScheme, P, IsTuple);
             std::optional<RVVTypes> PolicyTypes =
                 TypeCache.computeTypes(BT, Log2LMUL, NF, PolicyPrototype);
@@ -769,12 +769,9 @@ void RVVEmitter::createRVVIntrinsics(
         for (auto P : SupportedMaskedPolicies) {
           SmallVector<PrototypeDescriptor> PolicyPrototype =
               RVVIntrinsic::computeBuiltinTypes(
-                  BasicPrototype, /*IsMasked=*/true, HasMaskedOffOperand, HasVL,
-                  NF, MaskedPolicyScheme, P, IsTuple);
-          if (MaskedPrototypeHasResultMask)
-            PolicyPrototype[1] =
-                PrototypeDescriptor(BaseTypeModifier::Vector,
-                                    VectorTypeModifier::DoubleLMULMaskVector);
+                  BasicPrototype, /*IsMasked=*/true, HasMaskedOffOperand,
+                  MaskedPrototypeHasResultMask, HasVL, NF, MaskedPolicyScheme,
+                  P, IsTuple);
           std::optional<RVVTypes> PolicyTypes =
               TypeCache.computeTypes(BT, Log2LMUL, NF, PolicyPrototype);
           Out.push_back(std::make_unique<RVVIntrinsic>(

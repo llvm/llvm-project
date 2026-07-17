@@ -26,9 +26,9 @@ vpairo.vv v0, v2, v4, v0.t
 # CHECK-ERROR-LABEL: vpairo.vv v0, v2, v4, v0.t
 
 vunzipe.v v1, v2, v0.t
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 # CHECK-ERROR-LABEL: vunzipe.v v1, v2, v0.t
 
 vunzipo.v v1, v2, v0.t
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: unexpected extra operand for instruction
 # CHECK-ERROR-LABEL: vunzipo.v v1, v2, v0.t

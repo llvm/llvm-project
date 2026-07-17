@@ -483,7 +483,8 @@ public:
 
   static llvm::SmallVector<PrototypeDescriptor>
   computeBuiltinTypes(llvm::ArrayRef<PrototypeDescriptor> Prototype,
-                      bool IsMasked, bool HasMaskedOffOperand, bool HasVL,
+                      bool IsMasked, bool HasMaskedOffOperand,
+                      bool MaskedPrototypeHasResultMask, bool HasVL,
                       unsigned NF, PolicyScheme DefaultScheme,
                       Policy PolicyAttrs, bool IsTuple);
 
