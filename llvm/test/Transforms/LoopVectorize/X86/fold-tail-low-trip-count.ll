@@ -44,10 +44,10 @@ define ptr @low_trip_count_via_profile_info_with_iv_live_out(ptr align 16 %start
 ; CHECK-LABEL: define ptr @low_trip_count_via_profile_info_with_iv_live_out(
 ; CHECK-SAME: ptr align 16 [[START:%.*]], ptr align 16 [[END:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
 ; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[START]] to i64
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[END1]], [[TMP7]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP8]], 1
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP1]], 63
@@ -61,8 +61,8 @@ define ptr @low_trip_count_via_profile_info_with_iv_live_out(ptr align 16 %start
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IV:%.*]] = phi <64 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16, i64 17, i64 18, i64 19, i64 20, i64 21, i64 22, i64 23, i64 24, i64 25, i64 26, i64 27, i64 28, i64 29, i64 30, i64 31, i64 32, i64 33, i64 34, i64 35, i64 36, i64 37, i64 38, i64 39, i64 40, i64 41, i64 42, i64 43, i64 44, i64 45, i64 46, i64 47, i64 48, i64 49, i64 50, i64 51, i64 52, i64 53, i64 54, i64 55, i64 56, i64 57, i64 58, i64 59, i64 60, i64 61, i64 62, i64 63>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule <64 x i64> [[VEC_IV]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <64 x i8> @llvm.masked.load.v64i8.p0(ptr align 1 [[TMP5]], <64 x i1> [[TMP3]], <64 x i8> poison)
@@ -98,10 +98,10 @@ define void @low_trip_count_via_profile_info(ptr align 16 %start, ptr align 16 %
 ; CHECK-LABEL: define void @low_trip_count_via_profile_info(
 ; CHECK-SAME: ptr align 16 [[START:%.*]], ptr align 16 [[END:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
 ; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
+; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[START]] to i64
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[END1]], [[TMP6]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP7]], 1
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP1]], 63
@@ -114,8 +114,8 @@ define void @low_trip_count_via_profile_info(ptr align 16 %start, ptr align 16 %
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IV:%.*]] = phi <64 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16, i64 17, i64 18, i64 19, i64 20, i64 21, i64 22, i64 23, i64 24, i64 25, i64 26, i64 27, i64 28, i64 29, i64 30, i64 31, i64 32, i64 33, i64 34, i64 35, i64 36, i64 37, i64 38, i64 39, i64 40, i64 41, i64 42, i64 43, i64 44, i64 45, i64 46, i64 47, i64 48, i64 49, i64 50, i64 51, i64 52, i64 53, i64 54, i64 55, i64 56, i64 57, i64 58, i64 59, i64 60, i64 61, i64 62, i64 63>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <64 x i64> [[VEC_IV]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <64 x i8> @llvm.masked.load.v64i8.p0(ptr align 1 [[TMP4]], <64 x i1> [[TMP2]], <64 x i8> poison)

@@ -1257,9 +1257,7 @@ def : RWSysReg<"ACTLR_EL12",         0b11, 0b101, 0b0001, 0b0000, 0b001>;
 def : RWSysReg<"ACTLR_EL2",          0b11, 0b100, 0b0001, 0b0000, 0b001>;
 def : RWSysReg<"ACTLR_EL3",          0b11, 0b110, 0b0001, 0b0000, 0b001>;
 def : RWSysReg<"HCR_EL2",            0b11, 0b100, 0b0001, 0b0001, 0b000>;
-def : RWSysReg<"HCRX_EL2",           0b11, 0b100, 0b0001, 0b0010, 0b010> {
-  let Requires = [{ {AArch64::FeatureHCX} }];
-}
+def : RWSysReg<"HCRX_EL2",           0b11, 0b100, 0b0001, 0b0010, 0b010>;
 def : RWSysReg<"SCR_EL3",            0b11, 0b110, 0b0001, 0b0001, 0b000>;
 def : RWSysReg<"MDCR_EL2",           0b11, 0b100, 0b0001, 0b0001, 0b001>;
 def : RWSysReg<"SDER32_EL3",         0b11, 0b110, 0b0001, 0b0001, 0b001>;
@@ -2670,16 +2668,11 @@ def : RWSysReg<"NVHCRXMASK_EL2",    0b11, 0b100, 0b0001, 0b0101, 0b101>;
 
 // S1POE2 Thread private state extension (FEAT_TPS/TPSP).
 foreach n = 0-1 in {
-  defvar nb = !cast<bits<1>>(n);
   //                                Op0   Op1    CRn     CRm     Op2
-  def : RWSysReg<"TPMIN"#n#"_EL0",  0b11, 0b011, 0b0010, 0b0010, {0b1,nb,0}>;
-  def : RWSysReg<"TPMAX"#n#"_EL0",  0b11, 0b011, 0b0010, 0b0010, {0b1,nb,1}>;
-  def : RWSysReg<"TPMIN"#n#"_EL1",  0b11, 0b000, 0b0010, 0b0010, {0b1,nb,0}>;
-  def : RWSysReg<"TPMAX"#n#"_EL1",  0b11, 0b000, 0b0010, 0b0010, {0b1,nb,1}>;
-  def : RWSysReg<"TPMIN"#n#"_EL2",  0b11, 0b100, 0b0010, 0b0010, {0b1,nb,0}>;
-  def : RWSysReg<"TPMAX"#n#"_EL2",  0b11, 0b100, 0b0010, 0b0010, {0b1,nb,1}>;
-  def : RWSysReg<"TPMIN"#n#"_EL12", 0b11, 0b101, 0b0010, 0b0010, {0b1,nb,0}>;
-  def : RWSysReg<"TPMAX"#n#"_EL12", 0b11, 0b101, 0b0010, 0b0010, {0b1,nb,1}>;
+  def : RWSysReg<"TPCR"#n#"_EL0",   0b11, 0b011, 0b0010, 0b0010, {0b10,n}>;
+  def : RWSysReg<"TPCR"#n#"_EL1",   0b11, 0b000, 0b0010, 0b0010, {0b10,n}>;
+  def : RWSysReg<"TPCR"#n#"_EL2",   0b11, 0b100, 0b0010, 0b0010, {0b10,n}>;
+  def : RWSysReg<"TPCR"#n#"_EL12",  0b11, 0b101, 0b0010, 0b0010, {0b10,n}>;
 }
 
 class PLBIEntry<bits<3> op1, bits<4> crn, bits<4> crm, bits<3> op2, string name,

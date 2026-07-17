@@ -1659,6 +1659,11 @@ const CallExpr* ThreadSafetyAnalyzer::getTrylockCallExpr(const Stmt *Cond,
         return getTrylockCallExpr(COP->getCond(), C, Negate);
       }
     }
+  } else if (const auto *SE = dyn_cast<StmtExpr>(Cond)) {
+    if (const auto *CS = SE->getSubStmt(); CS && !CS->body_empty()) {
+      if (const auto *E = dyn_cast<Expr>(CS->body_back()))
+        return getTrylockCallExpr(E, C, Negate);
+    }
   }
   return nullptr;
 }

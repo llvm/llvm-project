@@ -1701,6 +1701,18 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
   if (const SCEVZeroExtendExpr *SZ = dyn_cast<SCEVZeroExtendExpr>(Op))
     return getZeroExtendExpr(SZ->getOperand(), Ty, Depth + 1);
 
+  // If the operand is an affine AddRec with the no-unsigned-wrap flag, the
+  // zero-extension distributes over the recurrence.
+  if (Depth <= MaxCastDepth)
+    if (const auto *AR = dyn_cast<SCEVAddRecExpr>(Op))
+      if (AR->isAffine() && AR->hasNoUnsignedWrap()) {
+        const SCEV *Start =
+            getExtendAddRecStart<SCEVZeroExtendExpr>(AR, Ty, this, Depth + 1);
+        const SCEV *Step =
+            getZeroExtendExpr(AR->getStepRecurrence(*this), Ty, Depth + 1);
+        return getAddRecExpr(Start, Step, AR->getLoop(), AR->getNoWrapFlags());
+      }
+
   // Before doing any expensive analysis, check to see if we've already
   // computed a SCEV for this Op and Ty.
   FoldingSetNodeID ID;
@@ -1742,14 +1754,7 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
       unsigned BitWidth = getTypeSizeInBits(AR->getType());
       const Loop *L = AR->getLoop();
 
-      // If we have special knowledge that this addrec won't overflow,
-      // we don't need to do any further analysis.
-      if (AR->hasNoUnsignedWrap()) {
-        Start =
-            getExtendAddRecStart<SCEVZeroExtendExpr>(AR, Ty, this, Depth + 1);
-        Step = getZeroExtendExpr(Step, Ty, Depth + 1);
-        return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
-      }
+      // The no-unsigned-wrap case is handled before the uniquing lookup above.
 
       // Check whether the backedge-taken count is SCEVCouldNotCompute.
       // Note that this serves two purposes: It filters out loops that are
@@ -2054,6 +2059,18 @@ const SCEV *ScalarEvolution::getSignExtendExprImpl(const SCEV *Op, Type *Ty,
   if (const SCEVZeroExtendExpr *SZ = dyn_cast<SCEVZeroExtendExpr>(Op))
     return getZeroExtendExpr(SZ->getOperand(), Ty, Depth + 1);
 
+  // If the operand is an affine AddRec with the no-signed-wrap flag, the
+  // sign-extension distributes over the recurrence.
+  if (Depth <= MaxCastDepth)
+    if (const auto *AR = dyn_cast<SCEVAddRecExpr>(Op))
+      if (AR->isAffine() && AR->hasNoSignedWrap()) {
+        const SCEV *Start =
+            getExtendAddRecStart<SCEVSignExtendExpr>(AR, Ty, this, Depth + 1);
+        const SCEV *Step =
+            getSignExtendExpr(AR->getStepRecurrence(*this), Ty, Depth + 1);
+        return getAddRecExpr(Start, Step, AR->getLoop(), SCEV::FlagNSW);
+      }
+
   // Before doing any expensive analysis, check to see if we've already
   // computed a SCEV for this Op and Ty.
   FoldingSetNodeID ID;
@@ -2128,14 +2145,7 @@ const SCEV *ScalarEvolution::getSignExtendExprImpl(const SCEV *Op, Type *Ty,
       unsigned BitWidth = getTypeSizeInBits(AR->getType());
       const Loop *L = AR->getLoop();
 
-      // If we have special knowledge that this addrec won't overflow,
-      // we don't need to do any further analysis.
-      if (AR->hasNoSignedWrap()) {
-        Start =
-            getExtendAddRecStart<SCEVSignExtendExpr>(AR, Ty, this, Depth + 1);
-        Step = getSignExtendExpr(Step, Ty, Depth + 1);
-        return getAddRecExpr(Start, Step, L, SCEV::FlagNSW);
-      }
+      // The no-signed-wrap case is handled before the uniquing lookup above.
 
       // Check whether the backedge-taken count is SCEVCouldNotCompute.
       // Note that this serves two purposes: It filters out loops that are
@@ -13016,6 +13026,29 @@ static bool IsKnownPredicateViaMinOrMax(ScalarEvolution &SE, CmpPredicate Pred,
         IsMinMaxConsistingOf<SCEVUMinExpr>(LHS, RHS) ||
         // A <= max(A, ...)
         IsMinMaxConsistingOf<SCEVUMaxExpr>(RHS, LHS);
+
+  case ICmpInst::ICMP_UGT:
+    std::swap(LHS, RHS);
+    [[fallthrough]];
+  case ICmpInst::ICMP_ULT:
+    // umin(Ops) u<= each Op, so proving Op u< RHS for any Op proves
+    // umin(Ops) u< RHS.
+    //
+    // Use computeConstantDifference instead of the more powerful
+    // isKnownPredicate to keep this check cheap: isKnownPredicateViaMinOrMax
+    // is called from isKnownViaNonRecursiveReasoning, so recursing into
+    // the full predicate prover would be expensive.
+    if (const auto *Min = dyn_cast<SCEVUMinExpr>(LHS)) {
+      for (SCEVUse Op : Min->operands()) {
+        std::optional<APInt> Diff = SE.computeConstantDifference(RHS, Op);
+        // When Op and RHS share a common base differing by a
+        // constant offset D (RHS - Op = D), Op u< RHS holds iff D != 0 and
+        // RHS >= D (unsigned), i.e. the subtraction doesn't underflow.
+        if (Diff && !Diff->isZero() && SE.getUnsignedRangeMin(RHS).uge(*Diff))
+          return true;
+      }
+    }
+    return false;
   }
 
   llvm_unreachable("covered switch fell through?!");

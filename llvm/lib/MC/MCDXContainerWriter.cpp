@@ -13,8 +13,15 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
+
+cl::opt<bool> EmbedDebug("dx-embed-debug",
+                         cl::desc("Embed PDB in shader container"));
+cl::opt<bool>
+    StripDebug("dx-strip-debug",
+               cl::desc("Strip debug information from shader bytecode"));
 
 MCDXContainerTargetWriter::~MCDXContainerTargetWriter() = default;
 
@@ -130,6 +137,16 @@ ArrayRef<MCDXContainerPart> DXContainerObjectWriter::collectParts() {
     Parts.push_back({Sec.getName(), StringRef(SectionBuffers.back())});
   }
   return Parts;
+}
+
+bool DXContainerObjectWriter::shouldSkipSection(StringRef SectionName,
+                                                size_t SectionSize) {
+  // Do not write ILDB part if we're not embedding it.
+  if (SectionName == "ILDB" && (!EmbedDebug || StripDebug))
+    return true;
+  if (SectionName == "SRCI")
+    return true;
+  return MCDXContainerBaseWriter::shouldSkipSection(SectionName, SectionSize);
 }
 
 uint64_t DXContainerObjectWriter::writeObject() {

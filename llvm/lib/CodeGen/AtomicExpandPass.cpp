@@ -151,8 +151,7 @@ private:
   bool processAtomicInstr(Instruction *I);
 
 public:
-  bool run(Function &F,
-           const LibcallLoweringModuleAnalysisResult &LibcallResult,
+  bool run(Function &F, const ModuleLibcallLoweringInfo &LibcallResult,
            const TargetMachine *TM);
 };
 
@@ -455,9 +454,9 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
   return false;
 }
 
-bool AtomicExpandImpl::run(
-    Function &F, const LibcallLoweringModuleAnalysisResult &LibcallResult,
-    const TargetMachine *TM) {
+bool AtomicExpandImpl::run(Function &F,
+                           const ModuleLibcallLoweringInfo &LibcallResult,
+                           const TargetMachine *TM) {
   const auto *Subtarget = TM->getSubtargetImpl(F);
   if (!Subtarget->enableAtomicExpand())
     return false;
@@ -496,7 +495,7 @@ bool AtomicExpandLegacy::runOnFunction(Function &F) {
     return false;
   auto *TM = &TPC->getTM<TargetMachine>();
 
-  const LibcallLoweringModuleAnalysisResult &LibcallResult =
+  const ModuleLibcallLoweringInfo &LibcallResult =
       getAnalysis<LibcallLoweringInfoWrapper>().getResult(*F.getParent());
   AtomicExpandImpl AE;
   return AE.run(F, LibcallResult, TM);
@@ -510,7 +509,7 @@ PreservedAnalyses AtomicExpandPass::run(Function &F,
                                         FunctionAnalysisManager &FAM) {
   auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
 
-  const LibcallLoweringModuleAnalysisResult *LibcallResult =
+  const ModuleLibcallLoweringInfo *LibcallResult =
       MAMProxy.getCachedResult<LibcallLoweringModuleAnalysis>(*F.getParent());
 
   if (!LibcallResult) {
@@ -563,10 +562,7 @@ LoadInst *AtomicExpandImpl::convertAtomicLoadToIntegerType(LoadInst *LI) {
 
   Value *Addr = LI->getPointerOperand();
 
-  auto *NewLI = Builder.CreateLoad(NewTy, Addr);
-  NewLI->setAlignment(LI->getAlign());
-  NewLI->setVolatile(LI->isVolatile());
-  NewLI->setAtomic(LI->getOrdering(), LI->getSyncScopeID());
+  auto *NewLI = Builder.CreateLoad(NewTy, Addr, LI->getProperties());
   LLVM_DEBUG(dbgs() << "Replaced " << *LI << " with " << *NewLI << "\n");
 
   Value *NewVal = LI->getType()->isPtrOrPtrVectorTy()
@@ -719,10 +715,7 @@ StoreInst *AtomicExpandImpl::convertAtomicStoreToIntegerType(StoreInst *SI) {
 
   Value *Addr = SI->getPointerOperand();
 
-  StoreInst *NewSI = Builder.CreateStore(NewVal, Addr);
-  NewSI->setAlignment(SI->getAlign());
-  NewSI->setVolatile(SI->isVolatile());
-  NewSI->setAtomic(SI->getOrdering(), SI->getSyncScopeID());
+  StoreInst *NewSI = Builder.CreateStore(NewVal, Addr, SI->getProperties());
   LLVM_DEBUG(dbgs() << "Replaced " << *SI << " with " << *NewSI << "\n");
   SI->eraseFromParent();
   return NewSI;

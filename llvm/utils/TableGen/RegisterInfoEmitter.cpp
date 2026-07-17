@@ -1073,15 +1073,45 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
     OS << "};\n\n";
   }
 
+  // Emit register class bit mask tables. The first bit mask emitted for a
+  // register class, RC, is the set of sub-classes, including RC itself.
+  //
+  // If RC has super-registers, also create a list of subreg indices and bit
+  // masks, (Idx, Mask). The bit mask has a bit for every superreg regclass,
+  // SuperRC, that satisfies:
+  //
+  //   For all SuperReg in SuperRC: SuperReg:Idx in RC
+  //
+  // The 0-terminated list of subreg indices starts at:
+  //
+  //   RC->getSuperRegIndices() = SuperRegIdxSeqs + ...
+  //
+  // The corresponding bitmasks follow the sub-class mask in memory. Each
+  // mask has RCMaskWords uint32_t entries.
+  //
+  // Every bit mask present in the list has at least one bit set.
+
   const auto &RegisterClasses = RegBank.getRegClasses();
 
   OS << "// Register classes...\n";
 
   SequenceToOffsetTable<std::string> RegClassStrings;
-  SmallVector<unsigned> BitSetSizes;
-  BitSetSizes.reserve(RegisterClasses.size());
-  unsigned TotalRegCount = 0;
-  unsigned TotalBitSetSize = 0;
+  // Start indices for per-reg-class info in the respective arrays.
+  struct StartIndex {
+    unsigned RegIdx;
+    unsigned BitSetIdx;
+    unsigned SubClassMaskIdx;
+    unsigned SuperClassIdx;
+  };
+  SmallVector<StartIndex> StartIndices;
+  StartIndices.reserve(RegisterClasses.size() + 1);
+  StartIndices.push_back(StartIndex{0, 0, 0, 0});
+
+  // For compressing the sub-reg index lists.
+  using IdxList = std::vector<const CodeGenSubRegIndex *>;
+  SmallVector<IdxList, 8> SuperRegIdxLists(RegisterClasses.size());
+  SequenceToOffsetTable<IdxList, deref<std::less<>>> SuperRegIdxSeqs;
+  BitVector MaskBV(RegisterClasses.size());
   for (const auto &RC : RegisterClasses) {
     ArrayRef<const Record *> Order = RC.getOrder();
     RegClassStrings.add(RC.getName());
@@ -1089,77 +1119,155 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
     unsigned MaxRegVal = 0;
     for (const Record *Reg : Order)
       MaxRegVal = std::max(MaxRegVal, RegBank.getReg(Reg)->EnumValue);
-    // Round to next byte size.
-    BitSetSizes.push_back(Order.empty() ? 0 : (MaxRegVal / 8) + 1);
-    TotalRegCount += Order.size();
-    TotalBitSetSize += BitSetSizes.back();
+
+    unsigned SubClassMaskSize = (RC.getSubClasses().size() + 31) / 32;
+    IdxList &SRIList = SuperRegIdxLists[RC.EnumValue];
+    for (auto &Idx : SubRegIndices) {
+      MaskBV.reset();
+      RC.getSuperRegClasses(&Idx, MaskBV);
+      if (MaskBV.none())
+        continue;
+      SRIList.push_back(&Idx);
+      SubClassMaskSize += (MaskBV.size() + 31) / 32;
+    }
+    SuperRegIdxSeqs.add(SRIList);
+
+    const auto &Last = StartIndices.back();
+    StartIndices.push_back(StartIndex{
+        Last.RegIdx + unsigned(Order.size()),
+        // Round to next byte size.
+        Last.BitSetIdx + (Order.empty() ? 0 : (MaxRegVal / 8) + 1),
+        Last.SubClassMaskIdx + SubClassMaskSize,
+        Last.SuperClassIdx + unsigned(RC.getSuperClasses().size()),
+    });
   }
 
   RegClassStrings.layout();
   RegClassStrings.emitStringLiteralDef(
       OS, Twine("extern const char ") + TargetName + "RegClassStrings[]");
 
+  SuperRegIdxSeqs.layout();
+
+  const auto &Totals = StartIndices.back();
   raw_string_ostream(MCRegisterClassStorageType)
       << "MCRegisterClassStorage<" << RegisterClasses.size() << ", "
-      << TotalRegCount << ", " << TotalBitSetSize << ">";
+      << Totals.RegIdx << ", " << Totals.BitSetIdx << ", "
+      << Totals.SubClassMaskIdx << ", " << SuperRegIdxSeqs.size() << ", "
+      << Totals.SuperClassIdx << ">";
+  OS << "using " << TargetName
+     << "RegisterClassStorage = " << MCRegisterClassStorageType << ";\n";
   OS << "extern const " << MCRegisterClassStorageType << " " << TargetName
      << "MCRegisterClassStorage = {\n"
      << "  {\n";
 
-  unsigned RegCount = 0;   // Number of entries in registers array.
-  unsigned BitSetSize = 0; // Number of entries in bitset array.
-  for (const auto &[Idx, RC] : enumerate(RegisterClasses)) {
-    ArrayRef<const Record *> Order = RC.getOrder();
+  for (const auto &It : enumerate(RegisterClasses)) {
+    const auto &RC = It.value();
+    const auto &RCIndices = StartIndices[It.index()];
     uint32_t RegSize = 0;
     if (RC.RSI.isSimple())
       RegSize = RC.RSI.getSimple().RegSize;
-    OS << "    { " << (RegisterClasses.size() - Idx)
-       << " * sizeof(MCRegisterClass)"
-       << " + sizeof(MCPhysReg) * " << RegCount << ", "
-       << (RegisterClasses.size() - Idx) << " * sizeof(MCRegisterClass)"
-       << " + sizeof(MCPhysReg) * " << TotalRegCount << " + " << BitSetSize
-       << ", " << RegClassStrings.get(RC.getName()) << ", " << RegSize << ", "
-       << RC.getOrder().size() << ", " << BitSetSizes[Idx] << ", "
-       << RC.getQualifiedIdName() << ", " << static_cast<unsigned>(RC.CopyCost)
-       << ", " << (RC.Allocatable ? "true" : "false") << ", "
-       << (RC.getBaseClassOrder() ? "true" : "false") << " },\n";
 
-    RegCount += Order.size();
-    BitSetSize += BitSetSizes[Idx];
+    // Helper to generate offsetof macro for relative offset in storage.
+    auto GetOff = [&](std::string_view Member,
+                      unsigned DataIdx) -> std::string {
+      return ("offsetof(" + Twine(TargetName) + "RegisterClassStorage, " +
+              Member + "[" + Twine(DataIdx) + "]) - " + Twine(It.index()) +
+              " * sizeof(MCRegisterClass)")
+          .str();
+    };
+
+    unsigned BitSetSize =
+        StartIndices[It.index() + 1].BitSetIdx - RCIndices.BitSetIdx;
+    OS << "    {\n      " << GetOff("Regs", RCIndices.RegIdx) << ",\n      "
+       << GetOff("BitSets", RCIndices.BitSetIdx) << ",\n      "
+       << RegClassStrings.get(RC.getName()) << ",\n      " << RegSize
+       << ",\n      " << RC.getOrder().size() << ",\n      " << BitSetSize
+       << ",\n      " << RC.getQualifiedIdName() << ",\n      "
+       << static_cast<unsigned>(RC.CopyCost) << ", /* CopyCost */\n      "
+       << (RC.Allocatable ? "true" : "false") << ", /* Allocatable */\n      "
+       << (RC.getBaseClassOrder() ? "true" : "false") << ",\n      "
+       << GetOff("SubClassMasks", RCIndices.SubClassMaskIdx) << ",\n      "
+       << GetOff("SuperRegIdxSeqs",
+                 SuperRegIdxSeqs.get(SuperRegIdxLists[RC.EnumValue]))
+       << ",\n      ";
+    printMask(OS, RC.LaneMask);
+    OS << ",\n      " << (unsigned)RC.AllocationPriority << ",\n      "
+       << (RC.GlobalPriority ? "true" : "false") << ",\n      "
+       << format("0x%02x", RC.TSFlags) << ", /* TSFlags */\n      "
+       << (unsigned)RC.SpillStackID << ", /* SpillStackID */\n      "
+       << (RC.HasDisjunctSubRegs ? "true" : "false")
+       << ", /* HasDisjunctSubRegs */\n      "
+       << (RC.CoveredBySubRegs ? "true" : "false")
+       << ", /* CoveredBySubRegs */\n      "
+       << GetOff("SuperClasses", RCIndices.SuperClassIdx) << ",\n      "
+       << RC.getSuperClasses().size() << "\n    },\n";
   }
 
   OS << "  },\n  {\n";
 
   // Emit registers.
   // TODO: these sequences often have overlaps which could be deduplicated.
-  RegCount = 0;
-  for (const auto &RC : RegisterClasses) {
+  for (const auto &[Idx, RC] : enumerate(RegisterClasses)) {
     ArrayRef<const Record *> Order = RC.getOrder();
     if (Order.empty())
       continue;
-    OS << "    /* " << RegCount << " */ ";
+    OS << "    /* " << StartIndices[Idx].RegIdx << " */ ";
     for (const Record *Reg : Order)
       OS << getQualifiedName(Reg) << ", ";
     OS << "\n";
-    RegCount += Order.size();
   }
 
   OS << "  },\n  {\n";
 
   // Emit register bit sets.
-  BitSetSize = 0;
   for (const auto &[Idx, RC] : enumerate(RegisterClasses)) {
     ArrayRef<const Record *> Order = RC.getOrder();
     if (!Order.empty()) {
-      OS << "    /* " << BitSetSize << " */ ";
+      OS << "    /* " << StartIndices[Idx].BitSetIdx << " */ ";
       BitVectorEmitter BVE;
       for (const Record *Reg : Order)
         BVE.add(RegBank.getReg(Reg)->EnumValue);
       BVE.print(OS);
       OS << "\n";
-      BitSetSize += BitSetSizes[Idx];
     }
   }
+  OS << "  },\n  {\n";
+
+  // Emit subclass masks.
+  for (const auto &[Idx, RC] : enumerate(RegisterClasses)) {
+    OS << "    // " << StartIndices[Idx].SubClassMaskIdx << " " << RC.getName()
+       << "\n    ";
+    printBitVectorAsHex(OS, RC.getSubClasses(), 32);
+
+    // Emit super-reg class masks for any relevant SubRegIndices that can
+    // project into RC.
+    for (auto &Idx : SubRegIndices) {
+      MaskBV.reset();
+      RC.getSuperRegClasses(&Idx, MaskBV);
+      if (MaskBV.none())
+        continue;
+      OS << "\n    ";
+      printBitVectorAsHex(OS, MaskBV, 32);
+      OS << "// " << Idx.getName();
+    }
+    OS << "\n";
+  }
+  OS << "  },\n  {\n";
+
+  // Emit SubRegIdxSeqs.
+  SuperRegIdxSeqs.emit(OS, printSubRegIndex);
+  OS << "  },\n  {\n";
+
+  // Emit super-class lists.
+  for (const auto &[Idx, RC] : enumerate(RegisterClasses)) {
+    ArrayRef<CodeGenRegisterClass *> Supers = RC.getSuperClasses();
+    OS << "    /* " << StartIndices[Idx].SuperClassIdx << " " << RC.getName()
+       << " */ ";
+    for (const auto *Super : Supers)
+      OS << Super->getQualifiedIdName() << ", ";
+    OS << "\n";
+  }
+
   OS << "  }\n};\n\n";
   OS << "const MCRegisterClass &get" << Target.getName()
      << "MCRegisterClass(unsigned RC) {\n"
@@ -1250,6 +1358,9 @@ void RegisterInfoEmitter::runTargetHeader(raw_ostream &OS, raw_ostream &MainOS,
 
   OS << "class " << TargetName << "FrameLowering;\n\n";
 
+  OS << "extern const " << MCRegisterClassStorageType << " " << TargetName
+     << "MCRegisterClassStorage;\n\n";
+
   OS << "struct " << ClassName << " : public TargetRegisterInfo {\n"
      << "  explicit " << ClassName
      << "(unsigned RA, unsigned D = 0, unsigned E = 0,\n"
@@ -1319,8 +1430,9 @@ void RegisterInfoEmitter::runTargetHeader(raw_ostream &OS, raw_ostream &MainOS,
 
     for (const auto &RC : RegisterClasses) {
       // Output the extern for the instance.
-      OS << "  extern const TargetRegisterClass " << RC.getName()
-         << "RegClass;\n";
+      OS << "static constexpr const TargetRegisterClass &" << RC.getName()
+         << "RegClass = " << TargetName << "MCRegisterClassStorage.Classes["
+         << RC.EnumValue << "];\n";
     }
   }
 }
@@ -1446,71 +1558,6 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
     }
     OS << "};\n";
 
-    // Emit register class bit mask tables. The first bit mask emitted for a
-    // register class, RC, is the set of sub-classes, including RC itself.
-    //
-    // If RC has super-registers, also create a list of subreg indices and bit
-    // masks, (Idx, Mask). The bit mask has a bit for every superreg regclass,
-    // SuperRC, that satisfies:
-    //
-    //   For all SuperReg in SuperRC: SuperReg:Idx in RC
-    //
-    // The 0-terminated list of subreg indices starts at:
-    //
-    //   RC->getSuperRegIndices() = SuperRegIdxSeqs + ...
-    //
-    // The corresponding bitmasks follow the sub-class mask in memory. Each
-    // mask has RCMaskWords uint32_t entries.
-    //
-    // Every bit mask present in the list has at least one bit set.
-
-    // Compress the sub-reg index lists.
-    using IdxList = std::vector<const CodeGenSubRegIndex *>;
-    SmallVector<IdxList, 8> SuperRegIdxLists(RegisterClasses.size());
-    SequenceToOffsetTable<IdxList, deref<std::less<>>> SuperRegIdxSeqs;
-    BitVector MaskBV(RegisterClasses.size());
-
-    for (const auto &RC : RegisterClasses) {
-      OS << "static const uint32_t " << RC.getName()
-         << "SubClassMask[] = {\n  ";
-      printBitVectorAsHex(OS, RC.getSubClasses(), 32);
-
-      // Emit super-reg class masks for any relevant SubRegIndices that can
-      // project into RC.
-      IdxList &SRIList = SuperRegIdxLists[RC.EnumValue];
-      for (auto &Idx : SubRegIndices) {
-        MaskBV.reset();
-        RC.getSuperRegClasses(&Idx, MaskBV);
-        if (MaskBV.none())
-          continue;
-        SRIList.push_back(&Idx);
-        OS << "\n  ";
-        printBitVectorAsHex(OS, MaskBV, 32);
-        OS << "// " << Idx.getName();
-      }
-      SuperRegIdxSeqs.add(SRIList);
-      OS << "\n};\n\n";
-    }
-
-    OS << "static const uint16_t SuperRegIdxSeqs[] = {\n";
-    SuperRegIdxSeqs.layout();
-    SuperRegIdxSeqs.emit(OS, printSubRegIndex);
-    OS << "};\n\n";
-
-    // Emit super-class lists.
-    for (const auto &RC : RegisterClasses) {
-      ArrayRef<CodeGenRegisterClass *> Supers = RC.getSuperClasses();
-
-      // Skip classes without supers.
-      if (Supers.empty())
-        continue;
-
-      OS << "static unsigned const " << RC.getName() << "Superclasses[] = {\n";
-      for (const auto *Super : Supers)
-        OS << "  " << Super->getQualifiedIdName() << ",\n";
-      OS << "};\n\n";
-    }
-
     // Emit methods.
     for (const auto &RC : RegisterClasses) {
       if (!RC.AltOrderSelect.empty()) {
@@ -1541,40 +1588,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
            << RC.getNumOrders() << ");\n  return Order[Select];\n}\n";
       }
     }
-
-    // Now emit the actual value-initialized register class instances.
-    NamespaceEmitter RegClassNS(OS, RegisterClasses.front().Namespace);
-    OS << "// Register class instances.\n";
-
-    for (const auto &RC : RegisterClasses) {
-      OS << "  extern const TargetRegisterClass " << RC.getName()
-         << "RegClass = {\n    " << "&" << Target.getName()
-         << "MCRegisterClassStorage.Classes[" << RC.getName() << "RegClassID],"
-         << "\n    " << RC.getName() << "SubClassMask,\n    SuperRegIdxSeqs + "
-         << SuperRegIdxSeqs.get(SuperRegIdxLists[RC.EnumValue]) << ",\n    ";
-      printMask(OS, RC.LaneMask);
-      OS << ",\n    " << (unsigned)RC.AllocationPriority << ",\n    "
-         << (RC.GlobalPriority ? "true" : "false") << ",\n    "
-         << format("0x%02x", RC.TSFlags) << ", /* TSFlags */\n    "
-         << (unsigned)RC.SpillStackID << ", /* SpillStackID */\n    "
-         << (RC.HasDisjunctSubRegs ? "true" : "false")
-         << ", /* HasDisjunctSubRegs */\n    "
-         << (RC.CoveredBySubRegs ? "true" : "false")
-         << ", /* CoveredBySubRegs */\n    ";
-      if (RC.getSuperClasses().empty())
-        OS << "nullptr, ";
-      else
-        OS << RC.getName() << "Superclasses,  ";
-      OS << RC.getSuperClasses().size() << "\n";
-      OS << "  };\n\n";
-    }
   }
-
-  OS << "static const TargetRegisterClass *const " << TargetName
-     << "RegisterClasses[] = {\n";
-  for (const auto &RC : RegisterClasses)
-    OS << "    &" << RC.getQualifiedName() << "RegClass,\n";
-  OS << "  };\n";
 
   // Emit extra information about registers.
   const auto &Regs = RegBank.getRegisters();
@@ -1774,9 +1788,9 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
             "  unsigned RCID = Mapping[Reg.id()];\n"
             "  if (RCID == InvalidRegClassID)\n"
             "    return nullptr;\n"
-            "  return "
+            "  return &"
          << TargetName
-         << "RegisterClasses[RCID];\n"
+         << "MCRegisterClassStorage.Classes[RCID];\n"
             "}\n";
     }
   }
@@ -1807,9 +1821,9 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
           "  unsigned RCID = Mapping[Reg.id()];\n"
           "  if (RCID == InvalidRegClassID)\n"
           "    return nullptr;\n"
-          "  return "
+          "  return &"
        << TargetName
-       << "RegisterClasses[RCID];\n"
+       << "MCRegisterClassStorage.Classes[RCID];\n"
           "}\n";
   }
 
@@ -1831,7 +1845,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
 {0}::
 {0}(unsigned RA, unsigned DwarfFlavour, unsigned EHFlavour,
     unsigned PC, unsigned HwMode)
-  : TargetRegisterInfo(&{1}RegInfoDesc, {1}RegisterClasses,
+  : TargetRegisterInfo(&{1}RegInfoDesc,
       {1}SubRegIndexStrings, {1}SubRegIndexNameOffsets,
       {1}SubRegIdxRangeTable, {1}SubRegIndexLaneMaskTable,
 

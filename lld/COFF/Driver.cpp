@@ -269,6 +269,18 @@ InputFile *LinkerDriver::addObjectFile(COFFLinkerContext &ctx,
   std::unique_ptr<COFFObjectFile> coffObj = ObjFile::createCOFFObject(ctx, mb);
   InputFile *obj = nullptr;
 
+  // On ARM64EC, check for a hybrid object section and use it for the EC object.
+  if (ctx.symtab.isEC()) {
+    if (std::optional<MemoryBufferRef> hybridSec =
+            coffObj->findHybridObjectSection()) {
+      InputFile *hybridObj =
+          addObjectFile(ctx, *hybridSec, archiveName, offsetInArchive, lazy);
+      // For the ARM64X target, continue processing the native file.
+      if (ctx.config.machine != ARM64X)
+        return hybridObj;
+    }
+  }
+
   if (ctx.config.fatLTOObjects) {
     Expected<MemoryBufferRef> fatLTOData =
         IRObjectFile::findBitcodeInObject(*coffObj);
@@ -344,7 +356,21 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
     break;
   case file_magic::pecoff_executable:
     if (ctx.config.mingw) {
-      addFile(make<DLLFile>(ctx.symtab, mbref));
+      std::unique_ptr<COFFObjectFile> obj =
+          ObjFile::createCOFFObject(ctx, mbref);
+      if (ctx.symtab.isEC()) {
+        // When importing an ARM64X image, add both the native and EC views.
+        if (std::unique_ptr<MemoryBuffer> hybridView =
+                obj->getHybridObjectView()) {
+          std::unique_ptr<COFFObjectFile> hybridObj =
+              ObjFile::createCOFFObject(ctx, takeBuffer(std::move(hybridView)));
+          addFile(make<DLLFile>(ctx.symtab, hybridObj));
+          addFile(make<DLLFile>(*ctx.hybridSymtab, obj));
+          break;
+        }
+      }
+      auto machine = static_cast<MachineTypes>(obj->getMachine());
+      addFile(make<DLLFile>(ctx.getSymtab(machine), obj));
       break;
     }
     if (filename.ends_with_insensitive(".dll")) {

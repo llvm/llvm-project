@@ -10,4 +10,4 @@ for more information.
 
 This check corresponds to the CERT C++ Coding Standard rule
 `DCL58-CPP. Do not modify the standard namespaces
-<https://www.securecoding.cert.org/confluence/display/cplusplus/DCL58-CPP.+Do+not+modify+the+standard+namespaces>`_.
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/declarations-and-initialization-dcl/dcl58-cpp/>`_.

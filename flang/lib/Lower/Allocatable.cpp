@@ -29,16 +29,14 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/MIF/MIFOps.h"
-#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/FatalError.h"
-#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Runtime/allocatable.h"
 #include "flang/Runtime/pointer.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
+#include "flang/Support/Fortran-features.h"
 #include "llvm/Support/CommandLine.h"
 
 /// By default fir memory operation fir::AllocMemOp/fir::FreeMemOp are used.
@@ -515,11 +513,28 @@ private:
       isCudaAllocate = propagateCUDAAttrsFromParent(alloc, cudaSymForAlloc);
 
     bool isCudaDeviceContext = cuf::isCUDADeviceContext(builder.getRegion());
+    unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(*cudaSymForAlloc);
+
+    // Under -gpu=mem:unified, back plain (unattributed) allocatables/pointers
+    // with managed memory by selecting the unified allocator index at the
+    // ALLOCATE site. The symbol stays unattributed, so argument passing,
+    // interfaces, and COMMON legality are unaffected.
+    bool implicitManagedBacking = false;
+    if (allocatorIdx == kDefaultAllocator && !isCudaAllocate &&
+        !isCudaDeviceContext && (box.isAllocatable() || box.isPointer()) &&
+        converter.getFoldingContext().languageFeatures().IsEnabled(
+            Fortran::common::LanguageFeature::CudaUnified)) {
+      allocatorIdx = kUnifiedAllocatorPos;
+      implicitManagedBacking = true;
+    }
+
+    // The inlined allocation path emits a plain heap allocmem that ignores the
+    // allocator index; use the runtime path when we redirected an otherwise
+    // plain allocatable to a managed allocator so the index is honored.
     bool inlineAllocation = !box.isDerived() && !errorManager.hasStatSpec() &&
                             !alloc.type.IsPolymorphic() &&
                             !alloc.hasCoarraySpec() && !useAllocateRuntime &&
-                            !box.isPointer();
-    unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(*cudaSymForAlloc);
+                            !box.isPointer() && !implicitManagedBacking;
 
     if (inlineAllocation && !alloc.hasCoarraySpec() &&
         ((isCudaAllocate && isCudaDeviceContext) || !isCudaAllocate)) {
@@ -946,10 +961,19 @@ genDeallocate(fir::FirOpBuilder &builder,
               const Fortran::semantics::Symbol *symbol = nullptr) {
   bool isCudaSymbol = symbol && Fortran::semantics::HasCUDAAttr(*symbol);
   bool isCudaDeviceContext = cuf::isCUDADeviceContext(builder.getRegion());
+  // A plain allocatable/pointer under -gpu=mem:unified was given the unified
+  // allocator index at ALLOCATE, so its deallocation must go through the
+  // runtime (which honors that index) rather than an inlined freemem that would
+  // call libc free() on managed memory.
+  bool implicitManagedBacking =
+      !isCudaSymbol && !isCudaDeviceContext &&
+      (box.isAllocatable() || box.isPointer()) &&
+      converter.getFoldingContext().languageFeatures().IsEnabled(
+          Fortran::common::LanguageFeature::CudaUnified);
   bool inlineDeallocation =
       !box.isDerived() && !box.isPolymorphic() && !box.hasAssumedRank() &&
       !box.isUnlimitedPolymorphic() && !errorManager.hasStatSpec() &&
-      !useAllocateRuntime && !box.isPointer();
+      !useAllocateRuntime && !box.isPointer() && !implicitManagedBacking;
   bool isCoarraySymbol = symbol && Fortran::evaluate::IsCoarray(*symbol);
 
   // Deallocate intrinsic types inline.

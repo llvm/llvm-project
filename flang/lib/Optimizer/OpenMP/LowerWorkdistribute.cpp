@@ -24,8 +24,6 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Optimizer/HLFIR/Passes.h"
-#include "flang/Optimizer/OpenMP/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -34,7 +32,6 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
-#include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include <mlir/Dialect/Arith/IR/Arith.h>
 #include <mlir/Dialect/LLVMIR/LLVMTypes.h>
 #include <mlir/Dialect/Utils/IndexingUtils.h>
@@ -46,7 +43,6 @@
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 #include <mlir/Support/LLVM.h>
 #include <optional>
-#include <variant>
 
 namespace flangomp {
 #define GEN_PASS_DEF_LOWERWORKDISTRIBUTE
