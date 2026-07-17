@@ -2217,7 +2217,8 @@ def CIR_WhileOp : CIR_WhileOpBase<"while"> {
      (condition-false exit, end-of-iteration, break/continue, and EH unwinding
      when the cleanup kind includes EH). This is used to destroy a condition
      variable whose lifetime is a single iteration. When present, it carries a
-     cleanup kind matching `cir.cleanup.scope` (`normal` or `all`).
+     cleanup kind matching `cir.cleanup.scope` (`normal` or `all`). Note that
+     a `DoWhileOp` cannot contain a `cleanup` region.
 
     Example:
 
@@ -2279,7 +2280,10 @@ def CIR_DoWhileOp : CIR_WhileOpBase<"do"> {
 
   let description = [{
     Represents a C/C++ do-while loop. Identical to `cir.while` but the
-    condition is evaluated after the body.
+    condition is evaluated after the body. Because a variable cannot be
+    declared in the condition of a do-while loop, this operation cannot
+    have a `cleanup` region. A cleanup scope should be created within the
+    body region for any variables within the loop that require cleanup.
 
     Example:
 
