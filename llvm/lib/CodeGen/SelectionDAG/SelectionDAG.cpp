@@ -7848,7 +7848,8 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
           return SDValue();
         APInt Value = cast<ConstantSDNode>(Elt)->getAPIntValue().trunc(EltBits);
         std::optional<APInt> Folded = FoldValue(BaseOpcode, Acc, Value);
-        assert(Folded && "Unexpected vector reduction opcode");
+        assert(Folded &&
+               "Expected vector reduction base opcode to be foldable");
         Acc = *Folded;
       }
       EVT EltVT = N1.getValueType().getScalarType();
