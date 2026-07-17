@@ -26,6 +26,9 @@
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only %t/mod_noflag_enforce.cppm -verify
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/mod_bare.cppm -o %t/mod_bare.pcm -verify
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only %t/import_noflag_require.cpp -fmodule-file=BareMod=%t/mod_bare.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/import_mixed_require.cpp -fmodule-file=BareMod=%t/mod_bare.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fprofiles-test-profiles -fsyntax-only %t/import_mixed_local_enforce.cpp -fmodule-file=BareMod=%t/mod_bare.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only %t/import_mixed_noflag.cpp -fmodule-file=TestMod=%t/mod_enforced.pcm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/mod_enforce_no_args.cppm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/import_require_no_args.cpp -fmodule-file=TestMod=%t/mod_enforced.pcm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/unknown_attr_mod.cppm -verify
@@ -269,6 +272,39 @@ export void bare_fn();
 // ===================================================================
 //--- import_noflag_require.cpp
 import BareMod [[profiles::require(test::type_cast)]]; // expected-warning {{'profiles::require' attribute ignored}}
+
+// ===================================================================
+// -fprofiles is a Compatible language option: a BMI built without it
+// loads into a -fprofiles compile instead of being rejected as a
+// configuration mismatch (P3589R2's gradual-adoption premise). The
+// no-flag BMI advertises no profiles, so require gets its ordinary
+// not-enforced answer rather than a load error.
+// ===================================================================
+//--- import_mixed_require.cpp
+import BareMod [[profiles::require(test::type_cast)]]; // expected-error {{required profile 'test::type_cast' is not enforced by imported module}}
+
+// ===================================================================
+// Local enforcement still works across a mixed-mode import.
+// ===================================================================
+//--- import_mixed_local_enforce.cpp
+[[profiles::enforce(test::type_cast)]];
+import BareMod;
+
+void mixed_local_func() {
+  int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+}
+
+// ===================================================================
+// The reverse mix: a BMI built WITH -fprofiles loads into a compile
+// without the flag; require is ignored (flag off) and the module's
+// enforcement does not leak into the importer.
+// ===================================================================
+//--- import_mixed_noflag.cpp
+import TestMod [[profiles::require(test::type_cast)]]; // expected-warning {{'profiles::require' attribute ignored}}
+
+void mixed_noflag_func() {
+  int *p = reinterpret_cast<int*>(0);
+}
 
 // ===================================================================
 // [[profiles::enforce]] on a module-declaration with no argument

@@ -158,6 +158,14 @@ same way: an ``[[profiles::enforce(...)]];`` empty-declaration in the header
 is exported by the corresponding header unit and validated by
 ``[[profiles::require]]`` on its import.
 
+``-fprofiles`` does not have to be uniform across a build: a module built
+without the flag imports fine into a profiles-enabled compile -- it simply
+advertises no profiles, so a ``[[profiles::require]]`` on the import reports
+the profile as not enforced -- and an enforcing module loads fine into a
+compile with the feature off.  A PCH is stricter (like other compatible
+language options, it must be built with the same ``-fprofiles`` setting as
+its consumer).
+
 Enforcement on a module interface extends to the module's implementation
 units:
 
