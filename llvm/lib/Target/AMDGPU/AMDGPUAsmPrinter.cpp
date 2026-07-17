@@ -1915,8 +1915,6 @@ bool AMDGPUAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
                                              const char *ExtraCode,
                                              raw_ostream &OS) {
   const MachineOperand &MO = MI->getOperand(OpNo);
-  if (!MO.isReg())
-    return true;
   AMDGPUInstPrinter::printRegOperand(MO.getReg(), OS,
                                      *MF->getSubtarget().getRegisterInfo());
   return false;
