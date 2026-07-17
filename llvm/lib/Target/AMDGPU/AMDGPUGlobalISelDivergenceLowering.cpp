@@ -240,14 +240,14 @@ bool DivergenceLoweringHelper::lowerTemporalDivergenceI1() {
 
   // In case of use outside muliple nested cycles or muliple uses we only need
   // to merge lane mask across largest relevant cycle.
-  SmallDenseMap<Register, std::pair<MachineCycle, Register>> LRCCache;
+  SmallDenseMap<Register, std::pair<CycleRef, Register>> LRCCache;
   for (auto [Reg, UseInst, LRC] : MUI->getTemporalDivergenceList()) {
     if (MRI->getType(Reg) != LLT::scalar(1))
       continue;
 
     auto [LRCCacheIter, RegNotCached] = LRCCache.try_emplace(Reg);
     auto &CycleMergedMask = LRCCacheIter->getSecond();
-    MachineCycle &CachedLRC = CycleMergedMask.first;
+    CycleRef &CachedLRC = CycleMergedMask.first;
     if (RegNotCached || CInfo.contains(LRC, CachedLRC)) {
       CachedLRC = LRC;
     }
@@ -256,7 +256,7 @@ bool DivergenceLoweringHelper::lowerTemporalDivergenceI1() {
   for (auto &LRCCacheEntry : LRCCache) {
     Register Reg = LRCCacheEntry.first;
     auto &CycleMergedMask = LRCCacheEntry.getSecond();
-    MachineCycle Cycle = CycleMergedMask.first;
+    CycleRef Cycle = CycleMergedMask.first;
 
     Register MergedMask = MRI->createVirtualRegister(BoolS1);
     SSAUpdater.Initialize(MergedMask);

@@ -214,11 +214,11 @@ ChangeStatus clampStateAndIndicateChange<DerefState>(DerefState &S,
 } // namespace llvm
 
 static bool mayBeInCycle(const CycleInfo *CI, const Instruction *I,
-                         bool HeaderOnly, Cycle *CPtr = nullptr) {
+                         bool HeaderOnly, CycleRef *CPtr = nullptr) {
   if (!CI)
     return true;
   auto *BB = I->getParent();
-  Cycle C = CI->getCycle(BB);
+  CycleRef C = CI->getCycle(BB);
   if (!C)
     return false;
   if (CPtr)
@@ -11421,7 +11421,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
           A.getInfoCache().getAnalysisResultForFunction<CycleAnalysis>(
               *PHI.getFunction());
 
-      Cycle C;
+      CycleRef C;
       bool CyclePHI = mayBeInCycle(CI, &PHI, /* HeaderOnly */ true, &C);
       for (unsigned u = 0, e = PHI.getNumIncomingValues(); u < e; u++) {
         BasicBlock *IncomingBB = PHI.getIncomingBlock(u);

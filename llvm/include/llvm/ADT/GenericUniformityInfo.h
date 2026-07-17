@@ -38,10 +38,10 @@ public:
   using ThisT = GenericUniformityInfo<ContextT>;
 
   using CycleInfoT = GenericCycleInfo<ContextT>;
-  using Cycle = typename CycleInfoT::Cycle;
+  using CycleRef = typename CycleInfoT::CycleRef;
 
   using TemporalDivergenceTuple =
-      std::tuple<ConstValueRefT, InstructionT *, Cycle>;
+      std::tuple<ConstValueRefT, InstructionT *, CycleRef>;
 
   GenericUniformityInfo(const DominatorTreeT &DT, const CycleInfoT &CI,
                         const TargetTransformInfo *TTI = nullptr);

@@ -116,8 +116,8 @@ MachineCycleInfoPrinterPass::run(MachineFunction &MF,
   return PreservedAnalyses::all();
 }
 
-bool llvm::isCycleInvariant(const MachineCycleInfo &CI,
-                            const MachineCycle &Cycle, MachineInstr &I) {
+bool llvm::isCycleInvariant(const MachineCycleInfo &CI, const CycleRef &Cycle,
+                            MachineInstr &I) {
   MachineFunction *MF = I.getParent()->getParent();
   MachineRegisterInfo *MRI = &MF->getRegInfo();
   const TargetSubtargetInfo &ST = MF->getSubtarget();

@@ -228,11 +228,11 @@ bool SIInstrInfo::isSafeToSink(MachineInstr &MI,
       MachineInstr *SgprDef = MRI.getVRegDef(Op.getReg());
 
       // SgprDef defined inside cycle
-      MachineCycle FromCycle = CI->getCycle(SgprDef->getParent());
+      CycleRef FromCycle = CI->getCycle(SgprDef->getParent());
       if (!FromCycle)
         continue;
 
-      MachineCycle ToCycle = CI->getCycle(SuccToSinkTo);
+      CycleRef ToCycle = CI->getCycle(SuccToSinkTo);
       // Check if there is a FromCycle that contains SgprDef's basic block but
       // does not contain SuccToSinkTo and also has divergent exit condition.
       while (FromCycle && !(ToCycle && CI->contains(FromCycle, ToCycle))) {

@@ -772,7 +772,8 @@ BasicBlock *llvm::SplitCallBrEdge(BasicBlock *CallBrBlock, BasicBlock *Succ,
                                                        CallBrTarget, Succ);
     if (UpdatedLI)
       *UpdatedLI = Updated;
-    updateCycleLoopInfo<CycleInfo, Cycle>(CI, CallBrBlock, CallBrTarget, Succ);
+    updateCycleLoopInfo<CycleInfo, CycleRef>(CI, CallBrBlock, CallBrTarget,
+                                             Succ);
   } else {
     for (PHINode &PN : Succ->phis())
       PN.removeIncomingValue(CallBrBlock, false);

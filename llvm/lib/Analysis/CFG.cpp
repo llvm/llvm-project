@@ -178,10 +178,10 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
     }
   }
 
-  DenseSet<Cycle> CyclesWithHoles;
+  DenseSet<CycleRef> CyclesWithHoles;
   if (CI && ExclusionSet) {
     for (auto *BB : *ExclusionSet) {
-      if (Cycle C = CI->getTopLevelParentCycle(BB))
+      if (CycleRef C = CI->getTopLevelParentCycle(BB))
         CyclesWithHoles.insert(C);
     }
   }
@@ -194,10 +194,10 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
     }
   }
 
-  DenseSet<Cycle> StopCycles;
+  DenseSet<CycleRef> StopCycles;
   if (CI) {
     for (auto *StopSetBB : StopSet) {
-      if (Cycle C = CI->getTopLevelParentCycle(StopSetBB))
+      if (CycleRef C = CI->getTopLevelParentCycle(StopSetBB))
         StopCycles.insert(C);
     }
   }
@@ -232,12 +232,12 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
         return true;
     }
 
-    Cycle OuterC;
+    CycleRef OuterC;
     if (CI) {
       OuterC = CI->getTopLevelParentCycle(BB);
       if (OuterC) {
         if (CyclesWithHoles.count(OuterC))
-          OuterC = Cycle();
+          OuterC = CycleRef();
         else if (StopCycles.contains(OuterC))
           return true;
       } else {

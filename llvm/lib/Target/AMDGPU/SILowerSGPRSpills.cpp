@@ -67,7 +67,7 @@ private:
   MBBVector SaveBlocks;
   MBBVector RestoreBlocks;
 
-  MachineBasicBlock *getCycleDomBB(MachineCycle C);
+  MachineBasicBlock *getCycleDomBB(CycleRef C);
 
 public:
   SILowerSGPRSpills(LiveIntervals *LIS, SlotIndexes *Indexes,
@@ -302,7 +302,7 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(
   return false;
 }
 
-MachineBasicBlock *SILowerSGPRSpills::getCycleDomBB(MachineCycle C) {
+MachineBasicBlock *SILowerSGPRSpills::getCycleDomBB(CycleRef C) {
   // If the insertion point lands on a cycle entry, move it to a block that
   // dominates all entries.
   if (MCI->isReducible(C)) {
@@ -518,7 +518,7 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
 
     for (auto Reg : FuncInfo->getSGPRSpillVGPRs()) {
       LaneVGPRInsertPt IP = LaneVGPRDomInstr[Reg];
-      if (MachineCycle C = MCI->getTopLevelParentCycle(IP.MBB)) {
+      if (CycleRef C = MCI->getTopLevelParentCycle(IP.MBB)) {
         MachineBasicBlock *AdjMBB = getCycleDomBB(C);
         IP = insertPt(AdjMBB, AdjMBB->getFirstTerminator());
       }

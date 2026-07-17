@@ -23,7 +23,6 @@
 namespace llvm {
 
 class MachineCycleInfo : public GenericCycleInfo<MachineSSAContext> {};
-using MachineCycle = MachineCycleInfo::Cycle;
 
 /// Legacy analysis pass which computes a \ref MachineCycleInfo.
 class LLVM_ABI MachineCycleInfoWrapperPass : public MachineFunctionPass {
@@ -47,7 +46,7 @@ public:
 // TODO: add this function to the GenericCycleInfo template after implementing
 //       the IR version.
 LLVM_ABI bool isCycleInvariant(const MachineCycleInfo &CI,
-                               const MachineCycle &Cycle, MachineInstr &I);
+                               const CycleRef &Cycle, MachineInstr &I);
 
 class MachineCycleAnalysis : public AnalysisInfoMixin<MachineCycleAnalysis> {
   friend AnalysisInfoMixin<MachineCycleAnalysis>;

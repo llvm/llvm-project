@@ -97,34 +97,32 @@ public:
 /// preorder index; a default-constructed handle is invalid ("no cycle"). All
 /// queries live on GenericCycleInfo, which resolves the handle to storage.
 ///
-/// Handles remain valid as long as the cycle forest is not recomputed.
-/// addBlockToCycle() adds a block but never adds, removes, or reorders cycles,
-/// so it leaves every handle valid.
-template <typename ContextT> class GenericCycleRef {
+/// The handle is context-free: IR and machine cycles share one type, which
+/// keeps forward declarations simple. Handles remain valid as long as the
+/// cycle forest is not recomputed; addBlockToCycle() adds a block but never
+/// adds, removes, or reorders cycles, so it leaves every handle valid.
+class CycleRef {
   static constexpr unsigned InvalidIndex = ~0u;
   unsigned Index = InvalidIndex;
 
-  explicit GenericCycleRef(unsigned Index) : Index(Index) {}
-  friend class GenericCycleInfo<ContextT>;
-  friend struct DenseMapInfo<GenericCycleRef<ContextT>>;
+  explicit CycleRef(unsigned Index) : Index(Index) {}
+  template <typename ContextT> friend class GenericCycleInfo;
+  friend struct DenseMapInfo<CycleRef>;
 
 public:
-  GenericCycleRef() = default;
+  CycleRef() = default;
   bool isValid() const { return Index != InvalidIndex; }
   explicit operator bool() const { return isValid(); }
-  bool operator==(GenericCycleRef O) const { return Index == O.Index; }
-  bool operator!=(GenericCycleRef O) const { return Index != O.Index; }
+  bool operator==(CycleRef O) const { return Index == O.Index; }
+  bool operator!=(CycleRef O) const { return Index != O.Index; }
 };
 
-/// The empty/tombstone keys are distinct from the invalid handle, so an invalid
-/// handle stays a legal key -- matching the pointer world where nullptr is a
-/// legal DenseMap/SmallPtrSet key.
-template <typename ContextT> struct DenseMapInfo<GenericCycleRef<ContextT>> {
-  using T = GenericCycleRef<ContextT>;
-  static T getEmptyKey() { return T(~0u - 1); }
-  static T getTombstoneKey() { return T(~0u - 2); }
-  static unsigned getHashValue(T C) { return C.Index; }
-  static bool isEqual(T A, T B) { return A.Index == B.Index; }
+/// DenseMap tracks bucket occupancy with a separate bitmap rather than sentinel
+/// key values, so only hashing and equality are needed and the invalid handle
+/// is itself a legal key.
+template <> struct DenseMapInfo<CycleRef> {
+  static unsigned getHashValue(CycleRef C) { return C.Index; }
+  static bool isEqual(CycleRef A, CycleRef B) { return A.Index == B.Index; }
 };
 
 /// \brief Cycle information for a function.
@@ -134,7 +132,7 @@ public:
   /// The internal, by-value storage type for a cycle.
   using CycleT = GenericCycle<ContextT>;
   /// The opaque handle by which consumers refer to a cycle.
-  using Cycle = GenericCycleRef<ContextT>;
+  using CycleRef = ::llvm::CycleRef;
   using FunctionT = typename ContextT::FunctionT;
   template <typename> friend class GenericCycleInfoCompute;
 
@@ -164,16 +162,16 @@ private:
 
   /// Resolve a handle to its stored cycle. The assert catches deref of an
   /// invalid handle and (partially) of a handle from another CycleInfo.
-  CycleT &deref(Cycle C) {
+  CycleT &deref(CycleRef C) {
     assert(C.Index < NumCycles);
     return Cycles[C.Index];
   }
-  const CycleT &deref(Cycle C) const {
+  const CycleT &deref(CycleRef C) const {
     assert(C.Index < NumCycles);
     return Cycles[C.Index];
   }
   /// The handle for a stored cycle.
-  Cycle ref(const CycleT &C) const { return Cycle(getCycleIndex(C)); }
+  CycleRef ref(const CycleT &C) const { return CycleRef(getCycleIndex(C)); }
 
   /// The innermost cycle containing \p Block as a raw pointer, or null. Used
   /// internally and during construction, where handles are not yet meaningful
@@ -197,7 +195,7 @@ public:
   /// sibling follows the previous child's subtree.
   struct const_child_iterator
       : iterator_facade_base<const_child_iterator, std::forward_iterator_tag,
-                             Cycle, std::ptrdiff_t, Cycle, Cycle> {
+                             CycleRef, std::ptrdiff_t, CycleRef, CycleRef> {
     const GenericCycleInfo *CI = nullptr;
     unsigned Index = 0;
 
@@ -205,7 +203,7 @@ public:
     const_child_iterator(const GenericCycleInfo &CI, unsigned Index)
         : CI(&CI), Index(Index) {}
 
-    Cycle operator*() const { return Cycle(Index); }
+    CycleRef operator*() const { return CycleRef(Index); }
     const_child_iterator &operator++() {
       Index += 1 + CI->Cycles[Index].NumDescendants;
       return *this;
@@ -218,13 +216,13 @@ public:
   /// Sequential iteration over all cycles in forest preorder, yielding handles.
   struct const_cycle_iterator
       : iterator_facade_base<const_cycle_iterator, std::forward_iterator_tag,
-                             Cycle, std::ptrdiff_t, Cycle, Cycle> {
+                             CycleRef, std::ptrdiff_t, CycleRef, CycleRef> {
     unsigned Index = 0;
 
     const_cycle_iterator() = default;
     explicit const_cycle_iterator(unsigned Index) : Index(Index) {}
 
-    Cycle operator*() const { return Cycle(Index); }
+    CycleRef operator*() const { return CycleRef(Index); }
     const_cycle_iterator &operator++() {
       ++Index;
       return *this;
@@ -255,45 +253,45 @@ public:
   ///
   /// \returns the innermost cycle containing \p Block or an invalid handle if
   ///          it is not contained in any cycle.
-  Cycle getCycle(const BlockT *Block) const {
+  CycleRef getCycle(const BlockT *Block) const {
     CycleT *C = getCyclePtr(Block);
-    return C ? ref(*C) : Cycle();
+    return C ? ref(*C) : CycleRef();
   }
 
-  BlockT *getHeader(Cycle C) const { return deref(C).Entries[0]; }
-  bool isReducible(Cycle C) const { return deref(C).Entries.size() == 1; }
-  Cycle getParentCycle(Cycle C) const {
+  BlockT *getHeader(CycleRef C) const { return deref(C).Entries[0]; }
+  bool isReducible(CycleRef C) const { return deref(C).Entries.size() == 1; }
+  CycleRef getParentCycle(CycleRef C) const {
     CycleT *P = deref(C).ParentCycle;
-    return P ? ref(*P) : Cycle();
+    return P ? ref(*P) : CycleRef();
   }
-  unsigned getDepth(Cycle C) const { return deref(C).Depth; }
-  size_t getNumBlocks(Cycle C) const {
+  unsigned getDepth(CycleRef C) const { return deref(C).Depth; }
+  size_t getNumBlocks(CycleRef C) const {
     const CycleT &Cyc = deref(C);
     return Cyc.IdxEnd - Cyc.IdxBegin;
   }
 
-  ArrayRef<BlockT *> getEntries(Cycle C) const { return deref(C).Entries; }
-  bool isEntry(Cycle C, const BlockT *Block) const {
+  ArrayRef<BlockT *> getEntries(CycleRef C) const { return deref(C).Entries; }
+  bool isEntry(CycleRef C, const BlockT *Block) const {
     return is_contained(deref(C).Entries, Block);
   }
-  void setSingleEntry(Cycle C, BlockT *Block) {
+  void setSingleEntry(CycleRef C, BlockT *Block) {
     auto &Entries = deref(C).Entries;
     Entries.clear();
     Entries.push_back(Block);
   }
   /// Returns true iff \p Outer contains \p Inner. O(1). Non-strict.
-  bool contains(Cycle Outer, Cycle Inner) const {
+  bool contains(CycleRef Outer, CycleRef Inner) const {
     const CycleT &O = deref(Outer);
     const CycleT &I = deref(Inner);
     return O.IdxBegin <= I.IdxBegin && I.IdxEnd <= O.IdxEnd;
   }
-  iterator_range<const_child_iterator> children(Cycle C) const {
+  iterator_range<const_child_iterator> children(CycleRef C) const {
     unsigned First = C.Index + 1;
     return llvm::make_range(
         const_child_iterator(*this, First),
         const_child_iterator(*this, First + deref(C).NumDescendants));
   }
-  Printable printEntries(Cycle C, const ContextT &Ctx) const {
+  Printable printEntries(CycleRef C, const ContextT &Ctx) const {
     return Printable([this, C, &Ctx](raw_ostream &Out) {
       ListSeparator LS(" ");
       for (auto *Entry : deref(C).Entries)
@@ -302,32 +300,32 @@ public:
   }
 
   /// \brief Return whether \p Block is contained in \p C. O(1).
-  bool contains(Cycle C, const BlockT *Block) const {
-    Cycle Inner = getCycle(Block);
+  bool contains(CycleRef C, const BlockT *Block) const {
+    CycleRef Inner = getCycle(Block);
     return Inner.isValid() && contains(C, Inner);
   }
 
   /// \brief Return the blocks of \p C, including those of nested cycles.
-  ArrayRef<BlockT *> getBlocks(Cycle C) const {
+  ArrayRef<BlockT *> getBlocks(CycleRef C) const {
     const CycleT &Cyc = deref(C);
     return ArrayRef<BlockT *>(BlockLayout.begin() + Cyc.IdxBegin,
                               BlockLayout.begin() + Cyc.IdxEnd);
   }
 
-  Cycle getSmallestCommonCycle(Cycle A, Cycle B) const;
-  Cycle getSmallestCommonCycle(BlockT *A, BlockT *B) const;
+  CycleRef getSmallestCommonCycle(CycleRef A, CycleRef B) const;
+  CycleRef getSmallestCommonCycle(BlockT *A, BlockT *B) const;
 
   /// \brief Return the depth of the innermost cycle containing \p Block, or 0
   /// if it is not contained in any cycle.
   unsigned getCycleDepth(const BlockT *Block) const {
-    Cycle C = getCycle(Block);
+    CycleRef C = getCycle(Block);
     return C.isValid() ? getDepth(C) : 0;
   }
 
-  Cycle getTopLevelParentCycle(const BlockT *Block) const {
+  CycleRef getTopLevelParentCycle(const BlockT *Block) const {
     CycleT *C = getCyclePtr(Block);
     if (!C)
-      return Cycle();
+      return CycleRef();
     while (C->ParentCycle)
       C = C->ParentCycle;
     return ref(*C);
@@ -335,33 +333,34 @@ public:
 
   /// Return all of the successor blocks of \p C: the blocks outside of \p C
   /// which are branched to from within it.
-  void getExitBlocks(Cycle C, SmallVectorImpl<BlockT *> &TmpStorage) const;
+  void getExitBlocks(CycleRef C, SmallVectorImpl<BlockT *> &TmpStorage) const;
 
   /// Return all blocks of \p C that have a successor outside of \p C.
-  void getExitingBlocks(Cycle C, SmallVectorImpl<BlockT *> &TmpStorage) const;
+  void getExitingBlocks(CycleRef C,
+                        SmallVectorImpl<BlockT *> &TmpStorage) const;
 
   /// Return the preheader block for \p C. Pre-header is well-defined for
   /// reducible cycle in docs/LoopTerminology.md as: the only one entering
   /// block and its only edge is to the entry block. Return null for
   /// irreducible cycles.
-  BlockT *getCyclePreheader(Cycle C) const;
+  BlockT *getCyclePreheader(CycleRef C) const;
 
   /// If \p C has exactly one entry with exactly one predecessor, return it,
   /// otherwise return nullptr.
-  BlockT *getCyclePredecessor(Cycle C) const;
+  BlockT *getCyclePredecessor(CycleRef C) const;
 
   /// Verify that \p C is actually a well-formed cycle in the CFG.
-  void verifyCycle(Cycle C) const;
+  void verifyCycle(CycleRef C) const;
 
   /// Verify the parent-child relations of \p C.
   ///
   /// Note that this does \em not check that \p C is really a cycle in the CFG.
-  void verifyCycleNest(Cycle C) const;
+  void verifyCycleNest(CycleRef C) const;
 
   /// Assumes that \p C is the innermost cycle containing \p Block.
   /// \p Block will be appended to \p C and all of its parent cycles.
   /// \p Block will be added to BlockMap with \p C.
-  void addBlockToCycle(BlockT *Block, Cycle C);
+  void addBlockToCycle(BlockT *Block, CycleRef C);
 
   /// Methods for debug and self-test.
   //@{
@@ -369,7 +368,7 @@ public:
   void verify() const;
   void print(raw_ostream &Out) const;
   void dump() const { print(dbgs()); }
-  Printable print(Cycle C) const;
+  Printable print(CycleRef C) const;
   //@}
 
   /// Iteration over top-level cycles.

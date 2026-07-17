@@ -36,7 +36,7 @@ namespace llvm {
 
 template <typename ContextT>
 void GenericCycleInfo<ContextT>::getExitBlocks(
-    Cycle C, SmallVectorImpl<BlockT *> &TmpStorage) const {
+    CycleRef C, SmallVectorImpl<BlockT *> &TmpStorage) const {
   if (ExitBlocksCaches.empty())
     ExitBlocksCaches.resize(NumCycles);
   auto &Cache = ExitBlocksCaches[C.Index];
@@ -66,7 +66,7 @@ void GenericCycleInfo<ContextT>::getExitBlocks(
 
 template <typename ContextT>
 void GenericCycleInfo<ContextT>::getExitingBlocks(
-    Cycle C, SmallVectorImpl<BlockT *> &TmpStorage) const {
+    CycleRef C, SmallVectorImpl<BlockT *> &TmpStorage) const {
   for (BlockT *Block : getBlocks(C)) {
     for (BlockT *Succ : successors(Block)) {
       if (!contains(C, Succ)) {
@@ -78,7 +78,8 @@ void GenericCycleInfo<ContextT>::getExitingBlocks(
 }
 
 template <typename ContextT>
-auto GenericCycleInfo<ContextT>::getCyclePreheader(Cycle C) const -> BlockT * {
+auto GenericCycleInfo<ContextT>::getCyclePreheader(CycleRef C) const
+    -> BlockT * {
   BlockT *Predecessor = getCyclePredecessor(C);
   if (!Predecessor)
     return nullptr;
@@ -96,7 +97,7 @@ auto GenericCycleInfo<ContextT>::getCyclePreheader(Cycle C) const -> BlockT * {
 }
 
 template <typename ContextT>
-auto GenericCycleInfo<ContextT>::getCyclePredecessor(Cycle C) const
+auto GenericCycleInfo<ContextT>::getCyclePredecessor(CycleRef C) const
     -> BlockT * {
   if (!isReducible(C))
     return nullptr;
@@ -117,7 +118,7 @@ auto GenericCycleInfo<ContextT>::getCyclePredecessor(Cycle C) const
 }
 
 template <typename ContextT>
-void GenericCycleInfo<ContextT>::verifyCycle(Cycle C) const {
+void GenericCycleInfo<ContextT>::verifyCycle(CycleRef C) const {
 #ifndef NDEBUG
   assert(getNumBlocks(C) != 0 && "Cycle cannot be empty.");
   DenseSet<BlockT *> Blocks;
@@ -191,11 +192,11 @@ void GenericCycleInfo<ContextT>::verifyCycle(Cycle C) const {
 }
 
 template <typename ContextT>
-void GenericCycleInfo<ContextT>::verifyCycleNest(Cycle C) const {
+void GenericCycleInfo<ContextT>::verifyCycleNest(CycleRef C) const {
 #ifndef NDEBUG
   const CycleT &Cyc = deref(C);
   // Check the subcycles.
-  for (Cycle Child : children(C)) {
+  for (auto Child : children(C)) {
     // Each block in each subcycle should be contained within this cycle.
     for (BlockT *BB : getBlocks(Child)) {
       assert(contains(C, BB) &&
@@ -297,7 +298,7 @@ void GenericCycleInfo<ContextT>::addToBlockMap(BlockT *Block, CycleT *Cycle) {
 }
 
 template <typename ContextT>
-void GenericCycleInfo<ContextT>::addBlockToCycle(BlockT *Block, Cycle C) {
+void GenericCycleInfo<ContextT>::addBlockToCycle(BlockT *Block, CycleRef C) {
   CycleT &Cyc = deref(C);
   // Make sure BlockMap is large enough for the new block.
   unsigned Number = GraphTraits<BlockT *>::getNumber(Block);
@@ -587,7 +588,7 @@ void GenericCycleInfo<ContextT>::splitCriticalEdge(BlockT *Pred, BlockT *Succ,
                                                    BlockT *NewBlock) {
   // Edge Pred-Succ is replaced by edges Pred-NewBlock and NewBlock-Succ, all
   // cycles that had blocks Pred and Succ also get NewBlock.
-  Cycle C = getSmallestCommonCycle(getCycle(Pred), getCycle(Succ));
+  CycleRef C = getSmallestCommonCycle(getCycle(Pred), getCycle(Succ));
   if (!C)
     return;
 
@@ -600,10 +601,11 @@ void GenericCycleInfo<ContextT>::splitCriticalEdge(BlockT *Pred, BlockT *Succ,
 /// \returns the innermost cycle containing both \p A and \p B
 ///          or nullptr if there is no such cycle.
 template <typename ContextT>
-auto GenericCycleInfo<ContextT>::getSmallestCommonCycle(Cycle A, Cycle B) const
-    -> Cycle {
+auto GenericCycleInfo<ContextT>::getSmallestCommonCycle(CycleRef A,
+                                                        CycleRef B) const
+    -> CycleRef {
   if (!A || !B)
-    return Cycle();
+    return CycleRef();
 
   // If cycles A and B have different depth replace them with parent cycle
   // until they have the same depth.
@@ -630,7 +632,7 @@ auto GenericCycleInfo<ContextT>::getSmallestCommonCycle(Cycle A, Cycle B) const
 template <typename ContextT>
 auto GenericCycleInfo<ContextT>::getSmallestCommonCycle(BlockT *A,
                                                         BlockT *B) const
-    -> Cycle {
+    -> CycleRef {
   return getSmallestCommonCycle(getCycle(A), getCycle(B));
 }
 
@@ -643,7 +645,7 @@ void GenericCycleInfo<ContextT>::verifyCycleNest(bool VerifyFull) const {
 #ifndef NDEBUG
   DenseSet<BlockT *> CycleHeaders;
 
-  for (Cycle C : cycles()) {
+  for (auto C : cycles()) {
     BlockT *Header = getHeader(C);
     assert(CycleHeaders.insert(Header).second);
     if (VerifyFull)
@@ -652,7 +654,7 @@ void GenericCycleInfo<ContextT>::verifyCycleNest(bool VerifyFull) const {
       verifyCycleNest(C);
     // Check the block map entries for blocks contained in this cycle.
     for (BlockT *BB : getBlocks(C)) {
-      Cycle InBlockMap = getCycle(BB);
+      CycleRef InBlockMap = getCycle(BB);
       assert(InBlockMap.isValid());
       assert(contains(C, InBlockMap));
     }
@@ -668,7 +670,7 @@ template <typename ContextT> void GenericCycleInfo<ContextT>::verify() const {
 /// \brief Print the cycle info.
 template <typename ContextT>
 void GenericCycleInfo<ContextT>::print(raw_ostream &Out) const {
-  for (Cycle C : cycles()) {
+  for (auto C : cycles()) {
     for (unsigned I = 0, Depth = getDepth(C); I < Depth; ++I)
       Out << "    ";
 
@@ -678,7 +680,7 @@ void GenericCycleInfo<ContextT>::print(raw_ostream &Out) const {
 
 /// \brief Print a single cycle: its depth, entries, and remaining blocks.
 template <typename ContextT>
-Printable GenericCycleInfo<ContextT>::print(Cycle C) const {
+Printable GenericCycleInfo<ContextT>::print(CycleRef C) const {
   return Printable([this, C](raw_ostream &Out) {
     Out << "depth=" << getDepth(C) << ": entries(" << printEntries(C, Context)
         << ')';

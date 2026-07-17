@@ -132,7 +132,7 @@ void GenericConvergenceVerifier<ContextT>::verify(const DominatorTreeT &DT) {
   const auto &F = *Context.getFunction();
 
   DenseMap<const BlockT *, SmallVector<const InstructionT *, 8>> LiveTokenMap;
-  DenseMap<Cycle, const InstructionT *> CycleHearts;
+  DenseMap<CycleRef, const InstructionT *> CycleHearts;
 
   // Just like the DominatorTree, compute the CycleInfo locally so that we
   // can run the verifier outside of a pass manager and we don't rely on
@@ -153,7 +153,7 @@ void GenericConvergenceVerifier<ContextT>::verify(const DominatorTreeT &DT) {
 
     // Check static rules about cycles.
     auto *BB = User->getParent();
-    Cycle BBCycle = CI.getCycle(BB);
+    CycleRef BBCycle = CI.getCycle(BB);
     if (!BBCycle)
       return;
 
@@ -170,7 +170,7 @@ void GenericConvergenceVerifier<ContextT>::verify(const DominatorTreeT &DT) {
           {Context.print(User), CI.print(BBCycle)});
 
     while (true) {
-      Cycle Parent = CI.getParentCycle(BBCycle);
+      CycleRef Parent = CI.getParentCycle(BBCycle);
       if (!Parent || CI.contains(Parent, DefBB))
         break;
       BBCycle = Parent;
