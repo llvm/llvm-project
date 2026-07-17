@@ -2830,6 +2830,7 @@ static void emitMatchRegisterAltName(const CodeGenTarget &Target,
 
 /// emitOperandDiagnosticTypes - Emit the operand matching diagnostic types.
 static void emitOperandDiagnosticTypes(AsmMatcherInfo &Info, raw_ostream &OS) {
+  // Get the set of diagnostic types from all of the operand classes.
   std::set<StringRef> Types;
   for (const auto &CI : Info.Classes) {
     if (!CI.DiagnosticType.empty())
@@ -2839,6 +2840,7 @@ static void emitOperandDiagnosticTypes(AsmMatcherInfo &Info, raw_ostream &OS) {
   if (Types.empty())
     return;
 
+  // Now emit the enum entries.
   for (StringRef Type : Types)
     OS << "  Match_" << Type << ",\n";
   OS << "  END_OPERAND_DIAGNOSTIC_TYPES\n";
