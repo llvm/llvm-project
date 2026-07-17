@@ -1694,6 +1694,25 @@ def SETP_bf16x2rr :
 
 def addr : ComplexPattern<pAny, 2, "SelectADDR">;
 
+// Match an address only when the parent MemSDNode has the requested address
+// space.
+class ADDR_AS<string ASName>
+    : ComplexPattern<pAny, 2,
+                     "SelectADDRInAS<NVPTX::AddressSpace::" # ASName # ">"> {
+  let WantsParent = true;
+}
+
+// Using these address space patterns requires the corresponding intrinsics to
+// be registered in getTgtMemIntrinsic so that SelectionDAG preserves the
+// address space (AS) information.
+def addr_generic        : ADDR_AS<"Generic">;
+def addr_global         : ADDR_AS<"Global">;
+def addr_shared         : ADDR_AS<"Shared">;
+def addr_const          : ADDR_AS<"Const">;
+def addr_local          : ADDR_AS<"Local">;
+def addr_shared_cluster : ADDR_AS<"SharedCluster">;
+def addr_param          : ADDR_AS<"EntryParam">;
+
 def ADDR_base : Operand<pAny>;
 def ADDR : Operand<pAny> {
   let PrintMethod = "printMemOperand";

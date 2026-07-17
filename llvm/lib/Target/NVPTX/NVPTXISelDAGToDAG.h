@@ -102,6 +102,16 @@ private:
   NVPTX::Scope getAtomicScope(const MemSDNode *N) const;
 
   bool SelectADDR(SDValue Addr, SDValue &Base, SDValue &Offset);
+  // Match an address only when its parent memory operation is in address
+  // space AS.
+  template <unsigned AS>
+  bool SelectADDRInAS(SDNode *Parent, SDValue Addr, SDValue &Base,
+                      SDValue &Offset) {
+    const auto *MemN = dyn_cast_or_null<MemSDNode>(Parent);
+    if (!MemN || MemN->getAddressSpace() != AS)
+      return false;
+    return SelectADDR(Addr, Base, Offset);
+  }
   SDValue getPTXCmpMode(const CondCodeSDNode &CondCode);
   SDValue selectPossiblyImm(SDValue V);
 
