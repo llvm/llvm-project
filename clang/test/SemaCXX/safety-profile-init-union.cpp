@@ -95,6 +95,17 @@ void test_byte_union() {
   (void)a; (void)b;
 }
 
+// Default member initializers on the leaves of an anonymous-struct variant
+// activate it during default-initialization: an all-NSDMI variant is
+// initialized completely, a partial one leaves its other leaf indeterminate.
+union NSDMIVariant { struct { int a = 1; int b = 2; }; float f; };
+union PartialNSDMIVariant { struct { int a = 1; int b; }; float f; };
+void test_nsdmi_variant_union() {
+  NSDMIVariant a;        // OK: default-init activates the complete variant
+  PartialNSDMIVariant b; // expected-error {{variable 'b' of union type must be initialized under profile 'std::init'}}
+  (void)a; (void)b;
+}
+
 // A union data member that a constructor leaves uninitialized is diagnosed; one
 // initialized via its member-initializer is accepted.
 struct HasUnionMember {

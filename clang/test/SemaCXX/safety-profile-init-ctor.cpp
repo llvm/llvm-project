@@ -320,3 +320,46 @@ struct AnonUnionMixedByte {
   };
   AnonUnionMixedByte() {} // expected-error {{constructor does not initialize any member of the anonymous union under profile 'std::init'}}
 };
+
+// Default member initializers on every leaf of an anonymous-struct variant
+// activate it during default-initialization and initialize it completely;
+// the static_assert below is the constant-evaluation proof.
+struct AnonUnionAllNSDMIVariant {
+  union {
+    struct {
+      int a = 1;
+      int b = 2;
+    };
+    float f;
+  };
+  constexpr AnonUnionAllNSDMIVariant() {} // OK: the variant is active and complete
+};
+static_assert(AnonUnionAllNSDMIVariant().a == 1 &&
+              AnonUnionAllNSDMIVariant().b == 2);
+
+// A partial-NSDMI variant is activated all the same, but default-init
+// leaves its other leaf indeterminate, so the constructor stays diagnosed.
+struct AnonUnionPartialNSDMIVariant {
+  union { // expected-note {{anonymous union declared here}}
+    struct {
+      int a = 1;
+      int b;
+    };
+    float f;
+  };
+  AnonUnionPartialNSDMIVariant() {} // expected-error {{constructor does not initialize any member of the anonymous union under profile 'std::init'}}
+};
+
+// The activation is visible through nesting: an all-NSDMI anonymous struct
+// variant of an anonymous union inside an anonymous struct.
+struct AnonNestedNSDMIVariant {
+  struct {
+    union {
+      struct {
+        int a = 1;
+      };
+      float f;
+    };
+  };
+  AnonNestedNSDMIVariant() {} // OK: the nested variant is active and complete
+};

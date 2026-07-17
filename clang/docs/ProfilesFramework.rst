@@ -264,7 +264,11 @@ initialize its members (§5.1), and a data member that is itself marked
 ``[[uninit]]`` is acknowledged -- a type whose only indeterminate scalars are
 all marked does not trigger the rule.  Marking a variable of such a type
 ``[[uninit]]`` is likewise consistent: its default-initialization is a
-genuine no-op.
+genuine no-op.  A union whose default-initialization activates a variant
+through a default member initializer -- including initializers written on
+the leaves of an anonymous-record variant, provided they initialize the
+variant completely -- counts as initialized, and a union of only unnamed
+bit-fields or only ``std::byte`` members has nothing to acknowledge (§4.5).
 
 
 Where ``[[uninit]]`` May Not Go
@@ -588,9 +592,13 @@ indeterminate (a nested aggregate) is flagged the same way, and the members
 of an anonymous struct are checked exactly like direct members (a written
 initializer for one is an indirect member-initializer).  An anonymous
 *union* member instead needs one active member: a written leaf initializer
-or a leaf default member initializer satisfies it.  A delegating
-constructor is exempt -- its target initializes the members -- and so is a
-union's own constructor, whose members are mutually exclusive (§5.6).
+or a leaf default member initializer satisfies it -- default member
+initializers on the leaves of an anonymous-record variant activate that
+variant, which satisfies the union when they initialize it completely --
+and an anonymous union of only unnamed bit-fields or only ``std::byte``
+members has nothing to initialize.  A delegating constructor is exempt --
+its target initializes the members -- and so is a union's own constructor,
+whose members are mutually exclusive (§5.6).
 
 
 Global and Static Variables

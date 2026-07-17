@@ -525,6 +525,28 @@ SemaProfiles::ProfileSuppressScope::~ProfileSuppressScope() {
   S.Profiles().ProfileSuppressStack.pop_back_n(Count);
 }
 
+// True if a field of RD -- or, transitively, of an anonymous-record member
+// of RD -- carries a default member initializer. Default-initializing a
+// union performs the initialization of its single variant member with a
+// default member initializer ([class.union.general]p6; at most one variant
+// may have one), and initializers written on the leaves of an
+// anonymous-record variant activate it the same way.
+static bool anyLeafHasNSDMI(const CXXRecordDecl *RD) {
+  if (!RD->hasDefinition() || RD->isInvalidDecl())
+    return false;
+  for (const FieldDecl *F : RD->fields()) {
+    if (F->isUnnamedBitField())
+      continue;
+    if (F->hasInClassInitializer())
+      return true;
+    if (F->isAnonymousStructOrUnion())
+      if (const auto *FRD = F->getType()->getAsCXXRecordDecl())
+        if (anyLeafHasNSDMI(FRD))
+          return true;
+  }
+  return false;
+}
+
 static bool defaultInitLeavesScalarIndeterminateImpl(
     ASTContext &Ctx, QualType T, bool HonorUninitMarkers,
     llvm::SmallPtrSetImpl<const CXXRecordDecl *> &Visited) {
@@ -561,6 +583,16 @@ static bool defaultInitLeavesScalarIndeterminateImpl(
       AnyMember = true;
       if (F->hasInClassInitializer())
         return false;
+      // Default member initializers on the leaves of an anonymous-record
+      // member activate that variant during default-initialization, so the
+      // union is indeterminate iff the activated variant itself still is
+      // (returning at the first match is sound: at most one variant may
+      // carry default member initializers).
+      if (F->isAnonymousStructOrUnion())
+        if (const auto *FRD = F->getType()->getAsCXXRecordDecl();
+            FRD && anyLeafHasNSDMI(FRD))
+          return defaultInitLeavesScalarIndeterminateImpl(
+              Ctx, F->getType(), HonorUninitMarkers, Visited);
       if (!Ctx.getBaseElementType(F->getType())->isStdByteType())
         AllStdByte = false;
     }
