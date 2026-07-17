@@ -1039,10 +1039,29 @@ private:
               iter->second.insert(label);
             }
           },
-          [&](const parser::AssignedGotoStmt &) {
-            // Although this statement is a branch, it doesn't have any
-            // explicit control successors. So the code at the end of the
-            // loop won't mark the successor. Do that here.
+          [&](const parser::AssignedGotoStmt &s) {
+            // Mark every possible target of the assigned GO TO so that
+            // wrappability analyses (branchesAreInternal, hasIncomingBranch)
+            // can see any escape from an enclosing construct.
+            const auto &labelList = std::get<std::list<parser::Label>>(s.t);
+            if (!labelList.empty()) {
+              // Explicit target list: `go to v, (l1, l2, ...)`.
+              for (const auto &label : labelList)
+                markBranchTarget(eval, label);
+            } else {
+              // No explicit list (`go to v`): fall back to the set of labels
+              // that have been previously ASSIGN'd to v.
+              // TODO: This may miss assignments that appear later in program
+              // order, but it matches the information available at this point
+              // in the walk.
+              const auto *sym = std::get<parser::Name>(s.t).symbol;
+              if (sym) {
+                auto iter = assignSymbolLabelMap->find(*sym);
+                if (iter != assignSymbolLabelMap->end())
+                  for (auto label : iter->second)
+                    markBranchTarget(eval, label);
+              }
+            }
             eval.isUnstructured = true;
             markSuccessorAsNewBlock(eval);
           },
