@@ -35,6 +35,83 @@ define <8 x half> @masked_load_v8f16(ptr %src, <8 x i1> %mask) {
   ret <8 x half> %load
 }
 
+define <8 x bfloat> @masked_load_v8bf16_without_bf16_attr(ptr %src, <8 x i1> %mask) {
+; CHECK-LABEL: masked_load_v8bf16_without_bf16_attr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.8b, v0.8b, #7
+; CHECK-NEXT:    adrp x8, .LCPI2_0
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI2_0]
+; CHECK-NEXT:    cmlt v0.8b, v0.8b, #0
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    addv b1, v0.8b
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    tbnz w8, #0, .LBB2_9
+; CHECK-NEXT:  // %bb.1: // %else
+; CHECK-NEXT:    tbnz w8, #1, .LBB2_10
+; CHECK-NEXT:  .LBB2_2: // %else2
+; CHECK-NEXT:    tbnz w8, #2, .LBB2_11
+; CHECK-NEXT:  .LBB2_3: // %else5
+; CHECK-NEXT:    tbnz w8, #3, .LBB2_12
+; CHECK-NEXT:  .LBB2_4: // %else8
+; CHECK-NEXT:    tbnz w8, #4, .LBB2_13
+; CHECK-NEXT:  .LBB2_5: // %else11
+; CHECK-NEXT:    tbnz w8, #5, .LBB2_14
+; CHECK-NEXT:  .LBB2_6: // %else14
+; CHECK-NEXT:    tbnz w8, #6, .LBB2_15
+; CHECK-NEXT:  .LBB2_7: // %else17
+; CHECK-NEXT:    tbnz w8, #7, .LBB2_16
+; CHECK-NEXT:  .LBB2_8: // %else20
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB2_9: // %cond.load
+; CHECK-NEXT:    ldr h0, [x0]
+; CHECK-NEXT:    tbz w8, #1, .LBB2_2
+; CHECK-NEXT:  .LBB2_10: // %cond.load1
+; CHECK-NEXT:    add x9, x0, #2
+; CHECK-NEXT:    ld1 { v0.h }[1], [x9]
+; CHECK-NEXT:    tbz w8, #2, .LBB2_3
+; CHECK-NEXT:  .LBB2_11: // %cond.load4
+; CHECK-NEXT:    add x9, x0, #4
+; CHECK-NEXT:    ld1 { v0.h }[2], [x9]
+; CHECK-NEXT:    tbz w8, #3, .LBB2_4
+; CHECK-NEXT:  .LBB2_12: // %cond.load7
+; CHECK-NEXT:    add x9, x0, #6
+; CHECK-NEXT:    ld1 { v0.h }[3], [x9]
+; CHECK-NEXT:    tbz w8, #4, .LBB2_5
+; CHECK-NEXT:  .LBB2_13: // %cond.load10
+; CHECK-NEXT:    add x9, x0, #8
+; CHECK-NEXT:    ld1 { v0.h }[4], [x9]
+; CHECK-NEXT:    tbz w8, #5, .LBB2_6
+; CHECK-NEXT:  .LBB2_14: // %cond.load13
+; CHECK-NEXT:    add x9, x0, #10
+; CHECK-NEXT:    ld1 { v0.h }[5], [x9]
+; CHECK-NEXT:    tbz w8, #6, .LBB2_7
+; CHECK-NEXT:  .LBB2_15: // %cond.load16
+; CHECK-NEXT:    add x9, x0, #12
+; CHECK-NEXT:    ld1 { v0.h }[6], [x9]
+; CHECK-NEXT:    tbz w8, #7, .LBB2_8
+; CHECK-NEXT:  .LBB2_16: // %cond.load19
+; CHECK-NEXT:    add x8, x0, #14
+; CHECK-NEXT:    ld1 { v0.h }[7], [x8]
+; CHECK-NEXT:    ret
+  %load = call <8 x bfloat> @llvm.masked.load.v8bf16(ptr %src, i32 8, <8 x i1> %mask, <8 x bfloat> zeroinitializer)
+  ret <8 x bfloat> %load
+}
+
+define <8 x bfloat> @masked_load_v8bf16_with_bf16_attr(ptr %src, <8 x i1> %mask) #0 {
+; CHECK-LABEL: masked_load_v8bf16_with_bf16_attr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    shl v0.8h, v0.8h, #15
+; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
+; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    ret
+  %load = call <8 x bfloat> @llvm.masked.load.v8bf16(ptr %src, i32 8, <8 x i1> %mask, <8 x bfloat> zeroinitializer)
+  ret <8 x bfloat> %load
+}
+
 define <4 x float> @masked_load_v4f32(ptr %src, <4 x i1> %mask) {
 ; CHECK-LABEL: masked_load_v4f32:
 ; CHECK:       // %bb.0:
@@ -134,3 +211,74 @@ define <4 x half> @masked_load_v4f16(ptr %ap, ptr %bp) {
   %load = call <4 x half> @llvm.masked.load.v4f16(ptr %ap, i32 2, <4 x i1> %mask, <4 x half> zeroinitializer)
   ret <4 x half> %load
 }
+
+define <4 x bfloat> @masked_load_v4bf16_without_bf16_attr(ptr %ap, ptr %bp) {
+; CHECK-LABEL: masked_load_v4bf16_without_bf16_attr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    adrp x8, .LCPI10_0
+; CHECK-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-NEXT:    fcmeq v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI10_0]
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    addv h1, v0.4h
+; CHECK-NEXT:    movi d0, #0000000000000000
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    tbnz w8, #0, .LBB10_5
+; CHECK-NEXT:  // %bb.1: // %else
+; CHECK-NEXT:    tbnz w8, #1, .LBB10_6
+; CHECK-NEXT:  .LBB10_2: // %else2
+; CHECK-NEXT:    tbnz w8, #2, .LBB10_7
+; CHECK-NEXT:  .LBB10_3: // %else5
+; CHECK-NEXT:    tbnz w8, #3, .LBB10_8
+; CHECK-NEXT:  .LBB10_4: // %else8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB10_5: // %cond.load
+; CHECK-NEXT:    ldr h0, [x0]
+; CHECK-NEXT:    tbz w8, #1, .LBB10_2
+; CHECK-NEXT:  .LBB10_6: // %cond.load1
+; CHECK-NEXT:    add x9, x0, #2
+; CHECK-NEXT:    ld1 { v0.h }[1], [x9]
+; CHECK-NEXT:    tbz w8, #2, .LBB10_3
+; CHECK-NEXT:  .LBB10_7: // %cond.load4
+; CHECK-NEXT:    add x9, x0, #4
+; CHECK-NEXT:    ld1 { v0.h }[2], [x9]
+; CHECK-NEXT:    tbz w8, #3, .LBB10_4
+; CHECK-NEXT:  .LBB10_8: // %cond.load7
+; CHECK-NEXT:    add x8, x0, #6
+; CHECK-NEXT:    ld1 { v0.h }[3], [x8]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
+  %a = load <4 x bfloat>, ptr %ap
+  %b = load <4 x bfloat>, ptr %bp
+  %mask = fcmp oeq <4 x bfloat> %a, %b
+  %load = call <4 x bfloat> @llvm.masked.load.v4bf16(ptr %ap, i32 2, <4 x i1> %mask, <4 x bfloat> zeroinitializer)
+  ret <4 x bfloat> %load
+}
+
+define <4 x bfloat> @masked_load_v4bf16_with_bf16_attr(ptr %ap, ptr %bp) #0 {
+; CHECK-LABEL: masked_load_v4bf16_with_bf16_attr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-NEXT:    fcmeq v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
+; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    ret
+  %a = load <4 x bfloat>, ptr %ap
+  %b = load <4 x bfloat>, ptr %bp
+  %mask = fcmp oeq <4 x bfloat> %a, %b
+  %load = call <4 x bfloat> @llvm.masked.load.v4bf16(ptr %ap, i32 2, <4 x i1> %mask, <4 x bfloat> zeroinitializer)
+  ret <4 x bfloat> %load
+}
+
+attributes #0 = { "target-features"="+bf16" }
