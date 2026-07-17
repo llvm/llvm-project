@@ -48,7 +48,6 @@ Implemented Papers
 - P2781R9: ``std::constant_wrapper`` (`Github <https://llvm.org/PR148179>`__)
 - P3978R3: ``constant_wrapper`` should unwrap on call and subscript (`Github <https://llvm.org/PR189605>`__)
 - P2164R9: ``views::enumerate`` (`Github <https://llvm.org/PR105251>`__)
-- P0448R4: A ``strstream`` replacement using ``span<charT>`` as buffer (`Github <https://llvm.org/PR105145>`__)
 - P2322R6: ``ranges::fold`` (`Github <https://llvm.org/PR105208>`__)
 - P4144R1: Remove ``span``'s ``initializer_list`` constructor for C++26 (`Github <https://llvm.org/PR189612>`__)
 - P2542R8: ``views::concat`` (`Github <https://llvm.org/PR105419>`__)
