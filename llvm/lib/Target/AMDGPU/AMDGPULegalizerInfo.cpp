@@ -6701,6 +6701,14 @@ bool AMDGPULegalizerInfo::legalizeBufferStore(MachineInstr &MI,
   const int MemSize = MMO->getSize().getValue();
   LLT MemTy = MMO->getMemoryType();
 
+  if (IsFormat && !IsTyped && !IsD16 && MemTy.getSizeInBits() < 32) {
+    const Function &Fn = B.getMF().getFunction();
+    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+        Fn, "unsupported sub-dword format buffer store", MI.getDebugLoc()));
+    MI.eraseFromParent();
+    return true;
+  }
+
   VData = fixStoreSourceType(B, VData, MemTy, IsFormat);
 
   castBufferRsrcArgToV4I32(MI, B, 2);
@@ -6870,6 +6878,17 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
   LLT EltTy = Ty.getScalarType();
   const bool IsD16 = IsFormat && (EltTy.getSizeInBits() == 16);
   const bool Unpacked = ST.hasUnpackedD16VMem();
+
+  if (IsFormat && !IsTyped && !IsD16 && MemTy.getSizeInBits() < 32) {
+    const Function &Fn = B.getMF().getFunction();
+    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+        Fn, "unsupported sub-dword format buffer load", MI.getDebugLoc()));
+    B.buildUndef(Dst);
+    if (IsTFE)
+      B.buildUndef(StatusDst);
+    MI.eraseFromParent();
+    return true;
+  }
 
   std::tie(VOffset, ImmOffset) = splitBufferOffsets(B, VOffset);
 
@@ -7895,13 +7914,6 @@ bool AMDGPULegalizerInfo::legalizeBVHIntersectRayIntrinsic(
   Register RayInvDir = MI.getOperand(6).getReg();
   Register TDescr = MI.getOperand(7).getReg();
 
-  if (!ST.hasGFX10_AEncoding()) {
-    Function &Fn = B.getMF().getFunction();
-    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
-        Fn, "intrinsic not supported on subtarget", MI.getDebugLoc()));
-    return false;
-  }
-
   RayExtent = B.buildBitcast(I32, RayExtent).getReg(0);
 
   const bool IsGFX11 = AMDGPU::isGFX11(ST);
@@ -8054,13 +8066,6 @@ bool AMDGPULegalizerInfo::legalizeBVHDualOrBVH8IntersectRayIntrinsic(
   Register RayDir = MI.getOperand(8).getReg();
   Register Offsets = MI.getOperand(9).getReg();
   Register TDescr = MI.getOperand(10).getReg();
-
-  if (!ST.hasBVHDualAndBVH8Insts()) {
-    Function &Fn = B.getMF().getFunction();
-    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
-        Fn, "intrinsic not supported on subtarget", MI.getDebugLoc()));
-    return false;
-  }
 
   bool IsBVH8 = cast<GIntrinsic>(MI).getIntrinsicID() ==
                 Intrinsic::amdgcn_image_bvh8_intersect_ray;
@@ -8712,16 +8717,6 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return true;
   case Intrinsic::amdgcn_av_load_b128:
   case Intrinsic::amdgcn_av_store_b128: {
-    const GCNSubtarget &ST = B.getMF().getSubtarget<GCNSubtarget>();
-    if (!ST.hasFlatGlobalInsts()) {
-      const char *Name = IntrID == Intrinsic::amdgcn_av_load_b128
-                             ? "llvm.amdgcn.av.load.b128"
-                             : "llvm.amdgcn.av.store.b128";
-      Function &Fn = B.getMF().getFunction();
-      Fn.getContext().diagnose(DiagnosticInfoUnsupported(
-          Fn, Twine(Name) + " not supported on subtarget", MI.getDebugLoc()));
-      return false;
-    }
     assert(MI.hasOneMemOperand() && "Expected IRTranslator to set MemOp!");
     if (IntrID == Intrinsic::amdgcn_av_load_b128)
       B.buildLoad(MI.getOperand(0), MI.getOperand(2), **MI.memoperands_begin());

@@ -1328,23 +1328,23 @@ static llvm::Error CheckScalarOperandsHaveSameType(const Scalar &lhs,
                                                    const Scalar &rhs,
                                                    LocationAtom opcode,
                                                    size_t address_size) {
-  auto mismatch = [&]() {
-    return llvm::createStringError("%s requires operands to have the same type",
-                                   DW_OP_value_to_name(opcode));
+  auto mismatch = [&](const char *what) {
+    return llvm::createStringError("%s requires operands to have the same %s",
+                                   DW_OP_value_to_name(opcode), what);
   };
 
   // Scalar does not preserve the original DWARF DIE, but it does carry the
   // pieces of base-type information used by the evaluator: kind, size, and
   // integer signedness.
   if (lhs.GetType() != rhs.GetType())
-    return mismatch();
+    return mismatch("type");
 
   // Only integer scalars have signedness. Non-integer operands (e.g. floats)
   // have no further scalar type information to compare once kind and size
   // match.
   if (lhs.GetType() != Scalar::e_int) {
     if (lhs.GetByteSize() != rhs.GetByteSize())
-      return mismatch();
+      return mismatch("size");
     return llvm::Error::success();
   }
 
@@ -1366,9 +1366,9 @@ static llvm::Error CheckScalarOperandsHaveSameType(const Scalar &lhs,
   // For non-generic integer operands, size and signedness are part of the
   // base-type information preserved by Scalar, so require them to match.
   if (lhs.GetByteSize() != rhs.GetByteSize())
-    return mismatch();
+    return mismatch("size");
   if (lhs.IsSigned() != rhs.IsSigned())
-    return mismatch();
+    return mismatch("signedness");
 
   return llvm::Error::success();
 }
@@ -1724,7 +1724,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
-      stack.back().GetScalar() = stack.back().GetScalar() == tmp.GetScalar();
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar() == tmp.GetScalar());
       break;
 
     case DW_OP_ge:
@@ -1734,7 +1735,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
-      stack.back().GetScalar() = stack.back().GetScalar() >= tmp.GetScalar();
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar() >= tmp.GetScalar());
       break;
 
     case DW_OP_gt:
@@ -1744,7 +1746,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
-      stack.back().GetScalar() = stack.back().GetScalar() > tmp.GetScalar();
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar() > tmp.GetScalar());
       break;
 
     case DW_OP_le:
@@ -1754,7 +1757,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
-      stack.back().GetScalar() = stack.back().GetScalar() <= tmp.GetScalar();
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar() <= tmp.GetScalar());
       break;
 
     case DW_OP_lt:
@@ -1764,7 +1768,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
-      stack.back().GetScalar() = stack.back().GetScalar() < tmp.GetScalar();
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar() < tmp.GetScalar());
       break;
 
     case DW_OP_ne:
@@ -1774,7 +1779,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
-      stack.back().GetScalar() = stack.back().GetScalar() != tmp.GetScalar();
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar() != tmp.GetScalar());
       break;
 
     case DW_OP_lit0:

@@ -93,6 +93,10 @@ define i32 @add(i32 %a, i32 %b) {
 
 ; ILDB-DIS: define i32 @add(i32 %a, i32 %b)
 ; ILDB-DIS: !llvm.dbg.cu
+; ILDB-DIS: !dx.source.contents
+; ILDB-DIS: !dx.source.defines
+; ILDB-DIS: !dx.source.mainFileName
+; ILDB-DIS: !dx.source.args
 ; ILDB-DIS: !DICompileUnit
 ; ILDB-DIS: !DIFile
 ; ILDB-DIS: !"Dwarf Version"
