@@ -25,6 +25,19 @@
 ; PDB-DAG:   - Name:            ILDB
 ; PDB-DAG:   - Name:            ILDN
 
+;; Check that --dx-strip-debug strips ILDB from DXContainer, but still keeps ILDN part
+; RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj --dx-strip-debug -o %t.cso
+; RUN: obj2yaml %t.cso | FileCheck %s --check-prefix=STRIP --implicit-check-not ILDB
+; STRIP:     Parts:
+; STRIP-DAG:   - Name:            ILDN
+
+;; Check that --dx-strip-debug is ignored when provided along with --dx-embed-debug
+; RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj --dx-strip-debug --dx-embed-debug -o %t.cso
+; RUN: obj2yaml %t.cso | FileCheck %s --check-prefix=STRIP-EMBED
+; STRIP-EMBED:     Parts:
+; STRIP-EMBED-DAG:   - Name:            ILDB
+; STRIP-EMBED-DAG:   - Name:            ILDN
+
 ;; Check errors when trying to output debug info with no debug info present
 ; RUN: not llc %s --filetype=obj --dx-embed-debug -o %t.cso 2>&1 | FileCheck %s --check-prefix=ERROR-NODBG
 ; ERROR-NODBG: Missing debug info for embedding into the container
