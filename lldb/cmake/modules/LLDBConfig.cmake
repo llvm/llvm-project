@@ -64,15 +64,6 @@ endif()
 
 option(LLDB_ENABLE_FORTRAN "Enable Fortran support in LLDB" ${LLDB_DEFAULT_ENABLE_FORTRAN})
 
-# Fail early if the user forced Fortran ON but we don't have in-tree Flang.
-if(LLDB_ENABLE_FORTRAN AND NOT "flang" IN_LIST LLVM_ENABLE_PROJECTS)
-  message(FATAL_ERROR 
-    "Fortran support in LLDB requires an in-tree Flang build. "
-    "Please add 'flang' to LLVM_ENABLE_PROJECTS or disable Fortran "
-    "support by passing -DLLDB_ENABLE_FORTRAN=OFF."
-  )
-endif()
-
 add_optional_dependency(LLDB_ENABLE_SWIG "Enable SWIG to generate LLDB bindings" SWIG SWIG_FOUND VERSION 4)
 add_optional_dependency(LLDB_ENABLE_LIBEDIT "Enable editline support in LLDB" LibEdit LibEdit_FOUND)
 add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support in LLDB" CursesAndPanel CURSESANDPANEL_FOUND)
