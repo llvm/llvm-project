@@ -317,7 +317,7 @@ private:
     const std::string separator(
         std::min<uint64_t>(GetDebugger().GetTerminalWidth(), 80), '-');
 
-    s.Printf("Available scripted extension templates:");
+    s.PutCString("Available scripted extension templates:");
 
     auto print_field = [&](llvm::StringRef key, llvm::StringRef value,
                            const std::string &value_color = std::string()) {
