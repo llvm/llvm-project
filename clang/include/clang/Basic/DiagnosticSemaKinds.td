@@ -7253,6 +7253,7 @@ def err_count_attr_param_not_in_same_struct : Error<
 // `ended_by` is downstream only.
 // FIXME: Stating `or C99 flexible array members` is only partially true.
 // In `-fbounds-safety` we also support it on arrays too.
+// Tracked by swiftlang/llvm-project#13416.
 def err_count_attr_not_on_ptr_or_flexible_array_member : Error<
   "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null|ended_by}0' only applies to pointers%select{ or C99 flexible array members||||}0%select{|; did you mean to use 'counted_by'?}1">;
 /* TO_UPSTREAM(BoundsSafety) OFF */
