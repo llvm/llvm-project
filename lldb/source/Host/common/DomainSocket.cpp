@@ -35,7 +35,6 @@ static const int kDomain = AF_UNIX;
 static const int kType = SOCK_STREAM;
 
 std::string DomainSocket::NativePathToURIPath(llvm::StringRef path) {
-#ifdef _WIN32
   // A drive-letter path (e.g. "C:\\dir\\sock") is not a valid URI authority, so
   // it is carried in the RFC 8089 URI form "/C:/dir/sock".
   if (path.size() >= 2 && llvm::isAlpha(path[0]) && path[1] == ':') {
@@ -50,12 +49,10 @@ std::string DomainSocket::NativePathToURIPath(llvm::StringRef path) {
     std::replace(uri_path.begin(), uri_path.end(), '\\', '/');
     return uri_path;
   }
-#endif
   return path.str();
 }
 
 std::string DomainSocket::URIPathToNativePath(llvm::StringRef path) {
-#ifdef _WIN32
   // Reverse of the drive-letter mapping: "/C:/dir/sock" -> "C:\\dir\\sock".
   if (path.size() >= 3 && path[0] == '/' && llvm::isAlpha(path[1]) &&
       path[2] == ':') {
@@ -69,7 +66,6 @@ std::string DomainSocket::URIPathToNativePath(llvm::StringRef path) {
     std::replace(native.begin(), native.end(), '/', '\\');
     return native;
   }
-#endif
   return path.str();
 }
 

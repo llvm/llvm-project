@@ -403,12 +403,10 @@ TEST_F(SocketTest, DomainGetConnectURI) {
 }
 
 TEST_F(SocketTest, DomainSocketPathURIConversion) {
-  // Paths that are already valid URI paths (no drive letter) are unchanged on
-  // every platform.
+  // Paths that are already valid URI paths (no drive letter) are unchanged.
   EXPECT_EQ(DomainSocket::NativePathToURIPath("/tmp/foo"), "/tmp/foo");
   EXPECT_EQ(DomainSocket::URIPathToNativePath("/tmp/foo"), "/tmp/foo");
 
-#ifdef _WIN32
   // A Windows drive-letter path round-trips through the RFC 8089 "/C:/..."
   // URI form.
   EXPECT_EQ(DomainSocket::NativePathToURIPath("C:\\dir\\sock"), "/C:/dir/sock");
@@ -422,10 +420,9 @@ TEST_F(SocketTest, DomainSocketPathURIConversion) {
             "//server/share/sock");
   EXPECT_EQ(DomainSocket::URIPathToNativePath("//server/share/sock"),
             "\\\\server\\share\\sock");
-  EXPECT_EQ(DomainSocket::URIPathToNativePath(DomainSocket::NativePathToURIPath(
-                "\\\\server\\share\\sock")),
+  EXPECT_EQ(DomainSocket::URIPathToNativePath(
+                DomainSocket::NativePathToURIPath("\\\\server\\share\\sock")),
             "\\\\server\\share\\sock");
-#endif
 }
 
 TEST_F(SocketTest, DomainSocketFromBoundNativeSocket) {
