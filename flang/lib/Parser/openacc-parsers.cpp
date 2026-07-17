@@ -85,11 +85,11 @@ TYPE_PARSER(construct<AccTileExprList>(nonemptyList(Parser<AccTileExpr>{})))
 //   dim:int-expr
 //   static:size-expr
 TYPE_PARSER(sourced(construct<AccGangArg>(construct<AccGangArg::Static>(
-                        "STATIC: " >> Parser<AccSizeExpr>{})) ||
+                        "STATIC :" >> Parser<AccSizeExpr>{})) ||
     construct<AccGangArg>(
-        construct<AccGangArg::Dim>("DIM: " >> scalarIntExpr)) ||
+        construct<AccGangArg::Dim>("DIM :" >> scalarIntExpr)) ||
     construct<AccGangArg>(
-        construct<AccGangArg::Num>(maybe("NUM: "_tok) >> scalarIntExpr))))
+        construct<AccGangArg::Num>(maybe("NUM :"_tok) >> scalarIntExpr))))
 
 // 2.9 gang-arg-list
 TYPE_PARSER(

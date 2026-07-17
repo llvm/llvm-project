@@ -44,9 +44,9 @@ body:             |
   ; GFX11-NEXT:   renamable $vgpr6 = V_ADD_U32_e32 $sgpr8, $vgpr5, implicit $exec
   ; GFX11-NEXT:   renamable $vgpr7 = V_ADD_U32_e32 $sgpr9, $vgpr5, implicit $exec
   ; GFX11-NEXT:   renamable $sgpr18_sgpr19 = V_CMP_GT_U32_e64 $sgpr15, killed $vgpr5, implicit $exec
-  ; GFX11-NEXT:   S_WAITCNT_DEPCTR .VaSdst_0
   ; GFX11-NEXT:   renamable $sgpr16 = nsw S_ADD_I32 killed renamable $sgpr16, -1, implicit-def dead $scc
   ; GFX11-NEXT:   renamable $vgpr9 = V_ADD_U32_e32 $sgpr9, $vgpr8, implicit $exec
+  ; GFX11-NEXT:   S_WAITCNT_DEPCTR .VaSdst_0
   ; GFX11-NEXT:   renamable $vgpr5 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr6, $sgpr18_sgpr19, implicit $exec
   ; GFX11-NEXT:   renamable $vgpr6 = V_CNDMASK_B32_e64 0, $sgpr10, 0, killed $vgpr7, killed $sgpr18_sgpr19, implicit $exec
   ; GFX11-NEXT:   renamable $vgpr7 = V_ADD_U32_e32 $sgpr8, $vgpr8, implicit $exec

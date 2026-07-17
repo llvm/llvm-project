@@ -2363,15 +2363,15 @@ define void @divergent_value_dpp_i64(ptr addrspace(1) %out, i64 %in) #0 {
 ; GFX1164DAGISEL-NEXT:    ds_swizzle_b32 v7, v5 offset:swizzle(BROADCAST,32,15)
 ; GFX1164DAGISEL-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX1164DAGISEL-NEXT:    v_add_co_u32 v4, vcc, v4, v6
-; GFX1164DAGISEL-NEXT:    s_waitcnt_depctr depctr_va_vcc(0)
 ; GFX1164DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1164DAGISEL-NEXT:    s_waitcnt_depctr depctr_va_vcc(0)
 ; GFX1164DAGISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v5, v7, vcc
 ; GFX1164DAGISEL-NEXT:    ds_permute_b32 v6, v8, v4
 ; GFX1164DAGISEL-NEXT:    ds_permute_b32 v7, v8, v5
 ; GFX1164DAGISEL-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX1164DAGISEL-NEXT:    v_add_co_u32 v4, vcc, v4, v6
-; GFX1164DAGISEL-NEXT:    s_waitcnt_depctr depctr_va_vcc(0)
 ; GFX1164DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1164DAGISEL-NEXT:    s_waitcnt_depctr depctr_va_vcc(0)
 ; GFX1164DAGISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v5, v7, vcc
 ; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1164DAGISEL-NEXT:    v_readlane_b32 s2, v4, 63
@@ -2381,13 +2381,13 @@ define void @divergent_value_dpp_i64(ptr addrspace(1) %out, i64 %in) #0 {
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX1164DAGISEL-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX1164DAGISEL-NEXT:    s_xor_saveexec_b64 s[0:1], -1
-; GFX1164DAGISEL-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
 ; GFX1164DAGISEL-NEXT:    s_clause 0x4 ; 20-byte Folded Reload
 ; GFX1164DAGISEL-NEXT:    scratch_load_b32 v4, off, s32
 ; GFX1164DAGISEL-NEXT:    scratch_load_b32 v5, off, s32 offset:4
 ; GFX1164DAGISEL-NEXT:    scratch_load_b32 v6, off, s32 offset:8
 ; GFX1164DAGISEL-NEXT:    scratch_load_b32 v7, off, s32 offset:12
 ; GFX1164DAGISEL-NEXT:    scratch_load_b32 v8, off, s32 offset:16
+; GFX1164DAGISEL-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
 ; GFX1164DAGISEL-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1164DAGISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1164DAGISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -2455,15 +2455,15 @@ define void @divergent_value_dpp_i64(ptr addrspace(1) %out, i64 %in) #0 {
 ; GFX1164GISEL-NEXT:    ds_swizzle_b32 v7, v5 offset:swizzle(BROADCAST,32,15)
 ; GFX1164GISEL-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX1164GISEL-NEXT:    v_add_co_u32 v4, vcc, v4, v6
-; GFX1164GISEL-NEXT:    s_waitcnt_depctr depctr_va_vcc(0)
 ; GFX1164GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1164GISEL-NEXT:    s_waitcnt_depctr depctr_va_vcc(0)
 ; GFX1164GISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v5, v7, vcc
 ; GFX1164GISEL-NEXT:    ds_permute_b32 v6, v8, v4
 ; GFX1164GISEL-NEXT:    ds_permute_b32 v7, v8, v5
 ; GFX1164GISEL-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX1164GISEL-NEXT:    v_add_co_u32 v4, vcc, v4, v6
-; GFX1164GISEL-NEXT:    s_waitcnt_depctr depctr_va_vcc(0)
 ; GFX1164GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1164GISEL-NEXT:    s_waitcnt_depctr depctr_va_vcc(0)
 ; GFX1164GISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v5, v7, vcc
 ; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1164GISEL-NEXT:    v_readlane_b32 s2, v4, 63
@@ -2473,13 +2473,13 @@ define void @divergent_value_dpp_i64(ptr addrspace(1) %out, i64 %in) #0 {
 ; GFX1164GISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX1164GISEL-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX1164GISEL-NEXT:    s_xor_saveexec_b64 s[0:1], -1
-; GFX1164GISEL-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
 ; GFX1164GISEL-NEXT:    s_clause 0x4 ; 20-byte Folded Reload
 ; GFX1164GISEL-NEXT:    scratch_load_b32 v4, off, s32
 ; GFX1164GISEL-NEXT:    scratch_load_b32 v5, off, s32 offset:4
 ; GFX1164GISEL-NEXT:    scratch_load_b32 v6, off, s32 offset:8
 ; GFX1164GISEL-NEXT:    scratch_load_b32 v7, off, s32 offset:12
 ; GFX1164GISEL-NEXT:    scratch_load_b32 v8, off, s32 offset:16
+; GFX1164GISEL-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
 ; GFX1164GISEL-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1164GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1164GISEL-NEXT:    s_setpc_b64 s[30:31]

@@ -1488,6 +1488,16 @@ func.func @test_matmul_t_a_zp_same_element_type(%arg0: tensor<1x14x19xf32>, %arg
 
 // -----
 
+func.func @test_matmul_t_b_zp_block_scaled_requires_fp32(%arg0: tensor<1x14x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>, %arg1: tensor<1x28x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<1x14x28xf32> {
+%azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+%bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf16>}> : () -> tensor<1xf16>
+// expected-error@+1 {{'tosa.matmul_t' op expect input b and b_zp have compatible element types, got '!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>' and 'f16'}}
+%0 = tosa.matmul_t %arg0, %arg1, %azp0, %bzp0 : (tensor<1x14x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>, tensor<1x28x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>, tensor<1xf32>, tensor<1xf16>)  -> tensor<1x14x28xf32>
+  return %0 : tensor<1x14x28xf32>
+}
+
+// -----
+
 func.func @test_matmul_t_a_zp_non_zero(%arg0: tensor<1x14x19xf32>, %arg1: tensor<1x28x19xf32>) -> tensor<1x14x28xf32> {
 %azp0 = "tosa.const"() <{values = dense<1.0> : tensor<1xf32>}> : () -> tensor<1xf32>
 %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>

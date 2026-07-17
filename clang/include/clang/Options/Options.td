@@ -990,6 +990,13 @@ def _ssaf_include_local_entities :
     "Include block-scope (function-local) declarations in extracted SSAF "
     "summaries. By default they are omitted.">,
   MarshallingInfoFlag<SSAFOpts<"IncludeLocalEntities">>;
+def _ssaf_no_extract_from_system_headers :
+  Flag<["--"], "ssaf-no-extract-from-system-headers">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<
+    "Skip declarations in system headers during SSAF summary extraction">,
+  MarshallingInfoNegativeFlag<SSAFOpts<"ExtractFromSystemHeaders">>;
 def Xarch__
     : JoinedAndSeparate<["-"], "Xarch_">,
       Flags<[NoXarchOption]>,
@@ -6737,6 +6744,7 @@ def target : Joined<["--"], "target=">, Flags<[NoXarchOption]>,
 def darwin_target_variant : Separate<["-"], "darwin-target-variant">,
   Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption]>,
   HelpText<"Generate code for an additional runtime variant of the deployment target">;
+def target_variant : Separate<["-"], "target-variant">, Alias<darwin_target_variant>;
 
 //===----------------------------------------------------------------------===//
 // Print CPU info options (clang, clang-cl, flang)

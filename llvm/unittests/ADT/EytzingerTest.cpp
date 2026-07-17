@@ -195,4 +195,106 @@ TEST(EytzingerTest, IsSortedVerification) {
   EXPECT_FALSE(EytzingerTableSpan<int>(Duplicates, 3).isSorted());
 }
 
+TEST(EytzingerTest, EytzingerTableCreateAndLookup) {
+  // Construct table from an unsorted vector with duplicate keys for a non-full
+  // bottom level (10 unique elements, size != 2^k - 1).
+  std::vector<int> Unsorted = {70, 20, 40, 10,  60, 30, 50,
+                               80, 90, 40, 100, 20, 10};
+  auto Table = EytzingerTable<int>::create(std::move(Unsorted));
+
+  // Should contain exactly 10 unique elements after deduplication.
+  EXPECT_EQ(Table.size(), 10u);
+  EXPECT_FALSE(Table.empty());
+  EXPECT_TRUE(Table.isSorted());
+
+  // Root of 10-element complete BST is 70.
+  EXPECT_EQ(Table[0], 70);
+  EXPECT_EQ(Table.findIndex(70), 0u);
+  EXPECT_TRUE(Table.contains(70));
+
+  // Verify successful lookups for all unique keys explicitly so line numbers
+  // identify failures.
+  EXPECT_TRUE(Table.contains(10));
+  EXPECT_NE(Table.findIndex(10), std::nullopt);
+  EXPECT_TRUE(Table.contains(20));
+  EXPECT_NE(Table.findIndex(20), std::nullopt);
+  EXPECT_TRUE(Table.contains(30));
+  EXPECT_NE(Table.findIndex(30), std::nullopt);
+  EXPECT_TRUE(Table.contains(40));
+  EXPECT_NE(Table.findIndex(40), std::nullopt);
+  EXPECT_TRUE(Table.contains(50));
+  EXPECT_NE(Table.findIndex(50), std::nullopt);
+  EXPECT_TRUE(Table.contains(60));
+  EXPECT_NE(Table.findIndex(60), std::nullopt);
+  EXPECT_TRUE(Table.contains(70));
+  EXPECT_NE(Table.findIndex(70), std::nullopt);
+  EXPECT_TRUE(Table.contains(80));
+  EXPECT_NE(Table.findIndex(80), std::nullopt);
+  EXPECT_TRUE(Table.contains(90));
+  EXPECT_NE(Table.findIndex(90), std::nullopt);
+  EXPECT_TRUE(Table.contains(100));
+  EXPECT_NE(Table.findIndex(100), std::nullopt);
+
+  // Verify missing keys across various bounds and gaps.
+  EXPECT_FALSE(Table.contains(0));
+  EXPECT_EQ(Table.findIndex(0), std::nullopt);
+  EXPECT_FALSE(Table.contains(15));
+  EXPECT_EQ(Table.findIndex(15), std::nullopt);
+  EXPECT_FALSE(Table.contains(75));
+  EXPECT_EQ(Table.findIndex(75), std::nullopt);
+  EXPECT_FALSE(Table.contains(110));
+  EXPECT_EQ(Table.findIndex(110), std::nullopt);
+}
+
+TEST(EytzingerTest, EytzingerTableEmptyAndSingle) {
+  auto EmptyTable = EytzingerTable<int>::create(std::vector<int>{});
+  EXPECT_TRUE(EmptyTable.empty());
+  EXPECT_EQ(EmptyTable.size(), 0u);
+  EXPECT_TRUE(EmptyTable.isSorted());
+  EXPECT_FALSE(EmptyTable.contains(42));
+
+  auto SingleTable = EytzingerTable<int>::create(std::vector<int>{42, 42});
+  EXPECT_FALSE(SingleTable.empty());
+  EXPECT_EQ(SingleTable.size(), 1u);
+  EXPECT_TRUE(SingleTable.isSorted());
+  EXPECT_EQ(SingleTable[0], 42);
+  EXPECT_TRUE(SingleTable.contains(42));
+  EXPECT_EQ(SingleTable.findIndex(42), 0u);
+}
+
+TEST(EytzingerTest, EytzingerTableEndianSpecific) {
+  std::vector<support::ulittle64_t> Input = {
+      support::ulittle64_t(500), support::ulittle64_t(100),
+      support::ulittle64_t(300), support::ulittle64_t(300)};
+  auto Table = EytzingerTable<support::ulittle64_t>::create(Input);
+
+  EXPECT_EQ(Table.size(), 3u);
+  EXPECT_TRUE(Table.isSorted());
+  EXPECT_TRUE(Table.contains(uint64_t(300)));
+  EXPECT_EQ(Table.findIndex(uint64_t(300)), 0u);
+  EXPECT_FALSE(Table.contains(uint64_t(999)));
+}
+
+TEST(EytzingerTest, EytzingerTableHeterogeneousCreate) {
+  // Construct EytzingerTable<support::ulittle64_t> directly from a vector of
+  // native uint64_t keys with an imperfect tree size (6 elements).
+  std::vector<uint64_t> NativeKeys = {500ULL, 100ULL, 300ULL, 600ULL,
+                                      200ULL, 400ULL, 300ULL};
+  auto Table = EytzingerTable<support::ulittle64_t>::create(NativeKeys);
+
+  EXPECT_EQ(Table.size(), 6u);
+  EXPECT_TRUE(Table.isSorted());
+
+  // Root of 6-element complete BST is 400.
+  EXPECT_EQ(uint64_t(Table[0]), 400ULL);
+  EXPECT_EQ(Table.findIndex(uint64_t(400ULL)), 0u);
+  EXPECT_TRUE(Table.contains(uint64_t(100ULL)));
+  EXPECT_TRUE(Table.contains(uint64_t(200ULL)));
+  EXPECT_TRUE(Table.contains(uint64_t(300ULL)));
+  EXPECT_TRUE(Table.contains(uint64_t(400ULL)));
+  EXPECT_TRUE(Table.contains(uint64_t(500ULL)));
+  EXPECT_TRUE(Table.contains(uint64_t(600ULL)));
+  EXPECT_FALSE(Table.contains(uint64_t(999ULL)));
+}
+
 } // namespace
