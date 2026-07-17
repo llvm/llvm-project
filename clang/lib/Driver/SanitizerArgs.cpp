@@ -902,14 +902,20 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     MsanParamRetval = Args.hasFlag(
         options::OPT_fsanitize_memory_param_retval,
         options::OPT_fno_sanitize_memory_param_retval, MsanParamRetval);
+    MsanCheckLocalUninitReads =
+        Args.hasFlag(options::OPT_fsanitize_memory_local_address_never_taken,
+                     options::OPT_fno_sanitize_memory_local_address_never_taken,
+                     MsanCheckLocalUninitReads);
   } else if (AllAddedKinds & SanitizerKind::KernelMemory) {
     MsanUseAfterDtor = false;
     MsanParamRetval = Args.hasFlag(
         options::OPT_fsanitize_memory_param_retval,
         options::OPT_fno_sanitize_memory_param_retval, MsanParamRetval);
+    MsanCheckLocalUninitReads = false;
   } else {
     MsanUseAfterDtor = false;
     MsanParamRetval = false;
+    MsanCheckLocalUninitReads = false;
   }
 
   if (AllAddedKinds & SanitizerKind::MemTag) {
@@ -1534,6 +1540,9 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
   if (!MsanParamRetval)
     CmdArgs.push_back("-fno-sanitize-memory-param-retval");
+
+  if (MsanCheckLocalUninitReads)
+    CmdArgs.push_back("-fsanitize-memory-local-address-never-taken");
 
   // FIXME: Pass these parameters as function attributes, not as -llvm flags.
   if (!TsanMemoryAccess) {

@@ -534,6 +534,10 @@ public:
   /// Sets the nosanitize metadata on this instruction.
   LLVM_ABI void setNoSanitizeMetadata();
 
+  /// Marks this load as needing an MSan uninitialized-read check
+  /// (locals whose address is never taken).
+  LLVM_ABI void setUninitReadCheckMetadata();
+
   /// Retrieve total raw weight values of a branch.
   /// Returns true on success with profile total weights filled in.
   /// Returns false if no metadata was found.

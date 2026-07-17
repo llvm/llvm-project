@@ -283,6 +283,9 @@ ENUM_CODEGENOPT(SanitizeAddressDtor, AsanDtorKind, 2,
 CODEGENOPT(SanitizeMemoryParamRetval, 1, 0, Benign) ///< Enable detection of uninitialized
                                                     ///< parameters and return values
                                                     ///< in MemorySanitizer
+CODEGENOPT(SanitizeMemoryLocalAddressNeverTaken, 1, 0, Benign) ///< Enable detection of
+                                                                ///< uninitialized reads of
+                                                                ///< locals never address-taken
 CODEGENOPT(SanitizeMemoryUseAfterDtor, 1, 0, Benign) ///< Enable use-after-delete detection
                                                      ///< in MemorySanitizer
 CODEGENOPT(SanitizeCfiCrossDso, 1, 0, Benign) ///< Enable cross-dso support in CFI.
