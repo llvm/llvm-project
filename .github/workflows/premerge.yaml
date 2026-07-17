@@ -283,6 +283,7 @@ jobs:
           brew install ninja cmake
           command -v sccache >/dev/null || brew install sccache
       - name: Build and Test
+        timeout-minutes: 240
         env:
           SCCACHE_BUCKET: sccache-bucket
           SCCACHE_REGION: us-west-2
