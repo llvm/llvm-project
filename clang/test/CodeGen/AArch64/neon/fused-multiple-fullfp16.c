@@ -269,9 +269,13 @@ float16_t test_vfmah_laneq_f16(float16_t a, float16_t b, float16x8_t c) {
 // ALL-LABEL: @test_vfms_lane_f16(
 float16x4_t test_vfms_lane_f16(float16x4_t a, float16x4_t b,
                                 float16x4_t c) {
-// CIR: cir.fneg %{{.*}} : !cir.vector<4 x !cir.f16>
+// CIR: [[FNEG:%.*]] = cir.fneg %{{.*}} : !cir.vector<4 x !cir.f16>
+// CIR: cir.store align(8) [[FNEG]], [[NEG_SLOT:%.*]] : !cir.vector<4 x !cir.f16>, !cir.ptr<!cir.vector<4 x !cir.f16>>
+// CIR: [[NEG_PTR:%.*]] = cir.cast bitcast [[NEG_SLOT]] : !cir.ptr<!cir.vector<4 x !cir.f16>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+// CIR: [[NEG_BYTES:%.*]] = cir.load align(8) [[NEG_PTR]] : !cir.ptr<!cir.vector<8 x !s8i>>, !cir.vector<8 x !s8i>
+// CIR: [[NEG_CAST:%.*]] = cir.cast bitcast [[NEG_BYTES]] : !cir.vector<8 x !s8i> -> !cir.vector<4 x !cir.f16>
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<4 x !cir.f16>) [#cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !cir.f16>
-// CIR: cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>) -> !cir.vector<4 x !cir.f16>
+// CIR: cir.call_llvm_intrinsic "fma" [[NEG_CAST]], [[LANE]], %{{.*}} : (!cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>) -> !cir.vector<4 x !cir.f16>
 
 // LLVM-SAME: <4 x half> {{.*}} [[A:%.*]], <4 x half> {{.*}} [[B:%.*]], <4 x half> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM-DAG:  [[FNEG:%.*]] = fneg <4 x half> [[B]]
@@ -293,9 +297,13 @@ float16x4_t test_vfms_lane_f16(float16x4_t a, float16x4_t b,
 // ALL-LABEL: @test_vfmsq_lane_f16(
 float16x8_t test_vfmsq_lane_f16(float16x8_t a, float16x8_t b,
                                  float16x4_t c) {
-// CIR: cir.fneg %{{.*}} : !cir.vector<8 x !cir.f16>
+// CIR: [[FNEG:%.*]] = cir.fneg %{{.*}} : !cir.vector<8 x !cir.f16>
+// CIR: cir.store align(16) [[FNEG]], [[NEG_SLOT:%.*]] : !cir.vector<8 x !cir.f16>, !cir.ptr<!cir.vector<8 x !cir.f16>>
+// CIR: [[NEG_PTR:%.*]] = cir.cast bitcast [[NEG_SLOT]] : !cir.ptr<!cir.vector<8 x !cir.f16>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+// CIR: [[NEG_BYTES:%.*]] = cir.load align(16) [[NEG_PTR]] : !cir.ptr<!cir.vector<16 x !s8i>>, !cir.vector<16 x !s8i>
+// CIR: [[NEG_CAST:%.*]] = cir.cast bitcast [[NEG_BYTES]] : !cir.vector<16 x !s8i> -> !cir.vector<8 x !cir.f16>
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<4 x !cir.f16>) [#cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i] : !cir.vector<8 x !cir.f16>
-// CIR: cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>) -> !cir.vector<8 x !cir.f16>
+// CIR: cir.call_llvm_intrinsic "fma" [[NEG_CAST]], [[LANE]], %{{.*}} : (!cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>) -> !cir.vector<8 x !cir.f16>
 
 // LLVM-SAME: <8 x half> {{.*}} [[A:%.*]], <8 x half> {{.*}} [[B:%.*]], <4 x half> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM-DAG:  [[FNEG:%.*]] = fneg <8 x half> [[B]]
@@ -317,9 +325,13 @@ float16x8_t test_vfmsq_lane_f16(float16x8_t a, float16x8_t b,
 // ALL-LABEL: @test_vfms_laneq_f16(
 float16x4_t test_vfms_laneq_f16(float16x4_t a, float16x4_t b,
                                  float16x8_t c) {
-// CIR: cir.fneg %{{.*}} : !cir.vector<4 x !cir.f16>
+// CIR: [[FNEG:%.*]] = cir.fneg %{{.*}} : !cir.vector<4 x !cir.f16>
+// CIR: cir.store align(8) [[FNEG]], [[NEG_SLOT:%.*]] : !cir.vector<4 x !cir.f16>, !cir.ptr<!cir.vector<4 x !cir.f16>>
+// CIR: [[NEG_PTR:%.*]] = cir.cast bitcast [[NEG_SLOT]] : !cir.ptr<!cir.vector<4 x !cir.f16>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+// CIR: [[NEG_BYTES:%.*]] = cir.load align(8) [[NEG_PTR]] : !cir.ptr<!cir.vector<8 x !s8i>>, !cir.vector<8 x !s8i>
+// CIR: [[NEG_CAST:%.*]] = cir.cast bitcast [[NEG_BYTES]] : !cir.vector<8 x !s8i> -> !cir.vector<4 x !cir.f16>
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<8 x !cir.f16>) [#cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i] : !cir.vector<4 x !cir.f16>
-// CIR: cir.call_llvm_intrinsic "fma" [[LANE]], %{{.*}}, %{{.*}} : (!cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>) -> !cir.vector<4 x !cir.f16>
+// CIR: cir.call_llvm_intrinsic "fma" [[LANE]], [[NEG_CAST]], %{{.*}} : (!cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>) -> !cir.vector<4 x !cir.f16>
 
 // LLVM-SAME: <4 x half> {{.*}} [[A:%.*]], <4 x half> {{.*}} [[B:%.*]], <8 x half> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM-DAG:  [[FNEG:%.*]] = fneg <4 x half> [[B]]
@@ -341,9 +353,13 @@ float16x4_t test_vfms_laneq_f16(float16x4_t a, float16x4_t b,
 // ALL-LABEL: @test_vfmsq_laneq_f16(
 float16x8_t test_vfmsq_laneq_f16(float16x8_t a, float16x8_t b,
                                   float16x8_t c) {
-// CIR: cir.fneg %{{.*}} : !cir.vector<8 x !cir.f16>
+// CIR: [[FNEG:%.*]] = cir.fneg %{{.*}} : !cir.vector<8 x !cir.f16>
+// CIR: cir.store align(16) [[FNEG]], [[NEG_SLOT:%.*]] : !cir.vector<8 x !cir.f16>, !cir.ptr<!cir.vector<8 x !cir.f16>>
+// CIR: [[NEG_PTR:%.*]] = cir.cast bitcast [[NEG_SLOT]] : !cir.ptr<!cir.vector<8 x !cir.f16>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+// CIR: [[NEG_BYTES:%.*]] = cir.load align(16) [[NEG_PTR]] : !cir.ptr<!cir.vector<16 x !s8i>>, !cir.vector<16 x !s8i>
+// CIR: [[NEG_CAST:%.*]] = cir.cast bitcast [[NEG_BYTES]] : !cir.vector<16 x !s8i> -> !cir.vector<8 x !cir.f16>
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<8 x !cir.f16>) [#cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i] : !cir.vector<8 x !cir.f16>
-// CIR: cir.call_llvm_intrinsic "fma" [[LANE]], %{{.*}}, %{{.*}} : (!cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>) -> !cir.vector<8 x !cir.f16>
+// CIR: cir.call_llvm_intrinsic "fma" [[LANE]], [[NEG_CAST]], %{{.*}} : (!cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>, !cir.vector<8 x !cir.f16>) -> !cir.vector<8 x !cir.f16>
 
 // LLVM-SAME: <8 x half> {{.*}} [[A:%.*]], <8 x half> {{.*}} [[B:%.*]], <8 x half> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM-DAG:  [[FNEG:%.*]] = fneg <8 x half> [[B]]
@@ -410,13 +426,19 @@ float16x8_t test_vfmsq_n_f16(float16x8_t a, float16x8_t b, float16_t c) {
 
 // ALL-LABEL: @test_vfmsh_lane_f16(
 float16_t test_vfmsh_lane_f16(float16_t a, float16_t b, float16x4_t c) {
-// CIR: cir.fneg %{{.*}} : !cir.float
+// CIR: [[CONV:%.*]] = cir.cast floating %{{.*}} : !cir.f16 -> !cir.float
+// CIR: [[FNEG:%.*]] = cir.fneg [[CONV]] : !cir.float
+// CIR: [[NEG:%.*]] = cir.cast floating [[FNEG]] : !cir.float -> !cir.f16
+// CIR: cir.store align(2) [[NEG]], [[NEG_SLOT:%.*]] : !cir.f16, !cir.ptr<!cir.f16>
+// CIR: [[NEG_ARG:%.*]] = cir.load align(2) [[NEG_SLOT]] : !cir.ptr<!cir.f16>, !cir.f16
 // CIR: [[LANE:%.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !u64i] : !cir.vector<4 x !cir.f16>
-// CIR: cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
+// CIR: cir.call_llvm_intrinsic "fma" [[NEG_ARG]], [[LANE]], %{{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
 
 // LLVM-SAME: half {{.*}} [[A:%.*]], half {{.*}} [[B:%.*]], <4 x half> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM-DAG:  [[LANE:%.*]] = extractelement <4 x half> [[C]], i{{32|64}} 3
-// LLVM-DAG:  [[NEG:%.*]] = {{(fptrunc float .* to half|fneg half .*)}}
+// LLVM-DAG:  [[CONV:%.*]] = fpext half [[B]] to float
+// LLVM-DAG:  [[FNEG:%.*]] = fneg float [[CONV]]
+// LLVM-DAG:  [[NEG:%.*]] = fptrunc float [[FNEG]] to half
 // LLVM:      [[FMA:%.*]] = call half @llvm.fma.f16(half [[NEG]], half [[LANE]], half [[A]])
 // LLVM:      ret half [[FMA]]
   return vfmsh_lane_f16(a, b, c, 3);
@@ -424,13 +446,19 @@ float16_t test_vfmsh_lane_f16(float16_t a, float16_t b, float16x4_t c) {
 
 // ALL-LABEL: @test_vfmsh_laneq_f16(
 float16_t test_vfmsh_laneq_f16(float16_t a, float16_t b, float16x8_t c) {
-// CIR: cir.fneg %{{.*}} : !cir.float
+// CIR: [[CONV:%.*]] = cir.cast floating %{{.*}} : !cir.f16 -> !cir.float
+// CIR: [[FNEG:%.*]] = cir.fneg [[CONV]] : !cir.float
+// CIR: [[NEG:%.*]] = cir.cast floating [[FNEG]] : !cir.float -> !cir.f16
+// CIR: cir.store align(2) [[NEG]], [[NEG_SLOT:%.*]] : !cir.f16, !cir.ptr<!cir.f16>
+// CIR: [[NEG_ARG:%.*]] = cir.load align(2) [[NEG_SLOT]] : !cir.ptr<!cir.f16>, !cir.f16
 // CIR: [[LANE:%.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !u64i] : !cir.vector<8 x !cir.f16>
-// CIR: cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
+// CIR: cir.call_llvm_intrinsic "fma" [[NEG_ARG]], [[LANE]], %{{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
 
 // LLVM-SAME: half {{.*}} [[A:%.*]], half {{.*}} [[B:%.*]], <8 x half> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM-DAG:  [[LANE:%.*]] = extractelement <8 x half> [[C]], i{{32|64}} 7
-// LLVM-DAG:  [[NEG:%.*]] = {{(fptrunc float .* to half|fneg half .*)}}
+// LLVM-DAG:  [[CONV:%.*]] = fpext half [[B]] to float
+// LLVM-DAG:  [[FNEG:%.*]] = fneg float [[CONV]]
+// LLVM-DAG:  [[NEG:%.*]] = fptrunc float [[FNEG]] to half
 // LLVM:      [[FMA:%.*]] = call half @llvm.fma.f16(half [[NEG]], half [[LANE]], half [[A]])
 // LLVM:      ret half [[FMA]]
   return vfmsh_laneq_f16(a, b, c, 7);
