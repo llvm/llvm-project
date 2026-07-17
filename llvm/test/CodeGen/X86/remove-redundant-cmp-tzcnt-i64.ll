@@ -5,7 +5,6 @@ define i64 @remove_redundant_cmp_eq_tzcnt_i64(i64 %0) {
 ; CHECK-LABEL: remove_redundant_cmp_eq_tzcnt_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tzcntq %rdi, %rax
-; CHECK-NEXT:    cmpq $1, %rdi
 ; CHECK-NEXT:    adcq $0, %rax
 ; CHECK-NEXT:    retq
   %2 = tail call i64 @llvm.cttz.i64(i64 %0, i1 false)
@@ -19,7 +18,6 @@ define i64 @remove_redundant_cmp_uge_tzcnt_i64(i64 %0) {
 ; CHECK-LABEL: remove_redundant_cmp_uge_tzcnt_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tzcntq %rdi, %rax
-; CHECK-NEXT:    cmpq $1, %rdi
 ; CHECK-NEXT:    sbbq $-1, %rax
 ; CHECK-NEXT:    retq
   %2 = tail call i64 @llvm.cttz.i64(i64 %0, i1 false)

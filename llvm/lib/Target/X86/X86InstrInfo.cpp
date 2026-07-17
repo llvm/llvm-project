@@ -4998,6 +4998,27 @@ bool X86InstrInfo::isRedundantFlagInstr(const MachineInstr &FlagI,
   }
 }
 
+inline static bool isCmpRedundantAfterLTZCNT(Register SrcReg, Register SrcReg2,
+                                             int64_t ImmMask, int64_t ImmValue,
+                                             const MachineInstr &OI) {
+  switch (OI.getOpcode()) {
+  default:
+    return false;
+  case X86::LZCNT16rr:
+  case X86::LZCNT32rr:
+  case X86::LZCNT64rr:
+  case X86::TZCNT16rr:
+  case X86::TZCNT32rr:
+  case X86::TZCNT64rr: {
+    if (ImmMask != 0 && !SrcReg2.isValid() && ImmValue == 1 &&
+        OI.getOperand(1).isReg() && SrcReg == OI.getOperand(1).getReg()) {
+      return true;
+    }
+    return false;
+  }
+  }
+}
+
 #define CASE_EVEX(OP)                                                          \
   case X86::OP:                                                                \
   case X86::OP##_EVEX:
@@ -5362,6 +5383,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   MachineInstr *MI = nullptr;
   MachineInstr *Sub = nullptr;
   MachineInstr *Movr0Inst = nullptr;
+  MachineInstr *LTZCNTInst = nullptr;
   SmallVector<std::pair<MachineInstr *, unsigned>, 4> InstsToUpdate;
   bool NoSignFlag = false;
   bool ClearsOverflowFlag = false;
@@ -5444,6 +5466,12 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
           break;
         }
 
+        if (isCmpRedundantAfterLTZCNT(SrcReg, SrcReg2, CmpMask, CmpValue,
+                                      Inst)) {
+          LTZCNTInst = &Inst;
+          break;
+        }
+
         // MOV32r0 is implemented with xor which clobbers condition code. It is
         // safe to move up, if the definition to EFLAGS is dead and earlier
         // instructions do not read or write EFLAGS.
@@ -5476,7 +5504,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       }
     }
 
-    if (MI || Sub)
+    if (MI || Sub || LTZCNTInst)
       break;
 
     // Reached begin of basic block. Continue in predecessor if there is
@@ -5617,6 +5645,19 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         return false;
       }
       ShouldUpdateCC = true;
+    }
+
+    if (LTZCNTInst) {
+      unsigned InstCode = Instr.getOpcode();
+      bool UsesOnlyCF = X86::isADC(InstCode) || X86::isSBB(InstCode) ||
+                        X86::isRCL(InstCode) || X86::isRCR(InstCode) ||
+                        OldCC == X86::COND_B || OldCC == X86::COND_AE;
+      if (!UsesOnlyCF)
+        return false;
+
+      MI = LTZCNTInst;
+      FlagsMayLiveOut = false;
+      break;
     }
 
     if (ShouldUpdateCC && ReplacementCC != OldCC) {

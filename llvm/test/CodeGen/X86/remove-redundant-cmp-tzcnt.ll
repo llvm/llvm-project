@@ -6,15 +6,12 @@ define i32 @remove_redundant_cmp_ult_tzcnt_i32(i32 %0) {
 ; X64-LABEL: remove_redundant_cmp_ult_tzcnt_i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    tzcntl %edi, %eax
-; X64-NEXT:    cmpl $1, %edi
 ; X64-NEXT:    adcl $0, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: remove_redundant_cmp_ult_tzcnt_i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    tzcntl %ecx, %eax
-; X86-NEXT:    cmpl $1, %ecx
+; X86-NEXT:    tzcntl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    adcl $0, %eax
 ; X86-NEXT:    retl
   %2 = tail call i32 @llvm.cttz.i32(i32 %0, i1 false)
