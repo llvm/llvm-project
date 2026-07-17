@@ -1,0 +1,117 @@
+name: Profiles Boost Build
+
+# Compiles Boost with the std::init profile enforced, using a clang built by the
+# weekly profiles release, and publishes the raw compiler log for inspection.
+#
+# Normally dispatched by weekly-profiles-release.yml right after the weekly
+# release is cut (passing that run's id in clang_run_id). Can also be run
+# manually: omit clang_run_id to pull the latest published release instead.
+
+on:
+  workflow_dispatch:
+    inputs:
+      clang_run_id:
+        description: "weekly-profiles-release run id to take the clang artifact from (empty = latest release)"
+        required: false
+        default: ""
+      boost_ref:
+        description: "Boost superproject git ref (branch or tag)"
+        required: false
+        default: "master"
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  build-boost:
+    name: Build Boost (std::init enforced)
+    # ubuntu-24.04 for a newer libstdc++ (cleaner c++23); the 22.04-built clang
+    # runs fine here.
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout profiles branch (helpers)
+        uses: actions/checkout@v4
+
+      - name: Install a recent libstdc++
+        run: sudo apt-get update && sudo apt-get install -y g++-14
+
+      - name: Download clang (from weekly run)
+        if: inputs.clang_run_id != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: clang-profiles-linux-x86_64
+          path: clang-dl
+          run-id: ${{ inputs.clang_run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Download clang (latest release)
+        if: inputs.clang_run_id == ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p clang-dl
+          gh release download --repo "${{ github.repository }}" \
+            --pattern 'clang-profiles-linux-x86_64.tar.gz' --dir clang-dl
+
+      - name: Unpack clang
+        run: |
+          mkdir -p "$RUNNER_TEMP/clang"
+          tar xzf clang-dl/clang-profiles-linux-x86_64.tar.gz -C "$RUNNER_TEMP/clang"
+          "$RUNNER_TEMP/clang/bin/clang++" --version
+          echo "PROFILES_CLANGXX=$RUNNER_TEMP/clang/bin/clang++" >> "$GITHUB_ENV"
+          echo "PROFILES_PRELUDE=$GITHUB_WORKSPACE/clang/utils/profiles-boost/prelude.hpp" >> "$GITHUB_ENV"
+          mkdir -p "$GITHUB_WORKSPACE/crash"
+          echo "PROFILES_CRASH_DIR=$GITHUB_WORKSPACE/crash" >> "$GITHUB_ENV"
+
+      - name: Clone Boost
+        run: |
+          git clone --depth 1 --recursive --shallow-submodules \
+            --branch "${{ inputs.boost_ref || 'master' }}" \
+            https://github.com/boostorg/boost boost
+
+      - name: Bootstrap Boost.Build
+        working-directory: boost
+        run: |
+          ./bootstrap.sh
+          ./b2 headers
+
+      - name: Build Boost with std::init enforced
+        working-directory: boost
+        run: |
+          set -o pipefail
+          # Violations are hard errors, so b2 is expected to exit non-zero; the
+          # log is the deliverable, so never fail the job on that.
+          ./b2 \
+            --user-config="$GITHUB_WORKSPACE/clang/utils/profiles-boost/user-config.jam" \
+            toolset=clang-profiles \
+            cxxstd=23 \
+            testing.execute=off \
+            -k -j"$(nproc)" \
+            libs/*/test \
+            2>&1 | tee "$GITHUB_WORKSPACE/boost-profiles.log" || true
+
+      - name: Log overview
+        if: always()
+        run: |
+          log="$GITHUB_WORKSPACE/boost-profiles.log"
+          {
+            echo "## Boost profiles build"
+            echo "- Boost ref: \`${{ inputs.boost_ref || 'master' }}\`"
+            if [ -f "$log" ]; then
+              echo "- \`error:\` lines: $(grep -c 'error:' "$log" || true)"
+              echo "- clang crash markers: $(grep -c 'PLEASE submit a bug report' "$log" || true)"
+            else
+              echo "- no log produced"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload log and crash reproducers
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: boost-profiles-log
+          path: |
+            boost-profiles.log
+            crash/
+          if-no-files-found: warn

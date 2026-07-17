@@ -115,3 +115,19 @@ jobs:
             ### Artifacts
             - `clang-profiles-linux-x86_64.tar.gz` — Linux x86_64 (Ubuntu 22.04, gcc)
             - `clang-profiles-windows-x86_64.zip` — Windows x86_64 (MSVC 2022)
+
+  trigger-boost:
+    name: Trigger Boost profiles build
+    needs: [create-release]
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch Boost build against this run's clang
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh workflow run profiles-boost-build.yml
+          --repo ${{ github.repository }}
+          --ref ${{ github.ref_name }}
+          -f clang_run_id=${{ github.run_id }}

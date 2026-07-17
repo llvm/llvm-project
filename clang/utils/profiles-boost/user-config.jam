@@ -1,0 +1,30 @@
+# Boost.Build (b2) toolset for the profiles Boost build
+# (.github/workflows/profiles-boost-build.yml). Selected with
+# `b2 toolset=clang-profiles`.
+#
+# The freshly-built profiles clang and the enforcement prelude are read from the
+# environment so this committed config works wherever CI unpacks them:
+#
+#   PROFILES_CLANGXX    - path to the profiles-enabled clang++
+#   PROFILES_PRELUDE    - path to prelude.hpp ([[profiles::enforce(std::init)]])
+#   PROFILES_CRASH_DIR  - directory for clang crash reproducers
+#
+# `-fprofiles` enables the framework and the prelude enforces std::init; the
+# system-header exemption is left at its default (on), so stdlib headers are not
+# diagnosed. `-ferror-limit=0` makes each TU report every violation rather than
+# stopping after the first 20.
+
+import os ;
+
+local clang_cmd = [ os.environ PROFILES_CLANGXX ] ;
+local prelude = [ os.environ PROFILES_PRELUDE ] ;
+local crash_dir = [ os.environ PROFILES_CRASH_DIR ] ;
+
+using clang : profiles
+  : $(clang_cmd)
+  : <cxxflags>-fprofiles
+    <cxxflags>-include
+    <cxxflags>$(prelude)
+    <cxxflags>-ferror-limit=0
+    <cxxflags>-fcrash-diagnostics-dir=$(crash_dir)
+  ;
