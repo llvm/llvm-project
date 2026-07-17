@@ -10588,6 +10588,32 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
     }
   }
 
+  if (SQ.CxtI && SQ.DC && SQ.DT) {
+    // Try to restrict the range based on dominating conditions. This mirrors
+    // the dominating-condition handling in computeKnownBitsFromContext, which
+    // computeConstantRange previously lacked.
+    for (CondBrInst *BI : SQ.DC->conditionsFor(V)) {
+      auto *Cmp = dyn_cast<ICmpInst>(BI->getCondition());
+      // Currently we just use information from comparisons directly on V.
+      if (!Cmp || Cmp->getOperand(0) != V)
+        continue;
+      // TODO: Set "ForSigned" parameter via Cmp->isSigned()?
+      ConstantRange RHS =
+          computeConstantRange(Cmp->getOperand(1), /*ForSigned=*/false,
+                               SQ.getWithInstruction(BI), Depth + 1);
+      // The true edge implies the condition; the false edge implies its
+      // inverse. At most one of them can dominate the context.
+      BasicBlockEdge TrueEdge(BI->getParent(), BI->getSuccessor(0));
+      if (SQ.DT->dominates(TrueEdge, SQ.CxtI->getParent()))
+        CR = CR.intersectWith(
+            ConstantRange::makeAllowedICmpRegion(Cmp->getCmpPredicate(), RHS));
+      BasicBlockEdge FalseEdge(BI->getParent(), BI->getSuccessor(1));
+      if (SQ.DT->dominates(FalseEdge, SQ.CxtI->getParent()))
+        CR = CR.intersectWith(ConstantRange::makeAllowedICmpRegion(
+            Cmp->getInverseCmpPredicate(), RHS));
+    }
+  }
+
   if (SQ.CxtI && SQ.AC) {
     // Try to restrict the range based on information from assumptions.
     for (auto &AssumeVH : SQ.AC->assumptionsFor(V)) {
