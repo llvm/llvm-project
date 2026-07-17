@@ -265,9 +265,7 @@ private:
   bool avoidLIRForMultiBlockLoop(bool IsMemset = false,
                                  bool IsLoopMemset = false);
   bool optimizeCRCLoop(const PolynomialInfo &Info);
-  void optimizeCRCLoopUsingClmul(const PolynomialInfo &Info,
-                                 IntegerType *ClmulMuTy,
-                                 IntegerType *ClmulGPTy);
+  void optimizeCRCLoopUsingClmul(const PolynomialInfo &Info);
   void optimizeCRCLoopUsingTableLookup(const PolynomialInfo &Info);
 
   /// @}
@@ -1591,16 +1589,10 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
   if (TT.getArch() == Triple::hexagon)
     return false;
 
-  // Calculate the widths for the clmul operations that would be required.
-  LLVMContext &Ctx = Info.LHS->getContext();
-  unsigned CRCBW = Info.LHS->getType()->getIntegerBitWidth();
-  auto *ClmulMuTy = IntegerType::get(Ctx, 2 * Info.TripCount);
-  auto *ClmulGPTy = IntegerType::get(Ctx, CRCBW + Info.TripCount);
-
   // The force-crc-clmul flag should cause the clmul optimization to run
   // unconditionally.
   if (ForceCRCClmul) {
-    optimizeCRCLoopUsingClmul(Info, ClmulMuTy, ClmulGPTy);
+    optimizeCRCLoopUsingClmul(Info);
     return true;
   }
 
@@ -1614,11 +1606,16 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
   }
 
   // The clmul optimization should only be applied if clmul with the required
-  // bit width is a fast operation on the target.
+  // bit width is a fast operation on the target. The first clmul needs 2*TC
+  // bits, and the second clmul needs CRCBW+TC bits, so test the widest clmul.
   // TODO: If clmul exists on the target but not for the required width, it
   // might be possible to split into multiple iterations of reduction.
-  if (TTI->haveFastClmul(ClmulMuTy) && TTI->haveFastClmul(ClmulGPTy)) {
-    optimizeCRCLoopUsingClmul(Info, ClmulMuTy, ClmulGPTy);
+  unsigned CRCBW = Info.LHS->getType()->getIntegerBitWidth();
+  IntegerType *WidestClmulTy =
+      IntegerType::get(Info.LHS->getContext(),
+                       std::max(2 * Info.TripCount, CRCBW + Info.TripCount));
+  if (TTI->haveFastClmul(WidestClmulTy)) {
+    optimizeCRCLoopUsingClmul(Info);
     return true;
   }
 
@@ -1628,9 +1625,7 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
 // The algorithm used in this optimization is a Polynomial (GF(2)) Barrett
 // Reduction based on Intel's "Fast CRC Computation for Generic Polynomials
 // Using PCLMULQDQ Instruction" white paper (December 2009).
-void LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info,
-                                                   IntegerType *ClmulMuTy,
-                                                   IntegerType *ClmulGPTy) {
+void LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
   Type *CRCTy = Info.LHS->getType();
   LLVMContext &Ctx = CRCTy->getContext();
   unsigned CRCBW = CRCTy->getIntegerBitWidth();
@@ -1638,6 +1633,10 @@ void LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info,
   // regardless of whether the actual data bit width matches (if auxiliary data
   // is even used at all).
   unsigned TC = Info.TripCount;
+  // Based on the clmul inputs, the first clmul needs 2*TC bits, and the second
+  // needs CRCBW+TC bits.
+  IntegerType *ClmulMuTy = IntegerType::get(Ctx, 2 * TC);
+  IntegerType *ClmulGPTy = IntegerType::get(Ctx, CRCBW + TC);
 
   // First, generate the constants required for GF(2) Barrett reduction.
   auto [Mu, FullGenPoly] = HashRecognize::genBarrettConstants(Info);
