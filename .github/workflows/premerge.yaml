@@ -307,6 +307,22 @@ jobs:
                 -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
 
           ninja -C build ${CHECK_TARGETS}
-      - name: Stop sccache
+      - name: Show sccache stats
         if: always()
-        run: sccache --stop-server
+        run: |
+          mkdir -p artifacts
+          sccache --show-stats
+          sccache --show-stats >> artifacts/sccache_stats.txt
+      - name: Upload Artifacts
+        # In some cases, Github will fail to upload the artifact. We want to
+        # continue anyways as a failed artifact upload is an infra failure, not
+        # a checks failure.
+        # https://github.com/actions/upload-artifact/issues/569
+        continue-on-error: true
+        if: '!cancelled()'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: Premerge Artifacts (macOS arm64)
+          path: artifacts/
+          retention-days: 5
+          include-hidden-files: 'true'
