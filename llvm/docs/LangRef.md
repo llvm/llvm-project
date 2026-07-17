@@ -11714,7 +11714,10 @@ Instructions for bit-range manipulation on {ref}`byte type <t_byte>` values.
 #### '`bitextract`' Instruction
 
 ##### Syntax:
+
+```
 <result> = bitextract <ty>, <bty> <source>, i32 <offset>
+```
 
 ##### Overview:
 
@@ -11748,8 +11751,9 @@ If `offset + bitwidth(ty)` is greater than `bitwidth(source)`,
 #### '`bitinsert`' Instruction
 
 ##### Syntax:
+```
 <result> = bitinsert <bty> <base>, <ty> <val>, i32 <offset>
-
+```
 ##### Overview:
 
 The '`bitinsert`' instruction writes a contiguous range of bits from a
