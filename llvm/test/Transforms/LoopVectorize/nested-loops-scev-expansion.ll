@@ -404,7 +404,7 @@ exit:
   ret void
 }
 
-; SCEV expander creates a new canonical IV in the outer loop.
+; Outer loop does not have a canonical induction phi. SCEV expansion introduces one.
 define void @test_expand_new_canonical_iv_non_zero_start(ptr %dst) {
 ; CHECK-LABEL: define void @test_expand_new_canonical_iv_non_zero_start(
 ; CHECK-SAME: ptr [[DST:%.*]]) {
@@ -412,11 +412,11 @@ define void @test_expand_new_canonical_iv_non_zero_start(ptr %dst) {
 ; CHECK-NEXT:    br label %[[OUTER:.*]]
 ; CHECK:       [[OUTER]]:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 10, %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH]] ]
+; CHECK-NEXT:    [[O:%.*]] = phi i64 [ 10, %[[ENTRY]] ], [ [[O_NEXT:%.*]], %[[OUTER_LATCH]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDVAR]], 17
 ; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
-; CHECK-NEXT:    [[BOUND:%.*]] = add i64 [[OUTER_IV]], 8
+; CHECK-NEXT:    [[BOUND:%.*]] = add i64 [[O]], 8
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 4
@@ -450,13 +450,13 @@ define void @test_expand_new_canonical_iv_non_zero_start(ptr %dst) {
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[IV]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 3
-; CHECK-NEXT:    [[CMP_INNER:%.*]] = icmp ult i64 [[IV_NEXT]], [[BOUND]]
-; CHECK-NEXT:    br i1 [[CMP_INNER]], label %[[INNER]], label %[[OUTER_LATCH]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-NEXT:    [[EC_INNER:%.*]] = icmp ult i64 [[IV_NEXT]], [[BOUND]]
+; CHECK-NEXT:    br i1 [[EC_INNER]], label %[[INNER]], label %[[OUTER_LATCH]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       [[OUTER_LATCH]]:
-; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nuw i64 [[OUTER_IV]], 1
-; CHECK-NEXT:    [[CMP_OUTER:%.*]] = icmp ult i64 [[OUTER_IV_NEXT]], 110
+; CHECK-NEXT:    [[O_NEXT]] = add nuw i64 [[O]], 1
+; CHECK-NEXT:    [[EC_OUTER:%.*]] = icmp ult i64 [[O_NEXT]], 110
 ; CHECK-NEXT:    [[INDVAR_NEXT]] = add i64 [[INDVAR]], 1
-; CHECK-NEXT:    br i1 [[CMP_OUTER]], label %[[OUTER]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[EC_OUTER]], label %[[OUTER]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -473,13 +473,13 @@ inner:
   %gep = getelementptr i8, ptr %dst, i64 %iv
   store i8 0, ptr %gep
   %iv.next = add nuw i64 %iv, 3
-  %cmp.inner = icmp ult i64 %iv.next, %bound
-  br i1 %cmp.inner, label %inner, label %outer.latch
+  %ec.inner = icmp ult i64 %iv.next, %bound
+  br i1 %ec.inner, label %inner, label %outer.latch
 
 outer.latch:
   %outer.iv.next = add nuw i64 %outer.iv, 1
-  %cmp.outer = icmp ult i64 %outer.iv.next, 110
-  br i1 %cmp.outer, label %outer, label %exit
+  %ec.outer = icmp ult i64 %outer.iv.next, 110
+  br i1 %ec.outer, label %outer, label %exit
 
 exit:
   ret void
