@@ -1,5 +1,5 @@
 // DEFINE: %{main_point} = main
-// DEFINE: %{run} = mlir-runner -e main -main-point-result=void \
+// DEFINE: %{run} = mlir-runner -e main -entry-point-result=void \
 // DEFINE:         -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
 
 /// TEST 1. Verify default compilation (direct lowering of `vector.gather` to LLVM)
