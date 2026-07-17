@@ -2822,6 +2822,73 @@ mlir::Speculation::Speculatability fir::EmboxOp::getSpeculatability() {
 }
 
 //===----------------------------------------------------------------------===//
+// CreateBoxOp
+//===----------------------------------------------------------------------===//
+
+unsigned fir::CreateBoxOp::getRank() {
+  auto boxTy = mlir::cast<fir::BaseBoxType>(getResult().getType());
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(
+          fir::unwrapRefType(boxTy.getEleTy())))
+    return seqTy.getDimension();
+  return 0;
+}
+
+llvm::LogicalResult fir::CreateBoxOp::verify() {
+  auto memEleTy = fir::dyn_cast_ptrEleTy(getMemref().getType());
+  auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(memEleTy);
+  if (!seqTy)
+    return emitOpError("memref must be a reference to an array");
+
+  auto boxTy = mlir::cast<fir::BaseBoxType>(getResult().getType());
+  auto boxSeqTy =
+      mlir::dyn_cast<fir::SequenceType>(fir::unwrapRefType(boxTy.getEleTy()));
+  if (!boxSeqTy)
+    return emitOpError("result box must describe an array");
+
+  // The result box must preserve the memref's storage kind so that the
+  // descriptor's CFI attribute field is set correctly and the value matches a
+  // box loaded from the corresponding !fir.ref<!fir.box<...>>:
+  //   !fir.heap<...> -> !fir.box<!fir.heap<...>> (allocatable)
+  //   !fir.ptr<...>  -> !fir.box<!fir.ptr<...>>  (pointer)
+  //   !fir.ref<...>  -> !fir.box<...>            (plain)
+  mlir::Type memrefTy = getMemref().getType();
+  mlir::Type boxEleTy = boxTy.getEleTy();
+  if (mlir::isa<fir::HeapType>(memrefTy) !=
+          mlir::isa<fir::HeapType>(boxEleTy) ||
+      mlir::isa<fir::PointerType>(memrefTy) !=
+          mlir::isa<fir::PointerType>(boxEleTy))
+    return emitOpError(
+        "result box element storage kind must match the memref storage kind");
+
+  unsigned rank = boxSeqTy.getDimension();
+  if (seqTy.getDimension() != rank)
+    return emitOpError("memref rank does not match result box rank");
+  if (getLbounds().size() != rank || getExtents().size() != rank ||
+      getStrides().size() != rank)
+    return emitOpError("expected ")
+           << rank << " values for each of lbounds, extents, and strides";
+
+  mlir::Type eleTy = boxSeqTy.getEleTy();
+  if (fir::isPolymorphicType(boxTy))
+    return emitOpError("result box element type must not be polymorphic");
+  if (fir::characterWithDynamicLen(eleTy) ||
+      fir::isRecordWithTypeParameters(eleTy))
+    return emitOpError("result box element type must be statically sized");
+  if (failed(verifyEmboxOpVolatilityInvariants(getMemref().getType(),
+                                               getResult().getType())))
+    return emitOpError(
+               "cannot convert between volatile and non-volatile types:")
+           << " " << getMemref().getType() << " " << getResult().getType();
+  return mlir::success();
+}
+
+std::optional<std::int64_t> fir::CreateBoxOp::getViewOffset(mlir::OpResult) {
+  // The base pointer is the view source and the descriptor addresses relative
+  // to it, so the view offset onto the source is zero.
+  return 0;
+}
+
+//===----------------------------------------------------------------------===//
 // EmboxCharOp
 //===----------------------------------------------------------------------===//
 

@@ -9,6 +9,7 @@
 #include "SLPUtils.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Constants.h"
@@ -20,6 +21,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <algorithm>
 #include <string>
 #include <type_traits>
 
@@ -350,6 +352,263 @@ bool doesNotNeedToBeScheduled(Value *V) {
 bool doesNotNeedToSchedule(ArrayRef<Value *> VL) {
   return !VL.empty() &&
          (all_of(VL, isUsedOutsideBlock) || all_of(VL, areAllOperandsNonInsts));
+}
+
+void transformScalarShuffleIndiciesToVector(unsigned VecTyNumElements,
+                                            SmallVectorImpl<int> &Mask) {
+  // The ShuffleBuilder implementation use shufflevector to splat an "element".
+  // But the element have different meaning for SLP (scalar) and REVEC
+  // (vector). We need to expand Mask into masks which shufflevector can use
+  // directly.
+  SmallVector<int> NewMask(Mask.size() * VecTyNumElements);
+  for (unsigned I : seq<unsigned>(Mask.size()))
+    for (auto [J, MaskV] : enumerate(MutableArrayRef(NewMask).slice(
+             I * VecTyNumElements, VecTyNumElements)))
+      MaskV = Mask[I] == PoisonMaskElem ? PoisonMaskElem
+                                        : Mask[I] * VecTyNumElements + J;
+  Mask.swap(NewMask);
+}
+
+unsigned getShufflevectorNumGroups(ArrayRef<Value *> VL) {
+  if (VL.empty())
+    return 0;
+  if (!all_of(VL, IsaPred<ShuffleVectorInst>))
+    return 0;
+  auto *SV = cast<ShuffleVectorInst>(VL.front());
+  unsigned SVNumElements =
+      cast<FixedVectorType>(SV->getOperand(0)->getType())->getNumElements();
+  unsigned ShuffleMaskSize = SV->getShuffleMask().size();
+  if (SVNumElements % ShuffleMaskSize != 0)
+    return 0;
+  unsigned GroupSize = SVNumElements / ShuffleMaskSize;
+  if (GroupSize == 0 || (VL.size() % GroupSize) != 0)
+    return 0;
+  unsigned NumGroup = 0;
+  for (size_t I = 0, E = VL.size(); I != E; I += GroupSize) {
+    auto *SV = cast<ShuffleVectorInst>(VL[I]);
+    Value *Src = SV->getOperand(0);
+    ArrayRef<Value *> Group = VL.slice(I, GroupSize);
+    SmallBitVector ExpectedIndex(GroupSize);
+    if (!all_of(Group, [&](Value *V) {
+          auto *SV = cast<ShuffleVectorInst>(V);
+          // From the same source.
+          if (SV->getOperand(0) != Src)
+            return false;
+          int Index;
+          if (!SV->isExtractSubvectorMask(Index))
+            return false;
+          ExpectedIndex.set(Index / ShuffleMaskSize);
+          return true;
+        }))
+      return 0;
+    if (!ExpectedIndex.all())
+      return 0;
+    ++NumGroup;
+  }
+  assert(NumGroup == (VL.size() / GroupSize) && "Unexpected number of groups");
+  return NumGroup;
+}
+
+SmallVector<int> calculateShufflevectorMask(ArrayRef<Value *> VL) {
+  assert(getShufflevectorNumGroups(VL) && "Not supported shufflevector usage.");
+  auto *SV = cast<ShuffleVectorInst>(VL.front());
+  unsigned SVNumElements =
+      cast<FixedVectorType>(SV->getOperand(0)->getType())->getNumElements();
+  SmallVector<int> Mask;
+  unsigned AccumulateLength = 0;
+  for (Value *V : VL) {
+    auto *SV = cast<ShuffleVectorInst>(V);
+    for (int M : SV->getShuffleMask())
+      Mask.push_back(M == PoisonMaskElem ? PoisonMaskElem
+                                         : AccumulateLength + M);
+    AccumulateLength += SVNumElements;
+  }
+  return Mask;
+}
+
+SmallBitVector buildUseMask(int VF, ArrayRef<int> Mask, UseMask MaskArg) {
+  SmallBitVector UseMask(VF, true);
+  for (auto [Idx, Value] : enumerate(Mask)) {
+    if (Value == PoisonMaskElem) {
+      if (MaskArg == UseMask::UndefsAsMask)
+        UseMask.reset(Idx);
+      continue;
+    }
+    if (MaskArg == UseMask::FirstArg && Value < VF)
+      UseMask.reset(Value);
+    else if (MaskArg == UseMask::SecondArg && Value >= VF)
+      UseMask.reset(Value - VF);
+  }
+  return UseMask;
+}
+
+template <bool IsPoisonOnly>
+SmallBitVector isUndefVector(const Value *V, const SmallBitVector &UseMask) {
+  SmallBitVector Res(UseMask.empty() ? 1 : UseMask.size(), true);
+  using T = std::conditional_t<IsPoisonOnly, PoisonValue, UndefValue>;
+  if (isa<T>(V))
+    return Res;
+  auto *VecTy = dyn_cast<FixedVectorType>(V->getType());
+  if (!VecTy)
+    return Res.reset();
+  auto *C = dyn_cast<Constant>(V);
+  if (!C) {
+    if (!UseMask.empty()) {
+      const Value *Base = V;
+      while (auto *II = dyn_cast<InsertElementInst>(Base)) {
+        Base = II->getOperand(0);
+        if (isa<T>(II->getOperand(1)))
+          continue;
+        std::optional<unsigned> Idx = getElementIndex(II);
+        if (!Idx) {
+          Res.reset();
+          return Res;
+        }
+        if (*Idx < UseMask.size() && !UseMask.test(*Idx))
+          Res.reset(*Idx);
+      }
+      // TODO: Add analysis for shuffles here too.
+      if (V == Base) {
+        Res.reset();
+      } else {
+        SmallBitVector SubMask(UseMask.size(), false);
+        Res &= isUndefVector<IsPoisonOnly>(Base, SubMask);
+      }
+    } else {
+      Res.reset();
+    }
+    return Res;
+  }
+  for (unsigned I = 0, E = VecTy->getNumElements(); I != E; ++I) {
+    if (Constant *Elem = C->getAggregateElement(I))
+      if (!isa<T>(Elem) &&
+          (UseMask.empty() || (I < UseMask.size() && !UseMask.test(I))))
+        Res.reset(I);
+  }
+  return Res;
+}
+
+template SmallBitVector isUndefVector<false>(const Value *,
+                                             const SmallBitVector &);
+template SmallBitVector isUndefVector<true>(const Value *,
+                                            const SmallBitVector &);
+
+bool doesInTreeUserNeedToExtract(Value *Scalar, Instruction *UserInst,
+                                 TargetLibraryInfo *TLI,
+                                 const TargetTransformInfo *TTI) {
+  if (!UserInst)
+    return false;
+  unsigned Opcode = UserInst->getOpcode();
+  switch (Opcode) {
+  case Instruction::Load: {
+    LoadInst *LI = cast<LoadInst>(UserInst);
+    return (LI->getPointerOperand() == Scalar);
+  }
+  case Instruction::Store: {
+    StoreInst *SI = cast<StoreInst>(UserInst);
+    return (SI->getPointerOperand() == Scalar);
+  }
+  case Instruction::Call: {
+    CallInst *CI = cast<CallInst>(UserInst);
+    Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
+    return any_of(enumerate(CI->args()), [&](auto &&Arg) {
+      return isVectorIntrinsicWithScalarOpAtArg(ID, Arg.index(), TTI) &&
+             Arg.value().get() == Scalar;
+    });
+  }
+  default:
+    return false;
+  }
+}
+
+MemoryLocation getLocation(Instruction *I) {
+  if (StoreInst *SI = dyn_cast<StoreInst>(I))
+    return MemoryLocation::get(SI);
+  if (LoadInst *LI = dyn_cast<LoadInst>(I))
+    return MemoryLocation::get(LI);
+  return MemoryLocation();
+}
+
+bool isSimple(Instruction *I) {
+  if (LoadInst *LI = dyn_cast<LoadInst>(I))
+    return LI->isSimple();
+  if (StoreInst *SI = dyn_cast<StoreInst>(I))
+    return SI->isSimple();
+  if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(I))
+    return !MI->isVolatile();
+  return true;
+}
+
+void addMask(SmallVectorImpl<int> &Mask, ArrayRef<int> SubMask,
+             bool ExtendingManyInputs) {
+  if (SubMask.empty())
+    return;
+  assert(
+      (!ExtendingManyInputs || SubMask.size() > Mask.size() ||
+       // Check if input scalars were extended to match the size of other node.
+       (SubMask.size() == Mask.size() && Mask.back() == PoisonMaskElem)) &&
+      "SubMask with many inputs support must be larger than the mask.");
+  if (Mask.empty()) {
+    Mask.append(SubMask.begin(), SubMask.end());
+    return;
+  }
+  SmallVector<int> NewMask(SubMask.size(), PoisonMaskElem);
+  int TermValue = std::min(Mask.size(), SubMask.size());
+  for (int I = 0, E = SubMask.size(); I < E; ++I) {
+    if (SubMask[I] == PoisonMaskElem ||
+        (!ExtendingManyInputs &&
+         (SubMask[I] >= TermValue || Mask[SubMask[I]] >= TermValue)))
+      continue;
+    NewMask[I] = Mask[SubMask[I]];
+  }
+  Mask.swap(NewMask);
+}
+
+void fixupOrderingIndices(MutableArrayRef<unsigned> Order) {
+  const size_t Sz = Order.size();
+  SmallBitVector UnusedIndices(Sz, /*t=*/true);
+  SmallBitVector MaskedIndices(Sz);
+  for (unsigned I = 0; I < Sz; ++I) {
+    if (Order[I] < Sz)
+      UnusedIndices.reset(Order[I]);
+    else
+      MaskedIndices.set(I);
+  }
+  if (MaskedIndices.none())
+    return;
+  assert(UnusedIndices.count() == MaskedIndices.count() &&
+         "Non-synced masked/available indices.");
+  int Idx = UnusedIndices.find_first();
+  int MIdx = MaskedIndices.find_first();
+  while (MIdx >= 0) {
+    assert(Idx >= 0 && "Indices must be synced.");
+    Order[MIdx] = Idx;
+    Idx = UnusedIndices.find_next(Idx);
+    MIdx = MaskedIndices.find_next(MIdx);
+  }
+}
+
+SmallBitVector getAltInstrMask(ArrayRef<Value *> VL, Type *ScalarTy,
+                               unsigned Opcode0, unsigned Opcode1) {
+  unsigned ScalarTyNumElements = getNumElements(ScalarTy);
+  SmallBitVector OpcodeMask(VL.size() * ScalarTyNumElements, false);
+  for (unsigned Lane : seq<unsigned>(VL.size())) {
+    if (isa<PoisonValue>(VL[Lane]))
+      continue;
+    if (cast<Instruction>(VL[Lane])->getOpcode() == Opcode1)
+      OpcodeMask.set(Lane * ScalarTyNumElements,
+                     Lane * ScalarTyNumElements + ScalarTyNumElements);
+  }
+  return OpcodeMask;
+}
+
+SmallVector<Constant *> replicateMask(ArrayRef<Constant *> Val, unsigned VF) {
+  assert(none_of(Val, [](Constant *C) { return C->getType()->isVectorTy(); }) &&
+         "Expected scalar constants.");
+  SmallVector<Constant *> NewVal(Val.size() * VF);
+  for (auto [I, V] : enumerate(Val))
+    std::fill_n(NewVal.begin() + I * VF, VF, V);
+  return NewVal;
 }
 
 } // namespace llvm::slpvectorizer
