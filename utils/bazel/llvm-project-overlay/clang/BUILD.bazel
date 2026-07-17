@@ -2777,7 +2777,11 @@ cc_binary(
 
 cc_binary(
     name = "clang-ssaf-linker",
-    srcs = ["tools/clang-ssaf-linker/SSAFLinker.cpp"],
+    srcs = [
+        "tools/clang-ssaf-linker/SSAFLinker.cpp",
+        "tools/clang-ssaf-linker/StaticLibraryCreateCLI.cpp",
+        "tools/clang-ssaf-linker/StaticLibraryCreateCLI.h",
+    ],
     deps = [
         ":basic",
         ":scalable_static_analysis_analyses",
@@ -2786,5 +2790,6 @@ cc_binary(
         ":scalable_static_analysis_tool",
         "//llvm:Option",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
