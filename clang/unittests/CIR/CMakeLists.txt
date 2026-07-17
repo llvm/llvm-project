@@ -6,6 +6,7 @@ include_directories(${MLIR_TABLEGEN_OUTPUT_DIR})
 add_distinct_clang_unittest(CIRUnitTests
   CallOpTest.cpp
   ControlFlowTest.cpp
+  IntTypeABIAlignTest.cpp
   PointerLikeTest.cpp
   RecordTypeMetadataTest.cpp
   UnionTypeSizeTest.cpp

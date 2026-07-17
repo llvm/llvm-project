@@ -37,3 +37,9 @@ declare_args() {
     symbol_level = 0
   }
 }
+
+declare_args() {
+  # Allow the debug toolchain to override these.
+  toolchain_is_optimized = is_optimized
+  toolchain_symbol_level = symbol_level
+}

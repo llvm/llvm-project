@@ -349,22 +349,40 @@ void AccStructureChecker::CheckNotInSameOrSubLevelLoopConstruct() {
   }
 }
 
-void AccStructureChecker::Enter(const parser::CallStmt &call) {
-  if (dirContext_.empty() || !call.typedCall) {
+void AccStructureChecker::CheckRoutineCallInLoop(const Symbol &symbol) {
+  if (dirContext_.empty()) {
     return;
   }
-  const Symbol *sym{call.typedCall->proc().GetSymbol()};
-  if (!sym) {
-    return;
+  // OpenACC routine information can be attached either to a SubprogramDetails
+  // (a normal function/subroutine) or to a ProcEntityDetails (a procedure
+  // pointer or dummy procedure).
+  auto getRoutineInfos =
+      [](const Symbol &sym) -> const std::vector<OpenACCRoutineInfo> * {
+    if (const auto *subp{sym.detailsIf<SubprogramDetails>()}) {
+      return &subp->openACCRoutineInfos();
+    }
+    if (const auto *proc{sym.detailsIf<ProcEntityDetails>()}) {
+      return &proc->openACCRoutineInfos();
+    }
+    return nullptr;
+  };
+
+  const Symbol &ult{symbol.GetUltimate()};
+  const std::vector<OpenACCRoutineInfo> *infos{getRoutineInfos(ult)};
+  // For a call made through a procedure pointer or binding whose routine level
+  // is declared on its interface rather than on the pointer itself, follow the
+  // interface to pick up the routine information.
+  if (!infos || infos->empty()) {
+    if (const Symbol *subpSym{FindSubprogram(ult)}) {
+      infos = getRoutineInfos(*subpSym);
+    }
   }
-  const Symbol &ult{sym->GetUltimate()};
-  const auto *subp{ult.detailsIf<SubprogramDetails>()};
-  if (!subp || subp->openACCRoutineInfos().empty()) {
+  if (!infos || infos->empty()) {
     return;
   }
   std::string routineParDim;
   unsigned routineGangDim = 0;
-  for (const OpenACCRoutineInfo &ri : subp->openACCRoutineInfos()) {
+  for (const OpenACCRoutineInfo &ri : *infos) {
     if (ri.isGang()) {
       if (unsigned gangDim = ri.gangDim()) {
         routineGangDim = gangDim;
@@ -416,6 +434,35 @@ void AccStructureChecker::Enter(const parser::CallStmt &call) {
       }
     }
   }
+}
+
+void AccStructureChecker::Enter(const parser::CallStmt &call) {
+  if (!call.typedCall) {
+    return;
+  }
+  const Symbol *sym{call.typedCall->proc().GetSymbol()};
+  if (!sym) {
+    return;
+  }
+  CheckRoutineCallInLoop(*sym);
+}
+
+void AccStructureChecker::Enter(const parser::FunctionReference &ref) {
+  auto &proc{std::get<parser::ProcedureDesignator>(ref.v.t)};
+  const Symbol *sym{common::visit(
+      common::visitors{
+          [](const parser::Name &x) { return x.symbol; },
+          [](const parser::ProcComponentRef &x) {
+            return parser::UnwrapRef<parser::StructureComponent>(x.v)
+                .Component()
+                .symbol;
+          },
+      },
+      proc.u)};
+  if (!sym) {
+    return;
+  }
+  CheckRoutineCallInLoop(*sym);
 }
 
 void AccStructureChecker::Enter(const parser::OpenACCLoopConstruct &x) {

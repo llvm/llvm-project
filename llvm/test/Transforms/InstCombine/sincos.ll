@@ -469,4 +469,51 @@ merge:
   ret float %res
 }
 
+define double @sincos_arg_is_invoke() personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: @sincos_arg_is_invoke(
+; CHECK-NEXT:    [[ANGLE:%.*]] = invoke double @foo()
+; CHECK-NEXT:            to label [[CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       cont:
+; CHECK-NEXT:    [[SINCOS:%.*]] = call { double, double } @llvm.sincos.f64(double [[ANGLE]])
+; CHECK-NEXT:    [[SIN:%.*]] = extractvalue { double, double } [[SINCOS]], 0
+; CHECK-NEXT:    [[COS:%.*]] = extractvalue { double, double } [[SINCOS]], 1
+; CHECK-NEXT:    [[SUM:%.*]] = fadd double [[SIN]], [[COS]]
+; CHECK-NEXT:    ret double [[SUM]]
+; CHECK:       lpad:
+; CHECK-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    ret double 0.000000e+00
+;
+; CHECK-SHRINK-LABEL: @sincos_arg_is_invoke(
+; CHECK-SHRINK-NEXT:    [[ANGLE:%.*]] = invoke double @foo()
+; CHECK-SHRINK-NEXT:            to label [[CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-SHRINK:       cont:
+; CHECK-SHRINK-NEXT:    [[SINCOS:%.*]] = call { double, double } @llvm.sincos.f64(double [[ANGLE]])
+; CHECK-SHRINK-NEXT:    [[SIN:%.*]] = extractvalue { double, double } [[SINCOS]], 0
+; CHECK-SHRINK-NEXT:    [[COS:%.*]] = extractvalue { double, double } [[SINCOS]], 1
+; CHECK-SHRINK-NEXT:    [[SUM:%.*]] = fadd double [[SIN]], [[COS]]
+; CHECK-SHRINK-NEXT:    ret double [[SUM]]
+; CHECK-SHRINK:       lpad:
+; CHECK-SHRINK-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
+; CHECK-SHRINK-NEXT:            cleanup
+; CHECK-SHRINK-NEXT:    ret double 0.000000e+00
+;
+  %angle = invoke double @foo()
+  to label %cont unwind label %lpad
+
+cont:
+  %s = call double @llvm.sin.f64(double %angle)
+  %c = call double @llvm.cos.f64(double %angle)
+  %sum = fadd double %s, %c
+  ret double %sum
+
+lpad:
+  %lp = landingpad { ptr, i32 }
+  cleanup
+  ret double 0.000000e+00
+}
+
+declare double @foo()
+declare i32 @__gxx_personality_v0(...)
+
 attributes #0 = { nounwind memory(none) }

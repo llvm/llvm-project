@@ -632,6 +632,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::BSWAP, VT, Legal);
       }
     }
+    setOperationAction(ISD::UNDEF, VTs, Legal);
     setOperationAction(ISD::SPLAT_VECTOR, VTs, Legal);
     setOperationAction(ISD::BUILD_VECTOR, VTs, Legal);
     setOperationAction(ISD::SCALAR_TO_VECTOR, VTs, Legal);
@@ -668,6 +669,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         }
       }
 
+      setOperationAction(ISD::UNDEF, P64VecVTs, Legal);
       setOperationAction({ISD::LOAD, ISD::STORE}, P64VecVTs, Custom);
       setOperationAction(ISD::BITCAST, P64VecVTs, Custom);
       setOperationAction({ISD::ADD, ISD::SUB}, P64VecVTs, Legal);
@@ -6395,6 +6397,7 @@ static SDValue tryWidenMaskForShuffle(SDValue Op, SelectionDAG &DAG) {
 // Match an interleave shuffle that forms a P-extension packed zip:
 //   <a0, b0, a1, b1, ...> -> zip*p/wzip*p
 static SDValue lowerVECTOR_SHUFFLEAsPZip(ShuffleVectorSDNode *SVN,
+                                         const RISCVSubtarget &Subtarget,
                                          SelectionDAG &DAG) {
   SDValue V1 = SVN->getOperand(0);
   SDValue V2 = SVN->getOperand(1);
@@ -6411,10 +6414,22 @@ static SDValue lowerVECTOR_SHUFFLEAsPZip(ShuffleVectorSDNode *SVN,
       ShuffleVectorInst::isInterleaveMask(Mask, 2, NumElts * 2, StartIndexes)) {
     unsigned EvenSrc = StartIndexes[0];
     unsigned OddSrc = StartIndexes[1];
-    if (EvenSrc == 0 && OddSrc == NumElts)
-      return DAG.getNode(RISCVISD::PZIP, DL, VT, V1, V2);
-    if (EvenSrc == NumElts && OddSrc == 0)
-      return DAG.getNode(RISCVISD::PZIP, DL, VT, V2, V1);
+    if (EvenSrc == 0 && OddSrc == NumElts) {
+      if (Subtarget.is64Bit())
+        return DAG.getNode(RISCVISD::PZIP, DL, VT, V1, V2);
+      EVT HalfVT = VT.getHalfNumVectorElementsVT();
+      V1 = DAG.getExtractSubvector(DL, HalfVT, V1, 0);
+      V2 = DAG.getExtractSubvector(DL, HalfVT, V2, 0);
+      return DAG.getNode(RISCVISD::PWZIP, DL, VT, V1, V2);
+    }
+    if (EvenSrc == NumElts && OddSrc == 0) {
+      if (Subtarget.is64Bit())
+        return DAG.getNode(RISCVISD::PZIP, DL, VT, V2, V1);
+      EVT HalfVT = VT.getHalfNumVectorElementsVT();
+      V1 = DAG.getExtractSubvector(DL, HalfVT, V1, 0);
+      V2 = DAG.getExtractSubvector(DL, HalfVT, V2, 0);
+      return DAG.getNode(RISCVISD::PWZIP, DL, VT, V2, V1);
+    }
   }
 
   return SDValue();
@@ -6512,49 +6527,6 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
   if (Subtarget.hasStdExtP() && !Subtarget.hasVInstructions()) {
     ArrayRef<int> Mask = SVN->getMask();
 
-    // Match the IR produced by the packed widening high-half convert header
-    // intrinsics:
-    //   shufflevector zeroinitializer, src, <0, N, 1, N+1, ...>
-    //   bitcast to the widened vector type
-    // This places each source element in the high half of the widened element.
-    // Lower it to PZIP with a zero first operand and let tablegen select
-    // pwcvth.* via zip*p/wzip*p.
-    auto IsWidenHighMask = [&](unsigned SrcNumElts) {
-      for (unsigned I = 0; I != SrcNumElts; ++I)
-        if (Mask[2 * I] != (int)I || Mask[2 * I + 1] != (int)(NumElts + I))
-          return false;
-      return true;
-    };
-
-    SDValue Src = V2;
-    if (V2.getOpcode() == ISD::CONCAT_VECTORS && V2.getOperand(1).isUndef())
-      Src = V2.getOperand(0);
-    MVT SrcVT = Src.getSimpleValueType();
-    if (Subtarget.isRV32() &&
-        ISD::isConstantSplatVectorAllZeros(V1.getNode()) &&
-        SrcVT.getVectorNumElements() * 2 == NumElts &&
-        V2.getSimpleValueType().getVectorNumElements() == NumElts) {
-      unsigned SrcNumElts = SrcVT.getVectorNumElements();
-      if (IsWidenHighMask(SrcNumElts) &&
-          (SrcVT == MVT::v4i8 || SrcVT == MVT::v2i16)) {
-        Src =
-            DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Src, DAG.getUNDEF(SrcVT));
-        return DAG.getNode(RISCVISD::PZIP, DL, VT, DAG.getConstant(0, DL, VT),
-                           Src);
-      }
-    }
-
-    if (ISD::isConstantSplatVectorAllZeros(V1.getNode()) &&
-        V2.getSimpleValueType() == VT &&
-        (VT == MVT::v8i8 || VT == MVT::v4i16)) {
-      unsigned SrcNumElts = NumElts / 2;
-      if (IsWidenHighMask(SrcNumElts)) {
-        Src = V2;
-        return DAG.getNode(RISCVISD::PZIP, DL, VT, DAG.getConstant(0, DL, VT),
-                           Src);
-      }
-    }
-
     // Select an element reverse shuffle to VECTOR_REVERSE. The tablegen
     // patterns select rev8/rev16/ppairoe.* from VECTOR_REVERSE.
     // Reverse of the low L lanes, higher lanes poison. L == NumElts is a plain
@@ -6583,7 +6555,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
 
     if (SDValue V = lowerVECTOR_SHUFFLEAsPUnzip(SVN, DAG, Subtarget.is64Bit()))
       return V;
-    if (SDValue V = lowerVECTOR_SHUFFLEAsPZip(SVN, DAG))
+    if (SDValue V = lowerVECTOR_SHUFFLEAsPZip(SVN, Subtarget, DAG))
       return V;
     if (SDValue V =
             lowerVECTOR_SHUFFLEAsRV32PNarrowingShift(SVN, Subtarget, DAG))

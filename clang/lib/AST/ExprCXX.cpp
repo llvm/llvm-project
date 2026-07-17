@@ -1602,14 +1602,13 @@ CXXThisExpr *CXXThisExpr::CreateEmpty(const ASTContext &Ctx) {
 static bool hasOnlyNonStaticMemberFunctions(UnresolvedSetIterator begin,
                                             UnresolvedSetIterator end) {
   do {
-    NamedDecl *decl = *begin;
+    NamedDecl *decl = (*begin)->getUnderlyingDecl();
     if (isa<UnresolvedUsingValueDecl>(decl))
       return false;
 
     // Unresolved member expressions should only contain methods and
     // method templates.
-    if (cast<CXXMethodDecl>(decl->getUnderlyingDecl()->getAsFunction())
-            ->isStatic())
+    if (cast<CXXMethodDecl>(decl->getAsFunction())->isStatic())
       return false;
   } while (++begin != end);
 

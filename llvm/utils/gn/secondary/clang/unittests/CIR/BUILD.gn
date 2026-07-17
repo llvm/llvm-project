@@ -4,6 +4,7 @@ group("CIRUnitTests") {
   sources = [
     "CallOpTest.cpp",
     "ControlFlowTest.cpp",
+    "IntTypeABIAlignTest.cpp",
     "PointerLikeTest.cpp",
     "RecordTypeMetadataTest.cpp",
     "UnionTypeSizeTest.cpp",

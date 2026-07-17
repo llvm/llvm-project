@@ -6504,9 +6504,6 @@ static SDValue matchHalfOf128BitLanes(SDValue N, bool isLow) {
 static SDValue performSHLCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const LoongArchSubtarget &Subtarget) {
-  if (!Subtarget.hasExtLSX())
-    return SDValue();
-
   assert(N->getOpcode() == ISD::SHL && "Unexpected opcode");
 
   EVT VT = N->getValueType(0);
@@ -6527,6 +6524,10 @@ static SDValue performSHLCombine(SDNode *N, SelectionDAG &DAG,
   if (!LHS.hasOneUse())
     return SDValue();
 
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(VT) ||
+      N->getValueSizeInBits(0) != LHS->getOperand(0).getValueSizeInBits() * 2)
+    return SDValue();
+
   SDValue Vec = matchHalfOf128BitLanes(LHS.getOperand(0), /*isLow=*/true);
   if (!Vec)
     return SDValue();
@@ -6534,16 +6535,6 @@ static SDValue performSHLCombine(SDNode *N, SelectionDAG &DAG,
   EVT SrcVT = Vec.getValueType();
   EVT SrcEltVT = SrcVT.getVectorElementType();
   EVT DstEltVT = VT.getVectorElementType();
-
-  if (!SrcVT.isVector() || !VT.isVector())
-    return SDValue();
-  if (SrcVT.getSizeInBits() != VT.getSizeInBits())
-    return SDValue();
-  if (DstEltVT.getSizeInBits() != SrcEltVT.getSizeInBits() * 2)
-    return SDValue();
-  if (!SrcEltVT.isInteger() || SrcEltVT.getSizeInBits() > 32)
-    return SDValue();
-
   APInt Imm;
   if (!isConstantSplatVector(RHS, Imm, DstEltVT.getSizeInBits()))
     return SDValue();
@@ -8511,6 +8502,10 @@ static SDValue performEXTENDCombine(SDNode *N, SelectionDAG &DAG,
   if (VT.isVector()) {
     if (SDValue R = PromoteMaskArithmetic(SDValue(N, 0), DL, DAG, Subtarget))
       return R;
+
+    if (!DAG.getTargetLoweringInfo().isTypeLegal(VT) ||
+        N->getValueSizeInBits(0) != N->getOperand(0).getValueSizeInBits() * 2)
+      return SDValue();
 
     if (SDValue R = matchHalfOf128BitLanes(N->getOperand(0), /*isLow=*/false)) {
       if (N->getOpcode() == ISD::SIGN_EXTEND)

@@ -1921,6 +1921,11 @@ def SDT_RISCVPZip : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                          SDTCisSameAs<0, 2>]>;
 def riscv_pzip : RVSDNode<"PZIP", SDT_RISCVPZip>;
 
+def SDT_RISCVPWZip : SDTypeProfile<1, 2, [SDTCisVec<0>,
+                                          SDTCisSubVecOfVec<1, 0>,
+                                          SDTCisSameAs<1, 2>]>;
+def riscv_pwzip : RVSDNode<"PWZIP", SDT_RISCVPWZip>;
+
 // Deinterleave the even/odd lanes of two packed vectors.
 def SDT_RISCVPUnzip : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                            SDTCisSameAs<0, 1>,
@@ -2293,14 +2298,10 @@ let append Predicates = [IsRV32] in {
   def : Pat<(v2i32 (zext (v2i16 GPR:$rs))), (WZIP16P GPR:$rs, (v2i16 X0))>;
 
   // Packed zip.
-  def : Pat<(v8i8 (riscv_pzip (v8i8 GPRPair:$rs1),
-                               (v8i8 GPRPair:$rs2))),
-            (WZIP8P (i32 (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_even)),
-                    (i32 (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_even)))>;
-  def : Pat<(v4i16 (riscv_pzip (v4i16 GPRPair:$rs1),
-                                (v4i16 GPRPair:$rs2))),
-            (WZIP16P (i32 (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_even)),
-                     (i32 (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_even)))>;
+  def : Pat<(v8i8 (riscv_pwzip (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
+            (WZIP8P GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i16 (riscv_pwzip (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (WZIP16P GPR:$rs1, GPR:$rs2)>;
 
   // Sign-extend patterns using pwadd with zero
   def : Pat<(v4i16 (sext (v4i8 GPR:$rs))), (PWADD_B GPR:$rs, (v4i8 X0))>;
@@ -2819,6 +2820,18 @@ let append Predicates = [IsRV64] in {
             (UNZIP16P GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v4i16 (riscv_punzipo (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
             (UNZIP16HP GPR:$rs1, GPR:$rs2)>;
+
+  // Match undef to X0 to avoid false dependency.
+  // FIXME: Match operand 0 too?
+  // FIXME: Enable BreakFalseDep pass?
+  def : Pat<(v8i8 (riscv_punzipe (v8i8 GPR:$rs1), (v8i8 undef))),
+            (UNZIP8P GPR:$rs1, (v8i8 X0))>;
+  def : Pat<(v8i8 (riscv_punzipo (v8i8 GPR:$rs1), (v8i8 undef))),
+            (UNZIP8HP GPR:$rs1, (v8i8 X0))>;
+  def : Pat<(v4i16 (riscv_punzipe (v4i16 GPR:$rs1), (v4i16 undef))),
+            (UNZIP16P GPR:$rs1, (v4i16 X0))>;
+  def : Pat<(v4i16 (riscv_punzipo (v4i16 GPR:$rs1), (v4i16 undef))),
+            (UNZIP16HP GPR:$rs1, (v4i16 X0))>;
 
   // Packed zip.
   def : Pat<(v8i8 (riscv_pzip (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),

@@ -254,6 +254,25 @@ class CUFDeviceFuncTransform
       });
     });
 
+    // Optionally report an error when device code calls the runtime function
+    // _FortranAioOutputDescriptor, which is not supported on the device.
+    if (checkioOutputDescriptor) {
+      constexpr llvm::StringRef aioOutputDescriptor =
+          "_FortranAioOutputDescriptor";
+      auto checkForAioOutputDescriptor = [&](fir::CallOp op) {
+        if (op.getCallee() && op.getCallee()->getLeafReference().getValue() ==
+                                  aioOutputDescriptor) {
+          op.emitError("descriptor I/O is not supported in device code");
+          signalPassFailure();
+        }
+      };
+      for (auto funcOp : deviceFuncs)
+        funcOp.walk(checkForAioOutputDescriptor);
+      mod.walk([&](cuf::KernelOp kernelOp) {
+        kernelOp.walk(checkForAioOutputDescriptor);
+      });
+    }
+
     for (auto funcOp : funcsToClone)
       gpuModSymTab.insert(funcOp->clone());
 

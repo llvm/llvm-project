@@ -2,6 +2,16 @@ add_custom_target(libc_include_tests)
 add_dependencies(check-libc libc_include_tests-build)
 
 add_libc_test(
+  alloca_test
+  SUITE
+    libc_include_tests
+  SRCS
+    alloca_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.alloca_macros
+)
+
+add_libc_test(
   assert_test
   SUITE
     libc_include_tests

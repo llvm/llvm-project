@@ -257,13 +257,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  gettimeofday
-  ALIAS
-  DEPENDS
-    .${LIBC_TARGET_OS}.gettimeofday
-)
-
-add_entrypoint_object(
   clock_getres
   ALIAS
   DEPENDS

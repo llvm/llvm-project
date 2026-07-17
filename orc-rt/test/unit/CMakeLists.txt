@@ -15,6 +15,7 @@ add_orc_rt_unittest(CoreTests
   AllocActionTest.cpp
   BitmaskEnumTest.cpp
   BootstrapInfoTest.cpp
+  CCallbackTest.cpp
   CallSPSCITest.cpp
   CallableTraitsHelperTest.cpp
   CommandLineTest.cpp

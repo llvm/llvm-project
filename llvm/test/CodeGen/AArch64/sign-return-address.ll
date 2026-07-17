@@ -5,14 +5,21 @@
 ; v9.5-A is not expected to change codegen without -mbranch-protection=+pc, so reuse DWARFCFI-V83A.
 ; RUN: llc -mtriple=aarch64 -mattr=v9.5a < %s | FileCheck --check-prefixes=CHECK,DWARFCFI,DWARFCFI-V83A %s
 
-; RUN: llc -mtriple=aarch64-windows              < %s | FileCheck --check-prefixes=CHECK,WINCFI,WINCFI-COMPAT %s
-; RUN: llc -mtriple=aarch64-windows -mattr=v8.3a < %s | FileCheck --check-prefixes=CHECK,WINCFI,WINCFI-V83A %s
+; RUN: sed -e '/^define i32 @leaf_sign_all_a_key(/,/^}/d' -e '/^define i32 @leaf_sign_all_a_key_bti(/,/^}/d' %s > %t.win-valid.ll
+; RUN: llc -mtriple=aarch64-windows              < %t.win-valid.ll | FileCheck --check-prefixes=CHECK,WINCFI,WINCFI-COMPAT %s
+; RUN: llc -mtriple=aarch64-windows -mattr=v8.3a < %t.win-valid.ll | FileCheck --check-prefixes=CHECK,WINCFI,WINCFI-V83A %s
+
+; RUN: sed -n -e '/^define i32 @leaf_sign_all_a_key(/,/^}/p' %s | not llc -mtriple=aarch64-windows -filetype=null 2>&1 | FileCheck --check-prefix=ERR-AKEY %s
 
 ; Make sure no errors are detected when emitting SEH opcodes.
 ; Errors are only checked for when generating a binary, so emit a dummy object
 ; file and make sure llc produces zero exit code.
-; RUN: llc -mtriple=aarch64-windows              -o %t.dummy.o --filetype=obj < %s
-; RUN: llc -mtriple=aarch64-windows -mattr=v8.3a -o %t.dummy.o --filetype=obj < %s
+; RUN: llc -mtriple=aarch64-windows              -o %t.dummy.o --filetype=obj < %t.win-valid.ll
+; RUN: llc -mtriple=aarch64-windows -mattr=v8.3a -o %t.dummy.o --filetype=obj < %t.win-valid.ll
+
+; ERR-AKEY: error:
+; ERR-AKEY-SAME: in function leaf_sign_all_a_key
+; ERR-AKEY-SAME: A-key return address signing is unsupported on AArch64 Windows
 
 define i32 @leaf(i32 %x) {
 ; CHECK-LABEL: leaf:
@@ -649,34 +656,6 @@ define i32 @leaf_sign_all_a_key(i32 %x) "sign-return-address"="all" "sign-return
 ; DWARFCFI-V83A-NEXT:    paciasp
 ; DWARFCFI-V83A-NEXT:    .cfi_negate_ra_state
 ; DWARFCFI-V83A-NEXT:    retaa
-;
-; WINCFI-COMPAT-LABEL: leaf_sign_all_a_key:
-; WINCFI-COMPAT:       .seh_proc leaf_sign_all_a_key
-; WINCFI-COMPAT-NEXT:  // %bb.0:
-; WINCFI-COMPAT-NEXT:    hint #25
-; WINCFI-COMPAT-NEXT:    .seh_pac_sign_lr
-; WINCFI-COMPAT-NEXT:    .seh_endprologue
-; WINCFI-COMPAT-NEXT:    .seh_startepilogue
-; WINCFI-COMPAT-NEXT:    hint #29
-; WINCFI-COMPAT-NEXT:    .seh_pac_sign_lr
-; WINCFI-COMPAT-NEXT:    .seh_endepilogue
-; WINCFI-COMPAT-NEXT:    ret
-; WINCFI-COMPAT-NEXT:    .seh_endfunclet
-; WINCFI-COMPAT-NEXT:    .seh_endproc
-;
-; WINCFI-V83A-LABEL: leaf_sign_all_a_key:
-; WINCFI-V83A:       .seh_proc leaf_sign_all_a_key
-; WINCFI-V83A-NEXT:  // %bb.0:
-; WINCFI-V83A-NEXT:    paciasp
-; WINCFI-V83A-NEXT:    .seh_pac_sign_lr
-; WINCFI-V83A-NEXT:    .seh_endprologue
-; WINCFI-V83A-NEXT:    .seh_startepilogue
-; WINCFI-V83A-NEXT:    autiasp
-; WINCFI-V83A-NEXT:    .seh_pac_sign_lr
-; WINCFI-V83A-NEXT:    .seh_endepilogue
-; WINCFI-V83A-NEXT:    ret
-; WINCFI-V83A-NEXT:    .seh_endfunclet
-; WINCFI-V83A-NEXT:    .seh_endproc
   ret i32 %x
 }
 
@@ -764,34 +743,6 @@ define i32 @leaf_sign_all_a_key_bti(i32 %x) "sign-return-address"="all" "sign-re
 ; DWARFCFI-V83A-NEXT:    paciasp
 ; DWARFCFI-V83A-NEXT:    .cfi_negate_ra_state
 ; DWARFCFI-V83A-NEXT:    retaa
-;
-; WINCFI-COMPAT-LABEL: leaf_sign_all_a_key_bti:
-; WINCFI-COMPAT:       .seh_proc leaf_sign_all_a_key_bti
-; WINCFI-COMPAT-NEXT:  // %bb.0:
-; WINCFI-COMPAT-NEXT:    hint #25
-; WINCFI-COMPAT-NEXT:    .seh_pac_sign_lr
-; WINCFI-COMPAT-NEXT:    .seh_endprologue
-; WINCFI-COMPAT-NEXT:    .seh_startepilogue
-; WINCFI-COMPAT-NEXT:    hint #29
-; WINCFI-COMPAT-NEXT:    .seh_pac_sign_lr
-; WINCFI-COMPAT-NEXT:    .seh_endepilogue
-; WINCFI-COMPAT-NEXT:    ret
-; WINCFI-COMPAT-NEXT:    .seh_endfunclet
-; WINCFI-COMPAT-NEXT:    .seh_endproc
-;
-; WINCFI-V83A-LABEL: leaf_sign_all_a_key_bti:
-; WINCFI-V83A:       .seh_proc leaf_sign_all_a_key_bti
-; WINCFI-V83A-NEXT:  // %bb.0:
-; WINCFI-V83A-NEXT:    paciasp
-; WINCFI-V83A-NEXT:    .seh_pac_sign_lr
-; WINCFI-V83A-NEXT:    .seh_endprologue
-; WINCFI-V83A-NEXT:    .seh_startepilogue
-; WINCFI-V83A-NEXT:    autiasp
-; WINCFI-V83A-NEXT:    .seh_pac_sign_lr
-; WINCFI-V83A-NEXT:    .seh_endepilogue
-; WINCFI-V83A-NEXT:    ret
-; WINCFI-V83A-NEXT:    .seh_endfunclet
-; WINCFI-V83A-NEXT:    .seh_endproc
   ret i32 %x
 }
 

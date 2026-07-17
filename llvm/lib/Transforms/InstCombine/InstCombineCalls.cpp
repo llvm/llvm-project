@@ -1948,13 +1948,11 @@ static Value *foldSinAndCosToSinCos(IntrinsicInst *II, IRBuilderBase &B,
   // Insert sincos right after the argument definition.
   IRBuilderBase::InsertPointGuard Guard(B);
   if (auto *ArgInst = dyn_cast<Instruction>(Arg)) {
-    BasicBlock *ArgBB = ArgInst->getParent();
-    // Need skip whole PHIs if Arg is PHI to prevent insert in the middle
-    // of PHIs.
-    if (isa<PHINode>(ArgInst))
-      B.SetInsertPoint(ArgBB, ArgBB->getFirstInsertionPt());
-    else
-      B.SetInsertPoint(ArgBB, std::next(ArgInst->getIterator()));
+    std::optional<BasicBlock::iterator> InsertPt =
+        ArgInst->getInsertionPointAfterDef();
+    if (!InsertPt)
+      return nullptr;
+    B.SetInsertPoint(*InsertPt);
   } else {
     BasicBlock &EntryBB = II->getFunction()->getEntryBlock();
     B.SetInsertPoint(&EntryBB, EntryBB.begin());

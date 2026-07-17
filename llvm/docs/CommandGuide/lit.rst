@@ -166,6 +166,12 @@ EXECUTION OPTIONS
 
  Specify an additional ``PATH`` to use when searching for executables in tests.
 
+.. option:: --pass-env NAME
+
+ Pass the environment variable ``NAME`` through to the test environment, in
+ addition to the built-in allow-list of variables that are always passed
+ through. May be specified multiple times to pass through several variables.
+
 .. option:: --vg
 
  Run individual tests under valgrind (using the memcheck tool).  The

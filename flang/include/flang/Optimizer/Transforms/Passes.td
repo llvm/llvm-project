@@ -584,8 +584,13 @@ def CUFDeviceFuncTransform
   let dependentDialects = ["mlir::gpu::GPUDialect",
                            "mlir::cf::ControlFlowDialect",
                            "mlir::NVVM::NVVMDialect"];
-  let options = [Option<"computeCap", "compute-capability", "int",
-                        /*default=*/"0", "CUDA compute capability version">];
+  let options =
+      [Option<"computeCap", "compute-capability", "int",
+              /*default=*/"0", "CUDA compute capability version">,
+       Option<"checkioOutputDescriptor", "check-io-output-descriptor", "bool",
+              /*default=*/"false",
+              "Report an error if device code contains a call to "
+              "descriptor I/O">];
 }
 
 def CUFFunctionRewrite : Pass<"cuf-function-rewrite", ""> {

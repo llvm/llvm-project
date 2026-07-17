@@ -623,6 +623,10 @@ defm BF16PackedInsts : AMDGPUSubtargetFeature<"bf16-pk-insts",
   "Has bf16 packed instructions (fma, add, mul, max, min)"
 >;
 
+defm BF16InlineConstFromUpperFP32 : AMDGPUSubtargetFeature<"bf16-from-upper-fp32",
+  "bf16 inline constants are actually selected from upper 16-bits of a fp32"
+>;
+
 defm VOP3PInsts : AMDGPUSubtargetFeature<"vop3p",
   "Has VOP3P packed instructions"
 >;
@@ -2204,6 +2208,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
    FeatureBF16PackedInsts,
+   FeatureBF16InlineConstFromUpperFP32,
    FeatureCvtPkF16F32Inst,
    FeatureFmaMixBF16Insts,
    FeatureMin3Max3PKF16,
@@ -2350,6 +2355,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
    FeatureBF16PackedInsts,
+   FeatureBF16InlineConstFromUpperFP32,
    FeaturePrngInst,
    FeaturePermlane16Swap,
    FeatureAshrPkInsts,

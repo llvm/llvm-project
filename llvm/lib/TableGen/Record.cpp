@@ -2738,6 +2738,16 @@ const Init *CondOpInit::resolveReferences(Resolver &R) const {
     const Init *NewVal = Val->resolveReferences(R);
     NewVals.push_back(NewVal);
     Changed |= NewVal != Val;
+
+    // Short-circuit if this cond is true.
+    if (auto *NewCondVal = dyn_cast_or_null<IntInit>(
+            NewCond->convertInitializerTo(IntRecTy::get(getRecordKeeper())))) {
+      if (NewCondVal->getValue()) {
+        Changed = true;
+        // Don't push the rest of the conds and values.
+        break;
+      }
+    }
   }
 
   if (Changed)

@@ -28,15 +28,15 @@ static HWEvents getExpertSchedulingEventType(const MachineInstr &Inst,
     // has its own event.
 
     if (TII.isXDL(Inst))
-      return HWEvents::VGPR_XDL_WRITE;
+      return HWEvents::VGPR_XDL_READ | HWEvents::VGPR_XDL_WRITE;
 
     if (TII.isTRANS(Inst))
-      return HWEvents::VGPR_TRANS_WRITE;
+      return HWEvents::VGPR_TRANS_READ | HWEvents::VGPR_TRANS_WRITE;
 
     if (AMDGPU::isDPMACCInstruction(Inst.getOpcode()))
-      return HWEvents::VGPR_DPMACC_WRITE;
+      return HWEvents::VGPR_DPMACC_READ | HWEvents::VGPR_DPMACC_WRITE;
 
-    return HWEvents::VGPR_CSMACC_WRITE;
+    return HWEvents::VGPR_CSMACC_READ | HWEvents::VGPR_CSMACC_WRITE;
   }
 
   // FLAT and LDS instructions may read their VGPR sources out-of-order

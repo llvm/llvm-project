@@ -220,7 +220,7 @@ static void reconnectChildLoops(LoopInfo &LI, Loop *ParentLoop, Loop *NewLoop,
   }
 }
 
-static void updateLoopInfo(CycleInfo &CI, LoopInfo &LI, Cycle &C,
+static void updateLoopInfo(CycleInfo &CI, LoopInfo &LI, CycleRef C,
                            ArrayRef<BasicBlock *> GuardBlocks) {
   // The parent loop is a natural loop L mapped to the cycle header H as long as
   // H is not also the header of L. In the latter case, L is destroyed and we
@@ -274,11 +274,11 @@ static void updateLoopInfo(CycleInfo &CI, LoopInfo &LI, Cycle &C,
 // Given a set of blocks and headers in an irreducible SCC, convert it into a
 // natural loop. Also insert this new loop at its appropriate place in the
 // hierarchy of loops.
-static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
+static bool fixIrreducible(CycleRef C, CycleInfo &CI, DominatorTree &DT,
                            LoopInfo *LI) {
   if (CI.isReducible(C))
     return false;
-  LLVM_DEBUG(dbgs() << "Processing cycle:\n" << CI.print(&C) << "\n";);
+  LLVM_DEBUG(dbgs() << "Processing cycle:\n" << CI.print(C) << "\n";);
 
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
   ControlFlowHub CHub;
@@ -411,13 +411,13 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
   for (auto *G : GuardBlocks) {
     LLVM_DEBUG(dbgs() << "added guard block to cycle: " << G->getName()
                       << "\n");
-    CI.addBlockToCycle(G, &C);
+    CI.addBlockToCycle(G, C);
   }
   CI.setSingleEntry(C, GuardBlocks[0]);
 
   CI.verifyCycle(C);
-  if (Cycle *Parent = CI.getParentCycle(C))
-    CI.verifyCycle(*Parent);
+  if (CycleRef Parent = CI.getParentCycle(C))
+    CI.verifyCycle(Parent);
 
   LLVM_DEBUG(dbgs() << "Finished one cycle:\n"; CI.print(dbgs()););
   return true;
@@ -429,7 +429,7 @@ static bool FixIrreducibleImpl(Function &F, CycleInfo &CI, DominatorTree &DT,
                     << F.getName() << "\n");
 
   bool Changed = false;
-  for (Cycle &C : CI.cycles())
+  for (auto C : CI.cycles())
     Changed |= fixIrreducible(C, CI, DT, LI);
 
   if (!Changed)

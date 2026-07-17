@@ -404,4 +404,85 @@ exit:
   ret void
 }
 
+; Outer loop does not have a canonical induction phi. SCEV expansion introduces one.
+define void @test_expand_new_canonical_iv_non_zero_start(ptr %dst) {
+; CHECK-LABEL: define void @test_expand_new_canonical_iv_non_zero_start(
+; CHECK-SAME: ptr [[DST:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[OUTER:.*]]
+; CHECK:       [[OUTER]]:
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[O:%.*]] = phi i64 [ 10, %[[ENTRY]] ], [ [[O_NEXT:%.*]], %[[OUTER_LATCH]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDVAR]], 17
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[TMP0]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
+; CHECK-NEXT:    [[BOUND:%.*]] = add i64 [[O]], 8
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[N_VEC]], 3
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], 3
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], 6
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP4]], 9
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP7]]
+; CHECK-NEXT:    store i8 0, ptr [[TMP8]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[TMP9]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[TMP10]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[TMP11]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[OUTER_LATCH]], label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    br label %[[INNER:.*]]
+; CHECK:       [[INNER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[TMP3]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[INNER]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[IV]]
+; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 3
+; CHECK-NEXT:    [[EC_INNER:%.*]] = icmp ult i64 [[IV_NEXT]], [[BOUND]]
+; CHECK-NEXT:    br i1 [[EC_INNER]], label %[[INNER]], label %[[OUTER_LATCH]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    [[O_NEXT]] = add nuw i64 [[O]], 1
+; CHECK-NEXT:    [[EC_OUTER:%.*]] = icmp ult i64 [[O_NEXT]], 110
+; CHECK-NEXT:    [[INDVAR_NEXT]] = add i64 [[INDVAR]], 1
+; CHECK-NEXT:    br i1 [[EC_OUTER]], label %[[OUTER]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %outer
+
+outer:
+  %outer.iv = phi i64 [ 10, %entry ], [ %outer.iv.next, %outer.latch ]
+  %bound = add i64 %outer.iv, 8
+  br label %inner
+
+inner:
+  %iv = phi i64 [ 0, %outer ], [ %iv.next, %inner ]
+  %gep = getelementptr i8, ptr %dst, i64 %iv
+  store i8 0, ptr %gep
+  %iv.next = add nuw i64 %iv, 3
+  %ec.inner = icmp ult i64 %iv.next, %bound
+  br i1 %ec.inner, label %inner, label %outer.latch
+
+outer.latch:
+  %outer.iv.next = add nuw i64 %outer.iv, 1
+  %ec.outer = icmp ult i64 %outer.iv.next, 110
+  br i1 %ec.outer, label %outer, label %exit
+
+exit:
+  ret void
+}
+
 declare void @cond()

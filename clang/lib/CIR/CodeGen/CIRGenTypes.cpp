@@ -505,7 +505,9 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     if (BuiltinType::Id == BuiltinType::AMDGPUTexture) {                       \
       resultType = cir::VectorType::get(builder.getSInt32Ty(), 8);             \
     } else {                                                                   \
-      resultType = builder.getPointerTo(cgm.voidTy);                           \
+      resultType = builder.getPointerTo(                                       \
+          cgm.voidTy,                                                          \
+          cir::TargetAddressSpaceAttr::get(&getMLIRContext(), AS));            \
     }                                                                          \
     break;                                                                     \
   }

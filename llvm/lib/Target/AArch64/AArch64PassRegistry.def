@@ -46,6 +46,7 @@ MACHINE_FUNCTION_PASS("aarch64-isel", AArch64DAGToDAGISelPass(*this))
 MACHINE_FUNCTION_PASS("aarch64-jump-tables", AArch64CompressJumpTablesPass())
 MACHINE_FUNCTION_PASS("aarch64-ldst-opt", AArch64LoadStoreOptPass())
 MACHINE_FUNCTION_PASS("aarch64-mi-peephole-opt", AArch64MIPeepholeOptPass())
+MACHINE_FUNCTION_PASS("aarch64-ptrue-coalesce", AArch64PTrueCoalescingPass())
 MACHINE_FUNCTION_PASS("aarch64-post-coalescer", AArch64PostCoalescerPass())
 MACHINE_FUNCTION_PASS("aarch64-post-select-optimize",
                       AArch64PostSelectOptimizePass())

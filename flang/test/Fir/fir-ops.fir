@@ -1139,6 +1139,27 @@ func.func @test_logical_ops(%l1: !fir.logical<4>, %l2: !fir.logical<4>, %i1: i32
   return
 }
 
+// CHECK-LABEL: @test_create_box(
+func.func @test_create_box(%arg0: !fir.heap<!fir.array<?xcomplex<f32>>>, %lb: index, %ext: index, %sm: index) {
+  // CHECK: fir.create_box %{{.*}} lbs(%{{.*}}) extents(%{{.*}}) strides(%{{.*}}) : (!fir.heap<!fir.array<?xcomplex<f32>>>, index, index, index) -> !fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>
+  %0 = fir.create_box %arg0 lbs(%lb) extents(%ext) strides(%sm) : (!fir.heap<!fir.array<?xcomplex<f32>>>, index, index, index) -> !fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>
+  return
+}
+
+// CHECK-LABEL: @test_create_box_pointer(
+func.func @test_create_box_pointer(%arg0: !fir.ptr<!fir.array<?xf32>>, %lb: index, %ext: index, %sm: index) {
+  // CHECK: fir.create_box %{{.*}} lbs(%{{.*}}) extents(%{{.*}}) strides(%{{.*}}) : (!fir.ptr<!fir.array<?xf32>>, index, index, index) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+  %0 = fir.create_box %arg0 lbs(%lb) extents(%ext) strides(%sm) : (!fir.ptr<!fir.array<?xf32>>, index, index, index) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+  return
+}
+
+// CHECK-LABEL: @test_create_box_2d(
+func.func @test_create_box_2d(%arg0: !fir.ref<!fir.array<?x?xf32>>, %lb0: index, %ext0: index, %sm0: index, %lb1: index, %ext1: index, %sm1: index) {
+  // CHECK: fir.create_box %{{.*}} lbs(%{{.*}}, %{{.*}}) extents(%{{.*}}, %{{.*}}) strides(%{{.*}}, %{{.*}}) : (!fir.ref<!fir.array<?x?xf32>>, index, index, index, index, index, index) -> !fir.box<!fir.array<?x?xf32>>
+  %0 = fir.create_box %arg0 lbs(%lb0, %lb1) extents(%ext0, %ext1) strides(%sm0, %sm1) : (!fir.ref<!fir.array<?x?xf32>>, index, index, index, index, index, index) -> !fir.box<!fir.array<?x?xf32>>
+  return
+}
+
 // CHECK-LABEL: fir.module_debug_imports "debug_mod"
 // CHECK-NEXT: fir.use_stmt "used_mod"
 // CHECK-NEXT: }

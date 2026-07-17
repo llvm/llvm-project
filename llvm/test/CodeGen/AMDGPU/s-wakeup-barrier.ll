@@ -2,8 +2,8 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.50 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX1250-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu12.50 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX1250-GISEL %s
 
-; RUN: not llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
-; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -global-isel=0 -mtriple=amdgpu12.00 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -global-isel=1 -mtriple=amdgpu12.00 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
 
 ; ERR: error: <unknown>:0:0: in function @kernel1 void (ptr addrspace(1), ptr addrspace(3)): llvm.amdgcn.s.wakeup.barrier requires target feature 's-wakeup-barrier-inst'
 

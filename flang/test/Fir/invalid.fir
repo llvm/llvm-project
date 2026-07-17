@@ -372,6 +372,46 @@ func.func @embox_tdesc(%arg0: !fir.class<!fir.array<10x!fir.type<derived{a:i32,b
 
 // -----
 
+func.func @create_box_rank_mismatch(%arg0: !fir.ref<!fir.array<?xf32>>, %lb0: index, %ext0: index, %sm0: index, %lb1: index, %ext1: index, %sm1: index) {
+  // expected-error@+1 {{'fir.create_box' op memref rank does not match result box rank}}
+  %0 = fir.create_box %arg0 lbs(%lb0, %lb1) extents(%ext0, %ext1) strides(%sm0, %sm1) : (!fir.ref<!fir.array<?xf32>>, index, index, index, index, index, index) -> !fir.box<!fir.array<?x?xf32>>
+  return
+}
+
+// -----
+
+func.func @create_box_operand_count(%arg0: !fir.ref<!fir.array<?x?xf32>>, %lb: index, %ext: index, %sm: index) {
+  // expected-error@+1 {{'fir.create_box' op expected 2 values for each of lbounds, extents, and strides}}
+  %0 = fir.create_box %arg0 lbs(%lb) extents(%ext, %ext) strides(%sm, %sm) : (!fir.ref<!fir.array<?x?xf32>>, index, index, index, index, index) -> !fir.box<!fir.array<?x?xf32>>
+  return
+}
+
+// -----
+
+func.func @create_box_dynamic_char(%arg0: !fir.ref<!fir.array<?x!fir.char<1,?>>>, %lb: index, %ext: index, %sm: index) {
+  // expected-error@+1 {{'fir.create_box' op result box element type must be statically sized}}
+  %0 = fir.create_box %arg0 lbs(%lb) extents(%ext) strides(%sm) : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, index, index, index) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
+  return
+}
+
+// -----
+
+func.func @create_box_storage_kind(%arg0: !fir.heap<!fir.array<?xf32>>, %lb: index, %ext: index, %sm: index) {
+  // expected-error@+1 {{'fir.create_box' op result box element storage kind must match the memref storage kind}}
+  %0 = fir.create_box %arg0 lbs(%lb) extents(%ext) strides(%sm) : (!fir.heap<!fir.array<?xf32>>, index, index, index) -> !fir.box<!fir.array<?xf32>>
+  return
+}
+
+// -----
+
+func.func @create_box_volatile_mismatch(%arg0: !fir.ref<!fir.array<?xf32>, volatile>, %lb: index, %ext: index, %sm: index) {
+  // expected-error@+1 {{'fir.create_box' op cannot convert between volatile and non-volatile types}}
+  %0 = fir.create_box %arg0 lbs(%lb) extents(%ext) strides(%sm) : (!fir.ref<!fir.array<?xf32>, volatile>, index, index, index) -> !fir.box<!fir.array<?xf32>>
+  return
+}
+
+// -----
+
 %lo = arith.constant 1 : index
 %c1 = arith.constant 1 : index
 %up = arith.constant 10 : index

@@ -70,7 +70,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVPreLegalizerPass(PR);
   initializeSPIRVPostLegalizerPass(PR);
   initializeSPIRVMergeRegionExitTargetsLegacyPass(PR);
-  initializeSPIRVEmitIntrinsicsPass(PR);
+  initializeSPIRVEmitIntrinsicsLegacyPass(PR);
   initializeSPIRVPrepareFunctionsLegacyPass(PR);
   initializeSPIRVPrepareGlobalsLegacyPass(PR);
   initializeSPIRVLegalizeImplicitBindingLegacyPass(PR);

@@ -26,9 +26,21 @@ using namespace llvm::omp::target;
 using namespace error;
 
 Expected<int32_t> LevelZeroPluginTy::findDevices() {
-  CALL_ZE_RET_ERROR(zeInit, ZE_INIT_FLAG_GPU_ONLY);
+  ze_result_t RC;
+  CALL_ZE(RC, zeInit, ZE_INIT_FLAG_GPU_ONLY);
+  if (RC != ZE_RESULT_SUCCESS) {
+    ODBG(OLDT_Init) << "Cannot initialize Level Zero library. Error: "
+                    << getZeErrorName(RC);
+    return 0;
+  }
+
   uint32_t NumDrivers = 0;
-  CALL_ZE_RET_ERROR(zeDriverGet, &NumDrivers, nullptr);
+  CALL_ZE(RC, zeDriverGet, &NumDrivers, nullptr);
+  if (RC != ZE_RESULT_SUCCESS) {
+    ODBG(OLDT_Init) << "Error getting number of drivers. Error: "
+                    << getZeErrorName(RC);
+    return 0;
+  }
   if (NumDrivers == 0) {
     ODBG(OLDT_Init) << "Cannot find any drivers.";
     return 0;

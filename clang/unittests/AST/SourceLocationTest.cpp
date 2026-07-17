@@ -353,13 +353,13 @@ TEST(CXXConstructorDecl, NoRetFunTypeLocRange) {
 
 TEST(CXXConstructorDecl, DefaultedCtorLocRange) {
   RangeVerifier<CXXConstructorDecl> Verifier;
-  Verifier.expectRange(1, 11, 1, 23);
+  Verifier.expectRange(1, 11, 1, 17);
   EXPECT_TRUE(Verifier.match("class C { C() = default; };", functionDecl()));
 }
 
 TEST(CXXConstructorDecl, DeletedCtorLocRange) {
   RangeVerifier<CXXConstructorDecl> Verifier;
-  Verifier.expectRange(1, 11, 1, 22);
+  Verifier.expectRange(1, 11, 1, 17);
   EXPECT_TRUE(Verifier.match("class C { C() = delete; };", functionDecl()));
 }
 

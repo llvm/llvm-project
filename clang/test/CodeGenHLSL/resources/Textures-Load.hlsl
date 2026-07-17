@@ -10,6 +10,10 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=RWTexture2D -DLOCATION_TYPE=int3 -DZEROS=0 -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,DXIL -DTEXTURE=RWTexture2D -DLOCATION_DIM=3 -DCOORD_DIM=2 -DCOORD_MASK="<i32 0, i32 1>" -DDXIL_TY=2 -DRW=1
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=RWTexture2D -DLOCATION_TYPE=int3 -DZEROS=0 -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,SPIRV -DTEXTURE=RWTexture2D -DLOCATION_DIM=3 -DCOORD_DIM=2 -DCOORD_MASK="<i32 0, i32 1>" -DARRAYED=0 -DSAMPLED=2 -DFORMAT1=1 -DFORMAT3=3 -DFORMAT6=6 -DFORMAT21=21 -DFORMAT24=24 -DFORMAT25=25
 
+// RWTexture2DArray
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=RWTexture2DArray -DLOCATION_TYPE=int4 -DZEROS=" 0, 0" -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,DXIL -DTEXTURE=RWTexture2DArray -DLOCATION_DIM=4 -DCOORD_DIM=3 -DCOORD_MASK="<i32 0, i32 1, i32 2>" -DDXIL_TY=7 -DRW=1
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=RWTexture2DArray -DLOCATION_TYPE=int4 -DZEROS=" 0, 0" -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,SPIRV -DTEXTURE=RWTexture2DArray -DLOCATION_DIM=4 -DCOORD_DIM=3 -DCOORD_MASK="<i32 0, i32 1, i32 2>" -DARRAYED=1 -DSAMPLED=2 -DFORMAT1=1 -DFORMAT3=3 -DFORMAT6=6 -DFORMAT21=21 -DFORMAT24=24 -DFORMAT25=25
+
 TEXTURE<float4> t;
 
 // CHECK: define hidden {{.*}} <4 x float> @test_load(int vector[2])

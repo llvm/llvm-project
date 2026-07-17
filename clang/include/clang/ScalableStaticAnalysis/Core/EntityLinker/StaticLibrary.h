@@ -23,6 +23,8 @@
 
 namespace clang::ssaf {
 
+class StaticLibraryCreateCLI;
+
 /// Represents a static library of translation unit summary encodings.
 ///
 /// A StaticLibrary bundles member translation units without performing
@@ -35,12 +37,13 @@ namespace clang::ssaf {
 /// expressed as a fat wrapper around per-architecture StaticLibrary
 /// instances rather than as a single mixed-architecture library.
 ///
-/// Members are stored as encoded TUSummaryEncoding objects: the archiver
-/// tool never decodes per-entity payloads, and the linker consumes them
-/// as-is during its selective inclusion pass.
+/// Members are stored as encoded TUSummaryEncoding objects: the
+/// static-library tool never decodes per-entity payloads, and the linker
+/// consumes them as-is during its selective inclusion pass.
 class StaticLibrary {
   friend class MultiArchStaticLibrary;
   friend class SerializationFormat;
+  friend class StaticLibraryCreateCLI;
   friend class TestFixture;
 
   /// Orders members by their TUNamespace. As a nested struct of
