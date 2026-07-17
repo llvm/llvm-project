@@ -75,13 +75,13 @@ exit:
 
 ; For VF vscale x 4:
 ;   load cost  = 2 + (4 * 1) + (4 * 2) = 14
-;   store cost = 1 + (4 * 2) + (4 * 2) = 17
+;   store cost = 1 + (4 * 4) + (4 * 2) = 25
 ;
 ; This makes the fixed VF 8 epilogue preferable to VF vscale x 4.
 ;
 ; CHECK-LABEL: LV: Checking a loop in 'deinterleave4_nxv4i16_load_interleave4_nxv4i8_store'
 ; CHECK: Cost of 14 for VF vscale x 4: INTERLEAVE-GROUP with factor 4
-; CHECK: Cost of 17 for VF vscale x 4: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 25 for VF vscale x 4: INTERLEAVE-GROUP with factor 4
 ; CHECK: LV: Selecting VF: vscale x 16
 ; CHECK: LEV: Vectorizing epilogue loop with VF = 8
 define void @deinterleave4_nxv4i16_load_interleave4_nxv4i8_store(
