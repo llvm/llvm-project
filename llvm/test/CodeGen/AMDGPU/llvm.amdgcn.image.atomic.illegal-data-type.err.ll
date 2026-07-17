@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=amdgcn -mcpu=gfx90a -filetype=null %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=amdgpu9.0a -filetype=null %s 2>&1 | FileCheck %s
 
 ; llvm.amdgcn.image.atomic.<op> only supports 32-bit, 64-bit, and packed
 ; f16/bf16 data.
