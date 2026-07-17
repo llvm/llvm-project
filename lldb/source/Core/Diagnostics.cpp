@@ -8,12 +8,16 @@
 
 #include "lldb/Core/Diagnostics.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Module.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Platform.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/Statistics.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Args.h"
@@ -34,6 +38,38 @@
 using namespace lldb_private;
 using namespace lldb;
 using namespace llvm;
+
+namespace {
+
+#define LLDB_PROPERTIES_diagnostics
+#include "CoreProperties.inc"
+
+enum {
+#define LLDB_PROPERTIES_diagnostics
+#include "CorePropertiesEnum.inc"
+};
+
+} // namespace
+
+DiagnosticsProperties::DiagnosticsProperties() {
+  m_collection_sp = std::make_shared<OptionValueProperties>("diagnostics");
+  m_collection_sp->Initialize(g_diagnostics_properties_def);
+}
+
+bool DiagnosticsProperties::GetCollectBinaries() const {
+  const uint32_t idx = ePropertyCollectBinaries;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_diagnostics_properties[idx].default_uint_value != 0);
+}
+
+bool DiagnosticsProperties::SetCollectBinaries(bool collect) {
+  return SetPropertyAtIndex(ePropertyCollectBinaries, collect);
+}
+
+DiagnosticsProperties &Diagnostics::GetGlobalProperties() {
+  static DiagnosticsProperties g_settings;
+  return g_settings;
+}
 
 static constexpr size_t g_num_log_messages = 100;
 
@@ -132,6 +168,28 @@ static void WriteArtifact(const FileSpec &dir, llvm::StringRef name,
   files.push_back(name.str());
 }
 
+// Copy a file into the bundle, best-effort like WriteArtifact. The basename is
+// disambiguated because an executable and its symbol file can share one (a
+// Mach-O and the DWARF binary inside its .dSYM), which would otherwise clobber.
+static void CopyBinary(const FileSpec &src, const FileSpec &dir,
+                       std::vector<std::string> &files) {
+  if (!src || !FileSystem::Instance().Exists(src))
+    return;
+
+  std::string name = src.GetFilename().str();
+  FileSpec dst = dir.CopyByAppendingPathComponent(name);
+  for (unsigned i = 1; FileSystem::Instance().Exists(dst); ++i) {
+    name = formatv("{0}.{1}", src.GetFilename(), i).str();
+    dst = dir.CopyByAppendingPathComponent(name);
+  }
+
+  if (llvm::sys::fs::copy_file(src.GetPath(), dst.GetPath()))
+    return;
+  llvm::sys::fs::setPermissions(dst.GetPath(), llvm::sys::fs::owner_read |
+                                                   llvm::sys::fs::owner_write);
+  files.push_back(std::move(name));
+}
+
 // Run a command through the interpreter and return its combined output and
 // error text, for inclusion as a snapshot in the bundle.
 static std::string CaptureCommand(Debugger &debugger, llvm::StringRef command) {
@@ -193,6 +251,8 @@ Diagnostics::Collect(Debugger &debugger, const ExecutionContext &exe_ctx,
   CollectLogs(debugger, dir, report.attachments.files);
   CollectStatistics(debugger, exe_ctx, dir, report.attachments.files);
   CollectCommands(debugger, exe_ctx, dir, report.attachments.files);
+  if (GetGlobalProperties().GetCollectBinaries())
+    CollectBinaries(exe_ctx, dir, report.attachments.files);
 
   report.version = lldb_private::GetVersion();
   report.os = GetHostDescription(exe_ctx);
@@ -239,6 +299,22 @@ void Diagnostics::CollectCommands(Debugger &debugger,
     snapshot += "\n\n";
   }
   WriteArtifact(dir, "commands.txt", snapshot, files);
+}
+
+void Diagnostics::CollectBinaries(const ExecutionContext &exe_ctx,
+                                  const FileSpec &dir,
+                                  std::vector<std::string> &files) {
+  if (Target *target = exe_ctx.GetTargetPtr()) {
+    if (Module *exe = target->GetExecutableModulePointer()) {
+      CopyBinary(exe->GetFileSpec(), dir, files);
+      // Skip when symbols are inline: the symbol file is then the executable.
+      if (exe->GetSymbolFileFileSpec() != exe->GetFileSpec())
+        CopyBinary(exe->GetSymbolFileFileSpec(), dir, files);
+    }
+  }
+
+  if (Process *process = exe_ctx.GetProcessPtr())
+    CopyBinary(process->GetCoreFile(), dir, files);
 }
 
 std::string Diagnostics::GetHostDescription(const ExecutionContext &exe_ctx) {
