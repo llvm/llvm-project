@@ -208,7 +208,7 @@ public:
 
   bool IsDescendant(const Section *section);
 
-  ConstString GetName() const { return m_name; }
+  llvm::StringRef GetName() const { return m_name; }
 
   bool Slide(lldb::addr_t slide_amount, bool slide_children);
 

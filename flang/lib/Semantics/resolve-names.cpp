@@ -10619,7 +10619,9 @@ void DeclarationVisitor::SetImplicitCUDADataAttr(Symbol &symbol) {
   // COMMON objects may not carry managed/unified attributes.
   if (cudaEnabled && (cudaManaged || cudaUnified) && !object->commonBlock()) {
     const Scope &owner{symbol.owner()};
-    const bool unifiedAllowed{!IsCUDADeviceContext(&owner) &&
+    const bool isSavedLocal{
+        owner.kind() == Scope::Kind::Subprogram && IsSaved(symbol)};
+    const bool unifiedAllowed{!isSavedLocal && !IsCUDADeviceContext(&owner) &&
         (owner.IsDerivedType() || owner.kind() == Scope::Kind::MainProgram ||
             owner.kind() == Scope::Kind::Subprogram)};
     object->set_cudaDataAttr(cudaUnified && unifiedAllowed
