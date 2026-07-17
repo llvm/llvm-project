@@ -148,6 +148,11 @@ public:
     if (clock_id != CLOCK_MONOTONIC && clock_id != CLOCK_REALTIME)
       return EINVAL;
 
+    // If the semaphore can be locked immediately, succeed without consulting
+    // the clock or dereferencing abstime.
+    if (trywait() == 0)
+      return 0;
+
     bool is_realtime = (clock_id == CLOCK_REALTIME);
     auto timeout =
         internal::AbsTimeout::from_timespec(*abstime, /*realtime=*/is_realtime);
@@ -163,7 +168,8 @@ public:
     case internal::AbsTimeout::Error::BeforeEpoch:
       return ETIMEDOUT;
     }
-    __builtin_unreachable();
+
+    __builtin_trap();
   }
 
   // Named semaphore operations.

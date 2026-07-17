@@ -76,6 +76,25 @@ TEST(LlvmLibcSemaphoreTest, TimedWaitNonBlocking) {
   ASSERT_EQ(sem.getvalue(), 1);
 }
 
+TEST(LlvmLibcSemaphoreTest, TimedWaitNullTime) {
+  // When the semaphore can be locked immediately, abstime must not be
+  // dereferenced.
+  Semaphore sem(1, /*is_shared=*/false);
+  ASSERT_EQ(sem.timedwait(nullptr), 0);
+  ASSERT_EQ(sem.getvalue(), 0);
+
+  Semaphore sem2(1, /*is_shared=*/false);
+  ASSERT_EQ(sem2.clockwait(CLOCK_MONOTONIC, nullptr), 0);
+  ASSERT_EQ(sem2.getvalue(), 0);
+}
+
+TEST(LlvmLibcSemaphoreTest, PostOverflow) {
+  // The value exceeds maximum, post() must fail with EOVERFLOW
+  Semaphore sem(LIBC_NAMESPACE::SEM_VALUE_MAX, /*is_shared=*/false);
+  ASSERT_EQ(sem.post(), EOVERFLOW);
+  ASSERT_EQ(sem.getvalue(), static_cast<int>(LIBC_NAMESPACE::SEM_VALUE_MAX));
+}
+
 TEST(LlvmLibcSemaphoreTest, TimedWaitTimeout) {
   Semaphore sem(0, /*is_shared=*/false);
   timespec ts{};
