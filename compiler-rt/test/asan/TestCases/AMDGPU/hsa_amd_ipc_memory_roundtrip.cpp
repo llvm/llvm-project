@@ -11,7 +11,7 @@
 // Coarse-grained device memory is often not mapped for CPU stores; do not
 // read/write *mapped from the host. Validate with hsa_amd_pointer_info instead.
 //
-// REQUIRES: sanitizer-amdgpu, linux, stable-runtime, rocm
+// REQUIRES: linux, stable-runtime, rocm
 // UNSUPPORTED: android
 
 #include "hsa_amd_test_helpers.h"

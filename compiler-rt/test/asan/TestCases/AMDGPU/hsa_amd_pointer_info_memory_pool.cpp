@@ -6,7 +6,7 @@
 // hsa_amd_memory_pool_allocate pointers: reported sizeInBytes matches the user
 // request (ASan unwraps the page-sized host wrapper from pointer metadata).
 //
-// REQUIRES: sanitizer-amdgpu, linux, stable-runtime, rocm
+// REQUIRES: linux, stable-runtime, rocm
 // UNSUPPORTED: android
 
 #include "hsa_amd_test_helpers.h"

@@ -5,7 +5,7 @@
 // Regression test for the AddressSanitizer hsa_amd_memory_pool_allocate /
 // hsa_amd_memory_pool_free interceptors: Using the same freed pool allocation twice is diagnosed as use-after-free.
 //
-// REQUIRES: sanitizer-amdgpu, linux, stable-runtime, rocm
+// REQUIRES: linux, stable-runtime, rocm
 // UNSUPPORTED: android
 
 #include "hsa_amd_test_helpers.h"

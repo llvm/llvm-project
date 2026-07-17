@@ -5,7 +5,7 @@
 // Regression test for the AddressSanitizer hsa_amd_vmem_address_reserve_align /
 // hsa_amd_vmem_address_free interceptors: Using the same freed reserved range is diagnosed as use-after-free.
 //
-// REQUIRES: sanitizer-amdgpu, linux, stable-runtime, rocm, hsa-vmem
+// REQUIRES: linux, stable-runtime, rocm, hsa-vmem
 // UNSUPPORTED: android
 
 #include "hsa_amd_test_helpers.h"

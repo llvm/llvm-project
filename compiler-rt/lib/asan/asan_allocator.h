@@ -18,11 +18,6 @@
 #include "asan_interceptors.h"
 #include "asan_internal.h"
 #include "sanitizer_common/sanitizer_allocator.h"
-#if SANITIZER_AMDHSA
-namespace __sanitizer {
-#  include "sanitizer_common/sanitizer_allocator_amdgpu.h"
-}  // namespace __sanitizer
-#endif
 #include "sanitizer_common/sanitizer_list.h"
 #include "sanitizer_common/sanitizer_platform.h"
 

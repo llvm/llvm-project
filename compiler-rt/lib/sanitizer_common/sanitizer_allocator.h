@@ -25,7 +25,7 @@
 #include "sanitizer_type_traits.h"
 
 #if SANITIZER_AMDHSA
-#  include "sanitizer_common/sanitizer_hsa.h"
+#  include "sanitizer_hsa.h"
 #endif
 
 namespace __sanitizer {
@@ -81,6 +81,9 @@ struct NoOpMapUnmapCallback {
 #include "sanitizer_allocator_local_cache.h"
 #include "sanitizer_allocator_secondary.h"
 #include "sanitizer_allocator_device.h"
+#if SANITIZER_AMDHSA
+#include "sanitizer_allocator_amdgpu.h"
+#endif
 #include "sanitizer_allocator_combined.h"
 #include "sanitizer_allocator_combined_device.h"
 // clang-format on

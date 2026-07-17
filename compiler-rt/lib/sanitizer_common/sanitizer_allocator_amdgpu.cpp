@@ -9,6 +9,8 @@
 // Part of the Sanitizer Allocator.
 //
 //===----------------------------------------------------------------------===//
+#include "sanitizer_platform.h"
+
 #if SANITIZER_AMDHSA
 #  include <dlfcn.h>  // For dlopen, dlsym
 
@@ -16,7 +18,6 @@
 #  include "sanitizer_atomic.h"
 
 namespace __sanitizer {
-#  include "sanitizer_allocator_amdgpu.h"
 
 struct HsaFunctions {
   // -------------- Memory Allocate/Deallocate Functions ----------------

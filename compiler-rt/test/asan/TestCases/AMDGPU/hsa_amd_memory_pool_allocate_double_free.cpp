@@ -6,7 +6,7 @@
 // hsa_amd_memory_pool_free interceptors: freeing the same pool allocation
 // twice is diagnosed as double-free.
 //
-// REQUIRES: sanitizer-amdgpu, linux, stable-runtime, rocm
+// REQUIRES: linux, stable-runtime, rocm
 // UNSUPPORTED: android
 
 #include "hsa_amd_test_helpers.h"
