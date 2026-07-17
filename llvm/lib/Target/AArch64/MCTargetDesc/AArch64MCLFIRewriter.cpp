@@ -298,11 +298,14 @@ MCRegister AArch64MCLFIRewriter::mayModifyReserved(const MCInst &Inst) const {
 }
 
 void AArch64MCLFIRewriter::onLabel(const MCSymbol *, MCStreamer &Out) {
+  if (Guard)
+    return;
+
   // Flush a deferred LR guard before the label, since the label is a potential
   // branch target and code reached through it may use LR for control flow.
   if (DeferredLRGuard && LastSTI) {
-    DeferredLRGuard = false;
     emitAddMask(AArch64::LR, AArch64::LR, Out, *LastSTI);
+    DeferredLRGuard = false;
   }
 
   // Invalidate guard state since the label is a potential branch target.
@@ -312,8 +315,8 @@ void AArch64MCLFIRewriter::onLabel(const MCSymbol *, MCStreamer &Out) {
 void AArch64MCLFIRewriter::finish(MCStreamer &Out) {
   // Flush a deferred LR guard at the end of the stream.
   if (DeferredLRGuard && LastSTI) {
-    DeferredLRGuard = false;
     emitAddMask(AArch64::LR, AArch64::LR, Out, *LastSTI);
+    DeferredLRGuard = false;
   }
 }
 
@@ -948,8 +951,8 @@ void AArch64MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
   // modified LR is sandboxed before it can be used to transfer control.
   if (DeferredLRGuard && (isReturn(Inst) || isIndirectBranch(Inst) ||
                           isCall(Inst) || isBranch(Inst))) {
-    DeferredLRGuard = false;
     emitAddMask(AArch64::LR, AArch64::LR, Out, STI);
+    DeferredLRGuard = false;
   }
 
   // PAC authenticated branches/calls expand to authenticate + guarded branch.
