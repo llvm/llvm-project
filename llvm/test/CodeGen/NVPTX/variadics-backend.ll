@@ -345,7 +345,7 @@ define dso_local void @qux() {
 ; CHECK-PTX-NEXT:    .local .align 8 .b8 __local_depot7[24];
 ; CHECK-PTX-NEXT:    .reg .b64 %SP;
 ; CHECK-PTX-NEXT:    .reg .b64 %SPL;
-; CHECK-PTX-NEXT:    .reg .b64 %rd<6>;
+; CHECK-PTX-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-PTX-EMPTY:
 ; CHECK-PTX-NEXT:  // %bb.0: // %entry
 ; CHECK-PTX-NEXT:    mov.b64 %SPL, __local_depot7;
@@ -360,10 +360,8 @@ define dso_local void @qux() {
 ; CHECK-PTX-NEXT:    .param .b32 retval0;
 ; CHECK-PTX-NEXT:    add.u64 %rd3, %SPL, 16;
 ; CHECK-PTX-NEXT:    st.param.b64 [param1], %rd3;
-; CHECK-PTX-NEXT:    ld.b64 %rd4, [%SPL+8];
-; CHECK-PTX-NEXT:    st.param.b64 [param0+8], %rd4;
-; CHECK-PTX-NEXT:    ld.b64 %rd5, [%SPL];
-; CHECK-PTX-NEXT:    st.param.b64 [param0], %rd5;
+; CHECK-PTX-NEXT:    st.param.b64 [param0+8], %rd1;
+; CHECK-PTX-NEXT:    st.param.b64 [param0], %rd2;
 ; CHECK-PTX-NEXT:    call.uni (retval0), variadics4, (param0, param1);
 ; CHECK-PTX-NEXT:    } // callseq 3
 ; CHECK-PTX-NEXT:    ret;

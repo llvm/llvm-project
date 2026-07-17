@@ -896,7 +896,7 @@ define ptx_kernel void @test_forward_byval_arg(ptr byval(i32) align 4 %input) {
 ; PTX-NEXT:    .local .align 4 .b8 __local_depot15[4];
 ; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
-; PTX-NEXT:    .reg .b32 %r<3>;
+; PTX-NEXT:    .reg .b32 %r<2>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
 ; PTX-NEXT:    mov.b64 %SPL, __local_depot15;
@@ -904,8 +904,7 @@ define ptx_kernel void @test_forward_byval_arg(ptr byval(i32) align 4 %input) {
 ; PTX-NEXT:    st.local.b32 [%SPL], %r1;
 ; PTX-NEXT:    { // callseq 2, 0
 ; PTX-NEXT:    .param .align 4 .b8 param0[4];
-; PTX-NEXT:    ld.b32 %r2, [%SPL];
-; PTX-NEXT:    st.param.b32 [param0], %r2;
+; PTX-NEXT:    st.param.b32 [param0], %r1;
 ; PTX-NEXT:    call.uni device_func, (param0);
 ; PTX-NEXT:    } // callseq 2
 ; PTX-NEXT:    ret;

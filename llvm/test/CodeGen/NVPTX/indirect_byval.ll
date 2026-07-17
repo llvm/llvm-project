@@ -29,7 +29,7 @@ define internal i32 @foo() {
 ; CHECK-NEXT:    .param .b64 param1;
 ; CHECK-NEXT:    .param .b32 retval0;
 ; CHECK-NEXT:    st.param.b64 [param1], %rd2;
-; CHECK-NEXT:    ld.b8 %rs1, [%SPL+1];
+; CHECK-NEXT:    ld.local.b8 %rs1, [%SPL+1];
 ; CHECK-NEXT:    st.param.b8 [param0], %rs1;
 ; CHECK-NEXT:    call (retval0), %rd3, (param0, param1), prototype_0;
 ; CHECK-NEXT:    ld.param.b32 %r1, [retval0];
@@ -64,7 +64,7 @@ define internal i32 @bar() {
 ; CHECK-NEXT:    .param .b64 param1;
 ; CHECK-NEXT:    .param .b32 retval0;
 ; CHECK-NEXT:    st.param.b64 [param1], %rd2;
-; CHECK-NEXT:    ld.b64 %rd4, [%SPL+8];
+; CHECK-NEXT:    ld.local.b64 %rd4, [%SPL+8];
 ; CHECK-NEXT:    st.param.b64 [param0], %rd4;
 ; CHECK-NEXT:    call (retval0), %rd3, (param0, param1), prototype_1;
 ; CHECK-NEXT:    ld.param.b32 %r1, [retval0];
