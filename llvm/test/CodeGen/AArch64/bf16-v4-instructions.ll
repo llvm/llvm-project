@@ -4,22 +4,10 @@
 ; RUN: llc < %s -mtriple aarch64 -mattr=-bf16 -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-CVT,CHECK-CVT-GI
 ; RUN: llc < %s -mtriple aarch64 -mattr=+bf16 -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-BF16,CHECK-BF16-GI
 
-; CHECK-CVT-GI:       warning: Instruction selection used fallback path for test_sitofp_i8
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_sitofp_i16
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_sitofp_i32
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_sitofp_i64
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_uitofp_i8
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_uitofp_i16
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_uitofp_i32
+; CHECK-CVT-GI:       warning: Instruction selection used fallback path for test_sitofp_i64
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for test_uitofp_i64
 ;
-; CHECK-BF16-GI:       warning: Instruction selection used fallback path for test_sitofp_i8
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_sitofp_i16
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_sitofp_i32
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_sitofp_i64
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_uitofp_i8
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_uitofp_i16
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_uitofp_i32
+; CHECK-BF16-GI:       warning: Instruction selection used fallback path for test_sitofp_i64
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for test_uitofp_i64
 
 define <4 x bfloat> @test_build(<4 x bfloat> %a) {
@@ -1572,44 +1560,73 @@ define <4 x i64> @test_fptoui_sat_i64(<4 x bfloat> %a) {
 }
 
 define <4 x bfloat> @test_sitofp_i8(<4 x i8> %a) #0 {
-; CHECK-CVT-LABEL: test_sitofp_i8:
-; CHECK-CVT:       // %bb.0:
-; CHECK-CVT-NEXT:    shl v0.4h, v0.4h, #8
-; CHECK-CVT-NEXT:    movi v1.4s, #1
-; CHECK-CVT-NEXT:    sshr v0.4h, v0.4h, #8
-; CHECK-CVT-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-CVT-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-CVT-NEXT:    ushr v2.4s, v0.4s, #16
-; CHECK-CVT-NEXT:    and v1.16b, v2.16b, v1.16b
-; CHECK-CVT-NEXT:    movi v2.4s, #127, msl #8
-; CHECK-CVT-NEXT:    add v0.4s, v1.4s, v0.4s
-; CHECK-CVT-NEXT:    addhn v0.4h, v0.4s, v2.4s
-; CHECK-CVT-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_sitofp_i8:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    shl v0.4h, v0.4h, #8
+; CHECK-CVT-SD-NEXT:    movi v1.4s, #1
+; CHECK-CVT-SD-NEXT:    sshr v0.4h, v0.4h, #8
+; CHECK-CVT-SD-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-CVT-SD-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    ushr v2.4s, v0.4s, #16
+; CHECK-CVT-SD-NEXT:    and v1.16b, v2.16b, v1.16b
+; CHECK-CVT-SD-NEXT:    movi v2.4s, #127, msl #8
+; CHECK-CVT-SD-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    addhn v0.4h, v0.4s, v2.4s
+; CHECK-CVT-SD-NEXT:    ret
 ;
-; CHECK-BF16-LABEL: test_sitofp_i8:
-; CHECK-BF16:       // %bb.0:
-; CHECK-BF16-NEXT:    shl v0.4h, v0.4h, #8
-; CHECK-BF16-NEXT:    sshr v0.4h, v0.4h, #8
-; CHECK-BF16-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-BF16-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
-; CHECK-BF16-NEXT:    ret
+; CHECK-BF16-SD-LABEL: test_sitofp_i8:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    shl v0.4h, v0.4h, #8
+; CHECK-BF16-SD-NEXT:    sshr v0.4h, v0.4h, #8
+; CHECK-BF16-SD-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-BF16-SD-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-BF16-SD-NEXT:    bfcvtn v0.4h, v0.4s
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_sitofp_i8:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-CVT-GI-NEXT:    movi v1.4s, #1
+; CHECK-CVT-GI-NEXT:    movi v2.4s, #127, msl #8
+; CHECK-CVT-GI-NEXT:    movi v4.4s, #64, lsl #16
+; CHECK-CVT-GI-NEXT:    shl v0.4s, v0.4s, #24
+; CHECK-CVT-GI-NEXT:    sshr v0.4s, v0.4s, #24
+; CHECK-CVT-GI-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-CVT-GI-NEXT:    ushr v3.4s, v0.4s, #16
+; CHECK-CVT-GI-NEXT:    fcmeq v5.4s, v0.4s, v0.4s
+; CHECK-CVT-GI-NEXT:    add v2.4s, v0.4s, v2.4s
+; CHECK-CVT-GI-NEXT:    orr v0.16b, v0.16b, v4.16b
+; CHECK-CVT-GI-NEXT:    and v1.16b, v3.16b, v1.16b
+; CHECK-CVT-GI-NEXT:    add v1.4s, v2.4s, v1.4s
+; CHECK-CVT-GI-NEXT:    mvn v2.16b, v5.16b
+; CHECK-CVT-GI-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-CVT-GI-NEXT:    shrn v0.4h, v0.4s, #16
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_sitofp_i8:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-BF16-GI-NEXT:    shl v0.4s, v0.4s, #24
+; CHECK-BF16-GI-NEXT:    sshr v0.4s, v0.4s, #24
+; CHECK-BF16-GI-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-BF16-GI-NEXT:    bfcvtn v0.4h, v0.4s
+; CHECK-BF16-GI-NEXT:    ret
   %1 = sitofp <4 x i8> %a to <4 x bfloat>
   ret <4 x bfloat> %1
 }
 
 define <4 x bfloat> @test_sitofp_i16(<4 x i16> %a) #0 {
-; CHECK-CVT-LABEL: test_sitofp_i16:
-; CHECK-CVT:       // %bb.0:
-; CHECK-CVT-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-CVT-NEXT:    movi v1.4s, #1
-; CHECK-CVT-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-CVT-NEXT:    ushr v2.4s, v0.4s, #16
-; CHECK-CVT-NEXT:    and v1.16b, v2.16b, v1.16b
-; CHECK-CVT-NEXT:    movi v2.4s, #127, msl #8
-; CHECK-CVT-NEXT:    add v0.4s, v1.4s, v0.4s
-; CHECK-CVT-NEXT:    addhn v0.4h, v0.4s, v2.4s
-; CHECK-CVT-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_sitofp_i16:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-CVT-SD-NEXT:    movi v1.4s, #1
+; CHECK-CVT-SD-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    ushr v2.4s, v0.4s, #16
+; CHECK-CVT-SD-NEXT:    and v1.16b, v2.16b, v1.16b
+; CHECK-CVT-SD-NEXT:    movi v2.4s, #127, msl #8
+; CHECK-CVT-SD-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    addhn v0.4h, v0.4s, v2.4s
+; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-BF16-LABEL: test_sitofp_i16:
 ; CHECK-BF16:       // %bb.0:
@@ -1617,30 +1634,48 @@ define <4 x bfloat> @test_sitofp_i16(<4 x i16> %a) #0 {
 ; CHECK-BF16-NEXT:    scvtf v0.4s, v0.4s
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
 ; CHECK-BF16-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_sitofp_i16:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-CVT-GI-NEXT:    movi v1.4s, #1
+; CHECK-CVT-GI-NEXT:    movi v2.4s, #127, msl #8
+; CHECK-CVT-GI-NEXT:    movi v4.4s, #64, lsl #16
+; CHECK-CVT-GI-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-CVT-GI-NEXT:    ushr v3.4s, v0.4s, #16
+; CHECK-CVT-GI-NEXT:    fcmeq v5.4s, v0.4s, v0.4s
+; CHECK-CVT-GI-NEXT:    add v2.4s, v0.4s, v2.4s
+; CHECK-CVT-GI-NEXT:    orr v0.16b, v0.16b, v4.16b
+; CHECK-CVT-GI-NEXT:    and v1.16b, v3.16b, v1.16b
+; CHECK-CVT-GI-NEXT:    add v1.4s, v2.4s, v1.4s
+; CHECK-CVT-GI-NEXT:    mvn v2.16b, v5.16b
+; CHECK-CVT-GI-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-CVT-GI-NEXT:    shrn v0.4h, v0.4s, #16
+; CHECK-CVT-GI-NEXT:    ret
   %1 = sitofp <4 x i16> %a to <4 x bfloat>
   ret <4 x bfloat> %1
 }
 
 define <4 x bfloat> @test_sitofp_i32(<4 x i32> %a) #0 {
-; CHECK-CVT-LABEL: test_sitofp_i32:
-; CHECK-CVT:       // %bb.0:
-; CHECK-CVT-NEXT:    sshll v1.2d, v0.2s, #0
-; CHECK-CVT-NEXT:    sshll2 v0.2d, v0.4s, #0
-; CHECK-CVT-NEXT:    movi v2.4s, #127, msl #8
-; CHECK-CVT-NEXT:    scvtf v1.2d, v1.2d
-; CHECK-CVT-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-CVT-NEXT:    fcvtxn v1.2s, v1.2d
-; CHECK-CVT-NEXT:    fcvtxn2 v1.4s, v0.2d
-; CHECK-CVT-NEXT:    movi v0.4s, #1
-; CHECK-CVT-NEXT:    ushr v3.4s, v1.4s, #16
-; CHECK-CVT-NEXT:    add v2.4s, v1.4s, v2.4s
-; CHECK-CVT-NEXT:    and v0.16b, v3.16b, v0.16b
-; CHECK-CVT-NEXT:    fcmeq v3.4s, v1.4s, v1.4s
-; CHECK-CVT-NEXT:    orr v1.4s, #64, lsl #16
-; CHECK-CVT-NEXT:    add v0.4s, v2.4s, v0.4s
-; CHECK-CVT-NEXT:    bif v0.16b, v1.16b, v3.16b
-; CHECK-CVT-NEXT:    shrn v0.4h, v0.4s, #16
-; CHECK-CVT-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_sitofp_i32:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    sshll v1.2d, v0.2s, #0
+; CHECK-CVT-SD-NEXT:    sshll2 v0.2d, v0.4s, #0
+; CHECK-CVT-SD-NEXT:    movi v2.4s, #127, msl #8
+; CHECK-CVT-SD-NEXT:    scvtf v1.2d, v1.2d
+; CHECK-CVT-SD-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-CVT-SD-NEXT:    fcvtxn v1.2s, v1.2d
+; CHECK-CVT-SD-NEXT:    fcvtxn2 v1.4s, v0.2d
+; CHECK-CVT-SD-NEXT:    movi v0.4s, #1
+; CHECK-CVT-SD-NEXT:    ushr v3.4s, v1.4s, #16
+; CHECK-CVT-SD-NEXT:    add v2.4s, v1.4s, v2.4s
+; CHECK-CVT-SD-NEXT:    and v0.16b, v3.16b, v0.16b
+; CHECK-CVT-SD-NEXT:    fcmeq v3.4s, v1.4s, v1.4s
+; CHECK-CVT-SD-NEXT:    orr v1.4s, #64, lsl #16
+; CHECK-CVT-SD-NEXT:    add v0.4s, v2.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    bif v0.16b, v1.16b, v3.16b
+; CHECK-CVT-SD-NEXT:    shrn v0.4h, v0.4s, #16
+; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-BF16-LABEL: test_sitofp_i32:
 ; CHECK-BF16:       // %bb.0:
@@ -1652,6 +1687,28 @@ define <4 x bfloat> @test_sitofp_i32(<4 x i32> %a) #0 {
 ; CHECK-BF16-NEXT:    fcvtxn2 v1.4s, v0.2d
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v1.4s
 ; CHECK-BF16-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_sitofp_i32:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    sshll v1.2d, v0.2s, #0
+; CHECK-CVT-GI-NEXT:    sshll2 v0.2d, v0.4s, #0
+; CHECK-CVT-GI-NEXT:    movi v2.4s, #127, msl #8
+; CHECK-CVT-GI-NEXT:    movi v4.4s, #64, lsl #16
+; CHECK-CVT-GI-NEXT:    scvtf v1.2d, v1.2d
+; CHECK-CVT-GI-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-CVT-GI-NEXT:    fcvtxn v1.2s, v1.2d
+; CHECK-CVT-GI-NEXT:    fcvtxn2 v1.4s, v0.2d
+; CHECK-CVT-GI-NEXT:    movi v0.4s, #1
+; CHECK-CVT-GI-NEXT:    ushr v3.4s, v1.4s, #16
+; CHECK-CVT-GI-NEXT:    fcmeq v5.4s, v1.4s, v1.4s
+; CHECK-CVT-GI-NEXT:    add v2.4s, v1.4s, v2.4s
+; CHECK-CVT-GI-NEXT:    orr v1.16b, v1.16b, v4.16b
+; CHECK-CVT-GI-NEXT:    and v0.16b, v3.16b, v0.16b
+; CHECK-CVT-GI-NEXT:    add v0.4s, v2.4s, v0.4s
+; CHECK-CVT-GI-NEXT:    mvn v2.16b, v5.16b
+; CHECK-CVT-GI-NEXT:    bit v0.16b, v1.16b, v2.16b
+; CHECK-CVT-GI-NEXT:    shrn v0.4h, v0.4s, #16
+; CHECK-CVT-GI-NEXT:    ret
   %1 = sitofp <4 x i32> %a to <4 x bfloat>
   ret <4 x bfloat> %1
 }
@@ -1702,42 +1759,71 @@ define <4 x bfloat> @test_sitofp_i64(<4 x i64> %a) #0 {
 }
 
 define <4 x bfloat> @test_uitofp_i8(<4 x i8> %a) #0 {
-; CHECK-CVT-LABEL: test_uitofp_i8:
-; CHECK-CVT:       // %bb.0:
-; CHECK-CVT-NEXT:    bic v0.4h, #255, lsl #8
-; CHECK-CVT-NEXT:    movi v1.4s, #1
-; CHECK-CVT-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-CVT-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-CVT-NEXT:    ushr v2.4s, v0.4s, #16
-; CHECK-CVT-NEXT:    and v1.16b, v2.16b, v1.16b
-; CHECK-CVT-NEXT:    movi v2.4s, #127, msl #8
-; CHECK-CVT-NEXT:    add v0.4s, v1.4s, v0.4s
-; CHECK-CVT-NEXT:    addhn v0.4h, v0.4s, v2.4s
-; CHECK-CVT-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_uitofp_i8:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    bic v0.4h, #255, lsl #8
+; CHECK-CVT-SD-NEXT:    movi v1.4s, #1
+; CHECK-CVT-SD-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-CVT-SD-NEXT:    ucvtf v0.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    ushr v2.4s, v0.4s, #16
+; CHECK-CVT-SD-NEXT:    and v1.16b, v2.16b, v1.16b
+; CHECK-CVT-SD-NEXT:    movi v2.4s, #127, msl #8
+; CHECK-CVT-SD-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    addhn v0.4h, v0.4s, v2.4s
+; CHECK-CVT-SD-NEXT:    ret
 ;
-; CHECK-BF16-LABEL: test_uitofp_i8:
-; CHECK-BF16:       // %bb.0:
-; CHECK-BF16-NEXT:    bic v0.4h, #255, lsl #8
-; CHECK-BF16-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-BF16-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
-; CHECK-BF16-NEXT:    ret
+; CHECK-BF16-SD-LABEL: test_uitofp_i8:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    bic v0.4h, #255, lsl #8
+; CHECK-BF16-SD-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-BF16-SD-NEXT:    ucvtf v0.4s, v0.4s
+; CHECK-BF16-SD-NEXT:    bfcvtn v0.4h, v0.4s
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_uitofp_i8:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    movi v1.2d, #0x0000ff000000ff
+; CHECK-CVT-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-CVT-GI-NEXT:    movi v2.4s, #127, msl #8
+; CHECK-CVT-GI-NEXT:    movi v4.4s, #64, lsl #16
+; CHECK-CVT-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-CVT-GI-NEXT:    movi v1.4s, #1
+; CHECK-CVT-GI-NEXT:    ucvtf v0.4s, v0.4s
+; CHECK-CVT-GI-NEXT:    ushr v3.4s, v0.4s, #16
+; CHECK-CVT-GI-NEXT:    fcmeq v5.4s, v0.4s, v0.4s
+; CHECK-CVT-GI-NEXT:    add v2.4s, v0.4s, v2.4s
+; CHECK-CVT-GI-NEXT:    orr v0.16b, v0.16b, v4.16b
+; CHECK-CVT-GI-NEXT:    and v1.16b, v3.16b, v1.16b
+; CHECK-CVT-GI-NEXT:    add v1.4s, v2.4s, v1.4s
+; CHECK-CVT-GI-NEXT:    mvn v2.16b, v5.16b
+; CHECK-CVT-GI-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-CVT-GI-NEXT:    shrn v0.4h, v0.4s, #16
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: test_uitofp_i8:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    movi v1.2d, #0x0000ff000000ff
+; CHECK-BF16-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-BF16-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-BF16-GI-NEXT:    ucvtf v0.4s, v0.4s
+; CHECK-BF16-GI-NEXT:    bfcvtn v0.4h, v0.4s
+; CHECK-BF16-GI-NEXT:    ret
   %1 = uitofp <4 x i8> %a to <4 x bfloat>
   ret <4 x bfloat> %1
 }
 
 define <4 x bfloat> @test_uitofp_i16(<4 x i16> %a) #0 {
-; CHECK-CVT-LABEL: test_uitofp_i16:
-; CHECK-CVT:       // %bb.0:
-; CHECK-CVT-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-CVT-NEXT:    movi v1.4s, #1
-; CHECK-CVT-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-CVT-NEXT:    ushr v2.4s, v0.4s, #16
-; CHECK-CVT-NEXT:    and v1.16b, v2.16b, v1.16b
-; CHECK-CVT-NEXT:    movi v2.4s, #127, msl #8
-; CHECK-CVT-NEXT:    add v0.4s, v1.4s, v0.4s
-; CHECK-CVT-NEXT:    addhn v0.4h, v0.4s, v2.4s
-; CHECK-CVT-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_uitofp_i16:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-CVT-SD-NEXT:    movi v1.4s, #1
+; CHECK-CVT-SD-NEXT:    ucvtf v0.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    ushr v2.4s, v0.4s, #16
+; CHECK-CVT-SD-NEXT:    and v1.16b, v2.16b, v1.16b
+; CHECK-CVT-SD-NEXT:    movi v2.4s, #127, msl #8
+; CHECK-CVT-SD-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    addhn v0.4h, v0.4s, v2.4s
+; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-BF16-LABEL: test_uitofp_i16:
 ; CHECK-BF16:       // %bb.0:
@@ -1745,30 +1831,48 @@ define <4 x bfloat> @test_uitofp_i16(<4 x i16> %a) #0 {
 ; CHECK-BF16-NEXT:    ucvtf v0.4s, v0.4s
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
 ; CHECK-BF16-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_uitofp_i16:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-CVT-GI-NEXT:    movi v1.4s, #1
+; CHECK-CVT-GI-NEXT:    movi v2.4s, #127, msl #8
+; CHECK-CVT-GI-NEXT:    movi v4.4s, #64, lsl #16
+; CHECK-CVT-GI-NEXT:    ucvtf v0.4s, v0.4s
+; CHECK-CVT-GI-NEXT:    ushr v3.4s, v0.4s, #16
+; CHECK-CVT-GI-NEXT:    fcmeq v5.4s, v0.4s, v0.4s
+; CHECK-CVT-GI-NEXT:    add v2.4s, v0.4s, v2.4s
+; CHECK-CVT-GI-NEXT:    orr v0.16b, v0.16b, v4.16b
+; CHECK-CVT-GI-NEXT:    and v1.16b, v3.16b, v1.16b
+; CHECK-CVT-GI-NEXT:    add v1.4s, v2.4s, v1.4s
+; CHECK-CVT-GI-NEXT:    mvn v2.16b, v5.16b
+; CHECK-CVT-GI-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-CVT-GI-NEXT:    shrn v0.4h, v0.4s, #16
+; CHECK-CVT-GI-NEXT:    ret
   %1 = uitofp <4 x i16> %a to <4 x bfloat>
   ret <4 x bfloat> %1
 }
 
 define <4 x bfloat> @test_uitofp_i32(<4 x i32> %a) #0 {
-; CHECK-CVT-LABEL: test_uitofp_i32:
-; CHECK-CVT:       // %bb.0:
-; CHECK-CVT-NEXT:    ushll v1.2d, v0.2s, #0
-; CHECK-CVT-NEXT:    ushll2 v0.2d, v0.4s, #0
-; CHECK-CVT-NEXT:    movi v2.4s, #127, msl #8
-; CHECK-CVT-NEXT:    ucvtf v1.2d, v1.2d
-; CHECK-CVT-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-CVT-NEXT:    fcvtxn v1.2s, v1.2d
-; CHECK-CVT-NEXT:    fcvtxn2 v1.4s, v0.2d
-; CHECK-CVT-NEXT:    movi v0.4s, #1
-; CHECK-CVT-NEXT:    ushr v3.4s, v1.4s, #16
-; CHECK-CVT-NEXT:    add v2.4s, v1.4s, v2.4s
-; CHECK-CVT-NEXT:    and v0.16b, v3.16b, v0.16b
-; CHECK-CVT-NEXT:    fcmeq v3.4s, v1.4s, v1.4s
-; CHECK-CVT-NEXT:    orr v1.4s, #64, lsl #16
-; CHECK-CVT-NEXT:    add v0.4s, v2.4s, v0.4s
-; CHECK-CVT-NEXT:    bif v0.16b, v1.16b, v3.16b
-; CHECK-CVT-NEXT:    shrn v0.4h, v0.4s, #16
-; CHECK-CVT-NEXT:    ret
+; CHECK-CVT-SD-LABEL: test_uitofp_i32:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    ushll v1.2d, v0.2s, #0
+; CHECK-CVT-SD-NEXT:    ushll2 v0.2d, v0.4s, #0
+; CHECK-CVT-SD-NEXT:    movi v2.4s, #127, msl #8
+; CHECK-CVT-SD-NEXT:    ucvtf v1.2d, v1.2d
+; CHECK-CVT-SD-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-CVT-SD-NEXT:    fcvtxn v1.2s, v1.2d
+; CHECK-CVT-SD-NEXT:    fcvtxn2 v1.4s, v0.2d
+; CHECK-CVT-SD-NEXT:    movi v0.4s, #1
+; CHECK-CVT-SD-NEXT:    ushr v3.4s, v1.4s, #16
+; CHECK-CVT-SD-NEXT:    add v2.4s, v1.4s, v2.4s
+; CHECK-CVT-SD-NEXT:    and v0.16b, v3.16b, v0.16b
+; CHECK-CVT-SD-NEXT:    fcmeq v3.4s, v1.4s, v1.4s
+; CHECK-CVT-SD-NEXT:    orr v1.4s, #64, lsl #16
+; CHECK-CVT-SD-NEXT:    add v0.4s, v2.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    bif v0.16b, v1.16b, v3.16b
+; CHECK-CVT-SD-NEXT:    shrn v0.4h, v0.4s, #16
+; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-BF16-LABEL: test_uitofp_i32:
 ; CHECK-BF16:       // %bb.0:
@@ -1780,6 +1884,28 @@ define <4 x bfloat> @test_uitofp_i32(<4 x i32> %a) #0 {
 ; CHECK-BF16-NEXT:    fcvtxn2 v1.4s, v0.2d
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v1.4s
 ; CHECK-BF16-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: test_uitofp_i32:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    ushll v1.2d, v0.2s, #0
+; CHECK-CVT-GI-NEXT:    ushll2 v0.2d, v0.4s, #0
+; CHECK-CVT-GI-NEXT:    movi v2.4s, #127, msl #8
+; CHECK-CVT-GI-NEXT:    movi v4.4s, #64, lsl #16
+; CHECK-CVT-GI-NEXT:    ucvtf v1.2d, v1.2d
+; CHECK-CVT-GI-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-CVT-GI-NEXT:    fcvtxn v1.2s, v1.2d
+; CHECK-CVT-GI-NEXT:    fcvtxn2 v1.4s, v0.2d
+; CHECK-CVT-GI-NEXT:    movi v0.4s, #1
+; CHECK-CVT-GI-NEXT:    ushr v3.4s, v1.4s, #16
+; CHECK-CVT-GI-NEXT:    fcmeq v5.4s, v1.4s, v1.4s
+; CHECK-CVT-GI-NEXT:    add v2.4s, v1.4s, v2.4s
+; CHECK-CVT-GI-NEXT:    orr v1.16b, v1.16b, v4.16b
+; CHECK-CVT-GI-NEXT:    and v0.16b, v3.16b, v0.16b
+; CHECK-CVT-GI-NEXT:    add v0.4s, v2.4s, v0.4s
+; CHECK-CVT-GI-NEXT:    mvn v2.16b, v5.16b
+; CHECK-CVT-GI-NEXT:    bit v0.16b, v1.16b, v2.16b
+; CHECK-CVT-GI-NEXT:    shrn v0.4h, v0.4s, #16
+; CHECK-CVT-GI-NEXT:    ret
   %1 = uitofp <4 x i32> %a to <4 x bfloat>
   ret <4 x bfloat> %1
 }

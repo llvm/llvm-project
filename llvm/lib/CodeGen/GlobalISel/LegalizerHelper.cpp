@@ -8459,6 +8459,27 @@ loweri64tof16ITOFP(MachineInstr &MI, Register Dst, LLT DstTy, Register Src,
   return LegalizerHelper::Legalized;
 }
 
+static LegalizerHelper::LegalizeResult
+lowerBF16ITOFP(MachineInstr &MI, Register Dst, LLT DstTy, Register Src,
+               LLT SrcTy, MachineIRBuilder &MIRBuilder) {
+  // TODOD: Use max bits from known-bits
+  if (SrcTy.getScalarSizeInBits() <= 24) {
+    LLT CvtTy = SrcTy.changeElementType(LLT::float32());
+    auto Cvt =
+        MIRBuilder.buildInstr(MI.getOpcode(), {CvtTy}, {Src}, MI.getFlags());
+    MIRBuilder.buildFPTrunc(Dst, Cvt, MI.getFlags());
+  } else if (SrcTy.getScalarSizeInBits() <= 53) {
+    LLT CvtTy = SrcTy.changeElementType(LLT::float64());
+    auto Cvt =
+        MIRBuilder.buildInstr(MI.getOpcode(), {CvtTy}, {Src}, MI.getFlags());
+    MIRBuilder.buildFPTrunc(Dst, Cvt, MI.getFlags());
+  } else
+    return LegalizerHelper::UnableToLegalize;
+
+  MI.eraseFromParent();
+  return LegalizerHelper::Legalized;
+}
+
 LegalizerHelper::LegalizeResult LegalizerHelper::lowerUITOFP(MachineInstr &MI) {
   auto [Dst, DstTy, Src, SrcTy] = MI.getFirst2RegLLTs();
 
@@ -8470,8 +8491,11 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerUITOFP(MachineInstr &MI) {
     return Legalized;
   }
 
-  if (DstTy.getScalarSizeInBits() == 16 && SrcTy.getScalarSizeInBits() == 64)
+  if (DstTy.getScalarType().isFloat16() && SrcTy.getScalarSizeInBits() == 64)
     return loweri64tof16ITOFP(MI, Dst, DstTy, Src, SrcTy, MIRBuilder);
+
+  if (DstTy.getScalarType().isBFloat16())
+    return lowerBF16ITOFP(MI, Dst, DstTy, Src, SrcTy, MIRBuilder);
 
   if (SrcTy != LLT::scalar(64))
     return UnableToLegalize;
@@ -8504,8 +8528,11 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerSITOFP(MachineInstr &MI) {
     return Legalized;
   }
 
-  if (DstTy.getScalarSizeInBits() == 16 && SrcTy.getScalarSizeInBits() == 64)
+  if (DstTy.getScalarType().isFloat16() && SrcTy.getScalarSizeInBits() == 64)
     return loweri64tof16ITOFP(MI, Dst, DstTy, Src, SrcTy, MIRBuilder);
+
+  if (DstTy.getScalarType().isBFloat16())
+    return lowerBF16ITOFP(MI, Dst, DstTy, Src, SrcTy, MIRBuilder);
 
   if (SrcTy != I64)
     return UnableToLegalize;

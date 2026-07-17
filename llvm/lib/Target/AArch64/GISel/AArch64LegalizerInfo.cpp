@@ -1020,14 +1020,14 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                  {v2f64, v2i64}})
       .legalFor(HasFP16,
                 {{f16, i32}, {f16, i64}, {v4f16, v4i16}, {v8f16, v8i16}})
-      .unsupportedIf([&](const LegalityQuery &Query) {
-        return Query.Types[0].getScalarType().isBFloat16();
-      })
       .scalarizeIf(scalarOrEltWiderThan(1, 64), 1)
       .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
       .moreElementsToNextPow2(1)
       .widenScalarOrEltToNextPow2OrMinSize(1)
       .minScalar(1, f32)
+      .lowerIf([](const LegalityQuery &Query) {
+        return Query.Types[0].getScalarType().isBFloat16();
+      })
       .lowerIf([](const LegalityQuery &Query) {
         return Query.Types[1].isVector() &&
                Query.Types[1].getScalarSizeInBits() == 64 &&

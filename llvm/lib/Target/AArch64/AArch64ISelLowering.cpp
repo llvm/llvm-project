@@ -5421,7 +5421,7 @@ SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
   assert(!(IsStrict && VT.isScalableVector()) &&
          "Unimplemented SVE support for ISD:::STRICT_INT_TO_FP!");
 
-  // NOTE: i1->bf16 does not require promotion to f32.
+  // NOTE: i1->float does not require promotion to f32.
   if (VT.isScalableVector() && InVT.getVectorElementType() == MVT::i1) {
     SDValue FalseVal = DAG.getConstantFP(0.0, DL, VT);
     SDValue TrueVal = IsSigned ? DAG.getConstantFP(-1.0, DL, VT)
@@ -8452,7 +8452,7 @@ SDValue AArch64TargetLowering::LowerCLMUL(SDValue Op, SelectionDAG &DAG) const {
 SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
                                               SelectionDAG &DAG) const {
   LLVM_DEBUG(dbgs() << "Custom lowering: ");
-  LLVM_DEBUG(Op.dump());
+  LLVM_DEBUG(Op.dump(&DAG));
 
   switch (Op.getOpcode()) {
   default:
