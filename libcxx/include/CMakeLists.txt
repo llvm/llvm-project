@@ -665,8 +665,8 @@ set(files
   __optional/common.h
   __optional/comparison.h
   __optional/hash.h
-  __optional/nullopt_t.h
   __optional/make_optional.h
+  __optional/nullopt_t.h
   __optional/optional.h
   __optional/optional_ref.h
   __optional/swap.h
