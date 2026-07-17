@@ -812,15 +812,18 @@ static mlir::Value emitX86MaskedLoad(CIRGenBuilderTy &builder,
 }
 
 static mlir::Value emitX86VPerm2f128(CIRGenBuilderTy &builder,
-                                     mlir::Location loc, mlir::Type resType,
+                                     mlir::Location loc,
                                      llvm::SmallVector<mlir::Value> ops) {
   auto inputType = cast<cir::VectorType>(ops[0].getType());
-  const unsigned imm = CIRGenFunction::getZExtIntValueFromConstOp(ops[2]);
-  const uint8_t zeroMask = 0x08, controlMask = 0x0F;
+  assert(!inputType.getIsScalable() &&
+         "This is only intended for fixed-width vectors");
+
+  const uint8_t imm = CIRGenFunction::getZExtIntValueFromConstOp(ops[2]) & 0xFF;
+  mlir::Value zeroVec = builder.getZero(loc, inputType);
 
   // Mirror hardware and OGCG behaviour returning a zero vector
-  if ((imm & zeroMask) && (imm & zeroMask << 4))
-    return builder.getZero(loc, resType);
+  if ((imm & 0x80) && (imm & 0x08))
+    return zeroVec;
 
   mlir::Value lanes[2];
   llvm::SmallVector<int64_t, 64> mask;
@@ -828,34 +831,26 @@ static mlir::Value emitX86VPerm2f128(CIRGenBuilderTy &builder,
 
   // We must evaluated each lane(128 bits) separetely
   for (auto lane : llvm::seq(0, 2)) {
-    uint8_t controlBits = (imm >> (lane * 4)) & controlMask;
-
-    llvm::Boolean isZeroBit = controlBits & zeroMask;
-    llvm::Boolean isSourceA = controlBits <= 1;
-    llvm::Boolean isLowerHalf = controlBits % 2 == 0;
+    llvm::Boolean isZeroBit = imm & (1 << ((lane * 4) + 3)),
+                  isSourceB = imm & (1 << ((lane * 4) + 1)),
+                  isUpperHalf = imm & (1 << (lane * 4));
 
     //  Determine the source for this lane
     if (isZeroBit)
-      lanes[lane] = builder.getZero(loc, resType);
+      lanes[lane] = zeroVec;
     else
-      lanes[lane] = isSourceA ? ops[0] : ops[1];
+      lanes[lane] = isSourceB ? ops[1] : ops[0];
 
     // We need to built the shuffle mask selecting the right half
     for (auto elt : llvm::seq(0u, numElts / 2u)) {
       unsigned idx = (lane * numElts) + elt;
-      if (!isLowerHalf)
+      if (isUpperHalf)
         idx += numElts / 2;
       mask.push_back(idx);
     }
   }
 
-  mlir::Value shuffleResult =
-      builder.createVecShuffle(loc, lanes[0], lanes[1], mask);
-
-  if (inputType != resType)
-    builder.createBitcast(shuffleResult, resType);
-
-  return shuffleResult;
+  return builder.createVecShuffle(loc, lanes[0], lanes[1], mask);
 }
 
 static mlir::Value emitX86PackedByteShift(CIRGenBuilderTy &builder,
@@ -1902,8 +1897,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_vperm2f128_ps256:
   case X86::BI__builtin_ia32_vperm2f128_si256:
   case X86::BI__builtin_ia32_permti256:
-    return emitX86VPerm2f128(builder, getLoc(expr->getExprLoc()),
-                             this->convertType(expr->getType()), ops);
+    return emitX86VPerm2f128(builder, getLoc(expr->getExprLoc()), ops);
   case X86::BI__builtin_ia32_pslldqi128_byteshift:
   case X86::BI__builtin_ia32_pslldqi256_byteshift:
   case X86::BI__builtin_ia32_pslldqi512_byteshift:
