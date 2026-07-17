@@ -45,7 +45,7 @@ namespace {
 // requires. Hence, as a work around for this problem, we use a simple allocator
 // which just hands out continuous blocks from a statically allocated chunk of
 // memory.
-static constexpr uint64_t MEMORY_SIZE = 65336;
+static constexpr uint64_t MEMORY_SIZE = 1 << 20; // 1 MiB
 alignas(ALIGNMENT) static uint8_t memory[MEMORY_SIZE];
 static uint8_t *ptr = memory;
 

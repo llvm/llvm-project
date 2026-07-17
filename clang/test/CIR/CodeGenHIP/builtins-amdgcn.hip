@@ -127,3 +127,83 @@ __device__ void test_rcp_f32(float* out, float a) {
 __device__ void test_rcp_f64(double* out, double a) {
   *out = __builtin_amdgcn_rcp(a);
 }
+
+// CIR-LABEL: @_Z12test_rsq_f32Pff
+// CIR: cir.call_llvm_intrinsic "amdgcn.rsq" {{.*}} : (!cir.float) -> !cir.float
+// LLVM: define{{.*}} void @_Z12test_rsq_f32Pff
+// LLVM: call{{.*}} float @llvm.amdgcn.rsq.f32(float %{{.*}})
+__device__ void test_rsq_f32(float* out, float a) {
+  *out = __builtin_amdgcn_rsqf(a);
+}
+
+// CIR-LABEL: @_Z12test_rsq_f64Pdd
+// CIR: cir.call_llvm_intrinsic "amdgcn.rsq" {{.*}} : (!cir.double) -> !cir.double
+// LLVM: define{{.*}} void @_Z12test_rsq_f64Pdd
+// LLVM: call{{.*}} double @llvm.amdgcn.rsq.f64(double %{{.*}})
+__device__ void test_rsq_f64(double* out, double a) {
+  *out = __builtin_amdgcn_rsq(a);
+}
+
+// CIR-LABEL: @_Z18test_rsq_clamp_f32Pff
+// CIR: cir.call_llvm_intrinsic "amdgcn.rsq.clamp" {{.*}} : (!cir.float) -> !cir.float
+// LLVM: define{{.*}} void @_Z18test_rsq_clamp_f32Pff
+// LLVM: call{{.*}} float @llvm.amdgcn.rsq.clamp.f32(float %{{.*}})
+__device__ void test_rsq_clamp_f32(float* out, float a) {
+  *out = __builtin_amdgcn_rsq_clampf(a);
+}
+
+// CIR-LABEL: @_Z18test_rsq_clamp_f64Pdd
+// CIR: cir.call_llvm_intrinsic "amdgcn.rsq.clamp" {{.*}} : (!cir.double) -> !cir.double
+// LLVM: define{{.*}} void @_Z18test_rsq_clamp_f64Pdd
+// LLVM: call{{.*}} double @llvm.amdgcn.rsq.clamp.f64(double %{{.*}})
+__device__ void test_rsq_clamp_f64(double* out, double a) {
+  *out = __builtin_amdgcn_rsq_clamp(a);
+}
+
+// CIR-LABEL: @_Z13test_sqrt_f32Pff
+// CIR: cir.call_llvm_intrinsic "amdgcn.sqrt" {{.*}} : (!cir.float) -> !cir.float
+// LLVM: define{{.*}} void @_Z13test_sqrt_f32Pff
+// LLVM: call{{.*}} float @llvm.amdgcn.sqrt.f32(float %{{.*}})
+__device__ void test_sqrt_f32(float* out, float a) {
+  *out = __builtin_amdgcn_sqrtf(a);
+}
+
+// CIR-LABEL: @_Z13test_sqrt_f64Pdd
+// CIR: cir.call_llvm_intrinsic "amdgcn.sqrt" {{.*}} : (!cir.double) -> !cir.double
+// LLVM: define{{.*}} void @_Z13test_sqrt_f64Pdd
+// LLVM: call{{.*}} double @llvm.amdgcn.sqrt.f64(double %{{.*}})
+__device__ void test_sqrt_f64(double* out, double a) {
+  *out = __builtin_amdgcn_sqrt(a);
+}
+
+// CIR-LABEL: @_Z13test_sinf_f32Pff
+// CIR: cir.call_llvm_intrinsic "amdgcn.sin" {{.*}} : (!cir.float) -> !cir.float
+// LLVM: define{{.*}} void @_Z13test_sinf_f32Pff
+// LLVM: call{{.*}} float @llvm.amdgcn.sin.f32(float %{{.*}})
+__device__ void test_sinf_f32(float* out, float a) {
+  *out = __builtin_amdgcn_sinf(a);
+}
+
+// CIR-LABEL: @_Z13test_cosf_f32Pff
+// CIR: cir.call_llvm_intrinsic "amdgcn.cos" {{.*}} : (!cir.float) -> !cir.float
+// LLVM: define{{.*}} void @_Z13test_cosf_f32Pff
+// LLVM: call{{.*}} float @llvm.amdgcn.cos.f32(float %{{.*}})
+__device__ void test_cosf_f32(float* out, float a) {
+  *out = __builtin_amdgcn_cosf(a);
+}
+
+// CIR-LABEL: @_Z13test_exp2_f32Pff
+// CIR: cir.call_llvm_intrinsic "amdgcn.exp2" {{.*}} : (!cir.float) -> !cir.float
+// LLVM: define{{.*}} void @_Z13test_exp2_f32Pff
+// LLVM: call{{.*}} float @llvm.amdgcn.exp2.f32(float %{{.*}})
+__device__ void test_exp2_f32(float* out, float a) {
+  *out = __builtin_amdgcn_exp2f(a);
+}
+
+// CIR-LABEL: @_Z12test_log_f32Pff
+// CIR: cir.call_llvm_intrinsic "amdgcn.log" {{.*}} : (!cir.float) -> !cir.float
+// LLVM: define{{.*}} void @_Z12test_log_f32Pff
+// LLVM: call{{.*}} float @llvm.amdgcn.log.f32(float %{{.*}})
+__device__ void test_log_f32(float* out, float a) {
+  *out = __builtin_amdgcn_logf(a);
+}
