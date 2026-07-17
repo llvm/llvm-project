@@ -81,22 +81,20 @@ const CGFunctionInfo &
 arrangeCXXMethodCall(CodeGenModule &CGM, CanQualType returnType,
                      ArrayRef<CanQualType> argTypes, FunctionType::ExtInfo info,
                      ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
-                     RequiredArgs args, const FunctionDecl *CallerFD);
+                     RequiredArgs args);
 
 const CGFunctionInfo &arrangeFreeFunctionCall(
     CodeGenModule &CGM, CanQualType returnType, ArrayRef<CanQualType> argTypes,
     FunctionType::ExtInfo info,
-    ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos, RequiredArgs args,
-    const FunctionDecl *CallerFD);
+    ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
+    RequiredArgs args);
 
 // An overload with an empty `paramInfos`
 inline const CGFunctionInfo &
 arrangeFreeFunctionCall(CodeGenModule &CGM, CanQualType returnType,
                         ArrayRef<CanQualType> argTypes,
-                        FunctionType::ExtInfo info, RequiredArgs args,
-                        const FunctionDecl *CallerFD) {
-  return arrangeFreeFunctionCall(CGM, returnType, argTypes, info, {}, args,
-                                 CallerFD);
+                        FunctionType::ExtInfo info, RequiredArgs args) {
+  return arrangeFreeFunctionCall(CGM, returnType, argTypes, info, {}, args);
 }
 
 /// Returns the implicit arguments to add to a complete, non-delegating C++
