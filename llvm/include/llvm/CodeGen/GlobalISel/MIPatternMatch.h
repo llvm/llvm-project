@@ -645,6 +645,10 @@ inline GInstrBind<GVScale> m_GVScale(GVScale *&Inst) { return Inst; }
 inline GInstrBind<GBuildVector> m_GBuildVector(GBuildVector *&Inst) {
   return Inst;
 }
+/// Matches any of G_MERGE_VALUES, G_BUILD_VECTOR or G_CONCAT_VECTORS.
+inline GInstrBind<GMergeLikeInstr> m_GMergeLikeInstr(GMergeLikeInstr *&Inst) {
+  return Inst;
+}
 inline GInstrBind<GConcatVectors> m_GConcatVectors(GConcatVectors *&Inst) {
   return Inst;
 }

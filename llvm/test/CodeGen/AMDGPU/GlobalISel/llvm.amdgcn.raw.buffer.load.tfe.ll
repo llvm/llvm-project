@@ -749,16 +749,13 @@ define amdgpu_ps void @raw_buffer_load_v2i32_tfe(<4 x i32> inreg %rsrc, ptr addr
   ; GFX67-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_TFE_OFFSET]].sub0
   ; GFX67-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_TFE_OFFSET]].sub1
   ; GFX67-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_TFE_OFFSET]].sub2
-  ; GFX67-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY8]], implicit $exec
-  ; GFX67-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
-  ; GFX67-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
-  ; GFX67-NEXT:   [[COPY11:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE3]]
+  ; GFX67-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY9]], %subreg.sub1
   ; GFX67-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX67-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 61440
   ; GFX67-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, [[S_MOV_B32_2]], %subreg.sub1
   ; GFX67-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
   ; GFX67-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B64_]], %subreg.sub0_sub1, [[REG_SEQUENCE4]], %subreg.sub2_sub3
-  ; GFX67-NEXT:   BUFFER_STORE_DWORDX2_ADDR64 [[COPY11]], [[REG_SEQUENCE1]], [[REG_SEQUENCE5]], 0, 0, 0, 0, implicit $exec :: (store (<2 x i32>) into %ir.data_addr, addrspace 1)
+  ; GFX67-NEXT:   BUFFER_STORE_DWORDX2_ADDR64 [[REG_SEQUENCE3]], [[REG_SEQUENCE1]], [[REG_SEQUENCE5]], 0, 0, 0, 0, implicit $exec :: (store (<2 x i32>) into %ir.data_addr, addrspace 1)
   ; GFX67-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX67-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 61440
   ; GFX67-NEXT:   [[REG_SEQUENCE6:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_3]], %subreg.sub0, [[S_MOV_B32_4]], %subreg.sub1
@@ -787,11 +784,8 @@ define amdgpu_ps void @raw_buffer_load_v2i32_tfe(<4 x i32> inreg %rsrc, ptr addr
   ; GFX8-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_TFE_OFFSET]].sub0
   ; GFX8-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_TFE_OFFSET]].sub1
   ; GFX8-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_TFE_OFFSET]].sub2
-  ; GFX8-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY8]], implicit $exec
-  ; GFX8-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
-  ; GFX8-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
-  ; GFX8-NEXT:   [[COPY11:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE3]]
-  ; GFX8-NEXT:   FLAT_STORE_DWORDX2 [[REG_SEQUENCE1]], [[COPY11]], 0, 0, implicit $exec, implicit $flat_scr :: (store (<2 x i32>) into %ir.data_addr, addrspace 1)
+  ; GFX8-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY9]], %subreg.sub1
+  ; GFX8-NEXT:   FLAT_STORE_DWORDX2 [[REG_SEQUENCE1]], [[REG_SEQUENCE3]], 0, 0, implicit $exec, implicit $flat_scr :: (store (<2 x i32>) into %ir.data_addr, addrspace 1)
   ; GFX8-NEXT:   FLAT_STORE_DWORD [[REG_SEQUENCE2]], [[COPY10]], 0, 0, implicit $exec, implicit $flat_scr :: (store (i32) into %ir.tfe_addr, addrspace 1)
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
@@ -815,11 +809,8 @@ define amdgpu_ps void @raw_buffer_load_v2i32_tfe(<4 x i32> inreg %rsrc, ptr addr
   ; GFX910-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_TFE_OFFSET]].sub0
   ; GFX910-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_TFE_OFFSET]].sub1
   ; GFX910-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_TFE_OFFSET]].sub2
-  ; GFX910-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY8]], implicit $exec
-  ; GFX910-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
-  ; GFX910-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
-  ; GFX910-NEXT:   [[COPY11:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE3]]
-  ; GFX910-NEXT:   GLOBAL_STORE_DWORDX2 [[REG_SEQUENCE1]], [[COPY11]], 0, 0, implicit $exec :: (store (<2 x i32>) into %ir.data_addr, addrspace 1)
+  ; GFX910-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY9]], %subreg.sub1
+  ; GFX910-NEXT:   GLOBAL_STORE_DWORDX2 [[REG_SEQUENCE1]], [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (<2 x i32>) into %ir.data_addr, addrspace 1)
   ; GFX910-NEXT:   GLOBAL_STORE_DWORD [[REG_SEQUENCE2]], [[COPY10]], 0, 0, implicit $exec :: (store (i32) into %ir.tfe_addr, addrspace 1)
   ; GFX910-NEXT:   S_ENDPGM 0
   ;
@@ -843,11 +834,8 @@ define amdgpu_ps void @raw_buffer_load_v2i32_tfe(<4 x i32> inreg %rsrc, ptr addr
   ; GFX11-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_TFE_OFFSET]].sub0
   ; GFX11-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_TFE_OFFSET]].sub1
   ; GFX11-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_TFE_OFFSET]].sub2
-  ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY8]], implicit $exec
-  ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
-  ; GFX11-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
-  ; GFX11-NEXT:   [[COPY11:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE3]]
-  ; GFX11-NEXT:   GLOBAL_STORE_DWORDX2 [[REG_SEQUENCE1]], [[COPY11]], 0, 0, implicit $exec :: (store (<2 x i32>) into %ir.data_addr, addrspace 1)
+  ; GFX11-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY9]], %subreg.sub1
+  ; GFX11-NEXT:   GLOBAL_STORE_DWORDX2 [[REG_SEQUENCE1]], [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (<2 x i32>) into %ir.data_addr, addrspace 1)
   ; GFX11-NEXT:   GLOBAL_STORE_DWORD [[REG_SEQUENCE2]], [[COPY10]], 0, 0, implicit $exec :: (store (i32) into %ir.tfe_addr, addrspace 1)
   ; GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -870,11 +858,8 @@ define amdgpu_ps void @raw_buffer_load_v2i32_tfe(<4 x i32> inreg %rsrc, ptr addr
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_TFE_VBUFFER_OFFSET]].sub0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_TFE_VBUFFER_OFFSET]].sub1
   ; GFX12-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_TFE_VBUFFER_OFFSET]].sub2
-  ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY8]], implicit $exec
-  ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
-  ; GFX12-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
-  ; GFX12-NEXT:   [[COPY11:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE3]]
-  ; GFX12-NEXT:   GLOBAL_STORE_DWORDX2 [[REG_SEQUENCE1]], [[COPY11]], 0, 0, implicit $exec :: (store (<2 x i32>) into %ir.data_addr, addrspace 1)
+  ; GFX12-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY9]], %subreg.sub1
+  ; GFX12-NEXT:   GLOBAL_STORE_DWORDX2 [[REG_SEQUENCE1]], [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (<2 x i32>) into %ir.data_addr, addrspace 1)
   ; GFX12-NEXT:   GLOBAL_STORE_DWORD [[REG_SEQUENCE2]], [[COPY10]], 0, 0, implicit $exec :: (store (i32) into %ir.tfe_addr, addrspace 1)
   ; GFX12-NEXT:   S_ENDPGM 0
   ;
@@ -897,11 +882,8 @@ define amdgpu_ps void @raw_buffer_load_v2i32_tfe(<4 x i32> inreg %rsrc, ptr addr
   ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_TFE_VBUFFER_OFFSET]].sub0
   ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_TFE_VBUFFER_OFFSET]].sub1
   ; GFX1250-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_TFE_VBUFFER_OFFSET]].sub2
-  ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY8]], implicit $exec
-  ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
-  ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
-  ; GFX1250-NEXT:   [[COPY11:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE3]]
-  ; GFX1250-NEXT:   GLOBAL_STORE_DWORDX2 [[REG_SEQUENCE1]], [[COPY11]], 0, 0, implicit $exec :: (store (<2 x i32>) into %ir.data_addr, addrspace 1)
+  ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY9]], %subreg.sub1
+  ; GFX1250-NEXT:   GLOBAL_STORE_DWORDX2 [[REG_SEQUENCE1]], [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (<2 x i32>) into %ir.data_addr, addrspace 1)
   ; GFX1250-NEXT:   GLOBAL_STORE_DWORD [[REG_SEQUENCE2]], [[COPY10]], 0, 0, implicit $exec :: (store (i32) into %ir.tfe_addr, addrspace 1)
   ; GFX1250-NEXT:   S_ENDPGM 0
   %res = call { <2 x i32>, i32 } @llvm.amdgcn.raw.buffer.load.sl_v2i32i32s(<4 x i32> %rsrc, i32 0, i32 0, i32 0)
@@ -1167,17 +1149,13 @@ define amdgpu_ps void @raw_buffer_load_v3i32_tfe(<4 x i32> inreg %rsrc, ptr addr
   ; GFX7-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_TFE_OFFSET]].sub1
   ; GFX7-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_TFE_OFFSET]].sub2
   ; GFX7-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_TFE_OFFSET]].sub3
-  ; GFX7-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY8]], implicit $exec
-  ; GFX7-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
-  ; GFX7-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY10]], implicit $exec
-  ; GFX7-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_96 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2
-  ; GFX7-NEXT:   [[COPY12:%[0-9]+]]:vreg_96 = COPY [[REG_SEQUENCE3]]
+  ; GFX7-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_96 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY9]], %subreg.sub1, [[COPY10]], %subreg.sub2
   ; GFX7-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX7-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 61440
   ; GFX7-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, [[S_MOV_B32_2]], %subreg.sub1
   ; GFX7-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
   ; GFX7-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B64_]], %subreg.sub0_sub1, [[REG_SEQUENCE4]], %subreg.sub2_sub3
-  ; GFX7-NEXT:   BUFFER_STORE_DWORDX3_ADDR64 [[COPY12]], [[REG_SEQUENCE1]], [[REG_SEQUENCE5]], 0, 0, 0, 0, implicit $exec :: (store (<3 x i32>) into %ir.data_addr, align 16, addrspace 1)
+  ; GFX7-NEXT:   BUFFER_STORE_DWORDX3_ADDR64 [[REG_SEQUENCE3]], [[REG_SEQUENCE1]], [[REG_SEQUENCE5]], 0, 0, 0, 0, implicit $exec :: (store (<3 x i32>) into %ir.data_addr, align 16, addrspace 1)
   ; GFX7-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX7-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 61440
   ; GFX7-NEXT:   [[REG_SEQUENCE6:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_3]], %subreg.sub0, [[S_MOV_B32_4]], %subreg.sub1
@@ -1207,12 +1185,8 @@ define amdgpu_ps void @raw_buffer_load_v3i32_tfe(<4 x i32> inreg %rsrc, ptr addr
   ; GFX8-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_TFE_OFFSET]].sub1
   ; GFX8-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_TFE_OFFSET]].sub2
   ; GFX8-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_TFE_OFFSET]].sub3
-  ; GFX8-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY8]], implicit $exec
-  ; GFX8-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
-  ; GFX8-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY10]], implicit $exec
-  ; GFX8-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_96 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2
-  ; GFX8-NEXT:   [[COPY12:%[0-9]+]]:vreg_96 = COPY [[REG_SEQUENCE3]]
-  ; GFX8-NEXT:   FLAT_STORE_DWORDX3 [[REG_SEQUENCE1]], [[COPY12]], 0, 0, implicit $exec, implicit $flat_scr :: (store (<3 x i32>) into %ir.data_addr, align 16, addrspace 1)
+  ; GFX8-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_96 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY9]], %subreg.sub1, [[COPY10]], %subreg.sub2
+  ; GFX8-NEXT:   FLAT_STORE_DWORDX3 [[REG_SEQUENCE1]], [[REG_SEQUENCE3]], 0, 0, implicit $exec, implicit $flat_scr :: (store (<3 x i32>) into %ir.data_addr, align 16, addrspace 1)
   ; GFX8-NEXT:   FLAT_STORE_DWORD [[REG_SEQUENCE2]], [[COPY11]], 0, 0, implicit $exec, implicit $flat_scr :: (store (i32) into %ir.tfe_addr, addrspace 1)
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
@@ -1237,12 +1211,8 @@ define amdgpu_ps void @raw_buffer_load_v3i32_tfe(<4 x i32> inreg %rsrc, ptr addr
   ; GFX910-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_TFE_OFFSET]].sub1
   ; GFX910-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_TFE_OFFSET]].sub2
   ; GFX910-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_TFE_OFFSET]].sub3
-  ; GFX910-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY8]], implicit $exec
-  ; GFX910-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
-  ; GFX910-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY10]], implicit $exec
-  ; GFX910-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_96 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2
-  ; GFX910-NEXT:   [[COPY12:%[0-9]+]]:vreg_96 = COPY [[REG_SEQUENCE3]]
-  ; GFX910-NEXT:   GLOBAL_STORE_DWORDX3 [[REG_SEQUENCE1]], [[COPY12]], 0, 0, implicit $exec :: (store (<3 x i32>) into %ir.data_addr, align 16, addrspace 1)
+  ; GFX910-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_96 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY9]], %subreg.sub1, [[COPY10]], %subreg.sub2
+  ; GFX910-NEXT:   GLOBAL_STORE_DWORDX3 [[REG_SEQUENCE1]], [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (<3 x i32>) into %ir.data_addr, align 16, addrspace 1)
   ; GFX910-NEXT:   GLOBAL_STORE_DWORD [[REG_SEQUENCE2]], [[COPY11]], 0, 0, implicit $exec :: (store (i32) into %ir.tfe_addr, addrspace 1)
   ; GFX910-NEXT:   S_ENDPGM 0
   ;
@@ -1267,12 +1237,8 @@ define amdgpu_ps void @raw_buffer_load_v3i32_tfe(<4 x i32> inreg %rsrc, ptr addr
   ; GFX11-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_TFE_OFFSET]].sub1
   ; GFX11-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_TFE_OFFSET]].sub2
   ; GFX11-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_TFE_OFFSET]].sub3
-  ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY8]], implicit $exec
-  ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
-  ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY10]], implicit $exec
-  ; GFX11-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_96 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2
-  ; GFX11-NEXT:   [[COPY12:%[0-9]+]]:vreg_96 = COPY [[REG_SEQUENCE3]]
-  ; GFX11-NEXT:   GLOBAL_STORE_DWORDX3 [[REG_SEQUENCE1]], [[COPY12]], 0, 0, implicit $exec :: (store (<3 x i32>) into %ir.data_addr, align 16, addrspace 1)
+  ; GFX11-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_96 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY9]], %subreg.sub1, [[COPY10]], %subreg.sub2
+  ; GFX11-NEXT:   GLOBAL_STORE_DWORDX3 [[REG_SEQUENCE1]], [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (<3 x i32>) into %ir.data_addr, align 16, addrspace 1)
   ; GFX11-NEXT:   GLOBAL_STORE_DWORD [[REG_SEQUENCE2]], [[COPY11]], 0, 0, implicit $exec :: (store (i32) into %ir.tfe_addr, addrspace 1)
   ; GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -1296,12 +1262,8 @@ define amdgpu_ps void @raw_buffer_load_v3i32_tfe(<4 x i32> inreg %rsrc, ptr addr
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_TFE_VBUFFER_OFFSET]].sub1
   ; GFX12-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_TFE_VBUFFER_OFFSET]].sub2
   ; GFX12-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_TFE_VBUFFER_OFFSET]].sub3
-  ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY8]], implicit $exec
-  ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
-  ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY10]], implicit $exec
-  ; GFX12-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_96 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2
-  ; GFX12-NEXT:   [[COPY12:%[0-9]+]]:vreg_96 = COPY [[REG_SEQUENCE3]]
-  ; GFX12-NEXT:   GLOBAL_STORE_DWORDX3 [[REG_SEQUENCE1]], [[COPY12]], 0, 0, implicit $exec :: (store (<3 x i32>) into %ir.data_addr, align 16, addrspace 1)
+  ; GFX12-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_96 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY9]], %subreg.sub1, [[COPY10]], %subreg.sub2
+  ; GFX12-NEXT:   GLOBAL_STORE_DWORDX3 [[REG_SEQUENCE1]], [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (<3 x i32>) into %ir.data_addr, align 16, addrspace 1)
   ; GFX12-NEXT:   GLOBAL_STORE_DWORD [[REG_SEQUENCE2]], [[COPY11]], 0, 0, implicit $exec :: (store (i32) into %ir.tfe_addr, addrspace 1)
   ; GFX12-NEXT:   S_ENDPGM 0
   ;
@@ -1325,12 +1287,8 @@ define amdgpu_ps void @raw_buffer_load_v3i32_tfe(<4 x i32> inreg %rsrc, ptr addr
   ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_TFE_VBUFFER_OFFSET]].sub1
   ; GFX1250-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_TFE_VBUFFER_OFFSET]].sub2
   ; GFX1250-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_TFE_VBUFFER_OFFSET]].sub3
-  ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY8]], implicit $exec
-  ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
-  ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY10]], implicit $exec
-  ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_96 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2
-  ; GFX1250-NEXT:   [[COPY12:%[0-9]+]]:vreg_96_align2 = COPY [[REG_SEQUENCE3]]
-  ; GFX1250-NEXT:   GLOBAL_STORE_DWORDX3 [[REG_SEQUENCE1]], [[COPY12]], 0, 0, implicit $exec :: (store (<3 x i32>) into %ir.data_addr, align 16, addrspace 1)
+  ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_96_align2 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY9]], %subreg.sub1, [[COPY10]], %subreg.sub2
+  ; GFX1250-NEXT:   GLOBAL_STORE_DWORDX3 [[REG_SEQUENCE1]], [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (<3 x i32>) into %ir.data_addr, align 16, addrspace 1)
   ; GFX1250-NEXT:   GLOBAL_STORE_DWORD [[REG_SEQUENCE2]], [[COPY11]], 0, 0, implicit $exec :: (store (i32) into %ir.tfe_addr, addrspace 1)
   ; GFX1250-NEXT:   S_ENDPGM 0
   %res = call { <3 x i32>, i32 } @llvm.amdgcn.raw.buffer.load.sl_v3i32i32s(<4 x i32> %rsrc, i32 0, i32 0, i32 0)
@@ -1607,18 +1565,13 @@ define amdgpu_ps void @raw_buffer_load_v4i32_tfe(<4 x i32> inreg %rsrc, ptr addr
   ; GFX67-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_TFE_OFFSET]].sub2
   ; GFX67-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_TFE_OFFSET]].sub3
   ; GFX67-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_TFE_OFFSET]].sub4
-  ; GFX67-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY8]], implicit $exec
-  ; GFX67-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
-  ; GFX67-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY10]], implicit $exec
-  ; GFX67-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY11]], implicit $exec
-  ; GFX67-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX67-NEXT:   [[COPY13:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE3]]
+  ; GFX67-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY9]], %subreg.sub1, [[COPY10]], %subreg.sub2, [[COPY11]], %subreg.sub3
   ; GFX67-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX67-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 61440
   ; GFX67-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_1]], %subreg.sub0, [[S_MOV_B32_2]], %subreg.sub1
   ; GFX67-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
   ; GFX67-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B64_]], %subreg.sub0_sub1, [[REG_SEQUENCE4]], %subreg.sub2_sub3
-  ; GFX67-NEXT:   BUFFER_STORE_DWORDX4_ADDR64 [[COPY13]], [[REG_SEQUENCE1]], [[REG_SEQUENCE5]], 0, 0, 0, 0, implicit $exec :: (store (<4 x i32>) into %ir.data_addr, addrspace 1)
+  ; GFX67-NEXT:   BUFFER_STORE_DWORDX4_ADDR64 [[REG_SEQUENCE3]], [[REG_SEQUENCE1]], [[REG_SEQUENCE5]], 0, 0, 0, 0, implicit $exec :: (store (<4 x i32>) into %ir.data_addr, addrspace 1)
   ; GFX67-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX67-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 61440
   ; GFX67-NEXT:   [[REG_SEQUENCE6:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_3]], %subreg.sub0, [[S_MOV_B32_4]], %subreg.sub1
@@ -1649,13 +1602,8 @@ define amdgpu_ps void @raw_buffer_load_v4i32_tfe(<4 x i32> inreg %rsrc, ptr addr
   ; GFX8-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_TFE_OFFSET]].sub2
   ; GFX8-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_TFE_OFFSET]].sub3
   ; GFX8-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_TFE_OFFSET]].sub4
-  ; GFX8-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY8]], implicit $exec
-  ; GFX8-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
-  ; GFX8-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY10]], implicit $exec
-  ; GFX8-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY11]], implicit $exec
-  ; GFX8-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX8-NEXT:   [[COPY13:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE3]]
-  ; GFX8-NEXT:   FLAT_STORE_DWORDX4 [[REG_SEQUENCE1]], [[COPY13]], 0, 0, implicit $exec, implicit $flat_scr :: (store (<4 x i32>) into %ir.data_addr, addrspace 1)
+  ; GFX8-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY9]], %subreg.sub1, [[COPY10]], %subreg.sub2, [[COPY11]], %subreg.sub3
+  ; GFX8-NEXT:   FLAT_STORE_DWORDX4 [[REG_SEQUENCE1]], [[REG_SEQUENCE3]], 0, 0, implicit $exec, implicit $flat_scr :: (store (<4 x i32>) into %ir.data_addr, addrspace 1)
   ; GFX8-NEXT:   FLAT_STORE_DWORD [[REG_SEQUENCE2]], [[COPY12]], 0, 0, implicit $exec, implicit $flat_scr :: (store (i32) into %ir.tfe_addr, addrspace 1)
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
@@ -1681,13 +1629,8 @@ define amdgpu_ps void @raw_buffer_load_v4i32_tfe(<4 x i32> inreg %rsrc, ptr addr
   ; GFX910-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_TFE_OFFSET]].sub2
   ; GFX910-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_TFE_OFFSET]].sub3
   ; GFX910-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_TFE_OFFSET]].sub4
-  ; GFX910-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY8]], implicit $exec
-  ; GFX910-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
-  ; GFX910-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY10]], implicit $exec
-  ; GFX910-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY11]], implicit $exec
-  ; GFX910-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX910-NEXT:   [[COPY13:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE3]]
-  ; GFX910-NEXT:   GLOBAL_STORE_DWORDX4 [[REG_SEQUENCE1]], [[COPY13]], 0, 0, implicit $exec :: (store (<4 x i32>) into %ir.data_addr, addrspace 1)
+  ; GFX910-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY9]], %subreg.sub1, [[COPY10]], %subreg.sub2, [[COPY11]], %subreg.sub3
+  ; GFX910-NEXT:   GLOBAL_STORE_DWORDX4 [[REG_SEQUENCE1]], [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (<4 x i32>) into %ir.data_addr, addrspace 1)
   ; GFX910-NEXT:   GLOBAL_STORE_DWORD [[REG_SEQUENCE2]], [[COPY12]], 0, 0, implicit $exec :: (store (i32) into %ir.tfe_addr, addrspace 1)
   ; GFX910-NEXT:   S_ENDPGM 0
   ;
@@ -1713,13 +1656,8 @@ define amdgpu_ps void @raw_buffer_load_v4i32_tfe(<4 x i32> inreg %rsrc, ptr addr
   ; GFX11-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_TFE_OFFSET]].sub2
   ; GFX11-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_TFE_OFFSET]].sub3
   ; GFX11-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_TFE_OFFSET]].sub4
-  ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY8]], implicit $exec
-  ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
-  ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY10]], implicit $exec
-  ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY11]], implicit $exec
-  ; GFX11-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX11-NEXT:   [[COPY13:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE3]]
-  ; GFX11-NEXT:   GLOBAL_STORE_DWORDX4 [[REG_SEQUENCE1]], [[COPY13]], 0, 0, implicit $exec :: (store (<4 x i32>) into %ir.data_addr, addrspace 1)
+  ; GFX11-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY9]], %subreg.sub1, [[COPY10]], %subreg.sub2, [[COPY11]], %subreg.sub3
+  ; GFX11-NEXT:   GLOBAL_STORE_DWORDX4 [[REG_SEQUENCE1]], [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (<4 x i32>) into %ir.data_addr, addrspace 1)
   ; GFX11-NEXT:   GLOBAL_STORE_DWORD [[REG_SEQUENCE2]], [[COPY12]], 0, 0, implicit $exec :: (store (i32) into %ir.tfe_addr, addrspace 1)
   ; GFX11-NEXT:   S_ENDPGM 0
   ;
@@ -1744,13 +1682,8 @@ define amdgpu_ps void @raw_buffer_load_v4i32_tfe(<4 x i32> inreg %rsrc, ptr addr
   ; GFX12-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_TFE_VBUFFER_OFFSET]].sub2
   ; GFX12-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_TFE_VBUFFER_OFFSET]].sub3
   ; GFX12-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_TFE_VBUFFER_OFFSET]].sub4
-  ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY8]], implicit $exec
-  ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
-  ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY10]], implicit $exec
-  ; GFX12-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY11]], implicit $exec
-  ; GFX12-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX12-NEXT:   [[COPY13:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE3]]
-  ; GFX12-NEXT:   GLOBAL_STORE_DWORDX4 [[REG_SEQUENCE1]], [[COPY13]], 0, 0, implicit $exec :: (store (<4 x i32>) into %ir.data_addr, addrspace 1)
+  ; GFX12-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY9]], %subreg.sub1, [[COPY10]], %subreg.sub2, [[COPY11]], %subreg.sub3
+  ; GFX12-NEXT:   GLOBAL_STORE_DWORDX4 [[REG_SEQUENCE1]], [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (<4 x i32>) into %ir.data_addr, addrspace 1)
   ; GFX12-NEXT:   GLOBAL_STORE_DWORD [[REG_SEQUENCE2]], [[COPY12]], 0, 0, implicit $exec :: (store (i32) into %ir.tfe_addr, addrspace 1)
   ; GFX12-NEXT:   S_ENDPGM 0
   ;
@@ -1775,13 +1708,8 @@ define amdgpu_ps void @raw_buffer_load_v4i32_tfe(<4 x i32> inreg %rsrc, ptr addr
   ; GFX1250-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_TFE_VBUFFER_OFFSET]].sub2
   ; GFX1250-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_TFE_VBUFFER_OFFSET]].sub3
   ; GFX1250-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_TFE_VBUFFER_OFFSET]].sub4
-  ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY8]], implicit $exec
-  ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
-  ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY10]], implicit $exec
-  ; GFX1250-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY11]], implicit $exec
-  ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX1250-NEXT:   [[COPY13:%[0-9]+]]:vreg_128_align2 = COPY [[REG_SEQUENCE3]]
-  ; GFX1250-NEXT:   GLOBAL_STORE_DWORDX4 [[REG_SEQUENCE1]], [[COPY13]], 0, 0, implicit $exec :: (store (<4 x i32>) into %ir.data_addr, addrspace 1)
+  ; GFX1250-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY9]], %subreg.sub1, [[COPY10]], %subreg.sub2, [[COPY11]], %subreg.sub3
+  ; GFX1250-NEXT:   GLOBAL_STORE_DWORDX4 [[REG_SEQUENCE1]], [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (<4 x i32>) into %ir.data_addr, addrspace 1)
   ; GFX1250-NEXT:   GLOBAL_STORE_DWORD [[REG_SEQUENCE2]], [[COPY12]], 0, 0, implicit $exec :: (store (i32) into %ir.tfe_addr, addrspace 1)
   ; GFX1250-NEXT:   S_ENDPGM 0
   %res = call { <4 x i32>, i32 } @llvm.amdgcn.raw.buffer.load.sl_v4i32i32s(<4 x i32> %rsrc, i32 0, i32 0, i32 0)

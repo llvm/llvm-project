@@ -184,6 +184,14 @@ def fminimum_to_minmax3 : minmax_to_minmax3_opcodes<G_FMINIMUM>;
 def fmax_ieee_to_minmax3 : minmax_to_minmax3_opcodes<G_FMAXNUM_IEEE>;
 def fmin_ieee_to_minmax3 : minmax_to_minmax3_opcodes<G_FMINNUM_IEEE>;
 
+// Copy to vgpr of a merge of readanylane results and uniform values can use the
+// values before they were moved to sgprs.
+def merge_readanylane_to_vgpr : GICombineRule<
+  (defs root:$copy, register_vector_matchinfo:$matchinfo),
+  (match (COPY $dst, $src):$copy,
+         [{ return matchMergeReadAnyLaneToVgpr(*${copy}, ${matchinfo}); }]),
+  (apply [{ applyMergeReadAnyLaneToVgpr(*${copy}, ${matchinfo}); }])>;
+
 // (and/or i64:x, i64:y) -> i64:(merge (and/or lo_32(x), lo_32(y)), (and/or hi_32(x), hi_32(y)))
 // when either x or y is all ones in low or high parts
 class combine_binop_s64_with_s32_mask<Instruction opcode> : GICombineRule<
@@ -270,5 +278,6 @@ def AMDGPURegBankCombiner : GICombiner<
    cast_of_cast_combines, sext_trunc, zext_of_shift_amount_combines,
    d16_load, smax_to_minmax3, smin_to_minmax3, umax_to_minmax3,
    umin_to_minmax3, fmax_to_minmax3, fmin_to_minmax3, fmaximum_to_minmax3,
-   fminimum_to_minmax3, fmax_ieee_to_minmax3, fmin_ieee_to_minmax3]> {
+   fminimum_to_minmax3, fmax_ieee_to_minmax3, fmin_ieee_to_minmax3,
+   merge_readanylane_to_vgpr]> {
 }

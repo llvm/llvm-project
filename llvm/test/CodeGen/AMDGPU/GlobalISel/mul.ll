@@ -3863,15 +3863,13 @@ define amdgpu_kernel void @s_mul_u64_zext_with_sregs(ptr addrspace(1) %out, ptr 
 ; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; GFX7-NEXT:    v_mov_b32_e32 v0, 0x50
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    s_load_dword s3, s[2:3], 0x0
-; GFX7-NEXT:    s_mov_b32 s2, -1
+; GFX7-NEXT:    s_load_dword s2, s[2:3], 0x0
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    v_mul_hi_u32 v0, s3, v0
-; GFX7-NEXT:    s_mul_i32 s4, s3, 0x50
+; GFX7-NEXT:    v_mul_hi_u32 v1, s2, v0
+; GFX7-NEXT:    s_mul_i32 s3, s2, 0x50
+; GFX7-NEXT:    v_mov_b32_e32 v0, s3
+; GFX7-NEXT:    s_mov_b32 s2, -1
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
-; GFX7-NEXT:    v_readfirstlane_b32 s5, v0
-; GFX7-NEXT:    v_mov_b32_e32 v0, s4
-; GFX7-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX7-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -3884,11 +3882,9 @@ define amdgpu_kernel void @s_mul_u64_zext_with_sregs(ptr addrspace(1) %out, ptr 
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    v_mul_hi_u32 v0, s2, v0
+; GFX8-NEXT:    v_mul_hi_u32 v1, s2, v0
 ; GFX8-NEXT:    s_mulk_i32 s2, 0x50
-; GFX8-NEXT:    v_readfirstlane_b32 s3, v0
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s2
-; GFX8-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX8-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GFX8-NEXT:    s_endpgm
 ;
