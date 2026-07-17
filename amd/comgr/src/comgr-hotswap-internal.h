@@ -967,6 +967,26 @@ std::optional<llvm::SmallVector<uint8_t>>
 encodeSetPCLongBranch(const LLVMState &LS, uint64_t FromOffset,
                       uint64_t TargetOffset, unsigned SgprBase);
 
+struct EncodedSetPcGateway {
+  NopSled *Sled = nullptr;
+  llvm::SmallVector<uint8_t> Bytes;
+};
+
+/// Find the nearest short-branch-reachable gateway whose remaining space fits
+/// the set-PC sequence encoded for that candidate's address. The returned
+/// plan does not advance the sled or modify text.
+llvm::Expected<std::optional<EncodedSetPcGateway>>
+findNearestSetPcGateway(std::vector<NopSled> &Gateways, const LLVMState &LS,
+                        uint64_t FromOffset, uint64_t TargetOffset,
+                        unsigned SgprBase);
+
+/// Count set-PC gateway slots reachable from \p FromOffset, up to \p MaxSlots.
+/// Zero means that no candidate fits; an Error means that a reachable
+/// candidate could not be encoded.
+llvm::Expected<uint64_t> countReachableSetPcGatewaySlots(
+    llvm::ArrayRef<NopSled> Gateways, const LLVMState &LS, uint64_t FromOffset,
+    uint64_t TargetOffset, unsigned SgprBase, uint64_t MaxSlots);
+
 /// Return whether an s_branch at \p From can encode \p To, including the
 /// instruction-relative PC base, alignment, signed range, and overflow checks.
 bool isSBranchReachable(uint64_t From, uint64_t To);

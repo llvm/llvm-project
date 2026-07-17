@@ -32,6 +32,7 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -436,6 +437,42 @@ std::optional<SmallVector<uint8_t>> encodeSetPCLongBranch(const LLVMState &LS,
     return std::nullopt;
   }
   return Bytes;
+}
+
+Expected<std::optional<EncodedSetPcGateway>>
+findNearestSetPcGateway(std::vector<NopSled> &Gateways, const LLVMState &LS,
+                        uint64_t FromOffset, uint64_t TargetOffset,
+                        unsigned SgprBase) {
+  NopSled *Best = nullptr;
+  SmallVector<uint8_t> BestBytes;
+  uint64_t BestDistance = std::numeric_limits<uint64_t>::max();
+  for (NopSled &Sled : Gateways) {
+    if (FromOffset < Sled.FunctionStart || FromOffset >= Sled.FunctionEnd)
+      continue;
+    uint64_t UsableEnd = std::min(Sled.End, Sled.FunctionEnd);
+    if (Sled.WritePos > UsableEnd)
+      continue;
+    uint64_t Distance = Sled.WritePos > FromOffset ? Sled.WritePos - FromOffset
+                                                   : FromOffset - Sled.WritePos;
+    if (Distance >= MaxSledDistance || Distance >= BestDistance ||
+        LS.encodeSBranch(FromOffset, Sled.WritePos).empty())
+      continue;
+    std::optional<SmallVector<uint8_t>> Bytes =
+        encodeSetPCLongBranch(LS, Sled.WritePos, TargetOffset, SgprBase);
+    if (!Bytes)
+      return createStringError(
+          Twine("failed to encode set-PC gateway at candidate offset 0x") +
+          utohexstr(Sled.WritePos));
+    if (Bytes->size() > UsableEnd - Sled.WritePos)
+      continue;
+    Best = &Sled;
+    BestBytes = std::move(*Bytes);
+    BestDistance = Distance;
+  }
+  if (!Best)
+    return std::nullopt;
+  return std::optional<EncodedSetPcGateway>(
+      EncodedSetPcGateway{Best, std::move(BestBytes)});
 }
 
 static std::optional<unsigned> numberedSgprIndex(const MCRegisterInfo &MRI,
@@ -1831,20 +1868,36 @@ buildExternalGatewaySleds(ArrayRef<InternalDecodedInst> Decoded,
   return Sleds;
 }
 
-static uint64_t countReachableGatewaySlots(ArrayRef<NopSled> Gateways,
-                                           uint64_t Offset, uint64_t Needed) {
+Expected<uint64_t>
+countReachableSetPcGatewaySlots(ArrayRef<NopSled> Gateways, const LLVMState &LS,
+                                uint64_t FromOffset, uint64_t TargetOffset,
+                                unsigned SgprBase, uint64_t MaxSlots) {
   uint64_t Slots = 0;
   for (const NopSled &Sled : Gateways) {
-    if (Offset < Sled.FunctionStart || Offset >= Sled.FunctionEnd)
+    if (FromOffset < Sled.FunctionStart || FromOffset >= Sled.FunctionEnd)
       continue;
     uint64_t UsableEnd = std::min(Sled.End, Sled.FunctionEnd);
-    if (Sled.WritePos > UsableEnd || Needed > UsableEnd - Sled.WritePos)
-      continue;
-    uint64_t Distance = Sled.WritePos > Offset ? Sled.WritePos - Offset
-                                               : Offset - Sled.WritePos;
-    if (Distance >= MaxSledDistance)
-      continue;
-    Slots += (UsableEnd - Sled.WritePos) / Needed;
+    uint64_t Candidate = Sled.WritePos;
+    while (Candidate <= UsableEnd && Slots < MaxSlots) {
+      uint64_t Distance = Candidate > FromOffset ? Candidate - FromOffset
+                                                 : FromOffset - Candidate;
+      if (Distance >= MaxSledDistance ||
+          LS.encodeSBranch(FromOffset, Candidate).empty())
+        break;
+      std::optional<SmallVector<uint8_t>> Bytes =
+          encodeSetPCLongBranch(LS, Candidate, TargetOffset, SgprBase);
+      if (!Bytes)
+        return createStringError(
+            Twine("failed to encode set-PC gateway while counting candidate "
+                  "offset 0x") +
+            utohexstr(Candidate));
+      if (Bytes->size() > UsableEnd - Candidate)
+        break;
+      ++Slots;
+      Candidate += Bytes->size();
+    }
+    if (Slots == MaxSlots)
+      break;
   }
   return Slots;
 }
@@ -1934,7 +1987,6 @@ assignLongBranchGateways(PatchContext &Ctx,
   struct PendingGateway {
     size_t TrampolineIndex = 0;
     uint64_t TargetOffset = 0;
-    uint64_t NeededBytes = 0;
     uint64_t InitialCandidateSlots = 0;
   };
   std::vector<PendingGateway> Pending;
@@ -1961,10 +2013,20 @@ assignLongBranchGateways(PatchContext &Ctx,
       T.DirectSetPCForwardBytes = std::move(*Direct);
       continue;
     }
-    uint64_t Needed = SetPcForwardSequenceBytes;
-    Pending.push_back(
-        {I, TP, Needed,
-         countReachableGatewaySlots(Gateways, T.OriginalOffset, Needed)});
+    Pending.push_back({I, TP, 0});
+  }
+  for (PendingGateway &P : Pending) {
+    const Trampoline &T = Ctx.OutTrampolines[P.TrampolineIndex];
+    Expected<uint64_t> CandidateSlots = countReachableSetPcGatewaySlots(
+        Gateways, Ctx.LS, T.OriginalOffset, P.TargetOffset,
+        T.LongBranchSgprBase, Pending.size());
+    if (!CandidateSlots) {
+      log() << "hotswap: error: failed to count gateways for far site 0x"
+            << utohexstr(T.OriginalOffset) << ": "
+            << toString(CandidateSlots.takeError()) << "\n";
+      return false;
+    }
+    P.InitialCandidateSlots = *CandidateSlots;
   }
 
   std::vector<PendingGateway> StillPending;
@@ -1987,8 +2049,6 @@ assignLongBranchGateways(PatchContext &Ctx,
 
   std::stable_sort(Pending.begin(), Pending.end(),
                    [](const PendingGateway &LHS, const PendingGateway &RHS) {
-                     if (LHS.NeededBytes != RHS.NeededBytes)
-                       return LHS.NeededBytes > RHS.NeededBytes;
                      return LHS.InitialCandidateSlots <
                             RHS.InitialCandidateSlots;
                    });
@@ -1996,25 +2056,26 @@ assignLongBranchGateways(PatchContext &Ctx,
   uint64_t AssignedGateways = 0;
   for (const PendingGateway &P : Pending) {
     Trampoline &T = Ctx.OutTrampolines[P.TrampolineIndex];
-    NopSled *Sled = findNearestSled(Gateways, T.OriginalOffset, P.NeededBytes);
-    if (!Sled ||
-        Ctx.LS.encodeSBranch(T.OriginalOffset, Sled->WritePos).empty()) {
+    Expected<std::optional<EncodedSetPcGateway>> GatewayOrErr =
+        findNearestSetPcGateway(Gateways, Ctx.LS, T.OriginalOffset,
+                                P.TargetOffset, T.LongBranchSgprBase);
+    if (!GatewayOrErr) {
+      log() << "hotswap: error: failed to plan gateway for far site 0x"
+            << utohexstr(T.OriginalOffset) << ": "
+            << toString(GatewayOrErr.takeError()) << "\n";
+      return false;
+    }
+    std::optional<EncodedSetPcGateway> Gateway = std::move(*GatewayOrErr);
+    if (!Gateway) {
       log() << "hotswap: error: no safe short-branch gateway for far site 0x"
             << utohexstr(T.OriginalOffset) << " (" << P.InitialCandidateSlots
             << " initial candidate slot(s))\n";
       return false;
     }
-    std::optional<SmallVector<uint8_t>> Gateway = encodeSetPCLongBranch(
-        Ctx.LS, Sled->WritePos, P.TargetOffset, T.LongBranchSgprBase);
-    if (!Gateway || Gateway->size() > P.NeededBytes) {
-      log() << "hotswap: error: failed to encode far-site gateway at 0x"
-            << utohexstr(Sled->WritePos) << "\n";
-      return false;
-    }
     T.HasForwardGateway = true;
-    T.ForwardGatewayOffset = Sled->WritePos;
-    T.ForwardGatewayBytes = std::move(*Gateway);
-    Sled->WritePos += T.ForwardGatewayBytes.size();
+    T.ForwardGatewayOffset = Gateway->Sled->WritePos;
+    T.ForwardGatewayBytes = std::move(Gateway->Bytes);
+    Gateway->Sled->WritePos += T.ForwardGatewayBytes.size();
     ++AssignedGateways;
   }
   if (!Pending.empty())
