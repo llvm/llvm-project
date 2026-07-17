@@ -1,4 +1,4 @@
-// COM: HotSwap entry trampolines are supported across gfx125x.
+// COM: Direct HotSwap entry displacement is supported across gfx125x.
 
 // RUN: %clang -target amdgcn-amd-amdhsa -mcpu=gfx1251 -nostdlib %s -o %t.gfx1251.elf
 // RUN: hotswap-rewrite %t.gfx1251.elf \
@@ -6,6 +6,18 @@
 // RUN:   --entry-trampolines --output %t.gfx1251.out.elf \
 // RUN:   | %FileCheck --check-prefix=API %s
 // RUN: %llvm-objdump -d %t.gfx1251.out.elf | %FileCheck --check-prefix=DISASM %s
+
+// COM: Direct displacement does not need scratch SGPRs, so it remains valid at
+// COM: the architectural SGPR limit.
+// RUN: sed 's/.sgpr_count: 1/.sgpr_count: 105/' %s > %t.highsgpr.s
+// RUN: %clang -target amdgcn-amd-amdhsa -mcpu=gfx1251 -nostdlib \
+// RUN:   %t.highsgpr.s -o %t.highsgpr.elf
+// RUN: hotswap-rewrite %t.highsgpr.elf \
+// RUN:   amdgcn-amd-amdhsa--gfx1251 amdgcn-amd-amdhsa--gfx1251 \
+// RUN:   --entry-trampolines --output %t.highsgpr.out.elf \
+// RUN:   | %FileCheck --check-prefix=API %s
+// RUN: %llvm-objdump -d %t.highsgpr.out.elf \
+// RUN:   | %FileCheck --check-prefix=DISASM %s
 
 // RUN: sed -e '/^\.amdgcn_target/d' \
 // RUN:   -e 's/gfx1251/gfx12-5-generic/g' %s > %t.generic.s
@@ -21,13 +33,11 @@
 // API: RESULT: SUCCESS
 
 // DISASM-LABEL: <entry_tramp_family_kernel>:
-// DISASM: s_endpgm
-// DISASM: global_wb
+// DISASM-NEXT: global_wb
 // DISASM-NEXT: v_nop
-// DISASM-NEXT: s_get_pc_i64 s[2:3]
-// DISASM-NEXT: s_add_co_u32 s2
-// DISASM-NEXT: s_add_co_ci_u32 s3
-// DISASM-NEXT: s_set_pc_i64 s[2:3]
+// DISASM-NEXT: v_mov_b32_e32 v0, 0
+// DISASM-NEXT: s_endpgm
+// DISASM-NOT: s_get_pc_i64
 
 .amdgcn_target "amdgcn-amd-amdhsa--gfx1251"
 .text

@@ -14,6 +14,28 @@
 
 // RUN: %llvm-objdump -d %t.out.elf | %FileCheck --check-prefix=DISASM %s
 
+// COM: Entry displacement is applied before ordinary instruction rewriting.
+// COM: Verify that the direct entry prefix and appended DS trampoline coexist
+// COM: with branch sites calculated from the displaced instruction layout.
+// RUN: hotswap-rewrite %t.elf \
+// RUN:   amdgcn-amd-amdhsa--gfx1250 amdgcn-amd-amdhsa--gfx1250 \
+// RUN:   --entry-trampolines --output %t.entry.elf \
+// RUN:   | %FileCheck --check-prefix=ENTRY-API %s
+// ENTRY-API: RESULT: SUCCESS
+// RUN: %llvm-objdump -d %t.entry.elf | %FileCheck --check-prefix=ENTRY %s
+// ENTRY-LABEL: <test_ds_trampoline>:
+// ENTRY-NEXT: global_wb
+// ENTRY-NEXT: v_nop
+// ENTRY-NEXT: s_branch
+// ENTRY-NEXT: s_nop 0
+// ENTRY-NEXT: s_wait_dscnt 0x0
+// ENTRY-NEXT: s_endpgm
+// ENTRY: ds_load_b32 v0, v2 offset:256
+// ENTRY-NEXT: ds_load_b32 v1, v2 offset:768
+// ENTRY-NEXT: s_wait_dscnt 0x0
+// ENTRY-NEXT: s_branch
+// ENTRY-NOT: s_get_pc_i64
+
 // COM: The original DS2 is gone; s_branch forward replaces it. The drain
 // COM: s_wait_dscnt stays at the original position with imm unchanged (0x0).
 // DISASM-LABEL: <test_ds_trampoline>:

@@ -104,6 +104,7 @@ set(SOURCES
   src/comgr-hotswap.cpp
   src/comgr-hotswap-b0a0.cpp
   src/comgr-hotswap-profile.cpp
+  src/comgr-hotswap-displacement.cpp
   src/comgr-hotswap-entry-trampoline.cpp
   src/comgr-hotswap-entry-trampoline-fast.cpp
   src/comgr-hotswap-occupancy.cpp

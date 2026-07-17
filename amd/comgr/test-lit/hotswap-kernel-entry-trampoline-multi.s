@@ -1,6 +1,6 @@
-// COM: The entry-trampoline rewrite must redirect every kernel descriptor in
-// COM: the code object, not just the first one. Each descriptor gets its own
-// COM: appended PC-relative entry stub.
+// COM: A 16-byte direct prefix before the first kernel would misalign the
+// COM: second kernel. HotSwap must retain the ABI's 256-byte entry alignment by
+// COM: falling back to aligned appended stubs for the whole object.
 
 // RUN: %clang -target amdgcn-amd-amdhsa -mcpu=gfx1250 -nostdlib %s -o %t.elf
 
@@ -13,21 +13,17 @@
 // RUN: %llvm-objdump -d %t.out.elf | %FileCheck --check-prefix=DISASM %s
 
 // DISASM-LABEL: <entry_tramp_first>:
-// DISASM: s_endpgm
+// DISASM-NEXT: v_mov_b32_e32 v0, 1
+// DISASM-NEXT: s_endpgm
 // DISASM-LABEL: <entry_tramp_second>:
-// DISASM: s_endpgm
-// DISASM: global_wb
+// DISASM-NEXT: v_mov_b32_e32 v0, 2
+// DISASM-NEXT: s_endpgm
+// DISASM: global_wb // {{[0-9a-fA-F]+00}}:
 // DISASM-NEXT: v_nop
-// DISASM-NEXT: s_get_pc_i64 s[2:3]
-// DISASM-NEXT: s_add_co_u32 s2
-// DISASM-NEXT: s_add_co_ci_u32 s3
-// DISASM-NEXT: s_set_pc_i64 s[2:3]
-// DISASM: global_wb
+// DISASM-NEXT: s_get_pc_i64
+// DISASM: global_wb // {{[0-9a-fA-F]+00}}:
 // DISASM-NEXT: v_nop
-// DISASM-NEXT: s_get_pc_i64 s[2:3]
-// DISASM-NEXT: s_add_co_u32 s2
-// DISASM-NEXT: s_add_co_ci_u32 s3
-// DISASM-NEXT: s_set_pc_i64 s[2:3]
+// DISASM-NEXT: s_get_pc_i64
 
 .amdgcn_target "amdgcn-amd-amdhsa--gfx1250"
 .text

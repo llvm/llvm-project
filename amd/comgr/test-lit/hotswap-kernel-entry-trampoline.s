@@ -1,5 +1,6 @@
-// COM: HotSwap redirects kernel descriptors to appended PC-relative entry
-// COM: stubs when the entry-trampoline flag is explicitly enabled.
+// COM: HotSwap applies the entry workaround when the entry-trampoline flag is
+// COM: enabled. This multi-kernel layout uses aligned appended stubs because a
+// COM: direct prefix would misalign later kernel entries.
 
 // RUN: %clang -target amdgcn-amd-amdhsa -mcpu=gfx1250 -nostdlib %s -o %t.elf
 
@@ -10,7 +11,8 @@
 // RUN: cmp %t.elf %t.default.elf
 // RUN: %llvm-objdump -d %t.default.elf | %FileCheck --check-prefix=NO-TRAMP %s
 // NO-TRAMP-LABEL: <entry_tramp_kernel>:
-// NO-TRAMP: s_endpgm
+// NO-TRAMP-NEXT: v_mov_b32_e32 v0, 0
+// NO-TRAMP-NEXT: s_endpgm
 // NO-TRAMP-LABEL: <hipblaslt_entry_kernel>:
 // NO-TRAMP: s_setreg_imm32_b32
 // NO-TRAMP-LABEL: <decoder_trip_kernel>:
@@ -24,7 +26,6 @@
 // API: RESULT: SUCCESS
 
 // RUN: %llvm-objdump -d %t.out.elf | %FileCheck --check-prefix=DISASM %s
-// RUN: %llvm-objdump -s -j .rodata %t.out.elf | %FileCheck --check-prefix=RODATA %s
 // RUN: %llvm-readelf --notes %t.out.elf | %FileCheck --check-prefix=METADATA %s
 
 // COM: Entry trampolines are independent of the B0-to-A0 patch policy, so an
@@ -37,29 +38,30 @@
 // RUN: %llvm-objdump -d %t.b0a0.elf | %FileCheck --check-prefix=DISASM %s
 
 // DISASM-LABEL: <entry_tramp_kernel>:
-// DISASM: s_endpgm
+// DISASM-NEXT: v_mov_b32_e32 v0, 0
+// DISASM-NEXT: s_endpgm
 // DISASM-LABEL: <hipblaslt_entry_kernel>:
-// DISASM: s_setreg_imm32_b32
+// DISASM-NEXT: s_setreg_imm32_b32
 // DISASM-LABEL: <decoder_trip_kernel>:
-// DISASM: .long 0xffffffff
+// DISASM-NEXT: .long 0xffffffff
 // DISASM: global_wb
 // DISASM-NEXT: v_nop
-// DISASM-NEXT: s_get_pc_i64 s[8:9]
-// DISASM-NEXT: s_add_co_u32 s8
-// DISASM-NEXT: s_add_co_ci_u32 s9
-// DISASM-NEXT: s_set_pc_i64 s[8:9]
-
-// RODATA: Contents of section .rodata
-// RODATA: {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9a-f]+}} 20000000
+// DISASM-NEXT: s_get_pc_i64
+// DISASM: global_wb
+// DISASM-NEXT: v_nop
+// DISASM-NEXT: s_get_pc_i64
+// DISASM: global_wb
+// DISASM-NEXT: v_nop
+// DISASM-NEXT: s_get_pc_i64
 
 // METADATA: .name:           entry_tramp_kernel
 // METADATA: .sgpr_count:     10
 
-// COM: Each appended stub gets a <kernel>.stub symbol so a dispatch whose entry
-// COM: points at the stub still resolves to a name (e.g. rocgdb info dispatches).
+// COM: The alignment fallback records each appended stub for debuggers.
 // RUN: %llvm-readelf -s %t.out.elf | %FileCheck --check-prefix=SYMS %s
-// SYMS-DAG: FUNC {{.*}} entry_tramp_kernel.stub
-// SYMS-DAG: FUNC {{.*}} hipblaslt_entry_kernel.stub
+// SYMS-DAG: entry_tramp_kernel.stub
+// SYMS-DAG: hipblaslt_entry_kernel.stub
+// SYMS-DAG: decoder_trip_kernel.stub
 
 // RUN: hotswap-rewrite %t.out.elf \
 // RUN:   amdgcn-amd-amdhsa--gfx1250 amdgcn-amd-amdhsa--gfx1250 \
@@ -68,8 +70,7 @@
 // API2: RESULT: SUCCESS
 // RUN: cmp %t.out.elf %t.out2.elf
 
-// COM: If the requested entry trampoline cannot allocate an aligned scratch
-// COM: SGPR pair, the rewrite fails instead of returning a partial output.
+// COM: The alignment fallback needs a scratch SGPR pair for its appended stubs.
 // RUN: sed 's/.sgpr_count: 8/.sgpr_count: 105/' %s > %t.highsgpr.s
 // RUN: %clang -target amdgcn-amd-amdhsa -mcpu=gfx1250 -nostdlib \
 // RUN:   %t.highsgpr.s -o %t.highsgpr.elf

@@ -104,6 +104,7 @@ add_executable(HotswapMCTests
   HotswapOccupancyTest.cpp
   HotswapMCTest.cpp
   ../src/comgr-hotswap-b0a0.cpp
+  ../src/comgr-hotswap-displacement.cpp
   ../src/comgr-hotswap-entry-trampoline.cpp
   ../src/comgr-hotswap-entry-trampoline-fast.cpp
   ../src/comgr-hotswap-elf.cpp

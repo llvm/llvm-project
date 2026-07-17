@@ -10,10 +10,9 @@
 // RUN:   | %FileCheck --check-prefix=API %s
 // API: RESULT: SUCCESS
 
-// COM: An installed trampoline gets a <kernel>.stub symbol: the plain kernel
-// COM: has one, the pre-fixed kernel does not.
+// COM: Direct displacement creates no appended-stub symbols.
 // RUN: %llvm-readelf -s %t.out.elf | %FileCheck --check-prefix=SYMS %s
-// SYMS: plain_kernel.stub
+// SYMS-NOT: plain_kernel.stub
 
 // RUN: %llvm-readelf -s %t.out.elf | %FileCheck --check-prefix=NO-WA-STUB %s
 // NO-WA-STUB-NOT: precompiled_wa_kernel.stub
@@ -21,9 +20,13 @@
 // COM: The pre-fixed kernel keeps its in-place workaround, not a redirect stub.
 // RUN: %llvm-objdump -d %t.out.elf | %FileCheck --check-prefix=DISASM %s
 // DISASM-LABEL: <precompiled_wa_kernel>:
-// DISASM: global_wb
+// DISASM-NEXT: global_wb
 // DISASM-NEXT: v_nop
 // DISASM-NEXT: s_endpgm
+// DISASM-LABEL: <plain_kernel>:
+// DISASM-NEXT: global_wb
+// DISASM-NEXT: v_nop
+// DISASM-NEXT: s_setreg_imm32_b32
 
 .amdgcn_target "amdgcn-amd-amdhsa--gfx1250"
 .text

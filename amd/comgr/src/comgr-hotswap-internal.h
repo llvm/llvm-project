@@ -72,6 +72,8 @@
 namespace COMGR {
 namespace hotswap {
 
+class ElfView;
+
 // -- Logging ------------------------------------------------------------------
 //
 // Single output stream for all hotswap diagnostics (errors, warnings, and
@@ -332,6 +334,51 @@ struct Trampoline {
   bool HasFunctionRange = false;
   uint64_t FunctionStart = 0;
   uint64_t FunctionEnd = 0;
+};
+
+struct DisplacementEdit {
+  uint64_t Offset = 0;
+  uint32_t OriginalSize = 0;
+  llvm::SmallVector<uint8_t> ReplacementBytes;
+};
+
+enum class DisplacementMapBias {
+  BeforeInsertedBytes,
+  AfterInsertedBytes,
+};
+
+class DisplacementPlan {
+public:
+  static llvm::Expected<DisplacementPlan>
+  create(const ElfView &Elf, llvm::ArrayRef<DisplacementEdit> Edits);
+
+  llvm::ArrayRef<DisplacementEdit> edits() const { return Edits; }
+  uint64_t oldTextSize() const { return OldTextSize; }
+  uint64_t rawGrowth() const { return RawGrowth; }
+  uint64_t paddedGrowth() const { return PaddedGrowth; }
+  uint64_t newTextSize() const { return OldTextSize + RawGrowth; }
+  uint64_t paddedTextSize() const { return OldTextSize + PaddedGrowth; }
+  size_t newElfSize(size_t OldElfSize) const {
+    return OldElfSize + PaddedGrowth;
+  }
+
+  bool mapOffset(uint64_t OldOffset, DisplacementMapBias Bias,
+                 uint64_t &NewOffset) const;
+  bool rangeOverlapsReplacement(uint64_t OldOffset, uint64_t Size) const;
+
+  llvm::SmallVector<uint8_t> buildText(llvm::ArrayRef<uint8_t> OldText,
+                                       llvm::ArrayRef<uint8_t> SNopBytes) const;
+
+private:
+  DisplacementPlan(uint64_t OldTextSize, uint64_t RawGrowth,
+                   uint64_t PaddedGrowth, std::vector<DisplacementEdit> Edits)
+      : OldTextSize(OldTextSize), RawGrowth(RawGrowth),
+        PaddedGrowth(PaddedGrowth), Edits(std::move(Edits)) {}
+
+  uint64_t OldTextSize = 0;
+  uint64_t RawGrowth = 0;
+  uint64_t PaddedGrowth = 0;
+  std::vector<DisplacementEdit> Edits;
 };
 
 // Kernel-entry stubs are appended as normal .text growth. Keep each entry on
@@ -1347,6 +1394,13 @@ bool hasKernelEntryTrampolinePrefix(llvm::ArrayRef<uint8_t> Bytes,
 /// mapped .text bytes.
 uint64_t computeKernelEntryPrefetchGuardBytes(uint32_t InstPrefLines);
 
+/// Queue one direct insertion of `global_wb; v_nop` at each kernel descriptor
+/// entry that does not already target either a direct entry prefix or an
+/// appended HotSwap entry stub.
+std::optional<uint32_t>
+collectKernelEntryDisplacements(const ElfView &Elf, const LLVMState &LS,
+                                std::vector<DisplacementEdit> &OutEdits);
+
 /// Append one entry stub per kernel descriptor that does not already target a
 /// HotSwap entry stub. The stubs are appended to \p Growth and descriptor
 /// rewrites are recorded in \p OutFixups for application after ELF growth.
@@ -1365,6 +1419,10 @@ bool rewriteKernelEntryDescriptorOffsets(
 /// Resolve the virtual address of a kernel descriptor's entry point. Shared by
 /// the MC and fast entry-trampoline paths.
 std::optional<uint64_t> entryVAddr(const KernelDescriptorInfo &KD);
+
+/// Compute LHS - RHS when the result is representable as int64_t.
+std::optional<int64_t> checkedSignedDifference(uint64_t LHS, uint64_t RHS,
+                                               llvm::StringRef Context);
 
 /// Round Value up to a multiple of Alignment, reporting overflow against
 /// Context. Shared by the MC and fast entry-trampoline paths.
@@ -1402,6 +1460,11 @@ std::unique_ptr<llvm::WritableMemoryBuffer> addKernelEntryTrampolineSymbols(
     llvm::WritableMemoryBuffer &In, unsigned TextSectionIndex,
     uint64_t TextAddr, uint64_t OldTextSize,
     llvm::ArrayRef<KernelEntryTrampolineFixup> Fixups);
+
+/// Apply direct .text displacement to a newly allocated output buffer.
+llvm::Expected<std::unique_ptr<llvm::WritableMemoryBuffer>>
+tryApplyTextDisplacementToNewBuffer(const ElfView &Elf, const LLVMState &LS,
+                                    llvm::ArrayRef<DisplacementEdit> Edits);
 
 // -- Function declarations (GFX1250 hotswap policy layer) ---------------------
 

@@ -2655,10 +2655,10 @@ copyOutputBuffer(const void *Data, size_t Size, StringRef CopyKind) {
 
 // -- retargetCodeObject -------------------------------------------------------
 
-amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
-                                      const TargetIdentifier &TargetIdent,
-                                      const Gfx1250RewriteOptions &Options,
-                                      std::unique_ptr<MemoryBuffer> &Out) {
+static amd_comgr_status_t retargetCodeObjectImpl(
+    const void *ElfData, size_t ElfSize, const TargetIdentifier &TargetIdent,
+    const Gfx1250RewriteOptions &Options, std::unique_ptr<MemoryBuffer> &Out,
+    bool AllowTextDisplacement, HotswapProfile &Profile) {
   // The dispatcher fetches the patch vtable lazily via
   // getHotswapPatchVTable() inside applyGfx1250B0toA0Rules; the singleton's
   // initializer binds every register*Patch slot on first access, so no
@@ -2667,22 +2667,7 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
   const bool RunInstructionPatches =
       Options.RunB0A0Patches ||
       Options.MaskPolicy != MaskWorkaroundPolicy::None;
-  if (!RunInstructionPatches && !Options.RunEntryTrampolines) {
-    std::unique_ptr<WritableMemoryBuffer> Result =
-        copyOutputBuffer(ElfData, ElfSize, "no-op");
-    if (!Result)
-      return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
-    Out = std::move(Result);
-    return AMD_COMGR_STATUS_SUCCESS;
-  }
-
-  // One profiling session per code object, merged into TimeStatistics when it
-  // goes out of scope. Prof gates the manual per-phase clock reads.
-  HotswapProfile Profile(hotswapProfilingEnabled());
   const bool Prof = Profile.enabled();
-  // RAII guard: records phase:rewrite_total on every return path.
-  [[maybe_unused]] HotswapProfile::Scope TotalScope =
-      Profile.time(HotswapMetric::RewriteTotal);
 
   // Take a working copy so the input is preserved and we have a mutable
   // buffer to parse / patch.
@@ -2742,6 +2727,44 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
       log() << "hotswap: error: retargetCodeObject: initLLVM failed "
             << "for CPU '" << TargetIdent.Processor << "'; aborting rewrite.\n";
       return AMD_COMGR_STATUS_ERROR;
+    }
+  }
+
+  // Direct displacement is an entry-workaround optimization only. Apply the
+  // entry prefixes before ordinary instruction rewriting so the existing
+  // NOP-sled/trampoline planner sees the final instruction offsets. If the ELF
+  // cannot be displaced safely, continue from the pristine working copy and
+  // append the established entry stubs below.
+  if (Options.RunEntryTrampolines && AllowTextDisplacement && !UseFastAppend) {
+    std::vector<DisplacementEdit> EntryDisplacements;
+    std::optional<uint32_t> EntryCount =
+        collectKernelEntryDisplacements(Elf, LS, EntryDisplacements);
+    if (!EntryCount)
+      return AMD_COMGR_STATUS_ERROR;
+
+    if (!EntryDisplacements.empty()) {
+      Expected<std::unique_ptr<WritableMemoryBuffer>> DisplacedOrErr =
+          tryApplyTextDisplacementToNewBuffer(Elf, LS, EntryDisplacements);
+      if (DisplacedOrErr) {
+        std::unique_ptr<WritableMemoryBuffer> Displaced =
+            std::move(*DisplacedOrErr);
+        if (!RunInstructionPatches) {
+          Out = std::move(Displaced);
+          return AMD_COMGR_STATUS_SUCCESS;
+        }
+
+        Gfx1250RewriteOptions RemainingOptions = Options;
+        RemainingOptions.RunEntryTrampolines = false;
+        RemainingOptions.UseB0B0EntryFastPath = false;
+        return retargetCodeObjectImpl(Displaced->getBufferStart(),
+                                      Displaced->getBufferSize(), TargetIdent,
+                                      RemainingOptions, Out,
+                                      /*AllowTextDisplacement=*/false, Profile);
+      }
+
+      log() << "hotswap: entry displacement unavailable: "
+            << toString(DisplacedOrErr.takeError())
+            << "; using appended entry stubs\n";
     }
   }
 
@@ -2947,6 +2970,33 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
 
   Out = std::move(Result);
   return AMD_COMGR_STATUS_SUCCESS;
+}
+
+amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
+                                      const TargetIdentifier &TargetIdent,
+                                      const Gfx1250RewriteOptions &Options,
+                                      std::unique_ptr<MemoryBuffer> &Out) {
+  const bool RunInstructionPatches =
+      Options.RunB0A0Patches ||
+      Options.MaskPolicy != MaskWorkaroundPolicy::None;
+  if (!RunInstructionPatches && !Options.RunEntryTrampolines) {
+    std::unique_ptr<WritableMemoryBuffer> Result =
+        copyOutputBuffer(ElfData, ElfSize, "no-op");
+    if (!Result)
+      return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
+    Out = std::move(Result);
+    return AMD_COMGR_STATUS_SUCCESS;
+  }
+
+  // One profiling session per code object, merged into TimeStatistics when it
+  // goes out of scope. Prof gates the manual per-phase clock reads.
+  HotswapProfile Profile(hotswapProfilingEnabled());
+  // RAII guard: records phase:rewrite_total on every return path.
+  [[maybe_unused]] HotswapProfile::Scope TotalScope =
+      Profile.time(HotswapMetric::RewriteTotal);
+
+  return retargetCodeObjectImpl(ElfData, ElfSize, TargetIdent, Options, Out,
+                                /*AllowTextDisplacement=*/true, Profile);
 }
 
 } // namespace hotswap

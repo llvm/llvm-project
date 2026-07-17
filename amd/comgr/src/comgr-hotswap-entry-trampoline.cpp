@@ -309,11 +309,9 @@ std::optional<uint64_t> entryVAddr(const KernelDescriptorInfo &KD) {
   return KD.VAddr - Magnitude;
 }
 
-static std::optional<bool>
-descriptorAlreadyTargetsEntryStub(const ElfView &Elf,
-                                  const KernelDescriptorInfo &KD,
-                                  const LLVMState &LS,
-                                  ArrayRef<uint8_t> EntryStubPrefix) {
+static std::optional<bool> descriptorAlreadyTargetsEntryStub(
+    const ElfView &Elf, const KernelDescriptorInfo &KD, const LLVMState &LS,
+    ArrayRef<uint8_t> EntryStubPrefix) {
   std::optional<uint64_t> Entry = entryVAddr(KD);
   if (!Entry)
     return std::nullopt;
@@ -338,8 +336,8 @@ descriptorAlreadyTargetsEntryStub(const ElfView &Elf,
     return false;
 
   std::vector<InternalDecodedInst> Decoded;
-  if (!decodeKernelEntryStub(Candidate, LS,
-                             Decoded, "entry trampoline idempotency matcher"))
+  if (!decodeKernelEntryStub(Candidate, LS, Decoded,
+                             "entry trampoline idempotency matcher"))
     return false;
   if (!hasEntryStubOperandShape(Decoded, LS))
     return false;
@@ -403,8 +401,8 @@ totalTrampolineBytes(ArrayRef<Trampoline> Trampolines) {
   return Total;
 }
 
-static std::optional<int64_t>
-checkedSignedDifference(uint64_t LHS, uint64_t RHS, StringRef Context) {
+std::optional<int64_t> checkedSignedDifference(uint64_t LHS, uint64_t RHS,
+                                               StringRef Context) {
   if (LHS >= RHS) {
     uint64_t Diff = LHS - RHS;
     if (Diff > static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
@@ -484,6 +482,73 @@ static bool appendPaddingTrampoline(std::vector<Trampoline> &Out,
     Pad.Bytes.append(Fill.begin(), Fill.end());
   Out.push_back(std::move(Pad));
   return true;
+}
+
+std::optional<uint32_t>
+collectKernelEntryDisplacements(const ElfView &Elf, const LLVMState &LS,
+                                std::vector<DisplacementEdit> &OutEdits) {
+  ArrayRef<KernelDescriptorInfo> Descriptors = Elf.kernelDescriptors();
+  if (Descriptors.empty())
+    return 0;
+
+  SmallVector<uint8_t> Prefix = buildEntryStubBytePrefix(LS);
+  if (Prefix.empty())
+    return std::nullopt;
+
+  std::optional<uint64_t> TextEnd = checkedAddUint64(
+      Elf.textAddr(), Elf.textSize(), "entry displacement text end");
+  if (!TextEnd)
+    return std::nullopt;
+
+  uint32_t Added = 0;
+  for (const KernelDescriptorInfo &KD : Descriptors) {
+    std::optional<bool> AlreadyHasEntryStub =
+        descriptorAlreadyTargetsEntryStub(Elf, KD, LS, Prefix);
+    if (!AlreadyHasEntryStub)
+      return std::nullopt;
+    if (*AlreadyHasEntryStub)
+      continue;
+
+    std::optional<bool> PrologueHasWorkaround =
+        entryPrologueHasVmemWorkaround(Elf, KD, LS, Prefix);
+    if (!PrologueHasWorkaround)
+      return std::nullopt;
+    if (*PrologueHasWorkaround)
+      continue;
+
+    std::optional<uint64_t> Entry = entryVAddr(KD);
+    if (!Entry)
+      return std::nullopt;
+    if (*Entry < Elf.textAddr() || *Entry >= *TextEnd) {
+      log() << "hotswap: error: kernel-entry displacement for '"
+            << KD.KernelName << "' points outside .text at vaddr 0x"
+            << utohexstr(*Entry) << ".\n";
+      return std::nullopt;
+    }
+    const uint64_t TextOffset = *Entry - Elf.textAddr();
+
+    bool DuplicateOffset = false;
+    for (const DisplacementEdit &Existing : OutEdits) {
+      if (Existing.Offset == TextOffset && Existing.OriginalSize == 0) {
+        DuplicateOffset = true;
+        break;
+      }
+    }
+    if (DuplicateOffset)
+      continue;
+
+    DisplacementEdit Edit;
+    Edit.Offset = TextOffset;
+    Edit.OriginalSize = 0;
+    Edit.ReplacementBytes.assign(Prefix.begin(), Prefix.end());
+    OutEdits.push_back(std::move(Edit));
+    ++Added;
+  }
+
+  if (Added > 0)
+    log() << "hotswap: queued " << Added << " kernel-entry displacement"
+          << (Added == 1 ? "" : "s") << "\n";
+  return Added;
 }
 
 std::optional<uint32_t> appendKernelEntryTrampolines(
