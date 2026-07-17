@@ -45,8 +45,8 @@ public:
 
 // TODO: add this function to the GenericCycleInfo template after implementing
 //       the IR version.
-LLVM_ABI bool isCycleInvariant(const MachineCycleInfo &CI,
-                               const CycleRef &Cycle, MachineInstr &I);
+LLVM_ABI bool isCycleInvariant(const MachineCycleInfo &CI, CycleRef Cycle,
+                               MachineInstr &I);
 
 class MachineCycleAnalysis : public AnalysisInfoMixin<MachineCycleAnalysis> {
   friend AnalysisInfoMixin<MachineCycleAnalysis>;

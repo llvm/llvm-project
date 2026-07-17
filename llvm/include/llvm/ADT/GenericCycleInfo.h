@@ -45,56 +45,6 @@ namespace llvm {
 template <typename ContextT> class GenericCycleInfo;
 template <typename ContextT> class GenericCycleInfoCompute;
 
-/// A possibly irreducible generalization of a \ref Loop.
-///
-/// Cycles are stored by value in GenericCycleInfo::Cycles in preorder of the
-/// cycle forest: a cycle is immediately followed by its descendants. Child
-/// iteration is therefore pointer arithmetic over that array.
-template <typename ContextT> class GenericCycle {
-public:
-  using BlockT = typename ContextT::BlockT;
-  using FunctionT = typename ContextT::FunctionT;
-  template <typename> friend class GenericCycleInfo;
-  template <typename> friend class GenericCycleInfoCompute;
-
-private:
-  /// The parent cycle. Is null for top-level cycles.
-  GenericCycle *ParentCycle = nullptr;
-
-  /// The entry block(s) of the cycle. The header is the only entry if
-  /// this is a loop.
-  SmallVector<BlockT *, 1> Entries;
-
-  /// This cycle's blocks (its own and its nested cycles') occupy the half-open
-  /// range [IdxBegin, IdxEnd) of GenericCycleInfo::BlockLayout. The
-  /// ranges are nested like an Euler tour of the cycle tree, so containment is
-  /// an interval test (see contains()).
-  ///
-  /// During construction (before the forest is flattened), IdxEnd accumulates
-  /// the number of this cycle's own blocks (those whose innermost cycle is
-  /// this one).
-  unsigned IdxBegin = 0, IdxEnd = 0;
-
-  /// Depth of the cycle in the tree: top-level cycles are at depth 1 and each
-  /// nested cycle is one deeper (getCycleDepth() returns 0 for blocks outside
-  /// any cycle). Sibling cycles share a depth.
-  unsigned Depth = 0;
-
-  /// Number of cycles nested inside this one: the subtree occupies
-  /// [this, this + 1 + NumDescendants) of GenericCycleInfo::Cycles.
-  unsigned NumDescendants = 0;
-
-  void appendEntry(BlockT *Block) { Entries.push_back(Block); }
-
-  GenericCycle(const GenericCycle &) = delete;
-  GenericCycle &operator=(const GenericCycle &) = delete;
-  GenericCycle(GenericCycle &&Rhs) = delete;
-  GenericCycle &operator=(GenericCycle &&Rhs) = delete;
-
-public:
-  GenericCycle() = default;
-};
-
 /// Opaque handle to a cycle within a GenericCycleInfo that wraps the cycle's
 /// preorder index. Handles remain valid as long as the cycle forest is not
 /// recomputed; addBlockToCycle() adds a block but never adds, removes, or
@@ -116,7 +66,9 @@ public:
 };
 
 template <> struct DenseMapInfo<CycleRef> {
-  static unsigned getHashValue(CycleRef C) { return C.Index; }
+  static unsigned getHashValue(CycleRef C) {
+    return DenseMapInfo<unsigned>::getHashValue(C.Index);
+  }
   static bool isEqual(CycleRef A, CycleRef B) { return A.Index == B.Index; }
 };
 
@@ -124,12 +76,50 @@ template <> struct DenseMapInfo<CycleRef> {
 template <typename ContextT> class GenericCycleInfo {
 public:
   using BlockT = typename ContextT::BlockT;
-  /// The internal, by-value storage type for a cycle.
-  using CycleT = GenericCycle<ContextT>;
   using FunctionT = typename ContextT::FunctionT;
   template <typename> friend class GenericCycleInfoCompute;
 
 private:
+  /// Internal, data-only storage for a cycle. Consumers name a cycle by a
+  /// CycleRef handle and query it through GenericCycleInfo.
+  class Cycle {
+  public:
+    /// The parent cycle. Is null for top-level cycles.
+    Cycle *ParentCycle = nullptr;
+
+    /// The entry block(s) of the cycle. The header is the only entry if this
+    /// is a loop.
+    SmallVector<BlockT *, 1> Entries;
+
+    /// This cycle's blocks (its own and its nested cycles') occupy the
+    /// half-open range [IdxBegin, IdxEnd) of BlockLayout, nested like an Euler
+    /// tour of the cycle tree, so containment is an interval test (see
+    /// contains()).
+    ///
+    /// During construction (before the forest is flattened), IdxEnd accumulates
+    /// the number of this cycle's own blocks (those whose innermost cycle is
+    /// this one).
+    unsigned IdxBegin = 0, IdxEnd = 0;
+
+    /// Depth of the cycle in the tree: top-level cycles are at depth 1 and each
+    /// nested cycle is one deeper (getCycleDepth() returns 0 for blocks outside
+    /// any cycle). Sibling cycles share a depth.
+    unsigned Depth = 0;
+
+    /// Number of cycles nested inside this one: the subtree occupies
+    /// [this, this + 1 + NumDescendants) of Cycles.
+    unsigned NumDescendants = 0;
+
+    void appendEntry(BlockT *Block) { Entries.push_back(Block); }
+
+    Cycle() = default;
+    Cycle(const Cycle &) = delete;
+    Cycle &operator=(const Cycle &) = delete;
+    Cycle(Cycle &&) = delete;
+    Cycle &operator=(Cycle &&) = delete;
+  };
+  using CycleT = Cycle;
+
   ContextT Context;
   unsigned BlockNumberEpoch;
 

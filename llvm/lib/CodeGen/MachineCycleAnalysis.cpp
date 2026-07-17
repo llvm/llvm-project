@@ -17,7 +17,6 @@
 using namespace llvm;
 
 template class llvm::GenericCycleInfo<llvm::MachineSSAContext>;
-template class llvm::GenericCycle<llvm::MachineSSAContext>;
 
 char MachineCycleInfoWrapperPass::ID = 0;
 
@@ -116,7 +115,7 @@ MachineCycleInfoPrinterPass::run(MachineFunction &MF,
   return PreservedAnalyses::all();
 }
 
-bool llvm::isCycleInvariant(const MachineCycleInfo &CI, const CycleRef &Cycle,
+bool llvm::isCycleInvariant(const MachineCycleInfo &CI, CycleRef Cycle,
                             MachineInstr &I) {
   MachineFunction *MF = I.getParent()->getParent();
   MachineRegisterInfo *MRI = &MF->getRegInfo();

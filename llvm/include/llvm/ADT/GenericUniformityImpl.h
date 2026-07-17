@@ -962,7 +962,7 @@ void GenericUniformityAnalysisImpl<ContextT>::taintAndPushPhiNodes(
 /// Add \p Candidate to \p Cycles if it is not already contained in \p Cycles.
 ///
 /// \return true iff \p Candidate was added to \p Cycles.
-template <typename CycleInfoT, typename CycleRef>
+template <typename CycleInfoT>
 bool insertIfNotContained(const CycleInfoT &CI, SmallVector<CycleRef> &Cycles,
                           CycleRef Candidate) {
   if (llvm::any_of(Cycles,
@@ -977,7 +977,7 @@ bool insertIfNotContained(const CycleInfoT &CI, SmallVector<CycleRef> &Cycles,
 /// If two paths that diverged outside an irreducible cycle join
 /// inside that cycle, then that whole cycle is assumed to be
 /// divergent. This does not apply if the cycle is reducible.
-template <typename CycleInfoT, typename CycleRef, typename BlockT>
+template <typename CycleInfoT, typename BlockT>
 CycleRef getExtDivCycle(const CycleInfoT &CI, CycleRef Cycle,
                         const BlockT *DivTermBlock, const BlockT *JoinBlock) {
   assert(Cycle);
@@ -1012,8 +1012,8 @@ CycleRef getExtDivCycle(const CycleInfoT &CI, CycleRef Cycle,
 ///
 /// This checks the "diverged entry" criterion defined in the
 /// docs/ConvergenceAnalysis.html.
-template <typename ContextT, typename CycleInfoT, typename CycleRef,
-          typename BlockT, typename DominatorTreeT>
+template <typename ContextT, typename CycleInfoT, typename BlockT,
+          typename DominatorTreeT>
 CycleRef getIntDivCycle(const CycleInfoT &CI, CycleRef Cycle,
                         const BlockT *DivTermBlock, const BlockT *JoinBlock,
                         const DominatorTreeT &DT, ContextT &Context) {
@@ -1049,8 +1049,8 @@ CycleRef getIntDivCycle(const CycleInfoT &CI, CycleRef Cycle,
   return Cycle;
 }
 
-template <typename ContextT, typename CycleInfoT, typename CycleRef,
-          typename BlockT, typename DominatorTreeT>
+template <typename ContextT, typename CycleInfoT, typename BlockT,
+          typename DominatorTreeT>
 CycleRef
 getOutermostDivergentCycle(const CycleInfoT &CI, CycleRef Cycle,
                            const BlockT *DivTermBlock, const BlockT *JoinBlock,
