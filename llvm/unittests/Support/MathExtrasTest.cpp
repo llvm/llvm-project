@@ -9,6 +9,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "gtest/gtest.h"
 #include <limits>
+#include <utility>
 
 using namespace llvm;
 
@@ -691,6 +692,136 @@ TYPED_TEST(OverflowTest, MulResultZero) {
   EXPECT_EQ(Result, TypeParam(0));
   EXPECT_FALSE(MulOverflow<TypeParam>(0, -5, Result));
   EXPECT_EQ(Result, TypeParam(0));
+}
+
+template <typename T> class ConstexprOverflowTest : public ::testing::Test {};
+
+TYPED_TEST_SUITE(ConstexprOverflowTest, OverflowTestTypes, );
+
+TYPED_TEST(ConstexprOverflowTest, AddNoOverflow) {
+  std::pair<TypeParam, bool> Result = AddOverflow<TypeParam>(1, 2);
+  EXPECT_EQ(Result.first, TypeParam(3));
+  EXPECT_FALSE(Result.second);
+}
+
+TYPED_TEST(ConstexprOverflowTest, AddOverflowToNegative) {
+  auto MaxValue = std::numeric_limits<TypeParam>::max();
+  std::pair<TypeParam, bool> Result = AddOverflow<TypeParam>(MaxValue, MaxValue);
+  EXPECT_EQ(Result.first, TypeParam(-2));
+  EXPECT_TRUE(Result.second);
+}
+
+TYPED_TEST(ConstexprOverflowTest, AddOverflowToMin) {
+  auto MaxValue = std::numeric_limits<TypeParam>::max();
+  std::pair<TypeParam, bool> Result = AddOverflow<TypeParam>(MaxValue, TypeParam(1));
+  EXPECT_EQ(Result.first, std::numeric_limits<TypeParam>::min());
+  EXPECT_TRUE(Result.second);
+}
+
+TYPED_TEST(ConstexprOverflowTest, AddOverflowToZero) {
+  auto MinValue = std::numeric_limits<TypeParam>::min();
+  std::pair<TypeParam, bool> Result = AddOverflow<TypeParam>(MinValue, MinValue);
+  EXPECT_EQ(Result.first, TypeParam(0));
+  EXPECT_TRUE(Result.second);
+}
+
+TYPED_TEST(ConstexprOverflowTest, AddOverflowToMax) {
+  auto MinValue = std::numeric_limits<TypeParam>::min();
+  std::pair<TypeParam, bool> Result = AddOverflow<TypeParam>(MinValue, TypeParam(-1));
+  EXPECT_EQ(Result.first, std::numeric_limits<TypeParam>::max());
+  EXPECT_TRUE(Result.second);
+}
+
+TYPED_TEST(ConstexprOverflowTest, SubNoOverflow) {
+  std::pair<TypeParam, bool> Result = SubOverflow<TypeParam>(1, 2);
+  EXPECT_EQ(Result.first, TypeParam(-1));
+  EXPECT_FALSE(Result.second);
+}
+
+TYPED_TEST(ConstexprOverflowTest, SubOverflowToMax) {
+  auto MinValue = std::numeric_limits<TypeParam>::min();
+  std::pair<TypeParam, bool> Result = SubOverflow<TypeParam>(0, MinValue);
+  EXPECT_EQ(Result.first, MinValue);
+  EXPECT_TRUE(Result.second);
+}
+
+TYPED_TEST(ConstexprOverflowTest, SubOverflowToMin) {
+  auto MinValue = std::numeric_limits<TypeParam>::min();
+  std::pair<TypeParam, bool> Result = SubOverflow<TypeParam>(0, MinValue);
+  EXPECT_EQ(Result.first, MinValue);
+  EXPECT_TRUE(Result.second);
+}
+
+TYPED_TEST(ConstexprOverflowTest, SubOverflowToNegative) {
+  auto MaxValue = std::numeric_limits<TypeParam>::max();
+  auto MinValue = std::numeric_limits<TypeParam>::min();
+  std::pair<TypeParam, bool> Result = SubOverflow<TypeParam>(MaxValue, MinValue);
+  EXPECT_EQ(Result.first, TypeParam(-1));
+  EXPECT_TRUE(Result.second);
+}
+
+TYPED_TEST(ConstexprOverflowTest, SubOverflowToPositive) {
+  auto MaxValue = std::numeric_limits<TypeParam>::max();
+  auto MinValue = std::numeric_limits<TypeParam>::min();
+  std::pair<TypeParam, bool> Result = SubOverflow<TypeParam>(MinValue, MaxValue);
+  EXPECT_EQ(Result.first, TypeParam(1));
+  EXPECT_TRUE(Result.second);
+}
+
+TYPED_TEST(ConstexprOverflowTest, MulNoOverflow) {
+  std::pair<TypeParam, bool> Result1 = MulOverflow<TypeParam>(1, 2);
+  EXPECT_EQ(Result1.first, 2);
+  EXPECT_FALSE(Result1.second);
+  std::pair<TypeParam, bool> Result2 = MulOverflow<TypeParam>(-1, 3);
+  EXPECT_EQ(Result2.first, -3);
+  EXPECT_FALSE(Result2.second);
+  std::pair<TypeParam, bool> Result3 = MulOverflow<TypeParam>(4, -2);
+  EXPECT_EQ(Result3.first, -8);
+  EXPECT_FALSE(Result3.second);
+  std::pair<TypeParam, bool> Result4 = MulOverflow<TypeParam>(-6, -5);
+  EXPECT_EQ(Result4.first, 30);
+  EXPECT_FALSE(Result4.second);
+}
+
+TYPED_TEST(ConstexprOverflowTest, MulNoOverflowToMax) {
+  auto MaxValue = std::numeric_limits<TypeParam>::max();
+  auto MinValue = std::numeric_limits<TypeParam>::min();
+  std::pair<TypeParam, bool> Result = MulOverflow<TypeParam>(MinValue + 1, -1);
+  EXPECT_EQ(Result.first, MaxValue);
+  EXPECT_FALSE(Result.second);
+}
+
+TYPED_TEST(ConstexprOverflowTest, MulOverflowToMin) {
+  auto MinValue = std::numeric_limits<TypeParam>::min();
+  std::pair<TypeParam, bool> Result = MulOverflow<TypeParam>(MinValue, -1);
+  EXPECT_EQ(Result.first, MinValue);
+  EXPECT_TRUE(Result.second);
+}
+
+TYPED_TEST(ConstexprOverflowTest, MulOverflowMax) {
+  auto MinValue = std::numeric_limits<TypeParam>::min();
+  auto MaxValue = std::numeric_limits<TypeParam>::max();
+  std::pair<TypeParam, bool> Result1 = MulOverflow<TypeParam>(MinValue, MinValue);
+  EXPECT_EQ(Result1.first, 0);
+  EXPECT_TRUE(Result1.second);
+  std::pair<TypeParam, bool> Result2 = MulOverflow<TypeParam>(MaxValue, MaxValue);
+  EXPECT_EQ(Result2.first, 1);
+  EXPECT_TRUE(Result2.second);
+}
+
+TYPED_TEST(ConstexprOverflowTest, MulResultZero) {
+  std::pair<TypeParam, bool> Result1 = MulOverflow<TypeParam>(4, 0);
+  EXPECT_EQ(Result1.first, TypeParam(0));
+  EXPECT_FALSE(Result1.second);
+  std::pair<TypeParam, bool> Result2 = MulOverflow<TypeParam>(-5, 0);
+  EXPECT_EQ(Result2.first, TypeParam(0));
+  EXPECT_FALSE(Result2.second);
+  std::pair<TypeParam, bool> Result3 = MulOverflow<TypeParam>(0, 5);
+  EXPECT_EQ(Result3.first, TypeParam(0));
+  EXPECT_FALSE(Result3.second);
+  std::pair<TypeParam, bool> Result4 = MulOverflow<TypeParam>(0, -5);
+  EXPECT_EQ(Result4.first, TypeParam(0));
+  EXPECT_FALSE(Result4.second);
 }
 
 TEST(MathExtras, NumDigitsBase10) {
