@@ -389,8 +389,8 @@ class SPIRVLegalizePointerCastImpl {
       bool CanUseAnyVectorRank = TM.getSubtargetImpl()->canUseExtension(
           SPIRV::Extension::SPV_EXT_long_vector);
       Value *Element = (E == 1 && !CanUseAnyVectorRank)
-          ? SrcVector
-          : makeExtractElement(B, ElemTy, SrcVector, I);
+                           ? SrcVector
+                           : makeExtractElement(B, ElemTy, SrcVector, I);
       StoreInst *SI = B.CreateStore(Element, ElementPtr);
       SI->setAlignment(commonAlignment(Alignment, I * ElemSize));
     }

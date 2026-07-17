@@ -324,10 +324,9 @@ const MachineInstr *SPIRVGlobalRegistry::createConstOrTypeAtFunctionEntry(
   return ConstOrType;
 }
 
-SPIRVTypeInst
-SPIRVGlobalRegistry::getOpTypeVectorImpl(
-    uint32_t NumElems, SPIRVTypeInst ElemType,
-    MachineIRBuilder &MIRBuilder, bool IsLongVector) {
+SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeVectorImpl(
+    uint32_t NumElems, SPIRVTypeInst ElemType, MachineIRBuilder &MIRBuilder,
+    bool IsLongVector) {
   auto EleOpc = ElemType->getOpcode();
   if (EleOpc == SPIRV::OpTypePointer) {
     if (!cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget())
@@ -348,8 +347,9 @@ SPIRVGlobalRegistry::getOpTypeVectorImpl(
 
   return createConstOrTypeAtFunctionEntry(
       MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-        return MIRBuilder.buildInstr(IsLongVector ? SPIRV::OpTypeVectorIdEXT
-                                                  : SPIRV::OpTypeVector)
+        return MIRBuilder
+            .buildInstr(IsLongVector ? SPIRV::OpTypeVectorIdEXT
+                                     : SPIRV::OpTypeVector)
             .addDef(createTypeVReg(MIRBuilder))
             .addUse(getSPIRVTypeID(ElemType))
             .addImm(NumElems);
@@ -363,8 +363,7 @@ SPIRVGlobalRegistry::getOpTypeVector(uint32_t NumElems, SPIRVTypeInst ElemType,
   return getOpTypeVectorImpl(NumElems, ElemType, MIRBuilder);
 }
 
-SPIRVTypeInst
-SPIRVGlobalRegistry::getOpTypeVectorIdEXT(
+SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeVectorIdEXT(
     uint32_t NumElems, SPIRVTypeInst ElemType, MachineIRBuilder &MIRBuilder) {
   assert((NumElems < 2 || NumElems > 16 ||
           (NumElems != 3 && NumElems != 4 && NumElems != 8)) &&

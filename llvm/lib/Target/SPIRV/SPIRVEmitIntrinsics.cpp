@@ -1351,9 +1351,9 @@ bool SPIRVEmitIntrinsics::deduceOperandElementTypeFunctionRet(
         continue;
       if (CallInst *AssignCI = GR->findAssignPtrTypeInstr(CI)) {
         if (Type *PrevElemTy = GR->findDeducedElementType(CI)) {
-          GR->updateAssignType(AssignCI, CI,
-                               getNormalizedPoisonValue(OpElemTy,
-                                                        CanUseAnyVectorRank));
+          GR->updateAssignType(
+              AssignCI, CI,
+              getNormalizedPoisonValue(OpElemTy, CanUseAnyVectorRank));
           propagateElemType(CI, PrevElemTy, VisitedSubst);
         }
       }
@@ -1547,8 +1547,8 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
     if (Op->hasUseList() && !WouldClobberPtrWithNonPtr &&
         (!Ty || AskTy || isUntypedPointerTy(Ty) || isTodoType(Op))) {
       Type *PrevElemTy = GR->findDeducedElementType(Op);
-      GR->addDeducedElementType(Op, normalizeType(KnownElemTy,
-                                                  CanUseAnyVectorRank));
+      GR->addDeducedElementType(
+          Op, normalizeType(KnownElemTy, CanUseAnyVectorRank));
       // check if KnownElemTy is complete
       if (!Incomplete)
         eraseTodoType(Op);
@@ -2165,8 +2165,8 @@ void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
     return;
 
   setInsertPointSkippingPhis(B, I);
-  Value *ExpectedElementVal = getNormalizedPoisonValue(ExpectedElementType,
-                                                       CanUseAnyVectorRank);
+  Value *ExpectedElementVal =
+      getNormalizedPoisonValue(ExpectedElementType, CanUseAnyVectorRank);
   MetadataAsValue *VMD = buildMD(ExpectedElementVal);
   unsigned AddressSpace = getPointerAddressSpace(Pointer->getType());
   bool FirstPtrCastOrAssignPtrType = true;
@@ -2931,11 +2931,10 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
             // types are handled in `processInstrAfterVisit`
             OpTyVal = getNormalizedPoisonValue(OpTy, CanUseAnyVectorRank);
           }
-          CallInst *AssignCI =
-              buildIntrWithMD(Intrinsic::spv_assign_type, {OpTy},
-                              getNormalizedPoisonValue(OpTy,
-                                                       CanUseAnyVectorRank),
-                              OpTyVal, {}, B);
+          CallInst *AssignCI = buildIntrWithMD(
+              Intrinsic::spv_assign_type, {OpTy},
+              getNormalizedPoisonValue(OpTy, CanUseAnyVectorRank), OpTyVal, {},
+              B);
           GR->addAssignPtrTypeInstr(OpTyVal, AssignCI);
         }
       }
@@ -3479,8 +3478,8 @@ bool SPIRVEmitIntrinsics::processFunctionPointers(Module &M) {
   for (Function *F : Worklist) {
     SmallVector<Value *> Args;
     for (const auto &Arg : F->args())
-      Args.push_back(getNormalizedPoisonValue(Arg.getType(),
-                                              CanUseAnyVectorRank));
+      Args.push_back(
+          getNormalizedPoisonValue(Arg.getType(), CanUseAnyVectorRank));
     IRB.CreateCall(F, Args);
   }
   IRB.CreateRetVoid();
@@ -3514,8 +3513,8 @@ void SPIRVEmitIntrinsics::applyDemangledPtrArgTypes(IRBuilder<> &B) {
           replaceUsesOfWithSpvPtrcast(
               Param, normalizeType(ElemTy, CanUseAnyVectorRank), CI, Ptrcasts);
         } else if (isa<Instruction>(Param)) {
-          GR->addDeducedElementType(Param, normalizeType(ElemTy,
-                                                         CanUseAnyVectorRank));
+          GR->addDeducedElementType(Param,
+                                    normalizeType(ElemTy, CanUseAnyVectorRank));
           // insertAssignTypeIntrs() will complete buildAssignPtr()
         } else {
           B.SetInsertPoint(CI->getParent()
@@ -3658,8 +3657,8 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
 
     if (SGEP) {
       GR->addDeducedElementType(
-          SGEP, normalizeType(SGEP->getResultElementType(),
-                              CanUseAnyVectorRank));
+          SGEP,
+          normalizeType(SGEP->getResultElementType(), CanUseAnyVectorRank));
       continue;
     }
 

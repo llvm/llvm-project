@@ -1239,13 +1239,13 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     return selectFrexp(ResVReg, ResType, I);
 
   case TargetOpcode::G_UADDO:
-    return selectOverflowArith(ResVReg, ResType, I, isVectorType(ResType)
-                                                        ? SPIRV::OpIAddCarryV
-                                                        : SPIRV::OpIAddCarryS);
+    return selectOverflowArith(ResVReg, ResType, I,
+                               isVectorType(ResType) ? SPIRV::OpIAddCarryV
+                                                     : SPIRV::OpIAddCarryS);
   case TargetOpcode::G_USUBO:
-    return selectOverflowArith(ResVReg, ResType, I, isVectorType(ResType)
-                                                        ? SPIRV::OpISubBorrowV
-                                                        : SPIRV::OpISubBorrowS);
+    return selectOverflowArith(ResVReg, ResType, I,
+                               isVectorType(ResType) ? SPIRV::OpISubBorrowV
+                                                     : SPIRV::OpISubBorrowS);
   case TargetOpcode::G_UMULO:
     return selectOverflowArith(ResVReg, ResType, I, SPIRV::OpUMulExtended);
   case TargetOpcode::G_SMULO:
@@ -2681,9 +2681,8 @@ bool SPIRVInstructionSelector::selectOverflowArith(Register ResVReg,
   assert(I.getNumDefs() > 1 && "Not enought operands");
   SPIRVTypeInst BoolType = GR.getOrCreateSPIRVBoolType(I, TII);
   unsigned N = GR.getScalarOrVectorComponentCount(ResType);
-  if (N > 1 ||
-      (isVectorType(ResType) &&
-       STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector)))
+  if (N > 1 || (isVectorType(ResType) &&
+                STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector)))
     BoolType = GR.getOrCreateSPIRVVectorType(BoolType, N, I, TII);
   Register BoolTypeReg = GR.getSPIRVTypeID(BoolType);
   Register ZeroReg = buildZerosVal(ResType, I);
@@ -3191,7 +3190,7 @@ bool SPIRVInstructionSelector::selectFloatDot(Register ResVReg,
   assert((VecType->getOpcode() == SPIRV::OpTypeVector &&
           GR.getScalarOrVectorComponentCount(VecType) > 1) ||
          VecType->getOpcode() == SPIRV::OpTypeVectorIdEXT &&
-         "dot product requires a vector of at least 2 components");
+             "dot product requires a vector of at least 2 components");
 
   [[maybe_unused]] SPIRVTypeInst EltType =
       GR.getScalarOrVectorComponentType(VecType);
@@ -3252,7 +3251,7 @@ bool SPIRVInstructionSelector::selectIntegerDotExpansion(
   assert((VecType->getOpcode() == SPIRV::OpTypeVector &&
           GR.getScalarOrVectorComponentCount(VecType) > 1) ||
          VecType->getOpcode() == SPIRV::OpTypeVectorIdEXT &&
-         "dot product requires a vector of at least 2 components");
+             "dot product requires a vector of at least 2 components");
 
   Register Res = MRI->createVirtualRegister(GR.getRegClass(ResType));
   BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
@@ -3609,8 +3608,8 @@ bool SPIRVInstructionSelector::selectWaveActiveAllEqual(Register ResVReg,
   // Determine if input is vector
   unsigned NumElems = GR.getScalarOrVectorComponentCount(InputType);
   bool IsVector = NumElems > 1 ||
-      (InputType->getOpcode() == SPIRV::OpTypeVectorIdEXT &&
-       STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector));
+                  (InputType->getOpcode() == SPIRV::OpTypeVectorIdEXT &&
+                   STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector));
 
   // Determine element types
   SPIRVTypeInst ElemInputType = GR.getScalarOrVectorComponentType(InputType);
@@ -3901,9 +3900,8 @@ bool SPIRVInstructionSelector::selectBitreverseViaI32(Register ResVReg,
                                     ? SPIRV::OpSConvert
                                     : SPIRV::OpUConvert;
 
-  if (N > 1 ||
-      (ResType->getOpcode() == SPIRV::OpTypeVectorIdEXT &&
-       STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector))) {
+  if (N > 1 || (ResType->getOpcode() == SPIRV::OpTypeVectorIdEXT &&
+                STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector))) {
     Int32Type = GR.getOrCreateSPIRVVectorType(Int32Type, N, I, TII);
     ShiftOp = SPIRV::OpShiftRightLogicalV;
 
@@ -4110,9 +4108,8 @@ bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
   unsigned OrOp = SPIRV::OpBitwiseOrS;
   unsigned ShlOp = SPIRV::OpShiftLeftLogicalS;
   unsigned ShrOp = SPIRV::OpShiftRightLogicalS;
-  if (N > 1 ||
-      (ResType->getOpcode() == SPIRV::OpTypeVectorIdEXT &&
-       STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector))) {
+  if (N > 1 || (ResType->getOpcode() == SPIRV::OpTypeVectorIdEXT &&
+                STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector))) {
     AndOp = SPIRV::OpBitwiseAndV;
     OrOp = SPIRV::OpBitwiseOrV;
     ShlOp = SPIRV::OpShiftLeftLogicalV;
@@ -4497,8 +4494,8 @@ bool SPIRVInstructionSelector::selectExp10(Register ResVReg,
     Register ConstReg =
         GR.buildConstantFP(ConstVal, MIRBuilder, SpirvScalarType);
     Register ArgReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
-    auto Opcode = isVectorType(ResType) ? SPIRV::OpVectorTimesScalar
-                                        : SPIRV::OpFMulS;
+    auto Opcode =
+        isVectorType(ResType) ? SPIRV::OpVectorTimesScalar : SPIRV::OpFMulS;
 
     if (!selectOpWithSrcs(ArgReg, ResType, I,
                           {I.getOperand(1).getReg(), ConstReg}, Opcode))
@@ -4715,9 +4712,8 @@ bool SPIRVInstructionSelector::selectSUCmp(Register ResVReg,
   // Ensure we have bool.
   SPIRVTypeInst BoolType = GR.getOrCreateSPIRVBoolType(I, TII);
   unsigned N = GR.getScalarOrVectorComponentCount(ResType);
-  if (N > 1 ||
-      (ResType->getOpcode() == SPIRV::OpTypeVectorIdEXT &&
-       STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector)))
+  if (N > 1 || (ResType->getOpcode() == SPIRV::OpTypeVectorIdEXT &&
+                STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector)))
     BoolType = GR.getOrCreateSPIRVVectorType(BoolType, N, I, TII);
   Register BoolTypeReg = GR.getSPIRVTypeID(BoolType);
   // Build less-than-equal and less-than.
@@ -4746,10 +4742,10 @@ bool SPIRVInstructionSelector::selectSUCmp(Register ResVReg,
   MRI->setType(NegOneOrZeroReg, LLT::scalar(64));
   GR.assignSPIRVTypeToVReg(ResType, NegOneOrZeroReg, MIRBuilder.getMF());
   unsigned SelectOpcode =
-      (N > 1 ||
-       (ResType->getOpcode() == SPIRV::OpTypeVectorIdEXT &&
-        STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector)))
-          ? SPIRV::OpSelectVIVCond : SPIRV::OpSelectSISCond;
+      (N > 1 || (ResType->getOpcode() == SPIRV::OpTypeVectorIdEXT &&
+                 STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector)))
+          ? SPIRV::OpSelectVIVCond
+          : SPIRV::OpSelectSISCond;
   BuildMI(BB, I, I.getDebugLoc(), TII.get(SelectOpcode))
       .addDef(NegOneOrZeroReg)
       .addUse(ResTypeReg)
@@ -4774,8 +4770,8 @@ bool SPIRVInstructionSelector::selectIntToBool(Register IntReg,
                                                SPIRVTypeInst BoolTy) const {
   // To truncate to a bool, we use OpBitwiseAnd 1 and OpINotEqual to zero.
   Register BitIntReg = createVirtualRegister(IntTy, &GR, MRI, MRI->getMF());
-  unsigned Opcode = isVectorType(IntTy) ? SPIRV::OpBitwiseAndV
-                                        : SPIRV::OpBitwiseAndS;
+  unsigned Opcode =
+      isVectorType(IntTy) ? SPIRV::OpBitwiseAndV : SPIRV::OpBitwiseAndS;
   Register Zero = buildZerosVal(IntTy, I);
   Register One = buildOnesVal(false, IntTy, I);
   MachineBasicBlock &BB = *I.getParent();
@@ -7193,8 +7189,8 @@ bool SPIRVInstructionSelector::selectLog10(Register ResVReg,
   Register ScaleReg = GR.buildConstantFP(ScaleVal, MIRBuilder, SpirvScalarType);
 
   // Multiply log2(x) by 0.30103 to get log10(x) result.
-  auto Opcode = isVectorType(ResType) ? SPIRV::OpVectorTimesScalar
-                                      : SPIRV::OpFMulS;
+  auto Opcode =
+      isVectorType(ResType) ? SPIRV::OpVectorTimesScalar : SPIRV::OpFMulS;
   BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))

@@ -1629,7 +1629,7 @@ void addInstrRequirements(const MachineInstr &MI,
     }
     break;
   }
-  case SPIRV::OpTypeVectorIdEXT : {
+  case SPIRV::OpTypeVectorIdEXT: {
     if (!ST.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector))
       reportFatalUsageError("OpTypeVectorIdEXT requires the following SPIR-V "
                             "extension: SPV_EXT_long_vector extension");

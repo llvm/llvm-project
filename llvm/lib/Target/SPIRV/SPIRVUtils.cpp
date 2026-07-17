@@ -973,7 +973,7 @@ Register createVirtualRegister(
 
 bool isVectorType(SPIRVTypeInst SPVTy) {
   return SPVTy->getOpcode() == SPIRV::OpTypeVector ||
-      SPVTy->getOpcode() == SPIRV::OpTypeVectorIdEXT;
+         SPVTy->getOpcode() == SPIRV::OpTypeVectorIdEXT;
 }
 
 CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
