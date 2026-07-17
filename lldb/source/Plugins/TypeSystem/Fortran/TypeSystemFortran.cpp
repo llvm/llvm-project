@@ -104,10 +104,10 @@ public:
 
   const ArrayBound &GetLowerBound() const { return m_lb; }
   const ArrayBound &GetUpperBound() const { return m_ub; }
-  const int64_t GetNumberOfElements() const {
+  int64_t GetNumberOfElements() const {
     return m_ub.GetBound() - m_lb.GetBound() + 1;
   }
-  const uint64_t GetByteStride() const { return m_byte_stride; }
+  uint64_t GetByteStride() const { return m_byte_stride; }
 
   void SetByteStride(uint64_t byte_stride) { m_byte_stride = byte_stride; }
 
@@ -126,7 +126,7 @@ public:
                uint64_t total_elements)
       : m_element_type(element_type),
         m_dimensions(dimensions.begin(), dimensions.end()),
-        m_is_allocatable(is_allocatable), m_total_elements(total_elements),
+        m_total_elements(total_elements), m_is_allocatable(is_allocatable), 
         FortranType(TypeKind::KIND_ARRAY, array_type_name, total_array_size) {}
   // TODO: Add necessary methods here
   CompilerType GetElementType() const { return m_element_type; }
@@ -393,7 +393,7 @@ CompilerType TypeSystemFortran::CreateArrayType(
   bool is_size_known = true;
   if (total_array_size == 0)
     is_size_known = false;
-  for (int idx = 0; idx < rank; ++idx) {
+  for (size_t idx = 0; idx < rank; ++idx) {
     ArrayBound lb;
     ArrayBound ub;
     ArrayBound::Category bound_category;
