@@ -82,7 +82,7 @@ constexpr bool test() {
     static_assert(!std::same_as<Sentinel, ConstSentinel>);
 
     R r{TestRng{}, nullptr};
-    Sentinel s1 = r.end();
+    Sentinel s1      = r.end();
     ConstSentinel s2 = s1;
     assert(s2.base().i == 5);
   }
@@ -110,8 +110,8 @@ constexpr bool test() {
     Sentinel s1      = r.end();
     ConstSentinel s2 = s1;
 
-    int i     = 10;
-    int* iter = &i;
+    int i                   = 10;
+    int* iter               = &i;
     [[maybe_unused]] bool b = iter == s2;
     assert(called);
   }

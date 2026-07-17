@@ -37,7 +37,8 @@ constexpr void test() {
 
   for (std::size_t n = 0; n != array.size(); ++n) {
     FilterIterator iter = view.begin();
-    for (std::size_t i = 0; i < n; ++i) ++iter;
+    for (std::size_t i = 0; i < n; ++i)
+      ++iter;
     ValueType& result = *iter;
     ASSERT_SAME_TYPE(ValueType&, decltype(*iter));
     assert(&result == array.data() + n);

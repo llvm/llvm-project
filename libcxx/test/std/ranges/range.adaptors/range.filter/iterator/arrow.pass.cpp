@@ -88,7 +88,8 @@ constexpr void test() {
   for (std::ptrdiff_t n = 0; n != 5; ++n) {
     FilterView view = make_filter_view(array.data(), array.data() + array.size(), AlwaysTrue{});
     FilterIterator iter = view.begin();
-    for (std::ptrdiff_t i = 0; i < n; ++i) ++iter;
+    for (std::ptrdiff_t i = 0; i < n; ++i)
+      ++iter;
     std::same_as<Iter> decltype(auto) result = iter.operator->();
     assert(base(result) == array.data() + n);
     assert(iter->x == n);

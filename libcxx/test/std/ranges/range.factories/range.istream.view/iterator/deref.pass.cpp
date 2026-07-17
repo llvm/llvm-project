@@ -28,7 +28,6 @@ void test() {
     std::same_as<int&> decltype(auto) v1 = *it;
     assert(v1 == 1);
   }
-
 }
 
 int main(int, char**) {

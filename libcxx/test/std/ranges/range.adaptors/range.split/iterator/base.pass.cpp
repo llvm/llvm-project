@@ -37,8 +37,7 @@ constexpr bool test() {
   using SplitView = std::ranges::split_view<std::ranges::subrange<Iter>, std::ranges::subrange<Iter>>;
   using SplitIter = std::ranges::iterator_t<SplitView>;
 
-  SplitView sv{std::ranges::subrange<Iter>{Iter{5}, Iter{8}},
-               std::ranges::subrange<Iter>{Iter{8}, Iter{9}}};
+  SplitView sv{std::ranges::subrange<Iter>{Iter{5}, Iter{8}}, std::ranges::subrange<Iter>{Iter{8}, Iter{9}}};
 
   // const &
   {
