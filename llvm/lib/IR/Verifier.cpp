@@ -4723,9 +4723,7 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
   Type *ScalarTy = ElTy;
   if (RMWI.isElementwise()) {
     Check(RMWI.getOrdering() != AtomicOrdering::SequentiallyConsistent,
-          "atomicrmw elementwise instructions cannot be sequentially "
-          "consistent.",
-          &RMWI);
+          "atomicrmw elementwise cannot be sequentially consistent.", &RMWI);
     auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
     Check(VecTy, "atomicrmw elementwise operand must have fixed vector type!",
           &RMWI, ElTy);

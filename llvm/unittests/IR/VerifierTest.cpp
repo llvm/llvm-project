@@ -450,7 +450,7 @@ TEST(VerifierTest, AtomicRMWElementwiseSequentiallyConsistent) {
   raw_string_ostream ErrorOS(Error);
   EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
   EXPECT_TRUE(StringRef(Error).starts_with(
-      "atomicrmw elementwise instructions cannot be sequentially consistent."))
+      "atomicrmw elementwise cannot be sequentially consistent."))
       << Error;
 }
 
