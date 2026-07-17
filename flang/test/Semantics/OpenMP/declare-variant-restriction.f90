@@ -55,6 +55,76 @@ contains
   end subroutine
 end subroutine
 
+! 'simd' appears in both sets but with different simd properties (simdlen), so
+! the construct selector sets differ: not conforming.
+subroutine r1_simd_simdlen_diff
+  !$omp declare variant (p1:p3) match (construct={simd(simdlen(4))})
+  !ERROR: Variant procedure 'p3' must have the same 'construct' selector set in all DECLARE VARIANT directives
+  !$omp declare variant (p2:p3) match (construct={simd(simdlen(8))})
+contains
+  subroutine p1
+  end subroutine
+  subroutine p2
+  end subroutine
+  subroutine p3
+  end subroutine
+end subroutine
+
+! 'simd' with identical simd properties in both sets: allowed.
+subroutine r1_simd_simdlen_same
+  !$omp declare variant (p1:p3) match (construct={simd(simdlen(4))})
+  !$omp declare variant (p2:p3) match (construct={simd(simdlen(4))})
+contains
+  subroutine p1
+  end subroutine
+  subroutine p2
+  end subroutine
+  subroutine p3
+  end subroutine
+end subroutine
+
+! Bare 'simd' versus 'simd' with a property: the sets differ.
+subroutine r1_simd_bare_vs_prop
+  !$omp declare variant (p1:p3) match (construct={simd})
+  !ERROR: Variant procedure 'p3' must have the same 'construct' selector set in all DECLARE VARIANT directives
+  !$omp declare variant (p2:p3) match (construct={simd(simdlen(4))})
+contains
+  subroutine p1
+  end subroutine
+  subroutine p2
+  end subroutine
+  subroutine p3
+  end subroutine
+end subroutine
+
+! 'simd' with inbranch versus notinbranch: the sets differ.
+subroutine r1_simd_inbranch_diff
+  !$omp declare variant (p1:p3) match (construct={simd(inbranch)})
+  !ERROR: Variant procedure 'p3' must have the same 'construct' selector set in all DECLARE VARIANT directives
+  !$omp declare variant (p2:p3) match (construct={simd(notinbranch)})
+contains
+  subroutine p1
+  end subroutine
+  subroutine p2
+  end subroutine
+  subroutine p3
+  end subroutine
+end subroutine
+
+! The same simd properties written in a different order describe the same set:
+! allowed (property order is not significant).
+subroutine r1_simd_prop_reorder
+  !$omp declare variant (p1:p3) match (construct={simd(simdlen(4), inbranch)})
+  !$omp declare variant (p2:p3) match (construct={simd(inbranch, simdlen(4))})
+contains
+  subroutine p1
+  end subroutine
+  subroutine p2
+  end subroutine
+  subroutine p3
+  end subroutine
+end subroutine
+
 ! A procedure (p2) that is a variant may not later be used as a base function.
 subroutine r3_variant_then_base
   !$omp declare variant (p1:p2) match (construct={parallel})

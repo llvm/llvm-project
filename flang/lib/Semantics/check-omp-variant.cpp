@@ -26,8 +26,10 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 
+#include <algorithm>
 #include <list>
 #include <map>
 #include <optional>
@@ -878,14 +880,54 @@ static bool CheckVariantAccessibility(SemanticsContext &context,
   return false;
 }
 
+// Normalize the text spanned by `source` for structural comparison: drop
+// whitespace and fold to lower case (Fortran is case-insensitive). This lets
+// e.g. `simdlen(4)` and `SIMDLEN( 4 )` compare equal while `simdlen(4)` and
+// `simdlen(8)` do not.
+static std::string NormalizeSelectorText(parser::CharBlock source) {
+  std::string text{source.ToString()};
+  llvm::erase_if(text, parser::IsWhiteSpace);
+  return parser::ToLowerCaseLetters(text);
+}
+
+// Render the properties of a trait selector into a canonical string (in a
+// construct selector set only `simd` currently carries properties, e.g.
+// simdlen, inbranch/notinbranch). The property list is unordered, so the
+// individual properties are sorted; two selectors have the same properties iff
+// these strings are equal.
+static std::string CanonicalizeTraitProperties(
+    const parser::OmpTraitSelector &trait) {
+  const auto &maybeProperties{
+      std::get<std::optional<parser::OmpTraitSelector::Properties>>(trait.t)};
+  if (!maybeProperties) {
+    return {};
+  }
+  llvm::SmallVector<std::string> items;
+  for (const parser::OmpTraitProperty &property :
+      std::get<std::list<parser::OmpTraitProperty>>(maybeProperties->t)) {
+    items.push_back(NormalizeSelectorText(property.source));
+  }
+  std::sort(items.begin(), items.end());
+  std::string result;
+  for (const std::string &item : items) {
+    result += item;
+    result += ';';
+  }
+  return result;
+}
+
 // Collect the construct selector set of `sel` into `constructs` as an ordered
-// list of leaf construct directives. Combined and composite constructs are
-// decomposed into their leaves (e.g. `target teams` -> target, teams), so two
-// match selectors have the same construct selector set iff the collected lists
-// are equal. An absent construct selector yields an empty list.
+// list of elements: a leaf construct directive plus a normalized rendering of
+// any properties it carries. Combined and composite constructs are decomposed
+// into their leaves (e.g. `target teams` -> target, teams). The properties
+// are included so that e.g. `simd(simdlen(4))` and `simd(simdlen(8))` are
+// treated as different construct selector sets. Two match selectors have the
+// same construct selector set iff the collected lists are equal; an absent
+// construct selector yields an empty list.
 static void CollectConstructSelectorSet(
     const parser::traits::OmpContextSelectorSpecification &sel,
-    llvm::SmallVectorImpl<llvm::omp::Directive> &constructs) {
+    llvm::SmallVectorImpl<std::pair<llvm::omp::Directive, std::string>>
+        &constructs) {
   using SetName = parser::OmpTraitSetSelectorName;
   using TraitName = parser::OmpTraitSelectorName;
   for (const parser::OmpTraitSetSelector &traitSet : sel.v) {
@@ -898,14 +940,16 @@ static void CollectConstructSelectorSet(
       if (const auto *dir{std::get_if<llvm::omp::Directive>(&traitName.u)}) {
         for (llvm::omp::Directive leaf :
             llvm::omp::getLeafConstructsOrSelf(*dir)) {
-          constructs.push_back(leaf);
+          constructs.emplace_back(leaf, std::string{});
         }
       } else if (const auto *value{std::get_if<TraitName::Value>(&traitName.u)};
           value && *value == TraitName::Value::Simd) {
         // In a construct selector, `simd` is represented as Value::Simd (it can
         // carry simd-specific properties), not as a Directive; treat it as
-        // OMPD_simd so it participates in the comparison.
-        constructs.push_back(llvm::omp::Directive::OMPD_simd);
+        // OMPD_simd and fold in its properties so they participate in the
+        // comparison.
+        constructs.emplace_back(llvm::omp::Directive::OMPD_simd,
+            CanonicalizeTraitProperties(trait));
       }
     }
   }
@@ -1025,7 +1069,8 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
         // OpenMP 5.2 [7.5] / 6.0 [9.6]: if a procedure is determined to be a
         // function variant through more than one DECLARE VARIANT directive, the
         // construct selector set of their context selectors must be the same.
-        llvm::SmallVector<llvm::omp::Directive, 4> constructs;
+        llvm::SmallVector<std::pair<llvm::omp::Directive, std::string>, 4>
+            constructs;
         CollectConstructSelectorSet(*matchSelector, constructs);
         auto it{declareVariantConstructSets_.find(variant)};
         if (it == declareVariantConstructSets_.end()) {

@@ -459,8 +459,14 @@ private:
   int directiveNest_[LastType + 1] = {0};
 
   std::set<std::pair<const Symbol *, const Symbol *>> declareVariantPairs_;
+  // For each variant procedure: its construct-selector-set as an ordered list
+  // of elements (a leaf construct directive plus a normalized rendering of any
+  // properties), and the source of the DECLARE VARIANT directive that first
+  // established the set.
   std::map<const Symbol *,
-      std::pair<llvm::SmallVector<llvm::omp::Directive, 4>, parser::CharBlock>>
+      std::pair<
+          llvm::SmallVector<std::pair<llvm::omp::Directive, std::string>, 4>,
+          parser::CharBlock>>
       declareVariantConstructSets_;
   // Tracks the procedures that appear as a base in DECLARE VARIANT.
   std::set<const Symbol *> declareVariantBases_;
