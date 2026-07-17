@@ -361,6 +361,7 @@
 #include "llvm/Transforms/Scalar/TailRecursionElimination.h"
 #include "llvm/Transforms/Scalar/WarnMissedTransforms.h"
 #include "llvm/Transforms/Utils/AddDiscriminators.h"
+#include "llvm/Transforms/Utils/AssignGUID.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/BreakCriticalEdges.h"
 #include "llvm/Transforms/Utils/CanonicalizeAliases.h"
@@ -891,7 +892,7 @@ Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
     std::tie(ParamName, Params) = Params.split(';');
     std::optional<OptimizationLevel> OptLevel = parseOptLevel(ParamName);
     if (OptLevel) {
-      UnrollOpts.setOptLevel(OptLevel->getSpeedupLevel());
+      UnrollOpts.setOptLevel(static_cast<int>(*OptLevel));
       continue;
     }
     if (ParamName.consume_front("full-unroll-max=")) {
@@ -2063,8 +2064,8 @@ PassBuilder::parsePipelineText(StringRef Text) {
 
 static void setupOptionsForPipelineAlias(PipelineTuningOptions &PTO,
                                          OptimizationLevel L) {
-  PTO.LoopVectorization = L.getSpeedupLevel() > 1;
-  PTO.SLPVectorization = L.getSpeedupLevel() > 1;
+  PTO.LoopVectorization = L >= OptimizationLevel::O2;
+  PTO.SLPVectorization = L >= OptimizationLevel::O2;
 }
 
 Error PassBuilder::parseModulePass(ModulePassManager &MPM,

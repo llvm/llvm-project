@@ -386,6 +386,7 @@ jobs:
           persist-credentials: false
           sparse-checkout: |
             .github/workflows/upload-release-artifact
+            .github/workflows/validate-release-version
             llvm/utils/release/github-upload-release.py
             llvm/utils/git/requirements.txt
           sparse-checkout-cone-mode: false

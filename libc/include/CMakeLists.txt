@@ -83,6 +83,14 @@ add_header_macro(
 )
 
 add_header_macro(
+  err
+  ../libc/include/err.yaml
+  err.h
+  DEPENDS
+    .llvm_libc_common_h
+)
+
+add_header_macro(
   features
   ../libc/include/features.yaml
   features.h
@@ -201,6 +209,16 @@ add_header_macro(
   sysexits.h
   DEPENDS
     .llvm-libc-macros.sysexits_macros
+)
+
+add_header_macro(
+  alloca
+  ../libc/include/alloca.yaml
+  alloca.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.alloca_macros
+    .llvm-libc-types.size_t
 )
 
 add_header_macro(
@@ -539,6 +557,7 @@ add_header_macro(
   elf.h
   DEPENDS
     .llvm-libc-macros.elf_macros
+    .llvm-libc-macros.sys_auxv_macros
     .llvm-libc-types.Elf32_Addr
     .llvm-libc-types.Elf32_Chdr
     .llvm-libc-types.Elf32_Dyn
@@ -893,6 +912,18 @@ add_header_macro(
     .llvm-libc-types.pid_t
     .llvm-libc-types.struct_rusage
     .llvm-libc-types.siginfo_t
+)
+
+file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/net)
+
+add_header_macro(
+  net_if
+  ../libc/include/net/if.yaml
+  net/if.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.net_if_macros
+    .llvm-libc-types.struct_ifreq
 )
 
 # TODO: This should be conditional on POSIX networking being included.
