@@ -7989,10 +7989,6 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
   MVT IntVT = MVT::getIntegerVT(ValSize);
   const GCNSubtarget *ST = TLI.getSubtarget();
 
-  if ((IsPermLane16 && !ST->hasPermlane16Insts()) ||
-      (IID == Intrinsic::amdgcn_mov_dpp8 && !ST->hasDPP8()))
-    return emitRemovedIntrinsicError(DAG, SL, VT);
-
   unsigned SplitSize = 32;
   if (IID == Intrinsic::amdgcn_update_dpp && (ValSize % 64 == 0) &&
       ST->hasDPALU_DPP() &&
@@ -11000,17 +10996,9 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return emitRemovedIntrinsicError(DAG, DL, VT);
     return DAG.getNode(AMDGPUISD::RCP_LEGACY, DL, VT, Op.getOperand(1));
   case Intrinsic::amdgcn_fma_legacy:
-    if (!Subtarget->hasFmaLegacy32Insts())
-      return emitRemovedIntrinsicError(DAG, DL, VT);
-    return SDValue();
   case Intrinsic::amdgcn_sudot4:
   case Intrinsic::amdgcn_sudot8:
-    if (!Subtarget->hasDot8Insts())
-      return emitRemovedIntrinsicError(DAG, DL, VT);
-    return SDValue();
   case Intrinsic::amdgcn_tanh:
-    if (!Subtarget->hasTanhInsts())
-      return emitRemovedIntrinsicError(DAG, DL, VT);
     return SDValue();
   case Intrinsic::amdgcn_rsq_clamp: {
     if (Subtarget->getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS)
@@ -11880,11 +11868,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     assert(NodePtr.getValueType() == MVT::i64);
     assert(RayDir.getValueType() == MVT::v3f32);
 
-    if (!Subtarget->hasBVHDualAndBVH8Insts()) {
-      emitRemovedIntrinsicError(DAG, DL, Op.getValueType());
-      return SDValue();
-    }
-
     bool IsBVH8 = IntrID == Intrinsic::amdgcn_image_bvh8_intersect_ray;
     const unsigned NumVDataDwords = 10;
     const unsigned NumVAddrDwords = IsBVH8 ? 11 : 12;
@@ -11924,11 +11907,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
            NodePtr.getValueType() == MVT::i64);
     assert(RayDir.getValueType() == MVT::v3f16 ||
            RayDir.getValueType() == MVT::v3f32);
-
-    if (!Subtarget->hasGFX10_AEncoding()) {
-      emitRemovedIntrinsicError(DAG, DL, Op.getValueType());
-      return SDValue();
-    }
 
     const bool IsGFX11 = AMDGPU::isGFX11(*Subtarget);
     const bool IsGFX11Plus = AMDGPU::isGFX11Plus(*Subtarget);
@@ -12121,14 +12099,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                              Chain, Ptr, MII->getMemOperand());
   }
   case Intrinsic::amdgcn_av_load_b128: {
-    if (!Subtarget->hasFlatGlobalInsts()) {
-      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
-          DAG.getMachineFunction().getFunction(),
-          "llvm.amdgcn.av.load.b128 not supported on subtarget",
-          DL.getDebugLoc()));
-      return DAG.getMergeValues(
-          {DAG.getPOISON(Op->getValueType(0)), Op->getOperand(0)}, DL);
-    }
     MemIntrinsicSDNode *MII = cast<MemIntrinsicSDNode>(Op);
     SDValue Chain = Op->getOperand(0);
     SDValue Ptr = Op->getOperand(2);
@@ -12318,11 +12288,6 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
   switch (IntrinsicID) {
   case Intrinsic::amdgcn_exp_compr: {
-    if (!Subtarget->hasCompressedExport()) {
-      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
-          DAG.getMachineFunction().getFunction(),
-          "intrinsic not supported on subtarget", DL.getDebugLoc()));
-    }
     SDValue Src0 = Op.getOperand(4);
     SDValue Src1 = Op.getOperand(5);
     // Hack around illegal type on SI by directly selecting it.
@@ -12852,13 +12817,6 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                          Ptr, MII->getMemOperand());
   }
   case Intrinsic::amdgcn_av_store_b128: {
-    if (!Subtarget->hasFlatGlobalInsts()) {
-      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
-          DAG.getMachineFunction().getFunction(),
-          "llvm.amdgcn.av.store.b128 not supported on subtarget",
-          DL.getDebugLoc()));
-      return Op->getOperand(0); // return the input chain
-    }
     MemIntrinsicSDNode *MII = cast<MemIntrinsicSDNode>(Op);
     SDValue Chain = Op->getOperand(0);
     SDValue Ptr = Op->getOperand(2);

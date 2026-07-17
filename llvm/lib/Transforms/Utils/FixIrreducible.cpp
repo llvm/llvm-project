@@ -220,12 +220,12 @@ static void reconnectChildLoops(LoopInfo &LI, Loop *ParentLoop, Loop *NewLoop,
   }
 }
 
-static void updateLoopInfo(CycleInfo &CI, LoopInfo &LI, Cycle &C,
+static void updateLoopInfo(CycleInfo &CI, LoopInfo &LI, CycleRef C,
                            ArrayRef<BasicBlock *> GuardBlocks) {
   // The parent loop is a natural loop L mapped to the cycle header H as long as
   // H is not also the header of L. In the latter case, L is destroyed and we
   // seek its parent instead.
-  BasicBlock *CycleHeader = C.getHeader();
+  BasicBlock *CycleHeader = CI.getHeader(C);
   Loop *ParentLoop = LI.getLoopFor(CycleHeader);
   if (ParentLoop && ParentLoop->getHeader() == CycleHeader)
     ParentLoop = ParentLoop->getParentLoop();
@@ -261,7 +261,7 @@ static void updateLoopInfo(CycleInfo &CI, LoopInfo &LI, Cycle &C,
   LLVM_DEBUG(dbgs() << "header for new loop: "
                     << NewLoop->getHeader()->getName() << "\n");
 
-  reconnectChildLoops(LI, ParentLoop, NewLoop, C.getHeader());
+  reconnectChildLoops(LI, ParentLoop, NewLoop, CI.getHeader(C));
 
   LLVM_DEBUG(dbgs() << "Verify new loop.\n"; NewLoop->print(dbgs()));
   NewLoop->verifyLoop();
@@ -274,18 +274,18 @@ static void updateLoopInfo(CycleInfo &CI, LoopInfo &LI, Cycle &C,
 // Given a set of blocks and headers in an irreducible SCC, convert it into a
 // natural loop. Also insert this new loop at its appropriate place in the
 // hierarchy of loops.
-static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
+static bool fixIrreducible(CycleRef C, CycleInfo &CI, DominatorTree &DT,
                            LoopInfo *LI) {
-  if (C.isReducible())
+  if (CI.isReducible(C))
     return false;
-  LLVM_DEBUG(dbgs() << "Processing cycle:\n" << CI.print(&C) << "\n";);
+  LLVM_DEBUG(dbgs() << "Processing cycle:\n" << CI.print(C) << "\n";);
 
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
   ControlFlowHub CHub;
   SetVector<BasicBlock *> Predecessors;
 
   // Redirect internal edges incident on the header.
-  BasicBlock *Header = C.getHeader();
+  BasicBlock *Header = CI.getHeader(C);
   for (BasicBlock *P : predecessors(Header)) {
     if (CI.contains(C, P))
       Predecessors.insert(P);
@@ -329,7 +329,7 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
 
   // Redirect external incoming edges. This includes the edges on the header.
   Predecessors.clear();
-  for (BasicBlock *E : C.entries()) {
+  for (BasicBlock *E : CI.getEntries(C)) {
     for (BasicBlock *P : predecessors(E)) {
       if (!CI.contains(C, P))
         Predecessors.insert(P);
@@ -394,7 +394,7 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
   // the new ControlFlowHub, which can be mitigated if the orders match. So we
   // reverse the entries when adding them to the hub.
   SetVector<BasicBlock *> Entries;
-  Entries.insert(C.entry_rbegin(), C.entry_rend());
+  Entries.insert(CI.getEntries(C).rbegin(), CI.getEntries(C).rend());
 
   CHub.finalize(&DTU, GuardBlocks, "irr");
 #if defined(EXPENSIVE_CHECKS)
@@ -411,13 +411,13 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
   for (auto *G : GuardBlocks) {
     LLVM_DEBUG(dbgs() << "added guard block to cycle: " << G->getName()
                       << "\n");
-    CI.addBlockToCycle(G, &C);
+    CI.addBlockToCycle(G, C);
   }
-  C.setSingleEntry(GuardBlocks[0]);
+  CI.setSingleEntry(C, GuardBlocks[0]);
 
   CI.verifyCycle(C);
-  if (Cycle *Parent = C.getParentCycle())
-    CI.verifyCycle(*Parent);
+  if (CycleRef Parent = CI.getParentCycle(C))
+    CI.verifyCycle(Parent);
 
   LLVM_DEBUG(dbgs() << "Finished one cycle:\n"; CI.print(dbgs()););
   return true;
@@ -429,15 +429,8 @@ static bool FixIrreducibleImpl(Function &F, CycleInfo &CI, DominatorTree &DT,
                     << F.getName() << "\n");
 
   bool Changed = false;
-  SmallVector<Cycle *, 8> Worklist;
-  for (Cycle *TopCycle : CI.toplevel_cycles()) {
-    Worklist.push_back(TopCycle);
-    while (!Worklist.empty()) {
-      Cycle *C = Worklist.pop_back_val();
-      Changed |= fixIrreducible(*C, CI, DT, LI);
-      llvm::append_range(Worklist, reverse(C->children()));
-    }
-  }
+  for (auto C : CI.cycles())
+    Changed |= fixIrreducible(C, CI, DT, LI);
 
   if (!Changed)
     return false;
