@@ -275,6 +275,10 @@ Error DataReader::preprocessProfile(BinaryContext &BC) {
       FuncData->setEntryCounts(Function);
       FuncData->Used = true;
     }
+    if (NoLBRMode)
+      if (FuncBasicSampleData *SampleData =
+              getFuncBasicSampleData(Function.getNames()))
+        Function.setExecutionCount(SampleData->getSamples());
   }
 
   for (auto &BFI : BC.getBinaryFunctions()) {
