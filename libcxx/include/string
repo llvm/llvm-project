@@ -3804,38 +3804,26 @@ stoull(const string& __str, size_t* __idx = nullptr, int __base = 10);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI double stod(const string& __str, size_t* __idx = nullptr);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI long double stold(const string& __str, size_t* __idx = nullptr);
 
-<<<<<<< HEAD
-_LIBCPP_EXPORTED_FROM_ABI string to_string(int __val);
-_LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned __val);
-_LIBCPP_EXPORTED_FROM_ABI string to_string(long __val);
-_LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned long __val);
-_LIBCPP_EXPORTED_FROM_ABI string to_string(long long __val);
-_LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned long long __val);
-
-#  if _LIBCPP_STD_VER >= 26
-_LIBCPP_EXPORTED_FROM_ABI string __to_string(float __val);
-_LIBCPP_EXPORTED_FROM_ABI string __to_string(double __val);
-_LIBCPP_EXPORTED_FROM_ABI string __to_string(long double __val);
-
-_LIBCPP_HIDE_FROM_ABI string to_string(float __val) { return std::__to_string(__val); }
-_LIBCPP_HIDE_FROM_ABI string to_string(double __val) { return std::__to_string(__val); }
-_LIBCPP_HIDE_FROM_ABI string to_string(long double __val) { return std::__to_string(__val); }
-#  else
-_LIBCPP_EXPORTED_FROM_ABI string to_string(float __val);
-_LIBCPP_EXPORTED_FROM_ABI string to_string(double __val);
-_LIBCPP_EXPORTED_FROM_ABI string to_string(long double __val);
-#  endif // _LIBCPP_STD_VER >= 26
-=======
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(int __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(long __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned long __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(long long __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned long long __val);
+
+#  if _LIBCPP_STD_VER >= 26
+_LIBCPP_EXPORTED_FROM_ABI string __to_string(float __val);
+_LIBCPP_EXPORTED_FROM_ABI string __to_string(double __val);
+_LIBCPP_EXPORTED_FROM_ABI string __to_string(long double __val);
+
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string to_string(float __val) { return std::__to_string(__val); }
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string to_string(double __val) { return std::__to_string(__val); }
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string to_string(long double __val) { return std::__to_string(__val); }
+#  else
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(float __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(double __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(long double __val);
->>>>>>> main
+#  endif // _LIBCPP_STD_VER >= 26
 
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI int stoi(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
