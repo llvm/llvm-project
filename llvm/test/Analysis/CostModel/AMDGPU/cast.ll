@@ -299,19 +299,19 @@ define void @sitofp4(<4 x i1> %a, <4 x i8> %b, <4 x i16> %c, <4 x i32> %d) {
 }
 
 define void @sitofp8(<8 x i1> %a, <8 x i8> %b, <8 x i16> %c, <8 x i32> %d) {
-; ALL-LABEL: 'sitofp8'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A1 = sitofp <8 x i1> %a to <8 x float>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %B1 = sitofp <8 x i8> %b to <8 x float>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %C1 = sitofp <8 x i16> %c to <8 x float>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %D1 = sitofp <8 x i32> %d to <8 x float>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+; SLOW-LABEL: 'sitofp8'
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A1 = sitofp <8 x i1> %a to <8 x float>
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %B1 = sitofp <8 x i8> %b to <8 x float>
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %C1 = sitofp <8 x i16> %c to <8 x float>
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %D1 = sitofp <8 x i32> %d to <8 x float>
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
-; ALL-SIZE-LABEL: 'sitofp8'
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A1 = sitofp <8 x i1> %a to <8 x float>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %B1 = sitofp <8 x i8> %b to <8 x float>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %C1 = sitofp <8 x i16> %c to <8 x float>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %D1 = sitofp <8 x i32> %d to <8 x float>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; SLOW-SIZE-LABEL: 'sitofp8'
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A1 = sitofp <8 x i1> %a to <8 x float>
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %B1 = sitofp <8 x i8> %b to <8 x float>
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %C1 = sitofp <8 x i16> %c to <8 x float>
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %D1 = sitofp <8 x i32> %d to <8 x float>
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %A1 = sitofp <8 x i1> %a to <8 x float>
   %B1 = sitofp <8 x i8> %b to <8 x float>
@@ -377,19 +377,19 @@ define void @uitofp4(<4 x i1> %a, <4 x i8> %b, <4 x i16> %c, <4 x i32> %d) {
 }
 
 define void @uitofp8(<8 x i1> %a, <8 x i8> %b, <8 x i16> %c, <8 x i32> %d) {
-; ALL-LABEL: 'uitofp8'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A1 = uitofp <8 x i1> %a to <8 x float>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %B1 = uitofp <8 x i8> %b to <8 x float>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %C1 = uitofp <8 x i16> %c to <8 x float>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %D1 = uitofp <8 x i32> %d to <8 x float>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+; SLOW-LABEL: 'uitofp8'
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A1 = uitofp <8 x i1> %a to <8 x float>
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %B1 = uitofp <8 x i8> %b to <8 x float>
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %C1 = uitofp <8 x i16> %c to <8 x float>
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %D1 = uitofp <8 x i32> %d to <8 x float>
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
-; ALL-SIZE-LABEL: 'uitofp8'
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A1 = uitofp <8 x i1> %a to <8 x float>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %B1 = uitofp <8 x i8> %b to <8 x float>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %C1 = uitofp <8 x i16> %c to <8 x float>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %D1 = uitofp <8 x i32> %d to <8 x float>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; SLOW-SIZE-LABEL: 'uitofp8'
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A1 = uitofp <8 x i1> %a to <8 x float>
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %B1 = uitofp <8 x i8> %b to <8 x float>
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %C1 = uitofp <8 x i16> %c to <8 x float>
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %D1 = uitofp <8 x i32> %d to <8 x float>
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %A1 = uitofp <8 x i1> %a to <8 x float>
   %B1 = uitofp <8 x i8> %b to <8 x float>
@@ -399,19 +399,19 @@ define void @uitofp8(<8 x i1> %a, <8 x i8> %b, <8 x i16> %c, <8 x i32> %d) {
 }
 
 define void @fp_conv(<8 x float> %a, <16 x float>%b, <4 x float> %c) {
-; ALL-LABEL: 'fp_conv'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %A1 = fpext <4 x float> %c to <4 x double>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A2 = fpext <8 x float> %a to <8 x double>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %A3 = fptrunc <4 x double> undef to <4 x float>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A4 = fptrunc <8 x double> undef to <8 x float>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+; SLOW-LABEL: 'fp_conv'
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %A1 = fpext <4 x float> %c to <4 x double>
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A2 = fpext <8 x float> %a to <8 x double>
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %A3 = fptrunc <4 x double> undef to <4 x float>
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A4 = fptrunc <8 x double> undef to <8 x float>
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
-; ALL-SIZE-LABEL: 'fp_conv'
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %A1 = fpext <4 x float> %c to <4 x double>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A2 = fpext <8 x float> %a to <8 x double>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %A3 = fptrunc <4 x double> undef to <4 x float>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A4 = fptrunc <8 x double> undef to <8 x float>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; SLOW-SIZE-LABEL: 'fp_conv'
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %A1 = fpext <4 x float> %c to <4 x double>
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A2 = fpext <8 x float> %a to <8 x double>
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %A3 = fptrunc <4 x double> undef to <4 x float>
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %A4 = fptrunc <8 x double> undef to <8 x float>
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %A1 = fpext <4 x float> %c to <4 x double>
   %A2 = fpext <8 x float> %a to <8 x double>

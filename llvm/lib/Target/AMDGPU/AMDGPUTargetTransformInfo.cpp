@@ -1042,16 +1042,17 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
                                        VIC);
     }
 
-    // Gfx9 packed <2 x f32> pair formation for v_pk_*_f32: lanes must occupy an
-    // aligned VGPR pair. A load-fed insert can be allocated into its slot for
-    // free; a compute-fed insert typically needs an alignment move, so
-    // charge 1. f32-only on gfx9 targets with packed FP32 ops.
+    // Gfx9 packed f32 pair formation for v_pk_*_f32: load-fed inserts are free;
+    // compute-fed inserts cost scales with legalization (wide vectors split to
+    // native <2 x f32>).
     if (Opcode == Instruction::InsertElement && EltSize == 32 &&
         ST->hasPackedFP32Ops())
       if (auto *VecTy = dyn_cast<FixedVectorType>(ValTy))
-        if (VecTy->getNumElements() == 2 &&
-            VecTy->getElementType()->isFloatTy())
-          return (Op1 && isa<LoadInst>(Op1)) ? 0 : 1;
+        if (VecTy->getElementType()->isFloatTy()) {
+          if (Op1 && isa<LoadInst>(Op1))
+            return 0;
+          return getTypeLegalizationCost(ValTy).first;
+        }
 
     // Extracts are just reads of a subregister, so are free. Inserts are
     // considered free because we don't want to have any cost for scalarizing
