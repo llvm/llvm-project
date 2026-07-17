@@ -9,6 +9,7 @@
 /// Strong-symbol override for applyInPlacePatches.  Handles instruction
 /// rewrites that fit in the same code size as the original:
 ///
+///   - s_clause                 -> s_nop 0
 ///   - cluster_load             -> global_load    (opcode swap via MCInst +
 ///                                                 MCCodeEmitter)
 ///   - s_barrier_signal_isfirst -> s_barrier_signal
@@ -116,6 +117,14 @@ bool swapOpcode(InternalDecodedInst &DI, uint8_t *Text, const LLVMState &LS,
 static uint32_t applyInPlacePatchesImpl(PatchContext &Ctx, size_t Idx) {
   InternalDecodedInst &DI = Ctx.Decoded[Idx];
   StringRef Mnemonic(DI.Mnemonic);
+
+  if (DI.Inst.getOpcode() == Ctx.LS.SClauseOpcode) {
+    std::memcpy(Ctx.Text + DI.Offset, Ctx.LS.SNopBytes.data(),
+                Ctx.LS.SNopBytes.size());
+    log() << "hotswap: inplace: s_clause -> s_nop 0 at 0x"
+          << utohexstr(DI.Offset) << "\n";
+    return 1;
+  }
 
   StringRef ReplacementAsm = getClusterLoadReplacementAsm(Mnemonic);
   if (!ReplacementAsm.empty()) {

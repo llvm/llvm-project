@@ -1659,11 +1659,13 @@ decodeCurrentInstruction(const PatchContext &Ctx,
 }
 
 /// Instructions covered by a hard clause or a delay directive must remain in
-/// place relative to that directive. Mark the complete encoded clause and the
-/// maximum six-instruction forward span addressable by s_delay_alu.
+/// place relative to that directive. B0-to-A0 rewrites have already replaced
+/// clauses with s_nop, so only preserve clause members when requested. Always
+/// mark the maximum six-instruction forward span addressable by s_delay_alu.
 static DenseSet<uint64_t>
 collectRelocationProtectedOffsets(ArrayRef<InternalDecodedInst> Decoded,
-                                  const LLVMState &LS) {
+                                  const LLVMState &LS,
+                                  bool ProtectClauseMembers) {
   DenseSet<uint64_t> Protected;
   unsigned ClauseRemaining = 0;
   unsigned DelayRemaining = 0;
@@ -1678,7 +1680,7 @@ collectRelocationProtectedOffsets(ArrayRef<InternalDecodedInst> Decoded,
       --DelayRemaining;
     }
 
-    if (DI.Inst.getOpcode() == LS.SClauseOpcode &&
+    if (ProtectClauseMembers && DI.Inst.getOpcode() == LS.SClauseOpcode &&
         DI.Inst.getNumOperands() == 1 && DI.Inst.getOperand(0).isImm())
       ClauseRemaining =
           (static_cast<unsigned>(DI.Inst.getOperand(0).getImm()) & 63u) + 1;
@@ -1725,8 +1727,8 @@ expandStraightLineTrampolines(PatchContext &Ctx,
   DenseMap<uint64_t, size_t> DecodedAt;
   for (size_t I = 0; I != Ctx.Decoded.size(); ++I)
     DecodedAt[Ctx.Decoded[I].Offset] = I;
-  DenseSet<uint64_t> Protected =
-      collectRelocationProtectedOffsets(Ctx.Decoded, Ctx.LS);
+  DenseSet<uint64_t> Protected = collectRelocationProtectedOffsets(
+      Ctx.Decoded, Ctx.LS, !Ctx.Config.RunB0A0Patches);
   DenseSet<uint64_t> IndirectControlFlowFunctions =
       collectIndirectControlFlowFunctions(Ctx.Decoded, Ctx.LS, Ctx.Elf);
 
@@ -2780,8 +2782,7 @@ amd_comgr_status_t retargetCodeObject(const void *ElfData, size_t ElfSize,
 
   // gfx1250 revision is recorded per kernel in the AMDGPU metadata note.
   // Running a B0 object on A0 requires retagging that metadata even when no
-  // machine instruction needed rewriting. Native A0 code generation preserves
-  // s_clause and emits the same instructions as B0 for valid clauses.
+  // machine instruction needed rewriting.
   if (Options.RunB0A0Patches && !Elf.updateGfx1250RevisionMetadata("A0"))
     return AMD_COMGR_STATUS_ERROR;
 
