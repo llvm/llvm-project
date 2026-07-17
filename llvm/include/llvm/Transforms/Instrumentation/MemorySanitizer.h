@@ -27,11 +27,13 @@ struct MemorySanitizerOptions {
   MemorySanitizerOptions(int TrackOrigins, bool Recover, bool Kernel)
       : MemorySanitizerOptions(TrackOrigins, Recover, Kernel, false) {}
   LLVM_ABI MemorySanitizerOptions(int TrackOrigins, bool Recover, bool Kernel,
-                                  bool EagerChecks);
+                                  bool EagerChecks,
+                                  bool CheckLocalUninitReads = false);
   bool Kernel;
   int TrackOrigins;
   bool Recover;
   bool EagerChecks;
+  bool CheckLocalUninitReads;
 };
 
 /// A module pass for msan instrumentation.

@@ -343,6 +343,12 @@ static cl::opt<bool> ClEagerChecks(
     cl::desc("check arguments and return values at function call boundaries"),
     cl::Hidden, cl::init(false));
 
+static cl::opt<bool> ClCheckLocalUninitReads(
+    "msan-check-local-uninit-reads",
+    cl::desc("check reads of local variables whose address is never "
+             "taken for uninitialized values"),
+    cl::Hidden, cl::init(false));
+
 static cl::opt<bool> ClDumpStrictInstructions(
     "msan-dump-strict-instructions",
     cl::desc("print out instructions with default strict semantics i.e.,"
@@ -616,7 +622,8 @@ class MemorySanitizer {
 public:
   MemorySanitizer(Module &M, MemorySanitizerOptions Options)
       : CompileKernel(Options.Kernel), TrackOrigins(Options.TrackOrigins),
-        Recover(Options.Recover), EagerChecks(Options.EagerChecks) {
+        Recover(Options.Recover), EagerChecks(Options.EagerChecks),
+        CheckLocalUninitReads(Options.CheckLocalUninitReads) {
     initializeModule(M);
   }
 
@@ -654,6 +661,7 @@ private:
   int TrackOrigins;
   bool Recover;
   bool EagerChecks;
+  bool CheckLocalUninitReads;
 
   Triple TargetTriple;
   LLVMContext *C;
@@ -778,11 +786,14 @@ template <class T> T getOptOrDefault(const cl::opt<T> &Opt, T Default) {
 } // end anonymous namespace
 
 MemorySanitizerOptions::MemorySanitizerOptions(int TO, bool R, bool K,
-                                               bool EagerChecks)
+                                               bool EagerChecks,
+                                               bool CheckLocalUninitReads)
     : Kernel(getOptOrDefault(ClEnableKmsan, K)),
       TrackOrigins(getOptOrDefault(ClTrackOrigins, Kernel ? 2 : TO)),
       Recover(getOptOrDefault(ClKeepGoing, Kernel || R)),
-      EagerChecks(getOptOrDefault(ClEagerChecks, EagerChecks)) {}
+      EagerChecks(getOptOrDefault(ClEagerChecks, EagerChecks)),
+      CheckLocalUninitReads(
+          getOptOrDefault(ClCheckLocalUninitReads, CheckLocalUninitReads)) {}
 
 PreservedAnalyses MemorySanitizerPass::run(Module &M,
                                            ModuleAnalysisManager &AM) {
@@ -2371,6 +2382,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void visitLoadInst(LoadInst &I) {
     assert(I.getType()->isSized() && "Load type must have size");
     assert(!I.getMetadata(LLVMContext::MD_nosanitize));
+    // Captured before any shadow/origin instructions are spliced in after I,
+    // so this stays a valid anchor for a check that depends on I's own
+    // shadow (which NextNodeIRBuilder inserts *after* I, not before).
+    Instruction *UninitReadCheckAnchor = I.getNextNode();
     NextNodeIRBuilder IRB(&I);
     Type *ShadowTy = getShadowTy(&I);
     Value *Addr = I.getPointerOperand();
@@ -2387,6 +2402,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     if (ClCheckAccessAddress)
       insertCheckShadowOf(I.getPointerOperand(), &I);
+
+    if (MS.CheckLocalUninitReads &&
+        I.getMetadata(LLVMContext::MD_msan_check_uninit_read))
+      insertCheckShadowOf(&I, UninitReadCheckAnchor);
 
     if (I.isAtomic())
       I.setOrdering(addAcquireOrdering(I.getOrdering()));

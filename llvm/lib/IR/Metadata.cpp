@@ -1862,6 +1862,11 @@ void Instruction::setNoSanitizeMetadata() {
               llvm::MDNode::get(getContext(), {}));
 }
 
+void Instruction::setUninitReadCheckMetadata() {
+  setMetadata(llvm::LLVMContext::MD_msan_check_uninit_read,
+              llvm::MDNode::get(getContext(), {}));
+}
+
 void Instruction::getAllMetadataImpl(
     SmallVectorImpl<std::pair<unsigned, MDNode *>> &Result) const {
   Result.clear();

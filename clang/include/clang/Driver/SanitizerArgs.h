@@ -44,6 +44,7 @@ class SanitizerArgs {
   int MsanTrackOrigins = 0;
   bool MsanUseAfterDtor = true;
   bool MsanParamRetval = true;
+  bool MsanCheckLocalUninitReads = false;
   bool CfiCrossDso = false;
   bool CfiICallGeneralizePointers = false;
   bool CfiICallNormalizeIntegers = false;

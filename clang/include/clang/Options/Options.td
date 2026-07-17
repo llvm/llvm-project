@@ -2744,6 +2744,13 @@ defm sanitize_memory_param_retval
         PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
         NegFlag<SetFalse, [], [ClangOption], "Disable">,
         BothFlags<[], [ClangOption], " detection of uninitialized parameters and return values">>;
+defm sanitize_memory_local_address_never_taken
+    : BoolFOption<"sanitize-memory-local-address-never-taken",
+        CodeGenOpts<"SanitizeMemoryLocalAddressNeverTaken">,
+        DefaultFalse,
+        PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
+        NegFlag<SetFalse, [], [ClangOption], "Disable">,
+        BothFlags<[], [ClangOption], " detection of reads of uninitialized local variables whose address is never taken">>;
 //// Note: This flag was introduced when it was necessary to distinguish between
 //       ABI for correct codegen.  This is no longer needed, but the flag is
 //       not removed since targeting either ABI will behave the same.
