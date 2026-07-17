@@ -17,7 +17,8 @@ using namespace lldb_private;
 
 StackID::StackID(lldb::addr_t pc, lldb::addr_t cfa,
                  SymbolContextScope *symbol_scope, Process *process)
-    : m_pc(pc), m_cfa(cfa), m_symbol_scope(symbol_scope) {
+    : m_pc(pc), m_cfa(cfa), m_cfa_with_metadata(cfa),
+      m_symbol_scope(symbol_scope) {
   if (process) {
     m_pc = process->FixCodeAddress(m_pc);
     m_cfa = process->FixDataAddress(m_cfa);
@@ -29,6 +30,7 @@ void StackID::SetPC(lldb::addr_t pc, Process *process) {
 }
 
 void StackID::SetCFA(lldb::addr_t cfa, Process *process) {
+  m_cfa_with_metadata = cfa;
   m_cfa = process ? process->FixDataAddress(cfa) : cfa;
 }
 
@@ -49,7 +51,8 @@ void StackID::Dump(Stream *s) {
 }
 
 bool lldb_private::operator==(const StackID &lhs, const StackID &rhs) {
-  if (lhs.GetCallFrameAddress() != rhs.GetCallFrameAddress())
+  if (lhs.GetCallFrameAddressWithoutMetadata() !=
+      rhs.GetCallFrameAddressWithoutMetadata())
     return false;
 
   SymbolContextScope *lhs_scope = lhs.GetSymbolContextScope();
@@ -66,9 +69,9 @@ bool lldb_private::operator!=(const StackID &lhs, const StackID &rhs) {
   return !(lhs == rhs);
 }
 
-bool lldb_private::operator<(const StackID &lhs, const StackID &rhs) {
-  const lldb::addr_t lhs_cfa = lhs.GetCallFrameAddress();
-  const lldb::addr_t rhs_cfa = rhs.GetCallFrameAddress();
+bool StackID::IsYoungerThan(const StackID &other) const {
+  const lldb::addr_t lhs_cfa = GetCallFrameAddressWithoutMetadata();
+  const lldb::addr_t rhs_cfa = other.GetCallFrameAddressWithoutMetadata();
 
   // FIXME: We are assuming that the stacks grow downward in memory.  That's not
   // necessary, but true on
@@ -82,8 +85,8 @@ bool lldb_private::operator<(const StackID &lhs, const StackID &rhs) {
   if (lhs_cfa != rhs_cfa)
     return lhs_cfa < rhs_cfa;
 
-  SymbolContextScope *lhs_scope = lhs.GetSymbolContextScope();
-  SymbolContextScope *rhs_scope = rhs.GetSymbolContextScope();
+  SymbolContextScope *lhs_scope = GetSymbolContextScope();
+  SymbolContextScope *rhs_scope = other.GetSymbolContextScope();
 
   if (lhs_scope != nullptr && rhs_scope != nullptr) {
     // Same exact scope, lhs is not less than (younger than rhs)

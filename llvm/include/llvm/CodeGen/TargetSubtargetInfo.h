@@ -14,8 +14,10 @@
 #define LLVM_CODEGEN_TARGETSUBTARGETINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/CodeGen/MacroFusion.h"
 #include "llvm/CodeGen/PBQPRAConstraint.h"
 #include "llvm/CodeGen/SchedulerRegistry.h"
@@ -38,9 +40,11 @@ class InstrItineraryData;
 struct InstrStage;
 class InstructionSelector;
 class LegalizerInfo;
+class LibcallLoweringInfo;
 class MachineInstr;
 struct MachineSchedPolicy;
 struct MCReadAdvanceEntry;
+struct MCSchedModel;
 struct MCWriteLatencyEntry;
 struct MCWriteProcResEntry;
 class RegisterBankInfo;
@@ -50,7 +54,8 @@ class SUnit;
 class TargetFrameLowering;
 class TargetInstrInfo;
 class TargetLowering;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 class TargetSchedModel;
 class Triple;
@@ -65,9 +70,9 @@ struct SchedRegion;
 class LLVM_ABI TargetSubtargetInfo : public MCSubtargetInfo {
 protected: // Can only create subclasses...
   TargetSubtargetInfo(const Triple &TT, StringRef CPU, StringRef TuneCPU,
-                      StringRef FS, ArrayRef<StringRef> PN,
+                      StringRef FS, StringTable PN,
                       ArrayRef<SubtargetFeatureKV> PF,
-                      ArrayRef<SubtargetSubTypeKV> PD,
+                      ArrayRef<SubtargetSubTypeKV> PD, const MCSchedModel *PSM,
                       const MCWriteProcResEntry *WPR,
                       const MCWriteLatencyEntry *WL,
                       const MCReadAdvanceEntry *RA, const InstrStage *IS,
@@ -85,6 +90,10 @@ public:
   ~TargetSubtargetInfo() override;
 
   virtual bool isXRaySupported() const { return false; }
+
+  /// \returns true if the target intrinsic \p IntrinsicID is supported by this
+  /// subtarget.
+  bool isIntrinsicSupported(unsigned IntrinsicID) const;
 
   // Interfaces to the major aspects of target machine information:
   //
@@ -139,6 +148,24 @@ public:
     return nullptr;
   }
 
+  /// Return the number of extra cycles the processor takes to recover from a
+  /// branch misprediction. Defaults to the value in the scheduling model.
+  virtual unsigned getMispredictionPenalty() const {
+    return getSchedModel().MispredictPenalty;
+  }
+
+  /// Return the expected latency of load instructions. Defaults to the value
+  /// in the scheduling model.
+  virtual unsigned getLoadLatency() const {
+    return getSchedModel().LoadLatency;
+  }
+
+  /// Configure the LibcallLoweringInfo for this subtarget. The libcalls will be
+  /// pre-configured with defaults based on RuntimeLibcallsInfo. This may be
+  /// used to override those decisions, such as disambiguating alternative
+  /// implementations.
+  virtual void initLibcallLoweringInfo(LibcallLoweringInfo &Info) const {}
+
   /// Resolve a SchedClass at runtime, where SchedClass identifies an
   /// MCSchedClassDesc with the isVariant property. This may return the ID of
   /// another variant SchedClass, but repeated invocation must quickly terminate
@@ -166,7 +193,7 @@ public:
   ///
   /// Similar in behavior to `isZeroIdiom`. However, it knows how to identify
   /// all dependency breaking instructions (i.e. not just zero-idioms).
-  /// 
+  ///
   /// As for `isZeroIdiom`, this method returns a mask of "broken" dependencies.
   /// (See method `isZeroIdiom` for a detailed description of Mask).
   virtual bool isDependencyBreaking(const MachineInstr *MI, APInt &Mask) const {
@@ -209,6 +236,10 @@ public:
   /// By default this is enabled if the machine scheduler is enabled, but
   /// can be overridden.
   virtual bool enableJoinGlobalCopies() const;
+
+  /// Hack to bring up option. This should be unconditionally true, all targets
+  /// should enable it and delete this.
+  virtual bool enableTerminalRule() const { return false; }
 
   /// True if the subtarget should run a scheduler after register allocation.
   ///
@@ -353,6 +384,18 @@ public:
   }
 
   virtual bool isRegisterReservedByUser(Register R) const { return false; }
+
+  /// Target features to ignore for inline compatibility check.
+  virtual const FeatureBitset &getInlineIgnoreFeatures() const = 0;
+  /// Target features where the callee may have an additional feature,
+  /// instead of the caller.
+  virtual const FeatureBitset &getInlineInverseFeatures() const = 0;
+  /// Target features where all mismatches prevent inlining.
+  virtual const FeatureBitset &getInlineMustMatchFeatures() const = 0;
+
+private:
+  /// Lazy, incrementally-populated cache for isIntrinsicSupported().
+  mutable DenseMap<unsigned, bool> IntrinsicSupportCache;
 };
 } // end namespace llvm
 

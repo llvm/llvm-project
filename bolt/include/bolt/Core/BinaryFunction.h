@@ -35,8 +35,11 @@
 #include "bolt/Core/JumpTable.h"
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Utils/NameResolver.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
@@ -147,6 +150,11 @@ public:
     PF_MEMEVENT = 4, /// Profile has mem events.
   };
 
+  void setContainedNegateRAState() { HadNegateRAState = true; }
+  bool containedNegateRAState() const { return HadNegateRAState; }
+  void setInitialRAState(bool State) { InitialRAState = State; }
+  bool getInitialRAState() { return InitialRAState; }
+
   /// Struct for tracking exception handling ranges.
   struct CallSite {
     const MCSymbol *Start;
@@ -187,13 +195,12 @@ public:
     /// Keeps track of other functions we depend on because there is a reference
     /// to the constant islands in them.
     IslandProxiesType Proxies, ColdProxies;
-    SmallPtrSet<BinaryFunction *, 1> Dependency; // The other way around
+    SetVector<BinaryFunction *, SmallVector<BinaryFunction *, 1>,
+              SmallPtrSet<BinaryFunction *, 1>>
+        Dependency; // The other way around
 
     mutable MCSymbol *FunctionConstantIslandLabel{nullptr};
     mutable MCSymbol *FunctionColdConstantIslandLabel{nullptr};
-
-    // Returns constant island alignment
-    uint16_t getAlignment() const { return sizeof(uint64_t); }
   };
 
   static constexpr uint64_t COUNT_NO_PROFILE =
@@ -219,6 +226,12 @@ public:
 private:
   /// Current state of the function.
   State CurrentState{State::Empty};
+
+  /// Indicates if the Function contained .cfi-negate-ra-state. These are not
+  /// read from the binary. This boolean is used when deciding to run the
+  /// .cfi-negate-ra-state rewriting passes on a function or not.
+  bool HadNegateRAState{false};
+  bool InitialRAState{false};
 
   /// A list of symbols associated with the function entry point.
   ///
@@ -267,13 +280,31 @@ private:
   std::unique_ptr<BinaryLoopInfo> BLI;
   std::unique_ptr<BinaryDominatorTree> BDT;
 
+  /// Epoch for basic block indices, bumped by updateBBIndices(). See
+  /// getBlockNumberEpoch().
+  unsigned BlockNumberEpoch = 0;
+
   /// All labels in the function that are referenced via relocations from
   /// data objects. Typically these are jump table destinations and computed
   /// goto labels.
   std::set<uint64_t> ExternallyReferencedOffsets;
 
+  /// Relocations from data sections targeting internals of this function, i.e.
+  /// some code not at an entry point. These include, but are not limited to,
+  /// jump table relocations and computed goto tables.
+  ///
+  /// Since relocations can be removed/deallocated, we store relocation offsets
+  /// instead of pointers.
+  DenseSet<uint64_t> InternalRefDataRelocations;
+
   /// Offsets of indirect branches with unknown destinations.
   std::set<uint64_t> UnknownIndirectBranchOffsets;
+
+  /// Offsets of instructions that begin or end a DWARF lexical scope
+  /// (inlined_subroutine / lexical_block low_pc/high_pc and DW_AT_ranges).
+  /// Populated before disassembly and cleared once disassembly of this
+  /// function is done.
+  SparseBitVector<> DebugScopeBoundaryOffsets;
 
   /// A set of local and global symbols corresponding to secondary entry points.
   /// Each additional function entry point has a corresponding entry in the map.
@@ -368,6 +399,10 @@ private:
   /// True if the function should not have an associated symbol table entry.
   bool IsAnonymous{false};
 
+  /// Indicates whether branch validation has already been performed,
+  /// to avoid redundant processing.
+  bool NeedBranchValidation{true};
+
   /// Name for the section this function code should reside in.
   std::string CodeSectionName;
 
@@ -379,7 +414,8 @@ private:
   FragmentsSetTy ParentFragments;
 
   /// Indicate if the function body was folded into another function.
-  /// Used by ICF optimization.
+  /// Used by ICF optimization. Always points to the root parent function
+  /// (i.e., a function that is not itself folded).
   BinaryFunction *FoldedIntoFunction{nullptr};
 
   /// All fragments for a parent function.
@@ -423,8 +459,9 @@ private:
   /// Original LSDA type encoding
   unsigned LSDATypeEncoding{dwarf::DW_EH_PE_omit};
 
-  /// Containing compilation unit for the function.
-  DWARFUnit *DwarfUnit{nullptr};
+  /// All compilation units this function belongs to.
+  /// Maps DWARF unit offset to the unit pointer.
+  DenseMap<uint64_t, DWARFUnit *> DwarfUnitMap;
 
   /// Last computed hash value. Note that the value could be recomputed using
   /// different parameters by every pass.
@@ -610,13 +647,11 @@ private:
   }
 
   /// Return a label at a given \p Address in the function. If the label does
-  /// not exist - create it. Assert if the \p Address does not belong to
-  /// the function. If \p CreatePastEnd is true, then return the function
-  /// end label when the \p Address points immediately past the last byte
-  /// of the function.
+  /// not exist - create it.
+  ///
   /// NOTE: the function always returns a local (temp) symbol, even if there's
   ///       a global symbol that corresponds to an entry at this address.
-  MCSymbol *getOrCreateLocalLabel(uint64_t Address, bool CreatePastEnd = false);
+  MCSymbol *getOrCreateLocalLabel(uint64_t Address);
 
   /// Register an data entry at a given \p Offset into the function.
   void markDataAtOffset(uint64_t Offset) {
@@ -632,6 +667,20 @@ private:
     Islands->CodeOffsets.emplace(Offset);
   }
 
+  /// Register a relocation from data section referencing code at a non-zero
+  /// offset in this function.
+  void registerInternalRefDataRelocation(uint64_t FuncOffset,
+                                         uint64_t RelOffset) {
+    assert(FuncOffset != 0 && "Relocation should reference function internals");
+    registerReferencedOffset(FuncOffset);
+    InternalRefDataRelocations.insert(RelOffset);
+    const MCSymbol *ReferencedSymbol =
+        getOrCreateLocalLabel(getAddress() + FuncOffset);
+
+    // Track the symbol mapping since it's used in relocation handling.
+    BC.setSymbolToFunctionMap(ReferencedSymbol, this);
+  }
+
   /// Register an internal offset in a function referenced from outside.
   void registerReferencedOffset(uint64_t Offset) {
     ExternallyReferencedOffsets.emplace(Offset);
@@ -643,12 +692,19 @@ private:
     return !ExternallyReferencedOffsets.empty();
   }
 
+  /// True if there are references to \p Offset inside this function from data,
+  /// e.g. from indirect goto references.
+  bool hasInternalReferenceAt(uint64_t Offset) const {
+    return ExternallyReferencedOffsets.count(Offset) != 0;
+  }
+
   /// Return an entry ID corresponding to a symbol known to belong to
   /// the function.
   ///
   /// Prefer to use BinaryContext::getFunctionForSymbol(EntrySymbol, &ID)
   /// instead of calling this function directly.
-  uint64_t getEntryIDForSymbol(const MCSymbol *EntrySymbol) const;
+  std::optional<uint64_t>
+  getEntryIDForSymbol(const MCSymbol *EntrySymbol) const;
 
   /// If the function represents a secondary split function fragment, set its
   /// parent fragment to \p BF.
@@ -701,11 +757,12 @@ private:
     Symbols.push_back(BC.Ctx->getOrCreateSymbol(Name));
   }
 
-  /// This constructor is used to create an injected function
+  /// This constructor is used to create an injected function, i.e. a function
+  /// that didn't originate in the input file.
   BinaryFunction(const std::string &Name, BinaryContext &BC, bool IsSimple)
       : Address(0), Size(0), BC(BC), IsSimple(IsSimple),
-        CodeSectionName(buildCodeSectionName(Name, BC)),
-        ColdCodeSectionName(buildColdCodeSectionName(Name, BC)),
+        CodeSectionName(BC.getInjectedCodeSectionName()),
+        ColdCodeSectionName(BC.getInjectedColdCodeSectionName()),
         FunctionNumber(++Count) {
     Symbols.push_back(BC.Ctx->getOrCreateSymbol(Name));
     IsInjected = true;
@@ -735,6 +792,9 @@ private:
   /// Clear state of the function that could not be disassembled or if its
   /// disassembled state was later invalidated.
   void clearDisasmState();
+
+  /// Reset the function state into Empty state, i.e. pre-disassembly form.
+  void resetState();
 
   /// Release memory allocated for CFG and instructions.
   /// We still keep basic blocks for address translation/mapping purposes.
@@ -784,6 +844,11 @@ public:
         BinaryBasicBlock &front()        { return *BasicBlocks.front(); }
   const BinaryBasicBlock & back() const  { return *BasicBlocks.back(); }
         BinaryBasicBlock & back()        { return *BasicBlocks.back(); }
+
+  /// Epoch bumped whenever basic block indices are reassigned by
+  /// updateBBIndices(), so number-indexed structures (LoopInfo, DominatorTree)
+  /// can detect stale block numbers. See BinaryBasicBlock::getIndex().
+  unsigned getBlockNumberEpoch() const { return BlockNumberEpoch; }
   inline iterator_range<iterator> blocks() {
     return iterator_range<iterator>(begin(), end());
   }
@@ -981,6 +1046,14 @@ public:
   MCInst *getInstructionContainingOffset(uint64_t Offset);
 
   std::optional<MCInst> disassembleInstructionAtOffset(uint64_t Offset) const;
+
+  /// Given a starting point \p Offset and a number of bytes \p MinLength,
+  /// returns the number of bytes \p MinLength + Tail such that the last
+  /// instruction in the sequence is not split apart. Returns std::nullopt if
+  /// disassembling fails. Assumes that \p Offset aligns with instruction stream
+  /// and that the instructions can be disassembled.
+  uint64_t getInstructionSequenceLength(uint64_t Offset,
+                                        uint64_t MinLength) const;
 
   /// Return offset for the first instruction. If there is data at the
   /// beginning of a function then offset of the first instruction could
@@ -1291,6 +1364,29 @@ public:
   void addRelocation(uint64_t Address, MCSymbol *Symbol, uint32_t RelType,
                      uint64_t Addend, uint64_t Value);
 
+  /// Return locations (offsets) of data section relocations targeting internals
+  /// of this functions.
+  const DenseSet<uint64_t> &getInternalRefDataRelocations() const {
+    return InternalRefDataRelocations;
+  }
+
+  /// Add function-relative \p Offset as a DWARF lexical-scope boundary.
+  void addDebugScopeBoundaryOffset(uint32_t Offset) {
+    DebugScopeBoundaryOffsets.set(Offset);
+  }
+
+  /// Return true if function-relative \p Offset begins/ends a DWARF scope.
+  bool isDebugScopeBoundaryOffset(uint32_t Offset) {
+    return DebugScopeBoundaryOffsets.test(Offset);
+  }
+
+  /// Return true if an "Offset" annotation should be kept for instruction
+  /// \p Inst located at function-relative \p Offset. Offsets are kept for
+  /// control-flow instructions (profile matching) and for instructions that
+  /// begin/end a DWARF lexical scope (needed to translate scope ranges
+  /// precisely; see DebugScopeBoundaryOffsets).
+  bool keepOffsetForInstruction(const MCInst &Inst, uint32_t Offset);
+
   /// Return the name of the section this function originated from.
   std::optional<StringRef> getOriginSectionName() const {
     if (!OriginSection)
@@ -1326,7 +1422,7 @@ public:
     ColdCodeSectionName = Name.str();
   }
 
-  /// Return true iif the function will halt execution on entry.
+  /// Return true if the function will halt execution on entry.
   bool trapsOnEntry() const { return TrapsOnEntry; }
 
   /// Make the function always trap on entry. Other than the trap instruction,
@@ -1640,6 +1736,51 @@ public:
   bool hasInferredProfile() const { return HasInferredProfile; }
 
   void setHasInferredProfile(bool Inferred) { HasInferredProfile = Inferred; }
+
+  /// Find corrected offset the same way addCFIInstruction does it to skip NOPs.
+  std::optional<uint64_t> getCorrectedCFIOffset(uint64_t Offset) {
+    assert(!Instructions.empty());
+    auto I = Instructions.lower_bound(Offset);
+    if (Offset == getSize()) {
+      assert(I == Instructions.end() && "unexpected iterator value");
+      // Sometimes compiler issues restore_state after all instructions
+      // in the function (even after nop).
+      --I;
+      Offset = I->first;
+    }
+    assert(I->first == Offset && "CFI pointing to unknown instruction");
+    if (I == Instructions.begin())
+      return {};
+
+    --I;
+    while (I != Instructions.begin() && BC.MIB->isNoop(I->second)) {
+      Offset = I->first;
+      --I;
+    }
+    return Offset;
+  }
+
+  void setInstModifiesRAState(uint8_t CFIOpcode, uint64_t Offset) {
+    std::optional<uint64_t> CorrectedOffset = getCorrectedCFIOffset(Offset);
+    if (CorrectedOffset) {
+      auto I = Instructions.lower_bound(*CorrectedOffset);
+      I--;
+
+      switch (CFIOpcode) {
+      case dwarf::DW_CFA_AARCH64_negate_ra_state:
+        BC.MIB->setNegateRAState(I->second);
+        break;
+      case dwarf::DW_CFA_remember_state:
+        BC.MIB->setRememberState(I->second);
+        break;
+      case dwarf::DW_CFA_restore_state:
+        BC.MIB->setRestoreState(I->second);
+        break;
+      default:
+        assert(0 && "CFI Opcode not covered by function");
+      }
+    }
+  }
 
   void addCFIInstruction(uint64_t Offset, MCCFIInstruction &&Inst) {
     assert(!Instructions.empty());
@@ -2087,8 +2228,9 @@ public:
   }
 
   /// Detects whether \p Address is inside a data region in this function
-  /// (constant islands).
-  bool isInConstantIsland(uint64_t Address) const {
+  /// (constant islands), and optionally return the island size starting
+  /// from the given \p Address.
+  bool isInConstantIsland(uint64_t Address, uint64_t *Size = nullptr) const {
     if (!Islands)
       return false;
 
@@ -2106,15 +2248,18 @@ public:
     DataIter = std::prev(DataIter);
 
     auto CodeIter = Islands->CodeOffsets.upper_bound(Offset);
-    if (CodeIter == Islands->CodeOffsets.begin())
+    if (CodeIter == Islands->CodeOffsets.begin() ||
+        *std::prev(CodeIter) <= *DataIter) {
+      if (Size)
+        *Size = (CodeIter == Islands->CodeOffsets.end() ? getMaxSize()
+                                                        : *CodeIter) -
+                Offset;
       return true;
-
-    return *std::prev(CodeIter) <= *DataIter;
+    }
+    return false;
   }
 
-  uint16_t getConstantIslandAlignment() const {
-    return Islands ? Islands->getAlignment() : 1;
-  }
+  uint16_t getConstantIslandAlignment() const;
 
   /// If there is a constant island in the range [StartOffset, EndOffset),
   /// return its address.
@@ -2164,6 +2309,11 @@ public:
 
   bool hasConstantIsland() const {
     return Islands && !Islands->DataOffsets.empty();
+  }
+
+  /// Return true if the whole function is a constant island.
+  bool isDataObject() const {
+    return Islands && Islands->CodeOffsets.size() == 0;
   }
 
   bool isStartOfConstantIsland(uint64_t Offset) const {
@@ -2230,6 +2380,11 @@ public:
   /// zero-value bytes.
   bool isZeroPaddingAt(uint64_t Offset) const;
 
+  /// Validate if the target of any internal direct branch/call is a valid
+  /// executable instruction.
+  /// Return true if all the targets are valid, false otherwise.
+  bool validateInternalBranches();
+
   /// Check that entry points have an associated instruction at their
   /// offsets after disassembly.
   void postProcessEntryPoints();
@@ -2266,10 +2421,9 @@ public:
   bool postProcessIndirectBranches(MCPlusBuilder::AllocatorIdTy AllocId);
 
   /// Validate that all data references to function offsets are claimed by
-  /// recognized jump tables. Register externally referenced blocks as entry
-  /// points. Returns true if there are no unclaimed externally referenced
-  /// offsets.
-  bool validateExternallyReferencedOffsets();
+  /// recognized jump tables. Returns true if there are no unclaimed externally
+  /// referenced offsets.
+  bool validateInternalRefDataRelocations();
 
   /// Return all call site profile info for this function.
   IndirectCallSiteProfile &getAllCallSites() { return AllCallSites; }
@@ -2324,14 +2478,16 @@ public:
   /// is corrupted. If it is unable to fix it, it returns false.
   bool finalizeCFIState();
 
-  /// Return true if this function needs an address-translation table after
-  /// its code emission.
-  bool requiresAddressTranslation() const;
-
   /// Return true if the linker needs to generate an address map for this
   /// function. Used for keeping track of the mapping from input to out
   /// addresses of basic blocks.
   bool requiresAddressMap() const;
+
+  /// Return true if this function needs an address-translation table after
+  /// its code emission, or to update any metadata accurately (debug info,
+  /// SDT probes). This is gated since it incurs extra cost for the linker
+  /// to keep track of more addresses.
+  bool requiresPreciseAddressMap() const;
 
   /// Adjust branch instructions to match the CFG.
   ///
@@ -2409,15 +2565,21 @@ public:
   void
   computeBlockHashes(HashFunction HashFunction = HashFunction::Default) const;
 
-  void setDWARFUnit(DWARFUnit *Unit) { DwarfUnit = Unit; }
+  void addDWARFUnit(DWARFUnit *Unit) { DwarfUnitMap[Unit->getOffset()] = Unit; }
 
-  /// Return DWARF compile unit for this function.
-  DWARFUnit *getDWARFUnit() const { return DwarfUnit; }
+  void removeDWARFUnit(DWARFUnit *Unit) {
+    DwarfUnitMap.erase(Unit->getOffset());
+  }
 
-  /// Return line info table for this function.
-  const DWARFDebugLine::LineTable *getDWARFLineTable() const {
-    return getDWARFUnit() ? BC.DwCtx->getLineTableForUnit(getDWARFUnit())
-                          : nullptr;
+  /// Return DWARF compile units for this function.
+  /// Returns a reference to the map of DWARF unit offsets to units.
+  const DenseMap<uint64_t, DWARFUnit *> &getDWARFUnits() const {
+    return DwarfUnitMap;
+  }
+
+  const DWARFDebugLine::LineTable *
+  getDWARFLineTableForUnit(DWARFUnit *Unit) const {
+    return BC.DwCtx->getLineTableForUnit(Unit);
   }
 
   /// Finalize profile for the function.
@@ -2478,6 +2640,10 @@ public:
   /// Return true if the function is an AArch64 linker inserted veneer
   bool isAArch64Veneer() const;
 
+  /// Return true if the function signature matches veneer or it was established
+  /// to be a veneer.
+  bool isPossibleVeneer() const;
+
   virtual ~BinaryFunction();
 };
 
@@ -2521,6 +2687,12 @@ struct GraphTraits<bolt::BinaryFunction *>
     return nodes_iterator(F->end());
   }
   static size_t size(bolt::BinaryFunction *F) { return F->size(); }
+  static unsigned getMaxNumber(const bolt::BinaryFunction *F) {
+    return F->size();
+  }
+  static unsigned getNumberEpoch(const bolt::BinaryFunction *F) {
+    return F->getBlockNumberEpoch();
+  }
 };
 
 template <>
@@ -2541,6 +2713,12 @@ struct GraphTraits<const bolt::BinaryFunction *>
     return nodes_iterator(F->end());
   }
   static size_t size(const bolt::BinaryFunction *F) { return F->size(); }
+  static unsigned getMaxNumber(const bolt::BinaryFunction *F) {
+    return F->size();
+  }
+  static unsigned getNumberEpoch(const bolt::BinaryFunction *F) {
+    return F->getBlockNumberEpoch();
+  }
 };
 
 template <>
@@ -2549,6 +2727,12 @@ struct GraphTraits<Inverse<bolt::BinaryFunction *>>
   static NodeRef getEntryNode(Inverse<bolt::BinaryFunction *> G) {
     return G.Graph->getLayout().block_front();
   }
+  static unsigned getMaxNumber(const bolt::BinaryFunction *F) {
+    return F->size();
+  }
+  static unsigned getNumberEpoch(const bolt::BinaryFunction *F) {
+    return F->getBlockNumberEpoch();
+  }
 };
 
 template <>
@@ -2556,6 +2740,12 @@ struct GraphTraits<Inverse<const bolt::BinaryFunction *>>
     : public GraphTraits<Inverse<const bolt::BinaryBasicBlock *>> {
   static NodeRef getEntryNode(Inverse<const bolt::BinaryFunction *> G) {
     return G.Graph->getLayout().block_front();
+  }
+  static unsigned getMaxNumber(const bolt::BinaryFunction *F) {
+    return F->size();
+  }
+  static unsigned getNumberEpoch(const bolt::BinaryFunction *F) {
+    return F->getBlockNumberEpoch();
   }
 };
 

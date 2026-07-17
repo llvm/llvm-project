@@ -1,0 +1,5 @@
+# Check that we can delete a symlink to a folder without -r
+#
+# RUN: mkdir %t.dir
+# RUN: ln -s %t.dir %t.symlink
+# RUN: rm %t.symlink

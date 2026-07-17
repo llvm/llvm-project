@@ -4421,50 +4421,51 @@ define i32 @full(ptr %p1, i32 noundef %s1, ptr %p2, i32 noundef %s2) {
 ; CHECK-SD-BASE-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-BASE-NEXT:    sxtw x8, w3
 ; CHECK-SD-BASE-NEXT:    sxtw x9, w1
-; CHECK-SD-BASE-NEXT:    ldr d0, [x0]
-; CHECK-SD-BASE-NEXT:    ldr d1, [x2]
+; CHECK-SD-BASE-NEXT:    ldr d3, [x0]
+; CHECK-SD-BASE-NEXT:    ldr d4, [x2]
 ; CHECK-SD-BASE-NEXT:    add x10, x0, x9
 ; CHECK-SD-BASE-NEXT:    add x11, x2, x8
+; CHECK-SD-BASE-NEXT:    add x12, x10, x9
+; CHECK-SD-BASE-NEXT:    add x13, x11, x8
+; CHECK-SD-BASE-NEXT:    add x14, x12, x9
+; CHECK-SD-BASE-NEXT:    add x15, x13, x8
+; CHECK-SD-BASE-NEXT:    ldr d5, [x13]
+; CHECK-SD-BASE-NEXT:    add x16, x14, x9
+; CHECK-SD-BASE-NEXT:    add x17, x15, x8
+; CHECK-SD-BASE-NEXT:    add x18, x16, x9
+; CHECK-SD-BASE-NEXT:    add x1, x17, x8
+; CHECK-SD-BASE-NEXT:    add x3, x18, x9
+; CHECK-SD-BASE-NEXT:    add x4, x1, x8
+; CHECK-SD-BASE-NEXT:    ldr d0, [x3]
+; CHECK-SD-BASE-NEXT:    ldr d1, [x4]
+; CHECK-SD-BASE-NEXT:    ldr d2, [x4, x8]
 ; CHECK-SD-BASE-NEXT:    uabdl v0.8h, v0.8b, v1.8b
-; CHECK-SD-BASE-NEXT:    ldr d1, [x10]
-; CHECK-SD-BASE-NEXT:    ldr d2, [x11]
-; CHECK-SD-BASE-NEXT:    add x10, x10, x9
-; CHECK-SD-BASE-NEXT:    add x11, x11, x8
+; CHECK-SD-BASE-NEXT:    ldr d1, [x3, x9]
 ; CHECK-SD-BASE-NEXT:    uabdl v1.8h, v1.8b, v2.8b
-; CHECK-SD-BASE-NEXT:    ldr d2, [x11]
-; CHECK-SD-BASE-NEXT:    add x11, x11, x8
+; CHECK-SD-BASE-NEXT:    ldr d2, [x1]
 ; CHECK-SD-BASE-NEXT:    uaddlp v0.4s, v0.8h
 ; CHECK-SD-BASE-NEXT:    uadalp v0.4s, v1.8h
-; CHECK-SD-BASE-NEXT:    ldr d1, [x10]
-; CHECK-SD-BASE-NEXT:    add x10, x10, x9
+; CHECK-SD-BASE-NEXT:    ldr d1, [x18]
 ; CHECK-SD-BASE-NEXT:    uabdl v1.8h, v1.8b, v2.8b
-; CHECK-SD-BASE-NEXT:    ldr d2, [x11]
-; CHECK-SD-BASE-NEXT:    add x11, x11, x8
+; CHECK-SD-BASE-NEXT:    ldr d2, [x17]
+; CHECK-SD-BASE-NEXT:    uadalp v0.4s, v1.8h
+; CHECK-SD-BASE-NEXT:    ldr d1, [x16]
+; CHECK-SD-BASE-NEXT:    uabdl v1.8h, v1.8b, v2.8b
+; CHECK-SD-BASE-NEXT:    ldr d2, [x15]
+; CHECK-SD-BASE-NEXT:    uadalp v0.4s, v1.8h
+; CHECK-SD-BASE-NEXT:    ldr d1, [x14]
+; CHECK-SD-BASE-NEXT:    uabdl v1.8h, v1.8b, v2.8b
+; CHECK-SD-BASE-NEXT:    uabdl v2.8h, v3.8b, v4.8b
+; CHECK-SD-BASE-NEXT:    ldr d3, [x11]
+; CHECK-SD-BASE-NEXT:    ldr d4, [x12]
+; CHECK-SD-BASE-NEXT:    uaddlp v2.4s, v2.8h
 ; CHECK-SD-BASE-NEXT:    uadalp v0.4s, v1.8h
 ; CHECK-SD-BASE-NEXT:    ldr d1, [x10]
-; CHECK-SD-BASE-NEXT:    add x10, x10, x9
-; CHECK-SD-BASE-NEXT:    uabdl v1.8h, v1.8b, v2.8b
-; CHECK-SD-BASE-NEXT:    ldr d2, [x11]
-; CHECK-SD-BASE-NEXT:    add x11, x11, x8
-; CHECK-SD-BASE-NEXT:    uadalp v0.4s, v1.8h
-; CHECK-SD-BASE-NEXT:    ldr d1, [x10]
-; CHECK-SD-BASE-NEXT:    add x10, x10, x9
-; CHECK-SD-BASE-NEXT:    uabdl v1.8h, v1.8b, v2.8b
-; CHECK-SD-BASE-NEXT:    ldr d2, [x11]
-; CHECK-SD-BASE-NEXT:    add x11, x11, x8
-; CHECK-SD-BASE-NEXT:    uadalp v0.4s, v1.8h
-; CHECK-SD-BASE-NEXT:    ldr d1, [x10]
-; CHECK-SD-BASE-NEXT:    add x10, x10, x9
-; CHECK-SD-BASE-NEXT:    uabdl v1.8h, v1.8b, v2.8b
-; CHECK-SD-BASE-NEXT:    ldr d2, [x11]
-; CHECK-SD-BASE-NEXT:    uadalp v0.4s, v1.8h
-; CHECK-SD-BASE-NEXT:    ldr d1, [x10]
-; CHECK-SD-BASE-NEXT:    uabdl v1.8h, v1.8b, v2.8b
-; CHECK-SD-BASE-NEXT:    ldr d2, [x11, x8]
-; CHECK-SD-BASE-NEXT:    uadalp v0.4s, v1.8h
-; CHECK-SD-BASE-NEXT:    ldr d1, [x10, x9]
-; CHECK-SD-BASE-NEXT:    uabdl v1.8h, v1.8b, v2.8b
-; CHECK-SD-BASE-NEXT:    uadalp v0.4s, v1.8h
+; CHECK-SD-BASE-NEXT:    uabdl v1.8h, v1.8b, v3.8b
+; CHECK-SD-BASE-NEXT:    uabdl v3.8h, v4.8b, v5.8b
+; CHECK-SD-BASE-NEXT:    uadalp v2.4s, v1.8h
+; CHECK-SD-BASE-NEXT:    uadalp v0.4s, v3.8h
+; CHECK-SD-BASE-NEXT:    add v0.4s, v2.4s, v0.4s
 ; CHECK-SD-BASE-NEXT:    addv s0, v0.4s
 ; CHECK-SD-BASE-NEXT:    fmov w0, s0
 ; CHECK-SD-BASE-NEXT:    ret
@@ -4773,6 +4774,71 @@ entry:
   %z4 = add <4 x i32> %z1, %z1
   %z5 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %z4)
   ret i32 %z5
+}
+
+define i64 @extract_scalable(<2 x i32> %0) "target-features"="+sve2" {
+; CHECK-SD-LABEL: extract_scalable:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov z1.s, #1 // =0x1
+; CHECK-SD-NEXT:    ptrue p0.s, vl2
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SD-NEXT:    sdivr z0.s, p0/m, z0.s, z1.s
+; CHECK-SD-NEXT:    saddl v0.2d, v0.2s, v0.2s
+; CHECK-SD-NEXT:    addp d0, v0.2d
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_scalable:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    fmov w9, s0
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    mov w10, v0.s[1]
+; CHECK-GI-NEXT:    sdiv w9, w8, w9
+; CHECK-GI-NEXT:    sdiv w8, w8, w10
+; CHECK-GI-NEXT:    fmov s0, w9
+; CHECK-GI-NEXT:    mov v0.s[1], w8
+; CHECK-GI-NEXT:    saddl v0.2d, v0.2s, v0.2s
+; CHECK-GI-NEXT:    addp d0, v0.2d
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
+  %2 = sdiv <2 x i32> splat (i32 1), %0
+  %3 = sext <2 x i32> %2 to <2 x i64>
+  %4 = add <2 x i64> %3, %3
+  %5 = tail call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %4)
+  ret i64 %5
+}
+
+define i32 @vecreduce_add_from_i21_zero() {
+; CHECK-SD-LABEL: vecreduce_add_from_i21_zero:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov w0, wzr
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vecreduce_add_from_i21_zero:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-GI-NEXT:    addv s0, v0.4s
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
+entry:
+  %0 = zext <4 x i21> zeroinitializer to <4 x i32>
+  %1 = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %0)
+  ret i32 %1
+}
+
+define i32 @vecreduce_add_from_i21(<4 x i21> %a) {
+; CHECK-LABEL: vecreduce_add_from_i21:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v1.4s, #31, msl #16
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %0 = zext <4 x i21> %a to <4 x i32>
+  %1 = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %0)
+  ret i32 %1
 }
 
 declare <8 x i32> @llvm.abs.v8i32(<8 x i32>, i1 immarg) #1

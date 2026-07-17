@@ -13,6 +13,8 @@
 
 #include "ReduceInstructions.h"
 #include "Utils.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Instructions.h"
 
 using namespace llvm;
 
@@ -22,7 +24,8 @@ using namespace llvm;
 // TODO: Technically the verifier only enforces preallocated token usage and
 // there is a none token.
 static bool shouldAlwaysKeep(const Instruction &I) {
-  return I.isEHPad() || I.getType()->isTokenTy() || I.isSwiftError();
+  return I.isEHPad() || I.getType()->isTokenTy() ||
+         I.getType()->isX86_AMXTy() || I.isSwiftError();
 }
 
 /// Removes out-of-chunk arguments from functions, and modifies their calls
@@ -37,7 +40,9 @@ void llvm::reduceInstructionsDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
       for (auto &Inst :
            make_early_inc_range(make_range(BB.begin(), std::prev(BB.end())))) {
         if (!shouldAlwaysKeep(Inst) && !O.shouldKeep()) {
-          Inst.replaceAllUsesWith(getDefaultValue(Inst.getType()));
+          Inst.replaceAllUsesWith(isa<AllocaInst>(Inst)
+                                      ? PoisonValue::get(Inst.getType())
+                                      : getDefaultValue(Inst.getType()));
           Inst.eraseFromParent();
         }
       }

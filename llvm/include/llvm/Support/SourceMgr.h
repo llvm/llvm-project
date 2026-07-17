@@ -15,6 +15,7 @@
 #ifndef LLVM_SUPPORT_SOURCEMGR_H
 #define LLVM_SUPPORT_SOURCEMGR_H
 
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -22,6 +23,10 @@
 #include <vector>
 
 namespace llvm {
+
+namespace vfs {
+class FileSystem;
+} // end namespace vfs
 
 class raw_ostream;
 class SMDiagnostic;
@@ -60,11 +65,14 @@ private:
     /// dynamically based on the size of Buffer.
     mutable void *OffsetCache = nullptr;
 
-    /// Look up a given \p Ptr in the buffer, determining which line it came
-    /// from.
-    LLVM_ABI unsigned getLineNumber(const char *Ptr) const;
+    /// Look up a given \p Ptr in the buffer, determining which line and column
+    /// it came from. This method has O(log n) complexity, where n is the number
+    /// of lines in the buffer.
+    LLVM_ABI std::pair<unsigned, unsigned>
+    getLineAndColumn(const char *Ptr) const;
     template <typename T>
-    unsigned getLineNumberSpecialized(const char *Ptr) const;
+    std::pair<unsigned, unsigned>
+    getLineAndColumnSpecialized(const char *Ptr) const;
 
     /// Return a pointer to the first character of the specified line number or
     /// null if the line number is invalid.
@@ -91,15 +99,25 @@ private:
   DiagHandlerTy DiagHandler = nullptr;
   void *DiagContext = nullptr;
 
+  // Optional file system for finding include files.
+  IntrusiveRefCntPtr<vfs::FileSystem> FS;
+
   bool isValidBufferID(unsigned i) const { return i && i <= Buffers.size(); }
 
 public:
-  SourceMgr() = default;
+  /// Create new source manager without support for include files.
+  LLVM_ABI SourceMgr();
+  /// Create new source manager with the capability of finding include files
+  /// via the provided file system.
+  LLVM_ABI explicit SourceMgr(IntrusiveRefCntPtr<vfs::FileSystem> FS);
   SourceMgr(const SourceMgr &) = delete;
   SourceMgr &operator=(const SourceMgr &) = delete;
-  SourceMgr(SourceMgr &&) = default;
-  SourceMgr &operator=(SourceMgr &&) = default;
-  ~SourceMgr() = default;
+  LLVM_ABI SourceMgr(SourceMgr &&);
+  LLVM_ABI SourceMgr &operator=(SourceMgr &&);
+  LLVM_ABI ~SourceMgr();
+
+  LLVM_ABI IntrusiveRefCntPtr<vfs::FileSystem> getVirtualFileSystem() const;
+  LLVM_ABI void setVirtualFileSystem(IntrusiveRefCntPtr<vfs::FileSystem> FS);
 
   /// Return the include directories of this source manager.
   ArrayRef<std::string> getIncludeDirs() const { return IncludeDirectories; }
@@ -185,7 +203,8 @@ public:
   /// buffer of the stacked file. The full path to the included file can be
   /// found in \p IncludedFile.
   LLVM_ABI ErrorOr<std::unique_ptr<MemoryBuffer>>
-  OpenIncludeFile(const std::string &Filename, std::string &IncludedFile);
+  OpenIncludeFile(const std::string &Filename, std::string &IncludedFile,
+                  bool RequiresNullTerminator = true);
 
   /// Return the ID of the buffer containing the specified location.
   ///
@@ -193,13 +212,15 @@ public:
   LLVM_ABI unsigned FindBufferContainingLoc(SMLoc Loc) const;
 
   /// Find the line number for the specified location in the specified file.
-  /// This is not a fast method.
+  /// This method has O(log n) complexity, where n is the number of lines in the
+  /// buffer.
   unsigned FindLineNumber(SMLoc Loc, unsigned BufferID = 0) const {
     return getLineAndColumn(Loc, BufferID).first;
   }
 
   /// Find the line and column number for the specified location in the
-  /// specified file. This is not a fast method.
+  /// specified file. This method has O(log n) complexity, where n is the number
+  /// of lines in the buffer.
   LLVM_ABI std::pair<unsigned, unsigned>
   getLineAndColumn(SMLoc Loc, unsigned BufferID = 0) const;
 

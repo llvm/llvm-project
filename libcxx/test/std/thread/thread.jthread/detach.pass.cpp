@@ -8,7 +8,6 @@
 //
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// XFAIL: availability-synchronization_library-missing
 
 // void detach();
 

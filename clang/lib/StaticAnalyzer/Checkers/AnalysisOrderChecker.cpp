@@ -129,7 +129,8 @@ public:
       llvm::errs() << " {argno: " << Call.getNumArgs() << '}';
       llvm::errs() << " [" << Call.getKindAsString() << ']';
       llvm::errs() << '\n';
-      return true;
+      // We can't return `true` from this callback without binding the return
+      // value. Let's just fallthrough here and return `false`.
     }
     return false;
   }
@@ -161,7 +162,8 @@ public:
         return;
 
       llvm::errs() << "CFGElement: ";
-      CFGStmtMap *Map = C.getCurrentAnalysisDeclContext()->getCFGStmtMap();
+      const CFGStmtMap *Map =
+          C.getCurrentAnalysisDeclContext()->getCFGStmtMap();
       CFGElement LastElement = Map->getBlock(S)->back();
 
       if (LastElement.getAs<CFGStmt>())
@@ -198,8 +200,8 @@ public:
   checkRegionChanges(ProgramStateRef State,
                      const InvalidatedSymbols *Invalidated,
                      ArrayRef<const MemRegion *> ExplicitRegions,
-                     ArrayRef<const MemRegion *> Regions,
-                     const LocationContext *LCtx, const CallEvent *Call) const {
+                     ArrayRef<const MemRegion *> Regions, const StackFrame *SF,
+                     const CallEvent *Call) const {
     if (isCallbackEnabled(State, "RegionChanges"))
       llvm::errs() << "RegionChanges\n";
     return State;

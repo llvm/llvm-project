@@ -16,6 +16,7 @@ define void @foo(i64 %n, i64 %m, i64 %b, ptr %A) {
 ; CHECK-NEXT:  Base offset: %A
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][%m] with elements of 8 bytes.
 ; CHECK-NEXT:  ArrayRef[{%b,+,2}<nsw><%for.i>][{0,+,2}<nuw><%for.j>]
+; CHECK-NEXT:  Delinearization validation: Failed
 ;
 entry:
   br label %for.i

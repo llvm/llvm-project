@@ -64,6 +64,5 @@ private:
 
 void mlir::nvgpu::populateMmaSyncF32ToTF32Patterns(
     RewritePatternSet &patterns, nvgpu::MmaSyncF32Lowering precision) {
-
   patterns.add<MmaSyncF32ToTF32Pattern>(patterns.getContext(), precision);
 }

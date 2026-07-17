@@ -37,6 +37,7 @@
 #include "orc-rt/Error.h"
 #include "orc-rt/ExecutorAddress.h"
 #include "orc-rt/bit.h"
+#include "orc-rt/iterator_range.h"
 #include "orc-rt/span.h"
 
 #include <cstring>
@@ -172,6 +173,28 @@ public:
   }
 };
 
+class SPSSize;
+
+/// SPSSize is serializable to/from size_t. Wire size is 64-bits.
+template <> class SPSSerializationTraits<SPSSize, size_t> {
+public:
+  static size_t size(const size_t &Value) {
+    return SPSArgList<uint64_t>::size(static_cast<uint64_t>(Value));
+  }
+  static bool serialize(SPSOutputBuffer &OB, const size_t &Value) {
+    return SPSArgList<uint64_t>::serialize(OB, static_cast<uint64_t>(Value));
+  }
+  static bool deserialize(SPSInputBuffer &IB, size_t &Value) {
+    uint64_t Tmp;
+    if (!SPSArgList<uint64_t>::deserialize(IB, Tmp))
+      return false;
+    if (Tmp > std::numeric_limits<size_t>::max())
+      return false;
+    Value = Tmp;
+    return true;
+  }
+};
+
 /// Any empty placeholder suitable as a substitute for void when deserializing
 class SPSEmpty {};
 
@@ -191,7 +214,7 @@ public:
 /// SPSTagT value is present, and false indicating that there is no value.
 /// If the boolean is true then the serialized SPSTagT will follow immediately
 /// after it.
-template <typename SPSTagT> class SPSOptional {};
+template <typename SPSTagT> class SPSOptional;
 
 /// SPS tag type for sequences.
 ///
@@ -366,6 +389,33 @@ public:
   }
 };
 
+/// Serialization (but no deserialization) from iterator range.
+template <typename SPSElementTagT, typename IteratorT>
+class SPSSerializationTraits<SPSSequence<SPSElementTagT>,
+                             iterator_range<IteratorT>> {
+  static uint64_t rangeSize(const iterator_range<IteratorT> &R) {
+    return std::distance(R.begin(), R.end());
+  }
+
+public:
+  static size_t size(const iterator_range<IteratorT> &R) {
+    size_t Size = SPSArgList<uint64_t>::size(rangeSize(R));
+    for (const auto &E : R)
+      Size += SPSArgList<SPSElementTagT>::size(E);
+    return Size;
+  }
+
+  static bool serialize(SPSOutputBuffer &OB,
+                        const iterator_range<IteratorT> &R) {
+    if (!SPSArgList<uint64_t>::serialize(OB, rangeSize(R)))
+      return false;
+    for (const auto &E : R)
+      if (!SPSArgList<SPSElementTagT>::serialize(OB, E))
+        return false;
+    return true;
+  }
+};
+
 /// Trivial serialization / deserialization for span<char>
 template <> class SPSSerializationTraits<SPSSequence<char>, span<const char>> {
 public:
@@ -510,10 +560,7 @@ public:
 };
 
 /// Represents an address in the executor.
-class SPSExecutorAddr {};
-
-/// SPS tag type for errors.
-class SPSError;
+class SPSExecutorAddr;
 
 template <> class SPSSerializationTraits<SPSExecutorAddr, ExecutorAddr> {
 public:
@@ -533,6 +580,49 @@ public:
     return true;
   }
 };
+
+/// Allow SPSExectorAddr serialization to/from T*.
+template <typename T> class SPSSerializationTraits<SPSExecutorAddr, T *> {
+public:
+  static size_t size(T *const &P) {
+    return SPSArgList<SPSExecutorAddr>::size(ExecutorAddr::fromPtr(P));
+  }
+
+  static bool serialize(SPSOutputBuffer &OB, T *const &P) {
+    return SPSArgList<SPSExecutorAddr>::serialize(OB, ExecutorAddr::fromPtr(P));
+  }
+
+  static bool deserialize(SPSInputBuffer &IB, T *&P) {
+    ExecutorAddr Value;
+    if (!SPSArgList<SPSExecutorAddr>::deserialize(IB, Value))
+      return false;
+    P = Value.toPtr<T *>();
+    return true;
+  }
+};
+
+class SPSExecutorAddrRange;
+
+template <>
+class SPSSerializationTraits<SPSExecutorAddrRange, ExecutorAddrRange> {
+public:
+  static size_t size(const ExecutorAddrRange &R) {
+    return SPSArgList<SPSExecutorAddr, SPSExecutorAddr>::size(R.Start, R.End);
+  }
+
+  static bool serialize(SPSOutputBuffer &OB, const ExecutorAddrRange &R) {
+    return SPSArgList<SPSExecutorAddr, SPSExecutorAddr>::serialize(OB, R.Start,
+                                                                   R.End);
+  }
+
+  static bool deserialize(SPSInputBuffer &IB, ExecutorAddrRange &R) {
+    return SPSArgList<SPSExecutorAddr, SPSExecutorAddr>::deserialize(
+        IB, R.Start, R.End);
+  }
+};
+
+/// SPS tag type for errors.
+class SPSError;
 
 /// Helper type for serializing Errors.
 ///

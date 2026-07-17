@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# ===- rename_check.py - clang-tidy check renamer ------------*- python -*--===#
+# ===-----------------------------------------------------------------------===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
@@ -51,30 +51,6 @@ def replaceInFile(fileName: str, sFrom: str, sTo: str) -> None:
         f.write(txt)
 
 
-def generateCommentLineHeader(filename: str) -> str:
-    return "".join(
-        [
-            "//===--- ",
-            os.path.basename(filename),
-            " - clang-tidy ",
-            "-" * max(0, 42 - len(os.path.basename(filename))),
-            "*- C++ -*-===//",
-        ]
-    )
-
-
-def generateCommentLineSource(filename: str) -> str:
-    return "".join(
-        [
-            "//===--- ",
-            os.path.basename(filename),
-            " - clang-tidy",
-            "-" * max(0, 52 - len(os.path.basename(filename))),
-            "-===//",
-        ]
-    )
-
-
 def fileRename(fileName: str, sFrom: str, sTo: str) -> str:
     if sFrom not in fileName or sFrom == sTo:
         return fileName
@@ -89,12 +65,12 @@ def deleteMatchingLines(fileName: str, pattern: str) -> bool:
     with io.open(fileName, "r", encoding="utf8") as f:
         lines = f.readlines()
 
-    not_matching_lines = [l for l in lines if not re.search(pattern, l)]
+    not_matching_lines = [line for line in lines if not re.search(pattern, line)]
     if len(not_matching_lines) == len(lines):
         return False
 
     print("Removing lines matching '%s' in '%s'..." % (pattern, fileName))
-    print("  " + "  ".join([l for l in lines if re.search(pattern, l)]))
+    print("  " + "  ".join(line for line in lines if re.search(pattern, line)))
     with io.open(fileName, "w", encoding="utf8") as f:
         f.writelines(not_matching_lines)
 
@@ -331,22 +307,11 @@ def main() -> None:
         )
 
     for filename in getListOfFiles(clang_tidy_path):
-        originalName = filename
         filename = fileRename(
             filename, old_module + "/" + old_name, new_module + "/" + new_name
         )
         filename = fileRename(filename, args.old_check_name, args.new_check_name)
         filename = fileRename(filename, check_name_camel, new_check_name_camel)
-        replaceInFile(
-            filename,
-            generateCommentLineHeader(originalName),
-            generateCommentLineHeader(filename),
-        )
-        replaceInFile(
-            filename,
-            generateCommentLineSource(originalName),
-            generateCommentLineSource(filename),
-        )
         for header_guard in header_guard_variants:
             replaceInFile(filename, header_guard, header_guard_new)
 

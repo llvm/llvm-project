@@ -1017,7 +1017,7 @@ private:
     // First, for any types that have a declaration, extract the declaration and
     // match on it.
     if (const auto *S = dyn_cast<TagType>(&Node)) {
-      return matchesDecl(S->getOriginalDecl(), Finder, Builder);
+      return matchesDecl(S->getDecl(), Finder, Builder);
     }
     if (const auto *S = dyn_cast<TemplateTypeParmType>(&Node)) {
       return matchesDecl(S->getDecl(), Finder, Builder);
@@ -1984,6 +1984,46 @@ getTemplateArgsWritten(const TemplateSpecializationTypeLoc &T) {
       Args.emplace_back(T.getArgLoc(I));
   }
   return Args;
+}
+
+inline ArrayRef<TemplateArgumentLoc>
+getTemplateArgsWritten(const OverloadExpr &OE) {
+  return OE.template_arguments();
+}
+
+inline unsigned
+getNumTemplateArgsWritten(const ClassTemplateSpecializationDecl &D) {
+  if (const ASTTemplateArgumentListInfo *Args = D.getTemplateArgsAsWritten())
+    return Args->getNumTemplateArgs();
+  return 0;
+}
+
+inline unsigned
+getNumTemplateArgsWritten(const VarTemplateSpecializationDecl &D) {
+  if (const ASTTemplateArgumentListInfo *Args = D.getTemplateArgsAsWritten())
+    return Args->getNumTemplateArgs();
+  return 0;
+}
+
+inline unsigned getNumTemplateArgsWritten(const FunctionDecl &FD) {
+  if (const auto *Args = FD.getTemplateSpecializationArgsAsWritten())
+    return Args->getNumTemplateArgs();
+  return 0;
+}
+
+inline unsigned getNumTemplateArgsWritten(const DeclRefExpr &DRE) {
+  return DRE.getNumTemplateArgs();
+}
+
+inline unsigned
+getNumTemplateArgsWritten(const TemplateSpecializationTypeLoc &T) {
+  if (!T.isNull())
+    return T.getNumArgs();
+  return 0;
+}
+
+inline unsigned getNumTemplateArgsWritten(const OverloadExpr &OE) {
+  return OE.getNumTemplateArgs();
 }
 
 struct NotEqualsBoundNodePredicate {

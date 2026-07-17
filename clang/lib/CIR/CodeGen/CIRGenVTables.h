@@ -46,6 +46,11 @@ class CIRGenVTables {
   /// indices.
   SecondaryVirtualPointerIndicesMapTy secondaryVirtualPointerIndices;
 
+  /// Cache for the pure virtual member call function.
+  cir::FuncOp pureVirtualFn = nullptr;
+  /// Cache for the deleted virtual member call function.
+  cir::FuncOp deletedVirtualFn = nullptr;
+
   mlir::Attribute
   getVTableComponent(const VTableLayout &layout, unsigned componentIndex,
                      mlir::Attribute rtti, unsigned &nextVTableThunkIndex,
@@ -95,10 +100,17 @@ public:
   /// Emit the associated thunks for the given global decl.
   void emitThunks(GlobalDecl gd);
 
+  /// Emit a thunk for the given global decl if needed, or return an existing
+  /// thunk.
+  cir::FuncOp maybeEmitThunk(GlobalDecl gd, const ThunkInfo &thunkAdjustments,
+                             bool forVTable);
+
   /// Generate all the class data required to be generated upon definition of a
   /// KeyFunction. This includes the vtable, the RTTI data structure (if RTTI
   /// is enabled) and the VTT (if the class has virtual bases).
   void generateClassData(const CXXRecordDecl *rd);
+
+  bool isVTableExternal(const clang::CXXRecordDecl *rd);
 
   /// Returns the type of a vtable with the given layout. Normally a struct of
   /// arrays of pointers, with one struct element for each vtable in the vtable

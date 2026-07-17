@@ -32,11 +32,62 @@ func.func @test_rescale_input_unsigned(%arg0: tensor<1x1xui16>) -> (tensor<1x1xi
 
 // -----
 
+// CHECK-LABEL: test_rescale_unsigned_zp
+// CHECK: %[[ZP_IN:.*]] = "tosa.const"() <{values = dense<-2> : tensor<1xi8>}> : () -> tensor<1xi8>
+// CHECK: %[[ZP_OUT:.*]] = "tosa.const"() <{values = dense<2> : tensor<1xi8>}> : () -> tensor<1xi8>
+// CHECK: tosa.rescale %arg0, %0, %1, %[[ZP_IN]], %[[ZP_OUT]] {input_unsigned = true, output_unsigned = false, per_channel = false, rounding_mode = SINGLE_ROUND, scale32 = true} : (tensor<1x1xi8>, tensor<1xi32>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>)
+func.func @test_rescale_unsigned_zp(%arg0: tensor<1x1xui8>) -> tensor<1x1xi8> {
+  %0 = "tosa.const"() <{values = dense<2> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %1 = "tosa.const"() <{values = dense<1> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %2 = "tosa.const"() <{values = dense<254> : tensor<1xui8>}> : () -> tensor<1xui8>
+  %3 = "tosa.const"() <{values = dense<2> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %r = tosa.rescale %arg0, %0, %1, %2, %3 {input_unsigned = true, output_unsigned = false, per_channel = false, rounding_mode = SINGLE_ROUND, scale32 = true} : (tensor<1x1xui8>, tensor<1xi32>, tensor<1xi8>, tensor<1xui8>, tensor<1xi8>) -> tensor<1x1xi8>
+  return %r : tensor<1x1xi8>
+}
+
+// -----
+
 // CHECK-LABEL: test_unsigned_function_signature
 // CHECK: %arg0: tensor<1xi8>, %arg1: tensor<1xi8>
 func.func @test_unsigned_function_signature(%arg0: tensor<1xui8>, %arg1: tensor<1xui8>) -> (tensor<1xui8>, tensor<1xui8>) {
   // CHECK: return %arg0, %arg1 : tensor<1xi8>, tensor<1xi8>
   return %arg0, %arg1 : tensor<1xui8>, tensor<1xui8>
+}
+
+// -----
+
+// CHECK-LABEL: test_unsigned_const_data
+// CHECK: "tosa.const"() <{values = dense<[-1, -2, 0, 1, -128]> : tensor<5xi8>}> : () -> tensor<5xi8>
+func.func @test_unsigned_const_data() -> tensor<5xui8> {
+  %0 = "tosa.const"() <{values = dense<[255, 254, 0, 1, 128]> : tensor<5xui8>}> : () -> tensor<5xui8>
+  return %0 : tensor<5xui8>
+}
+
+// -----
+
+// CHECK-LABEL: test_unsigned_const_data_i16
+// CHECK: "tosa.const"() <{values = dense<[-1, -2, 0, 1, -32768]> : tensor<5xi16>}> : () -> tensor<5xi16>
+func.func @test_unsigned_const_data_i16() -> tensor<5xui16> {
+  %0 = "tosa.const"() <{values = dense<[65535, 65534, 0, 1, 32768]> : tensor<5xui16>}> : () -> tensor<5xui16>
+  return %0 : tensor<5xui16>
+}
+
+// -----
+
+// CHECK-LABEL: test_unsigned_const_data_i32
+// CHECK: "tosa.const"() <{values = dense<[-1, -2, 0, 1, -2147483648]> : tensor<5xi32>}> : () -> tensor<5xi32>
+func.func @test_unsigned_const_data_i32() -> tensor<5xui32> {
+  %0 = "tosa.const"() <{values = dense<[4294967295, 4294967294, 0, 1, 2147483648]> : tensor<5xui32>}> : () -> tensor<5xui32>
+  return %0 : tensor<5xui32>
+}
+
+// -----
+
+// CHECK-LABEL: test_unsigned_const_data_i48
+// CHECK: "tosa.const"() <{values = dense<[-1, -2, 0, 1, -140737488355328]> : tensor<5xi48>}> : () -> tensor<5xi48>
+func.func @test_unsigned_const_data_i48() -> tensor<5xui48> {
+  %0 = "tosa.const"() <{values = dense<[281474976710655, 281474976710654, 0, 1, 140737488355328]> : tensor<5xui48>}> : () -> tensor<5xui48>
+  return %0 : tensor<5xui48>
 }
 
 // -----

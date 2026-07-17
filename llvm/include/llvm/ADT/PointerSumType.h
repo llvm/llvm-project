@@ -15,7 +15,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <type_traits>
 
 namespace llvm {
 
@@ -239,19 +238,9 @@ struct PointerSumTypeHelper : MemberTs... {
     TagMask = ~PointerMask
   };
 
-  // Finally we need a recursive template to do static checks of each
-  // member.
-  template <typename MemberT, typename... InnerMemberTs>
-  struct Checker : Checker<InnerMemberTs...> {
-    static_assert(MemberT::Tag < (1 << NumTagBits),
-                  "This discriminant value requires too many bits!");
-  };
-  template <typename MemberT> struct Checker<MemberT> : std::true_type {
-    static_assert(MemberT::Tag < (1 << NumTagBits),
-                  "This discriminant value requires too many bits!");
-  };
-  static_assert(Checker<MemberTs...>::value,
-                "Each member must pass the checker.");
+  // Finally, statically check each member.
+  static_assert(((MemberTs::Tag < (1 << NumTagBits)) && ...),
+                "A discriminant value requires too many bits!");
 };
 
 } // end namespace detail
@@ -260,20 +249,6 @@ struct PointerSumTypeHelper : MemberTs... {
 template <typename TagT, typename... MemberTs>
 struct DenseMapInfo<PointerSumType<TagT, MemberTs...>> {
   using SumType = PointerSumType<TagT, MemberTs...>;
-  using HelperT = detail::PointerSumTypeHelper<TagT, MemberTs...>;
-  enum { SomeTag = HelperT::MinTag };
-  using SomePointerT =
-      typename HelperT::template Lookup<HelperT::MinTag>::PointerT;
-  using SomePointerInfo = DenseMapInfo<SomePointerT>;
-
-  static inline SumType getEmptyKey() {
-    return SumType::template create<SomeTag>(SomePointerInfo::getEmptyKey());
-  }
-
-  static inline SumType getTombstoneKey() {
-    return SumType::template create<SomeTag>(
-        SomePointerInfo::getTombstoneKey());
-  }
 
   static unsigned getHashValue(const SumType &Arg) {
     uintptr_t OpaqueValue = Arg.getOpaqueValue();

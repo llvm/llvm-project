@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s cppcoreguidelines-virtual-class-destructor %t -- --fix-notes
+// RUN: %check_clang_tidy %s cppcoreguidelines-virtual-class-destructor %t -- --fix-notes
 
 // CHECK-MESSAGES: :[[@LINE+4]]:8: warning: destructor of 'PrivateVirtualBaseStruct' is private and prevents using the type [cppcoreguidelines-virtual-class-destructor]
 // CHECK-MESSAGES: :[[@LINE+3]]:8: note: make it public and virtual
@@ -163,7 +163,7 @@ protected:
 // CHECK-FIXES: class OverridingDerivedClass : ProtectedNonVirtualClass {
 // CHECK-FIXES-NEXT: public:
 // CHECK-FIXES-NEXT: virtual ~OverridingDerivedClass() = default;
-// CHECK-FIXES-NEXT: void f() override;
+// CHECK-FIXES-NEXT: void f() override; // is implicitly virtual
 // CHECK-FIXES-NEXT: };
 class OverridingDerivedClass : ProtectedNonVirtualClass {
 public:
@@ -186,7 +186,7 @@ class NonOverridingDerivedClass : ProtectedNonVirtualClass {
 // CHECK-MESSAGES: :[[@LINE+5]]:8: note: make it public and virtual
 // CHECK-FIXES: struct OverridingDerivedStruct : ProtectedNonVirtualBaseStruct {
 // CHECK-FIXES-NEXT: virtual ~OverridingDerivedStruct() = default;
-// CHECK-FIXES-NEXT: void f() override;
+// CHECK-FIXES-NEXT: void f() override; // is implicitly virtual
 // CHECK-FIXES-NEXT: };
 struct OverridingDerivedStruct : ProtectedNonVirtualBaseStruct {
   void f() override; // is implicitly virtual
@@ -289,26 +289,18 @@ protected:
   virtual CONCAT(~Foo, Bar2()); // FIXME: We should have a fixit for this.
 };
 
-// CHECK-MESSAGES: :[[@LINE+6]]:7: warning: destructor of 'FooBar3' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
-// CHECK-MESSAGES: :[[@LINE+5]]:7: note: make it protected and non-virtual
-// CHECK-FIXES:      class FooBar3 {
-// CHECK-FIXES-NEXT: protected:
-// CHECK-FIXES-NEXT:   ~FooBar3();
-// CHECK-FIXES-NEXT: };
+// CHECK-MESSAGES: :[[@LINE+2]]:7: warning: destructor of 'FooBar3' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+1]]:7: note: make it protected and non-virtual
 class FooBar3 {
 protected:
-  CONCAT(vir, tual) ~FooBar3();
+  CONCAT(vir, tual) ~FooBar3(); // FIXME: We should have a fixit for this.
 };
 
-// CHECK-MESSAGES: :[[@LINE+6]]:7: warning: destructor of 'FooBar4' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
-// CHECK-MESSAGES: :[[@LINE+5]]:7: note: make it protected and non-virtual
-// CHECK-FIXES:      class FooBar4 {
-// CHECK-FIXES-NEXT: protected:
-// CHECK-FIXES-NEXT:   ~CONCAT(Foo, Bar4());
-// CHECK-FIXES-NEXT: };
+// CHECK-MESSAGES: :[[@LINE+2]]:7: warning: destructor of 'FooBar4' is protected and virtual [cppcoreguidelines-virtual-class-destructor]
+// CHECK-MESSAGES: :[[@LINE+1]]:7: note: make it protected and non-virtual
 class FooBar4 {
 protected:
-  CONCAT(vir, tual) ~CONCAT(Foo, Bar4());
+  CONCAT(vir, tual) ~CONCAT(Foo, Bar4()); // FIXME: We should have a fixit for this.
 };
 
 // CHECK-MESSAGES: :[[@LINE+3]]:7: warning: destructor of 'FooBar5' is protected and virtual [cppcoreguidelines-virtual-class-destructor]

@@ -56,6 +56,8 @@ public:
   nub_size_t ReadMemory(nub_addr_t addr, nub_size_t size, void *buf);
   nub_size_t WriteMemory(nub_addr_t addr, nub_size_t size, const void *buf);
   int GetMemoryRegionInfo(nub_addr_t addr, DNBRegionInfo *region_info);
+  nub_bool_t GetMemoryTags(nub_addr_t addr, nub_size_t size,
+                           std::vector<uint8_t> &tags);
   std::string GetProfileData(DNBProfileDataScanType scanType);
 
   nub_addr_t AllocateMemory(nub_size_t size, uint32_t permissions);
@@ -66,7 +68,7 @@ public:
   bool ExceptionPortIsValid() const;
   kern_return_t SaveExceptionPortInfo();
   kern_return_t RestoreExceptionPortInfo();
-  kern_return_t ShutDownExcecptionThread();
+  void ShutDownExceptionThread();
 
   bool StartExceptionThread(
       const RNBContext::IgnoredExceptions &ignored_exceptions, DNBError &err);
@@ -79,9 +81,7 @@ public:
   void TaskPortChanged(task_t task);
   task_t TaskPort() const { return m_task; }
   task_t TaskPortForProcessID(DNBError &err, bool force = false);
-  static task_t TaskPortForProcessID(pid_t pid, DNBError &err,
-                                     uint32_t num_retries = 10,
-                                     uint32_t usec_interval = 10000);
+  static task_t TaskPortForProcessID(pid_t pid, DNBError &err);
 
   MachProcess *Process() { return m_process; }
   const MachProcess *Process() const { return m_process; }

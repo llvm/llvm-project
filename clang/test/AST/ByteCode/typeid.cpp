@@ -22,6 +22,8 @@ class type_info : public __pointer_type_info {
 protected:
   typedef __type_info_implementations::__impl __impl;
   __impl::__type_name_t __type_name;
+public:
+  const char *name;
 };
 }; // namespace std
 
@@ -32,10 +34,13 @@ static_assert(&typeid(int) < &typeid(long)); // both-error {{not an integral con
 static_assert(&typeid(int) > &typeid(long)); // both-error {{not an integral constant expression}} \
                                              // both-note {{comparison between pointers to unrelated objects '&typeid(int)' and '&typeid(long)' has unspecified value}}
 
- struct Base {
-   virtual void func() ;
- };
- struct Derived : Base {};
+constexpr auto name = typeid(int).name; // both-error {{constant expression}} \
+                                        // both-note {{read of object 'typeid(int).name' whose value is not known}}
+
+struct Base {
+ virtual void func() ;
+};
+struct Derived : Base {};
 
 constexpr bool test() {
   Derived derived;
@@ -51,4 +56,58 @@ int dontcrash() {
       typeid(int)
   );
   return pti.__flags == 0 ? 1 : 0;
+}
+
+namespace TypeidPtrInEvaluationResult {
+  struct C {};
+  C c = C();
+  consteval const std::type_info *ftype_info() { return &typeid(c); }
+  const std::type_info *T1 = ftype_info();
+}
+
+// Regression test for crash in ArrayElemPtrPop with typeid pointers. GH-163127
+namespace TypeidPtrRegression {
+  void dontcrash() {
+    constexpr auto res = ((void**)&typeid(int))[0]; // both-error {{must be initialized by a constant expression}} \
+                                                    // both-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
+  }
+  void dontcrash2() {
+    constexpr auto res = ((void**)&typeid(int))[1]; // both-error {{must be initialized by a constant expression}} \
+                                                    // both-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
+  }
+}
+
+namespace GH173950 {
+  struct A {
+    virtual void f();
+  };
+
+  static A &a = *new A;
+  extern A &a;
+
+  // This used to crash with: Assertion `IsInitialized' failed in invokeDtor()
+  const std::type_info &a_ti = typeid(a);
+}
+
+namespace MissingInitalizer {
+  struct Item {
+    const std::type_info &ti;
+  };
+  extern constexpr Item items[] = ; // both-error {{expected expression}} \
+                                    // both-note {{declared here}}
+  constexpr auto &x = items[0].ti; // both-error {{must be initialized by a constant expression}} \
+                                   // both-note {{initializer of 'items' is unknown}}
+}
+
+namespace TypeIdInOtherStruct {
+  struct X {
+    virtual constexpr ~X() {}
+  };
+  struct Y : X {};
+  struct Z {
+    mutable Y y;
+  };
+  constexpr Z z;
+  auto &zti = typeid(z.y);
+  static_assert(&zti == &typeid(Y));
 }

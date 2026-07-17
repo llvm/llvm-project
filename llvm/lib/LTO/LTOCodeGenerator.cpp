@@ -111,13 +111,15 @@ static cl::opt<std::string> AIXSystemAssemblerPath(
     cl::desc("Path to a system assembler, picked up on AIX only"),
     cl::value_desc("path"));
 
-static cl::opt<bool>
+cl::opt<bool>
     LTORunCSIRInstr("cs-profile-generate",
                     cl::desc("Perform context sensitive PGO instrumentation"));
 
-static cl::opt<std::string>
+cl::opt<std::string>
     LTOCSIRProfile("cs-profile-path",
                    cl::desc("Context sensitive profile file path"));
+
+extern cl::opt<std::string> SampleProfileFile;
 } // namespace llvm
 
 LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
@@ -375,16 +377,12 @@ bool LTOCodeGenerator::determineTarget() {
   if (TargetMach)
     return true;
 
-  TripleStr = MergedModule->getTargetTriple().str();
-  llvm::Triple Triple(TripleStr);
-  if (TripleStr.empty()) {
-    TripleStr = sys::getDefaultTargetTriple();
-    MergedModule->setTargetTriple(Triple);
-  }
+  if (MergedModule->getTargetTriple().empty())
+    MergedModule->setTargetTriple(Triple(sys::getDefaultTargetTriple()));
 
   // create target machine from info for merged modules
   std::string ErrMsg;
-  MArch = TargetRegistry::lookupTarget(Triple, ErrMsg);
+  MArch = TargetRegistry::lookupTarget(MergedModule->getTargetTriple(), ErrMsg);
   if (!MArch) {
     emitError(ErrMsg);
     return false;
@@ -393,10 +391,10 @@ bool LTOCodeGenerator::determineTarget() {
   // Construct LTOModule, hand over ownership of module and target. Use MAttr as
   // the default set of features.
   SubtargetFeatures Features(join(Config.MAttrs, ""));
-  Features.getDefaultSubtargetFeatures(Triple);
+  Features.getDefaultSubtargetFeatures(MergedModule->getTargetTriple());
   FeatureStr = Features.getString();
   if (Config.CPU.empty())
-    Config.CPU = lto::getThinLTODefaultCPU(Triple);
+    Config.CPU = lto::getThinLTODefaultCPU(MergedModule->getTargetTriple());
 
   // If data-sections is not explicitly set or unset, set data-sections by
   // default to match the behaviour of lld and gold plugin.
@@ -412,7 +410,7 @@ bool LTOCodeGenerator::determineTarget() {
 std::unique_ptr<TargetMachine> LTOCodeGenerator::createTargetMachine() {
   assert(MArch && "MArch is not set!");
   return std::unique_ptr<TargetMachine>(MArch->createTargetMachine(
-      Triple(TripleStr), Config.CPU, FeatureStr, Config.Options,
+      MergedModule->getTargetTriple(), Config.CPU, FeatureStr, Config.Options,
       Config.RelocModel, std::nullopt, Config.CGOptLevel));
 }
 
@@ -549,6 +547,7 @@ void LTOCodeGenerator::finishOptimizationRemarks() {
   if (DiagnosticOutputFile) {
     DiagnosticOutputFile->keep();
     // FIXME: LTOCodeGenerator dtor is not invoked on Darwin
+    DiagnosticOutputFile.finalize();
     DiagnosticOutputFile->os().flush();
   }
 }
@@ -560,6 +559,10 @@ bool LTOCodeGenerator::optimize() {
 
   // libLTO parses options late, so re-set them here.
   Context.setDiscardValueNames(LTODiscardValueNames);
+  Config.StatsFile = LTOStatsFile;
+  Config.RunCSIRInstr = LTORunCSIRInstr;
+  Config.CSIRProfile = LTOCSIRProfile;
+  Config.SampleProfile = SampleProfileFile;
 
   auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
       Context, RemarksFilename, RemarksPasses, RemarksFormat,
@@ -617,7 +620,7 @@ bool LTOCodeGenerator::optimize() {
   TargetMach = createTargetMachine();
   if (!opt(Config, TargetMach.get(), 0, *MergedModule, /*IsThinLTO=*/false,
            /*ExportSummary=*/&CombinedIndex, /*ImportSummary=*/nullptr,
-           /*CmdArgs*/ std::vector<uint8_t>())) {
+           /*CmdArgs*/ std::vector<uint8_t>(), /*BitcodeLibFuncs=*/{})) {
     emitError("LTO middle-end optimizations failed");
     return false;
   }
@@ -642,7 +645,7 @@ bool LTOCodeGenerator::compileOptimized(AddStreamFn AddStream,
 
   Config.CodeGenOnly = true;
   Error Err = backend(Config, AddStream, ParallelismLevel, *MergedModule,
-                      CombinedIndex);
+                      CombinedIndex, /*BitcodeLibFuncs=*/{});
   assert(!Err && "unexpected code-generation failure");
   (void)Err;
 
@@ -702,7 +705,6 @@ void LTOCodeGenerator::DiagnosticHandler(const DiagnosticInfo &DI) {
   raw_string_ostream Stream(MsgStorage);
   DiagnosticPrinterRawOStream DP(Stream);
   DI.print(DP);
-  Stream.flush();
 
   // If this method has been called it means someone has set up an external
   // diagnostic handler. Assert on that.

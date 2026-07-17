@@ -46,6 +46,9 @@ infrastructure are described first, followed by tool-specific sections.
 Major New Features
 ------------------
 
+Potentially Breaking Changes
+----------------------------
+
 Improvements to clangd
 ----------------------
 

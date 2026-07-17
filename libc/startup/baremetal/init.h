@@ -7,6 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/stdint_proxy.h"
+#include "src/__support/macros/config.h"
+
+// NOTE: The namespace is necessary here to set the correct symbol visibility.
+namespace LIBC_NAMESPACE_DECL {
 
 extern "C" {
 extern uintptr_t __preinit_array_start[];
@@ -16,3 +20,5 @@ extern uintptr_t __init_array_end[];
 
 void __libc_init_array(void);
 } // extern "C"
+
+} // namespace LIBC_NAMESPACE_DECL

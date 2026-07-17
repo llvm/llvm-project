@@ -3,11 +3,11 @@
 objc-forbidden-subclassing
 ==========================
 
-Finds Objective-C classes which are subclasses of classes which are not designed
-to be subclassed.
+Finds Objective-C classes which are subclasses of classes which are
+not designed to be subclassed.
 
-By default, includes a list of Objective-C classes which are publicly documented
-as not supporting subclassing.
+By default, includes a list of Objective-C classes which are publicly
+documented as not supporting subclassing.
 
 .. note::
 

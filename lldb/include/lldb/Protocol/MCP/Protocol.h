@@ -14,6 +14,7 @@
 #ifndef LLDB_PROTOCOL_MCP_PROTOCOL_H
 #define LLDB_PROTOCOL_MCP_PROTOCOL_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include <optional>
 #include <string>
@@ -23,6 +24,10 @@
 namespace lldb_protocol::mcp {
 
 static llvm::StringLiteral kProtocolVersion = "2024-11-05";
+
+/// Version reported by LLDB's MCP server. The function avoids having to include
+/// the version header.
+llvm::StringLiteral GetServerVersion();
 
 /// A Request or Response 'id'.
 ///
@@ -321,6 +326,10 @@ struct CallToolResult {
 };
 llvm::json::Value toJSON(const CallToolResult &);
 bool fromJSON(const llvm::json::Value &, CallToolResult &, llvm::json::Path);
+
+lldb_protocol::mcp::Request
+MakeRequest(int64_t id, llvm::StringRef method,
+            std::optional<llvm::json::Value> params);
 
 } // namespace lldb_protocol::mcp
 

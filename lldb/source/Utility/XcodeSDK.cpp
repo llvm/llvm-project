@@ -38,8 +38,8 @@ static llvm::StringRef GetName(XcodeSDK::Type type) {
     return "XRSimulator";
   case XcodeSDK::XROS:
     return "XROS";
-  case XcodeSDK::bridgeOS:
-    return "bridgeOS";
+  case XcodeSDK::BridgeOS:
+    return "BridgeOS";
   case XcodeSDK::Linux:
     return "Linux";
   case XcodeSDK::unknown:
@@ -83,8 +83,8 @@ static XcodeSDK::Type ParseSDKName(llvm::StringRef &name) {
     return XcodeSDK::XRSimulator;
   if (name.consume_front("XROS"))
     return XcodeSDK::XROS;
-  if (name.consume_front("bridgeOS"))
-    return XcodeSDK::bridgeOS;
+  if (name.consume_front("BridgeOS"))
+    return XcodeSDK::BridgeOS;
   if (name.consume_front("Linux"))
     return XcodeSDK::Linux;
   static_assert(XcodeSDK::Linux == XcodeSDK::numSDKTypes - 1,
@@ -170,7 +170,7 @@ void XcodeSDK::Merge(const XcodeSDK &other) {
   }
 
   // We changed the SDK name. Adjust the sysroot accordingly.
-  if (m_sysroot && m_sysroot.GetFilename().GetStringRef() != m_name)
+  if (m_sysroot && m_sysroot.GetFilename() != m_name)
     m_sysroot.SetFilename(m_name);
 }
 
@@ -204,7 +204,7 @@ std::string XcodeSDK::GetCanonicalName(XcodeSDK::Info info) {
   case XROS:
     name = "xros";
     break;
-  case bridgeOS:
+  case BridgeOS:
     name = "bridgeos";
     break;
   case Linux:
@@ -245,12 +245,12 @@ bool XcodeSDK::SDKSupportsModules(XcodeSDK::Type sdk_type,
 
 bool XcodeSDK::SDKSupportsModules(XcodeSDK::Type desired_type,
                                   const FileSpec &sdk_path) {
-  ConstString last_path_component = sdk_path.GetFilename();
+  llvm::StringRef last_path_component = sdk_path.GetFilename();
 
-  if (!last_path_component)
+  if (last_path_component.empty())
     return false;
 
-  XcodeSDK sdk(last_path_component.GetStringRef().str());
+  XcodeSDK sdk(last_path_component.str());
   if (sdk.GetType() != desired_type)
     return false;
   return SDKSupportsModules(sdk.GetType(), sdk.GetVersion());

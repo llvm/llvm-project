@@ -1,31 +1,8 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s performance-unnecessary-value-param %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy %s performance-unnecessary-value-param %t -- -- -fno-delayed-template-parsing
 
 // CHECK-FIXES: #include <utility>
 
-namespace std {
-template <typename>
-struct remove_reference;
-
-template <typename _Tp>
-struct remove_reference {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-struct remove_reference<_Tp &> {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-struct remove_reference<_Tp &&> {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t) {
-  return static_cast<typename std::remove_reference<_Tp>::type &&>(__t);
-}
-} // namespace std
+#include <utility>
 
 struct ExpensiveToCopyType {
   const ExpensiveToCopyType & constReference() const {
@@ -215,7 +192,7 @@ void NegativeTypedefParam(const Container<ExpensiveToCopyType>::const_reference 
   void inMacro(const ExpensiveToCopyType T) {           \
   }                                                     \
 // Ensure fix is not applied.
-// CHECK-FIXES: void inMacro(const ExpensiveToCopyType T) {
+// CHECK-FIXES: void inMacro(const ExpensiveToCopyType T) { {{\\}}
 
 UNNECESSARY_VALUE_PARAM_IN_MACRO_BODY()
 // CHECK-MESSAGES: [[@LINE-1]]:1: warning: the const qualified parameter 'T'
@@ -225,7 +202,7 @@ UNNECESSARY_VALUE_PARAM_IN_MACRO_BODY()
 
 UNNECESSARY_VALUE_PARAM_IN_MACRO_ARGUMENT(void inMacroArgument(const ExpensiveToCopyType InMacroArg) {})
 // CHECK-MESSAGES: [[@LINE-1]]:90: warning: the const qualified parameter 'InMacroArg'
-// CHECK-FIXES: void inMacroArgument(const ExpensiveToCopyType InMacroArg) {}
+// CHECK-FIXES: UNNECESSARY_VALUE_PARAM_IN_MACRO_ARGUMENT(void inMacroArgument(const ExpensiveToCopyType InMacroArg) {})
 
 struct VirtualMethod {
   virtual ~VirtualMethod() {}
@@ -234,7 +211,7 @@ struct VirtualMethod {
 
 struct NegativeOverriddenMethod : public VirtualMethod {
   void handle(ExpensiveToCopyType Overridden) const {
-    // CHECK-FIXES: handle(ExpensiveToCopyType Overridden) const {
+    // CHECK-FIXES: void handle(ExpensiveToCopyType Overridden) const {
   }
 };
 

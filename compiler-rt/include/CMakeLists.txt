@@ -11,9 +11,11 @@ if (COMPILER_RT_BUILD_SANITIZERS)
     sanitizer/msan_interface.h
     sanitizer/netbsd_syscall_hooks.h
     sanitizer/rtsan_interface.h
+    sanitizer/safestack_interface.h
     sanitizer/scudo_interface.h
     sanitizer/tsan_interface.h
     sanitizer/tsan_interface_atomic.h
+    sanitizer/tysan_interface.h
     sanitizer/ubsan_interface.h
     )
   set(FUZZER_HEADERS

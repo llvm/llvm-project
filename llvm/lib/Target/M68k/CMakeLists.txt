@@ -51,6 +51,7 @@ add_llvm_target(M68kCodeGen
   SelectionDAG
   Support
   Target
+  TargetParser
 
   ADD_TO_COMPONENT
   M68k

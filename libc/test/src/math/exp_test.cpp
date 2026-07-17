@@ -7,13 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/math_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/exp.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include "hdr/stdint_proxy.h"
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcExpTest = LIBC_NAMESPACE::testing::FPTest<double>;
 
@@ -52,15 +58,15 @@ TEST_F(LlvmLibcExpTest, TrickyInputs) {
   for (int i = 0; i < N; ++i) {
     double x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp, x,
-                                   LIBC_NAMESPACE::exp(x), 0.5);
+                                   LIBC_NAMESPACE::exp(x), TOLERANCE + 0.5);
   }
 }
 
 TEST_F(LlvmLibcExpTest, InDoubleRange) {
   constexpr uint64_t COUNT = 1'231;
-  uint64_t START = LIBC_NAMESPACE::fputil::FPBits<double>(0.25).uintval();
-  uint64_t STOP = LIBC_NAMESPACE::fputil::FPBits<double>(4.0).uintval();
-  uint64_t STEP = (STOP - START) / COUNT;
+  constexpr uint64_t START = FPBits(0.25).uintval();
+  constexpr uint64_t STOP = FPBits(4.0).uintval();
+  constexpr uint64_t STEP = (STOP - START) / COUNT;
 
   auto test = [&](mpfr::RoundingMode rounding_mode) {
     mpfr::ForceRoundingMode __r(rounding_mode);
@@ -85,7 +91,7 @@ TEST_F(LlvmLibcExpTest, InDoubleRange) {
       ++count;
       // ASSERT_MPFR_MATCH(mpfr::Operation::Log, x, result, 0.5);
       if (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Exp, x, result,
-                                             0.5, rounding_mode)) {
+                                             TOLERANCE + 0.5, rounding_mode)) {
         ++fails;
         while (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Exp, x,
                                                   result, tol, rounding_mode)) {
@@ -99,10 +105,10 @@ TEST_F(LlvmLibcExpTest, InDoubleRange) {
         }
       }
     }
-    tlog << " Exp failed: " << fails << "/" << count << "/" << cc
-         << " tests.\n";
-    tlog << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
     if (fails) {
+      tlog << " Exp failed: " << fails << "/" << count << "/" << cc
+           << " tests.\n";
+      tlog << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
       EXPECT_MPFR_MATCH(mpfr::Operation::Exp, mx, mr, 0.5, rounding_mode);
     }
   };

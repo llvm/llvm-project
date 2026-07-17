@@ -25,3 +25,12 @@ subroutine pow_test(a, b, c)
    complex :: a, b, c
    a = b**c
 end subroutine pow_test
+
+! CHECK-LABEL: func @_QPpowi_test(
+! CHECK: complex.powi
+! CHECK-NOT: fir.call @_FortranAcpowi
+subroutine powi_test(a, b, c)
+   complex :: a, b
+   integer :: i
+   b = a ** i
+end subroutine powi_test

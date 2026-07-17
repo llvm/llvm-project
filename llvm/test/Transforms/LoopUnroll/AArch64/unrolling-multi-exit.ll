@@ -70,7 +70,7 @@ define i1 @multi_2_exiting_find_i8_loop_same_exit(ptr %vec, i8 %tgt) {
 ; UNROLL4-NEXT:    [[C_2_3:%.*]] = icmp eq ptr [[PTR_IV_NEXT_3]], [[END]]
 ; UNROLL4-NEXT:    br i1 [[C_2_3]], label %[[EXIT_UNR_LCSSA_LOOPEXIT]], label %[[LOOP_HEADER]]
 ; UNROLL4:       [[EXIT_UNR_LCSSA_LOOPEXIT]]:
-; UNROLL4-NEXT:    [[RES_PH_PH:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ], [ [[PTR_IV_NEXT]], %[[LOOP_LATCH]] ], [ [[PTR_IV_NEXT_1]], %[[LOOP_LATCH_1]] ], [ [[PTR_IV_NEXT_2]], %[[LOOP_LATCH_2]] ], [ [[END]], %[[LOOP_LATCH_3]] ]
+; UNROLL4-NEXT:    [[RES_PH_PH:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ], [ [[END]], %[[LOOP_LATCH_3]] ], [ [[PTR_IV_NEXT]], %[[LOOP_LATCH]] ], [ [[PTR_IV_NEXT_2]], %[[LOOP_LATCH_2]] ], [ [[PTR_IV_NEXT_1]], %[[LOOP_LATCH_1]] ]
 ; UNROLL4-NEXT:    br label %[[EXIT_UNR_LCSSA:.*]]
 ; UNROLL4:       [[EXIT_UNR_LCSSA_LOOPEXIT3]]:
 ; UNROLL4-NEXT:    [[RES_PH_PH4:%.*]] = phi ptr [ [[PTR_IV_PROL]], %[[LOOP_HEADER_PROL]] ]
@@ -317,7 +317,7 @@ define i1 @multi_2_exiting_find_ptr_loop_same_exit(ptr %vec, ptr %tgt) {
 ; UNROLL4-NEXT:    [[C_2_3:%.*]] = icmp eq ptr [[PTR_IV_NEXT_3]], [[END]]
 ; UNROLL4-NEXT:    br i1 [[C_2_3]], label %[[EXIT_UNR_LCSSA_LOOPEXIT]], label %[[LOOP_HEADER]]
 ; UNROLL4:       [[EXIT_UNR_LCSSA_LOOPEXIT]]:
-; UNROLL4-NEXT:    [[RES_PH_PH:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ], [ [[PTR_IV_NEXT]], %[[LOOP_LATCH]] ], [ [[PTR_IV_NEXT_1]], %[[LOOP_LATCH_1]] ], [ [[PTR_IV_NEXT_2]], %[[LOOP_LATCH_2]] ], [ [[END]], %[[LOOP_LATCH_3]] ]
+; UNROLL4-NEXT:    [[RES_PH_PH:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ], [ [[END]], %[[LOOP_LATCH_3]] ], [ [[PTR_IV_NEXT]], %[[LOOP_LATCH]] ], [ [[PTR_IV_NEXT_2]], %[[LOOP_LATCH_2]] ], [ [[PTR_IV_NEXT_1]], %[[LOOP_LATCH_1]] ]
 ; UNROLL4-NEXT:    br label %[[EXIT_UNR_LCSSA:.*]]
 ; UNROLL4:       [[EXIT_UNR_LCSSA_LOOPEXIT3]]:
 ; UNROLL4-NEXT:    [[RES_PH_PH4:%.*]] = phi ptr [ [[PTR_IV_PROL]], %[[LOOP_HEADER_PROL]] ]

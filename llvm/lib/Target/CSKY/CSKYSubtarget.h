@@ -30,8 +30,8 @@ class CSKYSubtarget : public CSKYGenSubtargetInfo {
   virtual void anchor();
 
   CSKYFrameLowering FrameLowering;
-  CSKYInstrInfo InstrInfo;
   CSKYRegisterInfo RegInfo;
+  CSKYInstrInfo InstrInfo;
   CSKYTargetLowering TLInfo;
   std::unique_ptr<const SelectionDAGTargetInfo> TSInfo;
 

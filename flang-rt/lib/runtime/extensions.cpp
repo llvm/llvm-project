@@ -12,6 +12,8 @@
 #include "flang/Runtime/extensions.h"
 #include "unit.h"
 #include "flang-rt/runtime/descriptor.h"
+#include "flang-rt/runtime/environment.h"
+#include "flang-rt/runtime/lock.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
 #include "flang/Runtime/command.h"
@@ -23,6 +25,7 @@
 #include <cstdio>
 #include <cstring>
 #include <ctime>
+#include <limits>
 #include <signal.h>
 #include <stdlib.h>
 #include <thread>
@@ -53,6 +56,7 @@ inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
 
 #ifndef _WIN32
 // posix-compliant and has getlogin_r and F_OK
+#include <sys/times.h>
 #include <unistd.h>
 #else
 #include <direct.h>
@@ -60,7 +64,20 @@ inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
 
 namespace Fortran::runtime {
 
-// Common implementation that could be used for either SECNDS() or SECNDSD(),
+#define GFC_RAND_A 16807
+#define GFC_RAND_M 2147483647
+static unsigned rand_seed = 1;
+static Lock rand_seed_lock;
+
+#ifndef _WIN32
+// Used by RTNAME(Timef).  Declared at namespace scope so that Lock's
+// non-trivial constructor does not require thread-safe-static guards
+// (__cxa_guard_acquire/_release), which would introduce a dependency on
+// the C++ runtime library.
+static Lock timef_lock;
+#endif
+
+// Common implementation that could be used for either SECNDS() or DSECNDS(),
 // which are defined for float or double.
 template <typename T> T SecndsImpl(T *refTime) {
   static_assert(std::is_same<T, float>::value || std::is_same<T, double>::value,
@@ -162,6 +179,17 @@ namespace io {
 void FORTRAN_PROCEDURE_NAME(flush)(const int &unit) {
   Cookie cookie{IONAME(BeginFlush)(unit, __FILE__, __LINE__)};
   IONAME(EndIoStatement)(cookie);
+}
+
+void RTNAME(Flush)(int unit) {
+  // We set the `unit == -1` on the `flush()` case, so flush all units.
+  if (unit < 0) {
+    Terminator terminator{__FILE__, __LINE__};
+    IoErrorHandler handler{terminator};
+    ExternalFileUnit::FlushAll(handler);
+    return;
+  }
+  FORTRAN_PROCEDURE_NAME(flush)(unit);
 }
 } // namespace io
 
@@ -381,19 +409,136 @@ float RTNAME(Secnds)(float *refTime, const char *sourceFile, int line) {
   return FORTRAN_PROCEDURE_NAME(secnds)(refTime);
 }
 
+// PGI extension function DSECNDS(refTime)
+double FORTRAN_PROCEDURE_NAME(dsecnds)(double *refTime) {
+  return SecndsImpl(refTime);
+}
+
+double RTNAME(Dsecnds)(double *refTime, const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
+  RUNTIME_CHECK(terminator, refTime != nullptr);
+  return FORTRAN_PROCEDURE_NAME(dsecnds)(refTime);
+}
+
 // GNU extension function TIME()
 std::int64_t RTNAME(time)() { return time(nullptr); }
 
+// Extension function TIMEF().
+// By default, it returns number of seconds that have elapsed since the first
+// time TIMEF was called. For the first call, it returns 0.
+// FLANG_TIMEF_IN_MILLISECONDS=1 sets the resolution to milliseconds.
+double RTNAME(Timef)() {
+#ifndef _WIN32
+  // posix-compliant
+  static clock_t start = static_cast<clock_t>(-1);
+  static long ticks_per_sec = 0;
+  static bool isInit{false};
+
+  struct tms b;
+  clock_t current;
+  double duration;
+  {
+    CriticalSection critical{timef_lock};
+    if (ticks_per_sec <= 0) {
+      ticks_per_sec = sysconf(_SC_CLK_TCK);
+      if (ticks_per_sec <= 0)
+        return 0.0;
+    }
+
+    if (times(&b) == static_cast<clock_t>(-1)) {
+      return 0.0;
+    }
+
+    current = b.tms_utime + b.tms_stime;
+
+    if (!isInit) {
+      isInit = true;
+      start = current;
+      return 0.0;
+    }
+    if (Fortran::runtime::executionEnvironment.timefInMillisec) {
+      duration =
+          (static_cast<double>(current - start) * 1000.0) / ticks_per_sec;
+    } else {
+      duration = static_cast<double>(current - start) / ticks_per_sec;
+    }
+
+    return duration;
+  }
+#else
+  // TODO: Windows implementation.
+  return 0.0;
+#endif
+}
+
 // MCLOCK: returns accumulated CPU time in ticks
 std::int32_t FORTRAN_PROCEDURE_NAME(mclock)() { return std::clock(); }
+
+static void _internal_srand(int seed) { rand_seed = seed ? seed : 123459876; }
+
+// IRAND(I)
+int RTNAME(Irand)(int *i) {
+  int j;
+  if (i)
+    j = *i;
+  else
+    j = 0;
+
+  rand_seed_lock.Take();
+  switch (j) {
+  case 0:
+    break;
+  case 1:
+    _internal_srand(0);
+    break;
+  default:
+    _internal_srand(j);
+    break;
+  }
+
+  rand_seed = GFC_RAND_A * rand_seed % GFC_RAND_M;
+  j = (int)rand_seed;
+  rand_seed_lock.Drop();
+  return j;
+}
+
+// RAND(I)
+float RTNAME(Rand)(int *i, const char *sourceFile, int line) {
+  unsigned mask = 0;
+  constexpr int radix = std::numeric_limits<float>::radix;
+  constexpr int digits = std::numeric_limits<float>::digits;
+  if constexpr (radix == 2) {
+    mask = ~(unsigned)0u << (32 - digits + 1);
+  } else {
+    Terminator terminator{sourceFile, line};
+    terminator.Crash("Radix unknown value.");
+  }
+  return ((unsigned)(RTNAME(Irand)(i) - 1) & mask) * (float)0x1.p-31f;
+}
+
+// SRAND(SEED)
+void FORTRAN_PROCEDURE_NAME(srand)(int *seed) {
+  rand_seed_lock.Take();
+  _internal_srand(*seed);
+  rand_seed_lock.Drop();
+}
+
+void RTNAME(ShowDescriptor)(const Fortran::runtime::Descriptor *descr) {
+  if (descr) {
+    descr->Dump(stderr, /*dumpRawType=*/false);
+  } else {
+    std::fprintf(stderr, "NULL\n");
+  }
+}
 
 // Extension procedures related to I/O
 
 namespace io {
 std::int32_t RTNAME(Fseek)(int unitNumber, std::int64_t zeroBasedPos,
     int whence, const char *sourceFileName, int lineNumber) {
-  if (ExternalFileUnit * unit{ExternalFileUnit::LookUp(unitNumber)}) {
-    Terminator terminator{sourceFileName, lineNumber};
+  Terminator terminator{sourceFileName, lineNumber};
+  if (ExternalFileUnit *
+      unit{ExternalFileUnit::LookUp(unitNumber, terminator)}) {
     IoErrorHandler handler{terminator};
     if (unit->Fseek(
             zeroBasedPos, static_cast<enum FseekWhence>(whence), handler)) {
@@ -407,14 +552,25 @@ std::int32_t RTNAME(Fseek)(int unitNumber, std::int64_t zeroBasedPos,
 }
 
 std::int64_t RTNAME(Ftell)(int unitNumber) {
-  if (ExternalFileUnit * unit{ExternalFileUnit::LookUp(unitNumber)}) {
+  Terminator terminator{__FILE__, __LINE__};
+  if (ExternalFileUnit *
+      unit{ExternalFileUnit::LookUp(unitNumber, terminator)}) {
     return unit->InquirePos() - 1; // zero-based result
   } else {
     return -1;
   }
 }
+
+std::int32_t FORTRAN_PROCEDURE_NAME(fnum)(const int &unitNumber) {
+  Terminator terminator{__FILE__, __LINE__};
+  if (ExternalFileUnit *
+      unit{ExternalFileUnit::LookUp(unitNumber, terminator)}) {
+    return unit->fd();
+  } else {
+    return -1;
+  }
+}
+
 } // namespace io
-
 } // extern "C"
-
 } // namespace Fortran::runtime

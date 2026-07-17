@@ -14,7 +14,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_SIMACHINEFUNCTIONINFO_H
 
 #include "AMDGPUArgumentUsageInfo.h"
-#include "AMDGPUMachineFunction.h"
+#include "AMDGPUMachineFunctionInfo.h"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -33,7 +33,8 @@ class MachineFrameInfo;
 class MachineFunction;
 class SIMachineFunctionInfo;
 class SIRegisterInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 
 class AMDGPUPseudoSourceValue : public PseudoSourceValue {
 public:
@@ -170,6 +171,7 @@ struct SIArgumentInfo {
   std::optional<SIArgument> DispatchID;
   std::optional<SIArgument> FlatScratchInit;
   std::optional<SIArgument> PrivateSegmentSize;
+  std::optional<SIArgument> FirstKernArgPreloadReg;
 
   std::optional<SIArgument> WorkGroupIDX;
   std::optional<SIArgument> WorkGroupIDY;
@@ -195,6 +197,7 @@ template <> struct MappingTraits<SIArgumentInfo> {
     YamlIO.mapOptional("dispatchID", AI.DispatchID);
     YamlIO.mapOptional("flatScratchInit", AI.FlatScratchInit);
     YamlIO.mapOptional("privateSegmentSize", AI.PrivateSegmentSize);
+    YamlIO.mapOptional("firstKernArgPreloadReg", AI.FirstKernArgPreloadReg);
 
     YamlIO.mapOptional("workGroupIDX", AI.WorkGroupIDX);
     YamlIO.mapOptional("workGroupIDY", AI.WorkGroupIDY);
@@ -265,7 +268,6 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   Align DynLDSAlign;
   bool IsEntryFunction = false;
   bool IsChainFunction = false;
-  bool NoSignedZerosFPMath = false;
   bool MemoryBound = false;
   bool WaveLimiter = false;
   bool HasSpilledSGPRs = false;
@@ -302,8 +304,12 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   bool HasInitWholeWave = false;
   bool IsWholeWaveFunction = false;
 
-  unsigned DynamicVGPRBlockSize = 0;
+  std::optional<unsigned> DynamicVGPRBlockSize;
   unsigned ScratchReservedForDynamicVGPRs = 0;
+
+  unsigned NumKernargPreloadSGPRs = 0;
+
+  unsigned MinNumAGPRs = ~0u;
 
   SIMachineFunctionInfo() = default;
   SIMachineFunctionInfo(const llvm::SIMachineFunctionInfo &,
@@ -311,7 +317,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
                         const llvm::MachineFunction &MF);
 
   void mappingImpl(yaml::IO &YamlIO) override;
-  ~SIMachineFunctionInfo() = default;
+  ~SIMachineFunctionInfo() override = default;
 };
 
 template <> struct MappingTraits<SIMachineFunctionInfo> {
@@ -324,7 +330,6 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("dynLDSAlign", MFI.DynLDSAlign, Align());
     YamlIO.mapOptional("isEntryFunction", MFI.IsEntryFunction, false);
     YamlIO.mapOptional("isChainFunction", MFI.IsChainFunction, false);
-    YamlIO.mapOptional("noSignedZerosFPMath", MFI.NoSignedZerosFPMath, false);
     YamlIO.mapOptional("memoryBound", MFI.MemoryBound, false);
     YamlIO.mapOptional("waveLimiter", MFI.WaveLimiter, false);
     YamlIO.mapOptional("hasSpilledSGPRs", MFI.HasSpilledSGPRs, false);
@@ -358,10 +363,12 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("longBranchReservedReg", MFI.LongBranchReservedReg,
                        StringValue());
     YamlIO.mapOptional("hasInitWholeWave", MFI.HasInitWholeWave, false);
-    YamlIO.mapOptional("dynamicVGPRBlockSize", MFI.DynamicVGPRBlockSize, false);
+    YamlIO.mapOptional("dynamicVGPRBlockSize", MFI.DynamicVGPRBlockSize);
     YamlIO.mapOptional("scratchReservedForDynamicVGPRs",
                        MFI.ScratchReservedForDynamicVGPRs, 0);
+    YamlIO.mapOptional("numKernargPreloadSGPRs", MFI.NumKernargPreloadSGPRs, 0);
     YamlIO.mapOptional("isWholeWaveFunction", MFI.IsWholeWaveFunction, false);
+    YamlIO.mapOptional("minNumAGPRs", MFI.MinNumAGPRs, ~0u);
   }
 };
 
@@ -408,7 +415,7 @@ struct VGPRBlock2IndexFunctor {
 
 /// This class keeps track of the SPI_SP_INPUT_ADDR config register, which
 /// tells the hardware which interpolation parameters to load.
-class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
+class SIMachineFunctionInfo final : public AMDGPUMachineFunctionInfo,
                                     private MachineRegisterInfo::Delegate {
   friend class GCNTargetMachine;
 
@@ -465,6 +472,9 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
   // Default/requested number of work groups for the function.
   SmallVector<unsigned> MaxNumWorkGroups = {0, 0, 0};
 
+  // Requested cluster dimensions.
+  AMDGPU::ClusterDimsAttr ClusterDims;
+
 private:
   unsigned NumUserSGPRs = 0;
   unsigned NumSystemSGPRs = 0;
@@ -506,7 +516,9 @@ private:
   // user arguments. This is an offset from the KernargSegmentPtr.
   bool ImplicitArgPtr : 1;
 
-  bool MayNeedAGPRs : 1;
+  /// Minimum number of AGPRs required to allocate in the function. Only
+  /// relevant for gfx90a-gfx950. For gfx908, this should be infinite.
+  unsigned MinNumAGPRs = ~0u;
 
   // The hard-wired high half of the address of the global information table
   // for AMDPAL OS type. 0xffffffff represents no hard-wired high half, since
@@ -534,6 +546,8 @@ private:
   void MRI_NoteCloneVirtualRegister(Register NewReg, Register SrcReg) override;
 
 public:
+  static bool MFMAVGPRForm;
+
   struct VGPRSpillToAGPR {
     SmallVector<MCPhysReg, 32> Lanes;
     bool FullyAllocated = false;
@@ -743,6 +757,16 @@ public:
                                 SGPRSaveKind::SPILL_TO_VGPR_LANE &&
                             SI.second.getIndex() == FI;
                    }) != PrologEpilogSGPRSpills.end();
+  }
+
+  // Remove if an entry created for \p Reg.
+  void removePrologEpilogSGPRSpillEntry(Register Reg) {
+    auto I = find_if(PrologEpilogSGPRSpills,
+                     [&Reg](const auto &Spill) { return Spill.first == Reg; });
+    if (I == PrologEpilogSGPRSpills.end())
+      return;
+
+    PrologEpilogSGPRSpills.erase(I);
   }
 
   const PrologEpilogSGPRSaveRestoreInfo &
@@ -1007,7 +1031,9 @@ public:
   void setNumWaveDispatchVGPRs(unsigned Count) { NumWaveDispatchVGPRs = Count; }
 
   Register getPrivateSegmentWaveByteOffsetSystemSGPR() const {
-    return ArgInfo.PrivateSegmentWaveByteOffset.getRegister();
+    if (ArgInfo.PrivateSegmentWaveByteOffset)
+      return ArgInfo.PrivateSegmentWaveByteOffset.getRegister();
+    return MCRegister();
   }
 
   /// Returns the physical register reserved for use as the resource
@@ -1193,8 +1219,12 @@ public:
 
   unsigned getMaxMemoryClusterDWords() const { return MaxMemoryClusterDWords; }
 
-  bool mayNeedAGPRs() const {
-    return MayNeedAGPRs;
+  unsigned getMinNumAGPRs() const { return MinNumAGPRs; }
+
+  /// Return true if an MFMA that requires at least \p NumRegs should select to
+  /// the AGPR form, instead of the VGPR form.
+  bool selectAGPRFormMFMA(unsigned NumRegs) const {
+    return !MFMAVGPRForm && getMinNumAGPRs() >= NumRegs;
   }
 
   // \returns true if a function has a use of AGPRs via inline asm or
@@ -1207,6 +1237,8 @@ public:
   unsigned getMaxNumWorkGroupsX() const { return MaxNumWorkGroups[0]; }
   unsigned getMaxNumWorkGroupsY() const { return MaxNumWorkGroups[1]; }
   unsigned getMaxNumWorkGroupsZ() const { return MaxNumWorkGroups[2]; }
+
+  AMDGPU::ClusterDimsAttr getClusterDims() const { return ClusterDims; }
 };
 
 } // end namespace llvm

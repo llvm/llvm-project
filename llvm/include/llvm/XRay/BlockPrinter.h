@@ -18,8 +18,7 @@
 #include "llvm/XRay/FDRRecords.h"
 #include "llvm/XRay/RecordPrinter.h"
 
-namespace llvm {
-namespace xray {
+namespace llvm::xray {
 
 class LLVM_ABI BlockPrinter : public RecordVisitor {
   enum class State {
@@ -55,7 +54,6 @@ public:
   void reset() { CurrentState = State::Start; }
 };
 
-} // namespace xray
-} // namespace llvm
+} // namespace llvm::xray
 
 #endif // LLVM_XRAY_BLOCKPRINTER_H

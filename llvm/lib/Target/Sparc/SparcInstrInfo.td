@@ -21,11 +21,12 @@ include "SparcInstrFormats.td"
 //===----------------------------------------------------------------------===//
 
 // True when generating 32-bit code.
-def Is32Bit : Predicate<"!Subtarget->is64Bit()">;
+def Is32Bit : Predicate<"!Subtarget->is64Bit()">,
+              AssemblerPredicate<(all_of (not Feature64Bit))>;
 
 // True when generating 64-bit code. This also implies HasV9.
 def Is64Bit : Predicate<"Subtarget->is64Bit()">,
-              AssemblerPredicate<(all_of FeatureV9)>;
+              AssemblerPredicate<(all_of Feature64Bit)>;
 
 def UseSoftMulDiv : Predicate<"Subtarget->useSoftMulDiv()">,
               AssemblerPredicate<(all_of FeatureSoftMulDiv)>;
@@ -96,8 +97,25 @@ def HasFSMULD : Predicate<"!Subtarget->hasNoFSMULD()">;
 def UseDeprecatedInsts : Predicate<"Subtarget->useV8DeprecatedInsts()">;
 
 //===----------------------------------------------------------------------===//
+// HwModes Pattern Stuff
+//===----------------------------------------------------------------------===//
+
+defvar SPARC32 = DefaultMode;
+def SPARC64 : HwMode<[Is64Bit]>;
+
+//===----------------------------------------------------------------------===//
 // Instruction Pattern Stuff
 //===----------------------------------------------------------------------===//
+
+def sparc_ptr_rc : RegClassByHwMode<
+  [SPARC32, SPARC64],
+  [IntRegs, I64Regs]>;
+
+// Both cases can use the same decoder method, so avoid the dispatch
+// by hwmode by setting an explicit DecoderMethod
+def ptr_op : RegisterOperand<sparc_ptr_rc> {
+  let DecoderMethod = "DecodeIntRegsRegisterClass";
+}
 
 // FIXME these should have AsmOperandClass.
 def uimm3 : PatLeaf<(imm), [{ return isUInt<3>(N->getZExtValue()); }]>;
@@ -140,6 +158,7 @@ def SETHIimm_not : PatLeaf<(i32 imm), [{
 // Addressing modes.
 def ADDRrr : ComplexPattern<iPTR, 2, "SelectADDRrr", [], []>;
 def ADDRri : ComplexPattern<iPTR, 2, "SelectADDRri", [], []>;
+def ForceADDRrr : ComplexPattern<iPTR, 2, "SelectForceADDRrr", [], []>;
 
 // Constrained operands for the shift operations.
 class ShiftAmtImmAsmOperand<int Bits> : AsmOperandClass {
@@ -178,12 +197,12 @@ def simm13Op : Operand<iPTR> {
 
 def MEMrr : Operand<iPTR> {
   let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_rc, ptr_rc);
+  let MIOperandInfo = (ops ptr_op, ptr_op);
   let ParserMatchClass = SparcMEMrrAsmOperand;
 }
 def MEMri : Operand<iPTR> {
   let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_rc, simm13Op);
+  let MIOperandInfo = (ops ptr_op, simm13Op);
   let ParserMatchClass = SparcMEMriAsmOperand;
 }
 
@@ -318,6 +337,11 @@ SDTypeProfile<1, 2, [SDTCisPtrTy<0>, SDTCisPtrTy<1>]>;
 def SDTSPloadgdop :
 SDTypeProfile<1, 2, [SDTCisPtrTy<0>, SDTCisPtrTy<1>]>;
 
+def SDTSPloadbig     : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisPtrTy<1>, SDTCisVT<2, OtherVT>]>;
+def SDTSPloadlittle  : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisPtrTy<1>, SDTCisVT<2, OtherVT>]>;
+def SDTSPstorebig    : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisPtrTy<1>, SDTCisVT<2, OtherVT>]>;
+def SDTSPstorelittle : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisPtrTy<1>, SDTCisVT<2, OtherVT>]>;
+
 def SPcmpicc : SDNode<"SPISD::CMPICC", SDTSPcmpicc, [SDNPOutGlue]>;
 def SPcmpfcc : SDNode<"SPISD::CMPFCC", SDTSPcmpfcc, [SDNPOutGlue]>;
 def SPcmpfccv9 : SDNode<"SPISD::CMPFCC_V9", SDTSPcmpfcc, [SDNPOutGlue]>;
@@ -341,6 +365,24 @@ def SPselectxcc : SDNode<"SPISD::SELECT_XCC", SDTSPselectcc, [SDNPInGlue]>;
 def SPselectfcc : SDNode<"SPISD::SELECT_FCC", SDTSPselectcc, [SDNPInGlue]>;
 def SPselectreg : SDNode<"SPISD::SELECT_REG", SDTSPselectreg>;
 
+// GPRC, CHAIN = LOAD_BIG/LITTLE CHAIN, Ptr, Type
+// These are endianness-adjusted load instructions. They load the low "Type"
+// bits of the memory pointed by Ptr, possibly byte swapping it as necessary
+// to account for its in-memory endianness. Type can be i16, i32, or i64.
+def SPloadbig    : SDNode<"SPISD::LOAD_BIG", SDTSPloadbig,
+                           [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def SPloadlittle : SDNode<"SPISD::LOAD_LITTLE", SDTSPloadlittle,
+                           [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+
+// CHAIN = STORE_BIG/LITTLE CHAIN, GPRC, Ptr, Type
+// These are endianness-adjusted store instructions. They store the low "Type"
+// bits of the GPR input out through Ptr, possibly byte swapping it as necessary
+// to adjust its in-memory endianness. Type can be i16, i32, or i64.
+def SPstorebig    : SDNode<"SPISD::STORE_BIG", SDTSPstorebig,
+                           [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def SPstorelittle : SDNode<"SPISD::STORE_LITTLE", SDTSPstorelittle,
+                           [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
 //  These are target-independent nodes, but have target-specific formats.
 def SDT_SPCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i32>,
                                           SDTCisVT<1, i32> ]>;
@@ -352,7 +394,7 @@ def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_SPCallSeqStart,
 def callseq_end   : SDNode<"ISD::CALLSEQ_END",   SDT_SPCallSeqEnd,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
-def SDT_SPCall    : SDTypeProfile<0, -1, [SDTCisVT<0, i32>]>;
+def SDT_SPCall    : SDTypeProfile<0, -1, [SDTCisVT<0, iPTR>]>;
 def call          : SDNode<"SPISD::CALL", SDT_SPCall,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                             SDNPVariadic]>;
@@ -528,8 +570,6 @@ multiclass Store<string OpcStr, bits<6> Op3Val, SDPatternOperator OpNode,
                  itin>;
 }
 
-// TODO: Instructions of the StoreASI class are currently asm only; hooking up
-// CodeGen's address spaces to use these is a future task.
 multiclass StoreASI<string OpcStr, bits<6> Op3Val, RegisterClass RC,
                InstrItinClass itin = IIC_st> {
   def rr : F3_1_asi<3, Op3Val, (outs), (ins (MEMrr $rs1, $rs2):$addr, RC:$rd, ASITag:$asi),
@@ -560,6 +600,9 @@ class Pseudo<dag outs, dag ins, string asmstr, list<dag> pattern>
   let isCodeGenOnly = 1;
   let isPseudo = 1;
 }
+
+// Full memory barrier for V8.
+def V8BAR : Pseudo<(outs), (ins), "!V8BAR", []>, Requires<[HasNoV9]>;
 
 // GETPCX for PIC
 let Defs = [O7] in {
@@ -888,7 +931,7 @@ defm SUB    : F3_12  <"sub"  , 0b000100, sub, IntRegs, i32, simm13Op>;
 let Uses = [ICC], Defs = [ICC] in
   defm SUBE   : F3_12  <"subxcc" , 0b011100, sube, IntRegs, i32, simm13Op>;
 
-let Defs = [ICC], hasPostISelHook = true in
+let Defs = [ICC], hasPostISelHook = true, isCompare = 1 in
   defm SUBCC  : F3_12  <"subcc", 0b010100, subc, IntRegs, i32, simm13Op>;
 
 let Uses = [ICC] in
@@ -1074,7 +1117,7 @@ def CPBCONDA : CPBranchSPA<(ins brtarget:$imm22, CCOp:$cond),
 
 // Section B.24 - Call and Link Instruction, p. 125
 // This is the only Format 1 instruction
-let Uses = [O6],
+let Uses = [O6], Defs = [O7],
     hasDelaySlot = 1, isCall = 1 in {
   def CALL : InstSP<(outs), (ins calltarget:$disp, variable_ops),
                     "call $disp",
@@ -1568,8 +1611,8 @@ let Uses = [O6], isCall = 1, hasDelaySlot = 1 in
 //===----------------------------------------------------------------------===//
 // Instructions for tail calls.
 //===----------------------------------------------------------------------===//
-let isCodeGenOnly = 1, isReturn = 1,  hasDelaySlot = 1,
-    isTerminator = 1, isBarrier = 1 in {
+let isCodeGenOnly = 1, isReturn = 1, hasDelaySlot = 1, isTerminator = 1,
+    isBarrier = 1, isCall = 1 in {
   def TAIL_CALL : InstSP<(outs), (ins calltarget:$disp, variable_ops),
                          "call $disp",
                          [(tailcall tglobaladdr:$disp)]> {
@@ -1582,8 +1625,8 @@ let isCodeGenOnly = 1, isReturn = 1,  hasDelaySlot = 1,
 def : Pat<(tailcall (iPTR texternalsym:$dst)),
           (TAIL_CALL texternalsym:$dst)>;
 
-let isCodeGenOnly = 1, isReturn = 1,  hasDelaySlot = 1,  isTerminator = 1,
-    isBarrier = 1, rd = 0 in {
+let isCodeGenOnly = 1, isReturn = 1, hasDelaySlot = 1, isTerminator = 1,
+    isBarrier = 1, isCall = 1, rd = 0 in {
   def TAIL_CALLri : F3_2<2, 0b111000,
                          (outs), (ins (MEMri $rs1, $simm13):$addr, variable_ops),
                          "jmp $addr",
@@ -1957,12 +2000,30 @@ def : Pat<(i32 (zextloadi1 ADDRri:$src)), (LDUBri ADDRri:$src)>;
 def : Pat<(store (i32 0), ADDRrr:$dst), (STrr ADDRrr:$dst, (i32 G0))>;
 def : Pat<(store (i32 0), ADDRri:$dst), (STri ADDRri:$dst, (i32 G0))>;
 
-// store bar for all atomic_fence in V8.
-let Predicates = [HasNoV9] in
-  def : Pat<(atomic_fence timm, timm), (STBAR)>;
+// All load-type operations in V8 comes with implicit acquire semantics.
+let Predicates = [HasNoV9] in {
+  // Acquire -> nop
+  def : Pat<(atomic_fence (i32 4), timm), (NOP)>;
+  // Release / AcqRel -> stbar
+  def : Pat<(atomic_fence (i32 5), timm), (STBAR)>;
+  // AcqRel and stronger -> stbar; ldstub [%sp-1], %g0
+  def : Pat<(atomic_fence timm, timm), (V8BAR)>;
+}
 
-let Predicates = [HasV9] in
+// We have to handle both 32 and 64-bit cases.
+let Predicates = [HasV9] in {
+  // Acquire -> membar #LoadLoad | #LoadStore
+  def : Pat<(atomic_fence (i32 4), timm), (MEMBARi 0x5)>;
+  def : Pat<(atomic_fence (i64 4), timm), (MEMBARi 0x5)>;
+  // Release -> membar #LoadStore | #StoreStore
+  def : Pat<(atomic_fence (i32 5), timm), (MEMBARi 0xc)>;
+  def : Pat<(atomic_fence (i64 5), timm), (MEMBARi 0xc)>;
+  // AcqRel -> membar #LoadLoad | #LoadStore | #StoreStore
+  def : Pat<(atomic_fence (i32 6), timm), (MEMBARi 0xd)>;
+  def : Pat<(atomic_fence (i64 6), timm), (MEMBARi 0xd)>;
+  // SeqCst -> membar #StoreLoad | #LoadLoad | #LoadStore | #StoreStore
   def : Pat<(atomic_fence timm, timm), (MEMBARi 0xf)>;
+}
 
 // atomic_load addr -> load addr
 def : Pat<(i32 (atomic_load_azext_8 ADDRrr:$src)), (LDUBrr ADDRrr:$src)>;
@@ -2011,6 +2072,26 @@ def : Pat<(build_vector (i32 IntRegs:$a1), (i32 IntRegs:$a2)),
 	    (INSERT_SUBREG (v2i32 (IMPLICIT_DEF)), (i32 IntRegs:$a1), sub_even),
             (i32 IntRegs:$a2), sub_odd)>;
 
+// Endian adjusted memory operations.
+let Predicates = [HasV9] in {
+  def : Pat<(i32 (SPloadbig    ForceADDRrr:$src, i16)), (LDUHArr ForceADDRrr:$src, 0x80)>;
+  def : Pat<(i32 (SPloadbig    ForceADDRrr:$src, i32)), (LDArr   ForceADDRrr:$src, 0x80)>;
+  def : Pat<(i32 (SPloadlittle ForceADDRrr:$src, i16)), (LDUHArr ForceADDRrr:$src, 0x88)>;
+  def : Pat<(i32 (SPloadlittle ForceADDRrr:$src, i32)), (LDArr   ForceADDRrr:$src, 0x88)>;
+
+  def : Pat<(zanyext (i32 (SPloadbig    ForceADDRrr:$src, i16))), (LDUHArr ForceADDRrr:$src, 0x80)>;
+  def : Pat<(zanyext (i32 (SPloadbig    ForceADDRrr:$src, i32))), (LDArr   ForceADDRrr:$src, 0x80)>;
+  def : Pat<(zanyext (i32 (SPloadlittle ForceADDRrr:$src, i16))), (LDUHArr ForceADDRrr:$src, 0x88)>;
+  def : Pat<(zanyext (i32 (SPloadlittle ForceADDRrr:$src, i32))), (LDArr   ForceADDRrr:$src, 0x88)>;
+
+  def : Pat<(sext    (i32 (SPloadbig    ForceADDRrr:$src, i16))), (LDSHArr ForceADDRrr:$src, 0x80)>;
+  def : Pat<(sext    (i32 (SPloadlittle ForceADDRrr:$src, i16))), (LDSHArr ForceADDRrr:$src, 0x88)>;
+
+  def : Pat<(SPstorebig    i32:$val, ForceADDRrr:$dst, i16), (STHArr ForceADDRrr:$dst, $val, 0x80)>;
+  def : Pat<(SPstorebig    i32:$val, ForceADDRrr:$dst, i32), (STArr  ForceADDRrr:$dst, $val, 0x80)>;
+  def : Pat<(SPstorelittle i32:$val, ForceADDRrr:$dst, i16), (STHArr ForceADDRrr:$dst, $val, 0x88)>;
+  def : Pat<(SPstorelittle i32:$val, ForceADDRrr:$dst, i32), (STArr  ForceADDRrr:$dst, $val, 0x88)>;
+}
 
 include "SparcInstr64Bit.td"
 include "SparcInstrVIS.td"

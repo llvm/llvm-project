@@ -57,11 +57,19 @@ def MathExpandOpsPass : Pass<"math-expand-ops"> {
     `math.acosh` operations. If the list is empty, then all expansions are
     applied.
   }];
-  let dependentDialects = ["arith::ArithDialect"];
+  let dependentDialects = ["arith::ArithDialect", "mlir::tensor::TensorDialect"];
   let options = [
     ListOption<"opMnemonics", "ops", "std::string",
                "Operations to expand.">
   ];
+}
+
+def MathSincosFusionPass : Pass<"math-sincos-fusion"> {
+  let summary = "Fuse sin and cos operations.";
+  let description = [{
+    Fuse sin and cos operations into a sincos operation.
+  }];
+  let dependentDialects = ["math::MathDialect"];
 }
 
 #endif // MLIR_DIALECT_MATH_TRANSFORMS_PASSES

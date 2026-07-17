@@ -372,8 +372,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   case WebAssembly::BI__builtin_wasm_abs_f32x4:
   case WebAssembly::BI__builtin_wasm_abs_f64x2: {
     Value *Vec = EmitScalarExpr(E->getArg(0));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::fabs, Vec->getType());
-    return Builder.CreateCall(Callee, {Vec});
+    return Builder.CreateFAbs(Vec);
   }
   case WebAssembly::BI__builtin_wasm_sqrt_f16x8:
   case WebAssembly::BI__builtin_wasm_sqrt_f32x4:
@@ -633,8 +632,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Function *Callee;
     if (E->getArg(1)->getType().isWebAssemblyExternrefType())
       Callee = CGM.getIntrinsic(Intrinsic::wasm_table_grow_externref);
-    else if (E->getArg(2)->getType().isWebAssemblyFuncrefType())
-      Callee = CGM.getIntrinsic(Intrinsic::wasm_table_fill_funcref);
+    else if (E->getArg(1)->getType().isWebAssemblyFuncrefType())
+      Callee = CGM.getIntrinsic(Intrinsic::wasm_table_grow_funcref);
     else
       llvm_unreachable(
           "Unexpected reference type for __builtin_wasm_table_grow");

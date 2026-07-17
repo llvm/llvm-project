@@ -84,10 +84,6 @@ public:
   bool run();
 };
 
-} // anonymous namespace
-
-namespace llvm {
-
 struct FrozenIndPHIInfo {
   // A freeze instruction that uses an induction phi
   FreezeInst *FI = nullptr;
@@ -103,17 +99,9 @@ struct FrozenIndPHIInfo {
   bool operator==(const FrozenIndPHIInfo &Other) { return FI == Other.FI; }
 };
 
-template <> struct DenseMapInfo<FrozenIndPHIInfo> {
-  static inline FrozenIndPHIInfo getEmptyKey() {
-    return FrozenIndPHIInfo(DenseMapInfo<PHINode *>::getEmptyKey(),
-                            DenseMapInfo<BinaryOperator *>::getEmptyKey());
-  }
+} // namespace
 
-  static inline FrozenIndPHIInfo getTombstoneKey() {
-    return FrozenIndPHIInfo(DenseMapInfo<PHINode *>::getTombstoneKey(),
-                            DenseMapInfo<BinaryOperator *>::getTombstoneKey());
-  }
-
+template <> struct llvm::DenseMapInfo<FrozenIndPHIInfo> {
   static unsigned getHashValue(const FrozenIndPHIInfo &Val) {
     return DenseMapInfo<FreezeInst *>::getHashValue(Val.FI);
   };
@@ -123,8 +111,6 @@ template <> struct DenseMapInfo<FrozenIndPHIInfo> {
     return LHS.FI == RHS.FI;
   };
 };
-
-} // end namespace llvm
 
 // Given U = (value, user), replace value with freeze(value), and let
 // SCEV forget user. The inserted freeze is placed in the preheader.

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s llvm-prefer-isa-or-dyn-cast-in-conditionals %t
+// RUN: %check_clang_tidy %s llvm-prefer-isa-or-dyn-cast-in-conditionals %t
 
 struct X;
 struct Y;
@@ -79,7 +79,7 @@ bool foo(Y *y, Z *z) {
     break;
   } while (cast<X>(y));
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: cast<> in conditional
-  // CHECK-FIXES: while (isa<X>(y));
+  // CHECK-FIXES: } while (isa<X>(y));
 
   if (dyn_cast<X>(y))
     return true;
@@ -100,7 +100,7 @@ bool foo(Y *y, Z *z) {
     break;
   } while (dyn_cast<X>(y));
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: return value from dyn_cast<> not used
-  // CHECK-FIXES: while (isa<X>(y));
+  // CHECK-FIXES: } while (isa<X>(y));
 
   if (y && isa<X>(y))
     return true;

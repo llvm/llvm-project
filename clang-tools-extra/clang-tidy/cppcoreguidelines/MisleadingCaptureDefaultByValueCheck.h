@@ -1,4 +1,4 @@
-//===--- MisleadingCaptureDefaultByValueCheck.h - clang-tidy---------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,7 +19,7 @@ namespace clang::tidy::cppcoreguidelines {
 /// whether data members are captured by value or reference.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/misleading-capture-default-by-value.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/misleading-capture-default-by-value.html
 class MisleadingCaptureDefaultByValueCheck : public ClangTidyCheck {
 public:
   MisleadingCaptureDefaultByValueCheck(StringRef Name,

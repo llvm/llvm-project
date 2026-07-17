@@ -69,6 +69,9 @@ void TracePC::HandleInline8bitCountersInit(uint8_t *Start, uint8_t *Stop) {
 }
 
 void TracePC::HandlePCsInit(const uintptr_t *Start, const uintptr_t *Stop) {
+  if (Start == Stop) {
+    return;
+  }
   const PCTableEntry *B = reinterpret_cast<const PCTableEntry *>(Start);
   const PCTableEntry *E = reinterpret_cast<const PCTableEntry *>(Stop);
   if (NumPCTables && ModulePCTable[NumPCTables - 1].Start == B) return;

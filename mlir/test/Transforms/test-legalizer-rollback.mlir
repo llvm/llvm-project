@@ -138,6 +138,18 @@ func.func @test_properties_rollback() {
 
 // -----
 
+// CHECK-LABEL: func @test_undo_block_move_detached
+func.func @test_undo_block_move_detached() {
+  // expected-remark @below{{op 'test.undo_detached_block_move' is not legalizable}}
+  "test.undo_detached_block_move"() ({
+  ^bb0(%arg0: i64):
+    "test.return"() : () -> ()
+  }) : () -> ()
+  "test.return"() : () -> ()
+}
+
+// -----
+
 // expected-remark@+1 {{applyPartialConversion failed}}
 builtin.module {
 // Test that region cloning can be properly undone.
@@ -161,5 +173,24 @@ func.func @create_unregistered_op_in_pattern() -> i32 {
   // expected-error@+1 {{failed to legalize operation 'test.illegal_op_g'}}
   %0 = "test.illegal_op_g"() : () -> (i32)
   "test.return"(%0) : (i32) -> ()
+}
+}
+
+// -----
+
+// CHECK-LABEL: func @test_failed_preorder_legalization
+//       CHECK:   "test.post_order_legalization"() ({
+//       CHECK:     %[[r:.*]] = "test.illegal_op_g"() : () -> i32
+//       CHECK:     "test.return"(%[[r]]) : (i32) -> ()
+//       CHECK:   }) : () -> ()
+// expected-remark @+1 {{applyPartialConversion failed}}
+module {
+func.func @test_failed_preorder_legalization() {
+  // expected-error @+1 {{failed to legalize operation 'test.post_order_legalization' that was explicitly marked illegal}}
+  "test.post_order_legalization"() ({
+    %0 = "test.illegal_op_g"() : () -> (i32)
+    "test.return"(%0) : (i32) -> ()
+  }) : () -> ()
+  return
 }
 }

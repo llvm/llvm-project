@@ -355,23 +355,24 @@ static bool NameInfoEquals(const DemangledNameInfo &lhs,
 
 TEST(MangledTest, DemangledNameInfo_SetMangledResets) {
   Mangled mangled;
-  EXPECT_EQ(mangled.GetDemangledInfo(), std::nullopt);
+  EXPECT_EQ(mangled.GetDemangledInfo(), nullptr);
 
   mangled.SetMangledName(ConstString("_Z3foov"));
   ASSERT_TRUE(mangled);
 
-  auto info1 = mangled.GetDemangledInfo();
-  EXPECT_NE(info1, std::nullopt);
-  EXPECT_TRUE(info1->hasBasename());
+  ASSERT_NE(mangled.GetDemangledInfo(), nullptr);
+  // Keep a copy of the original demangled info.
+  DemangledNameInfo info1 = *mangled.GetDemangledInfo();
+  EXPECT_TRUE(info1.hasBasename());
 
   mangled.SetMangledName(ConstString("_Z4funcv"));
 
   // Should have re-calculated demangled-info since mangled name changed.
-  auto info2 = mangled.GetDemangledInfo();
-  ASSERT_NE(info2, std::nullopt);
-  EXPECT_TRUE(info2->hasBasename());
+  ASSERT_NE(mangled.GetDemangledInfo(), nullptr);
+  DemangledNameInfo info2 = *mangled.GetDemangledInfo();
+  EXPECT_TRUE(info2.hasBasename());
 
-  EXPECT_FALSE(NameInfoEquals(info1.value(), info2.value()));
+  EXPECT_FALSE(NameInfoEquals(info1, info2));
   EXPECT_EQ(mangled.GetDemangledName(), "func()");
 }
 
@@ -383,45 +384,46 @@ TEST(MangledTest, DemangledNameInfo_SetDemangledResets) {
 
   // Mangled name hasn't changed, so GetDemangledInfo causes re-demangling
   // of previously set mangled name.
-  EXPECT_NE(mangled.GetDemangledInfo(), std::nullopt);
+  EXPECT_NE(mangled.GetDemangledInfo(), nullptr);
   EXPECT_EQ(mangled.GetDemangledName(), "foo()");
 }
 
 TEST(MangledTest, DemangledNameInfo_Clear) {
   Mangled mangled("_Z3foov");
   ASSERT_TRUE(mangled);
-  EXPECT_NE(mangled.GetDemangledInfo(), std::nullopt);
+  EXPECT_NE(mangled.GetDemangledInfo(), nullptr);
 
   mangled.Clear();
 
-  EXPECT_EQ(mangled.GetDemangledInfo(), std::nullopt);
+  EXPECT_EQ(mangled.GetDemangledInfo(), nullptr);
 }
 
 TEST(MangledTest, DemangledNameInfo_SetValue) {
   Mangled mangled("_Z4funcv");
   ASSERT_TRUE(mangled);
 
-  auto demangled_func = mangled.GetDemangledInfo();
+  ASSERT_NE(mangled.GetDemangledInfo(), nullptr);
+  // Keep a copy of the original demangled info.
+  DemangledNameInfo demangled_func = *mangled.GetDemangledInfo();
 
   // SetValue(mangled) resets demangled-info
   mangled.SetValue(ConstString("_Z3foov"));
-  auto demangled_foo = mangled.GetDemangledInfo();
-  EXPECT_NE(demangled_foo, std::nullopt);
-  EXPECT_FALSE(NameInfoEquals(demangled_foo.value(), demangled_func.value()));
+  ASSERT_NE(mangled.GetDemangledInfo(), nullptr);
+  DemangledNameInfo demangled_foo = *mangled.GetDemangledInfo();
+  EXPECT_FALSE(NameInfoEquals(demangled_foo, demangled_func));
 
   // SetValue(demangled) resets demangled-info
   mangled.SetValue(ConstString("_Z4funcv"));
-  EXPECT_TRUE(NameInfoEquals(mangled.GetDemangledInfo().value(),
-                             demangled_func.value()));
+  EXPECT_TRUE(NameInfoEquals(*mangled.GetDemangledInfo(), demangled_func));
 
   // SetValue(empty) resets demangled-info
   mangled.SetValue(ConstString());
-  EXPECT_EQ(mangled.GetDemangledInfo(), std::nullopt);
+  EXPECT_EQ(mangled.GetDemangledInfo(), nullptr);
 
   // Demangling invalid mangled name will set demangled-info
   // (without a valid basename).
   mangled.SetValue(ConstString("_Zinvalid"));
-  ASSERT_NE(mangled.GetDemangledInfo(), std::nullopt);
+  ASSERT_NE(mangled.GetDemangledInfo(), nullptr);
   EXPECT_FALSE(mangled.GetDemangledInfo()->hasBasename());
 }
 
@@ -636,6 +638,16 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
      /*.basename=*/"operator()",
      /*.scope=*/"dyld4::Loader::runInitializersBottomUpPlusUpwardLinks(dyld4::RuntimeState&) const::$_0::",
      /*.qualifiers=*/" const",
+   },
+   {"_Z4funcILN3foo4EnumE1EEvv",
+     {
+       /*.BasenameRange=*/{5, 9}, /*.TemplateArgumentsRange=*/{9, 23}, /*.ScopeRange=*/{5, 5},
+       /*.ArgumentsRange=*/{23, 25}, /*.QualifiersRange=*/{25, 25}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
+     /*.basename=*/"func",
+     /*.scope=*/"",
+     /*.qualifiers=*/"",
    }
     // clang-format on
 };

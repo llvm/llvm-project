@@ -125,3 +125,15 @@ def olLaunchHostFunction : Function {
   ];
   let returns = [];
 }
+
+def olQueryQueue : Function {
+    let desc = "Query for queue work completion in a non-blocking manner.";
+    let details = [
+      "The function checks if a queue work has completed enqueued work without blocking the calling thread."
+    ];
+    let params = [
+        Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>,
+        Param<"bool *", "IsQueueWorkCompleted", " A flag indicating if the queue work has completed", PARAM_OUT_OPTIONAL>
+    ];
+    let returns = [];
+}

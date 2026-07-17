@@ -113,7 +113,8 @@ PatternParser::parseInstructionPattern(const Init &Arg, StringRef Name) {
 
   std::unique_ptr<InstructionPattern> Pat;
   if (const DagInit *IP = getDagWithOperatorOfSubClass(Arg, "Instruction")) {
-    auto &Instr = CGT.getInstruction(IP->getOperatorAsDef(DiagLoc));
+    const CodeGenInstruction &Instr =
+        CGT.getInstruction(IP->getOperatorAsDef(DiagLoc));
     Pat =
         std::make_unique<CodeGenInstructionPattern>(Instr, insertStrRef(Name));
   } else if (const DagInit *IP =

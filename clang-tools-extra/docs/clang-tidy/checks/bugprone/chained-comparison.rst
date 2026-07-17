@@ -71,3 +71,11 @@ developer's intention more explicit and help avoid misunderstanding.
         // This block will be executed
     }
 
+Options
+-------
+
+.. option:: IgnoreMacros
+
+    If `true`, the check will not warn on chained comparisons inside macros.
+    Default is `false`.
+

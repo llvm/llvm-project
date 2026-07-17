@@ -29,6 +29,7 @@ bb:
 !1 = !DIFile(filename: "x.c", directory: "/proc/self/cwd")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
 !3 = !DILocalVariable(name: "x", arg: 1, scope: !4, file: !1)
-!4 = distinct !DISubprogram(name: "x", scope: null, file: !1, spFlags: DISPFlagDefinition, unit: !0)
+!4 = distinct !DISubprogram(name: "x", scope: null, file: !1, spFlags: DISPFlagDefinition, unit: !0, type: !7)
 !5 = !DILocation(line: 0, scope: !4)
-
+!6 = !{null}
+!7 = !DISubroutineType(types: !6)

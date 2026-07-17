@@ -61,7 +61,7 @@ define void @umin(i32 noundef %a, i32 noundef %b) {
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + ((2 * %a) umin (4 * %b)))
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 2147483646
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + ((2 * %a) umin (4 * %b)))
-; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 2
 ;
 ; void umin(unsigned a, unsigned b) {
 ;   a *= 2;
@@ -157,7 +157,7 @@ define void @smin(i32 noundef %a, i32 noundef %b) {
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + ((2 * %a)<nsw> smin (4 * %b)<nsw>))
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 2147483646
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + ((2 * %a)<nsw> smin (4 * %b)<nsw>))
-; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 2
 ;
 ; void smin(signed a, signed b) {
 ;   a *= 2;

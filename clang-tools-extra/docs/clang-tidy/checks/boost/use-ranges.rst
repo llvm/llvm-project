@@ -146,7 +146,7 @@ If calls are made using reverse iterators on containers, The code will be
 fixed using the ``boost::adaptors::reverse`` adaptor.
 
 .. code-block:: c++
-  
+
   auto AreSame = std::equal(Items1.rbegin(), Items1.rend(),
                             std::crbegin(Items2), std::crend(Items2));
 
@@ -166,7 +166,7 @@ Options
    is `llvm`.
 
 .. option:: IncludeBoostSystem
-   
+
    If `true` (default value) the boost headers are included as system headers
    with angle brackets (`#include <boost.hpp>`), otherwise quotes are used
    (`#include "boost.hpp"`).

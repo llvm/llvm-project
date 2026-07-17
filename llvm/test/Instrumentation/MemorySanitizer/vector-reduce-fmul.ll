@@ -13,7 +13,7 @@ define float @test_v2f32(float %a0, <2 x float> %a1) #0 {
 ; CHECK-LABEL: define float @test_v2f32(
 ; CHECK-SAME: float [[A0:%.*]], <2 x float> [[A1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> [[TMP2]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP1]], [[TMP3]]
@@ -29,7 +29,7 @@ define float @test_v4f32(float %a0, <4 x float> %a1) #0 {
 ; CHECK-LABEL: define float @test_v4f32(
 ; CHECK-SAME: float [[A0:%.*]], <4 x float> [[A1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP2]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP1]], [[TMP3]]
@@ -45,7 +45,7 @@ define float @test_v8f32(float %a0, <8 x float> %a1) #0 {
 ; CHECK-LABEL: define float @test_v8f32(
 ; CHECK-SAME: float [[A0:%.*]], <8 x float> [[A1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> [[TMP2]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP1]], [[TMP3]]
@@ -61,7 +61,7 @@ define float @test_v16f32(float %a0, <16 x float> %a1) #0 {
 ; CHECK-LABEL: define float @test_v16f32(
 ; CHECK-SAME: float [[A0:%.*]], <16 x float> [[A1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.or.v16i32(<16 x i32> [[TMP2]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP1]], [[TMP3]]
@@ -138,7 +138,7 @@ define double @test_v2f64(double %a0, <2 x double> %a1) #0 {
 ; CHECK-LABEL: define double @test_v2f64(
 ; CHECK-SAME: double [[A0:%.*]], <2 x double> [[A1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> [[TMP2]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP1]], [[TMP3]]
@@ -154,7 +154,7 @@ define double @test_v4f64(double %a0, <4 x double> %a1) #0 {
 ; CHECK-LABEL: define double @test_v4f64(
 ; CHECK-SAME: double [[A0:%.*]], <4 x double> [[A1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[TMP2]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP1]], [[TMP3]]
@@ -170,7 +170,7 @@ define double @test_v8f64(double %a0, <8 x double> %a1) #0 {
 ; CHECK-LABEL: define double @test_v8f64(
 ; CHECK-SAME: double [[A0:%.*]], <8 x double> [[A1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vector.reduce.or.v8i64(<8 x i64> [[TMP2]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP1]], [[TMP3]]
@@ -186,7 +186,7 @@ define double @test_v16f64(double %a0, <16 x double> %a1) #0 {
 ; CHECK-LABEL: define double @test_v16f64(
 ; CHECK-SAME: double [[A0:%.*]], <16 x double> [[A1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vector.reduce.or.v16i64(<16 x i64> [[TMP2]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP1]], [[TMP3]]

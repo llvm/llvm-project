@@ -2,6 +2,8 @@
 
 #include "sanitizer_common/sanitizer_asm.h"
 
+.att_syntax
+
 .comm _ZN14__interception10real_vforkE,4,4
 .globl ASM_WRAPPER_NAME(vfork)
 ASM_TYPE_FUNCTION(ASM_WRAPPER_NAME(vfork))

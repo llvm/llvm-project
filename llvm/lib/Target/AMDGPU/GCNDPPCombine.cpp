@@ -43,6 +43,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 
 using namespace llvm;
 
@@ -256,7 +257,7 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
               TII->getNamedOperand(MovMI, AMDGPU::OpName::vdst)->getReg()),
           *MRI));
       auto *Def = getVRegSubRegDef(CombOldVGPR, *MRI);
-      DPPInst.addReg(CombOldVGPR.Reg, Def ? 0 : RegState::Undef,
+      DPPInst.addReg(CombOldVGPR.Reg, getUndefRegState(!Def),
                      CombOldVGPR.SubReg);
       ++NumOperands;
     } else if (TII->isVOPC(DPPOp) || (TII->isVOP3(DPPOp) && OrigOpE32 != -1 &&
@@ -307,14 +308,6 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
     if (Src1) {
       assert(AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::src1) &&
              "dpp version of instruction missing src1");
-      // If subtarget does not support SGPRs for src1 operand then the
-      // requirements are the same as for src0. We check src0 instead because
-      // pseudos are shared between subtargets and allow SGPR for src1 on all.
-      if (!ST->hasDPPSrc1SGPR()) {
-        assert(TII->getOpSize(*DPPInst, Src0Idx) ==
-                   TII->getOpSize(*DPPInst, NumOperands) &&
-               "Src0 and Src1 operands should have the same size");
-      }
 
       DPPInst.add(*Src1);
       ++NumOperands;
@@ -486,6 +479,44 @@ static bool isIdentityValue(unsigned OrigMIOp, MachineOperand *OldOpnd) {
   case AMDGPU::V_MUL_U32_U24_e32:
   case AMDGPU::V_MUL_U32_U24_e64:
     if (OldOpnd->getImm() == 1)
+      return true;
+    break;
+  case AMDGPU::V_MIN_F32_e32:
+  case AMDGPU::V_MIN_F32_e64:
+    if (static_cast<uint32_t>(OldOpnd->getImm()) == /*+inf=*/0x7F800000)
+      return true;
+    break;
+  case AMDGPU::V_MAX_F32_e32:
+  case AMDGPU::V_MAX_F32_e64:
+    if (static_cast<uint32_t>(OldOpnd->getImm()) == /*-inf=*/0xFF800000)
+      return true;
+    break;
+  case AMDGPU::V_MIN_F64_e64:
+  case AMDGPU::V_MIN_NUM_F64_e64:
+    if (static_cast<uint64_t>(OldOpnd->getImm()) == /*+inf=*/0x7FF0000000000000)
+      return true;
+    break;
+  case AMDGPU::V_MAX_F64_e64:
+  case AMDGPU::V_MAX_NUM_F64_e64:
+    if (static_cast<uint64_t>(OldOpnd->getImm()) == /*-inf=*/0xFFF0000000000000)
+      return true;
+    break;
+  case AMDGPU::V_MIN_F16_e32:
+  case AMDGPU::V_MIN_F16_e64:
+  case AMDGPU::V_MIN_F16_t16_e32:
+  case AMDGPU::V_MIN_F16_t16_e64:
+  case AMDGPU::V_MIN_F16_fake16_e32:
+  case AMDGPU::V_MIN_F16_fake16_e64:
+    if (static_cast<uint16_t>(OldOpnd->getImm()) == /*+inf=*/0x7C00)
+      return true;
+    break;
+  case AMDGPU::V_MAX_F16_e32:
+  case AMDGPU::V_MAX_F16_e64:
+  case AMDGPU::V_MAX_F16_t16_e32:
+  case AMDGPU::V_MAX_F16_t16_e64:
+  case AMDGPU::V_MAX_F16_fake16_e32:
+  case AMDGPU::V_MAX_F16_fake16_e64:
+    if (static_cast<uint16_t>(OldOpnd->getImm()) == /*-inf=*/0xFC00)
       return true;
     break;
   }
@@ -722,7 +753,7 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
     }
 
     if (!AMDGPU::isLegalDPALU_DPPControl(*ST, DppCtrlVal) &&
-        AMDGPU::isDPALU_DPP(TII->get(OrigOp), *ST)) {
+        AMDGPU::isDPALU_DPP(TII->get(OrigOp), *TII, *ST)) {
       LLVM_DEBUG(dbgs() << "  " << OrigMI
                         << "  failed: not valid 64-bit DPP control value\n");
       break;

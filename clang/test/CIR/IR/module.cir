@@ -1,5 +1,4 @@
-// RUN: cir-opt %s -split-input-file -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s
+// RUN: cir-opt %s -split-input-file --verify-roundtrip | FileCheck %s
 
 // Should parse and print C source language attribute.
 module attributes {cir.lang = #cir.lang<c>} { }

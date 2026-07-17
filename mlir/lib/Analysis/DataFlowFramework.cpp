@@ -9,6 +9,7 @@
 #include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/iterator.h"
@@ -19,7 +20,7 @@
 
 #define DEBUG_TYPE "dataflow"
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-#define DATAFLOW_DEBUG(X) LLVM_DEBUG(X)
+#define DATAFLOW_DEBUG(X) X
 #else
 #define DATAFLOW_DEBUG(X)
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -66,8 +67,12 @@ void ProgramPoint::print(raw_ostream &os) const {
        << OpWithFlags(getPrevOp(), OpPrintingFlags().skipRegions());
     return;
   }
-  os << "<before operation>:"
-     << OpWithFlags(getNextOp(), OpPrintingFlags().skipRegions());
+  if (!isBlockEnd()) {
+    os << "<before operation>:"
+       << OpWithFlags(getNextOp(), OpPrintingFlags().skipRegions());
+    return;
+  }
+  os << "<beginning of empty block>";
 }
 
 //===----------------------------------------------------------------------===//
@@ -104,18 +109,34 @@ Location LatticeAnchor::getLoc() const {
 // DataFlowSolver
 //===----------------------------------------------------------------------===//
 
-LogicalResult DataFlowSolver::initializeAndRun(Operation *top) {
+LogicalResult DataFlowSolver::initializeAndRun(
+    Operation *top,
+    llvm::function_ref<bool(DataFlowAnalysis &)> analysisFilter) {
   // Enable enqueue to the worklist.
   isRunning = true;
-  auto guard = llvm::make_scope_exit([&]() { isRunning = false; });
+  llvm::scope_exit guard([&]() { isRunning = false; });
+
+  bool isInterprocedural = config.isInterprocedural();
+  llvm::scope_exit restoreInterprocedural(
+      [&]() { config.setInterprocedural(isInterprocedural); });
+  if (isInterprocedural && !top->hasTrait<OpTrait::SymbolTable>())
+    config.setInterprocedural(false);
+
+  auto shouldInitialize = [&](DataFlowAnalysis &analysis) {
+    return !analysisFilter || analysisFilter(analysis);
+  };
 
   // Initialize equivalent lattice anchors.
   for (DataFlowAnalysis &analysis : llvm::make_pointee_range(childAnalyses)) {
+    if (!shouldInitialize(analysis))
+      continue;
     analysis.initializeEquivalentLatticeAnchor(top);
   }
 
   // Initialize the analyses.
   for (DataFlowAnalysis &analysis : llvm::make_pointee_range(childAnalyses)) {
+    if (!shouldInitialize(analysis))
+      continue;
     DATAFLOW_DEBUG(LDBG() << "Priming analysis: " << analysis.debugName);
     if (failed(analysis.initialize(top)))
       return failure();

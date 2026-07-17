@@ -17,6 +17,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Location.h"
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
+#include "mlir/Target/SPIRV/SPIRVExtInstSets.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
@@ -35,6 +36,11 @@ static inline spirv::Opcode extractOpcode(uint32_t word) {
   return static_cast<spirv::Opcode>(word & 0xffff);
 }
 
+/// Returns a NameLoc location from the given debug info string.
+static NameLoc getLocFromDebugInfoString(OpBuilder &builder, StringRef source) {
+  return NameLoc::get(builder.getStringAttr(source));
+}
+
 //===----------------------------------------------------------------------===//
 // Instruction
 //===----------------------------------------------------------------------===//
@@ -42,7 +48,10 @@ static inline spirv::Opcode extractOpcode(uint32_t word) {
 Value spirv::Deserializer::getValue(uint32_t id) {
   if (auto constInfo = getConstant(id)) {
     // Materialize a `spirv.Constant` op at every use site.
-    return spirv::ConstantOp::create(opBuilder, unknownLoc, constInfo->second,
+    Location loc = unknownLoc;
+    if (LocationAttr locAttr = constantLocMap.lookup(id))
+      loc = Location(locAttr);
+    return spirv::ConstantOp::create(opBuilder, loc, constInfo->second,
                                      constInfo->first);
   }
   if (std::optional<std::pair<Attribute, Type>> constCompositeReplicateInfo =
@@ -86,6 +95,13 @@ Value spirv::Deserializer::getValue(uint32_t id) {
   if (auto undef = getUndefType(id)) {
     return spirv::UndefOp::create(opBuilder, unknownLoc, undef);
   }
+  if (std::optional<spirv::GraphConstantARMOpMaterializationInfo>
+          graphConstantARMInfo = getGraphConstantARM(id)) {
+    IntegerAttr graphConstantID = graphConstantARMInfo->graphConstantID;
+    Type resultType = graphConstantARMInfo->resultType;
+    return spirv::GraphConstantARMOp::create(opBuilder, unknownLoc, resultType,
+                                             graphConstantID);
+  }
   return valueMap.lookup(id);
 }
 
@@ -118,10 +134,44 @@ LogicalResult spirv::Deserializer::sliceInstruction(
   return success();
 }
 
+void spirv::Deserializer::mergeLongCompositeContinuations(
+    spirv::Opcode opcode, ArrayRef<uint32_t> &operands,
+    SmallVectorImpl<uint32_t> &mergedStorage) {
+  std::optional<spirv::Opcode> continuationOp = getContinuationOpcode(opcode);
+  if (!continuationOp)
+    return;
+
+  size_t binarySize = binary.size();
+  auto isNextContinuation = [&]() {
+    if (curOffset >= binarySize)
+      return false;
+    uint32_t wordCount = binary[curOffset] >> 16;
+    if (wordCount == 0 || curOffset + wordCount > binarySize)
+      return false;
+    return extractOpcode(binary[curOffset]) == *continuationOp;
+  };
+
+  if (!isNextContinuation())
+    return;
+
+  mergedStorage.assign(operands);
+  do {
+    spirv::Opcode contOpcode;
+    ArrayRef<uint32_t> contOperands;
+    if (failed(sliceInstruction(contOpcode, contOperands, *continuationOp)))
+      return;
+    llvm::append_range(mergedStorage, contOperands);
+  } while (isNextContinuation());
+  operands = mergedStorage;
+}
+
 LogicalResult spirv::Deserializer::processInstruction(
     spirv::Opcode opcode, ArrayRef<uint32_t> operands, bool deferInstructions) {
   LLVM_DEBUG(logger.startLine() << "[inst] processing instruction "
                                 << spirv::stringifyOpcode(opcode) << "\n");
+
+  SmallVector<uint32_t, 0> mergedStorage;
+  mergeLongCompositeContinuations(opcode, operands, mergedStorage);
 
   // First dispatch all the instructions whose opcode does not correspond to
   // those that have a direct mirror in the SPIR-V dialect
@@ -130,8 +180,14 @@ LogicalResult spirv::Deserializer::processInstruction(
     return processCapability(operands);
   case spirv::Opcode::OpExtension:
     return processExtension(operands);
-  case spirv::Opcode::OpExtInst:
+  case spirv::Opcode::OpExtInst: {
+    DenseMap<uint32_t, StringRef>::iterator setIt =
+        operands.size() >= 4 ? extendedInstSets.find(operands[2])
+                             : extendedInstSets.end();
+    if (setIt != extendedInstSets.end() && setIt->second == extDebugInfo)
+      return processDebugInfoExtInst(operands, deferInstructions);
     return processExtInst(operands);
+  }
   case spirv::Opcode::OpExtInstImport:
     return processExtInstImport(operands);
   case spirv::Opcode::OpMemberName:
@@ -140,6 +196,7 @@ LogicalResult spirv::Deserializer::processInstruction(
     return processMemoryModel(operands);
   case spirv::Opcode::OpEntryPoint:
   case spirv::Opcode::OpExecutionMode:
+  case spirv::Opcode::OpExecutionModeId:
     if (deferInstructions) {
       deferredInstructions.emplace_back(opcode, operands);
       return success();
@@ -175,11 +232,14 @@ LogicalResult spirv::Deserializer::processInstruction(
   case spirv::Opcode::OpTypeArray:
   case spirv::Opcode::OpTypeFunction:
   case spirv::Opcode::OpTypeImage:
+  case spirv::Opcode::OpTypeSampler:
+  case spirv::Opcode::OpTypeNamedBarrier:
   case spirv::Opcode::OpTypeSampledImage:
   case spirv::Opcode::OpTypeRuntimeArray:
   case spirv::Opcode::OpTypeStruct:
   case spirv::Opcode::OpTypePointer:
   case spirv::Opcode::OpTypeTensorARM:
+  case spirv::Opcode::OpTypeGraphARM:
   case spirv::Opcode::OpTypeCooperativeMatrixKHR:
     return processType(opcode, operands);
   case spirv::Opcode::OpTypeForwardPointer:
@@ -208,12 +268,27 @@ LogicalResult spirv::Deserializer::processInstruction(
     return processConstantBool(/*isTrue=*/false, operands, /*isSpec=*/true);
   case spirv::Opcode::OpConstantNull:
     return processConstantNull(operands);
+  case spirv::Opcode::OpGraphConstantARM:
+    return processGraphConstantARM(operands);
   case spirv::Opcode::OpDecorate:
+  case spirv::Opcode::OpDecorateId:
     return processDecoration(operands);
   case spirv::Opcode::OpMemberDecorate:
     return processMemberDecoration(operands);
   case spirv::Opcode::OpFunction:
     return processFunction(operands);
+  case spirv::Opcode::OpGraphEntryPointARM:
+    if (deferInstructions) {
+      deferredInstructions.emplace_back(opcode, operands);
+      return success();
+    }
+    return processGraphEntryPointARM(operands);
+  case spirv::Opcode::OpGraphARM:
+    return processGraphARM(operands);
+  case spirv::Opcode::OpGraphSetOutputARM:
+    return processOpGraphSetOutputARM(operands);
+  case spirv::Opcode::OpGraphEndARM:
+    return processGraphEndARM(operands);
   case spirv::Opcode::OpLabel:
     return processLabel(operands);
   case spirv::Opcode::OpBranch:
@@ -226,6 +301,8 @@ LogicalResult spirv::Deserializer::processInstruction(
     return processLoopMerge(operands);
   case spirv::Opcode::OpPhi:
     return processPhi(operands);
+  case spirv::Opcode::OpSwitch:
+    return processSwitch(operands);
   case spirv::Opcode::OpUndef:
     return processUndef(operands);
   default:
@@ -326,6 +403,101 @@ LogicalResult spirv::Deserializer::processUndef(ArrayRef<uint32_t> operands) {
   return success();
 }
 
+LogicalResult
+spirv::Deserializer::processDebugInfoExtInst(ArrayRef<uint32_t> operands,
+                                             bool deferInstructions) {
+  if (deferInstructions) {
+    deferredInstructions.emplace_back(spirv::Opcode::OpExtInst, operands);
+    return success();
+  }
+
+  if (operands.size() < 4) {
+    return emitError(unknownLoc,
+                     "OpExtInst must have at least 4 operands, result type "
+                     "<id>, result <id>, set <id> and instruction opcode");
+  }
+
+  Type resultType = getType(operands[0]);
+  if (!resultType || !isVoidType(resultType))
+    return emitError(unknownLoc,
+                     "DebugInfo instructions must have OpTypeVoid result type");
+
+  auto getDebugLoc = [&](uint32_t stringID) -> FailureOr<Location> {
+    DenseMap<uint32_t, StringRef>::iterator stringIt =
+        debugInfoMap.find(stringID);
+    if (stringIt == debugInfoMap.end()) {
+      return emitError(unknownLoc, "undefined string <id> ")
+             << stringID << " in DebugInfo";
+    }
+    return Location(getLocFromDebugInfoString(opBuilder, stringIt->second));
+  };
+
+  if (!spirv::isValidGraphDebugInfoExtInst(operands[3]))
+    return emitError(unknownLoc, "unknown DebugInfo instruction opcode: ")
+           << operands[3];
+
+  auto instructionID = static_cast<spirv::GraphDebugInfoExtInst>(operands[3]);
+  switch (instructionID) {
+  case spirv::GraphDebugInfoExtInst::DebugGraph: {
+    if (operands.size() < 6)
+      return emitError(unknownLoc, "DebugGraph must have graph and string IDs");
+    uint32_t graphID = operands[4];
+    uint32_t stringID = operands[5];
+    DenseMap<uint32_t, spirv::GraphARMOp>::iterator graphIt =
+        graphMap.find(graphID);
+    if (graphIt == graphMap.end())
+      return emitError(unknownLoc, "undefined graph <id> ")
+             << graphID << " in DebugGraph";
+    FailureOr<Location> loc = getDebugLoc(stringID);
+    if (failed(loc))
+      return failure();
+    graphIt->second->setLoc(*loc);
+    break;
+  }
+  case spirv::GraphDebugInfoExtInst::DebugOperation: {
+    if (operands.size() < 7)
+      return emitError(unknownLoc, "DebugOperation must have graph, string and "
+                                   "instruction IDs");
+    uint32_t stringID = operands[5];
+    FailureOr<Location> loc = getDebugLoc(stringID);
+    if (failed(loc))
+      return failure();
+    SmallVector<uint32_t> operationIDs;
+    operationIDs.append(std::next(operands.begin(), 6), operands.end());
+    for (uint32_t operationID : operationIDs) {
+      DenseMap<uint32_t, Value>::iterator valueIt = valueMap.find(operationID);
+      if (valueIt == valueMap.end())
+        return emitError(unknownLoc, "undefined operation <id> ")
+               << operationID << " in DebugOperation";
+      valueIt->second.setLoc(*loc);
+    }
+    break;
+  }
+  case spirv::GraphDebugInfoExtInst::DebugTensor: {
+    if (operands.size() < 6)
+      return emitError(unknownLoc,
+                       "DebugTensor must have tensor and string IDs");
+    uint32_t stringID = operands[5];
+    uint32_t tensorID = operands[4];
+    FailureOr<Location> loc = getDebugLoc(stringID);
+    if (failed(loc))
+      return failure();
+    if (constantMap.contains(tensorID)) {
+      constantLocMap[tensorID] = *loc;
+      break;
+    }
+    DenseMap<uint32_t, Value>::iterator valueIt = valueMap.find(tensorID);
+    if (valueIt == valueMap.end())
+      return emitError(unknownLoc, "undefined tensor <id> ")
+             << tensorID << " in DebugTensor";
+    valueIt->second.setLoc(*loc);
+    break;
+  }
+  }
+
+  return success();
+}
+
 LogicalResult spirv::Deserializer::processExtInst(ArrayRef<uint32_t> operands) {
   if (operands.size() < 4) {
     return emitError(unknownLoc,
@@ -423,6 +595,42 @@ Deserializer::processOp<spirv::ExecutionModeOp>(ArrayRef<uint32_t> words) {
   }
   auto values = opBuilder.getArrayAttr(attrListElems);
   spirv::ExecutionModeOp::create(
+      opBuilder, unknownLoc,
+      SymbolRefAttr::get(opBuilder.getContext(), fn.getName()), execMode,
+      values);
+  return success();
+}
+
+template <>
+LogicalResult
+Deserializer::processOp<spirv::ExecutionModeIdOp>(ArrayRef<uint32_t> words) {
+  unsigned wordIndex = 0;
+  unsigned const wordsSize = words.size();
+  if (wordIndex >= wordsSize)
+    return emitError(unknownLoc,
+                     "missing function result <id> in OpExecutionModeId");
+
+  // Get the function <id> to get the name of the function.
+  uint32_t fnID = words[wordIndex++];
+  FuncOp fn = getFunction(fnID);
+  if (!fn)
+    return emitError(unknownLoc, "no function matching <id> ") << fnID;
+
+  // Get the Execution mode.
+  if (wordIndex >= wordsSize)
+    return emitError(unknownLoc, "missing Execution Mode in OpExecutionModeId");
+
+  ExecutionModeAttr execMode = spirv::ExecutionModeAttr::get(
+      context, static_cast<spirv::ExecutionMode>(words[wordIndex++]));
+
+  // Get the values.
+  SmallVector<Attribute, 4> attrListElems;
+  while (wordIndex < words.size()) {
+    std::string id = getSpecConstantSymbol(words[wordIndex++]);
+    attrListElems.push_back(FlatSymbolRefAttr::get(context, id));
+  }
+  ArrayAttr values = opBuilder.getArrayAttr(attrListElems);
+  spirv::ExecutionModeIdOp::create(
       opBuilder, unknownLoc,
       SymbolRefAttr::get(opBuilder.getContext(), fn.getName()), execMode,
       values);

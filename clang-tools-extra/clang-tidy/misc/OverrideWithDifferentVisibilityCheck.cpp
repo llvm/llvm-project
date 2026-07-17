@@ -1,4 +1,4 @@
-//===--- OverrideWithDifferentVisibilityCheck.cpp - clang-tidy ------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -71,7 +71,7 @@ void OverrideWithDifferentVisibilityCheck::storeOptions(
 void OverrideWithDifferentVisibilityCheck::registerMatchers(
     MatchFinder *Finder) {
   const auto IgnoredDecl =
-      namedDecl(matchers::matchesAnyListedName(IgnoredFunctions));
+      namedDecl(matchers::matchesAnyListedRegexName(IgnoredFunctions));
   const auto FilterDestructors =
       CheckDestructors ? decl() : decl(unless(cxxDestructorDecl()));
   const auto FilterOperators =
@@ -79,8 +79,7 @@ void OverrideWithDifferentVisibilityCheck::registerMatchers(
   Finder->addMatcher(
       cxxMethodDecl(
           isVirtual(), FilterDestructors, FilterOperators,
-          ofClass(
-              cxxRecordDecl(unless(isExpansionInSystemHeader())).bind("class")),
+          ofClass(cxxRecordDecl().bind("class")),
           forEachOverridden(cxxMethodDecl(ofClass(cxxRecordDecl().bind("base")),
                                           unless(IgnoredDecl))
                                 .bind("base_func")))

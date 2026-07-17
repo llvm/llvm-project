@@ -1,4 +1,4 @@
-//===--- MiscTidyModule.cpp - clang-tidy ----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,12 +8,12 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "AvoidSpinlockCheck.h"
 #include "DispatchOnceNonstaticCheck.h"
 
 namespace clang::tidy {
 namespace darwin {
+namespace {
 
 class DarwinModule : public ClangTidyModule {
 public:
@@ -24,6 +24,7 @@ public:
   }
 };
 
+} // namespace
 } // namespace darwin
 
 // Register the DarwinTidyModule using this statically initialized variable.

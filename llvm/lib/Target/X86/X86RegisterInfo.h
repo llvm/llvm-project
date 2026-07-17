@@ -28,6 +28,9 @@ private:
   ///
   bool Is64Bit;
 
+  /// Is this x86_64 with the LP64 programming model (standard AMD64, no x32)?
+  bool IsTarget64BitLP64;
+
   /// IsWin64 - Is the target on of win64 flavours
   ///
   bool IsWin64;
@@ -78,8 +81,7 @@ public:
   /// getPointerRegClass - Returns a TargetRegisterClass used for pointer
   /// values.
   const TargetRegisterClass *
-  getPointerRegClass(const MachineFunction &MF,
-                     unsigned Kind = 0) const override;
+  getPointerRegClass(unsigned Kind = 0) const override;
 
   /// getCrossCopyRegClass - Returns a legal register class to copy a register
   /// in the specified class to or from. Returns NULL if it is possible to copy

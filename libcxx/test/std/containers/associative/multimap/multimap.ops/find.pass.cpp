@@ -10,8 +10,8 @@
 
 // class multimap
 
-//       iterator find(const key_type& k);
-// const_iterator find(const key_type& k) const;
+//       iterator find(const key_type& k); // constexpr since C++26
+// const_iterator find(const key_type& k) const; // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -22,7 +22,7 @@
 #include "is_transparent.h"
 
 template <class Iter>
-bool iter_in_range(Iter first, Iter last, Iter to_find) {
+TEST_CONSTEXPR_CXX26 bool iter_in_range(Iter first, Iter last, Iter to_find) {
   for (; first != last; ++first) {
     if (first == to_find)
       return true;
@@ -30,7 +30,8 @@ bool iter_in_range(Iter first, Iter last, Iter to_find) {
   return false;
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26
+bool test() {
   typedef std::pair<const int, double> V;
   {
     typedef std::multimap<int, double> M;
@@ -68,6 +69,19 @@ int main(int, char**) {
       r = m.find(10);
       assert(r == m.end());
     }
+  }
+  {
+    using Pair = std::pair<const int, int>;
+    using Map  = std::multimap<int, int, std::greater<int> >;
+    Pair arr[] = {
+        Pair(5, 1), Pair(5, 2), Pair(5, 3), Pair(7, 1), Pair(7, 2), Pair(7, 3), Pair(9, 1), Pair(9, 2), Pair(9, 3)};
+    const Map m(arr, arr + sizeof(arr) / sizeof(arr[0]));
+    assert(iter_in_range(std::next(m.begin(), 6), std::next(m.begin(), 9), m.find(5)));
+    assert(m.find(6) == m.end());
+    assert(iter_in_range(std::next(m.begin(), 3), std::next(m.begin(), 6), m.find(7)));
+    assert(m.find(8) == m.end());
+    assert(iter_in_range(std::next(m.begin(), 0), std::next(m.begin(), 3), m.find(9)));
+    assert(m.find(10) == m.end());
   }
 #if TEST_STD_VER >= 11
   {
@@ -173,5 +187,14 @@ int main(int, char**) {
   }
 #endif
 
+  return true;
+}
+
+int main(int, char**) {
+  test();
+
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

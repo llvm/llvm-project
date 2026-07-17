@@ -11,15 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/ConvertExpr.h"
-#include "flang/Common/unwrap.h"
-#include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/real.h"
 #include "flang/Evaluate/traverse.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/Bridge.h"
-#include "flang/Lower/BuiltinModules.h"
 #include "flang/Lower/CallInterface.h"
-#include "flang/Lower/Coarray.h"
 #include "flang/Lower/ComponentPath.h"
 #include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/ConvertConstant.h"
@@ -28,6 +24,7 @@
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/CustomIntrinsicCall.h"
 #include "flang/Lower/Mangler.h"
+#include "flang/Lower/MultiImageFortran.h"
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/Character.h"
@@ -42,10 +39,8 @@
 #include "flang/Optimizer/Builder/Runtime/Ragged.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
-#include "flang/Runtime/support.h"
 #include "flang/Semantics/dump-expr.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/symbol.h"
@@ -925,6 +920,11 @@ public:
   }
   ExtValue genval(const Fortran::evaluate::NullPointer &) {
     return builder.createNullConstant(getLoc());
+  }
+
+  template <typename A>
+  ExtValue genval(const Fortran::evaluate::ConditionalExpr<A> &) {
+    fir::emitFatalError(getLoc(), "ConditionalExpr should be lowered to HLFIR");
   }
 
   static bool
@@ -2907,10 +2907,8 @@ public:
       }
     }
 
-    auto loweredResult =
-        Fortran::lower::genCallOpAndResult(loc, converter, symMap, stmtCtx,
-                                           caller, callSiteType, resultType)
-            .first;
+    auto loweredResult = std::get<0>(Fortran::lower::genCallOpAndResult(
+        loc, converter, symMap, stmtCtx, caller, callSiteType, resultType));
     auto &result = std::get<ExtValue>(loweredResult);
 
     // Sync pointers and allocatables that may have been modified during the
@@ -4946,10 +4944,9 @@ private:
         caller.placeInput(argIface, arg);
       }
       Fortran::lower::LoweredResult res =
-          Fortran::lower::genCallOpAndResult(loc, converter, symMap,
-                                             getElementCtx(), caller,
-                                             callSiteType, retTy)
-              .first;
+          std::get<0>(Fortran::lower::genCallOpAndResult(
+              loc, converter, symMap, getElementCtx(), caller, callSiteType,
+              retTy));
       return std::get<ExtValue>(res);
     };
   }
@@ -5369,6 +5366,11 @@ private:
     };
   }
 
+  template <typename A>
+  CC genarr(const Fortran::evaluate::ConditionalExpr<A> &) {
+    fir::emitFatalError(getLoc(), "ConditionalExpr should be lowered to HLFIR");
+  }
+
   template <typename T>
   CC genarr(const Fortran::evaluate::Constant<T> &x) {
     if (x.Rank() == 0)
@@ -5603,7 +5605,7 @@ private:
                     return newIters;
                   };
                   if (useTripsForSlice) {
-                    LLVM_ATTRIBUTE_UNUSED auto vectorSubscriptShape =
+                    [[maybe_unused]] auto vectorSubscriptShape =
                         getShape(arrayOperands.back());
                     auto undef = fir::UndefOp::create(builder, loc, idxTy);
                     trips.push_back(undef);

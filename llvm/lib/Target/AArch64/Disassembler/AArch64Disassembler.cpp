@@ -38,6 +38,9 @@ using DecodeStatus = MCDisassembler::DecodeStatus;
 template <int Bits>
 static DecodeStatus DecodeSImm(MCInst &Inst, uint64_t Imm, uint64_t Address,
                                const MCDisassembler *Decoder);
+template <int Bits>
+static DecodeStatus DecodeUImm(MCInst &Inst, uint64_t Imm, uint64_t Address,
+                               const MCDisassembler *Decoder);
 
 #define Success MCDisassembler::Success
 #define Fail MCDisassembler::Fail
@@ -51,7 +54,7 @@ static DecodeStatus DecodeSimpleRegisterClass(MCInst &Inst, unsigned RegNo,
     return Fail;
 
   MCRegister Register =
-      AArch64MCRegisterClasses[RegClassID].getRegister(RegNo + FirstReg);
+      getAArch64MCRegisterClass(RegClassID).getRegister(RegNo + FirstReg);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
@@ -65,21 +68,20 @@ DecodeGPR64x8ClassRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
     return Fail;
 
   MCRegister Register =
-      AArch64MCRegisterClasses[AArch64::GPR64x8ClassRegClassID].getRegister(
-          RegNo >> 1);
+      getAArch64MCRegisterClass(AArch64::GPR64x8ClassRegClassID)
+          .getRegister(RegNo >> 1);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
 
-template <unsigned Min, unsigned Max>
-static DecodeStatus DecodeZPRMul2_MinMax(MCInst &Inst, unsigned RegNo,
-                                         uint64_t Address,
-                                         const MCDisassembler *Decoder) {
-  unsigned Reg = (RegNo * 2) + Min;
-  if (Reg < Min || Reg > Max || (Reg & 1))
+template <unsigned RegClassID, unsigned Multiple, unsigned Min, unsigned Max>
+static DecodeStatus
+DecodeMulMinMaxRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
+                             const MCDisassembler *Decoder) {
+  unsigned Reg = (RegNo * Multiple) + Min;
+  if (Reg < Min || Reg > Max || (Reg % Multiple))
     return Fail;
-  MCRegister Register =
-      AArch64MCRegisterClasses[AArch64::ZPRRegClassID].getRegister(Reg);
+  MCRegister Register = getAArch64MCRegisterClass(RegClassID).getRegister(Reg);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
@@ -93,7 +95,7 @@ static DecodeStatus DecodeZPR2Mul2RegisterClass(MCInst &Inst, unsigned RegNo,
     return Fail;
 
   MCRegister Register =
-      AArch64MCRegisterClasses[AArch64::ZPR2RegClassID].getRegister(Reg);
+      getAArch64MCRegisterClass(AArch64::ZPR2RegClassID).getRegister(Reg);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
@@ -104,7 +106,7 @@ static DecodeStatus DecodeZK(MCInst &Inst, unsigned RegNo, uint64_t Address,
     return Fail;
 
   MCRegister Register =
-      AArch64MCRegisterClasses[AArch64::ZPR_KRegClassID].getRegister(RegNo);
+      getAArch64MCRegisterClass(AArch64::ZPR_KRegClassID).getRegister(RegNo);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
@@ -115,7 +117,7 @@ static DecodeStatus DecodeZPR4Mul4RegisterClass(MCInst &Inst, unsigned RegNo,
   if (RegNo * 4 > 28)
     return Fail;
   MCRegister Register =
-      AArch64MCRegisterClasses[AArch64::ZPR4RegClassID].getRegister(RegNo * 4);
+      getAArch64MCRegisterClass(AArch64::ZPR4RegClassID).getRegister(RegNo * 4);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
@@ -130,26 +132,57 @@ DecodeMatrixTileListRegisterClass(MCInst &Inst, unsigned RegMask,
   return Success;
 }
 
-static const MCPhysReg MatrixZATileDecoderTable[5][16] = {
-    {AArch64::ZAB0},
-    {AArch64::ZAH0, AArch64::ZAH1},
-    {AArch64::ZAS0, AArch64::ZAS1, AArch64::ZAS2, AArch64::ZAS3},
-    {AArch64::ZAD0, AArch64::ZAD1, AArch64::ZAD2, AArch64::ZAD3, AArch64::ZAD4,
-     AArch64::ZAD5, AArch64::ZAD6, AArch64::ZAD7},
-    {AArch64::ZAQ0, AArch64::ZAQ1, AArch64::ZAQ2, AArch64::ZAQ3, AArch64::ZAQ4,
-     AArch64::ZAQ5, AArch64::ZAQ6, AArch64::ZAQ7, AArch64::ZAQ8, AArch64::ZAQ9,
-     AArch64::ZAQ10, AArch64::ZAQ11, AArch64::ZAQ12, AArch64::ZAQ13,
-     AArch64::ZAQ14, AArch64::ZAQ15}};
+static DecodeStatus DecodeZTRRegisterClass(MCInst &Inst,
+                                           const MCDisassembler *Decoder) {
+  Inst.addOperand(MCOperand::createReg(AArch64::ZT0));
+  return Success;
+}
 
-template <unsigned NumBitsForTile>
-static DecodeStatus DecodeMatrixTile(MCInst &Inst, unsigned RegNo,
-                                     uint64_t Address,
-                                     const MCDisassembler *Decoder) {
-  unsigned LastReg = (1 << NumBitsForTile) - 1;
-  if (RegNo > LastReg)
-    return Fail;
-  Inst.addOperand(
-      MCOperand::createReg(MatrixZATileDecoderTable[NumBitsForTile][RegNo]));
+static DecodeStatus DecodeMPRRegisterClass(MCInst &Inst,
+                                           const MCDisassembler *Decoder) {
+  Inst.addOperand(MCOperand::createReg(AArch64::ZA));
+  return Success;
+}
+
+static DecodeStatus DecodeMPR8RegisterClass(MCInst &Inst,
+                                            const MCDisassembler *Decoder) {
+  Inst.addOperand(MCOperand::createReg(AArch64::ZAB0));
+  return Success;
+}
+
+static DecodeStatus DecodeMPR16RegisterClass(MCInst &Inst, unsigned RegNo,
+                                             uint64_t Address,
+                                             const MCDisassembler *Decoder) {
+  MCRegister Reg =
+      getAArch64MCRegisterClass(AArch64::MPR16RegClassID).getRegister(RegNo);
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return Success;
+}
+
+static DecodeStatus DecodeMPR32RegisterClass(MCInst &Inst, unsigned RegNo,
+                                             uint64_t Address,
+                                             const MCDisassembler *Decoder) {
+  MCRegister Reg =
+      getAArch64MCRegisterClass(AArch64::MPR32RegClassID).getRegister(RegNo);
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return Success;
+}
+
+static DecodeStatus DecodeMPR64RegisterClass(MCInst &Inst, unsigned RegNo,
+                                             uint64_t Address,
+                                             const MCDisassembler *Decoder) {
+  MCRegister Reg =
+      getAArch64MCRegisterClass(AArch64::MPR64RegClassID).getRegister(RegNo);
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return Success;
+}
+
+static DecodeStatus DecodeMPR128RegisterClass(MCInst &Inst, unsigned RegNo,
+                                              uint64_t Address,
+                                              const MCDisassembler *Decoder) {
+  MCRegister Reg =
+      getAArch64MCRegisterClass(AArch64::MPR128RegClassID).getRegister(RegNo);
+  Inst.addOperand(MCOperand::createReg(Reg));
   return Success;
 }
 
@@ -159,7 +192,7 @@ static DecodeStatus DecodePPR2Mul2RegisterClass(MCInst &Inst, unsigned RegNo,
   if ((RegNo * 2) > 14)
     return Fail;
   MCRegister Register =
-      AArch64MCRegisterClasses[AArch64::PPR2RegClassID].getRegister(RegNo * 2);
+      getAArch64MCRegisterClass(AArch64::PPR2RegClassID).getRegister(RegNo * 2);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
@@ -1334,7 +1367,7 @@ DecodeGPRSeqPairsClassRegisterClass(MCInst &Inst, unsigned RegClassID,
   if (RegNo & 0x1)
     return Fail;
 
-  MCRegister Reg = AArch64MCRegisterClasses[RegClassID].getRegister(RegNo / 2);
+  MCRegister Reg = getAArch64MCRegisterClass(RegClassID).getRegister(RegNo / 2);
   Inst.addOperand(MCOperand::createReg(Reg));
   return Success;
 }
@@ -1392,6 +1425,11 @@ DecodeSVELogicalImmInstruction(MCInst &Inst, uint32_t insn, uint64_t Addr,
   return Success;
 }
 
+static DecodeStatus DecodeZeroImm(MCInst &Inst, const MCDisassembler *Decoder) {
+  Inst.addOperand(MCOperand::createImm(0));
+  return Success;
+}
+
 template <int Bits>
 static DecodeStatus DecodeSImm(MCInst &Inst, uint64_t Imm, uint64_t Address,
                                const MCDisassembler *Decoder) {
@@ -1401,6 +1439,16 @@ static DecodeStatus DecodeSImm(MCInst &Inst, uint64_t Imm, uint64_t Address,
   // Imm is a signed immediate, so sign extend it.
   if (Imm & (1 << (Bits - 1)))
     Imm |= ~((1LL << Bits) - 1);
+
+  Inst.addOperand(MCOperand::createImm(Imm));
+  return Success;
+}
+
+template <int Bits>
+static DecodeStatus DecodeUImm(MCInst &Inst, uint64_t Imm, uint64_t Address,
+                               const MCDisassembler *Decoder) {
+  if (Imm & ~((1ULL << Bits) - 1))
+    return Fail;
 
   Inst.addOperand(MCOperand::createImm(Imm));
   return Success;
@@ -1416,6 +1464,16 @@ static DecodeStatus DecodeImm8OptLsl(MCInst &Inst, unsigned Imm, uint64_t Addr,
     return Fail;
   Inst.addOperand(MCOperand::createImm(Val));
   Inst.addOperand(MCOperand::createImm(Shift));
+  return Success;
+}
+
+static DecodeStatus DecodeHinteUImm16(MCInst &Inst, unsigned Imm, uint64_t Addr,
+                                      const MCDisassembler *Decoder) {
+  if (Imm > 65535 ||
+      (Imm >= 12319 && Imm <= 16383 && ((Imm - 12319) % 32) == 0))
+    return Fail;
+
+  Inst.addOperand(MCOperand::createImm(Imm));
   return Success;
 }
 
@@ -1496,6 +1554,32 @@ static DecodeStatus DecodeSETMemOpInstruction(MCInst &Inst, uint32_t insn,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeSETMemGoOpInstruction(MCInst &Inst, uint32_t insn,
+                                                uint64_t Addr,
+                                                const MCDisassembler *Decoder) {
+  unsigned Rd = fieldFromInstruction(insn, 0, 5);
+  unsigned Rn = fieldFromInstruction(insn, 5, 5);
+
+  // None of the registers may alias: if they do, then the instruction is not
+  // merely unpredictable but actually entirely unallocated.
+  if (Rd == Rn)
+    return MCDisassembler::Fail;
+
+  // Rd and Rn register operands are written back, so they appear
+  // twice in the operand list, once as outputs and once as inputs.
+  if (!DecodeSimpleRegisterClass<AArch64::GPR64commonRegClassID, 0, 31>(
+          Inst, Rd, Addr, Decoder) ||
+      !DecodeSimpleRegisterClass<AArch64::GPR64RegClassID, 0, 32>(
+          Inst, Rn, Addr, Decoder) ||
+      !DecodeSimpleRegisterClass<AArch64::GPR64commonRegClassID, 0, 31>(
+          Inst, Rd, Addr, Decoder) ||
+      !DecodeSimpleRegisterClass<AArch64::GPR64RegClassID, 0, 32>(
+          Inst, Rn, Addr, Decoder))
+    return MCDisassembler::Fail;
+
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus DecodePRFMRegInstruction(MCInst &Inst, uint32_t insn,
                                              uint64_t Addr,
                                              const MCDisassembler *Decoder) {
@@ -1540,6 +1624,7 @@ DecodeSMESpillFillInstruction(MCInst &Inst, uint32_t Bits, uint64_t Addr,
   unsigned RnBits = fieldFromInstruction(Bits, 5, 5);
   unsigned Imm4Bits = fieldFromInstruction(Bits, 0, 4);
 
+  DecodeMPRRegisterClass(Inst, Decoder);
   DecodeSimpleRegisterClass<AArch64::MatrixIndexGPR32_12_15RegClassID, 0, 4>(
       Inst, RvBits, Addr, Decoder);
   Inst.addOperand(MCOperand::createImm(Imm4Bits));
@@ -1583,33 +1668,6 @@ DecodeStatus AArch64Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
   for (const auto *Table : Tables) {
     DecodeStatus Result =
         decodeInstruction(Table, MI, Insn, Address, this, STI);
-
-    const MCInstrDesc &Desc = MCII->get(MI.getOpcode());
-
-    // For Scalable Matrix Extension (SME) instructions that have an implicit
-    // operand for the accumulator (ZA) or implicit immediate zero which isn't
-    // encoded, manually insert operand.
-    for (unsigned i = 0; i < Desc.getNumOperands(); i++) {
-      if (Desc.operands()[i].OperandType == MCOI::OPERAND_REGISTER) {
-        switch (Desc.operands()[i].RegClass) {
-        default:
-          break;
-        case AArch64::MPRRegClassID:
-          MI.insert(MI.begin() + i, MCOperand::createReg(AArch64::ZA));
-          break;
-        case AArch64::MPR8RegClassID:
-          MI.insert(MI.begin() + i, MCOperand::createReg(AArch64::ZAB0));
-          break;
-        case AArch64::ZTRRegClassID:
-          MI.insert(MI.begin() + i, MCOperand::createReg(AArch64::ZT0));
-          break;
-        }
-      } else if (Desc.operands()[i].OperandType ==
-                 AArch64::OPERAND_IMPLICIT_IMM_0) {
-        MI.insert(MI.begin() + i, MCOperand::createImm(0));
-      }
-    }
-
     if (Result != MCDisassembler::Fail)
       return Result;
   }

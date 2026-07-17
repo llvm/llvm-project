@@ -177,8 +177,9 @@ def Q15 : ARMReg<15, "q15", [D30, D31]>;
 }
 
 // Current Program Status Register.
-// We model fpscr with two registers: FPSCR models the control bits and will be
-// reserved. FPSCR_NZCV models the flag bits and will be unreserved. APSR_NZCV
+// We model fpscr with three registers. FPSCR models the control bits and will be
+// reserved. FPSCR_RM models rounding mode control bits and will be reserved.
+// FPSCR_NZCV models the flag bits and will be unreserved. APSR_NZCV
 // models the APSR when it's accessed by some special instructions. In such cases
 // it has the same encoding as PC.
 def CPSR       : ARMReg<0,  "cpsr">;
@@ -187,6 +188,9 @@ def APSR_NZCV  : ARMReg<15, "apsr_nzcv">;
 def SPSR       : ARMReg<2,  "spsr">;
 def FPSCR      : ARMReg<3,  "fpscr">;
 def FPSCR_NZCV : ARMReg<3,  "fpscr_nzcv"> {
+  let Aliases = [FPSCR];
+}
+def FPSCR_RM : ARMReg<3,  "fpscr_rm"> {
   let Aliases = [FPSCR];
 }
 def ITSTATE    : ARMReg<4, "itstate">;
@@ -362,8 +366,9 @@ def hGPR : RegisterClass<"ARM", [i32], 32, (sub GPR, tGPR)> {
   let DiagnosticString = "operand must be a register in range [r8, r15]";
 }
 
-// For tail calls, we can't use callee-saved registers, as they are restored
-// to the saved value before the tail call, which would clobber a call address.
+// For tail calls, we can't use callee-saved registers. When the frame
+// is destroyed before the tail call, callee-saved registers are restored
+// to the caller's values, clobbering any call address stored in them.
 // Note, getMinimalPhysRegClass(R0) returns tGPR because of the names of
 // this class and the preceding one(!)  This is what we want.
 def tcGPR : RegisterClass<"ARM", [i32], 32, (add R0, R1, R2, R3, R12)> {

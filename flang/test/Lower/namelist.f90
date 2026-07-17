@@ -123,6 +123,45 @@ subroutine global_pointer
   write(10, nml=mygroup)
 end
 
+module m
+  type base
+    real :: r1
+  end type
+  interface write(formatted)
+    subroutine writeformatted(dtv, unit, iotype, v_list, iostat, iomsg )
+      import base
+        class(base), intent(in) :: dtv
+        integer,  intent(in) :: unit
+        character(*), intent(in) :: iotype
+        integer, intent(in)     :: v_list(:)
+        integer,  intent(out) :: iostat
+        character(*),  intent(inout) :: iomsg
+     end subroutine
+  end interface
+end module
+
+! CHECK-LABEL: c.func @_QPlocal_poly_namelist
+subroutine local_poly_namelist
+  use m
+  class(base), allocatable :: b1
+! CHECK:  %[[V_0:[0-9]+]]  = fir.alloca !fir.class<!fir.ptr<!fir.type<_QMmTbase{r1:f32}>>>
+! CHECK:  %[[V_2:[0-9]+]]  = fir.alloca !fir.class<!fir.heap<!fir.type<_QMmTbase{r1:f32}>>> {bindc_name = "b1", uniq_name = "_QFlocal_poly_namelistEb1"}
+! CHECK:  %[[V_5:[0-9]+]]  = fir.declare %[[V_2]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFlocal_poly_namelistEb1"} : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMmTbase{r1:f32}>>>>) -> !fir.ref<!fir.class<!fir.heap<!fir.type<_QMmTbase{r1:f32}>>>>
+! CHECK:  %[[V_9:[0-9]+]]  = fir.alloca !fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>
+! CHECK:  %[[V_10:[0-9]+]] = fir.undefined !fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>
+! CHECK:  %[[V_11:[0-9]+]] = fir.address_of(@_QQclX623100) : !fir.ref<!fir.char<1,3>>
+! CHECK:  %[[V_12:[0-9]+]] = fir.convert %[[V_11]] : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<i8>
+! CHECK:  %[[V_13:[0-9]+]] = fir.insert_value %[[V_10]], %[[V_12]], [0 : index, 0 : index] : (!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>, !fir.ref<i8>) -> !fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>
+! CHECK:  %[[V_14:[0-9]+]] = fir.load %[[V_5]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMmTbase{r1:f32}>>>>
+! CHECK:  %[[V_15:[0-9]+]] = fir.rebox %[[V_14]] : (!fir.class<!fir.heap<!fir.type<_QMmTbase{r1:f32}>>>) -> !fir.class<!fir.ptr<!fir.type<_QMmTbase{r1:f32}>>>
+! CHECK:  fir.store %[[V_15]] to %[[V_0]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMmTbase{r1:f32}>>>>
+! CHECK:  %[[V_16:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMmTbase{r1:f32}>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:  %[[V_17:[0-9]+]] = fir.insert_value %[[V_13]], %[[V_16]], [0 : index, 1 : index] : (!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>, !fir.ref<!fir.box<none>>) -> !fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>
+! CHECK:  fir.store %[[V_17]] to %[[V_9]] : !fir.ref<!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>
+  namelist/mygroup/b1
+  write(10, nml=mygroup)
+end subroutine
+
 module mmm
   real rrr
   namelist /aaa/ rrr
@@ -142,3 +181,4 @@ end
 
 ! CHECK-NOT:   ggg
 ! CHECK:       fir.string_lit "aaa\00"(4) : !fir.char<1,4>
+

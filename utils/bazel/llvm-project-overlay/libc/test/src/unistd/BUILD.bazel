@@ -16,9 +16,9 @@ libc_test(
     deps = [
         "//libc:access",
         "//libc:close",
+        "//libc:hdr_sys_stat_macros",
         "//libc:open",
         "//libc:unlink",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -28,11 +28,11 @@ libc_test(
     deps = [
         "//libc:close",
         "//libc:dup",
+        "//libc:hdr_sys_stat_macros",
         "//libc:open",
         "//libc:read",
         "//libc:unlink",
         "//libc:write",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -42,11 +42,11 @@ libc_test(
     deps = [
         "//libc:close",
         "//libc:dup2",
+        "//libc:hdr_sys_stat_macros",
         "//libc:open",
         "//libc:read",
         "//libc:unlink",
         "//libc:write",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -56,11 +56,11 @@ libc_test(
     deps = [
         "//libc:close",
         "//libc:dup3",
+        "//libc:hdr_sys_stat_macros",
         "//libc:open",
         "//libc:read",
         "//libc:unlink",
         "//libc:write",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -71,11 +71,19 @@ libc_test(
         "//libc:__support_cpp_string_view",
         "//libc:close",
         "//libc:ftruncate",
+        "//libc:hdr_sys_stat_macros",
         "//libc:open",
         "//libc:read",
         "//libc:unlink",
         "//libc:write",
-        "//libc/test/UnitTest:errno_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "getpagesize_test",
+    srcs = ["getpagesize_test.cpp"],
+    deps = [
+        "//libc:getpagesize",
     ],
 )
 
@@ -85,12 +93,12 @@ libc_test(
     deps = [
         "//libc:close",
         "//libc:fsync",
+        "//libc:hdr_sys_stat_macros",
         "//libc:open",
         "//libc:pread",
         "//libc:pwrite",
         "//libc:unlink",
         "//libc:write",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -100,11 +108,11 @@ libc_test(
     deps = [
         "//libc:close",
         "//libc:fsync",
+        "//libc:hdr_sys_stat_macros",
         "//libc:open",
         "//libc:read",
         "//libc:remove",
         "//libc:write",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -113,10 +121,10 @@ libc_test(
     srcs = ["link_test.cpp"],
     deps = [
         "//libc:close",
+        "//libc:hdr_sys_stat_macros",
         "//libc:link",
         "//libc:open",
         "//libc:unlink",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -134,10 +142,10 @@ libc_test(
     srcs = ["symlink_test.cpp"],
     deps = [
         "//libc:close",
+        "//libc:hdr_sys_stat_macros",
         "//libc:open",
         "//libc:symlink",
         "//libc:unlink",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -147,12 +155,12 @@ libc_test(
     deps = [
         "//libc:__support_cpp_string_view",
         "//libc:close",
+        "//libc:hdr_sys_stat_macros",
         "//libc:open",
         "//libc:read",
         "//libc:truncate",
         "//libc:unlink",
         "//libc:write",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -161,9 +169,9 @@ libc_test(
     srcs = ["unlink_test.cpp"],
     deps = [
         "//libc:close",
+        "//libc:hdr_sys_stat_macros",
         "//libc:open",
         "//libc:unlink",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -188,9 +196,9 @@ libc_test(
     srcs = ["isatty_test.cpp"],
     deps = [
         "//libc:close",
+        "//libc:hdr_sys_stat_macros",
         "//libc:isatty",
         "//libc:open",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 

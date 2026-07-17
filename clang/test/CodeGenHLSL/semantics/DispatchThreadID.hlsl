@@ -24,4 +24,3 @@ void foo(uint Idx : SV_DispatchThreadID) {}
 [shader("compute")]
 [numthreads(8,8,1)]
 void bar(uint2 Idx : SV_DispatchThreadID) {}
-

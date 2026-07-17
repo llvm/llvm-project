@@ -21,6 +21,7 @@ add_llvm_unittest(SupportTests
   Caching.cpp
   Casting.cpp
   CheckedArithmeticTest.cpp
+  CHERICapabilityFormatTest.cpp
   Chrono.cpp
   CommandLineTest.cpp
   CompressionTest.cpp
@@ -44,6 +45,7 @@ add_llvm_unittest(SupportTests
   ExtensibleRTTITest.cpp
   FileCollectorTest.cpp
   FileOutputBufferTest.cpp
+  Format.cpp
   FormatVariadicTest.cpp
   FSUniqueIDTest.cpp
   GenericDomTreeTest.cpp
@@ -52,6 +54,7 @@ add_llvm_unittest(SupportTests
   IndexedAccessorTest.cpp
   InstructionCostTest.cpp
   InterleavedRangeTest.cpp
+  JobserverTest.cpp
   JSONTest.cpp
   KnownBitsTest.cpp
   LEB128Test.cpp
@@ -74,6 +77,7 @@ add_llvm_unittest(SupportTests
   ProcessTest.cpp
   ProgramTest.cpp
   ProgramStackTest.cpp
+  IntegerInclusiveIntervalTest.cpp
   RecyclerTest.cpp
   RegexTest.cpp
   ReverseIterationTest.cpp
@@ -124,6 +128,8 @@ add_llvm_unittest(SupportTests
   DEPENDS
   intrinsics_gen
   )
+
+add_subdirectory(LSP)
 
 target_link_libraries(SupportTests PRIVATE LLVMTestingSupport)
 

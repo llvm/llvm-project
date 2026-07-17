@@ -11,7 +11,6 @@ target triple = "nvptx64-unknown-unknown"
 define void @test_infer_const_from_cast() {
 ; INFER-LABEL: @test_infer_const_from_cast
 ; INFER: call void @llvm.nvvm.prefetch.tensormap.p4(ptr addrspace(4) @constant_tensormap)
-; BOTH: call void @llvm.nvvm.prefetch.tensormap.p4(ptr addrspace(4) @constant_tensormap)
 ; PTX-LABEL: .visible .func test_infer_const_from_cast(
 ; PTX: mov.b64 %rd{{[0-9]+}}, constant_tensormap;
 ; PTX: cvta.const.u64 %rd{{[0-9]+}}, %rd{{[0-9]+}};
@@ -69,12 +68,40 @@ entry:
   %cast1 = addrspacecast ptr addrspace(4) @constant_tensormap to ptr
   %cast2 = addrspacecast ptr %cast1 to ptr addrspace(4)
   %cast3 = addrspacecast ptr addrspace(4) %cast2 to ptr
-  call void @llvm.nvvm.prefetch.tensormap(ptr %cast3)
+  call void @llvm.nvvm.prefetch.tensormap.p0(ptr %cast3)
+  ret void
+}
+
+; Kernel Function Test
+; Cast from Param space to Generic
+define ptx_kernel void @test_param_to_generic_cast_kernel(ptr addrspace(101) %param_ptr) {
+; INFER-LABEL: @test_param_to_generic_cast_kernel
+; INFER: call void @llvm.nvvm.prefetch.tensormap.p101(ptr addrspace(101) %param_ptr)
+; PTX-LABEL: .visible .entry test_param_to_generic_cast_kernel(
+; PTX: prefetch.param.tensormap [%rd{{[0-9]+}}];
+entry:
+  %cast = addrspacecast ptr addrspace(101) %param_ptr to ptr
+  call void @llvm.nvvm.prefetch.tensormap.p0(ptr %cast)
+  ret void
+}
+
+; Kernel Function Test
+; Multiple casts in sequence
+define ptx_kernel void @test_infer_through_multiple_casts_kernel() {
+; INFER-LABEL: @test_infer_through_multiple_casts_kernel
+; INFER: call void @llvm.nvvm.prefetch.tensormap.p4(ptr addrspace(4) @constant_tensormap)
+; PTX-LABEL: .visible .entry test_infer_through_multiple_casts_kernel(
+; PTX: mov.b64 %rd{{[0-9]+}}, constant_tensormap;
+; PTX: cvta.const.u64 %rd{{[0-9]+}}, %rd{{[0-9]+}};
+; PTX: prefetch.tensormap [%rd{{[0-9]+}}];
+entry:
+  %cast1 = addrspacecast ptr addrspace(4) @constant_tensormap to ptr
+  %cast2 = addrspacecast ptr %cast1 to ptr addrspace(4)
+  %cast3 = addrspacecast ptr addrspace(4) %cast2 to ptr
+  call void @llvm.nvvm.prefetch.tensormap.p0(ptr %cast3)
   ret void
 }
 
 declare void @llvm.nvvm.prefetch.tensormap.p0(ptr)
 declare void @llvm.nvvm.prefetch.tensormap.p4(ptr addrspace(4))
 declare void @llvm.nvvm.prefetch.tensormap.p101(ptr addrspace(101))
-
-

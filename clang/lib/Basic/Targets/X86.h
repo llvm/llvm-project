@@ -50,6 +50,8 @@ static const unsigned X86AddrSpaceMap[] = {
     0,   // hlsl_private
     0,   // hlsl_device
     0,   // hlsl_input
+    0,   // hlsl_output
+    0,   // hlsl_push_constant
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -103,6 +105,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasAVX512BF16 = false;
   bool HasAVX512DQ = false;
   bool HasAVX512BITALG = false;
+  bool HasAVX512BMM = false;
   bool HasAVX512BW = false;
   bool HasAVX512VL = false;
   bool HasAVX512VBMI = false;
@@ -160,9 +163,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasAMXCOMPLEX = false;
   bool HasAMXFP8 = false;
   bool HasAMXMOVRS = false;
-  bool HasAMXTRANSPOSE = false;
   bool HasAMXAVX512 = false;
-  bool HasAMXTF32 = false;
   bool HasSERIALIZE = false;
   bool HasTSXLDTRK = false;
   bool HasUSERMSR = false;
@@ -177,6 +178,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasNF = false;
   bool HasCF = false;
   bool HasZU = false;
+  bool HasJMPABS = false;
   bool HasInlineAsmUseGPR32 = false;
   bool HasBranchHint = false;
 
@@ -256,6 +258,16 @@ public:
       HasSizeMismatch = RegSize != 32;
       return true;
     }
+    if (RegName.ends_with("di")) {
+      if (getTargetOpts().FeatureMap.lookup("reserve-edi")) {
+        if (RegName == "edi") {
+          HasSizeMismatch = RegSize != 32;
+        } else if (RegName == "di") {
+          HasSizeMismatch = RegSize != 16;
+        }
+        return true;
+      }
+    }
 
     return false;
   }
@@ -325,10 +337,6 @@ public:
     return "";
   }
 
-  bool useFP16ConversionIntrinsics() const override {
-    return false;
-  }
-
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
@@ -379,7 +387,7 @@ public:
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
   void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     bool Only64Bit = getTriple().getArch() != llvm::Triple::x86;
     CPU = llvm::X86::parseArchX86(Name, Only64Bit);
     return CPU != llvm::X86::CK_None;
@@ -457,12 +465,7 @@ public:
     LongDoubleWidth = 96;
     LongDoubleAlign = 32;
     SuitableAlign = 128;
-    resetDataLayout(Triple.isOSBinFormatMachO()
-                        ? "e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:"
-                          "128-f64:32:64-f80:32-n8:16:32-S128"
-                        : "e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:"
-                          "128-f64:32:64-f80:32-n8:16:32-S128",
-                    Triple.isOSBinFormatMachO() ? "_" : "");
+    resetDataLayout();
     SizeType = UnsignedInt;
     PtrDiffType = SignedInt;
     IntPtrType = SignedInt;
@@ -566,9 +569,7 @@ public:
       UseSignedCharForObjCBool = false;
     SizeType = UnsignedLong;
     IntPtrType = SignedLong;
-    resetDataLayout("e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:128-"
-                    "f64:32:64-f80:128-n8:16:32-S128",
-                    "_");
+    resetDataLayout();
     HasAlignMac68kSupport = true;
   }
 
@@ -598,7 +599,9 @@ public:
     Layout += "-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-";
     Layout += IsMSVC ? "f80:128" : "f80:32";
     Layout += "-n8:16:32-a:0:32-S32";
-    resetDataLayout(Layout, IsWinCOFF ? "_" : "");
+    if (IsWinCOFF)
+      UserLabelPrefix = "_";
+    resetDataLayout();
   }
 };
 
@@ -646,10 +649,10 @@ public:
       : X86_32TargetInfo(Triple, Opts) {
     this->WCharType = TargetInfo::UnsignedShort;
     this->WIntType = TargetInfo::UnsignedInt;
+    this->UseMicrosoftManglingForC = true;
     DoubleAlign = LongLongAlign = 64;
-    resetDataLayout("e-m:x-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-"
-                    "i128:128-f80:32-n8:16:32-a:0:32-S32",
-                    "_");
+    UserLabelPrefix = "_";
+    resetDataLayout();
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -687,8 +690,7 @@ public:
     LongDoubleWidth = 64;
     DefaultAlignForAttributeAligned = 32;
     LongDoubleFormat = &llvm::APFloat::IEEEdouble();
-    resetDataLayout("e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:32-"
-                    "f64:32-f128:32-n8:16:32-a:0:32-S32");
+    resetDataLayout();
     WIntType = UnsignedInt;
   }
 
@@ -731,8 +733,6 @@ public:
   X86_64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : X86TargetInfo(Triple, Opts) {
     const bool IsX32 = getTriple().isX32();
-    bool IsWinCOFF =
-        getTriple().isOSWindows() && getTriple().isOSBinFormatCOFF();
     LongWidth = LongAlign = PointerWidth = PointerAlign = IsX32 ? 32 : 64;
     LongDoubleWidth = 128;
     LongDoubleAlign = 128;
@@ -746,13 +746,7 @@ public:
     Int64Type = IsX32 ? SignedLongLong : SignedLong;
     RegParmMax = 6;
 
-    // Pointers are 32-bit in x32.
-    resetDataLayout(IsX32 ? "e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-"
-                            "i64:64-i128:128-f80:128-n8:16:32:64-S128"
-                    : IsWinCOFF ? "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:"
-                                  "64-i128:128-f80:128-n8:16:32:64-S128"
-                                : "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:"
-                                  "64-i128:128-f80:128-n8:16:32:64-S128");
+    resetDataLayout();
 
     // Use fpret only for long double.
     RealTypeUsesObjCFPRetMask = (unsigned)FloatModeKind::LongDouble;
@@ -821,6 +815,30 @@ public:
       return true;
     }
 
+    // -ffixed-r8 through -ffixed-r31 are lowered to reserve-r8 through
+    // reserve-r31 target features, so canonicalize subregister spellings
+    // like r15d/r15w/r15b back to the corresponding 64-bit register first.
+    StringRef Reg64 = RegName;
+    if (Reg64.back() == 'd' || Reg64.back() == 'w' || Reg64.back() == 'b') {
+      Reg64 = Reg64.substr(0, Reg64.size() - 1);
+    }
+    if (getTargetOpts().FeatureMap.lookup(("reserve-" + Reg64).str())) {
+      switch (RegName.back()) {
+      case 'd':
+        HasSizeMismatch = RegSize != 32;
+        break;
+      case 'w':
+        HasSizeMismatch = RegSize != 16;
+        break;
+      case 'b':
+        HasSizeMismatch = RegSize != 8;
+        break;
+      default:
+        HasSizeMismatch = RegSize != 64;
+      }
+      return true;
+    }
+
     // Check if the register is a 32-bit register the backend can handle.
     return X86TargetInfo::validateGlobalRegisterVariable(RegName, RegSize,
                                                          HasSizeMismatch);
@@ -870,8 +888,7 @@ public:
     IntPtrType = SignedLongLong;
     WCharType = UnsignedShort;
     WIntType = UnsignedShort;
-    this->resetDataLayout("e-m:w-p270:32:32-p271:32:32-p272:64:64-"
-                          "i64:64-i128:128-f80:128-n8:16:32:64-S128");
+    this->resetDataLayout();
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
@@ -947,6 +964,8 @@ public:
       : WindowsX86_64TargetInfo(Triple, Opts) {
     LongDoubleWidth = LongDoubleAlign = 64;
     LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+    LargeArrayMinWidth = 0;
+    LargeArrayAlign = 0;
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -960,6 +979,9 @@ public:
   getCallingConvKind(bool ClangABICompat4) const override {
     return CCK_MicrosoftWin64;
   }
+
+  unsigned getMinGlobalAlign(uint64_t TypeSize,
+                             bool HasNonWeakDef) const override;
 };
 
 // x86-64 MinGW target
@@ -983,6 +1005,7 @@ public:
       : X86_64TargetInfo(Triple, Opts) {
     this->WCharType = TargetInfo::UnsignedShort;
     this->WIntType = TargetInfo::UnsignedInt;
+    this->UseMicrosoftManglingForC = true;
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -995,6 +1018,29 @@ public:
     DefineStd(Builder, "unix", Opts);
     if (Opts.CPlusPlus)
       Builder.defineMacro("_GNU_SOURCE");
+  }
+
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
+    switch (CC) {
+    case CC_X86StdCall:
+    case CC_X86ThisCall:
+    case CC_X86FastCall:
+      return CCCR_Ignore;
+    case CC_C:
+    case CC_X86VectorCall:
+    case CC_IntelOclBicc:
+    case CC_PreserveMost:
+    case CC_PreserveAll:
+    case CC_PreserveNone:
+    case CC_X86_64SysV:
+    case CC_Swift:
+    case CC_SwiftAsync:
+    case CC_X86RegCall:
+    case CC_DeviceKernel:
+      return CCCR_OK;
+    default:
+      return CCCR_Warning;
+    }
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
@@ -1012,9 +1058,7 @@ public:
     llvm::Triple T = llvm::Triple(Triple);
     if (T.isiOS())
       UseSignedCharForObjCBool = false;
-    resetDataLayout("e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-"
-                    "f80:128-n8:16:32:64-S128",
-                    "_");
+    resetDataLayout();
   }
 
   bool handleTargetFeatures(std::vector<std::string> &Features,

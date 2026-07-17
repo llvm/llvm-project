@@ -3,9 +3,10 @@
 cert-flp30-c
 ============
 
-This check flags ``for`` loops where the induction expression has a
-floating-point type.
+The `cert-flp30-c` check is an alias, please see
+:doc:`bugprone-float-loop-counter <../bugprone/float-loop-counter>`
+for more information
 
 This check corresponds to the CERT C Coding Standard rule
 `FLP30-C. Do not use floating-point variables as loop counters
-<https://www.securecoding.cert.org/confluence/display/c/FLP30-C.+Do+not+use+floating-point+variables+as+loop+counters>`_.
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/floating-point-flp/flp30-c/>`_.

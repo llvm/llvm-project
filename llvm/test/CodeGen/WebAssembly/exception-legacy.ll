@@ -429,16 +429,14 @@ unreachable:                                      ; preds = %rethrow
 ; CHECK:   try
 ; CHECK:     try
 ; CHECK:       call  __cxa_throw
-; CHECK:       catch
+; CHECK:     catch
 ; CHECK:       call  __cxa_end_catch
 ; CHECK:       try
 ; CHECK:         try
 ; Note that this rethrow targets the top-level catch_all
 ; CHECK:           rethrow   4
 ; CHECK:         catch
-; CHECK:           try
-; CHECK:             call  __cxa_end_catch
-; CHECK:           delegate    5
+; CHECK:           call  __cxa_end_catch
 ; CHECK:           return
 ; CHECK:         end_try
 ; CHECK:       delegate    3
@@ -573,4 +571,5 @@ attributes #0 = { nounwind }
 attributes #1 = { noreturn }
 attributes #2 = { noreturn nounwind }
 
-; CHECK: __cpp_exception:
+;; The exception tag should not be defined locally
+; CHECK-NOT: __cpp_exception:

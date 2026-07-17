@@ -173,17 +173,17 @@ define <4 x i32> @sign_4xi32_multi_use(<4 x i32> %a) {
 ; CHECK-LABEL: sign_4xi32_multi_use:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    cmlt v1.4s, v0.4s, #0
 ; CHECK-NEXT:    cmge v0.4s, v0.4s, #0
 ; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    orr v1.4s, #1
-; CHECK-NEXT:    str q1, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    str q1, [sp] // 16-byte Spill
 ; CHECK-NEXT:    bl use_4xi1
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
+; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   %c = icmp sgt <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>

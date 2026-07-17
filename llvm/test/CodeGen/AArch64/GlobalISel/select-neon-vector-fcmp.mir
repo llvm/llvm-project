@@ -15,10 +15,10 @@ body:             |
     ; CHECK-NEXT: %fcmp:fpr128 = nofpexcept FCMEQv2f64 %lhs, %rhs, implicit $fpcr
     ; CHECK-NEXT: $q0 = COPY %fcmp
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %lhs:fpr(<2 x s64>) = COPY $q0
-    %rhs:fpr(<2 x s64>) = COPY $q1
-    %fcmp:fpr(<2 x s64>) = G_FCMEQ %lhs, %rhs(<2 x s64>)
-    $q0 = COPY %fcmp(<2 x s64>)
+    %lhs:fpr(<2 x f64>) = COPY $q0
+    %rhs:fpr(<2 x f64>) = COPY $q1
+    %fcmp:fpr(<2 x i64>) = G_FCMEQ %lhs, %rhs(<2 x f64>)
+    $q0 = COPY %fcmp(<2 x i64>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -35,10 +35,10 @@ body:             |
     ; CHECK-NEXT: %fcmp:fpr128 = nofpexcept FCMGEv2f64 %lhs, %rhs, implicit $fpcr
     ; CHECK-NEXT: $q0 = COPY %fcmp
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %lhs:fpr(<2 x s64>) = COPY $q0
-    %rhs:fpr(<2 x s64>) = COPY $q1
-    %fcmp:fpr(<2 x s64>) = G_FCMGE %lhs, %rhs(<2 x s64>)
-    $q0 = COPY %fcmp(<2 x s64>)
+    %lhs:fpr(<2 x f64>) = COPY $q0
+    %rhs:fpr(<2 x f64>) = COPY $q1
+    %fcmp:fpr(<2 x i64>) = G_FCMGE %lhs, %rhs(<2 x f64>)
+    $q0 = COPY %fcmp(<2 x i64>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -55,10 +55,10 @@ body:             |
     ; CHECK-NEXT: %fcmp:fpr128 = nofpexcept FCMGTv2f64 %lhs, %rhs, implicit $fpcr
     ; CHECK-NEXT: $q0 = COPY %fcmp
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %lhs:fpr(<2 x s64>) = COPY $q0
-    %rhs:fpr(<2 x s64>) = COPY $q1
-    %fcmp:fpr(<2 x s64>) = G_FCMGT %lhs, %rhs(<2 x s64>)
-    $q0 = COPY %fcmp(<2 x s64>)
+    %lhs:fpr(<2 x f64>) = COPY $q0
+    %rhs:fpr(<2 x f64>) = COPY $q1
+    %fcmp:fpr(<2 x i64>) = G_FCMGT %lhs, %rhs(<2 x f64>)
+    $q0 = COPY %fcmp(<2 x i64>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -74,11 +74,11 @@ body:             |
     ; CHECK-NEXT: %fcmp:fpr128 = nofpexcept FCMEQv2i64rz %lhs, implicit $fpcr
     ; CHECK-NEXT: $q0 = COPY %fcmp
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %lhs:fpr(<2 x s64>) = COPY $q0
-    %zero:gpr(s64) = G_CONSTANT i64 0
-    %zero_vec:fpr(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
-    %fcmp:fpr(<2 x s64>) = G_FCMEQ %lhs, %zero_vec(<2 x s64>)
-    $q0 = COPY %fcmp(<2 x s64>)
+    %lhs:fpr(<2 x f64>) = COPY $q0
+    %zero:gpr(f64) = G_CONSTANT i64 0
+    %zero_vec:fpr(<2 x f64>) = G_BUILD_VECTOR %zero(f64), %zero(f64)
+    %fcmp:fpr(<2 x i64>) = G_FCMEQ %lhs, %zero_vec(<2 x f64>)
+    $q0 = COPY %fcmp(<2 x i64>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -94,11 +94,11 @@ body:             |
     ; CHECK-NEXT: %fcmp:fpr128 = nofpexcept FCMGEv2i64rz %lhs, implicit $fpcr
     ; CHECK-NEXT: $q0 = COPY %fcmp
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %lhs:fpr(<2 x s64>) = COPY $q0
-    %zero:gpr(s64) = G_CONSTANT i64 0
-    %zero_vec:fpr(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
-    %fcmp:fpr(<2 x s64>) = G_FCMGE %lhs, %zero_vec(<2 x s64>)
-    $q0 = COPY %fcmp(<2 x s64>)
+    %lhs:fpr(<2 x f64>) = COPY $q0
+    %zero:gpr(f64) = G_CONSTANT i64 0
+    %zero_vec:fpr(<2 x f64>) = G_BUILD_VECTOR %zero(f64), %zero(f64)
+    %fcmp:fpr(<2 x i64>) = G_FCMGE %lhs, %zero_vec(<2 x f64>)
+    $q0 = COPY %fcmp(<2 x i64>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -114,11 +114,11 @@ body:             |
     ; CHECK-NEXT: %fcmp:fpr128 = nofpexcept FCMGTv2i64rz %lhs, implicit $fpcr
     ; CHECK-NEXT: $q0 = COPY %fcmp
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %lhs:fpr(<2 x s64>) = COPY $q0
-    %zero:gpr(s64) = G_CONSTANT i64 0
-    %zero_vec:fpr(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
-    %fcmp:fpr(<2 x s64>) = G_FCMGT %lhs, %zero_vec(<2 x s64>)
-    $q0 = COPY %fcmp(<2 x s64>)
+    %lhs:fpr(<2 x f64>) = COPY $q0
+    %zero:gpr(f64) = G_CONSTANT i64 0
+    %zero_vec:fpr(<2 x f64>) = G_BUILD_VECTOR %zero(f64), %zero(f64)
+    %fcmp:fpr(<2 x i64>) = G_FCMGT %lhs, %zero_vec(<2 x f64>)
+    $q0 = COPY %fcmp(<2 x i64>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -134,11 +134,11 @@ body:             |
     ; CHECK-NEXT: %fcmp:fpr128 = nofpexcept FCMLEv2i64rz %lhs, implicit $fpcr
     ; CHECK-NEXT: $q0 = COPY %fcmp
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %lhs:fpr(<2 x s64>) = COPY $q0
-    %zero:gpr(s64) = G_CONSTANT i64 0
-    %zero_vec:fpr(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
-    %fcmp:fpr(<2 x s64>) = G_FCMGE %zero_vec(<2 x s64>), %lhs
-    $q0 = COPY %fcmp(<2 x s64>)
+    %lhs:fpr(<2 x f64>) = COPY $q0
+    %zero:gpr(f64) = G_CONSTANT i64 0
+    %zero_vec:fpr(<2 x f64>) = G_BUILD_VECTOR %zero(f64), %zero(f64)
+    %fcmp:fpr(<2 x i64>) = G_FCMGE %zero_vec(<2 x f64>), %lhs
+    $q0 = COPY %fcmp(<2 x i64>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -154,9 +154,9 @@ body:             |
     ; CHECK-NEXT: %fcmp:fpr128 = nofpexcept FCMLTv2i64rz %lhs, implicit $fpcr
     ; CHECK-NEXT: $q0 = COPY %fcmp
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %lhs:fpr(<2 x s64>) = COPY $q0
-    %zero:gpr(s64) = G_CONSTANT i64 0
-    %zero_vec:fpr(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
-    %fcmp:fpr(<2 x s64>) = G_FCMGT %zero_vec(<2 x s64>), %lhs
-    $q0 = COPY %fcmp(<2 x s64>)
+    %lhs:fpr(<2 x f64>) = COPY $q0
+    %zero:gpr(f64) = G_CONSTANT i64 0
+    %zero_vec:fpr(<2 x f64>) = G_BUILD_VECTOR %zero(f64), %zero(f64)
+    %fcmp:fpr(<2 x i64>) = G_FCMGT %zero_vec(<2 x f64>), %lhs
+    $q0 = COPY %fcmp(<2 x i64>)
     RET_ReallyLR implicit $q0

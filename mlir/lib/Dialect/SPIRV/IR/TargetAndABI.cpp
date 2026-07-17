@@ -165,6 +165,12 @@ spirv::getDefaultResourceLimits(MLIRContext *context) {
       /*cooperative_matrix_properties_nv=*/ArrayAttr{});
 }
 
+StringRef spirv::getLoopControlAttrName() { return "spirv.loop_control"; }
+
+StringRef spirv::getSelectionControlAttrName() {
+  return "spirv.selection_control";
+}
+
 StringRef spirv::getTargetEnvAttrName() { return "spirv.target_env"; }
 
 spirv::TargetEnvAttr spirv::getDefaultTargetEnv(MLIRContext *context) {

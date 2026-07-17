@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx90a < %s | FileCheck -check-prefixes=CHECK,GFX90A %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx908 < %s | FileCheck -check-prefixes=CHECK,GFX908 %s
+; RUN: llc -mtriple=amdgpu9.0a--amdpal < %s | FileCheck -check-prefixes=CHECK,GFX90A %s
+; RUN: llc -mtriple=amdgpu9.08--amdpal < %s | FileCheck -check-prefixes=CHECK,GFX908 %s
 
 ; COM: Adapted from agpr-register-count.ll
 ; COM: GFX900 and below should not have .agpr_count present in the metadata
@@ -60,8 +60,8 @@ bb:
 declare void @undef_func()
 
 ; CHECK:      .type          kernel_call_undef_func
-; CHECK:      .set kernel_call_undef_func.num_agpr, max(0, amdgpu.max_num_agpr)
-; CHECK:      NumAgprs: kernel_call_undef_func.num_agpr
+; CHECK:      .set .Lkernel_call_undef_func.num_agpr, max(0, amdgpu.max_num_agpr)
+; CHECK:      NumAgprs: .Lkernel_call_undef_func.num_agpr
 ; CHECK:      .set amdgpu.max_num_agpr, 32
 define amdgpu_kernel void @kernel_call_undef_func() #0 {
 bb:

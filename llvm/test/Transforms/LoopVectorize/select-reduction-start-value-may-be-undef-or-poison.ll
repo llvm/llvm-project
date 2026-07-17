@@ -6,7 +6,7 @@ define i64 @pr62565_incoming_value_known_undef(i64 %a, ptr %src) {
 ; CHECK-LABEL: define i64 @pr62565_incoming_value_known_undef
 ; CHECK-SAME: (i64 [[A:%.*]], ptr [[SRC:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -23,30 +23,17 @@ define i64 @pr62565_incoming_value_known_undef(i64 %a, ptr %src) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> [[TMP2]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = freeze i1 [[TMP4]]
-; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP5]], i64 [[A]], i64 undef
+; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP5]], i64 [[A]], i64 poison
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 1, [[SCALAR_PH]] ], [ [[ADD:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ undef, [[SCALAR_PH]] ], [ [[SELECT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[IV]]
-; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP]], align 4
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[L]], 1
-; CHECK-NEXT:    [[SELECT]] = select i1 [[C]], i64 [[RED]], i64 [[A]]
-; CHECK-NEXT:    [[ADD]] = add nuw i32 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV]], 32
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[SELECT]], [[LOOP]] ], [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i64 [[PHI]]
+; CHECK-NEXT:    ret i64 [[RDX_SELECT]]
 ;
 entry:
   br label %loop
 
 loop:
   %iv = phi i32 [ 1, %entry ], [ %add, %loop ]
-  %red = phi i64 [ undef, %entry ], [ %select, %loop ]
+  %red = phi i64 [ poison, %entry ], [ %select, %loop ]
   %gep = getelementptr inbounds i32, ptr %src, i32 %iv
   %l = load i32, ptr %gep
   %c = icmp eq i32 %l, 1
@@ -64,7 +51,7 @@ define i64 @pr62565_incoming_value_known_poison(i64 %a, ptr %src) {
 ; CHECK-LABEL: define i64 @pr62565_incoming_value_known_poison
 ; CHECK-SAME: (i64 [[A:%.*]], ptr [[SRC:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -77,27 +64,14 @@ define i64 @pr62565_incoming_value_known_poison(i64 %a, ptr %src) {
 ; CHECK-NEXT:    [[TMP2]] = or <2 x i1> [[VEC_PHI]], [[TMP1]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 32
-; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> [[TMP2]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = freeze i1 [[TMP4]]
 ; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP5]], i64 [[A]], i64 poison
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 1, [[SCALAR_PH]] ], [ [[ADD:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ poison, [[SCALAR_PH]] ], [ [[SELECT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[IV]]
-; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP]], align 4
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[L]], 1
-; CHECK-NEXT:    [[SELECT]] = select i1 [[C]], i64 [[RED]], i64 [[A]]
-; CHECK-NEXT:    [[ADD]] = add nuw i32 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV]], 32
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[SELECT]], [[LOOP]] ], [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i64 [[PHI]]
+; CHECK-NEXT:    ret i64 [[RDX_SELECT]]
 ;
 entry:
   br label %loop
@@ -122,7 +96,7 @@ define i64 @pr62565_incoming_value_may_be_poison(i64 %a, ptr %src, i64 %start) {
 ; CHECK-LABEL: define i64 @pr62565_incoming_value_may_be_poison
 ; CHECK-SAME: (i64 [[A:%.*]], ptr [[SRC:%.*]], i64 [[START:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -135,27 +109,14 @@ define i64 @pr62565_incoming_value_may_be_poison(i64 %a, ptr %src, i64 %start) {
 ; CHECK-NEXT:    [[TMP2]] = or <2 x i1> [[VEC_PHI]], [[TMP1]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 32
-; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> [[TMP2]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = freeze i1 [[TMP4]]
 ; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP5]], i64 [[A]], i64 [[START]]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 1, [[SCALAR_PH]] ], [ [[ADD:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ [[START]], [[SCALAR_PH]] ], [ [[SELECT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[IV]]
-; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP]], align 4
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[L]], 1
-; CHECK-NEXT:    [[SELECT]] = select i1 [[C]], i64 [[RED]], i64 [[A]]
-; CHECK-NEXT:    [[ADD]] = add nuw i32 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV]], 32
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[SELECT]], [[LOOP]] ], [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i64 [[PHI]]
+; CHECK-NEXT:    ret i64 [[RDX_SELECT]]
 ;
 entry:
   br label %loop

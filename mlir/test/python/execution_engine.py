@@ -1,13 +1,14 @@
 # RUN: env MLIR_RUNNER_UTILS=%mlir_runner_utils MLIR_C_RUNNER_UTILS=%mlir_c_runner_utils %PYTHON %s 2>&1 | FileCheck %s
 # REQUIRES: host-supports-jit
 import gc, sys, os, tempfile
+from textwrap import dedent
 from mlir.ir import *
 from mlir.passmanager import *
 from mlir.execution_engine import *
 from mlir.runtime import *
 
 try:
-    from ml_dtypes import bfloat16, float8_e5m2
+    from ml_dtypes import bfloat16, float8_e5m2, float8_e3m4, float8_e4m3
 
     HAS_ML_DTYPES = True
 except ModuleNotFoundError:
@@ -20,6 +21,7 @@ MLIR_RUNNER_UTILS = os.getenv(
 MLIR_C_RUNNER_UTILS = os.getenv(
     "MLIR_C_RUNNER_UTILS", "../../../../lib/libmlir_c_runner_utils.so"
 )
+
 
 # Log everything to stderr and flush so that we have a unified stream to match
 # errors/info emitted by MLIR to stderr.
@@ -69,6 +71,7 @@ def testInvalidModule():
     func.func @foo() { return }
     """
         )
+        # CHECK: error: cannot be converted to LLVM IR: missing `LLVMTranslationDialectInterface` registration for dialect for op: func.func
         # CHECK: Got RuntimeError:  Failure while creating the ExecutionEngine.
         try:
             execution_engine = ExecutionEngine(module)
@@ -336,6 +339,7 @@ func.func private @some_callback_into_python(memref<*xf32>) attributes {llvm.emi
             "callback_memref",
             ctypes.pointer(ctypes.pointer(get_ranked_memref_descriptor(inp_arr))),
         )
+
 
 run(testUnrankedMemRefWithOffsetCallback)
 
@@ -619,6 +623,90 @@ else:
     log("TEST: testF8E5M2Memref")
 
 
+# Test f8E3M4 memrefs
+# CHECK-LABEL: TEST: testF8E3M4Memref
+def testF8E3M4Memref():
+    with Context():
+        module = Module.parse(
+            """
+    module  {
+      func.func @main(%arg0: memref<1xf8E3M4>,
+                      %arg1: memref<1xf8E3M4>) attributes { llvm.emit_c_interface } {
+        %0 = arith.constant 0 : index
+        %1 = memref.load %arg0[%0] : memref<1xf8E3M4>
+        memref.store %1, %arg1[%0] : memref<1xf8E3M4>
+        return
+      }
+    } """
+        )
+
+        arg1 = np.array([0.5]).astype(float8_e3m4)
+        arg2 = np.array([0.0]).astype(float8_e3m4)
+
+        arg1_memref_ptr = ctypes.pointer(
+            ctypes.pointer(get_ranked_memref_descriptor(arg1))
+        )
+        arg2_memref_ptr = ctypes.pointer(
+            ctypes.pointer(get_ranked_memref_descriptor(arg2))
+        )
+
+        execution_engine = ExecutionEngine(lowerToLLVM(module))
+        execution_engine.invoke("main", arg1_memref_ptr, arg2_memref_ptr)
+
+        # test to-numpy utility
+        x = ranked_memref_to_numpy(arg2_memref_ptr[0])
+        assert len(x) == 1
+        assert x[0] == 0.5
+
+
+if HAS_ML_DTYPES:
+    run(testF8E3M4Memref)
+else:
+    log("TEST: testF8E3M4Memref")
+
+
+# Test f8E4M3 memrefs
+# CHECK-LABEL: TEST: testF8E4M3Memref
+def testF8E4M3Memref():
+    with Context():
+        module = Module.parse(
+            """
+    module  {
+      func.func @main(%arg0: memref<1xf8E4M3>,
+                      %arg1: memref<1xf8E4M3>) attributes { llvm.emit_c_interface } {
+        %0 = arith.constant 0 : index
+        %1 = memref.load %arg0[%0] : memref<1xf8E4M3>
+        memref.store %1, %arg1[%0] : memref<1xf8E4M3>
+        return
+      }
+    } """
+        )
+
+        arg1 = np.array([0.5]).astype(float8_e4m3)
+        arg2 = np.array([0.0]).astype(float8_e4m3)
+
+        arg1_memref_ptr = ctypes.pointer(
+            ctypes.pointer(get_ranked_memref_descriptor(arg1))
+        )
+        arg2_memref_ptr = ctypes.pointer(
+            ctypes.pointer(get_ranked_memref_descriptor(arg2))
+        )
+
+        execution_engine = ExecutionEngine(lowerToLLVM(module))
+        execution_engine.invoke("main", arg1_memref_ptr, arg2_memref_ptr)
+
+        # test to-numpy utility
+        x = ranked_memref_to_numpy(arg2_memref_ptr[0])
+        assert len(x) == 1
+        assert x[0] == 0.5
+
+
+if HAS_ML_DTYPES:
+    run(testF8E4M3Memref)
+else:
+    log("TEST: testF8E4M3Memref")
+
+
 #  Test addition of two 2d_memref
 # CHECK-LABEL: TEST: testDynamicMemrefAdd2D
 def testDynamicMemrefAdd2D():
@@ -785,15 +873,26 @@ def testDumpToObjectFile():
     try:
         with Context():
             module = Module.parse(
-                """
-        module {
-        func.func @main() attributes { llvm.emit_c_interface } {
-          return
-        }
-      }"""
+                dedent(
+                    """
+                    func.func private @printF32(f32)
+                    func.func @main(%arg0: f32) attributes { llvm.emit_c_interface } {
+                      call @printF32(%arg0) : (f32) -> ()
+                      return
+                    }
+                    """
+                )
             )
 
-            execution_engine = ExecutionEngine(lowerToLLVM(module), opt_level=3)
+            execution_engine = ExecutionEngine(
+                lowerToLLVM(module),
+                opt_level=3,
+                # Loading MLIR_C_RUNNER_UTILS is necessary even though we don't actually run the code (i.e., call printF32)
+                # because RTDyldObjectLinkingLayer::emit will try to resolve symbols before dumping
+                # (see the jitLinkForORC call at the bottom there).
+                shared_libs=[MLIR_C_RUNNER_UTILS],
+                enable_pic=True,
+            )
 
             # CHECK: Object file exists: True
             print(f"Object file exists: {os.path.exists(object_path)}")

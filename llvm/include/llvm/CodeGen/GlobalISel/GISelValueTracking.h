@@ -37,8 +37,6 @@ class LLVM_ABI GISelValueTracking : public GISelChangeObserver {
   const TargetLowering &TL;
   const DataLayout &DL;
   unsigned MaxDepth;
-  /// Cache maintained during a computeKnownBits request.
-  SmallDenseMap<Register, KnownBits, 16> ComputeKnownBitsCache;
 
   void computeKnownBitsMin(Register Src0, Register Src1, KnownBits &Known,
                            const APInt &DemandedElts, unsigned Depth = 0);
@@ -60,15 +58,14 @@ class LLVM_ABI GISelValueTracking : public GISelChangeObserver {
 
 public:
   GISelValueTracking(MachineFunction &MF, unsigned MaxDepth = 6);
-  virtual ~GISelValueTracking() = default;
+  ~GISelValueTracking() override = default;
 
   const MachineFunction &getMachineFunction() const { return MF; }
 
   const DataLayout &getDataLayout() const { return DL; }
 
-  virtual void computeKnownBitsImpl(Register R, KnownBits &Known,
-                                    const APInt &DemandedElts,
-                                    unsigned Depth = 0);
+  void computeKnownBitsImpl(Register R, KnownBits &Known,
+                            const APInt &DemandedElts, unsigned Depth = 0);
 
   unsigned computeNumSignBits(Register R, const APInt &DemandedElts,
                               unsigned Depth = 0);
@@ -145,6 +142,14 @@ public:
                                    FPClassTest InterestedClasses,
                                    unsigned Depth);
 
+  /// Returns true if \p Val can be assumed to never be a NaN. If \p SNaN is
+  /// true, this returns whether \p Val can be assumed to never be a signaling
+  /// NaN.
+  bool isKnownNeverNaN(Register Val, bool SNaN = false);
+
+  /// Returns true if \p Val can be assumed to never be a signaling NaN.
+  bool isKnownNeverSNaN(Register Val) { return isKnownNeverNaN(Val, true); }
+
   // Observer API. No-op for non-caching implementation.
   void erasingInstr(MachineInstr &MI) override {}
   void createdInstr(MachineInstr &MI) override {}
@@ -168,10 +173,7 @@ class LLVM_ABI GISelValueTrackingAnalysisLegacy : public MachineFunctionPass {
 
 public:
   static char ID;
-  GISelValueTrackingAnalysisLegacy() : MachineFunctionPass(ID) {
-    initializeGISelValueTrackingAnalysisLegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
+  GISelValueTrackingAnalysisLegacy() : MachineFunctionPass(ID) {}
   GISelValueTracking &get(MachineFunction &MF);
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -191,7 +193,7 @@ public:
 };
 
 class GISelValueTrackingPrinterPass
-    : public PassInfoMixin<GISelValueTrackingPrinterPass> {
+    : public RequiredPassInfoMixin<GISelValueTrackingPrinterPass> {
   raw_ostream &OS;
 
 public:

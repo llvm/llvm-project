@@ -123,7 +123,7 @@ void mlir::arith::populateEmulateUnsupportedFloatsLegality(
                                vector::OuterProductOp, vector::ScanOp>(
       [&](Operation *op) { return converter.isLegal(op); });
   target.addLegalOp<arith::BitcastOp, arith::ExtFOp, arith::TruncFOp,
-                    arith::ConstantOp, vector::SplatOp, vector::BroadcastOp>();
+                    arith::ConstantOp, arith::SelectOp, vector::BroadcastOp>();
 }
 
 void EmulateUnsupportedFloatsPass::runOnOperation() {
@@ -132,25 +132,23 @@ void EmulateUnsupportedFloatsPass::runOnOperation() {
   SmallVector<Type> sourceTypes;
   Type targetType;
 
-  std::optional<FloatType> maybeTargetType =
-      arith::parseFloatType(ctx, targetTypeStr);
-  if (!maybeTargetType) {
+  FloatType parsedTargetType = arith::parseFloatType(ctx, targetTypeStr);
+  if (!parsedTargetType) {
     emitError(UnknownLoc::get(ctx), "could not map target type '" +
                                         targetTypeStr +
                                         "' to a known floating-point type");
     return signalPassFailure();
   }
-  targetType = *maybeTargetType;
+  targetType = parsedTargetType;
   for (StringRef sourceTypeStr : sourceTypeStrs) {
-    std::optional<FloatType> maybeSourceType =
-        arith::parseFloatType(ctx, sourceTypeStr);
-    if (!maybeSourceType) {
+    FloatType sourceType = arith::parseFloatType(ctx, sourceTypeStr);
+    if (!sourceType) {
       emitError(UnknownLoc::get(ctx), "could not map source type '" +
                                           sourceTypeStr +
                                           "' to a known floating-point type");
       return signalPassFailure();
     }
-    sourceTypes.push_back(*maybeSourceType);
+    sourceTypes.push_back(sourceType);
   }
   if (sourceTypes.empty())
     (void)emitOptionalWarning(

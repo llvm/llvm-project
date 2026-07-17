@@ -12,6 +12,18 @@ func.func @unary_resize_nearest_fp32(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x1x
 
 // -----
 
+// CHECK-LABEL: @unary_resize_nearest_bf16
+func.func @unary_resize_nearest_bf16(%arg0 : tensor<3x1x1x7xbf16>) -> tensor<3x1x1x7xbf16> {
+  %scale = tosa.const_shape { values = dense<[2, 2, 1, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %resize = tosa.resize %arg0, %scale, %offset, %border {mode = NEAREST_NEIGHBOR} : (tensor<3x1x1x7xbf16>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<3x1x1x7xbf16>
+  // CHECK: return %arg0
+  return %resize : tensor<3x1x1x7xbf16>
+}
+
+// -----
+
 // CHECK-LABEL: @unary_resize_nearest_fp16
 func.func @unary_resize_nearest_fp16(%arg0 : tensor<3x1x1x7xf16>) -> tensor<3x1x1x7xf16> {
   %scale = tosa.const_shape { values = dense<[2, 2, 1, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
@@ -36,6 +48,18 @@ func.func @unary_resize_bilinear_fp32(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x1
 
 // -----
 
+// CHECK-LABEL: @unary_resize_bilinear_bf16
+func.func @unary_resize_bilinear_bf16(%arg0 : tensor<3x1x1x7xbf16>) -> tensor<3x1x1x7xbf16> {
+  %scale = tosa.const_shape { values = dense<[2, 2, 1, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %resize = tosa.resize %arg0, %scale, %offset, %border {mode = BILINEAR} : (tensor<3x1x1x7xbf16>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<3x1x1x7xbf16>
+  // CHECK: return %arg0
+  return %resize : tensor<3x1x1x7xbf16>
+}
+
+// -----
+
 // CHECK-LABEL: @unary_resize_bilinear_fp16
 func.func @unary_resize_bilinear_fp16(%arg0 : tensor<3x1x1x7xf16>) -> tensor<3x1x1x7xf16> {
   %scale = tosa.const_shape { values = dense<[2, 2, 1, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
@@ -56,6 +80,26 @@ func.func @unary_resize_nearest_i8(%arg0 : tensor<3x1x1x7xi8>) -> tensor<3x1x1x7
   %resize = tosa.resize %arg0, %scale, %offset, %border {mode = NEAREST_NEIGHBOR} : (tensor<3x1x1x7xi8>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<3x1x1x7xi8>
   // CHECK: return %arg0
   return %resize : tensor<3x1x1x7xi8>
+}
+
+// -----
+
+// CHECK-LABEL: @broadcast_resize_nearest_bf16
+func.func @broadcast_resize_nearest_bf16(%arg0 : tensor<3x1x1x7xbf16>) -> tensor<3x1x5x7xbf16> {
+  // CHECK: %[[COLLAPSE:.+]] = tensor.collapse_shape %arg0
+  // CHECK-NEXT{literal}: [[0], [1, 2, 3]] : tensor<3x1x1x7xbf16> into tensor<3x7xbf16>
+  // CHECK: %[[EMPTY:.+]] = tensor.empty() : tensor<3x1x5x7xbf16>
+  // CHECK: %[[GENERIC:.+]] = linalg.generic
+  // CHECK-SAME: indexing_maps = [#map, #map1], iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
+  // CHECK-SAME: ins(%[[COLLAPSE]] : tensor<3x7xbf16>) outs(%[[EMPTY]] : tensor<3x1x5x7xbf16>)
+  // CHECK: ^bb0(%[[IN:.+]]: bf16, %[[OUT:.+]]: bf16):
+  // CHECK:   linalg.yield %[[IN]] : bf16
+  %scale = tosa.const_shape { values = dense<[2, 1, 3, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %resize = tosa.resize %arg0, %scale, %offset, %border {mode = NEAREST_NEIGHBOR} : (tensor<3x1x1x7xbf16>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<3x1x5x7xbf16>
+
+  return %resize : tensor<3x1x5x7xbf16>
 }
 
 // -----
@@ -174,13 +218,13 @@ func.func @resize_nearest_int(%arg0: tensor<1x15x13x1xi8>) -> () {
 
   // CHECK: %[[TEMP_Y:.*]] = arith.muli %[[Y]], %[[SCALE_Y_D]]
   // CHECK: %[[Y:.*]] = arith.addi %[[TEMP_Y]], %[[OFFSET_Y]]
-  // CHECK: %[[I_Y:.*]] = arith.divsi %[[Y]], %[[SCALE_Y_N]]
+  // CHECK: %[[I_Y:.*]] = arith.floordivsi %[[Y]], %[[SCALE_Y_N]]
   // CHECK: %[[TEMP_Y:.*]] = arith.muli %[[I_Y]], %[[SCALE_Y_N]]
   // CHECK: %[[D_Y:.*]] = arith.subi %[[Y]], %[[TEMP_Y]]
 
   // CHECK: %[[TEMP_X:.*]] = arith.muli %[[X]], %[[SCALE_X_D]]
   // CHECK: %[[X:.*]] = arith.addi %[[TEMP_X]], %[[OFFSET_X]]
-  // CHECK: %[[I_X:.*]] = arith.divsi %[[X]], %[[SCALE_X_N]]
+  // CHECK: %[[I_X:.*]] = arith.floordivsi %[[X]], %[[SCALE_X_N]]
   // CHECK: %[[TEMP_X:.*]] = arith.muli %[[I_X]], %[[SCALE_X_N]]
   // CHECK: %[[D_X:.*]] = arith.subi %[[X]], %[[TEMP_X]]
 
@@ -241,13 +285,13 @@ func.func @resize_bilinear_int(%arg0: tensor<1x19x20x1xi8>) {
 
   // CHECK: %[[TEMP_Y:.*]] = arith.muli %[[Y]], %[[SCALE_Y_D]]
   // CHECK: %[[Y:.*]] = arith.addi %[[TEMP_Y]], %[[OFFSET_Y]]
-  // CHECK: %[[I_Y:.*]] = arith.divsi %[[Y]], %[[SCALE_Y_N]]
+  // CHECK: %[[I_Y:.*]] = arith.floordivsi %[[Y]], %[[SCALE_Y_N]]
   // CHECK: %[[TEMP_Y:.*]] = arith.muli %[[I_Y]], %[[SCALE_Y_N]]
   // CHECK: %[[D_Y:.*]] = arith.subi %[[Y]], %[[TEMP_Y]]
 
   // CHECK: %[[TEMP_X:.*]] = arith.muli %[[X]], %[[SCALE_X_D]]
   // CHECK: %[[X:.*]] = arith.addi %[[TEMP_X]], %[[OFFSET_X]]
-  // CHECK: %[[I_X:.*]] = arith.divsi %[[X]], %[[SCALE_X_N]]
+  // CHECK: %[[I_X:.*]] = arith.floordivsi %[[X]], %[[SCALE_X_N]]
   // CHECK: %[[TEMP_X:.*]] = arith.muli %[[I_X]], %[[SCALE_X_N]]
   // CHECK: %[[D_X:.*]] = arith.subi %[[X]], %[[TEMP_X]]
 
@@ -345,7 +389,8 @@ func.func @resize_nearest_fp32(%input: tensor<1x50x48x1xf32>) -> () {
   // CHECK: %[[VAL_29:.*]] = arith.muli %[[Y]], %[[SCALE_Y_D]]
   // CHECK: %[[Y_TEMP:.*]] = arith.addi %[[VAL_29]], %[[OFFSET_Y]]
   // CHECK: %[[IY_TEMP:.*]] = arith.floordivsi %[[Y_TEMP]], %[[SCALE_Y_N]]
-  // CHECK: %[[RY:.*]] = arith.remsi %[[Y_TEMP]], %[[SCALE_Y_N]]
+  // CHECK: %[[SCALED_IY:.*]] = arith.muli %[[IY_TEMP]], %[[SCALE_Y_N]]
+  // CHECK: %[[RY:.*]] = arith.subi %[[Y_TEMP]], %[[SCALED_IY]]
   // CHECK: %[[RY_FP:.*]] = arith.sitofp %[[RY]]
   // CHECK: %[[SCALE_Y_N_FP:.*]] = arith.uitofp %[[SCALE_Y_N]]
   // CHECK: %[[D_Y:.*]] = arith.divf %[[RY_FP]], %[[SCALE_Y_N_FP]]
@@ -353,7 +398,8 @@ func.func @resize_nearest_fp32(%input: tensor<1x50x48x1xf32>) -> () {
   // CHECK: %[[VAL_30:.*]] = arith.muli %[[X]], %[[SCALE_X_D]]
   // CHECK: %[[X_TEMP:.*]] = arith.addi %[[VAL_30]], %[[OFFSET_X]]
   // CHECK: %[[IX_TEMP:.*]] = arith.floordivsi %[[X_TEMP]], %[[SCALE_X_N]]
-  // CHECK: %[[RX:.*]] = arith.remsi %[[X_TEMP]], %[[SCALE_X_N]]
+  // CHECK: %[[SCALED_IX:.*]] = arith.muli %[[IX_TEMP]], %[[SCALE_X_N]]
+  // CHECK: %[[RX:.*]] = arith.subi %[[X_TEMP]], %[[SCALED_IX]]
   // CHECK: %[[RX_FP:.*]] = arith.sitofp %[[RX]]
   // CHECK: %[[SCALE_X_N_FP:.*]] = arith.uitofp %[[SCALE_X_N]]
   // CHECK: %[[D_X:.*]] = arith.divf %[[RX_FP]], %[[SCALE_X_N_FP]]
@@ -412,7 +458,8 @@ func.func @resize_bilinear_fp(%input: tensor<1x23x24x1xf32>) -> () {
   // CHECK: %[[VAL_29:.*]] = arith.muli %[[Y]], %[[SCALE_Y_D]]
   // CHECK: %[[Y_TEMP:.*]] = arith.addi %[[VAL_29]], %[[OFFSET_Y]]
   // CHECK: %[[I_Y:.*]] = arith.floordivsi %[[Y_TEMP]], %[[SCALE_Y_N]]
-  // CHECK: %[[RY:.*]] = arith.remsi %[[Y_TEMP]], %[[SCALE_Y_N]]
+  // CHECK: %[[SCALED_IY:.*]] = arith.muli %[[I_Y]], %[[SCALE_Y_N]]
+  // CHECK: %[[RY:.*]] = arith.subi %[[Y_TEMP]], %[[SCALED_IY]]
   // CHECK: %[[RY_FP:.*]] = arith.sitofp %[[RY]]
   // CHECK: %[[SCALE_Y_N_FP:.*]] = arith.uitofp %[[SCALE_Y_N]]
   // CHECK: %[[D_Y:.*]] = arith.divf %[[RY_FP]], %[[SCALE_Y_N_FP]]
@@ -420,7 +467,8 @@ func.func @resize_bilinear_fp(%input: tensor<1x23x24x1xf32>) -> () {
   // CHECK: %[[VAL_30:.*]] = arith.muli %[[X]], %[[SCALE_X_D]]
   // CHECK: %[[X_TEMP:.*]] = arith.addi %[[VAL_30]], %[[OFFSET_X]]
   // CHECK: %[[I_X:.*]] = arith.floordivsi %[[X_TEMP]], %[[SCALE_X_N]]
-  // CHECK: %[[RX:.*]] = arith.remsi %[[X_TEMP]], %[[SCALE_X_N]]
+  // CHECK: %[[SCALED_IX:.*]] = arith.muli %[[I_X]], %[[SCALE_X_N]]
+  // CHECK: %[[RX:.*]] = arith.subi %[[X_TEMP]], %[[SCALED_IX]]
   // CHECK: %[[RX_FP:.*]] = arith.sitofp %[[RX]]
   // CHECK: %[[SCALE_X_N_FP:.*]] = arith.uitofp %[[SCALE_X_N]]
   // CHECK: %[[D_X:.*]] = arith.divf %[[RX_FP]], %[[SCALE_X_N_FP]]
@@ -557,3 +605,4 @@ func.func @skip_interpolate_bilinear_f32(%arg0 : tensor<3x1x2x7xf32>) -> tensor<
   // CHECK:  return %[[GENERIC]]
   return %resize : tensor<3x1x4x7xf32>
 }
+

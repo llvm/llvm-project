@@ -6,23 +6,13 @@
 #
 # ==-------------------------------------------------------------------------==#
 
-from functools import total_ordering
+from hdrgen.symbol import Symbol
 
 
-@total_ordering
-class Enumeration:
+class Enumeration(Symbol):
     def __init__(self, name, value):
-        self.name = name
+        super().__init__(name)
         self.value = value
-
-    def __eq__(self, other):
-        return self.name == other.name
-
-    def __lt__(self, other):
-        return self.name < other.name
-
-    def __hash__(self):
-        return self.name.__hash__()
 
     def __str__(self):
         if self.value != None:

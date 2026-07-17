@@ -26,7 +26,11 @@ public:
 
   lldb::addr_t GetPC() const { return m_pc; }
 
-  lldb::addr_t GetCallFrameAddress() const { return m_cfa; }
+  lldb::addr_t GetCallFrameAddressWithMetadata() const {
+    return m_cfa_with_metadata;
+  }
+
+  lldb::addr_t GetCallFrameAddressWithoutMetadata() const { return m_cfa; }
 
   SymbolContextScope *GetSymbolContextScope() const { return m_symbol_scope; }
 
@@ -46,8 +50,14 @@ public:
 
   void Dump(Stream *s);
 
+  /// Returns true if this StackID corresponds to a frame younger (i.e. higher
+  /// on the call stack) than `other`, and false otherwise (including when the
+  /// frames are not comparable, in some cases where this can be detected).
+  bool IsYoungerThan(const StackID &other) const;
+
 protected:
   friend class StackFrame;
+  friend class SyntheticStackFrameList;
 
   void SetPC(lldb::addr_t pc, Process *process);
   void SetCFA(lldb::addr_t cfa, Process *process);
@@ -62,6 +72,9 @@ protected:
   /// below)
   lldb::addr_t m_cfa = LLDB_INVALID_ADDRESS;
 
+  /// The cfa with metadata (i.e. prior to Process::FixAddress).
+  lldb::addr_t m_cfa_with_metadata = LLDB_INVALID_ADDRESS;
+
   /// If nullptr, there is no block or symbol for this frame. If not nullptr,
   /// this will either be the scope for the lexical block for the frame, or the
   /// scope for the symbol. Symbol context scopes are always be unique pointers
@@ -72,10 +85,6 @@ protected:
 
 bool operator==(const StackID &lhs, const StackID &rhs);
 bool operator!=(const StackID &lhs, const StackID &rhs);
-
-// frame_id_1 < frame_id_2 means "frame_id_1 is YOUNGER than frame_id_2"
-bool operator<(const StackID &lhs, const StackID &rhs);
-
 } // namespace lldb_private
 
 #endif // LLDB_TARGET_STACKID_H

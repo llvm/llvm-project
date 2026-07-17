@@ -897,31 +897,31 @@ define <4 x i64> @dont_fold_urem_i64(<4 x i64> %x) {
 ; P8LE-NEXT:    mfvsrd r6, v2
 ; P8LE-NEXT:    mfvsrd r8, v3
 ; P8LE-NEXT:    ori r3, r3, 51289
+; P8LE-NEXT:    mffprd r4, f0
 ; P8LE-NEXT:    ori r5, r5, 42889
-; P8LE-NEXT:    rldic r4, r3, 36, 1
-; P8LE-NEXT:    mffprd r3, f0
+; P8LE-NEXT:    rldic r3, r3, 36, 1
 ; P8LE-NEXT:    rldic r5, r5, 35, 1
 ; P8LE-NEXT:    rldicl r7, r6, 63, 1
-; P8LE-NEXT:    oris r4, r4, 45590
+; P8LE-NEXT:    oris r3, r3, 45590
 ; P8LE-NEXT:    oris r5, r5, 1603
-; P8LE-NEXT:    ori r4, r4, 17097
+; P8LE-NEXT:    ori r3, r3, 17097
 ; P8LE-NEXT:    ori r5, r5, 21445
-; P8LE-NEXT:    mulhdu r4, r3, r4
+; P8LE-NEXT:    mulhdu r3, r4, r3
 ; P8LE-NEXT:    mulhdu r5, r7, r5
-; P8LE-NEXT:    sub r7, r3, r4
+; P8LE-NEXT:    sub r7, r4, r3
 ; P8LE-NEXT:    rldicl r5, r5, 57, 7
 ; P8LE-NEXT:    rldicl r7, r7, 63, 1
 ; P8LE-NEXT:    mulli r5, r5, 654
-; P8LE-NEXT:    add r4, r7, r4
+; P8LE-NEXT:    add r3, r7, r3
 ; P8LE-NEXT:    lis r7, -16037
 ; P8LE-NEXT:    ori r7, r7, 28749
-; P8LE-NEXT:    rldicl r4, r4, 60, 4
+; P8LE-NEXT:    rldicl r3, r3, 60, 4
 ; P8LE-NEXT:    sub r5, r6, r5
 ; P8LE-NEXT:    rldic r7, r7, 32, 0
-; P8LE-NEXT:    mulli r4, r4, 23
+; P8LE-NEXT:    mulli r3, r3, 23
 ; P8LE-NEXT:    oris r7, r7, 52170
 ; P8LE-NEXT:    ori r7, r7, 12109
-; P8LE-NEXT:    sub r3, r3, r4
+; P8LE-NEXT:    sub r3, r4, r3
 ; P8LE-NEXT:    mulhdu r7, r8, r7
 ; P8LE-NEXT:    mtfprd f1, r3
 ; P8LE-NEXT:    li r3, 0

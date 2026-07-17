@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_PROTOCOL_MCP_TOOL_H
-#define LLDB_PLUGINS_PROTOCOL_MCP_TOOL_H
+#ifndef LLDB_SOURCE_PLUGINS_PROTOCOL_MCP_TOOL_H
+#define LLDB_SOURCE_PLUGINS_PROTOCOL_MCP_TOOL_H
 
 #include "lldb/Protocol/MCP/Protocol.h"
 #include "lldb/Protocol/MCP/Tool.h"
@@ -21,6 +21,35 @@ class CommandTool : public lldb_protocol::mcp::Tool {
 public:
   using lldb_protocol::mcp::Tool::Tool;
   ~CommandTool() = default;
+
+  llvm::Expected<lldb_protocol::mcp::CallToolResult>
+  Call(const lldb_protocol::mcp::ToolArguments &args) override;
+
+  std::optional<llvm::json::Value> GetSchema() const override;
+};
+
+class DebuggerListTool : public lldb_protocol::mcp::Tool {
+public:
+  using lldb_protocol::mcp::Tool::Tool;
+  ~DebuggerListTool() = default;
+
+  llvm::Expected<lldb_protocol::mcp::CallToolResult>
+  Call(const lldb_protocol::mcp::ToolArguments &args) override;
+};
+
+class DebuggerCreateTool : public lldb_protocol::mcp::Tool {
+public:
+  using lldb_protocol::mcp::Tool::Tool;
+  ~DebuggerCreateTool() = default;
+
+  llvm::Expected<lldb_protocol::mcp::CallToolResult>
+  Call(const lldb_protocol::mcp::ToolArguments &args) override;
+};
+
+class DebuggerDeleteTool : public lldb_protocol::mcp::Tool {
+public:
+  using lldb_protocol::mcp::Tool::Tool;
+  ~DebuggerDeleteTool() = default;
 
   llvm::Expected<lldb_protocol::mcp::CallToolResult>
   Call(const lldb_protocol::mcp::ToolArguments &args) override;

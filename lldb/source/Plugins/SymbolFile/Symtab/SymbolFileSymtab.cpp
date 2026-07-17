@@ -120,9 +120,10 @@ CompUnitSP SymbolFileSymtab::ParseCompileUnitAtIndex(uint32_t idx) {
     const Symbol *cu_symbol =
         m_objfile_sp->GetSymtab()->SymbolAtIndex(m_source_indexes[idx]);
     if (cu_symbol)
-      cu_sp = std::make_shared<CompileUnit>(m_objfile_sp->GetModule(), nullptr,
-                                            cu_symbol->GetName().AsCString(), 0,
-                                            eLanguageTypeUnknown, eLazyBoolNo);
+      cu_sp =
+          std::make_shared<CompileUnit>(m_objfile_sp->GetModule(), nullptr,
+                                        cu_symbol->GetName().AsCString(nullptr),
+                                        0, eLanguageTypeUnknown, eLazyBoolNo);
   }
   return cu_sp;
 }

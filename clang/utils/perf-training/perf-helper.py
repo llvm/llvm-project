@@ -45,14 +45,22 @@ def clean(args):
 
 
 def merge(args):
-    if len(args) < 3:
-        print(
-            "Usage: %s merge <llvm-profdata> <output> <paths>\n" % __file__
-            + "\tMerges all profraw files from path into output."
-        )
-        return 1
-    cmd = [args[0], "merge", "-o", args[1]]
-    for path in args[2:]:
+    parser = argparse.ArgumentParser(
+        prog="perf-helper merge",
+        description="Merges all profraw files from path(s) into output",
+    )
+    parser.add_argument("profdata", help="Path to llvm-profdata tool")
+    parser.add_argument("output", help="Output filename")
+    parser.add_argument(
+        "paths", nargs="+", help="Folder(s) containing input profraw files"
+    )
+    parser.add_argument("--sample", action="store_true", help="Sample profile")
+    opts = parser.parse_args(args)
+
+    cmd = [opts.profdata, "merge", "-o", opts.output]
+    if opts.sample:
+        cmd += ["--sample"]
+    for path in opts.paths:
         cmd.extend(findFilesWithExtension(path, "profraw"))
     subprocess.check_call(cmd)
     return 0
@@ -73,25 +81,30 @@ def merge_fdata(args):
 
 def perf(args):
     parser = argparse.ArgumentParser(
-        prog="perf-helper perf", description="perf wrapper for BOLT profile collection"
+        prog="perf-helper perf",
+        description="perf wrapper for BOLT/CSSPGO profile collection",
     )
     parser.add_argument(
         "--lbr", action="store_true", help="Use perf with branch stacks"
     )
+    parser.add_argument("--csspgo", action="store_true", help="Enable CSSPGO flags")
     parser.add_argument("cmd", nargs=argparse.REMAINDER, help="")
 
     opts = parser.parse_args(args)
     cmd = opts.cmd[1:]
 
+    event = "br_inst_retired.near_taken:uppp" if opts.csspgo else "cycles:u"
     perf_args = [
         "perf",
         "record",
-        "--event=cycles:u",
+        f"--event={event}",
         "--freq=max",
         "--output=%d.perf.data" % os.getpid(),
     ]
-    if opts.lbr:
+    if opts.lbr or opts.csspgo:
         perf_args += ["--branch-filter=any,u"]
+    if opts.csspgo:
+        perf_args += ["-g", "--call-graph=fp"]
     perf_args.extend(cmd)
 
     start_time = time.time()
@@ -120,10 +133,34 @@ def perf2bolt(args):
         "--profile-format=yaml",
     ]
     if not opts.lbr:
-        p2b_args += ["-nl"]
+        p2b_args += ["-ba"]
     p2b_args += ["-p"]
     for filename in findFilesWithExtension(opts.path, "perf.data"):
         subprocess.check_call(p2b_args + [filename, "-o", filename + ".fdata"])
+    return 0
+
+
+def perf2prof(args):
+    parser = argparse.ArgumentParser(
+        prog="perf-helper perf2prof",
+        description="perf to CSSPGO prof conversion wrapper",
+    )
+    parser.add_argument("profgen", help="Path to llvm-profgen binary")
+    parser.add_argument("binary", help="Input binary")
+    parser.add_argument("paths", nargs="+", help="Path containing perf.data files")
+    opts = parser.parse_args(args)
+
+    profgen_args = [opts.profgen, f"--binary={opts.binary}"]
+    for path in opts.paths:
+        for filename in findFilesWithExtension(path, "perf.data"):
+            subprocess.run(
+                [
+                    *profgen_args,
+                    f"--perfdata={filename}",
+                    f"--output={filename}.profraw",
+                ],
+                check=True,
+            )
     return 0
 
 
@@ -238,6 +275,7 @@ def get_cc1_command_for_args(cmd, env):
             or ln.startswith("LLVM Profile Note")
             or ln.startswith(" (in-process)")
             or ln.startswith("Configuration file:")
+            or ln.startswith("Build config:")
             or " version " in ln
         ):
             continue
@@ -659,7 +697,10 @@ def bolt_optimize(args):
     process.check_returncode()
 
     if opts.method in ["PERF", "LBR"]:
-        perf2bolt([opts.bolt, opts.perf_training_binary_dir, opts.input])
+        args = [opts.bolt, opts.perf_training_binary_dir, opts.input]
+        if opts.method == "LBR":
+            args.extend("--lbr")
+        perf2bolt(args)
 
     merge_fdata([opts.merge_fdata, opts.fdata, opts.perf_training_binary_dir])
 
@@ -681,7 +722,7 @@ def bolt_optimize(args):
             "-dyno-stats",
             "-use-gnu-stack",
             "-update-debug-sections",
-            "-nl" if opts.method == "PERF" else "",
+            "-ba" if opts.method == "PERF" else "",
         ]
         print("Running: " + " ".join(args))
         process = subprocess.run(
@@ -706,6 +747,7 @@ commands = {
     "merge-fdata": merge_fdata,
     "perf": perf,
     "perf2bolt": perf2bolt,
+    "perf2prof": perf2prof,
 }
 
 

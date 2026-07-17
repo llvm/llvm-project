@@ -36,6 +36,7 @@ static_library("Core") {
     "GDBIndex.cpp",
     "HashUtilities.cpp",
     "JumpTable.cpp",
+    "MCInstUtils.cpp",
     "MCPlusBuilder.cpp",
     "ParallelUtilities.cpp",
     "Relocation.cpp",

@@ -134,46 +134,52 @@ double16 call_sqrt_v16f64(double16 x) {
 }
 
 
-// Not for f16
 // CHECK-LABEL: define {{.*}} half @call_sqrt_f16(
-// CHECK: call {{.*}} half @_Z4sqrtDh(half noundef %{{.+}}) #{{[0-9]+$}}{{$}}
+// DEFAULT: call {{.*}} half @_Z4sqrtDh(half noundef %{{.+}}) #{{[0-9]+}}, !fpmath [[HFPMATH:\![0-9]+]]{{$}}
+// CORRECTLYROUNDED: call {{.*}} half @_Z4sqrtDh(half noundef %{{.+}}) #{{[0-9]+$}}{{$}}
 half call_sqrt_f16(half x) {
   return sqrt(x);
 }
 
 
 // CHECK-LABEL: define {{.*}} <2 x half> @call_sqrt_v2f16(
-// CHECK: call {{.*}} <2 x half> @_Z4sqrtDv2_Dh(<2 x half> noundef %{{.+}}) #{{[0-9]+$}}{{$}}
+// DEFAULT: call {{.*}} <2 x half> @_Z4sqrtDv2_Dh(<2 x half> noundef %{{.+}}) #{{[0-9]+}}, !fpmath [[HFPMATH]]{{$}}
+// CORRECTLYROUNDED: call {{.*}} <2 x half> @_Z4sqrtDv2_Dh(<2 x half> noundef %{{.+}}) #{{[0-9]+$}}{{$}}
 half2 call_sqrt_v2f16(half2 x) {
   return sqrt(x);
 }
 
 
 // CHECK-LABEL: define {{.*}} <3 x half> @call_sqrt_v3f16(
-// CHECK: call {{.*}} <3 x half> @_Z4sqrtDv3_Dh(<3 x half> noundef %{{.+}}) #{{[0-9]+$}}{{$}}
+// DEFAULT: call {{.*}} <3 x half> @_Z4sqrtDv3_Dh(<3 x half> noundef %{{.+}}) #{{[0-9]+}}, !fpmath [[HFPMATH]]{{$}}
+// CORRECTLYROUNDED: call {{.*}} <3 x half> @_Z4sqrtDv3_Dh(<3 x half> noundef %{{.+}}) #{{[0-9]+$}}{{$}}
 half3 call_sqrt_v3f16(half3 x) {
   return sqrt(x);
 }
 
 
 // CHECK-LABEL: define {{.*}} <4 x half> @call_sqrt_v4f16(
-// CHECK: call {{.*}} <4 x half> @_Z4sqrtDv4_Dh(<4 x half> noundef %{{.+}}) #{{[0-9]+$}}{{$}}
+// DEFAULT: call {{.*}} <4 x half> @_Z4sqrtDv4_Dh(<4 x half> noundef %{{.+}}) #{{[0-9]+}}, !fpmath [[HFPMATH]]{{$}}
+// CORRECTLYROUNDED: call {{.*}} <4 x half> @_Z4sqrtDv4_Dh(<4 x half> noundef %{{.+}}) #{{[0-9]+$}}{{$}}
 half4 call_sqrt_v4f16(half4 x) {
   return sqrt(x);
 }
 
 
 // CHECK-LABEL: define {{.*}} <8 x half> @call_sqrt_v8f16(
-// CHECK: call {{.*}} <8 x half> @_Z4sqrtDv8_Dh(<8 x half> noundef %{{.+}}) #{{[0-9]+$}}{{$}}
+// DEFAULT: call {{.*}} <8 x half> @_Z4sqrtDv8_Dh(<8 x half> noundef %{{.+}}) #{{[0-9]+}}, !fpmath [[HFPMATH]]{{$}}
+// CORRECTLYROUNDED: call {{.*}} <8 x half> @_Z4sqrtDv8_Dh(<8 x half> noundef %{{.+}}) #{{[0-9]+$}}{{$}}
 half8 call_sqrt_v8f16(half8 x) {
   return sqrt(x);
 }
 
 
 // CHECK-LABEL: define {{.*}} <16 x half> @call_sqrt_v16f16(
-// CHECK: call {{.*}} <16 x half> @_Z4sqrtDv16_Dh(<16 x half> noundef %{{.+}}) #{{[0-9]+$}}{{$}}
+// DEFAULT: call {{.*}} <16 x half> @_Z4sqrtDv16_Dh(<16 x half> noundef %{{.+}}) #{{[0-9]+}}, !fpmath [[HFPMATH]]{{$}}
+// CORRECTLYROUNDED: call {{.*}} <16 x half> @_Z4sqrtDv16_Dh(<16 x half> noundef %{{.+}}) #{{[0-9]+$}}{{$}}
 half16 call_sqrt_v16f16(half16 x) {
   return sqrt(x);
 }
 
 // DEFAULT: [[FPMATH]] = !{float 3.000000e+00}
+// DEFAULT: [[HFPMATH]] = !{float 1.500000e+00}

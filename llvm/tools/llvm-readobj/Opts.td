@@ -20,6 +20,7 @@ def all : FF<"all", "Equivalent to setting: --file-header, --program-headers, --
 def arch_specific : FF<"arch-specific", "Display architecture-specific information">;
 def bb_addr_map : FF<"bb-addr-map", "Display the BB address map section">;
 def pretty_pgo_analysis_map : FF<"pretty-pgo-analysis-map", "Display PGO analysis values with formatting rather than raw numbers">;
+def call_graph_info : FF<"call-graph-info", "Display call graph information">;
 def cg_profile : FF<"cg-profile", "Display call graph profile section">;
 def decompress : FF<"decompress", "Dump decompressed section content when used with -x or -p">;
 defm demangle : BB<"demangle", "Demangle symbol names", "Do not demangle symbol names (default)">;
@@ -32,6 +33,7 @@ def file_header : FF<"file-header", "Display file header">;
 def headers : FF<"headers", "Equivalent to setting: --file-header, --program-headers, --section-headers">;
 defm hex_dump : Eq<"hex-dump", "Display the specified section(s) as hexadecimal bytes">, MetaVarName<"<name or index>">;
 def pretty_print : FF<"pretty-print", "Pretty print JSON output">;
+def offloading : FF<"offloading", "Display the content of the offloading section">;
 def relocs : FF<"relocs", "Display the relocation entries in the file">;
 def section_data : FF<"section-data", "Display section data for each section shown. This option has no effect for GNU style output">;
 def section_details : FF<"section-details", "Display the section details">;
@@ -47,6 +49,7 @@ defm string_dump : Eq<"string-dump", "Display the specified section(s) as a list
 def string_table : FF<"string-table", "Display the string table (only for XCOFF/COFF now)">;
 def symbols : FF<"symbols", "Display the symbol table. Also display the dynamic symbol table when using GNU output style for ELF">;
 def unwind : FF<"unwind", "Display unwind information">;
+def unwind_show_wod_pool : FF<"unwind-show-wod-pool", "Also display the raw Windows x64 unwind V3 WOD pool with byte offsets (requires --unwind)">;
 
 // ELF specific options.
 def grp_elf : OptionGroup<"kind">, HelpText<"OPTIONS (ELF specific)">;

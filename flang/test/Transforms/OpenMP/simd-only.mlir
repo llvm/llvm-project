@@ -65,10 +65,10 @@ func.func @parallel(%arg0: i32, %arg1: !fir.ref<i32>) {
     // CHECK: fir.convert
     %16 = fir.convert %c100000_i32 : (i32) -> index
     // CHECK: fir.do_loop
-    %18:2 = fir.do_loop %arg4 = %15 to %16 step %c1 iter_args(%arg2 = %arg0) -> (index, i32) {
+    %18 = fir.do_loop %arg4 = %15 to %16 step %c1 iter_args(%arg2 = %arg0) -> (i32) {
       // CHECK: fir.store
       fir.store %arg0 to %arg1 : !fir.ref<i32>
-      fir.result %arg4, %arg2 : index, i32
+      fir.result %arg2 : i32
     }
     // CHECK-NOT: omp.terminator
     omp.terminator
@@ -84,7 +84,7 @@ func.func @target_map(%arg5: i32, %arg6: !fir.ref<i32>) {
   // CHECK-NOT: omp.map.info
   %3 = omp.map.info var_ptr(%arg6 : !fir.ref<i32>, i32) map_clauses(implicit) capture(ByCopy) -> !fir.ref<i32>
   // CHECK-NOT: omp.target
-  omp.target map_entries(%3 -> %arg0 : !fir.ref<i32>) {
+  omp.target kernel_type(generic) map_entries(%3 -> %arg0 : !fir.ref<i32>) {
     // CHECK: arith.constant
     %c1_i32 = arith.constant 1 : i32
     // CHECK: fir.store %c1_i32 to %[[ARG_1]]
@@ -183,7 +183,7 @@ func.func @map_info(%funcArg0: i32, %funcArg1: !fir.ref<i32>) {
   // CHECK-NOT: omp.map.info
   %13 = omp.map.info var_ptr(%funcArg1 : !fir.ref<i32>, i32) map_clauses(to) capture(ByRef) bounds(%1) -> !fir.ref<i32>
   // CHECK-NOT: omp.target
-  omp.target map_entries(%13 -> %arg3 : !fir.ref<i32>) {
+  omp.target kernel_type(generic) map_entries(%13 -> %arg3 : !fir.ref<i32>) {
     %c1_i32 = arith.constant 1 : i32
     // CHECK: fir.store %c1_i32 to %[[ARG_1]]
     fir.store %c1_i32 to %arg3 : !fir.ref<i32>

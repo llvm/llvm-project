@@ -346,3 +346,189 @@ entry:
   call void @use.i32(i32 %ext.3)
   ret void
 }
+
+define noundef i32 @zext_v4i8_all_lanes_used_no_freeze(<4 x i8> %src) {
+; CHECK-LABEL: define noundef i32 @zext_v4i8_all_lanes_used_no_freeze(
+; CHECK-SAME: <4 x i8> [[SRC:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i8> [[SRC]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[TMP0]], 24
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP0]], 16
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 255
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 255
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP0]], 255
+; CHECK-NEXT:    [[EXT:%.*]] = zext nneg <4 x i8> [[SRC]] to <4 x i32>
+; CHECK-NEXT:    [[EXT_0:%.*]] = extractelement <4 x i32> [[EXT]], i64 0
+; CHECK-NEXT:    [[EXT_1:%.*]] = extractelement <4 x i32> [[EXT]], i64 1
+; CHECK-NEXT:    [[EXT_2:%.*]] = extractelement <4 x i32> [[EXT]], i64 2
+; CHECK-NEXT:    [[EXT_3:%.*]] = extractelement <4 x i32> [[EXT]], i64 3
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[TMP6]], [[TMP5]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], [[TMP3]]
+; CHECK-NEXT:    [[ADD3:%.*]] = add i32 [[ADD2]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[ADD3]]
+;
+entry:
+  %ext = zext nneg <4 x i8> %src to <4 x i32>
+  %ext.0 = extractelement <4 x i32> %ext, i64 0
+  %ext.1 = extractelement <4 x i32> %ext, i64 1
+  %ext.2 = extractelement <4 x i32> %ext, i64 2
+  %ext.3 = extractelement <4 x i32> %ext, i64 3
+
+  %add1 = add i32 %ext.0, %ext.1
+  %add2 = add i32 %add1, %ext.2
+  %add3 = add i32 %add2, %ext.3
+  ret i32 %add3
+}
+
+define noundef i32 @zext_v4i8_not_all_lanes_used(<4 x i8> %src) {
+; CHECK-LABEL: define noundef i32 @zext_v4i8_not_all_lanes_used(
+; CHECK-SAME: <4 x i8> [[SRC:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze <4 x i8> [[SRC]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i8> [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[TMP0]], 24
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 255
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP0]], 255
+; CHECK-NEXT:    [[EXT:%.*]] = zext nneg <4 x i8> [[SRC]] to <4 x i32>
+; CHECK-NEXT:    [[EXT_0:%.*]] = extractelement <4 x i32> [[EXT]], i64 0
+; CHECK-NEXT:    [[EXT_1:%.*]] = extractelement <4 x i32> [[EXT]], i64 1
+; CHECK-NEXT:    [[EXT_3:%.*]] = extractelement <4 x i32> [[EXT]], i64 3
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[TMP6]], [[TMP5]]
+; CHECK-NEXT:    [[ADD3:%.*]] = add i32 [[ADD2]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[ADD3]]
+;
+entry:
+  %ext = zext nneg <4 x i8> %src to <4 x i32>
+  %ext.0 = extractelement <4 x i32> %ext, i64 0
+  %ext.1 = extractelement <4 x i32> %ext, i64 1
+  %ext.3 = extractelement <4 x i32> %ext, i64 3
+
+  %add1 = add i32 %ext.0, %ext.1
+  %add2 = add i32 %add1, %ext.3
+  ret i32 %add2
+}
+
+define i32 @zext_v4i8_all_lanes_used_no_ub(<4 x i8> %src) {
+; CHECK-LABEL: define i32 @zext_v4i8_all_lanes_used_no_ub(
+; CHECK-SAME: <4 x i8> [[SRC:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze <4 x i8> [[SRC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[TMP0]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 24
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[TMP1]], 16
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], 255
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i32 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP5]], 255
+; CHECK-NEXT:    [[TMP7:%.*]] = and i32 [[TMP1]], 255
+; CHECK-NEXT:    [[EXT:%.*]] = zext nneg <4 x i8> [[SRC]] to <4 x i32>
+; CHECK-NEXT:    [[EXT_0:%.*]] = extractelement <4 x i32> [[EXT]], i64 0
+; CHECK-NEXT:    [[EXT_1:%.*]] = extractelement <4 x i32> [[EXT]], i64 1
+; CHECK-NEXT:    [[EXT_2:%.*]] = extractelement <4 x i32> [[EXT]], i64 2
+; CHECK-NEXT:    [[EXT_3:%.*]] = extractelement <4 x i32> [[EXT]], i64 3
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[TMP7]], [[TMP6]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], [[TMP4]]
+; CHECK-NEXT:    [[ADD3:%.*]] = add i32 [[ADD2]], [[TMP2]]
+; CHECK-NEXT:    ret i32 [[ADD3]]
+;
+entry:
+  %ext = zext nneg <4 x i8> %src to <4 x i32>
+  %ext.0 = extractelement <4 x i32> %ext, i64 0
+  %ext.1 = extractelement <4 x i32> %ext, i64 1
+  %ext.2 = extractelement <4 x i32> %ext, i64 2
+  %ext.3 = extractelement <4 x i32> %ext, i64 3
+
+  %add1 = add i32 %ext.0, %ext.1
+  %add2 = add i32 %add1, %ext.2
+  %add3 = add i32 %add2, %ext.3
+  ret i32 %add3
+}
+
+define noundef i32 @zext_v4i8_extracts_different_blocks(<4 x i8> %src, i1 %cond) {
+; CHECK-LABEL: define noundef i32 @zext_v4i8_extracts_different_blocks(
+; CHECK-SAME: <4 x i8> [[SRC:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze <4 x i8> [[SRC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[TMP0]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 24
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[TMP1]], 16
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], 255
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i32 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP5]], 255
+; CHECK-NEXT:    [[TMP7:%.*]] = and i32 [[TMP1]], 255
+; CHECK-NEXT:    [[EXT:%.*]] = zext nneg <4 x i8> [[SRC]] to <4 x i32>
+; CHECK-NEXT:    [[EXT_0:%.*]] = extractelement <4 x i32> [[EXT]], i64 0
+; CHECK-NEXT:    [[EXT_1:%.*]] = extractelement <4 x i32> [[EXT]], i64 1
+; CHECK-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[EXT_2:%.*]] = extractelement <4 x i32> [[EXT]], i64 2
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    [[EXT_3:%.*]] = extractelement <4 x i32> [[EXT]], i64 3
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[TMP4]], %[[THEN]] ], [ [[TMP2]], %[[ELSE]] ]
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[TMP7]], [[TMP6]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], [[PHI]]
+; CHECK-NEXT:    ret i32 [[ADD2]]
+;
+entry:
+  %ext = zext nneg <4 x i8> %src to <4 x i32>
+  %ext.0 = extractelement <4 x i32> %ext, i64 0
+  %ext.1 = extractelement <4 x i32> %ext, i64 1
+  br i1 %cond, label %then, label %else
+
+then:
+  %ext.2 = extractelement <4 x i32> %ext, i64 2
+  br label %exit
+
+else:
+  %ext.3 = extractelement <4 x i32> %ext, i64 3
+  br label %exit
+
+exit:
+  %phi = phi i32 [ %ext.2, %then ], [ %ext.3, %else ]
+  %add1 = add i32 %ext.0, %ext.1
+  %add2 = add i32 %add1, %phi
+  ret i32 %add2
+}
+
+
+declare void @may_throw() willreturn
+
+define noundef i32 @zext_v4i8_throwing_call_between(<4 x i8> %src) {
+; CHECK-LABEL: define noundef i32 @zext_v4i8_throwing_call_between(
+; CHECK-SAME: <4 x i8> [[SRC:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze <4 x i8> [[SRC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[TMP0]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 24
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[TMP1]], 16
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], 255
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i32 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP5]], 255
+; CHECK-NEXT:    [[TMP7:%.*]] = and i32 [[TMP1]], 255
+; CHECK-NEXT:    [[EXT:%.*]] = zext nneg <4 x i8> [[SRC]] to <4 x i32>
+; CHECK-NEXT:    [[EXT_0:%.*]] = extractelement <4 x i32> [[EXT]], i64 0
+; CHECK-NEXT:    [[EXT_1:%.*]] = extractelement <4 x i32> [[EXT]], i64 1
+; CHECK-NEXT:    [[EXT_2:%.*]] = extractelement <4 x i32> [[EXT]], i64 2
+; CHECK-NEXT:    call void @may_throw()
+; CHECK-NEXT:    [[EXT_3:%.*]] = extractelement <4 x i32> [[EXT]], i64 3
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[TMP7]], [[TMP6]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], [[TMP4]]
+; CHECK-NEXT:    [[ADD3:%.*]] = add i32 [[ADD2]], [[TMP2]]
+; CHECK-NEXT:    ret i32 [[ADD3]]
+;
+entry:
+  %ext = zext nneg <4 x i8> %src to <4 x i32>
+  %ext.0 = extractelement <4 x i32> %ext, i64 0
+  %ext.1 = extractelement <4 x i32> %ext, i64 1
+  %ext.2 = extractelement <4 x i32> %ext, i64 2
+  call void @may_throw()
+  %ext.3 = extractelement <4 x i32> %ext, i64 3
+  %add1 = add i32 %ext.0, %ext.1
+  %add2 = add i32 %add1, %ext.2
+  %add3 = add i32 %add2, %ext.3
+  ret i32 %add3
+}

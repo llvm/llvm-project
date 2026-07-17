@@ -6,25 +6,35 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ClientLauncher.h"
 #include "DAP.h"
 #include "DAPLog.h"
 #include "EventHelper.h"
 #include "Handler/RequestHandler.h"
+#include "Handler/ResponseHandler.h"
+#include "LLDBUtils.h"
 #include "RunInTerminal.h"
 #include "Transport.h"
 #include "lldb/API/SBDebugger.h"
+#include "lldb/API/SBPlatform.h"
+#include "lldb/API/SBProcessInfo.h"
+#include "lldb/API/SBProcessInfoList.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/File.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/MainLoopBase.h"
 #include "lldb/Host/MemoryMonitor.h"
 #include "lldb/Host/Socket.h"
+#include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/UriParser.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Arg.h"
@@ -35,17 +45,17 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
-#include <condition_variable>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <fcntl.h>
-#include <map>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -65,10 +75,15 @@
 #undef GetObject
 #include <io.h>
 typedef int socklen_t;
+#include "lldb/Host/ScriptInterpreterRuntimeLoader.h"
+#include "lldb/Host/windows/ProcessLauncherWindows.h"
+#include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Program.h"
 #else
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <termios.h>
 #include <unistd.h>
 #endif
 
@@ -134,6 +149,12 @@ EXAMPLES:
   debugger to attach to the process.
 
     lldb-dap -g
+
+  You can also use lldb-dap to launch a supported client, for example the
+  LLDB-DAP Visual Studio Code extension.
+
+    lldb-dap --client vscode -- /path/to/binary <args>
+
 )___";
 }
 
@@ -142,6 +163,204 @@ static void PrintVersion() {
   llvm::cl::PrintVersionMessage();
   llvm::outs() << "liblldb: " << lldb::SBDebugger::GetVersionString() << '\n';
 }
+
+static llvm::Error LaunchClient(const llvm::opt::InputArgList &args) {
+  auto *client_arg = args.getLastArg(OPT_client);
+  assert(client_arg && "must have client arg");
+
+  std::optional<ClientLauncher::Client> client =
+      ClientLauncher::GetClientFrom(client_arg->getValue());
+  if (!client)
+    return llvm::createStringError(
+        llvm::formatv("unsupported client: {0}", client_arg->getValue()));
+
+  std::vector<llvm::StringRef> launch_args;
+  if (auto *arg = args.getLastArgNoClaim(OPT_REM)) {
+    for (auto *value : arg->getValues()) {
+      launch_args.push_back(value);
+    }
+  }
+
+  if (launch_args.empty())
+    return llvm::createStringError("no launch arguments provided");
+
+  return ClientLauncher::GetLauncher(*client)->Launch(launch_args);
+}
+
+/// Handles `--list-processes`: print the processes visible to the selected
+/// platform as a JSON array on stdout, then exit.
+///
+/// The JSON shape is intentionally minimal and stable:
+///
+///   [ { "pid": number, "name": string, "triple": string,
+///       "user": number, "executable": string }, ... ]
+///
+/// Fields other than `pid` are omitted if not available.
+static llvm::Expected<llvm::json::Array>
+GetProcessArray(const llvm::opt::InputArgList &args) {
+  llvm::StringRef platform_name = args.getLastArgValue(OPT_platform_name);
+  llvm::StringRef platform_url = args.getLastArgValue(OPT_platform_url);
+
+  if (!platform_url.empty() && platform_name.empty())
+    return llvm::createStringError("--platform-url requires --platform");
+
+  if (lldb::SBError init_error =
+          lldb::SBDebugger::InitializeWithErrorHandling();
+      init_error.Fail())
+    return llvm::createStringError(llvm::formatv(
+        "failed to initialize lldb: {0}", init_error.GetCString()));
+  llvm::scope_exit cleanup{[]() { lldb::SBDebugger::Terminate(); }};
+
+  lldb::SBDebugger debugger =
+      lldb::SBDebugger::Create(/*source_init_files=*/false);
+  if (!debugger.IsValid())
+    return llvm::createStringError("failed to create debugger");
+
+  lldb::SBPlatform platform =
+      platform_name.empty() ? lldb::SBPlatform::GetHostPlatform()
+                            : lldb::SBPlatform(platform_name.str().c_str());
+  if (!platform.IsValid())
+    return llvm::createStringError(
+        llvm::formatv("unknown platform: {0}", platform_name));
+
+  bool connected = false;
+  if (!platform_url.empty()) {
+    lldb::SBPlatformConnectOptions opts(platform_url.str().c_str());
+    lldb::SBError error = platform.ConnectRemote(opts);
+    if (error.Fail())
+      return llvm::createStringError(
+          llvm::formatv("failed to connect to platform {0} at {1}: {2}",
+                        platform.GetName(), platform_url, error.GetCString()));
+    connected = true;
+  }
+  llvm::scope_exit disconnect{[&]() {
+    if (connected)
+      platform.DisconnectRemote();
+  }};
+
+  lldb::SBError error;
+  lldb::SBProcessInfoList processes = platform.GetAllProcesses(error);
+  if (error.Fail()) {
+    if (!platform.IsConnected() && platform_url.empty())
+      return llvm::createStringError(
+          llvm::formatv("platform {0} is not connected; pass --platform-url "
+                        "to connect to a remote platform",
+                        platform.GetName()));
+    return llvm::createStringError(
+        llvm::formatv("failed to list processes: {0}", error.GetCString()));
+  }
+
+  llvm::json::Array array;
+  for (uint32_t i = 0, n = processes.GetSize(); i < n; ++i) {
+    lldb::SBProcessInfo info;
+    if (!processes.GetProcessInfoAtIndex(i, info))
+      continue;
+
+    llvm::json::Object entry;
+    entry["pid"] = info.GetProcessID();
+    if (const char *name = info.GetName())
+      entry["name"] = name;
+    if (const char *triple = info.GetTriple())
+      entry["triple"] = triple;
+    if (info.UserIDIsValid())
+      entry["user"] = info.GetUserID();
+
+    lldb::SBFileSpec exe = info.GetExecutableFile();
+    if (exe.IsValid()) {
+      std::string path = lldb_dap::GetSBFileSpecPath(exe);
+      if (!path.empty())
+        entry["executable"] = path;
+    }
+
+    array.push_back(std::move(entry));
+  }
+
+  return array;
+}
+
+llvm::Error
+notifyError(RunInTerminalLauncherCommChannel &comm_channel, std::string message,
+            std::optional<std::error_code> error_code = std::nullopt) {
+  comm_channel.NotifyError(message);
+
+  std::error_code ec = error_code.value_or(
+#ifdef _WIN32
+      std::error_code(GetLastError(), std::system_category())
+#else
+      llvm::inconvertibleErrorCode()
+#endif
+  );
+
+  return llvm::createStringError(ec, std::move(message));
+}
+
+#if not defined(_WIN32)
+struct FDGroup {
+  int GetFlags() const {
+    if (read && write)
+      return O_NOCTTY | O_CREAT | O_RDWR;
+    if (read)
+      return O_NOCTTY | O_RDONLY;
+    return O_NOCTTY | O_CREAT | O_WRONLY | O_TRUNC;
+  }
+
+  std::vector<int> fds;
+  bool read = false;
+  bool write = false;
+};
+
+static llvm::Error RedirectToFile(const FDGroup &fdg, llvm::StringRef file) {
+  if (!fdg.read && !fdg.write)
+    return llvm::Error::success();
+  int target_fd = lldb_private::FileSystem::Instance().Open(
+      file.str().c_str(), fdg.GetFlags(), 0666);
+  if (target_fd == -1)
+    return llvm::errorCodeToError(
+        std::error_code(errno, std::generic_category()));
+  for (int fd : fdg.fds) {
+    if (target_fd == fd)
+      continue;
+    if (::dup2(target_fd, fd) == -1)
+      return llvm::errorCodeToError(
+          std::error_code(errno, std::generic_category()));
+  }
+  ::close(target_fd);
+  return llvm::Error::success();
+}
+
+static llvm::Error
+SetupIORedirection(const llvm::SmallVectorImpl<llvm::StringRef> &files) {
+  llvm::SmallDenseMap<llvm::StringRef, FDGroup> groups;
+  for (size_t i = 0; i < files.size(); i++) {
+    if (files[i].empty())
+      continue;
+    auto group = groups.find(files[i]);
+    if (group == groups.end())
+      group = groups.insert({files[i], {{static_cast<int>(i)}}}).first;
+    else
+      group->second.fds.push_back(i);
+    switch (i) {
+    case 0:
+      group->second.read = true;
+      break;
+    case 1:
+    case 2:
+      group->second.write = true;
+      break;
+    default:
+      group->second.read = true;
+      group->second.write = true;
+      break;
+    }
+  }
+  for (const auto &[file, group] : groups) {
+    if (llvm::Error err = RedirectToFile(group, file))
+      return llvm::createStringError(
+          llvm::formatv("{0}: {1}", file, llvm::toString(std::move(err))));
+  }
+  return llvm::Error::success();
+}
+#endif
 
 // If --launch-target is provided, this instance of lldb-dap becomes a
 // runInTerminal launcher. It will ultimately launch the program specified in
@@ -162,14 +381,15 @@ static void PrintVersion() {
 //
 // In case of errors launching the target, a suitable error message will be
 // emitted to the debug adapter.
-static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
-                                             llvm::StringRef comm_file,
-                                             lldb::pid_t debugger_pid,
-                                             char *argv[]) {
-#if defined(_WIN32)
-  return llvm::createStringError(
-      "runInTerminal is only supported on POSIX systems");
-#else
+static llvm::Expected<int> LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
+                                                     llvm::StringRef comm_file,
+                                                     lldb::pid_t debugger_pid,
+                                                     llvm::StringRef stdio,
+                                                     char *argv[], int argc) {
+  // This env var should be used only for tests.
+  const char *timeout_env_var = getenv("LLDB_DAP_RIT_TIMEOUT_IN_MS");
+  int timeout_in_ms =
+      timeout_env_var != nullptr ? atoi(timeout_env_var) : 20000;
 
   // On Linux with the Yama security module enabled, a process can only attach
   // to its descendants by default. In the runInTerminal case the target
@@ -179,6 +399,137 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
     (void)prctl(PR_SET_PTRACER, debugger_pid, 0, 0, 0);
 #endif
 
+  lldb_private::FileSystem::Initialize();
+
+#ifdef _WIN32
+  RunInTerminalLauncherCommChannel comm_channel(comm_file);
+
+  llvm::ArrayRef<const char *> args_arr = llvm::ArrayRef(argv, argc);
+  auto wcommand_line_or_err =
+      lldb_private::GetFlattenedWindowsCommandStringW(args_arr);
+  if (!wcommand_line_or_err)
+    return notifyError(comm_channel, "Failed to process arguments");
+
+  STARTUPINFOEXW startupinfoex = {};
+  startupinfoex.StartupInfo.cb = sizeof(STARTUPINFOEXW);
+  startupinfoex.StartupInfo.dwFlags |= STARTF_USESTDHANDLES;
+
+  HANDLE stdin_handle = GetStdHandle(STD_INPUT_HANDLE);
+  HANDLE stdout_handle = GetStdHandle(STD_OUTPUT_HANDLE);
+  HANDLE stderr_handle = GetStdHandle(STD_ERROR_HANDLE);
+
+  auto attributelist_or_err =
+      lldb_private::ProcThreadAttributeList::Create(startupinfoex);
+  if (!attributelist_or_err) {
+    return notifyError(comm_channel, "Could not open inherited handles",
+                       attributelist_or_err.getError());
+  }
+
+  if (!stdio.empty()) {
+    llvm::SmallVector<llvm::StringRef, 3> files;
+    stdio.split(files, ';');
+    while (files.size() < 3)
+      files.push_back(files.back());
+
+    stdin_handle = lldb_private::ProcessLauncherWindows::GetStdioHandle(
+        files[0], STDIN_FILENO);
+    stdout_handle = lldb_private::ProcessLauncherWindows::GetStdioHandle(
+        files[1], STDOUT_FILENO);
+    stderr_handle = lldb_private::ProcessLauncherWindows::GetStdioHandle(
+        files[2], STDERR_FILENO);
+  }
+
+  llvm::scope_exit close_handles([&] {
+    // Only close the handles we created
+    if (stdio.empty())
+      return;
+    if (stdin_handle)
+      CloseHandle(stdin_handle);
+    if (stdout_handle)
+      CloseHandle(stdout_handle);
+    if (stderr_handle)
+      CloseHandle(stderr_handle);
+  });
+
+  auto inherited_handles_or_err =
+      lldb_private::ProcessLauncherWindows::GetInheritedHandles(
+          startupinfoex, /*launch_info*=*/nullptr, stdout_handle, stderr_handle,
+          stdin_handle);
+
+  if (!inherited_handles_or_err)
+    return notifyError(comm_channel, "Failed to get inherited handles",
+                       inherited_handles_or_err.getError());
+  std::vector<HANDLE> inherited_handles = std::move(*inherited_handles_or_err);
+
+  PROCESS_INFORMATION pi = {};
+
+  // Start the process in a suspended state, while we attach the debugger.
+  BOOL result = CreateProcessW(
+      /*lpApplicationName=*/NULL,
+      /*lpCommandLine=*/wcommand_line_or_err->data(),
+      /*lpProcessAttributes=*/NULL, /*lpThreadAttributes=*/NULL,
+      /*bInheritHandles=*/!inherited_handles.empty(),
+      /*dwCreationFlags=*/CREATE_SUSPENDED, /*lpEnvironment=*/NULL,
+      /*lpCurrentDirectory=*/NULL,
+      /*lpStartupInfo=*/reinterpret_cast<STARTUPINFOW *>(&startupinfoex),
+      /*lpProcessInformation=*/&pi);
+
+  if (!result)
+    return notifyError(comm_channel, "Failed to launch target process");
+
+  auto cleanup_and_return = [&](llvm::Error err) -> llvm::Expected<int> {
+    if (pi.hProcess)
+      TerminateProcess(pi.hProcess, 1);
+    if (pi.hThread)
+      CloseHandle(pi.hThread);
+    if (pi.hProcess)
+      CloseHandle(pi.hProcess);
+    return err;
+  };
+
+  // Notify the pid of the process to debug to the debugger. It will attach to
+  // the newly created process.
+  if (llvm::Error err = comm_channel.NotifyPid(pi.dwProcessId))
+    return cleanup_and_return(std::move(err));
+
+  if (llvm::Error err = comm_channel.WaitUntilDebugAdapterAttaches(
+          std::chrono::milliseconds(timeout_in_ms)))
+    return cleanup_and_return(std::move(err));
+
+  // The debugger attached to the process. We can resume it.
+  if (ResumeThread(pi.hThread) == (DWORD)-1)
+    return cleanup_and_return(
+        notifyError(comm_channel, "Failed to resume the target process"));
+
+  // Wait for child to complete to match POSIX behavior.
+  WaitForSingleObject(pi.hProcess, INFINITE);
+  DWORD code = 0;
+  if (!::GetExitCodeProcess(pi.hProcess, &code))
+    return cleanup_and_return(notifyError(
+        comm_channel, "Failed to get the target's process return code"));
+
+  CloseHandle(pi.hThread);
+  CloseHandle(pi.hProcess);
+  return code;
+#else
+  if (!stdio.empty()) {
+    constexpr size_t num_of_stdio = 3;
+    llvm::SmallVector<llvm::StringRef, num_of_stdio> stdio_files;
+    stdio.split(stdio_files, ':');
+    stdio_files.resize(std::max(num_of_stdio, stdio_files.size()));
+    if (llvm::Error err = SetupIORedirection(stdio_files))
+      return err;
+  } else if ((isatty(STDIN_FILENO) != 0) &&
+             llvm::StringRef(getenv("TERM")).starts_with_insensitive("xterm")) {
+    // Clear the screen.
+    llvm::outs() << ANSI_CSI_RESET_CURSOR ANSI_CSI_ERASE_VIEWPORT
+            ANSI_CSI_ERASE_SCROLLBACK;
+    // VS Code will reuse the same terminal for the same debug configuration
+    // between runs. Clear the input buffer prior to starting the new process so
+    // prior input is not carried forward to the new debug session.
+    tcflush(STDIN_FILENO, TCIFLUSH);
+  }
+
   RunInTerminalLauncherCommChannel comm_channel(comm_file);
   if (llvm::Error err = comm_channel.NotifyPid())
     return err;
@@ -186,10 +537,6 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
   // We will wait to be attached with a timeout. We don't wait indefinitely
   // using a signal to prevent being paused forever.
 
-  // This env var should be used only for tests.
-  const char *timeout_env_var = getenv("LLDB_DAP_RIT_TIMEOUT_IN_MS");
-  int timeout_in_ms =
-      timeout_env_var != nullptr ? atoi(timeout_env_var) : 20000;
   if (llvm::Error err = comm_channel.WaitUntilDebugAdapterAttaches(
           std::chrono::milliseconds(timeout_in_ms))) {
     return err;
@@ -198,10 +545,7 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
   const char *target = target_arg.getValue();
   execvp(target, argv);
 
-  std::string error = std::strerror(errno);
-  comm_channel.NotifyError(error);
-  return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                 std::move(error));
+  return notifyError(comm_channel, std::strerror(errno));
 #endif
 }
 
@@ -285,9 +629,9 @@ validateConnection(llvm::StringRef conn) {
 }
 
 static llvm::Error serveConnection(
-    const Socket::SocketProtocol &protocol, const std::string &name, Log *log,
+    const Socket::SocketProtocol &protocol, llvm::StringRef name, Log &log,
     const ReplMode default_repl_mode,
-    const std::vector<std::string> &pre_init_commands, bool no_lldbinit,
+    const std::vector<protocol::String> &pre_init_commands, bool no_lldbinit,
     std::optional<std::chrono::seconds> connection_timeout_seconds) {
   Status status;
   static std::unique_ptr<Socket> listener = Socket::Create(protocol, status);
@@ -319,56 +663,51 @@ static llvm::Error serveConnection(
     TrackConnectionTimeout(g_loop, g_connection_timeout_mutex,
                            g_connection_timeout_time_point,
                            connection_timeout_seconds.value());
-  std::condition_variable dap_sessions_condition;
-  std::mutex dap_sessions_mutex;
-  std::map<MainLoop *, DAP *> dap_sessions;
   unsigned int clientCount = 0;
-  auto handle = listener->Accept(g_loop, [=, &dap_sessions_condition,
-                                          &dap_sessions_mutex, &dap_sessions,
-                                          &clientCount](
+  auto handle = listener->Accept(g_loop, [=, &log, &clientCount](
                                              std::unique_ptr<Socket> sock) {
     // Reset the keep alive timer, because we won't be killing the server
     // while this connection is being served.
     if (connection_timeout_seconds)
       ResetConnectionTimeout(g_connection_timeout_mutex,
                              g_connection_timeout_time_point);
-    std::string client_name = llvm::formatv("client_{0}", clientCount++).str();
-    DAP_LOG(log, "({0}) client connected", client_name);
-
+    const std::string client_name = llvm::formatv("conn{0}", clientCount++);
     lldb::IOObjectSP io(std::move(sock));
 
     // Move the client into a background thread to unblock accepting the next
     // client.
-    std::thread client([=, &dap_sessions_condition, &dap_sessions_mutex,
-                        &dap_sessions]() {
+    std::thread client([=, &log]() {
       llvm::set_thread_name(client_name + ".runloop");
+
+      Log client_log = log.WithPrefix("(" + client_name + ")");
+      DAP_LOG(client_log, "client connected");
+
       MainLoop loop;
-      Transport transport(client_name, log, io, io);
-      DAP dap(log, default_repl_mode, pre_init_commands, no_lldbinit,
+      Transport transport(client_log, loop, io, io);
+      DAP dap(client_log, default_repl_mode, pre_init_commands, no_lldbinit,
               client_name, transport, loop);
 
       if (auto Err = dap.ConfigureIO()) {
+        DAP_LOG(client_log, "error: Failed to configure stdout redirect: {}",
+                llvm::toStringWithoutConsuming(Err));
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
                                     "Failed to configure stdout redirect: ");
         return;
       }
 
-      {
-        std::scoped_lock<std::mutex> lock(dap_sessions_mutex);
-        dap_sessions[&loop] = &dap;
-      }
+      // Register the DAP session with the global manager.
+      DAPSessionManager::GetInstance().RegisterSession(&loop, &dap);
 
       if (auto Err = dap.Loop()) {
+        DAP_LOG(client_log, "error: {}", llvm::toStringWithoutConsuming(Err));
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
                                     "DAP session (" + client_name +
                                         ") error: ");
       }
 
-      DAP_LOG(log, "({0}) client disconnected", client_name);
-      std::unique_lock<std::mutex> lock(dap_sessions_mutex);
-      dap_sessions.erase(&loop);
-      std::notify_all_at_thread_exit(dap_sessions_condition, std::move(lock));
-
+      DAP_LOG(client_log, "client disconnected");
+      // Unregister the DAP session from the global manager.
+      DAPSessionManager::GetInstance().UnregisterSession(&loop);
       // Start the countdown to kill the server at the end of each connection.
       if (connection_timeout_seconds)
         TrackConnectionTimeout(g_loop, g_connection_timeout_mutex,
@@ -387,33 +726,13 @@ static llvm::Error serveConnection(
     return status.takeError();
   }
 
-  DAP_LOG(
-      log,
-      "lldb-dap server shutdown requested, disconnecting remaining clients...");
+  DAP_LOG(log, "server shutting down, disconnecting remaining clients");
 
-  bool client_failed = false;
-  {
-    std::scoped_lock<std::mutex> lock(dap_sessions_mutex);
-    for (auto [loop, dap] : dap_sessions) {
-      if (llvm::Error error = dap->Disconnect()) {
-        client_failed = true;
-        llvm::WithColor::error() << "DAP client disconnected failed: "
-                                 << llvm::toString(std::move(error)) << "\n";
-      }
-      loop->AddPendingCallback(
-          [](MainLoopBase &loop) { loop.RequestTermination(); });
-    }
-  }
+  // Disconnect all active sessions using the global manager.
+  DAPSessionManager::GetInstance().DisconnectAllSessions();
 
-  // Wait for all clients to finish disconnecting.
-  std::unique_lock<std::mutex> lock(dap_sessions_mutex);
-  dap_sessions_condition.wait(lock, [&] { return dap_sessions.empty(); });
-
-  if (client_failed)
-    return llvm::make_error<llvm::StringError>(
-        "disconnecting all clients failed", llvm::inconvertibleErrorCode());
-
-  return llvm::Error::success();
+  // Wait for all clients to finish disconnecting and return any errors.
+  return DAPSessionManager::GetInstance().WaitForAllSessionsToDisconnect();
 }
 
 int main(int argc, char *argv[]) {
@@ -441,8 +760,77 @@ int main(int argc, char *argv[]) {
     return EXIT_SUCCESS;
   }
 
+#if defined(_WIN32) && LLDB_ENABLE_PYTHON
+  // liblldb.dll has direct imports from python3xx.dll, so pre-load the Python
+  // runtime before any SB call (PrintVersion below, SBDebugger::Initialize
+  // later) triggers lldb-dap.exe's delay-load thunk for liblldb.dll. The
+  // runtime loader is statically linked into lldb-dap.exe via lldbHost (no
+  // LLDB_API export), so this call does not itself trigger the load.
+  llvm::Expected<lldb_private::ScriptInterpreterRuntimeLoader &> python_loader =
+      lldb_private::ScriptInterpreterRuntimeLoader::Get(
+          lldb::eScriptLanguagePython);
+  if (!python_loader)
+    llvm::WithColor::warning()
+        << llvm::toString(python_loader.takeError()) << '\n';
+  else if (llvm::Error err = python_loader->Load())
+    llvm::WithColor::warning() << llvm::toString(std::move(err)) << '\n';
+#endif
+
   if (input_args.hasArg(OPT_version)) {
     PrintVersion();
+    return EXIT_SUCCESS;
+  }
+
+#ifdef _WIN32
+  if (input_args.hasArg(OPT_check_python)) {
+#ifndef LLDB_ENABLE_PYTHON
+    llvm::errs() << "lldb-dap was not built with Python support" << '\n';
+    return EXIT_SUCCESS;
+#endif
+    llvm::Expected<lldb_private::ScriptInterpreterRuntimeLoader &> loader =
+        lldb_private::ScriptInterpreterRuntimeLoader::Get(
+            lldb::eScriptLanguagePython);
+    if (!loader) {
+      llvm::WithColor::error() << llvm::toString(loader.takeError()) << '\n';
+      return EXIT_FAILURE;
+    }
+    if (llvm::Error err = loader->Load()) {
+      llvm::WithColor::error() << llvm::toString(std::move(err)) << '\n';
+      return EXIT_FAILURE;
+    }
+    llvm::Expected<llvm::StringRef> python_path = loader->GetLoadedPath();
+    if (!python_path) {
+      llvm::WithColor::error()
+          << llvm::toString(python_path.takeError()) << '\n';
+      return EXIT_FAILURE;
+    }
+    if (python_path->empty()) {
+      llvm::WithColor::error()
+          << "unable to look for the Python shared library" << '\n';
+      return EXIT_FAILURE;
+    }
+    llvm::outs() << *python_path << '\n';
+    return EXIT_SUCCESS;
+  }
+#endif
+
+  if (input_args.hasArg(OPT_client)) {
+    if (llvm::Error error = LaunchClient(input_args)) {
+      llvm::WithColor::error() << llvm::toString(std::move(error)) << '\n';
+      return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
+  }
+
+  if (input_args.hasArg(OPT_list_processes)) {
+    llvm::Expected<llvm::json::Array> arr_or_err = GetProcessArray(input_args);
+    if (!arr_or_err) {
+      llvm::WithColor::error()
+          << llvm::toString(arr_or_err.takeError()) << '\n';
+      return EXIT_FAILURE;
+    }
+    llvm::outs() << llvm::formatv("{0}\n",
+                                  llvm::json::Value(std::move(*arr_or_err)));
     return EXIT_SUCCESS;
   }
 
@@ -484,12 +872,15 @@ int main(int argc, char *argv[]) {
           break;
         }
       }
-      if (llvm::Error err =
-              LaunchRunInTerminalTarget(*target_arg, comm_file->getValue(), pid,
-                                        argv + target_args_pos)) {
-        llvm::errs() << llvm::toString(std::move(err)) << '\n';
+      llvm::StringRef stdio = input_args.getLastArgValue(OPT_stdio);
+      auto return_code_or_err = LaunchRunInTerminalTarget(
+          *target_arg, comm_file->getValue(), pid, stdio,
+          argv + target_args_pos, argc - target_args_pos);
+      if (!return_code_or_err) {
+        llvm::errs() << llvm::toString(return_code_or_err.takeError()) << '\n';
         return EXIT_FAILURE;
       }
+      return *return_code_or_err;
     } else {
       llvm::errs() << "\"--launch-target\" requires \"--comm-file\" to be "
                       "specified\n";
@@ -535,17 +926,19 @@ int main(int argc, char *argv[]) {
   }
 #endif
 
-  std::unique_ptr<Log> log = nullptr;
-  const char *log_file_path = getenv("LLDBDAP_LOG");
-  if (log_file_path) {
-    std::error_code EC;
-    log = std::make_unique<Log>(log_file_path, EC);
-    if (EC) {
-      llvm::logAllUnhandledErrors(llvm::errorCodeToError(EC), llvm::errs(),
-                                  "Failed to create log file: ");
+  std::unique_ptr<llvm::raw_ostream> log_os;
+  if (const char *log_file_path = getenv("LLDBDAP_LOG"); log_file_path) {
+    int FD;
+    if (std::error_code EC =
+            llvm::sys::fs::openFileForWrite(log_file_path, FD)) {
+      llvm::errs() << "Failed to open log file: " << log_file_path << ": "
+                   << EC.message() << "\n";
       return EXIT_FAILURE;
     }
+    log_os = std::make_unique<llvm::raw_fd_ostream>(FD, /*shouldClose=*/true);
   }
+  Log::Mutex mutex;
+  Log log(log_os ? *log_os : llvm::nulls(), mutex);
 
   // Initialize LLDB first before we do anything.
   lldb::SBError error = lldb::SBDebugger::InitializeWithErrorHandling();
@@ -559,7 +952,7 @@ int main(int argc, char *argv[]) {
   // Create a memory monitor. This can return nullptr if the host platform is
   // not supported.
   std::unique_ptr<lldb_private::MemoryMonitor> memory_monitor =
-      lldb_private::MemoryMonitor::Create([log = log.get()]() {
+      lldb_private::MemoryMonitor::Create([&log]() {
         DAP_LOG(log, "memory pressure detected");
         lldb::SBDebugger::MemoryPressureDetected();
       });
@@ -568,13 +961,13 @@ int main(int argc, char *argv[]) {
     memory_monitor->Start();
 
   // Terminate the debugger before the C++ destructor chain kicks in.
-  auto terminate_debugger = llvm::make_scope_exit([&] {
+  llvm::scope_exit terminate_debugger([&] {
     if (memory_monitor)
       memory_monitor->Stop();
     lldb::SBDebugger::Terminate();
   });
 
-  std::vector<std::string> pre_init_commands;
+  std::vector<protocol::String> pre_init_commands;
   for (const std::string &arg :
        input_args.getAllArgValues(OPT_pre_init_command)) {
     pre_init_commands.push_back(arg);
@@ -585,6 +978,8 @@ int main(int argc, char *argv[]) {
   if (!connection.empty()) {
     auto maybeProtoclAndName = validateConnection(connection);
     if (auto Err = maybeProtoclAndName.takeError()) {
+      DAP_LOG(log, "Connection Failed: {}",
+              llvm::toStringWithoutConsuming(Err));
       llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
                                   "Invalid connection: ");
       return EXIT_FAILURE;
@@ -593,7 +988,7 @@ int main(int argc, char *argv[]) {
     Socket::SocketProtocol protocol;
     std::string name;
     std::tie(protocol, name) = *maybeProtoclAndName;
-    if (auto Err = serveConnection(protocol, name, log.get(), default_repl_mode,
+    if (auto Err = serveConnection(protocol, name, log, default_repl_mode,
                                    pre_init_commands, no_lldbinit,
                                    connection_timeout_seconds)) {
       llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
@@ -630,8 +1025,9 @@ int main(int argc, char *argv[]) {
 
   constexpr llvm::StringLiteral client_name = "stdio";
   MainLoop loop;
-  Transport transport(client_name, log.get(), input, output);
-  DAP dap(log.get(), default_repl_mode, pre_init_commands, no_lldbinit,
+  Log client_log = log.WithPrefix("(stdio)");
+  Transport transport(client_log, loop, input, output);
+  DAP dap(client_log, default_repl_mode, pre_init_commands, no_lldbinit,
           client_name, transport, loop);
 
   // stdout/stderr redirection to the IDE's console
@@ -641,16 +1037,22 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
+  // Register the DAP session with the global manager for stdio mode.
+  // This is needed for the event handling to find the correct DAP instance.
+  DAPSessionManager::GetInstance().RegisterSession(&loop, &dap);
+
   // used only by TestVSCode_redirection_to_console.py
   if (getenv("LLDB_DAP_TEST_STDOUT_STDERR_REDIRECTION") != nullptr)
     redirection_test();
 
   if (auto Err = dap.Loop()) {
-    DAP_LOG(log.get(), "({0}) DAP session error: {1}", client_name,
+    DAP_LOG(client_log, "DAP session error: {0}",
             llvm::toStringWithoutConsuming(Err));
     llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
                                 "DAP session error: ");
+    DAPSessionManager::GetInstance().UnregisterSession(&loop);
     return EXIT_FAILURE;
   }
+  DAPSessionManager::GetInstance().UnregisterSession(&loop);
   return EXIT_SUCCESS;
 }

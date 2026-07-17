@@ -57,6 +57,12 @@ private:
 
   bool legalizeGETROUNDING(MachineInstr &MI, MachineRegisterInfo &MRI,
                            LegalizerHelper &Helper) const;
+
+  bool legalizeSETROUNDING(MachineInstr &MI, MachineRegisterInfo &MRI,
+                           LegalizerHelper &Helper) const;
+
+  bool legalizeGLOBAL_VALUE(MachineInstr &MI, MachineRegisterInfo &MRI,
+                            LegalizerHelper &Helper) const;
 };
 } // namespace llvm
 #endif

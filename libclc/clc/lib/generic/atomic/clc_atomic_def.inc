@@ -8,60 +8,61 @@
 
 #ifdef __CLC_SCALAR
 
-#if defined(__SPIR32__) || defined(CLC_NVPTX)
+#if defined(__SPIR32__) || defined(__NVPTX__)
 #if (defined(__CLC_FPSIZE) && __CLC_FPSIZE <= 32) ||                           \
     (defined(__CLC_GENSIZE) && (__CLC_GENSIZE == 32))
 #define __CLC_HAS_ATOMIC
 #endif
-#else // defined(__SPIR32__) || defined(CLC_NVPTX)
+#else // defined(__SPIR32__) || defined(__NVPTX__)
 #if defined(__CLC_FPSIZE) || (__CLC_GENSIZE >= 32)
 #define __CLC_HAS_ATOMIC
 #endif
-#endif // defined(__SPIR32__) || defined(CLC_NVPTX)
+#endif // defined(__SPIR32__) || defined(__NVPTX__)
 
 #ifdef __CLC_HAS_ATOMIC
 
-#ifndef __CLC_PTR_CASTTYPE
-#define __CLC_PTR_CASTTYPE __CLC_GENTYPE
+#ifndef __CLC_CASTTYPE
+#define __CLC_CASTTYPE __CLC_GENTYPE
 #endif
 
 #ifndef __CLC_AS_RETTYPE
 #define __CLC_AS_RETTYPE(x) x
 #endif
 
+#ifndef __CLC_AS_CASTTYPE
+#define __CLC_AS_CASTTYPE(x) x
+#endif
+
 #ifdef __CLC_NO_VALUE_ARG
 #define __CLC_DEFINE_ATOMIC(ADDRSPACE)                                         \
-  _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __CLC_FUNCTION(                        \
-      volatile ADDRSPACE __CLC_GENTYPE *Ptr, int MemoryOrder,                  \
-      int MemoryScope) {                                                       \
+  _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __CLC_FUNCTION(                         \
+      ADDRSPACE __CLC_GENTYPE *Ptr, int MemoryOrder, int MemoryScope) {        \
     return __CLC_AS_RETTYPE(__CLC_IMPL_FUNCTION(                               \
-        (ADDRSPACE __CLC_PTR_CASTTYPE *)Ptr, MemoryOrder, MemoryScope));       \
+        (ADDRSPACE __CLC_CASTTYPE *)Ptr, MemoryOrder, MemoryScope));           \
   }
 #elif defined(__CLC_INC_DEC)
 #define __CLC_DEFINE_ATOMIC(ADDRSPACE)                                         \
-  _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __CLC_FUNCTION(                        \
-      volatile ADDRSPACE __CLC_GENTYPE *Ptr, int MemoryOrder,                  \
-      int MemoryScope) {                                                       \
-    return __CLC_AS_RETTYPE(                                                   \
-        __CLC_IMPL_FUNCTION((ADDRSPACE __CLC_PTR_CASTTYPE *)Ptr,               \
-                            (__CLC_GENTYPE)1, MemoryOrder, MemoryScope));      \
+  _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __CLC_FUNCTION(                         \
+      ADDRSPACE __CLC_GENTYPE *Ptr, int MemoryOrder, int MemoryScope) {        \
+    return __CLC_IMPL_FUNCTION(Ptr, (__CLC_U_GENTYPE)(-1), MemoryOrder,        \
+                               MemoryScope);                                   \
   }
 #elif defined(__CLC_RETURN_VOID)
 #define __CLC_DEFINE_ATOMIC(ADDRSPACE)                                         \
-  _CLC_OVERLOAD _CLC_DECL void __CLC_FUNCTION(                                 \
-      volatile ADDRSPACE __CLC_GENTYPE *Ptr, __CLC_GENTYPE Value,              \
-      int MemoryOrder, int MemoryScope) {                                      \
-    __CLC_IMPL_FUNCTION((ADDRSPACE __CLC_PTR_CASTTYPE *)Ptr, Value,            \
-                        MemoryOrder, MemoryScope);                             \
+  _CLC_OVERLOAD _CLC_DEF void __CLC_FUNCTION(                                  \
+      ADDRSPACE __CLC_GENTYPE *Ptr, __CLC_GENTYPE Value, int MemoryOrder,      \
+      int MemoryScope) {                                                       \
+    __CLC_IMPL_FUNCTION((ADDRSPACE __CLC_CASTTYPE *)Ptr,                       \
+                        __CLC_AS_CASTTYPE(Value), MemoryOrder, MemoryScope);   \
   }
 #else
 #define __CLC_DEFINE_ATOMIC(ADDRSPACE)                                         \
-  _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __CLC_FUNCTION(                        \
-      volatile ADDRSPACE __CLC_GENTYPE *Ptr, __CLC_GENTYPE Value,              \
-      int MemoryOrder, int MemoryScope) {                                      \
-    return __CLC_AS_RETTYPE(                                                   \
-        __CLC_IMPL_FUNCTION((ADDRSPACE __CLC_PTR_CASTTYPE *)Ptr, Value,        \
-                            MemoryOrder, MemoryScope));                        \
+  _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __CLC_FUNCTION(                         \
+      ADDRSPACE __CLC_GENTYPE *Ptr, __CLC_GENTYPE Value, int MemoryOrder,      \
+      int MemoryScope) {                                                       \
+    return __CLC_AS_RETTYPE(__CLC_IMPL_FUNCTION(                               \
+        (ADDRSPACE __CLC_CASTTYPE *)Ptr, __CLC_AS_CASTTYPE(Value),             \
+        MemoryOrder, MemoryScope));                                            \
   }
 #endif
 

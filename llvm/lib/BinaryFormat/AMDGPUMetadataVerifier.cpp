@@ -17,8 +17,6 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/MsgPackDocument.h"
 
-#include <utility>
-
 namespace llvm {
 namespace AMDGPU {
 namespace HSAMD {
@@ -281,7 +279,14 @@ bool MetadataVerifier::verifyKernel(msgpack::DocNode &Node) {
     return false;
   if (!verifyIntegerEntry(KernelMap, ".uniform_work_group_size", false))
     return false;
-
+  if (!verifyEntry(
+          KernelMap, ".cluster_dims", false, [this](msgpack::DocNode &Node) {
+            return verifyArray(
+                Node,
+                [this](msgpack::DocNode &Node) { return verifyInteger(Node); },
+                3);
+          }))
+    return false;
 
   return true;
 }

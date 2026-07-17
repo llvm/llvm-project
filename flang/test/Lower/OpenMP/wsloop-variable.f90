@@ -139,7 +139,7 @@ subroutine wsloop_variable_sub
 !CHECK:               %[[VAL_33:.*]] = fir.load %[[VAL_15]]#0 : !fir.ref<i32>
 !CHECK:               %[[VAL_34:.*]] = fir.convert %[[VAL_33]] : (i32) -> index
 !CHECK:               %[[VAL_35:.*]] = fir.convert %[[VAL_30]] : (index) -> i64
-!CHECK:               %[[VAL_36:.*]]:2 = fir.do_loop %[[VAL_37:.*]] = %[[VAL_30]] to %[[VAL_32]] step %[[VAL_34]] iter_args(%[[VAL_38:.*]] = %[[VAL_35]]) -> (index, i64) {
+!CHECK:               %[[VAL_36:.*]] = fir.do_loop %[[VAL_37:.*]] = %[[VAL_30]] to %[[VAL_32]] step %[[VAL_34]] iter_args(%[[VAL_38:.*]] = %[[VAL_35]]) -> (i64) {
 !CHECK:                 fir.store %[[VAL_38]] to %[[VAL_17]]#0 : !fir.ref<i64>
 !CHECK:                 %[[VAL_39:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i16>
 !CHECK:                 %[[VAL_40:.*]] = fir.convert %[[VAL_39]] : (i16) -> i64
@@ -147,13 +147,12 @@ subroutine wsloop_variable_sub
 !CHECK:                 %[[VAL_42:.*]] = arith.addi %[[VAL_40]], %[[VAL_41]] : i64
 !CHECK:                 %[[VAL_43:.*]] = fir.convert %[[VAL_42]] : (i64) -> f32
 !CHECK:                 hlfir.assign %[[VAL_43]] to %[[VAL_21]]#0 : f32, !fir.ref<f32>
-!CHECK:                 %[[VAL_44:.*]] = arith.addi %[[VAL_37]], %[[VAL_34]] overflow<nsw> : index
 !CHECK:                 %[[VAL_45:.*]] = fir.convert %[[VAL_34]] : (index) -> i64
 !CHECK:                 %[[VAL_46:.*]] = fir.load %[[VAL_17]]#0 : !fir.ref<i64>
 !CHECK:                 %[[VAL_47:.*]] = arith.addi %[[VAL_46]], %[[VAL_45]] overflow<nsw> : i64
-!CHECK:                 fir.result %[[VAL_44]], %[[VAL_47]] : index, i64
+!CHECK:                 fir.result %[[VAL_47]] : i64
 !CHECK:               }
-!CHECK:               fir.store %[[VAL_48:.*]]#1 to %[[VAL_17]]#0 : !fir.ref<i64>
+!CHECK:               fir.store %[[VAL_48:.*]] to %[[VAL_17]]#0 : !fir.ref<i64>
 !CHECK:               omp.yield
 !CHECK:             }
 !CHECK:           }

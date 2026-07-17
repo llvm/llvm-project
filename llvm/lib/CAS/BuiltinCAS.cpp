@@ -9,7 +9,7 @@
 #include "BuiltinCAS.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CAS/BuiltinObjectHasher.h"
-#include "llvm/Support/Process.h"
+#include "llvm/CAS/UnifiedOnDiskCache.h"
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -68,7 +68,7 @@ Expected<ObjectRef> BuiltinCAS::store(ArrayRef<ObjectRef> Refs,
                    Refs, Data);
 }
 
-Error BuiltinCAS::validate(const CASID &ID) {
+Error BuiltinCAS::validateObject(const CASID &ID) {
   auto Ref = getReference(ID);
   if (!Ref)
     return createUnknownObjectError(ID);
@@ -91,4 +91,23 @@ Error BuiltinCAS::validate(const CASID &ID) {
     return createCorruptObjectError(ID);
 
   return Error::success();
+}
+
+Expected<std::unique_ptr<ondisk::UnifiedOnDiskCache>>
+cas::builtin::createBuiltinUnifiedOnDiskCache(StringRef Path) {
+#if LLVM_ENABLE_ONDISK_CAS
+  return ondisk::UnifiedOnDiskCache::open(Path, /*SizeLimit=*/std::nullopt,
+                                          BuiltinCASContext::getHashName(),
+                                          sizeof(HashType));
+#else
+  return createStringError(inconvertibleErrorCode(), "OnDiskCache is disabled");
+#endif
+}
+
+void cas::builtin::hashingFunc(ArrayRef<ArrayRef<uint8_t>> Refs,
+                               ArrayRef<char> Data,
+                               SmallVectorImpl<uint8_t> &Result) {
+  auto Hash =
+      BuiltinObjectHasher<llvm::cas::builtin::HasherT>::hashObject(Refs, Data);
+  Result.assign(Hash.begin(), Hash.end());
 }

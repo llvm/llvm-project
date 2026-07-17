@@ -357,7 +357,7 @@ CXIndexDataConsumer::CXXBasesListInfo::CXXBasesListInfo(const CXXRecordDecl *D,
           TST = T->getAs<TemplateSpecializationType>()) {
       BaseD = TST->getTemplateName().getAsTemplateDecl();
     } else if (const RecordType *RT = T->getAs<RecordType>()) {
-      BaseD = RT->getOriginalDecl();
+      BaseD = RT->getDecl();
     }
 
     if (BaseD)
@@ -393,8 +393,6 @@ SourceLocation CXIndexDataConsumer::CXXBasesListInfo::getBaseLoc(
   // TypeLoc::getNameLoc()
   if (auto TTL = TL.getAs<DependentNameTypeLoc>())
     return TTL.getNameLoc();
-  if (auto TTL = TL.getAs<DependentTemplateSpecializationTypeLoc>())
-    return TTL.getTemplateNameLoc();
   if (auto TTL = TL.getAs<TemplateSpecializationTypeLoc>())
     return TTL.getTemplateNameLoc();
   if (auto TTL = TL.getAs<TagTypeLoc>())
@@ -507,7 +505,11 @@ void CXIndexDataConsumer::importedModule(const ImportDecl *ImportD) {
     if (SrcMod->getTopLevelModule() == Mod->getTopLevelModule())
       return;
 
-  OptionalFileEntryRef FE = Mod->getASTFile();
+  OptionalFileEntryRef FE;
+  if (const ModuleFileName *ASTFileName = Mod->getASTFileName()) {
+    FileManager &FileMgr = cxtu::getASTUnit(CXTU)->getFileManager();
+    FE = FileMgr.getOptionalFileRef(*ASTFileName);
+  }
   CXIdxImportedASTFileInfo Info = {cxfile::makeCXFile(FE), Mod,
                                    getIndexLoc(ImportD->getLocation()),
                                    ImportD->isImplicit()};
@@ -515,9 +517,12 @@ void CXIndexDataConsumer::importedModule(const ImportDecl *ImportD) {
   (void)astFile;
 }
 
-void CXIndexDataConsumer::importedPCH(FileEntryRef File) {
+void CXIndexDataConsumer::importedPCH(StringRef FileName) {
   if (!CB.importedASTFile)
     return;
+
+  FileManager &FileMgr = cxtu::getASTUnit(CXTU)->getFileManager();
+  OptionalFileEntryRef File = FileMgr.getOptionalFileRef(FileName);
 
   CXIdxImportedASTFileInfo Info = {
                                     cxfile::makeCXFile(File),

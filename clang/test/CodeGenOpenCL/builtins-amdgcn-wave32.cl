@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -D__AMDGCN_WAVEFRONT_SIZE=32 -target-feature +wavefrontsize32 -emit-llvm -o - %s | FileCheck -enable-var-scope %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-feature +wavefrontsize32 -emit-llvm -o - %s | FileCheck -enable-var-scope %s
 // RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -emit-llvm -o - %s | FileCheck -enable-var-scope %s
 // RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -target-feature +wavefrontsize32 -emit-llvm -o - %s | FileCheck -enable-var-scope %s
 // RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx1100 -target-feature +wavefrontsize32 -emit-llvm -o - %s | FileCheck -enable-var-scope %s
@@ -48,7 +48,3 @@ void test_read_exec_lo(global uint* out) {
 void test_read_exec_hi(global uint* out) {
   *out = __builtin_amdgcn_read_exec_hi();
 }
-
-#if __AMDGCN_WAVEFRONT_SIZE != 32
-#error Wrong wavesize detected
-#endif

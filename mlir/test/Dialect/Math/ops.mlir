@@ -62,6 +62,18 @@ func.func @sin(%f: f32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) {
   return
 }
 
+// CHECK-LABEL: func @sincos(
+// CHECK-SAME:            %[[F:.*]]: f32, %[[V:.*]]: vector<4xf32>, %[[T:.*]]: tensor<4x4x?xf32>)
+func.func @sincos(%f: f32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) {
+  // CHECK: %{{.*}} = math.sincos %[[F]] : f32
+  %0:2 = math.sincos %f : f32
+  // CHECK: %{{.*}} = math.sincos %[[V]] : vector<4xf32>
+  %1:2 = math.sincos %v : vector<4xf32>
+  // CHECK: %{{.*}} = math.sincos %[[T]] : tensor<4x4x?xf32>
+  %2:2 = math.sincos %t : tensor<4x4x?xf32>
+  return
+}
+
 // CHECK-LABEL: func @erf(
 // CHECK-SAME:            %[[F:.*]]: f32, %[[V:.*]]: vector<4xf32>, %[[T:.*]]: tensor<4x4x?xf32>)
 func.func @erf(%f: f32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) {
@@ -292,10 +304,16 @@ func.func @fastmath(%f: f32, %i: i32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) 
   %1 = math.powf %v, %v fastmath<reassoc,nnan,ninf,nsz,arcp,contract,afn> : vector<4xf32>
   // CHECK: math.fma %[[T]], %[[T]], %[[T]] : tensor<4x4x?xf32>
   %2 = math.fma %t, %t, %t fastmath<none> : tensor<4x4x?xf32>
+  // CHECK: math.fma %[[F]], %[[F]], %[[F]] to_nearest_even : f32
+  %3 = math.fma %f, %f, %f to_nearest_even : f32
+  // CHECK: math.fma %[[F]], %[[F]], %[[F]] downward fastmath<contract> : f32
+  %4 = math.fma %f, %f, %f downward fastmath<contract> : f32
+  // CHECK: math.fma %[[V]], %[[V]], %[[V]] toward_zero : vector<4xf32>
+  %5 = math.fma %v, %v, %v toward_zero : vector<4xf32>
   // CHECK: math.absf %[[F]] fastmath<ninf> : f32
-  %3 = math.absf %f fastmath<ninf> : f32
+  %6 = math.absf %f fastmath<ninf> : f32
   // CHECK: math.fpowi %[[F]], %[[I]] fastmath<fast> : f32, i32
-  %4 = math.fpowi %f, %i fastmath<fast> : f32, i32
+  %7 = math.fpowi %f, %i fastmath<fast> : f32, i32
   return
 }
 

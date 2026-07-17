@@ -20,7 +20,6 @@ namespace lldb_private {
 class DeclVendor {
 public:
   enum DeclVendorKind {
-    eClangDeclVendor,
     eClangModuleDeclVendor,
     eAppleObjCDeclVendor,
     eLastClangDeclVendor,

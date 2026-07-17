@@ -59,10 +59,30 @@ static std::string updateTripleOSVersion(std::string TargetTripleString) {
     if (TT.getOS() == Triple::AIX && !TT.getOSMajorVersion()) {
       struct utsname name;
       if (uname(&name) != -1) {
+        std::string release = name.release;
+
+        if (strcmp(name.sysname, "OS400") == 0) {
+          /*
+            PASE uses different versioning system than AIX.
+            The following table shows the currently supported PASE
+            releases and the corresponding AIX release:
+            --------------------------
+              PASE    |    AIX
+            --------------------------
+              V7R4    |    7.2 (TL2)
+            --------------------------
+              V7R5    |    7.2 (TL5)
+            --------------------------
+              V7R6    |    7.3 (TL1)
+            --------------------------
+          */
+          release = (release == "4" || release == "5") ? "2" : "3";
+        }
+
         std::string NewOSName = std::string(Triple::getOSTypeName(Triple::AIX));
         NewOSName += name.version;
         NewOSName += '.';
-        NewOSName += name.release;
+        NewOSName += release;
         NewOSName += ".0.0";
         TT.setOSName(NewOSName);
         return TT.str();

@@ -33,7 +33,7 @@ end subroutine allocate
 !PARSE-TREE-NEXT: | | OmpClauseList -> OmpClause -> Allocate -> OmpAllocateClause
 !PARSE-TREE-NEXT: | | | Modifier -> OmpAllocatorSimpleModifier -> Scalar -> Integer -> Expr -> Designator -> DataRef -> Name = 'omp_default_mem_alloc'
 !PARSE-TREE-NEXT: | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'arr1'
-!PARSE-TREE-NEXT: | | Flags = None
+!PARSE-TREE-NEXT: | | Flags = {}
 !PARSE-TREE-NEXT: | Block
 !PARSE-TREE-NEXT: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AllocateStmt
 !PARSE-TREE-NEXT: | | | Allocation
@@ -49,7 +49,7 @@ end subroutine allocate
 !PARSE-TREE-NEXT: | | OmpClause -> Allocate -> OmpAllocateClause
 !PARSE-TREE-NEXT: | | | Modifier -> OmpAllocatorSimpleModifier -> Scalar -> Integer -> Expr -> Designator -> DataRef -> Name = 'omp_default_mem_alloc'
 !PARSE-TREE-NEXT: | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'arr2'
-!PARSE-TREE-NEXT: | | Flags = None
+!PARSE-TREE-NEXT: | | Flags = {}
 !PARSE-TREE-NEXT: | Block
 !PARSE-TREE-NEXT: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AllocateStmt
 !PARSE-TREE-NEXT: | | | Allocation
@@ -61,7 +61,7 @@ end subroutine allocate
 !PARSE-TREE-NEXT: | | OmpClauseList -> OmpClause -> Allocate -> OmpAllocateClause
 !PARSE-TREE-NEXT: | | | Modifier -> OmpAlignModifier -> Scalar -> Integer -> Expr -> LiteralConstant -> IntLiteralConstant = '32'
 !PARSE-TREE-NEXT: | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'arr2'
-!PARSE-TREE-NEXT: | | Flags = None
+!PARSE-TREE-NEXT: | | Flags = {}
 !PARSE-TREE-NEXT: | Block
 !PARSE-TREE-NEXT: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AllocateStmt
 !PARSE-TREE-NEXT: | | | Allocation
@@ -73,4 +73,4 @@ end subroutine allocate
 !PARSE-TREE-NEXT: | OmpEndDirective
 !PARSE-TREE-NEXT: | | OmpDirectiveName -> llvm::omp::Directive = allocators
 !PARSE-TREE-NEXT: | | OmpClauseList ->
-!PARSE-TREE-NEXT: | | Flags = None
+!PARSE-TREE-NEXT: | | Flags = {}

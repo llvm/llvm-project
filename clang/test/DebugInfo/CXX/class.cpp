@@ -99,12 +99,12 @@ int main(int argc, char **argv) {
   return 0;
 }
 
-// RUN: %clang_cc1 -triple x86_64-unknown_unknown -emit-llvm -debug-info-kind=limited -fexceptions -std=c++98 %s -o - | FileCheck -check-prefix=CHECK98 -check-prefix=CHECK -check-prefix=CHECKELF %s
-// RUN: %clang_cc1 -triple i686-cygwin -emit-llvm -debug-info-kind=limited -fexceptions -std=c++98 %s -o - | FileCheck -check-prefix=CHECK98 -check-prefix=CHECK -check-prefix=CHECKCOFF %s
-// RUN: %clang_cc1 -triple armv7l-unknown-linux-gnueabihf -emit-llvm -debug-info-kind=limited -fexceptions -std=c++98 %s -o - | FileCheck -check-prefix=CHECK98 -check-prefix=CHECK -check-prefix=CHECKELF %s
-// RUN: %clang_cc1 -triple x86_64-unknown_unknown -emit-llvm -debug-info-kind=limited -fexceptions -std=c++11 %s -o - | FileCheck -check-prefix=CHECK11 -check-prefix=CHECK -check-prefix=CHECKELF %s
-// RUN: %clang_cc1 -triple i686-cygwin -emit-llvm -debug-info-kind=limited -fexceptions -std=c++11 %s -o - | FileCheck -check-prefix=CHECK11 -check-prefix=CHECK -check-prefix=CHECKCOFF %s
-// RUN: %clang_cc1 -triple armv7l-unknown-linux-gnueabihf -emit-llvm -debug-info-kind=limited -fexceptions -std=c++11 %s -o - | FileCheck -check-prefix=CHECK11 -check-prefix=CHECK -check-prefix=CHECKELF %s
+// RUN: %clang_cc1 -triple x86_64-unknown_unknown -emit-llvm -debug-info-kind=limited -fexceptions -std=c++98 %s -o - | FileCheck -check-prefix=CHECK98 -check-prefix=CHECK  %s
+// RUN: %clang_cc1 -triple i686-cygwin -emit-llvm -debug-info-kind=limited -fexceptions -std=c++98 %s -o - | FileCheck -check-prefix=CHECK98 -check-prefix=CHECK %s
+// RUN: %clang_cc1 -triple armv7l-unknown-linux-gnueabihf -emit-llvm -debug-info-kind=limited -fexceptions -std=c++98 %s -o - | FileCheck -check-prefix=CHECK98 -check-prefix=CHECK %s
+// RUN: %clang_cc1 -triple x86_64-unknown_unknown -emit-llvm -debug-info-kind=limited -fexceptions -std=c++11 %s -o - | FileCheck -check-prefix=CHECK11 -check-prefix=CHECK %s
+// RUN: %clang_cc1 -triple i686-cygwin -emit-llvm -debug-info-kind=limited -fexceptions -std=c++11 %s -o - | FileCheck -check-prefix=CHECK11 -check-prefix=CHECK %s
+// RUN: %clang_cc1 -triple armv7l-unknown-linux-gnueabihf -emit-llvm -debug-info-kind=limited -fexceptions -std=c++11 %s -o - | FileCheck -check-prefix=CHECK11 -check-prefix=CHECK %s
 
 // CHECK98: invoke {{.+}} @_ZN1BD1Ev(ptr {{[^,]*}} %b)
 // CHECK98-NEXT: unwind label %{{.+}}, !dbg ![[EXCEPTLOC:.*]]
@@ -122,14 +122,6 @@ int main(int argc, char **argv) {
 // CHECK-SAME:             ){{$}}
 
 // CHECK:      ![[INT:[0-9]+]] = !DIBasicType(name: "int"
-// CHECKCOFF: !DICompositeType(tag: DW_TAG_structure_type, name: "foo"
-// CHECKCOFF: !DICompositeType(tag: DW_TAG_class_type, name: "bar"
-// CHECKCOFF: !DICompositeType(tag: DW_TAG_union_type, name: "baz"
-// CHECKCOFF: !DICompositeType(tag: DW_TAG_class_type, name: "B"
-// CHECKCOFF-NOT:              DIFlagFwdDecl
-// CHECKCOFF-SAME:             ){{$}}
-// CHECKCOFF: !DIDerivedType(tag: DW_TAG_member, name: "_vptr$B",
-// CHECKCOFF-SAME:           DIFlagArtificial
 
 // CHECK: [[C:![0-9]*]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "C",
 // CHECK-NOT:                              DIFlagFwdDecl
@@ -145,19 +137,19 @@ int main(int argc, char **argv) {
 // CHECK-SAME:                     DIFlagStaticMember
 // CHECK: [[C_DTOR]] = !DISubprogram(name: "~C"
 
-// CHECKELF: !DICompositeType(tag: DW_TAG_structure_type, name: "K"
-// CHECKELF-SAME:             identifier: "_ZTS1K"
-// CHECKELF-SAME:             ){{$}}
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "K"
+// CHECK-SAME:             identifier: "_ZTS1K"
+// CHECK-SAME:             ){{$}}
 
-// CHECKELF: !DICompositeType(tag: DW_TAG_class_type, name: "B"
-// CHECKELF-NOT:              DIFlagFwdDecl
-// CHECKELF-SAME:             ){{$}}
-// CHECKELF: !DIDerivedType(tag: DW_TAG_member, name: "_vptr$B",
-// CHECKELF-SAME:           DIFlagArtificial
+// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "B"
+// CHECK-NOT:              DIFlagFwdDecl
+// CHECK-SAME:             ){{$}}
+// CHECK: !DIDerivedType(tag: DW_TAG_member, name: "_vptr$B",
+// CHECK-SAME:           DIFlagArtificial
 
-// CHECKELF: !DICompositeType(tag: DW_TAG_structure_type, name: "foo"
-// CHECKELF: !DICompositeType(tag: DW_TAG_class_type, name: "bar"
-// CHECKELF: !DICompositeType(tag: DW_TAG_union_type, name: "baz"
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "foo"
+// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "bar"
+// CHECK: !DICompositeType(tag: DW_TAG_union_type, name: "baz"
 
 // CHECK: [[D:![0-9]+]] = !DICompositeType(tag: DW_TAG_structure_type, name: "D"
 // CHECK-SAME:             size:
@@ -169,10 +161,6 @@ int main(int argc, char **argv) {
 // CHECK-SAME:             DIFlagFwdDecl
 // CHECK-NOT:              identifier:
 // CHECK-SAME:             ){{$}}
-
-// CHECKCOFF: !DICompositeType(tag: DW_TAG_structure_type, name: "K"
-// CHECKCOFF-SAME:             identifier: "_ZTS1K"
-// CHECKCOFF-SAME:             ){{$}}
 
 // CHECK: [[L:![0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "L"
 // CHECK-SAME:             ){{$}}

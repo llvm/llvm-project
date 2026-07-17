@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple i686-windows-msvc   -emit-llvm -o - %s | FileCheck %s --check-prefix=X86
 // RUN: %clang_cc1 -triple x86_64-windows-msvc -emit-llvm -o - %s | FileCheck %s --check-prefix=X64
+// RUN: %clang_cc1 -triple x86_64-windows-gnu  -emit-llvm -o - %s | FileCheck %s --check-prefix=X64
+// RUN: %clang_cc1 -triple x86_64-cygwin       -emit-llvm -o - %s | FileCheck %s --check-prefix=X64
 // RUN: %clang_cc1 -triple i686-windows-msvc   -emit-llvm -o - %s -fdefault-calling-conv=vectorcall | FileCheck %s --check-prefix=X86-VEC
 // RUN: %clang_cc1 -triple x86_64-windows-msvc -emit-llvm -o - %s -fdefault-calling-conv=vectorcall | FileCheck %s --check-prefix=X64-VEC
 

@@ -341,12 +341,12 @@ bool ThreadPlanStepOut::DoPlanExplainsStop(Event *event_ptr) {
 
         if (m_step_out_to_id == frame_zero_id)
           done = true;
-        else if (m_step_out_to_id < frame_zero_id) {
+        else if (m_step_out_to_id.IsYoungerThan(frame_zero_id)) {
           // Either we stepped past the breakpoint, or the stack ID calculation
           // was incorrect and we should probably stop.
           done = true;
         } else {
-          done = (m_immediate_step_from_id < frame_zero_id);
+          done = (m_immediate_step_from_id.IsYoungerThan(frame_zero_id));
         }
 
         if (done) {
@@ -356,13 +356,10 @@ bool ThreadPlanStepOut::DoPlanExplainsStop(Event *event_ptr) {
           }
         }
 
-        // If there was only one owner, then we're done.  But if we also hit
-        // some user breakpoint on our way out, we should mark ourselves as
-        // done, but also not claim to explain the stop, since it is more
-        // important to report the user breakpoint than the step out
-        // completion.
-
-        if (site_sp->GetNumberOfConstituents() == 1)
+        // If the thread also hit a user breakpoint on its way out, the plan is
+        // done but should not claim to explain the stop. It is more important
+        // to report the user breakpoint than the step out completion.
+        if (!site_sp->ContainsUserBreakpointForThread(GetThread()))
           return true;
       }
       return false;
@@ -397,9 +394,10 @@ bool ThreadPlanStepOut::ShouldStop(Event *event_ptr) {
     else
       return m_step_through_inline_plan_sp->ShouldStop(event_ptr);
   } else if (m_step_out_further_plan_sp) {
-    if (m_step_out_further_plan_sp->MischiefManaged())
+    if (m_step_out_further_plan_sp->MischiefManaged()) {
       m_step_out_further_plan_sp.reset();
-    else
+      done = true;
+    } else
       return m_step_out_further_plan_sp->ShouldStop(event_ptr);
   }
 
@@ -407,7 +405,7 @@ bool ThreadPlanStepOut::ShouldStop(Event *event_ptr) {
     StopInfoSP stop_info_sp = GetPrivateStopInfo();
     if (stop_info_sp && stop_info_sp->GetStopReason() == eStopReasonBreakpoint) {
       StackID frame_zero_id = GetThread().GetStackFrameAtIndex(0)->GetStackID();
-      done = !(frame_zero_id < m_step_out_to_id);
+      done = !(frame_zero_id.IsYoungerThan(m_step_out_to_id));
     }
   }
 
@@ -468,8 +466,7 @@ bool ThreadPlanStepOut::MischiefManaged() {
     // we're done with this step out operation.
 
     Log *log = GetLog(LLDBLog::Step);
-    if (log)
-      LLDB_LOGF(log, "Completed step out plan.");
+    LLDB_LOGF(log, "Completed step out plan.");
     if (m_return_bp_id != LLDB_INVALID_BREAK_ID) {
       GetTarget().RemoveBreakpointByID(m_return_bp_id);
       m_return_bp_id = LLDB_INVALID_BREAK_ID;
@@ -568,5 +565,5 @@ bool ThreadPlanStepOut::IsPlanStale() {
   // then there's something for us to do.  Otherwise, we're stale.
 
   StackID frame_zero_id = GetThread().GetStackFrameAtIndex(0)->GetStackID();
-  return !(frame_zero_id < m_step_out_to_id);
+  return !(frame_zero_id.IsYoungerThan(m_step_out_to_id));
 }

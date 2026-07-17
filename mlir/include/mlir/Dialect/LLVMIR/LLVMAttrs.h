@@ -79,7 +79,7 @@ public:
   /// Support LLVM type casting.
   static bool classof(Attribute attr);
 
-  /// Required by DenseMapInfo to create empty and tombstone key.
+  /// Required by DenseMapInfo to create the empty key.
   static TBAANodeAttr getFromOpaquePointer(const void *pointer) {
     return TBAANodeAttr(reinterpret_cast<const ImplType *>(pointer));
   }
@@ -93,6 +93,19 @@ public:
 using cconv::CConv;
 using linkage::Linkage;
 using tailcallkind::TailCallKind;
+
+namespace detail {
+/// Checks whether the given type is an LLVM type that can be loaded or stored.
+bool isValidLoadStoreImpl(Type type, ptr::AtomicOrdering ordering,
+                          std::optional<int64_t> alignment,
+                          const ::mlir::DataLayout *dataLayout,
+                          function_ref<InFlightDiagnostic()> emitError);
+
+/// Verifies that a module flag value can be exported to LLVM IR.
+LogicalResult
+verifyModuleFlagValue(StringAttr key, Attribute value,
+                      function_ref<InFlightDiagnostic()> emitError);
+} // namespace detail
 } // namespace LLVM
 } // namespace mlir
 

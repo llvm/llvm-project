@@ -165,8 +165,6 @@ define double @fdiv_d(double %a, double %b) nounwind {
   ret double %1
 }
 
-declare double @llvm.sqrt.f64(double)
-
 define double @fsqrt_d(double %a) nounwind {
 ; CHECKIFD-LABEL: fsqrt_d:
 ; CHECKIFD:       # %bb.0:
@@ -203,8 +201,6 @@ define double @fsqrt_d(double %a) nounwind {
   %1 = call double @llvm.sqrt.f64(double %a)
   ret double %1
 }
-
-declare double @llvm.copysign.f64(double, double)
 
 define double @fsgnj_d(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fsgnj_d:
@@ -305,9 +301,6 @@ define i32 @fneg_d(double %a, double %b) nounwind {
 }
 
 define double @fsgnjn_d(double %a, double %b) nounwind {
-; TODO: fsgnjn.s isn't selected on RV64 because DAGCombiner::visitBITCAST will
-; convert (bitconvert (fneg x)) to a xor.
-;
 ; CHECKIFD-LABEL: fsgnjn_d:
 ; CHECKIFD:       # %bb.0:
 ; CHECKIFD-NEXT:    fsgnjn.d fa0, fa0, fa1
@@ -337,8 +330,8 @@ define double @fsgnjn_d(double %a, double %b) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    not a1, a1
 ; RV64I-NEXT:    slli a0, a0, 1
-; RV64I-NEXT:    srli a0, a0, 1
 ; RV64I-NEXT:    srli a1, a1, 63
+; RV64I-NEXT:    srli a0, a0, 1
 ; RV64I-NEXT:    slli a1, a1, 63
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
@@ -346,8 +339,6 @@ define double @fsgnjn_d(double %a, double %b) nounwind {
   %2 = call double @llvm.copysign.f64(double %a, double %1)
   ret double %2
 }
-
-declare double @llvm.fabs.f64(double)
 
 ; This function performs extra work to ensure that
 ; DAGCombiner::visitBITCAST doesn't replace the fabs with an and.
@@ -405,8 +396,6 @@ define double @fabs_d(double %a, double %b) nounwind {
   ret double %3
 }
 
-declare double @llvm.minnum.f64(double, double)
-
 define double @fmin_d(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fmin_d:
 ; CHECKIFD:       # %bb.0:
@@ -444,8 +433,6 @@ define double @fmin_d(double %a, double %b) nounwind {
   ret double %1
 }
 
-declare double @llvm.maxnum.f64(double, double)
-
 define double @fmax_d(double %a, double %b) nounwind {
 ; CHECKIFD-LABEL: fmax_d:
 ; CHECKIFD:       # %bb.0:
@@ -482,8 +469,6 @@ define double @fmax_d(double %a, double %b) nounwind {
   %1 = call double @llvm.maxnum.f64(double %a, double %b)
   ret double %1
 }
-
-declare double @llvm.fma.f64(double, double, double)
 
 define double @fmadd_d(double %a, double %b, double %c) nounwind {
 ; CHECKIFD-LABEL: fmadd_d:
@@ -1432,8 +1417,8 @@ define double @fnmadd_d_contract(double %a, double %b, double %c) nounwind {
 ;
 ; RV64IZFINXZDINX-LABEL: fnmadd_d_contract:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    fadd.d a0, a0, zero
 ; RV64IZFINXZDINX-NEXT:    fadd.d a1, a1, zero
+; RV64IZFINXZDINX-NEXT:    fadd.d a0, a0, zero
 ; RV64IZFINXZDINX-NEXT:    fadd.d a2, a2, zero
 ; RV64IZFINXZDINX-NEXT:    fnmadd.d a0, a0, a1, a2
 ; RV64IZFINXZDINX-NEXT:    ret

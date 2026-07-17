@@ -128,3 +128,82 @@ namespace NonConstBitWidth {
                 // both-note {{read of non-const variable}}
   };
 }
+
+namespace IncDecOverflow {
+  constexpr bool test1() {
+    struct {unsigned u: 5; } a {};
+    a.u--;
+    return a.u == 31;
+  }
+  static_assert(test1(), "");
+
+  constexpr bool test2() {
+    struct {unsigned u: 5; } a {};
+    --a.u;
+    return a.u == 31;
+  }
+  static_assert(test2(), "");
+
+  constexpr bool test3() {
+    int x = 0;
+    struct {unsigned u: 5; } a {};
+    x = a.u--;
+    return a.u == 31;
+  }
+  static_assert(test3(), "");
+
+  constexpr bool test4() {
+    int x = 0;
+    struct {unsigned u: 5; } a {};
+    x = --a.u;
+    return a.u == 31;
+  }
+  static_assert(test4(), "");
+
+  constexpr bool test5() {
+    struct {unsigned u: 5; } a {};
+    a.u = 31;
+    ++a.u;
+
+    return a.u == 0;
+  }
+  static_assert(test5(), "");
+
+  constexpr bool test6() {
+    struct {unsigned u: 5; } a {};
+    a.u = 31;
+    ++a.u;
+
+    return a.u == 0;
+  }
+  static_assert(test6(), "");
+
+  constexpr bool test7() {
+    struct {unsigned u: 5; } a {};
+    a.u = 31;
+    a.u++;
+
+    return a.u == 0;
+  }
+  static_assert(test7(), "");
+
+  constexpr bool test8() {
+    int x = 0;
+    struct {unsigned u: 5; } a {};
+    a.u = 31;
+    x = a.u++;
+
+    return a.u == 0;
+  }
+  static_assert(test8(), "");
+
+  constexpr bool test9() {
+    int x = 0;
+    struct {unsigned u: 5; } a {};
+    a.u = 31;
+    x = ++a.u;
+
+    return a.u == 0;
+  }
+  static_assert(test9(), "");
+}

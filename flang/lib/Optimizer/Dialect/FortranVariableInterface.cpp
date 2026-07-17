@@ -53,8 +53,9 @@ fir::FortranVariableOpInterface::verifyDeclareLikeOpImpl(mlir::Value memref) {
         shapeRank = shapeShiftType.getRank();
       } else {
         if (!sourceIsBoxValue)
-          emitOpError("of array entity with a raw address base must have a "
-                      "shape operand that is a shape or shapeshift");
+          return emitOpError(
+              "of array entity with a raw address base must have a "
+              "shape operand that is a shape or shapeshift");
         shapeRank = mlir::cast<fir::ShiftType>(shape.getType()).getRank();
       }
 
@@ -62,8 +63,9 @@ fir::FortranVariableOpInterface::verifyDeclareLikeOpImpl(mlir::Value memref) {
       if (!rank || *rank != shapeRank)
         return emitOpError("has conflicting shape and base operand ranks");
     } else if (!sourceIsBox) {
-      emitOpError("of array entity with a raw address base must have a shape "
-                  "operand that is a shape or shapeshift");
+      return emitOpError(
+          "of array entity with a raw address base must have a shape "
+          "operand that is a shape or shapeshift");
     }
   }
   return mlir::success();

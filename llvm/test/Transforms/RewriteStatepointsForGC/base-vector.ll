@@ -75,9 +75,9 @@ merge2:                                           ; preds = %untaken2, %taken2
 define ptr addrspace(1) @test3(ptr addrspace(1) %ptr) gc "statepoint-example" {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VEC_BASE:%.*]] = insertelement <2 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[PTR:%.*]], i32 0, !is_base_value !0
+; CHECK-NEXT:    [[VEC_BASE:%.*]] = insertelement <2 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[PTR:%.*]], i32 0, !is_base_value [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[VEC:%.*]] = insertelement <2 x ptr addrspace(1)> undef, ptr addrspace(1) [[PTR]], i32 0
-; CHECK-NEXT:    [[OBJ_BASE:%.*]] = extractelement <2 x ptr addrspace(1)> [[VEC_BASE]], i32 0, !is_base_value !0
+; CHECK-NEXT:    [[OBJ_BASE:%.*]] = extractelement <2 x ptr addrspace(1)> [[VEC_BASE]], i32 0, !is_base_value [[META0]]
 ; CHECK-NEXT:    [[OBJ:%.*]] = extractelement <2 x ptr addrspace(1)> [[VEC]], i32 0
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @do_safepoint, i32 0, i32 0, i32 0, i32 0) [ "deopt"(), "gc-live"(ptr addrspace(1) [[OBJ]], ptr addrspace(1) [[OBJ_BASE]]) ]
 ; CHECK-NEXT:    [[OBJ_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
@@ -97,11 +97,11 @@ define ptr addrspace(1) @test4(ptr addrspace(1) %ptr) gc "statepoint-example" {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DERIVED:%.*]] = getelementptr i64, ptr addrspace(1) [[PTR:%.*]], i64 16
-; CHECK-NEXT:    [[VECA_BASE:%.*]] = insertelement <2 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[PTR]], i32 0, !is_base_value !0
+; CHECK-NEXT:    [[VECA_BASE:%.*]] = insertelement <2 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[PTR]], i32 0, !is_base_value [[META0]]
 ; CHECK-NEXT:    [[VECA:%.*]] = insertelement <2 x ptr addrspace(1)> undef, ptr addrspace(1) [[DERIVED]], i32 0
-; CHECK-NEXT:    [[VEC_BASE:%.*]] = insertelement <2 x ptr addrspace(1)> [[VECA_BASE]], ptr addrspace(1) [[PTR]], i32 1, !is_base_value !0
+; CHECK-NEXT:    [[VEC_BASE:%.*]] = insertelement <2 x ptr addrspace(1)> [[VECA_BASE]], ptr addrspace(1) [[PTR]], i32 1, !is_base_value [[META0]]
 ; CHECK-NEXT:    [[VEC:%.*]] = insertelement <2 x ptr addrspace(1)> [[VECA]], ptr addrspace(1) [[PTR]], i32 1
-; CHECK-NEXT:    [[OBJ_BASE:%.*]] = extractelement <2 x ptr addrspace(1)> [[VEC_BASE]], i32 0, !is_base_value !0
+; CHECK-NEXT:    [[OBJ_BASE:%.*]] = extractelement <2 x ptr addrspace(1)> [[VEC_BASE]], i32 0, !is_base_value [[META0]]
 ; CHECK-NEXT:    [[OBJ:%.*]] = extractelement <2 x ptr addrspace(1)> [[VEC]], i32 0
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @do_safepoint, i32 0, i32 0, i32 0, i32 0) [ "deopt"(), "gc-live"(ptr addrspace(1) [[OBJ]], ptr addrspace(1) [[OBJ_BASE]]) ]
 ; CHECK-NEXT:    [[OBJ_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
@@ -125,9 +125,9 @@ define void @test5(i1 %cnd, ptr addrspace(1) %obj) gc "statepoint-example" {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr addrspace(1) [[OBJ:%.*]], i64 1
-; CHECK-NEXT:    [[VEC_BASE:%.*]] = insertelement <2 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[OBJ]], i32 0, !is_base_value !0
+; CHECK-NEXT:    [[VEC_BASE:%.*]] = insertelement <2 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[OBJ]], i32 0, !is_base_value [[META0]]
 ; CHECK-NEXT:    [[VEC:%.*]] = insertelement <2 x ptr addrspace(1)> undef, ptr addrspace(1) [[GEP]], i32 0
-; CHECK-NEXT:    [[BDV_BASE:%.*]] = extractelement <2 x ptr addrspace(1)> [[VEC_BASE]], i32 0, !is_base_value !0
+; CHECK-NEXT:    [[BDV_BASE:%.*]] = extractelement <2 x ptr addrspace(1)> [[VEC_BASE]], i32 0, !is_base_value [[META0]]
 ; CHECK-NEXT:    [[BDV:%.*]] = extractelement <2 x ptr addrspace(1)> [[VEC]], i32 0
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @do_safepoint, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0), "gc-live"(ptr addrspace(1) [[BDV]], ptr addrspace(1) [[BDV_BASE]]) ]
 ; CHECK-NEXT:    [[BDV_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
@@ -151,9 +151,9 @@ define void @test6(i1 %cnd, ptr addrspace(1) %obj, i64 %idx) gc "statepoint-exam
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr addrspace(1) [[OBJ:%.*]], i64 1
-; CHECK-NEXT:    [[VEC_BASE:%.*]] = insertelement <2 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[OBJ]], i32 0, !is_base_value !0
+; CHECK-NEXT:    [[VEC_BASE:%.*]] = insertelement <2 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[OBJ]], i32 0, !is_base_value [[META0]]
 ; CHECK-NEXT:    [[VEC:%.*]] = insertelement <2 x ptr addrspace(1)> undef, ptr addrspace(1) [[GEP]], i32 0
-; CHECK-NEXT:    [[BDV_BASE:%.*]] = extractelement <2 x ptr addrspace(1)> [[VEC_BASE]], i64 [[IDX:%.*]], !is_base_value !0
+; CHECK-NEXT:    [[BDV_BASE:%.*]] = extractelement <2 x ptr addrspace(1)> [[VEC_BASE]], i64 [[IDX:%.*]], !is_base_value [[META0]]
 ; CHECK-NEXT:    [[BDV:%.*]] = extractelement <2 x ptr addrspace(1)> [[VEC]], i64 [[IDX]]
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @do_safepoint, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0), "gc-live"(ptr addrspace(1) [[BDV]], ptr addrspace(1) [[BDV_BASE]]) ]
 ; CHECK-NEXT:    [[BDV_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
@@ -173,22 +173,22 @@ entry:
 define ptr addrspace(1) @test7(i1 %cnd, ptr addrspace(1) %obj, ptr addrspace(1) %obj2) gc "statepoint-example" {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VEC_BASE:%.*]] = insertelement <2 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[OBJ2:%.*]], i32 0, !is_base_value !0
+; CHECK-NEXT:    [[VEC_BASE:%.*]] = insertelement <2 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[OBJ2:%.*]], i32 0, !is_base_value [[META0]]
 ; CHECK-NEXT:    [[VEC:%.*]] = insertelement <2 x ptr addrspace(1)> undef, ptr addrspace(1) [[OBJ2]], i32 0
 ; CHECK-NEXT:    br label [[MERGE1:%.*]]
 ; CHECK:       merge1:
-; CHECK-NEXT:    [[VEC2_BASE:%.*]] = phi <2 x ptr addrspace(1)> [ [[VEC_BASE]], [[ENTRY:%.*]] ], [ [[VEC3_BASE:%.*]], [[MERGE1]] ], !is_base_value !0
+; CHECK-NEXT:    [[VEC2_BASE:%.*]] = phi <2 x ptr addrspace(1)> [ [[VEC_BASE]], [[ENTRY:%.*]] ], [ [[VEC3_BASE:%.*]], [[MERGE1]] ], !is_base_value [[META0]]
 ; CHECK-NEXT:    [[VEC2:%.*]] = phi <2 x ptr addrspace(1)> [ [[VEC]], [[ENTRY]] ], [ [[VEC3:%.*]], [[MERGE1]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr addrspace(1) [[OBJ2]], i64 1
-; CHECK-NEXT:    [[VEC3_BASE]] = insertelement <2 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[OBJ2]], i32 0, !is_base_value !0
+; CHECK-NEXT:    [[VEC3_BASE]] = insertelement <2 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[OBJ2]], i32 0, !is_base_value [[META0]]
 ; CHECK-NEXT:    [[VEC3]] = insertelement <2 x ptr addrspace(1)> undef, ptr addrspace(1) [[GEP]], i32 0
 ; CHECK-NEXT:    br i1 [[CND:%.*]], label [[MERGE1]], label [[NEXT1:%.*]]
 ; CHECK:       next1:
-; CHECK-NEXT:    [[BDV_BASE:%.*]] = extractelement <2 x ptr addrspace(1)> [[VEC2_BASE]], i32 0, !is_base_value !0
+; CHECK-NEXT:    [[BDV_BASE:%.*]] = extractelement <2 x ptr addrspace(1)> [[VEC2_BASE]], i32 0, !is_base_value [[META0]]
 ; CHECK-NEXT:    [[BDV:%.*]] = extractelement <2 x ptr addrspace(1)> [[VEC2]], i32 0
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[OBJB_BASE:%.*]] = phi ptr addrspace(1) [ [[OBJ:%.*]], [[NEXT1]] ], [ [[BDV_BASE]], [[MERGE]] ], !is_base_value !0
+; CHECK-NEXT:    [[OBJB_BASE:%.*]] = phi ptr addrspace(1) [ [[OBJ:%.*]], [[NEXT1]] ], [ [[BDV_BASE]], [[MERGE]] ], !is_base_value [[META0]]
 ; CHECK-NEXT:    [[OBJB:%.*]] = phi ptr addrspace(1) [ [[OBJ]], [[NEXT1]] ], [ [[BDV]], [[MERGE]] ]
 ; CHECK-NEXT:    br i1 [[CND]], label [[MERGE]], label [[NEXT:%.*]]
 ; CHECK:       next:
@@ -226,13 +226,13 @@ define void @test8(ptr addrspace(1) %obj, i64 %idx) gc "statepoint-example" {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr addrspace(1) [[OBJ:%.*]], i64 1
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i64, ptr addrspace(1) [[OBJ]], i64 2
-; CHECK-NEXT:    [[VEC1_BASE:%.*]] = insertelement <4 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[OBJ]], i32 0, !is_base_value !0
+; CHECK-NEXT:    [[VEC1_BASE:%.*]] = insertelement <4 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[OBJ]], i32 0, !is_base_value [[META0]]
 ; CHECK-NEXT:    [[VEC1:%.*]] = insertelement <4 x ptr addrspace(1)> undef, ptr addrspace(1) [[GEP]], i32 0
-; CHECK-NEXT:    [[VEC2_BASE:%.*]] = insertelement <4 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[OBJ]], i32 2, !is_base_value !0
+; CHECK-NEXT:    [[VEC2_BASE:%.*]] = insertelement <4 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[OBJ]], i32 2, !is_base_value [[META0]]
 ; CHECK-NEXT:    [[VEC2:%.*]] = insertelement <4 x ptr addrspace(1)> undef, ptr addrspace(1) [[GEP2]], i32 2
-; CHECK-NEXT:    [[VEC_BASE:%.*]] = shufflevector <4 x ptr addrspace(1)> [[VEC1_BASE]], <4 x ptr addrspace(1)> [[VEC2_BASE]], <2 x i32> <i32 0, i32 2>, !is_base_value !0
+; CHECK-NEXT:    [[VEC_BASE:%.*]] = shufflevector <4 x ptr addrspace(1)> [[VEC1_BASE]], <4 x ptr addrspace(1)> [[VEC2_BASE]], <2 x i32> <i32 0, i32 2>, !is_base_value [[META0]]
 ; CHECK-NEXT:    [[VEC:%.*]] = shufflevector <4 x ptr addrspace(1)> [[VEC1]], <4 x ptr addrspace(1)> [[VEC2]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[BDV_BASE:%.*]] = extractelement <2 x ptr addrspace(1)> [[VEC_BASE]], i64 [[IDX:%.*]], !is_base_value !0
+; CHECK-NEXT:    [[BDV_BASE:%.*]] = extractelement <2 x ptr addrspace(1)> [[VEC_BASE]], i64 [[IDX:%.*]], !is_base_value [[META0]]
 ; CHECK-NEXT:    [[BDV:%.*]] = extractelement <2 x ptr addrspace(1)> [[VEC]], i64 [[IDX]]
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @do_safepoint, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0), "gc-live"(ptr addrspace(1) [[BDV]], ptr addrspace(1) [[BDV_BASE]]) ]
 ; CHECK-NEXT:    [[BDV_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
@@ -277,19 +277,19 @@ entry:
 define ptr addrspace(1) @test10(i1 %cnd, ptr addrspace(1) %obj, ptr addrspace(1) %obj2) gc "statepoint-example" {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VEC1_BASE:%.*]] = insertelement <4 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[OBJ:%.*]], i32 0, !is_base_value !0
+; CHECK-NEXT:    [[VEC1_BASE:%.*]] = insertelement <4 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[OBJ:%.*]], i32 0, !is_base_value [[META0]]
 ; CHECK-NEXT:    [[VEC1:%.*]] = insertelement <4 x ptr addrspace(1)> undef, ptr addrspace(1) [[OBJ]], i32 0
 ; CHECK-NEXT:    br i1 [[CND:%.*]], label [[HERE:%.*]], label [[MERGE:%.*]]
 ; CHECK:       here:
-; CHECK-NEXT:    [[VEC2_BASE:%.*]] = insertelement <4 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[OBJ2:%.*]], i32 2, !is_base_value !0
+; CHECK-NEXT:    [[VEC2_BASE:%.*]] = insertelement <4 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[OBJ2:%.*]], i32 2, !is_base_value [[META0]]
 ; CHECK-NEXT:    [[VEC2:%.*]] = insertelement <4 x ptr addrspace(1)> undef, ptr addrspace(1) [[OBJ2]], i32 2
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[VEC_BASE:%.*]] = phi <4 x ptr addrspace(1)> [ [[VEC1_BASE]], [[ENTRY:%.*]] ], [ [[VEC2_BASE]], [[HERE]] ], [ [[VEC3_BASE:%.*]], [[MERGE]] ], !is_base_value !0
+; CHECK-NEXT:    [[VEC_BASE:%.*]] = phi <4 x ptr addrspace(1)> [ [[VEC1_BASE]], [[ENTRY:%.*]] ], [ [[VEC2_BASE]], [[HERE]] ], [ [[VEC3_BASE:%.*]], [[MERGE]] ], !is_base_value [[META0]]
 ; CHECK-NEXT:    [[VEC:%.*]] = phi <4 x ptr addrspace(1)> [ [[VEC1]], [[ENTRY]] ], [ [[VEC2]], [[HERE]] ], [ [[VEC3:%.*]], [[MERGE]] ]
-; CHECK-NEXT:    [[VEC3_BASE]] = shufflevector <4 x ptr addrspace(1)> [[VEC_BASE]], <4 x ptr addrspace(1)> [[VEC_BASE]], <4 x i32> <i32 2, i32 0, i32 1, i32 3>, !is_base_value !0
+; CHECK-NEXT:    [[VEC3_BASE]] = shufflevector <4 x ptr addrspace(1)> [[VEC_BASE]], <4 x ptr addrspace(1)> [[VEC_BASE]], <4 x i32> <i32 2, i32 0, i32 1, i32 3>, !is_base_value [[META0]]
 ; CHECK-NEXT:    [[VEC3]] = shufflevector <4 x ptr addrspace(1)> [[VEC]], <4 x ptr addrspace(1)> [[VEC]], <4 x i32> <i32 2, i32 0, i32 1, i32 3>
-; CHECK-NEXT:    [[BDV_BASE:%.*]] = extractelement <4 x ptr addrspace(1)> [[VEC3_BASE]], i32 0, !is_base_value !0
+; CHECK-NEXT:    [[BDV_BASE:%.*]] = extractelement <4 x ptr addrspace(1)> [[VEC3_BASE]], i32 0, !is_base_value [[META0]]
 ; CHECK-NEXT:    [[BDV:%.*]] = extractelement <4 x ptr addrspace(1)> [[VEC3]], i32 0
 ; CHECK-NEXT:    br i1 [[CND]], label [[MERGE]], label [[NEXT:%.*]]
 ; CHECK:       next:
@@ -354,16 +354,16 @@ entry:
 }
 
 define i32 @test13() gc "statepoint-example" {
-; CHECK-LABEL: define i32 @test13() gc "statepoint-example" {
+; CHECK-LABEL: @test13(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i8, <2 x ptr addrspace(1)> zeroinitializer, <2 x i64> <i64 948, i64 896>
-; CHECK-NEXT:    [[SHUFFLEVECTOR_BASE:%.*]] = shufflevector <2 x ptr addrspace(1)> zeroinitializer, <2 x ptr addrspace(1)> zeroinitializer, <4 x i32> <i32 0, i32 3, i32 1, i32 2>, !is_base_value !0
-; CHECK-NEXT:    [[SHUFFLEVECTOR:%.*]] = shufflevector <2 x ptr addrspace(1)> zeroinitializer, <2 x ptr addrspace(1)> [[GETELEMENTPTR]], <4 x i32> <i32 0, i32 3, i32 1, i32 2>
+; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i8, <2 x ptr addrspace(1)> splat (ptr addrspace(1) null), <2 x i64> <i64 948, i64 896>
+; CHECK-NEXT:    [[SHUFFLEVECTOR_BASE:%.*]] = shufflevector <2 x ptr addrspace(1)> zeroinitializer, <2 x ptr addrspace(1)> zeroinitializer, <4 x i32> <i32 0, i32 3, i32 1, i32 2>, !is_base_value [[META0]]
+; CHECK-NEXT:    [[SHUFFLEVECTOR:%.*]] = shufflevector <2 x ptr addrspace(1)> splat (ptr addrspace(1) null), <2 x ptr addrspace(1)> [[GETELEMENTPTR]], <4 x i32> <i32 0, i32 3, i32 1, i32 2>
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[PHI_BASE:%.*]] = phi <4 x ptr addrspace(1)> [ [[SHUFFLEVECTOR_BASE]], [[BB:%.*]] ], [ zeroinitializer, [[BB1]] ], !is_base_value !0
-; CHECK-NEXT:    [[PHI:%.*]] = phi <4 x ptr addrspace(1)> [ [[SHUFFLEVECTOR]], [[BB]] ], [ zeroinitializer, [[BB1]] ]
-; CHECK-NEXT:    [[EXTRACTELEMENT_BASE:%.*]] = extractelement <4 x ptr addrspace(1)> [[PHI_BASE]], i32 0, !is_base_value !0
+; CHECK-NEXT:    [[PHI_BASE:%.*]] = phi <4 x ptr addrspace(1)> [ [[SHUFFLEVECTOR_BASE]], [[BB:%.*]] ], [ zeroinitializer, [[BB1]] ], !is_base_value [[META0]]
+; CHECK-NEXT:    [[PHI:%.*]] = phi <4 x ptr addrspace(1)> [ [[SHUFFLEVECTOR]], [[BB]] ], [ splat (ptr addrspace(1) null), [[BB1]] ]
+; CHECK-NEXT:    [[EXTRACTELEMENT_BASE:%.*]] = extractelement <4 x ptr addrspace(1)> [[PHI_BASE]], i32 0, !is_base_value [[META0]]
 ; CHECK-NEXT:    [[EXTRACTELEMENT:%.*]] = extractelement <4 x ptr addrspace(1)> [[PHI]], i32 0
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(i32 ()) @spam, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(ptr addrspace(1) [[EXTRACTELEMENT]], ptr addrspace(1) [[EXTRACTELEMENT_BASE]]) ]
 ; CHECK-NEXT:    [[EXTRACTELEMENT_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)

@@ -23,7 +23,5 @@ class SemanticsContext;
 void ResolveAccParts(
     SemanticsContext &, const parser::ProgramUnit &, Scope *topScope);
 void ResolveOmpParts(SemanticsContext &, const parser::ProgramUnit &);
-void ResolveOmpTopLevelParts(SemanticsContext &, const parser::Program &);
-
 } // namespace Fortran::semantics
 #endif

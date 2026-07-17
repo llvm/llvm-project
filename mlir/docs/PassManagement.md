@@ -835,6 +835,12 @@ each pass, the generator produces a `registerPassName` where
 generates a `registerGroupPasses`, where `Group` is the tag provided via the
 `-name` input parameter, that registers all of the passes present.
 
+These declarations can be enabled for the whole group of passes by
+defining the `GEN_PASS_REGISTRATION` macro, or on a per-pass basis by
+defining `GEN_PASS_REGISTRATION_PASSNAME` where `PASSNAME` is the
+uppercase version of the name of the pass (similar to pass def and
+decls).
+
 ```c++
 // Tablegen options: -gen-pass-decls -name="Example"
 

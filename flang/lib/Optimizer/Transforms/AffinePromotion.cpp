@@ -21,7 +21,6 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Visitors.h"
@@ -474,7 +473,7 @@ public:
                   mlir::PatternRewriter &rewriter) const override {
     LLVM_DEBUG(llvm::dbgs() << "AffineLoopConversion: rewriting loop:\n";
                loop.dump(););
-    LLVM_ATTRIBUTE_UNUSED auto loopAnalysis =
+    [[maybe_unused]] auto loopAnalysis =
         functionAnalysis.getChildLoopAnalysis(loop);
     if (!loopAnalysis.canPromoteToAffine())
       return rewriter.notifyMatchFailure(loop, "cannot promote to affine");

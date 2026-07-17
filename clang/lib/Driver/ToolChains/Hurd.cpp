@@ -10,7 +10,7 @@
 #include "clang/Config/config.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
@@ -33,6 +33,12 @@ std::string Hurd::getMultiarchTriple(const Driver &D,
   switch (TargetTriple.getArch()) {
   default:
     break;
+
+  case llvm::Triple::aarch64:
+    return "aarch64-gnu";
+
+  case llvm::Triple::riscv64:
+    return "riscv64-gnu";
 
   case llvm::Triple::x86:
     // We use the existence of '/lib/<triple>' as a directory to detect some
@@ -142,6 +148,10 @@ Tool *Hurd::buildAssembler() const {
 
 std::string Hurd::getDynamicLinker(const ArgList &Args) const {
   switch (getArch()) {
+  case llvm::Triple::aarch64:
+    return "/lib/ld-aarch64.so.1";
+  case llvm::Triple::riscv64:
+    return "/lib/ld-riscv64-lp64.so.1";
   case llvm::Triple::x86:
     return "/lib/ld.so";
   case llvm::Triple::x86_64:
@@ -158,7 +168,7 @@ void Hurd::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   const Driver &D = getDriver();
   std::string SysRoot = computeSysRoot();
 
-  if (DriverArgs.hasArg(clang::driver::options::OPT_nostdinc))
+  if (DriverArgs.hasArg(options::OPT_nostdinc))
     return;
 
   if (!DriverArgs.hasArg(options::OPT_nostdlibinc))

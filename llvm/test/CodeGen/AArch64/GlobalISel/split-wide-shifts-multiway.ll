@@ -1219,14 +1219,14 @@ define void @test_shl_i1024(ptr %result, ptr %input, i32 %shift) {
 ;
 ; GISEL-LABEL: test_shl_i1024:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    sub sp, sp, #416
-; GISEL-NEXT:    stp x28, x27, [sp, #320] ; 16-byte Folded Spill
-; GISEL-NEXT:    stp x26, x25, [sp, #336] ; 16-byte Folded Spill
-; GISEL-NEXT:    stp x24, x23, [sp, #352] ; 16-byte Folded Spill
-; GISEL-NEXT:    stp x22, x21, [sp, #368] ; 16-byte Folded Spill
-; GISEL-NEXT:    stp x20, x19, [sp, #384] ; 16-byte Folded Spill
-; GISEL-NEXT:    stp x29, x30, [sp, #400] ; 16-byte Folded Spill
-; GISEL-NEXT:    .cfi_def_cfa_offset 416
+; GISEL-NEXT:    sub sp, sp, #432
+; GISEL-NEXT:    stp x28, x27, [sp, #336] ; 16-byte Folded Spill
+; GISEL-NEXT:    stp x26, x25, [sp, #352] ; 16-byte Folded Spill
+; GISEL-NEXT:    stp x24, x23, [sp, #368] ; 16-byte Folded Spill
+; GISEL-NEXT:    stp x22, x21, [sp, #384] ; 16-byte Folded Spill
+; GISEL-NEXT:    stp x20, x19, [sp, #400] ; 16-byte Folded Spill
+; GISEL-NEXT:    stp x29, x30, [sp, #416] ; 16-byte Folded Spill
+; GISEL-NEXT:    .cfi_def_cfa_offset 432
 ; GISEL-NEXT:    .cfi_offset w30, -8
 ; GISEL-NEXT:    .cfi_offset w29, -16
 ; GISEL-NEXT:    .cfi_offset w19, -24
@@ -1242,38 +1242,44 @@ define void @test_shl_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    ldp x10, x11, [x1]
 ; GISEL-NEXT:    mov w8, w2
 ; GISEL-NEXT:    lsr x9, x8, #6
-; GISEL-NEXT:    and x16, x8, #0x3f
+; GISEL-NEXT:    and x12, x8, #0x3f
+; GISEL-NEXT:    str x0, [sp, #144] ; 8-byte Spill
+; GISEL-NEXT:    and x14, x8, #0x3f
 ; GISEL-NEXT:    mov w13, #64 ; =0x40
-; GISEL-NEXT:    sub x21, x13, x16
-; GISEL-NEXT:    str x0, [sp, #112] ; 8-byte Folded Spill
-; GISEL-NEXT:    mov x24, x16
-; GISEL-NEXT:    lsl x25, x10, x16
+; GISEL-NEXT:    and x16, x8, #0x3f
+; GISEL-NEXT:    lsl x0, x10, x12
 ; GISEL-NEXT:    cmp x9, #0
-; GISEL-NEXT:    lsr x26, x10, x21
-; GISEL-NEXT:    lsl x2, x11, x16
-; GISEL-NEXT:    lsr x23, x11, x21
-; GISEL-NEXT:    mov x22, x21
-; GISEL-NEXT:    csel x12, x25, xzr, eq
+; GISEL-NEXT:    sub x2, x13, x14
+; GISEL-NEXT:    lsr x3, x10, x2
+; GISEL-NEXT:    lsl x6, x11, x14
+; GISEL-NEXT:    and x14, x8, #0x3f
+; GISEL-NEXT:    csel x12, x0, xzr, eq
 ; GISEL-NEXT:    cmp x9, #1
-; GISEL-NEXT:    str x1, [sp, #312] ; 8-byte Folded Spill
+; GISEL-NEXT:    lsr x20, x11, x2
 ; GISEL-NEXT:    csel x12, xzr, x12, eq
 ; GISEL-NEXT:    cmp x9, #2
-; GISEL-NEXT:    str x23, [sp, #208] ; 8-byte Folded Spill
+; GISEL-NEXT:    mov x24, x0
 ; GISEL-NEXT:    csel x12, xzr, x12, eq
 ; GISEL-NEXT:    cmp x9, #3
-; GISEL-NEXT:    stp x24, x22, [sp, #40] ; 16-byte Folded Spill
+; GISEL-NEXT:    mov x7, x3
 ; GISEL-NEXT:    csel x12, xzr, x12, eq
 ; GISEL-NEXT:    cmp x9, #4
+; GISEL-NEXT:    mov x28, x1
 ; GISEL-NEXT:    csel x12, xzr, x12, eq
 ; GISEL-NEXT:    cmp x9, #5
+; GISEL-NEXT:    and x21, x8, #0x3f
 ; GISEL-NEXT:    csel x12, xzr, x12, eq
 ; GISEL-NEXT:    cmp x9, #6
+; GISEL-NEXT:    str x6, [sp, #24] ; 8-byte Spill
 ; GISEL-NEXT:    csel x12, xzr, x12, eq
 ; GISEL-NEXT:    cmp x9, #7
+; GISEL-NEXT:    str x28, [sp, #304] ; 8-byte Spill
 ; GISEL-NEXT:    csel x12, xzr, x12, eq
 ; GISEL-NEXT:    cmp x9, #8
+; GISEL-NEXT:    str x7, [sp, #272] ; 8-byte Spill
 ; GISEL-NEXT:    csel x12, xzr, x12, eq
 ; GISEL-NEXT:    cmp x9, #9
+; GISEL-NEXT:    str x20, [sp, #112] ; 8-byte Spill
 ; GISEL-NEXT:    csel x12, xzr, x12, eq
 ; GISEL-NEXT:    cmp x9, #10
 ; GISEL-NEXT:    csel x12, xzr, x12, eq
@@ -1290,13 +1296,13 @@ define void @test_shl_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x8, #0
 ; GISEL-NEXT:    csel x10, x10, x12, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    str x10, [sp, #192] ; 8-byte Folded Spill
-; GISEL-NEXT:    csel x10, xzr, x26, eq
+; GISEL-NEXT:    str x10, [sp, #232] ; 8-byte Spill
+; GISEL-NEXT:    csel x10, xzr, x3, eq
 ; GISEL-NEXT:    cmp x9, #0
-; GISEL-NEXT:    orr x10, x2, x10
+; GISEL-NEXT:    orr x10, x6, x10
 ; GISEL-NEXT:    csel x10, x10, xzr, eq
 ; GISEL-NEXT:    cmp x9, #1
-; GISEL-NEXT:    csel x10, x25, x10, eq
+; GISEL-NEXT:    csel x10, x0, x10, eq
 ; GISEL-NEXT:    cmp x9, #2
 ; GISEL-NEXT:    csel x10, xzr, x10, eq
 ; GISEL-NEXT:    cmp x9, #3
@@ -1327,25 +1333,24 @@ define void @test_shl_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x9, #15
 ; GISEL-NEXT:    csel x13, xzr, x13, eq
 ; GISEL-NEXT:    cmp x8, #0
-; GISEL-NEXT:    lsl x20, x12, x16
+; GISEL-NEXT:    lsl x26, x12, x14
 ; GISEL-NEXT:    csel x11, x11, x13, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    str x11, [sp, #184] ; 8-byte Folded Spill
-; GISEL-NEXT:    csel x11, xzr, x23, eq
+; GISEL-NEXT:    str x11, [sp, #224] ; 8-byte Spill
+; GISEL-NEXT:    csel x11, xzr, x20, eq
 ; GISEL-NEXT:    cmp x9, #0
-; GISEL-NEXT:    orr x11, x20, x11
-; GISEL-NEXT:    lsr x15, x12, x21
-; GISEL-NEXT:    lsl x14, x10, x16
+; GISEL-NEXT:    orr x11, x26, x11
+; GISEL-NEXT:    lsr x15, x12, x2
+; GISEL-NEXT:    lsl x30, x10, x16
 ; GISEL-NEXT:    csel x11, x11, xzr, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    lsr x17, x10, x21
-; GISEL-NEXT:    csel x13, xzr, x26, eq
+; GISEL-NEXT:    lsr x17, x10, x2
+; GISEL-NEXT:    csel x13, xzr, x3, eq
 ; GISEL-NEXT:    cmp x9, #1
-; GISEL-NEXT:    str x20, [sp, #8] ; 8-byte Folded Spill
-; GISEL-NEXT:    orr x13, x2, x13
+; GISEL-NEXT:    orr x13, x6, x13
 ; GISEL-NEXT:    csel x11, x13, x11, eq
 ; GISEL-NEXT:    cmp x9, #2
-; GISEL-NEXT:    csel x11, x25, x11, eq
+; GISEL-NEXT:    csel x11, x0, x11, eq
 ; GISEL-NEXT:    cmp x9, #3
 ; GISEL-NEXT:    csel x11, xzr, x11, eq
 ; GISEL-NEXT:    cmp x9, #4
@@ -1375,23 +1380,23 @@ define void @test_shl_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x8, #0
 ; GISEL-NEXT:    csel x11, x12, x11, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    str x11, [sp, #176] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x11, [sp, #216] ; 8-byte Spill
 ; GISEL-NEXT:    csel x11, xzr, x15, eq
 ; GISEL-NEXT:    cmp x9, #0
-; GISEL-NEXT:    orr x11, x14, x11
+; GISEL-NEXT:    orr x11, x30, x11
 ; GISEL-NEXT:    csel x11, x11, xzr, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x12, xzr, x23, eq
+; GISEL-NEXT:    csel x12, xzr, x20, eq
 ; GISEL-NEXT:    cmp x9, #1
-; GISEL-NEXT:    orr x12, x20, x12
+; GISEL-NEXT:    orr x12, x26, x12
 ; GISEL-NEXT:    csel x11, x12, x11, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x12, xzr, x26, eq
+; GISEL-NEXT:    csel x12, xzr, x3, eq
 ; GISEL-NEXT:    cmp x9, #2
-; GISEL-NEXT:    orr x12, x2, x12
+; GISEL-NEXT:    orr x12, x6, x12
 ; GISEL-NEXT:    csel x11, x12, x11, eq
 ; GISEL-NEXT:    cmp x9, #3
-; GISEL-NEXT:    csel x11, x25, x11, eq
+; GISEL-NEXT:    csel x11, x0, x11, eq
 ; GISEL-NEXT:    cmp x9, #4
 ; GISEL-NEXT:    csel x11, xzr, x11, eq
 ; GISEL-NEXT:    cmp x9, #5
@@ -1421,33 +1426,33 @@ define void @test_shl_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    lsl x0, x12, x16
 ; GISEL-NEXT:    csel x10, x10, x13, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    str x10, [sp, #168] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x10, [sp, #208] ; 8-byte Spill
 ; GISEL-NEXT:    csel x10, xzr, x17, eq
 ; GISEL-NEXT:    cmp x9, #0
 ; GISEL-NEXT:    orr x10, x0, x10
-; GISEL-NEXT:    lsr x27, x12, x21
+; GISEL-NEXT:    lsr x4, x12, x2
 ; GISEL-NEXT:    lsl x19, x11, x16
 ; GISEL-NEXT:    csel x10, x10, xzr, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    lsr x3, x11, x21
+; GISEL-NEXT:    mov x16, x15
 ; GISEL-NEXT:    csel x13, xzr, x15, eq
 ; GISEL-NEXT:    cmp x9, #1
-; GISEL-NEXT:    stp x27, x0, [sp, #240] ; 16-byte Folded Spill
-; GISEL-NEXT:    orr x13, x14, x13
-; GISEL-NEXT:    mov x7, x3
+; GISEL-NEXT:    str x4, [sp, #248] ; 8-byte Spill
+; GISEL-NEXT:    orr x13, x30, x13
+; GISEL-NEXT:    str x0, [sp, #48] ; 8-byte Spill
 ; GISEL-NEXT:    csel x10, x13, x10, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x13, xzr, x23, eq
+; GISEL-NEXT:    csel x13, xzr, x20, eq
 ; GISEL-NEXT:    cmp x9, #2
-; GISEL-NEXT:    orr x13, x20, x13
+; GISEL-NEXT:    orr x13, x26, x13
 ; GISEL-NEXT:    csel x10, x13, x10, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x13, xzr, x26, eq
+; GISEL-NEXT:    csel x13, xzr, x3, eq
 ; GISEL-NEXT:    cmp x9, #3
-; GISEL-NEXT:    orr x13, x2, x13
+; GISEL-NEXT:    orr x13, x6, x13
 ; GISEL-NEXT:    csel x10, x13, x10, eq
 ; GISEL-NEXT:    cmp x9, #4
-; GISEL-NEXT:    csel x10, x25, x10, eq
+; GISEL-NEXT:    csel x10, x24, x10, eq
 ; GISEL-NEXT:    cmp x9, #5
 ; GISEL-NEXT:    csel x10, xzr, x10, eq
 ; GISEL-NEXT:    cmp x9, #6
@@ -1473,8 +1478,8 @@ define void @test_shl_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x8, #0
 ; GISEL-NEXT:    csel x10, x12, x10, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    str x10, [sp, #160] ; 8-byte Folded Spill
-; GISEL-NEXT:    csel x10, xzr, x27, eq
+; GISEL-NEXT:    str x10, [sp, #200] ; 8-byte Spill
+; GISEL-NEXT:    csel x10, xzr, x4, eq
 ; GISEL-NEXT:    cmp x9, #0
 ; GISEL-NEXT:    orr x10, x19, x10
 ; GISEL-NEXT:    csel x10, x10, xzr, eq
@@ -1486,20 +1491,22 @@ define void @test_shl_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x12, xzr, x15, eq
 ; GISEL-NEXT:    cmp x9, #2
-; GISEL-NEXT:    orr x12, x14, x12
+; GISEL-NEXT:    and x15, x8, #0x3f
+; GISEL-NEXT:    orr x12, x30, x12
 ; GISEL-NEXT:    csel x10, x12, x10, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x12, xzr, x23, eq
+; GISEL-NEXT:    csel x12, xzr, x20, eq
 ; GISEL-NEXT:    cmp x9, #3
-; GISEL-NEXT:    orr x12, x20, x12
+; GISEL-NEXT:    orr x12, x26, x12
 ; GISEL-NEXT:    csel x10, x12, x10, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x12, xzr, x26, eq
+; GISEL-NEXT:    csel x12, xzr, x3, eq
 ; GISEL-NEXT:    cmp x9, #4
-; GISEL-NEXT:    orr x12, x2, x12
+; GISEL-NEXT:    lsr x3, x11, x2
+; GISEL-NEXT:    orr x12, x6, x12
 ; GISEL-NEXT:    csel x10, x12, x10, eq
 ; GISEL-NEXT:    cmp x9, #5
-; GISEL-NEXT:    csel x10, x25, x10, eq
+; GISEL-NEXT:    csel x10, x24, x10, eq
 ; GISEL-NEXT:    cmp x9, #6
 ; GISEL-NEXT:    csel x10, xzr, x10, eq
 ; GISEL-NEXT:    cmp x9, #7
@@ -1522,21 +1529,23 @@ define void @test_shl_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x9, #15
 ; GISEL-NEXT:    csel x13, xzr, x13, eq
 ; GISEL-NEXT:    cmp x8, #0
-; GISEL-NEXT:    lsl x4, x12, x16
+; GISEL-NEXT:    lsl x22, x12, x15
 ; GISEL-NEXT:    csel x11, x11, x13, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    str x11, [sp, #152] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x11, [sp, #192] ; 8-byte Spill
 ; GISEL-NEXT:    csel x11, xzr, x3, eq
 ; GISEL-NEXT:    cmp x9, #0
-; GISEL-NEXT:    orr x11, x4, x11
-; GISEL-NEXT:    lsl x30, x10, x16
-; GISEL-NEXT:    lsr x28, x10, x21
+; GISEL-NEXT:    orr x11, x22, x11
+; GISEL-NEXT:    lsl x5, x10, x15
+; GISEL-NEXT:    lsr x27, x10, x2
 ; GISEL-NEXT:    csel x11, x11, xzr, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x13, xzr, x27, eq
+; GISEL-NEXT:    csel x13, xzr, x4, eq
 ; GISEL-NEXT:    cmp x9, #1
-; GISEL-NEXT:    str x30, [sp, #200] ; 8-byte Folded Spill
+; GISEL-NEXT:    mov x25, x27
 ; GISEL-NEXT:    orr x13, x19, x13
+; GISEL-NEXT:    mov x14, x5
+; GISEL-NEXT:    str x27, [sp, #328] ; 8-byte Spill
 ; GISEL-NEXT:    csel x11, x13, x11, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x13, xzr, x17, eq
@@ -1544,30 +1553,29 @@ define void @test_shl_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    orr x13, x0, x13
 ; GISEL-NEXT:    csel x11, x13, x11, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x13, xzr, x15, eq
+; GISEL-NEXT:    csel x13, xzr, x16, eq
 ; GISEL-NEXT:    cmp x9, #3
-; GISEL-NEXT:    orr x13, x14, x13
+; GISEL-NEXT:    orr x13, x30, x13
 ; GISEL-NEXT:    csel x11, x13, x11, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x13, xzr, x23, eq
+; GISEL-NEXT:    csel x13, xzr, x20, eq
 ; GISEL-NEXT:    cmp x9, #4
-; GISEL-NEXT:    orr x13, x20, x13
+; GISEL-NEXT:    orr x13, x26, x13
 ; GISEL-NEXT:    csel x11, x13, x11, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x13, xzr, x26, eq
+; GISEL-NEXT:    csel x13, xzr, x7, eq
 ; GISEL-NEXT:    cmp x9, #5
-; GISEL-NEXT:    orr x13, x2, x13
+; GISEL-NEXT:    orr x13, x6, x13
 ; GISEL-NEXT:    csel x11, x13, x11, eq
 ; GISEL-NEXT:    cmp x9, #6
-; GISEL-NEXT:    lsr x13, x12, x21
-; GISEL-NEXT:    csel x11, x25, x11, eq
+; GISEL-NEXT:    lsr x13, x12, x2
+; GISEL-NEXT:    csel x11, x24, x11, eq
 ; GISEL-NEXT:    cmp x9, #7
 ; GISEL-NEXT:    csel x11, xzr, x11, eq
 ; GISEL-NEXT:    cmp x9, #8
-; GISEL-NEXT:    mov x6, x13
+; GISEL-NEXT:    mov x15, x13
 ; GISEL-NEXT:    csel x11, xzr, x11, eq
 ; GISEL-NEXT:    cmp x9, #9
-; GISEL-NEXT:    str x6, [sp, #256] ; 8-byte Folded Spill
 ; GISEL-NEXT:    csel x11, xzr, x11, eq
 ; GISEL-NEXT:    cmp x9, #10
 ; GISEL-NEXT:    csel x11, xzr, x11, eq
@@ -1584,18 +1592,18 @@ define void @test_shl_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x8, #0
 ; GISEL-NEXT:    csel x11, x12, x11, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    str x11, [sp, #144] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x11, [sp, #184] ; 8-byte Spill
 ; GISEL-NEXT:    csel x11, xzr, x13, eq
 ; GISEL-NEXT:    cmp x9, #0
-; GISEL-NEXT:    orr x11, x30, x11
+; GISEL-NEXT:    orr x11, x5, x11
 ; GISEL-NEXT:    csel x11, x11, xzr, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x12, xzr, x3, eq
 ; GISEL-NEXT:    cmp x9, #1
-; GISEL-NEXT:    orr x12, x4, x12
+; GISEL-NEXT:    orr x12, x22, x12
 ; GISEL-NEXT:    csel x11, x12, x11, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x12, xzr, x27, eq
+; GISEL-NEXT:    csel x12, xzr, x4, eq
 ; GISEL-NEXT:    cmp x9, #2
 ; GISEL-NEXT:    orr x12, x19, x12
 ; GISEL-NEXT:    csel x11, x12, x11, eq
@@ -1605,22 +1613,22 @@ define void @test_shl_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    orr x12, x0, x12
 ; GISEL-NEXT:    csel x11, x12, x11, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x12, xzr, x15, eq
+; GISEL-NEXT:    csel x12, xzr, x16, eq
 ; GISEL-NEXT:    cmp x9, #4
-; GISEL-NEXT:    orr x12, x14, x12
+; GISEL-NEXT:    orr x12, x30, x12
 ; GISEL-NEXT:    csel x11, x12, x11, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x12, xzr, x23, eq
+; GISEL-NEXT:    csel x12, xzr, x20, eq
 ; GISEL-NEXT:    cmp x9, #5
-; GISEL-NEXT:    orr x12, x20, x12
+; GISEL-NEXT:    orr x12, x26, x12
 ; GISEL-NEXT:    csel x11, x12, x11, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x12, xzr, x26, eq
+; GISEL-NEXT:    csel x12, xzr, x7, eq
 ; GISEL-NEXT:    cmp x9, #6
-; GISEL-NEXT:    orr x12, x2, x12
+; GISEL-NEXT:    orr x12, x6, x12
 ; GISEL-NEXT:    csel x11, x12, x11, eq
 ; GISEL-NEXT:    cmp x9, #7
-; GISEL-NEXT:    csel x11, x25, x11, eq
+; GISEL-NEXT:    csel x11, x24, x11, eq
 ; GISEL-NEXT:    cmp x9, #8
 ; GISEL-NEXT:    csel x11, xzr, x11, eq
 ; GISEL-NEXT:    cmp x9, #9
@@ -1635,39 +1643,34 @@ define void @test_shl_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    csel x11, xzr, x11, eq
 ; GISEL-NEXT:    cmp x9, #14
 ; GISEL-NEXT:    csel x12, xzr, x11, eq
-; GISEL-NEXT:    ldp x11, x5, [x1, #64]
+; GISEL-NEXT:    ldp x11, x1, [x1, #64]
 ; GISEL-NEXT:    cmp x9, #15
 ; GISEL-NEXT:    csel x12, xzr, x12, eq
 ; GISEL-NEXT:    cmp x8, #0
 ; GISEL-NEXT:    csel x12, x10, x12, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    lsl x21, x11, x16
-; GISEL-NEXT:    str x12, [sp, #136] ; 8-byte Folded Spill
-; GISEL-NEXT:    csel x12, xzr, x28, eq
+; GISEL-NEXT:    lsl x23, x11, x21
+; GISEL-NEXT:    str x12, [sp, #176] ; 8-byte Spill
+; GISEL-NEXT:    csel x12, xzr, x27, eq
 ; GISEL-NEXT:    cmp x9, #0
-; GISEL-NEXT:    orr x12, x21, x12
-; GISEL-NEXT:    lsr x10, x11, x22
-; GISEL-NEXT:    mov x16, x19
+; GISEL-NEXT:    orr x12, x23, x12
+; GISEL-NEXT:    lsr x21, x11, x2
+; GISEL-NEXT:    str x23, [sp, #288] ; 8-byte Spill
 ; GISEL-NEXT:    csel x12, x12, xzr, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    mov x1, x16
 ; GISEL-NEXT:    csel x13, xzr, x13, eq
 ; GISEL-NEXT:    cmp x9, #1
-; GISEL-NEXT:    str x16, [sp, #304] ; 8-byte Folded Spill
-; GISEL-NEXT:    orr x13, x30, x13
+; GISEL-NEXT:    orr x13, x5, x13
 ; GISEL-NEXT:    csel x12, x13, x12, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x13, xzr, x3, eq
 ; GISEL-NEXT:    cmp x9, #2
-; GISEL-NEXT:    lsl x3, x5, x24
-; GISEL-NEXT:    orr x13, x4, x13
+; GISEL-NEXT:    orr x13, x22, x13
 ; GISEL-NEXT:    csel x12, x13, x12, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    stp x21, x3, [sp, #216] ; 16-byte Folded Spill
-; GISEL-NEXT:    csel x13, xzr, x27, eq
+; GISEL-NEXT:    csel x13, xzr, x4, eq
 ; GISEL-NEXT:    cmp x9, #3
 ; GISEL-NEXT:    orr x13, x19, x13
-; GISEL-NEXT:    mov x19, x28
 ; GISEL-NEXT:    csel x12, x13, x12, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x13, xzr, x17, eq
@@ -1675,27 +1678,30 @@ define void @test_shl_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    orr x13, x0, x13
 ; GISEL-NEXT:    csel x12, x13, x12, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x13, xzr, x15, eq
+; GISEL-NEXT:    csel x13, xzr, x16, eq
 ; GISEL-NEXT:    cmp x9, #5
-; GISEL-NEXT:    orr x13, x14, x13
+; GISEL-NEXT:    orr x13, x30, x13
 ; GISEL-NEXT:    csel x12, x13, x12, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x13, xzr, x23, eq
+; GISEL-NEXT:    csel x13, xzr, x20, eq
 ; GISEL-NEXT:    cmp x9, #6
-; GISEL-NEXT:    orr x13, x20, x13
+; GISEL-NEXT:    orr x13, x26, x13
 ; GISEL-NEXT:    csel x12, x13, x12, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x13, xzr, x26, eq
+; GISEL-NEXT:    csel x13, xzr, x7, eq
 ; GISEL-NEXT:    cmp x9, #7
-; GISEL-NEXT:    orr x13, x2, x13
+; GISEL-NEXT:    orr x13, x6, x13
 ; GISEL-NEXT:    csel x12, x13, x12, eq
 ; GISEL-NEXT:    cmp x9, #8
-; GISEL-NEXT:    csel x12, x25, x12, eq
+; GISEL-NEXT:    and x13, x8, #0x3f
+; GISEL-NEXT:    csel x12, x24, x12, eq
 ; GISEL-NEXT:    cmp x9, #9
+; GISEL-NEXT:    lsl x10, x1, x13
 ; GISEL-NEXT:    csel x12, xzr, x12, eq
 ; GISEL-NEXT:    cmp x9, #10
 ; GISEL-NEXT:    csel x12, xzr, x12, eq
 ; GISEL-NEXT:    cmp x9, #11
+; GISEL-NEXT:    stp x10, x15, [sp, #312] ; 16-byte Folded Spill
 ; GISEL-NEXT:    csel x12, xzr, x12, eq
 ; GISEL-NEXT:    cmp x9, #12
 ; GISEL-NEXT:    csel x12, xzr, x12, eq
@@ -1708,227 +1714,70 @@ define void @test_shl_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x8, #0
 ; GISEL-NEXT:    csel x11, x11, x12, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    str x11, [sp, #128] ; 8-byte Folded Spill
-; GISEL-NEXT:    csel x11, xzr, x10, eq
+; GISEL-NEXT:    str x11, [sp, #168] ; 8-byte Spill
+; GISEL-NEXT:    csel x11, xzr, x21, eq
 ; GISEL-NEXT:    cmp x9, #0
-; GISEL-NEXT:    orr x11, x3, x11
+; GISEL-NEXT:    orr x11, x10, x11
+; GISEL-NEXT:    mov x10, x23
 ; GISEL-NEXT:    csel x11, x11, xzr, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x12, xzr, x28, eq
-; GISEL-NEXT:    cmp x9, #1
-; GISEL-NEXT:    mov x28, x4
-; GISEL-NEXT:    orr x12, x21, x12
-; GISEL-NEXT:    str x28, [sp, #32] ; 8-byte Folded Spill
-; GISEL-NEXT:    csel x11, x12, x11, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x12, xzr, x6, eq
-; GISEL-NEXT:    cmp x9, #2
-; GISEL-NEXT:    orr x12, x30, x12
-; GISEL-NEXT:    csel x11, x12, x11, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x12, xzr, x7, eq
-; GISEL-NEXT:    cmp x9, #3
-; GISEL-NEXT:    orr x12, x4, x12
-; GISEL-NEXT:    mov x4, x20
-; GISEL-NEXT:    csel x11, x12, x11, eq
-; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x12, xzr, x27, eq
+; GISEL-NEXT:    cmp x9, #1
+; GISEL-NEXT:    mov x27, x24
+; GISEL-NEXT:    orr x12, x23, x12
+; GISEL-NEXT:    mov x23, x15
+; GISEL-NEXT:    csel x11, x12, x11, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x12, xzr, x15, eq
+; GISEL-NEXT:    cmp x9, #2
+; GISEL-NEXT:    mov x15, x22
+; GISEL-NEXT:    orr x12, x5, x12
+; GISEL-NEXT:    mov x5, x3
+; GISEL-NEXT:    csel x11, x12, x11, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    stp x14, x5, [sp, #256] ; 16-byte Folded Spill
+; GISEL-NEXT:    csel x12, xzr, x3, eq
+; GISEL-NEXT:    cmp x9, #3
+; GISEL-NEXT:    mov x5, x4
+; GISEL-NEXT:    orr x12, x22, x12
+; GISEL-NEXT:    lsr x22, x1, x2
+; GISEL-NEXT:    csel x11, x12, x11, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x12, xzr, x4, eq
 ; GISEL-NEXT:    cmp x9, #4
-; GISEL-NEXT:    mov x27, x2
-; GISEL-NEXT:    orr x12, x16, x12
-; GISEL-NEXT:    mov x16, x17
+; GISEL-NEXT:    str x22, [sp, #240] ; 8-byte Spill
+; GISEL-NEXT:    orr x12, x19, x12
 ; GISEL-NEXT:    csel x11, x12, x11, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x12, xzr, x17, eq
 ; GISEL-NEXT:    cmp x9, #5
-; GISEL-NEXT:    mov x17, x15
 ; GISEL-NEXT:    orr x12, x0, x12
-; GISEL-NEXT:    lsr x0, x5, x22
-; GISEL-NEXT:    csel x11, x12, x11, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x12, xzr, x15, eq
-; GISEL-NEXT:    cmp x9, #6
-; GISEL-NEXT:    ldr x15, [sp, #312] ; 8-byte Folded Reload
-; GISEL-NEXT:    orr x12, x14, x12
-; GISEL-NEXT:    str x0, [sp, #280] ; 8-byte Folded Spill
-; GISEL-NEXT:    csel x11, x12, x11, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x12, xzr, x23, eq
-; GISEL-NEXT:    cmp x9, #7
-; GISEL-NEXT:    mov x23, x25
-; GISEL-NEXT:    orr x12, x20, x12
-; GISEL-NEXT:    str x23, [sp, #288] ; 8-byte Folded Spill
-; GISEL-NEXT:    csel x11, x12, x11, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x12, xzr, x26, eq
-; GISEL-NEXT:    cmp x9, #8
-; GISEL-NEXT:    orr x12, x2, x12
-; GISEL-NEXT:    mov x2, x3
-; GISEL-NEXT:    csel x11, x12, x11, eq
-; GISEL-NEXT:    cmp x9, #9
-; GISEL-NEXT:    csel x11, x25, x11, eq
-; GISEL-NEXT:    cmp x9, #10
-; GISEL-NEXT:    mov x25, x26
-; GISEL-NEXT:    csel x11, xzr, x11, eq
-; GISEL-NEXT:    cmp x9, #11
-; GISEL-NEXT:    csel x11, xzr, x11, eq
-; GISEL-NEXT:    cmp x9, #12
-; GISEL-NEXT:    csel x11, xzr, x11, eq
-; GISEL-NEXT:    cmp x9, #13
-; GISEL-NEXT:    csel x11, xzr, x11, eq
-; GISEL-NEXT:    cmp x9, #14
-; GISEL-NEXT:    csel x11, xzr, x11, eq
-; GISEL-NEXT:    cmp x9, #15
-; GISEL-NEXT:    csel x12, xzr, x11, eq
-; GISEL-NEXT:    cmp x8, #0
-; GISEL-NEXT:    csel x12, x5, x12, eq
-; GISEL-NEXT:    ldp x11, x5, [x15, #80]
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    str x12, [sp, #120] ; 8-byte Folded Spill
-; GISEL-NEXT:    mov x15, x7
-; GISEL-NEXT:    csel x12, xzr, x0, eq
-; GISEL-NEXT:    cmp x9, #0
-; GISEL-NEXT:    str x15, [sp, #24] ; 8-byte Folded Spill
-; GISEL-NEXT:    lsl x20, x11, x24
-; GISEL-NEXT:    orr x12, x20, x12
-; GISEL-NEXT:    str x20, [sp, #232] ; 8-byte Folded Spill
-; GISEL-NEXT:    csel x12, x12, xzr, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x13, xzr, x10, eq
-; GISEL-NEXT:    cmp x9, #1
-; GISEL-NEXT:    orr x13, x3, x13
-; GISEL-NEXT:    lsl x3, x5, x24
-; GISEL-NEXT:    csel x12, x13, x12, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x13, xzr, x19, eq
-; GISEL-NEXT:    cmp x9, #2
-; GISEL-NEXT:    stp x19, x3, [sp, #264] ; 16-byte Folded Spill
-; GISEL-NEXT:    orr x13, x21, x13
-; GISEL-NEXT:    csel x12, x13, x12, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x13, xzr, x6, eq
-; GISEL-NEXT:    cmp x9, #3
-; GISEL-NEXT:    orr x13, x30, x13
-; GISEL-NEXT:    csel x12, x13, x12, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x13, xzr, x7, eq
-; GISEL-NEXT:    ldp x7, x30, [sp, #240] ; 16-byte Folded Reload
-; GISEL-NEXT:    cmp x9, #4
-; GISEL-NEXT:    orr x13, x28, x13
-; GISEL-NEXT:    csel x12, x13, x12, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x13, xzr, x7, eq
-; GISEL-NEXT:    cmp x9, #5
-; GISEL-NEXT:    orr x13, x1, x13
-; GISEL-NEXT:    mov x1, x14
-; GISEL-NEXT:    csel x12, x13, x12, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x13, xzr, x16, eq
-; GISEL-NEXT:    cmp x9, #6
-; GISEL-NEXT:    orr x13, x30, x13
-; GISEL-NEXT:    csel x12, x13, x12, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x13, xzr, x17, eq
-; GISEL-NEXT:    cmp x9, #7
-; GISEL-NEXT:    orr x13, x14, x13
-; GISEL-NEXT:    ldr x14, [sp, #208] ; 8-byte Folded Reload
-; GISEL-NEXT:    csel x12, x13, x12, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x13, xzr, x14, eq
-; GISEL-NEXT:    cmp x9, #8
-; GISEL-NEXT:    orr x13, x4, x13
-; GISEL-NEXT:    mov x4, x10
-; GISEL-NEXT:    csel x12, x13, x12, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x13, xzr, x26, eq
-; GISEL-NEXT:    cmp x9, #9
-; GISEL-NEXT:    mov x26, x27
-; GISEL-NEXT:    orr x13, x27, x13
-; GISEL-NEXT:    lsr x27, x11, x22
-; GISEL-NEXT:    csel x12, x13, x12, eq
-; GISEL-NEXT:    cmp x9, #10
-; GISEL-NEXT:    mov x13, x23
-; GISEL-NEXT:    csel x12, x23, x12, eq
-; GISEL-NEXT:    cmp x9, #11
-; GISEL-NEXT:    str x27, [sp, #64] ; 8-byte Folded Spill
-; GISEL-NEXT:    csel x12, xzr, x12, eq
-; GISEL-NEXT:    cmp x9, #12
-; GISEL-NEXT:    mov x23, x20
-; GISEL-NEXT:    csel x12, xzr, x12, eq
-; GISEL-NEXT:    cmp x9, #13
-; GISEL-NEXT:    csel x12, xzr, x12, eq
-; GISEL-NEXT:    cmp x9, #14
-; GISEL-NEXT:    csel x12, xzr, x12, eq
-; GISEL-NEXT:    cmp x9, #15
-; GISEL-NEXT:    csel x12, xzr, x12, eq
-; GISEL-NEXT:    cmp x8, #0
-; GISEL-NEXT:    csel x11, x11, x12, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    str x11, [sp, #104] ; 8-byte Folded Spill
-; GISEL-NEXT:    csel x11, xzr, x27, eq
-; GISEL-NEXT:    cmp x9, #0
-; GISEL-NEXT:    orr x11, x3, x11
-; GISEL-NEXT:    csel x11, x11, xzr, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x12, xzr, x0, eq
-; GISEL-NEXT:    cmp x9, #1
-; GISEL-NEXT:    mov x0, x7
-; GISEL-NEXT:    orr x12, x20, x12
-; GISEL-NEXT:    mov x20, x16
-; GISEL-NEXT:    csel x11, x12, x11, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x12, xzr, x10, eq
-; GISEL-NEXT:    cmp x9, #2
-; GISEL-NEXT:    ldr x10, [sp, #312] ; 8-byte Folded Reload
-; GISEL-NEXT:    orr x12, x2, x12
-; GISEL-NEXT:    ldr x2, [sp, #304] ; 8-byte Folded Reload
-; GISEL-NEXT:    csel x11, x12, x11, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x12, xzr, x19, eq
-; GISEL-NEXT:    cmp x9, #3
-; GISEL-NEXT:    orr x12, x21, x12
-; GISEL-NEXT:    ldr x21, [sp, #200] ; 8-byte Folded Reload
-; GISEL-NEXT:    csel x11, x12, x11, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x12, xzr, x6, eq
-; GISEL-NEXT:    cmp x9, #4
-; GISEL-NEXT:    orr x12, x21, x12
-; GISEL-NEXT:    csel x11, x12, x11, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x12, xzr, x15, eq
-; GISEL-NEXT:    cmp x9, #5
-; GISEL-NEXT:    orr x12, x28, x12
-; GISEL-NEXT:    csel x11, x12, x11, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x12, xzr, x7, eq
-; GISEL-NEXT:    cmp x9, #6
-; GISEL-NEXT:    mov x7, x17
-; GISEL-NEXT:    orr x12, x2, x12
 ; GISEL-NEXT:    csel x11, x12, x11, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x12, xzr, x16, eq
-; GISEL-NEXT:    cmp x9, #7
+; GISEL-NEXT:    cmp x9, #6
 ; GISEL-NEXT:    orr x12, x30, x12
 ; GISEL-NEXT:    csel x11, x12, x11, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x12, xzr, x17, eq
-; GISEL-NEXT:    cmp x9, #8
-; GISEL-NEXT:    mov x17, x24
-; GISEL-NEXT:    orr x12, x1, x12
-; GISEL-NEXT:    csel x11, x12, x11, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x12, xzr, x14, eq
-; GISEL-NEXT:    ldr x14, [sp, #8] ; 8-byte Folded Reload
-; GISEL-NEXT:    cmp x9, #9
-; GISEL-NEXT:    orr x12, x14, x12
-; GISEL-NEXT:    csel x11, x12, x11, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x12, xzr, x25, eq
-; GISEL-NEXT:    cmp x9, #10
+; GISEL-NEXT:    csel x12, xzr, x20, eq
+; GISEL-NEXT:    cmp x9, #7
 ; GISEL-NEXT:    orr x12, x26, x12
 ; GISEL-NEXT:    csel x11, x12, x11, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x12, xzr, x7, eq
+; GISEL-NEXT:    cmp x9, #8
+; GISEL-NEXT:    mov x7, x14
+; GISEL-NEXT:    orr x12, x6, x12
+; GISEL-NEXT:    mov x6, x28
+; GISEL-NEXT:    csel x11, x12, x11, eq
+; GISEL-NEXT:    cmp x9, #9
+; GISEL-NEXT:    csel x11, x24, x11, eq
+; GISEL-NEXT:    cmp x9, #10
+; GISEL-NEXT:    ldr x24, [x6, #88]
+; GISEL-NEXT:    csel x11, xzr, x11, eq
 ; GISEL-NEXT:    cmp x9, #11
-; GISEL-NEXT:    csel x11, x13, x11, eq
+; GISEL-NEXT:    ldr x6, [sp, #272] ; 8-byte Reload
+; GISEL-NEXT:    csel x11, xzr, x11, eq
 ; GISEL-NEXT:    cmp x9, #12
 ; GISEL-NEXT:    csel x11, xzr, x11, eq
 ; GISEL-NEXT:    cmp x9, #13
@@ -1937,393 +1786,562 @@ define void @test_shl_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    csel x11, xzr, x11, eq
 ; GISEL-NEXT:    cmp x9, #15
 ; GISEL-NEXT:    csel x12, xzr, x11, eq
+; GISEL-NEXT:    ldr x11, [x28, #80]
 ; GISEL-NEXT:    cmp x8, #0
-; GISEL-NEXT:    ldp x11, x10, [x10, #96]
-; GISEL-NEXT:    csel x12, x5, x12, eq
-; GISEL-NEXT:    str x12, [sp, #96] ; 8-byte Folded Spill
-; GISEL-NEXT:    mov x12, x22
-; GISEL-NEXT:    lsr x22, x5, x22
+; GISEL-NEXT:    csel x12, x1, x12, eq
+; GISEL-NEXT:    mov x28, x2
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    mov x5, x27
-; GISEL-NEXT:    lsl x24, x11, x24
-; GISEL-NEXT:    str x10, [sp, #296] ; 8-byte Folded Spill
-; GISEL-NEXT:    csel x10, xzr, x22, eq
+; GISEL-NEXT:    lsl x2, x11, x13
+; GISEL-NEXT:    str x12, [sp, #160] ; 8-byte Spill
+; GISEL-NEXT:    csel x12, xzr, x22, eq
 ; GISEL-NEXT:    cmp x9, #0
-; GISEL-NEXT:    str x22, [sp, #16] ; 8-byte Folded Spill
-; GISEL-NEXT:    orr x10, x24, x10
+; GISEL-NEXT:    ldr x1, [sp, #312] ; 8-byte Reload
+; GISEL-NEXT:    str x28, [sp, #16] ; 8-byte Spill
+; GISEL-NEXT:    orr x12, x2, x12
+; GISEL-NEXT:    str x2, [sp, #280] ; 8-byte Spill
+; GISEL-NEXT:    csel x12, x12, xzr, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x13, xzr, x21, eq
+; GISEL-NEXT:    cmp x9, #1
+; GISEL-NEXT:    orr x13, x1, x13
+; GISEL-NEXT:    csel x12, x13, x12, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x13, xzr, x25, eq
+; GISEL-NEXT:    cmp x9, #2
+; GISEL-NEXT:    mov x25, x16
+; GISEL-NEXT:    orr x13, x10, x13
+; GISEL-NEXT:    mov x10, x30
+; GISEL-NEXT:    str x25, [sp, #80] ; 8-byte Spill
+; GISEL-NEXT:    csel x12, x13, x12, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x13, xzr, x23, eq
+; GISEL-NEXT:    cmp x9, #3
+; GISEL-NEXT:    mov x23, x3
+; GISEL-NEXT:    orr x13, x14, x13
+; GISEL-NEXT:    mov x14, x17
+; GISEL-NEXT:    csel x12, x13, x12, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    stp x19, x14, [sp, #64] ; 16-byte Folded Spill
+; GISEL-NEXT:    csel x13, xzr, x3, eq
+; GISEL-NEXT:    cmp x9, #4
+; GISEL-NEXT:    mov x3, x21
+; GISEL-NEXT:    orr x13, x15, x13
+; GISEL-NEXT:    str x3, [sp, #32] ; 8-byte Spill
+; GISEL-NEXT:    csel x12, x13, x12, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x13, xzr, x4, eq
+; GISEL-NEXT:    cmp x9, #5
+; GISEL-NEXT:    mov x4, x0
+; GISEL-NEXT:    orr x13, x19, x13
+; GISEL-NEXT:    csel x12, x13, x12, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x13, xzr, x17, eq
+; GISEL-NEXT:    cmp x9, #6
+; GISEL-NEXT:    mov x17, x27
+; GISEL-NEXT:    orr x13, x0, x13
+; GISEL-NEXT:    ldr x0, [sp, #24] ; 8-byte Reload
+; GISEL-NEXT:    csel x12, x13, x12, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x13, xzr, x16, eq
+; GISEL-NEXT:    cmp x9, #7
+; GISEL-NEXT:    orr x13, x30, x13
+; GISEL-NEXT:    ldp x30, x16, [sp, #320] ; 16-byte Folded Reload
+; GISEL-NEXT:    csel x12, x13, x12, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x13, xzr, x20, eq
+; GISEL-NEXT:    cmp x9, #8
+; GISEL-NEXT:    orr x13, x26, x13
+; GISEL-NEXT:    csel x12, x13, x12, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x13, xzr, x6, eq
+; GISEL-NEXT:    cmp x9, #9
+; GISEL-NEXT:    orr x13, x0, x13
+; GISEL-NEXT:    csel x12, x13, x12, eq
+; GISEL-NEXT:    cmp x9, #10
+; GISEL-NEXT:    lsr x13, x11, x28
+; GISEL-NEXT:    csel x12, x27, x12, eq
+; GISEL-NEXT:    cmp x9, #11
+; GISEL-NEXT:    csel x12, xzr, x12, eq
+; GISEL-NEXT:    cmp x9, #12
+; GISEL-NEXT:    str x13, [sp, #96] ; 8-byte Spill
+; GISEL-NEXT:    csel x12, xzr, x12, eq
+; GISEL-NEXT:    cmp x9, #13
+; GISEL-NEXT:    csel x12, xzr, x12, eq
+; GISEL-NEXT:    cmp x9, #14
+; GISEL-NEXT:    csel x12, xzr, x12, eq
+; GISEL-NEXT:    cmp x9, #15
+; GISEL-NEXT:    csel x12, xzr, x12, eq
+; GISEL-NEXT:    cmp x8, #0
+; GISEL-NEXT:    csel x11, x11, x12, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    str x11, [sp, #152] ; 8-byte Spill
+; GISEL-NEXT:    and x11, x8, #0x3f
+; GISEL-NEXT:    lsl x27, x24, x11
+; GISEL-NEXT:    csel x11, xzr, x13, eq
+; GISEL-NEXT:    cmp x9, #0
+; GISEL-NEXT:    orr x11, x27, x11
+; GISEL-NEXT:    str x27, [sp, #56] ; 8-byte Spill
+; GISEL-NEXT:    csel x11, x11, xzr, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x12, xzr, x22, eq
+; GISEL-NEXT:    cmp x9, #1
+; GISEL-NEXT:    mov x22, x2
+; GISEL-NEXT:    orr x12, x2, x12
+; GISEL-NEXT:    mov x2, x14
+; GISEL-NEXT:    csel x11, x12, x11, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x12, xzr, x21, eq
+; GISEL-NEXT:    cmp x9, #2
+; GISEL-NEXT:    ldr x21, [sp, #288] ; 8-byte Reload
+; GISEL-NEXT:    orr x12, x1, x12
+; GISEL-NEXT:    mov x1, x27
+; GISEL-NEXT:    csel x11, x12, x11, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x12, xzr, x16, eq
+; GISEL-NEXT:    cmp x9, #3
+; GISEL-NEXT:    orr x12, x21, x12
+; GISEL-NEXT:    csel x11, x12, x11, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x12, xzr, x30, eq
+; GISEL-NEXT:    cmp x9, #4
+; GISEL-NEXT:    orr x12, x7, x12
+; GISEL-NEXT:    mov x7, x15
+; GISEL-NEXT:    csel x11, x12, x11, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    str x7, [sp, #40] ; 8-byte Spill
+; GISEL-NEXT:    csel x12, xzr, x23, eq
+; GISEL-NEXT:    cmp x9, #5
+; GISEL-NEXT:    orr x12, x15, x12
+; GISEL-NEXT:    csel x11, x12, x11, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x12, xzr, x5, eq
+; GISEL-NEXT:    cmp x9, #6
+; GISEL-NEXT:    mov x5, x19
+; GISEL-NEXT:    orr x12, x19, x12
+; GISEL-NEXT:    mov x19, x7
+; GISEL-NEXT:    csel x11, x12, x11, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x12, xzr, x14, eq
+; GISEL-NEXT:    cmp x9, #7
+; GISEL-NEXT:    lsr x14, x24, x28
+; GISEL-NEXT:    orr x12, x4, x12
+; GISEL-NEXT:    mov x4, x10
+; GISEL-NEXT:    csel x11, x12, x11, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x12, xzr, x25, eq
+; GISEL-NEXT:    cmp x9, #8
+; GISEL-NEXT:    orr x12, x10, x12
+; GISEL-NEXT:    ldr x10, [sp, #304] ; 8-byte Reload
+; GISEL-NEXT:    csel x11, x12, x11, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x12, xzr, x20, eq
+; GISEL-NEXT:    cmp x9, #9
+; GISEL-NEXT:    orr x12, x26, x12
+; GISEL-NEXT:    csel x11, x12, x11, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x12, xzr, x6, eq
+; GISEL-NEXT:    cmp x9, #10
+; GISEL-NEXT:    orr x12, x0, x12
+; GISEL-NEXT:    csel x11, x12, x11, eq
+; GISEL-NEXT:    cmp x9, #11
+; GISEL-NEXT:    csel x11, x17, x11, eq
+; GISEL-NEXT:    cmp x9, #12
+; GISEL-NEXT:    csel x11, xzr, x11, eq
+; GISEL-NEXT:    cmp x9, #13
+; GISEL-NEXT:    csel x11, xzr, x11, eq
+; GISEL-NEXT:    cmp x9, #14
+; GISEL-NEXT:    csel x11, xzr, x11, eq
+; GISEL-NEXT:    cmp x9, #15
+; GISEL-NEXT:    csel x12, xzr, x11, eq
+; GISEL-NEXT:    ldp x11, x6, [x10, #96]
+; GISEL-NEXT:    cmp x8, #0
+; GISEL-NEXT:    and x10, x8, #0x3f
+; GISEL-NEXT:    csel x12, x24, x12, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    ldr x24, [sp, #248] ; 8-byte Reload
+; GISEL-NEXT:    lsl x15, x11, x10
+; GISEL-NEXT:    csel x10, xzr, x14, eq
+; GISEL-NEXT:    cmp x9, #0
+; GISEL-NEXT:    str x12, [sp, #136] ; 8-byte Spill
+; GISEL-NEXT:    ldr x12, [sp, #312] ; 8-byte Reload
+; GISEL-NEXT:    orr x10, x15, x10
+; GISEL-NEXT:    str x15, [sp, #296] ; 8-byte Spill
+; GISEL-NEXT:    mov x15, x13
 ; GISEL-NEXT:    csel x10, x10, xzr, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x13, xzr, x27, eq
+; GISEL-NEXT:    csel x13, xzr, x13, eq
 ; GISEL-NEXT:    cmp x9, #1
-; GISEL-NEXT:    ldr x27, [sp, #280] ; 8-byte Folded Reload
-; GISEL-NEXT:    orr x13, x3, x13
-; GISEL-NEXT:    mov x3, x26
+; GISEL-NEXT:    orr x13, x27, x13
+; GISEL-NEXT:    ldr x27, [sp, #240] ; 8-byte Reload
 ; GISEL-NEXT:    csel x10, x13, x10, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x13, xzr, x27, eq
 ; GISEL-NEXT:    cmp x9, #2
-; GISEL-NEXT:    orr x13, x23, x13
-; GISEL-NEXT:    mov x23, x4
+; GISEL-NEXT:    orr x13, x22, x13
+; GISEL-NEXT:    ldr x22, [sp, #272] ; 8-byte Reload
 ; GISEL-NEXT:    csel x10, x13, x10, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x13, xzr, x4, eq
-; GISEL-NEXT:    ldp x4, x16, [sp, #216] ; 16-byte Folded Reload
+; GISEL-NEXT:    csel x13, xzr, x3, eq
 ; GISEL-NEXT:    cmp x9, #3
-; GISEL-NEXT:    orr x13, x16, x13
+; GISEL-NEXT:    orr x13, x12, x13
 ; GISEL-NEXT:    csel x10, x13, x10, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x13, xzr, x19, eq
+; GISEL-NEXT:    csel x13, xzr, x16, eq
 ; GISEL-NEXT:    cmp x9, #4
-; GISEL-NEXT:    mov x19, x1
-; GISEL-NEXT:    orr x13, x4, x13
-; GISEL-NEXT:    csel x10, x13, x10, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x13, xzr, x6, eq
-; GISEL-NEXT:    cmp x9, #5
-; GISEL-NEXT:    mov x6, x14
+; GISEL-NEXT:    mov x16, x17
 ; GISEL-NEXT:    orr x13, x21, x13
-; GISEL-NEXT:    csel x10, x13, x10, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x13, xzr, x15, eq
-; GISEL-NEXT:    cmp x9, #6
-; GISEL-NEXT:    orr x13, x28, x13
-; GISEL-NEXT:    csel x10, x13, x10, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x13, xzr, x0, eq
-; GISEL-NEXT:    cmp x9, #7
-; GISEL-NEXT:    mov x0, x23
-; GISEL-NEXT:    orr x13, x2, x13
-; GISEL-NEXT:    csel x10, x13, x10, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x13, xzr, x20, eq
-; GISEL-NEXT:    cmp x9, #8
-; GISEL-NEXT:    orr x13, x30, x13
-; GISEL-NEXT:    ldr x30, [sp, #208] ; 8-byte Folded Reload
-; GISEL-NEXT:    csel x10, x13, x10, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x13, xzr, x7, eq
-; GISEL-NEXT:    cmp x9, #9
-; GISEL-NEXT:    orr x13, x1, x13
+; GISEL-NEXT:    ldp x23, x21, [sp, #256] ; 16-byte Folded Reload
 ; GISEL-NEXT:    csel x10, x13, x10, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x13, xzr, x30, eq
-; GISEL-NEXT:    cmp x9, #10
-; GISEL-NEXT:    orr x13, x14, x13
-; GISEL-NEXT:    ldp x14, x2, [sp, #264] ; 16-byte Folded Reload
+; GISEL-NEXT:    cmp x9, #5
+; GISEL-NEXT:    mov x30, x0
+; GISEL-NEXT:    orr x13, x23, x13
+; GISEL-NEXT:    csel x10, x13, x10, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x13, xzr, x21, eq
+; GISEL-NEXT:    cmp x9, #6
+; GISEL-NEXT:    orr x13, x7, x13
+; GISEL-NEXT:    mov x7, x14
+; GISEL-NEXT:    csel x10, x13, x10, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x13, xzr, x24, eq
+; GISEL-NEXT:    cmp x9, #7
+; GISEL-NEXT:    orr x13, x5, x13
+; GISEL-NEXT:    ldr x5, [sp, #48] ; 8-byte Reload
+; GISEL-NEXT:    csel x10, x13, x10, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x13, xzr, x2, eq
+; GISEL-NEXT:    cmp x9, #8
+; GISEL-NEXT:    ldr x2, [sp, #296] ; 8-byte Reload
+; GISEL-NEXT:    orr x13, x5, x13
 ; GISEL-NEXT:    csel x10, x13, x10, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x13, xzr, x25, eq
-; GISEL-NEXT:    cmp x9, #11
+; GISEL-NEXT:    cmp x9, #9
+; GISEL-NEXT:    mov x25, x6
+; GISEL-NEXT:    orr x13, x4, x13
+; GISEL-NEXT:    csel x10, x13, x10, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x13, xzr, x20, eq
+; GISEL-NEXT:    cmp x9, #10
 ; GISEL-NEXT:    orr x13, x26, x13
-; GISEL-NEXT:    ldr x26, [sp, #288] ; 8-byte Folded Reload
+; GISEL-NEXT:    csel x10, x13, x10, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x13, xzr, x22, eq
+; GISEL-NEXT:    cmp x9, #11
+; GISEL-NEXT:    orr x13, x0, x13
 ; GISEL-NEXT:    csel x10, x13, x10, eq
 ; GISEL-NEXT:    cmp x9, #12
-; GISEL-NEXT:    lsr x13, x11, x12
-; GISEL-NEXT:    csel x10, x26, x10, eq
+; GISEL-NEXT:    lsr x13, x11, x28
+; GISEL-NEXT:    csel x10, x17, x10, eq
 ; GISEL-NEXT:    cmp x9, #13
+; GISEL-NEXT:    ldr x17, [sp, #80] ; 8-byte Reload
 ; GISEL-NEXT:    csel x10, xzr, x10, eq
 ; GISEL-NEXT:    cmp x9, #14
-; GISEL-NEXT:    str x13, [sp, #72] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x13, [sp, #104] ; 8-byte Spill
 ; GISEL-NEXT:    csel x10, xzr, x10, eq
 ; GISEL-NEXT:    cmp x9, #15
 ; GISEL-NEXT:    csel x10, xzr, x10, eq
 ; GISEL-NEXT:    cmp x8, #0
 ; GISEL-NEXT:    csel x10, x11, x10, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    str x10, [sp, #88] ; 8-byte Folded Spill
-; GISEL-NEXT:    ldr x10, [sp, #296] ; 8-byte Folded Reload
-; GISEL-NEXT:    lsl x11, x10, x17
+; GISEL-NEXT:    str x10, [sp, #128] ; 8-byte Spill
+; GISEL-NEXT:    and x10, x8, #0x3f
+; GISEL-NEXT:    lsl x11, x6, x10
 ; GISEL-NEXT:    csel x10, xzr, x13, eq
 ; GISEL-NEXT:    cmp x9, #0
-; GISEL-NEXT:    ldr x17, [sp, #232] ; 8-byte Folded Reload
-; GISEL-NEXT:    ldr x13, [sp, #256] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldp x0, x13, [sp, #280] ; 16-byte Folded Reload
+; GISEL-NEXT:    mov x6, x16
 ; GISEL-NEXT:    orr x10, x11, x10
-; GISEL-NEXT:    str x11, [sp, #56] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x11, [sp, #88] ; 8-byte Spill
 ; GISEL-NEXT:    csel x10, x10, xzr, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x11, xzr, x22, eq
+; GISEL-NEXT:    csel x11, xzr, x14, eq
 ; GISEL-NEXT:    cmp x9, #1
-; GISEL-NEXT:    orr x11, x24, x11
+; GISEL-NEXT:    orr x11, x2, x11
 ; GISEL-NEXT:    csel x10, x11, x10, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x11, xzr, x5, eq
+; GISEL-NEXT:    csel x11, xzr, x15, eq
 ; GISEL-NEXT:    cmp x9, #2
-; GISEL-NEXT:    orr x11, x2, x11
-; GISEL-NEXT:    ldp x12, x5, [sp, #240] ; 16-byte Folded Reload
+; GISEL-NEXT:    mov x15, x3
+; GISEL-NEXT:    orr x11, x1, x11
 ; GISEL-NEXT:    csel x10, x11, x10, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x11, xzr, x27, eq
 ; GISEL-NEXT:    cmp x9, #3
-; GISEL-NEXT:    mov x27, x30
-; GISEL-NEXT:    orr x11, x17, x11
+; GISEL-NEXT:    orr x11, x0, x11
 ; GISEL-NEXT:    csel x10, x11, x10, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x11, xzr, x23, eq
+; GISEL-NEXT:    csel x11, xzr, x3, eq
+; GISEL-NEXT:    ldp x14, x3, [sp, #320] ; 16-byte Folded Reload
 ; GISEL-NEXT:    cmp x9, #4
-; GISEL-NEXT:    mov x23, x20
-; GISEL-NEXT:    orr x11, x16, x11
-; GISEL-NEXT:    ldr x16, [sp, #304] ; 8-byte Folded Reload
+; GISEL-NEXT:    orr x11, x12, x11
+; GISEL-NEXT:    csel x10, x11, x10, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x11, xzr, x3, eq
+; GISEL-NEXT:    cmp x9, #5
+; GISEL-NEXT:    orr x11, x13, x11
 ; GISEL-NEXT:    csel x10, x11, x10, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x11, xzr, x14, eq
-; GISEL-NEXT:    cmp x9, #5
+; GISEL-NEXT:    cmp x9, #6
+; GISEL-NEXT:    orr x11, x23, x11
+; GISEL-NEXT:    mov x23, x5
+; GISEL-NEXT:    csel x10, x11, x10, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x11, xzr, x21, eq
+; GISEL-NEXT:    cmp x9, #7
+; GISEL-NEXT:    mov x21, x4
+; GISEL-NEXT:    orr x11, x19, x11
+; GISEL-NEXT:    ldp x12, x19, [sp, #64] ; 16-byte Folded Reload
+; GISEL-NEXT:    csel x10, x11, x10, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x11, xzr, x24, eq
+; GISEL-NEXT:    cmp x9, #8
+; GISEL-NEXT:    orr x11, x12, x11
+; GISEL-NEXT:    csel x10, x11, x10, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x11, xzr, x19, eq
+; GISEL-NEXT:    cmp x9, #9
+; GISEL-NEXT:    orr x11, x5, x11
+; GISEL-NEXT:    mov x5, x30
+; GISEL-NEXT:    csel x10, x11, x10, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x11, xzr, x17, eq
+; GISEL-NEXT:    cmp x9, #10
 ; GISEL-NEXT:    orr x11, x4, x11
 ; GISEL-NEXT:    csel x10, x11, x10, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x11, xzr, x13, eq
-; GISEL-NEXT:    cmp x9, #6
-; GISEL-NEXT:    orr x11, x21, x11
-; GISEL-NEXT:    ldr x21, [sp, #296] ; 8-byte Folded Reload
-; GISEL-NEXT:    csel x10, x11, x10, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x11, xzr, x15, eq
-; GISEL-NEXT:    cmp x9, #7
-; GISEL-NEXT:    orr x11, x28, x11
-; GISEL-NEXT:    csel x10, x11, x10, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x11, xzr, x12, eq
-; GISEL-NEXT:    cmp x9, #8
-; GISEL-NEXT:    orr x11, x16, x11
-; GISEL-NEXT:    csel x10, x11, x10, eq
-; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x11, xzr, x20, eq
-; GISEL-NEXT:    cmp x9, #9
-; GISEL-NEXT:    orr x11, x5, x11
-; GISEL-NEXT:    csel x10, x11, x10, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x11, xzr, x7, eq
-; GISEL-NEXT:    cmp x9, #10
-; GISEL-NEXT:    orr x11, x1, x11
-; GISEL-NEXT:    ldr x1, [sp, #312] ; 8-byte Folded Reload
-; GISEL-NEXT:    csel x10, x11, x10, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x11, xzr, x30, eq
 ; GISEL-NEXT:    cmp x9, #11
-; GISEL-NEXT:    orr x11, x6, x11
+; GISEL-NEXT:    orr x11, x26, x11
 ; GISEL-NEXT:    csel x10, x11, x10, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x11, xzr, x25, eq
+; GISEL-NEXT:    csel x11, xzr, x22, eq
 ; GISEL-NEXT:    cmp x9, #12
-; GISEL-NEXT:    orr x11, x3, x11
+; GISEL-NEXT:    orr x11, x30, x11
 ; GISEL-NEXT:    csel x10, x11, x10, eq
 ; GISEL-NEXT:    cmp x9, #13
-; GISEL-NEXT:    csel x10, x26, x10, eq
+; GISEL-NEXT:    csel x10, x16, x10, eq
 ; GISEL-NEXT:    cmp x9, #14
+; GISEL-NEXT:    ldr x16, [sp, #304] ; 8-byte Reload
 ; GISEL-NEXT:    csel x10, xzr, x10, eq
 ; GISEL-NEXT:    cmp x9, #15
 ; GISEL-NEXT:    csel x11, xzr, x10, eq
 ; GISEL-NEXT:    cmp x8, #0
-; GISEL-NEXT:    csel x11, x21, x11, eq
-; GISEL-NEXT:    ldp x10, x20, [x1, #112]
-; GISEL-NEXT:    str x11, [sp, #80] ; 8-byte Folded Spill
-; GISEL-NEXT:    ldp x11, x4, [sp, #40] ; 16-byte Folded Reload
+; GISEL-NEXT:    ldp x10, x4, [x16, #112]
+; GISEL-NEXT:    csel x11, x25, x11, eq
+; GISEL-NEXT:    str x11, [sp, #120] ; 8-byte Spill
+; GISEL-NEXT:    lsr x11, x25, x28
+; GISEL-NEXT:    and x16, x8, #0x3f
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    lsr x21, x21, x4
-; GISEL-NEXT:    lsl x28, x10, x11
-; GISEL-NEXT:    csel x1, xzr, x21, eq
-; GISEL-NEXT:    str x21, [sp, #296] ; 8-byte Folded Spill
+; GISEL-NEXT:    ldr x25, [sp, #88] ; 8-byte Reload
+; GISEL-NEXT:    lsl x24, x10, x16
+; GISEL-NEXT:    csel x1, xzr, x11, eq
 ; GISEL-NEXT:    cmp x9, #0
-; GISEL-NEXT:    orr x1, x28, x1
-; GISEL-NEXT:    ldr x21, [sp, #72] ; 8-byte Folded Reload
-; GISEL-NEXT:    str x28, [sp, #312] ; 8-byte Folded Spill
+; GISEL-NEXT:    ldp x16, x28, [sp, #96] ; 16-byte Folded Reload
+; GISEL-NEXT:    orr x1, x24, x1
 ; GISEL-NEXT:    csel x1, x1, xzr, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    ldr x28, [sp, #56] ; 8-byte Folded Reload
-; GISEL-NEXT:    csel x30, xzr, x21, eq
+; GISEL-NEXT:    csel x30, xzr, x28, eq
 ; GISEL-NEXT:    cmp x9, #1
-; GISEL-NEXT:    orr x30, x28, x30
+; GISEL-NEXT:    orr x30, x25, x30
 ; GISEL-NEXT:    csel x1, x30, x1, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x30, xzr, x22, eq
+; GISEL-NEXT:    csel x30, xzr, x7, eq
 ; GISEL-NEXT:    cmp x9, #2
-; GISEL-NEXT:    ldr x22, [sp, #64] ; 8-byte Folded Reload
-; GISEL-NEXT:    orr x30, x24, x30
+; GISEL-NEXT:    orr x30, x2, x30
+; GISEL-NEXT:    ldr x2, [sp, #56] ; 8-byte Reload
 ; GISEL-NEXT:    csel x1, x30, x1, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x30, xzr, x22, eq
+; GISEL-NEXT:    csel x30, xzr, x16, eq
 ; GISEL-NEXT:    cmp x9, #3
 ; GISEL-NEXT:    orr x30, x2, x30
-; GISEL-NEXT:    ldr x2, [sp, #280] ; 8-byte Folded Reload
 ; GISEL-NEXT:    csel x1, x30, x1, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x30, xzr, x2, eq
+; GISEL-NEXT:    csel x30, xzr, x27, eq
 ; GISEL-NEXT:    cmp x9, #4
-; GISEL-NEXT:    orr x30, x17, x30
-; GISEL-NEXT:    ldr x17, [sp, #224] ; 8-byte Folded Reload
+; GISEL-NEXT:    mov x27, x13
+; GISEL-NEXT:    orr x30, x0, x30
+; GISEL-NEXT:    ldr x0, [sp, #248] ; 8-byte Reload
 ; GISEL-NEXT:    csel x1, x30, x1, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x30, xzr, x0, eq
+; GISEL-NEXT:    csel x30, xzr, x15, eq
+; GISEL-NEXT:    ldr x15, [sp, #312] ; 8-byte Reload
 ; GISEL-NEXT:    cmp x9, #5
-; GISEL-NEXT:    orr x30, x17, x30
+; GISEL-NEXT:    orr x30, x15, x30
+; GISEL-NEXT:    csel x1, x30, x1, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x30, xzr, x3, eq
+; GISEL-NEXT:    cmp x9, #6
+; GISEL-NEXT:    ldr x3, [sp, #40] ; 8-byte Reload
+; GISEL-NEXT:    orr x30, x13, x30
 ; GISEL-NEXT:    csel x1, x30, x1, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x30, xzr, x14, eq
-; GISEL-NEXT:    ldr x14, [sp, #216] ; 8-byte Folded Reload
-; GISEL-NEXT:    cmp x9, #6
-; GISEL-NEXT:    orr x30, x14, x30
-; GISEL-NEXT:    csel x1, x30, x1, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x30, xzr, x13, eq
-; GISEL-NEXT:    ldr x13, [sp, #200] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldp x13, x14, [sp, #256] ; 16-byte Folded Reload
 ; GISEL-NEXT:    cmp x9, #7
 ; GISEL-NEXT:    orr x30, x13, x30
 ; GISEL-NEXT:    csel x1, x30, x1, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x30, xzr, x15, eq
-; GISEL-NEXT:    ldr x15, [sp, #32] ; 8-byte Folded Reload
+; GISEL-NEXT:    csel x30, xzr, x14, eq
 ; GISEL-NEXT:    cmp x9, #8
-; GISEL-NEXT:    orr x30, x15, x30
-; GISEL-NEXT:    csel x1, x30, x1, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x30, xzr, x12, eq
-; GISEL-NEXT:    cmp x9, #9
-; GISEL-NEXT:    orr x30, x16, x30
-; GISEL-NEXT:    csel x1, x30, x1, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x30, xzr, x23, eq
-; GISEL-NEXT:    cmp x9, #10
-; GISEL-NEXT:    orr x30, x5, x30
-; GISEL-NEXT:    csel x1, x30, x1, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x30, xzr, x7, eq
-; GISEL-NEXT:    cmp x9, #11
-; GISEL-NEXT:    orr x30, x19, x30
-; GISEL-NEXT:    csel x1, x30, x1, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x30, xzr, x27, eq
-; GISEL-NEXT:    cmp x9, #12
-; GISEL-NEXT:    orr x30, x6, x30
-; GISEL-NEXT:    csel x1, x30, x1, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x30, xzr, x25, eq
-; GISEL-NEXT:    cmp x9, #13
 ; GISEL-NEXT:    orr x30, x3, x30
 ; GISEL-NEXT:    csel x1, x30, x1, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x30, xzr, x0, eq
+; GISEL-NEXT:    cmp x9, #9
+; GISEL-NEXT:    orr x30, x12, x30
+; GISEL-NEXT:    csel x1, x30, x1, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x30, xzr, x19, eq
+; GISEL-NEXT:    cmp x9, #10
+; GISEL-NEXT:    orr x30, x23, x30
+; GISEL-NEXT:    csel x1, x30, x1, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x30, xzr, x17, eq
+; GISEL-NEXT:    cmp x9, #11
+; GISEL-NEXT:    orr x30, x21, x30
+; GISEL-NEXT:    csel x1, x30, x1, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x30, xzr, x20, eq
+; GISEL-NEXT:    cmp x9, #12
+; GISEL-NEXT:    mov x20, x26
+; GISEL-NEXT:    orr x30, x26, x30
+; GISEL-NEXT:    mov x26, x5
+; GISEL-NEXT:    csel x1, x30, x1, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x30, xzr, x22, eq
+; GISEL-NEXT:    cmp x9, #13
+; GISEL-NEXT:    orr x30, x5, x30
+; GISEL-NEXT:    ldr x5, [sp, #16] ; 8-byte Reload
+; GISEL-NEXT:    csel x1, x30, x1, eq
 ; GISEL-NEXT:    cmp x9, #14
-; GISEL-NEXT:    lsr x30, x10, x4
-; GISEL-NEXT:    csel x1, x26, x1, eq
+; GISEL-NEXT:    csel x1, x6, x1, eq
 ; GISEL-NEXT:    cmp x9, #15
+; GISEL-NEXT:    lsr x30, x10, x5
 ; GISEL-NEXT:    csel x1, xzr, x1, eq
 ; GISEL-NEXT:    cmp x8, #0
-; GISEL-NEXT:    csel x26, x10, x1, eq
-; GISEL-NEXT:    lsl x10, x20, x11
+; GISEL-NEXT:    csel x5, x10, x1, eq
+; GISEL-NEXT:    and x10, x8, #0x3f
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x16, xzr, x30, eq
+; GISEL-NEXT:    lsl x10, x4, x10
+; GISEL-NEXT:    csel x1, xzr, x30, eq
 ; GISEL-NEXT:    cmp x9, #0
-; GISEL-NEXT:    ldr x11, [sp, #296] ; 8-byte Folded Reload
-; GISEL-NEXT:    orr x10, x10, x16
-; GISEL-NEXT:    ldr x16, [sp, #312] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldp x29, x30, [sp, #416] ; 16-byte Folded Reload
+; GISEL-NEXT:    orr x10, x10, x1
+; GISEL-NEXT:    ldr x1, [sp, #296] ; 8-byte Reload
 ; GISEL-NEXT:    csel x10, x10, xzr, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x11, xzr, x11, eq
 ; GISEL-NEXT:    cmp x9, #1
-; GISEL-NEXT:    orr x11, x16, x11
-; GISEL-NEXT:    ldr x16, [sp, #272] ; 8-byte Folded Reload
-; GISEL-NEXT:    csel x10, x11, x10, eq
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x11, xzr, x21, eq
-; GISEL-NEXT:    cmp x9, #2
-; GISEL-NEXT:    orr x11, x28, x11
-; GISEL-NEXT:    ldp x29, x30, [sp, #400] ; 16-byte Folded Reload
-; GISEL-NEXT:    csel x10, x11, x10, eq
-; GISEL-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
-; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x11, xzr, x11, eq
-; GISEL-NEXT:    cmp x9, #3
 ; GISEL-NEXT:    orr x11, x24, x11
 ; GISEL-NEXT:    csel x10, x11, x10, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x11, xzr, x22, eq
-; GISEL-NEXT:    cmp x9, #4
-; GISEL-NEXT:    orr x11, x16, x11
-; GISEL-NEXT:    ldr x16, [sp, #232] ; 8-byte Folded Reload
+; GISEL-NEXT:    csel x11, xzr, x28, eq
+; GISEL-NEXT:    cmp x9, #2
+; GISEL-NEXT:    orr x11, x25, x11
 ; GISEL-NEXT:    csel x10, x11, x10, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x11, xzr, x2, eq
+; GISEL-NEXT:    csel x11, xzr, x7, eq
+; GISEL-NEXT:    cmp x9, #3
+; GISEL-NEXT:    orr x11, x1, x11
+; GISEL-NEXT:    csel x10, x11, x10, eq
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x11, xzr, x16, eq
+; GISEL-NEXT:    cmp x9, #4
+; GISEL-NEXT:    ldr x16, [sp, #280] ; 8-byte Reload
+; GISEL-NEXT:    orr x11, x2, x11
+; GISEL-NEXT:    csel x10, x11, x10, eq
+; GISEL-NEXT:    ldr x11, [sp, #240] ; 8-byte Reload
+; GISEL-NEXT:    tst x8, #0x3f
+; GISEL-NEXT:    csel x11, xzr, x11, eq
 ; GISEL-NEXT:    cmp x9, #5
 ; GISEL-NEXT:    orr x11, x16, x11
-; GISEL-NEXT:    ldp x22, x21, [sp, #368] ; 16-byte Folded Reload
 ; GISEL-NEXT:    csel x10, x11, x10, eq
+; GISEL-NEXT:    ldr x11, [sp, #32] ; 8-byte Reload
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x11, xzr, x0, eq
+; GISEL-NEXT:    csel x11, xzr, x11, eq
 ; GISEL-NEXT:    cmp x9, #6
-; GISEL-NEXT:    orr x11, x17, x11
+; GISEL-NEXT:    orr x11, x15, x11
 ; GISEL-NEXT:    csel x10, x11, x10, eq
-; GISEL-NEXT:    ldr x11, [sp, #264] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x11, [sp, #328] ; 8-byte Reload
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x11, xzr, x11, eq
 ; GISEL-NEXT:    cmp x9, #7
-; GISEL-NEXT:    orr x11, x14, x11
+; GISEL-NEXT:    orr x11, x27, x11
+; GISEL-NEXT:    ldp x28, x27, [sp, #336] ; 16-byte Folded Reload
 ; GISEL-NEXT:    csel x10, x11, x10, eq
-; GISEL-NEXT:    ldr x11, [sp, #256] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x11, [sp, #320] ; 8-byte Reload
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x11, xzr, x11, eq
 ; GISEL-NEXT:    cmp x9, #8
 ; GISEL-NEXT:    orr x11, x13, x11
-; GISEL-NEXT:    ldr x13, [sp, #112] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x13, [sp, #144] ; 8-byte Reload
 ; GISEL-NEXT:    csel x10, x11, x10, eq
-; GISEL-NEXT:    ldr x11, [sp, #24] ; 8-byte Folded Reload
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x11, xzr, x11, eq
+; GISEL-NEXT:    csel x11, xzr, x14, eq
 ; GISEL-NEXT:    cmp x9, #9
-; GISEL-NEXT:    orr x11, x15, x11
+; GISEL-NEXT:    orr x11, x3, x11
 ; GISEL-NEXT:    csel x10, x11, x10, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    csel x11, xzr, x12, eq
-; GISEL-NEXT:    ldr x12, [sp, #304] ; 8-byte Folded Reload
+; GISEL-NEXT:    csel x11, xzr, x0, eq
 ; GISEL-NEXT:    cmp x9, #10
 ; GISEL-NEXT:    orr x11, x12, x11
 ; GISEL-NEXT:    csel x10, x11, x10, eq
-; GISEL-NEXT:    ldr x11, [sp, #192] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x11, [sp, #232] ; 8-byte Reload
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    str x11, [x13]
-; GISEL-NEXT:    ldp x12, x11, [sp, #176] ; 16-byte Folded Reload
+; GISEL-NEXT:    ldp x12, x11, [sp, #216] ; 16-byte Folded Reload
 ; GISEL-NEXT:    stp x11, x12, [x13, #8]
-; GISEL-NEXT:    csel x11, xzr, x23, eq
+; GISEL-NEXT:    csel x11, xzr, x19, eq
 ; GISEL-NEXT:    cmp x9, #11
-; GISEL-NEXT:    orr x11, x5, x11
-; GISEL-NEXT:    ldp x24, x23, [sp, #352] ; 16-byte Folded Reload
+; GISEL-NEXT:    orr x11, x23, x11
+; GISEL-NEXT:    ldp x24, x23, [sp, #368] ; 16-byte Folded Reload
 ; GISEL-NEXT:    csel x10, x11, x10, eq
-; GISEL-NEXT:    ldr x11, [sp, #168] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x11, [sp, #208] ; 8-byte Reload
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    str x11, [x13, #24]
-; GISEL-NEXT:    ldp x12, x11, [sp, #152] ; 16-byte Folded Reload
+; GISEL-NEXT:    ldp x12, x11, [sp, #192] ; 16-byte Folded Reload
 ; GISEL-NEXT:    stp x11, x12, [x13, #32]
-; GISEL-NEXT:    csel x11, xzr, x7, eq
+; GISEL-NEXT:    csel x11, xzr, x17, eq
 ; GISEL-NEXT:    cmp x9, #12
-; GISEL-NEXT:    orr x11, x19, x11
+; GISEL-NEXT:    orr x11, x21, x11
 ; GISEL-NEXT:    csel x10, x11, x10, eq
-; GISEL-NEXT:    ldr x11, [sp, #144] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x11, [sp, #184] ; 8-byte Reload
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    str x11, [x13, #48]
-; GISEL-NEXT:    ldp x12, x11, [sp, #128] ; 16-byte Folded Reload
+; GISEL-NEXT:    ldp x12, x11, [sp, #168] ; 16-byte Folded Reload
 ; GISEL-NEXT:    stp x11, x12, [x13, #56]
-; GISEL-NEXT:    csel x11, xzr, x27, eq
+; GISEL-NEXT:    ldr x11, [sp, #112] ; 8-byte Reload
+; GISEL-NEXT:    ldr x12, [sp, #136] ; 8-byte Reload
+; GISEL-NEXT:    csel x11, xzr, x11, eq
 ; GISEL-NEXT:    cmp x9, #13
-; GISEL-NEXT:    orr x11, x6, x11
-; GISEL-NEXT:    ldp x28, x27, [sp, #320] ; 16-byte Folded Reload
+; GISEL-NEXT:    orr x11, x20, x11
+; GISEL-NEXT:    ldp x20, x19, [sp, #400] ; 16-byte Folded Reload
 ; GISEL-NEXT:    csel x10, x11, x10, eq
-; GISEL-NEXT:    ldr x11, [sp, #120] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x11, [sp, #160] ; 8-byte Reload
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    str x11, [x13, #72]
-; GISEL-NEXT:    ldp x12, x11, [sp, #96] ; 16-byte Folded Reload
-; GISEL-NEXT:    stp x11, x12, [x13, #80]
-; GISEL-NEXT:    csel x11, xzr, x25, eq
+; GISEL-NEXT:    ldr x11, [sp, #152] ; 8-byte Reload
+; GISEL-NEXT:    str x11, [x13, #80]
+; GISEL-NEXT:    csel x11, xzr, x22, eq
 ; GISEL-NEXT:    cmp x9, #14
-; GISEL-NEXT:    orr x11, x3, x11
+; GISEL-NEXT:    orr x11, x26, x11
+; GISEL-NEXT:    ldp x22, x21, [sp, #384] ; 16-byte Folded Reload
 ; GISEL-NEXT:    csel x10, x11, x10, eq
 ; GISEL-NEXT:    cmp x9, #15
-; GISEL-NEXT:    ldr x9, [sp, #288] ; 8-byte Folded Reload
-; GISEL-NEXT:    ldr x11, [sp, #88] ; 8-byte Folded Reload
-; GISEL-NEXT:    csel x9, x9, x10, eq
+; GISEL-NEXT:    ldr x9, [sp, #128] ; 8-byte Reload
+; GISEL-NEXT:    ldp x26, x25, [sp, #352] ; 16-byte Folded Reload
+; GISEL-NEXT:    stp x12, x9, [x13, #88]
+; GISEL-NEXT:    csel x9, x6, x10, eq
 ; GISEL-NEXT:    cmp x8, #0
-; GISEL-NEXT:    ldr x8, [sp, #80] ; 8-byte Folded Reload
-; GISEL-NEXT:    stp x11, x8, [x13, #96]
-; GISEL-NEXT:    csel x8, x20, x9, eq
-; GISEL-NEXT:    stp x26, x8, [x13, #112]
-; GISEL-NEXT:    ldp x20, x19, [sp, #384] ; 16-byte Folded Reload
-; GISEL-NEXT:    ldp x26, x25, [sp, #336] ; 16-byte Folded Reload
-; GISEL-NEXT:    add sp, sp, #416
+; GISEL-NEXT:    ldr x8, [sp, #120] ; 8-byte Reload
+; GISEL-NEXT:    stp x8, x5, [x13, #104]
+; GISEL-NEXT:    csel x8, x4, x9, eq
+; GISEL-NEXT:    str x8, [x13, #120]
+; GISEL-NEXT:    add sp, sp, #432
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i1024, ptr %input, align 128
@@ -2495,12 +2513,12 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    lsr x9, x8, #6
 ; GISEL-NEXT:    lsr x11, x20, x14
 ; GISEL-NEXT:    lsr x19, x16, x14
-; GISEL-NEXT:    str x16, [sp, #264] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x16, [sp, #264] ; 8-byte Spill
 ; GISEL-NEXT:    csel x10, xzr, x10, eq
 ; GISEL-NEXT:    lsl x22, x12, x15
 ; GISEL-NEXT:    cmp x9, #0
 ; GISEL-NEXT:    orr x10, x11, x10
-; GISEL-NEXT:    str x12, [sp, #240] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x12, [sp, #240] ; 8-byte Spill
 ; GISEL-NEXT:    lsr x26, x12, x14
 ; GISEL-NEXT:    csel x10, x10, xzr, eq
 ; GISEL-NEXT:    tst x8, #0x3f
@@ -2512,10 +2530,10 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    ldp x12, x16, [x1, #32]
 ; GISEL-NEXT:    csel x10, x11, x10, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    str x0, [sp, #296] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x0, [sp, #296] ; 8-byte Spill
 ; GISEL-NEXT:    csel x11, xzr, x24, eq
 ; GISEL-NEXT:    cmp x9, #2
-; GISEL-NEXT:    str x13, [sp, #216] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x13, [sp, #216] ; 8-byte Spill
 ; GISEL-NEXT:    lsl x23, x12, x15
 ; GISEL-NEXT:    orr x11, x26, x11
 ; GISEL-NEXT:    stp x12, x16, [sp, #176] ; 16-byte Folded Spill
@@ -2548,13 +2566,13 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    ldp x4, x2, [x1, #64]
 ; GISEL-NEXT:    csel x10, x11, x10, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    ldr x17, [sp, #144] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x17, [sp, #144] ; 8-byte Reload
 ; GISEL-NEXT:    stp x5, x23, [sp, #24] ; 16-byte Folded Spill
 ; GISEL-NEXT:    csel x11, xzr, x0, eq
 ; GISEL-NEXT:    cmp x9, #6
 ; GISEL-NEXT:    lsl x3, x4, x15
 ; GISEL-NEXT:    orr x11, x13, x11
-; GISEL-NEXT:    str x4, [sp, #208] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x4, [sp, #208] ; 8-byte Spill
 ; GISEL-NEXT:    csel x10, x11, x10, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    lsl x6, x2, x15
@@ -2562,7 +2580,7 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x9, #7
 ; GISEL-NEXT:    lsr x13, x4, x14
 ; GISEL-NEXT:    orr x11, x12, x11
-; GISEL-NEXT:    str x2, [sp, #224] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x2, [sp, #224] ; 8-byte Spill
 ; GISEL-NEXT:    csel x16, x11, x10, eq
 ; GISEL-NEXT:    ldp x10, x4, [x1, #80]
 ; GISEL-NEXT:    tst x8, #0x3f
@@ -2573,16 +2591,16 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    lsr x11, x11, x14
 ; GISEL-NEXT:    orr x2, x13, x2
 ; GISEL-NEXT:    lsl x12, x10, x15
-; GISEL-NEXT:    str x10, [sp, #232] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x10, [sp, #232] ; 8-byte Spill
 ; GISEL-NEXT:    csel x16, x2, x16, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    lsr x10, x10, x14
 ; GISEL-NEXT:    csel x2, xzr, x12, eq
-; GISEL-NEXT:    str x12, [sp, #312] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x12, [sp, #312] ; 8-byte Spill
 ; GISEL-NEXT:    cmp x9, #9
 ; GISEL-NEXT:    orr x2, x11, x2
 ; GISEL-NEXT:    lsl x12, x4, x15
-; GISEL-NEXT:    str x10, [sp, #304] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x10, [sp, #304] ; 8-byte Spill
 ; GISEL-NEXT:    csel x16, x2, x16, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    lsr x13, x4, x14
@@ -2596,7 +2614,7 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    stp x4, x11, [sp, #248] ; 16-byte Folded Spill
 ; GISEL-NEXT:    csel x16, x2, x16, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    str x3, [sp, #16] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x3, [sp, #16] ; 8-byte Spill
 ; GISEL-NEXT:    csel x2, xzr, x28, eq
 ; GISEL-NEXT:    lsl x12, x10, x15
 ; GISEL-NEXT:    cmp x9, #11
@@ -2614,7 +2632,7 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    lsr x27, x30, x14
 ; GISEL-NEXT:    orr x4, x13, x2
 ; GISEL-NEXT:    mov x12, x23
-; GISEL-NEXT:    str x28, [sp, #48] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x28, [sp, #48] ; 8-byte Spill
 ; GISEL-NEXT:    csel x16, x4, x16, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    lsl x25, x11, x15
@@ -2623,10 +2641,10 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    stp x10, x13, [sp, #72] ; 16-byte Folded Spill
 ; GISEL-NEXT:    orr x1, x10, x1
 ; GISEL-NEXT:    lsr x10, x11, x14
-; GISEL-NEXT:    str x11, [sp, #288] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x11, [sp, #288] ; 8-byte Spill
 ; GISEL-NEXT:    csel x1, x1, x16, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    str x21, [sp, #40] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x21, [sp, #40] ; 8-byte Spill
 ; GISEL-NEXT:    csel x30, xzr, x25, eq
 ; GISEL-NEXT:    cmp x9, #14
 ; GISEL-NEXT:    stp x27, x10, [sp, #56] ; 16-byte Folded Spill
@@ -2641,7 +2659,7 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x1, xzr, x22, eq
 ; GISEL-NEXT:    cmp x9, #0
-; GISEL-NEXT:    str x10, [sp, #168] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x10, [sp, #168] ; 8-byte Spill
 ; GISEL-NEXT:    orr x1, x19, x1
 ; GISEL-NEXT:    ldp x20, x14, [sp, #112] ; 16-byte Folded Reload
 ; GISEL-NEXT:    csel x1, x1, xzr, eq
@@ -2694,7 +2712,7 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    csel x19, xzr, x22, eq
 ; GISEL-NEXT:    cmp x9, #9
 ; GISEL-NEXT:    orr x19, x10, x19
-; GISEL-NEXT:    ldr x10, [sp, #264] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x10, [sp, #264] ; 8-byte Reload
 ; GISEL-NEXT:    csel x1, x19, x1, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x19, xzr, x28, eq
@@ -2728,8 +2746,8 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x9, #0
 ; GISEL-NEXT:    mov x24, x11
 ; GISEL-NEXT:    orr x1, x26, x1
-; GISEL-NEXT:    str x10, [sp, #264] ; 8-byte Folded Spill
-; GISEL-NEXT:    ldr x10, [sp, #240] ; 8-byte Folded Reload
+; GISEL-NEXT:    str x10, [sp, #264] ; 8-byte Spill
+; GISEL-NEXT:    ldr x10, [sp, #240] ; 8-byte Reload
 ; GISEL-NEXT:    csel x1, x1, xzr, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    mov x26, x13
@@ -2765,7 +2783,7 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x9, #5
 ; GISEL-NEXT:    mov x3, x22
 ; GISEL-NEXT:    orr x19, x23, x19
-; GISEL-NEXT:    ldr x23, [sp, #16] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x23, [sp, #16] ; 8-byte Reload
 ; GISEL-NEXT:    csel x1, x19, x1, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x19, xzr, x6, eq
@@ -2775,14 +2793,14 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x19, xzr, x15, eq
 ; GISEL-NEXT:    cmp x9, #7
-; GISEL-NEXT:    ldr x15, [sp, #304] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x15, [sp, #304] ; 8-byte Reload
 ; GISEL-NEXT:    orr x19, x20, x19
 ; GISEL-NEXT:    ldp x14, x20, [sp, #40] ; 16-byte Folded Reload
 ; GISEL-NEXT:    csel x1, x19, x1, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x19, xzr, x22, eq
 ; GISEL-NEXT:    cmp x9, #8
-; GISEL-NEXT:    ldr x22, [sp, #56] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x22, [sp, #56] ; 8-byte Reload
 ; GISEL-NEXT:    orr x19, x15, x19
 ; GISEL-NEXT:    csel x1, x19, x1, eq
 ; GISEL-NEXT:    tst x8, #0x3f
@@ -2814,13 +2832,13 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x8, #0
 ; GISEL-NEXT:    csel x10, x10, x1, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    str x10, [sp, #240] ; 8-byte Folded Spill
-; GISEL-NEXT:    ldr x10, [sp, #32] ; 8-byte Folded Reload
+; GISEL-NEXT:    str x10, [sp, #240] ; 8-byte Spill
+; GISEL-NEXT:    ldr x10, [sp, #32] ; 8-byte Reload
 ; GISEL-NEXT:    csel x1, xzr, x10, eq
-; GISEL-NEXT:    ldr x10, [sp, #24] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x10, [sp, #24] ; 8-byte Reload
 ; GISEL-NEXT:    cmp x9, #0
 ; GISEL-NEXT:    orr x1, x10, x1
-; GISEL-NEXT:    ldr x10, [sp, #216] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x10, [sp, #216] ; 8-byte Reload
 ; GISEL-NEXT:    csel x1, x1, xzr, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x19, xzr, x26, eq
@@ -2899,9 +2917,9 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x1, xzr, x26, eq
 ; GISEL-NEXT:    cmp x9, #0
-; GISEL-NEXT:    str x10, [sp, #216] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x10, [sp, #216] ; 8-byte Spill
 ; GISEL-NEXT:    orr x1, x24, x1
-; GISEL-NEXT:    ldr x10, [sp, #176] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x10, [sp, #176] ; 8-byte Reload
 ; GISEL-NEXT:    mov x24, x3
 ; GISEL-NEXT:    csel x1, x1, xzr, eq
 ; GISEL-NEXT:    tst x8, #0x3f
@@ -2914,7 +2932,7 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    csel x19, xzr, x27, eq
 ; GISEL-NEXT:    cmp x9, #2
 ; GISEL-NEXT:    orr x19, x30, x19
-; GISEL-NEXT:    ldr x30, [sp, #312] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x30, [sp, #312] ; 8-byte Reload
 ; GISEL-NEXT:    csel x1, x19, x1, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x19, xzr, x23, eq
@@ -2969,7 +2987,7 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x8, #0
 ; GISEL-NEXT:    csel x19, x10, x1, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    ldr x10, [sp, #184] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x10, [sp, #184] ; 8-byte Reload
 ; GISEL-NEXT:    csel x1, xzr, x11, eq
 ; GISEL-NEXT:    cmp x9, #0
 ; GISEL-NEXT:    mov x11, x23
@@ -3040,9 +3058,9 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x17, xzr, x27, eq
 ; GISEL-NEXT:    cmp x9, #0
-; GISEL-NEXT:    str x10, [sp, #184] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x10, [sp, #184] ; 8-byte Spill
 ; GISEL-NEXT:    orr x17, x22, x17
-; GISEL-NEXT:    ldr x10, [sp, #192] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x10, [sp, #192] ; 8-byte Reload
 ; GISEL-NEXT:    csel x17, x17, xzr, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x0, xzr, x11, eq
@@ -3101,7 +3119,7 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x8, #0
 ; GISEL-NEXT:    csel x17, x10, x17, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    ldr x10, [sp, #200] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x10, [sp, #200] ; 8-byte Reload
 ; GISEL-NEXT:    csel x13, xzr, x11, eq
 ; GISEL-NEXT:    cmp x9, #0
 ; GISEL-NEXT:    orr x12, x12, x13
@@ -3183,7 +3201,7 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    csel x11, xzr, x2, eq
 ; GISEL-NEXT:    cmp x9, #4
 ; GISEL-NEXT:    orr x11, x4, x11
-; GISEL-NEXT:    ldr x4, [sp, #168] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x4, [sp, #168] ; 8-byte Reload
 ; GISEL-NEXT:    csel x10, x11, x10, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x11, xzr, x20, eq
@@ -3196,7 +3214,7 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    orr x11, x23, x11
 ; GISEL-NEXT:    csel x10, x11, x10, eq
 ; GISEL-NEXT:    cmp x9, #7
-; GISEL-NEXT:    ldr x11, [sp, #208] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x11, [sp, #208] ; 8-byte Reload
 ; GISEL-NEXT:    csel x10, x28, x10, eq
 ; GISEL-NEXT:    cmp x9, #8
 ; GISEL-NEXT:    csel x10, xzr, x10, eq
@@ -3248,7 +3266,7 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    orr x13, x23, x13
 ; GISEL-NEXT:    csel x11, x13, x11, eq
 ; GISEL-NEXT:    cmp x9, #6
-; GISEL-NEXT:    ldr x13, [sp, #224] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x13, [sp, #224] ; 8-byte Reload
 ; GISEL-NEXT:    csel x11, x28, x11, eq
 ; GISEL-NEXT:    cmp x9, #7
 ; GISEL-NEXT:    csel x11, xzr, x11, eq
@@ -3296,7 +3314,7 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    orr x0, x23, x0
 ; GISEL-NEXT:    csel x13, x0, x13, eq
 ; GISEL-NEXT:    cmp x9, #5
-; GISEL-NEXT:    ldr x0, [sp, #232] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x0, [sp, #232] ; 8-byte Reload
 ; GISEL-NEXT:    csel x13, x28, x13, eq
 ; GISEL-NEXT:    cmp x9, #6
 ; GISEL-NEXT:    csel x13, xzr, x13, eq
@@ -3324,7 +3342,7 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    csel x0, xzr, x24, eq
 ; GISEL-NEXT:    cmp x9, #0
 ; GISEL-NEXT:    orr x0, x16, x0
-; GISEL-NEXT:    ldr x16, [sp, #280] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x16, [sp, #280] ; 8-byte Reload
 ; GISEL-NEXT:    csel x0, x0, xzr, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x1, xzr, x2, eq
@@ -3342,7 +3360,7 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    orr x1, x23, x1
 ; GISEL-NEXT:    csel x0, x1, x0, eq
 ; GISEL-NEXT:    cmp x9, #4
-; GISEL-NEXT:    ldr x1, [sp, #248] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x1, [sp, #248] ; 8-byte Reload
 ; GISEL-NEXT:    csel x0, x28, x0, eq
 ; GISEL-NEXT:    cmp x9, #5
 ; GISEL-NEXT:    csel x0, xzr, x0, eq
@@ -3384,7 +3402,7 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    orr x3, x23, x3
 ; GISEL-NEXT:    csel x1, x3, x1, eq
 ; GISEL-NEXT:    cmp x9, #3
-; GISEL-NEXT:    ldr x3, [sp, #256] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x3, [sp, #256] ; 8-byte Reload
 ; GISEL-NEXT:    csel x1, x28, x1, eq
 ; GISEL-NEXT:    cmp x9, #4
 ; GISEL-NEXT:    csel x1, xzr, x1, eq
@@ -3424,7 +3442,7 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    orr x2, x23, x2
 ; GISEL-NEXT:    csel x1, x2, x1, eq
 ; GISEL-NEXT:    cmp x9, #2
-; GISEL-NEXT:    ldr x2, [sp, #272] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x2, [sp, #272] ; 8-byte Reload
 ; GISEL-NEXT:    csel x1, x28, x1, eq
 ; GISEL-NEXT:    cmp x9, #3
 ; GISEL-NEXT:    csel x1, xzr, x1, eq
@@ -3455,7 +3473,7 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x8, #0
 ; GISEL-NEXT:    csel x2, x2, x1, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    ldr x1, [sp, #264] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x1, [sp, #264] ; 8-byte Reload
 ; GISEL-NEXT:    csel x15, xzr, x25, eq
 ; GISEL-NEXT:    cmp x9, #0
 ; GISEL-NEXT:    orr x15, x23, x15
@@ -3494,7 +3512,7 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x8, #0
 ; GISEL-NEXT:    csel x15, x16, x15, eq
 ; GISEL-NEXT:    cmp x9, #0
-; GISEL-NEXT:    ldr x16, [sp, #296] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x16, [sp, #296] ; 8-byte Reload
 ; GISEL-NEXT:    csel x14, x28, xzr, eq
 ; GISEL-NEXT:    cmp x9, #1
 ; GISEL-NEXT:    csel x14, xzr, x14, eq
@@ -3508,10 +3526,10 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    stp x4, x1, [x16]
 ; GISEL-NEXT:    csel x14, xzr, x14, eq
 ; GISEL-NEXT:    cmp x9, #5
-; GISEL-NEXT:    ldr x4, [sp, #240] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x4, [sp, #240] ; 8-byte Reload
 ; GISEL-NEXT:    csel x14, xzr, x14, eq
 ; GISEL-NEXT:    cmp x9, #6
-; GISEL-NEXT:    ldr x1, [sp, #216] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x1, [sp, #216] ; 8-byte Reload
 ; GISEL-NEXT:    csel x14, xzr, x14, eq
 ; GISEL-NEXT:    cmp x9, #7
 ; GISEL-NEXT:    stp x13, x0, [x16, #80]
@@ -3520,7 +3538,7 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    stp x4, x1, [x16, #16]
 ; GISEL-NEXT:    csel x14, xzr, x14, eq
 ; GISEL-NEXT:    cmp x9, #9
-; GISEL-NEXT:    ldr x1, [sp, #184] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x1, [sp, #184] ; 8-byte Reload
 ; GISEL-NEXT:    csel x12, xzr, x14, eq
 ; GISEL-NEXT:    cmp x9, #10
 ; GISEL-NEXT:    stp x3, x2, [x16, #96]
@@ -3537,7 +3555,7 @@ define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x9, #15
 ; GISEL-NEXT:    csel x9, xzr, x10, eq
 ; GISEL-NEXT:    cmp x8, #0
-; GISEL-NEXT:    ldr x8, [sp, #288] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x8, [sp, #288] ; 8-byte Reload
 ; GISEL-NEXT:    ldp x20, x19, [sp, #384] ; 16-byte Folded Reload
 ; GISEL-NEXT:    ldp x26, x25, [sp, #336] ; 16-byte Folded Reload
 ; GISEL-NEXT:    csel x8, x8, x9, eq
@@ -3708,7 +3726,7 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    .cfi_offset w26, -80
 ; GISEL-NEXT:    .cfi_offset w27, -88
 ; GISEL-NEXT:    .cfi_offset w28, -96
-; GISEL-NEXT:    str x0, [sp, #264] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x0, [sp, #264] ; 8-byte Spill
 ; GISEL-NEXT:    mov w8, w2
 ; GISEL-NEXT:    mov w9, #64 ; =0x40
 ; GISEL-NEXT:    ldp x7, x0, [x1]
@@ -3722,13 +3740,13 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    lsr x12, x7, x15
 ; GISEL-NEXT:    asr x11, x28, #63
 ; GISEL-NEXT:    lsr x20, x0, x15
-; GISEL-NEXT:    str x0, [sp, #232] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x0, [sp, #232] ; 8-byte Spill
 ; GISEL-NEXT:    lsl x27, x28, x14
 ; GISEL-NEXT:    csel x9, xzr, x9, eq
 ; GISEL-NEXT:    lsl x19, x17, x14
 ; GISEL-NEXT:    cmp x10, #0
 ; GISEL-NEXT:    orr x9, x12, x9
-; GISEL-NEXT:    str x17, [sp, #208] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x17, [sp, #208] ; 8-byte Spill
 ; GISEL-NEXT:    lsr x2, x17, x15
 ; GISEL-NEXT:    csel x9, x9, x11, eq
 ; GISEL-NEXT:    tst x8, #0x3f
@@ -3740,13 +3758,13 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    ldp x13, x17, [x1, #32]
 ; GISEL-NEXT:    csel x9, x12, x9, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    str x16, [sp, #184] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x16, [sp, #184] ; 8-byte Spill
 ; GISEL-NEXT:    csel x12, xzr, x30, eq
 ; GISEL-NEXT:    cmp x10, #2
-; GISEL-NEXT:    str x2, [sp, #88] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x2, [sp, #88] ; 8-byte Spill
 ; GISEL-NEXT:    lsl x24, x13, x14
 ; GISEL-NEXT:    orr x12, x2, x12
-; GISEL-NEXT:    str x13, [sp, #168] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x13, [sp, #168] ; 8-byte Spill
 ; GISEL-NEXT:    csel x9, x12, x9, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    lsr x21, x13, x15
@@ -3760,15 +3778,15 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    lsr x3, x17, x15
 ; GISEL-NEXT:    csel x12, xzr, x0, eq
 ; GISEL-NEXT:    cmp x10, #4
-; GISEL-NEXT:    str x0, [sp, #128] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x0, [sp, #128] ; 8-byte Spill
 ; GISEL-NEXT:    lsl x2, x16, x14
 ; GISEL-NEXT:    orr x12, x21, x12
 ; GISEL-NEXT:    mov x0, x16
 ; GISEL-NEXT:    csel x9, x12, x9, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    str x17, [sp, #144] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x17, [sp, #144] ; 8-byte Spill
 ; GISEL-NEXT:    csel x12, xzr, x2, eq
-; GISEL-NEXT:    str x2, [sp, #304] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x2, [sp, #304] ; 8-byte Spill
 ; GISEL-NEXT:    lsl x2, x13, x14
 ; GISEL-NEXT:    cmp x10, #5
 ; GISEL-NEXT:    orr x12, x3, x12
@@ -3794,21 +3812,21 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    csel x9, x12, x9, eq
 ; GISEL-NEXT:    lsl x12, x13, x14
 ; GISEL-NEXT:    mov x16, x13
-; GISEL-NEXT:    str x13, [sp, #192] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x13, [sp, #192] ; 8-byte Spill
 ; GISEL-NEXT:    ldp x13, x5, [x1, #80]
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    str x17, [sp, #176] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x17, [sp, #176] ; 8-byte Spill
 ; GISEL-NEXT:    csel x17, xzr, x12, eq
-; GISEL-NEXT:    str x0, [sp, #112] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x0, [sp, #112] ; 8-byte Spill
 ; GISEL-NEXT:    cmp x10, #8
 ; GISEL-NEXT:    orr x17, x0, x17
 ; GISEL-NEXT:    lsl x0, x13, x14
-; GISEL-NEXT:    str x12, [sp, #280] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x12, [sp, #280] ; 8-byte Spill
 ; GISEL-NEXT:    csel x17, x17, x9, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    lsr x9, x16, x15
 ; GISEL-NEXT:    csel x4, xzr, x0, eq
-; GISEL-NEXT:    str x13, [sp, #200] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x13, [sp, #200] ; 8-byte Spill
 ; GISEL-NEXT:    cmp x10, #9
 ; GISEL-NEXT:    stp x9, x0, [sp, #96] ; 16-byte Folded Spill
 ; GISEL-NEXT:    orr x4, x9, x4
@@ -3817,10 +3835,10 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    ldp x9, x13, [x1, #96]
 ; GISEL-NEXT:    csel x17, x4, x17, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    str x28, [sp, #256] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x28, [sp, #256] ; 8-byte Spill
 ; GISEL-NEXT:    csel x4, xzr, x23, eq
 ; GISEL-NEXT:    cmp x10, #10
-; GISEL-NEXT:    str x3, [sp, #120] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x3, [sp, #120] ; 8-byte Spill
 ; GISEL-NEXT:    orr x4, x12, x4
 ; GISEL-NEXT:    lsl x16, x9, x14
 ; GISEL-NEXT:    stp x5, x9, [sp, #216] ; 16-byte Folded Spill
@@ -3835,13 +3853,13 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x10, #11
 ; GISEL-NEXT:    orr x4, x9, x4
 ; GISEL-NEXT:    lsr x12, x12, x15
-; GISEL-NEXT:    str x30, [sp, #48] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x30, [sp, #48] ; 8-byte Spill
 ; GISEL-NEXT:    stp x16, x9, [sp, #56] ; 16-byte Folded Spill
 ; GISEL-NEXT:    ldr x9, [x1, #112]
 ; GISEL-NEXT:    csel x17, x4, x17, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    stp x25, x24, [sp, #16] ; 16-byte Folded Spill
-; GISEL-NEXT:    ldr x5, [sp, #96] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x5, [sp, #96] ; 8-byte Reload
 ; GISEL-NEXT:    csel x1, xzr, x16, eq
 ; GISEL-NEXT:    lsl x16, x9, x14
 ; GISEL-NEXT:    cmp x10, #12
@@ -3855,21 +3873,21 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    lsr x26, x12, x15
 ; GISEL-NEXT:    csel x17, xzr, x16, eq
 ; GISEL-NEXT:    cmp x10, #13
-; GISEL-NEXT:    str x23, [sp, #272] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x23, [sp, #272] ; 8-byte Spill
 ; GISEL-NEXT:    orr x13, x9, x17
-; GISEL-NEXT:    str x9, [sp, #312] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x9, [sp, #312] ; 8-byte Spill
 ; GISEL-NEXT:    mov x9, x28
 ; GISEL-NEXT:    csel x13, x13, x1, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    lsr x22, x9, x15
 ; GISEL-NEXT:    csel x28, xzr, x27, eq
 ; GISEL-NEXT:    cmp x10, #14
-; GISEL-NEXT:    str x2, [sp, #8] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x2, [sp, #8] ; 8-byte Spill
 ; GISEL-NEXT:    orr x28, x26, x28
 ; GISEL-NEXT:    ldp x0, x16, [sp, #120] ; 16-byte Folded Reload
 ; GISEL-NEXT:    csel x12, x28, x13, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    ldr x13, [sp, #304] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x13, [sp, #304] ; 8-byte Reload
 ; GISEL-NEXT:    csel x28, xzr, x3, eq
 ; GISEL-NEXT:    cmp x10, #15
 ; GISEL-NEXT:    stp x22, x3, [sp, #32] ; 16-byte Folded Spill
@@ -3880,12 +3898,12 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    mov x28, x24
 ; GISEL-NEXT:    csel x9, x7, x9, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    ldr x7, [sp, #88] ; 8-byte Folded Reload
-; GISEL-NEXT:    str x9, [sp, #136] ; 8-byte Folded Spill
+; GISEL-NEXT:    ldr x7, [sp, #88] ; 8-byte Reload
+; GISEL-NEXT:    str x9, [sp, #136] ; 8-byte Spill
 ; GISEL-NEXT:    csel x9, xzr, x19, eq
 ; GISEL-NEXT:    cmp x10, #0
 ; GISEL-NEXT:    orr x9, x20, x9
-; GISEL-NEXT:    ldr x12, [sp, #280] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x12, [sp, #280] ; 8-byte Reload
 ; GISEL-NEXT:    csel x9, x9, x11, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x20, xzr, x30, eq
@@ -3936,7 +3954,7 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x20, xzr, x23, eq
 ; GISEL-NEXT:    cmp x10, #9
-; GISEL-NEXT:    ldr x23, [sp, #328] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x23, [sp, #328] ; 8-byte Reload
 ; GISEL-NEXT:    orr x20, x14, x20
 ; GISEL-NEXT:    csel x9, x20, x9, eq
 ; GISEL-NEXT:    tst x8, #0x3f
@@ -3960,12 +3978,12 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    csel x20, xzr, x27, eq
 ; GISEL-NEXT:    cmp x10, #13
 ; GISEL-NEXT:    orr x20, x26, x20
-; GISEL-NEXT:    ldr x26, [sp, #272] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x26, [sp, #272] ; 8-byte Reload
 ; GISEL-NEXT:    csel x9, x20, x9, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x20, xzr, x3, eq
 ; GISEL-NEXT:    cmp x10, #14
-; GISEL-NEXT:    ldr x3, [sp, #232] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x3, [sp, #232] ; 8-byte Reload
 ; GISEL-NEXT:    orr x20, x22, x20
 ; GISEL-NEXT:    mov x22, x23
 ; GISEL-NEXT:    csel x9, x20, x9, eq
@@ -3975,12 +3993,12 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    csel x9, x3, x9, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    mov x3, x16
-; GISEL-NEXT:    str x9, [sp, #232] ; 8-byte Folded Spill
-; GISEL-NEXT:    ldr x9, [sp, #48] ; 8-byte Folded Reload
+; GISEL-NEXT:    str x9, [sp, #232] ; 8-byte Spill
+; GISEL-NEXT:    ldr x9, [sp, #48] ; 8-byte Reload
 ; GISEL-NEXT:    csel x9, xzr, x9, eq
 ; GISEL-NEXT:    cmp x10, #0
 ; GISEL-NEXT:    orr x9, x7, x9
-; GISEL-NEXT:    ldr x7, [sp, #312] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x7, [sp, #312] ; 8-byte Reload
 ; GISEL-NEXT:    csel x9, x9, x11, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x20, xzr, x28, eq
@@ -4016,7 +4034,7 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x20, xzr, x12, eq
 ; GISEL-NEXT:    cmp x10, #6
-; GISEL-NEXT:    ldr x12, [sp, #208] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x12, [sp, #208] ; 8-byte Reload
 ; GISEL-NEXT:    orr x20, x19, x20
 ; GISEL-NEXT:    mov x19, x27
 ; GISEL-NEXT:    csel x9, x20, x9, eq
@@ -4065,24 +4083,24 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x8, #0
 ; GISEL-NEXT:    csel x9, x12, x9, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    str x9, [sp, #208] ; 8-byte Folded Spill
+; GISEL-NEXT:    str x9, [sp, #208] ; 8-byte Spill
 ; GISEL-NEXT:    ldp x12, x9, [sp, #16] ; 16-byte Folded Reload
 ; GISEL-NEXT:    csel x9, xzr, x9, eq
 ; GISEL-NEXT:    cmp x10, #0
 ; GISEL-NEXT:    orr x9, x12, x9
-; GISEL-NEXT:    ldr x12, [sp, #184] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x12, [sp, #184] ; 8-byte Reload
 ; GISEL-NEXT:    csel x9, x9, x11, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x20, xzr, x3, eq
 ; GISEL-NEXT:    cmp x10, #1
-; GISEL-NEXT:    ldr x3, [sp, #296] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x3, [sp, #296] ; 8-byte Reload
 ; GISEL-NEXT:    orr x20, x25, x20
-; GISEL-NEXT:    ldr x25, [sp, #280] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x25, [sp, #280] ; 8-byte Reload
 ; GISEL-NEXT:    csel x9, x20, x9, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x20, xzr, x13, eq
 ; GISEL-NEXT:    cmp x10, #2
-; GISEL-NEXT:    ldr x13, [sp, #8] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x13, [sp, #8] ; 8-byte Reload
 ; GISEL-NEXT:    orr x20, x16, x20
 ; GISEL-NEXT:    csel x9, x20, x9, eq
 ; GISEL-NEXT:    tst x8, #0x3f
@@ -4130,7 +4148,7 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x20, xzr, x30, eq
 ; GISEL-NEXT:    cmp x10, #10
-; GISEL-NEXT:    ldr x30, [sp, #272] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x30, [sp, #272] ; 8-byte Reload
 ; GISEL-NEXT:    orr x20, x7, x20
 ; GISEL-NEXT:    csel x9, x20, x9, eq
 ; GISEL-NEXT:    tst x8, #0x3f
@@ -4152,12 +4170,12 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x8, #0
 ; GISEL-NEXT:    csel x9, x12, x9, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    ldr x12, [sp, #168] ; 8-byte Folded Reload
-; GISEL-NEXT:    str x9, [sp, #184] ; 8-byte Folded Spill
+; GISEL-NEXT:    ldr x12, [sp, #168] ; 8-byte Reload
+; GISEL-NEXT:    str x9, [sp, #184] ; 8-byte Spill
 ; GISEL-NEXT:    csel x9, xzr, x5, eq
 ; GISEL-NEXT:    cmp x10, #0
 ; GISEL-NEXT:    orr x9, x21, x9
-; GISEL-NEXT:    ldr x5, [sp, #304] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x5, [sp, #304] ; 8-byte Reload
 ; GISEL-NEXT:    mov x21, x0
 ; GISEL-NEXT:    csel x9, x9, x11, eq
 ; GISEL-NEXT:    tst x8, #0x3f
@@ -4170,7 +4188,7 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    csel x20, xzr, x13, eq
 ; GISEL-NEXT:    cmp x10, #2
 ; GISEL-NEXT:    orr x20, x24, x20
-; GISEL-NEXT:    ldr x24, [sp, #288] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x24, [sp, #288] ; 8-byte Reload
 ; GISEL-NEXT:    csel x9, x20, x9, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x20, xzr, x3, eq
@@ -4228,8 +4246,8 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x8, #0
 ; GISEL-NEXT:    csel x9, x12, x9, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    ldr x12, [sp, #144] ; 8-byte Folded Reload
-; GISEL-NEXT:    str x9, [sp, #168] ; 8-byte Folded Spill
+; GISEL-NEXT:    ldr x12, [sp, #144] ; 8-byte Reload
+; GISEL-NEXT:    str x9, [sp, #168] ; 8-byte Spill
 ; GISEL-NEXT:    csel x9, xzr, x5, eq
 ; GISEL-NEXT:    cmp x10, #0
 ; GISEL-NEXT:    orr x9, x28, x9
@@ -4302,8 +4320,8 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x8, #0
 ; GISEL-NEXT:    csel x9, x12, x9, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    ldr x12, [sp, #152] ; 8-byte Folded Reload
-; GISEL-NEXT:    str x9, [sp, #304] ; 8-byte Folded Spill
+; GISEL-NEXT:    ldr x12, [sp, #152] ; 8-byte Reload
+; GISEL-NEXT:    str x9, [sp, #304] ; 8-byte Spill
 ; GISEL-NEXT:    csel x9, xzr, x13, eq
 ; GISEL-NEXT:    cmp x10, #0
 ; GISEL-NEXT:    orr x9, x16, x9
@@ -4370,7 +4388,7 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x8, #0
 ; GISEL-NEXT:    csel x20, x12, x9, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    ldr x12, [sp, #160] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x12, [sp, #160] ; 8-byte Reload
 ; GISEL-NEXT:    csel x9, xzr, x28, eq
 ; GISEL-NEXT:    cmp x10, #0
 ; GISEL-NEXT:    orr x9, x24, x9
@@ -4433,11 +4451,11 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x8, #0
 ; GISEL-NEXT:    csel x2, x12, x9, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    ldr x12, [sp, #176] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x12, [sp, #176] ; 8-byte Reload
 ; GISEL-NEXT:    csel x9, xzr, x25, eq
 ; GISEL-NEXT:    cmp x10, #0
 ; GISEL-NEXT:    orr x9, x16, x9
-; GISEL-NEXT:    ldr x16, [sp, #216] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x16, [sp, #216] ; 8-byte Reload
 ; GISEL-NEXT:    csel x9, x9, x11, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x13, xzr, x3, eq
@@ -4528,7 +4546,7 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    orr x12, x27, x12
 ; GISEL-NEXT:    csel x9, x12, x9, eq
 ; GISEL-NEXT:    cmp x10, #7
-; GISEL-NEXT:    ldr x12, [sp, #192] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x12, [sp, #192] ; 8-byte Reload
 ; GISEL-NEXT:    csel x9, x11, x9, eq
 ; GISEL-NEXT:    cmp x10, #8
 ; GISEL-NEXT:    csel x9, x11, x9, eq
@@ -4581,7 +4599,7 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    orr x13, x27, x13
 ; GISEL-NEXT:    csel x12, x13, x12, eq
 ; GISEL-NEXT:    cmp x10, #6
-; GISEL-NEXT:    ldr x13, [sp, #200] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x13, [sp, #200] ; 8-byte Reload
 ; GISEL-NEXT:    csel x12, x11, x12, eq
 ; GISEL-NEXT:    cmp x10, #7
 ; GISEL-NEXT:    csel x12, x11, x12, eq
@@ -4606,9 +4624,9 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x12, xzr, x14, eq
 ; GISEL-NEXT:    cmp x10, #0
-; GISEL-NEXT:    ldr x14, [sp, #264] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x14, [sp, #264] ; 8-byte Reload
 ; GISEL-NEXT:    orr x12, x15, x12
-; GISEL-NEXT:    ldr x15, [sp, #136] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x15, [sp, #136] ; 8-byte Reload
 ; GISEL-NEXT:    csel x12, x12, x11, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    stp x9, x13, [x14, #72]
@@ -4616,7 +4634,7 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x10, #1
 ; GISEL-NEXT:    str x15, [x14]
 ; GISEL-NEXT:    orr x0, x1, x0
-; GISEL-NEXT:    ldr x15, [sp, #232] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x15, [sp, #232] ; 8-byte Reload
 ; GISEL-NEXT:    stp x2, x6, [x14, #56]
 ; GISEL-NEXT:    csel x12, x0, x12, eq
 ; GISEL-NEXT:    tst x8, #0x3f
@@ -4624,21 +4642,21 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x10, #2
 ; GISEL-NEXT:    str x15, [x14, #8]
 ; GISEL-NEXT:    orr x0, x5, x0
-; GISEL-NEXT:    ldr x15, [sp, #208] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x15, [sp, #208] ; 8-byte Reload
 ; GISEL-NEXT:    csel x12, x0, x12, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x0, xzr, x7, eq
 ; GISEL-NEXT:    cmp x10, #3
 ; GISEL-NEXT:    str x15, [x14, #16]
 ; GISEL-NEXT:    orr x0, x19, x0
-; GISEL-NEXT:    ldr x15, [sp, #184] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x15, [sp, #184] ; 8-byte Reload
 ; GISEL-NEXT:    csel x12, x0, x12, eq
 ; GISEL-NEXT:    tst x8, #0x3f
 ; GISEL-NEXT:    csel x0, xzr, x23, eq
 ; GISEL-NEXT:    cmp x10, #4
 ; GISEL-NEXT:    str x15, [x14, #24]
 ; GISEL-NEXT:    orr x0, x27, x0
-; GISEL-NEXT:    ldr x15, [sp, #168] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x15, [sp, #168] ; 8-byte Reload
 ; GISEL-NEXT:    csel x12, x0, x12, eq
 ; GISEL-NEXT:    cmp x10, #5
 ; GISEL-NEXT:    csel x12, x11, x12, eq
@@ -4646,7 +4664,7 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    str x15, [x14, #32]
 ; GISEL-NEXT:    csel x12, x11, x12, eq
 ; GISEL-NEXT:    cmp x10, #7
-; GISEL-NEXT:    ldr x15, [sp, #304] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x15, [sp, #304] ; 8-byte Reload
 ; GISEL-NEXT:    csel x12, x11, x12, eq
 ; GISEL-NEXT:    cmp x10, #8
 ; GISEL-NEXT:    csel x12, x11, x12, eq
@@ -4668,7 +4686,7 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x8, #0
 ; GISEL-NEXT:    csel x0, x16, x12, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    ldr x16, [sp, #224] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x16, [sp, #224] ; 8-byte Reload
 ; GISEL-NEXT:    csel x12, xzr, x17, eq
 ; GISEL-NEXT:    cmp x10, #0
 ; GISEL-NEXT:    orr x12, x1, x12
@@ -4716,7 +4734,7 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x8, #0
 ; GISEL-NEXT:    csel x3, x16, x12, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    ldr x16, [sp, #240] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x16, [sp, #240] ; 8-byte Reload
 ; GISEL-NEXT:    csel x12, xzr, x4, eq
 ; GISEL-NEXT:    cmp x10, #0
 ; GISEL-NEXT:    stp x0, x3, [x14, #88]
@@ -4761,7 +4779,7 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x8, #0
 ; GISEL-NEXT:    csel x4, x16, x12, eq
 ; GISEL-NEXT:    tst x8, #0x3f
-; GISEL-NEXT:    ldr x16, [sp, #248] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x16, [sp, #248] ; 8-byte Reload
 ; GISEL-NEXT:    csel x12, xzr, x7, eq
 ; GISEL-NEXT:    cmp x10, #0
 ; GISEL-NEXT:    orr x12, x19, x12
@@ -4840,7 +4858,7 @@ define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; GISEL-NEXT:    cmp x10, #15
 ; GISEL-NEXT:    csel x9, x11, x9, eq
 ; GISEL-NEXT:    cmp x8, #0
-; GISEL-NEXT:    ldr x8, [sp, #256] ; 8-byte Folded Reload
+; GISEL-NEXT:    ldr x8, [sp, #256] ; 8-byte Reload
 ; GISEL-NEXT:    ldp x28, x27, [sp, #336] ; 16-byte Folded Reload
 ; GISEL-NEXT:    csel x8, x8, x9, eq
 ; GISEL-NEXT:    str x8, [x14, #120]
@@ -4974,28 +4992,21 @@ define void @test_shl_i512_const_32(ptr %result, ptr %input) {
 ; GISEL-LABEL: test_shl_i512_const_32:
 ; GISEL:       ; %bb.0: ; %entry
 ; GISEL-NEXT:    ldp x8, x9, [x1]
-; GISEL-NEXT:    ldp x11, x12, [x1, #16]
-; GISEL-NEXT:    ldp x14, x15, [x1, #32]
-; GISEL-NEXT:    lsr x10, x8, #32
-; GISEL-NEXT:    lsr x13, x9, #32
-; GISEL-NEXT:    lsl x8, x8, #32
-; GISEL-NEXT:    orr x9, x10, x9, lsl #32
-; GISEL-NEXT:    lsr x10, x11, #32
-; GISEL-NEXT:    orr x11, x13, x11, lsl #32
-; GISEL-NEXT:    ldp x13, x16, [x1, #48]
-; GISEL-NEXT:    stp x8, x9, [x0]
-; GISEL-NEXT:    lsr x8, x12, #32
-; GISEL-NEXT:    orr x10, x10, x12, lsl #32
-; GISEL-NEXT:    lsr x12, x14, #32
-; GISEL-NEXT:    lsr x9, x15, #32
-; GISEL-NEXT:    orr x8, x8, x14, lsl #32
-; GISEL-NEXT:    stp x11, x10, [x0, #16]
-; GISEL-NEXT:    orr x11, x12, x15, lsl #32
-; GISEL-NEXT:    lsr x12, x13, #32
-; GISEL-NEXT:    orr x9, x9, x13, lsl #32
-; GISEL-NEXT:    stp x8, x11, [x0, #32]
-; GISEL-NEXT:    orr x8, x12, x16, lsl #32
-; GISEL-NEXT:    stp x9, x8, [x0, #48]
+; GISEL-NEXT:    ldp x10, x11, [x1, #16]
+; GISEL-NEXT:    ldp x13, x14, [x1, #32]
+; GISEL-NEXT:    lsl x12, x8, #32
+; GISEL-NEXT:    extr x8, x9, x8, #32
+; GISEL-NEXT:    extr x9, x10, x9, #32
+; GISEL-NEXT:    extr x10, x11, x10, #32
+; GISEL-NEXT:    ldp x15, x16, [x1, #48]
+; GISEL-NEXT:    stp x12, x8, [x0]
+; GISEL-NEXT:    extr x8, x13, x11, #32
+; GISEL-NEXT:    stp x9, x10, [x0, #16]
+; GISEL-NEXT:    extr x9, x14, x13, #32
+; GISEL-NEXT:    extr x10, x15, x14, #32
+; GISEL-NEXT:    stp x8, x9, [x0, #32]
+; GISEL-NEXT:    extr x8, x16, x15, #32
+; GISEL-NEXT:    stp x10, x8, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5026,30 +5037,22 @@ define void @test_lshr_i512_const_32(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_lshr_i512_const_32:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #8]
-; GISEL-NEXT:    ldr x11, [x1]
-; GISEL-NEXT:    ldp x10, x14, [x1, #24]
-; GISEL-NEXT:    ldr x16, [x1, #56]
-; GISEL-NEXT:    lsl x12, x8, #32
-; GISEL-NEXT:    lsl x13, x9, #32
-; GISEL-NEXT:    lsl x15, x10, #32
-; GISEL-NEXT:    orr x11, x12, x11, lsr #32
-; GISEL-NEXT:    orr x8, x13, x8, lsr #32
-; GISEL-NEXT:    lsl x13, x14, #32
-; GISEL-NEXT:    orr x9, x15, x9, lsr #32
-; GISEL-NEXT:    ldp x12, x15, [x1, #40]
-; GISEL-NEXT:    stp x11, x8, [x0]
-; GISEL-NEXT:    orr x10, x13, x10, lsr #32
-; GISEL-NEXT:    lsl x8, x16, #32
-; GISEL-NEXT:    lsl x11, x12, #32
-; GISEL-NEXT:    lsl x13, x15, #32
-; GISEL-NEXT:    stp x9, x10, [x0, #16]
-; GISEL-NEXT:    orr x8, x8, x15, lsr #32
-; GISEL-NEXT:    lsr x10, x16, #32
-; GISEL-NEXT:    orr x11, x11, x14, lsr #32
-; GISEL-NEXT:    orr x9, x13, x12, lsr #32
-; GISEL-NEXT:    stp x8, x10, [x0, #48]
-; GISEL-NEXT:    stp x11, x9, [x0, #32]
+; GISEL-NEXT:    ldp x8, x9, [x1]
+; GISEL-NEXT:    ldp x10, x11, [x1, #16]
+; GISEL-NEXT:    ldp x12, x13, [x1, #32]
+; GISEL-NEXT:    extr x8, x9, x8, #32
+; GISEL-NEXT:    ldp x14, x15, [x1, #48]
+; GISEL-NEXT:    extr x9, x10, x9, #32
+; GISEL-NEXT:    extr x10, x11, x10, #32
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    extr x8, x12, x11, #32
+; GISEL-NEXT:    extr x9, x13, x12, #32
+; GISEL-NEXT:    stp x10, x8, [x0, #16]
+; GISEL-NEXT:    extr x10, x14, x13, #32
+; GISEL-NEXT:    extr x8, x15, x14, #32
+; GISEL-NEXT:    stp x9, x10, [x0, #32]
+; GISEL-NEXT:    lsr x9, x15, #32
+; GISEL-NEXT:    stp x8, x9, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5080,32 +5083,24 @@ define void @test_ashr_i512_const_32(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_ashr_i512_const_32:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #8]
-; GISEL-NEXT:    ldr x11, [x1]
-; GISEL-NEXT:    ldp x10, x13, [x1, #24]
-; GISEL-NEXT:    ldr x17, [x1, #56]
-; GISEL-NEXT:    lsl x12, x8, #32
-; GISEL-NEXT:    lsl x15, x9, #32
-; GISEL-NEXT:    lsl x16, x10, #32
-; GISEL-NEXT:    orr x11, x12, x11, lsr #32
-; GISEL-NEXT:    ldp x14, x12, [x1, #40]
-; GISEL-NEXT:    orr x8, x15, x8, lsr #32
-; GISEL-NEXT:    lsl x15, x13, #32
-; GISEL-NEXT:    orr x9, x16, x9, lsr #32
-; GISEL-NEXT:    asr x16, x17, #63
-; GISEL-NEXT:    stp x11, x8, [x0]
-; GISEL-NEXT:    lsl x11, x14, #32
-; GISEL-NEXT:    orr x10, x15, x10, lsr #32
-; GISEL-NEXT:    lsl x15, x12, #32
-; GISEL-NEXT:    orr x8, x11, x13, lsr #32
-; GISEL-NEXT:    lsl x11, x17, #32
-; GISEL-NEXT:    stp x9, x10, [x0, #16]
-; GISEL-NEXT:    orr x9, x15, x14, lsr #32
-; GISEL-NEXT:    lsl x13, x16, #32
-; GISEL-NEXT:    orr x10, x11, x12, lsr #32
-; GISEL-NEXT:    stp x8, x9, [x0, #32]
-; GISEL-NEXT:    orr x8, x13, x17, asr #32
-; GISEL-NEXT:    stp x10, x8, [x0, #48]
+; GISEL-NEXT:    ldp x8, x9, [x1]
+; GISEL-NEXT:    ldp x10, x11, [x1, #16]
+; GISEL-NEXT:    ldp x12, x13, [x1, #48]
+; GISEL-NEXT:    extr x8, x9, x8, #32
+; GISEL-NEXT:    ldp x14, x15, [x1, #32]
+; GISEL-NEXT:    extr x9, x10, x9, #32
+; GISEL-NEXT:    extr x10, x11, x10, #32
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    asr x8, x13, #63
+; GISEL-NEXT:    extr x11, x14, x11, #32
+; GISEL-NEXT:    extr x9, x15, x14, #32
+; GISEL-NEXT:    lsl x8, x8, #32
+; GISEL-NEXT:    stp x10, x11, [x0, #16]
+; GISEL-NEXT:    extr x10, x12, x15, #32
+; GISEL-NEXT:    extr x11, x13, x12, #32
+; GISEL-NEXT:    orr x8, x8, x13, asr #32
+; GISEL-NEXT:    stp x9, x10, [x0, #32]
+; GISEL-NEXT:    stp x11, x8, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5234,23 +5229,17 @@ define void @test_shl_i512_const_96(ptr %result, ptr %input) {
 ; GISEL-NEXT:    ldr x15, [x1, #48]
 ; GISEL-NEXT:    ldp x10, x11, [x1, #16]
 ; GISEL-NEXT:    ldp x12, x13, [x1, #32]
-; GISEL-NEXT:    lsr x14, x8, #32
-; GISEL-NEXT:    lsr x16, x9, #32
-; GISEL-NEXT:    lsl x8, x8, #32
-; GISEL-NEXT:    orr x9, x14, x9, lsl #32
-; GISEL-NEXT:    lsr x14, x10, #32
-; GISEL-NEXT:    orr x10, x16, x10, lsl #32
-; GISEL-NEXT:    stp xzr, x8, [x0]
-; GISEL-NEXT:    lsr x8, x11, #32
-; GISEL-NEXT:    orr x11, x14, x11, lsl #32
-; GISEL-NEXT:    lsr x14, x12, #32
-; GISEL-NEXT:    stp x9, x10, [x0, #16]
-; GISEL-NEXT:    lsr x9, x13, #32
-; GISEL-NEXT:    orr x8, x8, x12, lsl #32
-; GISEL-NEXT:    orr x10, x14, x13, lsl #32
-; GISEL-NEXT:    orr x9, x9, x15, lsl #32
-; GISEL-NEXT:    stp x11, x8, [x0, #32]
-; GISEL-NEXT:    stp x10, x9, [x0, #48]
+; GISEL-NEXT:    lsl x14, x8, #32
+; GISEL-NEXT:    extr x8, x9, x8, #32
+; GISEL-NEXT:    extr x9, x10, x9, #32
+; GISEL-NEXT:    extr x10, x11, x10, #32
+; GISEL-NEXT:    stp xzr, x14, [x0]
+; GISEL-NEXT:    stp x8, x9, [x0, #16]
+; GISEL-NEXT:    extr x8, x12, x11, #32
+; GISEL-NEXT:    extr x9, x13, x12, #32
+; GISEL-NEXT:    stp x10, x8, [x0, #32]
+; GISEL-NEXT:    extr x10, x15, x13, #32
+; GISEL-NEXT:    stp x9, x10, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5279,27 +5268,21 @@ define void @test_lshr_i512_const_96(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_lshr_i512_const_96:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #16]
-; GISEL-NEXT:    ldr x10, [x1, #8]
-; GISEL-NEXT:    ldp x11, x14, [x1, #32]
-; GISEL-NEXT:    ldp x15, x16, [x1, #48]
-; GISEL-NEXT:    lsl x12, x8, #32
-; GISEL-NEXT:    lsl x13, x9, #32
-; GISEL-NEXT:    orr x10, x12, x10, lsr #32
-; GISEL-NEXT:    lsl x12, x11, #32
-; GISEL-NEXT:    orr x8, x13, x8, lsr #32
-; GISEL-NEXT:    lsl x13, x14, #32
-; GISEL-NEXT:    orr x9, x12, x9, lsr #32
-; GISEL-NEXT:    stp x10, x8, [x0]
-; GISEL-NEXT:    lsl x10, x15, #32
-; GISEL-NEXT:    orr x11, x13, x11, lsr #32
-; GISEL-NEXT:    lsl x12, x16, #32
-; GISEL-NEXT:    orr x8, x10, x14, lsr #32
-; GISEL-NEXT:    lsr x10, x16, #32
-; GISEL-NEXT:    stp x9, x11, [x0, #16]
-; GISEL-NEXT:    orr x9, x12, x15, lsr #32
-; GISEL-NEXT:    stp x10, xzr, [x0, #48]
-; GISEL-NEXT:    stp x8, x9, [x0, #32]
+; GISEL-NEXT:    ldp x8, x9, [x1, #8]
+; GISEL-NEXT:    ldr x14, [x1, #56]
+; GISEL-NEXT:    ldp x10, x11, [x1, #24]
+; GISEL-NEXT:    ldp x12, x13, [x1, #40]
+; GISEL-NEXT:    extr x8, x9, x8, #32
+; GISEL-NEXT:    extr x9, x10, x9, #32
+; GISEL-NEXT:    extr x10, x11, x10, #32
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    extr x8, x12, x11, #32
+; GISEL-NEXT:    extr x9, x13, x12, #32
+; GISEL-NEXT:    stp x10, x8, [x0, #16]
+; GISEL-NEXT:    extr x10, x14, x13, #32
+; GISEL-NEXT:    lsr x8, x14, #32
+; GISEL-NEXT:    stp x9, x10, [x0, #32]
+; GISEL-NEXT:    stp x8, xzr, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5329,29 +5312,23 @@ define void @test_ashr_i512_const_96(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_ashr_i512_const_96:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #16]
-; GISEL-NEXT:    ldr x11, [x1, #8]
-; GISEL-NEXT:    ldp x10, x13, [x1, #32]
-; GISEL-NEXT:    lsl x12, x8, #32
-; GISEL-NEXT:    lsl x14, x9, #32
-; GISEL-NEXT:    lsl x15, x10, #32
-; GISEL-NEXT:    orr x11, x12, x11, lsr #32
-; GISEL-NEXT:    ldp x12, x16, [x1, #48]
-; GISEL-NEXT:    orr x8, x14, x8, lsr #32
-; GISEL-NEXT:    lsl x14, x13, #32
-; GISEL-NEXT:    orr x9, x15, x9, lsr #32
-; GISEL-NEXT:    asr x15, x16, #63
-; GISEL-NEXT:    stp x11, x8, [x0]
-; GISEL-NEXT:    lsl x11, x12, #32
-; GISEL-NEXT:    orr x10, x14, x10, lsr #32
-; GISEL-NEXT:    lsl x14, x16, #32
-; GISEL-NEXT:    orr x8, x11, x13, lsr #32
+; GISEL-NEXT:    ldp x8, x9, [x1, #8]
+; GISEL-NEXT:    ldr x13, [x1, #40]
+; GISEL-NEXT:    ldp x10, x11, [x1, #24]
+; GISEL-NEXT:    ldp x14, x12, [x1, #48]
+; GISEL-NEXT:    extr x8, x9, x8, #32
+; GISEL-NEXT:    extr x9, x10, x9, #32
+; GISEL-NEXT:    extr x10, x11, x10, #32
+; GISEL-NEXT:    asr x15, x12, #63
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    extr x8, x13, x11, #32
+; GISEL-NEXT:    extr x9, x14, x13, #32
 ; GISEL-NEXT:    lsl x11, x15, #32
-; GISEL-NEXT:    stp x9, x10, [x0, #16]
-; GISEL-NEXT:    orr x9, x14, x12, lsr #32
-; GISEL-NEXT:    orr x10, x11, x16, asr #32
-; GISEL-NEXT:    stp x8, x9, [x0, #32]
-; GISEL-NEXT:    stp x10, x15, [x0, #48]
+; GISEL-NEXT:    stp x10, x8, [x0, #16]
+; GISEL-NEXT:    extr x10, x12, x14, #32
+; GISEL-NEXT:    orr x8, x11, x12, asr #32
+; GISEL-NEXT:    stp x9, x10, [x0, #32]
+; GISEL-NEXT:    stp x8, x15, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5386,28 +5363,21 @@ define void @test_shl_i512_const_1(ptr %result, ptr %input) {
 ; GISEL-LABEL: test_shl_i512_const_1:
 ; GISEL:       ; %bb.0: ; %entry
 ; GISEL-NEXT:    ldp x8, x9, [x1]
-; GISEL-NEXT:    ldp x11, x12, [x1, #16]
-; GISEL-NEXT:    ldp x14, x15, [x1, #32]
-; GISEL-NEXT:    lsr x10, x8, #63
-; GISEL-NEXT:    lsr x13, x9, #63
-; GISEL-NEXT:    lsl x8, x8, #1
-; GISEL-NEXT:    orr x9, x10, x9, lsl #1
-; GISEL-NEXT:    lsr x10, x11, #63
-; GISEL-NEXT:    orr x11, x13, x11, lsl #1
-; GISEL-NEXT:    ldp x13, x16, [x1, #48]
-; GISEL-NEXT:    stp x8, x9, [x0]
-; GISEL-NEXT:    lsr x8, x12, #63
-; GISEL-NEXT:    orr x10, x10, x12, lsl #1
-; GISEL-NEXT:    lsr x12, x14, #63
-; GISEL-NEXT:    lsr x9, x15, #63
-; GISEL-NEXT:    orr x8, x8, x14, lsl #1
-; GISEL-NEXT:    stp x11, x10, [x0, #16]
-; GISEL-NEXT:    orr x11, x12, x15, lsl #1
-; GISEL-NEXT:    lsr x12, x13, #63
-; GISEL-NEXT:    orr x9, x9, x13, lsl #1
-; GISEL-NEXT:    stp x8, x11, [x0, #32]
-; GISEL-NEXT:    orr x8, x12, x16, lsl #1
-; GISEL-NEXT:    stp x9, x8, [x0, #48]
+; GISEL-NEXT:    ldp x10, x11, [x1, #16]
+; GISEL-NEXT:    ldp x13, x14, [x1, #32]
+; GISEL-NEXT:    lsl x12, x8, #1
+; GISEL-NEXT:    extr x8, x9, x8, #63
+; GISEL-NEXT:    extr x9, x10, x9, #63
+; GISEL-NEXT:    extr x10, x11, x10, #63
+; GISEL-NEXT:    ldp x15, x16, [x1, #48]
+; GISEL-NEXT:    stp x12, x8, [x0]
+; GISEL-NEXT:    extr x8, x13, x11, #63
+; GISEL-NEXT:    stp x9, x10, [x0, #16]
+; GISEL-NEXT:    extr x9, x14, x13, #63
+; GISEL-NEXT:    extr x10, x15, x14, #63
+; GISEL-NEXT:    stp x8, x9, [x0, #32]
+; GISEL-NEXT:    extr x8, x16, x15, #63
+; GISEL-NEXT:    stp x10, x8, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5439,30 +5409,22 @@ define void @test_lshr_i512_const_1(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_lshr_i512_const_1:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #8]
-; GISEL-NEXT:    ldr x11, [x1]
-; GISEL-NEXT:    ldp x10, x14, [x1, #24]
-; GISEL-NEXT:    ldr x16, [x1, #56]
-; GISEL-NEXT:    lsl x12, x8, #63
-; GISEL-NEXT:    lsl x13, x9, #63
-; GISEL-NEXT:    lsl x15, x10, #63
-; GISEL-NEXT:    orr x11, x12, x11, lsr #1
-; GISEL-NEXT:    orr x8, x13, x8, lsr #1
-; GISEL-NEXT:    lsl x13, x14, #63
-; GISEL-NEXT:    orr x9, x15, x9, lsr #1
-; GISEL-NEXT:    ldp x12, x15, [x1, #40]
-; GISEL-NEXT:    stp x11, x8, [x0]
-; GISEL-NEXT:    orr x10, x13, x10, lsr #1
-; GISEL-NEXT:    lsl x8, x16, #63
-; GISEL-NEXT:    lsl x11, x12, #63
-; GISEL-NEXT:    lsl x13, x15, #63
-; GISEL-NEXT:    stp x9, x10, [x0, #16]
-; GISEL-NEXT:    orr x8, x8, x15, lsr #1
-; GISEL-NEXT:    lsr x10, x16, #1
-; GISEL-NEXT:    orr x11, x11, x14, lsr #1
-; GISEL-NEXT:    orr x9, x13, x12, lsr #1
-; GISEL-NEXT:    stp x8, x10, [x0, #48]
-; GISEL-NEXT:    stp x11, x9, [x0, #32]
+; GISEL-NEXT:    ldp x8, x9, [x1]
+; GISEL-NEXT:    ldp x10, x11, [x1, #16]
+; GISEL-NEXT:    ldp x12, x13, [x1, #32]
+; GISEL-NEXT:    extr x8, x9, x8, #1
+; GISEL-NEXT:    ldp x14, x15, [x1, #48]
+; GISEL-NEXT:    extr x9, x10, x9, #1
+; GISEL-NEXT:    extr x10, x11, x10, #1
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    extr x8, x12, x11, #1
+; GISEL-NEXT:    extr x9, x13, x12, #1
+; GISEL-NEXT:    stp x10, x8, [x0, #16]
+; GISEL-NEXT:    extr x10, x14, x13, #1
+; GISEL-NEXT:    extr x8, x15, x14, #1
+; GISEL-NEXT:    stp x9, x10, [x0, #32]
+; GISEL-NEXT:    lsr x9, x15, #1
+; GISEL-NEXT:    stp x8, x9, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5494,32 +5456,24 @@ define void @test_ashr_i512_const_1(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_ashr_i512_const_1:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #8]
-; GISEL-NEXT:    ldr x11, [x1]
-; GISEL-NEXT:    ldp x10, x13, [x1, #24]
-; GISEL-NEXT:    ldr x17, [x1, #56]
-; GISEL-NEXT:    lsl x12, x8, #63
-; GISEL-NEXT:    lsl x15, x9, #63
-; GISEL-NEXT:    lsl x16, x10, #63
-; GISEL-NEXT:    orr x11, x12, x11, lsr #1
-; GISEL-NEXT:    ldp x14, x12, [x1, #40]
-; GISEL-NEXT:    orr x8, x15, x8, lsr #1
-; GISEL-NEXT:    lsl x15, x13, #63
-; GISEL-NEXT:    orr x9, x16, x9, lsr #1
-; GISEL-NEXT:    asr x16, x17, #63
-; GISEL-NEXT:    stp x11, x8, [x0]
-; GISEL-NEXT:    lsl x11, x14, #63
-; GISEL-NEXT:    orr x10, x15, x10, lsr #1
-; GISEL-NEXT:    lsl x15, x12, #63
-; GISEL-NEXT:    orr x8, x11, x13, lsr #1
-; GISEL-NEXT:    lsl x11, x17, #63
-; GISEL-NEXT:    stp x9, x10, [x0, #16]
-; GISEL-NEXT:    orr x9, x15, x14, lsr #1
-; GISEL-NEXT:    lsl x13, x16, #63
-; GISEL-NEXT:    orr x10, x11, x12, lsr #1
-; GISEL-NEXT:    stp x8, x9, [x0, #32]
-; GISEL-NEXT:    orr x8, x13, x17, asr #1
-; GISEL-NEXT:    stp x10, x8, [x0, #48]
+; GISEL-NEXT:    ldp x8, x9, [x1]
+; GISEL-NEXT:    ldp x10, x11, [x1, #16]
+; GISEL-NEXT:    ldp x12, x13, [x1, #48]
+; GISEL-NEXT:    extr x8, x9, x8, #1
+; GISEL-NEXT:    ldp x14, x15, [x1, #32]
+; GISEL-NEXT:    extr x9, x10, x9, #1
+; GISEL-NEXT:    extr x10, x11, x10, #1
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    asr x8, x13, #63
+; GISEL-NEXT:    extr x11, x14, x11, #1
+; GISEL-NEXT:    extr x9, x15, x14, #1
+; GISEL-NEXT:    lsl x8, x8, #63
+; GISEL-NEXT:    stp x10, x11, [x0, #16]
+; GISEL-NEXT:    extr x10, x12, x15, #1
+; GISEL-NEXT:    extr x11, x13, x12, #1
+; GISEL-NEXT:    orr x8, x8, x13, asr #1
+; GISEL-NEXT:    stp x9, x10, [x0, #32]
+; GISEL-NEXT:    stp x11, x8, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5553,28 +5507,21 @@ define void @test_shl_i512_const_15(ptr %result, ptr %input) {
 ; GISEL-LABEL: test_shl_i512_const_15:
 ; GISEL:       ; %bb.0: ; %entry
 ; GISEL-NEXT:    ldp x8, x9, [x1]
-; GISEL-NEXT:    ldp x11, x12, [x1, #16]
-; GISEL-NEXT:    ldp x14, x15, [x1, #32]
-; GISEL-NEXT:    lsr x10, x8, #49
-; GISEL-NEXT:    lsr x13, x9, #49
-; GISEL-NEXT:    lsl x8, x8, #15
-; GISEL-NEXT:    orr x9, x10, x9, lsl #15
-; GISEL-NEXT:    lsr x10, x11, #49
-; GISEL-NEXT:    orr x11, x13, x11, lsl #15
-; GISEL-NEXT:    ldp x13, x16, [x1, #48]
-; GISEL-NEXT:    stp x8, x9, [x0]
-; GISEL-NEXT:    lsr x8, x12, #49
-; GISEL-NEXT:    orr x10, x10, x12, lsl #15
-; GISEL-NEXT:    lsr x12, x14, #49
-; GISEL-NEXT:    lsr x9, x15, #49
-; GISEL-NEXT:    orr x8, x8, x14, lsl #15
-; GISEL-NEXT:    stp x11, x10, [x0, #16]
-; GISEL-NEXT:    orr x11, x12, x15, lsl #15
-; GISEL-NEXT:    lsr x12, x13, #49
-; GISEL-NEXT:    orr x9, x9, x13, lsl #15
-; GISEL-NEXT:    stp x8, x11, [x0, #32]
-; GISEL-NEXT:    orr x8, x12, x16, lsl #15
-; GISEL-NEXT:    stp x9, x8, [x0, #48]
+; GISEL-NEXT:    ldp x10, x11, [x1, #16]
+; GISEL-NEXT:    ldp x13, x14, [x1, #32]
+; GISEL-NEXT:    lsl x12, x8, #15
+; GISEL-NEXT:    extr x8, x9, x8, #49
+; GISEL-NEXT:    extr x9, x10, x9, #49
+; GISEL-NEXT:    extr x10, x11, x10, #49
+; GISEL-NEXT:    ldp x15, x16, [x1, #48]
+; GISEL-NEXT:    stp x12, x8, [x0]
+; GISEL-NEXT:    extr x8, x13, x11, #49
+; GISEL-NEXT:    stp x9, x10, [x0, #16]
+; GISEL-NEXT:    extr x9, x14, x13, #49
+; GISEL-NEXT:    extr x10, x15, x14, #49
+; GISEL-NEXT:    stp x8, x9, [x0, #32]
+; GISEL-NEXT:    extr x8, x16, x15, #49
+; GISEL-NEXT:    stp x10, x8, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5606,30 +5553,22 @@ define void @test_lshr_i512_const_15(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_lshr_i512_const_15:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #8]
-; GISEL-NEXT:    ldr x11, [x1]
-; GISEL-NEXT:    ldp x10, x14, [x1, #24]
-; GISEL-NEXT:    ldr x16, [x1, #56]
-; GISEL-NEXT:    lsl x12, x8, #49
-; GISEL-NEXT:    lsl x13, x9, #49
-; GISEL-NEXT:    lsl x15, x10, #49
-; GISEL-NEXT:    orr x11, x12, x11, lsr #15
-; GISEL-NEXT:    orr x8, x13, x8, lsr #15
-; GISEL-NEXT:    lsl x13, x14, #49
-; GISEL-NEXT:    orr x9, x15, x9, lsr #15
-; GISEL-NEXT:    ldp x12, x15, [x1, #40]
-; GISEL-NEXT:    stp x11, x8, [x0]
-; GISEL-NEXT:    orr x10, x13, x10, lsr #15
-; GISEL-NEXT:    lsl x8, x16, #49
-; GISEL-NEXT:    lsl x11, x12, #49
-; GISEL-NEXT:    lsl x13, x15, #49
-; GISEL-NEXT:    stp x9, x10, [x0, #16]
-; GISEL-NEXT:    orr x8, x8, x15, lsr #15
-; GISEL-NEXT:    lsr x10, x16, #15
-; GISEL-NEXT:    orr x11, x11, x14, lsr #15
-; GISEL-NEXT:    orr x9, x13, x12, lsr #15
-; GISEL-NEXT:    stp x8, x10, [x0, #48]
-; GISEL-NEXT:    stp x11, x9, [x0, #32]
+; GISEL-NEXT:    ldp x8, x9, [x1]
+; GISEL-NEXT:    ldp x10, x11, [x1, #16]
+; GISEL-NEXT:    ldp x12, x13, [x1, #32]
+; GISEL-NEXT:    extr x8, x9, x8, #15
+; GISEL-NEXT:    ldp x14, x15, [x1, #48]
+; GISEL-NEXT:    extr x9, x10, x9, #15
+; GISEL-NEXT:    extr x10, x11, x10, #15
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    extr x8, x12, x11, #15
+; GISEL-NEXT:    extr x9, x13, x12, #15
+; GISEL-NEXT:    stp x10, x8, [x0, #16]
+; GISEL-NEXT:    extr x10, x14, x13, #15
+; GISEL-NEXT:    extr x8, x15, x14, #15
+; GISEL-NEXT:    stp x9, x10, [x0, #32]
+; GISEL-NEXT:    lsr x9, x15, #15
+; GISEL-NEXT:    stp x8, x9, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5661,32 +5600,24 @@ define void @test_ashr_i512_const_15(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_ashr_i512_const_15:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #8]
-; GISEL-NEXT:    ldr x11, [x1]
-; GISEL-NEXT:    ldp x10, x13, [x1, #24]
-; GISEL-NEXT:    ldr x17, [x1, #56]
-; GISEL-NEXT:    lsl x12, x8, #49
-; GISEL-NEXT:    lsl x15, x9, #49
-; GISEL-NEXT:    lsl x16, x10, #49
-; GISEL-NEXT:    orr x11, x12, x11, lsr #15
-; GISEL-NEXT:    ldp x14, x12, [x1, #40]
-; GISEL-NEXT:    orr x8, x15, x8, lsr #15
-; GISEL-NEXT:    lsl x15, x13, #49
-; GISEL-NEXT:    orr x9, x16, x9, lsr #15
-; GISEL-NEXT:    asr x16, x17, #63
-; GISEL-NEXT:    stp x11, x8, [x0]
-; GISEL-NEXT:    lsl x11, x14, #49
-; GISEL-NEXT:    orr x10, x15, x10, lsr #15
-; GISEL-NEXT:    lsl x15, x12, #49
-; GISEL-NEXT:    orr x8, x11, x13, lsr #15
-; GISEL-NEXT:    lsl x11, x17, #49
-; GISEL-NEXT:    stp x9, x10, [x0, #16]
-; GISEL-NEXT:    orr x9, x15, x14, lsr #15
-; GISEL-NEXT:    lsl x13, x16, #49
-; GISEL-NEXT:    orr x10, x11, x12, lsr #15
-; GISEL-NEXT:    stp x8, x9, [x0, #32]
-; GISEL-NEXT:    orr x8, x13, x17, asr #15
-; GISEL-NEXT:    stp x10, x8, [x0, #48]
+; GISEL-NEXT:    ldp x8, x9, [x1]
+; GISEL-NEXT:    ldp x10, x11, [x1, #16]
+; GISEL-NEXT:    ldp x12, x13, [x1, #48]
+; GISEL-NEXT:    extr x8, x9, x8, #15
+; GISEL-NEXT:    ldp x14, x15, [x1, #32]
+; GISEL-NEXT:    extr x9, x10, x9, #15
+; GISEL-NEXT:    extr x10, x11, x10, #15
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    asr x8, x13, #63
+; GISEL-NEXT:    extr x11, x14, x11, #15
+; GISEL-NEXT:    extr x9, x15, x14, #15
+; GISEL-NEXT:    lsl x8, x8, #49
+; GISEL-NEXT:    stp x10, x11, [x0, #16]
+; GISEL-NEXT:    extr x10, x12, x15, #15
+; GISEL-NEXT:    extr x11, x13, x12, #15
+; GISEL-NEXT:    orr x8, x8, x13, asr #15
+; GISEL-NEXT:    stp x9, x10, [x0, #32]
+; GISEL-NEXT:    stp x11, x8, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5720,28 +5651,21 @@ define void @test_shl_i512_const_63(ptr %result, ptr %input) {
 ; GISEL-LABEL: test_shl_i512_const_63:
 ; GISEL:       ; %bb.0: ; %entry
 ; GISEL-NEXT:    ldp x8, x9, [x1]
-; GISEL-NEXT:    ldp x11, x12, [x1, #16]
-; GISEL-NEXT:    ldp x14, x15, [x1, #32]
-; GISEL-NEXT:    lsr x10, x8, #1
-; GISEL-NEXT:    lsr x13, x9, #1
-; GISEL-NEXT:    lsl x8, x8, #63
-; GISEL-NEXT:    orr x9, x10, x9, lsl #63
-; GISEL-NEXT:    lsr x10, x11, #1
-; GISEL-NEXT:    orr x11, x13, x11, lsl #63
-; GISEL-NEXT:    ldp x13, x16, [x1, #48]
-; GISEL-NEXT:    stp x8, x9, [x0]
-; GISEL-NEXT:    lsr x8, x12, #1
-; GISEL-NEXT:    orr x10, x10, x12, lsl #63
-; GISEL-NEXT:    lsr x12, x14, #1
-; GISEL-NEXT:    lsr x9, x15, #1
-; GISEL-NEXT:    orr x8, x8, x14, lsl #63
-; GISEL-NEXT:    stp x11, x10, [x0, #16]
-; GISEL-NEXT:    orr x11, x12, x15, lsl #63
-; GISEL-NEXT:    lsr x12, x13, #1
-; GISEL-NEXT:    orr x9, x9, x13, lsl #63
-; GISEL-NEXT:    stp x8, x11, [x0, #32]
-; GISEL-NEXT:    orr x8, x12, x16, lsl #63
-; GISEL-NEXT:    stp x9, x8, [x0, #48]
+; GISEL-NEXT:    ldp x10, x11, [x1, #16]
+; GISEL-NEXT:    ldp x13, x14, [x1, #32]
+; GISEL-NEXT:    lsl x12, x8, #63
+; GISEL-NEXT:    extr x8, x9, x8, #1
+; GISEL-NEXT:    extr x9, x10, x9, #1
+; GISEL-NEXT:    extr x10, x11, x10, #1
+; GISEL-NEXT:    ldp x15, x16, [x1, #48]
+; GISEL-NEXT:    stp x12, x8, [x0]
+; GISEL-NEXT:    extr x8, x13, x11, #1
+; GISEL-NEXT:    stp x9, x10, [x0, #16]
+; GISEL-NEXT:    extr x9, x14, x13, #1
+; GISEL-NEXT:    extr x10, x15, x14, #1
+; GISEL-NEXT:    stp x8, x9, [x0, #32]
+; GISEL-NEXT:    extr x8, x16, x15, #1
+; GISEL-NEXT:    stp x10, x8, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5773,30 +5697,22 @@ define void @test_lshr_i512_const_63(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_lshr_i512_const_63:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #8]
-; GISEL-NEXT:    ldr x11, [x1]
-; GISEL-NEXT:    ldp x10, x14, [x1, #24]
-; GISEL-NEXT:    ldr x16, [x1, #56]
-; GISEL-NEXT:    lsl x12, x8, #1
-; GISEL-NEXT:    lsl x13, x9, #1
-; GISEL-NEXT:    lsl x15, x10, #1
-; GISEL-NEXT:    orr x11, x12, x11, lsr #63
-; GISEL-NEXT:    orr x8, x13, x8, lsr #63
-; GISEL-NEXT:    lsl x13, x14, #1
-; GISEL-NEXT:    orr x9, x15, x9, lsr #63
-; GISEL-NEXT:    ldp x12, x15, [x1, #40]
-; GISEL-NEXT:    stp x11, x8, [x0]
-; GISEL-NEXT:    orr x10, x13, x10, lsr #63
-; GISEL-NEXT:    lsl x8, x16, #1
-; GISEL-NEXT:    lsl x11, x12, #1
-; GISEL-NEXT:    lsl x13, x15, #1
-; GISEL-NEXT:    stp x9, x10, [x0, #16]
-; GISEL-NEXT:    orr x8, x8, x15, lsr #63
-; GISEL-NEXT:    lsr x10, x16, #63
-; GISEL-NEXT:    orr x11, x11, x14, lsr #63
-; GISEL-NEXT:    orr x9, x13, x12, lsr #63
-; GISEL-NEXT:    stp x8, x10, [x0, #48]
-; GISEL-NEXT:    stp x11, x9, [x0, #32]
+; GISEL-NEXT:    ldp x8, x9, [x1]
+; GISEL-NEXT:    ldp x10, x11, [x1, #16]
+; GISEL-NEXT:    ldp x12, x13, [x1, #32]
+; GISEL-NEXT:    extr x8, x9, x8, #63
+; GISEL-NEXT:    ldp x14, x15, [x1, #48]
+; GISEL-NEXT:    extr x9, x10, x9, #63
+; GISEL-NEXT:    extr x10, x11, x10, #63
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    extr x8, x12, x11, #63
+; GISEL-NEXT:    extr x9, x13, x12, #63
+; GISEL-NEXT:    stp x10, x8, [x0, #16]
+; GISEL-NEXT:    extr x10, x14, x13, #63
+; GISEL-NEXT:    extr x8, x15, x14, #63
+; GISEL-NEXT:    stp x9, x10, [x0, #32]
+; GISEL-NEXT:    lsr x9, x15, #63
+; GISEL-NEXT:    stp x8, x9, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5828,30 +5744,22 @@ define void @test_ashr_i512_const_63(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_ashr_i512_const_63:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #8]
-; GISEL-NEXT:    ldr x10, [x1]
-; GISEL-NEXT:    ldp x11, x13, [x1, #24]
-; GISEL-NEXT:    ldr x17, [x1, #56]
-; GISEL-NEXT:    lsl x15, x9, #1
-; GISEL-NEXT:    lsl x12, x8, #1
-; GISEL-NEXT:    lsl x16, x11, #1
-; GISEL-NEXT:    orr x8, x15, x8, lsr #63
-; GISEL-NEXT:    lsl x15, x13, #1
-; GISEL-NEXT:    orr x10, x12, x10, lsr #63
-; GISEL-NEXT:    ldp x14, x12, [x1, #40]
-; GISEL-NEXT:    orr x9, x16, x9, lsr #63
-; GISEL-NEXT:    orr x11, x15, x11, lsr #63
-; GISEL-NEXT:    stp x10, x8, [x0]
-; GISEL-NEXT:    lsl x8, x17, #1
-; GISEL-NEXT:    lsl x16, x14, #1
-; GISEL-NEXT:    lsl x10, x12, #1
-; GISEL-NEXT:    stp x9, x11, [x0, #16]
-; GISEL-NEXT:    asr x9, x17, #63
-; GISEL-NEXT:    orr x8, x8, x12, lsr #63
-; GISEL-NEXT:    orr x13, x16, x13, lsr #63
-; GISEL-NEXT:    orr x10, x10, x14, lsr #63
-; GISEL-NEXT:    orr x9, x9, x9, lsl #1
-; GISEL-NEXT:    stp x13, x10, [x0, #32]
+; GISEL-NEXT:    ldp x8, x9, [x1]
+; GISEL-NEXT:    ldp x10, x11, [x1, #16]
+; GISEL-NEXT:    ldp x12, x13, [x1, #32]
+; GISEL-NEXT:    extr x8, x9, x8, #63
+; GISEL-NEXT:    ldp x14, x15, [x1, #48]
+; GISEL-NEXT:    extr x9, x10, x9, #63
+; GISEL-NEXT:    extr x10, x11, x10, #63
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    extr x8, x12, x11, #63
+; GISEL-NEXT:    extr x9, x13, x12, #63
+; GISEL-NEXT:    extr x11, x14, x13, #63
+; GISEL-NEXT:    stp x10, x8, [x0, #16]
+; GISEL-NEXT:    asr x10, x15, #63
+; GISEL-NEXT:    extr x8, x15, x14, #63
+; GISEL-NEXT:    stp x9, x11, [x0, #32]
+; GISEL-NEXT:    orr x9, x10, x10, lsl #1
 ; GISEL-NEXT:    stp x8, x9, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
@@ -5888,23 +5796,17 @@ define void @test_shl_i512_const_65(ptr %result, ptr %input) {
 ; GISEL-NEXT:    ldr x15, [x1, #48]
 ; GISEL-NEXT:    ldp x10, x11, [x1, #16]
 ; GISEL-NEXT:    ldp x12, x13, [x1, #32]
-; GISEL-NEXT:    lsr x14, x8, #63
-; GISEL-NEXT:    lsr x16, x9, #63
-; GISEL-NEXT:    lsl x8, x8, #1
-; GISEL-NEXT:    orr x9, x14, x9, lsl #1
-; GISEL-NEXT:    lsr x14, x10, #63
-; GISEL-NEXT:    orr x10, x16, x10, lsl #1
-; GISEL-NEXT:    stp xzr, x8, [x0]
-; GISEL-NEXT:    lsr x8, x11, #63
-; GISEL-NEXT:    orr x11, x14, x11, lsl #1
-; GISEL-NEXT:    lsr x14, x12, #63
-; GISEL-NEXT:    stp x9, x10, [x0, #16]
-; GISEL-NEXT:    lsr x9, x13, #63
-; GISEL-NEXT:    orr x8, x8, x12, lsl #1
-; GISEL-NEXT:    orr x10, x14, x13, lsl #1
-; GISEL-NEXT:    orr x9, x9, x15, lsl #1
-; GISEL-NEXT:    stp x11, x8, [x0, #32]
-; GISEL-NEXT:    stp x10, x9, [x0, #48]
+; GISEL-NEXT:    lsl x14, x8, #1
+; GISEL-NEXT:    extr x8, x9, x8, #63
+; GISEL-NEXT:    extr x9, x10, x9, #63
+; GISEL-NEXT:    extr x10, x11, x10, #63
+; GISEL-NEXT:    stp xzr, x14, [x0]
+; GISEL-NEXT:    stp x8, x9, [x0, #16]
+; GISEL-NEXT:    extr x8, x12, x11, #63
+; GISEL-NEXT:    extr x9, x13, x12, #63
+; GISEL-NEXT:    stp x10, x8, [x0, #32]
+; GISEL-NEXT:    extr x10, x15, x13, #63
+; GISEL-NEXT:    stp x9, x10, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5935,27 +5837,21 @@ define void @test_lshr_i512_const_65(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_lshr_i512_const_65:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #16]
-; GISEL-NEXT:    ldr x10, [x1, #8]
-; GISEL-NEXT:    ldp x11, x14, [x1, #32]
-; GISEL-NEXT:    ldp x15, x16, [x1, #48]
-; GISEL-NEXT:    lsl x12, x8, #63
-; GISEL-NEXT:    lsl x13, x9, #63
-; GISEL-NEXT:    orr x10, x12, x10, lsr #1
-; GISEL-NEXT:    lsl x12, x11, #63
-; GISEL-NEXT:    orr x8, x13, x8, lsr #1
-; GISEL-NEXT:    lsl x13, x14, #63
-; GISEL-NEXT:    orr x9, x12, x9, lsr #1
-; GISEL-NEXT:    stp x10, x8, [x0]
-; GISEL-NEXT:    lsl x10, x15, #63
-; GISEL-NEXT:    orr x11, x13, x11, lsr #1
-; GISEL-NEXT:    lsl x12, x16, #63
-; GISEL-NEXT:    orr x8, x10, x14, lsr #1
-; GISEL-NEXT:    lsr x10, x16, #1
-; GISEL-NEXT:    stp x9, x11, [x0, #16]
-; GISEL-NEXT:    orr x9, x12, x15, lsr #1
-; GISEL-NEXT:    stp x10, xzr, [x0, #48]
-; GISEL-NEXT:    stp x8, x9, [x0, #32]
+; GISEL-NEXT:    ldp x8, x9, [x1, #8]
+; GISEL-NEXT:    ldr x14, [x1, #56]
+; GISEL-NEXT:    ldp x10, x11, [x1, #24]
+; GISEL-NEXT:    ldp x12, x13, [x1, #40]
+; GISEL-NEXT:    extr x8, x9, x8, #1
+; GISEL-NEXT:    extr x9, x10, x9, #1
+; GISEL-NEXT:    extr x10, x11, x10, #1
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    extr x8, x12, x11, #1
+; GISEL-NEXT:    extr x9, x13, x12, #1
+; GISEL-NEXT:    stp x10, x8, [x0, #16]
+; GISEL-NEXT:    extr x10, x14, x13, #1
+; GISEL-NEXT:    lsr x8, x14, #1
+; GISEL-NEXT:    stp x9, x10, [x0, #32]
+; GISEL-NEXT:    stp x8, xzr, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5987,29 +5883,23 @@ define void @test_ashr_i512_const_65(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_ashr_i512_const_65:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #16]
-; GISEL-NEXT:    ldr x11, [x1, #8]
-; GISEL-NEXT:    ldp x10, x13, [x1, #32]
-; GISEL-NEXT:    lsl x12, x8, #63
-; GISEL-NEXT:    lsl x14, x9, #63
-; GISEL-NEXT:    lsl x15, x10, #63
-; GISEL-NEXT:    orr x11, x12, x11, lsr #1
-; GISEL-NEXT:    ldp x12, x16, [x1, #48]
-; GISEL-NEXT:    orr x8, x14, x8, lsr #1
-; GISEL-NEXT:    lsl x14, x13, #63
-; GISEL-NEXT:    orr x9, x15, x9, lsr #1
-; GISEL-NEXT:    asr x15, x16, #63
-; GISEL-NEXT:    stp x11, x8, [x0]
-; GISEL-NEXT:    lsl x11, x12, #63
-; GISEL-NEXT:    orr x10, x14, x10, lsr #1
-; GISEL-NEXT:    lsl x14, x16, #63
-; GISEL-NEXT:    orr x8, x11, x13, lsr #1
+; GISEL-NEXT:    ldp x8, x9, [x1, #8]
+; GISEL-NEXT:    ldr x13, [x1, #40]
+; GISEL-NEXT:    ldp x10, x11, [x1, #24]
+; GISEL-NEXT:    ldp x14, x12, [x1, #48]
+; GISEL-NEXT:    extr x8, x9, x8, #1
+; GISEL-NEXT:    extr x9, x10, x9, #1
+; GISEL-NEXT:    extr x10, x11, x10, #1
+; GISEL-NEXT:    asr x15, x12, #63
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    extr x8, x13, x11, #1
+; GISEL-NEXT:    extr x9, x14, x13, #1
 ; GISEL-NEXT:    lsl x11, x15, #63
-; GISEL-NEXT:    stp x9, x10, [x0, #16]
-; GISEL-NEXT:    orr x9, x14, x12, lsr #1
-; GISEL-NEXT:    orr x10, x11, x16, asr #1
-; GISEL-NEXT:    stp x8, x9, [x0, #32]
-; GISEL-NEXT:    stp x10, x15, [x0, #48]
+; GISEL-NEXT:    stp x10, x8, [x0, #16]
+; GISEL-NEXT:    extr x10, x12, x14, #1
+; GISEL-NEXT:    orr x8, x11, x12, asr #1
+; GISEL-NEXT:    stp x9, x10, [x0, #32]
+; GISEL-NEXT:    stp x8, x15, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -6044,23 +5934,17 @@ define void @test_shl_i512_const_100(ptr %result, ptr %input) {
 ; GISEL-NEXT:    ldr x15, [x1, #48]
 ; GISEL-NEXT:    ldp x10, x11, [x1, #16]
 ; GISEL-NEXT:    ldp x12, x13, [x1, #32]
-; GISEL-NEXT:    lsr x14, x8, #28
-; GISEL-NEXT:    lsr x16, x9, #28
-; GISEL-NEXT:    lsl x8, x8, #36
-; GISEL-NEXT:    orr x9, x14, x9, lsl #36
-; GISEL-NEXT:    lsr x14, x10, #28
-; GISEL-NEXT:    orr x10, x16, x10, lsl #36
-; GISEL-NEXT:    stp xzr, x8, [x0]
-; GISEL-NEXT:    lsr x8, x11, #28
-; GISEL-NEXT:    orr x11, x14, x11, lsl #36
-; GISEL-NEXT:    lsr x14, x12, #28
-; GISEL-NEXT:    stp x9, x10, [x0, #16]
-; GISEL-NEXT:    lsr x9, x13, #28
-; GISEL-NEXT:    orr x8, x8, x12, lsl #36
-; GISEL-NEXT:    orr x10, x14, x13, lsl #36
-; GISEL-NEXT:    orr x9, x9, x15, lsl #36
-; GISEL-NEXT:    stp x11, x8, [x0, #32]
-; GISEL-NEXT:    stp x10, x9, [x0, #48]
+; GISEL-NEXT:    lsl x14, x8, #36
+; GISEL-NEXT:    extr x8, x9, x8, #28
+; GISEL-NEXT:    extr x9, x10, x9, #28
+; GISEL-NEXT:    extr x10, x11, x10, #28
+; GISEL-NEXT:    stp xzr, x14, [x0]
+; GISEL-NEXT:    stp x8, x9, [x0, #16]
+; GISEL-NEXT:    extr x8, x12, x11, #28
+; GISEL-NEXT:    extr x9, x13, x12, #28
+; GISEL-NEXT:    stp x10, x8, [x0, #32]
+; GISEL-NEXT:    extr x10, x15, x13, #28
+; GISEL-NEXT:    stp x9, x10, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -6091,27 +5975,21 @@ define void @test_lshr_i512_const_100(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_lshr_i512_const_100:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #16]
-; GISEL-NEXT:    ldr x10, [x1, #8]
-; GISEL-NEXT:    ldp x11, x14, [x1, #32]
-; GISEL-NEXT:    ldp x15, x16, [x1, #48]
-; GISEL-NEXT:    lsl x12, x8, #28
-; GISEL-NEXT:    lsl x13, x9, #28
-; GISEL-NEXT:    orr x10, x12, x10, lsr #36
-; GISEL-NEXT:    lsl x12, x11, #28
-; GISEL-NEXT:    orr x8, x13, x8, lsr #36
-; GISEL-NEXT:    lsl x13, x14, #28
-; GISEL-NEXT:    orr x9, x12, x9, lsr #36
-; GISEL-NEXT:    stp x10, x8, [x0]
-; GISEL-NEXT:    lsl x10, x15, #28
-; GISEL-NEXT:    orr x11, x13, x11, lsr #36
-; GISEL-NEXT:    lsl x12, x16, #28
-; GISEL-NEXT:    orr x8, x10, x14, lsr #36
-; GISEL-NEXT:    lsr x10, x16, #36
-; GISEL-NEXT:    stp x9, x11, [x0, #16]
-; GISEL-NEXT:    orr x9, x12, x15, lsr #36
-; GISEL-NEXT:    stp x10, xzr, [x0, #48]
-; GISEL-NEXT:    stp x8, x9, [x0, #32]
+; GISEL-NEXT:    ldp x8, x9, [x1, #8]
+; GISEL-NEXT:    ldr x14, [x1, #56]
+; GISEL-NEXT:    ldp x10, x11, [x1, #24]
+; GISEL-NEXT:    ldp x12, x13, [x1, #40]
+; GISEL-NEXT:    extr x8, x9, x8, #36
+; GISEL-NEXT:    extr x9, x10, x9, #36
+; GISEL-NEXT:    extr x10, x11, x10, #36
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    extr x8, x12, x11, #36
+; GISEL-NEXT:    extr x9, x13, x12, #36
+; GISEL-NEXT:    stp x10, x8, [x0, #16]
+; GISEL-NEXT:    extr x10, x14, x13, #36
+; GISEL-NEXT:    lsr x8, x14, #36
+; GISEL-NEXT:    stp x9, x10, [x0, #32]
+; GISEL-NEXT:    stp x8, xzr, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -6143,29 +6021,23 @@ define void @test_ashr_i512_const_100(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_ashr_i512_const_100:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #16]
-; GISEL-NEXT:    ldr x11, [x1, #8]
-; GISEL-NEXT:    ldp x10, x13, [x1, #32]
-; GISEL-NEXT:    lsl x12, x8, #28
-; GISEL-NEXT:    lsl x14, x9, #28
-; GISEL-NEXT:    lsl x15, x10, #28
-; GISEL-NEXT:    orr x11, x12, x11, lsr #36
-; GISEL-NEXT:    ldp x12, x16, [x1, #48]
-; GISEL-NEXT:    orr x8, x14, x8, lsr #36
-; GISEL-NEXT:    lsl x14, x13, #28
-; GISEL-NEXT:    orr x9, x15, x9, lsr #36
-; GISEL-NEXT:    asr x15, x16, #63
-; GISEL-NEXT:    stp x11, x8, [x0]
-; GISEL-NEXT:    lsl x11, x12, #28
-; GISEL-NEXT:    orr x10, x14, x10, lsr #36
-; GISEL-NEXT:    lsl x14, x16, #28
-; GISEL-NEXT:    orr x8, x11, x13, lsr #36
+; GISEL-NEXT:    ldp x8, x9, [x1, #8]
+; GISEL-NEXT:    ldr x13, [x1, #40]
+; GISEL-NEXT:    ldp x10, x11, [x1, #24]
+; GISEL-NEXT:    ldp x14, x12, [x1, #48]
+; GISEL-NEXT:    extr x8, x9, x8, #36
+; GISEL-NEXT:    extr x9, x10, x9, #36
+; GISEL-NEXT:    extr x10, x11, x10, #36
+; GISEL-NEXT:    asr x15, x12, #63
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    extr x8, x13, x11, #36
+; GISEL-NEXT:    extr x9, x14, x13, #36
 ; GISEL-NEXT:    lsl x11, x15, #28
-; GISEL-NEXT:    stp x9, x10, [x0, #16]
-; GISEL-NEXT:    orr x9, x14, x12, lsr #36
-; GISEL-NEXT:    orr x10, x11, x16, asr #36
-; GISEL-NEXT:    stp x8, x9, [x0, #32]
-; GISEL-NEXT:    stp x10, x15, [x0, #48]
+; GISEL-NEXT:    stp x10, x8, [x0, #16]
+; GISEL-NEXT:    extr x10, x12, x14, #36
+; GISEL-NEXT:    orr x8, x11, x12, asr #36
+; GISEL-NEXT:    stp x9, x10, [x0, #32]
+; GISEL-NEXT:    stp x8, x15, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -6201,23 +6073,17 @@ define void @test_shl_i512_const_127(ptr %result, ptr %input) {
 ; GISEL-NEXT:    ldr x15, [x1, #48]
 ; GISEL-NEXT:    ldp x10, x11, [x1, #16]
 ; GISEL-NEXT:    ldp x12, x13, [x1, #32]
-; GISEL-NEXT:    lsr x14, x8, #1
-; GISEL-NEXT:    lsr x16, x9, #1
-; GISEL-NEXT:    lsl x8, x8, #63
-; GISEL-NEXT:    orr x9, x14, x9, lsl #63
-; GISEL-NEXT:    lsr x14, x10, #1
-; GISEL-NEXT:    orr x10, x16, x10, lsl #63
-; GISEL-NEXT:    stp xzr, x8, [x0]
-; GISEL-NEXT:    lsr x8, x11, #1
-; GISEL-NEXT:    orr x11, x14, x11, lsl #63
-; GISEL-NEXT:    lsr x14, x12, #1
-; GISEL-NEXT:    stp x9, x10, [x0, #16]
-; GISEL-NEXT:    lsr x9, x13, #1
-; GISEL-NEXT:    orr x8, x8, x12, lsl #63
-; GISEL-NEXT:    orr x10, x14, x13, lsl #63
-; GISEL-NEXT:    orr x9, x9, x15, lsl #63
-; GISEL-NEXT:    stp x11, x8, [x0, #32]
-; GISEL-NEXT:    stp x10, x9, [x0, #48]
+; GISEL-NEXT:    lsl x14, x8, #63
+; GISEL-NEXT:    extr x8, x9, x8, #1
+; GISEL-NEXT:    extr x9, x10, x9, #1
+; GISEL-NEXT:    extr x10, x11, x10, #1
+; GISEL-NEXT:    stp xzr, x14, [x0]
+; GISEL-NEXT:    stp x8, x9, [x0, #16]
+; GISEL-NEXT:    extr x8, x12, x11, #1
+; GISEL-NEXT:    extr x9, x13, x12, #1
+; GISEL-NEXT:    stp x10, x8, [x0, #32]
+; GISEL-NEXT:    extr x10, x15, x13, #1
+; GISEL-NEXT:    stp x9, x10, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -6248,27 +6114,21 @@ define void @test_lshr_i512_const_127(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_lshr_i512_const_127:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #16]
-; GISEL-NEXT:    ldr x10, [x1, #8]
-; GISEL-NEXT:    ldp x11, x14, [x1, #32]
-; GISEL-NEXT:    ldp x15, x16, [x1, #48]
-; GISEL-NEXT:    lsl x12, x8, #1
-; GISEL-NEXT:    lsl x13, x9, #1
-; GISEL-NEXT:    orr x10, x12, x10, lsr #63
-; GISEL-NEXT:    lsl x12, x11, #1
-; GISEL-NEXT:    orr x8, x13, x8, lsr #63
-; GISEL-NEXT:    lsl x13, x14, #1
-; GISEL-NEXT:    orr x9, x12, x9, lsr #63
-; GISEL-NEXT:    stp x10, x8, [x0]
-; GISEL-NEXT:    lsl x10, x15, #1
-; GISEL-NEXT:    orr x11, x13, x11, lsr #63
-; GISEL-NEXT:    lsl x12, x16, #1
-; GISEL-NEXT:    orr x8, x10, x14, lsr #63
-; GISEL-NEXT:    lsr x10, x16, #63
-; GISEL-NEXT:    stp x9, x11, [x0, #16]
-; GISEL-NEXT:    orr x9, x12, x15, lsr #63
-; GISEL-NEXT:    stp x10, xzr, [x0, #48]
-; GISEL-NEXT:    stp x8, x9, [x0, #32]
+; GISEL-NEXT:    ldp x8, x9, [x1, #8]
+; GISEL-NEXT:    ldr x14, [x1, #56]
+; GISEL-NEXT:    ldp x10, x11, [x1, #24]
+; GISEL-NEXT:    ldp x12, x13, [x1, #40]
+; GISEL-NEXT:    extr x8, x9, x8, #63
+; GISEL-NEXT:    extr x9, x10, x9, #63
+; GISEL-NEXT:    extr x10, x11, x10, #63
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    extr x8, x12, x11, #63
+; GISEL-NEXT:    extr x9, x13, x12, #63
+; GISEL-NEXT:    stp x10, x8, [x0, #16]
+; GISEL-NEXT:    extr x10, x14, x13, #63
+; GISEL-NEXT:    lsr x8, x14, #63
+; GISEL-NEXT:    stp x9, x10, [x0, #32]
+; GISEL-NEXT:    stp x8, xzr, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -6299,28 +6159,22 @@ define void @test_ashr_i512_const_127(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_ashr_i512_const_127:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #16]
-; GISEL-NEXT:    ldr x10, [x1, #8]
-; GISEL-NEXT:    ldp x11, x14, [x1, #32]
-; GISEL-NEXT:    ldp x15, x16, [x1, #48]
-; GISEL-NEXT:    lsl x12, x8, #1
-; GISEL-NEXT:    lsl x13, x9, #1
-; GISEL-NEXT:    orr x10, x12, x10, lsr #63
-; GISEL-NEXT:    lsl x12, x11, #1
-; GISEL-NEXT:    orr x8, x13, x8, lsr #63
-; GISEL-NEXT:    lsl x13, x14, #1
-; GISEL-NEXT:    orr x9, x12, x9, lsr #63
-; GISEL-NEXT:    lsl x12, x15, #1
-; GISEL-NEXT:    stp x10, x8, [x0]
-; GISEL-NEXT:    lsl x10, x16, #1
-; GISEL-NEXT:    orr x11, x13, x11, lsr #63
-; GISEL-NEXT:    asr x8, x16, #63
-; GISEL-NEXT:    orr x12, x12, x14, lsr #63
-; GISEL-NEXT:    stp x9, x11, [x0, #16]
-; GISEL-NEXT:    orr x9, x10, x15, lsr #63
-; GISEL-NEXT:    orr x10, x8, x8, lsl #1
-; GISEL-NEXT:    stp x12, x9, [x0, #32]
-; GISEL-NEXT:    stp x10, x8, [x0, #48]
+; GISEL-NEXT:    ldp x8, x9, [x1, #8]
+; GISEL-NEXT:    ldr x14, [x1, #56]
+; GISEL-NEXT:    ldp x10, x11, [x1, #24]
+; GISEL-NEXT:    ldp x12, x13, [x1, #40]
+; GISEL-NEXT:    extr x8, x9, x8, #63
+; GISEL-NEXT:    extr x9, x10, x9, #63
+; GISEL-NEXT:    extr x10, x11, x10, #63
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    extr x8, x12, x11, #63
+; GISEL-NEXT:    asr x9, x14, #63
+; GISEL-NEXT:    extr x11, x13, x12, #63
+; GISEL-NEXT:    stp x10, x8, [x0, #16]
+; GISEL-NEXT:    extr x10, x14, x13, #63
+; GISEL-NEXT:    orr x8, x9, x9, lsl #1
+; GISEL-NEXT:    stp x11, x10, [x0, #32]
+; GISEL-NEXT:    stp x8, x9, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64

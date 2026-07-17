@@ -133,7 +133,7 @@ func.func @testOptOperandFail(%x: i16) {
 // Check that an operation with multiple variadics expects the segment size
 // attribute
 func.func @testMultOperandsMissingSegment(%x: i16, %z: i64) {
-  // expected-error@+1 {{'operand_segment_sizes' attribute is expected but not provided}}
+  // expected-error@+1 {{'operandSegmentSizes' attribute is expected but not provided}}
   "testvar.var_and_opt_operand"(%x, %x, %z) : (i16, i16, i64) -> ()
   return
 }
@@ -143,8 +143,8 @@ func.func @testMultOperandsMissingSegment(%x: i16, %z: i64) {
 // Check that an operation with multiple variadics expects the segment size
 // attribute of the right type
 func.func @testMultOperandsWrongSegmentType(%x: i16, %z: i64) {
-  // expected-error@+1 {{'operand_segment_sizes' attribute is expected to be a dense i32 array}}
-  "testvar.var_and_opt_operand"(%x, %x, %z) {operand_segment_sizes = i32} : (i16, i16, i64) -> ()
+  // expected-error@+1 {{'operandSegmentSizes' attribute is expected to be a dense i32 array}}
+  "testvar.var_and_opt_operand"(%x, %x, %z) {operandSegmentSizes = i32} : (i16, i16, i64) -> ()
   return
 }
 
@@ -153,12 +153,12 @@ func.func @testMultOperandsWrongSegmentType(%x: i16, %z: i64) {
 // Check that an operation with multiple variadics with the right segment size
 // verifies.
 func.func @testMultOperands(%x: i16, %y: i32, %z: i64) {
-  "testvar.var_and_opt_operand"(%x, %x, %z) {operand_segment_sizes = array<i32: 2, 0, 1>} : (i16, i16, i64) -> ()
-  // CHECK: "testvar.var_and_opt_operand"(%{{.*}}, %{{.*}}, %{{.*}}) {operand_segment_sizes = array<i32: 2, 0, 1>} : (i16, i16, i64) -> ()
-  "testvar.var_and_opt_operand"(%x, %x, %y, %z) {operand_segment_sizes = array<i32: 2, 1, 1>} : (i16, i16, i32, i64) -> ()
-  // CHECK-NEXT: "testvar.var_and_opt_operand"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {operand_segment_sizes = array<i32: 2, 1, 1>} : (i16, i16, i32, i64) -> ()
-  "testvar.var_and_opt_operand"(%y, %z) {operand_segment_sizes = array<i32: 0, 1, 1>} : (i32, i64) -> ()
-  // CHECK-NEXT: "testvar.var_and_opt_operand"(%{{.*}}, %{{.*}}) {operand_segment_sizes = array<i32: 0, 1, 1>} : (i32, i64) -> ()
+  "testvar.var_and_opt_operand"(%x, %x, %z) {operandSegmentSizes = array<i32: 2, 0, 1>} : (i16, i16, i64) -> ()
+  // CHECK: "testvar.var_and_opt_operand"(%{{.*}}, %{{.*}}, %{{.*}}) {operandSegmentSizes = array<i32: 2, 0, 1>} : (i16, i16, i64) -> ()
+  "testvar.var_and_opt_operand"(%x, %x, %y, %z) {operandSegmentSizes = array<i32: 2, 1, 1>} : (i16, i16, i32, i64) -> ()
+  // CHECK-NEXT: "testvar.var_and_opt_operand"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {operandSegmentSizes = array<i32: 2, 1, 1>} : (i16, i16, i32, i64) -> ()
+  "testvar.var_and_opt_operand"(%y, %z) {operandSegmentSizes = array<i32: 0, 1, 1>} : (i32, i64) -> ()
+  // CHECK-NEXT: "testvar.var_and_opt_operand"(%{{.*}}, %{{.*}}) {operandSegmentSizes = array<i32: 0, 1, 1>} : (i32, i64) -> ()
   return
 }
 
@@ -166,8 +166,8 @@ func.func @testMultOperands(%x: i16, %y: i32, %z: i64) {
 
 // Check that the segment sizes expects non-negative values
 func.func @testMultOperandsSegmentNegative() {
-  // expected-error@+1 {{'operand_segment_sizes' attribute for specifying operand segments must have non-negative values}}
-  "testvar.var_and_opt_operand"() {operand_segment_sizes = array<i32: 2, -1, 1>} : () -> ()
+  // expected-error@+1 {{'operandSegmentSizes' attribute for specifying operand segments must have non-negative values}}
+  "testvar.var_and_opt_operand"() {operandSegmentSizes = array<i32: 2, -1, 1>} : () -> ()
   return
 }
 
@@ -175,8 +175,8 @@ func.func @testMultOperandsSegmentNegative() {
 
 // Check that the segment sizes expects 1 for single values
 func.func @testMultOperandsSegmentWrongSingle() {
-  // expected-error@+1 {{element 2 in 'operand_segment_sizes' attribute must be equal to 1}}
-  "testvar.var_and_opt_operand"() {operand_segment_sizes = array<i32: 0, 0, 0>} : () -> ()
+  // expected-error@+1 {{element 2 in 'operandSegmentSizes' attribute must be equal to 1}}
+  "testvar.var_and_opt_operand"() {operandSegmentSizes = array<i32: 0, 0, 0>} : () -> ()
   return
 }
 
@@ -184,8 +184,8 @@ func.func @testMultOperandsSegmentWrongSingle() {
 
 // Check that the segment sizes expects not more than 1 for optional values
 func.func @testMultOperandsSegmentWrongOptional() {
-  // expected-error@+1 {{element 1 in 'operand_segment_sizes' attribute must be equal to 0 or 1}}
-  "testvar.var_and_opt_operand"() {operand_segment_sizes = array<i32: 0, 2, 0>} : () -> ()
+  // expected-error@+1 {{element 1 in 'operandSegmentSizes' attribute must be equal to 0 or 1}}
+  "testvar.var_and_opt_operand"() {operandSegmentSizes = array<i32: 0, 2, 0>} : () -> ()
   return
 }
 
@@ -193,8 +193,8 @@ func.func @testMultOperandsSegmentWrongOptional() {
 
 // Check that the sum of the segment sizes should be equal to the number of operands
 func.func @testMultOperandsSegmentWrongOptional(%y: i32, %z: i64) {
-  // expected-error@+1 {{sum of elements in 'operand_segment_sizes' attribute must be equal to the number of operands}}
-  "testvar.var_and_opt_operand"(%y, %z) {operand_segment_sizes = array<i32: 0, 0, 1>} : (i32, i64) -> ()
+  // expected-error@+1 {{sum of elements in 'operandSegmentSizes' attribute must be equal to the number of operands}}
+  "testvar.var_and_opt_operand"(%y, %z) {operandSegmentSizes = array<i32: 0, 0, 1>} : (i32, i64) -> ()
   return
 }
 
@@ -334,7 +334,7 @@ func.func @testOptResultFail() {
 // Check that an operation with multiple variadics expects the segment size
 // attribute
 func.func @testMultResultsMissingSegment() {
-  // expected-error@+1 {{'result_segment_sizes' attribute is expected but not provided}}
+  // expected-error@+1 {{'resultSegmentSizes' attribute is expected but not provided}}
   "testvar.var_and_opt_result"() : () -> (i16, i16, i64)
   return
 }
@@ -344,8 +344,8 @@ func.func @testMultResultsMissingSegment() {
 // Check that an operation with multiple variadics expects the segment size
 // attribute of the right type
 func.func @testMultResultsWrongSegmentType() {
-  // expected-error@+1 {{'result_segment_sizes' attribute is expected to be a dense i32 array}}
-  "testvar.var_and_opt_result"() {result_segment_sizes = i32} : () -> (i16, i16, i64)
+  // expected-error@+1 {{'resultSegmentSizes' attribute is expected to be a dense i32 array}}
+  "testvar.var_and_opt_result"() {resultSegmentSizes = i32} : () -> (i16, i16, i64)
   return
 }
 
@@ -354,12 +354,12 @@ func.func @testMultResultsWrongSegmentType() {
 // Check that an operation with multiple variadics with the right segment size
 // verifies.
 func.func @testMultResults() {
-  "testvar.var_and_opt_result"() {result_segment_sizes = array<i32: 2, 0, 1>} : () -> (i16, i16, i64)
-  // CHECK: "testvar.var_and_opt_result"() {result_segment_sizes = array<i32: 2, 0, 1>} : () -> (i16, i16, i64)
-  "testvar.var_and_opt_result"() {result_segment_sizes = array<i32: 2, 1, 1>} : () -> (i16, i16, i32, i64)
-  // CHECK-NEXT: "testvar.var_and_opt_result"() {result_segment_sizes = array<i32: 2, 1, 1>} : () -> (i16, i16, i32, i64)
-  "testvar.var_and_opt_result"() {result_segment_sizes = array<i32: 0, 1, 1>} : () -> (i32, i64)
-  // CHECK-NEXT: "testvar.var_and_opt_result"() {result_segment_sizes = array<i32: 0, 1, 1>} : () -> (i32, i64)
+  "testvar.var_and_opt_result"() {resultSegmentSizes = array<i32: 2, 0, 1>} : () -> (i16, i16, i64)
+  // CHECK: "testvar.var_and_opt_result"() {resultSegmentSizes = array<i32: 2, 0, 1>} : () -> (i16, i16, i64)
+  "testvar.var_and_opt_result"() {resultSegmentSizes = array<i32: 2, 1, 1>} : () -> (i16, i16, i32, i64)
+  // CHECK-NEXT: "testvar.var_and_opt_result"() {resultSegmentSizes = array<i32: 2, 1, 1>} : () -> (i16, i16, i32, i64)
+  "testvar.var_and_opt_result"() {resultSegmentSizes = array<i32: 0, 1, 1>} : () -> (i32, i64)
+  // CHECK-NEXT: "testvar.var_and_opt_result"() {resultSegmentSizes = array<i32: 0, 1, 1>} : () -> (i32, i64)
   return
 }
 
@@ -367,8 +367,8 @@ func.func @testMultResults() {
 
 // Check that the segment sizes expects non-negative values
 func.func @testMultResultsSegmentNegative() {
-  // expected-error@+1 {{'result_segment_sizes' attribute for specifying result segments must have non-negative values}}
-  "testvar.var_and_opt_result"() {result_segment_sizes = array<i32: 2, -1, 1>} : () -> ()
+  // expected-error@+1 {{'resultSegmentSizes' attribute for specifying result segments must have non-negative values}}
+  "testvar.var_and_opt_result"() {resultSegmentSizes = array<i32: 2, -1, 1>} : () -> ()
   return
 }
 
@@ -376,8 +376,8 @@ func.func @testMultResultsSegmentNegative() {
 
 // Check that the segment sizes expects 1 for single values
 func.func @testMultResultsSegmentWrongSingle() {
-  // expected-error@+1 {{element 2 in 'result_segment_sizes' attribute must be equal to 1}}
-  "testvar.var_and_opt_result"() {result_segment_sizes = array<i32: 0, 0, 0>} : () -> ()
+  // expected-error@+1 {{element 2 in 'resultSegmentSizes' attribute must be equal to 1}}
+  "testvar.var_and_opt_result"() {resultSegmentSizes = array<i32: 0, 0, 0>} : () -> ()
   return
 }
 
@@ -385,8 +385,8 @@ func.func @testMultResultsSegmentWrongSingle() {
 
 // Check that the segment sizes expects not more than 1 for optional values
 func.func @testMultResultsSegmentWrongOptional() {
-  // expected-error@+1 {{element 1 in 'result_segment_sizes' attribute must be equal to 0 or 1}}
-  "testvar.var_and_opt_result"() {result_segment_sizes = array<i32: 0, 2, 0>} : () -> ()
+  // expected-error@+1 {{element 1 in 'resultSegmentSizes' attribute must be equal to 0 or 1}}
+  "testvar.var_and_opt_result"() {resultSegmentSizes = array<i32: 0, 2, 0>} : () -> ()
   return
 }
 
@@ -394,7 +394,7 @@ func.func @testMultResultsSegmentWrongOptional() {
 
 // Check that the sum of the segment sizes should be equal to the number of results
 func.func @testMultResultsSegmentWrongOptional() {
-  // expected-error@+1 {{sum of elements in 'result_segment_sizes' attribute must be equal to the number of results}}
-  "testvar.var_and_opt_result"() {result_segment_sizes = array<i32: 0, 0, 1>} : () -> (i32, i64)
+  // expected-error@+1 {{sum of elements in 'resultSegmentSizes' attribute must be equal to the number of results}}
+  "testvar.var_and_opt_result"() {resultSegmentSizes = array<i32: 0, 0, 1>} : () -> (i32, i64)
   return
 }

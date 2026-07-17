@@ -30,6 +30,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SpecialCaseList.h"
 #include "llvm/Support/Unicode.h"
@@ -517,12 +518,6 @@ public:
                         const SourceManager &SM) const;
 
 private:
-  // Find the longest glob pattern that matches FilePath amongst
-  // CategoriesToMatchers, return true iff the match exists and belongs to a
-  // positive category.
-  bool globsMatches(const llvm::StringMap<Matcher> &CategoriesToMatchers,
-                    StringRef FilePath) const;
-
   llvm::DenseMap<diag::kind, const Section *> DiagToSection;
 };
 } // namespace
@@ -537,33 +532,16 @@ WarningsSpecialCaseList::create(const llvm::MemoryBuffer &Input,
 }
 
 void WarningsSpecialCaseList::processSections(DiagnosticsEngine &Diags) {
-  // Drop the default section introduced by special case list, we only support
-  // exact diagnostic group names.
-  // FIXME: We should make this configurable in the parser instead.
-  // FIXME: C++20 can use std::erase_if(Sections, [](Section &sec) { return
-  // sec.SectionStr == "*"; });
-  llvm::erase_if(Sections, [](Section &sec) { return sec.SectionStr == "*"; });
-  // Make sure we iterate sections by their line numbers.
-  std::vector<std::pair<unsigned, const Section *>> LineAndSectionEntry;
-  LineAndSectionEntry.reserve(Sections.size());
-  for (const auto &Entry : Sections) {
-    StringRef DiagName = Entry.SectionStr;
-    // Each section has a matcher with that section's name, attached to that
-    // line.
-    const auto &DiagSectionMatcher = Entry.SectionMatcher;
-    unsigned DiagLine = 0;
-    for (const auto &Glob : DiagSectionMatcher->Globs)
-      if (Glob->Name == DiagName) {
-        DiagLine = Glob->LineNo;
-        break;
-      }
-    LineAndSectionEntry.emplace_back(DiagLine, &Entry);
-  }
-  llvm::sort(LineAndSectionEntry);
   static constexpr auto WarningFlavor = clang::diag::Flavor::WarningOrError;
-  for (const auto &[_, SectionEntry] : LineAndSectionEntry) {
+  for (const auto &SectionEntry : sections()) {
+    StringRef DiagGroup = SectionEntry.name();
+    if (DiagGroup == "*") {
+      // Drop the default section introduced by special case list, we only
+      // support exact diagnostic group names.
+      // FIXME: We should make this configurable in the parser instead.
+      continue;
+    }
     SmallVector<diag::kind> GroupDiags;
-    StringRef DiagGroup = SectionEntry->SectionStr;
     if (Diags.getDiagnosticIDs()->getDiagnosticsInGroup(
             WarningFlavor, DiagGroup, GroupDiags)) {
       StringRef Suggestion =
@@ -576,7 +554,7 @@ void WarningsSpecialCaseList::processSections(DiagnosticsEngine &Diags) {
     for (diag::kind Diag : GroupDiags)
       // We're intentionally overwriting any previous mappings here to make sure
       // latest one takes precedence.
-      DiagToSection[Diag] = SectionEntry;
+      DiagToSection[Diag] = &SectionEntry;
   }
 }
 
@@ -601,43 +579,21 @@ void DiagnosticsEngine::setDiagSuppressionMapping(llvm::MemoryBuffer &Input) {
 bool WarningsSpecialCaseList::isDiagSuppressed(diag::kind DiagId,
                                                SourceLocation DiagLoc,
                                                const SourceManager &SM) const {
+  PresumedLoc PLoc = SM.getPresumedLoc(DiagLoc);
+  if (!PLoc.isValid())
+    return false;
   const Section *DiagSection = DiagToSection.lookup(DiagId);
   if (!DiagSection)
     return false;
-  const SectionEntries &EntityTypeToCategories = DiagSection->Entries;
-  auto SrcEntriesIt = EntityTypeToCategories.find("src");
-  if (SrcEntriesIt == EntityTypeToCategories.end())
-    return false;
-  const llvm::StringMap<llvm::SpecialCaseList::Matcher> &CategoriesToMatchers =
-      SrcEntriesIt->getValue();
-  // We also use presumed locations here to improve reproducibility for
-  // preprocessed inputs.
-  if (PresumedLoc PLoc = SM.getPresumedLoc(DiagLoc); PLoc.isValid())
-    return globsMatches(
-        CategoriesToMatchers,
-        llvm::sys::path::remove_leading_dotslash(PLoc.getFilename()));
-  return false;
-}
 
-bool WarningsSpecialCaseList::globsMatches(
-    const llvm::StringMap<Matcher> &CategoriesToMatchers,
-    StringRef FilePath) const {
-  StringRef LongestMatch;
-  bool LongestIsPositive = false;
-  for (const auto &Entry : CategoriesToMatchers) {
-    StringRef Category = Entry.getKey();
-    const llvm::SpecialCaseList::Matcher &Matcher = Entry.getValue();
-    bool IsPositive = Category != "emit";
-    for (const auto &Glob : Matcher.Globs) {
-      if (Glob->Name.size() < LongestMatch.size())
-        continue;
-      if (!Glob->Pattern.match(FilePath))
-        continue;
-      LongestMatch = Glob->Name;
-      LongestIsPositive = IsPositive;
-    }
-  }
-  return LongestIsPositive;
+  StringRef F = llvm::sys::path::remove_leading_dotslash(PLoc.getFilename());
+
+  unsigned LastSup = DiagSection->getLastMatch("src", F, "");
+  if (LastSup == 0)
+    return false;
+
+  unsigned LastEmit = DiagSection->getLastMatch("src", F, "emit");
+  return LastSup > LastEmit;
 }
 
 bool DiagnosticsEngine::isSuppressedViaMapping(diag::kind DiagId,
@@ -1087,18 +1043,32 @@ void Diagnostic::FormatDiagnostic(SmallVectorImpl<char> &OutStr) const {
 
 /// EscapeStringForDiagnostic - Append Str to the diagnostic buffer,
 /// escaping non-printable characters and ill-formed code unit sequences.
-void clang::EscapeStringForDiagnostic(StringRef Str,
-                                      SmallVectorImpl<char> &OutStr) {
+static void EscapeStringForDiagnostic(StringRef Str,
+                                      SmallVectorImpl<char> &OutStr,
+                                      bool ForCodepoint) {
   OutStr.reserve(OutStr.size() + Str.size());
   auto *Begin = reinterpret_cast<const unsigned char *>(Str.data());
   llvm::raw_svector_ostream OutStream(OutStr);
-  const unsigned char *End = Begin + Str.size();
+  unsigned Size = Str.size();
+  const unsigned char *End = Begin + Size;
+  if (ForCodepoint) {
+    unsigned Size = llvm::getUTF8SequenceSize(Begin, End);
+    if (Size == 0)
+      Size = llvm::findMaximalSubpartOfIllFormedUTF8Sequence(Begin, End);
+    End = Begin + Size;
+  }
   while (Begin != End) {
-    // ASCII case
-    if (isPrintable(*Begin) || isWhitespace(*Begin)) {
+    if (!ForCodepoint && (isPrintable(*Begin) || isWhitespace(*Begin))) {
       OutStream << *Begin;
       ++Begin;
       continue;
+    }
+    if (ForCodepoint && *Begin < 0x80) {
+      if (isPrintable(*Begin)) {
+        OutStream << "'" << *Begin << "'";
+        ++Begin;
+        continue;
+      }
     }
     if (llvm::isLegalUTF8Sequence(Begin, End)) {
       llvm::UTF32 CodepointValue;
@@ -1114,20 +1084,49 @@ void clang::EscapeStringForDiagnostic(StringRef Str,
           "the sequence is legal UTF-8 but we couldn't convert it to UTF-32");
       assert(Begin == CodepointEnd &&
              "we must be further along in the string now");
+
       if (llvm::sys::unicode::isPrintable(CodepointValue) ||
-          llvm::sys::unicode::isFormatting(CodepointValue)) {
-        OutStr.append(CodepointBegin, CodepointEnd);
-        continue;
+          (!ForCodepoint && llvm::sys::unicode::isFormatting(CodepointValue))) {
+        OutStream << (ForCodepoint ? "'" : "")
+                  << StringRef(reinterpret_cast<const char *>(CodepointBegin),
+                               std::distance(CodepointBegin, CodepointEnd))
+                  << (ForCodepoint ? "' " : "");
+        if (!ForCodepoint)
+          continue;
       }
       // Unprintable code point.
-      OutStream << "<U+" << llvm::format_hex_no_prefix(CodepointValue, 4, true)
-                << ">";
+      OutStream << (ForCodepoint ? "" : "<") << "U+"
+                << llvm::format_hex_no_prefix(CodepointValue, 4, true)
+                << (ForCodepoint ? "" : ">");
       continue;
     }
     // Invalid code unit.
-    OutStream << "<" << llvm::format_hex_no_prefix(*Begin, 2, true) << ">";
+    OutStream << "<0x" << llvm::format_hex_no_prefix(*Begin, 2, true) << ">";
     ++Begin;
   }
+}
+
+/// EscapeStringForDiagnostic - Append Str to the diagnostic buffer,
+/// escaping non-printable characters and ill-formed code unit sequences.
+void clang::EscapeStringForDiagnostic(StringRef Str,
+                                      SmallVectorImpl<char> &OutStr) {
+  ::EscapeStringForDiagnostic(Str, OutStr, /*ForCodepoint=*/false);
+}
+
+/// Displays a single Unicode codepoint in U+NNNN notation, optionally
+/// prepending the quoted codepoint itself if printable.
+SmallString<16> clang::EscapeSingleCodepointForDiagnostic(StringRef Str) {
+  SmallString<16> CP;
+  ::EscapeStringForDiagnostic(Str, CP, /*ForCodepoint=*/true);
+  return CP;
+}
+
+SmallString<16> clang::EscapeSingleCodepointForDiagnostic(llvm::UTF32 CP) {
+  std::string Str;
+  bool Converted = convertUTF32ToUTF8String(ArrayRef<llvm::UTF32>(&CP, 1), Str);
+  if (!Converted)
+    return SmallString<16>(llvm::formatv("<{0:X+}>", CP).str());
+  return EscapeSingleCodepointForDiagnostic(Str);
 }
 
 void Diagnostic::FormatDiagnostic(const char *DiagStr, const char *DiagEnd,

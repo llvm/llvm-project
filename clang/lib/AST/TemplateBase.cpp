@@ -340,13 +340,14 @@ bool TemplateArgument::isPackExpansion() const {
 }
 
 bool TemplateArgument::isConceptOrConceptTemplateParameter() const {
-  if (getKind() == TemplateArgument::Template) {
-    if (isa<ConceptDecl>(getAsTemplate().getAsTemplateDecl()))
-      return true;
-    else if (auto *TTP = dyn_cast_if_present<TemplateTemplateParmDecl>(
-                 getAsTemplate().getAsTemplateDecl()))
-      return TTP->templateParameterKind() == TNK_Concept_template;
-  }
+  if (getKind() != TemplateArgument::Template)
+    return false;
+
+  if (isa_and_nonnull<ConceptDecl>(getAsTemplate().getAsTemplateDecl()))
+    return true;
+  if (auto *TTP = llvm::dyn_cast_or_null<TemplateTemplateParmDecl>(
+          getAsTemplate().getAsTemplateDecl()))
+    return TTP->templateParameterKind() == TNK_Concept_template;
   return false;
 }
 
@@ -625,9 +626,13 @@ SourceRange TemplateArgumentLoc::getSourceRange() const {
     return getSourceExpression()->getSourceRange();
 
   case TemplateArgument::Declaration:
+    if (LocInfo.isTrivial())
+      return SourceRange(LocInfo.getTrivialLoc());
     return getSourceDeclExpression()->getSourceRange();
 
   case TemplateArgument::NullPtr:
+    if (LocInfo.isTrivial())
+      return SourceRange(LocInfo.getTrivialLoc());
     return getSourceNullPtrExpression()->getSourceRange();
 
   case TemplateArgument::Type:
@@ -649,12 +654,18 @@ SourceRange TemplateArgumentLoc::getSourceRange() const {
     return SourceRange(getTemplateNameLoc(), getTemplateEllipsisLoc());
 
   case TemplateArgument::Integral:
+    if (LocInfo.isTrivial())
+      return SourceRange(LocInfo.getTrivialLoc());
     return getSourceIntegralExpression()->getSourceRange();
 
   case TemplateArgument::StructuralValue:
+    if (LocInfo.isTrivial())
+      return SourceRange(LocInfo.getTrivialLoc());
     return getSourceStructuralValueExpression()->getSourceRange();
 
   case TemplateArgument::Pack:
+    return SourceRange(LocInfo.getTrivialLoc());
+
   case TemplateArgument::Null:
     return SourceRange();
   }
@@ -734,6 +745,15 @@ clang::TemplateArgumentLocInfo::TemplateArgumentLocInfo(
   Template->TemplateNameLoc = TemplateNameLoc;
   Template->EllipsisLoc = EllipsisLoc;
   Pointer = Template;
+}
+
+clang::TemplateArgumentLocInfo::TemplateArgumentLocInfo(
+    ASTContext &Ctx, SourceLocation TrivialLoc) {
+  if constexpr (EmbedLocInPointer)
+    Pointer = reinterpret_cast<LocOrPointer>(static_cast<uintptr_t>(
+        (TrivialLoc.getRawEncoding() + 1u) << LowBitsRequired));
+  else
+    Pointer = new (Ctx) SourceLocation(TrivialLoc);
 }
 
 const ASTTemplateArgumentListInfo *

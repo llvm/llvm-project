@@ -7,19 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/libc_errno.h"
 #include "src/dirent/closedir.h"
 #include "src/dirent/dirfd.h"
 #include "src/dirent/opendir.h"
 #include "src/dirent/readdir.h"
 
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 
 #include <dirent.h>
 
+using LlvmLibcDirentTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 using string_view = LIBC_NAMESPACE::cpp::string_view;
 
-TEST(LlvmLibcDirentTest, SimpleOpenAndRead) {
+TEST_F(LlvmLibcDirentTest, SimpleOpenAndRead) {
   ::DIR *dir = LIBC_NAMESPACE::opendir("testdata");
   ASSERT_TRUE(dir != nullptr);
   // The file descriptors 0, 1 and 2 are reserved for standard streams.
@@ -54,18 +55,14 @@ TEST(LlvmLibcDirentTest, SimpleOpenAndRead) {
   ASSERT_EQ(LIBC_NAMESPACE::closedir(dir), 0);
 }
 
-TEST(LlvmLibcDirentTest, OpenNonExistentDir) {
-  libc_errno = 0;
+TEST_F(LlvmLibcDirentTest, OpenNonExistentDir) {
   ::DIR *dir = LIBC_NAMESPACE::opendir("___xyz123__.non_existent__");
   ASSERT_TRUE(dir == nullptr);
   ASSERT_ERRNO_EQ(ENOENT);
-  libc_errno = 0;
 }
 
-TEST(LlvmLibcDirentTest, OpenFile) {
-  libc_errno = 0;
+TEST_F(LlvmLibcDirentTest, OpenFile) {
   ::DIR *dir = LIBC_NAMESPACE::opendir("testdata/file1.txt");
   ASSERT_TRUE(dir == nullptr);
   ASSERT_ERRNO_EQ(ENOTDIR);
-  libc_errno = 0;
 }

@@ -1093,8 +1093,8 @@ _mm_max_epu32(__m128i __V1, __m128i __V2) {
 /// \param __V
 ///    A 128-bit integer vector selecting which bits to test in operand \a __M.
 /// \returns TRUE if the specified bits are all zeros; FALSE otherwise.
-static __inline__ int __DEFAULT_FN_ATTRS _mm_testz_si128(__m128i __M,
-                                                         __m128i __V) {
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_testz_si128(__m128i __M, __m128i __V) {
   return __builtin_ia32_ptestz128((__v2di)__M, (__v2di)__V);
 }
 
@@ -1110,8 +1110,8 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_testz_si128(__m128i __M,
 /// \param __V
 ///    A 128-bit integer vector selecting which bits to test in operand \a __M.
 /// \returns TRUE if the specified bits are all ones; FALSE otherwise.
-static __inline__ int __DEFAULT_FN_ATTRS _mm_testc_si128(__m128i __M,
-                                                         __m128i __V) {
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_testc_si128(__m128i __M, __m128i __V) {
   return __builtin_ia32_ptestc128((__v2di)__M, (__v2di)__V);
 }
 
@@ -1128,8 +1128,8 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_testc_si128(__m128i __M,
 ///    A 128-bit integer vector selecting which bits to test in operand \a __M.
 /// \returns TRUE if the specified bits are neither all zeros nor all ones;
 ///    FALSE otherwise.
-static __inline__ int __DEFAULT_FN_ATTRS _mm_testnzc_si128(__m128i __M,
-                                                           __m128i __V) {
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_testnzc_si128(__m128i __M, __m128i __V) {
   return __builtin_ia32_ptestnzc128((__v2di)__M, (__v2di)__V);
 }
 
@@ -1466,8 +1466,8 @@ _mm_cvtepu32_epi64(__m128i __V) {
 ///    A 128-bit vector of [4 x i32]. The converted [4 x i16] values are
 ///    written to the higher 64 bits of the result.
 /// \returns A 128-bit vector of [8 x i16] containing the converted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_packus_epi32(__m128i __V1,
-                                                              __m128i __V2) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_packus_epi32(__m128i __V1, __m128i __V2) {
   return (__m128i)__builtin_ia32_packusdw128((__v4si)__V1, (__v4si)__V2);
 }
 
@@ -1524,7 +1524,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_packus_epi32(__m128i __V1,
 /// \returns A 128-bit value where bits [15:0] contain the minimum value found
 ///    in parameter \a __V, bits [18:16] contain the index of the minimum value
 ///    and the remaining bits are set to 0.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_minpos_epu16(__m128i __V) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_minpos_epu16(__m128i __V) {
   return (__m128i)__builtin_ia32_phminposuw128((__v8hi)__V);
 }
 
@@ -1534,8 +1535,15 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_minpos_epu16(__m128i __V) {
    so we'll do the same.  */
 
 #undef __DEFAULT_FN_ATTRS
+#undef __DEFAULT_FN_ATTRS_CONSTEXPR
 #define __DEFAULT_FN_ATTRS                                                     \
   __attribute__((__always_inline__, __nodebug__, __target__("sse4.2")))
+
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr
+#else
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS
+#endif
 
 /* These specify the type of data that we're comparing.  */
 #define _SIDD_UBYTE_OPS 0x00

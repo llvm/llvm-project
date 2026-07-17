@@ -30,7 +30,7 @@ program openmp_parse_if
   !$omp target data map(tofrom: i) if(target data: cond)
   !$omp end target data
 
-  ! CHECK: OmpLoopDirective -> llvm::omp::Directive = target teams distribute parallel do simd
+  ! CHECK: OmpDirectiveName -> llvm::omp::Directive = target teams distribute parallel do simd
   ! CHECK: OmpClause -> If -> OmpIfClause
   ! CHECK-NEXT: OmpDirectiveName -> llvm::omp::Directive = target
   ! CHECK: OmpClause -> If -> OmpIfClause
@@ -51,7 +51,7 @@ program openmp_parse_if
   !$omp task if(task: cond)
   !$omp end task
 
-  ! CHECK: OmpLoopDirective -> llvm::omp::Directive = taskloop
+  ! CHECK: OmpDirectiveName -> llvm::omp::Directive = taskloop
   ! CHECK-NEXT: OmpClause -> If -> OmpIfClause
   ! CHECK-NEXT: OmpDirectiveName -> llvm::omp::Directive = taskloop
   !$omp taskloop if(taskloop: cond)

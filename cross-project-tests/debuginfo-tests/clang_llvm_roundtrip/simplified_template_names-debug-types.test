@@ -1,0 +1,9 @@
+// debug-types are not available for MachO.
+//
+// UNSUPPORTED: system-darwin
+//
+// RUN: %clang %target_itanium_abi_host_triple %p/Inputs/simplified_template_names.cpp -c -o - -gdwarf-4 -Xclang -gsimple-template-names=mangled -Xclang -debug-forward-template-params -std=c++20 -fdebug-types-section \
+// RUN:   | llvm-dwarfdump --verify -
+//
+// RUN: %clang %target_itanium_abi_host_triple %p/Inputs/simplified_template_names.cpp -c -o - -gdwarf-5 -Xclang -gsimple-template-names=mangled -Xclang -debug-forward-template-params -std=c++20 -fdebug-types-section \
+// RUN:   | llvm-dwarfdump --verify -

@@ -94,7 +94,9 @@ static void specializeForLoopForUnrolling(ForOp op) {
 
   OpBuilder b(op);
   IRMapping map;
-  Value constant = arith::ConstantIndexOp::create(b, op.getLoc(), minConstant);
+  Value constant = arith::ConstantOp::create(
+      b, op.getLoc(),
+      IntegerAttr::get(op.getUpperBound().getType(), minConstant));
   Value cond = arith::CmpIOp::create(b, op.getLoc(), arith::CmpIPredicate::eq,
                                      bound, constant);
   map.map(bound, constant);
@@ -115,6 +117,9 @@ static void specializeForLoopForUnrolling(ForOp op) {
 /// The newly generated scf.if operation is returned via `ifOp`. The boundary
 /// at which the loop is split (new upper bound) is returned via `splitBound`.
 /// The return value indicates whether the loop was rewritten or not.
+///
+/// Note: Loops with a step size of 0 cannot be peeled. Applying this function
+/// to such a loop may result in IR with undefined behavior.
 static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
                                  ForOp &partialIteration, Value &splitBound) {
   RewriterBase::InsertionGuard guard(b);
@@ -150,6 +155,9 @@ static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
                                              ValueRange{forOp.getLowerBound(),
                                                         forOp.getUpperBound(),
                                                         forOp.getStep()});
+  if (splitBound.getType() != forOp.getLowerBound().getType())
+    splitBound = b.createOrFold<arith::IndexCastOp>(
+        loc, forOp.getLowerBound().getType(), splitBound);
 
   // Create ForOp for partial iteration.
   b.setInsertionPointAfter(forOp);
@@ -230,12 +238,15 @@ LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
   auto loc = forOp.getLoc();
   Value splitBound = b.createOrFold<AffineApplyOp>(
       loc, ubMap, ValueRange{forOp.getLowerBound(), forOp.getStep()});
+  if (splitBound.getType() != forOp.getUpperBound().getType())
+    splitBound = b.createOrFold<arith::IndexCastOp>(
+        loc, forOp.getUpperBound().getType(), splitBound);
 
   // Peel the first iteration.
-  IRMapping map;
-  map.map(forOp.getUpperBound(), splitBound);
-  firstIteration = cast<ForOp>(b.clone(*forOp.getOperation(), map));
-
+  firstIteration = cast<ForOp>(b.clone(*forOp.getOperation()));
+  b.modifyOpInPlace(firstIteration, [&]() {
+    firstIteration.getUpperBoundMutable().assign(splitBound);
+  });
   // Update main loop with new lower bound.
   b.modifyOpInPlace(forOp, [&]() {
     forOp.getInitArgsMutable().assign(firstIteration->getResults());
@@ -329,6 +340,8 @@ struct ForLoopSpecialization
 };
 
 struct ForLoopPeeling : public impl::SCFForLoopPeelingBase<ForLoopPeeling> {
+  using impl::SCFForLoopPeelingBase<ForLoopPeeling>::SCFForLoopPeelingBase;
+
   void runOnOperation() override {
     auto *parentOp = getOperation();
     MLIRContext *ctx = parentOp->getContext();
@@ -351,8 +364,4 @@ std::unique_ptr<Pass> mlir::createParallelLoopSpecializationPass() {
 
 std::unique_ptr<Pass> mlir::createForLoopSpecializationPass() {
   return std::make_unique<ForLoopSpecialization>();
-}
-
-std::unique_ptr<Pass> mlir::createForLoopPeelingPass() {
-  return std::make_unique<ForLoopPeeling>();
 }

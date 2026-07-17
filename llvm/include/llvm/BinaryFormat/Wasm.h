@@ -81,6 +81,15 @@ enum : unsigned {
   WASM_TYPE_NORESULT = 0x40, // for blocks with no result values
 };
 
+// Memory ordering encodings for atomic instructions.
+enum : unsigned {
+  WASM_MEM_ORDER_SEQ_CST = 0x00,
+  WASM_MEM_ORDER_ACQ_REL = 0x01,
+  // RMW/CMPXCHG operations have 2 orderings but they must currently match.
+  WASM_MEM_ORDER_RMW_ACQ_REL = 0x11,
+};
+const unsigned WASM_MEMARG_HAS_MEM_ORDER = 0x20;
+
 // Kinds of externals (for imports and exports).
 enum : unsigned {
   WASM_EXTERNAL_FUNCTION = 0x0,
@@ -510,8 +519,8 @@ struct WasmSignature {
   // but does not actually model them. Instead a placeholder signature is
   // created in the Object's signature list.
   enum { Function, Tag, Placeholder } Kind = Function;
-  // Support empty and tombstone instances, needed by DenseMap.
-  enum { Plain, Empty, Tombstone } State = Plain;
+  // Support empty instances, needed by DenseMap.
+  enum { Plain, Empty } State = Plain;
 
   WasmSignature(SmallVector<ValType, 1> &&InReturns,
                 SmallVector<ValType, 4> &&InParams)

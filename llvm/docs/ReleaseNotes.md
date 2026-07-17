@@ -4,8 +4,7 @@ MyST (https://myst-parser.readthedocs.io/en/latest/). -->
 <!-- If you want to modify sections/contents permanently, you should modify both
 ReleaseNotes.md and ReleaseNotesTemplate.txt. -->
 
-LLVM {{env.config.release}} Release Notes
-=========================================
+# LLVM {{env.config.release}} Release Notes
 
 ```{contents}
 ```
@@ -17,8 +16,7 @@ LLVM {{env.config.release}} Release Notes
 ```
 ````
 
-Introduction
-============
+## Introduction
 
 This document contains the release notes for the LLVM Compiler Infrastructure,
 release {{env.config.release}}.  Here we describe the status of LLVM, including
@@ -36,8 +34,7 @@ LLVM web page, this document applies to the *next* release, not the current
 one.  To see the release notes for a specific release, please see the
 [releases page](https://llvm.org/releases/).
 
-Non-comprehensive list of changes in this release
-=================================================
+## Non-comprehensive list of changes in this release
 
 <!-- For small 1-3 sentence descriptions, just add an entry at the end of
 this list. If your description won't fit comfortably in one bullet
@@ -50,136 +47,96 @@ for adding a new subsection. -->
 <!-- If you would like to document a larger change, then you can add a
 subsection about it right here. You can copy the following boilerplate:
 
-Special New Feature
--------------------
+### Special New Feature
 
 Makes programs 10x faster by doing Special New Thing.
 -->
 
-Changes to the LLVM IR
-----------------------
+### Changes to the LLVM IR
 
-* The `ptrtoaddr` instruction was introduced. This instruction returns the
-  address component of a pointer type variable but unlike `ptrtoint` does not
-  capture provenance ([#125687](https://github.com/llvm/llvm-project/pull/125687)).
+### Changes to LLVM infrastructure
 
-Changes to LLVM infrastructure
-------------------------------
+### Changes to building LLVM
 
-Changes to building LLVM
-------------------------
+### Changes to TableGen
 
-Changes to TableGen
--------------------
+* `!cond` operator short-circuits at the first `true` condition.  Subsequent
+  `condition : value` pairs, along with their corresponding side effects,
+  are left unresolved.
 
-Changes to Interprocedural Optimizations
-----------------------------------------
+### Changes to Interprocedural Optimizations
 
-* Added `-enable-machine-outliner={optimistic-pgo,conservative-pgo}` to read
-  profile data to guide the machine outliner
-  ([#154437](https://github.com/llvm/llvm-project/pull/154437)).
+### Changes to Vectorizers
 
-Changes to Vectorizers
-----------------------------------------
+### Changes to the AArch64 Backend
 
-* Added initial support for copyable elements in SLP, which models copyable
-  elements as add <element>, 0, i.e. uses identity constants for missing lanes.
-* SLP vectorizer supports initial recognition of FMA/FMAD pattern
+* On AArch64 Windows targets, return address signing now uses the B-key by
+  default because Windows unwind information only supports B-key signing.
 
-Changes to the AArch64 Backend
-------------------------------
+### Changes to the AMDGPU Backend
 
-Changes to the AMDGPU Backend
------------------------------
+### Changes to the ARM Backend
 
-Changes to the ARM Backend
---------------------------
+### Changes to the AVR Backend
 
-Changes to the AVR Backend
---------------------------
+### Changes to the DirectX Backend
 
-Changes to the DirectX Backend
-------------------------------
+### Changes to the Hexagon Backend
 
-Changes to the Hexagon Backend
-------------------------------
+### Changes to the LoongArch Backend
 
-Changes to the LoongArch Backend
---------------------------------
+### Changes to the MIPS Backend
 
-Changes to the MIPS Backend
----------------------------
+### Changes to the PowerPC Backend
 
-Changes to the PowerPC Backend
-------------------------------
+### Changes to the RISC-V Backend
 
-Changes to the RISC-V Backend
------------------------------
+### Changes to the WebAssembly Backend
 
-* The loop vectorizer now performs tail folding by default on RISC-V, which
-  removes the need for a scalar epilogue loop. To restore the previous behaviour
-  use `-prefer-predicate-over-epilogue=scalar-epilogue`.
-* `llvm-objdump` now has basic support for switching between disassembling code
-  and data using mapping symbols such as `$x` and `$d`. Switching architectures
-  using `$x` with an architecture string suffix is not yet supported.
-* Ssctr and Smctr extensions are no longer experimental.
-* Add support for Zvfbfa (Additional BF16 vector compute support)
+### Changes to the Windows Target
 
-Changes to the WebAssembly Backend
-----------------------------------
+### Changes to the X86 Backend
 
-Changes to the Windows Target
------------------------------
+### Changes to the OCaml bindings
 
-Changes to the X86 Backend
---------------------------
+### Changes to the Python bindings
 
-Changes to the OCaml bindings
------------------------------
+### Changes to the C API
 
-Changes to the Python bindings
-------------------------------
+### Changes to the CodeGen infrastructure
 
-Changes to the C API
---------------------
+### Changes to the Metadata Info
 
-Changes to the CodeGen infrastructure
--------------------------------------
+### Changes to the Debug Info
 
-Changes to the Metadata Info
----------------------------------
+### Changes to the LLVM tools
 
-Changes to the Debug Info
----------------------------------
+### Changes to LLDB
 
-Changes to the LLVM tools
----------------------------------
+#### Windows
 
-* `llvm-readelf` now dumps all hex format values in lower-case mode.
-* Some code paths for supporting Python 2.7 in `llvm-lit` have been removed.
+* Python 3.11 or later is now recommended for building LLDB 23 on Windows. From LLDB 24, Python 3.11 or later will be required.
+* Messages from `OutputDebugString[A|W]` are now shown inline when using LLDB
+  from the command-line and in the output window when using lldb-dap.
+* LLDB now uses `lldb-server.exe` to launch and manage the program being debugged,
+  instead of running it within LLDB's own process. To revert to the previous behavior, set the environment variable `LLDB_USE_LLDB_SERVER=0`.
+* Support for PDB symbol servers has been added. By default, no symbol servers are used.
+  You can control this either through the [`_NT_SYMBOL_PATH`](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/symbol-path)
+  environment variable or by setting `plugin.symbol-locator.symstore.urls`
+  (see [`plugin.symbol-locator.symstore`](https://lldb.llvm.org/use/settings.html#symstore) for more info).
+* LLDB no longer depends on the Python private API on Windows. Users are now free to
+  use any Python version they want, as long as it is 3.8 or later and LLDB can find it
+  (i.e. it is on their `PATH`).
 
-Changes to LLDB
----------------------------------
+### Changes to BOLT
 
-* LLDB can now set breakpoints, show backtraces, and display variables when
-  debugging Wasm with supported runtimes (WAMR and V8).
+### Changes to Sanitizers
 
-Changes to BOLT
----------------------------------
+### Other Changes
 
-Changes to Sanitizers
----------------------
+## External Open Source Projects Using LLVM {{env.config.release}}
 
-Other Changes
--------------
-
-External Open Source Projects Using LLVM {{env.config.release}}
-===============================================================
-
-* A project...
-
-Additional Information
-======================
+## Additional Information
 
 A wide variety of additional information is available on the
 [LLVM web page](https://llvm.org/), in particular in the

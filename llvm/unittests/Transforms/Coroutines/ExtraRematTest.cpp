@@ -71,7 +71,7 @@ struct ExtraRematTest : public testing::Test {
 StringRef Text = R"(
     define ptr @f(i32 %n) presplitcoroutine {
     entry:
-      %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+      %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null)
       %size = call i32 @llvm.coro.size.i32()
       %alloc = call ptr @malloc(i32 %size)
       %hdl = call ptr @llvm.coro.begin(token %id, ptr %alloc)
@@ -97,7 +97,7 @@ StringRef Text = R"(
       call void @free(ptr %mem)
       br label %suspend
     suspend:
-      call i1 @llvm.coro.end(ptr %hdl, i1 0)
+      call void @llvm.coro.end(ptr %hdl, i1 0)
       ret ptr %hdl
     }
 
@@ -110,7 +110,7 @@ StringRef Text = R"(
     declare token @llvm.coro.id(i32, ptr, ptr, ptr)
     declare i1 @llvm.coro.alloc(token)
     declare ptr @llvm.coro.begin(token, ptr)
-    declare i1 @llvm.coro.end(ptr, i1)
+    declare void @llvm.coro.end(ptr, i1)
 
     declare i32 @should.remat(i32)
 
@@ -186,7 +186,7 @@ TEST_F(ExtraRematTest, TestCoroRematWithCallback) {
 StringRef TextCoroBeginCustomABI = R"(
     define ptr @f(i32 %n) presplitcoroutine {
     entry:
-      %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+      %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null)
       %size = call i32 @llvm.coro.size.i32()
       %alloc = call ptr @malloc(i32 %size)
       %hdl = call ptr @llvm.coro.begin.custom.abi(token %id, ptr %alloc, i32 0)
@@ -212,7 +212,7 @@ StringRef TextCoroBeginCustomABI = R"(
       call void @free(ptr %mem)
       br label %suspend
     suspend:
-      call i1 @llvm.coro.end(ptr %hdl, i1 0)
+      call void @llvm.coro.end(ptr %hdl, i1 0)
       ret ptr %hdl
     }
 
@@ -225,7 +225,7 @@ StringRef TextCoroBeginCustomABI = R"(
     declare token @llvm.coro.id(i32, ptr, ptr, ptr)
     declare i1 @llvm.coro.alloc(token)
     declare ptr @llvm.coro.begin.custom.abi(token, ptr, i32)
-    declare i1 @llvm.coro.end(ptr, i1)
+    declare void @llvm.coro.end(ptr, i1)
 
     declare i32 @should.remat(i32)
 

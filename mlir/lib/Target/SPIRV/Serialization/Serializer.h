@@ -15,6 +15,7 @@
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/Target/SPIRV/SPIRVExtInstSets.h"
 #include "mlir/Target/SPIRV/Serialization.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -104,9 +105,22 @@ private:
 
   LogicalResult processExtension();
 
+  /// Encodes `op` + `operands` into `binary`, splitting via the
+  /// SPV_INTEL_long_composites continuation opcode when the total word count
+  /// would exceed kMaxWordCount. `op` must be a splittable composite/struct
+  /// opcode (see getContinuationOpcode). The capability and extension are
+  /// emitted lazily on first split.
+  void encodeInstructionWithContinuationInto(SmallVectorImpl<uint32_t> &binary,
+                                             spirv::Opcode op,
+                                             ArrayRef<uint32_t> operands);
+
+  void addLongCompositesCapability();
+
   void processMemoryModel();
 
   LogicalResult processConstantOp(spirv::ConstantOp op);
+
+  LogicalResult processCompositeConstructOp(spirv::CompositeConstructOp op);
 
   LogicalResult processConstantCompositeReplicateOp(
       spirv::EXTConstantCompositeReplicateOp op);
@@ -122,6 +136,8 @@ private:
   LogicalResult
   processSpecConstantOperationOp(spirv::SpecConstantOperationOp op);
 
+  LogicalResult processGraphConstantARMOp(spirv::GraphConstantARMOp op);
+
   /// SPIR-V dialect supports OpUndef using spirv.UndefOp that produces a SSA
   /// value to use with other operations. The SPIR-V spec recommends that
   /// OpUndef be generated at module level. The serialization generates an
@@ -134,6 +150,15 @@ private:
   /// Processes a SPIR-V function op.
   LogicalResult processFuncOp(spirv::FuncOp op);
   LogicalResult processFuncParameter(spirv::FuncOp op);
+
+  /// Processes a SPIR-V GraphARM op.
+  LogicalResult processGraphARMOp(spirv::GraphARMOp op);
+
+  /// Processes a SPIR-V GraphEntryPointARM op.
+  LogicalResult processGraphEntryPointARMOp(spirv::GraphEntryPointARMOp op);
+
+  /// Processes a SPIR-V GraphOutputsARMOp op.
+  LogicalResult processGraphOutputsARMOp(spirv::GraphOutputsARMOp op);
 
   LogicalResult processVariableOp(spirv::VariableOp op);
 
@@ -189,6 +214,10 @@ private:
                                     spirv::Opcode &typeEnum,
                                     SmallVectorImpl<uint32_t> &operands);
 
+  LogicalResult prepareGraphType(Location loc, GraphType type,
+                                 spirv::Opcode &typeEnum,
+                                 SmallVectorImpl<uint32_t> &operands);
+
   //===--------------------------------------------------------------------===//
   // Constant
   //===--------------------------------------------------------------------===//
@@ -238,6 +267,13 @@ private:
   uint32_t prepareConstantInt(Location loc, IntegerAttr intAttr,
                               bool isSpec = false);
 
+  uint32_t getGraphConstantARMId(Attribute value) const {
+    return graphConstIDMap.lookup(value);
+  }
+
+  uint32_t prepareGraphConstantId(Location loc, Type graphConstType,
+                                  IntegerAttr intAttr);
+
   uint32_t prepareConstantFp(Location loc, FloatAttr floatAttr,
                              bool isSpec = false);
 
@@ -282,6 +318,8 @@ private:
 
   LogicalResult processBranchOp(spirv::BranchOp branchOp);
 
+  LogicalResult processSwitchOp(spirv::SwitchOp switchOp);
+
   //===--------------------------------------------------------------------===//
   // Operations
   //===--------------------------------------------------------------------===//
@@ -290,6 +328,22 @@ private:
                                            StringRef extensionSetName,
                                            uint32_t opcode,
                                            ArrayRef<uint32_t> operands);
+
+  LogicalResult encodeExtensionInstruction(Operation *op,
+                                           StringRef extensionSetName,
+                                           uint32_t opcode,
+                                           ArrayRef<uint32_t> operands,
+                                           SmallVectorImpl<uint32_t> &binary);
+
+  uint32_t encodeDebugStringInst(StringRef str);
+
+  LogicalResult encodeDebugInfoGraphInst(spirv::GraphARMOp op,
+                                         uint32_t &debugGraphID);
+
+  LogicalResult encodeDebugInfoOperationInst(uint32_t debugGraphID,
+                                             const SetVector<Operation *> &ops);
+
+  LogicalResult encodeDebugInfoTensorInst(Value tensor);
 
   uint32_t getValueID(Value val) const { return valueIDMap.lookup(val); }
 
@@ -326,10 +380,18 @@ private:
   // Utilities
   //===--------------------------------------------------------------------===//
 
+  /// Updates tosaOpsMap after ensuring that the op is inside a graph.
+  void updateTosaOpsMap(Operation *op);
+
   /// Emits an OpDecorate instruction to decorate the given `target` with the
   /// given `decoration`.
   LogicalResult emitDecoration(uint32_t target, spirv::Decoration decoration,
                                ArrayRef<uint32_t> params = {});
+
+  /// Emits an OpDecorateId instruction to decorate the given `target` with the
+  /// given `decoration` whose extra operands are SPIR-V <id>s.
+  LogicalResult emitDecorationId(uint32_t target, spirv::Decoration decoration,
+                                 ArrayRef<uint32_t> operandIds);
 
   /// Emits an OpLine instruction with the given `loc` location information into
   /// the given `binary` vector.
@@ -355,8 +417,13 @@ private:
   /// use by other debug instructions.
   uint32_t fileID = 0;
 
+  /// Map from graph debug info string payloads to their OpString <id>s.
+  llvm::StringMap<uint32_t> debugStringIDMap;
+
   /// The next available result <id>.
   uint32_t nextID = 1;
+
+  bool longCompositesEmitted = false;
 
   // The following are for different SPIR-V instruction sections. They follow
   // the logical layout of a SPIR-V module.
@@ -372,6 +439,8 @@ private:
   SmallVector<uint32_t, 0> decorations;
   SmallVector<uint32_t, 0> typesGlobalValues;
   SmallVector<uint32_t, 0> functions;
+  SmallVector<uint32_t, 0> graphs;
+  SmallVector<uint32_t, 0> graphsDebugInfo;
 
   /// Recursive struct references are serialized as OpTypePointer instructions
   /// to the recursive struct type. However, the OpTypePointer instruction
@@ -388,15 +457,22 @@ private:
       recursiveStructInfos;
 
   /// `functionHeader` contains all the instructions that must be in the first
-  /// block in the function, and `functionBody` contains the rest. After
-  /// processing FuncOp, the encoded instructions of a function are appended to
-  /// `functions`. An example of instructions in `functionHeader` in order:
+  /// block in the function or graph, and `functionBody` contains the rest.
+  /// After processing FuncOp/GraphARMOp, the encoded instructions of a function
+  /// or graph are appended to `functions` or `graphs` respectively. Examples of
+  /// instructions in `functionHeader` in order:
+  ///
+  /// For a FuncOp:
   /// OpFunction ...
   /// OpFunctionParameter ...
   /// OpFunctionParameter ...
   /// OpLabel ...
   /// OpVariable ...
   /// OpVariable ...
+  ///
+  /// For a GraphARMOp
+  /// OpGraphARM ...
+  /// OpGraphInputARM ...
   SmallVector<uint32_t, 0> functionHeader;
   SmallVector<uint32_t, 0> functionBody;
 
@@ -411,6 +487,9 @@ private:
 
   /// Map from specialization constant names to their <id>s.
   llvm::StringMap<uint32_t> specConstIDMap;
+
+  /// Map from graph constant ID value to their <id>s.
+  DenseMap<Attribute, uint32_t> graphConstIDMap;
 
   /// Map from GlobalVariableOps name to <id>s.
   llvm::StringMap<uint32_t> globalVarIDMap;
@@ -429,6 +508,10 @@ private:
 
   /// Map from extended instruction set name to <id>s.
   llvm::StringMap<uint32_t> extendedInstSetIDMap;
+
+  /// Map of graph <id> to map of locations in that graph to set of tosa ops in
+  /// that location
+  DenseMap<uint32_t, DenseMap<Location, SetVector<Operation *>>> tosaOpsMap;
 
   /// Map from values used in OpPhi instructions to their offset in the
   /// `functions` section.

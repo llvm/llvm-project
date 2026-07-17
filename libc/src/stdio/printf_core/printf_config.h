@@ -36,6 +36,11 @@
 #define LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
 #endif
 
+#if defined(LIBC_TYPES_HAS_FLOAT128) &&                                        \
+    !defined(LIBC_COPT_PRINTF_NO_CONVERT_FLOAT128)
+#define LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
+#endif
+
 // TODO(michaelrj): Provide a proper interface for these options.
 // LIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE
 // LIBC_COPT_FLOAT_TO_STR_USE_DYADIC_FLOAT
@@ -47,5 +52,25 @@
 // TODO(michaelrj): Move the other printf configuration options into this file.
 
 // LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
+
+#ifdef LIBC_COPT_PRINTF_MODULAR
+#define LIBC_PRINTF_MODULE_DECL __attribute__((weak))
+#else
+#define LIBC_PRINTF_MODULE_DECL LIBC_INLINE
+#endif
+
+// LIBC_PRINTF_MODULE: Defines/declares a printf module.
+//
+// Usage: LIBC_PRINTF_MODULE((<signature>), { <body> })
+//
+// Note that the signature is parenthesized, but the body is not.
+
+#define LIBC_PRINTF_MODULE_UNWRAP(...) __VA_ARGS__
+#if !defined(LIBC_COPT_PRINTF_MODULAR) || defined(LIBC_PRINTF_DEFINE_MODULES)
+#define LIBC_PRINTF_MODULE(SIG, ...) LIBC_PRINTF_MODULE_UNWRAP SIG __VA_ARGS__
+#else
+#define LIBC_PRINTF_MODULE(SIG, ...)                                           \
+  LIBC_PRINTF_MODULE_UNWRAP SIG LIBC_PRINTF_MODULE_DECL;
+#endif
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PRINTF_CONFIG_H

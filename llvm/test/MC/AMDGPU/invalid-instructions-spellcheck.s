@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -triple amdgcn -mcpu=tahiti < %s 2>&1 | FileCheck --strict-whitespace %s
+# RUN: not llvm-mc -triple amdgcn -mcpu=tahiti < %s -filetype=null 2>&1 | FileCheck --strict-whitespace %s
 
 # This tests the mnemonic spell checker.
 

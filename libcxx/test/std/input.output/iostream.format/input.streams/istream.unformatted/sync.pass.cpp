@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO(mordante) Investigate
-// UNSUPPORTED: apple-clang
-
 // <istream>
 
 // int sync();

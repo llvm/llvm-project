@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes -std=c++11,c++14,c++17 %s cppcoreguidelines-pro-type-member-init %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++11,c++14,c++17 %s cppcoreguidelines-pro-type-member-init %t -- -- -fno-delayed-template-parsing
 // FIXME: Fix the checker to work in C++20 mode.
 
 struct PositiveFieldBeforeConstructor {
@@ -105,7 +105,7 @@ template <class T> class NegativeTemplateConstructor {
     int FIELD;                                   \
   };                                             \
 // Ensure FIELD is not initialized since fixes inside of macros are disabled.
-// CHECK-FIXES: int FIELD;
+// CHECK-FIXES: int FIELD; {{\\}}
 
 UNINITIALIZED_FIELD_IN_MACRO_BODY(F);
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: constructor does not initialize these fields: F
@@ -429,7 +429,7 @@ template struct PositiveTemplateVirtualDestructor<int>;
     virtual ~UninitializedFieldVirtual##FIELD() {}       \
   };                                                     \
 // Ensure FIELD is not initialized since fixes inside of macros are disabled.
-// CHECK-FIXES: int FIELD;
+// CHECK-FIXES: int FIELD; {{\\}}
 
 UNINITIALIZED_FIELD_IN_MACRO_BODY_VIRTUAL(F);
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: constructor does not initialize these fields: F
@@ -610,4 +610,47 @@ namespace PR37250 {
 
   const V v;
   const S s{v};
+}
+
+namespace PR155416 {
+  struct S;
+
+  struct S {
+    int a;
+  };
+
+  struct C : S {
+    C() : S{0} {}
+  };
+
+  template<typename T>
+  struct St;
+
+  template<typename T>
+  struct St{
+    T a;
+  };
+
+  struct Ct : St<int> {
+    Ct() : St{0} {}
+  };
+}
+
+namespace gh192510 {
+  template<typename T>
+  struct C {
+
+  };
+
+  struct Base {  
+    int x;
+  };
+
+  template<typename T>
+  class X: public Base {
+    using INT = C<T>;
+
+    X(INT i) : INT(i) {} // no crash
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: constructor does not initialize these bases: Base
+  };
 }

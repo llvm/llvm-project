@@ -1,6 +1,5 @@
 ; RUN: opt < %s -passes='pseudo-probe,cgscc(inline)' -S | FileCheck %s
 
-
 ; CHECK-LABEL: @caller(
 
 ; This instruction did not have a !dbg metadata in the callee but get a !dbg after inlined.
@@ -10,25 +9,22 @@
 ; CHECK-NOT:  call void @llvm.pseudoprobe({{.*}}), !dbg ![[#]]
 ; CHECK:  call void @llvm.pseudoprobe({{.*}})
 
-
 @a = common global i32 0, align 4
 @b = common global i32 0, align 4
 
 ; Function Attrs: nounwind uwtable
-define void @callee() #0 {
+define void @callee() {
 entry:
   store i32 1, ptr @a, align 4
   ret void
 }
 
 ; Function Attrs: nounwind uwtable
-define void @caller() #0 !dbg !4 {
+define void @caller() !dbg !4 {
 entry:
   tail call void @callee(), !dbg !12
   ret void, !dbg !12
 }
-
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!8, !9}

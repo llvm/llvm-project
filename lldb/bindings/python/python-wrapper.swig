@@ -128,10 +128,13 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallTypeScript(
 
   PyObject *pfunc_impl = nullptr;
 
-  if (pyfunct_wrapper && *pyfunct_wrapper &&
-      PyFunction_Check(*pyfunct_wrapper)) {
+  if (pyfunct_wrapper && *pyfunct_wrapper
+#ifndef Py_LIMITED_API
+      && PyFunction_Check(*pyfunct_wrapper)
+#endif
+      ) {
     pfunc_impl = (PyObject *)(*pyfunct_wrapper);
-    if (pfunc_impl->ob_refcnt == 1) {
+    if (Py_REFCNT(pfunc_impl) == 1) {
       Py_XDECREF(pfunc_impl);
       pfunc_impl = NULL;
     }
@@ -312,7 +315,7 @@ PyObject *lldb_private::python::SWIGBridge::LLDBSwigPython_GetChildAtIndex(PyObj
   return result.release();
 }
 
-int lldb_private::python::SWIGBridge::LLDBSwigPython_GetIndexOfChildWithName(
+uint32_t lldb_private::python::SWIGBridge::LLDBSwigPython_GetIndexOfChildWithName(
     PyObject * implementor, const char *child_name) {
   PyErr_Cleaner py_err_cleaner(true);
 
@@ -422,6 +425,42 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBBreakpoint(PyObject *
   return sb_ptr;
 }
 
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBThread(PyObject * data) {
+  lldb::SBThread *sb_ptr = nullptr;
+
+  int valid_cast =
+      SWIG_ConvertPtr(data, (void **)&sb_ptr, SWIGTYPE_p_lldb__SBThread, 0);
+
+  if (valid_cast == -1)
+    return NULL;
+
+  return sb_ptr;
+}
+
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBFrame(PyObject * data) {
+  lldb::SBFrame *sb_ptr = nullptr;
+
+  int valid_cast =
+      SWIG_ConvertPtr(data, (void **)&sb_ptr, SWIGTYPE_p_lldb__SBFrame, 0);
+
+  if (valid_cast == -1)
+    return NULL;
+
+  return sb_ptr;
+}
+
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBBreakpointLocation(PyObject * data) {
+  lldb::SBBreakpointLocation *sb_ptr = nullptr;
+
+  int valid_cast =
+      SWIG_ConvertPtr(data, (void **)&sb_ptr, SWIGTYPE_p_lldb__SBBreakpointLocation, 0);
+
+  if (valid_cast == -1)
+    return NULL;
+
+  return sb_ptr;
+}
+
 void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBAttachInfo(PyObject * data) {
   lldb::SBAttachInfo *sb_ptr = nullptr;
 
@@ -506,6 +545,18 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBValue(PyObject * data
   return sb_ptr;
 }
 
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBValueList(PyObject * data) {
+  lldb::SBValueList *sb_ptr = NULL;
+
+  int valid_cast =
+      SWIG_ConvertPtr(data, (void **)&sb_ptr, SWIGTYPE_p_lldb__SBValueList, 0);
+
+  if (valid_cast == -1)
+    return NULL;
+
+  return sb_ptr;
+}
+
 void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(PyObject *
                                                                     data) {
   lldb::SBMemoryRegionInfo *sb_ptr = NULL;
@@ -532,6 +583,30 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBExecutionContext(PyOb
   return sb_ptr;
 }
 
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBFrameList(PyObject *data) {
+  lldb::SBFrameList *sb_ptr = NULL;
+
+  int valid_cast = SWIG_ConvertPtr(data, (void **)&sb_ptr,
+                                   SWIGTYPE_p_lldb__SBFrameList, 0);
+
+  if (valid_cast == -1)
+    return NULL;
+
+  return sb_ptr;
+}
+
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBTarget(PyObject *
+                                                                    data) {
+  lldb::SBTarget *sb_ptr = NULL;
+
+  int valid_cast = SWIG_ConvertPtr(data, (void **)&sb_ptr,
+                                   SWIGTYPE_p_lldb__SBTarget, 0);
+
+  if (valid_cast == -1)
+    return NULL;
+
+  return sb_ptr;                                                                                                                                                                                  
+}                                                                                                                                                                                                 
 bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallCommand(
     const char *python_function_name, const char *session_dictionary_name,
     lldb::DebuggerSP debugger, const char *args,
@@ -721,53 +796,6 @@ PythonObject lldb_private::python::SWIGBridge::LLDBSWIGPythonCreateOSPlugin(
     return PythonObject();
 
   return pfunc(SWIGBridge::ToSWIGWrapper(process_sp));
-}
-
-PythonObject lldb_private::python::SWIGBridge::LLDBSWIGPython_CreateFrameRecognizer(
-    const char *python_class_name, const char *session_dictionary_name) {
-  if (python_class_name == NULL || python_class_name[0] == '\0' ||
-      !session_dictionary_name)
-    return PythonObject();
-
-  PyErr_Cleaner py_err_cleaner(true);
-
-  auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(
-      session_dictionary_name);
-  auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(
-      python_class_name, dict);
-
-  if (!pfunc.IsAllocated())
-    return PythonObject();
-
-  return pfunc();
-}
-
-PyObject *lldb_private::python::SWIGBridge::LLDBSwigPython_GetRecognizedArguments(
-    PyObject *implementor, const lldb::StackFrameSP &frame_sp) {
-  static char callee_name[] = "get_recognized_arguments";
-
-  PythonObject arg = SWIGBridge::ToSWIGWrapper(frame_sp);
-
-  PythonString str(callee_name);
-  PyObject *result =
-      PyObject_CallMethodObjArgs(implementor, str.get(), arg.get(), NULL);
-  return result;
-}
-
-bool lldb_private::python::SWIGBridge::LLDBSwigPython_ShouldHide(
-    PyObject *implementor, const lldb::StackFrameSP &frame_sp) {
-  static char callee_name[] = "should_hide";
-
-  PythonObject arg = SWIGBridge::ToSWIGWrapper(frame_sp);
-
-  PythonString str(callee_name);
-
-  PyObject *result =
-      PyObject_CallMethodObjArgs(implementor, str.get(), arg.get(), NULL);
-  bool ret_val = result ? PyObject_IsTrue(result) : false;
-  Py_XDECREF(result);
-
-  return ret_val;
 }
 
 void *lldb_private::python::SWIGBridge::LLDBSWIGPython_GetDynamicSetting(

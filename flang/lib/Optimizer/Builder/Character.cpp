@@ -92,7 +92,7 @@ getCompileTimeLength(const fir::CharBoxValue &box) {
 
 /// Detect the precondition that the value `str` does not reside in memory. Such
 /// values will have a type `!fir.array<...x!fir.char<N>>` or `!fir.char<N>`.
-LLVM_ATTRIBUTE_UNUSED static bool needToMaterialize(mlir::Value str) {
+[[maybe_unused]] static bool needToMaterialize(mlir::Value str) {
   return mlir::isa<fir::SequenceType>(str.getType()) ||
          fir::isa_char(str.getType());
 }

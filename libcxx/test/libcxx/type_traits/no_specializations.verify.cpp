@@ -154,14 +154,10 @@ SPECIALIZE_UTT(is_unbounded_array);     // expected-error 2 {{cannot be speciali
 #  endif
 
 #  if TEST_STD_VER >= 23
-SPECIALIZE_UTT(is_implicit_lifetime); // expected-error 2 {{cannot be specialized}}
-SPECIALIZE_UTT(is_scoped_enum);       // expected-error 2 {{cannot be specialized}}
-#    if __has_builtin(__reference_constructs_from_temporary)
+SPECIALIZE_UTT(is_implicit_lifetime);                // expected-error 2 {{cannot be specialized}}
+SPECIALIZE_UTT(is_scoped_enum);                      // expected-error 2 {{cannot be specialized}}
 SPECIALIZE_BTT(reference_constructs_from_temporary); // expected-error 2 {{cannot be specialized}}
-#    endif
-#    if __has_builtin(__reference_converts_from_temporary)
-SPECIALIZE_BTT(reference_converts_from_temporary); // expected-error 2 {{cannot be specialized}}
-#    endif
+SPECIALIZE_BTT(reference_converts_from_temporary);   // expected-error 2 {{cannot be specialized}}
 #  endif
 
 #  if TEST_STD_VER >= 26

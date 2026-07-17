@@ -27,6 +27,7 @@ class OpenFile {
 public:
   using FileOffset = std::int64_t;
 
+  int fd() const { return fd_; }
   const char *path() const { return path_.get(); }
   std::size_t pathLength() const { return pathLength_; }
   void set_path(OwningPtr<char> &&, std::size_t bytes);

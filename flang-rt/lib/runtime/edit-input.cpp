@@ -23,7 +23,7 @@ static inline RT_API_ATTRS bool IsCharValueSeparator(
     const DataEdit &edit, char32_t ch) {
   return ch == ' ' || ch == '\t' || ch == '/' ||
       ch == edit.modes.GetSeparatorChar() ||
-      (edit.IsNamelist() && (ch == '&' || ch == '$'));
+      (edit.IsNamelist() && (ch == '&' || ch == '$' || ch == '!'));
 }
 
 // Checks that a list-directed input value has been entirely consumed and
@@ -53,11 +53,13 @@ static RT_API_ATTRS bool EditBOZInput(
     IoStatementState &io, const DataEdit &edit, void *n, std::size_t bytes) {
   // Skip leading white space & zeroes
   common::optional<int> remaining{io.CueUpInput(edit)};
-  auto start{io.GetConnectionState().positionInRecord};
+  const ConnectionState &connection{io.GetConnectionState()};
+  auto leftTabLimit{connection.leftTabLimit.value_or(0)};
+  auto start{connection.positionInRecord - leftTabLimit};
   common::optional<char32_t> next{io.NextInField(remaining, edit)};
   if (next.value_or('?') == '0') {
     do {
-      start = io.GetConnectionState().positionInRecord;
+      start = connection.positionInRecord - leftTabLimit;
       next = io.NextInField(remaining, edit);
     } while (next && *next == '0');
   }
@@ -447,7 +449,9 @@ static RT_API_ATTRS ScannedRealInput ScanRealInput(
     }
     // In list-directed input, a bad exponent is not consumed.
     auto nextBeforeExponent{next};
-    auto startExponent{io.GetConnectionState().positionInRecord};
+    const ConnectionState &connection{io.GetConnectionState()};
+    auto leftTabLimit{connection.leftTabLimit.value_or(0)};
+    auto startExponent{connection.positionInRecord - leftTabLimit};
     bool hasGoodExponent{false};
     if (next) {
       if (isHexadecimal) {
@@ -920,7 +924,7 @@ RT_API_ATTRS bool EditRealInput(
   }
 }
 
-// 13.7.3 in Fortran 2018
+// F2018 13.7.3 (B descriptor is a non-standard extension)
 RT_API_ATTRS bool EditLogicalInput(
     IoStatementState &io, const DataEdit &edit, bool &x) {
   switch (edit.descriptor) {
@@ -931,6 +935,7 @@ RT_API_ATTRS bool EditLogicalInput(
     break;
   case 'L':
   case 'G':
+  case 'B':
     break;
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
@@ -940,32 +945,52 @@ RT_API_ATTRS bool EditLogicalInput(
   }
   common::optional<int> remaining{io.CueUpInput(edit)};
   common::optional<char32_t> next{io.NextInField(remaining, edit)};
-  if (next && *next == '.') { // skip optional period
+  if (next && *next == '.' && edit.descriptor != 'B') { // skip optional period
     next = io.NextInField(remaining, edit);
   }
   if (!next) {
     io.GetIoErrorHandler().SignalError("Empty LOGICAL input field");
     return false;
   }
-  switch (*next) {
-  case 'T':
-  case 't':
-    x = true;
-    break;
-  case 'F':
-  case 'f':
-    x = false;
-    break;
-  default:
-    io.GetIoErrorHandler().SignalError(
-        "Bad character '%lc' in LOGICAL input field", *next);
-    return false;
+  if (edit.descriptor == 'B') {
+    switch (*next) {
+    case '1':
+      x = true;
+      break;
+    case '0':
+      x = false;
+      break;
+    default:
+      io.GetIoErrorHandler().SignalError(
+          "Bad character '%lc' in BINARY input field", *next);
+      return false;
+    }
+  } else {
+    switch (*next) {
+    case 'T':
+    case 't':
+      x = true;
+      break;
+    case 'F':
+    case 'f':
+      x = false;
+      break;
+    default:
+      io.GetIoErrorHandler().SignalError(
+          "Bad character '%lc' in LOGICAL input field", *next);
+      return false;
+    }
   }
   if (remaining || edit.descriptor == DataEdit::ListDirected) {
     // Ignore the rest of the input field; stop after separator when
     // not list-directed.
     char32_t comma{edit.modes.GetSeparatorChar()};
     while (next && *next != comma) {
+      if (*next == '!') {
+        if (!io.AdvanceRecord()) { // skip namelist comment
+          return false;
+        }
+      }
       next = io.NextInField(remaining, edit);
     }
   }
@@ -1046,6 +1071,12 @@ RT_API_ATTRS bool EditCharacterInput(IoStatementState &io, const DataEdit &edit,
   case DataEdit::ListDirected:
     return EditListDirectedCharacterInput(io, x, lengthChars, edit);
   case 'A':
+    if (edit.variation == 'T') {
+      io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
+          "'AT' edit descriptor may not be used for input");
+      return false;
+    }
+    break;
   case 'G':
     break;
   case 'B':

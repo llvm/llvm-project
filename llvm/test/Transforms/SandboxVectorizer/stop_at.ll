@@ -10,37 +10,37 @@ define void @widen(ptr %ptrA, ptr %ptrB) {
 ; STOPAT0-NEXT:    [[PTRA1:%.*]] = getelementptr float, ptr [[PTRA]], i32 1
 ; STOPAT0-NEXT:    [[LDA0:%.*]] = load float, ptr [[PTRA0]], align 4
 ; STOPAT0-NEXT:    [[LDA1:%.*]] = load float, ptr [[PTRA1]], align 4
-; STOPAT0-NEXT:    store float [[LDA0]], ptr [[PTRA0]], align 4
-; STOPAT0-NEXT:    store float [[LDA1]], ptr [[PTRA1]], align 4
+; STOPAT0-NEXT:    store float [[LDA0]], ptr [[PTRA0]], align 4, !sandboxvec [[META0:![0-9]+]]
+; STOPAT0-NEXT:    store float [[LDA1]], ptr [[PTRA1]], align 4, !sandboxvec [[META0]]
 ; STOPAT0-NEXT:    [[PTRB0:%.*]] = getelementptr float, ptr [[PTRB]], i32 0
 ; STOPAT0-NEXT:    [[PTRB1:%.*]] = getelementptr float, ptr [[PTRB]], i32 1
 ; STOPAT0-NEXT:    [[LDB0:%.*]] = load float, ptr [[PTRB0]], align 4
 ; STOPAT0-NEXT:    [[LDB1:%.*]] = load float, ptr [[PTRB1]], align 4
-; STOPAT0-NEXT:    store float [[LDB0]], ptr [[PTRB0]], align 4
-; STOPAT0-NEXT:    store float [[LDB1]], ptr [[PTRB1]], align 4
+; STOPAT0-NEXT:    store float [[LDB0]], ptr [[PTRB0]], align 4, !sandboxvec [[META1:![0-9]+]]
+; STOPAT0-NEXT:    store float [[LDB1]], ptr [[PTRB1]], align 4, !sandboxvec [[META1]]
 ; STOPAT0-NEXT:    ret void
 ;
 ; STOPAT1-LABEL: define void @widen(
 ; STOPAT1-SAME: ptr [[PTRA:%.*]], ptr [[PTRB:%.*]]) {
 ; STOPAT1-NEXT:    [[PTRA0:%.*]] = getelementptr float, ptr [[PTRA]], i32 0
-; STOPAT1-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTRA0]], align 4
-; STOPAT1-NEXT:    store <2 x float> [[VECL]], ptr [[PTRA0]], align 4
+; STOPAT1-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTRA0]], align 4, !sandboxvec [[META0:![0-9]+]]
+; STOPAT1-NEXT:    store <2 x float> [[VECL]], ptr [[PTRA0]], align 4, !sandboxvec [[META0]]
 ; STOPAT1-NEXT:    [[PTRB0:%.*]] = getelementptr float, ptr [[PTRB]], i32 0
 ; STOPAT1-NEXT:    [[PTRB1:%.*]] = getelementptr float, ptr [[PTRB]], i32 1
 ; STOPAT1-NEXT:    [[LDB0:%.*]] = load float, ptr [[PTRB0]], align 4
 ; STOPAT1-NEXT:    [[LDB1:%.*]] = load float, ptr [[PTRB1]], align 4
-; STOPAT1-NEXT:    store float [[LDB0]], ptr [[PTRB0]], align 4
-; STOPAT1-NEXT:    store float [[LDB1]], ptr [[PTRB1]], align 4
+; STOPAT1-NEXT:    store float [[LDB0]], ptr [[PTRB0]], align 4, !sandboxvec [[META1:![0-9]+]]
+; STOPAT1-NEXT:    store float [[LDB1]], ptr [[PTRB1]], align 4, !sandboxvec [[META1]]
 ; STOPAT1-NEXT:    ret void
 ;
 ; STOPAT2-LABEL: define void @widen(
 ; STOPAT2-SAME: ptr [[PTRA:%.*]], ptr [[PTRB:%.*]]) {
 ; STOPAT2-NEXT:    [[PTRA0:%.*]] = getelementptr float, ptr [[PTRA]], i32 0
-; STOPAT2-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTRA0]], align 4
-; STOPAT2-NEXT:    store <2 x float> [[VECL]], ptr [[PTRA0]], align 4
+; STOPAT2-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTRA0]], align 4, !sandboxvec [[META0:![0-9]+]]
+; STOPAT2-NEXT:    store <2 x float> [[VECL]], ptr [[PTRA0]], align 4, !sandboxvec [[META0]]
 ; STOPAT2-NEXT:    [[PTRB0:%.*]] = getelementptr float, ptr [[PTRB]], i32 0
-; STOPAT2-NEXT:    [[VECL1:%.*]] = load <2 x float>, ptr [[PTRB0]], align 4
-; STOPAT2-NEXT:    store <2 x float> [[VECL1]], ptr [[PTRB0]], align 4
+; STOPAT2-NEXT:    [[VECL1:%.*]] = load <2 x float>, ptr [[PTRB0]], align 4, !sandboxvec [[META1:![0-9]+]]
+; STOPAT2-NEXT:    store <2 x float> [[VECL1]], ptr [[PTRB0]], align 4, !sandboxvec [[META1]]
 ; STOPAT2-NEXT:    ret void
 ;
   %ptrA0 = getelementptr float, ptr %ptrA, i32 0
@@ -59,3 +59,13 @@ define void @widen(ptr %ptrA, ptr %ptrB) {
 
   ret void
 }
+;.
+; STOPAT0: [[META0]] = distinct !{!"sandboxregion"}
+; STOPAT0: [[META1]] = distinct !{!"sandboxregion"}
+;.
+; STOPAT1: [[META0]] = distinct !{!"sandboxregion"}
+; STOPAT1: [[META1]] = distinct !{!"sandboxregion"}
+;.
+; STOPAT2: [[META0]] = distinct !{!"sandboxregion"}
+; STOPAT2: [[META1]] = distinct !{!"sandboxregion"}
+;.

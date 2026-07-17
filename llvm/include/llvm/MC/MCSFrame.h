@@ -16,16 +16,31 @@
 #ifndef LLVM_MC_MCSFRAME_H
 #define LLVM_MC_MCSFRAME_H
 
+#include "llvm/ADT/SmallVector.h"
+#include <cstdint>
+
 namespace llvm {
 
+class MCContext;
 class MCObjectStreamer;
+class MCFragment;
 
 class MCSFrameEmitter {
 public:
   // Emit the sframe section.
   //
   // \param Streamer - Emit into this stream.
-  static void emit(MCObjectStreamer &Streamer);
+  LLVM_ABI static void emit(MCObjectStreamer &Streamer);
+
+  // Encode the FRE's function offset.
+  //
+  // \param C - Context.
+  // \param Offset - Offset to encode.
+  // \param Out - Destination of the encoding.
+  // \param FDEFrag - Frag that specifies the encoding format.
+  LLVM_ABI static void encodeFuncOffset(MCContext &C, uint64_t Offset,
+                                        SmallVectorImpl<char> &Out,
+                                        MCFragment *FDEFrag);
 };
 
 } // end namespace llvm
