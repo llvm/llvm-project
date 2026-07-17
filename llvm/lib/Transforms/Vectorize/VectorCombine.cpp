@@ -1986,7 +1986,7 @@ bool VectorCombine::foldInsertElementsToStores(Instruction &I) {
   auto *Load = dyn_cast<LoadInst>(Base);
   if (!Load)
     return false;
-  auto VecTy = cast<VectorType>(SI->getValueOperand()->getType());
+  auto *VecTy = cast<VectorType>(SI->getValueOperand()->getType());
 
   // Step 3: Avoid replacing a complete overwrite with scalar stores when every
   // lane receives the same value; keeping the vector operation is preferable.
