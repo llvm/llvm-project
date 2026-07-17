@@ -4427,21 +4427,24 @@ void Verifier::visitShuffleVectorInst(ShuffleVectorInst &SV) {
   visitInstruction(SV);
 }
 
-void Verifier::visitBitInsertInst(BitInsertInst &IE) {
-  Check(BitInsertInst::isValidOperands(IE.getOperand(0), IE.getOperand(1),
-                                       IE.getOperand(2)),
-        "Invalid bitinsert operands!", &IE);
-  visitInstruction(IE);
+void Verifier::visitBitInsertInst(BitInsertInst &BII) {
+  Check(BitInsertInst::isValidOperands(BII.getOperand(0), BII.getOperand(1),
+                                       BII.getOperand(2)),
+        "Invalid bitinsert operands!", &BII);
+  Check(DL.getTypeSizeInBits(BII.getOperand(0)->getType()) <=
+            DL.getTypeSizeInBits(BII.getOperand(1)->getType()),
+        "bitinsert val type cannot be wider than base type!", &BII);
+  visitInstruction(BII);
 }
 
-void Verifier::visitBitExtractInst(BitExtractInst &IE) {
-  Check(BitExtractInst::isValidOperands(IE.getType(), IE.getOperand(0),
-                                        IE.getOperand(1)),
-        "Invalid bitextract operands!", &IE);
-  Check(DL.getTypeSizeInBits(IE.getType()) <=
-            DL.getTypeSizeInBits(IE.getOperand(0)->getType()),
-        "bitextract result type cannot be wider than source type!", &IE);
-  visitInstruction(IE);
+void Verifier::visitBitExtractInst(BitExtractInst &BEI) {
+  Check(BitExtractInst::isValidOperands(BEI.getType(), BEI.getOperand(0),
+                                        BEI.getOperand(1)),
+        "Invalid bitextract operands!", &BEI);
+  Check(DL.getTypeSizeInBits(BEI.getType()) <=
+            DL.getTypeSizeInBits(BEI.getOperand(0)->getType()),
+        "bitextract result type cannot be wider than source type!", &BEI);
+  visitInstruction(BEI);
 }
 
 void Verifier::visitGetElementPtrInst(GetElementPtrInst &GEP) {

@@ -4244,11 +4244,11 @@ void SelectionDAGBuilder::visitBitExtract(const User &I) {
   // Convert offset to SrcVT
   SDValue LegalOffset = DAG.getZExtOrTrunc(Offset, dl, SrcVT);
 
-  // Legalize rotate amount to the target's shift amount type
+  // Legalize shift amount to the target's shift amount type
   EVT ShiftAmtTy = TLI.getShiftAmountTy(SrcVT, DAG.getDataLayout());
   SDValue LegalShiftAmount = DAG.getZExtOrTrunc(LegalOffset, dl, ShiftAmtTy);
 
-  // Shift left by (Offset + ResultWidth) - brings target field to bit 0
+  // Shift right by (Offset + ResultWidth) - brings target field to bit 0
   SDValue Shifted = DAG.getNode(ISD::SRL, dl, SrcVT, Src, LegalShiftAmount);
 
   setValue(&I, DAG.getZExtOrTrunc(Shifted, dl, ResultVT));

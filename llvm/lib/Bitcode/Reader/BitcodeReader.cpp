@@ -5667,6 +5667,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         return error("Record is empty for bitextract");
       unsigned TypeID = Record[OpNum++];
       Type *ResTy = getTypeByID(TypeID);
+      if(!ResTy)
+        return error("Invalid bitextract result type");
       Value *Src, *Offset;
       unsigned SrcTypeID, OffsetTypeID;
       if (getValueTypePair(Record, OpNum, NextValueNo, Src, SrcTypeID, CurBB) ||
