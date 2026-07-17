@@ -22,16 +22,16 @@ entry:
 
 ;; Check that the numeric type id (md5 hash) for the below type ids are emitted
 ;; to the callgraph section.
-!0 = !{!"_ZTSFvE.generalized"}
+!0 = !{!"_ZTSFvE"}
 !1 = !{!0}
-!2 = !{!"_ZTSFicE.generalized"}
+!2 = !{!"_ZTSFicE"}
 !3 = !{!2}
 !4 = !{!5}
-!5 = !{!"_ZTSFPvS_E.generalized"}
+!5 = !{!"_ZTSFPvS_"}
 
 ;; Make sure following type IDs are in call graph section
 ;; 0x5eecb3e2444f731f, 0x814b8e305486bc59, 0xf897fd777ade6814
 ; CHECK: Hex dump of section '.llvm.callgraph':
-; CHECK-NEXT: 0x00000000 00050000 00000000 00000000 00000324
-; CHECK-NEXT: 0x00000010 44f731f5 eecb3e54 86bc5981 4b8e307a
-; CHECK-NEXT: 0x00000020 de6814f8 97fd77
+; CHECK-NEXT: 0x00000000 00050000 00000000 00000000 000003e4
+; CHECK-NEXT: 0x00000010 2fa3e616 b06f5bc6 50144734 74f90127
+; CHECK-NEXT: 0x00000020 e7899bea af4387

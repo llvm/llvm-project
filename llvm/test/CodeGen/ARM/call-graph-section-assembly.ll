@@ -29,11 +29,11 @@ entry:
 }
 
 !0 = !{!1}
-!1 = !{!"_ZTSFvE.generalized"}
+!1 = !{!"_ZTSFvE"}
 !2 = !{!3}
-!3 = !{!"_ZTSFicE.generalized"}
+!3 = !{!"_ZTSFicE"}
 !4 = !{!5}
-!5 = !{!"_ZTSFPvS_E.generalized"}
+!5 = !{!"_ZTSFPvS_"}
 
 ; CHECK: .section .llvm.callgraph,"o",%llvm_call_graph,.text
 ;; Version
@@ -54,9 +54,9 @@ entry:
 ;; Number of unique indirect target type IDs.
 ; CHECK-NEXT: .byte   3
 ;; Indirect type IDs.
-; CHECK-NEXT: .long 838288420
-; CHECK-NEXT: .long 1053552373
-; CHECK-NEXT: .long 1505527380
-; CHECK-NEXT: .long 814631809
-; CHECK-NEXT: .long 342417018
-; CHECK-NEXT: .long 2013108216
+; CHECK-NEXT: .long 3869454308
+; CHECK-NEXT: .long 1534046230
+; CHECK-NEXT: .long 1192513734
+; CHECK-NEXT: .long 33125428
+; CHECK-NEXT: .long 2609506087
+; CHECK-NEXT: .long 2269360106
