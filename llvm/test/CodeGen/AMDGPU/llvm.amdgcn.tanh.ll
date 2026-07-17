@@ -8,8 +8,8 @@
 ; xUN: llc -global-isel=1 -mtriple=amdgpu13.10 -mattr=+real-true16 %s -o - | FileCheck -check-prefixes=GFX13,GFX13-GISEL-REAL16 %s
 ; xUN: llc -global-isel=1 -mtriple=amdgpu13.10 -mattr=-real-true16 %s -o - | FileCheck -check-prefixes=GFX13,GFX13-GISEL-FAKE16 %s
 
-; RUN: not llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
-; RUN: not llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -global-isel=0 -mtriple=amdgpu9.50 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -global-isel=1 -mtriple=amdgpu9.50 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
 
 ; ERR: error: <unknown>:0:0: in function @tanh_f32 float (float): llvm.amdgcn.tanh requires target feature 'tanh-insts'
 
