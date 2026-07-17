@@ -44,7 +44,7 @@ OptionalAmount clang::analyze_format_string::ParseAmount(
   bool hasDigits = false;
 
   for (; I != E; ++I) {
-    char c = FromSystemEncodingConverter.convert(*I);
+    char c = FromSystemEncodingConverter.convertBasicChar(*I);
     if (c >= '0' && c <= '9') {
       hasDigits = true;
       accumulator = (accumulator * 10) + (c - '0');
@@ -79,7 +79,7 @@ static bool ParseWidthModifier(const char *&I, const char *E,
 OptionalAmount clang::analyze_format_string::ParseNonPositionAmount(
     const char *&Beg, const char *E, unsigned &argIndex,
     const llvm::TextEncodingConverter &FromSystemEncodingConverter) {
-  if (FromSystemEncodingConverter.convert(*Beg) == '*') {
+  if (FromSystemEncodingConverter.convertBasicChar(*Beg) == '*') {
     ++Beg;
     return OptionalAmount(OptionalAmount::Arg, argIndex++, Beg, 0, false);
   }
@@ -91,7 +91,7 @@ OptionalAmount clang::analyze_format_string::ParsePositionAmount(
     FormatStringHandler &H, const char *Start, const char *&Beg, const char *E,
     PositionContext p,
     const llvm::TextEncodingConverter &FromSystemEncodingConverter) {
-  if (FromSystemEncodingConverter.convert(*Beg) == '*') {
+  if (FromSystemEncodingConverter.convertBasicChar(*Beg) == '*') {
     const char *I = Beg + 1;
     const OptionalAmount &Amt = ParseAmount(I, E, FromSystemEncodingConverter);
 
@@ -108,7 +108,7 @@ OptionalAmount clang::analyze_format_string::ParsePositionAmount(
 
     assert(Amt.getHowSpecified() == OptionalAmount::Constant);
 
-    if (FromSystemEncodingConverter.convert(*I) == '$') {
+    if (FromSystemEncodingConverter.convertBasicChar(*I) == '$') {
       // Handle positional arguments
 
       // Special case: '*0$', since this is an easy mistake.
@@ -166,7 +166,7 @@ bool clang::analyze_format_string::ParseArgPosition(
   }
 
   if (Amt.getHowSpecified() == OptionalAmount::Constant &&
-      FromSystemEncodingConverter.convert(*(I++)) == '$') {
+      FromSystemEncodingConverter.convertBasicChar(*(I++)) == '$') {
     // Warn that positional arguments are non-standard.
     H.HandlePosition(Start, I - Start);
 
@@ -195,7 +195,7 @@ bool clang::analyze_format_string::ParseVectorModifier(
     return false;
 
   const char *Start = I;
-  if (FromSystemEncodingConverter.convert(*I) == 'v') {
+  if (FromSystemEncodingConverter.convertBasicChar(*I) == 'v') {
     ++I;
 
     if (I == E) {
@@ -221,15 +221,16 @@ bool clang::analyze_format_string::ParseLengthModifier(
     bool IsScanf) {
   LengthModifier::Kind lmKind = LengthModifier::None;
   const char *lmPosition = I;
-  switch (FromSystemEncodingConverter.convert(*I)) {
+  switch (FromSystemEncodingConverter.convertBasicChar(*I)) {
   default:
     return false;
   case 'h':
     ++I;
-    if (I != E && FromSystemEncodingConverter.convert(*I) == 'h') {
+    if (I != E && FromSystemEncodingConverter.convertBasicChar(*I) == 'h') {
       ++I;
       lmKind = LengthModifier::AsChar;
-    } else if (I != E && FromSystemEncodingConverter.convert(*I) == 'l' &&
+    } else if (I != E &&
+               FromSystemEncodingConverter.convertBasicChar(*I) == 'l' &&
                LO.OpenCL) {
       ++I;
       lmKind = LengthModifier::AsShortLong;
@@ -239,7 +240,7 @@ bool clang::analyze_format_string::ParseLengthModifier(
     break;
   case 'l':
     ++I;
-    if (I != E && FromSystemEncodingConverter.convert(*I) == 'l') {
+    if (I != E && FromSystemEncodingConverter.convertBasicChar(*I) == 'l') {
       ++I;
       lmKind = LengthModifier::AsLongLong;
     } else {
@@ -272,9 +273,9 @@ bool clang::analyze_format_string::ParseLengthModifier(
       // be parsed as the GNU extension 'a' length modifier. If not, this
       // will be parsed as a conversion specifier.
       ++I;
-      if (I != E && (FromSystemEncodingConverter.convert(*I) == 's' ||
-                     FromSystemEncodingConverter.convert(*I) == 'S' ||
-                     FromSystemEncodingConverter.convert(*I) == '[')) {
+      if (I != E && (FromSystemEncodingConverter.convertBasicChar(*I) == 's' ||
+                     FromSystemEncodingConverter.convertBasicChar(*I) == 'S' ||
+                     FromSystemEncodingConverter.convertBasicChar(*I) == '[')) {
         lmKind = LengthModifier::AsAllocate;
         break;
       }
@@ -292,8 +293,8 @@ bool clang::analyze_format_string::ParseLengthModifier(
   // scanf:  AsInt64
   case 'I':
     if (I + 1 != E && I + 2 != E) {
-      if (FromSystemEncodingConverter.convert(I[1]) == '6' &&
-          FromSystemEncodingConverter.convert(I[2]) == '4') {
+      if (FromSystemEncodingConverter.convertBasicChar(I[1]) == '6' &&
+          FromSystemEncodingConverter.convertBasicChar(I[2]) == '4') {
         I += 3;
         lmKind = LengthModifier::AsInt64;
         break;
@@ -301,8 +302,8 @@ bool clang::analyze_format_string::ParseLengthModifier(
       if (IsScanf)
         return false;
 
-      if (FromSystemEncodingConverter.convert(I[1]) == '3' &&
-          FromSystemEncodingConverter.convert(I[2]) == '2') {
+      if (FromSystemEncodingConverter.convertBasicChar(I[1]) == '3' &&
+          FromSystemEncodingConverter.convertBasicChar(I[2]) == '2') {
         I += 3;
         lmKind = LengthModifier::AsInt32;
         break;

@@ -137,7 +137,9 @@ public:
     return EC;
   }
 
-  char convert(char SingleChar) const {
+  // This method is used in format string handling and is only intended
+  // to support basic charsets, not multibyte characters.
+  char convertBasicChar(char SingleChar) const {
     SmallString<1> Result;
     auto EC = Converter->convert(StringRef(&SingleChar, 1), Result);
     if (!EC)
