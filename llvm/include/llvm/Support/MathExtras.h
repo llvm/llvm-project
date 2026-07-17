@@ -713,11 +713,11 @@ AddOverflow(T X, T Y) {
 
   // Adding two positive numbers should result in a positive number.
   if (X > 0 && Y > 0)
-    return std::make_pair(Result, Result <= 0);
+    return {Result, Result <= 0};
   // Adding two negatives should result in a negative number.
   if (X < 0 && Y < 0)
-    return std::make_pair(Result, Result >= 0);
-  return std::make_pair(Result, false);
+    return {Result, Result >= 0};
+  return {Result, false};
 }
 
 /// Add two signed integers, computing the two's complement truncated result,
@@ -750,11 +750,11 @@ SubOverflow(T X, T Y) {
 
   // Subtracting a positive number from a negative results in a negative number.
   if (X <= 0 && Y > 0)
-    return std::make_pair(Result, Result >= 0);
+    return {Result, Result >= 0};
   // Subtracting a negative number from a positive results in a positive number.
   if (X >= 0 && Y < 0)
-    return std::make_pair(Result, Result <= 0);
-  return std::make_pair(Result, false);
+    return {Result, Result <= 0};
+  return {Result, false};
 }
 
 /// Subtract two signed integers, computing the two's complement truncated
@@ -788,7 +788,7 @@ MulOverflow(T X, T Y) {
 
   // If any of the args was 0, result is 0 and no overflow occurs.
   if (UX == 0 || UY == 0)
-    return std::make_pair(Result, false);
+    return {Result, false};
 
   // UX and UY are in [1, 2^n], where n is the number of digits.
   // Check how the max allowed absolute value (2^n for negative, 2^(n-1) for
@@ -798,7 +798,7 @@ MulOverflow(T X, T Y) {
           ? UX > (static_cast<U>(std::numeric_limits<T>::max()) + U(1)) / UY
           : UX > (static_cast<U>(std::numeric_limits<T>::max())) / UY;
 
-  return std::make_pair(Result, Overflow);
+  return {Result, Overflow};
 }
 
 /// Multiply two signed integers, computing the two's complement truncated
