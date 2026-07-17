@@ -1705,6 +1705,13 @@ def fprofiles_test_profiles : Flag<["-"], "fprofiles-test-profiles">,
   Group<f_Group>, Visibility<[CC1Option]>,
   HelpText<"Enable the C++ profiles framework's built-in test:: profiles (test suite only)">,
   MarshallingInfoFlag<LangOpts<"ProfilesTestProfiles">>;
+defm profiles_exempt_system_headers : BoolFOption<"profiles-exempt-system-headers",
+  LangOpts<"ProfilesExemptSystemHeaders">, DefaultTrue,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Exempt code originating in system headers from C++ profile enforcement (temporary stopgap for [[profiles::exempt]], P3589R2 1.1.6; on by default)">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option],
+          "Enforce C++ profiles in system-header code too">>,
+  ShouldParseIf<cplusplus.KeyPath>;
 
 defm coro_aligned_allocation : BoolFOption<"coro-aligned-allocation",
   LangOpts<"CoroAlignedAllocation">, DefaultFalse,

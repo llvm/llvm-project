@@ -322,6 +322,20 @@ bool SemaProfiles::isProfileSuppressed(StringRef ProfileName,
   return isProfileSuppressed(ProfileName, RuleName, AC.getDecl());
 }
 
+// Temporary stopgap for the not-yet-implemented [[profiles::exempt]] (P3589R2
+// s1.1.6): exempt code originating in a system header from profile enforcement,
+// so enforcing a profile on a translation unit does not diagnose violations
+// inside the standard library and the other system headers it transitively
+// includes. On by default; -fno-profiles-exempt-system-headers restores
+// spec-exact enforcement into system-header code. Remove once
+// [[profiles::exempt]] has wording and a real implementation.
+static bool isExemptSystemHeaderLoc(const ASTContext &Ctx,
+                                    const LangOptions &LangOpts,
+                                    SourceLocation Loc) {
+  return LangOpts.ProfilesExemptSystemHeaders && Loc.isValid() &&
+         Ctx.getSourceManager().isInSystemHeader(Loc);
+}
+
 bool SemaProfiles::shouldEmitProfileViolation(StringRef ProfileName,
                                               StringRef RuleName,
                                               SourceLocation Loc) {
@@ -333,6 +347,8 @@ bool SemaProfiles::shouldEmitProfileViolation(StringRef ProfileName,
                                               SourceLocation Loc,
                                               const Decl *D) {
   if (!isProfileEnforced(ProfileName))
+    return false;
+  if (isExemptSystemHeaderLoc(getASTContext(), getLangOpts(), Loc))
     return false;
   // Honor [[profiles::suppress]] from the parse-time stack and, when a Decl is
   // available, from the declaration and its lexical parents. The latter does
@@ -389,6 +405,10 @@ bool SemaProfiles::shouldEmitProfileViolation(StringRef ProfileName,
                                               const Stmt *UseStmt,
                                               AnalysisDeclContext &AC) const {
   if (!isProfileEnforced(ProfileName))
+    return false;
+  SourceLocation Loc =
+      UseStmt ? UseStmt->getBeginLoc() : AC.getDecl()->getLocation();
+  if (isExemptSystemHeaderLoc(getASTContext(), getLangOpts(), Loc))
     return false;
   if (isProfileSuppressed(ProfileName, RuleName, UseStmt, AC))
     return false;

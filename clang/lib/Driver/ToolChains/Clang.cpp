@@ -6412,6 +6412,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptInFlag(CmdArgs, options::OPT_fprofiles,
                     options::OPT_fno_profiles);
 
+  Args.addOptOutFlag(CmdArgs, options::OPT_fprofiles_exempt_system_headers,
+                     options::OPT_fno_profiles_exempt_system_headers);
+
   Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_overflow_behavior_types,
                     options::OPT_fno_experimental_overflow_behavior_types);
 

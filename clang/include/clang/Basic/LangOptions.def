@@ -156,6 +156,7 @@ LANGOPT(Modules           , 1, 0, NotCompatible, "modules semantics")
 LANGOPT(CPlusPlusModules  , 1, 0, Compatible, "C++ modules syntax")
 LANGOPT(Profiles          , 1, 0, Compatible, "C++ profiles framework")
 LANGOPT(ProfilesTestProfiles, 1, 0, Benign, "C++ profiles framework built-in test:: profiles")
+LANGOPT(ProfilesExemptSystemHeaders, 1, 1, Benign, "exempt system-header code from C++ profile enforcement (temporary stopgap for [[profiles::exempt]])")
 LANGOPT(SkipODRCheckInGMF , 1, 0, NotCompatible, "Skip ODR checks for decls in the global module fragment")
 LANGOPT(BuiltinHeadersInSystemModules, 1, 0, NotCompatible, "builtin headers belong to system modules, and _Builtin_ modules are ignored for cstdlib headers")
 ENUM_LANGOPT(CompilingModule, CompilingModuleKind, 3, CMK_None, Benign,

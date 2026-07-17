@@ -699,6 +699,14 @@ Not Yet Implemented
 ``[[profiles::exempt(...)]]`` (P3589R2 §1.1.6), which would exempt named
 included source files from the enforcement of a profile, is not implemented.
 
+As a **temporary stopgap** until ``[[profiles::exempt]]`` has wording and an
+implementation, Clang exempts code that originates in a *system header* from
+profile enforcement.  This is on by default whenever a profile is enforced, so
+enforcing a profile on a translation unit does not report violations inside the
+standard library and the other system headers it transitively includes.  Pass
+``-fno-profiles-exempt-system-headers`` to disable the exemption and enforce
+profiles in system-header code as well (spec-exact behavior).
+
 
 Extending the Framework
 =======================
