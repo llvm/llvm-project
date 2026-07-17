@@ -33,9 +33,9 @@ ScriptedPlatformPythonInterface::CreatePluginObject(
     StructuredData::DictionarySP args_sp, StructuredData::Generic *script_obj) {
   ExecutionContextRefSP exe_ctx_ref_sp =
       std::make_shared<ExecutionContextRef>(exe_ctx);
-  StructuredDataImpl sd_impl(args_sp);
-  return ScriptedPythonInterface::CreatePluginObject(class_name, script_obj,
-                                                     exe_ctx_ref_sp, sd_impl);
+  ScriptedMetadata scripted_metadata(class_name, args_sp);
+  return ScriptedPythonInterface::CreatePluginObject(
+      scripted_metadata, script_obj, exe_ctx_ref_sp, args_sp);
 }
 
 StructuredData::DictionarySP ScriptedPlatformPythonInterface::ListProcesses() {
@@ -92,7 +92,8 @@ Status ScriptedPlatformPythonInterface::KillProcess(lldb::pid_t pid) {
 void ScriptedPlatformPythonInterface::Initialize() {
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(), "Mock platform and interact with its processes.",
-      CreateInstance, eScriptLanguagePython, {});
+      CreateInstance, eScriptedExtensionScriptedPlatform, eScriptLanguagePython,
+      {});
 }
 
 void ScriptedPlatformPythonInterface::Terminate() {

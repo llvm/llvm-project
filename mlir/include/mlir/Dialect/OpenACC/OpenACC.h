@@ -32,6 +32,7 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 #include <variant>
 
 #define GET_TYPEDEF_CLASSES
@@ -205,6 +206,12 @@ static constexpr StringLiteral getFromDefaultClauseAttrName() {
   return StringLiteral("acc.from_default");
 }
 
+/// Name for an attribute attached to a loop indicating the number of loops
+/// collapsed to create that loop
+static constexpr StringLiteral getCollapseCountAttrName() {
+  return StringLiteral("acc.collapse_count");
+}
+
 static constexpr StringLiteral getVarNameAttrName() {
   return VarNameAttr::name;
 }
@@ -230,6 +237,32 @@ struct CurrentDeviceIdResource
   mlir::StringRef getName() const final { return "AccCurrentDeviceIdResource"; }
   bool isAddressable() const override { return false; }
 };
+
+template <typename ComputeOpT>
+static bool isGangWorkerVectorAllOne(ComputeOpT op) {
+  // Strip index_cast operations from a value before checking for a constant.
+  auto stripIndexCasts = [](Value val) -> Value {
+    while (auto castOp = val.getDefiningOp<arith::IndexCastOp>())
+      val = castOp.getIn();
+    return val;
+  };
+
+  auto numGangs = op.getNumGangsValues();
+  if (numGangs.empty())
+    return false;
+  for (Value gangSize : numGangs) {
+    if (!isConstantIntValue(stripIndexCasts(gangSize), 1))
+      return false;
+  }
+  Value numWorkers = op.getNumWorkersValue();
+  if (!numWorkers)
+    return false;
+  Value vectorLength = op.getVectorLengthValue();
+  if (!vectorLength)
+    return false;
+  return isConstantIntValue(stripIndexCasts(numWorkers), 1) &&
+         isConstantIntValue(stripIndexCasts(vectorLength), 1);
+}
 
 } // namespace acc
 } // namespace mlir

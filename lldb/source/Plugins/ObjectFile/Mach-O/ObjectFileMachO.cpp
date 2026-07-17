@@ -49,6 +49,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 
+#include "MachOTrie.h"
 #include "ObjectFileMachO.h"
 
 #if defined(__APPLE__)
@@ -129,7 +130,6 @@
 #undef PLATFORM_WATCHOSSIMULATOR
 #endif
 
-#define THUMB_ADDRESS_BIT_MASK 0xfffffffffffffffeull
 using namespace lldb;
 using namespace lldb_private;
 using namespace llvm::MachO;
@@ -1647,14 +1647,11 @@ void ObjectFileMachO::ProcessSegmentCommand(
     // addresses will differ from what the ObjectFile had originally,
     // and what the dSYM has.
     if (is_dsym && unified_section_sp->GetFileAddress() != load_cmd.vmaddr) {
-      Log *log = GetLog(LLDBLog::Symbols);
-      if (log) {
-        log->Printf(
-            "Installing dSYM's %s segment file address over ObjectFile's "
-            "so symbol table/debug info resolves correctly for %s",
-            const_segname.AsCString(""),
-            module_sp->GetFileSpec().GetFilename().AsCString(""));
-      }
+      LLDB_LOG(GetLog(LLDBLog::Symbols),
+               "Installing dSYM's {0} segment file address over ObjectFile's "
+               "so symbol table/debug info resolves correctly for {1}",
+               const_segname.AsCString(""),
+               module_sp->GetFileSpec().GetFilename());
 
       // Make sure we've parsed the symbol table from the ObjectFile before
       // we go around changing its Sections.
@@ -1957,137 +1954,6 @@ protected:
   std::vector<SectionInfo> m_section_infos;
 };
 
-#define TRIE_SYMBOL_IS_THUMB (1ULL << 63)
-struct TrieEntry {
-  void Dump() const {
-    printf("0x%16.16llx 0x%16.16llx 0x%16.16llx \"%s\"",
-           static_cast<unsigned long long>(address),
-           static_cast<unsigned long long>(flags),
-           static_cast<unsigned long long>(other), name.GetCString());
-    if (import_name)
-      printf(" -> \"%s\"\n", import_name.GetCString());
-    else
-      printf("\n");
-  }
-  ConstString name;
-  uint64_t address = LLDB_INVALID_ADDRESS;
-  uint64_t flags =
-      0; // EXPORT_SYMBOL_FLAGS_REEXPORT, EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER,
-         // TRIE_SYMBOL_IS_THUMB
-  uint64_t other = 0;
-  ConstString import_name;
-};
-
-struct TrieEntryWithOffset {
-  lldb::offset_t nodeOffset;
-  TrieEntry entry;
-
-  TrieEntryWithOffset(lldb::offset_t offset) : nodeOffset(offset), entry() {}
-
-  void Dump(uint32_t idx) const {
-    printf("[%3u] 0x%16.16llx: ", idx,
-           static_cast<unsigned long long>(nodeOffset));
-    entry.Dump();
-  }
-
-  bool operator<(const TrieEntryWithOffset &other) const {
-    return (nodeOffset < other.nodeOffset);
-  }
-};
-
-static bool ParseTrieEntries(DataExtractor &data, lldb::offset_t offset,
-                             const bool is_arm, addr_t text_seg_base_addr,
-                             std::vector<llvm::StringRef> &nameSlices,
-                             std::set<lldb::addr_t> &resolver_addresses,
-                             std::vector<TrieEntryWithOffset> &reexports,
-                             std::vector<TrieEntryWithOffset> &ext_symbols) {
-  if (!data.ValidOffset(offset))
-    return true;
-
-  // Terminal node -- end of a branch, possibly add this to
-  // the symbol table or resolver table.
-  const uint64_t terminalSize = data.GetULEB128(&offset);
-  lldb::offset_t children_offset = offset + terminalSize;
-  if (terminalSize != 0) {
-    TrieEntryWithOffset e(offset);
-    e.entry.flags = data.GetULEB128(&offset);
-    const char *import_name = nullptr;
-    if (e.entry.flags & EXPORT_SYMBOL_FLAGS_REEXPORT) {
-      e.entry.address = 0;
-      e.entry.other = data.GetULEB128(&offset); // dylib ordinal
-      import_name = data.GetCStr(&offset);
-    } else {
-      e.entry.address = data.GetULEB128(&offset);
-      if (text_seg_base_addr != LLDB_INVALID_ADDRESS)
-        e.entry.address += text_seg_base_addr;
-      if (e.entry.flags & EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER) {
-        e.entry.other = data.GetULEB128(&offset);
-        uint64_t resolver_addr = e.entry.other;
-        if (text_seg_base_addr != LLDB_INVALID_ADDRESS)
-          resolver_addr += text_seg_base_addr;
-        if (is_arm)
-          resolver_addr &= THUMB_ADDRESS_BIT_MASK;
-        resolver_addresses.insert(resolver_addr);
-      } else
-        e.entry.other = 0;
-    }
-    bool add_this_entry = false;
-    if (Flags(e.entry.flags).Test(EXPORT_SYMBOL_FLAGS_REEXPORT) &&
-        import_name && import_name[0]) {
-      // add symbols that are reexport symbols with a valid import name.
-      add_this_entry = true;
-    } else if (e.entry.flags == 0 &&
-               (import_name == nullptr || import_name[0] == '\0')) {
-      // add externally visible symbols, in case the nlist record has
-      // been stripped/omitted.
-      add_this_entry = true;
-    }
-    if (add_this_entry) {
-      std::string name;
-      if (!nameSlices.empty()) {
-        for (auto name_slice : nameSlices)
-          name.append(name_slice.data(), name_slice.size());
-      }
-      if (name.size() > 1) {
-        // Skip the leading '_'
-        e.entry.name.SetCStringWithLength(name.c_str() + 1, name.size() - 1);
-      }
-      if (import_name) {
-        // Skip the leading '_'
-        e.entry.import_name.SetCString(import_name + 1);
-      }
-      if (Flags(e.entry.flags).Test(EXPORT_SYMBOL_FLAGS_REEXPORT)) {
-        reexports.push_back(e);
-      } else {
-        if (is_arm && (e.entry.address & 1)) {
-          e.entry.flags |= TRIE_SYMBOL_IS_THUMB;
-          e.entry.address &= THUMB_ADDRESS_BIT_MASK;
-        }
-        ext_symbols.push_back(e);
-      }
-    }
-  }
-
-  const uint8_t childrenCount = data.GetU8(&children_offset);
-  for (uint8_t i = 0; i < childrenCount; ++i) {
-    const char *cstr = data.GetCStr(&children_offset);
-    if (cstr)
-      nameSlices.push_back(llvm::StringRef(cstr));
-    else
-      return false; // Corrupt data
-    lldb::offset_t childNodeOffset = data.GetULEB128(&children_offset);
-    if (childNodeOffset) {
-      if (!ParseTrieEntries(data, childNodeOffset, is_arm, text_seg_base_addr,
-                            nameSlices, resolver_addresses, reexports,
-                            ext_symbols)) {
-        return false;
-      }
-    }
-    nameSlices.pop_back();
-  }
-  return true;
-}
-
 static bool
 TryParseV2ObjCMetadataSymbol(const char *&symbol_name,
                              const char *&symbol_name_non_abi_mangled,
@@ -2134,7 +2000,7 @@ static SymbolType GetSymbolType(const char *&symbol_name,
                                 const SectionSP &symbol_section) {
   SymbolType type = eSymbolTypeInvalid;
 
-  const char *symbol_sect_name = symbol_section->GetName().AsCString(nullptr);
+  llvm::StringRef symbol_sect_name = symbol_section->GetName();
   if (symbol_section->IsDescendant(text_section_sp.get())) {
     if (symbol_section->IsClear(S_ATTR_PURE_INSTRUCTIONS |
                                 S_ATTR_SELF_MODIFYING_CODE |
@@ -2145,8 +2011,7 @@ static SymbolType GetSymbolType(const char *&symbol_name,
   } else if (symbol_section->IsDescendant(data_section_sp.get()) ||
              symbol_section->IsDescendant(data_dirty_section_sp.get()) ||
              symbol_section->IsDescendant(data_const_section_sp.get())) {
-    if (symbol_sect_name &&
-        ::strstr(symbol_sect_name, "__objc") == symbol_sect_name) {
+    if (symbol_sect_name.starts_with("__objc")) {
       type = eSymbolTypeRuntime;
 
       if (symbol_name) {
@@ -2171,15 +2036,12 @@ static SymbolType GetSymbolType(const char *&symbol_name,
           }
         }
       }
-    } else if (symbol_sect_name &&
-               ::strstr(symbol_sect_name, "__gcc_except_tab") ==
-                   symbol_sect_name) {
+    } else if (symbol_sect_name.starts_with("__gcc_except_tab")) {
       type = eSymbolTypeException;
     } else {
       type = eSymbolTypeData;
     }
-  } else if (symbol_sect_name &&
-             ::strstr(symbol_sect_name, "__IMPORT") == symbol_sect_name) {
+  } else if (symbol_sect_name.starts_with("__IMPORT")) {
     type = eSymbolTypeTrampoline;
   }
   return type;
@@ -2209,10 +2071,11 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   Log *log = GetLog(LLDBLog::Symbols);
 
   const FileSpec &file = m_file ? m_file : module_sp->GetFileSpec();
-  const char *file_name = file.GetFilename().AsCString("<Unknown>");
-  LLDB_SCOPED_TIMERF("ObjectFileMachO::ParseSymtab () module = %s", file_name);
+  llvm::StringRef file_name = file.GetFilename().nonEmptyOr("<Unknown>");
+  LLDB_SCOPED_TIMERF("ObjectFileMachO::ParseSymtab () module = %s",
+                     file_name.str().c_str());
   LLDB_LOG(log, "Parsing symbol table for {0}", file_name);
-  Progress progress("Parsing symbol table", file_name);
+  Progress progress("Parsing symbol table", file_name.str());
 
   LinkeditDataCommandLargeOffsets function_starts_load_command;
   LinkeditDataCommandLargeOffsets exports_trie_load_command;
@@ -2230,10 +2093,10 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   llvm::DenseSet<addr_t> symbols_added;
 
   // We are using a llvm::DenseSet for "symbols_added" so we must be sure we
-  // do not add the tombstone or empty keys to the set.
+  // do not add the empty key to the set.
   auto add_symbol_addr = [&symbols_added](lldb::addr_t file_addr) {
-    // Don't add the tombstone or empty keys.
-    if (file_addr == UINT64_MAX || file_addr == UINT64_MAX - 1)
+    // Don't add the empty key.
+    if (file_addr == UINT64_MAX)
       return;
     symbols_added.insert(file_addr);
   };
@@ -2659,9 +2522,8 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
     lldb::addr_t text_segment_file_addr = LLDB_INVALID_ADDRESS;
     if (text_segment_sp)
       text_segment_file_addr = text_segment_sp->GetFileAddress();
-    std::vector<llvm::StringRef> nameSlices;
-    ParseTrieEntries(dyld_trie_data, 0, is_arm, text_segment_file_addr,
-                     nameSlices, resolver_addresses, reexport_trie_entries,
+    ParseTrieEntries(dyld_trie_data, is_arm, text_segment_file_addr,
+                     resolver_addresses, reexport_trie_entries,
                      external_sym_trie_entries);
   }
 
@@ -3334,8 +3196,8 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                           }
 
                           if (type == eSymbolTypeInvalid) {
-                            const char *symbol_sect_name =
-                                symbol_section->GetName().AsCString(nullptr);
+                            llvm::StringRef symbol_sect_name =
+                                symbol_section->GetName();
                             if (symbol_section->IsDescendant(
                                     text_section_sp.get())) {
                               if (symbol_section->IsClear(
@@ -3351,26 +3213,19 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                                            data_dirty_section_sp.get()) ||
                                        symbol_section->IsDescendant(
                                            data_const_section_sp.get())) {
-                              if (symbol_sect_name &&
-                                  ::strstr(symbol_sect_name, "__objc") ==
-                                      symbol_sect_name) {
+                              if (symbol_sect_name.starts_with("__objc")) {
                                 type = eSymbolTypeRuntime;
 
                                 if (TryParseV2ObjCMetadataSymbol(
                                         symbol_name,
                                         symbol_name_non_abi_mangled, type))
                                   demangled_is_synthesized = true;
-                              } else if (symbol_sect_name &&
-                                         ::strstr(symbol_sect_name,
-                                                  "__gcc_except_tab") ==
-                                             symbol_sect_name) {
+                              } else if (symbol_sect_name.starts_with("__gcc_except_tab")) {
                                 type = eSymbolTypeException;
                               } else {
                                 type = eSymbolTypeData;
                               }
-                            } else if (symbol_sect_name &&
-                                       ::strstr(symbol_sect_name, "__IMPORT") ==
-                                           symbol_sect_name) {
+                            } else if (symbol_sect_name.starts_with("__IMPORT")) 
                               type = eSymbolTypeTrampoline;
                             } else if (symbol_section->IsDescendant(
                                            objc_section_sp.get())) {
@@ -4094,8 +3949,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
             }
 
             if (type == eSymbolTypeInvalid) {
-              const char *symbol_sect_name =
-                  symbol_section->GetName().AsCString(nullptr);
+              llvm::StringRef symbol_sect_name = symbol_section->GetName();
               if (symbol_section->IsDescendant(text_section_sp.get())) {
                 if (symbol_section->IsClear(S_ATTR_PURE_INSTRUCTIONS |
                                             S_ATTR_SELF_MODIFYING_CODE |
@@ -4108,23 +3962,18 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                              data_dirty_section_sp.get()) ||
                          symbol_section->IsDescendant(
                              data_const_section_sp.get())) {
-                if (symbol_sect_name &&
-                    ::strstr(symbol_sect_name, "__objc") == symbol_sect_name) {
+                if (symbol_sect_name.starts_with("__objc")) {
                   type = eSymbolTypeRuntime;
 
                   if (TryParseV2ObjCMetadataSymbol(
                           symbol_name, symbol_name_non_abi_mangled, type))
                     demangled_is_synthesized = true;
-                } else if (symbol_sect_name &&
-                           ::strstr(symbol_sect_name, "__gcc_except_tab") ==
-                               symbol_sect_name) {
+                } else if (symbol_sect_name.starts_with("__gcc_except_tab")) {
                   type = eSymbolTypeException;
                 } else {
                   type = eSymbolTypeData;
                 }
-              } else if (symbol_sect_name &&
-                         ::strstr(symbol_sect_name, "__IMPORT") ==
-                             symbol_sect_name) {
+              } else if (symbol_sect_name.starts_with("__IMPORT")) {
                 type = eSymbolTypeTrampoline;
               } else if (symbol_section->IsDescendant(objc_section_sp.get())) {
                 type = eSymbolTypeRuntime;
@@ -4958,8 +4807,7 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
 
   if (!rpath_paths.empty()) {
     // Fixup all LC_RPATH values to be absolute paths.
-    const std::string this_directory =
-        this_file_spec.GetDirectory().GetString();
+    const std::string this_directory = this_file_spec.GetDirectory().str();
     for (auto &rpath : rpath_paths) {
       if (llvm::StringRef(rpath).starts_with(g_loader_path))
         rpath = this_directory + rpath.substr(g_loader_path.size());
@@ -5645,8 +5493,7 @@ ObjectFile::Strata ObjectFileMachO::CalculateStrata() {
     } else {
       SectionList *section_list = GetSectionList();
       if (section_list) {
-        static ConstString g_kld_section_name("__KLD");
-        if (section_list->FindSectionByName(g_kld_section_name))
+        if (section_list->FindSectionByName("__KLD"))
           return eStrataKernel;
       }
     }
@@ -6214,7 +6061,7 @@ CreateAllImageInfosPayload(const lldb::ProcessSP &process_sp,
         addr_t vmaddr = section->GetLoadBaseAddress(&target);
         if (vmaddr == LLDB_INVALID_ADDRESS)
           continue;
-        ConstString name = section->GetName();
+        llvm::StringRef name = section->GetName();
         segment_vmaddr seg_vmaddr;
         // This is the uncommon case where strncpy is exactly
         // the right one, doesn't need to be nul terminated.
@@ -6222,8 +6069,8 @@ CreateAllImageInfosPayload(const lldb::ProcessSP &process_sp,
         // is not guaranteed to be nul-terminated if all 16 characters are
         // used.
         // coverity[buffer_size_warning]
-        strncpy(seg_vmaddr.segname, name.AsCString(nullptr),
-                sizeof(seg_vmaddr.segname));
+        strncpy(seg_vmaddr.segname, name.data(),
+                std::min(name.size(), sizeof(seg_vmaddr.segname)));
         seg_vmaddr.vmaddr = vmaddr;
         seg_vmaddr.unused = 0;
         segment_vmaddrs.push_back(seg_vmaddr);

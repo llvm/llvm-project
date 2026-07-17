@@ -698,6 +698,27 @@ TEST(CompletionTest, PrivateMemberDefinition) {
                              snippetSuffix("(int a, int b)"))));
 }
 
+TEST(CompletionTest, DeclParamName) {
+  // This is 1/3 regression tests to make sure signatures
+  // 1) have consistent variable names between header and source file
+  // 2) find variable names in other declarations
+  // See SignatureHelpTest.DeclParamName and IndexActionTest.DeclParamName for
+  // the other tests.
+  clangd::CodeCompleteOptions Opts;
+  Opts.EnableSnippets = true;
+  auto FuncFromSource = completions(R"cpp(
+      void sun(int);
+      void sun(int night);
+      void sun(int day);
+      void sun(int);
+      void position() {
+        sun^;
+      }
+      )cpp",
+                                    {}, Opts);
+  EXPECT_THAT(FuncFromSource.Completions, Contains(signature("(int day)")));
+}
+
 TEST(CompletionTest, DefaultArgsWithValues) {
   clangd::CodeCompleteOptions Opts;
   Opts.EnableSnippets = true;
@@ -1676,6 +1697,25 @@ TEST(SignatureHelpTest, Overloads) {
   EXPECT_EQ(0, Results.activeParameter);
 }
 
+TEST(SignatureHelpTest, DeclParamName) {
+  // This is 2/3 regression tests to make sure signatures
+  // 1) have consistent variable names between header and source file
+  // 2) find variable names in other declarations
+  // See CompletionTest.DeclParamName and IndexActionTest.DeclParamName for the
+  // other tests.
+  auto FuncFromSource = signatures(R"cpp(
+      void sun(int);
+      void sun(int night);
+      void sun(int day);
+      void sun(int);
+      void position() {
+        sun(^);
+      }
+      )cpp");
+  EXPECT_THAT(FuncFromSource.signatures,
+              UnorderedElementsAre(sig("sun([[int day]]) -> void")));
+}
+
 TEST(SignatureHelpTest, FunctionPointers) {
   llvm::StringLiteral Tests[] = {
       // Variable of function pointer type
@@ -1916,6 +1956,23 @@ TEST(SignatureHelpTest, StalePreamble) {
   EXPECT_THAT(Results.signatures, ElementsAre(sig("foo([[int x]]) -> int")));
   EXPECT_EQ(0, Results.activeSignature);
   EXPECT_EQ(0, Results.activeParameter);
+}
+
+TEST(SignatureHelpTest, EOFInSkippedFunctionBody) {
+  Annotations Test(R"cpp(
+#ifdef IS_HEADER
+void frameSizeBlocksWarning() {
+  auto fn = []() {
+  };
+  fn();
+}
+#else
+#define IS_HEADER
+#include __FILE__
+#^endif
+)cpp");
+  auto Results = signatures(Test.code(), Test.point());
+  EXPECT_THAT(Results.signatures, IsEmpty());
 }
 
 class IndexRequestCollector : public SymbolIndex {
@@ -2537,6 +2594,45 @@ TEST(CompletionTest, CodeCompletionContext) {
       )cpp");
 
   EXPECT_THAT(Results.Context, CodeCompletionContext::CCC_DotMemberAccess);
+}
+
+TEST(CompletionTest, OffsetOfDesignator) {
+  auto Results = completions(R"cpp(
+    struct S { int field; int other; void fieldFn(); };
+    int x = __builtin_offsetof(S, fiel^d);
+  )cpp");
+  EXPECT_THAT(
+      Results.Completions,
+      ElementsAre(AllOf(named("field"), kind(CompletionItemKind::Field))));
+  EXPECT_THAT(Results.Context, CodeCompletionContext::CCC_DotMemberAccess);
+
+  Results = completions(R"cpp(
+    struct Inner { int field; void fieldFn(); };
+    struct Outer { Inner inner; };
+    int x = __builtin_offsetof(Outer, inner.fiel^d);
+  )cpp");
+  EXPECT_THAT(
+      Results.Completions,
+      ElementsAre(AllOf(named("field"), kind(CompletionItemKind::Field))));
+
+  Results = completions(R"cpp(
+    struct Inner { int field; void fieldFn(); };
+    struct Outer { Inner inner[2]; };
+    int i;
+    int x = __builtin_offsetof(Outer, inner[i].fiel^d);
+  )cpp");
+  EXPECT_THAT(
+      Results.Completions,
+      ElementsAre(AllOf(named("field"), kind(CompletionItemKind::Field))));
+
+  Results = completions(R"cpp(
+    struct Base { int field; void fieldFn(); };
+    struct Derived : Base {};
+    int x = __builtin_offsetof(Derived, fiel^d);
+  )cpp");
+  EXPECT_THAT(
+      Results.Completions,
+      ElementsAre(AllOf(named("field"), kind(CompletionItemKind::Field))));
 }
 
 TEST(CompletionTest, FixItForArrowToDot) {
@@ -4129,8 +4225,8 @@ TEST(CompletionTest, ReplaceRange) {
   EXPECT_EQ(Completions.ReplaceRange, A.range("replace"));
 
   // Cursor mid-word with UTF-8 continuation: replace extends past UTF-8.
-  const char *MidWordUTF8 = "struct S { int ab🙂cd; }; void f() { S s; "
-                            "s.$replace[[$insert[[ab^]]🙂cd]]; }";
+  const char *MidWordUTF8 = "struct S { int naïve; }; void f() { S s; "
+                            "s.$replace[[$insert[[na^]]ïve]]; }";
   Completions = completions(MidWordUTF8, /*IndexSymbols=*/{}, Opts);
   A = Annotations(MidWordUTF8);
   EXPECT_EQ(Completions.InsertRange, A.range("insert"));
@@ -4196,7 +4292,7 @@ TEST(CompletionTest, ReplaceRangeNoCompile) {
   EXPECT_EQ(Results.ReplaceRange, A.range("replace"));
 
   // ASCII heuristic stops at non-ASCII: replace doesn't extend past UTF-8.
-  const char *MidWordUTF8 = "auto x = $replace[[$insert[[ab^]]]]🙂cd";
+  const char *MidWordUTF8 = "auto x = $replace[[$insert[[na^]]]]ïve";
   Results = completionsNoCompile(MidWordUTF8, /*IndexSymbols=*/{}, Opts);
   A = Annotations(MidWordUTF8);
   EXPECT_EQ(Results.InsertRange, A.range("insert"));
@@ -4590,8 +4686,7 @@ TEST(CompletionTest, CommentParamName) {
   }
   {
     // With */ and UTF-8 suffix: replace extends past UTF-8 to */.
-    const std::string WithUTF8(Code +
-                               "fun(/*$replace[[$insert[[fo^]]o🙂=*/]])");
+    const std::string WithUTF8(Code + "fun(/*$replace[[$insert[[ca^]]fé=*/]])");
     const CodeCompleteResult Results = completions(WithUTF8, {}, ReplaceOpts);
     const Annotations A(WithUTF8);
     EXPECT_EQ(Results.InsertRange, A.range("insert"));

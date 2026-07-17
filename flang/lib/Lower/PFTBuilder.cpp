@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/PFTBuilder.h"
-#include "flang/Lower/IntervalSet.h"
 #include "flang/Lower/LoweringOptions.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Parser/dump-parse-tree.h"
@@ -253,6 +252,7 @@ public:
                             std::string localName{
                                 std::get<0>(names.t).source.ToString()};
                             stmt.renames.push_back(localName);
+                            stmt.hasOnlyWithRenames = true;
                           },
                           [&](const parser::Rename::Operators &) {
                             // Operator renames - not commonly needed for debug
@@ -333,6 +333,20 @@ public:
     return true;
   }
   void Post(const parser::SpecificationPart &) { --specificationPartLevel; }
+
+  bool Pre(const parser::InterfaceBody &) {
+    ++interfaceBodyLevel;
+    return true;
+  }
+  void Post(const parser::InterfaceBody &) { --interfaceBodyLevel; }
+
+  // An acc declare in an interface body describes the interface's procedure,
+  // not the enclosing unit; skip it so it is not hoisted and lowered there.
+  bool Pre(const parser::OpenACCDeclarativeConstruct &accDecl) {
+    if (interfaceBodyLevel > 0)
+      return false;
+    return enterConstructOrDirective(accDecl);
+  }
 
   bool Pre(const parser::ContainsStmt &) {
     if (!specificationPartLevel) {
@@ -839,6 +853,11 @@ private:
     sourceEvaluation.isUnstructured = true;
     if (!sourceEvaluation.controlSuccessor)
       sourceEvaluation.controlSuccessor = &targetEvaluation;
+    else if (sourceEvaluation.controlSuccessor != &targetEvaluation &&
+             llvm::find(sourceEvaluation.extraControlSuccessors,
+                        &targetEvaluation) ==
+                 sourceEvaluation.extraControlSuccessors.end())
+      sourceEvaluation.extraControlSuccessors.push_back(&targetEvaluation);
     targetEvaluation.isNewBlock = true;
     // If this is a branch into the body of a construct (usually illegal,
     // but allowed in some legacy cases), then the targetEvaluation and its
@@ -1260,6 +1279,7 @@ private:
   lower::pft::SymbolLabelMap *assignSymbolLabelMap{};
   std::map<std::string, lower::pft::Evaluation *> constructNameMap{};
   int specificationPartLevel{};
+  int interfaceBodyLevel{};
   lower::pft::Evaluation *lastLexicalEvaluation{};
   /// Current function-like unit being processed (for USE statement tracking)
   lower::pft::FunctionLikeUnit *currentFunctionUnit{nullptr};
@@ -1361,12 +1381,19 @@ public:
       outputStream << newBlock << name << bang;
     if (eval.negateCondition)
       outputStream << " [negate]";
-    if (eval.constructExit)
+    if (eval.constructExit) {
       outputStream << " -> " << eval.constructExit->printIndex;
-    else if (eval.controlSuccessor)
+    } else if (eval.controlSuccessor) {
       outputStream << " -> " << eval.controlSuccessor->printIndex;
-    else if (eval.isA<parser::EntryStmt>() && eval.lexicalSuccessor)
+      // Multiway branches (computed GO TO, arithmetic IF) put additional
+      // targets in extraControlSuccessors; print them so PFT dumps expose
+      // every target rather than only the first.
+      for (const Fortran::lower::pft::Evaluation *extra :
+           eval.extraControlSuccessors)
+        outputStream << ", " << extra->printIndex;
+    } else if (eval.isA<parser::EntryStmt>() && eval.lexicalSuccessor) {
       outputStream << " -> " << eval.lexicalSuccessor->printIndex;
+    }
     bool extraNewline = false;
     if (!eval.position.empty())
       outputStream << ": " << eval.position.ToString();

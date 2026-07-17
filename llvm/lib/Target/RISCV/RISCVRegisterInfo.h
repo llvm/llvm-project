@@ -125,6 +125,9 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
   Register getFrameRegister(const MachineFunction &MF) const override;
 
+  bool isArgumentRegister(const MachineFunction &MF,
+                          MCRegister Reg) const override;
+
   StringRef getRegAsmName(MCRegister Reg) const override;
 
   bool requiresRegisterScavenging(const MachineFunction &MF) const override {
@@ -173,6 +176,13 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
   static bool isRVVRegClass(const TargetRegisterClass *RC) {
     return RISCVRI::isVRegClass(RC->TSFlags);
+  }
+
+  static bool isFPRegister(MCRegister Reg) {
+    return RISCV::FPR16RegClass.contains(Reg) ||
+           RISCV::FPR32RegClass.contains(Reg) ||
+           RISCV::FPR64RegClass.contains(Reg) ||
+           RISCV::FPR128RegClass.contains(Reg);
   }
 };
 } // namespace llvm

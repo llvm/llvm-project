@@ -470,20 +470,21 @@ PathDiagnosticConsumer::FilesMade::getFiles(const PathDiagnostic &PD) {
 //===----------------------------------------------------------------------===//
 
 SourceLocation PathDiagnosticLocation::getValidSourceLocation(
-    const Stmt *S, LocationOrAnalysisDeclContext LAC, bool UseEndOfStatement) {
+    const Stmt *S, StackFrameOrAnalysisDeclContext SFAC,
+    bool UseEndOfStatement) {
   SourceLocation L = UseEndOfStatement ? S->getEndLoc() : S->getBeginLoc();
-  assert(!LAC.isNull() &&
-         "A valid LocationContext or AnalysisDeclContext should be passed to "
+  assert(!SFAC.isNull() &&
+         "A valid StackFrame or AnalysisDeclContext should be passed to "
          "PathDiagnosticLocation upon creation.");
 
   // S might be a temporary statement that does not have a location in the
   // source code, so find an enclosing statement and use its location.
   if (!L.isValid()) {
     AnalysisDeclContext *ADC;
-    if (auto *LC = dyn_cast<const LocationContext *>(LAC))
-      ADC = LC->getAnalysisDeclContext();
+    if (auto *SF = dyn_cast<const StackFrame *>(SFAC))
+      ADC = SF->getAnalysisDeclContext();
     else
-      ADC = cast<AnalysisDeclContext *>(LAC);
+      ADC = cast<AnalysisDeclContext *>(SFAC);
 
     ParentMap &PM = ADC->getParentMap();
 
@@ -513,9 +514,9 @@ SourceLocation PathDiagnosticLocation::getValidSourceLocation(
   return L;
 }
 
-static PathDiagnosticLocation
-getLocationForCaller(const StackFrame *SF, const LocationContext *CallerCtx,
-                     const SourceManager &SM) {
+static PathDiagnosticLocation getLocationForCaller(const StackFrame *SF,
+                                                   const StackFrame *CallerSF,
+                                                   const SourceManager &SM) {
   const CFGBlock &Block = *SF->getCallSiteBlock();
   CFGElement Source = Block[SF->getIndex()];
 
@@ -523,32 +524,32 @@ getLocationForCaller(const StackFrame *SF, const LocationContext *CallerCtx,
   case CFGElement::Statement:
   case CFGElement::Constructor:
   case CFGElement::CXXRecordTypedCall:
-    return PathDiagnosticLocation(Source.castAs<CFGStmt>().getStmt(),
-                                  SM, CallerCtx);
+    return PathDiagnosticLocation(Source.castAs<CFGStmt>().getStmt(), SM,
+                                  CallerSF);
   case CFGElement::Initializer: {
     const CFGInitializer &Init = Source.castAs<CFGInitializer>();
-    return PathDiagnosticLocation(Init.getInitializer()->getInit(),
-                                  SM, CallerCtx);
+    return PathDiagnosticLocation(Init.getInitializer()->getInit(), SM,
+                                  CallerSF);
   }
   case CFGElement::AutomaticObjectDtor: {
     const CFGAutomaticObjDtor &Dtor = Source.castAs<CFGAutomaticObjDtor>();
-    return PathDiagnosticLocation::createEnd(Dtor.getTriggerStmt(),
-                                             SM, CallerCtx);
+    return PathDiagnosticLocation::createEnd(Dtor.getTriggerStmt(), SM,
+                                             CallerSF);
   }
   case CFGElement::DeleteDtor: {
     const CFGDeleteDtor &Dtor = Source.castAs<CFGDeleteDtor>();
-    return PathDiagnosticLocation(Dtor.getDeleteExpr(), SM, CallerCtx);
+    return PathDiagnosticLocation(Dtor.getDeleteExpr(), SM, CallerSF);
   }
   case CFGElement::BaseDtor:
   case CFGElement::MemberDtor: {
-    const AnalysisDeclContext *CallerInfo = CallerCtx->getAnalysisDeclContext();
+    const AnalysisDeclContext *CallerInfo = CallerSF->getAnalysisDeclContext();
     if (const Stmt *CallerBody = CallerInfo->getBody())
-      return PathDiagnosticLocation::createEnd(CallerBody, SM, CallerCtx);
+      return PathDiagnosticLocation::createEnd(CallerBody, SM, CallerSF);
     return PathDiagnosticLocation::create(CallerInfo->getDecl(), SM);
   }
   case CFGElement::NewAllocator: {
     const CFGNewAllocator &Alloc = Source.castAs<CFGNewAllocator>();
-    return PathDiagnosticLocation(Alloc.getAllocatorExpr(), SM, CallerCtx);
+    return PathDiagnosticLocation(Alloc.getAllocatorExpr(), SM, CallerSF);
   }
   case CFGElement::TemporaryDtor: {
     // Temporary destructors are for temporaries. They die immediately at around
@@ -556,7 +557,7 @@ getLocationForCaller(const StackFrame *SF, const LocationContext *CallerCtx,
     // they'd be dealt with via an AutomaticObjectDtor instead.
     const auto &Dtor = Source.castAs<CFGTemporaryDtor>();
     return PathDiagnosticLocation::createEnd(Dtor.getBindTemporaryExpr(), SM,
-                                             CallerCtx);
+                                             CallerSF);
   }
   case CFGElement::ScopeBegin:
   case CFGElement::ScopeEnd:
@@ -578,21 +579,19 @@ PathDiagnosticLocation::createBegin(const Decl *D,
 }
 
 PathDiagnosticLocation
-PathDiagnosticLocation::createBegin(const Stmt *S,
-                                    const SourceManager &SM,
-                                    LocationOrAnalysisDeclContext LAC) {
+PathDiagnosticLocation::createBegin(const Stmt *S, const SourceManager &SM,
+                                    StackFrameOrAnalysisDeclContext SFAC) {
   assert(S && "Statement cannot be null");
-  return PathDiagnosticLocation(getValidSourceLocation(S, LAC),
-                                SM, SingleLocK);
+  return PathDiagnosticLocation(getValidSourceLocation(S, SFAC), SM,
+                                SingleLocK);
 }
 
 PathDiagnosticLocation
-PathDiagnosticLocation::createEnd(const Stmt *S,
-                                  const SourceManager &SM,
-                                  LocationOrAnalysisDeclContext LAC) {
+PathDiagnosticLocation::createEnd(const Stmt *S, const SourceManager &SM,
+                                  StackFrameOrAnalysisDeclContext SFAC) {
   if (const auto *CS = dyn_cast<CompoundStmt>(S))
     return createEndBrace(CS, SM);
-  return PathDiagnosticLocation(getValidSourceLocation(S, LAC, /*End=*/true),
+  return PathDiagnosticLocation(getValidSourceLocation(S, SFAC, /*End=*/true),
                                 SM, SingleLocK);
 }
 
@@ -638,10 +637,10 @@ PathDiagnosticLocation::createEndBrace(const CompoundStmt *CS,
 }
 
 PathDiagnosticLocation
-PathDiagnosticLocation::createDeclBegin(const LocationContext *LC,
+PathDiagnosticLocation::createDeclBegin(const StackFrame *SF,
                                         const SourceManager &SM) {
   // FIXME: Should handle CXXTryStmt if analyser starts supporting C++.
-  if (const auto *CS = dyn_cast_or_null<CompoundStmt>(LC->getDecl()->getBody()))
+  if (const auto *CS = dyn_cast_or_null<CompoundStmt>(SF->getDecl()->getBody()))
     if (!CS->body_empty()) {
       SourceLocation Loc = (*CS->body_begin())->getBeginLoc();
       return PathDiagnosticLocation(Loc, SM, SingleLocK);
@@ -651,9 +650,9 @@ PathDiagnosticLocation::createDeclBegin(const LocationContext *LC,
 }
 
 PathDiagnosticLocation
-PathDiagnosticLocation::createDeclEnd(const LocationContext *LC,
+PathDiagnosticLocation::createDeclEnd(const StackFrame *SF,
                                       const SourceManager &SM) {
-  SourceLocation L = LC->getDecl()->getBodyRBrace();
+  SourceLocation L = SF->getDecl()->getBodyRBrace();
   return PathDiagnosticLocation(L, SM, SingleLocK);
 }
 
@@ -666,8 +665,8 @@ PathDiagnosticLocation::create(const ProgramPoint& P,
     if (BSrc->getTerminator().isVirtualBaseBranch()) {
       // TODO: VirtualBaseBranches should also appear for destructors.
       // In this case we should put the diagnostic at the end of decl.
-      return PathDiagnosticLocation::createBegin(
-          P.getLocationContext()->getDecl(), SMng);
+      return PathDiagnosticLocation::createBegin(P.getStackFrame()->getDecl(),
+                                                 SMng);
 
     } else {
       S = BSrc->getTerminatorCondition();
@@ -677,14 +676,14 @@ PathDiagnosticLocation::create(const ProgramPoint& P,
         // the beginning of a function), use the function's declaration instead.
         assert(BSrc == &BSrc->getParent()->getEntry() && "CFGBlock has no "
                "TerminatorCondition and is not the enrty block of the CFG");
-        return PathDiagnosticLocation::createBegin(
-            P.getLocationContext()->getDecl(), SMng);
+        return PathDiagnosticLocation::createBegin(P.getStackFrame()->getDecl(),
+                                                   SMng);
       }
     }
   } else if (std::optional<StmtPoint> SP = P.getAs<StmtPoint>()) {
     S = SP->getStmt();
     if (P.getAs<PostStmtPurgeDeadSymbols>())
-      return PathDiagnosticLocation::createEnd(S, SMng, P.getLocationContext());
+      return PathDiagnosticLocation::createEnd(S, SMng, P.getStackFrame());
   } else if (std::optional<PostInitializer> PIP = P.getAs<PostInitializer>()) {
     return PathDiagnosticLocation(PIP->getInitializer()->getSourceLocation(),
                                   SMng);
@@ -694,19 +693,17 @@ PathDiagnosticLocation::create(const ProgramPoint& P,
                  P.getAs<PostImplicitCall>()) {
     return PathDiagnosticLocation(PIE->getLocation(), SMng);
   } else if (std::optional<CallEnter> CE = P.getAs<CallEnter>()) {
-    return getLocationForCaller(CE->getCalleeContext(),
-                                CE->getLocationContext(),
+    return getLocationForCaller(CE->getCalleeStackFrame(), CE->getStackFrame(),
                                 SMng);
   } else if (std::optional<CallExitEnd> CEE = P.getAs<CallExitEnd>()) {
-    return getLocationForCaller(CEE->getCalleeContext(),
-                                CEE->getLocationContext(),
-                                SMng);
+    return getLocationForCaller(CEE->getCalleeStackFrame(),
+                                CEE->getStackFrame(), SMng);
   } else if (auto CEB = P.getAs<CallExitBegin>()) {
     if (const ReturnStmt *RS = CEB->getReturnStmt())
       return PathDiagnosticLocation::createBegin(RS, SMng,
-                                                 CEB->getLocationContext());
+                                                 CEB->getStackFrame());
     return PathDiagnosticLocation(
-        CEB->getLocationContext()->getDecl()->getSourceRange().getEnd(), SMng);
+        CEB->getStackFrame()->getDecl()->getSourceRange().getEnd(), SMng);
   } else if (std::optional<BlockEntrance> BE = P.getAs<BlockEntrance>()) {
     if (std::optional<CFGElement> BlockFront = BE->getFirstElement()) {
       if (auto StmtElt = BlockFront->getAs<CFGStmt>()) {
@@ -722,13 +719,15 @@ PathDiagnosticLocation::create(const ProgramPoint& P,
         BE->getBlock()->getTerminatorStmt()->getBeginLoc(), SMng);
   } else if (std::optional<FunctionExitPoint> FE =
                  P.getAs<FunctionExitPoint>()) {
-    return PathDiagnosticLocation(FE->getStmt(), SMng,
-                                  FE->getLocationContext());
+    return PathDiagnosticLocation(FE->getStmt(), SMng, FE->getStackFrame());
+  } else if (std::optional<LifetimeEnd> LE = P.getAs<LifetimeEnd>()) {
+    return PathDiagnosticLocation::createEnd(LE->getTriggerStmt(), SMng,
+                                             LE->getStackFrame());
   } else {
     llvm_unreachable("Unexpected ProgramPoint");
   }
 
-  return PathDiagnosticLocation(S, SMng, P.getLocationContext());
+  return PathDiagnosticLocation(S, SMng, P.getStackFrame());
 }
 
 PathDiagnosticLocation PathDiagnosticLocation::createSingleLocation(
@@ -737,9 +736,8 @@ PathDiagnosticLocation PathDiagnosticLocation::createSingleLocation(
   return PathDiagnosticLocation(L, L.getManager(), SingleLocK);
 }
 
-FullSourceLoc
-  PathDiagnosticLocation::genLocation(SourceLocation L,
-                                      LocationOrAnalysisDeclContext LAC) const {
+FullSourceLoc PathDiagnosticLocation::genLocation(
+    SourceLocation L, StackFrameOrAnalysisDeclContext SFAC) const {
   assert(isValid());
   // Note that we want a 'switch' here so that the compiler can warn us in
   // case we add more cases.
@@ -751,8 +749,8 @@ FullSourceLoc
       // Defensive checking.
       if (!S)
         break;
-      return FullSourceLoc(getValidSourceLocation(S, LAC),
-                           const_cast<SourceManager&>(*SM));
+      return FullSourceLoc(getValidSourceLocation(S, SFAC),
+                           const_cast<SourceManager &>(*SM));
     case DeclK:
       // Defensive checking.
       if (!D)
@@ -764,7 +762,7 @@ FullSourceLoc
 }
 
 PathDiagnosticRange
-  PathDiagnosticLocation::genRange(LocationOrAnalysisDeclContext LAC) const {
+PathDiagnosticLocation::genRange(StackFrameOrAnalysisDeclContext SFAC) const {
   assert(isValid());
   // Note that we want a 'switch' here so that the compiler can warn us in
   // case we add more cases.
@@ -799,7 +797,7 @@ PathDiagnosticRange
         case Stmt::BinaryConditionalOperatorClass:
         case Stmt::ConditionalOperatorClass:
         case Stmt::ObjCForCollectionStmtClass: {
-          SourceLocation L = getValidSourceLocation(S, LAC);
+          SourceLocation L = getValidSourceLocation(S, SFAC);
           return SourceRange(L, L);
         }
       }
@@ -844,10 +842,9 @@ void PathDiagnosticLocation::flatten() {
 std::shared_ptr<PathDiagnosticCallPiece>
 PathDiagnosticCallPiece::construct(const CallExitEnd &CE,
                                    const SourceManager &SM) {
-  const Decl *caller = CE.getLocationContext()->getDecl();
-  PathDiagnosticLocation pos = getLocationForCaller(CE.getCalleeContext(),
-                                                    CE.getLocationContext(),
-                                                    SM);
+  const Decl *caller = CE.getStackFrame()->getDecl();
+  PathDiagnosticLocation pos =
+      getLocationForCaller(CE.getCalleeStackFrame(), CE.getStackFrame(), SM);
   return std::shared_ptr<PathDiagnosticCallPiece>(
       new PathDiagnosticCallPiece(caller, pos));
 }
@@ -865,11 +862,11 @@ PathDiagnosticCallPiece::construct(PathPieces &path,
 
 void PathDiagnosticCallPiece::setCallee(const CallEnter &CE,
                                         const SourceManager &SM) {
-  const StackFrame *CalleeSF = CE.getCalleeContext();
+  const StackFrame *CalleeSF = CE.getCalleeStackFrame();
   Callee = CalleeSF->getDecl();
 
   callEnterWithin = PathDiagnosticLocation::createBegin(Callee, SM);
-  callEnter = getLocationForCaller(CalleeSF, CE.getLocationContext(), SM);
+  callEnter = getLocationForCaller(CalleeSF, CE.getStackFrame(), SM);
 
   // Autosynthesized property accessors are special because we'd never
   // pop back up to non-autosynthesized code until we leave them.

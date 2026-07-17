@@ -1,15 +1,20 @@
 // REQUIRES: arm
-// RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t
-// RUN: echo "SECTIONS { \
-// RUN:       . = SIZEOF_HEADERS; \
-// RUN:       .text_low : { *(.text_low) *(.text_low2) } \
-// RUN:       .text_high 0x2000000 : { *(.text_high) *(.text_high2) } \
-// RUN:       } " > %t.script
-// RUN: ld.lld --pic-veneer --no-rosegment --script %t.script %t -o %t2
-// RUN: llvm-objdump --no-print-imm-hex -d %t2 | FileCheck %s
+// RUN: rm -rf %t && split-file %s %t && cd %t
+// RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv7a-none-linux-gnueabi a.s -o a.o
+// RUN: ld.lld --pic-veneer --no-rosegment --script a.lds a.o -o exe
+// RUN: llvm-objdump --no-print-imm-hex -d exe | FileCheck %s
 
 // Test that we can force generation of position independent thunks even when
 // inputs are not pic.
+
+//--- a.lds
+
+SECTIONS {
+  .text_low 0x94 : AT(0x94) { *(.text_low) *(.text_low2) }
+  .text_high 0x2000000 : AT(0x2000000) { *(.text_high) *(.text_high2) }
+}
+
+//--- a.s
 
  .syntax unified
  .section .text_low, "ax", %progbits

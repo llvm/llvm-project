@@ -1194,3 +1194,29 @@ size_t lldb_private::npdb::GetSizeOfType(PdbTypeSymId id,
   }
   return 0;
 }
+
+std::optional<PdbTypeSymId>
+lldb_private::npdb::GetFunctionType(llvm::codeview::CVSymbol symbol) {
+  switch (symbol.kind()) {
+  case SymbolKind::S_GPROC32:
+  case SymbolKind::S_LPROC32:
+  case SymbolKind::S_LPROC32_ID:
+  case SymbolKind::S_GPROC32_ID: {
+    ProcSym reg(SymbolRecordKind::ProcSym);
+    llvm::Error err = SymbolDeserializer::deserializeAs<ProcSym>(symbol, reg);
+    if (err)
+      return std::nullopt;
+    return PdbTypeSymId(reg.FunctionType, /*is_ipi=*/false);
+  }
+  case SymbolKind::S_INLINESITE: {
+    InlineSiteSym reg(SymbolRecordKind::InlineesSym);
+    llvm::Error err =
+        SymbolDeserializer::deserializeAs<InlineSiteSym>(symbol, reg);
+    if (err)
+      return std::nullopt;
+    return PdbTypeSymId(reg.Inlinee, /*is_ipi=*/true);
+  }
+  default:
+    return std::nullopt;
+  }
+}

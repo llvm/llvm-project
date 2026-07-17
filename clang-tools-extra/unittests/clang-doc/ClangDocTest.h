@@ -19,7 +19,7 @@
 namespace clang {
 namespace doc {
 
-using EmittedInfoList = OwningPtrVec<Info>;
+using EmittedInfoList = std::vector<Info *>;
 
 static const SymbolID EmptySID = SymbolID();
 static const SymbolID NonEmptySID =
@@ -33,8 +33,8 @@ TypedefInfo *InfoAsTypedef(Info *I);
 
 void CheckCommentInfo(ArrayRef<CommentInfo> Expected,
                       ArrayRef<CommentInfo> Actual);
-void CheckCommentInfo(const OwningVec<CommentInfo> &Expected,
-                      const OwningVec<CommentInfo> &Actual);
+void CheckCommentInfo(const DocList<CommentInfo> &Expected,
+                      const DocList<CommentInfo> &Actual);
 void CheckReference(const Reference &Expected, const Reference &Actual);
 void CheckTypeInfo(const TypeInfo *Expected, const TypeInfo *Actual);
 void CheckFieldTypeInfo(const FieldTypeInfo *Expected,

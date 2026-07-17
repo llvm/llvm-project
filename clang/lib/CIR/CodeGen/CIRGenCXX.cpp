@@ -163,9 +163,22 @@ static void emitDeclDestroy(CIRGenFunction &cgf, const VarDecl *vd,
     // call right here.
     auto gd = GlobalDecl(dtor, Dtor_Complete);
     fnOp = cgm.getAddrAndTypeOfCXXStructor(gd).second;
+    // When a global has a constant initializer that fixes the active member
+    // of a union (e.g. an SSO short variant), CIR creates the global with
+    // the initializer's narrowed record type, so `getAddrOfGlobalVar` returns
+    // a pointer to the narrowed type rather than the variable's declared
+    // type.  Mirror the cast pattern from `emitGlobalVarDeclLValue` so the
+    // destructor receives a `this` pointer typed as the declared class.
+    mlir::Value thisAddr = cgm.getAddrOfGlobalVar(vd);
+    mlir::Type realVarTy = cgm.getTypes().convertTypeForMem(type);
+    cir::PointerType realPtrTy = cir::PointerType::get(
+        realVarTy,
+        mlir::cast<cir::PointerType>(thisAddr.getType()).getAddrSpace());
+    if (realPtrTy != thisAddr.getType())
+      thisAddr = builder.createBitcast(thisAddr.getLoc(), thisAddr, realPtrTy);
     builder.createCallOp(cgf.getLoc(vd->getSourceRange()),
                          mlir::FlatSymbolRefAttr::get(fnOp.getSymNameAttr()),
-                         mlir::ValueRange{cgm.getAddrOfGlobalVar(vd)});
+                         mlir::ValueRange{thisAddr});
     assert(fnOp && "expected cir.func");
     // TODO(cir): This doesn't do anything but check for unhandled conditions.
     // What it is meant to do should really be happening in LoweringPrepare.

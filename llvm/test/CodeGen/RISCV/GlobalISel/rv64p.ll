@@ -4,9 +4,9 @@
 define i8 @cls_i8(i8 %x) {
 ; CHECK-LABEL: cls_i8:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 24
 ; CHECK-NEXT:    sext.b a0, a0
 ; CHECK-NEXT:    clsw a0, a0
-; CHECK-NEXT:    li a1, 24
 ; CHECK-NEXT:    subw a0, a0, a1
 ; CHECK-NEXT:    ret
   %a = ashr i8 %x, 7
@@ -19,9 +19,9 @@ define i8 @cls_i8(i8 %x) {
 define i8 @cls_i8_2(i8 %x) {
 ; CHECK-LABEL: cls_i8_2:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 24
 ; CHECK-NEXT:    sext.b a0, a0
 ; CHECK-NEXT:    clsw a0, a0
-; CHECK-NEXT:    li a1, 24
 ; CHECK-NEXT:    subw a0, a0, a1
 ; CHECK-NEXT:    ret
   %a = ashr i8 %x, 7
@@ -35,9 +35,9 @@ define i8 @cls_i8_2(i8 %x) {
 define i16 @cls_i16(i16 %x) {
 ; CHECK-LABEL: cls_i16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:    sext.h a0, a0
 ; CHECK-NEXT:    clsw a0, a0
-; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:    subw a0, a0, a1
 ; CHECK-NEXT:    ret
   %a = ashr i16 %x, 15
@@ -50,9 +50,9 @@ define i16 @cls_i16(i16 %x) {
 define i16 @cls_i16_2(i16 %x) {
 ; CHECK-LABEL: cls_i16_2:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:    sext.h a0, a0
 ; CHECK-NEXT:    clsw a0, a0
-; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:    subw a0, a0, a1
 ; CHECK-NEXT:    ret
   %a = ashr i16 %x, 15

@@ -59,7 +59,7 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI ostream_iterator& operator*() { return *this; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI ostream_iterator& operator*() { return *this; }
   _LIBCPP_HIDE_FROM_ABI ostream_iterator& operator++() { return *this; }
   _LIBCPP_HIDE_FROM_ABI ostream_iterator& operator++(int) { return *this; }
 };

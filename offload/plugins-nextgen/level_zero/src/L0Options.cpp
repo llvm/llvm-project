@@ -25,6 +25,9 @@ void L0OptionsTy::processEnvironmentVars() {
       std::string(" ") +
       StringEnvar("LIBOMPTARGET_LEVEL_ZERO_COMPILATION_OPTIONS", "").get();
 
+  Flags.UseCopyOffloadHint =
+      BoolEnvar("LIBOFFLOAD_LEVEL_ZERO_USE_COPY_OFFLOAD_HINT", true);
+
   // Memory pool syntax:
   // LIBOMPTARGET_LEVEL_ZERO_MEMORY_POOL=<Option>
   //  <Option>       := 0 | <PoolInfoList>
@@ -185,14 +188,13 @@ void L0OptionsTy::processEnvironmentVars() {
       CommandMode = CommandModeTy::Async;
     else if (match(CommandModeVar, "async_ordered"))
       CommandMode = CommandModeTy::AsyncOrdered;
+    else if (match(CommandModeVar, "inorder"))
+      CommandMode = CommandModeTy::InOrder;
     else
       MESSAGE("Warning: Ignoring invalid value for "
               "LIBOMPTARGET_LEVEL_ZERO_COMMAND_MODE=%s\n",
               CommandModeVar.get().c_str());
   }
-
-  // Detect if we need to enable compatibility with Level Zero debug mode.
-  ZeDebugEnabled = BoolEnvar("ZET_ENABLE_PROGRAM_DEBUGGING", false);
 }
 
 } // namespace llvm::omp::target::plugin

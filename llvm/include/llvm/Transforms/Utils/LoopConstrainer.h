@@ -80,7 +80,7 @@ struct LoopStructure {
     return Result;
   }
 
-  static std::optional<LoopStructure>
+  LLVM_ABI static std::optional<LoopStructure>
   parseLoopStructure(ScalarEvolution &, Loop &, bool, const char *&);
 };
 
@@ -213,13 +213,13 @@ private:
   SubRanges SR;
 
 public:
-  LoopConstrainer(Loop &L, LoopInfo &LI,
-                  function_ref<void(Loop *, bool)> LPMAddNewLoop,
-                  const LoopStructure &LS, ScalarEvolution &SE,
-                  DominatorTree &DT, Type *T, SubRanges SR);
+  LLVM_ABI LoopConstrainer(Loop &L, LoopInfo &LI,
+                           function_ref<void(Loop *, bool)> LPMAddNewLoop,
+                           const LoopStructure &LS, ScalarEvolution &SE,
+                           DominatorTree &DT, Type *T, SubRanges SR);
 
   // Entry point for the algorithm.  Returns true on success.
-  bool run();
+  LLVM_ABI bool run();
 };
 } // namespace llvm
 

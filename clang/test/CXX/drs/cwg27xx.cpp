@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++98 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98 %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++14 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx20 %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx20,since-cxx23 %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx20,since-cxx23,since-cxx26 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++98 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,cxx98
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++14 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11,since-cxx14
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11,since-cxx14
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx20
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx20,since-cxx23
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx20,since-cxx23,since-cxx26
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -18,6 +18,25 @@
 #endif
 
 namespace std {
+#if __cplusplus >= 201103L
+using size_t = decltype(sizeof(0));
+template <typename T>
+struct initializer_list {
+  const T *p;
+  size_t n;
+
+  #if __cplusplus >= 201402L
+  constexpr
+  #endif
+  initializer_list(const T *p, size_t n);
+
+  #if __cplusplus >= 201402L
+  constexpr
+  #endif
+  const T* begin() const { return p; };
+};
+#endif
+
 #if __cplusplus >= 202002L
   struct strong_ordering {
     int n;
@@ -173,6 +192,40 @@ static_assert(!__is_layout_compatible(StructWithAnonUnion, StructWithAnonUnion2)
 static_assert(!__is_layout_compatible(StructWithAnonUnion, StructWithAnonUnion3), "");
 #endif
 } // namespace cwg2759
+
+namespace cwg2765 { // cwg2765: partial
+static_assert(+"foo" == "foo", "");
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
+//   expected-note@-2 {{comparison of addresses of potentially overlapping literals has unspecified value}}
+static_assert("xfoo" + 1 == "foo\0y", "");
+// expected-warning@-1 {{adding 'int' to a string does not append to the string}}
+//   expected-note@-2 {{use array indexing to silence this warning}}
+// expected-error@-3 {{static assertion expression is not an integral constant expression}}
+//   expected-note@-4 {{comparison of addresses of potentially overlapping literals has unspecified value}}
+static_assert("foo" + 0 != "bar", "");
+// expected-warning@-1 {{adding 'int' to a string does not append to the string}}
+//   expected-note@-2 {{use array indexing to silence this warning}}
+// cxx98-error@-3 {{static assertion expression is not an integral constant expression}} FIXME
+static_assert((const char*)"foo" != "oo", "");
+// cxx98-error@-1 {{static assertion expression is not an integral constant expression}} FIXME
+
+#if __cplusplus >= 201103L
+constexpr const char *f() { return "foo"; }
+constexpr bool b2 = f() == f(); 
+// since-cxx11-error@-1 {{constexpr variable 'b2' must be initialized by a constant expression}}
+//   since-cxx11-note@-2 {{comparison of addresses of potentially overlapping literals has unspecified value}}
+constexpr const char *p = f();
+constexpr bool b3 = p == p; 
+#endif
+
+#if __cplusplus >= 201402L
+constexpr std::initializer_list<int *> il1 = { (int *)nullptr };
+constexpr std::initializer_list<unsigned long> il2 = { 0 };
+constexpr bool b7 = il1.begin() == (void *)il2.begin();
+// FIXME-error@-1 {{constexpr variable 'b7' must be initialized by a constant expression}}
+//   FIXME-note@-2 {{address of a constexpr-unknown object cannot be used for comparison}}
+#endif
+} // namespace cwg2765
 
 namespace cwg2770 { // cwg2770: 20 open 2023-07-14
 #if __cplusplus >= 202002L

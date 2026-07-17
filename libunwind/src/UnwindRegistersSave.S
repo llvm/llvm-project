@@ -807,6 +807,7 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   mov    x1,sp
   str    x1,      [x0, #0x0F8]
   str    x30,     [x0, #0x100]    // store return address as pc
+  str    xzr,     [x0, #0x108]    // zero __ra_sign_state
   // skip cpsr
 #if defined(__ARM_FP) && __ARM_FP != 0
   stp    d0, d1,  [x0, #0x110]
@@ -1102,8 +1103,21 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 # On entry:
 #  thread_state pointer is in r0
 #
+# The context layout is hexagon_thread_state_t: unsigned int __r[35]
+# __r[0..31] = r0..r31, __r[32] = predicates, __r[33] = PC, __r[34] = unused
+# Offsets: __r[n] is at byte offset n*4.
+#
 #define OFFSET(offset) (offset/4)
 DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
+  // Save r1-r7 first (r0 is the context pointer, saved last)
+  memw(r0+#4)  = r1
+  memw(r0+#8)  = r2
+  memw(r0+#12) = r3
+  memw(r0+#16) = r4
+  memw(r0+#20) = r5
+  memw(r0+#24) = r6
+  memw(r0+#28) = r7
+
   memw(r0+#32) = r8
   memw(r0+#36) = r9
   memw(r0+#40) = r10
@@ -1133,12 +1147,17 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   memw(r0+#116) = r29
   memw(r0+#120) = r30
   memw(r0+#124) = r31
-  r1 = c4   // Predicate register
+
+  r1 = c4                  // Predicate register
   memw(r0+#128) = r1
-  r1 = memw(r30)           // *FP == Saved FP
-  r1 = r31
+
+  r1 = r31                 // Store return address as PC
   memw(r0+#132) = r1
 
+  // Save r0 (the context pointer itself) last
+  memw(r0+#0) = r0
+
+  r0 = #0                  // return UNW_ESUCCESS
   jumpr r31
 
 #elif defined(__sparc__) && defined(__arch64__)

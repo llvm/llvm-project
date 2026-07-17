@@ -154,11 +154,11 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
 
       else
         image_info = HostInfo::GetSharedCacheImageInfo(
-            module_spec.GetFileSpec().GetPathAsConstString(), sc_uuid, sc_mode);
+            ConstString(module_spec.GetFileSpec().GetPath()), sc_uuid, sc_mode);
     } else {
       // Fall back to looking lldb's own shared cache by filename
       image_info = HostInfo::GetSharedCacheImageInfo(
-          module_spec.GetFileSpec().GetPathAsConstString(), sc_mode);
+          ConstString(module_spec.GetFileSpec().GetPath()), sc_mode);
     }
 
     // If we found it and it has the correct UUID, let's proceed with
@@ -177,7 +177,8 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
   // added to the target, don't let it be called for every one.
   if (!module_sp || module_sp->GetObjectFile() == nullptr) {
     llvm::Expected<ModuleSP> module_sp_or_err = m_process->ReadModuleFromMemory(
-        image_info.file_spec, image_info.address);
+        image_info.file_spec, image_info.address,
+        image_info.mh_and_load_cmd_size);
     if (auto err = module_sp_or_err.takeError()) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::DynamicLoader), std::move(err),
                      "Failed to load module from memory: {0}");
@@ -309,19 +310,19 @@ bool DynamicLoaderDarwin::UpdateImageLoadAddress(Module *module,
               // If a segment was eliminated for the in-memory image,
               // don't map it into lldb's target section load list.
               if (info.segments[i].vmsize == 0) {
-                LLDB_LOGF(log, "%s: Omitting zero-size segment %s",
-                          info.file_spec.GetFilename().AsCString(""),
-                          info.segments[i].name.AsCString(""));
+                LLDB_LOG(log, "{0}: Omitting zero-size segment {1}",
+                         info.file_spec.GetFilename(),
+                         info.segments[i].name.AsCString(""));
                 continue;
               }
 
               if (info.segments[i].vmsize != section_sp->GetByteSize())
-                LLDB_LOGF(log,
-                          "%s: In-memory segment size for %s is 0x%" PRIx64
-                          " but file segment size is 0x%" PRIx64,
-                          info.file_spec.GetFilename().AsCString(""),
-                          info.segments[i].name.AsCString(""),
-                          info.segments[i].vmsize, section_sp->GetByteSize());
+                LLDB_LOG(log,
+                         "{0}: In-memory segment size for {1} is {2:x}"
+                         " but file segment size is {3:x}",
+                         info.file_spec.GetFilename(),
+                         info.segments[i].name.AsCString(""),
+                         info.segments[i].vmsize, section_sp->GetByteSize());
 
               changed = m_process->GetTarget().SetSectionLoadAddress(
                   section_sp, new_section_load_addr, warn_multiple);
@@ -445,6 +446,10 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
         mh->GetValueForKey("cpusubtype")->GetUnsignedIntegerValue();
     image_infos[i].header.filetype =
         mh->GetValueForKey("filetype")->GetUnsignedIntegerValue();
+    if (mh->HasKey("sizeof_mh_and_loadcmds"))
+      image_infos[i].mh_and_load_cmd_size =
+          mh->GetValueForKey("sizeof_mh_and_loadcmds")
+              ->GetUnsignedIntegerValue();
 
     if (image->HasKey("min_version_os_name")) {
       std::string os_name =
@@ -758,13 +763,13 @@ bool DynamicLoaderDarwin::AddModulesUsingPreloadedModules(
       if (objfile) {
         SectionList *sections = objfile->GetSectionList();
         if (sections) {
-          ConstString commpage_dbstr("__commpage");
+          llvm::StringRef commpage_sect_name("__commpage");
           Section *commpage_section =
-              sections->FindSectionByName(commpage_dbstr).get();
+              sections->FindSectionByName(commpage_sect_name).get();
           if (commpage_section) {
             ModuleSpec module_spec(objfile->GetFileSpec(),
                                    image_info.GetArchitecture());
-            module_spec.GetObjectName() = commpage_dbstr;
+            module_spec.GetObjectName() = ConstString(commpage_sect_name);
             ModuleSP commpage_image_module_sp(
                 target_images.FindFirstModule(module_spec));
             if (!commpage_image_module_sp) {

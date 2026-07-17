@@ -29,24 +29,17 @@ Library::Library(Context &Ctx, EventHandler &Handler, const DataLayout &DL,
     : Ctx(Ctx), Handler(Handler), DL(DL), Executor(Executor) {}
 
 std::optional<std::string> Library::readStringFromMemory(const Pointer &Ptr) {
-  auto *MO = Ptr.getMemoryObject();
-  if (!MO) {
-    Executor.reportImmediateUB()
-        << "Invalid memory access via a pointer with nullary provenance.";
-    return std::nullopt;
-  }
-
   std::string Result;
   const APInt &Address = Ptr.address();
   uint64_t Offset = 0;
 
   while (true) {
-    auto ValidOffset =
-        Executor.verifyMemAccess(*MO, Address + Offset, 1, Align(1), false);
-    if (!ValidOffset)
+    auto [MO, ValidOffset] = Executor.verifyMemAccess(
+        Ptr.getWithNewAddr(Address + Offset), 1, Align(1), /*IsStore=*/false);
+    if (!MO)
       return std::nullopt;
 
-    Byte B = (*MO)[*ValidOffset];
+    Byte B = (*MO)[ValidOffset];
     if (B.ConcreteMask != 0xFF) {
       Executor.reportImmediateUB()
           << "Read uninitialized or poison memory while "
@@ -128,11 +121,14 @@ AnyValue Library::executeFree(ArrayRef<AnyValue> Args) {
   if (Ptr.isNullPtr(/*AS=*/0, DL))
     return AnyValue();
 
-  MemoryObject *Obj = Ptr.getMemoryObject();
+  MemoryObject *Obj = Ctx.checkProvenance(Ptr, [](const Provenance &) {
+    // TODO: check nofree
+    return true;
+  });
   if (!Obj) {
     Executor.reportImmediateUB()
         << "freeing a pointer with nullary provenance.";
-    return AnyValue::poison();
+    return AnyValue();
   }
 
   if (const uint64_t Address = Ptr.address().getZExtValue();
@@ -142,20 +138,20 @@ AnyValue Library::executeFree(ArrayRef<AnyValue> Args) {
            "the start of an allocation. Pointer address: 0x"
         << Twine::utohexstr(Address) << ", allocation base: 0x"
         << Twine::utohexstr(Obj->getAddress()) << ".";
-    return AnyValue::poison();
+    return AnyValue();
   }
 
   if (Obj->getState() == MemoryObjectState::Freed) {
     Executor.reportImmediateUB()
         << "double-freeing a memory object allocated at 0x"
         << Twine::utohexstr(Obj->getAddress()) << ".";
-    return AnyValue::poison();
+    return AnyValue();
   }
 
   if (!Obj->isHeapAllocated()) {
     Executor.reportImmediateUB() << "freeing a non-heap allocation at 0x"
                                  << Twine::utohexstr(Obj->getAddress()) << ".";
-    return AnyValue::poison();
+    return AnyValue();
   }
 
   // Currently we don't check for cases where a memory allocated with C
