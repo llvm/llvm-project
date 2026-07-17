@@ -869,7 +869,7 @@ declineSourceMaterialization(MlirRewriterBase rewriter, MlirType outputType,
   (void)loc;
   intptr_t *declined = (intptr_t *)userData;
   if (declined)
-    (*declined)++;
+    ++(*declined);
   return (MlirValue){NULL};
 }
 
@@ -905,7 +905,7 @@ static MlirValue buildTargetCast(MlirRewriterBase rewriter, MlirType outputType,
   intptr_t *counter = (intptr_t *)userData;
   if (counter && mlirTypeIsAInteger(originalType) &&
       mlirIntegerTypeGetWidth(originalType) == 32)
-    (*counter)++;
+    ++(*counter);
   MlirOperationState state =
       mlirOperationStateGet(mlirStringRefCreateFromCString("test.cast"), loc);
   mlirOperationStateAddOperands(&state, nInputs, inputs);
@@ -957,7 +957,7 @@ static MlirLogicalResult buildSplitCast(MlirRewriterBase rewriter,
   // the (i16) output types alone, so observing it here proves it is propagated.
   if (counter && mlirTypeIsAInteger(originalType) &&
       mlirIntegerTypeGetWidth(originalType) == 32)
-    (*counter)++;
+    ++(*counter);
   for (intptr_t i = 0; i < nOutputTypes; ++i) {
     MlirOperationState state =
         mlirOperationStateGet(mlirStringRefCreateFromCString("test.cast"), loc);
@@ -977,7 +977,7 @@ static MlirTypeConverterConversionStatus appendThenDeclineConversion(
     MlirType type, MlirTypeConverterConversionResults results, void *userData) {
   intptr_t *counter = (intptr_t *)userData;
   if (counter)
-    (*counter)++;
+    ++(*counter);
   MlirType i8 = mlirIntegerTypeGet(mlirTypeGetContext(type), 8);
   // Append more (and differently-typed) entries than the real conversion would,
   // so any leak is observable as a wrong type/arity downstream.
@@ -1003,7 +1003,7 @@ static MlirLogicalResult declineTargetMaterialization(
   (void)outputs;
   intptr_t *counter = (intptr_t *)userData;
   if (counter)
-    (*counter)++;
+    ++(*counter);
   return mlirLogicalResultFailure();
 }
 
