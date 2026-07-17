@@ -35,14 +35,14 @@ enum class I64Enum : long long {
   Max = 9223372036854775807LL,
 };
 
-int main(){
-    auto u8 = U8Enum::Max;
-    auto i8 = I8Enum::Max;
-    auto u16 = U16Enum::Max;
-    auto i16 = I16Enum::Max;
-    auto u32 = U32Enum::Max;
-    auto i32 = I32Enum::Max;
-    auto u64 = U64Enum::Max;
-    auto i64 = I64Enum::Max;
-    return 0;
+int main() {
+  auto u8 = U8Enum::Max;
+  auto i8 = I8Enum::Max;
+  auto u16 = U16Enum::Max;
+  auto i16 = I16Enum::Max;
+  auto u32 = U32Enum::Max;
+  auto i32 = I32Enum::Max;
+  auto u64 = U64Enum::Max;
+  auto i64 = I64Enum::Max;
+  return 0;
 }
