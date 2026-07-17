@@ -260,18 +260,6 @@ lldb_private::python::SWIGBridge::LLDBSWIGPythonCreateOSPlugin(
   return python::PythonObject();
 }
 
-python::PythonObject
-lldb_private::python::SWIGBridge::LLDBSWIGPython_CreateFrameRecognizer(
-    const char *python_class_name, const char *session_dictionary_name) {
-  return python::PythonObject();
-}
-
-PyObject *
-lldb_private::python::SWIGBridge::LLDBSwigPython_GetRecognizedArguments(
-    PyObject *implementor, const lldb::StackFrameSP &frame_sp) {
-  return nullptr;
-}
-
 bool lldb_private::python::SWIGBridge::LLDBSWIGPythonRunScriptKeywordProcess(
     const char *python_function_name, const char *session_dictionary_name,
     const lldb::ProcessSP &process, std::string &output) {

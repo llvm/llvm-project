@@ -495,20 +495,6 @@ createGlobalInitialization(fir::FirOpBuilder &builder, fir::GlobalOp global,
   builder.restoreInsertionPoint(insertPt);
 }
 
-static unsigned getAllocatorIdxFromDataAttr(cuf::DataAttributeAttr dataAttr) {
-  if (dataAttr) {
-    if (dataAttr.getValue() == cuf::DataAttribute::Pinned)
-      return kPinnedAllocatorPos;
-    if (dataAttr.getValue() == cuf::DataAttribute::Device)
-      return kDeviceAllocatorPos;
-    if (dataAttr.getValue() == cuf::DataAttribute::Managed)
-      return kManagedAllocatorPos;
-    if (dataAttr.getValue() == cuf::DataAttribute::Unified)
-      return kUnifiedAllocatorPos;
-  }
-  return kDefaultAllocator;
-}
-
 /// Create the global op and its init if it has one
 fir::GlobalOp Fortran::lower::defineGlobal(
     Fortran::lower::AbstractConverter &converter,
@@ -564,12 +550,19 @@ fir::GlobalOp Fortran::lower::defineGlobal(
         fir::HasValueOp::create(b, loc, box);
       });
     } else {
-      // Create unallocated/disassociated descriptor if no explicit init
+      // Create unallocated/disassociated descriptor if no explicit init. Under
+      // -gpu=unified, back a plain module allocatable/pointer with managed
+      // memory by baking the unified allocator index into the descriptor.
+      const bool cudaUnifiedBacking =
+          converter.getFoldingContext().languageFeatures().IsEnabled(
+              Fortran::common::LanguageFeature::CudaUnified);
+      unsigned allocatorIdx =
+          Fortran::lower::getAllocatorIdxForUnified(sym, cudaUnifiedBacking);
       createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
         mlir::Value box = fir::factory::createUnallocatedBox(
             b, loc, symTy,
             /*nonDeferredParams=*/{},
-            /*typeSourceBox=*/{}, getAllocatorIdxFromDataAttr(dataAttr));
+            /*typeSourceBox=*/{}, allocatorIdx);
         fir::HasValueOp::create(b, loc, box);
       });
     }
@@ -698,10 +691,15 @@ static void instantiateGlobal(Fortran::lower::AbstractConverter &converter,
   mlir::StringAttr linkage = getLinkageAttribute(converter, var);
   fir::GlobalOp global;
 
-  if (Fortran::evaluate::IsCoarray(sym))
+  if (Fortran::evaluate::IsCoarray(sym)) {
     if (hasFinalization(sym) || hasAllocatableDirectComponent(sym))
       TODO(loc, "coarray: coarray with an allocatable direct component and/or "
                 "requiring finalization");
+    const auto *details =
+        sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
+    if (details && details->init())
+      TODO(loc, "coarray: initialization");
+  }
 
   if (var.isModuleOrSubmoduleVariable()) {
     // A non-intrinsic module global is defined when lowering the module.
@@ -2322,9 +2320,17 @@ void Fortran::lower::mapSymbolAttributes(
           TODO(loc,
                "derived type allocatable or pointer with length parameters");
     }
+    // Under -gpu=unified, bake the unified allocator index into the descriptor
+    // at creation so runtime-driven allocations (allocate-on-assignment,
+    // SOURCE=, ...) get managed backing, not just explicit ALLOCATE.
+    const bool cudaUnifiedBacking =
+        converter.getFoldingContext().languageFeatures().IsEnabled(
+            Fortran::common::LanguageFeature::CudaUnified) &&
+        !cuf::isCUDADeviceContext(builder.getRegion());
     fir::MutableBoxValue box = Fortran::lower::createMutableBox(
         converter, loc, var, boxAlloc, nonDeferredLenParams,
-        Fortran::lower::getAllocatorIdx(var.getSymbol()));
+        Fortran::lower::getAllocatorIdxForUnified(var.getSymbol(),
+                                                  cudaUnifiedBacking));
     genAllocatableOrPointerDeclare(converter, symMap, var.getSymbol(), box,
                                    replace);
     return;
@@ -2634,11 +2640,12 @@ void Fortran::lower::mapSymbolAttributes(
     assert(!Fortran::semantics::IsAllocatable(sym) &&
            "must be a non-ALLOCATABLE coarray");
     if (Fortran::semantics::IsSaved(sym) &&
-        sym.owner().kind() != Fortran::semantics::Scope::Kind::MainProgram)
-      TODO(loc,
-           "coarray: non-ALLOCATABLE SAVE coarray outside the main program");
-    ;
-    Fortran::lower::genAllocateCoarray(converter, loc, sym, addr);
+        (sym.owner().kind() != Fortran::semantics::Scope::Kind::MainProgram ||
+         var.isModuleOrSubmoduleVariable()))
+      Fortran::lower::genAllocateNonAllocatableSaveCoarray(converter, loc, sym,
+                                                           addr);
+    else
+      Fortran::lower::genAllocateCoarray(converter, loc, sym, addr);
     ::genDeclareSymbol(converter, symMap, sym, addr, len, extents, lbounds,
                        replace);
     return;
