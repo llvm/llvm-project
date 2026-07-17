@@ -277,10 +277,6 @@ static void createAtomicBinOp(IntrinsicInst *II, AtomicRMWInst *AI,
                               std::optional<dxil::DXILOpBuilder> &OpBuilder) {
   std::optional<unsigned> BinOpCode = getAtomicBinOpCode(AI->getOperation());
   if (!BinOpCode) {
-    // TODO(#nnn): DXIL only defines atomic ops for Add/And/Or/Xor/
-    // Min/Max/UMin/UMax/Xchg; the remaining atomicrmw ops (FSub, Nand,
-    // FAdd, FMin/Max variants, UIncWrap, etc.) have no direct DXIL
-    // equivalent and need explicit expansion (e.g. compare-and-swap loop).
     reportFatalUsageError("DXIL resource atomicrmw operation not implemented");
     return;
   }
@@ -354,15 +350,12 @@ createAtomicBinOpIntrinsic(IntrinsicInst *II, AtomicRMWInst *AI,
   case dxil::ResourceKind::TextureCubeArray:
   case dxil::ResourceKind::FeedbackTexture2D:
   case dxil::ResourceKind::FeedbackTexture2DArray:
-    // TODO(#nnn): lower atomicrmw on texture UAVs to dx.op.textureAtomic.
     reportFatalUsageError(
         "DXIL atomicrmw not implemented for texture resources");
     return;
   case dxil::ResourceKind::CBuffer:
   case dxil::ResourceKind::Sampler:
   case dxil::ResourceKind::TBuffer:
-    // TODO(#nnn): decide whether these resource kinds should be diagnosed
-    // in the frontend instead of reaching backend lowering.
     reportFatalUsageError(
         "DXIL atomicrmw not implemented for this resource type");
     return;

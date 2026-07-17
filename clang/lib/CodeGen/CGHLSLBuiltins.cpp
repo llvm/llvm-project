@@ -310,17 +310,18 @@ static Value *handleElementwiseF32ToF16(CodeGenFunction &CGF,
   llvm_unreachable("Intrinsic F32ToF16 not supported by target architecture");
 }
 
-static Value *handleInterlockedAdd(CodeGenFunction &CGF, const CallExpr *E) {
-  // Emit `atomicrmw add` directly — no intermediate `*.interlocked.add`
-  // intrinsic needed on either DXIL or SPIR-V.
+static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
+                                  llvm::AtomicRMWInst::BinOp Op) {
+  // Emit `atomicrmw <op>` directly — no intermediate intrinsic needed on
+  // either DXIL or SPIR-V.
   LValue DestLV = CGF.EmitLValue(E->getArg(0));
   Address DestAddr = DestLV.getAddress();
   Value *Val = CGF.EmitScalarExpr(E->getArg(1));
   assert(E->getArg(1)->getType()->isIntegerType() &&
-         "Intrinsic InterlockedAdd value operand must be an integer");
+         "Intrinsic InterlockedOp value operand must be an integer");
 
   llvm::AtomicRMWInst *Call = CGF.Builder.CreateAtomicRMW(
-      llvm::AtomicRMWInst::Add, DestAddr, Val, llvm::AtomicOrdering::Monotonic);
+      Op, DestAddr, Val, llvm::AtomicOrdering::Monotonic);
 
   // The 3-arg overload writes the old value (the RMW's return value) into
   // the `original_value` reference parameter.
@@ -1481,7 +1482,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     // Emit `atomicrmw` directly for both DXIL and SPIR-V — the backends pick
     // up the raw instruction (DXIL via DXILResourceAccess for resource
     // pointers, SPIR-V via selectAtomicRMW). No intermediate intrinsic.
-    return handleInterlockedAdd(*this, E);
+    return handleInterlockedOp(*this, E, llvm::AtomicRMWInst::Add);
   }
   case Builtin::BI__builtin_hlsl_interlocked_or: {
     return handleInterlockedOp(*this, E,
