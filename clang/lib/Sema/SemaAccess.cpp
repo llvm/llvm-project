@@ -21,6 +21,7 @@
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
+#include "llvm/ADT/ScopeExit.h"
 
 using namespace clang;
 using namespace sema;
@@ -1611,6 +1612,16 @@ bool Sema::isMemberAccessibleForDeletion(CXXRecordDecl *NamingClass,
 
   // Suppress diagnostics.
   Entity.setDiag(Diag);
+
+  // Deletion checking can run while we are inside an enclosing
+  // delayed-diagnostics scope (e.g. when parsing a later declaration whose
+  // initializer requires explaining why a defaulted comparison operator is
+  // deleted). CheckAccess would then return AR_delayed, but the result must be
+  // known immediately here. Force an undelayed check, mirroring CheckEnableIf.
+  llvm::scope_exit UndelayDiags(
+      [&, CurrentState(DelayedDiagnostics.pushUndelayed())] {
+        DelayedDiagnostics.popUndelayed(CurrentState);
+      });
 
   switch (CheckAccess(*this, Loc, Entity)) {
   case AR_accessible: return true;
