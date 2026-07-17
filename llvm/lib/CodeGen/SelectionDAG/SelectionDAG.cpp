@@ -7483,7 +7483,26 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   return V;
 }
 
-static APInt getIntegerIdentity(unsigned Opcode, unsigned BitWidth);
+static APInt getIntegerIdentity(unsigned Opcode, unsigned BitWidth) {
+  switch (Opcode) {
+  default:
+    llvm_unreachable("Unexpected integer identity opcode");
+  case ISD::ADD:
+  case ISD::OR:
+  case ISD::XOR:
+  case ISD::UMAX:
+    return APInt::getZero(BitWidth);
+  case ISD::MUL:
+    return APInt(BitWidth, 1);
+  case ISD::AND:
+  case ISD::UMIN:
+    return APInt::getAllOnes(BitWidth);
+  case ISD::SMAX:
+    return APInt::getSignedMinValue(BitWidth);
+  case ISD::SMIN:
+    return APInt::getSignedMaxValue(BitWidth);
+  }
+}
 
 static std::optional<APInt> FoldValue(unsigned Opcode, const APInt &C1,
                                       const APInt &C2) {
@@ -15068,27 +15087,6 @@ SDValue SelectionDAG::getTokenFactor(const SDLoc &DL,
     Vals.emplace_back(NewTF);
   }
   return getNode(ISD::TokenFactor, DL, MVT::Other, Vals);
-}
-
-static APInt getIntegerIdentity(unsigned Opcode, unsigned BitWidth) {
-  switch (Opcode) {
-  default:
-    llvm_unreachable("Unexpected integer identity opcode");
-  case ISD::ADD:
-  case ISD::OR:
-  case ISD::XOR:
-  case ISD::UMAX:
-    return APInt::getZero(BitWidth);
-  case ISD::MUL:
-    return APInt(BitWidth, 1);
-  case ISD::AND:
-  case ISD::UMIN:
-    return APInt::getAllOnes(BitWidth);
-  case ISD::SMAX:
-    return APInt::getSignedMinValue(BitWidth);
-  case ISD::SMIN:
-    return APInt::getSignedMaxValue(BitWidth);
-  }
 }
 
 SDValue SelectionDAG::getIdentityElement(unsigned Opcode, const SDLoc &DL,
