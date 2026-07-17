@@ -2,6 +2,8 @@
 // RUN:    | FileCheck %s --check-prefixes=CHECK,X64
 // RUN: %clang_cc1 -triple x86_64-windows-msvc -emit-llvm -o - %s \
 // RUN:    | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang --target=x86_64-windows-msvc -mno-sse -S -emit-llvm -o - %s \
+// RUN:    | FileCheck %s --check-prefixes=CHECK,NOSSE
 // RUN: %clang_cc1 -triple aarch64-windows-msvc -emit-llvm -o - %s \
 // RUN:    | FileCheck %s --check-prefixes=CHECK,ARM,ARM64
 // RUN: %clang_cc1 -triple arm64ec-windows-msvc -emit-llvm -o - %s \
@@ -11,13 +13,37 @@ typedef int int128_t __attribute__((mode(TI)));
 
 int128_t foo(void) { return 0; }
 
-// X64: define dso_local <2 x i64> @foo()
+// X64-LABEL: define dso_local void @foo(
+// X64-SAME: sret(i128) align 16
 // ARM: define dso_local i128 @foo()
 
 int128_t bar(int128_t a, int128_t b) { return a * b; }
 
-// X64: define dso_local <2 x i64> @bar(ptr noundef align 16 dead_on_return %0, ptr noundef align 16 dead_on_return %1)
+// X64-LABEL: define dso_local void @bar(
+// X64-SAME: sret(i128) align 16
+// X64-SAME: ptr noundef align 16 dead_on_return
+// X64-SAME: ptr noundef align 16 dead_on_return
+// NOSSE-LABEL: define dso_local void @bar(
+// NOSSE-SAME: sret(i128) align 16
+// NOSSE-SAME: ptr noundef align 16 dead_on_return
+// NOSSE-SAME: ptr noundef align 16 dead_on_return
 // ARM: define dso_local i128 @bar(i128 noundef %a, i128 noundef %b)
+
+#if defined(__x86_64__) && !defined(__arm64ec__)
+int128_t __attribute__((vectorcall)) vectorcall_foo(void) { return 0; }
+
+// X64-LABEL: define dso_local x86_vectorcallcc void @"\01vectorcall_foo@@0"(
+// X64-SAME: sret(i128) align 16
+
+int128_t __attribute__((vectorcall)) vectorcall_bar(int128_t a, int128_t b) {
+  return a * b;
+}
+
+// X64-LABEL: define dso_local x86_vectorcallcc void @"\01vectorcall_bar@@32"(
+// X64-SAME: sret(i128) align 16
+// X64-SAME: ptr noundef align 16 dead_on_return
+// X64-SAME: ptr noundef align 16 dead_on_return
+#endif
 
 void vararg(int a, ...) {
   // CHECK: define{{.*}} void @vararg
