@@ -39,6 +39,18 @@ static void setKernelLaunchArgs(const detail::UnifiedRangeView &Range,
     }
   }
 
+  // We have the following mapping between dimensions with SPIR-V builtins:
+  // 1D: id[0] -> x
+  // 2D: id[0] -> y, id[1] -> x
+  // 3D: id[0] -> z, id[1] -> y, id[2] -> x
+  // So in order to ensure the correctness we update all the kernel
+  // parameters accordingly.
+  if (Range.MDims > 1) {
+    // TODO: Offset is not supported in liboffload so just ignore it for now.
+    std::swap(GlobalSize[0], GlobalSize[Range.MDims - 1]);
+    std::swap(GroupSize[0], GroupSize[Range.MDims - 1]);
+  }
+
   ArgsToSet.Dimensions = Range.MDims;
   ArgsToSet.NumGroups.x = GlobalSize[0] / GroupSize[0];
   ArgsToSet.NumGroups.y = GlobalSize[1] / GroupSize[1];
@@ -73,6 +85,13 @@ static ol_device_handle_t getHostOLDevice() {
 
 void QueueImpl::wait() { callAndThrow(olSyncQueue, MOffloadQueue); }
 
+void QueueImpl::waitAndThrow() {
+  wait();
+  throwAsynchronous();
+}
+
+void QueueImpl::throwAsynchronous() { flushAsyncExceptions(); }
+
 static void checkEventsPlatformMatch(const std::vector<EventImplPtr> &Events,
                                      const PlatformImpl &QueuePlatform) {
   // liboffload limitation to olWaitEvents. We can't do any extra handling for
@@ -94,14 +113,12 @@ void QueueImpl::setKernelParameters(std::vector<EventImplPtr> &&Events,
                                     const detail::UnifiedRangeView &Range) {
   checkEventsPlatformMatch(Events, MDevice.getPlatformImpl());
 
-  // TODO: this conversion and storing of only offload events is possible only
-  // while we don't have host tasks (or features based on host tasks, like
-  // streams). With them - it is very likely we should copy EventImplPtr
-  // (shared_ptr) and keep it here. Although it may differ if host tasks will be
-  // implemented on offload level (no data now).
-  assert(MCurrentSubmitInfo.DepEvents.empty() &&
-         "Kernel submission must clean up dependencies.");
-  MCurrentSubmitInfo.DepEvents = getSyclObjHandles(Events);
+  // It is done at the beginning of a new submission to ensure that we can still
+  // submit a kernel properly if the previous submission throws.
+  MCurrentSubmitInfo.DepEvents.clear();
+  MCurrentSubmitInfo.Range = {};
+
+  MCurrentSubmitInfo.DepEvents = std::move(Events);
   setKernelLaunchArgs(Range, MCurrentSubmitInfo.Range);
 }
 
@@ -122,17 +139,14 @@ void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
   auto Result =
       olLaunchKernel(MOffloadQueue, MDevice.getOLHandle(), Kernel,
                      &MCurrentSubmitInfo.Range, NULL, 1, ArgPtrs, ArgSizes);
-  // Clean up current kernel submit data to prepare structures for next
-  // submission.
-  MCurrentSubmitInfo.DepEvents.clear();
-  MCurrentSubmitInfo.Range = {};
   if (isFailed(Result))
     throw sycl::exception(sycl::make_error_code(sycl::errc::runtime),
                           std::string("Kernel submission (") +
                               KernelInfo.getName().data() + ") failed with " +
                               formatCodeString(Result));
 
-  MCurrentSubmitInfo.LastEvent = createEvent();
+  MCurrentSubmitInfo.LastEvent =
+      createEvent(std::move(MCurrentSubmitInfo.DepEvents));
 }
 
 // Returns the {DeviceHandle, IsHostDevice} pair associated with the ptr.
@@ -158,9 +172,8 @@ std::shared_ptr<EventImpl>
 QueueImpl::memcpy(void *Dest, const void *Src, std::size_t NumBytes,
                   const std::vector<EventImplPtr> &DepEvents) {
   checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl());
-  auto EventHandles = getSyclObjHandles(DepEvents);
   if (NumBytes == 0) {
-    handleEventDependencies(EventHandles);
+    handleEventDependencies(DepEvents);
     return createEvent();
   }
 
@@ -180,13 +193,13 @@ QueueImpl::memcpy(void *Dest, const void *Src, std::size_t NumBytes,
         sycl::make_error_code(sycl::errc::feature_not_supported),
         "Host-to-host copy is not implemented yet");
 
-  handleEventDependencies(EventHandles);
+  handleEventDependencies(DepEvents);
   callAndThrow(olMemcpy, MOffloadQueue, Dest, DestOLDevice, Src, SrcOLDevice,
                NumBytes);
   return createEvent();
 }
 
-void QueueImpl::handleEventDependencies(std::vector<ol_event_handle_t> &Deps) {
+void QueueImpl::handleEventDependencies(const std::vector<EventImplPtr> &Deps) {
   // TODO: liboffload supports only in-order queues and no cross context waiting
   // is available now that means that this code is excessive but correct. I
   // don't want to skip it and rely on default liboffload behaviour that is
@@ -194,15 +207,18 @@ void QueueImpl::handleEventDependencies(std::vector<ol_event_handle_t> &Deps) {
   // must be disabled for in-order queues. Once host tasks are added - cross
   // context dependencies should be enabled and checked as well.
   if (!Deps.empty()) {
-    callAndThrow(olWaitEvents, MOffloadQueue, Deps.data(), Deps.size());
+    auto EventHandles = getSyclObjHandles(Deps);
+    callAndThrow(olWaitEvents, MOffloadQueue, EventHandles.data(),
+                 EventHandles.size());
   }
 }
 
-EventImplPtr QueueImpl::createEvent() {
+EventImplPtr QueueImpl::createEvent(std::vector<EventImplPtr> &&Deps) {
   ol_event_handle_t NewEvent{};
   ol_event_flags_t Flags{};
   callAndThrow(olCreateEvent, MOffloadQueue, Flags, &NewEvent);
-  return EventImpl::createEventWithHandle(NewEvent, MDevice.getPlatformImpl());
+  return EventImpl::createEventWithHandle(NewEvent, MDevice.getPlatformImpl(),
+                                          std::move(Deps));
 }
 } // namespace detail
 _LIBSYCL_END_NAMESPACE_SYCL

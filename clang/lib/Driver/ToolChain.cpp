@@ -1122,6 +1122,14 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
   if (auto Path = getPathForTriple(T))
     return *Path;
 
+  // Handle the legacy AMDGPU triple case as well.
+  if (T.getArchName() == "amdgcn") {
+    llvm::Triple Canon(T);
+    Canon.setArchName("amdgpu");
+    if (auto Path = getPathForTriple(Canon))
+      return *Path;
+  }
+
   if (T.isOSAIX()) {
     llvm::Triple AIXTriple;
     if (T.getEnvironment() == Triple::UnknownEnvironment) {

@@ -85,12 +85,14 @@ public:
 
   // Reports when a reference/iterator is used after the container operation
   // that invalidated it.
-  virtual void reportUseAfterInvalidation(const Expr *IssueExpr,
-                                          const Expr *UseExpr,
-                                          const Expr *InvalidationExpr) {}
-  virtual void reportUseAfterInvalidation(const ParmVarDecl *PVD,
-                                          const Expr *UseExpr,
-                                          const Expr *InvalidationExpr) {}
+  virtual void
+  reportUseAfterInvalidation(const Expr *IssueExpr, const Expr *UseExpr,
+                             const Expr *InvalidationExpr,
+                             llvm::ArrayRef<const Expr *> ExprChain) {}
+  virtual void
+  reportUseAfterInvalidation(const ParmVarDecl *PVD, const Expr *UseExpr,
+                             const Expr *InvalidationExpr,
+                             llvm::ArrayRef<const Expr *> ExprChain) {}
   virtual void reportInvalidatedField(const Expr *IssueExpr,
                                       const FieldDecl *Field,
                                       const Expr *InvalidationExpr) {}

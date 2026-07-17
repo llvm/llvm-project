@@ -733,7 +733,7 @@ void MachineSinking::FindCycleSinkCandidates(
                            "target\n");
       continue;
     }
-    if (!isCycleInvariant(Cycle, MI)) {
+    if (!isCycleInvariant(*CI, *Cycle, MI)) {
       LLVM_DEBUG(dbgs() << "CycleSink: Instruction is not cycle invariant\n");
       continue;
     }
@@ -895,7 +895,7 @@ bool MachineSinking::run(MachineFunction &MF) {
       HasHighPressure = false;
 
       for (auto *Cycle : Cycles) {
-        MachineBasicBlock *Preheader = Cycle->getCyclePreheader();
+        MachineBasicBlock *Preheader = CI->getCyclePreheader(*Cycle);
         if (!Preheader) {
           LLVM_DEBUG(dbgs() << "CycleSink: Can't find preheader\n");
           continue;
@@ -1121,7 +1121,7 @@ bool MachineSinking::isLegalToBreakCriticalEdge(MachineInstr &MI,
 
   // Check for backedges of more "complex" cycles.
   if (FromCycle == ToCycle && FromCycle &&
-      (!FromCycle->isReducible() || FromCycle->getHeader() == ToBB))
+      (!CI->isReducible(*FromCycle) || CI->getHeader(*FromCycle) == ToBB))
     return false;
 
   // It's not always legal to break critical edges and sink the computation
@@ -1345,8 +1345,9 @@ bool MachineSinking::isProfitableToSinkTo(Register Reg, MachineInstr &MI,
       // impact for this operand. Defination outside of cycle means:
       // 1: defination is outside of cycle.
       // 2: defination is in this cycle, but it is a PHI in the cycle header.
-      if (Cycle != MCycle || (DefMI->isPHI() && Cycle && Cycle->isReducible() &&
-                              Cycle->getHeader() == DefMI->getParent()))
+      if (Cycle != MCycle ||
+          (DefMI->isPHI() && Cycle && CI->isReducible(*Cycle) &&
+           CI->getHeader(*Cycle) == DefMI->getParent()))
         continue;
       // The DefMI is defined inside the cycle.
       // If sinking this operand makes some register pressure set exceed limit,
@@ -1758,7 +1759,7 @@ bool MachineSinking::aggressivelySinkIntoCycle(
     return false;
 
   LLVM_DEBUG(dbgs() << "AggressiveCycleSink: Finding sink block for: " << I);
-  assert(Cycle->getCyclePreheader() && "Cycle sink needs a preheader block");
+  assert(CI->getCyclePreheader(*Cycle) && "Cycle sink needs a preheader block");
   SmallVector<std::pair<RegSubRegPair, MachineInstr *>> Uses;
 
   MachineOperand &DefMO = I.getOperand(0);
@@ -1780,7 +1781,7 @@ bool MachineSinking::aggressivelySinkIntoCycle(
                            "can't sink.\n");
       continue;
     }
-    if (!Cycle->contains(MI->getParent())) {
+    if (!CI->contains(*Cycle, MI->getParent())) {
       LLVM_DEBUG(
           dbgs() << "AggressiveCycleSink:   Use not in cycle, can't sink.\n");
       continue;
@@ -1913,8 +1914,8 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
 
     // Don't sink instructions into a cycle.
     if (!TryBreak && CI->getCycle(SuccToSinkTo) &&
-        (!CI->getCycle(SuccToSinkTo)->isReducible() ||
-         CI->getCycle(SuccToSinkTo)->getHeader() == SuccToSinkTo)) {
+        (!CI->isReducible(*CI->getCycle(SuccToSinkTo)) ||
+         CI->getHeader(*CI->getCycle(SuccToSinkTo)) == SuccToSinkTo)) {
       LLVM_DEBUG(dbgs() << " *** NOTE: cycle header found\n");
       TryBreak = true;
     }
