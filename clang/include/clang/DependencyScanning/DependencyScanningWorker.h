@@ -75,20 +75,16 @@ public:
 
   /// Drain-style by-name scanning over a single cc1 command line. Builds a
   /// scanning session local to this call, then pulls module names from
-  /// \p getNextInput and delivers each module's dependencies to
-  /// \p deliverResult (std::nullopt on scan failure) until \p getNextInput
-  /// returns std::nullopt. Diagnostics flow to \p DiagConsumer.
+  /// \p getNextInput until it returns std::nullopt.
+  /// \p DepConsumer receives the result. Diagnostics flow to \p DiagConsumer.
   /// \returns false if session setup failed, true otherwise.
   bool computeDependenciesByNameWithDrain(
       StringRef CWD, ArrayRef<std::string> CC1CommandLine,
       IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS,
       DiagnosticConsumer &DiagConsumer,
       dependencies::DependencyActionController &Controller,
-      const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
       llvm::function_ref<std::optional<std::string>()> getNextInput,
-      llvm::function_ref<void(StringRef,
-                              std::optional<dependencies::TranslationUnitDeps>)>
-          deliverResult);
+      DependencyConsumer &DepConsumer);
 
   /// Creates the effective VFS that will be used for the scan.
   ///

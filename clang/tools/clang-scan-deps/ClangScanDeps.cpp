@@ -855,6 +855,35 @@ getCompilationDatabase(int argc, char **argv, std::string &ErrorMessage) {
       FEOpts.Inputs[0].getFile(), OutputFile, CommandLine);
 }
 
+namespace {
+struct ByNameConsumer : DependencyConsumer {
+  FullDeps &FD;
+  size_t InputIndex;
+  bool AnyFailure = false;
+  ModuleDepsGraph ModuleGraph;
+
+  ByNameConsumer(FullDeps &FD, size_t InputIndex)
+      : FD(FD), InputIndex(InputIndex) {}
+
+  void handleDependencyOutputOpts(const DependencyOutputOptions &) override {}
+  void handleFileDependency(StringRef) override {}
+  void handlePrebuiltModuleDependency(PrebuiltModuleDep) override {}
+  void handleDirectModuleDependency(ModuleID) override {}
+  void handleVisibleModule(std::string) override {}
+  void handleContextHash(std::string) override {}
+  void handleModuleDependency(ModuleDeps MD) override {
+    ModuleGraph.push_back(std::move(MD));
+  }
+  void finishQuery(StringRef, bool Success) override {
+    if (Success)
+      FD.mergeDeps(std::move(ModuleGraph), InputIndex);
+    else
+      AnyFailure = true;
+    ModuleGraph.clear();
+  }
+};
+} // namespace
+
 int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   llvm::InitializeAllTargetInfos();
   std::string ErrorMessage;
@@ -1109,31 +1138,23 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
                                  LocalIndex, DependencyOS, Errs))
             HadErrors = true;
         } else {
+          ByNameConsumer DepConsumer(*FD, LocalIndex);
+
           unsigned NameIdx = 0;
           auto getNextName = [&]() -> std::optional<std::string> {
-            if (NameIdx < Names.size())
-              return Names[NameIdx++].str();
-            return std::nullopt;
-          };
-          auto deliverResult = [&](StringRef Name,
-                                   std::optional<TranslationUnitDeps> Result) {
-            llvm::Expected<TranslationUnitDeps> MaybeTUDeps =
-                Result ? llvm::Expected<TranslationUnitDeps>(std::move(*Result))
-                       : llvm::Expected<TranslationUnitDeps>(
-                             llvm::make_error<llvm::StringError>(
-                                 S, llvm::inconvertibleErrorCode()));
-            if (handleModuleResult(Name, MaybeTUDeps, *FD, LocalIndex,
-                                   DependencyOS, Errs))
-              HadErrors = true;
-            S.clear();
+            if (NameIdx >= Names.size())
+              return std::nullopt;
+
+            StringRef Name = Names[NameIdx++];
+            return Name.str();
           };
 
-          if (!WorkerTool.computeDependenciesByNameWithDrain(
-                  CWD, Input->CommandLine, DiagConsumer, Controller,
-                  AlreadySeenModules, getNextName, deliverResult)) {
-            handleDiagnostics(Filename, S, Errs);
+          bool DrainOk = WorkerTool.computeDependenciesByNameWithDrain(
+              CWD, Input->CommandLine, DiagConsumer, Controller, getNextName,
+              DepConsumer);
+          handleDiagnostics(ModuleNameRef, S, Errs);
+          if (!DrainOk || DepConsumer.AnyFailure)
             HadErrors = true;
-          }
         }
       } else {
         std::unique_ptr<llvm::MemoryBuffer> TU;

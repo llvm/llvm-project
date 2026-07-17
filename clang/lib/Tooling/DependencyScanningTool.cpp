@@ -9,6 +9,7 @@
 #include "clang/Tooling/DependencyScanningTool.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/DependencyScanning/DependencyConsumer.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Tool.h"
@@ -350,7 +351,6 @@ DependencyScanningTool::getModuleDependencies(
     DependencyActionController &Controller) {
   TextDiagnosticsPrinterWithOutput DiagPrinter(CommandLine);
 
-  std::optional<TranslationUnitDeps> Result;
   bool Pulled = false;
   auto getNextName = [&]() -> std::optional<std::string> {
     if (Pulled)
@@ -358,16 +358,19 @@ DependencyScanningTool::getModuleDependencies(
     Pulled = true;
     return ModuleName.str();
   };
-  auto deliverResult = [&](StringRef, std::optional<TranslationUnitDeps> R) {
-    Result = std::move(R);
-  };
 
-  if (!computeDependenciesByNameWithDrain(
-          CWD, CommandLine, DiagPrinter.DiagPrinter, Controller, AlreadySeen,
-          getNextName, deliverResult) ||
-      !Result)
+  struct SingleNameConsumer : FullDependencyConsumer {
+    using FullDependencyConsumer::FullDependencyConsumer;
+    bool Success = false;
+    void finishQuery(StringRef, bool S) override { Success = S; }
+  } DepConsumer(AlreadySeen);
+
+  if (!computeDependenciesByNameWithDrain(CWD, CommandLine,
+                                          DiagPrinter.DiagPrinter, Controller,
+                                          getNextName, DepConsumer) ||
+      !DepConsumer.Success)
     return makeErrorFromDiagnosticsOS(DiagPrinter);
-  return std::move(*Result);
+  return DepConsumer.takeTranslationUnitDeps();
 }
 
 static std::optional<SmallVector<std::string, 0>>
@@ -396,10 +399,8 @@ getFirstCC1CommandLine(ArrayRef<std::string> CommandLine,
 bool DependencyScanningTool::computeDependenciesByNameWithDrain(
     StringRef CWD, ArrayRef<std::string> CommandLine,
     DiagnosticConsumer &DiagConsumer, DependencyActionController &Controller,
-    const llvm::DenseSet<ModuleID> &AlreadySeen,
     llvm::function_ref<std::optional<std::string>()> getNextInput,
-    llvm::function_ref<void(StringRef, std::optional<TranslationUnitDeps>)>
-        deliverResult) {
+    DependencyConsumer &DepConsumer) {
   auto [OverlayFS, ModifiedCommandLine] = initVFSForByNameScanning(CommandLine);
 
   std::vector<std::string> CC1CommandLine;
@@ -419,5 +420,5 @@ bool DependencyScanningTool::computeDependenciesByNameWithDrain(
 
   return Worker.computeDependenciesByNameWithDrain(
       CWD, CC1CommandLine, std::move(OverlayFS), DiagConsumer, Controller,
-      AlreadySeen, getNextInput, deliverResult);
+      getNextInput, DepConsumer);
 }

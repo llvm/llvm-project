@@ -12,7 +12,6 @@
 #include "clang/Basic/DiagnosticSerialization.h"
 #include "clang/DependencyScanning/DependencyActionController.h"
 #include "clang/DependencyScanning/DependencyConsumer.h"
-#include "clang/DependencyScanning/DependencyScanningUtils.h"
 #include "clang/DependencyScanning/InProcessModuleCache.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -1043,10 +1042,8 @@ bool DependencyScanningWorker::computeDependenciesByNameWithDrain(
     StringRef CWD, ArrayRef<std::string> CC1CommandLine,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS,
     DiagnosticConsumer &DiagConsumer, DependencyActionController &Controller,
-    const llvm::DenseSet<ModuleID> &AlreadySeen,
     llvm::function_ref<std::optional<std::string>()> getNextInput,
-    llvm::function_ref<void(StringRef, std::optional<TranslationUnitDeps>)>
-        deliverResult) {
+    DependencyConsumer &DepConsumer) {
   auto FS = makeEffectiveVFS(CWD, OverlayFS);
   auto DiagEngine = std::make_unique<DiagnosticsEngineWithDiagOpts>(
       CC1CommandLine, FS, DiagConsumer);
@@ -1059,11 +1056,9 @@ bool DependencyScanningWorker::computeDependenciesByNameWithDrain(
     return false;
 
   while (std::optional<std::string> NextInput = getNextInput()) {
-    FullDependencyConsumer Consumer(AlreadySeen);
-    if (CIWC->computeDependencies(*NextInput, Consumer, Controller))
-      deliverResult(*NextInput, Consumer.takeTranslationUnitDeps());
-    else
-      deliverResult(*NextInput, std::nullopt);
+    bool Success =
+        CIWC->computeDependencies(*NextInput, DepConsumer, Controller);
+    DepConsumer.finishQuery(*NextInput, Success);
   }
   return true;
 }

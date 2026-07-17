@@ -112,11 +112,8 @@ public:
       StringRef CWD, ArrayRef<std::string> CommandLine,
       DiagnosticConsumer &DiagConsumer,
       dependencies::DependencyActionController &Controller,
-      const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
       llvm::function_ref<std::optional<std::string>()> getNextInput,
-      llvm::function_ref<void(StringRef,
-                              std::optional<dependencies::TranslationUnitDeps>)>
-          deliverResult);
+      dependencies::DependencyConsumer &DepConsumer);
 
   /// Returns the worker tracing VFS, if it was requested via the service.
   llvm::vfs::TracingFileSystem *getWorkerTracingVFS() const {
