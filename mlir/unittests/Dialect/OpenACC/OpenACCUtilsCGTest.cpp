@@ -769,10 +769,10 @@ TEST_F(OpenACCUtilsCGTest, getSharedMemoryBytesGangWorkerReductionAccumulator) {
   GPUParallelDimsAttr gangWorkerDims = GPUParallelDimsAttr::get(
       &context, {GPUParallelDimAttr::blockXDim(&context),
                  GPUParallelDimAttr::threadYDim(&context)});
-  auto c1 = arith::ConstantIndexOp::create(b, loc, 1);
+  auto c2 = arith::ConstantIndexOp::create(b, loc, 2);
   auto c4 = arith::ConstantIndexOp::create(b, loc, 4);
   auto bx =
-      ParWidthOp::create(b, loc, c1, GPUParallelDimAttr::blockXDim(&context));
+      ParWidthOp::create(b, loc, c2, GPUParallelDimAttr::blockXDim(&context));
   auto ty =
       ParWidthOp::create(b, loc, c4, GPUParallelDimAttr::threadYDim(&context));
 
