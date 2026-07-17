@@ -433,6 +433,8 @@ void Sema::DiagnoseSentinelCalls(const NamedDecl *D, SourceLocation Loc,
   } else if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     NumFormalParams = FD->param_size();
     CalleeKind = CK_Function;
+    if (FD->hasCXXExplicitFunctionObjectParameter())
+      NumFormalParams++;
   } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
     QualType Ty = VD->getType();
     const FunctionType *Fn = nullptr;
@@ -1922,8 +1924,8 @@ ExprResult Sema::CreateGenericSelectionExpr(
         // earlier because GCC does so.
         unsigned D = 0;
         if (ControllingExpr && Types[i]->getType()->isIncompleteType())
-          D = LangOpts.C2y ? diag::warn_c2y_compat_assoc_type_incomplete
-                           : diag::ext_assoc_type_incomplete;
+          D = LangOpts.C2y ? diag::compat_c2y_assoc_type_incomplete
+                           : diag::compat_pre_c2y_assoc_type_incomplete;
         else if (ControllingExpr && !Types[i]->getType()->isObjectType())
           D = diag::err_assoc_type_nonobject;
         else if (Types[i]->getType()->isVariablyModifiedType())
@@ -4258,14 +4260,10 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
                                         Context.getComplexType(Res->getType()));
 
     // In C++, this is a GNU extension. In C, it's a C2y extension.
-    unsigned DiagId;
     if (getLangOpts().CPlusPlus)
-      DiagId = diag::ext_gnu_imaginary_constant;
-    else if (getLangOpts().C2y)
-      DiagId = diag::warn_c23_compat_imaginary_constant;
+      Diag(Tok.getLocation(), diag::ext_gnu_imaginary_constant);
     else
-      DiagId = diag::ext_c2y_imaginary_constant;
-    Diag(Tok.getLocation(), DiagId);
+      DiagCompat(Tok.getLocation(), diag_compat::imaginary_constant);
   }
   return Res;
 }
@@ -4732,9 +4730,7 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,
     // trait to an incomplete array is an extension.
     if (ExprKind == UETT_AlignOf && !getLangOpts().CPlusPlus &&
         ExprType->isIncompleteArrayType())
-      Diag(OpLoc, getLangOpts().C2y
-                      ? diag::warn_c2y_compat_alignof_incomplete_array
-                      : diag::ext_c2y_alignof_incomplete_array);
+      DiagCompat(OpLoc, diag_compat::alignof_incomplete_array);
     ExprType = Context.getBaseElementType(ExprType);
   }
 
@@ -14822,8 +14818,7 @@ static QualType CheckIncrementDecrementOperand(Sema &S, Expr *Op,
       return QualType();
   } else if (ResType->isAnyComplexType()) {
     // C99 does not support ++/-- on complex types, we allow as an extension.
-    S.Diag(OpLoc, S.getLangOpts().C2y ? diag::warn_c2y_compat_increment_complex
-                                      : diag::ext_c2y_increment_complex)
+    S.DiagCompat(OpLoc, diag_compat::increment_complex)
         << IsInc << Op->getSourceRange();
   } else if (ResType->isPlaceholderType()) {
     ExprResult PR = S.CheckPlaceholderExpr(Op);

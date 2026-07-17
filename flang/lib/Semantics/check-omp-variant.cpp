@@ -20,6 +20,7 @@
 #include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Semantics/omp-declare-variant.h"
 #include "flang/Semantics/openmp-modifiers.h"
 #include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/symbol.h"
@@ -44,7 +45,10 @@ void OmpStructureChecker::Enter(const parser::OmpClause::When &x) {
   OmpVerifyModifiers(
       x.v, llvm::omp::OMPC_when, GetContext().clauseSource, context_);
   // Record this WHEN clause's context selector so the variant directive it
-  // controls can be paired with it for static-applicability matching.
+  // controls can be paired with it for static-applicability matching. A
+  // well-formed WHEN clause has exactly one modifier, its context selector;
+  // pair it only in that case, which also makes front() safe. Any other count
+  // is malformed and already diagnosed by OmpVerifyModifiers above.
   if (const auto &modifiers{std::get<0>(x.v.t)};
       modifiers && modifiers->size() == 1) {
     currentWhenSelector_ =
@@ -602,46 +606,10 @@ void OmpStructureChecker::Leave(const parser::OmpDirectiveSpecification &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpMetadirectiveDirective &x) {
   EnterDirectiveNest(MetadirectiveNest);
-  metadirectiveLoopVariants_.clear();
 }
 
 void OmpStructureChecker::Leave(const parser::OmpMetadirectiveDirective &) {
   ExitDirectiveNest(MetadirectiveNest);
-}
-
-// Return true if the variant guarded by `selector` might be selected, so its
-// associated loop must still be checked. Skip it only when it is provably
-// unselectable.
-static bool mayVariantBeSelected(
-    const parser::traits::OmpContextSelectorSpecification *selector,
-    SemanticsContext &context, OmpVariantMatchContext &matchContext) {
-  if (!selector ||
-      FindUnsupportedSelectorFeature(*selector, context) !=
-          UnsupportedSelectorFeature::None) {
-    return true;
-  }
-  llvm::omp::VariantMatchInfo vmi;
-  (void)MakeVariantMatchInfo(vmi, *selector, context);
-  const auto &required{vmi.RequiredTraits};
-  using TP = llvm::omp::TraitProperty;
-  // In the default "match all" mode, a required trait that can never match
-  // (e.g. a compile-time-false condition or an invalid device/implementation
-  // property) makes the variant unselectable. match_any and match_none tolerate
-  // such traits, so only reject variants in the default mode.
-  bool matchAll{
-      !required.test(unsigned(TP::implementation_extension_match_any)) &&
-      !required.test(unsigned(TP::implementation_extension_match_none))};
-  if (matchAll &&
-      (required.test(unsigned(TP::user_condition_false)) ||
-          required.test(unsigned(TP::invalid)))) {
-    return false;
-  }
-  // Matching a device or implementation selector requires a known target.
-  if (context.targetTriple().empty()) {
-    return true;
-  }
-  return llvm::omp::isVariantApplicableInContext(
-      vmi, matchContext, /*DeviceOrImplementationSetOnly=*/true);
 }
 
 // Check a loop-associated metadirective's variants against the loop nest they
@@ -709,7 +677,7 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
     const parser::OmpDirectiveSpecification *spec{variant.spec};
     // Skip variants that can never be selected on this compilation target so
     // that their associated loop is not diagnosed.
-    if (!mayVariantBeSelected(variant.selector, context_, matchContext)) {
+    if (!MayVariantBeSelected(variant.selector, context_, matchContext)) {
       continue;
     }
     auto assoc{llvm::omp::getDirectiveAssociation(spec->DirId())};
@@ -747,16 +715,24 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
 // loop nest, either because the metadirective is the last construct in the
 // execution part or because a non-loop construct follows it. Variants that
 // cannot be selected on this target are skipped.
-void OmpStructureChecker::CheckMetadirectiveVariantsWithoutLoop() {
+void OmpStructureChecker::CheckMetadirectiveVariantsWithoutLoop(
+    std::size_t firstVariant) {
+  CHECK(firstVariant <= metadirectiveLoopVariants_.size());
   std::vector<MetadirectiveLoopVariant> variants;
-  variants.swap(metadirectiveLoopVariants_);
+  if (firstVariant == 0) {
+    variants.swap(metadirectiveLoopVariants_);
+  } else {
+    auto first{metadirectiveLoopVariants_.begin() + firstVariant};
+    variants.assign(first, metadirectiveLoopVariants_.end());
+    metadirectiveLoopVariants_.erase(first, metadirectiveLoopVariants_.end());
+  }
 
   OmpVariantMatchContext matchContext{context_};
   const auto MsgShouldContainDoOr{
       "This construct should contain a DO-loop or a loop-%s-generating construct"_err_en_US};
 
   for (const MetadirectiveLoopVariant &variant : variants) {
-    if (!mayVariantBeSelected(variant.selector, context_, matchContext)) {
+    if (!MayVariantBeSelected(variant.selector, context_, matchContext)) {
       continue;
     }
     auto assoc{llvm::omp::getDirectiveAssociation(variant.spec->DirId())};
@@ -824,6 +800,10 @@ void OmpStructureChecker::CheckDeclareVariantUserConditions(
   }
 }
 
+static bool IsProcedureOrFunction(const Symbol &symbol) {
+  return IsProcedure(symbol) || IsFunction(symbol);
+}
+
 // OpenMP 6.0, 9.6 (declare_variant), Fortran restriction: "The characteristic
 // of the function variant must be compatible with the characteristic of the
 // base function after the implementation defined transformation for its OpenMP
@@ -848,6 +828,29 @@ static void CheckDeclareVariantInterface(SemanticsContext &context,
         "The variant procedure '%s' is not compatible with the base procedure '%s': %s"_err_en_US,
         variant.name(), base.name(), whyNot);
   }
+}
+
+// A declare-variant call is rewritten to the variant at every reference to the
+// base, so the variant must be accessible at each of those references. The name
+// of an internal procedure is only visible within its host, so it may only be a
+// variant of a procedure that is internal to the same host; otherwise a
+// reference to the base from elsewhere could not name the variant. OpenMP does
+// not clearly specify this; Flang restricts it to avoid resolving a call to an
+// internal procedure that is not accessible there. Returns true if the pairing
+// is allowed.
+static bool CheckVariantAccessibility(SemanticsContext &context,
+    const Symbol &base, const Symbol &variant, parser::CharBlock source) {
+  if (ClassifyProcedure(variant) != ProcedureDefinitionClass::Internal) {
+    return true;
+  }
+  if (ClassifyProcedure(base) == ProcedureDefinitionClass::Internal &&
+      &base.owner() == &variant.owner()) {
+    return true;
+  }
+  context.Say(source,
+      "The variant procedure '%s' is an internal procedure and is not accessible at every reference to the base procedure '%s'"_err_en_US,
+      variant.name(), base.name());
+  return false;
 }
 
 void OmpStructureChecker::CheckOmpDeclareVariantDirective(
@@ -881,7 +884,7 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
 
   auto CheckProcedureSymbol{[&](const Symbol *sym, parser::CharBlock source) {
     if (sym) {
-      if (!IsProcedure(*sym) && !IsFunction(*sym)) {
+      if (!IsProcedureOrFunction(*sym)) {
         auto &msg{context_.Say(source,
             "The name '%s' should refer to a procedure"_err_en_US,
             sym->name())};
@@ -919,7 +922,19 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
       },
       arg.u);
 
-  if (base && variant) {
+  const parser::traits::OmpContextSelectorSpecification *matchSelector{
+      getMatchClauseContextSelector(spec)};
+  if (!matchSelector) {
+    context_.Say(x.source,
+        "DECLARE_VARIANT directive requires a MATCH clause"_err_en_US);
+    return;
+  }
+
+  // Only validate and record the pairing when both names resolve to procedures.
+  // Otherwise a diagnostic was already issued (see CheckProcedureSymbol), and
+  // proceeding would emit spurious follow-on errors.
+  if (base && variant && IsProcedureOrFunction(*base) &&
+      IsProcedureOrFunction(*variant)) {
     base = &base->GetUltimate();
     variant = &variant->GetUltimate();
     if (base == variant) {
@@ -929,20 +944,21 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
       context_.Say(arg.source,
           "Variant '%s' was already specified for '%s' in another DECLARE VARIANT directive"_err_en_US,
           variant->name(), base->name());
-    } else if (!hasArgModifiers) {
-      // adjust_args/append_args perform the "transformation for its OpenMP
-      // context", so the variant interface intentionally differs from the
-      // base; skip the same-interface check until they are supported.
-      CheckDeclareVariantInterface(context_, *base, *variant, arg.source);
+    } else if (CheckVariantAccessibility(
+                   context_, *base, *variant, arg.source)) {
+      if (!hasArgModifiers) {
+        // adjust_args/append_args perform the "transformation for its OpenMP
+        // context", so the variant interface intentionally differs from the
+        // base; skip the same-interface check until they are supported.
+        CheckDeclareVariantInterface(context_, *base, *variant, arg.source);
+      }
+      // Record the variant on its base procedure.
+      if (base->has<SubprogramDetails>()) {
+        auto &details{const_cast<Symbol &>(*base).get<SubprogramDetails>()};
+        details.addOmpDeclareVariant(
+            OmpDeclareVariantEntry{*variant, matchSelector});
+      }
     }
-  }
-
-  const parser::traits::OmpContextSelectorSpecification *matchSelector{
-      getMatchClauseContextSelector(spec)};
-  if (!matchSelector) {
-    context_.Say(x.source,
-        "DECLARE_VARIANT directive requires a MATCH clause"_err_en_US);
-    return;
   }
 
   EnterDirectiveNest(ContextSelectorNest);

@@ -3239,30 +3239,29 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                   : RS->scavengeRegisterBackwards(AMDGPU::SReg_32_XM0RegClass,
                                                   MI, false, 0, !UseSGPR);
 
-      if ((!TmpSReg && !FrameReg) || (!TmpReg && !UseSGPR)) {
+      if (!TmpSReg || (!TmpReg && !UseSGPR)) {
+        assert(!FrameReg && "there is a frame register!");
         int SVOpcode = AMDGPU::getFlatScratchInstSVfromSS(MI->getOpcode());
         if (ST.hasFlatScratchSVSMode() && SVOpcode != -1) {
           Register TmpVGPR = RS->scavengeRegisterBackwards(
               AMDGPU::VGPR_32RegClass, MI, false, 0, /*AllowSpill=*/true);
 
-          // Materialize the frame register.
-          auto MIB =
-              BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MOV_B32_e32), TmpVGPR);
-          if (FrameReg)
-            MIB.addReg(FrameReg);
-          else
-            MIB.addImm(Offset);
-
-          // Add the offset to the frame register.
-          if (FrameReg && Offset)
-            BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_ADD_U32_e32), FrameReg)
-                .addReg(FrameReg, RegState::Kill)
-                .addImm(Offset);
-
+          // Fold as much of the constant offset as possible into the SV form
+          // instruction's immediate offset field, and materialize the
+          // remainder (plus the frame register, if any) into the scavenged
+          // VGPR used as the vaddr.
+          int64_t FullOffset =
+              Offset +
+              TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm();
+          auto [ImmOffset, RemainderOffset] =
+              TII->splitFlatOffset(FullOffset, AMDGPUAS::PRIVATE_ADDRESS,
+                                   AMDGPU::FlatAddrSpace::FlatScratch);
+          BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MOV_B32_e32), TmpVGPR)
+              .addImm(RemainderOffset);
           BuildMI(*MBB, MI, DL, TII->get(SVOpcode))
               .add(MI->getOperand(0)) // $vdata
               .addReg(TmpVGPR)        // $vaddr
-              .addImm(0)              // Offset
+              .addImm(ImmOffset)      // $offset
               .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::cpol));
           MI->eraseFromParent();
           return true;

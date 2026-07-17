@@ -879,6 +879,9 @@ m_WithOverflowInst(const WithOverflowInst *&I) {
   return I;
 }
 
+/// Match a PHI node, capturing it if we match.
+inline match_bind<PHINode> m_Phi(PHINode *&PN) { return PN; }
+
 /// Match an UndefValue, capturing the value if we match.
 inline match_bind<UndefValue> m_UndefValue(UndefValue *&U) { return U; }
 
@@ -1089,6 +1092,39 @@ inline match_deferred<BasicBlock> m_Deferred(BasicBlock *const &BB) {
 inline match_deferred<const BasicBlock>
 m_Deferred(const BasicBlock *const &BB) {
   return BB;
+}
+
+template <typename Pattern> struct SpecificType_match {
+  Type *RefTy;
+  Pattern P;
+
+  SpecificType_match(Type *RefTy, const Pattern &P) : RefTy(RefTy), P(P) {}
+
+  template <typename ITy> bool match(ITy *V) const {
+    return V->getType() == RefTy && P.match(V);
+  }
+};
+
+// Explicit deduction guide.
+template <typename Pattern>
+SpecificType_match(const Type *, const Pattern &)
+    -> SpecificType_match<Pattern>;
+
+/// Match a value of a specific type.
+template <typename Pattern>
+inline auto m_SpecificType(Type *RefTy, const Pattern &P) {
+  return SpecificType_match<Pattern>(RefTy, P);
+}
+inline auto m_SpecificType(Type *RefTy) {
+  return m_SpecificType(RefTy, m_Value());
+}
+
+/// Match a value of a specific type, capturing it if we match.
+inline auto m_SpecificType(Type *RefTy, Value *&V) {
+  return m_SpecificType(RefTy, m_Value(V));
+}
+inline auto m_SpecificType(Type *RefTy, const Value *&V) {
+  return m_SpecificType(RefTy, m_Value(V));
 }
 
 //===----------------------------------------------------------------------===//

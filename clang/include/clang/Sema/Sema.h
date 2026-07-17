@@ -3609,8 +3609,13 @@ public:
       ExtnameUndeclaredIdentifiers;
 
   /// Set containing all typedefs that are likely unused.
-  llvm::SmallSetVector<const TypedefNameDecl *, 4>
+  llvm::SmallPtrSet<const TypedefNameDecl *, 4>
       UnusedLocalTypedefNameCandidates;
+
+  /// Store UnusedLocalTypedefNameCandidates in \p Sorted in a deterministic
+  /// order.
+  void getSortedUnusedLocalTypedefNameCandidates(
+      SmallVectorImpl<const TypedefNameDecl *> &Sorted) const;
 
   typedef LazyVector<const DeclaratorDecl *, ExternalSemaSource,
                      &ExternalSemaSource::ReadUnusedFileScopedDecls, 2, 2>
@@ -13923,21 +13928,6 @@ public:
   /// act like a CXXIdExpression rather than an attempt to call.
   ExprResult SubstCXXIdExpr(Expr *E,
                             const MultiLevelTemplateArgumentList &TemplateArgs);
-
-  // A RAII type used by the TemplateDeclInstantiator and TemplateInstantiator
-  // to disable constraint evaluation, then restore the state.
-  template <typename InstTy> struct ConstraintEvalRAII {
-    InstTy &TI;
-    bool OldValue;
-
-    ConstraintEvalRAII(InstTy &TI)
-        : TI(TI), OldValue(TI.getEvaluateConstraints()) {
-      TI.setEvaluateConstraints(false);
-    }
-    ~ConstraintEvalRAII() { TI.setEvaluateConstraints(OldValue); }
-    ConstraintEvalRAII(const ConstraintEvalRAII &) = delete;
-    ConstraintEvalRAII &operator=(const ConstraintEvalRAII &) = delete;
-  };
 
   // Must be used instead of SubstExpr at 'constraint checking' time.
   ExprResult

@@ -30,6 +30,9 @@ if (LLDB_ENABLE_PYTHON AND SPHINX_FOUND)
       COMMAND "${CMAKE_COMMAND}" -E copy "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_platform.py" "${CMAKE_CURRENT_BINARY_DIR}/lldb/plugins/"
       COMMAND "${CMAKE_COMMAND}" -E copy "${LLDB_SOURCE_DIR}/examples/python/templates/operating_system.py" "${CMAKE_CURRENT_BINARY_DIR}/lldb/plugins/"
       COMMAND "${CMAKE_COMMAND}" -E copy "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_thread_plan.py" "${CMAKE_CURRENT_BINARY_DIR}/lldb/plugins/"
+      COMMAND "${CMAKE_COMMAND}" -E copy "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_breakpoint.py" "${CMAKE_CURRENT_BINARY_DIR}/lldb/plugins/"
+      COMMAND "${CMAKE_COMMAND}" -E copy "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_hook.py" "${CMAKE_CURRENT_BINARY_DIR}/lldb/plugins/"
+      COMMAND "${CMAKE_COMMAND}" -E copy "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_stackframe_recognizer.py" "${CMAKE_CURRENT_BINARY_DIR}/lldb/plugins/"
       COMMENT "Copying lldb.py to pretend its a Python package.")
 
     add_dependencies(lldb-python-doc-package swig_wrapper_python)

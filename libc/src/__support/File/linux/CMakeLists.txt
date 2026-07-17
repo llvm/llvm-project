@@ -8,9 +8,10 @@ add_object_library(
   DEPENDS
     libc.hdr.fcntl_macros
     libc.hdr.stdio_macros
+    libc.hdr.sys_stat_macros
     libc.hdr.types.FILE
+    libc.hdr.types.off_t
     libc.include.sys_syscall
-    libc.include.sys_stat
     libc.src.__support.CPP.new
     libc.src.__support.OSUtil.osutil
     libc.src.__support.OSUtil.linux.syscall_wrappers.fcntl
