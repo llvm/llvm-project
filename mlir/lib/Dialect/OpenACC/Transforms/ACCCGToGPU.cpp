@@ -1241,11 +1241,11 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
         }
       }
     }
-    // A dynamically-shaped privatization is materialized as a strided view whose
-    // type does not reveal its parallel scope. Keep its own par_dims active so
-    // the view is materialized (and predicated) per owning thread/block.
-    // Statically-shaped privatizations are left to the stack-fit decision
-    // so only do this for dynamic shapes.
+    // A dynamically-shaped privatization is materialized as a strided view
+    // whose type does not reveal its parallel scope. Keep its own par_dims
+    // active so the view is materialized (and predicated) per owning
+    // thread/block. Statically-shaped privatizations are left to the stack-fit
+    // decision so only do this for dynamic shapes.
     acc::PrivateType privTy =
         cast<acc::PrivateType>(privateLocalOp.getPrivatized().getType());
     MemRefType baseTy = getPrivateBaseMemRefType(
@@ -3021,10 +3021,9 @@ void ACCCGToGPULowering::createGPUAllReduceOp(
   // value on all threads, so each can safely store to its own copy.
   // Detect per-thread storage by walking through conversion ops to
   // find the underlying allocation.
-  bool isPerThreadPrivate =
-      isPerThreadPrivateTarget ||
-      isa_and_nonnull<memref::AllocaOp>(
-          unwrapMemRefConversion(memref).getDefiningOp());
+  bool isPerThreadPrivate = isPerThreadPrivateTarget ||
+                            isa_and_nonnull<memref::AllocaOp>(
+                                unwrapMemRefConversion(memref).getDefiningOp());
   // combine
   scf::IfOp ifOp;
   if (predicate && !isPerThreadPrivate) {
