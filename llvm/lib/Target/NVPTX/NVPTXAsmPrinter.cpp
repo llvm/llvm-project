@@ -523,10 +523,13 @@ void NVPTXAsmPrinter::emitFunctionBodyStart() {
 
   if (const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo())
     for (const auto &[Idx, JT] : enumerate(MJTI->getJumpTables())) {
-      O << "$L_brx_" << Idx << ": .branchtargets ";
-      interleaveComma(JT.MBBs, O, [&](const MachineBasicBlock *MBB) {
-        MBB->getSymbol()->print(O, MAI);
-      });
+      O << "$L_brx_" << Idx << ":\n\t.branchtargets\n\t\t";
+      interleave(
+          JT.MBBs, O,
+          [&](const MachineBasicBlock *MBB) {
+            MBB->getSymbol()->print(O, MAI);
+          },
+          ",\n\t\t");
       O << ";\n";
     }
 

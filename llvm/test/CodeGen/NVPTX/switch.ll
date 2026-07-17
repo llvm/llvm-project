@@ -8,7 +8,15 @@ define void @pr170051(i32 %cond) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b32 %r<4>;
-; CHECK-NEXT:  $L_brx_0: .branchtargets $L__BB0_2, $L__BB0_3, $L__BB0_5, $L__BB0_5, $L__BB0_1, $L__BB0_5, $L__BB0_3;
+; CHECK-NEXT:  $L_brx_0:
+; CHECK-NEXT:    .branchtargets
+; CHECK-NEXT:     $L__BB0_2,
+; CHECK-NEXT:     $L__BB0_3,
+; CHECK-NEXT:     $L__BB0_5,
+; CHECK-NEXT:     $L__BB0_5,
+; CHECK-NEXT:     $L__BB0_1,
+; CHECK-NEXT:     $L__BB0_5,
+; CHECK-NEXT:     $L__BB0_3;
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    mov.b32 %r2, 0;
 ; CHECK-NEXT:    ld.param.b32 %r1, [pr170051_param_0];
