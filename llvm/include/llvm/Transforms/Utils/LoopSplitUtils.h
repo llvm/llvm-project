@@ -49,28 +49,33 @@ public:
   LoopSplitUtils(Loop *L, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT)
       : L(L), LI(LI), SE(SE), DT(DT) {}
 
-  /// Analyze \p L and return true if it is a counted loop this utility can split:
-  /// a bottom-tested single-exit loop in LCSSA form with a unique unit-step
-  /// integer induction and a computable trip count. Must succeed before split().
+  /// Analyze \p L and return true if it is a counted loop this utility can
+  /// split: a bottom-tested single-exit loop in LCSSA form with a unique
+  /// unit-step integer induction and a computable trip count. Must succeed
+  /// before split().
   LLVM_ABI bool isLegal();
 
   /// Return the loop's induction variable. Valid only after isLegal() succeeds.
-  PHINode *getInductionVariable() const { return Induction; }
+  LLVM_ABI PHINode *getInductionVariable() const;
 
   /// Append an inclusive partition range [Start, End] in iteration order.
   /// Partitions must tile the whole space: first Start = induction start, each
-  /// later Start = previous End +/- step, last End = induction end (desc: S >= E).
+  /// later Start = previous End +/- step, last End = induction end (desc: S >=
+  /// E).
   ///
   /// Bounds must be loop-invariant and representable in the induction type
   /// without wrapping: a Start +/- offset that wraps past TYPE_MAX/MIN/0 looks
-  /// in-range and silently miscompiles. See LoopSplitUtils.cpp for the rationale.
+  /// in-range and silently miscompiles. See LoopSplitUtils.cpp for the
+  /// rationale.
   ///
-  /// Every partition is guarded by default; use avoidPartitionGuard() to opt out.
+  /// Every partition is guarded by default; use avoidPartitionGuard() to opt
+  /// out.
   LLVM_ABI void addPartition(const SCEV *Start, const SCEV *End);
 
-  /// Suppress the entry guard for partition \p PartitionIndex (already added). Use
-  /// only for a partition the caller can prove runs at least once; for a runtime-
-  /// empty partition this is incorrect and yields one spurious iteration.
+  /// Suppress the entry guard for partition \p PartitionIndex (already added).
+  /// Use only for a partition the caller can prove runs at least once; for a
+  /// runtime- empty partition this is incorrect and yields one spurious
+  /// iteration.
   LLVM_ABI void avoidPartitionGuard(unsigned PartitionIndex);
 
   unsigned getNumPartitions() const { return Partitions.size(); }
@@ -80,8 +85,9 @@ public:
   LLVM_ABI bool split();
 
   /// Return the counterpart of original-loop value \p V in partition
-  /// \p PartitionIndex (0-based). Partition 0 maps values to themselves; a later
-  /// partition returns the clone, or null if not cloned. Valid only after split().
+  /// \p PartitionIndex (0-based). Partition 0 maps values to themselves; a
+  /// later partition returns the clone, or null if not cloned. Valid only after
+  /// split().
   LLVM_ABI Value *getPartitionValue(const Value *V,
                                     unsigned PartitionIndex) const;
 
@@ -123,29 +129,16 @@ private:
   DominatorTree *DT;
 
   // Induction analysis, populated by isLegal().
-  PHINode *Induction = nullptr;
-  ICmpInst *LatchCmp = nullptr;        // the loop's latch exit compare.
-  Value *LatchIndOperand = nullptr;    // induction operand of the latch compare.
-  bool LatchUsesInductionPHI = false;  // latch compares the PHI, not the step.
-  bool InductionIsSigned = false;      // iteration ordering signedness.
-  bool InductionIsDescending = false;  // step is -1 (loop counts down).
+  Value *LatchIndOperand = nullptr; // induction operand of the latch compare.
+  bool InductionIsSigned = false;   // iteration ordering signedness.
   const SCEV *InductionEnd = nullptr;
 
   /// One record per partition, in add order.
   SmallVector<PartitionInfo, 4> Partitions;
 
-  /// Find and validate the induction recurrence; returns its add-recurrence, or
-  /// null if the loop has no suitable induction.
-  const SCEVAddRecExpr *analyzeInduction();
-  /// Determine the signedness of the iteration ordering from the latch compare
-  /// and the recurrence's no-wrap flags; returns false if it cannot be proven.
-  bool computeSignedness(const SCEVAddRecExpr *IndAR);
-
   // split() phase helpers, run in order; each is documented at its definition.
   /// Collect loop-carried and live-out values and split off the final exit.
   void collectEscapingValues(SplitState &S);
-  /// Insert the entry guard ahead of partition 0 and update the dominator tree.
-  void buildEntryGuard(SplitState &S);
   /// Expand each partition's start and clamped end into the entry guard.
   void expandPartitionBounds(SplitState &S);
   /// Pass 1: clone each later partition's sub-loop and create its guard/exit.
@@ -154,8 +147,6 @@ private:
   void chainPartitions(SplitState &S);
   /// Rebuild SSA for every escaping value with a per-value SSAUpdater.
   void reconstructSSA(SplitState &S);
-  /// Clamp \p PL's latch so it iterates only within [start, \p SelEnd].
-  void rewriteLatch(Loop *PL, Value *IndOp, Value *SelEnd, BasicBlock *Exit);
 };
 
 } // namespace llvm
