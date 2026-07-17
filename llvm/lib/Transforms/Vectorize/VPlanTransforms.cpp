@@ -1018,8 +1018,8 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan, VPValue *Op,
 
   DebugLoc DL = ExtractR->getDebugLoc();
   VPValue *FirstActiveLane = B.createFirstActiveLane(Mask, DL);
-  FirstActiveLane = B.createScalarZExtOrTrunc(
-      FirstActiveLane, CanonicalIVType, FirstActiveLane->getScalarType(), DL);
+  FirstActiveLane =
+      B.createScalarZExtOrTrunc(FirstActiveLane, CanonicalIVType, DL);
   VPValue *EndValue = B.createAdd(CanonicalIV, FirstActiveLane, DL);
 
   // `getOptimizableIVOf()` always returns the pre-incremented IV, so if it
@@ -3218,7 +3218,7 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR) {
       VF = Builder.createScalarCast(Instruction::CastOps::UIToFP, VF, StepTy,
                                     DL);
     else
-      VF = Builder.createScalarZExtOrTrunc(VF, StepTy, VF->getScalarType(), DL);
+      VF = Builder.createScalarZExtOrTrunc(VF, StepTy, DL);
 
     Inc = Builder.createNaryOp(MulOp, {Step, VF}, Flags);
     Inc = Builder.createNaryOp(VPInstruction::Broadcast, Inc);
@@ -3288,7 +3288,7 @@ static void expandVPWidenPointerInduction(VPWidenPointerInductionRecipe *R) {
   // Create the backedge value for the scalar pointer phi.
   VPBasicBlock *ExitingBB = Plan->getVectorLoopRegion()->getExitingBasicBlock();
   Builder.setInsertPoint(ExitingBB, ExitingBB->getTerminator()->getIterator());
-  VF = Builder.createScalarZExtOrTrunc(VF, StepTy, VF->getScalarType(), DL);
+  VF = Builder.createScalarZExtOrTrunc(VF, StepTy, DL);
   VPValue *Inc = Builder.createOverflowingOp(Instruction::Mul, {Step, VF});
 
   VPValue *InductionGEP =
@@ -3303,10 +3303,9 @@ static void expandVPDerivedIV(VPDerivedIVRecipe *R) {
   VPValue *Step = R->getStepValue();
   VPValue *Index = R->getIndex();
   Type *StepTy = Step->getScalarType();
-  Type *IndexTy = Index->getScalarType();
   Index = StepTy->isIntegerTy()
               ? Builder.createScalarSExtOrTrunc(
-                    Index, StepTy, IndexTy, DebugLoc::getCompilerGenerated())
+                    Index, StepTy, DebugLoc::getCompilerGenerated())
               : Builder.createScalarCast(Instruction::SIToFP, Index, StepTy,
                                          DebugLoc::getCompilerGenerated());
   switch (R->getInductionKind()) {
@@ -3851,11 +3850,10 @@ static bool handleUncountableExitsWithSideEffects(
   VPBuilder MaskBuilder(HeaderVPBB, InsertIt);
   VPValue *FirstActive = MaskBuilder.createFirstActiveLane(*Cond);
   Type *IVScalarTy = IV->getScalarType();
-  Type *FirstActiveTy = FirstActive->getScalarType();
   VPValue *ALMMultiplier = Plan.getConstantInt(IVScalarTy, 1);
   VPValue *Zero = Plan.getZero(IVScalarTy);
-  FirstActive = MaskBuilder.createScalarZExtOrTrunc(FirstActive, IVScalarTy,
-                                                    FirstActiveTy, DebugLoc());
+  FirstActive =
+      MaskBuilder.createScalarZExtOrTrunc(FirstActive, IVScalarTy, DebugLoc());
   VPValue *Mask = MaskBuilder.createNaryOp(VPInstruction::ActiveLaneMask,
                                            {Zero, FirstActive, ALMMultiplier},
                                            DebugLoc(), "uncountable.exit.mask");
@@ -4921,7 +4919,7 @@ VPlanTransforms::materializeAliasMask(VPlan &Plan, VPBasicBlock *AliasCheckVPBB,
       VPInstruction::NumActiveLanes, {AliasMask}, nullptr, {}, {},
       DebugLoc::getUnknown(), "num.active.lanes", IndexTy);
   VPValue *ClampedVF = Builder.createScalarZExtOrTrunc(
-      NumActive, IVTy, IndexTy, DebugLoc::getCompilerGenerated());
+      NumActive, IVTy, DebugLoc::getCompilerGenerated());
 
   IncomingAliasMask->replaceAllUsesWith(AliasMask);
 
@@ -6941,7 +6939,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
         VPBuilder Builder(Plan.getVectorPreheader());
         I32VF = Builder.createScalarZExtOrTrunc(
             &Plan.getVF(), Type::getInt32Ty(Plan.getContext()),
-            Plan.getVF().getScalarType(), DebugLoc::getUnknown());
+            DebugLoc::getUnknown());
       }
 
       VPBuilder Builder(LoadR);
@@ -6958,8 +6956,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       assert(IndexTy == StrideInBytes->getScalarType() &&
              "Stride type from SCEV must match the index type");
       VPValue *CanIV = Builder.createScalarSExtOrTrunc(
-          VectorLoop->getCanonicalIV(), IndexTy,
-          VectorLoop->getCanonicalIVType(), DebugLoc::getUnknown());
+          VectorLoop->getCanonicalIV(), IndexTy, DebugLoc::getUnknown());
       auto *AddRecPtr = cast<SCEVAddRecExpr>(PtrSCEV);
       auto *Offset = Builder.createOverflowingOp(
           Instruction::Mul, {CanIV, StrideInBytes},
