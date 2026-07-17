@@ -1033,8 +1033,13 @@ static VPValue *optimizeLatchExitIVUserViaSCEV(VPlan &Plan, VPValue *Op,
                                                VPValue *ResumeTC,
                                                const Loop *L) {
   VPValue *Incoming;
-  if (!match(Op, m_ExtractLastLaneOfLastPart(m_VPValue(Incoming))))
-    return nullptr;
+  if (!match(Op, m_ExtractLastLaneOfLastPart(m_VPValue(Incoming)))) {
+    VPValue *Mask;
+    if (!match(Op, m_ExtractLane(m_LastActiveLane(m_VPValue(Mask)),
+                                 m_VPValue(Incoming))) ||
+        !match(Mask, m_HeaderMask()))
+      return nullptr;
+  }
 
   const SCEV *IncomingSCEV = vputils::getSCEVExprForVPValue(Incoming, PSE, L);
   const SCEV *Start, *Step;

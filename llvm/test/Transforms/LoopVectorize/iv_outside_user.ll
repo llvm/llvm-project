@@ -931,18 +931,12 @@ define i32 @postinc_not_iv_backedge_value(i32 %k)  {
 ; TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TAILFOLD:       [[VECTOR_BODY]]:
 ; TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; TAILFOLD-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; TAILFOLD-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i32(i32 [[INDEX]], i32 [[K]])
 ; TAILFOLD-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
-; TAILFOLD-NEXT:    [[VEC_IND_NEXT]] = add nsw <2 x i32> [[VEC_IND]], splat (i32 2)
 ; TAILFOLD-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; TAILFOLD-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; TAILFOLD:       [[MIDDLE_BLOCK]]:
-; TAILFOLD-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[VEC_IND]], splat (i32 2)
-; TAILFOLD-NEXT:    [[TMP2:%.*]] = xor <2 x i1> [[ACTIVE_LANE_MASK]], splat (i1 true)
-; TAILFOLD-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP2]], i1 false)
-; TAILFOLD-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[FIRST_INACTIVE_LANE]], 1
-; TAILFOLD-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i64 [[LAST_ACTIVE_LANE]]
+; TAILFOLD-NEXT:    [[TMP1:%.*]] = sub nuw i32 [[K]], 1
+; TAILFOLD-NEXT:    [[TMP3:%.*]] = add i32 2, [[TMP1]]
 ; TAILFOLD-NEXT:    br label %[[FOR_END:.*]]
 ; TAILFOLD:       [[FOR_END]]:
 ; TAILFOLD-NEXT:    ret i32 [[TMP3]]
@@ -1919,7 +1913,6 @@ define i32 @cast_incremented_iv_live_out(ptr %arr, i32 %n) {
 ; TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TAILFOLD:       [[VECTOR_BODY]]:
 ; TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE2:.*]] ]
-; TAILFOLD-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE2]] ]
 ; TAILFOLD-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 [[INDEX]], i64 [[TMP1]])
 ; TAILFOLD-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[ACTIVE_LANE_MASK]], i64 0
 ; TAILFOLD-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
@@ -1941,16 +1934,12 @@ define i32 @cast_incremented_iv_live_out(ptr %arr, i32 %n) {
 ; TAILFOLD-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
 ; TAILFOLD:       [[PRED_STORE_CONTINUE2]]:
 ; TAILFOLD-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; TAILFOLD-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
 ; TAILFOLD-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; TAILFOLD-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; TAILFOLD:       [[MIDDLE_BLOCK]]:
-; TAILFOLD-NEXT:    [[TMP12:%.*]] = add <2 x i64> [[VEC_IND]], splat (i64 1)
-; TAILFOLD-NEXT:    [[TMP13:%.*]] = trunc <2 x i64> [[TMP12]] to <2 x i32>
-; TAILFOLD-NEXT:    [[TMP14:%.*]] = xor <2 x i1> [[ACTIVE_LANE_MASK]], splat (i1 true)
-; TAILFOLD-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP14]], i1 false)
-; TAILFOLD-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[FIRST_INACTIVE_LANE]], 1
-; TAILFOLD-NEXT:    [[TMP15:%.*]] = extractelement <2 x i32> [[TMP13]], i64 [[LAST_ACTIVE_LANE]]
+; TAILFOLD-NEXT:    [[TMP12:%.*]] = sub nuw i64 [[TMP1]], 1
+; TAILFOLD-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP12]] to i32
+; TAILFOLD-NEXT:    [[TMP15:%.*]] = add i32 1, [[TMP13]]
 ; TAILFOLD-NEXT:    br label %[[EXIT:.*]]
 ; TAILFOLD:       [[EXIT]]:
 ; TAILFOLD-NEXT:    ret i32 [[TMP15]]
@@ -2109,10 +2098,8 @@ define i32 @added_step(i32 %n, i32 %step_base, ptr %p) {
 ; TAILFOLD-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; TAILFOLD-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; TAILFOLD:       [[MIDDLE_BLOCK]]:
-; TAILFOLD-NEXT:    [[TMP12:%.*]] = xor <2 x i1> [[ACTIVE_LANE_MASK]], splat (i1 true)
-; TAILFOLD-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP12]], i1 false)
-; TAILFOLD-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[FIRST_INACTIVE_LANE]], 1
-; TAILFOLD-NEXT:    [[TMP13:%.*]] = extractelement <2 x i32> [[TMP3]], i64 [[LAST_ACTIVE_LANE]]
+; TAILFOLD-NEXT:    [[TMP12:%.*]] = sub nuw i32 [[TMP0]], 1
+; TAILFOLD-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP12]], [[STEP]]
 ; TAILFOLD-NEXT:    br label %[[EXIT:.*]]
 ; TAILFOLD:       [[SCALAR_PH]]:
 ; TAILFOLD-NEXT:    br label %[[LOOP:.*]]
@@ -2160,6 +2147,21 @@ define i64 @zext_iv_outside_user() {
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i64 2147483651
+;
+; TAILFOLD-LABEL: define i64 @zext_iv_outside_user() {
+; TAILFOLD-NEXT:  [[ENTRY:.*:]]
+; TAILFOLD-NEXT:    br label %[[VECTOR_PH:.*]]
+; TAILFOLD:       [[VECTOR_PH]]:
+; TAILFOLD-NEXT:    br label %[[VECTOR_BODY:.*]]
+; TAILFOLD:       [[VECTOR_BODY]]:
+; TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; TAILFOLD-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; TAILFOLD-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[INDEX_NEXT]], -2147483644
+; TAILFOLD-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
+; TAILFOLD:       [[MIDDLE_BLOCK]]:
+; TAILFOLD-NEXT:    br label %[[EXIT:.*]]
+; TAILFOLD:       [[EXIT]]:
+; TAILFOLD-NEXT:    ret i64 2147483651
 ;
 entry:
   br label %loop
