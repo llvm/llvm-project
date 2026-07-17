@@ -10,7 +10,7 @@ This can be done by searching for issues in the llvm-project repository which ha
 Any user that meets the [commit access requirements] should be added to the ['LLVM Committers' team].
 The admin should add a comment to the issue when an invite to join the team has been sent and then close the issue when the invite has been accepted.
 Admins should close issues after sending the invite and invite the requestor to reopen if there are issues.
-If there are insufficient votes and it has been over five days since the last update, admins should remove the `infra:commit-access-request` label.
+If there are insufficient votes and it has been over two weeks since the last update, admins may remove the `infra:commit-access-request` label to take the request off the queue.
 To reopen the request, someone with repository triage or write access must reapply the label to get it back on the dashboard.
 
 [`infra:commit-access-request` label]: https://github.com/llvm/llvm-project/issues/?q=is%3Aissue%20state%3Aopen%20label%3Ainfra%3Acommit-access-request
