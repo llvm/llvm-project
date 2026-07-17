@@ -3282,7 +3282,7 @@ void delete_direct_use_after_free() {
 
 void delete_alias_use_after_free() {
   MyObj *p = new MyObj; // expected-warning {{allocated object does not live long enough}}
-  MyObj *q = p;
+  MyObj *q = p;         // expected-note {{local variable 'p' aliases the storage of allocated object}}
   delete p;             // expected-note {{allocated object is freed here}}
   (void)q->id;          // expected-note {{later used here}}
 }
@@ -3430,7 +3430,7 @@ void placement_new_array_braces() {
 
 void placement_new_heap_then_delete_use_after_free() {
   int *storage = new int(7); // expected-warning {{allocated object does not live long enough}}
-  int *p = new (storage) int(42);
+  int *p = new (storage) int(42); // expected-note {{local variable 'storage' aliases the storage of allocated object}}
   delete storage;            // expected-note {{allocated object is freed here}}
   (void)*p;                  // expected-note {{later used here}}
 }
@@ -3478,7 +3478,9 @@ void placement_new_delete_result_of_lifetimebound_call() {
   int *x = new int(1); // expected-warning {{allocated object does not live long enough}}
   int *y = new int(2); // expected-warning {{allocated object does not live long enough}}
   int *slot = nullptr;
-  int **p = new (&slot) int *(foo(x, y));
+  int **p = new (&slot) int *(foo(x, y)); // expected-note {{local variable 'x' aliases the storage of allocated object}} \
+                                          // expected-note {{local variable 'y' aliases the storage of allocated object}} \
+                                          // expected-note 2 {{result of call to 'foo' aliases the storage of allocated object}}
   delete foo(x, y);    // expected-note 2 {{allocated object is freed here}}
   (void)**p;           // expected-note 2 {{later used here}}
 }
