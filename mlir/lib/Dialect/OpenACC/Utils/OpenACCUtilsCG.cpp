@@ -208,6 +208,15 @@ void updateParDimsAttr(Operation *op, GPUParallelDimsAttr attr) {
 
 #undef ACC_OP_WITH_PAR_DIMS_LIST
 
+bool hasGPUBlockRedundantAttr(Operation *op) {
+  return op->hasAttrOfType<GPUBlockRedundantAttr>(GPUBlockRedundantAttr::name);
+}
+
+void setGPUBlockRedundantAttr(Operation *op) {
+  op->setAttr(GPUBlockRedundantAttr::name,
+              GPUBlockRedundantAttr::get(op->getContext()));
+}
+
 void copyParDimsAttr(Operation *from, Operation *to) {
   assert(hasParDimsAttr(from) &&
          "expected parallel dimensions attribute to already be set");
