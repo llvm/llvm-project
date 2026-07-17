@@ -440,7 +440,7 @@ buildBoolRegister(MachineIRBuilder &MIRBuilder, SPIRVTypeInst ResultType,
   LLT Type;
   SPIRVTypeInst BoolType = GR->getOrCreateSPIRVBoolType(MIRBuilder, true);
 
-  if (ResultType->getOpcode() == SPIRV::OpTypeVector) {
+  if (isVectorType(ResultType)) {
     unsigned VectorElements = GR->getScalarOrVectorComponentCount(ResultType);
     BoolType = GR->getOrCreateSPIRVVectorType(BoolType, VectorElements,
                                               MIRBuilder, true);
@@ -465,7 +465,7 @@ static bool buildSelectInst(MachineIRBuilder &MIRBuilder,
                             SPIRVTypeInst ReturnType, SPIRVGlobalRegistry *GR) {
   Register TrueConst, FalseConst;
 
-  if (ReturnType->getOpcode() == SPIRV::OpTypeVector) {
+  if (isVectorType(ReturnType)) {
     unsigned Bits = GR->getScalarOrVectorBitWidth(ReturnType);
     uint64_t AllOnes = APInt::getAllOnes(Bits).getZExtValue();
     TrueConst =
@@ -1790,7 +1790,7 @@ static bool generateBuiltinVar(const SPIRV::IncomingCall *Call,
   // Build a load instruction for the builtin variable.
   unsigned BitWidth = GR->getScalarOrVectorBitWidth(Call->ReturnType);
   LLT LLType;
-  if (Call->ReturnType->getOpcode() == SPIRV::OpTypeVector)
+  if (isVectorType(Call->ReturnType))
     LLType = LLT::fixed_vector(
         GR->getScalarOrVectorComponentCount(Call->ReturnType), BitWidth);
   else
@@ -1906,9 +1906,8 @@ static bool generateDotOrFMulInst(StringRef DemangledCall,
     return buildOpFromWrapper(MIRBuilder, SPIRV::OpDot, Call,
                               GR->getSPIRVTypeID(Call->ReturnType));
 
-  bool IsVec = GR->getSPIRVTypeForVReg(Call->Arguments[0])->getOpcode() ==
-               SPIRV::OpTypeVector;
   // Use OpDot only in case of vector args and OpFMul in case of scalar args.
+  bool IsVec = isVectorType(GR->getSPIRVTypeForVReg(Call->Arguments[0]));
   uint32_t OC = IsVec ? SPIRV::OpDot : SPIRV::OpFMulS;
   bool IsSwapReq = false;
 
@@ -2043,7 +2042,7 @@ static bool generateICarryBorrowInst(const SPIRV::IncomingCall *Call,
   SPIRVTypeInst OpType2 = GR->getSPIRVTypeForVReg(Call->Arguments[2]);
   if (!OpType1 || !OpType2 || OpType1 != OpType2)
     report_fatal_error("Operands must have the same type");
-  if (OpType1->getOpcode() == SPIRV::OpTypeVector)
+  if (isVectorType(OpType1))
     switch (Opcode) {
     case SPIRV::OpIAddCarryS:
       Opcode = SPIRV::OpIAddCarryV;
@@ -2212,7 +2211,7 @@ static bool generateImageSizeQueryInst(const SPIRV::IncomingCall *Call,
            "Invalid composite index!");
     Register TypeReg = GR->getSPIRVTypeID(Call->ReturnType);
     SPIRVTypeInst NewType = nullptr;
-    if (QueryResultType->getOpcode() == SPIRV::OpTypeVector) {
+    if (isVectorType(QueryResultType)) {
       NewType = GR->getScalarOrVectorComponentType(QueryResultType);
       Register NewTypeReg = GR->getSPIRVTypeID(NewType);
       if (TypeReg != NewTypeReg)
@@ -2346,7 +2345,7 @@ static bool generateReadImageInst(StringRef DemangledCall,
     Register Lod = GR->buildConstantFP(APFloat::getZero(APFloat::IEEEsingle()),
                                        MIRBuilder);
 
-    if (Call->ReturnType->getOpcode() != SPIRV::OpTypeVector) {
+    if (!isVectorType(Call->ReturnType)) {
       SPIRVTypeInst TempType =
           GR->getOrCreateSPIRVVectorType(Call->ReturnType, 4, MIRBuilder, true);
       Register TempRegister =

@@ -161,6 +161,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds an instruction that prevents fast-math optimizations between its argument and the expression that contains it.
    * - ``SPV_EXT_demote_to_helper_invocation``
      - Adds an instruction that demotes a fragment shader invocation to a helper invocation.
+   * - ``SPV_EXT_long_vector``
+     - Adds support for any vector rank.
    * - ``SPV_EXT_optnone``
      - Adds OptNoneEXT value for Function Control mask that indicates a request to not optimize the function.
    * - ``SPV_EXT_shader_atomic_float16_add``

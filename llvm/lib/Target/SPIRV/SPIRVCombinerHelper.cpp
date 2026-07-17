@@ -279,7 +279,7 @@ SPIRVCombinerHelper::extractRows(Register MatrixReg, uint32_t NumRows,
   // If there is only one column, then each row is a scalar that needs
   // to be extracted.
   if (NumCols == 1) {
-    assert(SpvRowType->getOpcode() != SPIRV::OpTypeVector);
+    assert(!isVectorType(SpvRowType));
     for (uint32_t I = 0; I < NumRows; ++I)
       Rows.push_back(MRI.createGenericVirtualRegister(VecTy));
     Builder.buildUnmerge(Rows, MatrixReg);
@@ -310,13 +310,12 @@ SPIRVCombinerHelper::extractRows(Register MatrixReg, uint32_t NumRows,
 Register SPIRVCombinerHelper::computeDotProduct(Register RowA, Register ColB,
                                                 SPIRVTypeInst SpvVecType,
                                                 SPIRVGlobalRegistry *GR) const {
-  bool IsVectorOp = SpvVecType->getOpcode() == SPIRV::OpTypeVector;
   SPIRVTypeInst SpvScalarType = GR->getScalarOrVectorComponentType(SpvVecType);
   bool IsFloatOp = SpvScalarType->getOpcode() == SPIRV::OpTypeFloat;
   LLT VecTy = GR->getRegType(SpvVecType);
 
   Register DotRes;
-  if (IsVectorOp) {
+  if (isVectorType(SpvVecType)) {
     LLT ScalarTy = VecTy.getElementType();
     Intrinsic::SPVIntrinsics DotIntrinsic =
         (IsFloatOp ? Intrinsic::spv_fdot : Intrinsic::spv_udot);
