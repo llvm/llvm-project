@@ -644,25 +644,6 @@ private:
   std::vector<InputDeps> Inputs;
 };
 
-static bool handleModuleResult(StringRef ModuleName,
-                               llvm::Expected<TranslationUnitDeps> &MaybeTUDeps,
-                               FullDeps &FD, size_t InputIndex,
-                               SharedStream &OS, SharedStream &Errs) {
-  if (!MaybeTUDeps) {
-    llvm::handleAllErrors(MaybeTUDeps.takeError(),
-                          [&ModuleName, &Errs](llvm::StringError &Err) {
-                            Errs.applyLocked([&](raw_ostream &OS) {
-                              OS << "Error while scanning dependencies for "
-                                 << ModuleName << ":\n";
-                              OS << Err.getMessage();
-                            });
-                          });
-    return true;
-  }
-  FD.mergeDeps(std::move(MaybeTUDeps->ModuleGraph), InputIndex);
-  return false;
-}
-
 class P1689Deps {
 public:
   void printDependencies(raw_ostream &OS) {
@@ -1129,33 +1110,23 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
         ModuleNameRef.split(Names, ',');
 
         CallbackActionController Controller(LookupOutput);
+        ByNameConsumer DepConsumer(*FD, LocalIndex);
 
-        if (Names.size() == 1) {
-          auto MaybeModuleDepsGraph = WorkerTool.getModuleDependencies(
-              Names[0], Input->CommandLine, CWD, AlreadySeenModules,
-              Controller);
-          if (handleModuleResult(Names[0], MaybeModuleDepsGraph, *FD,
-                                 LocalIndex, DependencyOS, Errs))
-            HadErrors = true;
-        } else {
-          ByNameConsumer DepConsumer(*FD, LocalIndex);
+        unsigned NameIdx = 0;
+        auto getNextName = [&]() -> std::optional<std::string> {
+          if (NameIdx >= Names.size())
+            return std::nullopt;
 
-          unsigned NameIdx = 0;
-          auto getNextName = [&]() -> std::optional<std::string> {
-            if (NameIdx >= Names.size())
-              return std::nullopt;
+          StringRef Name = Names[NameIdx++];
+          return Name.str();
+        };
 
-            StringRef Name = Names[NameIdx++];
-            return Name.str();
-          };
-
-          bool DrainOk = WorkerTool.computeDependenciesByNameWithDrain(
-              CWD, Input->CommandLine, DiagConsumer, Controller, getNextName,
-              DepConsumer);
-          handleDiagnostics(ModuleNameRef, S, Errs);
-          if (!DrainOk || DepConsumer.AnyFailure)
-            HadErrors = true;
-        }
+        bool DrainOk = WorkerTool.getByNameDependenciesWithDrain(
+            CWD, Input->CommandLine, DiagConsumer, Controller, getNextName,
+            DepConsumer);
+        handleDiagnostics(ModuleNameRef, S, Errs);
+        if (!DrainOk || DepConsumer.AnyFailure)
+          HadErrors = true;
       } else {
         std::unique_ptr<llvm::MemoryBuffer> TU;
         std::optional<llvm::MemoryBufferRef> TUBuffer;

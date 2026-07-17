@@ -100,15 +100,22 @@ public:
       dependencies::LookupModuleOutputCallback LookupModuleOutput,
       std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt);
 
-  /// Given a compilation context specified via the Clang driver command-line,
-  /// gather modular dependencies of module with the given name, and return the
-  /// information needed for explicit build.
-  llvm::Expected<dependencies::TranslationUnitDeps> getModuleDependencies(
-      StringRef ModuleName, ArrayRef<std::string> CommandLine, StringRef CWD,
-      const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
-      dependencies::DependencyActionController &Controller);
-
-  bool computeDependenciesByNameWithDrain(
+  /// Drain-style by-name scanning given a Clang command-line. The scanning
+  /// context is initialized once, and reused for NextInput (passed in through
+  /// calls to getNextInput).
+  ///
+  /// \param CWD The current working directory.
+  /// \param CommandLine The input Clang command-line.
+  /// \param DiagConsumer Reports the diagnostics to the user.
+  /// \param Controller Callback that can be used to modify the scans.
+  /// \param getNextInput The drain method that provides the names.
+  /// \param DepConsumer Collects the dependency scanning results.
+  ///
+  /// \returns true if the context is initialized correctly to perform the
+  /// scans. It does not necessarily indicate all the scans succeeded.
+  /// The DepConsumer can be used to query the state of the scan (success or
+  /// failure), and the DiagConsumer to obtain the exact diagnostics.
+  bool getByNameDependenciesWithDrain(
       StringRef CWD, ArrayRef<std::string> CommandLine,
       DiagnosticConsumer &DiagConsumer,
       dependencies::DependencyActionController &Controller,

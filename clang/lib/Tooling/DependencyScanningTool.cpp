@@ -14,7 +14,6 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/FrontendActions.h"
-#include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -86,20 +85,6 @@ protected:
   std::unique_ptr<DependencyOutputOptions> Opts;
   std::vector<std::string> Dependencies;
   std::vector<std::string> DependenciesFromModules;
-};
-
-struct TextDiagnosticsPrinterWithOutput {
-  // We need to bound the lifetime of the data that supports the DiagPrinter
-  // with it together so they have the same lifetime.
-  std::string DiagnosticOutput;
-  llvm::raw_string_ostream DiagnosticsOS;
-  std::unique_ptr<DiagnosticOptions> DiagOpts;
-  TextDiagnosticPrinter DiagPrinter;
-
-  TextDiagnosticsPrinterWithOutput(ArrayRef<std::string> CommandLine)
-      : DiagnosticsOS(DiagnosticOutput),
-        DiagOpts(createDiagOptions(CommandLine)),
-        DiagPrinter(DiagnosticsOS, *DiagOpts) {}
 };
 } // anonymous namespace
 
@@ -184,12 +169,6 @@ static bool computeDependenciesForDriverCommandLine(
   return Worker.computeDependencies(WorkingDirectory, FrontendCommandLinesView,
                                     Consumer, Controller, DiagConsumer,
                                     std::move(OverlayFS));
-}
-
-static llvm::Error makeErrorFromDiagnosticsOS(
-    TextDiagnosticsPrinterWithOutput &DiagPrinterWithOS) {
-  return llvm::make_error<llvm::StringError>(
-      DiagPrinterWithOS.DiagnosticsOS.str(), llvm::inconvertibleErrorCode());
 }
 
 bool tooling::computeDependencies(
@@ -344,35 +323,6 @@ DependencyScanningTool::getTranslationUnitDependencies(
   return Consumer.takeTranslationUnitDeps();
 }
 
-llvm::Expected<TranslationUnitDeps>
-DependencyScanningTool::getModuleDependencies(
-    StringRef ModuleName, ArrayRef<std::string> CommandLine, StringRef CWD,
-    const llvm::DenseSet<ModuleID> &AlreadySeen,
-    DependencyActionController &Controller) {
-  TextDiagnosticsPrinterWithOutput DiagPrinter(CommandLine);
-
-  bool Pulled = false;
-  auto getNextName = [&]() -> std::optional<std::string> {
-    if (Pulled)
-      return std::nullopt;
-    Pulled = true;
-    return ModuleName.str();
-  };
-
-  struct SingleNameConsumer : FullDependencyConsumer {
-    using FullDependencyConsumer::FullDependencyConsumer;
-    bool Success = false;
-    void finishQuery(StringRef, bool S) override { Success = S; }
-  } DepConsumer(AlreadySeen);
-
-  if (!computeDependenciesByNameWithDrain(CWD, CommandLine,
-                                          DiagPrinter.DiagPrinter, Controller,
-                                          getNextName, DepConsumer) ||
-      !DepConsumer.Success)
-    return makeErrorFromDiagnosticsOS(DiagPrinter);
-  return DepConsumer.takeTranslationUnitDeps();
-}
-
 static std::optional<SmallVector<std::string, 0>>
 getFirstCC1CommandLine(ArrayRef<std::string> CommandLine,
                        DiagnosticsEngine &Diags,
@@ -396,7 +346,7 @@ getFirstCC1CommandLine(ArrayRef<std::string> CommandLine,
   return std::nullopt;
 }
 
-bool DependencyScanningTool::computeDependenciesByNameWithDrain(
+bool DependencyScanningTool::getByNameDependenciesWithDrain(
     StringRef CWD, ArrayRef<std::string> CommandLine,
     DiagnosticConsumer &DiagConsumer, DependencyActionController &Controller,
     llvm::function_ref<std::optional<std::string>()> getNextInput,
