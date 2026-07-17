@@ -2410,7 +2410,7 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
     std::optional<PtrAuthSchema> SignSchema, std::optional<int64_t> Addend,
     Value *DS) {
   const PtrauthCheckMode CheckMode = getCheckMode(MF);
-  const bool AuthWithPC = AuthSchema.PCDisc != AArch64::NoRegister;
+  const bool IsAuthWithPC = AuthSchema.PCDisc != AArch64::NoRegister;
   assert(!SignSchema || SignSchema->PCDisc == AArch64::NoRegister);
 
   Register SignAddrDiscOrNone =
@@ -2419,7 +2419,7 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
   // 1. Authenticate Pointer - this is the only common step.
   // It is more complex than signing because AUTI[AB]171615 may be used.
 
-  if (AuthWithPC) {
+  if (IsAuthWithPC) {
     assert(Pointer == AArch64::X17 && Scratch == AArch64::X16 &&
            "AUTPCPAC must use x17/x16 as Pointer/Scratch");
 
@@ -2445,7 +2445,7 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
     // emitPtrauthDiscriminator is allowed to clobber AuthSchema.AddrDisc as
     // long as it is not used past this point neither externally (the register
     // operand is "killed"), nor internally (it does not alias anything being
-    // used later).
+    // used later by this pseudo instruction).
     //
     // Note that, while rather unlikely, it is technically possible to use the
     // Pointer to compute its own discriminator.
@@ -2457,7 +2457,7 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
   }
 
   // The other two steps are optional, define lambdas for them:
-  // 2. Check That Pointer is valid, on failure jump to label or trap.
+  // 2. Check that Pointer is valid, on failure jump to label or trap.
   auto EmitCheck = [&](MCSymbol *OnFailure = nullptr) {
     emitPtrauthCheckAuthenticatedValue(Pointer, Scratch, AuthSchema.Key,
                                        AArch64PAuth::AuthCheckMethod::XPAC,
