@@ -1131,7 +1131,7 @@ static constexpr Builtin::Info PrefixedBuiltinInfos[] = {
 #undef GET_BUILTIN_PREFIXED_INFOS
 };
 
-static_assert((std::size(BuiltinInfos) + std::size(PrefixedBuiltinInfos)) == 
+static_assert((std::size(BuiltinInfos) + std::size(PrefixedBuiltinInfos)) ==
               NumARMBuiltins);
 
 } // namespace ARM
