@@ -1515,7 +1515,7 @@ int OnExit() {
     if (msan_init_is_running || __msan::IsInSymbolizerOrUnwider())     \
       return REAL(__memset_chk)(dest, c, n, dest_size);                \
     ENSURE_MSAN_INITED();                                              \
-    void *res = REAL(__memset_chk)(dest, c, n, dest_size);             \
+    void* res = REAL(__memset_chk)(dest, c, n, dest_size);             \
     __msan_unpoison(dest, n);                                          \
     return res;                                                        \
   }
@@ -1528,7 +1528,7 @@ int OnExit() {
       return REAL(__memmove_chk)(dest, src, n, dest_size);                \
     ENSURE_MSAN_INITED();                                                 \
     GET_STORE_STACK_TRACE;                                                \
-    void *res = REAL(__memmove_chk)(dest, src, n, dest_size);             \
+    void* res = REAL(__memmove_chk)(dest, src, n, dest_size);             \
     MoveShadowAndOrigin(dest, src, n, &stack);                            \
     return res;                                                           \
   }
@@ -1541,7 +1541,7 @@ int OnExit() {
       return REAL(__memcpy_chk)(dest, src, n, dest_size);                \
     ENSURE_MSAN_INITED();                                                \
     GET_STORE_STACK_TRACE;                                               \
-    void *res = REAL(__memcpy_chk)(dest, src, n, dest_size);             \
+    void* res = REAL(__memcpy_chk)(dest, src, n, dest_size);             \
     CopyShadowAndOrigin(dest, src, n, &stack);                           \
     return res;                                                          \
   }
@@ -1550,13 +1550,13 @@ int OnExit() {
     (void)ctx;                                                            \
     if (!msan_inited) {                                                   \
       internal_memcpy(dest, src, n);                                      \
-      return (char *)dest + n;                                            \
+      return (char*)dest + n;                                             \
     }                                                                     \
     if (msan_init_is_running || __msan::IsInSymbolizerOrUnwider())        \
       return REAL(__mempcpy_chk)(dest, src, n, dest_size);                \
     ENSURE_MSAN_INITED();                                                 \
     GET_STORE_STACK_TRACE;                                                \
-    void *res = REAL(__mempcpy_chk)(dest, src, n, dest_size);             \
+    void* res = REAL(__mempcpy_chk)(dest, src, n, dest_size);             \
     CopyShadowAndOrigin(dest, src, n, &stack);                            \
     return res;                                                           \
   }
