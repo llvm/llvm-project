@@ -3438,6 +3438,13 @@ public:
     return false;
   }
 
+  /// When true, FMA fusion during DAG combine requires the FMUL to carry a
+  /// local contract flag, ignoring global -ffp-contract=fast.
+  virtual bool
+  restrictFMAFusionToLocalContract(const MachineFunction &MF) const {
+    return false;
+  }
+
   /// Return true if an FMA operation is faster than a pair of fmul and fadd
   /// instructions. fmuladd intrinsics will be expanded to FMAs when this method
   /// returns true, otherwise fmuladd is expanded to fmul + fadd.

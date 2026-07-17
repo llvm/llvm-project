@@ -708,6 +708,14 @@ def TuningInsertVZEROUPPER
                        "true", "Should insert vzeroupper instructions",
                        [], InlineIgnore>;
 
+// When enabled, only fuse mul+add into FMA when the FMUL carries a local
+// contract flag, ignoring global -ffp-contract=fast.
+def TuningSuppressFMAFusion
+    : SubtargetFeature<"suppress-fma-fusion",
+                       "SuppressFMAFusion",
+                       "true",
+                       "Restrict FMA fusion to FMUL ops with a local contract flag">;
+
 // TuningFastScalarFSQRT should be enabled if scalar FSQRT has shorter latency
 // than the corresponding NR code. TuningFastVectorFSQRT should be enabled if
 // vector FSQRT has higher throughput than the corresponding NR code.
