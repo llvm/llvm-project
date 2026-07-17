@@ -84,6 +84,10 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(env_variables["projects_to_build"], "")
         self.assertEqual(env_variables["project_check_targets"], "")
+        self.assertEqual(env_variables["runtimes_to_build"], "")
+        self.assertEqual(env_variables["runtimes_check_targets"], "")
+        self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
+        self.assertEqual(env_variables["enable_cir"], "OFF")
 
     def test_cir_mac(self):
         env_variables = compute_projects.get_env_variables(
@@ -97,6 +101,11 @@ class TestComputeProjects(unittest.TestCase):
             env_variables["project_check_targets"],
             "check-clang check-clang-python check-clang-tools",
         )
+        self.assertEqual(env_variables["runtimes_to_build"], "compiler-rt")
+        self.assertEqual(
+            env_variables["runtimes_check_targets"], "check-compiler-rt"
+        )
+        self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
         self.assertEqual(env_variables["enable_cir"], "OFF")
 
     def test_lldb_mac(self):
@@ -105,13 +114,19 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(env_variables["projects_to_build"], "clang;lld;lldb;llvm")
         self.assertEqual(env_variables["project_check_targets"], "")
+        self.assertEqual(env_variables["runtimes_to_build"], "compiler-rt")
+        self.assertEqual(env_variables["runtimes_check_targets"], "")
+        self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
 
     def test_libclc_mac(self):
         env_variables = compute_projects.get_env_variables(
             ["libclc/CMakeLists.txt"], "Darwin"
         )
         self.assertEqual(env_variables["projects_to_build"], "clang;llvm")
+        self.assertEqual(env_variables["project_check_targets"], "")
+        self.assertEqual(env_variables["runtimes_to_build"], "")
         self.assertEqual(env_variables["runtimes_check_targets"], "")
+        self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
 
     def test_clang(self):
         env_variables = compute_projects.get_env_variables(
