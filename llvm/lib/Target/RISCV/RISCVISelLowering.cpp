@@ -6512,12 +6512,11 @@ lowerVECTOR_SHUFFLEAsRV32PNarrowingShift(ShuffleVectorSDNode *SVN,
                      DAG.getConstant(Index * EltBits, DL, MVT::i32));
 }
 
-// Match a strided-interleave shuffle that forms a P-extension packed
-// narrowing zip:
+// Match a strided-interleave shuffle that forms a P-extension packed pair:
 //   <a0, b0, a2, b2, ...> -> ppaire.*
 //   <a1, b1, a3, b3, ...> -> ppairo.*
-static SDValue lowerVECTOR_SHUFFLEAsPNarrowingZip(ShuffleVectorSDNode *SVN,
-                                                  SelectionDAG &DAG) {
+static SDValue lowerVECTOR_SHUFFLEAsPPair(ShuffleVectorSDNode *SVN,
+                                          SelectionDAG &DAG) {
   MVT VT = SVN->getSimpleValueType(0);
   if (VT != MVT::v4i8 && VT != MVT::v8i8 && VT != MVT::v4i16)
     return SDValue();
@@ -6605,7 +6604,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
     if (SDValue V =
             lowerVECTOR_SHUFFLEAsRV32PNarrowingShift(SVN, Subtarget, DAG))
       return V;
-    if (SDValue V = lowerVECTOR_SHUFFLEAsPNarrowingZip(SVN, DAG))
+    if (SDValue V = lowerVECTOR_SHUFFLEAsPPair(SVN, DAG))
       return V;
     return SDValue();
   }
