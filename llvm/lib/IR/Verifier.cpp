@@ -4585,6 +4585,8 @@ void Verifier::visitLoadInst(LoadInst &LI) {
 
     Type *ScalarTy = ElTy;
     if (LI.isElementwise()) {
+      Check(LI.getOrdering() != AtomicOrdering::SequentiallyConsistent,
+            "atomic elementwise load cannot be sequentially consistent.", &LI);
       auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
       Check(VecTy,
             "atomic elementwise load operand must have fixed vector type!", &LI,

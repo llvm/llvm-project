@@ -4181,6 +4181,29 @@ Otherwise, an atomic operation that is not marked
 monotonic modification order with other operations that are not marked
 `syncscope("singlethread")` or `syncscope("<target-scope>")`.
 
+(elementwise-atomics)=
+
+### Elementwise Atomic Operations
+
+Certain atomic instructions, such as {ref}`atomicrmw <i_atomicrmw>`,
+and {ref}`atomic load <i_load>`, may be marked `elementwise`. The access type
+must then be a fixed vector type whose total bit width is a power of two greater
+than or equal to eight, and whose element type is supported by the corresponding
+scalar atomic instruction.
+
+For the purposes of the happens-before relation, the instruction behaves as if
+one thread were spawned per element, each performing the corresponding scalar
+atomic operation on that element, and then joining after completion. For the
+purposes of `syncscope`, each scalar operation is still considered to execute
+in the same thread as the original instruction. Synchronizing with one of the
+scalar operations does not, by itself, establish a happens-before relationship
+with another scalar operation from the same `elementwise` instruction.
+
+The instruction's `syncscope` and {ref}`ordering <ordering>` apply
+independently to each scalar operation and the `ordering` may not be `seq_cst`.
+Without `elementwise`, vector atomic instructions are performed atomically over
+the entire vector operation.
+
 (floatenv)=
 
 ### Floating-Point Environment
@@ -11741,13 +11764,10 @@ multiple atomic stores. The type of the pointee must be an integer, pointer,
 floating-point, or vector type whose bit width is a power of two greater than or
 equal to eight.
 
-If the `elementwise` modifier is present, the loaded type must be a fixed
-vector type whose total bit width is a power of two greater than or equal to
-eight, and whose element type is supported by scalar atomic loads. The load has
-per-element atomic load semantics: it behaves as if it were expanded into
-one scalar atomic load per element, and the element loads are not ordered with
-respect to each other. Without `elementwise`, vector atomic loads keep
-whole-value atomic semantics. That is, the entire vector is loaded atomically.
+If the `elementwise` modifier is present, the instruction has
+{ref}`elementwise atomic semantics <elementwise-atomics>`. The loaded type must
+be a fixed vector type whose total bit width is a power of two greater than or
+equal to eight, and whose element type is supported by scalar atomic loads.
 
 `align` must be explicitly specified on atomic loads, and is otherwise
 optional on non-atomic loads. Note: if the alignment is not greater than or equal
@@ -12143,16 +12163,8 @@ isn't specified.
 An `atomicrmw` instruction can also take an optional
 "{ref}`syncscope <syncscope>`" argument.
 
-If the `elementwise` modifier is present, the instruction has per-element vector
-atomic semantics. It behaves as if it were expanded into one scalar `atomicrmw`
-per element, that are not ordered with respect to each other. In other words, a
-consistent ordering does not exist between the individual scalar operations of
-the same `elementwise` instruction. Synchronizing with one of the scalar
-operations does not, by itself, establish a happens-before relationship with another scalar operation from the same `elementwise` instruction.
-
-If the `elementwise` modifier is present, the `<ordering>` applies independently to each scalar operation and the `<ordering>` may not be `seq_cst`.
-
-Without `elementwise`, vector `atomicrmw` keeps whole-value atomic semantics.
+If the `elementwise` modifier is present, the instruction has
+{ref}`elementwise atomic semantics <elementwise-atomics>`.
 
 ##### Semantics:
 

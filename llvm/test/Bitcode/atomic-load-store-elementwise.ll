@@ -10,7 +10,7 @@ define <2 x float> @load_elem_f32(ptr %p) {
 
 define <4 x i32> @load_elem_i32_volatile(ptr %p) {
 ; CHECK-LABEL: @load_elem_i32_volatile(
-; CHECK: %v = load atomic volatile elementwise <4 x i32>, ptr %p seq_cst, align 4
-  %v = load atomic volatile elementwise <4 x i32>, ptr %p seq_cst, align 4
+; CHECK: %v = load atomic volatile elementwise <4 x i32>, ptr %p acquire, align 4
+  %v = load atomic volatile elementwise <4 x i32>, ptr %p acquire, align 4
   ret <4 x i32> %v
 }
