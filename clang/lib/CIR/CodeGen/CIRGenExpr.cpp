@@ -3094,8 +3094,6 @@ CIRGenFunction::emitConditionalBlocks(const AbstractConditionalOperator *e,
   CIRGenBuilderTy &builder = getBuilder();
 
   mlir::Value condV = emitOpOnBoolExpr(loc, e->getCond());
-  SmallVector<mlir::OpBuilder::InsertPoint, 2> insertPoints{};
-  mlir::Type yieldTy{};
 
   auto emitBranch = [&](mlir::OpBuilder &b, mlir::Location loc,
                         const Expr *expr, std::optional<LValue> &resultLV) {
@@ -3115,53 +3113,30 @@ CIRGenFunction::emitConditionalBlocks(const AbstractConditionalOperator *e,
       branchCleanups.forceCleanup({&resultPtr});
     }
 
-    if (resultPtr) {
-      yieldTy = resultPtr.getType();
+    // A branch that produced no result is a throw-expression; its region is
+    // already terminated by cir.unreachable and needs no yield.
+    if (resultPtr)
       cir::YieldOp::create(b, loc, resultPtr);
-    } else {
-      // If LHS or RHS is a void expression we need
-      // to patch arms as to properly match yield types.
-      // If the current block's terminator is an UnreachableOp (from a throw),
-      // we don't need a yield
-      if (builder.getInsertionBlock()->mightHaveTerminator()) {
-        mlir::Operation *terminator =
-            builder.getInsertionBlock()->getTerminator();
-        if (isa_and_nonnull<cir::UnreachableOp>(terminator))
-          insertPoints.push_back(b.saveInsertionPoint());
-      }
-    }
   };
 
-  info.result = cir::TernaryOp::create(
-                    builder, loc, condV,
-                    /*trueBuilder=*/
-                    [&](mlir::OpBuilder &b, mlir::Location loc) {
-                      emitBranch(b, loc, e->getTrueExpr(), info.lhs);
-                    },
-                    /*falseBuilder=*/
-                    [&](mlir::OpBuilder &b, mlir::Location loc) {
-                      emitBranch(b, loc, e->getFalseExpr(), info.rhs);
-                    })
-                    .getResult();
+  cir::TernaryOp ternary = cir::TernaryOp::create(
+      builder, loc, condV,
+      /*trueBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        emitBranch(b, loc, e->getTrueExpr(), info.lhs);
+      },
+      /*falseBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        emitBranch(b, loc, e->getFalseExpr(), info.rhs);
+      });
 
-  // If both arms are void, so be it.
-  if (!yieldTy)
-    yieldTy = voidTy;
+  // Close any region left unterminated (which can only happen on error
+  // paths, since a glvalue arm either yields its pointer or throws) with an
+  // empty cir.yield.
+  terminateStructuredRegionBody(ternary.getTrueRegion(), loc);
+  terminateStructuredRegionBody(ternary.getFalseRegion(), loc);
 
-  // Insert required yields.
-  for (mlir::OpBuilder::InsertPoint &toInsert : insertPoints) {
-    mlir::OpBuilder::InsertionGuard guard(builder);
-    builder.restoreInsertionPoint(toInsert);
-
-    // Block does not return: build empty yield.
-    if (!yieldTy) {
-      cir::YieldOp::create(builder, loc);
-    } else { // Block returns: set null yield value.
-      mlir::Value op0 = builder.getNullValue(yieldTy, loc);
-      cir::YieldOp::create(builder, loc, op0);
-    }
-  }
-
+  info.result = ternary.getResult();
   return info;
 }
 

@@ -18,13 +18,13 @@ const int& test_cond_throw_false(bool flag) {
 // CIR: %[[FLAG_VAL:.*]] = cir.load{{.*}} %[[FLAG]] : !cir.ptr<!cir.bool>, !cir.bool
 // CIR: %[[RESULT:.*]] = cir.ternary(%[[FLAG_VAL]], true {
 // CIR:   cir.yield %[[A]] : !cir.ptr<!s32i>
-// CIR: }, false {
+// CIR-NEXT: }, false {
 // CIR:   %[[EXCEPTION:.*]] = cir.alloc.exception{{.*}} -> !cir.ptr<!s32i>
 // CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:   cir.store{{.*}} %[[ZERO]], %[[EXCEPTION]] : !s32i, !cir.ptr<!s32i>
 // CIR:   cir.throw %[[EXCEPTION]] : !cir.ptr<!s32i>, @_ZTIi
 // CIR:   cir.unreachable
-// CIR: }) : (!cir.bool) -> !cir.ptr<!s32i>
+// CIR-NEXT: }) : (!cir.bool) -> !cir.ptr<!s32i>
 
 // LLVM-LABEL: define{{.*}} ptr @_Z21test_cond_throw_falseb(
 // LLVM: %[[FLAG_ALLOCA:.*]] = alloca i8
@@ -85,9 +85,9 @@ const int& test_cond_throw_true(bool flag) {
 // CIR:   cir.store{{.*}} %[[ZERO]], %[[EXCEPTION]] : !s32i, !cir.ptr<!s32i>
 // CIR:   cir.throw %[[EXCEPTION]] : !cir.ptr<!s32i>, @_ZTIi
 // CIR:   cir.unreachable
-// CIR: }, false {
+// CIR-NEXT: }, false {
 // CIR:   cir.yield %[[A]] : !cir.ptr<!s32i>
-// CIR: }) : (!cir.bool) -> !cir.ptr<!s32i>
+// CIR-NEXT: }) : (!cir.bool) -> !cir.ptr<!s32i>
 
 // LLVM-LABEL: define{{.*}} ptr @_Z20test_cond_throw_trueb(
 // LLVM: %[[FLAG_ALLOCA:.*]] = alloca i8
@@ -541,7 +541,7 @@ void test_agg_throw_true(bool flag) {
 // CIR:     cir.store{{.*}} %[[ZERO]], %[[EXC]] : !s32i, !cir.ptr<!s32i>
 // CIR:     cir.throw %[[EXC]] : !cir.ptr<!s32i>, @_ZTIi
 // CIR:     cir.unreachable
-// CIR:   } else {
+// CIR-NEXT:   } else {
 // CIR:     %[[X:.*]] = cir.get_member %[[A]][0] {name = "x"} : !cir.ptr<!rec_Agg> -> !cir.ptr<!s32i>
 // CIR:     %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CIR:     cir.store{{.*}} %[[ONE]], %[[X]] : !s32i, !cir.ptr<!s32i>
@@ -610,7 +610,7 @@ void test_agg_throw_false(bool flag) {
 // CIR:     cir.store{{.*}} %[[ZERO]], %[[EXC]] : !s32i, !cir.ptr<!s32i>
 // CIR:     cir.throw %[[EXC]] : !cir.ptr<!s32i>, @_ZTIi
 // CIR:     cir.unreachable
-// CIR:   }
+// CIR-NEXT:   }
 // CIR:   cir.return
 
 // LLVM-LABEL: define{{.*}} void @_Z20test_agg_throw_falseb(

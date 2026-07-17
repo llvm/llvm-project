@@ -479,8 +479,11 @@ public:
             cgf.curLexScope->setAsTernary();
             dest.setExternallyDestructed(isExternallyDestructed);
             assert(!cir::MissingFeatures::incrementProfileCounter());
+            // emitIfOnBoolExpr terminates the region with a yield if needed;
+            // creating one here unconditionally would land in the dead block
+            // left behind by a noreturn arm (e.g. a throw-expression) and
+            // keep that block alive.
             Visit(e->getTrueExpr());
-            cir::YieldOp::create(b, loc);
           }
           eval.endEvaluation();
         },
@@ -500,7 +503,6 @@ public:
             dest.setExternallyDestructed(isExternallyDestructed);
             assert(!cir::MissingFeatures::incrementProfileCounter());
             Visit(e->getFalseExpr());
-            cir::YieldOp::create(b, loc);
           }
           eval.endEvaluation();
         },
