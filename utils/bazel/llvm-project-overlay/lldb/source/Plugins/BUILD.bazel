@@ -618,6 +618,7 @@ cc_library(
         "//lldb:Host",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
+        "//lldb:Utility",
         "//llvm:Support",
     ],
 )
