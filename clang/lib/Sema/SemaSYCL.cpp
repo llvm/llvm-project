@@ -747,8 +747,10 @@ public:
     auto emitDiagnostic = [this](clang::diag::kind DiagId, auto &&...Args) {
       const auto &DiagDetail =
           getObjectAccessDiagDetails(ObjectAccessPath.back());
-      (SemaSYCLRef.Diag(DiagDetail.Loc, DiagId)
-       << DiagDetail.Type << ... << Args);
+      {
+        auto DB = SemaSYCLRef.Diag(DiagDetail.Loc, DiagId) << DiagDetail.Type;
+        (void)(DB << ... << Args);
+      }
       emitObjectAccessPathNotes();
     };
 
