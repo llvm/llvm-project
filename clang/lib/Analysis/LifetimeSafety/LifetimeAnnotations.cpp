@@ -107,8 +107,8 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   return isNormalAssignmentOperator(FD);
 }
 
-std::optional<LifetimeBoundParamInfo>
-getLifetimeBoundParamInfo(const FunctionDecl *FD, unsigned I) {
+static std::optional<LifetimeBoundParamInfo>
+getExplicitLifetimeBoundParamInfo(const FunctionDecl *FD, unsigned I) {
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);
   if (!FD)
     return std::nullopt;
@@ -117,7 +117,7 @@ getLifetimeBoundParamInfo(const FunctionDecl *FD, unsigned I) {
   if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
       Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD)) {
     if (I == 0)
-      return implicitObjectParamIsLifetimeBound(Method)
+      return getImplicitObjectParamLifetimeBoundAttr(Method)
                  ? std::optional<LifetimeBoundParamInfo>(
                        LifetimeBoundParamInfo(Method))
                  : std::nullopt;
@@ -149,46 +149,78 @@ static bool isExprInCallArg(const Expr *Arg, const Expr *Source) {
   return false;
 }
 
-LifetimeSafetyCallInfo getLifetimeSafetyCallInfo(const Expr *Call) {
-  LifetimeSafetyCallInfo Info;
+std::pair<const FunctionDecl *, llvm::SmallVector<const Expr *, 4>>
+getFunctionCallInfo(const Expr *Call) {
+  const FunctionDecl *FD = nullptr;
+  llvm::SmallVector<const Expr *, 4> Args;
   if (!Call)
-    return Info;
+    return {FD, Args};
 
   Call = Call->IgnoreParenImpCasts();
   if (const auto *CCE = dyn_cast<CXXConstructExpr>(Call)) {
-    Info.FD = CCE->getConstructor();
-    Info.Args.append(CCE->getArgs(), CCE->getArgs() + CCE->getNumArgs());
+    FD = CCE->getConstructor();
+    Args.append(CCE->getArgs(), CCE->getArgs() + CCE->getNumArgs());
   } else if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(Call)) {
-    Info.FD = MCE->getMethodDecl();
-    Info.Args.push_back(MCE->getImplicitObjectArgument());
-    Info.Args.append(MCE->getArgs(), MCE->getArgs() + MCE->getNumArgs());
+    FD = MCE->getMethodDecl();
+    Args.push_back(MCE->getImplicitObjectArgument());
+    Args.append(MCE->getArgs(), MCE->getArgs() + MCE->getNumArgs());
   } else if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(Call)) {
-    Info.FD = OCE->getDirectCallee();
-    Info.Args.append(OCE->getArgs(), OCE->getArgs() + OCE->getNumArgs());
-    if (Info.FD && OCE->getOperator() == OO_Call && Info.FD->isStatic())
-      Info.Args.erase(Info.Args.begin());
+    FD = OCE->getDirectCallee();
+    Args.append(OCE->getArgs(), OCE->getArgs() + OCE->getNumArgs());
+    // For `static operator()`, the first argument is the object argument,
+    // remove it from the argument list to avoid off-by-one errors.
+    if (FD && OCE->getOperator() == OO_Call && FD->isStatic())
+      Args.erase(Args.begin());
   } else if (const auto *CE = dyn_cast<CallExpr>(Call)) {
-    Info.FD = CE->getDirectCallee();
-    Info.Args.append(CE->getArgs(), CE->getArgs() + CE->getNumArgs());
+    FD = CE->getDirectCallee();
+    Args.append(CE->getArgs(), CE->getArgs() + CE->getNumArgs());
   }
 
-  return Info;
+  return {FD, Args};
 }
 
-std::optional<LifetimeBoundParamInfo>
-getLifetimeBoundParamInfoForCallArg(const Expr *Call, const Expr *Source) {
+TrackedArgInfo getTrackedArgInfo(const FunctionDecl *FD,
+                                 llvm::ArrayRef<const Expr *> Args,
+                                 unsigned I) {
+  FD = getDeclWithMergedLifetimeBoundAttrs(FD);
+  if (!FD || I >= Args.size())
+    return {};
+
+  if (std::optional<LifetimeBoundParamInfo> Info =
+          getExplicitLifetimeBoundParamInfo(FD, I))
+    return {TrackedArgKind::ExplicitLifetimeBound, Info};
+
+  if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
+      Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD))
+    if (I == 0 &&
+        (isNormalAssignmentOperator(Method) ||
+         shouldTrackImplicitObjectArg(*Args[0], Method,
+                                      /*RunningUnderLifetimeSafety=*/true)))
+      return {TrackedArgKind::Inferred, std::nullopt};
+
+  if (I == 0 && shouldTrackFirstArgument(FD))
+    return {TrackedArgKind::Inferred, std::nullopt};
+  if (I == 1 && shouldTrackSecondArgument(FD))
+    return {TrackedArgKind::Inferred, std::nullopt};
+
+  return {};
+}
+
+std::optional<TrackedArgInfo> getTrackingInfoForCallArg(const Expr *Call,
+                                                        const Expr *Source) {
   if (!Call || !Source)
     return std::nullopt;
 
-  LifetimeSafetyCallInfo Info = getLifetimeSafetyCallInfo(Call);
-  if (!Info.FD)
+  auto [FD, Args] = getFunctionCallInfo(Call);
+  if (!FD)
     return std::nullopt;
 
-  for (unsigned I = 0; I < Info.Args.size(); ++I)
-    if (isExprInCallArg(Info.Args[I], Source))
-      if (std::optional<LifetimeBoundParamInfo> ParamInfo =
-              getLifetimeBoundParamInfo(Info.FD, I))
-        return ParamInfo;
+  for (unsigned I = 0; I < Args.size(); ++I)
+    if (isExprInCallArg(Args[I], Source)) {
+      TrackedArgInfo Info = getTrackedArgInfo(FD, Args, I);
+      if (Info.Kind != TrackedArgKind::None)
+        return Info;
+    }
 
   return std::nullopt;
 }

@@ -664,52 +664,25 @@ private:
     return CurrExpr->getSourceRange() != LastExpr->getSourceRange();
   }
 
-  bool shouldCarryHiddenLifetimeBound(const Expr *HiddenExpr,
-                                      const Expr *LastExpr) {
-    HiddenExpr = HiddenExpr->IgnoreImpCasts();
-    LastExpr = LastExpr->IgnoreImpCasts();
-
-    SourceRange HiddenRange = HiddenExpr->getSourceRange();
-    SourceRange LastRange = LastExpr->getSourceRange();
-    if (HiddenRange == LastRange)
-      return true;
-    if (HiddenRange.isInvalid() || LastRange.isInvalid())
-      return false;
-
-    const SourceManager &SM = S.getSourceManager();
-    auto IsBeforeOrEqual = [&SM](SourceLocation LHS, SourceLocation RHS) {
-      return LHS == RHS || SM.isBeforeInTranslationUnit(LHS, RHS);
-    };
-    return IsBeforeOrEqual(HiddenRange.getBegin(), LastRange.getBegin()) &&
-           IsBeforeOrEqual(LastRange.getEnd(), HiddenRange.getEnd());
-  }
-
   void reportAliasingChain(llvm::ArrayRef<const Expr *> OriginExprChain) {
     if (OriginExprChain.empty())
       return;
 
     const Expr *LastExpr = OriginExprChain.back();
     std::string IssueStr = getDiagSubjectDescription(LastExpr);
-    std::optional<LifetimeBoundParamInfo> HiddenLifetimeBound;
 
     for (const Expr *CurrExpr : reverse(OriginExprChain.drop_back())) {
-      std::optional<LifetimeBoundParamInfo> LifetimeBound =
-          getLifetimeBoundParamInfoForCallArg(CurrExpr, LastExpr);
-      if (!shouldShowInAliasChain(CurrExpr, LastExpr)) {
-        if (!HiddenLifetimeBound && LifetimeBound &&
-            shouldCarryHiddenLifetimeBound(CurrExpr, LastExpr))
-          HiddenLifetimeBound = LifetimeBound;
+      if (!shouldShowInAliasChain(CurrExpr, LastExpr))
         continue;
-      }
-
-      if (!LifetimeBound)
-        LifetimeBound = HiddenLifetimeBound;
-
-      if (LifetimeBound) {
-        bool IsImplicitObject = isa<const CXXMethodDecl *>(*LifetimeBound);
+      std::optional<TrackedArgInfo> ArgInfo =
+          getTrackingInfoForCallArg(CurrExpr, LastExpr);
+      if (ArgInfo && ArgInfo->Kind == TrackedArgKind::ExplicitLifetimeBound &&
+          ArgInfo->ParamInfo) {
+        LifetimeBoundParamInfo ParamInfo = *ArgInfo->ParamInfo;
+        bool IsImplicitObject = isa<const CXXMethodDecl *>(ParamInfo);
         std::string ParamName;
         if (!IsImplicitObject) {
-          const auto *Param = cast<const ParmVarDecl *>(*LifetimeBound);
+          const auto *Param = cast<const ParmVarDecl *>(ParamInfo);
           ParamName = Param->getIdentifier()
                           ? "'" + Param->getNameAsString() + "'"
                           : "'<unnamed>'";
@@ -723,7 +696,6 @@ private:
                diag::note_lifetime_safety_aliases_storage)
             << CurrExpr->getSourceRange() << getDiagSubjectDescription(CurrExpr)
             << IssueStr;
-      HiddenLifetimeBound.reset();
       LastExpr = CurrExpr;
     }
   }

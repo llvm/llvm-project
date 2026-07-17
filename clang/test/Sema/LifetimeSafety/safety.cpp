@@ -3038,7 +3038,7 @@ void nested_local_pointer() {
   {
     Bar v;
     p = Pointer(v);     // expected-warning {{local variable 'v' does not live long enough}}
-    pp = Pointer(p);    // expected-note {{local variable 'p' aliases the storage of local variable 'v' because parameter 'bar' is marked 'lifetimebound'}}
+    pp = Pointer(p);    // expected-note {{local variable 'p' aliases the storage of local variable 'v'}}
     ppp = Pointer(pp);  // expected-note {{local variable 'pp' aliases the storage of local variable 'v'}}
   }                     // expected-note {{local variable 'v' is destroyed here}}
   use(***ppp);          // expected-note {{later used here}}

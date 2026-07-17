@@ -232,8 +232,8 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
       return;
     }
   }
-  LifetimeSafetyCallInfo CallInfo = getLifetimeSafetyCallInfo(CCE);
-  handleFunctionCall(CCE, CallInfo.FD, CallInfo.Args,
+  auto [FD, Args] = getFunctionCallInfo(CCE);
+  handleFunctionCall(CCE, FD, Args,
                      /*IsGslConstruction=*/false);
 }
 
@@ -255,17 +255,13 @@ void FactsGenerator::VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
   if (isGslPointerType(MCE->getType()) &&
       isa_and_present<CXXConversionDecl>(MCE->getCalleeDecl()) &&
       isGslOwnerType(MCE->getImplicitObjectArgument()->getType())) {
-    // The argument is the implicit object itself.
-    LifetimeSafetyCallInfo CallInfo = getLifetimeSafetyCallInfo(MCE);
-    handleFunctionCall(MCE, CallInfo.FD, CallInfo.Args,
+    auto [FD, Args] = getFunctionCallInfo(MCE);
+    handleFunctionCall(MCE, FD, Args,
                        /*IsGslConstruction=*/true);
     return;
   }
-  if (MCE->getMethodDecl()) {
-    LifetimeSafetyCallInfo CallInfo = getLifetimeSafetyCallInfo(MCE);
-    handleFunctionCall(MCE, CallInfo.FD, CallInfo.Args,
-                       /*IsGslConstruction=*/false);
-  }
+  auto [FD, Args] = getFunctionCallInfo(MCE);
+  handleFunctionCall(MCE, FD, Args, /*IsGslConstruction=*/false);
 }
 
 void FactsGenerator::VisitMemberExpr(const MemberExpr *ME) {
@@ -285,8 +281,8 @@ void FactsGenerator::VisitMemberExpr(const MemberExpr *ME) {
 }
 
 void FactsGenerator::VisitCallExpr(const CallExpr *CE) {
-  LifetimeSafetyCallInfo CallInfo = getLifetimeSafetyCallInfo(CE);
-  handleFunctionCall(CE, CallInfo.FD, CallInfo.Args);
+  auto [FD, Args] = getFunctionCallInfo(CE);
+  handleFunctionCall(CE, FD, Args);
 }
 
 void FactsGenerator::VisitCXXNullPtrLiteralExpr(
@@ -633,8 +629,8 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
     }
   }
 
-  LifetimeSafetyCallInfo CallInfo = getLifetimeSafetyCallInfo(OCE);
-  handleFunctionCall(OCE, CallInfo.FD, CallInfo.Args);
+  auto [FD, Args] = getFunctionCallInfo(OCE);
+  handleFunctionCall(OCE, FD, Args);
 }
 
 void FactsGenerator::VisitCXXFunctionalCastExpr(
@@ -890,8 +886,8 @@ void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
   } else {
     // This could be a new borrow.
     // TODO: Add code example here.
-    LifetimeSafetyCallInfo CallInfo = getLifetimeSafetyCallInfo(CCE);
-    handleFunctionCall(CCE, CallInfo.FD, CallInfo.Args,
+    auto [FD, Args] = getFunctionCallInfo(CCE);
+    handleFunctionCall(CCE, FD, Args,
                        /*IsGslConstruction=*/true);
   }
 }
@@ -1088,20 +1084,6 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
     flow(CallList, getOriginsList(*Args[0]), /*Kill=*/true);
     return;
   }
-  auto ShouldTrackArg = [FD, &Args](unsigned I) -> bool {
-    if (getLifetimeBoundParamInfo(FD, I))
-      return true;
-    if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
-        Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD))
-      if (I == 0)
-        return shouldTrackImplicitObjectArg(
-            *Args[0], Method, /*RunningUnderLifetimeSafety=*/true);
-    if (I == 0 && shouldTrackFirstArgument(FD))
-      return true;
-    if (I == 1 && shouldTrackSecondArgument(FD))
-      return true;
-    return false;
-  };
   auto shouldTrackPointerImplicitObjectArg = [FD, &Args](unsigned I) -> bool {
     const auto *Method = dyn_cast<CXXMethodDecl>(FD);
     if (!Method || !Method->isInstance())
@@ -1118,7 +1100,8 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
     OriginList *ArgList = getOriginsList(*Args[I]);
     if (!ArgList)
       continue;
-    bool TrackArg = ShouldTrackArg(I);
+    TrackedArgInfo ArgInfo = getTrackedArgInfo(FD, Args, I);
+    bool ShouldTrackArg = ArgInfo.Kind != TrackedArgKind::None;
     if (IsGslConstruction) {
       // TODO: document with code example.
       // std::string_view(const std::string_view& from)
@@ -1134,7 +1117,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
             CallList->getOuterOriginID(), ArgList->getOuterOriginID(),
             KillSrc));
         KillSrc = false;
-      } else if (TrackArg) {
+      } else if (ShouldTrackArg) {
         // Only flow the outer origin here. For lifetimebound args in
         // gsl::Pointer construction, we do not have enough information to
         // safely match inner origins, so the source and
@@ -1154,7 +1137,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
           CallList->getOuterOriginID(),
           ArgList->peelOuterOrigin()->getOuterOriginID(), KillSrc));
       KillSrc = false;
-    } else if (TrackArg) {
+    } else if (ShouldTrackArg) {
       // Lifetimebound on a non-GSL-ctor function means the returned
       // pointer/reference itself must not outlive the arguments. This
       // only constrains the top-level origin.

@@ -12,11 +12,13 @@
 
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include <optional>
+#include <utility>
 
-namespace clang::lifetimes {
+namespace clang ::lifetimes {
 
 // This function is needed because Decl::isInStdNamespace will return false for
 // iterators in some STL implementations due to them being defined in a
@@ -62,24 +64,32 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD);
 using LifetimeBoundParamInfo =
     llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *>;
 
-struct LifetimeSafetyCallInfo {
-  const FunctionDecl *FD = nullptr;
-  llvm::SmallVector<const Expr *, 4> Args;
+enum class TrackedArgKind {
+  None,
+  ExplicitLifetimeBound,
+  Inferred,
+};
+
+struct TrackedArgInfo {
+  TrackedArgKind Kind = TrackedArgKind::None;
+  std::optional<LifetimeBoundParamInfo> ParamInfo;
 };
 
 /// Returns the callee and arguments corresponding to Call. For instance member
 /// calls, Args includes the implicit object argument as argument 0.
-LifetimeSafetyCallInfo getLifetimeSafetyCallInfo(const Expr *Call);
+std::pair<const FunctionDecl *, llvm::SmallVector<const Expr *, 4>>
+getFunctionCallInfo(const Expr *Call);
 
-/// Returns the lifetimebound parameter corresponding to argument I.
-/// For instance methods, argument 0 is the implicit object argument.
-std::optional<LifetimeBoundParamInfo>
-getLifetimeBoundParamInfo(const FunctionDecl *FD, unsigned I);
+/// Returns whether argument I should be tracked for lifetime safety, and
+/// whether the tracking reason is an explicit lifetimebound annotation or an
+/// inferred/heuristic rule.
+TrackedArgInfo getTrackedArgInfo(const FunctionDecl *FD,
+                                 llvm::ArrayRef<const Expr *> Args, unsigned I);
 
-/// Returns the lifetimebound parameter in Call whose argument corresponds to
-/// Source, if any.
-std::optional<LifetimeBoundParamInfo>
-getLifetimeBoundParamInfoForCallArg(const Expr *Call, const Expr *Source);
+/// Returns lifetime safety tracking info for the call argument containing
+/// Source.
+std::optional<TrackedArgInfo> getTrackingInfoForCallArg(const Expr *Call,
+                                                        const Expr *Source);
 
 // Returns true if the implicit object argument (this) of a method call should
 // be tracked for GSL lifetime analysis. This applies to STL methods that return
