@@ -600,11 +600,11 @@ TEST(CollectDirectBranchTargets, ResolvesProductionPcMaterializedCall) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
   llvm::SmallVector<uint8_t> Bytes =
-      assembleSingleInst("s_get_pc_i64 s[0:1]\n"
-                         "s_add_nc_u64 s[0:1], s[0:1], 0xffffffffffed1230\n"
-                         "v_mov_b32 v0, v1\n"
-                         "s_swap_pc_i64 s[30:31], s[0:1]",
-                         S);
+      assembleInstructions("s_get_pc_i64 s[0:1]\n"
+                           "s_add_nc_u64 s[0:1], s[0:1], 0xffffffffffed1230\n"
+                           "v_mov_b32 v0, v1\n"
+                           "s_swap_pc_i64 s[30:31], s[0:1]",
+                           S);
   ASSERT_FALSE(Bytes.empty());
 
   std::vector<InternalDecodedInst> Decoded;
@@ -629,11 +629,11 @@ TEST(CollectDirectBranchTargets, RejectsClobberedPcMaterializedCall) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
   llvm::SmallVector<uint8_t> Bytes =
-      assembleSingleInst("s_get_pc_i64 s[0:1]\n"
-                         "s_add_nc_u64 s[0:1], s[0:1], -4\n"
-                         "s_mov_b32 s0, 0\n"
-                         "s_swap_pc_i64 s[30:31], s[0:1]",
-                         S);
+      assembleInstructions("s_get_pc_i64 s[0:1]\n"
+                           "s_add_nc_u64 s[0:1], s[0:1], -4\n"
+                           "s_mov_b32 s0, 0\n"
+                           "s_swap_pc_i64 s[30:31], s[0:1]",
+                           S);
   ASSERT_FALSE(Bytes.empty());
 
   std::vector<InternalDecodedInst> Decoded;
@@ -652,11 +652,11 @@ TEST(CollectDirectBranchTargets, RejectsAlternateEntryIntoMaterialization) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
   llvm::SmallVector<uint8_t> Bytes =
-      assembleSingleInst("s_branch 1\n"
-                         "s_get_pc_i64 s[0:1]\n"
-                         "s_add_nc_u64 s[0:1], s[0:1], 4\n"
-                         "s_swap_pc_i64 s[30:31], s[0:1]",
-                         S);
+      assembleInstructions("s_branch 1\n"
+                           "s_get_pc_i64 s[0:1]\n"
+                           "s_add_nc_u64 s[0:1], s[0:1], 4\n"
+                           "s_swap_pc_i64 s[30:31], s[0:1]",
+                           S);
   ASSERT_FALSE(Bytes.empty());
 
   std::vector<InternalDecodedInst> Decoded;
@@ -677,10 +677,10 @@ TEST(CollectDirectBranchTargets, RejectsDeclaredEntryIntoMaterialization) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
   llvm::SmallVector<uint8_t> Bytes =
-      assembleSingleInst("s_get_pc_i64 s[0:1]\n"
-                         "s_add_nc_u64 s[0:1], s[0:1], 4\n"
-                         "s_swap_pc_i64 s[30:31], s[0:1]",
-                         S);
+      assembleInstructions("s_get_pc_i64 s[0:1]\n"
+                           "s_add_nc_u64 s[0:1], s[0:1], 4\n"
+                           "s_swap_pc_i64 s[30:31], s[0:1]",
+                           S);
   ASSERT_FALSE(Bytes.empty());
 
   std::vector<InternalDecodedInst> Decoded;
@@ -701,11 +701,11 @@ TEST(CollectDirectBranchTargets, RejectsUndecodedMaterializationSlot) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
   llvm::SmallVector<uint8_t> Bytes =
-      assembleSingleInst("s_get_pc_i64 s[0:1]\n"
-                         "s_add_nc_u64 s[0:1], s[0:1], 8\n"
-                         "v_mov_b32 v0, v1\n"
-                         "s_swap_pc_i64 s[30:31], s[0:1]",
-                         S);
+      assembleInstructions("s_get_pc_i64 s[0:1]\n"
+                           "s_add_nc_u64 s[0:1], s[0:1], 8\n"
+                           "v_mov_b32 v0, v1\n"
+                           "s_swap_pc_i64 s[30:31], s[0:1]",
+                           S);
   ASSERT_FALSE(Bytes.empty());
 
   std::vector<InternalDecodedInst> Decoded;
@@ -728,11 +728,11 @@ TEST(CollectDirectBranchTargets, RejectsUnboundedIndirectEntry) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
   llvm::SmallVector<uint8_t> Bytes =
-      assembleSingleInst("s_set_pc_i64 s[4:5]\n"
-                         "s_get_pc_i64 s[0:1]\n"
-                         "s_add_nc_u64 s[0:1], s[0:1], 4\n"
-                         "s_swap_pc_i64 s[30:31], s[0:1]",
-                         S);
+      assembleInstructions("s_set_pc_i64 s[4:5]\n"
+                           "s_get_pc_i64 s[0:1]\n"
+                           "s_add_nc_u64 s[0:1], s[0:1], 4\n"
+                           "s_swap_pc_i64 s[30:31], s[0:1]",
+                           S);
   ASSERT_FALSE(Bytes.empty());
 
   std::vector<InternalDecodedInst> Decoded;
@@ -753,13 +753,13 @@ TEST(CollectDirectBranchTargets, BoundsCanonicalSetPcReturn) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
   llvm::SmallVector<uint8_t> Bytes =
-      assembleSingleInst("s_nop 0\n"
-                         "s_set_pc_i64 s[30:31]\n"
-                         "s_branch -2\n"
-                         "s_get_pc_i64 s[0:1]\n"
-                         "s_add_nc_u64 s[0:1], s[0:1], -16\n"
-                         "s_swap_pc_i64 s[30:31], s[0:1]",
-                         S);
+      assembleInstructions("s_nop 0\n"
+                           "s_set_pc_i64 s[30:31]\n"
+                           "s_branch -2\n"
+                           "s_get_pc_i64 s[0:1]\n"
+                           "s_add_nc_u64 s[0:1], s[0:1], -16\n"
+                           "s_swap_pc_i64 s[30:31], s[0:1]",
+                           S);
   ASSERT_FALSE(Bytes.empty());
 
   std::vector<InternalDecodedInst> Decoded;
@@ -789,12 +789,12 @@ TEST(CollectDirectBranchTargets, RejectsClobberedSetPcReturn) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
   llvm::SmallVector<uint8_t> Bytes =
-      assembleSingleInst("s_mov_b32 s31, 0\n"
-                         "s_set_pc_i64 s[30:31]\n"
-                         "s_get_pc_i64 s[0:1]\n"
-                         "s_add_nc_u64 s[0:1], s[0:1], -12\n"
-                         "s_swap_pc_i64 s[30:31], s[0:1]",
-                         S);
+      assembleInstructions("s_mov_b32 s31, 0\n"
+                           "s_set_pc_i64 s[30:31]\n"
+                           "s_get_pc_i64 s[0:1]\n"
+                           "s_add_nc_u64 s[0:1], s[0:1], -12\n"
+                           "s_swap_pc_i64 s[30:31], s[0:1]",
+                           S);
   ASSERT_FALSE(Bytes.empty());
 
   std::vector<InternalDecodedInst> Decoded;
@@ -818,14 +818,14 @@ TEST(CollectDirectBranchTargets, RejectsNestedCallSetPcReturn) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
   llvm::SmallVector<uint8_t> Bytes =
-      assembleSingleInst("s_call_i64 s[4:5], 1\n"
-                         "s_set_pc_i64 s[30:31]\n"
-                         "s_mov_b32 s30, 0\n"
-                         "s_set_pc_i64 s[4:5]\n"
-                         "s_get_pc_i64 s[0:1]\n"
-                         "s_add_nc_u64 s[0:1], s[0:1], -20\n"
-                         "s_swap_pc_i64 s[30:31], s[0:1]",
-                         S);
+      assembleInstructions("s_call_i64 s[4:5], 1\n"
+                           "s_set_pc_i64 s[30:31]\n"
+                           "s_mov_b32 s30, 0\n"
+                           "s_set_pc_i64 s[4:5]\n"
+                           "s_get_pc_i64 s[0:1]\n"
+                           "s_add_nc_u64 s[0:1], s[0:1], -20\n"
+                           "s_swap_pc_i64 s[30:31], s[0:1]",
+                           S);
   ASSERT_FALSE(Bytes.empty());
 
   std::vector<InternalDecodedInst> Decoded;
@@ -851,15 +851,15 @@ TEST(CollectDirectBranchTargets, RejectsIndirectFallthroughChainEntry) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
   llvm::SmallVector<uint8_t> Bytes =
-      assembleSingleInst("s_branch -1\n"
-                         "s_nop 0\n"
-                         "s_nop 0\n"
-                         "s_set_pc_i64 s[30:31]\n"
-                         "s_set_pc_i64 s[2:3]\n"
-                         "s_get_pc_i64 s[0:1]\n"
-                         "s_add_nc_u64 s[0:1], s[0:1], -12\n"
-                         "s_swap_pc_i64 s[30:31], s[0:1]",
-                         S);
+      assembleInstructions("s_branch -1\n"
+                           "s_nop 0\n"
+                           "s_nop 0\n"
+                           "s_set_pc_i64 s[30:31]\n"
+                           "s_set_pc_i64 s[2:3]\n"
+                           "s_get_pc_i64 s[0:1]\n"
+                           "s_add_nc_u64 s[0:1], s[0:1], -12\n"
+                           "s_swap_pc_i64 s[30:31], s[0:1]",
+                           S);
   ASSERT_FALSE(Bytes.empty());
 
   std::vector<InternalDecodedInst> Decoded;
@@ -884,14 +884,14 @@ TEST(CollectDirectBranchTargets, RejectsAlternateEntryIntoReturnFunction) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
   llvm::SmallVector<uint8_t> Bytes =
-      assembleSingleInst("s_nop 0\n"
-                         "s_set_pc_i64 s[30:31]\n"
-                         "s_branch -2\n"
-                         "s_branch -2\n"
-                         "s_get_pc_i64 s[0:1]\n"
-                         "s_add_nc_u64 s[0:1], s[0:1], -20\n"
-                         "s_swap_pc_i64 s[30:31], s[0:1]",
-                         S);
+      assembleInstructions("s_nop 0\n"
+                           "s_set_pc_i64 s[30:31]\n"
+                           "s_branch -2\n"
+                           "s_branch -2\n"
+                           "s_get_pc_i64 s[0:1]\n"
+                           "s_add_nc_u64 s[0:1], s[0:1], -20\n"
+                           "s_swap_pc_i64 s[30:31], s[0:1]",
+                           S);
   ASSERT_FALSE(Bytes.empty());
 
   std::vector<InternalDecodedInst> Decoded;
@@ -916,15 +916,15 @@ TEST(CollectDirectBranchTargets,
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
   llvm::SmallVector<uint8_t> Bytes =
-      assembleSingleInst("s_nop 0\n"
-                         "s_set_pc_i64 s[30:31]\n"
-                         "s_get_pc_i64 s[4:5]\n"
-                         "s_add_nc_u64 s[4:5], s[4:5], -12\n"
-                         "s_swap_pc_i64 s[30:31], s[4:5]\n"
-                         "s_get_pc_i64 s[6:7]\n"
-                         "s_add_nc_u64 s[6:7], s[6:7], -20\n"
-                         "s_swap_pc_i64 s[2:3], s[6:7]",
-                         S);
+      assembleInstructions("s_nop 0\n"
+                           "s_set_pc_i64 s[30:31]\n"
+                           "s_get_pc_i64 s[4:5]\n"
+                           "s_add_nc_u64 s[4:5], s[4:5], -12\n"
+                           "s_swap_pc_i64 s[30:31], s[4:5]\n"
+                           "s_get_pc_i64 s[6:7]\n"
+                           "s_add_nc_u64 s[6:7], s[6:7], -20\n"
+                           "s_swap_pc_i64 s[2:3], s[6:7]",
+                           S);
   ASSERT_FALSE(Bytes.empty());
 
   std::vector<InternalDecodedInst> Decoded;
@@ -949,12 +949,12 @@ TEST(CollectDirectBranchTargets, RejectsExternalAliasAtLocalFunctionEntry) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
   llvm::SmallVector<uint8_t> Bytes =
-      assembleSingleInst("s_nop 0\n"
-                         "s_set_pc_i64 s[30:31]\n"
-                         "s_get_pc_i64 s[0:1]\n"
-                         "s_add_nc_u64 s[0:1], s[0:1], -12\n"
-                         "s_swap_pc_i64 s[30:31], s[0:1]",
-                         S);
+      assembleInstructions("s_nop 0\n"
+                           "s_set_pc_i64 s[30:31]\n"
+                           "s_get_pc_i64 s[0:1]\n"
+                           "s_add_nc_u64 s[0:1], s[0:1], -12\n"
+                           "s_swap_pc_i64 s[30:31], s[0:1]",
+                           S);
   ASSERT_FALSE(Bytes.empty());
 
   std::vector<InternalDecodedInst> Decoded;
@@ -979,13 +979,13 @@ TEST(CollectDirectBranchTargets, RejectsFallthroughIntoReturnFunction) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
   llvm::SmallVector<uint8_t> Bytes =
-      assembleSingleInst("s_nop 0\n"
-                         "s_nop 0\n"
-                         "s_set_pc_i64 s[30:31]\n"
-                         "s_get_pc_i64 s[0:1]\n"
-                         "s_add_nc_u64 s[0:1], s[0:1], -12\n"
-                         "s_swap_pc_i64 s[30:31], s[0:1]",
-                         S);
+      assembleInstructions("s_nop 0\n"
+                           "s_nop 0\n"
+                           "s_set_pc_i64 s[30:31]\n"
+                           "s_get_pc_i64 s[0:1]\n"
+                           "s_add_nc_u64 s[0:1], s[0:1], -12\n"
+                           "s_swap_pc_i64 s[30:31], s[0:1]",
+                           S);
   ASSERT_FALSE(Bytes.empty());
 
   std::vector<InternalDecodedInst> Decoded;
@@ -1009,15 +1009,15 @@ TEST(CollectDirectBranchTargets, AllowsUnreachablePaddingBeforeReturnFunction) {
   LLVMState S = initLLVM(makeGfx1250Ident());
   ASSERT_TRUE(S.Valid);
   llvm::SmallVector<uint8_t> Bytes =
-      assembleSingleInst("s_branch -1\n"
-                         "s_nop 0\n"
-                         "s_nop 0\n"
-                         "s_nop 0\n"
-                         "s_set_pc_i64 s[30:31]\n"
-                         "s_get_pc_i64 s[0:1]\n"
-                         "s_add_nc_u64 s[0:1], s[0:1], -12\n"
-                         "s_swap_pc_i64 s[30:31], s[0:1]",
-                         S);
+      assembleInstructions("s_branch -1\n"
+                           "s_nop 0\n"
+                           "s_nop 0\n"
+                           "s_nop 0\n"
+                           "s_set_pc_i64 s[30:31]\n"
+                           "s_get_pc_i64 s[0:1]\n"
+                           "s_add_nc_u64 s[0:1], s[0:1], -12\n"
+                           "s_swap_pc_i64 s[30:31], s[0:1]",
+                           S);
   ASSERT_FALSE(Bytes.empty());
 
   std::vector<InternalDecodedInst> Decoded;
@@ -1261,6 +1261,29 @@ TEST(AssembleDecode, SNopRoundTrip) {
   EXPECT_TRUE(Decoded[0].DecodeSucceeded);
   EXPECT_EQ(Decoded[0].Size, MinInstSize);
   EXPECT_EQ(Decoded[0].Mnemonic, "s_nop");
+}
+
+TEST(AssembleDecode, SingleInstructionRejectsSequence) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+
+  llvm::SmallVector<uint8_t> Bytes = assembleSingleInst("s_nop 0\ns_endpgm", S);
+  EXPECT_TRUE(Bytes.empty());
+}
+
+TEST(AssembleDecode, InstructionSequenceRoundTrip) {
+  LLVMState S = initLLVM(makeGfx1250Ident());
+  ASSERT_TRUE(S.Valid);
+
+  llvm::SmallVector<uint8_t> Bytes =
+      assembleInstructions("s_nop 0\ns_endpgm", S);
+  ASSERT_EQ(Bytes.size(), 2u * MinInstSize);
+
+  std::vector<InternalDecodedInst> Decoded;
+  ASSERT_TRUE(decodeTextSection(Bytes.data(), Bytes.size(), S, Decoded));
+  ASSERT_EQ(Decoded.size(), 2u);
+  EXPECT_EQ(Decoded[0].Mnemonic, "s_nop");
+  EXPECT_EQ(Decoded[1].Mnemonic, "s_endpgm");
 }
 
 TEST(AssembleDecode, CvtPkFp8LiteralSourcesDecodeAsTwelveBytes) {

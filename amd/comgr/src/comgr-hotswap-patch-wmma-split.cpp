@@ -655,7 +655,7 @@ static uint32_t applyWmmaSplitPatchesImpl(PatchContext &Ctx, size_t Idx) {
   // emitToTrampoline, which picks a short s_branch or an SGPR-backed set-PC
   // gateway based on the site's distance from the appended pool.
   SmallVector<uint8_t> Replacement =
-      assembleSingleInst(joinAsmLines(AsmLines), Ctx.LS);
+      assembleInstructions(joinAsmLines(AsmLines), Ctx.LS);
   if (Replacement.empty()) {
     log() << "hotswap: error: WMMA split: trampoline assembly failed for "
           << DI.Mnemonic << "\n";

@@ -638,12 +638,18 @@ LLVMState initLLVM(const TargetIdentifier &TI);
                                      const LLVMState &LS,
                                      std::vector<InternalDecodedInst> &Decoded);
 
-/// Assemble a single instruction string, returning its encoded bytes.
+/// Assemble one non-empty assembly source line, returning its encoded bytes.
+/// Target pseudos may expand that source line to more than one MCInst.
 llvm::SmallVector<uint8_t> assembleSingleInst(llvm::StringRef AsmStr,
                                               const LLVMState &LS);
 
+/// Assemble a newline-separated instruction sequence, returning its encoded
+/// bytes.
+llvm::SmallVector<uint8_t> assembleInstructions(llvm::StringRef AsmStr,
+                                                const LLVMState &LS);
+
 /// Join \p AsmLines into a single newline-terminated assembly source string,
-/// as expected by assembleSingleInst (which accepts multiple instructions).
+/// as expected by assembleInstructions.
 std::string joinAsmLines(llvm::ArrayRef<std::string> AsmLines);
 
 /// Assemble \p AsmLines and append a branch-back to the next instruction

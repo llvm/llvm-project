@@ -57,8 +57,8 @@ fix upstream. Do not implement a parallel version inside Comgr.
     and will fail to build.
   - No GCC/Clang-only attributes without an LLVM-portable wrapper.
 - All assembly / disassembly goes through the MC layer (e.g.,
-  `assembleSingleInst`, `parseAsmToMCInsts`). **No hardcoded
-  instruction opcodes or encoded byte sequences** — let the asm parser
+  `assembleSingleInst`, `assembleInstructions`, `parseAsmToMCInsts`). **No
+  hardcoded instruction opcodes or encoded byte sequences** — let the asm parser
   resolve them, and round-trip through `MCCodeEmitter::encodeInstruction`
   for any modification.
 - When invoking the asm parser, register the SourceMgr with `MCContext`

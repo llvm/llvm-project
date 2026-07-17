@@ -136,7 +136,7 @@ static SmallVector<uint8_t> encodeMCInst(const MCInst &Inst,
 }
 
 /// Run the AMDGPU asm parser over \p AsmStr and return the captured MCInsts.
-/// Used by assembleSingleInst() for the full parse-and-encode path, and by
+/// Used by the assembly helpers for the full parse-and-encode path, and by
 /// initLLVM() / resolveOpcodeViaParse() for instructions where parsing the
 /// assembly mnemonic is the least fragile way to pick the target opcode.
 static SmallVector<MCInst, 2> parseAsmToMCInsts(StringRef AsmStr,
@@ -536,15 +536,16 @@ bool decodeTextSection(const uint8_t *Text, uint64_t TextSize,
   return true;
 }
 
-// -- assembleSingleInst -------------------------------------------------------
+// -- assembly helpers ---------------------------------------------------------
 
-SmallVector<uint8_t> assembleSingleInst(StringRef AsmStr, const LLVMState &S) {
+SmallVector<uint8_t> assembleInstructions(StringRef AsmStr,
+                                          const LLVMState &S) {
   // Parse \p AsmStr through the shared parseAsmToMCInsts helper, then encode
   // each captured MCInst via the cached MCCodeEmitter. Avoids the old
   // createMCObjectStreamer -> ELF parse -> extract .text round trip.
   SmallVector<MCInst, 2> Insts = parseAsmToMCInsts(AsmStr, S);
   if (Insts.empty()) {
-    log() << "hotswap: error: assembleSingleInst: parser produced no "
+    log() << "hotswap: error: assembleInstructions: parser produced no "
           << "instructions for asm:\n    " << AsmStr << "\n";
     return {};
   }
@@ -555,6 +556,22 @@ SmallVector<uint8_t> assembleSingleInst(StringRef AsmStr, const LLVMState &S) {
     Bytes.append(InstBytes.begin(), InstBytes.end());
   }
   return Bytes;
+}
+
+SmallVector<uint8_t> assembleSingleInst(StringRef AsmStr, const LLVMState &S) {
+  SmallVector<StringRef, 2> Lines;
+  AsmStr.split(Lines, '\n');
+  unsigned InstructionLines = 0;
+  for (StringRef Line : Lines)
+    if (!Line.trim().empty())
+      ++InstructionLines;
+  if (InstructionLines != 1) {
+    log() << "hotswap: error: assembleSingleInst: expected one non-empty "
+             "assembly line, got "
+          << InstructionLines << " for asm:\n    " << AsmStr << "\n";
+    return {};
+  }
+  return assembleInstructions(AsmStr, S);
 }
 
 // -- buildTrampoline ----------------------------------------------------------
@@ -575,9 +592,9 @@ Trampoline buildTrampoline(ArrayRef<std::string> AsmLines,
   Result.OriginalOffset = OriginalOffset;
   Result.OriginalSize = OriginalSize;
 
-  SmallVector<uint8_t> Bytes = assembleSingleInst(joinAsmLines(AsmLines), S);
+  SmallVector<uint8_t> Bytes = assembleInstructions(joinAsmLines(AsmLines), S);
   if (Bytes.empty()) {
-    log() << "hotswap: error: buildTrampoline: assembleSingleInst returned "
+    log() << "hotswap: error: buildTrampoline: assembleInstructions returned "
           << "empty for trampoline originating at offset 0x"
           << utohexstr(OriginalOffset) << " (" << AsmLines.size()
           << " asm lines).\n";

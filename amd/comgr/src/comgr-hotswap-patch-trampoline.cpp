@@ -435,7 +435,7 @@ bool patchDs2Addr(PatchContext &Ctx, size_t Idx) {
   // local drain is unconditionally correct; a precise per-wait dataflow
   // recomputation is the eventual optimization (tracked separately).
   Combined += "s_wait_dscnt 0\n";
-  SmallVector<uint8_t> Bytes = assembleSingleInst(Combined, Ctx.LS);
+  SmallVector<uint8_t> Bytes = assembleInstructions(Combined, Ctx.LS);
   if (Bytes.empty()) {
     log() << "hotswap: error: ds_2addr: assembly failed: " << Combined << "\n";
     return failRequiredPatch(Ctx);
@@ -1367,7 +1367,7 @@ bool patchDsAddtid(PatchContext &Ctx, size_t Idx) {
   std::string Combined;
   for (const std::string &Line : AsmLines)
     Combined += Line + "\n";
-  SmallVector<uint8_t> Bytes = assembleSingleInst(Combined, Ctx.LS);
+  SmallVector<uint8_t> Bytes = assembleInstructions(Combined, Ctx.LS);
   if (Bytes.empty()) {
     log() << "hotswap: error: " << DI.Mnemonic
           << " trampoline assembly failed at 0x" << utohexstr(DI.Offset)

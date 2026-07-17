@@ -429,7 +429,7 @@ std::optional<SmallVector<uint8_t>> encodeSetPCLongBranch(const LLVMState &LS,
   AsmLines.push_back("s_add_nc_u64 " + Pair + ", " + Pair + ", 0x" +
                      utohexstr(Delta));
   AsmLines.push_back("s_set_pc_i64 " + Pair);
-  SmallVector<uint8_t> Bytes = assembleSingleInst(joinAsmLines(AsmLines), LS);
+  SmallVector<uint8_t> Bytes = assembleInstructions(joinAsmLines(AsmLines), LS);
   if (Bytes.empty() || Bytes.size() > SetPcReturnReserveBytes) {
     log() << "hotswap: error: failed to assemble SCC-neutral set-PC branch via "
           << Pair << "\n";

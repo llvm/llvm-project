@@ -289,7 +289,7 @@ static uint32_t patchWmmaScale16_16x16(PatchContext &Ctx, size_t Idx) {
 
   SmallVector<uint8_t> PreambleBytes;
   if (NeedReductionA || NeedReductionB) {
-    PreambleBytes = assembleSingleInst(Asm, Ctx.LS);
+    PreambleBytes = assembleInstructions(Asm, Ctx.LS);
     if (PreambleBytes.empty()) {
       log() << "hotswap: error: wmma_scale16: preamble assembly failed at "
             << "offset 0x" << utohexstr(DI.Offset) << "\n";
@@ -602,7 +602,7 @@ static uint32_t patchWmmaScale16_32x16(PatchContext &Ctx, size_t Idx) {
 
   SmallVector<uint8_t> PreambleBytes;
   if (NeedReductionA || NeedReductionB) {
-    PreambleBytes = assembleSingleInst(Asm, Ctx.LS);
+    PreambleBytes = assembleInstructions(Asm, Ctx.LS);
     if (PreambleBytes.empty()) {
       log() << "hotswap: error: wmma_scale16: 32x16 preamble assembly failed "
             << "at offset 0x" << utohexstr(DI.Offset) << "\n";

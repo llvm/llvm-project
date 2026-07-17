@@ -396,7 +396,7 @@ uint32_t patchCvtPkFp8F32(PatchContext &Ctx, size_t Idx) {
   // Restore VCC to its pre-patch value.
   AsmOS << "s_mov_b32 vcc_lo, " << VccSaveName << "\n";
 
-  SmallVector<uint8_t> ReplacementBytes = assembleSingleInst(Asm, Ctx.LS);
+  SmallVector<uint8_t> ReplacementBytes = assembleInstructions(Asm, Ctx.LS);
   if (ReplacementBytes.empty()) {
     log() << "hotswap: error: cvt_pk_fp8_f32: assembly failed for "
           << "replacement at offset 0x" << utohexstr(DI.Offset) << "\n";
@@ -594,7 +594,7 @@ uint32_t patchCvtSrFp8F32(PatchContext &Ctx, size_t Idx) {
   // Restore VCC to its pre-patch value.
   AsmOS << "s_mov_b32 vcc_lo, " << VccSaveName << "\n";
 
-  SmallVector<uint8_t> ReplacementBytes = assembleSingleInst(Asm, Ctx.LS);
+  SmallVector<uint8_t> ReplacementBytes = assembleInstructions(Asm, Ctx.LS);
   if (ReplacementBytes.empty()) {
     log() << "hotswap: error: cvt_sr_fp8_f32: assembly failed for "
           << "replacement at offset 0x" << utohexstr(DI.Offset) << "\n";
@@ -763,7 +763,7 @@ uint32_t patchCvtF32Fp8(PatchContext &Ctx, size_t Idx) {
   // Restore VCC to its pre-patch value.
   AsmOS << "s_mov_b32 vcc_lo, " << VccSaveName << "\n";
 
-  SmallVector<uint8_t> ReplacementBytes = assembleSingleInst(Asm, Ctx.LS);
+  SmallVector<uint8_t> ReplacementBytes = assembleInstructions(Asm, Ctx.LS);
   if (ReplacementBytes.empty()) {
     log() << "hotswap: error: cvt_f32_fp8: assembly failed for "
           << "replacement at offset 0x" << utohexstr(DI.Offset) << "\n";
