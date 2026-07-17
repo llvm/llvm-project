@@ -999,7 +999,7 @@ public:
   /// Checks if two pointers are comparable.
   static bool hasSameBase(const Pointer &A, const Pointer &B);
   /// Checks if two pointers can be subtracted.
-  static bool hasSameArray(const Pointer &A, const Pointer &B);
+  static bool elemsOfSameArray(const Pointer &A, const Pointer &B);
   /// Checks if both given pointers point to the same block.
   static bool pointToSameBlock(const Pointer &A, const Pointer &B);
 

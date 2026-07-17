@@ -1316,6 +1316,7 @@ bool Sema::AttachTypeConstraint(AutoTypeLoc TL,
         << NewConstrainedParm->getTypeSourceInfo()
                ->getTypeLoc()
                .getSourceRange();
+    NewConstrainedParm->setType(TL.getType());
     return true;
   }
   // FIXME: Concepts: This should be the type of the placeholder, but this is
