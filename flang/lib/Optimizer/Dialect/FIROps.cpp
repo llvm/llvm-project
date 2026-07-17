@@ -2874,6 +2874,11 @@ llvm::LogicalResult fir::CreateBoxOp::verify() {
   if (fir::characterWithDynamicLen(eleTy) ||
       fir::isRecordWithTypeParameters(eleTy))
     return emitOpError("result box element type must be statically sized");
+  if (failed(verifyEmboxOpVolatilityInvariants(getMemref().getType(),
+                                               getResult().getType())))
+    return emitOpError(
+               "cannot convert between volatile and non-volatile types:")
+           << " " << getMemref().getType() << " " << getResult().getType();
   return mlir::success();
 }
 

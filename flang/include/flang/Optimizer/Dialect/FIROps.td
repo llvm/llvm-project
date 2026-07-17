@@ -1019,7 +1019,7 @@ def fir_ReboxOp : fir_Op<"rebox", [NoMemoryEffect, AttrSizedOperandSegments,
   }];
 }
 
-def fir_CreateBoxOp : fir_Op<"create_box", [NoMemoryEffect,
+def fir_CreateBoxOp : fir_Op<"create_box", [Pure,
                                             AttrSizedOperandSegments,
                                             fir_FortranObjectViewOpInterface]> {
   let summary = "create a box from a base pointer and explicit byte strides";

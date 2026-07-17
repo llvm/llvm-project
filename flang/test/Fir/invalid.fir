@@ -404,6 +404,14 @@ func.func @create_box_storage_kind(%arg0: !fir.heap<!fir.array<?xf32>>, %lb: ind
 
 // -----
 
+func.func @create_box_volatile_mismatch(%arg0: !fir.ref<!fir.array<?xf32>, volatile>, %lb: index, %ext: index, %sm: index) {
+  // expected-error@+1 {{'fir.create_box' op cannot convert between volatile and non-volatile types}}
+  %0 = fir.create_box %arg0 lbs(%lb) extents(%ext) strides(%sm) : (!fir.ref<!fir.array<?xf32>, volatile>, index, index, index) -> !fir.box<!fir.array<?xf32>>
+  return
+}
+
+// -----
+
 %lo = arith.constant 1 : index
 %c1 = arith.constant 1 : index
 %up = arith.constant 10 : index
