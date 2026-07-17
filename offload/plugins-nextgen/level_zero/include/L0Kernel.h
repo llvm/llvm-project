@@ -41,8 +41,6 @@ struct L0LaunchEnvTy {
   ze_group_count_t GroupCounts = {0, 0, 0};
   ze_group_size_t GroupSizes = {0, 0, 0};
   KernelPropertiesTy &KernelPR;
-  bool HalfNumThreads = false;
-  bool IsTeamsNDRange = false;
   bool IsCooperative = false;
   bool IsPtrArg = false;
   void **ArgPtrs = nullptr;

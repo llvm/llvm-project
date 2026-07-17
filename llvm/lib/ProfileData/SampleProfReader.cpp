@@ -904,7 +904,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
     FunctionSamples::ProfileIsProbeBased = ProfileIsProbeBased;
     ProfileHasAttribute =
         hasSecFlag(Entry, SecFuncMetadataFlags::SecFlagHasAttribute);
-    if (std::error_code EC = readFuncMetadata(ProfileHasAttribute))
+    if (std::error_code EC = readFuncMetadata())
       return EC;
     break;
   }
@@ -966,8 +966,7 @@ SampleProfileReaderExtBinaryBase::read(const DenseSet<StringRef> &FuncsToUse,
       ProfilesToReadMetadata.insert(&I->second);
   }
 
-  if (std::error_code EC =
-          readFuncMetadata(ProfileHasAttribute, ProfilesToReadMetadata))
+  if (std::error_code EC = readFuncMetadata(ProfilesToReadMetadata))
     return EC;
   return sampleprof_error::success;
 }
@@ -1380,8 +1379,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readCSNameTableSec() {
 }
 
 std::error_code
-SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute,
-                                                   FunctionSamples *FProfile) {
+SampleProfileReaderExtBinaryBase::readFuncMetadata(FunctionSamples *FProfile) {
   if (Data < End) {
     if (ProfileIsProbeBased) {
       auto Checksum = readNumber<uint64_t>();
@@ -1425,8 +1423,7 @@ SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute,
               &FProfile->functionSamplesAt(LineLocation(
                   *LineOffset, *Discriminator))[FContext.getFunction()]);
         }
-        if (std::error_code EC =
-                readFuncMetadata(ProfileHasAttribute, CalleeProfile))
+        if (std::error_code EC = readFuncMetadata(CalleeProfile))
           return EC;
       }
     }
@@ -1436,7 +1433,7 @@ SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute,
 }
 
 std::error_code SampleProfileReaderExtBinaryBase::readFuncMetadata(
-    bool ProfileHasAttribute, DenseSet<FunctionSamples *> &Profiles) {
+    DenseSet<FunctionSamples *> &Profiles) {
   if (FuncMetadataIndex.empty())
     return sampleprof_error::success;
 
@@ -1447,15 +1444,14 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncMetadata(
 
     Data = R->second.first;
     End = R->second.second;
-    if (std::error_code EC = readFuncMetadata(ProfileHasAttribute, FProfile))
+    if (std::error_code EC = readFuncMetadata(FProfile))
       return EC;
     assert(Data == End && "More data is read than expected");
   }
   return sampleprof_error::success;
 }
 
-std::error_code
-SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute) {
+std::error_code SampleProfileReaderExtBinaryBase::readFuncMetadata() {
   while (Data < End) {
     auto FContextHash(readSampleContextFromTable());
     if (std::error_code EC = FContextHash.getError())
@@ -1467,7 +1463,7 @@ SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute) {
       FProfile = &It->second;
 
     const uint8_t *Start = Data;
-    if (std::error_code EC = readFuncMetadata(ProfileHasAttribute, FProfile))
+    if (std::error_code EC = readFuncMetadata(FProfile))
       return EC;
 
     FuncMetadataIndex[FContext.getHashCode()] = {Start, Data};

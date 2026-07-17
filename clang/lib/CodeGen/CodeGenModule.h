@@ -562,9 +562,9 @@ private:
   llvm::SmallPtrSet<const CXXRecordDecl *, 16> RequireVectorDeletingDtor;
 
   /// Pending MSVC __global_delete variants that may need forwarding bodies.
-  /// Maps each __global_delete wrapper function to the corresponding global
+  /// Maps each __global_delete wrapper alias to the corresponding global
   /// ::operator delete FunctionDecl, in insertion order.
-  llvm::MapVector<llvm::Function *, const FunctionDecl *>
+  llvm::MapVector<llvm::GlobalAlias *, const FunctionDecl *>
       PendingMSVCGlobalDeletes;
 
   /// Whether this TU contains a direct use of global ::operator delete
@@ -1654,8 +1654,15 @@ public:
   void requireVectorDestructorDefinition(const CXXRecordDecl *RD);
 
   /// Record a pending __global_delete variant that may need a forwarding body.
-  void addPendingGlobalDelete(llvm::Function *GlobalDeleteFn,
+  void addPendingGlobalDelete(llvm::GlobalAlias *GlobalDeleteAlias,
                               const FunctionDecl *OperatorDeleteFD);
+
+  /// Get or create the MSVC-compatible __global_delete wrapper for the given
+  /// global ::operator delete, registering it as a pending variant so a
+  /// forwarding body can be emitted if this TU directly uses global
+  /// ::operator delete.
+  llvm::Constant *
+  getOrCreateMSVCGlobalDeleteWrapper(const FunctionDecl *GlobOD);
 
   /// Note that global ::operator delete is directly used in this TU.
   void noteDirectGlobalDelete();

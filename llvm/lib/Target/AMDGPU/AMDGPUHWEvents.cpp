@@ -22,7 +22,7 @@ LLVM_DUMP_METHOD void HWEvents::dump() const { dbgs() << *this << "\n"; }
 
 static HWEvents getExpertSchedulingEventType(const MachineInstr &Inst,
                                              const SIInstrInfo &TII) {
-  if (TII.isVALU(Inst, /*AllowLDSDMA=*/true) && !SIInstrInfo::isLDSDMA(Inst)) {
+  if (TII.isVALU(Inst, /*AllowLDSDMA=*/false)) {
     // Core/Side-, DP-, XDL- and TRANS-MACC VALU instructions complete
     // out-of-order with respect to each other, so each of these classes
     // has its own event.

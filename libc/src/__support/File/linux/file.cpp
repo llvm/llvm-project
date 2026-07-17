@@ -8,7 +8,9 @@
 
 #include "file.h"
 
+#include "hdr/fcntl_macros.h" // For mode_t and other flags to the open syscall
 #include "hdr/stdio_macros.h"
+#include "hdr/sys_stat_macros.h" // For S_IS*, S_IF*, and S_IR* flags.
 #include "hdr/types/off_t.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/File/file.h"
@@ -20,8 +22,6 @@
 #include "src/__support/libc_errno.h" // For error macros
 #include "src/__support/macros/config.h"
 
-#include "hdr/fcntl_macros.h" // For mode_t and other flags to the open syscall
-#include <sys/stat.h>         // For S_IS*, S_IF*, and S_IR* flags.
 #include <sys/syscall.h>      // For syscall numbers
 
 namespace LIBC_NAMESPACE_DECL {

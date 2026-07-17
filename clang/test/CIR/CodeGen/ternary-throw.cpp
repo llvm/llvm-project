@@ -650,3 +650,92 @@ void test_agg_throw_false(bool flag) {
 // OGCG:   unreachable
 // OGCG: [[END]]:
 // OGCG:   ret void
+
+int test_scalar_throw_true(bool flag, int x) {
+  return flag ? throw 0 : x;
+}
+
+// CIR-LABEL: cir.func {{.*}} @_Z22test_scalar_throw_truebi(
+// CIR:   %[[COND:.*]] = cir.load{{.*}} : !cir.ptr<!cir.bool>, !cir.bool
+// CIR:   %{{.*}} = cir.ternary(%[[COND]], true {
+// CIR:     %[[EXC:.*]] = cir.alloc.exception 4 -> !cir.ptr<!s32i>
+// CIR:     cir.throw %[[EXC]] : !cir.ptr<!s32i>, @_ZTIi
+// CIR:     cir.unreachable
+// CIR-NEXT:   }, false {
+// CIR:     %[[X:.*]] = cir.load{{.*}} : !cir.ptr<!s32i>, !s32i
+// CIR:     cir.yield %[[X]] : !s32i
+// CIR:   }) : (!cir.bool) -> !s32i
+
+// LLVM-LABEL: define{{.*}} i32 @_Z22test_scalar_throw_truebi(
+// LLVM:   br i1 %{{.*}}, label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
+// LLVM: [[TRUE_BB]]:
+// LLVM:   call void @__cxa_throw(ptr %{{.*}}, ptr @_ZTIi
+// LLVM:   unreachable
+// LLVM: [[FALSE_BB]]:
+// LLVM:   %{{.*}} = load i32
+// LLVM:   ret i32
+
+// OGCG-LABEL: define{{.*}} i32 @_Z22test_scalar_throw_truebi(
+// OGCG:   br i1 %{{.*}}, label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
+// OGCG: [[TRUE_BB]]:
+// OGCG:   call void @__cxa_throw(ptr %{{.*}}, ptr @_ZTIi
+// OGCG:   unreachable
+// OGCG: [[FALSE_BB]]:
+// OGCG:   ret i32
+
+int test_scalar_throw_false(bool flag, int x) {
+  return flag ? x : throw 0;
+}
+
+// CIR-LABEL: cir.func {{.*}} @_Z23test_scalar_throw_falsebi(
+// CIR:   %{{.*}} = cir.ternary(%{{.*}}, true {
+// CIR:     %[[X:.*]] = cir.load{{.*}} : !cir.ptr<!s32i>, !s32i
+// CIR:     cir.yield %[[X]] : !s32i
+// CIR:   }, false {
+// CIR:     %[[EXC:.*]] = cir.alloc.exception 4 -> !cir.ptr<!s32i>
+// CIR:     cir.throw %[[EXC]] : !cir.ptr<!s32i>, @_ZTIi
+// CIR:     cir.unreachable
+// CIR-NEXT:   }) : (!cir.bool) -> !s32i
+
+// LLVM-LABEL: define{{.*}} i32 @_Z23test_scalar_throw_falsebi(
+// LLVM:   br i1 %{{.*}}, label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
+// LLVM: [[FALSE_BB]]:
+// LLVM:   call void @__cxa_throw(ptr %{{.*}}, ptr @_ZTIi
+// LLVM:   unreachable
+
+// OGCG-LABEL: define{{.*}} i32 @_Z23test_scalar_throw_falsebi(
+// OGCG:   br i1 %{{.*}}, label %{{.*}}, label %[[FALSE_BB:.*]]
+// OGCG: [[FALSE_BB]]:
+// OGCG:   call void @__cxa_throw(ptr %{{.*}}, ptr @_ZTIi
+// OGCG:   unreachable
+
+void test_both_throw(bool flag) {
+  flag ? throw 1 : throw 2;
+}
+
+// CIR-LABEL: cir.func {{.*}} @_Z15test_both_throwb(
+// CIR:   cir.ternary(%{{.*}}, true {
+// CIR:     cir.throw %{{.*}} : !cir.ptr<!s32i>, @_ZTIi
+// CIR:     cir.unreachable
+// CIR-NEXT:   }, false {
+// CIR:     cir.throw %{{.*}} : !cir.ptr<!s32i>, @_ZTIi
+// CIR:     cir.unreachable
+// CIR-NEXT:   })
+
+// LLVM-LABEL: define{{.*}} void @_Z15test_both_throwb(
+// LLVM:   br i1 %{{.*}}, label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
+// LLVM: [[TRUE_BB]]:
+// LLVM:   call void @__cxa_throw(ptr %{{.*}}, ptr @_ZTIi
+// LLVM:   unreachable
+// LLVM: [[FALSE_BB]]:
+// LLVM:   call void @__cxa_throw(ptr %{{.*}}, ptr @_ZTIi
+// LLVM:   unreachable
+
+// OGCG-LABEL: define{{.*}} void @_Z15test_both_throwb(
+// OGCG:   br i1 %{{.*}}, label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
+// OGCG: [[TRUE_BB]]:
+// OGCG:   call void @__cxa_throw(ptr %{{.*}}, ptr @_ZTIi
+// OGCG:   unreachable
+// OGCG: [[FALSE_BB]]:
+// OGCG:   call void @__cxa_throw(ptr %{{.*}}, ptr @_ZTIi
+// OGCG:   unreachable

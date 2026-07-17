@@ -485,8 +485,8 @@ public:
 
   /// Get the appropriate diagnostic Id to use for issuing a compatibility
   /// diagnostic. For use by the various DiagCompat() helpers.
-  static unsigned getCXXCompatDiagId(const LangOptions &LangOpts,
-                                     unsigned CompatDiagId);
+  static unsigned getCompatDiagId(const LangOptions &LangOpts,
+                                  unsigned CompatDiagId);
 
   /// Return true if either of the following two conditions hold:
   /// 1. \p Loc is in a system header and the diagnostic kind \p DiagID does

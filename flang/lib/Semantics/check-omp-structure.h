@@ -60,6 +60,7 @@ public:
   OmpStructureChecker(SemanticsContext &context);
 
   void Enter(const parser::ProgramUnit &);
+  void Leave(const parser::ProgramUnit &);
   void Enter(const parser::MainProgram &);
   void Leave(const parser::MainProgram &);
   void Enter(const parser::BlockData &);
@@ -74,10 +75,15 @@ public:
   void Enter(const parser::EndFunctionStmt &);
   void Enter(const parser::MpSubprogramStmt &);
   void Enter(const parser::EndMpSubprogramStmt &);
+  void Enter(const parser::Block &);
+  void Leave(const parser::Block &);
   void Enter(const parser::BlockConstruct &);
   void Leave(const parser::BlockConstruct &);
   void Enter(const parser::InternalSubprogram &);
   void Enter(const parser::ModuleSubprogram &);
+  void Enter(const parser::ModuleSubprogramPart &);
+  void Enter(const parser::InterfaceBody &);
+  void Leave(const parser::InterfaceBody &);
 
   void Enter(const parser::SpecificationPart &);
   void Leave(const parser::SpecificationPart &);
@@ -282,8 +288,11 @@ private:
   void CheckScanModifier(const parser::OmpClause::Reduction &x);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
 
+  void BeginMetadirectiveVariantScope();
+  void EndMetadirectiveVariantScope();
+
   // check-omp-variant.cpp
-  void CheckMetadirectiveVariantsWithoutLoop();
+  void CheckMetadirectiveVariantsWithoutLoop(std::size_t firstVariant = 0);
   void CheckOmpDeclareVariantDirective(
       const parser::OmpDeclareVariantDirective &);
   void CheckDeclareVariantUserConditions(const parser::OmpContextSelector &);
@@ -497,6 +506,7 @@ private:
     const parser::OmpDirectiveSpecification *spec;
   };
   std::vector<MetadirectiveLoopVariant> metadirectiveLoopVariants_;
+  std::vector<std::size_t> metadirectiveVariantScopeStarts_;
   const parser::traits::OmpContextSelectorSpecification *currentWhenSelector_{
       nullptr};
 

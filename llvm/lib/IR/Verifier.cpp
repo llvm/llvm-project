@@ -4582,15 +4582,29 @@ void Verifier::visitLoadInst(LoadInst &LI) {
     Check(LI.getOrdering() != AtomicOrdering::Release &&
               LI.getOrdering() != AtomicOrdering::AcquireRelease,
           "Load cannot have Release ordering", &LI);
-    Check(ElTy->getScalarType()->isIntOrPtrTy() ||
-              ElTy->getScalarType()->isByteTy() ||
-              ElTy->getScalarType()->isFloatingPointTy(),
+
+    Type *ScalarTy = ElTy;
+    if (LI.isElementwise()) {
+      auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
+      Check(VecTy,
+            "atomic elementwise load operand must have fixed vector type!", &LI,
+            ElTy);
+      if (VecTy) {
+        checkAtomicMemAccessSize(ScalarTy, &LI);
+        ScalarTy = VecTy->getElementType();
+      }
+    }
+
+    Check(ScalarTy->getScalarType()->isIntOrPtrTy() ||
+              ScalarTy->getScalarType()->isByteTy() ||
+              ScalarTy->getScalarType()->isFloatingPointTy(),
           "atomic load operand must have integer, byte, pointer, floating "
           "point, or vector type!",
           ElTy, &LI);
 
-    checkAtomicMemAccessSize(ElTy, &LI);
+    checkAtomicMemAccessSize(ScalarTy, &LI);
   } else {
+    Check(!LI.isElementwise(), "non-atomic load cannot be elementwise", &LI);
     Check(LI.getSyncScopeID() == SyncScope::System,
           "Non-atomic load cannot have SynchronizationScope specified", &LI);
   }

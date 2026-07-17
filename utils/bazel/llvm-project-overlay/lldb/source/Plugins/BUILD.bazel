@@ -716,6 +716,39 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "PlatformWasmProperties",
+    strip_include_prefix = "Platform/WebAssembly",
+    tbl_outs = {
+        "Platform/WebAssembly/PlatformWasmProperties.inc": ["-gen-lldb-property-defs"],
+        "Platform/WebAssembly/PlatformWasmPropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
+    },
+    tblgen = "//lldb:lldb-tblgen",
+    td_file = "Platform/WebAssembly/PlatformWasmProperties.td",
+    deps = ["//lldb:CoreTdFiles"],
+)
+
+cc_library(
+    name = "PluginPlatformWasm",
+    srcs = glob(["Platform/WebAssembly/*.cpp"]),
+    hdrs = glob(["Platform/WebAssembly/*.h"]),
+    includes = [".."],
+    deps = [
+        ":PlatformWasmProperties",
+        ":PluginPlatformGDB",
+        ":PluginProcessWasm",
+        "//lldb:Core",
+        "//lldb:CoreHeaders",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:InterpreterHeaders",
+        "//lldb:Target",
+        "//lldb:TargetHeaders",
+        "//lldb:Utility",
+        "//llvm:Support",
+    ],
+)
+
 cc_library(
     name = "PluginPlatformGDB",
     srcs = glob(["Platform/gdb-server/*.cpp"]),
@@ -2173,6 +2206,26 @@ cc_library(
         "//llvm:Object",
         "//llvm:Support",
         "//llvm:TargetParser",
+    ],
+)
+
+cc_library(
+    name = "PluginObjectFileXCOFF",
+    srcs = glob(["ObjectFile/XCOFF/*.cpp"]),
+    hdrs = glob(["ObjectFile/XCOFF/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Symbol",
+        "//lldb:SymbolHeaders",
+        "//lldb:Target",
+        "//lldb:TargetHeaders",
+        "//lldb:UtilityHeaders",
+        "//llvm:BinaryFormat",
+        "//llvm:Object",
+        "//llvm:Support",
     ],
 )
 
