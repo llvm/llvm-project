@@ -1050,9 +1050,10 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
         // EXPERIMENT: if we already passed a suitable source while trying to
         // reach a deeper one, fall back to it instead of aborting.
         if (FoundSuitable) {
-          LLVM_DEBUG(dbgs() << "EXP fallback " << printReg(SuitablePair.Reg,
-                            TRI, SuitablePair.SubReg) << " (orig "
-                            << printReg(Reg, TRI) << ")\n");
+          LLVM_DEBUG(dbgs()
+                     << "EXP fallback "
+                     << printReg(SuitablePair.Reg, TRI, SuitablePair.SubReg)
+                     << " (orig " << printReg(Reg, TRI) << ")\n");
           CurSrcPair = SuitablePair;
           break;
         }
@@ -1114,18 +1115,18 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
       // subregister; keep tracing to try to reach a deeper source. Remember it
       // as a fallback.
       if (CurSrcPair.SubReg != 0) {
-        LLVM_DEBUG(dbgs() << "EXP continue " << printReg(CurSrcPair.Reg, TRI,
-                          CurSrcPair.SubReg) << " (orig "
-                          << printReg(Reg, TRI) << ")\n");
+        LLVM_DEBUG(dbgs() << "EXP continue "
+                          << printReg(CurSrcPair.Reg, TRI, CurSrcPair.SubReg)
+                          << " (orig " << printReg(Reg, TRI) << ")\n");
         SuitablePair = CurSrcPair;
         FoundSuitable = true;
         continue;
       }
 
       // We found a suitable source, and are done with this chain.
-      LLVM_DEBUG(dbgs() << "EXP final " << printReg(CurSrcPair.Reg, TRI,
-                        CurSrcPair.SubReg) << " (orig " << printReg(Reg, TRI)
-                        << ")\n");
+      LLVM_DEBUG(dbgs() << "EXP final "
+                        << printReg(CurSrcPair.Reg, TRI, CurSrcPair.SubReg)
+                        << " (orig " << printReg(Reg, TRI) << ")\n");
       break;
     }
   } while (!SrcToLook.empty());
