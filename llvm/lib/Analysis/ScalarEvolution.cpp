@@ -16045,18 +16045,19 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     // Check for a condition of the form (-C1 + X < C2).  InstCombine will
     // create this form when combining two checks of the form (X u< C2 + C1) and
     // (X >=u C1).
-    auto MatchRangeCheckIdiom = [&](ICmpInst::Predicate Predicate,
-                                    const SCEV *LHS, const SCEV *RHS) {
+    auto MatchRangeCheckIdiom = [&](ICmpInst::Predicate Pred,
+                                    const SCEV *MatchLHS,
+                                    const SCEV *MatchRHS) {
       const SCEVConstant *C1;
       const SCEVUnknown *LHSUnknown;
-      auto *C2 = dyn_cast<SCEVConstant>(RHS);
-      if (!match(LHS,
+      auto *C2 = dyn_cast<SCEVConstant>(MatchRHS);
+      if (!match(MatchLHS,
                  m_scev_Add(m_SCEVConstant(C1), m_SCEVUnknown(LHSUnknown))) ||
           !C2)
         return false;
 
       auto ExactRegion =
-          ConstantRange::makeExactICmpRegion(Predicate, C2->getAPInt())
+          ConstantRange::makeExactICmpRegion(Pred, C2->getAPInt())
               .sub(C1->getAPInt());
 
       // Bail out, unless we have a non-wrapping, monotonic range.
