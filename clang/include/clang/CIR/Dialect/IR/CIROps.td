@@ -8697,4 +8697,6 @@ def CIR_LaunderOp : CIR_Op<"launder", [SameOperandsAndResultType]> {
   let llvmOp = "LaunderInvariantGroupOp";
 }
 
+include "clang/CIR/Dialect/IR/CIRStdOps.td"
+
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD
