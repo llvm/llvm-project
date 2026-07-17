@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_DEPENDENCYSCANNING_DEPENDENCYSCANNINGSERVICE_H
 #define LLVM_CLANG_DEPENDENCYSCANNING_DEPENDENCYSCANNINGSERVICE_H
 
+#include "clang/Basic/AtomicLineLogger.h"
 #include "clang/DependencyScanning/DependencyScanningFilesystem.h"
 #include "clang/DependencyScanning/InProcessModuleCache.h"
 #include "llvm/ADT/BitmaskEnum.h"
@@ -98,6 +99,9 @@ struct DependencyScanningServiceOptions {
   bool FlushModuleCache = true;
   /// Whether the caching VFS should cache missing filesystem entries.
   bool CacheNegativeStats = shouldCacheNegativeStatsDefault();
+  /// The path to a log file, which logs timing of actions performed by
+  /// the dependency scanner.
+  std::string LogPath;
 };
 
 /// The dependency scanning service contains shared configuration and state that
@@ -105,7 +109,7 @@ struct DependencyScanningServiceOptions {
 class DependencyScanningService {
 public:
   explicit DependencyScanningService(DependencyScanningServiceOptions Opts)
-      : Opts(std::move(Opts)) {}
+      : Opts(std::move(Opts)), Logger(this->Opts.LogPath) {}
 
   ~DependencyScanningService() {
     if (Opts.FlushModuleCache)
@@ -120,6 +124,8 @@ public:
 
   ModuleCacheEntries &getModuleCacheEntries() { return ModCacheEntries; }
 
+  AtomicLineLogger &getLogger() { return Logger; }
+
 private:
   /// The options customizing dependency scanning behavior.
   DependencyScanningServiceOptions Opts;
@@ -127,6 +133,8 @@ private:
   DependencyScanningFilesystemSharedCache SharedCache;
   /// The global module cache entries.
   ModuleCacheEntries ModCacheEntries;
+  /// The logger of dependency scanning actions.
+  AtomicLineLogger Logger;
 };
 
 } // end namespace dependencies
