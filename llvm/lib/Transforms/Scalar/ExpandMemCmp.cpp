@@ -894,10 +894,10 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
     return !TTI->allowsMisalignedMemoryAccesses(Context, LoadSize * 8, AS,
                                                 MinAlign);
   });
-  // Byte loads are naturally aligned for any pointer, so at least the 1-byte
-  // size normally survives and remains useful for small compares: the number
-  // of loads is bounded by MaxNumLoads, and larger compares that would need
-  // too many byte loads fall back to the libcall in MemCmpExpansion.
+  // If the filter removed every load size, bail out to the libcall: the
+  // MemCmpExpansion constructor asserts that at least one load size remains.
+  // In practice all in-tree targets include a byte load size, which is
+  // accessible at any alignment and therefore always survives the filter.
   if (Options.LoadSizes.empty())
     return false;
 
