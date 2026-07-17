@@ -1044,10 +1044,10 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
 
     // Gfx9 packed <2 x f32> pair formation for v_pk_*_f32: lanes must occupy an
     // aligned VGPR pair. A load-fed insert can be allocated into its slot for
-    // free; a compute-fed insert typically needs an alignment move, so charge 1.
-    // f32-only on gfx9 targets with packed FP32 ops.
+    // free; a compute-fed insert typically needs an alignment move, so
+    // charge 1. f32-only on gfx9 targets with packed FP32 ops.
     if (Opcode == Instruction::InsertElement && EltSize == 32 &&
-        ST->hasPackedFP32Ops() && ST->getGeneration() == AMDGPUSubtarget::GFX9)
+        ST->hasPackedFP32Ops())
       if (auto *VecTy = dyn_cast<FixedVectorType>(ValTy))
         if (VecTy->getNumElements() == 2 &&
             VecTy->getElementType()->isFloatTy())
