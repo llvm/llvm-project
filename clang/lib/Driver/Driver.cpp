@@ -676,15 +676,18 @@ static llvm::Triple computeTargetTriple(const Driver &D, StringRef TargetTriple,
       llvm::Triple::ArchType AT = llvm::Triple::UnknownArch;
 
       if (D.IsFlangMode()) {
-        bool HasMaix = Args.hasArg(options::OPT_maix32, options::OPT_maix64,
-                                   options::OPT_m32, options::OPT_m64);
-        if (!HasMaix) {
-          if (ObjectMode == "64") {
+        if (ObjectMode == "64") {
+          AT = Target.get64BitArchVariant().getArch();
+        } else if (ObjectMode == "32" || ObjectMode == "32_64" ||
+                   ObjectMode == "any") {
+          // OBJECT_MODE setting can be overridden by -maix64/-m64
+          if (Args.hasArg(options::OPT_maix64, options::OPT_m64)) {
             AT = Target.get64BitArchVariant().getArch();
           } else {
-            D.Diag(diag::err_drv_compile_mode_unsupported);
-            AT = Target.get32BitArchVariant().getArch();
+            D.Diag(diag::err_drv_compile_mode_unsupported_aix);
           }
+        } else {
+          D.Diag(diag::err_drv_invalid_object_mode) << ObjectMode;
         }
       } else {
         // Silently accept '32_64' and 'any'
@@ -705,7 +708,9 @@ static llvm::Triple computeTargetTriple(const Driver &D, StringRef TargetTriple,
       }
     } else if (D.IsFlangMode() &&
                !Args.hasArg(options::OPT_maix64, options::OPT_m64)) {
-      D.Diag(diag::err_drv_compile_mode_unsupported);
+      // For flang on AIX, if OBJECT_MODE is unset and compile
+      // without -maix64/-m64 issue an error.
+      D.Diag(diag::err_drv_compile_mode_unsupported_aix);
     }
   }
 #endif
@@ -745,17 +750,11 @@ static llvm::Triple computeTargetTriple(const Driver &D, StringRef TargetTriple,
     } else if (A->getOption().matches(options::OPT_m32) ||
                A->getOption().matches(options::OPT_maix32)) {
       if (D.IsFlangMode()) {
-        // Flang does not support 32-bit compilation.
-        // On an AIX host, -m32/-maix32 is always an error.
-        // On a non-AIX host, it is an error only when targeting AIX.
-        llvm::Triple HostTriple(D.getTargetTriple());
-        if (HostTriple.isOSAIX() || Target.isOSAIX()) {
-          D.Diag(diag::err_drv_compile_mode_unsupported);
+        if (Target.isOSAIX()) {
+          D.Diag(diag::err_drv_compile_mode_unsupported_aix);
         } else {
-          AT = Target.get32BitArchVariant().getArch();
-          if (AT == llvm::Triple::ppcle)
-            D.Diag(diag::err_drv_unsupported_opt_for_target)
-                << A->getAsString(Args) << Target.str();
+          D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << A->getAsString(Args) << Target.str();
         }
       } else {
         AT = Target.get32BitArchVariant().getArch();
