@@ -64,6 +64,17 @@ struct on_pointer_named_inner_both {
   } inner;
 };
 
+// count in a nested anonymous struct, buf in the enclosing
+// non-anonymous unnamed struct: should accept
+struct on_pointer_named_inner_anon_inner {
+  struct {
+    struct {
+      int count;
+    };
+    struct size_known *buf __counted_by(count);
+  } inner;
+};
+
 //==============================================================================
 // TODO: allow future sizeof, offsetof expressions in the new ordering
 // of ActOnFields
