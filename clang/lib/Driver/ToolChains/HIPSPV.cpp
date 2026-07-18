@@ -143,11 +143,12 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
       // translate modules whose printf format string is not in the constant
       // address space (e.g. device-side assert / dynamic %s lowering); without
       // it llvm-spirv aborts with exit code 18.
-      TrArgs.push_back(
-          "--spirv-ext=-all,+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups"
-          ",+SPV_EXT_relaxed_printf_string_address_space"
-          ",+SPV_KHR_bit_instructions"
-          ",+SPV_EXT_shader_atomic_float_add");
+      TrArgs.push_back("--spirv-ext=-all"
+                       ",+SPV_INTEL_function_pointers"
+                       ",+SPV_INTEL_subgroups"
+                       ",+SPV_EXT_relaxed_printf_string_address_space"
+                       ",+SPV_KHR_bit_instructions"
+                       ",+SPV_EXT_shader_atomic_float_add");
 
       InputInfo TrInput = InputInfo(types::TY_LLVM_BC, TempFile, "");
       SPIRV::constructTranslateCommand(C, *this, JA, Output, TrInput, TrArgs);
