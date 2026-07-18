@@ -97,6 +97,13 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`modernize-use-as-const
+  <clang-tidy/checks/modernize/use-as-const>` check.
+
+  Replaces a ``static_cast`` that only adds ``const`` to an lvalue with a call
+  to ``std::as_const`` (available since C++17), which states the intent more
+  clearly and cannot accidentally change the referenced type.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 

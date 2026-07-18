@@ -31,6 +31,7 @@
 #include "ShrinkToFitCheck.h"
 #include "TypeTraitsCheck.h"
 #include "UnaryStaticAssertCheck.h"
+#include "UseAsConstCheck.h"
 #include "UseAutoCheck.h"
 #include "UseBoolLiteralsCheck.h"
 #include "UseConstraintsCheck.h"
@@ -88,6 +89,8 @@ public:
     CheckFactories.registerCheck<MinMaxUseInitializerListCheck>(
         "modernize-min-max-use-initializer-list");
     CheckFactories.registerCheck<PassByValueCheck>("modernize-pass-by-value");
+    CheckFactories.registerCheck<UseAsConstCheck>(
+        "modernize-use-as-const");
     CheckFactories.registerCheck<UseDesignatedInitializersCheck>(
         "modernize-use-designated-initializers");
     CheckFactories.registerCheck<UseIntegerSignComparisonCheck>(
