@@ -72,11 +72,9 @@ enum RelExpr {
   R_TLSGD_GOT,
   R_TLSGD_GOTPLT,
   R_TLSGD_PC,
-  R_TLSIE_HINT,
   R_TLSLD_GOT,
   R_TLSLD_GOTPLT,
   R_TLSLD_GOT_OFF,
-  R_TLSLD_HINT,
   R_TLSLD_PC,
 
   // The following is abstract relocation types used for only one target.
