@@ -179,10 +179,18 @@ Error UdtRecordCompleter::visitKnownMember(
 
         clang::QualType qual_type = decl->getType();
         unsigned type_width = decl->getASTContext().getIntWidth(qual_type);
-        unsigned constant_width = constant.Value.getBitWidth();
+
+        // Get the minimum bit width to encode this constant value.
+        // The bit width of the APSInt might be larger than the bits required to
+        // encode the value.
+        unsigned min_constant_width = 0;
+        if (qual_type->isUnsignedIntegerOrEnumerationType())
+          min_constant_width = constant.Value.getActiveBits();
+        else
+          min_constant_width = constant.Value.getSignificantBits();
 
         if (qual_type->isIntegralOrEnumerationType()) {
-          if (type_width >= constant_width) {
+          if (type_width >= min_constant_width) {
             TypeSystemClang::SetIntegerInitializerForVariable(
                 decl, constant.Value.extOrTrunc(type_width));
           } else {
@@ -191,7 +199,7 @@ Error UdtRecordCompleter::visitKnownMember(
                      "which resolves to a wider constant value ({4} bits). "
                      "Ignoring constant.",
                      m_derived_ct.GetTypeName(), static_data_member.Name,
-                     member_ct.GetTypeName(), type_width, constant_width);
+                     member_ct.GetTypeName(), type_width, min_constant_width);
           }
         } else {
           lldb::BasicType basic_type_enum = member_ct.GetBasicTypeEnumeration();
@@ -199,7 +207,7 @@ Error UdtRecordCompleter::visitKnownMember(
           case lldb::eBasicTypeFloat:
           case lldb::eBasicTypeDouble:
           case lldb::eBasicTypeLongDouble:
-            if (type_width == constant_width) {
+            if (type_width == min_constant_width) {
               TypeSystemClang::SetFloatingInitializerForVariable(
                   decl, basic_type_enum == lldb::eBasicTypeFloat
                             ? llvm::APFloat(constant.Value.bitsToFloat())
@@ -212,7 +220,7 @@ Error UdtRecordCompleter::visitKnownMember(
                   "which resolves to a constant value of mismatched width "
                   "({4} bits). Ignoring constant.",
                   m_derived_ct.GetTypeName(), static_data_member.Name,
-                  member_ct.GetTypeName(), type_width, constant_width);
+                  member_ct.GetTypeName(), type_width, min_constant_width);
             }
             break;
           default:

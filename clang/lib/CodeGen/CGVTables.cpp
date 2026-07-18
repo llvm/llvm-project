@@ -988,8 +988,11 @@ llvm::GlobalVariable *CodeGenVTables::GenerateConstructionVTable(
       CGM.CreateOrReplaceCXXRuntimeVariable(Name, VTType, Linkage, Align);
 
   // dynamic_cast assumes the vtable address is unique; see
-  // https://github.com/llvm/llvm-project/pull/200108
-  if (!CGM.shouldEmitRTTI())
+  // https://github.com/llvm/llvm-project/pull/200108. The address is
+  // insignificant either when no RTTI is emitted or for a weak vtable on a
+  // target that may duplicate vtables. In those cases the vtable can be marked
+  // unnamed_addr.
+  if (!CGM.shouldEmitRTTI() || CGM.mayVTableBeDuplicated(VTable->getLinkage()))
     VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   llvm::Constant *RTTI = CGM.GetAddrOfRTTIDescriptor(
@@ -1149,22 +1152,21 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
 
       return llvm::GlobalVariable::ExternalLinkage;
 
-    case TSK_FriendDeclaration:
-    case TSK_ImplicitInstantiation:
-      return !Context.getLangOpts().AppleKext
-                 ? llvm::GlobalVariable::LinkOnceODRLinkage
-                 : llvm::Function::InternalLinkage;
+      case TSK_ImplicitInstantiation:
+        return !Context.getLangOpts().AppleKext ?
+                 llvm::GlobalVariable::LinkOnceODRLinkage :
+                 llvm::Function::InternalLinkage;
 
-    case TSK_ExplicitInstantiationDefinition:
-      return !Context.getLangOpts().AppleKext
-                 ? llvm::GlobalVariable::WeakODRLinkage
-                 : llvm::Function::InternalLinkage;
+      case TSK_ExplicitInstantiationDefinition:
+        return !Context.getLangOpts().AppleKext ?
+                 llvm::GlobalVariable::WeakODRLinkage :
+                 llvm::Function::InternalLinkage;
 
-    case TSK_ExplicitInstantiationDeclaration:
-      return IsExternalDefinition
-                 ? llvm::GlobalVariable::AvailableExternallyLinkage
-                 : llvm::GlobalVariable::ExternalLinkage;
-    }
+      case TSK_ExplicitInstantiationDeclaration:
+        return IsExternalDefinition
+                   ? llvm::GlobalVariable::AvailableExternallyLinkage
+                   : llvm::GlobalVariable::ExternalLinkage;
+      }
   }
 
   // -fapple-kext mode does not support weak linkage, so we must use
@@ -1189,7 +1191,6 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
     case TSK_Undeclared:
     case TSK_ExplicitSpecialization:
     case TSK_ImplicitInstantiation:
-    case TSK_FriendDeclaration:
       return DiscardableODRLinkage;
 
     case TSK_ExplicitInstantiationDeclaration:
@@ -1206,6 +1207,13 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
   }
 
   llvm_unreachable("Invalid TemplateSpecializationKind!");
+}
+
+bool CodeGenModule::mayVTableBeDuplicated(
+    llvm::GlobalValue::LinkageTypes Linkage) const {
+  return getTarget().getVTableUniqueness() ==
+             VTableUniquenessKind::UniqueIfStrongLinkage &&
+         llvm::GlobalValue::isWeakForLinker(Linkage);
 }
 
 /// This is a callback from Sema to tell us that a particular vtable is

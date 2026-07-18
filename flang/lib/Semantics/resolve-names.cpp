@@ -833,6 +833,10 @@ public:
     nonIntrinsicUses_.clear();
   }
 
+protected:
+  std::optional<std::string> implicitUseModuleBeingResolved_;
+  std::set<std::string> implicitUseModulesInCurrentProgram_;
+
 private:
   // The location of the last AccessStmt without access-ids, if any.
   std::optional<SourceName> prevAccessStmt_;
@@ -3916,15 +3920,54 @@ void ModuleVisitor::AddUseForCommonBlocks() {
 }
 
 void ModuleVisitor::AddImplicitUseModules() {
+  if (InModuleFile() || currScope().kind() != Scope::Kind::Subprogram) {
+    return;
+  }
+  if (const Symbol *symbol{currScope().symbol()}) {
+    if (const auto *details{symbol->detailsIf<SubprogramDetails>()}) {
+      if (auto attrs{details->cudaSubprogramAttrs()}) {
+        if (*attrs == common::CUDASubprogramAttrs::Device ||
+            *attrs == common::CUDASubprogramAttrs::Global ||
+            *attrs == common::CUDASubprogramAttrs::Grid_Global) {
+          return;
+        }
+      }
+    }
+  }
   for (const std::string &module : context().implicitUseModules()) {
     if (module.empty()) {
       continue;
     }
     SourceName moduleName{module};
-    std::optional<SourceName> currModuleName{currScope().GetName()};
-    if (currScope().IsModule() && currModuleName &&
-        *currModuleName == moduleName) {
+    if (implicitUseModulesInCurrentProgram_.count(module) != 0) {
       continue;
+    }
+    if (implicitUseModuleBeingResolved_ &&
+        *implicitUseModuleBeingResolved_ == module) {
+      continue;
+    }
+    bool isContainedInImplicitModule{false};
+    for (const Scope *scope{&currScope()}; !scope->IsTopLevel();
+        scope = &scope->parent()) {
+      if (scope->kind() == Scope::Kind::Module) {
+        if (std::optional<SourceName> scopeName{scope->GetName()};
+            scopeName && scopeName->ToString() == module) {
+          // Do not implicitly USE a module while resolving anything contained
+          // in that module; doing so would be a self USE.
+          isContainedInImplicitModule = true;
+          break;
+        }
+      }
+    }
+    if (isContainedInImplicitModule) {
+      continue;
+    }
+    if (auto it{context().globalScope().find(moduleName)};
+        it != context().globalScope().end()) {
+      if (Scope *scope{it->second->scope()};
+          scope && DoesScopeContain(scope, currScope())) {
+        continue;
+      }
     }
     parser::Name name{moduleName};
     std::optional<bool> isIntrinsic;
@@ -11007,6 +11050,10 @@ bool ResolveNamesVisitor::Pre(const parser::ProgramUnit &x) {
     return false;
   }
   ProgramTree &root{ProgramTree::Build(x, context())};
+  auto implicitUseModuleBeingResolvedRestorer{
+      common::ScopedSet(implicitUseModuleBeingResolved_,
+          root.IsModule() ? std::optional<std::string>{root.name().ToString()}
+                          : implicitUseModuleBeingResolved_)};
   SetScope(topScope_);
   ResolveSpecificationParts(root);
   FinishSpecificationParts(root);
@@ -11048,6 +11095,7 @@ bool ResolveNamesVisitor::Pre(const parser::Program &x) {
     ImplicitRulesVisitor::BeginScope(*hermetic);
   }
   std::map<SourceName, const parser::ProgramUnit *> modules;
+  std::set<std::string> moduleNamesInCurrentProgram;
   std::set<SourceName> uses;
   bool disordered{false};
   for (const auto &progUnit : x.v) {
@@ -11057,6 +11105,7 @@ bool ResolveNamesVisitor::Pre(const parser::Program &x) {
       const auto &moduleStmt{
           std::get<parser::Statement<parser::ModuleStmt>>(mod.t)};
       const SourceName &name{moduleStmt.statement.v.source};
+      moduleNamesInCurrentProgram.insert(name.ToString());
       if (auto iter{modules.find(name)}; iter != modules.end()) {
         Say(name,
             "Module '%s' appears multiple times in a compilation unit"_err_en_US)
@@ -11080,6 +11129,7 @@ bool ResolveNamesVisitor::Pre(const parser::Program &x) {
       uses.insert(used);
     }
   }
+  implicitUseModulesInCurrentProgram_ = std::move(moduleNamesInCurrentProgram);
   if (!disordered) {
     return true;
   }
@@ -11174,6 +11224,10 @@ void ResolveNamesVisitor::ResolveSpecificationParts(ProgramTree &node) {
   if (node.isSpecificationPartResolved()) {
     return; // been here already
   }
+  auto implicitUseModuleBeingResolvedRestorer{
+      common::ScopedSet(implicitUseModuleBeingResolved_,
+          node.IsModule() ? std::optional<std::string>{node.name().ToString()}
+                          : implicitUseModuleBeingResolved_)};
   node.set_isSpecificationPartResolved();
   if (!BeginScopeForNode(node)) {
     return; // an error prevented scope from being created

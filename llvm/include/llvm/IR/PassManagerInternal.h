@@ -41,30 +41,39 @@ namespace detail {
 template <typename IRUnitT, typename AnalysisManagerT, typename... ExtraArgTs>
 class PassConcept {
 private:
-  using DestructorTy = void (*)(PassConcept &);
+  using DestroyTy = void (*)(PassConcept &);
   using RunTy = PreservedAnalyses (*)(PassConcept &, IRUnitT &,
                                       AnalysisManagerT &, ExtraArgTs...);
   using PrintPipelineTy =
       void (*)(PassConcept &, raw_ostream &,
                function_ref<StringRef(StringRef)> MapClassName2PassName);
 
+public:
+  struct Deleter {
+    void operator()(PassConcept *P) { P->Destroy(*P); }
+  };
+
+  using unique_ptr = std::unique_ptr<PassConcept, Deleter>;
+
+private:
   StringRef Name;
   bool IsRequired;
 
-  DestructorTy Destructor;
+  DestroyTy Destroy;
   RunTy Run;
   PrintPipelineTy PrintPipeline;
 
 protected:
-  PassConcept(StringRef Name, bool IsRequired, DestructorTy Destructor,
-              RunTy Run, PrintPipelineTy PrintPipeline)
-      : Name(Name), IsRequired(IsRequired), Destructor(Destructor), Run(Run),
+  PassConcept(StringRef Name, bool IsRequired, DestroyTy Destroy, RunTy Run,
+              PrintPipelineTy PrintPipeline)
+      : Name(Name), IsRequired(IsRequired), Destroy(Destroy), Run(Run),
         PrintPipeline(PrintPipeline) {}
 
-public:
-  // Boiler plate necessary for the container of derived classes.
-  ~PassConcept() { Destructor(*this); }
+  // Note: this is intentionally not public to catch uses of delete and
+  // unique_ptr<PassConcept>.
+  void operator delete(void *P) { ::operator delete(P); }
 
+public:
   // Passes are immovable.
   PassConcept(const PassConcept &) = delete;
   PassConcept &operator=(const PassConcept &) = delete;
@@ -103,16 +112,15 @@ class PassModel final
 private:
   using PassConceptT = PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...>;
 
-  /// Storage for PassT. We don't use a PassT here, because the destructor of
-  /// PassModel will not be called -- the PassT instance has to be destructed
-  /// in destructorImpl.
-  alignas(PassT) char PassBytes[sizeof(PassT)];
+  PassT Pass;
 
   static PassT &getPass(PassConceptT &Self) {
-    return *reinterpret_cast<PassT *>(static_cast<PassModel &>(Self).PassBytes);
+    return static_cast<PassModel &>(Self).Pass;
   }
 
-  static void destructorImpl(PassConceptT &Self) { getPass(Self).~PassT(); }
+  static void destroyImpl(PassConceptT &Self) {
+    delete static_cast<PassModel *>(&Self);
+  }
 
   static PreservedAnalyses runImpl(PassConceptT &Self, IRUnitT &IR,
                                    AnalysisManagerT &AM,
@@ -126,11 +134,14 @@ private:
     getPass(Self).printPipeline(OS, MapClassName2PassName);
   }
 
+  explicit PassModel(PassT &&Pass)
+      : PassConceptT(PassT::name(), PassT::isRequired(), destroyImpl, runImpl,
+                     printPipelineImpl),
+        Pass(std::move(Pass)) {}
+
 public:
-  explicit PassModel(PassT Pass)
-      : PassConceptT(PassT::name(), PassT::isRequired(), destructorImpl,
-                     runImpl, printPipelineImpl) {
-    new (PassBytes) PassT(std::move(Pass));
+  static typename PassConceptT::unique_ptr create(PassT &&Pass) {
+    return typename PassConceptT::unique_ptr(new PassModel(std::move(Pass)));
   }
 };
 

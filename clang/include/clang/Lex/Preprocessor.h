@@ -383,6 +383,9 @@ private:
   llvm::DenseMap<FileID, SmallVector<const char *>> CheckPoints;
   unsigned CheckPointCounter = 0;
 
+  /// Whether to record lexer check points for diagnostic snippet highlighting.
+  bool RecordCheckPoints = false;
+
   /// Whether we're importing a standard C++20 named Modules.
   bool ImportingCXXNamedModules = false;
 

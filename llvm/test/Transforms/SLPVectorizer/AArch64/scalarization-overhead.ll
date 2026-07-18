@@ -9,11 +9,11 @@ define fastcc i64 @zot(float %arg, float %arg1, float %arg2, float %arg3, float 
 ; CHECK-LABEL: @zot(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[VAL9:%.*]] = fmul fast float 0.000000e+00, [[ARG:%.*]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> <float 0.000000e+00, float poison, float poison, float poison>, float [[ARG]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float [[ARG3:%.*]], i32 2
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> <float 0.000000e+00, float poison, float poison, float poison>, float [[ARG]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float [[ARG3:%.*]], i64 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <4 x float> <float 0.000000e+00, float 0.000000e+00, float 1.000000e+00, float 1.000000e+00>, [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> <float poison, float 0.000000e+00>, float [[ARG3]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> <float poison, float 0.000000e+00>, float [[ARG3]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd fast <2 x float> [[TMP4]], <float 1.000000e+00, float 0.000000e+00>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> [[TMP6]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
@@ -21,9 +21,9 @@ define fastcc i64 @zot(float %arg, float %arg1, float %arg2, float %arg3, float 
 ; CHECK-NEXT:    br i1 [[ARG6:%.*]], label [[BB18:%.*]], label [[BB57:%.*]]
 ; CHECK:       bb18:
 ; CHECK-NEXT:    [[TMP9:%.*]] = phi <4 x float> [ [[TMP8]], [[BB:%.*]] ]
-; CHECK-NEXT:    [[VAL16:%.*]] = extractelement <4 x float> [[TMP8]], i32 2
+; CHECK-NEXT:    [[VAL16:%.*]] = extractelement <4 x float> [[TMP8]], i64 2
 ; CHECK-NEXT:    [[VAL23:%.*]] = fmul fast float [[VAL16]], 2.000000e+00
-; CHECK-NEXT:    [[VAL17:%.*]] = extractelement <4 x float> [[TMP8]], i32 3
+; CHECK-NEXT:    [[VAL17:%.*]] = extractelement <4 x float> [[TMP8]], i64 3
 ; CHECK-NEXT:    [[VAL24:%.*]] = fmul fast float [[VAL17]], 3.000000e+00
 ; CHECK-NEXT:    br i1 [[ARG7:%.*]], label [[BB25:%.*]], label [[BB57]]
 ; CHECK:       bb25:

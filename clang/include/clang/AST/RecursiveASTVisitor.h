@@ -1909,6 +1909,14 @@ DEF_TRAVERSE_DECL(UsingShadowDecl, {})
 
 DEF_TRAVERSE_DECL(ConstructorUsingShadowDecl, {})
 
+DEF_TRAVERSE_DECL(CXXExpansionStmtDecl, {
+  if (D->getInstantiations() &&
+      getDerived().shouldVisitTemplateInstantiations())
+    TRY_TO(TraverseStmt(D->getInstantiations()));
+
+  TRY_TO(TraverseStmt(D->getExpansionPattern()));
+})
+
 DEF_TRAVERSE_DECL(OMPThreadPrivateDecl, {
   for (auto *I : D->varlist()) {
     TRY_TO(TraverseStmt(I));
@@ -2002,7 +2010,6 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
       case TSK_ExplicitInstantiationDeclaration:
       case TSK_ExplicitInstantiationDefinition:
       case TSK_ExplicitSpecialization:
-      case TSK_FriendDeclaration:
         break;
       }
     }
@@ -2023,7 +2030,6 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
         TRY_TO(TraverseDecl(RD));
         break;
 
-      case TSK_FriendDeclaration:
       case TSK_ExplicitInstantiationDeclaration:
       case TSK_ExplicitInstantiationDefinition:
       case TSK_ExplicitSpecialization:
@@ -2058,7 +2064,6 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
         TRY_TO(TraverseDecl(RD));
         break;
 
-      case TSK_FriendDeclaration:
       case TSK_ExplicitSpecialization:
         break;
       }
@@ -2225,9 +2230,8 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateArgumentLocsHelper(
        handles traversal of template args and qualifier.                       \
        For explicit specializations ("template<> set<int> {...};"),            \
        we traverse template args here since there is no EID. */                \
-    if (const auto *Info = D->getExplicitSpecializationInfo()) {               \
-      const auto *ArgsWritten = Info->TemplateArgsAsWritten;                   \
-      TRY_TO(TraverseTemplateParameterListHelper(Info->TemplateParams));       \
+    if (D->getTemplateSpecializationKind() == TSK_ExplicitSpecialization) {    \
+      const auto *ArgsWritten = D->getTemplateArgsAsWritten();                 \
       TRY_TO(TraverseTemplateArgumentLocsHelper(                               \
           ArgsWritten->getTemplateArgs(), ArgsWritten->NumTemplateArgs));      \
     } else if (!getDerived().shouldVisitTemplateInstantiations()) {            \
@@ -3164,6 +3168,10 @@ DEF_TRAVERSE_STMT(RequiresExpr, {
   for (concepts::Requirement *Req : S->getRequirements())
     TRY_TO(TraverseConceptRequirement(Req));
 })
+
+DEF_TRAVERSE_STMT(CXXExpansionStmtPattern, {})
+DEF_TRAVERSE_STMT(CXXExpansionStmtInstantiation, {})
+DEF_TRAVERSE_STMT(CXXExpansionSelectExpr, {})
 
 // These literals (all of them) do not need any action.
 DEF_TRAVERSE_STMT(IntegerLiteral, {})

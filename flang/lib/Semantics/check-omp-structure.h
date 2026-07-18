@@ -60,6 +60,7 @@ public:
   OmpStructureChecker(SemanticsContext &context);
 
   void Enter(const parser::ProgramUnit &);
+  void Leave(const parser::ProgramUnit &);
   void Enter(const parser::MainProgram &);
   void Leave(const parser::MainProgram &);
   void Enter(const parser::BlockData &);
@@ -74,10 +75,15 @@ public:
   void Enter(const parser::EndFunctionStmt &);
   void Enter(const parser::MpSubprogramStmt &);
   void Enter(const parser::EndMpSubprogramStmt &);
+  void Enter(const parser::Block &);
+  void Leave(const parser::Block &);
   void Enter(const parser::BlockConstruct &);
   void Leave(const parser::BlockConstruct &);
   void Enter(const parser::InternalSubprogram &);
   void Enter(const parser::ModuleSubprogram &);
+  void Enter(const parser::ModuleSubprogramPart &);
+  void Enter(const parser::InterfaceBody &);
+  void Leave(const parser::InterfaceBody &);
 
   void Enter(const parser::SpecificationPart &);
   void Leave(const parser::SpecificationPart &);
@@ -141,8 +147,16 @@ public:
   void Enter(const parser::OmpMetadirectiveDirective &);
   void Leave(const parser::OmpMetadirectiveDirective &);
 
+  void Enter(const parser::ExecutionPartConstruct &);
+  void Leave(const parser::OmpClause::When &);
+
   void Enter(const parser::OmpContextSelector &);
   void Leave(const parser::OmpContextSelector &);
+
+  void Enter(const parser::OmpLoopModifier &);
+
+  void Enter(const parser::OmpClause::Apply &);
+  void Leave(const parser::OmpClause::Apply &);
 
   template <typename A> void Enter(const parser::Statement<A> &);
   void Leave(const parser::GotoStmt &);
@@ -274,7 +288,11 @@ private:
   void CheckScanModifier(const parser::OmpClause::Reduction &x);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
 
+  void BeginMetadirectiveVariantScope();
+  void EndMetadirectiveVariantScope();
+
   // check-omp-variant.cpp
+  void CheckMetadirectiveVariantsWithoutLoop(std::size_t firstVariant = 0);
   void CheckOmpDeclareVariantDirective(
       const parser::OmpDeclareVariantDirective &);
   void CheckDeclareVariantUserConditions(const parser::OmpContextSelector &);
@@ -437,6 +455,7 @@ private:
 
   bool deviceConstructFound_{false};
   enum directiveNestType : int {
+    ApplyNest,
     SIMDNest,
     TargetBlockOnlyTeams,
     TargetNest,
@@ -481,6 +500,15 @@ private:
     ExecutionPart,
   };
   std::vector<PartKind> partStack_;
+
+  struct MetadirectiveLoopVariant {
+    const parser::traits::OmpContextSelectorSpecification *selector;
+    const parser::OmpDirectiveSpecification *spec;
+  };
+  std::vector<MetadirectiveLoopVariant> metadirectiveLoopVariants_;
+  std::vector<std::size_t> metadirectiveVariantScopeStarts_;
+  const parser::traits::OmpContextSelectorSpecification *currentWhenSelector_{
+      nullptr};
 
   std::multimap<const parser::Label,
       std::pair<parser::CharBlock, const parser::OpenMPConstruct *>>

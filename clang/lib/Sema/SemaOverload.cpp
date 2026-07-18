@@ -1325,10 +1325,8 @@ OverloadKind Sema::CheckOverload(Scope *S, FunctionDecl *New,
       !New->getType()->isDependentType()) {
     LookupResult TemplateSpecResult(LookupResult::Temporary, Old);
     TemplateSpecResult.addAllDecls(Old);
-    if (CheckFunctionTemplateSpecialization(New, /*TemplateParams=*/nullptr,
-                                            /*ExplicitTemplateArgs=*/nullptr,
-                                            TemplateSpecResult,
-                                            /*QualifiedFriend*/ true)) {
+    if (CheckFunctionTemplateSpecialization(New, nullptr, TemplateSpecResult,
+                                            /*QualifiedFriend*/true)) {
       New->setInvalidDecl();
       return OverloadKind::Overload;
     }
@@ -6501,6 +6499,9 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
     return ExprError();
 
   if (From->containsErrors()) {
+    if (S.Context.hasSameType(From->getType(), T))
+      return From;
+
     // The expression already has errors, so the correct cast kind can't be
     // determined. Use RecoveryExpr to keep the expected type T and mark the
     // result as invalid, preventing further cascading errors.

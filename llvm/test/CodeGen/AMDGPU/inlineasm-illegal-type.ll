@@ -1,6 +1,6 @@
-; RUN: not llc -mtriple=amdgcn -mcpu=bonaire < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=SICI %s
-; RUN: not llc -mtriple=amdgcn -mcpu=tonga < %s 2>&1 | FileCheck -check-prefix=GCN %s
-; RUN: not llc -mtriple=amdgcn -mcpu=tahiti < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=SICI %s
+; RUN: not llc -mtriple=amdgpu7.04 < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=SICI %s
+; RUN: not llc -mtriple=amdgpu8.02 < %s 2>&1 | FileCheck -check-prefix=GCN %s
+; RUN: not llc -mtriple=amdgpu6.00 < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=SICI %s
 
 ; GCN: error: could not allocate output register for constraint 's'
 ; GCN: error: could not allocate input reg for constraint 's'

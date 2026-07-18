@@ -233,8 +233,7 @@ TosaReduceTransposes::transposeDenseAttribute(DenseElementsAttr input,
   // perms: dim 0→2, dim 1→0, dim 2→1, giving source position
   // calculated as 1*inputStrides[2] + 1*inputStrides[0] + 2*inputStrides[1]
   // = 1*1 + 1*12 + 2*4 = 21
-
-  size_t elementSize = oldType.getElementTypeBitWidth() / 8;
+  size_t elementSize = llvm::divideCeil(oldType.getElementTypeBitWidth(), 8);
   int64_t numElements = oldType.getNumElements();
 
   SmallVector<char> outputBuffer(numElements * elementSize);

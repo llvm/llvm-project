@@ -711,3 +711,54 @@ of the output. The operand must be uniform across the wavefront. A divergent
 value gives an undefined result.
 }];
 }
+
+//===----------------------------------------------------------------------===//
+// S-Buffer Load Builtins
+//===----------------------------------------------------------------------===//
+
+def DocCatSBufferLoad : DocumentationCategory<"S-Buffer Load Builtins"> {
+  let Content = [{
+These builtins lower to ``llvm.amdgcn.s.buffer.load`` and issue an
+``s_buffer_load`` when the byte offset is uniform across the wavefront.
+When the offset is divergent, the backend may lower to a ``buffer_load``.
+
+.. warning::
+
+   These builtins should generally be avoided. They must only be used to emit
+   ``s_buffer_load`` instructions that access memory not modified during kernel
+   execution. ``s_buffer_load`` uses a separate cache that is not coherent with
+   the caches used by other load and store operations. The compiler does not
+   verify the alignment requirements imposed by ``s_buffer_load``. However,
+   because automatic promotion of ``buffer_load`` to ``s_buffer_load`` where
+   legal is not yet fully implemented, these builtins are provided so that
+   programmers can use such load operations directly.
+
+These builtins take the buffer resource as ``__amdgpu_buffer_rsrc_t``, which
+can be created with ``__builtin_amdgcn_make_buffer_rsrc``. The backend
+lowers the resource to the 4-dword SGPR descriptor required by
+``llvm.amdgcn.s.buffer.load``.
+
+The return type selects the load width. Separate builtins are provided for
+each supported scalar and vector element type.
+}];
+}
+
+def DocSBufferLoad : Documentation {
+  let Category = DocCatSBufferLoad;
+  let Content = [{
+Loads data from a buffer using an SGPR buffer descriptor.
+
+- ``rsrc``: buffer resource descriptor.
+- ``offset``: byte offset from the base of the buffer. May be variable; a
+  uniform offset enables ``s_buffer_load`` selection.
+- ``aux``: cache-policy and control flags. Must be a compile-time constant.
+  The encoding is target-dependent. Common fields include:
+
+  - Pre-GFX12: bit 0 = glc, bit 1 = slc, bit 2 = dlc (GFX10/GFX11), bit 3 =
+    swz, bit 4 = scc (GFX90a).
+  - GFX942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1.
+  - GFX12+: bits [0-2] = th, bits [3-4] = scope, bit 6 = swz.
+
+  The volatile bit is not permitted for this intrinsic.
+}];
+}
