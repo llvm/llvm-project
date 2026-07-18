@@ -4202,6 +4202,9 @@ void SelectionDAGBuilder::visitBitInsert(const User &I) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc dl = getCurSDLoc();
 
+  assert(BaseVT.getSizeInBits() >= ValVT.getSizeInBits() &&
+        "bitinsert val wider than base should be rejected by verifier");
+
   // If Val is a float, cast it to an integer of the same bitwidth
   // so DAG.getZExtOrTrunc can process it safely.
   if (ValVT.isFloatingPoint()) {
