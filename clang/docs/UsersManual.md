@@ -1071,9 +1071,9 @@ If the provided argument contains a directory separator, it is considered as
 a file path, and options are read from that file. Otherwise the argument is
 treated as a file name and is searched for sequentially in the directories:
 
-> - user directory,
-> - system directory,
-> - the directory where Clang executable resides.
+- user directory,
+- system directory,
+- the directory where Clang executable resides.
 
 Both user and system directories for configuration files can be specified
 either during build or during runtime. At build time, use
@@ -2253,12 +2253,12 @@ in general be in a different floating point environment).
 
 Consider this example when compiled with `-frounding-math`
 
-> ```console
-> constexpr float func_01(float x, float y) {
->   return x + y;
-> }
-> float V1 = func_01(1.0F, 0x0.000001p0F);
-> ```
+```console
+constexpr float func_01(float x, float y) {
+  return x + y;
+}
+float V1 = func_01(1.0F, 0x0.000001p0F);
+```
 
 The C++ rule is that initializers for static storage duration variables are
 first evaluated during translation (therefore, in the default rounding mode),
@@ -3731,10 +3731,10 @@ collection. Specifically, the PGO runtime provides the following functions
 that can be used to control the regions in the program where profiles should
 be collected.
 
-> - `void __llvm_profile_set_filename(const char *Name)`: changes the name of
->   the profile file to `Name`.
-> - `void __llvm_profile_reset_counters(void)`: resets all counters to zero.
-> - `int __llvm_profile_dump(void)`: write the profile data to disk.
+- `void __llvm_profile_set_filename(const char *Name)`: changes the name of
+  the profile file to `Name`.
+- `void __llvm_profile_reset_counters(void)`: resets all counters to zero.
+- `int __llvm_profile_dump(void)`: write the profile data to disk.
 
 For example, the following pattern can be used to skip profiling program
 initialization, profile two specific hot regions, and skip profiling program
@@ -3800,10 +3800,10 @@ if the `clang` is not compiling for profile generation.
 Such replacement can happen because `clang` adds one of two macros depending
 on the `-fprofile-generate` and the `-fprofile-use` flags.
 
-> - `__LLVM_INSTR_PROFILE_GENERATE`: defined when one of
->   `-fprofile[-instr]-generate`/`-fcs-profile-generate` is in effect.
-> - `__LLVM_INSTR_PROFILE_USE`: defined when one of
->   `-fprofile-use`/`-fprofile-instr-use` is in effect.
+- `__LLVM_INSTR_PROFILE_GENERATE`: defined when one of
+  `-fprofile[-instr]-generate`/`-fcs-profile-generate` is in effect.
+- `__LLVM_INSTR_PROFILE_USE`: defined when one of
+  `-fprofile-use`/`-fprofile-instr-use` is in effect.
 
 The two macros can be used to provide more flexibility so a user program
 can execute code specifically intended for profile generate or profile use.
@@ -3882,51 +3882,51 @@ are `function` and `source`. Supported categories are `allow`, `skip`, and `forb
 `noprofile` attribute to the appropriate function. Use
 `default:<allow|skip|forbid>` to specify the default category.
 
-> ```console
-> $ cat fun.list
-> # The following cases are for clang instrumentation.
-> [clang]
->
-> # We might not want to profile functions that are inlined in many places.
-> function:inlinedLots=skip
->
-> # We want to forbid profiling where it might be dangerous.
-> source:lib/unsafe/*.cc=forbid
->
-> # Otherwise we allow profiling.
-> default:allow
-> ```
+```console
+$ cat fun.list
+# The following cases are for clang instrumentation.
+[clang]
+
+# We might not want to profile functions that are inlined in many places.
+function:inlinedLots=skip
+
+# We want to forbid profiling where it might be dangerous.
+source:lib/unsafe/*.cc=forbid
+
+# Otherwise we allow profiling.
+default:allow
+```
 
 ##### Older Prefixes
 
-> An older format is also supported, but it is only able to add the
-> `noprofile` attribute.
-> To filter individual functions or entire source files use `fun:<name>` or
-> `src:<file>` respectively. To exclude a function or a source file, use
-> `!fun:<name>` or `!src:<file>` respectively. The format also supports
-> wildcard expansion. The compiler generated functions are assumed to be located
-> in the main source file. It is also possible to restrict the filter to a
-> particular instrumentation type by using a named section.
->
-> ```none
-> # all functions whose name starts with foo will be instrumented.
-> fun:foo*
->
-> # except for foo1 which will be excluded from instrumentation.
-> !fun:foo1
->
-> # every function in path/to/foo.cc will be instrumented.
-> src:path/to/foo.cc
->
-> # bar will be instrumented only when using backend instrumentation.
-> # Recognized section names are clang, llvm and csllvm.
-> [llvm]
-> fun:bar
-> ```
->
-> When the file contains only excludes, all files and functions except for the
-> excluded ones will be instrumented. Otherwise, only the files and functions
-> specified will be instrumented.
+An older format is also supported, but it is only able to add the
+`noprofile` attribute.
+To filter individual functions or entire source files use `fun:<name>` or
+`src:<file>` respectively. To exclude a function or a source file, use
+`!fun:<name>` or `!src:<file>` respectively. The format also supports
+wildcard expansion. The compiler generated functions are assumed to be located
+in the main source file. It is also possible to restrict the filter to a
+particular instrumentation type by using a named section.
+
+```none
+# all functions whose name starts with foo will be instrumented.
+fun:foo*
+
+# except for foo1 which will be excluded from instrumentation.
+!fun:foo1
+
+# every function in path/to/foo.cc will be instrumented.
+src:path/to/foo.cc
+
+# bar will be instrumented only when using backend instrumentation.
+# Recognized section names are clang, llvm and csllvm.
+[llvm]
+fun:bar
+```
+
+When the file contains only excludes, all files and functions except for the
+excluded ones will be instrumented. Otherwise, only the files and functions
+specified will be instrumented.
 
 #### Instrument function groups
 
@@ -3960,13 +3960,13 @@ instrument functions in a specified group. This can be done using the
 When the program is compiled after a change that affects many symbol names,
 pre-existing profile data may no longer match the program. For example:
 
-> - switching from libstdc++ to libc++ will result in the mangled names of all
->   functions taking standard library types to change
-> - renaming a widely-used type in C++ will result in the mangled names of all
->   functions that have parameters involving that type to change
-> - moving from a 32-bit compilation to a 64-bit compilation may change the
->   underlying type of `size_t` and similar types, resulting in changes to
->   manglings
+- switching from libstdc++ to libc++ will result in the mangled names of all
+  functions taking standard library types to change
+- renaming a widely-used type in C++ will result in the mangled names of all
+  functions that have parameters involving that type to change
+- moving from a 32-bit compilation to a 64-bit compilation may change the
+  underlying type of `size_t` and similar types, resulting in changes to
+  manglings
 
 Clang allows use of a profile remapping file to specify that such differences
 in mangled names should be ignored when matching the profile data against the
@@ -4551,24 +4551,24 @@ into generic bitcode files loadable into other toolchains.
 Compiling to a binary using the default target from the installation can be done
 as follows:
 
-> ```console
-> $ echo "kernel void k(){}" > test.cl
-> $ clang test.cl
-> ```
+```console
+$ echo "kernel void k(){}" > test.cl
+$ clang test.cl
+```
 
 Compiling for a specific target can be done by specifying the triple corresponding
 to the target, for example:
 
-> ```console
-> $ clang --target=nvptx64-unknown-unknown test.cl
-> $ clang --target=amdgcn-amd-amdhsa -mcpu=gfx900 test.cl
-> ```
+```console
+$ clang --target=nvptx64-unknown-unknown test.cl
+$ clang --target=amdgcn-amd-amdhsa -mcpu=gfx900 test.cl
+```
 
 Compiling to bitcode can be done as follows:
 
-> ```console
-> $ clang -c -emit-llvm test.cl
-> ```
+```console
+$ clang -c -emit-llvm test.cl
+```
 
 This will produce a file `test.bc` that can be used in vendor toolchains
 to perform machine code generation.
@@ -4598,9 +4598,9 @@ Most of the OpenCL build options from [the specification v2.0 section 5.8.4](htt
 
 Examples:
 
-> ```console
-> $ clang -cl-std=CL2.0 -cl-single-precision-constant test.cl
-> ```
+```console
+$ clang -cl-std=CL2.0 -cl-single-precision-constant test.cl
+```
 
 Many flags used for the compilation for C sources can also be passed while
 compiling for OpenCL, examples: `-c`, `-O<1-4|s>`, `-o`, `-emit-llvm`, etc.
@@ -4669,24 +4669,24 @@ There is a set of concrete HW architectures that OpenCL can be compiled for.
 
 - For AMD target:
 
-  > ```console
-  > $ clang --target=amdgcn-amd-amdhsa -mcpu=gfx900 test.cl
-  > ```
+  ```console
+  $ clang --target=amdgcn-amd-amdhsa -mcpu=gfx900 test.cl
+  ```
 
 - For Nvidia architectures:
 
-  > ```console
-  > $ clang --target=nvptx64-unknown-unknown test.cl
-  > ```
+  ```console
+  $ clang --target=nvptx64-unknown-unknown test.cl
+  ```
 
 #### Generic Targets
 
 - A SPIR-V binary can be produced for 32- or 64-bit targets.
 
-  > ```console
-  > $ clang --target=spirv32 -c test.cl
-  > $ clang --target=spirv64 -c test.cl
-  > ```
+  ```console
+  $ clang --target=spirv32 -c test.cl
+  $ clang --target=spirv64 -c test.cl
+  ```
 
   More details can be found in {ref}`the SPIR-V support section <spir-v>`.
 
@@ -4695,10 +4695,10 @@ There is a set of concrete HW architectures that OpenCL can be compiled for.
   specification](https://www.khronos.org/spir). There are two flavors
   available for 32 and 64 bits.
 
-  > ```console
-  > $ clang --target=spir test.cl -emit-llvm -c
-  > $ clang --target=spir64 test.cl -emit-llvm -c
-  > ```
+  ```console
+  $ clang --target=spir test.cl -emit-llvm -c
+  $ clang --target=spir64 test.cl -emit-llvm -c
+  ```
 
   Clang will generate SPIR v1.2 compatible IR for OpenCL versions up to 2.0 and
   SPIR v2.0 for OpenCL v2.0 or C++ for OpenCL.
@@ -4733,10 +4733,10 @@ The following example demonstrates that OpenCL kernel sources with various
 standard builtin functions can be compiled without the need for an explicit
 includes or compiler flags.
 
-> ```console
-> $ echo "bool is_wg_uniform(int i){return get_enqueued_local_size(i)==get_local_size(i);}" > test.cl
-> $ clang -cl-std=CL2.0 test.cl
-> ```
+```console
+$ echo "bool is_wg_uniform(int i){return get_enqueued_local_size(i)==get_local_size(i);}" > test.cl
+$ clang -cl-std=CL2.0 test.cl
+```
 
 More information about the default headers is provided in {doc}`OpenCLSupport`.
 
@@ -4754,23 +4754,23 @@ Vendor extensions can be added flexibly by declaring the list of types and
 functions associated with each extensions enclosed within the following
 compiler pragma directives:
 
-> ```c
-> #pragma OPENCL EXTENSION the_new_extension_name : begin
-> // declare types and functions associated with the extension here
-> #pragma OPENCL EXTENSION the_new_extension_name : end
-> ```
+```c
+#pragma OPENCL EXTENSION the_new_extension_name : begin
+// declare types and functions associated with the extension here
+#pragma OPENCL EXTENSION the_new_extension_name : end
+```
 
 For example, parsing the following code adds `my_t` type and `my_func`
 function to the custom `my_ext` extension.
 
-> ```c
-> #pragma OPENCL EXTENSION my_ext : begin
-> typedef struct{
->   int a;
-> }my_t;
-> void my_func(my_t);
-> #pragma OPENCL EXTENSION my_ext : end
-> ```
+```c
+#pragma OPENCL EXTENSION my_ext : begin
+typedef struct{
+  int a;
+}my_t;
+void my_func(my_t);
+#pragma OPENCL EXTENSION my_ext : end
+```
 
 There is no conflict resolution for identifier clashes among extensions.
 It is therefore recommended that the identifiers are prefixed with a
@@ -4806,38 +4806,38 @@ To make sure no invalid optimizations occur for single program multiple data
 can be used for special functions that have cross work item semantics.
 An example is the subgroup operations such as [intel_sub_group_shuffle](https://www.khronos.org/registry/cl/extensions/intel/cl_intel_subgroups.txt)
 
-> ```c
-> // Define custom my_sub_group_shuffle(data, c)
-> // that makes use of intel_sub_group_shuffle
-> r1 = ...
-> if (r0) r1 = computeA();
-> // Shuffle data from r1 into r3
-> // of threads id r2.
-> r3 = my_sub_group_shuffle(r1, r2);
-> if (r0) r3 = computeB();
-> ```
+```c
+// Define custom my_sub_group_shuffle(data, c)
+// that makes use of intel_sub_group_shuffle
+r1 = ...
+if (r0) r1 = computeA();
+// Shuffle data from r1 into r3
+// of threads id r2.
+r3 = my_sub_group_shuffle(r1, r2);
+if (r0) r3 = computeB();
+```
 
 with non-SPMD semantics this is optimized to the following equivalent code:
 
-> ```c
-> r1 = ...
-> if (!r0)
->   // Incorrect functionality! The data in r1
->   // have not been computed by all threads yet.
->   r3 = my_sub_group_shuffle(r1, r2);
-> else {
->   r1 = computeA();
->   r3 = my_sub_group_shuffle(r1, r2);
->   r3 = computeB();
-> }
-> ```
+```c
+r1 = ...
+if (!r0)
+  // Incorrect functionality! The data in r1
+  // have not been computed by all threads yet.
+  r3 = my_sub_group_shuffle(r1, r2);
+else {
+  r1 = computeA();
+  r3 = my_sub_group_shuffle(r1, r2);
+  r3 = computeB();
+}
+```
 
 Declaring the function `my_sub_group_shuffle` with the convergent attribute
 would prevent this:
 
-> ```c
-> my_sub_group_shuffle() __attribute__((convergent));
-> ```
+```c
+my_sub_group_shuffle() __attribute__((convergent));
+```
 
 Using `convergent` guarantees correct execution by keeping CFG equivalence
 wrt operations marked as `convergent`. CFG `G´` is equivalent to `G` wrt
@@ -4851,19 +4851,19 @@ respect to `Ni` remain the same in both `G` and `G´`.
 This allows some optimizations to happen as long as the control flow remains
 unmodified.
 
-> ```c
-> for (int i=0; i<4; i++)
->   my_sub_group_shuffle()
-> ```
+```c
+for (int i=0; i<4; i++)
+  my_sub_group_shuffle()
+```
 
 can be modified to:
 
-> ```c
-> my_sub_group_shuffle();
-> my_sub_group_shuffle();
-> my_sub_group_shuffle();
-> my_sub_group_shuffle();
-> ```
+```c
+my_sub_group_shuffle();
+my_sub_group_shuffle();
+my_sub_group_shuffle();
+my_sub_group_shuffle();
+```
 
 while using `noduplicate` would disallow this. Also `noduplicate` doesn't
 have the same safe semantics of CFG as `convergent` and can cause changes in
@@ -4919,17 +4919,17 @@ Example of use:
 By default, files with `.clcpp` extension are compiled with the C++ for
 OpenCL 1.0 mode.
 
-> ```console
-> clang test.clcpp
-> ```
+```console
+clang test.clcpp
+```
 
 For backward compatibility files with `.cl` extensions can also be compiled
 in C++ for OpenCL mode but the desirable language mode must be activated with
 a flag.
 
-> ```console
-> clang -cl-std=clc++ test.cl
-> ```
+```console
+clang -cl-std=clc++ test.cl
+```
 
 Support of C++ for OpenCL 2021 is currently in experimental phase, refer to
 {doc}`OpenCLSupport` for more details.
@@ -4961,9 +4961,9 @@ invoked.
 Applications are currently required to run initialization of global objects
 manually before running any kernels in which the objects are used.
 
-> ```console
-> clang -cl-std=clc++ test.cl
-> ```
+```console
+clang -cl-std=clc++ test.cl
+```
 
 If there are any global objects to be initialized, the final binary will
 contain the `_GLOBAL__sub_I_test.cl` kernel to be enqueued.
@@ -5205,10 +5205,10 @@ To generate SPIR-V binaries, Clang uses the in-tree LLVM SPIR-V backend.
 
 Example usage for OpenCL kernel compilation:
 
-> ```console
-> $ clang --target=spirv32 -c test.cl
-> $ clang --target=spirv64 -c test.cl
-> ```
+```console
+$ clang --target=spirv32 -c test.cl
+$ clang --target=spirv64 -c test.cl
+```
 
 Both invocations of Clang will result in the generation of a SPIR-V binary file
 `test.o` for 32 bit and 64 bit respectively. This file can be imported
@@ -5224,9 +5224,9 @@ linkers, Clang will expect `spirv-link` to be installed separately and to be
 present in the `PATH` environment variable. Please refer to [the build and
 installation instructions](https://github.com/KhronosGroup/SPIRV-Tools#build).
 
-> ```console
-> $ clang --target=spirv64 test1.cl test2.cl
-> ```
+```console
+$ clang --target=spirv64 test1.cl test2.cl
+```
 
 More information about the SPIR-V target settings and supported versions of SPIR-V
 format can be found in [the SPIR-V target guide](https://llvm.org/docs/SPIRVUsage.html).
@@ -5261,17 +5261,17 @@ passing `/p:CLToolPath=c:\llvm\bin /p:CLToolExe=clang-cl.exe`.
 
 When using CMake and the Visual Studio generators, the toolset can be set with the `-T` flag:
 
-> ```
-> cmake -G"Visual Studio 16 2019" -T LLVM ..
-> ```
+```
+cmake -G"Visual Studio 16 2019" -T LLVM ..
+```
 
 When using CMake with the Ninja generator, set the `CMAKE_C_COMPILER` and
 `CMAKE_CXX_COMPILER` variables to clang-cl:
 
-> ```
-> cmake -GNinja -DCMAKE_C_COMPILER="c:/Program Files (x86)/LLVM/bin/clang-cl.exe"
->     -DCMAKE_CXX_COMPILER="c:/Program Files (x86)/LLVM/bin/clang-cl.exe" ..
-> ```
+```
+cmake -GNinja -DCMAKE_C_COMPILER="c:/Program Files (x86)/LLVM/bin/clang-cl.exe"
+    -DCMAKE_CXX_COMPILER="c:/Program Files (x86)/LLVM/bin/clang-cl.exe" ..
+```
 
 ### Command-Line Options
 
@@ -5282,9 +5282,9 @@ some of Clang's core options, such as the `-W` options.
 Options that are known to clang-cl, but not currently supported, are ignored
 with a warning. For example:
 
-> ```
-> clang-cl.exe: warning: argument unused during compilation: '/AI'
-> ```
+```
+clang-cl.exe: warning: argument unused during compilation: '/AI'
+```
 
 To suppress warnings about unused arguments, use the `-Qunused-arguments` option.
 
@@ -5292,9 +5292,9 @@ Options that are not known to clang-cl will be ignored by default. Use the
 `-Werror=unknown-argument` option in order to treat them as errors. If these
 options are spelled with a leading `/`, they will be mistaken for a filename:
 
-> ```
-> clang-cl.exe: error: no such file or directory: '/foobar'
-> ```
+```
+clang-cl.exe: error: no such file or directory: '/foobar'
+```
 
 Please [file a bug](https://github.com/llvm/llvm-project/issues/new?labels=clang-cl)
 for any valid cl.exe flags that clang-cl does not understand.
@@ -6388,100 +6388,100 @@ follows:
 
 1. Consult the command line.
 
-   > Anything the user specifies is always given precedence. The following
-   > extensions are part of the clang-cl toolset:
-   >
-   > - `/winsysroot:`
-   >
-   > The `/winsysroot:` is used as an equivalent to `-sysroot` on Unix
-   > environments. It allows the control of an alternate location to be treated
-   > as a system root. When specified, it will be used as the root where the
-   > `Windows Kits` is located.
-   >
-   > - `/winsdkversion:`
-   > - `/winsdkdir:`
-   >
-   > If `/winsysroot:` is not specified, the `/winsdkdir:` argument is consulted
-   > as a location to identify where the Windows SDK is located. Contrary to
-   > `/winsysroot:`, `/winsdkdir:` is expected to be the complete path rather
-   > than a root to locate `Windows Kits`.
-   >
-   > The `/winsdkversion:` flag allows the user to specify a version identifier
-   > for the SDK to prefer. When this is specified, no additional validation is
-   > performed and this version is preferred. If the version is not specified,
-   > the highest detected version number will be used.
+   Anything the user specifies is always given precedence. The following
+   extensions are part of the clang-cl toolset:
+
+   - `/winsysroot:`
+
+   The `/winsysroot:` is used as an equivalent to `-sysroot` on Unix
+   environments. It allows the control of an alternate location to be treated
+   as a system root. When specified, it will be used as the root where the
+   `Windows Kits` is located.
+
+   - `/winsdkversion:`
+   - `/winsdkdir:`
+
+   If `/winsysroot:` is not specified, the `/winsdkdir:` argument is consulted
+   as a location to identify where the Windows SDK is located. Contrary to
+   `/winsysroot:`, `/winsdkdir:` is expected to be the complete path rather
+   than a root to locate `Windows Kits`.
+
+   The `/winsdkversion:` flag allows the user to specify a version identifier
+   for the SDK to prefer. When this is specified, no additional validation is
+   performed and this version is preferred. If the version is not specified,
+   the highest detected version number will be used.
 
 2. Consult the environment.
 
-   > TODO: This is not yet implemented.
-   >
-   > This will consult the environment variables:
-   >
-   > - `WindowsSdkDir`
-   > - `UCRTVersion`
+   TODO: This is not yet implemented.
+
+   This will consult the environment variables:
+
+   - `WindowsSdkDir`
+   - `UCRTVersion`
 
 3. Fallback to the registry.
 
-   > If no arguments are used to indicate where the SDK is present, and the
-   > compiler is running on Windows, the registry is consulted to locate the
-   > installation.
+   If no arguments are used to indicate where the SDK is present, and the
+   compiler is running on Windows, the registry is consulted to locate the
+   installation.
 
 The Visual C++ Toolset has a slightly more elaborate mechanism for detection.
 
 1. Consult the command line.
 
-   > - `/winsysroot:`
-   >
-   > The `/winsysroot:` is used as an equivalent to `-sysroot` on Unix
-   > environments. It allows the control of an alternate location to be treated
-   > as a system root. When specified, it will be used as the root where the
-   > `VC` directory is located.
-   >
-   > - `/vctoolsdir:`
-   > - `/vctoolsversion:`
-   >
-   > If `/winsysroot:` is not specified, the `/vctoolsdir:` argument is consulted
-   > as a location to identify where the Visual C++ Tools are located. If
-   > `/vctoolsversion:` is specified, that version is preferred, otherwise, the
-   > highest version detected is used.
+   - `/winsysroot:`
+
+   The `/winsysroot:` is used as an equivalent to `-sysroot` on Unix
+   environments. It allows the control of an alternate location to be treated
+   as a system root. When specified, it will be used as the root where the
+   `VC` directory is located.
+
+   - `/vctoolsdir:`
+   - `/vctoolsversion:`
+
+   If `/winsysroot:` is not specified, the `/vctoolsdir:` argument is consulted
+   as a location to identify where the Visual C++ Tools are located. If
+   `/vctoolsversion:` is specified, that version is preferred, otherwise, the
+   highest version detected is used.
 
 2. Consult the environment.
 
-   > - `/external:[VARIABLE]`
-   >
-   >   This specifies a user identified environment variable which is treated as
-   >   a path delimiter (`;`) separated list of paths to map into `-imsvc`
-   >   arguments which are treated as `-isystem`.
-   >
-   > - `INCLUDE` and `EXTERNAL_INCLUDE`
-   >
-   >   The path delimiter (`;`) separated list of paths will be mapped to
-   >   `-imsvc` arguments which are treated as `-isystem`.
-   >
-   > - `LIB` (indirectly)
-   >
-   >   The linker `link.exe` or `lld-link.exe` will honour the environment
-   >   variable `LIB` which is a path delimiter (`;`) set of paths to consult for
-   >   the import libraries to use when linking the final target.
-   >
-   > The following environment variables will be consulted and used to form paths
-   > to validate and load content from as appropriate:
-   >
-   > > - `VCToolsInstallDir`
-   > > - `VCINSTALLDIR`
-   > > - `Path`
+  - `/external:[VARIABLE]`
+
+    This specifies a user identified environment variable which is treated as
+    a path delimiter (`;`) separated list of paths to map into `-imsvc`
+    arguments which are treated as `-isystem`.
+
+  - `INCLUDE` and `EXTERNAL_INCLUDE`
+
+    The path delimiter (`;`) separated list of paths will be mapped to
+    `-imsvc` arguments which are treated as `-isystem`.
+
+  - `LIB` (indirectly)
+
+    The linker `link.exe` or `lld-link.exe` will honour the environment
+    variable `LIB` which is a path delimiter (`;`) set of paths to consult for
+    the import libraries to use when linking the final target.
+
+  The following environment variables will be consulted and used to form paths
+  to validate and load content from as appropriate:
+
+  - `VCToolsInstallDir`
+  - `VCINSTALLDIR`
+  - `Path`
 
 3. Consult `ISetupConfiguration` [Windows Only]
 
-   > Assuming that the toolchain is built with `USE_MSVC_SETUP_API` defined and
-   > is running on Windows, the Visual Studio COM interface `ISetupConfiguration`
-   > will be used to locate the installation of the MSVC toolset.
+   Assuming that the toolchain is built with `USE_MSVC_SETUP_API` defined and
+   is running on Windows, the Visual Studio COM interface `ISetupConfiguration`
+   will be used to locate the installation of the MSVC toolset.
 
 4. Fallback to the registry [DEPRECATED]
 
-   > The registry information is used to help locate the installation as a final
-   > fallback. This is only possible for pre-VS2017 installations and is
-   > considered deprecated.
+   The registry information is used to help locate the installation as a final
+   fallback. This is only possible for pre-VS2017 installations and is
+   considered deprecated.
 
 ### Restrictions and Limitations compared to Clang
 
