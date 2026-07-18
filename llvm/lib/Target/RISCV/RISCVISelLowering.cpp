@@ -24108,6 +24108,28 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known.Zero.setBitsFrom(Known2.countMaxActiveBits());
     break;
   }
+  case RISCVISD::VECREDUCE_ADD_VL: {
+    SDValue Src = Op.getOperand(1);
+    SDValue InitVal = Op.getOperand(2);
+    SDValue VL = Op.getOperand(4);
+    unsigned NumElts;
+
+    if (isa<ConstantSDNode>(VL)) {
+      NumElts = VL->getAsZExtVal();
+    } else {
+      const RISCVSubtarget &SubTarget = DAG.getSubtarget<RISCVSubtarget>();
+      auto [Min, Max] = computeVLMAXBounds(Src.getSimpleValueType(), SubTarget);
+      NumElts = Max;
+    }
+
+    KnownBits KnownAcrossElts =
+        DAG.computeKnownBits(Src, APInt::getAllOnes(1), Depth + 1);
+    KnownBits VecSum = KnownAcrossElts.reduceAdd(NumElts);
+    KnownBits Start = DAG.computeKnownBits(InitVal, Depth + 1);
+
+    Known = KnownBits::add(Start, VecSum);
+    break;
+  }
   case RISCVISD::CZERO_EQZ:
   case RISCVISD::CZERO_NEZ:
     Known = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
