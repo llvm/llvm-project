@@ -1366,7 +1366,9 @@ static HTTPResult handleGetCompareFunctionDetail(CoreClient &Client,
 
   // Match by (pass, name, type) — group and count
   struct Key { std::string Pass, Name; int64_t Type; };
-  auto makeKey = [](const Remark &R) { return R.Pass + "\0" + R.Name + "\0" + std::to_string(R.Type); };
+  auto makeKey = [](const Remark &R) {
+    return R.Pass + std::string(1, '\0') + R.Name + std::string(1, '\0') + std::to_string(R.Type);
+  };
 
   StringMap<int64_t> BeforeCounts, AfterCounts;
   StringMap<std::string> AfterFile; // first file seen for each key

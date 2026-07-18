@@ -340,7 +340,12 @@ const CompareView = {
         ? (e) => {
             e.stopPropagation();
             State.set('currentSnapshot', State.get('snapshots').find(s => s.id === this._candidateId) || null);
-            Router.navigate(`/explorer?path=${encodeURIComponent(r.file)}&line=${r.line}`);
+            const qs = new URLSearchParams();
+            qs.set('path', r.file);
+            qs.set('line', String(r.line));
+            if (r.pass) qs.set('pass', r.pass);
+            if (r.name) qs.set('name', r.name);
+            Router.navigate(`/explorer?${qs.toString()}`);
           }
         : null;
       return h('div', {

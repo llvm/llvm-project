@@ -1440,6 +1440,16 @@ const CodeExplorerView = {
     const initialPath = params.path || (files.length > 0 ? files[0].path : null);
     this._scrollToLine = params.line ? parseInt(params.line, 10) : 0;
 
+    // Apply remark filters from URL params (e.g., from diff drill-down)
+    if (params.pass) {
+      passInput.value = params.pass;
+      this._filters.pass = params.pass;
+    }
+    if (params.name) {
+      nameInput.value = params.name;
+      this._filters.name = params.name;
+    }
+
     if (initialPath) {
       const match = list.querySelector(`.explorer-file[data-path="${CSS.escape(initialPath)}"]`);
       if (match) match.style.background = 'var(--bg2)';
