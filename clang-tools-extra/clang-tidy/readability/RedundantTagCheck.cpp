@@ -50,14 +50,45 @@ void RedundantTagCheck::check(const MatchFinder::MatchResult &Result) {
   if (!TD)
     return;
 
-  auto Lookup = TD->getDeclContext()->lookup(TD->getDeclName());
+  // Find the declaration enclosing this use of the tag.
+  const Decl *EnclosingDecl = nullptr;
 
-  for (const NamedDecl *ND : Lookup) {
-    if (declaresSameEntity(ND, TD))
+  DynTypedNodeList Parents = Result.Context->getParents(*TL);
+
+  while (!Parents.empty()) {
+    if (const auto *D = Parents[0].get<Decl>()) {
+      EnclosingDecl = D;
+      break;
+    }
+    Parents = Result.Context->getParents(Parents[0]);
+  }
+
+  if (!EnclosingDecl)
+    return;
+
+  DeclarationName Name = TD->getDeclName();
+
+  for (const DeclContext *DC = EnclosingDecl->getDeclContext(); DC;
+       DC = DC->getLookupParent()) {
+    auto Lookup = DC->lookup(Name);
+
+    if (Lookup.empty())
       continue;
 
-    if (canHideTag(ND))
-      return;
+    bool FoundSameEntity = false;
+
+    for (const NamedDecl *ND : Lookup) {
+      if (declaresSameEntity(ND, TD)) {
+        FoundSameEntity = true;
+        continue;
+      }
+
+      if (canHideTag(ND))
+        return;
+    }
+
+    if (FoundSameEntity)
+      break;
   }
 
   const SourceLocation KeywordLoc = TagTL.getElaboratedKeywordLoc();

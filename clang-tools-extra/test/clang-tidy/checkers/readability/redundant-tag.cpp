@@ -97,3 +97,208 @@ void templateArgument() {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant 'struct' keyword in C++ declaration
   // CHECK-FIXES: tf<Struct>();
 }
+
+//===----------------------------------------------------------------------===//
+// Regression test: using declaration lookup
+//===----------------------------------------------------------------------===//
+
+namespace UsingDeclarationRegression {
+
+namespace NS {
+struct S {};
+} // namespace NS
+
+using NS::S;
+
+using T = struct S;
+// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: redundant 'struct' keyword in C++ declaration
+// CHECK-FIXES: using T = S;
+
+} // namespace UsingDeclarationRegression
+
+//===----------------------------------------------------------------------===//
+// Regression test: hidden in nested namespace scope
+//===----------------------------------------------------------------------===//
+
+namespace HiddenNamespaceRegression {
+
+struct S {};
+
+namespace N1 {
+namespace N2 {
+
+using A = struct S;
+// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: redundant 'struct' keyword in C++ declaration
+// CHECK-FIXES: using A = S;
+
+namespace N3 {
+
+int S;
+
+using B = struct S;
+// CHECK-FIXES: using B = struct S;
+
+void foo() {
+  using C = struct S;
+  // CHECK-FIXES: using C = struct S;
+
+  {
+    using D = struct S;
+    // CHECK-FIXES: using D = struct S;
+  }
+}
+
+} // namespace N3
+
+void bar() {
+  using E = struct S;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: redundant 'struct' keyword in C++ declaration
+  // CHECK-FIXES: using E = S;
+}
+
+} // namespace N2
+} // namespace N1
+
+} // namespace HiddenNamespaceRegression
+
+//===----------------------------------------------------------------------===//
+// Regression test: deep namespace lookup
+//===----------------------------------------------------------------------===//
+
+namespace DeepLookupRegression {
+
+struct Global {};
+
+namespace N1 {
+
+using ::DeepLookupRegression::Global;
+
+using T1 = struct Global;
+// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant 'struct' keyword in C++ declaration
+// CHECK-FIXES: using T1 = Global;
+
+namespace N2 {
+
+using T2 = struct Global;
+// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant 'struct' keyword in C++ declaration
+// CHECK-FIXES: using T2 = Global;
+
+namespace N3 {
+
+int Global;
+
+using T3 = struct Global;
+// CHECK-FIXES: using T3 = struct Global;
+
+namespace N4 {
+
+using T4 = struct Global;
+// CHECK-FIXES: using T4 = struct Global;
+
+namespace N5 {
+
+using T5 = struct Global;
+// CHECK-FIXES: using T5 = struct Global;
+
+} // namespace N5
+} // namespace N4
+} // namespace N3
+
+using T6 = struct Global;
+// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant 'struct' keyword in C++ declaration
+// CHECK-FIXES: using T6 = Global;
+
+} // namespace N2
+
+using T7 = struct Global;
+// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant 'struct' keyword in C++ declaration
+// CHECK-FIXES: using T7 = Global;
+
+} // namespace N1
+
+} // namespace DeepLookupRegression
+
+//===----------------------------------------------------------------------===//
+// Regression test: deep nested block scopes
+//===----------------------------------------------------------------------===//
+
+namespace DeepBlockRegression {
+
+struct S {};
+
+namespace N1 {
+
+using ::DeepBlockRegression::S;
+
+namespace N2 {
+
+using A = struct S;
+// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: redundant 'struct' keyword in C++ declaration
+// CHECK-FIXES: using A = S;
+
+namespace N3 {
+
+int S;
+
+using B = struct S;
+// CHECK-FIXES: using B = struct S;
+
+void foo() {
+  using C = struct S;
+  // CHECK-FIXES: using C = struct S;
+
+  {
+    using D = struct S;
+    // CHECK-FIXES: using D = struct S;
+
+    {
+      using E = struct S;
+      // CHECK-FIXES: using E = struct S;
+
+      {
+        using F = struct S;
+        // CHECK-FIXES: using F = struct S;
+
+        {
+          using G = struct S;
+          // CHECK-FIXES: using G = struct S;
+        }
+      }
+    }
+  }
+}
+
+} // namespace N3
+
+void bar() {
+  using H = struct S;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: redundant 'struct' keyword in C++ declaration
+  // CHECK-FIXES: using H = S;
+}
+
+namespace N4 {
+
+using I = struct S;
+// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: redundant 'struct' keyword in C++ declaration
+// CHECK-FIXES: using I = S;
+
+namespace N5 {
+
+void baz() {
+  using J = struct S;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: redundant 'struct' keyword in C++ declaration
+  // CHECK-FIXES: using J = S;
+
+  {
+    using K = struct S;
+    // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: redundant 'struct' keyword in C++ declaration
+    // CHECK-FIXES: using K = S;
+  }
+}
+
+} // namespace N5
+} // namespace N4
+} // namespace N2
+} // namespace N1
+
+} // namespace DeepBlockRegression
