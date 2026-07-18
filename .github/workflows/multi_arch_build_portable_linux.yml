@@ -10,7 +10,7 @@
 # 4. comm-libs (per-arch) - RCCL, rocshmem (parallel to math-libs)
 # 5. debug-tools (generic) - amd-dbgapi, rocr-debug-agent, rocgdb (parallel to math-libs)
 # 6. dctools-core (generic) - RDC (parallel to math-libs)
-# 7. profiler-apps (generic) - rocprofiler-systems (parallel to math-libs)
+# 7. profiler-apps (generic) - rocprofiler-systems (parallel to math-libs) [DISABLED: see stage below]
 # 8. iree-compiler (generic) - IREE compiler (parallel to math-libs)
 # 9. fusilli-libs (generic) - Fusilli hipdnn provider (after math-libs + iree-compiler)
 # 10. media-libs (generic) - sysdeps-amd-mesa, rocdecode, rocjpeg
@@ -191,25 +191,30 @@ jobs:
       id-token: write
 
   # ==========================================================================
-  # STAGE: profiler-apps (generic, parallel to math-libs)
+  # STAGE: profiler-apps (generic, parallel to math-libs) - DISABLED
   # ==========================================================================
-  profiler-apps:
-    needs: compiler-runtime
-    if: ${{ !cancelled() && !failure() && !contains(inputs.prebuilt_stages, 'profiler-apps') }}
-    uses: ./.github/workflows/multi_arch_build_portable_linux_artifacts.yml
-    secrets: inherit
-    with:
-      stage_name: profiler-apps
-      stage_display_name: "Stage - Profiler Apps"
-      timeout_minutes: 180  # 3 hours
-      dist_amdgpu_families: ${{ inputs.dist_amdgpu_families }}
-      rocm_package_version: ${{ inputs.rocm_package_version }}
-      build_variant_cmake_preset: ${{ inputs.build_variant_cmake_preset }}
-      release_type: ${{ inputs.release_type }}
-      test_type: ${{ inputs.test_type }}
-    permissions:
-      contents: read
-      id-token: write
+  # Temporarily disabled: the rocprofiler-systems examples build hangs while
+  # compiling/linking transferBench/AllToAll.cpp, causing the stage to run for
+  # the full 3h timeout (first seen in upstream-merge PR #3391). No other stage
+  # depends on profiler-apps, so disabling it is safe. Re-enable by uncommenting
+  # once the upstream compiler/lld regression is fixed.
+  # profiler-apps:
+  #   needs: compiler-runtime
+  #   if: ${{ !cancelled() && !failure() && !contains(inputs.prebuilt_stages, 'profiler-apps') }}
+  #   uses: ./.github/workflows/multi_arch_build_portable_linux_artifacts.yml
+  #   secrets: inherit
+  #   with:
+  #     stage_name: profiler-apps
+  #     stage_display_name: "Stage - Profiler Apps"
+  #     timeout_minutes: 180  # 3 hours
+  #     dist_amdgpu_families: ${{ inputs.dist_amdgpu_families }}
+  #     rocm_package_version: ${{ inputs.rocm_package_version }}
+  #     build_variant_cmake_preset: ${{ inputs.build_variant_cmake_preset }}
+  #     release_type: ${{ inputs.release_type }}
+  #     test_type: ${{ inputs.test_type }}
+  #   permissions:
+  #     contents: read
+  #     id-token: write
 
   # ==========================================================================
   # STAGE: media-libs (generic)
