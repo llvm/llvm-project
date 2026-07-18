@@ -79,6 +79,11 @@ namespace {
     Align Alignment;            // CP alignment.
     unsigned char SymbolFlags = X86II::MO_NO_FLAG;  // X86II::MO_*
     bool NegateIndex = false;
+    // True when this address is being matched to be emitted as an LEA rather
+    // than folded into a memory operand.  Unlike a memory operand, an LEA turns
+    // the folded arithmetic into real instructions, so it is not profitable to
+    // split an already-materialized (multi-use) value here. (Issue #51707)
+    bool IsForLEA = false;
 
     X86ISelAddressMode() = default;
 
@@ -2067,16 +2072,32 @@ bool X86DAGToDAGISel::matchAdd(SDValue &N, X86ISelAddressMode &AM,
   // it if it gets CSE'd with a different node.
   HandleSDNode Handle(N);
 
+  // When forming an LEA, avoid splitting an already-materialized value.  A
+  // multi-use, multi-level add-like operand will be materialized in a register
+  // regardless; looking through it to sink a part into the address would force
+  // the inner level to be recomputed separately (a constant folds into the
+  // displacement, a leaf into a base/index register, but a nested add-like
+  // value does not fold into a single free address slot).  Just use the
+  // operand directly as a base/index register. (Issue #51707)
+  auto IsAddLike = [&](SDValue V) {
+    return V.getOpcode() == ISD::ADD || CurDAG->isADDLike(V);
+  };
+  auto MatchOperand = [&](SDValue Op) {
+    if (AM.IsForLEA && !Op.hasOneUse() && IsAddLike(Op) &&
+        (IsAddLike(Op.getOperand(0)) || IsAddLike(Op.getOperand(1))))
+      return matchAddressBase(Op, AM);
+    return matchAddressRecursively(Op, AM, Depth + 1);
+  };
+
   X86ISelAddressMode Backup = AM;
-  if (!matchAddressRecursively(N.getOperand(0), AM, Depth+1) &&
-      !matchAddressRecursively(Handle.getValue().getOperand(1), AM, Depth+1))
+  if (!MatchOperand(N.getOperand(0)) &&
+      !MatchOperand(Handle.getValue().getOperand(1)))
     return false;
   AM = Backup;
 
   // Try again after commutating the operands.
-  if (!matchAddressRecursively(Handle.getValue().getOperand(1), AM,
-                               Depth + 1) &&
-      !matchAddressRecursively(Handle.getValue().getOperand(0), AM, Depth + 1))
+  if (!MatchOperand(Handle.getValue().getOperand(1)) &&
+      !MatchOperand(Handle.getValue().getOperand(0)))
     return false;
   AM = Backup;
 
@@ -3153,6 +3174,7 @@ bool X86DAGToDAGISel::selectLEAAddr(SDValue N,
                                     SDValue &Index, SDValue &Disp,
                                     SDValue &Segment) {
   X86ISelAddressMode AM;
+  AM.IsForLEA = true;
 
   // Save the DL and VT before calling matchAddress, it can invalidate N.
   SDLoc DL(N);
