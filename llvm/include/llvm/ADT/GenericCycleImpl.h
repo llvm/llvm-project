@@ -231,11 +231,11 @@ template <typename ContextT> class GenericCycleInfoCompute {
   struct BlockInfo {
     // The block this entry describes; non-null once visited by DFS.
     BlockT *Block = nullptr;
+    // 1-based position on the current DFS path; 0 if off path.
+    unsigned DFSPPos = 0;
     // Block number of the innermost loop header; NoBlock if none. Set to
     // NoBlock by open() on first visit, then woven by tagLoopHeader.
     unsigned LoopHeader = 0;
-    // 1-based position on the current DFS path; 0 if off path.
-    unsigned DFSPPos = 0;
     // Header-preorder rank of the innermost cycle containing this block (the
     // cycle it heads if IsHeader); NoCycle if none. Set by the numbering pass.
     unsigned CycleIdx = 0;
@@ -254,7 +254,7 @@ template <typename ContextT> class GenericCycleInfoCompute {
   SmallVector<BlockInfo, 8> BlockInfos;
   // Reachable block numbers in DFS preorder.
   SmallVector<unsigned, 8> Preorder;
-  // Number of loop headers found by dfs(), i.e. the number of cycles.
+  // Number of loop headers found by dfs().
   unsigned NumHeaders = 0;
   // Records (header H, block B): an edge from outside re-enters the closed
   // cycle headed by H at B, making B a non-header entry of it.
@@ -419,9 +419,9 @@ void GenericCycleInfoCompute<ContextT>::run(FunctionT *F) {
   // Number the cycles by their header's preorder rank and resolve every
   // block's innermost cycle in one pass: a block's LoopHeader is a DFS
   // ancestor and so already numbered, and parents get smaller ranks than
-  // their children. dfs() counted the headers, so Build needs one allocation;
-  // the exact reserve also keeps push_back from invalidating Head.
+  // their children.
   SmallVector<CycleBuild, 8> Build;
+  // Exact reserve so the Head reference below survives each push_back.
   Build.reserve(NumHeaders);
   unsigned TopHead = NoCycle;
   for (unsigned N : Preorder) {
@@ -483,11 +483,11 @@ void GenericCycleInfoCompute<ContextT>::dfs(BlockT *EntryBlock) {
 
   auto open = [&](BlockT *Block) {
     unsigned N = num(Block);
+    Preorder[Counter] = N;
     BlockInfo &BI = info(N);
     BI.Block = Block;
-    BI.LoopHeader = NoBlock;
     BI.DFSPPos = ++Counter;
-    Preorder[Counter - 1] = N;
+    BI.LoopHeader = NoBlock;
     auto Succs = successors(Block);
     Stack.push_back({N, std::make_reverse_iterator(Succs.end()),
                      std::make_reverse_iterator(Succs.begin())});
@@ -512,11 +512,10 @@ void GenericCycleInfoCompute<ContextT>::dfs(BlockT *EntryBlock) {
         }
         tagLoopHeader(B0, B1);
       } else {
-        // Climb B1's header chain outward: every enclosing header still off
-        // the DFS path heads a closed cycle that this edge re-enters, making
-        // B1 a non-header entry of it (and the cycle irreducible). Stop at the
-        // first header still on the path (genuine interior node of the loop),
-        // and attribute B0 to it.
+        // Climb B1's header chain: each enclosing header still off the DFS path
+        // heads a closed cycle this edge re-enters, so B1 is a non-header entry
+        // of it (and it is irreducible). Stop at the first on-path header and
+        // attribute B0 to it.
         for (unsigned H = B1Info.LoopHeader; H != NoBlock;
              H = info(H).LoopHeader) {
           if (info(H).DFSPPos > 0) {
