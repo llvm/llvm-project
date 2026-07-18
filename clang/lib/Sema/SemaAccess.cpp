@@ -389,6 +389,37 @@ DeduceTemplateArguments(Sema &S, FriendTemplateDecl *FTD, DeclContext *DC,
   return CandidateRD->isDependentContext() ? AR_dependent : AR_inaccessible;
 }
 
+class FriendTemplateMatchContext {
+  Sema &S;
+  FriendTemplateDecl *FTD;
+  Sema::InstantiatingTemplate Inst;
+  TemplateDeductionInfo Info;
+  MultiLevelTemplateArgumentList DeducedArgs;
+  Sema::SFINAETrap Trap;
+  LocalInstantiationScope InstantiationScope;
+  AccessResult Result = AR_inaccessible;
+
+public:
+  FriendTemplateMatchContext(Sema &S, FriendTemplateDecl *FTD)
+      : S(S), FTD(FTD), Inst(S, FTD->getLocation(), FTD),
+        Info(FTD->getLocation()), Trap(S, Info), InstantiationScope(S) {}
+
+  AccessResult deduce(DeclContext *DC, const TemplateSpecializationType *TST,
+                      ArrayRef<TemplateParameterList *> TPLs,
+                      TemplateSpecCandidateSet *FailedTSC) {
+    if (Inst.isInvalid())
+      return Result = AR_inaccessible;
+    return Result = DeduceTemplateArguments(S, FTD, DC, TST, TPLs, FailedTSC,
+                                            DeducedArgs);
+  }
+
+  AccessResult getAccessResult() const { return Result; }
+  MultiLevelTemplateArgumentList &getDeducedArgs() { return DeducedArgs; }
+
+  bool hasDeducedArgs() const { return Result == AR_accessible; }
+  bool hasErrorOccurred() const { return Trap.hasErrorOccurred(); }
+};
+
 static bool HasSameFunctionType(Sema &S, QualType FriendType,
                                 QualType ContextType, SourceLocation Loc) {
   if (!S.Context.hasSameFunctionTypeIgnoringExceptionSpec(FriendType,
@@ -727,22 +758,14 @@ static AccessResult MatchesFriend(Sema &S, FriendTemplateDecl *FTD,
   AccessResult OnFailure =
       ContextDC->isDependentContext() ? AR_dependent : AR_inaccessible;
 
-  MultiLevelTemplateArgumentList DeducedArgs;
-  AccessResult QualifierResult = DeduceTemplateArguments(
-      S, FTD, ContextDC, FriendTST, TPLs, FailedTSC, DeducedArgs);
-  if (QualifierResult != AR_accessible)
-    return QualifierResult;
+  FriendTemplateMatchContext FTMC(S, FTD);
+  AccessResult Result = FTMC.deduce(ContextDC, FriendTST, TPLs, FailedTSC);
+  if (!FTMC.hasDeducedArgs())
+    return Result;
 
-  Sema::InstantiatingTemplate Inst(S, FTD->getLocation(), FTD);
-  if (Inst.isInvalid())
-    return AR_inaccessible;
-
-  TemplateDeductionInfo Info(FTD->getLocation());
-  Sema::SFINAETrap Trap(S, Info);
-  LocalInstantiationScope InstantiationScope(S);
-  TemplateParameterList *InstTPL =
-      SubstTemplateParameterList(S, MemberTPL, ContextDC, DeducedArgs);
-  if (!InstTPL || Trap.hasErrorOccurred())
+  TemplateParameterList *InstTPL = SubstTemplateParameterList(
+      S, MemberTPL, ContextDC, FTMC.getDeducedArgs());
+  if (!InstTPL || FTMC.hasErrorOccurred())
     return OnFailure;
 
   Sema::TemplateCompareNewDeclInfo FriendInfo(
@@ -826,24 +849,17 @@ static AccessResult MatchesFriend(Sema &S, FriendTemplateDecl *FTD,
   AccessResult OnFailure =
       ContextDC->isDependentContext() ? AR_dependent : AR_inaccessible;
 
-  MultiLevelTemplateArgumentList DeducedArgs;
-  AccessResult QualifierResult = DeduceTemplateArguments(
-      S, FTD, ContextDC, FriendTST, TPLs, FailedTSC, DeducedArgs);
-  if (QualifierResult != AR_accessible)
-    return QualifierResult;
+  FriendTemplateMatchContext FTMC(S, FTD);
+  AccessResult Result = FTMC.deduce(ContextDC, FriendTST, TPLs, FailedTSC);
+  if (!FTMC.hasDeducedArgs())
+    return Result;
 
-  Sema::InstantiatingTemplate Inst(S, FTD->getLocation(), FTD);
-  if (Inst.isInvalid())
-    return AR_inaccessible;
-
-  TemplateDeductionInfo Info(FTD->getLocation());
-  Sema::SFINAETrap Trap(S, Info);
-  LocalInstantiationScope InstantiationScope(S);
   Sema::TemplateCompareNewDeclInfo FriendInfo(
       ContextDC, FTD->getLexicalDeclContext(), FTD->getLocation());
   if (FriendTemplate) {
-    TemplateParameterList *InstTPL = SubstTemplateParameterList(
-        S, FriendTemplate->getTemplateParameters(), ContextDC, DeducedArgs);
+    TemplateParameterList *InstTPL =
+        SubstTemplateParameterList(S, FriendTemplate->getTemplateParameters(),
+                                   ContextDC, FTMC.getDeducedArgs());
     if (!InstTPL || !S.TemplateParameterListsAreEqual(
                         FriendInfo, InstTPL, ContextTemplate,
                         ContextTemplate->getTemplateParameters(),
@@ -855,10 +871,10 @@ static AccessResult MatchesFriend(Sema &S, FriendTemplateDecl *FTD,
 
   Sema::ContextRAII SavedContext(S, FTD->getDeclContext());
   QualType InstFriendType =
-      S.SubstType(FriendFD->getType(), DeducedArgs, FriendFD->getLocation(),
-                  FriendFD->getDeclName());
+      S.SubstType(FriendFD->getType(), FTMC.getDeducedArgs(),
+                  FriendFD->getLocation(), FriendFD->getDeclName());
   SavedContext.pop();
-  if (InstFriendType.isNull() || Trap.hasErrorOccurred())
+  if (InstFriendType.isNull() || FTMC.hasErrorOccurred())
     return OnFailure;
 
   if (ContextTemplate && !FriendTemplate) {
@@ -870,8 +886,8 @@ static AccessResult MatchesFriend(Sema &S, FriendTemplateDecl *FTD,
     if (ArgsWritten) {
       InstArgs.setLAngleLoc(ArgsWritten->getLAngleLoc());
       InstArgs.setRAngleLoc(ArgsWritten->getRAngleLoc());
-      if (S.SubstTemplateArguments(ArgsWritten->arguments(), DeducedArgs,
-                                   InstArgs))
+      if (S.SubstTemplateArguments(ArgsWritten->arguments(),
+                                   FTMC.getDeducedArgs(), InstArgs))
         return OnSpecializationFailure;
     }
 
@@ -881,7 +897,7 @@ static AccessResult MatchesFriend(Sema &S, FriendTemplateDecl *FTD,
             ContextTemplate, ArgsWritten ? &InstArgs : nullptr, InstFriendType,
             ContextSpecialization,
             FunctionInfo) != TemplateDeductionResult::Success ||
-        !ContextSpecialization || Trap.hasErrorOccurred() ||
+        !ContextSpecialization || FTMC.hasErrorOccurred() ||
         !declaresSameEntity(ContextSpecialization, ContextFD))
       return OnSpecializationFailure;
 
@@ -890,7 +906,7 @@ static AccessResult MatchesFriend(Sema &S, FriendTemplateDecl *FTD,
 
   if (!HasSameFunctionType(S, InstFriendType, ContextFD->getType(),
                            FTD->getLocation()) ||
-      Trap.hasErrorOccurred())
+      FTMC.hasErrorOccurred())
     return OnFailure;
 
   if (!FriendTemplate)
@@ -908,7 +924,8 @@ static AccessResult MatchesFriend(Sema &S, FriendTemplateDecl *FTD,
 
   ExprResult InstFriendRequiresClause =
       S.SubstConstraintExprWithoutSatisfaction(
-          const_cast<Expr *>(FriendRequiresClause.ConstraintExpr), DeducedArgs);
+          const_cast<Expr *>(FriendRequiresClause.ConstraintExpr),
+          FTMC.getDeducedArgs());
 
   if (!InstFriendRequiresClause.isUsable())
     return OnFailure;
@@ -917,7 +934,7 @@ static AccessResult MatchesFriend(Sema &S, FriendTemplateDecl *FTD,
           ContextFD, ContextRequiresClause.ConstraintExpr, FriendInfo,
           InstFriendRequiresClause.get()))
     return OnFailure;
-  return Trap.hasErrorOccurred() ? AR_inaccessible : AR_accessible;
+  return FTMC.hasErrorOccurred() ? AR_inaccessible : AR_accessible;
 }
 
 static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
@@ -1000,26 +1017,19 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
           ContextCTD->getTemplatedDecl()->isUnion())
         continue;
 
-      MultiLevelTemplateArgumentList DeducedArgs;
+      FriendTemplateMatchContext FTMC(S, FTD);
       AccessResult Result =
-          DeduceTemplateArguments(S, FTD, ContextRD->getDeclContext(),
-                                  FriendQTST, TPLs, FailedTSC, DeducedArgs);
-      if (Result != AR_accessible) {
+          FTMC.deduce(ContextRD->getDeclContext(), FriendQTST, TPLs, FailedTSC);
+      if (!FTMC.hasDeducedArgs()) {
         if (Result == AR_dependent)
           OnFailure = AR_dependent;
         continue;
       }
 
-      Sema::InstantiatingTemplate Inst(S, FTD->getLocation(), FTD);
-      if (Inst.isInvalid())
-        continue;
-
-      TemplateDeductionInfo Info(FTD->getLocation());
-      Sema::SFINAETrap Trap(S, Info);
-      LocalInstantiationScope InstantiationScope(S);
-      TypeSourceInfo *InstFriendTSI = S.SubstFriendType(
-          FriendTSI, DeducedArgs, FTD->getLocation(), DeclarationName());
-      if (InstFriendTSI && !Trap.hasErrorOccurred() &&
+      TypeSourceInfo *InstFriendTSI =
+          S.SubstFriendType(FriendTSI, FTMC.getDeducedArgs(),
+                            FTD->getLocation(), DeclarationName());
+      if (InstFriendTSI && !FTMC.hasErrorOccurred() &&
           S.Context.hasSameType(InstFriendTSI->getType(),
                                 S.Context.getCanonicalTagType(ContextRD)))
         return AR_accessible;
@@ -1110,13 +1120,12 @@ static AccessResult MatchesFriend(Sema &S, const EffectiveContext &EC,
   if (FTD->isInvalidDecl())
     return AR_accessible;
 
-  if (NamedDecl *Friend = FTD->getFriendDecl())
-    return MatchesFriend(S, EC, FTD, Friend, FailedTSC);
+  if (TypeSourceInfo *TSI = FTD->getFriendType())
+    return MatchesFriend(S, EC, FTD, TSI, FailedTSC);
 
-  if (TypeSourceInfo *FriendTSI = FTD->getFriendType())
-    return MatchesFriend(S, EC, FTD, FriendTSI, FailedTSC);
-
-  return AR_inaccessible;
+  NamedDecl *Friend = FTD->getFriendDecl();
+  assert(Friend && "friend template must name a type or declaration");
+  return MatchesFriend(S, EC, FTD, Friend, FailedTSC);
 }
 
 static AccessResult GetFriendKind(Sema &S, const EffectiveContext &EC,

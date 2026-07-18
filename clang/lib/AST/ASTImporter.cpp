@@ -185,6 +185,8 @@ namespace clang {
       return Importer.importInto(To, From);
     }
 
+    Expected<FriendDecl::FriendUnion> importFriendUnion(FriendDecl *D);
+
     // Use this to import pointers of specific type.
     template <typename ImportT>
     [[nodiscard]] Error importInto(ImportT *&To, ImportT *From) {
@@ -4637,6 +4639,27 @@ static FriendCountAndPosition getFriendCountAndPosition(ASTImporter &Importer,
   return {FriendCount, *FriendPosition};
 }
 
+Expected<FriendDecl::FriendUnion>
+ASTNodeImporter::importFriendUnion(FriendDecl *D) {
+  if (NamedDecl *FriendD = D->getFriendDecl()) {
+    NamedDecl *ToFriendD;
+    if (Error Err = importInto(ToFriendD, FriendD))
+      return std::move(Err);
+
+    if (FriendD->getFriendObjectKind() != Decl::FOK_None &&
+        !FriendD->isInIdentifierNamespace(Decl::IDNS_NonMemberOperator))
+      ToFriendD->setObjectOfFriendDecl(false);
+
+    return ToFriendD;
+  }
+
+  // The friend is a type, not a decl.
+  auto TSIOrErr = import(D->getFriendType());
+  if (TSIOrErr)
+    return *TSIOrErr;
+  return TSIOrErr.takeError();
+}
+
 ExpectedDecl ASTNodeImporter::VisitFriendDecl(FriendDecl *D) {
   // Import the major distinguishing characteristics of a declaration.
   DeclContext *DC, *LexicalDC;
@@ -4663,23 +4686,10 @@ ExpectedDecl ASTNodeImporter::VisitFriendDecl(FriendDecl *D) {
 
   // Not found. Create it.
   // The declarations will be put into order later by ImportDeclContext.
-  FriendDecl::FriendUnion ToFU;
-  if (NamedDecl *FriendD = D->getFriendDecl()) {
-    NamedDecl *ToFriendD;
-    if (Error Err = importInto(ToFriendD, FriendD))
-      return std::move(Err);
-
-    if (FriendD->getFriendObjectKind() != Decl::FOK_None &&
-        !(FriendD->isInIdentifierNamespace(Decl::IDNS_NonMemberOperator)))
-      ToFriendD->setObjectOfFriendDecl(false);
-
-    ToFU = ToFriendD;
-  } else { // The friend is a type, not a decl.
-    if (auto TSIOrErr = import(D->getFriendType()))
-      ToFU = *TSIOrErr;
-    else
-      return TSIOrErr.takeError();
-  }
+  auto ToFUOrErr = importFriendUnion(D);
+  if (!ToFUOrErr)
+    return ToFUOrErr.takeError();
+  FriendDecl::FriendUnion ToFU = *ToFUOrErr;
 
   auto LocationOrErr = import(D->getLocation());
   if (!LocationOrErr)
@@ -4727,26 +4737,16 @@ ExpectedDecl ASTNodeImporter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
         D, ImportedEquivalentFriends[CountAndPosition.IndexOfDecl]);
 
   FriendTemplateDecl::FriendUnion ToFU;
-  TemplateName ToTemplate;
-  TemplateName FromTemplate = D->getFriendTemplateName();
-  if (TypeSourceInfo *FriendType = D->getFriendType()) {
-    if (auto TSIOrErr = import(FriendType))
-      ToFU = *TSIOrErr;
-    else
-      return TSIOrErr.takeError();
-  } else if (FromTemplate.isNull()) {
-    NamedDecl *FriendD = D->getFriendDecl();
-    NamedDecl *ToFriendD;
-    if (Error Err = importInto(ToFriendD, FriendD))
-      return std::move(Err);
-
-    if (FriendD->getFriendObjectKind() != Decl::FOK_None &&
-        !FriendD->isInIdentifierNamespace(Decl::IDNS_NonMemberOperator))
-      ToFriendD->setObjectOfFriendDecl(false);
-
-    ToFU = ToFriendD;
+  if (D->getFriendKind() !=
+      FriendTemplateDecl::FriendTemplateEntityKind::Template) {
+    auto ToFUOrErr = importFriendUnion(D);
+    if (!ToFUOrErr)
+      return ToFUOrErr.takeError();
+    ToFU = *ToFUOrErr;
   }
 
+  TemplateName ToTemplate;
+  const TemplateName FromTemplate = D->getFriendTemplateName();
   if (!FromTemplate.isNull()) {
     if (Error Err = importInto(ToTemplate, FromTemplate))
       return std::move(Err);
@@ -4770,17 +4770,10 @@ ExpectedDecl ASTNodeImporter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
     return EllipsisLocOrErr.takeError();
 
   FriendTemplateDecl *FTD;
-  if (!ToFU.isNull()) {
-    if (GetImportedOrCreateDecl(FTD, D, Importer.getToContext(), DC,
-                                *LocationOrErr, ToFU, *FriendLocOrErr, ToTPLs,
-                                *EllipsisLocOrErr, ToTemplate))
-      return FTD;
-  } else {
-    if (GetImportedOrCreateDecl(FTD, D, Importer.getToContext(), DC,
-                                *LocationOrErr, ToTemplate, *FriendLocOrErr,
-                                ToTPLs, *EllipsisLocOrErr))
-      return FTD;
-  }
+  if (GetImportedOrCreateDecl(FTD, D, Importer.getToContext(), DC,
+                              *LocationOrErr, ToFU, *FriendLocOrErr, ToTPLs,
+                              *EllipsisLocOrErr, ToTemplate))
+    return FTD;
 
   FTD->setAccess(D->getAccess());
   FTD->setLexicalDeclContext(LexicalDC);

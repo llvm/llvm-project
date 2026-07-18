@@ -2493,6 +2493,8 @@ public:
   friend class ASTDeclWriter;
   friend TrailingObjects;
 
+  enum class FriendTemplateEntityKind { Type, Template, Decl };
+
   static FriendTemplateDecl *
   Create(ASTContext &Context, DeclContext *DC, SourceLocation Loc,
          FriendUnion Friend, SourceLocation FriendLoc,
@@ -2511,6 +2513,20 @@ public:
   SourceRange getSourceRange() const override LLVM_READONLY;
 
   TemplateName getFriendTemplateName() const { return Template; }
+
+  FriendTemplateEntityKind getFriendKind() const {
+    if (getFriendType())
+      return FriendTemplateEntityKind::Type;
+    if (Template.isNull())
+      return FriendTemplateEntityKind::Decl;
+    return FriendTemplateEntityKind::Template;
+  }
+
+  NamedDecl *getFriendDecl() const override {
+    if (NamedDecl *ND = Friend.dyn_cast<NamedDecl *>())
+      return ND;
+    return Template.getAsTemplateDecl();
+  }
 
   ArrayRef<TemplateParameterList *> getTemplateParameterLists() const {
     return ArrayRef(getTrailingObjects(), NumTPLists);

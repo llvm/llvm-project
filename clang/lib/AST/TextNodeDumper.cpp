@@ -3042,13 +3042,13 @@ void TextNodeDumper::VisitFriendDecl(const FriendDecl *D) {
 }
 
 void TextNodeDumper::VisitFriendTemplateDecl(const FriendTemplateDecl *D) {
-  TemplateName TN = D->getFriendTemplateName();
-  if (D->getFriendType() || TN.isNull()) {
+  if (D->getFriendKind() !=
+      FriendTemplateDecl::FriendTemplateEntityKind::Template) {
     VisitFriendDecl(D);
     return;
   }
 
-  dumpBareTemplateName(TN);
+  dumpBareTemplateName(D->getFriendTemplateName());
   if (D->isPackExpansion())
     OS << "...";
 }

@@ -481,19 +481,21 @@ public:
   }
 
   void VisitFriendTemplateDecl(const FriendTemplateDecl *D) {
-    for (TemplateParameterList *TPL : D->getTemplateParameterLists())
+    for (const TemplateParameterList *TPL : D->getTemplateParameterLists())
       Hash.AddTemplateParameterList(TPL);
 
-    TemplateName TN = D->getFriendTemplateName();
-    Hash.AddBoolean(TN.isNull());
-    if (D->getFriendType()) {
+    bool IsTemplateFriend =
+        D->getFriendKind() ==
+        FriendTemplateDecl::FriendTemplateEntityKind::Template;
+    Hash.AddBoolean(!IsTemplateFriend);
+    if (!IsTemplateFriend) {
       VisitFriendDecl(D);
-      if (!TN.isNull())
-        Hash.AddTemplateName(TN);
-    } else if (TN.isNull()) {
-      VisitFriendDecl(D);
+      if (D->getFriendKind() ==
+              FriendTemplateDecl::FriendTemplateEntityKind::Type &&
+          !D->getFriendTemplateName().isNull())
+        Hash.AddTemplateName(D->getFriendTemplateName());
     } else {
-      Hash.AddTemplateName(TN);
+      Hash.AddTemplateName(D->getFriendTemplateName());
       Hash.AddBoolean(D->isPackExpansion());
     }
   }

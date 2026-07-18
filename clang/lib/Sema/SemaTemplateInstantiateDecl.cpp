@@ -2099,8 +2099,10 @@ Sema::SubstFriendType(TypeSourceInfo *TSI,
 }
 
 struct SubstitutedFriend {
-  TypeSourceInfo *Type = nullptr;
-  TemplateName Template;
+  TypeSourceInfo *TypeInfo = nullptr;
+  TemplateName TemplateName;
+
+  bool empty() const { return !TypeInfo && TemplateName.isNull(); }
 };
 
 static std::optional<SubstitutedFriend>
@@ -2190,26 +2192,23 @@ bool TemplateDeclInstantiator::InstantiateFriendPackExpansion(FriendDecl *D) {
     else if (TypeSourceInfo *InstType = SemaRef.SubstFriendType(
                  TSI, TemplateArgs, D->getEllipsisLoc(), DeclarationName()))
       InstFriend = SubstitutedFriend{InstType, {}};
-    if (!InstFriend || (!InstFriend->Type && InstFriend->Template.isNull()))
+    if (!InstFriend || InstFriend->empty())
       return true;
 
     FriendDecl *FD;
     if (FTD) {
-      if (InstFriend->Type)
-        FD = FriendTemplateDecl::Create(
-            SemaRef.Context, Owner, D->getLocation(), InstFriend->Type,
-            D->getFriendLoc(), InstTPLs, /*EllipsisLoc=*/{},
-            InstFriend->Template);
-      else
-        FD = FriendTemplateDecl::Create(SemaRef.Context, Owner,
-                                        D->getLocation(), InstFriend->Template,
-                                        D->getFriendLoc(), InstTPLs);
+      FriendDecl::FriendUnion ToFriend =
+          InstFriend->TypeInfo ? FriendDecl::FriendUnion(InstFriend->TypeInfo)
+                               : FriendDecl::FriendUnion();
+      FD = FriendTemplateDecl::Create(
+          SemaRef.Context, Owner, D->getLocation(), ToFriend, D->getFriendLoc(),
+          InstTPLs, /*EllipsisLoc=*/{}, InstFriend->TemplateName);
     } else {
       assert(InstTPLs.empty() && "unexpected template parameter lists");
-      assert(InstFriend->Template.isNull() &&
+      assert(InstFriend->TemplateName.isNull() &&
              "non-template friend resolved to a class template");
       FD = FriendDecl::Create(SemaRef.Context, Owner, D->getLocation(),
-                              InstFriend->Type, D->getFriendLoc());
+                              InstFriend->TypeInfo, D->getFriendLoc());
     }
 
     FD->setAccess(AS_public);
@@ -4961,45 +4960,36 @@ Decl *TemplateDeclInstantiator::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
   if (SubstTemplateParameterLists(FriendTPLs, InstTPLs))
     return nullptr;
 
-  FriendTemplateDecl *InstFriend = nullptr;
+  FriendDecl::FriendUnion ToFriend;
+  TemplateName ToTemplate;
   if (FriendTSI) {
     std::optional<SubstitutedFriend> Substituted = SubstFriendTemplateType(
         SemaRef, FriendTSI, D->getFriendTemplateName(), TemplateArgs,
         D->getLocation(), DeclarationName());
-    if (!Substituted)
+    if (!Substituted || Substituted->empty())
       return nullptr;
-
-    if (Substituted->Type) {
-      InstFriend = FriendTemplateDecl::Create(
-          SemaRef.Context, Owner, D->getLocation(), Substituted->Type,
-          D->getFriendLoc(), InstTPLs, /*EllipsisLoc=*/{},
-          Substituted->Template);
-    } else {
-      if (Substituted->Template.isNull())
-        return nullptr;
-      InstFriend = FriendTemplateDecl::Create(
-          SemaRef.Context, Owner, D->getLocation(), Substituted->Template,
-          D->getFriendLoc(), InstTPLs);
-    }
+    ToFriend = Substituted->TypeInfo;
+    ToTemplate = Substituted->TemplateName;
   } else if (!D->getFriendTemplateName().isNull()) {
     if (auto *InstTemplate =
             cast_or_null<TemplateDecl>(Visit(D->getFriendDecl())))
-      InstFriend = FriendTemplateDecl::Create(
-          SemaRef.Context, Owner, D->getLocation(), TemplateName(InstTemplate),
-          D->getFriendLoc(), InstTPLs);
+      ToTemplate = TemplateName(InstTemplate);
+    else
+      return nullptr;
   } else {
     if (auto *InstFriendDecl =
             cast_or_null<NamedDecl>(Visit(D->getFriendDecl())))
-      InstFriend = FriendTemplateDecl::Create(SemaRef.Context, Owner,
-                                              D->getLocation(), InstFriendDecl,
-                                              D->getFriendLoc(), InstTPLs);
+      ToFriend = InstFriendDecl;
+    else
+      return nullptr;
   }
 
-  if (InstFriend) {
-    InstFriend->setAccess(AS_public);
-    Owner->addDecl(InstFriend);
-  }
+  FriendTemplateDecl *InstFriend = FriendTemplateDecl::Create(
+      SemaRef.Context, Owner, D->getLocation(), ToFriend, D->getFriendLoc(),
+      InstTPLs, /*EllipsisLoc=*/{}, ToTemplate);
 
+  InstFriend->setAccess(AS_public);
+  Owner->addDecl(InstFriend);
   return InstFriend;
 }
 

@@ -1733,16 +1733,15 @@ DEF_TRAVERSE_DECL(FriendDecl, {
 })
 
 DEF_TRAVERSE_DECL(FriendTemplateDecl, {
-  TemplateName Template = D->getFriendTemplateName();
+  const TemplateName Template = D->getFriendTemplateName();
   if (D->getFriendType())
     TRY_TO(TraverseTypeLoc(D->getFriendType()->getTypeLoc()));
   else if (!Template.isNull())
     TRY_TO(TraverseTemplateName(Template));
   else
     TRY_TO(TraverseDecl(D->getFriendDecl()));
-  if (D->getFriendType() || !Template.isNull())
-    for (TemplateParameterList *TPL : D->getTemplateParameterLists())
-      TRY_TO(TraverseTemplateParameterListHelper(TPL));
+  for (TemplateParameterList *TPL : D->getTemplateParameterLists())
+    TRY_TO(TraverseTemplateParameterListHelper(TPL));
 })
 
 DEF_TRAVERSE_DECL(LinkageSpecDecl, {})

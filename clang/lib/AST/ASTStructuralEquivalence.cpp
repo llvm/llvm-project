@@ -2459,23 +2459,30 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
           }))
     return false;
 
-  TemplateName TN1 = FTD1->getFriendTemplateName();
-  TemplateName TN2 = FTD2->getFriendTemplateName();
-  if (TN1.isNull() != TN2.isNull())
+  auto FK1 = FTD1->getFriendKind();
+  auto FK2 = FTD2->getFriendKind();
+  if (FK1 != FK2)
     return false;
 
-  TypeSourceInfo *TSI1 = FTD1->getFriendType();
-  TypeSourceInfo *TSI2 = FTD2->getFriendType();
-  if (TSI1 || TSI2) {
-    if (!TSI1 || !TSI2 ||
-        !IsStructurallyEquivalent(Context, TSI1->getType(), TSI2->getType()))
+  switch (FK1) {
+  case FriendTemplateDecl::FriendTemplateEntityKind::Type: {
+    const TemplateName TN1 = FTD1->getFriendTemplateName();
+    const TemplateName TN2 = FTD2->getFriendTemplateName();
+    if (TN1.isNull() != TN2.isNull())
       return false;
-  } else if (TN1.isNull()) {
+    if (!IsStructurallyEquivalent(Context, FTD1->getFriendType()->getType(),
+                                  FTD2->getFriendType()->getType()))
+      return false;
+    return TN1.isNull() || IsStructurallyEquivalent(Context, TN1, TN2);
+  }
+  case FriendTemplateDecl::FriendTemplateEntityKind::Template:
+    return IsStructurallyEquivalent(Context, FTD1->getFriendTemplateName(),
+                                    FTD2->getFriendTemplateName());
+  case FriendTemplateDecl::FriendTemplateEntityKind::Decl:
     return IsStructurallyEquivalent(Context, static_cast<FriendDecl *>(FTD1),
                                     static_cast<FriendDecl *>(FTD2));
   }
-
-  return TN1.isNull() || IsStructurallyEquivalent(Context, TN1, TN2);
+  llvm_unreachable("unknown friend template kind");
 }
 
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,

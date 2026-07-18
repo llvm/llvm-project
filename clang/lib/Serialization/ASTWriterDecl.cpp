@@ -1851,23 +1851,30 @@ void ASTDeclWriter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
   VisitDecl(D);
   for (TemplateParameterList *TPL : D->getTemplateParameterLists())
     Record.AddTemplateParameterList(TPL);
+  FriendTemplateDeclKind Kind;
   if (D->getFriendType()) {
-    if (D->Template.isNull())
-      Record.push_back(FTDK_Type);
-    else {
-      assert(D->Template.isDependent());
-      Record.push_back(FTDK_Dependent);
-    }
-    Record.AddTypeSourceInfo(D->getFriendType());
-    if (!D->Template.isNull())
-      Record.AddTemplateName(D->Template);
+    Kind = D->Template.isNull() ? FTDK_Type : FTDK_Dependent;
   } else if (D->Template.isNull()) {
     assert(D->getFriendDecl());
-    Record.push_back(FTDK_Decl);
-    Record.AddDeclRef(D->getFriendDecl());
+    Kind = FTDK_Decl;
   } else {
-    Record.push_back(FTDK_Template);
+    Kind = FTDK_Template;
+  }
+  Record.push_back(Kind);
+  switch (Kind) {
+  case FTDK_Type:
+    Record.AddTypeSourceInfo(D->getFriendType());
+    break;
+  case FTDK_Dependent:
+    Record.AddTypeSourceInfo(D->getFriendType());
     Record.AddTemplateName(D->Template);
+    break;
+  case FTDK_Decl:
+    Record.AddDeclRef(D->getFriendDecl());
+    break;
+  case FTDK_Template:
+    Record.AddTemplateName(D->Template);
+    break;
   }
   Record.AddDeclRef(D->getNextFriend());
   Record.AddSourceLocation(D->FriendLoc);

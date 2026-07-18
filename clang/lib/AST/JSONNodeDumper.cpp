@@ -1152,15 +1152,15 @@ void JSONNodeDumper::VisitFriendDecl(const FriendDecl *FD) {
 }
 
 void JSONNodeDumper::VisitFriendTemplateDecl(const FriendTemplateDecl *FD) {
-  TemplateName TN = FD->getFriendTemplateName();
-  if (FD->getFriendType() || TN.isNull()) {
+  if (FD->getFriendKind() !=
+      FriendTemplateDecl::FriendTemplateEntityKind::Template) {
     VisitFriendDecl(FD);
     return;
   }
 
-  std::string Str;
-  llvm::raw_string_ostream OS(Str);
-  TN.print(OS, PrintPolicy);
+  llvm::SmallString<128> Str;
+  llvm::raw_svector_ostream OS(Str);
+  FD->getFriendTemplateName().print(OS, PrintPolicy);
   JOS.attribute("templateName", Str);
   attributeOnlyIfTrue("isPackExpansion", FD->isPackExpansion());
 }

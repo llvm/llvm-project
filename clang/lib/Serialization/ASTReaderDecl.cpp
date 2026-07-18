@@ -2417,7 +2417,8 @@ void ASTDeclReader::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
   VisitDecl(D);
   for (unsigned I = 0; I != D->NumTPLists; ++I)
     D->getTrailingObjects()[I] = Record.readTemplateParameterList();
-  switch (Record.readInt()) {
+  auto Kind = static_cast<FriendTemplateDeclKind>(Record.readInt());
+  switch (Kind) {
   case FTDK_Type:
     D->Friend = readTypeSourceInfo();
     break;
@@ -2426,6 +2427,8 @@ void ASTDeclReader::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
     break;
   case FTDK_Template:
     D->Template = Record.readTemplateName();
+    assert(D->Template.getAsTemplateDecl() &&
+           "friend template name must resolve to a template declaration");
     D->Friend = D->Template.getAsTemplateDecl();
     break;
   case FTDK_Dependent:

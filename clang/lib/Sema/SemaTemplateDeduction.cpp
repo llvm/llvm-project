@@ -4161,6 +4161,7 @@ bool Sema::DeduceTemplateArguments(
   }
 
   SmallVector<TemplateArgumentList *, 2> DeducedArgLists;
+  DeducedArgLists.reserve(TPLs.size());
   for (TemplateParameterList *Params : TPLs) {
     TemplateDeductionInfo Info(Loc, Params->getDepth());
     SFINAETrap Trap(*this, Info);
@@ -4239,7 +4240,7 @@ bool Sema::DeduceTemplateArguments(
 
     TemplateDeductionInfo Info(Loc, Params->getDepth());
     SFINAETrap Trap(*this, Info);
-    if (CheckConstraintSatisfaction(nullptr, Constraints, DeducedArgs,
+    if (CheckConstraintSatisfaction(PatternCTD, Constraints, DeducedArgs,
                                     SourceRange(Loc),
                                     Info.AssociatedConstraintsSatisfaction) ||
         !Info.AssociatedConstraintsSatisfaction.IsSatisfied ||

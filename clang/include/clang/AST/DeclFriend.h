@@ -56,6 +56,7 @@ private:
   // Location of the '...', if present.
   SourceLocation EllipsisLoc;
 
+  // Location of the 'friend' keyword.
   SourceLocation FriendLoc;
 
 protected:
@@ -65,8 +66,8 @@ protected:
   LazyDeclPtr NextFriend;
 
   FriendDecl(Kind K, DeclContext *DC, SourceLocation L, FriendUnion Friend,
-             SourceLocation FriendL, SourceLocation EllipsisLoc = {})
-      : Decl(K, DC, L), EllipsisLoc(EllipsisLoc), FriendLoc(FriendL),
+             SourceLocation FriendLoc, SourceLocation EllipsisLoc = {})
+      : Decl(K, DC, L), EllipsisLoc(EllipsisLoc), FriendLoc(FriendLoc),
         Friend(Friend), NextFriend() {}
 
   FriendDecl(Kind K, EmptyShell Empty) : Decl(K, Empty) {}
@@ -99,7 +100,7 @@ public:
 
   /// If this friend declaration doesn't name a type, return the inner
   /// declaration.
-  NamedDecl *getFriendDecl() const {
+  virtual NamedDecl *getFriendDecl() const {
     return Friend.dyn_cast<NamedDecl *>();
   }
 

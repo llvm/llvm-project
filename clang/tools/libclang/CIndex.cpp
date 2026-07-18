@@ -1313,10 +1313,9 @@ bool CursorVisitor::VisitFriendDecl(FriendDecl *D) {
 }
 
 bool CursorVisitor::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
-  if (D->getFriendType() || !D->getFriendTemplateName().isNull())
-    for (TemplateParameterList *TPL : D->getTemplateParameterLists())
-      if (VisitTemplateParameters(TPL))
-        return true;
+  for (TemplateParameterList *TPL : D->getTemplateParameterLists())
+    if (VisitTemplateParameters(TPL))
+      return true;
 
   return VisitFriendDecl(D);
 }
