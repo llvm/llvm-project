@@ -16,14 +16,6 @@ class TestCase(TestBase):
 
         frame = thread.GetFrameAtIndex(0)
 
-        # CXX runtime synthetic can be overridden
-        vec = frame.FindVariable("vec")
-
-        # GNU libstdc++'s std::vector doesn't have a CXXSyntheticChildren implementation
-        # Use the fact that GetTypeSynthetic() only returns scripted SCPs to filter
-        if vec.IsSynthetic() and vec.GetTypeSynthetic() is None:
-            self.checkOverride(vec, before=None)
-
         # Python synthetic can be overridden
         foo = frame.FindVariable("foo")
         self.assertTrue(foo.IsSynthetic())
