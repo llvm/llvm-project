@@ -274,8 +274,7 @@ template <typename ContextT> class GenericCycleInfoCompute {
   // DFS-path position. Building this chain on the fly is why the algorithm
   // needs no union-find (used in the Havlak algorithm) at all.
   void tagLoopHeader(unsigned B, unsigned H) {
-    if (H == NoBlock)
-      return;
+    assert(H != NoBlock);
     // Invariant: info(B).DFSPPos >= info(H).DFSPPos.
     while (B != H) {
       unsigned IH = info(B).LoopHeader;
@@ -531,7 +530,7 @@ void GenericCycleInfoCompute<ContextT>::dfs(BlockT *EntryBlock) {
       info(B0).DFSPPos = 0;
       Stack.pop_back();
       // And weave into the parent's chain (continue the "Tree edge" case).
-      if (!Stack.empty())
+      if (!Stack.empty() && info(B0).LoopHeader != NoBlock)
         tagLoopHeader(Stack.back().Block, info(B0).LoopHeader);
     }
   }
