@@ -192,12 +192,9 @@ static mlir::Value makeAtomicCmpXchgValue(CIRGenFunction &cgf,
   cir::AtomicCmpXchgOp op = cir::AtomicCmpXchgOp::create(
       builder, cgf.getLoc(expr->getSourceRange()), cmpVal.getType(),
       builder.getBoolTy(), destAddr.getPointer(), cmpVal, newVal,
-      cir::MemOrderAttr::get(&cgf.getMLIRContext(),
-                             cir::MemOrder::SequentiallyConsistent),
-      cir::MemOrderAttr::get(&cgf.getMLIRContext(),
-                             cir::MemOrder::SequentiallyConsistent),
-      cir::SyncScopeKindAttr::get(&cgf.getMLIRContext(),
-                                  cir::SyncScopeKind::System),
+      cir::MemOrder::SequentiallyConsistent,
+      cir::MemOrder::SequentiallyConsistent,
+      cir::SyncScopeKind::System,
       builder.getI64IntegerAttr(destAddr.getAlignment().getAsAlign().value()));
 
   return returnBool ? op.getResult(1) : op.getResult(0);
