@@ -91,6 +91,8 @@ public:
       orc_rt_SessionRef S, uint64_t CallId, orc_rt_WrapperFunctionReturn Return,
       orc_rt_WrapperFunction Fn, WrapperFunctionBuffer ArgBytes)>;
 
+  /// Tag used to identify executor-callable functions in the controller.
+  /// See callController.
   using HandlerTag = void *;
 
   /// Provides access to the controller.
