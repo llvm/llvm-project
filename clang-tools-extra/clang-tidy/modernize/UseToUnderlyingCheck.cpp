@@ -1,4 +1,4 @@
-//===--- UseToUnderlyingCheck.cpp - clang-tidy ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,7 +9,7 @@
 #include "UseToUnderlyingCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Lex/Lexer.h"
+#include "clang/Tooling/FixIt.h"
 
 using namespace clang::ast_matchers;
 
@@ -46,8 +46,14 @@ UseToUnderlyingCheck::UseToUnderlyingCheck(StringRef Name,
                                                utils::IncludeSorter::IS_LLVM),
                       areDiagsSelfContained()),
       MaybeHeaderToInclude(Options.get("ReplacementFunctionHeader")) {
-  if (!MaybeHeaderToInclude && ReplacementFunction == "std::to_underlying")
-    MaybeHeaderToInclude = "<utility>";
+  if (ReplacementFunction == "std::to_underlying") {
+    if (!MaybeHeaderToInclude)
+      MaybeHeaderToInclude = "<utility>";
+    else if (*MaybeHeaderToInclude != "<utility>")
+      configurationDiag("'std::to_underlying' is declared in '<utility>', but "
+                        "'ReplacementFunctionHeader' is set to '%0'")
+          << *MaybeHeaderToInclude;
+  }
 }
 
 bool UseToUnderlyingCheck::isLanguageVersionSupported(
@@ -75,13 +81,14 @@ void UseToUnderlyingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UseToUnderlyingCheck::registerMatchers(MatchFinder *Finder) {
-  // Match an explicit cast (``static_cast``, C-style or functional) whose
-  // operand is an expression of scoped-enumeration type. The destination type
-  // is validated in check() so that the same code path handles precise and
-  // imprecise conversions.
+  // Match an explicit cast (``static_cast``, C-style or functional) from a
+  // scoped enumeration to an integer type. Enum-to-enum casts and casts to a
+  // floating-point or pointer type are excluded here; whether the conversion is
+  // precise or imprecise is decided in check().
   Finder->addMatcher(
       explicitCastExpr(
-          unless(isInTemplateInstantiation()),
+          hasDestinationType(
+              qualType(isInteger(), unless(hasCanonicalType(enumType())))),
           hasSourceExpression(
               expr(hasType(hasCanonicalType(enumType(
                        hasDeclaration(enumDecl(isScoped()).bind("enum"))))))
@@ -95,17 +102,7 @@ void UseToUnderlyingCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Operand = Result.Nodes.getNodeAs<Expr>("operand");
   const auto *Enum = Result.Nodes.getNodeAs<EnumDecl>("enum");
 
-  // Ignore dependent contexts we cannot reason about reliably.
-  if (Cast->isValueDependent() || Cast->getType()->isDependentType())
-    return;
-
   const QualType DestType = Cast->getType().getCanonicalType();
-
-  // We only care about conversions to an integer type. Enum-to-enum casts and
-  // floating-point or pointer destinations are excluded.
-  if (!DestType->isIntegerType() || DestType->isEnumeralType())
-    return;
-
   const QualType UnderlyingType =
       Enum->getIntegerType().getCanonicalType().getUnqualifiedType();
   const QualType DestUnqualified = DestType.getUnqualifiedType();
@@ -130,9 +127,8 @@ void UseToUnderlyingCheck::check(const MatchFinder::MatchResult &Result) {
   if (!IsPrecise && ImpreciseCasts == ImpreciseCastsKind::Warn)
     return;
 
-  const StringRef OperandText = Lexer::getSourceText(
-      CharSourceRange::getTokenRange(Operand->getSourceRange()),
-      *Result.SourceManager, getLangOpts());
+  const StringRef OperandText =
+      tooling::fixit::getText(*Operand, *Result.Context);
   if (OperandText.empty())
     return;
 
@@ -145,12 +141,12 @@ void UseToUnderlyingCheck::check(const MatchFinder::MatchResult &Result) {
     // Replace the whole cast: ``static_cast<int>(e)`` -> ``to_underlying(e)``.
     // For an imprecise cast this changes the resulting type to the underlying
     // type.
-    Diag << FixItHint::CreateReplacement(Cast->getSourceRange(), Call);
+    Diag << tooling::fixit::createReplacement(*Cast, Call);
   } else {
     // Preserve the intended (wider or differently-signed) destination type by
     // wrapping only the operand: ``static_cast<long>(e)`` ->
     // ``static_cast<long>(to_underlying(e))``.
-    Diag << FixItHint::CreateReplacement(Operand->getSourceRange(), Call);
+    Diag << tooling::fixit::createReplacement(*Operand, Call);
   }
 
   if (MaybeHeaderToInclude)

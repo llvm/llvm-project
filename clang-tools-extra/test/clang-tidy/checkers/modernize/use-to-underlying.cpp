@@ -80,13 +80,46 @@ int typedef_enum(ColorAlias c) {
   // CHECK-FIXES: return std::to_underlying(c);
 }
 
-// The check should not fire on an uninstantiated template.
-template <typename E>
-int template_cast(E e) {
-  return static_cast<int>(e);
+// A cast whose operand has a dependent (template parameter) type is not a
+// scoped enumeration in the template pattern, so it is never flagged.
+template <typename T>
+int dependent_operand(T t) {
+  return static_cast<int>(t);
 }
 
-void use_template(ColorInt c) { template_cast(c); }
+// A cast whose destination type is dependent is not a known integer type, so it
+// is never flagged either.
+template <typename T>
+T dependent_destination(ColorInt c) {
+  return static_cast<T>(c);
+}
+
+// A non-dependent cast inside a template is flagged and fixed on the template
+// pattern itself, even when the template is never instantiated and the cast
+// sits in a value-dependent context.
+template <int N>
+int nondependent_in_uninstantiated_template(ColorInt c) {
+  return static_cast<int>(c) + N;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use 'std::to_underlying' to convert a scoped enumeration to its underlying type [modernize-use-to-underlying]
+  // CHECK-FIXES: return std::to_underlying(c) + N;
+}
+
+// A non-dependent cast that is instantiated multiple times is still flagged and
+// fixed exactly once (on the pattern), not once per instantiation.
+template <typename T>
+int nondependent_in_instantiated_template(ColorInt c) {
+  return static_cast<int>(c);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use 'std::to_underlying' to convert a scoped enumeration to its underlying type [modernize-use-to-underlying]
+  // CHECK-FIXES: return std::to_underlying(c);
+}
+
+void use_templates(ColorInt c) {
+  dependent_operand(c);
+  dependent_destination<int>(c);
+  dependent_destination<long>(c);
+  nondependent_in_instantiated_template<int>(c);
+  nondependent_in_instantiated_template<char>(c);
+}
 
 // Casts involving macros. The fix is applied whenever the operand's spelling
 // can be recovered: at the invocation of a function-like macro whose body is
