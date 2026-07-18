@@ -2035,96 +2035,96 @@ define <2 x i32> @sdiv_select_one_false_poison_vec(<2 x i32> %a, i1 %b) {
 
 define i32 @sdiv_mul_nsw_gcd(i32 %x) {
 ; CHECK-LABEL: @sdiv_mul_nsw_gcd(
-; CHECK-NEXT:    [[M:%.*]] = mul nsw i32 [[X:%.*]], 150
-; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 100
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i32 [[X:%.*]], 5
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 3
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %m = mul nsw i32 %x, 150
-  %d = sdiv i32 %m, 100
+  %d = sdiv i32 %m, 90
   ret i32 %d
 }
 
 define i32 @sdiv_mul_nsw_gcd_neg_c1(i32 %x) {
 ; CHECK-LABEL: @sdiv_mul_nsw_gcd_neg_c1(
-; CHECK-NEXT:    [[M:%.*]] = mul nsw i32 [[X:%.*]], -150
-; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 100
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i32 [[X:%.*]], -5
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 3
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %m = mul nsw i32 %x, -150
-  %d = sdiv i32 %m, 100
+  %d = sdiv i32 %m, 90
   ret i32 %d
 }
 
 define i32 @sdiv_mul_nsw_gcd_neg_c2(i32 %x) {
 ; CHECK-LABEL: @sdiv_mul_nsw_gcd_neg_c2(
-; CHECK-NEXT:    [[M:%.*]] = mul nsw i32 [[X:%.*]], 150
-; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], -100
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i32 [[X:%.*]], 5
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], -3
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %m = mul nsw i32 %x, 150
-  %d = sdiv i32 %m, -100
+  %d = sdiv i32 %m, -90
   ret i32 %d
 }
 
 define i32 @sdiv_mul_nsw_gcd_neg_both(i32 %x) {
 ; CHECK-LABEL: @sdiv_mul_nsw_gcd_neg_both(
-; CHECK-NEXT:    [[M:%.*]] = mul nsw i32 [[X:%.*]], -150
-; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], -100
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i32 [[X:%.*]], -5
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], -3
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %m = mul nsw i32 %x, -150
-  %d = sdiv i32 %m, -100
+  %d = sdiv i32 %m, -90
   ret i32 %d
 }
 
 define i32 @udiv_mul_nuw_gcd(i32 %x) {
 ; CHECK-LABEL: @udiv_mul_nuw_gcd(
-; CHECK-NEXT:    [[M:%.*]] = mul nuw i32 [[X:%.*]], 150
-; CHECK-NEXT:    [[D1:%.*]] = udiv i32 [[M]], 100
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i32 [[X:%.*]], 5
+; CHECK-NEXT:    [[D1:%.*]] = udiv i32 [[M]], 3
 ; CHECK-NEXT:    ret i32 [[D1]]
 ;
   %m = mul nuw i32 %x, 150
-  %d = udiv i32 %m, 100
+  %d = udiv i32 %m, 90
   ret i32 %d
 }
 
 define i32 @udiv_mul_nuw_nsw_gcd(i32 %x) {
 ; CHECK-LABEL: @udiv_mul_nuw_nsw_gcd(
-; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[X:%.*]], 150
-; CHECK-NEXT:    [[D1:%.*]] = udiv i32 [[M]], 100
+; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[X:%.*]], 5
+; CHECK-NEXT:    [[D1:%.*]] = udiv i32 [[M]], 3
 ; CHECK-NEXT:    ret i32 [[D1]]
 ;
   %m = mul nuw nsw i32 %x, 150
-  %d = udiv i32 %m, 100
+  %d = udiv i32 %m, 90
   ret i32 %d
 }
 
 define i32 @sdiv_mul_nsw_exact_gcd(i32 %x) {
 ; CHECK-LABEL: @sdiv_mul_nsw_exact_gcd(
-; CHECK-NEXT:    [[M:%.*]] = mul nsw i32 [[X:%.*]], 150
-; CHECK-NEXT:    [[D:%.*]] = sdiv exact i32 [[M]], 100
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i32 [[X:%.*]], 5
+; CHECK-NEXT:    [[D:%.*]] = sdiv exact i32 [[M]], 3
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %m = mul nsw i32 %x, 150
-  %d = sdiv exact i32 %m, 100
+  %d = sdiv exact i32 %m, 90
   ret i32 %d
 }
 
 define i32 @udiv_mul_nuw_exact_gcd(i32 %x) {
 ; CHECK-LABEL: @udiv_mul_nuw_exact_gcd(
-; CHECK-NEXT:    [[M:%.*]] = mul nuw i32 [[X:%.*]], 150
-; CHECK-NEXT:    [[D1:%.*]] = udiv exact i32 [[M]], 100
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i32 [[X:%.*]], 5
+; CHECK-NEXT:    [[D1:%.*]] = udiv exact i32 [[M]], 3
 ; CHECK-NEXT:    ret i32 [[D1]]
 ;
   %m = mul nuw i32 %x, 150
-  %d = udiv exact i32 %m, 100
+  %d = udiv exact i32 %m, 90
   ret i32 %d
 }
 
 define i32 @sdiv_shl_nsw_gcd(i32 %x) {
 ; CHECK-LABEL: @sdiv_shl_nsw_gcd(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[SHL]], 6
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[SHL]], 3
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %shl = shl nsw i32 %x, 2
@@ -2134,8 +2134,8 @@ define i32 @sdiv_shl_nsw_gcd(i32 %x) {
 
 define i32 @udiv_shl_nuw_gcd(i32 %x) {
 ; CHECK-LABEL: @udiv_shl_nuw_gcd(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[D:%.*]] = udiv i32 [[SHL]], 6
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[D:%.*]] = udiv i32 [[SHL]], 3
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %shl = shl nuw i32 %x, 2
@@ -2145,8 +2145,8 @@ define i32 @udiv_shl_nuw_gcd(i32 %x) {
 
 define i32 @sdiv_shl_nsw_exact_gcd(i32 %x) {
 ; CHECK-LABEL: @sdiv_shl_nsw_exact_gcd(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[D:%.*]] = sdiv exact i32 [[SHL]], 6
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[D:%.*]] = sdiv exact i32 [[SHL]], 3
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %shl = shl nsw i32 %x, 2
@@ -2157,12 +2157,12 @@ define i32 @sdiv_shl_nsw_exact_gcd(i32 %x) {
 ; Vector splat test
 define <2 x i32> @sdiv_mul_nsw_gcd_splat(<2 x i32> %x) {
 ; CHECK-LABEL: @sdiv_mul_nsw_gcd_splat(
-; CHECK-NEXT:    [[M:%.*]] = mul nsw <2 x i32> [[X:%.*]], splat (i32 150)
-; CHECK-NEXT:    [[D:%.*]] = sdiv <2 x i32> [[M]], splat (i32 100)
+; CHECK-NEXT:    [[M:%.*]] = mul nsw <2 x i32> [[X:%.*]], splat (i32 5)
+; CHECK-NEXT:    [[D:%.*]] = sdiv <2 x i32> [[M]], splat (i32 3)
 ; CHECK-NEXT:    ret <2 x i32> [[D]]
 ;
   %m = mul nsw <2 x i32> %x, <i32 150, i32 150>
-  %d = sdiv <2 x i32> %m, <i32 100, i32 100>
+  %d = sdiv <2 x i32> %m, <i32 90, i32 90>
   ret <2 x i32> %d
 }
 
@@ -2170,11 +2170,11 @@ define <2 x i32> @sdiv_mul_nsw_gcd_splat(<2 x i32> %x) {
 define <2 x i32> @sdiv_mul_nsw_gcd_non_splat(<2 x i32> %x) {
 ; CHECK-LABEL: @sdiv_mul_nsw_gcd_non_splat(
 ; CHECK-NEXT:    [[M:%.*]] = mul nsw <2 x i32> [[X:%.*]], <i32 150, i32 90>
-; CHECK-NEXT:    [[D:%.*]] = sdiv <2 x i32> [[M]], <i32 100, i32 60>
+; CHECK-NEXT:    [[D:%.*]] = sdiv <2 x i32> [[M]], <i32 90, i32 60>
 ; CHECK-NEXT:    ret <2 x i32> [[D]]
 ;
   %m = mul nsw <2 x i32> %x, <i32 150, i32 90>
-  %d = sdiv <2 x i32> %m, <i32 100, i32 60>
+  %d = sdiv <2 x i32> %m, <i32 90, i32 60>
   ret <2 x i32> %d
 }
 
@@ -2183,22 +2183,22 @@ define <2 x i32> @sdiv_mul_nsw_gcd_non_splat(<2 x i32> %x) {
 define i32 @sdiv_mul_no_nsw_gcd(i32 %x) {
 ; CHECK-LABEL: @sdiv_mul_no_nsw_gcd(
 ; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X:%.*]], 150
-; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 100
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 90
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %m = mul i32 %x, 150
-  %d = sdiv i32 %m, 100
+  %d = sdiv i32 %m, 90
   ret i32 %d
 }
 
 define i32 @udiv_mul_no_nuw_gcd(i32 %x) {
 ; CHECK-LABEL: @udiv_mul_no_nuw_gcd(
 ; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X:%.*]], 150
-; CHECK-NEXT:    [[D:%.*]] = udiv i32 [[M]], 100
+; CHECK-NEXT:    [[D:%.*]] = udiv i32 [[M]], 90
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %m = mul i32 %x, 150
-  %d = udiv i32 %m, 100
+  %d = udiv i32 %m, 90
   ret i32 %d
 }
 
@@ -2228,12 +2228,12 @@ define i32 @sdiv_mul_nsw_gcd_multi_use(i32 %x) {
 ; CHECK-LABEL: @sdiv_mul_nsw_gcd_multi_use(
 ; CHECK-NEXT:    [[M:%.*]] = mul nsw i32 [[X:%.*]], 150
 ; CHECK-NEXT:    call void @use(i32 [[M]])
-; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 100
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], 90
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %m = mul nsw i32 %x, 150
   call void @use(i32 %m)
-  %d = sdiv i32 %m, 100
+  %d = sdiv i32 %m, 90
   ret i32 %d
 }
 
