@@ -45,6 +45,8 @@ RUN wget https://apt.llvm.org/llvm.sh && \
     sudo ./llvm.sh 23 && \
     rm llvm.sh
 
+RUN apt-get install -y llvm-23-tools
+
 # Install gmp and mpfr for cross compilation
 RUN wget https://ftp.gnu.org/gnu/gmp/gmp-6.3.0.tar.xz && \
     tar -xf gmp-6.3.0.tar.xz && \
