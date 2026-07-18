@@ -1509,30 +1509,18 @@ static bool optimizeBitCast(BitCastInst *BCI, const TargetLowering &TLI,
       TLI.getNumRegisters(BCI->getContext(), DestVT))
     return false;
 
-  // Prevent large cross-domain scalar hoists
+  // Block large or cross-domain scalars to prevent spills and broken atomics.
   Type *DestTy = BCI->getType();
   Type *SrcTy = SrcInst->getType();
   bool IsCrossDomain = DestTy->isFPOrFPVectorTy() != SrcTy->isFPOrFPVectorTy();
-  bool IsLargeScalar = !DestTy->isVectorTy() &&
-                       DL.getTypeSizeInBits(DestTy).getFixedValue() > 64;
-  if (IsCrossDomain && IsLargeScalar)
-    return false;
 
-  // SelectionDAG Guard to prevent breaking atomic loop layout
-  auto IsAtomic = [](const Value *V) {
-    const auto *I = dyn_cast<Instruction>(V);
-    return I && I->isAtomic();
-  };
+  // A scalar is large if it requires more than one native register.
+  unsigned NativeWidth = DL.getPointerSizeInBits();
+  bool IsLargeScalar =
+      !DestTy->isVectorTy() &&
+      DL.getTypeSizeInBits(DestTy).getFixedValue() > NativeWidth;
 
-  // Check upstream atomic -> [extractvalue] -> bitcast
-  const Value *Origin = SrcInst;
-  if (auto *EV = dyn_cast<ExtractValueInst>(Origin))
-    Origin = EV->getAggregateOperand();
-
-  // Check downstream bitcast -> [phi] -> atomic
-  if (IsAtomic(Origin) || any_of(BCI->users(), [IsAtomic](const User *U) {
-        return IsAtomic(U) || (isa<PHINode>(U) && any_of(U->users(), IsAtomic));
-      }))
+  if (IsCrossDomain || IsLargeScalar)
     return false;
 
   // Hoist the bitcast

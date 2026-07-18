@@ -5,9 +5,9 @@ define double @test_hoist_bitcast_i64_to_double(i1 %cond, i64 %a) {
 ; CHECK-LABEL: @test_hoist_bitcast_i64_to_double(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[A:%.*]], 1
-; CHECK-NEXT:    [[BC_HOISTED:%.*]] = bitcast i64 [[ADD]] to double
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       if.then:
+; CHECK-NEXT:    [[BC_HOISTED:%.*]] = bitcast i64 [[ADD]] to double
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[RES:%.*]] = phi double [ [[BC_HOISTED]], [[IF_THEN]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
