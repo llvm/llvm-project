@@ -821,7 +821,7 @@ static mlir::Value emitX86VPerm2f128(CIRGenBuilderTy &builder,
   const uint8_t imm = CIRGenFunction::getZExtIntValueFromConstOp(ops[2]);
   mlir::Value zeroVec = builder.getZero(loc, inputType);
 
-  // Mirror hardware and OGCG behaviour returning a zero vector
+  // If both lanes are zero, return a zero result.
   if ((imm & 0x80) && (imm & 0x08))
     return zeroVec;
 
