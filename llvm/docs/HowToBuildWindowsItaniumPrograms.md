@@ -1,9 +1,6 @@
-==========================================
-How to build Windows Itanium applications.
-==========================================
+# How to build Windows Itanium applications.
 
-Introduction
-============
+## Introduction
 
 This document contains information describing how to create a Windows Itanium toolchain.
 
@@ -13,26 +10,24 @@ headers or additional runtime machinery (such as is used by mingw).
 
 Windows Itanium Stack:
 
-* Uses the Itanium C++ ABI.
-* libc++.
-* libc++-abi.
-* libunwind.
-* The MS VS CRT.
-* Is compatible with MS Windows SDK include headers.
-* COFF/PE file format.
-* LLD
+- Uses the Itanium C++ ABI.
+- libc++.
+- libc++-abi.
+- libunwind.
+- The MS VS CRT.
+- Is compatible with MS Windows SDK include headers.
+- COFF/PE file format.
+- LLD
 
 Note: compiler-rt is not used. This functionality is supplied by the MS VCRT.
 
-Prerequisites
-=============
+## Prerequisites
 
-* The MS SDK is installed as part of MS Visual Studio.
-* Clang with support for the windows-itanium triple.
-* COFF LLD with support for the -autoimport switch.
+- The MS SDK is installed as part of MS Visual Studio.
+- Clang with support for the windows-itanium triple.
+- COFF LLD with support for the -autoimport switch.
 
-Known issues:
-=============
+## Known issues:
 
 SJLJ exceptions, "-fsjlj-exceptions", are the only currently supported model.
 
@@ -53,124 +48,118 @@ store a runtime address from another DLL into this pointer (although runtime
 addresses are patched into the IAT). Therefore, the compiler must emit some code,
 that runs after IAT patching but before anything that might use the vtable pointers,
 and sets the vtable pointer to the address from the IAT. For the special case of
-the references to vtables for __cxxabiv1::__class_type_info from typeinto objects
+the references to vtables for `__cxxabiv1::__class_type_info` from typeinto objects
 there is no declaration available to the compiler so this can't be done. To allow
 programs to link we currently rely on the -auto-import switch in LLD to auto-import
-references to __cxxabiv1::__class_type_info pointers (see: https://reviews.llvm.org/D43184
+references to `__cxxabiv1::__class_type_info` pointers (see: <https://reviews.llvm.org/D43184>
 for a related discussion). This allows for linking; but, code that actually uses
 such fields will not work as they these will not be fixed up at runtime. See
-_pei386_runtime_relocator which handles the runtime component of the autoimporting
-scheme used for mingw and comments in https://reviews.llvm.org/D43184 and
-https://reviews.llvm.org/D89518 for more.
+`_pei386_runtime_relocator` which handles the runtime component of the autoimporting
+scheme used for mingw and comments in <https://reviews.llvm.org/D43184> and
+<https://reviews.llvm.org/D89518> for more.
 
-Assembling a Toolchain:
-=======================
+## Assembling a Toolchain:
 
 The procedure is:
 
-# Build an LLVM toolchain with support for Windows Itanium.
-# Use the toolchain from step 1. to build libc++, libc++abi, and libunwind.
+1. Build an LLVM toolchain with support for Windows Itanium.
+2. Use the toolchain from step 1. to build libc++, libc++abi, and libunwind.
 
 It is also possible to cross-compile from Linux.
 
-To build the libraries in step 2, refer to the `libc++ documentation <https://libcxx.llvm.org/VendorDocumentation.html#the-default-build>`_.
+To build the libraries in step 2, refer to the [libc++ documentation](https://libcxx.llvm.org/VendorDocumentation.html#the-default-build).
 
 The next section discusses the salient options and modifications required for building and installing the
 libraries. This assumes that we are building libunwind and libc++ as DLLs and statically linking libc++abi
 into libc++. Other build configurations are possible, but they are not discussed here.
 
-Common CMake configuration options:
------------------------------------
+### Common CMake configuration options:
 
-* ``-D_LIBCPP_ABI_FORCE_ITANIUM'``
+- `-D_LIBCPP_ABI_FORCE_ITANIUM'`
 
 Tell the libc++ headers that the Itanium C++ ABI is being used.
 
-* ``-DCMAKE_C_FLAGS="-lmsvcrt -llegacy_stdio_definitions -D_NO_CRT_STDIO_INLINE"``
+- `-DCMAKE_C_FLAGS="-lmsvcrt -llegacy_stdio_definitions -D_NO_CRT_STDIO_INLINE"`
 
 Supply CRT definitions including stdio definitions that have been removed from the MS VS CRT.
 We don't want the stdio functions declared inline as they will cause multiple definition
 errors when the same symbols are pulled in from legacy_stdio_definitions.ib.
 
-* ``-DCMAKE_INSTALL_PREFIX=<install path>``
+- `-DCMAKE_INSTALL_PREFIX=<install path>`
 
 Where to install the library and headers.
 
-Building libunwind:
--------------------
+### Building libunwind:
 
-* ``-DLIBUNWIND_ENABLE_SHARED=ON``
-* ``-DLIBUNWIND_ENABLE_STATIC=OFF``
+- `-DLIBUNWIND_ENABLE_SHARED=ON`
+- `-DLIBUNWIND_ENABLE_STATIC=OFF`
 
 libunwind can be built as a DLL. It is not dependent on other projects.
 
-* ``-DLIBUNWIND_USE_COMPILER_RT=OFF``
+- `-DLIBUNWIND_USE_COMPILER_RT=OFF`
 
 We use the MS runtime.
 
 The CMake files will need to be edited to prevent them adding GNU specific libraries to the link line.
 
-Building libc++abi:
--------------------
+### Building libc++abi:
 
-* ``-DLIBCXXABI_ENABLE_SHARED=OFF``
-* ``-DLIBCXXABI_ENABLE_STATIC=ON``
-* ``-DLIBCXX_ENABLE_SHARED=ON'``
-* ``-DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON``
+- `-DLIBCXXABI_ENABLE_SHARED=OFF`
+- `-DLIBCXXABI_ENABLE_STATIC=ON`
+- `-DLIBCXX_ENABLE_SHARED=ON'`
+- `-DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON`
 
 To break the symbol dependency between libc++abi and libc++ we
 build libc++abi as a static library and then statically link it
 into the libc++ DLL. This necessitates setting the CMake file
 to ensure that the visibility macros (which expand to dllexport/import)
 are expanded as they will be needed when creating the final libc++
-DLL later, see: https://reviews.llvm.org/D90021.
+DLL later, see: <https://reviews.llvm.org/D90021>.
 
-* ``-DLIBCXXABI_LIBCXX_INCLUDES=<path to libcxx>/include``
+- `-DLIBCXXABI_LIBCXX_INCLUDES=<path to libcxx>/include`
 
 Where to find the libc++ headers
 
-Building libc++:
-----------------
+### Building libc++:
 
-* ``-DLIBCXX_ENABLE_SHARED=ON``
-* ``-DLIBCXX_ENABLE_STATIC=OFF``
+- `-DLIBCXX_ENABLE_SHARED=ON`
+- `-DLIBCXX_ENABLE_STATIC=OFF`
 
 We build libc++ as a DLL and statically link libc++abi into it.
 
-* ``-DLIBCXX_INSTALL_HEADERS=ON``
+- `-DLIBCXX_INSTALL_HEADERS=ON`
 
 Install the headers.
 
-* ``-DLIBCXX_USE_COMPILER_RT=OFF``
+- `-DLIBCXX_USE_COMPILER_RT=OFF`
 
 We use the MS runtime.
 
-* ``-DLIBCXX_HAS_WIN32_THREAD_API=ON``
+- `-DLIBCXX_HAS_WIN32_THREAD_API=ON`
 
 Windows Itanium does not offer a POSIX-like layer over WIN32.
 
-* ``-DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON``
-* ``-DLIBCXX_CXX_ABI=libcxxabi``
-* ``-DLIBCXX_CXX_ABI_INCLUDE_PATHS=<libcxxabi src path>/include``
-* ``-DLIBCXX_CXX_ABI_LIBRARY_PATH=<libcxxabi build path>/lib``
+- `-DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON`
+- `-DLIBCXX_CXX_ABI=libcxxabi`
+- `-DLIBCXX_CXX_ABI_INCLUDE_PATHS=<libcxxabi src path>/include`
+- `-DLIBCXX_CXX_ABI_LIBRARY_PATH=<libcxxabi build path>/lib`
 
 Use the static libc++abi library built earlier.
 
-* ``-DLIBCXX_NO_VCRUNTIME=ON``
+- `-DLIBCXX_NO_VCRUNTIME=ON`
 
 Remove any dependency on the VC runtime - we need libc++abi to supply the C++ runtime.
 
-* ``-DCMAKE_C_FLAGS=<path to installed unwind.lib>``
+- `-DCMAKE_C_FLAGS=<path to installed unwind.lib>`
 
 As we are statically linking against libcxxabi we need to link
 against the unwind import library to resolve unwind references
 from the libcxxabi objects.
 
-* ``-DCMAKE_C_FLAGS+=' -UCLOCK_REALTIME'``
+- `-DCMAKE_C_FLAGS+=' -UCLOCK_REALTIME'`
 
 Prevent the inclusion of sys/time that MS doesn't provide.
 
-Notes:
-------
+### Notes:
 
-An example build recipe is available here: https://reviews.llvm.org/D88124
+An example build recipe is available here: <https://reviews.llvm.org/D88124>
