@@ -97,6 +97,13 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-unordered-equal-compare
+  <clang-tidy/checks/bugprone/unordered-equal-compare>` check.
+
+  Flags uses of ``std::equal`` to compare the ranges of two unordered
+  containers (``std::unordered_set``, ``std::unordered_multiset``,
+  ``std::unordered_map`` and ``std::unordered_multimap``).
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
