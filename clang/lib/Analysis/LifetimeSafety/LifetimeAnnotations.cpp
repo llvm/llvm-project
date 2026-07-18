@@ -191,17 +191,21 @@ TrackedArgInfo getTrackedArgInfo(const FunctionDecl *FD,
     return {TrackedArgKind::ExplicitLifetimeBound, Info};
 
   if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
-      Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD))
+      Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD)) {
     if (I == 0 &&
         (isNormalAssignmentOperator(Method) ||
          shouldTrackImplicitObjectArg(*Args[0], Method,
                                       /*RunningUnderLifetimeSafety=*/true)))
-      return {TrackedArgKind::Inferred, std::nullopt};
+      return {TrackedArgKind::Inferred, LifetimeBoundParamInfo(Method)};
+    return {};
+  }
 
   if (I == 0 && shouldTrackFirstArgument(FD))
-    return {TrackedArgKind::Inferred, std::nullopt};
+    return {TrackedArgKind::Inferred,
+            LifetimeBoundParamInfo(FD->getParamDecl(I))};
   if (I == 1 && shouldTrackSecondArgument(FD))
-    return {TrackedArgKind::Inferred, std::nullopt};
+    return {TrackedArgKind::Inferred,
+            LifetimeBoundParamInfo(FD->getParamDecl(I))};
 
   return {};
 }

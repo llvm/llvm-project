@@ -1893,14 +1893,14 @@ void wrong_use_of_move_is_permissive() {
   {
     MyObj a;
     v = std::move(a); // expected-warning {{local variable 'a' does not live long enough}} \
-                      // expected-note {{result of call to 'move<MyObj &>' aliases the storage of local variable 'a'}}
+                      // expected-note {{result of call to 'move<MyObj &>' aliases the storage of local variable 'a' because parameter 't' is marked 'lifetimebound'}}
   }         // expected-note {{local variable 'a' is destroyed here}}
   (void)v;  // expected-note {{later used here}}
   const int* p;
   {
     MyObj a;
     p = std::move(a).getData(); // expected-warning {{local variable 'a' does not live long enough}} \
-                                // expected-note {{result of call to 'move<MyObj &>' aliases the storage of local variable 'a'}} \
+                                // expected-note {{result of call to 'move<MyObj &>' aliases the storage of local variable 'a' because parameter 't' is marked 'lifetimebound'}} \
                                 // expected-note {{result of call to 'getData' aliases the storage of local variable 'a' because the implicit object parameter is marked 'lifetimebound'}}
   }         // expected-note {{local variable 'a' is destroyed here}}
   (void)p;  // expected-note {{later used here}}
@@ -1913,7 +1913,7 @@ void test_release_no_uaf() {
   {
     std::unique_ptr<int> p;
     r = p.get();        // expected-warning {{local variable 'p' may not live long enough. This could be a false positive as the storage may have been moved later}} \
-                        // expected-note {{result of call to 'get' aliases the storage of local variable 'p'}}
+                        // expected-note {{result of call to 'get' aliases the storage of local variable 'p' because the implicit object parameter is inferred as lifetimebound}}
     take(p.release());  // expected-note {{potentially moved here}}
   }                     // expected-note {{local variable 'p' is destroyed here}}
   (void)*r;             // expected-note {{later used here}}
@@ -2074,7 +2074,7 @@ void uaf() {
     S str;
     S* p = &str;  // expected-warning {{local variable 'str' does not live long enough}}
     view = p->s;  // expected-note {{local variable 'p' aliases the storage of local variable 'str'}} \
-                  // expected-note {{expression aliases the storage of local variable 'str'}}
+                  // expected-note {{expression aliases the storage of local variable 'str' because the implicit object parameter is inferred as lifetimebound}}
   } // expected-note {{local variable 'str' is destroyed here}}
   (void)view;  // expected-note {{later used here}}
 }
@@ -2101,7 +2101,7 @@ void uaf_union() {
     U u = U{"hello"};
     U* up = &u;   // expected-warning {{local variable 'u' does not live long enough}}
     view = up->s; // expected-note {{local variable 'up' aliases the storage of local variable 'u'}} \
-                  // expected-note {{expression aliases the storage of local variable 'u'}}
+                  // expected-note {{expression aliases the storage of local variable 'u' because the implicit object parameter is inferred as lifetimebound}}
   } // expected-note {{local variable 'u' is destroyed here}}
   (void)view;  // expected-note {{later used here}}
 }
@@ -2277,8 +2277,8 @@ void test_optional_arrow() {
   {
     std::optional<std::string> opt;
     p = opt->data();  // expected-warning {{local variable 'opt' does not live long enough}} \
-                      // expected-note {{expression aliases the storage of local variable 'opt'}} \
-                      // expected-note {{result of call to 'data' aliases the storage of local variable 'opt'}}
+                      // expected-note {{expression aliases the storage of local variable 'opt' because the implicit object parameter is inferred as lifetimebound}} \
+                      // expected-note {{result of call to 'data' aliases the storage of local variable 'opt' because the implicit object parameter is inferred as lifetimebound}}
   }                   // expected-note {{local variable 'opt' is destroyed here}}
   (void)*p;           // expected-note {{later used here}}
 }
@@ -2288,7 +2288,7 @@ void test_optional_arrow_lifetimebound() {
   {
     std::optional<MyObj> opt;
     v = opt->getView();  // expected-warning {{local variable 'opt' does not live long enough}} \
-                         // expected-note {{expression aliases the storage of local variable 'opt'}} \
+                         // expected-note {{expression aliases the storage of local variable 'opt' because the implicit object parameter is inferred as lifetimebound}} \
                          // expected-note {{result of call to 'getView' aliases the storage of local variable 'opt' because the implicit object parameter is marked 'lifetimebound'}}
   }                      // expected-note {{local variable 'opt' is destroyed here}}
   v.use();               // expected-note {{later used here}}
@@ -2299,8 +2299,8 @@ void test_unique_ptr_arrow() {
   {
     std::unique_ptr<std::string> up;
     p = up->data();  // expected-warning {{local variable 'up' does not live long enough}} \
-                     // expected-note {{expression aliases the storage of local variable 'up'}} \
-                     // expected-note {{result of call to 'data' aliases the storage of local variable 'up'}}
+                     // expected-note {{expression aliases the storage of local variable 'up' because the implicit object parameter is inferred as lifetimebound}} \
+                     // expected-note {{result of call to 'data' aliases the storage of local variable 'up' because the implicit object parameter is inferred as lifetimebound}}
   }                  // expected-note {{local variable 'up' is destroyed here}}
   (void)*p;          // expected-note {{later used here}}
 }
@@ -3860,7 +3860,7 @@ void deref_use_after_scope() {
   {
     optional<MyObj> opt;
     p = &*opt; // expected-warning {{local variable 'opt' does not live long enough}} \
-               // expected-note {{expression aliases the storage of local variable 'opt'}}
+               // expected-note {{expression aliases the storage of local variable 'opt' because the implicit object parameter is inferred as lifetimebound}}
   }            // expected-note {{local variable 'opt' is destroyed here}}
   (void)p->id; // expected-note {{later used here}}
 }
