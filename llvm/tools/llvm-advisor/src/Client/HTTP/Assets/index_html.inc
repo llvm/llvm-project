@@ -3914,24 +3914,27 @@ const CompareView = {
 
     const makeEntries = (items, sign, color) => items.map(r => {
       const hasLoc = r.file && r.line > 0;
-      const explorerLink = hasLoc
-        ? h('a', {
-            class: 'text-muted',
-            style: { fontSize: '10px', cursor: 'pointer', textDecoration: 'underline' },
-            onClick: (e) => {
-              e.stopPropagation();
-              State.set('currentSnapshot', State.get('snapshots').find(s => s.id === this._candidateId) || null);
-              Router.navigate(`/explorer?path=${encodeURIComponent(r.file)}&line=${r.line}`);
-            }
-          }, `${r.file.split('/').pop()}:${r.line}`)
+      const locLabel = hasLoc ? `${r.file.split('/').pop()}:${r.line}` : '';
+      const goToExplorer = hasLoc
+        ? (e) => {
+            e.stopPropagation();
+            State.set('currentSnapshot', State.get('snapshots').find(s => s.id === this._candidateId) || null);
+            Router.navigate(`/explorer?path=${encodeURIComponent(r.file)}&line=${r.line}`);
+          }
         : null;
-      return h('div', { style: { display: 'flex', gap: '8px', padding: '2px 0', alignItems: 'baseline' } },
+      return h('div', {
+        style: { display: 'flex', gap: '8px', padding: '4px 6px', alignItems: 'baseline', cursor: hasLoc ? 'pointer' : 'default', borderRadius: '4px' },
+        onClick: goToExplorer,
+        onMouseEnter: (e) => { if (hasLoc) e.currentTarget.style.background = 'var(--bg)'; },
+        onMouseLeave: (e) => { if (hasLoc) e.currentTarget.style.background = ''; },
+        title: hasLoc ? `Click to open ${locLabel} in Code Explorer` : ''
+      },
         h('span', { style: { color, fontWeight: '600', minWidth: '16px' } }, sign),
         h('span', { style: { color: TYPE_COLORS[r.type] || 'var(--fg3)', minWidth: '60px' } }, TYPE_NAMES[r.type] || '?'),
         h('span', { style: { fontWeight: '500' } }, r.name || ''),
         h('span', { class: 'text-muted' }, r.pass || ''),
         h('span', { style: { color: color, fontSize: '10px' } }, `×${Math.abs(r.delta || r.after_count - r.before_count)}`),
-        explorerLink,
+        hasLoc ? h('span', { class: 'text-muted', style: { fontSize: '10px', textDecoration: 'underline' } }, locLabel) : null,
       );
     });
 
