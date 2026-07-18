@@ -77,6 +77,15 @@ static bool hasAccDeclareGlobals(ModuleOp mod) {
   return false;
 }
 
+static void makeDeviceGlobalDeclaration(Operation &globalOp) {
+  globalOp.removeAttr("initVal");
+  globalOp.removeAttr("linkName");
+  for (Region &region : globalOp.getRegions()) {
+    region.dropAllReferences();
+    region.getBlocks().clear();
+  }
+}
+
 class ACCDeclareGPUModuleInsertion
     : public acc::impl::ACCDeclareGPUModuleInsertionBase<
           ACCDeclareGPUModuleInsertion> {
@@ -123,7 +132,13 @@ public:
         continue;
       }
 
-      gpuSymTable.insert(globalOp.clone());
+      Operation *deviceGlobal = globalOp.clone();
+      auto declareAttr =
+          globalOp.getAttrOfType<acc::DeclareAttr>(acc::getDeclareAttrName());
+      if (cudaUnified && declareAttr.getDataClause().getValue() !=
+          acc::DataClause::acc_declare_device_resident)
+        makeDeviceGlobalDeclaration(*deviceGlobal);
+      gpuSymTable.insert(deviceGlobal);
     }
     return success();
   }
