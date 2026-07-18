@@ -42,6 +42,7 @@
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -3098,6 +3099,13 @@ unsigned AArch64TargetLowering::computeNumSignBitsForTargetInstr(
   case AArch64::G_FCMGT: {
     LLT VT = MRI.getType(R);
     return VT.getScalarSizeInBits();
+  }
+  case AArch64::G_VASHR: {
+    unsigned Tmp = Analysis.computeNumSignBits(MI->getOperand(1).getReg(),
+                                               DemandedElts, Depth + 1);
+    LLT VT = MRI.getType(R);
+    return std::min<uint64_t>(Tmp + MI->getOperand(2).getImm(),
+                              VT.getScalarSizeInBits());
   }
   default:
     return 1;

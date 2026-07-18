@@ -362,8 +362,8 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
         // When importing an ARM64X image, add both the native and EC views.
         if (std::unique_ptr<MemoryBuffer> hybridView =
                 obj->getHybridObjectView()) {
-          std::unique_ptr<COFFObjectFile> hybridObj = ObjFile::createCOFFObject(
-              ctx, hybridView.release()->getMemBufferRef());
+          std::unique_ptr<COFFObjectFile> hybridObj =
+              ObjFile::createCOFFObject(ctx, takeBuffer(std::move(hybridView)));
           addFile(make<DLLFile>(ctx.symtab, hybridObj));
           addFile(make<DLLFile>(*ctx.hybridSymtab, obj));
           break;

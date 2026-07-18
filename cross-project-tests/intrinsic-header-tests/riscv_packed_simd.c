@@ -2340,6 +2340,74 @@ int32x2_t test_pmerge_mvmn_i32x2(int32x2_t rs2, int32x2_t rs1, uint32x2_t rd) {
   return __riscv_pmerge_i32x2(rs1, rs2, rd);
 }
 
+// CHECK-LABEL: test_pzip_i8x8:
+// RV32:        wzip8p
+// RV64:        zip8p
+int8x8_t test_pzip_i8x8(int8x4_t a, int8x4_t b) {
+  return __riscv_pzip_i8x8(a, b);
+}
+
+// CHECK-LABEL: test_pzip_u8x8:
+// RV32:        wzip8p
+// RV64:        zip8p
+uint8x8_t test_pzip_u8x8(uint8x4_t a, uint8x4_t b) {
+  return __riscv_pzip_u8x8(a, b);
+}
+
+// CHECK-LABEL: test_pzip_i16x4:
+// RV32:        wzip16p
+// RV64:        zip16p
+int16x4_t test_pzip_i16x4(int16x2_t a, int16x2_t b) {
+  return __riscv_pzip_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_pzip_u16x4:
+// RV32:        wzip16p
+// RV64:        zip16p
+uint16x4_t test_pzip_u16x4(uint16x2_t a, uint16x2_t b) {
+  return __riscv_pzip_u16x4(a, b);
+}
+
+// CHECK-LABEL: test_punzipe_i8x4:
+// RV32:        pncvt.b
+// RV64:        pncvt.wb
+int8x4_t test_punzipe_i8x4(int8x8_t a) { return __riscv_punzipe_i8x4(a); }
+
+// CHECK-LABEL: test_punzipo_i8x4:
+// RV32:        pncvth.b
+// RV64:        pncvth.wb
+int8x4_t test_punzipo_i8x4(int8x8_t a) { return __riscv_punzipo_i8x4(a); }
+
+// CHECK-LABEL: test_punzipe_u8x4:
+// RV32:        pncvt.b
+// RV64:        pncvt.wb
+uint8x4_t test_punzipe_u8x4(uint8x8_t a) { return __riscv_punzipe_u8x4(a); }
+
+// CHECK-LABEL: test_punzipo_u8x4:
+// RV32:        pncvth.b
+// RV64:        pncvth.wb
+uint8x4_t test_punzipo_u8x4(uint8x8_t a) { return __riscv_punzipo_u8x4(a); }
+
+// CHECK-LABEL: test_punzipe_i16x2:
+// RV32:        pncvt.h
+// RV64:        pncvt.wh
+int16x2_t test_punzipe_i16x2(int16x4_t a) { return __riscv_punzipe_i16x2(a); }
+
+// CHECK-LABEL: test_punzipo_i16x2:
+// RV32:        pncvth.h
+// RV64:        pncvth.wh
+int16x2_t test_punzipo_i16x2(int16x4_t a) { return __riscv_punzipo_i16x2(a); }
+
+// CHECK-LABEL: test_punzipe_u16x2:
+// RV32:        pncvt.h
+// RV64:        pncvt.wh
+uint16x2_t test_punzipe_u16x2(uint16x4_t a) { return __riscv_punzipe_u16x2(a); }
+
+// CHECK-LABEL: test_punzipo_u16x2:
+// RV32:        pncvth.h
+// RV64:        pncvth.wh
+uint16x2_t test_punzipo_u16x2(uint16x4_t a) { return __riscv_punzipo_u16x2(a); }
+
 // CHECK-LABEL: test_prev_i8x4:
 // CHECK:       rev8
 int8x4_t test_prev_i8x4(int8x4_t a) { return __riscv_prev_i8x4(a); }

@@ -770,7 +770,7 @@ static llvm::Function *emitOutlinedFunctionPrologue(
        (Ctx.getTargetInfo().getTriple().isAMDGCN()))
           ? CGM.getTypes().arrangeLLVMFunctionInfo(
                 Ctx.VoidTy, FnInfoOpts::None, argCanQualTypes,
-                FunctionType::ExtInfo(), {}, RequiredArgs::All, nullptr)
+                FunctionType::ExtInfo(), {}, RequiredArgs::All)
           :
       FO.IsDeviceKernel
           ? CGM.getTypes().arrangeDeviceKernelCallerDeclaration(Ctx.VoidTy,

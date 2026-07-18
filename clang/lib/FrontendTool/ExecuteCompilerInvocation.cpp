@@ -120,8 +120,8 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   case InitOnly:               return std::make_unique<InitOnlyAction>();
   case ParseSyntaxOnly:        return std::make_unique<SyntaxOnlyAction>();
   case ModuleFileInfo:         return std::make_unique<DumpModuleInfoAction>();
-  case VerifyPCH:              return std::make_unique<VerifyPCHAction>();
-  case TemplightDump:          return std::make_unique<TemplightDumpAction>();
+  case VerifyPCH:
+    return std::make_unique<VerifyPCHAction>();
 
   case PluginAction: {
     for (const FrontendPluginRegistry::entry &Plugin :
