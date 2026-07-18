@@ -2944,9 +2944,7 @@ static amd_comgr_status_t retargetCodeObjectImpl(
     if (!EntryFixups.empty() && AddStubSymbols) {
       uint64_t SymT0 = Prof ? profNowNs() : 0;
       std::unique_ptr<WritableMemoryBuffer> WithSyms =
-          addKernelEntryTrampolineSymbols(*Result, Elf.textSectionIndex(),
-                                          Elf.textAddr(), Elf.textSize(),
-                                          EntryFixups);
+          addKernelEntryTrampolineSymbols(*Result, PoolVAddr, EntryFixups);
       if (Prof)
         Profile.add(HotswapMetric::SymbolInsert, profNowNs() - SymT0, 0);
       if (WithSyms)
