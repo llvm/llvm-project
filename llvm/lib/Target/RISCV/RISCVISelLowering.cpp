@@ -6457,12 +6457,8 @@ static SDValue lowerVECTOR_SHUFFLEAsPUnzip(ShuffleVectorSDNode *SVN,
   return DAG.getNode(Opc, DL, VT, V1, V2);
 }
 
-// Match a legalized single-source deinterleave shuffle where the source
-// vector was split into two extract_subvectors of the same vector, e.g.
-//   t20: v4i8 = extract_subvector t5, 0
-//   t19: v4i8 = extract_subvector t5, 4
-//   t21: v4i8 = vector_shuffle<0,2,4,6> t20, t19
-// and lower it to an RV32 P narrowing shift on the original source.
+// Match a legalized deinterleave shuffle on two RV32 vector halves and lower
+// it to an RV32 P narrowing shift on the concatenated source.
 static SDValue
 lowerVECTOR_SHUFFLEAsRV32PNarrowingShift(ShuffleVectorSDNode *SVN,
                                          const RISCVSubtarget &Subtarget,
@@ -6473,41 +6469,24 @@ lowerVECTOR_SHUFFLEAsRV32PNarrowingShift(ShuffleVectorSDNode *SVN,
 
   SDValue V1 = SVN->getOperand(0);
   SDValue V2 = SVN->getOperand(1);
+  SDLoc DL(SVN);
+  unsigned NumElts = VT.getVectorNumElements();
 
-  // The inputs should be two extract_subvectors from the same source.
-  using namespace llvm::SDPatternMatch;
-  SDValue Src;
-  int64_t V1Index, V2Index;
-  if (!sd_match(V1, m_ExtractSubvector(m_Value(Src), m_ConstInt(V1Index))) ||
-      !sd_match(V2, m_ExtractSubvector(m_Specific(Src), m_ConstInt(V2Index))))
-    return SDValue();
+  SDValue Src = foldConcatVector(V1, V2);
+  if (!Src) {
+    MVT SrcVT = VT == MVT::v4i8 ? MVT::v8i8 : MVT::v4i16;
+    Src = DAG.getNode(ISD::CONCAT_VECTORS, DL, SrcVT, V1, V2);
+  }
 
   // The source vector should be twice the size.
-  unsigned NumElts = VT.getVectorNumElements();
   if (Src.getValueType().getVectorNumElements() != 2 * NumElts)
     return SDValue();
 
-  // The two extract_subvectors should be from different halves.
-  if ((V1Index != 0 || V2Index != NumElts) &&
-      (V1Index != NumElts || V2Index != 0))
-    return SDValue();
-
-  // Translate the shuffle mask, which indexes into the concatenation of V1
-  // and V2, into indices into Src.
-  SmallVector<int, 4> Indices(NumElts, -1);
-  for (auto [I, M] : enumerate(SVN->getMask())) {
-    if (M < 0)
-      continue;
-    int64_t Base = static_cast<unsigned>(M) < NumElts ? V1Index : V2Index;
-    Indices[I] = Base + (M % NumElts);
-  }
-
   unsigned Index = 0;
-  if (!ShuffleVectorInst::isDeInterleaveMaskOfFactor(Indices, 2, Index))
+  if (!ShuffleVectorInst::isDeInterleaveMaskOfFactor(SVN->getMask(), 2, Index))
     return SDValue();
 
   unsigned EltBits = VT.getVectorElementType().getSizeInBits();
-  SDLoc DL(SVN);
   return DAG.getNode(RISCVISD::PNSRL, DL, VT, Src,
                      DAG.getConstant(Index * EltBits, DL, MVT::i32));
 }
