@@ -27,7 +27,7 @@ void invoke_function_with_side_effects() {
 void inlined() {
   int local;
   global = &local; // expected-warning {{stack memory associated with local variable 'local' escapes to the global variable 'global_backup' which will dangle}}
-  global_backup = global; 
+  global_backup = global; // expected-note {{global variable 'global' aliases the storage of local variable 'local'}}
   global = nullptr;
 }
 

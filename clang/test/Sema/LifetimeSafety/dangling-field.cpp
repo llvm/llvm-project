@@ -40,7 +40,8 @@ struct CtorSetInLoop {
 
 struct CtorInitLifetimeBound {
   std::string_view view;  // expected-note {{this field dangles}}
-  CtorInitLifetimeBound(std::string s) : view(construct_view(s)) {} // expected-warning {{stack memory associated with parameter 's' escapes to the field 'view' which will dangle}}
+  CtorInitLifetimeBound(std::string s) : view(construct_view(s)) {} // expected-warning {{stack memory associated with parameter 's' escapes to the field 'view' which will dangle}} \
+                                                                    // expected-note {{result of call to 'construct_view' aliases the storage of parameter 's'}}
 };
 
 struct CtorInitButMoved {
@@ -90,7 +91,8 @@ struct CtorRefField {
 
 struct CtorPointerField {
   const char* ptr; // expected-note {{this field dangles}}
-  CtorPointerField(std::string s) : ptr(s.data()) {}  // expected-warning {{stack memory associated with parameter 's' escapes to the field 'ptr' which will dangle}}
+  CtorPointerField(std::string s) : ptr(s.data()) {}  // expected-warning {{stack memory associated with parameter 's' escapes to the field 'ptr' which will dangle}} \
+                                                      // expected-note {{result of call to 'data' aliases the storage of parameter 's'}}
   CtorPointerField(Dummy<1> ok, const std::string& s) : ptr(s.data()) {}
   CtorPointerField(Dummy<2> ok, std::string_view view) : ptr(view.data()) {}
 };
@@ -101,12 +103,14 @@ struct MemberSetters {
 
   void setWithParam(std::string s) {
     view = s;     // expected-warning {{stack memory associated with parameter 's' escapes to the field 'view' which will dangle}}
-    p = s.data(); // expected-warning {{stack memory associated with parameter 's' escapes to the field 'p' which will dangle}}
+    p = s.data(); // expected-warning {{stack memory associated with parameter 's' escapes to the field 'p' which will dangle}} \
+                  // expected-note {{result of call to 'data' aliases the storage of parameter 's'}}
   }
 
   void setWithParamAndReturn(std::string s) {
     view = s;     // expected-warning {{stack memory associated with parameter 's' escapes to the field 'view' which will dangle}}
-    p = s.data(); // expected-warning {{stack memory associated with parameter 's' escapes to the field 'p' which will dangle}}
+    p = s.data(); // expected-warning {{stack memory associated with parameter 's' escapes to the field 'p' which will dangle}} \
+                  // expected-note {{result of call to 'data' aliases the storage of parameter 's'}}
     return;
   }
 
@@ -124,13 +128,15 @@ struct MemberSetters {
   void setWithLocal() {
     std::string s;
     view = s;     // expected-warning {{stack memory associated with local variable 's' escapes to the field 'view' which will dangle}}
-    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}}
+    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}} \
+                  // expected-note {{result of call to 'data' aliases the storage of local variable 's'}}
   }
   
   void setWithLocalButMoved() {
     std::string s;
     view = s;                 // expected-warning-re {{stack memory associated with local variable 's' may escape to the field 'view' which will dangle. {{.*}} may have been moved}}
-    p = s.data();             // expected-warning-re {{stack memory associated with local variable 's' may escape to the field 'p' which will dangle. {{.*}} may have been moved}}
+    p = s.data();             // expected-warning-re {{stack memory associated with local variable 's' may escape to the field 'p' which will dangle. {{.*}} may have been moved}} \
+                              // expected-note {{result of call to 'data' aliases the storage of local variable 's'}}
     takeString(std::move(s)); // expected-note 2 {{potentially moved here}}
   }
 
@@ -154,14 +160,16 @@ struct MemberSetters {
 
     std::string local;
     view = local;     // expected-warning {{stack memory associated with local variable 'local' escapes to the field 'view' which will dangle}}
-    p = local.data(); // expected-warning {{stack memory associated with local variable 'local' escapes to the field 'p' which will dangle}}
+    p = local.data(); // expected-warning {{stack memory associated with local variable 'local' escapes to the field 'p' which will dangle}} \
+                      // expected-note {{result of call to 'data' aliases the storage of local variable 'local'}}
   }
 
   void use_after_scope() {
     {
       std::string local;
       view = local;     // expected-warning {{stack memory associated with local variable 'local' escapes to the field 'view' which will dangle}}
-      p = local.data(); // expected-warning {{stack memory associated with local variable 'local' escapes to the field 'p' which will dangle}}
+      p = local.data(); // expected-warning {{stack memory associated with local variable 'local' escapes to the field 'p' which will dangle}} \
+                        // expected-note {{result of call to 'data' aliases the storage of local variable 'local'}}
     }
     (void)view;
     (void)p;
@@ -241,7 +249,8 @@ struct HasUniquePtrField {
   std::unique_ptr<LifetimeBoundCtor> field; // tu-note {{this field dangles}}
 
   void setWithParam(MyObj obj) {
-    field = std::make_unique<LifetimeBoundCtor>(obj); // tu-warning {{stack memory associated with parameter 'obj' escapes to the field 'field' which will dangle}}
+    field = std::make_unique<LifetimeBoundCtor>(obj); // tu-warning {{stack memory associated with parameter 'obj' escapes to the field 'field' which will dangle}} \
+                                                      // tu-note {{result of call to 'make_unique<MakeUnique::LifetimeBoundCtor, MakeUnique::MyObj &>' aliases the storage of parameter 'obj'}}
   }
 };
 } // namespace MakeUnique
