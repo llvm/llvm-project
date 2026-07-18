@@ -130,7 +130,7 @@ public:
     notifyDisconnected();
   }
 
-  void callController(OnCallHandlerCompleteFn OnComplete, HandlerTag T,
+  void callController(OnControllerCallReturnFn OnComplete, HandlerTag T,
                       WrapperFunctionBuffer ArgBytes) override {
     // Simulate a call to the controller by running the requested function via
     // the test-supplied Post hook (or inline, if no hook was provided).
@@ -163,7 +163,7 @@ public:
   void sendWrapperResult(uint64_t CallId,
                          WrapperFunctionBuffer ResultBytes) override {
     // Respond to a simulated call by the controller.
-    OnCallHandlerCompleteFn OnComplete;
+    OnControllerCallReturnFn OnComplete;
     {
       std::scoped_lock<std::mutex> Lock(M);
       if (Shutdown) {
@@ -192,7 +192,7 @@ public:
       ShutdownCV.notify_all();
   }
 
-  void callFromController(OnCallHandlerCompleteFn OnComplete,
+  void callFromController(OnControllerCallReturnFn OnComplete,
                           orc_rt_WrapperFunction Fn,
                           WrapperFunctionBuffer ArgBytes) {
     size_t CId = 0;
@@ -263,7 +263,7 @@ private:
   bool Shutdown = false;
   size_t Outstanding = 0;
   size_t CallId = 0;
-  std::unordered_map<size_t, OnCallHandlerCompleteFn> Pending;
+  std::unordered_map<size_t, OnControllerCallReturnFn> Pending;
   std::condition_variable ShutdownCV;
   OnConnectFn OnConnect;
 };
@@ -273,7 +273,7 @@ public:
   CallViaMockControllerAccess(MockControllerAccess &CA,
                               orc_rt_WrapperFunction Fn)
       : CA(CA), Fn(Fn) {}
-  void operator()(Session::OnCallHandlerCompleteFn OnComplete,
+  void operator()(Session::OnControllerCallReturnFn OnComplete,
                   WrapperFunctionBuffer ArgBytes) {
     CA.callFromController(std::move(OnComplete), Fn, std::move(ArgBytes));
   }
@@ -444,7 +444,7 @@ TEST(SessionTest, ActiveManagedCallsDelayShutdown) {
   ASSERT_FALSE(ShutdownOpIdx);
 
   // Take a managed code call token. This should succeed.
-  auto Tok = TaskGroup::Token(S.managedCodeTaskGroup());
+  auto Tok = TaskGroup::Token(S.managedCodeTokenSource());
   ASSERT_TRUE(Tok);
 
   // We expect shutdown to wait for any active managed calls to complete.
@@ -458,7 +458,7 @@ TEST(SessionTest, ActiveManagedCallsDelayShutdown) {
 
   // The managed calls code group should have been closed. Assert that we
   // can't get a new token.
-  ASSERT_FALSE(TaskGroup::Token(S.managedCodeTaskGroup()));
+  ASSERT_FALSE(TaskGroup::Token(S.managedCodeTokenSource()));
 
   Tok = TaskGroup::Token(); // Reset token.
 

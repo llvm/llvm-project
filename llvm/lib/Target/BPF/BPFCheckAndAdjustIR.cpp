@@ -31,6 +31,7 @@
 #include "llvm/IR/IntrinsicsBPF.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
@@ -292,6 +293,9 @@ static bool sinkMinMaxInBB(BasicBlock &BB,
       // x > min(a, b) -> x > a || x > b
       // x < max(a, b) -> x < a || x < b
       Replacement = Builder.CreateLogicalOr(LHS, RHS);
+
+    if (SelectInst *ReplacementInst = dyn_cast<SelectInst>(Replacement))
+      setExplicitlyUnknownBranchWeightsIfProfiled(*ReplacementInst, DEBUG_TYPE);
 
     ICmp->replaceAllUsesWith(Replacement);
 

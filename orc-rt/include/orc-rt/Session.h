@@ -106,6 +106,10 @@ public:
   using OnDetachFn = move_only_function<void()>;
   using OnShutdownFn = move_only_function<void()>;
 
+  /// Return value callback used to return results from callController.
+  using OnControllerCallReturnFn =
+      move_only_function<void(WrapperFunctionBuffer)>;
+
   /// Callback used by the Session to run incoming wrapper-function calls.
   ///
   /// A ManagedCodeTaskGroup token is created for each call to this callback,
@@ -119,8 +123,6 @@ public:
       orc_rt_WrapperFunction Fn, WrapperFunctionBuffer ArgBytes)>;
 
   using HandlerTag = void *;
-  using OnCallHandlerCompleteFn =
-      move_only_function<void(WrapperFunctionBuffer)>;
 
   /// Provides access to the controller.
   class ControllerAccess {
@@ -131,7 +133,7 @@ public:
 
   protected:
     using HandlerTag = Session::HandlerTag;
-    using OnCallHandlerCompleteFn = Session::OnCallHandlerCompleteFn;
+    using OnControllerCallReturnFn = Session::OnControllerCallReturnFn;
 
     ControllerAccess(Session &S) : S(S) {}
 
@@ -179,7 +181,7 @@ public:
     void reportError(Error Err) { S.reportError(std::move(Err)); }
 
     /// Call the handler in the controller associated with the given tag.
-    virtual void callController(OnCallHandlerCompleteFn OnComplete,
+    virtual void callController(OnControllerCallReturnFn OnComplete,
                                 HandlerTag T,
                                 WrapperFunctionBuffer ArgBytes) = 0;
 
@@ -354,18 +356,18 @@ public:
   /// Session has already shut down, the callback will be called immediately.
   void addOnShutdown(OnShutdownFn OnShutdown);
 
-  /// Returns a reference to this Session's ManagedCodeTaskGroup.
+  /// Return a TokenSource for this Session's ManagedCodeTaskGroup.
   ///
   /// When calling code managed by a Session (e.g. JIT'd code, or library code
   /// loaded on behalf of JIT'd code), clients should hold a token for this
-  /// group. That token will prevent the Session from shutting down any Services
-  /// (and the Session itself) until tasks accessing managed code have
-  /// completed.
+  /// group, which can be constructed from the returned TokenSource. That token
+  /// will prevent the Session from shutting down any Services (and the Session
+  /// itself) until tasks accessing managed code have completed.
   ///
   /// Clients should prefer using the callManagedCodeSync and
   /// callManagedCodeAsync helpers to automatically acquire and hold a token
   /// for the duration of a call.
-  const std::shared_ptr<TaskGroup> &managedCodeTaskGroup() const {
+  TaskGroup::TokenSource managedCodeTokenSource() const {
     return ManagedCodeTaskGroup;
   }
 
@@ -418,7 +420,7 @@ public:
   /// This method can be called directly, but is expected to be more commonly
   /// called via WrapperFunction::call using a CallViaSession object (returned
   /// by the callViaSession method).
-  void callController(OnCallHandlerCompleteFn OnComplete, HandlerTag T,
+  void callController(OnControllerCallReturnFn OnComplete, HandlerTag T,
                       WrapperFunctionBuffer ArgBytes) {
     if (auto TmpCA = std::atomic_load(&CA))
       TmpCA->callController(std::move(OnComplete), T, std::move(ArgBytes));
@@ -435,7 +437,7 @@ public:
   public:
     CallViaSession(Session &S, HandlerTag T) : S(S), T(T) {}
 
-    void operator()(OnCallHandlerCompleteFn &&HandleResult,
+    void operator()(OnControllerCallReturnFn &&HandleResult,
                     WrapperFunctionBuffer ArgBytes) {
       S.callController(std::move(HandleResult), T, std::move(ArgBytes));
     }
