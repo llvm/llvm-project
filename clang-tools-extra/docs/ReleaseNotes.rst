@@ -97,6 +97,11 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`portability-errno-comparison
+  <clang-tidy/checks/portability/errno-comparison>` check.
+
+  Flags comparisons of ``errno`` against an integer literal.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
