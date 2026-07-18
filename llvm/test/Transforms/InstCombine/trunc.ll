@@ -1357,8 +1357,7 @@ define i8 @neg_trunc_nuw_i8_trunc_nuw_i16(i32 %x) {
 
 define i1 @trunc_nuw_lshr_exact(i8 %x, i8 %c) {
 ; CHECK-LABEL: @trunc_nuw_lshr_exact(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact i8 [[X:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = trunc nuw i8 [[LSHR]] to i1
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne i8 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %lshr = lshr exact i8 %x, %c
@@ -1368,8 +1367,7 @@ define i1 @trunc_nuw_lshr_exact(i8 %x, i8 %c) {
 
 define i1 @trunc_nsw_lshr_exact(i8 %x, i8 %c) {
 ; CHECK-LABEL: @trunc_nsw_lshr_exact(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact i8 [[X:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = trunc nsw i8 [[LSHR]] to i1
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne i8 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %lshr = lshr exact i8 %x, %c
@@ -1379,8 +1377,7 @@ define i1 @trunc_nsw_lshr_exact(i8 %x, i8 %c) {
 
 define i1 @trunc_nuw_ashr_exact(i8 %x, i8 %c) {
 ; CHECK-LABEL: @trunc_nuw_ashr_exact(
-; CHECK-NEXT:    [[ASHR1:%.*]] = lshr i8 [[X:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = trunc i8 [[ASHR1]] to i1
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne i8 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %ashr = ashr exact i8 %x, %c
@@ -1390,8 +1387,7 @@ define i1 @trunc_nuw_ashr_exact(i8 %x, i8 %c) {
 
 define i1 @trunc_nsw_ashr_exact(i8 %x, i8 %c) {
 ; CHECK-LABEL: @trunc_nsw_ashr_exact(
-; CHECK-NEXT:    [[ASHR1:%.*]] = lshr i8 [[X:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = trunc i8 [[ASHR1]] to i1
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne i8 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %ashr = ashr exact i8 %x, %c
@@ -1403,7 +1399,7 @@ define i1 @trunc_nuw_lshr_exact_use(i8 %x, i8 %c) {
 ; CHECK-LABEL: @trunc_nuw_lshr_exact_use(
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact i8 [[X:%.*]], [[C:%.*]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[LSHR]])
-; CHECK-NEXT:    [[RET:%.*]] = trunc nuw i8 [[LSHR]] to i1
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne i8 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %lshr = lshr exact i8 %x, %c
@@ -1416,7 +1412,7 @@ define i1 @trunc_nuw_ashr_exact_use(i8 %x, i8 %c) {
 ; CHECK-LABEL: @trunc_nuw_ashr_exact_use(
 ; CHECK-NEXT:    [[ASHR:%.*]] = ashr exact i8 [[X:%.*]], [[C:%.*]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[ASHR]])
-; CHECK-NEXT:    [[RET:%.*]] = trunc nuw i8 [[ASHR]] to i1
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne i8 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %ashr = ashr exact i8 %x, %c
@@ -1427,8 +1423,7 @@ define i1 @trunc_nuw_ashr_exact_use(i8 %x, i8 %c) {
 
 define <2 x i1> @trunc_nuw_lshr_icmp_vec(<2 x i8> %x, <2 x i8> %c) {
 ; CHECK-LABEL: @trunc_nuw_lshr_icmp_vec(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact <2 x i8> [[X:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = trunc nuw <2 x i8> [[LSHR]] to <2 x i1>
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne <2 x i8> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[RET]]
 ;
   %lshr = lshr exact <2 x i8> %x, %c
@@ -1438,8 +1433,7 @@ define <2 x i1> @trunc_nuw_lshr_icmp_vec(<2 x i8> %x, <2 x i8> %c) {
 
 define <2 x i1> @trunc_nuw_ashr_icmp_vec(<2 x i8> %x, <2 x i8> %c) {
 ; CHECK-LABEL: @trunc_nuw_ashr_icmp_vec(
-; CHECK-NEXT:    [[ASHR1:%.*]] = lshr <2 x i8> [[X:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = trunc <2 x i8> [[ASHR1]] to <2 x i1>
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne <2 x i8> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[RET]]
 ;
   %ashr = ashr exact <2 x i8> %x, %c
