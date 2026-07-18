@@ -222,29 +222,42 @@ template <typename ContextT> class GenericCycleInfoCompute {
 
   CycleInfoT &Info;
 
-  /// Sentinel header-preorder rank meaning "no cycle".
+  // Sentinel header-preorder rank meaning "no cycle".
   static constexpr unsigned NoCycle = ~0u;
-  /// Sentinel block number meaning "no block".
+  // Sentinel block number meaning "no block".
   static constexpr unsigned NoBlock = ~0u;
 
-  /// Per-block state indexed by block number.
+  // Per-block state indexed by block number. All fields default to zero.
   struct BlockInfo {
-    /// The block this entry describes; null for an unreachable block.
+    // The block this entry describes; non-null once visited by DFS.
     BlockT *Block = nullptr;
-    /// Block number of the innermost loop header found so far; NoBlock if none.
-    unsigned LoopHeader = NoBlock;
-    /// 1-based position on the current DFS path; 0 once the block leaves it.
+    // Block number of the innermost loop header; NoBlock if none. Set to
+    // NoBlock by open() on first visit, then woven by tagLoopHeader.
+    unsigned LoopHeader = 0;
+    // 1-based position on the current DFS path; 0 if off path.
     unsigned DFSPPos = 0;
-    /// Header-preorder rank of the innermost cycle containing this block (the
-    /// cycle it heads if IsHeader); NoCycle if none, or unreachable.
-    unsigned CycleIdx = NoCycle;
+    // Header-preorder rank of the innermost cycle containing this block (the
+    // cycle it heads if IsHeader); NoCycle if none. Set by the numbering pass.
+    unsigned CycleIdx = 0;
     bool IsHeader = false;
   };
+
+  // Per-cycle scratch built in run() and consumed by flatten(), keyed by
+  // header-preorder rank.
+  struct CycleBuild {
+    BlockT *Header;
+    unsigned ChildHead;
+    unsigned NextSibling;
+    unsigned OwnCount;
+  };
+
   SmallVector<BlockInfo, 8> BlockInfos;
-  /// Reachable block numbers in DFS preorder.
+  // Reachable block numbers in DFS preorder.
   SmallVector<unsigned, 8> Preorder;
-  /// Records (block B, header H): an edge from outside re-enters the closed
-  /// cycle headed by H at B, making B a non-header entry of it.
+  // Number of loop headers found by dfs(), i.e. the number of cycles.
+  unsigned NumHeaders = 0;
+  // Records (header H, block B): an edge from outside re-enters the closed
+  // cycle headed by H at B, making B a non-header entry of it.
   SmallVector<std::pair<unsigned, unsigned>, 8> Reentries;
 
   GenericCycleInfoCompute(const GenericCycleInfoCompute &) = delete;
@@ -256,10 +269,10 @@ template <typename ContextT> class GenericCycleInfoCompute {
 
   BlockInfo &info(unsigned Number) { return BlockInfos[Number]; }
 
-  /// Weave loop header \p H (and its own header chain) into the loop header
-  /// chain of \p B, keeping the chain ordered from innermost to outermost by
-  /// DFS-path position. Building this chain on the fly is why the algorithm
-  /// needs no union-find (used in the Havlak algorithm) at all.
+  // Weave loop header \p H (and its own header chain) into the loop header
+  // chain of \p B, keeping the chain ordered from innermost to outermost by
+  // DFS-path position. Building this chain on the fly is why the algorithm
+  // needs no union-find (used in the Havlak algorithm) at all.
   void tagLoopHeader(unsigned B, unsigned H) {
     if (H == NoBlock)
       return;
@@ -283,9 +296,7 @@ template <typename ContextT> class GenericCycleInfoCompute {
   }
 
   void dfs(BlockT *EntryBlock);
-  void flatten(ArrayRef<BlockT *> Headers, ArrayRef<unsigned> ChildHead,
-               ArrayRef<unsigned> NextSibling, ArrayRef<unsigned> OwnCount,
-               unsigned TopHead);
+  void flatten(ArrayRef<CycleBuild> Build, unsigned TopHead);
 
 public:
   GenericCycleInfoCompute(CycleInfoT &Info) : Info(Info) {}
@@ -336,17 +347,12 @@ void GenericCycleInfo<ContextT>::addBlockToCycle(BlockT *Block, CycleRef C) {
 /// Lay the discovered cycle forest out into Info's flat preorder array: number
 /// the cycles in Euler-tour order, set each one's parent, depth and descendant
 /// count, place every block into its innermost cycle's region of BlockLayout,
-/// and fill BlockMap. Arrays are keyed by header-preorder rank.
+/// and fill BlockMap. \p Build is keyed by header-preorder rank.
 template <typename ContextT>
-void GenericCycleInfoCompute<ContextT>::flatten(ArrayRef<BlockT *> Headers,
-                                                ArrayRef<unsigned> ChildHead,
-                                                ArrayRef<unsigned> NextSibling,
-                                                ArrayRef<unsigned> OwnCount,
+void GenericCycleInfoCompute<ContextT>::flatten(ArrayRef<CycleBuild> Build,
                                                 unsigned TopHead) {
-  unsigned N = Headers.size();
+  unsigned N = Build.size();
   Info.NumCycles = N;
-  if (!N)
-    return;
   Info.Cycles = std::make_unique<CycleT[]>(N);
 
   // Walk the cycle forest as an Euler tour. On entry a cycle reserves [Cursor,
@@ -366,18 +372,18 @@ void GenericCycleInfoCompute<ContextT>::flatten(ArrayRef<BlockT *> Headers,
     CycleT &Flat = Info.Cycles[ID];
     Flat.Parent = Parent;
     Flat.Depth = Parent ? Info.deref(Parent).Depth + 1 : 1;
-    Flat.appendEntry(Headers[C]);
-    Cursor += OwnCount[C];
+    Flat.appendEntry(Build[C].Header);
+    Cursor += Build[C].OwnCount;
     Flat.IdxBegin = Cursor;
-    Stack.push_back({ID, ChildHead[C]});
+    Stack.push_back({ID, Build[C].ChildHead});
   };
-  for (auto TLC = TopHead; TLC != NoCycle; TLC = NextSibling[TLC]) {
+  for (auto TLC = TopHead; TLC != NoCycle; TLC = Build[TLC].NextSibling) {
     enter(TLC, CycleRef());
     while (!Stack.empty()) {
       Frame &F = Stack.back();
       if (F.Child != NoCycle) {
         unsigned C = F.Child;
-        F.Child = NextSibling[C];
+        F.Child = Build[C].NextSibling;
         enter(C, CycleRef(F.Flat));
       } else {
         CycleT &Flat = Info.Cycles[F.Flat];
@@ -407,50 +413,55 @@ void GenericCycleInfoCompute<ContextT>::run(FunctionT *F) {
   BlockInfos.assign(GraphTraits<FunctionT *>::getMaxNumber(F), BlockInfo{});
 
   dfs(EntryBlock);
+  if (!NumHeaders)
+    return;
 
   // Number the cycles by their header's preorder rank and resolve every
   // block's innermost cycle in one pass: a block's LoopHeader is a DFS
   // ancestor and so already numbered, and parents get smaller ranks than
-  // their children.
-  SmallVector<BlockT *, 8> Headers;
-  SmallVector<unsigned, 8> ChildHead, NextSibling, OwnCount;
+  // their children. dfs() counted the headers, so Build needs one allocation;
+  // the exact reserve also keeps push_back from invalidating Head.
+  SmallVector<CycleBuild, 8> Build;
+  Build.reserve(NumHeaders);
   unsigned TopHead = NoCycle;
   for (unsigned N : Preorder) {
     BlockInfo &BI = info(N);
     if (BI.IsHeader) {
-      unsigned I = Headers.size();
+      unsigned I = Build.size();
       BI.CycleIdx = I;
-      Headers.push_back(BI.Block);
-      ChildHead.push_back(NoCycle);
-      OwnCount.push_back(1); // The header itself.
       unsigned &Head = BI.LoopHeader != NoBlock
-                           ? ChildHead[info(BI.LoopHeader).CycleIdx]
+                           ? Build[info(BI.LoopHeader).CycleIdx].ChildHead
                            : TopHead;
-      NextSibling.push_back(Head);
+      Build.push_back({BI.Block, NoCycle, Head, 1}); // OwnCount 1: the header.
       Head = I;
-      LLVM_DEBUG(errs() << "Found cycle for header: "
+      LLVM_DEBUG(dbgs() << "Found cycle for header: "
                         << Info.Context.print(BI.Block) << "\n");
     } else if (BI.LoopHeader != NoBlock) {
       BI.CycleIdx = info(BI.LoopHeader).CycleIdx;
-      ++OwnCount[BI.CycleIdx];
+      ++Build[BI.CycleIdx].OwnCount;
+    } else {
+      BI.CycleIdx = NoCycle;
     }
   }
-  flatten(Headers, ChildHead, NextSibling, OwnCount, TopHead);
+  flatten(Build, TopHead);
   if (Reentries.empty())
     return;
 
-  // Add the non-header entries recorded during the DFS. Sorting by preorder
-  // rank appends each cycle's entries in block preorder; several edges may
-  // re-enter a cycle at the same block, so drop duplicates.
+  // Add the non-header entries recorded during the DFS. Sorting by (header,
+  // block) groups each cycle's entries together and in block preorder; a block
+  // may re-enter a cycle via several edges, so skip duplicates.
   SmallVector<unsigned, 8> Rank(BlockInfos.size());
   for (auto [R, N] : enumerate(Preorder))
     Rank[N] = R;
-  for (auto &[B, H] : Reentries)
+  for (auto &[H, B] : Reentries)
     B = Rank[B];
   llvm::sort(Reentries);
-  Reentries.erase(llvm::unique(Reentries), Reentries.end());
-  for (auto [R, H] : Reentries)
+  for (unsigned I = 0, E = Reentries.size(); I != E; ++I) {
+    if (I && Reentries[I] == Reentries[I - 1])
+      continue;
+    auto [H, R] = Reentries[I];
     Info.deref(Info.BlockMap[H]).appendEntry(info(Preorder[R]).Block);
+  }
 }
 
 /// Identify (possibly irreducible) loops using a single-pass DFS algorithm of
@@ -468,14 +479,15 @@ void GenericCycleInfoCompute<ContextT>::dfs(BlockT *EntryBlock) {
   };
   SmallVector<Frame, 8> Stack;
   unsigned Counter = 0;
-  Preorder.reserve(BlockInfos.size());
+  Preorder.resize_for_overwrite(BlockInfos.size());
 
   auto open = [&](BlockT *Block) {
     unsigned N = num(Block);
     BlockInfo &BI = info(N);
     BI.Block = Block;
+    BI.LoopHeader = NoBlock;
     BI.DFSPPos = ++Counter;
-    Preorder.push_back(N);
+    Preorder[Counter - 1] = N;
     auto Succs = successors(Block);
     Stack.push_back({N, std::make_reverse_iterator(Succs.end()),
                      std::make_reverse_iterator(Succs.begin())});
@@ -494,7 +506,10 @@ void GenericCycleInfoCompute<ContextT>::dfs(BlockT *EntryBlock) {
         open(B1P);
       } else if (B1Info.DFSPPos > 0) {
         // B1 is a loop header (including self-edge).
-        B1Info.IsHeader = true;
+        if (!B1Info.IsHeader) {
+          B1Info.IsHeader = true;
+          ++NumHeaders;
+        }
         tagLoopHeader(B0, B1);
       } else {
         // Climb B1's header chain outward: every enclosing header still off
@@ -508,7 +523,7 @@ void GenericCycleInfoCompute<ContextT>::dfs(BlockT *EntryBlock) {
             tagLoopHeader(B0, H);
             break;
           }
-          Reentries.push_back({B1, H});
+          Reentries.push_back({H, B1});
         }
       }
     } else {
@@ -521,6 +536,7 @@ void GenericCycleInfoCompute<ContextT>::dfs(BlockT *EntryBlock) {
         tagLoopHeader(Stack.back().Block, info(B0).LoopHeader);
     }
   }
+  Preorder.truncate(Counter);
 }
 
 /// \brief Reset the object to its initial state.
@@ -540,7 +556,7 @@ void GenericCycleInfo<ContextT>::compute(FunctionT &F) {
   BlockNumberEpoch = GraphTraits<FunctionT *>::getNumberEpoch(&F);
   BlockMap.assign(GraphTraits<FunctionT *>::getMaxNumber(&F), CycleRef());
 
-  LLVM_DEBUG(errs() << "Computing cycles for function: " << F.getName()
+  LLVM_DEBUG(dbgs() << "Computing cycles for function: " << F.getName()
                     << "\n");
   Compute.run(&F);
 }
