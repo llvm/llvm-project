@@ -659,6 +659,147 @@ define void @masked_scatter_v32f16(ptr %a, ptr %b) vscale_range(16,0) #0 {
   ret void
 }
 
+; FIXME: Tests should not be dependant on bf16
+define void @masked_scatter_v2bf16(ptr %a, ptr %b) vscale_range(2,0) "target-features"="+sve,+bf16" {
+; CHECK-LABEL: masked_scatter_v2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr s1, [x0]
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    shll v2.4s, v1.4h, #16
+; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    fcmeq v2.4s, v2.4s, #0.0
+; CHECK-NEXT:    mov v0.h[0], v2.h[0]
+; CHECK-NEXT:    mov w8, v2.s[1]
+; CHECK-NEXT:    mov v0.h[1], w8
+; CHECK-NEXT:    sunpklo z0.s, z0.h
+; CHECK-NEXT:    sunpklo z0.d, z0.s
+; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, #0
+; CHECK-NEXT:    uunpklo z0.d, z1.s
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    st1h { z0.d }, p1, [z1.d]
+; CHECK-NEXT:    ret
+  %vals = load <2 x bfloat>, ptr %a
+  %ptrs = load <2 x ptr>, ptr %b
+  %mask = fcmp oeq <2 x bfloat> %vals, zeroinitializer
+  call void @llvm.masked.scatter.v2bf16(<2 x bfloat> %vals, <2 x ptr> %ptrs, i32 8, <2 x i1> %mask)
+  ret void
+}
+
+define void @masked_scatter_v4bf16(ptr %a, ptr %b) vscale_range(2,0) "target-features"="+sve,+bf16" {
+; CHECK-LABEL: masked_scatter_v4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    shll v1.4s, v0.4h, #16
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    fcmeq v1.4s, v1.4s, #0.0
+; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    xtn v1.4h, v1.4s
+; CHECK-NEXT:    sunpklo z1.s, z1.h
+; CHECK-NEXT:    sunpklo z1.d, z1.s
+; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; CHECK-NEXT:    st1h { z0.d }, p1, [z1.d]
+; CHECK-NEXT:    ret
+  %vals = load <4 x bfloat>, ptr %a
+  %ptrs = load <4 x ptr>, ptr %b
+  %mask = fcmp oeq <4 x bfloat> %vals, zeroinitializer
+  call void @llvm.masked.scatter.v4bf16(<4 x bfloat> %vals, <4 x ptr> %ptrs, i32 8, <4 x i1> %mask)
+  ret void
+}
+
+define void @masked_scatter_v8bf16(ptr %a, ptr %b) "target-features"="+sve,+bf16" {
+; VBITS_GE_256-LABEL: masked_scatter_v8bf16:
+; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    ldr q0, [x0]
+; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
+; VBITS_GE_256-NEXT:    uunpklo z1.s, z0.h
+; VBITS_GE_256-NEXT:    mov d0, v0.d[1]
+; VBITS_GE_256-NEXT:    lsl z2.s, z1.s, #16
+; VBITS_GE_256-NEXT:    uunpklo z1.d, z1.s
+; VBITS_GE_256-NEXT:    uunpklo z0.s, z0.h
+; VBITS_GE_256-NEXT:    fcmeq p0.s, p0/z, z2.s, #0.0
+; VBITS_GE_256-NEXT:    uunpklo z0.d, z0.s
+; VBITS_GE_256-NEXT:    mov z2.s, p0/z, #-1 // =0xffffffffffffffff
+; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    ld1d { z4.d }, p0/z, [x1, x8, lsl #3]
+; VBITS_GE_256-NEXT:    uzp1 z2.h, z2.h, z2.h
+; VBITS_GE_256-NEXT:    sunpklo z3.s, z2.h
+; VBITS_GE_256-NEXT:    ext z2.b, z2.b, z2.b, #8
+; VBITS_GE_256-NEXT:    sunpklo z2.s, z2.h
+; VBITS_GE_256-NEXT:    sunpklo z3.d, z3.s
+; VBITS_GE_256-NEXT:    sunpklo z2.d, z2.s
+; VBITS_GE_256-NEXT:    cmpne p1.d, p0/z, z3.d, #0
+; VBITS_GE_256-NEXT:    ld1d { z3.d }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    st1h { z1.d }, p1, [z3.d]
+; VBITS_GE_256-NEXT:    cmpne p1.d, p0/z, z2.d, #0
+; VBITS_GE_256-NEXT:    st1h { z0.d }, p1, [z4.d]
+; VBITS_GE_256-NEXT:    ret
+;
+; VBITS_GE_512-LABEL: masked_scatter_v8bf16:
+; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    ldr q0, [x0]
+; VBITS_GE_512-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_512-NEXT:    uunpklo z0.s, z0.h
+; VBITS_GE_512-NEXT:    lsl z1.s, z0.s, #16
+; VBITS_GE_512-NEXT:    uunpklo z0.d, z0.s
+; VBITS_GE_512-NEXT:    fcmeq p0.s, p0/z, z1.s, #0.0
+; VBITS_GE_512-NEXT:    mov z1.s, p0/z, #-1 // =0xffffffffffffffff
+; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
+; VBITS_GE_512-NEXT:    uzp1 z1.h, z1.h, z1.h
+; VBITS_GE_512-NEXT:    sunpklo z1.s, z1.h
+; VBITS_GE_512-NEXT:    sunpklo z1.d, z1.s
+; VBITS_GE_512-NEXT:    cmpne p1.d, p0/z, z1.d, #0
+; VBITS_GE_512-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    st1h { z0.d }, p1, [z1.d]
+; VBITS_GE_512-NEXT:    ret
+  %vals = load <8 x bfloat>, ptr %a
+  %ptrs = load <8 x ptr>, ptr %b
+  %mask = fcmp oeq <8 x bfloat> %vals, zeroinitializer
+  call void @llvm.masked.scatter.v8bf16(<8 x bfloat> %vals, <8 x ptr> %ptrs, i32 8, <8 x i1> %mask)
+  ret void
+}
+
+define void @masked_scatter_v16bf16(ptr %a, ptr %b) vscale_range(8,0) "target-features"="+sve,+bf16" {
+; CHECK-LABEL: masked_scatter_v16bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl8
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    lsl z2.s, z0.s, #16
+; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    fcmeq p1.s, p0/z, z2.s, #0.0
+; CHECK-NEXT:    lsl z2.s, z1.s, #16
+; CHECK-NEXT:    fcmeq p0.s, p0/z, z2.s, #0.0
+; CHECK-NEXT:    mov z3.s, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p1.d, vl16
+; CHECK-NEXT:    uzp1 z2.h, z3.h, z3.h
+; CHECK-NEXT:    mov z3.s, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p0.d, vl8
+; CHECK-NEXT:    sunpklo z2.s, z2.h
+; CHECK-NEXT:    uzp1 z3.h, z3.h, z3.h
+; CHECK-NEXT:    sunpklo z3.s, z3.h
+; CHECK-NEXT:    sunpklo z2.d, z2.s
+; CHECK-NEXT:    sunpklo z3.d, z3.s
+; CHECK-NEXT:    cmpne p2.d, p0/z, z2.d, #0
+; CHECK-NEXT:    ld1d { z2.d }, p1/z, [x1]
+; CHECK-NEXT:    cmpne p1.d, p0/z, z3.d, #0
+; CHECK-NEXT:    st1h { z0.d }, p2, [z2.d]
+; CHECK-NEXT:    uunpklo z0.d, z1.s
+; CHECK-NEXT:    movprfx z1, z2
+; CHECK-NEXT:    ext z1.b, z1.b, z2.b, #64
+; CHECK-NEXT:    st1h { z0.d }, p1, [z1.d]
+; CHECK-NEXT:    ret
+  %vals = load <16 x bfloat>, ptr %a
+  %ptrs = load <16 x ptr>, ptr %b
+  %mask = fcmp oeq <16 x bfloat> %vals, zeroinitializer
+  call void @llvm.masked.scatter.v16bf16(<16 x bfloat> %vals, <16 x ptr> %ptrs, i32 8, <16 x i1> %mask)
+  ret void
+}
+
 ;
 ; ST1W (float)
 ;
@@ -790,12 +931,12 @@ define void @masked_scatter_v1f64(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    fcmp d0, #0.0
-; CHECK-NEXT:    b.ne .LBB31_2
+; CHECK-NEXT:    b.ne .LBB35_2
 ; CHECK-NEXT:  // %bb.1: // %cond.store
 ; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    fmov x8, d1
 ; CHECK-NEXT:    str d0, [x8]
-; CHECK-NEXT:  .LBB31_2: // %else
+; CHECK-NEXT:  .LBB35_2: // %else
 ; CHECK-NEXT:    ret
   %vals = load <1 x double>, ptr %a
   %ptrs = load <1 x ptr>, ptr %b
@@ -1120,12 +1261,12 @@ define void @masked_scatter_bitcast_infinite_loop(ptr %a, ptr %b, i1 %cond) vsca
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl8
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    tbz w2, #0, .LBB47_2
+; CHECK-NEXT:    tbz w2, #0, .LBB51_2
 ; CHECK-NEXT:  // %bb.1: // %bb.1
 ; CHECK-NEXT:    fcmeq p1.d, p0/z, z0.d, #0.0
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
 ; CHECK-NEXT:    st1d { z0.d }, p1, [z1.d]
-; CHECK-NEXT:  .LBB47_2: // %bb.2
+; CHECK-NEXT:  .LBB51_2: // %bb.2
 ; CHECK-NEXT:    ret
   %vals = load volatile <8 x double>, ptr %a
   br i1 %cond, label %bb.1, label %bb.2

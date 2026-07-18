@@ -446,7 +446,13 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
     llvm::sort(SortedPredicates, [](PredicateWithCC A, PredicateWithCC B) {
       StringRef AName = A.Predicate ? A.Predicate->getName() : "";
       StringRef BName = B.Predicate ? B.Predicate->getName() : "";
-      return AName < BName;
+      if (AName != BName)
+        return AName < BName;
+      // Break ties on the calling convention so predicates that share a name
+      // but differ in calling convention emit in a deterministic order.
+      StringRef ACC = A.CallingConv ? A.CallingConv->getName() : "";
+      StringRef BCC = B.CallingConv ? B.CallingConv->getName() : "";
+      return ACC < BCC;
     });
 
     for (PredicateWithCC Entry : SortedPredicates) {

@@ -393,6 +393,33 @@ lldb::SBTypeSynthetic SBValue::GetTypeSynthetic() {
   return synthetic;
 }
 
+void SBValue::SetTypeSynthetic(lldb::SBTypeSynthetic &synthetic) {
+  LLDB_INSTRUMENT_VA(this);
+
+  ValueLocker locker;
+  lldb::ValueObjectSP value_sp(GetSP(locker));
+  lldb::ScriptedSyntheticChildrenSP synthetic_sp(synthetic.GetSP());
+  if (value_sp) {
+    value_sp->SetSyntheticChildrenOverride(synthetic_sp);
+  }
+}
+
+lldb::SBScriptObject SBValue::GetTypeSyntheticImplementation() {
+  LLDB_INSTRUMENT_VA(this);
+
+  ValueLocker locker;
+  lldb::ValueObjectSP value_sp(GetSP(locker));
+  if (!value_sp)
+    return lldb::SBScriptObject(nullptr, eScriptLanguageDefault);
+
+  auto frontend = value_sp->GetSyntheticChildrenFrontEnd();
+  if (!frontend)
+    return lldb::SBScriptObject(nullptr, eScriptLanguageDefault);
+
+  return lldb::SBScriptObject(frontend->GetImplementation(),
+                              eScriptLanguageDefault);
+}
+
 lldb::SBValue SBValue::CreateChildAtOffset(const char *name, uint32_t offset,
                                            SBType type) {
   LLDB_INSTRUMENT_VA(this, name, offset, type);

@@ -12,6 +12,7 @@
 #ifndef LLVM_PROFILEDATA_SAMPLEPROFWRITER_H
 #define LLVM_PROFILEDATA_SAMPLEPROFWRITER_H
 
+#include "llvm/ADT/Eytzinger.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
@@ -416,6 +417,8 @@ protected:
   std::error_code writeNameTableSection(const SampleProfileMap &ProfileMap);
   std::error_code writeFuncOffsetTable();
   std::error_code writeProfileSymbolListSection();
+  std::error_code writeStringBasedProfileSymbolListSection();
+  std::error_code writeMD5ProfileSymbolListSection();
 
   SectionLayout SecLayout = DefaultLayout;
   // Specifiy the order of sections in section header table. Note

@@ -83,6 +83,8 @@ public:
   // display purposes
   virtual ConstString GetSyntheticTypeName() { return ConstString(); }
 
+  virtual void *GetImplementation() { return nullptr; }
+
   typedef std::shared_ptr<SyntheticChildrenFrontEnd> SharedPointer;
   typedef std::unique_ptr<SyntheticChildrenFrontEnd> UniquePointer;
 
@@ -468,6 +470,8 @@ public:
     lldb::ValueObjectSP GetSyntheticValue() override;
 
     ConstString GetSyntheticTypeName() override;
+
+    void *GetImplementation() override;
 
     typedef std::shared_ptr<SyntheticChildrenFrontEnd> SharedPointer;
 

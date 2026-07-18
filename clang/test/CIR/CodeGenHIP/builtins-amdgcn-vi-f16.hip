@@ -103,3 +103,11 @@ __device__ void test_sin_f16(_Float16* out, _Float16 a) {
 __device__ void test_cos_f16(_Float16* out, _Float16 a) {
   *out = __builtin_amdgcn_cosh(a);
 }
+
+// CIR-LABEL: @_Z19test_frexp_mant_f16PDF16_DF16_
+// CIR: cir.call_llvm_intrinsic "amdgcn.frexp.mant" {{.*}} : (!cir.f16) -> !cir.f16
+// LLVM: define{{.*}} void @_Z19test_frexp_mant_f16PDF16_DF16_
+// LLVM: call{{.*}} half @llvm.amdgcn.frexp.mant.f16(half %{{.*}})
+__device__ void test_frexp_mant_f16(_Float16* out, _Float16 a) {
+  *out = __builtin_amdgcn_frexp_manth(a);
+}

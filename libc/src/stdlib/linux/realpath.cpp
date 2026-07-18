@@ -18,6 +18,7 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/getcwd.h"
 #include "src/__support/OSUtil/path.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
@@ -41,7 +42,21 @@ public:
 
   void set_to_root() { path_ = path::SEPARATOR; }
 
-  cpp::optional<Error> set_to_cwd() { return Error(ENOSYS); }
+  cpp::optional<Error> set_to_cwd() {
+    char buf[PATH_MAX];
+    ErrorOr<ssize_t> ret = linux_syscalls::getcwd(buf, PATH_MAX);
+    if (!ret) {
+      if (ret.error() == ERANGE)
+        return Error(ENAMETOOLONG);
+      return Error(ret.error());
+    }
+
+    if (*ret <= 0)
+      return Error(EIO);
+
+    path_ = cpp::string_view(buf, *ret - 1);
+    return cpp::nullopt;
+  }
 
   // Removes the trailing path component.
   void set_to_parent() {

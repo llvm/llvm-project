@@ -389,7 +389,7 @@ public:
 
     const std::string paramName = safeGetName(Param);
     Os << "Function argument";
-    printArgument(Os, CallArg, DeclWithIssue);
+    printArgument(Os, CallArg);
     if (!paramName.empty() || Callee)
       Os << " (";
     if (!paramName.empty()) {
@@ -442,7 +442,7 @@ public:
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
     Os << "Function argument";
-    printArgument(Os, CallArg, DeclWithIssue);
+    printArgument(Os, CallArg);
     Os << " (parameter 'this'";
     if (Callee) {
       Os << " to ";
@@ -467,7 +467,7 @@ public:
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
     Os << "Receiver";
-    printArgument(Os, CallArg, DeclWithIssue);
+    printArgument(Os, CallArg);
     if (Callee) {
       Os << " (to ";
       printQuotedQualifiedName(Os, Callee);
@@ -483,12 +483,11 @@ public:
     BR->emitReport(std::move(Report));
   }
 
-  void printArgument(llvm::raw_svector_ostream &Os, const Expr *Arg,
-                     const Decl *D) const {
+  void printArgument(llvm::raw_svector_ostream &Os, const Expr *Arg) const {
     SmallString<100> Buf;
     llvm::raw_svector_ostream ArgOs(Buf);
     Arg->printPretty(ArgOs, /*Helper=*/nullptr,
-                     D->getASTContext().getPrintingPolicy());
+                     BR->getContext().getPrintingPolicy());
     StringRef ArgCode = ArgOs.str();
     if (ArgCode.contains('\n'))
       return;

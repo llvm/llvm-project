@@ -33,6 +33,7 @@
 #include "lldb/Breakpoint/WatchpointAlgorithms.h"
 #include "lldb/Breakpoint/WatchpointResource.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Diagnostics.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -102,6 +103,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Threading.h"
@@ -346,10 +348,29 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
 
   m_use_g_packet_for_reading =
       GetGlobalPluginProperties().GetUseGPacketForReading();
+
+  // Contribute the packet history to diagnostics bundles, named with the
+  // creation timestamp so files from different processes stay distinguishable.
+  if (Diagnostics::Enabled()) {
+    llvm::sys::TimePoint<> now = std::chrono::system_clock::now();
+    std::string name = llvm::formatv(
+        "gdb-remote-packet-history-{0:%Y-%m-%dT%H-%M-%S}.txt", now);
+    m_diagnostics_artifact_id = Diagnostics::Instance().AddArtifactProvider(
+        std::move(name), [this]() -> std::string {
+          StreamString stream;
+          DumpPluginHistory(stream);
+          return stream.GetString().str();
+        });
+  }
 }
 
 // Destructor
 ProcessGDBRemote::~ProcessGDBRemote() {
+  // Unregister before teardown so a concurrent collection can't run the
+  // provider on a half-destroyed process.
+  if (m_diagnostics_artifact_id && Diagnostics::Enabled())
+    Diagnostics::Instance().RemoveArtifactProvider(*m_diagnostics_artifact_id);
+
   //  m_mach_process.UnregisterNotificationCallbacks (this);
   Clear();
   // We need to call finalize on the process before destroying ourselves to

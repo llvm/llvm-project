@@ -1,0 +1,91 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 | FileCheck %s
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 -cir-to-llvm -o - 2>/dev/null \
+// RUN:   | mlir-translate -mlir-to-llvmir --allow-unregistered-dialect \
+// RUN:   | FileCheck %s --check-prefix=LLVM
+
+!s8i = !cir.int<s, 8>
+!u16i = !cir.int<u, 16>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i1, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i16, dense<16>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // Register-sized integers are Direct: signature and call sites unchanged.
+  cir.func @passthrough(%arg0: !s32i, %arg1: !s64i) -> !s32i {
+    cir.return %arg0 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @passthrough(%arg0: !s32i, %arg1: !s64i) -> !s32i
+  // CHECK-NEXT: cir.return %arg0 : !s32i
+
+  // Floating-point scalars are Direct.
+  cir.func @floats(%arg0: !cir.float, %arg1: !cir.double) -> !cir.double {
+    cir.return %arg1 : !cir.double
+  }
+
+  // CHECK: cir.func{{.*}} @floats(%arg0: !cir.float, %arg1: !cir.double) -> !cir.double
+
+  // Pointers are Direct.
+  cir.func @take_ptr(%arg0: !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {
+    cir.return %arg0 : !cir.ptr<!s32i>
+  }
+
+  // CHECK: cir.func{{.*}} @take_ptr(%arg0: !cir.ptr<!s32i>) -> !cir.ptr<!s32i>
+
+  // Signed sub-register integer is sign-extended.
+  cir.func @take_s8(%arg0: !s8i) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_s8(%arg0: !s8i {llvm.signext})
+
+  // Unsigned sub-register integer is zero-extended.
+  cir.func @take_u16(%arg0: !u16i) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_u16(%arg0: !u16i {llvm.zeroext})
+
+  // bool is zero-extended.
+  cir.func @take_bool(%arg0: !cir.bool) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_bool(%arg0: !cir.bool {llvm.zeroext})
+
+  // Call site picks up the same extension attribute on the operand.
+  cir.func @call_s8(%arg0: !s8i) {
+    cir.call @take_s8(%arg0) : (!s8i) -> ()
+    cir.return
+  }
+
+  // CHECK: cir.call @take_s8(%arg0) : (!s8i {llvm.signext}) -> ()
+
+  // A sub-register integer return is also extended, not just arguments.
+  cir.func @ret_s8() -> !s8i {
+    %0 = cir.const #cir.int<0> : !s8i
+    cir.return %0 : !s8i
+  }
+
+  // CHECK: cir.func{{.*}} @ret_s8() -> (!s8i {llvm.signext})
+
+  cir.func @ret_u16() -> !u16i {
+    %0 = cir.const #cir.int<0> : !u16i
+    cir.return %0 : !u16i
+  }
+
+  // CHECK: cir.func{{.*}} @ret_u16() -> (!u16i {llvm.zeroext})
+}
+
+// LLVM: define void @take_s8(i8 signext %{{.+}})
+// LLVM: define void @take_u16(i16 zeroext %{{.+}})
+// LLVM: define void @take_bool(i1 zeroext %{{.+}})
+// LLVM: define signext i8 @ret_s8()
+// LLVM: define zeroext i16 @ret_u16()

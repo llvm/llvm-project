@@ -298,6 +298,9 @@ MCRegister AArch64MCLFIRewriter::mayModifyReserved(const MCInst &Inst) const {
 }
 
 void AArch64MCLFIRewriter::onLabel(const MCSymbol *, MCStreamer &Out) {
+  if (Guard)
+    return;
+
   // Flush a deferred LR guard before the label, since the label is a potential
   // branch target and code reached through it may use LR for control flow.
   if (DeferredLRGuard && LastSTI) {

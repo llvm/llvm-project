@@ -586,3 +586,13 @@ namespace call_with_weak_ptr {
   };
 
 }
+
+namespace call_arg_outside_decl {
+
+  RefCountable* provide();
+  bool consume(RefCountable*);
+
+  bool global_init = consume(provide());
+  // expected-warning@-1{{Function argument 'provide()' (to 'call_arg_outside_decl::consume') is a raw pointer to RefPtr-capable type 'RefCountable'}}
+
+}
