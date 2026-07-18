@@ -2267,6 +2267,8 @@ let Predicates = [HasPAuth] in {
                (ins i32imm:$AUTKey, i64imm:$AUTDisc, GPR64noip:$AUTAddrDisc,
                     i32imm:$PACKey, i64imm:$PACDisc, GPR64noip:$PACAddrDisc),
                []>, Sched<[WriteI, ReadI]> {
+    // Thanks to its register class, $PACAddrDisc never aliases X16 which is
+    // early-clobbered.
     let isCodeGenOnly = 1;
     let hasSideEffects = 1;
     let mayStore = 0;
@@ -2288,6 +2290,8 @@ let Predicates = [HasPAuth] in {
                (ins i32imm:$AUTKey,
                     i32imm:$PACKey, i64imm:$PACDisc, GPR64noip:$PACAddrDisc),
                []>, Sched<[WriteI, ReadI]> {
+    // Thanks to its register class, $PACAddrDisc never aliases X17 which is
+    // early-clobbered.
     let isCodeGenOnly = 1;
     let hasSideEffects = 1;
     let mayStore = 0;
@@ -2308,6 +2312,8 @@ let Predicates = [HasPAuth] in {
                    i64imm:$Addend),
                []>,
         Sched<[WriteI, ReadI]> {
+    // Thanks to its register class, $PACAddrDisc never aliases X16 which is
+    // early-clobbered.
     let isCodeGenOnly = 1;
     let hasSideEffects = 1;
     let mayStore = 0;
