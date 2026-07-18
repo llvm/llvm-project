@@ -3159,6 +3159,27 @@ void AMDGPUInstructionSelector::initM0(MachineInstr &I) const {
 bool AMDGPUInstructionSelector::selectG_LOAD_STORE_ATOMICRMW(
   MachineInstr &I) const {
   initM0(I);
+
+  // Pointers in address spaces the target doesn't know about are treated as
+  // aliases of the global address space. Stored values of such pointer types
+  // have no store patterns of their own (the register class type lists only
+  // name pointers in the known address spaces), so rewrite the value operand
+  // through a COPY to an integer of the same size, which the patterns do
+  // match.
+  if (auto *Store = dyn_cast<GStore>(&I)) {
+    Register ValReg = Store->getValueReg();
+    const LLT ValTy = MRI->getType(ValReg);
+    if (ValTy.isPointer() &&
+        ValTy.getAddressSpace() > AMDGPUAS::MAX_AMDGPU_ADDRESS) {
+      Register IntReg =
+          MRI->createGenericVirtualRegister(LLT::scalar(ValTy.getSizeInBits()));
+      MRI->setRegBank(IntReg, *RBI.getRegBank(ValReg, *MRI, TRI));
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(AMDGPU::COPY), IntReg)
+          .addReg(ValReg);
+      I.getOperand(0).setReg(IntReg);
+    }
+  }
+
   return selectImpl(I, *CoverageInfo);
 }
 
