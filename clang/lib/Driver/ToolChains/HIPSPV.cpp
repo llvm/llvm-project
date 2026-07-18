@@ -112,6 +112,19 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
     TrArgs.push_back("--spirv-ext=+all");
   }
 
+  // Preserve debug info requested via -g into the emitted SPIR-V using the
+  // NonSemantic.Shader.DebugInfo form. Downstream consumers such as Intel's IGC
+  // and gdb-oneapi use it to map device code back to source lines and local
+  // variables; the translator's default OpenCL.DebugInfo.100 form is not
+  // sufficient for that. Emitting the NonSemantic debug instructions requires
+  // the SPV_KHR_non_semantic_info extension. The translator accumulates
+  // --spirv-ext across occurrences, so this augments the list set above.
+  if (const Arg *A = Args.getLastArg(options::OPT_g_Group);
+      A && !A->getOption().matches(options::OPT_g0)) {
+    TrArgs.push_back("--spirv-ext=+SPV_KHR_non_semantic_info");
+    TrArgs.push_back("--spirv-debug-info-version=nonsemantic-shader-200");
+  }
+
   InputInfo TrInput = InputInfo(types::TY_LLVM_BC, TempFile, "");
   SPIRV::constructTranslateCommand(C, *this, JA, Output, TrInput, TrArgs);
 }
@@ -333,10 +346,16 @@ VersionTuple HIPSPVToolChain::computeMSVCVersion(const Driver *D,
 void HIPSPVToolChain::adjustDebugInfoKind(
     llvm::codegenoptions::DebugInfoKind &DebugInfoKind,
     const llvm::opt::ArgList &Args) const {
-  // Debug info generation is disabled for SPIRV-LLVM-Translator
-  // which currently aborts on the presence of DW_OP_LLVM_convert.
-  // TODO: Enable debug info when the SPIR-V backend arrives.
-  DebugInfoKind = llvm::codegenoptions::NoDebugInfo;
+  // Historically device debug info was force-disabled here because the
+  // SPIRV-LLVM-Translator aborted on DW_OP_LLVM_convert debug expressions. The
+  // translator now lowers that operation, so honor the debug level the user
+  // requested (e.g. via -g) and let it flow into the emitted SPIR-V.
+  // constructLinkAndEmitSpirvCommand() enables the NonSemantic.Shader.DebugInfo
+  // form at translation time so downstream tools (e.g. gdb-oneapi) can consume
+  // it. Leaving DebugInfoKind untouched keeps the default (no -g) behavior,
+  // since the driver defaults it to NoDebugInfo.
+  (void)DebugInfoKind;
+  (void)Args;
 }
 
 LTOKind HIPSPVToolChain::getLTOMode(const llvm::opt::ArgList &Args,

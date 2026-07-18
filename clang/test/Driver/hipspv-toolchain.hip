@@ -129,3 +129,26 @@
 // RUN: | FileCheck -DVERSION=%llvm-version-major --check-prefix=VERSIONED %s
 
 // VERSIONED: {{.*}}llvm-spirv-[[VERSION]]
+
+//-----------------------------------------------------------------------------
+// Check that -g preserves device debug info by requesting the
+// NonSemantic.Shader.DebugInfo form (and the extension it depends on) from the
+// translator, and that no debug flags are emitted without -g.
+// RUN: %clang -### --no-default-config -g -o %t.dummy.img \
+// RUN:   --target=spirv64-unknown-chipstar %t.dummy.o \
+// RUN:   --hip-path="%S/Inputs/hipspv" \
+// RUN: 2>&1 | FileCheck %s --check-prefix=DEBUG
+
+//      DEBUG: {{".*llvm-spirv"}} "--spirv-max-version=1.2"
+// DEBUG-SAME: "--spirv-ext=-all,+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups"
+// DEBUG-SAME: "--spirv-ext=+SPV_KHR_non_semantic_info"
+// DEBUG-SAME: "--spirv-debug-info-version=nonsemantic-shader-200"
+
+// RUN: %clang -### --no-default-config -o %t.dummy.img \
+// RUN:   --target=spirv64-unknown-chipstar %t.dummy.o \
+// RUN:   --hip-path="%S/Inputs/hipspv" \
+// RUN: 2>&1 | FileCheck %s --check-prefix=NODEBUG
+
+//      NODEBUG: {{".*llvm-spirv"}}
+// NODEBUG-NOT: SPV_KHR_non_semantic_info
+// NODEBUG-NOT: spirv-debug-info-version
