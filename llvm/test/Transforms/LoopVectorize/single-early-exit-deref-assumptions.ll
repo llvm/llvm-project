@@ -299,7 +299,7 @@ define i64 @early_exit_alignment_and_deref_known_via_assumption_n_not_zero_i16_p
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 2) ]
 ; CHECK-NEXT:    [[N_EXT:%.*]] = zext i32 [[N]] to i64
-; CHECK-NEXT:    [[MUL:%.*]] = shl i64 [[N_EXT]], 1
+; CHECK-NEXT:    [[MUL:%.*]] = shl nuw nsw i64 [[N_EXT]], 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[A]], i64 [[MUL]]) ]
 ; CHECK-NEXT:    [[A_END:%.*]] = getelementptr i8, ptr [[A]], i64 [[MUL]]
 ; CHECK-NEXT:    [[PRE:%.*]] = icmp eq i32 [[N]], 0
