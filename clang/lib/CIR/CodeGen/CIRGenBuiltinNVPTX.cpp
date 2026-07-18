@@ -39,10 +39,10 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__nvvm_atom_add_gen_i:
   case NVPTX::BI__nvvm_atom_add_gen_l:
   case NVPTX::BI__nvvm_atom_add_gen_ll:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return makeBinaryAtomicValue(cir::AtomicFetchKind::Add, expr,
+                                 /*originalArgType=*/nullptr,
+                                 /*emittedArgValue=*/nullptr,
+                                 cir::MemOrder::Relaxed);
   case NVPTX::BI__nvvm_atom_sub_gen_i:
   case NVPTX::BI__nvvm_atom_sub_gen_l:
   case NVPTX::BI__nvvm_atom_sub_gen_ll:
