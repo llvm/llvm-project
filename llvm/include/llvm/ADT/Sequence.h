@@ -87,6 +87,7 @@
                        // std::enable_if
 
 #include "llvm/ADT/STLForwardCompat.h" // llvm::to_underlying
+#include "llvm/Support/Error.h" // llvm_unreachable
 #include "llvm/Support/MathExtras.h" // AddOverflow / SubOverflow
 
 namespace llvm {
@@ -185,9 +186,13 @@ struct CheckedInt {
   }
 
 private:
+#ifndef NDEBUG
   [[noreturn]] static void assertOutOfBounds() {
-    assert(false && "Out of bounds");
+    llvm_unreachable("Out of bounds");
   }
+#else
+  static constexpr void assertOutOfBounds() {}
+#endif
 
   intmax_t Value = 0;
 };
