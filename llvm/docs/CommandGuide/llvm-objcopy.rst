@@ -177,6 +177,13 @@ multiple file formats.
  For MachO objects, ``<section>`` must be formatted as
  ``<segment name>,<section name>``.
 
+.. option:: --rename-section <old>=<new>[,<flag>,...]
+
+ Rename sections called ``<old>`` to ``<new>`` in the output, and apply any
+ specified ``<flag>`` values. See :option:`--set-section-flags` for a list of
+ supported flags. Can be specified multiple times to rename multiple sections.
+ Supported for ELF and COFF.
+
 .. option:: --set-section-alignment <section>=<align>
 
  Set the alignment of section ``<section>`` to ``<align>``. Can be specified
@@ -498,12 +505,6 @@ them.
 
  Remove notes of integer type ``<type>`` and name ``<name>`` from SHT_NOTE
  sections that are not in a segment. Can be specified multiple times.
-
-.. option:: --rename-section <old>=<new>[,<flag>,...]
-
- Rename sections called ``<old>`` to ``<new>`` in the output, and apply any
- specified ``<flag>`` values. See :option:`--set-section-flags` for a list of
- supported flags. Can be specified multiple times to rename multiple sections.
 
 .. option:: --set-section-type <section>=<type>
 

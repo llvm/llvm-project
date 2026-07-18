@@ -1,0 +1,72 @@
+# RUN: yaml2obj %s -o %t
+
+## Single flags via --rename-section (same mapping as --set-section-flags).
+# RUN: llvm-objcopy --rename-section=.foo=.bar,alloc %t %t.alloc
+# RUN: llvm-readobj --sections %t.alloc | FileCheck %s --check-prefixes=CHECK,UNINITDATA,READ,WRITE
+# RUN: llvm-objcopy --rename-section=.foo=.bar,load %t %t.load
+# RUN: llvm-readobj --sections %t.load | FileCheck %s --check-prefixes=CHECK,READ,WRITE
+# RUN: llvm-objcopy --rename-section=.foo=.bar,noload %t %t.noload
+# RUN: llvm-readobj --sections %t.noload | FileCheck %s --check-prefixes=CHECK,READ,WRITE,REMOVE
+# RUN: llvm-objcopy --rename-section=.foo=.bar,readonly %t %t.readonly
+# RUN: llvm-readobj --sections %t.readonly | FileCheck %s --check-prefixes=CHECK,READ
+# RUN: llvm-objcopy --rename-section=.foo=.bar,exclude %t %t.exclude
+# RUN: llvm-readobj --sections %t.exclude | FileCheck %s --check-prefixes=CHECK,READ,WRITE,REMOVE
+# RUN: llvm-objcopy --rename-section=.foo=.bar,debug %t %t.debug
+# RUN: llvm-readobj --sections %t.debug | FileCheck %s --check-prefixes=CHECK,INITDATA,DISCARDABLE,READ,WRITE
+# RUN: llvm-objcopy --rename-section=.foo=.bar,code %t %t.code
+# RUN: llvm-readobj --sections %t.code | FileCheck %s --check-prefixes=CHECK,CODE,EXECUTE,READ,WRITE
+# RUN: llvm-objcopy --rename-section=.foo=.bar,data %t %t.data
+# RUN: llvm-readobj --sections %t.data | FileCheck %s --check-prefixes=CHECK,INITDATA,READ,WRITE
+# RUN: llvm-objcopy --rename-section=.foo=.bar,share %t %t.share
+# RUN: llvm-readobj --sections %t.share | FileCheck %s --check-prefixes=CHECK,READ,SHARED,WRITE
+
+## Multiple flags:
+# RUN: llvm-objcopy --rename-section=.foo=.bar,alloc,readonly,share %t %t.alloc_ro_share
+# RUN: llvm-readobj --sections %t.alloc_ro_share | FileCheck %s --check-prefixes=CHECK,UNINITDATA,READ,SHARED
+# RUN: llvm-objcopy --rename-section=.foo=.bar,alloc,code %t %t.alloc_code
+# RUN: llvm-readobj --sections %t.alloc_code | FileCheck %s --check-prefixes=CHECK,CODE,UNINITDATA,EXECUTE,READ,WRITE
+
+## No flags: preserve original characteristics (contents are never dropped).
+# RUN: llvm-objcopy --rename-section=.foo=.bar %t %t.none
+# RUN: llvm-readobj --sections --section-data %t.none | FileCheck %s --check-prefixes=PRESERVE,PRESERVE-DATA
+
+## Invalid flag:
+# RUN: not llvm-objcopy --rename-section=.foo=.bar,xyzzy %t %t.xyzzy 2>&1 | FileCheck %s --check-prefix=BAD-FLAG
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ ]
+sections:
+  - Name:            .foo
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     'DEADBEEF'
+symbols:
+...
+
+# CHECK:            Name: .bar
+# CHECK:            Characteristics [
+# CHECK-NEXT:         IMAGE_SCN_ALIGN_4BYTES
+# CODE-NEXT:          IMAGE_SCN_CNT_CODE
+# INITDATA-NEXT:      IMAGE_SCN_CNT_INITIALIZED_DATA
+# UNINITDATA-NEXT:    IMAGE_SCN_CNT_UNINITIALIZED_DATA
+# REMOVE-NEXT:        IMAGE_SCN_LNK_REMOVE
+# DISCARDABLE-NEXT:   IMAGE_SCN_MEM_DISCARDABLE
+# EXECUTE-NEXT:       IMAGE_SCN_MEM_EXECUTE
+# READ-NEXT:          IMAGE_SCN_MEM_READ
+# SHARED-NEXT:        IMAGE_SCN_MEM_SHARED
+# WRITE-NEXT:         IMAGE_SCN_MEM_WRITE
+# CHECK-NEXT:       ]
+
+# PRESERVE:            Name: .bar
+# PRESERVE:            Characteristics [
+# PRESERVE-NEXT:         IMAGE_SCN_ALIGN_4BYTES
+# PRESERVE-NEXT:         IMAGE_SCN_CNT_INITIALIZED_DATA
+# PRESERVE-NEXT:         IMAGE_SCN_MEM_READ
+# PRESERVE-NEXT:       ]
+# PRESERVE-DATA:       SectionData (
+# PRESERVE-DATA-NEXT:    0000: DEADBEEF
+# PRESERVE-DATA-NEXT:  )
+
+# BAD-FLAG: unrecognized section flag 'xyzzy'. Flags supported for GNU compatibility: alloc, load, noload, readonly, exclude, debug, code, data, rom, share, contents, merge, strings

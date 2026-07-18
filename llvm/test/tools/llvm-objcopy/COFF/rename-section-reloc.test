@@ -1,0 +1,64 @@
+## Renaming a section also renames its section-definition symbol. Relocations
+## that target that symbol stay valid (they use symbol indices, not names).
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy --rename-section=.text=.text2 %t %t2
+# RUN: llvm-readobj --sections --relocations --symbols %t2 | FileCheck %s
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       16
+    SectionData:     '9090'
+  - Name:            .debug_info
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       1
+    SectionData:     '0000000000000000'
+    Relocations:
+      - VirtualAddress:  0
+        SymbolName:      .text
+        Type:            IMAGE_REL_AMD64_ADDR64
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          2
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          1
+  - Name:            .debug_info
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          8
+      NumberOfRelocations: 1
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          2
+...
+
+# CHECK:      Name: .text2
+# CHECK:      Name: .debug_info
+
+# CHECK:      Relocations [
+# CHECK-NEXT:   Section (2) .debug_info {
+# CHECK-NEXT:     0x0 IMAGE_REL_AMD64_ADDR64 .text2 (0)
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]
+
+# CHECK:      Name: .text2
+# CHECK-NEXT: Value: 0
+# CHECK-NEXT: Section: .text2
+# CHECK:      Name: .debug_info

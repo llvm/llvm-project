@@ -1,0 +1,56 @@
+## --update-section / --add-section / --set-section-flags match the original
+## name and run before --rename-section.
+
+# RUN: yaml2obj %s -o %t
+# RUN: echo DEADBEEF > %t.sec
+
+## --update-section then rename:
+# RUN: echo -n AAAB > %t.diff
+# RUN: llvm-objcopy --update-section=.foo=%t.diff --rename-section=.foo=.bar %t %t.1
+# RUN: llvm-readobj --sections --section-data %t.1 | FileCheck %s --check-prefix=UPDATE
+
+# UPDATE:      Name: .bar
+# UPDATE:      SectionData (
+# UPDATE-NEXT:   0000: 41414142
+# UPDATE-NEXT: )
+
+## --add-section then rename:
+# RUN: llvm-objcopy --add-section=.new=%t.sec --rename-section=.new=.renamed %t %t.2
+# RUN: llvm-readobj --sections --section-data %t.2 | FileCheck %s --check-prefix=ADD
+
+# ADD:      Name: .foo
+# ADD:      Name: .renamed
+# ADD:      SectionData (
+# ADD-NEXT:   0000: {{.*}}DEADBEEF{{.*}}
+# ADD-NEXT: )
+
+## --set-section-flags then rename (flags applied under original name):
+# RUN: llvm-objcopy --set-section-flags=.foo=code --rename-section=.foo=.bar %t %t.3
+# RUN: llvm-readobj --sections %t.3 | FileCheck %s --check-prefix=FLAGS
+
+# FLAGS:      Name: .bar
+# FLAGS:      Characteristics [
+# FLAGS-NEXT:   IMAGE_SCN_ALIGN_4BYTES
+# FLAGS-NEXT:   IMAGE_SCN_CNT_CODE
+# FLAGS-NEXT:   IMAGE_SCN_MEM_EXECUTE
+# FLAGS-NEXT:   IMAGE_SCN_MEM_READ
+# FLAGS-NEXT:   IMAGE_SCN_MEM_WRITE
+# FLAGS-NEXT: ]
+
+## Conflict: --set-section-flags on rename destination is rejected (CLI).
+# RUN: not llvm-objcopy --rename-section=.foo=.bar --set-section-flags=.bar=alloc %t %t.4 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=CONFLICT
+
+# CONFLICT: --set-section-flags=.bar conflicts with --rename-section=.foo=.bar
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ ]
+sections:
+  - Name:            .foo
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     '41414141'
+symbols:
+...

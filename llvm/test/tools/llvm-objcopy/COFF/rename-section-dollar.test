@@ -1,0 +1,30 @@
+## Renaming to a $ grouping name changes only the logical name.
+## LLVM does not apply GNU PE known-name characteristic forcing;
+## characteristics are not touched unless flags are given.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy --rename-section=.foo=.rdata$1 %t %t2
+# RUN: llvm-readobj --sections --section-data %t2 | FileCheck %s
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ ]
+sections:
+  - Name:            .foo
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    Alignment:       4
+    SectionData:     '01020304'
+symbols:
+...
+
+# CHECK:      Name: .rdata$1
+# CHECK:      Characteristics [
+# CHECK-NEXT:   IMAGE_SCN_ALIGN_4BYTES
+# CHECK-NEXT:   IMAGE_SCN_CNT_INITIALIZED_DATA
+# CHECK-NEXT:   IMAGE_SCN_MEM_READ
+# CHECK-NEXT:   IMAGE_SCN_MEM_WRITE
+# CHECK-NEXT: ]
+# CHECK:      SectionData (
+# CHECK-NEXT:   0000: 01020304
+# CHECK-NEXT: )

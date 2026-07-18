@@ -309,6 +309,29 @@ static Error handleArgs(const CommonConfig &Config,
     if (Error E = addGnuDebugLink(Obj, Config.AddGnuDebugLink))
       return E;
 
+  if (!Config.SectionsToRename.empty()) {
+    for (Section &Sec : Obj.getMutableSections()) {
+      auto It = Config.SectionsToRename.find(Sec.Name);
+      if (It == Config.SectionsToRename.end())
+        continue;
+
+      const SectionRename &SR = It->second;
+      StringRef OldName = Sec.Name;
+      StringRef NewName = SR.NewName;
+
+      // Update section-definition symbols that still share the section's name.
+      for (Symbol &Sym : Obj.getMutableSymbols()) {
+        if (Sym.Name == OldName && Sym.TargetSectionId == Sec.UniqueId)
+          Sym.Name = NewName;
+      }
+
+      Sec.Name = NewName;
+      if (SR.NewFlags)
+        Sec.Header.Characteristics =
+            flagsToCharacteristics(*SR.NewFlags, Sec.Header.Characteristics);
+    }
+  }
+
   if (COFFConfig.Subsystem || COFFConfig.MajorSubsystemVersion ||
       COFFConfig.MinorSubsystemVersion) {
     if (!Obj.IsPE)
