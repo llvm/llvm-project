@@ -1,140 +1,147 @@
-===========================
-SYCL runtime implementation
-===========================
+# SYCL runtime implementation
 
-.. contents::
-   :local:
+:::{contents}
+:local: true
+:::
 
-.. _index:
+(index)=
 
-Current Status
-==============
+## Current Status
 
 The implementation is in the very early stages of upstreaming. The first
 milestone is to get
 support for a simple SYCL application with device code using Unified Shared
 Memory:
 
-.. code-block:: c++
+```c++
+#include <sycl/sycl.hpp>
 
-   #include <sycl/sycl.hpp>
-   
-   class TestKernel;
-   
-   int main() {
-     sycl::queue q;
-   
-     const size_t dataSize = 32;
-     int *dataPtr = sycl::malloc_shared<int>(32, q);
-     for (int i = 0; i < dataSize; ++i)
-       dataPtr[i] = 0;
-   
-     q.submit([&](sycl::handler &cgh) {
-       cgh.parallel_for<TestKernel>(
-           sycl::range<1>(dataSize),
-           [=](sycl::id<1> idx) { dataPtr[idx] = idx[0]; });
-     });
-     q.wait();
-   
-     bool error = false;
-     for (int i = 0; i < dataSize; ++i)
-       if (dataPtr[i] != i) error = true;
-   
-     free(dataPtr, q);
-   
-     return error;
-   }
+class TestKernel;
+
+int main() {
+  sycl::queue q;
+
+  const size_t dataSize = 32;
+  int *dataPtr = sycl::malloc_shared<int>(32, q);
+  for (int i = 0; i < dataSize; ++i)
+    dataPtr[i] = 0;
+
+  q.submit([&](sycl::handler &cgh) {
+    cgh.parallel_for<TestKernel>(
+        sycl::range<1>(dataSize),
+        [=](sycl::id<1> idx) { dataPtr[idx] = idx[0]; });
+  });
+  q.wait();
+
+  bool error = false;
+  for (int i = 0; i < dataSize; ++i)
+    if (dataPtr[i] != i) error = true;
+
+  free(dataPtr, q);
+
+  return error;
+}
+```
 
 This requires at least partial support of the following functionality on the
 libsycl side:
 
-* ``sycl::platform`` class
-* ``sycl::device`` class
-* ``sycl::context`` class
-* ``sycl::queue`` class
-* ``sycl::handler`` class
-* ``sycl::id`` and ``sycl::range`` classes
-* Unified shared memory allocation/deallocation
-* Program manager, an internal component for retrieving and using device images
+- `sycl::platform` class
+- `sycl::device` class
+- `sycl::context` class
+- `sycl::queue` class
+- `sycl::handler` class
+- `sycl::id` and `sycl::range` classes
+- Unified shared memory allocation/deallocation
+- Program manager, an internal component for retrieving and using device images
   from the multi-architectural binaries
 
-Build steps
-===========
+## Build steps
 
 To build LLVM with libsycl runtime enabled the following script can be used.
 
-.. code-block:: console
+```console
+#!/bin/sh
 
-  #!/bin/sh
+build_llvm=`pwd`/build-llvm
+installprefix=`pwd`/install
+llvm=`pwd`
+mkdir -p $build_llvm
+mkdir -p $installprefix
 
-  build_llvm=`pwd`/build-llvm
-  installprefix=`pwd`/install
-  llvm=`pwd`
-  mkdir -p $build_llvm
-  mkdir -p $installprefix
+cmake -G Ninja -S $llvm/llvm -B $build_llvm \
+      -DLLVM_ENABLE_PROJECTS="clang" \
+      -DLLVM_INSTALL_UTILS=ON \
+      -DCMAKE_INSTALL_PREFIX=$installprefix \
+      -DLLVM_ENABLE_RUNTIMES="offload;openmp;libsycl" \
+      -DCMAKE_BUILD_TYPE=Release \
+      # must be default and configured in liboffload,
+      # requires level zero, see offload/cmake/Modules/LibomptargetGetDependencies.cmake
+      -DLIBOMPTARGET_PLUGINS_TO_BUILD=level_zero
 
-  cmake -G Ninja -S $llvm/llvm -B $build_llvm \
-        -DLLVM_ENABLE_PROJECTS="clang" \
-        -DLLVM_INSTALL_UTILS=ON \
-        -DCMAKE_INSTALL_PREFIX=$installprefix \
-        -DLLVM_ENABLE_RUNTIMES="offload;openmp;libsycl" \
-        -DCMAKE_BUILD_TYPE=Release \
-        # must be default and configured in liboffload,
-        # requires level zero, see offload/cmake/Modules/LibomptargetGetDependencies.cmake
-        -DLIBOMPTARGET_PLUGINS_TO_BUILD=level_zero
+ninja -C $build_llvm install
+```
 
-  ninja -C $build_llvm install
-
-
-Limitations
-===========
+## Limitations
 
 Libsycl is not currently supported on Windows because it depends on liboffload
 which doesn't currently support Windows.
 
-TODO for added SYCL classes
-===========================
+## TODO for added SYCL classes
 
-* ``exception``: methods with context are not implemented, to add once context is ready
-* ``platform``: deprecated info descriptor is not implemented (info::platform::extensions), to implement on RT level with ``device::get_info<info::device::aspects>()``
-* ``device``:
+- `exception`: methods with context are not implemented, to add once context is ready
 
-  * ``get_info``: to find an efficient way to map descriptors to liboffload types, add other descriptors, add cache of info data
-  * ``has(aspect)``: same as get_info
-  * ``create_sub_devices``: partitioning is not supported by liboffload now, blocked
-  * ``has_extension``: deprecated API, to implement on RT level with ``device::has``
+- `platform`: deprecated info descriptor is not implemented (`info::platform::extensions`), to implement on RT level with `device::get_info<info::device::aspects>()`
 
-* device selection: to add compatibility with old SYCL 1.2.1 device selectors, still part of SYCL 2020 specification
-* ``context``: to implement get_info, properties & public constructors once context support is added to liboffload
-* ``queue``:
+- `device`:
 
-  * to implement USM methods
+  - `get_info`: to find an efficient way to map descriptors to liboffload types, add other descriptors, add cache of info data
+  - `has(aspect)`: same as get_info
+  - `create_sub_devices`: partitioning is not supported by liboffload now, blocked
+  - `has_extension`: deprecated API, to implement on RT level with `device::has`
 
-    * ``memcpy``: enable the host-to-host case (blocked by liboffload limitations)
+- device selection: to add compatibility with old SYCL 1.2.1 device selectors, still part of SYCL 2020 specification
 
-  * to implement synchronization methods
-  * to implement submit & copy with accessors (low priority)
-  * get_info & properties
-  * ctors that accepts context (blocked by lack of liboffload support)
-  * nd_range kernel submissions: offset is not supported by liboffload now, SYCL2020 deprecated feature
-  * cross-context events wait (host tasks are needed)
-  * implement check if lambda arguments are device copyable (requires clang support of corresponding builtins) unless FE will fully cover it
-  * kernel instantiating on host (debugging purposes)
+- `context`: to implement get_info, properties & public constructors once context support is added to liboffload
 
-* ``property_list``: to fully implement and integrate with existing SYCL runtime classes supporting it
-* usm allocations:
+- `queue`:
 
-  * add aligned functions (blocked by liboffload support)
-  * forward templated funcs to alignment methods (rewrite current impl)
-  * handle sub devices once they are implemented (blocked by liboffload support)
+  - to implement USM methods
 
-* ``event``:
+    - `memcpy`: enable the host-to-host case (blocked by liboffload limitations)
 
-  * get_info, get_profiling_info (no liboffload support) are not implemented
-  * get_wait_list should be aligned with the results of this discussion: https://github.com/KhronosGroup/SYCL-Docs/issues/1017
+  - to implement synchronization methods
 
-* ``range``, ``id`` - __SYCL_DISABLE_ID_TO_INT_CONV__ and __SYCL_ASSUME_ID_RANGE optimizations are not implemented
-* general opens:
+  - to implement submit & copy with accessors (low priority)
 
-  * define a way to report errors from object dtors
-  * unittests: add functions to reset libsycl internal state completely (static variables)
+  - get_info & properties
+
+  - ctors that accepts context (blocked by lack of liboffload support)
+
+  - nd_range kernel submissions: offset is not supported by liboffload now, SYCL2020 deprecated feature
+
+  - cross-context events wait (host tasks are needed)
+
+  - implement check if lambda arguments are device copyable (requires clang support of corresponding builtins) unless FE will fully cover it
+
+  - kernel instantiating on host (debugging purposes)
+
+- `property_list`: to fully implement and integrate with existing SYCL runtime classes supporting it
+
+- usm allocations:
+
+  - add aligned functions (blocked by liboffload support)
+  - forward templated funcs to alignment methods (rewrite current impl)
+  - handle sub devices once they are implemented (blocked by liboffload support)
+
+- `event`:
+
+  - get_info, get_profiling_info (no liboffload support) are not implemented
+  - get_wait_list should be aligned with the results of this discussion: <https://github.com/KhronosGroup/SYCL-Docs/issues/1017>
+
+- `range`, `id` - `__SYCL_DISABLE_ID_TO_INT_CONV__` and `__SYCL_ASSUME_ID_RANGE` optimizations are not implemented
+
+- general opens:
+
+  - define a way to report errors from object dtors
+  - unittests: add functions to reset libsycl internal state completely (static variables)
