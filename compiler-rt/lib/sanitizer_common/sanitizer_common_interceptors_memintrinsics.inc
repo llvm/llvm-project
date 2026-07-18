@@ -97,27 +97,27 @@
 // checking already covers the access. A tool may override these to preserve the
 // libc _FORTIFY_SOURCE semantics (e.g. by calling REAL(__memset_chk)).
 #ifndef COMMON_INTERCEPTOR_MEMSET_CHK_IMPL
-#define COMMON_INTERCEPTOR_MEMSET_CHK_IMPL(ctx, dst, v, size, dst_size) \
-  {                                                                     \
-    (void)dst_size;                                                     \
-    COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, dst, v, size);                  \
-  }
+#  define COMMON_INTERCEPTOR_MEMSET_CHK_IMPL(ctx, dst, v, size, dst_size) \
+    {                                                                     \
+      (void)dst_size;                                                     \
+      COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, dst, v, size);                  \
+    }
 #endif
 
 #ifndef COMMON_INTERCEPTOR_MEMMOVE_CHK_IMPL
-#define COMMON_INTERCEPTOR_MEMMOVE_CHK_IMPL(ctx, dst, src, size, dst_size) \
-  {                                                                        \
-    (void)dst_size;                                                        \
-    COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, dst, src, size);                  \
-  }
+#  define COMMON_INTERCEPTOR_MEMMOVE_CHK_IMPL(ctx, dst, src, size, dst_size) \
+    {                                                                        \
+      (void)dst_size;                                                        \
+      COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, dst, src, size);                  \
+    }
 #endif
 
 #ifndef COMMON_INTERCEPTOR_MEMCPY_CHK_IMPL
-#define COMMON_INTERCEPTOR_MEMCPY_CHK_IMPL(ctx, dst, src, size, dst_size) \
-  {                                                                       \
-    (void)dst_size;                                                       \
-    COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, dst, src, size);                  \
-  }
+#  define COMMON_INTERCEPTOR_MEMCPY_CHK_IMPL(ctx, dst, src, size, dst_size) \
+    {                                                                       \
+      (void)dst_size;                                                       \
+      COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, dst, src, size);                  \
+    }
 #endif
 
 #if SANITIZER_INTERCEPT_MEMSET
