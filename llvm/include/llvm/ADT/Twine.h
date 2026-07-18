@@ -466,8 +466,7 @@ public:
   /// This returns the twine as a single StringRef if it can be
   /// represented as such. Otherwise the twine is written into the given
   /// SmallVector and a StringRef to the SmallVector's data is returned.
-  StringRef toStringRef(SmallVectorImpl<char> &Out LLVM_LIFETIME_BOUND) const
-      LLVM_LIFETIME_BOUND {
+  StringRef toStringRef(SmallVectorImpl<char> &Out) const {
     if (isSingleStringRef())
       return getSingleStringRef();
     toVector(Out);
@@ -479,8 +478,8 @@ public:
   /// given SmallVector and a StringRef to the SmallVector's data is returned.
   ///
   /// The returned StringRef's size does not include the null terminator.
-  LLVM_ABI StringRef toNullTerminatedStringRef(
-      SmallVectorImpl<char> &Out LLVM_LIFETIME_BOUND) const;
+  LLVM_ABI StringRef
+  toNullTerminatedStringRef(SmallVectorImpl<char> &Out) const;
 
   /// Write the concatenated string represented by this twine to the
   /// stream \p OS.
@@ -553,8 +552,7 @@ inline Twine operator+(StringRef LHS LLVM_LIFETIME_BOUND,
   return Twine(LHS, RHS);
 }
 
-inline raw_ostream &operator<<(raw_ostream &OS LLVM_LIFETIME_BOUND,
-                               const Twine &RHS) {
+inline raw_ostream &operator<<(raw_ostream &OS, const Twine &RHS) {
   RHS.print(OS);
   return OS;
 }
