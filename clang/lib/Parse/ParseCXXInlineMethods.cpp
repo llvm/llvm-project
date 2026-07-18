@@ -772,9 +772,6 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LPA, bool EnterScope,
 
     if (HasFuncScope)
       Actions.ActOnExitFunctionContext();
-  } else if (OutAttrs) {
-    ParsedAttributes Parsed = ParseLexedAttributeTokens(LPA);
-    Attrs.takeAllAppendingFrom(Parsed);
   } else {
     Diag(LPA.AttrNameLoc, diag::warn_attribute_no_decl)
         << LPA.AttrName.getName();
