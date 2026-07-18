@@ -4334,6 +4334,13 @@ bool IRTranslatorImpl::translateBitInsert(const User &U,
   LLT BaseTy = MRI.getType(Base);
   LLT ValTy = MRI.getType(Val);
 
+  // If Val is a floating-point type, bitcast it to an integer of the same
+  // size so buildZExtOrTrunc can safely extend or truncate it.
+  if (ValTy.isFloat()) {
+    ValTy = LLT::scalar(ValTy.getSizeInBits());
+    Val = MIRBuilder.buildBitcast(ValTy, Val).getReg(0);
+  }
+
   // Convert Offset to BaseTy.
   Register LegalOffset = MIRBuilder.buildZExtOrTrunc(BaseTy, Offset).getReg(0);
 
@@ -4376,11 +4383,26 @@ bool IRTranslatorImpl::translateBitExtract(const User &U,
   // Shift right by Offset to bring the target field down to bit 0.
   Register Shifted = MIRBuilder.buildLShr(SrcTy, Src, LegalOffset).getReg(0);
 
-  // Truncating to ResTy discards the high bits for free.
-  if (SrcTy == ResTy)
-    MIRBuilder.buildCopy(Res, Shifted);
-  else
-    MIRBuilder.buildTrunc(Res, Shifted);
+  if (ResTy.isFloat()) {
+    // Drop into the integer domain to safely handle the size conversion
+    LLT IntResTy = LLT::scalar(ResTy.getSizeInBits());
+    Register IntRes = MRI.createGenericVirtualRegister(IntResTy);
+
+    if (SrcTy == IntResTy)
+      MIRBuilder.buildCopy(IntRes, Shifted);
+    else
+      MIRBuilder.buildTrunc(IntRes, Shifted);
+
+    // Bitcast the raw integer bits back into the requested floating-point register
+    MIRBuilder.buildBitcast(Res, IntRes);
+  } else {
+    // Normal integer path
+    if (SrcTy == ResTy)
+      MIRBuilder.buildCopy(Res, Shifted);
+    else
+      MIRBuilder.buildTrunc(Res, Shifted);
+  }
+
   return true;
 }
 

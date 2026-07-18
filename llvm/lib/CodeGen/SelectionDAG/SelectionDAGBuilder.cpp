@@ -4202,6 +4202,13 @@ void SelectionDAGBuilder::visitBitInsert(const User &I) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc dl = getCurSDLoc();
 
+  // If Val is a float, cast it to an integer of the same bitwidth
+  // so DAG.getZExtOrTrunc can process it safely.
+  if (ValVT.isFloatingPoint()) {
+    ValVT = EVT::getIntegerVT(*DAG.getContext(), ValVT.getSizeInBits());
+    Val = DAG.getBitcast(ValVT, Val);
+  }
+
   SDValue LegalOffset = DAG.getZExtOrTrunc(Offset, dl, BaseVT);
 
   // Legalize rotate amount to the target's shift amount type.
@@ -4234,9 +4241,6 @@ void SelectionDAGBuilder::visitBitExtract(const User &I) {
   EVT ResultVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
   SDLoc dl = getCurSDLoc();
 
-  // The verifier guarantees the result type is not wider than the source
-  // type, so reject any widening case here. getZExtOrTrunc handles the
-  // equal-width and narrower cases.
   assert(ResultVT.getSizeInBits() <= SrcVT.getSizeInBits() &&
          "bitextract result wider than source should be rejected by verifier");
 
@@ -4247,10 +4251,21 @@ void SelectionDAGBuilder::visitBitExtract(const User &I) {
   EVT ShiftAmtTy = TLI.getShiftAmountTy(SrcVT, DAG.getDataLayout());
   SDValue LegalShiftAmount = DAG.getZExtOrTrunc(LegalOffset, dl, ShiftAmtTy);
 
-  // Shift right by (Offset + ResultWidth) - brings target field to bit 0
+  // Shift right by Offset - brings target field to bit 0
   SDValue Shifted = DAG.getNode(ISD::SRL, dl, SrcVT, Src, LegalShiftAmount);
 
-  setValue(&I, DAG.getZExtOrTrunc(Shifted, dl, ResultVT));
+  SDValue Result;
+  if (ResultVT.isFloatingPoint()) {
+    // Drop into the integer domain to safely truncate the shifted bits
+    EVT IntResultVT = EVT::getIntegerVT(*DAG.getContext(), ResultVT.getSizeInBits());
+    Result = DAG.getZExtOrTrunc(Shifted, dl, IntResultVT);
+    Result = DAG.getBitcast(ResultVT, Result);
+  } else {
+    // Normal integer path
+    Result = DAG.getZExtOrTrunc(Shifted, dl, ResultVT);
+  }
+
+  setValue(&I, Result);
 }
 
 void SelectionDAGBuilder::visitExtractElement(const User &I) {
