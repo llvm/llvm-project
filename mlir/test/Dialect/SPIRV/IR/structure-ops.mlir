@@ -640,6 +640,56 @@ spirv.module Logical GLSL450 {
 
 // -----
 
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @var0 {aliased_pointer} :
+    !spirv.ptr<!spirv.ptr<f32, PhysicalStorageBuffer>, Private>
+  spirv.GlobalVariable @var1 {restrict_pointer} :
+    !spirv.ptr<!spirv.ptr<f32, PhysicalStorageBuffer>, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{must be decorated either 'AliasedPointer' or 'RestrictPointer'}}
+  spirv.GlobalVariable @var0 :
+    !spirv.ptr<!spirv.ptr<f32, PhysicalStorageBuffer>, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{must have exactly one aliasing decoration}}
+  spirv.GlobalVariable @var0 {aliased_pointer, restrict_pointer} :
+    !spirv.ptr<!spirv.ptr<f32, PhysicalStorageBuffer>, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @var0 {aliased_pointer} :
+    !spirv.ptr<!spirv.array<4x!spirv.ptr<f32, PhysicalStorageBuffer>>, Private>
+  spirv.GlobalVariable @var1 {restrict_pointer} :
+    !spirv.ptr<!spirv.array<4x!spirv.ptr<f32, PhysicalStorageBuffer>>, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{must be decorated either 'AliasedPointer' or 'RestrictPointer'}}
+  spirv.GlobalVariable @var0 :
+    !spirv.ptr<!spirv.array<4x!spirv.ptr<f32, PhysicalStorageBuffer>>, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{must have exactly one aliasing decoration}}
+  spirv.GlobalVariable @var0 {aliased_pointer, restrict_pointer} :
+    !spirv.ptr<!spirv.array<4x!spirv.ptr<f32, PhysicalStorageBuffer>>, Private>
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.module
 //===----------------------------------------------------------------------===//
@@ -1166,6 +1216,17 @@ spirv.module Logical GLSL450 {
 
     // expected-error @+1 {{invalid operand, must be defined by a constant operation}}
     %2 = spirv.SpecConstantOperation wraps "spirv.IAdd"(%1, %1) : (i32, i32) -> i32
+
+    spirv.Return
+  }
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.func @foo(%arg0: i32) -> () "None" {
+    // expected-error @+1 {{invalid operand, must be defined by a constant operation}}
+    %0 = spirv.SpecConstantOperation wraps "spirv.IAdd"(%arg0, %arg0) : (i32, i32) -> i32
 
     spirv.Return
   }

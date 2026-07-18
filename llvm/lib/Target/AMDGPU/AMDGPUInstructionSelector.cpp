@@ -41,10 +41,8 @@ using namespace MIPatternMatch;
 #undef AMDGPUSubtarget
 
 AMDGPUInstructionSelector::AMDGPUInstructionSelector(
-    const GCNSubtarget &STI, const AMDGPURegisterBankInfo &RBI,
-    const AMDGPUTargetMachine &TM)
-    : TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()), RBI(RBI), TM(TM),
-      STI(STI),
+    const GCNSubtarget &STI, const AMDGPURegisterBankInfo &RBI)
+    : TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()), RBI(RBI), STI(STI),
 #define GET_GLOBALISEL_PREDICATES_INIT
 #include "AMDGPUGenGlobalISel.inc"
 #undef GET_GLOBALISEL_PREDICATES_INIT
@@ -72,12 +70,6 @@ static Register getWaveAddress(const MachineInstr *Def) {
   return Def->getOpcode() == AMDGPU::G_AMDGPU_WAVE_ADDRESS
              ? Def->getOperand(1).getReg()
              : Register();
-}
-
-static void diagnoseUnsupportedIntrinsic(const MachineInstr &I) {
-  const Function &F = I.getMF()->getFunction();
-  F.getContext().diagnose(DiagnosticInfoUnsupported(
-      F, "intrinsic not supported on subtarget", I.getDebugLoc(), DS_Error));
 }
 
 bool AMDGPUInstructionSelector::isVCC(Register Reg,
@@ -777,6 +769,41 @@ bool AMDGPUInstructionSelector::selectS16MergeToS32(MachineInstr &MI) const {
   return true;
 }
 
+// Pack each pair of s16 into an s32 with S_PACK_LL_B32_B16, then combine the
+// s32 pieces into the destination with a REG_SEQUENCE.
+bool AMDGPUInstructionSelector::selectS16MergeToWide(MachineInstr &MI) const {
+  MachineBasicBlock *BB = MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+  Register DstReg = MI.getOperand(0).getReg();
+  const unsigned DstSize = MRI->getType(DstReg).getSizeInBits();
+  const RegisterBank *DstBank = RBI.getRegBank(DstReg, *MRI, TRI);
+  const unsigned NumSrc = MI.getNumOperands() - 1;
+
+  // Pack each pair of s16 sources into an s32.
+  SmallVector<Register, 8> S32Regs;
+  for (unsigned I = 0; I != NumSrc; I += 2) {
+    Register S32 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    auto Pack = BuildMI(*BB, MI, DL, TII.get(AMDGPU::S_PACK_LL_B32_B16), S32)
+                    .addReg(MI.getOperand(I + 1).getReg())
+                    .addReg(MI.getOperand(I + 2).getReg());
+    constrainSelectedInstRegOperands(*Pack, TII, TRI, RBI);
+    S32Regs.push_back(S32);
+  }
+
+  // Combine the s32 pieces into the destination with a REG_SEQUENCE.
+  const TargetRegisterClass *DstRC =
+      TRI.getRegClassForSizeOnBank(DstSize, *DstBank);
+  if (!DstRC || !RBI.constrainGenericRegister(DstReg, *DstRC, *MRI))
+    return false;
+  ArrayRef<int16_t> SubRegs = TRI.getRegSplitParts(DstRC, /*EltSize=*/4);
+  auto MIB = BuildMI(*BB, MI, DL, TII.get(TargetOpcode::REG_SEQUENCE), DstReg);
+  for (unsigned I = 0, E = S32Regs.size(); I != E; ++I)
+    MIB.addReg(S32Regs[I]).addImm(SubRegs[I]);
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPUInstructionSelector::selectG_MERGE_VALUES(MachineInstr &MI) const {
   MachineBasicBlock *BB = MI.getParent();
   Register DstReg = MI.getOperand(0).getReg();
@@ -790,7 +817,19 @@ bool AMDGPUInstructionSelector::selectG_MERGE_VALUES(MachineInstr &MI) const {
         MI.getNumOperands() == 3) {
       return selectS16MergeToS32(MI);
     }
-    return selectImpl(MI, *CoverageInfo);
+    // With true16 a scalar s16 is a register type, so a scalar wider than 32
+    // bits can be built from s16 pieces.
+    bool IsWideS16Merge = SrcSize == 16 && DstTy.getSizeInBits() > 32 &&
+                          DstTy.getSizeInBits() % 32 == 0;
+
+    // SGPRs have no 16-bit subregisters, so pack pairs of s16 with S_PACK.
+    if (IsWideS16Merge &&
+        RBI.getRegBank(DstReg, *MRI, TRI)->getID() != AMDGPU::VGPRRegBankID)
+      return selectS16MergeToWide(MI);
+
+    // A VGPR wide s16 merge falls through to the generic path below.
+    if (!IsWideS16Merge)
+      return selectImpl(MI, *CoverageInfo);
   }
 
   const DebugLoc &DL = MI.getDebugLoc();
@@ -1285,38 +1324,6 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
     return selectPermlaneSwapIntrin(I, IntrinsicID);
   case Intrinsic::amdgcn_wave_shuffle:
     return selectWaveShuffleIntrin(I);
-  case Intrinsic::amdgcn_fma_legacy:
-    if (!STI.hasFmaLegacy32Insts()) {
-      diagnoseUnsupportedIntrinsic(I);
-      return false;
-    }
-    return selectImpl(I, *CoverageInfo);
-  case Intrinsic::amdgcn_sudot4:
-  case Intrinsic::amdgcn_sudot8:
-    if (!STI.hasDot8Insts()) {
-      diagnoseUnsupportedIntrinsic(I);
-      return false;
-    }
-    return selectImpl(I, *CoverageInfo);
-  case Intrinsic::amdgcn_permlane16:
-  case Intrinsic::amdgcn_permlanex16:
-    if (!STI.hasPermlane16Insts()) {
-      diagnoseUnsupportedIntrinsic(I);
-      return false;
-    }
-    return selectImpl(I, *CoverageInfo);
-  case Intrinsic::amdgcn_mov_dpp8:
-    if (!STI.hasDPP8()) {
-      diagnoseUnsupportedIntrinsic(I);
-      return false;
-    }
-    return selectImpl(I, *CoverageInfo);
-  case Intrinsic::amdgcn_tanh:
-    if (!STI.hasTanhInsts()) {
-      diagnoseUnsupportedIntrinsic(I);
-      return false;
-    }
-    return selectImpl(I, *CoverageInfo);
   default:
     return selectImpl(I, *CoverageInfo);
   }
@@ -1696,6 +1703,10 @@ static bool isLaneMaskFromSameBlock(Register Reg, MachineRegisterInfo &MRI,
         SrcRB->getID() == AMDGPU::SGPRRegBankID)
       return true;
   }
+
+  // Lane mask generated by SCC to VCC copy
+  if (MI->getOpcode() == AMDGPU::G_AMDGPU_COPY_VCC_SCC)
+    return true;
 
   // Lane mask generated using compare with same exec.
   if (isa<GAnyCmp>(MI))
@@ -2495,12 +2506,6 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     if (!Subtarget->hasAsyncMark())
       return false;
     break;
-  case Intrinsic::amdgcn_exp_compr:
-    if (!STI.hasCompressedExport()) {
-      diagnoseUnsupportedIntrinsic(I);
-      return false;
-    }
-    break;
   case Intrinsic::amdgcn_ds_bvh_stack_rtn:
   case Intrinsic::amdgcn_ds_bvh_stack_push4_pop1_rtn:
   case Intrinsic::amdgcn_ds_bvh_stack_push8_pop1_rtn:
@@ -2525,13 +2530,7 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   case Intrinsic::amdgcn_s_barrier_init:
   case Intrinsic::amdgcn_s_barrier_signal_var:
     return selectNamedBarrierInit(I, IntrinsicID);
-  case Intrinsic::amdgcn_s_wakeup_barrier: {
-    if (!STI.hasSWakeupBarrier()) {
-      diagnoseUnsupportedIntrinsic(I);
-      return false;
-    }
-    return selectNamedBarrierInst(I, IntrinsicID);
-  }
+  case Intrinsic::amdgcn_s_wakeup_barrier:
   case Intrinsic::amdgcn_s_barrier_join:
   case Intrinsic::amdgcn_s_get_named_barrier_state:
     return selectNamedBarrierInst(I, IntrinsicID);
@@ -4309,16 +4308,106 @@ static std::pair<unsigned, uint8_t> BitOp3_Op(Register R,
     }
 
     // Recursion is naturally limited by the size of the operand vector.
-    auto Op = BitOp3_Op(LHS, Src, MRI);
-    if (Op.first) {
-      NumOpcodes += Op.first;
-      LHSBits = Op.second;
+    //
+    // When LHS and RHS share a common sub-expression, one side's recursion
+    // may decompose that sub-expression and replace the Src slot the other
+    // side occupies with sub-operands via the "replace parent" path in
+    // getOperandBits. The other side's cached bit-pattern then refers to a
+    // slot whose contents changed, producing a wrong truth table.
+    //
+    // We detect this in three ways:
+    // (A) If LHS recursed, its truth table is valid against the Src state
+    //     when LHS recursion completed (SrcAfterLHS). If RHS recursion
+    //     then mutates a Src slot that LHSBits depends on, LHSBits is
+    //     stale.
+    // (B) If RHS did not recurse, RHSBits came from getOperandBits and
+    //     refers to a specific Src slot. If that slot's contents changed
+    //     (by either recursion), RHSBits is stale.
+    // (C) Symmetrically for LHS if it did not recurse.
+    SmallVector<Register, 3> SrcBeforeRecurse(Src.begin(), Src.end());
+    uint8_t LHSBitsOrig = LHSBits;
+    uint8_t RHSBitsOrig = RHSBits;
+
+    auto LHSOp = BitOp3_Op(LHS, Src, MRI);
+    if (LHSOp.first) {
+      NumOpcodes += LHSOp.first;
+      LHSBits = LHSOp.second;
     }
 
-    Op = BitOp3_Op(RHS, Src, MRI);
-    if (Op.first) {
-      NumOpcodes += Op.first;
-      RHSBits = Op.second;
+    SmallVector<Register, 3> SrcAfterLHS(Src.begin(), Src.end());
+
+    auto RHSOp = BitOp3_Op(RHS, Src, MRI);
+    if (RHSOp.first) {
+      NumOpcodes += RHSOp.first;
+      RHSBits = RHSOp.second;
+    }
+
+    // dependsOnSlot: true iff the truth table TT varies with slot Slot.
+    auto dependsOnSlot = [](uint8_t TT, int Slot) -> bool {
+      if (Slot < 0 || Slot > 2)
+        return false;
+      const uint8_t Masks[3] = {0x0f, 0x33, 0x55};
+      const int Shifts[3] = {4, 2, 1};
+      return ((TT ^ (TT >> Shifts[Slot])) & Masks[Slot]) != 0;
+    };
+
+    // findSlot: locate the Src slot a getOperandBits result depends on,
+    // including negated (NOT) patterns that getOperandBits resolves via
+    // the ~SrcBits[I] shortcut.
+    const uint8_t SrcBitsConst[3] = {0xf0, 0xcc, 0xaa};
+    auto findSlot = [&](uint8_t Bits, Register Op,
+                        const SmallVectorImpl<Register> &S) -> int {
+      Register NegatedInner;
+      bool IsNegationOp = mi_match(Op, MRI, m_Not(m_Reg(NegatedInner)));
+      if (IsNegationOp)
+        NegatedInner = getSrcRegIgnoringCopies(NegatedInner, MRI);
+      for (int I = 0; I < (int)S.size(); I++) {
+        if (Bits == SrcBitsConst[I] && S[I] == Op)
+          return I;
+        if (IsNegationOp && Bits == (uint8_t)~SrcBitsConst[I] &&
+            S[I] == NegatedInner)
+          return I;
+      }
+      return -1;
+    };
+
+    bool Stale = false;
+
+    // (A) LHS recursed: its truth table is against SrcAfterLHS.
+    //     Check if RHS recursion mutated a slot that LHSBits uses.
+    if (LHSOp.first) {
+      for (int I = 0; I < (int)SrcAfterLHS.size() && I < 3; I++) {
+        if (I < (int)Src.size() && Src[I] != SrcAfterLHS[I] &&
+            dependsOnSlot(LHSBits, I)) {
+          Stale = true;
+          break;
+        }
+      }
+    }
+
+    // (B) RHS did not recurse: RHSBits from getOperandBits is against
+    //     SrcBeforeRecurse. Check if that slot was mutated since then.
+    if (!Stale && !RHSOp.first) {
+      int Slot = findSlot(RHSBitsOrig, RHS, SrcBeforeRecurse);
+      if (Slot >= 0 &&
+          (Slot >= (int)Src.size() || Src[Slot] != SrcBeforeRecurse[Slot]))
+        Stale = true;
+    }
+
+    // (C) LHS did not recurse: LHSBits from getOperandBits is against
+    //     SrcBeforeRecurse. Check if that slot was mutated since then.
+    if (!Stale && !LHSOp.first) {
+      int Slot = findSlot(LHSBitsOrig, LHS, SrcBeforeRecurse);
+      if (Slot >= 0 &&
+          (Slot >= (int)Src.size() || Src[Slot] != SrcBeforeRecurse[Slot]))
+        Stale = true;
+    }
+
+    if (Stale) {
+      Src = std::move(SrcBeforeRecurse);
+      LHSBits = LHSBitsOrig;
+      RHSBits = RHSBitsOrig;
+      NumOpcodes = 0;
     }
     break;
   }
@@ -5264,6 +5353,13 @@ std::pair<Register, unsigned> AMDGPUInstructionSelector::selectVOP3PModsImpl(
     Mods ^= SISrcMods::NEG_HI;
   else if (Stat.second == SrcStatus::IS_LO_NEG)
     Mods ^= SISrcMods::NEG;
+
+  // 64-bit VOP3P instructions do not have OPSEL or ABS. Bail on v2f64 or v2i64.
+  // TODO: Select NEG_LO and NEG_HI modifiers from BUILD_VECTOR.
+  if (MRI.getType(RootReg).getSizeInBits() == 128) {
+    Mods |= SISrcMods::OP_SEL_1; // Just the default, OPSEL unsupported.
+    return {Stat.first, Mods};
+  }
 
   MachineInstr *MI = MRI.getVRegDef(Stat.first);
 
@@ -6366,7 +6462,7 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffen(MachineOperand &Root) const {
 
     // TODO: Should this be inside the render function? The iterator seems to
     // move.
-    const uint32_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset(*Subtarget);
+    const int64_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset(*Subtarget);
     BuildMI(*MBB, MI, MI->getDebugLoc(), TII.get(AMDGPU::V_MOV_B32_e32),
             HighBits)
         .addImm(Offset & ~MaxOffset);

@@ -23,15 +23,15 @@ define void @forked_ptrs_different_base_same_offset(ptr nocapture readonly %Base
 ; CHECK-NEXT:    [[PREDS2:%.*]] = ptrtoaddr ptr [[PREDS:%.*]] to i64
 ; CHECK-NEXT:    [[BASE23:%.*]] = ptrtoaddr ptr [[BASE2:%.*]] to i64
 ; CHECK-NEXT:    [[BASE15:%.*]] = ptrtoaddr ptr [[BASE1:%.*]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[DEST1]], [[PREDS2]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 16
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[DEST1]], [[BASE23]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[PREDS2]], [[DEST1]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ugt i64 [[TMP0]], -16
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[BASE23]], [[DEST1]]
 ; CHECK-NEXT:    [[DOTFR:%.*]] = freeze i64 [[TMP1]]
-; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[DOTFR]], 16
+; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ugt i64 [[DOTFR]], -16
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[DEST1]], [[BASE15]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[BASE15]], [[DEST1]]
 ; CHECK-NEXT:    [[DOTFR10:%.*]] = freeze i64 [[TMP2]]
-; CHECK-NEXT:    [[DIFF_CHECK6:%.*]] = icmp ult i64 [[DOTFR10]], 16
+; CHECK-NEXT:    [[DIFF_CHECK6:%.*]] = icmp ugt i64 [[DOTFR10]], -16
 ; CHECK-NEXT:    [[CONFLICT_RDX7:%.*]] = or i1 [[CONFLICT_RDX]], [[DIFF_CHECK6]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX7]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -47,14 +47,14 @@ define void @forked_ptrs_different_base_same_offset(ptr nocapture readonly %Base
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP7]], <4 x ptr> [[BROADCAST_SPLAT]], <4 x ptr> [[BROADCAST_SPLAT9]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x ptr> [[TMP8]], i64 0
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x ptr> [[TMP8]], i64 1
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x ptr> [[TMP8]], i64 2
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x ptr> [[TMP8]], i64 3
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP9]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x ptr> [[TMP8]], i64 1
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr [4 x i8], ptr [[TMP11]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP29]], i64 4
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x ptr> [[TMP8]], i64 2
 ; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr [4 x i8], ptr [[TMP13]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP30]], i64 8
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x ptr> [[TMP8]], i64 3
 ; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr [4 x i8], ptr [[TMP15]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP31]], i64 12
 ; CHECK-NEXT:    [[TMP17:%.*]] = load float, ptr [[TMP10]], align 4

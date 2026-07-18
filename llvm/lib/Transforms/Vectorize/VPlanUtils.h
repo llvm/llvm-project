@@ -13,6 +13,7 @@
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
+class DominatorTree;
 class MemoryLocation;
 class ScalarEvolution;
 class SCEV;
@@ -54,14 +55,17 @@ bool isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE, const Loop *L);
 /// same value for all lanes or only has its first lane used.
 bool isSingleScalar(const VPValue *VPV);
 
-/// Return true if \p V is a header mask in \p Plan.
-bool isHeaderMask(const VPValue *V, const VPlan &Plan);
-
 /// Checks if \p V is uniform across all VF lanes and UF parts. It is considered
 /// as such if it is either loop invariant (defined outside the vector region)
 /// or its operands are known to be uniform across all VFs and UFs (e.g.
 /// VPDerivedIV or the canonical IV).
 bool isUniformAcrossVFsAndUFs(const VPValue *V);
+
+/// Return true if \p V is elementwise, i.e. none of the lanes are permuted.
+bool isElementwise(const VPValue *V);
+
+/// Returns true if \p R produces scalar values for all VF lanes.
+bool doesGeneratePerAllLanes(const VPRecipeBase *R);
 
 /// Returns the header block of the first, top-level loop, or null if none
 /// exist.
@@ -91,26 +95,29 @@ template <typename Ty> Intrinsic::ID getIntrinsicID(const Ty *R) {
   };
   if (const auto *Rep = dyn_cast<VPReplicateRecipe>(R))
     if (Rep->getOpcode() == Instruction::Call)
-      // The mask is always the last operand if predicated.
+      // The callee is the last operand, excluding the mask if predicated.
       return GetCalleeIntrinsic(
-          Rep->getOperand(Rep->getNumOperands() - 1 - Rep->isPredicated()));
-  if (const auto *VPI = dyn_cast<VPInstruction>(R))
+          Rep->getOperand(Rep->getNumOperandsWithoutMask() - 1));
+  if (const auto *VPI = dyn_cast<VPInstruction>(R)) {
     if (VPI->getOpcode() == Instruction::Call)
       return GetCalleeIntrinsic(VPI->getOperand(VPI->getNumOperands() - 1));
+    if (VPI->getOpcode() == VPInstruction::Intrinsic) {
+      return cast<VPConstantInt>(VPI->getOperand(VPI->getNumOperands() - 1))
+          ->getZExtValue();
+    }
+  }
   return Intrinsic::not_intrinsic;
 }
 
-/// Returns the VPValue representing the uncountable exit comparison used by
-/// AnyOf if the recipes it depends on can be traced back to live-ins and
-/// the addresses (in GEP/PtrAdd form) of any (non-masked) load used in
-/// generating the values for the comparison. The recipes are stored in
-/// \p Recipes, and recipes forming an address for a load are also added to
-/// \p GEPs.
-LLVM_ABI_FOR_TEST
-std::optional<VPValue *>
-getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
-                             SmallVectorImpl<VPInstruction *> &GEPs,
-                             VPBasicBlock *LatchVPBB);
+/// Return the instruction opcode for the recipe defining \p V or 0 for
+/// unsupported recipes and VPValues not defined by a recipe.
+unsigned getOpcode(const VPValue *V);
+
+/// Get the instruction opcode or intrinsic ID for the recipe defining \p V.
+/// Returns an optional pair, where the first element indicates whether it is an
+/// intrinsic ID.
+std::optional<std::pair<bool, unsigned>>
+getOpcodeOrIntrinsicID(const VPValue *V);
 
 /// Return a MemoryLocation for \p R with noalias metadata populated from
 /// \p R, if the recipe is supported and std::nullopt otherwise. The pointer of
@@ -170,16 +177,46 @@ bool isUsedByLoadStoreAddress(const VPValue *V);
 /// inserted for predicated reductions or tail folding.
 VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
 
-/// Collect the header mask with the pattern:
-/// (ICMP_ULE, WideCanonicalIV, backedge-taken-count)
-/// Note: If alias masking is enabled this will find:
-/// (AND, HeaderMask, AliasMask)
-/// TODO: Introduce explicit recipe for header-mask instead of searching
-/// the header-mask pattern manually.
-VPSingleDefRecipe *findHeaderMask(VPlan &Plan);
-
 /// Finds the incoming alias-mask within the vector preheader.
 VPValue *findIncomingAliasMask(const VPlan &Plan);
+
+/// Returns true if \p R is dead, i.e. none of its defined values are used and
+/// it has no side effects (with the exception of conditional assumes, which are
+/// considered dead as their conditions may be flattened).
+bool isDeadRecipe(VPRecipeBase &R);
+
+/// Recursively delete \p V and any of its operands that become dead.
+void recursivelyDeleteDeadRecipes(VPValue *V);
+
+/// Collect all users of \p V, looking through recipes that define other values.
+SmallVector<VPUser *> collectUsersRecursively(VPValue *V);
+
+/// Try to fold \p R using InstSimplifyFolder. Will succeed and return a
+/// non-nullptr VPValue for a handled opcode or intrinsic ID if corresponding \p
+/// Operands are foldable live-ins.
+VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R, ArrayRef<VPValue *> Operands,
+                            const DataLayout &DL);
+
+namespace detail {
+
+/// Template-independent implementation for pullOutPermutations.
+void pullOutPermutationsImpl(
+    VPlan &Plan, function_ref<VPValue *(VPValue *Op)> Perm,
+    function_ref<VPSingleDefRecipe *(VPSingleDefRecipe *X)> Build);
+} // namespace detail
+
+/// Removes the permutation pattern \p Perm from any elementwise operations
+/// in the plan, by constructing a new permutation via \p Build.
+/// e.g. binop(perm(x), perm(y)) -> perm(binop(x,y)).
+template <typename Match_t, typename Builder>
+void pullOutPermutations(VPlan &Plan, Match_t Perm, Builder Build) {
+  // Convert matcher to function returing the matched VPValue.
+  auto MatchPerm = [&Perm](VPValue *Op) -> VPValue * {
+    VPValue *X;
+    return match(Op, Perm(X)) ? X : nullptr;
+  };
+  detail::pullOutPermutationsImpl(Plan, MatchPerm, Build);
+}
 
 } // namespace vputils
 
@@ -197,7 +234,7 @@ class VPSCEVExpander {
   VPValue *tryToReuseIRValue(const SCEV *S);
 
 public:
-  VPSCEVExpander(VPBuilder &Builder, ScalarEvolution &SE, DebugLoc DL = {})
+  VPSCEVExpander(VPBuilder &Builder, ScalarEvolution &SE, DebugLoc DL)
       : Builder(Builder), SE(SE), DL(DL) {}
 
   /// Try to expand \p S into recipes and live-ins using the builder. Returns

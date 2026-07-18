@@ -11,6 +11,7 @@
 ; CHECK-DAG: OpDecorate %[[#D:]] NoSignedWrap
 ; CHECK-DAG: OpDecorate %[[#E:]] NoUnsignedWrap
 ; CHECK-DAG: OpDecorate %[[#E]] NoSignedWrap
+; CHECK-DAG: OpDecorate %[[#F:]] NoUnsignedWrap
 
 ; CHECK-NOT: DAG-FENCE
 
@@ -23,7 +24,8 @@ define i32 @no_wrap_test(i32 %a, i32 %b) {
     %c = mul nuw i32 %a, %b
     %d = mul nsw i32 %a, %b
     %e = add nuw nsw i32 %c, %d
-    ret i32 %e
+    %f = shl nuw i32 %e, %b
+    ret i32 %f
 }
 
 ; CHECK:      OpFunction %[[#I32]] None %[[#FN]]
@@ -33,5 +35,6 @@ define i32 @no_wrap_test(i32 %a, i32 %b) {
 ; CHECK:      %[[#C]] = OpIMul %[[#I32]] %[[#A]] %[[#B]]
 ; CHECK:      %[[#D]] = OpIMul %[[#I32]] %[[#A]] %[[#B]]
 ; CHECK:      %[[#E]] = OpIAdd %[[#I32]] %[[#C]] %[[#D]]
-; CHECK:      OpReturnValue %[[#E]]
+; CHECK:      %[[#F]] = OpShiftLeftLogical %[[#I32]] %[[#E]] %[[#B]]
+; CHECK:      OpReturnValue %[[#F]]
 ; CHECK-NEXT: OpFunctionEnd

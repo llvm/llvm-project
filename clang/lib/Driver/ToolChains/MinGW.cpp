@@ -476,11 +476,26 @@ findClangRelativeSysroot(const Driver &D, const llvm::Triple &LiteralTriple,
                          const llvm::Triple &T, std::string &SubdirName) {
   llvm::SmallVector<llvm::SmallString<32>, 4> Subdirs;
   Subdirs.emplace_back(LiteralTriple.str());
+  // On ARM64EC targets, also try native aarch64 sysroot, which may contain
+  // support for both targets.
+  if (LiteralTriple.isWindowsArm64EC()) {
+    llvm::Triple NativeTriple(LiteralTriple);
+    NativeTriple.setArchName("aarch64");
+    Subdirs.emplace_back(NativeTriple.str());
+  }
   Subdirs.emplace_back(T.str());
   Subdirs.emplace_back(T.getArchName());
   Subdirs.back() += "-w64-mingw32";
   Subdirs.emplace_back(T.getArchName());
   Subdirs.back() += "-w64-mingw32ucrt";
+  if (T.isWindowsArm64EC()) {
+    llvm::Triple NativeTriple(T);
+    NativeTriple.setArchName("aarch64");
+    Subdirs.emplace_back(NativeTriple.str());
+
+    Subdirs.emplace_back("aarch64-w64-mingw32");
+    Subdirs.emplace_back("aarch64-w64-mingw32ucrt");
+  }
   StringRef ClangRoot = llvm::sys::path::parent_path(D.Dir);
   StringRef Sep = llvm::sys::path::get_separator();
   for (StringRef CandidateSubdir : Subdirs) {
@@ -575,6 +590,10 @@ Tool *toolchains::MinGW::getTool(Action::ActionClass AC) const {
     if (!Compiler)
       Compiler.reset(new tools::gcc::Compiler(*this));
     return Compiler.get();
+  case Action::ObjcopyJobClass:
+    if (!Objcopy)
+      Objcopy.reset(new tools::ARM64XObjcopy(*this));
+    return Objcopy.get();
   default:
     return ToolChain::getTool(AC);
   }
@@ -627,9 +646,8 @@ toolchains::MinGW::GetExceptionModel(const ArgList &Args) const {
 }
 
 SanitizerMask toolchains::MinGW::getSupportedSanitizers(
-    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
-  SanitizerMask Res =
-      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
+    BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
@@ -746,7 +764,7 @@ void toolchains::MinGW::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
 void toolchains::MinGW::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadKind) const {
+    BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
   if (Arg *A = DriverArgs.getLastArg(options::OPT_mguard_EQ)) {
     StringRef GuardArgs = A->getValue();
     if (GuardArgs == "none") {

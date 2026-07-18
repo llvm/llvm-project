@@ -33,7 +33,7 @@ define i32 @test(i32 %limit, i1 %guard, i32 %divisor) {
 ; CHECK-NEXT:    WIDEN ir<%prev.iv> = add nsw ir<%iv>, ir<-1>
 ; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = compute-reduction-result (add) ir<%sum>
 ; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = extract-last-part ir<%prev.iv>
-; CHECK-NEXT:    EMIT vp<%vector.recur.extract> = extract-last-lane vp<[[VP8]]>
+; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = extract-last-lane vp<[[VP8]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -43,9 +43,9 @@ define i32 @test(i32 %limit, i1 %guard, i32 %divisor) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%scalar.recur.init> = phi [ vp<%vector.recur.extract>, middle.block ], [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[VP7]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP11:%[0-9]+]]> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP12:%[0-9]+]]> = phi [ vp<[[VP9]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP13:%[0-9]+]]> = phi [ vp<[[VP7]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop.header>:

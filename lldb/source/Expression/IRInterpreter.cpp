@@ -18,6 +18,7 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Policy.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
@@ -266,7 +267,12 @@ public:
         lldb::addr_t addr = m_execution_unit.FindSymbol(name, missing_weak);
         if (addr == LLDB_INVALID_ADDRESS)
           return false;
-        value = APInt(m_target_data.getPointerSizeInBits(), addr);
+        // A resolved symbol address may be wider than a target pointer when we
+        // store extra information in the high bits, such as an address-space
+        // tag. Truncate to the pointer width rather than asserting. When the
+        // address already fits this is a no-op.
+        value = APInt(m_target_data.getPointerSizeInBits(), addr,
+                      /*isSigned=*/false, /*implicitTrunc=*/true);
         return true;
       }
       break;
@@ -1580,6 +1586,9 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       }
 
       process->SetRunningUserExpression(true);
+
+      lldb_private::PolicyStack::Guard expr_policy_guard =
+          lldb_private::PolicyStack::Get().PushPublicStateRunningExpression();
 
       // Execute the actual function call thread plan
       lldb::ExpressionResults res =

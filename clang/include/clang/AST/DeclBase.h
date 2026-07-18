@@ -687,6 +687,10 @@ public:
 
   /// Whether the definition of the declaration should be emitted in external
   /// sources.
+  /// FIXME: This conflates two questions: if the entity should be emitted into
+  ///   other object files (because there's no primary), and if the debug info
+  ///   should be emitted into other object files. This matters for
+  //    `-fmodules-debuginfo`, `-fmodules-codgen`, and `isInNamedModule()`.
   bool shouldEmitInExternalSource() const;
 
   /// Whether this declaration comes from explicit global module.
@@ -2208,6 +2212,10 @@ public:
     return getDeclKind() == Decl::RequiresExprBody;
   }
 
+  bool isExpansionStmt() const {
+    return getDeclKind() == Decl::CXXExpansionStmt;
+  }
+
   bool isNamespace() const { return getDeclKind() == Decl::Namespace; }
 
   bool isStdNamespace() const;
@@ -2303,6 +2311,15 @@ public:
   RecordDecl *getOuterLexicalRecordContext();
   const RecordDecl *getOuterLexicalRecordContext() const {
     return const_cast<DeclContext *>(this)->getOuterLexicalRecordContext();
+  }
+
+  /// Retrieve the innermost enclosing context that doesn't belong to an
+  /// expansion statement. Returns 'this' if this context is not an expansion
+  /// statement.
+  DeclContext *getEnclosingNonExpansionStatementContext();
+  const DeclContext *getEnclosingNonExpansionStatementContext() const {
+    return const_cast<DeclContext *>(this)
+        ->getEnclosingNonExpansionStatementContext();
   }
 
   /// Test if this context is part of the enclosing namespace set of

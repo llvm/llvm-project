@@ -13,9 +13,11 @@
 #include "SPIRVUtils.h"
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRV.h"
+#include "SPIRVBuiltins.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVInstrInfo.h"
 #include "SPIRVSubtarget.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -24,11 +26,21 @@
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include "llvm/Support/MathExtras.h"
 #include <queue>
 #include <vector>
 
 namespace llvm {
 namespace SPIRV {
+static MDNode *findNamedMDOperand(NamedMDNode *NMD, StringRef Name) {
+  auto It = find_if(NMD->operands(), [Name](MDNode *N) {
+    if (auto *MDS = dyn_cast_or_null<MDString>(N->getOperand(0)))
+      return MDS->getString() == Name;
+    return false;
+  });
+  return It == NMD->op_end() ? nullptr : *It;
+}
+
 // This code restores function args/retvalue types for composite cases
 // because the final types should still be aggregate whereas they're i32
 // during the translation to cope with aggregate flattening etc.
@@ -39,31 +51,18 @@ static FunctionType *extractFunctionTypeFromMetadata(NamedMDNode *NMD,
   if (!NMD)
     return FTy;
 
-  constexpr auto getConstInt = [](MDNode *MD, unsigned OpId) -> ConstantInt * {
-    if (MD->getNumOperands() <= OpId)
-      return nullptr;
-    if (auto *CMeta = dyn_cast<ConstantAsMetadata>(MD->getOperand(OpId)))
-      return dyn_cast<ConstantInt>(CMeta->getValue());
-    return nullptr;
-  };
-
-  auto It = find_if(NMD->operands(), [Name](MDNode *N) {
-    if (auto *MDS = dyn_cast_or_null<MDString>(N->getOperand(0)))
-      return MDS->getString() == Name;
-    return false;
-  });
-
-  if (It == NMD->op_end())
+  MDNode *Match = findNamedMDOperand(NMD, Name);
+  if (!Match)
     return FTy;
 
   Type *RetTy = FTy->getReturnType();
   SmallVector<Type *, 4> PTys(FTy->params());
 
-  for (unsigned I = 1; I != (*It)->getNumOperands(); ++I) {
-    MDNode *MD = dyn_cast<MDNode>((*It)->getOperand(I));
+  for (unsigned I = 1; I != Match->getNumOperands(); ++I) {
+    MDNode *MD = dyn_cast<MDNode>(Match->getOperand(I));
     assert(MD && "MDNode operand is expected");
 
-    if (auto *Const = getConstInt(MD, 0)) {
+    if (auto *Const = getMDOperandAsConstInt(MD, 0)) {
       auto *CMeta = dyn_cast<ConstantAsMetadata>(MD->getOperand(1));
       assert(CMeta && "ConstantAsMetadata operand is expected");
       int64_t Idx = Const->getSExtValue();
@@ -87,21 +86,15 @@ static FunctionType *extractFunctionTypeFromMetadata(NamedMDNode *NMD,
 static StringRef extractAsmConstraintsFromMetadata(NamedMDNode *NMD,
                                                    StringRef Constraints,
                                                    StringRef Name) {
-  // TODO: unify the extractors.
   if (!NMD)
     return Constraints;
 
-  auto It = find_if(NMD->operands(), [Name](MDNode *N) {
-    if (auto *MDS = dyn_cast_or_null<MDString>(N->getOperand(0)))
-      return MDS->getString() == Name;
-    return false;
-  });
-
-  if (It == NMD->op_end())
+  MDNode *Match = findNamedMDOperand(NMD, Name);
+  if (!Match)
     return Constraints;
 
   // By convention, the constraints string is stored in the final MD operand.
-  MDNode *MD = dyn_cast<MDNode>((*It)->getOperand((*It)->getNumOperands() - 1));
+  MDNode *MD = dyn_cast<MDNode>(Match->getOperand(Match->getNumOperands() - 1));
   assert(MD && "MDNode operand is expected");
 
   if (auto *MDS = dyn_cast<MDString>(MD->getOperand(0)))
@@ -116,17 +109,33 @@ FunctionType *getOriginalFunctionType(const Function &F) {
       F.getName());
 }
 
+// Keyed via instruction metadata, not a name.
+static std::optional<StringRef> getMutatedCallsiteKey(const CallBase &CB) {
+  if (MDNode *MD = CB.getMetadata("spv.mutated_callsite"))
+    if (MD->getNumOperands() > 0)
+      if (auto *MDS = dyn_cast<MDString>(MD->getOperand(0)))
+        return MDS->getString();
+  return std::nullopt;
+}
+
 FunctionType *getOriginalFunctionType(const CallBase &CB) {
+  std::optional<StringRef> Key = getMutatedCallsiteKey(CB);
+  if (!Key)
+    return CB.getFunctionType();
   return extractFunctionTypeFromMetadata(
       CB.getModule()->getNamedMetadata("spv.mutated_callsites"),
-      CB.getFunctionType(), CB.getName());
+      CB.getFunctionType(), *Key);
 }
 
 StringRef getOriginalAsmConstraints(const CallBase &CB) {
+  StringRef Constraints =
+      cast<InlineAsm>(CB.getCalledOperand())->getConstraintString();
+  std::optional<StringRef> Key = getMutatedCallsiteKey(CB);
+  if (!Key)
+    return Constraints;
   return extractAsmConstraintsFromMetadata(
-      CB.getModule()->getNamedMetadata("spv.mutated_callsites"),
-      cast<InlineAsm>(CB.getCalledOperand())->getConstraintString(),
-      CB.getName());
+      CB.getModule()->getNamedMetadata("spv.mutated_callsites"), Constraints,
+      *Key);
 }
 } // Namespace SPIRV
 
@@ -134,7 +143,7 @@ StringRef getOriginalAsmConstraints(const CallBase &CB) {
 // 32-bit integer operands with the correct format, and unpack them if necessary
 // when making string comparisons in compiler passes.
 // SPIR-V requires null-terminated UTF-8 strings padded to 32-bit alignment.
-static uint32_t convertCharsToWord(const StringRef &Str, unsigned i) {
+static uint32_t convertCharsToWord(StringRef Str, unsigned i) {
   uint32_t Word = 0u; // Build up this 32-bit word from 4 8-bit chars.
   for (unsigned WordIndex = 0; WordIndex < 4; ++WordIndex) {
     unsigned StrIndex = i + WordIndex;
@@ -148,11 +157,9 @@ static uint32_t convertCharsToWord(const StringRef &Str, unsigned i) {
 }
 
 // Get length including padding and null terminator.
-static size_t getPaddedLen(const StringRef &Str) {
-  return (Str.size() + 4) & ~3;
-}
+static size_t getPaddedLen(StringRef Str) { return alignTo(Str.size() + 1, 4); }
 
-void addStringImm(const StringRef &Str, MCInst &Inst) {
+void addStringImm(StringRef Str, MCInst &Inst) {
   const size_t PaddedLen = getPaddedLen(Str);
   for (unsigned i = 0; i < PaddedLen; i += 4) {
     // Add an operand for the 32-bits of chars or padding.
@@ -160,20 +167,11 @@ void addStringImm(const StringRef &Str, MCInst &Inst) {
   }
 }
 
-void addStringImm(const StringRef &Str, MachineInstrBuilder &MIB) {
+void addStringImm(StringRef Str, MachineInstrBuilder &MIB) {
   const size_t PaddedLen = getPaddedLen(Str);
   for (unsigned i = 0; i < PaddedLen; i += 4) {
     // Add an operand for the 32-bits of chars or padding.
     MIB.addImm(convertCharsToWord(Str, i));
-  }
-}
-
-void addStringImm(const StringRef &Str, IRBuilder<> &B,
-                  std::vector<Value *> &Args) {
-  const size_t PaddedLen = getPaddedLen(Str);
-  for (unsigned i = 0; i < PaddedLen; i += 4) {
-    // Add a vector element for the 32-bits of chars or padding.
-    Args.push_back(B.getInt32(convertCharsToWord(Str, i)));
   }
 }
 
@@ -203,15 +201,13 @@ void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB) {
     return;
   } else if (Bitwidth <= 64) {
     uint64_t FullImm = Imm.getZExtValue();
-    uint32_t LowBits = FullImm & 0xffffffff;
-    uint32_t HighBits = (FullImm >> 32) & 0xffffffff;
-    MIB.addImm(LowBits).addImm(HighBits);
+    MIB.addImm(Lo_32(FullImm)).addImm(Hi_32(FullImm));
     // Asm Printer needs this info to print 64-bit operands correctly
     MIB.getInstr()->setAsmPrinterFlag(SPIRV::ASM_PRINTER_WIDTH64);
     return;
   } else {
     // Emit ceil(Bitwidth / 32) words to conform SPIR-V spec.
-    unsigned NumWords = (Bitwidth + 31) / 32;
+    unsigned NumWords = divideCeil(Bitwidth, 32);
     for (unsigned I = 0; I < NumWords; ++I) {
       unsigned LimbIdx = I / 2;
       unsigned LimbShift = (I % 2) * 32;
@@ -222,7 +218,7 @@ void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB) {
   }
 }
 
-void buildOpName(Register Target, const StringRef &Name,
+void buildOpName(Register Target, StringRef Name,
                  MachineIRBuilder &MIRBuilder) {
   if (!Name.empty()) {
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpName).addUse(Target);
@@ -230,7 +226,7 @@ void buildOpName(Register Target, const StringRef &Name,
   }
 }
 
-void buildOpName(Register Target, const StringRef &Name, MachineInstr &I,
+void buildOpName(Register Target, StringRef Name, MachineInstr &I,
                  const SPIRVInstrInfo &TII) {
   if (!Name.empty()) {
     auto MIB =
@@ -241,7 +237,7 @@ void buildOpName(Register Target, const StringRef &Name, MachineInstr &I,
 }
 
 static void finishBuildOpDecorate(MachineInstrBuilder &MIB,
-                                  const std::vector<uint32_t> &DecArgs,
+                                  ArrayRef<uint32_t> DecArgs,
                                   StringRef StrImm) {
   if (!StrImm.empty())
     addStringImm(StrImm, MIB);
@@ -251,7 +247,7 @@ static void finishBuildOpDecorate(MachineInstrBuilder &MIB,
 
 void buildOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
                      SPIRV::Decoration::Decoration Dec,
-                     const std::vector<uint32_t> &DecArgs, StringRef StrImm) {
+                     ArrayRef<uint32_t> DecArgs, StringRef StrImm) {
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
                  .addUse(Reg)
                  .addImm(static_cast<uint32_t>(Dec));
@@ -260,7 +256,7 @@ void buildOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
 
 void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
                      SPIRV::Decoration::Decoration Dec,
-                     const std::vector<uint32_t> &DecArgs, StringRef StrImm) {
+                     ArrayRef<uint32_t> DecArgs, StringRef StrImm) {
   MachineBasicBlock &MBB = *I.getParent();
   auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(SPIRV::OpDecorate))
                  .addUse(Reg)
@@ -270,22 +266,8 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
 
 void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
                            SPIRV::Decoration::Decoration Dec, uint32_t Member,
-                           const std::vector<uint32_t> &DecArgs,
-                           StringRef StrImm) {
+                           ArrayRef<uint32_t> DecArgs, StringRef StrImm) {
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpMemberDecorate)
-                 .addUse(Reg)
-                 .addImm(Member)
-                 .addImm(static_cast<uint32_t>(Dec));
-  finishBuildOpDecorate(MIB, DecArgs, StrImm);
-}
-
-void buildOpMemberDecorate(Register Reg, MachineInstr &I,
-                           const SPIRVInstrInfo &TII,
-                           SPIRV::Decoration::Decoration Dec, uint32_t Member,
-                           const std::vector<uint32_t> &DecArgs,
-                           StringRef StrImm) {
-  MachineBasicBlock &MBB = *I.getParent();
-  auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(SPIRV::OpMemberDecorate))
                  .addUse(Reg)
                  .addImm(Member)
                  .addImm(static_cast<uint32_t>(Dec));
@@ -319,9 +301,26 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
             static_cast<uint32_t>(SPIRV::Decoration::FPFastMathMode)) {
       continue; // Ignored.
     }
-    auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
-                   .addUse(Reg)
-                   .addImm(static_cast<uint32_t>(DecorationId->getZExtValue()));
+    uint32_t Dec = static_cast<uint32_t>(DecorationId->getZExtValue());
+    if (Dec == static_cast<uint32_t>(SPIRV::Decoration::UniformId)) {
+      ConstantInt *ScopeV =
+          OpMD->getNumOperands() == 2
+              ? mdconst::dyn_extract<ConstantInt>(OpMD->getOperand(1))
+              : nullptr;
+      assert(ScopeV && isUInt<32>(ScopeV->getZExtValue()) &&
+             "Expect Scope <id> operand of the UniformId decoration");
+      SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
+      SPIRVTypeInst SpvTypeInt32 =
+          GR->getOrCreateSPIRVIntegerType(32, MIRBuilder);
+      Register ScopeReg = GR->buildConstantInt(
+          ScopeV->getZExtValue(), MIRBuilder, SpvTypeInt32, /*EmitIR=*/false);
+      MIRBuilder.buildInstr(SPIRV::OpDecorateId)
+          .addUse(Reg)
+          .addImm(Dec)
+          .addUse(ScopeReg);
+      continue;
+    }
+    auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate).addUse(Reg).addImm(Dec);
     for (unsigned OpI = 1, OpE = OpMD->getNumOperands(); OpI != OpE; ++OpI) {
       if (ConstantInt *OpV =
               mdconst::dyn_extract<ConstantInt>(OpMD->getOperand(OpI)))
@@ -521,40 +520,22 @@ Type *getMDOperandAsType(const MDNode *N, unsigned I) {
   return toTypedPointer(ElementTy);
 }
 
-// The set of names is borrowed from the SPIR-V translator.
-// TODO: may be implemented in SPIRVBuiltins.td.
-static bool isPipeOrAddressSpaceCastBI(const StringRef MangledName) {
-  return MangledName == "write_pipe_2" || MangledName == "read_pipe_2" ||
-         MangledName == "write_pipe_2_bl" || MangledName == "read_pipe_2_bl" ||
-         MangledName == "write_pipe_4" || MangledName == "read_pipe_4" ||
-         MangledName == "reserve_write_pipe" ||
-         MangledName == "reserve_read_pipe" ||
-         MangledName == "commit_write_pipe" ||
-         MangledName == "commit_read_pipe" ||
-         MangledName == "work_group_reserve_write_pipe" ||
-         MangledName == "work_group_reserve_read_pipe" ||
-         MangledName == "work_group_commit_write_pipe" ||
-         MangledName == "work_group_commit_read_pipe" ||
-         MangledName == "get_pipe_num_packets_ro" ||
-         MangledName == "get_pipe_max_packets_ro" ||
-         MangledName == "get_pipe_num_packets_wo" ||
-         MangledName == "get_pipe_max_packets_wo" ||
-         MangledName == "sub_group_reserve_write_pipe" ||
-         MangledName == "sub_group_reserve_read_pipe" ||
-         MangledName == "sub_group_commit_write_pipe" ||
-         MangledName == "sub_group_commit_read_pipe" ||
-         MangledName == "to_global" || MangledName == "to_local" ||
-         MangledName == "to_private";
+ConstantInt *getMDOperandAsConstInt(const MDNode *N, unsigned I) {
+  if (N->getNumOperands() <= I)
+    return nullptr;
+  if (auto *CMeta = dyn_cast<ConstantAsMetadata>(N->getOperand(I)))
+    return dyn_cast<ConstantInt>(CMeta->getValue());
+  return nullptr;
 }
 
-static bool isEnqueueKernelBI(const StringRef MangledName) {
+static bool isEnqueueKernelBI(StringRef MangledName) {
   return MangledName == "__enqueue_kernel_basic" ||
          MangledName == "__enqueue_kernel_basic_events" ||
          MangledName == "__enqueue_kernel_varargs" ||
          MangledName == "__enqueue_kernel_events_varargs";
 }
 
-static bool isKernelQueryBI(const StringRef MangledName) {
+static bool isKernelQueryBI(StringRef MangledName) {
   return MangledName == "__get_kernel_work_group_size_impl" ||
          MangledName == "__get_kernel_sub_group_count_for_ndrange_impl" ||
          MangledName == "__get_kernel_max_sub_group_size_for_ndrange_impl" ||
@@ -566,7 +547,7 @@ static bool isNonMangledOCLBuiltin(StringRef Name) {
     return false;
 
   return isEnqueueKernelBI(Name) || isKernelQueryBI(Name) ||
-         isPipeOrAddressSpaceCastBI(Name.drop_front(2)) ||
+         SPIRV::isPipeOrAddressSpaceCastBuiltin(Name) ||
          Name == "__translate_sampler_initializer";
 }
 
@@ -602,10 +583,10 @@ std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
     DemangledNameLenStart = NameSpaceStart + 11;
   }
   Start = Name.find_first_not_of("0123456789", DemangledNameLenStart);
-  [[maybe_unused]] bool Error =
-      Name.substr(DemangledNameLenStart, Start - DemangledNameLenStart)
-          .getAsInteger(10, Len);
-  assert(!Error && "Failed to parse demangled name length");
+  bool Error = Name.substr(DemangledNameLenStart, Start - DemangledNameLenStart)
+                   .getAsInteger(10, Len);
+  if (Error)
+    return std::string();
   return Name.substr(Start, Len).str();
 }
 
@@ -678,12 +659,12 @@ Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx) {
   return nullptr;
 }
 
-std::unordered_set<BasicBlock *>
+SmallPtrSet<BasicBlock *, 0>
 PartialOrderingVisitor::getReachableFrom(BasicBlock *Start) {
   std::queue<BasicBlock *> ToVisit;
   ToVisit.push(Start);
 
-  std::unordered_set<BasicBlock *> Output;
+  SmallPtrSet<BasicBlock *, 0> Output;
   while (ToVisit.size() != 0) {
     BasicBlock *BB = ToVisit.front();
     ToVisit.pop();
@@ -792,7 +773,7 @@ size_t PartialOrderingVisitor::visit(BasicBlock *BB, size_t Unused) {
     QueueIndex = 0;
     size_t Rank = GetNodeRank(BB);
     OrderInfo Info = {Rank, BlockToOrder.size()};
-    BlockToOrder.emplace(BB, Info);
+    BlockToOrder.try_emplace(BB, Info);
 
     for (BasicBlock *S : successors(BB)) {
       if (Queued.count(S) != 0)
@@ -815,7 +796,7 @@ PartialOrderingVisitor::PartialOrderingVisitor(Function &F) {
   for (auto &[BB, Info] : BlockToOrder)
     Order.emplace_back(BB);
 
-  std::sort(Order.begin(), Order.end(), [&](const auto &LHS, const auto &RHS) {
+  llvm::sort(Order, [&](const auto &LHS, const auto &RHS) {
     return compare(LHS, RHS);
   });
 }
@@ -831,7 +812,7 @@ bool PartialOrderingVisitor::compare(const BasicBlock *LHS,
 
 void PartialOrderingVisitor::partialOrderVisit(
     BasicBlock &Start, std::function<bool(BasicBlock *)> Op) {
-  std::unordered_set<BasicBlock *> Reachable = getReachableFrom(&Start);
+  SmallPtrSet<BasicBlock *, 0> Reachable = getReachableFrom(&Start);
   assert(BlockToOrder.count(&Start) != 0);
 
   // Skipping blocks with a rank inferior to |Start|'s rank.
@@ -921,7 +902,7 @@ MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg) {
   return MaybeDef;
 }
 
-bool getVacantFunctionName(Module &M, std::string &Name) {
+static bool getVacantFunctionName(Module &M, std::string &Name) {
   // It's a bit of paranoia, but still we don't want to have even a chance that
   // the loop will work for too long.
   constexpr unsigned MaxIters = 1024;
@@ -997,7 +978,7 @@ CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
   Args.push_back(Arg2);
   Args.push_back(buildMD(Arg));
   llvm::append_range(Args, Imms);
-  return B.CreateIntrinsic(IntrID, {Types}, Args);
+  return B.CreateIntrinsicWithoutFolding(IntrID, {Types}, Args);
 }
 
 // Return true if there is an opaque pointer type nested in the argument.

@@ -166,6 +166,12 @@ EXECUTION OPTIONS
 
  Specify an additional ``PATH`` to use when searching for executables in tests.
 
+.. option:: --pass-env NAME
+
+ Pass the environment variable ``NAME`` through to the test environment, in
+ addition to the built-in allow-list of variables that are always passed
+ through. May be specified multiple times to pass through several variables.
+
 .. option:: --vg
 
  Run individual tests under valgrind (using the memcheck tool).  The
@@ -254,11 +260,15 @@ EXECUTION OPTIONS
 
  Do not track elapsed wall time for each test.
 
-.. option:: --time-tests
+.. option:: --time-tests[=N|all]
 
- Track the wall time individual tests take to execute and includes the results
+ Track the wall time individual tests take to execute and include the results
  in the summary output.  This is useful for determining which tests in a test
- suite take the most time to execute.
+ suite take the most time to execute.  When enabled, lit prints a slowest-test
+ list and a histogram over all timed tests.  The slowest-test list defaults to
+ the 20 slowest tests, but can be limited with ``=N`` or expanded to every
+ timed test with ``=all``.  The headings report how many tests are listed, for
+ example ``Slowest Tests (N of M):`` and ``Test Times (M):``.
 
 .. _selection-options:
 
@@ -667,6 +677,7 @@ TestRunner.py:
  %/p                     %p but ``\`` is replaced by ``/``
  %/t                     %t but ``\`` is replaced by ``/``
  %{s:basename}           The last path component of %s
+ %{s:stem}               The last path component of %s but with the last extension removed.
  %{t:stem}               The last path component of %t but without the ``.tmp`` extension (alias for %basename_t)
  %{s:real}               %s after expanding all symbolic links and substitute drives
  %{S:real}               %S after expanding all symbolic links and substitute drives

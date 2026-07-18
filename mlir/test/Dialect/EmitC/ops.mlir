@@ -52,14 +52,6 @@ func.func @c() {
   return
 }
 
-func.func @a() {
-  %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
-  %1 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
-  %2 = "emitc.apply"(%0) {applicableOperator = "&"} : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
-  %3 = emitc.apply "&"(%1) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
-  return
-}
-
 func.func @add_int(%arg0: i32, %arg1: i32) {
   %1 = "emitc.add" (%arg0, %arg1) : (i32, i32) -> i32
   return
@@ -153,6 +145,15 @@ func.func @logical(%arg0: i32, %arg1: i32) {
 func.func @unary(%arg0: i32) {
   %0 = emitc.unary_minus %arg0 : (i32) -> i32
   %1 = emitc.unary_plus %arg0 : (i32) -> i32
+  return
+}
+
+func.func @inc_dec(%arg0: !emitc.ptr<i32>) {
+  %v = "emitc.variable"() <{value = 0 : i32}> : () -> !emitc.lvalue<i32>
+  %0 = emitc.pre_increment %v : !emitc.lvalue<i32>
+  %1 = emitc.post_increment %v : !emitc.lvalue<i32>
+  %2 = emitc.pre_decrement %v : !emitc.lvalue<i32>
+  %3 = emitc.post_decrement %v : !emitc.lvalue<i32>
   return
 }
 
@@ -323,6 +324,8 @@ func.func @member_access(%arg0: !emitc.lvalue<!emitc.opaque<"mystruct">>, %arg1:
   %3 = "emitc.member_of_ptr" (%arg1) {member = "b"} : (!emitc.lvalue<!emitc.opaque<"mystruct_ptr">>) -> !emitc.array<2xi32>
   %4 = "emitc.member_of_ptr" (%arg2) {member = "a"} : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.lvalue<i32>
   %5 = "emitc.member_of_ptr" (%arg2) {member = "b"} : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.array<2xi32>
+  %6 = emitc.load %arg0 : !emitc.lvalue<!emitc.opaque<"mystruct">>
+  %7 = "emitc.member" (%6) {member = "a"} : (!emitc.opaque<"mystruct">) -> i32
   return
 }
 

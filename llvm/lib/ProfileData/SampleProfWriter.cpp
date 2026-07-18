@@ -31,7 +31,6 @@
 #include <cmath>
 #include <cstdint>
 #include <memory>
-#include <set>
 #include <system_error>
 #include <utility>
 #include <vector>
@@ -46,6 +45,15 @@ static cl::opt<bool> ExtBinaryWriteVTableTypeProf(
     "extbinary-write-vtable-type-prof", cl::init(false), cl::Hidden,
     cl::desc("Write vtable type profile in ext-binary sample profile writer"));
 
+static cl::opt<uint64_t> RequestedVersion(
+    "sample-profile-format-version", cl::init(DefaultVersion), cl::Hidden,
+    cl::desc("Format version to write for extensible binary profiles"));
+
+static cl::opt<bool>
+    WriteMD5ProfSymList("md5-prof-sym-list", cl::init(false), cl::Hidden,
+                        cl::desc("Write ProfileSymbolList (Cold Symbols) as "
+                                 "64-bit MD5 hashes in Eytzinger layout"));
+
 namespace llvm {
 namespace support {
 namespace endian {
@@ -58,8 +66,7 @@ struct SeekableWriter {
   SeekableWriter(raw_pwrite_stream &OS, endianness Endian)
       : OS(OS), Endian(Endian) {}
 
-  template <typename ValueType>
-  void pwrite(ValueType Val, size_t Offset) {
+  template <typename ValueType> void pwrite(ValueType Val, size_t Offset) {
     std::string StringBuf;
     raw_string_ostream SStream(StringBuf);
     Writer(SStream, Endian).write(Val);
@@ -344,21 +351,34 @@ std::error_code SampleProfileWriterExtBinaryBase::writeFuncMetadata(
   return sampleprof_error::success;
 }
 
+template <class KeyT, class ValT>
+static SmallVector<std::pair<KeyT, ValT> *, 0>
+stabilizeTable(MapVector<KeyT, ValT> &Table) {
+  SmallVector<std::pair<KeyT, ValT> *, 0> Entries(
+      llvm::make_pointer_range(Table));
+
+  llvm::sort(Entries,
+             [](const auto *L, const auto *R) { return L->first < R->first; });
+
+  for (const auto &[I, Entry] : llvm::enumerate(Entries))
+    Entry->second = I;
+
+  return Entries;
+}
+
 std::error_code SampleProfileWriterExtBinaryBase::writeNameTable() {
   if (!UseMD5)
     return SampleProfileWriterBinary::writeNameTable();
 
   auto &OS = *OutputStream;
-  std::set<FunctionId> V;
-  stablizeNameTable(NameTable, V);
 
   // Write out the MD5 name table. We wrote unencoded MD5 so reader can
   // retrieve the name using the name index without having to read the
   // whole name table.
   encodeULEB128(NameTable.size(), OS);
   support::endian::Writer Writer(OS, llvm::endianness::little);
-  for (auto N : V)
-    Writer.write(N.getHashCode());
+  for (const auto *Entry : stabilizeTable(NameTable))
+    Writer.write(Entry->first.getHashCode());
   return sampleprof_error::success;
 }
 
@@ -388,21 +408,11 @@ std::error_code SampleProfileWriterExtBinaryBase::writeNameTableSection(
 }
 
 std::error_code SampleProfileWriterExtBinaryBase::writeCSNameTableSection() {
-  // Sort the names to make CSNameTable deterministic.
-  std::set<SampleContext> OrderedContexts;
-  for (const auto &I : CSNameTable)
-    OrderedContexts.insert(I.first);
-  assert(OrderedContexts.size() == CSNameTable.size() &&
-         "Unmatched ordered and unordered contexts");
-  uint64_t I = 0;
-  for (auto &Context : OrderedContexts)
-    CSNameTable[Context] = I++;
-
   auto &OS = *OutputStream;
-  encodeULEB128(OrderedContexts.size(), OS);
+  encodeULEB128(CSNameTable.size(), OS);
   support::endian::Writer Writer(OS, llvm::endianness::little);
-  for (auto Context : OrderedContexts) {
-    auto Frames = Context.getContextFrames();
+  for (const auto *Entry : stabilizeTable(CSNameTable)) {
+    auto Frames = Entry->first.getContextFrames();
     encodeULEB128(Frames.size(), OS);
     for (auto &Callsite : Frames) {
       if (std::error_code EC = writeNameIdx(Callsite.Func))
@@ -417,10 +427,39 @@ std::error_code SampleProfileWriterExtBinaryBase::writeCSNameTableSection() {
 
 std::error_code
 SampleProfileWriterExtBinaryBase::writeProfileSymbolListSection() {
+  if (WriteMD5ProfSymList)
+    return writeMD5ProfileSymbolListSection();
+  return writeStringBasedProfileSymbolListSection();
+}
+
+std::error_code
+SampleProfileWriterExtBinaryBase::writeStringBasedProfileSymbolListSection() {
+  assert((!ProfSymList || !ProfSymList->isMD5()) &&
+         "Writing string-based ProfileSymbolListSection from MD5 table "
+         "not yet implemented");
   if (ProfSymList && ProfSymList->size() > 0)
     if (std::error_code EC = ProfSymList->write(*OutputStream))
       return EC;
 
+  return sampleprof_error::success;
+}
+
+std::error_code
+SampleProfileWriterExtBinaryBase::writeMD5ProfileSymbolListSection() {
+  if (!ProfSymList || ProfSymList->size() == 0)
+    return sampleprof_error::success;
+  assert(!ProfSymList->isMD5() &&
+         "Writing MD5 ProfileSymbolListSection from existing MD5 "
+         "table not yet implemented");
+
+  auto &OS = *OutputStream;
+  std::vector<uint64_t> Keys = ProfSymList->collectGUIDs();
+
+  auto Table =
+      llvm::EytzingerTable<support::ulittle64_t>::create(std::move(Keys));
+
+  OS.write(reinterpret_cast<const char *>(Table.data()),
+           Table.size() * sizeof(support::ulittle64_t));
   return sampleprof_error::success;
 }
 
@@ -443,6 +482,8 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
   if (Type == SecProfSummary && ExtBinaryWriteVTableTypeProf)
     addSectionFlag(SecProfSummary,
                    SecProfSummaryFlags::SecFlagHasVTableTypeProf);
+  if (Type == SecProfileSymbolList && WriteMD5ProfSymList)
+    addSectionFlag(SecProfileSymbolList, SecProfileSymbolListFlags::SecFlagMD5);
 
   uint64_t SectionStart = markSectionStart(Type, LayoutIdx);
   switch (Type) {
@@ -728,25 +769,13 @@ void SampleProfileWriterExtBinaryBase::addContext(
   }
 }
 
-void SampleProfileWriterBinary::stablizeNameTable(
-    MapVector<FunctionId, uint32_t> &NameTable, std::set<FunctionId> &V) {
-  // Sort the names to make NameTable deterministic.
-  for (const auto &I : NameTable)
-    V.insert(I.first);
-  int i = 0;
-  for (const FunctionId &N : V)
-    NameTable[N] = i++;
-}
-
 std::error_code SampleProfileWriterBinary::writeNameTable() {
   auto &OS = *OutputStream;
-  std::set<FunctionId> V;
-  stablizeNameTable(NameTable, V);
 
   // Write out the name table.
   encodeULEB128(NameTable.size(), OS);
-  for (auto N : V) {
-    OS << N;
+  for (const auto *Entry : stabilizeTable(NameTable)) {
+    OS << Entry->first;
     encodeULEB128(0, OS);
   }
   return sampleprof_error::success;
@@ -757,7 +786,7 @@ SampleProfileWriterBinary::writeMagicIdent(SampleProfileFormat Format) {
   auto &OS = *OutputStream;
   // Write file magic identifier.
   encodeULEB128(SPMagic(Format), OS);
-  encodeULEB128(SPVersion(), OS);
+  encodeULEB128(FormatVersion, OS);
   return sampleprof_error::success;
 }
 
@@ -982,6 +1011,12 @@ SampleProfileWriter::create(std::unique_ptr<raw_ostream> &OS,
     return EC;
 
   Writer->Format = Format;
+  if (Format != SPF_Ext_Binary)
+    Writer->setFormatVersion(DefaultVersion);
+  else if (formatVersionIsSupported(RequestedVersion))
+    Writer->setFormatVersion(RequestedVersion);
+  else
+    return sampleprof_error::unsupported_version;
   return std::move(Writer);
 }
 

@@ -1995,6 +1995,11 @@ public:
     llvm_unreachable("not implemented");
   }
 
+  /// Creates a breakpoint instruction in Inst.
+  virtual void createBreakpoint(MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+  }
+
   /// Creates an instruction to bump the stack pointer just like a call.
   virtual void createStackPointerIncrement(MCInst &Inst, int Size = 8,
                                            bool NoFlagsClobber = false) const {
@@ -2073,6 +2078,16 @@ public:
   virtual InstructionListType createCmpJNE(MCPhysReg RegNo, int64_t Imm,
                                            const MCSymbol *Target,
                                            MCContext *Ctx) const {
+    llvm_unreachable("not implemented");
+    return {};
+  }
+
+  /// Create a sequence of instructions to compare contents of a register
+  /// \p Reg1 to a register \p Reg2 and jump to \p Target if they are different.
+  virtual InstructionListType createCmpJNEWithReg(MCPhysReg Reg1,
+                                                  MCPhysReg Reg2,
+                                                  const MCSymbol *Target,
+                                                  MCContext *Ctx) const {
     llvm_unreachable("not implemented");
     return {};
   }
@@ -2501,7 +2516,7 @@ public:
   };
 
   virtual BlocksVectorTy indirectCallPromotion(
-      const MCInst &CallInst,
+      const MCInst &CallInst, MCPhysReg Reg,
       const std::vector<std::pair<MCSymbol *, uint64_t>> &Targets,
       const std::vector<std::pair<MCSymbol *, uint64_t>> &VtableSyms,
       const std::vector<MCInst *> &MethodFetchInsns,

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -run-pass=none %s -o - | FileCheck --check-prefix=GCN %s
+# RUN: llc -mtriple=amdgpu8.03-amd-amdhsa -run-pass=none %s -o - | FileCheck --check-prefix=GCN %s
 
 --- |
   ; ModuleID = '<stdin>'
@@ -25,9 +25,6 @@
 
   ; Function Attrs: convergent nounwind readnone
   declare i64 @llvm.amdgcn.if.break(i1, i64) #2
-
-  ; Function Attrs: convergent nounwind readnone
-  declare i64 @llvm.amdgcn.else.break(i64, i64) #2
 
   ; Function Attrs: convergent nounwind
   declare i1 @llvm.amdgcn.loop(i64) #1

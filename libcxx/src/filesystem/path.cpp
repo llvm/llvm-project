@@ -140,21 +140,20 @@ string_view_t path::__extension() const { return parser::separate_filename(__fil
 ////////////////////////////////////////////////////////////////////////////
 // path.gen
 
-enum PathPartKind : unsigned char { PK_None, PK_RootSep, PK_Filename, PK_Dot, PK_DotDot, PK_TrailingSep };
+enum PathPartKind : unsigned char { PK_None, PK_RootName, PK_RootSep, PK_Filename, PK_Dot, PK_DotDot, PK_TrailingSep };
 
-static PathPartKind ClassifyPathPart(string_view_t Part) {
+static PathPartKind ClassifyPathPart(const PathParser& PP) {
+  if (PP.inRootName())
+    return PK_RootName;
+  if (PP.inRootDir())
+    return PK_RootSep;
+  string_view_t Part = *PP;
   if (Part.empty())
     return PK_TrailingSep;
   if (Part == PATHSTR("."))
     return PK_Dot;
   if (Part == PATHSTR(".."))
     return PK_DotDot;
-  if (Part == PATHSTR("/"))
-    return PK_RootSep;
-#if defined(_LIBCPP_WIN32API)
-  if (Part == PATHSTR("\\"))
-    return PK_RootSep;
-#endif
   return PK_Filename;
 }
 
@@ -184,13 +183,13 @@ path path::lexically_normal() const {
   // Build a stack containing the remaining elements of the path, popping off
   // elements which occur before a '..' entry.
   for (auto PP = PathParser::CreateBegin(__pn_); PP; ++PP) {
-    auto Part         = *PP;
-    PathPartKind Kind = ClassifyPathPart(Part);
+    PathPartKind Kind = ClassifyPathPart(PP);
     switch (Kind) {
     case PK_Filename:
+    case PK_RootName:
     case PK_RootSep: {
       // Add all non-dot and non-dot-dot elements to the stack of elements.
-      AddPart(Kind, Part);
+      AddPart(Kind, *PP);
       MaybeNeedTrailingSep = false;
       break;
     }

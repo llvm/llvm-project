@@ -1,6 +1,6 @@
 ; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+reference-types | FileCheck %s
 
-%funcref = type ptr addrspace(20) ;; addrspace 20 is nonintegral
+%funcref = type target("wasm.funcref")
 
 @funcref_table = local_unnamed_addr addrspace(1) global [0 x %funcref] undef
 

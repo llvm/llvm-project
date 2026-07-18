@@ -32,7 +32,16 @@ def UnaryFn : I32EnumAttr<"UnaryFn", "", [
   I32EnumAttrCase<"erf", 12>,
   I32EnumAttrCase<"sin", 13>,
   I32EnumAttrCase<"cos", 14>,
-  I32EnumAttrCase<"tan", 15>
+  I32EnumAttrCase<"tan", 15>,
+  I32EnumAttrCase<"acos", 16>,
+  I32EnumAttrCase<"acosh", 17>,
+  I32EnumAttrCase<"asin", 18>,
+  I32EnumAttrCase<"asinh", 19>,
+  I32EnumAttrCase<"atan", 20>,
+  I32EnumAttrCase<"atanh", 21>,
+  I32EnumAttrCase<"log10", 22>,
+  I32EnumAttrCase<"log1p", 23>,
+  I32EnumAttrCase<"log2", 24>
 ]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::linalg";

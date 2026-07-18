@@ -1,9 +1,18 @@
 // REQUIRES: arm
-// RUN: llvm-mc -triple armv7-unknown-gnu -arm-add-build-attributes -filetype=obj -o %t %s
-// RUN: ld.lld %t %S/Inputs/arm-long-thunk-converge.lds -o %t2
-// RUN: llvm-objdump --no-print-imm-hex -d --start-address=0x00000000 --stop-address=0x00000010 --triple=armv7a-linux-gnueabihf %t2 | FileCheck --check-prefix=CHECK1 %s
-// RUN: llvm-objdump --no-print-imm-hex -d --start-address=0x02000000 --stop-address=0x02000010 --triple=armv7a-linux-gnueabihf %t2 | FileCheck --check-prefix=CHECK2 %s
-// RUN: rm -f %t2
+// RUN: rm -rf %t && split-file %s %t && cd %t
+// RUN: llvm-mc -triple armv7-unknown-gnu -arm-add-build-attributes -filetype=obj -o a.o a.s
+// RUN: ld.lld a.o a.lds -o exe
+// RUN: llvm-objdump --no-print-imm-hex -d --start-address=0x00000000 --stop-address=0x00000010 --triple=armv7a-linux-gnueabihf exe | FileCheck --check-prefix=CHECK1 %s
+// RUN: llvm-objdump --no-print-imm-hex -d --start-address=0x02000000 --stop-address=0x02000010 --triple=armv7a-linux-gnueabihf exe | FileCheck --check-prefix=CHECK2 %s
+// RUN: rm -f a.o exe
+
+//--- a.lds
+SECTIONS {
+  .foo 0x0 : AT(0x0) { *(.foo) }
+  .bar 0x2000000 : AT(0x2000000) { *(.bar) }
+}
+
+//--- a.s
 
 // CHECK1: <__ARMv7ABSLongThunk_bar>:
 // CHECK1-NEXT:        0:       e300c00c        movw    r12, #12

@@ -15,25 +15,11 @@ from lit.llvm.subst import FindTool
 
 # Configuration file for the 'lit' test runner.
 
-# name: The name of this test suite.
-config.name = "Flang"
-
-# TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
-# See https://github.com/llvm/llvm-project/issues/106636 for more details.
-#
-# We prefer the lit internal shell which provides a better user experience on failures
-# and is faster unless the user explicitly disables it with LIT_USE_INTERNAL_SHELL=0
-# env var.
-use_lit_shell = True
-lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
-if lit_shell_env:
-    use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
-
 # testFormat: The test format to use to interpret tests.
 #
 # For now we require '&&' between commands, until they get globally killed and
 # the test runner updated.
-config.test_format = lit.formats.ShTest(execute_external=not use_lit_shell)
+config.test_format = lit.formats.ShTest()
 
 # suffixes: A list of file extensions to treat as test files.
 config.suffixes = [
@@ -121,6 +107,12 @@ config.test_exec_root = os.path.join(config.flang_obj_root, "test")
 llvm_config.with_environment("PATH", config.flang_tools_dir, append_path=True)
 llvm_config.with_environment("PATH", config.llvm_tools_dir, append_path=True)
 
+if config.llvm_profile_file:
+    config.environment["LLVM_PROFILE_FILE"] = config.llvm_profile_file
+    llvm_config.with_environment(
+        "LLVM_PROFILE_FILE", config.llvm_profile_file, append_path=False
+    )
+
 if config.flang_standalone_build:
     # For builds with FIR, set path for tco and enable related tests
     if config.flang_llvm_tools_dir != "":
@@ -143,8 +135,7 @@ if config.default_sysroot:
 host_triple = config.host_triple.split("-")
 config.available_features.add(f"{host_triple[0]}-host")
 
-flang_exe = lit.util.which("flang", config.flang_llvm_tools_dir)
-if not flang_exe:
+if not config.flang_exe:
     lit_config.fatal(f"Could not identify flang executable")
 
 # Intrinsic paths that are added implicitly by the `flang` driver, but have to be added manually when invoking the frontend `flang -fc1`.
@@ -158,7 +149,11 @@ def get_resource_module_intrinsic_dir(modfile):
     # Determine the intrinsic module search path that is added by the driver. If
     # skipping the driver using -fc1, we need to append the path manually.
     flang_intrinsics_dir = subprocess.check_output(
-        [flang_exe, *config.flang_test_fortran_flags, f"-print-file-name={modfile}"],
+        [
+            config.flang_exe,
+            *config.flang_test_fortran_flags,
+            f"-print-file-name={modfile}",
+        ],
         text=True,
     ).strip()
     flang_intrinsics_dir = os.path.dirname(flang_intrinsics_dir)
@@ -193,7 +188,7 @@ else:
     )
 
 
-lit_config.note(f"using flang: {flang_exe}")
+lit_config.note(f"using flang: {config.flang_exe}")
 lit_config.note(
     f"using flang implicit search paths: {' '.join(flang_driver_search_args)}"
 )
@@ -210,13 +205,13 @@ tools = [
     ),
     ToolSubst(
         "%flang",
-        command=flang_exe,
+        command=config.flang_exe,
         extra_args=flang_extra_search_args,
         unresolved="fatal",
     ),
     ToolSubst(
         "%flang_fc1",
-        command=flang_exe,
+        command=config.flang_exe,
         extra_args=["-fc1"] + flang_driver_search_args + flang_extra_search_args,
         unresolved="fatal",
     ),

@@ -18,11 +18,14 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/TemplateDeduction.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
 using namespace clang;
@@ -53,6 +56,7 @@ void HLSLExternalSemaSource::InitializeSema(Sema &S) {
   (void)HLSLNamespace->getCanonicalDecl()->decls_begin();
   defineTrivialHLSLTypes();
   defineHLSLTypesWithForwardDeclarations();
+  defineHLSLAtomicIntrinsics();
 
   // This adds a `using namespace hlsl` directive. In DXC, we don't put HLSL's
   // built in types inside a namespace, but we are planning to change that in
@@ -254,26 +258,43 @@ static BuiltinTypeDeclBuilder setupSamplerType(CXXRecordDecl *Decl, Sema &S) {
 /// Set up common members and attributes for texture types
 static BuiltinTypeDeclBuilder setupTextureType(CXXRecordDecl *Decl, Sema &S,
                                                ResourceClass RC, bool IsROV,
+                                               bool IsArray,
                                                ResourceDimension Dim) {
   return BuiltinTypeDeclBuilder(S, Decl)
-      .addTextureHandle(RC, IsROV, Dim)
-      .addTextureLoadMethods(Dim)
-      .addArraySubscriptOperators(Dim)
+      .addTextureHandle(RC, IsROV, IsArray, Dim)
+      .addTextureLoadMethods(Dim, IsArray)
+      .addArraySubscriptOperators(Dim, IsArray)
       .addMipsMember(Dim)
       .addDefaultHandleConstructor()
       .addCopyConstructor()
       .addCopyAssignmentOperator()
       .addStaticInitializationFunctions(false)
-      .addSampleMethods(Dim)
-      .addSampleBiasMethods(Dim)
-      .addSampleGradMethods(Dim)
-      .addSampleLevelMethods(Dim)
-      .addSampleCmpMethods(Dim)
-      .addSampleCmpLevelZeroMethods(Dim)
+      .addSampleMethods(Dim, IsArray)
+      .addSampleBiasMethods(Dim, IsArray)
+      .addSampleGradMethods(Dim, IsArray)
+      .addSampleLevelMethods(Dim, IsArray)
+      .addSampleCmpMethods(Dim, IsArray)
+      .addSampleCmpLevelZeroMethods(Dim, IsArray)
       .addCalculateLodMethods(Dim)
       .addGetDimensionsMethods(Dim)
-      .addGatherMethods(Dim)
-      .addGatherCmpMethods(Dim);
+      .addGatherMethods(Dim, IsArray)
+      .addGatherCmpMethods(Dim, IsArray);
+}
+
+/// Set up RWTexture type: UAV texture with only operator[] (uint2, read/write),
+/// Load and GetDimensions (no sample/gather/mips/LOD).
+static BuiltinTypeDeclBuilder setupRWTextureType(CXXRecordDecl *Decl, Sema &S,
+                                                 bool IsArray,
+                                                 ResourceDimension Dim) {
+  return BuiltinTypeDeclBuilder(S, Decl)
+      .addTextureHandle(ResourceClass::UAV, /*IsROV=*/false, IsArray, Dim)
+      .addTextureLoadMethods(Dim, IsArray)
+      .addArraySubscriptOperators(Dim, IsArray)
+      .addGetDimensionsMethods(Dim)
+      .addDefaultHandleConstructor()
+      .addCopyConstructor()
+      .addCopyAssignmentOperator()
+      .addStaticInitializationFunctions(false);
 }
 
 // Add a partial specialization for a template. The `TextureTemplate` is
@@ -312,6 +333,12 @@ addVectorTexturePartialSpecialization(Sema &S, NamespaceDecl *HLSLNamespace,
           ElaboratedTypeKeyword::Class, TemplateName(TextureTemplate),
           {TemplateArgument(VectorType)}, {}));
 
+  auto *PartialSpec = ClassTemplatePartialSpecializationDecl::Create(
+      AST, TagDecl::TagKind::Class, HLSLNamespace, SourceLocation(),
+      SourceLocation(), TemplateParams, TextureTemplate,
+      {TemplateArgument(VectorType)},
+      CanQualType::CreateUnsafe(CanonInjectedTST), nullptr);
+
   // Set the template arguments as written.
   TemplateArgument Arg(VectorType);
   TemplateArgumentLoc ArgLoc =
@@ -319,13 +346,8 @@ addVectorTexturePartialSpecialization(Sema &S, NamespaceDecl *HLSLNamespace,
   TemplateArgumentListInfo ArgsInfo =
       TemplateArgumentListInfo(SourceLocation(), SourceLocation());
   ArgsInfo.addArgument(ArgLoc);
-
-  auto *PartialSpec = ClassTemplatePartialSpecializationDecl::Create(
-      AST, TagDecl::TagKind::Class, HLSLNamespace, SourceLocation(),
-      SourceLocation(), TemplateParams,
-      ASTTemplateArgumentListInfo::Create(AST, ArgsInfo), TextureTemplate,
-      {TemplateArgument(VectorType)},
-      CanQualType::CreateUnsafe(CanonInjectedTST), nullptr);
+  PartialSpec->setTemplateArgsAsWritten(
+      ASTTemplateArgumentListInfo::Create(AST, ArgsInfo));
 
   PartialSpec->setImplicit(true);
   PartialSpec->setLexicalDeclContext(HLSLNamespace);
@@ -673,7 +695,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
 
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
-                     ResourceDimension::Dim2D)
+                     /*IsArray=*/false, ResourceDimension::Dim2D)
         .completeDefinition();
   });
 
@@ -681,9 +703,144 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
       *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
   onCompletion(PartialSpec, [this](CXXRecordDecl *Decl) {
     setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
-                     ResourceDimension::Dim2D)
+                     /*IsArray=*/false, ResourceDimension::Dim2D)
         .completeDefinition();
   });
+
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWTexture2D")
+             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
+                                      TypedBufferConcept)
+             .finalizeForwardDeclaration();
+
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupRWTextureType(Decl, *SemaPtr, /*IsArray=*/false,
+                       ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
+
+  auto *PartialSpecRW = addVectorTexturePartialSpecialization(
+      *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
+  onCompletion(PartialSpecRW, [this](CXXRecordDecl *Decl) {
+    setupRWTextureType(Decl, *SemaPtr, /*IsArray=*/false,
+                       ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
+
+  // Texture2DArray — same as Texture2D but IsArray=true
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "Texture2DArray")
+             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
+                                      TypedBufferConcept)
+             .finalizeForwardDeclaration();
+
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
+                     /*IsArray=*/true, ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
+
+  auto *PartialSpec2DA = addVectorTexturePartialSpecialization(
+      *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
+  onCompletion(PartialSpec2DA, [this](CXXRecordDecl *Decl) {
+    setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
+                     /*IsArray=*/true, ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
+
+  // RWTexture2DArray — same as RWTexture2D but IsArray=true
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWTexture2DArray")
+             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
+                                      TypedBufferConcept)
+             .finalizeForwardDeclaration();
+
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupRWTextureType(Decl, *SemaPtr, /*IsArray=*/true,
+                       ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
+
+  auto *PartialSpecRW2DA = addVectorTexturePartialSpecialization(
+      *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
+  onCompletion(PartialSpecRW2DA, [this](CXXRecordDecl *Decl) {
+    setupRWTextureType(Decl, *SemaPtr, /*IsArray=*/true,
+                       ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
+}
+
+// Build a single overload of an HLSL atomic intrinsic in the hlsl namespace.
+// `dest` is an address-space-qualified reference; `original_value` (when
+// present) is a plain reference. The synthesized FunctionDecl aliases the
+// underlying clang builtin via BuiltinAliasAttr.
+static void buildAtomicOverload(Sema &S, NamespaceDecl *NS, StringRef FuncName,
+                                StringRef BuiltinName, QualType ElemTy,
+                                LangAS DestAS, bool ThreeArg) {
+  ASTContext &AST = S.getASTContext();
+
+  QualType DestTy =
+      AST.getLValueReferenceType(AST.getAddrSpaceQualType(ElemTy, DestAS));
+  QualType OrigRefTy = AST.getLValueReferenceType(ElemTy);
+
+  SmallVector<QualType, 3> ParamTypes;
+  ParamTypes.push_back(DestTy);
+  ParamTypes.push_back(ElemTy);
+  if (ThreeArg)
+    ParamTypes.push_back(OrigRefTy);
+
+  FunctionProtoType::ExtProtoInfo EPI;
+  QualType FuncTy = AST.getFunctionType(AST.VoidTy, ParamTypes, EPI);
+  auto *TSInfo = AST.getTrivialTypeSourceInfo(FuncTy, SourceLocation());
+
+  IdentifierInfo &FuncII = AST.Idents.get(FuncName, tok::TokenKind::identifier);
+  DeclarationName FuncDeclName(&FuncII);
+
+  FunctionDecl *FD = FunctionDecl::Create(
+      AST, NS, SourceLocation(), SourceLocation(), FuncDeclName, FuncTy, TSInfo,
+      SC_Extern, /*UsesFPIntrin=*/false, /*isInlineSpecified=*/false,
+      /*hasWrittenPrototype=*/true);
+
+  constexpr const char *ParamNames[] = {"dest", "value", "original_value"};
+  SmallVector<ParmVarDecl *, 3> ParmDecls;
+  unsigned I = 0;
+  for (auto [ParamType, ParamName] : llvm::zip(ParamTypes, ParamNames)) {
+    IdentifierInfo &PII = AST.Idents.get(ParamName, tok::TokenKind::identifier);
+    ParmVarDecl *Parm = ParmVarDecl::Create(
+        AST, FD, SourceLocation(), SourceLocation(), &PII, ParamType,
+        AST.getTrivialTypeSourceInfo(ParamType, SourceLocation()), SC_None,
+        nullptr);
+    Parm->setScopeInfo(0, I++);
+    ParmDecls.push_back(Parm);
+  }
+  FD->setParams(ParmDecls);
+
+  IdentifierInfo &BuiltinII =
+      S.getPreprocessor().getIdentifierTable().get(BuiltinName);
+  FD->addAttr(BuiltinAliasAttr::CreateImplicit(AST, &BuiltinII));
+  FD->setImplicit();
+  NS->addDecl(FD);
+}
+
+// Synthesize the InterlockedFunc overload set: {int, uint, int64_t, uint64_t}
+// x {groupshared, device} x {2-arg, 3-arg}.
+static void defineHLSLInterlockedFunc(Sema &S, NamespaceDecl *NS,
+                                      StringRef FuncName,
+                                      StringRef BuiltinName) {
+  ASTContext &AST = S.getASTContext();
+  // HLSL: int64_t == long, uint64_t == unsigned long (see hlsl_basic_types.h).
+  QualType Elems[] = {AST.IntTy, AST.UnsignedIntTy, AST.LongTy,
+                      AST.UnsignedLongTy};
+  LangAS AddrSpaces[] = {LangAS::hlsl_groupshared, LangAS::hlsl_device};
+
+  for (QualType ElemTy : Elems)
+    for (LangAS AS : AddrSpaces)
+      for (bool ThreeArg : {false, true})
+        buildAtomicOverload(S, NS, FuncName, BuiltinName, ElemTy, AS, ThreeArg);
+}
+
+void HLSLExternalSemaSource::defineHLSLAtomicIntrinsics() {
+  defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedAdd",
+                            "__builtin_hlsl_interlocked_add");
+  defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedOr",
+                            "__builtin_hlsl_interlocked_or");
 }
 
 void HLSLExternalSemaSource::onCompletion(CXXRecordDecl *Record,

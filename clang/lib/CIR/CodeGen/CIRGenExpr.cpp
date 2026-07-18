@@ -499,12 +499,7 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
   }
 
   assert(currSrcLoc && "must pass in source location");
-  builder.createStore(*currSrcLoc, value, addr, isVolatile);
-
-  if (isNontemporal) {
-    cgm.errorNYI(addr.getPointer().getLoc(), "emitStoreOfScalar nontemporal");
-    return;
-  }
+  builder.createStore(*currSrcLoc, value, addr, isVolatile, isNontemporal);
 
   assert(!cir::MissingFeatures::opTBAA());
 }
@@ -736,12 +731,13 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, LValue lvalue,
 
   emitStoreOfScalar(value, lvalue.getAddress(), lvalue.isVolatile(),
                     lvalue.getType(), lvalue.getBaseInfo(), isInit,
-                    /*isNontemporal=*/false);
+                    lvalue.isNontemporal());
 }
 
 mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
                                              QualType ty, SourceLocation loc,
-                                             LValueBaseInfo baseInfo) {
+                                             LValueBaseInfo baseInfo,
+                                             bool isNontemporal) {
   // Traditional LLVM codegen handles thread local separately, CIR handles
   // as part of getAddrOfGlobalVar (GetGlobalOp).
   mlir::Type eltTy = addr.getElementType();
@@ -771,19 +767,23 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
 
   assert(!cir::MissingFeatures::opLoadEmitScalarRangeCheck());
 
-  mlir::Value loadOp = builder.createLoad(getLoc(loc), addr, isVolatile);
-  if (!ty->isBooleanType() && ty->hasBooleanRepresentation())
-    cgm.errorNYI("emitLoadOfScalar: boolean type with boolean representation");
+  mlir::Value loadOp =
+      builder.createLoad(getLoc(loc), addr, isVolatile, isNontemporal);
 
+  // Types with a boolean representation that are not the builtin bool (an enum
+  // whose underlying type is bool, or a _BitInt(1)) need no register/memory
+  // conversion here: like bool and _BitInt(N), CIR keeps them in their literal
+  // type until LowerToLLVM widens them to the in-memory integer type (see
+  // emitToMemory).
   return loadOp;
 }
 
 mlir::Value CIRGenFunction::emitLoadOfScalar(LValue lvalue,
                                              SourceLocation loc) {
-  assert(!cir::MissingFeatures::opLoadStoreNontemporal());
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
   return emitLoadOfScalar(lvalue.getAddress(), lvalue.isVolatile(),
-                          lvalue.getType(), loc, lvalue.getBaseInfo());
+                          lvalue.getType(), loc, lvalue.getBaseInfo(),
+                          lvalue.isNontemporal());
 }
 
 /// Given an expression that represents a value lvalue, this
@@ -2135,6 +2135,24 @@ LValue CIRGenFunction::emitCallExprLValue(const CallExpr *e) {
   return makeNaturalAlignPointeeAddrLValue(rv.getValue(), e->getType());
 }
 
+LValue
+CIRGenFunction::emitCXXBindTemporaryLValue(const CXXBindTemporaryExpr *e) {
+  AggValueSlot slot =
+      createAggTemp(e->getType(), getLoc(e->getSourceRange()), "temp.lvalue");
+  slot.setExternallyDestructed();
+  emitAggExpr(e->getSubExpr(), slot);
+  emitCXXTemporary(e->getTemporary(), e->getType(), slot.getAddress());
+  return makeAddrLValue(slot.getAddress(), e->getType(), AlignmentSource::Decl);
+}
+
+LValue CIRGenFunction::emitCXXConstructLValue(const CXXConstructExpr *e) {
+  assert(e->getType()->getAsCXXRecordDecl()->hasTrivialDestructor() &&
+         "binding l-value to type which needs a temporary");
+  AggValueSlot slot = createAggTemp(e->getType(), getLoc(e->getSourceRange()));
+  emitCXXConstructExpr(e, slot);
+  return makeAddrLValue(slot.getAddress(), e->getType(), AlignmentSource::Decl);
+}
+
 LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
   // Comma expressions just emit their LHS then their RHS as an l-value.
   if (e->getOpcode() == BO_Comma) {
@@ -2705,8 +2723,8 @@ mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
   {
     mlir::OpBuilder::InsertionGuard guard(builder);
     builder.restoreInsertionPoint(ip);
-    addr = builder.createAlloca(loc, /*addr type*/ localVarPtrTy,
-                                /*var type*/ ty, name, alignIntAttr, arraySize);
+    addr = builder.createAlloca(loc, /*addr type*/ localVarPtrTy, name,
+                                alignIntAttr, arraySize);
     assert(!cir::MissingFeatures::astVarDeclInterface());
   }
   return addr;
@@ -3076,8 +3094,6 @@ CIRGenFunction::emitConditionalBlocks(const AbstractConditionalOperator *e,
   CIRGenBuilderTy &builder = getBuilder();
 
   mlir::Value condV = emitOpOnBoolExpr(loc, e->getCond());
-  SmallVector<mlir::OpBuilder::InsertPoint, 2> insertPoints{};
-  mlir::Type yieldTy{};
 
   auto emitBranch = [&](mlir::OpBuilder &b, mlir::Location loc,
                         const Expr *expr, std::optional<LValue> &resultLV) {
@@ -3097,53 +3113,29 @@ CIRGenFunction::emitConditionalBlocks(const AbstractConditionalOperator *e,
       branchCleanups.forceCleanup({&resultPtr});
     }
 
-    if (resultPtr) {
-      yieldTy = resultPtr.getType();
+    // A branch that produced no result is a throw-expression; its region is
+    // already terminated by cir.unreachable and needs no yield.
+    if (resultPtr)
       cir::YieldOp::create(b, loc, resultPtr);
-    } else {
-      // If LHS or RHS is a void expression we need
-      // to patch arms as to properly match yield types.
-      // If the current block's terminator is an UnreachableOp (from a throw),
-      // we don't need a yield
-      if (builder.getInsertionBlock()->mightHaveTerminator()) {
-        mlir::Operation *terminator =
-            builder.getInsertionBlock()->getTerminator();
-        if (isa_and_nonnull<cir::UnreachableOp>(terminator))
-          insertPoints.push_back(b.saveInsertionPoint());
-      }
-    }
   };
 
-  info.result = cir::TernaryOp::create(
-                    builder, loc, condV,
-                    /*trueBuilder=*/
-                    [&](mlir::OpBuilder &b, mlir::Location loc) {
-                      emitBranch(b, loc, e->getTrueExpr(), info.lhs);
-                    },
-                    /*falseBuilder=*/
-                    [&](mlir::OpBuilder &b, mlir::Location loc) {
-                      emitBranch(b, loc, e->getFalseExpr(), info.rhs);
-                    })
-                    .getResult();
+  cir::TernaryOp ternary = cir::TernaryOp::create(
+      builder, loc, condV,
+      /*trueBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        emitBranch(b, loc, e->getTrueExpr(), info.lhs);
+      },
+      /*falseBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        emitBranch(b, loc, e->getFalseExpr(), info.rhs);
+      });
 
-  // If both arms are void, so be it.
-  if (!yieldTy)
-    yieldTy = voidTy;
+  // Arms end with a yield or cir.unreachable (throw); this is a backstop
+  // for error (NYI) paths that leave a region open.
+  terminateStructuredRegionBody(ternary.getTrueRegion(), loc);
+  terminateStructuredRegionBody(ternary.getFalseRegion(), loc);
 
-  // Insert required yields.
-  for (mlir::OpBuilder::InsertPoint &toInsert : insertPoints) {
-    mlir::OpBuilder::InsertionGuard guard(builder);
-    builder.restoreInsertionPoint(toInsert);
-
-    // Block does not return: build empty yield.
-    if (!yieldTy) {
-      cir::YieldOp::create(builder, loc);
-    } else { // Block returns: set null yield value.
-      mlir::Value op0 = builder.getNullValue(yieldTy, loc);
-      cir::YieldOp::create(builder, loc, op0);
-    }
-  }
-
+  info.result = ternary.getResult();
   return info;
 }
 
@@ -3187,7 +3179,15 @@ LValue CIRGenFunction::emitConditionalOperatorLValue(
 
   assert((info.lhs || info.rhs) &&
          "both operands of glvalue conditional are throw-expressions?");
-  return info.lhs ? *info.lhs : *info.rhs;
+
+  // One arm threw; the surviving arm's pointer is local to the ternary's
+  // region, so address the result through the ternary's result value.
+  const LValue &survivingLV = info.lhs ? *info.lhs : *info.rhs;
+  Address survivingAddr = survivingLV.getAddress();
+  Address result(info.result, survivingAddr.getElementType(),
+                 survivingAddr.getAlignment());
+  assert(!cir::MissingFeatures::opTBAA());
+  return makeAddrLValue(result, expr->getType(), survivingLV.getBaseInfo());
 }
 
 /// An LValue is a candidate for having its loads and stores be made atomic if

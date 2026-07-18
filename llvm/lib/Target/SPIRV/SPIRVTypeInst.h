@@ -58,6 +58,8 @@ public:
   // Returns true if this is an OpTypePointer or OpTypeUntypedPointerKHR
   // instruction.
   bool isPointer() const;
+  // Returns true if this is an OpTypePointer instruction.
+  bool isTypePtr() const;
 
   friend struct DenseMapInfo<SPIRVTypeInst>;
 };

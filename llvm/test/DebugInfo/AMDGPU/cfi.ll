@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=gfx900 -mtriple=amdgcn-amd-amdhsa -filetype=obj -o - %s | llvm-dwarfdump -debug-frame - | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -filetype=obj -o - %s | llvm-dwarfdump -debug-frame - | FileCheck %s
 
 ; CHECK: .debug_frame contents:
 ; CHECK: 00000000 0000000c ffffffff CIE
