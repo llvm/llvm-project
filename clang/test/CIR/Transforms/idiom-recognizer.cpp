@@ -14,12 +14,12 @@
 
 // A no builtin list for another function survives the round trip on the
 // rebuilt call.
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fno-builtin-memcpy -fclangir -clangir-enable-idiom-recognizer -emit-cir %s -o %t.fnb.cir
-// RUN: FileCheck %s --check-prefix=FNB --input-file=%t.fnb.cir
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fno-builtin-memcpy -fclangir -clangir-enable-idiom-recognizer -emit-cir %s -o %t.no-builtin-memcpy.cir
+// RUN: FileCheck %s --check-prefix=NO-BUILTIN-MEMCPY --input-file=%t.no-builtin-memcpy.cir
 
 // With builtins disabled the strlen call is left alone, while the tagged
 // std::find is unaffected and still raises.
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fno-builtin -fclangir -clangir-enable-idiom-recognizer -emit-cir -mmlir --mlir-print-ir-after=cir-idiom-recognizer %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=NB --implicit-check-not=cir.std.strlen
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fno-builtin -fclangir -clangir-enable-idiom-recognizer -emit-cir -mmlir --mlir-print-ir-after=cir-idiom-recognizer %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=NO-BUILTINS --implicit-check-not=cir.std.strlen
 
 namespace std {
 template <class Iter, class T>
@@ -34,6 +34,8 @@ char *test_find(char *first, char *last, const char &value) {
 // operands in source order and its attributes.
 // RAISED: cir.std.find(
 // RAISED-SAME: @_ZSt4findIPccET_S1_S1_RKT0_
+// NO-BUILTINS: cir.std.find(
+// NO-BUILTINS-SAME: @_ZSt4findIPccET_S1_S1_RKT0_
 // FINAL: %[[FIRST_ADDR:.*]] = cir.alloca "first"
 // FINAL: %[[LAST_ADDR:.*]] = cir.alloca "last"
 // FINAL: %[[VALUE_ADDR:.*]] = cir.alloca "value"
@@ -55,9 +57,16 @@ unsigned long test_strlen(const char *s) { return strlen(s); }
 // FINAL: cir.call @strlen(%[[S]]) nothrow
 // FINAL-SAME: (!cir.ptr<!s8i> {llvm.noundef})
 // FINAL-SAME: -> !u64i
-// FNB: cir.call @strlen
-// FNB-SAME: nobuiltins = ["memcpy"]
-// NB: cir.call @strlen
+// NO-BUILTIN-MEMCPY: cir.call @strlen
+// NO-BUILTIN-MEMCPY-SAME: nobuiltins = ["memcpy"]
+// NO-BUILTINS: cir.call @strlen
+
+__attribute__((no_builtin("strlen")))
+unsigned long test_strlen_no_builtin(const char *s) { return strlen(s); }
+// RAISED-LABEL: @_Z22test_strlen_no_builtinPKc
+// RAISED: cir.call @strlen
+// RAISED-SAME: nobuiltins = ["strlen"]
+// RAISED-NOT: cir.std.strlen
 
 // A function merely named like the std one is not raised, and it survives the
 // whole pipeline as the same plain call.

@@ -1,7 +1,5 @@
 // RUN: cir-opt %s | FileCheck %s
 
-// Round-trip parse and print of the raised standard library ops.
-
 !s8i = !cir.int<s, 8>
 !u64i = !cir.int<u, 64>
 

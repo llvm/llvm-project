@@ -275,6 +275,10 @@ def CIR_PtrToVoidPtrType : CIR_PtrToPtrTo<CIR_AnyVoidType, "void type">;
 
 class CIR_PtrToType<Type type> : CIR_PtrToAnyOf<[type]>;
 
+def CIR_PtrToChar8Type : CIR_PtrToType<CIR_AnyChar8Type> {
+    let cppFunctionName = "isPtrToChar8Type";
+}
+
 // Pointer to type constraints
 def CIR_PtrToIntOrFloatType : CIR_PtrToType<CIR_AnyIntOrFloatType>;
 

@@ -107,38 +107,51 @@ static void addAttributesFromFunctionProtoType(CIRGenBuilderTy &builder,
               mlir::UnitAttr::get(builder.getContext()));
 }
 
-static void addNoBuiltinAttributes(mlir::MLIRContext &ctx,
-                                   mlir::NamedAttrList &attrs,
-                                   const LangOptions &langOpts,
-                                   const NoBuiltinAttr *nba = nullptr) {
-  // First, handle the language options passed through -fno-builtin.
-  // or, if there is a wildcard in the builtin names specified through the
-  // attribute, disable them all.
-  if (langOpts.NoBuiltin ||
-      (nba && llvm::is_contained(nba->builtinNames(), "*"))) {
-    // -fno-builtin disables them all.
-    // Empty attribute means 'all'.
+static void mergeNoBuiltinAttributes(mlir::MLIRContext &ctx,
+                                     mlir::NamedAttrList &attrs,
+                                     llvm::ArrayRef<llvm::StringRef> names,
+                                     bool disableAll) {
+  llvm::SetVector<mlir::Attribute> nbFuncs;
+
+  // Fold into any nobuiltins list already on the call. An existing empty
+  // list disables every builtin, so it wins.
+  if (auto existing =
+          attrs.getNamed(cir::CIRDialect::getNoBuiltinsAttrName())) {
+    auto arr = mlir::cast<mlir::ArrayAttr>(existing->getValue());
+    if (arr.empty())
+      disableAll = true;
+    else
+      nbFuncs.insert(arr.begin(), arr.end());
+  }
+
+  if (disableAll) {
     attrs.set(cir::CIRDialect::getNoBuiltinsAttrName(),
               mlir::ArrayAttr::get(&ctx, {}));
     return;
   }
 
-  llvm::SetVector<mlir::Attribute> nbFuncs;
   auto addNoBuiltinAttr = [&ctx, &nbFuncs](StringRef builtinName) {
     nbFuncs.insert(mlir::StringAttr::get(&ctx, builtinName));
   };
-
-  // Then, add attributes for builtins specified through -fno-builtin-<name>.
-  llvm::for_each(langOpts.NoBuiltinFuncs, addNoBuiltinAttr);
-
-  // Now, let's check the __attribute__((no_builtin("...")) attribute added to
-  // the source.
-  if (nba)
-    llvm::for_each(nba->builtinNames(), addNoBuiltinAttr);
+  llvm::for_each(names, addNoBuiltinAttr);
 
   if (!nbFuncs.empty())
     attrs.set(cir::CIRDialect::getNoBuiltinsAttrName(),
               mlir::ArrayAttr::get(&ctx, nbFuncs.getArrayRef()));
+}
+
+static void addNoBuiltinAttributes(mlir::MLIRContext &ctx,
+                                   mlir::NamedAttrList &attrs,
+                                   const LangOptions &langOpts,
+                                   const NoBuiltinAttr *nba = nullptr) {
+  llvm::SmallVector<llvm::StringRef> names;
+  llvm::append_range(names, langOpts.NoBuiltinFuncs);
+  if (nba)
+    llvm::append_range(names, nba->builtinNames());
+
+  bool disableAll = langOpts.NoBuiltin ||
+                    (nba && llvm::is_contained(nba->builtinNames(), "*"));
+  mergeNoBuiltinAttributes(ctx, attrs, names, disableAll);
 }
 
 /// Add denormal-fp-math and denormal-fp-math-f32 as appropriate for the
@@ -1285,6 +1298,17 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   cgm.constructAttributeList(funcName, funcInfo, callee.getAbstractInfo(),
                              attrs, argAttrs, retAttrs, callingConv, sideEffect,
                              /*attrOnCallSite=*/true, /*isThunk=*/false);
+
+  // A caller's no_builtin list applies to each call it makes, so merge it
+  // onto the call where later passes look for it.
+  if (const auto *caller = dyn_cast_or_null<FunctionDecl>(curFuncDecl)) {
+    if (const auto *nba = caller->getAttr<NoBuiltinAttr>()) {
+      llvm::SmallVector<llvm::StringRef> names;
+      llvm::append_range(names, nba->builtinNames());
+      mergeNoBuiltinAttributes(cgm.getMLIRContext(), attrs, names,
+                               llvm::is_contained(nba->builtinNames(), "*"));
+    }
+  }
 
   auto resolvedFuncOpFromGlobal = [&](mlir::Operation *op) -> cir::FuncOp {
     if (auto fnOp = dyn_cast<cir::FuncOp>(op))

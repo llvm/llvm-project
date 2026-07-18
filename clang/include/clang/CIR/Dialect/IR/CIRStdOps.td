@@ -18,7 +18,7 @@
 // empty for a C library function that has no such entry.
 class CIR_StdOp<string functionName, dag args, dag res,
                 list<Trait> traits = [], string knownKind = "">
-    : CIR_Op<"std." # functionName, traits> {
+    : CIR_Op<"std." # functionName, traits # [CIR_StdOpInterface]> {
   let arguments = !con(args, (ins FlatSymbolRefAttr:$original_fn));
   let results = res;
   let hasLLVMLowering = false;
@@ -30,11 +30,49 @@ class CIR_StdOp<string functionName, dag args, dag res,
     static llvm::StringLiteral getFunctionName() {
       return "}] # functionName # [{";
     }
+    // True when matched by its KnownFuncKind tag, not the callee symbol.
+    static constexpr bool hasKnownFuncKind() {
+      return }] # !if(!empty(knownKind), "false", "true") # [{;
+    }
+    static bool signatureMatches(mlir::TypeRange operands,
+                                 mlir::TypeRange results);
   }] # !if(!empty(knownKind), "", [{
     static cir::KnownFuncKind getFuncKind() {
       return cir::KnownFuncKind::}] # knownKind # [{;
     }
   }]);
+}
+
+// A C library op whose signatureMatches is generated from its type constraints.
+class CIR_CStdLibOp<string functionName, dag args, dag res,
+                    list<Trait> traits = []>
+    : CIR_StdOp<functionName, args, res, traits> {
+  assert !foldl(true, !listconcat(
+                          !foreach(i, !range(!size(args)),
+                                   !getdagarg<TypeConstraint>(args, i)),
+                          !foreach(i, !range(!size(res)),
+                                   !getdagarg<TypeConstraint>(res, i))),
+                acc, c, !and(acc, !ne(c.cppFunctionName, ""))),
+      "CIR_CStdLibOp operand and result types must set cppFunctionName";
+
+  let extraClassDefinition = [{
+    bool $cppClass::signatureMatches(mlir::TypeRange operands,
+                                     mlir::TypeRange results) {
+      return }] # !interleave(
+          !listconcat(
+              ["operands.size() == " # !size(args),
+               "results.size() == " # !size(res)],
+              !foreach(i, !range(!size(args)),
+                       "::cir::" #
+                       !getdagarg<TypeConstraint>(args, i).cppFunctionName #
+                       "(operands[" # i # "])"),
+              !foreach(i, !range(!size(res)),
+                       "::cir::" #
+                       !getdagarg<TypeConstraint>(res, i).cppFunctionName #
+                       "(results[" # i # "])")),
+          " && ") # [{;
+    }
+  }];
 }
 
 def CIR_StdFindOp : CIR_StdOp<"find",
@@ -50,8 +88,8 @@ def CIR_StdFindOp : CIR_StdOp<"find",
   }];
 }
 
-def CIR_StrLenOp : CIR_StdOp<"strlen",
-  (ins CIR_PtrToType<CIR_AnyChar8Type>:$string),
+def CIR_StrLenOp : CIR_CStdLibOp<"strlen",
+  (ins CIR_PtrToChar8Type:$string),
   (outs CIR_AnyFundamentalUIntType:$result)> {
   let summary = "C standard library strlen()";
   let assemblyFormat = [{
