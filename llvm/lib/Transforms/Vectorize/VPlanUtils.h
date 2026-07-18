@@ -64,6 +64,9 @@ bool isUniformAcrossVFsAndUFs(const VPValue *V);
 /// Return true if \p V is elementwise, i.e. none of the lanes are permuted.
 bool isElementwise(const VPValue *V);
 
+/// Returns true if \p R produces scalar values for all VF lanes.
+bool doesGeneratePerAllLanes(const VPRecipeBase *R);
+
 /// Returns the header block of the first, top-level loop, or null if none
 /// exist.
 VPBasicBlock *getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT);
@@ -105,6 +108,12 @@ template <typename Ty> Intrinsic::ID getIntrinsicID(const Ty *R) {
   }
   return Intrinsic::not_intrinsic;
 }
+
+/// Get any instruction opcode or intrinsic ID data embedded in recipe \p R.
+/// Returns an optional pair, where the first element indicates whether it is
+/// an intrinsic ID.
+std::optional<std::pair<bool, unsigned>>
+getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R);
 
 /// Return a MemoryLocation for \p R with noalias metadata populated from
 /// \p R, if the recipe is supported and std::nullopt otherwise. The pointer of
@@ -166,6 +175,44 @@ VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
 
 /// Finds the incoming alias-mask within the vector preheader.
 VPValue *findIncomingAliasMask(const VPlan &Plan);
+
+/// Returns true if \p R is dead, i.e. none of its defined values are used and
+/// it has no side effects (with the exception of conditional assumes, which are
+/// considered dead as their conditions may be flattened).
+bool isDeadRecipe(VPRecipeBase &R);
+
+/// Recursively delete \p V and any of its operands that become dead.
+void recursivelyDeleteDeadRecipes(VPValue *V);
+
+/// Collect all users of \p V, looking through recipes that define other values.
+SmallVector<VPUser *> collectUsersRecursively(VPValue *V);
+
+/// Try to fold \p R using InstSimplifyFolder. Will succeed and return a
+/// non-nullptr VPValue for a handled opcode or intrinsic ID if corresponding \p
+/// Operands are foldable live-ins.
+VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R, ArrayRef<VPValue *> Operands,
+                            const DataLayout &DL);
+
+namespace detail {
+
+/// Template-independent implementation for pullOutPermutations.
+void pullOutPermutationsImpl(
+    VPlan &Plan, function_ref<VPValue *(VPValue *Op)> Perm,
+    function_ref<VPSingleDefRecipe *(VPSingleDefRecipe *X)> Build);
+} // namespace detail
+
+/// Removes the permutation pattern \p Perm from any elementwise operations
+/// in the plan, by constructing a new permutation via \p Build.
+/// e.g. binop(perm(x), perm(y)) -> perm(binop(x,y)).
+template <typename Match_t, typename Builder>
+void pullOutPermutations(VPlan &Plan, Match_t Perm, Builder Build) {
+  // Convert matcher to function returing the matched VPValue.
+  auto MatchPerm = [&Perm](VPValue *Op) -> VPValue * {
+    VPValue *X;
+    return match(Op, Perm(X)) ? X : nullptr;
+  };
+  detail::pullOutPermutationsImpl(Plan, MatchPerm, Build);
+}
 
 } // namespace vputils
 
