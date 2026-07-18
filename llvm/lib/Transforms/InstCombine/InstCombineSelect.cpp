@@ -1602,6 +1602,67 @@ static Value *foldSelectCttzCtlz(ICmpInst *ICI, Value *TrueVal, Value *FalseVal,
   return nullptr;
 }
 
+/// Fold the ctlz "digit count" idiom, e.g. ceil(active_bits(x) / 4):
+
+///   select (X == 0), 0, trunc((C - ctlz(X, /*is_zero_poison=*/true)) >> K)
+///     -> trunc((C - ctlz(X, /*is_zero_poison=*/false)) >> K)
+
+/// If M <=u C <u M + 2^K (M is the bit width of X), then at X == 0 we get
+/// ctlz == M and (C - M) >> K == 0, which is the same as the zero arm. So the
+/// select is redundant and the ctlz no longer has to poison on zero.
+/// foldSelectCttzCtlz already does the direct shape; this handles it with the
+/// extra arithmetic in between.
+static Value *foldSelectCtlzBiasedShift(ICmpInst *ICI, Value *TrueVal,
+                                        Value *FalseVal, InstCombinerImpl &IC) {
+  if (!ICI->isEquality())
+    return nullptr;
+
+  Value *CmpLHS = ICI->getOperand(0), *CmpRHS = ICI->getOperand(1);
+  Value *X;
+  if (match(CmpRHS, m_Zero()))
+    X = CmpLHS;
+  else if (match(CmpLHS, m_Zero()))
+    X = CmpRHS;
+  else
+    return nullptr;
+
+  Value *SelectArg = FalseVal, *ValueOnZero = TrueVal;
+  if (ICI->getPredicate() == ICmpInst::ICMP_NE)
+    std::swap(SelectArg, ValueOnZero);
+
+  if (!match(ValueOnZero, m_Zero()))
+    return nullptr;
+
+  Value *Shifted = SelectArg;
+  bool HasTrunc = match(SelectArg, m_Trunc(m_Value(Shifted)));
+  if (HasTrunc && !SelectArg->hasOneUse())
+    return nullptr;
+
+  const APInt *C, *K;
+  Value *CtlzV;
+  if (!match(Shifted, m_OneUse(m_LShr(
+                          m_OneUse(m_Sub(m_APInt(C), m_Value(CtlzV))),
+                          m_APInt(K)))))
+    return nullptr;
+  if (!match(CtlzV, m_OneUse(m_Ctlz(m_Specific(X), m_Value()))))
+    return nullptr;
+
+  unsigned M = X->getType()->getScalarSizeInBits();
+  if (K->uge(M) || C->ult(APInt(M, M)))
+    return nullptr;
+  if ((*C - M).uge(APInt::getOneBitSet(M, K->getZExtValue())))
+    return nullptr;
+
+  Value *NewCtlz = IC.Builder.CreateBinaryIntrinsic(Intrinsic::ctlz, X,
+                                                    IC.Builder.getFalse());
+  Value *V = IC.Builder.CreateLShr(
+      IC.Builder.CreateSub(ConstantInt::get(X->getType(), *C), NewCtlz),
+      ConstantInt::get(X->getType(), *K));
+  if (HasTrunc)
+    V = IC.Builder.CreateTrunc(V, SelectArg->getType());
+  return V;
+}
+
 static Value *canonicalizeSPF(ICmpInst &Cmp, Value *TrueVal, Value *FalseVal,
                               InstCombinerImpl &IC) {
   Value *LHS, *RHS;
@@ -2464,6 +2525,9 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = foldSelectCttzCtlz(ICI, TrueVal, FalseVal, *this))
+    return replaceInstUsesWith(SI, V);
+
+  if (Value *V = foldSelectCtlzBiasedShift(ICI, TrueVal, FalseVal, *this))
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = canonicalizeSaturatedSubtract(ICI, TrueVal, FalseVal, Builder))
