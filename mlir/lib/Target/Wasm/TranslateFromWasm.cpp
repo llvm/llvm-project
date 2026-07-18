@@ -433,7 +433,8 @@ public:
     static constexpr bool hasParserForOpcode = false;
 
     template <std::byte opCode>
-    static parsed_inst_t parseInstrWithOpCode(OpBuilder &, ExpressionParser &) = delete;
+    static parsed_inst_t parseInstrWithOpCode(OpBuilder &,
+                                              ExpressionParser &) = delete;
   };
 
 private:
