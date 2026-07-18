@@ -374,8 +374,10 @@ const char *trackThroughMultiplePointer() {
 
 struct X {
   X(std::unique_ptr<int> up) :
-    pointee(*up),             // cfg-warning {{may have been moved.}}
-    pointee2(up.get()),       // cfg-warning {{may have been moved.}}
+    pointee(*up),             // cfg-warning {{may have been moved.}} \
+                              // cfg-note {{expression aliases the storage of parameter 'up'}}
+    pointee2(up.get()),       // cfg-warning {{may have been moved.}} \
+                              // cfg-note {{result of call to 'get' aliases the storage of parameter 'up'}}
     pointer(std::move(up)) {} // cfg-note 2 {{potentially moved here}}
   int &pointee;               // cfg-note {{this field dangles}}
   int *pointee2;              // cfg-note {{this field dangles}}
@@ -389,7 +391,8 @@ struct X2 {
   // A common usage that moves the passing owner to the class.
   // verify a strict warning on this case.
   X2(XOwner owner) :
-    pointee(owner.get()),       // cfg-warning {{may have been moved.}}
+    pointee(owner.get()),       // cfg-warning {{may have been moved.}} \
+                                // cfg-note {{result of call to 'get' aliases the storage of parameter 'owner'}}
     owner(std::move(owner)) {}  // cfg-note {{potentially moved here}}
   int* pointee;                 // cfg-note {{this field dangles}}
   XOwner owner;
@@ -610,10 +613,12 @@ FooView test3(int i, std::optional<Foo> a) {
     return *a; // expected-warning {{address of stack memory}} \
                // cfg-note {{result of call to 'operator*' aliases the storage of parameter 'a' because the implicit object parameter is inferred as lifetimebound}} \
                // cfg-warning {{stack memory associated with parameter 'a' is returned}} \
+               // cfg-note {{expression aliases the storage of parameter 'a'}} \
                // cfg-note {{returned here}}
   return a.value(); // expected-warning {{address of stack memory}} \
                     // cfg-note {{result of call to 'value' aliases the storage of parameter 'a' because the implicit object parameter is inferred as lifetimebound}} \
                     // cfg-warning {{stack memory associated with parameter 'a' is returned}} \
+                    // cfg-note {{result of call to 'value' aliases the storage of parameter 'a'}} \
                     // cfg-note {{returned here}}
 }
 } // namespace GH93386
@@ -1197,7 +1202,8 @@ struct Foo2 {
 };
 
 struct Test {
-  Test(Foo2 foo) : bar(foo.bar.get()),  // cfg-warning-re {{stack memory associated with parameter 'foo' may escape to the field 'bar' which will dangle. {{.*}} may have been moved}}
+  Test(Foo2 foo) : bar(foo.bar.get()),  // cfg-warning-re {{stack memory associated with parameter 'foo' may escape to the field 'bar' which will dangle. {{.*}} may have been moved}} \
+                                        // cfg-note {{result of call to 'get' aliases the storage of parameter 'foo'}}
       storage(std::move(foo.bar)) {};   // cfg-note {{potentially moved here}}
 
   Bar* bar; // cfg-note {{this field dangles}}
