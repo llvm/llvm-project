@@ -253,7 +253,7 @@ define amdgpu_kernel void @s_test_sdiv22_32(ptr addrspace(1) %out, i32 %x, i32 %
 ;
 ; EG-LABEL: s_test_sdiv22_32:
 ; EG:       ; %bb.0:
-; EG-NEXT:    ALU 23, @4, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 20, @4, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -276,12 +276,9 @@ define amdgpu_kernel void @s_test_sdiv22_32(ptr addrspace(1) %out, i32 %x, i32 %
 ; EG-NEXT:     OR_INT * T0.W, PV.W, 1,
 ; EG-NEXT:     CNDE T0.W, PV.W, 0.0, PS,
 ; EG-NEXT:     FLT_TO_INT * T1.W, PV.Z,
-; EG-NEXT:     ADD_INT * T0.W, PS, PV.W,
-; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
-; EG-NEXT:    10(1.401298e-44), 0(0.000000e+00)
-; EG-NEXT:     ASHR T0.X, PV.W, literal.x,
-; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.y,
-; EG-NEXT:    10(1.401298e-44), 2(2.802597e-45)
+; EG-NEXT:     ADD_INT T0.X, PS, PV.W,
+; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
+; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %1 = ashr i32 %x, 10
   %2 = ashr i32 %y, 10
   %result = sdiv i32 %1, %2
