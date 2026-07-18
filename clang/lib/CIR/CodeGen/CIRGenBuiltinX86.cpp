@@ -818,7 +818,7 @@ static mlir::Value emitX86VPerm2f128(CIRGenBuilderTy &builder,
   assert(!inputType.getIsScalable() &&
          "This is only intended for fixed-width vectors");
 
-  const uint8_t imm = CIRGenFunction::getZExtIntValueFromConstOp(ops[2]) & 0xFF;
+  const uint8_t imm = CIRGenFunction::getZExtIntValueFromConstOp(ops[2]);
   mlir::Value zeroVec = builder.getZero(loc, inputType);
 
   // Mirror hardware and OGCG behaviour returning a zero vector
@@ -826,14 +826,15 @@ static mlir::Value emitX86VPerm2f128(CIRGenBuilderTy &builder,
     return zeroVec;
 
   mlir::Value lanes[2];
-  llvm::SmallVector<int64_t, 64> mask;
-  const unsigned numElts = inputType.getSize();
+  llvm::SmallVector<mlir::Attribute, 64> mask;
 
+  cir::IntType i32Ty = builder.getSInt32Ty();
+  const unsigned numElts = inputType.getSize();
   // We must evaluated each lane(128 bits) separetely
   for (auto lane : llvm::seq(0, 2)) {
-    llvm::Boolean isZeroBit = imm & (1 << ((lane * 4) + 3)),
-                  isSourceB = imm & (1 << ((lane * 4) + 1)),
-                  isUpperHalf = imm & (1 << (lane * 4));
+    bool isZeroBit = imm & (1 << ((lane * 4) + 3)),
+         isSourceB = imm & (1 << ((lane * 4) + 1)),
+         isUpperHalf = imm & (1 << (lane * 4));
 
     //  Determine the source for this lane
     if (isZeroBit)
@@ -846,7 +847,7 @@ static mlir::Value emitX86VPerm2f128(CIRGenBuilderTy &builder,
       unsigned idx = (lane * numElts) + elt;
       if (isUpperHalf)
         idx += numElts / 2;
-      mask.push_back(idx);
+      mask.push_back(cir::IntAttr::get(i32Ty, idx));
     }
   }
 
