@@ -40,27 +40,13 @@ void GenericCycleInfo<ContextT>::getExitBlocks(
   if (ExitBlocksCaches.empty())
     ExitBlocksCaches.resize(NumCycles);
   auto &Cache = ExitBlocksCaches[C.Index];
-  if (!Cache.empty()) {
-    TmpStorage.append(Cache.begin(), Cache.end());
-    return;
+  if (Cache.empty()) {
+    SmallPtrSet<BlockT *, 4> Seen;
+    for (BlockT *Block : getBlocks(C))
+      for (BlockT *Succ : successors(Block))
+        if (!contains(C, Succ) && Seen.insert(Succ).second)
+          Cache.push_back(Succ);
   }
-
-  size_t NumExitBlocks = 0;
-  for (BlockT *Block : getBlocks(C)) {
-    llvm::append_range(Cache, successors(Block));
-
-    for (size_t Idx = NumExitBlocks, End = Cache.size(); Idx < End; ++Idx) {
-      BlockT *Succ = Cache[Idx];
-      if (!contains(C, Succ)) {
-        auto ExitEndIt = Cache.begin() + NumExitBlocks;
-        if (std::find(Cache.begin(), ExitEndIt, Succ) == ExitEndIt)
-          Cache[NumExitBlocks++] = Succ;
-      }
-    }
-
-    Cache.resize(NumExitBlocks);
-  }
-
   TmpStorage.append(Cache.begin(), Cache.end());
 }
 
