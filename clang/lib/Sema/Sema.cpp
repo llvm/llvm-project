@@ -616,6 +616,8 @@ Sema::~Sema() {
   if (ExternalSemaSource *ExternalSema
         = dyn_cast_or_null<ExternalSemaSource>(Context.getExternalSource()))
     ExternalSema->ForgetSema();
+  if (ExternalSource)
+    ExternalSource->ForgetSema();
 
   // Delete cached satisfactions.
   std::vector<ConstraintSatisfaction *> Satisfactions;
