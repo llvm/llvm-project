@@ -88,7 +88,6 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__nvvm_atom_max_gen_ui:
   case NVPTX::BI__nvvm_atom_max_gen_ul:
   case NVPTX::BI__nvvm_atom_max_gen_ull:
-    // The unsigned operand type makes this lower to `umax`.
     return makeBinaryAtomicValue(cir::AtomicFetchKind::Max, expr,
                                  /*originalArgType=*/nullptr,
                                  /*emittedArgValue=*/nullptr,
@@ -103,7 +102,6 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__nvvm_atom_min_gen_ui:
   case NVPTX::BI__nvvm_atom_min_gen_ul:
   case NVPTX::BI__nvvm_atom_min_gen_ull:
-    // The unsigned operand type makes this lower to `umin`.
     return makeBinaryAtomicValue(cir::AtomicFetchKind::Min, expr,
                                  /*originalArgType=*/nullptr,
                                  /*emittedArgValue=*/nullptr,
