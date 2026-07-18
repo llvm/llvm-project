@@ -136,10 +136,7 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
     if (!LLVMSpirvPath.empty()) {
       // External translator path: BC -> SPIR-V via llvm-spirv.
       llvm::opt::ArgStringList TrArgs;
-      // Match clang-linker-wrapper's chipstar version selection.
-      if (T.getSubArch() == llvm::Triple::SPIRVSubArch_v13)
-        TrArgs.push_back("--spirv-max-version=1.3");
-      else
+      if (T.getSubArch() == llvm::Triple::NoSubArch)
         TrArgs.push_back("--spirv-max-version=1.2");
       // Keep this extension list in sync with the in-tree backend fallback
       // below. SPV_EXT_relaxed_printf_string_address_space is required to
