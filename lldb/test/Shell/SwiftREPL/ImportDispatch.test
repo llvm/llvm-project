@@ -3,7 +3,7 @@
 // REQUIRES: swift
 
 // RUN: %lldb --repl < %s 2>&1 | FileCheck %s
-// CHECK: UInt
+// CHECK: CUnsignedLong
 
 import Dispatch
 DISPATCH_WALLTIME_NOW

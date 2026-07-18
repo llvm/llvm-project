@@ -6,4 +6,4 @@
 
 import Foundation
 sleep(2)
-// SLEEP: $R0: UInt32 = 0
+// SLEEP: $R0: CUnsignedInt = 0
