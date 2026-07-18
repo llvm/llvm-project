@@ -1826,7 +1826,7 @@ void *__msan_memmove(void *dest, const void *src, SIZE_T n) {
 // the MSan interface.
 static void* __msan_memset_chk(void* dest, int c, SIZE_T n, SIZE_T dest_size) {
   if (!msan_inited)
-    return internal_memset(dest, c, n);
+    return internal_memset(dest, c, Min(n, dest_size));
   if (msan_init_is_running)
     return REAL(__memset_chk)(dest, c, n, dest_size);
   ENSURE_MSAN_INITED();
@@ -1838,7 +1838,7 @@ static void* __msan_memset_chk(void* dest, int c, SIZE_T n, SIZE_T dest_size) {
 static void* __msan_memmove_chk(void* dest, const void* src, SIZE_T n,
                                 SIZE_T dest_size) {
   if (!msan_inited)
-    return internal_memmove(dest, src, n);
+    return internal_memmove(dest, src, Min(n, dest_size));
   if (msan_init_is_running)
     return REAL(__memmove_chk)(dest, src, n, dest_size);
   ENSURE_MSAN_INITED();
@@ -1851,7 +1851,7 @@ static void* __msan_memmove_chk(void* dest, const void* src, SIZE_T n,
 static void* __msan_memcpy_chk(void* dest, const void* src, SIZE_T n,
                                SIZE_T dest_size) {
   if (!msan_inited)
-    return internal_memcpy(dest, src, n);
+    return internal_memcpy(dest, src, Min(n, dest_size));
   if (msan_init_is_running || __msan::IsInSymbolizerOrUnwider())
     return REAL(__memcpy_chk)(dest, src, n, dest_size);
   ENSURE_MSAN_INITED();
