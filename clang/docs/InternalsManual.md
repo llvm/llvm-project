@@ -126,11 +126,11 @@ wording a diagnostic:
 - Diagnostics in Clang do not start with a capital letter and do not end with
   punctuation.
 
-  > - This does not apply to proper nouns like `Clang` or `OpenMP`, to
-  >   acronyms like `GCC` or `ARC`, or to language standards like `C23`
-  >   or `C++17`.
-  > - A trailing question mark is allowed. e.g., `unknown identifier %0; did
-  >   you mean %1?`.
+  - This does not apply to proper nouns like `Clang` or `OpenMP`, to
+    acronyms like `GCC` or `ARC`, or to language standards like `C23`
+    or `C++17`.
+  - A trailing question mark is allowed. e.g., `unknown identifier %0; did
+    you mean %1?`.
 
 - Appropriately capitalize proper nouns like `Clang`, `OpenCL`, `GCC`,
   `Objective-C`, etc. and language standard versions like `C11` or `C++11`.
@@ -573,17 +573,17 @@ Fix-it hints can be created with one of three constructors:
 
 - `FixItHint::CreateInsertion(Loc, Code)`
 
-  > Specifies that the given `Code` (a string) should be inserted before the
-  > source location `Loc`.
+  Specifies that the given `Code` (a string) should be inserted before the
+  source location `Loc`.
 
 - `FixItHint::CreateRemoval(Range)`
 
-  > Specifies that the code in the given source `Range` should be removed.
+  Specifies that the code in the given source `Range` should be removed.
 
 - `FixItHint::CreateReplacement(Range, Code)`
 
-  > Specifies that the code in the given source `Range` should be removed,
-  > and replaced with the given `Code` string.
+  Specifies that the code in the given source `Range` should be removed,
+  and replaced with the given `Code` string.
 
 (diagnosticconsumer)=
 
@@ -1385,35 +1385,35 @@ Clang AST nodes (types, declarations, statements, expressions, and so on) are
 generally designed to be immutable once created. This provides a number of key
 benefits:
 
-> - Canonicalization of the "meaning" of nodes is possible as soon as the nodes
->   are created, and is not invalidated by later addition of more information.
->   For example, we {ref}`canonicalize types <CanonicalType>`, and use a
->   canonicalized representation of expressions when determining whether two
->   function template declarations involving dependent expressions declare the
->   same entity.
-> - AST nodes can be reused when they have the same meaning. For example, we
->   reuse `Type` nodes when representing the same type (but maintain separate
->   `TypeLoc`s for each instance where a type is written), and we reuse
->   non-dependent `Stmt` and `Expr` nodes across instantiations of a
->   template.
-> - Serialization and deserialization of the AST to/from AST files is simpler:
->   we do not need to track modifications made to AST nodes imported from AST
->   files and serialize separate "update records".
+- Canonicalization of the "meaning" of nodes is possible as soon as the nodes
+  are created, and is not invalidated by later addition of more information.
+  For example, we {ref}`canonicalize types <CanonicalType>`, and use a
+  canonicalized representation of expressions when determining whether two
+  function template declarations involving dependent expressions declare the
+  same entity.
+- AST nodes can be reused when they have the same meaning. For example, we
+  reuse `Type` nodes when representing the same type (but maintain separate
+  `TypeLoc`s for each instance where a type is written), and we reuse
+  non-dependent `Stmt` and `Expr` nodes across instantiations of a
+  template.
+- Serialization and deserialization of the AST to/from AST files is simpler:
+  we do not need to track modifications made to AST nodes imported from AST
+  files and serialize separate "update records".
 
 There are unfortunately exceptions to this general approach, such as:
 
-> - The first declaration of a redeclarable entity maintains a pointer to the
->   most recent declaration of that entity, which naturally needs to change as
->   more declarations are parsed.
-> - Name lookup tables in declaration contexts change after the namespace
->   declaration is formed.
-> - We attempt to maintain only a single declaration for an instantiation of a
->   template, rather than having distinct declarations for an instantiation of
->   the declaration versus the definition, so template instantiation often
->   updates parts of existing declarations.
-> - Some parts of declarations are required to be instantiated separately (this
->   includes default arguments and exception specifications), and such
->   instantiations update the existing declaration.
+- The first declaration of a redeclarable entity maintains a pointer to the
+  most recent declaration of that entity, which naturally needs to change as
+  more declarations are parsed.
+- Name lookup tables in declaration contexts change after the namespace
+  declaration is formed.
+- We attempt to maintain only a single declaration for an instantiation of a
+  template, rather than having distinct declarations for an instantiation of
+  the declaration versus the definition, so template instantiation often
+  updates parts of existing declarations.
+- Some parts of declarations are required to be instantiated separately (this
+  includes default arguments and exception specifications), and such
+  instantiations update the existing declaration.
 
 These cases tend to be fragile; mutable AST state should be avoided where
 possible.
@@ -1611,60 +1611,60 @@ the names are inside the `DeclarationName` class).
 
 `Identifier`
 
-> The name is a simple identifier. Use `N.getAsIdentifierInfo()` to retrieve
-> the corresponding `IdentifierInfo*` pointing to the actual identifier.
+: The name is a simple identifier. Use `N.getAsIdentifierInfo()` to retrieve
+  the corresponding `IdentifierInfo*` pointing to the actual identifier.
 
 `ObjCZeroArgSelector`, `ObjCOneArgSelector`, `ObjCMultiArgSelector`
 
-> The name is an Objective-C selector, which can be retrieved as a `Selector`
-> instance via `N.getObjCSelector()`. The three possible name kinds for
-> Objective-C reflect an optimization within the `DeclarationName` class:
-> both zero- and one-argument selectors are stored as a masked
-> `IdentifierInfo` pointer, and therefore require very little space, since
-> zero- and one-argument selectors are far more common than multi-argument
-> selectors (which use a different structure).
+: The name is an Objective-C selector, which can be retrieved as a `Selector`
+  instance via `N.getObjCSelector()`. The three possible name kinds for
+  Objective-C reflect an optimization within the `DeclarationName` class:
+  both zero- and one-argument selectors are stored as a masked
+  `IdentifierInfo` pointer, and therefore require very little space, since
+  zero- and one-argument selectors are far more common than multi-argument
+  selectors (which use a different structure).
 
 `CXXConstructorName`
 
-> The name is a C++ constructor name. Use `N.getCXXNameType()` to retrieve
-> the {ref}`type <QualType>` that this constructor is meant to construct. The
-> type is always the canonical type, since all constructors for a given type
-> have the same name.
+: The name is a C++ constructor name. Use `N.getCXXNameType()` to retrieve
+  the {ref}`type <QualType>` that this constructor is meant to construct. The
+  type is always the canonical type, since all constructors for a given type
+  have the same name.
 
 `CXXDestructorName`
 
-> The name is a C++ destructor name. Use `N.getCXXNameType()` to retrieve
-> the {ref}`type <QualType>` whose destructor is being named. This type is
-> always a canonical type.
+: The name is a C++ destructor name. Use `N.getCXXNameType()` to retrieve
+  the {ref}`type <QualType>` whose destructor is being named. This type is
+  always a canonical type.
 
 `CXXConversionFunctionName`
 
-> The name is a C++ conversion function. Conversion functions are named
-> according to the type they convert to, e.g., "`operator void const *`".
-> Use `N.getCXXNameType()` to retrieve the type that this conversion function
-> converts to. This type is always a canonical type.
+: The name is a C++ conversion function. Conversion functions are named
+  according to the type they convert to, e.g., "`operator void const *`".
+  Use `N.getCXXNameType()` to retrieve the type that this conversion function
+  converts to. This type is always a canonical type.
 
 `CXXOperatorName`
 
-> The name is a C++ overloaded operator name. Overloaded operators are named
-> according to their spelling, e.g., "`operator+`" or "`operator new []`".
-> Use `N.getCXXOverloadedOperator()` to retrieve the overloaded operator (a
-> value of type `OverloadedOperatorKind`).
+: The name is a C++ overloaded operator name. Overloaded operators are named
+  according to their spelling, e.g., "`operator+`" or "`operator new []`".
+  Use `N.getCXXOverloadedOperator()` to retrieve the overloaded operator (a
+  value of type `OverloadedOperatorKind`).
 
 `CXXLiteralOperatorName`
 
-> The name is a C++11 user-defined literal operator. User-defined
-> Literal operators are named according to the suffix they define,
-> e.g., "`_foo`" for "`operator "" _foo`". Use
-> `N.getCXXLiteralIdentifier()` to retrieve the corresponding
-> `IdentifierInfo*` pointing to the identifier.
+: The name is a C++11 user-defined literal operator. User-defined
+  Literal operators are named according to the suffix they define,
+  e.g., "`_foo`" for "`operator "" _foo`". Use
+  `N.getCXXLiteralIdentifier()` to retrieve the corresponding
+  `IdentifierInfo*` pointing to the identifier.
 
 `CXXUsingDirective`
 
-> The name is a C++ using directive. Using directives are not really
-> NamedDecls, in that they all have the same name, but they are
-> implemented as such in order to store them in DeclContext
-> effectively.
+: The name is a C++ using directive. Using directives are not really
+  NamedDecls, in that they all have the same name, but they are
+  implemented as such in order to store them in DeclContext
+  effectively.
 
 `DeclarationName`s are cheap to create, copy, and compare. They require
 only a single pointer's worth of storage in the common cases (identifiers,
@@ -1700,39 +1700,39 @@ provides several facilities common to each declaration context:
 
 Source-centric vs. Semantics-centric View of Declarations
 
-> `DeclContext` provides two views of the declarations stored within a
-> declaration context. The source-centric view accurately represents the
-> program source code as written, including multiple declarations of entities
-> where present (see the section {ref}`Redeclarations and Overloads
-> <Redeclarations>`), while the semantics-centric view represents the program
-> semantics. The two views are kept synchronized by semantic analysis while
-> the ASTs are being constructed.
+: `DeclContext` provides two views of the declarations stored within a
+  declaration context. The source-centric view accurately represents the
+  program source code as written, including multiple declarations of entities
+  where present (see the section {ref}`Redeclarations and Overloads
+  <Redeclarations>`), while the semantics-centric view represents the program
+  semantics. The two views are kept synchronized by semantic analysis while
+  the ASTs are being constructed.
 
 Storage of declarations within that context
 
-> Every declaration context can contain some number of declarations. For
-> example, a C++ class (represented by `RecordDecl`) contains various member
-> functions, fields, nested types, and so on. All of these declarations will
-> be stored within the `DeclContext`, and one can iterate over the
-> declarations via \[`DeclContext::decls_begin()`,
-> `DeclContext::decls_end()`). This mechanism provides the source-centric
-> view of declarations in the context.
+: Every declaration context can contain some number of declarations. For
+  example, a C++ class (represented by `RecordDecl`) contains various member
+  functions, fields, nested types, and so on. All of these declarations will
+  be stored within the `DeclContext`, and one can iterate over the
+  declarations via \[`DeclContext::decls_begin()`,
+  `DeclContext::decls_end()`). This mechanism provides the source-centric
+  view of declarations in the context.
 
 Lookup of declarations within that context
 
-> The `DeclContext` structure provides efficient name lookup for names within
-> that declaration context. For example, if `N` is a namespace we can look
-> for the name `N::f` using `DeclContext::lookup`. The lookup itself is
-> based on a lazily-constructed array (for declaration contexts with a small
-> number of declarations) or hash table (for declaration contexts with more
-> declarations). The lookup operation provides the semantics-centric view of
-> the declarations in the context.
+: The `DeclContext` structure provides efficient name lookup for names within
+  that declaration context. For example, if `N` is a namespace we can look
+  for the name `N::f` using `DeclContext::lookup`. The lookup itself is
+  based on a lazily-constructed array (for declaration contexts with a small
+  number of declarations) or hash table (for declaration contexts with more
+  declarations). The lookup operation provides the semantics-centric view of
+  the declarations in the context.
 
 Ownership of declarations
 
-> The `DeclContext` owns all of the declarations that were declared within
-> its declaration context, and is responsible for the management of their
-> memory as well as their (de-)serialization.
+: The `DeclContext` owns all of the declarations that were declared within
+  its declaration context, and is responsible for the management of their
+  memory as well as their (de-)serialization.
 
 All declarations are stored within a declaration context, and one can query
 information about the context in which each declaration lives. One can
@@ -2997,17 +2997,17 @@ may have a keyword spelling, as well as a C++11 spelling and a GNU spelling. An
 empty spelling list is also permissible and may be useful for attributes which
 are created implicitly. The following spellings are accepted:
 
-> | Spelling         | Description                                                                                                                                                                                                                                                                             |
-> | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-> | `GNU`            | Spelled with a GNU-style `__attribute__((attr))` syntax and placement.                                                                                                                                                                                                                  |
-> | `CXX11`          | Spelled with a C++-style `[[attr]]` syntax with an optional vendor-specific namespace.                                                                                                                                                                                                  |
-> | `C23`            | Spelled with a C-style `[[attr]]` syntax with an optional vendor-specific namespace.                                                                                                                                                                                                    |
-> | `Declspec`       | Spelled with a Microsoft-style `__declspec(attr)` syntax.                                                                                                                                                                                                                               |
-> | `CustomKeyword`  | The attribute is spelled as a keyword, and requires custom parsing.                                                                                                                                                                                                                     |
-> | `RegularKeyword` | The attribute is spelled as a keyword. It can be used in exactly the places that the standard `[[attr]]` syntax can be used, and appertains to exactly the same thing that a standard attribute would appertain to. Lexing and parsing of the keyword are handled automatically.        |
-> | `GCC`            | Specifies two or three spellings: the first is a GNU-style spelling, the second is a C++-style spelling with the `gnu` namespace, and the third is an optional C-style spelling with the `gnu` namespace. Attributes should only specify this spelling for attributes supported by GCC. |
-> | `Clang`          | Specifies two or three spellings: the first is a GNU-style spelling, the second is a C++-style spelling with the `clang` namespace, and the third is an optional C-style spelling with the `clang` namespace. By default, a C-style spelling is provided.                               |
-> | `Pragma`         | The attribute is spelled as a `#pragma`, and requires custom processing within the preprocessor. If the attribute is meant to be used by Clang, it should set the namespace to `"clang"`. Note that this spelling is not used for declaration attributes.                               |
+| Spelling         | Description                                                                                                                                                                                                                                                                             |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GNU`            | Spelled with a GNU-style `__attribute__((attr))` syntax and placement.                                                                                                                                                                                                                  |
+| `CXX11`          | Spelled with a C++-style `[[attr]]` syntax with an optional vendor-specific namespace.                                                                                                                                                                                                  |
+| `C23`            | Spelled with a C-style `[[attr]]` syntax with an optional vendor-specific namespace.                                                                                                                                                                                                    |
+| `Declspec`       | Spelled with a Microsoft-style `__declspec(attr)` syntax.                                                                                                                                                                                                                               |
+| `CustomKeyword`  | The attribute is spelled as a keyword, and requires custom parsing.                                                                                                                                                                                                                     |
+| `RegularKeyword` | The attribute is spelled as a keyword. It can be used in exactly the places that the standard `[[attr]]` syntax can be used, and appertains to exactly the same thing that a standard attribute would appertain to. Lexing and parsing of the keyword are handled automatically.        |
+| `GCC`            | Specifies two or three spellings: the first is a GNU-style spelling, the second is a C++-style spelling with the `gnu` namespace, and the third is an optional C-style spelling with the `gnu` namespace. Attributes should only specify this spelling for attributes supported by GCC. |
+| `Clang`          | Specifies two or three spellings: the first is a GNU-style spelling, the second is a C++-style spelling with the `clang` namespace, and the third is an optional C-style spelling with the `clang` namespace. By default, a C-style spelling is provided.                               |
+| `Pragma`         | The attribute is spelled as a `#pragma`, and requires custom processing within the preprocessor. If the attribute is meant to be used by Clang, it should set the namespace to `"clang"`. Note that this spelling is not used for declaration attributes.                               |
 
 The C++ standard specifies that “any [non-standard attribute] that is not
 recognized by the implementation is ignored” (`[dcl.attr.grammar]`).
@@ -3878,10 +3878,10 @@ lingering bugs, may only work on some targets, etc. We use the following
 criteria when deciding whether to expose a feature test macro (or particular
 result value for the feature test):
 
-> - Are there known issues where we reject valid code that should be accepted?
-> - Are there known issues where we accept invalid code that should be rejected?
-> - Are there known crashes, failed assertions, or miscompilations?
-> - Are there known issues on a particular relevant target?
+- Are there known issues where we reject valid code that should be accepted?
+- Are there known issues where we accept invalid code that should be rejected?
+- Are there known crashes, failed assertions, or miscompilations?
+- Are there known issues on a particular relevant target?
 
 If the answer to any of these is "yes", the feature test macro should either
 not be defined or there should be very strong rationale for why the issues

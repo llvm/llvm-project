@@ -53,7 +53,7 @@ nodes.
 
 We assume a familiarity with the clang AST and the corresponding AST matchers
 for the purpose of this tutorial. Users who are unfamiliar with either are
-encouraged to start with the recommended references in [Related Reading].
+encouraged to start with the recommended references in [Related Reading](#related-reading).
 
 ### Example: style-checking names
 
