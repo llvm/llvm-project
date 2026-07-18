@@ -76,6 +76,12 @@ if(LLVM_BINARY_DIR)
   list(APPEND llvm_search_paths "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
   list(APPEND clang_search_paths "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/clang")
 endif()
+
+# Exports from LLVM and Clang may contain shared libraries. When targeting
+# baremetal platforms that lacks shared library support, importing such
+# exports unrestrictedly will trigger cmake errors. Set
+# LLVM_OMIT_EXPORTS_FROM_CONFIG flag to skip importing these exports.
+set(LLVM_OMIT_EXPORTS_FROM_CONFIG ON)
 find_package(LLVM PATHS ${llvm_search_paths} NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 find_package(Clang PATHS ${clang_search_paths} NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 

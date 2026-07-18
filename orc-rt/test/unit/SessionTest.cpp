@@ -444,7 +444,7 @@ TEST(SessionTest, ActiveManagedCallsDelayShutdown) {
   ASSERT_FALSE(ShutdownOpIdx);
 
   // Take a managed code call token. This should succeed.
-  auto Tok = TaskGroup::Token(S.managedCodeTaskGroup());
+  auto Tok = TaskGroup::Token(S.managedCodeTokenSource());
   ASSERT_TRUE(Tok);
 
   // We expect shutdown to wait for any active managed calls to complete.
@@ -458,7 +458,7 @@ TEST(SessionTest, ActiveManagedCallsDelayShutdown) {
 
   // The managed calls code group should have been closed. Assert that we
   // can't get a new token.
-  ASSERT_FALSE(TaskGroup::Token(S.managedCodeTaskGroup()));
+  ASSERT_FALSE(TaskGroup::Token(S.managedCodeTokenSource()));
 
   Tok = TaskGroup::Token(); // Reset token.
 
