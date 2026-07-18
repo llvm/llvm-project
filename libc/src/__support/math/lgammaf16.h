@@ -156,6 +156,7 @@ LIBC_INLINE float16 lgammaf16(float16 x) {
   double abs_xd = xd < 0.0 ? -xd : xd;
   double lgamma_val;
 
+  // |x| = 0.66015625
   if (LIBC_UNLIKELY(x_abs < 0x3948u)) {
     // Small path: |x| < 0.66015625
     // For t = |x|: lgamma(t) = t*P(u) - log(t), where P(u) approximates
@@ -189,7 +190,7 @@ LIBC_INLINE float16 lgammaf16(float16 x) {
       lgamma_val = 0x1.250d048e7a1bdp+0 - lg_ln(lg_sinpi(abs_xd)) - poly_val;
     else
       lgamma_val = poly_val - lg_ln(abs_xd);
-  } else if (x_abs > 0x42BEu) {
+  } else if (x_abs > 0x42BEu) { // 3.3710938
     double log_abs_xd = lg_ln(abs_xd);
     // lgamma(x) = (x-0.5)*log(x) - x + log(2*pi)/2 + Bernoulli corrections
     //  Stirling base: (x-0.5)*(log(x)-1) + (log(2*pi)-1)/2
