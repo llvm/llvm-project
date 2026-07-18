@@ -50,16 +50,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### ABI Changes in This Version
 
-- Except on PlayStation, Clang now derives the x86-64 System V AVX ABI level
-for 256- and 512-bit vector arguments and returns from effective per-function
-target features. Features and `arch=` CPUs that imply AVX or AVX512F are
-honored, and calls use the caller's features, matching GCC. Per-function
-features cannot lower the translation-unit ABI level;
-`-fclang-abi-compat=23` restores the previous behavior. (#GH193298)
-
 ### AST Dumping Potentially Breaking Changes
 
 ### Clang Frontend Potentially Breaking Changes
+
+- Templight support has been removed.
 
 ### Clang Python Bindings Potentially Breaking Changes
 
@@ -318,7 +313,7 @@ features cannot lower the translation-unit ABI level;
 
 #### Bug Fixes to C++ Support
 
--Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)
+- Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)
 
 - Fixed a crash when a using-declaration naming an unresolvable member of a
   dependent base was shadowed by an invalid using-declaration. (#GH209427)
