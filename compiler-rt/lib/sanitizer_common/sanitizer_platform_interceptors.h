@@ -186,9 +186,10 @@ SANITIZER_WEAK_IMPORT void *aligned_alloc(__sanitizer::usize __alignment,
 //   - Bionic (Android)
 //   - Apple libc (macOS/iOS)
 //   - FreeBSD libc
-//   - MinGW/Windows (via GCC's libssp, linked with -lssp)
-#define SANITIZER_FORTIFY_CHK \
-  (SI_GLIBC || SI_ANDROID || SI_MAC || SI_FREEBSD || SI_WINDOWS)
+// Windows is intentionally excluded: the MSVC/UCRT runtime does not export
+// __*_chk symbols (they only exist on MinGW when linking GCC's libssp), so
+// intercepting them would produce unresolved externals at link time.
+#define SANITIZER_FORTIFY_CHK (SI_GLIBC || SI_ANDROID || SI_MAC || SI_FREEBSD)
 #define SANITIZER_INTERCEPT___MEMCPY_CHK SANITIZER_FORTIFY_CHK
 #define SANITIZER_INTERCEPT___MEMMOVE_CHK SANITIZER_FORTIFY_CHK
 #define SANITIZER_INTERCEPT___MEMSET_CHK SANITIZER_FORTIFY_CHK
