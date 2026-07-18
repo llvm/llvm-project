@@ -79,8 +79,8 @@ namespace {
     Align Alignment;            // CP alignment.
     unsigned char SymbolFlags = X86II::MO_NO_FLAG;  // X86II::MO_*
     bool NegateIndex = false;
-    // True when this address is being matched to be emitted as an LEA rather
-    // than folded into a memory operand.  Unlike a memory operand, an LEA turns
+    // True when this address is being matched to be emitted as a LEA rather
+    // than folded into a memory operand. Unlike a memory operand, a LEA turns
     // the folded arithmetic into real instructions, so it is not profitable to
     // split an already-materialized (multi-use) value here. (Issue #51707)
     bool IsForLEA = false;
@@ -2072,19 +2072,36 @@ bool X86DAGToDAGISel::matchAdd(SDValue &N, X86ISelAddressMode &AM,
   // it if it gets CSE'd with a different node.
   HandleSDNode Handle(N);
 
-  // When forming an LEA, avoid splitting an already-materialized value.  A
-  // multi-use, multi-level add-like operand will be materialized in a register
-  // regardless; looking through it to sink a part into the address would force
-  // the inner level to be recomputed separately (a constant folds into the
-  // displacement, a leaf into a base/index register, but a nested add-like
-  // value does not fold into a single free address slot).  Just use the
-  // operand directly as a base/index register. (Issue #51707)
   auto IsAddLike = [&](SDValue V) {
     return V.getOpcode() == ISD::ADD || CurDAG->isADDLike(V);
   };
+
+  // When forming a LEA, avoid splitting an already-materialized value.
+  // Use the operand directly as a base/index register instead.
+  // For now we assume `hasOneUse` to be a good approximation of
+  // "is already-materialized value" the same way it is done for other ops.
+  // Reusing the whole value only pays off when Op is genuinely materialized.
+  // hasOneUse does not distinguish that from a value whose uses all fold
+  // for free (e.g. loads); doing it correctly needs use analysis.
+  auto SplitsMaterializedValue = [&](SDValue Op) {
+    if (!AM.IsForLEA || Op.hasOneUse())
+      return false;
+
+    // add-like: decomposes to base + index (+ disp)
+    if (IsAddLike(Op))
+      return IsAddLike(Op.getOperand(0)) || IsAddLike(Op.getOperand(1));
+
+    // shl by 1/2/3 folds to a scaled index
+    if (Op.getOpcode() == ISD::SHL)
+      if (auto *C = dyn_cast<ConstantSDNode>(Op.getOperand(1)))
+        return C->getZExtValue() >= 1 && C->getZExtValue() <= 3 &&
+               IsAddLike(Op.getOperand(0));
+
+    return false;
+  };
+
   auto MatchOperand = [&](SDValue Op) {
-    if (AM.IsForLEA && !Op.hasOneUse() && IsAddLike(Op) &&
-        (IsAddLike(Op.getOperand(0)) || IsAddLike(Op.getOperand(1))))
+    if (SplitsMaterializedValue(Op))
       return matchAddressBase(Op, AM);
     return matchAddressRecursively(Op, AM, Depth + 1);
   };

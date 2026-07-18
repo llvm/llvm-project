@@ -77,3 +77,22 @@ define i32 @deeper(i32 %a, i32 %b, i32 %c, i32 %d, ptr %p) {
   %r = add i32 %v, %d
   ret i32 %r
 }
+
+; A multi-use shl-by-constant of an add folds to a scaled index; the materialized
+; value m = (a + b) << 2 should be reused for m + c, not recomputed.
+define i32 @shl_reuse(i32 %a, i32 %b, i32 %c, ptr %p) {
+; CHECK-LABEL: shl_reuse:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal (%rdi,%rsi), %eax
+; CHECK-NEXT:    shll $2, %eax
+; CHECK-NEXT:    movl %eax, (%rcx)
+; CHECK-NEXT:    addl %edx, %eax
+; CHECK-NEXT:    retq
+  %s = add i32 %a, %b
+  %m = shl i32 %s, 2
+  store i32 %m, ptr %p
+  %r = add i32 %m, %c
+  ret i32 %r
+}
