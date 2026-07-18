@@ -824,4 +824,46 @@ void f2() {
   Visitor.runOver(Code.code(), CallsVisitor::Lang_CXX14);
 }
 
+TEST(SourceCodeTest, GetCallReturnType_DependentBuiltinCall) {
+  // Dependent builtin calls keep their BuiltinFn placeholder until
+  // instantiation. The alias also covers the parse-time regression.
+  llvm::Annotations Code{R"cpp(
+template <auto> struct S {};
+
+template <typename T>
+using Alias = S<__builtin_constant_p(T::x)>;
+
+template <typename T>
+void templ(const T &t) {
+  $test1[[__builtin_constant_p(t.x)]];
+  $test2[[__builtin_ffs(t.x)]];
+}
+)cpp"};
+
+  llvm::Annotations::Range R1 = Code.range("test1");
+  llvm::Annotations::Range R2 = Code.range("test2");
+
+  bool SawBuiltinFnCallee = false;
+  CallsVisitor Visitor;
+  Visitor.OnCall = [&R1, &R2, &SawBuiltinFnCallee](CallExpr *Expr,
+                                                   ASTContext *Context) {
+    unsigned Begin = Context->getSourceManager().getFileOffset(
+        Expr->getSourceRange().getBegin());
+    unsigned End = Context->getSourceManager().getFileOffset(
+        Expr->getSourceRange().getEnd());
+    llvm::Annotations::Range R{Begin, End + 1};
+
+    QualType CalleeType = Expr->getCallee()->getType();
+    if (R == R1 || R == R2) {
+      SawBuiltinFnCallee = true;
+      ASSERT_FALSE(CalleeType->isDependentType());
+      ASSERT_TRUE(
+          CalleeType->isSpecificPlaceholderType(BuiltinType::BuiltinFn));
+      EXPECT_EQ(Expr->getCallReturnType(*Context), Context->DependentTy);
+    }
+  };
+  Visitor.runOver(Code.code(), CallsVisitor::Lang_CXX17);
+  EXPECT_TRUE(SawBuiltinFnCallee);
+}
+
 } // end anonymous namespace
