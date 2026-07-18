@@ -22,6 +22,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.locale
     libc.include.malloc
     libc.include.math
+    libc.include.net_if
     libc.include.netinet_in
     libc.include.netinet_tcp
     libc.include.netinet_udp
