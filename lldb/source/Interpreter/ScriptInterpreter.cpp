@@ -15,6 +15,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
+#include "lldb/Utility/UnimplementedError.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "llvm/ADT/StringSwitch.h"
 #if defined(_WIN32)
@@ -48,6 +49,12 @@ void ScriptInterpreter::CollectDataForWatchpointCommandCallback(
 
 StructuredData::DictionarySP ScriptInterpreter::GetInterpreterInfo() {
   return nullptr;
+}
+
+llvm::Expected<FileSpec> ScriptInterpreter::GenerateExtensionTemplate(
+    const std::string &name, std::vector<ExtensionTemplateRequest> &extensions,
+    bool generate_non_abstract_methods, std::string output_file) {
+  return llvm::make_error<UnimplementedError>();
 }
 
 bool ScriptInterpreter::LoadScriptingModule(

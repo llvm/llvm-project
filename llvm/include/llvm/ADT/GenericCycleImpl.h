@@ -36,10 +36,10 @@ namespace llvm {
 
 template <typename ContextT>
 void GenericCycleInfo<ContextT>::getExitBlocks(
-    const CycleT &C, SmallVectorImpl<BlockT *> &TmpStorage) const {
+    CycleRef C, SmallVectorImpl<BlockT *> &TmpStorage) const {
   if (ExitBlocksCaches.empty())
     ExitBlocksCaches.resize(NumCycles);
-  auto &Cache = ExitBlocksCaches[getCycleIndex(C)];
+  auto &Cache = ExitBlocksCaches[C.Index];
   if (!Cache.empty()) {
     TmpStorage.append(Cache.begin(), Cache.end());
     return;
@@ -66,7 +66,7 @@ void GenericCycleInfo<ContextT>::getExitBlocks(
 
 template <typename ContextT>
 void GenericCycleInfo<ContextT>::getExitingBlocks(
-    const CycleT &C, SmallVectorImpl<BlockT *> &TmpStorage) const {
+    CycleRef C, SmallVectorImpl<BlockT *> &TmpStorage) const {
   for (BlockT *Block : getBlocks(C)) {
     for (BlockT *Succ : successors(Block)) {
       if (!contains(C, Succ)) {
@@ -78,7 +78,7 @@ void GenericCycleInfo<ContextT>::getExitingBlocks(
 }
 
 template <typename ContextT>
-auto GenericCycleInfo<ContextT>::getCyclePreheader(const CycleT &C) const
+auto GenericCycleInfo<ContextT>::getCyclePreheader(CycleRef C) const
     -> BlockT * {
   BlockT *Predecessor = getCyclePredecessor(C);
   if (!Predecessor)
@@ -97,7 +97,7 @@ auto GenericCycleInfo<ContextT>::getCyclePreheader(const CycleT &C) const
 }
 
 template <typename ContextT>
-auto GenericCycleInfo<ContextT>::getCyclePredecessor(const CycleT &C) const
+auto GenericCycleInfo<ContextT>::getCyclePredecessor(CycleRef C) const
     -> BlockT * {
   if (!isReducible(C))
     return nullptr;
@@ -118,14 +118,14 @@ auto GenericCycleInfo<ContextT>::getCyclePredecessor(const CycleT &C) const
 }
 
 template <typename ContextT>
-void GenericCycleInfo<ContextT>::verifyCycle(const CycleT &C) const {
+void GenericCycleInfo<ContextT>::verifyCycle(CycleRef C) const {
 #ifndef NDEBUG
   assert(getNumBlocks(C) != 0 && "Cycle cannot be empty.");
   DenseSet<BlockT *> Blocks;
   for (BlockT *BB : getBlocks(C)) {
     assert(Blocks.insert(BB).second); // duplicates in block list?
   }
-  assert(!C.Entries.empty() && "Cycle must have one or more entries.");
+  assert(!getEntries(C).empty() && "Cycle must have one or more entries.");
 
   DenseSet<BlockT *> Entries;
   for (BlockT *Entry : getEntries(C)) {
@@ -192,21 +192,22 @@ void GenericCycleInfo<ContextT>::verifyCycle(const CycleT &C) const {
 }
 
 template <typename ContextT>
-void GenericCycleInfo<ContextT>::verifyCycleNest(const CycleT &C) const {
+void GenericCycleInfo<ContextT>::verifyCycleNest(CycleRef C) const {
 #ifndef NDEBUG
+  const CycleT &Cyc = deref(C);
   // Check the subcycles.
-  for (CycleT *Child : children(C)) {
+  for (auto Child : children(C)) {
     // Each block in each subcycle should be contained within this cycle.
-    for (BlockT *BB : getBlocks(*Child)) {
+    for (BlockT *BB : getBlocks(Child)) {
       assert(contains(C, BB) &&
              "Cycle does not contain all the blocks of a subcycle!");
     }
-    assert(Child->Depth == C.Depth + 1);
+    assert(deref(Child).Depth == Cyc.Depth + 1);
   }
 
-  // Check the parent cycle pointer.
-  if (C.ParentCycle) {
-    assert(is_contained(children(*C.ParentCycle), &C) &&
+  // Check the parent cycle.
+  if (Cyc.hasParent()) {
+    assert(is_contained(children(CycleRef(Cyc.ParentIndex)), C) &&
            "Cycle is not a subcycle of its parent!");
   }
 #endif
@@ -266,16 +267,26 @@ template <typename ContextT> class GenericCycleInfoCompute {
 
   /// Make top-level cycle \p Child a child of \p NewParent.
   void moveTopLevelCycleToNewParent(CycleT *NewParent, CycleT *Child) {
-    assert((!Child->ParentCycle && !NewParent->ParentCycle) &&
+    assert((!Child->hasParent() && !NewParent->hasParent()) &&
            "NewParent and Child must be both top level cycle!\n");
-    assert(NewParent == &AllCycles.back() &&
-           "attach slices in AttachedChildren must stay contiguous");
     auto Pos = llvm::find(TopLevelCycles, Child);
     assert(Pos != TopLevelCycles.end());
     *Pos = TopLevelCycles.back();
     TopLevelCycles.pop_back();
     AttachedChildren.push_back(Child);
-    Child->ParentCycle = NewParent;
+    // NewParent is the newest cycle and its creation-order index is
+    // AllCycles.size() - 1.
+    assert(NewParent == &AllCycles.back() &&
+           "attach slices in AttachedChildren must stay contiguous");
+    Child->ParentIndex = AllCycles.size() - 1;
+  }
+
+  /// Record that \p Block's innermost cycle is the one currently being built
+  /// (always AllCycles.back()), storing its creation-order index. flatten()
+  /// remaps it to the preorder index.
+  void recordInnermostCycle(BlockT *Block) {
+    Info.BlockMap[GraphTraits<BlockT *>::getNumber(Block)] =
+        AllCycles.size() - 1;
   }
 
 public:
@@ -290,42 +301,48 @@ private:
 
 template <typename ContextT>
 void GenericCycleInfo<ContextT>::addToBlockMap(BlockT *Block, CycleT *Cycle) {
-  // The caller should ensure that BlockMap is large enough.
+  // The caller should ensure that BlockMap is large enough. \p Cycle is a flat
+  // cycle, so its preorder index is well-defined.
   verifyBlockNumberEpoch(Block->getParent());
   unsigned Number = GraphTraits<BlockT *>::getNumber(Block);
-  BlockMap[Number] = Cycle;
+  BlockMap[Number] = getCycleIndex(*Cycle);
 }
 
 template <typename ContextT>
-void GenericCycleInfo<ContextT>::addBlockToCycle(BlockT *Block, CycleT *Cycle) {
+void GenericCycleInfo<ContextT>::addBlockToCycle(BlockT *Block, CycleRef C) {
+  CycleT &Cyc = deref(C);
   // Make sure BlockMap is large enough for the new block.
   unsigned Number = GraphTraits<BlockT *>::getNumber(Block);
   if (Number >= BlockMap.size())
-    BlockMap.resize(GraphTraits<FunctionT *>::getMaxNumber(Block->getParent()));
+    BlockMap.resize(GraphTraits<FunctionT *>::getMaxNumber(Block->getParent()),
+                    NoCycle);
 
-  // Insert Block at the end of Cycle's slice and shift every later cycle's
-  // range right. Ranges straddling Pos belong to Cycle's ancestors and are
+  // Insert Block at the end of Cyc's slice and shift every later cycle's
+  // range right. Ranges straddling Pos belong to Cyc's ancestors and are
   // extended below.
-  unsigned Pos = Cycle->IdxEnd;
+  unsigned Pos = Cyc.IdxEnd;
   BlockLayout.insert(BlockLayout.begin() + Pos, Block);
-  for (CycleT &C : cycles())
-    if (C.IdxBegin >= Pos) {
-      ++C.IdxBegin;
-      ++C.IdxEnd;
+  for (unsigned I = 0; I != NumCycles; ++I) {
+    CycleT &X = Cycles[I];
+    if (X.IdxBegin >= Pos) {
+      ++X.IdxBegin;
+      ++X.IdxEnd;
     }
-  addToBlockMap(Block, Cycle);
-  // Cycle and its ancestors gain the new block: extend each one's slice and
+  }
+  addToBlockMap(Block, &Cyc);
+  // Cyc and its ancestors gain the new block: extend each one's slice and
   // invalidate its exit-block cache in a single walk up the tree.
-  for (CycleT *C = Cycle; C; C = getParentCycle(*C)) {
-    ++C->IdxEnd;
+  for (unsigned I = getCycleIndex(Cyc); I != NoCycle;
+       I = Cycles[I].ParentIndex) {
+    ++Cycles[I].IdxEnd;
     if (!ExitBlocksCaches.empty())
-      ExitBlocksCaches[getCycleIndex(*C)].clear();
+      ExitBlocksCaches[I].clear();
   }
 }
 
 /// Move the discovered forest into Info's flat preorder array. Assigns preorder
-/// IDs, depths and descendant counts, remaps BlockMap from the temporary nodes,
-/// and lays out every cycle's blocks in BlockLayout.
+/// IDs, depths and descendant counts, remaps BlockMap from creation-order to
+/// preorder indices, and lays out every cycle's blocks in BlockLayout.
 template <typename ContextT>
 void GenericCycleInfoCompute<ContextT>::flatten(ArrayRef<BlockT *> Order) {
   unsigned N = AllCycles.size();
@@ -350,7 +367,8 @@ void GenericCycleInfoCompute<ContextT>::flatten(ArrayRef<BlockT *> Order) {
   auto enter = [&](CycleT *Temp, CycleT *Parent) {
     unsigned ID = NextID++;
     CycleT &Flat = Info.Cycles[ID];
-    Flat.ParentCycle = Parent;
+    Flat.ParentIndex =
+        Parent ? Info.getCycleIndex(*Parent) : CycleInfoT::NoCycle;
     Flat.Depth = Parent ? Parent->Depth + 1 : 1;
     Flat.Entries = std::move(Temp->Entries);
     Cursor += Temp->IdxEnd; // IdxEnd currently holds Temp's own-block count.
@@ -374,14 +392,18 @@ void GenericCycleInfoCompute<ContextT>::flatten(ArrayRef<BlockT *> Order) {
   }
 
   // Place every block into its innermost cycle's own region, remapping its
-  // BlockMap entry from the temporary node to the flat one.
+  // BlockMap entry from a creation-order index to the flat preorder index.
   Info.BlockLayout.resize_for_overwrite(Cursor);
   for (BlockT *B : llvm::reverse(Order)) {
     unsigned Number = GraphTraits<const BlockT *>::getNumber(B);
-    if (CycleT *Temp = Info.BlockMap[Number]) {
-      CycleT *Flat = &Info.Cycles[Temp->IdxBegin];
+    unsigned Created = Info.BlockMap[Number];
+    if (Created != CycleInfoT::NoCycle) {
+      // Created indexes AllCycles; enter() stashed the flat preorder index in
+      // that temporary node's IdxBegin.
+      unsigned Flat = AllCycles[Created].IdxBegin;
       Info.BlockMap[Number] = Flat;
-      Info.BlockLayout[--Flat->IdxBegin] = B;
+      CycleT &FlatCycle = Info.Cycles[Flat];
+      Info.BlockLayout[--FlatCycle.IdxBegin] = B;
     }
   }
 }
@@ -416,7 +438,7 @@ void GenericCycleInfoCompute<ContextT>::run(FunctionT *F) {
     CycleT *NewCycle = &AllCycles.emplace_back();
     NewCycle->IdxBegin = AttachedChildren.size(); // Attach-log slice start.
     NewCycle->appendEntry(HeaderCandidate);
-    Info.addToBlockMap(HeaderCandidate, NewCycle);
+    recordInnermostCycle(HeaderCandidate);
     // The header is this cycle's first own block. Until flatten() runs,
     // IdxEnd accumulates this cycle's own-block count (see the IdxBegin/
     // IdxEnd doc comment), so flatten() needs no separate counting pass.
@@ -442,7 +464,7 @@ void GenericCycleInfoCompute<ContextT>::run(FunctionT *F) {
         }
       }
       if (IsEntry) {
-        assert(!Info.isEntry(*NewCycle, Block));
+        assert(!is_contained(NewCycle->Entries, Block));
         LLVM_DEBUG(errs() << "append as entry\n");
         NewCycle->appendEntry(Block);
       } else {
@@ -457,26 +479,33 @@ void GenericCycleInfoCompute<ContextT>::run(FunctionT *F) {
 
       // If the block has already been discovered by some cycle
       // (possibly by ourself), then the outermost cycle containing it
-      // should become our child.
-      if (auto *BlockParent = Info.getTopLevelParentCycle(Block)) {
+      // should become our child. Walk the temporary forest directly:
+      // handles are not meaningful until flatten() builds the flat array, so
+      // BlockMap still holds creation-order indices into AllCycles.
+      unsigned Created = Info.BlockMap[GraphTraits<BlockT *>::getNumber(Block)];
+      CycleT *BlockParent =
+          Created == CycleInfoT::NoCycle ? nullptr : &AllCycles[Created];
+      while (BlockParent && BlockParent->hasParent())
+        BlockParent = &AllCycles[BlockParent->ParentIndex];
+      if (BlockParent) {
         LLVM_DEBUG(errs() << "  block " << Info.Context.print(Block) << ": ");
 
         if (BlockParent != NewCycle) {
-          LLVM_DEBUG(errs() << "discovered child cycle "
-                            << Info.Context.print(Info.getHeader(*BlockParent))
-                            << "\n");
+          LLVM_DEBUG(errs()
+                     << "discovered child cycle "
+                     << Info.Context.print(BlockParent->Entries[0]) << "\n");
           // Make BlockParent the child of NewCycle.
           moveTopLevelCycleToNewParent(NewCycle, BlockParent);
 
-          for (auto *ChildEntry : Info.getEntries(*BlockParent))
+          for (auto *ChildEntry : BlockParent->Entries)
             ProcessPredecessors(ChildEntry);
         } else {
-          LLVM_DEBUG(errs() << "known child cycle "
-                            << Info.Context.print(Info.getHeader(*BlockParent))
-                            << "\n");
+          LLVM_DEBUG(errs()
+                     << "known child cycle "
+                     << Info.Context.print(BlockParent->Entries[0]) << "\n");
         }
       } else {
-        Info.addToBlockMap(Block, NewCycle);
+        recordInnermostCycle(Block);
         ++NewCycle->IdxEnd; // Block's innermost cycle is NewCycle.
         ProcessPredecessors(Block);
       }
@@ -568,7 +597,7 @@ void GenericCycleInfo<ContextT>::compute(FunctionT &F) {
   GenericCycleInfoCompute<ContextT> Compute(*this);
   Context = ContextT(&F);
   BlockNumberEpoch = GraphTraits<FunctionT *>::getNumberEpoch(&F);
-  BlockMap.resize(GraphTraits<FunctionT *>::getMaxNumber(&F));
+  BlockMap.assign(GraphTraits<FunctionT *>::getMaxNumber(&F), NoCycle);
 
   LLVM_DEBUG(errs() << "Computing cycles for function: " << F.getName()
                     << "\n");
@@ -580,11 +609,11 @@ void GenericCycleInfo<ContextT>::splitCriticalEdge(BlockT *Pred, BlockT *Succ,
                                                    BlockT *NewBlock) {
   // Edge Pred-Succ is replaced by edges Pred-NewBlock and NewBlock-Succ, all
   // cycles that had blocks Pred and Succ also get NewBlock.
-  CycleT *Cycle = getSmallestCommonCycle(getCycle(Pred), getCycle(Succ));
-  if (!Cycle)
+  CycleRef C = getSmallestCommonCycle(getCycle(Pred), getCycle(Succ));
+  if (!C)
     return;
 
-  addBlockToCycle(NewBlock, Cycle);
+  addBlockToCycle(NewBlock, C);
   verifyCycleNest();
 }
 
@@ -593,25 +622,25 @@ void GenericCycleInfo<ContextT>::splitCriticalEdge(BlockT *Pred, BlockT *Succ,
 /// \returns the innermost cycle containing both \p A and \p B
 ///          or nullptr if there is no such cycle.
 template <typename ContextT>
-auto GenericCycleInfo<ContextT>::getSmallestCommonCycle(CycleT *A,
-                                                        CycleT *B) const
-    -> CycleT * {
+auto GenericCycleInfo<ContextT>::getSmallestCommonCycle(CycleRef A,
+                                                        CycleRef B) const
+    -> CycleRef {
   if (!A || !B)
-    return nullptr;
+    return CycleRef();
 
   // If cycles A and B have different depth replace them with parent cycle
   // until they have the same depth.
-  while (getDepth(*A) > getDepth(*B))
-    A = getParentCycle(*A);
-  while (getDepth(*B) > getDepth(*A))
-    B = getParentCycle(*B);
+  while (getDepth(A) > getDepth(B))
+    A = getParentCycle(A);
+  while (getDepth(B) > getDepth(A))
+    B = getParentCycle(B);
 
   // Cycles A and B are at same depth but may be disjoint, replace them with
   // parent cycles until we find cycle that contains both or we run out of
   // parent cycles.
   while (A != B) {
-    A = getParentCycle(*A);
-    B = getParentCycle(*B);
+    A = getParentCycle(A);
+    B = getParentCycle(B);
   }
 
   return A;
@@ -624,7 +653,7 @@ auto GenericCycleInfo<ContextT>::getSmallestCommonCycle(CycleT *A,
 template <typename ContextT>
 auto GenericCycleInfo<ContextT>::getSmallestCommonCycle(BlockT *A,
                                                         BlockT *B) const
-    -> CycleT * {
+    -> CycleRef {
   return getSmallestCommonCycle(getCycle(A), getCycle(B));
 }
 
@@ -637,18 +666,18 @@ void GenericCycleInfo<ContextT>::verifyCycleNest(bool VerifyFull) const {
 #ifndef NDEBUG
   DenseSet<BlockT *> CycleHeaders;
 
-  for (const CycleT &Cycle : cycles()) {
-    BlockT *Header = getHeader(Cycle);
+  for (auto C : cycles()) {
+    BlockT *Header = getHeader(C);
     assert(CycleHeaders.insert(Header).second);
     if (VerifyFull)
-      verifyCycle(Cycle);
+      verifyCycle(C);
     else
-      verifyCycleNest(Cycle);
+      verifyCycleNest(C);
     // Check the block map entries for blocks contained in this cycle.
-    for (BlockT *BB : getBlocks(Cycle)) {
-      CycleT *CycleInBlockMap = getCycle(BB);
-      assert(CycleInBlockMap != nullptr);
-      assert(contains(Cycle, *CycleInBlockMap));
+    for (BlockT *BB : getBlocks(C)) {
+      CycleRef InBlockMap = getCycle(BB);
+      assert(InBlockMap.isValid());
+      assert(contains(C, InBlockMap));
     }
   }
 #endif
@@ -662,23 +691,23 @@ template <typename ContextT> void GenericCycleInfo<ContextT>::verify() const {
 /// \brief Print the cycle info.
 template <typename ContextT>
 void GenericCycleInfo<ContextT>::print(raw_ostream &Out) const {
-  for (const CycleT &Cycle : cycles()) {
-    for (unsigned I = 0; I < Cycle.Depth; ++I)
+  for (auto C : cycles()) {
+    for (unsigned I = 0, Depth = getDepth(C); I < Depth; ++I)
       Out << "    ";
 
-    Out << print(&Cycle) << '\n';
+    Out << print(C) << '\n';
   }
 }
 
 /// \brief Print a single cycle: its depth, entries, and remaining blocks.
 template <typename ContextT>
-Printable GenericCycleInfo<ContextT>::print(const CycleT *Cycle) const {
-  return Printable([this, Cycle](raw_ostream &Out) {
-    Out << "depth=" << Cycle->Depth << ": entries("
-        << printEntries(*Cycle, Context) << ')';
+Printable GenericCycleInfo<ContextT>::print(CycleRef C) const {
+  return Printable([this, C](raw_ostream &Out) {
+    Out << "depth=" << getDepth(C) << ": entries(" << printEntries(C, Context)
+        << ')';
 
-    for (auto *Block : getBlocks(*Cycle)) {
-      if (isEntry(*Cycle, Block))
+    for (auto *Block : getBlocks(C)) {
+      if (isEntry(C, Block))
         continue;
 
       Out << ' ' << Context.print(Block);
