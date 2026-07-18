@@ -827,8 +827,7 @@ public:
       // FIXME: This function is also used to retrieve floating-point values,
       // which can be 16, 32, 64 or 128 bits long. Bitvectors can be arbitrarily
       // long. In the future, we need proper calls in the backend to retrieve
-      // floating-points and its special values (NaN, +/-infinity, +/-zero),
-      // then we can drop this weird condition.
+      // floating-points and its special values (NaN, +/-infinity, +/-zero).
       Int = getBitvector(AST, Int.getBitWidth(), Int.isUnsigned());
       return true;
     }
