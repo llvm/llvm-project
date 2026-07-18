@@ -2737,16 +2737,16 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     // Replacing 0/x with a zero is only valid when the divisor can't be
     // (logical) zero, since 0/0 is NaN -- unless NaN results aren't demanded. A
     // subnormal divisor can flush to zero under a flushing denormal mode.
-    bool DivisorNonZeroOrNanOK =
+    bool CanIgnoreZeroByZeroNan =
         ResultNotNan || KnownRHS.isKnownNeverLogicalZero(Mode);
 
     // nsz [+-]0 / x -> 0
     if (FMF.noSignedZeros() && KnownLHS.isKnownAlways(fcZero) &&
-        KnownRHS.isKnownNeverNaN() && DivisorNonZeroOrNanOK)
+        KnownRHS.isKnownNeverNaN() && CanIgnoreZeroByZeroNan)
       return ConstantFP::getZero(VTy);
 
     if (KnownLHS.isKnownAlways(fcPosZero) && KnownRHS.isKnownNeverNaN() &&
-        DivisorNonZeroOrNanOK) {
+        CanIgnoreZeroByZeroNan) {
       IRBuilderBase::InsertPointGuard Guard(Builder);
       Builder.SetInsertPoint(I);
 
