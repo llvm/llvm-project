@@ -11572,6 +11572,12 @@ If `offset + bitwidth(ty)` is greater than `bitwidth(source)`,
 
 ```text
 %result = bitextract i8, b32 %src, i32 24 ; Extract the 8 most-significant bits (bits [24..31]) of %src and return an 8-bit integer
+
+%result = bitextract i1, b32 %src, i32 5  ; Extract a single bit (bit 5) of %src and return it as an i1
+
+%result = bitextract i16, b64 %src, i32 16 ; Extract bits [16..31] of %src and return a 16-bit integer
+
+%result = bitextract float, b32 %src, i32 0 ; Extract bits [0..31] of %src and reinterpret them as a 32-bit float
 ```
 
 (i_bitinsert)=
@@ -11609,6 +11615,12 @@ If `offset + bitwidth(ty)` is greater than `bitwidth(base)`,
 
 ```text
 %result = bitinsert b32 %x, i8 %y, i32 3 ; Inserts the %y bits into %x with an offset of 3
+
+%result = bitinsert b32 %x, i1 %flag, i32 7 ; Inserts a single bit (%flag) into bit 7 of %x, leaving all other bits unchanged
+
+%result = bitinsert b64 %x, i16 %y, i32 32 ; Inserts a 16-bit value into bits [32..47] of %x
+
+%result = bitinsert b32 %x, float %f, i32 0 ; Inserts the bit pattern of %f into bits [0..31] of %x, overwriting it entirely
 ```
 
 ### Vector Operations
