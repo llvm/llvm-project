@@ -878,6 +878,9 @@ public:
                                 llvm::opt::ArgStringList &CmdArgs) const {}
 
   /// Return sanitizers which are available in this toolchain.
+  SanitizerMask getSupportedSanitizers() const;
+
+  /// Return sanitizers which are available in this toolchain.
   virtual SanitizerMask
   getSupportedSanitizers(BoundArch BA,
                          Action::OffloadKind DeviceOffloadKind) const;
