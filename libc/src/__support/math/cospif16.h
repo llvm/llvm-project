@@ -96,4 +96,4 @@ LIBC_INLINE constexpr float16 cospif16(float16 x) {
 
 #endif // LIBC_TYPES_HAS_FLOAT16
 
-#endif // LLVM_LIBC_SRC___SUPPORT_MATH_COSHF16_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_COSPIF16_H

@@ -7,10 +7,13 @@ add_libc_unittest(
   SRCS
     mmap_test.cpp
   DEPENDS
-    libc.include.sys_mman
+    libc.hdr.sys_mman_macros
+    libc.src.__support.CPP.scope
     libc.src.errno.errno
+    libc.src.sys.mman.memfd_create
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
+    libc.src.unistd.close
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -22,6 +25,7 @@ add_libc_unittest(
   SRCS
     mremap_test.cpp
   DEPENDS
+    libc.hdr.sys_mman_macros
     libc.include.sys_mman
     libc.src.errno.errno
     libc.src.sys.mman.mmap
@@ -39,7 +43,7 @@ if (NOT LLVM_USE_SANITIZER)
     SRCS
       mprotect_test.cpp
     DEPENDS
-      libc.include.sys_mman
+      libc.hdr.sys_mman_macros
       libc.include.signal
       libc.src.errno.errno
       libc.src.sys.mman.mmap
@@ -57,6 +61,7 @@ add_libc_unittest(
   SRCS
   madvise_test.cpp
   DEPENDS
+    libc.hdr.sys_mman_macros
     libc.include.sys_mman
     libc.src.errno.errno
     libc.src.sys.mman.mmap
@@ -79,6 +84,7 @@ if (NOT LLVM_USE_SANITIZER)
     DEPENDS
       libc.hdr.errno_macros
       libc.hdr.signal_macros
+      libc.hdr.sys_mman_macros
       libc.hdr.types.size_t
       libc.src.sys.mman.mmap
       libc.src.sys.mman.munmap
@@ -99,6 +105,7 @@ add_libc_unittest(
   SRCS
   posix_madvise_test.cpp
   DEPENDS
+    libc.hdr.sys_mman_macros
     libc.include.sys_mman
     libc.src.errno.errno
     libc.src.sys.mman.mmap
@@ -115,6 +122,7 @@ add_libc_unittest(
   SRCS
     mincore_test.cpp
   DEPENDS
+    libc.hdr.sys_mman_macros
     libc.include.sys_mman
     libc.include.unistd
     libc.src.errno.errno
@@ -136,6 +144,7 @@ add_libc_unittest(
   SRCS
     mlock_test.cpp
   DEPENDS
+    libc.hdr.sys_mman_macros
     libc.include.sys_mman
     libc.include.unistd
     libc.src.errno.errno
@@ -148,6 +157,7 @@ add_libc_unittest(
     libc.src.sys.mman.munlock
     libc.src.sys.mman.mlockall
     libc.src.sys.mman.munlockall
+    libc.hdr.sys_resource_macros
     libc.src.sys.resource.getrlimit
     libc.src.unistd.sysconf
     libc.src.__support.OSUtil.osutil
@@ -162,6 +172,7 @@ add_libc_unittest(
   SRCS
     msync_test.cpp
   DEPENDS
+    libc.hdr.sys_mman_macros
     libc.include.sys_mman
     libc.include.unistd
     libc.src.errno.errno
@@ -176,6 +187,11 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
+if(CMAKE_CROSSCOMPILING_EMULATOR)
+  if(LIBC_CMAKE_VERBOSE_LOGGING)
+    message(STATUS "Skipping remap_file_pages_test under emulator.")
+  endif()
+else()
 add_libc_unittest(
   remap_file_pages_test
   SUITE
@@ -183,8 +199,8 @@ add_libc_unittest(
   SRCS
     remap_file_pages_test.cpp
   DEPENDS
-    libc.include.sys_mman
-    libc.include.sys_stat
+    libc.hdr.sys_mman_macros
+    libc.hdr.sys_stat_macros
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
     libc.src.sys.mman.remap_file_pages
@@ -195,6 +211,7 @@ add_libc_unittest(
     libc.src.unistd.close
     libc.src.unistd.sysconf
 )
+endif()
 
 add_libc_unittest(
   shm_test
@@ -203,6 +220,7 @@ add_libc_unittest(
   SRCS
     shm_test.cpp
   DEPENDS
+    libc.hdr.sys_mman_macros
     libc.include.sys_mman
     libc.include.sys_syscall
     libc.src.errno.errno
@@ -215,6 +233,27 @@ add_libc_unittest(
     libc.src.unistd.close
     libc.src.__support.OSUtil.osutil
     libc.hdr.fcntl_macros
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
+  memfd_create_test
+  SUITE
+    libc_sys_mman_unittests
+  SRCS
+    memfd_create_test.cpp
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_mman_macros
+    libc.include.llvm-libc-macros.file_seek_macros
+    libc.include.sys_mman
+    libc.src.__support.CPP.scope
+    libc.src.errno.errno
+    libc.src.fcntl.fcntl
+    libc.src.sys.mman.memfd_create
+    libc.src.unistd.close
+    libc.src.unistd.lseek
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )

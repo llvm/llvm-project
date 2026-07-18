@@ -38,10 +38,10 @@ Out2<double>::AInner t(1.0);
 // CHECK-NEXT: |     | `-TypeTraitExpr {{.*}} 'bool' __is_deducible
 // CHECK-NEXT: |     |   |-DeducedTemplateSpecializationType {{.*}} 'Out2<double>::AInner' dependent
 // CHECK-NEXT: |     |   | `-name: 'Out2<double>::AInner'
-// CHECK-NEXT: |     |   |   `-TypeAliasTemplateDecl {{.+}} AInner{{$}}
+// CHECK-NEXT: |     |   |   `-TypeAliasTemplateDecl {{.+}} AInner external-linkage{{$}}
 // CHECK-NEXT: |     |   `-TemplateSpecializationType {{.*}} 'Inner<Y>' dependent
 // CHECK-NEXT: |     |     |-name: 'Inner':'Out<int>::Inner' qualified
-// CHECK-NEXT: |     |     | `-ClassTemplateDecl {{.+}} Inner{{$}}
+// CHECK-NEXT: |     |     | `-ClassTemplateDecl {{.+}} Inner external-linkage{{$}}
 // CHECK-NEXT: |     |     `-TemplateArgument type 'Y'
 // CHECK-NEXT: |     |       `-SubstTemplateTypeParmType {{.*}} 'Y'
 // CHECK-NEXT: |     |         |-FunctionTemplate {{.*}} '<deduction guide for Inner>'
@@ -151,7 +151,7 @@ ATemplatedClass2 test2(list);
 //
 // CHECK:      FunctionTemplateDecl {{.*}} <deduction guide for ATemplatedClass2>
 // CHECK-NEXT: |-TemplateTemplateParmDecl {{.*}} depth 0 index 0 T2
-// CHECK-NEXT: | `-TemplateTypeParmDecl {{.*}} typename depth 0 index 0
+// CHECK-NEXT: | `-TemplateTypeParmDecl {{.*}} typename depth 1 index 0
 // CHECK-NEXT: |-TypeTraitExpr {{.*}} 'bool' __is_deducible
 
 } // namespace GH90209

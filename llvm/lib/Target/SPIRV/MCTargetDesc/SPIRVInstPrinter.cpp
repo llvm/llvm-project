@@ -135,7 +135,7 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     recordIntType(MI);
   }
 
-  if (OpCode == SPIRV::OpDecorate) {
+  if (OpCode == SPIRV::OpDecorate || OpCode == SPIRV::OpDecorateId) {
     printOpDecorate(MI, OS);
   } else if (OpCode == SPIRV::OpExtInstImport) {
     recordOpExtInstImport(MI);
@@ -398,7 +398,7 @@ void SPIRVInstPrinter::printOpDecorate(const MCInst *MI, raw_ostream &O) {
       printSymbolicOperand<OperandCategory::BuiltInOperand>(MI, NumFixedOps, O);
       break;
     case Decoration::UniformId:
-      printSymbolicOperand<OperandCategory::ScopeOperand>(MI, NumFixedOps, O);
+      printOperand(MI, NumFixedOps, O);
       break;
     case Decoration::FuncParamAttr:
       printSymbolicOperand<OperandCategory::FunctionParameterAttributeOperand>(

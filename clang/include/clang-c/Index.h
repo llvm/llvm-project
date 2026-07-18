@@ -2166,6 +2166,10 @@ enum CXCursorKind {
    */
   CXCursor_OMPFuseDirective = 311,
 
+  /** OpenMP split directive.
+   */
+  CXCursor_OMPSplitDirective = 312,
+
   /** OpenACC Compute Construct.
    */
   CXCursor_OpenACCComputeConstruct = 320,
@@ -3039,7 +3043,9 @@ enum CXTypeKind {
   /* HLSL Types */
   CXType_HLSLResource = 179,
   CXType_HLSLAttributedResource = 180,
-  CXType_HLSLInlineSpirv = 181
+  CXType_HLSLInlineSpirv = 181,
+
+  CXType_PredefinedSugar = 182
 };
 
 /**

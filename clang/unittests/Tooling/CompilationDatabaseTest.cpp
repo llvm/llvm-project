@@ -847,6 +847,25 @@ TEST_F(InterpolateTest, Language) {
             "clang -D dir/aux.cpp -x objective-c++-header -std=c++17");
 }
 
+TEST_F(InterpolateTest, StdTransferSameFamily) {
+  // ObjC++ → C++ .hpp header: same standard family, -std should survive.
+  add("dir/foo.mm", "-std=c++20");
+  EXPECT_EQ(getCommand("dir/foo.hh"), "clang -D dir/foo.mm -std=c++20");
+
+  // Explicit -x objective-c++ on .cpp → C++ header: same family.
+  add("dir/bar.cpp", "-x objective-c++ -std=c++20");
+  EXPECT_EQ(getCommand("dir/bar.hh"), "clang -D dir/bar.cpp -std=c++20");
+
+  // ObjC++ → C++ .h header: same standard family, -std should survive.
+  add("dir/qux.mm", "-std=c++20");
+  EXPECT_EQ(getCommand("dir/qux.h"),
+            "clang -D dir/qux.mm -x objective-c++-header -std=c++20");
+
+  // ObjC → C: same standard family, -std should survive.
+  add("dir/baz.m", "-std=c17");
+  EXPECT_EQ(getCommand("dir/baz.c"), "clang -D dir/baz.m -std=c17");
+}
+
 TEST_F(InterpolateTest, CXX20Modules) {
   add("dir/foo.cpp", "-std=c++20");
   EXPECT_EQ(getCommand("dir/foo.cppm"), "clang -D dir/foo.cpp -std=c++20");

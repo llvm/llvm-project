@@ -13,6 +13,7 @@
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 
+#include <array>
 #include <atomic>
 #include <fstream>
 #include <memory>
@@ -318,10 +319,16 @@ private:
 /// A derived class may additionally define:
 ///   - a `static void bindDerived(ClassTy &)` method to bind additional methods
 ///     the python class.
+///   - a `static constexpr std::array<const char *, N> typeParams` to make the
+///     Python class generic, parameterizable with the given type parameters.
 template <typename Derived, typename ElementTy>
 class Sliceable {
 protected:
   using ClassTy = nanobind::class_<Derived>;
+
+  /// Type parameter names for generic classes. When non-empty, the Python
+  /// class will be made generic with `typing.Generic[...]`.
+  static constexpr std::array<const char *, 0> typeParams = {};
 
   /// Transforms `index` into a legal value to access the underlying sequence.
   /// Returns <0 on failure.
@@ -475,11 +482,31 @@ public:
     nanobind::handle elemTyName = nanobind::detail::nb_type_name(elemTyInfo);
     std::string sig = std::string("class ") + Derived::pyClassName +
                       "(collections.abc.Sequence[" +
-                      nanobind::cast<std::string>(elemTyName) + "])";
-    auto clazz = nanobind::class_<Derived>(m, Derived::pyClassName,
-                                           nanobind::type_slots(sequenceSlots),
-                                           nanobind::sig(sig.c_str()))
-                     .def("__add__", &Sliceable::dunderAdd);
+                      nanobind::cast<std::string>(elemTyName) + "]";
+    if constexpr (!Derived::typeParams.empty()) {
+      sig += ", typing.Generic[";
+      for (size_t i = 0; i < Derived::typeParams.size(); ++i) {
+        if (i > 0)
+          sig += ", ";
+        const char *tp = Derived::typeParams[i];
+        sig += tp;
+        if (!nanobind::hasattr(m, tp))
+          m.attr(tp) = nanobind::type_var(tp);
+      }
+      sig += "]";
+    }
+    sig += ")";
+    ClassTy clazz;
+    if constexpr (!Derived::typeParams.empty()) {
+      clazz =
+          ClassTy(m, Derived::pyClassName, nanobind::type_slots(sequenceSlots),
+                  nanobind::is_generic(), nanobind::sig(sig.c_str()));
+    } else {
+      clazz =
+          ClassTy(m, Derived::pyClassName, nanobind::type_slots(sequenceSlots),
+                  nanobind::sig(sig.c_str()));
+    }
+    clazz.def("__add__", &Sliceable::dunderAdd);
     Derived::bindDerived(clazz);
   }
 

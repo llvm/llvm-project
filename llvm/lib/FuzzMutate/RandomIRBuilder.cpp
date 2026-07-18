@@ -25,7 +25,7 @@ static DominatorTree getDomTree(Function &F) {
   // Dominator tree construction requires that all blocks have terminators.
   SmallVector<Instruction *> AddedInsts;
   for (BasicBlock &BB : F)
-    if (!BB.getTerminator())
+    if (!BB.hasTerminator())
       AddedInsts.push_back(new UnreachableInst(F.getContext(), &BB));
   DominatorTree DT(F);
   for (Instruction *I : AddedInsts)
@@ -219,7 +219,7 @@ Value *RandomIRBuilder::findOrCreateSource(BasicBlock &BB,
       Module *M = BB.getParent()->getParent();
       auto [GV, DidCreate] = findOrCreateGlobalVariable(M, Srcs, Pred);
       Type *Ty = GV->getValueType();
-      InsertPosition IP = BB.getTerminator()
+      InsertPosition IP = BB.hasTerminator()
                               ? InsertPosition(BB.getFirstInsertionPt())
                               : InsertPosition(&BB);
       // Build a legal load and track new instructions in case a rollback is
@@ -292,7 +292,7 @@ Value *RandomIRBuilder::newSource(BasicBlock &BB, ArrayRef<Instruction *> Insts,
     Type *Ty = newSrc->getType();
     Function *F = BB.getParent();
     AllocaInst *Alloca = createStackMemory(F, Ty, newSrc);
-    if (BB.getTerminator()) {
+    if (BB.hasTerminator()) {
       newSrc = new LoadInst(Ty, Alloca, /*ArrLen,*/ "L",
                             BB.getTerminator()->getIterator());
     } else {
@@ -344,6 +344,11 @@ static bool isCompatibleReplacement(const Instruction *I, const Use &Operand,
       return false;
     return !Callee->hasParamAttribute(OperandNo, Attribute::ImmArg);
   }
+  case Instruction::CatchPad:
+    // Argument operand must be alloca or constant
+    if (!isa<Constant>(Replacement) && !isa<AllocaInst>(Replacement))
+      return false;
+    break;
   default:
     break;
   }

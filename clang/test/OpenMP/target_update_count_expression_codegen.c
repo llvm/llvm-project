@@ -59,9 +59,9 @@ void test_contig_byte_size() {
 // CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR_DIM]], ptr [[TMP7]], i32 0, i32 0
 // CHECK-NEXT:    store i64 0, ptr [[TMP8]], align 8
 // CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR_DIM]], ptr [[TMP7]], i32 0, i32 1
-// CHECK-NEXT:    store i64 1, ptr [[TMP9]], align 8
+// CHECK-NEXT:    store i64 4, ptr [[TMP9]], align 8
 // CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR_DIM]], ptr [[TMP7]], i32 0, i32 2
-// CHECK-NEXT:    store i64 4, ptr [[TMP10]], align 8
+// CHECK-NEXT:    store i64 1, ptr [[TMP10]], align 8
 // CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK-NEXT:    store ptr [[DIMS]], ptr [[TMP11]], align 8
 // CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0

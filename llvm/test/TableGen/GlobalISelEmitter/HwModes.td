@@ -70,17 +70,17 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 
 // CHECK-LABEL: // LLT Objects.
 // CHECK-NEXT:  enum {
-// CHECK-NEXT:    GILLT_p0s32,
-// CHECK-NEXT:    GILLT_p0s64,
 // CHECK-NEXT:    GILLT_s32,
 // CHECK-NEXT:    GILLT_s64,
-// CHECK-NEXT:  }
+// CHECK-NEXT:    GILLT_p0s32,
+// CHECK-NEXT:    GILLT_p0s64,
+// CHECK-NEXT:  };
 // CHECK-NEXT:  const static size_t NumTypeObjects = 4;
 // CHECK-NEXT:  const static LLT TypeObjects[] = {
-// CHECK-NEXT:    LLT::pointer(0, 32),
-// CHECK-NEXT:    LLT::pointer(0, 64),
 // CHECK-NEXT:    LLT::scalar(32),
 // CHECK-NEXT:    LLT::scalar(64),
+// CHECK-NEXT:    LLT::pointer(0, 32),
+// CHECK-NEXT:    LLT::pointer(0, 64),
 // CHECK-NEXT:  };
 
 // CHECK-LABEL: enum SubtargetFeatureBits : uint8_t {
@@ -132,8 +132,7 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 
 //===- Test a simple pattern with inferred pointer operands. ---------------===//
 
-// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]),
-// CHECK-NEXT:    GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode0),
+// CHECK-NEXT:  GIM_Try_CheckFeatures, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]), GIMT_Encode2(GIFBS_HwMode0), // Rule ID 0 //
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_LOAD),
 // CHECK-NEXT:    GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
@@ -150,8 +149,7 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 // CHECK-NEXT:    // GIR_Coverage, 0,
 // CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
-// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]),
-// CHECK-NEXT:    GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode1),
+// CHECK-NEXT:  GIM_Try_CheckFeatures, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]), GIMT_Encode2(GIFBS_HwMode1), // Rule ID 1 //
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_LOAD),
 // CHECK-NEXT:    GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
@@ -174,8 +172,7 @@ def LOAD : I<(outs GPR:$dst), (ins GPR:$src1),
 
 //===- Test a simple pattern with explicit pointer operands. ---------------===//
 
-// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]),
-// CHECK-NEXT:    GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode0),
+// CHECK-NEXT:  GIM_Try_CheckFeatures, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]), GIMT_Encode2(GIFBS_HwMode0), // Rule ID 2 //
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_LOAD),
 // CHECK-NEXT:    GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
@@ -192,8 +189,7 @@ def LOAD : I<(outs GPR:$dst), (ins GPR:$src1),
 // CHECK-NEXT:    // GIR_Coverage, 2,
 // CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
-// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]),
-// CHECK-NEXT:    GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode1),
+// CHECK-NEXT:  GIM_Try_CheckFeatures, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]), GIMT_Encode2(GIFBS_HwMode1), // Rule ID 3 //
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_LOAD),
 // CHECK-NEXT:    GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,

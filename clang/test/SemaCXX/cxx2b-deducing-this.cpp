@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++2b -Woverloaded-virtual %s -verify
+// RUN: %clang_cc1 -fsyntax-only -std=c++2b -Woverloaded-virtual %s -verify -fexperimental-new-constant-interpreter
 
 
 // FIXME: can we improve these diagnostics?
@@ -1167,6 +1168,19 @@ struct S {
   auto f(this auto) -> S;
   bool g() { return f(); } // expected-error {{no viable conversion from returned value of type 'S' to function return type 'bool'}}
 };
+}
+
+namespace GH136472 {
+template<class T>
+struct S {
+  struct Nested {
+      void f(this auto);
+  };
+};
+
+// Test that out-of-line member definition of dependent nested class works
+template<class T>
+void S<T>::Nested::f(this auto) {}
 }
 
 namespace tpl_address {

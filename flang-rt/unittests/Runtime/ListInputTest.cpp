@@ -10,6 +10,7 @@
 #include "flang-rt/runtime/descriptor.h"
 #include "flang-rt/runtime/io-error.h"
 #include "flang/Runtime/io-api.h"
+#include "flang/Runtime/iostat-consts.h"
 
 using namespace Fortran::runtime;
 using namespace Fortran::runtime::io;
@@ -149,6 +150,23 @@ TEST(InputTest, TestListInputInvalidFormat) {
   // Perform failing InputInteger
   ASSERT_DEATH(IONAME(InputInteger)(cookie, dummy),
       "Bad character 'g' in INTEGER input field");
+}
+
+// The NAMELIST extension that treats '!' as a value separator is scoped to
+// NAMELIST mode only.  In ordinary list-directed input '!' is not a comment
+// introducer, so a '!' glued to a value must still be rejected as an invalid
+// trailing character.
+TEST(InputTest, BangIsNotSeparatorInListDirected) {
+  std::string buffer{"0.01!comment"};
+  auto *cookie{IONAME(BeginInternalListInput)(
+      buffer.data(), buffer.size(), nullptr, 0, __FILE__, __LINE__)};
+  IONAME(EnableHandlers)(cookie, /*hasIoStat=*/true);
+  float got{-1.f};
+  IONAME(InputReal32)(cookie, got);
+  auto status{IONAME(EndIoStatement)(cookie)};
+  ASSERT_EQ(status, IostatBadListDirectedInputSeparator)
+      << "expected '!' to be rejected in list-directed input, got status "
+      << static_cast<int>(status);
 }
 
 using ParamTy = std::tuple<std::string, std::vector<int>>;

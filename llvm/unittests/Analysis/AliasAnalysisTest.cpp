@@ -185,7 +185,7 @@ TEST_F(AliasAnalysisTest, getModRefInfo) {
       SyncScope::System, BB);
   auto *AtomicRMW = new AtomicRMWInst(
       AtomicRMWInst::Xchg, Addr, ConstantInt::get(IntType, 1), Alignment,
-      AtomicOrdering::Monotonic, SyncScope::System, BB);
+      AtomicOrdering::Monotonic, SyncScope::System, /*Elementwise=*/false, BB);
 
   FunctionType *FooBarTy = FunctionType::get(Type::getVoidTy(C), {}, false);
   Function::Create(FooBarTy, Function::ExternalLinkage, "foo", &M);

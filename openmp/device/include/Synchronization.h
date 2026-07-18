@@ -62,7 +62,12 @@ V add(Ty *Address, V Val, atomic::OrderingTy Ordering,
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
 V load(Ty *Address, atomic::OrderingTy Ordering,
        MemScopeTy MemScope = MemScopeTy::device) {
+#ifdef __NVPTX__
+  // FIXME: Workaround for older NVIDIA GPUs (#191910).
+  return __scoped_atomic_fetch_add(Address, V(0), Ordering, MemScope);
+#else
   return __scoped_atomic_load_n(Address, Ordering, MemScope);
+#endif
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>

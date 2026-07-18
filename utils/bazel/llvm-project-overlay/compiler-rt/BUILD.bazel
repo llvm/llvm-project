@@ -31,6 +31,50 @@ WIN32_ONLY_FILES = [
     "lib/profile/WindowsMMap.c",
 ]
 
+PROFILE_ROCM_FILES = [
+    "lib/profile/InstrProfilingPlatformROCm.cpp",
+    "lib/profile/InstrProfilingPlatformROCmHSA.cpp",
+]
+
+cc_library(
+    name = "sanitizer_common_headers",
+    hdrs = glob([
+        "lib/sanitizer_common/*.h",
+        "lib/sanitizer_common/*.inc",
+        "lib/sanitizer_common/*.inc.S",
+    ]),
+    includes = ["lib"],
+)
+
+cc_library(
+    name = "sanitizer_common",
+    srcs = glob(
+        [
+            "lib/sanitizer_common/*.cpp",
+        ],
+    ),
+    linkstatic = True,
+    deps = [
+        ":interception",
+        ":sanitizer_common_headers",
+    ],
+)
+
+cc_library(
+    name = "interception",
+    srcs = glob(["lib/interception/*.cpp"]),
+    hdrs = glob(["lib/interception/*.h"]),
+    copts = [
+        "-fomit-frame-pointer",
+        "-fvisibility=hidden",
+    ],
+    includes = ["lib"],
+    linkstatic = True,
+    deps = [
+        ":sanitizer_common_headers",
+    ],
+)
+
 cc_library(
     name = "profile",
     srcs = glob(
@@ -39,7 +83,7 @@ cc_library(
             "lib/profile/*.cpp",
             "lib/profile/*.h",
         ],
-        exclude = WIN32_ONLY_FILES,
+        exclude = WIN32_ONLY_FILES + PROFILE_ROCM_FILES,
     ) + select({
         "@platforms//os:windows": WIN32_ONLY_FILES,
         "//conditions:default": [],
@@ -54,6 +98,7 @@ cc_library(
     linkstatic = True,
     deps = [
         ":config",
+        ":interception",
     ],
 )
 
@@ -242,6 +287,14 @@ filegroup(
     ] + glob(["lib/builtins/aarch64/sme-libc-opt-*.S"]),
 )
 
+filegroup(
+    name = "builtins_aarch64_sme_os_srcs",
+    srcs = select({
+        "@platforms//os:macos": [":builtins_aarch64_apple_sme_srcs"],
+        "//conditions:default": [":builtins_aarch64_sme_srcs"],
+    }),
+)
+
 # A list of (pat, size, model) tuples for AArch64's outline atomics.
 AARCH64_OUTLINE_ATOMICS = [
     (pat, size, model)
@@ -292,6 +345,7 @@ filegroup(
     srcs = [
         "lib/builtins/cpu_model/aarch64.c",
         "lib/builtins/cpu_model/aarch64.h",
+        ":builtins_aarch64_sme_os_srcs",
     ] + [
         AARCH64_OUTLINE_ATOMICS_FMT.format(pat, size, model)
         for (pat, size, model) in AARCH64_OUTLINE_ATOMICS
@@ -416,6 +470,11 @@ filegroup(
     ),
 )
 
+BUILTINS_LIBC_MATH_EXCLUDES = [
+    # Sources requiring COMPILER_RT_USE_LIBC_MATH (e.g. LIBC_NAMESPACE::shared::*).
+    "lib/builtins/addtf3.cpp",
+]
+
 # Source files for portable components of the compiler builtins library.
 filegroup(
     name = "builtins_generic_srcs",
@@ -433,7 +492,8 @@ filegroup(
             BUILTINS_TF_EXCLUDES +
             BUILTINS_TF_SRCS_PATTERNS +
             BUILTNS_ATOMICS_SRCS +
-            BUILTINS_MACOS_ATOMIC_SRCS_PATTERNS
+            BUILTINS_MACOS_ATOMIC_SRCS_PATTERNS +
+            BUILTINS_LIBC_MATH_EXCLUDES
         ),
     ),
 )

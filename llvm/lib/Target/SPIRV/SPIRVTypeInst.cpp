@@ -11,7 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRVTypeInst.h"
+#include "MCTargetDesc/SPIRVMCTargetDesc.h"
 #include "SPIRVInstrInfo.h"
+
+#include "SPIRV.h"
 
 namespace llvm {
 [[maybe_unused]] static bool definesATypeRegister(const MachineInstr &MI) {
@@ -22,5 +25,21 @@ namespace llvm {
 SPIRVTypeInst::SPIRVTypeInst(const MachineInstr *MI) : MI(MI) {
   // A SPIRV Type whose result is not a type is invalid.
   assert(!MI || definesATypeRegister(*MI));
+}
+
+bool SPIRVTypeInst::isTypeIntN(unsigned N) const {
+  if (MI->getOpcode() != SPIRV::OpTypeInt)
+    return false;
+  if (N)
+    return MI->getOperand(1).getImm() == N;
+  return true;
+}
+
+bool SPIRVTypeInst::isAnyTypeFloat() const {
+  return MI->getOpcode() == SPIRV::OpTypeFloat;
+}
+
+bool SPIRVTypeInst::isTypePtr() const {
+  return MI->getOpcode() == SPIRV::OpTypePointer;
 }
 } // namespace llvm

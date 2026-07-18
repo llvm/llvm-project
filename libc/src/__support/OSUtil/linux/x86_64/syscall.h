@@ -16,6 +16,11 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+// In order for SHSTK (CET ShadowStack) to work, we are required to force
+// inlining the syscall_impl, since we cannot return from an untracked call
+// after enabling support throught the system call.
+// For consistency, we do this consistently on all platforms, but can split it
+// into force-inlined and regular inlined functions in the future if necessary.
 [[gnu::always_inline]] LIBC_INLINE long syscall_impl(long __number) {
   long retcode;
   LIBC_INLINE_ASM("syscall"

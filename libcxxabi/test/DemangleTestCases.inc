@@ -30187,6 +30187,10 @@
 {"_ZZNH3Foo3fooES_iENK4Foo24foo2Ev", "Foo::foo(this Foo, int)::Foo2::foo2() const" },
 {"_ZNH3FooclERKS_", "Foo::operator()(this Foo const&)"},
 
+// C++26 pack indexing
+{"_Z3fooILi0ETpTnDaJLi1ELi2EEEDTsyT0_T_Ev", "decltype((1, 2...)[0]) foo<0, 1, 2>()"},
+{"_Z1gILi0EJciEEDyT0_T_v", "(char, int)[0] g<0, char, int>()"},
+
 // fixed-point types as defined in the N1169 draft of ISO/IEC DTR 18037
 {"_Z1fDAs", "f(short _Accum)"},
 {"_Z1fDAt", "f(unsigned short _Accum)"},
@@ -30219,4 +30223,15 @@
 {"_Z3fooIPU9__ptrauthILj1ELb0ELj64EEPiEvT_", "void foo<int* __ptrauth<1u, false, 64u>*>(int* __ptrauth<1u, false, 64u>*)"},
 
 {"_ZN1CpmEi", "C::operator->*(int)"},
+
+// AllocToken instrumentation
+{"__alloc_token__Znwm", "operator new(unsigned long) (.alloc_token)"},
+{"__alloc_token__Znam", "operator new[](unsigned long) (.alloc_token)"},
+{"__alloc_token__ZnwmRKSt9nothrow_t", "operator new(unsigned long, std::nothrow_t const&) (.alloc_token)"},
+{"__alloc_token__ZnamRKSt9nothrow_t", "operator new[](unsigned long, std::nothrow_t const&) (.alloc_token)"},
+{"__alloc_token_0__Znwm", "operator new(unsigned long) (.alloc_token)"},
+{"__alloc_token_1__Znam", "operator new[](unsigned long) (.alloc_token)"},
+{"__alloc_token_123__ZnwmRKSt9nothrow_t", "operator new(unsigned long, std::nothrow_t const&) (.alloc_token)"},
+{"__alloc_token__Znwm.llvm.1234", "operator new(unsigned long) (.llvm.1234) (.alloc_token)"},
+{"__alloc_token_123__Z3foov", "foo() (.alloc_token)"},
     // clang-format on

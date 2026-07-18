@@ -206,6 +206,12 @@ enum EnumKindAttribute {
   DW_APPLE_ENUM_KIND_max = 0x01
 };
 
+enum LanguageDialectAttribute {
+#define HANDLE_DW_LLVM_LANG_DIALECT(ID, NAME) DW_LLVM_LANG_DIALECT_##NAME = ID,
+#include "llvm/BinaryFormat/Dwarf.def"
+  DW_LLVM_LANG_DIALECT_max = 0x02
+};
+
 enum DefaultedMemberAttribute {
 #define HANDLE_DW_DEFAULTED(ID, NAME) DW_DEFAULTED_##NAME = ID,
 #include "llvm/BinaryFormat/Dwarf.def"
@@ -1005,6 +1011,7 @@ LLVM_ABI StringRef VirtualityString(unsigned Virtuality);
 LLVM_ABI StringRef EnumKindString(unsigned EnumKind);
 LLVM_ABI StringRef LanguageString(unsigned Language);
 LLVM_ABI StringRef SourceLanguageNameString(SourceLanguageName Lang);
+LLVM_ABI StringRef LanguageDialectString(unsigned LanguageDialect);
 LLVM_ABI StringRef CaseString(unsigned Case);
 LLVM_ABI StringRef ConventionString(unsigned Convention);
 LLVM_ABI StringRef InlineCodeString(unsigned Code);
@@ -1047,6 +1054,7 @@ LLVM_ABI unsigned getVirtuality(StringRef VirtualityString);
 LLVM_ABI unsigned getEnumKind(StringRef EnumKindString);
 LLVM_ABI unsigned getLanguage(StringRef LanguageString);
 LLVM_ABI unsigned getSourceLanguageName(StringRef SourceLanguageNameString);
+LLVM_ABI unsigned getLanguageDialect(StringRef LanguageDialectString);
 LLVM_ABI unsigned getCallingConvention(StringRef LanguageString);
 LLVM_ABI unsigned getAttributeEncoding(StringRef EncodingString);
 LLVM_ABI unsigned getMacinfo(StringRef MacinfoString);
@@ -1090,6 +1098,10 @@ LLVM_ABI std::optional<unsigned> OperationOperands(LocationAtom O);
 /// stack this operation operates on. Returns -1 if the arity is variable (e.g.
 /// depending on the argument) or unknown.
 LLVM_ABI std::optional<unsigned> OperationArity(LocationAtom O);
+
+inline bool isTlsAddressOp(uint8_t O) {
+  return O == DW_OP_form_tls_address || O == DW_OP_GNU_push_tls_address;
+}
 
 LLVM_ABI std::optional<unsigned> LanguageLowerBound(SourceLanguage L);
 

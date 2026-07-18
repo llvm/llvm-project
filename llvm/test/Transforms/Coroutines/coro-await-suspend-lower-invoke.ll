@@ -105,7 +105,6 @@ declare noalias ptr @malloc(i32)
 declare void @free(ptr)
 ; CHECK-LABEL: define void @f() personality i32 0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[AWAITER:%.*]] = alloca [[AWAITER:%.*]], align 8
 ; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr @f.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i32 24)
 ; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
@@ -118,7 +117,7 @@ declare void @free(ptr)
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define internal fastcc void @f.resume(
+; CHECK-LABEL: define internal void @f.resume(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(24) [[HDL:%.*]]) personality i32 0 {
 ; CHECK-NEXT:  [[ENTRY_RESUME:.*]]:
 ; CHECK-NEXT:    [[AWAITER_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 0
@@ -157,7 +156,7 @@ declare void @free(ptr)
 ; CHECK-NEXT:            to label %[[STEP2_CONTINUE:.*]] unwind label %[[PAD]]
 ; CHECK:       [[STEP2_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call ptr @llvm.coro.subfn.addr(ptr [[TMP3]], i8 0)
-; CHECK-NEXT:    musttail call fastcc void [[TMP4]](ptr [[TMP3]])
+; CHECK-NEXT:    musttail call void [[TMP4]](ptr [[TMP3]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[PAD]]:
 ; CHECK-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
@@ -176,7 +175,7 @@ declare void @free(ptr)
 ; CHECK-NEXT:    unreachable
 ;
 ;
-; CHECK-LABEL: define internal fastcc void @f.destroy(
+; CHECK-LABEL: define internal void @f.destroy(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(24) [[HDL:%.*]]) personality i32 0 {
 ; CHECK-NEXT:  [[ENTRY_DESTROY:.*:]]
 ; CHECK-NEXT:    [[AWAITER_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 0
@@ -185,7 +184,7 @@ declare void @free(ptr)
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define internal fastcc void @f.cleanup(
+; CHECK-LABEL: define internal void @f.cleanup(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(24) [[HDL:%.*]]) personality i32 0 {
 ; CHECK-NEXT:  [[ENTRY_CLEANUP:.*:]]
 ; CHECK-NEXT:    [[AWAITER_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 0

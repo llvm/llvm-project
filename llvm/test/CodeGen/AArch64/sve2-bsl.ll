@@ -16,9 +16,10 @@ define <vscale x 4 x i32> @bsl(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 define <vscale x 4 x i32> @bsl_add_sub(<vscale x 4 x i32> %pre_cond, <vscale x 4 x i32> %left, <vscale x 4 x i32> %right) #0 {
 ; CHECK-LABEL: bsl_add_sub:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    subr z0.s, z0.s, #0 // =0x0
-; CHECK-NEXT:    bsl z1.d, z1.d, z2.d, z0.d
+; CHECK-NEXT:    movprfx z3, z0
+; CHECK-NEXT:    subr z3.s, z3.s, #0 // =0x0
 ; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    bsl z0.d, z0.d, z2.d, z3.d
 ; CHECK-NEXT:    ret
   %neg_cond = sub <vscale x 4 x i32> zeroinitializer, %pre_cond
   %min_cond = add <vscale x 4 x i32> %pre_cond, splat(i32 -1)
@@ -313,14 +314,11 @@ entry:
   ret <vscale x 4 x i32> %t3
 }
 
-; NOT (a) = NBSL (a, a, a).
-; We don't have a pattern for this right now because the tied register
-; constraint can lead to worse code gen.
+; NOT (a) = NBSL (a, a, a) = SUBR (a, -1).
 define <vscale x 2 x i64> @not(<vscale x 2 x i64> %0) #0 {
 ; CHECK-LABEL: not:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor z0.d, z0.d, z1.d
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; CHECK-NEXT:    ret
   %2 = xor <vscale x 2 x i64> %0, splat (i64 -1)
   ret <vscale x 2 x i64> %2

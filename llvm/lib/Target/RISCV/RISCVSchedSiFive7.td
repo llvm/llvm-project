@@ -298,14 +298,14 @@ multiclass SiFive7ProcResources<bit dualVALU = false> {
     // instruction at a time and remain busy for the number of cycles associated
     // with that instruction.
     def VCQ       : ProcResource<1>; // Vector Command Queue
+
+    def PipeAB : ProcResGroup<[!cast<ProcResource>(NAME#"PipeA"),
+                               !cast<ProcResource>(NAME#"PipeB")]>;
+
+    if dualVALU then
+    def VA1OrVA2 : ProcResGroup<[!cast<ProcResource>(NAME#"VA1"),
+                                 !cast<ProcResource>(NAME#"VA2")]>;
   }
-
-  def PipeAB : ProcResGroup<[!cast<ProcResource>(NAME#"PipeA"),
-                             !cast<ProcResource>(NAME#"PipeB")]>;
-
-  if dualVALU then
-  def VA1OrVA2 : ProcResGroup<[!cast<ProcResource>(NAME#"VA1"),
-                               !cast<ProcResource>(NAME#"VA2")]>;
 }
 
 multiclass SiFive7WriteResBase<int VLEN,
@@ -523,12 +523,12 @@ multiclass SiFive7WriteResBase<int VLEN,
   def : WriteRes<WriteFCmp16, [PipeB]>;
   def : WriteRes<WriteFCmp32, [PipeB]>;
   def : WriteRes<WriteFCmp64, [PipeB]>;
-  def : WriteRes<WriteFMovI16ToF16, [PipeB]>;
-  def : WriteRes<WriteFMovF16ToI16, [PipeB]>;
-  def : WriteRes<WriteFMovI32ToF32, [PipeB]>;
-  def : WriteRes<WriteFMovF32ToI32, [PipeB]>;
-  def : WriteRes<WriteFMovI64ToF64, [PipeB]>;
-  def : WriteRes<WriteFMovF64ToI64, [PipeB]>;
+  def : WriteRes<WriteFMovI16ToF16, [PipeA]>;
+  def : WriteRes<WriteFMovF16ToI16, [PipeA]>;
+  def : WriteRes<WriteFMovI32ToF32, [PipeA]>;
+  def : WriteRes<WriteFMovF32ToI32, [PipeA]>;
+  def : WriteRes<WriteFMovI64ToF64, [PipeA]>;
+  def : WriteRes<WriteFMovF64ToI64, [PipeA]>;
   }
 
   // 6. Configuration-Setting Instructions

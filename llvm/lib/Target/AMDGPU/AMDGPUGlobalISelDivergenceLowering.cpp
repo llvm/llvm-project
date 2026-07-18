@@ -51,7 +51,7 @@ public:
   }
 };
 
-class DivergenceLoweringHelper : public PhiLoweringHelper {
+class DivergenceLoweringHelper : public AMDGPU::PhiLoweringHelper {
 public:
   DivergenceLoweringHelper(MachineFunction *MF, MachineDominatorTree *DT,
                            MachinePostDominatorTree *PDT,
@@ -68,14 +68,14 @@ public:
       SmallVectorImpl<MachineInstr *> &Vreg1Phis) const override;
   void collectIncomingValuesFromPhi(
       const MachineInstr *MI,
-      SmallVectorImpl<Incoming> &Incomings) const override;
+      SmallVectorImpl<AMDGPU::Incoming> &Incomings) const override;
   void replaceDstReg(Register NewReg, Register OldReg,
                      MachineBasicBlock *MBB) override;
   void buildMergeLaneMasks(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator I, const DebugLoc &DL,
                            Register DstReg, Register PrevReg,
                            Register CurReg) override;
-  void constrainAsLaneMask(Incoming &In) override;
+  void constrainAsLaneMask(AMDGPU::Incoming &In) override;
 
   bool lowerTemporalDivergence();
   bool lowerTemporalDivergenceI1();
@@ -111,14 +111,15 @@ void DivergenceLoweringHelper::getCandidatesForLowering(
       if (MI.getOpcode() != TargetOpcode::G_PHI)
         continue;
       Register Dst = MI.getOperand(0).getReg();
-      if (MRI->getType(Dst) == S1 && MUI->isDivergent(Dst))
+      if (MRI->getType(Dst) == S1 && MUI->isDivergentAtDef(Dst))
         Vreg1Phis.push_back(&MI);
     }
   }
 }
 
 void DivergenceLoweringHelper::collectIncomingValuesFromPhi(
-    const MachineInstr *MI, SmallVectorImpl<Incoming> &Incomings) const {
+    const MachineInstr *MI,
+    SmallVectorImpl<AMDGPU::Incoming> &Incomings) const {
   for (unsigned i = 1; i < MI->getNumOperands(); i += 2) {
     Incomings.emplace_back(MI->getOperand(i).getReg(),
                            MI->getOperand(i + 1).getMBB(), Register());
@@ -134,7 +135,7 @@ void DivergenceLoweringHelper::replaceDstReg(Register NewReg, Register OldReg,
 // Copy Reg to new lane mask register, insert a copy after instruction that
 // defines Reg while skipping phis if needed.
 Register DivergenceLoweringHelper::buildRegCopyToLaneMask(Register Reg) {
-  Register LaneMask = createLaneMaskReg(MRI, LaneMaskRegAttrs);
+  Register LaneMask = AMDGPU::createLaneMaskReg(MRI, LaneMaskRegAttrs);
   MachineInstr *Instr = MRI->getVRegDef(Reg);
   MachineBasicBlock *MBB = Instr->getParent();
   B.setInsertPt(*MBB, MBB->SkipPHIsAndLabels(std::next(Instr->getIterator())));
@@ -173,8 +174,8 @@ void DivergenceLoweringHelper::buildMergeLaneMasks(
 
   Register PrevRegCopy = buildRegCopyToLaneMask(PrevReg);
   Register CurRegCopy = buildRegCopyToLaneMask(CurReg);
-  Register PrevMaskedReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
-  Register CurMaskedReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
+  Register PrevMaskedReg = AMDGPU::createLaneMaskReg(MRI, LaneMaskRegAttrs);
+  Register CurMaskedReg = AMDGPU::createLaneMaskReg(MRI, LaneMaskRegAttrs);
 
   B.setInsertPt(MBB, I);
   B.buildInstr(LMC->AndN2Opc, {PrevMaskedReg}, {PrevRegCopy, LMC->ExecReg});
@@ -185,7 +186,7 @@ void DivergenceLoweringHelper::buildMergeLaneMasks(
 // GlobalISel has to constrain S1 incoming taken as-is with lane mask register
 // class. Insert a copy of Incoming.Reg to new lane mask inside Incoming.Block,
 // Incoming.Reg becomes that new lane mask.
-void DivergenceLoweringHelper::constrainAsLaneMask(Incoming &In) {
+void DivergenceLoweringHelper::constrainAsLaneMask(AMDGPU::Incoming &In) {
   B.setInsertPt(*In.Block, In.Block->getFirstTerminator());
 
   auto Copy = B.buildCopy(LLT::scalar(1), In.Reg);
@@ -206,7 +207,7 @@ bool DivergenceLoweringHelper::lowerTemporalDivergence() {
   DenseMap<Register, Register> TDCache;
 
   for (auto [Reg, UseInst, _] : MUI->getTemporalDivergenceList()) {
-    if (MRI->getType(Reg) == LLT::scalar(1) || MUI->isDivergent(Reg) ||
+    if (MRI->getType(Reg) == LLT::scalar(1) || MUI->isDivergentAtDef(Reg) ||
         ILMA.isS32S64LaneMask(Reg))
       continue;
 
@@ -235,17 +236,19 @@ bool DivergenceLoweringHelper::lowerTemporalDivergenceI1() {
   initializeLaneMaskRegisterAttributes(BoolS1);
   MachineSSAUpdater SSAUpdater(*MF);
 
+  const auto &CInfo = MUI->getCycleInfo();
+
   // In case of use outside muliple nested cycles or muliple uses we only need
   // to merge lane mask across largest relevant cycle.
-  SmallDenseMap<Register, std::pair<const MachineCycle *, Register>> LRCCache;
+  SmallDenseMap<Register, std::pair<CycleRef, Register>> LRCCache;
   for (auto [Reg, UseInst, LRC] : MUI->getTemporalDivergenceList()) {
     if (MRI->getType(Reg) != LLT::scalar(1))
       continue;
 
     auto [LRCCacheIter, RegNotCached] = LRCCache.try_emplace(Reg);
     auto &CycleMergedMask = LRCCacheIter->getSecond();
-    const MachineCycle *&CachedLRC = CycleMergedMask.first;
-    if (RegNotCached || LRC->contains(CachedLRC)) {
+    CycleRef &CachedLRC = CycleMergedMask.first;
+    if (RegNotCached || CInfo.contains(LRC, CachedLRC)) {
       CachedLRC = LRC;
     }
   }
@@ -253,7 +256,7 @@ bool DivergenceLoweringHelper::lowerTemporalDivergenceI1() {
   for (auto &LRCCacheEntry : LRCCache) {
     Register Reg = LRCCacheEntry.first;
     auto &CycleMergedMask = LRCCacheEntry.getSecond();
-    const MachineCycle *Cycle = CycleMergedMask.first;
+    CycleRef Cycle = CycleMergedMask.first;
 
     Register MergedMask = MRI->createVirtualRegister(BoolS1);
     SSAUpdater.Initialize(MergedMask);
@@ -261,9 +264,9 @@ bool DivergenceLoweringHelper::lowerTemporalDivergenceI1() {
     MachineBasicBlock *MBB = MRI->getVRegDef(Reg)->getParent();
     SSAUpdater.AddAvailableValue(MBB, MergedMask);
 
-    for (auto Entry : Cycle->getEntries()) {
+    for (auto Entry : CInfo.getEntries(Cycle)) {
       for (MachineBasicBlock *Pred : Entry->predecessors()) {
-        if (!Cycle->contains(Pred)) {
+        if (!CInfo.contains(Cycle, Pred)) {
           B.setInsertPt(*Pred, Pred->getFirstTerminator());
           auto ImplDef = B.buildInstr(AMDGPU::IMPLICIT_DEF, {BoolS1}, {});
           SSAUpdater.AddAvailableValue(Pred, ImplDef.getReg(0));

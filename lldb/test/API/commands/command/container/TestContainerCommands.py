@@ -237,7 +237,7 @@ class TestCmdContainer(TestBase):
         self.expect(
             "test-multi test-multi-sub welcome friend",
             "did remove subcommand",
-            substrs=["'test-multi-sub' does not have any subcommands."],
+            substrs=["'test-multi-sub' does not have any subcommands"],
             error=True,
         )
         # We should have the new help:
@@ -262,6 +262,6 @@ class TestCmdContainer(TestBase):
         self.expect(
             "test-multi",
             "Root command gone",
-            substrs=["'test-multi' is not a valid command."],
+            substrs=["'test-multi' is not a valid command"],
             error=True,
         )

@@ -77,8 +77,7 @@ public:
 /// tracks a particular Python classobject, which will be asked to recognize
 /// stack frames.
 class ScriptedStackFrameRecognizer : public StackFrameRecognizer {
-  lldb_private::ScriptInterpreter *m_interpreter;
-  lldb_private::StructuredData::ObjectSP m_python_object_sp;
+  lldb::ScriptedStackFrameRecognizerInterfaceSP m_interface_sp;
 
   std::string m_python_class;
 
@@ -196,7 +195,6 @@ class ValueObjectRecognizerSynthesizedValue : public ValueObject {
   CompilerType GetCompilerTypeImpl() override {
     return m_parent->GetCompilerType();
   }
-  bool IsSynthetic() override { return true; }
 
  private:
   lldb::ValueType m_type;

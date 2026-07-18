@@ -101,7 +101,8 @@ public:
   getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override;
   unsigned getCacheLineSize() const override;
   unsigned getPrefetchDistance() const override;
-  unsigned getMaxInterleaveFactor(ElementCount VF) const override;
+  unsigned getMaxInterleaveFactor(ElementCount VF,
+                                  bool HasUnorderedReductions) const override;
   InstructionCost vectorCostAdjustmentFactor(unsigned Opcode, Type *Ty1,
                                              Type *Ty2) const;
   InstructionCost getArithmeticInstrCost(
@@ -145,8 +146,6 @@ public:
   InstructionCost
   getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                         TTI::TargetCostKind CostKind) const override;
-  bool areInlineCompatible(const Function *Caller,
-                           const Function *Callee) const override;
   bool areTypesABICompatible(const Function *Caller, const Function *Callee,
                              ArrayRef<Type *> Types) const override;
   bool supportsTailCallFor(const CallBase *CB) const override;
@@ -168,6 +167,15 @@ public:
   InstructionCost
   getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
                            TTI::TargetCostKind CostKind) const override;
+
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const override {
+    return InstructionCost::getInvalid();
+  }
 
 private:
   // The following constant is used for estimating costs on power9.

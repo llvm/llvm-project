@@ -12,8 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMIRFormatter.h"
+#include "AMDGPUWaitcntUtils.h"
 #include "SIMachineFunctionInfo.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
 
@@ -29,6 +30,13 @@ StringLiteral VaVccName = "VaVcc";
 StringLiteral SaSdstName = "SaSdst";
 
 StringLiteral AllOff = "AllOff";
+
+StringLiteral VmcntName = "Vmcnt";
+StringLiteral ExpcntName = "Expcnt";
+StringLiteral LgkmcntName = "Lgkmcnt";
+
+StringLiteral LoadcntName = "Loadcnt";
+StringLiteral DscntName = "Dscnt";
 
 void AMDGPUMIRFormatter::printSWaitAluImm(uint64_t Imm, raw_ostream &OS) const {
   bool NonePrinted = true;
@@ -61,10 +69,58 @@ void AMDGPUMIRFormatter::printSWaitAluImm(uint64_t Imm, raw_ostream &OS) const {
     OS << AllOff;
 }
 
+void AMDGPUMIRFormatter::printSWaitcntImm(uint64_t Imm, raw_ostream &OS) const {
+  const AMDGPU::IsaVersion &Version = AMDGPU::getIsaVersion(STI.getCPU());
+  bool NonePrinted = true;
+  ListSeparator Delim(SWaitAluDelim);
+  auto PrintFieldIfNotMax = [&](StringRef Descr, uint64_t Num, unsigned Max) {
+    if (Num != Max) {
+      OS << Delim << Descr << SWaitAluDelim << Num;
+      NonePrinted = false;
+    }
+  };
+  OS << SWaitAluImmPrefix;
+  PrintFieldIfNotMax(VmcntName, AMDGPU::decodeVmcnt(Version, Imm),
+                     AMDGPU::getVmcntBitMask(Version));
+  PrintFieldIfNotMax(ExpcntName, AMDGPU::decodeExpcnt(Version, Imm),
+                     AMDGPU::getExpcntBitMask(Version));
+  PrintFieldIfNotMax(LgkmcntName, AMDGPU::decodeLgkmcnt(Version, Imm),
+                     AMDGPU::getLgkmcntBitMask(Version));
+  if (NonePrinted)
+    OS << AllOff;
+}
+
+void AMDGPUMIRFormatter::printSWaitLoadcntDscntImm(uint64_t Imm,
+                                                   raw_ostream &OS) const {
+  const AMDGPU::IsaVersion &Version = AMDGPU::getIsaVersion(STI.getCPU());
+  bool NonePrinted = true;
+  ListSeparator Delim(SWaitAluDelim);
+  auto PrintFieldIfNotMax = [&](StringRef Descr, uint64_t Num, unsigned Max) {
+    if (Num != Max) {
+      OS << Delim << Descr << SWaitAluDelim << Num;
+      NonePrinted = false;
+    }
+  };
+  OS << SWaitAluImmPrefix;
+  PrintFieldIfNotMax(LoadcntName, AMDGPU::decodeLoadcnt(Version, Imm),
+                     AMDGPU::getLoadcntBitMask(Version));
+  PrintFieldIfNotMax(DscntName, AMDGPU::decodeDscnt(Version, Imm),
+                     AMDGPU::getDscntBitMask(Version));
+  if (NonePrinted)
+    OS << AllOff;
+}
+
 void AMDGPUMIRFormatter::printImm(raw_ostream &OS, const MachineInstr &MI,
                       std::optional<unsigned int> OpIdx, int64_t Imm) const {
 
   switch (MI.getOpcode()) {
+  case AMDGPU::S_WAITCNT:
+  case AMDGPU::S_WAITCNT_soft:
+    printSWaitcntImm(Imm, OS);
+    break;
+  case AMDGPU::S_WAIT_LOADCNT_DSCNT:
+    printSWaitLoadcntDscntImm(Imm, OS);
+    break;
   case AMDGPU::S_WAITCNT_DEPCTR:
     printSWaitAluImm(Imm, OS);
     break;
@@ -87,6 +143,11 @@ bool AMDGPUMIRFormatter::parseImmMnemonic(const unsigned OpCode,
 {
 
   switch (OpCode) {
+  case AMDGPU::S_WAITCNT:
+  case AMDGPU::S_WAITCNT_soft:
+    return parseSWaitcntImmMnemonic(OpIdx, Imm, Src, ErrorCallback);
+  case AMDGPU::S_WAIT_LOADCNT_DSCNT:
+    return parseSWaitLoadcntDscntImmMnemonic(OpIdx, Imm, Src, ErrorCallback);
   case AMDGPU::S_WAITCNT_DEPCTR:
     return parseSWaitAluImmMnemonic(OpIdx, Imm, Src, ErrorCallback);
   case AMDGPU::S_DELAY_ALU:
@@ -138,6 +199,134 @@ void AMDGPUMIRFormatter::printSDelayAluImm(int64_t Imm,
 
   OS << "_id1_";
   Outdep(Id1);
+}
+
+bool AMDGPUMIRFormatter::parseSWaitcntImmMnemonic(
+    const unsigned int OpIdx, int64_t &Imm, StringRef &Src,
+    MIRFormatter::ErrorCallbackType &ErrorCallback) const {
+  const AMDGPU::IsaVersion &Version = AMDGPU::getIsaVersion(STI.getCPU());
+
+  // Accept integer masks for compatibility with old MIR.
+  if (!Src.consumeInteger(10, Imm))
+    return false;
+
+  // Initialize with all counters at max (no wait).
+  unsigned Vmcnt = AMDGPU::getVmcntBitMask(Version);
+  unsigned Expcnt = AMDGPU::getExpcntBitMask(Version);
+  unsigned Lgkmcnt = AMDGPU::getLgkmcntBitMask(Version);
+
+  // The input is in the form: .Name1_Num1_Name2_Num2
+  // Drop the '.' prefix.
+  if (!Src.consume_front(SWaitAluImmPrefix))
+    return ErrorCallback(Src.begin(), "expected prefix");
+  if (Src.empty())
+    return ErrorCallback(Src.begin(), "expected <CounterName>_<CounterNum>");
+
+  // Special case for all off (all counters at max).
+  if (Src == AllOff) {
+    Imm = AMDGPU::encodeWaitcnt(Version, Vmcnt, Expcnt, Lgkmcnt);
+    return false;
+  }
+
+  // Parse counter name, number pairs.
+  while (!Src.empty()) {
+    size_t DelimIdx = Src.find(SWaitAluDelim);
+    if (DelimIdx == StringRef::npos)
+      return ErrorCallback(Src.begin(), "expected <CounterName>_<CounterNum>");
+    StringRef Name = Src.substr(0, DelimIdx);
+    StringRef::iterator NamePos = Src.begin();
+    Src.consume_front(Name);
+    Src.consume_front(SWaitAluDelim);
+
+    int64_t Num;
+    StringRef::iterator NumPos = Src.begin();
+    if (Src.consumeInteger(10, Num) || Num < 0)
+      return ErrorCallback(NumPos,
+                           "expected non-negative integer counter number");
+
+    unsigned Max;
+    if (Name == VmcntName) {
+      Max = AMDGPU::getVmcntBitMask(Version);
+      Vmcnt = Num;
+    } else if (Name == ExpcntName) {
+      Max = AMDGPU::getExpcntBitMask(Version);
+      Expcnt = Num;
+    } else if (Name == LgkmcntName) {
+      Max = AMDGPU::getLgkmcntBitMask(Version);
+      Lgkmcnt = Num;
+    } else {
+      return ErrorCallback(NamePos, "invalid counter name");
+    }
+    if (Num >= Max)
+      return ErrorCallback(NumPos, "counter value too large");
+
+    Src.consume_front(SWaitAluDelim);
+  }
+
+  Imm = AMDGPU::encodeWaitcnt(Version, Vmcnt, Expcnt, Lgkmcnt);
+  return false;
+}
+
+bool AMDGPUMIRFormatter::parseSWaitLoadcntDscntImmMnemonic(
+    const unsigned int OpIdx, int64_t &Imm, StringRef &Src,
+    MIRFormatter::ErrorCallbackType &ErrorCallback) const {
+  const AMDGPU::IsaVersion &Version = AMDGPU::getIsaVersion(STI.getCPU());
+
+  // Accept integer masks for compatibility with old MIR.
+  if (!Src.consumeInteger(10, Imm))
+    return false;
+
+  // Initialize with all counters at max (no wait).
+  unsigned Loadcnt = AMDGPU::getLoadcntBitMask(Version);
+  unsigned Dscnt = AMDGPU::getDscntBitMask(Version);
+
+  // The input is in the form: .Name1_Num1_Name2_Num2
+  // Drop the '.' prefix.
+  if (!Src.consume_front(SWaitAluImmPrefix))
+    return ErrorCallback(Src.begin(), "expected prefix");
+  if (Src.empty())
+    return ErrorCallback(Src.begin(), "expected <CounterName>_<CounterNum>");
+
+  // Special case for all off (all counters at max).
+  if (Src == AllOff) {
+    Imm = AMDGPU::encodeLoadcntDscnt(Version, Loadcnt, Dscnt);
+    return false;
+  }
+
+  // Parse counter name, number pairs.
+  while (!Src.empty()) {
+    size_t DelimIdx = Src.find(SWaitAluDelim);
+    if (DelimIdx == StringRef::npos)
+      return ErrorCallback(Src.begin(), "expected <CounterName>_<CounterNum>");
+    StringRef Name = Src.substr(0, DelimIdx);
+    StringRef::iterator NamePos = Src.begin();
+    Src.consume_front(Name);
+    Src.consume_front(SWaitAluDelim);
+
+    int64_t Num;
+    StringRef::iterator NumPos = Src.begin();
+    if (Src.consumeInteger(10, Num) || Num < 0)
+      return ErrorCallback(NumPos,
+                           "expected non-negative integer counter number");
+
+    unsigned Max;
+    if (Name == LoadcntName) {
+      Max = AMDGPU::getLoadcntBitMask(Version);
+      Loadcnt = Num;
+    } else if (Name == DscntName) {
+      Max = AMDGPU::getDscntBitMask(Version);
+      Dscnt = Num;
+    } else {
+      return ErrorCallback(NamePos, "invalid counter name");
+    }
+    if (Num >= Max)
+      return ErrorCallback(NumPos, "counter value too large");
+
+    Src.consume_front(SWaitAluDelim);
+  }
+
+  Imm = AMDGPU::encodeLoadcntDscnt(Version, Loadcnt, Dscnt);
+  return false;
 }
 
 bool AMDGPUMIRFormatter::parseSWaitAluImmMnemonic(

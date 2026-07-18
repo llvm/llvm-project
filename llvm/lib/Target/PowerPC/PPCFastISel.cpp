@@ -375,8 +375,7 @@ bool PPCFastISel::PPCComputeAddress(const Value *Obj, Address &Addr) {
     }
     case Instruction::Alloca: {
       const AllocaInst *AI = cast<AllocaInst>(Obj);
-      DenseMap<const AllocaInst*, int>::iterator SI =
-        FuncInfo.StaticAllocaMap.find(AI);
+      auto SI = FuncInfo.StaticAllocaMap.find(AI);
       if (SI != FuncInfo.StaticAllocaMap.end()) {
         Addr.BaseType = Address::FrameIndexBase;
         Addr.Base.FI = SI->second;
@@ -2270,8 +2269,7 @@ Register PPCFastISel::fastMaterializeConstant(const Constant *C) {
 // Materialize the address created by an alloca into a register, and
 // return the register number (or zero if we failed to handle it).
 Register PPCFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
-  DenseMap<const AllocaInst *, int>::iterator SI =
-      FuncInfo.StaticAllocaMap.find(AI);
+  auto SI = FuncInfo.StaticAllocaMap.find(AI);
 
   // Don't handle dynamic allocas.
   if (SI == FuncInfo.StaticAllocaMap.end())

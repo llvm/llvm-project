@@ -359,8 +359,8 @@ public:
 protected:
   // Utility methods for derived classes
 
-  /// Find a module in the target that matches the given file.
-  lldb::ModuleSP FindModuleViaTarget(const FileSpec &file);
+  /// Find a module in the target that matches the given module spec.
+  lldb::ModuleSP FindModuleViaTarget(const ModuleSpec &module_spec);
 
   /// Checks to see if the target module has changed, updates the target
   /// accordingly and returns the target executable module.

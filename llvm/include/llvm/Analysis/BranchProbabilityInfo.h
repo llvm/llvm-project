@@ -137,9 +137,6 @@ public:
   LLVM_ABI BranchProbability getEdgeProbability(const BasicBlock *Src,
                                                 const BasicBlock *Dst) const;
 
-  LLVM_ABI BranchProbability getEdgeProbability(const BasicBlock *Src,
-                                                const_succ_iterator Dst) const;
-
   /// Test if an edge is hot relative to other out-edges of the Src.
   ///
   /// Check whether this edge out of the source block is 'hot'. We define hot
@@ -160,9 +157,8 @@ public:
   /// This allows a pass to explicitly set edge probabilities for a block. It
   /// can be used when updating the CFG to update the branch probability
   /// information.
-  LLVM_ABI void
-  setEdgeProbability(const BasicBlock *Src,
-                     const SmallVectorImpl<BranchProbability> &Probs);
+  LLVM_ABI void setEdgeProbability(const BasicBlock *Src,
+                                   ArrayRef<BranchProbability> Probs);
 
   /// Copy outgoing edge probabilities from \p Src to \p Dst.
   ///
@@ -216,15 +212,13 @@ public:
 
 /// Printer pass for the \c BranchProbabilityAnalysis results.
 class BranchProbabilityPrinterPass
-    : public PassInfoMixin<BranchProbabilityPrinterPass> {
+    : public RequiredPassInfoMixin<BranchProbabilityPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit BranchProbabilityPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// Legacy analysis pass which computes \c BranchProbabilityInfo.

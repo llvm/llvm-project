@@ -298,44 +298,6 @@ static void test_valid_md_values() {
         std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::December}});
 
   // Use the global locale (fr_FR)
-#if defined(__APPLE__)
-  check(SV("%b='jan'\t%B='janvier'\t%h='jan'\t%m='01'\t%Om='01'\t%d='31'\t%e='31'\t%Od='31'\t%Oe='31'\n"),
-        lfmt,
-        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::January}});
-  check(SV("%b='fév'\t%B='février'\t%h='fév'\t%m='02'\t%Om='02'\t%d='28'\t%e='28'\t%Od='28'\t%Oe='28'\n"),
-        lfmt,
-        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::February}});
-  check(SV("%b='mar'\t%B='mars'\t%h='mar'\t%m='03'\t%Om='03'\t%d='31'\t%e='31'\t%Od='31'\t%Oe='31'\n"),
-        lfmt,
-        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::March}});
-  check(SV("%b='avr'\t%B='avril'\t%h='avr'\t%m='04'\t%Om='04'\t%d='30'\t%e='30'\t%Od='30'\t%Oe='30'\n"),
-        lfmt,
-        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::April}});
-  check(SV("%b='mai'\t%B='mai'\t%h='mai'\t%m='05'\t%Om='05'\t%d='31'\t%e='31'\t%Od='31'\t%Oe='31'\n"),
-        lfmt,
-        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::May}});
-  check(SV("%b='jui'\t%B='juin'\t%h='jui'\t%m='06'\t%Om='06'\t%d='30'\t%e='30'\t%Od='30'\t%Oe='30'\n"),
-        lfmt,
-        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::June}});
-  check(SV("%b='jul'\t%B='juillet'\t%h='jul'\t%m='07'\t%Om='07'\t%d='31'\t%e='31'\t%Od='31'\t%Oe='31'\n"),
-        lfmt,
-        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::July}});
-  check(SV("%b='aoû'\t%B='août'\t%h='aoû'\t%m='08'\t%Om='08'\t%d='31'\t%e='31'\t%Od='31'\t%Oe='31'\n"),
-        lfmt,
-        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::August}});
-  check(SV("%b='sep'\t%B='septembre'\t%h='sep'\t%m='09'\t%Om='09'\t%d='30'\t%e='30'\t%Od='30'\t%Oe='30'\n"),
-        lfmt,
-        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::September}});
-  check(SV("%b='oct'\t%B='octobre'\t%h='oct'\t%m='10'\t%Om='10'\t%d='31'\t%e='31'\t%Od='31'\t%Oe='31'\n"),
-        lfmt,
-        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::October}});
-  check(SV("%b='nov'\t%B='novembre'\t%h='nov'\t%m='11'\t%Om='11'\t%d='30'\t%e='30'\t%Od='30'\t%Oe='30'\n"),
-        lfmt,
-        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::November}});
-  check(SV("%b='déc'\t%B='décembre'\t%h='déc'\t%m='12'\t%Om='12'\t%d='31'\t%e='31'\t%Od='31'\t%Oe='31'\n"),
-        lfmt,
-        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::December}});
-#else    // defined(__APPLE__)
   check(SV("%b='janv.'\t%B='janvier'\t%h='janv.'\t%m='01'\t%Om='01'\t%d='31'\t%e='31'\t%Od='31'\t%Oe='31'\n"),
         lfmt,
         std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::January}});
@@ -346,11 +308,11 @@ static void test_valid_md_values() {
         lfmt,
         std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::March}});
   check(
-#  if defined(_WIN32) || defined(_AIX) || defined(__FreeBSD__)
+#if defined(_WIN32) || defined(_AIX) || defined(__FreeBSD__) || defined(__APPLE__)
       SV("%b='avr.'\t%B='avril'\t%h='avr.'\t%m='04'\t%Om='04'\t%d='30'\t%e='30'\t%Od='30'\t%Oe='30'\n"),
-#  else  // defined(_WIN32) || defined(_AIX) || defined(__FreeBSD__)
+#else
       SV("%b='avril'\t%B='avril'\t%h='avril'\t%m='04'\t%Om='04'\t%d='30'\t%e='30'\t%Od='30'\t%Oe='30'\n"),
-#  endif // defined(_WIN32) || defined(_AIX) || defined(__FreeBSD__)
+#endif
       lfmt,
       std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::April}});
   check(SV("%b='mai'\t%B='mai'\t%h='mai'\t%m='05'\t%Om='05'\t%d='31'\t%e='31'\t%Od='31'\t%Oe='31'\n"),
@@ -377,7 +339,6 @@ static void test_valid_md_values() {
   check(SV("%b='déc.'\t%B='décembre'\t%h='déc.'\t%m='12'\t%Om='12'\t%d='31'\t%e='31'\t%Od='31'\t%Oe='31'\n"),
         lfmt,
         std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::December}});
-#endif   // defined(__APPLE__)
 
   // Use supplied locale (ja_JP)
 #if defined(_WIN32)
@@ -478,7 +439,7 @@ static void test_valid_md_values() {
         SV("%b='12月'\t%B='12月'\t%h='12月'\t%m='12'\t%Om='12'\t%d='31'\t%e='31'\t%Od='31'\t%Oe='31'\n"),
         lfmt,
         std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::December}});
-#elif defined(__FreeBSD__) // defined(_WIN32)
+#elif defined(__FreeBSD__) || defined(__APPLE__) // defined(_WIN32)
   check(loc,
         SV("%b=' 1月'\t%B='1月'\t%h=' 1月'\t%m='01'\t%Om='01'\t%d='31'\t%e='31'\t%Od='31'\t%Oe='31'\n"),
         lfmt,
@@ -525,55 +486,6 @@ static void test_valid_md_values() {
         std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::November}});
   check(loc,
         SV("%b='12月'\t%B='12月'\t%h='12月'\t%m='12'\t%Om='12'\t%d='31'\t%e='31'\t%Od='31'\t%Oe='31'\n"),
-        lfmt,
-        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::December}});
-#elif defined(__APPLE__) // defined(_WIN32)
-  check(loc,
-        SV("%b=' 1'\t%B='1月'\t%h=' 1'\t%m='01'\t%Om='01'\t%d='31'\t%e='31'\t%Od='31'\t%Oe='31'\n"),
-        lfmt,
-        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::January}});
-  check(loc,
-        SV("%b=' 2'\t%B='2月'\t%h=' 2'\t%m='02'\t%Om='02'\t%d='28'\t%e='28'\t%Od='28'\t%Oe='28'\n"),
-        lfmt,
-        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::February}});
-  check(loc,
-        SV("%b=' 3'\t%B='3月'\t%h=' 3'\t%m='03'\t%Om='03'\t%d='31'\t%e='31'\t%Od='31'\t%Oe='31'\n"),
-        lfmt,
-        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::March}});
-  check(loc,
-        SV("%b=' 4'\t%B='4月'\t%h=' 4'\t%m='04'\t%Om='04'\t%d='30'\t%e='30'\t%Od='30'\t%Oe='30'\n"),
-        lfmt,
-        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::April}});
-  check(loc,
-        SV("%b=' 5'\t%B='5月'\t%h=' 5'\t%m='05'\t%Om='05'\t%d='31'\t%e='31'\t%Od='31'\t%Oe='31'\n"),
-        lfmt,
-        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::May}});
-  check(loc,
-        SV("%b=' 6'\t%B='6月'\t%h=' 6'\t%m='06'\t%Om='06'\t%d='30'\t%e='30'\t%Od='30'\t%Oe='30'\n"),
-        lfmt,
-        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::June}});
-  check(loc,
-        SV("%b=' 7'\t%B='7月'\t%h=' 7'\t%m='07'\t%Om='07'\t%d='31'\t%e='31'\t%Od='31'\t%Oe='31'\n"),
-        lfmt,
-        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::July}});
-  check(loc,
-        SV("%b=' 8'\t%B='8月'\t%h=' 8'\t%m='08'\t%Om='08'\t%d='31'\t%e='31'\t%Od='31'\t%Oe='31'\n"),
-        lfmt,
-        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::August}});
-  check(loc,
-        SV("%b=' 9'\t%B='9月'\t%h=' 9'\t%m='09'\t%Om='09'\t%d='30'\t%e='30'\t%Od='30'\t%Oe='30'\n"),
-        lfmt,
-        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::September}});
-  check(loc,
-        SV("%b='10'\t%B='10月'\t%h='10'\t%m='10'\t%Om='10'\t%d='31'\t%e='31'\t%Od='31'\t%Oe='31'\n"),
-        lfmt,
-        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::October}});
-  check(loc,
-        SV("%b='11'\t%B='11月'\t%h='11'\t%m='11'\t%Om='11'\t%d='30'\t%e='30'\t%Od='30'\t%Oe='30'\n"),
-        lfmt,
-        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::November}});
-  check(loc,
-        SV("%b='12'\t%B='12月'\t%h='12'\t%m='12'\t%Om='12'\t%d='31'\t%e='31'\t%Od='31'\t%Oe='31'\n"),
         lfmt,
         std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::December}});
 #else                    // defined(_WIN32)

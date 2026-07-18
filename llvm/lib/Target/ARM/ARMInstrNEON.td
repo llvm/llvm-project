@@ -5564,7 +5564,7 @@ def : Pat<(v16i8 (vnotq QPR:$src)),
 
 // The TwoAddress pass will not go looking for equivalent operations
 // with different register constraints; it just inserts copies.
-// That is why pseudo VBSP implemented. Is is expanded later into
+// That is why pseudo VBSP implemented. It is expanded later into
 // VBIT/VBIF/VBSL taking into account register constraints to avoid copies.
 def  VBSPd : PseudoNeonI<(outs DPR:$Vd), (ins DPR:$src1, DPR:$Vn, DPR:$Vm),
                          IIC_VBINiD, "", []>;
@@ -8130,19 +8130,19 @@ let Predicates = [HasNEON,IsBE] in {
 
 let Predicates = [HasNEON] in {
 def : Pat<(v2i64 (concat_vectors DPR:$Dn, DPR:$Dm)),
-          (REG_SEQUENCE QPR, DPR:$Dn, dsub_0, DPR:$Dm, dsub_1)>;
+          (INSERT_SUBREG (INSERT_SUBREG (IMPLICIT_DEF), DPR:$Dn, dsub_0), DPR:$Dm, dsub_1)>;
 def : Pat<(v4i32 (concat_vectors DPR:$Dn, DPR:$Dm)),
-          (REG_SEQUENCE QPR, DPR:$Dn, dsub_0, DPR:$Dm, dsub_1)>;
+          (INSERT_SUBREG (INSERT_SUBREG (IMPLICIT_DEF), DPR:$Dn, dsub_0), DPR:$Dm, dsub_1)>;
 def : Pat<(v8i16 (concat_vectors DPR:$Dn, DPR:$Dm)),
-          (REG_SEQUENCE QPR, DPR:$Dn, dsub_0, DPR:$Dm, dsub_1)>;
+          (INSERT_SUBREG (INSERT_SUBREG (IMPLICIT_DEF), DPR:$Dn, dsub_0), DPR:$Dm, dsub_1)>;
 def : Pat<(v16i8 (concat_vectors DPR:$Dn, DPR:$Dm)),
-          (REG_SEQUENCE QPR, DPR:$Dn, dsub_0, DPR:$Dm, dsub_1)>;
+          (INSERT_SUBREG (INSERT_SUBREG (IMPLICIT_DEF), DPR:$Dn, dsub_0), DPR:$Dm, dsub_1)>;
 def : Pat<(v4f32 (concat_vectors DPR:$Dn, DPR:$Dm)),
-          (REG_SEQUENCE QPR, DPR:$Dn, dsub_0, DPR:$Dm, dsub_1)>;
+          (INSERT_SUBREG (INSERT_SUBREG (IMPLICIT_DEF), DPR:$Dn, dsub_0), DPR:$Dm, dsub_1)>;
 def : Pat<(v8f16 (concat_vectors DPR:$Dn, DPR:$Dm)),
-          (REG_SEQUENCE QPR, DPR:$Dn, dsub_0, DPR:$Dm, dsub_1)>;
+          (INSERT_SUBREG (INSERT_SUBREG (IMPLICIT_DEF), DPR:$Dn, dsub_0), DPR:$Dm, dsub_1)>;
 def : Pat<(v8bf16 (concat_vectors DPR:$Dn, DPR:$Dm)),
-          (REG_SEQUENCE QPR, DPR:$Dn, dsub_0, DPR:$Dm, dsub_1)>;
+          (INSERT_SUBREG (INSERT_SUBREG (IMPLICIT_DEF), DPR:$Dn, dsub_0), DPR:$Dm, dsub_1)>;
 }
 
 //===----------------------------------------------------------------------===//

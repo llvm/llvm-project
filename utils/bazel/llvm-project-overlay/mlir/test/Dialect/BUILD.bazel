@@ -10,7 +10,6 @@ package(default_visibility = ["//visibility:public"])
         srcs = [src],
         data = [
             "Builtin/Bytecode/builtin_fixed_0.mlirbc",
-            "EmitC/tosa/td.mlir",
             "Vector/vector-sink-transform.mlir",
             "//llvm:llc",
             "//llvm:llvm-symbolizer",
@@ -31,7 +30,6 @@ package(default_visibility = ["//visibility:public"])
     for src in glob(
         include = ["**/*.mlir"],
         exclude = [
-            "EmitC/tosa/td.mlir",
             "IRDL/*.irdl.mlir",
             "Linalg/td/*.mlir",
             "Linalg/transpose-matmul-*.mlir",

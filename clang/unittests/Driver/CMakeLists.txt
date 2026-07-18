@@ -1,6 +1,7 @@
 add_clang_unittest(ClangDriverTests
   DistroTest.cpp
   DXCModeTest.cpp
+  EscapedCommandLineTest.cpp
   GCCVersionTest.cpp
   ToolChainTest.cpp
   ModuleCacheTest.cpp
@@ -11,6 +12,7 @@ add_clang_unittest(ClangDriverTests
   clangDriver
   clangBasic
   clangFrontend # For TextDiagnosticPrinter.
+  clangOptions
   clangSerialization
   LLVM_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}

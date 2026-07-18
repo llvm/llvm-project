@@ -94,7 +94,9 @@ LIBC_INLINE void memcpy_inline(void *__restrict dst,
 #ifndef LIBC_COMPILER_IS_MSVC
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
+#if defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 1100)
 #pragma GCC diagnostic ignored "-Wstringop-overread"
+#endif // LIBC_COMPILER_IS_GCC && LIBC_COMPILER_GCC_VER >= 1100
 #pragma GCC diagnostic ignored "-Wstringop-overflow"
 #endif // !LIBC_COMPILER_IS_MSVC
   for (size_t i = 0; i < Size; ++i)
@@ -231,21 +233,20 @@ template <typename T> LIBC_INLINE void store(Ptr ptr, T value) {
 template <typename ValueType, typename T, typename... TS>
 LIBC_INLINE ValueType load_aligned(CPtr src) {
   static_assert(sizeof(ValueType) >= (sizeof(T) + ... + sizeof(TS)));
+  static_assert(Endian::IS_LITTLE || Endian::IS_BIG, "Invalid endianness");
   const ValueType value = load<T>(assume_aligned<sizeof(T)>(src));
+
   if constexpr (sizeof...(TS) > 0) {
     const ValueType next = load_aligned<ValueType, TS...>(src + sizeof(T));
-    if constexpr (Endian::IS_LITTLE) {
-      // T goes at the bottom of the output, so shift up everything
-      // else by the number of bits in T.
-      constexpr size_t SHIFT = sizeof(T) * 8;
-      return value | (next << SHIFT);
-    } else if constexpr (Endian::IS_BIG) {
-      // T goes at the top of the output, so shift it up by the number
-      // of bits in everything else that goes below it.
-      constexpr size_t SHIFT = (0 + ... + sizeof(TS)) * 8;
-      return (value << SHIFT) | next;
-    } else
-      static_assert(cpp::always_false<T>, "Invalid endianness");
+
+    // Calculate shifts at compile time.
+    // In Little Endian, 'value' stays at the bottom (shift 0).
+    // In Big Endian, 'next' stays at the bottom (shift 0).
+    constexpr size_t VAL_SHIFT = Endian::IS_LITTLE ? 0 : (sizeof(TS) + ...) * 8;
+    constexpr size_t NEXT_SHIFT = Endian::IS_LITTLE ? sizeof(T) * 8 : 0;
+
+    // The compiler will constant-fold '<< 0' into a no-op.
+    return (value << VAL_SHIFT) | (next << NEXT_SHIFT);
   } else {
     return value;
   }

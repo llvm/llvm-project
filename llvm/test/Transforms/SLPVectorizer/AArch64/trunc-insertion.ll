@@ -18,7 +18,8 @@ define dso_local void @l(i1 %arg) local_unnamed_addr {
 ; CHECK:       bb11:
 ; CHECK-NEXT:    [[I12:%.*]] = zext i1 undef to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i16> [[TMP0]], undef
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ule <2 x i16> undef, [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <2 x i16> [[TMP3]] to <2 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ule <2 x i64> undef, [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i1> [[TMP5]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult <2 x i32> undef, [[TMP6]]
 ; CHECK-NEXT:    br label [[BB25]]
@@ -26,10 +27,10 @@ define dso_local void @l(i1 %arg) local_unnamed_addr {
 ; CHECK-NEXT:    [[I28:%.*]] = phi i32 [ [[I12]], [[BB11]] ], [ [[I4]], [[BB3]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x i1> [ [[TMP7]], [[BB11]] ], [ [[TMP2]], [[BB3]] ]
 ; CHECK-NEXT:    [[TMP9]] = phi <2 x i16> [ [[TMP3]], [[BB11]] ], [ [[TMP1]], [[BB3]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP8]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP8]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i1 [[TMP10]] to i32
 ; CHECK-NEXT:    [[I31:%.*]] = and i32 undef, [[TMP11]]
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP8]], i64 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = zext i1 [[TMP12]] to i32
 ; CHECK-NEXT:    [[I32:%.*]] = and i32 [[I31]], [[TMP13]]
 ; CHECK-NEXT:    [[I33:%.*]] = and i32 [[I32]], [[I28]]

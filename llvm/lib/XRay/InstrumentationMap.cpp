@@ -167,9 +167,7 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
   int32_t FuncId = 1;
   uint64_t CurFn = 0;
   for (; C != Contents.bytes_end(); C += ELFSledEntrySize) {
-    DataExtractor Extractor(
-        StringRef(reinterpret_cast<const char *>(C), ELFSledEntrySize), true,
-        8);
+    DataExtractor Extractor(ArrayRef<uint8_t>(C, ELFSledEntrySize), true);
     Sleds.push_back({});
     auto &Entry = Sleds.back();
     uint64_t OffsetPtr = 0;

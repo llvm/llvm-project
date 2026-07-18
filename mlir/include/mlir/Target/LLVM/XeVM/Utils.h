@@ -39,7 +39,7 @@ public:
   /// Returns the gpu module being serialized.
   gpu::GPUModuleOp getGPUModuleOp();
 
-  /// Compiles to native code using `ocloc`.
+  /// Compiles to native code using `ocloc` (API or tool).
   FailureOr<SmallVector<char, 0>> compileToBinary(StringRef asmStr,
                                                   StringRef inputFormat);
 
@@ -53,6 +53,18 @@ protected:
 
   /// Returns the path to the tool used for serialization.
   std::optional<std::string> findTool(StringRef tool);
+
+  /// Compiles to native code using the `ocloc` command-line tool, communicating
+  /// through temporary files.
+  FailureOr<SmallVector<char, 0>>
+  compileToBinaryViaOclocTool(StringRef asmStr, StringRef inputFormat);
+
+  /// Compiles to native code using the `ocloc` shared library API, in-process,
+  /// without temporary files. Only available when the library is linked in.
+#if MLIR_XEVM_OCLOC_LIB_AVAILABLE
+  FailureOr<SmallVector<char, 0>>
+  compileToBinaryViaLibocloc(StringRef asmStr, StringRef inputFormat);
+#endif // MLIR_XEVM_OCLOC_LIB_AVAILABLE
 
   /// GPU compilation target options.
   gpu::TargetOptions targetOptions;

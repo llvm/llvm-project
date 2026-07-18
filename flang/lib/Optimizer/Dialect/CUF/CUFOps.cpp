@@ -12,7 +12,6 @@
 
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
-#include "flang/Optimizer/Dialect/CUF/CUFDialect.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -291,7 +290,13 @@ bool cuf::KernelOp::canMoveOutOf(mlir::Operation *candidate) {
   return !llvm::any_of(candidate->getOperands(),
                        [&](mlir::Value candidateOperand) {
                          return fir::isa_ref_type(candidateOperand.getType());
-                       });
+                       }) &&
+         // Same is true for symbol operands (this has to be revisited,
+         // because this may indicate an issue in ordering between
+         // CUFDeviceGlobal and OffloadLiveInValueCanonicalization passes).
+         !llvm::any_of(candidate->getAttrs(), [&](mlir::NamedAttribute attr) {
+           return mlir::isa_and_present<mlir::SymbolRefAttr>(attr.getValue());
+         });
 }
 
 //===----------------------------------------------------------------------===//

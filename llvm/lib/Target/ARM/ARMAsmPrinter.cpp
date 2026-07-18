@@ -1366,7 +1366,7 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
       PadBefore = -MI->getOperand(4).getImm() - 8;
       break;
     }
-    if (MAI->getExceptionHandlingType() == ExceptionHandling::ARM) {
+    if (MAI.getExceptionHandlingType() == ExceptionHandling::ARM) {
       if (PadBefore)
         ATS.emitPad(PadBefore);
       ATS.emitRegSave(RegList, Opc == ARM::VSTMDDB_UPD);
@@ -1417,7 +1417,7 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
         break;
       }
 
-      if (MAI->getExceptionHandlingType() == ExceptionHandling::ARM) {
+      if (MAI.getExceptionHandlingType() == ExceptionHandling::ARM) {
         if (DstReg == FramePtr && FramePtr != ARM::SP)
           // Set-up of the frame pointer. Positive values correspond to "add"
           // instruction.
@@ -1915,12 +1915,8 @@ void ARMAsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   const MachineInstr &Call = *std::next(MI.getIterator());
 
   // Adjust the offset for patchable-function-prefix.
-  int64_t PrefixNops = 0;
-  MI.getMF()
-      ->getFunction()
-      .getFnAttribute("patchable-function-prefix")
-      .getValueAsString()
-      .getAsInteger(10, PrefixNops);
+  int64_t PrefixNops = MI.getMF()->getFunction().getFnAttributeAsParsedInteger(
+      "patchable-function-prefix");
 
   // Emit the appropriate instruction sequence based on the opcode variant.
   switch (MI.getOpcode()) {
@@ -2407,7 +2403,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
       // FIXME: Ideally we could vary the LDRB index based on the padding
       // between the sequence and jump table, however that relies on MCExprs
       // for load indexes which are currently not supported.
-      OutStreamer->emitCodeAlignment(Align(4), &getSubtargetInfo());
+      OutStreamer->emitCodeAlignment(Align(4), getSubtargetInfo());
       EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tADDhirr)
                                        .addReg(Idx)
                                        .addReg(Idx)

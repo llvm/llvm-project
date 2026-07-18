@@ -11,6 +11,8 @@ from lldbsuite.test import lldbutil
 
 
 class ObjCDataFormatterTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def appkit_tester_impl(self, commands, use_constant_classes):
         if use_constant_classes:
             self.build()

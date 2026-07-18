@@ -7,7 +7,7 @@ module module_without_init
   integer :: i(2)
   equivalence(i(1), x)
 end module
-! CHECK-LABEL: fir.global @_QMmodule_without_initEi : !fir.array<8xi8> {
+! CHECK-LABEL: fir.global @_QMmodule_without_initEi {alignment = 64 : i64} : !fir.array<8xi8> {
   ! CHECK: %0 = fir.zero_bits !fir.array<8xi8>
   ! CHECK: fir.has_value %0 : !fir.array<8xi8>
 ! CHECK: }
@@ -21,7 +21,7 @@ subroutine test_eqv_init
   equivalence (i, link(3))
 end subroutine
 
-! CHECK-LABEL: fir.global internal @_QFtest_eqv_initEi : !fir.array<3xi32> {
+! CHECK-LABEL: fir.global internal @_QFtest_eqv_initEi {alignment = 64 : i64} : !fir.array<3xi32> {
     ! CHECK: %[[VAL_1:.*]] = fir.undefined !fir.array<3xi32>
     ! CHECK: %[[VAL_2:.*]] = fir.insert_value %0, %c7{{.*}}, [0 : index] : (!fir.array<3xi32>, i32) -> !fir.array<3xi32>
     ! CHECK: %[[VAL_3:.*]] = fir.insert_value %1, %c0{{.*}}, [1 : index] : (!fir.array<3xi32>, i32) -> !fir.array<3xi32>

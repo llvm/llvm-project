@@ -21,20 +21,21 @@ jobs:
       run:
         shell: bash
     container:
-      image: 'ghcr.io/llvm/ci-ubuntu-24.04-lint'
+      image: 'ghcr.io/llvm/ci-ubuntu-24.04-lint:latest@sha256:91665a4e158d3b2a4b93da1ebdab3067196a8b48f1f84759cc83c09e9d038ee5'
     timeout-minutes: 60
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
     steps:
       - name: Fetch LLVM sources
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          persist-credentials: false
           fetch-depth: 2
       
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@e0021407031f5be11a464abee9a0776171c79891 # v47.0.1
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
           separator: ","
           skip_initial_fetch: true
@@ -73,9 +74,16 @@ jobs:
                 -DCLANG_INCLUDE_TESTS=OFF \
                 -DCMAKE_BUILD_TYPE=Release
 
-          ninja -C build \
-                clang-tablegen-targets \
-                genconfusable               # for "ConfusableIdentifierCheck.h"
+          ninja_targets=""
+          if [[ ";${projects_to_build};" == *";clang;"* ]]; then
+            ninja_targets="${ninja_targets} clang-tablegen-targets"
+          fi
+          if [[ ";${projects_to_build};" == *";clang-tools-extra;"* ]]; then
+            ninja_targets="${ninja_targets} genconfusable"
+          fi
+          if [[ -n "${ninja_targets}" ]]; then
+            ninja -C build ${ninja_targets}
+          fi
 
       - name: Run code linters
         env:
@@ -92,7 +100,7 @@ jobs:
             --changed-files "$CHANGED_FILES"
       
       - name: Upload results
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: workflow-args

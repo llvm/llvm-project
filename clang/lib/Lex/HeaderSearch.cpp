@@ -91,8 +91,8 @@ void HeaderSearch::PrintStats() {
   llvm::errs() << "\n*** HeaderSearch Stats:\n"
                << FileInfo.size() << " files tracked.\n";
   unsigned NumOnceOnlyFiles = 0;
-  for (unsigned i = 0, e = FileInfo.size(); i != e; ++i)
-    NumOnceOnlyFiles += (FileInfo[i].isPragmaOnce || FileInfo[i].isImport);
+  for (const auto &[FE, HFI] : FileInfo)
+    NumOnceOnlyFiles += (HFI.isPragmaOnce || HFI.isImport);
   llvm::errs() << "  " << NumOnceOnlyFiles << " #import/#pragma once files.\n";
 
   llvm::errs() << "  " << NumIncluded << " #include/#include_next/#import.\n"
@@ -907,15 +907,13 @@ void HeaderSearch::diagnoseHeaderShadowing(
       const auto &IncluderAndDir = Includers[i];
       SmallString<1024> TmpDir = IncluderAndDir.second.getName();
       llvm::sys::path::append(TmpDir, Filename);
-      if (auto File = getFileMgr().getFileRef(TmpDir, false, false)) {
+      if (auto File = getFileMgr().getOptionalFileRef(TmpDir, false, false)) {
         if (&File->getFileEntry() == *FE)
           continue;
         Diags.Report(IncludeLoc, diag::warn_header_shadowing)
             << Filename << (*FE).getDir().getName()
             << IncluderAndDir.second.getName();
         return;
-      } else {
-        llvm::errorToErrorCode(File.takeError());
       }
     }
   }
@@ -934,14 +932,12 @@ void HeaderSearch::diagnoseHeaderShadowing(
       continue;
     SmallString<1024> TmpPath = It->getName();
     llvm::sys::path::append(TmpPath, Filename);
-    if (auto File = getFileMgr().getFileRef(TmpPath, false, false)) {
+    if (auto File = getFileMgr().getOptionalFileRef(TmpPath, false, false)) {
       if (&File->getFileEntry() == *FE)
         continue;
       Diags.Report(IncludeLoc, diag::warn_header_shadowing)
           << Filename << (*FE).getDir().getName() << It->getName();
       return;
-    } else {
-      llvm::errorToErrorCode(File.takeError());
     }
   }
 }
@@ -1380,10 +1376,7 @@ static void mergeHeaderFileInfo(HeaderFileInfo &HFI,
 }
 
 HeaderFileInfo &HeaderSearch::getFileInfo(FileEntryRef FE) {
-  if (FE.getUID() >= FileInfo.size())
-    FileInfo.resize(FE.getUID() + 1);
-
-  HeaderFileInfo *HFI = &FileInfo[FE.getUID()];
+  HeaderFileInfo *HFI = &FileInfo[FE];
   // FIXME: Use a generation count to check whether this is really up to date.
   if (ExternalSource && !HFI->Resolved) {
     auto ExternalHFI = ExternalSource->GetHeaderFileInfo(FE);
@@ -1404,10 +1397,7 @@ HeaderFileInfo &HeaderSearch::getFileInfo(FileEntryRef FE) {
 const HeaderFileInfo *HeaderSearch::getExistingFileInfo(FileEntryRef FE) const {
   HeaderFileInfo *HFI;
   if (ExternalSource) {
-    if (FE.getUID() >= FileInfo.size())
-      FileInfo.resize(FE.getUID() + 1);
-
-    HFI = &FileInfo[FE.getUID()];
+    HFI = &FileInfo[FE];
     // FIXME: Use a generation count to check whether this is really up to date.
     if (!HFI->Resolved) {
       auto ExternalHFI = ExternalSource->GetHeaderFileInfo(FE);
@@ -1417,8 +1407,8 @@ const HeaderFileInfo *HeaderSearch::getExistingFileInfo(FileEntryRef FE) const {
           mergeHeaderFileInfo(*HFI, ExternalHFI);
       }
     }
-  } else if (FE.getUID() < FileInfo.size()) {
-    HFI = &FileInfo[FE.getUID()];
+  } else if (auto It = FileInfo.find(FE); It != FileInfo.end()) {
+    HFI = &It->second;
   } else {
     HFI = nullptr;
   }
@@ -1426,16 +1416,11 @@ const HeaderFileInfo *HeaderSearch::getExistingFileInfo(FileEntryRef FE) const {
   return (HFI && HFI->IsValid) ? HFI : nullptr;
 }
 
-const HeaderFileInfo *
-HeaderSearch::getExistingLocalFileInfo(FileEntryRef FE) const {
-  HeaderFileInfo *HFI;
-  if (FE.getUID() < FileInfo.size()) {
-    HFI = &FileInfo[FE.getUID()];
-  } else {
-    HFI = nullptr;
-  }
-
-  return (HFI && HFI->IsValid && !HFI->External) ? HFI : nullptr;
+void HeaderSearch::forEachExistingLocalFileInfo(
+    llvm::function_ref<void(FileEntryRef, const HeaderFileInfo &)> Fn) const {
+  for (const auto &[FE, HFI] : FileInfo)
+    if (HFI.IsValid && !HFI.External)
+      Fn(FE, HFI);
 }
 
 bool HeaderSearch::isFileMultipleIncludeGuarded(FileEntryRef File) const {
@@ -1733,6 +1718,52 @@ void HeaderSearch::processModuleMapForIndex(const modulemap::ModuleMapFile &MMF,
   }
 }
 
+/// Compute relative path from DirPath to FileName by stripping the DirPath
+/// prefix. DirPath should be derived from FileName (e.g. via parent_path) to
+/// ensure consistent path separators. Returns empty if FileName doesn't start
+/// with DirPath.
+static StringRef computeRelativePath(StringRef FileName, StringRef DirPath) {
+  if (!FileName.starts_with(DirPath))
+    return {};
+  StringRef RelativePath = FileName.substr(DirPath.size());
+  while (!RelativePath.empty() &&
+         llvm::sys::path::is_separator(RelativePath.front()))
+    RelativePath = RelativePath.substr(1);
+  return RelativePath;
+}
+
+SmallVector<StringRef, 1> HeaderSearch::findMatchingModulesInIndex(
+    StringRef RelativePath, const ModuleMapDirectoryState &MMState) const {
+  SmallVector<StringRef, 1> Modules;
+
+  // Check for exact matches in cache.
+  auto CachedMods = MMState.HeaderToModules.find(RelativePath);
+  if (CachedMods != MMState.HeaderToModules.end())
+    Modules.append(CachedMods->second.begin(), CachedMods->second.end());
+
+  // Check umbrella directories.
+  for (const auto &UmbrellaDir : MMState.UmbrellaDirModules) {
+    if (RelativePath.starts_with(UmbrellaDir.first) || UmbrellaDir.first == ".")
+      Modules.push_back(UmbrellaDir.second);
+  }
+
+  // Add all modules corresponding to an umbrella header. We don't know which
+  // other headers these umbrella headers include, so it's possible any one of
+  // them includes the file. `ModuleMap::findModuleForHeader` will select the
+  // correct module, accounting for any already known headers from other module
+  // maps or loaded PCMs.
+  //
+  // TODO: Clang should strictly enforce that umbrella headers include the
+  //       other headers in their directory, or that they are referenced in
+  //       the module map. The current behavior can be order of include/import
+  //       dependent. This would allow treating umbrella headers the same as
+  //       umbrella directories here.
+  Modules.append(MMState.UmbrellaHeaderModules.begin(),
+                 MMState.UmbrellaHeaderModules.end());
+
+  return Modules;
+}
+
 bool HeaderSearch::hasModuleMap(StringRef FileName,
                                 const DirectoryEntry *Root,
                                 bool IsSystem) {
@@ -1764,7 +1795,9 @@ bool HeaderSearch::hasModuleMap(StringRef FileName,
     if (DirState == DirectoryModuleMap.end() || !DirState->second.ModuleMapFile)
       continue;
 
-    if (!HSOpts.LazyLoadModuleMaps)
+    if (!HSOpts.LazyLoadModuleMaps &&
+        Diags.isIgnored(diag::warn_mmap_deprecated_symlink_to_modular_header,
+                        SourceLocation()))
       return true;
 
     auto &MMState = DirState->second;
@@ -1775,49 +1808,21 @@ bool HeaderSearch::hasModuleMap(StringRef FileName,
       buildModuleMapIndex(*Dir, MMState);
     }
 
+    // The header cache is needed for the symlink diagnostic.
+    if (!HSOpts.LazyLoadModuleMaps)
+      return true;
+
     // Compute relative path from directory to the file. Use DirName (which
     // we computed via parent_path) rather than Dir->getName() to ensure
     // consistent path separators.
-    StringRef RelativePath = FileName.substr(DirName.size());
-    // Strip leading separator
-    while (!RelativePath.empty() &&
-           llvm::sys::path::is_separator(RelativePath.front()))
-      RelativePath = RelativePath.substr(1);
+    StringRef RelativePath = computeRelativePath(FileName, DirName);
     SmallString<128> RelativePathNative(RelativePath);
     llvm::sys::path::native(RelativePathNative);
-    RelativePath = RelativePathNative;
 
-    // Check for exact matches in index
-    llvm::SmallVector<StringRef, 4> ModulesToLoad;
-    auto CachedMods = MMState.HeaderToModules.find(RelativePath);
-    if (CachedMods != MMState.HeaderToModules.end()) {
-      ModulesToLoad.append(CachedMods->second.begin(),
-                           CachedMods->second.end());
-    }
+    auto ModulesToLoad =
+        findMatchingModulesInIndex(RelativePathNative, MMState);
 
-    // Check umbrella directories
-    for (const auto &UmbrellaDir : MMState.UmbrellaDirModules) {
-      if (RelativePath.starts_with(UmbrellaDir.first) ||
-          UmbrellaDir.first == ".") {
-        ModulesToLoad.push_back(UmbrellaDir.second);
-      }
-    }
-
-    // Add all modules corresponding to an umbrella header. We don't know which
-    // other headers these umbrella headers include, so it's possible any one of
-    // them includes `FileName`. `ModuleMap::findModuleForHeader` will select
-    // the correct module, accounting for any already known headers from other
-    // module maps or loaded PCMs.
-    //
-    // TODO: Clang should strictly enforce that umbrella headers include the
-    //       other headers in their directory, or that they are referenced in
-    //       the module map. The current behavior can be order of include/import
-    //       dependent. This would allow treating umbrella headers the same as
-    //       umbrella directories here.
-    ModulesToLoad.append(MMState.UmbrellaHeaderModules.begin(),
-                         MMState.UmbrellaHeaderModules.end());
-
-    // Load all matching modules
+    // Load all matching modules.
     bool LoadedAny = false;
     for (StringRef ModName : ModulesToLoad) {
       if (ModMap.findOrLoadModule(ModName)) {
@@ -1896,6 +1901,77 @@ static bool suggestModule(HeaderSearch &HS, ModuleMap::KnownHeader Module,
   return true;
 }
 
+void HeaderSearch::diagnoseUncoveredSymlink(FileEntryRef File,
+                                            ModuleMap::KnownHeader &Module,
+                                            const DirectoryEntry *Root) {
+  if (!Module)
+    return;
+
+  if (!HSOpts.ImplicitModuleMaps || Module.getModule()->isPartOfFramework() ||
+      !Module.getModule()->isModuleMapModule())
+    return;
+
+  if (Diags.isIgnored(diag::warn_mmap_deprecated_symlink_to_modular_header,
+                      Module.getModule()->DefinitionLoc))
+    return;
+
+  if (File.isDeviceFile() || File.isNamedPipe())
+    return;
+
+  llvm::SmallString<128> AbsPath(File.getName());
+  FileMgr.makeAbsolutePath(AbsPath);
+  llvm::sys::path::remove_dots(AbsPath, /*remove_dot_dot=*/true);
+
+  // NOTE: This path may be redirected, LLVM's VFS does not model symlinks, so
+  //       it's possible this fails. The diagnostic is worded as such.
+  llvm::SmallString<128> LinkTarget;
+  if (llvm::sys::fs::readlink(AbsPath, LinkTarget))
+    return;
+
+  // We know this file is a symlink and resolved to a module. Check that there's
+  // a module map that would be discoverable that covers this header. This uses
+  // VFS paths as that's how module map search works.
+  StringRef FileName = File.getNameAsRequested();
+  StringRef DirName = FileName;
+  const DirectoryEntry *CurDir = nullptr;
+
+  // Walk up the directory tree looking for a module map that covers this path.
+  do {
+    DirName = llvm::sys::path::parent_path(DirName);
+    if (DirName.empty())
+      break;
+
+    auto Dir = FileMgr.getOptionalDirectoryRef(DirName);
+    if (!Dir)
+      break;
+    CurDir = *Dir;
+
+    auto DirState = DirectoryModuleMap.find(*Dir);
+    if (DirState == DirectoryModuleMap.end() || !DirState->second.ModuleMapFile)
+      continue;
+
+    // Use DirName (from parent_path) rather than Dir->getName() to ensure
+    // consistent path separators.
+    StringRef RelativePath = computeRelativePath(FileName, DirName);
+    if (RelativePath.empty())
+      continue;
+    SmallString<128> RelativePathNative(RelativePath);
+    llvm::sys::path::native(RelativePathNative);
+
+    auto MatchingModules =
+        findMatchingModulesInIndex(RelativePathNative, DirState->second);
+    if (!MatchingModules.empty())
+      return; // Symlink path is covered, no diagnostic needed.
+  } while (CurDir != Root);
+
+  // The symlink path is not covered by any module map.
+  Diags.Report(diag::warn_mmap_deprecated_symlink_to_modular_header)
+      << File.getName() << LinkTarget
+      << Module.getModule()->getFullModuleName();
+  Diags.Report(Module.getModule()->DefinitionLoc,
+               diag::note_mmap_module_defined_here);
+}
+
 bool HeaderSearch::findUsableModuleForHeader(
     FileEntryRef File, const DirectoryEntry *Root, Module *RequestingModule,
     ModuleMap::KnownHeader *SuggestedModule, bool IsSystemHeaderDir) {
@@ -1908,6 +1984,7 @@ bool HeaderSearch::findUsableModuleForHeader(
       hasModuleMap(File.getNameAsRequested(), Root, IsSystemHeaderDir);
       ModuleMap::KnownHeader Module =
           findModuleForHeader(File, /*AllowTextual=*/true);
+      diagnoseUncoveredSymlink(File, Module, Root);
       return suggestModule(*this, Module, File, RequestingModule,
                            SuggestedModule);
     }
@@ -1923,7 +2000,7 @@ bool HeaderSearch::findUsableModuleForHeader(
       // map data from PCMs.
       Module = ModMap.findModuleForHeader(File, /*AllowTextual=*/true);
     }
-
+    diagnoseUncoveredSymlink(File, Module, Root);
     return suggestModule(*this, Module, File, RequestingModule,
                          SuggestedModule);
   }

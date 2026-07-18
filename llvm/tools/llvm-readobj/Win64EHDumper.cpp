@@ -8,38 +8,52 @@
 
 #include "Win64EHDumper.h"
 #include "llvm-readobj.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/WithColor.h"
 
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::Win64EH;
 
-const EnumEntry<unsigned> UnwindFlags[] = {
-  { "ExceptionHandler", UNW_ExceptionHandler },
-  { "TerminateHandler", UNW_TerminateHandler },
-  { "ChainInfo"       , UNW_ChainInfo        }
+// clang-format off
+constexpr EnumStringDef<unsigned> UnwindFlagDefs[] = {
+  {{"ExceptionHandler"}, UNW_ExceptionHandler},
+  {{"TerminateHandler"}, UNW_TerminateHandler},
+  {{"ChainInfo"}       , UNW_ChainInfo       },
+  {{"Large"}           , UNW_FlagLarge       }
 };
+constexpr auto UnwindFlags = BUILD_ENUM_STRINGS(UnwindFlagDefs);
 
-const EnumEntry<unsigned> UnwindOpInfo[] = {
-  { "RAX",  0 },
-  { "RCX",  1 },
-  { "RDX",  2 },
-  { "RBX",  3 },
-  { "RSP",  4 },
-  { "RBP",  5 },
-  { "RSI",  6 },
-  { "RDI",  7 },
-  { "R8",   8 },
-  { "R9",   9 },
-  { "R10", 10 },
-  { "R11", 11 },
-  { "R12", 12 },
-  { "R13", 13 },
-  { "R14", 14 },
-  { "R15", 15 }
+constexpr EnumStringDef<unsigned> EpilogFlagDefs[] = {
+  {{"ParentFragmentTransfer"}, EPILOG_PARENT_FRAGMENT_TRANSFER},
+  {{"Large"}                 , EPILOG_INFO_LARGE              }
 };
+constexpr auto EpilogFlags = BUILD_ENUM_STRINGS(EpilogFlagDefs);
+
+constexpr EnumStringDef<unsigned> UnwindOpInfoDefs[] = {
+  {{"RAX"},  0},
+  {{"RCX"},  1},
+  {{"RDX"},  2},
+  {{"RBX"},  3},
+  {{"RSP"},  4},
+  {{"RBP"},  5},
+  {{"RSI"},  6},
+  {{"RDI"},  7},
+  {{"R8"},   8},
+  {{"R9"},   9},
+  {{"R10"}, 10},
+  {{"R11"}, 11},
+  {{"R12"}, 12},
+  {{"R13"}, 13},
+  {{"R14"}, 14},
+  {{"R15"}, 15}
+};
+constexpr auto UnwindOpInfo = BUILD_ENUM_STRINGS(UnwindOpInfoDefs);
+// clang-format on
 
 static uint64_t getOffsetOfLSDA(const UnwindInfo& UI) {
   return static_cast<const char*>(UI.getLanguageSpecificData())
@@ -336,11 +350,11 @@ void Dumper::printUnwindInfo(const Context &Ctx, const coff_section *Section,
                              off_t Offset, const UnwindInfo &UI) {
   DictScope UIS(SW, "UnwindInfo");
   SW.printNumber("Version", UI.getVersion());
-  SW.printFlags("Flags", UI.getFlags(), ArrayRef(UnwindFlags));
+  SW.printFlags("Flags", UI.getFlags(), EnumStrings(UnwindFlags));
   SW.printNumber("PrologSize", UI.PrologSize);
   if (UI.getFrameRegister()) {
     SW.printEnum("FrameRegister", UI.getFrameRegister(),
-                 ArrayRef(UnwindOpInfo));
+                 EnumStrings(UnwindOpInfo));
     SW.printHex("FrameOffset", UI.getFrameOffset());
   } else {
     SW.printString("FrameRegister", StringRef("-"));
@@ -407,8 +421,242 @@ void Dumper::printRuntimeFunction(const Context &Ctx,
   if (Offset > Contents.size())
     return;
 
-  const auto UI = reinterpret_cast<const UnwindInfo*>(Contents.data() + Offset);
-  printUnwindInfo(Ctx, XData, Offset, *UI);
+  // Check version before casting to UnwindInfo struct.
+  // Only byte 0 (VersionAndFlags) is layout-compatible between V1/V2 and V3.
+  uint8_t VersionByte = Contents[Offset];
+  uint8_t Version = VersionByte & 0x07;
+
+  if (Version == 3) {
+    ArrayRef<uint8_t> RawData = Contents.slice(Offset);
+    printUnwindInfoV3(Ctx, XData, Offset, RawData);
+  } else {
+    const auto UI =
+        reinterpret_cast<const UnwindInfo *>(Contents.data() + Offset);
+    printUnwindInfo(Ctx, XData, Offset, *UI);
+  }
+}
+
+static void printDecodedWOD(ScopedPrinter &SW, raw_ostream &OS,
+                            const DecodedWOD &W) {
+  switch (W.Opcode) {
+  case WOD_PUSH:
+    OS << "PUSH Reg=" << getRegisterNameV3(W.Register);
+    break;
+  case WOD_PUSH2:
+    OS << "PUSH2 Reg1=" << getRegisterNameV3(W.Register)
+       << ", Reg2=" << getRegisterNameV3(W.Register2);
+    break;
+  case WOD_PUSH_CONSECUTIVE_2:
+    OS << "PUSH_CONSECUTIVE_2 Reg=" << getRegisterNameV3(W.Register) << " (+"
+       << getRegisterNameV3(W.Register + 1) << ")";
+    break;
+  case WOD_ALLOC_SMALL:
+    OS << format("ALLOC_SMALL Size=0x%X", W.Size);
+    break;
+  case WOD_ALLOC_LARGE:
+    OS << format("ALLOC_LARGE Size=0x%X", W.Size);
+    break;
+  case WOD_ALLOC_HUGE:
+    OS << format("ALLOC_HUGE Size=0x%X", W.Size);
+    break;
+  case WOD_SET_FPREG:
+    OS << "SET_FPREG Reg=" << getRegisterNameV3(W.Register)
+       << format(", Offset=0x%X", W.Displacement);
+    break;
+  case WOD_SAVE_NONVOL:
+    OS << "SAVE_NONVOL Reg=" << getRegisterNameV3(W.Register)
+       << format(", Disp=0x%X", W.Displacement);
+    break;
+  case WOD_SAVE_NONVOL_FAR:
+    OS << "SAVE_NONVOL_FAR Reg=" << getRegisterNameV3(W.Register)
+       << format(", Disp=0x%X", W.Displacement);
+    break;
+  case WOD_SAVE_XMM128:
+    OS << "SAVE_XMM128 Reg=XMM" << static_cast<unsigned>(W.Register)
+       << format(", Disp=0x%X", W.Displacement);
+    break;
+  case WOD_SAVE_XMM128_FAR:
+    OS << "SAVE_XMM128_FAR Reg=XMM" << static_cast<unsigned>(W.Register)
+       << format(", Disp=0x%X", W.Displacement);
+    break;
+  case WOD_PUSH_CANONICAL_FRAME:
+    // TODO: When the Windows x64 Unwind V3 spec is finalized, replace this
+    // raw Type value with a descriptive name. Type values are defined by the
+    // OS (see the Windows SDK headers) but the set is not yet stable.
+    OS << "PUSH_CANONICAL_FRAME Type=" << static_cast<unsigned>(W.Type);
+    break;
+  }
+}
+
+/// Decode and print N WODs from the pool starting at byte offset PoolOffset,
+/// pairing each with the corresponding IP offset from IpOffsets.
+static void printWODSequence(ScopedPrinter &SW, raw_ostream &OS,
+                             ArrayRef<uint8_t> WODPool, unsigned PoolOffset,
+                             ArrayRef<uint16_t> IpOffsets, unsigned Count) {
+  unsigned CurrentOffset = PoolOffset;
+  for (unsigned I = 0; I < Count; ++I) {
+    Expected<DecodedWOD> WOrErr = decodeWOD(WODPool, CurrentOffset);
+    if (!WOrErr) {
+      WithColor::warning(errs()) << toString(WOrErr.takeError()) << "\n";
+      return;
+    }
+    const DecodedWOD &W = *WOrErr;
+    SW.startLine() << format("[%u] IP +0x%04X: ", I,
+                             I < IpOffsets.size() ? IpOffsets[I] : 0);
+    printDecodedWOD(SW, OS, W);
+    OS << "\n";
+    CurrentOffset += W.ByteSize;
+  }
+}
+
+void Dumper::printUnwindInfoV3(const Context &Ctx,
+                               const object::coff_section *Section,
+                               off_t Offset, ArrayRef<uint8_t> Data) {
+  DictScope UIS(SW, "UnwindInfo");
+
+  Expected<DecodedUnwindInfoV3> InfoOrErr = decodeUnwindInfoV3(Data);
+  if (!InfoOrErr) {
+    WithColor::warning(errs()) << toString(InfoOrErr.takeError()) << "\n";
+    return;
+  }
+  const DecodedUnwindInfoV3 &Info = *InfoOrErr;
+
+  SW.printNumber("Version", Info.Version);
+  SW.printFlags("Flags", Info.Flags, EnumStrings(UnwindFlags));
+  SW.printHex("SizeOfProlog", Info.SizeOfProlog);
+  SW.printNumber("PayloadWords", Info.PayloadWords);
+  SW.printNumber("NumberOfOps", Info.NumberOfOps);
+  SW.printNumber("NumberOfEpilogs", Info.NumberOfEpilogs);
+
+  // Validation: SizeOfProlog must be >= first (largest) prolog IP offset.
+  // SizeOfProlog is the total prolog size in bytes, while the first IP offset
+  // is the start of the last unwind-affecting instruction within the prolog.
+  if (Info.NumberOfOps > 0 && Info.SizeOfProlog < Info.PrologIpOffsets[0]) {
+    WithColor::warning(errs())
+        << format("SizeOfProlog (%u) is smaller than first prolog IP offset "
+                  "(%u)\n",
+                  Info.SizeOfProlog, Info.PrologIpOffsets[0]);
+  }
+
+  // Per the V3 spec, Flags bit 4 (0x10) is reserved and must be zero. Warn
+  // (rather than error) so we stay forward-compatible if Microsoft later
+  // defines this bit.
+  if (Info.Flags & 0x10)
+    WithColor::warning(errs())
+        << "V3 unwind info has reserved Flags bit 4 set\n";
+
+  // Print prolog ops
+  {
+    SW.startLine() << format("Prolog [%u ops]:\n", Info.NumberOfOps);
+    SW.indent();
+    printWODSequence(SW, OS, Info.WODPool, 0, ArrayRef(Info.PrologIpOffsets),
+                     Info.NumberOfOps);
+    SW.unindent();
+  }
+
+  // Print epilog descriptors
+  uint8_t BaseEpilogFlags = 0;
+  bool HaveBaseEpilog = false;
+  for (unsigned I = 0; I < Info.NumberOfEpilogs; ++I) {
+    const DecodedEpilogV3 &Epi = Info.Epilogs[I];
+
+    DictScope ES(SW, formatv("Epilog [{0}]", I).str());
+    SW.printFlags("Flags", Epi.Flags, EnumStrings(EpilogFlags));
+    // Format the signed EpilogOffset as hex with explicit sign so negative
+    // tail-relative offsets remain readable (e.g. "-0x14" rather than
+    // "0xFFFFFFEC").
+    {
+      int32_t SignedOff = static_cast<int32_t>(Epi.EpilogOffset);
+      uint32_t AbsOff =
+          SignedOff < 0
+              ? static_cast<uint32_t>(-static_cast<int64_t>(SignedOff))
+              : static_cast<uint32_t>(SignedOff);
+      SW.printString(
+          "EpilogOffset",
+          formatv("{0}0x{1:X-}", SignedOff < 0 ? "-" : "+", AbsOff).str());
+    }
+    SW.printNumber("NumberOfOps", Epi.NumberOfOps);
+
+    if (Epi.NumberOfOps == 0) {
+      if (I == 0) {
+        WithColor::warning(errs())
+            << "first epilog cannot inherit (NumberOfOps=0)\n";
+      } else {
+        // Per the V3 spec, Flags bits 0 and 1 are producer-replicated into an
+        // inherited descriptor, so they must match the base epilog. Warn if a
+        // non-compliant producer left them inconsistent.
+        if (HaveBaseEpilog && (Epi.Flags & 0x03) != (BaseEpilogFlags & 0x03))
+          WithColor::warning(errs())
+              << format("inherited epilog flags (0x%X) do not match base "
+                        "epilog flags (0x%X)\n",
+                        Epi.Flags & 0x03, BaseEpilogFlags & 0x03);
+        // Surface the values inherited from the base epilog so a
+        // reader can see what the unwinder will actually execute.
+        SW.startLine() << format(
+            "(inherits from base epilog: FirstOp=0x%X, "
+            "IpOffsetOfLastInstruction=0x%X, %u ops)\n",
+            Epi.FirstOp, static_cast<unsigned>(Epi.IpOffsetOfLastInstruction),
+            static_cast<unsigned>(Epi.IpOffsets.size()));
+      }
+    } else {
+      SW.printHex("FirstOp", Epi.FirstOp);
+      SW.printHex("IpOffsetOfLastInstruction", Epi.IpOffsetOfLastInstruction);
+      printWODSequence(SW, OS, Info.WODPool, Epi.FirstOp,
+                       ArrayRef(Epi.IpOffsets), Epi.NumberOfOps);
+      // This is a full descriptor; it becomes the base that subsequent
+      // inherited descriptors replicate their flags from.
+      BaseEpilogFlags = Epi.Flags;
+      HaveBaseEpilog = true;
+    }
+  }
+
+  // Optionally dump the WOD pool with byte offsets. This is useful for
+  // understanding how WODs are shared between the prolog and epilogs but is
+  // normally redundant with the per-prolog / per-epilog decoded output, so
+  // it's gated behind --unwind-show-wod-pool.
+  if (opts::UnwindShowWODPool) {
+    ListScope WS(SW, formatv("WODPool [{0} bytes]", Info.WODPool.size()).str());
+    unsigned PoolOffset = 0;
+    while (PoolOffset < Info.WODPool.size()) {
+      // PayloadWords counts 2-byte words, so the pool may have a single
+      // trailing zero padding byte to round up to a word boundary. A bare
+      // 0x00 byte is never a valid 1-byte WOD (WOD_ALLOC_SMALL requires the
+      // low nibble to be 8), so treat a final zero byte as padding rather
+      // than trying to decode it.
+      if (PoolOffset + 1 == Info.WODPool.size() &&
+          Info.WODPool[PoolOffset] == 0) {
+        SW.startLine() << format("+0x%04X: (padding)\n", PoolOffset);
+        break;
+      }
+      Expected<DecodedWOD> WOrErr = decodeWOD(Info.WODPool, PoolOffset);
+      if (!WOrErr) {
+        WithColor::warning(errs()) << toString(WOrErr.takeError()) << "\n";
+        break;
+      }
+      const DecodedWOD &W = *WOrErr;
+      SW.startLine() << format("+0x%04X: ", PoolOffset);
+      printDecodedWOD(SW, OS, W);
+      OS << "\n";
+      PoolOffset += W.ByteSize;
+    }
+  }
+
+  // Handle exception handler / chain info
+  uint64_t LSDAOffset = Offset + Info.PayloadSize;
+  if (Info.Flags & (UNW_ExceptionHandler | UNW_TerminateHandler)) {
+    if (LSDAOffset + 4 <= Data.size() + Offset) {
+      uint32_t HandlerRVA = support::endian::read32le(&Data[Info.PayloadSize]);
+      SW.printString("Handler",
+                     formatSymbol(Ctx, Section, LSDAOffset, HandlerRVA));
+    }
+  } else if (Info.Flags & UNW_ChainInfo) {
+    if (LSDAOffset + sizeof(RuntimeFunction) <= Data.size() + Offset) {
+      const auto *Chained =
+          reinterpret_cast<const RuntimeFunction *>(&Data[Info.PayloadSize]);
+      DictScope CS(SW, "Chained");
+      printRuntimeFunctionEntry(Ctx, Section, LSDAOffset, *Chained);
+    }
+  }
 }
 
 void Dumper::printData(const Context &Ctx) {

@@ -6,12 +6,12 @@ define <2 x half> @f16_vec_param(<2 x half> %v) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $d0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
-  ; CHECK-NEXT:   [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[UV]](<2 x s16>)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[UV2]](s16), [[UV3]](s16), [[DEF]](s16), [[DEF]](s16)
-  ; CHECK-NEXT:   $d0 = COPY [[BUILD_VECTOR]](<4 x s16>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x f16>) = COPY $d0
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(<2 x f16>), [[UV1:%[0-9]+]]:_(<2 x f16>) = G_UNMERGE_VALUES [[COPY]](<4 x f16>)
+  ; CHECK-NEXT:   [[UV2:%[0-9]+]]:_(f16), [[UV3:%[0-9]+]]:_(f16) = G_UNMERGE_VALUES [[UV]](<2 x f16>)
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(f16) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x f16>) = G_BUILD_VECTOR [[UV2]](f16), [[UV3]](f16), [[DEF]](f16), [[DEF]](f16)
+  ; CHECK-NEXT:   $d0 = COPY [[BUILD_VECTOR]](<4 x f16>)
   ; CHECK-NEXT:   RET_ReallyLR implicit $d0
   ret <2 x half> %v
 }
@@ -21,10 +21,10 @@ define <2 x i16> @i16_vec_param(<2 x i16> %v) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $d0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[COPY]](<2 x s32>)
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(<2 x s32>) = G_ANYEXT [[TRUNC]](<2 x s16>)
-  ; CHECK-NEXT:   $d0 = COPY [[ANYEXT]](<2 x s32>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $d0
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(<2 x i16>) = G_TRUNC [[COPY]](<2 x i32>)
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(<2 x i32>) = G_ANYEXT [[TRUNC]](<2 x i16>)
+  ; CHECK-NEXT:   $d0 = COPY [[ANYEXT]](<2 x i32>)
   ; CHECK-NEXT:   RET_ReallyLR implicit $d0
   ret <2 x i16> %v
 }

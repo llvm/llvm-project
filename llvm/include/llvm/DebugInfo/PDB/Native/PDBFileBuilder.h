@@ -53,6 +53,7 @@ public:
   LLVM_ABI TpiStreamBuilder &getIpiBuilder();
   LLVM_ABI PDBStringTableBuilder &getStringTableBuilder();
   LLVM_ABI GSIStreamBuilder &getGsiBuilder();
+  LLVM_ABI std::unique_ptr<SmallVector<char>> &getDXContainerData();
 
   // If HashPDBContentsToGUID is true on the InfoStreamBuilder, Guid is filled
   // with the computed PDB GUID on return.
@@ -96,8 +97,9 @@ private:
   std::unique_ptr<GSIStreamBuilder> Gsi;
   std::unique_ptr<TpiStreamBuilder> Tpi;
   std::unique_ptr<TpiStreamBuilder> Ipi;
+  std::unique_ptr<SmallVector<char>> Dxc;
 
-  PDBStringTableBuilder Strings;
+  std::unique_ptr<PDBStringTableBuilder> Strings;
   StringTableHashTraits InjectedSourceHashTraits;
   HashTable<SrcHeaderBlockEntry> InjectedSourceTable;
 

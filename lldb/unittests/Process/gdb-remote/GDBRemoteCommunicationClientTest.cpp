@@ -391,16 +391,14 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfo) {
   EXPECT_TRUE(result.get().Success());
   EXPECT_EQ(addr, region_info.GetRange().GetRangeBase());
   EXPECT_EQ(0x2000u, region_info.GetRange().GetByteSize());
-  EXPECT_EQ(lldb_private::MemoryRegionInfo::eYes, region_info.GetReadable());
-  EXPECT_EQ(lldb_private::MemoryRegionInfo::eNo, region_info.GetWritable());
-  EXPECT_EQ(lldb_private::MemoryRegionInfo::eYes, region_info.GetExecutable());
+  EXPECT_EQ(lldb_private::eLazyBoolYes, region_info.GetReadable());
+  EXPECT_EQ(lldb_private::eLazyBoolNo, region_info.GetWritable());
+  EXPECT_EQ(lldb_private::eLazyBoolYes, region_info.GetExecutable());
   EXPECT_EQ("/foo/bar.so", region_info.GetName().GetStringRef());
-  EXPECT_EQ(lldb_private::MemoryRegionInfo::eDontKnow,
-            region_info.GetMemoryTagged());
-  EXPECT_EQ(lldb_private::MemoryRegionInfo::eDontKnow,
-            region_info.IsStackMemory());
-  EXPECT_EQ(lldb_private::MemoryRegionInfo::eDontKnow,
-            region_info.IsShadowStack());
+  EXPECT_EQ(lldb_private::eLazyBoolDontKnow, region_info.GetMemoryTagged());
+  EXPECT_EQ(lldb_private::eLazyBoolDontKnow, region_info.IsStackMemory());
+  EXPECT_EQ(lldb_private::eLazyBoolDontKnow, region_info.IsShadowStack());
+  EXPECT_EQ(std::nullopt, region_info.GetProtectionKey());
 
   result = std::async(std::launch::async, [&] {
     return client.GetMemoryRegionInfo(addr, region_info);
@@ -409,9 +407,9 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfo) {
   HandlePacket(server, "qMemoryRegionInfo:a000",
                "start:a000;size:2000;flags:;type:stack;");
   EXPECT_TRUE(result.get().Success());
-  EXPECT_EQ(lldb_private::MemoryRegionInfo::eNo, region_info.GetMemoryTagged());
-  EXPECT_EQ(lldb_private::MemoryRegionInfo::eYes, region_info.IsStackMemory());
-  EXPECT_EQ(lldb_private::MemoryRegionInfo::eNo, region_info.IsShadowStack());
+  EXPECT_EQ(lldb_private::eLazyBoolNo, region_info.GetMemoryTagged());
+  EXPECT_EQ(lldb_private::eLazyBoolYes, region_info.IsStackMemory());
+  EXPECT_EQ(lldb_private::eLazyBoolNo, region_info.IsShadowStack());
 
   result = std::async(std::launch::async, [&] {
     return client.GetMemoryRegionInfo(addr, region_info);
@@ -420,10 +418,9 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfo) {
   HandlePacket(server, "qMemoryRegionInfo:a000",
                "start:a000;size:2000;flags: mt  zz mt ss  ;type:ha,ha,stack;");
   EXPECT_TRUE(result.get().Success());
-  EXPECT_EQ(lldb_private::MemoryRegionInfo::eYes,
-            region_info.GetMemoryTagged());
-  EXPECT_EQ(lldb_private::MemoryRegionInfo::eYes, region_info.IsStackMemory());
-  EXPECT_EQ(lldb_private::MemoryRegionInfo::eYes, region_info.IsShadowStack());
+  EXPECT_EQ(lldb_private::eLazyBoolYes, region_info.GetMemoryTagged());
+  EXPECT_EQ(lldb_private::eLazyBoolYes, region_info.IsStackMemory());
+  EXPECT_EQ(lldb_private::eLazyBoolYes, region_info.IsShadowStack());
 
   result = std::async(std::launch::async, [&] {
     return client.GetMemoryRegionInfo(addr, region_info);
@@ -432,7 +429,26 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfo) {
   HandlePacket(server, "qMemoryRegionInfo:a000",
                "start:a000;size:2000;type:heap;");
   EXPECT_TRUE(result.get().Success());
-  EXPECT_EQ(lldb_private::MemoryRegionInfo::eNo, region_info.IsStackMemory());
+  EXPECT_EQ(lldb_private::eLazyBoolNo, region_info.IsStackMemory());
+
+  result = std::async(std::launch::async, [&] {
+    return client.GetMemoryRegionInfo(addr, region_info);
+  });
+
+  HandlePacket(server, "qMemoryRegionInfo:a000",
+               "start:a000;size:2000;protection-key:42;");
+  EXPECT_TRUE(result.get().Success());
+  ASSERT_THAT(region_info.GetProtectionKey(),
+              ::testing::Optional(::testing::Eq(42)));
+
+  result = std::async(std::launch::async, [&] {
+    return client.GetMemoryRegionInfo(addr, region_info);
+  });
+
+  HandlePacket(server, "qMemoryRegionInfo:a000",
+               "start:a000;size:2000;protection-key:not_a_number;");
+  EXPECT_TRUE(result.get().Success());
+  ASSERT_THAT(region_info.GetProtectionKey(), std::nullopt);
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfoInvalidResponse) {
@@ -711,5 +727,27 @@ TEST_F(GDBRemoteCommunicationClientTest, MultiMemReadNotSupported) {
     return true;
   });
   ASSERT_FALSE(client.GetMultiMemReadSupported());
+  async_result.wait();
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, MultiBreakpointdSupported) {
+  std::future<bool> async_result = std::async(std::launch::async, [&] {
+    StringExtractorGDBRemote qSupported_packet_request;
+    server.GetPacket(qSupported_packet_request);
+    server.SendPacket("jMultiBreakpoint+;");
+    return true;
+  });
+  ASSERT_TRUE(client.GetMultiBreakpointSupported());
+  async_result.wait();
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, MultiBreakpointdNotSupported) {
+  std::future<bool> async_result = std::async(std::launch::async, [&] {
+    StringExtractorGDBRemote qSupported_packet_request;
+    server.GetPacket(qSupported_packet_request);
+    server.SendPacket(";");
+    return true;
+  });
+  ASSERT_FALSE(client.GetMultiBreakpointSupported());
   async_result.wait();
 }

@@ -23,11 +23,14 @@
 #ifdef DEPRECATION_WARNINGS 
 # ifdef __cplusplus
 # define DEPRECATED_51 [[deprecated("as of 5.1")]]
+# define DEPRECATED_60 [[deprecated("as of 6.0")]]
 # else
 # define DEPRECATED_51 __attribute__((deprecated("as of 5.1")))
+# define DEPRECATED_60 __attribute__((deprecated("as of 6.0")))
 #endif
 #else
 #define DEPRECATED_51
+#define DEPRECATED_60
 #endif
 
 /*****************************************************************************
@@ -69,6 +72,8 @@
     macro (ompt_state_work_serial, 0x000)    /* working outside parallel */                      \
     macro (ompt_state_work_parallel, 0x001)  /* working within parallel */                       \
     macro (ompt_state_work_reduction, 0x002) /* performing a reduction */                        \
+    macro (ompt_state_work_free_agent, 0x003) /* free agent thread */                            \
+    macro (ompt_state_work_induction, 0x004) /* induction */                                    \
                                                                                                 \
     /* barrier wait states (16..31) */                                                          \
     macro (ompt_state_wait_barrier, 0x010)   /* waiting at a barrier */                          \
@@ -218,44 +223,44 @@ extern "C" {
 #endif
 
 typedef enum ompt_callbacks_t {
-  ompt_callback_thread_begin             = 1,
-  ompt_callback_thread_end               = 2,
-  ompt_callback_parallel_begin           = 3,
-  ompt_callback_parallel_end             = 4,
-  ompt_callback_task_create              = 5,
-  ompt_callback_task_schedule            = 6,
-  ompt_callback_implicit_task            = 7,
-  ompt_callback_target                   = 8,
-  ompt_callback_target_data_op           = 9,
-  ompt_callback_target_submit            = 10,
-  ompt_callback_control_tool             = 11,
-  ompt_callback_device_initialize        = 12,
-  ompt_callback_device_finalize          = 13,
-  ompt_callback_device_load              = 14,
-  ompt_callback_device_unload            = 15,
-  ompt_callback_sync_region_wait         = 16,
-  ompt_callback_mutex_released           = 17,
-  ompt_callback_dependences              = 18,
-  ompt_callback_task_dependence          = 19,
-  ompt_callback_work                     = 20,
-  ompt_callback_master     DEPRECATED_51 = 21,
-  ompt_callback_masked                   = 21,
-  ompt_callback_target_map               = 22,
-  ompt_callback_sync_region              = 23,
-  ompt_callback_lock_init                = 24,
-  ompt_callback_lock_destroy             = 25,
-  ompt_callback_mutex_acquire            = 26,
-  ompt_callback_mutex_acquired           = 27,
-  ompt_callback_nest_lock                = 28,
-  ompt_callback_flush                    = 29,
-  ompt_callback_cancel                   = 30,
-  ompt_callback_reduction                = 31,
-  ompt_callback_dispatch                 = 32,
-  ompt_callback_target_emi               = 33,
-  ompt_callback_target_data_op_emi       = 34,
-  ompt_callback_target_submit_emi        = 35,
-  ompt_callback_target_map_emi           = 36,
-  ompt_callback_error                    = 37
+  ompt_callback_thread_begin                 = 1,
+  ompt_callback_thread_end                   = 2,
+  ompt_callback_parallel_begin               = 3,
+  ompt_callback_parallel_end                 = 4,
+  ompt_callback_task_create                  = 5,
+  ompt_callback_task_schedule                = 6,
+  ompt_callback_implicit_task                = 7,
+  ompt_callback_target         DEPRECATED_60 = 8,
+  ompt_callback_target_data_op DEPRECATED_60 = 9,
+  ompt_callback_target_submit  DEPRECATED_60 = 10,
+  ompt_callback_control_tool                 = 11,
+  ompt_callback_device_initialize            = 12,
+  ompt_callback_device_finalize              = 13,
+  ompt_callback_device_load                  = 14,
+  ompt_callback_device_unload                = 15,
+  ompt_callback_sync_region_wait             = 16,
+  ompt_callback_mutex_released               = 17,
+  ompt_callback_dependences                  = 18,
+  ompt_callback_task_dependence              = 19,
+  ompt_callback_work                         = 20,
+  ompt_callback_master         DEPRECATED_51 = 21,
+  ompt_callback_masked                       = 21,
+  ompt_callback_target_map     DEPRECATED_60 = 22,
+  ompt_callback_sync_region                  = 23,
+  ompt_callback_lock_init                    = 24,
+  ompt_callback_lock_destroy                 = 25,
+  ompt_callback_mutex_acquire                = 26,
+  ompt_callback_mutex_acquired               = 27,
+  ompt_callback_nest_lock                    = 28,
+  ompt_callback_flush                        = 29,
+  ompt_callback_cancel                       = 30,
+  ompt_callback_reduction                    = 31,
+  ompt_callback_dispatch                     = 32,
+  ompt_callback_target_emi                   = 33,
+  ompt_callback_target_data_op_emi           = 34,
+  ompt_callback_target_submit_emi            = 35,
+  ompt_callback_target_map_emi               = 36,
+  ompt_callback_error                        = 37
 } ompt_callbacks_t;
 
 typedef enum ompt_record_t {
@@ -319,16 +324,22 @@ typedef enum ompt_sync_region_t {
 } ompt_sync_region_t;
 
 typedef enum ompt_target_data_op_t {
-  ompt_target_data_alloc                      = 1,
-  ompt_target_data_transfer_to_device         = 2,
-  ompt_target_data_transfer_from_device       = 3,
-  ompt_target_data_delete                     = 4,
-  ompt_target_data_associate                  = 5,
-  ompt_target_data_disassociate               = 6,
-  ompt_target_data_alloc_async                = 17,
-  ompt_target_data_transfer_to_device_async   = 18,
-  ompt_target_data_transfer_from_device_async = 19,
-  ompt_target_data_delete_async               = 20
+  ompt_target_data_alloc                                    = 1,
+  ompt_target_data_transfer_to_device         DEPRECATED_60 = 2,
+  ompt_target_data_transfer_from_device       DEPRECATED_60 = 3,
+  ompt_target_data_delete                                   = 4,
+  ompt_target_data_associate                                = 5,
+  ompt_target_data_disassociate                             = 6,
+  ompt_target_data_transfer                                 = 7,
+  ompt_target_data_memset                                   = 8,
+  ompt_target_data_transfer_rect                            = 9,
+  ompt_target_data_alloc_async                              = 17,
+  ompt_target_data_transfer_to_device_async   DEPRECATED_60 = 18,
+  ompt_target_data_transfer_from_device_async DEPRECATED_60 = 19,
+  ompt_target_data_delete_async                             = 20,
+  ompt_target_data_transfer_async                           = 23,
+  ompt_target_data_memset_async                             = 24,
+  ompt_target_data_transfer_rect_async                      = 25
 } ompt_target_data_op_t;
 
 typedef enum ompt_work_t {
@@ -340,6 +351,7 @@ typedef enum ompt_work_t {
   ompt_work_distribute         = 6,
   ompt_work_taskloop           = 7,
   ompt_work_scope              = 8,
+  ompt_work_workdistribute     = 9,
   ompt_work_loop_static        = 10,
   ompt_work_loop_dynamic       = 11,
   ompt_work_loop_guided        = 12,
@@ -373,6 +385,8 @@ typedef enum ompt_task_flag_t {
   ompt_task_explicit                  = 0x00000004,
   ompt_task_target                    = 0x00000008,
   ompt_task_taskwait                  = 0x00000010,
+  ompt_task_importing                 = 0x02000000,
+  ompt_task_exporting                 = 0x04000000,
   ompt_task_undeferred                = 0x08000000,
   ompt_task_untied                    = 0x10000000,
   ompt_task_final                     = 0x20000000,
@@ -415,7 +429,11 @@ typedef enum ompt_target_map_flag_t {
   ompt_target_map_flag_alloc          = 0x04,
   ompt_target_map_flag_release        = 0x08,
   ompt_target_map_flag_delete         = 0x10,
-  ompt_target_map_flag_implicit       = 0x20
+  ompt_target_map_flag_implicit       = 0x20,
+  ompt_target_map_flag_always         = 0x40,
+  ompt_target_map_flag_present        = 0x80,
+  ompt_target_map_flag_close          = 0x100,
+  ompt_target_map_flag_shared         = 0x200
 } ompt_target_map_flag_t;
 
 typedef enum ompt_dependence_type_t {
@@ -461,6 +479,8 @@ typedef enum ompt_state_t {
   ompt_state_work_serial                      = 0x000,
   ompt_state_work_parallel                    = 0x001,
   ompt_state_work_reduction                   = 0x002,
+  ompt_state_work_free_agent                  = 0x003,
+  ompt_state_work_induction                   = 0x004,
 
   ompt_state_wait_barrier                     DEPRECATED_51 = 0x010,
   ompt_state_wait_barrier_implicit_parallel   = 0x011,
@@ -508,7 +528,9 @@ typedef enum ompd_scope_t {
   ompd_scope_thread = 3,
   ompd_scope_parallel = 4,
   ompd_scope_implicit_task = 5,
-  ompd_scope_task = 6
+  ompd_scope_task = 6,
+  ompd_scope_teams = 7,
+  ompd_scope_target = 8
 } ompd_scope_t;
 
 typedef uint64_t ompd_icv_id_t;
@@ -526,8 +548,16 @@ typedef enum ompd_rc_t {
   ompd_rc_device_write_error = 9,
   ompd_rc_nomem = 10,
   ompd_rc_incomplete = 11,
-  ompd_rc_callback_error = 12
+  ompd_rc_callback_error = 12,
+  ompd_rc_incompatible_handle = 13
 } ompd_rc_t;
+
+typedef enum ompd_team_generator_t {
+  ompd_generator_program = 0,
+  ompd_generator_parallel = 1,
+  ompd_generator_teams = 2,
+  ompd_generator_target = 3
+} ompd_team_generator_t;
 
 typedef void (*ompt_interface_fn_t) (void);
 
@@ -600,6 +630,15 @@ typedef struct ompt_dispatch_chunk_t {
   uint64_t start;
   uint64_t iterations;
 } ompt_dispatch_chunk_t;
+
+typedef struct ompt_subvolume_t {
+  const void *base;
+  uint64_t size;
+  uint64_t num_dims;
+  const uint64_t *volume;
+  const uint64_t *offsets;
+  const uint64_t *dimensions;
+} ompt_subvolume_t;
 
 typedef int (*ompt_enumerate_states_t) (
   int current_state,
@@ -702,6 +741,12 @@ typedef ompt_set_result_t (*ompt_set_trace_native_t) (
   ompt_device_t *device,
   int enable,
   int flags
+);
+
+typedef void (*ompt_get_buffer_limits_t) (
+  ompt_device_t *device,
+  int *max_concurrent_allocs,
+  size_t *recommended_bytes
 );
 
 typedef int (*ompt_start_trace_t) (
@@ -1037,9 +1082,9 @@ typedef void (*ompt_callback_target_data_op_t) (
   int dest_device_num,
   size_t bytes,
   const void *codeptr_ra
-);
+); // deprecated since 6.0
 
-typedef struct ompt_record_target_data_op_t {
+typedef struct ompt_record_target_data_op_emi_t {
   ompt_id_t host_op_id;
   ompt_target_data_op_t optype;
   void *src_addr;
@@ -1049,7 +1094,9 @@ typedef struct ompt_record_target_data_op_t {
   size_t bytes;
   ompt_device_time_t end_time;
   const void *codeptr_ra;
-} ompt_record_target_data_op_t;
+} ompt_record_target_data_op_emi_t;
+typedef ompt_record_target_data_op_emi_t ompt_record_target_data_op_t
+  DEPRECATED_60;
 
 typedef void (*ompt_callback_target_emi_t) (
   ompt_target_t kind,
@@ -1068,16 +1115,17 @@ typedef void (*ompt_callback_target_t) (
   ompt_data_t *task_data,
   ompt_id_t target_id,
   const void *codeptr_ra
-);
+); // deprecated since 6.0
 
-typedef struct ompt_record_target_t {
+typedef struct ompt_record_target_emi_t {
   ompt_target_t kind;
   ompt_scope_endpoint_t endpoint;
   int device_num;
   ompt_id_t task_id;
   ompt_id_t target_id;
   const void *codeptr_ra;
-} ompt_record_target_t;
+} ompt_record_target_emi_t;
+typedef ompt_record_target_emi_t ompt_record_target_t DEPRECATED_60;
 
 typedef void (*ompt_callback_target_map_emi_t) (
   ompt_data_t *target_data,
@@ -1097,9 +1145,9 @@ typedef void (*ompt_callback_target_map_t) (
   size_t *bytes,
   unsigned int *mapping_flags,
   const void *codeptr_ra
-);
+); // deprecated since 6.0
 
-typedef struct ompt_record_target_map_t {
+typedef struct ompt_record_target_map_emi_t {
   ompt_id_t target_id;
   unsigned int nitems;
   void **host_addr;
@@ -1107,7 +1155,8 @@ typedef struct ompt_record_target_map_t {
   size_t *bytes;
   unsigned int *mapping_flags;
   const void *codeptr_ra;
-} ompt_record_target_map_t;
+} ompt_record_target_map_emi_t;
+typedef ompt_record_target_map_emi_t ompt_record_target_map_t DEPRECATED_60;
 
 typedef void (*ompt_callback_target_submit_emi_t) (
   ompt_scope_endpoint_t endpoint,
@@ -1122,12 +1171,14 @@ typedef void (*ompt_callback_target_submit_t) (
   unsigned int requested_num_teams
 );
 
-typedef struct ompt_record_target_kernel_t {
+typedef struct ompt_record_target_submit_emi_t {
   ompt_id_t host_op_id;
   unsigned int requested_num_teams;
   unsigned int granted_num_teams;
   ompt_device_time_t end_time;
-} ompt_record_target_kernel_t;
+} ompt_record_target_submit_emi_t;
+typedef ompt_record_target_submit_emi_t ompt_record_target_kernel_t
+  DEPRECATED_60;
 
 typedef int (*ompt_callback_control_tool_t) (
   uint64_t command,
@@ -1374,36 +1425,42 @@ ompd_rc_t ompd_get_icv_string_from_scope(void *handle, ompd_scope_t scope,
 ompd_rc_t ompd_get_tool_data(void *handle, ompd_scope_t scope,
                              ompd_word_t *value, ompd_address_t *ptr);
 
+typedef union ompt_any_record_ompt_t {
+  ompt_record_thread_begin_t thread_begin;
+  ompt_record_parallel_begin_t parallel_begin;
+  ompt_record_parallel_end_t parallel_end;
+  ompt_record_work_t work;
+  ompt_record_dispatch_t dispatch;
+  ompt_record_task_create_t task_create;
+  ompt_record_dependences_t dependences;
+  ompt_record_task_dependence_t task_dependence;
+  ompt_record_task_schedule_t task_schedule;
+  ompt_record_implicit_task_t implicit_task;
+  ompt_record_masked_t masked;
+  ompt_record_sync_region_t sync_region;
+  ompt_record_mutex_acquire_t mutex_acquire;
+  ompt_record_mutex_t mutex;
+  ompt_record_nest_lock_t nest_lock;
+  ompt_record_flush_t flush;
+  ompt_record_cancel_t cancel;
+  ompt_record_target_t target DEPRECATED_60;
+  ompt_record_target_data_op_t target_data_op DEPRECATED_60;
+  ompt_record_target_map_t target_map DEPRECATED_60;
+  ompt_record_target_kernel_t target_kernel DEPRECATED_60;
+  ompt_record_target_emi_t target_emi;
+  ompt_record_target_data_op_emi_t target_data_op_emi;
+  ompt_record_target_map_emi_t target_map_emi;
+  ompt_record_target_submit_emi_t target_submit_emi;
+  ompt_record_control_tool_t control_tool;
+  ompt_record_error_t error;
+} ompt_any_record_ompt_t;
+
 typedef struct ompt_record_ompt_t {
   ompt_callbacks_t type;
   ompt_device_time_t time;
   ompt_id_t thread_id;
   ompt_id_t target_id;
-  union {
-    ompt_record_thread_begin_t thread_begin;
-    ompt_record_parallel_begin_t parallel_begin;
-    ompt_record_parallel_end_t parallel_end;
-    ompt_record_work_t work;
-    ompt_record_dispatch_t dispatch;
-    ompt_record_task_create_t task_create;
-    ompt_record_dependences_t dependences;
-    ompt_record_task_dependence_t task_dependence;
-    ompt_record_task_schedule_t task_schedule;
-    ompt_record_implicit_task_t implicit_task;
-    ompt_record_masked_t masked;
-    ompt_record_sync_region_t sync_region;
-    ompt_record_mutex_acquire_t mutex_acquire;
-    ompt_record_mutex_t mutex;
-    ompt_record_nest_lock_t nest_lock;
-    ompt_record_flush_t flush;
-    ompt_record_cancel_t cancel;
-    ompt_record_target_t target;
-    ompt_record_target_data_op_t target_data_op;
-    ompt_record_target_map_t target_map;
-    ompt_record_target_kernel_t target_kernel;
-    ompt_record_control_tool_t control_tool;
-    ompt_record_error_t error;
-  } record;
+  ompt_any_record_ompt_t record;
 } ompt_record_ompt_t;
 
 typedef ompt_record_ompt_t *(*ompt_get_record_ompt_t) (

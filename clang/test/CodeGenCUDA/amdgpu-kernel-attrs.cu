@@ -11,7 +11,7 @@
 // RUN:     -fcuda-is-device -emit-llvm -o - %s | FileCheck %s \
 // RUN:     -check-prefix=NAMD
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm \
-// RUN:     -verify -o - -x hip %s | FileCheck -check-prefix=NAMD %s
+// RUN:     -verify -Wno-deprecated-declarations -o - -x hip %s | FileCheck -check-prefix=NAMD %s
 
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -foffload-uniform-block \
 // RUN:     -fcuda-is-device -emit-llvm -o - -x hip %s \

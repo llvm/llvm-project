@@ -30,6 +30,7 @@
 #include "clang/Lex/ModuleMap.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/PPEmbedParameters.h"
+#include "clang/Lex/TextEncoding.h"
 #include "clang/Lex/Token.h"
 #include "clang/Lex/TokenLexer.h"
 #include "clang/Support/Compiler.h"
@@ -198,6 +199,7 @@ class Preprocessor {
   std::unique_ptr<ScratchBuffer> ScratchBuf;
   HeaderSearch      &HeaderInfo;
   ModuleLoader      &TheModuleLoader;
+  TextEncoding TE;
 
   /// External source of macros.
   ExternalPreprocessorSource *ExternalSource;
@@ -381,11 +383,8 @@ private:
   llvm::DenseMap<FileID, SmallVector<const char *>> CheckPoints;
   unsigned CheckPointCounter = 0;
 
-  /// Whether the import is an `@import` or a standard c++ modules import.
-  bool IsAtImport = false;
-
-  /// Whether the last token we lexed was an '@'.
-  bool LastTokenWasAt = false;
+  /// Whether to record lexer check points for diagnostic snippet highlighting.
+  bool RecordCheckPoints = false;
 
   /// Whether we're importing a standard C++20 named Modules.
   bool ImportingCXXNamedModules = false;
@@ -880,7 +879,7 @@ private:
   SmallVector<MacroExpandsInfo, 2> DelayedMacroExpandsCallbacks;
 
   /// Information about a name that has been used to define a module macro.
-  struct ModuleMacroInfo {
+  struct FullModuleMacroInfo {
     /// The most recent macro directive for this identifier.
     MacroDirective *MD;
 
@@ -897,15 +896,15 @@ private:
     /// The module macros that are overridden by this macro.
     llvm::TinyPtrVector<ModuleMacro *> OverriddenMacros;
 
-    ModuleMacroInfo(MacroDirective *MD) : MD(MD) {}
+    FullModuleMacroInfo(MacroDirective *MD) : MD(MD) {}
   };
 
   /// The state of a macro for an identifier.
   class MacroState {
-    mutable llvm::PointerUnion<MacroDirective *, ModuleMacroInfo *> State;
+    mutable llvm::PointerUnion<MacroDirective *, FullModuleMacroInfo *> State;
 
-    ModuleMacroInfo *getModuleInfo(Preprocessor &PP,
-                                   const IdentifierInfo *II) const {
+    FullModuleMacroInfo *getFullModuleInfo(Preprocessor &PP,
+                                           const IdentifierInfo *II) const {
       if (II->isOutOfDate())
         PP.updateOutOfDateIdentifier(*II);
       // FIXME: Find a spare bit on IdentifierInfo and store a
@@ -916,10 +915,10 @@ private:
           !PP.CurSubmoduleState->VisibleModules.getGeneration())
         return nullptr;
 
-      auto *Info = dyn_cast_if_present<ModuleMacroInfo *>(State);
+      auto *Info = dyn_cast_if_present<FullModuleMacroInfo *>(State);
       if (!Info) {
         Info = new (PP.getPreprocessorAllocator())
-            ModuleMacroInfo(cast<MacroDirective *>(State));
+            FullModuleMacroInfo(cast<MacroDirective *>(State));
         State = Info;
       }
 
@@ -945,32 +944,27 @@ private:
     }
 
     ~MacroState() {
-      if (auto *Info = dyn_cast_if_present<ModuleMacroInfo *>(State))
-        Info->~ModuleMacroInfo();
+      if (auto *Info = dyn_cast_if_present<FullModuleMacroInfo *>(State))
+        Info->~FullModuleMacroInfo();
     }
 
     MacroDirective *getLatest() const {
-      if (auto *Info = dyn_cast_if_present<ModuleMacroInfo *>(State))
+      if (auto *Info = dyn_cast_if_present<FullModuleMacroInfo *>(State))
         return Info->MD;
       return cast<MacroDirective *>(State);
     }
 
     void setLatest(MacroDirective *MD) {
-      if (auto *Info = dyn_cast_if_present<ModuleMacroInfo *>(State))
+      if (auto *Info = dyn_cast_if_present<FullModuleMacroInfo *>(State))
         Info->MD = MD;
       else
         State = MD;
     }
 
-    bool isAmbiguous(Preprocessor &PP, const IdentifierInfo *II) const {
-      auto *Info = getModuleInfo(PP, II);
-      return Info ? Info->IsAmbiguous : false;
-    }
-
-    ArrayRef<ModuleMacro *>
-    getActiveModuleMacros(Preprocessor &PP, const IdentifierInfo *II) const {
-      if (auto *Info = getModuleInfo(PP, II))
-        return Info->ActiveModuleMacros;
+    ModuleMacroInfo getModuleInfo(Preprocessor &PP,
+                                  const IdentifierInfo *II) const {
+      if (auto *Info = getFullModuleInfo(PP, II))
+        return ModuleMacroInfo{Info->ActiveModuleMacros, Info->IsAmbiguous};
       return {};
     }
 
@@ -983,7 +977,7 @@ private:
     }
 
     void overrideActiveModuleMacros(Preprocessor &PP, IdentifierInfo *II) {
-      if (auto *Info = getModuleInfo(PP, II)) {
+      if (auto *Info = getFullModuleInfo(PP, II)) {
         Info->OverriddenMacros.insert(Info->OverriddenMacros.end(),
                                       Info->ActiveModuleMacros.begin(),
                                       Info->ActiveModuleMacros.end());
@@ -993,19 +987,19 @@ private:
     }
 
     ArrayRef<ModuleMacro*> getOverriddenMacros() const {
-      if (auto *Info = dyn_cast_if_present<ModuleMacroInfo *>(State))
+      if (auto *Info = dyn_cast_if_present<FullModuleMacroInfo *>(State))
         return Info->OverriddenMacros;
       return {};
     }
 
     void setOverriddenMacros(Preprocessor &PP,
                              ArrayRef<ModuleMacro *> Overrides) {
-      auto *Info = dyn_cast_if_present<ModuleMacroInfo *>(State);
+      auto *Info = dyn_cast_if_present<FullModuleMacroInfo *>(State);
       if (!Info) {
         if (Overrides.empty())
           return;
         Info = new (PP.getPreprocessorAllocator())
-            ModuleMacroInfo(cast<MacroDirective *>(State));
+            FullModuleMacroInfo(cast<MacroDirective *>(State));
         State = Info;
       }
       Info->OverriddenMacros.clear();
@@ -1275,6 +1269,7 @@ public:
   SelectorTable &getSelectorTable() { return Selectors; }
   Builtin::Context &getBuiltinInfo() { return *BuiltinInfo; }
   llvm::BumpPtrAllocator &getPreprocessorAllocator() { return BP; }
+  TextEncoding &getTextEncoding() { return TE; }
 
   void setExternalSource(ExternalPreprocessorSource *Source) {
     ExternalSource = Source;
@@ -1367,7 +1362,7 @@ public:
                                                 std::move(Callbacks));
     Callbacks = std::move(C);
   }
-  void removePPCallbacks() { Callbacks.reset(); }
+  void removePPCallbacks();
   /// \}
 
   /// Get the number of tokens processed so far.
@@ -1429,8 +1424,7 @@ public:
     while (isa_and_nonnull<VisibilityMacroDirective>(MD))
       MD = MD->getPrevious();
     return MacroDefinition(dyn_cast_or_null<DefMacroDirective>(MD),
-                           S.getActiveModuleMacros(*this, II),
-                           S.isAmbiguous(*this, II));
+                           S.getModuleInfo(*this, II));
   }
 
   MacroDefinition getMacroDefinitionAtLoc(const IdentifierInfo *II,
@@ -1443,9 +1437,7 @@ public:
     if (auto *MD = S.getLatest())
       DI = MD->findDirectiveAtLoc(Loc, getSourceManager());
     // FIXME: Compute the set of active module macros at the specified location.
-    return MacroDefinition(DI.getDirective(),
-                           S.getActiveModuleMacros(*this, II),
-                           S.isAmbiguous(*this, II));
+    return MacroDefinition(DI.getDirective(), S.getModuleInfo(*this, II));
   }
 
   /// Given an identifier, return its latest non-imported MacroDirective
@@ -1524,15 +1516,8 @@ public:
   /// MacroInfo::getUndefLoc() at the head of the list.
   using macro_iterator = MacroMap::const_iterator;
 
-  macro_iterator macro_begin(bool IncludeExternalMacros = true) const;
-  macro_iterator macro_end(bool IncludeExternalMacros = true) const;
-
   llvm::iterator_range<macro_iterator>
-  macros(bool IncludeExternalMacros = true) const {
-    macro_iterator begin = macro_begin(IncludeExternalMacros);
-    macro_iterator end = macro_end(IncludeExternalMacros);
-    return llvm::make_range(begin, end);
-  }
+  macros(bool IncludeExternalMacros = true) const;
 
   /// \}
 
@@ -1541,7 +1526,7 @@ public:
     assert(M->isModuleMapModule());
     if (!BuildingSubmoduleStack.empty()) {
       if (M != BuildingSubmoduleStack.back().M)
-        BuildingSubmoduleStack.back().M->AffectingClangModules.insert(M);
+        BuildingSubmoduleStack.back().M->AffectingClangModules.push_back(M);
     } else {
       AffectingClangModules.insert(M);
     }
@@ -1857,7 +1842,6 @@ public:
     return FirstPPTokenLoc;
   }
 
-  bool LexAfterModuleImport(Token &Result);
   void CollectPPImportSuffix(SmallVectorImpl<Token> &Toks,
                              bool StopUntilEOD = false);
   bool CollectPPImportSuffixAndEnterStream(SmallVectorImpl<Token> &Toks,
@@ -2633,7 +2617,8 @@ private:
 
   /// Update the set of active module macros and ambiguity flag for a module
   /// macro name.
-  void updateModuleMacroInfo(const IdentifierInfo *II, ModuleMacroInfo &Info);
+  void updateModuleMacroInfo(const IdentifierInfo *II,
+                             FullModuleMacroInfo &Info);
 
   DefMacroDirective *AllocateDefMacroDirective(MacroInfo *MI,
                                                SourceLocation Loc);
@@ -2801,7 +2786,8 @@ private:
 
   /// Add a lexer to the top of the include stack and
   /// start lexing tokens from it instead of the current buffer.
-  void EnterSourceFileWithLexer(Lexer *TheLexer, ConstSearchDirIterator Dir);
+  void EnterSourceFileWithLexer(std::unique_ptr<Lexer> TheLexer,
+                                ConstSearchDirIterator Dir);
 
   /// Set the FileID for the preprocessor predefines.
   void setPredefinesFileID(FileID FID) {
@@ -2839,11 +2825,7 @@ private:
   // Caching stuff.
   void CachingLex(Token &Result);
 
-  bool InCachingLexMode() const {
-    // If the Lexer pointers are 0 and IncludeMacroStack is empty, it means
-    // that we are past EOF, not that we are in CachingLex mode.
-    return !CurPPLexer && !CurTokenLexer && !IncludeMacroStack.empty();
-  }
+  bool InCachingLexMode() const { return CurLexerCallback == CLK_CachingLexer; }
 
   void EnterCachingLexMode();
   void EnterCachingLexModeUnchecked();
@@ -2914,6 +2896,7 @@ private:
   void HandleIncludeMacrosDirective(SourceLocation HashLoc, Token &Tok);
   void HandleImportDirective(SourceLocation HashLoc, Token &Tok);
   void HandleMicrosoftImportDirective(Token &Tok);
+  void HandleObjCImportDirective(Token &AtTok, Token &ImportTok);
 
 public:
   /// Check that the given module is available, producing a diagnostic if not.
@@ -3176,9 +3159,6 @@ private:
   }
   static bool CLK_DependencyDirectivesLexer(Preprocessor &P, Token &Result) {
     return P.CurLexer->LexDependencyDirectiveToken(Result);
-  }
-  static bool CLK_LexAfterModuleImport(Preprocessor &P, Token &Result) {
-    return P.LexAfterModuleImport(Result);
   }
 };
 

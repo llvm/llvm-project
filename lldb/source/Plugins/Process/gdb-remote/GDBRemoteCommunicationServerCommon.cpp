@@ -118,6 +118,9 @@ GDBRemoteCommunicationServerCommon::GDBRemoteCommunicationServerCommon()
       StringExtractorGDBRemote::eServerPacketType_QSetSTDOUT,
       &GDBRemoteCommunicationServerCommon::Handle_QSetSTDOUT);
   RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_QSetSTDIOWindowSize,
+      &GDBRemoteCommunicationServerCommon::Handle_QSetSTDIOWindowSize);
+  RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qSpeedTest,
       &GDBRemoteCommunicationServerCommon::Handle_qSpeedTest);
   RegisterMemberFunctionHandler(
@@ -964,6 +967,41 @@ GDBRemoteCommunicationServerCommon::Handle_QSetSTDERR(
 }
 
 GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerCommon::Handle_QSetSTDIOWindowSize(
+    StringExtractorGDBRemote &packet) {
+  // Format: "QSetSTDIOWindowSize:cols=N;rows=N"
+  packet.SetFilePos(::strlen("QSetSTDIOWindowSize:"));
+  llvm::StringRef body = packet.GetStringRef().substr(packet.GetFilePos());
+
+  uint16_t cols = 0;
+  uint16_t rows = 0;
+  llvm::SmallVector<llvm::StringRef, 2> fields;
+  body.split(fields, ';');
+  for (llvm::StringRef field : fields) {
+    auto [key, value] = field.split('=');
+    uint16_t *dest;
+    if (key == "cols")
+      dest = &cols;
+    else if (key == "rows")
+      dest = &rows;
+    else
+      continue;
+    unsigned parsed = 0;
+    if (value.empty() || value.getAsInteger(10, parsed) || parsed > UINT16_MAX)
+      continue;
+    *dest = static_cast<uint16_t>(parsed);
+  }
+  // 0x0 is a valid request: it signals "no terminal" and a redirection
+  // backend that supports an alternative path (anonymous pipes on Windows
+  // ConPTY) can switch on it. Reject only the malformed cases.
+  if ((cols == 0) != (rows == 0))
+    return SendErrorResponse(28);
+
+  m_process_launch_info.SetSTDIOWindowSize(cols, rows);
+  return SendOKResponse();
+}
+
+GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerCommon::Handle_qLaunchSuccess(
     StringExtractorGDBRemote &packet) {
   if (m_process_launch_error.Success())
@@ -1353,9 +1391,9 @@ GDBRemoteCommunicationServerCommon::GetModuleInfo(llvm::StringRef module_path,
 
   const ModuleSpec module_spec(actual_module_path_spec, arch);
 
-  ModuleSpecList module_specs;
-  if (!ObjectFile::GetModuleSpecifications(actual_module_path_spec, file_offset,
-                                           file_size, module_specs))
+  ModuleSpecList module_specs = ObjectFile::GetModuleSpecifications(
+      actual_module_path_spec, file_offset, file_size);
+  if (module_specs.GetSize() == 0)
     return ModuleSpec();
 
   ModuleSpec matched_module_spec;

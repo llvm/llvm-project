@@ -40,6 +40,7 @@ __device__ int foo() { return __gpu_thread_id_x(); }
 #elif defined(SYCL)
 extern "C" [[clang::sycl_external]] int foo() { return __gpu_thread_id_x(); }
 #else
+//
 // CUDA-LABEL: define dso_local i32 @foo(
 // CUDA-SAME: ) #[[ATTR0:[0-9]+]] {
 // CUDA-NEXT:  [[ENTRY:.*:]]

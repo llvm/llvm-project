@@ -773,7 +773,7 @@ static addr_t DoFixAddr(addr_t addr, bool is_code, ProcessSP process_sp) {
 
   if (addr & pac_sign_extension) {
     addr_t highmem_mask = is_code ? process_sp->GetHighmemCodeAddressMask()
-                                  : process_sp->GetHighmemCodeAddressMask();
+                                  : process_sp->GetHighmemDataAddressMask();
     if (highmem_mask != LLDB_INVALID_ADDRESS_MASK)
       return addr | highmem_mask;
     return addr | mask;

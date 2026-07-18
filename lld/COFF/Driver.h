@@ -125,6 +125,10 @@ private:
 
   bool isDecorated(StringRef sym);
 
+  InputFile *addObjectFile(COFFLinkerContext &ctx, MemoryBufferRef mb,
+                           StringRef archiveName, uint64_t offsetInArchive,
+                           bool lazy);
+
   std::string getMapFile(const llvm::opt::InputArgList &args,
                          llvm::opt::OptSpecifier os,
                          llvm::opt::OptSpecifier osFile);
@@ -178,8 +182,10 @@ private:
   void addBuffer(std::unique_ptr<MemoryBuffer> mb, bool wholeArchive,
                  bool lazy);
   void addArchiveBuffer(MemoryBufferRef mbref, StringRef symName,
-                        StringRef parentName, uint64_t offsetInArchive);
-  void addThinArchiveBuffer(MemoryBufferRef mbref, StringRef symName);
+                        StringRef parentName, uint64_t offsetInArchive,
+                        bool lazy);
+  void addThinArchiveBuffer(MemoryBufferRef mbref, StringRef symName,
+                            bool lazy);
 
   void enqueueTask(std::function<void()> task);
   bool run();

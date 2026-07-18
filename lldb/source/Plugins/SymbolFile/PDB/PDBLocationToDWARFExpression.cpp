@@ -80,7 +80,7 @@ DWARFExpression ConvertPDBLocationToDWARFExpression(
     return DWARFExpression();
 
   RegisterKind register_kind = eRegisterKindDWARF;
-  StreamBuffer<32> stream(Stream::eBinary, address_size, byte_order);
+  StreamBuffer<32> stream(Stream::eBinary, byte_order);
   switch (symbol.getLocationType()) {
   case PDB_LocType::Static:
   case PDB_LocType::TLS: {

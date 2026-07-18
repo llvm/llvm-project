@@ -1,4 +1,5 @@
 add_subdirectory(mman)
+add_subdirectory(personality)
 add_subdirectory(random)
 add_subdirectory(resource)
 add_subdirectory(select)

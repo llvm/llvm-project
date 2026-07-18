@@ -260,83 +260,117 @@ public:
   }
 };
 
-/// Move a split axis between tensor dimensions:
-/// e.g. [[0], []] -> [[], [0]].
-class MoveSplitAxisPattern : public ReshardingPattern {
-  // Detect if the resharding moves a single split axis from one tensor
-  // dimension to another tensor dimension. If detected, returns the
-  // corresponding (tgt_tensor_dim, grid_axis) pair.
+// Compute the result shape of an all-to-all that gathers along srcTensorDim
+// and scatters along tgtTensorDim with the given split count.
+static ShapedType allToAllResultShape(ShapedType srcShape, int64_t splitCount,
+                                      int64_t srcTensorDim,
+                                      int64_t tgtTensorDim) {
+  SmallVector<int64_t> tgtShape = llvm::to_vector(srcShape.getShape());
+  tgtShape[srcTensorDim] = gatherDimension(tgtShape[srcTensorDim], splitCount);
+  tgtShape[tgtTensorDim] = shardDimension(tgtShape[tgtTensorDim], splitCount);
+  return srcShape.cloneWith(tgtShape, srcShape.getElementType());
+}
+
+/// Move the last split axis of one tensor dimension to the front of another
+/// tensor dimension's split axes, e.g. [[0], []] -> [[], [0]] or
+/// [[0, 1], [2]] -> [[0], [1, 2]].
+class MoveLastSplitAxisPattern : public ReshardingPattern {
+  // Detect if the resharding moves the last grid axis of srcTensorDim to the
+  // front of another tensor dimension's split axes. If detected, returns
+  // (tgtTensorDim, movedGridAxis).
+  //
+  // Pattern: src[srcTensorDim] = [a1,...,a(n-1),an]  (n >= 1)
+  //          tgt[srcTensorDim] = [a1,...,a(n-1)]
+  //          src[tgtTensorDim] = [b1,...,bm]          (m >= 0)
+  //          tgt[tgtTensorDim] = [an, b1,...,bm]
   static std::optional<std::tuple<int64_t, GridAxis>>
   detect(const Sharding &srcSharding, const Sharding &tgtSharding,
          int64_t srcTensorDim) {
     if (static_cast<size_t>(srcTensorDim) >= srcSharding.getSplitAxes().size())
       return std::nullopt;
     auto srcAxes = srcSharding.getSplitAxes()[srcTensorDim].asArrayRef();
-    if (srcAxes.size() != 1)
+    // Need at least 1 axis to move.
+    if (srcAxes.empty())
       return std::nullopt;
+
+    // After the move the source tensor dim should lose its last axis.
+    if (static_cast<size_t>(srcTensorDim) >= tgtSharding.getSplitAxes().size())
+      return std::nullopt;
+    auto tgtSrcAxes = tgtSharding.getSplitAxes()[srcTensorDim].asArrayRef();
+    if (tgtSrcAxes.size() + 1 != srcAxes.size())
+      return std::nullopt;
+    // The remaining axes at srcTensorDim must be the same (prefix of source).
+    if (!llvm::equal(tgtSrcAxes,
+                     llvm::make_range(srcAxes.begin(), srcAxes.end() - 1)))
+      return std::nullopt;
+
+    GridAxis movedAxis = srcAxes.back();
+
+    // Find a target tensor dimension whose split axes start with movedAxis
+    // and whose remaining axes match the source sharding at that dimension.
     for (size_t tgtTensorDim = 0;
          tgtTensorDim < tgtSharding.getSplitAxes().size(); ++tgtTensorDim) {
       if (static_cast<int64_t>(tgtTensorDim) == srcTensorDim)
         continue;
       auto tgtAxes = tgtSharding.getSplitAxes()[tgtTensorDim].asArrayRef();
-      if (tgtAxes.size() != 1 || srcAxes.front() != tgtAxes.front())
+      // The target dimension must start with the moved axis.
+      if (tgtAxes.empty() || tgtAxes.front() != movedAxis)
         continue;
-      return std::make_tuple(static_cast<int64_t>(tgtTensorDim),
-                             srcAxes.front());
+      // The remainder of tgtAxes must equal the source sharding at
+      // tgtTensorDim.
+      ArrayRef<GridAxis> srcTgtAxes =
+          static_cast<size_t>(tgtTensorDim) < srcSharding.getSplitAxes().size()
+              ? srcSharding.getSplitAxes()[tgtTensorDim].asArrayRef()
+              : ArrayRef<GridAxis>{};
+      if (!llvm::equal(srcTgtAxes,
+                       llvm::make_range(tgtAxes.begin() + 1, tgtAxes.end())))
+        continue;
+      return std::make_tuple(static_cast<int64_t>(tgtTensorDim), movedAxis);
     }
     return std::nullopt;
   }
 
+  // Compute the result sharding after moving movedAxis from srcTensorDim
+  // to the front of tgtTensorDim.
   static Sharding tgtSharding(MLIRContext *ctx, const Sharding &srcSharding,
-                              int64_t srcTensorDim, int64_t tgtTensorDim) {
-    SmallVector<GridAxesAttr> tgtShardingSplitAxes =
+                              int64_t srcTensorDim, int64_t tgtTensorDim,
+                              GridAxis movedAxis) {
+    SmallVector<GridAxesAttr> splitAxes =
         llvm::to_vector(srcSharding.getSplitAxes());
-    while (static_cast<int64_t>(tgtShardingSplitAxes.size()) <= tgtTensorDim) {
-      tgtShardingSplitAxes.push_back(GridAxesAttr::get(ctx, {}));
-    }
+    while (static_cast<int64_t>(splitAxes.size()) <= tgtTensorDim)
+      splitAxes.push_back(GridAxesAttr::get(ctx, {}));
 
-    auto srcSplitAxes =
-        llvm::to_vector(tgtShardingSplitAxes[srcTensorDim].asArrayRef());
-    assert(srcSplitAxes.size() == 1);
-    auto gridAxis = srcSplitAxes.back();
+    // Remove last axis from srcTensorDim.
+    auto srcSplitAxes = llvm::to_vector(splitAxes[srcTensorDim].asArrayRef());
+    assert(!srcSplitAxes.empty() && srcSplitAxes.back() == movedAxis);
     srcSplitAxes.pop_back();
-    tgtShardingSplitAxes[srcTensorDim] = GridAxesAttr::get(ctx, srcSplitAxes);
+    splitAxes[srcTensorDim] = GridAxesAttr::get(ctx, srcSplitAxes);
 
-    auto tgtSplitAxes =
-        llvm::to_vector(tgtShardingSplitAxes[tgtTensorDim].asArrayRef());
-    tgtSplitAxes.push_back(gridAxis);
-    tgtShardingSplitAxes[tgtTensorDim] = GridAxesAttr::get(ctx, tgtSplitAxes);
+    // Prepend movedAxis to tgtTensorDim.
+    auto tgtSplitAxes = llvm::to_vector(splitAxes[tgtTensorDim].asArrayRef());
+    tgtSplitAxes.insert(tgtSplitAxes.begin(), movedAxis);
+    splitAxes[tgtTensorDim] = GridAxesAttr::get(ctx, tgtSplitAxes);
 
-    return Sharding::get(srcSharding.getGridAttr(), tgtShardingSplitAxes);
-  }
-
-  static ShapedType allToAllResultShape(ShapedType srcShape, int64_t splitCount,
-                                        int64_t srcTensorDim,
-                                        int64_t tgtTensorDim) {
-    SmallVector<int64_t> tgtShape = llvm::to_vector(srcShape.getShape());
-    tgtShape[srcTensorDim] =
-        gatherDimension(tgtShape[srcTensorDim], splitCount);
-    tgtShape[tgtTensorDim] = shardDimension(tgtShape[tgtTensorDim], splitCount);
-    return srcShape.cloneWith(tgtShape, srcShape.getElementType());
+    return Sharding::get(srcSharding.getGridAttr(), splitAxes);
   }
 
   static std::tuple<TypedValue<ShapedType>, Sharding>
-  apply(ImplicitLocOpBuilder &builder, GridOp grid, Sharding srcSharding,
+  apply(ImplicitLocOpBuilder &builder, GridOp grid, const Sharding &srcSharding,
         ShapedType srcUnshardedType, TypedValue<ShapedType> srcShard,
-        int64_t srcTensorDim, int64_t tgtTensorDim, GridAxis gridAxis) {
+        int64_t srcTensorDim, int64_t tgtTensorDim, GridAxis movedAxis) {
     MLIRContext *ctx = builder.getContext();
     builder.setInsertionPointAfterValue(srcShard);
 
     Sharding resultSharding =
-        tgtSharding(ctx, std::move(srcSharding), srcTensorDim, tgtTensorDim);
+        tgtSharding(ctx, srcSharding, srcTensorDim, tgtTensorDim, movedAxis);
     ShapedType a2aResultShape =
-        allToAllResultShape(srcShard.getType(), grid.getShape()[gridAxis],
+        allToAllResultShape(srcShard.getType(), grid.getShape()[movedAxis],
                             srcTensorDim, tgtTensorDim);
     Value allToAllResult = AllToAllOp::create(
         builder,
         RankedTensorType::get(a2aResultShape.getShape(),
                               a2aResultShape.getElementType()),
-        grid.getSymName(), SmallVector<GridAxis>({gridAxis}), srcShard,
+        grid.getSymName(), SmallVector<GridAxis>({movedAxis}), srcShard,
         APInt(64, tgtTensorDim), APInt(64, srcTensorDim));
     ShapedType tgtShape =
         shardShapedType(srcUnshardedType, grid, resultSharding);
@@ -354,9 +388,9 @@ public:
     if (hasStaticOffsetsOrHalos(srcSharding, tgtSharding))
       return std::nullopt;
     if (auto detectRes = detect(srcSharding, tgtSharding, tensorDim)) {
-      auto [tgtTensorDim, gridAxis] = detectRes.value();
+      auto [tgtTensorDim, movedAxis] = detectRes.value();
       return apply(builder, grid, srcSharding, srcUnshardedType, srcShard,
-                   tensorDim, tgtTensorDim, gridAxis);
+                   tensorDim, tgtTensorDim, movedAxis);
     }
     return std::nullopt;
   }
@@ -460,11 +494,11 @@ static TypedValue<ShapedType> reshard(ImplicitLocOpBuilder &builder,
 
   // Each pattern's tryApply checks its own applicability preconditions.
   static UpdateHaloPattern updateHaloPattern;
-  static MoveSplitAxisPattern moveSplitAxisPattern;
+  static MoveLastSplitAxisPattern moveLastSplitAxisPattern;
   static SplitLastAxisPattern splitLastAxisPattern;
   static UnsplitLastAxesPattern unsplitLastAxesPattern;
   static ReshardingPattern *patterns[] = {
-      &updateHaloPattern, &moveSplitAxisPattern, &splitLastAxisPattern,
+      &updateHaloPattern, &moveLastSplitAxisPattern, &splitLastAxisPattern,
       &unsplitLastAxesPattern};
   TypedValue<ShapedType> currentShard = shardedSrc;
   Sharding currentSharding = srcSharding;

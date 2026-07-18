@@ -1180,13 +1180,12 @@ define void @fcmp_ugt_v16f16(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fcmge p1.h, p0/z, z0.h, z1.h
-; CHECK-NEXT:    mov z0.h, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    fcmge p0.h, p0/z, z3.h, z2.h
-; CHECK-NEXT:    mov z1.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov z2.h, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor z1.d, z1.d, z0.d
-; CHECK-NEXT:    eor z0.d, z2.d, z0.d
-; CHECK-NEXT:    stp q1, q0, [x2]
+; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z1.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
+; CHECK-NEXT:    subr z1.b, z1.b, #255 // =0xff
+; CHECK-NEXT:    stp q0, q1, [x2]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fcmp_ugt_v16f16:
@@ -1481,13 +1480,12 @@ define void @fcmp_ult_v16f16(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fcmge p1.h, p0/z, z1.h, z0.h
-; CHECK-NEXT:    mov z0.h, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    fcmge p0.h, p0/z, z2.h, z3.h
-; CHECK-NEXT:    mov z1.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov z2.h, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor z1.d, z1.d, z0.d
-; CHECK-NEXT:    eor z0.d, z2.d, z0.d
-; CHECK-NEXT:    stp q1, q0, [x2]
+; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z1.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
+; CHECK-NEXT:    subr z1.b, z1.b, #255 // =0xff
+; CHECK-NEXT:    stp q0, q1, [x2]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fcmp_ult_v16f16:
@@ -1782,13 +1780,12 @@ define void @fcmp_uge_v16f16(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fcmgt p1.h, p0/z, z0.h, z1.h
-; CHECK-NEXT:    mov z0.h, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    fcmgt p0.h, p0/z, z3.h, z2.h
-; CHECK-NEXT:    mov z1.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov z2.h, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor z1.d, z1.d, z0.d
-; CHECK-NEXT:    eor z0.d, z2.d, z0.d
-; CHECK-NEXT:    stp q1, q0, [x2]
+; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z1.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
+; CHECK-NEXT:    subr z1.b, z1.b, #255 // =0xff
+; CHECK-NEXT:    stp q0, q1, [x2]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fcmp_uge_v16f16:
@@ -2083,13 +2080,12 @@ define void @fcmp_ule_v16f16(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fcmgt p1.h, p0/z, z1.h, z0.h
-; CHECK-NEXT:    mov z0.h, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    fcmgt p0.h, p0/z, z2.h, z3.h
-; CHECK-NEXT:    mov z1.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov z2.h, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor z1.d, z1.d, z0.d
-; CHECK-NEXT:    eor z0.d, z2.d, z0.d
-; CHECK-NEXT:    stp q1, q0, [x2]
+; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z1.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
+; CHECK-NEXT:    subr z1.b, z1.b, #255 // =0xff
+; CHECK-NEXT:    stp q0, q1, [x2]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fcmp_ule_v16f16:
@@ -2384,13 +2380,12 @@ define void @fcmp_ord_v16f16(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fcmuo p1.h, p0/z, z1.h, z0.h
-; CHECK-NEXT:    mov z0.h, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    fcmuo p0.h, p0/z, z2.h, z3.h
-; CHECK-NEXT:    mov z1.h, p1/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov z2.h, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor z1.d, z1.d, z0.d
-; CHECK-NEXT:    eor z0.d, z2.d, z0.d
-; CHECK-NEXT:    stp q1, q0, [x2]
+; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z1.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
+; CHECK-NEXT:    subr z1.b, z1.b, #255 // =0xff
+; CHECK-NEXT:    stp q0, q1, [x2]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fcmp_ord_v16f16:

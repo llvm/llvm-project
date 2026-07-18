@@ -15,7 +15,10 @@ unittest("PassTests") {
     "//llvm/lib/Object",
     "//llvm/lib/Target:TargetsToBuild",
   ]
-  sources = [ "PointerAuthCFIFixup.cpp" ]
+  sources = [
+    "LivenessAnalysis.cpp",
+    "PointerAuthCFIFixup.cpp",
+  ]
 
   defines = []
   include_dirs = []

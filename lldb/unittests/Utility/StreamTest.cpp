@@ -727,3 +727,30 @@ TEST_F(StreamTest, PutSLEB128) {
   EXPECT_EQ("0x6533", TakeValue());
   EXPECT_EQ(6U, bytes);
 }
+
+TEST_F(StreamTest, PutCStringColorHighlightedCaseInsensitive) {
+  Stream::HighlightSettings settings("hello", "[", "]", true);
+  s.PutCStringColorHighlighted("Say Hello World", settings);
+  EXPECT_EQ("Say [Hello] World", TakeValue());
+}
+
+TEST_F(StreamTest, PutCStringColorHighlightedCaseSensitive) {
+  Stream::HighlightSettings settings("hello", "[", "]", false);
+  s.PutCStringColorHighlighted("Say Hello World", settings);
+  EXPECT_EQ("Say Hello World", TakeValue());
+}
+
+TEST_F(StreamTest, PutCStringColorHighlightedMultipleMatches) {
+  Stream::HighlightSettings settings("o", "[", "]", false);
+  s.PutCStringColorHighlighted("foo bar boo", settings);
+  EXPECT_EQ("f[o][o] bar b[o][o]", TakeValue());
+}
+
+TEST_F(StreamTest, BoolOperator) {
+  s << true;
+  EXPECT_EQ("true", TakeValue());
+  s << false;
+  EXPECT_EQ("false", TakeValue());
+  s << "x=" << true << " y=" << false;
+  EXPECT_EQ("x=true y=false", TakeValue());
+}

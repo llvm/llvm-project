@@ -9,6 +9,7 @@ program omp
   !BECAUSE: COLLAPSE clause was specified with argument 3
   !$omp do  collapse(3)
   do i = 0, 10
+    !BECAUSE: This code prevents perfect nesting
     if (i .lt. 1) then
       !ERROR: CYCLE statement to non-innermost associated loop of an OpenMP DO construct
       cycle
@@ -26,6 +27,7 @@ program omp
   !$omp do  collapse(3)
   do i = 0, 10
     do j = 0, 10
+      !BECAUSE: This code prevents perfect nesting
       if (i .lt. 1) then
         !ERROR: CYCLE statement to non-innermost associated loop of an OpenMP DO construct
         cycle
@@ -59,6 +61,7 @@ program omp
   !$omp do  collapse(3)
   foo: do i = 0, 10
     foo1: do j = 0, 10
+      !BECAUSE: This code prevents perfect nesting
       if (i .lt. 1) then
         !ERROR: CYCLE statement to non-innermost associated loop of an OpenMP DO construct
         cycle foo

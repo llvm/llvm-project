@@ -708,8 +708,9 @@ bool X86FlagsCopyLoweringImpl::runOnMachineFunction(MachineFunction &MF) {
   }
 
 #ifndef NDEBUG
-  for (MachineBasicBlock &MBB : MF)
-    for (MachineInstr &MI : MBB)
+  // Check reachable blocks for unlowered EFLAGS copies.
+  for (MachineBasicBlock *MBB : depth_first(&MF))
+    for (MachineInstr &MI : *MBB)
       if (MI.getOpcode() == TargetOpcode::COPY &&
           (MI.getOperand(0).getReg() == X86::EFLAGS ||
            MI.getOperand(1).getReg() == X86::EFLAGS)) {

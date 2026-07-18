@@ -688,11 +688,7 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare ptr @vec_calloc(i64, i64)\n"
       "declare ptr @vec_malloc(i64)\n"
       "declare ptr @vec_realloc(ptr, i64)\n"
-      "declare void @vec_free(ptr)\n"
-
-      // These functions are OpenMP Offloading allocation / free routines
-      "declare ptr @__kmpc_alloc_shared(i64)\n"
-      "declare void @__kmpc_free_shared(ptr, i64)\n");
+      "declare void @vec_free(ptr)\n");
 
   for (unsigned FI = LibFunc::Begin_LibFunc; FI != LibFunc::End_LibFunc; ++FI) {
     LibFunc LF = (LibFunc)FI;

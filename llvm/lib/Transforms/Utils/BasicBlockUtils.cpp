@@ -212,16 +212,25 @@ bool llvm::FoldSingleEntryPHINodes(BasicBlock *BB,
 }
 
 bool llvm::DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI,
-                          MemorySSAUpdater *MSSAU) {
+                          MemorySSAUpdater *MSSAU,
+                          SmallPtrSetImpl<PHINode *> *KnownNonDeadPHIs) {
   // Recursively deleting a PHI may cause multiple PHIs to be deleted
   // or RAUW'd undef, so use an array of WeakTrackingVH for the PHIs to delete.
   SmallVector<WeakTrackingVH, 8> PHIs(llvm::make_pointer_range(BB->phis()));
 
-  bool Changed = false;
-  for (const auto &PHI : PHIs)
-    if (PHINode *PN = dyn_cast_or_null<PHINode>(PHI.operator Value *()))
-      Changed |= RecursivelyDeleteDeadPHINode(PN, TLI, MSSAU);
+  SmallPtrSet<PHINode *, 32> LocalKnownNonDeadPHIs;
+  if (!KnownNonDeadPHIs)
+    KnownNonDeadPHIs = &LocalKnownNonDeadPHIs;
 
+  bool Changed = false;
+  for (const auto &PHI : PHIs) {
+    if (PHINode *PN = dyn_cast_or_null<PHINode>(PHI.operator Value *())) {
+      bool PHIChanged = RecursivelyDeleteDeadPHINode(PN, TLI, MSSAU, KnownNonDeadPHIs);
+      Changed |= PHIChanged;
+      if (PHIChanged && KnownNonDeadPHIs)
+        KnownNonDeadPHIs->clear();
+    }
+  }
   return Changed;
 }
 
@@ -709,59 +718,78 @@ static bool updateCycleLoopInfo(TI *LCI, BasicBlock *CallBrBlock,
   if (!LCI)
     return false;
 
-  T *LC;
-  if constexpr (std::is_same_v<TI, CycleInfo>)
-    LC = LCI->getSmallestCommonCycle(CallBrBlock, Succ);
-  else
-    LC = LCI->getSmallestCommonLoop(CallBrBlock, Succ);
-  if (!LC)
-    return false;
-
-  if constexpr (std::is_same_v<TI, CycleInfo>)
+  if constexpr (std::is_same_v<TI, CycleInfo>) {
+    T LC = LCI->getSmallestCommonCycle(CallBrBlock, Succ);
+    if (!LC)
+      return false;
     LCI->addBlockToCycle(CallBrTarget, LC);
-  else
+  } else {
+    T *LC = LCI->getSmallestCommonLoop(CallBrBlock, Succ);
+    if (!LC)
+      return false;
     LC->addBasicBlockToLoop(CallBrTarget, *LCI);
+  }
 
   return true;
 }
 
 BasicBlock *llvm::SplitCallBrEdge(BasicBlock *CallBrBlock, BasicBlock *Succ,
-                                  unsigned SuccIdx, DomTreeUpdater *DTU,
-                                  CycleInfo *CI, LoopInfo *LI,
-                                  bool *UpdatedLI) {
+                                  unsigned SuccIdx, BasicBlock *CallBrTarget,
+                                  DomTreeUpdater *DTU, CycleInfo *CI,
+                                  LoopInfo *LI, bool *UpdatedLI) {
   CallBrInst *CallBr = dyn_cast<CallBrInst>(CallBrBlock->getTerminator());
   assert(CallBr && "expected callbr terminator");
   assert(SuccIdx < CallBr->getNumSuccessors() &&
          Succ == CallBr->getSuccessor(SuccIdx) && "invalid successor index");
 
+  if (UpdatedLI)
+    *UpdatedLI = false;
+
+  bool ReusesCallBrTarget = CallBrTarget;
   // Create a new block between callbr and the specified successor.
   // splitBlockBefore cannot be re-used here since it cannot split if the split
   // point is a PHI node (because BasicBlock::splitBasicBlockBefore cannot
   // handle that). But we don't need to rewire every part of a potential PHI
   // node. We only care about the edge between CallBrBlock and the original
   // successor.
-  BasicBlock *CallBrTarget =
-      BasicBlock::Create(CallBrBlock->getContext(),
-                         CallBrBlock->getName() + ".target." + Succ->getName(),
-                         CallBrBlock->getParent());
-  // Rewire control flow from the new target block to the original successor.
-  Succ->replacePhiUsesWith(CallBrBlock, CallBrTarget);
+  if (!ReusesCallBrTarget) {
+    CallBrTarget = BasicBlock::Create(CallBrBlock->getContext(),
+                                      CallBrBlock->getName() + ".target." +
+                                          Succ->getName(),
+                                      CallBrBlock->getParent());
+    // Jump from the new target block to the original successor.
+    UncondBrInst::Create(Succ, CallBrTarget);
+    // Replace a single incoming value with the callbr target block. We cannot
+    // use replacePhiUsesWith, as this would replace the value for every edge
+    // from the callbr block to succ.
+    for (PHINode &PN : Succ->phis()) {
+      int BBIdx = PN.getBasicBlockIndex(CallBrBlock);
+      assert(BBIdx != -1 && "expected incoming value form callbr block");
+      PN.setIncomingBlock(BBIdx, CallBrTarget);
+    }
+
+    bool Updated = updateCycleLoopInfo<LoopInfo, Loop>(LI, CallBrBlock,
+                                                       CallBrTarget, Succ);
+    if (UpdatedLI)
+      *UpdatedLI = Updated;
+    updateCycleLoopInfo<CycleInfo, CycleRef>(CI, CallBrBlock, CallBrTarget,
+                                             Succ);
+  } else {
+    for (PHINode &PN : Succ->phis())
+      PN.removeIncomingValue(CallBrBlock, false);
+  }
+
   // Rewire control flow from callbr to the new target block.
   CallBr->setSuccessor(SuccIdx, CallBrTarget);
-  // Jump from the new target block to the original successor.
-  UncondBrInst::Create(Succ, CallBrTarget);
 
-  bool Updated =
-      updateCycleLoopInfo<LoopInfo, Loop>(LI, CallBrBlock, CallBrTarget, Succ);
-  if (UpdatedLI)
-    *UpdatedLI = Updated;
-  updateCycleLoopInfo<CycleInfo, Cycle>(CI, CallBrBlock, CallBrTarget, Succ);
   if (DTU) {
-    DTU->applyUpdates({{DominatorTree::Insert, CallBrBlock, CallBrTarget}});
+    if (!ReusesCallBrTarget)
+      DTU->applyUpdates({{DominatorTree::Insert, CallBrBlock, CallBrTarget}});
     if (DTU->getDomTree().dominates(CallBrBlock, Succ)) {
       if (!is_contained(successors(CallBrBlock), Succ))
         DTU->applyUpdates({{DominatorTree::Delete, CallBrBlock, Succ}});
-      DTU->applyUpdates({{DominatorTree::Insert, CallBrTarget, Succ}});
+      if (!ReusesCallBrTarget)
+        DTU->applyUpdates({{DominatorTree::Insert, CallBrTarget, Succ}});
     }
   }
 
@@ -1057,6 +1085,15 @@ BasicBlock *llvm::SplitBlock(BasicBlock *Old, BasicBlock::iterator SplitPt,
   return SplitBlockImpl(Old, SplitPt, DTU, /*DT=*/nullptr, LI, MSSAU, BBName);
 }
 
+static bool hasReachableLoopEntryToHeader(const Loop &L,
+                                          const DominatorTree &DT) {
+  for (const BasicBlock *Pred : predecessors(L.getHeader()))
+    if (!L.contains(Pred) && DT.isReachableFromEntry(Pred))
+      return true;
+
+  return false;
+}
+
 /// Update DominatorTree, LoopInfo, and LCCSA analysis information.
 /// Invalidates DFS Numbering when DTU or DT is provided.
 static void UpdateAnalysisInformation(BasicBlock *OldBB, BasicBlock *NewBB,
@@ -1166,8 +1203,15 @@ static void UpdateAnalysisInformation(BasicBlock *OldBB, BasicBlock *NewBB,
       InnermostPredLoop->addBasicBlockToLoop(NewBB, *LI);
   } else {
     L->addBasicBlockToLoop(NewBB, *LI);
-    if (SplitMakesNewLoopHeader)
-      L->moveToHeader(NewBB);
+    if (SplitMakesNewLoopHeader) {
+      // The old header might still have a loop entry. If so the loop becomes
+      // irreducible and must be erased. Otherwise the NewBB becomes the loop
+      // header.
+      if (hasReachableLoopEntryToHeader(*L, *DT))
+        LI->erase(L);
+      else
+        L->moveToHeader(NewBB);
+    }
   }
 }
 

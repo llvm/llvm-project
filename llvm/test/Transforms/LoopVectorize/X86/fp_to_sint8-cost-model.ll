@@ -6,7 +6,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 
 
 ; CHECK: cost of 1 for VF 1 For instruction:   %conv = fptosi float %tmp to i8
-define void @float_to_sint8_cost(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) nounwind {
+define void @float_to_sint8_cost(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 entry:
   br label %for.body
 for.body:

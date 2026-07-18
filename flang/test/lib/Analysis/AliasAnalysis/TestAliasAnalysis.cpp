@@ -8,8 +8,10 @@
 
 #include "mlir/test/lib/Analysis/TestAliasAnalysis.h"
 #include "mlir/Analysis/AliasAnalysis.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "flang/Optimizer/Analysis/AliasAnalysis.h"
+#include "flang/Optimizer/Dialect/FIROps.h"
 
 using namespace mlir;
 
@@ -56,6 +58,52 @@ struct TestFIRAliasAnalysisModRefPass
     runAliasAnalysisOnOperation(getOperation(), aliasAnalysis);
   }
 };
+//===----------------------------------------------------------------------===//
+// Testing ModRefResult with MemoryEffectOpInterface attached to fir.call
+//===----------------------------------------------------------------------===//
+
+/// External model that attaches MemoryEffectOpInterface to fir::CallOp.
+/// Calls to functions whose name starts with "test_pure" have no memory
+/// effects; all other calls read and write DefaultResource.
+struct TestCallMemoryEffectsModel
+    : public MemoryEffectOpInterface::ExternalModel<TestCallMemoryEffectsModel,
+          fir::CallOp> {
+  void getEffects(Operation *op,
+      llvm::SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+          &effects) const {
+    auto call = cast<fir::CallOp>(op);
+    if (auto callee = call.getCallee())
+      if (callee->getLeafReference().getValue().starts_with("test_pure"))
+        return;
+    effects.emplace_back(
+        MemoryEffects::Read::get(), SideEffects::DefaultResource::get());
+    effects.emplace_back(
+        MemoryEffects::Write::get(), SideEffects::DefaultResource::get());
+  }
+};
+
+struct TestFIRAliasAnalysisModRefCallEffectsPass
+    : public test::TestAliasAnalysisModRefBase,
+      PassWrapper<TestFIRAliasAnalysisModRefCallEffectsPass, OperationPass<>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestFIRAliasAnalysisModRefCallEffectsPass)
+
+  StringRef getArgument() const final {
+    return "test-fir-alias-analysis-modref-call-effects";
+  }
+  StringRef getDescription() const final {
+    return "Test alias analysis ModRef results with MemoryEffectOpInterface "
+           "attached to fir.call.";
+  }
+  void runOnOperation() override {
+    MLIRContext *ctx = &getContext();
+    fir::CallOp::attachInterface<TestCallMemoryEffectsModel>(*ctx);
+
+    AliasAnalysis aliasAnalysis(getOperation());
+    aliasAnalysis.addAnalysisImplementation(fir::AliasAnalysis());
+    runAliasAnalysisOnOperation(getOperation(), aliasAnalysis);
+  }
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -67,6 +115,7 @@ namespace test {
 void registerTestFIRAliasAnalysisPass() {
   PassRegistration<TestFIRAliasAnalysisPass>();
   PassRegistration<TestFIRAliasAnalysisModRefPass>();
+  PassRegistration<TestFIRAliasAnalysisModRefCallEffectsPass>();
 }
 } // namespace test
 } // namespace fir

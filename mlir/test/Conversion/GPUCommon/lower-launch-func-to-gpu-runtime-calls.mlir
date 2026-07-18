@@ -80,7 +80,7 @@ module attributes {gpu.container_module} {
   // CHECK: [[C32:%.*]] = llvm.mlir.constant(32 : i32) : i32
   // CHECK: [[C256:%.*]] = llvm.mlir.constant(256 : i32) : i32
   // CHECK: [[C2:%.*]] = llvm.mlir.constant(2 : index) : i64
-    %c8 = arith.constant 8 : index    
+    %c8 = arith.constant 8 : index
     %c32 = arith.constant 32 : i32
     %c256 = arith.constant 256 : i32
     %c2 = arith.constant 2 : index
@@ -96,6 +96,39 @@ module attributes {gpu.container_module} {
         threads in (%c8, %c8, %c8)
         dynamic_shared_memory_size %c256
         args(%c32 : i32, %buffer : memref<?xf32>)
+    return
+  }
+}
+
+// -----
+
+// Test that gpu.launch_func async with multiple async dependencies correctly
+// synchronizes all deps onto the primary stream via events.
+module attributes {gpu.container_module} {
+  gpu.module @kernel_module [#nvvm.target] {
+    llvm.func @kernel() attributes {gpu.kernel} {
+      llvm.return
+    }
+  }
+
+  // CHECK-LABEL: @multi_dep_launch
+  func.func @multi_dep_launch() {
+    %c1 = arith.constant 1 : index
+    // CHECK: %[[stream0:.*]] = llvm.call @mgpuStreamCreate()
+    %t0 = gpu.wait async
+    // CHECK: %[[stream1:.*]] = llvm.call @mgpuStreamCreate()
+    %t1 = gpu.wait async
+    // The event for the second dependency is created and recorded after
+    // its defining stream, then the primary stream waits on it.
+    // CHECK: %[[e:.*]] = llvm.call @mgpuEventCreate()
+    // CHECK: llvm.call @mgpuEventRecord(%[[e]], %[[stream1]])
+    // CHECK: llvm.call @mgpuStreamWaitEvent(%[[stream0]], %[[e]])
+    // CHECK: llvm.call @mgpuEventDestroy(%[[e]])
+    // CHECK: gpu.launch_func <%[[stream0]] : !llvm.ptr> @kernel_module::@kernel
+    %t2 = gpu.launch_func async [%t0, %t1] @kernel_module::@kernel
+        blocks in (%c1, %c1, %c1)
+        threads in (%c1, %c1, %c1)
+    gpu.wait [%t2]
     return
   }
 }
