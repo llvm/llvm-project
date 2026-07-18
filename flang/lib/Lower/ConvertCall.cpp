@@ -12,6 +12,7 @@
 
 #include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/Allocatable.h"
+#include "flang/Lower/CUDA.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertProcedureDesignator.h"
 #include "flang/Lower/ConvertVariable.h"
@@ -1972,6 +1973,25 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
     // Allocatable result must be freed, other results are stack allocated.
     const auto *allocatable = result.getBoxOf<fir::MutableBoxValue>();
     const bool mustFree = allocatable != nullptr;
+    // A CUDA allocatable result lives in device/managed/unified memory: it was
+    // allocated with the CUDA allocator and cannot be moved into an hlfir.expr
+    // whose buffer would be released with the host deallocator. Keep it as a
+    // variable and release it with the CUDA-aware deallocation.
+    const Fortran::semantics::Symbol *resultSym = nullptr;
+    cuf::DataAttributeAttr resultCudaAttr;
+    if (mustFree && caller.getInterfaceDetails()) {
+      resultSym = &caller.getResultSymbol();
+      resultCudaAttr = Fortran::lower::translateSymbolCUFDataAttribute(
+          builder.getContext(), *resultSym);
+    }
+    if (resultCudaAttr) {
+      callContext.stmtCtx.attachCleanup([&converter = callContext.converter,
+                                         loc, box = *allocatable, resultSym]() {
+        Fortran::lower::genDeallocateIfAllocated(converter, box, loc,
+                                                 resultSym);
+      });
+      return hlfir::EntityWithAttributes{resultEntity};
+    }
     resultEntity = loadTrivialScalar(loc, builder, resultEntity);
     if (resultEntity.isVariable()) {
       // If the result has no finalization, it can be moved into an expression.
