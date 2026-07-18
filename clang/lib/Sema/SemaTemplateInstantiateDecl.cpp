@@ -2249,8 +2249,9 @@ void TemplateDeclInstantiator::InstantiateEnumDefinition(
     EnumDecl *Enum, EnumDecl *Pattern) {
   Enum->startDefinition();
 
-  // Update the location to refer to the definition.
+  // Use the definition's source locations.
   Enum->setLocation(Pattern->getLocation());
+  Enum->setBraceRange(Pattern->getBraceRange());
 
   SmallVector<Decl*, 4> Enumerators;
 
