@@ -539,17 +539,9 @@ define <4 x i32> @knownbits_sabd_and_or_mask(<4 x i32> %a0, <4 x i32> %a1) {
 ;
 ; CHECK-GI-LABEL: knownbits_sabd_and_or_mask:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI45_1
-; CHECK-GI-NEXT:    movi v3.2d, #0x00ffff0000ffff
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI45_1]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI45_0
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v3.16b
-; CHECK-GI-NEXT:    orr v1.16b, v1.16b, v3.16b
-; CHECK-GI-NEXT:    uabd v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI45_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI45_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v0.16b
 ; CHECK-GI-NEXT:    ret
   %1 = and <4 x i32> %a0, <i32 -1, i32 -1, i32 255, i32 4085>
   %2 = or <4 x i32> %1, <i32 65535, i32 65535, i32 65535, i32 65535>
@@ -605,16 +597,9 @@ define <4 x i32> @knownbits_sabd_and_shl_mask(<4 x i32> %a0, <4 x i32> %a1) {
 ;
 ; CHECK-GI-LABEL: knownbits_sabd_and_shl_mask:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI47_1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI47_1]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI47_0
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #17
-; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #17
-; CHECK-GI-NEXT:    sabd v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI47_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI47_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v0.16b
 ; CHECK-GI-NEXT:    ret
   %1 = and <4 x i32> %a0, <i32 -65536, i32 -7, i32 -7, i32 -65536>
   %2 = shl <4 x i32> %1, <i32 17, i32 17, i32 17, i32 17>
