@@ -4431,7 +4431,7 @@ void Verifier::visitBitInsertInst(BitInsertInst &BII) {
   Check(BitInsertInst::isValidOperands(BII.getOperand(0), BII.getOperand(1),
                                        BII.getOperand(2)),
         "Invalid bitinsert operands!", &BII);
-  Check(DL.getTypeSizeInBits(BII.getOperand(0)->getType()) <=
+  Check(DL.getTypeSizeInBits(BII.getOperand(0)->getType()) >=
             DL.getTypeSizeInBits(BII.getOperand(1)->getType()),
         "bitinsert val type cannot be wider than base type!", &BII);
   visitInstruction(BII);
