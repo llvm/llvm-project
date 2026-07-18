@@ -45,6 +45,9 @@ struct IntLitVisitor : TestVisitor {
 };
 
 struct CallsVisitor : TestVisitor {
+  // Expose the protected helper so a test can supply extra compiler args.
+  using TestVisitor::CreateTestAction;
+
   bool VisitCallExpr(CallExpr *Expr) override {
     OnCall(Expr, Context);
     return true;
@@ -862,7 +865,12 @@ void templ(const T &t) {
       EXPECT_EQ(Expr->getCallReturnType(*Context), Context->DependentTy);
     }
   };
-  Visitor.runOver(Code.code(), CallsVisitor::Lang_CXX17);
+  // Bypass TestVisitor::runOver so we can pass -fno-delayed-template-parsing.
+  // Otherwise on MSVC-compatible triples the uninstantiated body of templ is
+  // not parsed and the dependent builtin calls never enter the AST.
+  EXPECT_TRUE(tooling::runToolOnCodeWithArgs(
+      Visitor.CreateTestAction(), Code.code(),
+      {"-std=c++17", "-fno-delayed-template-parsing"}));
   EXPECT_TRUE(SawBuiltinFnCallee);
 }
 
