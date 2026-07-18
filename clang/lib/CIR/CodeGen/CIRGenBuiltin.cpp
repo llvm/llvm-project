@@ -163,9 +163,11 @@ static Address checkAtomicAlignment(CIRGenFunction &cgf, const CallExpr *e) {
 
 /// Utility to insert an atomic instruction based on Intrinsic::ID
 /// and the expression node.
-mlir::Value CIRGenFunction::makeBinaryAtomicValue(
-    cir::AtomicFetchKind kind, const CallExpr *expr, mlir::Type *originalArgType,
-    mlir::Value *emittedArgValue, cir::MemOrder ordering) {
+mlir::Value CIRGenFunction::makeBinaryAtomicValue(cir::AtomicFetchKind kind,
+                                                  const CallExpr *expr,
+                                                  mlir::Type *originalArgType,
+                                                  mlir::Value *emittedArgValue,
+                                                  cir::MemOrder ordering) {
   CIRGenFunction &cgf = *this;
 
   QualType type = expr->getType();
