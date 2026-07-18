@@ -259,9 +259,8 @@ ConstraintSystem::getSubSystem(ArrayRef<int64_t> R) const {
   SmallVector<unsigned, 16> OldToNew;
   OldToNew.assign(NumVariables + 1, 0);
   unsigned NextIdx = 1;
-  for (unsigned Id = 1; Id <= NumVariables; ++Id)
-    if (InSystem[Id])
-      OldToNew[Id] = NextIdx++;
+  for (unsigned Id : InSystem.set_bits())
+    OldToNew[Id] = NextIdx++;
 
   // Build new compact set of rows.
   SubSystem.NumVariables = NextIdx;
