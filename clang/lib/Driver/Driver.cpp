@@ -754,7 +754,7 @@ static llvm::Triple computeTargetTriple(const Driver &D, StringRef TargetTriple,
           D.Diag(diag::err_drv_compile_mode_unsupported_aix);
         } else {
           D.Diag(diag::err_drv_unsupported_opt_for_target)
-            << A->getAsString(Args) << Target.str();
+              << A->getAsString(Args) << Target.str();
         }
       } else {
         AT = Target.get32BitArchVariant().getArch();
