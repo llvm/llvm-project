@@ -265,7 +265,7 @@ jobs:
   premerge-check-macos:
     name: Build and Test macOS arm64
     needs: premerge-compute-macos
-    runs-on: [self-hosted, macos, apple-runners]
+    runs-on: [self-hosted, macOS, ARM64, apple-runners]
     # Skip the self-hosted runner entirely if there is nothing to build,
     # rather than tying up a runner slot for a no-op run.
     if: >-
