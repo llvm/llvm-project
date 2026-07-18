@@ -296,8 +296,6 @@ module {
 // PRODUCER-CONSUMER-LABEL: func @same_memref_load_store
 func.func @same_memref_load_store(%producer : memref<32xf32>, %consumer: memref<16xf32>){
   %cst = arith.constant 2.000000e+00 : f32
-  // Source isn't removed.
-  // PRODUCER-CONSUMER: affine.for %{{.*}} = 0 to 32
   affine.for %arg3 = 0 to 32 {
     %0 = affine.load %producer[%arg3] : memref<32xf32>
     %2 = arith.mulf %0, %cst : f32
@@ -308,6 +306,9 @@ func.func @same_memref_load_store(%producer : memref<32xf32>, %consumer: memref<
     %2 = arith.addf %0, %cst : f32
     affine.store %2, %consumer[%arg3] : memref<16xf32>
   }
+  // The source nest updates %producer in place and isn't removed; the fused
+  // nest is placed before it so that its recomputation of the source's
+  // values reads %producer's original values (issue #210490).
   // Fused nest.
   // PRODUCER-CONSUMER:      affine.for %{{.*}} = 0 to 16
   // PRODUCER-CONSUMER-NEXT:   affine.load %{{.*}}[%{{.*}}] : memref<32xf32>
@@ -316,6 +317,12 @@ func.func @same_memref_load_store(%producer : memref<32xf32>, %consumer: memref<
   // PRODUCER-CONSUMER-NEXT:   affine.load %{{.*}}[0] : memref<1xf32>
   // PRODUCER-CONSUMER-NEXT:   arith.addf
   // PRODUCER-CONSUMER-NEXT:   affine.store
+  // PRODUCER-CONSUMER-NEXT: }
+  // Source isn't removed, and runs after the fused nest.
+  // PRODUCER-CONSUMER:      affine.for %{{.*}} = 0 to 32
+  // PRODUCER-CONSUMER-NEXT:   affine.load %{{.*}}[%{{.*}}] : memref<32xf32>
+  // PRODUCER-CONSUMER-NEXT:   arith.mulf
+  // PRODUCER-CONSUMER-NEXT:   affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<32xf32>
   // PRODUCER-CONSUMER-NEXT: }
   return
 }
@@ -326,10 +333,6 @@ func.func @same_memref_load_store(%producer : memref<32xf32>, %consumer: memref<
 // ALL-LABEL: func @same_memref_load_multiple_stores
 func.func @same_memref_load_multiple_stores(%producer : memref<32xf32>, %producer_2 : memref<32xf32>, %consumer: memref<16xf32>){
   %cst = arith.constant 2.000000e+00 : f32
-  // Ensure that source isn't removed during both producer-consumer fusion and
-  // sibling fusion.
-  // PRODUCER-CONSUMER: affine.for %{{.*}} = 0 to 32
-  // ALL: affine.for %{{.*}} = 0 to 32
   affine.for %arg3 = 0 to 32 {
     %0 = affine.load %producer[%arg3] : memref<32xf32>
     %2 = arith.mulf %0, %cst : f32
@@ -342,6 +345,10 @@ func.func @same_memref_load_multiple_stores(%producer : memref<32xf32>, %produce
     %2 = arith.addf %0, %1 : f32
     affine.store %2, %consumer[%arg3] : memref<16xf32>
   }
+  // The source nest updates %producer in place and isn't removed during both
+  // producer-consumer fusion and sibling fusion; the fused nest is placed
+  // before it so that its recomputation of the source's values reads
+  // %producer's original values (issue #210490).
   // Fused nest.
   // PRODUCER-CONSUMER:      affine.for %{{.*}} = 0 to 16
   // PRODUCER-CONSUMER-NEXT:   affine.load %{{.*}}[%{{.*}}] : memref<32xf32>
@@ -356,6 +363,74 @@ func.func @same_memref_load_multiple_stores(%producer : memref<32xf32>, %produce
   // ALL:     affine.for %{{.*}} = 0 to 16
   // ALL:       mulf
   // ALL:       addf
+  // Source isn't removed, and runs after the fused nest.
+  // PRODUCER-CONSUMER:      affine.for %{{.*}} = 0 to 32
+  // PRODUCER-CONSUMER-NEXT:   affine.load %{{.*}}[%{{.*}}] : memref<32xf32>
+  // PRODUCER-CONSUMER-NEXT:   arith.mulf
+  // PRODUCER-CONSUMER-NEXT:   affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<32xf32>
+  // PRODUCER-CONSUMER-NEXT:   affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<32xf32>
+  // PRODUCER-CONSUMER-NEXT: }
+  // ALL:     affine.for %{{.*}} = 0 to 32
+  return
+}
+
+// -----
+
+// Reproducer for https://github.com/llvm/llvm-project/issues/210490: the
+// producer nest updates %p in place and is retained after fusion since the
+// fusion isn't maximal and %p escapes. The fused nest must be placed before
+// the retained producer nest so that its recomputation of the producer's
+// values reads %p's original values; placing it after would apply the
+// multiplication twice on the consumed prefix of %p.
+// PRODUCER-CONSUMER-LABEL: func @in_place_producer_prefix_consumer
+func.func @in_place_producer_prefix_consumer(%p: memref<4xf32>, %d: memref<2xf32>, %c: f32) {
+  affine.for %i = 0 to 4 {
+    %0 = affine.load %p[%i] : memref<4xf32>
+    %1 = arith.mulf %0, %c : f32
+    affine.store %1, %p[%i] : memref<4xf32>
+  }
+  affine.for %i = 0 to 2 {
+    %0 = affine.load %p[%i] : memref<4xf32>
+    affine.store %0, %d[%i] : memref<2xf32>
+  }
+  // Fused nest, placed before the retained producer nest.
+  // PRODUCER-CONSUMER:      affine.for %{{.*}} = 0 to 2
+  // PRODUCER-CONSUMER-NEXT:   affine.load %{{.*}}[%{{.*}}] : memref<4xf32>
+  // PRODUCER-CONSUMER-NEXT:   arith.mulf
+  // PRODUCER-CONSUMER-NEXT:   affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
+  // PRODUCER-CONSUMER-NEXT:   affine.load %{{.*}}[0] : memref<1xf32>
+  // PRODUCER-CONSUMER-NEXT:   affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<2xf32>
+  // PRODUCER-CONSUMER-NEXT: }
+  // PRODUCER-CONSUMER:      affine.for %{{.*}} = 0 to 4
+  // PRODUCER-CONSUMER-NEXT:   affine.load %{{.*}}[%{{.*}}] : memref<4xf32>
+  // PRODUCER-CONSUMER-NEXT:   arith.mulf
+  // PRODUCER-CONSUMER-NEXT:   affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<4xf32>
+  // PRODUCER-CONSUMER-NEXT: }
+  return
+}
+
+// -----
+
+// The consumer nest also stores to the in-place updated memref %p: %p can't
+// be privatized in the fused nest, so there is no legal placement for the
+// fused nest before the retained producer nest. Fusion must not happen.
+// PRODUCER-CONSUMER-LABEL: func @in_place_producer_storing_consumer
+func.func @in_place_producer_storing_consumer(%p: memref<4xf32>, %d: memref<2xf32>, %c: f32) {
+  affine.for %i = 0 to 4 {
+    %0 = affine.load %p[%i] : memref<4xf32>
+    %1 = arith.mulf %0, %c : f32
+    affine.store %1, %p[%i] : memref<4xf32>
+  }
+  affine.for %i = 0 to 2 {
+    %0 = affine.load %p[%i] : memref<4xf32>
+    affine.store %0, %d[%i] : memref<2xf32>
+    affine.store %c, %p[%i] : memref<4xf32>
+  }
+  // PRODUCER-CONSUMER-NOT:  memref.alloc
+  // PRODUCER-CONSUMER:      affine.for %{{.*}} = 0 to 4
+  // PRODUCER-CONSUMER:        arith.mulf
+  // PRODUCER-CONSUMER:      affine.for %{{.*}} = 0 to 2
+  // PRODUCER-CONSUMER-NOT:    arith.mulf
   return
 }
 
