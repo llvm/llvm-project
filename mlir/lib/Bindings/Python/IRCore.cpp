@@ -3408,6 +3408,14 @@ void populateIRCore(nb::module_ &m) {
           },
           "dialect_name"_a,
           "Gets or loads a dialect by name, returning its descriptor object.")
+      .def(
+          "is_dialect_loaded",
+          [=](PyMlirContext &self, std::string &name) {
+            MlirDialect dialect = mlirContextGetLoadedDialect(
+                self.get(), {name.data(), name.size()});
+            return !mlirDialectIsNull(dialect);
+          },
+          "dialect_name"_a, "Checks if a dialect is loaded in the context.")
       .def_prop_rw(
           "allow_unregistered_dialects",
           [](PyMlirContext &self) -> bool {
