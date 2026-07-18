@@ -26,6 +26,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/GenericCycleInfo.h"
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include <iterator>
@@ -229,17 +230,26 @@ template <typename ContextT> class GenericCycleInfoCompute {
 
   // Per-block state indexed by block number. All fields default to zero.
   struct BlockInfo {
-    // The block this entry describes; non-null once visited by DFS.
-    BlockT *Block = nullptr;
-    // 1-based position on the current DFS path; 0 if off path.
-    unsigned DFSPPos = 0;
+    // The block this entry describes (non-null once visited by DFS), packed
+    // with a bit for whether it heads a loop.
+    PointerIntPair<BlockT *, 1, bool> BlockAndHeader;
+    union {
+      // (Live only during DFS) 1-based position on the current DFS path; 0 if
+      // off path.
+      unsigned Pos = 0;
+      // (Live after DFS) Header-preorder rank of the innermost
+      // loop containing this block (the loop it heads if IsHeader); NoCycle if
+      // none.
+      unsigned LoopIdx;
+    };
     // Block number of the innermost loop header; NoBlock if none. Set to
     // NoBlock by open() on first visit, then woven by tagLoopHeader.
     unsigned LoopHeader = 0;
-    // Header-preorder rank of the innermost cycle containing this block (the
-    // cycle it heads if IsHeader); NoCycle if none. Set by the numbering pass.
-    unsigned CycleIdx = 0;
-    bool IsHeader = false;
+
+    BlockT *getBlock() const { return BlockAndHeader.getPointer(); }
+    void setBlock(BlockT *B) { BlockAndHeader.setPointer(B); }
+    bool isHeader() const { return BlockAndHeader.getInt(); }
+    void setHeader() { BlockAndHeader.setInt(true); }
   };
 
   // Per-cycle scratch built in run() and consumed by flatten(), keyed by
@@ -275,7 +285,7 @@ template <typename ContextT> class GenericCycleInfoCompute {
   // needs no union-find (used in the Havlak algorithm) at all.
   void tagLoopHeader(unsigned B, unsigned H) {
     assert(H != NoBlock);
-    // Invariant: info(B).DFSPPos >= info(H).DFSPPos.
+    // Invariant: info(B).Pos >= info(H).Pos.
     while (B != H) {
       unsigned IH = info(B).LoopHeader;
       if (IH == NoBlock) {
@@ -284,7 +294,7 @@ template <typename ContextT> class GenericCycleInfoCompute {
         return;
       }
       // Keep whichever candidate header is inner (larger DFS-path position).
-      if (info(IH).DFSPPos >= info(H).DFSPPos)
+      if (info(IH).Pos >= info(H).Pos)
         B = IH;
       else {
         info(B).LoopHeader = H;
@@ -397,11 +407,11 @@ void GenericCycleInfoCompute<ContextT>::flatten(ArrayRef<CycleBuild> Build,
   Info.BlockLayout.resize_for_overwrite(Cursor);
   for (unsigned N : llvm::reverse(Preorder)) {
     BlockInfo &BI = info(N);
-    if (BI.CycleIdx == NoCycle)
+    if (BI.LoopIdx == NoCycle)
       continue;
-    unsigned Flat = FlatIdx[BI.CycleIdx];
+    unsigned Flat = FlatIdx[BI.LoopIdx];
     Info.BlockMap[N] = CycleRef(Flat);
-    Info.BlockLayout[--Info.Cycles[Flat].IdxBegin] = BI.Block;
+    Info.BlockLayout[--Info.Cycles[Flat].IdxBegin] = BI.getBlock();
   }
 }
 
@@ -425,21 +435,21 @@ void GenericCycleInfoCompute<ContextT>::run(FunctionT *F) {
   unsigned TopHead = NoCycle;
   for (unsigned N : Preorder) {
     BlockInfo &BI = info(N);
-    if (BI.IsHeader) {
+    if (BI.isHeader()) {
       unsigned I = Build.size();
-      BI.CycleIdx = I;
+      BI.LoopIdx = I;
       unsigned &Head = BI.LoopHeader != NoBlock
-                           ? Build[info(BI.LoopHeader).CycleIdx].ChildHead
+                           ? Build[info(BI.LoopHeader).LoopIdx].ChildHead
                            : TopHead;
-      Build.push_back({BI.Block, NoCycle, Head, 1}); // OwnCount 1: the header.
+      Build.push_back({BI.getBlock(), NoCycle, Head, 1}); // OwnCount 1: header.
       Head = I;
       LLVM_DEBUG(dbgs() << "Found cycle for header: "
-                        << Info.Context.print(BI.Block) << "\n");
+                        << Info.Context.print(BI.getBlock()) << "\n");
     } else if (BI.LoopHeader != NoBlock) {
-      BI.CycleIdx = info(BI.LoopHeader).CycleIdx;
-      ++Build[BI.CycleIdx].OwnCount;
+      BI.LoopIdx = info(BI.LoopHeader).LoopIdx;
+      ++Build[BI.LoopIdx].OwnCount;
     } else {
-      BI.CycleIdx = NoCycle;
+      BI.LoopIdx = NoCycle;
     }
   }
   flatten(Build, TopHead);
@@ -459,7 +469,7 @@ void GenericCycleInfoCompute<ContextT>::run(FunctionT *F) {
     if (I && Reentries[I] == Reentries[I - 1])
       continue;
     auto [H, R] = Reentries[I];
-    Info.deref(Info.BlockMap[H]).appendEntry(info(Preorder[R]).Block);
+    Info.deref(Info.BlockMap[H]).appendEntry(info(Preorder[R]).getBlock());
   }
 }
 
@@ -484,8 +494,8 @@ void GenericCycleInfoCompute<ContextT>::dfs(BlockT *EntryBlock) {
     unsigned N = num(Block);
     Preorder[Counter] = N;
     BlockInfo &BI = info(N);
-    BI.Block = Block;
-    BI.DFSPPos = ++Counter;
+    BI.setBlock(Block);
+    BI.Pos = ++Counter;
     BI.LoopHeader = NoBlock;
     auto Succs = successors(Block);
     Stack.push_back({N, std::make_reverse_iterator(Succs.end()),
@@ -500,13 +510,13 @@ void GenericCycleInfoCompute<ContextT>::dfs(BlockT *EntryBlock) {
       BlockT *B1P = *Top.Cur++;
       unsigned B1 = num(B1P);
       BlockInfo &B1Info = info(B1);
-      if (!B1Info.Block) {
+      if (!B1Info.getBlock()) {
         // Tree edge; the weaving happens when B1's frame is popped.
         open(B1P);
-      } else if (B1Info.DFSPPos > 0) {
+      } else if (B1Info.Pos > 0) {
         // B1 is a loop header (including self-edge).
-        if (!B1Info.IsHeader) {
-          B1Info.IsHeader = true;
+        if (!B1Info.isHeader()) {
+          B1Info.setHeader();
           ++NumHeaders;
         }
         tagLoopHeader(B0, B1);
@@ -517,7 +527,7 @@ void GenericCycleInfoCompute<ContextT>::dfs(BlockT *EntryBlock) {
         // attribute B0 to it.
         for (unsigned H = B1Info.LoopHeader; H != NoBlock;
              H = info(H).LoopHeader) {
-          if (info(H).DFSPPos > 0) {
+          if (info(H).Pos > 0) {
             tagLoopHeader(B0, H);
             break;
           }
@@ -527,7 +537,7 @@ void GenericCycleInfoCompute<ContextT>::dfs(BlockT *EntryBlock) {
     } else {
       // Leave the DFS path.
       unsigned B0 = Top.Block;
-      info(B0).DFSPPos = 0;
+      info(B0).Pos = 0;
       Stack.pop_back();
       // And weave into the parent's chain (continue the "Tree edge" case).
       if (!Stack.empty() && info(B0).LoopHeader != NoBlock)
