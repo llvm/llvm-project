@@ -5679,6 +5679,14 @@ static Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
     }
   }
 
+  // trunc Op to Ty -> constant if all surviving bits are known
+  if (CastOpc == Instruction::Trunc && Ty->isIntegerTy()) {
+    unsigned DestWidth = Ty->getScalarSizeInBits();
+    KnownBits Known = computeKnownBits(Op, Q);
+    if ((Known.Zero | Known.One).countr_one() >= DestWidth)
+      return ConstantInt::get(Ty, Known.One.trunc(DestWidth));
+  }
+
   return nullptr;
 }
 
