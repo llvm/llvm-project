@@ -77,40 +77,9 @@ static bool isInnermostTwoDimsTransposed(AffineMap map) {
     if (map.getResult(i) != getAffineDimExpr(numInputs - numResults + i, ctx))
       return false;
   // The innermost two results must be the last two input dims, swapped.
-  return map.getResult(numResults - 2) == getAffineDimExpr(numInputs - 1, ctx) &&
+  return map.getResult(numResults - 2) ==
+             getAffineDimExpr(numInputs - 1, ctx) &&
          map.getResult(numResults - 1) == getAffineDimExpr(numInputs - 2, ctx);
-}
-
-static LogicalResult storeLoadPreconditions(PatternRewriter &rewriter,
-                                            Operation *op, VectorType vecTy,
-                                            MemRefType memTy,
-                                            bool allowHighDimVector = false) {
-  // Validate only vector as the basic vector store and load ops guarantee
-  // XeGPU-compatible memref source.
-  unsigned vecRank = vecTy.getRank();
-  // nd block loads/stores support N-D block transfers, so callers that lower to
-  // them (transfer_read/transfer_write) allow any non-zero rank. The plain
-  // vector.load/store lowering keeps the 1D/2D restriction.
-  if (allowHighDimVector) {
-    if (vecRank == 0)
-      return rewriter.notifyMatchFailure(op, "Expects non-0D vector");
-  } else if (!(vecRank == 1 || vecRank == 2)) {
-    return rewriter.notifyMatchFailure(op, "Expects 1D or 2D vector");
-  }
-
-  if (!vecTy.getElementType().isIntOrFloat())
-    return rewriter.notifyMatchFailure(
-        op, "Expected scalar type with known bitwidth");
-
-  // XeGPU requires the memref to have a scalar integer or float element type.
-  // Memrefs with vector element types (e.g. memref<?xvector<4xf32>>) are not
-  // supported because createNdDescriptor computes byte offsets using
-  // getElementTypeBitWidth(), which asserts on non-integer/float types.
-  if (!memTy.getElementType().isIntOrFloat())
-    return rewriter.notifyMatchFailure(
-        op, "Unsupported memref element type: expected integer or float");
-
-  return success();
 }
 
 static LogicalResult transferPreconditions(PatternRewriter &rewriter,
@@ -647,13 +616,12 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     bool isTransposeLoad = isInnermostTwoDimsTransposed(readMap);
 
     // Prefer an nd block load. It requires HW block-load support, a >1D vector
-    // of a scalar element type backed by a scalar-element memref, and a map the
-    // block load can realize. Out-of-bounds reads are allowed as long as the
-    // padding matches load_nd's implicit zero padding.
+    // backed by a scalar-element memref, and a map the block load can realize.
+    // Out-of-bounds reads are allowed as long as the padding matches load_nd's
+    // implicit zero padding.
     bool canLowerToLoadNd =
         hasBlockLoadSupport && loadedVecTy.getRank() > 1 &&
         (readMap.isMinorIdentity() || isTransposeLoad) &&
-        loadedVecTy.getElementType().isIntOrFloat() &&
         readMemTy.getElementType().isIntOrFloat() &&
         (!isOutOfBounds || isZeroOrPoisonPadding(readOp.getPadding()));
 
@@ -759,14 +727,13 @@ struct TransferWriteLowering
         (chip == "pvc" || chip == "bmg" || chip == "cri");
 
     // Prefer an nd block store. It requires HW block-store support, a >1D
-    // vector of a scalar element type backed by a scalar-element memref, and a
-    // minor-identity map (block stores have no transpose support). Out-of-bounds
-    // writes are handled by the descriptor's boundary check.
+    // vector backed by a scalar-element memref, and a minor-identity map (block
+    // stores have no transpose support). Out-of-bounds writes are handled by
+    // the descriptor's boundary check.
     AffineMap map = writeOp.getPermutationMap();
-    bool canLowerToStoreNd =
-        hasBlockStoreSupport && vecTy.getRank() > 1 && map.isMinorIdentity() &&
-        vecTy.getElementType().isIntOrFloat() &&
-        writeMemTy.getElementType().isIntOrFloat();
+    bool canLowerToStoreNd = hasBlockStoreSupport && vecTy.getRank() > 1 &&
+                             map.isMinorIdentity() &&
+                             writeMemTy.getElementType().isIntOrFloat();
 
     if (canLowerToStoreNd) {
       auto [src, indices] = convertMemrefAndOffsetsToTargetRank(
@@ -782,18 +749,17 @@ struct TransferWriteLowering
       xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
           rewriter, loc, descType, dyn_cast<TypedValue<MemRefType>>(src));
 
-      auto storeOp =
-          xegpu::StoreNdOp::create(rewriter, loc, writeOp.getVector(), ndDesc,
-                                   indices,
-                                   /*l1_hint=*/hint,
-                                   /*l2_hint=*/hint, /*l3_hint=*/hint,
-                                   /*layout=*/nullptr);
+      auto storeOp = xegpu::StoreNdOp::create(
+          rewriter, loc, writeOp.getVector(), ndDesc, indices,
+          /*l1_hint=*/hint,
+          /*l2_hint=*/hint, /*l3_hint=*/hint,
+          /*layout=*/nullptr);
       rewriter.replaceOp(writeOp, storeOp);
       return success();
     }
 
-    // Fall back to a scattered store. It supports arbitrary permutations and any
-    // rank, but cannot express out-of-bounds accesses.
+    // Fall back to a scattered store. It supports arbitrary permutations and
+    // any rank, but cannot express out-of-bounds accesses.
     // TODO: add support for OutOfBound access.
     if (writeOp.hasOutOfBoundsDim())
       return failure();
@@ -878,8 +844,12 @@ struct LoadLowering : public OpRewritePattern<vector::LoadOp> {
 
     VectorType vecTy = loadOp.getResult().getType();
     MemRefType memTy = loadOp.getBase().getType();
-    if (failed(storeLoadPreconditions(rewriter, loadOp, vecTy, memTy)))
-      return failure();
+    // The plain vector.load lowering only supports 1D/2D block loads.
+    if (vecTy.getRank() != 1 && vecTy.getRank() != 2)
+      return rewriter.notifyMatchFailure(loadOp, "Expects 1D or 2D vector");
+    if (!memTy.getElementType().isIntOrFloat())
+      return rewriter.notifyMatchFailure(
+          loadOp, "Unsupported memref element type: expected integer or float");
 
     // Boundary check is available only for block instructions.
     bool boundaryCheck = vecTy.getRank() > 1;
@@ -918,8 +888,12 @@ struct StoreLowering : public OpRewritePattern<vector::StoreOp> {
     TypedValue<VectorType> vector = storeOp.getValueToStore();
     VectorType vecTy = vector.getType();
     MemRefType memTy = storeOp.getBase().getType();
-    if (failed(storeLoadPreconditions(rewriter, storeOp, vecTy, memTy)))
-      return failure();
+    // The plain vector.store lowering only supports 1D/2D block stores.
+    if (vecTy.getRank() != 1 && vecTy.getRank() != 2)
+      return rewriter.notifyMatchFailure(storeOp, "Expects 1D or 2D vector");
+    if (!memTy.getElementType().isIntOrFloat())
+      return rewriter.notifyMatchFailure(
+          storeOp, "Unsupported memref element type: expected integer or float");
 
     // Boundary check is available only for block instructions.
     bool boundaryCheck = vecTy.getRank() > 1;
