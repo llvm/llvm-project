@@ -8,8 +8,8 @@ define void @foo(i1 %arg) {
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub float 6.553500e+04, 0.000000e+00
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> <float poison, float poison, float 0.000000e+00, float 0.000000e+00>, float [[SUB]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float [[CONV]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> <float poison, float poison, float 0.000000e+00, float 0.000000e+00>, float [[SUB]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float [[CONV]], i64 1
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x float> [ [[TMP1]], [[BB1]] ], [ [[TMP14:%.*]], [[BB3:%.*]] ]
@@ -18,8 +18,8 @@ define void @foo(i1 %arg) {
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[TMP4:%.*]] = fpext <4 x float> [[TMP2]] to <4 x double>
 ; CHECK-NEXT:    [[CONV2:%.*]] = uitofp i16 0 to double
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x double> <double 0.000000e+00, double poison, double 0.000000e+00, double -0.000000e+00>, double [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> <double -0.000000e+00, double poison, double -0.000000e+00, double 0.000000e+00>, double [[CONV2]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x double> <double 0.000000e+00, double poison, double 0.000000e+00, double -0.000000e+00>, double [[TMP3]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> <double -0.000000e+00, double poison, double -0.000000e+00, double 0.000000e+00>, double [[CONV2]], i64 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = fadd <4 x double> [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = fcmp ogt <4 x double> [[TMP10]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = fptrunc <4 x double> [[TMP10]] to <4 x float>

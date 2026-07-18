@@ -536,6 +536,9 @@ ENUM_CODEGENOPT(WinControlFlowGuardMechanism, ControlFlowGuardMechanism,
 /// Adds attributes that prevent outlining (`-mno-outline`)
 CODEGENOPT(DisableOutlining, 1, 0, Benign)
 
+/// Controlls the emission of function name in PPA1 on z/OS.
+CODEGENOPT(ZOSPPA1Name, 1, 1, Benign)
+
 /// FIXME: Make DebugOptions its own top-level .def file.
 #include "DebugOptions.def"
 

@@ -20,7 +20,10 @@ tablegen("AMDGPUGenDAGISel") {
 
 tablegen("AMDGPUGenGlobalISel") {
   visibility = [ ":LLVMAMDGPUCodeGen" ]
-  args = [ "-gen-global-isel" ]
+  args = [
+    "-gen-global-isel",
+    "-gisel-extended-llt",
+  ]
   td_file = "AMDGPUGISel.td"
 }
 
@@ -29,6 +32,7 @@ tablegen("AMDGPUGenPreLegalizeGICombiner") {
   args = [
     "-gen-global-isel-combiner",
     "-combiners=AMDGPUPreLegalizerCombiner",
+    "-gisel-extended-llt",
   ]
   td_file = "AMDGPUGISel.td"
 }
@@ -38,6 +42,7 @@ tablegen("AMDGPUGenPostLegalizeGICombiner") {
   args = [
     "-gen-global-isel-combiner",
     "-combiners=AMDGPUPostLegalizerCombiner",
+    "-gisel-extended-llt",
   ]
   td_file = "AMDGPUGISel.td"
 }
@@ -47,6 +52,7 @@ tablegen("AMDGPUGenRegBankGICombiner") {
   args = [
     "-gen-global-isel-combiner",
     "-combiners=AMDGPURegBankCombiner",
+    "-gisel-extended-llt",
   ]
   td_file = "AMDGPUGISel.td"
 }

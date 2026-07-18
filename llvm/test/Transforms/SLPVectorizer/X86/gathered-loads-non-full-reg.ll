@@ -46,24 +46,24 @@ define void @test(ptr noalias %0) {
 ; CHECK-NEXT:    [[TMP37:%.*]] = fmul double [[TMP32]], [[TMP23]]
 ; CHECK-NEXT:    [[TMP41:%.*]] = fmul double [[TMP36]], [[TMP31]]
 ; CHECK-NEXT:    [[TMP42:%.*]] = fsub double 0.000000e+00, [[TMP25]]
-; CHECK-NEXT:    [[TMP49:%.*]] = insertelement <2 x double> poison, double [[TMP42]], i32 0
-; CHECK-NEXT:    [[TMP44:%.*]] = insertelement <2 x double> [[TMP49]], double [[TMP41]], i32 1
+; CHECK-NEXT:    [[TMP49:%.*]] = insertelement <2 x double> poison, double [[TMP42]], i64 0
+; CHECK-NEXT:    [[TMP44:%.*]] = insertelement <2 x double> [[TMP49]], double [[TMP41]], i64 1
 ; CHECK-NEXT:    [[TMP50:%.*]] = fmul <2 x double> [[TMP44]], zeroinitializer
 ; CHECK-NEXT:    [[TMP43:%.*]] = shufflevector <2 x double> [[TMP50]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP51:%.*]] = insertelement <4 x double> [[TMP43]], double [[TMP37]], i32 2
-; CHECK-NEXT:    [[TMP52:%.*]] = insertelement <4 x double> [[TMP51]], double [[TMP47]], i32 3
+; CHECK-NEXT:    [[TMP51:%.*]] = insertelement <4 x double> [[TMP43]], double [[TMP37]], i64 2
+; CHECK-NEXT:    [[TMP52:%.*]] = insertelement <4 x double> [[TMP51]], double [[TMP47]], i64 3
 ; CHECK-NEXT:    [[TMP46:%.*]] = fadd <4 x double> [[TMP52]], <double 0.000000e+00, double 0.000000e+00, double -0.000000e+00, double 0.000000e+00>
 ; CHECK-NEXT:    [[TMP53:%.*]] = fmul <4 x double> [[TMP46]], <double 0.000000e+00, double 1.000000e+00, double 0.000000e+00, double 1.000000e+00>
-; CHECK-NEXT:    [[TMP59:%.*]] = insertelement <4 x double> <double 0.000000e+00, double poison, double poison, double 1.000000e+00>, double [[TMP33]], i32 1
+; CHECK-NEXT:    [[TMP59:%.*]] = insertelement <4 x double> <double 0.000000e+00, double poison, double poison, double 1.000000e+00>, double [[TMP33]], i64 1
 ; CHECK-NEXT:    [[TMP60:%.*]] = shufflevector <4 x double> [[TMP59]], <4 x double> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 3>
 ; CHECK-NEXT:    [[TMP61:%.*]] = fmul <4 x double> [[TMP60]], [[TMP53]]
 ; CHECK-NEXT:    store <4 x double> [[TMP61]], ptr getelementptr inbounds (i8, ptr @solid_, i64 384), align 8
 ; CHECK-NEXT:    [[TMP56:%.*]] = shufflevector <4 x double> [[TMP61]], <4 x double> poison, <2 x i32> <i32 1, i32 2>
-; CHECK-NEXT:    [[TMP45:%.*]] = insertelement <2 x double> <double poison, double 0.000000e+00>, double [[TMP17]], i32 0
+; CHECK-NEXT:    [[TMP45:%.*]] = insertelement <2 x double> <double poison, double 0.000000e+00>, double [[TMP17]], i64 0
 ; CHECK-NEXT:    [[TMP48:%.*]] = fmul <2 x double> [[TMP56]], [[TMP45]]
 ; CHECK-NEXT:    [[TMP54:%.*]] = fadd <2 x double> [[TMP48]], zeroinitializer
-; CHECK-NEXT:    [[TMP55:%.*]] = insertelement <2 x double> poison, double [[TMP38]], i32 0
-; CHECK-NEXT:    [[TMP62:%.*]] = insertelement <2 x double> [[TMP55]], double [[TMP33]], i32 1
+; CHECK-NEXT:    [[TMP55:%.*]] = insertelement <2 x double> poison, double [[TMP38]], i64 0
+; CHECK-NEXT:    [[TMP62:%.*]] = insertelement <2 x double> [[TMP55]], double [[TMP33]], i64 1
 ; CHECK-NEXT:    [[TMP57:%.*]] = fadd <2 x double> [[TMP62]], [[TMP54]]
 ; CHECK-NEXT:    [[TMP58:%.*]] = fsub <2 x double> zeroinitializer, [[TMP57]]
 ; CHECK-NEXT:    store <2 x double> [[TMP58]], ptr getelementptr inbounds (i8, ptr @solid_, i64 296), align 8

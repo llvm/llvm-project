@@ -89,3 +89,29 @@ func.func @allocating_and_deallocating_multi() {
 // NOCPP-NEXT: %[[FREE_PTR:.*]] = emitc.cast %[[ALLOC_CAST]] : !emitc.ptr<i32> to !emitc.ptr<!emitc.opaque<"void">>
 // NOCPP-NEXT: emitc.call_opaque "free"(%[[FREE_PTR]]) : (!emitc.ptr<!emitc.opaque<"void">>) -> ()
 // NOCPP-NEXT: return
+
+func.func @alloc_and_dealloc_rank0() {
+  %alloc = memref.alloc() : memref<i32>
+  memref.dealloc %alloc : memref<i32>
+  return
+}
+
+// CPP-LABEL: alloc_and_dealloc_rank0
+// CPP-NEXT: %[[ALLOC:.*]] = emitc.call_opaque "sizeof"() <{args = [i32]}> : () -> !emitc.size_t
+// CPP-NEXT: %[[ALLOC_SIZE:.*]] = "emitc.constant"() <{value = 1 : index}> : () -> index
+// CPP-NEXT: %[[ALLOC_TOTAL_SIZE:.*]] = emitc.mul %[[ALLOC]], %[[ALLOC_SIZE]] : (!emitc.size_t, index) -> !emitc.size_t
+// CPP-NEXT: %[[ALLOC_PTR:.*]] = emitc.call_opaque "malloc"(%[[ALLOC_TOTAL_SIZE]]) : (!emitc.size_t) -> !emitc.ptr<!emitc.opaque<"void">>
+// CPP-NEXT: %[[ALLOC_CAST:.*]] = emitc.cast %[[ALLOC_PTR]] : !emitc.ptr<!emitc.opaque<"void">> to !emitc.ptr<i32>
+// CPP-NEXT: %[[FREE_PTR:.*]] = emitc.cast %[[ALLOC_CAST]] : !emitc.ptr<i32> to !emitc.ptr<!emitc.opaque<"void">>
+// CPP-NEXT: emitc.call_opaque "free"(%[[FREE_PTR]]) : (!emitc.ptr<!emitc.opaque<"void">>) -> ()
+// CPP-NEXT: return
+
+// NOCPP-LABEL: alloc_and_dealloc_rank0
+// NOCPP-NEXT: %[[ALLOC:.*]] = emitc.call_opaque "sizeof"() <{args = [i32]}> : () -> !emitc.size_t
+// NOCPP-NEXT: %[[ALLOC_SIZE:.*]] = "emitc.constant"() <{value = 1 : index}> : () -> index
+// NOCPP-NEXT: %[[ALLOC_TOTAL_SIZE:.*]] = emitc.mul %[[ALLOC]], %[[ALLOC_SIZE]] : (!emitc.size_t, index) -> !emitc.size_t
+// NOCPP-NEXT: %[[ALLOC_PTR:.*]] = emitc.call_opaque "malloc"(%[[ALLOC_TOTAL_SIZE]]) : (!emitc.size_t) -> !emitc.ptr<!emitc.opaque<"void">>
+// NOCPP-NEXT: %[[ALLOC_CAST:.*]] = emitc.cast %[[ALLOC_PTR]] : !emitc.ptr<!emitc.opaque<"void">> to !emitc.ptr<i32>
+// NOCPP-NEXT: %[[FREE_PTR:.*]] = emitc.cast %[[ALLOC_CAST]] : !emitc.ptr<i32> to !emitc.ptr<!emitc.opaque<"void">>
+// NOCPP-NEXT: emitc.call_opaque "free"(%[[FREE_PTR]]) : (!emitc.ptr<!emitc.opaque<"void">>) -> ()
+// NOCPP-NEXT: return
