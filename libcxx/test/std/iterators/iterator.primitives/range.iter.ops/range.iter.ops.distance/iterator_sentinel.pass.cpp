@@ -13,7 +13,7 @@
 //     constexpr iter_difference_t<I> ranges::distance(I first, S last);
 //
 // template<class I, sized_sentinel_for<decay_t<I>> S>
-//   constexpr iter_difference_t<I> ranges::distance(I&& first, S last); // TODO: update when LWG3664 is resolved
+//   constexpr iter_difference_t<decay_t<I>> ranges::distance(I&& first, S last);
 
 #include <array>
 #include <cassert>
