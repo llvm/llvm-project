@@ -3287,7 +3287,10 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
         TrailingRequiresClause);
     Method->setRangeEnd(Constructor->getEndLoc());
   } else if (CXXDestructorDecl *Destructor = dyn_cast<CXXDestructorDecl>(D)) {
-    Method = CXXDestructorDecl::Create(
+      if (NameInfo.getName().getNameKind() != DeclarationName::NameKind::CXXDestructorName) {
+          return nullptr;
+      }
+      Method = CXXDestructorDecl::Create(
         SemaRef.Context, Record, StartLoc, NameInfo, T, TInfo,
         Destructor->UsesFPIntrin(), Destructor->isInlineSpecified(), false,
         Destructor->getConstexprKind(), TrailingRequiresClause);
