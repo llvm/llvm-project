@@ -17,8 +17,10 @@
 #include "Common/PredicateExpander.h"
 #include "Common/SubtargetFeatureInfo.h"
 #include "Common/Utils.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -36,7 +38,9 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
+#include <limits>
 #include <string>
+#include <tuple>
 #include <vector>
 
 using namespace llvm;
@@ -44,6 +48,18 @@ using namespace llvm;
 #define DEBUG_TYPE "subtarget-emitter"
 
 namespace {
+
+using SchedClassKey =
+    std::tuple<uint16_t, uint8_t, uint8_t, uint8_t, uint16_t, uint16_t,
+               uint16_t, uint16_t, uint16_t, uint16_t>;
+
+static SchedClassKey getSchedClassKey(const MCSchedClassDesc &Desc) {
+  return {Desc.NumMicroOps,     Desc.BeginGroup,
+          Desc.EndGroup,        Desc.RetireOOO,
+          Desc.WriteProcResIdx, Desc.NumWriteProcResEntries,
+          Desc.WriteLatencyIdx, Desc.NumWriteLatencyEntries,
+          Desc.ReadAdvanceIdx,  Desc.NumReadAdvanceEntries};
+}
 
 class SubtargetEmitter : TargetFeaturesEmitter {
   // Each processor has a SchedClassDesc table with an entry for each
@@ -55,6 +71,9 @@ class SubtargetEmitter : TargetFeaturesEmitter {
     std::vector<MCWriteLatencyEntry> WriteLatencies;
     std::vector<std::string> WriterNames;
     std::vector<MCReadAdvanceEntry> ReadAdvanceEntries;
+    SmallVector<MCSchedClassDesc> SchedClassPool;
+    SmallVector<SmallVector<uint16_t>> ProcSchedClassIndices;
+    bool UseSchedClassPool = false;
 
     // Reserve an invalid entry at index 0
     SchedClassTables() {
@@ -130,8 +149,10 @@ class SubtargetEmitter : TargetFeaturesEmitter {
                            const CodeGenProcModel &ProcModel);
   void genSchedClassTables(const CodeGenProcModel &ProcModel,
                            SchedClassTables &SchedTables);
+  void buildSchedClassPool(SchedClassTables &SchedTables);
   void emitSchedClassTables(SchedClassTables &SchedTables, raw_ostream &OS);
-  void emitProcessorModels(raw_ostream &OS);
+  void emitProcessorModels(const SchedClassTables &SchedTables,
+                           raw_ostream &OS);
   void emitSchedModelHelpers(const std::string &ClassName, raw_ostream &OS);
   void emitSchedModelHelpersImpl(raw_ostream &OS,
                                  bool OnlyExpandMCInstPredicates = false);
@@ -1338,6 +1359,56 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
   }
 }
 
+void SubtargetEmitter::buildSchedClassPool(SchedClassTables &SchedTables) {
+  constexpr size_t ReleaseSchedClassDescSize = 14;
+  DenseMap<SchedClassKey, uint16_t> PoolIndices;
+  size_t NumSchedClassDescs = 0;
+
+  SchedTables.ProcSchedClassIndices.clear();
+  SchedTables.ProcSchedClassIndices.resize(SchedTables.ProcSchedClasses.size());
+
+  for (const auto &[Idx, Proc] : enumerate(SchedModels.procModels())) {
+    if (!Proc.hasInstrSchedModel())
+      continue;
+
+    const std::vector<MCSchedClassDesc> &SCTab =
+        SchedTables.ProcSchedClasses[1 + Idx];
+    SmallVector<uint16_t> &Indices = SchedTables.ProcSchedClassIndices[1 + Idx];
+    Indices.reserve(SCTab.size());
+    NumSchedClassDescs += SCTab.size();
+
+    for (const MCSchedClassDesc &Desc : SCTab) {
+      SchedClassKey Key = getSchedClassKey(Desc);
+      auto It = PoolIndices.find(Key);
+      if (It == PoolIndices.end()) {
+        if (SchedTables.SchedClassPool.size() >
+            std::numeric_limits<uint16_t>::max()) {
+          SchedTables.SchedClassPool.clear();
+          SchedTables.ProcSchedClassIndices.clear();
+          return;
+        }
+        uint16_t PoolIdx = SchedTables.SchedClassPool.size();
+        auto [InsertedIt, Inserted] =
+            PoolIndices.try_emplace(std::move(Key), PoolIdx);
+        assert(Inserted && "SchedClassKey already exists");
+        It = InsertedIt;
+        SchedTables.SchedClassPool.push_back(Desc);
+      }
+      Indices.push_back(It->second);
+    }
+  }
+
+  size_t DirectSize = NumSchedClassDescs * ReleaseSchedClassDescSize;
+  size_t PooledSize =
+      SchedTables.SchedClassPool.size() * ReleaseSchedClassDescSize +
+      NumSchedClassDescs * sizeof(uint16_t);
+  SchedTables.UseSchedClassPool = PooledSize < DirectSize;
+  if (!SchedTables.UseSchedClassPool) {
+    SchedTables.SchedClassPool.clear();
+    SchedTables.ProcSchedClassIndices.clear();
+  }
+}
+
 // Emit SchedClass tables for all processors and associated global tables.
 void SubtargetEmitter::emitSchedClassTables(SchedClassTables &SchedTables,
                                             raw_ostream &OS) {
@@ -1393,53 +1464,102 @@ void SubtargetEmitter::emitSchedClassTables(SchedClassTables &SchedTables,
 
   // Pool all SchedClass names in a string table.
   StringToOffsetTable StrTab;
-  unsigned InvalidNameOff = StrTab.GetOrAddStringOffset("InvalidSchedClass");
+  std::vector<unsigned> SchedClassNameOffsets(
+      SchedModels.schedClasses().size());
+  assert(SchedModels.getSchedClass(0).Name == "NoInstrModel" &&
+         "invalid class not first");
+  SchedClassNameOffsets[0] = StrTab.GetOrAddStringOffset("InvalidSchedClass");
+  for (unsigned Idx = 1, N = SchedModels.schedClasses().size(); Idx != N; ++Idx)
+    SchedClassNameOffsets[Idx] =
+        StrTab.GetOrAddStringOffset(SchedModels.getSchedClass(Idx).Name);
 
-  // Emit a SchedClass table for each processor.
-  for (const auto &[Idx, Proc] : enumerate(SchedModels.procModels())) {
-    if (!Proc.hasInstrSchedModel())
-      continue;
+  auto emitDesc = [&OS](const MCSchedClassDesc &Desc) {
+    OS << Desc.NumMicroOps << ", " << (Desc.BeginGroup ? "true" : "false")
+       << ", " << (Desc.EndGroup ? "true" : "false") << ", "
+       << (Desc.RetireOOO ? "true" : "false") << ", "
+       << format("%2d", Desc.WriteProcResIdx) << ", "
+       << Desc.NumWriteProcResEntries << ", "
+       << format("%2d", Desc.WriteLatencyIdx) << ", "
+       << Desc.NumWriteLatencyEntries << ", "
+       << format("%2d", Desc.ReadAdvanceIdx) << ", "
+       << Desc.NumReadAdvanceEntries;
+  };
 
-    std::vector<MCSchedClassDesc> &SCTab =
-        SchedTables.ProcSchedClasses[1 + Idx];
+  if (!SchedTables.UseSchedClassPool) {
+    // Emit a SchedClass table for each processor.
+    for (const auto &[Idx, Proc] : enumerate(SchedModels.procModels())) {
+      if (!Proc.hasInstrSchedModel())
+        continue;
 
-    OS << "\n// {Name, NumMicroOps, BeginGroup, EndGroup, RetireOOO,"
-       << " WriteProcResIdx,#, WriteLatencyIdx,#, ReadAdvanceIdx,#}\n";
-    OS << "static const llvm::MCSchedClassDesc " << Proc.ModelName
-       << "SchedClasses[] = {\n";
+      std::vector<MCSchedClassDesc> &SCTab =
+          SchedTables.ProcSchedClasses[1 + Idx];
 
-    // The first class is always invalid. We no way to distinguish it except by
-    // name and position.
-    assert(SchedModels.getSchedClass(0).Name == "NoInstrModel" &&
-           "invalid class not first");
-    OS << "  {DBGFIELD(" << InvalidNameOff << ")  "
-       << MCSchedClassDesc::InvalidNumMicroOps
-       << ", false, false, false, 0, 0,  0, 0,  0, 0},\n";
+      OS << "\n// {NumMicroOps, BeginGroup, EndGroup, RetireOOO,"
+         << " WriteProcResIdx,#, WriteLatencyIdx,#, ReadAdvanceIdx,#}\n";
+      OS << "static const llvm::MCSchedClassDesc " << Proc.ModelName
+         << "SchedClasses[] = {\n";
 
-    for (unsigned SCIdx = 1, SCEnd = SCTab.size(); SCIdx != SCEnd; ++SCIdx) {
-      MCSchedClassDesc &MCDesc = SCTab[SCIdx];
-      const CodeGenSchedClass &SchedClass = SchedModels.getSchedClass(SCIdx);
-      unsigned NameOff = StrTab.GetOrAddStringOffset(SchedClass.Name);
-      OS << "  {DBGFIELD(/*" << SchedClass.Name << "*/ " << NameOff << ") ";
-      if (SchedClass.Name.size() < 18)
-        OS.indent(18 - SchedClass.Name.size());
-      OS << MCDesc.NumMicroOps << ", " << (MCDesc.BeginGroup ? "true" : "false")
-         << ", " << (MCDesc.EndGroup ? "true" : "false") << ", "
-         << (MCDesc.RetireOOO ? "true" : "false") << ", "
-         << format("%2d", MCDesc.WriteProcResIdx) << ", "
-         << MCDesc.NumWriteProcResEntries << ", "
-         << format("%2d", MCDesc.WriteLatencyIdx) << ", "
-         << MCDesc.NumWriteLatencyEntries << ", "
-         << format("%2d", MCDesc.ReadAdvanceIdx) << ", "
-         << MCDesc.NumReadAdvanceEntries << "}, // #" << SCIdx << '\n';
+      OS << "  {" << MCSchedClassDesc::InvalidNumMicroOps
+         << ", false, false, false, 0, 0,  0, 0,  0, 0},\n";
+
+      for (unsigned SCIdx = 1, SCEnd = SCTab.size(); SCIdx != SCEnd; ++SCIdx) {
+        const CodeGenSchedClass &SchedClass = SchedModels.getSchedClass(SCIdx);
+        OS << "  {/*" << SchedClass.Name << "*/ ";
+        if (SchedClass.Name.size() < 18)
+          OS.indent(18 - SchedClass.Name.size());
+        emitDesc(SCTab[SCIdx]);
+        OS << "}, // #" << SCIdx << '\n';
+      }
+      OS << "}; // " << Proc.ModelName << "SchedClasses\n";
     }
-    OS << "}; // " << Proc.ModelName << "SchedClasses\n";
+  } else {
+    OS << "\n// {NumMicroOps, BeginGroup, EndGroup, RetireOOO,"
+       << " WriteProcResIdx,#, WriteLatencyIdx,#, ReadAdvanceIdx,#}\n";
+    OS << "static const llvm::MCSchedClassDesc " << Target
+       << "SchedClassPool[] = {\n";
+    for (const auto &[PoolIdx, MCDesc] :
+         enumerate(SchedTables.SchedClassPool)) {
+      OS << "  {";
+      emitDesc(MCDesc);
+      OS << "}, // #" << PoolIdx << '\n';
+    }
+    OS << "}; // " << Target << "SchedClassPool\n";
+    OS << "static_assert(sizeof(" << Target << "SchedClassPool) / sizeof("
+       << Target << "SchedClassPool[0]) <= (1ULL << 16));\n";
+
+    for (const auto &[Idx, Proc] : enumerate(SchedModels.procModels())) {
+      if (!Proc.hasInstrSchedModel())
+        continue;
+
+      ArrayRef<uint16_t> Indices = SchedTables.ProcSchedClassIndices[1 + Idx];
+      OS << "\nstatic const uint16_t " << Proc.ModelName
+         << "SchedClassIndices[] = {\n";
+      for (const auto [SCIdx, PoolIdx] : enumerate(Indices))
+        OS << "  " << PoolIdx << ", // #" << SCIdx << '\n';
+      OS << "}; // " << Proc.ModelName << "SchedClassIndices\n";
+      OS << "static_assert(sizeof(" << Proc.ModelName
+         << "SchedClassIndices[0]) == 2);\n";
+      OS << "static_assert(sizeof(" << Proc.ModelName
+         << "SchedClassIndices) / sizeof(" << Proc.ModelName
+         << "SchedClassIndices[0]) == " << Indices.size() << ");\n";
+    }
   }
 
   StrTab.EmitStringTableDef(OS, Target + "SchedClassNames");
+  OS << "\nstatic const uint32_t " << Target << "SchedClassNameOffsets[] = {\n";
+  for (const auto [SCIdx, NameOff] : enumerate(SchedClassNameOffsets))
+    OS << "  " << NameOff << ", // #" << SCIdx << '\n';
+  OS << "}; // " << Target << "SchedClassNameOffsets\n";
+  OS << "static_assert(sizeof(" << Target
+     << "SchedClassNameOffsets[0]) == 4);\n";
+  OS << "static_assert(sizeof(" << Target << "SchedClassNameOffsets) / sizeof("
+     << Target
+     << "SchedClassNameOffsets[0]) == " << SchedClassNameOffsets.size()
+     << ");\n";
 }
 
-void SubtargetEmitter::emitProcessorModels(raw_ostream &OS) {
+void SubtargetEmitter::emitProcessorModels(const SchedClassTables &SchedTables,
+                                           raw_ostream &OS) {
   // For each processor model.
   for (const CodeGenProcModel &PM : SchedModels.procModels()) {
     // Emit extra processor info if available.
@@ -1486,15 +1606,25 @@ void SubtargetEmitter::emitProcessorModels(raw_ostream &OS) {
 
     OS << "  " << PM.Index << ", // Processor ID\n";
     if (PM.hasInstrSchedModel())
-      OS << "  " << PM.ModelName << "ProcResources" << ",\n"
-         << "  " << PM.ModelName << "SchedClasses" << ",\n"
-         << "  " << PM.ProcResourceDefs.size() + 1 << ",\n"
+      OS << "  " << PM.ModelName << "ProcResources" << ",\n";
+    else
+      OS << "  nullptr,\n";
+    if (PM.hasInstrSchedModel() && SchedTables.UseSchedClassPool)
+      OS << "  " << Target << "SchedClassPool,\n";
+    else if (PM.hasInstrSchedModel())
+      OS << "  " << PM.ModelName << "SchedClasses" << ",\n";
+    else
+      OS << "  nullptr,\n";
+    if (PM.hasInstrSchedModel())
+      OS << "  " << PM.ProcResourceDefs.size() + 1 << ",\n"
          << "  " << SchedModels.schedClasses().size() << ",\n";
     else
-      OS << "  nullptr, nullptr, 0, 0,"
+      OS << "  0, 0,"
          << " // No instruction-level machine model.\n";
     OS << "  DBGVAL_OR_NULLPTR(&" << Target
        << "SchedClassNames), // SchedClassNames\n";
+    OS << "  DBGVAL_OR_NULLPTR(" << Target
+       << "SchedClassNameOffsets), // SchedClassNameOffsets\n";
     if (PM.hasItineraries())
       OS << "  " << PM.ItinsDef->getName() << ",\n";
     else
@@ -1502,7 +1632,11 @@ void SubtargetEmitter::emitProcessorModels(raw_ostream &OS) {
     if (PM.hasExtraProcessorInfo())
       OS << "  &" << PM.ModelName << "ExtraInfo,\n";
     else
-      OS << "  nullptr // No extra processor descriptor\n";
+      OS << "  nullptr, // No extra processor descriptor\n";
+    if (PM.hasInstrSchedModel() && SchedTables.UseSchedClassPool)
+      OS << "  " << PM.ModelName << "SchedClassIndices,\n";
+    else
+      OS << "  nullptr,\n";
     OS << "  },\n";
   }
   OS << "};\n";
@@ -1512,14 +1646,13 @@ void SubtargetEmitter::emitProcessorModels(raw_ostream &OS) {
 // EmitSchedModel - Emits all scheduling model tables, folding common patterns.
 //
 void SubtargetEmitter::emitSchedModel(raw_ostream &OS) {
-  OS << "#ifdef DBGFIELD\n"
-     << "#error \"<target>GenSubtargetInfo.inc requires a DBGFIELD macro\"\n"
+  OS << "#ifdef DBGVAL_OR_NULLPTR\n"
+     << "#error \"<target>GenSubtargetInfo.inc requires a DBGVAL_OR_NULLPTR "
+        "macro\"\n"
      << "#endif\n"
      << "#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)\n"
-     << "#define DBGFIELD(x) x,\n"
      << "#define DBGVAL_OR_NULLPTR(x) x\n"
      << "#else\n"
-     << "#define DBGFIELD(x)\n"
      << "#define DBGVAL_OR_NULLPTR(x) nullptr\n"
      << "#endif\n";
 
@@ -1536,12 +1669,12 @@ void SubtargetEmitter::emitSchedModel(raw_ostream &OS) {
   for (const CodeGenProcModel &ProcModel : SchedModels.procModels()) {
     genSchedClassTables(ProcModel, SchedTables);
   }
+  buildSchedClassPool(SchedTables);
   emitSchedClassTables(SchedTables, OS);
 
   // Emit the processor machine model
-  emitProcessorModels(OS);
+  emitProcessorModels(SchedTables, OS);
 
-  OS << "\n#undef DBGFIELD\n";
   OS << "\n#undef DBGVAL_OR_NULLPTR\n";
 }
 

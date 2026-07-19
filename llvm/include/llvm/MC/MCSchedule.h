@@ -130,9 +130,6 @@ struct MCSchedClassDesc {
   static const unsigned short InvalidNumMicroOps = (1U << 13) - 1;
   static const unsigned short VariantNumMicroOps = InvalidNumMicroOps - 1;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  uint32_t NameOff;
-#endif
   uint16_t NumMicroOps : 13;
   uint16_t BeginGroup : 1;
   uint16_t EndGroup : 1;
@@ -151,6 +148,10 @@ struct MCSchedClassDesc {
     return NumMicroOps == VariantNumMicroOps;
   }
 };
+
+// If this assertion fails, try to repack MCSchedClassDesc to preserve the
+// compact layout; remove the assertion if the layout can no longer be kept.
+static_assert(sizeof(MCSchedClassDesc) == 14);
 
 /// Specify the cost of a register definition in terms of number of physical
 /// register allocated at register renaming stage. For example, AMD Jaguar.
@@ -332,11 +333,13 @@ struct MCSchedModel {
   unsigned NumProcResourceKinds;
   unsigned NumSchedClasses;
   const StringTable *SchedClassNames;
+  const uint32_t *SchedClassNameOffsets;
   // Instruction itinerary tables used by InstrItineraryData.
   friend class InstrItineraryData;
   const InstrItinerary *InstrItineraries;
 
   const MCExtraProcessorInfo *ExtraProcessorInfo;
+  const uint16_t *SchedClassTableIndices;
 
   bool hasExtraProcessorInfo() const { return ExtraProcessorInfo; }
 
@@ -373,12 +376,14 @@ struct MCSchedModel {
     assert(hasInstrSchedModel() && "No scheduling machine model");
 
     assert(SchedClassIdx < NumSchedClasses && "bad scheduling class idx");
+    if (SchedClassTableIndices)
+      SchedClassIdx = SchedClassTableIndices[SchedClassIdx];
     return &SchedClassTable[SchedClassIdx];
   }
 
   StringRef getSchedClassName(unsigned SchedClassIdx) const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-    return (*SchedClassNames)[SchedClassTable[SchedClassIdx].NameOff];
+    return (*SchedClassNames)[SchedClassNameOffsets[SchedClassIdx]];
 #else
     return "<unknown>";
 #endif
