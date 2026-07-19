@@ -1603,10 +1603,12 @@ libc_support_library(
         ":__support_file_file",
         ":__support_libc_errno",
         ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_close",
         ":__support_osutil_linux_syscall_wrappers_fcntl",
         ":__support_osutil_linux_syscall_wrappers_lseek",
         ":__support_osutil_linux_syscall_wrappers_open",
-        ":__support_osutil_syscall",
+        ":__support_osutil_linux_syscall_wrappers_read",
+        ":__support_osutil_linux_syscall_wrappers_write",
         ":hdr_fcntl_macros",
         ":hdr_stdint_proxy",
         ":hdr_stdio_macros",
@@ -2932,11 +2934,14 @@ libc_support_library(
     }),
     deps = [
         ":__support_common",
+        ":__support_osutil_linux_syscall_wrappers_close",
         ":__support_osutil_linux_syscall_wrappers_mmap",
         ":__support_osutil_linux_syscall_wrappers_munmap",
         ":__support_osutil_linux_syscall_wrappers_open",
+        ":__support_osutil_linux_syscall_wrappers_read",
         ":__support_osutil_syscall",
         ":__support_threads_callonce",
+        ":hdr_errno_macros",
         ":hdr_fcntl_macros",
         ":hdr_sys_auxv_macros",
         ":hdr_sys_mman_macros",
@@ -8319,6 +8324,24 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_lgammaf16",
+    hdrs = ["src/__support/math/lgammaf16.h"],
+    deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_cast",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_fputil_polyeval",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_types",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_llogbf16",
     hdrs = ["src/__support/math/llogbf16.h"],
     deps = [
@@ -12058,6 +12081,11 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "lgammaf16",
+    additional_deps = [":__support_math_lgammaf16"],
+)
+
+libc_math_function(
     name = "llogb",
     additional_deps = [
         ":__support_math_llogb",
@@ -15702,8 +15730,9 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_osutil_syscall",
+        ":__support_osutil_linux_syscall_wrappers_unlinkat",
         ":errno",
+        ":hdr_errno_macros",
         ":hdr_fcntl_macros",
         ":hdr_stdio_overlay",
         ":types_FILE",
@@ -16090,9 +16119,8 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_osutil_syscall",
+        ":__support_osutil_linux_syscall_wrappers_unlink",
         ":errno",
-        ":hdr_fcntl_macros",
         ":shm_common",
         ":types_mode_t",
     ],

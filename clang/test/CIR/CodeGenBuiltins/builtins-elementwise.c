@@ -640,3 +640,12 @@ void test_builtin_elementwise_sub_sat(int i1, int i2, unsigned u1, unsigned u2,
   // LLVM: call <8 x i16> @llvm.ssub.sat.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   vs1 = __builtin_elementwise_sub_sat(vs1, vs2);
 }
+
+vfloat4 test_builtin_elementwise_fma(vfloat4 a, vfloat4 b, vfloat4 c) {
+  // CIR-LABEL: test_builtin_elementwise_fma
+  // LLVM-LABEL: test_builtin_elementwise_fma
+
+  // CIR: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float>
+  // LLVM: call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
+  return __builtin_elementwise_fma(a, b, c);
+}

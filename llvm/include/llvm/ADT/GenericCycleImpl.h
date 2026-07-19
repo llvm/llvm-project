@@ -40,27 +40,13 @@ void GenericCycleInfo<ContextT>::getExitBlocks(
   if (ExitBlocksCaches.empty())
     ExitBlocksCaches.resize(NumCycles);
   auto &Cache = ExitBlocksCaches[C.Index];
-  if (!Cache.empty()) {
-    TmpStorage.append(Cache.begin(), Cache.end());
-    return;
+  if (Cache.empty()) {
+    SmallPtrSet<BlockT *, 4> Seen;
+    for (BlockT *Block : getBlocks(C))
+      for (BlockT *Succ : successors(Block))
+        if (!contains(C, Succ) && Seen.insert(Succ).second)
+          Cache.push_back(Succ);
   }
-
-  size_t NumExitBlocks = 0;
-  for (BlockT *Block : getBlocks(C)) {
-    llvm::append_range(Cache, successors(Block));
-
-    for (size_t Idx = NumExitBlocks, End = Cache.size(); Idx < End; ++Idx) {
-      BlockT *Succ = Cache[Idx];
-      if (!contains(C, Succ)) {
-        auto ExitEndIt = Cache.begin() + NumExitBlocks;
-        if (std::find(Cache.begin(), ExitEndIt, Succ) == ExitEndIt)
-          Cache[NumExitBlocks++] = Succ;
-      }
-    }
-
-    Cache.resize(NumExitBlocks);
-  }
-
   TmpStorage.append(Cache.begin(), Cache.end());
 }
 
@@ -205,9 +191,9 @@ void GenericCycleInfo<ContextT>::verifyCycleNest(CycleRef C) const {
     assert(deref(Child).Depth == Cyc.Depth + 1);
   }
 
-  // Check the parent cycle pointer.
-  if (Cyc.ParentCycle) {
-    assert(is_contained(children(ref(*Cyc.ParentCycle)), C) &&
+  // Check the parent cycle.
+  if (Cyc.hasParent()) {
+    assert(is_contained(children(CycleRef(Cyc.ParentIndex)), C) &&
            "Cycle is not a subcycle of its parent!");
   }
 #endif
@@ -267,16 +253,26 @@ template <typename ContextT> class GenericCycleInfoCompute {
 
   /// Make top-level cycle \p Child a child of \p NewParent.
   void moveTopLevelCycleToNewParent(CycleT *NewParent, CycleT *Child) {
-    assert((!Child->ParentCycle && !NewParent->ParentCycle) &&
+    assert((!Child->hasParent() && !NewParent->hasParent()) &&
            "NewParent and Child must be both top level cycle!\n");
-    assert(NewParent == &AllCycles.back() &&
-           "attach slices in AttachedChildren must stay contiguous");
     auto Pos = llvm::find(TopLevelCycles, Child);
     assert(Pos != TopLevelCycles.end());
     *Pos = TopLevelCycles.back();
     TopLevelCycles.pop_back();
     AttachedChildren.push_back(Child);
-    Child->ParentCycle = NewParent;
+    // NewParent is the newest cycle and its creation-order index is
+    // AllCycles.size() - 1.
+    assert(NewParent == &AllCycles.back() &&
+           "attach slices in AttachedChildren must stay contiguous");
+    Child->ParentIndex = AllCycles.size() - 1;
+  }
+
+  /// Record that \p Block's innermost cycle is the one currently being built
+  /// (always AllCycles.back()), storing its creation-order index. flatten()
+  /// remaps it to the preorder index.
+  void recordInnermostCycle(BlockT *Block) {
+    Info.BlockMap[GraphTraits<BlockT *>::getNumber(Block)] =
+        AllCycles.size() - 1;
   }
 
 public:
@@ -291,10 +287,11 @@ private:
 
 template <typename ContextT>
 void GenericCycleInfo<ContextT>::addToBlockMap(BlockT *Block, CycleT *Cycle) {
-  // The caller should ensure that BlockMap is large enough.
+  // The caller should ensure that BlockMap is large enough. \p Cycle is a flat
+  // cycle, so its preorder index is well-defined.
   verifyBlockNumberEpoch(Block->getParent());
   unsigned Number = GraphTraits<BlockT *>::getNumber(Block);
-  BlockMap[Number] = Cycle;
+  BlockMap[Number] = getCycleIndex(*Cycle);
 }
 
 template <typename ContextT>
@@ -303,7 +300,8 @@ void GenericCycleInfo<ContextT>::addBlockToCycle(BlockT *Block, CycleRef C) {
   // Make sure BlockMap is large enough for the new block.
   unsigned Number = GraphTraits<BlockT *>::getNumber(Block);
   if (Number >= BlockMap.size())
-    BlockMap.resize(GraphTraits<FunctionT *>::getMaxNumber(Block->getParent()));
+    BlockMap.resize(GraphTraits<FunctionT *>::getMaxNumber(Block->getParent()),
+                    NoCycle);
 
   // Insert Block at the end of Cyc's slice and shift every later cycle's
   // range right. Ranges straddling Pos belong to Cyc's ancestors and are
@@ -320,16 +318,17 @@ void GenericCycleInfo<ContextT>::addBlockToCycle(BlockT *Block, CycleRef C) {
   addToBlockMap(Block, &Cyc);
   // Cyc and its ancestors gain the new block: extend each one's slice and
   // invalidate its exit-block cache in a single walk up the tree.
-  for (CycleT *P = &Cyc; P; P = P->ParentCycle) {
-    ++P->IdxEnd;
+  for (unsigned I = getCycleIndex(Cyc); I != NoCycle;
+       I = Cycles[I].ParentIndex) {
+    ++Cycles[I].IdxEnd;
     if (!ExitBlocksCaches.empty())
-      ExitBlocksCaches[getCycleIndex(*P)].clear();
+      ExitBlocksCaches[I].clear();
   }
 }
 
 /// Move the discovered forest into Info's flat preorder array. Assigns preorder
-/// IDs, depths and descendant counts, remaps BlockMap from the temporary nodes,
-/// and lays out every cycle's blocks in BlockLayout.
+/// IDs, depths and descendant counts, remaps BlockMap from creation-order to
+/// preorder indices, and lays out every cycle's blocks in BlockLayout.
 template <typename ContextT>
 void GenericCycleInfoCompute<ContextT>::flatten(ArrayRef<BlockT *> Order) {
   unsigned N = AllCycles.size();
@@ -354,7 +353,8 @@ void GenericCycleInfoCompute<ContextT>::flatten(ArrayRef<BlockT *> Order) {
   auto enter = [&](CycleT *Temp, CycleT *Parent) {
     unsigned ID = NextID++;
     CycleT &Flat = Info.Cycles[ID];
-    Flat.ParentCycle = Parent;
+    Flat.ParentIndex =
+        Parent ? Info.getCycleIndex(*Parent) : CycleInfoT::NoCycle;
     Flat.Depth = Parent ? Parent->Depth + 1 : 1;
     Flat.Entries = std::move(Temp->Entries);
     Cursor += Temp->IdxEnd; // IdxEnd currently holds Temp's own-block count.
@@ -378,14 +378,18 @@ void GenericCycleInfoCompute<ContextT>::flatten(ArrayRef<BlockT *> Order) {
   }
 
   // Place every block into its innermost cycle's own region, remapping its
-  // BlockMap entry from the temporary node to the flat one.
+  // BlockMap entry from a creation-order index to the flat preorder index.
   Info.BlockLayout.resize_for_overwrite(Cursor);
   for (BlockT *B : llvm::reverse(Order)) {
     unsigned Number = GraphTraits<const BlockT *>::getNumber(B);
-    if (CycleT *Temp = Info.BlockMap[Number]) {
-      CycleT *Flat = &Info.Cycles[Temp->IdxBegin];
+    unsigned Created = Info.BlockMap[Number];
+    if (Created != CycleInfoT::NoCycle) {
+      // Created indexes AllCycles; enter() stashed the flat preorder index in
+      // that temporary node's IdxBegin.
+      unsigned Flat = AllCycles[Created].IdxBegin;
       Info.BlockMap[Number] = Flat;
-      Info.BlockLayout[--Flat->IdxBegin] = B;
+      CycleT &FlatCycle = Info.Cycles[Flat];
+      Info.BlockLayout[--FlatCycle.IdxBegin] = B;
     }
   }
 }
@@ -420,7 +424,7 @@ void GenericCycleInfoCompute<ContextT>::run(FunctionT *F) {
     CycleT *NewCycle = &AllCycles.emplace_back();
     NewCycle->IdxBegin = AttachedChildren.size(); // Attach-log slice start.
     NewCycle->appendEntry(HeaderCandidate);
-    Info.addToBlockMap(HeaderCandidate, NewCycle);
+    recordInnermostCycle(HeaderCandidate);
     // The header is this cycle's first own block. Until flatten() runs,
     // IdxEnd accumulates this cycle's own-block count (see the IdxBegin/
     // IdxEnd doc comment), so flatten() needs no separate counting pass.
@@ -462,10 +466,13 @@ void GenericCycleInfoCompute<ContextT>::run(FunctionT *F) {
       // If the block has already been discovered by some cycle
       // (possibly by ourself), then the outermost cycle containing it
       // should become our child. Walk the temporary forest directly:
-      // handles are not meaningful until flatten() builds the flat array.
-      CycleT *BlockParent = Info.getCyclePtr(Block);
-      while (BlockParent && BlockParent->ParentCycle)
-        BlockParent = BlockParent->ParentCycle;
+      // handles are not meaningful until flatten() builds the flat array, so
+      // BlockMap still holds creation-order indices into AllCycles.
+      unsigned Created = Info.BlockMap[GraphTraits<BlockT *>::getNumber(Block)];
+      CycleT *BlockParent =
+          Created == CycleInfoT::NoCycle ? nullptr : &AllCycles[Created];
+      while (BlockParent && BlockParent->hasParent())
+        BlockParent = &AllCycles[BlockParent->ParentIndex];
       if (BlockParent) {
         LLVM_DEBUG(errs() << "  block " << Info.Context.print(Block) << ": ");
 
@@ -484,7 +491,7 @@ void GenericCycleInfoCompute<ContextT>::run(FunctionT *F) {
                      << Info.Context.print(BlockParent->Entries[0]) << "\n");
         }
       } else {
-        Info.addToBlockMap(Block, NewCycle);
+        recordInnermostCycle(Block);
         ++NewCycle->IdxEnd; // Block's innermost cycle is NewCycle.
         ProcessPredecessors(Block);
       }
@@ -576,7 +583,7 @@ void GenericCycleInfo<ContextT>::compute(FunctionT &F) {
   GenericCycleInfoCompute<ContextT> Compute(*this);
   Context = ContextT(&F);
   BlockNumberEpoch = GraphTraits<FunctionT *>::getNumberEpoch(&F);
-  BlockMap.resize(GraphTraits<FunctionT *>::getMaxNumber(&F));
+  BlockMap.assign(GraphTraits<FunctionT *>::getMaxNumber(&F), NoCycle);
 
   LLVM_DEBUG(errs() << "Computing cycles for function: " << F.getName()
                     << "\n");
