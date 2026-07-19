@@ -3092,8 +3092,8 @@ static void DiagnoseCountedByAddrOfDynamicObjectSize(Sema &S,
     return;
 
   // The pointer argument must be the address of an lvalue: '&<expr>'.
-  const auto *UO = dyn_cast<UnaryOperator>(
-      Call->getArg(0)->IgnoreParenImpCasts());
+  const auto *UO =
+      dyn_cast<UnaryOperator>(Call->getArg(0)->IgnoreParenImpCasts());
   if (!UO || UO->getOpcode() != UO_AddrOf)
     return;
 
