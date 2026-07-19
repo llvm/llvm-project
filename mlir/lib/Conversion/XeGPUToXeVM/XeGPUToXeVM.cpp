@@ -720,8 +720,9 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
       // not catch it for results.
       if (auto vecType = dyn_cast<VectorType>(resType)) {
         // Flatten to 1D
-        // Accepts multi-dim tile as one flat, contiguous run. 
-        // This is only valid when the underlying mem_desc region is contiguous in memory
+        // Accepts multi-dim tile as one flat, contiguous run.
+        // This is only valid when the underlying mem_desc region is contiguous
+        // in memory
         resType = VectorType::get({vecType.getNumElements()},
                                   vecType.getElementType());
       }

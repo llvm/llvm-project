@@ -335,9 +335,6 @@ gpu.module @test_kernel[#xevm.target<chip = "pvc">] {
         : !xegpu.mem_desc<32x32xf8E8M0FNU>,
       index, index->vector<8xf8E8M0FNU> gpu.return % 1 : vector<8xf8E8M0FNU>
   }
-}
-
-// -----
 
 // CHECK-LABEL: func.func @m(
 // CHECK: memref.extract_aligned_pointer_as_index
@@ -345,8 +342,7 @@ gpu.module @test_kernel[#xevm.target<chip = "pvc">] {
 // CHECK: llvm.load
 // CHECK-SAME: vector<32xf32>
 
-module {
-  func.func @m(% arg0 : index) {
+func.func @m(%arg0: index) {
     % alloca =
         memref.alloca()
         : memref<4x8xf32, 3> %
