@@ -10464,8 +10464,8 @@ SDValue SelectionDAG::getMergeValues(ArrayRef<SDValue> Ops, const SDLoc &dl) {
   return getNode(ISD::MERGE_VALUES, dl, getVTList(VTs), Ops);
 }
 
-SDValue SelectionDAG::getPoisonMergeValues(ArrayRef<EVT> ResultTypes,
-                                           SDValue Chain, const SDLoc &dl) {
+SDValue SelectionDAG::getErrorMergeValues(ArrayRef<EVT> ResultTypes,
+                                          SDValue Chain, const SDLoc &dl) {
   SmallVector<SDValue, 4> RetValues;
   RetValues.reserve(ResultTypes.size());
   for (EVT VT : ResultTypes)

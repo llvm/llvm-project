@@ -10333,7 +10333,7 @@ static SDValue diagnoseUnsupportedImage(SelectionDAG &DAG, SDValue Op,
                                         const SDLoc &DL, const Twine &Msg) {
   DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
       DAG.getMachineFunction().getFunction(), Msg, DL.getDebugLoc()));
-  return DAG.getPoisonMergeValues(ResultTypes, Op.getOperand(0), DL);
+  return DAG.getErrorMergeValues(ResultTypes, Op.getOperand(0), DL);
 }
 
 SDValue SITargetLowering::lowerImage(SDValue Op,

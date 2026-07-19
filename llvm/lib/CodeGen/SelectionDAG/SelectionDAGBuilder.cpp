@@ -1821,7 +1821,7 @@ void SelectionDAGBuilder::setValueToPoison(const Value *V, const SDLoc &dl) {
   SmallVector<EVT, 4> ValueVTs;
   ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(),
                   V->getType(), ValueVTs);
-  setValue(V, DAG.getPoisonMergeValues(ValueVTs, SDValue(), dl));
+  setValue(V, DAG.getErrorMergeValues(ValueVTs, SDValue(), dl));
 }
 
 /// getNonRegisterValue - Return an SDValue for the given Value, but

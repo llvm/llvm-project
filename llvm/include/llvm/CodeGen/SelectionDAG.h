@@ -1519,9 +1519,10 @@ public:
 
   /// Return poison values for each of \p ResultTypes, substituting \p Chain
   /// for any result of type MVT::Other, merged into a single MERGE_VALUES
-  /// node. Used to salvage a chain when an operation cannot be lowered.
-  LLVM_ABI SDValue getPoisonMergeValues(ArrayRef<EVT> ResultTypes,
-                                        SDValue Chain, const SDLoc &dl);
+  /// node. Used to salvage a chain when an operation cannot be lowered due
+  /// to an error, and the program will be discarded.
+  LLVM_ABI SDValue getErrorMergeValues(ArrayRef<EVT> ResultTypes,
+                                       SDValue Chain, const SDLoc &dl);
 
   /// Loads are not normal binary operators: their result type is not
   /// determined by their operands, and they produce a value AND a token chain.
