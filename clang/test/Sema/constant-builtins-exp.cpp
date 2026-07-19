@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify -fexperimental-new-constant-interpreter %s
+// RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify -Wno-unknown-pragmas %s
+// RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify -fexperimental-new-constant-interpreter -Wno-unknown-pragmas %s
 
 constexpr float InfFloat = __builtin_inff();
 constexpr float NegInfFloat = -__builtin_inff();
@@ -26,3 +26,24 @@ static_assert(0x1.5bf0a8b145769p1 == __builtin_exp(1.0));
 
 // No constexpr for overflow.
 static_assert(InfDouble == __builtin_exp(1000.0)); // expected-error {{static assertion expression is not an integral constant expression}}
+
+// No constexpr for underflow.
+static_assert(0.0f == __builtin_expf(-100.0f)); // expected-error {{static assertion expression is not an integral constant expression}}
+static_assert(0.0 == __builtin_exp(-1000.0)); // expected-error {{static assertion expression is not an integral constant expression}}
+
+void test_rounding_modes() {
+  {
+    #pragma STDC FENV_ROUND FE_DOWNWARD
+    static_assert(InfFloat == __builtin_expf(100.0f)); // expected-error {{static assertion expression is not an integral constant expression}}
+    static_assert(InfDouble == __builtin_exp(1000.0)); // expected-error {{static assertion expression is not an integral constant expression}}
+    static_assert(0.0f == __builtin_expf(-100.0f)); // expected-error {{static assertion expression is not an integral constant expression}}
+    static_assert(0.0 == __builtin_exp(-1000.0)); // expected-error {{static assertion expression is not an integral constant expression}}
+  }
+  {
+    #pragma STDC FENV_ROUND FE_TOWARDZERO
+    static_assert(InfFloat == __builtin_expf(100.0f)); // expected-error {{static assertion expression is not an integral constant expression}}
+    static_assert(InfDouble == __builtin_exp(1000.0)); // expected-error {{static assertion expression is not an integral constant expression}}
+    static_assert(0.0f == __builtin_expf(-100.0f)); // expected-error {{static assertion expression is not an integral constant expression}}
+    static_assert(0.0 == __builtin_exp(-1000.0)); // expected-error {{static assertion expression is not an integral constant expression}}
+  }
+}

@@ -9,6 +9,7 @@
 #include "Boolean.h"
 #include "Char.h"
 #include "EvalEmitter.h"
+#include "Interp.h"
 #include "InterpBuiltinBitCast.h"
 #include "InterpHelpers.h"
 #include "PrimType.h"
@@ -716,7 +717,9 @@ static bool interp__builtin_exp(InterpState &S, CodePtr OpPC,
                                 const CallExpr *Call) {
   const Floating &Arg = S.Stk.pop<Floating>();
   FPOptions FPO = Call->getFPFeaturesInEffect(S.Ctx.getLangOpts());
-  llvm::RoundingMode RM = getRoundingMode(FPO);
+  llvm::RoundingMode RM = llvm::RoundingMode::NearestTiesToEven;
+  if (S.inConstantContext())
+    RM = getRoundingMode(FPO);
   APFloat::opStatus Status = APFloat::opStatus::opOK;
   std::optional<APFloat> Result = exp(Arg.getAPFloat(), RM, &Status);
   // Check for unsupported rounding modes.
@@ -727,6 +730,9 @@ static bool interp__builtin_exp(InterpState &S, CodePtr OpPC,
     return false;
   Floating Res = S.allocFloat(Arg.getSemantics());
   Res.copy(*Result);
+  // Add diagnostic when not in constant evaluation context.
+  if (!CheckFloatStatus(S, OpPC, Status, FPO))
+    return false;
   S.Stk.push<Floating>(Res);
   return true;
 }

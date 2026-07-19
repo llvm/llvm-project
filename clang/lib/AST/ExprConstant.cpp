@@ -2707,27 +2707,32 @@ static bool checkFloatingPointResult(EvalInfo &Info, const Expr *E,
   if (Info.InConstantContext)
     return true;
 
+  // The output result is exact and no exceptions are raised, so it is safe to
+  // perform compile-time evaluation.
+  if (St == APFloat::opOK)
+    return true;
+
   FPOptions FPO = E->getFPFeaturesInEffect(Info.getLangOpts());
-  if ((St & APFloat::opInexact) &&
-      FPO.getRoundingMode() == llvm::RoundingMode::Dynamic) {
-    // Inexact result means that it depends on rounding mode. If the requested
-    // mode is dynamic, the evaluation cannot be made in compile time.
+
+  // No fenv access and floating point exceptions are ignored, so it is safe to
+  // to perform compile-time evaluation.
+  if (!FPO.getAllowFEnvAccess() &&
+      FPO.getExceptionMode() == LangOptions::FPE_Ignore)
+    return true;
+
+  if (FPO.getAllowFEnvAccess() &&
+      (FPO.getRoundingMode() == llvm::RoundingMode::Dynamic)) {
+    // Some floating point exception is raised, so the result might depend on
+    // rounding mode. If the FENV_ACCESS is "on" and the rounding mode is
+    // dynamic, the evaluation cannot be made in compile time.
     Info.FFDiag(E, diag::note_constexpr_dynamic_rounding);
     return false;
   }
 
-  if ((St != APFloat::opOK) &&
-      (FPO.getRoundingMode() == llvm::RoundingMode::Dynamic ||
-       FPO.getExceptionMode() != LangOptions::FPE_Ignore ||
-       FPO.getAllowFEnvAccess())) {
+  if (FPO.getExceptionMode() != LangOptions::FPE_Ignore) {
+    // Some floating point exception is raised and the FP mode is strict or the
+    // exceptions may be trapped.
     Info.FFDiag(E, diag::note_constexpr_float_arithmetic_strict);
-    return false;
-  }
-
-  if ((St & APFloat::opStatus::opInvalidOp) &&
-      FPO.getExceptionMode() != LangOptions::FPE_Ignore) {
-    // There is no usefully definable result.
-    Info.FFDiag(E);
     return false;
   }
 
@@ -2737,7 +2742,8 @@ static bool checkFloatingPointResult(EvalInfo &Info, const Expr *E,
   // - the expression being evaluated is not a part of global variable
   //   initializer,
   // the evaluation probably need to be rejected.
-  return true;
+  Info.FFDiag(E, diag::note_constexpr_float_arithmetic_strict);
+  return false;
 }
 
 static bool HandleFloatToFloatCast(EvalInfo &Info, const Expr *E,
@@ -20515,7 +20521,9 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     APFloat Input(0.);
     if (!EvaluateFloat(E->getArg(0), Input, Info))
       return false;
-    llvm::RoundingMode RM = getActiveRoundingMode(Info, E);
+    llvm::RoundingMode RM = llvm::RoundingMode::NearestTiesToEven;
+    if (Info.InConstantContext)
+      RM = getActiveRoundingMode(Info, E);
     APFloat::opStatus Status = APFloat::opStatus::opOK;
     std::optional<APFloat> r = exp(Input, RM, &Status);
     // Check for unsupported rounding modes.
@@ -20523,6 +20531,8 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return false;
     // Check for raised non-FE_INEXACT exceptions.
     if (Status & (~APFloat::opStatus::opInexact))
+      return false;
+    if (!checkFloatingPointResult(Info, E, Status))
       return false;
     Result = *r;
     return true;
