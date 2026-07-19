@@ -6940,6 +6940,12 @@ public:
     return S.Context.getMacroQualifiedType(NewTy, T->getMacroIdentifier());
   }
 
+  QualType VisitTypedefType(const TypedefType *T) {
+    if (S.getLangOpts().isBoundsSafetyAttributeOnlyMode())
+      return Visit(T->desugar());
+    return VisitType(T);
+  }
+
   QualType VisitArrayType(const ArrayType *T) {
     return VisitType(T);
   }

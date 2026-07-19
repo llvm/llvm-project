@@ -12,7 +12,7 @@ void bar(int len, foo_t __counted_by(len) p);
 // FBOUNDS-NEXT: DependerDeclsAttr
 // FBOUNDS-NEXT: ParmVarDecl {{.*}} p 'int *__single __counted_by(len) _Nonnull':'int *__single'
 
-// FATTR_ONLY:      FunctionDecl {{.*}} bar 'void (int, int * __counted_by(len))'
+// FATTR_ONLY:      FunctionDecl {{.*}} bar 'void (int, int * __counted_by(len) _Nonnull)'
 // FATTR_ONLY-NEXT: ParmVarDecl {{.*}} len 'int'
 // FATTR_ONLY-NEXT: DependerDeclsAttr
-// FATTR_ONLY-NEXT: ParmVarDecl {{.*}} p 'int * __counted_by(len)':'int *'
+// FATTR_ONLY-NEXT: ParmVarDecl {{.*}} p 'int * __counted_by(len) _Nonnull':'int *'
