@@ -852,19 +852,19 @@ define <3 x i10> @urem_v3i10(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m) {
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1023,1023,1023,1023]
 ; AVX2-NEXT:    vmovd %ecx, %xmm2
 ; AVX2-NEXT:    vpinsrd $1, %r8d, %xmm2, %xmm2
-; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpinsrd $2, %r9d, %xmm2, %xmm2
+; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpand %xmm1, %xmm2, %xmm1
-; AVX2-NEXT:    vcvtdq2pd %xmm1, %ymm2
-; AVX2-NEXT:    vcvtdq2pd %xmm0, %ymm3
-; AVX2-NEXT:    vdivpd %ymm2, %ymm3, %ymm2
-; AVX2-NEXT:    vcvttpd2dq %ymm2, %xmm3
+; AVX2-NEXT:    vcvtdq2ps %xmm1, %xmm2
+; AVX2-NEXT:    vcvtdq2ps %xmm0, %xmm3
+; AVX2-NEXT:    vdivps %xmm2, %xmm3, %xmm2
+; AVX2-NEXT:    vcvttps2dq %xmm2, %xmm3
 ; AVX2-NEXT:    vpsrad $31, %xmm3, %xmm4
-; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm5 = [2.147483648E+9,2.147483648E+9,2.147483648E+9,2.147483648E+9]
-; AVX2-NEXT:    vsubpd %ymm5, %ymm2, %ymm2
-; AVX2-NEXT:    vcvttpd2dq %ymm2, %xmm2
-; AVX2-NEXT:    vandpd %xmm4, %xmm2, %xmm2
-; AVX2-NEXT:    vorpd %xmm2, %xmm3, %xmm2
+; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm5 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
+; AVX2-NEXT:    vsubps %xmm5, %xmm2, %xmm2
+; AVX2-NEXT:    vcvttps2dq %xmm2, %xmm2
+; AVX2-NEXT:    vpand %xmm4, %xmm2, %xmm2
+; AVX2-NEXT:    vpor %xmm2, %xmm3, %xmm2
 ; AVX2-NEXT:    vpmulld %xmm1, %xmm2, %xmm1
 ; AVX2-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
@@ -873,7 +873,6 @@ define <3 x i10> @urem_v3i10(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m) {
 ; AVX2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX2-NEXT:    # kill: def $dx killed $dx killed $edx
 ; AVX2-NEXT:    # kill: def $cx killed $cx killed $ecx
-; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: urem_v3i10:
@@ -882,15 +881,15 @@ define <3 x i10> @urem_v3i10(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m) {
 ; AVX512-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
 ; AVX512-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
 ; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1023,1023,1023,1023]
+; AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %ecx, %xmm2
 ; AVX512-NEXT:    vpinsrd $1, %r8d, %xmm2, %xmm2
 ; AVX512-NEXT:    vpinsrd $2, %r9d, %xmm2, %xmm2
-; AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vpand %xmm1, %xmm2, %xmm1
-; AVX512-NEXT:    vcvtdq2pd %xmm1, %ymm2
-; AVX512-NEXT:    vcvtdq2pd %xmm0, %ymm3
-; AVX512-NEXT:    vdivpd %ymm2, %ymm3, %ymm2
-; AVX512-NEXT:    vcvttpd2udq %ymm2, %xmm2
+; AVX512-NEXT:    vcvtdq2ps %xmm1, %xmm2
+; AVX512-NEXT:    vcvtdq2ps %xmm0, %xmm3
+; AVX512-NEXT:    vdivps %xmm2, %xmm3, %xmm2
+; AVX512-NEXT:    vcvttps2udq %xmm2, %xmm2
 ; AVX512-NEXT:    vpmulld %xmm1, %xmm2, %xmm1
 ; AVX512-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
@@ -899,7 +898,6 @@ define <3 x i10> @urem_v3i10(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m) {
 ; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX512-NEXT:    # kill: def $dx killed $dx killed $edx
 ; AVX512-NEXT:    # kill: def $cx killed $cx killed $ecx
-; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %res = call <3 x i10> @llvm.masked.urem(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m)
   ret <3 x i10> %res

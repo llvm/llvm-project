@@ -1541,3 +1541,96 @@ define <4 x i32> @test_remv_4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
   %res = srem <4 x i32> %a, %b
   ret <4 x i32> %res
 }
+
+define <4 x i32> @test_divv_4i32_narrow(<4 x i32> %a, <4 x i32> %b) nounwind {
+; SSE-LABEL: test_divv_4i32_narrow:
+; SSE:       # %bb.0:
+; SSE-NEXT:    psrad $8, %xmm0
+; SSE-NEXT:    psrad $8, %xmm1
+; SSE-NEXT:    cvtdq2ps %xmm1, %xmm1
+; SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
+; SSE-NEXT:    divps %xmm1, %xmm0
+; SSE-NEXT:    cvttps2dq %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: test_divv_4i32_narrow:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsrad $8, %xmm0, %xmm0
+; AVX-NEXT:    vpsrad $8, %xmm1, %xmm1
+; AVX-NEXT:    vcvtdq2ps %xmm1, %xmm1
+; AVX-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; AVX-NEXT:    vdivps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vcvttps2dq %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %aa = ashr <4 x i32> %a, splat (i32 8)
+  %bb = ashr <4 x i32> %b, splat (i32 8)
+  %res = sdiv <4 x i32> %aa, %bb
+  ret <4 x i32> %res
+}
+
+define <4 x i32> @test_divv_4i32_notnarrow(<4 x i32> %a, <4 x i32> %b) nounwind {
+; SSE-LABEL: test_divv_4i32_notnarrow:
+; SSE:       # %bb.0:
+; SSE-NEXT:    psrad $7, %xmm0
+; SSE-NEXT:    psrad $7, %xmm1
+; SSE-NEXT:    cvtdq2pd %xmm1, %xmm2
+; SSE-NEXT:    cvtdq2pd %xmm0, %xmm3
+; SSE-NEXT:    divpd %xmm2, %xmm3
+; SSE-NEXT:    cvttpd2dq %xmm3, %xmm2
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
+; SSE-NEXT:    cvtdq2pd %xmm1, %xmm1
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; SSE-NEXT:    cvtdq2pd %xmm0, %xmm0
+; SSE-NEXT:    divpd %xmm1, %xmm0
+; SSE-NEXT:    cvttpd2dq %xmm0, %xmm0
+; SSE-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm0[0]
+; SSE-NEXT:    movapd %xmm2, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: test_divv_4i32_notnarrow:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsrad $7, %xmm0, %xmm0
+; AVX-NEXT:    vpsrad $7, %xmm1, %xmm1
+; AVX-NEXT:    vcvtdq2pd %xmm1, %ymm1
+; AVX-NEXT:    vcvtdq2pd %xmm0, %ymm0
+; AVX-NEXT:    vdivpd %ymm1, %ymm0, %ymm0
+; AVX-NEXT:    vcvttpd2dq %ymm0, %xmm0
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+  %aa = ashr <4 x i32> %a, splat (i32 7)
+  %bb = ashr <4 x i32> %b, splat (i32 7)
+  %res = sdiv <4 x i32> %aa, %bb
+  ret <4 x i32> %res
+}
+
+define <4 x i32> @test_divv_4i32_one_narrow(<4 x i32> %a, <4 x i32> %b) nounwind {
+; SSE-LABEL: test_divv_4i32_one_narrow:
+; SSE:       # %bb.0:
+; SSE-NEXT:    psrad $8, %xmm0
+; SSE-NEXT:    cvtdq2pd %xmm1, %xmm2
+; SSE-NEXT:    cvtdq2pd %xmm0, %xmm3
+; SSE-NEXT:    divpd %xmm2, %xmm3
+; SSE-NEXT:    cvttpd2dq %xmm3, %xmm2
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
+; SSE-NEXT:    cvtdq2pd %xmm1, %xmm1
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; SSE-NEXT:    cvtdq2pd %xmm0, %xmm0
+; SSE-NEXT:    divpd %xmm1, %xmm0
+; SSE-NEXT:    cvttpd2dq %xmm0, %xmm0
+; SSE-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm0[0]
+; SSE-NEXT:    movapd %xmm2, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: test_divv_4i32_one_narrow:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsrad $8, %xmm0, %xmm0
+; AVX-NEXT:    vcvtdq2pd %xmm1, %ymm1
+; AVX-NEXT:    vcvtdq2pd %xmm0, %ymm0
+; AVX-NEXT:    vdivpd %ymm1, %ymm0, %ymm0
+; AVX-NEXT:    vcvttpd2dq %ymm0, %xmm0
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+  %aa = ashr <4 x i32> %a, splat (i32 8)
+  %res = sdiv <4 x i32> %aa, %b
+  ret <4 x i32> %res
+}

@@ -50559,10 +50559,20 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
   if (DAG.isConstantIntBuildVectorOrConstantInt(Divisor))
     return SDValue();
 
-  // i8/i16/i32: operands fit the float mantissa exactly (f32 for <=16-bit, f64
-  // for 32-bit) so one float divide recovers the exact quotient.
+  // i8/i16/i32: the operands fit the float mantissa exactly so one float
+  // divide recovers the exact quotient.
   if (VT.getScalarSizeInBits() <= 32) {
-    MVT FPSclVT = VT.getScalarSizeInBits() <= 16 ? MVT::f32 : MVT::f64;
+    // f32 recovers the quotient exactly when both operands fit in 24 bits
+    unsigned EltBits = VT.getScalarSizeInBits();
+    unsigned Precision = APFloat::semanticsPrecision(APFloat::IEEEsingle());
+    auto FitsF32 = [&](SDValue V) {
+      return IsSigned
+                 ? DAG.ComputeNumSignBits(V) + Precision > EltBits
+                 : DAG.computeKnownBits(V).countMaxActiveBits() <= Precision;
+    };
+    MVT FPSclVT = MVT::f64;
+    if (EltBits <= 16 || (FitsF32(Dividend) && FitsF32(Divisor)))
+      FPSclVT = MVT::f32;
     EVT FPVT = VT.changeVectorElementType(*DAG.getContext(), FPSclVT);
 
     // Nothing will split an illegal FP type after type legalization.
