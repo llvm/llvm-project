@@ -190,8 +190,8 @@ inline bool noDependence(DependenceResult result) {
 
 /// Returns in 'depCompsVec', dependence components for dependences between all
 /// load and store ops in loop nest rooted at 'forOp', at loop depths in range
-/// [1, maxLoopDepth].
-void getDependenceComponents(
+/// [1, maxLoopDepth]. Returns failure if any dependence cannot be analyzed.
+LogicalResult getDependenceComponents(
     AffineForOp forOp, unsigned maxLoopDepth,
     std::vector<SmallVector<DependenceComponent, 2>> *depCompsVec);
 
