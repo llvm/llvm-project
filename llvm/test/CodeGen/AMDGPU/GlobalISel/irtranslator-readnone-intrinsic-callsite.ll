@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -global-isel -stop-after=irtranslator -o - %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -global-isel -stop-after=irtranslator -o - %s | FileCheck %s
 
 ; Make sure that an intrinsic declaration that has side effects, but
 ; called with a readnone call site is translated to

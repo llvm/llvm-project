@@ -2950,7 +2950,7 @@ public:
   ///
   /// If this is not a pointer or reference, or the type being pointed to does
   /// not refer to a CXXRecordDecl, returns NULL.
-  CXXRecordDecl *getPointeeCXXRecordDecl() const;
+  const CXXRecordDecl *getPointeeCXXRecordDecl() const;
 
   /// Get the DeducedType whose type will be deduced for a variable with
   /// an initializer of this type. This looks through declarators like pointer

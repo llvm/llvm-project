@@ -88,7 +88,7 @@ public:
 class BogusSubtarget : public TargetSubtargetInfo {
 public:
   BogusSubtarget(TargetMachine &TM)
-      : TargetSubtargetInfo(Triple(""), "", "", "", {}, {}, {}, nullptr,
+      : TargetSubtargetInfo(Triple(""), "", "", "", "", {}, {}, nullptr,
                             nullptr, nullptr, nullptr, nullptr, nullptr,
                             nullptr),
         FL(), TL(TM, *this) {}
@@ -143,9 +143,9 @@ public:
     AsmInfo = std::make_unique<MCAsmInfo>(Options.MCOptions);
     MRI = std::make_unique<MCRegisterInfo>();
     STI = std::make_unique<MCSubtargetInfo>(
-        Triple(""), "", "", "", ArrayRef<StringRef>{},
-        ArrayRef<SubtargetFeatureKV>{}, ArrayRef<SubtargetSubTypeKV>{}, nullptr,
-        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+        Triple(""), "", "", "", StringTable{""}, ArrayRef<SubtargetFeatureKV>{},
+        ArrayRef<SubtargetSubTypeKV>{}, nullptr, nullptr, nullptr, nullptr,
+        nullptr, nullptr, nullptr);
   }
 
   ~BogusTargetMachine() override = default;

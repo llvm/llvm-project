@@ -353,7 +353,7 @@ TEST(MachineOperandTest, PrintMCSymbol) {
   MCAsmInfo MAI(MCOptions);
   MCRegisterInfo MRI;
   Triple T = Triple("unknown-unknown-unknown");
-  MCSubtargetInfo STI(T, "", "", "", {}, {}, {}, nullptr, nullptr, nullptr,
+  MCSubtargetInfo STI(T, "", "", "", "", {}, {}, nullptr, nullptr, nullptr,
                       nullptr, nullptr, nullptr, nullptr);
   MCContext Ctx(T, MAI, MRI, STI);
   MCSymbol *Sym = Ctx.getOrCreateSymbol("foo");

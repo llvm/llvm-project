@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/CodeGen/MacroFusion.h"
 #include "llvm/CodeGen/PBQPRAConstraint.h"
 #include "llvm/CodeGen/SchedulerRegistry.h"
@@ -69,7 +70,7 @@ struct SchedRegion;
 class LLVM_ABI TargetSubtargetInfo : public MCSubtargetInfo {
 protected: // Can only create subclasses...
   TargetSubtargetInfo(const Triple &TT, StringRef CPU, StringRef TuneCPU,
-                      StringRef FS, ArrayRef<StringRef> PN,
+                      StringRef FS, StringTable PN,
                       ArrayRef<SubtargetFeatureKV> PF,
                       ArrayRef<SubtargetSubTypeKV> PD, const MCSchedModel *PSM,
                       const MCWriteProcResEntry *WPR,
@@ -145,6 +146,18 @@ public:
   /// or specific subtarget.
   virtual const InstrItineraryData *getInstrItineraryData() const {
     return nullptr;
+  }
+
+  /// Return the number of extra cycles the processor takes to recover from a
+  /// branch misprediction. Defaults to the value in the scheduling model.
+  virtual unsigned getMispredictionPenalty() const {
+    return getSchedModel().MispredictPenalty;
+  }
+
+  /// Return the expected latency of load instructions. Defaults to the value
+  /// in the scheduling model.
+  virtual unsigned getLoadLatency() const {
+    return getSchedModel().LoadLatency;
   }
 
   /// Configure the LibcallLoweringInfo for this subtarget. The libcalls will be

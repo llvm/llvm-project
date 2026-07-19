@@ -12,7 +12,9 @@
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
@@ -55,43 +57,6 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
     ++Iter;
   EntryVPBB->insert(Expanded, Iter);
   return Expanded;
-}
-
-bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
-  if (isa<VPActiveLaneMaskPHIRecipe>(V))
-    return true;
-
-  VPValue *A, *B;
-
-  auto m_CanonicalScalarIVSteps = m_ScalarIVSteps(
-      m_CombineOr(m_CanonicalIV(),
-                  m_DerivedIV(m_ZeroInt(), m_CanonicalIV(), m_One())),
-      m_One(), m_Specific(&Plan.getVF()));
-
-  // A wide canonical IV is either an explicit VPWidenCanonicalIVRecipe or a
-  // canonical VPWidenIntOrFpInductionRecipe.
-  auto m_WideCanonicalIV =
-      m_CombineOr(m_Isa<VPWidenCanonicalIVRecipe>(), m_CanonicalWidenIV());
-
-  if (match(V, m_ActiveLaneMask(m_VPValue(A), m_VPValue(B), m_One())))
-    return B == Plan.getTripCount() &&
-           (match(A, m_CanonicalScalarIVSteps) || match(A, m_WideCanonicalIV));
-
-  // For scalar plans, the header mask uses the scalar steps.
-  if (match(V, m_ICmp(m_CanonicalScalarIVSteps,
-                      m_Specific(Plan.getBackedgeTakenCount())))) {
-    assert(Plan.hasScalarVFOnly() &&
-           "Non-scalar VF using scalar IV steps for header mask?");
-    return true;
-  }
-
-  auto MaskMatch = m_ICmp(m_VPValue(A), m_VPValue(B));
-  if (match(V, m_CombineOr(MaskMatch, m_Reverse(MaskMatch))))
-    return match(A, m_WideCanonicalIV) && B == Plan.getBackedgeTakenCount();
-
-  return match(
-      V, m_c_BinaryAnd(m_VPValue(),
-                       m_VPInstruction<VPInstruction::IncomingAliasMask>()));
 }
 
 /// Returns true if \p R propagates poison from any operand to its result.
@@ -398,6 +363,30 @@ bool vputils::isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE,
          match(Addr, m_scev_AffineAddRec(m_SCEV(), m_SCEV()));
 }
 
+unsigned vputils::getOpcode(const VPValue *V) {
+  return TypeSwitch<const VPValue *, unsigned>(V)
+      .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe, VPWidenGEPRecipe,
+            VPReplicateRecipe, VPWidenPHIRecipe>(
+          [](auto *I) { return I->getOpcode(); })
+      .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe, VPScalarIVStepsRecipe>(
+          [](auto *I) {
+            // For recipes that do not directly map to LLVM IR instructions,
+            // assign opcodes after the last VPInstruction opcode (which is also
+            // after the last IR Instruction opcode), based on the VPRecipeID.
+            return VPInstruction::OpsEnd + 1 + I->getVPRecipeID();
+          })
+      .Default([](auto *) { return 0; });
+}
+
+std::optional<std::pair<bool, unsigned>>
+vputils::getOpcodeOrIntrinsicID(const VPValue *V) {
+  if (Intrinsic::ID IID = vputils::getIntrinsicID(V))
+    return std::make_pair(true, IID);
+  if (unsigned Opcode = vputils::getOpcode(V))
+    return std::make_pair(false, Opcode);
+  return {};
+}
+
 /// Returns true if \p Opcode preserves uniformity, i.e., if all operands are
 /// uniform, the result will also be uniform.
 static bool preservesUniformity(unsigned Opcode) {
@@ -419,8 +408,18 @@ static bool preservesUniformity(unsigned Opcode) {
   }
 }
 
+bool vputils::isElementwise(const VPValue *V) {
+  // TODO: Handle more opcodes and recipes.
+  if (!isa<VPInstruction, VPWidenRecipe>(V))
+    return false;
+  unsigned Opcode = getOpcode(V);
+  return Instruction::isUnaryOp(Opcode) || Instruction::isBinaryOp(Opcode);
+}
+
 bool vputils::isSingleScalar(const VPValue *VPV) {
-  // Live-in, symbolic and region-values represent single-scalar values.
+  // Live-in, symbolic and canonical-IV region values are single-scalar.
+  if (auto *RV = dyn_cast<VPRegionValue>(VPV))
+    return RV == RV->getDefiningRegion()->getCanonicalIV();
   if (isa<VPIRValue, VPSymbolicValue>(VPV))
     return true;
 
@@ -457,7 +456,9 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
 }
 
 bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
-  // Live-ins and region values are uniform.
+  // Live-ins, symbolic and canonical-IV region values are uniform.
+  if (auto *RV = dyn_cast<VPRegionValue>(V))
+    return RV == RV->getDefiningRegion()->getCanonicalIV();
   if (isa<VPIRValue, VPSymbolicValue>(V))
     return true;
 
@@ -507,6 +508,16 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
       });
 }
 
+bool vputils::doesGeneratePerAllLanes(const VPRecipeBase *R) {
+  if (auto *RepR = dyn_cast<VPReplicateRecipe>(R))
+    return RepR->doesGeneratePerAllLanes();
+  if (auto *VPI = dyn_cast<VPInstruction>(R))
+    return VPI->doesGeneratePerAllLanes();
+  if (auto *SIVSteps = dyn_cast<VPScalarIVStepsRecipe>(R))
+    return SIVSteps->doesGeneratePerAllLanes();
+  return false;
+}
+
 VPBasicBlock *vputils::getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT) {
   auto DepthFirst = vp_depth_first_shallow(Plan.getEntry());
   auto I = find_if(DepthFirst, [&VPDT](VPBlockBase *VPB) {
@@ -542,60 +553,6 @@ bool vputils::cannotHoistOrSinkRecipe(const VPRecipeBase &R, bool Sinking) {
   // Allocas cannot be hoisted.
   auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
   return RepR && RepR->getOpcode() == Instruction::Alloca;
-}
-
-VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
-  if (VPValue *AliasMask = findIncomingAliasMask(Plan)) {
-    assert(match(AliasMask->getSingleUser(),
-                 m_c_BinaryAnd(m_VPValue(), m_Specific(AliasMask))) &&
-           "AliasMask must only be used with the original header mask");
-    return cast<VPSingleDefRecipe>(AliasMask->getSingleUser());
-  }
-
-  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  SmallVector<VPValue *> WideCanonicalIVs;
-  auto *WideCanonicalIV =
-      findUserOf<VPWidenCanonicalIVRecipe>(LoopRegion->getCanonicalIV());
-  assert(count_if(LoopRegion->getCanonicalIV()->users(),
-                  IsaPred<VPWidenCanonicalIVRecipe>) <= 1 &&
-         "Must have at most one VPWideCanonicalIVRecipe");
-  if (WideCanonicalIV)
-    WideCanonicalIVs.push_back(WideCanonicalIV);
-
-  // Also include VPWidenIntOrFpInductionRecipes that represent a widened
-  // version of the canonical induction.
-  VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
-  for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
-    VPWidenIntOrFpInductionRecipe *WidenIV;
-    if (match(&Phi, m_CanonicalWidenIV(WidenIV)))
-      WideCanonicalIVs.push_back(WidenIV);
-  }
-
-  // Walk users of wide canonical IVs and find the single compare of the form
-  // (ICMP_ULE, WideCanonicalIV, backedge-taken-count).
-  VPSingleDefRecipe *HeaderMask = nullptr;
-  for (auto *Wide : WideCanonicalIVs) {
-    for (VPUser *U : Wide->users()) {
-      auto *VPI = dyn_cast<VPInstruction>(U);
-      if (!VPI || !vputils::isHeaderMask(VPI, Plan))
-        continue;
-
-      assert(VPI->getOperand(0) == Wide &&
-             "WidenCanonicalIV must be the first operand of the compare");
-      assert(!HeaderMask && "Multiple header masks found?");
-      HeaderMask = VPI;
-    }
-  }
-
-  for (VPRecipeBase &R : LoopRegion->getEntryBasicBlock()->phis()) {
-    auto *Def = cast<VPSingleDefRecipe>(&R);
-    if (vputils::isHeaderMask(Def, Plan)) {
-      assert(!HeaderMask && "Multiple header masks found?");
-      HeaderMask = Def;
-    }
-  }
-
-  return HeaderMask;
 }
 
 SmallVector<VPBasicBlock *>
@@ -899,7 +856,9 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
   }
   case scTruncate:
   case scZeroExtend:
-  case scSignExtend: {
+  case scSignExtend:
+  case scPtrToInt:
+  case scPtrToAddr: {
     auto *Cast = cast<SCEVCastExpr>(S);
     VPValue *Op = tryToExpand(Cast->getOperand());
     if (!Op)
@@ -915,12 +874,209 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
     case scSignExtend:
       Opcode = Instruction::SExt;
       break;
+    case scPtrToInt:
+      Opcode = Instruction::PtrToInt;
+      break;
+    case scPtrToAddr:
+      Opcode = Instruction::PtrToAddr;
+      break;
     default:
       llvm_unreachable("Unhandled cast SCEV");
     }
     return Builder.createScalarCast(Opcode, Op, S->getType(), DL);
   }
+  case scUMaxExpr:
+  case scSMaxExpr:
+  case scUMinExpr:
+  case scSMinExpr: {
+    auto *MinMax = cast<SCEVMinMaxExpr>(S);
+    Intrinsic::ID IntrinsicID;
+    switch (S->getSCEVType()) {
+    case scUMaxExpr:
+      IntrinsicID = Intrinsic::umax;
+      break;
+    case scSMaxExpr:
+      IntrinsicID = Intrinsic::smax;
+      break;
+    case scUMinExpr:
+      IntrinsicID = Intrinsic::umin;
+      break;
+    case scSMinExpr:
+      IntrinsicID = Intrinsic::smin;
+      break;
+    default:
+      llvm_unreachable("Unexpected min/max SCEV type");
+    }
+    // Chain operands in reverse order matching SCEVExpander's expansion of
+    // min/max expressions.
+    SmallVector<VPValue *, 2> Ops;
+    for (const SCEVUse &Op : reverse(MinMax->operands())) {
+      VPValue *OpV = tryToExpand(Op);
+      if (!OpV)
+        return nullptr;
+      Ops.push_back(OpV);
+    }
+    Type *ResultTy = MinMax->getType();
+    VPValue *Result = Ops.front();
+    for (VPValue *Op : drop_begin(Ops))
+      Result = Builder.createScalarIntrinsic(IntrinsicID, {Result, Op},
+                                             ResultTy, DL);
+    return Result;
+  }
   default:
     return nullptr;
+  }
+}
+
+bool vputils::isDeadRecipe(VPRecipeBase &R) {
+  // Do remove conditional assume instructions as their conditions may be
+  // flattened.
+  auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+  bool IsConditionalAssume = RepR && RepR->isPredicated() &&
+                             match(RepR, m_Intrinsic<Intrinsic::assume>());
+  if (IsConditionalAssume)
+    return true;
+
+  if (R.mayHaveSideEffects())
+    return false;
+
+  // Recipe is dead if no user keeps the recipe alive.
+  return all_of(R.definedValues(), [](VPValue *V) { return V->user_empty(); });
+}
+
+void vputils::recursivelyDeleteDeadRecipes(VPValue *V) {
+  SmallVector<VPValue *> WorkList;
+  SmallPtrSet<VPValue *, 8> Seen;
+  WorkList.push_back(V);
+
+  while (!WorkList.empty()) {
+    VPValue *Cur = WorkList.pop_back_val();
+    if (!Seen.insert(Cur).second)
+      continue;
+    VPRecipeBase *R = Cur->getDefiningRecipe();
+    if (!R)
+      continue;
+    if (!isDeadRecipe(*R))
+      continue;
+    append_range(WorkList, R->operands());
+    R->eraseFromParent();
+  }
+}
+
+SmallVector<VPUser *> vputils::collectUsersRecursively(VPValue *V) {
+  SetVector<VPUser *> Users(llvm::from_range, V->users());
+  for (unsigned I = 0; I != Users.size(); ++I) {
+    VPRecipeBase *Cur = cast<VPRecipeBase>(Users[I]);
+    for (VPValue *V : Cur->definedValues())
+      Users.insert_range(V->users());
+  }
+  return Users.takeVector();
+}
+
+VPIRValue *vputils::tryToFoldLiveIns(VPSingleDefRecipe &R,
+                                     ArrayRef<VPValue *> Operands,
+                                     const DataLayout &DL) {
+  auto OpcodeOrIID = getOpcodeOrIntrinsicID(&R);
+  if (!OpcodeOrIID)
+    return nullptr;
+
+  SmallVector<Value *, 4> Ops;
+  for (VPValue *Op : Operands) {
+    VPValue *Candidate = Op;
+    match(Op, m_Broadcast(m_VPValue(Candidate)));
+    if (!match(Candidate, m_LiveIn()))
+      return nullptr;
+    Value *V = Candidate->getUnderlyingValue();
+    if (!V)
+      return nullptr;
+    Ops.push_back(V);
+  }
+
+  VPlan &Plan = *R.getParent()->getPlan();
+  auto FoldToIRValue = [&]() -> Value * {
+    InstSimplifyFolder Folder(DL);
+    if (OpcodeOrIID->first) {
+      // VPInstructions store the called intrinsic as last operand.
+      if (isa<VPInstruction>(R))
+        Ops.pop_back();
+
+      auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(&R);
+      return Folder.FoldIntrinsic(OpcodeOrIID->second, Ops, R.getScalarType(),
+                                  RFlags ? RFlags->getFastMathFlagsOrNone()
+                                         : FastMathFlags());
+    }
+    unsigned Opcode = OpcodeOrIID->second;
+    if (Instruction::isBinaryOp(Opcode))
+      return Folder.FoldBinOp(static_cast<Instruction::BinaryOps>(Opcode),
+                              Ops[0], Ops[1]);
+    if (Instruction::isCast(Opcode))
+      return Folder.FoldCast(static_cast<Instruction::CastOps>(Opcode), Ops[0],
+                             R.getVPSingleValue()->getScalarType());
+    switch (Opcode) {
+    case VPInstruction::Not:
+      return Folder.FoldBinOp(Instruction::BinaryOps::Xor, Ops[0],
+                              Constant::getAllOnesValue(Ops[0]->getType()));
+    case Instruction::Select:
+      return Folder.FoldSelect(Ops[0], Ops[1], Ops[2]);
+    case Instruction::ICmp:
+    case Instruction::FCmp:
+      return Folder.FoldCmp(cast<VPRecipeWithIRFlags>(R).getPredicate(), Ops[0],
+                            Ops[1]);
+    case Instruction::GetElementPtr: {
+      auto &RFlags = cast<VPRecipeWithIRFlags>(R);
+      auto *GEP = cast<GetElementPtrInst>(RFlags.getUnderlyingInstr());
+      return Folder.FoldGEP(GEP->getSourceElementType(), Ops[0],
+                            drop_begin(Ops), RFlags.getGEPNoWrapFlags());
+    }
+    case VPInstruction::PtrAdd:
+    case VPInstruction::WidePtrAdd:
+      return Folder.FoldGEP(IntegerType::getInt8Ty(Plan.getContext()), Ops[0],
+                            Ops[1],
+                            cast<VPRecipeWithIRFlags>(R).getGEPNoWrapFlags());
+    // An extract of a live-in is an extract of a broadcast, so return the
+    // broadcasted element.
+    case Instruction::ExtractElement:
+      assert(!Ops[0]->getType()->isVectorTy() && "Live-ins should be scalar");
+      return Ops[0];
+    }
+    return nullptr;
+  };
+
+  if (Value *V = FoldToIRValue())
+    return Plan.getOrAddLiveIn(V);
+  return nullptr;
+}
+
+void vputils::detail::pullOutPermutationsImpl(
+    VPlan &Plan, function_ref<VPValue *(VPValue *Op)> MatchPerm,
+    function_ref<VPSingleDefRecipe *(VPSingleDefRecipe *X)> BuildPerm) {
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *Def = dyn_cast<VPSingleDefRecipe>(&R);
+      if (!Def || !isElementwise(Def))
+        continue;
+
+      // At least one of the ops must be a permutation.
+      if (none_of(Def->operands(),
+                  [&MatchPerm](VPValue *Op) { return MatchPerm(Op); }))
+        continue;
+
+      // All operands must be a single-use permutation or a live in (splat).
+      if (!all_of(Def->operands(), [&MatchPerm](VPValue *Op) {
+            return (Op->hasOneUse() && MatchPerm(Op)) || match(Op, m_LiveIn());
+          }))
+        continue;
+
+      // Remove the inner permutations.
+      for (unsigned I = 0, E = Def->getNumOperands(); I != E; ++I)
+        if (VPValue *X = MatchPerm(Def->getOperand(I)))
+          Def->setOperand(I, X);
+
+      VPSingleDefRecipe *Res = BuildPerm(Def);
+      Res->insertAfter(Def);
+      Def->replaceUsesWithIf(
+          Res, [&Res](VPUser &U, unsigned _) { return &U != Res; });
+    }
   }
 }

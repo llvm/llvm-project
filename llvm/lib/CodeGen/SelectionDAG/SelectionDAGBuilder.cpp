@@ -1814,6 +1814,19 @@ SDValue SelectionDAGBuilder::getValue(const Value *V) {
   return Val;
 }
 
+void SelectionDAGBuilder::setValueToPoison(const Value *V, const SDLoc &dl) {
+  if (V->getType()->isVoidTy())
+    return;
+
+  SmallVector<EVT, 4> ValueVTs;
+  ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(),
+                  V->getType(), ValueVTs);
+  SmallVector<SDValue, 4> Results;
+  for (EVT VT : ValueVTs)
+    Results.push_back(DAG.getPOISON(VT));
+  setValue(V, DAG.getMergeValues(Results, dl));
+}
+
 /// getNonRegisterValue - Return an SDValue for the given Value, but
 /// don't look in FuncInfo.ValueMap for a virtual register.
 SDValue SelectionDAGBuilder::getNonRegisterValue(const Value *V) {
@@ -2229,16 +2242,18 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
     MVT PtrValueVT = TLI.getPointerTy(DL, DL.getAllocaAddrSpace());
     SDValue RetPtr =
         DAG.getCopyFromReg(Chain, getCurSDLoc(), DemoteReg, PtrValueVT);
+    Type *RetTy = I.getOperand(0)->getType();
+    Align BaseAlign = DL.getPrefTypeAlign(RetTy);
+    RetPtr =
+        TLI.annotateStackObjectPointer(RetPtr, DAG, getCurSDLoc(), BaseAlign);
     SDValue RetOp = getValue(I.getOperand(0));
 
     SmallVector<EVT, 4> ValueVTs, MemVTs;
     SmallVector<uint64_t, 4> Offsets;
-    ComputeValueVTs(TLI, DL, I.getOperand(0)->getType(), ValueVTs, &MemVTs,
-                    &Offsets, 0);
+    ComputeValueVTs(TLI, DL, RetTy, ValueVTs, &MemVTs, &Offsets, 0);
     unsigned NumValues = ValueVTs.size();
 
     SmallVector<SDValue, 4> Chains(NumValues);
-    Align BaseAlign = DL.getPrefTypeAlign(I.getOperand(0)->getType());
     for (unsigned i = 0; i != NumValues; ++i) {
       // An aggregate return value cannot wrap around the address space, so
       // offsets to its parts don't wrap either.
@@ -2867,7 +2882,7 @@ void SelectionDAGBuilder::visitCondBr(const CondBrInst &I) {
         !shouldKeepJumpConditionsTogether(
             FuncInfo, I, Opcode, BOp0, BOp1,
             DAG.getTargetLoweringInfo().getJumpConditionMergingParams(
-                Opcode, BOp0, BOp1))) {
+                Opcode, BOp0, BOp1, FuncInfo.Fn))) {
       FindMergedConditions(BOp, Succ0MBB, Succ1MBB, BrMBB, BrMBB, Opcode,
                            getEdgeProbability(BrMBB, Succ0MBB),
                            getEdgeProbability(BrMBB, Succ1MBB),
@@ -5564,15 +5579,7 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
     if (HasChain && !OnlyLoad)
       DAG.setRoot(getRoot());
 
-    if (!I.getType()->isVoidTy()) {
-      SmallVector<EVT, 4> ValueVTs;
-      ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(),
-                      I.getType(), ValueVTs);
-      SmallVector<SDValue, 4> Results;
-      for (EVT VT : ValueVTs)
-        Results.push_back(DAG.getPOISON(VT));
-      setValue(&I, DAG.getMergeValues(Results, DL));
-    }
+    setValueToPoison(&I, DL);
     return;
   }
 
@@ -7727,9 +7734,24 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
 
   case Intrinsic::type_test:
   case Intrinsic::public_type_test:
-    reportFatalUsageError("llvm.type.test intrinsic must be lowered by the "
-                          "LowerTypeTests pass before code generation");
+  case Intrinsic::type_checked_load:
+  case Intrinsic::type_checked_load_relative: {
+    // These intrinsics are expected to be lowered by the LowerTypeTests pass
+    // before code generation. Surviving until here usually indicates a
+    // misconfiguration, for instance when devirtualization is enabled but LTO
+    // does not actually run.
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        *I.getFunction(),
+        Intrinsic::getBaseName(Intrinsic) +
+            " intrinsic must be lowered by the LowerTypeTests pass "
+            "before code generation",
+        sdl.getDebugLoc()));
+
+    // Lower the result to poison so that compilation can continue and collect
+    // any further diagnostics.
+    setValueToPoison(&I, sdl);
     return;
+  }
 
   case Intrinsic::assume:
   case Intrinsic::experimental_noalias_scope_decl:

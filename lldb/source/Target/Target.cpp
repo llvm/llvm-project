@@ -40,7 +40,6 @@
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/Interfaces/ScriptedBreakpointInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedHookInterface.h"
-#include "lldb/Interpreter/Interfaces/ScriptedStopHookInterface.h"
 #include "lldb/Interpreter/OptionGroupWatchpoint.h"
 #include "lldb/Interpreter/OptionValueEnumeration.h"
 #include "lldb/Interpreter/OptionValues.h"
@@ -870,7 +869,7 @@ void Target::AddNameToBreakpoint(BreakpointSP &bp_sp, llvm::StringRef name,
   if (!bp_sp)
     return;
 
-  BreakpointName *bp_name = FindBreakpointName(ConstString(name), true, error);
+  BreakpointName *bp_name = FindBreakpointName(name, true, error);
   if (!bp_name)
     return;
 
@@ -883,9 +882,9 @@ void Target::AddBreakpointName(std::unique_ptr<BreakpointName> bp_name) {
       std::make_pair(bp_name->GetName(), std::move(bp_name)));
 }
 
-BreakpointName *Target::FindBreakpointName(ConstString name, bool can_create,
-                                           Status &error) {
-  BreakpointID::StringIsBreakpointName(name.GetStringRef(), error);
+BreakpointName *Target::FindBreakpointName(llvm::StringRef name,
+                                           bool can_create, Status &error) {
+  BreakpointID::StringIsBreakpointName(name, error);
   if (!error.Success())
     return nullptr;
 
@@ -901,19 +900,18 @@ BreakpointName *Target::FindBreakpointName(ConstString name, bool can_create,
   }
 
   return m_breakpoint_names
-      .insert(std::make_pair(
-          name, std::make_unique<BreakpointName>(name.GetStringRef().str())))
+      .insert(
+          std::make_pair(name, std::make_unique<BreakpointName>(name.str())))
       .first->second.get();
 }
 
-void Target::DeleteBreakpointName(ConstString name) {
+void Target::DeleteBreakpointName(llvm::StringRef name) {
   BreakpointNameMap::iterator iter = m_breakpoint_names.find(name);
 
   if (iter != m_breakpoint_names.end()) {
-    const char *name_cstr = name.AsCString(nullptr);
     m_breakpoint_names.erase(iter);
     for (auto bp_sp : m_breakpoint_list.Breakpoints())
-      bp_sp->RemoveName(name_cstr);
+      bp_sp->RemoveName(name);
   }
 }
 
@@ -2076,9 +2074,8 @@ size_t Target::ReadMemoryFromFileCache(const Address &addr, void *dst,
         if (bytes_read > 0)
           return bytes_read;
         else
-          error = Status::FromErrorStringWithFormat(
-              "error reading data from section %s",
-              section_sp->GetName().GetCString());
+          error = Status::FromErrorStringWithFormatv(
+              "error reading data from section {0}", section_sp->GetName());
       } else
         error = Status::FromErrorString("address isn't from a object file");
     } else
@@ -2660,8 +2657,10 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
           }
         }
 
-        if (replaced_modules.empty())
-          m_images.Append(module_sp, notify);
+        if (replaced_modules.empty()) {
+          if (!m_images.AppendIfNeeded(module_sp, notify) && notify)
+            NotifyModuleAdded(m_images, module_sp);
+        }
 
         for (ModuleSP &old_module_sp : replaced_modules) {
           auto old_module_wp = old_module_sp->weak_from_this();
@@ -4291,6 +4290,7 @@ Target::StopHookCommandLine::HandleStop(ExecutionContext &exc_ctx,
 
   CommandReturnObject result(false);
   result.SetImmediateOutputStream(output_sp);
+  result.SetImmediateErrorStream(output_sp);
   result.SetInteractive(false);
   Debugger &debugger = exc_ctx.GetTargetPtr()->GetDebugger();
   CommandInterpreterRunOptions options;
@@ -4326,7 +4326,7 @@ Status Target::StopHookScripted::SetScriptCallback(
     return error;
   }
 
-  m_interface_sp = script_interp->CreateScriptedStopHookInterface();
+  m_interface_sp = script_interp->CreateScriptedHookInterface();
   if (!m_interface_sp) {
     error = Status::FromErrorStringWithFormat(
         "ScriptedStopHook::%s () - ERROR: %s", __FUNCTION__,
@@ -4605,6 +4605,7 @@ Target::HookCommandLine::HandleStop(ExecutionContext &exc_ctx,
 
   CommandReturnObject result(false);
   result.SetImmediateOutputStream(output_sp);
+  result.SetImmediateErrorStream(output_sp);
   result.SetInteractive(false);
   Debugger &debugger = exc_ctx.GetTargetPtr()->GetDebugger();
   CommandInterpreterRunOptions options;
@@ -5994,9 +5995,6 @@ Target::TargetEventData::GetModuleListFromEvent(const Event *event_ptr) {
 std::recursive_mutex &Target::GetAPIMutex() {
   Policy policy = PolicyStack::Get().Current();
   if (policy.view == Policy::View::Private)
-    return m_private_mutex;
-
-  if (GetProcessSP() && GetProcessSP()->CurrentThreadIsPrivateStateThread())
     return m_private_mutex;
 
   return m_mutex;

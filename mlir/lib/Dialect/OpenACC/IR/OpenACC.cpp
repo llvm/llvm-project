@@ -394,6 +394,11 @@ struct MemrefGlobalVariableModel
     return globalOp.getConstant();
   }
 
+  bool hasInitializer(Operation *op) const {
+    auto globalOp = cast<memref::GlobalOp>(op);
+    return globalOp.getInitialValue().has_value();
+  }
+
   Region *getInitRegion(Operation *op) const {
     // GlobalOp uses attributes for initialization, not regions
     return nullptr;
@@ -2234,6 +2239,10 @@ bool acc::ParallelOp::hasAnyGangWorkerVector(mlir::acc::DeviceType deviceType) {
       getVectorLength(), deviceType);
 }
 
+bool acc::ParallelOp::isEffectivelySerial() {
+  return isGangWorkerVectorAllOne(*this);
+}
+
 bool acc::ParallelOp::hasWaitOnly() {
   return hasWaitOnly(mlir::acc::DeviceType::None);
 }
@@ -3105,6 +3114,10 @@ bool acc::KernelsOp::hasAnyGangWorkerVector(mlir::acc::DeviceType deviceType) {
       getNumGangsDeviceType(), getNumGangs(), getNumGangsSegments(),
       getNumWorkersDeviceType(), getNumWorkers(), getVectorLengthDeviceType(),
       getVectorLength(), deviceType);
+}
+
+bool acc::KernelsOp::isEffectivelySerial() {
+  return isGangWorkerVectorAllOne(*this);
 }
 
 bool acc::KernelsOp::hasWaitOnly() {
