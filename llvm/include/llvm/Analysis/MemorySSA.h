@@ -1075,6 +1075,22 @@ public:
     return getClobberingMemoryAccess(MA, Loc, BAA);
   }
 
+  /// Does the same thing as getClobberingMemoryAccess(MA, BAA), except that
+  /// atomic store defs with release (or weaker) ordering that provably have
+  /// no data effect on the queried access are not treated as clobbers.
+  ///
+  /// Such stores are normally reported as clobbering every escaped location
+  /// (see getSyncEffects) solely because their ordering forbids moving
+  /// program-order-earlier accesses below them. They impose nothing on
+  /// program-order-later reads, so the result of this query is valid ONLY
+  /// for clients that move the queried access to an *earlier* program point
+  /// (hoisting): it must not be used to justify sinking any access below,
+  /// or deleting any access above, one of the skipped stores.
+  ///
+  /// The result is never cached, and cached results are not consulted.
+  virtual MemoryAccess *getClobberingMemoryAccessForHoist(MemoryUseOrDef *,
+                                                          BatchAAResults &) = 0;
+
   /// Given a memory access, invalidate anything this walker knows about
   /// that access.
   /// This API is used by walkers that store information to perform basic cache
@@ -1101,6 +1117,8 @@ public:
   MemoryAccess *getClobberingMemoryAccess(MemoryAccess *,
                                           const MemoryLocation &,
                                           BatchAAResults &) override;
+  MemoryAccess *getClobberingMemoryAccessForHoist(MemoryUseOrDef *,
+                                                  BatchAAResults &) override;
 };
 
 /// Iterator base class used to implement const and non-const iterators
