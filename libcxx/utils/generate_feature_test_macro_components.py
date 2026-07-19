@@ -505,7 +505,7 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_debugging",
             "values": {
-                "c++26": 202403, # P2810R4: is_debugger_present is_replaceable
+                "c++26": 202403,  # P2810R4: is_debugger_present is_replaceable
             },
             "headers": ["debugging"],
             "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_DEBUGGING",
