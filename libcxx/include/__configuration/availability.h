@@ -38,11 +38,8 @@
 // When availability annotations are disabled, we take for granted that features introduced
 // in all versions of the library are available.
 #if !_LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS
-#  define _LIBCPP_INTRODUCED_IN_LLVM_23 1
-#  define _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE /* nothing */
-
-#  define _LIBCPP_INTRODUCED_IN_LLVM_23 1
-#  define _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE /* nothing */
+#  define _LIBCPP_INTRODUCED_IN_LLVM_24 1
+#  define _LIBCPP_INTRODUCED_IN_LLVM_24_ATTRIBUTE /* nothing */
 
 #  define _LIBCPP_INTRODUCED_IN_LLVM_23 1
 #  define _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE /* nothing */
@@ -246,8 +243,8 @@
 
 // This controls the availability of the C++26 debugging functions.
 // The platform specific implementation is built in the library.
-#define _LIBCPP_AVAILABILITY_HAS_DEBUGGING _LIBCPP_INTRODUCED_IN_LLVM_23
-#define _LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE
+#define _LIBCPP_AVAILABILITY_HAS_DEBUGGING _LIBCPP_INTRODUCED_IN_LLVM_24
+#define _LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_INTRODUCED_IN_LLVM_24_ATTRIBUTE
 
 // This controls the availability of new implementation of std::atomic's
 // wait, notify_one and notify_all. The new implementation uses
