@@ -1100,8 +1100,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
     OriginList *ArgList = getOriginsList(*Args[I]);
     if (!ArgList)
       continue;
-    TrackedArgInfo ArgInfo = getTrackedArgInfo(FD, Args, I);
-    bool ShouldTrackArg = ArgInfo.Kind != TrackedArgKind::None;
+    bool ShouldTrackArg = getTrackedArgInfo(FD, Args, I).has_value();
     if (IsGslConstruction) {
       // TODO: document with code example.
       // std::string_view(const std::string_view& from)

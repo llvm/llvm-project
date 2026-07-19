@@ -16,7 +16,6 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include <optional>
-#include <utility>
 
 namespace clang ::lifetimes {
 
@@ -64,32 +63,21 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD);
 using LifetimeBoundParamInfo =
     llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *>;
 
-enum class TrackedArgKind {
-  None,
-  ExplicitLifetimeBound,
-  Inferred,
-};
-
-struct TrackedArgInfo {
-  TrackedArgKind Kind = TrackedArgKind::None;
-  std::optional<LifetimeBoundParamInfo> ParamInfo;
-};
-
 /// Returns the callee and arguments corresponding to Call. For instance member
 /// calls, Args includes the implicit object argument as argument 0.
 std::pair<const FunctionDecl *, llvm::SmallVector<const Expr *, 4>>
 getFunctionCallInfo(const Expr *Call);
 
-/// Returns whether argument I should be tracked for lifetime safety, and
-/// whether the tracking reason is an explicit lifetimebound annotation or an
-/// inferred/heuristic rule.
-TrackedArgInfo getTrackedArgInfo(const FunctionDecl *FD,
-                                 llvm::ArrayRef<const Expr *> Args, unsigned I);
+/// Returns the parameter corresponding to argument I when the argument should
+/// be tracked for lifetime safety.
+std::optional<LifetimeBoundParamInfo>
+getTrackedArgInfo(const FunctionDecl *FD, llvm::ArrayRef<const Expr *> Args,
+                  unsigned I);
 
 /// Returns lifetime safety tracking info for the call argument containing
 /// Source.
-std::optional<TrackedArgInfo> getTrackingInfoForCallArg(const Expr *Call,
-                                                        const Expr *Source);
+std::optional<LifetimeBoundParamInfo>
+getTrackingInfoForCallArg(const Expr *Call, const Expr *Source);
 
 // Returns true if the implicit object argument (this) of a method call should
 // be tracked for GSL lifetime analysis. This applies to STL methods that return

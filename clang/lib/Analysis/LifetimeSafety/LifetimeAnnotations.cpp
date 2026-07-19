@@ -179,16 +179,16 @@ getFunctionCallInfo(const Expr *Call) {
   return {FD, Args};
 }
 
-TrackedArgInfo getTrackedArgInfo(const FunctionDecl *FD,
-                                 llvm::ArrayRef<const Expr *> Args,
-                                 unsigned I) {
+std::optional<LifetimeBoundParamInfo>
+getTrackedArgInfo(const FunctionDecl *FD, llvm::ArrayRef<const Expr *> Args,
+                  unsigned I) {
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);
   if (!FD || I >= Args.size())
-    return {};
+    return std::nullopt;
 
   if (std::optional<LifetimeBoundParamInfo> Info =
           getExplicitLifetimeBoundParamInfo(FD, I))
-    return {TrackedArgKind::ExplicitLifetimeBound, Info};
+    return Info;
 
   if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
       Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD)) {
@@ -196,22 +196,20 @@ TrackedArgInfo getTrackedArgInfo(const FunctionDecl *FD,
         (isNormalAssignmentOperator(Method) ||
          shouldTrackImplicitObjectArg(*Args[0], Method,
                                       /*RunningUnderLifetimeSafety=*/true)))
-      return {TrackedArgKind::Inferred, LifetimeBoundParamInfo(Method)};
-    return {};
+      return LifetimeBoundParamInfo(Method);
+    return std::nullopt;
   }
 
   if (I == 0 && shouldTrackFirstArgument(FD))
-    return {TrackedArgKind::Inferred,
-            LifetimeBoundParamInfo(FD->getParamDecl(I))};
+    return LifetimeBoundParamInfo(FD->getParamDecl(I));
   if (I == 1 && shouldTrackSecondArgument(FD))
-    return {TrackedArgKind::Inferred,
-            LifetimeBoundParamInfo(FD->getParamDecl(I))};
+    return LifetimeBoundParamInfo(FD->getParamDecl(I));
 
-  return {};
+  return std::nullopt;
 }
 
-std::optional<TrackedArgInfo> getTrackingInfoForCallArg(const Expr *Call,
-                                                        const Expr *Source) {
+std::optional<LifetimeBoundParamInfo>
+getTrackingInfoForCallArg(const Expr *Call, const Expr *Source) {
   if (!Call || !Source)
     return std::nullopt;
 
@@ -220,11 +218,10 @@ std::optional<TrackedArgInfo> getTrackingInfoForCallArg(const Expr *Call,
     return std::nullopt;
 
   for (unsigned I = 0; I < Args.size(); ++I)
-    if (isExprInCallArg(Args[I], Source)) {
-      TrackedArgInfo Info = getTrackedArgInfo(FD, Args, I);
-      if (Info.Kind != TrackedArgKind::None)
+    if (isExprInCallArg(Args[I], Source))
+      if (std::optional<LifetimeBoundParamInfo> Info =
+              getTrackedArgInfo(FD, Args, I))
         return Info;
-    }
 
   return std::nullopt;
 }
