@@ -720,10 +720,8 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
       // not catch it for results.
       if (auto vecType = dyn_cast<VectorType>(resType)) {
         // Flatten to 1D
-        // Accepts genuine multi-dim tiles 
-        // (e.g. a non-distributed `vector<4x8xf32>` result) by reinterpreting the whole
-        // tile as one flat, contiguous run. This is only valid when the
-        // underlying `mem_desc` region is actually contiguous in memory
+        // Accepts multi-dim tile as one flat, contiguous run. 
+        // This is only valid when the underlying mem_desc region is contiguous in memory
         resType = VectorType::get({vecType.getNumElements()},
                                   vecType.getElementType());
       }
@@ -789,9 +787,7 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
 
     if (valOrResVecTy.getNumElements() >= 1) {
       auto chipOpt = xegpu::getChipStr(op);
-      // Only reject an explicitly unsupported chip; a missing gpu.module/target
-      // (chipOpt == nullopt) is no longer treated as a hard failure, so this
-      // path also works for standalone/non-GPU-kernel-context IR.
+      // reject an explicitly unsupported chip
       if (chipOpt && *chipOpt != "pvc" && *chipOpt != "bmg" &&
           *chipOpt != "cri") {
         return rewriter.notifyMatchFailure(
