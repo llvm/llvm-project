@@ -14,8 +14,9 @@
 // instruction is the same as the destination register of the second
 // instruction.
 class FirstRdEqSecondRdFusion<string name, string fieldName, string desc,
-                   MCInstPredicate firstPred, MCInstPredicate secondPred,
-                   int secondOpIdx=0, int firstOpIdx=0>
+                              MCInstPredicate firstPred,
+                              MCInstPredicate secondPred,
+                              int secondOpIdx=0, int firstOpIdx=0>
   : Fusion<name, fieldName, desc,
            [
              SecondFusionPredicateWithMCInstPredicate<secondPred>,
@@ -24,17 +25,6 @@ class FirstRdEqSecondRdFusion<string name, string fieldName, string desc,
              TieReg<firstOpIdx, secondOpIdx>
            ]>;
 
-// Fuse two operations without tying any of their register operands.
-class XqciFusionNoTie<string name, string fieldName, string desc,
-                        MCInstPredicate firstPred, MCInstPredicate secondPred>
-  : Fusion<name, fieldName, desc,
-           [
-             SecondFusionPredicateWithMCInstPredicate<secondPred>,
-             WildcardTrue,
-             FirstFusionPredicateWithMCInstPredicate<firstPred>
-           ]>;
-
-defvar LoadAndMoveImmOp = [ADDI, LUI, QC_E_LI, QC_LI];
 defvar LoadImmOp = [LUI, QC_E_LI, QC_LI];
 // 48-bit load store
 defvar LongLoadStoreXqciOp = [QC_E_LB, QC_E_LBU, QC_E_LH, QC_E_LHU, QC_E_LW,
@@ -45,38 +35,60 @@ defvar LongLogicalXqciOp = [QC_E_XORAI, QC_E_ORAI, QC_E_ANDAI, QC_E_ADDAI];
 // Fuse load-immediate/move-immediate followed by arithmetic/logic.
 def TuneMOVIMMALUXqciFusion
   : SimpleFusion<"xqci-movimm-alu", "HasMOVIMMALUXqciFusion",
-                "Enable MOVIMM + ALU operations macrofusion",
-                CheckAny<[
-                  CheckOpcode<[AUIPC]>,
-                  CheckOpcode<LoadAndMoveImmOp>,
-                ]>,
-                CheckOpcode<[
-                  ADD, ADDI, SUB, MUL,
-                  AND, ANDI, OR, ORI, ORN, XOR, XORI, XNOR,
-                  QC_E_ANDI, QC_E_ORI, QC_E_XORI,
-                  SLLI, SRLI, SRAI, QC_LI, QC_E_LI,
-                  MAX, MAXU, MIN, MINU
-                ]>>;
+                 "Enable MOVIMM + ALU operations macrofusion",
+                 CheckAny<[
+                   CheckAll<[
+                     CheckOpcode<[ADDI]>,
+                     CheckRegOperand<1, X0>
+                   ]>,
+                   CheckOpcode<LoadImmOp>,
+                   CheckOpcode<[AUIPC]>,
+                 ]>,
+                 CheckOpcode<[
+                   ADD, ADDI, SUB, MUL,
+                   AND, ANDI, ANDN, OR, ORI, ORN, XOR, XORI, XNOR,
+                   QC_E_ANDI, QC_E_ORI, QC_E_XORI,
+                   SLLI, SRLI, SRAI, QC_LI, QC_E_LI,
+                   MAX, MAXU, MIN, MINU
+                 ]>>;
 
 // Fuse load-immediate/move-immediate followed by multiply.
 def TuneMOVIMMMULXqciFusion
   : SimpleFusion<"xqci-movimm-mul", "HasMOVIMMMULXqciFusion",
                  "Enable MOVIMM + multiply macrofusion",
-                 CheckOpcode<LoadAndMoveImmOp>,
+                 CheckAny<[
+                   CheckAll<[
+                     CheckOpcode<[ADDI]>,
+                     CheckRegOperand<1, X0>
+                   ]>,
+                   CheckOpcode<LoadImmOp>,
+                 ]>,
                  CheckOpcode<[MUL]>>;
 
 // Fuse load-immediate/move-immediate followed by long load/store.
 def TuneMOVIMMLoadStoreXqciFusion
   : SimpleFusion<"xqci-movimm-ldst", "HasMOVIMMLoadStoreXqciFusion",
                  "Enable MOVIMM + long Load/Store macrofusion",
-                 CheckOpcode<LoadAndMoveImmOp>,
+                 CheckAny<[
+                   CheckAll<[
+                     CheckOpcode<[ADDI]>,
+                     CheckRegOperand<1, X0>
+                   ]>,
+                   CheckOpcode<LoadImmOp>,
+                 ]>,
                  CheckOpcode<LongLoadStoreXqciOp>>;
 
 // Fuse load-immediate/move-immediate followed by a jump.
 def TuneMOVIMMJumpXqciFusion
   : SimpleFusion<"xqci-movimm-jump", "HasMOVIMMJumpXqciFusion",
                  "Enable MOVIMM + Jump macrofusion",
-                 CheckOpcode<LoadAndMoveImmOp>,
+                 CheckAny<[
+                   CheckAll<[
+                     CheckOpcode<[ADDI]>,
+                     CheckRegOperand<1, X0>
+                   ]>,
+                   CheckOpcode<LoadImmOp>,
+                 ]>,
                  CheckOpcode<[JALR]>>;
 
 // Fuse load-immediate/move-immediate followed by long logical operation.
@@ -86,14 +98,6 @@ def TuneMOVIMMLongLogicalXciFusion
   : FirstRdEqSecondRdFusion<"xqci-movimm-longlogical",
                  "HasMOVIMMLongLogicalXqciFusion",
                  "Enable MOVIMM + long logical operation macrofusion",
-                 CheckOpcode<LoadAndMoveImmOp>,
-                 CheckOpcode<LongLogicalXqciOp>
-                 >;
-
-// Fuse load-immediate/move-immediate followed by move.
-def TuneMOVIMMMovXqciFusion
-  : SimpleFusion<"xqci-movimm-mov", "HasMOVIMMMovXqciFusion",
-                 "Enable MOVIMM + Move macrofusion",
                  CheckAny<[
                    CheckAll<[
                      CheckOpcode<[ADDI]>,
@@ -101,21 +105,17 @@ def TuneMOVIMMMovXqciFusion
                    ]>,
                    CheckOpcode<LoadImmOp>,
                  ]>,
+                 CheckOpcode<LongLogicalXqciOp>>;
+
+// Fuse two adjacent moves.
+def TuneMOVIMMMovXqciFusion
+  : SimpleFusion<"xqci-mov-mov", "HasMovMovXqciFusion",
+                 "Enable Move + Move macrofusion",
                  CheckAny<[
                    CheckAll<[
                      CheckOpcode<[ADDI]>,
-                     CheckIsImmOperand<2>,
-                     CheckImmOperand<2, 0>
+                     CheckRegOperand<1, X0>
                    ]>,
-                   CheckOpcode<LoadImmOp>
-                 ]>
-                >;
-
-// Fuse two adjacent moves.
-def TuneMovMovXqciFusion
-  : XqciFusionNoTie<"xqci-mov-mov", "HasMovMovXqciFusion",
-                 "Enable move + move macrofusion",
-                 CheckAny<[
                    CheckAll<[
                      CheckOpcode<[ADDI]>,
                      CheckIsImmOperand<2>,
