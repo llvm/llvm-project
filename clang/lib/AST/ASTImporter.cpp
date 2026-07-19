@@ -1844,9 +1844,7 @@ ASTNodeImporter::VisitCountAttributedType(const CountAttributedType *T) {
 
 ExpectedType
 ASTNodeImporter::VisitLateParsedAttrType(const LateParsedAttrType *T) {
-  // LateParsedAttrType is a transient placeholder that should not normally
-  // appear during AST import. Import as the wrapped type.
-  return import(T->getWrappedType());
+  llvm_unreachable("should be replaced with a concrete type before AST import");
 }
 
 ExpectedType ASTNodeImporter::VisitTemplateTypeParmType(
