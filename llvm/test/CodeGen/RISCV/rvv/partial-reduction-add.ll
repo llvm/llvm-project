@@ -95,6 +95,67 @@ define <4 x i32> @partial_reduce_add_constants() {
   ret <4 x i32> %partial.reduce
 }
 
+; Accumulation wraps at the accumulator element width.
+define <2 x i32> @partial_reduce_add_constants_wraparound() {
+; CHECK-LABEL: partial_reduce_add_constants_wraparound:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    lui a0, 524288
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    vadd.vx v8, v8, a0
+; CHECK-NEXT:    ret
+  %partial.reduce = call <2 x i32> @llvm.vector.partial.reduce.add(
+      <2 x i32> <i32 2147483647, i32 -2147483648>,
+      <4 x i32> <i32 1, i32 1, i32 1, i32 1>)
+  ret <2 x i32> %partial.reduce
+}
+
+; A poison input only affects its result lane; other lanes still fold.
+define i32 @partial_reduce_add_constants_input_poison() {
+; CHECK-LABEL: partial_reduce_add_constants_input_poison:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 104
+; CHECK-NEXT:    ret
+  %partial.reduce = call <2 x i32> @llvm.vector.partial.reduce.add(
+      <2 x i32> <i32 100, i32 200>,
+      <4 x i32> <i32 1, i32 poison, i32 3, i32 4>)
+  %unaffected = extractelement <2 x i32> %partial.reduce, i64 0
+  ret i32 %unaffected
+}
+
+; A poison accumulator lane does not prevent other lanes from folding.
+define i32 @partial_reduce_add_constants_accumulator_poison() {
+; CHECK-LABEL: partial_reduce_add_constants_accumulator_poison:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 206
+; CHECK-NEXT:    ret
+  %partial.reduce = call <2 x i32> @llvm.vector.partial.reduce.add(
+      <2 x i32> <i32 poison, i32 200>,
+      <4 x i32> <i32 1, i32 2, i32 3, i32 4>)
+  %unaffected = extractelement <2 x i32> %partial.reduce, i64 1
+  ret i32 %unaffected
+}
+
+; Undef deliberately leaves the partial reduction unfolded.
+define <2 x i32> @partial_reduce_add_constants_undef() {
+; CHECK-LABEL: partial_reduce_add_constants_undef:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 100
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vmv.v.x v9, a0
+; CHECK-NEXT:    vmacc.vx v9, a0, v8
+; CHECK-NEXT:    vadd.vi v9, v9, 1
+; CHECK-NEXT:    vadd.vi v8, v8, 3
+; CHECK-NEXT:    vadd.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %partial.reduce = call <2 x i32> @llvm.vector.partial.reduce.add(
+      <2 x i32> <i32 100, i32 200>,
+      <4 x i32> <i32 1, i32 undef, i32 3, i32 4>)
+  ret <2 x i32> %partial.reduce
+}
+
 ; Ensure scalable splats do not fall through to generic scalar folding.
 define <vscale x 4 x i32> @partial_reduce_add_nxv4i32_splat_constants() {
 ; CHECK-LABEL: partial_reduce_add_nxv4i32_splat_constants:
