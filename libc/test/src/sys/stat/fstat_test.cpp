@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/fcntl_macros.h"
+#include "hdr/sys_stat_macros.h"
+#include "hdr/types/struct_stat.h"
 #include "src/fcntl/open.h"
 #include "src/sys/stat/fstat.h"
 #include "src/unistd/close.h"
@@ -13,9 +16,6 @@
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include "hdr/fcntl_macros.h"
-#include <sys/stat.h>
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 using LlvmLibcFStatTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;

@@ -1475,11 +1475,11 @@ define void @divergent_value_float_dpp(ptr addrspace(1) %out, float %in) #0 {
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX1164DAGISEL-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1164DAGISEL-NEXT:    s_xor_saveexec_b64 s[0:1], -1
-; GFX1164DAGISEL-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
 ; GFX1164DAGISEL-NEXT:    s_clause 0x2 ; 12-byte Folded Reload
 ; GFX1164DAGISEL-NEXT:    scratch_load_b32 v3, off, s32
 ; GFX1164DAGISEL-NEXT:    scratch_load_b32 v4, off, s32 offset:4
 ; GFX1164DAGISEL-NEXT:    scratch_load_b32 v5, off, s32 offset:8
+; GFX1164DAGISEL-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
 ; GFX1164DAGISEL-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1164DAGISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1164DAGISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -1519,11 +1519,11 @@ define void @divergent_value_float_dpp(ptr addrspace(1) %out, float %in) #0 {
 ; GFX1164GISEL-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX1164GISEL-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1164GISEL-NEXT:    s_xor_saveexec_b64 s[0:1], -1
-; GFX1164GISEL-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
 ; GFX1164GISEL-NEXT:    s_clause 0x2 ; 12-byte Folded Reload
 ; GFX1164GISEL-NEXT:    scratch_load_b32 v3, off, s32
 ; GFX1164GISEL-NEXT:    scratch_load_b32 v4, off, s32 offset:4
 ; GFX1164GISEL-NEXT:    scratch_load_b32 v5, off, s32 offset:8
+; GFX1164GISEL-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
 ; GFX1164GISEL-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1164GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1164GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -2255,12 +2255,12 @@ define void @divergent_value_double_dpp(ptr addrspace(1) %out, double %in) #0 {
 ; GFX1164DAGISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX1164DAGISEL-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX1164DAGISEL-NEXT:    s_xor_saveexec_b64 s[0:1], -1
-; GFX1164DAGISEL-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
 ; GFX1164DAGISEL-NEXT:    s_clause 0x3 ; 28-byte Folded Reload
 ; GFX1164DAGISEL-NEXT:    scratch_load_b64 v[4:5], off, s32
 ; GFX1164DAGISEL-NEXT:    scratch_load_b64 v[6:7], off, s32 offset:8
 ; GFX1164DAGISEL-NEXT:    scratch_load_b32 v6, off, s32 offset:16
 ; GFX1164DAGISEL-NEXT:    scratch_load_b64 v[7:8], off, s32 offset:20
+; GFX1164DAGISEL-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
 ; GFX1164DAGISEL-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1164DAGISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1164DAGISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -2331,12 +2331,12 @@ define void @divergent_value_double_dpp(ptr addrspace(1) %out, double %in) #0 {
 ; GFX1164GISEL-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX1164GISEL-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX1164GISEL-NEXT:    s_xor_saveexec_b64 s[0:1], -1
-; GFX1164GISEL-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
 ; GFX1164GISEL-NEXT:    s_clause 0x3 ; 28-byte Folded Reload
 ; GFX1164GISEL-NEXT:    scratch_load_b64 v[4:5], off, s32
 ; GFX1164GISEL-NEXT:    scratch_load_b64 v[6:7], off, s32 offset:8
 ; GFX1164GISEL-NEXT:    scratch_load_b32 v6, off, s32 offset:16
 ; GFX1164GISEL-NEXT:    scratch_load_b64 v[7:8], off, s32 offset:20
+; GFX1164GISEL-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
 ; GFX1164GISEL-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1164GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1164GISEL-NEXT:    s_setpc_b64 s[30:31]

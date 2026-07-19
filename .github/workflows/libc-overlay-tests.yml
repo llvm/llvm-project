@@ -122,12 +122,21 @@ jobs:
     name: qemu - ${{ matrix.arch }} - ${{ matrix.c_compiler }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
-    container: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:c6e2ee2a9bf5cebd51fd27dd8e85381c2f73d90e091c764082f8ad528ee18918'
+    container:
+      image: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:c6e2ee2a9bf5cebd51fd27dd8e85381c2f73d90e091c764082f8ad528ee18918'
+      # We need to enable privileged containers so that certain libc tests
+      # have the necessary permissions (like SYS_TIME). There are no security
+      # implications as we are already running in an isolated VM.
+      options: --privileged
     strategy:
       # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations.
       fail-fast: false
       matrix:
         include:
+          - arch: armhf
+            target_triple: arm-linux-gnueabihf
+            c_compiler: clang-23
+            cxx_compiler: clang++-23
           - arch: riscv64
             target_triple: riscv64-linux-gnu
             c_compiler: clang-23

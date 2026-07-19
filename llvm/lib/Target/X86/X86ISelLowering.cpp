@@ -1395,7 +1395,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SUB,                MVT::i16, Custom);
     setOperationAction(ISD::SUB,                MVT::i32, Custom);
   }
-
+  if (Subtarget.hasNDD()) {
+    // Enable custom lowering for scalar USUBSAT to optimize usub.sat(X,1)
+    // with cmp+adc when NDD is available.
+    setOperationAction(ISD::USUBSAT, MVT::i8, Custom);
+    setOperationAction(ISD::USUBSAT, MVT::i16, Custom);
+    setOperationAction(ISD::USUBSAT, MVT::i32, Custom);
+    setOperationAction(ISD::USUBSAT, MVT::i64, Custom);
+  }
   if (!Subtarget.useSoftFloat() && Subtarget.hasSSE41()) {
     for (MVT RoundedTy : {MVT::f32, MVT::f64, MVT::v4f32, MVT::v2f64}) {
       setOperationAction(ISD::FFLOOR,            RoundedTy,  Legal);
@@ -8182,6 +8189,13 @@ static bool isFoldableUseOfShuffle(SDNode *N) {
     }
   }
   return false;
+}
+
+static bool isFoldableAsShuffle(SDValue V) {
+  while (V.getOpcode() == ISD::BITCAST ||
+         V.getOpcode() == ISD::EXTRACT_SUBVECTOR)
+    V = V.getOperand(0);
+  return isTargetShuffle(V.getOpcode());
 }
 
 // If the node has a single use by a VSELECT then AVX512 targets may be able to
@@ -29631,7 +29645,6 @@ static SDValue lowerAddSub(SDValue Op, SelectionDAG &DAG,
                            const X86Subtarget &Subtarget) {
   MVT VT = Op.getSimpleValueType();
   SDLoc DL(Op);
-
   if (VT == MVT::i16 || VT == MVT::i32)
     return lowerAddSubToHorizontalOp(Op, DL, DAG, Subtarget);
 
@@ -29650,6 +29663,22 @@ static SDValue LowerADDSAT_SUBSAT(SDValue Op, SelectionDAG &DAG,
   SDValue X = Op.getOperand(0), Y = Op.getOperand(1);
   unsigned Opcode = Op.getOpcode();
   SDLoc DL(Op);
+
+  if (Opcode == ISD::USUBSAT && !VT.isVector() && Subtarget.hasNDD()) {
+
+    if (isOneConstant(Y)) {
+      // usub.sat(X,1) == (X==0 ? 0 : X-1). Lower to cmp+adc with NDD.
+      SDValue Sub = DAG.getNode(X86ISD::SUB, DL, DAG.getVTList(VT, MVT::i32), X,
+                                DAG.getConstant(1, DL, VT));
+      SDValue EFLAGS = Sub.getValue(1);
+      SDValue MinusOne = DAG.getAllOnesConstant(DL, VT);
+      return DAG.getNode(X86ISD::ADC, DL, DAG.getVTList(VT, MVT::i32), X,
+                         MinusOne, EFLAGS);
+    }
+
+    // Scalar USUBSAT was previously Expand. Don't fall through to vector path.
+    return SDValue();
+  }
 
   if (VT == MVT::v32i16 || VT == MVT::v64i8 ||
       (VT.is256BitVector() && !Subtarget.hasInt256())) {
@@ -59798,22 +59827,6 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // Peephole for 512-bit VPDPBSSD on non-VLX targets.
-  // TODO: Should this be part of matchPMADDWD/matchPMADDWD_2?
-  if (Subtarget.hasVNNI() && Subtarget.useAVX512Regs() && VT == MVT::v16i32) {
-    SDValue Accum, Lo0, Lo1, Hi0, Hi1;
-    if (sd_match(N, m_Add(m_Value(Accum),
-                          m_Node(ISD::CONCAT_VECTORS,
-                                 m_BinOp(X86ISD::VPMADDWD, m_Value(Lo0),
-                                         m_Value(Lo1)),
-                                 m_BinOp(X86ISD::VPMADDWD, m_Value(Hi0),
-                                         m_Value(Hi1)))))) {
-      return DAG.getNode(X86ISD::VPDPWSSD, DL, VT, Accum,
-                         concatSubVectors(Lo0, Hi0, DAG, DL),
-                         concatSubVectors(Lo1, Hi1, DAG, DL));
-    }
-  }
-
   // Fold ADD(ADC(Y,0,W),X) -> ADC(X,Y,W)
   if (Op0.getOpcode() == X86ISD::ADC && Op0->hasOneUse() &&
       X86::isZeroNode(Op0.getOperand(1))) {
@@ -61546,9 +61559,7 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
                          SubVectorOps[0], DAG.getVectorIdxConstant(0, dl));
 
     // Attempt to recursively combine to a shuffle.
-    if (all_of(SubVectorOps, [](SDValue SubOp) {
-          return isTargetShuffle(peekThroughBitcasts(SubOp).getOpcode());
-        })) {
+    if (all_of(SubVectorOps, isFoldableAsShuffle)) {
       SDValue Op(N, 0);
       if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
         return Res;
@@ -61601,16 +61612,8 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  auto peekThroughBitcastsAndExtracts = [](SDValue V) {
-    while (V.getOpcode() == ISD::BITCAST ||
-           V.getOpcode() == ISD::EXTRACT_SUBVECTOR)
-      V = V.getOperand(0);
-    return V;
-  };
-
   // Attempt to recursively combine to a shuffle.
-  if (isTargetShuffle(peekThroughBitcasts(Vec).getOpcode()) &&
-      isTargetShuffle(peekThroughBitcastsAndExtracts(SubVec).getOpcode())) {
+  if (isFoldableAsShuffle(Vec) && isFoldableAsShuffle(SubVec)) {
     SDValue Op(N, 0);
     if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
       return Res;

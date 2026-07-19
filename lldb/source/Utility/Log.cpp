@@ -282,15 +282,16 @@ bool Log::DumpLogChannel(llvm::StringRef channel,
   return true;
 }
 
-bool Log::ListChannelCategories(llvm::StringRef channel,
-                                llvm::raw_ostream &stream) {
+llvm::Expected<std::string>
+Log::ListChannelCategories(llvm::StringRef channel) {
   auto ch = g_channel_map->find(channel);
-  if (ch == g_channel_map->end()) {
-    stream << llvm::formatv("Invalid log channel '{0}'.\n", channel);
-    return false;
-  }
-  ListCategories(stream, *ch);
-  return true;
+  if (ch == g_channel_map->end())
+    return llvm::createStringErrorV("Invalid log channel '{0}'.\n", channel);
+
+  std::string categories;
+  llvm::raw_string_ostream strm(categories);
+  ListCategories(strm, *ch);
+  return categories;
 }
 
 void Log::DisableAllLogChannels() {
