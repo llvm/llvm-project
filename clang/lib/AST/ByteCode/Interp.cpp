@@ -1199,21 +1199,20 @@ bool CheckFloatStatus(InterpState &S, CodePtr OpPC, APFloat::opStatus Status,
   if (Status == APFloat::opOK)
     return true;
 
+  if (FPO.getRoundingMode() == llvm::RoundingMode::Dynamic) {
+    // Some floating point exception is raised, so the output might depend on
+    // rounding mode. If the requested mode is dynamic, the evaluation cannot be
+    // made in compile time.
+    const SourceInfo &E = S.Current->getSource(OpPC);
+    S.FFDiag(E, diag::note_constexpr_dynamic_rounding);
+    return false;
+  }
+
   // No fenv access and floating point exceptions are ignored, so it is safe to
   // to perform compile-time evaluation.
   if (!FPO.getAllowFEnvAccess() &&
       FPO.getExceptionMode() == LangOptions::FPE_Ignore)
     return true;
-
-  if (FPO.getAllowFEnvAccess() &&
-      (FPO.getRoundingMode() == llvm::RoundingMode::Dynamic)) {
-    // Some floating point exception is raised, so the output might depend on
-    // rounding mode. If the FENV_ACCESS is "on" and the rounding mode is
-    // dynamic, the evaluation cannot be made in compile time.
-    const SourceInfo &E = S.Current->getSource(OpPC);
-    S.FFDiag(E, diag::note_constexpr_dynamic_rounding);
-    return false;
-  }
 
   if (FPO.getExceptionMode() != LangOptions::FPE_Ignore) {
     // Some floating point exception is raised and the FP mode is strict or the
