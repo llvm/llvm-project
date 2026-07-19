@@ -16,7 +16,10 @@ namespace test {
 namespace {
 
 class FormatTest : public test::FormatTestBase {};
-
+TEST_F(FormatTest, FormatsUserDefinedLiteralTemplates) {
+    verifyFormat("template <char... Cs> auto f() { return operator\"\"_mag<Cs...>(); }");
+    verifyFormat("template <char... Cs> auto f() { return operator \"\"_mag<Cs...>(); }");
+}
 TEST_F(FormatTest, MessUp) {
   EXPECT_EQ("1 2 3", messUp("1 2 3"));
   EXPECT_EQ("1 2 3", messUp("1\n2\n3"));
