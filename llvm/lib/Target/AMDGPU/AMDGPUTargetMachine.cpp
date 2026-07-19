@@ -1119,6 +1119,13 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         FPM.addPass(AMDGPUPromoteKernelArgumentsPass());
         PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
 
+        // Clean up redundant memory round-trips that the full-LTO pipeline,
+        // unlike the non-LTO/ThinLTO ones, otherwise leaves for codegen.
+        if (Level != OptimizationLevel::O0) {
+          PM.addPass(createModuleToFunctionPassAdaptor(
+              EarlyCSEPass(/*UseMemorySSA=*/true)));
+        }
+
         // When we are using -fgpu-rdc, we can only run accelerator code
         // selection after linking to prevent, otherwise we end up removing
         // potentially reachable symbols that were exported as external in other
