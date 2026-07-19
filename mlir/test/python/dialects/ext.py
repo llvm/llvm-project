@@ -121,8 +121,6 @@ def testDialectLoadInMultipleContexts():
         attr: ContextLoadAttr
         result: Result[ContextLoadType]
 
-    # CHECK: same context: Dialect 'ext_context_load' has already been loaded in the current context.
-
     def check_dialect(context_name, type_value):
         i32 = IntegerType.get_signless(32)
         result_type = ContextLoadType.get(IntegerAttr.get(i32, type_value))
@@ -139,12 +137,6 @@ def testDialectLoadInMultipleContexts():
         assert isinstance(op.attr, ContextLoadAttr)
         assert isinstance(op.result.type, ContextLoadType)
 
-        # CHECK: first context: ContextLoadOp, ContextLoadAttr, ContextLoadType
-        # CHECK: "first context"
-        # CHECK: 1 : i32
-        # CHECK: second context: ContextLoadOp, ContextLoadAttr, ContextLoadType
-        # CHECK: "second context"
-        # CHECK: 2 : i32
         print(
             f"{context_name}: {type(op).__name__}, "
             f"{type(op.attr).__name__}, {type(op.result.type).__name__}"
@@ -160,15 +152,27 @@ def testDialectLoadInMultipleContexts():
         try:
             ContextLoadDialect.load()
         except RuntimeError as e:
+            # CHECK: same context: Dialect 'ext_context_load' has already been loaded in the current context.
             print("same context:", e)
-        else:
-            raise AssertionError("loading a dialect twice in one context must fail")
 
+        # CHECK: first context: ContextLoadOp, ContextLoadAttr, ContextLoadType
+        # CHECK: "first context"
+        # CHECK: 1 : i32
         check_dialect("first context", 1)
 
     with second_context, Location.unknown():
         ContextLoadDialect.load()
+        # CHECK: second context: ContextLoadOp, ContextLoadAttr, ContextLoadType
+        # CHECK: "second context"
+        # CHECK: 2 : i32
         check_dialect("second context", 2)
+
+    with first_context, Location.unknown():
+        try:
+            ContextLoadDialect.load()
+        except RuntimeError as e:
+            # CHECK: same context again: Dialect 'ext_context_load' has already been loaded in the current context.
+            print("same context again:", e)
 
 
 # CHECK: TEST: testExtDialect
