@@ -155,8 +155,6 @@ def run_pass(source, pipeline):
 with ir.Context(), ir.Location.unknown():
     MemoryEffectsTest.load()
 
-    # The static properties return wrappers around borrowed, statically-owned
-    # C++ singletons.
     # CHECK: memory effect properties: True True True True
     print(
         "memory effect properties:",
