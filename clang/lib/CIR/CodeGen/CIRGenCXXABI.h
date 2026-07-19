@@ -166,6 +166,10 @@ public:
   /// Loads the incoming C++ this pointer as it was passed by the caller.
   mlir::Value loadIncomingCXXThis(CIRGenFunction &cgf);
 
+  /// Returns the C++ this pointer as set by setCXXABIThisValue, before any
+  /// adjustment.
+  mlir::Value getThisValue(CIRGenFunction &cgf);
+
   virtual CatchTypeInfo
   getAddrOfCXXCatchHandlerType(mlir::Location loc, QualType ty,
                                QualType catchHandlerType) = 0;
