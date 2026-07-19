@@ -51,9 +51,11 @@ _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wmissing-prototypes")
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+
 // `breakpoint()` implementation
 
-_LIBCPP_EXPORTED_FROM_ABI void __breakpoint() noexcept {
+void __breakpoint() noexcept {
 #if defined(_LIBCPP_WIN32API)
   DebugBreak();
 #else
@@ -63,7 +65,7 @@ _LIBCPP_EXPORTED_FROM_ABI void __breakpoint() noexcept {
 
 // `is_debugger_present()` implementation
 
-OVERRIDABLE_FUNCTION _LIBCPP_EXPORTED_FROM_ABI bool is_debugger_present() noexcept {
+OVERRIDABLE_FUNCTION bool is_debugger_present() noexcept {
   if (__gnu_cxx::debugger_signal_for_breakpoint != 0)
     return true;
 
@@ -184,6 +186,8 @@ OVERRIDABLE_FUNCTION _LIBCPP_EXPORTED_FROM_ABI bool is_debugger_present() noexce
 
 #endif // defined(_LIBCPP_WIN32API)
 }
+
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 _LIBCPP_END_NAMESPACE_STD
 
