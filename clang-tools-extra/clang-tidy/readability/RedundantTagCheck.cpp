@@ -66,11 +66,11 @@ void RedundantTagCheck::check(const MatchFinder::MatchResult &Result) {
   if (!EnclosingDecl)
     return;
 
-  DeclarationName Name = TD->getDeclName();
+  const DeclarationName Name = TD->getDeclName();
 
   for (const DeclContext *DC = EnclosingDecl->getDeclContext(); DC;
        DC = DC->getLookupParent()) {
-    auto Lookup = DC->lookup(Name);
+    const auto Lookup = DC->lookup(Name);
 
     if (Lookup.empty())
       continue;

@@ -98,10 +98,6 @@ void templateArgument() {
   // CHECK-FIXES: tf<Struct>();
 }
 
-//===----------------------------------------------------------------------===//
-// Regression test: using declaration lookup
-//===----------------------------------------------------------------------===//
-
 namespace UsingDeclarationRegression {
 
 namespace NS {
@@ -116,9 +112,28 @@ using T = struct S;
 
 } // namespace UsingDeclarationRegression
 
-//===----------------------------------------------------------------------===//
-// Regression test: hidden in nested namespace scope
-//===----------------------------------------------------------------------===//
+namespace NegativeUsingDeclaration {
+
+namespace NS {
+struct S {};
+}
+
+using NS::S;
+
+namespace NS1 {
+
+int S;
+
+namespace NS2 {
+
+using T = struct S;
+
+// CHECK-FIXES: using T = struct S;
+// CHECK-MESSAGES-NOT: warning:
+
+} // namespace NS2
+} // namespace NS1
+} // namespace NegativeUsingDeclaration
 
 namespace HiddenNamespaceRegression {
 
@@ -160,10 +175,6 @@ void bar() {
 } // namespace N1
 
 } // namespace HiddenNamespaceRegression
-
-//===----------------------------------------------------------------------===//
-// Regression test: deep namespace lookup
-//===----------------------------------------------------------------------===//
 
 namespace DeepLookupRegression {
 
@@ -217,10 +228,6 @@ using T7 = struct Global;
 } // namespace N1
 
 } // namespace DeepLookupRegression
-
-//===----------------------------------------------------------------------===//
-// Regression test: deep nested block scopes
-//===----------------------------------------------------------------------===//
 
 namespace DeepBlockRegression {
 

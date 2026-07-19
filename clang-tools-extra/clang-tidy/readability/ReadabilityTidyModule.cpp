@@ -71,6 +71,7 @@
 #include "UseAnyOfAllOfCheck.h"
 #include "UseConcisePreprocessorDirectivesCheck.h"
 #include "UseStdMinMaxCheck.h"
+
 namespace clang::tidy {
 namespace readability {
 namespace {

@@ -4,7 +4,7 @@ readability-redundant-tag
 =========================
 
 Finds redundant uses of the ``class``, ``struct``, ``union``, and ``enum``
-keywords in C++ declarations and provides fix-it hints to remove them.
+keywords in C++ declarations.
 
 In C++, elaborated type specifiers are unnecessary when the type name is
 already unambiguous.
@@ -57,3 +57,27 @@ Similarly:
 
 Removing ``struct`` would cause ``Foo`` to refer to the function instead of
 the type.
+
+The check also avoids issuing diagnostics when removing the elaborated type
+specifier would change name lookup. For example:
+
+.. code-block:: c++
+
+  namespace NS {
+  struct S {};
+  }
+
+  using NS::S;
+
+  namespace NS1 {
+    int S;
+
+    namespace NS2 {
+      using T = struct S;
+    }
+  }
+
+Although ``NS::S`` is visible via the using declaration, the name ``S`` is
+hidden by the variable declaration in ``NS1``. Removing ``struct`` would make
+``S`` refer to the variable rather than the type, so no diagnostic is
+produced.
