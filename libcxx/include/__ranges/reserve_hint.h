@@ -47,22 +47,22 @@ concept __unqualified_reserve_hint =
 struct __fn {
   // `[range.prim.size.hint]`: `ranges::size(t)` is a valid expression
   template <__sized _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __integer_like auto operator()(_Tp&& __t) const
-      noexcept(noexcept(ranges::size(__t))) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr __integer_like auto
+  operator()(_Tp&& __t) noexcept(noexcept(ranges::size(__t))) {
     return ranges::size(__t);
   }
 
   // `[range.prim.size.hint]`: `auto(t.reserve_hint())` is a valid expression
   template <__member_reserve_hint _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __integer_like auto operator()(_Tp&& __t) const
-      noexcept(noexcept(auto(__t.reserve_hint()))) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr __integer_like auto
+  operator()(_Tp&& __t) noexcept(noexcept(auto(__t.reserve_hint()))) {
     return auto(__t.reserve_hint());
   }
 
   // `[range.prim.size.hint]`: `auto(reserve_hint(t))` is a valid expression
   template <__unqualified_reserve_hint _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __integer_like auto operator()(_Tp&& __t) const
-      noexcept(noexcept(auto(reserve_hint(__t)))) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr __integer_like auto
+  operator()(_Tp&& __t) noexcept(noexcept(auto(reserve_hint(__t)))) {
     return auto(reserve_hint(__t));
   }
 };
