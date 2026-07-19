@@ -1,6 +1,6 @@
 ! This test checks the lowering of OpenMP Indirect Clause when used with the Declare Target directive
 
-! RUN: not flang -fopenmp -fopenmp-version=52 %s 2>&1 | FileCheck %s
+! RUN: not %flang -fopenmp -fopenmp-version=52 %s 2>&1 | FileCheck %s
 
 module functions
   implicit none

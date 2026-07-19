@@ -8,7 +8,7 @@
 define noundef i32 @test_UAddc(i32 noundef %a, i32 noundef %b) {
 ; CHECK-LABEL: define noundef i32 @test_UAddc(
 ; CHECK-SAME: i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) {
-; CHECK-NEXT:    [[UADDC:%.*]] = call [[DX_TYPES_I32C]] @dx.op.binaryWithCarryOrBorrow.i32(i32 44, i32 [[A]], i32 [[B]]) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[UADDC:%.*]] = call [[DX_TYPES_I32C]] @dx.op.binaryWithCarryOrBorrow.i32(i32 44, i32 [[A]], i32 [[B]])
 ; CHECK-NEXT:    [[CARRY:%.*]] = extractvalue [[DX_TYPES_I32C]] [[UADDC]], 1
 ; CHECK-NEXT:    [[SUM:%.*]] = extractvalue [[DX_TYPES_I32C]] [[UADDC]], 0
 ; CHECK-NEXT:    [[CARRY_ZEXT:%.*]] = zext i1 [[CARRY]] to i32
@@ -29,10 +29,10 @@ define noundef <2 x i32> @test_UAddc_vec2(<2 x i32> noundef %a, <2 x i32> nounde
 ; CHECK-SAME: <2 x i32> noundef [[A:%.*]], <2 x i32> noundef [[B:%.*]]) {
 ; CHECK-NEXT:    [[A_I0:%.*]] = extractelement <2 x i32> [[A]], i64 0
 ; CHECK-NEXT:    [[B_I0:%.*]] = extractelement <2 x i32> [[B]], i64 0
-; CHECK-NEXT:    [[UADDC_I0:%.*]] = call [[DX_TYPES_I32C]] @dx.op.binaryWithCarryOrBorrow.i32(i32 44, i32 [[A_I0]], i32 [[B_I0]]) #[[ATTR0]]
+; CHECK-NEXT:    [[UADDC_I0:%.*]] = call [[DX_TYPES_I32C]] @dx.op.binaryWithCarryOrBorrow.i32(i32 44, i32 [[A_I0]], i32 [[B_I0]])
 ; CHECK-NEXT:    [[A_I1:%.*]] = extractelement <2 x i32> [[A]], i64 1
 ; CHECK-NEXT:    [[B_I1:%.*]] = extractelement <2 x i32> [[B]], i64 1
-; CHECK-NEXT:    [[UADDC_I1:%.*]] = call [[DX_TYPES_I32C]] @dx.op.binaryWithCarryOrBorrow.i32(i32 44, i32 [[A_I1]], i32 [[B_I1]]) #[[ATTR0]]
+; CHECK-NEXT:    [[UADDC_I1:%.*]] = call [[DX_TYPES_I32C]] @dx.op.binaryWithCarryOrBorrow.i32(i32 44, i32 [[A_I1]], i32 [[B_I1]])
 ; CHECK-NEXT:    [[CARRY_ELEM0:%.*]] = extractvalue [[DX_TYPES_I32C]] [[UADDC_I0]], 1
 ; CHECK-NEXT:    [[CARRY_ELEM1:%.*]] = extractvalue [[DX_TYPES_I32C]] [[UADDC_I1]], 1
 ; CHECK-NEXT:    [[SUM_ELEM0:%.*]] = extractvalue [[DX_TYPES_I32C]] [[UADDC_I0]], 0
@@ -56,7 +56,7 @@ define noundef <2 x i32> @test_UAddc_vec2(<2 x i32> noundef %a, <2 x i32> nounde
 define noundef i32 @test_UAddc_insert(i32 noundef %a, i32 noundef %b) {
 ; CHECK-LABEL: define noundef i32 @test_UAddc_insert(
 ; CHECK-SAME: i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) {
-; CHECK-NEXT:    [[UADDC:%.*]] = call [[DX_TYPES_I32C]] @dx.op.binaryWithCarryOrBorrow.i32(i32 44, i32 [[A]], i32 [[B]]) #[[ATTR0]]
+; CHECK-NEXT:    [[UADDC:%.*]] = call [[DX_TYPES_I32C]] @dx.op.binaryWithCarryOrBorrow.i32(i32 44, i32 [[A]], i32 [[B]])
 ; CHECK-NEXT:    [[UNUSED:%.*]] = insertvalue [[DX_TYPES_I32C]] [[UADDC]], i32 [[A]], 0
 ; CHECK-NEXT:    [[RESULT:%.*]] = extractvalue [[DX_TYPES_I32C]] [[UADDC]], 0
 ; CHECK-NEXT:    ret i32 [[RESULT]]
@@ -67,5 +67,7 @@ define noundef i32 @test_UAddc_insert(i32 noundef %a, i32 noundef %b) {
   ret i32 %result
 }
 
-declare { i32, i1 } @llvm.uadd.with.overflow.i32(i32, i32)
+; CHECK: declare [[DX_TYPES_I32C]] @dx.op.binaryWithCarryOrBorrow.i32(i32, i32, i32) #[[#ATTR0:]]
+; CHECK: attributes #[[#ATTR0]] = { nounwind memory(none) }
 
+declare { i32, i1 } @llvm.uadd.with.overflow.i32(i32, i32)

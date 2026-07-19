@@ -16,6 +16,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/GlobalValue.h"
@@ -105,6 +106,7 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
   switch (N->getOpcode()) {
   case ISD::LOAD:
   case ISD::ATOMIC_LOAD:
+  case NVPTXISD::MLoad:
     if (tryLoad(N))
       return;
     break;
@@ -189,6 +191,8 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
     if (tryBF16ArithToFMA(N))
       return;
     break;
+  case ISD::BR_JT:
+    return selectBR_JT(N);
   default:
     break;
   }
@@ -492,30 +496,21 @@ bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
   return true;
 }
 
-static std::optional<NVPTX::AddressSpace> convertAS(unsigned AS) {
-  switch (AS) {
-  case llvm::ADDRESS_SPACE_LOCAL:
-    return NVPTX::AddressSpace::Local;
-  case llvm::ADDRESS_SPACE_GLOBAL:
-    return NVPTX::AddressSpace::Global;
-  case llvm::ADDRESS_SPACE_SHARED:
-    return NVPTX::AddressSpace::Shared;
-  case llvm::ADDRESS_SPACE_SHARED_CLUSTER:
-    return NVPTX::AddressSpace::SharedCluster;
-  case llvm::ADDRESS_SPACE_GENERIC:
-    return NVPTX::AddressSpace::Generic;
-  case llvm::ADDRESS_SPACE_PARAM:
-    return NVPTX::AddressSpace::Param;
-  case llvm::ADDRESS_SPACE_CONST:
-    return NVPTX::AddressSpace::Const;
-  default:
-    return std::nullopt;
-  }
-}
-
 NVPTX::AddressSpace NVPTXDAGToDAGISel::getAddrSpace(const MemSDNode *N) {
-  return convertAS(N->getMemOperand()->getAddrSpace())
-      .value_or(NVPTX::AddressSpace::Generic);
+  auto AS =
+      static_cast<NVPTX::AddressSpace>(N->getMemOperand()->getAddrSpace());
+  switch (AS) {
+  case NVPTX::AddressSpace::Generic:
+  case NVPTX::AddressSpace::Global:
+  case NVPTX::AddressSpace::Shared:
+  case NVPTX::AddressSpace::Const:
+  case NVPTX::AddressSpace::Local:
+  case NVPTX::AddressSpace::SharedCluster:
+  case NVPTX::AddressSpace::EntryParam:
+  case NVPTX::AddressSpace::DeviceParam:
+    return AS;
+  }
+  llvm_unreachable("Unexpected address space");
 }
 
 NVPTX::Ordering NVPTXDAGToDAGISel::getMemOrder(const MemSDNode *N) const {
@@ -541,12 +536,17 @@ NVPTX::Ordering NVPTXDAGToDAGISel::getMemOrder(const MemSDNode *N) const {
   llvm_unreachable("Invalid atomic ordering");
 }
 
+// Clusters contain exactly 1 block on targets without cluster support.
+static NVPTX::Scope resolveScope(NVPTX::Scope S, const NVPTXSubtarget *T) {
+  if (S == NVPTX::Scope::Cluster && !T->hasClusters())
+    return NVPTX::Scope::Block;
+  return S;
+}
+
 NVPTX::Scope NVPTXDAGToDAGISel::getAtomicScope(const MemSDNode *N) const {
-  // No "scope" modifier for SM/PTX versions which do not support scoped atomics
-  // Functionally, these atomics are at device scope
   if (!Subtarget->hasAtomScope())
     return NVPTX::Scope::DefaultDevice;
-  return Scopes[N->getSyncScopeID()];
+  return resolveScope(Scopes[N->getSyncScopeID()], Subtarget);
 }
 
 namespace {
@@ -651,7 +651,8 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
   //          a dead dummy volatile load.
   if (CodeAddrSpace == NVPTX::AddressSpace::Local ||
       CodeAddrSpace == NVPTX::AddressSpace::Const ||
-      CodeAddrSpace == NVPTX::AddressSpace::Param) {
+      CodeAddrSpace == NVPTX::AddressSpace::EntryParam ||
+      CodeAddrSpace == NVPTX::AddressSpace::DeviceParam) {
     return NVPTX::Ordering::NotAtomic;
   }
 
@@ -769,14 +770,7 @@ NVPTX::Scope NVPTXDAGToDAGISel::getOperationScope(MemSDNode *N,
   case NVPTX::Ordering::SequentiallyConsistent:
     auto S = Scopes[N->getSyncScopeID()];
 
-    // Atomic operations must have a scope greater than thread.
-    if (S == NVPTX::Scope::Thread)
-      report_fatal_error(
-          formatv("Atomics need scope > \"{}\".", ScopeToString(S)));
-
-    // If scope is cluster, clusters must be supported.
-    if (S == NVPTX::Scope::Cluster)
-      Subtarget->failIfClustersUnsupported("cluster scope");
+    S = resolveScope(S, Subtarget);
 
     // If operation is volatile, then its scope is system.
     return N->isVolatile() ? NVPTX::Scope::System : S;
@@ -794,8 +788,7 @@ static bool canLowerToLDG(const MemSDNode &N, const NVPTXSubtarget &Subtarget,
 
 static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
                                NVPTXSubtarget const *T) {
-  if (S == NVPTX::Scope::Cluster)
-    T->failIfClustersUnsupported(".cluster scope fence");
+  S = resolveScope(S, T);
 
   // Fall back to .acq_rel if .acquire, .release is not supported.
   if (!T->hasSplitAcquireAndReleaseFences() &&
@@ -905,6 +898,15 @@ NVPTXDAGToDAGISel::insertMemoryInstructionFence(SDLoc DL, SDValue &Chain,
       getOperationOrderings(N, Subtarget);
   auto Scope = getOperationScope(N, InstructionOrdering);
 
+  // Singlethread scope has no inter-thread synchronization requirements, so
+  // the atomic operation is lowered as plain and the fence is skipped.
+  // NotAtomic and Volatile operations naturally have Thread scope and must
+  // preserve their ordering.
+  if (Scope == NVPTX::Scope::Thread &&
+      InstructionOrdering != NVPTX::Ordering::NotAtomic &&
+      InstructionOrdering != NVPTX::Ordering::Volatile)
+    return {NVPTX::Ordering::NotAtomic, Scope};
+
   // If a fence is required before the operation, insert it:
   switch (NVPTX::Ordering(FenceOrdering)) {
   case NVPTX::Ordering::NotAtomic:
@@ -963,7 +965,7 @@ void NVPTXDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {
     case ADDRESS_SPACE_LOCAL:
       Opc = TM.is64Bit() ? NVPTX::cvta_local_64 : NVPTX::cvta_local;
       break;
-    case ADDRESS_SPACE_PARAM:
+    case ADDRESS_SPACE_ENTRY_PARAM:
       Opc = TM.is64Bit() ? NVPTX::cvta_param_64 : NVPTX::cvta_param;
       break;
     }
@@ -994,7 +996,7 @@ void NVPTXDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {
     case ADDRESS_SPACE_LOCAL:
       Opc = TM.is64Bit() ? NVPTX::cvta_to_local_64 : NVPTX::cvta_to_local;
       break;
-    case ADDRESS_SPACE_PARAM:
+    case ADDRESS_SPACE_ENTRY_PARAM:
       Opc = TM.is64Bit() ? NVPTX::cvta_to_param_64 : NVPTX::cvta_to_param;
       break;
     }
@@ -1132,6 +1134,19 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
           ? NVPTX::PTXLdStInstCode::Signed
           : NVPTX::PTXLdStInstCode::Untyped;
 
+  uint32_t UsedBytesMask;
+  switch (N->getOpcode()) {
+  case ISD::LOAD:
+  case ISD::ATOMIC_LOAD:
+    UsedBytesMask = UINT32_MAX;
+    break;
+  case NVPTXISD::MLoad:
+    UsedBytesMask = N->getConstantOperandVal(3);
+    break;
+  default:
+    llvm_unreachable("Unexpected opcode");
+  }
+
   assert(isPowerOf2_32(FromTypeWidth) && FromTypeWidth >= 8 &&
          FromTypeWidth <= 128 && "Invalid width for load");
 
@@ -1142,6 +1157,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
                    getI32Imm(CodeAddrSpace, DL),
                    getI32Imm(FromType, DL),
                    getI32Imm(FromTypeWidth, DL),
+                   getI32Imm(UsedBytesMask, DL),
                    Base,
                    Offset,
                    Chain};
@@ -1196,14 +1212,14 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   //          type is integer
   // Float  : ISD::NON_EXTLOAD or ISD::EXTLOAD and the type is float
   // Read at least 8 bits (predicates are stored as 8-bit values)
-  // The last operand holds the original LoadSDNode::getExtensionType() value
-  const unsigned ExtensionType =
-      N->getConstantOperandVal(N->getNumOperands() - 1);
+  // Get the original LoadSDNode::getExtensionType() value
+  const unsigned ExtensionType = N->getConstantOperandVal(4);
   const unsigned FromType = (ExtensionType == ISD::SEXTLOAD)
                                 ? NVPTX::PTXLdStInstCode::Signed
                                 : NVPTX::PTXLdStInstCode::Untyped;
 
   const unsigned FromTypeWidth = getFromTypeWidthForLoad(LD);
+  const uint32_t UsedBytesMask = N->getConstantOperandVal(3);
 
   assert(!(EltVT.isVector() && ExtensionType != ISD::NON_EXTLOAD));
 
@@ -1213,6 +1229,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
                    getI32Imm(CodeAddrSpace, DL),
                    getI32Imm(FromType, DL),
                    getI32Imm(FromTypeWidth, DL),
+                   getI32Imm(UsedBytesMask, DL),
                    Base,
                    Offset,
                    Chain};
@@ -1250,10 +1267,13 @@ bool NVPTXDAGToDAGISel::tryLDG(MemSDNode *LD) {
   SDLoc DL(LD);
 
   unsigned ExtensionType;
+  uint32_t UsedBytesMask;
   if (const auto *Load = dyn_cast<LoadSDNode>(LD)) {
     ExtensionType = Load->getExtensionType();
+    UsedBytesMask = UINT32_MAX;
   } else {
-    ExtensionType = LD->getConstantOperandVal(LD->getNumOperands() - 1);
+    ExtensionType = LD->getConstantOperandVal(4);
+    UsedBytesMask = LD->getConstantOperandVal(3);
   }
   const unsigned FromType = (ExtensionType == ISD::SEXTLOAD)
                                 ? NVPTX::PTXLdStInstCode::Signed
@@ -1265,8 +1285,12 @@ bool NVPTXDAGToDAGISel::tryLDG(MemSDNode *LD) {
            ExtensionType != ISD::NON_EXTLOAD));
 
   const auto [Base, Offset] = selectADDR(LD->getOperand(1), CurDAG);
-  SDValue Ops[] = {getI32Imm(FromType, DL), getI32Imm(FromTypeWidth, DL), Base,
-                   Offset, LD->getChain()};
+  SDValue Ops[] = {getI32Imm(FromType, DL),
+                   getI32Imm(FromTypeWidth, DL),
+                   getI32Imm(UsedBytesMask, DL),
+                   Base,
+                   Offset,
+                   LD->getChain()};
 
   const MVT::SimpleValueType TargetVT = LD->getSimpleValueType(0).SimpleTy;
   std::optional<unsigned> Opcode;
@@ -1276,6 +1300,10 @@ bool NVPTXDAGToDAGISel::tryLDG(MemSDNode *LD) {
   case ISD::LOAD:
     Opcode = pickOpcodeForVT(TargetVT, NVPTX::LD_GLOBAL_NC_i16,
                              NVPTX::LD_GLOBAL_NC_i32, NVPTX::LD_GLOBAL_NC_i64);
+    break;
+  case NVPTXISD::MLoad:
+    Opcode = pickOpcodeForVT(TargetVT, std::nullopt, NVPTX::LD_GLOBAL_NC_i32,
+                             NVPTX::LD_GLOBAL_NC_i64);
     break;
   case NVPTXISD::LoadV2:
     Opcode =
@@ -1827,9 +1855,19 @@ void NVPTXDAGToDAGISel::SelectI128toV2I64(SDNode *N) {
 bool NVPTXDAGToDAGISel::tryFence(SDNode *N) {
   SDLoc DL(N);
   assert(N->getOpcode() == ISD::ATOMIC_FENCE);
-  unsigned int FenceOp =
-      getFenceOp(NVPTX::Ordering(N->getConstantOperandVal(1)),
-                 Scopes[N->getConstantOperandVal(2)], Subtarget);
+  auto Scope = Scopes[N->getConstantOperandVal(2)];
+
+  // Singlethread fences have no inter-thread synchronization requirements.
+  // Note: std::atomic_signal_fence lowers to singlethread LLVM IR fences;
+  // this intentionally drops these before emitting PTX.
+  if (Scope == NVPTX::Scope::Thread) {
+    CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), N->getOperand(0));
+    CurDAG->RemoveDeadNode(N);
+    return true;
+  }
+
+  unsigned int FenceOp = getFenceOp(
+      NVPTX::Ordering(N->getConstantOperandVal(1)), Scope, Subtarget);
   SDValue Chain = N->getOperand(0);
   SDNode *FenceNode = CurDAG->getMachineNode(FenceOp, DL, MVT::Other, Chain);
   ReplaceNode(N, FenceNode);
@@ -2245,4 +2283,39 @@ void NVPTXDAGToDAGISel::selectAtomicSwap128(SDNode *N) {
   CurDAG->setNodeMemRefs(ATOM, AN->getMemOperand());
 
   ReplaceNode(N, ATOM);
+}
+
+void NVPTXDAGToDAGISel::selectBR_JT(SDNode *N) {
+  assert(Subtarget->hasBrx() &&
+         "BR_JT should be expanded during legalization on unsupported targets");
+
+  SDLoc DL(N);
+  const SDValue InChain = N->getOperand(0);
+  const auto *JT = cast<JumpTableSDNode>(N->getOperand(1));
+  const SDValue Index = N->getOperand(2);
+
+  unsigned JId = JT->getIndex();
+  MachineJumpTableInfo *MJTI = CurDAG->getMachineFunction().getJumpTableInfo();
+  ArrayRef<MachineBasicBlock *> MBBs = MJTI->getJumpTables()[JId].MBBs;
+
+  SDValue IdV = getI32Imm(JId, DL);
+
+  // Generate BrxStart node
+  MachineSDNode *Chain = CurDAG->getMachineNode(
+      NVPTX::BRX_START, DL, {MVT::Other, MVT::Glue}, {IdV, InChain});
+
+  // Generate BrxItem nodes
+  assert(!MBBs.empty());
+  for (MachineBasicBlock *MBB : MBBs.drop_back())
+    Chain = CurDAG->getMachineNode(
+        NVPTX::BRX_ITEM, DL, {MVT::Other, MVT::Glue},
+        {CurDAG->getBasicBlock(MBB), SDValue(Chain, 0), SDValue(Chain, 1)});
+
+  // Generate BrxEnd nodes
+  MachineSDNode *BrxEnd =
+      CurDAG->getMachineNode(NVPTX::BRX_END, DL, MVT::Other,
+                             {CurDAG->getBasicBlock(MBBs.back()), Index, IdV,
+                              SDValue(Chain, 0), SDValue(Chain, 1)});
+
+  ReplaceNode(N, BrxEnd);
 }

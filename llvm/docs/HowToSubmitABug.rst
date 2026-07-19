@@ -102,19 +102,9 @@ functions. Then run:
 If this doesn't crash, please follow the instructions for a :ref:`front-end
 bug <frontend-crash>`.
 
-If this does crash, then you can debug this with the following
-:doc:`bugpoint <Bugpoint>` command:
-
-.. code-block:: bash
-
-   bugpoint foo.bc -O3
-
-Run this, then file a bug with the instructions and reduced ``.bc``
-files that bugpoint emits.
-
-If bugpoint doesn't reproduce the crash,
-:doc:`llvm-reduce <CommandGuide/llvm-reduce>` is an alternative way to reduce
-LLVM IR. Create a script that reproduces the crash and run:
+If this does crash, then you can debug this with the :doc:`llvm-reduce
+<CommandGuide/llvm-reduce>` tool. Create a script that reproduces the
+crash and run:
 
 .. code-block:: bash
 
@@ -123,13 +113,27 @@ LLVM IR. Create a script that reproduces the crash and run:
 which should produce reduced IR that reproduces the crash.
 
 .. TIP::
-   ``llvm-reduce`` is still fairly immature and may crash. On the other hand,
-   unlike ``bugpoint``, ``llvm-reduce -j $NUM_THREADS`` is multi-threaded and
-   can therefore potentially be much faster.
+   ``llvm-reduce -j $NUM_THREADS`` is multi-threaded and can therefore
+   potentially be much faster.
 
-If none of the above work, you can get the IR before a crash by running the
-``opt`` command with the ``--print-before-all --print-module-scope`` flags to
-dump the IR before every pass. Be warned that this is very verbose.
+.. TIP::
+   Reduction is fastest and most effective the simpler the
+   reproduction script is. Ideally, this will be running `opt` with a
+   single pass. The most effective way to extract the IR before a
+   specific point is a two step process. First, run the testcase with
+   the ``-print-pass-numbers`` flag. This will print the name of a
+   pass and an integer ID. You can then use the last ID printed before
+   the crash and add 3 flags,
+   ``-print-before-pass-number=<integer-id> -print-module-scope -ir-dump-directory=/my/debug/path``.
+   This will place failing IR files in the given directory.
+   ``-print-before-pass-number`` is the minimum required flag, but
+   will not produce an output directly consumable by a tool. It will
+   print to stderr, and will be incomplete in most situations without
+   ``-print-module-scope``.
+
+   A more brute force approach is to use the ``--print-before-all
+   --print-module-scope`` flags to dump the IR before every pass. Be
+   warned that this is very verbose.
 
 .. _backend-crash:
 
@@ -145,18 +149,17 @@ clang (in addition to the options you already pass).  Once you have
 #. ``llc foo.bc -relocation-model=pic``
 #. ``llc foo.bc -relocation-model=static``
 
-If none of these crash, please follow the instructions for a :ref:`front-end
-bug<frontend-crash>`. If one of these crashes, you should be able to reduce
-this with one of the following :doc:`bugpoint <Bugpoint>` command lines (use
-the one corresponding to the command above that failed):
+If none of these crash, please follow the instructions for a
+:ref:`front-end bug<frontend-crash>`. If one of these crashes, you
+should be able to reduce this with :doc:`llvm-reduce
+<CommandGuide/llvm-reduce>`, similar to middle end bugs. In this
+case, your test script should use :doc:`llc <CommandGuide/llc>`
+instead of `opt`.
 
-#. ``bugpoint -run-llc foo.bc``
-#. ``bugpoint -run-llc foo.bc --tool-args -relocation-model=pic``
-#. ``bugpoint -run-llc foo.bc --tool-args -relocation-model=static``
-
-Please run this, then file a bug with the instructions and reduced ``.bc`` file
-that bugpoint emits.  If something goes wrong with bugpoint, please submit
-the ``foo.bc`` file and the option that llc crashes with.
+Please run this, then file a bug with the instructions and reduced
+``.bc`` file that `llvm-reduce` emits.  If something goes wrong with
+`llvm-reduce`, please submit the ``foo.bc`` file and the option that
+`llc` crashes with.
 
 LTO bugs
 ---------------------------
@@ -244,71 +247,3 @@ resulting error.
 
 The :doc:`OptBisect <OptBisect>` page shows an alternative method for finding
 incorrect optimization passes.
-
-Incorrect code generation
-=========================
-
-Similarly to debugging incorrect compilation by mis-behaving passes, you
-can debug incorrect code generation by either LLC or the JIT, using
-``bugpoint``. The process ``bugpoint`` follows in this case is to try to
-narrow the code down to a function that is miscompiled by one or the other
-method, but since for correctness, the entire program must be run,
-``bugpoint`` will compile the code it deems to not be affected with the C
-Backend, and then link in the shared object it generates.
-
-To debug the JIT:
-
-.. code-block:: bash
-
-   bugpoint -run-jit -output=[correct output file] [bitcode file]  \
-            --tool-args -- [arguments to pass to lli]              \
-            --args -- [program arguments]
-
-Similarly, to debug the LLC, one would run:
-
-.. code-block:: bash
-
-   bugpoint -run-llc -output=[correct output file] [bitcode file]  \
-            --tool-args -- [arguments to pass to llc]              \
-            --args -- [program arguments]
-
-**Special note:** if you are debugging MultiSource or SPEC tests that
-already exist in the ``llvm/test`` hierarchy, there is an easier way to
-debug the JIT, LLC, and CBE, using the pre-written Makefile targets, which
-will pass the program options specified in the Makefiles:
-
-.. code-block:: bash
-
-   cd llvm/test/../../program
-   make bugpoint-jit
-
-At the end of a successful ``bugpoint`` run, you will be presented
-with two bitcode files: a *safe* file which can be compiled with the C
-backend and the *test* file which either LLC or the JIT
-mis-codegenerates, and thus causes the error.
-
-To reproduce the error that ``bugpoint`` found, it is sufficient to do
-the following:
-
-#. Regenerate the shared object from the safe bitcode file:
-
-   .. code-block:: bash
-
-      llc -march=c safe.bc -o safe.c
-      gcc -shared safe.c -o safe.so
-
-#. If debugging LLC, compile test bitcode native and link with the shared
-   object:
-
-   .. code-block:: bash
-
-      llc test.bc -o test.s
-      gcc test.s safe.so -o test.llc
-      ./test.llc [program options]
-
-#. If debugging the JIT, load the shared object and supply the test
-   bitcode:
-
-   .. code-block:: bash
-
-      lli -load=safe.so test.bc [program options]

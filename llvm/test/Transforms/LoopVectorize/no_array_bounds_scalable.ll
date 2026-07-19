@@ -9,16 +9,16 @@
 ;  }
 
 ; CHECK: warning: <unknown>:0:0: loop not interleaved: the optimizer was unable to perform the requested transformation; the transformation might be disabled or specified as part of an unsupported transformation ordering
-define dso_local void @foo(ptr nocapture %A, ptr nocapture readonly %B, i32 %N) {
+define void @foo(ptr nocapture %A, ptr nocapture readonly %B, i32 %N) {
 entry:
   %cmp7 = icmp sgt i32 %N, 0
   br i1 %cmp7, label %for.body.preheader, label %for.end
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %N to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %B, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4
@@ -31,21 +31,21 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
 ; CHECK: warning: <unknown>:0:0: loop not vectorized: the optimizer was unable to perform the requested transformation; the transformation might be disabled or specified as part of an unsupported transformation ordering
-define dso_local void @foo2(ptr nocapture %A, ptr nocapture readonly %B, i32 %N) {
+define void @foo2(ptr nocapture %A, ptr nocapture readonly %B, i32 %N) {
 entry:
   %cmp7 = icmp sgt i32 %N, 0
   br i1 %cmp7, label %for.body.preheader, label %for.end
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %wide.trip.count = zext i32 %N to i64
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %B, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4
@@ -58,7 +58,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !3
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 

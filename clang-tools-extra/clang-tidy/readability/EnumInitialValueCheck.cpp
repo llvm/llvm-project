@@ -52,7 +52,7 @@ static bool isInitializedByLiteral(const EnumConstantDecl *Enumerator) {
   return Init->isIntegerConstantExpr(Enumerator->getASTContext());
 }
 
-static void cleanInitialValue(DiagnosticBuilder &Diag,
+static void cleanInitialValue(const DiagnosticBuilder &Diag,
                               const EnumConstantDecl *ECD,
                               const SourceManager &SM,
                               const LangOptions &LangOpts) {
@@ -165,22 +165,36 @@ void EnumInitialValueCheck::registerMatchers(MatchFinder *Finder) {
 
 void EnumInitialValueCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Enum = Result.Nodes.getNodeAs<EnumDecl>("inconsistent")) {
-    const DiagnosticBuilder Diag =
-        diag(
-            Enum->getBeginLoc(),
-            "initial values in enum '%0' are not consistent, consider explicit "
-            "initialization of all, none or only the first enumerator")
-        << getName(Enum);
-    for (const EnumConstantDecl *ECD : Enum->enumerators())
-      if (ECD->getInitExpr() == nullptr) {
-        const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
-            ECD->getLocation(), 0, *Result.SourceManager, getLangOpts());
-        if (EndLoc.isMacroID())
-          continue;
-        llvm::SmallString<8> Str{" = "};
-        ECD->getInitVal().toString(Str);
-        Diag << FixItHint::CreateInsertion(EndLoc, Str);
+    // Emit warning first (DiagnosticBuilder emits on destruction), then notes.
+    // Notes must follow the primary diagnostic or they may be dropped.
+    {
+      const DiagnosticBuilder Diag =
+          diag(Enum->getBeginLoc(), "initial values in enum '%0' are not "
+                                    "consistent, consider explicit "
+                                    "initialization of all, none or only the "
+                                    "first enumerator")
+          << getName(Enum);
+
+      for (const EnumConstantDecl *ECD : Enum->enumerators()) {
+        if (ECD->getInitExpr() == nullptr) {
+          const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
+              ECD->getLocation(), 0, *Result.SourceManager, getLangOpts());
+          if (EndLoc.isMacroID())
+            continue;
+          SmallString<8> Str{" = "};
+          ECD->getInitVal().toString(Str);
+          Diag << FixItHint::CreateInsertion(EndLoc, Str);
+        }
       }
+    }
+
+    for (const EnumConstantDecl *ECD : Enum->enumerators()) {
+      if (ECD->getInitExpr() == nullptr) {
+        diag(ECD->getLocation(), "uninitialized enumerator '%0' defined here",
+             DiagnosticIDs::Note)
+            << ECD->getName();
+      }
+    }
     return;
   }
 
@@ -189,14 +203,15 @@ void EnumInitialValueCheck::check(const MatchFinder::MatchResult &Result) {
     const SourceLocation Loc = ECD->getLocation();
     if (Loc.isInvalid() || Loc.isMacroID())
       return;
-    DiagnosticBuilder Diag = diag(Loc, "zero initial value for the first "
-                                       "enumerator in '%0' can be disregarded")
-                             << getName(Enum);
+    const DiagnosticBuilder Diag =
+        diag(Loc, "zero initial value for the first "
+                  "enumerator in '%0' can be disregarded")
+        << getName(Enum);
     cleanInitialValue(Diag, ECD, *Result.SourceManager, getLangOpts());
     return;
   }
   if (const auto *Enum = Result.Nodes.getNodeAs<EnumDecl>("sequential")) {
-    DiagnosticBuilder Diag =
+    const DiagnosticBuilder Diag =
         diag(Enum->getBeginLoc(),
              "sequential initial value in '%0' can be ignored")
         << getName(Enum);

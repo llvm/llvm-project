@@ -14,10 +14,11 @@
 #ifndef ORC_RT_C_WRAPPERFUNCTION_H
 #define ORC_RT_C_WRAPPERFUNCTION_H
 
+#include "orc-rt-c/Compiler.h"
 #include "orc-rt-c/CoreTypes.h"
-#include "orc-rt-c/ExternC.h"
 
 #include <assert.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -54,7 +55,7 @@ typedef struct {
  * Asynchronous return function for an orc-rt wrapper function.
  */
 typedef void (*orc_rt_WrapperFunctionReturn)(
-    orc_rt_SessionRef Session, uint64_t CallId,
+    orc_rt_SessionRef S, uint64_t CallId,
     orc_rt_WrapperFunctionBuffer ResultBytes);
 
 /**
@@ -65,8 +66,7 @@ typedef void (*orc_rt_WrapperFunctionReturn)(
  * CallId holds a pointer to the context object for this particular call.
  * Return holds a pointer to the return function.
  */
-typedef void (*orc_rt_WrapperFunction)(orc_rt_SessionRef Session,
-                                       uint64_t CallId,
+typedef void (*orc_rt_WrapperFunction)(orc_rt_SessionRef S, uint64_t CallId,
                                        orc_rt_WrapperFunctionReturn Return,
                                        orc_rt_WrapperFunctionBuffer ArgBytes);
 
@@ -101,11 +101,13 @@ static inline orc_rt_WrapperFunctionBuffer
 orc_rt_CreateWrapperFunctionBufferFromRange(const char *Data, size_t Size) {
   orc_rt_WrapperFunctionBuffer B;
   B.Size = Size;
+  // If Size is 0 ValuePtr must be 0 or it is considered an out-of-band error.
+  B.Data.ValuePtr = 0;
   if (B.Size > sizeof(B.Data.Value)) {
     char *Tmp = (char *)malloc(Size);
     memcpy(Tmp, Data, Size);
     B.Data.ValuePtr = Tmp;
-  } else
+  } else if (Size != 0)
     memcpy(B.Data.Value, Data, Size);
   return B;
 }

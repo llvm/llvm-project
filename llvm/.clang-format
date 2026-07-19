@@ -1,2 +1,8 @@
 BasedOnStyle: LLVM
 LineEnding: LF
+---
+# Don't format .td files
+Language: TableGen
+DisableFormat: true
+SortIncludes: false
+---

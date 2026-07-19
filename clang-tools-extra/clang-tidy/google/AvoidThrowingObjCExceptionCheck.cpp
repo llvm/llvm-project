@@ -14,7 +14,6 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::google::objc {
 
 void AvoidThrowingObjCExceptionCheck::registerMatchers(MatchFinder *Finder) {
-
   Finder->addMatcher(objcThrowStmt().bind("throwStmt"), this);
   Finder->addMatcher(
       objcMessageExpr(anyOf(hasSelector("raise:format:"),

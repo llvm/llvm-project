@@ -1,0 +1,2 @@
+# Ignore leaks in CoreFoundation.
+leak:CF

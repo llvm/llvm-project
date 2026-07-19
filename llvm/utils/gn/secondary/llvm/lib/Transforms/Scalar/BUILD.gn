@@ -24,6 +24,7 @@ static_library("Scalar") {
     "DivRemPairs.cpp",
     "DropUnnecessaryAssumes.cpp",
     "EarlyCSE.cpp",
+    "ExpandMemCmp.cpp",
     "FlattenCFGPass.cpp",
     "Float2Int.cpp",
     "GVN.cpp",

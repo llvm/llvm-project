@@ -218,7 +218,7 @@ public:
           if (!VMap.empty())
             NewInst = cast<Instruction>(VMap[NewInst]);
 
-          assert(!isa<BranchInst>(NewInst) &&
+          assert((!isa<UncondBrInst, CondBrInst>(NewInst)) &&
                  "Branches are marked used early on");
           Unused.push_back(NewInst);
         }
@@ -815,6 +815,9 @@ public:
 
       LLVM_DEBUG(dbgs() << "LDist: Pointers:\n");
       LLVM_DEBUG(LAI->getRuntimePointerChecking()->printChecks(dbgs(), Checks));
+      // Forming LCSSA is a precondition of versioning.
+      if (!L->isRecursivelyLCSSAForm(*DT, *LI))
+        formLCSSARecursively(*L, *DT, LI, SE);
       LoopVersioning LVer(*LAI, Checks, L, LI, DT, SE);
       LVer.versionLoop(DefsUsedOutside);
       LVer.annotateLoopWithNoAlias();

@@ -299,28 +299,25 @@ public:
 };
 
 /// Printer pass for the \c CallGraphAnalysis results.
-class CallGraphPrinterPass : public PassInfoMixin<CallGraphPrinterPass> {
+class CallGraphPrinterPass
+    : public RequiredPassInfoMixin<CallGraphPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit CallGraphPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// Printer pass for the summarized \c CallGraphAnalysis results.
 class CallGraphSCCsPrinterPass
-    : public PassInfoMixin<CallGraphSCCsPrinterPass> {
+    : public RequiredPassInfoMixin<CallGraphSCCsPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit CallGraphSCCsPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// The \c ModulePass which wraps up a \c CallGraph and the logic to

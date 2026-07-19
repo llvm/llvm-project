@@ -1,0 +1,34 @@
+# UNSUPPORTED: system-windows
+# REQUIRES: clang-bounds-safety
+# RUN: %clang_host -c -fbounds-safety -fbounds-safety-soft-traps=call-minimal -g -O0 %S/Inputs/boundsSafetySoftTrapsMissingReason.c -o %t.o
+# Note: Building the runtime without debug info is intentional because this is the common case
+# RUN: %clang_host -c -O0 %S/Inputs/boundsSafetyMockSoftTrapRuntime.c -o %t.softtrap_runtime.o
+# RUN: %clang_host %t.o %t.softtrap_runtime.o -o %t.out
+# RUN: %lldb -b -s %s %t.out 2> %t.warnings | FileCheck %s
+# Warnings are checked separately because their order in the output is not guaranteed.
+# RUN: FileCheck --input-file=%t.warnings --check-prefix=WARN %s
+
+# This test relies on this plugin being enabled
+plugin list instrumentation-runtime.BoundsSafety
+# CHECK: [+] BoundsSafety
+
+# Emit logging so that the code has test coverage
+log enable lldb instrumentation-runtime
+
+run
+
+# CHECK: * thread #{{.*}} stop reason = Soft Bounds check failed{{$}}
+# WARN: warning: specific BoundsSafety trap reason is not available because the compiler omitted it from the debug info
+
+# Check that the `bad_read` frame is selected
+bt
+# CHECK: frame #{{.*}}`__bounds_safety_soft_trap{{$}}
+# CHECK-NEXT: frame #{{.*}}`__clang_trap_msg$Bounds check failed$
+# CHECK-NEXT: * frame #{{.*}}`main({{.+}}) at boundsSafetySoftTrapsMissingReason.c:17
+
+# Resume execution
+c
+# CHECK: BoundsSafety check FAILED
+# CHECK-NEXT: Execution continued
+# CHECK: Process {{[0-9]+}} exited with status = 0
+q

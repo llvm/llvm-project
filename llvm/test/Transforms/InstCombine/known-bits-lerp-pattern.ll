@@ -32,14 +32,14 @@ define i32 @test_clamp(i8 %a, i8 %c, i8 %d) {
 define i1 @test_trunc_cmp(i8 %a, i8 %c, i8 %d) {
 ; CHECK-LABEL: define i1 @test_trunc_cmp(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[C:%.*]], i8 [[D:%.*]]) {
-; CHECK-NEXT:    [[A32:%.*]] = zext i8 [[A]] to i32
-; CHECK-NEXT:    [[C32:%.*]] = zext i8 [[C]] to i32
-; CHECK-NEXT:    [[D32:%.*]] = zext i8 [[D]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = xor i32 [[C32]], 255
-; CHECK-NEXT:    [[MUL1:%.*]] = mul nuw nsw i32 [[SUB]], [[A32]]
-; CHECK-NEXT:    [[MUL2:%.*]] = mul nuw nsw i32 [[C32]], [[D32]]
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[MUL1]], [[MUL2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ADD]], 1234
+; CHECK-NEXT:    [[A32:%.*]] = zext i8 [[A]] to i16
+; CHECK-NEXT:    [[C32:%.*]] = zext i8 [[C]] to i16
+; CHECK-NEXT:    [[D32:%.*]] = zext i8 [[D]] to i16
+; CHECK-NEXT:    [[SUB:%.*]] = xor i16 [[C32]], 255
+; CHECK-NEXT:    [[MUL1:%.*]] = mul nuw i16 [[SUB]], [[A32]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul nuw i16 [[C32]], [[D32]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i16 [[MUL1]], [[MUL2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[ADD]], 1234
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a32 = zext i8 %a to i32
@@ -57,14 +57,14 @@ define i1 @test_trunc_cmp(i8 %a, i8 %c, i8 %d) {
 define i1 @test_trunc_cmp_xor(i8 %a, i8 %c, i8 %d) {
 ; CHECK-LABEL: define i1 @test_trunc_cmp_xor(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[C:%.*]], i8 [[D:%.*]]) {
-; CHECK-NEXT:    [[A32:%.*]] = zext i8 [[A]] to i32
-; CHECK-NEXT:    [[C32:%.*]] = zext i8 [[C]] to i32
-; CHECK-NEXT:    [[D32:%.*]] = zext i8 [[D]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = xor i32 [[C32]], 255
-; CHECK-NEXT:    [[MUL1:%.*]] = mul nuw nsw i32 [[SUB]], [[A32]]
-; CHECK-NEXT:    [[MUL2:%.*]] = mul nuw nsw i32 [[C32]], [[D32]]
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[MUL1]], [[MUL2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ADD]], 1234
+; CHECK-NEXT:    [[A32:%.*]] = zext i8 [[A]] to i16
+; CHECK-NEXT:    [[C32:%.*]] = zext i8 [[C]] to i16
+; CHECK-NEXT:    [[D32:%.*]] = zext i8 [[D]] to i16
+; CHECK-NEXT:    [[SUB:%.*]] = xor i16 [[C32]], 255
+; CHECK-NEXT:    [[MUL1:%.*]] = mul nuw i16 [[SUB]], [[A32]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul nuw i16 [[C32]], [[D32]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i16 [[MUL1]], [[MUL2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[ADD]], 1234
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a32 = zext i8 %a to i32
@@ -82,15 +82,15 @@ define i1 @test_trunc_cmp_xor(i8 %a, i8 %c, i8 %d) {
 define i1 @test_trunc_cmp_arbitrary_b(i8 %a, i8 %b, i8 %c, i8 %d) {
 ; CHECK-LABEL: define i1 @test_trunc_cmp_arbitrary_b(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]], i8 [[D:%.*]]) {
-; CHECK-NEXT:    [[A32:%.*]] = zext i8 [[A]] to i32
-; CHECK-NEXT:    [[B32:%.*]] = zext i8 [[B]] to i32
-; CHECK-NEXT:    [[C32:%.*]] = zext i8 [[C]] to i32
-; CHECK-NEXT:    [[D32:%.*]] = zext i8 [[D]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 [[B32]], [[C32]]
-; CHECK-NEXT:    [[MUL1:%.*]] = mul nuw nsw i32 [[SUB]], [[A32]]
-; CHECK-NEXT:    [[MUL2:%.*]] = mul nuw nsw i32 [[C32]], [[D32]]
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[MUL1]], [[MUL2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ADD]], 1234
+; CHECK-NEXT:    [[A32:%.*]] = zext i8 [[A]] to i16
+; CHECK-NEXT:    [[B32:%.*]] = zext i8 [[B]] to i16
+; CHECK-NEXT:    [[C32:%.*]] = zext i8 [[C]] to i16
+; CHECK-NEXT:    [[D32:%.*]] = zext i8 [[D]] to i16
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i16 [[B32]], [[C32]]
+; CHECK-NEXT:    [[MUL1:%.*]] = mul i16 [[SUB]], [[A32]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul nuw i16 [[C32]], [[D32]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i16 [[MUL1]], [[MUL2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[ADD]], 1234
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a32 = zext i8 %a to i32
@@ -110,13 +110,13 @@ define i1 @test_trunc_cmp_arbitrary_b(i8 %a, i8 %b, i8 %c, i8 %d) {
 define i1 @test_trunc_cmp_no_a(i8 %b, i8 %c, i8 %d) {
 ; CHECK-LABEL: define i1 @test_trunc_cmp_no_a(
 ; CHECK-SAME: i8 [[B:%.*]], i8 [[C:%.*]], i8 [[D:%.*]]) {
-; CHECK-NEXT:    [[B32:%.*]] = zext i8 [[B]] to i32
-; CHECK-NEXT:    [[C32:%.*]] = zext i8 [[C]] to i32
-; CHECK-NEXT:    [[D32:%.*]] = zext i8 [[D]] to i32
-; CHECK-NEXT:    [[MUL1:%.*]] = sub nuw nsw i32 [[B32]], [[C32]]
-; CHECK-NEXT:    [[MUL2:%.*]] = mul nuw nsw i32 [[C32]], [[D32]]
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[MUL1]], [[MUL2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ADD]], 1234
+; CHECK-NEXT:    [[B32:%.*]] = zext i8 [[B]] to i16
+; CHECK-NEXT:    [[C32:%.*]] = zext i8 [[C]] to i16
+; CHECK-NEXT:    [[D32:%.*]] = zext i8 [[D]] to i16
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i16 [[B32]], [[C32]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul nuw i16 [[C32]], [[D32]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i16 [[SUB]], [[MUL2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[ADD]], 1234
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %b32 = zext i8 %b to i32
@@ -133,13 +133,13 @@ define i1 @test_trunc_cmp_no_a(i8 %b, i8 %c, i8 %d) {
 define i1 @test_trunc_cmp_no_d(i8 %a, i8 %b, i8 %c) {
 ; CHECK-LABEL: define i1 @test_trunc_cmp_no_d(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
-; CHECK-NEXT:    [[A32:%.*]] = zext i8 [[A]] to i32
-; CHECK-NEXT:    [[B32:%.*]] = zext i8 [[B]] to i32
-; CHECK-NEXT:    [[C32:%.*]] = zext i8 [[C]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 [[B32]], [[C32]]
-; CHECK-NEXT:    [[MUL1:%.*]] = mul nuw nsw i32 [[SUB]], [[A32]]
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[MUL1]], [[C32]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ADD]], 1234
+; CHECK-NEXT:    [[A32:%.*]] = zext i8 [[A]] to i16
+; CHECK-NEXT:    [[B32:%.*]] = zext i8 [[B]] to i16
+; CHECK-NEXT:    [[C32:%.*]] = zext i8 [[C]] to i16
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i16 [[B32]], [[C32]]
+; CHECK-NEXT:    [[MUL1:%.*]] = mul i16 [[SUB]], [[A32]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i16 [[MUL1]], [[C32]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[ADD]], 1234
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a32 = zext i8 %a to i32
@@ -156,14 +156,13 @@ define i1 @test_trunc_cmp_no_d(i8 %a, i8 %b, i8 %c) {
 define i1 @test_trunc_cmp_xor_negative(i8 %a, i8 %c, i8 %d) {
 ; CHECK-LABEL: define i1 @test_trunc_cmp_xor_negative(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[C:%.*]], i8 [[D:%.*]]) {
-; CHECK-NEXT:    [[A32:%.*]] = zext i8 [[A]] to i32
-; CHECK-NEXT:    [[C32:%.*]] = zext i8 [[C]] to i32
-; CHECK-NEXT:    [[D32:%.*]] = zext i8 [[D]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = xor i32 [[C32]], 234
-; CHECK-NEXT:    [[MUL1:%.*]] = mul nuw nsw i32 [[SUB]], [[A32]]
-; CHECK-NEXT:    [[MUL2:%.*]] = mul nuw nsw i32 [[C32]], [[D32]]
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[MUL1]], [[MUL2]]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[ADD]] to i16
+; CHECK-NEXT:    [[A32:%.*]] = zext i8 [[A]] to i16
+; CHECK-NEXT:    [[C32:%.*]] = zext i8 [[C]] to i16
+; CHECK-NEXT:    [[D32:%.*]] = zext i8 [[D]] to i16
+; CHECK-NEXT:    [[SUB:%.*]] = xor i16 [[C32]], 234
+; CHECK-NEXT:    [[MUL1:%.*]] = mul nuw i16 [[SUB]], [[A32]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul nuw i16 [[C32]], [[D32]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = add i16 [[MUL1]], [[MUL2]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[TRUNC]], 1234
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;

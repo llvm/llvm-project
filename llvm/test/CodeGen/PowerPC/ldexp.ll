@@ -143,15 +143,15 @@ define half @ldexp_f16(half %arg0, i32 %arg1) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -32(r1)
-; CHECK-NEXT:    std r0, 48(r1)
-; CHECK-NEXT:    xscvdphp f0, f1
-; CHECK-NEXT:    extsw r4, r4
-; CHECK-NEXT:    mffprwz r3, f0
 ; CHECK-NEXT:    clrlwi r3, r3, 16
+; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    extsw r4, r4
 ; CHECK-NEXT:    mtfprwz f0, r3
 ; CHECK-NEXT:    xscvhpdp f1, f0
 ; CHECK-NEXT:    bl ldexpf
 ; CHECK-NEXT:    nop
+; CHECK-NEXT:    xscvdphp f0, f1
+; CHECK-NEXT:    mffprwz r3, f0
 ; CHECK-NEXT:    addi r1, r1, 32
 ; CHECK-NEXT:    ld r0, 16(r1)
 ; CHECK-NEXT:    mtlr r0

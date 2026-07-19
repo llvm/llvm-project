@@ -77,10 +77,13 @@ def APValueKind : EnumPropertyType<"APValue::ValueKind">;
 def ArraySizeModifier : EnumPropertyType<"ArraySizeModifier">;
 def AttrKind : EnumPropertyType<"attr::Kind">;
 def Attr : PropertyType<"const Attr *">;
+def DeducedKind : EnumPropertyType;
 def AutoTypeKeyword : EnumPropertyType;
 def Bool : PropertyType<"bool">;
 def BuiltinTypeKind : EnumPropertyType<"BuiltinType::Kind">;
 def BTFTypeTagAttr : PropertyType<"const BTFTypeTagAttr *">;
+def OverflowBehaviorKind
+    : EnumPropertyType<"OverflowBehaviorType::OverflowBehaviorKind">;
 def CallingConv : EnumPropertyType;
 def DeclarationName : PropertyType;
 def DeclarationNameKind : EnumPropertyType<"DeclarationName::NameKind">;
@@ -351,6 +354,29 @@ let Class = PropertyTypeCase<APValue, "Vector"> in {
     return result;
   }]>;
 }
+let Class = PropertyTypeCase<APValue, "Matrix"> in {
+  def : ReadHelper<[{
+    SmallVector<APValue, 16> buffer;
+    unsigned numElts = node.getMatrixNumElements();
+    for (unsigned i = 0; i < numElts; ++i)
+      buffer.push_back(node.getMatrixElt(i));
+  }]>;
+  def : Property<"numRows", UInt32> {
+    let Read = [{ node.getMatrixNumRows() }];
+  }
+  def : Property<"numCols", UInt32> {
+    let Read = [{ node.getMatrixNumColumns() }];
+  }
+  def : Property<"elements", Array<APValue>> { let Read = [{ buffer }]; }
+  def : Creator<[{
+    APValue result;
+    result.MakeMatrix();
+    (void)result.setMatrixUninit(numRows, numCols);
+    for (unsigned i = 0; i < elements.size(); i++)
+      result.getMatrixElt(i) = elements[i];
+    return result;
+  }]>;
+}
 let Class = PropertyTypeCase<APValue, "Array"> in {
   def : ReadHelper<[{
     SmallVector<APValue, 4> buffer{};
@@ -390,6 +416,10 @@ let Class = PropertyTypeCase<APValue, "Struct"> in {
     unsigned numFields = node.getStructNumFields();
     for (unsigned i = 0; i < numFields; ++i)
       structFields.push_back(node.getStructField(i));
+    SmallVector<APValue, 4> structVirtualBases;
+    unsigned numVirtualBases = node.getStructNumVirtualBases();
+    for (unsigned i = 0; i < numVirtualBases; ++i)
+      structVirtualBases.push_back(node.getStructVirtualBase(i));
   }]>;
   def : Property<"bases", Array<APValue>> {
     let Read = [{ structBases }];
@@ -397,13 +427,18 @@ let Class = PropertyTypeCase<APValue, "Struct"> in {
   def : Property<"fields", Array<APValue>> {
     let Read = [{ structFields }];
   }
+  def : Property<"vbases", Array<APValue>> {
+    let Read = [{ structVirtualBases }];
+  }
   def : Creator<[{
     APValue result;
-    result.MakeStruct(bases.size(), fields.size());
+    result.MakeStruct(bases.size(), fields.size(), vbases.size());
     for (unsigned i = 0; i < bases.size(); ++i)
       result.getStructBase(i) = bases[i];
     for (unsigned i = 0; i < fields.size(); ++i)
       result.getStructField(i) = fields[i];
+    for (unsigned i = 0; i < vbases.size(); ++i)
+      result.getStructVirtualBase(i) = vbases[i];
     return result;
   }]>;
 }

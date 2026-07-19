@@ -120,7 +120,7 @@ void QualifiedAutoCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 void QualifiedAutoCheck::registerMatchers(MatchFinder *Finder) {
   auto ExplicitSingleVarDecl =
       [](const ast_matchers::internal::Matcher<VarDecl> &InnerMatcher,
-         llvm::StringRef ID) {
+         StringRef ID) {
         return declStmt(
             unless(isInTemplateInstantiation()),
             hasSingleDecl(
@@ -128,7 +128,7 @@ void QualifiedAutoCheck::registerMatchers(MatchFinder *Finder) {
       };
   auto ExplicitSingleVarDeclInTemplate =
       [](const ast_matchers::internal::Matcher<VarDecl> &InnerMatcher,
-         llvm::StringRef ID) {
+         StringRef ID) {
         return declStmt(
             isInTemplateInstantiation(),
             hasSingleDecl(
@@ -193,10 +193,11 @@ void QualifiedAutoCheck::check(const MatchFinder::MatchResult &Result) {
     if (std::optional<SourceRange> TypeSpec =
             getTypeSpecifierLocation(Var, Result)) {
       TypeSpecifier = *TypeSpec;
-    } else
+    } else {
       return;
+    }
 
-    llvm::SmallVector<SourceRange, 4> RemoveQualifiersRange;
+    SmallVector<SourceRange, 4> RemoveQualifiersRange;
     auto CheckQualifier = [&](bool IsPresent, Qualifier Qual) {
       if (IsPresent) {
         std::optional<Token> Token = findQualToken(Var, Qual, Result);
@@ -228,10 +229,9 @@ void QualifiedAutoCheck::check(const MatchFinder::MatchResult &Result) {
       return;
 
     SourceLocation FixitLoc = FixItRange.getBegin();
-    for (const SourceRange &Range : RemoveQualifiersRange) {
+    for (const SourceRange &Range : RemoveQualifiersRange)
       if (Range.getBegin() < FixitLoc)
         FixitLoc = Range.getBegin();
-    }
 
     const std::string ReplStr = [&] {
       const StringRef PtrConst = isPointerConst(Var->getType()) ? "const " : "";
@@ -249,9 +249,8 @@ void QualifiedAutoCheck::check(const MatchFinder::MatchResult &Result) {
         << IsLocalConst << IsLocalVolatile << IsLocalRestrict << Var->getName()
         << ReplStr;
 
-    for (const SourceRange &Range : RemoveQualifiersRange) {
+    for (const SourceRange &Range : RemoveQualifiersRange)
       Diag << FixItHint::CreateRemoval(CharSourceRange::getCharRange(Range));
-    }
 
     Diag << FixItHint::CreateReplacement(FixItRange, ReplStr);
     return;

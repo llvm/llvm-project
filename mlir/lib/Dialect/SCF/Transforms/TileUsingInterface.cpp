@@ -824,9 +824,11 @@ getTiledImplementation(RewriterBase &rewriter, TilingInterface op,
                        ArrayRef<OpFoldResult> sizes, ValueRange ivs,
                        ArrayRef<OpFoldResult> numThreads,
                        ArrayRef<OpFoldResult> givenTileSizes,
+                       ArrayRef<InnerTileAlignment> innerTileAlignments,
                        const SetVector<unsigned> &reductionDims) {
   if (reductionStrategy == ReductionTilingStrategy::FullReduction) {
-    return op.getTiledImplementation(rewriter, offsets, sizes);
+    return op.getTiledImplementation(rewriter, offsets, sizes,
+                                     innerTileAlignments);
   }
 
   auto redOp = dyn_cast<PartialReductionOpInterface>(op.getOperation());
@@ -900,7 +902,7 @@ mergeTilingResults(RewriterBase &rewriter, TilingInterface op,
 /// and sizes at which the tiled value is inserted into the
 /// new region iter_args that correspond to the newly added init operands.
 template <typename LoopType>
-FailureOr<LoopLikeOpInterface>
+static FailureOr<LoopLikeOpInterface>
 yieldTiledValuesAndReplaceLoop(LoopType loopOp, RewriterBase &rewriter,
                                ValueRange newInitOperands,
                                YieldTiledValuesFn yieldTiledValuesFn) {
@@ -1018,7 +1020,7 @@ FailureOr<LoopLikeOpInterface> yieldTiledValuesAndReplaceLoop<scf::ForallOp>(
 /// Implementation of `yieldTiledValuesAndReplaceLoop` for
 /// `LoopLikeOpInterface`, that just dispatches to the implementation for each
 /// supported loop type.
-FailureOr<LoopLikeOpInterface> yieldTiledValuesAndReplaceLoop(
+static FailureOr<LoopLikeOpInterface> yieldTiledValuesAndReplaceLoop(
     LoopLikeOpInterface loopLikeOp, RewriterBase &rewriter,
     ValueRange newInitOperands, YieldTiledValuesFn yieldTiledValuesFn) {
   return TypeSwitch<Operation *, FailureOr<LoopLikeOpInterface>>(
@@ -1092,7 +1094,7 @@ static LogicalResult addInitOperandsToLoopNest(
   for (auto [outerLoop, innerLoop] :
        llvm::zip_equal(loops.drop_back(), loops.drop_front())) {
     // Again assume that all the outer loops are scf.for operations.
-    auto outerForLoop = cast<scf::ForOp>(outerLoop);
+    auto outerForLoop = cast<scf::ForOp>(outerLoop.getOperation());
     auto outerLoopYield =
         cast<scf::YieldOp>(outerForLoop.getBody()->getTerminator());
     SmallVector<Value> newYields =
@@ -1190,13 +1192,18 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
     }
 
     // 5c. Tile the cloned operation.
-    tilingResult =
-        getTiledImplementation(rewriter, clonedOp, options.reductionStrategy,
-                               regionIterArgs, tileOffsetsVec, tileSizesVec,
-                               ivs, numThreads, givenTileSizes, reductionDims);
+    SmallVector<InnerTileAlignment> innerTileAlignments =
+        options.innerTileAlignmentFn
+            ? options.innerTileAlignmentFn(clonedOp, givenTileSizes,
+                                           /*slices=*/{})
+            : SmallVector<InnerTileAlignment>{};
+    tilingResult = getTiledImplementation(
+        rewriter, clonedOp, options.reductionStrategy, regionIterArgs,
+        tileOffsetsVec, tileSizesVec, ivs, numThreads, givenTileSizes,
+        innerTileAlignments, reductionDims);
     if (failed(tilingResult)) {
       rewriter.eraseOp(clonedOp);
-      return op.emitOpError("faild to tile operation");
+      return op.emitOpError("failed to tile operation");
     }
 
     // 5d. Delete the cloned operation.
@@ -1327,7 +1334,18 @@ getUntiledProducerFromSliceSource(OpOperand *source,
   }
   if (loopIt == loops.rend())
     destinationIterArg = source;
-  return {dyn_cast<OpResult>(source->get()), destinationIterArg};
+
+  auto result = dyn_cast<OpResult>(source->get());
+  if (result) {
+    Operation *producer = result.getOwner();
+    Operation *innermostLoop = loops.back();
+    // If the producer is already inside the innermost loop (where the slice
+    // is), it has already been fused. Skip it to avoid infinite loops.
+    if (innermostLoop->isProperAncestor(producer))
+      return {OpResult(), std::nullopt};
+  }
+
+  return {result, destinationIterArg};
 }
 
 /// Implementation of fusing producer of a single slice by computing the
@@ -1335,7 +1353,8 @@ getUntiledProducerFromSliceSource(OpOperand *source,
 std::optional<scf::SCFFuseProducerOfSliceResult>
 mlir::scf::tileAndFuseProducerOfSlice(
     RewriterBase &rewriter, tensor::ExtractSliceOp candidateSliceOp,
-    MutableArrayRef<LoopLikeOpInterface> loops) {
+    MutableArrayRef<LoopLikeOpInterface> loops,
+    const InnerTileAlignmentFnTy &fn) {
   // 1. Get the producer of the source (potentially walking through
   // `iter_args` of nested `scf.for`)
   auto [fusableProducer, destinationInitArg] =
@@ -1344,6 +1363,14 @@ mlir::scf::tileAndFuseProducerOfSlice(
   if (!fusableProducer)
     return std::nullopt;
   unsigned resultNumber = fusableProducer.getResultNumber();
+
+  // Resolve the inner-tile alignment hint for the producer in its own iteration
+  // domain via the control function (consulted only by pack/unpack).
+  SmallVector<InnerTileAlignment> innerTileAlignments;
+  if (fn)
+    if (auto producer = dyn_cast<TilingInterface>(fusableProducer.getOwner()))
+      innerTileAlignments =
+          fn(producer, /*tileSizes=*/{}, {candidateSliceOp.getOperation()});
 
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(candidateSliceOp);
@@ -1383,7 +1410,7 @@ mlir::scf::tileAndFuseProducerOfSlice(
   FailureOr<TilingResult> tileAndFuseResult =
       tensor::replaceExtractSliceWithTiledProducer(
           rewriter, clonedCandidateSliceOp,
-          clonedProducerOp->getResult(resultNumber));
+          clonedProducerOp->getResult(resultNumber), innerTileAlignments);
   if (failed(tileAndFuseResult))
     return std::nullopt;
   // Note: Do not delete the candidateSliceOp, since its passed in from the
@@ -1498,6 +1525,14 @@ FailureOr<SmallVector<Operation *>> mlir::scf::yieldReplacementForFusedProducer(
     auto tilableOp = cast<TilingInterface>(originalOwner);
     // b. get iterDomain Offset and Sizes based on sliceOp tile
     SmallVector<OpFoldResult> iterDomainOffset, iterDomainSizes;
+    // Set insertion point before any operations that might create new SSA
+    // values used in offset/size computations. This ensures all values created
+    // by getIterationDomainTileFromResultTile and getResultTilePosition
+    // dominate the extract_slice operations created later.
+    if (auto tiledDestStyleOp =
+            dyn_cast<DestinationStyleOpInterface>(tiledOwner)) {
+      rewriter.setInsertionPoint(tiledDestStyleOp);
+    }
     // skip tensor.pack/unpack/pad, which expects single opResult
     if (tilableOp->getNumResults() > 1 &&
         failed(tilableOp.getIterationDomainTileFromResultTile(
@@ -1539,7 +1574,6 @@ FailureOr<SmallVector<Operation *>> mlir::scf::yieldReplacementForFusedProducer(
     // necessary
     if (auto tiledDestStyleOp =
             dyn_cast<DestinationStyleOpInterface>(tiledOwner)) {
-      rewriter.setInsertionPoint(tiledDestStyleOp);
       for (const auto &&[index, newRegionArg] :
            llvm::enumerate(newRegionIterArgs)) {
         auto destSlice = tensor::ExtractSliceOp::create(
@@ -1754,8 +1788,8 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
   // the mutation of replacement values. To do this, we attach a listener to
   // update the replacements as they happen.
   OpBuilder::Listener *previousListener = rewriter.getListener();
-  auto resetListener =
-      llvm::make_scope_exit([&]() { rewriter.setListener(previousListener); });
+  llvm::scope_exit resetListener(
+      [&]() { rewriter.setListener(previousListener); });
   ReplacementListener replaceListener(replacements, previousListener);
   rewriter.setListener(&replaceListener);
 
@@ -1801,8 +1835,8 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
     // values produced by operations that implement the `TilingInterface`.
     // Add these operations to the worklist.
     std::optional<scf::SCFFuseProducerOfSliceResult> fusedResult =
-        tileAndFuseProducerOfSlice(rewriter, worklistItem.candidateSlice,
-                                   loops);
+        tileAndFuseProducerOfSlice(rewriter, worklistItem.candidateSlice, loops,
+                                   options.tilingOptions.innerTileAlignmentFn);
     if (!fusedResult)
       continue;
 
@@ -2184,61 +2218,32 @@ cloneAsInsertSlices(RewriterBase &rewriter,
   return clonedSlices;
 }
 
-/// Implementation of fusing consumer of a single slice by computing the
-/// slice of the consumer in-place for scf loop.
-FailureOr<scf::SCFFuseConsumerOfSliceResult>
-mlir::scf::tileAndFuseConsumerOfSlices(
-    RewriterBase &rewriter, ArrayRef<Operation *> candidateSlices,
-    MutableArrayRef<LoopLikeOpInterface> loops) {
-  if (candidateSlices.empty()) {
-    return rewriter.notifyMatchFailure(
-        rewriter.getUnknownLoc(),
-        "no candidate slices provided for consumer fusion");
-  }
-  // Return if `loops` is empty, return an error for now. Caller is expected
-  // to handle this case.
-  if (loops.empty()) {
-    return rewriter.notifyMatchFailure(
-        candidateSlices.front(),
-        "cannot call tile and fuse consumer with an empty loop nest");
-  }
+static FailureOr<scf::SCFFuseConsumerOfSliceResult>
+tileAndFuseConsumerOfSlicesImpl(RewriterBase &rewriter, Operation *consumerOp,
+                                ArrayRef<OpOperand *> consumerOpOperands,
+                                ArrayRef<Operation *> candidateSlices,
+                                MutableArrayRef<LoopLikeOpInterface> loops,
+                                const mlir::scf::InnerTileAlignmentFnTy &fn) {
+  assert(!loops.empty() && "expected loops to be not empty");
 
-  if (!(llvm::all_of(candidateSlices, llvm::IsaPred<tensor::InsertSliceOp>) ||
-        llvm::all_of(candidateSlices,
-                     llvm::IsaPred<tensor::ParallelInsertSliceOp>))) {
-    return rewriter.notifyMatchFailure(
-        candidateSlices.front(),
-        "candidates slices need to be all `tensor.extract_slice`s or "
-        "`tensor.parallel_insert_slice`s");
-  }
+  // Resolve the inner-tile alignment hint for the consumer in its own iteration
+  // domain via the control function (consulted only by pack/unpack).
+  SmallVector<InnerTileAlignment> innerTileAlignments;
+  if (fn)
+    if (auto consumer = dyn_cast<TilingInterface>(consumerOp))
+      innerTileAlignments = fn(consumer, /*tileSizes=*/{}, candidateSlices);
 
-  // 1. Get the consumer of scf.for for the result yielded by
-  // tensor.insert_slice/parallel_insert_slice.
-  SmallVector<OpOperand *> consumerOpOperands;
-  Operation *consumerOp;
-  {
-    FailureOr<SmallVector<OpOperand *>> maybeConsumerOpOperand =
-        getUntiledConsumerOperandsFromSlices(rewriter, candidateSlices, loops);
-    if (failed(maybeConsumerOpOperand)) {
-      return rewriter.notifyMatchFailure(candidateSlices.front(),
-                                         "could not fetch consumer to fuse");
-    }
-    std::swap(consumerOpOperands, maybeConsumerOpOperand.value());
-    consumerOp = consumerOpOperands.front()->getOwner();
+  // 1. Check assumption for loop with `reorderOperations` disabled.
+  if (failed(checkAssumptionForLoop(loops.front(), consumerOp, false))) {
+    return rewriter.notifyMatchFailure(
+        loops.front(), "the first user of loop should not dominate any define "
+                       "of consumer operand(s)");
   }
 
   LoopLikeOpInterface outerMostLoop = loops.front();
   LoopLikeOpInterface innerMostLoop = loops.back();
 
-  // Check assumption for loop with `reorderOperations` disabled.
-  if (failed(checkAssumptionForLoop(outerMostLoop, consumerOp, false))) {
-    return rewriter.notifyMatchFailure(
-        outerMostLoop, "the first user of loop should not dominate any define "
-                       "of consumer operand(s)");
-  }
-
   OpBuilder::InsertionGuard g(rewriter);
-
   // 2. Check consumer is not using scf loop's output as init.
   auto dstOp = dyn_cast<DestinationStyleOpInterface>(consumerOp);
   if (!dstOp)
@@ -2301,7 +2306,8 @@ mlir::scf::tileAndFuseConsumerOfSlices(
   // `operandNumber` with the source of the cloned tensor.insert_slice op.
   FailureOr<TilingResult> tileAndFuseResult =
       tensor::replaceInsertSlicesWithTiledConsumer(rewriter, clonedInsertSlices,
-                                                   clonedOpFusedOperandsList);
+                                                   clonedOpFusedOperandsList,
+                                                   innerTileAlignments);
   if (failed(tileAndFuseResult)) {
     return failure();
   }
@@ -2348,7 +2354,7 @@ mlir::scf::tileAndFuseConsumerOfSlices(
     SmallVector<OpFoldResult> iterDomainOffsets, iterDomainSizes;
     if (failed(clonedConsumerOp.getIterationDomainTileFromOperandTiles(
             rewriter, operandNumbers, allOffsets, allSizes, iterDomainOffsets,
-            iterDomainSizes))) {
+            iterDomainSizes, innerTileAlignments))) {
       return rewriter.notifyMatchFailure(
           clonedConsumerOp,
           "can't get iter domain position from input position");
@@ -2428,9 +2434,167 @@ mlir::scf::tileAndFuseConsumerOfSlices(
       llvm::map_to_vector(operandNumbers, [&](unsigned operandNum) {
         return &tileAndFuseResult->tiledOps[0]->getOpOperand(operandNum);
       });
+  auto consumerOpOperandsVec = llvm::to_vector(consumerOpOperands);
   return scf::SCFFuseConsumerOfSliceResult{
-      std::move(consumerOpOperands), std::move(tiledAndFusedOpOperands),
+      std::move(consumerOpOperandsVec), std::move(tiledAndFusedOpOperands),
       std::move(tileAndFuseResult->tiledOps)};
+}
+
+/// Implementation of fusing consumer of a single slice by computing the
+/// slice of the consumer in-place for scf loop.
+FailureOr<scf::SCFFuseConsumerOfSliceResult>
+mlir::scf::tileAndFuseConsumerOfSlices(
+    RewriterBase &rewriter, ArrayRef<Operation *> candidateSlices,
+    MutableArrayRef<LoopLikeOpInterface> loops,
+    const InnerTileAlignmentFnTy &fn) {
+  if (candidateSlices.empty()) {
+    return rewriter.notifyMatchFailure(
+        rewriter.getUnknownLoc(),
+        "no candidate slices provided for consumer fusion");
+  }
+  // Return if `loops` is empty, return an error for now. Caller is expected
+  // to handle this case.
+  if (loops.empty()) {
+    return rewriter.notifyMatchFailure(
+        candidateSlices.front(),
+        "cannot call tile and fuse consumer with an empty loop nest");
+  }
+
+  if (!(llvm::all_of(candidateSlices, llvm::IsaPred<tensor::InsertSliceOp>) ||
+        llvm::all_of(candidateSlices,
+                     llvm::IsaPred<tensor::ParallelInsertSliceOp>))) {
+    return rewriter.notifyMatchFailure(
+        candidateSlices.front(),
+        "candidates slices need to be all `tensor.extract_slice`s or "
+        "`tensor.parallel_insert_slice`s");
+  }
+
+  // Get the consumer of scf.for for the result yielded by
+  // tensor.insert_slice/parallel_insert_slice.
+  FailureOr<SmallVector<OpOperand *>> maybeConsumerOpOperands =
+      getUntiledConsumerOperandsFromSlices(rewriter, candidateSlices, loops);
+  if (failed(maybeConsumerOpOperands)) {
+    return rewriter.notifyMatchFailure(candidateSlices.front(),
+                                       "could not fetch consumer to fuse");
+  }
+  Operation *consumerOp = maybeConsumerOpOperands->front()->getOwner();
+
+  return tileAndFuseConsumerOfSlicesImpl(rewriter, consumerOp,
+                                         maybeConsumerOpOperands.value(),
+                                         candidateSlices, loops, fn);
+}
+
+/// For a given `result` of a `forallOp` return the
+/// `tensor.parallel_insert_slice` op (or combining op) that is used to
+/// construct this result.
+static std::optional<Operation *>
+getProducingParallelInsertSlice(scf::ForallOp forallOp, OpResult result) {
+  if (result.getOwner() != forallOp)
+    return std::nullopt;
+  BlockArgument bbArg = forallOp.getTiedBlockArgument(result);
+  SmallVector<Operation *> combiningOps = forallOp.getCombiningOps(bbArg);
+  // If the number of combining ops is not 1, then this is unexpected. Return
+  // nullopt.
+  if (combiningOps.size() != 1)
+    return std::nullopt;
+  return combiningOps[0];
+}
+
+/// For a given result of the loop nest that is a tiled loop nest, return the
+/// insert slice-like op that is used for consumer fusion
+static std::optional<Operation *>
+getProducingInsertSliceLikeOp(OpResult result,
+                              ArrayRef<LoopLikeOpInterface> loops) {
+  assert(!loops.empty() && "Expected loops to be not empty");
+  LoopLikeOpInterface outerMostLoop = loops.front();
+  if (auto forallOp = dyn_cast<scf::ForallOp>(outerMostLoop.getOperation())) {
+    assert(loops.size() == 1 &&
+           "expected only a single loop when tiling using scf.forall");
+    return getProducingParallelInsertSlice(forallOp, result);
+  }
+  // Assume that the loop nest is a nested `scf.for` that is created through
+  // tiling and retrieve the `tensor.insert_slice` operation used to construct
+  // the result.
+  while (loops.size() != 1) {
+    LoopLikeOpInterface loop = loops.front();
+    if (result.getOwner() != loop)
+      return std::nullopt;
+    auto forOp = dyn_cast<scf::ForOp>(loop.getOperation());
+    if (!forOp)
+      return std::nullopt;
+    auto yieldOp = cast<scf::YieldOp>(forOp.getBody()->getTerminator());
+    auto innerForResult =
+        dyn_cast<OpResult>(yieldOp.getOperand(result.getResultNumber()));
+    if (!innerForResult)
+      return std::nullopt;
+    result = innerForResult;
+    loops = loops.drop_front();
+  }
+  LoopLikeOpInterface loop = loops.front();
+  if (result.getOwner() != loop)
+    return std::nullopt;
+  auto forOp = dyn_cast<scf::ForOp>(loop.getOperation());
+  if (!forOp)
+    return std::nullopt;
+  auto yieldOp = cast<scf::YieldOp>(forOp.getBody()->getTerminator());
+  auto insertSliceOp = yieldOp.getOperand(result.getResultNumber())
+                           .getDefiningOp<tensor::InsertSliceOp>();
+  if (!insertSliceOp)
+    return std::nullopt;
+  return insertSliceOp;
+}
+
+FailureOr<scf::SCFFuseConsumerOfSliceResult>
+mlir::scf::tileAndFuseConsumer(RewriterBase &rewriter, Operation *consumer,
+                               MutableArrayRef<LoopLikeOpInterface> loops,
+                               const InnerTileAlignmentFnTy &fn) {
+  if (!isa<TilingInterface>(consumer)) {
+    return rewriter.notifyMatchFailure(
+        consumer, "unhandled consumer that does not implement TilingInterface");
+  }
+
+  // Return if `loops` is empty, return an error for now. Caller is expected
+  // to handle this case.
+  if (loops.empty()) {
+    return rewriter.notifyMatchFailure(
+        consumer, "cannot call tile and fuse consumer with an empty loop nest");
+  }
+
+  LoopLikeOpInterface outermostLoop = loops.front();
+
+  // Collect the operands of the consumer that come from the outermost loop of
+  // the loop nest.
+  SmallVector<OpOperand *> consumerFusableOperands;
+  for (OpOperand &opOperand : consumer->getOpOperands()) {
+    if (opOperand.get().getDefiningOp() == outermostLoop) {
+      consumerFusableOperands.push_back(&opOperand);
+    }
+  }
+
+  // Nothing to fuse. Just return an empty set.
+  if (consumerFusableOperands.empty()) {
+    return mlir::scf::SCFFuseConsumerOfSliceResult{consumerFusableOperands,
+                                                   SmallVector<OpOperand *>{},
+                                                   SmallVector<Operation *>{}};
+  }
+
+  // Collect the relevant tensor.insert_slice/tensor.parallel_insert_slices
+  // for fusion.
+  SmallVector<Operation *> candidateSlices;
+  candidateSlices.reserve(consumerFusableOperands.size());
+  for (OpOperand *opOperand : consumerFusableOperands) {
+    std::optional<Operation *> slice =
+        getProducingInsertSliceLikeOp(cast<OpResult>(opOperand->get()), loops);
+    if (!slice) {
+      return rewriter.notifyMatchFailure(
+          consumer,
+          "couldnt find producing insert-slice like operation for operand");
+    }
+    candidateSlices.push_back(slice.value());
+  }
+
+  return tileAndFuseConsumerOfSlicesImpl(
+      rewriter, consumer, consumerFusableOperands, candidateSlices, loops, fn);
 }
 
 //===----------------------------------------------------------------------===//

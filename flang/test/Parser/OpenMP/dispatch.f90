@@ -33,14 +33,14 @@ subroutine sub(x)
 !PARSE-TREE: | | | | | LiteralConstant -> IntLiteralConstant = '1'
 !PARSE-TREE: | | | | Expr = '1_4'
 !PARSE-TREE: | | | | | LiteralConstant -> IntLiteralConstant = '1'
-!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | | Flags = {}
 !PARSE-TREE: | Block
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt
 ![...]
 !PARSE-TREE: | OmpEndDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = dispatch
 !PARSE-TREE: | | OmpClauseList ->
-!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | | Flags = {}
 
   !$omp dispatch device(3) nowait nocontext(.false.) novariants(1.eq.1)
   r = func(a, b, c)
@@ -57,7 +57,7 @@ subroutine sub(x)
 !PARSE-TREE: | | | Scalar -> Integer -> Expr = '3_4'
 !PARSE-TREE: | | | | LiteralConstant -> IntLiteralConstant = '3'
 !PARSE-TREE: | | OmpClause -> IsDevicePtr -> OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
-!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | | Flags = {}
 !PARSE-TREE: | Block
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt
 !PARSE-TREE-NOT: OmpEndDirective

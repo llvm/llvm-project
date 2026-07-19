@@ -14,6 +14,8 @@
 #include "lldb/Protocol/MCP/Resource.h"
 #include "lldb/Protocol/MCP/Tool.h"
 #include "lldb/Protocol/MCP/Transport.h"
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-types.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -21,6 +23,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Signals.h"
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -40,7 +43,7 @@ public:
   void AddTool(std::unique_ptr<Tool> tool);
   void AddResourceProvider(std::unique_ptr<ResourceProvider> resource_provider);
 
-  llvm::Error Accept(lldb_private::MainLoop &, MCPTransportUP);
+  llvm::Error Accept(MCPTransportUP);
 
 protected:
   MCPBinderUP Bind(MCPTransport &);
@@ -70,7 +73,6 @@ private:
 
   LogCallback m_log_callback;
   struct Client {
-    ReadHandleUP handle;
     MCPTransportUP transport;
     MCPBinderUP binder;
   };
@@ -86,6 +88,9 @@ class ServerInfoHandle;
 /// coordinate connecting an lldb-mcp client.
 struct ServerInfo {
   std::string connection_uri;
+  /// Process id of the lldb instance hosting this server, used as its stable
+  /// identity.
+  lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
 
   /// Writes the server info into a unique file in `~/.lldb`.
   static llvm::Expected<ServerInfoHandle> Write(const ServerInfo &);

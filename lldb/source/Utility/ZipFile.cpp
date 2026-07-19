@@ -144,7 +144,7 @@ bool FindFile(lldb::DataBufferSP zip_data, const EocdRecord *eocd,
     // Sanity check the file name values.
     auto file_name = reinterpret_cast<const char *>(cd + 1);
     size_t file_name_length = cd->file_name_length;
-    if (file_name + file_name_length >= reinterpret_cast<const char *>(eocd) ||
+    if (file_name + file_name_length > reinterpret_cast<const char *>(eocd) ||
         file_name_length == 0)
       return false;
 

@@ -1,6 +1,4 @@
 .. title:: clang-tidy - cert-msc32-c
-.. meta::
-   :http-equiv=refresh: 5;URL=../bugprone/random-generator-seed.html
 
 cert-msc32-c
 ============
@@ -11,4 +9,4 @@ for more information.
 
 This check corresponds to the CERT C Coding Standard rule
 `MSC32-C. Properly seed pseudorandom number generators
-<https://wiki.sei.cmu.edu/confluence/display/c/MSC32-C.+Properly+seed+pseudorandom+number+generators>`_.
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/miscellaneous-msc/msc32-c/>`_.

@@ -21,6 +21,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/UnifyLoopExits.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -154,20 +155,32 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
   SmallVector<BasicBlock *, 8> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
 
+  // No exit blocks, so nothing to do. Just return.
+  if (ExitingBlocks.empty())
+    return false;
+
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
   SmallVector<BasicBlock *, 8> CallBrTargetBlocksToFix;
+
   // Redirect exiting edges through a control flow hub.
   ControlFlowHub CHub;
   bool Changed = false;
 
-  for (unsigned I = 0; I < ExitingBlocks.size(); ++I) {
+  unsigned NumExitingBlocks = ExitingBlocks.size();
+  for (unsigned I = 0; I < NumExitingBlocks; ++I) {
     BasicBlock *BB = ExitingBlocks[I];
-    if (BranchInst *Branch = dyn_cast<BranchInst>(BB->getTerminator())) {
+    if (UncondBrInst *Branch = dyn_cast<UncondBrInst>(BB->getTerminator())) {
+      BasicBlock *Succ0 = Branch->getSuccessor(0);
+      Succ0 = L->contains(Succ0) ? nullptr : Succ0;
+      CHub.addBranch(BB, Succ0);
+
+      LLVM_DEBUG(dbgs() << "Added extiting branch: " << printBasicBlock(BB)
+                        << " -> " << printBasicBlock(Succ0) << '\n');
+    } else if (CondBrInst *Branch = dyn_cast<CondBrInst>(BB->getTerminator())) {
       BasicBlock *Succ0 = Branch->getSuccessor(0);
       Succ0 = L->contains(Succ0) ? nullptr : Succ0;
 
-      BasicBlock *Succ1 =
-          Branch->isUnconditional() ? nullptr : Branch->getSuccessor(1);
+      BasicBlock *Succ1 = Branch->getSuccessor(1);
       Succ1 = L->contains(Succ1) ? nullptr : Succ1;
       CHub.addBranch(BB, Succ0, Succ1);
 
@@ -176,28 +189,41 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
                         << (Succ0 && Succ1 ? " " : "") << printBasicBlock(Succ1)
                         << '\n');
     } else if (CallBrInst *CallBr = dyn_cast<CallBrInst>(BB->getTerminator())) {
+      SmallDenseMap<BasicBlock *, BasicBlock *> CallBrTargets;
       for (unsigned J = 0; J < CallBr->getNumSuccessors(); ++J) {
         BasicBlock *Succ = CallBr->getSuccessor(J);
         if (L->contains(Succ))
           continue;
-        bool UpdatedLI = false;
-        BasicBlock *NewSucc =
-            SplitCallBrEdge(BB, Succ, J, &DTU, nullptr, &LI, &UpdatedLI);
-        // SplitCallBrEdge modifies the CFG because it creates an intermediate
-        // block. So we need to set the changed flag no matter what the
-        // ControlFlowHub is going to do later.
-        Changed = true;
-        // Even if CallBr and Succ do not have a common parent loop, we need to
-        // add the new target block to the parent loop of the current loop.
-        if (!UpdatedLI)
-          CallBrTargetBlocksToFix.push_back(NewSucc);
-        // ExitingBlocks is later used to restore SSA, so we need to make sure
-        // that the blocks used for phi nodes in the guard blocks match the
-        // predecessors of the guard blocks, which, in the case of callbr, are
-        // the new intermediate target blocks instead of the callbr blocks
-        // themselves.
-        ExitingBlocks[I] = NewSucc;
-        CHub.addBranch(NewSucc, Succ);
+        bool UpdatedLI;
+        auto It = CallBrTargets.find(Succ);
+        BasicBlock *ExistingTarget =
+            (It != CallBrTargets.end()) ? It->second : nullptr;
+        BasicBlock *NewSucc = SplitCallBrEdge(BB, Succ, J, ExistingTarget, &DTU,
+                                              nullptr, &LI, &UpdatedLI);
+
+        if (!ExistingTarget) {
+          // SplitCallBrEdge modifies the CFG because it creates an intermediate
+          // block. So we need to set the changed flag no matter what the
+          // ControlFlowHub is going to do later.
+          Changed = true;
+          // Even if CallBr and Succ do not have a common parent loop, we need
+          // to add the new target block to the parent loop of the current loop.
+          if (!UpdatedLI)
+            CallBrTargetBlocksToFix.push_back(NewSucc);
+          // ExitingBlocks is later used to restore SSA, so we need to make sure
+          // that the blocks used for phi nodes in the guard blocks match the
+          // predecessors of the guard blocks, which, in the case of callbr, are
+          // the new intermediate target blocks instead of the callbr blocks
+          // themselves. If only one exiting block is generated, the callbr
+          // block itself is overwritten, while further blocks are appended as
+          // additional exiting blocks.
+          if (CallBrTargets.empty())
+            ExitingBlocks[I] = NewSucc;
+          else
+            ExitingBlocks.push_back(NewSucc);
+          CHub.addBranch(NewSucc, Succ);
+          CallBrTargets[Succ] = NewSucc;
+        }
         LLVM_DEBUG(dbgs() << "Added exiting branch: "
                           << printBasicBlock(NewSucc) << " -> "
                           << printBasicBlock(Succ) << '\n');

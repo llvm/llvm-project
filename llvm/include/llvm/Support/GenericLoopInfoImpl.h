@@ -295,7 +295,7 @@ void LoopBase<BlockT, LoopT>::addBasicBlockToLoop(
   LoopT *L = static_cast<LoopT *>(this);
 
   // Add the loop mapping to the LoopInfo object...
-  LIB.BBMap[NewBB] = L;
+  LIB.changeLoopFor(NewBB, L);
 
   // Add the basic block to this loop and all parent loops...
   while (L) {
@@ -560,8 +560,8 @@ void PopulateLoopsDFS<BlockT, LoopT>::insertIntoLoop(BlockT *Block) {
     Subloop->addBlockEntry(Block);
 }
 
-/// Analyze LoopInfo discovers loops during a postorder DominatorTree traversal
-/// interleaved with backward CFG traversals within each subloop
+/// Analyze LoopInfo discovers loops during a reverse preorder DominatorTree
+/// traversal interleaved with backward CFG traversals within each subloop
 /// (discoverAndMapSubloop). The backward traversal skips inner subloops, so
 /// this part of the algorithm is linear in the number of CFG edges. Subloop and
 /// Block vectors are then populated during a single forward CFG traversal
@@ -576,10 +576,20 @@ void PopulateLoopsDFS<BlockT, LoopT>::insertIntoLoop(BlockT *Block) {
 /// insertions per block.
 template <class BlockT, class LoopT>
 void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
-  // Postorder traversal of the dominator tree.
   const DomTreeNodeBase<BlockT> *DomRoot = DomTree.getRootNode();
-  for (auto DomNode : post_order(DomRoot)) {
+  ParentPtr = DomRoot->getBlock()->getParent();
+  BlockNumberEpoch = GraphTraits<ParentT>::getNumberEpoch(ParentPtr);
+  BBMap.resize(GraphTraits<ParentT>::getMaxNumber(ParentPtr));
 
+  // Visit dominator tree nodes in reverse preorder: like postorder, this
+  // guarantees a sub-loop is discovered before the outer loop.
+  DomTree.updateDFSNumbers();
+  SmallVector<const DomTreeNodeBase<BlockT> *, 32> PreorderNodes(
+      DomRoot->getDFSNumOut());
+  for (const DomTreeNodeBase<BlockT> *Node : DomTree.nodes())
+    PreorderNodes[Node->getDFSNumIn()] = Node;
+
+  for (const DomTreeNodeBase<BlockT> *DomNode : llvm::reverse(PreorderNodes)) {
     BlockT *Header = DomNode->getBlock();
     SmallVector<BlockT *, 4> Backedges;
 
@@ -612,9 +622,8 @@ LoopInfoBase<BlockT, LoopT>::getLoopsInPreorder() const {
   // FIXME: If we change the order of LoopInfo we will want to remove the
   // reverse here.
   for (LoopT *RootL : reverse(*this)) {
-    auto PreOrderLoopsInRootL = RootL->getLoopsInPreorder();
-    PreOrderLoops.append(PreOrderLoopsInRootL.begin(),
-                         PreOrderLoopsInRootL.end());
+    PreOrderLoops.push_back(RootL);
+    LoopT::getInnerLoopsInPreorder(*RootL, PreOrderLoops);
   }
 
   return PreOrderLoops;
@@ -680,12 +689,6 @@ template <class BlockT, class LoopT>
 void LoopInfoBase<BlockT, LoopT>::print(raw_ostream &OS) const {
   for (unsigned i = 0; i < TopLevelLoops.size(); ++i)
     TopLevelLoops[i]->print(OS);
-#if 0
-  for (DenseMap<BasicBlock*, LoopT*>::const_iterator I = BBMap.begin(),
-         E = BBMap.end(); I != E; ++I)
-    OS << "BB '" << I->first->getName() << "' level = "
-       << I->second->getLoopDepth() << "\n";
-#endif
 }
 
 template <typename T>
@@ -756,11 +759,18 @@ void LoopInfoBase<BlockT, LoopT>::verify(
 
 // Verify that blocks are mapped to valid loops.
 #ifndef NDEBUG
-  for (auto &Entry : BBMap) {
-    const BlockT *BB = Entry.first;
-    LoopT *L = Entry.second;
+  for (auto It : enumerate(BBMap)) {
+    LoopT *L = It.value();
+    unsigned Number = It.index();
+    if (!L)
+      continue;
     assert(Loops.count(L) && "orphaned loop");
-    assert(L->contains(BB) && "orphaned block");
+    // We have no way to map block numbers back to blocks, so find it.
+    auto BBIt = find_if(L->Blocks, [&Number](BlockT *BB) {
+      return GraphTraits<BlockT *>::getNumber(BB) == Number;
+    });
+    BlockT *BB = BBIt != L->Blocks.end() ? *BBIt : nullptr;
+    assert(BB && "orphaned block");
     for (LoopT *ChildLoop : *L)
       assert(!ChildLoop->contains(BB) &&
              "BBMap should point to the innermost loop containing BB");

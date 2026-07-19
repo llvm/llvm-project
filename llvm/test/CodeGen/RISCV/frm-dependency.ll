@@ -30,8 +30,6 @@ define float @fadd_s(float %a, float %b) nounwind {
   ret float %1
 }
 
-declare float @llvm.fma.f32(float, float, float)
-
 define float @fmadd_s(float %a, float %b, float %c) nounwind {
   ; RV32IF-LABEL: name: fmadd_s
   ; RV32IF: bb.0 (%ir-block.0):

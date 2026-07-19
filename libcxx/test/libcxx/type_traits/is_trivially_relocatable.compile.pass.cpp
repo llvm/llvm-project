@@ -103,7 +103,7 @@ static_assert(!std::__libcpp_is_trivially_relocatable<std::array<NotTriviallyCop
 static_assert(std::__libcpp_is_trivially_relocatable<std::array<std::unique_ptr<int>, 1> >::value, "");
 
 // basic_string
-#if !__has_feature(address_sanitizer) || !_LIBCPP_INSTRUMENTED_WITH_ASAN
+#if !_LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS_FOR_STRING
 struct MyChar {
   char c;
 };

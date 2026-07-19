@@ -51,6 +51,6 @@ Example:
    on non-enum types where the compiler warnings may not be present.
 
 .. seealso::
-   The `CppCoreGuideline ES.79 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Res-default>`_
+   The `CppCoreGuideline ES.79 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#res-default>`_
    provide guidelines on switch statements, including the recommendation to
    always provide a default case.

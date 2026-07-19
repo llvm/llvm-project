@@ -19,6 +19,7 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Template.h"
+#include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/STLExtras.h"
 using namespace clang;
 
@@ -47,105 +48,99 @@ DeclContext *Sema::computeDeclContext(QualType T) {
 
 DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
                                       bool EnteringContext) {
-  if (!SS.isSet() || SS.isInvalid())
-    return nullptr;
-
   NestedNameSpecifier NNS = SS.getScopeRep();
-  if (NNS.isDependent()) {
-    // If this nested-name-specifier refers to the current
-    // instantiation, return its DeclContext.
-    if (CXXRecordDecl *Record = getCurrentInstantiationOf(NNS))
-      return Record;
+  if (!NNS.isDependent()) {
+    switch (NNS.getKind()) {
+    case NestedNameSpecifier::Kind::Namespace:
+      return const_cast<NamespaceDecl *>(
+          NNS.getAsNamespaceAndPrefix().Namespace->getNamespace());
 
-    if (EnteringContext) {
-      if (NNS.getKind() != NestedNameSpecifier::Kind::Type)
-        return nullptr;
-      const Type *NNSType = NNS.getAsType();
+    case NestedNameSpecifier::Kind::Type:
+      return NNS.getAsType()->castAsTagDecl();
 
-      // Look through type alias templates, per C++0x [temp.dep.type]p1.
-      NNSType = Context.getCanonicalType(NNSType);
-      if (const auto *SpecType =
-              dyn_cast<TemplateSpecializationType>(NNSType)) {
-        // We are entering the context of the nested name specifier, so try to
-        // match the nested name specifier to either a primary class template
-        // or a class template partial specialization.
-        if (ClassTemplateDecl *ClassTemplate =
-                dyn_cast_or_null<ClassTemplateDecl>(
-                    SpecType->getTemplateName().getAsTemplateDecl())) {
-          // FIXME: The fallback on the search of partial
-          // specialization using ContextType should be eventually removed since
-          // it doesn't handle the case of constrained template parameters
-          // correctly. Currently removing this fallback would change the
-          // diagnostic output for invalid code in a number of tests.
-          ClassTemplatePartialSpecializationDecl *PartialSpec = nullptr;
-          ArrayRef<TemplateParameterList *> TemplateParamLists =
-              SS.getTemplateParamLists();
-          if (!TemplateParamLists.empty()) {
-            unsigned Depth = ClassTemplate->getTemplateParameters()->getDepth();
-            auto L = find_if(TemplateParamLists,
+    case NestedNameSpecifier::Kind::Global:
+      return Context.getTranslationUnitDecl();
+
+    case NestedNameSpecifier::Kind::MicrosoftSuper:
+      return NNS.getAsMicrosoftSuper();
+
+    case NestedNameSpecifier::Kind::Null:
+      return nullptr;
+    }
+
+    llvm_unreachable("Invalid NestedNameSpecifier::Kind!");
+  }
+
+  // If this nested-name-specifier refers to the current
+  // instantiation, return its DeclContext.
+  if (CXXRecordDecl *Record = getCurrentInstantiationOf(NNS))
+    return Record;
+
+  if (!EnteringContext || NNS.getKind() != NestedNameSpecifier::Kind::Type)
+    return nullptr;
+  const Type *NNSType = NNS.getAsType();
+
+  // Look through type alias templates, per C++0x [temp.dep.type]p1.
+  NNSType = Context.getCanonicalType(NNSType);
+  if (const auto *SpecType = dyn_cast<TemplateSpecializationType>(NNSType)) {
+    // We are entering the context of the nested name specifier, so try to
+    // match the nested name specifier to either a primary class template
+    // or a class template partial specialization.
+    ClassTemplateDecl *ClassTemplate = dyn_cast_or_null<ClassTemplateDecl>(
+        SpecType->getTemplateName().getAsTemplateDecl());
+    if (!ClassTemplate)
+      return nullptr;
+    ClassTemplatePartialSpecializationDecl *PartialSpec = nullptr;
+    ArrayRef<TemplateParameterList *> TemplateParamLists =
+        SS.getTemplateParamLists();
+    if (!TemplateParamLists.empty()) {
+      unsigned Depth = ClassTemplate->getTemplateParameters()->getDepth();
+      auto L = llvm::find_if(TemplateParamLists,
                              [Depth](TemplateParameterList *TPL) {
                                return TPL->getDepth() == Depth;
                              });
-            if (L != TemplateParamLists.end()) {
-              void *Pos = nullptr;
-              PartialSpec = ClassTemplate->findPartialSpecialization(
-                  SpecType->template_arguments(), *L, Pos);
-            }
-          } else {
-            PartialSpec =
-                ClassTemplate->findPartialSpecialization(QualType(SpecType, 0));
-          }
-
-          if (PartialSpec) {
-            // A declaration of the partial specialization must be visible.
-            // We can always recover here, because this only happens when we're
-            // entering the context, and that can't happen in a SFINAE context.
-            assert(!isSFINAEContext() && "partial specialization scope "
-                                         "specifier in SFINAE context?");
-            if (PartialSpec->hasDefinition() &&
-                !hasReachableDefinition(PartialSpec))
-              diagnoseMissingImport(SS.getLastQualifierNameLoc(), PartialSpec,
-                                    MissingImportKind::PartialSpecialization,
-                                    true);
-            return PartialSpec;
-          }
-
-          // If the type of the nested name specifier is the same as the
-          // injected class name of the named class template, we're entering
-          // into that class template definition.
-          CanQualType Injected =
-              ClassTemplate->getCanonicalInjectedSpecializationType(Context);
-          if (Context.hasSameType(Injected, QualType(SpecType, 0)))
-            return ClassTemplate->getTemplatedDecl();
-        }
-      } else if (const auto *RecordT = dyn_cast<RecordType>(NNSType)) {
-        // The nested name specifier refers to a member of a class template.
-        return RecordT->getDecl()->getDefinitionOrSelf();
+      if (L != TemplateParamLists.end()) {
+        void *Pos = nullptr;
+        PartialSpec = ClassTemplate->findPartialSpecialization(
+            SpecType->template_arguments(), *L, Pos);
       }
+    } else {
+      // FIXME: The fallback on the search of partial
+      // specialization using ContextType should be eventually removed since
+      // it doesn't handle the case of constrained template parameters
+      // correctly. Currently removing this fallback would change the
+      // diagnostic output for invalid code in a number of tests.
+      PartialSpec =
+          ClassTemplate->findPartialSpecialization(QualType(SpecType, 0));
     }
 
+    if (PartialSpec) {
+      // A declaration of the partial specialization must be visible.
+      // We can always recover here, because this only happens when we're
+      // entering the context, and that can't happen in a SFINAE context.
+      assert(!isSFINAEContext() && "partial specialization scope "
+                                   "specifier in SFINAE context?");
+      if (PartialSpec->hasDefinition() && !hasReachableDefinition(PartialSpec))
+        diagnoseMissingImport(SS.getLastQualifierNameLoc(), PartialSpec,
+                              MissingImportKind::PartialSpecialization, true);
+      return PartialSpec;
+    }
+
+    // If the type of the nested name specifier is the same as the
+    // injected class name of the named class template, we're entering
+    // into that class template definition.
+    CanQualType Injected =
+        ClassTemplate->getCanonicalInjectedSpecializationType(Context);
+    if (Context.hasSameType(Injected, QualType(SpecType, 0)))
+      return ClassTemplate->getTemplatedDecl();
     return nullptr;
   }
-
-  switch (NNS.getKind()) {
-  case NestedNameSpecifier::Kind::Namespace:
-    return const_cast<NamespaceDecl *>(
-        NNS.getAsNamespaceAndPrefix().Namespace->getNamespace());
-
-  case NestedNameSpecifier::Kind::Type:
-    return NNS.getAsType()->castAsTagDecl();
-
-  case NestedNameSpecifier::Kind::Global:
-    return Context.getTranslationUnitDecl();
-
-  case NestedNameSpecifier::Kind::MicrosoftSuper:
-    return NNS.getAsMicrosoftSuper();
-
-  case NestedNameSpecifier::Kind::Null:
-    llvm_unreachable("unexpected null nested name specifier");
+  if (const auto *RecordT = dyn_cast<RecordType>(NNSType)) {
+    // The nested name specifier refers to a member of a class template.
+    return RecordT->getDecl()->getDefinitionOrSelf();
   }
 
-  llvm_unreachable("Invalid NestedNameSpecifier::Kind!");
+  return nullptr;
 }
 
 bool Sema::isDependentScopeSpecifier(const CXXScopeSpec &SS) {
@@ -379,13 +374,18 @@ namespace {
 // Callback to only accept typo corrections that can be a valid C++ member
 // initializer: either a non-static field member or a base class.
 class NestedNameSpecifierValidatorCCC final
-    : public CorrectionCandidateCallback {
+    : public QualifiedLookupValidatorCCC {
 public:
-  explicit NestedNameSpecifierValidatorCCC(Sema &SRef)
-      : SRef(SRef) {}
+  explicit NestedNameSpecifierValidatorCCC(Sema &SRef, bool HasQualifier)
+      : QualifiedLookupValidatorCCC(HasQualifier), SRef(SRef) {}
 
   bool ValidateCandidate(const TypoCorrection &candidate) override {
-    return SRef.isAcceptableNestedNameSpecifier(candidate.getCorrectionDecl());
+    if (!QualifiedLookupValidatorCCC::ValidateCandidate(candidate))
+      return false;
+    const NamedDecl *ND = candidate.getCorrectionDecl();
+    if (!SRef.isAcceptableNestedNameSpecifier(ND))
+      return false;
+    return true;
   }
 
   std::unique_ptr<CorrectionCandidateCallback> clone() override {
@@ -393,9 +393,8 @@ public:
   }
 
  private:
-  Sema &SRef;
+   Sema &SRef;
 };
-
 }
 
 [[nodiscard]] static bool ExtendNestedNameSpecifier(Sema &S, CXXScopeSpec &SS,
@@ -596,7 +595,7 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
     // different kind of error, so look for typos.
     DeclarationName Name = Found.getLookupName();
     Found.clear();
-    NestedNameSpecifierValidatorCCC CCC(*this);
+    NestedNameSpecifierValidatorCCC CCC(*this, /*HasQualifier=*/!SS.isEmpty());
     if (TypoCorrection Corrected = CorrectTypo(
             Found.getLookupNameInfo(), Found.getLookupKind(), S, &SS, CCC,
             CorrectTypoKind::ErrorRecovery, LookupCtx, EnteringContext)) {
@@ -676,8 +675,7 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
       }
     }
 
-    if (auto *TD = dyn_cast_or_null<TypedefNameDecl>(SD))
-      MarkAnyDeclReferenced(TD->getLocation(), TD, /*OdrUse=*/false);
+    MarkAnyDeclReferenced(SD->getLocation(), SD, /*OdrUse=*/false);
 
     // If we're just performing this lookup for error-recovery purposes,
     // don't extend the nested-name-specifier. Just return now.
@@ -785,7 +783,8 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
           << IdInfo.Identifier << getLangOpts().CPlusPlus;
       return true;
     }
-    if (::ExtendNestedNameSpecifier(*this, SS, ND, IdInfo.IdentifierLoc,
+    if (Found.getLookupKind() == LookupNestedNameSpecifierName &&
+        ::ExtendNestedNameSpecifier(*this, SS, ND, IdInfo.IdentifierLoc,
                                     IdInfo.CCLoc)) {
       const Type *T = SS.getScopeRep().getAsType();
       Diag(IdInfo.IdentifierLoc, diag::err_expected_class_or_namespace)

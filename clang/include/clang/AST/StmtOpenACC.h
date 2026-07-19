@@ -515,8 +515,6 @@ class OpenACCWaitConstruct final
 
   ArrayRef<Expr *> getExprs() const { return {getExprPtr(), NumExprs}; }
 
-  ArrayRef<Expr *> getExprs() { return {getExprPtr(), NumExprs}; }
-
 public:
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OpenACCWaitConstructClass;
@@ -538,7 +536,6 @@ public:
 
   bool hasDevNumExpr() const { return getExprs()[0]; }
   Expr *getDevNumExpr() const { return getExprs()[0]; }
-  ArrayRef<Expr *> getQueueIdExprs() { return getExprs().drop_front(); }
   ArrayRef<Expr *> getQueueIdExprs() const { return getExprs().drop_front(); }
 
   child_range children() {
@@ -829,8 +826,13 @@ public:
     // Listed as 'expr' in the standard, this is typically a generic expression
     // as a component.
     const Expr *RefExpr;
+    // If this is an 'update', records whether this is a post-fix
+    // increment/decrement.  In the case where we have a single-line variant of
+    // 'capture' we have to form the IR differently if this is the case to make
+    // sure the old value is 'read' in the 2nd step.
+    bool IsPostfixIncDec = false;
     static SingleStmtInfo Empty() {
-      return {nullptr, nullptr, nullptr, nullptr};
+      return {nullptr, nullptr, nullptr, nullptr, false};
     }
 
     static SingleStmtInfo createRead(const Expr *WholeExpr, const Expr *V,
@@ -841,8 +843,9 @@ public:
                                       const Expr *RefExpr) {
       return {WholeExpr, /*V=*/nullptr, X, RefExpr};
     }
-    static SingleStmtInfo createUpdate(const Expr *WholeExpr, const Expr *X) {
-      return {WholeExpr, /*V=*/nullptr, X, /*RefExpr=*/nullptr};
+    static SingleStmtInfo createUpdate(const Expr *WholeExpr, const Expr *X,
+                                       bool PostfixIncDec) {
+      return {WholeExpr, /*V=*/nullptr, X, /*RefExpr=*/nullptr, PostfixIncDec};
     }
   };
 

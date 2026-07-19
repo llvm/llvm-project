@@ -15,14 +15,14 @@
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
 // DEFAULT-NEXT:    [[D1:%.*]] = alloca float, align 4, addrspace(5)
 // DEFAULT-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D1]] to ptr
-// DEFAULT-NEXT:    [[TMP0:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float 0x40301999A0000000)
+// DEFAULT-NEXT:    [[TMP0:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float 1.610000e+01)
 // DEFAULT-NEXT:    [[TMP1:%.*]] = extractvalue { float, i32 } [[TMP0]], 1
 // DEFAULT-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
 // DEFAULT-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to float
-// DEFAULT-NEXT:    [[TMP4:%.*]] = call float @llvm.fabs.f32(float 0x40301999A0000000)
-// DEFAULT-NEXT:    [[TMP5:%.*]] = fcmp one float [[TMP4]], 0x7FF0000000000000
+// DEFAULT-NEXT:    [[TMP4:%.*]] = call float @llvm.fabs.f32(float 1.610000e+01)
+// DEFAULT-NEXT:    [[TMP5:%.*]] = fcmp one float [[TMP4]], +inf
 // DEFAULT-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], float [[TMP3]], float [[TMP4]]
-// DEFAULT-NEXT:    [[TMP7:%.*]] = select i1 false, float 0xFFF0000000000000, float [[TMP6]]
+// DEFAULT-NEXT:    [[TMP7:%.*]] = select i1 false, float -inf, float [[TMP6]]
 // DEFAULT-NEXT:    store float [[TMP7]], ptr [[D1_ASCAST]], align 4
 // DEFAULT-NEXT:    ret void
 //
@@ -31,14 +31,14 @@
 // IGNORE-NEXT:  [[ENTRY:.*:]]
 // IGNORE-NEXT:    [[D1:%.*]] = alloca float, align 4, addrspace(5)
 // IGNORE-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D1]] to ptr
-// IGNORE-NEXT:    [[TMP0:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float 0x40301999A0000000)
+// IGNORE-NEXT:    [[TMP0:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float 1.610000e+01)
 // IGNORE-NEXT:    [[TMP1:%.*]] = extractvalue { float, i32 } [[TMP0]], 1
 // IGNORE-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
 // IGNORE-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to float
-// IGNORE-NEXT:    [[TMP4:%.*]] = call float @llvm.fabs.f32(float 0x40301999A0000000)
-// IGNORE-NEXT:    [[TMP5:%.*]] = fcmp one float [[TMP4]], 0x7FF0000000000000
+// IGNORE-NEXT:    [[TMP4:%.*]] = call float @llvm.fabs.f32(float 1.610000e+01)
+// IGNORE-NEXT:    [[TMP5:%.*]] = fcmp one float [[TMP4]], +inf
 // IGNORE-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], float [[TMP3]], float [[TMP4]]
-// IGNORE-NEXT:    [[TMP7:%.*]] = select i1 false, float 0xFFF0000000000000, float [[TMP6]]
+// IGNORE-NEXT:    [[TMP7:%.*]] = select i1 false, float -inf, float [[TMP6]]
 // IGNORE-NEXT:    store float [[TMP7]], ptr [[D1_ASCAST]], align 4
 // IGNORE-NEXT:    ret void
 //
@@ -47,14 +47,14 @@
 // STRICT-NEXT:  [[ENTRY:.*:]]
 // STRICT-NEXT:    [[D1:%.*]] = alloca float, align 4, addrspace(5)
 // STRICT-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D1]] to ptr
-// STRICT-NEXT:    [[TMP0:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float 0x40301999A0000000)
+// STRICT-NEXT:    [[TMP0:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float 1.610000e+01)
 // STRICT-NEXT:    [[TMP1:%.*]] = extractvalue { float, i32 } [[TMP0]], 1
 // STRICT-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
 // STRICT-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to float
-// STRICT-NEXT:    [[TMP4:%.*]] = call float @llvm.fabs.f32(float 0x40301999A0000000)
-// STRICT-NEXT:    [[TMP5:%.*]] = fcmp one float [[TMP4]], 0x7FF0000000000000
+// STRICT-NEXT:    [[TMP4:%.*]] = call float @llvm.fabs.f32(float 1.610000e+01)
+// STRICT-NEXT:    [[TMP5:%.*]] = fcmp one float [[TMP4]], +inf
 // STRICT-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], float [[TMP3]], float [[TMP4]]
-// STRICT-NEXT:    [[TMP7:%.*]] = select i1 false, float 0xFFF0000000000000, float [[TMP6]]
+// STRICT-NEXT:    [[TMP7:%.*]] = select i1 false, float -inf, float [[TMP6]]
 // STRICT-NEXT:    store float [[TMP7]], ptr [[D1_ASCAST]], align 4
 // STRICT-NEXT:    ret void
 //
@@ -63,14 +63,14 @@
 // MAYTRAP-NEXT:  [[ENTRY:.*:]]
 // MAYTRAP-NEXT:    [[D1:%.*]] = alloca float, align 4, addrspace(5)
 // MAYTRAP-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D1]] to ptr
-// MAYTRAP-NEXT:    [[TMP0:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float 0x40301999A0000000)
+// MAYTRAP-NEXT:    [[TMP0:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float 1.610000e+01)
 // MAYTRAP-NEXT:    [[TMP1:%.*]] = extractvalue { float, i32 } [[TMP0]], 1
 // MAYTRAP-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
 // MAYTRAP-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to float
-// MAYTRAP-NEXT:    [[TMP4:%.*]] = call float @llvm.fabs.f32(float 0x40301999A0000000)
-// MAYTRAP-NEXT:    [[TMP5:%.*]] = fcmp one float [[TMP4]], 0x7FF0000000000000
+// MAYTRAP-NEXT:    [[TMP4:%.*]] = call float @llvm.fabs.f32(float 1.610000e+01)
+// MAYTRAP-NEXT:    [[TMP5:%.*]] = fcmp one float [[TMP4]], +inf
 // MAYTRAP-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], float [[TMP3]], float [[TMP4]]
-// MAYTRAP-NEXT:    [[TMP7:%.*]] = select i1 false, float 0xFFF0000000000000, float [[TMP6]]
+// MAYTRAP-NEXT:    [[TMP7:%.*]] = select i1 false, float -inf, float [[TMP6]]
 // MAYTRAP-NEXT:    store float [[TMP7]], ptr [[D1_ASCAST]], align 4
 // MAYTRAP-NEXT:    ret void
 //
@@ -79,7 +79,7 @@
 // ERRNO-NEXT:  [[ENTRY:.*:]]
 // ERRNO-NEXT:    [[D1:%.*]] = alloca float, align 4, addrspace(5)
 // ERRNO-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D1]] to ptr
-// ERRNO-NEXT:    [[CALL:%.*]] = call float @logbf(float noundef 0x40301999A0000000) #[[ATTR2:[0-9]+]]
+// ERRNO-NEXT:    [[CALL:%.*]] = call float @logbf(float noundef 1.610000e+01) #[[ATTR2:[0-9]+]]
 // ERRNO-NEXT:    store float [[CALL]], ptr [[D1_ASCAST]], align 4
 // ERRNO-NEXT:    ret void
 //
@@ -88,14 +88,14 @@
 // AMDGCNSPIRV-DEFAULT-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-DEFAULT-NEXT:    [[D1:%.*]] = alloca float, align 4
 // AMDGCNSPIRV-DEFAULT-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
-// AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP0:%.*]] = call addrspace(4) { float, i32 } @llvm.frexp.f32.i32(float 0x40301999A0000000)
+// AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP0:%.*]] = call addrspace(4) { float, i32 } @llvm.frexp.f32.i32(float 1.610000e+01)
 // AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP1:%.*]] = extractvalue { float, i32 } [[TMP0]], 1
 // AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
 // AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to float
-// AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP4:%.*]] = call addrspace(4) float @llvm.fabs.f32(float 0x40301999A0000000)
-// AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP5:%.*]] = fcmp one float [[TMP4]], 0x7FF0000000000000
+// AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP4:%.*]] = call addrspace(4) float @llvm.fabs.f32(float 1.610000e+01)
+// AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP5:%.*]] = fcmp one float [[TMP4]], +inf
 // AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], float [[TMP3]], float [[TMP4]]
-// AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP7:%.*]] = select i1 false, float 0xFFF0000000000000, float [[TMP6]]
+// AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP7:%.*]] = select i1 false, float -inf, float [[TMP6]]
 // AMDGCNSPIRV-DEFAULT-NEXT:    store float [[TMP7]], ptr addrspace(4) [[D1_ASCAST]], align 4
 // AMDGCNSPIRV-DEFAULT-NEXT:    ret void
 //
@@ -104,14 +104,14 @@
 // AMDGCNSPIRV-IGNORE-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-IGNORE-NEXT:    [[D1:%.*]] = alloca float, align 4
 // AMDGCNSPIRV-IGNORE-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
-// AMDGCNSPIRV-IGNORE-NEXT:    [[TMP0:%.*]] = call addrspace(4) { float, i32 } @llvm.frexp.f32.i32(float 0x40301999A0000000)
+// AMDGCNSPIRV-IGNORE-NEXT:    [[TMP0:%.*]] = call addrspace(4) { float, i32 } @llvm.frexp.f32.i32(float 1.610000e+01)
 // AMDGCNSPIRV-IGNORE-NEXT:    [[TMP1:%.*]] = extractvalue { float, i32 } [[TMP0]], 1
 // AMDGCNSPIRV-IGNORE-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
 // AMDGCNSPIRV-IGNORE-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to float
-// AMDGCNSPIRV-IGNORE-NEXT:    [[TMP4:%.*]] = call addrspace(4) float @llvm.fabs.f32(float 0x40301999A0000000)
-// AMDGCNSPIRV-IGNORE-NEXT:    [[TMP5:%.*]] = fcmp one float [[TMP4]], 0x7FF0000000000000
+// AMDGCNSPIRV-IGNORE-NEXT:    [[TMP4:%.*]] = call addrspace(4) float @llvm.fabs.f32(float 1.610000e+01)
+// AMDGCNSPIRV-IGNORE-NEXT:    [[TMP5:%.*]] = fcmp one float [[TMP4]], +inf
 // AMDGCNSPIRV-IGNORE-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], float [[TMP3]], float [[TMP4]]
-// AMDGCNSPIRV-IGNORE-NEXT:    [[TMP7:%.*]] = select i1 false, float 0xFFF0000000000000, float [[TMP6]]
+// AMDGCNSPIRV-IGNORE-NEXT:    [[TMP7:%.*]] = select i1 false, float -inf, float [[TMP6]]
 // AMDGCNSPIRV-IGNORE-NEXT:    store float [[TMP7]], ptr addrspace(4) [[D1_ASCAST]], align 4
 // AMDGCNSPIRV-IGNORE-NEXT:    ret void
 //
@@ -120,14 +120,14 @@
 // AMDGCNSPIRV-STRICT-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-STRICT-NEXT:    [[D1:%.*]] = alloca float, align 4
 // AMDGCNSPIRV-STRICT-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
-// AMDGCNSPIRV-STRICT-NEXT:    [[TMP0:%.*]] = call addrspace(4) { float, i32 } @llvm.frexp.f32.i32(float 0x40301999A0000000)
+// AMDGCNSPIRV-STRICT-NEXT:    [[TMP0:%.*]] = call addrspace(4) { float, i32 } @llvm.frexp.f32.i32(float 1.610000e+01)
 // AMDGCNSPIRV-STRICT-NEXT:    [[TMP1:%.*]] = extractvalue { float, i32 } [[TMP0]], 1
 // AMDGCNSPIRV-STRICT-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
 // AMDGCNSPIRV-STRICT-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to float
-// AMDGCNSPIRV-STRICT-NEXT:    [[TMP4:%.*]] = call addrspace(4) float @llvm.fabs.f32(float 0x40301999A0000000)
-// AMDGCNSPIRV-STRICT-NEXT:    [[TMP5:%.*]] = fcmp one float [[TMP4]], 0x7FF0000000000000
+// AMDGCNSPIRV-STRICT-NEXT:    [[TMP4:%.*]] = call addrspace(4) float @llvm.fabs.f32(float 1.610000e+01)
+// AMDGCNSPIRV-STRICT-NEXT:    [[TMP5:%.*]] = fcmp one float [[TMP4]], +inf
 // AMDGCNSPIRV-STRICT-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], float [[TMP3]], float [[TMP4]]
-// AMDGCNSPIRV-STRICT-NEXT:    [[TMP7:%.*]] = select i1 false, float 0xFFF0000000000000, float [[TMP6]]
+// AMDGCNSPIRV-STRICT-NEXT:    [[TMP7:%.*]] = select i1 false, float -inf, float [[TMP6]]
 // AMDGCNSPIRV-STRICT-NEXT:    store float [[TMP7]], ptr addrspace(4) [[D1_ASCAST]], align 4
 // AMDGCNSPIRV-STRICT-NEXT:    ret void
 //
@@ -136,14 +136,14 @@
 // AMDGCNSPIRV-MAYTRAP-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-MAYTRAP-NEXT:    [[D1:%.*]] = alloca float, align 4
 // AMDGCNSPIRV-MAYTRAP-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
-// AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP0:%.*]] = call addrspace(4) { float, i32 } @llvm.frexp.f32.i32(float 0x40301999A0000000)
+// AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP0:%.*]] = call addrspace(4) { float, i32 } @llvm.frexp.f32.i32(float 1.610000e+01)
 // AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP1:%.*]] = extractvalue { float, i32 } [[TMP0]], 1
 // AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
 // AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to float
-// AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP4:%.*]] = call addrspace(4) float @llvm.fabs.f32(float 0x40301999A0000000)
-// AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP5:%.*]] = fcmp one float [[TMP4]], 0x7FF0000000000000
+// AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP4:%.*]] = call addrspace(4) float @llvm.fabs.f32(float 1.610000e+01)
+// AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP5:%.*]] = fcmp one float [[TMP4]], +inf
 // AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], float [[TMP3]], float [[TMP4]]
-// AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP7:%.*]] = select i1 false, float 0xFFF0000000000000, float [[TMP6]]
+// AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP7:%.*]] = select i1 false, float -inf, float [[TMP6]]
 // AMDGCNSPIRV-MAYTRAP-NEXT:    store float [[TMP7]], ptr addrspace(4) [[D1_ASCAST]], align 4
 // AMDGCNSPIRV-MAYTRAP-NEXT:    ret void
 //
@@ -152,7 +152,7 @@
 // AMDGCNSPIRV-ERRNO-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-ERRNO-NEXT:    [[D1:%.*]] = alloca float, align 4
 // AMDGCNSPIRV-ERRNO-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
-// AMDGCNSPIRV-ERRNO-NEXT:    [[CALL:%.*]] = call spir_func addrspace(4) float @logbf(float noundef 0x40301999A0000000) #[[ATTR2:[0-9]+]]
+// AMDGCNSPIRV-ERRNO-NEXT:    [[CALL:%.*]] = call spir_func addrspace(4) float @logbf(float noundef 1.610000e+01) #[[ATTR2:[0-9]+]]
 // AMDGCNSPIRV-ERRNO-NEXT:    store float [[CALL]], ptr addrspace(4) [[D1_ASCAST]], align 4
 // AMDGCNSPIRV-ERRNO-NEXT:    ret void
 //
@@ -174,10 +174,10 @@ void test_logbf() {
 // DEFAULT-NEXT:    [[TMP4:%.*]] = sitofp i32 [[TMP3]] to float
 // DEFAULT-NEXT:    [[TMP5:%.*]] = load float, ptr [[A_ADDR_ASCAST]], align 4
 // DEFAULT-NEXT:    [[TMP6:%.*]] = call float @llvm.fabs.f32(float [[TMP5]])
-// DEFAULT-NEXT:    [[TMP7:%.*]] = fcmp one float [[TMP6]], 0x7FF0000000000000
+// DEFAULT-NEXT:    [[TMP7:%.*]] = fcmp one float [[TMP6]], +inf
 // DEFAULT-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], float [[TMP4]], float [[TMP6]]
 // DEFAULT-NEXT:    [[TMP9:%.*]] = fcmp oeq float [[TMP0]], 0.000000e+00
-// DEFAULT-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], float 0xFFF0000000000000, float [[TMP8]]
+// DEFAULT-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], float -inf, float [[TMP8]]
 // DEFAULT-NEXT:    store float [[TMP10]], ptr [[D1_ASCAST]], align 4
 // DEFAULT-NEXT:    ret void
 //
@@ -196,10 +196,10 @@ void test_logbf() {
 // IGNORE-NEXT:    [[TMP4:%.*]] = sitofp i32 [[TMP3]] to float
 // IGNORE-NEXT:    [[TMP5:%.*]] = load float, ptr [[A_ADDR_ASCAST]], align 4
 // IGNORE-NEXT:    [[TMP6:%.*]] = call float @llvm.fabs.f32(float [[TMP5]])
-// IGNORE-NEXT:    [[TMP7:%.*]] = fcmp one float [[TMP6]], 0x7FF0000000000000
+// IGNORE-NEXT:    [[TMP7:%.*]] = fcmp one float [[TMP6]], +inf
 // IGNORE-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], float [[TMP4]], float [[TMP6]]
 // IGNORE-NEXT:    [[TMP9:%.*]] = fcmp oeq float [[TMP0]], 0.000000e+00
-// IGNORE-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], float 0xFFF0000000000000, float [[TMP8]]
+// IGNORE-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], float -inf, float [[TMP8]]
 // IGNORE-NEXT:    store float [[TMP10]], ptr [[D1_ASCAST]], align 4
 // IGNORE-NEXT:    ret void
 //
@@ -218,10 +218,10 @@ void test_logbf() {
 // STRICT-NEXT:    [[TMP4:%.*]] = sitofp i32 [[TMP3]] to float
 // STRICT-NEXT:    [[TMP5:%.*]] = load float, ptr [[A_ADDR_ASCAST]], align 4
 // STRICT-NEXT:    [[TMP6:%.*]] = call float @llvm.fabs.f32(float [[TMP5]])
-// STRICT-NEXT:    [[TMP7:%.*]] = fcmp one float [[TMP6]], 0x7FF0000000000000
+// STRICT-NEXT:    [[TMP7:%.*]] = fcmp one float [[TMP6]], +inf
 // STRICT-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], float [[TMP4]], float [[TMP6]]
 // STRICT-NEXT:    [[TMP9:%.*]] = fcmp oeq float [[TMP0]], 0.000000e+00
-// STRICT-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], float 0xFFF0000000000000, float [[TMP8]]
+// STRICT-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], float -inf, float [[TMP8]]
 // STRICT-NEXT:    store float [[TMP10]], ptr [[D1_ASCAST]], align 4
 // STRICT-NEXT:    ret void
 //
@@ -240,10 +240,10 @@ void test_logbf() {
 // MAYTRAP-NEXT:    [[TMP4:%.*]] = sitofp i32 [[TMP3]] to float
 // MAYTRAP-NEXT:    [[TMP5:%.*]] = load float, ptr [[A_ADDR_ASCAST]], align 4
 // MAYTRAP-NEXT:    [[TMP6:%.*]] = call float @llvm.fabs.f32(float [[TMP5]])
-// MAYTRAP-NEXT:    [[TMP7:%.*]] = fcmp one float [[TMP6]], 0x7FF0000000000000
+// MAYTRAP-NEXT:    [[TMP7:%.*]] = fcmp one float [[TMP6]], +inf
 // MAYTRAP-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], float [[TMP4]], float [[TMP6]]
 // MAYTRAP-NEXT:    [[TMP9:%.*]] = fcmp oeq float [[TMP0]], 0.000000e+00
-// MAYTRAP-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], float 0xFFF0000000000000, float [[TMP8]]
+// MAYTRAP-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], float -inf, float [[TMP8]]
 // MAYTRAP-NEXT:    store float [[TMP10]], ptr [[D1_ASCAST]], align 4
 // MAYTRAP-NEXT:    ret void
 //
@@ -275,10 +275,10 @@ void test_logbf() {
 // AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP4:%.*]] = sitofp i32 [[TMP3]] to float
 // AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP5:%.*]] = load float, ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
 // AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP6:%.*]] = call addrspace(4) float @llvm.fabs.f32(float [[TMP5]])
-// AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP7:%.*]] = fcmp one float [[TMP6]], 0x7FF0000000000000
+// AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP7:%.*]] = fcmp one float [[TMP6]], +inf
 // AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], float [[TMP4]], float [[TMP6]]
 // AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP9:%.*]] = fcmp oeq float [[TMP0]], 0.000000e+00
-// AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], float 0xFFF0000000000000, float [[TMP8]]
+// AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], float -inf, float [[TMP8]]
 // AMDGCNSPIRV-DEFAULT-NEXT:    store float [[TMP10]], ptr addrspace(4) [[D1_ASCAST]], align 4
 // AMDGCNSPIRV-DEFAULT-NEXT:    ret void
 //
@@ -297,10 +297,10 @@ void test_logbf() {
 // AMDGCNSPIRV-IGNORE-NEXT:    [[TMP4:%.*]] = sitofp i32 [[TMP3]] to float
 // AMDGCNSPIRV-IGNORE-NEXT:    [[TMP5:%.*]] = load float, ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
 // AMDGCNSPIRV-IGNORE-NEXT:    [[TMP6:%.*]] = call addrspace(4) float @llvm.fabs.f32(float [[TMP5]])
-// AMDGCNSPIRV-IGNORE-NEXT:    [[TMP7:%.*]] = fcmp one float [[TMP6]], 0x7FF0000000000000
+// AMDGCNSPIRV-IGNORE-NEXT:    [[TMP7:%.*]] = fcmp one float [[TMP6]], +inf
 // AMDGCNSPIRV-IGNORE-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], float [[TMP4]], float [[TMP6]]
 // AMDGCNSPIRV-IGNORE-NEXT:    [[TMP9:%.*]] = fcmp oeq float [[TMP0]], 0.000000e+00
-// AMDGCNSPIRV-IGNORE-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], float 0xFFF0000000000000, float [[TMP8]]
+// AMDGCNSPIRV-IGNORE-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], float -inf, float [[TMP8]]
 // AMDGCNSPIRV-IGNORE-NEXT:    store float [[TMP10]], ptr addrspace(4) [[D1_ASCAST]], align 4
 // AMDGCNSPIRV-IGNORE-NEXT:    ret void
 //
@@ -319,10 +319,10 @@ void test_logbf() {
 // AMDGCNSPIRV-STRICT-NEXT:    [[TMP4:%.*]] = sitofp i32 [[TMP3]] to float
 // AMDGCNSPIRV-STRICT-NEXT:    [[TMP5:%.*]] = load float, ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
 // AMDGCNSPIRV-STRICT-NEXT:    [[TMP6:%.*]] = call addrspace(4) float @llvm.fabs.f32(float [[TMP5]])
-// AMDGCNSPIRV-STRICT-NEXT:    [[TMP7:%.*]] = fcmp one float [[TMP6]], 0x7FF0000000000000
+// AMDGCNSPIRV-STRICT-NEXT:    [[TMP7:%.*]] = fcmp one float [[TMP6]], +inf
 // AMDGCNSPIRV-STRICT-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], float [[TMP4]], float [[TMP6]]
 // AMDGCNSPIRV-STRICT-NEXT:    [[TMP9:%.*]] = fcmp oeq float [[TMP0]], 0.000000e+00
-// AMDGCNSPIRV-STRICT-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], float 0xFFF0000000000000, float [[TMP8]]
+// AMDGCNSPIRV-STRICT-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], float -inf, float [[TMP8]]
 // AMDGCNSPIRV-STRICT-NEXT:    store float [[TMP10]], ptr addrspace(4) [[D1_ASCAST]], align 4
 // AMDGCNSPIRV-STRICT-NEXT:    ret void
 //
@@ -341,10 +341,10 @@ void test_logbf() {
 // AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP4:%.*]] = sitofp i32 [[TMP3]] to float
 // AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP5:%.*]] = load float, ptr addrspace(4) [[A_ADDR_ASCAST]], align 4
 // AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP6:%.*]] = call addrspace(4) float @llvm.fabs.f32(float [[TMP5]])
-// AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP7:%.*]] = fcmp one float [[TMP6]], 0x7FF0000000000000
+// AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP7:%.*]] = fcmp one float [[TMP6]], +inf
 // AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], float [[TMP4]], float [[TMP6]]
 // AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP9:%.*]] = fcmp oeq float [[TMP0]], 0.000000e+00
-// AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], float 0xFFF0000000000000, float [[TMP8]]
+// AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], float -inf, float [[TMP8]]
 // AMDGCNSPIRV-MAYTRAP-NEXT:    store float [[TMP10]], ptr addrspace(4) [[D1_ASCAST]], align 4
 // AMDGCNSPIRV-MAYTRAP-NEXT:    ret void
 //
@@ -389,9 +389,9 @@ void test_logbf_var(float a) {
 // DEFAULT-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
 // DEFAULT-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to double
 // DEFAULT-NEXT:    [[TMP4:%.*]] = call double @llvm.fabs.f64(double 1.510000e+01)
-// DEFAULT-NEXT:    [[TMP5:%.*]] = fcmp one double [[TMP4]], 0x7FF0000000000000
+// DEFAULT-NEXT:    [[TMP5:%.*]] = fcmp one double [[TMP4]], +inf
 // DEFAULT-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], double [[TMP3]], double [[TMP4]]
-// DEFAULT-NEXT:    [[TMP7:%.*]] = select i1 false, double 0xFFF0000000000000, double [[TMP6]]
+// DEFAULT-NEXT:    [[TMP7:%.*]] = select i1 false, double -inf, double [[TMP6]]
 // DEFAULT-NEXT:    store double [[TMP7]], ptr [[D1_ASCAST]], align 8
 // DEFAULT-NEXT:    ret void
 //
@@ -405,9 +405,9 @@ void test_logbf_var(float a) {
 // IGNORE-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
 // IGNORE-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to double
 // IGNORE-NEXT:    [[TMP4:%.*]] = call double @llvm.fabs.f64(double 1.510000e+01)
-// IGNORE-NEXT:    [[TMP5:%.*]] = fcmp one double [[TMP4]], 0x7FF0000000000000
+// IGNORE-NEXT:    [[TMP5:%.*]] = fcmp one double [[TMP4]], +inf
 // IGNORE-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], double [[TMP3]], double [[TMP4]]
-// IGNORE-NEXT:    [[TMP7:%.*]] = select i1 false, double 0xFFF0000000000000, double [[TMP6]]
+// IGNORE-NEXT:    [[TMP7:%.*]] = select i1 false, double -inf, double [[TMP6]]
 // IGNORE-NEXT:    store double [[TMP7]], ptr [[D1_ASCAST]], align 8
 // IGNORE-NEXT:    ret void
 //
@@ -421,9 +421,9 @@ void test_logbf_var(float a) {
 // STRICT-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
 // STRICT-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to double
 // STRICT-NEXT:    [[TMP4:%.*]] = call double @llvm.fabs.f64(double 1.510000e+01)
-// STRICT-NEXT:    [[TMP5:%.*]] = fcmp one double [[TMP4]], 0x7FF0000000000000
+// STRICT-NEXT:    [[TMP5:%.*]] = fcmp one double [[TMP4]], +inf
 // STRICT-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], double [[TMP3]], double [[TMP4]]
-// STRICT-NEXT:    [[TMP7:%.*]] = select i1 false, double 0xFFF0000000000000, double [[TMP6]]
+// STRICT-NEXT:    [[TMP7:%.*]] = select i1 false, double -inf, double [[TMP6]]
 // STRICT-NEXT:    store double [[TMP7]], ptr [[D1_ASCAST]], align 8
 // STRICT-NEXT:    ret void
 //
@@ -437,9 +437,9 @@ void test_logbf_var(float a) {
 // MAYTRAP-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
 // MAYTRAP-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to double
 // MAYTRAP-NEXT:    [[TMP4:%.*]] = call double @llvm.fabs.f64(double 1.510000e+01)
-// MAYTRAP-NEXT:    [[TMP5:%.*]] = fcmp one double [[TMP4]], 0x7FF0000000000000
+// MAYTRAP-NEXT:    [[TMP5:%.*]] = fcmp one double [[TMP4]], +inf
 // MAYTRAP-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], double [[TMP3]], double [[TMP4]]
-// MAYTRAP-NEXT:    [[TMP7:%.*]] = select i1 false, double 0xFFF0000000000000, double [[TMP6]]
+// MAYTRAP-NEXT:    [[TMP7:%.*]] = select i1 false, double -inf, double [[TMP6]]
 // MAYTRAP-NEXT:    store double [[TMP7]], ptr [[D1_ASCAST]], align 8
 // MAYTRAP-NEXT:    ret void
 //
@@ -462,9 +462,9 @@ void test_logbf_var(float a) {
 // AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
 // AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to double
 // AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP4:%.*]] = call addrspace(4) double @llvm.fabs.f64(double 1.510000e+01)
-// AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP5:%.*]] = fcmp one double [[TMP4]], 0x7FF0000000000000
+// AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP5:%.*]] = fcmp one double [[TMP4]], +inf
 // AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], double [[TMP3]], double [[TMP4]]
-// AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP7:%.*]] = select i1 false, double 0xFFF0000000000000, double [[TMP6]]
+// AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP7:%.*]] = select i1 false, double -inf, double [[TMP6]]
 // AMDGCNSPIRV-DEFAULT-NEXT:    store double [[TMP7]], ptr addrspace(4) [[D1_ASCAST]], align 8
 // AMDGCNSPIRV-DEFAULT-NEXT:    ret void
 //
@@ -478,9 +478,9 @@ void test_logbf_var(float a) {
 // AMDGCNSPIRV-IGNORE-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
 // AMDGCNSPIRV-IGNORE-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to double
 // AMDGCNSPIRV-IGNORE-NEXT:    [[TMP4:%.*]] = call addrspace(4) double @llvm.fabs.f64(double 1.510000e+01)
-// AMDGCNSPIRV-IGNORE-NEXT:    [[TMP5:%.*]] = fcmp one double [[TMP4]], 0x7FF0000000000000
+// AMDGCNSPIRV-IGNORE-NEXT:    [[TMP5:%.*]] = fcmp one double [[TMP4]], +inf
 // AMDGCNSPIRV-IGNORE-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], double [[TMP3]], double [[TMP4]]
-// AMDGCNSPIRV-IGNORE-NEXT:    [[TMP7:%.*]] = select i1 false, double 0xFFF0000000000000, double [[TMP6]]
+// AMDGCNSPIRV-IGNORE-NEXT:    [[TMP7:%.*]] = select i1 false, double -inf, double [[TMP6]]
 // AMDGCNSPIRV-IGNORE-NEXT:    store double [[TMP7]], ptr addrspace(4) [[D1_ASCAST]], align 8
 // AMDGCNSPIRV-IGNORE-NEXT:    ret void
 //
@@ -494,9 +494,9 @@ void test_logbf_var(float a) {
 // AMDGCNSPIRV-STRICT-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
 // AMDGCNSPIRV-STRICT-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to double
 // AMDGCNSPIRV-STRICT-NEXT:    [[TMP4:%.*]] = call addrspace(4) double @llvm.fabs.f64(double 1.510000e+01)
-// AMDGCNSPIRV-STRICT-NEXT:    [[TMP5:%.*]] = fcmp one double [[TMP4]], 0x7FF0000000000000
+// AMDGCNSPIRV-STRICT-NEXT:    [[TMP5:%.*]] = fcmp one double [[TMP4]], +inf
 // AMDGCNSPIRV-STRICT-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], double [[TMP3]], double [[TMP4]]
-// AMDGCNSPIRV-STRICT-NEXT:    [[TMP7:%.*]] = select i1 false, double 0xFFF0000000000000, double [[TMP6]]
+// AMDGCNSPIRV-STRICT-NEXT:    [[TMP7:%.*]] = select i1 false, double -inf, double [[TMP6]]
 // AMDGCNSPIRV-STRICT-NEXT:    store double [[TMP7]], ptr addrspace(4) [[D1_ASCAST]], align 8
 // AMDGCNSPIRV-STRICT-NEXT:    ret void
 //
@@ -510,9 +510,9 @@ void test_logbf_var(float a) {
 // AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP1]], -1
 // AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to double
 // AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP4:%.*]] = call addrspace(4) double @llvm.fabs.f64(double 1.510000e+01)
-// AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP5:%.*]] = fcmp one double [[TMP4]], 0x7FF0000000000000
+// AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP5:%.*]] = fcmp one double [[TMP4]], +inf
 // AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], double [[TMP3]], double [[TMP4]]
-// AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP7:%.*]] = select i1 false, double 0xFFF0000000000000, double [[TMP6]]
+// AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP7:%.*]] = select i1 false, double -inf, double [[TMP6]]
 // AMDGCNSPIRV-MAYTRAP-NEXT:    store double [[TMP7]], ptr addrspace(4) [[D1_ASCAST]], align 8
 // AMDGCNSPIRV-MAYTRAP-NEXT:    ret void
 //
@@ -564,10 +564,10 @@ void test_logb() {
 // DEFAULT-NEXT:    [[TMP4:%.*]] = sitofp i32 [[TMP3]] to double
 // DEFAULT-NEXT:    [[TMP5:%.*]] = load double, ptr [[A_ADDR_ASCAST]], align 8
 // DEFAULT-NEXT:    [[TMP6:%.*]] = call double @llvm.fabs.f64(double [[TMP5]])
-// DEFAULT-NEXT:    [[TMP7:%.*]] = fcmp one double [[TMP6]], 0x7FF0000000000000
+// DEFAULT-NEXT:    [[TMP7:%.*]] = fcmp one double [[TMP6]], +inf
 // DEFAULT-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], double [[TMP4]], double [[TMP6]]
 // DEFAULT-NEXT:    [[TMP9:%.*]] = fcmp oeq double [[TMP0]], 0.000000e+00
-// DEFAULT-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], double 0xFFF0000000000000, double [[TMP8]]
+// DEFAULT-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], double -inf, double [[TMP8]]
 // DEFAULT-NEXT:    store double [[TMP10]], ptr [[D1_ASCAST]], align 8
 // DEFAULT-NEXT:    ret void
 //
@@ -586,10 +586,10 @@ void test_logb() {
 // IGNORE-NEXT:    [[TMP4:%.*]] = sitofp i32 [[TMP3]] to double
 // IGNORE-NEXT:    [[TMP5:%.*]] = load double, ptr [[A_ADDR_ASCAST]], align 8
 // IGNORE-NEXT:    [[TMP6:%.*]] = call double @llvm.fabs.f64(double [[TMP5]])
-// IGNORE-NEXT:    [[TMP7:%.*]] = fcmp one double [[TMP6]], 0x7FF0000000000000
+// IGNORE-NEXT:    [[TMP7:%.*]] = fcmp one double [[TMP6]], +inf
 // IGNORE-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], double [[TMP4]], double [[TMP6]]
 // IGNORE-NEXT:    [[TMP9:%.*]] = fcmp oeq double [[TMP0]], 0.000000e+00
-// IGNORE-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], double 0xFFF0000000000000, double [[TMP8]]
+// IGNORE-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], double -inf, double [[TMP8]]
 // IGNORE-NEXT:    store double [[TMP10]], ptr [[D1_ASCAST]], align 8
 // IGNORE-NEXT:    ret void
 //
@@ -608,10 +608,10 @@ void test_logb() {
 // STRICT-NEXT:    [[TMP4:%.*]] = sitofp i32 [[TMP3]] to double
 // STRICT-NEXT:    [[TMP5:%.*]] = load double, ptr [[A_ADDR_ASCAST]], align 8
 // STRICT-NEXT:    [[TMP6:%.*]] = call double @llvm.fabs.f64(double [[TMP5]])
-// STRICT-NEXT:    [[TMP7:%.*]] = fcmp one double [[TMP6]], 0x7FF0000000000000
+// STRICT-NEXT:    [[TMP7:%.*]] = fcmp one double [[TMP6]], +inf
 // STRICT-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], double [[TMP4]], double [[TMP6]]
 // STRICT-NEXT:    [[TMP9:%.*]] = fcmp oeq double [[TMP0]], 0.000000e+00
-// STRICT-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], double 0xFFF0000000000000, double [[TMP8]]
+// STRICT-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], double -inf, double [[TMP8]]
 // STRICT-NEXT:    store double [[TMP10]], ptr [[D1_ASCAST]], align 8
 // STRICT-NEXT:    ret void
 //
@@ -630,10 +630,10 @@ void test_logb() {
 // MAYTRAP-NEXT:    [[TMP4:%.*]] = sitofp i32 [[TMP3]] to double
 // MAYTRAP-NEXT:    [[TMP5:%.*]] = load double, ptr [[A_ADDR_ASCAST]], align 8
 // MAYTRAP-NEXT:    [[TMP6:%.*]] = call double @llvm.fabs.f64(double [[TMP5]])
-// MAYTRAP-NEXT:    [[TMP7:%.*]] = fcmp one double [[TMP6]], 0x7FF0000000000000
+// MAYTRAP-NEXT:    [[TMP7:%.*]] = fcmp one double [[TMP6]], +inf
 // MAYTRAP-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], double [[TMP4]], double [[TMP6]]
 // MAYTRAP-NEXT:    [[TMP9:%.*]] = fcmp oeq double [[TMP0]], 0.000000e+00
-// MAYTRAP-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], double 0xFFF0000000000000, double [[TMP8]]
+// MAYTRAP-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], double -inf, double [[TMP8]]
 // MAYTRAP-NEXT:    store double [[TMP10]], ptr [[D1_ASCAST]], align 8
 // MAYTRAP-NEXT:    ret void
 //
@@ -665,10 +665,10 @@ void test_logb() {
 // AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP4:%.*]] = sitofp i32 [[TMP3]] to double
 // AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP5:%.*]] = load double, ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
 // AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP6:%.*]] = call addrspace(4) double @llvm.fabs.f64(double [[TMP5]])
-// AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP7:%.*]] = fcmp one double [[TMP6]], 0x7FF0000000000000
+// AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP7:%.*]] = fcmp one double [[TMP6]], +inf
 // AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], double [[TMP4]], double [[TMP6]]
 // AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP9:%.*]] = fcmp oeq double [[TMP0]], 0.000000e+00
-// AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], double 0xFFF0000000000000, double [[TMP8]]
+// AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], double -inf, double [[TMP8]]
 // AMDGCNSPIRV-DEFAULT-NEXT:    store double [[TMP10]], ptr addrspace(4) [[D1_ASCAST]], align 8
 // AMDGCNSPIRV-DEFAULT-NEXT:    ret void
 //
@@ -687,10 +687,10 @@ void test_logb() {
 // AMDGCNSPIRV-IGNORE-NEXT:    [[TMP4:%.*]] = sitofp i32 [[TMP3]] to double
 // AMDGCNSPIRV-IGNORE-NEXT:    [[TMP5:%.*]] = load double, ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
 // AMDGCNSPIRV-IGNORE-NEXT:    [[TMP6:%.*]] = call addrspace(4) double @llvm.fabs.f64(double [[TMP5]])
-// AMDGCNSPIRV-IGNORE-NEXT:    [[TMP7:%.*]] = fcmp one double [[TMP6]], 0x7FF0000000000000
+// AMDGCNSPIRV-IGNORE-NEXT:    [[TMP7:%.*]] = fcmp one double [[TMP6]], +inf
 // AMDGCNSPIRV-IGNORE-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], double [[TMP4]], double [[TMP6]]
 // AMDGCNSPIRV-IGNORE-NEXT:    [[TMP9:%.*]] = fcmp oeq double [[TMP0]], 0.000000e+00
-// AMDGCNSPIRV-IGNORE-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], double 0xFFF0000000000000, double [[TMP8]]
+// AMDGCNSPIRV-IGNORE-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], double -inf, double [[TMP8]]
 // AMDGCNSPIRV-IGNORE-NEXT:    store double [[TMP10]], ptr addrspace(4) [[D1_ASCAST]], align 8
 // AMDGCNSPIRV-IGNORE-NEXT:    ret void
 //
@@ -709,10 +709,10 @@ void test_logb() {
 // AMDGCNSPIRV-STRICT-NEXT:    [[TMP4:%.*]] = sitofp i32 [[TMP3]] to double
 // AMDGCNSPIRV-STRICT-NEXT:    [[TMP5:%.*]] = load double, ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
 // AMDGCNSPIRV-STRICT-NEXT:    [[TMP6:%.*]] = call addrspace(4) double @llvm.fabs.f64(double [[TMP5]])
-// AMDGCNSPIRV-STRICT-NEXT:    [[TMP7:%.*]] = fcmp one double [[TMP6]], 0x7FF0000000000000
+// AMDGCNSPIRV-STRICT-NEXT:    [[TMP7:%.*]] = fcmp one double [[TMP6]], +inf
 // AMDGCNSPIRV-STRICT-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], double [[TMP4]], double [[TMP6]]
 // AMDGCNSPIRV-STRICT-NEXT:    [[TMP9:%.*]] = fcmp oeq double [[TMP0]], 0.000000e+00
-// AMDGCNSPIRV-STRICT-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], double 0xFFF0000000000000, double [[TMP8]]
+// AMDGCNSPIRV-STRICT-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], double -inf, double [[TMP8]]
 // AMDGCNSPIRV-STRICT-NEXT:    store double [[TMP10]], ptr addrspace(4) [[D1_ASCAST]], align 8
 // AMDGCNSPIRV-STRICT-NEXT:    ret void
 //
@@ -731,10 +731,10 @@ void test_logb() {
 // AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP4:%.*]] = sitofp i32 [[TMP3]] to double
 // AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP5:%.*]] = load double, ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
 // AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP6:%.*]] = call addrspace(4) double @llvm.fabs.f64(double [[TMP5]])
-// AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP7:%.*]] = fcmp one double [[TMP6]], 0x7FF0000000000000
+// AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP7:%.*]] = fcmp one double [[TMP6]], +inf
 // AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], double [[TMP4]], double [[TMP6]]
 // AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP9:%.*]] = fcmp oeq double [[TMP0]], 0.000000e+00
-// AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], double 0xFFF0000000000000, double [[TMP8]]
+// AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], double -inf, double [[TMP8]]
 // AMDGCNSPIRV-MAYTRAP-NEXT:    store double [[TMP10]], ptr addrspace(4) [[D1_ASCAST]], align 8
 // AMDGCNSPIRV-MAYTRAP-NEXT:    ret void
 //
@@ -768,7 +768,7 @@ void test_logb_var(double a) {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
 // DEFAULT-NEXT:    [[D1:%.*]] = alloca float, align 4, addrspace(5)
 // DEFAULT-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D1]] to ptr
-// DEFAULT-NEXT:    [[TMP0:%.*]] = call float @llvm.ldexp.f32.i32(float 0x4030B33340000000, i32 10)
+// DEFAULT-NEXT:    [[TMP0:%.*]] = call float @llvm.ldexp.f32.i32(float 1.670000e+01, i32 10)
 // DEFAULT-NEXT:    store float [[TMP0]], ptr [[D1_ASCAST]], align 4
 // DEFAULT-NEXT:    ret void
 //
@@ -777,7 +777,7 @@ void test_logb_var(double a) {
 // IGNORE-NEXT:  [[ENTRY:.*:]]
 // IGNORE-NEXT:    [[D1:%.*]] = alloca float, align 4, addrspace(5)
 // IGNORE-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D1]] to ptr
-// IGNORE-NEXT:    [[TMP0:%.*]] = call float @llvm.ldexp.f32.i32(float 0x4030B33340000000, i32 10)
+// IGNORE-NEXT:    [[TMP0:%.*]] = call float @llvm.ldexp.f32.i32(float 1.670000e+01, i32 10)
 // IGNORE-NEXT:    store float [[TMP0]], ptr [[D1_ASCAST]], align 4
 // IGNORE-NEXT:    ret void
 //
@@ -786,7 +786,7 @@ void test_logb_var(double a) {
 // STRICT-NEXT:  [[ENTRY:.*:]]
 // STRICT-NEXT:    [[D1:%.*]] = alloca float, align 4, addrspace(5)
 // STRICT-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D1]] to ptr
-// STRICT-NEXT:    [[TMP0:%.*]] = call float @llvm.ldexp.f32.i32(float 0x4030B33340000000, i32 10)
+// STRICT-NEXT:    [[TMP0:%.*]] = call float @llvm.ldexp.f32.i32(float 1.670000e+01, i32 10)
 // STRICT-NEXT:    store float [[TMP0]], ptr [[D1_ASCAST]], align 4
 // STRICT-NEXT:    ret void
 //
@@ -795,7 +795,7 @@ void test_logb_var(double a) {
 // MAYTRAP-NEXT:  [[ENTRY:.*:]]
 // MAYTRAP-NEXT:    [[D1:%.*]] = alloca float, align 4, addrspace(5)
 // MAYTRAP-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D1]] to ptr
-// MAYTRAP-NEXT:    [[TMP0:%.*]] = call float @llvm.ldexp.f32.i32(float 0x4030B33340000000, i32 10)
+// MAYTRAP-NEXT:    [[TMP0:%.*]] = call float @llvm.ldexp.f32.i32(float 1.670000e+01, i32 10)
 // MAYTRAP-NEXT:    store float [[TMP0]], ptr [[D1_ASCAST]], align 4
 // MAYTRAP-NEXT:    ret void
 //
@@ -804,7 +804,7 @@ void test_logb_var(double a) {
 // ERRNO-NEXT:  [[ENTRY:.*:]]
 // ERRNO-NEXT:    [[D1:%.*]] = alloca float, align 4, addrspace(5)
 // ERRNO-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D1]] to ptr
-// ERRNO-NEXT:    [[CALL:%.*]] = call float @scalbnf(float noundef 0x4030B33340000000, i32 noundef 10) #[[ATTR2]]
+// ERRNO-NEXT:    [[CALL:%.*]] = call float @scalbnf(float noundef 1.670000e+01, i32 noundef 10) #[[ATTR2]]
 // ERRNO-NEXT:    store float [[CALL]], ptr [[D1_ASCAST]], align 4
 // ERRNO-NEXT:    ret void
 //
@@ -813,7 +813,7 @@ void test_logb_var(double a) {
 // AMDGCNSPIRV-DEFAULT-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-DEFAULT-NEXT:    [[D1:%.*]] = alloca float, align 4
 // AMDGCNSPIRV-DEFAULT-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
-// AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP0:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float 0x4030B33340000000, i32 10)
+// AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP0:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float 1.670000e+01, i32 10)
 // AMDGCNSPIRV-DEFAULT-NEXT:    store float [[TMP0]], ptr addrspace(4) [[D1_ASCAST]], align 4
 // AMDGCNSPIRV-DEFAULT-NEXT:    ret void
 //
@@ -822,7 +822,7 @@ void test_logb_var(double a) {
 // AMDGCNSPIRV-IGNORE-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-IGNORE-NEXT:    [[D1:%.*]] = alloca float, align 4
 // AMDGCNSPIRV-IGNORE-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
-// AMDGCNSPIRV-IGNORE-NEXT:    [[TMP0:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float 0x4030B33340000000, i32 10)
+// AMDGCNSPIRV-IGNORE-NEXT:    [[TMP0:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float 1.670000e+01, i32 10)
 // AMDGCNSPIRV-IGNORE-NEXT:    store float [[TMP0]], ptr addrspace(4) [[D1_ASCAST]], align 4
 // AMDGCNSPIRV-IGNORE-NEXT:    ret void
 //
@@ -831,7 +831,7 @@ void test_logb_var(double a) {
 // AMDGCNSPIRV-STRICT-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-STRICT-NEXT:    [[D1:%.*]] = alloca float, align 4
 // AMDGCNSPIRV-STRICT-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
-// AMDGCNSPIRV-STRICT-NEXT:    [[TMP0:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float 0x4030B33340000000, i32 10)
+// AMDGCNSPIRV-STRICT-NEXT:    [[TMP0:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float 1.670000e+01, i32 10)
 // AMDGCNSPIRV-STRICT-NEXT:    store float [[TMP0]], ptr addrspace(4) [[D1_ASCAST]], align 4
 // AMDGCNSPIRV-STRICT-NEXT:    ret void
 //
@@ -840,7 +840,7 @@ void test_logb_var(double a) {
 // AMDGCNSPIRV-MAYTRAP-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-MAYTRAP-NEXT:    [[D1:%.*]] = alloca float, align 4
 // AMDGCNSPIRV-MAYTRAP-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
-// AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP0:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float 0x4030B33340000000, i32 10)
+// AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP0:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float 1.670000e+01, i32 10)
 // AMDGCNSPIRV-MAYTRAP-NEXT:    store float [[TMP0]], ptr addrspace(4) [[D1_ASCAST]], align 4
 // AMDGCNSPIRV-MAYTRAP-NEXT:    ret void
 //
@@ -849,7 +849,7 @@ void test_logb_var(double a) {
 // AMDGCNSPIRV-ERRNO-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-ERRNO-NEXT:    [[D1:%.*]] = alloca float, align 4
 // AMDGCNSPIRV-ERRNO-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
-// AMDGCNSPIRV-ERRNO-NEXT:    [[CALL:%.*]] = call spir_func addrspace(4) float @scalbnf(float noundef 0x4030B33340000000, i32 noundef 10) #[[ATTR2]]
+// AMDGCNSPIRV-ERRNO-NEXT:    [[CALL:%.*]] = call spir_func addrspace(4) float @scalbnf(float noundef 1.670000e+01, i32 noundef 10) #[[ATTR2]]
 // AMDGCNSPIRV-ERRNO-NEXT:    store float [[CALL]], ptr addrspace(4) [[D1_ASCAST]], align 4
 // AMDGCNSPIRV-ERRNO-NEXT:    ret void
 //
@@ -1022,7 +1022,7 @@ void test_scalbnf_var1(float a) {
 // DEFAULT-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D1]] to ptr
 // DEFAULT-NEXT:    store i32 [[B]], ptr [[B_ADDR_ASCAST]], align 4
 // DEFAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B_ADDR_ASCAST]], align 4
-// DEFAULT-NEXT:    [[TMP1:%.*]] = call float @llvm.ldexp.f32.i32(float 0x402E666660000000, i32 [[TMP0]])
+// DEFAULT-NEXT:    [[TMP1:%.*]] = call float @llvm.ldexp.f32.i32(float 1.520000e+01, i32 [[TMP0]])
 // DEFAULT-NEXT:    store float [[TMP1]], ptr [[D1_ASCAST]], align 4
 // DEFAULT-NEXT:    ret void
 //
@@ -1035,7 +1035,7 @@ void test_scalbnf_var1(float a) {
 // IGNORE-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D1]] to ptr
 // IGNORE-NEXT:    store i32 [[B]], ptr [[B_ADDR_ASCAST]], align 4
 // IGNORE-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B_ADDR_ASCAST]], align 4
-// IGNORE-NEXT:    [[TMP1:%.*]] = call float @llvm.ldexp.f32.i32(float 0x402E666660000000, i32 [[TMP0]])
+// IGNORE-NEXT:    [[TMP1:%.*]] = call float @llvm.ldexp.f32.i32(float 1.520000e+01, i32 [[TMP0]])
 // IGNORE-NEXT:    store float [[TMP1]], ptr [[D1_ASCAST]], align 4
 // IGNORE-NEXT:    ret void
 //
@@ -1048,7 +1048,7 @@ void test_scalbnf_var1(float a) {
 // STRICT-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D1]] to ptr
 // STRICT-NEXT:    store i32 [[B]], ptr [[B_ADDR_ASCAST]], align 4
 // STRICT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B_ADDR_ASCAST]], align 4
-// STRICT-NEXT:    [[TMP1:%.*]] = call float @llvm.ldexp.f32.i32(float 0x402E666660000000, i32 [[TMP0]])
+// STRICT-NEXT:    [[TMP1:%.*]] = call float @llvm.ldexp.f32.i32(float 1.520000e+01, i32 [[TMP0]])
 // STRICT-NEXT:    store float [[TMP1]], ptr [[D1_ASCAST]], align 4
 // STRICT-NEXT:    ret void
 //
@@ -1061,7 +1061,7 @@ void test_scalbnf_var1(float a) {
 // MAYTRAP-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D1]] to ptr
 // MAYTRAP-NEXT:    store i32 [[B]], ptr [[B_ADDR_ASCAST]], align 4
 // MAYTRAP-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B_ADDR_ASCAST]], align 4
-// MAYTRAP-NEXT:    [[TMP1:%.*]] = call float @llvm.ldexp.f32.i32(float 0x402E666660000000, i32 [[TMP0]])
+// MAYTRAP-NEXT:    [[TMP1:%.*]] = call float @llvm.ldexp.f32.i32(float 1.520000e+01, i32 [[TMP0]])
 // MAYTRAP-NEXT:    store float [[TMP1]], ptr [[D1_ASCAST]], align 4
 // MAYTRAP-NEXT:    ret void
 //
@@ -1074,7 +1074,7 @@ void test_scalbnf_var1(float a) {
 // ERRNO-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D1]] to ptr
 // ERRNO-NEXT:    store i32 [[B]], ptr [[B_ADDR_ASCAST]], align 4
 // ERRNO-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B_ADDR_ASCAST]], align 4
-// ERRNO-NEXT:    [[CALL:%.*]] = call float @scalbnf(float noundef 0x402E666660000000, i32 noundef [[TMP0]]) #[[ATTR2]]
+// ERRNO-NEXT:    [[CALL:%.*]] = call float @scalbnf(float noundef 1.520000e+01, i32 noundef [[TMP0]]) #[[ATTR2]]
 // ERRNO-NEXT:    store float [[CALL]], ptr [[D1_ASCAST]], align 4
 // ERRNO-NEXT:    ret void
 //
@@ -1087,7 +1087,7 @@ void test_scalbnf_var1(float a) {
 // AMDGCNSPIRV-DEFAULT-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
 // AMDGCNSPIRV-DEFAULT-NEXT:    store i32 [[B]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
 // AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
-// AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP1:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float 0x402E666660000000, i32 [[TMP0]])
+// AMDGCNSPIRV-DEFAULT-NEXT:    [[TMP1:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float 1.520000e+01, i32 [[TMP0]])
 // AMDGCNSPIRV-DEFAULT-NEXT:    store float [[TMP1]], ptr addrspace(4) [[D1_ASCAST]], align 4
 // AMDGCNSPIRV-DEFAULT-NEXT:    ret void
 //
@@ -1100,7 +1100,7 @@ void test_scalbnf_var1(float a) {
 // AMDGCNSPIRV-IGNORE-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
 // AMDGCNSPIRV-IGNORE-NEXT:    store i32 [[B]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
 // AMDGCNSPIRV-IGNORE-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
-// AMDGCNSPIRV-IGNORE-NEXT:    [[TMP1:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float 0x402E666660000000, i32 [[TMP0]])
+// AMDGCNSPIRV-IGNORE-NEXT:    [[TMP1:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float 1.520000e+01, i32 [[TMP0]])
 // AMDGCNSPIRV-IGNORE-NEXT:    store float [[TMP1]], ptr addrspace(4) [[D1_ASCAST]], align 4
 // AMDGCNSPIRV-IGNORE-NEXT:    ret void
 //
@@ -1113,7 +1113,7 @@ void test_scalbnf_var1(float a) {
 // AMDGCNSPIRV-STRICT-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
 // AMDGCNSPIRV-STRICT-NEXT:    store i32 [[B]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
 // AMDGCNSPIRV-STRICT-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
-// AMDGCNSPIRV-STRICT-NEXT:    [[TMP1:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float 0x402E666660000000, i32 [[TMP0]])
+// AMDGCNSPIRV-STRICT-NEXT:    [[TMP1:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float 1.520000e+01, i32 [[TMP0]])
 // AMDGCNSPIRV-STRICT-NEXT:    store float [[TMP1]], ptr addrspace(4) [[D1_ASCAST]], align 4
 // AMDGCNSPIRV-STRICT-NEXT:    ret void
 //
@@ -1126,7 +1126,7 @@ void test_scalbnf_var1(float a) {
 // AMDGCNSPIRV-MAYTRAP-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
 // AMDGCNSPIRV-MAYTRAP-NEXT:    store i32 [[B]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
 // AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
-// AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP1:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float 0x402E666660000000, i32 [[TMP0]])
+// AMDGCNSPIRV-MAYTRAP-NEXT:    [[TMP1:%.*]] = call addrspace(4) float @llvm.ldexp.f32.i32(float 1.520000e+01, i32 [[TMP0]])
 // AMDGCNSPIRV-MAYTRAP-NEXT:    store float [[TMP1]], ptr addrspace(4) [[D1_ASCAST]], align 4
 // AMDGCNSPIRV-MAYTRAP-NEXT:    ret void
 //
@@ -1139,7 +1139,7 @@ void test_scalbnf_var1(float a) {
 // AMDGCNSPIRV-ERRNO-NEXT:    [[D1_ASCAST:%.*]] = addrspacecast ptr [[D1]] to ptr addrspace(4)
 // AMDGCNSPIRV-ERRNO-NEXT:    store i32 [[B]], ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
 // AMDGCNSPIRV-ERRNO-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[B_ADDR_ASCAST]], align 4
-// AMDGCNSPIRV-ERRNO-NEXT:    [[CALL:%.*]] = call spir_func addrspace(4) float @scalbnf(float noundef 0x402E666660000000, i32 noundef [[TMP0]]) #[[ATTR2]]
+// AMDGCNSPIRV-ERRNO-NEXT:    [[CALL:%.*]] = call spir_func addrspace(4) float @scalbnf(float noundef 1.520000e+01, i32 noundef [[TMP0]]) #[[ATTR2]]
 // AMDGCNSPIRV-ERRNO-NEXT:    store float [[CALL]], ptr addrspace(4) [[D1_ASCAST]], align 4
 // AMDGCNSPIRV-ERRNO-NEXT:    ret void
 //

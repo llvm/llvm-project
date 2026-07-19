@@ -101,3 +101,7 @@ spirv::getRecursiveImpliedCapabilities(spirv::Capability cap) {
 
   return allCaps.takeVector();
 }
+
+std::string spirv::getDecorationString(spirv::Decoration decoration) {
+  return llvm::convertToSnakeFromCamelCase(stringifyDecoration(decoration));
+}

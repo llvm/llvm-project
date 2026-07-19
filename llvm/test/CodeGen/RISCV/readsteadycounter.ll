@@ -6,8 +6,6 @@
 
 ; Verify that we lower @llvm.readsteadycounter() correctly.
 
-declare i64 @llvm.readsteadycounter()
-
 define i64 @test_builtin_readsteadycounter() nounwind {
 ; RV32I-LABEL: test_builtin_readsteadycounter:
 ; RV32I:       # %bb.0:

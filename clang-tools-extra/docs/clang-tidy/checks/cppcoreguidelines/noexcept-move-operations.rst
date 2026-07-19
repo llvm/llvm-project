@@ -1,6 +1,4 @@
 .. title:: clang-tidy - cppcoreguidelines-noexcept-move-operations
-.. meta::
-   :http-equiv=refresh: 5;URL=../performance/noexcept-move-constructor.html
 
 cppcoreguidelines-noexcept-move-operations
 ==========================================

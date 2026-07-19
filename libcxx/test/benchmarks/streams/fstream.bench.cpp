@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03
+
 #include <fstream>
 #include <vector>
 
@@ -20,7 +22,7 @@ static void bm_ofstream_write(benchmark::State& state) {
   for (auto _ : state)
     stream.write(buffer.data(), buffer.size());
 }
-BENCHMARK(bm_ofstream_write);
+BENCHMARK(bm_ofstream_write)->Name("std::ofstream::write(char*, size)");
 
 static void bm_ifstream_read(benchmark::State& state) {
   std::vector<char> buffer;
@@ -38,6 +40,6 @@ static void bm_ifstream_read(benchmark::State& state) {
     stream.seekg(0);
   }
 }
-BENCHMARK(bm_ifstream_read);
+BENCHMARK(bm_ifstream_read)->Name("std::ifstream::read(char*, size)");
 
 BENCHMARK_MAIN();

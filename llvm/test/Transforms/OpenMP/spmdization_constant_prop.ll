@@ -8,7 +8,6 @@
 ; CHECK: store i32 1, ptr addrspace(3) @IsSPMDMode
 ; CHECK-NOT: store i32 0, ptr addrspace(3) @IsSPMDMode
 ;
-target datalayout = "A5-G1-ni:7:8:9-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32"
 target triple = "amdgcn-amd-amdhsa"
 
 %struct.ident_t = type { i32, i32, i32, i32, ptr }
@@ -52,7 +51,7 @@ entry:
 user_code.entry:                                  ; preds = %entry
   %captured_vars_addrs.ascast = addrspacecast ptr addrspace(5) %captured_vars_addrs to ptr
   store ptr %ng1.cast, ptr addrspace(5) %captured_vars_addrs, align 8, !tbaa !6
-  call void @__kmpc_parallel_51(ptr addrspacecast (ptr addrspace(1) @1 to ptr), i32 0, i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__, ptr nonnull @__omp_outlined___wrapper, ptr nonnull %captured_vars_addrs.ascast, i64 2)
+  call void @__kmpc_parallel_60(ptr addrspacecast (ptr addrspace(1) @1 to ptr), i32 0, i32 1, i32 -1, i32 -1, ptr nonnull @__omp_outlined__, ptr nonnull @__omp_outlined___wrapper, ptr nonnull %captured_vars_addrs.ascast, i64 2, i32 0)
   call void @__kmpc_target_deinit()
   br label %common.ret
 
@@ -273,7 +272,7 @@ define internal void @__kmpc_target_deinit() local_unnamed_addr #9 {
   ret void
 }
 
-declare void @__kmpc_parallel_51(ptr noundef readnone captures(none), i32 noundef, i32 noundef, i32 noundef, i32 noundef, ptr noundef, ptr noundef, ptr noundef, i64 noundef)
+declare void @__kmpc_parallel_60(ptr noundef readnone captures(none), i32 noundef, i32 noundef, i32 noundef, i32 noundef, ptr noundef, ptr noundef, ptr noundef, i64 noundef, i32)
 
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias writeonly captures(none), ptr noalias readonly captures(none), i64, i1 immarg) #10

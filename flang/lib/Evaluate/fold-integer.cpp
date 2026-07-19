@@ -761,6 +761,22 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
   } else if (name == "int" || name == "int2" || name == "int8" ||
       name == "uint") {
     if (auto *expr{UnwrapExpr<Expr<SomeType>>(args[0])}) {
+      // Check for enumeration type argument first — extract __ordinal
+      if (auto *derivedExpr{std::get_if<Expr<SomeDerived>>(&expr->u)}) {
+        if (auto type{derivedExpr->GetType()}) {
+          if (const auto *derived{GetDerivedTypeSpec(*type)}) {
+            if (derived->IsEnumerationType()) {
+              if (auto ordExpr{GetEnumerationOrdinal(*derivedExpr)}) {
+                if (auto ordVal{ToInt64(*ordExpr)}) {
+                  return Expr<T>{Constant<T>{Scalar<T>{*ordVal}}};
+                }
+              }
+              // Non-constant enumeration argument — leave unfolded
+              return Expr<T>{std::move(funcRef)};
+            }
+          }
+        }
+      }
       return common::visit(
           [&](auto &&x) -> Expr<T> {
             using From = std::decay_t<decltype(x)>;
@@ -1187,7 +1203,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
       return common::visit(
           [&](auto &kx) {
             if (auto len{kx.LEN()}) {
-              if (IsScopeInvariantExpr(*len)) {
+              if (IsScopeInvariantExpr(*len, &context)) {
                 return Fold(context, ConvertToType<T>(*std::move(len)));
               } else {
                 return Expr<T>{std::move(funcRef)};
@@ -1509,7 +1525,7 @@ Expr<TypeParamInquiry::Result> FoldOperation(
           paramValue{
               declType->derivedTypeSpec().FindParameter(parameterName)}) {
         const semantics::MaybeIntExpr &paramExpr{paramValue->GetExplicit()};
-        if (paramExpr && IsConstantExpr(*paramExpr)) {
+        if (paramExpr && IsConstantExpr(*paramExpr, &context)) {
           Expr<SomeInteger> intExpr{*paramExpr};
           return Fold(context,
               ConvertToType<TypeParamInquiry::Result>(std::move(intExpr)));
@@ -1530,7 +1546,7 @@ Expr<TypeParamInquiry::Result> FoldOperation(
           if (details) {
             isLen = details->attr() == common::TypeParamAttr::Len;
             const semantics::MaybeIntExpr &initExpr{details->init()};
-            if (initExpr && IsConstantExpr(*initExpr) &&
+            if (initExpr && IsConstantExpr(*initExpr, &context) &&
                 (!isLen || ToInt64(*initExpr))) {
               Expr<SomeInteger> expr{*initExpr};
               return Fold(context,

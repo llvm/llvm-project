@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestBreakpointIllegal(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     @skipIf(archs=no_match(["rv64gc"]))
     def test_4(self):
         self.build()

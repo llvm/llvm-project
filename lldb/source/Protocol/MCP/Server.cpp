@@ -14,6 +14,7 @@
 #include "lldb/Protocol/MCP/Protocol.h"
 #include "lldb/Protocol/MCP/Transport.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Signals.h"
@@ -49,17 +50,23 @@ void ServerInfoHandle::Remove() {
 }
 
 json::Value lldb_protocol::mcp::toJSON(const ServerInfo &SM) {
-  return json::Object{{"connection_uri", SM.connection_uri}};
+  return json::Object{{"connection_uri", SM.connection_uri}, {"pid", SM.pid}};
 }
 
 bool lldb_protocol::mcp::fromJSON(const json::Value &V, ServerInfo &SM,
                                   json::Path P) {
   json::ObjectMapper O(V, P);
-  return O && O.map("connection_uri", SM.connection_uri);
+  return O && O.map("connection_uri", SM.connection_uri) &&
+         O.mapOptional("pid", SM.pid);
 }
 
 Expected<ServerInfoHandle> ServerInfo::Write(const ServerInfo &info) {
-  std::string buf = formatv("{0}", toJSON(info)).str();
+  // The file is written by the process that hosts the server, so stamp its pid
+  // to keep it consistent with the filename below.
+  ServerInfo stamped = info;
+  stamped.pid = getpid();
+
+  std::string buf = formatv("{0}", toJSON(stamped)).str();
   size_t num_bytes = buf.size();
 
   FileSpec user_lldb_dir = HostInfo::GetUserLLDBDir();
@@ -69,7 +76,7 @@ Expected<ServerInfoHandle> ServerInfo::Write(const ServerInfo &info) {
     return error.takeError();
 
   FileSpec mcp_registry_entry_path = user_lldb_dir.CopyByAppendingPathComponent(
-      formatv("lldb-mcp-{0}.json", getpid()).str());
+      formatv("lldb-mcp-{0}.json", stamped.pid).str());
 
   const File::OpenOptions flags = File::eOpenOptionWriteOnly |
                                   File::eOpenOptionCanCreate |
@@ -143,7 +150,7 @@ MCPBinderUP Server::Bind(MCPTransport &transport) {
   return binder_up;
 }
 
-llvm::Error Server::Accept(MainLoop &loop, MCPTransportUP transport) {
+llvm::Error Server::Accept(MCPTransportUP transport) {
   MCPBinderUP binder = Bind(*transport);
   MCPTransport *transport_ptr = transport.get();
   binder->OnDisconnect([this, transport_ptr]() {
@@ -155,12 +162,10 @@ llvm::Error Server::Accept(MainLoop &loop, MCPTransportUP transport) {
     Logv("Transport error: {0}", llvm::toString(std::move(err)));
   });
 
-  auto handle = transport->RegisterMessageHandler(loop, *binder);
-  if (!handle)
-    return handle.takeError();
+  if (llvm::Error err = transport->RegisterMessageHandler(*binder))
+    return err;
 
-  m_instances[transport_ptr] =
-      Client{std::move(*handle), std::move(transport), std::move(binder)};
+  m_instances[transport_ptr] = Client{std::move(transport), std::move(binder)};
   return llvm::Error::success();
 }
 
@@ -190,7 +195,7 @@ Server::ToolsCallHandler(const CallToolParams &params) {
 
   auto it = m_tools.find(tool_name);
   if (it == m_tools.end())
-    return llvm::createStringError(llvm::formatv("no tool \"{0}\"", tool_name));
+    return llvm::createStringErrorV("no tool \"{0}\"", tool_name);
 
   ToolArguments tool_args;
   if (params.arguments)

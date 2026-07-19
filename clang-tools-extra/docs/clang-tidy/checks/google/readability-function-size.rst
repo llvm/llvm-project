@@ -1,6 +1,4 @@
 .. title:: clang-tidy - google-readability-function-size
-.. meta::
-   :http-equiv=refresh: 5;URL=../readability/function-size.html
 
 google-readability-function-size
 ================================

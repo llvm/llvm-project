@@ -44,6 +44,11 @@ RValue ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
   return RValue::getIgnored();
 }
 
+RValue ABIInfo::EmitZOSVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                             QualType Ty, AggValueSlot Slot) const {
+  return RValue::getIgnored();
+}
+
 bool ABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
   return false;
 }
@@ -251,6 +256,11 @@ llvm::Value *ABIInfo::createCoercedLoad(Address SrcAddr, const ABIArgInfo &AI,
 void ABIInfo::createCoercedStore(llvm::Value *Val, Address DstAddr,
                                  const ABIArgInfo &AI, bool DestIsVolatile,
                                  CodeGenFunction &CGF) const {}
+
+ABIArgInfo ABIInfo::classifyArgForArm64ECVarArg(QualType Ty) const {
+  llvm_unreachable("Only implemented for x86");
+}
+
 // Pin the vtable to this file.
 SwiftABIInfo::~SwiftABIInfo() = default;
 

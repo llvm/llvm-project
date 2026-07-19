@@ -15,12 +15,16 @@
 #include <__memory/addressof.h>
 #include <__mutex/tag_types.h>
 #include <__system_error/throw_system_error.h>
+#include <__utility/move.h>
 #include <__utility/swap.h>
 #include <cerrno>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -74,24 +78,19 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI unique_lock& operator=(unique_lock&& __u) _NOEXCEPT {
-    if (__owns_)
-      __m_->unlock();
-
-    __m_        = __u.__m_;
-    __owns_     = __u.__owns_;
-    __u.__m_    = nullptr;
-    __u.__owns_ = false;
+    if (this != std::addressof(__u))
+      unique_lock(std::move(__u)).swap(*this);
     return *this;
   }
 
   _LIBCPP_HIDE_FROM_ABI void lock();
-  _LIBCPP_HIDE_FROM_ABI bool try_lock();
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool try_lock();
 
   template <class _Rep, class _Period>
-  _LIBCPP_HIDE_FROM_ABI bool try_lock_for(const chrono::duration<_Rep, _Period>& __d);
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool try_lock_for(const chrono::duration<_Rep, _Period>& __d);
 
   template <class _Clock, class _Duration>
-  _LIBCPP_HIDE_FROM_ABI bool try_lock_until(const chrono::time_point<_Clock, _Duration>& __t);
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool try_lock_until(const chrono::time_point<_Clock, _Duration>& __t);
 
   _LIBCPP_HIDE_FROM_ABI void unlock();
 
@@ -107,9 +106,9 @@ public:
     return __m;
   }
 
-  _LIBCPP_HIDE_FROM_ABI bool owns_lock() const _NOEXCEPT { return __owns_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool owns_lock() const _NOEXCEPT { return __owns_; }
   _LIBCPP_HIDE_FROM_ABI explicit operator bool() const _NOEXCEPT { return __owns_; }
-  _LIBCPP_HIDE_FROM_ABI mutex_type* mutex() const _NOEXCEPT { return __m_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI mutex_type* mutex() const _NOEXCEPT { return __m_; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(unique_lock);
 
@@ -169,5 +168,7 @@ inline _LIBCPP_HIDE_FROM_ABI void swap(unique_lock<_Mutex>& __x, unique_lock<_Mu
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___MUTEX_UNIQUE_LOCK_H

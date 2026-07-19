@@ -16,7 +16,7 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
 
-static constexpr llvm::StringRef DefaultExclusionStr =
+static constexpr StringRef DefaultExclusionStr =
     "::std::map;::std::unordered_map;::std::flat_map";
 
 ProBoundsAvoidUncheckedContainerAccessCheck::
@@ -95,7 +95,7 @@ void ProBoundsAvoidUncheckedContainerAccessCheck::registerMatchers(
               cxxMethodDecl(
                   hasOverloadedOperatorName("[]"),
                   anyOf(parameterCountIs(0), parameterCountIs(1)),
-                  unless(matchers::matchesAnyListedName(ExcludedClasses)))
+                  unless(matchers::matchesAnyListedRegexName(ExcludedClasses)))
                   .bind("operator")))
           .bind("caller"),
       this);
@@ -103,7 +103,6 @@ void ProBoundsAvoidUncheckedContainerAccessCheck::registerMatchers(
 
 void ProBoundsAvoidUncheckedContainerAccessCheck::check(
     const MatchFinder::MatchResult &Result) {
-
   const auto *MatchedExpr = Result.Nodes.getNodeAs<CallExpr>("caller");
 
   if (FixMode == None) {
@@ -177,7 +176,7 @@ void ProBoundsAvoidUncheckedContainerAccessCheck::check(
     }
   } else if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(MatchedExpr)) {
     // Case: a.operator[](i) or a->operator[](i)
-    const auto *Callee = dyn_cast<MemberExpr>(MCE->getCallee());
+    const auto *Callee = cast<MemberExpr>(MCE->getCallee());
 
     if (FixMode == At) {
       // Cases: a.operator[](i) => a.at(i) and a->operator[](i) => a->at(i)
@@ -215,7 +214,7 @@ void ProBoundsAvoidUncheckedContainerAccessCheck::check(
           "(";
 
       if (Callee->isArrow())
-        BeginInsertion += "*";
+        BeginInsertion += '*';
 
       // Since C++23, the subscript operator may also be called without an
       // argument, which makes the following distinction necessary

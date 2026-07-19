@@ -37,6 +37,26 @@
 using namespace lldb;
 using namespace lldb_private;
 
+namespace {
+/// RAII scope that resets the result's status to eReturnStatusInvalid on entry
+/// and asserts on exit that DoExecute changed it (directly via SetStatus, or
+/// indirectly via AppendError/SetError, which call SetStatus internally).
+class DoExecuteStatusCheck {
+public:
+  explicit DoExecuteStatusCheck(CommandReturnObject &result)
+      : m_result(result) {
+    m_result.SetStatus(eReturnStatusInvalid);
+  }
+  ~DoExecuteStatusCheck() {
+    assert(m_result.GetStatus() != eReturnStatusInvalid &&
+           "DoExecute did not set a status on the CommandReturnObject");
+  }
+
+private:
+  CommandReturnObject &m_result;
+};
+} // namespace
+
 // CommandObject
 
 CommandObject::CommandObject(CommandInterpreter &interpreter,
@@ -147,28 +167,38 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
   // we don't want any CommandObject instances to keep any of these objects
   // around longer than for a single command. Every command should call
   // CommandObject::Cleanup() after it has completed.
-  assert(!m_exe_ctx.GetTargetPtr());
+  //
+  // The dummy target is allowed here because it is always alive, never causes
+  // resource leaks, and can appear when a command (e.g. "command source") is
+  // invoked re-entrantly before the outer Cleanup() has run.
+  assert(!m_exe_ctx.GetTargetPtr() ||
+         m_exe_ctx.GetTargetPtr()->IsDummyTarget());
   assert(!m_exe_ctx.GetProcessPtr());
   assert(!m_exe_ctx.GetThreadPtr());
   assert(!m_exe_ctx.GetFramePtr());
 
   // Lock down the interpreter's execution context prior to running the command
   // so we guarantee the selected target, process, thread and frame can't go
-  // away during the execution
-  m_exe_ctx = m_interpreter.GetExecutionContext();
-
+  // away during the execution. The dummy target is only adopted when the
+  // command opts in via eCommandAllowsDummyTarget, so other commands won't
+  // accidentally see it through m_exe_ctx.
   const uint32_t flags = GetFlags().Get();
+  const bool adopt_dummy_target = flags & eCommandAllowsDummyTarget;
+  m_exe_ctx = m_interpreter.GetExecutionContext(adopt_dummy_target);
+
   if (flags & (eCommandRequiresTarget | eCommandRequiresProcess |
                eCommandRequiresThread | eCommandRequiresFrame |
                eCommandTryTargetAPILock)) {
 
-    if ((flags & eCommandRequiresTarget) && !m_exe_ctx.HasTargetScope()) {
+    Target *target = m_exe_ctx.GetTargetPtr();
+    if ((flags & eCommandRequiresTarget) &&
+        (!target || target->IsDummyTarget())) {
       result.AppendError(GetInvalidTargetDescription());
       return false;
     }
 
     if ((flags & eCommandRequiresProcess) && !m_exe_ctx.HasProcessScope()) {
-      if (!m_exe_ctx.HasTargetScope())
+      if (!target || target->IsDummyTarget())
         result.AppendError(GetInvalidTargetDescription());
       else
         result.AppendError(GetInvalidProcessDescription());
@@ -176,7 +206,7 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
     }
 
     if ((flags & eCommandRequiresThread) && !m_exe_ctx.HasThreadScope()) {
-      if (!m_exe_ctx.HasTargetScope())
+      if (!target || target->IsDummyTarget())
         result.AppendError(GetInvalidTargetDescription());
       else if (!m_exe_ctx.HasProcessScope())
         result.AppendError(GetInvalidProcessDescription());
@@ -186,7 +216,7 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
     }
 
     if ((flags & eCommandRequiresFrame) && !m_exe_ctx.HasFrameScope()) {
-      if (!m_exe_ctx.HasTargetScope())
+      if (!target || target->IsDummyTarget())
         result.AppendError(GetInvalidTargetDescription());
       else if (!m_exe_ctx.HasProcessScope())
         result.AppendError(GetInvalidProcessDescription());
@@ -204,8 +234,7 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
     }
 
     if (flags & eCommandTryTargetAPILock) {
-      Target *target = m_exe_ctx.GetTargetPtr();
-      if (target)
+      if (target && !target->IsDummyTarget())
         m_api_locker =
             std::unique_lock<std::recursive_mutex>(target->GetAPIMutex());
     }
@@ -272,7 +301,7 @@ void CommandObject::Cleanup() {
 void CommandObject::HandleCompletion(CompletionRequest &request) {
 
   m_exe_ctx = m_interpreter.GetExecutionContext();
-  auto reset_ctx = llvm::make_scope_exit([this]() { Cleanup(); });
+  llvm::scope_exit reset_ctx([this]() { Cleanup(); });
 
   // Default implementation of WantsCompletion() is !WantsRawCommandString().
   // Subclasses who want raw command string but desire, for example, argument
@@ -753,23 +782,24 @@ Target &CommandObject::GetDummyTarget() {
   return m_interpreter.GetDebugger().GetDummyTarget();
 }
 
-Target &CommandObject::GetTarget() {
-  // Prefer the frozen execution context in the command object.
-  if (Target *target = m_exe_ctx.GetTargetPtr())
-    return *target;
+Target *CommandObject::GetTarget() {
+  // Prefer the frozen execution context in the command object, falling back
+  // to the interpreter's execution context for paths like multi-line
+  // expressions or breakpoint callbacks that run after DoExecute has
+  // finished. Both honor eCommandAllowsDummyTarget when deciding whether to
+  // substitute the dummy target, so no post-hoc filtering is needed.
+  const uint32_t flags = GetFlags().Get();
+  const bool adopt_dummy_target = flags & eCommandAllowsDummyTarget;
+  Target *target = m_exe_ctx.GetTargetPtr();
+  if (!target)
+    target =
+        m_interpreter.GetExecutionContext(adopt_dummy_target).GetTargetPtr();
 
-  // Fallback to the command interpreter's execution context in case we get
-  // called after DoExecute has finished. For example, when doing multi-line
-  // expression that uses an input reader or breakpoint callbacks.
-  if (Target *target = m_interpreter.GetExecutionContext().GetTargetPtr())
-    return *target;
-
-  // Finally, if we have no other target, get the selected target.
-  if (TargetSP target_sp = m_interpreter.GetDebugger().GetSelectedTarget())
-    return *target_sp;
-
-  // We only have the dummy target.
-  return GetDummyTarget();
+  // CheckRequirements has already guaranteed a non-dummy target for any
+  // command declaring a Requires* flag.
+  assert(target || !(flags & (eCommandRequiresTarget | eCommandRequiresProcess |
+                              eCommandRequiresThread | eCommandRequiresFrame)));
+  return target;
 }
 
 Thread *CommandObject::GetDefaultThread() {
@@ -781,7 +811,7 @@ Thread *CommandObject::GetDefaultThread() {
   if (!process) {
     Target *target = m_exe_ctx.GetTargetPtr();
     if (!target) {
-      target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+      target = m_interpreter.GetSelectedTarget().get();
     }
     if (target)
       process = target->GetProcessSP().get();
@@ -827,6 +857,7 @@ void CommandObjectParsed::Execute(const char *args_string,
           return;
         }
         m_interpreter.IncreaseCommandUsage(*this);
+        DoExecuteStatusCheck check(result);
         DoExecute(cmd_args, result);
       }
     }
@@ -847,8 +878,10 @@ void CommandObjectRaw::Execute(const char *args_string,
     handled = InvokeOverrideCallback(argv, result);
   }
   if (!handled) {
-    if (CheckRequirements(result))
+    if (CheckRequirements(result)) {
+      DoExecuteStatusCheck check(result);
       DoExecute(args_string, result);
+    }
 
     Cleanup();
   }

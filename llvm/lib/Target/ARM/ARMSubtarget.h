@@ -258,6 +258,7 @@ public:
   InstructionSelector *getInstructionSelector() const override;
   const LegalizerInfo *getLegalizerInfo() const override;
   const RegisterBankInfo *getRegBankInfo() const override;
+  void initLibcallLoweringInfo(LibcallLoweringInfo &Info) const override;
 
 private:
   ARMSelectionDAGInfo TSInfo;
@@ -412,8 +413,6 @@ public:
   const std::string & getCPUString() const { return CPUString; }
 
   bool isLittle() const { return IsLittle; }
-
-  unsigned getMispredictionPenalty() const;
 
   /// Returns true if machine scheduler should be enabled.
   bool enableMachineScheduler() const override;

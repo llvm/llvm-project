@@ -7,12 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "UseNewMLIROpBuilderCheck.h"
+#include "../utils/LexerUtils.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Transformer/RangeSelector.h"
 #include "clang/Tooling/Transformer/RewriteRule.h"
-#include "clang/Tooling/Transformer/SourceCode.h"
 #include "clang/Tooling/Transformer/Stencil.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -51,16 +50,15 @@ static EditGenerator rewrite(RangeSelector Call, RangeSelector Builder) {
     auto NextToken = [&](std::optional<Token> CurrentToken) {
       if (!CurrentToken)
         return CurrentToken;
-      if (CurrentToken->is(clang::tok::eof))
+      if (CurrentToken->is(tok::eof))
         return std::optional<Token>();
-      return clang::Lexer::findNextToken(CurrentToken->getLocation(), SM,
-                                         LangOpts);
+      return utils::lexer::findNextTokenSkippingComments(
+          CurrentToken->getLocation(), SM, LangOpts);
     };
     std::optional<Token> LessToken =
-        clang::Lexer::findNextToken(Begin, SM, LangOpts);
-    while (LessToken && LessToken->getKind() != clang::tok::less) {
+        utils::lexer::findNextTokenSkippingComments(Begin, SM, LangOpts);
+    while (LessToken && LessToken->getKind() != tok::less)
       LessToken = NextToken(LessToken);
-    }
     if (!LessToken) {
       return llvm::make_error<llvm::StringError>(llvm::errc::invalid_argument,
                                                  "missing '<' token");
@@ -68,7 +66,7 @@ static EditGenerator rewrite(RangeSelector Call, RangeSelector Builder) {
 
     std::optional<Token> EndToken = NextToken(LessToken);
     std::optional<Token> GreaterToken = NextToken(EndToken);
-    for (; GreaterToken && GreaterToken->getKind() != clang::tok::greater;
+    for (; GreaterToken && GreaterToken->getKind() != tok::greater;
          GreaterToken = NextToken(GreaterToken)) {
       EndToken = GreaterToken;
     }
@@ -78,7 +76,7 @@ static EditGenerator rewrite(RangeSelector Call, RangeSelector Builder) {
     }
 
     std::optional<Token> ArgStart = NextToken(GreaterToken);
-    if (!ArgStart || ArgStart->getKind() != clang::tok::l_paren) {
+    if (!ArgStart || ArgStart->getKind() != tok::l_paren) {
       return llvm::make_error<llvm::StringError>(llvm::errc::invalid_argument,
                                                  "missing '(' token");
     }
@@ -87,7 +85,7 @@ static EditGenerator rewrite(RangeSelector Call, RangeSelector Builder) {
       return llvm::make_error<llvm::StringError>(llvm::errc::invalid_argument,
                                                  "unexpected end of file");
     }
-    const bool HasArgs = Arg->getKind() != clang::tok::r_paren;
+    const bool HasArgs = Arg->getKind() != tok::r_paren;
 
     Expected<CharSourceRange> BuilderRange = Builder(Result);
     if (!BuilderRange)
@@ -95,7 +93,7 @@ static EditGenerator rewrite(RangeSelector Call, RangeSelector Builder) {
 
     // Helper for concatting below.
     auto GetText = [&](const CharSourceRange &Range) {
-      return clang::Lexer::getSourceText(Range, SM, LangOpts);
+      return Lexer::getSourceText(Range, SM, LangOpts);
     };
 
     Edit Replace;

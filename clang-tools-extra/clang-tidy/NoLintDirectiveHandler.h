@@ -33,8 +33,8 @@ public:
   ~NoLintDirectiveHandler();
 
   bool shouldSuppress(DiagnosticsEngine::Level DiagLevel,
-                      const Diagnostic &Diag, llvm::StringRef DiagName,
-                      llvm::SmallVectorImpl<tooling::Diagnostic> &NoLintErrors,
+                      const Diagnostic &Diag, StringRef DiagName,
+                      SmallVectorImpl<tooling::Diagnostic> &NoLintErrors,
                       bool AllowIO, bool EnableNoLintBlocks);
 
 private:

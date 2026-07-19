@@ -238,8 +238,8 @@ def SPIRV_FRemOp : SPIRV_ArithmeticBinaryOp<"FRem", SPIRV_Float, []> {
     #### Example:
 
     ```mlir
-    %4 = spirv.FRemOp %0, %1 : f32
-    %5 = spirv.FRemOp %2, %3 : vector<4xf32>
+    %4 = spirv.FRem %0, %1 : f32
+    %5 = spirv.FRem %2, %3 : vector<4xf32>
     ```
   }];
 }
@@ -260,8 +260,8 @@ def SPIRV_FSubOp : SPIRV_ArithmeticBinaryOpWithCoopMatrix<"FSub", SPIRV_Float, [
     #### Example:
 
     ```mlir
-    %4 = spirv.FRemOp %0, %1 : f32
-    %5 = spirv.FRemOp %2, %3 : vector<4xf32>
+    %4 = spirv.FSub %0, %1 : f32
+    %5 = spirv.FSub %2, %3 : vector<4xf32>
     ```
   }];
 }
@@ -439,6 +439,8 @@ def SPIRV_ISubBorrowOp : SPIRV_ArithmeticExtendedBinaryOp<"ISubBorrow",
     %2 = spirv.ISubBorrow %0, %1 : !spirv.struct<(vector<2xi32>, vector<2xi32>)>
     ```
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 // -----
@@ -462,12 +464,12 @@ def SPIRV_DotOp : SPIRV_Op<"Dot",
   }];
 
   let arguments = (ins
-    SPIRV_VectorOf<SPIRV_AnyFloat>:$vector1,
-    SPIRV_VectorOf<SPIRV_AnyFloat>:$vector2
+    AnyTypeOf<[SPIRV_FloatVector, SPIRV_VectorOf<SPIRV_BFloat16KHR>]>:$vector1,
+    AnyTypeOf<[SPIRV_FloatVector, SPIRV_VectorOf<SPIRV_BFloat16KHR>]>:$vector2
   );
 
   let results = (outs
-    SPIRV_AnyFloat:$result
+    AnyTypeOf<[SPIRV_Float, SPIRV_BFloat16KHR]>:$result
   );
 
   let assemblyFormat = "operands attr-dict `:` type($vector1) `->` type($result)";

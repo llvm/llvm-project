@@ -32,7 +32,7 @@
 #  include <sys/time.h> // for gettimeofday and timeval
 #endif
 
-#if defined(__LLVM_LIBC__)
+#if _LIBCPP_LIBC_LLVM_LIBC
 #  define _LIBCPP_HAS_TIMESPEC_GET
 #endif
 
@@ -42,6 +42,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated")
@@ -76,4 +77,5 @@ _FilesystemClock::time_point _FilesystemClock::now() noexcept {
 #endif
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_FILESYSTEM

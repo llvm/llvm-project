@@ -8,6 +8,7 @@
 #ifndef MLIR_CONVERSION_GPUCOMMON_GPUOPSLOWERING_H_
 #define MLIR_CONVERSION_GPUCOMMON_GPUOPSLOWERING_H_
 
+#include "mlir/Conversion/LLVMCommon/LowerFunctionDiscardablesToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
@@ -73,6 +74,9 @@ struct GPUFuncOpLoweringOptions {
   /// The attribute name to to set block size. Null if no attribute should be
   /// used.
   StringAttr kernelBlockSizeAttributeName;
+  /// The attribute name to to set cluster size. Null if no attribute should be
+  /// used.
+  StringAttr kernelClusterSizeAttributeName;
 
   /// The calling convention to use for kernel functions.
   LLVM::CConv kernelCallingConvention = LLVM::CConv::C;
@@ -93,6 +97,7 @@ struct GPUFuncOpLowering : ConvertOpToLLVMPattern<gpu::GPUFuncOp> {
         workgroupAddrSpace(options.workgroupAddrSpace),
         kernelAttributeName(options.kernelAttributeName),
         kernelBlockSizeAttributeName(options.kernelBlockSizeAttributeName),
+        kernelClusterSizeAttributeName(options.kernelClusterSizeAttributeName),
         kernelCallingConvention(options.kernelCallingConvention),
         nonKernelCallingConvention(options.nonKernelCallingConvention),
         encodeWorkgroupAttributionsAsArguments(
@@ -101,6 +106,12 @@ struct GPUFuncOpLowering : ConvertOpToLLVMPattern<gpu::GPUFuncOp> {
   LogicalResult
   matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
+
+  /// Lower discardable attrs like `func` lowering, then set `llvm.func`
+  /// properties and append GPU / target-specific discardable metadata.
+  FailureOr<LoweredLLVMFuncAttrs>
+  buildLoweredGPULLVMFuncAttrs(gpu::GPUFuncOp gpuFuncOp, Type llvmFuncType,
+                               OpBuilder &rewriter) const;
 
 private:
   /// The address space to use for `alloca`s in private memory.
@@ -114,6 +125,9 @@ private:
   /// The attribute name to to set block size. Null if no attribute should be
   /// used.
   StringAttr kernelBlockSizeAttributeName;
+  /// The attribute name to to set cluster size. Null if no attribute should be
+  /// used.
+  StringAttr kernelClusterSizeAttributeName;
 
   /// The calling convention to use for kernel functions
   LLVM::CConv kernelCallingConvention;

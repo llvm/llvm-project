@@ -184,6 +184,20 @@ public:
     return fieldIdxMap.lookup(fd);
   }
 
+  bool hasCIRField(const clang::FieldDecl *fd) const {
+    fd = fd->getCanonicalDecl();
+    return fieldIdxMap.contains(fd);
+  }
+
+  unsigned getNonVirtualBaseCIRFieldNo(const CXXRecordDecl *rd) const {
+    assert(nonVirtualBases.count(rd) && "Invalid non-virtual base!");
+    return nonVirtualBases.lookup(rd);
+  }
+
+  bool hasNonVirtualBaseCIRField(const CXXRecordDecl *rd) const {
+    return nonVirtualBases.contains(rd);
+  }
+
   /// Check whether this struct can be C++ zero-initialized
   /// with a zeroinitializer.
   bool isZeroInitializable() const { return zeroInitializable; }

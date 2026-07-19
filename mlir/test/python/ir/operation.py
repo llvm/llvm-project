@@ -5,7 +5,7 @@ import io
 from tempfile import NamedTemporaryFile
 from mlir.ir import *
 from mlir.dialects.builtin import ModuleOp
-from mlir.dialects import arith, func, scf
+from mlir.dialects import arith, func, scf, shape
 from mlir.dialects._ods_common import _cext
 from mlir.extras import types as T
 
@@ -43,6 +43,10 @@ def testTraverseOpRegionBlockIterators():
     )
     op = module.operation
     assert op.context is ctx
+    # Note, __nb_signature__ stores the fully-qualified signature - the actual type stub emitted is
+    # class RegionSequence(Sequence[Region])
+    # CHECK: class RegionSequence(collections.abc.Sequence[mlir._mlir_libs._mlir.ir.Region])
+    print(RegionSequence.__nb_signature__)
     # Get the block using iterators off of the named collections.
     regions = list(op.regions[:])
     blocks = list(regions[0].blocks)
@@ -82,7 +86,7 @@ def testTraverseOpRegionBlockIterators():
     # CHECK:           OP 1: func.return
     walk_operations("", op)
 
-    # CHECK:    Region iter: <mlir.{{.+}}.RegionIterator
+    # CHECK:    Region iter: <iterator
     # CHECK:     Block iter: <mlir.{{.+}}.BlockIterator
     # CHECK: Operation iter: <mlir.{{.+}}.OperationIterator
     print("   Region iter:", iter(op.regions))
@@ -104,6 +108,17 @@ def testTraverseOpRegionBlockIterators():
     except IndexError as e:
         # CHECK: attempt to access out of bounds operation
         print(e)
+
+    # Verify that iterating a sliced region list yields the correct
+    # number of elements (i.e. respects length and step).
+    with Location.unknown(ctx):
+        op4 = Operation.create("custom.op", regions=4)
+        r = op4.regions
+        assert len(list(r[:])) == 4
+        assert len(list(r[1:])) == 3
+        assert len(list(r[::2])) == 2
+        assert len(list(r[1:3])) == 2
+        assert len(list(r[::-1])) == 4
 
 
 # Verify index based traversal of the op/region/block hierarchy.
@@ -186,8 +201,8 @@ def testBlockArgumentList():
     """,
             ctx,
         )
-        func = module.body.operations[0]
-        entry_block = func.regions[0].blocks[0]
+        func_op = module.body.operations[0]
+        entry_block = func_op.regions[0].blocks[0]
         assert len(entry_block.arguments) == 3
         # CHECK: Argument 0, type i32
         # CHECK: Argument 1, type f64
@@ -202,6 +217,21 @@ def testBlockArgumentList():
         # CHECK: Argument 2, type i24
         for arg in entry_block.arguments:
             print(f"Argument {arg.arg_number}, type {arg.type}")
+
+        # CHECK: Matched Arg 0, type i8
+        # CHECK: Matched Arg 1, type i16
+        # CHECK: Matched Arg 2, type i24
+        match func_op:
+            case func.FuncOp(body=Region(blocks=[Block(arguments=[a0, a1])])):
+                assert False
+            case func.FuncOp(body=Region(blocks=[Block(arguments=[a0, a1, a2, a3])])):
+                assert False
+            case func.FuncOp(body=Region(blocks=[Block(arguments=[a0, a1, a2])])):
+                print(f"Matched Arg 0, type {a0.type}")
+                print(f"Matched Arg 1, type {a1.type}")
+                print(f"Matched Arg 2, type {a2.type}")
+            case _:
+                assert False
 
         # Check that slicing works for block argument lists.
         # CHECK: Argument 1, type i16
@@ -246,14 +276,33 @@ def testOperationOperands():
         return
       }"""
         )
-        func = module.body.operations[0]
-        entry_block = func.regions[0].blocks[0]
+        func_op = module.body.operations[0]
+        entry_block = func_op.regions[0].blocks[0]
         consumer = entry_block.operations[1]
         assert len(consumer.operands) == 2
         # CHECK: Operand 0, type i32
         # CHECK: Operand 1, type i64
         for i, operand in enumerate(consumer.operands):
             print(f"Operand {i}, type {operand.type}")
+
+        match module.body.operations:
+            case [
+                func.FuncOp(
+                    body=Region(
+                        blocks=[
+                            Block(
+                                operations=[
+                                    _,
+                                    OpView(operands=[o1, o2]) as matched_consumer,
+                                    *_,
+                                ],
+                            ),
+                        ],
+                    ),
+                ),
+            ]:
+                print(f"Matched Operand 0, type {o1.type}")
+                print(f"Matched Operand 1, type {o2.type}")
 
 
 # CHECK-LABEL: TEST: testOperationOperandsSlice
@@ -476,6 +525,26 @@ def testOperationResultList():
     for res in call.results:
         print(f"Result {res.result_number}, type {res.type}")
 
+    # CHECK: Matched Result r0, type i32
+    # CHECK: Matched Result r1, type f64
+    # CHECK: Matched Result r2, type index
+    match caller:
+        case func.FuncOp(
+            body=Region(
+                blocks=[
+                    Block(
+                        operations=[OpView(results=[r0, r1, r2]) as matched_call, *_],
+                    ),
+                ],
+            ),
+        ):
+            assert matched_call == call
+            print(f"Matched Result r0, type {r0.type}")
+            print(f"Matched Result r1, type {r1.type}")
+            print(f"Matched Result r2, type {r2.type}")
+        case _:
+            assert False
+
     # CHECK: Result type i32
     # CHECK: Result type f64
     # CHECK: Result type index
@@ -594,6 +663,34 @@ def testOperationAttributes():
     # CHECK: Dict mapping {'dependent': 'text', 'other.attribute': 3.0, 'some.attribute': 1}
     print("Dict mapping", d)
 
+    # Structural pattern matching test using Mapping
+
+    # CHECK: Matched Mapping Attribute 'some.attribute': 1
+    # CHECK: Matched Mapping Attribute 'other.attribute': 3.0
+    # CHECK: Matched Mapping Attribute 'dependent': text
+    match op:
+        case OpView(attributes={"does_not_exist": a0}):
+            assert False
+        case OpView(
+            attributes={
+                "some.attribute": IntegerAttr(value=some_attr_val) as some_attr,
+                "other.attribute": FloatAttr() as other_attr,
+                "dependent": StringAttr() as dep_attr,
+                **other_attributes,
+            }
+        ):
+            print(f"Matched Mapping Attribute 'some.attribute': {some_attr_val}")
+            print(f"Matched Mapping Attribute 'other.attribute': {other_attr.value}")
+            print(f"Matched Mapping Attribute 'dependent': {dep_attr.value}")
+            assert type(other_attributes) == dict
+            assert len(other_attributes) == 0
+            assert some_attr == op.attributes.get("some.attribute")
+            assert other_attr == op.attributes.get("other.attribute", None)
+            assert dep_attr == op.attributes.get("dependent", "Default value")
+        case _:
+            print("Did not match!")
+            assert False
+
     # Check that exceptions are raised as expected.
     try:
         op.attributes["does_not_exist"]
@@ -608,6 +705,41 @@ def testOperationAttributes():
         pass
     else:
         assert False, "expected IndexError on accessing an out-of-bounds attribute"
+
+    # Check that exceptions are raised when `get` is used with non-str arg.
+    try:
+        op.attributes.get(0)
+    except TypeError:
+        pass
+    else:
+        assert False, "expected TypeError using int as key for get()"
+
+    try:
+        op.attributes.get(0, None)
+    except TypeError:
+        pass
+    else:
+        assert False, "expected TypeError using int as key for get()"
+
+    try:
+        op.attributes.get([], None)
+    except TypeError:
+        pass
+    else:
+        assert False, "expected TypeError using list as key for get()"
+
+    try:
+        match op:
+            case OpView(attributes={0: a}):
+                assert False
+    except TypeError:
+        pass
+    else:
+        assert False, "expected TypeError matching OpAttributeMap with int-key "
+
+    # get() does not throw for non existent attributes.
+    assert op.attributes.get("does_not_exist") is None
+    assert op.attributes.get("does_not_exist", "default_value") == "default_value"
 
 
 # CHECK-LABEL: TEST: testOperationPrint
@@ -772,6 +904,21 @@ def testKnownOpView():
         constant = module.body.operations[3]
         # CHECK: <__main__.testKnownOpView.<locals>.ConstantOp object
         print(repr(constant))
+
+
+# CHECK-LABEL: TEST: testFailedGenericOperationCreationReportsError
+@run
+def testFailedGenericOperationCreationReportsError():
+    with Context(), Location.unknown():
+        c0 = shape.const_shape([])
+        c1 = shape.const_shape([1, 2, 3])
+        try:
+            shape.MeetOp.build_generic(operands=[c0, c1])
+        except MLIRError as e:
+            # CHECK: unequal shape cardinality
+            print(e)
+        else:
+            assert False, "Expected exception"
 
 
 # CHECK-LABEL: TEST: testSingleResultProperty
@@ -1188,6 +1335,107 @@ def testOpWalk():
     except RuntimeError:
         print("Exception raised")
 
+    # Test op_class filter: only visits ops of the requested type.
+    module = Module.parse(
+        r"""
+    module {
+      func.func @f() {
+        func.return
+      }
+      func.func @g() {
+        func.return
+      }
+      arith.constant dense<0> : tensor<i32>
+    }
+  """,
+        ctx,
+    )
+
+    # CHECK-NEXT: only FuncOp visited: True
+    only_funcs = True
+
+    def check_type(op):
+        nonlocal only_funcs
+        if not isinstance(op.opview, func.FuncOp):
+            only_funcs = False
+        return WalkResult.ADVANCE
+
+    module.operation.walk(check_type, op_class=func.FuncOp)
+    print(f"only FuncOp visited: {only_funcs}")
+
+    # CHECK-NEXT: interrupted after: 1
+    seen = []
+
+    def stop_after_first(op):
+        seen.append(op.opview)
+        return WalkResult.INTERRUPT
+
+    module.operation.walk(stop_after_first, op_class=func.FuncOp)
+    print(f"interrupted after: {len(seen)}")
+
+    # CHECK-NEXT: never called: True
+    called = False
+
+    def should_not_run(op):
+        nonlocal called
+        called = True
+        return WalkResult.ADVANCE
+
+    module.operation.walk(should_not_run, op_class=scf.ForOp)
+    print(f"never called: {not called}")
+
+    # CHECK-NEXT: collected func.FuncOp: ['"f"', '"g"']
+    collected = []
+
+    def collect(op):
+        collected.append(op.opview)
+        return WalkResult.ADVANCE
+
+    module.operation.walk(collect, op_class=func.FuncOp)
+    assert all(isinstance(r, func.FuncOp) for r in collected)
+    print(f"collected func.FuncOp: {[str(r.name) for r in collected]}")
+
+    # Test op_class with walk_order: pre-order visits FuncOps in source order.
+    # CHECK-NEXT: pre-order FuncOp names: ['"f"', '"g"']
+    collected.clear()
+    module.operation.walk(collect, WalkOrder.PRE_ORDER, op_class=func.FuncOp)
+    assert all(isinstance(r, func.FuncOp) for r in collected)
+    print(f"pre-order FuncOp names: {[str(r.name) for r in collected]}")
+
+
+# CHECK-LABEL: TEST: testOpReplaceUsesWith
+@run
+def testOpReplaceUsesWith():
+    ctx = Context()
+    ctx.allow_unregistered_dialects = True
+    with Location.unknown(ctx):
+        m = Module.create()
+        i32 = IntegerType.get_signless(32)
+        with InsertionPoint(m.body):
+            value = Operation.create("custom.op1", results=[i32]).results[0]
+            value2 = Operation.create("custom.op2", results=[i32]).results[0]
+            op = Operation.create("custom.op3", operands=[value])
+            op2 = Operation.create("custom.op4", operands=[value])
+            op.replace_uses_of_with(value, value2)
+
+    assert len(list(value.uses)) == 1
+
+    # CHECK: Use owner: "custom.op4"
+    # CHECK: Use operand_number: 0
+    for use in value.uses:
+        assert use.owner in [op2]
+        print(f"Use owner: {use.owner}")
+        print(f"Use operand_number: {use.operand_number}")
+
+    assert len(list(value2.uses)) == 1
+
+    # CHECK: Use owner: "custom.op3"
+    # CHECK: Use operand_number: 0
+    for use in value2.uses:
+        assert use.owner in [op]
+        print(f"Use owner: {use.owner}")
+        print(f"Use operand_number: {use.operand_number}")
+
 
 # CHECK-LABEL: TEST: testGetOwnerConcreteOpview
 @run
@@ -1221,3 +1469,94 @@ def testIndexSwitch():
                 assert len([i for i in switch_op.caseRegions]) == 3
                 assert len(switch_op.caseRegions[1:]) == 2
                 assert len([i for i in switch_op.caseRegions[1:]]) == 2
+
+
+# CHECK-LABEL: TEST: testGetParentOfType
+@run
+def testGetParentOfType():
+    with Context() as ctx, Location.unknown():
+        ctx.allow_unregistered_dialects = True
+        idx = IndexType.get()
+        # Build: func.func -> scf.for -> custom.base_op
+        func_op: func.FuncOp = func.FuncOp("test_fn", ([], []))
+        with InsertionPoint(func_op.add_entry_block()):
+            lower_bound = arith.ConstantOp(idx, 0)
+            upper_bound = arith.ConstantOp(idx, 10)
+            step = arith.ConstantOp(idx, 1)
+            for_op: scf.ForOp = scf.ForOp(lower_bound, upper_bound, step)
+            with InsertionPoint(for_op.body):
+                base_op: Operation = Operation.create("custom.base_op")
+                scf.YieldOp([])
+            func.ReturnOp([])
+
+        # CHECK: get_parent_of_type detached->func.func: None
+        detached: Operation = Operation.create("custom.detached")
+        res = get_parent_of_type(detached, func.FuncOp)
+        print(f"get_parent_of_type detached->func.func: {res}")
+        assert res is None
+
+        # CHECK: get_parent_of_type base_op->func.func: func.func
+        res = get_parent_of_type(base_op, func.FuncOp)
+        print(f"get_parent_of_type base_op->func.func: {res.operation.name}")
+        assert isinstance(res, func.FuncOp)
+
+        # CHECK: get_parent_of_type func_op->func.func: None
+        res = get_parent_of_type(func_op, func.FuncOp)
+        print(f"get_parent_of_type func_op->func.func: {res}")
+        assert res is None
+
+        # CHECK: get_parent_of_type base_op->scf.if: None
+        res = get_parent_of_type(base_op, scf.IfOp)
+        print(f"get_parent_of_type base_op->scf.if: {res}")
+        assert res is None
+
+        try:
+            get_parent_of_type(base_op, int)
+            assert False, "expected TypeError"
+        except TypeError:
+            pass
+
+
+# CHECK-LABEL: TEST: test_get_ops_of_type
+@run
+def test_get_ops_of_type():
+    with Context(), Location.unknown():
+        module = Module.parse(
+            r"""
+    module {
+      func.func @f() {
+        func.return
+      }
+      func.func @g() {
+        func.return
+      }
+    }
+  """
+        )
+
+        # CHECK: get_ops_of_type func.func count: 2
+        results = get_ops_of_type(module, func.FuncOp)
+        print(f"get_ops_of_type func.func count: {len(results)}")
+        assert len(results) == 2
+        assert all(isinstance(r, func.FuncOp) for r in results)
+
+        # CHECK: get_ops_of_type scf.for count: 0
+        results = get_ops_of_type(module, scf.ForOp)
+        print(f"get_ops_of_type scf.for count: {len(results)}")
+        assert len(results) == 0
+
+        # CHECK: get_ops_of_type func_op->func.ReturnOp count: 1
+        # Accepts OpView as root.
+        func_op = get_ops_of_type(module, func.FuncOp)[0]
+        results = get_ops_of_type(func_op, func.ReturnOp)
+        print(f"get_ops_of_type func_op->func.ReturnOp count: {len(results)}")
+        assert len(results) == 1
+        assert isinstance(results[0], func.ReturnOp)
+
+        # CHECK: get_ops_of_type no filter count: 5
+        # No op_class collects all ops.
+        results = get_ops_of_type(module)
+        print(f"get_ops_of_type no filter count: {len(results)}")
+        assert len(results) == 5
+        assert any(isinstance(r, func.FuncOp) for r in results)
+        assert any(isinstance(r, func.ReturnOp) for r in results)

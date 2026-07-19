@@ -21,6 +21,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
 class MachineBasicBlock;
@@ -164,7 +165,8 @@ public:
   void changedInstr(MachineInstr &MI) override;
 };
 
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class RegisterBank;
 
 // Simple builder class to easily profile properties about MIs.
@@ -218,11 +220,23 @@ public:
   /// If CSEConfig is already set, and the CSE Analysis has been preserved,
   /// it will not use the new CSEOpt(use Recompute to force using the new
   /// CSEOpt).
-  LLVM_ABI GISelCSEInfo &get(std::unique_ptr<CSEConfigBase> CSEOpt,
-                             bool ReCompute = false);
+  LLVM_ABI GISelCSEInfo &get(std::unique_ptr<CSEConfigBase> CSEOpt);
   void setMF(MachineFunction &MFunc) { MF = &MFunc; }
   void setComputed(bool Computed) { AlreadyComputed = Computed; }
   void releaseMemory() { Info.releaseMemory(); }
+};
+
+class GISelCSEAnalysis : public AnalysisInfoMixin<GISelCSEAnalysis> {
+  friend AnalysisInfoMixin<GISelCSEAnalysis>;
+  LLVM_ABI static AnalysisKey Key;
+  TargetMachine *TM;
+
+public:
+  using Result = std::unique_ptr<GISelCSEInfo>;
+  GISelCSEAnalysis(TargetMachine *TM) : TM(TM) {};
+
+  LLVM_ABI Result run(MachineFunction &MF,
+                      MachineFunctionAnalysisManager &MFAM);
 };
 
 /// The actual analysis pass wrapper.

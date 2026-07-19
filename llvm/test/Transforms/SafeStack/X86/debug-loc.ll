@@ -1,5 +1,5 @@
 ; RUN: opt -safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
-; RUN: opt -passes=safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
+; RUN: opt -passes='require<libcall-lowering-info>,safe-stack' -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
 
 ; Test debug location for the local variables moved onto the unsafe stack.
 
@@ -23,7 +23,7 @@ entry:
 ; CHECK-NOT: #dbg_declare
 ; CHECK: #dbg_declare(ptr %[[USP]], ![[VAR_ARG:.*]], !DIExpression(DW_OP_constu, 104, DW_OP_minus),
 ; CHECK-NOT: #dbg_declare
-; CHECK: #dbg_declare(ptr %[[USP]], ![[VAR_LOCAL:.*]], !DIExpression(DW_OP_constu, 208, DW_OP_minus),
+; CHECK: #dbg_declare(ptr %[[USP]], ![[VAR_LOCAL:.*]], !DIExpression(DW_OP_constu, 204, DW_OP_minus),
 ; CHECK-NOT: #dbg_declare
 
   call void @Capture(ptr %zzz), !dbg !23
@@ -37,7 +37,6 @@ entry:
 }
 
 ; CHECK-DAG: ![[VAR_ARG]] = !DILocalVariable(name: "zzz"
-; 100 aligned up to 8
 
 ; CHECK-DAG: ![[VAR_LOCAL]] = !DILocalVariable(name: "xxx"
 

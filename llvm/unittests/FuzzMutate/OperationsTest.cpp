@@ -264,9 +264,8 @@ TEST(OperationsTest, SplitBlock) {
 
   // We should end up with an unconditional branch from BB to BB1, and the
   // return ends up in BB1.
-  auto *UncondBr = cast<BranchInst>(BB->getTerminator());
-  ASSERT_TRUE(UncondBr->isUnconditional());
-  auto *BB1 = UncondBr->getSuccessor(0);
+  auto *UncondBr = cast<UncondBrInst>(BB->getTerminator());
+  auto *BB1 = UncondBr->getSuccessor();
   ASSERT_THAT(RI->getParent(), Eq(BB1));
 
   // Now add an instruction to BB1 and split on that.
@@ -276,9 +275,7 @@ TEST(OperationsTest, SplitBlock) {
 
   // We should end up with a loop back on BB1 and the instruction we split on
   // moves to BB2.
-  auto *CondBr = cast<BranchInst>(BB1->getTerminator());
-  EXPECT_THAT(CondBr->getCondition(), Eq(Cond));
-  ASSERT_THAT(CondBr->getNumSuccessors(), Eq(2u));
+  auto *CondBr = cast<CondBrInst>(BB1->getTerminator());
   ASSERT_THAT(CondBr->getSuccessor(0), Eq(BB1));
   auto *BB2 = CondBr->getSuccessor(1);
   EXPECT_THAT(AI->getParent(), Eq(BB2));
@@ -331,8 +328,8 @@ TEST(OperationsTest, SplitBlockWithPhis) {
   auto *BB1 = BasicBlock::Create(Ctx, "BB1", F);
   auto *BB2 = BasicBlock::Create(Ctx, "BB2", F);
   auto *BB3 = BasicBlock::Create(Ctx, "BB3", F);
-  BranchInst::Create(BB2, BB3, ConstantInt::getFalse(Ctx), BB1);
-  BranchInst::Create(BB3, BB2);
+  CondBrInst::Create(ConstantInt::getFalse(Ctx), BB2, BB3, BB1);
+  UncondBrInst::Create(BB3, BB2);
 
   // Set up phi nodes selecting values for the incoming edges.
   auto *PHI1 = PHINode::Create(Int8Ty, /*NumReservedValues=*/2, "p1", BB3);

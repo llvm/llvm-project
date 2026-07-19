@@ -417,9 +417,8 @@ define <32 x i8> @test_buildvector_v32i8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
 define <4 x double> @test_buildvector_4f64_2_var(double %a0, double %a1) {
 ; AVX1-32-LABEL: test_buildvector_4f64_2_var:
 ; AVX1-32:       # %bb.0:
-; AVX1-32-NEXT:    vmovups {{[0-9]+}}(%esp), %xmm0
-; AVX1-32-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX1-32-NEXT:    vmovhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
+; AVX1-32-NEXT:    vmovupd {{[0-9]+}}(%esp), %xmm0
+; AVX1-32-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX1-32-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-32-NEXT:    retl
 ;

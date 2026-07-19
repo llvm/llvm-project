@@ -11,6 +11,7 @@
 */
 	.file	"regs_mixed_params.c"
 	.file	0 "." "regs_mixed_params.c" md5 0x73c4bda40238ae460aaecb3a6a2603cf
+	.att_syntax
 	.text
 	.globl	regs_mixed_params               # -- Begin function regs_mixed_params
 	.p2align	4

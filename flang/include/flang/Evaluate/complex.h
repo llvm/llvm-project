@@ -77,6 +77,9 @@ public:
       Rounding rounding = TargetCharacteristics::defaultRounding) const;
   ValueWithRealFlags<Complex> Divide(const Complex &,
       Rounding rounding = TargetCharacteristics::defaultRounding) const;
+  ValueWithRealFlags<Complex> KahanSummation(const Complex &,
+      Complex &correction,
+      Rounding rounding = TargetCharacteristics::defaultRounding) const;
 
   // ABS/CABS = HYPOT(re_, imag_) = SQRT(re_**2 + im_**2)
   ValueWithRealFlags<Part> ABS(

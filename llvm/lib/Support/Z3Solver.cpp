@@ -16,10 +16,10 @@ using namespace llvm;
 #if LLVM_WITH_Z3
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Twine.h"
 
 #include <set>
-#include <unordered_map>
 
 #include <z3.h>
 
@@ -938,26 +938,25 @@ public:
   };
 
   void print(raw_ostream &OS) const override {
-    for (auto const &[K, V] : UnsignedValues) {
-      OS << K << ": " << V << '\n';
-    }
-    for (auto const &[K, V] : DoubleValues) {
-      write_double(OS << K << ": ", V, FloatStyle::Fixed);
+    for (const auto &E : UnsignedValues)
+      OS << E.first() << ": " << E.second << '\n';
+    for (const auto &E : DoubleValues) {
+      write_double(OS << E.first() << ": ", E.second, FloatStyle::Fixed);
       OS << '\n';
     }
   }
 
 private:
   friend class Z3Solver;
-  std::unordered_map<std::string, unsigned> UnsignedValues;
-  std::unordered_map<std::string, double> DoubleValues;
+  StringMap<unsigned> UnsignedValues;
+  StringMap<double> DoubleValues;
 };
 
 std::unique_ptr<SMTSolverStatistics> Z3Solver::getStatistics() const {
   auto const &C = Context.Context;
   Z3_stats S = Z3_solver_get_statistics(C, Solver);
   Z3_stats_inc_ref(C, S);
-  auto StatsGuard = llvm::make_scope_exit([&C, &S] { Z3_stats_dec_ref(C, S); });
+  llvm::scope_exit StatsGuard([&C, &S] { Z3_stats_dec_ref(C, S); });
   Z3Statistics Result;
 
   unsigned NumKeys = Z3_stats_size(C, S);

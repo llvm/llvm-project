@@ -24,6 +24,6 @@ for.body:
 for.end:
   ret void
 
-; CHECK: LV: Found an estimated cost of 2 for VF 2 For instruction:   %mul = mul nsw i64 %iv, %s
-; CHECK: LV: Found an estimated cost of 2 for VF 2 For instruction:   %ld = load i64, ptr %bct
+; CHECK: Cost of 2 for VF 2: forced scalar   %mul = mul nsw i64 %iv, %s
+; CHECK: Cost of 2 for VF 2: REPLICATE ir<%ld> = load ir<%bct>
 }

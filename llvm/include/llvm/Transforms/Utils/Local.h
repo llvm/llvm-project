@@ -28,14 +28,15 @@ class DataLayout;
 class Value;
 class WeakTrackingVH;
 class WeakVH;
+template <typename PtrType> class SmallPtrSetImpl;
 template <typename T> class SmallVectorImpl;
 class AAResults;
 class AllocaInst;
 class AssumptionCache;
 class BasicBlock;
-class BranchInst;
 class CallBase;
 class CallInst;
+class CondBrInst;
 class DIBuilder;
 class DomTreeUpdater;
 class Function;
@@ -129,10 +130,10 @@ LLVM_ABI bool RecursivelyDeleteTriviallyDeadInstructionsPermissive(
 /// by a trivially dead instruction, delete it. If that makes any of its
 /// operands trivially dead, delete them too, recursively. Return true if a
 /// change was made.
-LLVM_ABI bool
-RecursivelyDeleteDeadPHINode(PHINode *PN,
-                             const TargetLibraryInfo *TLI = nullptr,
-                             MemorySSAUpdater *MSSAU = nullptr);
+LLVM_ABI bool RecursivelyDeleteDeadPHINode(
+    PHINode *PN, const TargetLibraryInfo *TLI = nullptr,
+    MemorySSAUpdater *MSSAU = nullptr,
+    SmallPtrSetImpl<PHINode *> *KnownNonDeadPHIs = nullptr);
 
 /// Scan the specified basic block and try to simplify any instructions in it
 /// and recursively delete dead instructions.
@@ -202,10 +203,11 @@ LLVM_ABI bool FlattenCFG(BasicBlock *BB, AAResults *AA = nullptr);
 /// If this basic block is ONLY a setcc and a branch, and if a predecessor
 /// branches to us and one of our successors, fold the setcc into the
 /// predecessor and use logical operations to pick the right destination.
-LLVM_ABI bool foldBranchToCommonDest(BranchInst *BI,
+LLVM_ABI bool foldBranchToCommonDest(CondBrInst *BI,
                                      llvm::DomTreeUpdater *DTU = nullptr,
                                      MemorySSAUpdater *MSSAU = nullptr,
                                      const TargetTransformInfo *TTI = nullptr,
+                                     AssumptionCache *AC = nullptr,
                                      unsigned BonusInstThreshold = 1);
 
 /// This function takes a virtual register computed by an Instruction and

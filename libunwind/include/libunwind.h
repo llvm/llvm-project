@@ -122,7 +122,7 @@
     __unwind_ptrauth_restricted_intptr(ptrauth_key_function_pointer, 1, \
                                        __ptrauth_unwind_cie_info_personality_disc)
 
-  // ptrauth_string_discriminator("personality") == 0x7EAD)
+  // ptrauth_string_discriminator("personality") == 0x7EAD
   #define __ptrauth_unwind_pauthtest_personality_disc 0x7EAD
 
 #else

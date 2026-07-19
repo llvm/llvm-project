@@ -202,11 +202,10 @@ SarifDiagnostics::createResult(const PathDiagnostic *Diag,
     // Find the HTML report that was generated for this issue, if one exists.
     PDFileEntry::ConsumerFiles *Files = FM->getFiles(*Diag);
     if (Files) {
-      auto HtmlFile =
-          std::find_if(Files->cbegin(), Files->cend(), [](auto &File) {
-            return File.first == HTML_DIAGNOSTICS_NAME;
-          });
-      if (HtmlFile != Files->cend()) {
+      auto HtmlFile = llvm::find_if(*Files, [](const auto &File) {
+        return File.first == HTML_DIAGNOSTICS_NAME;
+      });
+      if (HtmlFile != Files->end()) {
         SmallString<128> HtmlReportPath =
             llvm::sys::path::parent_path(OutputFile);
         llvm::sys::path::append(HtmlReportPath, HtmlFile->second);
@@ -219,7 +218,7 @@ SarifDiagnostics::createResult(const PathDiagnostic *Diag,
                     .setRuleId(CheckName)
                     .setDiagnosticMessage(Diag->getVerboseDescription())
                     .setDiagnosticLevel(SarifResultLevel::Warning)
-                    .setLocations({Range})
+                    .addLocations({Range})
                     .addPartialFingerprint(IssueHashKey, IssueHash)
                     .setHostedViewerURI(HtmlReportURL)
                     .setThreadFlows(Flows);

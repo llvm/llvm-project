@@ -93,7 +93,9 @@ struct ConvertNVVMToLLVMPass
 
 /// Implement the interface to convert NVVM to LLVM.
 struct NVVMToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
-  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  NVVMToLLVMDialectInterface(Dialect *dialect)
+      : ConvertToLLVMPatternInterface(dialect) {}
+
   void loadDependentDialects(MLIRContext *context) const final {
     context->loadDialect<NVVMDialect>();
   }

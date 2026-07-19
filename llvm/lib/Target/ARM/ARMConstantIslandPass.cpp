@@ -349,14 +349,14 @@ static bool AlignBlocks(MachineFunction *MF, const ARMSubtarget *STI) {
     return false;
 
   bool Changed = false;
-  bool PrevCanFallthough = true;
+  bool PrevCanFallthrough = true;
   for (auto &MBB : *MF) {
-    if (!PrevCanFallthough) {
+    if (!PrevCanFallthrough) {
       Changed = true;
       MBB.setAlignment(Alignment);
     }
 
-    PrevCanFallthough = MBB.canFallThrough();
+    PrevCanFallthrough = MBB.canFallThrough();
 
     // For LOB's, the ARMLowOverheadLoops pass may remove the unconditional
     // branch later in the pipeline.
@@ -367,7 +367,7 @@ static bool AlignBlocks(MachineFunction *MF, const ARMSubtarget *STI) {
           continue;
         if (isLoopStart(MI) || MI.getOpcode() == ARM::t2LoopEnd ||
             MI.getOpcode() == ARM::t2LoopEndDec) {
-          PrevCanFallthough = true;
+          PrevCanFallthrough = true;
           break;
         }
         // Any other terminator - nothing to do
@@ -408,7 +408,6 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   // Renumber all of the machine basic blocks in the function, guaranteeing that
   // the numbers agree with the position of the block in the function.
   MF->RenumberBlocks();
-  DT->updateBlockNumbers();
 
   // Try to reorder and otherwise adjust the block layout to make good use
   // of the TB[BH] instructions.
@@ -420,7 +419,6 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
     T2JumpTables.clear();
     // Blocks may have shifted around. Keep the numbering up to date.
     MF->RenumberBlocks();
-    DT->updateBlockNumbers();
   }
 
   // Align any non-fallthrough blocks
@@ -667,10 +665,8 @@ void ARMConstantIslands::doInitialJumpTablePlacement(
   }
 
   // If we did anything then we need to renumber the subsequent blocks.
-  if (LastCorrectlyNumberedBB) {
+  if (LastCorrectlyNumberedBB)
     MF->RenumberBlocks(LastCorrectlyNumberedBB);
-    DT->updateBlockNumbers();
-  }
 }
 
 /// BBHasFallthrough - Return true if the specified basic block can fallthrough
@@ -949,7 +945,6 @@ static bool CompareMBBNumbers(const MachineBasicBlock *LHS,
 void ARMConstantIslands::updateForInsertedWaterBlock(MachineBasicBlock *NewBB) {
   // Renumber the MBB's to keep them consecutive.
   NewBB->getParent()->RenumberBlocks(NewBB);
-  DT->updateBlockNumbers();
 
   // Insert an entry into BBInfo to align it properly with the (newly
   // renumbered) block numbers.
@@ -1012,7 +1007,6 @@ MachineBasicBlock *ARMConstantIslands::splitBlockBeforeInstr(MachineInstr *MI) {
   // This is almost the same as updateForInsertedWaterBlock, except that
   // the Water goes after OrigBB, not NewBB.
   MF->RenumberBlocks(NewBB);
-  DT->updateBlockNumbers();
 
   // Insert an entry into BBInfo to align it properly with the (newly
   // renumbered) block numbers.
@@ -1436,7 +1430,7 @@ void ARMConstantIslands::createNewWater(unsigned CPUserIndex,
     // If the CP is referenced(ie, UserOffset) is in first four instructions
     // after IT, this recalculated BaseInsertOffset could be in the middle of
     // an IT block. If it is, change the BaseInsertOffset to just after the
-    // IT block. This still make the CP Entry is in range becuase of the
+    // IT block. This still make the CP Entry is in range because of the
     // following reasons.
     //   1. The initial BaseseInsertOffset calculated is (UserOffset +
     //   U.getMaxDisp() - UPad).
@@ -2464,7 +2458,6 @@ MachineBasicBlock *ARMConstantIslands::adjustJTTargetBlockForward(
     BB->updateTerminator(OldNext != MF->end() ? &*OldNext : nullptr);
     // Update numbering to account for the block being moved.
     MF->RenumberBlocks();
-    DT->updateBlockNumbers();
     ++NumJTMoved;
     return nullptr;
   }
@@ -2493,7 +2486,6 @@ MachineBasicBlock *ARMConstantIslands::adjustJTTargetBlockForward(
 
   // Update internal data structures to account for the newly inserted MBB.
   MF->RenumberBlocks(NewBB);
-  DT->updateBlockNumbers();
 
   // Update the CFG.
   NewBB->addSuccessor(BB);

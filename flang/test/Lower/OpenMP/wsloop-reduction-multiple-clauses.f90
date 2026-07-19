@@ -24,7 +24,7 @@ program main
 
 endprogram
 
-! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_3x3xf64 : !fir.ref<!fir.box<!fir.array<3x3xf64>>> alloc {
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_3x3xf64 : !fir.ref<!fir.box<!fir.array<3x3xf64>>> {{.*}} alloc {
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.array<3x3xf64>>
 ! CHECK:           omp.yield(%[[VAL_3]] : !fir.ref<!fir.box<!fir.array<3x3xf64>>>)
 ! CHECK-LABEL:   } init {
@@ -155,7 +155,7 @@ endprogram
 ! CHECK:             omp.terminator
 ! CHECK:           }
 
-! CHECK-LABEL:   fir.global internal @_QFEarray : !fir.array<3x3xf64> {
+! CHECK-LABEL:   fir.global internal @_QFEarray {alignment = 64 : i64} : !fir.array<3x3xf64> {
 ! CHECK:           %[[VAL_0:.*]] = fir.zero_bits !fir.array<3x3xf64>
 ! CHECK:           fir.has_value %[[VAL_0]] : !fir.array<3x3xf64>
 ! CHECK:         }

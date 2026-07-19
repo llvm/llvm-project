@@ -48,11 +48,16 @@ static int getPrecedence(const BinaryOperator *BinOp) {
     return 0;
   }
 }
-static void addParentheses(const BinaryOperator *BinOp,
-                           const BinaryOperator *ParentBinOp,
-                           ClangTidyCheck *Check,
-                           const clang::SourceManager &SM,
-                           const clang::LangOptions &LangOpts) {
+static void addParentheses(const Expr *E, const BinaryOperator *ParentBinOp,
+                           ClangTidyCheck *Check, const SourceManager &SM,
+                           const LangOptions &LangOpts) {
+  if (const auto *Paren = dyn_cast<ParenExpr>(E)) {
+    addParentheses(Paren->getSubExpr()->IgnoreImpCasts(), nullptr, Check, SM,
+                   LangOpts);
+    return;
+  }
+
+  const auto *BinOp = dyn_cast<BinaryOperator>(E);
   if (!BinOp)
     return;
 
@@ -61,9 +66,9 @@ static void addParentheses(const BinaryOperator *BinOp,
 
   if (ParentBinOp != nullptr && Precedence1 != Precedence2 && Precedence1 > 0 &&
       Precedence2 > 0) {
-    const clang::SourceLocation StartLoc = BinOp->getBeginLoc();
-    const clang::SourceLocation EndLoc =
-        clang::Lexer::getLocForEndOfToken(BinOp->getEndLoc(), 0, SM, LangOpts);
+    const SourceLocation StartLoc = BinOp->getBeginLoc();
+    const SourceLocation EndLoc =
+        Lexer::getLocForEndOfToken(BinOp->getEndLoc(), 0, SM, LangOpts);
 
     auto Diag =
         Check->diag(StartLoc,
@@ -81,17 +86,15 @@ static void addParentheses(const BinaryOperator *BinOp,
     }
   }
 
-  addParentheses(dyn_cast<BinaryOperator>(BinOp->getLHS()->IgnoreImpCasts()),
-                 BinOp, Check, SM, LangOpts);
-  addParentheses(dyn_cast<BinaryOperator>(BinOp->getRHS()->IgnoreImpCasts()),
-                 BinOp, Check, SM, LangOpts);
+  addParentheses(BinOp->getLHS()->IgnoreImpCasts(), BinOp, Check, SM, LangOpts);
+  addParentheses(BinOp->getRHS()->IgnoreImpCasts(), BinOp, Check, SM, LangOpts);
 }
 
 void MathMissingParenthesesCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *BinOp = Result.Nodes.getNodeAs<BinaryOperator>("binOp");
   const SourceManager &SM = *Result.SourceManager;
-  const clang::LangOptions &LO = Result.Context->getLangOpts();
+  const LangOptions &LO = Result.Context->getLangOpts();
   addParentheses(BinOp, nullptr, this, SM, LO);
 }
 

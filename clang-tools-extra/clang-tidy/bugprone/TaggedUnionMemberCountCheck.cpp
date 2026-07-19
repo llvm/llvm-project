@@ -16,24 +16,22 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-static constexpr llvm::StringLiteral StrictModeOptionName = "StrictMode";
-static constexpr llvm::StringLiteral EnableCountingEnumHeuristicOptionName =
+static constexpr StringRef StrictModeOptionName = "StrictMode";
+static constexpr StringRef EnableCountingEnumHeuristicOptionName =
     "EnableCountingEnumHeuristic";
-static constexpr llvm::StringLiteral CountingEnumPrefixesOptionName =
+static constexpr StringRef CountingEnumPrefixesOptionName =
     "CountingEnumPrefixes";
-static constexpr llvm::StringLiteral CountingEnumSuffixesOptionName =
+static constexpr StringRef CountingEnumSuffixesOptionName =
     "CountingEnumSuffixes";
 
 static constexpr bool StrictModeOptionDefaultValue = false;
 static constexpr bool EnableCountingEnumHeuristicOptionDefaultValue = true;
-static constexpr llvm::StringLiteral CountingEnumPrefixesOptionDefaultValue =
-    "";
-static constexpr llvm::StringLiteral CountingEnumSuffixesOptionDefaultValue =
-    "count";
+static constexpr StringRef CountingEnumPrefixesOptionDefaultValue = "";
+static constexpr StringRef CountingEnumSuffixesOptionDefaultValue = "count";
 
-static constexpr llvm::StringLiteral RootMatchBindName = "root";
-static constexpr llvm::StringLiteral UnionMatchBindName = "union";
-static constexpr llvm::StringLiteral TagMatchBindName = "tags";
+static constexpr StringRef RootMatchBindName = "root";
+static constexpr StringRef UnionMatchBindName = "union";
+static constexpr StringRef TagMatchBindName = "tags";
 
 namespace {
 
@@ -45,20 +43,19 @@ AST_MATCHER_P2(RecordDecl, fieldCountOfKindIsOne,
   // is used for matching.
   //
   // For precedence, see commit: 5b07de1a5faf4a22ae6fd982b877c5e7e3a76559
-  clang::ast_matchers::internal::BoundNodesTreeBuilder TempBuilder;
+  ast_matchers::internal::BoundNodesTreeBuilder TempBuilder;
 
   const FieldDecl *FirstMatch = nullptr;
   for (const FieldDecl *Field : Node.fields()) {
     if (InnerMatcher.matches(*Field, Finder, &TempBuilder)) {
-      if (FirstMatch) {
+      if (FirstMatch)
         return false;
-      }
       FirstMatch = Field;
     }
   }
 
   if (FirstMatch) {
-    Builder->setBinding(BindName, clang::DynTypedNode::create(*FirstMatch));
+    Builder->setBinding(BindName, DynTypedNode::create(*FirstMatch));
     return true;
   }
   return false;
@@ -104,7 +101,6 @@ void TaggedUnionMemberCountCheck::storeOptions(
 }
 
 void TaggedUnionMemberCountCheck::registerMatchers(MatchFinder *Finder) {
-
   auto NotFromSystemHeaderOrStdNamespace =
       unless(anyOf(isExpansionInSystemHeader(), isInStdNamespace()));
 

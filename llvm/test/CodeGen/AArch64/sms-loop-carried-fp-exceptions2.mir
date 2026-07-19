@@ -71,7 +71,7 @@ body:             |
   
   bb.1.for.body.preheader:
     %13:gpr32 = ORRWrs $wzr, %9, 0
-    %1:gpr64 = SUBREG_TO_REG 0, killed %13, %subreg.sub_32
+    %1:gpr64 = SUBREG_TO_REG killed %13, %subreg.sub_32
     %14:gpr64all = COPY $xzr
     %12:gpr64all = COPY %14
     B %bb.3

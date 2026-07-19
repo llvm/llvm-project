@@ -15,7 +15,7 @@ define void @cost_hoisted_vector_code(ptr %p, float %arg) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[P]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[TMP1]], i32 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[TMP1]], i64 4
 ; CHECK-NEXT:    store <4 x float> [[TMP0]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    store <4 x float> [[TMP0]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
@@ -28,7 +28,7 @@ define void @cost_hoisted_vector_code(ptr %p, float %arg) {
 entry:
   br label %loop
 
-loop:                                              ; preds = %loop, %entry
+loop:
   %iv = phi i64 [ 1, %entry ], [ %iv.next, %loop ]
   %res = tail call float @llvm.minimumnum.f32(float %arg, float 0.0)
   %gep.p.red = getelementptr float, ptr %p, i64 %iv
@@ -37,8 +37,7 @@ loop:                                              ; preds = %loop, %entry
   %exit.cond = icmp eq i64 %iv.next, 0
   br i1 %exit.cond, label %exit, label %loop
 
-exit:                                              ; preds = %loop
+exit:
   ret void
 }
 
-declare float @llvm.minimumnum.f32(float, float)

@@ -33,7 +33,7 @@
 // non-loop SCC might contain a sub-SCC which is a Loop.
 //
 // For an overview of terminology used in this API (and thus all of our loop
-// analyses or transforms), see docs/LoopTerminology.rst.
+// analyses or transforms), see docs/LoopTerminology.md.
 //
 //===----------------------------------------------------------------------===//
 
@@ -524,8 +524,18 @@ raw_ostream &operator<<(raw_ostream &OS, const LoopBase<BlockT, LoopT> &Loop) {
 ///
 
 template <class BlockT, class LoopT> class LoopInfoBase {
-  // BBMap - Mapping of basic blocks to the inner most loop they occur in
-  DenseMap<const BlockT *, LoopT *> BBMap;
+  static_assert(GraphHasNodeNumbers<const BlockT *>,
+                "LoopInfo requires GraphTraits<BlockT *>::getNumber (see "
+                "GraphHasNodeNumbers)");
+
+  // Mapping of each block, indexed by its number, to the innermost loop it
+  // occurs in (or null).
+  SmallVector<LoopT *> BBMap;
+
+  using ParentT = decltype(std::declval<const BlockT *>()->getParent());
+  ParentT ParentPtr = nullptr;
+  unsigned BlockNumberEpoch;
+
   std::vector<LoopT *> TopLevelLoops;
   BumpPtrAllocator LoopAllocator;
 
@@ -543,11 +553,15 @@ public:
       : BBMap(std::move(Arg.BBMap)),
         TopLevelLoops(std::move(Arg.TopLevelLoops)),
         LoopAllocator(std::move(Arg.LoopAllocator)) {
+    ParentPtr = Arg.ParentPtr;
+    BlockNumberEpoch = Arg.BlockNumberEpoch;
     // We have to clear the arguments top level loops as we've taken ownership.
     Arg.TopLevelLoops.clear();
   }
   LoopInfoBase &operator=(LoopInfoBase &&RHS) {
     BBMap = std::move(RHS.BBMap);
+    ParentPtr = RHS.ParentPtr;
+    BlockNumberEpoch = RHS.BlockNumberEpoch;
 
     for (auto *L : TopLevelLoops)
       L->~LoopT();
@@ -601,9 +615,24 @@ public:
   /// reverse program order.
   SmallVector<LoopT *, 4> getLoopsInReverseSiblingPreorder() const;
 
+private:
+  /// Verify that used block numbers are still valid.
+  void verifyBlockNumberEpoch(ParentT BBParent) const {
+    assert(ParentPtr == BBParent &&
+           "loop info queried with block of other function");
+    assert(BlockNumberEpoch ==
+               GraphTraits<ParentT>::getNumberEpoch(ParentPtr) &&
+           "loop info used with outdated block numbers");
+  }
+
+public:
   /// Return the inner most loop that BB lives in. If a basic block is in no
   /// loop (for example the entry node), null is returned.
-  LoopT *getLoopFor(const BlockT *BB) const { return BBMap.lookup(BB); }
+  LoopT *getLoopFor(const BlockT *BB) const {
+    verifyBlockNumberEpoch(BB->getParent());
+    unsigned Number = GraphTraits<const BlockT *>::getNumber(BB);
+    return Number < BBMap.size() ? BBMap[Number] : nullptr;
+  }
 
   /// Same as getLoopFor.
   const LoopT *operator[](const BlockT *BB) const { return getLoopFor(BB); }
@@ -652,12 +681,16 @@ public:
   /// Change the top-level loop that contains BB to the specified loop.
   /// This should be used by transformations that restructure the loop hierarchy
   /// tree.
-  void changeLoopFor(BlockT *BB, LoopT *L) {
-    if (!L) {
-      BBMap.erase(BB);
-      return;
+  void changeLoopFor(const BlockT *BB, LoopT *L) {
+    verifyBlockNumberEpoch(BB->getParent());
+    unsigned Number = GraphTraits<const BlockT *>::getNumber(BB);
+    if (Number >= BBMap.size()) {
+      unsigned Max =
+          GraphTraits<decltype(BB->getParent())>::getMaxNumber(BB->getParent());
+      assert(Number < Max);
+      BBMap.resize(Max);
     }
-    BBMap[BB] = L;
+    BBMap[Number] = L;
   }
 
   /// Replace the specified loop in the top-level loops list with the indicated
@@ -680,13 +713,14 @@ public:
   /// including all of the Loop objects it is nested in and our mapping from
   /// BasicBlocks to loops.
   void removeBlock(BlockT *BB) {
-    auto I = BBMap.find(BB);
-    if (I != BBMap.end()) {
-      for (LoopT *L = I->second; L; L = L->getParentLoop())
-        L->removeBlockFromLoop(BB);
+    verifyBlockNumberEpoch(BB->getParent());
+    unsigned Number = GraphTraits<BlockT *>::getNumber(BB);
+    if (Number >= BBMap.size())
+      return;
 
-      BBMap.erase(I);
-    }
+    for (LoopT *L = BBMap[Number]; L; L = L->getParentLoop())
+      L->removeBlockFromLoop(BB);
+    BBMap[Number] = nullptr;
   }
 
   // Internals

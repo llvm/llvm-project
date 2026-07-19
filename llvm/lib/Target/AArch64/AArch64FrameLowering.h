@@ -21,6 +21,7 @@ namespace llvm {
 
 class TargetLowering;
 class AArch64FunctionInfo;
+class AArch64InstrInfo;
 class AArch64PrologueEmitter;
 class AArch64EpilogueEmitter;
 
@@ -86,13 +87,21 @@ public:
   /// Can this function use the red zone for local allocations.
   bool canUseRedZone(const MachineFunction &MF) const;
 
+  /// Returns how much of the incoming argument stack area (in bytes) we should
+  /// clean up in an epilogue. For the C calling convention this will be 0, for
+  /// guaranteed tail call conventions it can be positive (a normal return or a
+  /// tail call to a function that uses less stack space for arguments) or
+  /// negative (for a tail call to a function that needs more stack space than
+  /// us for arguments).
+  int64_t getArgumentStackToRestore(MachineFunction &MF,
+                                    MachineBasicBlock &MBB) const;
+
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
 
-  bool assignCalleeSavedSpillSlots(MachineFunction &MF,
-                                   const TargetRegisterInfo *TRI,
-                                   std::vector<CalleeSavedInfo> &CSI,
-                                   unsigned &MinCSFrameIndex,
-                                   unsigned &MaxCSFrameIndex) const override;
+  bool
+  assignCalleeSavedSpillSlots(MachineFunction &MF,
+                              const TargetRegisterInfo *TRI,
+                              std::vector<CalleeSavedInfo> &CSI) const override;
 
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                             RegScavenger *RS) const override;
@@ -169,6 +178,20 @@ public:
   friend class AArch64PrologueEmitter;
   friend class AArch64EpilogueEmitter;
 
+  // Windows unwind can't represent the required stack adjustments if we have
+  // both SVE callee-saves and dynamic stack allocations, and the frame
+  // pointer is before the SVE spills.  The allocation of the frame pointer
+  // must be the last instruction in the prologue so the unwinder can restore
+  // the stack pointer correctly. (And there isn't any unwind opcode for
+  // `addvl sp, x29, -17`.)
+  //
+  // Because of this, we do spills in the opposite order on Windows: first SVE,
+  // then GPRs. The main side-effect of this is that it makes accessing
+  // parameters passed on the stack more expensive.
+  //
+  // We could consider rearranging the spills for simpler cases.
+  bool hasSVECalleeSavesAboveFrameRecord(const MachineFunction &MF) const;
+
 protected:
   bool hasFPImpl(const MachineFunction &MF) const override;
 
@@ -222,17 +245,8 @@ private:
   // Given a load or a store instruction, generate an appropriate unwinding SEH
   // code on Windows.
   MachineBasicBlock::iterator insertSEH(MachineBasicBlock::iterator MBBI,
-                                        const TargetInstrInfo &TII,
+                                        const AArch64InstrInfo &TII,
                                         MachineInstr::MIFlag Flag) const;
-
-  /// Returns how much of the incoming argument stack area (in bytes) we should
-  /// clean up in an epilogue. For the C calling convention this will be 0, for
-  /// guaranteed tail call conventions it can be positive (a normal return or a
-  /// tail call to a function that uses less stack space for arguments) or
-  /// negative (for a tail call to a function that needs more stack space than
-  /// us for arguments).
-  int64_t getArgumentStackToRestore(MachineFunction &MF,
-                                    MachineBasicBlock &MBB) const;
 
   // Find a scratch register that we can use at the start of the prologue to
   // re-align the stack pointer.  We avoid using callee-save registers since

@@ -12,7 +12,6 @@
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 
 /// Retrieve or create the CUDA Fortran GPU module in the give in \p mod.
@@ -49,6 +48,8 @@ bool cuf::isCUDADeviceContext(mlir::Region &region,
   if (region.getParentOfType<cuf::KernelOp>())
     return true;
   if (region.getParentOfType<mlir::acc::ComputeRegionOpInterface>())
+    return true;
+  if (region.getParentOfType<mlir::acc::HostDataOp>())
     return true;
   if (auto funcOp = region.getParentOfType<mlir::func::FuncOp>()) {
     if (auto cudaProcAttr =
@@ -113,4 +114,45 @@ int cuf::computeElementByteSize(mlir::Location loc, mlir::Type type,
   if (emitErrorOnFailure)
     mlir::emitError(loc, "unsupported type");
   return 0;
+}
+
+mlir::Value cuf::computeElementCount(mlir::PatternRewriter &rewriter,
+                                     mlir::Location loc,
+                                     mlir::Value shapeOperand,
+                                     mlir::Type seqType,
+                                     mlir::Type targetType) {
+  if (shapeOperand) {
+    // Dynamic extent - extract from shape operand
+    llvm::SmallVector<mlir::Value> extents;
+    if (auto shapeOp =
+            mlir::dyn_cast<fir::ShapeOp>(shapeOperand.getDefiningOp())) {
+      extents = shapeOp.getExtents();
+    } else if (auto shapeShiftOp = mlir::dyn_cast<fir::ShapeShiftOp>(
+                   shapeOperand.getDefiningOp())) {
+      for (auto i : llvm::enumerate(shapeShiftOp.getPairs()))
+        if (i.index() & 1)
+          extents.push_back(i.value());
+    }
+
+    if (extents.empty())
+      return mlir::Value();
+
+    // Compute total element count by multiplying all dimensions
+    mlir::Value count =
+        fir::ConvertOp::create(rewriter, loc, targetType, extents[0]);
+    for (unsigned i = 1; i < extents.size(); ++i) {
+      auto operand =
+          fir::ConvertOp::create(rewriter, loc, targetType, extents[i]);
+      count = mlir::arith::MulIOp::create(rewriter, loc, count, operand);
+    }
+    return count;
+  } else {
+    // Static extent - use constant array size
+    if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(seqType)) {
+      mlir::IntegerAttr attr =
+          rewriter.getIntegerAttr(targetType, seqTy.getConstantArraySize());
+      return mlir::arith::ConstantOp::create(rewriter, loc, targetType, attr);
+    }
+  }
+  return mlir::Value();
 }

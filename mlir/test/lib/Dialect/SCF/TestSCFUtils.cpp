@@ -21,6 +21,8 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
+#include <limits>
+
 using namespace mlir;
 
 namespace {
@@ -50,7 +52,7 @@ struct TestSCFForUtilsPass
             "test.trip-count",
             IntegerAttr::get(IntegerType::get(&getContext(),
                                               tripCount.value().getBitWidth()),
-                             tripCount.value().getSExtValue()));
+                             tripCount.value().getZExtValue()));
       else
         loopOp->setDiscardableAttr("test.trip-count",
                                    StringAttr::get(&getContext(), "none"));
@@ -154,18 +156,36 @@ struct TestSCFPipeliningPass
       return;
 
     schedule.resize(forOp.getBody()->getOperations().size() - 1);
-    forOp.walk([&schedule](Operation *op) {
+    WalkResult result = forOp.walk([&schedule](Operation *op) {
       auto attrStage =
           op->getAttrOfType<IntegerAttr>(kTestPipeliningStageMarker);
       auto attrCycle =
           op->getAttrOfType<IntegerAttr>(kTestPipeliningOpOrderMarker);
       if (attrCycle && attrStage) {
-        // TODO: Index can be out-of-bounds if ops of the loop body disappear
-        // due to folding.
-        schedule[attrCycle.getInt()] =
-            std::make_pair(op, unsigned(attrStage.getInt()));
+        const APInt &stage = attrStage.getValue();
+        if (stage.isNegative() ||
+            stage.getActiveBits() > std::numeric_limits<unsigned>::digits) {
+          op->emitOpError("invalid pipeline stage");
+          return WalkResult::interrupt();
+        }
+        const APInt &order = attrCycle.getValue();
+        if (order.isNegative() || order.getActiveBits() > 64 ||
+            order.getZExtValue() >= schedule.size()) {
+          op->emitOpError("invalid pipeline op order");
+          return WalkResult::interrupt();
+        }
+        size_t orderIndex = static_cast<size_t>(order.getZExtValue());
+        if (schedule[orderIndex].first) {
+          op->emitOpError("duplicate pipeline op order");
+          return WalkResult::interrupt();
+        }
+        schedule[orderIndex] =
+            std::make_pair(op, static_cast<unsigned>(stage.getZExtValue()));
       }
+      return WalkResult::advance();
     });
+    if (result.wasInterrupted())
+      schedule.clear();
   }
 
   /// Helper to generate "predicated" version of `op`. For simplicity we just

@@ -33,6 +33,10 @@ class DirectiveLanguage {
   // enum.
   string clausePrefix = "";
 
+  // Optional prefix used for the generation of the enumerator in the
+  // LoopModifier enum.
+  string loopModifierPrefix = "";
+
   // Make the enum values available in the namespace. This allows us to
   // write something like Enum_X if we have a `using namespace cppNamespace`.
   bit makeEnumAvailableInNamespace = false;
@@ -162,7 +166,8 @@ def AS_Block : Association<"Block"> {}            // Block (incl. single
 def AS_Declaration : Association<"Declaration"> {}   // Declaration
 def AS_Delimited : Association<"Delimited"> {}    // Region delimited with
                                                   // begin/end
-def AS_Loop : Association<"Loop"> {}              // Loop
+def AS_LoopNest : Association<"LoopNest"> {}      // Loop nest
+def AS_LoopSeq : Association<"LoopSeq"> {}        // Loop sequence
 def AS_Separating : Association<"Separating"> {}  // Separates parts of a
                                                   // construct
 
@@ -173,7 +178,7 @@ def AS_FromLeaves : Association<"FromLeaves"> {}    // See below
 //   x + y = y + x
 //   x + x = x
 //   AS_None + x = x
-//   AS_Block + AS_Loop = AS_Loop
+//   AS_Block + AS_Loop{Nest|Seq} = AS_Loop{Nest|Seq}
 // Other combinations are not allowed.
 // This association is not valid for leaf constructs.
 // The name "AS_FromLeaves" is recognized by TableGen, and there is no enum
@@ -199,6 +204,23 @@ class SourceLanguage<string n> {
 // separately.
 def L_C : SourceLanguage<"C"> {}
 def L_Fortran : SourceLanguage<"Fortran"> {}
+
+// Loop Modifier for Apply clause
+class LoopModifier<list<Spelling> ss> {
+  // Spellings of the loop modifer.
+  list<Spelling> spellings = ss;
+}
+
+def LM_Flattened: LoopModifier<[Spelling<"flattened">]> {}
+def LM_Fused: LoopModifier<[Spelling<"fused">]> {}
+def LM_Grid: LoopModifier<[Spelling<"grid">]> {}
+def LM_Identity: LoopModifier<[Spelling<"identity">]> {}
+def LM_Interchanged: LoopModifier<[Spelling<"interchanged">]> {}
+def LM_Intratile: LoopModifier<[Spelling<"intratile">]> {}
+def LM_Offsets: LoopModifier<[Spelling<"offsets">]> {}
+def LM_Reversed: LoopModifier<[Spelling<"reversed">]> {}
+def LM_Split: LoopModifier<[Spelling<"split">]> {}
+def LM_Unrolled: LoopModifier<[Spelling<"unrolled">]> {}
 
 // Information about a specific directive.
 class Directive<list<Spelling> ss> {
@@ -233,6 +255,9 @@ class Directive<list<Spelling> ss> {
 
   // The category of the directive.
   Category category = ?;
+
+  // List of allowed loop modifiers for the apply clause.
+  list<LoopModifier> allowedLoopModifiers = [];
 
   // The languages that allow this directive. Default: all languages.
   list<SourceLanguage> languages = [L_C, L_Fortran];

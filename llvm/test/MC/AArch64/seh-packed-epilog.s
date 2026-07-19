@@ -126,7 +126,7 @@ func:
     .seh_set_fp
     ldp x29, x30, [sp, #16]
     .seh_save_fplr 16
-    ldp x29, x30, [sp, #-48]!
+    ldp x29, x30, [sp], #48
     .seh_save_fplr_x 48
     ldp x21, x22, [sp, #16]
     .seh_save_next

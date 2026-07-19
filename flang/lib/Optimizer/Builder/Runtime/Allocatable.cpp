@@ -28,7 +28,7 @@ mlir::Value fir::runtime::genMoveAlloc(fir::FirOpBuilder &builder,
       !fir::isUnlimitedPolymorphicType(from.getType())) {
     fir::ClassType clTy =
         mlir::dyn_cast<fir::ClassType>(fir::dyn_cast_ptrEleTy(from.getType()));
-    mlir::Type derivedType = fir::unwrapInnerType(clTy.getEleTy());
+    mlir::Type derivedType = clTy.unwrapInnerType();
     declaredTypeDesc =
         fir::TypeDescOp::create(builder, loc, mlir::TypeAttr::get(derivedType));
   } else {
@@ -86,8 +86,9 @@ void fir::runtime::genAllocatableAllocate(fir::FirOpBuilder &builder,
     mlir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
     errMsg = fir::AbsentOp::create(builder, loc, boxNoneTy).getResult();
   }
-  llvm::SmallVector<mlir::Value> args{
-      fir::runtime::createArguments(builder, loc, fTy, desc, asyncObject,
-                                    hasStat, errMsg, sourceFile, sourceLine)};
+  mlir::Value deviceInit = builder.createBool(loc, false);
+  llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
+      builder, loc, fTy, desc, asyncObject, hasStat, errMsg, sourceFile,
+      sourceLine, deviceInit)};
   fir::CallOp::create(builder, loc, func, args);
 }

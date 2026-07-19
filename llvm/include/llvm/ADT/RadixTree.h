@@ -166,17 +166,22 @@ private:
       return *Curr;
 
     for (;;) {
-      auto [I1, I2] = llvm::mismatch(Key, Curr->Key);
-      Key = make_range(I1, Key.end());
+      // The root node's Key is default-constructed with singular iterators
+      // that cannot be passed to std::mismatch.  Since the root's key is
+      // conceptually empty the mismatch is a no-op: skip it.
+      if (Curr != &Root) {
+        auto [I1, I2] = llvm::mismatch(Key, Curr->Key);
+        Key = make_range(I1, Key.end());
 
-      if (I2 != Curr->Key.end()) {
-        // Match is partial. Either query is too short, or there is mismatching
-        // character. Split either way, and put new node in between of the
-        // current and its children.
-        Curr->split(I2);
+        if (I2 != Curr->Key.end()) {
+          // Match is partial. Either query is too short, or there is
+          // mismatching character. Split either way, and put new node in
+          // between of the current and its children.
+          Curr->split(I2);
 
-        // Split was caused by mismatch, so `findChild` would fail.
-        break;
+          // Split was caused by mismatch, so `findChild` would fail.
+          break;
+        }
       }
 
       Node *Child = Curr->findChild(Key);

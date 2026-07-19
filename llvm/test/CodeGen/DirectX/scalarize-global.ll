@@ -11,7 +11,7 @@
 ; CHECK-LABEL: subtype_array_test
 define <4 x i32> @subtype_array_test() {
   ; CHECK: [[tid:%.*]] = tail call i32 @llvm.dx.thread.id(i32 0)
-  ; SCHECK: [[gep:%.*]] = getelementptr inbounds nuw [8 x [4 x i32]], ptr addrspace(3) [[arrayofVecData]], i32 0, i32 [[tid]]
+  ; SCHECK: [[gep:%.*]] = getelementptr inbounds nuw [4 x i32], ptr addrspace(3) [[arrayofVecData]], i32 [[tid]]
   ; FCHECK: [[flatidx_mul:%.*]] = mul i32 [[tid]], 4
   ; FCHECK: [[flatidx:%.*]] = add i32 0, [[flatidx_mul]]
   ; FCHECK: [[gep:%.*]] = getelementptr inbounds nuw [32 x i32], ptr addrspace(3) [[arrayofVecData]], i32 0, i32 [[flatidx]]
@@ -26,7 +26,7 @@ define <4 x i32> @subtype_array_test() {
 ; CHECK-LABEL: subtype_vector_test
 define <4 x i32> @subtype_vector_test() {
   ; CHECK: [[tid:%.*]] = tail call i32 @llvm.dx.thread.id(i32 0)
-  ; SCHECK: [[gep:%.*]] = getelementptr inbounds nuw [8 x [4 x i32]], ptr addrspace(3) [[arrayofVecData]], i32 0, i32 [[tid]]
+  ; SCHECK: [[gep:%.*]] = getelementptr inbounds nuw [4 x i32], ptr addrspace(3) [[arrayofVecData]], i32 [[tid]]
   ; FCHECK: [[flatidx_mul:%.*]] = mul i32 [[tid]], 4
   ; FCHECK: [[flatidx:%.*]] = add i32 0, [[flatidx_mul]]
   ; FCHECK: [[gep:%.*]] = getelementptr inbounds nuw [32 x i32], ptr addrspace(3) [[arrayofVecData]], i32 0, i32 [[flatidx]]
@@ -41,7 +41,7 @@ define <4 x i32> @subtype_vector_test() {
 ; CHECK-LABEL: subtype_scalar_test
 define <4 x i32> @subtype_scalar_test() {
   ; CHECK: [[tid:%.*]] = tail call i32 @llvm.dx.thread.id(i32 0)
-  ; SCHECK: [[gep:%.*]] = getelementptr inbounds nuw [8 x [4 x i32]], ptr addrspace(3) [[arrayofVecData]], i32 0, i32 0, i32 [[tid]]
+  ; SCHECK: [[gep:%.*]] = getelementptr inbounds nuw i32, ptr addrspace(3) [[arrayofVecData]], i32 [[tid]]
   ; FCHECK: [[flatidx_mul:%.*]] = mul i32 [[tid]], 1
   ; FCHECK: [[flatidx:%.*]] = add i32 0, [[flatidx_mul]]
   ; FCHECK: [[gep:%.*]] = getelementptr inbounds nuw [32 x i32], ptr addrspace(3) [[arrayofVecData]], i32 0, i32 [[flatidx]]

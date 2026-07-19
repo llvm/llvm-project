@@ -25,11 +25,12 @@ XCoreSelectionDAGInfo::XCoreSelectionDAGInfo()
 
 SDValue XCoreSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
-    SDValue Size, Align Alignment, bool isVolatile, bool AlwaysInline,
-    MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
+    SDValue Size, Align DstAlign, Align SrcAlign, bool isVolatile,
+    bool AlwaysInline, MachinePointerInfo DstPtrInfo,
+    MachinePointerInfo SrcPtrInfo) const {
   unsigned SizeBitWidth = Size.getValueSizeInBits();
   // Call __memcpy_4 if the src, dst and size are all 4 byte aligned.
-  if (!AlwaysInline && Alignment >= Align(4) &&
+  if (!AlwaysInline && SrcAlign >= Align(4) && DstAlign >= Align(4) &&
       DAG.MaskedValueIsZero(Size, APInt(SizeBitWidth, 3))) {
     const TargetLowering &TLI = *DAG.getSubtarget().getTargetLowering();
     TargetLowering::ArgListTy Args;
@@ -38,15 +39,20 @@ SDValue XCoreSelectionDAGInfo::EmitTargetCodeForMemcpy(
     Args.emplace_back(Src, ArgTy);
     Args.emplace_back(Size, ArgTy);
 
-    const char *MemcpyAlign4Name = TLI.getLibcallName(RTLIB::MEMCPY_ALIGN_4);
-    CallingConv::ID CC = TLI.getLibcallCallingConv(RTLIB::MEMCPY_ALIGN_4);
+    RTLIB::LibcallImpl MemcpyAlign4Impl =
+        DAG.getLibcalls().getLibcallImpl(RTLIB::MEMCPY_ALIGN_4);
+    if (MemcpyAlign4Impl == RTLIB::Unsupported)
+      return SDValue();
+
+    CallingConv::ID CC =
+        DAG.getLibcalls().getLibcallImplCallingConv(MemcpyAlign4Impl);
 
     TargetLowering::CallLoweringInfo CLI(DAG);
     CLI.setDebugLoc(dl)
         .setChain(Chain)
         .setLibCallee(
             CC, Type::getVoidTy(*DAG.getContext()),
-            DAG.getExternalSymbol(MemcpyAlign4Name,
+            DAG.getExternalSymbol(MemcpyAlign4Impl,
                                   TLI.getPointerTy(DAG.getDataLayout())),
             std::move(Args))
         .setDiscardResult();

@@ -404,12 +404,14 @@ define i64 @assume_ptr_eq_different_prov_does_not_matter_ptrtoint(ptr %p, ptr %p
   ret i64 %int
 }
 
-define i64 @assume_ptr_eq_different_prov_does_not_matter_ptrtoint_addrsize(ptr addrspace(1) %p, ptr addrspace(1) %p2) {
-; CHECK-LABEL: define i64 @assume_ptr_eq_different_prov_does_not_matter_ptrtoint_addrsize(
+; If the pointer and address size does not match, we can't replace a pointer
+; with different provenance in ptrtoint, as the non-address bits may not match.
+define i64 @assume_ptr_eq_different_prov_matters_ptrtoint_addrsize(ptr addrspace(1) %p, ptr addrspace(1) %p2) {
+; CHECK-LABEL: define i64 @assume_ptr_eq_different_prov_matters_ptrtoint_addrsize(
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]], ptr addrspace(1) [[P2:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr addrspace(1) [[P]], [[P2]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr addrspace(1) [[P]] to i64
+; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr addrspace(1) [[P2]] to i64
 ; CHECK-NEXT:    ret i64 [[INT]]
 ;
   %cmp = icmp eq ptr addrspace(1) %p, %p2

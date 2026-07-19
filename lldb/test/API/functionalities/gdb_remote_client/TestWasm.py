@@ -99,9 +99,6 @@ class MyResponder(MockGDBServerResponder):
     def QEnableErrorStrings(self):
         return ""
 
-    def qfThreadInfo(self):
-        return "m1,"
-
     def qRegisterInfo(self, index):
         if index == 0:
             return "name:pc;alt-name:pc;bitsize:64;offset:0;encoding:uint;format:hex;set:General Purpose Registers;gcc:16;dwarf:16;generic:pc;"
@@ -370,6 +367,15 @@ class TestWasm(GDBRemoteTestBase):
         self.assertTrue(frame1.IsValid())
         self.assertEqual(frame1.GetPC(), LOAD_ADDRESS | 0x01E5)
         self.assertIn("main", frame1.GetFunctionName())
+
+        frame2 = thread.GetFrameAtIndex(2)
+        self.assertTrue(frame2.IsValid())
+
+        # Wasm frames need distinct, ordered call frame addresses for StackID to
+        # tell an inner frame from an outer one. Without them every frame shares
+        # one address and stepping mistakes a step in for a step out.
+        self.assertLess(frame0.GetCFA(), frame1.GetCFA())
+        self.assertLess(frame1.GetCFA(), frame2.GetCFA())
 
         # Check that we can resolve local variables.
         a = frame0.FindVariable("a")

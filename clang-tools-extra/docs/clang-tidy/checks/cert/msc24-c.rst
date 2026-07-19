@@ -1,6 +1,4 @@
 .. title:: clang-tidy - cert-msc24-c
-.. meta::
-   :http-equiv=refresh: 5;URL=../bugprone/unsafe-functions.html
 
 cert-msc24-c
 ============

@@ -101,6 +101,12 @@ public:
     }
   }
 
+  /// Return true if the operand is commutable.
+  bool isCommutableOperand(unsigned Op) const {
+    constexpr unsigned NumCommutativeOps = 2;
+    return isCommutative() && Op < NumCommutativeOps;
+  }
+
   /// Checks if the intrinsic is an annotation.
   bool isAssumeLikeIntrinsic() const {
     switch (getIntrinsicID()) {
@@ -829,6 +835,29 @@ public:
 
   /// Whether the intrinsic is a smax or a umax.
   bool isMax() const { return !isMin(getIntrinsicID()); }
+
+  /// Returns the identity value for this min/max intrinsic, such
+  /// that minmax(X, Identity) == X.
+  static APInt getIdentity(Intrinsic::ID ID, unsigned NumBits) {
+    switch (ID) {
+    case Intrinsic::umin:
+      return APInt::getMaxValue(NumBits);
+    case Intrinsic::umax:
+      return APInt::getMinValue(NumBits);
+    case Intrinsic::smin:
+      return APInt::getSignedMaxValue(NumBits);
+    case Intrinsic::smax:
+      return APInt::getSignedMinValue(NumBits);
+    default:
+      llvm_unreachable("Invalid intrinsic");
+    }
+  }
+
+  /// Returns the identity value for this min/max intrinsic, such
+  /// that minmax(X, Identity) == X.
+  APInt getIdentity() const {
+    return getIdentity(getIntrinsicID(), getType()->getScalarSizeInBits());
+  }
 
   /// Min/max intrinsics are monotonic, they operate on a fixed-bitwidth values,
   /// so there is a certain threshold value, upon reaching which,
@@ -1796,6 +1825,69 @@ public:
   LLVM_ABI static ConvergenceControlInst *CreateEntry(BasicBlock &BB);
   LLVM_ABI static ConvergenceControlInst *
   CreateLoop(BasicBlock &BB, ConvergenceControlInst *Parent);
+};
+
+class StructuredAllocaInst : public IntrinsicInst {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::structured_alloca;
+  }
+
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+
+  Type *getAllocationType() const {
+    return getRetAttr(Attribute::ElementType).getValueAsType();
+  }
+};
+
+class StructuredGEPInst : public IntrinsicInst {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::structured_gep;
+  }
+
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+
+  static unsigned getPointerOperandIndex() { return 0; }
+
+  Value *getPointerOperand() const {
+    return getOperand(getPointerOperandIndex());
+  }
+
+  Type *getBaseType() const {
+    return getParamAttr(0, Attribute::ElementType).getValueAsType();
+  }
+
+  unsigned getNumIndices() const { return arg_size() - 1; }
+
+  Value *getIndexOperand(size_t Index) const {
+    assert(Index < getNumIndices());
+    return getOperand(Index + 1);
+  }
+
+  Type *getResultElementType() const {
+    Type *CurrentType = getBaseType();
+    for (unsigned I = 0; I < getNumIndices(); I++) {
+      if (ArrayType *AT = dyn_cast<ArrayType>(CurrentType)) {
+        CurrentType = AT->getElementType();
+      } else if (VectorType *VT = dyn_cast<VectorType>(CurrentType)) {
+        CurrentType = VT->getElementType();
+      } else if (StructType *ST = dyn_cast<StructType>(CurrentType)) {
+        ConstantInt *CI = cast<ConstantInt>(getIndexOperand(I));
+        CurrentType = ST->getElementType(CI->getZExtValue());
+      } else {
+        // FIXME(Keenuts): add testing reaching those places once initial
+        // implementation has landed.
+        llvm_unreachable("unimplemented");
+      }
+    }
+
+    return CurrentType;
+  }
 };
 
 } // end namespace llvm

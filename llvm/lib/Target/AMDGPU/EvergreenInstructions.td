@@ -489,10 +489,7 @@ def : AMDGPUPat <
                 $src1), sub1)
 >;
 
-def BFM_INT_eg : R600_2OP <0xA0, "BFM_INT",
-  [(set i32:$dst, (AMDGPUbfm i32:$src0, i32:$src1))],
-  VecALU
->;
+def BFM_INT_eg : R600_2OP <0xA0, "BFM_INT", [], VecALU>;
 
 def MULADD_UINT24_eg : R600_3OP <0x10, "MULADD_UINT24",
   [(set i32:$dst, (AMDGPUmad_u24 i32:$src0, i32:$src1, i32:$src2))], VecALU
@@ -505,7 +502,6 @@ def : AMDGPUPat <
   (fshr i32:$src0, i32:$src1, i32:$src2),
   (BIT_ALIGN_INT_eg $src0, $src1, $src2)
 >;
-def : ROTRPattern <BIT_ALIGN_INT_eg>;
 def MULADD_eg : MULADD_Common<0x14>;
 def MULADD_IEEE_eg : MULADD_IEEE_Common<0x18>;
 def FMA_eg : FMA_Common<0x7>;

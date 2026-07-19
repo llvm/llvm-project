@@ -15,6 +15,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 using namespace clang;
 
@@ -71,8 +72,21 @@ Builtin::Context::getShardAndInfo(unsigned ID) const {
   llvm_unreachable("Invalid target builtin shard structure!");
 }
 
+/// Return a non-owning StringRef of the builtin's name, reconstructed into Buf.
+static StringRef getBuiltinNameInto(const Builtin::InfosShard &Shard,
+                                    const Builtin::Info &BuiltinInfo,
+                                    SmallVectorImpl<char> &Buf) {
+  StringRef Name = (*Shard.Strings)[BuiltinInfo.Offsets.Name];
+  if (Shard.NamePrefix.empty())
+    return Name;
+  Buf.assign(Shard.NamePrefix.begin(), Shard.NamePrefix.end());
+  Buf.append(Name.begin(), Name.end());
+  return StringRef(Buf.data(), Buf.size());
+}
+
 std::string Builtin::Info::getName(const Builtin::InfosShard &Shard) const {
-  return (Twine(Shard.NamePrefix) + (*Shard.Strings)[Offsets.Name]).str();
+  SmallString<256> Buf;
+  return getBuiltinNameInto(Shard, *this, Buf).str();
 }
 
 /// Return the identifier name for the specified builtin,
@@ -194,6 +208,9 @@ static bool builtinIsSupported(const llvm::StringTable &Strings,
   /* C23 unsupported */
   if (!LangOpts.C23 && BuiltinInfo.Langs == C23_LANG)
     return false;
+  /* C2y unsupported */
+  if (!LangOpts.C2y && BuiltinInfo.Langs == C2Y_LANG)
+    return false;
   return true;
 }
 
@@ -294,12 +311,13 @@ void Builtin::Context::initializeBuiltins(IdentifierTable &Table,
                                           const LangOptions &LangOpts) {
   {
     unsigned ID = 0;
+    llvm::SmallString<256> NameBuf;
     // Step #1: mark all target-independent builtins with their ID's.
     for (const auto &Shard : BuiltinShards)
       for (const auto &I : Shard.Infos) {
         // If this is a real builtin (ID != 0) and is supported, add it.
         if (ID != 0 && builtinIsSupported(*Shard.Strings, I, LangOpts))
-          Table.get(I.getName(Shard)).setBuiltinID(ID);
+          Table.get(getBuiltinNameInto(Shard, I, NameBuf)).setBuiltinID(ID);
         ++ID;
       }
     assert(ID == FirstTSBuiltin && "Should have added all non-target IDs!");
@@ -308,14 +326,14 @@ void Builtin::Context::initializeBuiltins(IdentifierTable &Table,
     for (const auto &Shard : TargetShards)
       for (const auto &I : Shard.Infos) {
         if (builtinIsSupported(*Shard.Strings, I, LangOpts))
-          Table.get(I.getName(Shard)).setBuiltinID(ID);
+          Table.get(getBuiltinNameInto(Shard, I, NameBuf)).setBuiltinID(ID);
         ++ID;
       }
 
     // Step #3: Register target-specific builtins for AuxTarget.
     for (const auto &Shard : AuxTargetShards)
       for (const auto &I : Shard.Infos) {
-        Table.get(I.getName(Shard)).setBuiltinID(ID);
+        Table.get(getBuiltinNameInto(Shard, I, NameBuf)).setBuiltinID(ID);
         ++ID;
       }
   }
@@ -383,6 +401,51 @@ bool Builtin::Context::isScanfLike(unsigned ID, unsigned &FormatIdx,
   return isLike(ID, FormatIdx, HasVAListArg, "sS");
 }
 
+static void parseCommaSeparatedIndices(const char *CurrPos,
+                                       llvm::SmallVectorImpl<int> &Indxs) {
+  assert(*CurrPos == '<' && "Expected '<' to start index list");
+  ++CurrPos;
+
+  char *EndPos;
+  int PosIdx = ::strtol(CurrPos, &EndPos, 10);
+  assert(PosIdx >= 0 && "Index is supposed to be positive!");
+  Indxs.push_back(PosIdx);
+
+  while (*EndPos == ',') {
+    const char *PayloadPos = EndPos + 1;
+
+    int PayloadIdx = ::strtol(PayloadPos, &EndPos, 10);
+    Indxs.push_back(PayloadIdx);
+  }
+
+  assert(*EndPos == '>' && "Index list must end with '>'");
+}
+
+bool Builtin::Context::isNonNull(unsigned ID, llvm::SmallVectorImpl<int> &Indxs,
+                                 Info::NonNullMode &Mode) const {
+
+  const char *AttrPos = ::strchr(getAttributesString(ID), 'N');
+  if (!AttrPos)
+    return false;
+
+  ++AttrPos;
+  assert(*AttrPos == ':' && "Format specifier must be followed by a ':'");
+  ++AttrPos;
+  if (*AttrPos == '0')
+    Mode = Info::NonNullMode::NonOptimizing;
+  else if (*AttrPos == '1')
+    Mode = Info::NonNullMode::Optimizing;
+  else
+    llvm_unreachable("Unrecognized NonNull optimization mode");
+  ++AttrPos; // skip mode
+  assert(*AttrPos == ':' && "Mode must be followed by a ':'");
+  ++AttrPos;
+
+  parseCommaSeparatedIndices(AttrPos, Indxs);
+
+  return true;
+}
+
 bool Builtin::Context::performsCallback(unsigned ID,
                                         SmallVectorImpl<int> &Encoding) const {
   const char *CalleePos = ::strchr(getAttributesString(ID), 'C');
@@ -390,23 +453,8 @@ bool Builtin::Context::performsCallback(unsigned ID,
     return false;
 
   ++CalleePos;
-  assert(*CalleePos == '<' &&
-         "Callback callee specifier must be followed by a '<'");
-  ++CalleePos;
+  parseCommaSeparatedIndices(CalleePos, Encoding);
 
-  char *EndPos;
-  int CalleeIdx = ::strtol(CalleePos, &EndPos, 10);
-  assert(CalleeIdx >= 0 && "Callee index is supposed to be positive!");
-  Encoding.push_back(CalleeIdx);
-
-  while (*EndPos == ',') {
-    const char *PayloadPos = EndPos + 1;
-
-    int PayloadIdx = ::strtol(PayloadPos, &EndPos, 10);
-    Encoding.push_back(PayloadIdx);
-  }
-
-  assert(*EndPos == '>' && "Callback callee specifier must end with a '>'");
   return true;
 }
 

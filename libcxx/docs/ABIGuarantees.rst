@@ -58,6 +58,56 @@ most cases.
 This significantly restructures how ``function`` is written to provide better performance, but is currently not ABI
 stable.
 
+``_LIBCPP_ABI_VECTOR_LAYOUT_SIZE_BASED``
+----------------------------------------
+Changes the layout of :cpp:type:`std::vector` from pointer-based to size-based.
+
+libc++ supports two different data layouts for :cpp:type:`std::vector`:
+
+.. list-table::
+  :header-rows: 1
+
+  * - **Layout**
+    - ABI
+    - Description
+  * - Pointer-based layout
+    - Stable ABI (default)
+    - :cpp:type:`std::vector` uses three pointers to manage its state:
+
+        * A pointer to the beginning of the buffer (:cpp:expr:`begin_`);
+        * A pointer to where the next element should be inserted (:cpp:expr:`end_`); and
+        * A pointer to the end of the buffer (:cpp:expr:`cap_`).
+
+      This layout causes :cpp:type:`vector`'s implementation details to be pointer-oriented.
+      The following methods are of particular interest:
+
+        * :cpp:expr:`vector::size()` returns :cpp:expr:`end_ - begin_`;
+        * :cpp:expr:`vector::capacity()` returns :cpp:expr:`cap_ - begin_`; and
+        * :cpp:expr:`vector::end()` returns :cpp:expr:`end_`.
+
+      This is the original layout for libc++'s :cpp:type:`std::vector` implementation, and
+      is the default layout as a result.
+
+  * - Size-based layout
+    - Unstable ABI (opt-in)
+    - :cpp:type:`std::vector` uses a pointer and two integers to manage its state:
+
+        * A pointer to the beginning of the buffer (:cpp:expr:`begin_`);
+        * An integer storing how many elements are in the vector (:cpp:expr:`size_`); and
+        * An integer storing how many elements the vector can potentially hold before needing
+          to reallocate (:cpp:expr:`capacity_`).
+
+        This layout causes :cpp:type:`vector`'s implementation details to be integer-oriented.
+        The following methods are of particular interest:
+
+        * :cpp:expr:`vector::size()` returns :cpp:expr:`size_`;
+        * :cpp:expr:`vector::capacity()` returns :cpp:expr:`cap_`; and
+        * :cpp:expr:`vector::end()` returns :cpp:expr:`begin_ + size_`.
+
+      This layout is opt-in, and is incompatible with the pointer-based layout. It has the
+      potential for significant performance improvements, especially when combined with
+      :ref:`hardening`.
+
 ``_LIBCPP_ABI_NO_RANDOM_DEVICE_COMPATIBILITY_LAYOUT``
 -----------------------------------------------------
 This changes the layout of ``random_device`` to only holds state with an implementation that gets entropy from a file
@@ -67,7 +117,7 @@ removes these workarounds for platforms that don't care about ABI compatibility.
 
 ``_LIBCPP_ABI_NO_COMPRESSED_PAIR_PADDING``
 ------------------------------------------
-This removes artificial padding from ``_LIBCPP_COMPRESSED_PAIR`` and ``_LIBCPP_COMPRESSED_TRIPLE``.
+This removes artificial padding from ``_LIBCPP_COMPRESSED_PAIR``.
 
 These macros are used inside the associative and unordered containers, ``deque``, ``forward_list``, ``future``,
 ``list``, ``basic_string``, ``function``, ``shared_ptr``, ``unique_ptr``, and ``vector`` to stay ABI compatible with the
@@ -114,23 +164,6 @@ hand, backwards compatibility is generally guaranteed.
 
 There are multiple ABI flags that change the symbols exported from the built library:
 
-``_LIBCPP_ABI_DO_NOT_EXPORT_BASIC_STRING_COMMON``
--------------------------------------------------
-This removes ``__basic_string_common<true>::__throw_length_error()`` and
-``__basic_string_common<true>::__throw_out_of_range()``. These symbols have been used by ``basic_string`` in the past,
-but are not referenced from the headers anymore.
-
-``_LIBCPP_ABI_DO_NOT_EXPORT_VECTOR_BASE_COMMON``
-------------------------------------------------
-This removes ``__vector_base_common<true>::__throw_length_error()`` and
-``__vector_base_common<true>::__throw_out_of_range()``. These symbols have been used by ``vector`` in the past, but are
-not referenced from the headers anymore.
-
-``_LIBCPP_ABI_DO_NOT_EXPORT_TO_CHARS_BASE_10``
-----------------------------------------------
-This removes ``__itoa::__u32toa()`` and ``__iota::__u64toa``. These symbols have been used by ``to_chars`` in the past,
-but are not referenced from the headers anymore.
-
 ``_LIBCPP_ABI_STRING_OPTIMIZED_EXTERNAL_INSTANTIATION``
 -------------------------------------------------------
 This replaces the symbols that are exported for ``basic_string`` to avoid exporting functions which are likely to be
@@ -157,6 +190,14 @@ This flag adds ``[[clang::trivial_abi]]`` to ``unique_ptr``, which makes it triv
 ---------------------------------------------
 This flag adds ``[[clang::trivial_abi]]`` to ``shared_ptr``, which makes it trivial for the purpose of calls.
 
+``_LIBCPP_ABI_TRIVIALLY_COPYABLE_BIT_ITERATOR``
+-----------------------------------------------
+This flag makes ``__bit_iterator`` (a.k.a. ``vector<bool>::iterator``) trivially copyable as well as trivial for the
+purpose of calls, since the copy constructor is made trivial.
+
+``_LIBCPP_ABI_USE_SMALL_DEQUE_BLOCK_SIZE``
+------------------------------------------
+This flag sets the default block size of ``deque`` to 512 bytes and the minimum number of elements per block to 4.
 
 Types that public aliases reference
 ===================================
@@ -204,6 +245,16 @@ This changes the value of ``regex_constants::syntax_option-type::ECMAScript`` to
 This flag fixes the implementation of CityHash used for ``hash<fundamental-type>``. The incorrect implementation of
 CityHash has the problem that it drops some bits on the floor. Fixing the implementation changes the hash of values,
 resulting in an ABI break.
+
+``_LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE``
+------------------------------------------
+This flag changes the implementation of ``atomic::wait()`` and ``atomic::notify_one()/notify_all()`` to use the
+native atomic wait/notify operations on platforms that support them based on the size of the atomic type, instead
+of the type itself. This means for example that a type with ``sizeof(T) == 4`` on Linux that doesn't have padding
+bytes would be able to use the underlying platform's atomic wait primitive, which is otherwise only used for ``int32_t``.
+Since the whole program must use the same implementation for correctness, changing this is an ABI break since libc++
+supports linking against TUs that were compiled against older versions of the library.
+
 
 inline namespaces
 =================

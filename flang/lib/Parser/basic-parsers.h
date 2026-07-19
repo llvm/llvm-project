@@ -33,9 +33,7 @@
 #include <cstring>
 #include <functional>
 #include <list>
-#include <memory>
 #include <optional>
-#include <string>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -395,7 +393,7 @@ public:
     }
     if (bx) {
       // Error recovery situations must also produce messages.
-      CHECK(state.anyDeferredMessages() || state.messages().AnyFatalError());
+      CHECK(hadDeferredMessages || state.messages().AnyFatalError());
       state.set_anyErrorRecovery();
     }
     return bx;

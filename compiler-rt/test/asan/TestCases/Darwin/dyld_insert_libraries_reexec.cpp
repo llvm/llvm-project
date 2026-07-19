@@ -1,7 +1,7 @@
 // When DYLD-inserting the ASan dylib from a different location than the
 // original, make sure we don't try to reexec.
 
-// UNSUPPORTED: ios
+// UNSUPPORTED: darwin-remote
 
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: %clang_asan -print-file-name=lib | tr -d '\n' > %t.lib_name

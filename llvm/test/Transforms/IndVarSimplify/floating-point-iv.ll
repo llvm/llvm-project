@@ -507,7 +507,7 @@ define void @test_fp_to_int_irrealizable_exitval_pow_2_24() {
 ; CHECK-NEXT:    [[IV:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    call void @opaque()
 ; CHECK-NEXT:    [[IV_NEXT]] = fadd float [[IV]], 1.000000e+00
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt float [[IV_NEXT]], 0x4170000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt float [[IV_NEXT]], f0x4B800000
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -534,7 +534,7 @@ define void @test_fp_to_int_irrealizable_exitval_int64_min() {
 ; CHECK-NEXT:    [[IV:%.*]] = phi double [ 2.500000e+01, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    call void @opaque()
 ; CHECK-NEXT:    [[IV_NEXT]] = fadd double [[IV]], 1.700000e+01
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult double [[IV_NEXT]], 0xC3E0000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult double [[IV_NEXT]], f0xC3E0000000000000
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -548,6 +548,29 @@ loop:
   %iv.next = fadd double %iv, 1.700000e+01
   %cmp = fcmp ult double %iv.next, 0xC3E0000000000000
   br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test_fp_recurrence_cmp_used_by_select() {
+; CHECK-LABEL: @test_fp_recurrence_cmp_used_by_select(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %fp.iv = phi double [ 0.0, %entry ], [ %fp.iv.next, %loop ]
+  %fp.iv.next = fadd double %fp.iv, 1.250000e-02
+  %cmp.fp = fcmp olt double %fp.iv.next, 2.001250e+00
+  %cond = select i1 %cmp.fp, i1 false, i1 false
+  br i1 %cond, label %loop, label %exit
 
 exit:
   ret void

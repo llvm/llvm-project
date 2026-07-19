@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy %s bugprone-suspicious-memory-comparison %t \
-// RUN: -- -- -target x86_64-unknown-unknown -std=c99
+// RUN: %check_clang_tidy -std=c99-or-later %s bugprone-suspicious-memory-comparison %t \
+// RUN: -- -- -target x86_64-unknown-unknown 
 
 typedef __SIZE_TYPE__ size_t;
 int memcmp(const void *lhs, const void *rhs, size_t count);

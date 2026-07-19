@@ -102,7 +102,7 @@ lldb_private::BreakpointName *SBBreakpointNameImpl::GetBreakpointName() const {
   if (!target_sp)
     return nullptr;
   Status error;
-  return target_sp->FindBreakpointName(ConstString(m_name), true, error);
+  return target_sp->FindBreakpointName(m_name, true, error);
 }
 
 } // namespace lldb
@@ -213,6 +213,7 @@ void SBBreakpointName::SetEnabled(bool enable) {
         m_impl_up->GetTarget()->GetAPIMutex());
 
   bp_name->GetOptions().SetEnabled(enable);
+  UpdateName(*bp_name);
 }
 
 void SBBreakpointName::UpdateName(BreakpointName &bp_name) {

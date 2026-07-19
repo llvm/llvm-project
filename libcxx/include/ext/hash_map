@@ -570,10 +570,7 @@ hash_map<_Key, _Tp, _Hash, _Pred, _Alloc>::hash_map(
 }
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-hash_map<_Key, _Tp, _Hash, _Pred, _Alloc>::hash_map(const hash_map& __u) : __table_(__u.__table_) {
-  __table_.__rehash_unique(__u.bucket_count());
-  insert(__u.begin(), __u.end());
-}
+hash_map<_Key, _Tp, _Hash, _Pred, _Alloc>::hash_map(const hash_map& __u) : __table_(__u.__table_) {}
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 typename hash_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__node_holder
@@ -828,7 +825,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const hash_multimap<_Key, _Tp, _Has
 
 } // namespace __gnu_cxx
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
 #    include <concepts>
 #    include <iterator>
 #    include <type_traits>

@@ -1,4 +1,4 @@
-;; RUN: llc --mtriple=hexagon -mattr=+hvxv79,+hvx-length128b %s -o - | FileCheck %s
+;; RUN: llc --mtriple=hexagon -mattr=+hvxv79,+hvx-length128b %s -o - | FileCheck --enable-var-scope %s
 
 define dso_local void @store_isnan_f32(ptr %a, ptr %b, ptr %isnan_cmp) local_unnamed_addr {
 entry:
@@ -13,7 +13,7 @@ entry:
   ret void
 }
 
-; CHECK:      store_isnan_f32
+; CHECK-LABEL:store_isnan_f32
 ; CHECK:      [[RONE32:r[0-9]+]] = #1
 ; CHECK:      [[VOP2_F32:v[0-9]+]] = vxor([[VOP2_F32]],[[VOP2_F32]])
 ; CHECK:      [[VOP1_F32:v[0-9]+]] = vmemu(r0+#0)
@@ -45,7 +45,7 @@ entry:
 ; CHECK:       [[VOP3_F16:v[0-9]+]] = vmemu(r1+#0)
 ; CHECK:       [[Q1_F16]] &= vcmp.eq([[VOP3_F16]].h,[[VOP3_F16]].h)
 ; CHECK:       [[VOUT_F16:v[0-9]+]] = vmux([[Q1_F16]],[[VOP2_F16]],[[VONES16]])
-; CHECK:       vmemu(r2+#0) = [[VOUT_F32]]
+; CHECK:       vmemu(r2+#0) = [[VOUT_F16]]
 
 define dso_local void @store_isordered_f32(ptr %a, ptr %b, ptr %isordered_cmp) local_unnamed_addr {
 entry:
@@ -60,6 +60,7 @@ entry:
   ret void
 }
 ; CHECK-LABEL: store_isordered_f32
+; CHECK:       [[RONE32:r[0-9]+]] = #1
 ; CHECK:       [[VOP2_ORD_F32:v[0-9]+]] = vxor([[VOP2_ORD_F32]],[[VOP2_ORD_F32]])
 ; CHECK:       [[VOP1_ORD_F32:v[0-9]+]] = vmemu(r0+#0)
 ; CHECK:       [[VONES_ORD_F32:v[0-9]+]] = vsplat([[RONE32]])
@@ -83,6 +84,7 @@ entry:
   ret void
 }
 ; CHECK-LABEL: store_isordered_f16
+; CHECK:       [[RONE16:r[0-9]+]] = #1
 ; CHECK:       [[VOP2_ORD_F16:v[0-9]+]] = vxor([[VOP2_ORD_F16]],[[VOP2_ORD_F16]])
 ; CHECK:       [[VOP1_ORD_F16:v[0-9]+]] = vmemu(r0+#0)
 ; CHECK:       [[VONES_ORD_F16:v[0-9]+]].h = vsplat([[RONE16]])

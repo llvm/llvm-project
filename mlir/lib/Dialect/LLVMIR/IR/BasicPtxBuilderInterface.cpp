@@ -423,6 +423,31 @@ static std::string rewriteAsmPlaceholders(llvm::StringRef ptxCode) {
   return out;
 }
 
+/// Return the constraint index of the predicate operand.  The predicate
+/// constraint ("b") is always the last non-tied token in the canonicalized
+/// constraint string.  Tied constraints (digit-only tokens from read-write
+/// canonicalization) are appended at the end, so we walk backwards to skip
+/// them.
+static unsigned getPredicateConstraintIndex(StringRef constraints) {
+  SmallVector<StringRef> tokens;
+  constraints.split(tokens, ',');
+  assert(!tokens.empty() && "expected at least a predicate constraint");
+
+  auto isTiedConstraint = [](StringRef tok) {
+    unsigned idx;
+    return !tok.trim().getAsInteger(10, idx);
+  };
+
+  size_t numTied = 0;
+  for (StringRef tok : llvm::reverse(tokens)) {
+    if (!isTiedConstraint(tok))
+      break;
+    ++numTied;
+  }
+  assert(numTied < tokens.size() && "all constraints are tied");
+  return tokens.size() - numTied - 1;
+}
+
 LLVM::InlineAsmOp PtxBuilder::build() {
   auto asmDialectAttr = LLVM::AsmDialectAttr::get(interfaceOp->getContext(),
                                                   LLVM::AsmDialect::AD_ATT);
@@ -443,14 +468,27 @@ LLVM::InlineAsmOp PtxBuilder::build() {
   // Add the predicate to the asm string.
   if (interfaceOp.getPredicate().has_value() &&
       interfaceOp.getPredicate().value()) {
+    unsigned predIdx = getPredicateConstraintIndex(registerConstraints);
     std::string predicateStr = "@%";
-    predicateStr += std::to_string((ptxOperands.size() - 1));
+    predicateStr += std::to_string(predIdx);
     ptxInstruction = predicateStr + " " + ptxInstruction;
   }
 
-  // Tablegen doesn't accept $, so we use %, but inline assembly uses $.
-  // Replace all % with $
-  llvm::replace(ptxInstruction, '%', '$');
+  // Operand placeholders are written as %0, %1, ... (and the predicate as
+  // @%N), because TableGen string attributes cannot contain '$', which inline
+  // assembly uses for operand substitution. Convert only a '%' that is
+  // immediately followed by a digit; this leaves literal PTX special-register
+  // names such as %tid.x, %laneid or %dynamic_smem_size intact.
+  std::string mapped;
+  mapped.reserve(ptxInstruction.size());
+  for (size_t i = 0, e = ptxInstruction.size(); i < e; ++i) {
+    if (ptxInstruction[i] == '%' && i + 1 < e &&
+        llvm::isDigit(ptxInstruction[i + 1]))
+      mapped.push_back('$');
+    else
+      mapped.push_back(ptxInstruction[i]);
+  }
+  ptxInstruction = std::move(mapped);
 
   return LLVM::InlineAsmOp::create(
       rewriter, interfaceOp->getLoc(),
@@ -479,21 +517,31 @@ void PtxBuilder::buildAndReplaceOp() {
     return;
   }
 
-  // Case 1: Simple path, return single scalar
+  // Case 1: Simple path, single scalar inline asm result.
   if (!needsPackUnpack(interfaceOp, needsManualRegisterMapping,
                        registerModifiers)) {
-    if (inlineAsmOp->getNumResults() > 0) {
+    // Sub-case 1a: the wrapper op has a declared result -- replace it
+    // directly with the inline asm result.
+    if (interfaceOp->getNumResults() > 0) {
       rewriter.replaceOp(interfaceOp, inlineAsmOp->getResults());
-    } else {
-      // RW-only case with no declared results: forward the RW value.
-      SmallVector<Value> results;
-      for (auto [m, v] : llvm::zip(registerModifiers, ptxOperands))
-        if (m == PTXRegisterMod::ReadWrite) {
-          results.push_back(v);
-          break;
-        }
-      rewriter.replaceOp(interfaceOp, results);
+      return;
     }
+    // Sub-case 1b: RW-only, no declared result. The inline asm produces a
+    // single value that represents the post-asm value of the read-write
+    // operand; forward it to that operand's uses and erase the wrapper.
+    if (inlineAsmOp->getNumResults() > 0) {
+      Value postAsm = inlineAsmOp->getResult(0);
+      for (auto [m, v] : llvm::zip(registerModifiers, ptxOperands)) {
+        if (m != PTXRegisterMod::ReadWrite)
+          continue;
+        v.replaceUsesWithIf(postAsm, [&](OpOperand &use) {
+          Operation *owner = use.getOwner();
+          return owner != interfaceOp && owner != inlineAsmOp;
+        });
+        break;
+      }
+    }
+    rewriter.eraseOp(interfaceOp);
     return;
   }
 

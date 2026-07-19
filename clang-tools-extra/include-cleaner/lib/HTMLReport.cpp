@@ -502,10 +502,27 @@ void writeHTMLReport(FileID File, const include_cleaner::Includes &Includes,
                      const Preprocessor &PP, PragmaIncludes *PI,
                      llvm::raw_ostream &OS) {
   Reporter R(OS, Ctx, PP, Includes, PI, File);
-  const auto& SM = Ctx.getSourceManager();
+  const auto &SM = Ctx.getSourceManager();
   for (Decl *Root : Roots)
     walkAST(*Root, [&](SourceLocation Loc, const NamedDecl &D, RefType T) {
-      if(!SM.isWrittenInMainFile(SM.getSpellingLoc(Loc)))
+      // FIXME: we should merge this logic with `walkUsed` to prevent
+      // divergences in the future. It isn't trivial though, as we also update
+      // RefType. Since HTMLReport is only used for debugging purposes,
+      // divergences aren't critical.
+      auto SpellLoc = SM.getSpellingLoc(Loc);
+      // Tokens resulting from macro concatenation ends up in scratch space and
+      // clang currently doesn't have a good/simple APIs for tracking where
+      // pieces of a concataned token originated from.
+      // So we use the macro expansion location instead, and downgrade reference
+      // type to ambigious to prevent false negatives.
+      if (SM.isWrittenInScratchSpace(SpellLoc)) {
+        Loc = SM.getExpansionLoc(Loc);
+        if (T == RefType::Explicit)
+          T = RefType::Ambiguous;
+        SpellLoc = SM.getSpellingLoc(Loc);
+      }
+      auto FID = SM.getFileID(SpellLoc);
+      if (FID != SM.getMainFileID() && FID != SM.getPreambleFileID())
         return;
       R.addRef(SymbolReference{D, Loc, T});
     });

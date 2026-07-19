@@ -12,14 +12,15 @@
 
 #include "CIRGenModule.h"
 
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Target/LLVMIR/Import.h"
 
 #include "clang/AST/DeclGroup.h"
 #include "clang/CIR/CIRGenerator.h"
-#include "clang/CIR/Dialect/IR/CIRDialect.h"
-#include "clang/CIR/Dialect/OpenACC/RegisterOpenACCExtensions.h"
+#include "clang/CIR/InitAllDialects.h"
 #include "llvm/IR/DataLayout.h"
 
 using namespace cir;
@@ -50,14 +51,10 @@ void CIRGenerator::Initialize(ASTContext &astContext) {
   this->astContext = &astContext;
 
   mlirContext = std::make_unique<mlir::MLIRContext>();
-  mlirContext->loadDialect<mlir::DLTIDialect>();
-  mlirContext->loadDialect<cir::CIRDialect>();
+  cir::registerAllDialects(*mlirContext);
+  mlirContext->loadDialect<mlir::DLTIDialect, cir::CIRDialect>();
   mlirContext->getOrLoadDialect<mlir::acc::OpenACCDialect>();
-
-  // Register extensions to integrate CIR types with OpenACC.
-  mlir::DialectRegistry registry;
-  cir::acc::registerOpenACCExtensions(registry);
-  mlirContext->appendDialectRegistry(registry);
+  mlirContext->getOrLoadDialect<mlir::omp::OpenMPDialect>();
 
   cgm = std::make_unique<clang::CIRGen::CIRGenModule>(
       *mlirContext.get(), astContext, codeGenOpts, diags);
@@ -147,9 +144,22 @@ void CIRGenerator::HandleTagDeclDefinition(TagDecl *d) {
   // inline initializers as definitions.
   if (astContext->getTargetInfo().getCXXABI().isMicrosoft())
     cgm->errorNYI(d->getSourceRange(), "HandleTagDeclDefinition: MSABI");
-  // For OpenMP emit declare reduction functions, if required.
-  if (astContext->getLangOpts().OpenMP)
-    cgm->errorNYI(d->getSourceRange(), "HandleTagDeclDefinition: OpenMP");
+
+  // For OpenMP emit declare reduction functions or declare mapper, if
+  // required.
+  if (astContext->getLangOpts().OpenMP) {
+    for (Decl *member : d->decls()) {
+      if (auto *drd = dyn_cast<OMPDeclareReductionDecl>(member)) {
+        if (astContext->DeclMustBeEmitted(drd))
+          cgm->errorNYI(d->getSourceRange(),
+                        "HandleTagDeclDefinition: OMPDeclareReductionDecl");
+      } else if (auto *dmd = dyn_cast<OMPDeclareMapperDecl>(member)) {
+        if (astContext->DeclMustBeEmitted(dmd))
+          cgm->errorNYI(d->getSourceRange(),
+                        "HandleTagDeclDefinition: OMPDeclareMapperDecl");
+      }
+    }
+  }
 }
 
 void CIRGenerator::HandleTagDeclRequiredDefinition(const TagDecl *D) {
@@ -164,6 +174,18 @@ void CIRGenerator::HandleCXXStaticMemberVarInstantiation(VarDecl *D) {
     return;
 
   cgm->handleCXXStaticMemberVarInstantiation(D);
+}
+
+void CIRGenerator::HandleOpenACCRoutineReference(const FunctionDecl *FD,
+                                                 const OpenACCRoutineDecl *RD) {
+  llvm::StringRef mangledName = cgm->getMangledName(FD);
+  cir::FuncOp entry =
+      mlir::dyn_cast_if_present<cir::FuncOp>(cgm->getGlobalValue(mangledName));
+
+  // if this wasn't generated, don't force it to be.
+  if (!entry)
+    return;
+  cgm->emitOpenACCRoutineDecl(FD, entry, RD->getBeginLoc(), RD->clauses());
 }
 
 void CIRGenerator::CompleteTentativeDefinition(VarDecl *d) {

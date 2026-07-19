@@ -85,11 +85,11 @@ TYPE_PARSER(construct<AccTileExprList>(nonemptyList(Parser<AccTileExpr>{})))
 //   dim:int-expr
 //   static:size-expr
 TYPE_PARSER(sourced(construct<AccGangArg>(construct<AccGangArg::Static>(
-                        "STATIC: " >> Parser<AccSizeExpr>{})) ||
+                        "STATIC :" >> Parser<AccSizeExpr>{})) ||
     construct<AccGangArg>(
-        construct<AccGangArg::Dim>("DIM: " >> scalarIntExpr)) ||
+        construct<AccGangArg::Dim>("DIM :" >> scalarIntExpr)) ||
     construct<AccGangArg>(
-        construct<AccGangArg::Num>(maybe("NUM: "_tok) >> scalarIntExpr))))
+        construct<AccGangArg::Num>(maybe("NUM :"_tok) >> scalarIntExpr))))
 
 // 2.9 gang-arg-list
 TYPE_PARSER(
@@ -103,6 +103,7 @@ TYPE_PARSER(construct<AccCollapseArg>(
 // Operator for reduction
 TYPE_PARSER(construct<ReductionOperator>(
     first("+" >> pure(ReductionOperator::Operator::Plus),
+        "-" >> pure(ReductionOperator::Operator::Minus),
         "*" >> pure(ReductionOperator::Operator::Multiply),
         "MAX" >> pure(ReductionOperator::Operator::Max),
         "MIN" >> pure(ReductionOperator::Operator::Min),
@@ -176,8 +177,14 @@ TYPE_PARSER(construct<OpenACCLoopConstruct>(
     maybe(startAccLine >> Parser<AccEndLoop>{} / endAccLine)))
 
 // 2.15.1 Routine directive
+// The name list is optional: empty list = unnamed/implicit form; 1+ names =
+// named form.
 TYPE_PARSER(sourced(construct<OpenACCRoutineConstruct>(verbatim("ROUTINE"_tok),
-    maybe(parenthesized(name)), Parser<AccClauseList>{})))
+    defaulted(localRecovery(
+        "empty parentheses in ROUTINE directive; omit parentheses for the unnamed form"_err_en_US,
+        !parenthesized(ok) >> parenthesized(nonemptyList(name)),
+        parenthesized(ok))),
+    Parser<AccClauseList>{})))
 
 // 2.10 Cache directive
 TYPE_PARSER(sourced(

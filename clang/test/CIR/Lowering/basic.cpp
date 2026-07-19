@@ -31,7 +31,7 @@ int f3(int i) {
     return i;
   }
 
-// CHECK: define{{.*}} i32 @_Z2f3i(i32 %[[ARG:.*]])
+// CHECK: define{{.*}} i32 @_Z2f3i(i32 noundef %[[ARG:.*]])
 // CHECK:   %[[ARG_ALLOCA:.*]] = alloca i32, i64 1, align 4
 // CHECK:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // CHECK:   store i32 %[[ARG]], ptr %[[ARG_ALLOCA]], align 4
@@ -44,7 +44,7 @@ int f4(const int i) {
   return i;
 }
 
-// CHECK: define{{.*}} i32 @_Z2f4i(i32 %[[ARG:.*]])
+// CHECK: define{{.*}} i32 @_Z2f4i(i32 noundef %[[ARG:.*]])
 // CHECK:   %[[ARG_ALLOCA:.*]] = alloca i32, i64 1, align 4
 // CHECK:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // CHECK:   store i32 %[[ARG]], ptr %[[ARG_ALLOCA]], align 4

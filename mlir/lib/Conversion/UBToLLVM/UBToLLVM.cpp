@@ -23,8 +23,11 @@ namespace mlir {
 
 using namespace mlir;
 
-namespace {
+//===----------------------------------------------------------------------===//
+// PoisonOpLowering
+//===----------------------------------------------------------------------===//
 
+namespace {
 struct PoisonOpLowering : public ConvertOpToLLVMPattern<ub::PoisonOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
@@ -32,12 +35,7 @@ struct PoisonOpLowering : public ConvertOpToLLVMPattern<ub::PoisonOp> {
   matchAndRewrite(ub::PoisonOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
-
 } // namespace
-
-//===----------------------------------------------------------------------===//
-// PoisonOpLowering
-//===----------------------------------------------------------------------===//
 
 LogicalResult
 PoisonOpLowering::matchAndRewrite(ub::PoisonOp op, OpAdaptor adaptor,
@@ -57,6 +55,29 @@ PoisonOpLowering::matchAndRewrite(ub::PoisonOp op, OpAdaptor adaptor,
   }
 
   rewriter.replaceOpWithNewOp<LLVM::PoisonOp>(op, resType);
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// UnreachableOpLowering
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct UnreachableOpLowering
+    : public ConvertOpToLLVMPattern<ub::UnreachableOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(ub::UnreachableOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+} // namespace
+LogicalResult
+
+UnreachableOpLowering::matchAndRewrite(
+    ub::UnreachableOp op, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<LLVM::UnreachableOp>(op);
   return success();
 }
 
@@ -93,7 +114,7 @@ struct UBToLLVMConversionPass
 
 void mlir::ub::populateUBToLLVMConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
-  patterns.add<PoisonOpLowering>(converter);
+  patterns.add<PoisonOpLowering, UnreachableOpLowering>(converter);
 }
 
 //===----------------------------------------------------------------------===//
@@ -103,7 +124,9 @@ void mlir::ub::populateUBToLLVMConversionPatterns(
 namespace {
 /// Implement the interface to convert UB to LLVM.
 struct UBToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
-  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  UBToLLVMDialectInterface(Dialect *dialect)
+      : ConvertToLLVMPatternInterface(dialect) {}
+
   void loadDependentDialects(MLIRContext *context) const final {
     context->loadDialect<LLVM::LLVMDialect>();
   }

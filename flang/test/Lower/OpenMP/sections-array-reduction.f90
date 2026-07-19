@@ -14,7 +14,7 @@ subroutine sectionsReduction(x)
 end subroutine
 
 
-! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_Uxf32 : !fir.ref<!fir.box<!fir.array<?xf32>>> alloc {
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_Uxf32 : !fir.ref<!fir.box<!fir.array<?xf32>>> {{.*}} alloc {
 ! [...]
 ! CHECK:           omp.yield
 ! CHECK-LABEL:   } init {

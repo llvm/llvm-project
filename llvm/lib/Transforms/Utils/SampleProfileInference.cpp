@@ -15,12 +15,12 @@
 
 #include "llvm/Transforms/Utils/SampleProfileInference.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <queue>
 #include <set>
 #include <stack>
-#include <unordered_set>
 
 using namespace llvm;
 #define DEBUG_TYPE "sample-profile-inference"
@@ -969,7 +969,7 @@ private:
     // of all blocks
     if (UnknownBlocks.size() != AcyclicOrder.size())
       return false;
-    UnknownBlocks = AcyclicOrder;
+    UnknownBlocks = std::move(AcyclicOrder);
     return true;
   }
 
@@ -1174,8 +1174,6 @@ std::pair<int64_t, int64_t> assignJumpCosts(const ProfiParams &Params,
     else
       CostInc = Params.CostJumpUnknownInc;
     CostDec = 0;
-  } else {
-    assert(Jump.Weight > 0 && "found zero-weight jump with a positive weight");
   }
   return std::make_pair(CostInc, CostDec);
 }
@@ -1231,7 +1229,7 @@ void verifyInput(const FlowFunction &Func) {
 
   // Verify that there are no parallel edges
   for (auto &Block : Func.Blocks) {
-    std::unordered_set<uint64_t> UniqueSuccs;
+    DenseSet<uint64_t> UniqueSuccs;
     for (auto &Jump : Block.SuccJumps) {
       auto It = UniqueSuccs.insert(Jump->Target);
       assert(It.second && "input CFG contains parallel edges");

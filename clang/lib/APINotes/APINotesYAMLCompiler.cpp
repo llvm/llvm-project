@@ -49,6 +49,31 @@ enum class APIAvailability {
 };
 } // namespace
 
+namespace {
+struct BoundsSafetyNotes {
+  BoundsSafetyInfo::BoundsSafetyKind Kind;
+  std::optional<unsigned> Level;
+  StringRef BoundsExpr = "";
+};
+} // namespace
+
+namespace llvm {
+namespace yaml {
+template <> struct ScalarEnumerationTraits<BoundsSafetyInfo::BoundsSafetyKind> {
+  static void enumeration(IO &IO, BoundsSafetyInfo::BoundsSafetyKind &AA) {
+    IO.enumCase(AA, "counted_by",
+                BoundsSafetyInfo::BoundsSafetyKind::CountedBy);
+    IO.enumCase(AA, "counted_by_or_null",
+                BoundsSafetyInfo::BoundsSafetyKind::CountedByOrNull);
+    IO.enumCase(AA, "sized_by", BoundsSafetyInfo::BoundsSafetyKind::SizedBy);
+    IO.enumCase(AA, "sized_by_or_null",
+                BoundsSafetyInfo::BoundsSafetyKind::SizedByOrNull);
+    IO.enumCase(AA, "ended_by", BoundsSafetyInfo::BoundsSafetyKind::EndedBy);
+  }
+};
+} // namespace yaml
+} // namespace llvm
+
 namespace llvm {
 namespace yaml {
 template <> struct ScalarEnumerationTraits<APIAvailability> {
@@ -86,6 +111,7 @@ struct Param {
   std::optional<bool> Lifetimebound = false;
   std::optional<NullabilityKind> Nullability;
   std::optional<RetainCountConventionKind> RetainCountConvention;
+  std::optional<BoundsSafetyNotes> BoundsSafety;
   StringRef Type;
 };
 
@@ -103,7 +129,7 @@ template <> struct ScalarEnumerationTraits<NullabilityKind> {
     IO.enumCase(NK, "Optional", NullabilityKind::Nullable);
     IO.enumCase(NK, "Unspecified", NullabilityKind::Unspecified);
     IO.enumCase(NK, "NullableResult", NullabilityKind::NullableResult);
-    // TODO: Mapping this to it's own value would allow for better cross
+    // TODO: Mapping this to its own value would allow for better cross
     // checking. Also the default should be Unknown.
     IO.enumCase(NK, "Scalar", NullabilityKind::Unspecified);
 
@@ -137,6 +163,15 @@ template <> struct MappingTraits<Param> {
     IO.mapOptional("NoEscape", P.NoEscape);
     IO.mapOptional("Lifetimebound", P.Lifetimebound);
     IO.mapOptional("Type", P.Type, StringRef(""));
+    IO.mapOptional("BoundsSafety", P.BoundsSafety);
+  }
+};
+
+template <> struct MappingTraits<BoundsSafetyNotes> {
+  static void mapping(IO &IO, BoundsSafetyNotes &BS) {
+    IO.mapRequired("Kind", BS.Kind);
+    IO.mapRequired("BoundedBy", BS.BoundsExpr);
+    IO.mapOptional("Level", BS.Level);
   }
 };
 } // namespace yaml
@@ -303,8 +338,15 @@ template <> struct MappingTraits<Class> {
 } // namespace llvm
 
 namespace {
+typedef std::vector<StringRef> WhereParamsSeq;
+
+struct FunctionWhere {
+  std::optional<WhereParamsSeq> Parameters;
+};
+
 struct Function {
   StringRef Name;
+  std::optional<FunctionWhere> Where;
   ParamsSeq Params;
   NullabilitySeq Nullability;
   std::optional<NullabilityKind> NullabilityOfRet;
@@ -316,6 +358,7 @@ struct Function {
   StringRef ResultType;
   StringRef SwiftReturnOwnership;
   SwiftSafetyKind SafetyKind = SwiftSafetyKind::None;
+  bool UnsafeBufferUsage = false;
 };
 
 typedef std::vector<Function> FunctionsSeq;
@@ -325,9 +368,16 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(Function)
 
 namespace llvm {
 namespace yaml {
+template <> struct MappingTraits<FunctionWhere> {
+  static void mapping(IO &IO, FunctionWhere &W) {
+    IO.mapOptional("Parameters", W.Parameters);
+  }
+};
+
 template <> struct MappingTraits<Function> {
   static void mapping(IO &IO, Function &F) {
     IO.mapRequired("Name", F.Name);
+    IO.mapOptional("Where", F.Where);
     IO.mapOptional("Parameters", F.Params);
     IO.mapOptional("Nullability", F.Nullability);
     IO.mapOptional("NullabilityOfRet", F.NullabilityOfRet, std::nullopt);
@@ -341,6 +391,7 @@ template <> struct MappingTraits<Function> {
     IO.mapOptional("SwiftReturnOwnership", F.SwiftReturnOwnership,
                    StringRef(""));
     IO.mapOptional("SwiftSafety", F.SafetyKind, SwiftSafetyKind::None);
+    IO.mapOptional("UnsafeBufferUsage", F.UnsafeBufferUsage, false);
   }
 };
 } // namespace yaml
@@ -743,14 +794,14 @@ class YAMLConverter {
   llvm::raw_ostream &OS;
   llvm::SourceMgr::DiagHandlerTy DiagHandler;
   void *DiagHandlerCtxt;
-  bool ErrorOccured;
+  bool ErrorOccurred;
 
   /// Emit a diagnostic
   bool emitError(llvm::Twine Message) {
     DiagHandler(
         llvm::SMDiagnostic("", llvm::SourceMgr::DK_Error, Message.str()),
         DiagHandlerCtxt);
-    ErrorOccured = true;
+    ErrorOccurred = true;
     return true;
   }
 
@@ -761,7 +812,7 @@ public:
                 void *DiagHandlerCtxt)
       : M(TheModule), Writer(TheModule.Name, SourceFile), OS(OS),
         DiagHandler(DiagHandler), DiagHandlerCtxt(DiagHandlerCtxt),
-        ErrorOccured(false) {}
+        ErrorOccurred(false) {}
 
   void convertAvailability(const AvailabilityItem &Availability,
                            CommonEntityInfo &CEI, llvm::StringRef APIName) {
@@ -787,6 +838,14 @@ public:
       PI.setLifetimebound(P.Lifetimebound);
       PI.setType(std::string(P.Type));
       PI.setRetainCountConvention(P.RetainCountConvention);
+      if (P.BoundsSafety) {
+        BoundsSafetyInfo BSI;
+        BSI.setKindAudited(P.BoundsSafety->Kind);
+        if (P.BoundsSafety->Level)
+          BSI.setLevelAudited(*P.BoundsSafety->Level);
+        BSI.ExternalBounds = P.BoundsSafety->BoundsExpr.str();
+        PI.BoundsSafety = BSI;
+      }
       if (static_cast<int>(OutInfo.Params.size()) <= P.Position)
         OutInfo.Params.resize(P.Position + 1);
       if (P.Position == -1)
@@ -984,6 +1043,18 @@ public:
                          TheNamespace.Items, SwiftVersion);
   }
 
+  std::pair<bool, std::optional<llvm::ArrayRef<llvm::StringRef>>>
+  getWhereParameters(const Function &Function) {
+    if (!Function.Where)
+      return {true, std::nullopt};
+
+    if (!Function.Where->Parameters) {
+      emitError("'Where' requires 'Parameters'");
+      return {false, std::nullopt};
+    }
+    return {true, llvm::ArrayRef<llvm::StringRef>(*Function.Where->Parameters)};
+  }
+
   template <typename FuncOrMethodInfo>
   void convertFunction(const Function &Function, FuncOrMethodInfo &FI) {
     convertAvailability(Function.Availability, FI, Function.Name);
@@ -1003,6 +1074,7 @@ public:
     FI.ResultType = std::string(Function.ResultType);
     FI.SwiftReturnOwnership = std::string(Function.SwiftReturnOwnership);
     FI.setRetainCountConvention(Function.RetainCountConvention);
+    FI.UnsafeBufferUsage = Function.UnsafeBufferUsage;
   }
 
   void convertTagContext(std::optional<Context> ParentContext, const Tag &T,
@@ -1091,9 +1163,17 @@ public:
     }
 
     for (const auto &CXXMethod : T.Methods) {
+      auto WhereParameters = getWhereParameters(CXXMethod);
+      if (!WhereParameters.first)
+        continue;
+
       CXXMethodInfo MI;
       convertFunction(CXXMethod, MI);
-      Writer.addCXXMethod(TagCtxID, CXXMethod.Name, MI, SwiftVersion);
+      if (WhereParameters.second)
+        Writer.addCXXMethod(TagCtxID, CXXMethod.Name, *WhereParameters.second,
+                            MI, SwiftVersion);
+      else
+        Writer.addCXXMethod(TagCtxID, CXXMethod.Name, MI, SwiftVersion);
     }
 
     // Convert nested tags.
@@ -1162,10 +1242,16 @@ public:
     }
 
     // Write all global functions.
-    llvm::StringSet<> KnownFunctions;
+    llvm::StringSet<> KnownNameOnlyFunctions;
     for (const auto &Function : TLItems.Functions) {
-      // Check for duplicate global functions.
-      if (!KnownFunctions.insert(Function.Name).second) {
+      auto WhereParameters = getWhereParameters(Function);
+      if (!WhereParameters.first)
+        continue;
+
+      // Check for duplicate name-only global functions. Selector-aware
+      // duplicate diagnostics are handled by a later overload-matching PR.
+      if (!WhereParameters.second &&
+          !KnownNameOnlyFunctions.insert(Function.Name).second) {
         emitError(llvm::Twine("multiple definitions of global function '") +
                   Function.Name + "'");
         continue;
@@ -1173,7 +1259,11 @@ public:
 
       GlobalFunctionInfo GFI;
       convertFunction(Function, GFI);
-      Writer.addGlobalFunction(Ctx, Function.Name, GFI, SwiftVersion);
+      if (WhereParameters.second)
+        Writer.addGlobalFunction(Ctx, Function.Name, *WhereParameters.second,
+                                 GFI, SwiftVersion);
+      else
+        Writer.addGlobalFunction(Ctx, Function.Name, GFI, SwiftVersion);
     }
 
     // Write all enumerators.
@@ -1234,10 +1324,10 @@ public:
       convertTopLevelItems(/* context */ std::nullopt, Versioned.Items,
                            Versioned.Version);
 
-    if (!ErrorOccured)
+    if (!ErrorOccurred)
       Writer.writeToStream(OS);
 
-    return ErrorOccured;
+    return ErrorOccurred;
   }
 };
 } // namespace

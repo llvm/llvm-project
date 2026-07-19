@@ -23,6 +23,8 @@ using namespace clang;
 using namespace ento;
 using namespace clang::ast_matchers;
 
+using ast_matchers::internal::Matcher;
+
 static const int MAXIMUM_STEP_UNROLLED = 128;
 
 namespace {
@@ -30,31 +32,30 @@ struct LoopState {
 private:
   enum Kind { Normal, Unrolled } K;
   const Stmt *LoopStmt;
-  const LocationContext *LCtx;
+  const StackFrame *SF;
   unsigned maxStep;
-  LoopState(Kind InK, const Stmt *S, const LocationContext *L, unsigned N)
-      : K(InK), LoopStmt(S), LCtx(L), maxStep(N) {}
+  LoopState(Kind InK, const Stmt *S, const StackFrame *SF, unsigned N)
+      : K(InK), LoopStmt(S), SF(SF), maxStep(N) {}
 
 public:
-  static LoopState getNormal(const Stmt *S, const LocationContext *L,
-                             unsigned N) {
-    return LoopState(Normal, S, L, N);
+  static LoopState getNormal(const Stmt *S, const StackFrame *SF, unsigned N) {
+    return LoopState(Normal, S, SF, N);
   }
-  static LoopState getUnrolled(const Stmt *S, const LocationContext *L,
+  static LoopState getUnrolled(const Stmt *S, const StackFrame *SF,
                                unsigned N) {
-    return LoopState(Unrolled, S, L, N);
+    return LoopState(Unrolled, S, SF, N);
   }
   bool isUnrolled() const { return K == Unrolled; }
   unsigned getMaxStep() const { return maxStep; }
   const Stmt *getLoopStmt() const { return LoopStmt; }
-  const LocationContext *getLocationContext() const { return LCtx; }
+  const StackFrame *getStackFrame() const { return SF; }
   bool operator==(const LoopState &X) const {
     return K == X.K && LoopStmt == X.LoopStmt;
   }
   void Profile(llvm::FoldingSetNodeID &ID) const {
     ID.AddInteger(K);
     ID.AddPointer(LoopStmt);
-    ID.AddPointer(LCtx);
+    ID.AddPointer(SF);
     ID.AddInteger(maxStep);
   }
 };
@@ -65,10 +66,15 @@ public:
 // to unroll them.
 // TODO: The loop stack should not need to be in the program state since it is
 // lexical in nature. Instead, the stack of loops should be tracked in the
-// LocationContext.
+// StackFrame.
 REGISTER_LIST_WITH_PROGRAMSTATE(LoopStack, LoopState)
 
 namespace clang {
+namespace {
+AST_MATCHER(QualType, isIntegralOrEnumerationType) {
+  return Node->isIntegralOrEnumerationType();
+}
+} // namespace
 namespace ento {
 
 static bool isLoopStmt(const Stmt *S) {
@@ -82,22 +88,23 @@ ProgramStateRef processLoopEnd(const Stmt *LoopStmt, ProgramStateRef State) {
   return State;
 }
 
-static internal::Matcher<Stmt> simpleCondition(StringRef BindName,
-                                               StringRef RefName) {
+static Matcher<Stmt> simpleCondition(StringRef BindName, StringRef RefName) {
+  auto LoopVariable = ignoringParenImpCasts(
+      declRefExpr(to(varDecl(hasType(isInteger())).bind(BindName)))
+          .bind(RefName));
+  auto UpperBound = ignoringParenImpCasts(
+      expr(hasType(isIntegralOrEnumerationType())).bind("boundNum"));
+
   return binaryOperator(
              anyOf(hasOperatorName("<"), hasOperatorName(">"),
                    hasOperatorName("<="), hasOperatorName(">="),
                    hasOperatorName("!=")),
-             hasEitherOperand(ignoringParenImpCasts(
-                 declRefExpr(to(varDecl(hasType(isInteger())).bind(BindName)))
-                     .bind(RefName))),
-             hasEitherOperand(
-                 ignoringParenImpCasts(integerLiteral().bind("boundNum"))))
+             anyOf(binaryOperator(hasLHS(LoopVariable), hasRHS(UpperBound)),
+                   binaryOperator(hasRHS(LoopVariable), hasLHS(UpperBound))))
       .bind("conditionOperator");
 }
 
-static internal::Matcher<Stmt>
-changeIntBoundNode(internal::Matcher<Decl> VarNodeMatcher) {
+static Matcher<Stmt> changeIntBoundNode(Matcher<Decl> VarNodeMatcher) {
   return anyOf(
       unaryOperator(anyOf(hasOperatorName("--"), hasOperatorName("++")),
                     hasUnaryOperand(ignoringParenImpCasts(
@@ -107,15 +114,13 @@ changeIntBoundNode(internal::Matcher<Decl> VarNodeMatcher) {
                          declRefExpr(to(varDecl(VarNodeMatcher)))))));
 }
 
-static internal::Matcher<Stmt>
-callByRef(internal::Matcher<Decl> VarNodeMatcher) {
+static Matcher<Stmt> callByRef(Matcher<Decl> VarNodeMatcher) {
   return callExpr(forEachArgumentWithParam(
       declRefExpr(to(varDecl(VarNodeMatcher))),
       parmVarDecl(hasType(references(qualType(unless(isConstQualified())))))));
 }
 
-static internal::Matcher<Stmt>
-assignedToRef(internal::Matcher<Decl> VarNodeMatcher) {
+static Matcher<Stmt> assignedToRef(Matcher<Decl> VarNodeMatcher) {
   return declStmt(hasDescendant(varDecl(
       allOf(hasType(referenceType()),
             hasInitializer(anyOf(
@@ -123,14 +128,13 @@ assignedToRef(internal::Matcher<Decl> VarNodeMatcher) {
                 declRefExpr(to(varDecl(VarNodeMatcher)))))))));
 }
 
-static internal::Matcher<Stmt>
-getAddrTo(internal::Matcher<Decl> VarNodeMatcher) {
+static Matcher<Stmt> getAddrTo(Matcher<Decl> VarNodeMatcher) {
   return unaryOperator(
       hasOperatorName("&"),
       hasUnaryOperand(declRefExpr(hasDeclaration(VarNodeMatcher))));
 }
 
-static internal::Matcher<Stmt> hasSuspiciousStmt(StringRef NodeName) {
+static Matcher<Stmt> hasSuspiciousStmt(StringRef NodeName) {
   return hasDescendant(stmt(
       anyOf(gotoStmt(), switchStmt(), returnStmt(),
             // Escaping and not known mutation of the loop counter is handled
@@ -142,7 +146,7 @@ static internal::Matcher<Stmt> hasSuspiciousStmt(StringRef NodeName) {
             assignedToRef(equalsBoundNode(std::string(NodeName))))));
 }
 
-static internal::Matcher<Stmt> forLoopMatcher() {
+static Matcher<Stmt> forLoopMatcher() {
   return forStmt(
              hasCondition(simpleCondition("initVarName", "initVarRef")),
              // Initialization should match the form: 'int i = 6' or 'i = 42'.
@@ -170,8 +174,7 @@ static bool isCapturedByReference(ExplodedNode *N, const DeclRefExpr *DR) {
 
   // Get the lambda CXXRecordDecl
   assert(DR->refersToEnclosingVariableOrCapture());
-  const LocationContext *LocCtxt = N->getLocationContext();
-  const Decl *D = LocCtxt->getDecl();
+  const Decl *D = N->getStackFrame()->getDecl();
   const auto *MD = cast<CXXMethodDecl>(D);
   assert(MD && MD->getParent()->isLambda() &&
          "Captured variable should only be seen while evaluating a lambda");
@@ -246,7 +249,7 @@ static bool isPossiblyEscaped(ExplodedNode *N, const DeclRefExpr *DR) {
     // Check the usage of the pass-by-ref function calls and adress-of operator
     // on VD and reference initialized by VD.
     ASTContext &ASTCtx =
-        N->getLocationContext()->getAnalysisDeclContext()->getASTContext();
+        N->getStackFrame()->getAnalysisDeclContext()->getASTContext();
     // Case 3 and 4:
     auto Match =
         match(stmt(anyOf(callByRef(equalsNode(VD)), getAddrTo(equalsNode(VD)),
@@ -271,23 +274,26 @@ static bool shouldCompletelyUnroll(const Stmt *LoopStmt, ASTContext &ASTCtx,
   if (!isLoopStmt(LoopStmt))
     return false;
 
-  // TODO: Match the cases where the bound is not a concrete literal but an
-  // integer with known value
   auto Matches = match(forLoopMatcher(), *LoopStmt, ASTCtx);
   if (Matches.empty())
     return false;
 
   const auto *CounterVarRef = Matches[0].getNodeAs<DeclRefExpr>("initVarRef");
-  llvm::APInt BoundNum =
-      Matches[0].getNodeAs<IntegerLiteral>("boundNum")->getValue();
+  const Expr *BoundNumExpr = Matches[0].getNodeAs<Expr>("boundNum");
+
+  Expr::EvalResult BoundNumResult;
+  if (!BoundNumExpr || !BoundNumExpr->EvaluateAsInt(BoundNumResult, ASTCtx,
+                                                    Expr::SE_NoSideEffects)) {
+    return false;
+  }
   llvm::APInt InitNum =
       Matches[0].getNodeAs<IntegerLiteral>("initNum")->getValue();
   auto CondOp = Matches[0].getNodeAs<BinaryOperator>("conditionOperator");
-  unsigned MaxWidth = std::max(InitNum.getBitWidth(), BoundNum.getBitWidth());
+  unsigned MaxWidth = std::max(InitNum.getBitWidth(),
+                               BoundNumResult.Val.getInt().getBitWidth());
 
   InitNum = InitNum.zext(MaxWidth);
-  BoundNum = BoundNum.zext(MaxWidth);
-
+  llvm::APInt BoundNum = BoundNumResult.Val.getInt().zext(MaxWidth);
   if (CondOp->getOpcode() == BO_GE || CondOp->getOpcode() == BO_LE)
     maxStep = (BoundNum - InitNum + 1).abs().getZExtValue();
   else
@@ -320,25 +326,25 @@ static bool madeNewBranch(ExplodedNode *N, const Stmt *LoopStmt) {
 ProgramStateRef updateLoopStack(const Stmt *LoopStmt, ASTContext &ASTCtx,
                                 ExplodedNode *Pred, unsigned maxVisitOnPath) {
   auto State = Pred->getState();
-  auto LCtx = Pred->getLocationContext();
+  auto SF = Pred->getStackFrame();
 
   if (!isLoopStmt(LoopStmt))
     return State;
 
   auto LS = State->get<LoopStack>();
   if (!LS.isEmpty() && LoopStmt == LS.getHead().getLoopStmt() &&
-      LCtx == LS.getHead().getLocationContext()) {
+      SF == LS.getHead().getStackFrame()) {
     if (LS.getHead().isUnrolled() && madeNewBranch(Pred, LoopStmt)) {
       State = State->set<LoopStack>(LS.getTail());
       State = State->add<LoopStack>(
-          LoopState::getNormal(LoopStmt, LCtx, maxVisitOnPath));
+          LoopState::getNormal(LoopStmt, SF, maxVisitOnPath));
     }
     return State;
   }
   unsigned maxStep;
   if (!shouldCompletelyUnroll(LoopStmt, ASTCtx, Pred, maxStep)) {
     State = State->add<LoopStack>(
-        LoopState::getNormal(LoopStmt, LCtx, maxVisitOnPath));
+        LoopState::getNormal(LoopStmt, SF, maxVisitOnPath));
     return State;
   }
 
@@ -347,10 +353,10 @@ ProgramStateRef updateLoopStack(const Stmt *LoopStmt, ASTContext &ASTCtx,
   unsigned innerMaxStep = maxStep * outerStep;
   if (innerMaxStep > MAXIMUM_STEP_UNROLLED)
     State = State->add<LoopStack>(
-        LoopState::getNormal(LoopStmt, LCtx, maxVisitOnPath));
+        LoopState::getNormal(LoopStmt, SF, maxVisitOnPath));
   else
     State = State->add<LoopStack>(
-        LoopState::getUnrolled(LoopStmt, LCtx, innerMaxStep));
+        LoopState::getUnrolled(LoopStmt, SF, innerMaxStep));
   return State;
 }
 

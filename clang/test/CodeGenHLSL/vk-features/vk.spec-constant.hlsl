@@ -91,7 +91,7 @@ void main() {
 // CHECK-NEXT:    [[D:%.*]] = alloca double, align 8
 // CHECK-NEXT:    [[E:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(10) @_ZL10bool_const, align 4
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i32 [[TMP1]] to i1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i32 [[TMP1]], 0
 // CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[LOADEDV]] to i32
 // CHECK-NEXT:    store i32 [[STOREDV]], ptr [[B]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr addrspace(10) @_ZL11short_const, align 2
@@ -195,7 +195,7 @@ void main() {
 // CHECK-SAME: ) #[[ATTR3]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
-// CHECK-NEXT:    [[TMP1:%.*]] = call reassoc nnan ninf nsz arcp afn float @_Z20__spirv_SpecConstantiDh(i32 8, float 0x4044333340000000)
+// CHECK-NEXT:    [[TMP1:%.*]] = call reassoc nnan ninf nsz arcp afn float @_Z20__spirv_SpecConstantiDh(i32 8, float 4.040000e+01)
 // CHECK-NEXT:    store float [[TMP1]], ptr addrspace(10) @_ZL10half_const, align 4
 // CHECK-NEXT:    ret void
 //
@@ -213,7 +213,7 @@ void main() {
 // CHECK-SAME: ) #[[ATTR3]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
-// CHECK-NEXT:    [[TMP1:%.*]] = call reassoc nnan ninf nsz arcp afn double @_Z20__spirv_SpecConstantid(i32 9, double 0x40590CCCC0000000)
+// CHECK-NEXT:    [[TMP1:%.*]] = call reassoc nnan ninf nsz arcp afn double @_Z20__spirv_SpecConstantid(i32 9, double f0x40590CCCC0000000)
 // CHECK-NEXT:    store double [[TMP1]], ptr addrspace(10) @_ZL12double_const, align 8
 // CHECK-NEXT:    ret void
 //

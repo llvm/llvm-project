@@ -17,7 +17,7 @@ i(3) = 3
 print *,i
 end program
 
-! CPU-LABEL:   omp.declare_reduction @add_reduction_byref_box_3xi32 : !fir.ref<!fir.box<!fir.array<3xi32>>> alloc {
+! CPU-LABEL:   omp.declare_reduction @add_reduction_byref_box_3xi32 : !fir.ref<!fir.box<!fir.array<3xi32>>> attributes {byref_element_type = !fir.array<3xi32>} alloc {
 ! CPU:           %[[VAL_8:.*]] = fir.alloca !fir.box<!fir.array<3xi32>>
 ! CPU:           omp.yield(%[[VAL_8]] : !fir.ref<!fir.box<!fir.array<3xi32>>>)
 ! CPU-LABEL:   } init {

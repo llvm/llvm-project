@@ -106,7 +106,7 @@ TestTU::preamble(PreambleParsedCallback PreambleCallback) const {
   assert(CI && "Failed to build compilation invocation.");
   if (OverlayRealFileSystemForModules)
     initializeModuleCache(*CI);
-  auto ModuleCacheDeleter = llvm::make_scope_exit(
+  llvm::scope_exit ModuleCacheDeleter(
       std::bind(deleteModuleCache, CI->getHeaderSearchOpts().ModuleCachePath));
   return clang::clangd::buildPreamble(testPath(Filename), *CI, Inputs,
                                       /*StoreInMemory=*/true, PreambleCallback);
@@ -121,7 +121,7 @@ ParsedAST TestTU::build() const {
   assert(CI && "Failed to build compilation invocation.");
   if (OverlayRealFileSystemForModules)
     initializeModuleCache(*CI);
-  auto ModuleCacheDeleter = llvm::make_scope_exit(
+  llvm::scope_exit ModuleCacheDeleter(
       std::bind(deleteModuleCache, CI->getHeaderSearchOpts().ModuleCachePath));
 
   auto Preamble = clang::clangd::buildPreamble(testPath(Filename), *CI, Inputs,

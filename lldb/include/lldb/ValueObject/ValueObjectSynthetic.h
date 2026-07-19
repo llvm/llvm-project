@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_VALUEOBJECT_VALUEOBJECTSYNTHETICFILTER_H
-#define LLDB_VALUEOBJECT_VALUEOBJECTSYNTHETICFILTER_H
+#ifndef LLDB_VALUEOBJECT_VALUEOBJECTSYNTHETIC_H
+#define LLDB_VALUEOBJECT_VALUEOBJECTSYNTHETIC_H
 
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/ConstString.h"
@@ -123,6 +123,13 @@ public:
 
   void SetLanguageFlags(uint64_t flags) override;
 
+  void
+  GetExpressionPath(Stream &stream,
+                    GetExpressionPathFormat epformat =
+                        eGetExpressionPathFormatDereferencePointers) override;
+
+  SyntheticChildrenFrontEnd *GetSyntheticChildrenFrontEnd() override;
+
 protected:
   bool UpdateValue() override;
 
@@ -176,4 +183,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_VALUEOBJECT_VALUEOBJECTSYNTHETICFILTER_H
+#endif // LLDB_VALUEOBJECT_VALUEOBJECTSYNTHETIC_H

@@ -24,6 +24,11 @@ Example
 Options
 -------
 
+.. option:: IgnoreMacros
+
+    When `true`, the check will ignore member initializations where the
+    initializer involves a macro expansion. Default is `false`.
+
 .. option:: IgnoreBaseInCopyConstructors
 
     Default is `false`.

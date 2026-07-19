@@ -17,6 +17,7 @@
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTMATHTOLIBMPASS
@@ -113,10 +114,10 @@ PromoteOpToF32<Op>::matchAndRewrite(Op op, PatternRewriter &rewriter) const {
 
   auto loc = op.getLoc();
   auto f32 = rewriter.getF32Type();
-  auto extendedOperands = llvm::to_vector(
-      llvm::map_range(op->getOperands(), [&](Value operand) -> Value {
+  auto extendedOperands =
+      llvm::map_to_vector(op->getOperands(), [&](Value operand) -> Value {
         return arith::ExtFOp::create(rewriter, loc, f32, operand);
-      }));
+      });
   auto newOp = Op::create(rewriter, loc, f32, extendedOperands);
   rewriter.replaceOpWithNewOp<arith::TruncFOp>(op, opType, newOp);
   return success();
