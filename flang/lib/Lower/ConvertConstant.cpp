@@ -834,6 +834,10 @@ genConstantValue(Fortran::lower::AbstractConverter &converter,
           Fortran::evaluate::Parentheses<Fortran::evaluate::SomeDerived>>(
           &constantExpr.u))
     return genConstantValue(converter, loc, parens->left());
+  // Semantics gates every initializer through NonPointerInitializationExpr,
+  // which only accepts expressions admitted by evaluate::IsActuallyConstant --
+  // exactly the forms handled above. If this fatal error is ever hit, an
+  // initializer escaped that semantic check.
   fir::emitFatalError(loc, "expected a constant derived type expression in "
                            "initializer, but got: " +
                                constantExpr.AsFortran());
@@ -851,6 +855,11 @@ static fir::ExtendedValue genConstantValue(
           Fortran::evaluate::UnwrapConstantValue<T>(constantExpr))
     return Fortran::lower::convertConstant(converter, loc, *constant,
                                            /*outline=*/false);
+  // Semantics gates every initializer through NonPointerInitializationExpr,
+  // which only accepts expressions admitted by evaluate::IsActuallyConstant --
+  // a Constant<T>, possibly parenthesized, once the derived-type forms are
+  // handled by the overload above. If this fatal error is ever hit, an
+  // initializer escaped that semantic check.
   fir::emitFatalError(loc, "expected a constant expression in initializer, "
                            "but got: " +
                                constantExpr.AsFortran());
