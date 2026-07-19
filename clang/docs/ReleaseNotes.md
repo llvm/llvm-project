@@ -427,6 +427,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### OpenMP Support
 
+- Added parsing and semantic support for `dims` modifier in `num_teams` and
+  `thread_limit` clauses for OpenMP 6.1 or later.
+
 ### SYCL Support
 
 #### Improvements
