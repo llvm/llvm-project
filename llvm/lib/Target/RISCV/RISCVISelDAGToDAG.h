@@ -49,6 +49,7 @@ public:
 
   bool SelectAddrFrameIndex(SDValue Addr, SDValue &Base, SDValue &Offset);
   bool SelectAddrRegImm(SDValue Addr, SDValue &Base, SDValue &Offset);
+  bool SelectAddrRegImm26(SDValue Addr, SDValue &Base, SDValue &Offset);
   bool SelectAddrRegImm9(SDValue Addr, SDValue &Base, SDValue &Offset);
   bool SelectAddrRegImmLsb00000(SDValue Addr, SDValue &Base, SDValue &Offset);
 

@@ -20,6 +20,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostNativeProcessBase.h"
@@ -97,11 +98,14 @@ ProcessSP ProcessWindows::CreateInstance(lldb::TargetSP target_sp,
 }
 
 static bool ShouldUseLLDBServer() {
-  llvm::StringRef use_lldb_server = ::getenv("LLDB_USE_LLDB_SERVER");
-  return use_lldb_server.equals_insensitive("on") ||
-         use_lldb_server.equals_insensitive("yes") ||
-         use_lldb_server.equals_insensitive("1") ||
-         use_lldb_server.equals_insensitive("true");
+  if (const char *env = ::getenv("LLDB_USE_LLDB_SERVER")) {
+    llvm::StringRef use_lldb_server(env);
+    return use_lldb_server.equals_insensitive("on") ||
+           use_lldb_server.equals_insensitive("yes") ||
+           use_lldb_server.equals_insensitive("1") ||
+           use_lldb_server.equals_insensitive("true");
+  }
+  return LLDB_ENABLE_LIBXML2;
 }
 
 void ProcessWindows::Initialize() {
@@ -641,25 +645,23 @@ void ProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
   LLDB_LOG(log, "Debugger connected to process {0}.  Image base = {1:x}",
            debugger->GetProcess().GetProcessId(), image_base);
 
-  ModuleSP module;
-  // During attach, we won't have the executable module, so find it now.
-  const DWORD pid = debugger->GetProcess().GetProcessId();
-  const std::string file_name = GetProcessExecutableName(pid);
-  if (file_name.empty()) {
-    return;
-  }
-
-  FileSpec executable_file(file_name);
-  FileSystem::Instance().Resolve(executable_file);
-  ModuleSpec module_spec(executable_file);
-  Status error;
-  module =
-      GetTarget().GetOrCreateModule(module_spec, true /* notify */, &error);
+  ModuleSP module = GetTarget().GetExecutableModule();
   if (!module) {
-    return;
-  }
+    const DWORD pid = debugger->GetProcess().GetProcessId();
+    const std::string file_name = GetProcessExecutableName(pid);
+    if (file_name.empty())
+      return;
 
-  GetTarget().SetExecutableModule(module, eLoadDependentsNo);
+    FileSpec executable_file(file_name);
+    FileSystem::Instance().Resolve(executable_file);
+    ModuleSpec module_spec(executable_file);
+    Status error;
+    module =
+        GetTarget().GetOrCreateModule(module_spec, /*notify=*/true, &error);
+    if (!module)
+      return;
+    GetTarget().SetExecutableModule(module, eLoadDependentsNo);
+  }
 
   if (auto dyld = GetDynamicLoader())
     dyld->OnLoadModule(module, ModuleSpec(), image_base);

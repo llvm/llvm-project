@@ -2182,12 +2182,6 @@ bool Compiler<Emitter>::VisitImplicitValueInitExpr(
     if (RD->isInvalidDecl())
       return false;
 
-    if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
-        CXXRD && CXXRD->getNumVBases() > 0) {
-      // TODO: Diagnose.
-      return false;
-    }
-
     const Record *R = getRecord(QT);
     if (!R)
       return false;
@@ -4140,7 +4134,8 @@ bool Compiler<Emitter>::VisitCXXInheritedCtorInitExpr(
   assert(!Ctor->isTrivial() &&
          "Trivial CXXInheritedCtorInitExpr, implement. (possible?)");
   const Function *F = this->getFunction(Ctor);
-  assert(F);
+  if (!F)
+    return false;
   assert(!F->hasRVO());
   assert(F->hasThisPointer());
 
@@ -5049,7 +5044,8 @@ bool Compiler<Emitter>::visitZeroInitializer(PrimType T, QualType QT,
 
 template <class Emitter>
 bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
-                                                   const Expr *E) {
+                                                   const Expr *E,
+                                                   bool IsCompleteClass) {
   assert(E);
   assert(R);
   // Fields
@@ -5109,13 +5105,22 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
   for (const Record::Base &B : R->bases()) {
     if (!this->emitGetPtrBase(B.Offset, E))
       return false;
-    if (!this->visitZeroRecordInitializer(B.R, E))
+    if (!this->visitZeroRecordInitializer(B.R, E, /*IsCompleteClass=*/false))
       return false;
     if (!this->emitFinishInitPop(E))
       return false;
   }
 
-  // FIXME: Virtual bases.
+  if (IsCompleteClass) {
+    for (const Record::Base &B : R->virtual_bases()) {
+      if (!this->emitGetPtrVirtBase(cast<CXXRecordDecl>(B.R->getDecl()), E))
+        return false;
+      if (!this->visitZeroRecordInitializer(B.R, E, /*IsCompleteClass=*/false))
+        return false;
+      if (!this->emitFinishInitPop(E))
+        return false;
+    }
+  }
 
   return true;
 }
@@ -5501,6 +5506,7 @@ bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
     return false;
 
   OptPrimType VarT = classify(VD->getType());
+  bool IsReference = VD->getType()->isReferenceType();
   if (Context::shouldBeGloballyIndexed(VD)) {
     auto GlobalIndex = P.getGlobal(VD);
     assert(GlobalIndex); // visitVarDecl() didn't return false.
@@ -5515,7 +5521,10 @@ bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
     auto Local = Locals.find(VD);
     assert(Local != Locals.end()); // Same here.
     if (VarT) {
-      if (!this->emitGetLocal(*VarT, Local->second.Offset, VD))
+      if (IsReference) {
+        if (!this->emitGetRefLocal(Local->second.Offset, VD))
+          return false;
+      } else if (!this->emitGetLocal(*VarT, Local->second.Offset, VD))
         return false;
     } else {
       if (!this->emitGetPtrLocal(Local->second.Offset, VD))
@@ -5857,11 +5866,8 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
         } else {
           assert(EntryType->isRecordType());
           const Record *EntryRecord = getRecord(EntryType);
-          if (!EntryRecord) {
-            assert(false);
-
+          if (!EntryRecord)
             return false;
-          }
 
           const Decl *BaseOrMember = Entry.getAsBaseOrMember().getPointer();
           if (const auto *FD = dyn_cast<FieldDecl>(BaseOrMember)) {
@@ -5871,9 +5877,15 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
             EntryType = FD->getType();
           } else {
             const auto *Base = cast<CXXRecordDecl>(BaseOrMember);
-            unsigned BaseOffset = EntryRecord->getBase(Base)->Offset;
-            if (!this->emitGetPtrBasePop(BaseOffset, /*NullOK=*/false, Info))
-              return false;
+            if (const Record::Base *B = EntryRecord->getBaseOrNull(Base)) {
+              if (!this->emitGetPtrBasePop(B->Offset, /*NullOK=*/false, Info))
+                return false;
+            } else {
+              // Must be a virtual base.
+              assert(EntryRecord->getVirtualBase(Base));
+              if (!this->emitGetPtrVirtBasePop(Base, Info))
+                return false;
+            }
             EntryType = Ctx.getASTContext().getCanonicalTagType(Base);
           }
         }
@@ -5888,17 +5900,38 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
 
 template <class Emitter>
 bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
-                                                SourceInfo Info, QualType T) {
+                                                SourceInfo Info, QualType T,
+                                                bool IsCompleteClass) {
   if (Val.isStruct()) {
     const Record *R = this->getRecord(T);
     assert(R);
+
+    assert(R->getNumBases() == Val.getStructNumBases());
+    if (IsCompleteClass)
+      assert(R->getNumVirtualBases() == Val.getStructNumVirtualBases());
+
+    for (unsigned I = 0, N = Val.getStructNumBases(); I != N; ++I) {
+      const APValue &B = Val.getStructBase(I);
+      if (B.isIndeterminate())
+        continue;
+      const Record::Base *RB = R->getBase(I);
+      QualType BaseType = Ctx.getASTContext().getCanonicalTagType(RB->Decl);
+
+      if (!this->emitGetPtrBase(RB->Offset, Info))
+        return false;
+      if (!this->visitAPValueInitializer(B, Info, BaseType,
+                                         /*IsCompleteClass=*/false))
+        return false;
+      if (!this->emitFinishInitPop(Info))
+        return false;
+    }
+
     for (unsigned I = 0, N = Val.getStructNumFields(); I != N; ++I) {
       const APValue &F = Val.getStructField(I);
       if (F.isIndeterminate())
         continue;
       const Record::Field *RF = R->getField(I);
       QualType FieldType = RF->Decl->getType();
-
       // Fields.
       if (OptPrimType PT = classify(FieldType)) {
         if (!this->visitAPValue(F, *PT, Info))
@@ -5915,25 +5948,24 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
       }
     }
 
-    // Bases.
-    for (unsigned I = 0, N = Val.getStructNumBases(); I != N; ++I) {
-      // FIXME: APValue doesn't know about virtual bases.
-      //   We simply assume that if the APValue has more bases than the Record,
-      //   those additional bases must be virtual.
-      if (I >= R->getNumBases())
-        break;
-      const APValue &B = Val.getStructBase(I);
-      if (B.isIndeterminate())
-        continue;
-      const Record::Base *RB = R->getBase(I);
-      QualType BaseType = Ctx.getASTContext().getCanonicalTagType(RB->Decl);
+    // Virtual Bases.
+    if (IsCompleteClass) {
+      for (unsigned I = 0, N = Val.getStructNumVirtualBases(); I != N; ++I) {
+        const APValue &B = Val.getStructVirtualBase(I);
+        if (B.isIndeterminate())
+          continue;
+        const Record::Base *RB = R->getVirtualBase(I);
+        QualType BaseType = Ctx.getASTContext().getCanonicalTagType(RB->Decl);
 
-      if (!this->emitGetPtrBase(RB->Offset, Info))
-        return false;
-      if (!this->visitAPValueInitializer(B, Info, BaseType))
-        return false;
-      if (!this->emitFinishInitPop(Info))
-        return false;
+        if (!this->emitGetPtrVirtBase(cast<CXXRecordDecl>(RB->R->getDecl()),
+                                      Info))
+          return false;
+        if (!this->visitAPValueInitializer(B, Info, BaseType,
+                                           /*IsCompleteClass=*/false))
+          return false;
+        if (!this->emitFinishInitPop(Info))
+          return false;
+      }
     }
 
     return true;
@@ -7375,6 +7407,38 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
 
   unsigned FieldInits = 0;
   InitLinkScope<Emitter> InitScope(this, InitLink::This());
+  // First, initialize virtual bases if the records has them.
+  if (R->getNumVirtualBases() > 0) {
+    if (!this->emitThis(Ctor))
+      return false;
+    LabelTy AfterVirtBasesLabel = this->getLabel();
+
+    // If the instance pointer is a base class, skip the virtual bases.
+    if (!this->emitIsBaseClass({}))
+      return false;
+    if (!this->jumpTrue(AfterVirtBasesLabel, {}))
+      return false;
+
+    for (const auto *Init : Ctor->inits()) {
+      if (const Type *Base = Init->getBaseClass();
+          Base && Init->isBaseVirtual()) {
+        const auto *BaseDecl = Base->getAsCXXRecordDecl();
+        assert(BaseDecl);
+        assert(R->getVirtualBase(BaseDecl));
+        if (!this->emitGetPtrThisVirtBase(BaseDecl, Ctor))
+          return false;
+        if (!this->visitInitializerPop(Init->getInit()))
+          return false;
+      }
+    }
+
+    this->fallthrough(AfterVirtBasesLabel);
+    this->emitLabel(AfterVirtBasesLabel);
+
+    if (!this->emitPopPtr(Ctor))
+      return false;
+  }
+
   for (const auto *Init : Ctor->inits()) {
     // Scope needed for the initializers.
     LocalScope<Emitter> Scope(this, ScopeKind::FullExpression);
@@ -7393,10 +7457,8 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
       assert(BaseDecl);
 
       if (Init->isBaseVirtual()) {
-        assert(R->getVirtualBase(BaseDecl));
-        if (!this->emitGetPtrThisVirtBase(BaseDecl, InitExpr))
-          return false;
-
+        // See above.
+        continue;
       } else {
         // Base class initializer.
         // Get This Base and call initializer on it.
@@ -7535,10 +7597,31 @@ bool Compiler<Emitter>::compileDestructor(const CXXDestructorDecl *Dtor) {
       return false;
   }
 
+  if (R->getNumVirtualBases() > 0) {
+    LabelTy EndLabel = this->getLabel();
+    // If this is a base class, skip the virtual bases.
+    if (!this->emitIsBaseClass({}))
+      return false;
+    if (!this->jumpTrue(EndLabel, {}))
+      return false;
+
+    for (const Record::Base &Base : llvm::reverse(R->virtual_bases())) {
+      if (Base.R->hasTrivialDtor())
+        continue;
+      if (!this->emitGetPtrVirtBase(cast<CXXRecordDecl>(Base.R->getDecl()),
+                                    SourceInfo{}))
+        return false;
+      if (!this->emitRecordDestructionPop(Base.R, {}))
+        return false;
+    }
+
+    this->fallthrough(EndLabel);
+    this->emitLabel(EndLabel);
+  }
+
   if (!this->emitMarkDestroyed(Dtor))
     return false;
 
-  // FIXME: Virtual bases.
   return this->emitPopPtr(Dtor) && this->emitRetVoid(Dtor);
 }
 
@@ -8106,11 +8189,14 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     return F && this->emitGetFnPtr(F, E);
   }
   if (const auto *TPOD = dyn_cast<TemplateParamObjectDecl>(D)) {
+    TPOD = TPOD->getFirstDecl();
     if (DiscardResult)
       return true;
+    if (UnsignedOrNone GlobalIndex = P.getGlobal(TPOD))
+      return this->emitGetPtrGlobal(*GlobalIndex, E);
 
-    if (UnsignedOrNone Index = P.getOrCreateGlobal(D)) {
-      if (OptPrimType T = classify(D->getType())) {
+    if (UnsignedOrNone Index = P.getOrCreateGlobal(TPOD)) {
+      if (OptPrimType T = classify(TPOD->getType())) {
         if (!this->visitAPValue(TPOD->getValue(), *T, E))
           return false;
         return this->emitInitGlobal(*T, *Index, E);
