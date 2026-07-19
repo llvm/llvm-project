@@ -18,10 +18,12 @@
 #include <cassert>
 #include <iterator>
 #include <numeric>
+#include <limits>
 
 #include "test_execution_policies.h"
 #include "test_macros.h"
 #include "test_iterators.h"
+#include "type_algorithms.h"
 
 // TODO: switch to the shared implementation once it's merged into main
 template <class Callable>
