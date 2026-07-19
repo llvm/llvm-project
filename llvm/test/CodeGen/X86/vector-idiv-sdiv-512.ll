@@ -787,3 +787,25 @@ define <16 x i32> @test_remv_16i32(<16 x i32> %a, <16 x i32> %b) nounwind {
   %res = srem <16 x i32> %a, %b
   ret <16 x i32> %res
 }
+
+define void @test_divv_16i32_sext16(ptr %dst, ptr %x, ptr %y) nounwind {
+; AVX-LABEL: test_divv_16i32_sext16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmovsxwd (%rsi), %zmm0
+; AVX-NEXT:    vpmovsxwd (%rdx), %zmm1
+; AVX-NEXT:    vcvtdq2ps %zmm1, %zmm1
+; AVX-NEXT:    vcvtdq2ps %zmm0, %zmm0
+; AVX-NEXT:    vdivps %zmm1, %zmm0, %zmm0
+; AVX-NEXT:    vcvttps2dq %zmm0, %zmm0
+; AVX-NEXT:    vpmovdw %zmm0, (%rdi)
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+  %a16 = load <16 x i16>, ptr %x
+  %a = sext <16 x i16> %a16 to <16 x i32>
+  %b16 = load <16 x i16>, ptr %y
+  %b = sext <16 x i16> %b16 to <16 x i32>
+  %res = sdiv <16 x i32> %a, %b
+  %t = trunc <16 x i32> %res to <16 x i16>
+  store <16 x i16> %t, ptr %dst
+  ret void
+}
