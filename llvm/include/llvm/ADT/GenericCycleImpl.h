@@ -233,9 +233,10 @@ template <typename ContextT> class GenericCycleInfoCompute {
     unsigned LoopHeader = 0;
 
     BlockT *getBlock() const { return BlockAndHeader.getPointer(); }
-    void setBlock(BlockT *B) { BlockAndHeader.setPointer(B); }
     bool isHeader() const { return BlockAndHeader.getInt(); }
     void setHeader() { BlockAndHeader.setInt(true); }
+    // An unvisited entry is all-zero,
+    bool visited() const { return BlockAndHeader.getOpaqueValue() != nullptr; }
   };
 
   // Per-cycle scratch built in run() and consumed by flatten(), keyed by
@@ -480,7 +481,7 @@ void GenericCycleInfoCompute<ContextT>::dfs(BlockT *EntryBlock) {
     unsigned N = num(Block);
     Preorder[Counter] = N;
     BlockInfo &BI = info(N);
-    BI.setBlock(Block);
+    BI.BlockAndHeader.setPointerAndInt(Block, false);
     BI.Pos = ++Counter;
     BI.LoopHeader = NoBlock;
     auto Succs = successors(Block);
@@ -496,7 +497,7 @@ void GenericCycleInfoCompute<ContextT>::dfs(BlockT *EntryBlock) {
       BlockT *B1P = *Top.Cur++;
       unsigned B1 = num(B1P);
       BlockInfo &B1Info = info(B1);
-      if (!B1Info.getBlock()) {
+      if (!B1Info.visited()) {
         // Tree edge; the weaving happens when B1's frame is popped.
         open(B1P);
       } else if (B1Info.Pos > 0) {
