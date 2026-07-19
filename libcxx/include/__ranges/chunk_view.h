@@ -57,8 +57,8 @@ template <view _View>
   requires input_range<_View>
 class chunk_view : public view_interface<chunk_view<_View>> {
   _LIBCPP_NO_UNIQUE_ADDRESS _View __base_;
-  _LIBCPP_NO_UNIQUE_ADDRESS range_difference_t<_View> __n_;
-  _LIBCPP_NO_UNIQUE_ADDRESS range_difference_t<_View> __remainder_;
+  range_difference_t<_View> __n_;
+  range_difference_t<_View> __remainder_;
   _LIBCPP_NO_UNIQUE_ADDRESS __non_propagating_cache<iterator_t<_View>> __current_;
 
   class __outer_iterator;
@@ -256,7 +256,7 @@ template <view _View>
   requires forward_range<_View>
 class chunk_view<_View> : public view_interface<chunk_view<_View>> {
   _LIBCPP_NO_UNIQUE_ADDRESS _View __base_;
-  _LIBCPP_NO_UNIQUE_ADDRESS range_difference_t<_View> __n_;
+  range_difference_t<_View> __n_;
 
   template <bool _Const>
   class __iterator;
