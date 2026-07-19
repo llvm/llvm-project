@@ -615,12 +615,12 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     AffineMap readMap = readOp.getPermutationMap();
     bool isTransposeLoad = isInnermostTwoDimsTransposed(readMap);
 
-    // Prefer an nd block load. It requires HW block-load support, a >1D vector
-    // backed by a scalar-element memref, and a map the block load can realize.
-    // Out-of-bounds reads are allowed as long as the padding matches load_nd's
-    // implicit zero padding.
+    // Prefer an nd block load. It requires HW block-load support, a non-0D
+    // vector backed by a scalar-element memref, and a map the block load can
+    // realize. Out-of-bounds reads are allowed as long as the padding matches
+    // load_nd's implicit zero padding.
     bool canLowerToLoadNd =
-        hasBlockLoadSupport && loadedVecTy.getRank() > 1 &&
+        hasBlockLoadSupport && loadedVecTy.getRank() > 0 &&
         (readMap.isMinorIdentity() || isTransposeLoad) &&
         readMemTy.getElementType().isIntOrFloat() &&
         (!isOutOfBounds || isZeroOrPoisonPadding(readOp.getPadding()));
@@ -726,12 +726,12 @@ struct TransferWriteLowering
     bool hasBlockStoreSupport =
         (chip == "pvc" || chip == "bmg" || chip == "cri");
 
-    // Prefer an nd block store. It requires HW block-store support, a >1D
+    // Prefer an nd block store. It requires HW block-store support, a non-0D
     // vector backed by a scalar-element memref, and a minor-identity map (block
     // stores have no transpose support). Out-of-bounds writes are handled by
     // the descriptor's boundary check.
     AffineMap map = writeOp.getPermutationMap();
-    bool canLowerToStoreNd = hasBlockStoreSupport && vecTy.getRank() > 1 &&
+    bool canLowerToStoreNd = hasBlockStoreSupport && vecTy.getRank() > 0 &&
                              map.isMinorIdentity() &&
                              writeMemTy.getElementType().isIntOrFloat();
 
@@ -893,7 +893,8 @@ struct StoreLowering : public OpRewritePattern<vector::StoreOp> {
       return rewriter.notifyMatchFailure(storeOp, "Expects 1D or 2D vector");
     if (!memTy.getElementType().isIntOrFloat())
       return rewriter.notifyMatchFailure(
-          storeOp, "Unsupported memref element type: expected integer or float");
+          storeOp,
+          "Unsupported memref element type: expected integer or float");
 
     // Boundary check is available only for block instructions.
     bool boundaryCheck = vecTy.getRank() > 1;
