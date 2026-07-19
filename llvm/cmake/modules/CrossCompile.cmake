@@ -46,6 +46,10 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
     # Propagate LLVM_EXTERNAL_CLANG_SOURCE_DIR so that clang-tblgen can be built
     set(external_clang_dir "-DLLVM_EXTERNAL_CLANG_SOURCE_DIR=${LLVM_EXTERNAL_CLANG_SOURCE_DIR}")
   endif()
+  if (LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR)
+    # Propagate LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR so that clang-tidy-confusable-chars-gen can be built
+    set(external_clang_tools_extra_dir "-DLLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR=${LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR}")
+  endif()
 
   add_custom_command(OUTPUT ${${project_name}_${target_name}_BUILD}
     COMMAND ${CMAKE_COMMAND} -E make_directory ${${project_name}_${target_name}_BUILD}
@@ -111,6 +115,7 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
         -DLLVM_TABLEGEN_FLAGS="${llvm_tablegen_flags}"
         ${python_executable_flag}
         ${build_type_flags} ${linker_flag} ${external_clang_dir} ${libc_flags}
+        ${external_clang_tools_extra_dir}
         ${ARGN}
     WORKING_DIRECTORY ${${project_name}_${target_name}_BUILD}
     DEPENDS CREATE_${project_name}_${target_name}
