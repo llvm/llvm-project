@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+// REQUIRES: std-at-least-c++26
 // REQUIRES: linux && no-filesystem
 
 // <debugging>
@@ -19,7 +19,7 @@
 
 #include "check_assertion.h"
 
-// Test without debugger.
+// Test without a debugger.
 
 void test() {
   TEST_LIBCPP_ASSERT_FAILURE(

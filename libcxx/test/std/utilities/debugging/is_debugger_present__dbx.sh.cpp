@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+// REQUIRES: std-at-least-c++26
 // REQUIRES: host-has-dbx
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
@@ -39,11 +39,11 @@ void StopForDebugger(void*) OPT_NONE;
 void StopForDebugger(void*) {}
 
 void test() {
-  static_assert(noexcept(std::is_debugger_present()));
-
   std::same_as<bool> decltype(auto) isDebuggerPresent = std::is_debugger_present();
   MarkAsLive(isDebuggerPresent);
   StopForDebugger(&isDebuggerPresent);
+
+  static_assert(noexcept(std::is_debugger_present()));
 }
 
 int main(int, char**) {

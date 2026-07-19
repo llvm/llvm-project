@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+// REQUIRES: std-at-least-c++26
 
 // <debugging>
 
@@ -16,13 +16,13 @@
 #include <concepts>
 #include <debugging>
 
-// Test without debugger.
+// Test without a debugger.
 
 void test() {
-  static_assert(noexcept(std::is_debugger_present()));
-
   std::same_as<bool> decltype(auto) isDebuggerPresent = std::is_debugger_present();
   assert(!isDebuggerPresent);
+
+  static_assert(noexcept(std::is_debugger_present()));
 }
 
 int main(int, char**) {

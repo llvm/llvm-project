@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+// REQUIRES: std-at-least-c++26
 // REQUIRES: host-has-gdb-with-python
 // The Android libc++ tests are run on a non-Android host, connected to an
 // Android device over adb. gdb needs special support to make this work (e.g.
@@ -46,15 +46,15 @@ void StopForDebugger(void*) {}
 //   GDB command: `gdb is_debugger_present_with_debugger__gdb.sh -ex run -ex detach -ex quit --silent`
 
 void test() {
-  static_assert(noexcept(std::is_debugger_present()));
-
   std::same_as<bool> decltype(auto) isDebuggerPresent = std::is_debugger_present();
-#if defined(TEST_HAS_NO_FILESYSTEM) || defined(_PICOLIB_)
+  #if defined(TEST_HAS_NO_FILESYSTEM) || defined(_PICOLIB_)
   MarkAsLive(!isDebuggerPresent);
-#else
+  #else
   MarkAsLive(isDebuggerPresent);
-#endif
+  #endif
   StopForDebugger(&isDebuggerPresent);
+
+  static_assert(noexcept(std::is_debugger_present()));
 }
 
 int main(int, char**) {
