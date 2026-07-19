@@ -74,3 +74,33 @@ TEST(InProcessModuleCache, ReadReadInvalidation) {
   EXPECT_EQ(Buf1->getBuffer().begin(), Buf2->getBuffer().begin());
   EXPECT_EQ(Buf1->getBuffer().end(), Buf2->getBuffer().end());
 }
+
+TEST(InProcessModuleCache, TimestampWrittenOncePerSession) {
+#ifndef _WIN32
+  // Logging (and thus this assertion) is only enabled on non-Windows platforms.
+  int FD;
+  llvm::SmallString<256> LogPath;
+  ASSERT_FALSE(llvm::sys::fs::createTemporaryFile("m", "log", FD, LogPath));
+  {
+    llvm::raw_fd_ostream ClaimFD(FD, /*shouldClose=*/true);
+  }
+
+  {
+    ModuleCacheEntries Entries;
+    AtomicLineLogger Logger(LogPath);
+    std::shared_ptr<ModuleCache> ModCache =
+        makeInProcessModuleCache(Entries, Logger);
+
+    // Two workers validating the same shared module race to record its
+    // timestamp; only the first should record (and log) it.
+    ModCache->updateModuleTimestamp("A.pcm");
+    ModCache->updateModuleTimestamp("A.pcm");
+  }
+
+  auto Log = llvm::MemoryBuffer::getFile(LogPath);
+  ASSERT_TRUE(static_cast<bool>(Log));
+  EXPECT_EQ((*Log)->getBuffer().count("timestamp_write:"), 1u);
+
+  llvm::sys::fs::remove(LogPath);
+#endif
+}
