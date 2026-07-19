@@ -1439,6 +1439,12 @@ def mprintf_kind_EQ : Joined<["-"], "mprintf-kind=">, Group<m_Group>,
   NormalizedValues<["Hostcall", "Buffered"]>,
   MarshallingInfoEnum<TargetOpts<"AMDGPUPrintfKindVal">, "Hostcall">;
 
+def mamdgpu_assert_fault_buffer : Flag<["-"], "mamdgpu-assert-fault-buffer">,
+  Group<m_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Enable hidden assert fault buffer kernarg slot (CO v5+, AMDGPU/HIP only)">,
+  MarshallingInfoFlag<TargetOpts<"AMDGPUAssertFaultBuffer">>;
+
 // HIP options
 let Group = hip_Group in {
 def hip_link : Flag<["--"], "hip-link">, Group<opencl_Group>,

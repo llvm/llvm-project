@@ -1013,6 +1013,14 @@ consumed by the AMDGPU backend during code generation.
      - Same as above, but for typed buffer instructions (``tbuffer_load`` /
        ``tbuffer_store``).
 
+   * - ``amdgpu_assert_fault_buffer``
+     - ``i32``
+     - Error
+     - Set to ``1`` when HIP device code is compiled with
+       ``-mamdgpu-assert-fault-buffer``. Causes the AMDGPU backend to emit
+       ``hidden_assert_fault_buffer`` in HSA metadata for code object V5 and
+       above. See :ref:`amdgpu-clang-hip-options-table`.
+
 .. note::
 
    Frontends that require misaligned-access merging for performance should
@@ -1020,6 +1028,42 @@ consumed by the AMDGPU backend during code generation.
    per-byte OOB guarantees should set the flags to ``2`` (strict) as needed.
    Modules that do not use buffer operations or are indifferent to OOB semantics
    (e.g. device libraries) should leave the flags absent.
+
+.. _amdgpu-clang-hip-options:
+
+Clang HIP Options
+-----------------
+
+The following Clang options are supported for HIP device compilation and affect
+the generated code object:
+
+  .. table:: AMDGPU Clang HIP Options
+     :name: amdgpu-clang-hip-options-table
+
+     ============================== ==================================================
+     Option                         Description
+     ============================== ==================================================
+     ``-mamdgpu-assert-fault-buffer`` Enable the ``hidden_assert_fault_buffer``
+                                     implicit kernel argument in code object V5
+                                     and above. The Clang frontend sets the
+                                     ``amdgpu_assert_fault_buffer`` module flag
+                                     (see :ref:`amdgpu-module-flags-table`), which
+                                     causes the AMDGPU backend to emit
+                                     ``hidden_assert_fault_buffer`` metadata at
+                                     byte offset 124 of the implicit argument
+                                     region immediately after
+                                     ``hidden_dynamic_lds_size``. The runtime
+                                     allocates a buffer and patches the pointer at
+                                     dispatch; device code may write a compact
+                                     fault record using the
+                                     ``amdhsa_implicit_kernarg_v5`` struct in
+                                     ``amdhsa_abi.h``. This flag does not alter
+                                     LLVM IR lowering of asserts; device assert
+                                     behavior is controlled by the HIP/ROCm
+                                     runtime headers. Only supported for HIP. Off
+                                     by default; the 8-byte offset is reserved in
+                                     the implicit argument layout regardless.
+     ============================== ==================================================
 
 .. _amdgpu-target-id:
 
@@ -5567,6 +5611,24 @@ same *vendor-name*.
                                                        "hidden_hostcall_buffer"
                                                        before Code Object V5.
 
+
+                                                     "hidden_assert_fault_buffer"
+                                                       A global address space pointer
+                                                       to a runtime-managed buffer for
+                                                       recording kernel error codes is
+                                                       passed in the kernarg at byte
+                                                       offset 124 immediately after
+                                                       ``hidden_dynamic_lds_size``.
+                                                       Emitted in metadata when the
+                                                       module is compiled with
+                                                       ``-mamdgpu-assert-fault-buffer``
+                                                       (see :ref:`amdgpu-clang-hip-options-table`).
+                                                       The runtime allocates the buffer
+                                                       and sets the pointer at dispatch;
+                                                       the device may write a compact
+                                                       fault record on failure. Added
+                                                       in Code Object V5.
+
                                                      "hidden_hostcall_buffer"
                                                        A global address space pointer
                                                        to the runtime hostcall buffer
@@ -5862,6 +5924,25 @@ Code object V5 metadata is the same as
 
                                                      "hidden_dynamic_lds_size"
                                                        Size of the dynamically allocated LDS memory is passed in the kernarg.
+
+                                                     "hidden_assert_fault_buffer"
+                                                       A global address space pointer
+                                                       to a runtime-managed buffer for
+                                                       recording kernel error codes.
+                                                       Carved from the implicit argument
+                                                       region previously reserved after
+                                                       ``hidden_dynamic_lds_size`` at byte
+                                                       offset 124. Emitted in metadata
+                                                       when the module is compiled with
+                                                       ``-mamdgpu-assert-fault-buffer``
+                                                       (see :ref:`amdgpu-clang-hip-options-table`).
+                                                       The runtime allocates the buffer and
+                                                       sets the pointer at dispatch; the
+                                                       device may write a compact fault
+                                                       record on failure. Omitted from
+                                                       metadata when the flag is not used;
+                                                       the 8-byte offset is reserved
+                                                       regardless.
 
                                                      "hidden_private_base"
                                                        The high 32 bits of the flat addressing private aperture base.

@@ -26,7 +26,9 @@ typedef struct __attribute__((aligned(8))) amdhsa_implicit_kernarg_v5 {
   __attribute__((opencl_global)) void *heap_v1;
   __attribute__((opencl_global)) void *default_queue;
   __attribute__((opencl_global)) void *completion_action;
-  char reserved2[72];
+  uint32_t dynamic_lds_size;
+  __attribute__((opencl_global, packed)) void *assert_fault_buffer; // packed because dynamic lds size is 4 bytes
+  char reserved2[60];
   uint32_t private_base; // Unused on gfx9+
   uint32_t shared_base;  // Unused on gfx9+
   __attribute__((opencl_global)) void *queue_ptr;
@@ -72,6 +74,10 @@ _Static_assert(offsetof(amdhsa_implicit_kernarg_v5, heap_v1) == 96,
 _Static_assert(offsetof(amdhsa_implicit_kernarg_v5, default_queue) == 104,
                "wrong offset");
 _Static_assert(offsetof(amdhsa_implicit_kernarg_v5, completion_action) == 112,
+               "wrong offset");
+_Static_assert(offsetof(amdhsa_implicit_kernarg_v5, dynamic_lds_size) == 120,
+               "wrong offset");
+_Static_assert(offsetof(amdhsa_implicit_kernarg_v5, assert_fault_buffer) == 124,
                "wrong offset");
 _Static_assert(offsetof(amdhsa_implicit_kernarg_v5, private_base) == 192,
                "wrong offset");

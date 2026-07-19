@@ -299,6 +299,15 @@ unsigned getCompletionActionImplicitArgPosition(unsigned CodeObjectVersion) {
   }
 }
 
+unsigned getAssertFaultBufferImplicitArgPosition(unsigned CodeObjectVersion) {
+  switch (CodeObjectVersion) {
+  case AMDHSA_COV5:
+  case AMDHSA_COV6:
+  default:
+    return AMDGPU::ImplicitArg::ASSERT_FAULT_BUFFER_OFFSET;
+  }
+}
+
 #define GET_MIMGBaseOpcodesTable_IMPL
 #define GET_MIMGDimInfoTable_IMPL
 #define GET_MIMGInfoTable_IMPL

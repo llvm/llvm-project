@@ -92,6 +92,9 @@ public:
   /// \brief AMDGPU Printf lowering scheme
   AMDGPUPrintfKind AMDGPUPrintfKindVal = AMDGPUPrintfKind::Hostcall;
 
+  /// \brief AMDGPU: If enabled, use assert fault buffer kernarg slot
+  bool AMDGPUAssertFaultBuffer = false;
+
   // The code model to be used as specified by the user. Corresponds to
   // CodeModel::Model enum defined in include/llvm/Support/CodeGen.h, plus
   // "default" for the case when the user has not explicitly specified a

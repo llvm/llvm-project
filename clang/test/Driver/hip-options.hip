@@ -32,6 +32,13 @@
 // BUFF: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}} "-E" {{.*}}
 // BUFF: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-x" "ir"
 
+// Check -mamdgpu-assert-fault-buffer
+// RUN: %clang -### -nogpulib -nogpuinc --target=x86_64-unknown-linux-gnu -mamdgpu-assert-fault-buffer %s -save-temps 2>&1 | FileCheck -check-prefix=ASSERTFB %s
+// ASSERTFB: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-mamdgpu-assert-fault-buffer"{{.*}}"-E" {{.*}}
+// ASSERTFB: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-mamdgpu-assert-fault-buffer" {{.*}}"-x" "hip-cpp-output"
+// ASSERTFB: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}} "-E" {{.*}}
+// ASSERTFB: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-x" "ir"
+
 // RUN: %clang -### -x hip -nogpulib -nogpuinc --target=x86_64-pc-windows-msvc -fms-extensions \
 // RUN:   -mllvm -amdgpu-early-inline-all=true  %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=MLLVM %s

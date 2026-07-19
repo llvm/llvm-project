@@ -94,6 +94,7 @@ enum class ValueKind : uint8_t {
   HiddenCompletionAction = 13,
   HiddenMultiGridSyncArg = 14,
   HiddenHostcallBuffer   = 15,
+  HiddenAssertFaultBuffer = 16,
   Unknown                = 0xff
 };
 

@@ -698,6 +698,12 @@ private:
     return funcRetrievesImplicitKernelArg(A, Range);
   }
 
+  bool funcRetrievesAssertFaultBuffer(Attributor &A, unsigned COV) {
+    auto Pos = llvm::AMDGPU::getAssertFaultBufferImplicitArgPosition(COV);
+    AA::RangeTy Range(Pos, 8);
+    return funcRetrievesImplicitKernelArg(A, Range);
+  }
+
   bool funcRetrievesHeapPtr(Attributor &A, unsigned COV) {
     if (COV < 5)
       return false;

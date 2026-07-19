@@ -95,6 +95,7 @@ unsigned getHostcallImplicitArgPosition(unsigned COV);
 
 unsigned getDefaultQueueImplicitArgPosition(unsigned COV);
 unsigned getCompletionActionImplicitArgPosition(unsigned COV);
+unsigned getAssertFaultBufferImplicitArgPosition(unsigned COV);
 
 struct GcnBufferFormatInfo {
   unsigned Format;

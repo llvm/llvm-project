@@ -709,7 +709,14 @@ void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
     Offset += 4; // skipped
   }
 
-  Offset += 68; // Reserved.
+  if (M->getModuleFlag("amdgpu_assert_fault_buffer")) {
+    emitKernelArg(DL, Int8PtrTy, Align(4), "hidden_assert_fault_buffer", Offset,
+                  Args);
+  } else {
+    Offset += 8; // Skipped.
+  }
+
+  Offset += 60; // Reserved.
 
   // hidden_private_base and hidden_shared_base are only when the subtarget has
   // ApertureRegs.

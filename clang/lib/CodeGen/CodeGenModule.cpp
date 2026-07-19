@@ -1224,6 +1224,11 @@ void CodeGenModule::Release() {
       getModule().addModuleFlag(llvm::Module::Error, "amdgpu_printf_kind",
                                 MDStr);
     }
+
+    if (LangOpts.HIP && getTarget().getTargetOpts().AMDGPUAssertFaultBuffer) {
+      getModule().addModuleFlag(llvm::Module::Error,
+                                "amdgpu_assert_fault_buffer", 1);
+    }
   }
 
   // Emit a global array containing all external kernels or device variables
