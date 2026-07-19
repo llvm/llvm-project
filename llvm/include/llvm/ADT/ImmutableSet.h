@@ -378,7 +378,7 @@ public:
     // We need to clear the mutability bit in case we are
     // destroying the node as part of a sweep in ImutAVLFactory::recoverNodes().
     IsMutable = false;
-    next = factory->freeNodes;
+    this->Next = factory->freeNodes;
     factory->freeNodes = this;
   }
 };
@@ -486,8 +486,8 @@ protected:
   TreeTy* createNode(TreeTy* L, value_type_ref V, TreeTy* R) {
     TreeTy *T = freeNodes;
     if (T) {
-      freeNodes = T->next;
-      T->next = nullptr;
+      freeNodes = T->Next;
+      T->Next = nullptr;
       assert(T != L);
       assert(T != R);
     } else {
