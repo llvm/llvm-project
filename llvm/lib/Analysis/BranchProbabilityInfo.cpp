@@ -391,7 +391,7 @@ void BPIConstruction::SccInfo::getSccEnterBlocks(
     if (isSCCHeader(BB, SccNum))
       for (const auto *Pred : predecessors(BB))
         if (getSCCNum(Pred) != SccNum)
-          Enters.push_back(const_cast<BasicBlock *>(BB));
+          Enters.push_back(const_cast<BasicBlock *>(Pred));
   }
 }
 

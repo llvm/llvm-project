@@ -722,4 +722,34 @@ exit:
 }
 
 
+; Check that a cold irreducible loop propagates its estimated weight through
+; the blocks entering the SCC.
+define void @test19(i1 %arg, i1 %arg2, i1 %arg3, i1 %arg4) {
+; CHECK: edge %entry -> %dispatch probability is 0x078780e3 / 0x80000000 = 5.88%
+; CHECK: edge %entry -> %exit probability is 0x78787f1d / 0x80000000 = 94.12% [HOT edge]
 
+entry:
+  br i1 %arg, label %dispatch, label %exit
+
+dispatch:
+  br i1 %arg2, label %entry1, label %entry2
+
+entry1:
+  br label %loop1
+
+entry2:
+  br label %loop2
+
+loop1:
+  br i1 %arg3, label %loop2, label %cold
+
+loop2:
+  br i1 %arg4, label %loop1, label %cold
+
+cold:
+  call void @cold()
+  br label %exit
+
+exit:
+  ret void
+}
