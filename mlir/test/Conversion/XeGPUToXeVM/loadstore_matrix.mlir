@@ -1,11 +1,10 @@
 // RUN: mlir-opt  -split-input-file -convert-xegpu-to-xevm %s | FileCheck %s
 
-gpu.module @test_kernel[#xevm.target<chip = "pvc">] {
+gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
 
   // e.g. for mem_desc<32x32xf16, @strides=[1, 16]>
-  // its memory layout tuple is (blocked shape =
-  // [1,1,32,32],strides=[1024,1024,32,1])
-  // CHECK-LABEL: load_store_matrix_plain
+  // its memory layout tuple is (blocked shape = [1,1,32,32],strides=[1024,1024,32,1])
+  //CHECK-LABEL: load_store_matrix_plain
   gpu.func @load_store_matrix_plain(%arg0: memref<4096xi8, 3>) -> f32 {
 
     //CHECK: %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %arg0 : memref<4096xi8, 3> -> index
@@ -325,14 +324,12 @@ gpu.module @test_kernel[#xevm.target<chip = "pvc">] {
 
   //CHECK-LABEL: load_matrix_f8e8m0_vector
   gpu.func @load_matrix_f8e8m0_vector(%arg0: memref<1024xi8, 3>) -> vector<8xf8E8M0FNU> {
-    % c0 = arith.constant 0 : index % 0 =
-               xegpu.create_mem_desc %
-               arg0 : memref<1024xi8, 3>->!xegpu.mem_desc<32x32xf8E8M0FNU>
-               // CHECK: %[[LOADEDV:.*]] = llvm.load %{{.*}} : !llvm.ptr<3> ->
-               // vector<8xi8> CHECK: vector.bitcast %[[LOADEDV]] : vector<8xi8>
-               // to vector<8xf8E8M0FNU>
-               % 1 = xegpu.load_matrix % 0 [% c0, % c0]
-        : !xegpu.mem_desc<32x32xf8E8M0FNU>,
-      index, index->vector<8xf8E8M0FNU> gpu.return % 1 : vector<8xf8E8M0FNU>
+    %c0 = arith.constant 0 : index
+    %0 = xegpu.create_mem_desc %arg0 : memref<1024xi8, 3> -> !xegpu.mem_desc<32x32xf8E8M0FNU>
+    //CHECK: %[[LOADEDV:.*]] = llvm.load %{{.*}} : !llvm.ptr<3> -> vector<8xi8>
+    //CHECK: vector.bitcast %[[LOADEDV]] : vector<8xi8> to vector<8xf8E8M0FNU>
+    %1 = xegpu.load_matrix %0[%c0, %c0]: !xegpu.mem_desc<32x32xf8E8M0FNU>, index, index -> vector<8xf8E8M0FNU>
+    gpu.return %1 : vector<8xf8E8M0FNU>
   }
+
 }
