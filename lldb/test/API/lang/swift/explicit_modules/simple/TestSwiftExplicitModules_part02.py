@@ -23,8 +23,8 @@ class TestSwiftExplicitModules(lldbtest.TestBase):
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
 
-        self.expect('expression URL(string: "https://lldb.llvm.org")',
+        self.expect('expression Data([1, 2, 3])',
                     error=True)
         self.expect("expression import Foundation")
-        self.expect('expression URL(string: "https://lldb.llvm.org")',
-                    substrs=["https://lldb.llvm.org"])
+        self.expect('expression Data([1, 2, 3])',
+                    substrs=["3 bytes"])

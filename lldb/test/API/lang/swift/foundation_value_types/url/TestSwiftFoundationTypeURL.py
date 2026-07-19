@@ -33,9 +33,27 @@ class TestCase(TestBase):
 
         foundation = "Foundation" if sys.platform == "darwin" else "FoundationEssentials"
 
-        lldbutil.run_to_source_breakpoint(
-            self, "break here", lldb.SBFileSpec("main.swift")
+        # Foundation's URL stores its NSURL in a Synchronization.Mutex
+        # whose reflection metadata is missing if the stdlib is
+        # compiled with a deployment target < macOS 27.0, which is the
+        # case when building locally. Debug against the system
+        # Foundation / Swift stdlib (whose deployment target matches
+        # the OS) by dropping the library-path variables the test
+        # harness injects into the inferior environment (via
+        # --inferior-env) before launching.
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, VALID_TARGET)
+        for var in [
+            "DYLD_LIBRARY_PATH",
+            "LD_LIBRARY_PATH",
+            "SIMCTL_CHILD_DYLD_LIBRARY_PATH",
+        ]:
+            self.runCmd(f"settings remove target.env-vars {var}", check=False)
+        bkpt = target.BreakpointCreateBySourceRegex(
+            "break here", lldb.SBFileSpec("main.swift")
         )
+        self.assertGreater(bkpt.GetNumLocations(), 0)
+        lldbutil.run_to_breakpoint_do_run(self, target, bkpt)
 
         self.expect(
             "frame var url",
