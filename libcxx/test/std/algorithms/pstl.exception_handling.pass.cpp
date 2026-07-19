@@ -274,7 +274,7 @@ int main(int, char**) {
       }
 
       {
-        auto pred = maybe_throw(tokens[5], [](int a, int b) -> bool { return a == b; });
+        auto pred = maybe_throw(tokens[5], [](int x, int y) -> bool { return x == y; });
 
         // adjacent_find(first, last)
         assert_non_throwing([=, &policy] { (void)std::adjacent_find(policy, std::move(first1), std::move(last1)); });
