@@ -702,7 +702,8 @@ static void processTileSizesFromOpenMPConstruct(
   }
 }
 
-pft::Evaluation *getNestedDoConstruct(pft::Evaluation &eval) {
+static pft::Evaluation *getNestedDoConstructImpl(pft::Evaluation &eval,
+                                                 bool strict) {
   for (pft::Evaluation &nested : eval.getNestedEvaluations()) {
     // In an OpenMPConstruct there can be compiler directives:
     // 1 <<OpenMPConstruct>>
@@ -722,10 +723,41 @@ pft::Evaluation *getNestedDoConstruct(pft::Evaluation &eval) {
     // Loop transformations can introduce nested OpenMP
     // constructs between the directive and the actual do-loop nest.
     if (nested.getIf<parser::OpenMPConstruct>())
-      return getNestedDoConstruct(nested);
-    assert(false && "Unexpected construct in the nested evaluations");
+      return getNestedDoConstructImpl(nested, strict);
+    assert(!strict && "Unexpected construct in the nested evaluations");
+    // Skip valid intervening code in imperfect loop nests.
+    continue;
   }
-  llvm_unreachable("Expected do loop to be in the nested evaluations");
+  return nullptr;
+}
+
+pft::Evaluation *tryGetNestedDoConstruct(pft::Evaluation &eval) {
+  return getNestedDoConstructImpl(eval, /*strict=*/false);
+}
+
+pft::Evaluation *getNestedDoConstruct(pft::Evaluation &eval) {
+  pft::Evaluation *doConstruct =
+      getNestedDoConstructImpl(eval, /*strict=*/true);
+  if (!doConstruct)
+    llvm_unreachable("Expected do loop to be in the nested evaluations");
+  return doConstruct;
+}
+
+/// Return true if \p eval holds a metadirective.
+bool isMetadirectiveEval(lower::pft::Evaluation &eval) {
+  if (const auto *decl = eval.getIf<parser::OpenMPDeclarativeConstruct>())
+    return std::holds_alternative<parser::OmpMetadirectiveDirective>(decl->u);
+  if (const auto *ompConstruct = eval.getIf<parser::OpenMPConstruct>()) {
+    if (std::holds_alternative<parser::OmpDelimitedMetadirectiveDirective>(
+            ompConstruct->u))
+      return true;
+    if (const auto *standalone =
+            std::get_if<parser::OpenMPStandaloneConstruct>(&ompConstruct->u)) {
+      return std::holds_alternative<parser::OmpMetadirectiveDirective>(
+          standalone->u);
+    }
+  }
+  return false;
 }
 
 /// Populates the sizes vector with values if the given OpenMPConstruct
