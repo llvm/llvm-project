@@ -395,7 +395,7 @@ namespace Diagnostics {
 
   EnumTemplate<TestEnum, TestEnum(42)> test2;
   // expected-error@#enum-assert {{static assertion failed due to requirement '(Diagnostics::TestEnum)42 == Diagnostics::TestEnum::A': }} \
-  // expected-note@-1 {{in instantiation of template class 'Diagnostics::EnumTemplate<Diagnostics::TestEnum, (Diagnostics::TestEnum)42>' requested here}} \
+  // expected-note@-1 {{in instantiation of template class 'Diagnostics::EnumTemplate<Diagnostics::TestEnum, 42>' requested here}} \
   // expected-note@#enum-assert {{evaluates to '42 == 0'}}
 
   EnumTemplate<WithUnderlying, WithUnderlying::B> test3;
@@ -404,8 +404,8 @@ namespace Diagnostics {
   // expected-note@#enum-assert {{evaluates to '1 == 0'}}
 
   EnumTemplate<WithUnderlying, WithUnderlying(42)> test6;
-  // expected-error@#enum-assert {{static assertion failed due to requirement '(Diagnostics::WithUnderlying)42 == Diagnostics::WithUnderlying::A': }} \
-  // expected-note@-1 {{in instantiation of template class 'Diagnostics::EnumTemplate<Diagnostics::WithUnderlying, (Diagnostics::WithUnderlying)42>' requested here}} \
+  // expected-error@#enum-assert {{static assertion failed due to requirement '(Diagnostics::WithUnderlying)42U == Diagnostics::WithUnderlying::A': }} \
+  // expected-note@-1 {{in instantiation of template class 'Diagnostics::EnumTemplate<Diagnostics::WithUnderlying, 42>' requested here}} \
   // expected-note@#enum-assert {{evaluates to '42 == 0'}}
 
   EnumTemplate<TestEnumUnscoped, TestEnumUnscoped::TEST_B> test4;
@@ -414,8 +414,8 @@ namespace Diagnostics {
   // expected-note@#enum-assert {{evaluates to '1 == 0'}}
 
   EnumTemplate<TestEnumUnscoped, TestEnumUnscoped(2)> test7;
-  // expected-error@#enum-assert {{static assertion failed due to requirement '(Diagnostics::TestEnumUnscoped)2 == Diagnostics::TEST_A': }} \
-  // expected-note@-1 {{in instantiation of template class 'Diagnostics::EnumTemplate<Diagnostics::TestEnumUnscoped, (Diagnostics::TestEnumUnscoped)2>' requested here}} \
+  // expected-error@#enum-assert {{static assertion failed due to requirement '(Diagnostics::TestEnumUnscoped)2U == Diagnostics::TEST_A': }} \
+  // expected-note@-1 {{in instantiation of template class 'Diagnostics::EnumTemplate<Diagnostics::TestEnumUnscoped, 2>' requested here}} \
   // expected-note@#enum-assert {{evaluates to '2 == 0'}}
 
   EnumTemplate<WithUnderlyingUnscoped, WithUnderlyingUnscoped::TEST2_B> test5;
@@ -424,7 +424,7 @@ namespace Diagnostics {
   // expected-note@#enum-assert {{evaluates to '1 == 0'}}
 
   EnumTemplate<WithUnderlyingUnscoped, WithUnderlyingUnscoped(42)> test8;
-  // expected-error@#enum-assert {{static assertion failed due to requirement '(Diagnostics::WithUnderlyingUnscoped)42 == Diagnostics::TEST2_A': }} \
-  // expected-note@-1 {{in instantiation of template class 'Diagnostics::EnumTemplate<Diagnostics::WithUnderlyingUnscoped, (Diagnostics::WithUnderlyingUnscoped)42>' requested here}} \
+  // expected-error@#enum-assert {{static assertion failed due to requirement '(Diagnostics::WithUnderlyingUnscoped)42U == Diagnostics::TEST2_A': }} \
+  // expected-note@-1 {{in instantiation of template class 'Diagnostics::EnumTemplate<Diagnostics::WithUnderlyingUnscoped, 42>' requested here}} \
   // expected-note@#enum-assert {{evaluates to '42 == 0'}}
 }

@@ -1882,7 +1882,7 @@ void StmtPrinter::VisitMatrixElementExpr(MatrixElementExpr *Node) {
 }
 
 void StmtPrinter::VisitCStyleCastExpr(CStyleCastExpr *Node) {
-  if (QualType T = Node->getType(); T->isEnumeralType()) {
+  if (QualType T = Node->getType(); Policy.PrettyEnums && T->isEnumeralType()) {
     // special case enums to avoid producing cast expressions when naming
     // an enumerator would suffice
 
@@ -1890,11 +1890,13 @@ void StmtPrinter::VisitCStyleCastExpr(CStyleCastExpr *Node) {
     const auto *ED = T->getAsEnumDecl();
     if (IL && ED) {
       llvm::APInt Val = IL->getValue();
-      for (const EnumConstantDecl *ECD : ED->enumerators()) {
-        if (llvm::APInt::isSameValue(ECD->getInitVal(), Val)) {
-          ECD->printQualifiedName(OS, Policy);
-          return;
-        }
+      const auto ECD =
+          llvm::find_if(ED->enumerators(), [&](const EnumConstantDecl *ECD) {
+            return llvm::APInt::isSameValue(ECD->getInitVal(), Val);
+          });
+      if (ECD != ED->enumerator_end()) {
+        ECD->printQualifiedName(OS, Policy);
+        return;
       }
     }
   }
