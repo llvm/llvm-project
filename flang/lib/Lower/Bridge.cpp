@@ -618,8 +618,10 @@ public:
       createBuilderOutsideOfFuncOpAndDo([&]() {
         fir::runtime::genMain(*builder, toLocation(),
                               bridge.getEnvironmentDefaults(),
-                              getFoldingContext().languageFeatures().IsEnabled(
-                                  Fortran::common::LanguageFeature::CUDA),
+                              (getFoldingContext().languageFeatures().IsEnabled(
+                                   Fortran::common::LanguageFeature::CUDA) &&
+                               getFoldingContext().languageFeatures().IsEnabled(
+                                   Fortran::common::LanguageFeature::CUDAInit)),
                               getFoldingContext().languageFeatures().IsEnabled(
                                   Fortran::common::LanguageFeature::Coarray));
       });
@@ -6634,15 +6636,6 @@ private:
         if (sym.name() == "numeric_storage_size" && owner.IsModule() &&
             DEREF(owner.symbol()).name() == "iso_fortran_env")
           continue;
-
-        if (Fortran::evaluate::IsCoarray(sym) &&
-            !Fortran::semantics::IsAllocatable(sym) &&
-            Fortran::semantics::IsSaved(sym)) {
-          mlir::Location loc = toLocation();
-          TODO(
-              loc,
-              "coarray: non-ALLOCATABLE SAVE coarray outside the main program");
-        }
       }
       Fortran::lower::defineModuleVariable(*this, var);
     }

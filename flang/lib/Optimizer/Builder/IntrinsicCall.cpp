@@ -21,6 +21,7 @@
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/MIFCommon.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/OpenACCIntrinsicCall.h"
 #include "flang/Optimizer/Builder/PPCIntrinsicCall.h"
@@ -6332,9 +6333,8 @@ IntrinsicLibrary::genImageIndex(mlir::Type resultType,
     if (fir::isa_integer(fir::unwrapRefType(team.getType())))
       team = fir::LoadOp::create(builder, loc, team);
   }
-  return mif::ImageIndexOp::create(builder, loc,
-                                   /*coarray*/ fir::getBase(args[0]),
-                                   /*sub*/ fir::getBase(args[1]), team);
+  return mif::genImageIndex(builder, loc, fir::getBase(args[0]),
+                            fir::getBase(args[1]), team);
 }
 
 // INDEX

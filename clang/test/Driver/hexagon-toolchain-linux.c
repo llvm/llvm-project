@@ -223,7 +223,52 @@
 // CHECK-ASAN:      "-L{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}asan"
 // CHECK-ASAN-SAME: "-L{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib"
 // -----------------------------------------------------------------------------
-// No sanitizer: no msan/asan library paths
+// Sanitizer library paths: -fsanitize=shadow-call-stack
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   -fuse-ld=lld \
+// RUN:   -fsanitize=shadow-call-stack -ffixed-r19 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-SCS %s
+// CHECK-SCS:      "-L{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}scs"
+// CHECK-SCS-SAME: "-L{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib"
+// -----------------------------------------------------------------------------
+// Library paths: -ffixed-r19 alone must NOT select the scs multilib
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   -fuse-ld=lld \
+// RUN:   -ffixed-r19 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-R19-ONLY %s
+// CHECK-R19-ONLY-NOT: "-L{{.*}}{{/|\\\\}}scs"
+// -----------------------------------------------------------------------------
+// Startup object: -fsanitize=shadow-call-stack links the scs crt1.o, not the
+// base crt1.o. Selection is on the multilib in effect, not file presence, so
+// this holds even though the test sysroot ships no usr/lib/scs/crt1.o.
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   -fuse-ld=lld \
+// RUN:   -fsanitize=shadow-call-stack -ffixed-r19 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-SCS-CRT %s
+// CHECK-SCS-CRT:     "{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}scs{{/|\\\\}}crt1.o"
+// CHECK-SCS-CRT-NOT: "{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o"
+// -----------------------------------------------------------------------------
+// Startup object: without the scs multilib, the base crt1.o is used (never the
+// scs one).
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   -fuse-ld=lld \
+// RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-NOSCS-CRT %s
+// CHECK-NOSCS-CRT:     "{{[^"]*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o"
+// CHECK-NOSCS-CRT-NOT: "{{/|\\\\}}scs{{/|\\\\}}crt1.o"
+// -----------------------------------------------------------------------------
+// No sanitizer: no msan/asan/scs library paths
 // -----------------------------------------------------------------------------
 // RUN: %clang -### --target=hexagon-unknown-linux-musl \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
@@ -232,6 +277,7 @@
 // RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK-NOSAN %s
 // CHECK-NOSAN-NOT: "-L{{.*}}{{/|\\\\}}msan"
 // CHECK-NOSAN-NOT: "-L{{.*}}{{/|\\\\}}asan"
+// CHECK-NOSAN-NOT: "-L{{.*}}{{/|\\\\}}scs"
 // -----------------------------------------------------------------------------
 // ThinLTO passes LTO options to the linker
 // -----------------------------------------------------------------------------
