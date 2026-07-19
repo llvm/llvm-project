@@ -105,7 +105,8 @@ class MLGOAddReflectionMapPass
 /// ```mlir
 /// emitc.class @foo {
 ///   emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref =
-///   ["another_feature"]} emitc.func @bar() { return }
+///   ["another_feature"]}
+/// emitc.func @bar() { return }
 /// }
 /// ```
 ///
