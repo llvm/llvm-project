@@ -60,7 +60,8 @@ bool StackLifetime::isAliveAfter(const AllocaInst *AI,
 }
 
 void StackLifetime::collectMarkers() {
-  InterestingAllocas.resize(NumAllocas);
+  MarkerAllocas.resize(NumAllocas);
+  StartAllocas.resize(NumAllocas);
   DenseMap<const BasicBlock *, SmallDenseMap<const IntrinsicInst *, Marker>>
       BBMarkerSet;
 
@@ -78,8 +79,9 @@ void StackLifetime::collectMarkers() {
         continue;
       auto AllocaNo = It->second;
       bool IsStart = II->getIntrinsicID() == Intrinsic::lifetime_start;
+      MarkerAllocas.set(AllocaNo);
       if (IsStart)
-        InterestingAllocas.set(AllocaNo);
+        StartAllocas.set(AllocaNo);
       BBMarkerSet[BB][II] = {AllocaNo, IsStart};
     }
   }
@@ -168,9 +170,16 @@ void StackLifetime::calculateLocalLiveness() {
         BitsIn |= I->second.LiveOut;
       }
 
-      // Everything is "may be dead" for entry without predecessors.
-      if (Type == LivenessType::Must && BitsIn.empty())
-        BitsIn.resize(NumAllocas, true);
+      // Allocas with a lifetime.start are initially dead. Allocas with only
+      // lifetime.end markers are initially alive.
+      if (BB == &F.getEntryBlock()) {
+        if (Type == LivenessType::May) {
+          BitsIn = MarkerAllocas;
+          BitsIn.reset(StartAllocas);
+        } else {
+          BitsIn = StartAllocas;
+        }
+      }
 
       // Update block LiveIn set, noting whether it has changed.
       if (!BitsIn.subsetOf(BlockInfo.LiveIn)) {
@@ -303,7 +312,7 @@ StackLifetime::StackLifetime(const Function &F,
 void StackLifetime::run() {
   LiveRanges.resize(NumAllocas, LiveRange(Instructions.size()));
   for (unsigned I = 0; I < NumAllocas; ++I)
-    if (!InterestingAllocas.test(I))
+    if (!MarkerAllocas.test(I))
       LiveRanges[I] = getFullLiveRange();
 
   calculateLocalLiveness();

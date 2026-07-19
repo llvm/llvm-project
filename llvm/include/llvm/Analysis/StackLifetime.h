@@ -108,9 +108,13 @@ private:
   /// LiveRange for allocas.
   SmallVector<LiveRange, 8> LiveRanges;
 
-  /// The set of allocas that have at least one lifetime.start. All other
+  /// The set of allocas that have at least one lifetime marker. All other
   /// allocas get LiveRange that corresponds to the entire function.
-  BitVector InterestingAllocas;
+  BitVector MarkerAllocas;
+
+  /// The set of allocas that have at least one lifetime.start and are
+  /// therefore initially dead.
+  BitVector StartAllocas;
 
   struct Marker {
     unsigned AllocaNo;
