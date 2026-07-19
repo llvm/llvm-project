@@ -45,6 +45,12 @@ RUN wget https://apt.llvm.org/llvm.sh && \
     sudo ./llvm.sh 23 && \
     rm llvm.sh
 
+# Install the LLVM testing tools, which the llvm.sh script above does not
+# include. This provides lit (as lit-23) along with FileCheck, not, count and
+# split-file, which are required to run the libc test suites and some CIs like
+# precommit testing CI for libc-based compiler-rt builtins. 
+RUN apt-get install -y llvm-23-tools
+
 # Install gmp and mpfr for cross compilation
 RUN wget https://ftp.gnu.org/gnu/gmp/gmp-6.3.0.tar.xz && \
     tar -xf gmp-6.3.0.tar.xz && \

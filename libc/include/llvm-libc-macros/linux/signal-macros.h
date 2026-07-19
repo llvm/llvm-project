@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_MACROS_LINUX_SIGNAL_MACROS_H
 #define LLVM_LIBC_MACROS_LINUX_SIGNAL_MACROS_H
 
-#include "__llvm-libc-common.h"
+#include "../../__llvm-libc-common.h"
 
 #define SIGHUP 1
 #define SIGINT 2

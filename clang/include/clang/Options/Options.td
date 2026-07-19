@@ -990,6 +990,51 @@ def _ssaf_include_local_entities :
     "Include block-scope (function-local) declarations in extracted SSAF "
     "summaries. By default they are omitted.">,
   MarshallingInfoFlag<SSAFOpts<"IncludeLocalEntities">>;
+def _ssaf_no_extract_from_system_headers :
+  Flag<["--"], "ssaf-no-extract-from-system-headers">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<
+    "Skip declarations in system headers during SSAF summary extraction">,
+  MarshallingInfoNegativeFlag<SSAFOpts<"ExtractFromSystemHeaders">>;
+def _ssaf_source_transformation :
+  Joined<["--"], "ssaf-source-transformation=">,
+  MetaVarName<"<name>">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<
+    "Name of the SSAF source transformation to run. Exactly one transformation "
+    "per invocation.">,
+  MarshallingInfoString<SSAFOpts<"SourceTransformation">>;
+def _ssaf_global_scope_analysis_result :
+  Joined<["--"], "ssaf-global-scope-analysis-result=">,
+  MetaVarName<"<path>.<format>">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<
+    "Path to the WPASuite file containing the whole-program analysis result "
+    "consumed by the source transformation. The extension selects which file "
+    "format to use.">,
+  MarshallingInfoString<SSAFOpts<"GlobalScopeAnalysisResult">>;
+def _ssaf_src_edit_file :
+  Joined<["--"], "ssaf-src-edit-file=">,
+  MetaVarName<"<path>">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<
+    "Output file for the source edits produced by the source transformation. "
+    "The output is a YAML document compatible with "
+    "'clang-apply-replacements'.">,
+  MarshallingInfoString<SSAFOpts<"SrcEditFile">>;
+def _ssaf_transformation_report_file :
+  Joined<["--"], "ssaf-transformation-report-file=">,
+  MetaVarName<"<path>">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<
+    "Output file for the transformation report produced by the source "
+    "transformation. The output is a SARIF JSON document.">,
+  MarshallingInfoString<SSAFOpts<"TransformationReportFile">>;
 def Xarch__
     : JoinedAndSeparate<["-"], "Xarch_">,
       Flags<[NoXarchOption]>,
@@ -6737,6 +6782,7 @@ def target : Joined<["--"], "target=">, Flags<[NoXarchOption]>,
 def darwin_target_variant : Separate<["-"], "darwin-target-variant">,
   Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption]>,
   HelpText<"Generate code for an additional runtime variant of the deployment target">;
+def target_variant : Separate<["-"], "target-variant">, Alias<darwin_target_variant>;
 
 //===----------------------------------------------------------------------===//
 // Print CPU info options (clang, clang-cl, flang)
@@ -8563,8 +8609,6 @@ def ast_dump_all_EQ : Joined<["-"], "ast-dump-all=">,
 def ast_dump_decl_types : Flag<["-"], "ast-dump-decl-types">,
   HelpText<"Include declaration types in AST dumps">,
   MarshallingInfoFlag<FrontendOpts<"ASTDumpDeclTypes">>;
-def templight_dump : Flag<["-"], "templight-dump">,
-  HelpText<"Dump templight information to stdout">;
 def ast_dump_lookups : Flag<["-"], "ast-dump-lookups">,
   HelpText<"Build ASTs and then debug dump their name lookup tables">,
   MarshallingInfoFlag<FrontendOpts<"ASTDumpLookups">>;
@@ -9753,6 +9797,12 @@ def dxc_Zss : DXCFlag<"Zss">,
               HelpText<"Compute Shader Hash considering source information">;
 def dxc_Zsb : DXCFlag<"Zsb">,
               HelpText<"Compute Shader Hash considering only output binary">;
+def dxc_source_in_debug_module
+    : DXCFlag<"Qsource_in_debug_module">,
+      HelpText<"Embed source code into PDB debug module">;
+def dxc_Qstrip_debug
+    : DXCFlag<"Qstrip_debug">,
+      HelpText<"Strip debug information from shader container (specified with /Fo <file>)">;
 def dxil_validator_version : Option<["/", "-"], "validator-version", KIND_SEPARATE>,
   Group<dxc_Group>, Flags<[HelpHidden]>,
   Visibility<[DXCOption, ClangOption, CC1Option]>,

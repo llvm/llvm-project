@@ -258,11 +258,11 @@ private:
                                       bool &BreakPHIEdge,
                                       AllSuccsCache &AllSuccessors);
 
-  void FindCycleSinkCandidates(MachineCycle *Cycle, MachineBasicBlock *BB,
+  void FindCycleSinkCandidates(CycleRef Cycle, MachineBasicBlock *BB,
                                SmallVectorImpl<MachineInstr *> &Candidates);
 
   bool
-  aggressivelySinkIntoCycle(MachineCycle *Cycle, MachineInstr &I,
+  aggressivelySinkIntoCycle(CycleRef Cycle, MachineInstr &I,
                             DenseMap<SinkItem, MachineInstr *> &SunkInstrs);
 
   bool isProfitableToSinkTo(Register Reg, MachineInstr &MI,
@@ -720,7 +720,7 @@ static bool mayLoadFromGOTOrConstantPool(MachineInstr &MI) {
 }
 
 void MachineSinking::FindCycleSinkCandidates(
-    MachineCycle *Cycle, MachineBasicBlock *BB,
+    CycleRef Cycle, MachineBasicBlock *BB,
     SmallVectorImpl<MachineInstr *> &Candidates) {
   for (auto &MI : *BB) {
     LLVM_DEBUG(dbgs() << "CycleSink: Analysing candidate: " << MI);
@@ -733,7 +733,7 @@ void MachineSinking::FindCycleSinkCandidates(
                            "target\n");
       continue;
     }
-    if (!isCycleInvariant(Cycle, MI)) {
+    if (!isCycleInvariant(*CI, Cycle, MI)) {
       LLVM_DEBUG(dbgs() << "CycleSink: Instruction is not cycle invariant\n");
       continue;
     }
@@ -883,7 +883,7 @@ bool MachineSinking::run(MachineFunction &MF) {
   }
 
   if (SinkInstsIntoCycle) {
-    SmallVector<MachineCycle *, 8> Cycles(CI->toplevel_cycles());
+    SmallVector<CycleRef, 8> Cycles(CI->toplevel_cycles());
     SchedModel.init(STI);
     bool HasHighPressure;
 
@@ -894,8 +894,8 @@ bool MachineSinking::run(MachineFunction &MF) {
          ++Stage, SunkInstrs.clear()) {
       HasHighPressure = false;
 
-      for (auto *Cycle : Cycles) {
-        MachineBasicBlock *Preheader = Cycle->getCyclePreheader();
+      for (auto Cycle : Cycles) {
+        MachineBasicBlock *Preheader = CI->getCyclePreheader(Cycle);
         if (!Preheader) {
           LLVM_DEBUG(dbgs() << "CycleSink: Can't find preheader\n");
           continue;
@@ -1116,12 +1116,12 @@ bool MachineSinking::isLegalToBreakCriticalEdge(MachineInstr &MI,
   if (!SplitEdges || FromBB == ToBB || !FromBB->isSuccessor(ToBB))
     return false;
 
-  MachineCycle *FromCycle = CI->getCycle(FromBB);
-  MachineCycle *ToCycle = CI->getCycle(ToBB);
+  CycleRef FromCycle = CI->getCycle(FromBB);
+  CycleRef ToCycle = CI->getCycle(ToBB);
 
   // Check for backedges of more "complex" cycles.
   if (FromCycle == ToCycle && FromCycle &&
-      (!FromCycle->isReducible() || FromCycle->getHeader() == ToBB))
+      (!CI->isReducible(FromCycle) || CI->getHeader(FromCycle) == ToBB))
     return false;
 
   // It's not always legal to break critical edges and sink the computation
@@ -1304,7 +1304,7 @@ bool MachineSinking::isProfitableToSinkTo(Register Reg, MachineInstr &MI,
           FindSuccToSinkTo(MI, SuccToSinkTo, BreakPHIEdge, AllSuccessors))
     return isProfitableToSinkTo(Reg, MI, SuccToSinkTo, MBB2, AllSuccessors);
 
-  MachineCycle *MCycle = CI->getCycle(MBB);
+  CycleRef MCycle = CI->getCycle(MBB);
 
   // If the instruction is not inside a cycle, it is not profitable to sink MI
   // to a post dominate block SuccToSinkTo.
@@ -1340,13 +1340,14 @@ bool MachineSinking::isProfitableToSinkTo(Register Reg, MachineInstr &MI,
       MachineInstr *DefMI = MRI->getVRegDef(Reg);
       if (!DefMI)
         continue;
-      MachineCycle *Cycle = CI->getCycle(DefMI->getParent());
+      CycleRef Cycle = CI->getCycle(DefMI->getParent());
       // DefMI is defined outside of cycle. There should be no live range
       // impact for this operand. Defination outside of cycle means:
       // 1: defination is outside of cycle.
       // 2: defination is in this cycle, but it is a PHI in the cycle header.
-      if (Cycle != MCycle || (DefMI->isPHI() && Cycle && Cycle->isReducible() &&
-                              Cycle->getHeader() == DefMI->getParent()))
+      if (Cycle != MCycle ||
+          (DefMI->isPHI() && Cycle && CI->isReducible(Cycle) &&
+           CI->getHeader(Cycle) == DefMI->getParent()))
         continue;
       // The DefMI is defined inside the cycle.
       // If sinking this operand makes some register pressure set exceed limit,
@@ -1751,14 +1752,14 @@ bool MachineSinking::hasStoreBetween(MachineBasicBlock *From,
 /// based on the amount of sinking, or the type of ops being sunk (so long as
 /// they are safe to sink).
 bool MachineSinking::aggressivelySinkIntoCycle(
-    MachineCycle *Cycle, MachineInstr &I,
+    CycleRef Cycle, MachineInstr &I,
     DenseMap<SinkItem, MachineInstr *> &SunkInstrs) {
   // TODO: support instructions with multiple defs
   if (I.getNumDefs() > 1)
     return false;
 
   LLVM_DEBUG(dbgs() << "AggressiveCycleSink: Finding sink block for: " << I);
-  assert(Cycle->getCyclePreheader() && "Cycle sink needs a preheader block");
+  assert(CI->getCyclePreheader(Cycle) && "Cycle sink needs a preheader block");
   SmallVector<std::pair<RegSubRegPair, MachineInstr *>> Uses;
 
   MachineOperand &DefMO = I.getOperand(0);
@@ -1780,7 +1781,7 @@ bool MachineSinking::aggressivelySinkIntoCycle(
                            "can't sink.\n");
       continue;
     }
-    if (!Cycle->contains(MI->getParent())) {
+    if (!CI->contains(Cycle, MI->getParent())) {
       LLVM_DEBUG(
           dbgs() << "AggressiveCycleSink:   Use not in cycle, can't sink.\n");
       continue;
@@ -1913,8 +1914,8 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
 
     // Don't sink instructions into a cycle.
     if (!TryBreak && CI->getCycle(SuccToSinkTo) &&
-        (!CI->getCycle(SuccToSinkTo)->isReducible() ||
-         CI->getCycle(SuccToSinkTo)->getHeader() == SuccToSinkTo)) {
+        (!CI->isReducible(CI->getCycle(SuccToSinkTo)) ||
+         CI->getHeader(CI->getCycle(SuccToSinkTo)) == SuccToSinkTo)) {
       LLVM_DEBUG(dbgs() << " *** NOTE: cycle header found\n");
       TryBreak = true;
     }

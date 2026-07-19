@@ -391,6 +391,11 @@ void Module::addModuleFlag(ModFlagBehavior Behavior, StringRef Key,
   addModuleFlag(Behavior, Key, ConstantAsMetadata::get(Val));
 }
 void Module::addModuleFlag(ModFlagBehavior Behavior, StringRef Key,
+                           uint64_t Val) {
+  Type *Int64Ty = Type::getInt64Ty(Context);
+  addModuleFlag(Behavior, Key, ConstantInt::get(Int64Ty, Val));
+}
+void Module::addModuleFlag(ModFlagBehavior Behavior, StringRef Key,
                            uint32_t Val) {
   Type *Int32Ty = Type::getInt32Ty(Context);
   addModuleFlag(Behavior, Key, ConstantInt::get(Int32Ty, Val));
@@ -424,6 +429,11 @@ void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
 void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
                            Constant *Val) {
   setModuleFlag(Behavior, Key, ConstantAsMetadata::get(Val));
+}
+void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
+                           uint64_t Val) {
+  Type *Int64Ty = Type::getInt64Ty(Context);
+  setModuleFlag(Behavior, Key, ConstantInt::get(Int64Ty, Val));
 }
 void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
                            uint32_t Val) {

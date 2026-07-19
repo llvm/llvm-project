@@ -3609,8 +3609,13 @@ public:
       ExtnameUndeclaredIdentifiers;
 
   /// Set containing all typedefs that are likely unused.
-  llvm::SmallSetVector<const TypedefNameDecl *, 4>
+  llvm::SmallPtrSet<const TypedefNameDecl *, 4>
       UnusedLocalTypedefNameCandidates;
+
+  /// Store UnusedLocalTypedefNameCandidates in \p Sorted in a deterministic
+  /// order.
+  void getSortedUnusedLocalTypedefNameCandidates(
+      SmallVectorImpl<const TypedefNameDecl *> &Sorted) const;
 
   typedef LazyVector<const DeclaratorDecl *, ExternalSemaSource,
                      &ExternalSemaSource::ReadUnusedFileScopedDecls, 2, 2>
@@ -13772,14 +13777,6 @@ public:
   /// when there are multiple errors or warnings in the same instantiation.
   // FIXME: Does this belong in Sema? It's tough to implement it anywhere else.
   unsigned LastEmittedCodeSynthesisContextDepth = 0;
-
-  /// The template instantiation callbacks to trace or track
-  /// instantiations (objects can be chained).
-  ///
-  /// This callbacks is used to print, trace or track template
-  /// instantiations as they are being constructed.
-  std::vector<std::unique_ptr<TemplateInstantiationCallback>>
-      TemplateInstCallbacks;
 
   /// The current index into pack expansion arguments that will be
   /// used for substitution of parameter packs.
