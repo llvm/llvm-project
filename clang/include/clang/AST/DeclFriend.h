@@ -56,7 +56,6 @@ private:
   // Location of the '...', if present.
   SourceLocation EllipsisLoc;
 
-  // Location of the 'friend' keyword.
   SourceLocation FriendLoc;
 
 protected:
@@ -66,9 +65,9 @@ protected:
   LazyDeclPtr NextFriend;
 
   FriendDecl(Kind K, DeclContext *DC, SourceLocation L, FriendUnion Friend,
-             SourceLocation FriendLoc, SourceLocation EllipsisLoc = {})
-      : Decl(K, DC, L), EllipsisLoc(EllipsisLoc), FriendLoc(FriendLoc),
-        Friend(Friend), NextFriend() {}
+             SourceLocation FL, SourceLocation EllipsisLoc = {})
+      : Decl(K, DC, L), EllipsisLoc(EllipsisLoc), FriendLoc(FL), Friend(Friend),
+        NextFriend() {}
 
   FriendDecl(Kind K, EmptyShell Empty) : Decl(K, Empty) {}
 
