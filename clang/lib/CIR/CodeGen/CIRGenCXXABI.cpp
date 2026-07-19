@@ -80,6 +80,10 @@ void CIRGenCXXABI::setCXXABIThisValue(CIRGenFunction &cgf,
   cgf.cxxabiThisValue = thisPtr;
 }
 
+mlir::Value CIRGenCXXABI::getThisValue(CIRGenFunction &cgf) {
+  return cgf.cxxabiThisValue;
+}
+
 CharUnits CIRGenCXXABI::getArrayCookieSize(const CXXNewExpr *e) {
   if (!requiresArrayCookie(e))
     return CharUnits::Zero();
