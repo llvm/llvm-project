@@ -3548,10 +3548,14 @@ public:
 
 /// Represents a placeholder type for late-parsed type attributes.
 /// This type wraps another type and holds an opaque pointer to a
-/// LateParsedAttribute that will be parsed later (e.g., in ActOnFields).
+/// LateParsedTypeAttribute that will be parsed later (e.g., in ActOnFields).
 /// Once parsed, this type is replaced with the appropriate attributed type
-/// (e.g., CountAttributedType for counted_by).
-class LateParsedAttrType : public Type, public llvm::FoldingSetNode {
+/// (e.g., CountAttributedType for `__counted_by`).
+///
+/// Its canonical type is that of the wrapped type, so a consumer walking the
+/// AST during late parsing must treat this as "attribute unresolved", not "no
+/// attribute here".
+class LateParsedAttrType : public Type {
   friend class ASTContext; // ASTContext creates these.
 
   QualType WrappedTy;
@@ -3570,16 +3574,6 @@ public:
 
   bool isSugared() const { return true; }
   QualType desugar() const { return WrappedTy; }
-
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, WrappedTy, LateParsedTypeAttr);
-  }
-
-  static void Profile(llvm::FoldingSetNodeID &ID, QualType Wrapped,
-                      LateParsedTypeAttribute *Attr) {
-    ID.AddPointer(Wrapped.getAsOpaquePtr());
-    ID.AddPointer(Attr);
-  }
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == LateParsedAttr;
