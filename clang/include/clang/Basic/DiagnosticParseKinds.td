@@ -12,6 +12,9 @@
 
 let Component = "Parse" in {
 let CategoryName = "Parse Issue" in {
+// C2y compatibility with C89.
+defm decl_statement : C2yCompat<"'%select{if|switch}0' declaration statements are">;
+
 // C++11 compatibility with C++98.
 defm enum_fixed_underlying_type : CXX11Compat<
   "enumeration types with a fixed underlying type are",
@@ -220,6 +223,9 @@ def ext_c2y_case_range : Extension<
   "case ranges are a C2y extension">, InGroup<C2y>;
 def err_c2y_labeled_break_continue : Error<
   "named %select{'break'|'continue'}0 is only supported in C2y">;
+def err_c2y_first_condition_clause_is_not_declaration : Error<
+  "first clause in condition must be a declaration">;
+def err_c2y_multiple_declarations : Error<"multiple declarations are not allowed">;
 
 // Generic errors.
 def err_expected_expression : Error<"expected expression">;

@@ -2133,6 +2133,48 @@ uint32x2_t test_pwcvth_u32x2(uint16x2_t rs1) {
   return __riscv_pwcvth_u32x2(rs1);
 }
 
+// CHECK-LABEL: test_pncvt_i8x4:
+// RV32:        pncvt.b
+// RV64:        pncvt.wb
+int8x4_t test_pncvt_i8x4(int16x4_t rs1) { return __riscv_pncvt_i8x4(rs1); }
+
+// CHECK-LABEL: test_pncvt_u8x4:
+// RV32:        pncvt.b
+// RV64:        pncvt.wb
+uint8x4_t test_pncvt_u8x4(uint16x4_t rs1) { return __riscv_pncvt_u8x4(rs1); }
+
+// CHECK-LABEL: test_pncvt_i16x2:
+// RV32:        pncvt.h
+// RV64:        pncvt.wh
+int16x2_t test_pncvt_i16x2(int32x2_t rs1) { return __riscv_pncvt_i16x2(rs1); }
+
+// CHECK-LABEL: test_pncvt_u16x2:
+// RV32:        pncvt.h
+// RV64:        pncvt.wh
+uint16x2_t test_pncvt_u16x2(uint32x2_t rs1) { return __riscv_pncvt_u16x2(rs1); }
+
+// CHECK-LABEL: test_pncvth_i8x4:
+// RV32:        pncvth.b
+// RV64:        pncvth.wb
+int8x4_t test_pncvth_i8x4(int16x4_t rs1) { return __riscv_pncvth_i8x4(rs1); }
+
+// CHECK-LABEL: test_pncvth_u8x4:
+// RV32:        pncvth.b
+// RV64:        pncvth.wb
+uint8x4_t test_pncvth_u8x4(uint16x4_t rs1) { return __riscv_pncvth_u8x4(rs1); }
+
+// CHECK-LABEL: test_pncvth_i16x2:
+// RV32:        pncvth.h
+// RV64:        pncvth.wh
+int16x2_t test_pncvth_i16x2(int32x2_t rs1) { return __riscv_pncvth_i16x2(rs1); }
+
+// CHECK-LABEL: test_pncvth_u16x2:
+// RV32:        pncvth.h
+// RV64:        pncvth.wh
+uint16x2_t test_pncvth_u16x2(uint32x2_t rs1) {
+  return __riscv_pncvth_u16x2(rs1);
+}
+
 // CHECK-LABEL: test_pmerge_merge_u8x4:
 // CHECK:        merge
 uint8x4_t test_pmerge_merge_u8x4(uint8x4_t rd, uint8x4_t rs1, uint8x4_t rs2) {
@@ -2350,12 +2392,12 @@ uint8x4_t test_prev_u8x4(uint8x4_t a) { return __riscv_prev_u8x4(a); }
 
 // CHECK-LABEL: test_prev_i16x2:
 // RV32:        ppairoe.h
-// RV64:        rev16
+// RV64:        ppairoe.h
 int16x2_t test_prev_i16x2(int16x2_t a) { return __riscv_prev_i16x2(a); }
 
 // CHECK-LABEL: test_prev_u16x2:
 // RV32:        ppairoe.h
-// RV64:        rev16
+// RV64:        ppairoe.h
 uint16x2_t test_prev_u16x2(uint16x2_t a) { return __riscv_prev_u16x2(a); }
 
 // CHECK-LABEL: test_prev_i8x8:

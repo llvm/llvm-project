@@ -562,20 +562,6 @@ public:
     BR->emitReport(std::move(Report));
   }
 
-  ObjCInterfaceDecl *getObjCDecl(const Type *TypePtr) const {
-    auto *PointeeType = TypePtr->getPointeeType().getTypePtrOrNull();
-    if (!PointeeType)
-      return nullptr;
-    auto *Desugared = PointeeType->getUnqualifiedDesugaredType();
-    if (!Desugared)
-      return nullptr;
-    if (auto *ObjCType = dyn_cast<ObjCInterfaceType>(Desugared))
-      return ObjCType->getDecl();
-    if (auto *ObjCType = dyn_cast<ObjCObjectType>(Desugared))
-      return ObjCType->getInterface();
-    return nullptr;
-  }
-
   void reportBugOnThisPtr(const LambdaCapture &Capture,
                           const QualType T) const {
     SmallString<100> Buf;
@@ -608,7 +594,7 @@ public:
     if (auto *RD = T->getPointeeType()->getAsRecordDecl()) {
       Os << " ";
       printQuotedQualifiedName(Os, RD);
-    } else if (auto *ObjCDecl = getObjCDecl(T)) {
+    } else if (auto *ObjCDecl = getObjCDeclFromObjCPtr(T)) {
       Os << " ";
       printQuotedQualifiedName(Os, ObjCDecl);
     }
@@ -629,7 +615,7 @@ public:
     return isRefType(Name);
   }
 
-  const char *typeName() const final { return "ref-countable type"; }
+  const char *typeName() const final { return "RefPtr-capable type"; }
 };
 
 class UncheckedLambdaCapturesChecker : public RawPtrRefLambdaCapturesChecker {
@@ -646,7 +632,7 @@ public:
     return isCheckedPtr(Name);
   }
 
-  const char *typeName() const final { return "CheckedPtr capable type"; }
+  const char *typeName() const final { return "CheckedPtr-capable type"; }
 };
 
 class UnretainedLambdaCapturesChecker : public RawPtrRefLambdaCapturesChecker {
@@ -667,7 +653,7 @@ public:
     return isRetainPtrOrOSPtr(Name);
   }
 
-  const char *typeName() const final { return "retainable type"; }
+  const char *typeName() const final { return "RetainPtr-capable type"; }
 
   void printPointer(llvm::raw_svector_ostream &Os, const Type *T) const final {
     if (auto *ObjCPtr = dyn_cast<ObjCObjectPointerType>(T)) {
