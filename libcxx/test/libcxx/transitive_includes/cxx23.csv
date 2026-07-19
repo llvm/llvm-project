@@ -944,6 +944,7 @@ spanstream stdexcept
 spanstream streambuf
 spanstream string
 spanstream string_view
+spanstream text_encoding
 spanstream tuple
 spanstream typeinfo
 spanstream version

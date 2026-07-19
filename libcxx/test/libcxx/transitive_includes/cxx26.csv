@@ -862,7 +862,6 @@ spanstream cstdint
 spanstream cstdio
 spanstream cstdlib
 spanstream cstring
-spanstream ctime
 spanstream cwchar
 spanstream cwctype
 spanstream format
@@ -874,12 +873,12 @@ spanstream limits
 spanstream optional
 spanstream ostream
 spanstream print
-spanstream ratio
 spanstream span
 spanstream stdexcept
 spanstream streambuf
 spanstream string
 spanstream string_view
+spanstream text_encoding
 spanstream tuple
 spanstream typeinfo
 spanstream version
