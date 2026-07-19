@@ -250,6 +250,16 @@ enum {
   GIM_CheckType,
   /// GIM_CheckType but InsnID is omitted and defaults to zero.
   GIM_RootCheckType,
+  /// GIM_RootCheckType with OpIdx encoded in the opcode.
+  GIM_RootCheckType0,
+  GIM_RootCheckType1,
+  GIM_RootCheckType2,
+  GIM_RootCheckType3,
+  GIM_RootCheckType4,
+  GIM_RootCheckType5,
+  GIM_RootCheckType6,
+  GIM_RootCheckType7,
+  GIM_RootCheckType8,
 
   /// Check the type of a pointer to any address space.
   /// - InsnID(ULEB128) - Instruction ID
@@ -264,6 +274,16 @@ enum {
   GIM_CheckRegBankForClass,
   /// GIM_CheckRegBankForClass but InsnID is omitted and defaults to zero.
   GIM_RootCheckRegBankForClass,
+  /// GIM_RootCheckRegBankForClass with OpIdx encoded in the opcode.
+  GIM_RootCheckRegBankForClass0,
+  GIM_RootCheckRegBankForClass1,
+  GIM_RootCheckRegBankForClass2,
+  GIM_RootCheckRegBankForClass3,
+  GIM_RootCheckRegBankForClass4,
+  GIM_RootCheckRegBankForClass5,
+  GIM_RootCheckRegBankForClass6,
+  GIM_RootCheckRegBankForClass7,
+  GIM_RootCheckRegBankForClass8,
 
   /// Check the operand matches a complex predicate
   /// - InsnID(ULEB128) - Instruction ID
@@ -391,6 +411,16 @@ enum {
   GIR_Copy,
   /// GIR_Copy but with both New/OldInsnIDs omitted and defaulting to zero.
   GIR_RootToRootCopy,
+  /// GIR_RootToRootCopy with OpIdx encoded in the opcode.
+  GIR_RootToRootCopy0,
+  GIR_RootToRootCopy1,
+  GIR_RootToRootCopy2,
+  GIR_RootToRootCopy3,
+  GIR_RootToRootCopy4,
+  GIR_RootToRootCopy5,
+  GIR_RootToRootCopy6,
+  GIR_RootToRootCopy7,
+  GIR_RootToRootCopy8,
 
   /// Copies all operand starting from OpIdx in OldInsnID into the new
   /// instruction NewInsnID.
@@ -597,6 +627,8 @@ enum {
   /// Keeping track of the number of the GI opcodes. Must be the last entry.
   GIU_NumOpcodes,
 };
+static_assert(GIU_NumOpcodes <= 256,
+              "GlobalISel opcodes must fit in a match table byte");
 
 /// Provides the logic to execute GlobalISel match tables, which are used by the
 /// instruction selector and instruction combiners as their engine to match and
