@@ -3059,9 +3059,12 @@ bool TargetLowering::SimplifyDemandedBits(
     if (Op.getOpcode() == ISD::MUL) {
       Known = KnownBits::mul(KnownOp0, KnownOp1);
     } else { // Op.getOpcode() is either ISD::ADD, ISD::PTRADD, or ISD::SUB.
+      bool SwapAddSub = Op1->getOpcode() == ISD::Constant && Op1->getAsAPIntVal().isNegative();
+      KnownBits AdjustedKnownOp1 = SwapAddSub ? KnownBits::makeConstant(-Op1->getAsAPIntVal()) : KnownOp1;
+      bool Add = (Op.getOpcode() != ISD::SUB) != SwapAddSub;
       Known = KnownBits::computeForAddSub(
-          Op.getOpcode() != ISD::SUB, Flags.hasNoSignedWrap(),
-          Flags.hasNoUnsignedWrap(), KnownOp0, KnownOp1);
+          Add, Flags.hasNoSignedWrap(),
+          Flags.hasNoUnsignedWrap(), KnownOp0, AdjustedKnownOp1);
     }
     break;
   }
