@@ -627,7 +627,6 @@ public:
 
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
-    CommandObject::CommandMap::iterator pos;
     CommandObject *cmd_obj;
 
     if (args.empty()) {
@@ -702,8 +701,6 @@ public:
 
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
-    CommandObject::CommandMap::iterator pos;
-
     if (args.empty()) {
       result.AppendErrorWithFormat("must call '%s' with one or more valid user "
                                    "defined regular expression command names",
@@ -868,6 +865,7 @@ protected:
 
       if (error.Success()) {
         AddRegexCommandToInterpreter();
+        result.SetStatus(eReturnStatusSuccessFinishNoResult);
       }
     }
     if (error.Fail()) {
@@ -2498,6 +2496,8 @@ protected:
     if (m_options.m_class_name.empty() && m_options.m_funct_name.empty()) {
       m_interpreter.GetPythonCommandsFromIOHandler("     ", // Prompt
                                                    *this);  // IOHandlerDelegate
+      // Still gathering input; the IOHandler will set the final status.
+      result.SetStatus(eReturnStatusStarted);
       return;
     }
 

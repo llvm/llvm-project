@@ -38,12 +38,15 @@ struct LifetimeSafetyOpts {
   /// Maximum number of CFG blocks to analyze. Functions with larger CFGs will
   /// be skipped.
   size_t MaxCFGBlocks;
+
+  /// Whether to suggest lifetime annotations.
+  bool SuggestAnnotations;
 };
 
 /// Enum to track functions visible across or within TU.
-enum class SuggestionScope {
-  CrossTU, // For suggestions on declarations visible across Translation Units.
-  IntraTU  // For suggestions on definitions local to a Translation Unit.
+enum class WarningScope {
+  CrossTU, // For warnings on declarations visible across Translation Units.
+  IntraTU  // For warnings on functions local to a Translation Unit.
 };
 
 /// Abstract interface for operations requiring Sema access.
@@ -63,12 +66,12 @@ public:
 
   virtual void reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
                                    const Expr *MovedExpr,
-                                   SourceLocation FreeLoc) {}
+                                   SourceLocation FreeLoc,
+                                   llvm::ArrayRef<const Expr *> ExprChain) {}
 
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
                                     const Expr *ReturnExpr,
-                                    const Expr *MovedExpr,
-                                    SourceLocation ExpiryLoc) {}
+                                    const Expr *MovedExpr) {}
 
   virtual void reportDanglingField(const Expr *IssueExpr,
                                    const FieldDecl *Field,
@@ -82,18 +85,32 @@ public:
 
   // Reports when a reference/iterator is used after the container operation
   // that invalidated it.
-  virtual void reportUseAfterInvalidation(const Expr *IssueExpr,
-                                          const Expr *UseExpr,
-                                          const Expr *InvalidationExpr) {}
-  virtual void reportUseAfterInvalidation(const ParmVarDecl *PVD,
-                                          const Expr *UseExpr,
-                                          const Expr *InvalidationExpr) {}
+  virtual void
+  reportUseAfterInvalidation(const Expr *IssueExpr, const Expr *UseExpr,
+                             const Expr *InvalidationExpr,
+                             llvm::ArrayRef<const Expr *> ExprChain) {}
+  virtual void
+  reportUseAfterInvalidation(const ParmVarDecl *PVD, const Expr *UseExpr,
+                             const Expr *InvalidationExpr,
+                             llvm::ArrayRef<const Expr *> ExprChain) {}
+  virtual void reportInvalidatedField(const Expr *IssueExpr,
+                                      const FieldDecl *Field,
+                                      const Expr *InvalidationExpr) {}
+  virtual void reportInvalidatedField(const ParmVarDecl *PVD,
+                                      const FieldDecl *Field,
+                                      const Expr *InvalidationExpr) {}
+  virtual void reportInvalidatedGlobal(const Expr *IssueExpr,
+                                       const VarDecl *Global,
+                                       const Expr *InvalidationExpr) {}
+  virtual void reportInvalidatedGlobal(const ParmVarDecl *PVD,
+                                       const VarDecl *Global,
+                                       const Expr *InvalidationExpr) {}
 
   using EscapingTarget =
       llvm::PointerUnion<const Expr *, const FieldDecl *, const VarDecl *>;
 
   // Suggests lifetime bound annotations for function parameters.
-  virtual void suggestLifetimeboundToParmVar(SuggestionScope Scope,
+  virtual void suggestLifetimeboundToParmVar(WarningScope Scope,
                                              const ParmVarDecl *ParmToAnnotate,
                                              EscapingTarget Target) {}
 
@@ -108,8 +125,32 @@ public:
   virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
                                        const VarDecl *EscapeGlobal) {}
 
+  // Reports misuse of [[clang::lifetimebound]] when parameter doesn't escape
+  // through return.
+  virtual void
+  reportLifetimeboundViolation(const ParmVarDecl *ParmWithLifetimebound) {}
+
+  // Reports misuse of [[clang::lifetimebound]] when implicit this parameter
+  // doesn't escape through return.
+  virtual void
+  reportLifetimeboundViolation(const CXXMethodDecl *MDWithLifetimebound) {}
+
+  // Reports a member function definition that has [[clang::lifetimebound]] on
+  // the implicit this parameter when the canonical declaration does not.
+  virtual void reportMisplacedLifetimebound(WarningScope Scope,
+                                            const CXXMethodDecl *FDef,
+                                            const CXXMethodDecl *FDecl) {}
+
+  // Reports a function definition parameter that has [[clang::lifetimebound]]
+  // when the corresponding parameter in the canonical declaration.
+  virtual void reportMisplacedLifetimebound(WarningScope Scope,
+                                            const ParmVarDecl *PVDDef,
+                                            const ParmVarDecl *PVDDecl) {}
+
+  virtual void reportInapplicableLifetimebound(const ParmVarDecl *PVD) {}
+
   // Suggests lifetime bound annotations for implicit this.
-  virtual void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,
+  virtual void suggestLifetimeboundToImplicitThis(WarningScope Scope,
                                                   const CXXMethodDecl *MD,
                                                   const Expr *EscapeExpr) {}
 
@@ -121,6 +162,7 @@ public:
 /// The main entry point for the analysis.
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                LifetimeSafetySemaHelper *SemaHelper,
+                               const LifetimeSafetyOpts &Opts,
                                LifetimeSafetyStats &Stats, bool CollectStats);
 
 namespace internal {
@@ -131,10 +173,10 @@ void collectLifetimeStats(AnalysisDeclContext &AC, OriginManager &OM,
 /// An object to hold the factories for immutable collections, ensuring
 /// that all created states share the same underlying memory management.
 struct LifetimeFactory {
-  OriginLoanMap::Factory OriginMapFactory{/*canonicalize=*/false};
-  LoanSet::Factory LoanSetFactory{/*canonicalize=*/false};
-  MovedLoansMap::Factory MovedLoansMapFactory{/*canonicalize=*/false};
-  LivenessMap::Factory LivenessMapFactory{/*canonicalize=*/false};
+  OriginLoanMap::Factory OriginMapFactory;
+  LoanSet::Factory LoanSetFactory;
+  MovedLoansMap::Factory MovedLoansMapFactory;
+  LivenessMap::Factory LivenessMapFactory;
 };
 
 /// Running the lifetime safety analysis and querying its results. It

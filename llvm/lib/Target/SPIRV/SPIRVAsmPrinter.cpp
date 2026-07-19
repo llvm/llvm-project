@@ -13,6 +13,7 @@
 
 #include "MCTargetDesc/SPIRVInstPrinter.h"
 #include "SPIRV.h"
+#include "SPIRVAuxDataHandler.h"
 #include "SPIRVInstrInfo.h"
 #include "SPIRVMCInstLower.h"
 #include "SPIRVModuleAnalysis.h"
@@ -36,6 +37,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -44,6 +46,20 @@ using namespace llvm;
 #define DEBUG_TYPE "asm-printer"
 
 namespace {
+enum class SPIRVFPContractMode { On, Off, Fast };
+
+static cl::opt<SPIRVFPContractMode> SPIRVFPContract(
+    "spirv-fp-contract",
+    cl::desc("Override FP contraction policy for SPIR-V kernel entry points"),
+    cl::values(
+        clEnumValN(SPIRVFPContractMode::On, "on",
+                   "Follow IR metadata (default)"),
+        clEnumValN(SPIRVFPContractMode::Off, "off",
+                   "Force ContractionOff on all kernel entry points"),
+        clEnumValN(SPIRVFPContractMode::Fast, "fast",
+                   "Suppress ContractionOff on all kernel entry points")),
+    cl::init(SPIRVFPContractMode::On));
+
 class SPIRVAsmPrinter : public AsmPrinter {
   unsigned NLabels = 0;
   SmallPtrSet<const MachineBasicBlock *, 8> LabeledMBB;
@@ -81,6 +97,8 @@ public:
       SPIRV::ExecutionMode::ExecutionMode EM);
   void outputExecutionModeFromEnableMaximalReconvergenceAttr(
       const MCRegister &Reg, const SPIRVSubtarget &ST);
+  void emitSimpleExecutionMode(MCRegister Reg,
+                               SPIRV::ExecutionMode::ExecutionMode EM);
   void outputExecutionMode(const Module &M);
   void outputAnnotations(const Module &M);
   void outputModuleSections();
@@ -110,6 +128,8 @@ public:
   // The handler's lifetime is managed by AsmPrinter (the base class of this
   // object), so this pointer cannot dangle.
   SPIRVNonSemanticDebugHandler *NSDebugHandler = nullptr;
+
+  std::unique_ptr<SPIRVAuxDataHandler> AuxDataHandler;
 
 protected:
   void cleanUp(Module &M);
@@ -344,6 +364,8 @@ void SPIRVAsmPrinter::outputDebugSourceAndStrings(const Module &M) {
   // emitNonSemanticGlobalDebugInfo().
   if (NSDebugHandler)
     NSDebugHandler->emitNonSemanticDebugStrings(*MAI);
+  if (AuxDataHandler)
+    AuxDataHandler->emitAuxDataStrings(*MAI);
 }
 
 void SPIRVAsmPrinter::outputOpExtInstImports(const Module &M) {
@@ -525,33 +547,39 @@ void SPIRVAsmPrinter::outputExecutionModeFromNumthreadsAttribute(
   outputMCInst(Inst);
 }
 
+void SPIRVAsmPrinter::emitSimpleExecutionMode(
+    MCRegister Reg, SPIRV::ExecutionMode::ExecutionMode EM) {
+  MCInst Inst;
+  Inst.setOpcode(SPIRV::OpExecutionMode);
+  Inst.addOperand(MCOperand::createReg(Reg));
+  Inst.addOperand(MCOperand::createImm(static_cast<unsigned>(EM)));
+  outputMCInst(Inst);
+}
+
 void SPIRVAsmPrinter::outputExecutionModeFromEnableMaximalReconvergenceAttr(
     const MCRegister &Reg, const SPIRVSubtarget &ST) {
   assert(ST.canUseExtension(SPIRV::Extension::SPV_KHR_maximal_reconvergence) &&
          "Function called when SPV_KHR_maximal_reconvergence is not enabled.");
 
-  MCInst Inst;
-  Inst.setOpcode(SPIRV::OpExecutionMode);
-  Inst.addOperand(MCOperand::createReg(Reg));
-  unsigned EM =
-      static_cast<unsigned>(SPIRV::ExecutionMode::MaximallyReconvergesKHR);
-  Inst.addOperand(MCOperand::createImm(EM));
-  outputMCInst(Inst);
+  emitSimpleExecutionMode(Reg, SPIRV::ExecutionMode::MaximallyReconvergesKHR);
 }
 
 void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
   NamedMDNode *Node = M.getNamedMetadata("spirv.ExecutionMode");
   if (Node) {
     for (unsigned i = 0; i < Node->getNumOperands(); i++) {
+      const auto EM =
+          cast<ConstantInt>(
+              cast<ConstantAsMetadata>((Node->getOperand(i))->getOperand(1))
+                  ->getValue())
+              ->getZExtValue();
+      // Skip ArithmeticPoisonKHR to avoid a duplicate.
+      if (EM == SPIRV::ExecutionMode::ArithmeticPoisonKHR)
+        continue;
       // If SPV_KHR_float_controls2 is enabled and we find any of
       // FPFastMathDefault, ContractionOff or SignedZeroInfNanPreserve execution
       // modes, skip it, it'll be done somewhere else.
       if (ST->canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) {
-        const auto EM =
-            cast<ConstantInt>(
-                cast<ConstantAsMetadata>((Node->getOperand(i))->getOperand(1))
-                    ->getValue())
-                ->getZExtValue();
         if (EM == SPIRV::ExecutionMode::FPFastMathDefault ||
             EM == SPIRV::ExecutionMode::ContractionOff ||
             EM == SPIRV::ExecutionMode::SignedZeroInfNanPreserve)
@@ -580,13 +608,7 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
       // VUID-StandaloneSpirv-OriginLowerLeft-04653: Fragment must declare
       // OriginUpperLeft.
       if (Attr.getValueAsString() == "pixel") {
-        MCInst Inst;
-        Inst.setOpcode(SPIRV::OpExecutionMode);
-        Inst.addOperand(MCOperand::createReg(FReg));
-        unsigned EM =
-            static_cast<unsigned>(SPIRV::ExecutionMode::OriginUpperLeft);
-        Inst.addOperand(MCOperand::createImm(EM));
-        outputMCInst(Inst);
+        emitSimpleExecutionMode(FReg, SPIRV::ExecutionMode::OriginUpperLeft);
       }
     }
     if (MDNode *Node = F.getMetadata("reqd_work_group_size"))
@@ -602,6 +624,9 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
     if (MDNode *Node = F.getMetadata("work_group_size_hint"))
       outputExecutionModeFromMDNode(FReg, Node,
                                     SPIRV::ExecutionMode::LocalSizeHint, 3, 1);
+    if (MDNode *Node = F.getMetadata("reqd_sub_group_size"))
+      outputExecutionModeFromMDNode(FReg, Node,
+                                    SPIRV::ExecutionMode::SubgroupSize, 0, 0);
     if (MDNode *Node = F.getMetadata("intel_reqd_sub_group_size"))
       outputExecutionModeFromMDNode(FReg, Node,
                                     SPIRV::ExecutionMode::SubgroupSize, 0, 0);
@@ -620,8 +645,20 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
       Inst.addOperand(MCOperand::createImm(TypeCode));
       outputMCInst(Inst);
     }
-    if (ST->isKernel() && !M.getNamedMetadata("spirv.ExecutionMode") &&
-        !M.getNamedMetadata("opencl.enable.FP_CONTRACT")) {
+    // Per SPV_KHR_poison_freeze description of PoisonFreezeKHR "If declared,
+    // all entry points must use the ArithmeticPoisonKHR execution mode".
+    if (llvm::is_contained(MAI->Reqs.getMinimalCapabilities(),
+                           SPIRV::Capability::PoisonFreezeKHR)) {
+      emitSimpleExecutionMode(FReg, SPIRV::ExecutionMode::ArithmeticPoisonKHR);
+    }
+    // --spirv-fp-contract=off forces to emit ContractionOff for this kernel
+    // entry point, --spirv-fp-contract=fast suppresses it.
+    bool EmitContractionOff =
+        ST->isKernel() && !M.getNamedMetadata("spirv.ExecutionMode") &&
+        SPIRVFPContract != SPIRVFPContractMode::Fast &&
+        (SPIRVFPContract == SPIRVFPContractMode::Off ||
+         !M.getNamedMetadata("opencl.enable.FP_CONTRACT"));
+    if (EmitContractionOff) {
       if (ST->canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) {
         // When SPV_KHR_float_controls2 is enabled, ContractionOff is
         // deprecated. We need to use FPFastMathDefault with the appropriate
@@ -693,13 +730,7 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
           outputMCInst(Inst);
         }
       } else {
-        MCInst Inst;
-        Inst.setOpcode(SPIRV::OpExecutionMode);
-        Inst.addOperand(MCOperand::createReg(FReg));
-        unsigned EM =
-            static_cast<unsigned>(SPIRV::ExecutionMode::ContractionOff);
-        Inst.addOperand(MCOperand::createImm(EM));
-        outputMCInst(Inst);
+        emitSimpleExecutionMode(FReg, SPIRV::ExecutionMode::ContractionOff);
       }
     }
   }
@@ -752,7 +783,7 @@ void SPIRVAsmPrinter::outputFPFastMathDefaultInfo() {
   // int32, that might be used as FP Fast Math Mode.
   std::vector<const MachineInstr *> SPIRVFloatTypes;
   // Hashtable to associate immediate values with the constant holding them.
-  std::unordered_map<int, const MachineInstr *> ConstMap;
+  DenseMap<int, const MachineInstr *> ConstMap;
   for (const MachineInstr *MI : MAI->getMSInstrs(SPIRV::MB_TypeConstVars)) {
     // Skip if the instruction is not OpTypeFloat or OpConstant.
     unsigned OpCode = MI->getOpcode();
@@ -850,10 +881,18 @@ void SPIRVAsmPrinter::outputModuleSections() {
   MAI = &getAnalysis<SPIRVModuleAnalysis>().MAI;
   assert(ST && TII && MAI && M && "Module analysis is required");
 
+  if (!AuxDataHandler) {
+    auto Handler = std::make_unique<SPIRVAuxDataHandler>(*this, *M);
+    if (Handler->hasWork())
+      AuxDataHandler = std::move(Handler);
+  }
+
   // Let the NSDI handler add its extension and ext inst import entry to MAI
   // before the module header sections are emitted.
   if (NSDebugHandler)
     NSDebugHandler->prepareModuleOutput(*ST, *MAI);
+  if (AuxDataHandler)
+    AuxDataHandler->prepareModuleOutput(*ST, *MAI);
 
   // Output instructions according to the Logical Layout of a Module:
   // 1,2. All OpCapability instructions, then optional OpExtension
@@ -890,6 +929,8 @@ void SPIRVAsmPrinter::outputModuleSections() {
   // MB_NonSemanticGlobalDI section in MAI is intentionally left empty.
   if (NSDebugHandler)
     NSDebugHandler->emitNonSemanticGlobalDebugInfo(*MAI);
+  if (AuxDataHandler)
+    AuxDataHandler->emitAuxData(*MAI);
   // 11. All function declarations (functions without a body).
   outputExtFuncDecls();
   // 12. All function definitions (functions with a body).
@@ -898,6 +939,12 @@ void SPIRVAsmPrinter::outputModuleSections() {
 
 bool SPIRVAsmPrinter::doInitialization(Module &M) {
   ModuleSectionsEmitted = false;
+  if (!M.getModuleInlineAsm().empty()) {
+    M.getContext().emitError(
+        "SPIR-V does not support module-level inline assembly");
+    M.removeModuleInlineAsm();
+  }
+
   // Register the NSDI handler before calling the base class so that
   // AsmPrinter::doInitialization() calls Handler->beginModule(M) for it.
   if (M.getNamedMetadata("llvm.dbg.cu")) {

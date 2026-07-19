@@ -4671,12 +4671,12 @@ class SubstNonTypeTemplateParmExpr : public Expr {
   /// The associated declaration and a flag indicating if it was a reference
   /// parameter. For class NTTPs, we can't determine that based on the value
   /// category alone.
-  llvm::PointerIntPair<Decl *, 1, bool> AssociatedDeclAndRef;
+  llvm::PointerIntPair<Decl *, 1, bool> AssociatedDeclAndFinal;
+
+  QualType ParamType;
 
   unsigned Index : 15;
   unsigned PackIndex : 15;
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned Final : 1;
 
   explicit SubstNonTypeTemplateParmExpr(EmptyShell Empty)
       : Expr(SubstNonTypeTemplateParmExprClass, Empty) {}
@@ -4684,13 +4684,13 @@ class SubstNonTypeTemplateParmExpr : public Expr {
 public:
   SubstNonTypeTemplateParmExpr(QualType Ty, ExprValueKind ValueKind,
                                SourceLocation Loc, Expr *Replacement,
-                               Decl *AssociatedDecl, unsigned Index,
-                               UnsignedOrNone PackIndex, bool RefParam,
+                               Decl *AssociatedDecl, QualType ParamType,
+                               unsigned Index, UnsignedOrNone PackIndex,
                                bool Final)
       : Expr(SubstNonTypeTemplateParmExprClass, Ty, ValueKind, OK_Ordinary),
-        Replacement(Replacement),
-        AssociatedDeclAndRef(AssociatedDecl, RefParam), Index(Index),
-        PackIndex(PackIndex.toInternalRepresentation()), Final(Final) {
+        Replacement(Replacement), AssociatedDeclAndFinal(AssociatedDecl, Final),
+        ParamType(ParamType), Index(Index),
+        PackIndex(PackIndex.toInternalRepresentation()) {
     assert(AssociatedDecl != nullptr);
     SubstNonTypeTemplateParmExprBits.NameLoc = Loc;
     setDependence(computeDependence(this));
@@ -4706,7 +4706,9 @@ public:
 
   /// A template-like entity which owns the whole pattern being substituted.
   /// This will own a set of template parameters.
-  Decl *getAssociatedDecl() const { return AssociatedDeclAndRef.getPointer(); }
+  Decl *getAssociatedDecl() const {
+    return AssociatedDeclAndFinal.getPointer();
+  }
 
   /// Returns the index of the replaced parameter in the associated declaration.
   /// This should match the result of `getParameter()->getIndex()`.
@@ -4718,14 +4720,12 @@ public:
 
   // This substitution is Final, which means the substitution is fully
   // sugared: it doesn't need to be resugared later.
-  bool getFinal() const { return Final; }
+  bool getFinal() const { return AssociatedDeclAndFinal.getInt(); }
 
   NonTypeTemplateParmDecl *getParameter() const;
 
-  bool isReferenceParameter() const { return AssociatedDeclAndRef.getInt(); }
-
   /// Determine the substituted type of the template parameter.
-  QualType getParameterType(const ASTContext &Ctx) const;
+  QualType getParameterType() const { return ParamType; }
 
   static bool classof(const Stmt *s) {
     return s->getStmtClass() == SubstNonTypeTemplateParmExprClass;
@@ -5549,6 +5549,48 @@ public:
   }
 };
 
+/// Helper that selects an expression from an InitListExpr depending on the
+/// current expansion index. See 'CXXExpansionStmtPattern' for how this is used.
+class CXXExpansionSelectExpr : public Expr {
+  friend class ASTStmtReader;
+
+  enum SubExpr { RANGE, INDEX, COUNT };
+  Expr *SubExprs[COUNT];
+
+public:
+  CXXExpansionSelectExpr(EmptyShell Empty);
+  CXXExpansionSelectExpr(const ASTContext &C, InitListExpr *Range, Expr *Idx);
+
+  InitListExpr *getRangeExpr() { return cast<InitListExpr>(SubExprs[RANGE]); }
+
+  const InitListExpr *getRangeExpr() const {
+    return cast<InitListExpr>(SubExprs[RANGE]);
+  }
+
+  void setRangeExpr(InitListExpr *E) { SubExprs[RANGE] = E; }
+
+  Expr *getIndexExpr() { return SubExprs[INDEX]; }
+  const Expr *getIndexExpr() const { return SubExprs[INDEX]; }
+  void setIndexExpr(Expr *E) { SubExprs[INDEX] = E; }
+
+  SourceLocation getBeginLoc() const { return getRangeExpr()->getBeginLoc(); }
+  SourceLocation getEndLoc() const { return getRangeExpr()->getEndLoc(); }
+
+  child_range children() {
+    return child_range(reinterpret_cast<Stmt **>(SubExprs),
+                       reinterpret_cast<Stmt **>(SubExprs + COUNT));
+  }
+
+  const_child_range children() const {
+    return const_child_range(
+        reinterpret_cast<Stmt **>(const_cast<Expr **>(SubExprs)),
+        reinterpret_cast<Stmt **>(const_cast<Expr **>(SubExprs + COUNT)));
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXExpansionSelectExprClass;
+  }
+};
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_EXPRCXX_H

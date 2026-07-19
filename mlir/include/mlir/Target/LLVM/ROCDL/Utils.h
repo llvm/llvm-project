@@ -19,6 +19,7 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVM/ModuleToObject.h"
+#include "llvm/ADT/BitmaskEnum.h"
 
 namespace mlir {
 namespace ROCDL {
@@ -42,6 +43,8 @@ enum class AMDGCNLibraries : uint32_t {
   LLVM_MARK_AS_BITMASK_ENUM(LastLib),
   All = (LastLib << 1) - 1
 };
+
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 /// Assembles ISA to an object code.
 FailureOr<SmallVector<char, 0>>

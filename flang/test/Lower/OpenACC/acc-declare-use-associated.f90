@@ -25,5 +25,5 @@ subroutine use_mod()
   end do
 end subroutine
 
-! CHECK: fir.global @_QMacc_declare_modEaa {acc.declare = #acc.declare<dataClause = acc_create>} : !fir.array<100xf32>
+! CHECK: fir.global @_QMacc_declare_modEaa {acc.declare = #acc.declare<dataClause = acc_create>, alignment = 64 : i64} : !fir.array<100xf32>
 ! CHECK: fir.global @_QMacc_declare_modEcoef {acc.declare = #acc.declare<dataClause = acc_copyin>} : f32

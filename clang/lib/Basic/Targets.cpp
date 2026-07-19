@@ -128,6 +128,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       return std::make_unique<LinuxTargetInfo<HexagonTargetInfo>>(Triple, Opts);
     if (Triple.isOSQurt())
       return std::make_unique<QURTTargetInfo<HexagonTargetInfo>>(Triple, Opts);
+    if (Triple.isOSH2())
+      return std::make_unique<H2TargetInfo<HexagonTargetInfo>>(Triple, Opts);
     return std::make_unique<HexagonTargetInfo>(Triple, Opts);
 
   case llvm::Triple::lanai:
@@ -432,7 +434,7 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     return std::make_unique<NVPTXTargetInfo>(Triple, Opts,
                                              /*TargetPointerWidth=*/64);
 
-  case llvm::Triple::amdgcn:
+  case llvm::Triple::amdgpu:
   case llvm::Triple::r600:
     return std::make_unique<AMDGPUTargetInfo>(Triple, Opts);
 

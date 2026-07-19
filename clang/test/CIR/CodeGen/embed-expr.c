@@ -15,12 +15,12 @@ void embed_expr_on_scalar_with_constants() {
 
 // CIR-DAG: cir.global "private" constant cir_private @[[EMBED_A:.*]] = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<47> : !s32i]> : !cir.array<!s32i x 3>
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.array<!s32i x 3>, !cir.ptr<!cir.array<!s32i x 3>>, ["a", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.array<!s32i x 3>>
 // CIR: %[[ARRAY:.*]] = cir.get_global @[[EMBED_A]] : !cir.ptr<!cir.array<!s32i x 3>>
 // CIR: cir.copy %[[ARRAY]] to %[[A_ADDR]] : !cir.ptr<!cir.array<!s32i x 3>>
 
 // LLVM: %[[A_ADDR:.*]] = alloca [3 x i32], i64 1, align 4
-// LLVM: call void @llvm.memcpy{{.*}}(ptr %[[A_ADDR]], ptr @[[EMBED_A:.*]], i64 12, i1 false)
+// LLVM: call void @llvm.memcpy{{.*}}(ptr align 4 %[[A_ADDR]], ptr align 4 @[[EMBED_A:.*]], i64 12, i1 false)
 
 // OGCG: %[[A_ADDR:.*]] = alloca [3 x i32], align 4
 // OGCG: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[A_ADDR]], ptr align 4 @__const.embed_expr_on_scalar_with_constants.a, i64 12, i1 false)
@@ -34,8 +34,8 @@ void embed_expr_on_scalar_with_non_constants() {
   };
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a"]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.array<!s32i x 3>, !cir.ptr<!cir.array<!s32i x 3>>, ["b", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!s32i>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.array<!s32i x 3>>
 // CIR: %[[B_PTR:.*]] = cir.cast array_to_ptrdecay %[[B_ADDR]] : !cir.ptr<!cir.array<!s32i x 3>> -> !cir.ptr<!s32i>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.store {{.*}} %[[TMP_A]], %[[B_PTR]] : !s32i, !cir.ptr<!s32i>

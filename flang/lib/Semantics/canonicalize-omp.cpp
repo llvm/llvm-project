@@ -9,7 +9,6 @@
 #include "canonicalize-omp.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
-#include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/semantics.h"
 
 // After Loop Canonicalization, rewrite OpenMP parse tree to make OpenMP
@@ -278,7 +277,7 @@ private:
         // Got OpenMPDeclarativeConstruct. If it's not a utility construct
         // then stop.
         auto &odc = std::get<OpenMPDeclarativeConstruct>(sc.u).value();
-        if (!std::holds_alternative<parser::OpenMPUtilityConstruct>(odc.u)) {
+        if (!std::holds_alternative<parser::OmpUtilityDirective>(odc.u)) {
           return rit;
         }
       }
@@ -291,7 +290,7 @@ private:
           using OpenMPDeclarativeConstruct =
               common::Indirection<parser::OpenMPDeclarativeConstruct>;
           auto &oc = std::get<OpenMPDeclarativeConstruct>(sc.u).value();
-          auto &ut = std::get<parser::OpenMPUtilityConstruct>(oc.u);
+          auto &ut = std::get<parser::OmpUtilityDirective>(oc.u);
 
           return parser::ExecutionPartConstruct(parser::ExecutableConstruct(
               common::Indirection(parser::OpenMPConstruct(std::move(ut)))));
@@ -309,7 +308,7 @@ private:
     std::list<OpenMPDeclarativeConstruct>::reverse_iterator rlast = [&]() {
       for (auto rit = omps.rbegin(), rend = omps.rend(); rit != rend; ++rit) {
         OpenMPDeclarativeConstruct &dc = *rit;
-        if (!std::holds_alternative<parser::OpenMPUtilityConstruct>(dc.u)) {
+        if (!std::holds_alternative<parser::OmpUtilityDirective>(dc.u)) {
           return rit;
         }
       }
@@ -318,7 +317,7 @@ private:
 
     std::transform(omps.rbegin(), rlast, std::front_inserter(block),
         [](parser::OpenMPDeclarativeConstruct &dc) {
-          auto &ut = std::get<parser::OpenMPUtilityConstruct>(dc.u);
+          auto &ut = std::get<parser::OmpUtilityDirective>(dc.u);
           return parser::ExecutionPartConstruct(parser::ExecutableConstruct(
               common::Indirection(parser::OpenMPConstruct(std::move(ut)))));
         });

@@ -23,9 +23,14 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/MC/DXContainerInfo.h"
 #include "llvm/MC/DXContainerPSVInfo.h"
+#include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/Path.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <cstdint>
@@ -34,13 +39,22 @@ using namespace llvm;
 using namespace llvm::dxil;
 using namespace llvm::mcdxbc;
 
+static cl::opt<bool> ShaderHashDependsOnSource(
+    "dx-Zss", cl::desc("Compute Shader Hash considering source information"));
+extern cl::opt<std::string> PdbDebugPath;
+extern cl::opt<bool> SourceInDebugModule;
+
 namespace {
 class DXContainerGlobals : public llvm::ModulePass {
 
   GlobalVariable *buildContainerGlobal(Module &M, Constant *Content,
                                        StringRef Name, StringRef SectionName);
+  void addSection(Module &M, SmallVector<GlobalValue *> &Globals,
+                  StringRef SectionData, StringRef MetadataName,
+                  StringRef SectionName);
   GlobalVariable *getFeatureFlags(Module &M);
-  GlobalVariable *computeShaderHash(Module &M);
+  void computeShaderHashAndDebugName(Module &M,
+                                     SmallVector<GlobalValue *> &Globals);
   GlobalVariable *buildSignature(Module &M, Signature &Sig, StringRef Name,
                                  StringRef SectionName);
   void addSignature(Module &M, SmallVector<GlobalValue *> &Globals);
@@ -48,6 +62,8 @@ class DXContainerGlobals : public llvm::ModulePass {
   void addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV);
   void addPipelineStateValidationInfo(Module &M,
                                       SmallVector<GlobalValue *> &Globals);
+  void addCompilerVersion(Module &M, SmallVector<GlobalValue *> &Globals);
+  void addSourceInfo(Module &M, SmallVector<GlobalValue *> &Globals);
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -74,10 +90,12 @@ public:
 bool DXContainerGlobals::runOnModule(Module &M) {
   llvm::SmallVector<GlobalValue *> Globals;
   Globals.push_back(getFeatureFlags(M));
-  Globals.push_back(computeShaderHash(M));
+  computeShaderHashAndDebugName(M, Globals);
   addSignature(M, Globals);
   addRootSignature(M, Globals);
   addPipelineStateValidationInfo(M, Globals);
+  addCompilerVersion(M, Globals);
+  addSourceInfo(M, Globals);
   appendToCompilerUsed(M, Globals);
   return true;
 }
@@ -93,27 +111,83 @@ GlobalVariable *DXContainerGlobals::getFeatureFlags(Module &M) {
   return buildContainerGlobal(M, FeatureFlagsConstant, "dx.sfi0", "SFI0");
 }
 
-GlobalVariable *DXContainerGlobals::computeShaderHash(Module &M) {
-  auto *DXILConstant =
-      cast<ConstantDataArray>(M.getNamedGlobal("dx.dxil")->getInitializer());
+void DXContainerGlobals::addSection(Module &M,
+                                    SmallVector<GlobalValue *> &Globals,
+                                    StringRef SectionData,
+                                    StringRef MetadataName,
+                                    StringRef SectionName) {
+  Constant *SectionConstant = ConstantDataArray::getString(
+      M.getContext(), SectionData, /*AddNull*/ false);
+  Globals.emplace_back(
+      buildContainerGlobal(M, SectionConstant, MetadataName, SectionName));
+}
+
+void DXContainerGlobals::computeShaderHashAndDebugName(
+    Module &M, SmallVector<GlobalValue *> &Globals) {
+  ConstantDataArray *DXILConstant;
   MD5 Digest;
-  Digest.update(DXILConstant->getRawDataValues());
-  MD5::MD5Result Result = Digest.final();
-
   dxbc::ShaderHash HashData = {0, {0}};
-  // The Hash's IncludesSource flag gets set whenever the hashed shader includes
-  // debug information.
-  if (!M.debug_compile_units().empty())
-    HashData.Flags = static_cast<uint32_t>(dxbc::HashFlags::IncludesSource);
 
-  memcpy(reinterpret_cast<void *>(&HashData.Digest), Result.data(), 16);
+  if (ShaderHashDependsOnSource) {
+    if (auto *ILDB = M.getNamedGlobal("dx.ildb")) {
+      DXILConstant = cast<ConstantDataArray>(ILDB->getInitializer());
+      HashData.Flags = static_cast<uint32_t>(dxbc::HashFlags::IncludesSource);
+    } else {
+      reportFatalUsageError("/Zss requires debug info (/Zi or /Zs)");
+    }
+  } else {
+    DXILConstant =
+        cast<ConstantDataArray>(M.getNamedGlobal("dx.dxil")->getInitializer());
+  }
+
+  Digest.update(DXILConstant->getRawDataValues());
+  MD5::MD5Result MD5 = Digest.final();
+
+  memcpy(reinterpret_cast<void *>(&HashData.Digest), MD5.data(), 16);
   if (sys::IsBigEndianHost)
     HashData.swapBytes();
   StringRef Data(reinterpret_cast<char *>(&HashData), sizeof(dxbc::ShaderHash));
 
   Constant *ModuleConstant =
       ConstantDataArray::get(M.getContext(), arrayRefFromStringRef(Data));
-  return buildContainerGlobal(M, ModuleConstant, "dx.hash", "HASH");
+  Globals.emplace_back(
+      buildContainerGlobal(M, ModuleConstant, "dx.hash", "HASH"));
+
+  if (M.debug_compile_units().empty())
+    return;
+
+  SmallString<40> DebugNameStr;
+  Digest.stringifyResult(MD5, DebugNameStr);
+  DebugNameStr += ".pdb";
+  if (!PdbDebugPath.empty()) {
+    StringRef DebugFile = PdbDebugPath.getValue();
+    SmallString<256> AbsoluteDebugName;
+    if (sys::path::is_separator(DebugFile.back())) {
+      // If /Fd was specified as a directory, put the MD5.pdb file there.
+      AbsoluteDebugName = DebugFile;
+      sys::path::append(AbsoluteDebugName, DebugNameStr);
+    } else {
+      // Otherwise, use /Fd value as a user-provided PDB file name.
+      DebugNameStr = DebugFile;
+      AbsoluteDebugName = DebugNameStr;
+    }
+
+    // Pass PDB name to DXContainerPDBPass via PDBNAME section.
+    addSection(M, Globals, AbsoluteDebugName, "dx.pdb.name",
+               PdbFileNameSectionName);
+    // Pass module hash to DXContainerPDBPass.
+    Globals.emplace_back(buildContainerGlobal(
+        M, ConstantDataArray::get(M.getContext(), ArrayRef(HashData.Digest)),
+        "dx.pdb.hash", ModuleHashSectionName));
+  }
+
+  // Emit ILDN part in debug info mode.
+  mcdxbc::DebugName DebugName;
+  DebugName.setFilename(DebugNameStr);
+  SmallString<64> ILDNData;
+  raw_svector_ostream OS(ILDNData);
+  DebugName.write(OS);
+  addSection(M, Globals, ILDNData, "dx.ildn", "ILDN");
 }
 
 GlobalVariable *DXContainerGlobals::buildContainerGlobal(
@@ -175,9 +249,7 @@ void DXContainerGlobals::addRootSignature(Module &M,
 
   RS->write(OS);
 
-  Constant *Constant =
-      ConstantDataArray::getString(M.getContext(), Data, /*AddNull*/ false);
-  Globals.emplace_back(buildContainerGlobal(M, Constant, "dx.rts0", "RTS0"));
+  addSection(M, Globals, Data, "dx.rts0", "RTS0");
 }
 
 void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
@@ -302,9 +374,35 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
 
   PSV.finalize(MMI.ShaderProfile);
   PSV.write(OS);
-  Constant *Constant =
-      ConstantDataArray::getString(M.getContext(), Data, /*AddNull*/ false);
-  Globals.emplace_back(buildContainerGlobal(M, Constant, "dx.psv0", "PSV0"));
+  addSection(M, Globals, Data, "dx.psv0", "PSV0");
+}
+
+void DXContainerGlobals::addCompilerVersion(
+    Module &M, SmallVector<GlobalValue *> &Globals) {
+  if (M.debug_compile_units().empty())
+    return;
+
+  SmallString<256> Data;
+  raw_svector_ostream OS(Data);
+  mcdxbc::CompilerVersion CompilerVersion;
+  CompilerVersion.write(OS);
+  addSection(M, Globals, Data, "dx.vers", "VERS");
+}
+
+void DXContainerGlobals::addSourceInfo(Module &M,
+                                       SmallVector<GlobalValue *> &Globals) {
+  dxil::ModuleMetadataInfo &MMI =
+      getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
+
+  if (!MMI.SourceInfo || SourceInDebugModule)
+    return;
+
+  MMI.SourceInfo->computeEntries();
+  MMI.SourceInfo->finalize();
+  SmallString<256> Data;
+  raw_svector_ostream OS(Data);
+  MMI.SourceInfo->write(OS);
+  addSection(M, Globals, Data, "dx.srci", "SRCI");
 }
 
 char DXContainerGlobals::ID = 0;

@@ -1,0 +1,25 @@
+# RUN: yaml2obj %s 2>&1 | obj2yaml 2>&1 | FileCheck %s
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  FileSize:        88
+  PartCount:       1
+  PartOffsets:     [36]
+Parts:
+  - Name:            ILDN
+    Size:            44
+    DebugName:
+      DebugName:       0b40fc8650d90fa2e9fd5cadc8eaaace.pdb
+...
+
+#CHECK:       - Name:            ILDN
+#CHECK-NEXT:    Size:            44
+#CHECK-NEXT:    DebugName:
+#CHECK-NEXT:      Flags:           0
+#CHECK-NEXT:      NameLength:      36
+#CHECK-NEXT:      DebugName:       0b40fc8650d90fa2e9fd5cadc8eaaace.pdb

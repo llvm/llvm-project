@@ -149,6 +149,8 @@ HexagonTargetLowering::initializeHVXLowering() {
       setOperationAction(ISD::FMUL,              T, Legal);
       setOperationAction(ISD::FMINIMUMNUM, T, Legal);
       setOperationAction(ISD::FMAXIMUMNUM, T, Legal);
+      setOperationAction(ISD::FMINNUM, T, Legal);
+      setOperationAction(ISD::FMAXNUM, T, Legal);
 
       setOperationAction(ISD::INSERT_SUBVECTOR,  T, Custom);
       setOperationAction(ISD::EXTRACT_SUBVECTOR, T, Custom);
@@ -218,6 +220,8 @@ HexagonTargetLowering::initializeHVXLowering() {
       setOperationAction(ISD::FMUL,           P, Custom);
       setOperationAction(ISD::FMINIMUMNUM, P, Custom);
       setOperationAction(ISD::FMAXIMUMNUM, P, Custom);
+      setOperationAction(ISD::FMINNUM, P, Custom);
+      setOperationAction(ISD::FMAXNUM, P, Custom);
       setOperationAction(ISD::SETCC,          P, Custom);
       setOperationAction(ISD::VSELECT,        P, Custom);
 
@@ -1077,7 +1081,13 @@ HexagonTargetLowering::buildHvxVectorReg(ArrayRef<SDValue> Values,
 
   SDValue HalfV = getZero(dl, VecTy, DAG);
   if (VecHist[n] > 1) {
-    SDValue SplatV = DAG.getNode(ISD::SPLAT_VECTOR, dl, VecTy, Words[n]);
+    // Always splat at word (i32) granularity so that the SPLAT_VECTOR node
+    // is selected as PS_vsplatrw (word broadcast) rather than PS_vsplatrb
+    // (byte broadcast of the low byte only), which would corrupt multi-byte
+    // element types.
+    MVT WordVecTy = MVT::getVectorVT(MVT::i32, HwLen / 4);
+    SDValue WordSplat = DAG.getNode(ISD::SPLAT_VECTOR, dl, WordVecTy, Words[n]);
+    SDValue SplatV = DAG.getBitcast(VecTy, WordSplat);
     HalfV = DAG.getNode(HexagonISD::VALIGN, dl, VecTy,
                        {HalfV, SplatV, DAG.getConstant(HwLen/2, dl, MVT::i32)});
   }
@@ -2111,6 +2121,27 @@ HexagonTargetLowering::LowerHvxBitcast(SDValue Op, SelectionDAG &DAG) const {
   if (isHvxBoolTy(ValTy) && ResTy.isScalarInteger()) {
     unsigned HwLen = Subtarget.getVectorLength();
     MVT WordTy = MVT::getVectorVT(MVT::i32, HwLen/4);
+
+    // When the predicate is shorter than the predicate register, each boolean
+    // is represented by multiple consecutive bits in the input register.
+    // Condense the bits so each boolean is represented by one bit. This only
+    // handles 2x and 4x compaction ratios.
+    unsigned PredLen = ValTy.getVectorNumElements();
+    if (PredLen < HwLen) {
+      MVT ByteTy = MVT::getVectorVT(MVT::i8, HwLen);
+      Val = DAG.getNode(HexagonISD::Q2V, dl, ByteTy, Val);
+      if (HwLen > PredLen * 2) {
+        assert(HwLen == PredLen * 4);
+        PredLen *= 2;
+        Val = getInstr(Hexagon::V6_vdealh, dl, ByteTy, Val, DAG);
+      }
+      if (HwLen > PredLen) {
+        assert(HwLen == PredLen * 2);
+        Val = getInstr(Hexagon::V6_vdealb, dl, ByteTy, Val, DAG);
+      }
+      Val = DAG.getNode(HexagonISD::V2Q, dl, ValTy, Val);
+    }
+
     SDValue VQ = compressHvxPred(Val, dl, WordTy, DAG);
     unsigned BitWidth = ResTy.getSizeInBits();
 
@@ -3717,6 +3748,8 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
       case ISD::FMUL:
       case ISD::FMINIMUMNUM:
       case ISD::FMAXIMUMNUM:
+      case ISD::FMINNUM:
+      case ISD::FMAXNUM:
       case ISD::MULHS:
       case ISD::MULHU:
       case ISD::AND:

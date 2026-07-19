@@ -16,7 +16,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
 LIBC_INLINE LIBC_CONSTEXPR float roundf(float x) {
-#if defined(__LIBC_USE_BUILTIN_ROUND) && !defined(LIBC_HAS_CONSTANT_EVALUATION)
+#if defined(__LIBC_USE_BUILTIN_ROUND) && !defined(LIBC_USE_CONSTEXPR)
   return __builtin_roundf(x);
 #else
   return fputil::round(x);

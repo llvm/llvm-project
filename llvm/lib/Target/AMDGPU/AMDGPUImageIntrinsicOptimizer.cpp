@@ -240,7 +240,8 @@ bool optimizeSection(ArrayRef<SmallVector<IntrinsicInst *, 4>> MergeableInsts) {
       Args[ImageDimIntr->DMaskIndex] =
           ConstantInt::get(DMask->getType(), NewMaskVal);
       Args[FragIdIndex] = ConstantInt::get(FragId->getType(), NewFragIdVal);
-      CallInst *NewCall = B.CreateIntrinsic(NewIntrinID, OverloadTys, Args);
+      CallInst *NewCall =
+          B.CreateIntrinsicWithoutFolding(NewIntrinID, OverloadTys, Args);
       LLVM_DEBUG(dbgs() << "Optimize: " << *NewCall << "\n");
 
       NewCalls.push_back(NewCall);

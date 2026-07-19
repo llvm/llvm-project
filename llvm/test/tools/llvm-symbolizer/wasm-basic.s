@@ -1,11 +1,11 @@
-# REQUIRES: webassembly-registered-target, lld
+# REQUIRES: webassembly-registered-target
 # RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj %s -o %t.o -g
 # RUN: llvm-symbolizer --basenames --output-style=GNU -e %t.o 0 1 2 3 4 5 6 7 8 9 10 11 12 13 16 | FileCheck %s
-
-# This is the same test but on a linked wasm file, using file offsets rather than section offsets.
-# The code section starts at 0x41, so these are equivalent to above (except 3, see below for why).
-# RUN: wasm-ld %t.o -o %t.wasm --no-entry --export=foo --export=bar
-# RUN: llvm-symbolizer --basenames --output-style=GNU -e %t.wasm 3 0x42 0x43 0x44 0x45 0x46 0x47 0x48 0x49 0x4a 0x4b 0x4c 0x4d 0x4e 0x51 | FileCheck %s
+# This is the same test but on a linked wasm file, using file offsets.
+# wasm-basic.yaml was created by linking this object and converting to YAML.
+# CODE section starts at 0x4b in the yaml2obj-generated file.
+# RUN: yaml2obj %S/Inputs/wasm-basic.yaml -o %t.wasm
+# RUN: llvm-symbolizer --basenames --output-style=GNU -e %t.wasm 3 0x4c 0x4d 0x4e 0x4f 0x50 0x51 0x52 0x53 0x54 0x55 0x56 0x57 0x58 0x5b | FileCheck %s
 
 .globl foo
 foo:

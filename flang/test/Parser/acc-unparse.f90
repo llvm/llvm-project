@@ -75,6 +75,37 @@ subroutine acc_loop()
   end do
 ! CHECK: !$ACC LOOP GANG(STATIC:gangstatic,DIM:gangdim)
 
+! Spaces are permitted around the ':' separator of a gang-arg.
+  !$acc loop gang(static :gangStatic)
+  do i = 1, 10
+    a(i) = i
+  end do
+! CHECK: !$ACC LOOP GANG(STATIC:gangstatic)
+
+  !$acc loop gang(static : gangStatic)
+  do i = 1, 10
+    a(i) = i
+  end do
+! CHECK: !$ACC LOOP GANG(STATIC:gangstatic)
+
+  !$acc loop gang(static : *)
+  do i = 1, 10
+    a(i) = i
+  end do
+! CHECK: !$ACC LOOP GANG(STATIC:*)
+
+  !$acc loop gang(dim : gangDim)
+  do i = 1, 10
+    a(i) = i
+  end do
+! CHECK: !$ACC LOOP GANG(DIM:gangdim)
+
+  !$acc loop gang(num : gangNum)
+  do i = 1, 10
+    a(i) = i
+  end do
+! CHECK: !$ACC LOOP GANG(NUM:gangnum)
+
 end subroutine
 
 subroutine routine1()
@@ -86,3 +117,12 @@ subroutine routine2()
   !$acc routine(routine2) bind(routine2)
 ! CHECK: !$ACC ROUTINE(routine2) BIND(routine2)
 end subroutine
+
+subroutine routine3()
+end subroutine
+
+module routine_multi_mod
+  ! Multi-name form: round-trips as-is (NV extension, not canonicalized).
+  !$acc routine(routine2, routine3) seq
+! CHECK: !$ACC ROUTINE(routine2,routine3) SEQ
+end module

@@ -255,7 +255,7 @@ define void @ucvtf_v8i16_v8f64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    ldr q0, [x0]
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
-; VBITS_GE_256-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; VBITS_GE_256-NEXT:    mov d1, v0.d[1]
 ; VBITS_GE_256-NEXT:    uunpklo z0.s, z0.h
 ; VBITS_GE_256-NEXT:    uunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    uunpklo z0.d, z0.s
@@ -1176,7 +1176,7 @@ define void @scvtf_v8i16_v8f64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    ldr q0, [x0]
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
-; VBITS_GE_256-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; VBITS_GE_256-NEXT:    mov d1, v0.d[1]
 ; VBITS_GE_256-NEXT:    sunpklo z0.s, z0.h
 ; VBITS_GE_256-NEXT:    sunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    sunpklo z0.d, z0.s

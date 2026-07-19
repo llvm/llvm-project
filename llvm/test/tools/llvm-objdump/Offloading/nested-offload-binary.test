@@ -1,24 +1,7 @@
 ## Test that llvm-objdump can display nested OffloadBinary images.
 
-## The content blobs below were generated from the following YAML Input
-##!Offload
-##Members:
-##  - ImageKind:      IMG_Bitcode
-##    OffloadKind:    OFK_OpenMP
-##    String:
-##    - Key:            "triple"
-##      Value:          "x-y-z"
-##    - Key:            "arch"
-##      Value:          "arch1"
-##  - ImageKind:      IMG_Bitcode
-##    OffloadKind:    OFK_OpenMP
-##    String:
-##    - Key:            "triple"
-##      Value:          "x-y-z"
-##    - Key:            "arch"
-##      Value:          "arch2"
-
-# RUN: yaml2obj %s -o %t.bin
+# RUN: yaml2obj %S/Inputs/inner.yaml -o %t-inner.bin
+# RUN: %python -c "import sys; hex = open('%/t-inner.bin', 'rb').read().hex(); test = open('%/s', 'r').read(); sys.stdout.write(test.replace('INNER_IMAGE', hex))" | yaml2obj - -o %t.bin
 # RUN: llvm-objdump --offloading %t.bin | FileCheck --match-full-lines --strict-whitespace --implicit-check-not={{.}} %s
 
 !Offload
@@ -30,7 +13,7 @@ Members:
       Value:          "x-y-z"
     - Key:            "arch"
       Value:          "none"
-    Content:        10ff10ad02000000f00000000000000020000000000000000200000000000000020001000000000070000000000000000200000000000000f00000000000000000000000000000000200010000000000a0000000000000000200000000000000f0000000000000000000000000000000dc00000000000000d1000000000000000500000000000000d700000000000000e9000000000000000500000000000000dc00000000000000d1000000000000000500000000000000d700000000000000e300000000000000050000000000000000782d792d7a006172636800747269706c650061726368320061726368310000
+    Content:        INNER_IMAGE
   - ImageKind:      IMG_Object
     OffloadKind:    OFK_OpenMP
     String:
@@ -38,7 +21,7 @@ Members:
       Value:          "a-b-c"
     - Key:            "arch"
       Value:          "none"
-    Content:        10ff10ad02000000f00000000000000020000000000000000200000000000000020001000000000070000000000000000200000000000000f00000000000000000000000000000000200010000000000a0000000000000000200000000000000f0000000000000000000000000000000dc00000000000000d1000000000000000500000000000000d700000000000000e9000000000000000500000000000000dc00000000000000d1000000000000000500000000000000d700000000000000e300000000000000050000000000000000782d792d7a006172636800747269706c650061726368320061726368310000
+    Content:        INNER_IMAGE
 
 #      CHECK:OFFLOADING IMAGE [0]:
 # CHECK-NEXT:kind            elf

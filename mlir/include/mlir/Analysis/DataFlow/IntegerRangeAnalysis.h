@@ -26,9 +26,37 @@ class RewriterBase;
 namespace dataflow {
 
 /// This lattice element represents the integer value range of an SSA value.
+///
+/// `join` overrides the base behaviour to apply per-state widening: once
+/// the lattice has absorbed enough strictly-increasing merges the range is
+/// forced to its max as a sound over-approximation. This is the sole
+/// convergence guarantee for `IntegerRangeAnalysis` on loop-carried
+/// values; without it, `scf.while` loops with dynamic bounds and nested
+/// region ops can keep the solver ratcheting a loop-carried range by +1
+/// per worklist visit for up to 2^31 iterations on i32. The budget is
+/// sized to be much larger than realistic merge counts on naturally
+/// bounded accumulators (e.g. `arith.minsi`/`arith.andi`-clamped iter
+/// args) so the analysis still converges to a tight range on those.
+///
+/// Note that only the `(const AbstractSparseLattice &)` overload is
+/// overridden, so the widening fires only at framework merge sites
+/// (block-arg / region-successor / callable-arg joins) —
+/// transfer-function updates that go through the non-virtual
+/// `join(const ValueT &)` overload are unaffected.
 class IntegerValueRangeLattice : public Lattice<IntegerValueRange> {
 public:
   using Lattice::Lattice;
+  // The override below would otherwise hide the inherited
+  // `join(const ValueT &)` overload that callers (e.g. transfer functions)
+  // rely on for direct-value joins.
+  using Lattice::join;
+
+  ChangeResult join(const AbstractSparseLattice &rhs) override;
+
+private:
+  /// Per-state merge-site change counter. Drives the widening budget in
+  /// `join`.
+  unsigned mergeChangeCount = 0;
 };
 
 /// Integer range analysis determines the integer value range of SSA values

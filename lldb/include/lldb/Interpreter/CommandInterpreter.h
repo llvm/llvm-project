@@ -470,7 +470,21 @@ public:
 
   Debugger &GetDebugger() { return m_debugger; }
 
-  ExecutionContext GetExecutionContext() const;
+  /// Get the target selected by the user at the command line. All commands
+  /// should prefer this over any other notion of a "current" target, so that
+  /// the user's explicit `target select` stays authoritative within the
+  /// command layer. Non-command code should use the execution context instead.
+  lldb::TargetSP GetSelectedTarget() {
+    return m_debugger.GetTargetList().GetSelectedTarget();
+  }
+
+  /// Returns the execution context the interpreter should run a command in.
+  /// If `adopt_dummy_target` is true and no real target is selected, the
+  /// dummy target is substituted in. Pass false from CommandObject paths
+  /// where the command hasn't opted into the dummy via
+  /// eCommandAllowsDummyTarget, so callers can't inadvertently end up
+  /// operating on the dummy.
+  ExecutionContext GetExecutionContext(bool adopt_dummy_target = true) const;
 
   lldb::PlatformSP GetPlatform(bool prefer_target_platform);
 

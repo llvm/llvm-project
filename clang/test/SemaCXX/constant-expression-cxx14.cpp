@@ -1237,7 +1237,7 @@ namespace ObjectsUnderConstruction {
   };
   constexpr Aggregate aggr1;
   static_assert(aggr1.x == 1 && aggr1.y == 1, "");
-  // FIXME: This is not specified by the standard, but sanity requires it.
+  // This is not specified by the standard, but sanity requires it.
   constexpr Aggregate aggr2 = {};
   static_assert(aggr2.x == 1 && aggr2.y == 1, "");
 
@@ -1465,30 +1465,4 @@ constexpr bool missingCase() {
   switch (1) {
     1u: return false; // expected-error {{expected 'case' keyword before expression}}
   }
-}
-
-namespace GH183290 {
-struct A {
-  constexpr char a() const { return 'Z'; }
-  char b = a();
-};
-
-// expected-error@+1 {{expected class name}}
-struct B : sizeof(int[c]) {};
-
-struct C {
-  B b;
-  // expected-note@+1 {{overridden virtual function is here}}
-  virtual const A *d() const;
-};
-
-struct D : C {
-  // expected-error@+1 {{return type of virtual function 'd' is not covariant with the return type of the function it overrides ('const B *' is not derived from 'const A *')}}
-  constexpr virtual const B *d() const { return &this->b; }
-};
-
-constexpr D e;
-constexpr const C *f = &e;
-// expected-error@+1 {{static assertion expression is not an integral constant expression}}
-static_assert(f->d()->b == 'Z', "");
 }

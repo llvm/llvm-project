@@ -16,6 +16,7 @@
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/alloc-checker.h"
+#include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/wchar/character_converter.h"
 #include "src/__support/wchar/wcrtomb.h"
@@ -170,7 +171,7 @@ FileIOResult File::write_unlocked_fbf(const uint8_t *data, size_t len) {
 
     FileIOResult result =
         platform_write(this, remainder.data(), remainder.size());
-    size_t bytes_written = result.value;
+    bytes_written = result.value;
 
     // If less bytes were written than expected, then an error occurred. Return
     // the number of bytes that have been written from |data|.
@@ -590,8 +591,10 @@ FileIOResult File::write_unlocked(const wchar_t *ws, size_t len) {
     auto write_res = write_unlocked_impl(buffer, char_size);
     if (write_res.has_error())
       return {written, write_res.error};
-    if (write_res.value < 1)
-      return {written, 0};
+    if (write_res.value < char_size) {
+      err = true;
+      return {written, EIO};
+    }
     ++written;
   }
   return {written, 0};
@@ -640,7 +643,7 @@ FileIOResult File::read_unlocked(wchar_t *ws, size_t len) {
   return {read_count, 0};
 }
 
-wint_t File::ungetwc_unlocked(wint_t wc) {
+ErrorOr<wint_t> File::ungetwc_unlocked(wint_t wc) {
   // There is no meaning to unget if:
   // 1. You are trying to push back EOF.
   // 2. Read operations are not allowed on this file.
@@ -658,10 +661,10 @@ wint_t File::ungetwc_unlocked(wint_t wc) {
     break;
   }
 
-  char buf[4];
-  auto result = internal::wcrtomb(buf, static_cast<wchar_t>(wc), &mbstate);
+  char mb_buf[4];
+  auto result = internal::wcrtomb(mb_buf, static_cast<wchar_t>(wc), &mbstate);
   if (!result.has_value())
-    return WEOF;
+    return Error(result.error());
 
   size_t n = result.value();
 
@@ -670,7 +673,7 @@ wint_t File::ungetwc_unlocked(wint_t wc) {
       return WEOF;
 
     for (size_t i = 0; i < n; ++i)
-      this->buf[i] = static_cast<uint8_t>(buf[i]);
+      buf[i] = static_cast<uint8_t>(mb_buf[i]);
 
     read_limit = n;
     pos = 0;
@@ -679,7 +682,7 @@ wint_t File::ungetwc_unlocked(wint_t wc) {
       return WEOF;
     pos -= n;
     for (size_t i = 0; i < n; ++i)
-      this->buf[pos + i] = static_cast<uint8_t>(buf[i]);
+      buf[pos + i] = static_cast<uint8_t>(mb_buf[i]);
   }
   eof = false;
   err = false;

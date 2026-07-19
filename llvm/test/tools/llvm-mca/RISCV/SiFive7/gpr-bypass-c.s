@@ -154,4 +154,4 @@ c.jr a0
 # CHECK-NEXT: 17.    1     0.0    0.0    0.0       bnez	a0, .Ltmp1
 # CHECK-NEXT: 18.    1     0.0    0.0    0.0       add	a0, a0, a0
 # CHECK-NEXT: 19.    1     0.0    0.0    0.0       jr	a0
-# CHECK-NEXT:        1     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        20    0.0    0.0    0.0       <total>

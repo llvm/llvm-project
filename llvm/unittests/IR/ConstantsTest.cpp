@@ -19,7 +19,8 @@
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 
-namespace llvm {
+using namespace llvm;
+
 namespace {
 
 // Check that use count checks treat ConstantData like they have no uses.
@@ -920,4 +921,3 @@ TEST(ConstantsTest, ToConstantRangeConstantByteVector) {
 }
 
 } // end anonymous namespace
-} // end namespace llvm

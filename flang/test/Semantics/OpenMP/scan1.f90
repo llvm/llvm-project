@@ -8,7 +8,7 @@ subroutine test_scan()
  !$omp scan inclusive(x)
  !$omp parallel do simd
  do k = 1, n
- !ERROR: UNTIED clause is not allowed on the SCAN directive
+ !ERROR: UNTIED clause is not allowed on SCAN directive
    !$omp scan untied
  end do
 

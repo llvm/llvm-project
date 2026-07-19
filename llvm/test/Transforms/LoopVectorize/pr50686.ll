@@ -15,11 +15,11 @@ define void @m(ptr nocapture %p, ptr nocapture %p2, i32 %q) {
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX9_2]], align 4, !alias.scope [[META0:![0-9]+]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX9_1]], align 4, !alias.scope [[META0]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[P2]], align 4, !alias.scope [[META0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[P2]], align 4, !alias.scope [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i32 0, [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX9_1]], align 4, !alias.scope [[META0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw i32 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX9_2]], align 4, !alias.scope [[META0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub nsw i32 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <4 x i32> poison, i32 [[TMP5]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT4]], <4 x i32> poison, <4 x i32> zeroinitializer

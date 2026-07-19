@@ -101,11 +101,11 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   // TODO: remove copy-pasting here by using concatenation in some way.
   auto allPtrsScalarsAndVectors = {
-      p0,    p1,    p2,    p3,    p4,    p5,     p6,     p7,    p8,
-      p9,    p10,   p11,   p12,   p13,   s1,     s8,     s16,   s32,
-      s64,   v2s1,  v2s8,  v2s16, v2s32, v2s64,  v3s1,   v3s8,  v3s16,
-      v3s32, v3s64, v4s1,  v4s8,  v4s16, v4s32,  v4s64,  v8s1,  v8s8,
-      v8s16, v8s32, v8s64, v16s1, v16s8, v16s16, v16s32, v16s64};
+      p0,    p1,    p2,    p3,    p4,    p5,    p6,     p7,     p8,
+      p9,    p10,   p11,   p12,   p13,   s1,    s8,     s16,    s32,
+      s64,   s128,  v2s1,  v2s8,  v2s16, v2s32, v2s64,  v3s1,   v3s8,
+      v3s16, v3s32, v3s64, v4s1,  v4s8,  v4s16, v4s32,  v4s64,  v8s1,
+      v8s8,  v8s16, v8s32, v8s64, v16s1, v16s8, v16s16, v16s32, v16s64};
 
   auto allVectors = {v2s1,  v2s8,   v2s16,  v2s32, v2s64, v3s1,  v3s8,
                      v3s16, v3s32,  v3s64,  v4s1,  v4s8,  v4s16, v4s32,
@@ -135,9 +135,21 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   auto allFloatScalarsAndF16Vector2AndVector4s = {s16, s32, s64, v2s16, v4s16};
 
+  auto allFloatScalars = {s16, s32, s64};
+
   auto allFloatScalarsAndVectors = {
       s16,   s32,   s64,   v2s16, v2s32, v2s64, v3s16,  v3s32,  v3s64,
       v4s16, v4s32, v4s64, v8s16, v8s32, v8s64, v16s16, v16s32, v16s64};
+
+  auto allShaderFloatVectors = {v2s16, v2s32, v2s64, v3s16, v3s32,
+                                v3s64, v4s16, v4s32, v4s64};
+
+  auto allFloatVectors = {v2s16, v2s32, v2s64,  v3s16,  v3s32,
+                          v3s64, v4s16, v4s32,  v4s64,  v8s16,
+                          v8s32, v8s64, v16s16, v16s32, v16s64};
+
+  auto &allowedFloatVectorTypes =
+      ST.isShader() ? allShaderFloatVectors : allFloatVectors;
 
   auto allFloatAndIntScalarsAndPtrs = {s8, s16, s32, s64, p0,  p1,
                                        p2, p3,  p4,  p5,  p6,  p7,
@@ -147,9 +159,10 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   auto &allowedVectorTypes = ST.isShader() ? allShaderVectors : allVectors;
 
+  bool HasArbitraryPrecisionInts = ST.canUseExtension(
+      SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers);
   bool IsExtendedInts =
-      ST.canUseExtension(
-          SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers) ||
+      HasArbitraryPrecisionInts ||
       ST.canUseExtension(SPIRV::Extension::SPV_KHR_bit_instructions) ||
       ST.canUseExtension(SPIRV::Extension::SPV_INTEL_int4);
   auto extendedScalarsAndVectors =
@@ -291,18 +304,15 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder(G_UNMERGE_VALUES)
       .legalIf(vectorElementCountIsLessThanOrEqualTo(1, MaxVectorSize));
 
-  getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE})
+  getActionDefinitionsBuilder({G_MEMCPY, G_MEMCPY_INLINE, G_MEMMOVE})
       .unsupportedIf(LegalityPredicates::any(typeIs(0, p9), typeIs(1, p9)))
       .legalIf(all(typeInSet(0, allPtrs), typeInSet(1, allPtrs)));
 
-  getActionDefinitionsBuilder(G_MEMSET)
+  getActionDefinitionsBuilder({G_MEMSET, G_MEMSET_INLINE})
       .unsupportedIf(typeIs(0, p9))
       .legalIf(all(typeInSet(0, allPtrs), typeInSet(1, allIntScalars)));
 
   getActionDefinitionsBuilder(G_ADDRSPACE_CAST)
-      .unsupportedIf(
-          LegalityPredicates::any(all(typeIs(0, p9), typeIsNot(1, p9)),
-                                  all(typeIsNot(0, p9), typeIs(1, p9))))
       .legalForCartesianProduct(allPtrs, allPtrs);
 
   // Should we be legalizing bad scalar sizes like s5 here instead
@@ -319,6 +329,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                G_USUBSAT, G_SCMP, G_UCMP})
       .legalFor(allIntScalarsAndVectors)
       .legalIf(extendedScalarsAndVectors);
+
+  getActionDefinitionsBuilder({G_SSHLSAT, G_USHLSAT}).lower();
 
   getActionDefinitionsBuilder(G_STRICT_FLDEXP)
       .legalForCartesianProduct(allFloatScalarsAndVectors, allIntScalars);
@@ -344,9 +356,17 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalForCartesianProduct(allScalarsAndVectors)
       .legalIf(extendedScalarsAndVectorsProduct);
 
+  // Lower G_SEXT_INREG to the canonical shl/ashr pair, which map to
+  // OpShiftLeftLogical + OpShiftRightArithmetic.
+  getActionDefinitionsBuilder(G_SEXT_INREG).lower();
+
   getActionDefinitionsBuilder(G_PHI)
       .legalFor(allPtrsScalarsAndVectors)
-      .legalIf(extendedPtrsScalarsAndVectors);
+      .legalIf(extendedPtrsScalarsAndVectors)
+      .moreElementsToNextPow2(0)
+      .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
+                       LegalizeMutations::changeElementCountTo(
+                           0, ElementCount::getFixed(MaxVectorSize)));
 
   getActionDefinitionsBuilder(G_BITCAST).legalIf(
       all(typeInSet(0, allPtrsScalarsAndVectors),
@@ -393,6 +413,18 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalIf(
           all(typeInSet(0, allPtrs), typeOfExtendedScalars(1, IsExtendedInts)));
 
+  getActionDefinitionsBuilder(G_PTRMASK)
+      .legalForCartesianProduct(allPtrs, allIntScalars)
+      .legalIf(
+          all(typeInSet(0, allPtrs), typeOfExtendedScalars(1, IsExtendedInts)))
+      .legalIf([](const LegalityQuery &Query) {
+        const LLT PtrTy = Query.Types[0];
+        const LLT MaskTy = Query.Types[1];
+        return PtrTy.isPointerVector() && MaskTy.isVector() &&
+               !MaskTy.isPointer() &&
+               PtrTy.getNumElements() == MaskTy.getNumElements();
+      });
+
   // ST.canDirectlyComparePointers() for pointer args is supported in
   // legalizeCustom().
   getActionDefinitionsBuilder(G_ICMP)
@@ -433,6 +465,13 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder({G_SADDO, G_SSUBO}).lower();
 
+  // Lowering widens s64 to s128, which needs
+  // SPV_ALTERA_arbitrary_precision_integers. Mark s64 unsupported otherwise.
+  auto &MulFix = getActionDefinitionsBuilder({G_SMULFIX, G_UMULFIX});
+  if (!HasArbitraryPrecisionInts)
+    MulFix.unsupportedFor({s64});
+  MulFix.lower();
+
   getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
       .legalForCartesianProduct(allFloatScalarsAndVectors,
                                 allIntScalarsAndVectors);
@@ -447,6 +486,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder(G_GLOBAL_VALUE).legalFor(allPtrs);
 
   // Control-flow. In some cases (e.g. constants) s1 may be promoted to s32.
+  getActionDefinitionsBuilder(G_BR).alwaysLegal();
   getActionDefinitionsBuilder(G_BRCOND).legalFor({s1, s32});
 
   getActionDefinitionsBuilder(G_FFREXP).legalForCartesianProduct(
@@ -490,7 +530,12 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                G_FMINIMUM,
                                G_FMAXIMUM,
                                G_INTRINSIC_ROUNDEVEN})
-      .legalFor(allFloatScalarsAndVectors);
+      .legalFor(allFloatScalars)
+      .legalFor(allowedFloatVectorTypes)
+      .moreElementsToNextPow2(0)
+      .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
+                       LegalizeMutations::changeElementCountTo(
+                           0, ElementCount::getFixed(MaxVectorSize)));
   // clang-format on
 
   getActionDefinitionsBuilder(G_FCOPYSIGN)
@@ -502,7 +547,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   if (ST.canUseExtInstSet(SPIRV::InstructionSet::OpenCL_std)) {
     getActionDefinitionsBuilder(
-        {G_CTTZ, G_CTTZ_ZERO_UNDEF, G_CTLZ, G_CTLZ_ZERO_UNDEF})
+        {G_CTTZ, G_CTTZ_ZERO_POISON, G_CTLZ, G_CTLZ_ZERO_POISON})
         .legalForCartesianProduct(allIntScalarsAndVectors,
                                   allIntScalarsAndVectors);
 
@@ -512,12 +557,17 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_IS_FPCLASS).custom();
 
-  getLegacyLegalizerInfo().computeTables();
+  getActionDefinitionsBuilder({G_INTRINSIC, G_INTRINSIC_CONVERGENT,
+                               G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS})
+      .alwaysLegal();
+  getActionDefinitionsBuilder(G_FENCE).alwaysLegal();
+  getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP, G_UBSANTRAP}).alwaysLegal();
+
   verify(*ST.getInstrInfo());
 }
 
-static bool legalizeExtractVectorElt(LegalizerHelper &Helper, MachineInstr &MI,
-                                     SPIRVGlobalRegistry *GR) {
+static bool legalizeExtractVectorElt(LegalizerHelper &Helper,
+                                     MachineInstr &MI) {
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
@@ -531,8 +581,7 @@ static bool legalizeExtractVectorElt(LegalizerHelper &Helper, MachineInstr &MI,
   return true;
 }
 
-static bool legalizeInsertVectorElt(LegalizerHelper &Helper, MachineInstr &MI,
-                                    SPIRVGlobalRegistry *GR) {
+static bool legalizeInsertVectorElt(LegalizerHelper &Helper, MachineInstr &MI) {
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
@@ -680,9 +729,9 @@ bool SPIRVLegalizerInfo::legalizeCustom(
   case TargetOpcode::G_BITCAST:
     return legalizeBitcast(Helper, MI);
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
-    return legalizeExtractVectorElt(Helper, MI, GR);
+    return legalizeExtractVectorElt(Helper, MI);
   case TargetOpcode::G_INSERT_VECTOR_ELT:
-    return legalizeInsertVectorElt(Helper, MI, GR);
+    return legalizeInsertVectorElt(Helper, MI);
   case TargetOpcode::G_INTRINSIC:
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
     return legalizeIntrinsic(Helper, MI);

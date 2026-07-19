@@ -56,8 +56,6 @@ void OffloadTopology::registerNewPlatformsAndDevices(
 }
 
 void discoverOffloadDevices() {
-  callAndThrow(olInit, nullptr);
-
   // liboffload returns devices sorted by backend + platform. We rely on this
   // behavior during device enumeration.
   using PerBackendDataType =
@@ -88,9 +86,8 @@ void discoverOffloadDevices() {
         if (Res != OL_SUCCESS)
           return true;
 
-        // Ignore host and unknown backends
-        if (OL_PLATFORM_BACKEND_HOST == OlBackend ||
-            OL_PLATFORM_BACKEND_UNKNOWN == OlBackend)
+        // Ignore unknown backends
+        if (OL_PLATFORM_BACKEND_UNKNOWN == OlBackend)
           return true;
 
         // Ignore the device if the backend index exceeds the number of backends

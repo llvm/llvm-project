@@ -87,7 +87,9 @@ def SparseReinterpretMap : Pass<"sparse-reinterpret-map", "ModuleOp"> {
          clEnumValN(mlir::sparse_tensor::LoopOrderingStrategy::kDefault, "default",
                     "Default strategy (eagerly selects last loop in topological sort)"),
          clEnumValN(mlir::sparse_tensor::LoopOrderingStrategy::kDenseOuter, "dense-outer",
-                    "Prefer dense, then compressed, then singleton dimensions outermost"))}]>,
+                    "Prefer dense, then compressed, then singleton dimensions outermost"),
+         clEnumValN(mlir::sparse_tensor::LoopOrderingStrategy::kSparseOuter, "sparse-outer",
+                    "Prefer singleton, then compressed, then dense dimensions outermost"))}]>,
   ];
 }
 

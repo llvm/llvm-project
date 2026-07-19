@@ -59,6 +59,45 @@ void CIRGenFunction::emitCXXGuardedInit(const VarDecl &varDecl,
   cgm.emitCXXStaticLocalVarDeclInit(&varDecl, globalOp, performInit);
 }
 
+void CIRGenModule::setGlobalTlsReferences(const VarDecl &vd,
+                                          cir::GlobalOp globalOp) {
+  assert(!vd.isStaticLocal() && vd.getTLSKind());
+
+  // C doesn't need guarded thread-local init, because it can't have
+  // non-constant init.
+  if (!getLangOpts().CPlusPlus)
+    return;
+
+  if (globalOp.getTlsModel() != cir::TLS_Model::GeneralDynamic)
+    return;
+
+  llvm::SmallString<256> wrapperFuncName;
+  llvm::SmallString<256> initFuncName;
+  llvm::SmallString<256> guardName;
+
+  if (getCXXABI().getMangleContext().getKind() == MangleContext::MK_Itanium) {
+    llvm::raw_svector_ostream wrapperOut(wrapperFuncName);
+    llvm::raw_svector_ostream initOut(initFuncName);
+    llvm::raw_svector_ostream guardStream(guardName);
+
+    auto &mc = cast<ItaniumMangleContext>(getCXXABI().getMangleContext());
+    mc.mangleItaniumThreadLocalWrapper(&vd, wrapperOut);
+    mc.mangleItaniumThreadLocalInit(&vd, initOut);
+    if (globalOp.hasWeakLinkage() || globalOp.hasLinkOnceLinkage() ||
+        isTemplateInstantiation(vd.getTemplateSpecializationKind())) {
+      getCXXABI().getMangleContext().mangleStaticGuardVariable(&vd,
+                                                               guardStream);
+    }
+
+  } else {
+    errorNYI(vd.getSourceRange(),
+             "setGlobalTlsReferences: non-itanium mangler");
+    return;
+  }
+  globalOp.setDynTlsRefsAttr(cir::ThreadLocalGlobalWrapperInitAttr::get(
+      &getMLIRContext(), wrapperFuncName, initFuncName, guardName));
+}
+
 void CIRGenModule::emitCXXGlobalVarDeclInitFunc(const VarDecl *vd,
                                                 cir::GlobalOp addr,
                                                 bool performInit) {

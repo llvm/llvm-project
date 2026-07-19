@@ -4,6 +4,9 @@ after rebuilding the a dynamic library flushes the scratch
 TypeSystems tied to that process.
 """
 
+import os
+import time
+
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -25,6 +28,7 @@ def isUbuntu18_04():
     return None
 
 
+@skipIfWasm  # no expression evaluation
 class TestRerunExprDylib(TestBase):
     SHARED_BUILD_TESTCASE = False
 
@@ -60,6 +64,12 @@ class TestRerunExprDylib(TestBase):
             }
         )
 
+        # Age the library file to 10 seconds in the past so that it is rebuilt
+        # and reloaded even on filesystems with 1s resolution.
+        fpath = self.getBuildArtifact(FULL_DYLIB_NAME)
+        old_mtime = time.time() - 10
+        os.utime(fpath, (old_mtime, old_mtime))
+
         # Build a.out
         self.build(
             dictionary={
@@ -82,9 +92,6 @@ class TestRerunExprDylib(TestBase):
             result_type="Foo",
             result_children=[ValueCheck(name="m_val", value="42")],
         )
-
-        # Delete the dylib to force make to rebuild it.
-        remove_file(self.getBuildArtifact(FULL_DYLIB_NAME))
 
         # Re-build libfoo.dylib
         self.build(

@@ -138,8 +138,7 @@ public:
       return std::make_pair(false, std::nullopt);
 
     // Parse 'exprloc' expression.
-    DataExtractor Data(toStringRef(*Expr), U->getContext().isLittleEndian(),
-                       U->getAddressByteSize());
+    DataExtractor Data(*Expr, U->getContext().isLittleEndian());
     DWARFExpression Expression(Data, U->getAddressByteSize(),
                                U->getFormParams().Format);
 

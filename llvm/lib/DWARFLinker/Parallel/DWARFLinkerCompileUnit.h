@@ -439,13 +439,15 @@ public:
   /// Clone and emit debug macros(.debug_macinfo/.debug_macro).
   Error cloneAndEmitDebugMacro();
 
-  // Clone input DIE entry.
+  // Clone input DIE entry. \p SiblingOrdinal is this DIE's position in its
+  // parent's child list, or UINT32_MAX for the unit DIE.
   std::pair<DIE *, TypeEntry *>
   cloneDIE(const DWARFDebugInfoEntry *InputDieEntry,
            TypeEntry *ClonedParentTypeDIE, uint64_t OutOffset,
            std::optional<int64_t> FuncAddressAdjustment,
            std::optional<int64_t> VarAddressAdjustment,
-           BumpPtrAllocator &Allocator, TypeUnit *ArtificialTypeUnit);
+           BumpPtrAllocator &Allocator, TypeUnit *ArtificialTypeUnit,
+           uint32_t SiblingOrdinal = std::numeric_limits<uint32_t>::max());
 
   // Clone and emit line table.
   Error cloneAndEmitLineTable(const Triple &TargetTriple);
@@ -718,9 +720,11 @@ private:
       std::optional<int64_t> &VarAddressAdjustment);
 
   /// Creates DIE which would be placed into the "Type" compile unit.
+  /// \p SiblingOrdinal is the input DIE's position in its parent's child list.
   TypeEntry *createTypeDIEandCloneAttributes(
       const DWARFDebugInfoEntry *InputDieEntry, DIEGenerator &TypeDIEGenerator,
-      TypeEntry *ClonedParentTypeDIE, TypeUnit *ArtificialTypeUnit);
+      TypeEntry *ClonedParentTypeDIE, TypeUnit *ArtificialTypeUnit,
+      uint32_t SiblingOrdinal);
 
   /// Create output DIE inside specified \p TypeDescriptor.
   DIE *allocateTypeDie(TypeEntryBody *TypeDescriptor,

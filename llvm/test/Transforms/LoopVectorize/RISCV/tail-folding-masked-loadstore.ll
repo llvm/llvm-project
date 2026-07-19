@@ -38,11 +38,11 @@ define void @masked_loadstore(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; NO-VP-NEXT:  entry:
 ; NO-VP-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP12:%.*]] = shl nuw i64 [[TMP11]], 2
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[TMP12]]
+; NO-VP-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP12]], i64 8)
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[UMAX]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:
-; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP11]], 2
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
 ; NO-VP-NEXT:    [[INC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label [[FOR_BODY:%.*]]

@@ -235,7 +235,7 @@ static constexpr StringRef DeclStmtName = "decl-stmt";
 UseUsingCheck::UseUsingCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IgnoreMacros(Options.get("IgnoreMacros", true)),
-      IgnoreExternC(Options.get("IgnoreExternC", false)) {}
+      IgnoreExternC(Options.get("IgnoreExternC", true)) {}
 
 void UseUsingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);

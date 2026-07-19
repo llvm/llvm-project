@@ -1,0 +1,202 @@
+// SummaryData / EntityDataMap deserialization error tests, including the
+// PairsEntitySummary plugin error tests that exercise the same parsing path.
+
+// REQUIRES: plugins
+
+// ============================================================================
+// entitySummaryFromJSON() / encodingDataMapEntryFromJSON() errors
+// ============================================================================
+
+// Note: --encoding variants are not applicable for EntitySummary deserialization
+// tests because the encoding path stores raw JSON without deserializing.
+// RUN: not clang-ssaf-format --type tu %S/Inputs/read-entity-summary-no-format-info.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=READ-ENTITY-SUMMARY-NO-FORMAT-INFO
+// READ-ENTITY-SUMMARY-NO-FORMAT-INFO:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}read-entity-summary-no-format-info.json'
+// READ-ENTITY-SUMMARY-NO-FORMAT-INFO-NEXT: reading SummaryData entries from field 'data'
+// READ-ENTITY-SUMMARY-NO-FORMAT-INFO-NEXT: reading SummaryData entry from index '0'
+// READ-ENTITY-SUMMARY-NO-FORMAT-INFO-NEXT: reading EntitySummary entries from field 'summary_data'
+// READ-ENTITY-SUMMARY-NO-FORMAT-INFO-NEXT: reading EntitySummary entry from index '0'
+// READ-ENTITY-SUMMARY-NO-FORMAT-INFO-NEXT: reading EntitySummary from field 'entity_summary'
+// READ-ENTITY-SUMMARY-NO-FORMAT-INFO-NEXT: failed to deserialize EntitySummary: no FormatInfo registered for 'SummaryName(UnregisteredEntitySummary)'
+
+// ============================================================================
+// PairsEntitySummaryForJSONFormatTest Deserialization Error Tests
+// ============================================================================
+
+// RUN: not %clang-ssaf-format-with-plugin --type tu %S/Inputs/pairs-missing-pairs-field.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=PAIRS-MISSING-PAIRS-FIELD
+// PAIRS-MISSING-PAIRS-FIELD:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}pairs-missing-pairs-field.json'
+// PAIRS-MISSING-PAIRS-FIELD-NEXT: reading SummaryData entries from field 'data'
+// PAIRS-MISSING-PAIRS-FIELD-NEXT: reading SummaryData entry from index '0'
+// PAIRS-MISSING-PAIRS-FIELD-NEXT: reading EntitySummary entries from field 'summary_data'
+// PAIRS-MISSING-PAIRS-FIELD-NEXT: reading EntitySummary entry from index '0'
+// PAIRS-MISSING-PAIRS-FIELD-NEXT: reading EntitySummary from field 'entity_summary'
+// PAIRS-MISSING-PAIRS-FIELD-NEXT: missing or invalid field 'pairs'
+
+// RUN: not %clang-ssaf-format-with-plugin --type tu %S/Inputs/pairs-invalid-pairs-field-type.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=PAIRS-INVALID-PAIRS-FIELD-TYPE
+// PAIRS-INVALID-PAIRS-FIELD-TYPE:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}pairs-invalid-pairs-field-type.json'
+// PAIRS-INVALID-PAIRS-FIELD-TYPE-NEXT: reading SummaryData entries from field 'data'
+// PAIRS-INVALID-PAIRS-FIELD-TYPE-NEXT: reading SummaryData entry from index '0'
+// PAIRS-INVALID-PAIRS-FIELD-TYPE-NEXT: reading EntitySummary entries from field 'summary_data'
+// PAIRS-INVALID-PAIRS-FIELD-TYPE-NEXT: reading EntitySummary entry from index '0'
+// PAIRS-INVALID-PAIRS-FIELD-TYPE-NEXT: reading EntitySummary from field 'entity_summary'
+// PAIRS-INVALID-PAIRS-FIELD-TYPE-NEXT: missing or invalid field 'pairs'
+
+// RUN: not %clang-ssaf-format-with-plugin --type tu %S/Inputs/pairs-element-not-object.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=PAIRS-ELEMENT-NOT-OBJECT
+// PAIRS-ELEMENT-NOT-OBJECT:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}pairs-element-not-object.json'
+// PAIRS-ELEMENT-NOT-OBJECT-NEXT: reading SummaryData entries from field 'data'
+// PAIRS-ELEMENT-NOT-OBJECT-NEXT: reading SummaryData entry from index '0'
+// PAIRS-ELEMENT-NOT-OBJECT-NEXT: reading EntitySummary entries from field 'summary_data'
+// PAIRS-ELEMENT-NOT-OBJECT-NEXT: reading EntitySummary entry from index '0'
+// PAIRS-ELEMENT-NOT-OBJECT-NEXT: reading EntitySummary from field 'entity_summary'
+// PAIRS-ELEMENT-NOT-OBJECT-NEXT: pairs element at index 0 is not a JSON object
+
+// RUN: not %clang-ssaf-format-with-plugin --type tu %S/Inputs/pairs-missing-first-field.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=PAIRS-MISSING-FIRST-FIELD
+// PAIRS-MISSING-FIRST-FIELD:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}pairs-missing-first-field.json'
+// PAIRS-MISSING-FIRST-FIELD-NEXT: reading SummaryData entries from field 'data'
+// PAIRS-MISSING-FIRST-FIELD-NEXT: reading SummaryData entry from index '0'
+// PAIRS-MISSING-FIRST-FIELD-NEXT: reading EntitySummary entries from field 'summary_data'
+// PAIRS-MISSING-FIRST-FIELD-NEXT: reading EntitySummary entry from index '0'
+// PAIRS-MISSING-FIRST-FIELD-NEXT: reading EntitySummary from field 'entity_summary'
+// PAIRS-MISSING-FIRST-FIELD-NEXT: missing or invalid 'first' field at index '0'
+
+// RUN: not %clang-ssaf-format-with-plugin --type tu %S/Inputs/pairs-invalid-first-field.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=PAIRS-INVALID-FIRST-FIELD
+// PAIRS-INVALID-FIRST-FIELD:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}pairs-invalid-first-field.json'
+// PAIRS-INVALID-FIRST-FIELD-NEXT: reading SummaryData entries from field 'data'
+// PAIRS-INVALID-FIRST-FIELD-NEXT: reading SummaryData entry from index '0'
+// PAIRS-INVALID-FIRST-FIELD-NEXT: reading EntitySummary entries from field 'summary_data'
+// PAIRS-INVALID-FIRST-FIELD-NEXT: reading EntitySummary entry from index '0'
+// PAIRS-INVALID-FIRST-FIELD-NEXT: reading EntitySummary from field 'entity_summary'
+// PAIRS-INVALID-FIRST-FIELD-NEXT: missing or invalid 'first' field at index '0'
+
+// RUN: not %clang-ssaf-format-with-plugin --type tu %S/Inputs/pairs-missing-second-field.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=PAIRS-MISSING-SECOND-FIELD
+// PAIRS-MISSING-SECOND-FIELD:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}pairs-missing-second-field.json'
+// PAIRS-MISSING-SECOND-FIELD-NEXT: reading SummaryData entries from field 'data'
+// PAIRS-MISSING-SECOND-FIELD-NEXT: reading SummaryData entry from index '0'
+// PAIRS-MISSING-SECOND-FIELD-NEXT: reading EntitySummary entries from field 'summary_data'
+// PAIRS-MISSING-SECOND-FIELD-NEXT: reading EntitySummary entry from index '0'
+// PAIRS-MISSING-SECOND-FIELD-NEXT: reading EntitySummary from field 'entity_summary'
+// PAIRS-MISSING-SECOND-FIELD-NEXT: missing or invalid 'second' field at index '0'
+
+// RUN: not %clang-ssaf-format-with-plugin --type tu %S/Inputs/pairs-invalid-second-field.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=PAIRS-INVALID-SECOND-FIELD
+// PAIRS-INVALID-SECOND-FIELD:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}pairs-invalid-second-field.json'
+// PAIRS-INVALID-SECOND-FIELD-NEXT: reading SummaryData entries from field 'data'
+// PAIRS-INVALID-SECOND-FIELD-NEXT: reading SummaryData entry from index '0'
+// PAIRS-INVALID-SECOND-FIELD-NEXT: reading EntitySummary entries from field 'summary_data'
+// PAIRS-INVALID-SECOND-FIELD-NEXT: reading EntitySummary entry from index '0'
+// PAIRS-INVALID-SECOND-FIELD-NEXT: reading EntitySummary from field 'entity_summary'
+// PAIRS-INVALID-SECOND-FIELD-NEXT: missing or invalid 'second' field at index '0'
+
+// ============================================================================
+// entityDataMapEntryFromJSON() errors
+// ============================================================================
+
+// RUN: not clang-ssaf-format --type tu %S/Inputs/entity-data-missing-entity-id.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=ENTITY-DATA-MISSING-ENTITY-ID
+// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/entity-data-missing-entity-id.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=ENTITY-DATA-MISSING-ENTITY-ID
+// ENTITY-DATA-MISSING-ENTITY-ID:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}entity-data-missing-entity-id.json'
+// ENTITY-DATA-MISSING-ENTITY-ID-NEXT: reading SummaryData entries from field 'data'
+// ENTITY-DATA-MISSING-ENTITY-ID-NEXT: reading SummaryData entry from index '0'
+// ENTITY-DATA-MISSING-ENTITY-ID-NEXT: reading EntitySummary entries from field 'summary_data'
+// ENTITY-DATA-MISSING-ENTITY-ID-NEXT: reading EntitySummary entry from index '0'
+// ENTITY-DATA-MISSING-ENTITY-ID-NEXT: failed to read EntityId from field 'entity_id': expected JSON number (unsigned 64-bit integer)
+
+// RUN: not clang-ssaf-format --type tu %S/Inputs/entity-data-missing-entity-summary.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=ENTITY-DATA-MISSING-ENTITY-SUMMARY
+// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/entity-data-missing-entity-summary.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=ENTITY-DATA-MISSING-ENTITY-SUMMARY
+// ENTITY-DATA-MISSING-ENTITY-SUMMARY:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}entity-data-missing-entity-summary.json'
+// ENTITY-DATA-MISSING-ENTITY-SUMMARY-NEXT: reading SummaryData entries from field 'data'
+// ENTITY-DATA-MISSING-ENTITY-SUMMARY-NEXT: reading SummaryData entry from index '0'
+// ENTITY-DATA-MISSING-ENTITY-SUMMARY-NEXT: reading EntitySummary entries from field 'summary_data'
+// ENTITY-DATA-MISSING-ENTITY-SUMMARY-NEXT: reading EntitySummary entry from index '0'
+// ENTITY-DATA-MISSING-ENTITY-SUMMARY-NEXT: failed to read EntitySummary from field 'entity_summary': expected JSON object
+
+// RUN: not clang-ssaf-format --type tu %S/Inputs/entity-id-not-uint64.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=ENTITY-ID-NOT-UINT64
+// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/entity-id-not-uint64.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=ENTITY-ID-NOT-UINT64
+// ENTITY-ID-NOT-UINT64:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}entity-id-not-uint64.json'
+// ENTITY-ID-NOT-UINT64-NEXT: reading SummaryData entries from field 'data'
+// ENTITY-ID-NOT-UINT64-NEXT: reading SummaryData entry from index '0'
+// ENTITY-ID-NOT-UINT64-NEXT: reading EntitySummary entries from field 'summary_data'
+// ENTITY-ID-NOT-UINT64-NEXT: reading EntitySummary entry from index '0'
+// ENTITY-ID-NOT-UINT64-NEXT: failed to read EntityId from field 'entity_id': expected JSON number (unsigned 64-bit integer)
+
+// ============================================================================
+// entityDataMapFromJSON() errors
+// ============================================================================
+
+// RUN: not clang-ssaf-format --type tu %S/Inputs/entity-data-element-not-object.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=ENTITY-DATA-ELEMENT-NOT-OBJECT
+// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/entity-data-element-not-object.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=ENTITY-DATA-ELEMENT-NOT-OBJECT
+// ENTITY-DATA-ELEMENT-NOT-OBJECT:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}entity-data-element-not-object.json'
+// ENTITY-DATA-ELEMENT-NOT-OBJECT-NEXT: reading SummaryData entries from field 'data'
+// ENTITY-DATA-ELEMENT-NOT-OBJECT-NEXT: reading SummaryData entry from index '0'
+// ENTITY-DATA-ELEMENT-NOT-OBJECT-NEXT: reading EntitySummary entries from field 'summary_data'
+// ENTITY-DATA-ELEMENT-NOT-OBJECT-NEXT: failed to read EntitySummary entry from index '0': expected JSON object
+
+// RUN: not %clang-ssaf-format-with-plugin --type tu %S/Inputs/duplicate-entity-id-in-data-map.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=DUPLICATE-ENTITY-ID-IN-DATA-MAP
+// DUPLICATE-ENTITY-ID-IN-DATA-MAP:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}duplicate-entity-id-in-data-map.json'
+// DUPLICATE-ENTITY-ID-IN-DATA-MAP-NEXT: reading SummaryData entries from field 'data'
+// DUPLICATE-ENTITY-ID-IN-DATA-MAP-NEXT: reading SummaryData entry from index '0'
+// DUPLICATE-ENTITY-ID-IN-DATA-MAP-NEXT: reading EntitySummary entries from field 'summary_data'
+// DUPLICATE-ENTITY-ID-IN-DATA-MAP-NEXT: failed to insert EntitySummary entry at index '1': encountered duplicate 'EntityId(0)'
+
+// ============================================================================
+// summaryDataMapEntryFromJSON() errors
+// ============================================================================
+
+// RUN: not clang-ssaf-format --type tu %S/Inputs/data-entry-missing-summary-name.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=DATA-ENTRY-MISSING-SUMMARY-NAME
+// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/data-entry-missing-summary-name.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=DATA-ENTRY-MISSING-SUMMARY-NAME
+// DATA-ENTRY-MISSING-SUMMARY-NAME:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}data-entry-missing-summary-name.json'
+// DATA-ENTRY-MISSING-SUMMARY-NAME-NEXT: reading SummaryData entries from field 'data'
+// DATA-ENTRY-MISSING-SUMMARY-NAME-NEXT: reading SummaryData entry from index '0'
+// DATA-ENTRY-MISSING-SUMMARY-NAME-NEXT: failed to read SummaryName from field 'summary_name': expected JSON string
+
+// RUN: not clang-ssaf-format --type tu %S/Inputs/data-entry-missing-data.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=DATA-ENTRY-MISSING-DATA
+// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/data-entry-missing-data.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=DATA-ENTRY-MISSING-DATA
+// DATA-ENTRY-MISSING-DATA:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}data-entry-missing-data.json'
+// DATA-ENTRY-MISSING-DATA-NEXT: reading SummaryData entries from field 'data'
+// DATA-ENTRY-MISSING-DATA-NEXT: reading SummaryData entry from index '0'
+// DATA-ENTRY-MISSING-DATA-NEXT: failed to read EntitySummary entries from field 'summary_data': expected JSON array
+
+// ============================================================================
+// summaryDataMapFromJSON() / encodingSummaryDataMapFromJSON() errors
+// ============================================================================
+
+// RUN: not clang-ssaf-format --type tu %S/Inputs/data-not-array.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=DATA-NOT-ARRAY
+// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/data-not-array.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=DATA-NOT-ARRAY
+// DATA-NOT-ARRAY:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}data-not-array.json'
+// DATA-NOT-ARRAY-NEXT: failed to read SummaryData entries from field 'data': expected JSON array
+
+// RUN: not clang-ssaf-format --type tu %S/Inputs/data-element-not-object.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=DATA-ELEMENT-NOT-OBJECT
+// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/data-element-not-object.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=DATA-ELEMENT-NOT-OBJECT
+// DATA-ELEMENT-NOT-OBJECT:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}data-element-not-object.json'
+// DATA-ELEMENT-NOT-OBJECT-NEXT: reading SummaryData entries from field 'data'
+// DATA-ELEMENT-NOT-OBJECT-NEXT: failed to read SummaryData entry from index '0': expected JSON object
+
+// RUN: not clang-ssaf-format --type tu %S/Inputs/duplicate-summary-name.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=DUPLICATE-SUMMARY-NAME
+// RUN: not clang-ssaf-format --type tu --encoding %S/Inputs/duplicate-summary-name.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=DUPLICATE-SUMMARY-NAME
+// DUPLICATE-SUMMARY-NAME:      clang-ssaf-format: error: reading TUSummary from file '{{.*}}duplicate-summary-name.json'
+// DUPLICATE-SUMMARY-NAME-NEXT: reading SummaryData entries from field 'data'
+// DUPLICATE-SUMMARY-NAME-NEXT: failed to insert SummaryData entry at index '1': encountered duplicate 'SummaryName(PairsEntitySummary)'

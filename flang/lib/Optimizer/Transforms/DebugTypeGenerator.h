@@ -19,7 +19,6 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Support/DataLayout.h"
-#include "llvm/Support/Debug.h"
 
 namespace fir {
 
@@ -135,7 +134,8 @@ private:
                                               mlir::LLVM::DIFileAttr fileAttr,
                                               mlir::LLVM::DIScopeAttr scope,
                                               fir::cg::XDeclareOp declOp,
-                                              bool hasDescriptor);
+                                              bool hasDescriptor,
+                                              bool genStringLocation = true);
 
   mlir::LLVM::DITypeAttr convertPointerLikeType(mlir::Type elTy,
                                                 mlir::LLVM::DIFileAttr fileAttr,

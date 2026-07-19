@@ -134,8 +134,8 @@ namespace test5 {
 }
 
 // CIR-LABEL: cir.func {{.*}} @_ZN5test51gEv
-// CIR:   cir.alloca !rec_{{.*}}Y
-// CIR:   cir.alloca !rec_{{.*}}X
+// CIR:   cir.alloca {{.*}} : !cir.ptr<!rec_{{.*}}Y>
+// CIR:   cir.alloca {{.*}} : !cir.ptr<!rec_{{.*}}X>
 // CIR:   cir.call @_ZN5test54getXEv
 // CIR:   cir.call @_ZN5test51X1fEv
 // CIR:   cir.call @_ZN5test55takeYERKNS_1YEi

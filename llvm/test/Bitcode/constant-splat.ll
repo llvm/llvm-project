@@ -1,11 +1,7 @@
 ; RUN: llvm-as -use-constant-int-for-fixed-length-splat \
-; RUN:         -use-constant-fp-for-fixed-length-splat \
 ; RUN:         -use-constant-int-for-scalable-splat \
-; RUN:         -use-constant-fp-for-scalable-splat \
 ; RUN:   < %s | llvm-dis -use-constant-int-for-fixed-length-splat \
-; RUN:                   -use-constant-fp-for-fixed-length-splat \
 ; RUN:                   -use-constant-int-for-scalable-splat \
-; RUN:                   -use-constant-fp-for-scalable-splat \
 ; RUN:   | FileCheck %s
 
 ; CHECK: @constant.splat.i1 = constant <1 x i1> splat (i1 true)

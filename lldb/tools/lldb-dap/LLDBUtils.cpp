@@ -48,12 +48,9 @@ static bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
 
     // Get the current prompt from settings.
     if (const lldb::SBStructuredData prompt = debugger.GetSetting("prompt")) {
-      const size_t prompt_length = prompt.GetStringValue(nullptr, 0);
-
-      if (prompt_length != 0) {
-        prompt_string.resize(prompt_length + 1);
-        prompt.GetStringValue(prompt_string.data(), prompt_string.length());
-      }
+      std::string tmp_prompt = GetStringValue(prompt);
+      if (!tmp_prompt.empty())
+        prompt_string = std::move(tmp_prompt);
     }
   }
 
@@ -179,29 +176,17 @@ uint64_t MakeDAPFrameID(lldb::SBFrame &frame) {
 
 lldb::StopDisassemblyType
 GetStopDisassemblyDisplay(lldb::SBDebugger &debugger) {
-  lldb::StopDisassemblyType result =
-      lldb::StopDisassemblyType::eStopDisassemblyTypeNoDebugInfo;
   lldb::SBStructuredData string_result =
       debugger.GetSetting("stop-disassembly-display");
-  const size_t result_length = string_result.GetStringValue(nullptr, 0);
-  if (result_length > 0) {
-    std::string result_string(result_length, '\0');
-    string_result.GetStringValue(result_string.data(), result_length + 1);
-
-    result =
-        llvm::StringSwitch<lldb::StopDisassemblyType>(result_string)
-            .Case("never", lldb::StopDisassemblyType::eStopDisassemblyTypeNever)
-            .Case("always",
-                  lldb::StopDisassemblyType::eStopDisassemblyTypeAlways)
-            .Case("no-source",
-                  lldb::StopDisassemblyType::eStopDisassemblyTypeNoSource)
-            .Case("no-debuginfo",
-                  lldb::StopDisassemblyType::eStopDisassemblyTypeNoDebugInfo)
-            .Default(
-                lldb::StopDisassemblyType::eStopDisassemblyTypeNoDebugInfo);
-  }
-
-  return result;
+  return llvm::StringSwitch<lldb::StopDisassemblyType>(
+             GetStringValue(string_result))
+      .Case("never", lldb::StopDisassemblyType::eStopDisassemblyTypeNever)
+      .Case("always", lldb::StopDisassemblyType::eStopDisassemblyTypeAlways)
+      .Case("no-source",
+            lldb::StopDisassemblyType::eStopDisassemblyTypeNoSource)
+      .Case("no-debuginfo",
+            lldb::StopDisassemblyType::eStopDisassemblyTypeNoDebugInfo)
+      .Default(lldb::StopDisassemblyType::eStopDisassemblyTypeNoDebugInfo);
 }
 
 llvm::Error ToError(const lldb::SBError &error, bool show_user) {

@@ -225,14 +225,8 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
   if (!packOp.hasPureTensorSemantics())
     return failure();
 
-  // 1. Filter out NYI cases.
   auto packedTensorType =
       cast<RankedTensorType>(packOp->getResultTypes().front());
-  if (llvm::any_of(packOp.getStaticInnerTiles(), ShapedType::isDynamic)) {
-    return rewriter.notifyMatchFailure(
-        packOp,
-        "non-static shape NYI, needs a more powerful tensor.expand_shape op");
-  }
 
   Location loc = packOp->getLoc();
   OpBuilder::InsertionGuard g(rewriter);
@@ -248,6 +242,15 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
   // or inner permutations have been applied.
   SmallVector<int64_t> stripMinedShape(packedTensorType.getShape());
   applyPermutationToVector(stripMinedShape, packedToStripMinedShapePerm);
+
+  // Also compute the mixed (static+dynamic) strip-mined sizes for the
+  // expand_shape output. This is needed to support dynamic inner tile sizes,
+  // since the shapes cannot be inferred automatically when multiple dynamic
+  // dims appear in a single reassociation group during ExpandShapeOp
+  // construction.
+  SmallVector<OpFoldResult> stripMinedMixedSizes =
+      tensor::getMixedSizes(rewriter, loc, packOp.getDest());
+  applyPermutationToVector(stripMinedMixedSizes, packedToStripMinedShapePerm);
 
   // 4. Pad the source of packOp to a shape we can expand into stripMinedShape.
   SmallVector<OpFoldResult> lows(packOp.getSourceRank(),
@@ -331,7 +334,7 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
       RankedTensorType::Builder(packedTensorType).setShape(stripMinedShape);
   auto reshapeOp = tensor::ExpandShapeOp::create(
       rewriter, loc, expandShapeResultType, padOp.getResult(),
-      packingMetadata.reassociations);
+      packingMetadata.reassociations, stripMinedMixedSizes);
 
   // 6. Transpose stripMinedShape to packedShape.
   SmallVector<int64_t> transpPerm =
@@ -480,6 +483,10 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
   if (packedSizes.size() != linalgOp.getNumLoops()) {
     return rewriter.notifyMatchFailure(linalgOp,
                                        "incorrect number of pack sizes");
+  }
+  if (!linalgOp.hasPureTensorSemantics()) {
+    return rewriter.notifyMatchFailure(
+        linalgOp, "expects LinalgOp with pure tensor semantics");
   }
 
   Location loc = linalgOp->getLoc();

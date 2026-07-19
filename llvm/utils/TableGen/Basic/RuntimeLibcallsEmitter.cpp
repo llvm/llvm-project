@@ -47,16 +47,6 @@ inline bool operator==(PredicateWithCC LHS, PredicateWithCC RHS) {
 
 namespace llvm {
 template <> struct DenseMapInfo<PredicateWithCC, void> {
-  static inline PredicateWithCC getEmptyKey() {
-    return DenseMapInfo<
-        std::pair<const Record *, const Record *>>::getEmptyKey();
-  }
-
-  static inline PredicateWithCC getTombstoneKey() {
-    return DenseMapInfo<
-        std::pair<const Record *, const Record *>>::getTombstoneKey();
-  }
-
   static unsigned getHashValue(const PredicateWithCC Val) {
     auto Pair = std::make_pair(Val.Predicate, Val.CallingConv);
     return DenseMapInfo<
@@ -456,7 +446,13 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
     llvm::sort(SortedPredicates, [](PredicateWithCC A, PredicateWithCC B) {
       StringRef AName = A.Predicate ? A.Predicate->getName() : "";
       StringRef BName = B.Predicate ? B.Predicate->getName() : "";
-      return AName < BName;
+      if (AName != BName)
+        return AName < BName;
+      // Break ties on the calling convention so predicates that share a name
+      // but differ in calling convention emit in a deterministic order.
+      StringRef ACC = A.CallingConv ? A.CallingConv->getName() : "";
+      StringRef BCC = B.CallingConv ? B.CallingConv->getName() : "";
+      return ACC < BCC;
     });
 
     for (PredicateWithCC Entry : SortedPredicates) {

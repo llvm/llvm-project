@@ -210,8 +210,8 @@ void SBLaunchInfo::Clear() {
 const char *SBLaunchInfo::GetWorkingDirectory() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return m_opaque_sp->GetWorkingDirectory().GetPathAsConstString().AsCString(
-      nullptr);
+  return ConstString(m_opaque_sp->GetWorkingDirectory().GetPath())
+      .AsCString(nullptr);
 }
 
 void SBLaunchInfo::SetWorkingDirectory(const char *working_dir) {
@@ -249,7 +249,7 @@ const char *SBLaunchInfo::GetShell() {
 
   // Constify this string so that it is saved in the string pool.  Otherwise it
   // would be freed when this function goes out of scope.
-  ConstString shell(m_opaque_sp->GetShell().GetPath().c_str());
+  ConstString shell(m_opaque_sp->GetShell().GetPath());
   return shell.AsCString(nullptr);
 }
 
@@ -342,7 +342,7 @@ const char *SBLaunchInfo::GetScriptedProcessClassName() const {
 
   // Constify this string so that it is saved in the string pool.  Otherwise it
   // would be freed when this function goes out of scope.
-  ConstString class_name(metadata_sp->GetClassName().data());
+  ConstString class_name(metadata_sp->GetClassName());
   return class_name.AsCString(nullptr);
 }
 

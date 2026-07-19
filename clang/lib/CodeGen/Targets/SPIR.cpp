@@ -92,11 +92,6 @@ public:
   CommonSPIRTargetCodeGenInfo(std::unique_ptr<ABIInfo> ABIInfo)
       : TargetCodeGenInfo(std::move(ABIInfo)) {}
 
-  LangAS getASTAllocaAddressSpace() const override {
-    return getLangASFromTargetAS(
-        getABIInfo().getDataLayout().getAllocaAddrSpace());
-  }
-
   unsigned getDeviceKernelCallingConv() const override;
   llvm::Type *getOpenCLType(CodeGenModule &CGM, const Type *T) const override;
   llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *Ty,
@@ -453,7 +448,8 @@ LangAS SPIRVTargetCodeGenInfo::getSRetAddrSpace(const CXXRecordDecl *RD) const {
   // default AS so the sret pointer matches the "this" convention.
   if (RD && !RD->canPassInRegisters())
     return LangAS::Default;
-  return getASTAllocaAddressSpace();
+  return getLangASFromTargetAS(
+      getABIInfo().getDataLayout().getAllocaAddrSpace());
 }
 
 void SPIRVTargetCodeGenInfo::setCUDAKernelCallingConvention(
@@ -894,6 +890,17 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
          "The element type for a SPIR-V resource must be a scalar integer or "
          "floating point type.");
 
+  assert((!SampledType->isIntegerTy(64) || NumChannels <= 2) &&
+         "A 64-bit SPIR-V resource element can have at most 2 components.");
+
+  // SPIR-V has no 64-bit multi-component image format, so pack a 2-component
+  // 64-bit typed buffer into a 4-component 32-bit image. The backend
+  // reinterprets it with OpBitcast on load and store.
+  if (SampledType->isIntegerTy(64) && NumChannels == 2) {
+    SampledType = llvm::Type::getInt32Ty(Ctx);
+    NumChannels = 4;
+  }
+
   // These parameters correspond to the operands to the OpTypeImage SPIR-V
   // instruction. See
   // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#OpTypeImage.
@@ -926,7 +933,7 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
   IntParams[1] = 2;
 
   // Arrayed
-  IntParams[2] = 0;
+  IntParams[2] = static_cast<unsigned>(attributes.IsArray);
 
   // MS
   IntParams[3] = 0;

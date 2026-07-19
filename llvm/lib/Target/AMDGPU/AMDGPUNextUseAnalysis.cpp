@@ -2452,7 +2452,7 @@ void printNextUseDistancesAsJson(json::OStream &J, const MachineFunction &MF,
     for (const MachineInstr &MI : MBB) {
       // Update register pressure tracker
       if (!PrevMI || PrevMI->getOpcode() == AMDGPU::PHI)
-        RPTracker.reset(MI);
+        RPTracker.reset(MI, MBB.end());
       RPTracker.advance();
 
       UseDistancePair Furthest;

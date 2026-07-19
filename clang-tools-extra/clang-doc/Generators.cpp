@@ -66,7 +66,7 @@ Error MustacheGenerator::setupTemplate(
 }
 
 Error MustacheGenerator::generateDocumentation(
-    StringRef RootDir, StringMap<doc::OwnedPtr<doc::Info>> Infos,
+    StringRef RootDir, StringMap<doc::Info *> Infos,
     const clang::doc::ClangDocContext &CDCtx, std::string DirName) {
   {
     llvm::TimeTraceScope TS("Setup Templates");
@@ -248,11 +248,8 @@ void Generator::addInfoToIndex(Index &Idx, const doc::Info *Info) {
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the generators.
-[[maybe_unused]] static int YAMLGeneratorAnchorDest = YAMLGeneratorAnchorSource;
 [[maybe_unused]] static int MDGeneratorAnchorDest = MDGeneratorAnchorSource;
 [[maybe_unused]] static int HTMLGeneratorAnchorDest = HTMLGeneratorAnchorSource;
 [[maybe_unused]] static int JSONGeneratorAnchorDest = JSONGeneratorAnchorSource;
-[[maybe_unused]] static int MDMustacheGeneratorAnchorDest =
-    MDMustacheGeneratorAnchorSource;
 } // namespace doc
 } // namespace clang

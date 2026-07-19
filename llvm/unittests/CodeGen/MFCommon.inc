@@ -23,7 +23,7 @@ protected:
 class BogusRegisterInfo : public TargetRegisterInfo {
 public:
   BogusRegisterInfo()
-      : TargetRegisterInfo(nullptr, {}, nullptr, {}, nullptr, nullptr,
+      : TargetRegisterInfo(nullptr, nullptr, {}, nullptr, nullptr,
                            LaneBitmask(~0u), nullptr, nullptr) {
     InitMCRegisterInfo(nullptr, 0, 0, 0, nullptr, 0, nullptr, 0, nullptr,
                        nullptr, nullptr, nullptr, nullptr, 0, nullptr);
@@ -62,6 +62,11 @@ public:
     return &Bogus[0];
   }
 
+  const TargetRegisterClass *
+  getMinimalPhysRegClass(MCRegister Reg) const override {
+    return nullptr;
+  }
+
   Register getFrameRegister(const MachineFunction &MF) const override {
     return 0;
   }
@@ -83,8 +88,9 @@ public:
 class BogusSubtarget : public TargetSubtargetInfo {
 public:
   BogusSubtarget(TargetMachine &TM)
-      : TargetSubtargetInfo(Triple(""), "", "", "", {}, {}, {}, nullptr,
-                            nullptr, nullptr, nullptr, nullptr, nullptr),
+      : TargetSubtargetInfo(Triple(""), "", "", "", "", {}, {}, nullptr,
+                            nullptr, nullptr, nullptr, nullptr, nullptr,
+                            nullptr),
         FL(), TL(TM, *this) {}
   ~BogusSubtarget() override = default;
 
@@ -95,6 +101,21 @@ public:
   const TargetInstrInfo *getInstrInfo() const override { return &TII; }
 
   const TargetRegisterInfo *getRegisterInfo() const override { return &TRI; }
+
+  const FeatureBitset &getInlineIgnoreFeatures() const override {
+    static constexpr FeatureBitset Features;
+    return Features;
+  }
+
+  const FeatureBitset &getInlineInverseFeatures() const override {
+    static constexpr FeatureBitset Features;
+    return Features;
+  }
+
+  const FeatureBitset &getInlineMustMatchFeatures() const override {
+    static constexpr FeatureBitset Features;
+    return Features;
+  }
 
 private:
   BogusFrameLowering FL;
@@ -122,9 +143,9 @@ public:
     AsmInfo = std::make_unique<MCAsmInfo>(Options.MCOptions);
     MRI = std::make_unique<MCRegisterInfo>();
     STI = std::make_unique<MCSubtargetInfo>(
-        Triple(""), "", "", "", ArrayRef<StringRef>{},
-        ArrayRef<SubtargetFeatureKV>{}, ArrayRef<SubtargetSubTypeKV>{}, nullptr,
-        nullptr, nullptr, nullptr, nullptr, nullptr);
+        Triple(""), "", "", "", StringTable{""}, ArrayRef<SubtargetFeatureKV>{},
+        ArrayRef<SubtargetSubTypeKV>{}, nullptr, nullptr, nullptr, nullptr,
+        nullptr, nullptr, nullptr);
   }
 
   ~BogusTargetMachine() override = default;

@@ -14,25 +14,19 @@
 
 declare i64 @llvm.bswap.i64(i64)
 
-; For now both the set of instructions for P8 are unoptimized versions.
-; A future patch will leverage parallelism and improve the
-; efficiency and performance.
+; This patch verifies that the compiler generates optimized assembly for Power 8 64-bit
+; byte swap operations that enables instruction-level parallelism.
 define i64 @bswap64(i64 %x) {
 ; POWER-8-LABEL: bswap64:
 ; POWER-8:       # %bb.0: # %entry
-; POWER-8-NEXT:    rotldi 5, 3, 16
-; POWER-8-NEXT:    rotldi 4, 3, 8
-; POWER-8-NEXT:    rldimi 4, 5, 8, 48
-; POWER-8-NEXT:    rotldi 5, 3, 24
-; POWER-8-NEXT:    rldimi 4, 5, 16, 40
-; POWER-8-NEXT:    rotldi 5, 3, 32
-; POWER-8-NEXT:    rldimi 4, 5, 24, 32
-; POWER-8-NEXT:    rotldi 5, 3, 48
-; POWER-8-NEXT:    rldimi 4, 5, 40, 16
-; POWER-8-NEXT:    rotldi 5, 3, 56
-; POWER-8-NEXT:    rldimi 4, 5, 48, 8
-; POWER-8-NEXT:    rldimi 4, 3, 56, 0
-; POWER-8-NEXT:    mr 3, 4
+; POWER-8-NEXT:    rotlwi 4, 3, 8
+; POWER-8-NEXT:    rldicl 5, 3, 32, 32
+; POWER-8-NEXT:    rlwimi 4, 3, 24, 0, 7
+; POWER-8-NEXT:    rlwimi 4, 3, 24, 16, 23
+; POWER-8-NEXT:    rotlwi 3, 5, 8
+; POWER-8-NEXT:    rlwimi 3, 5, 24, 0, 7
+; POWER-8-NEXT:    rlwimi 3, 5, 24, 16, 23
+; POWER-8-NEXT:    rldimi 3, 4, 32, 0
 ; POWER-8-NEXT:    blr
 ;
 ; POWER-8-NO-ALTIVEC-LABEL: bswap64:

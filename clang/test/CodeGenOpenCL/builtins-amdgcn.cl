@@ -252,28 +252,34 @@ void test_fract_f64(global int* out, double a)
 }
 
 // CHECK-LABEL: @test_sicmp_i32
-// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.icmp.i64.i32(i32 %a, i32 %b, i32 32)
+// CHECK: [[CMP:%.+]] = icmp eq i32 %a, %b
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
 void test_sicmp_i32(global ulong* out, int a, int b)
 {
   *out = __builtin_amdgcn_sicmp(a, b, 32);
 }
 
+// CHECK: declare i64 @llvm.amdgcn.ballot.i64(i1){{.*}} #[[$NOUNWIND_READONLY_NOPOISON:[0-9]+]]
+
 // CHECK-LABEL: @test_uicmp_i32
-// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.icmp.i64.i32(i32 %a, i32 %b, i32 32)
+// CHECK: [[CMP:%.+]] = icmp eq i32 %a, %b
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
 void test_uicmp_i32(global ulong* out, uint a, uint b)
 {
   *out = __builtin_amdgcn_uicmp(a, b, 32);
 }
 
 // CHECK-LABEL: @test_sicmp_i64
-// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.icmp.i64.i64(i64 %a, i64 %b, i32 38)
+// CHECK: [[CMP:%.+]] = icmp sgt i64 %a, %b
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
 void test_sicmp_i64(global ulong* out, long a, long b)
 {
   *out = __builtin_amdgcn_sicmpl(a, b, 39-1);
 }
 
 // CHECK-LABEL: @test_uicmp_i64
-// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.icmp.i64.i64(i64 %a, i64 %b, i32 35)
+// CHECK: [[CMP:%.+]] = icmp uge i64 %a, %b
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
 void test_uicmp_i64(global ulong* out, ulong a, ulong b)
 {
   *out = __builtin_amdgcn_uicmpl(a, b, 30+5);
@@ -322,14 +328,16 @@ void test_wave_shuffle(global int* out, int a, int b)
 }
 
 // CHECK-LABEL: @test_fcmp_f32
-// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.fcmp.i64.f32(float %a, float %b, i32 5)
+// CHECK: [[CMP:%.+]] = fcmp ole float %a, %b
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
 void test_fcmp_f32(global ulong* out, float a, float b)
 {
   *out = __builtin_amdgcn_fcmpf(a, b, 5);
 }
 
 // CHECK-LABEL: @test_fcmp_f64
-// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.fcmp.i64.f64(double %a, double %b, i32 6)
+// CHECK: [[CMP:%.+]] = fcmp one double %a, %b
+// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
 void test_fcmp_f64(global ulong* out, double a, double b)
 {
   *out = __builtin_amdgcn_fcmp(a, b, 3+3);
@@ -1039,8 +1047,6 @@ void test_read_exec(global ulong* out) {
   *out = __builtin_amdgcn_read_exec();
 }
 
-// CHECK: declare i64 @llvm.amdgcn.ballot.i64(i1){{.*}} #[[$NOUNWIND_READONLY_NOPOISON:[0-9]+]]
-
 // CHECK-LABEL: @test_read_exec_lo(
 // CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.ballot.i32(i1 true)
 void test_read_exec_lo(global uint* out) {
@@ -1288,23 +1294,21 @@ kernel void test_cvt_pk_u8_f32(global uint* out, float src0, uint src1, uint src
   *out = __builtin_amdgcn_cvt_pk_u8_f32(src0, src1, src2);
 }
 
-// CHECK-LABEL: test_msad_u8(
-// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.msad.u8(i32 %src0, i32 %src1, i32 %src2)
+// CHECK-AMDGCN-LABEL: test_msad_u8(
+// CHECK-AMDGCN: {{.*}}call{{.*}} i32 @llvm.amdgcn.msad.u8(i32 %src0, i32 %src1, i32 %src2)
+#if !defined(__SPIRV__)
 kernel void test_msad_u8(global uint* out, uint src0, uint src1, uint src2) {
   *out = __builtin_amdgcn_msad_u8(src0, src1, src2);
 }
+#endif
 
-// CHECK-LABEL: @test_mqsad_pk_u16_u8(
-// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.mqsad.pk.u16.u8(i64 %src0, i32 %src1, i64 %src2)
+// CHECK-AMDGCN-LABEL: @test_mqsad_pk_u16_u8(
+// CHECK-AMDGCN: {{.*}}call{{.*}} i64 @llvm.amdgcn.mqsad.pk.u16.u8(i64 %src0, i32 %src1, i64 %src2)
+#if !defined(__SPIRV__)
 kernel void test_mqsad_pk_u16_u8(global ulong* out, ulong src0, uint src1, ulong src2) {
   *out = __builtin_amdgcn_mqsad_pk_u16_u8(src0, src1, src2);
 }
-
-// CHECK-LABEL: test_mqsad_u32_u8(
-// CHECK: {{.*}}call{{.*}} <4 x i32> @llvm.amdgcn.mqsad.u32.u8(i64 %src0, i32 %src1, <4 x i32> %src2)
-kernel void test_mqsad_u32_u8(global uint4* out, ulong src0, uint src1, uint4 src2) {
-  *out = __builtin_amdgcn_mqsad_u32_u8(src0, src1, src2);
-}
+#endif
 
 // CHECK-LABEL: test_s_setreg(
 // CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.s.setreg(i32 65535, i32 %val)

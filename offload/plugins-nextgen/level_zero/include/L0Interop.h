@@ -17,9 +17,6 @@ namespace llvm::omp::target::plugin::L0Interop {
 
 /// Level Zero interop property.
 struct Property {
-  // Use this when command queue needs to be accessed as
-  // the targetsync field in interop will be changed if preferred type is sycl.
-  ze_command_queue_handle_t CommandQueue;
   ze_command_list_handle_t ImmCmdList;
 };
 

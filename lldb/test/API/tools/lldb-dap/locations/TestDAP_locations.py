@@ -19,6 +19,9 @@ class TestDAP_locations(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(response["body"]["line"], line)
 
     @skipIfWindows
+    @skipIf(
+        bugnumber="https://github.com/llvm/llvm-project/issues/203127", archs=["arm64e"]
+    )
     def test_locations(self):
         """
         Tests the 'locations' request.

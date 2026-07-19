@@ -81,6 +81,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBProcessInfo.cpp
   SBProcessInfoList.cpp
   SBProgress.cpp
+  SBProtocolServer.cpp
   SBQueue.cpp
   SBQueueItem.cpp
   SBReproducer.cpp
@@ -159,28 +160,58 @@ set_target_properties(liblldb
 
 target_compile_definitions(liblldb PRIVATE LLDB_IN_LIBLLDB)
 if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
-  if (NOT LLDB_EXPORT_ALL_SYMBOLS)
+  if (LLDB_EXPORT_ALL_SYMBOLS)
+    if (LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE)
+      message(STATUS "Symbols (liblldb): exporting all symbols specified in the exports "
+              " file '${LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE}'")
+      message(WARNING "Private LLDB symbols frequently change and no API stability is guaranteed. "
+                      "Only the SB API is guaranteed to be stable.")
+      add_llvm_symbol_exports(liblldb "${LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE}")
+    else ()
+      message(STATUS "Symbols (liblldb): exporting all symbols from the lldb and lldb_private namespaces")
+      message(WARNING "Private LLDB symbols frequently change and no API stability is guaranteed. "
+                      "Only the SB API is guaranteed to be stable.")
+      add_llvm_symbol_exports(liblldb ${CMAKE_CURRENT_SOURCE_DIR}/liblldb-private.exports)
+    endif()
+  elseif (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
+    # Each script interpreter plugin contributes a list of its undefined
+    # LLDB symbols. Concatenating those with liblldb.exports yields the
+    # smallest export set that satisfies dynamically loaded plugins.
+    get_property(plugin_symbol_files GLOBAL
+      PROPERTY LLDB_DYNAMIC_SCRIPTINTERPRETER_SYMBOL_FILES)
+    set(generated_exports_file
+      ${CMAKE_CURRENT_BINARY_DIR}/liblldb-script-interpreter.exports)
+    add_custom_command(
+      OUTPUT ${generated_exports_file}
+      COMMAND ${CMAKE_COMMAND} -P
+        ${LLDB_SOURCE_DIR}/cmake/modules/LLDBConcatFiles.cmake
+        ${generated_exports_file}
+        ${CMAKE_CURRENT_SOURCE_DIR}/liblldb.exports
+        ${plugin_symbol_files}
+      DEPENDS
+        ${LLDB_SOURCE_DIR}/cmake/modules/LLDBConcatFiles.cmake
+        ${CMAKE_CURRENT_SOURCE_DIR}/liblldb.exports
+        ${plugin_symbol_files}
+      VERBATIM
+      COMMENT "Merging script interpreter export lists for liblldb"
+    )
+    add_custom_target(liblldb-script-interpreter-exports
+      DEPENDS ${generated_exports_file})
+    message(STATUS "Symbols (liblldb): exporting the lldb namespace plus "
+                   "script interpreter dependencies")
+    lldb_apply_exports_file(liblldb ${generated_exports_file})
+  else ()
     # If we're not exporting all symbols, we'll want to explicitly set
     # the exported symbols here.  This prevents 'log enable --stack ...'
     # from working on some systems but limits the liblldb size.
     message(STATUS "Symbols (liblldb): exporting all symbols from the lldb namespace")
     add_llvm_symbol_exports(liblldb ${CMAKE_CURRENT_SOURCE_DIR}/liblldb.exports)
-  elseif (NOT LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE)
-    # Don't use an explicit export. Instead, tell the linker to export all symbols.
-    message(STATUS "Symbols (liblldb): exporting all symbols from the lldb and lldb_private namespaces")
-    message(WARNING "Private LLDB symbols frequently change and no API stability is guaranteed. "
-                    "Only the SB API is guaranteed to be stable.")
-    add_llvm_symbol_exports(liblldb ${CMAKE_CURRENT_SOURCE_DIR}/liblldb-private.exports)
-  else ()
-    message(STATUS "Symbols (liblldb): exporting all symbols specified in the exports "
-            " file '${LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE}'")
-    message(WARNING "Private LLDB symbols frequently change and no API stability is guaranteed. "
-                    "Only the SB API is guaranteed to be stable.")
-    add_llvm_symbol_exports(liblldb "${LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE}")
   endif()
-elseif (LLDB_EXPORT_ALL_SYMBOLS)
+elseif (LLDB_EXPORT_ALL_SYMBOLS OR LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
+  # On Windows there is no per-plugin symbol extraction, so dynamically loaded
+  # script interpreter plugins resolve their imports against the full set of
+  # private symbols, same as LLDB_EXPORT_ALL_SYMBOLS.
   message(STATUS "Symbols (liblldb): exporting all symbols from the lldb and lldb_private namespaces")
-
   # Pull out the various lldb libraries linked into liblldb, these will be used
   # when looking for symbols to extract. We ignore most plugin libraries here,
   # because we may expose more symbols than the DLL limit and these symbols
