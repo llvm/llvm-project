@@ -45,6 +45,7 @@ RUN wget https://apt.llvm.org/llvm.sh && \
     sudo ./llvm.sh 23 && \
     rm llvm.sh
 
+# Install the LLVM testing tools, which the llvm.sh script above does not
 # include. This provides lit along with FileCheck, not, count and split-file,
 # which are required to run the libc test suites and some CIs like precommit
 # testing CI for libc-based compiler-rt builtins. The package only symlinks
