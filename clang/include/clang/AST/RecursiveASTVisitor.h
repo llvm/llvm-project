@@ -4092,6 +4092,8 @@ bool RecursiveASTVisitor<Derived>::VisitOMPNumTeamsClause(
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPThreadLimitClause(
     OMPThreadLimitClause *C) {
+  if (auto *E = C->getModifierExpr())
+    TRY_TO(VisitStmt(E));
   TRY_TO(VisitOMPClauseList(C));
   TRY_TO(VisitOMPClauseWithPreInit(C));
   return true;
