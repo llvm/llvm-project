@@ -96,3 +96,130 @@ define i32 @shl_reuse(i32 %a, i32 %b, i32 %c, ptr %p) {
   %r = add i32 %m, %c
   ret i32 %r
 }
+
+; Boundary/other-operand coverage: the following already produce optimal code
+; (with or without the reuse fix); they guard against a future matcher change
+; re-introducing the de-CSE.
+
+; A shift by 4 cannot fold into an LEA scale (max is <<3 == scale 8), so m is
+; kept whole regardless - nothing to split.
+define i32 @shl_by_4(i32 %a, i32 %b, i32 %c, ptr %p) {
+; CHECK-LABEL: shl_by_4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal (%rdi,%rsi), %eax
+; CHECK-NEXT:    shll $4, %eax
+; CHECK-NEXT:    movl %eax, (%rcx)
+; CHECK-NEXT:    addl %edx, %eax
+; CHECK-NEXT:    retq
+  %s = add i32 %a, %b
+  %m = shl i32 %s, 4
+  store i32 %m, ptr %p
+  %r = add i32 %m, %c
+  ret i32 %r
+}
+
+; mul by 3/5/9 folds to lea (X, X, {2,4,8}), consuming both base and index, so
+; the sibling add operand cannot be folded and m is reused whole.
+define i32 @mul_3(i32 %a, i32 %b, i32 %c, ptr %p) {
+; CHECK-LABEL: mul_3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    addl %esi, %edi
+; CHECK-NEXT:    leal (%rdi,%rdi,2), %eax
+; CHECK-NEXT:    movl %eax, (%rcx)
+; CHECK-NEXT:    addl %edx, %eax
+; CHECK-NEXT:    retq
+  %s = add i32 %a, %b
+  %m = mul i32 %s, 3
+  store i32 %m, ptr %p
+  %r = add i32 %m, %c
+  ret i32 %r
+}
+
+define i32 @mul_5(i32 %a, i32 %b, i32 %c, ptr %p) {
+; CHECK-LABEL: mul_5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    addl %esi, %edi
+; CHECK-NEXT:    leal (%rdi,%rdi,4), %eax
+; CHECK-NEXT:    movl %eax, (%rcx)
+; CHECK-NEXT:    addl %edx, %eax
+; CHECK-NEXT:    retq
+  %s = add i32 %a, %b
+  %m = mul i32 %s, 5
+  store i32 %m, ptr %p
+  %r = add i32 %m, %c
+  ret i32 %r
+}
+
+define i32 @mul_9(i32 %a, i32 %b, i32 %c, ptr %p) {
+; CHECK-LABEL: mul_9:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    addl %esi, %edi
+; CHECK-NEXT:    leal (%rdi,%rdi,8), %eax
+; CHECK-NEXT:    movl %eax, (%rcx)
+; CHECK-NEXT:    addl %edx, %eax
+; CHECK-NEXT:    retq
+  %s = add i32 %a, %b
+  %m = mul i32 %s, 9
+  store i32 %m, ptr %p
+  %r = add i32 %m, %c
+  ret i32 %r
+}
+
+; A real subtract (variable subtrahend) folds to base + neg-index, again
+; consuming both slots, so m = (a + b) - c is reused whole for m + d.
+define i32 @sub_var(i32 %a, i32 %b, i32 %c, i32 %d, ptr %p) {
+; CHECK-LABEL: sub_var:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal (%rdi,%rsi), %eax
+; CHECK-NEXT:    subl %edx, %eax
+; CHECK-NEXT:    movl %eax, (%r8)
+; CHECK-NEXT:    addl %ecx, %eax
+; CHECK-NEXT:    retq
+  %s = add i32 %a, %b
+  %m = sub i32 %s, %c
+  store i32 %m, ptr %p
+  %r = add i32 %m, %d
+  ret i32 %r
+}
+
+; Subtracting a constant is canonicalized to an add of a negative constant, so
+; this is the add-like case with a negative displacement and is covered by it.
+define i32 @sub_const(i32 %a, i32 %b, ptr %p) {
+; CHECK-LABEL: sub_const:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal -17(%rdi,%rsi), %eax
+; CHECK-NEXT:    movl %eax, (%rdx)
+; CHECK-NEXT:    addl %esi, %eax
+; CHECK-NEXT:    retq
+  %s = add i32 %a, %b
+  %m = sub i32 %s, 17
+  store i32 %m, ptr %p
+  %r = add i32 %m, %b
+  ret i32 %r
+}
+
+; The materialized value used as the minuend of a subtract is reused directly.
+define i32 @minuend(i32 %a, i32 %b, i32 %c, ptr %p) {
+; CHECK-LABEL: minuend:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal 17(%rdi,%rsi), %eax
+; CHECK-NEXT:    movl %eax, (%rcx)
+; CHECK-NEXT:    subl %edx, %eax
+; CHECK-NEXT:    retq
+  %s = add i32 %a, %b
+  %m = add i32 %s, 17
+  store i32 %m, ptr %p
+  %r = sub i32 %m, %c
+  ret i32 %r
+}
