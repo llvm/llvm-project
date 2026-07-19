@@ -34,6 +34,15 @@ end subroutine
 ! CHECK:         %[[C:.*]] = arith.constant 42 : i32
 ! CHECK:         fir.has_value %[[C]] : i32
 
+subroutine nested_parens()
+  ! Stacked parentheses: exercises the recursive descent through nested
+  ! Parentheses<T> nodes.
+  integer, save :: n2 = ((42))
+end subroutine
+! CHECK-LABEL: fir.global internal @_QFnested_parensEn2 : i32 {
+! CHECK:         %[[C:.*]] = arith.constant 42 : i32
+! CHECK:         fir.has_value %[[C]] : i32
+
 subroutine scalar_real()
   real, save :: r = (3.5)
 end subroutine
@@ -66,6 +75,20 @@ subroutine paren_ctor()
 end subroutine
 ! CHECK-LABEL: fir.global internal @_QFparen_ctorEx : !fir.type<_QMtypesTt{n:i32}> {
 ! CHECK:         %[[IV:.*]] = fir.insert_value %{{.*}}, %{{.*}}, ["n", !fir.type<_QMtypesTt{n:i32}>]
+! CHECK:         fir.has_value %[[IV]] : !fir.type<_QMtypesTt{n:i32}>
+
+subroutine paren_derived_named_const()
+  use types
+  ! Parenthesized derived named constant: the parentheses wrap a
+  ! Constant<SomeDerived> rather than a structure constructor.
+  type(t), parameter :: tp = t(3)
+  type(t), save :: pt2 = (tp)
+end subroutine
+! (The named constant tp also gets its own constant global; its position
+! relative to pt2's global is unpinned.)
+! CHECK-LABEL: fir.global internal @_QFparen_derived_named_constEpt2 : !fir.type<_QMtypesTt{n:i32}> {
+! CHECK:         %[[C:.*]] = arith.constant 3 : i32
+! CHECK:         %[[IV:.*]] = fir.insert_value %{{.*}}, %[[C]], ["n", !fir.type<_QMtypesTt{n:i32}>]
 ! CHECK:         fir.has_value %[[IV]] : !fir.type<_QMtypesTt{n:i32}>
 
 subroutine comp_default()
