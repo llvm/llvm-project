@@ -79,7 +79,7 @@ jobs:
         release-version: ${{ inputs.release-version }}
 
     - name: Checkout LLVM
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       with:
           persist-credentials: false
 
@@ -228,7 +228,7 @@ jobs:
     # to do that we need to specify a specific python version.  It's also
     # good practice to do this on other OSes so the version of python doesn't
     # get changed unexpectedly.
-    - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+    - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
       with:
         python-version: '3.14.6'
 
@@ -244,7 +244,7 @@ jobs:
         git config --global core.autocrlf false
 
     - name: Checkout LLVM
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       with:
         persist-credentials: false
         ref: ${{ needs.prepare.outputs.ref }}
@@ -381,7 +381,7 @@ jobs:
 
     steps:
       - name: Checkout Release Scripts
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
           sparse-checkout: |

@@ -5289,29 +5289,76 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
           Diag(Tok, diag::err_modifier_expected_colon) << "fallback";
       }
     }
-  } else if (Kind == OMPC_num_teams) {
-    // Handle optional lower-bound modifier for num_teams clause.
-    Data.ExtraModifier = OMPC_NUMTEAMS_unknown;
-    TentativeParsingAction TPA(*this);
-    SourceLocation TLoc = Tok.getLocation();
-    ExprResult FirstExpr = ParseAssignmentExpression();
-    if (FirstExpr.isInvalid()) {
-      SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end, StopBeforeMatch);
-      Data.RLoc = Tok.getLocation();
-      if (!T.consumeClose())
-        Data.RLoc = T.getCloseLocation();
-      TPA.Commit();
-      return true;
+  } else if (Kind == OMPC_num_teams || Kind == OMPC_thread_limit) {
+    int Mod = 0;
+    // Handle optional dims and lower-bound modifiers for num_teams clause, and
+    // the optional dims modifier for thread_limit clause.
+    Data.ExtraModifierArray[0] = Data.ExtraModifierArray[1] =
+        Kind == OMPC_num_teams ? static_cast<int>(OMPC_NUMTEAMS_unknown)
+                               : static_cast<int>(OMPC_THREADLIMIT_unknown);
+
+    // Lower-bound modifier is only accepted in num_teams.
+    bool CanParseLowerBoundModifier = (Kind == OMPC_num_teams);
+    if (Tok.is(tok::identifier) && Tok.getIdentifierInfo()->isStr("dims") &&
+        NextToken().is(tok::l_paren)) {
+      SourceLocation TLoc = Tok.getLocation();
+      ConsumeToken();
+      SourceLocation RLoc;
+      ExprResult ExprR = ParseOpenMPParensExpr(getOpenMPClauseName(Kind), RLoc);
+      if (ExprR.isUsable()) {
+        Data.ExtraModifierArray[Mod] =
+            Kind == OMPC_num_teams ? static_cast<int>(OMPC_NUMTEAMS_dims)
+                                   : static_cast<int>(OMPC_THREADLIMIT_dims);
+        Data.ExtraModifierExprArray[Mod] = ExprR.get();
+        Data.ExtraModifierLocArray[Mod] = TLoc;
+        ++Mod;
+      }
+
+      if (Tok.is(tok::colon)) {
+        // A colon was found, no more modifiers are expected.
+        ConsumeToken();
+        CanParseLowerBoundModifier = false;
+      } else if (CanParseLowerBoundModifier && Tok.is(tok::comma)) {
+        // num_teams(dims(N), lower : upper) is invalid. Only lower:upper may
+        // follow dims via comma, but sema will reject the combination.
+        ConsumeToken();
+      } else {
+        Diag(Tok, diag::err_modifier_expected_colon)
+            << getOpenMPClauseName(Kind);
+        SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end, StopBeforeMatch);
+        Data.RLoc = Tok.getLocation();
+        if (!T.consumeClose())
+          Data.RLoc = T.getCloseLocation();
+        return true;
+      }
     }
 
-    if (Tok.is(tok::colon)) {
-      ConsumeToken();
-      Data.ExtraModifier = OMPC_NUMTEAMS_lower_bound;
-      Data.ExtraModifierExpr = FirstExpr.get();
-      Data.ExtraModifierLoc = TLoc;
-      TPA.Commit();
-    } else {
-      TPA.Revert();
+    // The lower bound modifier must appear as the last modifier.
+    if (CanParseLowerBoundModifier) {
+      TentativeParsingAction TPA(*this);
+      SourceLocation TLoc = Tok.getLocation();
+      ExprResult FirstExpr = ParseAssignmentExpression();
+      if (FirstExpr.isInvalid()) {
+        SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end, StopBeforeMatch);
+        Data.RLoc = Tok.getLocation();
+        if (!T.consumeClose())
+          Data.RLoc = T.getCloseLocation();
+        TPA.Commit();
+        return true;
+      }
+
+      if (Tok.is(tok::colon)) {
+        // Correctly parsed the lower bound modifier.
+        ConsumeToken();
+        Data.ExtraModifierArray[Mod] = OMPC_NUMTEAMS_lower_bound;
+        Data.ExtraModifierExprArray[Mod] = FirstExpr.get();
+        Data.ExtraModifierLocArray[Mod] = TLoc;
+        TPA.Commit();
+      } else {
+        // Could not find the colon after the expression, revert it and let this
+        // function parse it as a list of expressions.
+        TPA.Revert();
+      }
     }
   }
 

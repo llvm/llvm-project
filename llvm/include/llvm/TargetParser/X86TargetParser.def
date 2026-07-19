@@ -235,7 +235,7 @@ X86_FEATURE_COMPAT(AVXVNNIINT16,       "avxvnniint16",           0, 107)
 X86_FEATURE_COMPAT(SM3,                "sm3",                    0, 108)
 X86_FEATURE_COMPAT(SHA512,             "sha512",                 0, 109)
 X86_FEATURE_COMPAT(SM4,                "sm4",                    0, 110)
-X86_FEATURE_COMPAT(APXF,               "apxf",                   0, 111)
+X86_FEATURE_COMPAT(APXF,               "apxf",                  36, 111)
 X86_FEATURE_COMPAT(USERMSR,            "usermsr",                0, 112)
 X86_FEATURE_COMPAT(AVX10_1,            "avx10.1",               34, 114)
 X86_FEATURE_COMPAT(AVX10_2,            "avx10.2",               35, 116)
@@ -274,7 +274,7 @@ X86_FEATURE       (LVI_CFI,                     "lvi-cfi")
 X86_FEATURE       (LVI_LOAD_HARDENING,          "lvi-load-hardening")
 
 // Max number of priorities. Priorities form a consecutive range.
-#define MAX_PRIORITY 35
+#define MAX_PRIORITY 36
 
 #undef X86_FEATURE_COMPAT
 #undef X86_FEATURE

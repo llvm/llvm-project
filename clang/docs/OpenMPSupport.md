@@ -389,7 +389,7 @@ implementation.
 | attach map-type modifier                                              | {part}`In Progress` | {none}`unclaimed`   | C/C++: @abhinavgaba; RT: @abhinavgaba ([PR149036][PR149036], [PR158370][PR158370])                       |
 | need_device_ptr modifier for adjust_args clause                       | {part}`partial`     | {none}`unclaimed`   | Clang Parsing/Sema: [PR168905][PR168905] [PR169558][PR169558]                                            |
 | fallback modifier for use_device_ptr clause                           | {good}`done`        | {none}`unclaimed`   | Clang: @abhinavgaba ([PR170578][PR170578], [PR173931][PR173931]) RT: @abhinavgaba ([PR169603][PR169603]) |
-| dims clause with strict behavior (multidimensional teams and leagues) | {part}`In Progress` | {part}`In Progress` | C/C++: kevinsala Fortran: skc7, kparzysz, mjklemm                                                        |
+| dims modifier for num_teams, thread_limit, and num_threads clauses    | {part}`partial`     | {part}`In Progress` | C/C++: @kevinsala ([PR206412]); Fortran: @skc7, @kparzysz, @mjklemm                                      |
 
 ## OpenMP Extensions
 
